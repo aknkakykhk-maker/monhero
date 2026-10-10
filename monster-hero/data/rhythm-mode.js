@@ -1152,22 +1152,45 @@ const RHYTHM_SKY_LIFT_RATIO=.16;
 // 参考動画(横画面)は差が画面の約39%。844×390 で 16% だと 62px しかなく、空中の段がつぶれて見えた)。演奏画面が向きに合わせて set する
 const RHYTHM_SKY_LIFT={ratio:RHYTHM_SKY_LIFT_RATIO,set(landscape){this.ratio=landscape?.25:RHYTHM_SKY_LIFT_RATIO;}};
 const rhythmNoteSkyHeight=note=>{const h=Number(note?.skyHeight);return Number.isFinite(h)&&h>0?Math.min(1,h):0;};
-// 毎コマ何百回も呼ばれるので、ノーツごとに1回だけ数えて覚える(譜面のノーツは凍らせてあり、中身は変わらない)
+// 毎コマ何百回も呼ばれるので、点の列ごとに1回だけ数えて覚える。演奏中のノーツは譜面のノーツの写しだが、
+// 点の列(slidePoints)は譜面の凍らせた配列をそのまま持つので、それを鍵にする(凍っていない列は覚えずに毎回数える)。
+// 2026-10-10: 以前はノーツそのもの(写しは凍っていない)を鍵にしていて覚えが効かず、点の多い曲(Sheriruth)で毎コマ数え直していた
 const RHYTHM_SLIDE_HAS_SKY_MEMO=typeof WeakMap==='function'?new WeakMap():null;
 const rhythmSlideHasSky=note=>{
-  if(!Array.isArray(note?.slidePoints))return false;
-  const memo=RHYTHM_SLIDE_HAS_SKY_MEMO&&Object.isFrozen(note)?RHYTHM_SLIDE_HAS_SKY_MEMO.get(note):undefined;
+  const points=note?.slidePoints;
+  if(!Array.isArray(points))return false;
+  const keep=RHYTHM_SLIDE_HAS_SKY_MEMO&&Object.isFrozen(points);
+  const memo=keep?RHYTHM_SLIDE_HAS_SKY_MEMO.get(points):undefined;
   if(memo!==undefined)return memo;
-  const has=note.slidePoints.some(point=>Number(point?.sky)>0);
-  if(RHYTHM_SLIDE_HAS_SKY_MEMO&&Object.isFrozen(note))RHYTHM_SLIDE_HAS_SKY_MEMO.set(note,has);
+  const has=points.some(point=>Number(point?.sky)>0);
+  if(keep)RHYTHM_SLIDE_HAS_SKY_MEMO.set(points,has);
   return has;
+};
+// 点の列で「t <= points[i].timeMs になる最初の i(1以上)」を探すときの、探し始める位置。
+// 時刻順に並んだ凍らせた列(譜面の点)は二分探索で先に絞る。それ以外は 1(=今までどおり頭から)。
+// 呼ぶ側のループはこの位置から始めるだけなので、答えは頭から探したときと同じ。
+// 2026-10-10 社長「Sheriruth だけカクカク」: 点が数十〜90あるスライドで、1コマに何千回も頭から探していた
+const RHYTHM_SLIDE_SORTED_MEMO=typeof WeakMap==='function'?new WeakMap():null;
+const rhythmSlideSegmentStart=(points,t)=>{
+  const n=points.length;
+  if(n<9||!RHYTHM_SLIDE_SORTED_MEMO||!Object.isFrozen(points)||!Number.isFinite(t))return 1;
+  let sorted=RHYTHM_SLIDE_SORTED_MEMO.get(points);
+  if(sorted===undefined){
+    sorted=true;
+    for(let i=1;i<n;i++){const a=Number(points[i-1]?.timeMs),b=Number(points[i]?.timeMs);if(!(Number.isFinite(a)&&Number.isFinite(b)&&a<=b)){sorted=false;break;}}
+    RHYTHM_SLIDE_SORTED_MEMO.set(points,sorted);
+  }
+  if(!sorted)return 1;
+  let lo=1,hi=n;
+  while(lo<hi){const mid=(lo+hi)>>1;if(t<=Number(points[mid].timeMs))hi=mid;else lo=mid+1;}
+  return lo;
 };
 const rhythmSlideSkyAt=(note,chartTimeMs)=>{
   const points=Array.isArray(note?.slidePoints)?note.slidePoints:null;
   if(!points||points.length<2||!rhythmSlideHasSky(note))return 0;
   const t=Number(chartTimeMs),h=point=>Math.max(0,Math.min(1,Number(point?.sky)||0));
   if(!Number.isFinite(t)||t<=Number(points[0].timeMs))return h(points[0]);
-  for(let i=1;i<points.length;i++){
+  for(let i=rhythmSlideSegmentStart(points,t);i<points.length;i++){
     const a=points[i-1],b=points[i];
     if(t<=Number(b.timeMs)){
       const span=Math.max(1,Number(b.timeMs)-Number(a.timeMs)),p=Math.max(0,Math.min(1,(t-Number(a.timeMs))/span));
@@ -1635,7 +1658,7 @@ const rhythmSlideEaseSlope=(ease,p)=>{
 const rhythmSlideWidthAt=(note,chartTimeMs)=>{
   const points=rhythmSlidePoints(note),t=Number(chartTimeMs);
   if(!Number.isFinite(t)||t<=Number(points[0]?.timeMs))return rhythmSlidePointWidth(note,points[0]);
-  for(let i=1;i<points.length;i++){
+  for(let i=rhythmSlideSegmentStart(points,t);i<points.length;i++){
     const a=points[i-1],b=points[i];
     if(t<=Number(b.timeMs)){
       const span=Math.max(1,Number(b.timeMs)-Number(a.timeMs)),p=Math.max(0,Math.min(1,(t-Number(a.timeMs))/span));
@@ -1652,7 +1675,7 @@ const rhythmSlideExpectedLane=(note,chartTimeMs)=>{
   const fit=(lane,timeMs)=>rhythmSlideFittedLane(Number(lane)||0,rhythmSlideWidthAt(note,timeMs));
   if(!Number.isFinite(t))return fit(points[0]?.lane,points[0]?.timeMs);
   if(t<=points[0].timeMs)return fit(points[0]?.lane,points[0]?.timeMs);
-  for(let i=1;i<points.length;i++){
+  for(let i=rhythmSlideSegmentStart(points,t);i<points.length;i++){
     const a=points[i-1],b=points[i];
     if(t<=b.timeMs){
       const span=Math.max(1,Number(b.timeMs)-Number(a.timeMs));
@@ -28450,6 +28473,8 @@ const rhythmLayoutPlayArea=area=>{
     area.style.setProperty('--mh-above-line-px',`${Math.max(0,Math.round(y*rect.height))}px`);
   }
 };
+// 画面の上の外へ、帯の線の太さ(6px)より十分大きくはみ出したら、その先の帯の区切りは作らない(rhythmSlideSegmentQuads・DOM 版の rhythmSlideSegmentPolygons)
+const RHYTHM_SLIDE_OFFSCREEN_PX=64;
 const rhythmSlideSegmentPolygons=(note,chartNowMs,travel,rect,noteHalfHeight=Number(travel.noteHalfHeight)||0)=>{
   const source=note?._rhythmSlideRenderPoints||rhythmSlidePoints(note),start=Number(source[0]?.timeMs)||0,end=Number(source[source.length-1]?.timeMs)||start;
   const now=Math.max(start,Math.min(end,Number(chartNowMs)||start));
@@ -28467,11 +28492,13 @@ const rhythmSlideSegmentPolygons=(note,chartNowMs,travel,rect,noteHalfHeight=Num
   // 外周(ふち)の点列も同じループで作る。あとからもう一度投影し直すと、
   // 画面に出ているSLIDEのぶんだけ毎フレームの計算が倍になるため。
   const head=from,rights=[],lefts=[];
-  for(let index=Math.max(1,firstIndex);index<source.length;index++){
+  outer:for(let index=Math.max(1,firstIndex);index<source.length;index++){
     const toPoint=source[index],fromTime=Number(fromPoint.timeMs),toTime=Number(toPoint.timeMs),spanMs=toTime-fromTime;
     for(let step=1;step<=RHYTHM_SLIDE_SEGMENT_STEPS;step++){
       const ratio=step/RHYTHM_SLIDE_SEGMENT_STEPS,timeMs=fromTime+spanMs*ratio;
       const to=step===RHYTHM_SLIDE_SEGMENT_STEPS?project(toPoint):project({timeMs,lane:rhythmSlideExpectedLane(note,timeMs)});
+      // canvas 版(rhythmSlideSegmentQuads)と同じく、区切りがまるごと画面の上から RHYTHM_SLIDE_OFFSCREEN_PX より外へ出たら、その先は作らない
+      if(from.y<-RHYTHM_SLIDE_OFFSCREEN_PX&&to.y<-RHYTHM_SLIDE_OFFSCREEN_PX)break outer;
       segments.push(`${from.left.toFixed(2)},${from.y.toFixed(2)} ${from.right.toFixed(2)},${from.y.toFixed(2)} ${to.right.toFixed(2)},${to.y.toFixed(2)} ${to.left.toFixed(2)},${to.y.toFixed(2)}`);
       rights.push(`${to.right.toFixed(2)},${to.y.toFixed(2)}`);
       lefts.push(`${to.left.toFixed(2)},${to.y.toFixed(2)}`);
@@ -28766,6 +28793,10 @@ const rhythmSlideSegmentQuads=(note,chartNowMs,travel,rect,noteHalfHeight=Number
     for(let step=1;step<=steps;step++){
       const ratio=step/steps,timeMs=fromTime+spanMs*ratio;
       const to=step===steps?project(toPoint):project({timeMs,lane:rhythmSlideExpectedLane(note,timeMs)});
+      // 地上だけのスライドは、奥へ行くほど上へ上がる一方なので、区切りがまるごと画面の上から RHYTHM_SLIDE_OFFSCREEN_PX より外へ出たら、
+      // そこから先も全部見えない。作らずに終える(2026-10-10 社長「Sheriruth だけカクカク」: 10秒・90点のスライドを毎コマ全部作っていた)。
+      // 見えている所の形は変わらない(押さえたときの光・流れる光も判定ライン寄りの範囲しか使わない)。空中のあるスライドは上の farPos で切る
+      if(!hasSky&&from.y<-RHYTHM_SLIDE_OFFSCREEN_PX&&to.y<-RHYTHM_SLIDE_OFFSCREEN_PX)return quads;
       // 高さ(sky)は空中のあるスライドだけに付ける(地上だけのスライド=既存の全曲は、区切りの形を今までと同じにする)
       quads.push(hasSky?{l0:from.left,r0:from.right,y0:from.y,l1:to.left,r1:to.right,y1:to.y,sky:(Number(from.sky)+Number(to.sky))/2||0}:{l0:from.left,r0:from.right,y0:from.y,l1:to.left,r1:to.right,y1:to.y});
       from=to;
