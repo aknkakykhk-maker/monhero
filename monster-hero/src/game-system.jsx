@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 27e5a809b3aefcc5
+// generated-sha256: 11316f610e883f85
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-10 10:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-10 11:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -44249,6 +44249,10 @@ function MonsterHeroGame() {
   // バトルメニューで選んでいるモード。挑戦を始めた時点の値が runMode に固定される
   const [battleMode, setBattleMode] = useState(BATTLE_MODE_CHALLENGE);
   const [modeInfoId, setModeInfoId] = useState(null); // 「？」で開くモード説明
+  // モンヒロバトルの入口で開く、モードをまたいだランキング(null=閉じている / 'breeder' / 'bond' / 'power')。
+  // 2026-10-10 社長指示「ここのランキングの中は、ブリーダーレベルと絆レベルと総合を見れるように」。
+  // モードごとの記録は、モードの札・難易度の札の「ランキング」から見る(今までどおり)
+  const [systemRankTab, setSystemRankTab] = useState(null);
   const [profileBattleMode, setProfileBattleMode] = useState(null); // プロフィールのバトル記録詳細
   // 遊んだ時間。数えるのはrefだけにして、画面の描き直しを起こさない
   // (15秒ごとにstateを書き換えると、バトル中や音ゲー中に毎回描き直しが走ってしまう)。
@@ -53990,7 +53994,15 @@ function MonsterHeroGame() {
     setModeSelectTab('mode');
     setGameState('BATTLE_MODE_SELECT');
   };
-  const openBattleSystemSelect = () => { setModeSelectTab('mode'); setGameState('BATTLE_SYSTEM_SELECT'); };
+  // 入口のランキングを開く・タブを切り替える。モードえらび画面のタブを押したときと同じ取得をする
+  const openSystemRank = (key) => {
+    setSystemRankTab(key);
+    addAssistantBond('ranking');
+    if (key === 'bond') setBondRankMonFilter('all');
+    if (key === 'power') setPowerRankMonFilter('all');
+    loadRankings(null, true, false, key === 'power' ? 'bond' : key);
+  };
+  const openBattleSystemSelect = () => { setModeSelectTab('mode'); setSystemRankTab(null); setGameState('BATTLE_SYSTEM_SELECT'); };
 
   const closeDailyMasuAdvice = () => setDailyMasuAdvice(null);
   const tryDailyMasuAdvice = () => {
@@ -61057,15 +61069,30 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <div data-mh-screen data-battle-system-select className="mhms-stage relative flex-1 flex flex-col h-full min-h-0 overflow-hidden text-white">
             <RhythmModeSelectStage notes={false}/>
             <header className="relative z-10 flex shrink-0 items-center gap-1.5 border-b border-fuchsia-300/20 bg-slate-950/55 px-2 py-1 backdrop-blur-sm">
-              <button aria-label="戻る" disabled={!!battleTutorial} onClick={returnToHome} className="min-h-[44px] min-w-[44px] shrink-0 rounded-xl text-lg font-black text-slate-300 active:scale-90 disabled:opacity-30">←</button>
+              <button aria-label="戻る" disabled={!!battleTutorial} onClick={()=>{if(systemRankTab){setSystemRankTab(null);return;}returnToHome();}} className="min-h-[44px] min-w-[44px] shrink-0 rounded-xl text-lg font-black text-slate-300 active:scale-90 disabled:opacity-30">←</button>
               <div className="min-w-0 flex-1 leading-none">
                 <small className="block truncate text-[8px] font-black tracking-[0.2em] text-fuchsia-300">MONHERO BATTLE ・ SELECT</small>
                 <b className="mhms-title block truncate text-lg font-black leading-tight tracking-wider">モンヒロバトル</b>
-                <small className="block truncate text-[9px] font-black text-slate-300/90">どのバトルで遊ぶかを選びます</small>
+                <small className="block truncate text-[9px] font-black text-slate-300/90">{systemRankTab?'ランキング(ブリーダーLv・絆Lv・総合力)':'どのバトルで遊ぶかを選びます'}</small>
               </div>
             </header>
             {/* 縦画面: 上に助手の立ち絵(余った高さを使って大きく)、下に札。横画面: 左に立ち絵、右に札 */}
-            <div className={`relative z-[1] flex min-h-0 flex-1 flex-col overflow-y-auto landscape:flex-row landscape:overflow-hidden ${assistShown?'':'portrait:justify-center'}`}>
+            {systemRankTab&&(
+              <div data-battle-system-rank={systemRankTab} className="relative z-[1] mx-auto flex min-h-0 w-full max-w-md flex-1 flex-col px-3 pt-2 pb-1">
+                {/* モードで分かれない3つ。中身・取得はモードえらび画面のタブと同じもの(総合力は絆Lvと同じ取得 'bond' を並べ替えたもの) */}
+                <div role="tablist" aria-label="ランキングの種類" className="mhbs-tabs grid-cols-3 mb-2 shrink-0">
+                  {[['breeder','ブリーダーLv'],['bond','絆Lv'],['power','総合力']].map(([key,label])=>(
+                    <button key={key} role="tab" aria-selected={systemRankTab===key} onClick={()=>openSystemRank(key)} className={`mhbs-tab text-[11px] active:scale-95 ${systemRankTab===key?'on':''}`}><span aria-hidden="true" className="mr-0.5">🏆</span>{label}</button>
+                  ))}
+                </div>
+                <div className="shrink-0 w-full mb-2"><AssistantBubble scene="ranking" compact/></div>
+                {systemRankTab==='breeder'&&<div className="flex-1 min-h-0 flex flex-col">{renderBreederRankingBody()}</div>}
+                {systemRankTab==='bond'&&<div className="flex-1 min-h-0 flex flex-col">{renderBondRankingBody()}</div>}
+                {systemRankTab==='power'&&<div className="flex-1 min-h-0 flex flex-col">{renderPowerRankingBody()}</div>}
+                <p className="shrink-0 pt-1.5 text-center text-[10px] font-bold text-slate-300/80">モードごとの記録は、それぞれのモードの「ランキング」から見られます</p>
+              </div>
+            )}
+            {!systemRankTab&&<div className={`relative z-[1] flex min-h-0 flex-1 flex-col overflow-y-auto landscape:flex-row landscape:overflow-hidden ${assistShown?'':'portrait:justify-center'}`}>
               <ModeSelectAssistantPanel assistant={battleSelectAssistant} showArt={battleSelectAssist.modeSelectArt} showComment={battleSelectAssist.modeSelectComment} onToggle={toggleBattleSelectAssist}/>
               <div className="shrink-0 space-y-2 p-3 landscape:flex landscape:min-h-0 landscape:flex-1 landscape:shrink landscape:flex-col landscape:justify-center landscape:overflow-y-auto landscape:py-2">
                 {!assistShown&&battleSelectAssistant&&<ModeSelectAssistToggles assistant={battleSelectAssistant} showArt={battleSelectAssist.modeSelectArt} showComment={battleSelectAssist.modeSelectComment} onToggle={toggleBattleSelectAssist} cls="justify-end" withLabel/>}
@@ -61111,13 +61138,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 </div>
                 {/* 下の小さいボタンの列(モンヒロビートのモードえらびと同じ並び)。ランキングと、ヘルプへの近道 */}
                 <div data-battle-system-shortcuts className="flex gap-2 pt-1">
-                  <button data-battle-system-ranking type="button" disabled={!!battleTutorial} onClick={()=>openModeScoreRanking(BATTLE_MODE_CHALLENGE,difficulty,'BATTLE_SYSTEM_SELECT')}
+                  <button data-battle-system-ranking type="button" disabled={!!battleTutorial} onClick={()=>openSystemRank('breeder')}
                     className="mhms-glass flex min-h-[48px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl px-1 leading-none text-emerald-100 active:scale-95 disabled:opacity-40"><span aria-hidden="true" className="text-lg">🏆</span><b className="text-[11px] font-black">ランキング</b></button>
                   <button data-battle-system-help type="button" disabled={!!battleTutorial} onClick={()=>openHelp()}
                     className="mhms-glass flex min-h-[48px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl px-1 leading-none text-amber-100 active:scale-95 disabled:opacity-40"><span aria-hidden="true" className="text-lg">📖</span><b className="text-[11px] font-black">ヘルプ</b></button>
                 </div>
               </div>
-            </div>
+            </div>}
           </div>);
         })()}
 
