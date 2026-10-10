@@ -109,6 +109,9 @@ function emergencyWhy(b) {
   const alive = b.slots.filter((x) => x.occupied && !x.downed && x.hp);
   if (!alive.length) return '';
   const usable = (re) => b.hand.some((c) => c.usable && re.test(c.type));
+  // ① ゲームの AUTO と同じ条件(60-app.jsx 13001 付近 lacksOnlyGuts): 置けるカードが1枚もなく、ガッツさえ足りれば置ける。
+  //   ボットは前は捨てて5%ずつ戻していた。緊急回復は回数の上限なし(2026-10-10 ハカセくん・改善部の確認)
+  if (b.hand.length && !b.hand.some((c) => c.usable) && b.hand.some((c) => c.block === 'guts')) return 'ガッツが足りず、置けるカードが1枚もない(ゲームの AUTO と同じ条件)';
   if (usable(/heal/)) return '';
   const falling = alive.filter((x) => x.aimDamage > 0 && x.aimDamage >= x.hp.now);
   const saved = falling.filter((x) => x.aimDamage < x.hp.now + Math.floor(x.hp.max * 0.3));
@@ -999,10 +1002,10 @@ function rememberRun(L, stats) {
     lostAt: L.result === 'clear' ? null : (L.waves[L.waves.length - 1] || {}).enemy || null, dmg: Object.fromEntries(Object.entries(dmg).map(([m, d]) => [m, Math.round(d)])),
     // 子ごとの技の回数・間合い適性(2026-10-09 から)・勇者特性が効いた回数・EX を使った子
     emergency: L.emergency || 0, // 緊急回復を押した回数(2026-10-10 から)
-    // ボットの版(2026-10-10 から)。arena-1 = アリーナくんの直し(緊急回復・自動回復の見込み・起こす・トレーニング・固有技の強化・おなら・時間停止)を入れた版。
-    //   切った直しがあれば「-off:…」を付ける(直す前と比べた回)。これが無い回は、それより前の版
-    bot: `arena-1${['EMERGENCY', 'REGEN', 'REVIVE_EACH', 'TRAIN_V2', 'UNIQUE_ROLE', 'HAM_STUN'].filter((f) => process.env[`PLAYBOT_TACTICS_${f}`] === '0').map((f, i) => `${i ? ',' : '-off:'}${f}`).join('')}`,
-    assistRotate: process.env.PLAYBOT_TACTICS_ASSIST_ROTATE === '1' || undefined,
+    // ボットの版(2026-10-10 から)。arena-1 = アリーナくんの直し(緊急回復・自動回復の見込み・起こす・トレーニング・固有技の強化・おなら・時間停止)の入った版。
+    //   これが無い回は、それより前の版
+    //   切り替えごとの入/切(ハカセくんの頼み: Tier を「直したボットの回だけ」に絞れるように)。時間停止の直しは切れないので、bot がある回は全部入っている
+    bot: { ver: 'arena-1', ...Object.fromEntries(['EMERGENCY', 'REGEN', 'REVIVE_EACH', 'TRAIN_V2', 'UNIQUE_ROLE', 'HAM_STUN'].map((f) => [f.toLowerCase().replace(/_(\w)/g, (_, c) => c.toUpperCase()), process.env[`PLAYBOT_TACTICS_${f}`] !== '0'])), rotate: process.env.PLAYBOT_TACTICS_ASSIST_ROTATE === '1' },
     heroStyle: L.build.heroStyle || null, // 勇者モンの初期スタイル(剣士モッチー。2026-10-10 から。それより前は片手剣)
     use, traitHits: L.waves.reduce((a, w) => a + (w.traitHits || 0), 0),
     exBy: L.ex.reduce((o, e) => { if (e.mon) o[e.mon] = (o[e.mon] || 0) + 1; return o; }, {}),

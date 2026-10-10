@@ -465,7 +465,9 @@ async function fightTactics(s, stats, { maxMs = 360000, waves = true, speedUp = 
     b = await brain.readBoard(s);
     ctx.mem.recentDealt = ctx.mem.recentDealt || 0;
     // 全滅の手前なら、カードを置かずに緊急回復(押すとそのまま敵の番へ進む)
-    const emergency = brain.emergencyWhy(b);
+    let emergency = brain.emergencyWhy(b);
+    // EX の演出のあいだは手札が一時的にどれも押せない。見誤らないよう、少し待って読み直してから決める
+    if (emergency) { await s.wait(1500); b = await brain.readBoard(s); emergency = brain.emergencyWhy(b); }
     let picks = [];
     if (emergency) {
       if (process.env.PLAYBOT_DEBUG) console.log(`    [判断] W${b.wave} T${b.turn} 緊急回復 … ${emergency}`);

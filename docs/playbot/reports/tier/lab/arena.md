@@ -27,6 +27,8 @@ PLAYBOT_PORT=8981 PLAYBOT_TACTICS_ALL=1 PLAYBOT_TACTICS_DIFF=Hard PLAYBOT_TACTIC
 | 10-10 10:18 | エイキ | Hard | クリア | 10 | 42ターン・倒れ2。EX: エイキ3・ライガー5・ゴーレム2・モッチー1 |
 | 10-10 10:20 | ヤオビクニ | Hard | クリア | 10 | 41ターン・倒れ2。**勇者のヤオビクニが EX を0回**(ゴーレム1・ライガー4だけ) |
 | 10-10 10:21 | プラント | Hard | クリア | 10 | |
+| 10-10 10:24 | エイキ | Expert | 全滅 | 3 | 直す前の版・アシカ順番(みゃる・ニコラオ・きき) |
+| 10-10 10:25 | ヤオビクニ | Expert | 全滅 | 2 | 直す前の版・アシカ順番(みゃる・みゅあ) |
 
 ## ボットで直したこと
 
@@ -38,7 +40,8 @@ PLAYBOT_PORT=8981 PLAYBOT_TACTICS_ALL=1 PLAYBOT_TACTICS_DIFF=Hard PLAYBOT_TACTIC
 
 - 2026-10-10 **緊急回復を押すようにした**(ハカセくんの直す順1)。それまで一度も押していなかった。`tactics-brain.js` の `emergencyWhy`・`tactics.js` のターンの始め。
   押すのは「次の攻撃で倒れる子がいて、そのあと立っている子が1体以下・+30% なら持ちこたえる・使える回復カードが無い(倒れそうなのが1体でガードのカードがあり、貫通撃でなければ守りに任せる)」とき。
-  `PLAYBOT_TACTICS_EMERGENCY=0` で切れる。覚え書きに `emergency`(押した回数)を足した
+  `PLAYBOT_TACTICS_EMERGENCY=0` で切れる。覚え書きに `emergency`(押した回数)を足した。
+  **追記(ハカセくん・改善部の確認)**: 1つ目の条件として、ゲームの AUTO と同じ「置けるカードが1枚もなく、ガッツさえ足りれば置ける」(60-app.jsx 13001 付近)でも押す(前は捨てて 5% ずつ戻していた)。緊急回復は回数の上限なし。EX の演出中の見誤りを避けるため、1.5秒待って読み直してから押す
 - 2026-10-10 **回復・支援のしきい値に自動回復を見込んだ**(ハカセくんの直す順2。`decidePick`)。
   回復カード: 前は「全体のライフが 35% 未満」→「次の攻撃(予告のダメージ)を受けて、ターン終わりの自動回復(上限の10%)が入ったあとで 35% 未満」。メロソも同じ見込みで 55% 未満。
   支援: 前は「いちばん多い子のガッツが6割以上」→「20 払って、ターン終わりのガッツ自動回復(上限の5%)のあとに4割以上」。
@@ -54,9 +57,8 @@ PLAYBOT_PORT=8981 PLAYBOT_TACTICS_ALL=1 PLAYBOT_TACTICS_DIFF=Hard PLAYBOT_TACTIC
 - 2026-10-10 **固有技の強化を役ごとに・ハムのおならを取っておく**(ハカセくんの直す順5)。
   強化: 前はダメージの多い子からだけ → ダメージ役(頭割り以上)2回にほかの子1回の割合で回す(`PLAYBOT_TACTICS_UNIQUE_ROLE=0` で前の決め方)。
   ハムの固有技「おなら」(このターン敵を行動不能)を、あつの挑発と同じスタンのカードとして扱う: 「ためる」「貫通の構え」のターンに使い、それ以外は取っておく(とどめのときは撃つ)。`PLAYBOT_TACTICS_HAM_STUN=0` で前の扱い
-- 2026-10-10 覚え書きの1回ごとに `bot`(ボットの版)を残す。`arena-1` = 上の直しを全部入れた版。切った直しがあると `arena-1-off:REGEN,…`。
-  `bot` の無い回はそれより前の版。直す前と比べる回は、`PLAYBOT_TACTICS_EMERGENCY=0 PLAYBOT_TACTICS_REGEN=0 PLAYBOT_TACTICS_REVIVE_EACH=0 PLAYBOT_TACTICS_TRAIN_V2=0 PLAYBOT_TACTICS_UNIQUE_ROLE=0 PLAYBOT_TACTICS_HAM_STUN=0` で回す(時間停止の直しは切れない)。
-  アシカを順番に試した回は `assistRotate: true`
+- 2026-10-10 覚え書きの1回ごとに `bot`(ボットの版と切り替え)を残す: `{ ver: 'arena-1', emergency, regen, reviveEach, trainV2, uniqueRole, hamStun, rotate }`(true=入)。
+  `bot` の無い回はそれより前の版。直す前と比べる回は `PLAYBOT_TACTICS_EMERGENCY=0 PLAYBOT_TACTICS_REGEN=0 PLAYBOT_TACTICS_REVIVE_EACH=0 PLAYBOT_TACTICS_TRAIN_V2=0 PLAYBOT_TACTICS_UNIQUE_ROLE=0 PLAYBOT_TACTICS_HAM_STUN=0` で回す(時間停止の直しは切れない)
 
 ## 見つけたボットの取りこぼし(ハカセくんへ渡す)
 
