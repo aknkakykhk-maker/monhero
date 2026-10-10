@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0927850bc69a77a9
+// source-sha256: 008a18743fec2e23
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-10 15:14";
+const BUILD_DATE = "2026-10-10 15:46";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -31212,6 +31212,13 @@ const RhythmTapTest = ({
   monstersRef.current = monsters;
   const monsterSignature = monsters.map(m => m ? `${m.baseId}|${m.imageUrl}|${JSON.stringify(m.colors || null)}` : '-').join(',');
   const canvasNotes = useState(() => rhythmCanvasNotesActive(RELEASE_FLAGS.rhythmCanvasNotes))[0];
+  const skyChart = useMemo(() => rhythmChartHasSky(chart?.notes), [chart]);
+  useEffect(() => {
+    RHYTHM_SKY_INPUT.active = skyChart;
+    return () => {
+      RHYTHM_SKY_INPUT.active = false;
+    };
+  }, [skyChart]);
   const [autoQuality, setAutoQuality] = useState(() => rhythmAutoQualityMemory.level);
   const autoQualityAtStart = useState(() => rhythmAutoQualityMemory.level)[0];
   const autoQualityLevelRef = useRef(autoQuality);
@@ -33372,6 +33379,7 @@ const RhythmTapTest = ({
             index: note.index,
             type: note.type,
             timeMs: note.timeMs,
+            skyHeight: rhythmNoteSkyHeight(note),
             endTimeMs: note.endTimeMs,
             lane: note.lane,
             subLane: note.subLane,
@@ -33687,6 +33695,7 @@ const RhythmTapTest = ({
         lane,
         subLaneCoordinate,
         inputKey: rhythmInputKey('pointer', entry.id),
+        sky: rhythmSkyTouch(p.y, rect),
         subLaneCoordinateAtLine: rhythmSubLaneCoordinateAtLineIfBelow(p.x, p.y, rect),
         pointerId: entry.id
       }], rawAge > 0 && rawAge < 300 ? rawAge : rhythmInputAgeMs(entry.stamp, nowMs()));
@@ -33807,6 +33816,7 @@ const RhythmTapTest = ({
       lane,
       subLaneCoordinate,
       inputKey: rhythmInputKey('pointer', e.pointerId),
+      sky: rhythmSkyTouch(p.y, rect),
       subLaneCoordinateAtLine: rhythmSubLaneCoordinateAtLineIfBelow(p.x, p.y, rect),
       captureTarget: e.currentTarget,
       pointerId: e.pointerId
@@ -33867,6 +33877,7 @@ const RhythmTapTest = ({
               lane,
               subLaneCoordinate,
               inputKey,
+              sky: rhythmSkyTouch(tp.y, rect),
               subLaneCoordinateAtLine: rhythmSubLaneCoordinateAtLineIfBelow(tp.x, tp.y, rect)
             });
             return;
@@ -33885,6 +33896,7 @@ const RhythmTapTest = ({
           lane,
           subLaneCoordinate,
           inputKey,
+          sky: rhythmSkyTouch(tp.y, rect),
           subLaneCoordinateAtLine: rhythmSubLaneCoordinateAtLineIfBelow(tp.x, tp.y, rect)
         });else {
           RHYTHM_PERF.touchIgnored();
@@ -34930,7 +34942,30 @@ const RhythmTapTest = ({
       background: 'linear-gradient(90deg,#f0abfc,#cffafe,#f0abfc)',
       boxShadow: settings.lightweightMode || settings.effectAmount === 'MINIMAL' ? 'none' : settings.effectAmount === 'LOW' ? '0 0 8px #67e8f9' : '0 0 18px #67e8f9,0 0 30px #c084fc'
     }
-  }), countdownStep !== null && React.createElement("div", {
+  }), skyChart && React.createElement("div", {
+    "data-rhythm-sky-line": true,
+    style: {
+      position: 'absolute',
+      left: '4%',
+      right: '4%',
+      bottom: `calc(var(--mh-judgment-line-bottom,12%) + ${RHYTHM_SKY_LIFT_RATIO * 100}%)`,
+      height: '2px',
+      background: 'linear-gradient(90deg,transparent,#7dd3fc 18%,#e0f2fe 50%,#7dd3fc 82%,transparent)',
+      boxShadow: '0 0 12px #38bdf8',
+      opacity: .85,
+      pointerEvents: 'none'
+    }
+  }, React.createElement("span", {
+    style: {
+      position: 'absolute',
+      right: 0,
+      top: '-16px',
+      fontSize: '10px',
+      letterSpacing: '.08em',
+      color: '#bae6fd',
+      opacity: .8
+    }
+  }, "SKY")), countdownStep !== null && React.createElement("div", {
     "data-rhythm-countdown": true,
     "aria-live": "assertive",
     style: {

@@ -51,7 +51,13 @@ const clickText = (page, re) => page.evaluate((src) => {
   console.log('開始', await clickText(page, /^(▶\s*)?決定$/));
   await page.waitForFunction(() => !!document.querySelector('[data-rhythm-play-area]') && window.__mhTestHooks && window.__mhTestHooks.rhythmNotes, null, { timeout: 30000 });
   const startAt = (Date.now() - t0) / 1000;
-  const inst = await page.evaluate(installPlayer, { sigma: 0, missRate: 0, seed: 7, human: false, persona: 'center', input: 'ios', dropRate: 0, lateRate: 0, touchSrc: touchInputSource });
+  // 空中の段(試作): 空中のノーツ(skyHeight>0)は、空中の判定ラインの高さを押す。ボットの本体は変えず、写しの1行だけ差し替える
+  const target = 'const p = fingerAt(c, hab, null, now);';
+  const src = installPlayer.toString();
+  if (!src.includes(target)) throw new Error('ボットの指の置き方の行が見つからない');
+  const patched = src.replace(target, 'const p = (() => { const q = fingerAt(c, hab, null, now); const sh = Number(n.skyHeight) > 0 ? Number(n.skyHeight) : 0; if (!sh) return q; const rr = area.getBoundingClientRect(); return { x: q.x, y: q.y - rr.height * RHYTHM_SKY_LIFT_RATIO * sh }; })();');
+  const args = { sigma: 0, missRate: 0, seed: 7, human: false, persona: 'center', input: 'ios', dropRate: 0, lateRate: 0, touchSrc: touchInputSource };
+  const inst = await page.evaluate(`(${patched})(${JSON.stringify(args)})`);
   console.log('演奏係', JSON.stringify(inst).slice(0, 200), '演奏開始(録画の秒)', startAt.toFixed(1));
   let songMs0 = null; const seenBad = new Set();
   for (let i = 0; i < 90; i++) {
