@@ -104,15 +104,21 @@ function threatOf(b) {
 //   「全滅の手前」だけで押す: 次の攻撃で倒れる子がいて、そのあと立っている子が1体以下になり、+30% なら持ちこたえる子がいる。
 //   使える回復カードがあるときは回復カードで(攻撃もできる)。ガードのカードがあり、倒れそうなのが1体で貫通撃でもなければ、守りの判断(②)に任せる
 //   PLAYBOT_TACTICS_EMERGENCY=0 で切れる(直す前と比べるため)
+//   PLAYBOT_TACTICS_EMERGENCY=auto … AUTO と同じ条件だけ / wipe … 全滅の手前だけ / 0 … 押さない / それ以外(既定)… 両方('auto+wipe')
+function emergencyMode() {
+  const v = process.env.PLAYBOT_TACTICS_EMERGENCY;
+  return v === '0' ? '' : v === 'auto' || v === 'wipe' ? v : 'auto+wipe';
+}
 function emergencyWhy(b) {
-  if (process.env.PLAYBOT_TACTICS_EMERGENCY === '0' || !b.emergencyReady) return '';
+  const mode = emergencyMode();
+  if (!mode || !b.emergencyReady) return '';
   const alive = b.slots.filter((x) => x.occupied && !x.downed && x.hp);
   if (!alive.length) return '';
   const usable = (re) => b.hand.some((c) => c.usable && re.test(c.type));
   // ① ゲームの AUTO と同じ条件(60-app.jsx 13001 付近 lacksOnlyGuts): 置けるカードが1枚もなく、ガッツさえ足りれば置ける。
   //   ボットは前は捨てて5%ずつ戻していた。緊急回復は回数の上限なし(2026-10-10 ハカセくん・改善部の確認)
-  if (b.hand.length && !b.hand.some((c) => c.usable) && b.hand.some((c) => c.block === 'guts')) return 'ガッツが足りず、置けるカードが1枚もない(ゲームの AUTO と同じ条件)';
-  if (usable(/heal/)) return '';
+  if (/auto/.test(mode) && b.hand.length && !b.hand.some((c) => c.usable) && b.hand.some((c) => c.block === 'guts')) return 'ガッツが足りず、置けるカードが1枚もない(ゲームの AUTO と同じ条件)';
+  if (!/wipe/.test(mode) || usable(/heal/)) return '';
   const falling = alive.filter((x) => x.aimDamage > 0 && x.aimDamage >= x.hp.now);
   // 回復はライフの上限で止まる
   const saved = falling.filter((x) => x.aimDamage < Math.min(x.hp.max, x.hp.now + Math.floor(x.hp.max * 0.3)));
@@ -1018,7 +1024,8 @@ function rememberRun(L, stats) {
     //   arena-2 = それに EX を早めに使う直し(火力の EX を WAVE の始めに・ウンディーネ・ニコラオ。exEarly)を足した版
     //   これが無い回は、それより前の版
     //   切り替えごとの入/切(ハカセくんの頼み: Tier を「直したボットの回だけ」に絞れるように)。時間停止の直しは切れないので、bot がある回は全部入っている
-    bot: { ver: 'arena-2', ...Object.fromEntries(['EMERGENCY', 'REGEN', 'REVIVE_EACH', 'TRAIN_V2', 'UNIQUE_ROLE', 'HAM_STUN', 'EX_EARLY'].map((f) => [f.toLowerCase().replace(/_(\w)/g, (_, c) => c.toUpperCase()), process.env[`PLAYBOT_TACTICS_${f}`] !== '0'])), rotate: process.env.PLAYBOT_TACTICS_ASSIST_ROTATE === '1' },
+    //   emergency は押す条件の名前('auto+wipe' / 'auto' / 'wipe' / false)。2026-10-10 10:30 ごろまでの arena-1 の回は true(= auto+wipe)
+    bot: { ver: 'arena-2', ...Object.fromEntries(['EMERGENCY', 'REGEN', 'REVIVE_EACH', 'TRAIN_V2', 'UNIQUE_ROLE', 'HAM_STUN', 'EX_EARLY'].map((f) => [f.toLowerCase().replace(/_(\w)/g, (_, c) => c.toUpperCase()), process.env[`PLAYBOT_TACTICS_${f}`] !== '0'])), emergency: emergencyMode() || false, rotate: process.env.PLAYBOT_TACTICS_ASSIST_ROTATE === '1' },
     heroStyle: L.build.heroStyle || null, // 勇者モンの初期スタイル(剣士モッチー。2026-10-10 から。それより前は片手剣)
     use, traitHits: L.waves.reduce((a, w) => a + (w.traitHits || 0), 0),
     exBy: L.ex.reduce((o, e) => { if (e.mon) o[e.mon] = (o[e.mon] || 0) + 1; return o; }, {}),
