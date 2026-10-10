@@ -140,15 +140,28 @@ async function enterTactics(s, { mode, difficulty = 'keep', stats = {}, ctx = nu
   await s.inspect();
   // 勇者モン・供モン・距離・アシストカード。勇者モンは毎回ちがう子から選ぶ
   // --hero で指定があれば、その子たちを勇者モン・供モンの順に先に選ぶ(名前は本体のデータから引く)
+  // PLAYBOT_TACTICS_ALLIES=ゴースト,モノリス,ハム … 供モンをこの3体に固定する(名前でも id でも。2026-10-10 社長の「4体パーティのおすすめ」を実戦で確かめるため)。
+  //   戦う前の編成で勇者モンの次にこの順で選び、WAVE の合間に加わる順もこの順にする(tactics-brain.js の供モン選び)
+  const allyWant = String(process.env.PLAYBOT_TACTICS_ALLIES || '').split(',').map((x) => x.trim()).filter(Boolean);
   const wantIds = String(process.env.PLAYBOT_HERO_IDS || '').split(',').map((x) => x.trim()).filter(Boolean);
-  await page.evaluate(([n, ids]) => {
+  const allyNames = await page.evaluate(([n, ids, allies]) => {
     window.__pbPick = n; window.__pbChange = 1;
     // eslint-disable-next-line no-undef
-    window.__pbWant = typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ids.map((id) => ALL_PLAYER_MONSTERS[id] && ALL_PLAYER_MONSTERS[id].name).filter(Boolean) : [];
-  }, [Math.floor(rand() * 6), wantIds]);
+    const all = typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS : {};
+    const nameOf = (x) => (all[x] && all[x].name) || (Object.values(all).some((m) => m && m.name === x) ? x : null);
+    window.__pbWant = ids.map(nameOf).filter(Boolean);
+    const al = allies.map(nameOf).filter(Boolean);
+    if (al.length) window.__pbWant = [...window.__pbWant.slice(0, 1), ...al, ...window.__pbWant.slice(1).filter((x) => !al.includes(x))];
+    return al;
+  }, [Math.floor(rand() * 6), wantIds, allyWant]);
+  if (allyWant.length && ctx) {
+    ctx.mem.fixedAllies = allyNames;
+    ctx.log.note(`供モンを固定: ${allyNames.join('・')}${allyNames.length < allyWant.length ? `(読めなかった名前あり: ${allyWant.join(',')})` : ''}`);
+  }
   // --hero の指定が無ければ、覚え書き(tactics-knowledge.json)の成績から勇者モン・供モンの順を決める
   if (!wantIds.length && ctx) {
     const pref = brain.preferredOrder(stats.difficulty || '', rand, ctx.mem.roster);
+    if (allyNames.length) pref.order = [pref.order.filter((x) => !allyNames.includes(x))[0], ...allyNames];
     await page.evaluate((names) => { window.__pbWant = names; }, pref.order);
     ctx.log.note(`編成の順(覚え書き ${pref.knownRuns}回ぶんから): ${pref.order.join('・')}`);
   }
