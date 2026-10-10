@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3b75f56867357a4d
+// generated-sha256: 51c45ace73c51d0d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-10 17:19"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-10 17:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -19408,7 +19408,9 @@ function RhythmSkyStage({plane}){
     </g>
     {plane.dividers.map((d,k)=><polyline key={k} points={d} fill="none" stroke={`rgb(${c})`} strokeOpacity=".16" strokeWidth="1" vectorEffect="non-scaling-stroke"/>)}
     {[plane.leftEdge,plane.rightEdge].map((d,k)=><g key={k}><polyline points={d} fill="none" stroke={`rgb(${c})`} strokeOpacity=".22" strokeWidth="5" vectorEffect="non-scaling-stroke"/><polyline points={d} fill="none" stroke={theme.core} strokeOpacity=".8" strokeWidth="1.4" vectorEffect="non-scaling-stroke"/></g>)}
-    {[fr.l,fr.r].map((x,k)=>{const w=1.1;return <polygon key={k} points={`${f(x-w)},${f(fr.gy)} ${f(x+w)},${f(fr.gy)} ${f(x+w*.5)},${f(fr.y)} ${f(x-w*.5)},${f(fr.y)}`} fill="url(#mhSkyPost)"/>;})}
+    {/* 空中と地上の判定ラインの「高さの差」がいつも見えるように、レーンの区切りごとに2本をつなぐ薄い縦の光(社長「立体感」) */}
+    {plane.markers.slice(1,-1).map((x,k)=><line key={'c'+k} x1={f(x)} y1={f(fr.gy)} x2={f(x)} y2={f(fr.y)} stroke={`rgb(${c})`} strokeOpacity=".13" strokeWidth="1" vectorEffect="non-scaling-stroke"/>)}
+    {[fr.l,fr.r].map((x,k)=>{const w=1.4;return <polygon key={k} points={`${f(x-w)},${f(fr.gy)} ${f(x+w)},${f(fr.gy)} ${f(x+w*.5)},${f(fr.y)} ${f(x-w*.5)},${f(fr.y)}`} fill="url(#mhSkyPost)"/>;})}
     {/* 空中の判定線(参考の Sky Input と同じく、床の幅を越えて画面の横いっぱいに、遠近で傾かない水平な2本線と薄い光の帯。床とは別の面だと分かるように) */}
     <rect x="-2" y={f(fr.y-1.6)} width="104" height="3.2" fill="url(#mhSkyBand)" opacity=".9"/>
     <line x1="-2" y1={f(fr.y)} x2="102" y2={f(fr.y)} stroke={`rgb(${c})`} strokeOpacity=".3" strokeWidth="8" vectorEffect="non-scaling-stroke"/>
