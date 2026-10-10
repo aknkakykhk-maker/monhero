@@ -92,5 +92,55 @@ ok('譜面コーパスの資料に「写しを残さない形でだけ使う」�
   }
 }
 
+// ── 段3 難易度を作る(rhythm-ref-tiers.js) ──
+{
+  const {deriveTiers,chartStats,thumbCheck,THUMB_PROFILES,stopReport,dedupeSlidePoints,STOP_END_GAP_MS}=require('./rhythm-ref-tiers.js');
+  const tiersSrc=fs.readFileSync(path.join(__dirname,'rhythm-ref-tiers.js'),'utf8');
+  ok('段3も書き出し先を workDirFor で決め、assertWorkPath を通して書く',/workDirFor\(track\)/.test(tiersSrc)&&/writeFileSync\(assertWorkPath\(/.test(tiersSrc)&&(tiersSrc.match(/writeFileSync\(/g)||[]).length===1);
+  // 作った MASTER: 16分の連打・同時押し・ホールド・左右のスライドを、決まった並びで置く
+  const Z=500,B=400,Q=B/4,grid={zero:Z,beat:B,div:4},at=s=>Z+s*Q;
+  const master=[];
+  for(let beat=0;beat<160;beat++){
+    if(beat%32>=24&&beat%32<28){if(beat%32===24){master.push({k:'s',hand:'L',endFlick:false,pts:[[at(beat*4),0.5,2,0,0],[at(beat*4+8),1.5,2,0,0],[at(beat*4+15),1,2,0,0]]},
+      {k:'s',hand:'R',endFlick:false,pts:[[at(beat*4),4,2,0,0],[at(beat*4+8),3.5,2,0,0],[at(beat*4+15),4.5,2,0,0],[at(beat*4+15)+1,4.5,2,0,0]]});}continue;}
+    const s=beat*4,side=beat%2?6:3;
+    master.push({k:'t',t:at(s),sub:side,w:3,sky:0,dir:''});
+    if(beat%4===0)master.push({k:'t',t:at(s),sub:side===6?0:9,w:3,sky:0,dir:''});
+    if(beat%8===6){master.push({k:'h',t:at(s+2),end:at(s+4),sub:0,w:3,sky:0});continue;}
+    master.push({k:'t',t:at(s+2),sub:side===6?9:0,w:3,sky:0,dir:''});
+    if(beat%3!==2)master.push({k:'t',t:at(s+1),sub:side,w:3,sky:0,dir:''},{k:'t',t:at(s+3),sub:side===6?9:0,w:3,sky:0,dir:''});
+  }
+  const stop=[at(40*4)-10,at(41*4)+10];
+  const {tiers,levels}=deriveTiers(master,{grid,stops:[stop]});
+  const st=Object.fromEntries(Object.entries(tiers).map(([d,n])=>[d,chartStats(n)]));
+  const order=['EASY','NORMAL','HARD','EXPERT','MASTER'];
+  ok('段3: 5難易度ができ、ノーツ数とレベルが EASY→MASTER で増える(下がらない)',
+    order.every((d,i)=>tiers[d]&&tiers[d].length&&(i===0||(st[d].notes>st[order[i-1]].notes&&st[d].level>=st[order[i-1]].level))),
+    order.map(d=>`${d} ${st[d].notes}/Lv${st[d].level}`).join(' '));
+  ok('段3: どの難易度もレベルの上限を超えない',['EXPERT','HARD','NORMAL','EASY'].every(d=>st[d].level<=levels[d]),JSON.stringify(levels));
+  ok('段3: EXPERT の叩く回数・速い連打は MASTER の97%以下',st.EXPERT.hits<=Math.floor(st.MASTER.hits*0.97)&&st.EXPERT.fast<=Math.floor(st.MASTER.fast*0.97),
+    `叩く ${st.EXPERT.hits}/${st.MASTER.hits} 速い ${st.EXPERT.fast}/${st.MASTER.fast}`);
+  const key=n=>JSON.stringify(n.k==='s'?['s',n.hand,n.pts[0][0]]:n);
+  const mKeys=new Set(tiers.MASTER.map(key));
+  ok('段3: EXPERT は MASTER の部分集合(足さない・動かさない)',tiers.EXPERT.every(n=>mKeys.has(key(n))));
+  ok('段3: 止まる区間の中にノーツが無い',order.every(d=>stopReport(tiers[d],[stop])[0].inside===0));
+  ok('段3: NORMAL・EASY はスライドを持たない / HARD のスライドは2本同時にならない',
+    !tiers.NORMAL.some(n=>n.k==='s')&&!tiers.EASY.some(n=>n.k==='s')
+    &&tiers.HARD.filter(n=>n.k==='s').every((a,i,S)=>S.every((b,j)=>j===i||b.pts[0][0]>=a.pts[a.pts.length-1][0]||a.pts[0][0]>=b.pts[b.pts.length-1][0])));
+  ok('段3: EASY は幅6・8分以上あける',tiers.EASY.every(n=>n.w===6)&&tiers.EASY.map(n=>n.t).sort((a,b)=>a-b).every((t,i,a)=>i===0||t===a[i-1]||t-a[i-1]>=B/2-1));
+  ok('段3: スライドに同じ時刻の点が残らない',order.every(d=>tiers[d].filter(n=>n.k==='s').every(n=>n.pts.every((p,i)=>i===0||p[0]-n.pts[i-1][0]>=5))));
+  const bad=order.map(d=>[d,thumbCheck(tiers[d],THUMB_PROFILES.landscape,B).issues.filter(i=>i.kind!=='busy').length]);
+  ok('段3: 作った EXPERT〜EASY は横持ちで押せない・交差・届きにくいが0',bad.filter(([d])=>d!=='MASTER').every(([,n])=>n===0),JSON.stringify(bad));
+  // 親指モデル・止まる区間の物差しそのもの
+  const tap=(t,sub)=>({k:'t',t,sub,w:3,sky:0,dir:''});
+  const kinds=notes=>thumbCheck(notes,THUMB_PROFILES.landscape,B).issues.map(i=>i.kind);
+  ok('親指モデル: 横持ちで真ん中を2レーン越える同時押しは押せない',kinds([tap(1000,0),tap(1000,9),tap(1100,0),tap(1100,1)]).includes('impossible'));
+  ok('親指モデル: 横持ちで左の線が右の線を越えるスライド2本は交差',kinds([{k:'s',hand:'L',pts:[[1000,1,2,0,0],[2000,4,2,0,0]]},{k:'s',hand:'R',pts:[[1000,4,2,0,0],[2000,1,2,0,0]]}]).includes('cross'));
+  ok('親指モデル: 左右に離れた拍ごとの打鍵は問題なし',kinds([0,1,2,3,4,5].map(i=>tap(1000+i*400,i%2?6:3))).length===0);
+  const sr=stopReport([tap(1000,3),tap(2100,3)],[[1500,2000]])[0];
+  ok(`止まる区間: 止まり終わりから次のノーツまで ${STOP_END_GAP_MS}ms 未満は NG`,!sr.ok&&sr.nextGapMs===100&&stopReport([tap(1000,3),tap(2200,3)],[[1500,2000]])[0].ok);
+  ok('同じ時刻の点をまとめる',dedupeSlidePoints([{k:'s',pts:[[0,1,2,0,0],[100,2,2,0,0],[101,3,2,0,0]]}])[0].pts.length===2);
+}
+
 console.log(failed?`\n${failed}件 NG`:'\nすべて OK');
 process.exit(failed?1:0);

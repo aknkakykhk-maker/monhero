@@ -101,7 +101,14 @@ const BGM_TRACKS = [
   { id:'eiki_boss_remix', name:'綺季一閃 ～花雪に舞う詠姫～ battle remix', creator:'オリジナル', src:'audio/bgm-eiki-boss-remix.mp3', gain:1, loop:true },
   { id:'pandora_boss_remix', name:'Stay With Me ～Locked Fate～ remix', creator:'オリジナル', src:'audio/bgm-pandora-boss-remix.mp3', gain:1, loop:true },
 ];
+// デバッグ専用の試作曲(モンヒロビートの「空中の段」の試作・2026-10-10)の音源。BGM_TRACKS へは入れない
+// (BGM_TRACKS はBGMアレンジ・自動周回のBGMの選択肢にそのまま並ぶので、入れるとプレイヤーに見えてしまう)。
+// 演奏のときに id から音源を引けるよう、BGM_TRACK_BY_ID にだけ足す
+const BGM_PROTO_TRACKS = Object.freeze([
+  { id:'melo_sheriruth_proto', name:'Sheriruth 試作', creator:'Team Grimoire', src:'audio/bgm-sheriruth-proto.mp3', gain:1, loop:true },
+]);
 const BGM_TRACK_BY_ID = Object.fromEntries(BGM_TRACKS.map(track => [track.id, track]));
+BGM_PROTO_TRACKS.forEach(track => { if (!BGM_TRACK_BY_ID[track.id]) BGM_TRACK_BY_ID[track.id] = track; });
 const BGM_TRACK_BY_KEY = Object.fromEntries(BGM_TRACKS.filter(track => track.legacyKey).map(track => [track.legacyKey, track]));
 // 音ゲーは曲データ側で既存track IDだけを持ち、音源・音量・ループ情報は必ずBGM_TRACKSから解決する。
 const rhythmSongTrack = song => BGM_TRACK_BY_ID[song?.bgmTrackId] || null;
