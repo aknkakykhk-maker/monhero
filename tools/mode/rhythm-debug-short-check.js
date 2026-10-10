@@ -42,7 +42,9 @@ check('短縮値を持つのはデバッグ専用曲だけで、既存曲は従�
 check('リスタートは新run生成・入力と音声を破棄',game.includes('const restart=()=>{const startBest=runRef.current?.startBest;if(startBest)beginRun(startBest);};')// ライフ0(DOWN)の表示も、やり直しのときは一緒に戻す(2026-09-12に追加)
 // 判定のたびの表示は hud(外の入れ物)へ移した(a129602・2026-09-26)。やり直しでは hud も初期値へ戻す
 &&game.includes('disposeRun();setLifeDownCount(0);setView({...initialView(),status:\'loading\'});hudRef.current.set(rhythmHudInitial());')
-&&/hudRef\.current\.set\(rhythmHudInitial\(\)\);[^\n]{0,200}const audio=await Audio_\.startRhythmTrack\(song\.bgmTrackId,settings\.bgmVolume,\{autoStart:false\}\)/.test(game));
+// 2026-10-10 曲が始まる前に曲名とジャケットを出す幕(#2643)が、表示を戻す所と音を用意する所の間に入った(約930文字・10行)。
+// 見張りたいのは「表示を初期値へ戻してから、鳴らし始めない形で音を用意する」順番なので、間の長さだけ広げる(順番の確かめ方は変えない)
+&&/hudRef\.current\.set\(rhythmHudInitial\(\)\);[\s\S]{0,1500}?const audio=await Audio_\.startRhythmTrack\(song\.bgmTrackId,settings\.bgmVolume,\{autoStart:false\}\)/.test(game));
 // どこから始めたプレイかを from で持つようにしたので 'debug' が付く(2026-09-05)。
 // 音を鳴らし始めるのがボタンのonClick経路のまま(自動クリックを挟んでいない)ことは変わらない
 check('音声開始は直接ボタンonClick経路',game.includes("onClick={()=>{setRhythmPlay({song,difficulty,from:'debug'});setGameState('RHYTHM_PLAY');}}")&&!game.includes("data-rhythm-tap-start')?.click"));
