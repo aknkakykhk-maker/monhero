@@ -386,7 +386,7 @@ function crossCheck(d, jsonText) {
     const overallLine = (mmd.split(/^## 総合 Tier\s*$/m)[1] || '').split(/^## /m)[0];
     for (const m of d.モンスター) {
       if (!['S', 'A', 'B', 'C', 'D'].includes(m.総合)) continue;
-      const mdProv = overallLine.includes(`${m.名前}(暫定)`);
+      const mdProv = new RegExp(`(^|[\\s・])${m.名前}\\(暫定\\)`, 'm').test(overallLine);
       if (mdProv !== !!m.暫定) p.push(`${m.名前}: 総合の「暫定」が違う(md ${mdProv ? 'あり' : 'なし'} / json ${m.暫定 ? 'あり' : 'なし'})`);
     }
     for (const t of [...(d.決め方.文 || []), d.決め方.暫定].filter(Boolean)) {
