@@ -1387,7 +1387,9 @@ const rhythmSlideTrackingFor = difficultyId =>
 // 数字を別に持つと、タップだけ緩めて終端が置き去りになる。判定表のいちばん外側から作る。
 const RHYTHM_RELEASE_MAX_MS = RHYTHM_INPUT_MATCH_WINDOW_MS;
 const RHYTHM_RELEASE_DEFER_ARM_MS = 100;
-const RHYTHM_RELEASE_AUTO_MISS_ARM_MS = 180;
+// 【2026-10-10・社長の決定】押しっぱなしで終わりの判定窓(RHYTHM_RELEASE_MAX_MS)を過ぎたら MISS。
+// 窓の中で離したぶんは、これまでどおり離した時刻で判定する(窓の中では MISS にしない)。
+const RHYTHM_RELEASE_AUTO_MISS_ARM_MS = RHYTHM_RELEASE_MAX_MS;
 const RHYTHM_RELEASE_JUDGMENT_IDS = Object.freeze(['MARVELOUS','EXCELLENT','GREAT','GOOD','BAD','MISS']);
 // ── そのスライド1本ごとの「なぞりにくさ」を許容へ足す ──────────────────────────
 //
@@ -1464,18 +1466,15 @@ const rhythmJudgeRelease=deltaMs=>{
   }
   return 'MISS';
 };
-// 【2026-09-07・離すのが遅いほうはやさしくする】
-// それまでは、終端から+240msより遅く離す・押しっぱなしにすると MISS だった。
-// 親指で押さえていると「音が終わってから離す」のはごくふつうの動きで、これで
-// コンボが切れると「取れているのに切れた」と感じる。よその音ゲーもここは緩い
-// (プロセカ・CHUNITHMは離すタイミングを見ない、Quaverは離し忘れがGOODでコンボは続く)。
+// 【2026-09-07・離すのが遅いほうはやさしくする → 2026-10-10 終わりの窓を過ぎたら MISS】
+// 終わりの判定窓(RHYTHM_RELEASE_MAX_MS)の中で遅く離したぶんは、これまでどおり GOOD より下にしない。
+// 窓を過ぎても離さない(押しっぱなし)・窓を過ぎてから離したぶんは MISS。
 // **早く離すほう**は音が終わる前に手を離しているので、これまでどおり判定表で見る。
-// **遅く離すほう**(押しっぱなしを含む)は、どれだけ遅くても GOOD より下にしない。
-// 判定表そのもの(RHYTHM_JUDGMENTS)と早離しの扱いは変えていない。
 const RHYTHM_RELEASE_LATE_FLOOR = 'GOOD';
 const rhythmJudgeReleaseLenient=deltaMs=>{
   const judged=rhythmJudgeRelease(deltaMs);
   if(!(Number(deltaMs)>0))return judged;
+  if(Number(deltaMs)>RHYTHM_RELEASE_MAX_MS)return 'MISS';
   const floorRank=RHYTHM_RELEASE_JUDGMENT_IDS.indexOf(RHYTHM_RELEASE_LATE_FLOOR);
   const rank=RHYTHM_RELEASE_JUDGMENT_IDS.indexOf(judged);
   return rank>floorRank?RHYTHM_RELEASE_LATE_FLOOR:judged;
@@ -2933,18 +2932,16 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
           session.autoCompletionDeferred=true;
         }
         if(releaseDelta>=RHYTHM_RELEASE_AUTO_MISS_ARM_MS){
-          // 押しっぱなしのまま終端を過ぎた。離すのが遅いほうはやさしくするので、
-          // ここで確定するのは MISS ではなく「始点の判定と GOOD の悪いほう」。
-          // (終点フリックが要るノーツは、弾かずに終わったので MISS のまま)
+          // 押しっぱなしのまま終わりの判定窓を過ぎた。MISS で確定する。
           session.expiredGuard=true;
+          // 終点フリックを弾き終えたノーツだけは、指を置いたままでも「弾いて取った」ので MISS にしない
+          // (経路が速くて早い確定を見送ったとき、弾いても取れないノーツになってしまう)。
           const start=session.startJudgment||session.note.holdJudgment||'MISS';
           const lateJudgment=rhythmWorseJudgment(start,RHYTHM_RELEASE_LATE_FLOOR);
           const lateFloor=session.kind==='SLIDE'
             ?rhythmSlideTrackingFloor(session.checkpointPassed,session.checkpointIndex):null;
-          // 終点フリックが要るノーツで MISS にするのは「弾かずに終わった」ときだけ。
-          // 弾いたのに指を置いたままだったとき(＝経路が速くて早い確定を見送ったとき)まで
-          // MISS にすると、弾いても取れないノーツになってしまう。
-          session.note.holdJudgment=session.failed||(session.endFlickRequired&&!session.endFlickDone)?'MISS'
+          const flickTaken=session.endFlickRequired&&session.endFlickDone;
+          session.note.holdJudgment=(session.failed||!flickTaken)?'MISS'
             :lateFloor?rhythmWorseJudgment(lateJudgment,lateFloor):lateJudgment;
           session.note.holdDeltaMs=releaseDelta;
         }
@@ -26255,8 +26252,8 @@ const RHYTHM_TUTORIAL_CHART=Object.freeze({
 const RHYTHM_TUTORIAL_STEPS=Object.freeze([
   {fromMs:0,             title:'まずは「タップ」',       text:'ノーツが下の判定ラインに重なった瞬間に、画面を叩きます。'},
   {fromMs:rhythmTutorialMs(14), title:'2つ同時に「同時押し」', text:'左右に1つずつ出ます。指を2本置いて、同時に叩きます。'},
-  {fromMs:rhythmTutorialMs(22), title:'押さえ続ける「ホールド」', text:'叩いたまま押さえて、終わりの光る横棒が判定ラインへ来たら離します。'},
-  {fromMs:rhythmTutorialMs(34), title:'なぞる「スライド」',   text:'押さえたまま、帯の道すじを指でなぞります。途中で指を離さないように。'},
+  {fromMs:rhythmTutorialMs(22), title:'押さえ続ける「ホールド」', text:'叩いたまま押さえて、終わりの光る横棒が判定ラインへ来たら離します。離さないままだとMISSです。'},
+  {fromMs:rhythmTutorialMs(34), title:'なぞる「スライド」',   text:'押さえたまま、帯の道すじを指でなぞります。途中で指を離さないように。終わりは離します。'},
   {fromMs:rhythmTutorialMs(43), title:'払う「フリック」',     text:'ピンクのノーツは、叩いたあと指を上へ払います。MASTERには、矢印の向き（左か右）へ払うノーツも出ます（左はオレンジ・右は黄緑）。'},
   {fromMs:rhythmTutorialMs(50), title:'「終点フリック」',     text:'終わりの横棒がピンクで上向きの矢印が付いているホールドは、離さずにそのまま上へ払って終わります。'},
   {fromMs:rhythmTutorialMs(58), title:'「モンスターノーツ」', text:'金色のノーツです。GREATより良い判定で取ると、設定したマスモンの能力が出ます。'},

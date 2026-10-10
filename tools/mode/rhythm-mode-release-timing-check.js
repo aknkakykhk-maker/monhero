@@ -32,14 +32,15 @@ note=fresh();now=709;runtime.release('touch:1',true);
 check('指が取り消されたときはMISSで確定する',note.holdJudgment==='MISS');
 // 【2026-09-07】離すのが遅いほう(押しっぱなしを含む)は GOOD より下にしない(rhythmJudgeReleaseLenient)。
 // 早く離すほうは音が終わる前に手を離しているので、これまでどおり判定表で見る。
-note=fresh();now=1241;runtime.release('touch:1');check('判定窓より遅い離しはGOODで止まる(MISSにしない)',note.holdJudgment==='GOOD');
-note=fresh();now=1900;runtime.release('touch:1');check('どれだけ遅く離してもGOODより下にならない',note.holdJudgment==='GOOD');
-note=fresh('HOLD','GREAT',80);now=1500;runtime.release('touch:1');check('始点がGREATで遅く離すと、GREATとGOODの悪いほう(GOOD)',note.holdJudgment==='GOOD');
+note=fresh();now=1241;runtime.release('touch:1');check('判定窓(+185ms)を過ぎてから離すとMISS',note.holdJudgment==='MISS');
+note=fresh();now=1175;runtime.release('touch:1');check('判定窓の中(+175ms)で離せばGOOD(窓の中ではMISSにしない)',note.holdJudgment==='GOOD');
+note=fresh();now=1900;runtime.release('touch:1');check('どれだけ遅く離してもMISS',note.holdJudgment==='MISS');
+note=fresh('HOLD','GREAT',80);now=1500;runtime.release('touch:1');check('始点がGREATでも、窓を過ぎて離すとMISS',note.holdJudgment==='MISS');
 check('早すぎる離しは今までどおりMISS',rhythmJudgeRelease(-186)==='MISS');
 note=fresh();now=1000;runtime.release('touch:1',true);check('touchcancel/pointercancelはMISS',note.holdJudgment==='MISS');
 note=fresh();now=1090;let cb=rafCb;cb&&cb();check('終端100ms前から旧自動成功を判定窓の直後(+186ms)へ延期',note.endTimeMs===2186);
-now=1220;cb=rafCb;cb&&cb();check('押しっぱなしは判定窓の到達前にGOODで確定する(MISSにしない)',note.holdJudgment==='GOOD');
-now=1180;runtime.release('touch:1');check('確定後でも+180msで離せばGOODのまま',note.holdJudgment==='GOOD');
+now=1220;cb=rafCb;cb&&cb();check('押しっぱなしは判定窓(+185ms)を過ぎたらMISSで確定する',note.holdJudgment==='MISS');
+
 note=fresh('SLIDE');const session=[...runtime._sessions.values()][0];session.failed=true;now=1000;runtime.release('touch:1');check('SLIDE途中追従失敗は終端が合ってもMISS',note.holdJudgment==='MISS');
 check('HOLDもruntimeへbindする',source.includes("originalType==='HOLD'||originalType==='FLICK'||originalType==='SLIDE'"));
 check('旧本体はruntimeが作ったholdJudgmentを1回だけ適用',game.includes("applyJudgment(note,note.holdJudgment||'MISS',note.holdDeltaMs||0)"));
