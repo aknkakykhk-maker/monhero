@@ -999,6 +999,10 @@ function rememberRun(L, stats) {
     lostAt: L.result === 'clear' ? null : (L.waves[L.waves.length - 1] || {}).enemy || null, dmg: Object.fromEntries(Object.entries(dmg).map(([m, d]) => [m, Math.round(d)])),
     // 子ごとの技の回数・間合い適性(2026-10-09 から)・勇者特性が効いた回数・EX を使った子
     emergency: L.emergency || 0, // 緊急回復を押した回数(2026-10-10 から)
+    // ボットの版(2026-10-10 から)。arena-1 = アリーナくんの直し(緊急回復・自動回復の見込み・起こす・トレーニング・固有技の強化・おなら・時間停止)を入れた版。
+    //   切った直しがあれば「-off:…」を付ける(直す前と比べた回)。これが無い回は、それより前の版
+    bot: `arena-1${['EMERGENCY', 'REGEN', 'REVIVE_EACH', 'TRAIN_V2', 'UNIQUE_ROLE', 'HAM_STUN'].filter((f) => process.env[`PLAYBOT_TACTICS_${f}`] === '0').map((f, i) => `${i ? ',' : '-off:'}${f}`).join('')}`,
+    assistRotate: process.env.PLAYBOT_TACTICS_ASSIST_ROTATE === '1' || undefined,
     heroStyle: L.build.heroStyle || null, // 勇者モンの初期スタイル(剣士モッチー。2026-10-10 から。それより前は片手剣)
     use, traitHits: L.waves.reduce((a, w) => a + (w.traitHits || 0), 0),
     exBy: L.ex.reduce((o, e) => { if (e.mon) o[e.mon] = (o[e.mon] || 0) + 1; return o; }, {}),

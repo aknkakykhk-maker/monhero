@@ -54,6 +54,9 @@ PLAYBOT_PORT=8981 PLAYBOT_TACTICS_ALL=1 PLAYBOT_TACTICS_DIFF=Hard PLAYBOT_TACTIC
 - 2026-10-10 **固有技の強化を役ごとに・ハムのおならを取っておく**(ハカセくんの直す順5)。
   強化: 前はダメージの多い子からだけ → ダメージ役(頭割り以上)2回にほかの子1回の割合で回す(`PLAYBOT_TACTICS_UNIQUE_ROLE=0` で前の決め方)。
   ハムの固有技「おなら」(このターン敵を行動不能)を、あつの挑発と同じスタンのカードとして扱う: 「ためる」「貫通の構え」のターンに使い、それ以外は取っておく(とどめのときは撃つ)。`PLAYBOT_TACTICS_HAM_STUN=0` で前の扱い
+- 2026-10-10 覚え書きの1回ごとに `bot`(ボットの版)を残す。`arena-1` = 上の直しを全部入れた版。切った直しがあると `arena-1-off:REGEN,…`。
+  `bot` の無い回はそれより前の版。直す前と比べる回は、`PLAYBOT_TACTICS_EMERGENCY=0 PLAYBOT_TACTICS_REGEN=0 PLAYBOT_TACTICS_REVIVE_EACH=0 PLAYBOT_TACTICS_TRAIN_V2=0 PLAYBOT_TACTICS_UNIQUE_ROLE=0 PLAYBOT_TACTICS_HAM_STUN=0` で回す(時間停止の直しは切れない)。
+  アシカを順番に試した回は `assistRotate: true`
 
 ## 見つけたボットの取りこぼし(ハカセくんへ渡す)
 
