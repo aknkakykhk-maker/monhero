@@ -850,7 +850,7 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   // 空中の段(試作・2026-10-10): 空中のノーツがある譜面だけ、空中の判定ラインを出し、指の高さで地上と空中を分ける
   const skyChart=useMemo(()=>rhythmChartHasSky(chart?.notes),[chart]);
   // 空中の面(試作): 道の左右の縁を、奥行きごとの持ち上げ幅ぶん上へずらした台形。プレイエリアを 0〜100 の座標で
-  const skyPlane=useMemo(()=>{
+  const skyPlane=(()=>{
     if(!skyChart)return null;
     const line=RHYTHM_JUDGMENT_LINE_Y.ratio,base=rhythmProjectionScale(line),steps=24,top=.03,pts=[];
     for(let i=0;i<=steps;i++){const y=top+(line-top)*i/steps;pts.push({y:(y-RHYTHM_SKY_LIFT_RATIO*rhythmProjectionScale(y)/base)*100,l:rhythmProjectBoundary(0,y)*100,r:rhythmProjectBoundary(RHYTHM_LANE_COUNT,y)*100,gy:y*100});}
@@ -859,7 +859,7 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
     const last=pts[pts.length-1];
     return {poly:[...left,...right].join(' '),leftEdge:left.join(' '),rightEdge:pts.map(p=>`${f(p.r)},${f(p.y)}`).join(' '),
       posts:[[last.l,last.gy,last.l,last.y],[last.r,last.gy,last.r,last.y]].map(a=>a.map(f))};
-  },[skyChart]);
+  })();
   useEffect(()=>{RHYTHM_SKY_INPUT.active=skyChart;return()=>{RHYTHM_SKY_INPUT.active=false;};},[skyChart]);
   // 速さの表(試作・2026-10-10): 譜面に scrollChanges があるときだけ、ノーツの見た目の位置を表で変える(判定の時刻は変えない)。
   // アシスト・ミラーで作り変えた譜面にも効くよう、元の譜面から読む
