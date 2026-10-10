@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 56e88835c718e46a
+// generated-sha256: 36b8b626bd8cf0b1
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-10 11:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-10 12:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5167,9 +5167,14 @@ const Audio_ = (() => {
   // ★曲えらびの試聴と演奏で読んだ曲の音は、直近の数曲ぶんだけ持っておく(2026-09-27 の点検で見つけた)。
   //   解いた音は1曲で数十〜百MBあり、以前は一度読んだら二度と捨てなかったので、試聴しながら
   //   何曲も眺めるだけで数百MBに増え、iPhone ではメモリ不足で落ちる・発熱の原因になり得た。
-  //   場面のBGM(タイトル・ホーム・バトルなど)は今までどおり持ち続ける。捨てても、次に読むときは
-  //   通信のキャッシュが効くので、解き直すだけで済む
-  const SONG_BUFFER_KEEP = 3;
+  //   捨てても、次に読むときは通信のキャッシュが効くので、解き直すだけで済む。
+  // ★場面のBGM(タイトル・ホーム・バトルなど)も同じ数え方に入れた(2026-10-10)。
+  //   以前は「場面のBGMは持ち続ける」としていたが、バトルはWAVEや敵ごとに曲が変わり、長く周回するほど
+  //   読んだ曲が増え続けた(クイックを2ウェーブ回すだけで3本→6本。1本は解くと約60MB)。
+  //   iPhone の Safari がメモリ不足でタブを読み込み直し、「やっている最中に最初の画面へ戻る」ことがあった。
+  //   いま鳴らしている曲・いまの場面の曲・演奏中の曲は捨てない(bufferInUse)。
+  //   上限は、いまの場面+次の場面+少し前の2本ぶんで 4
+  const SONG_BUFFER_KEEP = 4;
   const songBufferOrder = [];
   // previewRequest は試聴の「この呼び出しが今も最新か」を見るための番号。
   // 通常BGM(bgmRequest)と同じ役目で、読み込みを待っているあいだに止められたり
@@ -5457,9 +5462,10 @@ const Audio_ = (() => {
     // 起動タップ前にdecode済みなら、user activation中に同期的に再生開始する。
     if (buffers.has(track.src)) {
       startBgmBuffer(track.id, track, buffers.get(track.src), request);
+      rememberSongBuffer(track.src);
       return Promise.resolve();
     }
-    return loadBuffer(track.src).then((buffer) => startBgmBuffer(track.id, track, buffer, request)).catch(() => {});
+    return loadBuffer(track.src).then((buffer) => { rememberSongBuffer(track.src); startBgmBuffer(track.id, track, buffer, request); }).catch(() => {});
   };
   // 番号を進めることで、読み込み待ちの古い試聴を無効にする(あとから鳴り出さない)
   const stopPreview = (resume = true) => { ++previewRequest; stopSource(previewSource); previewSource = null; previewKey = null; if (resume && currentKey) playBGM(currentKey); };
@@ -5660,10 +5666,10 @@ const Audio_ = (() => {
       };
     } catch(e){ return null; }
   };
-  const preloadBGM = (key) => { const track = resolveTrack(key); if (track) loadBuffer(track.src).catch(() => {}); };
+  const preloadBGM = (key) => { const track = resolveTrack(key); if (track) loadBuffer(track.src).then(() => rememberSongBuffer(track.src)).catch(() => {}); };
   const prepareBGM = (key, timeoutMs = 2000) => {
     const track = resolveTrack(key); if (!track) return Promise.resolve(false);
-    return Promise.race([loadBuffer(track.src).then(() => true).catch(() => false), new Promise((r) => setTimeout(() => r(false), timeoutMs))]);
+    return Promise.race([loadBuffer(track.src).then(() => { rememberSongBuffer(track.src); return true; }).catch(() => false), new Promise((r) => setTimeout(() => r(false), timeoutMs))]);
   };
   const prepareSE = (timeoutMs = 5000) => Promise.race([
     load().then(() => true).catch(() => false),
@@ -21462,7 +21468,8 @@ scheduleTick();};
 {/* 譜面メモ(DEBUG ONLY)。デバッグ画面から始めた演奏にだけ出す */}
 {debugPlay&&!tutorial&&!calibrating&&<RhythmChartNotePanel song={song} difficulty={difficulty} chart={chart}/>}
 </div>
-<div data-rhythm-result-actions className="relative shrink-0 border-t border-white/10 bg-slate-950/90 px-4 pt-2" style={{paddingBottom:'calc(.5rem + var(--mh-sa-bottom))'}}><div className={multi||raidPlay?"grid grid-cols-1 gap-2":"grid grid-cols-2 gap-2"}>{!multi&&!raidPlay&&<button className="min-h-[48px] rounded-xl bg-fuchsia-700 font-black" disabled={startLockRef.current} onClick={()=>beginRun(mergeRhythmBestRecord(runRef.current?.startBest,result))}>もう一度プレイ</button>}<button data-rhythm-multi-result-back={multi?"":undefined} data-rhythm-raid-result-back={raidPlay?"":undefined} className="min-h-[48px] rounded-xl bg-indigo-700 font-black" onClick={abort}>{multi&&'みんなの結果を見る'}{!multi&&raidPlay&&'レイドの結果を見る'}{!multi&&!raidPlay&&<>{debugPlay?'音ゲーデバッグへ戻る':'曲えらびへ戻る'}</>}</button></div></div></div></div></main>}
+<div data-rhythm-result-actions className="relative shrink-0 border-t border-white/10 bg-slate-950/90 px-4 pt-2" style={{paddingBottom:'calc(.5rem + var(--mh-sa-bottom))'}}>{/* マルチだけ、縦⇄横の切り替えを左に置く(部屋の見出しと同じ部品。2026-10-10・社長「マルチの演奏後の結果画面でも縦横切り替えボタンほしい」)。
+  ソロ・レイドの結果は今のまま。上は曲の札とランクの丸で埋まっているので、指の届く下の列へ置く */}<div className={multi?"flex items-center gap-2":""}>{multi&&<div data-rhythm-result-orientation className="shrink-0"><RhythmOrientationButton/></div>}<div className={multi?"grid min-w-0 flex-1 grid-cols-1 gap-2":(raidPlay?"grid grid-cols-1 gap-2":"grid grid-cols-2 gap-2")}>{!multi&&!raidPlay&&<button className="min-h-[48px] rounded-xl bg-fuchsia-700 font-black" disabled={startLockRef.current} onClick={()=>beginRun(mergeRhythmBestRecord(runRef.current?.startBest,result))}>もう一度プレイ</button>}<button data-rhythm-multi-result-back={multi?"":undefined} data-rhythm-raid-result-back={raidPlay?"":undefined} className="min-h-[48px] rounded-xl bg-indigo-700 font-black" onClick={abort}>{multi&&'みんなの結果を見る'}{!multi&&raidPlay&&'レイドの結果を見る'}{!multi&&!raidPlay&&<>{debugPlay?'音ゲーデバッグへ戻る':'曲えらびへ戻る'}</>}</button></div></div></div></div></div></main>}
   /* ★演奏画面そのものを器(container-type:inline-size)にして、HUDの幅や字の大きさは vw ではなく cqw で決める
      (2026-09-26・ユーザー報告「演奏中の曲名が切れてる / 時間バーが難易度に被ってる」)。
      「🔄 横」で絵を回したとき、vw は端末の縦の幅(390px)のままなので、左上の欄が109pxまで縮んで曲名が「SIX…」になり、
@@ -28763,6 +28770,102 @@ class MhErrorBoundary extends React.Component {
 // デバッグ設定の「画面エラーの受け止めを試す」用。描画した瞬間に必ず例外を投げる
 // (文言に「デバッグ」を含めない。演奏画面の検査がこの範囲の「デバッグ」の語を数えるため)
 const DebugThrowScreenError = () => { throw new Error('画面エラーの受け止めを試すために、わざと投げた例外'); };
+
+// ==== 読み込み直しの記録(2026-10-10・iPhone の Safari で「やっている最中に最初の画面へ戻る」問い合わせの調査用) ====
+//
+// ゲームが自分で読み込み直す道は無いので、iPhone のメモリ不足などでタブが読み込み直されたのかを、
+// 次の起動で気づけるようにする。端末の中だけに残し、サーバーへは送らない。
+//
+//   (キー名の mhdev_ は「端末ごと」の印。バックアップ(mh_ で始まるキーだけ書き出す)には入らず、別の端末へ引き継がれない)
+//   mhdev_session_marker_v1 … 遊んでいるあいだ、15秒ごとに書き直す「いま遊んでいる」印(1件だけ)
+//   mhdev_reload_log_v1     … 前回が正常に終わっていなかったときに足す記録(直近 RELOAD_LOG_LIMIT 件まで)
+//
+// 印の state:
+//   'running' … 画面を見ている最中。次の起動でこの状態のままなら「遊んでいる最中に止まった」(kind:'foreground')
+//   'hidden'  … 裏に回った。次の起動でこの状態なら「裏に回ったあと読み込み直された」(kind:'background')
+//   'closed'  … pagehide(閉じる・ほかのページへ移る)で正常に終わった。記録しない
+// 新しい保存キーを足しただけで、既存の mh_* は触らない。読むときは「無い・壊れている」を既定値(null / [])にする。
+const RELOAD_MARKER_KEY = 'mhdev_session_marker_v1';
+const RELOAD_LOG_KEY = 'mhdev_reload_log_v1';
+const RELOAD_LOG_LIMIT = 12;
+const RELOAD_BEAT_MS = 15000;
+const RELOAD_STATES = ['running', 'hidden', 'closed'];
+const reloadNum = (value, fallback = null) => (Number.isFinite(Number(value)) && value !== null && value !== '' ? Number(value) : fallback);
+const normalizeSessionMarker = (value) => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const startedAt = reloadNum(value.startedAt), lastBeat = reloadNum(value.lastBeat);
+  if (startedAt === null || lastBeat === null || startedAt <= 0 || lastBeat < startedAt) return null;
+  return {
+    id: typeof value.id === 'string' ? value.id.slice(0, 40) : '',
+    startedAt, lastBeat,
+    state: RELOAD_STATES.includes(value.state) ? value.state : 'running',
+    screen: typeof value.screen === 'string' ? value.screen.slice(0, 40) : '',
+    audioBuffers: reloadNum(value.audioBuffers),
+    heapMB: reloadNum(value.heapMB),
+    nav: typeof value.nav === 'string' ? value.nav.slice(0, 20) : '',
+  };
+};
+const normalizeReloadLog = (value) => (Array.isArray(value) ? value : []).map(entry => {
+  if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return null;
+  const at = reloadNum(entry.at);
+  if (at === null || at <= 0) return null;
+  return {
+    at,
+    kind: entry.kind === 'background' ? 'background' : 'foreground',
+    minutes: reloadNum(entry.minutes, 0),
+    gapMinutes: reloadNum(entry.gapMinutes, 0),
+    screen: typeof entry.screen === 'string' ? entry.screen.slice(0, 40) : '',
+    audioBuffers: reloadNum(entry.audioBuffers),
+    heapMB: reloadNum(entry.heapMB),
+    nav: typeof entry.nav === 'string' ? entry.nav.slice(0, 20) : '',
+  };
+}).filter(Boolean).slice(0, RELOAD_LOG_LIMIT);
+// 起動したときに、前回の印から記録を1件作る。正常に終わっていた(closed)・印が無い・壊れているときは null
+const buildReloadLogEntry = (previous, now, nav = '') => {
+  const prev = normalizeSessionMarker(previous);
+  if (!prev || prev.state === 'closed') return null;
+  const at = reloadNum(now, Date.now());
+  return {
+    at,
+    kind: prev.state === 'hidden' ? 'background' : 'foreground',
+    minutes: Math.max(0, Math.round((prev.lastBeat - prev.startedAt) / 60000)),
+    gapMinutes: Math.max(0, Math.round((at - prev.lastBeat) / 60000)),
+    screen: prev.screen,
+    audioBuffers: prev.audioBuffers,
+    heapMB: prev.heapMB,
+    nav: String(nav || '').slice(0, 20),
+  };
+};
+const pushReloadLog = (log, entry) => normalizeReloadLog(entry ? [entry, ...normalizeReloadLog(log)] : log);
+const reloadReadJson = (key) => { try { const raw = window.localStorage.getItem(key); return raw ? JSON.parse(raw) : null; } catch (e) { return null; } };
+const reloadWriteJson = (key, value) => { try { window.localStorage.setItem(key, JSON.stringify(value)); return true; } catch (e) { return false; } };
+// 画面に出す1行。「何分遊んだあと」「どの画面で」「音のデータが何本あったか」を日本語で言う
+const describeReloadLogEntry = (entry) => {
+  const when = new Date(entry.at).toLocaleString('ja-JP', { timeZone:'Asia/Tokyo', month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' });
+  const head = entry.kind === 'background' ? '裏に回ったあと読み込み直された' : '遊んでいる最中に読み込み直された';
+  const parts = [`${entry.minutes}分遊んだあと`, entry.screen ? `画面 ${entry.screen}` : '', Number.isFinite(entry.audioBuffers) ? `音のデータ ${entry.audioBuffers}本` : '', Number.isFinite(entry.heapMB) ? `メモリ ${entry.heapMB}MB` : ''].filter(Boolean);
+  return `${when} 起動 — ${head}(${parts.join('・')})`;
+};
+// 音の設定の「音が出ないとき」の下に出す、前回までの記録(読み取りだけ。端末の外へは出さない)。
+// 「記録をコピー」は、困ったときに開発者へ伝えるための文字を、端末のクリップボードへ写すだけ
+function ReloadLogPanel() {
+  const [log] = React.useState(() => normalizeReloadLog(reloadReadJson(RELOAD_LOG_KEY)));
+  const [copied, setCopied] = React.useState(false);
+  const copy = async () => {
+    const text = JSON.stringify({ log, marker: reloadReadJson(RELOAD_MARKER_KEY), ua: (typeof navigator !== 'undefined' && navigator.userAgent) || '', build: typeof BUILD_DATE !== 'undefined' ? BUILD_DATE : '' });
+    try { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2500); } catch (e) { setCopied(false); }
+  };
+  return (
+    <div data-reload-log className="mt-2 rounded-xl border border-white/10 bg-black/30 p-2.5 text-left">
+      <div className="text-[12px] font-black text-slate-200">前回までの読み込み直し</div>
+      {log.length === 0
+        ? <div className="mt-1 text-[11px] font-bold text-slate-400">途中で読み込み直された記録は、ありません。</div>
+        : <ul className="mt-1 space-y-1">{log.map((entry, i) => <li key={i} data-reload-log-row className="text-[11px] font-bold leading-snug text-slate-300">{describeReloadLogEntry(entry)}</li>)}</ul>}
+      <div className="mt-1 text-[10px] font-bold leading-snug text-slate-500">この端末の中だけに残します(新しい記録が12件を超えると古いものから消えます)。</div>
+      {log.length > 0 && <button type="button" data-reload-log-copy onClick={copy} className="mh-button mh-button-secondary mt-1.5 min-h-[40px] w-full rounded-xl border border-white/15 bg-slate-800 px-2 text-[11px] font-black text-slate-200 active:scale-95">{copied ? 'コピーしました' : '記録をコピー'}</button>}
+    </div>
+  );
+}
 
 // ---- part: 51-screen-settings.jsx ----
 // ==== 画面: 設定(gameState === 'SETTINGS') ====
@@ -42199,6 +42302,10 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
               ))}
             </div>
           </div>
+          {/* 縦⇄横の切り替え(部屋の見出しと同じ部品。2026-10-10・社長「マルチの演奏後の結果画面でも縦横切り替えボタンほしい」)。
+              結果画面には見出しが無いので、いちばん上の帯の右(部屋と同じ右上)へ置く。向きは RHYTHM_VIEW_ROTATION が画面をまたいで持つので、
+              部屋で横 → 演奏 → 結果でも横のまま。結果で変えた向きも、部屋へ戻ればそのまま */}
+          <div data-rhythm-multi-result-orientation className="shrink-0 self-start"><RhythmOrientationButton/></div>
           <div className="flex w-16 shrink-0 flex-col items-center">
             <b data-rhythm-multi-team-rank className="text-5xl font-black leading-none text-amber-300 drop-shadow">{team.waiting ? '…' : team.rank}</b>
             <small className="text-[8px] font-black tracking-widest text-slate-400">SCORE RANK</small>
@@ -48677,6 +48784,42 @@ function MonsterHeroGame() {
     const timer = setInterval(() => { if (!armed && gameStateForBackRef.current !== 'HOME') arm(); }, 500);
     window.addEventListener('popstate', onPop);
     return () => { clearInterval(timer); window.removeEventListener('popstate', onPop); };
+  }, []);
+  // 読み込み直しの記録(本体は 50-error-boundary.jsx)。
+  // 起動したときに前回の印を調べ、正常に終わっていなければ記録を1件足す。そのあと、遊んでいるあいだ
+  // 15秒ごとに「いま遊んでいる」印(画面・音のデータの本数・使っているメモリ)を書き直す。
+  // 端末の中だけ。サーバーへは送らない。新しい保存キー mhdev_session_marker_v1 / mhdev_reload_log_v1 だけを使う
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const startedAt = Date.now();
+    let nav = '';
+    try { const e = window.performance.getEntriesByType('navigation')[0]; nav = e && e.type ? e.type : ''; } catch (e) {}
+    const entry = buildReloadLogEntry(reloadReadJson(RELOAD_MARKER_KEY), startedAt, nav);
+    if (entry) reloadWriteJson(RELOAD_LOG_KEY, pushReloadLog(reloadReadJson(RELOAD_LOG_KEY), entry));
+    const marker = { id:`${startedAt.toString(36)}${Math.floor(Math.random() * 1e6).toString(36)}`, startedAt, lastBeat:startedAt, state:'running', screen:'', audioBuffers:null, heapMB:null, nav };
+    const write = (state) => {
+      marker.lastBeat = Math.max(marker.startedAt, Date.now());
+      marker.state = state;
+      marker.screen = String(gameStateForBackRef.current || '');
+      try { const d = Audio_.diagnose(); marker.audioBuffers = Number.isFinite(d && d.bufferCount) ? d.bufferCount : null; } catch (e) {}
+      try { const m = window.performance && window.performance.memory; marker.heapMB = m && Number.isFinite(m.usedJSHeapSize) ? Math.round(m.usedJSHeapSize / 1048576) : null; } catch (e) {}
+      reloadWriteJson(RELOAD_MARKER_KEY, marker);
+    };
+    write('running');
+    const timer = setInterval(() => { if (document.visibilityState === 'visible') write('running'); }, RELOAD_BEAT_MS);
+    // ★ページを離れるときは pagehide のあとに visibilitychange(hidden) が来るブラウザがある。
+    //   閉じた('closed')印を hidden で上書きすると、正常に閉じたのに「裏に回ったあと読み込み直された」と記録してしまう
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') { if (marker.state !== 'closed') write('hidden'); }
+      else write('running');
+    };
+    // pagehide … 閉じる・ほかのページへ移るときは正常終了('closed')。ブラウザの保存(persisted)に入るだけなら裏に回った扱い
+    const onPageHide = (event) => write(event && event.persisted ? 'hidden' : 'closed');
+    const onPageShow = (event) => { if (event && event.persisted) write('running'); };
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('pagehide', onPageHide);
+    window.addEventListener('pageshow', onPageShow);
+    return () => { clearInterval(timer); document.removeEventListener('visibilitychange', onVisibility); window.removeEventListener('pagehide', onPageHide); window.removeEventListener('pageshow', onPageShow); };
   }, []);
   useEffect(() => {
     if (!pendingFriendCode) return;
@@ -60088,7 +60231,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   ) : showHomeArt ? (
     <ArtPickerModal pickerId="home" heading="ホーム画面アレンジ" note="ホーム画面の背景を選べます。「ハロウィン」は、横画面では横長の絵になります。" options={HOME_ART_OPTIONS} value={homeArt} resolved={resolveHomeArt(homeArt)} onChange={changeHomeArt} onClose={()=>setShowHomeArt(false)}/>
   ) : showAudioSettings ? (
-    <div className="mh-title-modal"><div className="mh-title-dialog" style={{maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',overflowY:'auto'}}><div className="mh-dialog-head"><h3>音量設定</h3><button onClick={()=>setShowAudioSettings(false)}><X size={18}/></button></div><button className="mh-dialog-choice" onClick={toggleQuickMute}>{audioMuted?'🔇 音がオフです':'🔊 音はオンです'}</button><VolumeSlider label="SE" icon="🔔" value={seVolume} onChange={changeSeVolume} gradient="from-cyan-500 to-indigo-500" thumbRing="border-indigo-400"/><VolumeSlider label="BGM" icon="🎵" value={bgmVolume} onChange={changeBgmVolume} gradient="from-fuchsia-500 to-pink-500" thumbRing="border-fuchsia-400"/><button className="mh-dialog-choice mt-3" aria-expanded={showAudioDiag} onClick={()=>setShowAudioDiag(v=>!v)}>🔧 音が出ないとき {showAudioDiag?'▲':'▼'}</button>{showAudioDiag&&<AudioTroubleshootPanel info={audioDiag} peak={audioDiagPeak} muted={audioMuted} onTest={testAudioOutput} onRepair={repairAudioOutput} repairing={audioRepairing}/>}</div></div>
+    <div className="mh-title-modal"><div className="mh-title-dialog" style={{maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',overflowY:'auto'}}><div className="mh-dialog-head"><h3>音量設定</h3><button onClick={()=>setShowAudioSettings(false)}><X size={18}/></button></div><button className="mh-dialog-choice" onClick={toggleQuickMute}>{audioMuted?'🔇 音がオフです':'🔊 音はオンです'}</button><VolumeSlider label="SE" icon="🔔" value={seVolume} onChange={changeSeVolume} gradient="from-cyan-500 to-indigo-500" thumbRing="border-indigo-400"/><VolumeSlider label="BGM" icon="🎵" value={bgmVolume} onChange={changeBgmVolume} gradient="from-fuchsia-500 to-pink-500" thumbRing="border-fuchsia-400"/><button className="mh-dialog-choice mt-3" aria-expanded={showAudioDiag} onClick={()=>setShowAudioDiag(v=>!v)}>🔧 音が出ないとき {showAudioDiag?'▲':'▼'}</button>{showAudioDiag&&<><AudioTroubleshootPanel info={audioDiag} peak={audioDiagPeak} muted={audioMuted} onTest={testAudioOutput} onRepair={repairAudioOutput} repairing={audioRepairing}/><ReloadLogPanel/></>}</div></div>
   ) : showBgmArrangement ? (
     <div className="mh-title-modal"><div className="mh-title-dialog" style={{maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',overflowY:'auto'}}><div className="mh-dialog-head"><h3>BGMアレンジ</h3><button onClick={closeBgmArrangement}><X size={18}/></button></div>{(()=>{const categories=[
       {id:'basic',label:'基本',items:[['home','HOME BGM'],['title','タイトル BGM'],['autoBattle','AUTOモード BGM'],['management','M/B管理 BGM'],['clear','ゲームクリア BGM'],

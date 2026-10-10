@@ -66,7 +66,10 @@ const roleOf = (m) => ROLE_BY_EFFECT[m && m.ex && m.ex.effect] || '攻め';
 
 // ★同じ版のボットの回どうしで比べる(2026-10-10 改善部 T2)。技と間合いまで記録している回(use)= 勇者モン選び・EX の使い方などを直したあとのボット。
 //   それより前の回(昼の Master のモッチー23回など)は、ボットの違いがモンスターの差に見えてしまうので数えない
-const runs = (know.runs || []).filter((r) => r && r.result && r.result !== 'stopped' && DIFF_ORDER.includes(r.difficulty) && r.use);
+// アシカを「順番に選ぶ」(r.bot.rotate)で戦った回は、モンスターの Tier に数えない。弱いアシカ(みゃる・ドラなど)から入るので、
+// その回の勇者モンが弱く見える(2026-10-10 ダイスくん: ユグドラシル Expert が3回とも WAVE 3 止まりだったわけ)。その回はアシカの記録にだけ使う。
+// 供モンを決めて戦った回(r.bot.fixedAllies。おすすめパーティの確かめ)も、強い組み合わせで勇者モンが強く見えるので数えない
+const runs = (know.runs || []).filter((r) => r && r.result && r.result !== 'stopped' && DIFF_ORDER.includes(r.difficulty) && r.use && !(r.bot && (r.bot.rotate || r.bot.fixedAllies)));
 // ★クリアした回は「WAVE 11 まで届いた」と数える(2026-10-10 改善部 T3)。Hard はほぼ全員が WAVE 10 に届くので、届いた WAVE だけでは差が出ない
 const reach = (r) => (r.wave || 0) + (r.result === 'clear' ? 1 : 0);
 const sum = (a) => a.reduce((x, y) => x + y, 0);
@@ -81,7 +84,14 @@ const meanWave = {};
 for (const d of diffs) meanWave[d] = avg(runs.filter((r) => r.difficulty === d).map(reach));
 
 // その回に戦った子(ダメージの記録がある子 + 勇者モン + 供モン)
-const membersOf = (r) => [...new Set([r.hero, ...(r.allies || []), ...Object.keys(r.dmg || {})].filter(Boolean))];
+// 戦った顔ぶれ。r.allies(選んだつもりの供モン)は、2026-10-10 まで供モン選びの不具合で実際と違う回があった(209回中57回。アリーナくん)。
+// 盤面から読んだ r.alliesSeen を先に使い、無い回は dmg・use の名前(盤面から読むので正しい)を使う。どちらも無いときだけ r.allies
+const membersOf = (r) => {
+  const seen = Array.isArray(r.alliesSeen) ? r.alliesSeen : null;
+  const board = [...Object.keys(r.dmg || {}), ...Object.keys(r.use || {})];
+  const allies = seen || (board.length ? board : (r.allies || []));
+  return [...new Set([r.hero, ...allies].filter(Boolean))];
+};
 // その回に、その子の EX を何回使ったか(exBy は 2026-10-09 から。古い回は EX の名前で数える)
 const exCountIn = (r, m) => {
   if (r.exBy) return r.exBy[m.name] || 0;
