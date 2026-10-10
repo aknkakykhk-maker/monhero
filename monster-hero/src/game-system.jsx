@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f5fb9d4290d87980
+// generated-sha256: 2b13ae89b1292a15
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-10 23:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-10 23:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4811,7 +4811,8 @@ const normalizeRhythmBestRecords = value => {
   const source=value&&typeof value==='object'&&!Array.isArray(value)?value:{};
   return Object.fromEntries(RHYTHM_SONGS.map(song=>{
     const raw=source[song.songId];
-    const known=Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[id,normalizeRhythmBestRecord(raw?.[id])]));
+    // 5難易度は全曲、HELL などはその曲に譜面があるときだけ(rhythmSongDifficultyDefs)
+    const known=Object.fromEntries(rhythmSongDifficultyDefs(song).map(({id})=>[id,normalizeRhythmBestRecord(raw?.[id])]));
     // この版が知らない難易度の記録は、捨てずにそのまま残す(2026-10-10・MASTER の上の難易度を足す前の先回り)。
     // 新しい版で付いた記録を、古い版のまま開いた端末が保存し直して消してしまわないように(CLAUDE.md ⑦「消さない」)。
     // 知っている5難易度の読み方は今までどおり。知らない曲の記録はこれまでどおり持たない
@@ -14880,7 +14881,9 @@ const saveRhythmMonsterSlots = async value => {
   const normalized=sanitizeRhythmMonsterSlotIds(value); await storeSet(RHYTHM_MONSTER_SLOT_KEY,normalized,false); return normalized;
 };
 const saveRhythmBestRecord = async (records,songId,difficultyId,value) => {
-  if(!RHYTHM_SONGS.some(song=>song.songId===songId)||!RHYTHM_DIFFICULTIES.some(item=>item.id===difficultyId)) return normalizeRhythmBestRecords(records);
+  const song=RHYTHM_SONGS.find(item=>item.songId===songId);
+  // HELL など5難易度の外の難易度は、その曲に譜面があるときだけ残す
+  if(!song||!rhythmSongDifficultyDefs(song).some(item=>item.id===difficultyId)) return normalizeRhythmBestRecords(records);
   const normalized=normalizeRhythmBestRecords(records);
   normalized[songId][difficultyId]=normalizeRhythmBestRecord(value);
   await storeSet(RHYTHM_BEST_RECORDS_KEY,normalized,false); return normalized;
@@ -18172,6 +18175,8 @@ const RHYTHM_DIFFICULTY_TONE=Object.freeze({
   HARD:  Object.freeze({badge:'from-amber-500 to-amber-700',dot:'bg-amber-400',   on:'border-amber-300 bg-amber-600 text-white',     off:'border-amber-400/40 text-amber-200',     text:'text-amber-300'}),
   EXPERT:Object.freeze({badge:'from-rose-500 to-rose-700',dot:'bg-rose-400',    on:'border-rose-300 bg-rose-600 text-white',       off:'border-rose-400/40 text-rose-200',       text:'text-rose-300'}),
   MASTER:Object.freeze({badge:'from-fuchsia-500 to-fuchsia-700',dot:'bg-fuchsia-400', on:'border-fuchsia-300 bg-fuchsia-700 text-white', off:'border-fuchsia-400/40 text-fuchsia-200', text:'text-fuchsia-300'}),
+  // 6段目 HELL。バトルの難易度「Hell」と同じ色(地 #7f1d1d=red-900・字 #f87171=red-400)
+  HELL:  Object.freeze({badge:'from-red-800 to-red-950',dot:'bg-red-400',       on:'border-red-400 bg-red-900 text-red-100',       off:'border-red-500/50 text-red-400',         text:'text-red-400'}),
 });
 const rhythmDifficultyTone=id=>RHYTHM_DIFFICULTY_TONE[id]||RHYTHM_DIFFICULTY_TONE.EASY;
 // 難易度の字の色だけを欲しいところへ。知らないidは灰に倒す(勝手にEASYの緑にしない)
@@ -19387,7 +19392,7 @@ const RHYTHM_SONG_INTRO_RETRY_MS=900;
 let rhythmSongIntroLastKey='';
 // 幕の難易度札の色。曲えらびの難易度の色(RHYTHM_DIFFICULTY_TONE)と同じ色相。
 // Tailwindのクラスではなく色で持つのは、幕を外部CSSに頼らず必ず読める形で出すため
-const RHYTHM_SONG_INTRO_DIFFICULTY_COLORS=Object.freeze({EASY:'#059669',NORMAL:'#0284c7',HARD:'#d97706',EXPERT:'#e11d48',MASTER:'#a21caf'});
+const RHYTHM_SONG_INTRO_DIFFICULTY_COLORS=Object.freeze({EASY:'#059669',NORMAL:'#0284c7',HARD:'#d97706',EXPERT:'#e11d48',MASTER:'#a21caf',HELL:'#7f1d1d'});
 const rhythmSongIntroVisible=settings=>!!settings&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL';
 // 作曲者の行。composer を持つ曲はそれを、よその作品の曲(credit)はその紹介文を出す。どちらも無ければ出さない
 const rhythmSongIntroCredit=song=>{if(!song)return '';if(typeof song.composer==='string'&&song.composer.trim())return `作曲: ${song.composer.trim()}`;return song.credit&&typeof song.credit.text==='string'?song.credit.text:'';};
@@ -21582,7 +21587,7 @@ scheduleTick();};
     それまでは戻って難易度ボタンを見ないと気づけなかった。
     ★前の記録がまだクリアしていなかったときだけ(=このプレイで初めて開いたときだけ)出す。
     ★練習・タイミング合わせ・デバッグから始めたプレイは記録に残らないので出さない */}
-{(()=>{if(tutorial||calibrating||debugPlay||multi||result.assist||result.cleared===false)return null;const before=runRef.current?.startBest;if(before&&before.clear===true)return null;/* 新曲は HARD のクリアで EXPERT と MASTER が一度に開く(2026-10-09・rhythmDifficultyUnlockRequirement)ので、開いたものを全部並べる */const openedIds=RHYTHM_DEMO_DIFFICULTY_IDS.filter(id=>rhythmDifficultyUnlockRequirement(id,song.songId)===difficulty.id&&rhythmChartPlayable(song,id));if(!openedIds.length)return null;const opened=openedIds.join('・');return <div data-rhythm-result-unlock={openedIds.join(',')} className="mx-auto my-3 max-w-xs rounded-2xl border-2 border-amber-300/70 bg-amber-500/15 px-3 py-2 text-center"><b className="block text-base font-black text-amber-100">🔓 {opened} が解放されました！</b><small className="mt-0.5 block text-[10px] font-bold text-amber-200/90">この曲の {openedIds.map(id=>`${id}（Lv.${song.difficulties[id].level}）`).join('・')} を曲えらびで選べます</small></div>;})()}
+{(()=>{if(tutorial||calibrating||debugPlay||multi||result.assist||result.cleared===false)return null;const before=runRef.current?.startBest;if(before&&before.clear===true)return null;/* 新曲は HARD のクリアで EXPERT と MASTER が一度に開く(2026-10-09・rhythmDifficultyUnlockRequirement)ので、開いたものを全部並べる */const openedIds=RHYTHM_SELECTABLE_DIFFICULTY_IDS.filter(id=>rhythmDifficultyUnlockRequirement(id,song.songId)===difficulty.id&&rhythmChartPlayable(song,id));if(!openedIds.length)return null;const opened=openedIds.join('・');return <div data-rhythm-result-unlock={openedIds.join(',')} className="mx-auto my-3 max-w-xs rounded-2xl border-2 border-amber-300/70 bg-amber-500/15 px-3 py-2 text-center"><b className="block text-base font-black text-amber-100">🔓 {opened} が解放されました！</b><small className="mt-0.5 block text-[10px] font-bold text-amber-200/90">この曲の {openedIds.map(id=>`${id}（Lv.${song.difficulties[id].level}）`).join('・')} を曲えらびで選べます</small></div>;})()}
 {result.luck&&(result.luck.draws>0||result.luck.points>0)&&<div data-rhythm-result-luck className="mx-auto my-2 max-w-xs rounded-2xl border border-lime-300/50 bg-lime-950/30 px-3 py-2 text-center [@container(min-width:680px)]:hidden"><small className="block text-[10px] font-black tracking-wider text-lime-200">🍀 ラッキーラッシュ</small><b className="mt-0.5 block text-lg font-black tabular-nums text-white">{Number(result.luck.points).toLocaleString()}pt</b><span className="mt-0.5 block text-[10px] font-bold text-lime-100">抽選 {result.luck.draws}回・RUSH {result.luck.rush}回{result.luck.bonus>0?`・おまけビートP +${result.luck.bonus}P`:''}</span></div>}
 {result.eventPointAward&&result.eventPointAward.amount>0&&<div data-rhythm-result-beat-points className="mx-auto my-3 max-w-xs rounded-2xl border border-violet-400/50 bg-violet-950/35 px-3 py-2 text-center [@container(min-width:680px)]:hidden"><small className="block text-[10px] font-black tracking-wider text-violet-200">🎟️ ビートP獲得</small><b className="mt-0.5 block text-2xl font-black text-white">+{result.eventPointAward.amount.toLocaleString()}P</b>{result.eventPointAward.multiScale>1&&<span data-rhythm-result-beat-points-multi className="mt-1 block text-[9px] font-black text-cyan-200">👥 みんなで対戦のボーナス(人数・連続) ×{result.eventPointAward.multiScale}</span>}{result.eventPointAward.target&&<span className="mt-1 block text-[9px] font-black text-amber-200">イベント対象曲 1.5倍</span>}{result.eventPointAward.lengthBonusPercent>0&&<span data-rhythm-result-beat-points-length className="mt-1 block text-[10px] font-black text-sky-200">曲の長さ +{result.eventPointAward.lengthBonusPercent}%</span>}{result.eventPointAward.campaign&&<span data-rhythm-result-beat-points-campaign className="mt-1 block text-[9px] font-black text-amber-200">ビートPアップキャンペーン いつもの{result.eventPointAward.boost}倍</span>}{result.eventPointAward.offEvent&&<span data-rhythm-result-beat-points-off-event className="mt-1 block text-[9px] font-black text-violet-200">イベント開催中はこの5倍もらえます</span>}</div>}{/* ライブログ(バンドリ！アワーノーツの演奏後の振り返り)。曲を8つの区間に分け、区間ごとに
     MARVELOUS・EXCELLENTの割合を棒の高さで、BAD・MISSの数を下の数字で出す。いちばん崩れた区間を一言で言う */}
@@ -30691,7 +30696,9 @@ function RhythmSongSelectScreen({
   startQuickRunFromRhythm, wave, monsterSlots=[], raidChallenge=null,
 }) {
       const songs=rhythmDemoSongs(RHYTHM_SONGS);
-      const difficulties=rhythmDemoDifficultyList(RHYTHM_DIFFICULTIES);
+      // 5難易度 + HELL(HELL は譜面がある曲だけボタンに出る。rhythmDemoDifficulties が空の譜面を外す)
+      // レイドバトルへ挑んでいるあいだは5難易度だけ(HELL はレイドのダメージの表に無い)
+      const difficulties=rhythmDemoDifficultyList(raidChallenge?RHYTHM_DIFFICULTIES:RHYTHM_PLAY_DIFFICULTIES);
       // 今週の対象曲の名前。曲名はデータから引くので、ここに書き写さない。
       // 副題まで入れるのは rhythmSongFullName の役目(原曲とリミックスが同じ displayName を持つため)
       const eventSongTitles=rhythmEventNotice

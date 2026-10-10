@@ -693,7 +693,8 @@ const normalizeRhythmBestRecords = value => {
   const source=value&&typeof value==='object'&&!Array.isArray(value)?value:{};
   return Object.fromEntries(RHYTHM_SONGS.map(song=>{
     const raw=source[song.songId];
-    const known=Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[id,normalizeRhythmBestRecord(raw?.[id])]));
+    // 5難易度は全曲、HELL などはその曲に譜面があるときだけ(rhythmSongDifficultyDefs)
+    const known=Object.fromEntries(rhythmSongDifficultyDefs(song).map(({id})=>[id,normalizeRhythmBestRecord(raw?.[id])]));
     // この版が知らない難易度の記録は、捨てずにそのまま残す(2026-10-10・MASTER の上の難易度を足す前の先回り)。
     // 新しい版で付いた記録を、古い版のまま開いた端末が保存し直して消してしまわないように(CLAUDE.md ⑦「消さない」)。
     // 知っている5難易度の読み方は今までどおり。知らない曲の記録はこれまでどおり持たない

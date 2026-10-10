@@ -144,7 +144,9 @@ const saveRhythmMonsterSlots = async value => {
   const normalized=sanitizeRhythmMonsterSlotIds(value); await storeSet(RHYTHM_MONSTER_SLOT_KEY,normalized,false); return normalized;
 };
 const saveRhythmBestRecord = async (records,songId,difficultyId,value) => {
-  if(!RHYTHM_SONGS.some(song=>song.songId===songId)||!RHYTHM_DIFFICULTIES.some(item=>item.id===difficultyId)) return normalizeRhythmBestRecords(records);
+  const song=RHYTHM_SONGS.find(item=>item.songId===songId);
+  // HELL など5難易度の外の難易度は、その曲に譜面があるときだけ残す
+  if(!song||!rhythmSongDifficultyDefs(song).some(item=>item.id===difficultyId)) return normalizeRhythmBestRecords(records);
   const normalized=normalizeRhythmBestRecords(records);
   normalized[songId][difficultyId]=normalizeRhythmBestRecord(value);
   await storeSet(RHYTHM_BEST_RECORDS_KEY,normalized,false); return normalized;

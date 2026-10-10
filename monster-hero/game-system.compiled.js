@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8871b25f726f3c6a
+// source-sha256: 46ba0fa713172483
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-10 23:16";
+const BUILD_DATE = "2026-10-10 23:28";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -5886,7 +5886,7 @@ const normalizeRhythmBestRecords = value => {
   const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
   return Object.fromEntries(RHYTHM_SONGS.map(song => {
     const raw = source[song.songId];
-    const known = Object.fromEntries(RHYTHM_DIFFICULTIES.map(({
+    const known = Object.fromEntries(rhythmSongDifficultyDefs(song).map(({
       id
     }) => [id, normalizeRhythmBestRecord(raw?.[id])]));
     const extra = raw && typeof raw === 'object' && !Array.isArray(raw) ? Object.fromEntries(Object.entries(raw).filter(([id, record]) => !Object.prototype.hasOwnProperty.call(known, id) && /^[A-Z][A-Z0-9_]{0,23}$/.test(id) && record && typeof record === 'object' && !Array.isArray(record))) : {};
@@ -24495,7 +24495,8 @@ const saveRhythmMonsterSlots = async value => {
   return normalized;
 };
 const saveRhythmBestRecord = async (records, songId, difficultyId, value) => {
-  if (!RHYTHM_SONGS.some(song => song.songId === songId) || !RHYTHM_DIFFICULTIES.some(item => item.id === difficultyId)) return normalizeRhythmBestRecords(records);
+  const song = RHYTHM_SONGS.find(item => item.songId === songId);
+  if (!song || !rhythmSongDifficultyDefs(song).some(item => item.id === difficultyId)) return normalizeRhythmBestRecords(records);
   const normalized = normalizeRhythmBestRecords(records);
   normalized[songId][difficultyId] = normalizeRhythmBestRecord(value);
   await storeSet(RHYTHM_BEST_RECORDS_KEY, normalized, false);
@@ -28644,6 +28645,13 @@ const RHYTHM_DIFFICULTY_TONE = Object.freeze({
     on: 'border-fuchsia-300 bg-fuchsia-700 text-white',
     off: 'border-fuchsia-400/40 text-fuchsia-200',
     text: 'text-fuchsia-300'
+  }),
+  HELL: Object.freeze({
+    badge: 'from-red-800 to-red-950',
+    dot: 'bg-red-400',
+    on: 'border-red-400 bg-red-900 text-red-100',
+    off: 'border-red-500/50 text-red-400',
+    text: 'text-red-400'
   })
 });
 const rhythmDifficultyTone = id => RHYTHM_DIFFICULTY_TONE[id] || RHYTHM_DIFFICULTY_TONE.EASY;
@@ -30297,7 +30305,8 @@ const RHYTHM_SONG_INTRO_DIFFICULTY_COLORS = Object.freeze({
   NORMAL: '#0284c7',
   HARD: '#d97706',
   EXPERT: '#e11d48',
-  MASTER: '#a21caf'
+  MASTER: '#a21caf',
+  HELL: '#7f1d1d'
 });
 const rhythmSongIntroVisible = settings => !!settings && !settings.lightweightMode && settings.effectAmount !== 'MINIMAL';
 const rhythmSongIntroCredit = song => {
@@ -34810,7 +34819,7 @@ const RhythmTapTest = ({
       if (tutorial || calibrating || debugPlay || multi || result.assist || result.cleared === false) return null;
       const before = runRef.current?.startBest;
       if (before && before.clear === true) return null;
-      const openedIds = RHYTHM_DEMO_DIFFICULTY_IDS.filter(id => rhythmDifficultyUnlockRequirement(id, song.songId) === difficulty.id && rhythmChartPlayable(song, id));
+      const openedIds = RHYTHM_SELECTABLE_DIFFICULTY_IDS.filter(id => rhythmDifficultyUnlockRequirement(id, song.songId) === difficulty.id && rhythmChartPlayable(song, id));
       if (!openedIds.length) return null;
       const opened = openedIds.join('・');
       return React.createElement("div", {
@@ -48390,7 +48399,7 @@ function RhythmSongSelectScreen({
   raidChallenge = null
 }) {
   const songs = rhythmDemoSongs(RHYTHM_SONGS);
-  const difficulties = rhythmDemoDifficultyList(RHYTHM_DIFFICULTIES);
+  const difficulties = rhythmDemoDifficultyList(raidChallenge ? RHYTHM_DIFFICULTIES : RHYTHM_PLAY_DIFFICULTIES);
   const eventSongTitles = rhythmEventNotice ? rhythmEventNotice.songIds.map(songId => rhythmSongFullName(rhythmEventSong(songId, RHYTHM_SONGS)) || songId) : [];
   const beatPointReleased = RELEASE_FLAGS.rhythmEventPoints === true;
   const beatPointEvent = beatPointReleased ? rhythmLimitedEventAt(Date.now()) : null;
