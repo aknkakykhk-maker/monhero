@@ -1250,7 +1250,9 @@ const rhythmSkyTouch=(clientY,rect)=>{
 const rhythmSkyGroundFeedback=(clientY,rect)=>{const r=rhythmSkyTouch(clientY,rect);return !(r!==null&&r<rhythmSkySplitRatio());};
 const rhythmSkyAccepts=(note,touchRatio)=>{
   if(!RHYTHM_SKY_INPUT.active||!Number.isFinite(touchRatio))return true;
-  return rhythmNoteSkyHeight(note)>0?touchRatio<RHYTHM_JUDGMENT_LINE_Y.ratio-RHYTHM_SKY_ACCEPT_BELOW:touchRatio>rhythmSkyLineRatio()+RHYTHM_GROUND_ACCEPT_ABOVE;
+  // 地上のノーツは、空中の線と地上の線のまん中より下を押したときだけ取る(2026-10-10 社長「中身がついてきてない」を受けて、
+  // 地上のタップを空中の線のすぐ下で押しても取れていた(77個中60個)のを直した。前は空中の線の5%下から下を全部地上として受けていた)
+  return rhythmNoteSkyHeight(note)>0?touchRatio<RHYTHM_JUDGMENT_LINE_Y.ratio-RHYTHM_SKY_ACCEPT_BELOW:touchRatio>rhythmSkyLineRatio()+Math.max(RHYTHM_GROUND_ACCEPT_ABOVE,RHYTHM_SKY_LIFT.ratio*.5);
 };
 // HOLD/SLIDEを押さえ続けているあいだの「指がどのレーンにいるか」。
 //
@@ -2512,6 +2514,8 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
 // ・HOLD横ズレ許容: 帯の半分幅に、0.3サブレーン(=0.15レーン)ぶんの余白を足す。
 //   HOLDは動かない的なので、経路を追従するSLIDEより厳しめにしている。
 const RHYTHM_MID_TRACKING_GRACE_MS=120;
+// 空中の段(試作): 高さのあるスライドが外れてから切れるまでの猶予。MASTER のホールド(120ms)を基準に、横持ち親指2本の人のくせのボットで決める
+const RHYTHM_SKY_SLIDE_CUT_GRACE_MS=120;
 const RHYTHM_HOLD_TRACKING_MARGIN_LANES=.15;
 // 帯が細くなっていくとき、追従の許容に残す「少し前の太さ」までの長さ(ms)。指の反応の遅れぶん。
 const RHYTHM_HOLD_NARROWING_LOOKBACK_MS=150;
@@ -2976,7 +2980,14 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
       const areaBox=areaRect();
       const atFinger=areaBox?rhythmLaneCoordinateAtPoint(pos.clientX,pos.clientY,areaBox):null;
       const off=actual=>actual===null||Math.abs(actual-target)>tolerance;
-      bad=off(atLine)&&off(atFinger);
+      // 空中の段(試作・2026-10-10 社長「空中スライドのとき長押ししてたら、位置を合わせなくても勝手に判定オッケーになってない?」):
+      // 判定ラインより上を押さえた指は、見えている帯と同じ「判定ラインの幅で測った位置」(atFinger)だけで見る。
+      // 判定ラインの高さに直した位置(atLine)は奥の狭い道幅から外へ引き延ばすので、2つの許し幅を合わせると地上より広くなり、
+      // 指を動かさなくても1.5レーンほど動くアークを最後まで取れていた。空中の段が無い曲(既存の全曲)は今までどおり
+      const skyFinger=typeof RHYTHM_SKY_INPUT!=='undefined'&&RHYTHM_SKY_INPUT.active&&areaBox&&((Number(pos.clientY)-areaBox.top)/areaBox.height)<RHYTHM_JUDGMENT_LINE_Y.ratio;
+      bad=skyFinger?off(atFinger):off(atLine)&&off(atFinger);
+      // 描き分け用(試作): いま指が帯から外れているか・指の位置(プレイエリアの中の px)。印の見せ方が読む(判定には使わない)
+      if(session.note&&rhythmSlideHasSky(session.note)){session.note._trackOff=!!bad;session.note._trackFinger=areaBox?{x:Number(pos.clientX)-areaBox.left,y:Number(pos.clientY)-areaBox.top}:null;}
     }else if(chartNow>=Number(session.note?.endTimeMs)-RHYTHM_HOLD_END_TRACKING_SKIP_MS){
       // 終わりの100msは外れを見ない。指を離すときに接点が動く・もう成立する時間なので、ここで外れ扱いにしない。
       bad=false;
@@ -3004,14 +3015,20 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
       bad=off(actual)&&off(atLine);
     }
     if(!bad){session.trackingBadSincePerf=null;return;}
-    if(session.trackingBadSincePerf==null)session.trackingBadSincePerf=pos.perfMs;
+    // 空中のスライドは外れ始めも「いまの時刻」で記録する(止まっていた指が外れた瞬間に、猶予なしで切れないように)
+    if(session.trackingBadSincePerf==null)session.trackingBadSincePerf=session.kind==='SLIDE'&&rhythmSlideHasSky(session.note)?Math.max(Number(pos.perfMs)||0,nowPerf()):pos.perfMs;
     // 【2026-09-12】SLIDEはここで打ち切らない。外れているあいだに来たチェックポイントだけが
     // 落ちて、指を戻せば続きは拾える(evaluateCheckpoints が数える)。
     // HOLDはこれまでどおり、猶予を超えたらその場でMISSを確定する。
-    if(session.kind==='SLIDE')return;
-    const graceMs=Number(session.note?._rhythmTrackingGraceMs)>0
+    // 空中の段(試作・2026-10-10 社長「切れる作りにしてほしいけど猶予はあり」): 高さのあるスライドは、ホールドと同じく
+    // 猶予を超えて外れたらその場で切れる(MISS)。地上だけのスライド(既存の全曲)はこれまでどおり切れない
+    if(session.kind==='SLIDE'&&!rhythmSlideHasSky(session.note))return;
+    const graceMs=session.kind==='SLIDE'?RHYTHM_SKY_SLIDE_CUT_GRACE_MS:Number(session.note?._rhythmTrackingGraceMs)>0
       ?Number(session.note._rhythmTrackingGraceMs):RHYTHM_MID_TRACKING_GRACE_MS;
-    if(pos.perfMs-session.trackingBadSincePerf<graceMs)return;
+    // 空中のスライドは「いまの時刻」で外れていた長さを測る。指が止まったままだと pos.perfMs は押した瞬間のまま進まず、
+    // 帯が離れていっても外れの長さが0のままで切れなかった(動かさないボットで見つけた)。ホールドは帯が横へ動かないので今までどおり
+    const elapsedPerf=(session.kind==='SLIDE'?Math.max(Number(pos.perfMs)||0,nowPerf()):pos.perfMs)-session.trackingBadSincePerf;
+    if(elapsedPerf<graceMs)return;
     session.note.holdJudgment='MISS';
     session.failed=true;
     // 猶予を超えて外れたままなら、指を離すのを待たずその場でMISS確定する。
@@ -3544,6 +3561,14 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
     const acceptsPosition=note=>{
       // 空中の段(試作): 空中のノーツは空中の指で、地上のノーツは地上の指でだけ取る(スライドは横の位置だけで追う)
       if(RHYTHM_SKY_INPUT.active&&!rhythmNoteIsSlide(note)&&note._rhythmOriginalType!=='SLIDE'&&!rhythmSkyAccepts(note,Number(input?.sky)))return false;
+      // 空中から始まるスライドは、空中の段を押したときだけ押し始めを受ける(2026-10-10 社長「位置を合わせなくても勝手に判定オッケーになってない?」。
+      // それまでは地上の高さで押しても受けていた)。地上から始まるスライドは今までどおり高さを見ない。押し始めたあとは横の位置だけで追う。
+      // 高さが半分未満で始まるスライドは、見た目の位置が空中の受け付けの境目(地上の線の少し上)とほとんど同じで、
+      // 少し低く押しただけで断られるので、高さを問わない(人の指のくせのボットで見つけた)
+      if(RHYTHM_SKY_INPUT.active&&rhythmNoteIsSlide(note)&&rhythmSlideHasSky(note)&&rhythmSlideSkyAt(note,Number(note.timeMs)||0)>=.5){
+        const ratio=Number(input?.sky);
+        if(Number.isFinite(ratio)&&!(ratio<RHYTHM_JUDGMENT_LINE_Y.ratio-RHYTHM_SKY_ACCEPT_BELOW))return false;
+      }
       const span=inputSpan(note);
       if(!span)return note.lane===lane;
       if(!Number.isFinite(subCoordinate))return note.lane===lane;
@@ -23643,8 +23668,10 @@ const journeyMasterNotes=((t,h,f,s)=>[
 // 曲の 102.5 秒から切った34秒の音源に合わせた MASTER。参考譜面(Arcaea)のアークを2本同時のスライドに置き換えた
 const SHERIRUTH_PROTO_DURATION_MS=34000;
 // 速さの表(試作・「画面が止まって動く」)。[時刻ms(試作の音源の時刻),倍率]。2026-10-10 テンポくん・オンプくんが参考譜面から決めた表。
-// 6.460〜6.866秒は止まる(この間に判定のノーツは来ない)。6.866秒から1.8倍で2本のスライドが流れ出し、7.515秒から元の速さ
-const SHERIRUTH_PROTO_SCROLL_CHANGES=Object.freeze([[6460,0],[6866,1.8],[7515,1]]);
+// 6.460〜6.700秒は止まる(この間に判定のノーツは来ない)。6.700秒から1.8倍で2本のスライドが流れ出し、7.515秒から元の速さ。
+// 2026-10-10 止まり終わりを 6.866 → 6.700 へ(ドライバーくんの表: 前は止まっている0.4秒のあいだ、6.866秒のノーツが判定線の上に乗ったまま止まって見え、
+// 早く叩くおそれがあった。いまは止まっている間、次のノーツは判定線より手前(流れる道のりの 速度3で6%・速度6で14%・速度10で37%)に見える。判定の時刻は変わらない)
+const SHERIRUTH_PROTO_SCROLL_CHANGES=Object.freeze([[6460,0],[6700,1.8],[7515,1]]);
 // 空中の段(試作): T=空中のタップ / F=空中のフリック(高さ1)/ S=高さのあるスライド(点は [時刻,レーン,幅,高さ0〜1,ease]、5つめの引数 hand は 'L'=水色・'R'=ピンク)
 const mhSkyTap=(timeMs,subLane,subLaneWidth,height=1)=>Object.freeze({...mhTap(timeMs,subLane,subLaneWidth),skyHeight:height});
 const mhSkyFlick=(timeMs,subLane,subLaneWidth,dirCode,height=1)=>Object.freeze({...mhFlick(timeMs,subLane,subLaneWidth,dirCode),skyHeight:height});
@@ -26646,7 +26673,7 @@ const RHYTHM_PROTO_SONGS=Object.freeze([
     debugDescription:'空中のノーツ・止まって動く演出の試作。遊んでも自己ベスト・ランキング・報酬には入らない',
     bgmTrackId:'melo_sheriruth_proto',
     difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[
-      id,rhythmChartOnRoad(id==='MASTER'?mhChart(46,sheriruthProtoMasterNotes,SHERIRUTH_PROTO_DURATION_MS,6,{scrollChanges:SHERIRUTH_PROTO_SCROLL_CHANGES}):emptyRhythmChart())
+      id,rhythmChartOnRoad(id==='MASTER'?mhChart(47,sheriruthProtoMasterNotes,SHERIRUTH_PROTO_DURATION_MS,6,{scrollChanges:SHERIRUTH_PROTO_SCROLL_CHANGES}):emptyRhythmChart())
     ])))
   }),
 ]);
@@ -30000,12 +30027,18 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       // 空中の段(試作): 手の色(左=水色・右=ピンク)。譜面のスライドに hand:'L'|'R' を書いたときだけ
       // 空中の段(試作): 高さのあるスライドは「空中の見せ方」で描く(社長: 左右は位置で分かるので色で分けない・地上のスライドは今の色のまま・空中は見せ方で分ける)
       if(rhythmSlideHasSky(note)){const th=rhythmSkyTheme();o.skySlideRgb=th.rgb;o.skySlideCore=th.core;}
+      // 空中スライドの印の追従(試作・2026-10-10 社長「空中は…こいつが勝手に動いてる」):
+      // 印は「指を置く目標」。指が帯に乗っている間だけ光らせ、外れている間は薄く欠けた見た目にする。
+      // 押さえた指の位置には小さな赤い受け(輪)を出し、印と指のずれが見えるようにする。
+      // note._trackOff / note._trackFinger が無いとき(押していない・追従を書かない曲)は今までどおり
+      const trackOn=!!(o.pressed&&!o.failed&&o.skySlideRgb&&typeof note._trackOff==='boolean');
+      const trackDim=trackOn&&note._trackOff?.4:1;
       if(o.pop===null){
         if(geo.slideShadow)drawSkyShadowBand(geo.slideShadow,o);
         if(geo.skyShadow&&!geo.slide)drawSkyShadowHead(geo,o);
         // 空中から始まる(高さのある)スライドは、頭から床へ細い支柱を下ろす(参考のアークと同じ・高さが分かるように)
         if(geo.slide&&geo.head&&o.pressed&&!o.failed&&o.skySlideRgb){
-          const hd=geo.head,r=Math.max(10,hd.w*.75),t=frameNow/90;ctx.globalAlpha=o.alpha;ctx.lineCap='round';
+          const hd=geo.head,r=Math.max(10,hd.w*.75),t=frameNow/90;ctx.globalAlpha=o.alpha*trackDim;ctx.lineCap='round';
           [[1,0],[0,1]].forEach(([dx,dy],k)=>{const len=r*(k?1.15:1)*(.85+.15*Math.sin(t+k));
             ctx.strokeStyle=`rgba(${o.skySlideRgb},.55)`;ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(hd.cx-dx*len,hd.cy-dy*len);ctx.lineTo(hd.cx+dx*len,hd.cy+dy*len);ctx.stroke();
             ctx.strokeStyle='rgba(255,255,255,.95)';ctx.lineWidth=1.6;ctx.beginPath();ctx.moveTo(hd.cx-dx*len,hd.cy-dy*len);ctx.lineTo(hd.cx+dx*len,hd.cy+dy*len);ctx.stroke();});
@@ -30016,7 +30049,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
         if(geo.slide)drawSlide(geo,o);
         drawEndBar(note,geo,o);
       }
-      const headOpts=o.pop===null?o:{...o,alpha:o.alpha*.95*(1-easeOut(o.pop)),brightness:1};
+      const headOpts=o.pop===null?{...o}:{...o,alpha:o.alpha*.95*(1-easeOut(o.pop)),brightness:1};
+      if(trackDim<1){headOpts.alpha=o.alpha*trackDim;headOpts.brightness=(Number(headOpts.brightness)||1)*.6;}
       // 押さえている最中の光は粒の下に敷く(粒の形は隠さない)。演出量「最小」では出さない
       if(o.pressed&&!o.failed&&o.pop===null&&effect!=='MINIMAL')drawHoldSpark(note,geo,o);
       // 空中のノーツも、既定(plate)ではふつうの板(drawHead)で描く。旧スタイルは drawSkyTap(箱・星など)
@@ -30029,6 +30063,16 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       if(!geo.skyShadow&&geo.head){const hw=geo.head.w*sizeScale/2+2,hh=Math.max(8,geo.head.h*(o.depthScale||1))/2+2;frameGround.push({x0:geo.head.cx-hw,x1:geo.head.cx+hw,y0:geo.head.cy-hh,y1:geo.head.cy+hh});
         const pts=geo.band||null;if(pts&&pts.length>1){let lo=1e9,hi=-1e9,top=pts[0].y,bot=pts[pts.length-1].y;for(const e of pts){lo=Math.min(lo,e.left);hi=Math.max(hi,e.right);}frameGround.push({x0:lo,x1:hi,y0:Math.min(top,bot),y1:Math.max(top,bot)});}
         if(geo.slide)for(const q of geo.slide){frameGround.push({x0:Math.min(q.l0,q.l1),x1:Math.max(q.r0,q.r1),y0:Math.min(q.y0,q.y1),y1:Math.max(q.y0,q.y1)});}}
+      // 押さえた指の位置の「受け」(細い赤い輪と点)。外れているときは印との間に細い点線を引く
+      if(trackOn&&note._trackFinger&&Number.isFinite(note._trackFinger.x)&&Number.isFinite(note._trackFinger.y)){
+        const fx=note._trackFinger.x,fy=note._trackFinger.y,off=note._trackOff===true;
+        ctx.save();ctx.globalAlpha=o.alpha;
+        if(off&&geo.head){ctx.strokeStyle='rgba(239,68,68,.55)';ctx.lineWidth=1.2;const ddx=geo.head.cx-fx,ddy=geo.head.cy-fy,dl=Math.hypot(ddx,ddy),dn=Math.min(24,Math.floor(dl/6));
+          ctx.beginPath();for(let i=0;i<dn;i++){const u0=i/dn,u1=(i+.45)/dn;ctx.moveTo(fx+ddx*u0,fy+ddy*u0);ctx.lineTo(fx+ddx*u1,fy+ddy*u1);}ctx.stroke();}
+        ctx.strokeStyle=off?'rgba(254,202,202,.95)':'rgba(239,68,68,.9)';ctx.lineWidth=off?1.8:1.4;ctx.beginPath();ctx.arc(fx,fy,off?10:8,0,Math.PI*2);ctx.stroke();
+        ctx.fillStyle=off?'rgba(254,202,202,.95)':'rgba(255,228,230,.95)';ctx.beginPath();ctx.arc(fx,fy,2,0,Math.PI*2);ctx.fill();
+        ctx.restore();
+      }
     },
     // マスモンの顔を1つ積む。bitmap は焼いた canvas、(cx,cy) は中心、size は一辺(どれも CSS px)。
     drawFace(bitmap,cx,cy,size,alpha=1){
