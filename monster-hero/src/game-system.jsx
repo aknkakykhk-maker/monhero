@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3bd98bcce48665d3
+// generated-sha256: b809f2865d4129e3
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-10 13:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-10 20:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -19353,6 +19353,24 @@ const rhythmBakeMonsterFace=async(monster,dpr)=>{
 };
 // ポーズから戻るときの数え方。開始のときの READY は要らない(もう構えている)ので 3→2→1 だけ
 const RHYTHM_RESUME_COUNTDOWN_STEPS=Object.freeze(['3','2','1']);
+/* 曲が始まる前の幕(ジャケット・曲名・作曲者・難易度とレベル)。2026-10-10・社長の依頼。
+   音源の読み込み・画面がそろうのを待つあいだと重ねて出し、READY→3→2→1 の前に閉じる。
+   なので実際に増える待ちは「幕の長さ − 読み込みにかかった時間」だけで、カウントダウン・曲の頭・判定の時刻は動かない。
+   ・はじめの1回は長め、同じ画面でのリトライは短め(何度もやり直す人を待たせない)
+   ・タップで飛ばせる。ただしマルチは全員同じ長さで待つ(飛ばすと開始がずれる)
+   ・軽量モード・演出「最小」では出さない。マルチだけは見た目を出さなくても待つ時間はそろえる */
+const RHYTHM_SONG_INTRO_MS=1800;
+const rhythmSongIntroNow=()=>typeof performance!=='undefined'?performance.now():Date.now();
+const RHYTHM_SONG_INTRO_RETRY_MS=900;
+// 直前に幕を出した曲と難易度。同じものをもう一度遊ぶ(リスタート・結果からのリトライ)ときは短くする。
+// メモリに置くだけで保存しない(アプリを開き直せば、はじめの1回はまた長めに出る)
+let rhythmSongIntroLastKey='';
+// 幕の難易度札の色。曲えらびの難易度の色(RHYTHM_DIFFICULTY_TONE)と同じ色相。
+// Tailwindのクラスではなく色で持つのは、幕を外部CSSに頼らず必ず読める形で出すため
+const RHYTHM_SONG_INTRO_DIFFICULTY_COLORS=Object.freeze({EASY:'#059669',NORMAL:'#0284c7',HARD:'#d97706',EXPERT:'#e11d48',MASTER:'#a21caf'});
+const rhythmSongIntroVisible=settings=>!!settings&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL';
+// 作曲者の行。composer を持つ曲はそれを、よその作品の曲(credit)はその紹介文を出す。どちらも無ければ出さない
+const rhythmSongIntroCredit=song=>{if(!song)return '';if(typeof song.composer==='string'&&song.composer.trim())return `作曲: ${song.composer.trim()}`;return song.credit&&typeof song.credit.text==='string'?song.credit.text:'';};
 // 曲の位置を「1:05」の形にする。ポーズ画面の「いまどのあたりか」に使う
 const rhythmClockLabel=ms=>{const total=Math.max(0,Math.floor((Number(ms)||0)/1000));return `${Math.floor(total/60)}:${String(total%60).padStart(2,'0')}`;};
 // TAPを取った指が境界付近に残ると、iPhoneの接触中心が数px揺れただけでも
@@ -20001,6 +20019,10 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
      流れてきたノーツを落としていた。true のあいだはポーズメニューを隠して、
      止まったままのノーツ(最後に描いた場面)を見せる */
   const [resumeCountdown,setResumeCountdown]=useState(false);
+  /* 曲が始まる前の幕(RHYTHM_SONG_INTRO_MS)。null のあいだは出さない。
+     songIntroRef は「幕のあいだか」「飛ばされたか」を beginRun の待ちとポーズが読む */
+  const [songIntro,setSongIntro]=useState(null);
+  const songIntroRef=useRef(null);
   const resumingRef=useRef(false);
   // ポーズした時点の曲の位置(ミリ秒)。ポーズ画面の「いまどのあたりか」に使う
   const [pausedSongMs,setPausedSongMs]=useState(0);
@@ -20944,7 +20966,7 @@ if(!run.fadedOut&&audioDurationMs>playEndTimeMs+RHYTHM_END_FADE_MARGIN_MS
   run.audio.fadeOut?.(RHYTHM_END_FADE_MS);
 }
 if(RHYTHM_PERF.enabled)RHYTHM_PERF.tick(performance.now()-perfTickStart,perfTickStart-frameNowMs);if(songTimeMs>=playEndTimeMs||run.audio.ended())finish();else frameRef.current=requestAnimationFrame(tick);};frameRef.current=requestAnimationFrame(tick);},[applyJudgment,chart.durationMs,finish,measureTravel,settings.frameRateMode,settings.stageEffect,settings.lightweightMode,settings.judgmentTimingOffsetMs,settings.noteSpeed,song.playDurationMs,stopFrame,tutorial,updateJudgmentBand]);
-  const disposeRun=useCallback(()=>{stopFrame();RHYTHM_NOTE_SE_RUNTIME.holdStopAll(.03);clearJudgmentTimer();clearAbilityTimer();clearCountdown();RHYTHM_GESTURE_RUNTIME.clear();rhythmFloatingNotesClear();const run=runRef.current;if(run){run.finished=true;run.paused=true;run.activePointers.clear();run.standbyPointers?.clear();run.activeTouchInputs?.clear();run.outsideStartInputs?.clear();run.inputFeedbackState?.clear();run.audio?.stop();}runRef.current=null;setPressedLanes([]);},[clearAbilityTimer,clearCountdown,clearJudgmentTimer,stopFrame]);
+  const disposeRun=useCallback(()=>{songIntroRef.current=null;setSongIntro(null);stopFrame();RHYTHM_NOTE_SE_RUNTIME.holdStopAll(.03);clearJudgmentTimer();clearAbilityTimer();clearCountdown();RHYTHM_GESTURE_RUNTIME.clear();rhythmFloatingNotesClear();const run=runRef.current;if(run){run.finished=true;run.paused=true;run.activePointers.clear();run.standbyPointers?.clear();run.activeTouchInputs?.clear();run.outsideStartInputs?.clear();run.inputFeedbackState?.clear();run.audio?.stop();}runRef.current=null;setPressedLanes([]);},[clearAbilityTimer,clearCountdown,clearJudgmentTimer,stopFrame]);
   /* プレイエリアが「遊べる大きさ」になるまで待つ。
      毎フレーム測り直し、整ったらすぐ返す。整わないまま上限に達したら、
      待ち続けて遊べなくなるより始めたほうがましなので諦めて返す。 */
@@ -20964,6 +20986,19 @@ if(RHYTHM_PERF.enabled)RHYTHM_PERF.tick(performance.now()-perfTickStart,perfTick
     };
     step();
   });
+  /* 幕が閉じるまで待つ。時間が来た・タップで飛ばした・幕が無い、のどれかで true。
+     途中で画面を離れた・作り直された(generationが変わった)ら false */
+  const waitSongIntro=generation=>new Promise(resolve=>{
+    const step=()=>{
+      if(!mountedRef.current||generation!==generationRef.current){resolve(false);return;}
+      const intro=songIntroRef.current;
+      if(!intro||intro.generation!==generation||intro.skipped||rhythmSongIntroNow()>=intro.endAt){songIntroRef.current=null;setSongIntro(null);resolve(true);return;}
+      setTimeout(step,Math.max(16,Math.min(50,intro.endAt-rhythmSongIntroNow())));
+    };
+    step();
+  });
+  // 幕をタップしたら閉じる(マルチは飛ばせない)
+  const skipSongIntro=()=>{const intro=songIntroRef.current;if(intro&&intro.skippable)intro.skipped=true;};
   const waitUntilPlayable=generation=>new Promise(resolve=>{
     const deadline=(typeof performance!=='undefined'?performance.now():Date.now())+RHYTHM_LAYOUT_WAIT_MAX_MS;
     const step=()=>{
@@ -20978,7 +21013,17 @@ if(RHYTHM_PERF.enabled)RHYTHM_PERF.tick(performance.now()-perfTickStart,perfTick
     };
     if(typeof requestAnimationFrame==='function')requestAnimationFrame(step);else setTimeout(step,16);
   });
-  const beginRun=async startBestValue=>{if(startLockRef.current)return;startLockRef.current=true;const generation=++generationRef.current;disposeRun();setLifeDownCount(0);setView({...initialView(),status:'loading'});hudRef.current.set(rhythmHudInitial());/* 直し方の入れ切りは、ゲームが端末の直近の診断の記録から自分で決める(人が調整する前提にしない) */try{rhythmTouchFixAutoSet(rhythmTouchFixAutoFrom(await storeGet(RHYTHM_TOUCH_DIAG_KEY,[])));}catch{rhythmTouchFixAutoSet({});}const audio=await Audio_.startRhythmTrack(song.bgmTrackId,settings.bgmVolume,{autoStart:false});if(!mountedRef.current||generation!==generationRef.current){audio?.stop();return;}if(!audio){startLockRef.current=false;setView(v=>({...v,status:'error'}));return;}const startBest=normalizeRhythmBestRecord(startBestValue);RHYTHM_TIMING_DIAG.reset();RHYTHM_TIMING_DIAG.meta(audio.info?.());RHYTHM_TOUCH_BRIDGE.reset();rhythmFloatingNotesClear();runRef.current={audio,heroSeed:Math.random(),notes:makeRuntimeNotes(),activePointers:new Map(),standbyPointers:new Map(),activeTouchInputs:new Set(),inputTimes:[],combo:0,maxCombo:0,counts:emptyCounts(),fast:0,slow:0,precise:0,deltas:[],life:RHYTHM_LIFE_MAX,lifeDepleted:false,score:0,lockedScore:0,scoreOffset:0,abilities:createRhythmMonsterAbilityState(),konjoOwnerName:'',finished:false,paused:false,generation,startBest,startBestScore:startBest.bestScore};laneRefs.current.forEach(el=>{if(el){el.style.display='block';el.style.opacity='0';el.style.filter='';/* styleを直接書き戻したら、「前に何を書いたか」の控えも一緒に捨てる。   控えだけ古いまま残ると、値が同じだと判断して書き込みを飛ばし、   実際の見た目とズレたまま固まる(例: 透明のまま出てこない)ため */el._rhythmHidden=false;el._rhythmOpacity=undefined;el._rhythmWillChange=undefined;el._rhythmFailedFlag=undefined;el._rhythmClearFlag=undefined;delete el.dataset.rhythmClear;el._rhythmHoldBody=undefined;el._rhythmHoldFilter=undefined;el._rhythmDepthScale=undefined;el._rhythmDepthBrightness=undefined;el._rhythmTransform=undefined;el._rhythmSlideBody=undefined;}});if(canvasNotes)RHYTHM_CANVAS_RENDERER.clear();rhythmLayoutPlayArea(playAreaRef.current);updateJudgmentBand(measureTravel(),rhythmTravelMsForSpeed(settings.noteSpeed));
+  const beginRun=async startBestValue=>{if(startLockRef.current)return;startLockRef.current=true;const generation=++generationRef.current;disposeRun();setLifeDownCount(0);setView({...initialView(),status:'loading'});hudRef.current.set(rhythmHudInitial());
+/* 曲が始まる前の幕。読み込みと同時に上げ、カウントダウンの前で閉じる(RHYTHM_SONG_INTRO_MS)。
+   チュートリアル・タイミング調整は曲を見せる場面ではないので出さない */
+{const introKey=`${song.songId}|${difficulty.id}`;
+const introMs=tutorial||calibrating?0:(!multi&&rhythmSongIntroLastKey===introKey?RHYTHM_SONG_INTRO_RETRY_MS:RHYTHM_SONG_INTRO_MS);
+const introShown=introMs>0&&rhythmSongIntroVisible(settings);
+if(introMs>0)rhythmSongIntroLastKey=introKey;
+// マルチは見た目を出さない設定の人も同じだけ待つ(全員の開始をそろえる)
+const introWaitMs=introShown||multi?introMs:0;
+songIntroRef.current=introWaitMs>0?{generation,endAt:rhythmSongIntroNow()+introWaitMs,skipped:false,skippable:!multi}:null;
+setSongIntro(introShown?{key:generation,ms:introMs,short:introMs<RHYTHM_SONG_INTRO_MS,skippable:!multi}:null);}/* 直し方の入れ切りは、ゲームが端末の直近の診断の記録から自分で決める(人が調整する前提にしない) */try{rhythmTouchFixAutoSet(rhythmTouchFixAutoFrom(await storeGet(RHYTHM_TOUCH_DIAG_KEY,[])));}catch{rhythmTouchFixAutoSet({});}const audio=await Audio_.startRhythmTrack(song.bgmTrackId,settings.bgmVolume,{autoStart:false});if(!mountedRef.current||generation!==generationRef.current){audio?.stop();return;}if(!audio){startLockRef.current=false;songIntroRef.current=null;setSongIntro(null);setView(v=>({...v,status:'error'}));return;}const startBest=normalizeRhythmBestRecord(startBestValue);RHYTHM_TIMING_DIAG.reset();RHYTHM_TIMING_DIAG.meta(audio.info?.());RHYTHM_TOUCH_BRIDGE.reset();rhythmFloatingNotesClear();runRef.current={audio,heroSeed:Math.random(),notes:makeRuntimeNotes(),activePointers:new Map(),standbyPointers:new Map(),activeTouchInputs:new Set(),inputTimes:[],combo:0,maxCombo:0,counts:emptyCounts(),fast:0,slow:0,precise:0,deltas:[],life:RHYTHM_LIFE_MAX,lifeDepleted:false,score:0,lockedScore:0,scoreOffset:0,abilities:createRhythmMonsterAbilityState(),konjoOwnerName:'',finished:false,paused:false,generation,startBest,startBestScore:startBest.bestScore};laneRefs.current.forEach(el=>{if(el){el.style.display='block';el.style.opacity='0';el.style.filter='';/* styleを直接書き戻したら、「前に何を書いたか」の控えも一緒に捨てる。   控えだけ古いまま残ると、値が同じだと判断して書き込みを飛ばし、   実際の見た目とズレたまま固まる(例: 透明のまま出てこない)ため */el._rhythmHidden=false;el._rhythmOpacity=undefined;el._rhythmWillChange=undefined;el._rhythmFailedFlag=undefined;el._rhythmClearFlag=undefined;delete el.dataset.rhythmClear;el._rhythmHoldBody=undefined;el._rhythmHoldFilter=undefined;el._rhythmDepthScale=undefined;el._rhythmDepthBrightness=undefined;el._rhythmTransform=undefined;el._rhythmSlideBody=undefined;}});if(canvasNotes)RHYTHM_CANVAS_RENDERER.clear();rhythmLayoutPlayArea(playAreaRef.current);updateJudgmentBand(measureTravel(),rhythmTravelMsForSpeed(settings.noteSpeed));
 /* 使い回すヒットエフェクトを先に作っておく。曲の途中で10個まとめて作ると、そこで一瞬引っかかる */
 rhythmEnsureHitEffects(playAreaRef.current);
 /* 光のスプライトも先に焼いておく。曲の中で「その種類のノーツが初めて出た瞬間」に作ると
@@ -21005,6 +21050,9 @@ if(!mountedRef.current||generation!==generationRef.current){audio.stop();return;
 /* 画面がそろってから READY→3→2→1 と数え、そのあとで曲を鳴らす。
    選んだ瞬間に曲が始まると構える間が無い(2026-09-05・ユーザー指摘)。
    ここで数えているあいだにレイアウトも完全に固まる */
+/* 幕がまだ上がっていれば、閉じるのを待ってから数える。読み込みに時間がかかった端末ではもう閉じている */
+if(!await waitSongIntro(generation)){audio.stop();return;}
+if(!mountedRef.current||generation!==generationRef.current){audio.stop();return;}
 if(!await runCountdown(generation)){audio.stop();return;}
 if(!mountedRef.current||generation!==generationRef.current){audio.stop();return;}
 audio.start();
@@ -21048,6 +21096,8 @@ scheduleTick();};
        (rhythm-hud-wedge-check など)がHUDのJSXをそのまま写して使うため、
        式や disabled: 変種を持ち込むと測れなくなるから */
     if(countdownStep!==null)return;
+    // 曲の前の幕のあいだも同じ(まだ曲が鳴っていない)
+    if(songIntroRef.current)return;
     if(!run||run.finished||run.paused)return;RHYTHM_NOTE_SE_RUNTIME.holdStopAll(.03);run.activePointers.clear();run.standbyPointers?.clear();run.activeTouchInputs?.clear();run.outsideStartInputs?.clear();run.inputFeedbackState?.clear();run.activePointerFeedback?.clear();setPressedLanes([]);run.notes.forEach(note=>{if(note.type==='HOLD'&&note.activePointerId!==null)note.activePointerId=-1;});setPausedSongMs(Math.max(0,Number(run.audio.songTimeMs())||0));run.paused=true;stopFrame();run.audio.pause();setView(v=>({...v,status:'paused'}));};
   /* 再開は 3→2→1 と数えてから(開始のカウントダウンと同じ部品を使い、READYだけ省く)。
      数えているあいだに画面を離れた・リスタートした(generationが変わった)ら鳴らさない。
@@ -21480,7 +21530,20 @@ scheduleTick();};
   /* ★ここへ属性を足すときは className の「後ろ」へ置く。
      rhythm-screen-layout-check.js が <main data-rhythm-tap-test className="…overflow-hidden という
      文字列の並びをそのまま見ているので、あいだに挟むと「1画面になっていない」と落ちる。 */
-  return <main data-rhythm-tap-test className="relative flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white landscape:pl-[var(--mh-sa-left)] landscape:pr-[var(--mh-sa-right)] [container-type:inline-size]" data-rhythm-lightweight={settings.lightweightMode?'true':'false'} data-rhythm-effect={settings.effectAmount} style={{touchAction:'none'}}><header data-rhythm-hud className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-2 px-3 pt-1.5"><div ref={hudLeftRef} data-rhythm-hud-left className="min-w-0 max-w-[35cqw] text-left landscape:max-w-[28cqw]"><div className="landscape:flex landscape:items-center landscape:gap-2"><RhythmHudScore hud={hudRef.current} maxScore={difficulty.maxScore} bestScore={bestRecord?.bestScore} rankFx={!settings.lightweightMode&&settings.effectAmount!=='MINIMAL'}/><div className="mt-1.5 flex max-w-[34cqw] flex-wrap items-center gap-1 landscape:mt-0 landscape:min-w-0 landscape:shrink"><span className="shrink-0 rounded bg-fuchsia-700/85 px-1.5 py-0.5 text-[9px] font-black leading-none">{difficulty.id}</span><small data-rhythm-mode-label className="text-[9px] font-bold leading-none tracking-[0.14em] text-cyan-300 landscape:hidden" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{calibrating?'タイミング合わせ':tutorial?'れんしゅう':debugPlay?debugChartLabel:`Lv.${chart.level}`}</small></div></div>{/* 曲名のとなり(レーンの外)に小さくジャケットを出す(2026-09-26・ユーザー指示「ジャケットは置くにもレーン外の曲名のあたりがいい」)。
+  return <main data-rhythm-tap-test className="relative flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white landscape:pl-[var(--mh-sa-left)] landscape:pr-[var(--mh-sa-right)] [container-type:inline-size]" data-rhythm-lightweight={settings.lightweightMode?'true':'false'} data-rhythm-effect={settings.effectAmount} style={{touchAction:'none'}}>{/* ===== 曲が始まる前の幕(2026-10-10・社長の依頼) =====
+    ジャケット・曲名・作曲者(または紹介文)・難易度とレベル。HUDもレーンも覆う(z-45)。
+    横持ちは絵と文字を横に、縦持ちは縦に積む。動きは index.html の [data-rhythm-song-intro] が持つ
+    (長さは --intro-ms。リトライの短い幕も同じ割合で縮む)。タップで閉じる(マルチは閉じない) */}
+{songIntro&&(()=>{const introCredit=rhythmSongIntroCredit(song),introLevel=Number(chart?.level),introColor=RHYTHM_SONG_INTRO_DIFFICULTY_COLORS[difficulty.id]||'#64748b';return <div key={songIntro.key} data-rhythm-song-intro data-intro-short={songIntro.short?'1':undefined} data-intro-layout={isLandscape?'row':'column'} role="status" aria-live="polite" onPointerDown={songIntro.skippable?event=>{event.stopPropagation();skipSongIntro();}:undefined} style={{position:'absolute',inset:0,zIndex:45,display:'flex',flexDirection:isLandscape?'row':'column',alignItems:'center',justifyContent:'center',gap:isLandscape?'24px':'16px',padding:'16px calc(16px + var(--mh-sa-right,0px)) 16px calc(16px + var(--mh-sa-left,0px))',pointerEvents:'auto','--intro-ms':`${songIntro.ms}ms`}}>
+  {hudArtSrc&&<div data-rhythm-song-intro-art style={{position:'relative',flexShrink:0,width:isLandscape?'min(48vh,200px)':'min(54vw,210px)',aspectRatio:'1 / 1',borderRadius:'14px',overflow:'hidden'}}><img src={hudArtSrc} alt="" draggable={false} decoding="async" style={{display:'block',width:'100%',height:'100%',objectFit:'cover'}}/><i data-rhythm-song-intro-shine aria-hidden="true"/></div>}
+  <div data-rhythm-song-intro-text style={{minWidth:0,maxWidth:isLandscape?'min(48vw,440px)':'88vw',textAlign:isLandscape?'left':'center'}}>
+    <small style={{display:'block',fontSize:'11px',fontWeight:900,letterSpacing:'.32em',color:'#a5f3fc',textShadow:'0 1px 6px rgba(2,6,23,.95)'}}>♪ LIVE START</small>
+    <b data-rhythm-song-intro-title style={{/* 行数で切り詰めない。切ると文字の影が四角く切れて見える */display:'block',overflowWrap:'anywhere',marginTop:'4px',fontSize:isLandscape?'26px':'24px',fontWeight:900,lineHeight:1.25,color:'#fff',textShadow:'0 0 14px rgba(103,232,249,.55),0 2px 8px rgba(2,6,23,.95)'}}>{rhythmSongFullName(song)}</b>
+    {introCredit&&<p data-rhythm-song-intro-credit style={{display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden',margin:'4px 0 0',fontSize:'12px',fontWeight:700,lineHeight:1.4,color:'#cbd5e1'}}>{introCredit}</p>}
+    <div style={{display:'flex',alignItems:'center',justifyContent:isLandscape?'flex-start':'center',gap:'8px',marginTop:'10px'}}><span data-rhythm-song-intro-difficulty style={{borderRadius:'999px',padding:'3px 12px',fontSize:'13px',fontWeight:900,letterSpacing:'.08em',color:'#fff',background:introColor,boxShadow:`0 0 12px ${introColor}`}}>{difficulty.id}</span>{Number.isFinite(introLevel)&&introLevel>0&&<b data-rhythm-song-intro-level style={{fontSize:'16px',fontWeight:900,color:'#fff',fontVariantNumeric:'tabular-nums'}}>Lv.{introLevel}</b>}</div>
+    {songIntro.skippable&&!songIntro.short&&<small style={{display:'block',marginTop:'10px',fontSize:'10px',fontWeight:700,color:'#94a3b8'}}>タップでとばす</small>}
+  </div>
+</div>;})()}<header data-rhythm-hud className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-2 px-3 pt-1.5"><div ref={hudLeftRef} data-rhythm-hud-left className="min-w-0 max-w-[35cqw] text-left landscape:max-w-[28cqw]"><div className="landscape:flex landscape:items-center landscape:gap-2"><RhythmHudScore hud={hudRef.current} maxScore={difficulty.maxScore} bestScore={bestRecord?.bestScore} rankFx={!settings.lightweightMode&&settings.effectAmount!=='MINIMAL'}/><div className="mt-1.5 flex max-w-[34cqw] flex-wrap items-center gap-1 landscape:mt-0 landscape:min-w-0 landscape:shrink"><span className="shrink-0 rounded bg-fuchsia-700/85 px-1.5 py-0.5 text-[9px] font-black leading-none">{difficulty.id}</span><small data-rhythm-mode-label className="text-[9px] font-bold leading-none tracking-[0.14em] text-cyan-300 landscape:hidden" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{calibrating?'タイミング合わせ':tutorial?'れんしゅう':debugPlay?debugChartLabel:`Lv.${chart.level}`}</small></div></div>{/* 曲名のとなり(レーンの外)に小さくジャケットを出す(2026-09-26・ユーザー指示「ジャケットは置くにもレーン外の曲名のあたりがいい」)。
     絵が無い曲は出さない。動かないので毎フレームの仕事は増えない。縦向きは左上の表示が道にかからないよう、絵のぶん曲名の幅を縮める */}
 <div data-rhythm-hud-songline data-hud-song-dim={hudSongDim?'1':undefined} className="mt-1 flex items-center gap-1.5 landscape:mt-0.5 landscape:min-w-0">{hudArtSrc&&<img data-rhythm-hud-art src={hudArtSrc} alt="" aria-hidden="true" decoding="async" draggable={false} className="h-7 w-7 shrink-0 rounded-md border border-white/25 object-cover landscape:h-6 landscape:w-6" style={{boxShadow:'0 1px 6px rgba(2,6,23,.8)'}}/>}<div data-rhythm-hud-song className="min-w-0 max-w-[31cqw] text-[10px] font-black text-slate-100 landscape:max-w-none" style={{maxWidth:hudArtSrc&&!isLandscape?'calc(31cqw - 34px)':undefined,display:'-webkit-box',WebkitLineClamp:isLandscape?'2':'3',WebkitBoxOrient:'vertical',overflow:'hidden',lineHeight:'1.25',textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>♪ {rhythmSongFullName(song)}</div></div></div><div data-rhythm-hud-right className="flex w-[33cqw] max-w-[33cqw] flex-col items-end gap-1.5">{/* ★縦持ちでも中身を右へそろえる(flex-col items-end)。ブロックのままだとポーズがライフの行の**左端**に並び、
     ライフ表示を大きくして行が左へ伸びると、ポーズもいっしょにレーンの上へ出ていた(2026-09-24・ユーザーの実機の指摘) */}<div className="flex flex-col items-end landscape:flex-row landscape:items-center landscape:gap-2"><RhythmHudLife hud={hudRef.current} settings={settings} isLandscape={isLandscape} lifeBoxRef={lifeBoxRef} lifeDamageRef={lifeDamageRef}/><button data-rhythm-pause aria-label="ポーズ" className="pointer-events-auto mt-1 flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-full border border-white/20 bg-slate-900/90 text-2xl font-black text-white shadow-[0_0_12px_rgba(103,232,249,0.18)] landscape:mt-0" onClick={pause}>Ⅱ</button></div><b ref={abilityBadgeRef} data-rhythm-ability-badge hidden className="mt-1 block text-right text-[9px] font-black leading-none tracking-[0.06em] text-amber-200 landscape:inline-block landscape:mt-0.5" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}/></div></header>{/* ===== 曲の進みぐあい・経過時間・自己ベスト比(2026-09-24) =====
@@ -39853,7 +39916,10 @@ const RHYTHM_MULTI_RESULT_MS = 45000;
 //   対戦の 3・2・1(3秒)+ 演奏画面の READY・3・2・1(0.8秒×4)= 曲が鳴りはじめるまで + 曲が終わってから10秒。
 //   最後まで演奏した人は曲が終わった瞬間にスコアを送ってくるので、それ以上待っても届かない人は抜けた人
 //   (2026-10-03・ユーザー指摘「演奏後30秒わからないのは不便」。以前は一律30秒だった)
-const RHYTHM_MULTI_PLAY_GRACE_MS = RHYTHM_MULTI_START_COUNTDOWN_SEC * 1000 + 4 * 800 + 10000;
+//   2026-10-10 から曲の前の幕(RHYTHM_SONG_INTRO_MS・30-rhythm-play.jsx)のぶんも足す。マルチは全員がこの長さだけ待つ
+//   (この部品だけを読み込む検査 rhythm-multi-check では 30 番が無いので、同じ値を控えに置く)
+const RHYTHM_MULTI_PLAY_GRACE_MS = RHYTHM_MULTI_START_COUNTDOWN_SEC * 1000
+  + (typeof RHYTHM_SONG_INTRO_MS === 'number' ? RHYTHM_SONG_INTRO_MS : 1800) + 4 * 800 + 10000;
 // 演奏中に溜めておく知らせの上限(5人・数分のライブなら届かない量。超えたら古いものから捨てる)
 const RHYTHM_MULTI_QUEUE_MAX = 300;
 // 公開ルームは、2人以上いて、この時間だれも出入りしなければメンバー確定
