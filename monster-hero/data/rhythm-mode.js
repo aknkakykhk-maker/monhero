@@ -27479,6 +27479,8 @@ const RHYTHM_DIFFICULTY_STEP_UNLOCK_BY=Object.freeze({EXPERT:'HARD', MASTER:'EXP
 const rhythmDifficultyUnlockRequirement=(difficultyId,songId='')=>RHYTHM_DIFFICULTY_UNLOCK_BY[difficultyId]||null;
 // 記録の形が壊れていても「解放されていない」に倒す(勝手に開けない)。
 const rhythmDifficultyUnlocked=(songId,difficultyId,bestRecords)=>{
+  // 実機で試すための試作ブランチだけ: 試作の曲は MASTER の譜面しか無いので、新しいセーブでもすぐ遊べるよう鍵をかけない(main へは入れない)
+  if(songId==='sheriruth_proto')return true;
   const required=RHYTHM_DIFFICULTY_UNLOCK_BY[difficultyId];
   if(!required)return true;
   const bySong=bestRecords&&typeof bestRecords==='object'?bestRecords[songId]:null;
