@@ -1,6 +1,6 @@
 // 簡易シミュレーター: タクティクスプロを、ブラウザなしで 1 ラン(WAVE 1〜10)まるごと回す。
 //
-//   node tools/playbot/sim/battle.js --diff Hard,Expert,Master --runs 300 --ex bot,best [--seed 1] [--max-wave 10] [--md <file>] [--assist bot|none|<カードの id>] [--training bot|none] [--emergency auto|none] [--dist-bonus on|off] [--unique-up on|off]
+//   node tools/playbot/sim/battle.js --diff Hard,Expert,Master --runs 300 --ex bot,best [--seed 1] [--max-wave 10] [--md <file>] [--assist bot|none|<カードの id>] [--training bot|none] [--emergency auto|brink|bot|none] [--dist-bonus on|off] [--unique-up on|off]
 //     --ex … EX の使い方。bot(いまのボットの決め方 = tactics-brain.js maybeUseEx と同じ条件)・
 //            best(上手な使い方)・none(EX を使わない)。カンマ区切りで並べると全部回して並べる(「bot|best」とも書ける)
 //   SIM_TRACE=1 を付けると、1ターンごとの経過(予告・EX・使ったカード・与ダメ・ライフ/ガッツ)を出す
@@ -954,11 +954,18 @@ function playTurn(st) {
   const exBefore = Object.values(st.exUses).reduce((a, b) => a + b, 0);
   EX_POLICIES[st.exMode](st);
   const exUsedNow = Object.values(st.exUses).reduce((a, b) => a + b, 0) > exBefore;
-  let { picks, discards } = decideTurn(st);
+  // 緊急回復②「全滅の手前」(brink・bot。tactics-brain.js emergencyWhy 107〜124 と同じ判断)はカードを選ぶ前に見る
+  let emergencyBrink = (st.emergency === 'brink' || st.emergency === 'bot') && !exUsedNow && st.enemy.hp > 0 && brinkWhy(st);
+  let { picks, discards } = emergencyBrink ? { picks: [], discards: [] } : decideTurn(st);
+  if (emergencyBrink) {
+    st.units = G.rateHealTacticsBoard(st.units, 0.3, 0.3, true).units;
+    st.emergencyUses += 1;
+    if (TRACE) console.log('  緊急回復(全滅の手前・全員 30%)');
+  }
   // 緊急回復(7 版目。60-app.jsx useEmergency 11939・AUTO の条件 12996〜13001): 出せるカードが1枚も無く(EX も使っていない)、
   //   ガッツさえあれば出せるカードがあるターンに使う。全員(倒れた子も)のライフ・ガッツを上限の 30% ずつ戻し、そのターンはカードを使わずに敵の番へ。
   //   ゲームでは回数の上限は無い。ここは AUTO と同じ「捨てる前に」使う(AUTO はカードを捨てない)
-  if (st.emergency === 'auto' && !picks.length && !exUsedNow && st.enemy.hp > 0) {
+  if ((st.emergency === 'auto' || st.emergency === 'bot') && !emergencyBrink && !picks.length && !exUsedNow && st.enemy.hp > 0) {
     const actors = G.tacticsFilledSlots(st.units).filter((i) => G.canTacticsSlotAct(st.units, i) && !exLockedSlots(st).includes(i));
     const lacksOnlyGuts = st.hand.some((c) => !c.teach && actors.some((i) => getCardGuts(st, c, i) <= G.normalizeTacticsUnit(st.units[i]).maxGuts));
     if (lacksOnlyGuts) {
@@ -1302,6 +1309,22 @@ const bestSlotFor = (mon, free) => free.slice().sort((a, b) => (G.DIST_APTITUDE_
 
 // 子ごとの与ダメージ(組み合わせの理由に使う)
 const dmgById = (st) => Object.fromEntries(Object.entries(st.dmgBySlot).filter(([i]) => st.mons[i]).map(([i, v]) => [st.mons[i].id, v]));
+// ---------- 緊急回復②「全滅の手前」(tactics-brain.js emergencyWhy 107〜124 を写した) ----------
+// 次の攻撃で倒れる子がいて、そのあと立っている子が1体以下になり、+30% なら持ちこたえる子がいるときに押す。
+// 使える回復カード(みゅあ・メロソ・ももすけ)があれば押さない。倒れそうなのが1体で貫通撃でなく、使えるガードのカードがあれば押さない(守りで受ける)
+function brinkWhy(st) {
+  const alive = G.tacticsFilledSlots(st.units).filter((i) => !G.normalizeTacticsUnit(st.units[i]).downed);
+  if (!alive.length) return false;
+  const actors = alive.filter((i) => G.canTacticsSlotAct(st.units, i) && !exLockedSlots(st).includes(i));
+  const usable = (pred) => st.hand.some((c) => pred(c) && actors.some((i) => getCardGuts(st, c, i) <= G.normalizeTacticsUnit(st.units[i]).guts));
+  if (usable((c) => c.teach && c.type === 'heal')) return false;
+  const falling = alive.filter((i) => { const u = G.normalizeTacticsUnit(st.units[i]); const d = aimDamageOf(st, i); return d > 0 && d >= u.hp; });
+  const saved = falling.filter((i) => { const u = G.normalizeTacticsUnit(st.units[i]); return aimDamageOf(st, i) < Math.min(u.maxHp, u.hp + Math.floor(u.maxHp * 0.3)); });
+  if (!saved.length || alive.length - falling.length >= 2) return false;
+  if (falling.length === 1 && threatOf(st.intent) !== 'pierce' && usable((c) => c.type === 'guard')) return false;
+  return true;
+}
+
 // ---------- 固有技の強化(供モンが入った WAVE のあと) ----------
 const MAX_UNIQUE_LV = 8; // 11-masu-progression.jsx MAX_UNIQUE_SKILL_LEVEL(load-game.js は 11 を読まないので写す)
 // ゲーム: 供モンが入ると強化ポイントを 1〜4(60-app.jsx 14648: Math.floor(Math.random()*4)+1)。1ポイントで固有技が1段(upgradeUnique 14998・最大 MAX_UNIQUE_SKILL_LEVEL 8)。
@@ -1378,7 +1401,7 @@ function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWa
     useDistBonus: distBonus, distBonus: [0, 0, 0, 0], waveDist: [0, 0, 0, 0], joinDistCatchUp: 1,
     // 固有技の強化(6 版目): 枠ごとの段・残りの強化ポイント・強化の記録
     useUniqueUp: uniqueUp, uniqueLv: {}, upgradePoints: 0, uniqueLog: [],
-    // 緊急回復(7 版目): 'auto'(AUTO と同じ条件)・'none'(使わない。いまのブラウザのボットは使わない)
+    // 緊急回復(7 版目): 'auto'(① AUTO と同じ条件)・'brink'(② 全滅の手前だけ)・'bot'(①+②。2026-10-10 からのブラウザのボット arena-1 と同じ)・'none'(使わない。それまでのボット)
     emergency, emergencyUses: 0,
   };
   if (assist !== 'bot' && assist !== 'none' && !TEACH_BY_ID[assist]) throw new Error(`アシカの選び方が分からない: ${assist}`);
@@ -1493,7 +1516,12 @@ if (require.main === module) {
   const MAX_WAVE = Number(argOf('--max-wave', '10'));
   const MODES = argOf('--ex', 'bot,best').split(/[,|]/).filter((x) => EX_POLICIES[x]);
   const ONLY = argOf('--hero', '');
-  const EMERGENCY = argOf('--emergency', 'auto'); // 緊急回復(auto・none)。7 版目から既定は auto
+  // 緊急回復(auto・brink・bot・none)。カンマで並べると、1つ目で全部(EX の使い方すべて・実戦との突き合わせ・bot と best の差)を出し、
+  //   2つ目からは EX=best だけ回して難易度ごとの表へ列を足す(2026-10-10 ハカセくん: 「AUTO と同じ」と「全滅の手前だけ」を並べる)
+  const EM_LIST = argOf('--emergency', 'brink,auto').split(',').filter(Boolean);
+  const EMERGENCY = EM_LIST[0];
+  const EM_EXTRA = EM_LIST.slice(1);
+  const EM_JA = { none: '使わない', auto: 'AUTO と同じ', brink: '全滅の手前だけ', bot: 'ボットと同じ(AUTO の条件+全滅の手前)' };
   const DIST_BONUS = argOf('--dist-bonus', 'on') !== 'off'; // WAVE 報酬の間合いボーナス(5 版目)
   const UNIQUE_UP = argOf('--unique-up', 'on') !== 'off'; // 固有技の強化(6 版目)
   const TRAINING = argOf('--training', 'bot'); // トレーニングの選び方(bot・none)。4 版目から既定は bot
@@ -1525,6 +1553,23 @@ if (require.main === module) {
     }
     console.log(`  ${mode}: ${((Date.now() - t0) / 1000).toFixed(0)} 秒`);
   }
+  const statsX = {}; // [緊急回復][heroId][diff](EX=best だけ)
+  for (const em of EM_EXTRA) {
+    statsX[em] = {};
+    for (const m of heroes) {
+      statsX[em][m.id] = {};
+      for (const d of DIFFS) {
+        let sum = 0; let clear = 0; let boss = 0; let eu = 0;
+        for (let i = 0; i < RUNS; i++) {
+          const allies = pickAllies(m.id, mulberry32(hashSeed(SEED, 'allies', m.id, d, i)));
+          const r = simulateRun({ heroId: m.id, allies, difficulty: d, seed: hashSeed(SEED, i), maxWave: MAX_WAVE, exMode: 'best', assist: ASSIST, training: TRAINING, emergency: em, distBonus: DIST_BONUS, uniqueUp: UNIQUE_UP });
+          sum += r.wave; if (r.result === 'clear') clear++; if (r.wave >= MAX_WAVE) boss++; eu += r.emergencyUses;
+        }
+        statsX[em][m.id][d] = { avg: sum / RUNS, clear: clear / RUNS, boss: boss / RUNS, bossWin: boss ? clear / boss : NaN, emergency: eu / RUNS };
+      }
+    }
+    console.log(`  緊急回復 ${em}(best): ${((Date.now() - t0) / 1000).toFixed(0)} 秒`);
+  }
   const sec = ((Date.now() - t0) / 1000).toFixed(1);
   // ブラウザの実戦(tactics-knowledge.json)。ボットが止まった回(stopped)は数えない
   const knowledge = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'tactics-knowledge.json'), 'utf8'));
@@ -1533,7 +1578,8 @@ if (require.main === module) {
   for (const r of knowledge.runs || []) {
     if (r.mode !== 'tacticsPro' || !['clear', 'wipe', 'timeout'].includes(r.result)) continue;
     // 実戦のボットは 2026-10-10 から緊急回復を使える(r.bot.emergency。古い回は使わない)。シミュレーターの --emergency と同じ条件の回だけ比べる
-    if (!!(r.bot && r.bot.emergency) !== (EMERGENCY !== 'none')) continue;
+    //   シミュレーターが 'bot'(AUTO の条件+全滅の手前)なら緊急回復を使えるボット(r.bot.emergency が入)の回と、それ以外なら使えないボットの回と比べる
+    if (!!(r.bot && r.bot.emergency) !== (EMERGENCY === 'bot')) continue;
     const id = idByName[r.hero]; if (!id || !DIFFS.includes(r.difficulty) || !heroes.some((m) => m.id === id)) continue;
     const k = `${id}|${r.difficulty}`;
     (real[k] = real[k] || []).push(r.result === 'clear' ? MAX_WAVE : Number(r.wave) || 0);
@@ -1548,7 +1594,7 @@ if (require.main === module) {
   const bossCell = (x) => (x.boss > 0 ? `${pct(x.bossWin)}(${pct(x.boss)})` : '—');
   out(`# 簡易シミュレーター(タクティクスプロ・${DIFFS.join(' / ')}・各 ${RUNS} 回・EX の使い方 ${MODES.join(' / ')})`);
   out();
-  out(`\`node tools/playbot/sim/battle.js\` の出力(7 版目・スキル・アシカ・トレーニング・間合いボーナス・固有技の強化・緊急回復入り。トレーニング ${TRAINING}・アシカ ${ASSIST}・間合いボーナス ${DIST_BONUS ? 'on' : 'off'}・固有技の強化 ${UNIQUE_UP ? 'on' : 'off'}・緊急回復 ${EMERGENCY})。式はゲームのコード(60-app.jsx・19-difficulties・22-enemy・32-tactics-units)から写したもの。`);
+  out(`\`node tools/playbot/sim/battle.js\` の出力(7 版目・スキル・アシカ・トレーニング・間合いボーナス・固有技の強化・緊急回復入り。トレーニング ${TRAINING}・アシカ ${ASSIST}・間合いボーナス ${DIST_BONUS ? 'on' : 'off'}・固有技の強化 ${UNIQUE_UP ? 'on' : 'off'}・緊急回復 ${EM_LIST.map((em) => EM_JA[em] || em).join(' / ')}。1つ目の「${EM_JA[EMERGENCY] || EMERGENCY}」で EX の使い方3通り・実戦との突き合わせ・bot と best の差を出し、2つ目からは EX=best だけを列に足した)。式はゲームのコード(60-app.jsx・19-difficulties・22-enemy・32-tactics-units)から写したもの。`);
   out();
   out('**2 版目で入れたもの**(社長の決まり「ステは弱いけどスキル系で調整してるから、そこもちゃんと見て判断して」):');
   out();
@@ -1581,12 +1627,13 @@ if (require.main === module) {
     out(`## ${d}`);
     out();
     const head = MODES.map((mo) => `${MODE_JA[mo]} 平均 | 序盤越え | クリア | ボス戦 | EX`).join(' | ');
-    out(`| 勇者モン | 前の版 | ${head} |`);
-    out(`| --- | --- | ${MODES.map(() => '--- | --- | --- | --- | ---').join(' | ')} |`);
+    const headX = EM_EXTRA.map((em) => ` | 緊急回復 ${EM_JA[em] || em}(EX=best)平均 | クリア | ボス戦 | 緊急回復の回数`).join('');
+    out(`| 勇者モン | 前の版 | ${head}${headX} |`);
+    out(`| --- | --- | ${MODES.map(() => '--- | --- | --- | --- | ---').join(' | ')}${EM_EXTRA.map(() => ' | --- | --- | --- | ---').join('')} |`);
     const key = MODES.includes('bot') ? 'bot' : MODES[0];
     for (const m of [...heroes].sort((a, b) => stats[key][b.id][d].avg - stats[key][a.id][d].avg)) {
       const old = (OLD[m.name] || {})[d];
-      out(`| ${m.name} | ${old ? old.avg.toFixed(2) : '-'} | ${MODES.map((mo) => { const s = stats[mo][m.id][d]; return `${s.avg.toFixed(2)} | ${pct(s.past2)} | ${pct(s.clear)} | ${bossCell(s)} | ${s.heroEx.toFixed(1)}`; }).join(' | ')} |`);
+      out(`| ${m.name} | ${old ? old.avg.toFixed(2) : '-'} | ${MODES.map((mo) => { const s = stats[mo][m.id][d]; return `${s.avg.toFixed(2)} | ${pct(s.past2)} | ${pct(s.clear)} | ${bossCell(s)} | ${s.heroEx.toFixed(1)}`; }).join(' | ')}${EM_EXTRA.map((em) => { const x = statsX[em][m.id][d]; return ` | ${x.avg.toFixed(2)} | ${pct(x.clear)} | ${bossCell(x)} | ${x.emergency.toFixed(1)}`; }).join('')} |`);
     }
   }
   if (MODES.includes('bot') && MODES.includes('best')) {
@@ -1623,7 +1670,7 @@ if (require.main === module) {
   out();
   out('アシストカードは 3 版目、トレーニングは 4 版目から入れた(選び方 --assist・--training、既定はどちらも bot)。ずれは式を合わせに行かず、そのまま書く(差 = 実戦 − シミュレーター)。');
   out('ボットが途中で止まった回(stopped)は除いた。実戦のクリアは WAVE 10 として数えた。「前の版」は 1 版目(スキル無し)。');
-  out(`実戦は${EMERGENCY !== 'none' ? '緊急回復を使えるボットの回だけ' : '緊急回復を使わないボットの回だけ(2026-10-10 までの回はすべてこちら)'}を数えた(シミュレーターの緊急回復 ${EMERGENCY} と合わせる)。`);
+  out(`実戦は${EMERGENCY === 'bot' ? '緊急回復を使えるボット(arena-1 から)の回だけ' : '緊急回復を使わないボットの回だけ(2026-10-10 までの回はすべてこちら)'}を数えた(シミュレーターの緊急回復は「${EM_JA[EMERGENCY] || EMERGENCY}」)。`);
   out();
   out(`| 勇者モン | 難易度 | 実戦の回数 | 実戦の平均 WAVE | 前の版 | ${MODES.map((mo) => `${MODE_JA[mo]} | 差`).join(' | ')} |`);
   out(`| --- | --- | --- | --- | --- | ${MODES.map(() => '--- | ---').join(' | ')} |`);
