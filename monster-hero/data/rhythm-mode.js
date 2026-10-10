@@ -1199,14 +1199,15 @@ const rhythmScrollTimeAt=s=>{
 };
 // 空中のノーツの手ごたえ(試作・2026-10-10・社長「見た目にもっと力いれてほしい」)。色は "r,g,b" の文字列。
 // ピンセットくんの色の案で差し替えるのはここだけ(core=芯の白っぽい光・main=金・accent=差し色の水色)
-const RHYTHM_SKY_FX={core:'255,251,235',main:'252,211,77',accent:'125,211,252'};
+// 色は演奏を始めるときに、空中の段の色(rhythmSkyTheme().fx)で上書きする(金はモンスターノーツと同じ系統なので使わない)
+const RHYTHM_SKY_FX={core:'255,255,255',main:'226,232,240',accent:'196,181,253'};
 // 取ったときの弾け方の長さ(ms)。地上(RHYTHM_HIT_EFFECT_MS.NORMAL=340)より長く、ふわっと残す
 const RHYTHM_SKY_HIT_MS=560;
 const RHYTHM_SKY_INPUT={active:false};
 // 空中の段の色(試作): 空中の面・空中の判定ライン・柱が使う。空中のノーツの見た目の案(localStorage 'mh_sky_tap_style_proto')ごとに変えられる。
 // 今あるノーツの色(水色・緑・紫・ピンク・オレンジ・黄緑・金のモンスターノーツ)とかぶらない色を選ぶこと
 const RHYTHM_SKY_THEMES=Object.freeze({
-  default:Object.freeze({rgb:'226,232,240',core:'#ffffff',label:'白銀'}),
+  default:Object.freeze({rgb:'226,232,240',core:'#ffffff',label:'白銀',fx:Object.freeze({core:'255,255,255',main:'226,232,240',accent:'186,230,253'})}),
 });
 const rhythmSkyTheme=()=>{try{const v=typeof localStorage!=='undefined'?localStorage.getItem('mh_sky_tap_style_proto'):'';return RHYTHM_SKY_THEMES[v]||RHYTHM_SKY_THEMES.default;}catch{return RHYTHM_SKY_THEMES.default;}};
 // 空中の段のある譜面で、指を押した高さ(プレイエリアの中の割合)。空中の段が無い譜面では null

@@ -463,7 +463,8 @@ const rhythmSlotAbility=masu=>(masu&&masu.baseId)
 // 道と同じ台形を空中の高さへ持ち上げた「空中の面」に、レーンの区切り・奥から手前へ流れる光・光る縁・手前の光の柱・空中の判定ラインを描く。
 // 色は rhythmSkyTheme()(空中のノーツの案ごと)。プレイエリアを 0〜100 の座標で描くので、画面の大きさに合わせて伸びる
 function RhythmSkyStage({plane}){
-  const theme=rhythmSkyTheme(),c=theme.rgb,f=v=>Number(v).toFixed(2),fr=plane.front;
+  const theme=rhythmSkyTheme();if(theme.fx)Object.assign(RHYTHM_SKY_FX,theme.fx);
+  const c=theme.rgb,f=v=>Number(v).toFixed(2),fr=plane.front;
   return <svg data-rhythm-sky-stage viewBox="0 0 100 100" preserveAspectRatio="none" style={{position:'absolute',inset:0,width:'100%',height:'100%',pointerEvents:'none',overflow:'visible'}}>
     <style>{`@keyframes mhSkyFlow{from{transform:translateY(-12px)}to{transform:translateY(${f(fr.y)}px)}}[data-rhythm-sky-flow]{animation:mhSkyFlow 1.3s linear infinite}[data-rhythm-sky-flow="2"]{animation-delay:-.65s}@keyframes mhSkyPulse{0%,100%{opacity:.55}50%{opacity:1}}[data-rhythm-sky-pulse]{animation:mhSkyPulse 1.3s ease-in-out infinite}@media (prefers-reduced-motion:reduce){[data-rhythm-sky-flow],[data-rhythm-sky-pulse]{animation:none}}`}</style>
     <defs>
