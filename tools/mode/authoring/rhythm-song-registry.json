@@ -768,6 +768,20 @@
     "subdivisionsPerBeat": 4,
     "source": "detected"
    }
+  },
+  "sheriruth": {
+   "audio": "monster-hero/audio/bgm-sheriruth.mp3",
+   "chartIntensity": "extreme",
+   "chartRevision": 28,
+   "audioSha256": "efc67a5fa5167337198437ef50c4d784fa2ccb6a996d9e98725e844e22c5855b",
+   "durationMs": 137592,
+   "analyzedTiming": {
+    "bpm": 184.99,
+    "beatZeroMs": 711.6,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   }
   }
  }
 }

@@ -69,6 +69,8 @@ const BGM_TRACKS = [
   { id:'melo_monster_short', name:'Monster short ver.', creator:'オリジナル', src:'audio/bgm-monster-short.mp3', gain:1, loop:true },
   { id:'melo_anima', name:'ANiMA', creator:'オリジナル', src:'audio/bgm-anima.mp3', gain:1, loop:true },
   { id:'melo_journey', name:'Journey', creator:'DECO*27', src:'audio/bgm-journey.mp3', gain:1, loop:true },
+  { id:'melo_sheriruth', name:'Sheriruth', creator:'Team Grimoire', src:'audio/bgm-sheriruth.mp3', gain:1, loop:true },
+  { id:'melo_sheriruth_proto', name:'Sheriruth 試作', creator:'Team Grimoire', src:'audio/bgm-sheriruth-proto.mp3', gain:1, loop:true },
   { id:'melo_dullahan_clockwork_alt', name:'呪われた騎士の時計仕掛け -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-clockwork-alt.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost', name:'鋼鉄の亡霊', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost_alt', name:'鋼鉄の亡霊 -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost-alt.mp3', gain:1, loop:true },
