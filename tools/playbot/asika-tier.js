@@ -236,8 +236,11 @@ function analyzeAsika(cache, real) {
   return { cards, base, none, botPick, cell };
 }
 
-// ボットの使い方で弱く見えているか(上手な使い方のほうが 0.15 点以上よい・ボットがほとんど使わない)
-const botWeak = (c) => (c.bestScore - c.botScore >= 0.15) || DIFFS.some((d) => c.per[d].bot.uses < 0.3 && c.per[d].best.uses >= 1);
+// ボットの使い方で弱く見えているか: その難易度で、上手に使うと 10 枚の中の差が 0.2 WAVE 以上よくなり、
+// しかもボットの使った回数が上手の 6 割未満(ボットが使い渋っている)。どの難易度で起きているかを返す
+const botWeakDiffs = (c) => DIFFS.filter((d) => c.per[d].best.lift - c.per[d].bot.lift >= 0.2 && c.per[d].bot.uses < c.per[d].best.uses * 0.6);
+const botWeak = (c) => botWeakDiffs(c).length > 0;
+const botWeakText = (c) => botWeakDiffs(c).map((d) => `${d} はボット ${sgn(c.per[d].bot.lift, r1)}(${r1(c.per[d].bot.uses)} 回/戦)→ 上手 ${sgn(c.per[d].best.lift, r1)}(${r1(c.per[d].best.uses)} 回/戦)`).join('・');
 
 function cardWords(c) {
   const good = []; const bad = [];
@@ -247,18 +250,21 @@ function cardWords(c) {
   good.push(NATURE[c.id]);
   if (strong.length) good.push(`${strong.join('・')} で伸びる`);
   if (weak.length) bad.push(`${weak.join('・')} で伸びない`);
-  if (c.id === 'myaru') bad.push('自傷があり、ボットは戦いの中で一度も使わない(点数でも自傷は −5)');
+  if (c.id === 'myaru') bad.push('自傷があり、飲んだ子の手番も1つ使う。ボットは戦いの中で一度も使わない');
   if (c.id === 'dra' || c.id === 'cadmium') bad.push('効き目が小さく、1体だけの序盤は攻撃1枚と引きかえになる');
   if (c.id === 'kiki') bad.push('1体だけのときは、枚数が増えても2枚目は半分の力');
+  if (c.id === 'poltz') bad.push('ガードで受け止めても回数を使う。敵の攻撃を受けないと何も起きない');
   if (c.id === 'atsu') good.push('止めたターンは被ダメ0');
   if (['mua', 'momosuke', 'meloso'].includes(c.id)) good.push('倒れた子にも回復が貯まる');
-  if (botWeak(c)) bad.push(`ボットの使い方が下手(上手に使うと点 ${sgn(c.bestScore)}・ボットのままだと ${sgn(c.botScore)})`);
+  if (botWeak(c)) bad.push(`ボットが使い渋っている(${botWeakText(c)})`);
   const reason = (() => {
     const bits = [];
-    if (['S', 'A'].includes(c.tier)) bits.push(`${KIND[c.id]}のカードとして、優先すると WAVE ${sgn(c.score * 2, r1)}`);
-    else if (['C', 'D'].includes(c.tier)) bits.push(`優先しても WAVE ${sgn(c.score * 2, r1)}(ほかのカードを選んだほうが伸びる)`);
+    const best = DIFFS.slice().sort((x, y) => c.per[y].lift - c.per[x].lift)[0];
+    if (['S', 'A'].includes(c.tier)) bits.push(`${KIND[c.id]}のカード。優先すると WAVE ${sgn(c.score * 2, r1)}`);
+    else if (['C', 'D'].includes(c.tier)) bits.push(`優先すると WAVE ${sgn(c.score * 2, r1)}。ほかのカードを選んだほうが伸びる`);
     else bits.push(`優先しても平均なみ(WAVE ${sgn(c.score * 2, r1)})`);
-    if (botWeak(c)) bits.push('ボットの使い方では弱く見えている');
+    if (c.tier !== tiers[best] && ['S', 'A'].includes(tiers[best])) bits.push(`${best} では ${tiers[best]}(WAVE ${sgn(c.per[best].lift, r1)})`);
+    if (botWeak(c)) bits.push(['C', 'D'].includes(c.tier) || c.score < 0 ? 'ボットは使い渋るが、上手に使っても弱い' : 'ボットの使い方では弱く見えている');
     if (c.id === 'momosuke') bits.push('ガッツ切れがいちばんの負け筋なので効く');
     if (c.id === 'atsu') bits.push('ボットは必ず最初に選ぶ');
     return bits.join('。');
@@ -311,32 +317,43 @@ function analyzeCombo(cache, real) {
       const pts = Number.isFinite(lm) ? (le * 5 + lm * 3) / 8 : le;
       const share = e && e.allyN ? e.allyShare / e.allyN : NaN;
       const rp = [...(real.pair[`${h.id}|${a.id}|Expert`] || []), ...(real.pair[`${h.id}|${a.id}|Master`] || []), ...(real.pair[`${h.id}|${a.id}|Hard`] || [])];
-      rows.push({ h, a, pts, le, lm, share, shareAvg: allyShareAvg[a.id], realN: rp.length, realLift: rp.length ? rp.reduce((x, y) => x + y, 0) / rp.length : NaN });
+      rows.push({ h, a, raw: pts, le, lm, share, shareAvg: allyShareAvg[a.id], realN: rp.length, realLift: rp.length ? rp.reduce((x, y) => x + y, 0) / rp.length : NaN });
     }
   }
+  // ★相性 = その組の伸び − その供モンがどの勇者でも出す伸び(供モンとしての強さ)。
+  //   引かないと、供モンとして強い子(ゴーストなど)がどの勇者とも「よく合う」に並んでしまう
+  const allyMain = {};
+  for (const a of MONS) { const xs = rows.filter((x) => x.a.id === a.id && Number.isFinite(x.raw)); allyMain[a.id] = xs.length ? xs.reduce((s0, x) => s0 + x.raw, 0) / xs.length : 0; }
+  for (const x of rows) { x.allyMain = allyMain[x.a.id]; x.pts = x.raw - allyMain[x.a.id]; }
+  rows.allyMain = allyMain;
   return rows;
 }
 function comboReason(x, good) {
   const { h, a } = x;
   const bits = [];
   const hs = bestSlotOf(h); const as = bestSlotOf(a);
-  const aApt = (a.distAptitude || [])[as];
-  if (hs === as && /^[SA]$/.test(aApt || '')) bits.push(good ? '' : `得意な枠(${DIST_JA[as]})が勇者と重なり、供モンが苦手な枠へ回る`);
-  else if (good && hs !== as && /^[SA]$/.test(aApt || '')) bits.push(`得意な枠が勇者(${DIST_JA[hs]})と${DIST_JA[as]}で分かれ、両方が得意な間合いで撃てる`);
   const role = roleOf(a); const hrole = roleOf(h);
+  if (!good && hs === as) bits.push(`得意な枠(${DIST_JA[as]})が勇者と重なり、供モンが空いた別の枠から撃つ`);
+  if (good && hs !== as && /^[SA]$/.test((a.distAptitude || [])[as] || '')) bits.push(`得意な枠が勇者(${DIST_JA[hs]})と供モン(${DIST_JA[as]})で分かれ、どちらも得意な間合いで撃てる`);
+  const MOCHI = ['Mocchi', 'Mitarashi'];
+  if (good && MOCHI.includes(h.id) && MOCHI.includes(a.id)) bits.push('どちらも「もち肌」(被ダメ −20%)で、2体とも倒れにくい');
   if (good && role === '守り' && h.baseHp <= 400) bits.push(`ライフ ${h.baseHp} の勇者を、守りの EX で支える`);
-  else if (good && role === '支え' && hrole === '攻め') bits.push(`攻めの勇者に、${roleOf(a)}の EX が噛み合う`);
+  else if (good && role === '守り') bits.push('守りの EX で勇者が倒れにくくなる(供モン自身は火力より守りで効く)');
+  else if (good && role === '支え' && hrole === '攻め') bits.push('攻めの勇者に、支えの EX が噛み合う');
   else if (good && role === '攻め' && hrole !== '攻め') bits.push(`${hrole}役の勇者に足りない火力を補う`);
-  if (Number.isFinite(x.share) && Number.isFinite(x.shareAvg)) {
-    const rel = x.share / Math.max(0.01, x.shareAvg);
-    if (good && rel >= 1.15) bits.push(`供モンの火力の割合がいつもの ${rel.toFixed(1)} 倍`);
-    if (!good && rel <= 0.85) bits.push(`供モンの火力の割合がいつもの ${rel.toFixed(1)} 倍しか出ない`);
-  }
   if (!good && role === hrole && role !== '攻め') bits.push(`どちらも${role}役で、火力が足りない`);
+  if (!good && role !== '攻め' && hrole !== '攻め' && role !== hrole) bits.push(`${hrole}役の勇者に${role}役の供モンで、火力が足りない`);
+  if (!good && h.baseHp <= 400 && a.baseHp <= 400) bits.push(`どちらもライフ 400 以下で打たれ弱い`);
   if (!good && h.baseGuts <= 90 && a.baseGuts <= 90) bits.push('どちらもガッツが少なく、撃ち続けられない');
-  const s = bits.filter(Boolean);
-  if (!s.length) s.push(good ? `勇者特性「${h.trait || '—'}」と、供モンの固有技・EX がよく噛み合う(シミュレーターで伸びる)` : 'この勇者のほかの供モンより先へ進めない(はっきりした理由は回数を足して確かめる)');
-  return s.slice(0, 2).join('。');
+  if (Number.isFinite(x.share) && Number.isFinite(x.shareAvg) && x.shareAvg > 0) {
+    const rel = x.share / x.shareAvg;
+    if (good && rel >= 1.1) bits.push(`供モンの火力の割合がいつもの ${rel.toFixed(1)} 倍に伸びる`);
+    if (!good && rel <= 0.9) bits.push(`供モンの火力の割合がいつもの ${rel.toFixed(1)} 倍に落ちる`);
+    if (!bits.length && good && rel < 0.8) bits.push(`供モンの火力の割合はいつもの ${rel.toFixed(1)} 倍。火力より EX・固有技の支えで勇者「${h.trait || '—'}」が長く戦える`);
+    if (!bits.length) bits.push(`供モンの火力の割合はいつもの ${rel.toFixed(1)} 倍。${good ? `勇者特性「${h.trait || '—'}」のもとで、供モンの EX・固有技が生きる` : '供モンは働いているが、この勇者のときだけ先へ進みにくい(回数を足して確かめる)'}`);
+  }
+  if (!bits.length) bits.push(good ? `勇者特性「${h.trait || '—'}」のもとで、供モンの EX・固有技が生きる` : 'この勇者のときだけ先へ進みにくい(回数を足して確かめる)');
+  return bits.slice(0, 2).join('。');
 }
 
 // ---------- 書き出し ----------
@@ -377,7 +394,9 @@ function writeAll(cache) {
     o();
     const weak = A.cards.filter(botWeak);
     if (!weak.length) o('- ありません');
-    for (const c of weak) o(`- **${c.name}**: ボットのままだと点 ${sgn(c.botScore)}、上手に使うと ${sgn(c.bestScore)}。1戦で使った回数(Expert)ボット ${r1(c.per.Expert.bot.uses)} 回・上手 ${r1(c.per.Expert.best.uses)} 回`);
+    o('上手に使うと 10 枚の中の差が 0.2 WAVE 以上よくなり、ボットの使った回数が上手の 6 割未満の難易度があるカード。差は「そのカード − 10 枚の平均」(使い方ごと)。');
+    o();
+    for (const c of weak) o(`- **${c.name}**(総合 ${c.tier}): ${botWeakText(c)}。${c.score < 0 ? '上手に使っても平均より下なので、カード自体も弱い' : 'ボットの使い方を直せば上がる見込み'}`);
     o();
     o('## 詳しい表(難易度ごと・届いた WAVE の差)');
     o();
@@ -399,6 +418,7 @@ function writeAll(cache) {
     o('## 実戦の記録について');
     o();
     o('実戦(ブラウザでボットが戦った回)は、ボットがほぼ毎回「あつの挑発」を最初に選ぶため、カードごとの回数がとても偏っています。差は「そのカードを選んだ回の届いた WAVE − その難易度の平均」で、選んだ回が少ないカードは当てになりません。');
+    o('もう1つの偏り: あとの WAVE で選ぶカード(2枚目・3枚目)は、そこまで届いた回にしか出てきません。そのため実戦の差は、ほとんどのカードで大きくプラスに出ます(生き残りの偏り)。いちばん最初に選ばれる「あつの挑発」だけが 0 前後になるのはこのためです。Tier は実戦の差では決めず、シミュレーターで決めています。');
     o();
     o('## 強み・弱み');
     o();
@@ -441,17 +461,25 @@ function writeAll(cache) {
     o();
     o(`更新: ${now}(JST)・シミュレーター: Expert 各 ${cache.combo.runs.Expert} 回・Master 各 ${cache.combo.runs.Master} 回(26 × 25 通り)`);
     o();
-    o('勇者モンごとに、最初に入る供モン(WAVE 2 のあと)を 25 通り入れ替えて回し、その勇者モンの平均との差(届いた WAVE)で並べます。残りの供モン2体はくじ。点 = Expert 5・Master 3 の重み(Master はほとんど WAVE 2 までに決まるので差が小さい)。アシカはボットの選び方、EX とアシカの使い方は上手な使い方。');
+    o('勇者モンごとに、最初に入る供モン(WAVE 2 のあと)を 25 通り入れ替えて回し、その勇者モンの平均との差(届いた WAVE)を出します。残りの供モン2体はくじ。Expert 5・Master 3 の重み(Master はほとんど WAVE 2 までに決まるので差が小さい)。アシカはボットの選び方、EX とアシカの使い方は上手な使い方。');
+    o();
+    o('**相性 = その組の伸び − その供モンがどの勇者と組んでも出す伸び(下の「供モンとしての強さ」)。** 引かないと、供モンとして強い子(ゴースト)がどの勇者とも上位に並んでしまうため。');
+    o();
+    o(`ぶれの目安: 1組は Expert ${cache.combo.runs.Expert} 回なので、相性 ±0.3 くらいまではくじのぶれの中。上位・下位の並びは目安として見る。理由は、間合いの枠・EX の役(攻め/守り/支え)・勇者特性・その組での供モンの火力の割合から機械が書いたもの。`);
+    o();
+    o('## 供モンとしての強さ(どの勇者と組んでも)');
+    o();
+    { const am = Object.entries(C.allyMain).sort((p, q) => q[1] - p[1]); o(`- 強い: ${am.slice(0, 5).map(([id, v]) => `${NAME[id]}(${sgn(v)})`).join('・')}`); o(`- 弱い: ${am.slice(-5).reverse().map(([id, v]) => `${NAME[id]}(${sgn(v)})`).join('・')}`); }
     o();
     o('## よく合う組み合わせ(上位 20)');
     o();
-    o('| 勇者モン | 供モン | 点 | 理由 |');
+    o('| 勇者モン | 供モン | 相性 | 理由 |');
     o('| --- | --- | --- | --- |');
     for (const x of top) o(`| ${x.h.name} | ${x.a.name} | ${sgn(x.pts)} | ${comboReason(x, true)}${confirmed(x, true) ? '(実戦でも確認)' : ''} |`);
     o();
     o('## 合わない組み合わせ(下位 10)');
     o();
-    o('| 勇者モン | 供モン | 点 | 理由 |');
+    o('| 勇者モン | 供モン | 相性 | 理由 |');
     o('| --- | --- | --- | --- |');
     for (const x of bottom) o(`| ${x.h.name} | ${x.a.name} | ${sgn(x.pts)} | ${comboReason(x, false)}${confirmed(x, false) ? '(実戦でも確認)' : ''} |`);
     o();
@@ -493,7 +521,7 @@ function writeAll(cache) {
     ];
     for (const jm of j.モンスター) {
       const xs = out.combo.rows.filter((x) => x.h.name === jm.名前 && Number.isFinite(x.pts)).sort((a, z) => z.pts - a.pts).slice(0, 3);
-      if (xs.length) jm.相性のいい供モン = xs.map((x) => ({ 名前: x.a.name, 理由: `${comboReason(x, true)}(点 ${sgn(x.pts)})` }));
+      if (xs.length) jm.相性のいい供モン = xs.map((x) => ({ 名前: x.a.name, 理由: `${comboReason(x, true)}(相性 ${sgn(x.pts)})` }));
     }
   }
   fs.writeFileSync(jf, JSON.stringify(j, null, 2) + '\n');
