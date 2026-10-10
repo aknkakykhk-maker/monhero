@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c4cfd8cd6d3c767d
+// source-sha256: b031a31101cefd72
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-10 17:38";
+const BUILD_DATE = "2026-10-10 17:42";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -31379,6 +31379,7 @@ const RhythmTapTest = ({
   const monsterSignature = monsters.map(m => m ? `${m.baseId}|${m.imageUrl}|${JSON.stringify(m.colors || null)}` : '-').join(',');
   const canvasNotes = useState(() => rhythmCanvasNotesActive(RELEASE_FLAGS.rhythmCanvasNotes))[0];
   const skyChart = useMemo(() => rhythmChartHasSky(chart?.notes), [chart]);
+  if (skyChart) RHYTHM_SKY_LIFT.set(orientationIsLandscape());
   const skyPlane = (() => {
     if (!skyChart) return null;
     const line = RHYTHM_JUDGMENT_LINE_Y.ratio,
@@ -31389,7 +31390,7 @@ const RhythmTapTest = ({
     for (let i = 0; i <= steps; i++) {
       const y = top + (line - top) * i / steps;
       pts.push({
-        y: (y - RHYTHM_SKY_LIFT_RATIO * rhythmProjectionScale(y) / base) * 100,
+        y: (y - RHYTHM_SKY_LIFT.ratio * rhythmProjectionScale(y) / base) * 100,
         l: rhythmProjectBoundary(0, y) * 100,
         r: rhythmProjectBoundary(RHYTHM_LANE_COUNT, y) * 100,
         gy: y * 100
@@ -35171,7 +35172,7 @@ const RhythmTapTest = ({
     style: {
       position: 'absolute',
       right: '2%',
-      bottom: `calc(var(--mh-judgment-line-bottom,12%) + ${RHYTHM_SKY_LIFT_RATIO * 100}% + 5px)`,
+      bottom: `calc(var(--mh-judgment-line-bottom,12%) + ${RHYTHM_SKY_LIFT.ratio * 100}% + 5px)`,
       fontSize: '12px',
       fontWeight: 800,
       letterSpacing: '.12em',

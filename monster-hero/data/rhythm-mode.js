@@ -1143,6 +1143,9 @@ const RHYTHM_JUDGMENT_LINE_Y={
 // 入力: 空中の段がある譜面だけ、地上と空中の判定ラインの真ん中より上を押した指を「空中」とし、空中のノーツは空中の指でだけ取れる。
 //   スライドは高さを見た目にだけ付け、判定は今までどおり横の位置だけで追う。
 const RHYTHM_SKY_LIFT_RATIO=.16;
+// 横画面では画面の高さが低いので、空中と地上の差を広げる(2026-10-10 社長「モンビーは縦でもできるけど基本は横使い」。
+// 参考動画(横画面)は差が画面の約39%。844×390 で 16% だと 62px しかなく、空中の段がつぶれて見えた)。演奏画面が向きに合わせて set する
+const RHYTHM_SKY_LIFT={ratio:RHYTHM_SKY_LIFT_RATIO,set(landscape){this.ratio=landscape?.3:RHYTHM_SKY_LIFT_RATIO;}};
 const rhythmNoteSkyHeight=note=>{const h=Number(note?.skyHeight);return Number.isFinite(h)&&h>0?Math.min(1,h):0;};
 const rhythmSlideHasSky=note=>Array.isArray(note?.slidePoints)&&note.slidePoints.some(point=>Number(point?.sky)>0);
 const rhythmSlideSkyAt=(note,chartTimeMs)=>{
@@ -1163,11 +1166,11 @@ const rhythmChartHasSky=notes=>Array.isArray(notes)&&notes.some(note=>rhythmNote
 // 画面の高さ yRatio の位置で、高さ1のノーツを何px持ち上げるか(判定ラインの高さで rect.height*RHYTHM_SKY_LIFT_RATIO)
 const rhythmSkyLiftPx=(rect,yRatio)=>{
   const h=Number(rect?.height)||0,line=RHYTHM_JUDGMENT_LINE_Y.ratio,base=rhythmProjectionScale(line);
-  return base>0?h*RHYTHM_SKY_LIFT_RATIO*rhythmProjectionScale(rhythmClamp01(Number(yRatio)))/base:0;
+  return base>0?h*RHYTHM_SKY_LIFT.ratio*rhythmProjectionScale(rhythmClamp01(Number(yRatio)))/base:0;
 };
 // 空中の判定ラインの高さ(プレイエリアの中の割合)と、地上と空中を分ける高さ
-const rhythmSkyLineRatio=()=>RHYTHM_JUDGMENT_LINE_Y.ratio-RHYTHM_SKY_LIFT_RATIO;
-const rhythmSkySplitRatio=()=>RHYTHM_JUDGMENT_LINE_Y.ratio-RHYTHM_SKY_LIFT_RATIO/2;
+const rhythmSkyLineRatio=()=>RHYTHM_JUDGMENT_LINE_Y.ratio-RHYTHM_SKY_LIFT.ratio;
+const rhythmSkySplitRatio=()=>RHYTHM_JUDGMENT_LINE_Y.ratio-RHYTHM_SKY_LIFT.ratio/2;
 // ── 速さの表(試作・2026-10-10・社長「画面が止まって動く」演出)──
 // 試作ブランチだけ。判定の時刻は音楽どおりのまま、ノーツの見た目の位置だけを速さの表で変える。
 // 譜面に scrollChanges:[[時刻ms,倍率],…] があれば、その時刻から先の流れる速さを倍率にする(0で止まる)。
@@ -28333,7 +28336,7 @@ const rhythmSpawnHitEffect=(area,{centerRatio,widthRatio,judgment,monster=false,
   item.style.setProperty('--rhythm-hit-width',`${(width*100).toFixed(2)}%`);
   item.style.setProperty('--rhythm-hit-color',monster?'#fde047':(sky?`rgb(${RHYTHM_SKY_FX.main})`:rhythmHitEffectColor(judgment)));
   // 空中のノーツ(試作)は、空中の判定ラインの高さで弾ける(DOM の部品で描く端末向け。形は地上と同じで、色と高さだけ変える)
-  item.style.setProperty('--rhythm-hit-lift',sky&&!monster?`${(RHYTHM_SKY_LIFT_RATIO*100).toFixed(2)}%`:'0%');
+  item.style.setProperty('--rhythm-hit-lift',sky&&!monster?`${(RHYTHM_SKY_LIFT.ratio*100).toFixed(2)}%`:'0%');
   // MARVELOUSだけ、はじける粒を1つずつ違う色にして虹にする(2026-09-12)。
   // 単色のまま虹に見せる手が無いので、粒そのものの色をCSS変数で配る。
   // ★モンスターノーツは金色を優先する(そちらが特別扱いなので、虹で上書きしない)
@@ -30346,7 +30349,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     const base=style==='beam'||style==='cube'?silver:(style==='ruby'?red:{core:RHYTHM_SKY_FX.core,main:RHYTHM_SKY_FX.main});
     const named=style==='beam'||style==='ruby'||style==='cube';
     const C={core:base.core,main:base.main,accent:(theme&&typeof theme.rgb==='string'&&theme.rgb)||RHYTHM_SKY_FX.accent};
-    const Y=hitY-cssH*RHYTHM_SKY_LIFT_RATIO;
+    const Y=hitY-cssH*RHYTHM_SKY_LIFT.ratio;
     const k=rhythmProjectionScale(rhythmSkyLineRatio())/Math.max(.01,rhythmProjectionScale(RHYTHM_JUDGMENT_LINE_Y.ratio));
     const cx=cssW/2+(h.center*cssW-cssW/2)*k,W=Math.max(34,h.width*cssW*k);
     const strong=h.judgment==='MARVELOUS'||h.judgment==='EXCELLENT'||h.precise,power=strong?1:(h.judgment==='GREAT'?.78:.55);
