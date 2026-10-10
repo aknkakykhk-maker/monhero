@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7f4451f131a00ee0
+// source-sha256: 1d9857e66e9d47c5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-11 08:00";
+const BUILD_DATE = "2026-10-11 08:05";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -30346,7 +30346,8 @@ function RhythmSkyStage({
       width: '100%',
       height: '100%',
       pointerEvents: 'none',
-      overflow: 'visible'
+      overflow: 'visible',
+      zIndex: 2
     }
   }, React.createElement("style", null, `@keyframes mhSkyFlow{from{transform:translateY(-12px)}to{transform:translateY(${f(fr.y)}px)}}[data-rhythm-sky-flow]{animation:mhSkyFlow 1.3s linear infinite}[data-rhythm-sky-flow="2"]{animation-delay:-.65s}@keyframes mhSkyPulse{0%,100%{opacity:.55}50%{opacity:1}}[data-rhythm-sky-pulse]{animation:mhSkyPulse 1.3s ease-in-out infinite}@media (prefers-reduced-motion:reduce){[data-rhythm-sky-flow],[data-rhythm-sky-pulse]{animation:none}}`), React.createElement("defs", null, React.createElement("linearGradient", {
     id: "mhSkyFill",
@@ -30406,12 +30407,12 @@ function RhythmSkyStage({
     y2: "1"
   }, React.createElement("stop", {
     offset: "0",
-    stopColor: "rgb(40,28,92)",
-    stopOpacity: ".30"
+    stopColor: "rgb(48,34,108)",
+    stopOpacity: ".55"
   }), React.createElement("stop", {
     offset: "1",
-    stopColor: "rgb(58,40,128)",
-    stopOpacity: ".62"
+    stopColor: "rgb(66,46,146)",
+    stopOpacity: ".88"
   })), React.createElement("clipPath", {
     id: "mhSkyClip"
   }, React.createElement("polygon", {
