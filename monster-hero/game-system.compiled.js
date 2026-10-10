@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7ec196d266e0cd49
+// source-sha256: 671b5c62be1b3330
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-10 21:19";
+const BUILD_DATE = "2026-10-10 21:25";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -31366,7 +31366,8 @@ const RhythmTapTest = ({
     generationRef = useRef(0),
     mountedRef = useRef(false),
     glowNodesRef = useRef(null),
-    liveTouchSubLanesRef = useRef([]);
+    liveTouchSubLanesRef = useRef([]),
+    liveTouchSkySubLanesRef = useRef([]);
   const tutorialBannerRef = useRef(null),
     tutorialStepRef = useRef(null);
   const calibrationBannerRef = useRef(null),
@@ -33661,6 +33662,8 @@ const RhythmTapTest = ({
     run.outsideStartInputs?.clear();
     run.inputFeedbackState?.clear();
     run.activePointerFeedback?.clear();
+    run.activePointerSkyFeedback?.clear();
+    liveTouchSkySubLanesRef.current = [];
     setPressedLanes([]);
     run.notes.forEach(note => {
       if (note.type === 'HOLD' && note.activePointerId !== null) note.activePointerId = -1;
@@ -33847,6 +33850,7 @@ const RhythmTapTest = ({
   const inputAreaRect = area => RHYTHM_GESTURE_RUNTIME.areaRect(area) || RHYTHM_VIEW_ROTATION.rectOf(area);
   const inputPoint = (clientX, clientY) => RHYTHM_VIEW_ROTATION.point(clientX, clientY);
   const pressedLanesNow = () => [...(liveTouchSubLanesRef.current || []), ...(runRef.current?.activePointerFeedback?.values() || [])];
+  const pressedSkyLanesNow = () => [...(liveTouchSkySubLanesRef.current || []), ...(runRef.current?.activePointerSkyFeedback?.values() || [])];
   const setPressedLanes = coordinates => {
     const area = playAreaRef.current;
     if (!area) return;
@@ -33861,6 +33865,7 @@ const RhythmTapTest = ({
       el.dataset.pressed = want;
       el.style.opacity = pressed ? glowOpacity : '0';
     });
+    if (typeof RHYTHM_CANVAS_RENDERER !== 'undefined' && typeof RHYTHM_CANVAS_RENDERER.setSkyPressed === 'function') RHYTHM_CANVAS_RENDERER.setSkyPressed(pressedSkyLanesNow(), Number(glowOpacity));
   };
   useEffect(() => {
     if (typeof document === 'undefined' || view.status === 'result' || view.status === 'celebrate') return undefined;
@@ -33891,6 +33896,7 @@ const RhythmTapTest = ({
       const run = runRef.current;
       if (!run) return;
       if (run.activePointerFeedback) run.activePointerFeedback.delete(entry.id);
+      if (run.activePointerSkyFeedback) run.activePointerSkyFeedback.delete(entry.id);
       setPressedLanes(pressedLanesNow());
       inputEnds([{
         inputKey: rhythmInputKey('pointer', entry.id),
@@ -33911,7 +33917,8 @@ const RhythmTapTest = ({
         return;
       }
       run.activePointerFeedback = run.activePointerFeedback || new Map();
-      rhythmSkyGroundFeedback(p.y, rect) ? run.activePointerFeedback.set(entry.id, subLaneCoordinate) : run.activePointerFeedback.delete(entry.id);
+      run.activePointerSkyFeedback = run.activePointerSkyFeedback || new Map();
+      rhythmSkyGroundFeedback(p.y, rect) ? (run.activePointerFeedback.set(entry.id, subLaneCoordinate), run.activePointerSkyFeedback.delete(entry.id)) : (run.activePointerFeedback.delete(entry.id), run.activePointerSkyFeedback.set(entry.id, subLaneCoordinate));
       setPressedLanes(pressedLanesNow());
       const rawAge = nowMs() - Number(entry.stamp);
       inputStarts([{
@@ -34029,7 +34036,8 @@ const RhythmTapTest = ({
     const run = runRef.current;
     if (run) {
       run.activePointerFeedback = run.activePointerFeedback || new Map();
-      if (rhythmSkyGroundFeedback(p.y, rect)) run.activePointerFeedback.set(e.pointerId, subLaneCoordinate);
+      run.activePointerSkyFeedback = run.activePointerSkyFeedback || new Map();
+      if (rhythmSkyGroundFeedback(p.y, rect)) run.activePointerFeedback.set(e.pointerId, subLaneCoordinate);else run.activePointerSkyFeedback.set(e.pointerId, subLaneCoordinate);
       setPressedLanes(pressedLanesNow());
     }
     const originStamp = Number(e.nativeEvent?.__mhOriginStamp);
@@ -34048,14 +34056,20 @@ const RhythmTapTest = ({
   const pointerMove = e => {
     if (e.pointerType === 'touch' && !RHYTHM_TOUCH_BRIDGE.isRecoveredPointer(e.pointerId)) return;
     const run = runRef.current;
-    if (!run?.activePointerFeedback?.has(e.pointerId)) return;
+    if (!run?.activePointerFeedback?.has(e.pointerId) && !run?.activePointerSkyFeedback?.has(e.pointerId)) return;
     e.preventDefault();
     const area = playAreaRef.current;
     if (!area) return;
     const mp = inputPoint(e.clientX, e.clientY),
       subLaneCoordinate = rhythmSubLaneCoordinateAtPoint(mp.x, mp.y, inputAreaRect(area));
     if (subLaneCoordinate === null) return;
-    if (rhythmSkyGroundFeedback(mp.y, inputAreaRect(area))) run.activePointerFeedback.set(e.pointerId, subLaneCoordinate);else run.activePointerFeedback.delete(e.pointerId);
+    if (rhythmSkyGroundFeedback(mp.y, inputAreaRect(area))) {
+      run.activePointerFeedback.set(e.pointerId, subLaneCoordinate);
+      run.activePointerSkyFeedback?.delete(e.pointerId);
+    } else {
+      run.activePointerFeedback.delete(e.pointerId);
+      (run.activePointerSkyFeedback = run.activePointerSkyFeedback || new Map()).set(e.pointerId, subLaneCoordinate);
+    }
     setPressedLanes(pressedLanesNow());
     inputMoves(rhythmInputKey('pointer', e.pointerId), subLaneCoordinate);
   };
@@ -34064,6 +34078,7 @@ const RhythmTapTest = ({
     const run = runRef.current;
     if (run?.activePointerFeedback) {
       run.activePointerFeedback.delete(e.pointerId);
+      run.activePointerSkyFeedback?.delete(e.pointerId);
       setPressedLanes(pressedLanesNow());
     } else setPressedLanes(pressedLanesNow());
     inputEnds([{
@@ -34084,6 +34099,7 @@ const RhythmTapTest = ({
       const rect = inputAreaRect(area),
         live = new Set(),
         liveSubLanes = [],
+        liveSkySubLanes = [],
         starts = [],
         movedTouchInputs = e.type === 'touchmove' ? new Set(Array.from(e.changedTouches || []).map(touch => rhythmInputKey('touch', touch.identifier))) : null;
       Array.from(e.touches || []).forEach(touch => {
@@ -34092,7 +34108,7 @@ const RhythmTapTest = ({
         const tp = inputPoint(touch.clientX, touch.clientY),
           lane = rhythmLaneAtPoint(tp.x, tp.y, rect),
           subLaneCoordinate = rhythmSubLaneCoordinateAtPoint(tp.x, tp.y, rect);
-        if (subLaneCoordinate !== null && rhythmSkyGroundFeedback(tp.y, rect)) liveSubLanes.push(subLaneCoordinate);
+        if (subLaneCoordinate !== null && rhythmSkyGroundFeedback(tp.y, rect)) liveSubLanes.push(subLaneCoordinate);else if (subLaneCoordinate !== null) liveSkySubLanes.push(subLaneCoordinate);
         if (current.activeTouchInputs.has(inputKey)) {
           if (current.outsideStartInputs?.has(inputKey) && movedTouchInputs?.has(inputKey) && lane !== null && subLaneCoordinate !== null && subLaneCoordinate >= RHYTHM_OUTSIDE_SLIDE_IN_SUBLANES && subLaneCoordinate <= RHYTHM_SUB_LANE_COUNT - RHYTHM_OUTSIDE_SLIDE_IN_SUBLANES) {
             current.outsideStartInputs.delete(inputKey);
@@ -34127,6 +34143,7 @@ const RhythmTapTest = ({
         }
       });
       liveTouchSubLanesRef.current = liveSubLanes;
+      liveTouchSkySubLanesRef.current = liveSkySubLanes;
       setPressedLanes(pressedLanesNow());
       const ageMs = rhythmInputAgeMs(e.timeStamp, typeof performance !== 'undefined' ? performance.now() : NaN);
       if (starts.length) inputStarts(starts, ageMs);
