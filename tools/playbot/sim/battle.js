@@ -1522,6 +1522,8 @@ if (require.main === module) {
   const real = {}; const realClear = {};
   for (const r of knowledge.runs || []) {
     if (r.mode !== 'tacticsPro' || !['clear', 'wipe', 'timeout'].includes(r.result)) continue;
+    // 実戦のボットは 2026-10-10 から緊急回復を使える(r.bot.emergency。古い回は使わない)。シミュレーターの --emergency と同じ条件の回だけ比べる
+    if (!!(r.bot && r.bot.emergency) !== (EMERGENCY !== 'none')) continue;
     const id = idByName[r.hero]; if (!id || !DIFFS.includes(r.difficulty) || !heroes.some((m) => m.id === id)) continue;
     const k = `${id}|${r.difficulty}`;
     (real[k] = real[k] || []).push(r.result === 'clear' ? MAX_WAVE : Number(r.wave) || 0);
@@ -1611,6 +1613,7 @@ if (require.main === module) {
   out();
   out('アシストカードは 3 版目、トレーニングは 4 版目から入れた(選び方 --assist・--training、既定はどちらも bot)。ずれは式を合わせに行かず、そのまま書く(差 = 実戦 − シミュレーター)。');
   out('ボットが途中で止まった回(stopped)は除いた。実戦のクリアは WAVE 10 として数えた。「前の版」は 1 版目(スキル無し)。');
+  out(`実戦は${EMERGENCY !== 'none' ? '緊急回復を使えるボットの回だけ' : '緊急回復を使わないボットの回だけ(2026-10-10 までの回はすべてこちら)'}を数えた(シミュレーターの緊急回復 ${EMERGENCY} と合わせる)。`);
   out();
   out(`| 勇者モン | 難易度 | 実戦の回数 | 実戦の平均 WAVE | 前の版 | ${MODES.map((mo) => `${MODE_JA[mo]} | 差`).join(' | ')} |`);
   out(`| --- | --- | --- | --- | --- | ${MODES.map(() => '--- | ---').join(' | ')} |`);
