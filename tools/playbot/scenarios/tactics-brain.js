@@ -114,7 +114,8 @@ function emergencyWhy(b) {
   if (b.hand.length && !b.hand.some((c) => c.usable) && b.hand.some((c) => c.block === 'guts')) return 'ガッツが足りず、置けるカードが1枚もない(ゲームの AUTO と同じ条件)';
   if (usable(/heal/)) return '';
   const falling = alive.filter((x) => x.aimDamage > 0 && x.aimDamage >= x.hp.now);
-  const saved = falling.filter((x) => x.aimDamage < x.hp.now + Math.floor(x.hp.max * 0.3));
+  // 回復はライフの上限で止まる
+  const saved = falling.filter((x) => x.aimDamage < Math.min(x.hp.max, x.hp.now + Math.floor(x.hp.max * 0.3)));
   const standAfter = alive.length - falling.length;
   if (!saved.length || standAfter >= 2) return '';
   if (falling.length === 1 && threatOf(b) !== 'pierce' && usable(/guard/)) return '';
