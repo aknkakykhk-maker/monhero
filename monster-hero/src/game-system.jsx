@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 0df1acf6fdbc8d4f
+// generated-sha256: 24ce248238e34c00
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-10 17:07"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-10 17:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -19391,7 +19391,8 @@ const rhythmSlotAbility=masu=>(masu&&masu.baseId)
 // 道と同じ台形を空中の高さへ持ち上げた「空中の面」に、レーンの区切り・奥から手前へ流れる光・光る縁・手前の光の柱・空中の判定ラインを描く。
 // 色は rhythmSkyTheme()(空中のノーツの案ごと)。プレイエリアを 0〜100 の座標で描くので、画面の大きさに合わせて伸びる
 function RhythmSkyStage({plane}){
-  const theme=rhythmSkyTheme(),c=theme.rgb,f=v=>Number(v).toFixed(2),fr=plane.front;
+  const theme=rhythmSkyTheme();if(theme.fx)Object.assign(RHYTHM_SKY_FX,theme.fx);
+  const c=theme.rgb,f=v=>Number(v).toFixed(2),fr=plane.front;
   return <svg data-rhythm-sky-stage viewBox="0 0 100 100" preserveAspectRatio="none" style={{position:'absolute',inset:0,width:'100%',height:'100%',pointerEvents:'none',overflow:'visible'}}>
     <style>{`@keyframes mhSkyFlow{from{transform:translateY(-12px)}to{transform:translateY(${f(fr.y)}px)}}[data-rhythm-sky-flow]{animation:mhSkyFlow 1.3s linear infinite}[data-rhythm-sky-flow="2"]{animation-delay:-.65s}@keyframes mhSkyPulse{0%,100%{opacity:.55}50%{opacity:1}}[data-rhythm-sky-pulse]{animation:mhSkyPulse 1.3s ease-in-out infinite}@media (prefers-reduced-motion:reduce){[data-rhythm-sky-flow],[data-rhythm-sky-pulse]{animation:none}}`}</style>
     <defs>
@@ -19853,6 +19854,8 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
     if(canvas&&RHYTHM_CANVAS_RENDERER.backend==='webgl')canvas.addEventListener('webglcontextlost',onLost);
     // WebGL で描けたときだけ、叩いたときの光もこの canvas で描く(DOM の部品は動かさない)。2D の canvas・DOM 版は今までどおり
     RHYTHM_CANVAS_RENDERER.enableHits(RHYTHM_CANVAS_RENDERER.backend==='webgl'?playAreaRef.current:null);
+    // 空中のノーツの弾け方(試作)は、2D の canvas でも canvas で描く(DOM の部品では形を変えられないため)
+    RHYTHM_CANVAS_RENDERER.enableSkyHits(playAreaRef.current);
     return()=>{if(canvas)canvas.removeEventListener('webglcontextlost',onLost);RHYTHM_CANVAS_RENDERER.release();};},[canvasNotes,webglNotes]);
   const noteElements=useMemo(()=>canvasNotes?null:chart.notes.map((note,index)=>{const monsterSlot=rhythmNoteMonsterSlot(note),monster=monsterSlot?monsters[monsterSlot-1]||null:null;return <div key={index} ref={el=>laneRefs.current[index]=el} data-rhythm-note data-note-type={note.type} data-rhythm-note-wide={rhythmNoteIsWide(note)?'1':undefined} data-rhythm-monster-note={monster?monsterSlot:undefined} className="absolute top-0 h-5" style={{left:`calc(${note.lane*20}% + 5px)`,width:'calc(20% - 10px)',pointerEvents:'none'}}>{/* HOLDの帯は水色でそろえる。以前は根もとが emerald(緑)だったが、FLICKが緑なので
                 「フリックとホールドの色が似ていて分かりにくい」と指摘された(2026-09-07)。
@@ -20473,6 +20476,8 @@ if(clearedGesture){
 const monsterHit=judgment!=='MISS'&&!!monsterForNote(note);
 if(judgment!=='MISS'){
   if(monsterHit)RHYTHM_NOTE_SE_RUNTIME.playMonster();
+  // 空中のノーツ(試作)は、ふだんの音に「きらっ」を重ねる(空中のノーツがある譜面だけ)
+  if(rhythmNoteSkyHeight(note)>0)RHYTHM_NOTE_SE_RUNTIME.playSky(judgment);
   if(!settings.lightweightMode&&settings.effectAmount!=='MINIMAL'){
     const area=playAreaRef.current;
     // 光の位置と幅はノーツと同じ投影から、**判定ラインの高さ**で出す(実測した比。ノーツの中心がラインに来たときと同じ値)。
@@ -20501,7 +20506,8 @@ if(judgment!=='MISS'){
     // 終点フリック(ホールド・スライドの最後で払う)も上向きの炎を出す(2026-09-28・ユーザー指示)
     const flickHit=rhythmNoteVisualType(note)==='FLICK'?(rhythmFlickDir(note)||'up'):(note.endFlick?'up':'');
     // ホールド・スライドを押し切ったときは、光を大きめにして手ごたえを出す(2026-09-27・参考動画)
-    const hitEffect=rhythmSpawnHitEffect(area,{centerRatio:span.center,widthRatio:span.width,judgment,monster:bigMonsterEffect,precise:preciseHit,defer:true,flick:flickHit,finish:rhythmNoteHasBody(note)});
+    // 空中のノーツ(試作)は、空中の判定ラインの上で空中専用の弾け方にする
+    const hitEffect=rhythmSpawnHitEffect(area,{centerRatio:span.center,widthRatio:span.width,judgment,monster:bigMonsterEffect,precise:preciseHit,defer:true,flick:flickHit,finish:rhythmNoteHasBody(note),sky:rhythmNoteSkyHeight(note)>0});
     if(hitEffect)restarts.push(hitEffect);
     if(monsterHit&&monsterEffect==='NORMAL'&&screenFlashRef.current)restarts.push({el:screenFlashRef.current,attr:'rhythmFlash'});
     // そのマスモンが両サイドで大きく跳ねる(どのマスモンの番だったかが分かるように)
