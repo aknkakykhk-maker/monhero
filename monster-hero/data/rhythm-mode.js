@@ -1147,7 +1147,16 @@ const RHYTHM_SKY_LIFT_RATIO=.16;
 // 参考動画(横画面)は差が画面の約39%。844×390 で 16% だと 62px しかなく、空中の段がつぶれて見えた)。演奏画面が向きに合わせて set する
 const RHYTHM_SKY_LIFT={ratio:RHYTHM_SKY_LIFT_RATIO,set(landscape){this.ratio=landscape?.25:RHYTHM_SKY_LIFT_RATIO;}};
 const rhythmNoteSkyHeight=note=>{const h=Number(note?.skyHeight);return Number.isFinite(h)&&h>0?Math.min(1,h):0;};
-const rhythmSlideHasSky=note=>Array.isArray(note?.slidePoints)&&note.slidePoints.some(point=>Number(point?.sky)>0);
+// 毎コマ何百回も呼ばれるので、ノーツごとに1回だけ数えて覚える(譜面のノーツは凍らせてあり、中身は変わらない)
+const RHYTHM_SLIDE_HAS_SKY_MEMO=typeof WeakMap==='function'?new WeakMap():null;
+const rhythmSlideHasSky=note=>{
+  if(!Array.isArray(note?.slidePoints))return false;
+  const memo=RHYTHM_SLIDE_HAS_SKY_MEMO&&Object.isFrozen(note)?RHYTHM_SLIDE_HAS_SKY_MEMO.get(note):undefined;
+  if(memo!==undefined)return memo;
+  const has=note.slidePoints.some(point=>Number(point?.sky)>0);
+  if(RHYTHM_SLIDE_HAS_SKY_MEMO&&Object.isFrozen(note))RHYTHM_SLIDE_HAS_SKY_MEMO.set(note,has);
+  return has;
+};
 const rhythmSlideSkyAt=(note,chartTimeMs)=>{
   const points=Array.isArray(note?.slidePoints)?note.slidePoints:null;
   if(!points||points.length<2||!rhythmSlideHasSky(note))return 0;
@@ -28833,15 +28842,20 @@ const rhythmCanvasNotesActive=flagOn=>{const pref=rhythmCanvasNotesPreference();
 const rhythmSlideSegmentQuads=(note,chartNowMs,travel,rect,noteHalfHeight=Number(travel.noteHalfHeight)||0)=>{
   const source=note?._rhythmSlideRenderPoints||rhythmSlidePoints(note),start=Number(source[0]?.timeMs)||0,end=Number(source[source.length-1]?.timeMs)||start;
   const now=Math.max(start,Math.min(end,Number(chartNowMs)||start));
+  const hasSky=rhythmSlideHasSky(note);
+  // 空中の段のある長いスライド(試作)だけ、画面の奥の端(出てくる所)より先の区切りは作らない。
+  // 10秒・80点のスライドを毎コマ全部作ると、1コマに千回以上の投影になり固まった(2026-10-10 社長「ダブルスライドで1回固まる」)。
+  // 地上だけのスライド(既存の全曲)は今までどおり全部作る
+  const farPos=hasSky?rhythmScrollPos(travel.visualTime)+Number(travel.travelMs)*1.1:Infinity;
   const project=point=>{
     const progress=1-(rhythmScrollPos(point.timeMs)-rhythmScrollPos(travel.visualTime))/Number(travel.travelMs),y=Number(travel.spawnY)+rhythmProjectTravelProgress(progress)*Number(travel.travelPx)+noteHalfHeight,yRatio=Math.min(1,y/rect.height),span=rhythmProjectSlideSpan(point.lane,note,yRatio,point.timeMs),half=rect.width*span.width*RHYTHM_BODY_WIDTH_RATIO/2;
     // 空中の段(試作): 高さのある点は、その奥行きの持ち上げ幅ぶん上へ。groundOnly のときは影として地面に置く
-    const skyAt=rhythmSlideHasSky(note)?rhythmSlideSkyAt(note,point.timeMs):0;
+    const skyAt=hasSky?rhythmSlideSkyAt(note,point.timeMs):0;
     const lift=!travel.groundOnly?rhythmSkyLiftPx(rect,yRatio)*skyAt:0;
     // 空中にある所も帯の太さは変えない(2026-10-10 社長「スライドの始まりのノーツのサイズがスライドラインと違う」。
     // 以前は参考のアークに寄せて高さ1で6割まで細くしていたが、始点の板の半分ほどになり幅が合わなかった)
     const thin=1;
-    return {y:y-lift,left:rect.width*span.center-half*thin,right:rect.width*span.center+half*thin,sky:rhythmSlideHasSky(note)?rhythmSlideSkyAt(note,point.timeMs):0};
+    return {y:y-lift,left:rect.width*span.center-half*thin,right:rect.width*span.center+half*thin,sky:skyAt};
   };
   let firstIndex=0;
   while(firstIndex<source.length&&Number(source[firstIndex].timeMs)<=now)firstIndex++;
@@ -28857,6 +28871,7 @@ const rhythmSlideSegmentQuads=(note,chartNowMs,travel,rect,noteHalfHeight=Number
       const to=step===steps?project(toPoint):project({timeMs,lane:rhythmSlideExpectedLane(note,timeMs)});
       quads.push({l0:from.left,r0:from.right,y0:from.y,l1:to.left,r1:to.right,y1:to.y,sky:(Number(from.sky)+Number(to.sky))/2||0});
       from=to;
+      if(rhythmScrollPos(timeMs)>farPos)return quads;
     }
     fromPoint=toPoint;
   }
