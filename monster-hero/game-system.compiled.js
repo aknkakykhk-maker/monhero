@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1d765db07d74109f
+// source-sha256: 150a18c2bd8ef98b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-11 00:00";
+const BUILD_DATE = "2026-10-11 00:19";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -35103,7 +35103,7 @@ const RhythmTapTest = ({
   }), React.createElement("div", {
     className: "mt-1.5 flex max-w-[34cqw] flex-wrap items-center gap-1 landscape:mt-0 landscape:min-w-0 landscape:shrink"
   }, React.createElement("span", {
-    className: "shrink-0 rounded bg-fuchsia-700/85 px-1.5 py-0.5 text-[9px] font-black leading-none"
+    className: `shrink-0 rounded ${difficulty.id === 'HELL' ? 'bg-red-900/90 text-red-200 ring-1 ring-red-500/70' : 'bg-fuchsia-700/85'} px-1.5 py-0.5 text-[9px] font-black leading-none`
   }, difficulty.id), React.createElement("small", {
     "data-rhythm-mode-label": true,
     className: "text-[9px] font-bold leading-none tracking-[0.14em] text-cyan-300 landscape:hidden",
@@ -35607,7 +35607,7 @@ const RhythmTapTest = ({
     }, "♪ ", rhythmSongFullName(song)), React.createElement("div", {
       className: "mt-1 flex items-center gap-1.5 text-[10px] font-black"
     }, React.createElement("span", {
-      className: "shrink-0 rounded bg-fuchsia-700/85 px-1.5 py-0.5 leading-none"
+      className: `shrink-0 rounded ${difficulty.id === 'HELL' ? 'bg-red-900/90 text-red-200 ring-1 ring-red-500/70' : 'bg-fuchsia-700/85'} px-1.5 py-0.5 leading-none`
     }, difficulty.id), !calibrating && !tutorial && React.createElement("span", {
       className: "text-cyan-300"
     }, "Lv.", chart.level), React.createElement("span", {
