@@ -11,6 +11,7 @@
 //   ・6曲続けて試聴しても、曲の音は SONG_BUFFER_KEEP 曲までしか持たない
 //   ・いちばん新しい曲は鳴っている(捨てたせいで鳴らない、が無い)
 //   ・前に試聴した曲をもう一度試聴しても鳴る(捨てた曲は読み直せる)
+//   ・場面のBGM(バトル・ホームなど)も同じ上限に入る(2026-10-10)。捨てた場面のBGMも読み直せる
 //   ・例外が出ない
 const http = require('http');
 const path = require('path');
@@ -78,6 +79,21 @@ check('直近何曲まで持つかを実装から読めた', KEEP >= 1, String(K
     const again = await page.evaluate(async (key) => Audio_.previewBGM(key), tracks[0]);
     check('前に試聴した曲をもう一度試聴しても鳴る', again === true);
     await page.evaluate(() => Audio_.stopPreview());
+    // 場面のBGM(バトル・ホームなど)も同じ上限に入れた(2026-10-10)。バトルはWAVEや敵ごとに曲が変わり、
+    // 長く周回するほど読んだ曲が増え続けて、iPhone でメモリ不足になっていた
+    const sceneIds = await page.evaluate((songIds) => (typeof BGM_TRACKS !== 'undefined' ? BGM_TRACKS : [])
+      .filter((t) => t && t.id && t.src && !songIds.includes(t.id) && !/jingle|se[_-]/i.test(t.id)).map((t) => t.id), tracks);
+    check('場面のBGMが6本以上ある', sceneIds.length >= 6, String(sceneIds.length));
+    await page.evaluate(() => Audio_.stopPreview());
+    const sceneBefore = await page.evaluate(() => Audio_.diagnose());
+    for (const id of sceneIds.slice(0, 8)) await page.evaluate(async (key) => Audio_.prepareBGM(key, 20000), id);
+    const sceneAfter = await page.evaluate(() => Audio_.diagnose());
+    check(`場面のBGMを8本続けて読んでも、持つのは ${KEEP} 本までしか持たない`, sceneAfter.songBufferCount <= KEEP,
+      `持っている曲 ${sceneAfter.songBufferCount} / 解いた音 ${sceneBefore.bufferCount}→${sceneAfter.bufferCount}`);
+    check('場面のBGMを読んでも、解いた音の総数が増え続けない', sceneAfter.bufferCount <= sceneBefore.bufferCount + 1, `${sceneBefore.bufferCount}→${sceneAfter.bufferCount}`);
+    // 捨てた場面のBGMも、もう一度読み直せる(音が出なくなったままにならない)
+    const reload = await page.evaluate(async (key) => Audio_.prepareBGM(key, 20000), sceneIds[0]);
+    check('捨てた場面のBGMも、読み直せる', reload === true);
     check('実行時エラーが出ていない', errors.length === 0, errors.slice(0, 2).join(' / '));
   } catch (e) {
     check('最後まで確かめられた', false, String(e).slice(0, 200));
