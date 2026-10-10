@@ -569,6 +569,18 @@ function crossCheck(d, jsonText) {
       }
     }
   }
+  // 緊急回復の効き目(sim.md「## 緊急回復の効き目」の表の勇者モン = tier.json で "緊急回復" を持つモンスター。改善部 E1)
+  {
+    const smd = read('sim.md') || '';
+    const sec = (smd.split(/^## 緊急回復の効き目.*$/m)[1] || '').split(/^## /m)[0];
+    const inMd = new Set(sec.split('\n').map((l) => l.split('|').slice(1, -1).map((x) => x.trim())).filter((c) => c.length >= 3 && c[0] && c[0] !== '勇者モン' && !/^-+$/.test(c[0])).map((c) => c[0]));
+    const inJson = new Set(d.モンスター.filter((m) => m.緊急回復).map((m) => m.名前));
+    // 節が無い・0体は「出力の作り直し忘れ」(battle.js はこの節を必ず出す。改善部 2026-10-10)
+    if (!/^## 緊急回復の効き目/m.test(smd)) p.push('sim.md に「## 緊急回復の効き目」の節が無い(node tools/playbot/sim/battle.js で作り直す)');
+    else if (!inMd.size) p.push('sim.md の「緊急回復の効き目」の表が0体(作り直し忘れの疑い)');
+    for (const n of inMd) if (!inJson.has(n)) p.push(`${n}: sim.md の「緊急回復の効き目」にあるが、tier.json に "緊急回復" が無い(battle.js --tier-json で入れ直す)`);
+    for (const n of inJson) if (!inMd.has(n)) p.push(`${n}: tier.json に "緊急回復" があるが、sim.md の「緊急回復の効き目」に無い`);
+  }
   // おすすめパーティ(party.md の難易度ごとの表 | 順位 | 勇者 | 供モン | 点 | 確か |。供モンは「・」でつなぐ)
   if (Array.isArray(d.おすすめパーティ) && d.おすすめパーティ.length) {
     const pmd = read('party.md');
