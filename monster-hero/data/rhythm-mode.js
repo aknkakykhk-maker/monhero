@@ -26460,7 +26460,7 @@ const RHYTHM_CHART_LEVELS = Object.freeze({
   monster_short:Object.freeze({EASY:6,NORMAL:7,HARD:9,EXPERT:16,MASTER:22}),
   anima:Object.freeze({EASY:8,NORMAL:11,HARD:17,EXPERT:26,MASTER:44}),
   journey:Object.freeze({EASY:7,NORMAL:10,HARD:15,EXPERT:23,MASTER:36}),
-  sheriruth:Object.freeze({EASY:9,NORMAL:14,HARD:22,EXPERT:33,MASTER:45}),
+  sheriruth:Object.freeze({EASY:9,NORMAL:14,HARD:22,EXPERT:33,MASTER:35}),
   atsu_cup_theme_debug_short:Object.freeze({HARD:9}),
 // </rhythm-chart-levels>
 });
@@ -28527,6 +28527,9 @@ const rhythmLayoutPlayArea=area=>{
 };
 // 画面の上の外へ、帯の線の太さ(6px)より十分大きくはみ出したら、その先の帯の区切りは作らない(rhythmSlideSegmentQuads・DOM 版の rhythmSlideSegmentPolygons)
 const RHYTHM_SLIDE_OFFSCREEN_PX=64;
+// 点がこの数以上のスライドだけ、帯の刻みを画面上の長さ(RHYTHM_SLIDE_ADAPTIVE_PX ごと)に合わせて減らす(rhythmSlideSegmentQuads)。
+// 既存の曲のスライドは最大17点なので当たらない(2026-10-10 Sheriruth のカクつき)
+const RHYTHM_SLIDE_ADAPTIVE_MIN_POINTS=20,RHYTHM_SLIDE_ADAPTIVE_PX=8,RHYTHM_SLIDE_ADAPTIVE_SKY_PX=4;
 const rhythmSlideSegmentPolygons=(note,chartNowMs,travel,rect,noteHalfHeight=Number(travel.noteHalfHeight)||0)=>{
   const source=note?._rhythmSlideRenderPoints||rhythmSlidePoints(note),start=Number(source[0]?.timeMs)||0,end=Number(source[source.length-1]?.timeMs)||start;
   const now=Math.max(start,Math.min(end,Number(chartNowMs)||start));
@@ -28566,15 +28569,25 @@ const rhythmSlideSegmentPolygons=(note,chartNowMs,travel,rect,noteHalfHeight=Num
 };
 // チェックポイントを横線として置く場所。帯と同じ手順で投影する。
 // まだ来ていない(判定ラインより先の)ぶんだけ描く。通り過ぎたぶんは帯自体が描かれない。
+// チェックポイントの時刻の列が時刻順か(列ごとに1回だけ確かめて覚える。演奏中に作った列は書き換えない)
+const RHYTHM_SLIDE_CHECKPOINT_SORTED=typeof WeakMap==='function'?new WeakMap():null;
 const rhythmSlideCheckpointLines=(note,chartNowMs,travel,rect,noteHalfHeight=Number(travel.noteHalfHeight)||0)=>{
   const times=note?._rhythmSlideCheckpoints;
   if(!Array.isArray(times)||!times.length||!rect||!(rect.height>0))return [];
   const now=Number(chartNowMs)||0,lines=[];
+  let sortedTimes=RHYTHM_SLIDE_CHECKPOINT_SORTED?RHYTHM_SLIDE_CHECKPOINT_SORTED.get(times):false;
+  if(sortedTimes===undefined){
+    sortedTimes=true;
+    for(let i=1;i<times.length;i++){const a=Number(times[i-1]),b=Number(times[i]);if(!(Number.isFinite(a)&&Number.isFinite(b)&&a<=b)){sortedTimes=false;break;}}
+    RHYTHM_SLIDE_CHECKPOINT_SORTED.set(times,sortedTimes);
+  }
   for(let index=0;index<times.length;index++){
     const at=Number(times[index]);
     if(!Number.isFinite(at)||at<=now)continue;
     const progress=1-(rhythmScrollPos(at)-rhythmScrollPos(travel.visualTime))/Number(travel.travelMs);
     const y=Number(travel.spawnY)+rhythmProjectTravelProgress(progress)*Number(travel.travelPx)+noteHalfHeight;
+    // 時刻順に並んだ列なら、画面の上の外(-rect.height より上)へ出たら、その先の線も全部外なので打ち切る(結果は同じ。持ち上げはこの判定のあとで引く)
+    if(Number.isFinite(y)&&y<-rect.height&&sortedTimes)break;
     if(!Number.isFinite(y)||y<-rect.height||y>rect.height)continue;
     const yRatio=rhythmClamp01(y/rect.height);
     const span=rhythmProjectSlideSpan(rhythmSlideExpectedLane(note,at),note,yRatio,at);
@@ -28819,6 +28832,8 @@ const rhythmSlideSegmentQuads=(note,chartNowMs,travel,rect,noteHalfHeight=Number
   const source=note?._rhythmSlideRenderPoints||rhythmSlidePoints(note),start=Number(source[0]?.timeMs)||0,end=Number(source[source.length-1]?.timeMs)||start;
   const now=Math.max(start,Math.min(end,Number(chartNowMs)||start));
   const hasSky=rhythmSlideHasSky(note);
+  // 空中の帯(高さを持ち上げて描く)は、持ち上げの分だけ区間の途中で曲がるので、刻みを細かめ(RHYTHM_SLIDE_ADAPTIVE_SKY_PX ごと)にする
+  const dense=source.length>=RHYTHM_SLIDE_ADAPTIVE_MIN_POINTS,adaptivePx=hasSky&&!travel.groundOnly?RHYTHM_SLIDE_ADAPTIVE_SKY_PX:RHYTHM_SLIDE_ADAPTIVE_PX;
   // 空中の段のある長いスライド(試作)だけ、画面の奥の端(出てくる所)より先の区切りは作らない。
   // 10秒・80点のスライドを毎コマ全部作ると、1コマに千回以上の投影になり固まった(2026-10-10 社長「ダブルスライドで1回固まる」)。
   // 地上だけのスライド(既存の全曲)は今までどおり全部作る
@@ -28841,10 +28856,16 @@ const rhythmSlideSegmentQuads=(note,chartNowMs,travel,rect,noteHalfHeight=Number
   for(let index=Math.max(1,firstIndex);index<source.length;index++){
     const toPoint=source[index],fromTime=Number(fromPoint.timeMs),toTime=Number(toPoint.timeMs),spanMs=toTime-fromTime;
     // 曲線の区間(ease)は刻みを倍にして、曲がりが折れ線に見えないようにする。直線の区間は今までどおり
-    const steps=rhythmSlideSegmentEase(note,source[index-1])==='linear'?RHYTHM_SLIDE_SEGMENT_STEPS:RHYTHM_SLIDE_SEGMENT_STEPS*2;
+    const baseSteps=rhythmSlideSegmentEase(note,source[index-1])==='linear'?RHYTHM_SLIDE_SEGMENT_STEPS:RHYTHM_SLIDE_SEGMENT_STEPS*2;
+    // 点の多いスライド(Sheriruth など。既存の曲は最大17点で当たらない)だけ、区間の刻みを画面上の長さに合わせて減らす。
+    // 点が0.1秒ごとにあると、1区間が数px しかないのに10〜20に刻んでいて、1コマに千を超える区切りを作っていた
+    // (2026-10-10 社長「Sheriruth だけカクカク」→「曲がりの差が1画素未満なら許す」。刻みは RHYTHM_SLIDE_ADAPTIVE_PX ごと・上限は今までの刻み)
+    // 曲線(ease)でつないだ区間は、区間の途中で横へ曲がるので今までどおりの刻みのまま。直線の区間だけ減らす
+    const segEnd=dense&&baseSteps===RHYTHM_SLIDE_SEGMENT_STEPS?project(toPoint):null;
+    const steps=segEnd?Math.max(1,Math.min(baseSteps,Math.ceil(Math.max(Math.abs(segEnd.y-from.y),Math.abs(segEnd.left-from.left),Math.abs(segEnd.right-from.right))/adaptivePx))):baseSteps;
     for(let step=1;step<=steps;step++){
       const ratio=step/steps,timeMs=fromTime+spanMs*ratio;
-      const to=step===steps?project(toPoint):project({timeMs,lane:rhythmSlideExpectedLane(note,timeMs)});
+      const to=step===steps?(segEnd||project(toPoint)):project({timeMs,lane:rhythmSlideExpectedLane(note,timeMs)});
       // 地上だけのスライドは、奥へ行くほど上へ上がる一方なので、区切りがまるごと画面の上から RHYTHM_SLIDE_OFFSCREEN_PX より外へ出たら、
       // そこから先も全部見えない。作らずに終える(2026-10-10 社長「Sheriruth だけカクカク」: 10秒・90点のスライドを毎コマ全部作っていた)。
       // 見えている所の形は変わらない(押さえたときの光・流れる光も判定ライン寄りの範囲しか使わない)。空中のあるスライドは上の farPos で切る
