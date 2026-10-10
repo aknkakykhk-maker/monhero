@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ccb660c8dd35946b
+// generated-sha256: 03d9faff1b6dfab7
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-10 18:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-10 20:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8129,7 +8129,8 @@ const QUICK_RHYTHM_LINK_PUBLIC_RELEASE = true;
 // ユーザー「問題なし」→ 公開。デバッグ画面の「ノーツの描き方」で「要素」を選べば従来の描き方へ戻せる。
 const RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE = true;
 // モンヒロビートのマルチ(同じ曲でスコア対決)。曲えらびの「対戦」ボタンの出し入れ
-const RHYTHM_MULTI_PUBLIC_RELEASE = true;
+// 実機で試すための試作ブランチだけ: マルチ(本物の部屋へ Supabase の realtime でつながる)を隠す。main は true のまま
+const RHYTHM_MULTI_PUBLIC_RELEASE = false;
 // フレンド機能(フレンドコード・申請・プロフィール閲覧)。docs/spec/FRIENDS.md
 // ★Supabase の friend_codes / friend_links を使うので、docs/sql/friends/FRIENDS_APPLY.sql を
 //   適用するまでは中身が出せない。適用して画面を確かめてから true にする。
@@ -15017,10 +15018,14 @@ const SB_HEADERS = { 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json' 
 //   window.__mhSupabaseStubbed = true を入れる(差し替え先へは今までどおり届く)。
 //   一部の表だけ差し替える検査は ['rankings', 'bond_levels'] のように表の名前(の頭)を並べ、
 //   並べた表だけを通す(差し替えていない表への書き込みは、引き続き止める)
+// 実機で試すための試作ブランチだけ(claude/sheriruth-proto-device。main へは入れない): どの端末からも本物の Supabase へ書き込まない。
+// 社長の iPhone で raw.githack.com から開いても、ランキング・プロフィール・絆Lv・マスモンランキング・フレンドなどへ何も送らない(読み込みと集計の rpc は通す)
+const SB_PROTO_NO_WRITE = true;
 const sbAutomationWriteBlocked = (url, method) => {
   try {
-    if (typeof navigator === 'undefined' || navigator.webdriver !== true) return false;
-    const stubbed = typeof window !== 'undefined' ? window.__mhSupabaseStubbed : undefined;
+    const automated = typeof navigator !== 'undefined' && navigator.webdriver === true;
+    if (!automated && !SB_PROTO_NO_WRITE) return false;
+    const stubbed = automated && typeof window !== 'undefined' ? window.__mhSupabaseStubbed : undefined;
     if (stubbed === true) return false;
     const m = String(method || 'GET').toUpperCase();
     if (m === 'GET' || m === 'HEAD') return false;

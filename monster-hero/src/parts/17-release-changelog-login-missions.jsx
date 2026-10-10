@@ -23,7 +23,8 @@ const QUICK_RHYTHM_LINK_PUBLIC_RELEASE = true;
 // ユーザー「問題なし」→ 公開。デバッグ画面の「ノーツの描き方」で「要素」を選べば従来の描き方へ戻せる。
 const RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE = true;
 // モンヒロビートのマルチ(同じ曲でスコア対決)。曲えらびの「対戦」ボタンの出し入れ
-const RHYTHM_MULTI_PUBLIC_RELEASE = true;
+// 実機で試すための試作ブランチだけ: マルチ(本物の部屋へ Supabase の realtime でつながる)を隠す。main は true のまま
+const RHYTHM_MULTI_PUBLIC_RELEASE = false;
 // フレンド機能(フレンドコード・申請・プロフィール閲覧)。docs/spec/FRIENDS.md
 // ★Supabase の friend_codes / friend_links を使うので、docs/sql/friends/FRIENDS_APPLY.sql を
 //   適用するまでは中身が出せない。適用して画面を確かめてから true にする。

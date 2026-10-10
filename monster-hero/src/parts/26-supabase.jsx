@@ -17,10 +17,14 @@ const SB_HEADERS = { 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json' 
 //   window.__mhSupabaseStubbed = true を入れる(差し替え先へは今までどおり届く)。
 //   一部の表だけ差し替える検査は ['rankings', 'bond_levels'] のように表の名前(の頭)を並べ、
 //   並べた表だけを通す(差し替えていない表への書き込みは、引き続き止める)
+// 実機で試すための試作ブランチだけ(claude/sheriruth-proto-device。main へは入れない): どの端末からも本物の Supabase へ書き込まない。
+// 社長の iPhone で raw.githack.com から開いても、ランキング・プロフィール・絆Lv・マスモンランキング・フレンドなどへ何も送らない(読み込みと集計の rpc は通す)
+const SB_PROTO_NO_WRITE = true;
 const sbAutomationWriteBlocked = (url, method) => {
   try {
-    if (typeof navigator === 'undefined' || navigator.webdriver !== true) return false;
-    const stubbed = typeof window !== 'undefined' ? window.__mhSupabaseStubbed : undefined;
+    const automated = typeof navigator !== 'undefined' && navigator.webdriver === true;
+    if (!automated && !SB_PROTO_NO_WRITE) return false;
+    const stubbed = automated && typeof window !== 'undefined' ? window.__mhSupabaseStubbed : undefined;
     if (stubbed === true) return false;
     const m = String(method || 'GET').toUpperCase();
     if (m === 'GET' || m === 'HEAD') return false;
