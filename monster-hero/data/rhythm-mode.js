@@ -29822,7 +29822,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       // 案L ガラスの角材(オンプくんの参考動画の読み: 空中は「厚みのある半透明の銀の角材」。色だけでなく 厚み・透け方・床の影 で地上と分ける)
       // 手前の面(半透明・端が濃く真ん中が明るい)の上に、奥へ細くなる上の面(明るい)を重ね、角材に見せる。近いほど不透明で明るい
       const near=Math.max(0,Math.min(1,((Number(opts.depthScale)||1)-.56)/.44)),pp=near*near;
-      const fw=hd.w*sizeScale,fh=Math.max(9,hd.h)*1.15,th=Math.max(5,fh*.62),sd=Math.max(3,fw*.07),fx=cx-fw/2,fy=cy-fh/2+th*.3;
+      const fw=hd.w*sizeScale*1.12,fh=Math.max(9,hd.h)*1.3,th=Math.max(6,fh*.7),sd=Math.max(3,fw*.07),fx=cx-fw/2,fy=cy-fh/2+th*.3;
       const al=.66+.3*pp;
       const pl=Math.max(20,fh*3.4),pw=fw*.2;
       const pg=ctx.createLinearGradient(0,cy,0,cy+pl);pg.addColorStop(0,`rgba(203,213,225,${(.5+.3*pp).toFixed(2)})`);pg.addColorStop(1,'rgba(203,213,225,0)');
@@ -29859,7 +29859,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
         if(pp>.05){ctx.lineWidth=1.2;ctx.strokeStyle=`rgba(255,255,255,${(.5*pp+.1).toFixed(2)})`;ctx.beginPath();ctx.moveTo(cx-ax*(1.35+.5*pp),cy);ctx.lineTo(cx+ax*(1.35+.5*pp),cy);ctx.moveTo(cx,cy-by*(1.25+.4*pp));ctx.lineTo(cx,cy+by*(1.25+.4*pp));ctx.stroke();}
       }else if(style==='wing'){
         // 案J 翼(藍): 左右へ開く一対の翼(羽が3枚)。上が淡い藍・下が濃い藍・縁は白。近いと翼が開いて光る
-        const k=1+.25*pp,ax=a*k*1.05,by=b*k*1.1;
+        const k=1+.25*pp,ax=a*k*1.3,by=b*k*.78;
         const wing=sg=>[[cx+sg*ax*.06,cy+by*.1],[cx+sg*ax*.34,cy-by*.95],[cx+sg*ax*.62,cy-by*1.0],[cx+sg*ax*1.0,cy-by*.72],[cx+sg*ax*.8,cy-by*.4],[cx+sg*ax*1.0,cy-by*.12],[cx+sg*ax*.74,cy+by*.1],[cx+sg*ax*.88,cy+by*.4],[cx+sg*ax*.46,cy+by*.34]];
         [-1,1].forEach(sg=>{
           poly(wing(sg));ctx.lineWidth=4+8*pp;ctx.strokeStyle=`rgba(129,140,248,${(.22+.4*pp).toFixed(2)})`;ctx.stroke();
@@ -29869,8 +29869,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
         const dm=Math.max(3.5,Math.max(8,hd.h)*.55);poly([[cx-dm,cy],[cx,cy-dm*1.3],[cx+dm,cy],[cx,cy+dm*1.3]]);ctx.fillStyle='rgba(255,255,255,1)';ctx.fill();ctx.lineWidth=1;ctx.strokeStyle='rgba(30,27,75,.9)';ctx.stroke();
       }else{
         // 案K 輪(赤): 中が空いた横長の輪。地上の板(中が詰まっている)と、形でも明るさでも分かれる。近いと外へもう1つの輪が広がり、芯が光る
-        const ry=b*1.0,ring=(rx,ty,n)=>{const out=[];for(let i=0;i<n;i++){const t=i/n*Math.PI*2;out.push([cx+Math.cos(t)*rx,cy+Math.sin(t)*ty]);}return out;};
-        const outer=ring(a,ry,28),inner=ring(a*.56,ry*.42,28);
+        const ry=b*.9,ring=(rx,ty,n)=>{const out=[];for(let i=0;i<n;i++){const t=i/n*Math.PI*2;out.push([cx+Math.cos(t)*rx,cy+Math.sin(t)*ty]);}return out;};
+        const outer=ring(a,ry,28),inner=ring(a*.68,ry*.55,28);
         if(pp>.05){poly(ring(a*(1.15+.35*pp),ry*(1.15+.35*pp),28));ctx.lineWidth=1.4;ctx.strokeStyle=`rgba(252,165,165,${(.6*pp).toFixed(2)})`;ctx.stroke();}
         poly(outer);ctx.lineWidth=4+7*pp;ctx.strokeStyle=`rgba(248,113,113,${(.22+.38*pp).toFixed(2)})`;ctx.stroke();
         ctx.beginPath();ctx.moveTo(outer[0][0],outer[0][1]);outer.forEach(q=>ctx.lineTo(q[0],q[1]));ctx.closePath();ctx.moveTo(inner[0][0],inner[0][1]);inner.forEach(q=>ctx.lineTo(q[0],q[1]));ctx.closePath();
