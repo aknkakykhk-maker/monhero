@@ -29872,6 +29872,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
         :{edge:'76,69,112',mid:'250,250,255',top1:'196,181,253',side:'100,116,139',out:'30,27,75',glow:'221,214,254'};
       const near=Math.max(0,Math.min(1,((Number(opts.depthScale)||1)-.56)/.44)),pp=near*near;
       const al=Math.min(.96,.64+.3*pp),br=.85+.15*near;
+      // 近さの見せ方は参考どおり「奥は暗く・手前は明るい」(近づく輪は外した)。奥(near=0)は全体の濃さを .62 倍まで落とし、手前(near=1)で 1 倍にする
+      ctx.globalAlpha=Math.min(1,opts.alpha*(.62+.38*near));
       // オンプくんの測定(参考動画): 厚みは地上のタップと同じ・幅は地上の0.5〜0.9倍・明るさは地上の0.85〜0.9倍
       const fw=hd.w*sizeScale*.88,fh=Math.max(8,hd.h),th=Math.max(5,fh*.7),sd=Math.max(3,fw*.09),fx=cx-fw/2,fy=cy-fh/2+th*.35;
       const sgn=cx<(typeof cssW==='number'?cssW/2:cx)?1:-1;
