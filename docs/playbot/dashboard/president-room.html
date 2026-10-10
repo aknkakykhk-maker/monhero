@@ -68,13 +68,13 @@ section{display:flex;flex-direction:column;gap:10px}
 <div class="wrap">
   <header>
     <h1>モンヒロ社 社長室</h1>
-    <p class="lead">10/10 11:22 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。<br>モンスター Tier 表: <a href="https://claude.ai/artifact/3sUNc2pQgN5f4QdYYW5tW8">https://claude.ai/artifact/3sUNc2pQgN5f4QdYYW5tW8</a>(サイドバーにも固定)</p>
+    <p class="lead">10/10 11:23 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。<br>モンスター Tier 表: <a href="https://claude.ai/artifact/3sUNc2pQgN5f4QdYYW5tW8">https://claude.ai/artifact/3sUNc2pQgN5f4QdYYW5tW8</a>(サイドバーにも固定)</p>
   </header>
 
   <nav class="counts" aria-label="件数">
     <a class="count warn" href="#decide"><b>0</b><span>社長の判断待ち</span></a>
-    <a class="count" href="#work"><b>8</b><span>進行中</span></a>
-    <a class="count" href="#shipped"><b>50</b><span>公開したもの</span></a>
+    <a class="count" href="#work"><b>7</b><span>進行中</span></a>
+    <a class="count" href="#shipped"><b>51</b><span>公開したもの</span></a>
   </nav>
 
   <section id="decide">
@@ -153,10 +153,51 @@ section{display:flex;flex-direction:column;gap:10px}
 <p>ほかに、Tier では「入っている(実戦)」だが<b>シミュレーターには欠けがある</b>もの: 魂格の枚数+1・パンドラの引き継ぎ固有技・剣士モッチーの初期スタイル・供モン選び。</p>
 </details></div></details>
       </li>
+      <li id="r2610100750a">
+        <div class="row-title">Tier の暫定を早めに外す(社長の目線は抜きで)</div>
+        <div class="row-body">暫定・保留の子を、回数の少ない子・EX を使えていない子から先に回す(エイキ・ヤオビクニ・メロディー・スプーキー・プラントなど)。社長の印象には合わせない</div>
+        <div class="meta"><span>部長ハカセくん(実戦はアリーナくん)</span><span>見込み 確定はゴーレム・モッチー・パンドラ・スエゾーの4体。回数不足の7体はアリーナくんが回していて、15:00前後に埋まる見込み。そのあと Tier 表のページをまとめて出し直す</span><span>PR #2524・#2528・#2529・#2532・#2539・#2535・#2541</span></div>
+      </li>
+      <li id="r2610100750b">
+        <div class="row-title">改善部をもっと積極的に動かす</div>
+        <div class="row-body">週1回だった改善部を毎晩に。その日の公開・社長室・研究所の Tier と調整の案を批判の目で見て、1回3件まで指摘する。調整の案は社長に届く前に改善部が確かめる。いますぐ Tier 表の点検を頼んだ</div>
+        <div class="meta"><span>部長ダメダシくん</span><span>見込み 毎晩 20:50 に定期実行(初回 10/10)</span></div>
+      </li>
+      <li id="w5">
+        <div class="row-title">モンスターのTier表の見直し(総合で決める)</div>
+        <div class="row-body">社長の選択で 10/10 朝からすぐ再開。①簡易シミュレーター ②Master の全種集め ③5回以上そろった子から調整の案、の順</div>
+        <div class="meta"><span>部長ハカセくん</span><span>見込み スキル入りシミュレーター公開(#2472)。次はトレーニング・アシカを足す。調整の案は改善部が確かめてから1件ずつ</span><span>PR #2396・#2401・#2407・#2513</span></div>
+      </li></ul>
+      <h3 style="margin-top:14px">これからの予定(まだ始めていない)</h3>
+      <ul class="list">
+      <li id="r2610100930api">
+        <div class="row-title">Claude API をゲームに生かす案(保留)</div>
+        <div class="row-body">費用は問題なし(毎月 $100 の API クレジット。Haiku 5.5 でひとこと1回 約0.007円)。社長の作業は APIキーを作って Supabase のシークレットに入れる5分ほど。SQL と Edge Function の公開は窓口が確認をとって行える。出した案(セリフ・助言・攻略相談・名前の見張り・おすすめ編成・困りごとの受付・質問検索・育成・AIのゲームマスター)はどれもしっくりこず、社長が「いったん保留」を選んだ</div>
+        <div class="meta"><span>統括部長:モンヒロくん</span><span>見込み 保留。改善部が毎日の指摘で良い使い道に気づいたら提案する</span></div>
+      </li>
+      <li id="q1zan">
+        <div class="row-title">調整の案1: ザン(Tier の精度が上がってから決める)</div>
+        <div class="row-body">スキル込みでもザンは下位。改善部が数字の食い違い(Z1)・上手な使い方(Z2)・案の抜け(Z3)を指摘。血踊の3ターンは社長が決めた仕様(コードの古い5ターンのメモは修理部が直す)。社長「今後Tier精度が上がったときにバランス調整をするか決めていきたい」→ 案は止めて、精度を上げる方を先にする。研究所の測り直し(#2478): 3ターンのままでは序盤で使い切っても守りきれない(Expert 2.28)、5ターンなら 3.06。調整するかは精度が上がってから社長が決める</div>
+        <div class="meta"><span>部長ハカセくん</span><span>見込み Tier の精度が上がってから、調整するかを社長が決める</span><span>PR #2475・#2478・#2484</span></div>
+      </li>
+      <li id="w3">
+        <div class="row-title">日曜夜の定期点検が各部へ届くかの確認</div>
+        <div class="row-body">届かなければ直接起こす</div>
+        <div class="meta"><span>統括部長:モンヒロくん</span><span>見込み 10/11 3:10</span></div>
+      </li>
+      <li id="w4">
+        <div class="row-title">初めての週報</div>
+        <div class="row-body">部ごとのまとめ・今週のMVP・使用量</div>
+        <div class="meta"><span>統括部長:モンヒロくん</span><span>見込み 10/12 8:52</span></div>
+      </li></ul>
+    </section>
+    <section id="shipped">
+      <h2>公開したもの</h2>
+      <ul class="list">
       <li id="kG8">
         <div class="row-title">G8 はじめての人に、れんしゅうとハロウィンのお話が重なる → れんしゅうのあとにお話</div>
         <div class="row-body">人でも起きると確かめた(「決定！」直後にお話と、れんしゅうの案内が同時に出る。お話を流す判定が、れんしゅうの案内・最中を見ていない)。社長の選択: れんしゅうが終わって HOME に戻ってからお話を流す</div>
-        <div class="meta"><span>部長マップくん</span><span>見込み 始めてから約1時間で公開</span></div><details class="more"><summary>くわしく見る: 改善部の記録</summary><div class="md"><p>時間: 07:50〜08:30 / 依頼: 統括部長(社長「批判目線で見る部署も、もっと積極的に見させて」)</p>
+        <div class="meta"><span>部長マップくん</span><span>PR #2555</span><span>はじめての設定を終えたHOMEで、れんしゅうの案内が先に出て、お話(ハロウィン・ナイト 第1部)は、れんしゅうを終えてHOMEへ戻ってから(「今は見ない」ならそのまま)流れるか</span></div><details class="more"><summary>くわしく見る: 改善部の記録</summary><div class="md"><p>時間: 07:50〜08:30 / 依頼: 統括部長(社長「批判目線で見る部署も、もっと積極的に見させて」)</p>
 <ul>
 <li><b>作らずに提案だけ。</b> ゲームも研究所の表も変えていない。案はおすすめを先頭に置いた</li>
 <li>遊んで確かめたものは、起動からHOMEまでの押す回数を数える小さな台本(ボットの <code>openSession</code>。<code>lib/fake-supabase.js</code> のままなので、ランキングへは送っていない)</li>
@@ -235,47 +276,6 @@ section{display:flex;flex-direction:column;gap:10px}
 </ul>
 </details></div></details>
       </li>
-      <li id="r2610100750a">
-        <div class="row-title">Tier の暫定を早めに外す(社長の目線は抜きで)</div>
-        <div class="row-body">暫定・保留の子を、回数の少ない子・EX を使えていない子から先に回す(エイキ・ヤオビクニ・メロディー・スプーキー・プラントなど)。社長の印象には合わせない</div>
-        <div class="meta"><span>部長ハカセくん(実戦はアリーナくん)</span><span>見込み 確定はゴーレム・モッチー・パンドラ・スエゾーの4体。回数不足の7体はアリーナくんが回していて、15:00前後に埋まる見込み。そのあと Tier 表のページをまとめて出し直す</span><span>PR #2524・#2528・#2529・#2532・#2539・#2535・#2541</span></div>
-      </li>
-      <li id="r2610100750b">
-        <div class="row-title">改善部をもっと積極的に動かす</div>
-        <div class="row-body">週1回だった改善部を毎晩に。その日の公開・社長室・研究所の Tier と調整の案を批判の目で見て、1回3件まで指摘する。調整の案は社長に届く前に改善部が確かめる。いますぐ Tier 表の点検を頼んだ</div>
-        <div class="meta"><span>部長ダメダシくん</span><span>見込み 毎晩 20:50 に定期実行(初回 10/10)</span></div>
-      </li>
-      <li id="w5">
-        <div class="row-title">モンスターのTier表の見直し(総合で決める)</div>
-        <div class="row-body">社長の選択で 10/10 朝からすぐ再開。①簡易シミュレーター ②Master の全種集め ③5回以上そろった子から調整の案、の順</div>
-        <div class="meta"><span>部長ハカセくん</span><span>見込み スキル入りシミュレーター公開(#2472)。次はトレーニング・アシカを足す。調整の案は改善部が確かめてから1件ずつ</span><span>PR #2396・#2401・#2407・#2513</span></div>
-      </li></ul>
-      <h3 style="margin-top:14px">これからの予定(まだ始めていない)</h3>
-      <ul class="list">
-      <li id="r2610100930api">
-        <div class="row-title">Claude API をゲームに生かす案(保留)</div>
-        <div class="row-body">費用は問題なし(毎月 $100 の API クレジット。Haiku 5.5 でひとこと1回 約0.007円)。社長の作業は APIキーを作って Supabase のシークレットに入れる5分ほど。SQL と Edge Function の公開は窓口が確認をとって行える。出した案(セリフ・助言・攻略相談・名前の見張り・おすすめ編成・困りごとの受付・質問検索・育成・AIのゲームマスター)はどれもしっくりこず、社長が「いったん保留」を選んだ</div>
-        <div class="meta"><span>統括部長:モンヒロくん</span><span>見込み 保留。改善部が毎日の指摘で良い使い道に気づいたら提案する</span></div>
-      </li>
-      <li id="q1zan">
-        <div class="row-title">調整の案1: ザン(Tier の精度が上がってから決める)</div>
-        <div class="row-body">スキル込みでもザンは下位。改善部が数字の食い違い(Z1)・上手な使い方(Z2)・案の抜け(Z3)を指摘。血踊の3ターンは社長が決めた仕様(コードの古い5ターンのメモは修理部が直す)。社長「今後Tier精度が上がったときにバランス調整をするか決めていきたい」→ 案は止めて、精度を上げる方を先にする。研究所の測り直し(#2478): 3ターンのままでは序盤で使い切っても守りきれない(Expert 2.28)、5ターンなら 3.06。調整するかは精度が上がってから社長が決める</div>
-        <div class="meta"><span>部長ハカセくん</span><span>見込み Tier の精度が上がってから、調整するかを社長が決める</span><span>PR #2475・#2478・#2484</span></div>
-      </li>
-      <li id="w3">
-        <div class="row-title">日曜夜の定期点検が各部へ届くかの確認</div>
-        <div class="row-body">届かなければ直接起こす</div>
-        <div class="meta"><span>統括部長:モンヒロくん</span><span>見込み 10/11 3:10</span></div>
-      </li>
-      <li id="w4">
-        <div class="row-title">初めての週報</div>
-        <div class="row-body">部ごとのまとめ・今週のMVP・使用量</div>
-        <div class="meta"><span>統括部長:モンヒロくん</span><span>見込み 10/12 8:52</span></div>
-      </li></ul>
-    </section>
-    <section id="shipped">
-      <h2>公開したもの</h2>
-      <ul class="list">
       <li id="r2610101110rank">
         <div class="row-title">モンヒロバトルのランキングは、ブリーダーLv・絆Lv・総合に。モードの記録は各モードの中へ</div>
         <div class="row-body">モードえらびのランキングは、モードをまたいだ3つ(ブリーダーLv・絆Lv・総合)に。チャレンジモードなどモードごとの記録は各モードの中で見る。「総合」の中身はバトル部が案を付けて社長に確かめる。記録と送信は壊さない。新しい表が要るときは窓口が社長に確かめてから</div>
@@ -2243,8 +2243,8 @@ section{display:flex;flex-direction:column;gap:10px}
       </div>
       <div class="bar-row">
         <span class="bar-name">部長マップくん</span>
-        <span class="bar-track"><span class="bar-zero" style="left:3.70%"></span><span class="bar " style="left:3.70%;width:40.74%"></span></span>
-        <span class="bar-val">11</span>
+        <span class="bar-track"><span class="bar-zero" style="left:3.70%"></span><span class="bar " style="left:3.70%;width:48.15%"></span></span>
+        <span class="bar-val">13</span>
       </div>
       <div class="bar-row">
         <span class="bar-name">部長ドライバーくん</span>
