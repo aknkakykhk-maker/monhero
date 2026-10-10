@@ -30176,48 +30176,76 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   // p は 0〜1 の進み。位置は空中の判定ライン(判定ラインの下端 hitY からプレイエリアの高さの RHYTHM_SKY_LIFT_RATIO 上)。
   // 横の位置は、判定ラインで測った中心を空中の線の奥行きへ寄せる(道は奥ほど狭い)
   const drawSkyHit=(h,p,hitY)=>{
-    const C=RHYTHM_SKY_FX,Y=hitY-cssH*RHYTHM_SKY_LIFT_RATIO;
+    // 案(localStorage 'mh_sky_tap_style_proto')ごとに形と色を変える(2026-10-10・ピンセットくんの案 beam/ruby/cube)。
+    // 外側の光は空中の面の差し色(ピンセットくんの RHYTHM_SKY_THEMES の rgb。無ければ RHYTHM_SKY_FX.accent)
+    let style='';try{style=typeof localStorage!=='undefined'?String(localStorage.getItem('mh_sky_tap_style_proto')||''):'';}catch{style='';}
+    const theme=typeof rhythmSkyTheme==='function'?rhythmSkyTheme():null;
+    const silver={core:'255,255,255',main:'226,232,240'},red={core:'255,255,255',main:'239,68,68'};
+    const base=style==='beam'||style==='cube'?silver:(style==='ruby'?red:{core:RHYTHM_SKY_FX.core,main:RHYTHM_SKY_FX.main});
+    const C={core:base.core,main:base.main,accent:(theme&&typeof theme.rgb==='string'&&theme.rgb)||RHYTHM_SKY_FX.accent};
+    const Y=hitY-cssH*RHYTHM_SKY_LIFT_RATIO;
     const k=rhythmProjectionScale(rhythmSkyLineRatio())/Math.max(.01,rhythmProjectionScale(RHYTHM_JUDGMENT_LINE_Y.ratio));
     const cx=cssW/2+(h.center*cssW-cssW/2)*k,W=Math.max(34,h.width*cssW*k);
     const strong=h.judgment==='MARVELOUS'||h.judgment==='EXCELLENT'||h.precise,power=strong?1:(h.judgment==='GREAT'?.78:.55);
     const fade=1-p,grow=1-Math.pow(1-p,3);
+    const poly=pts=>{ctx.beginPath();ctx.moveTo(pts[0],pts[1]);for(let i=2;i<pts.length;i+=2)ctx.lineTo(pts[i],pts[i+1]);ctx.closePath();};
     ctx.setTransform(dpr,0,0,dpr,0,0);
-    // ふわっとした光のかたまり(放射状のグラデーションが無い WebGL でも同じに出るよう、同心円を重ねる)
+    // ふわっとした光のかたまり(差し色。放射状のグラデーションが無い WebGL でも同じに出るよう、同心円を重ねる)
     for(let i=3;i>=1;i--){
-      ctx.globalAlpha=Math.max(0,fade*.13*(4-i)*power);ctx.fillStyle=`rgb(${C.main})`;
+      ctx.globalAlpha=Math.max(0,fade*.12*(4-i)*power);ctx.fillStyle=`rgb(${style?C.accent:C.main})`;
       ctx.beginPath();ctx.arc(cx,Y,W*.3*i*(.55+grow*.7),0,Math.PI*2);ctx.fill();
     }
-    // 広がる菱形の輪(2重。外は差し色で少し遅れて広がる)
+    // 線に沿って左右へ伸びる光の筋(レンズの光の筋のよう。参考の Sky Input の弾け方)。beam は長く強く、ruby は出さない
+    const lensOn=style!=='ruby',lens=Math.min(1,p/(style==='beam'?.7:.6));
+    if(lensOn&&lens<1){
+      const a=(1-lens)*power,len=W*((style==='beam'?1.5:1.1)+lens*(style==='beam'?2.2:1.6)),th=(style==='beam'?2:1.6)*(1-lens)+.5;
+      ctx.globalAlpha=a*.85;ctx.fillStyle=`rgb(${C.accent})`;poly([cx-len,Y,cx,Y-th*2,cx+len,Y,cx,Y+th*2]);ctx.fill();
+      ctx.globalAlpha=a;ctx.fillStyle=`rgb(${C.core})`;poly([cx-len*.7,Y,cx,Y-th,cx+len*.7,Y,cx,Y+th]);ctx.fill();
+    }
+    // 細い輪が広がる(菱形。ruby は差し色の赤、ほかは芯の色)
     const diamond=(R,flat)=>{ctx.beginPath();ctx.moveTo(cx,Y-R*flat);ctx.lineTo(cx+R,Y);ctx.lineTo(cx,Y+R*flat);ctx.lineTo(cx-R,Y);ctx.closePath();ctx.stroke();};
-    ctx.globalAlpha=Math.max(0,fade*power);ctx.lineWidth=1+3*fade;ctx.strokeStyle=`rgb(${C.core})`;diamond(W*(.22+grow*.78),.62);
+    ctx.globalAlpha=Math.max(0,fade*power*(style==='cube'?.6:1));ctx.lineWidth=1+(style==='beam'?2:3)*fade;ctx.strokeStyle=`rgb(${style==='ruby'?C.main:C.core})`;diamond(W*(.22+grow*.78),.62);
     const lag=Math.max(0,(p-.12)/.88),lagGrow=1-Math.pow(1-lag,3);
     if(lag>0){ctx.globalAlpha=Math.max(0,(1-lag)*.8*power);ctx.lineWidth=1+2*(1-lag);ctx.strokeStyle=`rgb(${C.accent})`;diamond(W*(.18+lagGrow*1.15),.5);}
-    // 線に沿って左右へ伸びる光の筋(レンズの光の筋のよう。参考動画の Sky Input の弾け方・オンプくんのまとめ)。最初の6割
-    const lens=Math.min(1,p/.6);
-    if(lens<1){
-      const a=(1-lens)*power,len=W*(1.1+lens*1.6),th=1.6*(1-lens)+.5;
-      ctx.globalAlpha=a*.85;ctx.fillStyle=`rgb(${C.accent})`;
-      ctx.beginPath();ctx.moveTo(cx-len,Y);ctx.lineTo(cx,Y-th*2);ctx.lineTo(cx+len,Y);ctx.lineTo(cx,Y+th*2);ctx.closePath();ctx.fill();
+    if(style==='ruby'){
+      // 案N 赤い宝石: 菱形が4つの面に割れて、赤い三角が4方向(斜め)へ回りながら飛ぶ
+      const sz=W*.22*(1-p*.5);
+      for(let i=0;i<4;i++){
+        const ang=Math.PI/4+i*Math.PI/2,d=W*(.08+grow*.75),x=cx+Math.cos(ang)*d,y=Y+Math.sin(ang)*d*.7,turn=ang+p*2.4*(i%2?1:-1);
+        ctx.globalAlpha=Math.max(0,fade*power);ctx.fillStyle=`rgb(${i%2?C.main:'254,202,202'})`;
+        poly([x+Math.cos(turn)*sz,y+Math.sin(turn)*sz,x+Math.cos(turn+2.1)*sz*.7,y+Math.sin(turn+2.1)*sz*.7,x+Math.cos(turn-2.1)*sz*.7,y+Math.sin(turn-2.1)*sz*.7]);ctx.fill();
+      }
+    }else if(style==='cube'){
+      // 案O 白銀の立方体: 上・左・右の3つの面が、それぞれ外へ開くように離れていく
+      const e=W*.2*(1-p*.35),d=W*.55*grow,a=Math.max(0,fade*power);
+      const top=[0,-1],left=[-.87,.5],right=[.87,.5];
+      [[top,'255,255,255'],[left,C.main],[right,'203,213,225']].forEach(([dir,col])=>{
+        const ox=cx+dir[0]*d,oy=Y+dir[1]*d*.8;ctx.globalAlpha=a;ctx.fillStyle=`rgb(${col})`;
+        if(dir===top)poly([ox,oy-e*.5,ox+e*.87,oy,ox,oy+e*.5,ox-e*.87,oy]);
+        else if(dir===left)poly([ox-e*.87,oy-e*.5,ox,oy,ox,oy+e,ox-e*.87,oy+e*.5]);
+        else poly([ox,oy,ox+e*.87,oy-e*.5,ox+e*.87,oy+e*.5,ox,oy+e]);
+        ctx.fill();
+      });
+    }
+    // 十字の星(最初の4割だけ。横に長く、縦は上へ長めに伸ばして「空中」の向きを出す。ruby は白い星形の閃光として強めに)
+    const q=Math.min(1,p/(style==='ruby'?.3:.4));
+    if(q<1&&style!=='cube'){
+      const a=(1-q)*power,len=W*((style==='ruby'?.4:.5)+q*.75),up=W*(.35+q*.9),th=2.6*(1-q)+.8;
       ctx.globalAlpha=a;ctx.fillStyle=`rgb(${C.core})`;
-      ctx.beginPath();ctx.moveTo(cx-len*.7,Y);ctx.lineTo(cx,Y-th);ctx.lineTo(cx+len*.7,Y);ctx.lineTo(cx,Y+th);ctx.closePath();ctx.fill();
+      poly([cx-len,Y,cx,Y-th,cx+len,Y,cx,Y+th]);ctx.fill();
+      poly([cx,Y-up,cx+th,Y,cx,Y+up*(style==='ruby'?1:.45),cx-th,Y]);ctx.fill();
     }
-    // 十字の星(最初の4割だけ。横に長く、縦は上へ長めに伸ばして「空中」の向きを出す)
-    const q=Math.min(1,p/.4);
-    if(q<1){
-      const a=(1-q)*power,len=W*(.5+q*.75),up=W*(.35+q*.9),th=2.6*(1-q)+.8;
-      ctx.globalAlpha=a;ctx.fillStyle=`rgb(${C.core})`;
-      ctx.beginPath();ctx.moveTo(cx-len,Y);ctx.lineTo(cx,Y-th);ctx.lineTo(cx+len,Y);ctx.lineTo(cx,Y+th);ctx.closePath();ctx.fill();
-      ctx.beginPath();ctx.moveTo(cx,Y-up);ctx.lineTo(cx+th,Y);ctx.lineTo(cx,Y+up*.45);ctx.lineTo(cx-th,Y);ctx.closePath();ctx.fill();
+    // 舞い上がる四角いかけら(回りながら外へ開いて上がり、ゆっくり落ちる)。ruby は三角が飛ぶので出さない
+    if(style!=='ruby'){
+      const n=style==='cube'?8:6;
+      for(let i=0;i<n;i++){
+        const spread=style==='cube'?.32:.42,ang=-Math.PI/2+(i-(n-1)/2)*spread,dist=W*(.18+grow*(.85+(i%2)*.25)),x=cx+Math.cos(ang)*dist,y=Y+Math.sin(ang)*dist*(style==='cube'?1.15:.9)+p*p*W*.25;
+        const r=Math.max(.6,(3-(i%3)*.5)*(1-p*.7)),turn=(i%2?1:-1)*(.6+p*3),co=Math.cos(turn)*r,si=Math.sin(turn)*r;
+        ctx.globalAlpha=Math.max(0,fade*power);ctx.fillStyle=i%2?`rgb(${C.main})`:`rgb(${C.core})`;
+        poly([x-co+si,y-si-co,x+co+si,y+si-co,x+co-si,y+si+co,x-co-si,y-si+co]);ctx.fill();
+      }
     }
-    // 上へ舞い上がるかけら(小さな四角が6つ。回りながら外へ開いて上がり、ゆっくり落ちる。参考の「四角い小さな破片」)
-    for(let i=0;i<6;i++){
-      const ang=-Math.PI/2+(i-2.5)*.42,dist=W*(.18+grow*(.85+(i%2)*.25)),x=cx+Math.cos(ang)*dist,y=Y+Math.sin(ang)*dist*.9+p*p*W*.25;
-      const r=Math.max(.6,(3-(i%3)*.5)*(1-p*.7)),turn=(i%2?1:-1)*(.6+p*3);
-      const co=Math.cos(turn)*r,si=Math.sin(turn)*r;
-      ctx.globalAlpha=Math.max(0,fade*power);ctx.fillStyle=i%2?`rgb(${C.main})`:`rgb(${C.core})`;
-      ctx.beginPath();ctx.moveTo(x-co+si,y-si-co);ctx.lineTo(x+co+si,y+si-co);ctx.lineTo(x+co-si,y+si+co);ctx.lineTo(x-co-si,y-si+co);ctx.closePath();ctx.fill();
-    }
-    // 真ん中に残る光の点(輪が広がったあとも少し残る)
+    // 真ん中に残る光の点
     ctx.globalAlpha=Math.max(0,Math.min(1,(1-p)*1.6)*power);ctx.fillStyle=`rgb(${C.core})`;
     ctx.beginPath();ctx.arc(cx,Y,1.5+2.5*(1-p),0,Math.PI*2);ctx.fill();
     ctx.globalAlpha=1;
@@ -30227,7 +30255,9 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   // ふわっとした光は c*c で明るくなり、細い輪は外から板へ向かって縮みながら濃くなる
   const drawSkyGlow=(hd,opts)=>{
     if(!hd||effect==='MINIMAL'||lightweight)return;
-    const C=RHYTHM_SKY_FX,line=rhythmSkyLineRatio()*cssH,range=cssH*.42,dist=line-hd.cy;
+    // 色は案の差し色(ピンセットくんの RHYTHM_SKY_THEMES)に合わせる。無ければ RHYTHM_SKY_FX(金)
+    const theme=typeof rhythmSkyTheme==='function'?rhythmSkyTheme():null,themed=theme&&typeof theme.rgb==='string'&&theme.rgb;
+    const C=themed?{core:'255,255,255',main:themed}:RHYTHM_SKY_FX,line=rhythmSkyLineRatio()*cssH,range=cssH*.42,dist=line-hd.cy;
     if(!(dist>-Math.max(8,hd.h)&&dist<range))return;
     const c=Math.max(0,Math.min(1,1-dist/range)),k=c*c,W=Math.max(18,hd.w*sizeScale*1.5),alpha=Number.isFinite(opts?.alpha)?opts.alpha:1;
     ctx.save();
