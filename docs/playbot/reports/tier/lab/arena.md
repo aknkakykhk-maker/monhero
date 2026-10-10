@@ -77,6 +77,10 @@ PLAYBOT_PORT=8981 PLAYBOT_TACTICS_ALL=1 PLAYBOT_TACTICS_DIFF=Hard PLAYBOT_TACTIC
   ニコラオの力(アシカ): 手札に来たら早めに置く(敵のライフ3割より上のとき)
 - 2026-10-10 緊急回復の条件を選べるようにした: `PLAYBOT_TACTICS_EMERGENCY=auto`(AUTO と同じ条件だけ)/ `wipe`(全滅の手前だけ)/ `0`(押さない)/ 既定は両方。
   記録の `r.bot.emergency` に条件の名前('auto+wipe' など)を入れる。それより前の r.bot つきの回(`emergency: true`)は、すべて両方の条件(auto+wipe)で戦った回
+- 2026-10-10 **供モンの固定・アシカの順**(社長の「4体パーティのおすすめ」を実戦で確かめるため。ハカセくんの頼み)。
+  `PLAYBOT_TACTICS_ALLIES=ゴースト,モノリス,ハム`(名前でも id でも): 戦う前の編成で勇者モンの次にこの順で選び、WAVE の合間に加わる順もこの順。
+  `PLAYBOT_TACTICS_ASSIST_ORDER=ポルツ,きき,あつ`(アシカ本人の名前): 出てきたカードのうち並びの前のアシカを選ぶ(新規習得も強化も)。順番に試す(ROTATE)より先に効く。
+  記録の `r.bot.fixedAllies`・`r.bot.assistOrder` に残す
 
 ## 見つけたボットの取りこぼし(ハカセくんへ渡す)
 
