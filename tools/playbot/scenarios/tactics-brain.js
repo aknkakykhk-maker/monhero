@@ -292,6 +292,9 @@ function decidePick(b, opts, ctx) {
   const leanG = alive.some((x) => x.guts && x.guts.max && x.guts.now < x.guts.max * 0.35);
   const named2 = (re) => opts.find((o) => re.test(o.card.label.replace(/^\d+\s*/, '')));
   const kiki = named2(/^きき/), poltz = named2(/^ポルツ/), momo = named2(/^ももすけ/), meloso = named2(/^メロソ/);
+  // ★ニコラオの力は手札に来たら早めに置く(2026-10-10 ダイスくん: 上手な使い方は 1ラン 5.0 回・1〜5 ターン目に 66%。ボットは 1.3 回で、Expert で +0.91 WAVE の差)
+  const nikolao = process.env.PLAYBOT_TACTICS_EX_EARLY !== '0' && named2(/^ニコラオ/);
+  if (nikolao && !ctx.buffed && b.enemy && b.enemy.hp > b.enemy.max * 0.3) { ctx.buffed = true; return { kind: 'support', card: nikolao.card, why: '手札に来たので早めに置く(ニコラオの力)' }; }
   if (momo && leanG && !ctx.healed) return { kind: 'support', card: momo.card, why: 'ガッツが細った子がいる(ももすけ: ガッツ回復)' };
   if (kiki && !ctx.buffed && richestG >= 0.3 && b.enemy && b.enemy.hp > b.enemy.max * 0.3) return { kind: 'support', card: kiki.card, why: '次のターンからカードの上限を増やす(きき)' };
   if (poltz && !ctx.buffed && richestG >= 0.3 && b.enemy && b.enemy.hp > b.enemy.max * 0.4) return { kind: 'support', card: poltz.card, why: '受けるたびにガッツが戻るようにする(ポルツ)' };
@@ -403,6 +406,8 @@ async function maybeUseEx(s, b, mem, log) {
     const gutsLow = x.guts && x.guts.now < x.guts.max * 0.25;
     const hpLow = x.hp && x.hp.now < x.hp.max * 0.4;
     const late = (b.wave || 0) >= 5;
+    const exEarly = process.env.PLAYBOT_TACTICS_EX_EARLY !== '0';
+    const heavyAimed = b.slots.find((y) => y.occupied && !y.downed && y.aimDamage && y.hp && y.aimDamage >= y.hp.now * 0.3);
     let why = '';
     // モノリスの「みんなをかばう」は1ランで10回。かばう子(自分)以外が倒れそうなら使う(打たれ弱いピクシー・ライガーを守る)
     const victim = b.slots.find((y) => y.occupied && !y.downed && y.i !== x.i && y.aimDamage && y.hp && y.aimDamage >= y.hp.now * 0.5);
@@ -424,6 +429,9 @@ async function maybeUseEx(s, b, mem, log) {
     else if (role === 'refill' && b.enemy && b.enemy.hp >= b.enemy.max * 0.9 && (b.turn || 1) <= 2 && mem.recentWave && b.enemy.max > mem.recentWave * 8 && x.guts && x.guts.now < x.guts.max * 0.7) why = '手強いWAVEの始め(満タンにして力を上げるEX)';
     else if (role === 'refill' && (gutsLow || hpLow) && (hpLow || (b.enemy && b.enemy.hp >= b.enemy.max * 0.4))) why = gutsLow ? 'ガッツが細った(満タンにするEX)' : 'ライフが細った(満タンにするEX)';
     else if (role === 'burst' && enemyFull && (late || (b.enemy && b.enemy.max >= 3000))) why = '敵のライフがたっぷり残っている(火力のEX)';
+    // ★WAVE の始めに使う(2026-10-10 ダイスくんのシミュレーター: 上手な使い方は WAVE の 1〜2 ターン目・敵のライフ 96% で使い、1ランの回数も倍。
+    //   Expert で ライガー +0.84・プラント +0.65・アーク +0.62 WAVE)。前は WAVE 5 より前の小さい敵では使わなかった。PLAYBOT_TACTICS_EX_EARLY=0 で前の決め方
+    else if (role === 'burst' && exEarly && (b.turn || 1) <= 2 && b.enemy && b.enemy.hp >= b.enemy.max * 0.9) why = 'WAVE の始め(火力の EX を早めに)';
     // 自分だけを守る EX(オボロゲソウの吸収・ゴーストの完全回避): 自分が狙われて、重く削られるとき
     else if (role === 'selfGuard' && x.aimDamage && x.hp && x.aimDamage >= x.hp.now * 0.3) why = '自分が狙われて重い(自分を守るEX)';
     // カウンター(ハム): 自分が狙われているターン。貫通撃は受けきれないので外す
@@ -437,11 +445,14 @@ async function maybeUseEx(s, b, mem, log) {
     }
     // 回復の EX(ウンディーネ・メロディー・スプーキー): 誰かのライフが4割を切った
     else if (role === 'heal' && b.slots.some((y) => y.occupied && !y.downed && y.hp && y.hp.now < y.hp.max * 0.4)) why = '味方のライフが細った(回復のEX)';
+    // ★ウンディーネの生命の泉は、細るまで待たない(2026-10-10 ダイスくん: 上手な使い方は 1ラン 4.8 回・使う前のライフ平均 72%、
+    //   1〜2 ターン目に 50%・狙われたターンに 68%。ボットは 1.7 回・39% で、Expert で +0.95 WAVE の差)
+    else if (role === 'heal' && exEarly && x.name === 'ウンディーネ' && (heavyAimed || ((b.turn || 1) <= 2 && b.slots.some((y) => y.occupied && !y.downed && y.hp && y.hp.now < y.hp.max * 0.8)))) why = heavyAimed ? `${heavyAimed.name}が重く狙われている(生命の泉を早めに)` : 'WAVE の始めにライフを満たす(生命の泉を早めに)';
     // 1WAVE に1回の EX(スネグーラチカ): ガッツが細ってきたら
     else if (role === 'present' && b.slots.filter((y) => y.occupied && !y.downed && y.guts).some((y) => y.guts.now < y.guts.max * 0.5)) why = 'ガッツが細ってきた(1WAVEに1回のEX)';
     if (!why) continue;
     // 選んだ味方へ使う EX(ウンディーネ)は、いちばんライフの細い子を選ぶ
-    const healTarget = role === 'heal' ? (b.slots.filter((y) => y.occupied && !y.downed && y.hp).sort((p, q) => p.hp.now / p.hp.max - q.hp.now / q.hp.max)[0] || {}).name : '';
+    const healTarget = role === 'heal' && exEarly && x.name === 'ウンディーネ' && heavyAimed && !b.slots.some((y) => y.occupied && !y.downed && y.hp && y.hp.now < y.hp.max * 0.4) ? heavyAimed.name : role === 'heal' ? (b.slots.filter((y) => y.occupied && !y.downed && y.hp).sort((p, q) => p.hp.now / p.hp.max - q.hp.now / q.hp.max)[0] || {}).name : '';
     await quickTap(s, `[data-slot-index="${x.i}"]`);
     await s.wait(500);
     const panel = await s.page.evaluate(() => {
@@ -1004,9 +1015,10 @@ function rememberRun(L, stats) {
     // 子ごとの技の回数・間合い適性(2026-10-09 から)・勇者特性が効いた回数・EX を使った子
     emergency: L.emergency || 0, // 緊急回復を押した回数(2026-10-10 から)
     // ボットの版(2026-10-10 から)。arena-1 = アリーナくんの直し(緊急回復・自動回復の見込み・起こす・トレーニング・固有技の強化・おなら・時間停止)の入った版。
+    //   arena-2 = それに EX を早めに使う直し(火力の EX を WAVE の始めに・ウンディーネ・ニコラオ。exEarly)を足した版
     //   これが無い回は、それより前の版
     //   切り替えごとの入/切(ハカセくんの頼み: Tier を「直したボットの回だけ」に絞れるように)。時間停止の直しは切れないので、bot がある回は全部入っている
-    bot: { ver: 'arena-1', ...Object.fromEntries(['EMERGENCY', 'REGEN', 'REVIVE_EACH', 'TRAIN_V2', 'UNIQUE_ROLE', 'HAM_STUN'].map((f) => [f.toLowerCase().replace(/_(\w)/g, (_, c) => c.toUpperCase()), process.env[`PLAYBOT_TACTICS_${f}`] !== '0'])), rotate: process.env.PLAYBOT_TACTICS_ASSIST_ROTATE === '1' },
+    bot: { ver: 'arena-2', ...Object.fromEntries(['EMERGENCY', 'REGEN', 'REVIVE_EACH', 'TRAIN_V2', 'UNIQUE_ROLE', 'HAM_STUN', 'EX_EARLY'].map((f) => [f.toLowerCase().replace(/_(\w)/g, (_, c) => c.toUpperCase()), process.env[`PLAYBOT_TACTICS_${f}`] !== '0'])), rotate: process.env.PLAYBOT_TACTICS_ASSIST_ROTATE === '1' },
     heroStyle: L.build.heroStyle || null, // 勇者モンの初期スタイル(剣士モッチー。2026-10-10 から。それより前は片手剣)
     use, traitHits: L.waves.reduce((a, w) => a + (w.traitHits || 0), 0),
     exBy: L.ex.reduce((o, e) => { if (e.mon) o[e.mon] = (o[e.mon] || 0) + 1; return o; }, {}),
