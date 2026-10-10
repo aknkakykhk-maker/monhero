@@ -68,7 +68,7 @@ async function multiScenario(s, { maxSongMs = 330000 } = {}) {
   await s.tapLabel(/^ルームを出る$/, 1500);
   await s.dismissOverlays(4);
   await s.backHome();
-  return { ok: true, stats, note: `部屋を作り、マスモン ${stats.called}体を呼んだ(今日の無料 ${stats.freeBefore}→${stats.freeAfter}回・二度押し)・${stats.song || '?'} を ${stats.notes}ノーツ演奏 → スコア ${stats.score || '?'}` };
+  return { ok: true, stats, note: `部屋を作り、マスモン ${stats.called}体を呼んだ(今日の無料 ${stats.freeBefore}→${stats.freeAfter}回・二度押し)・${stats.song || '?'} を ${stats.notes}ノーツ演奏 → スコア ${stats.score || '?'}${s.state.resultOrientation ? `・結果の縦横 ${s.state.resultOrientation}` : ''}` };
 }
 
 
@@ -129,7 +129,57 @@ async function playInRoom(s, stats, { maxSongMs = 330000 } = {}) {
   stats.score = m ? m[1] : null;
   await s.shot('multi-result');
   await s.inspect();
+  await resultOrientation(s);
   return { ok: true };
+}
+
+// マルチの結果画面の縦横切り替え(2026-10-10・社長「マルチの演奏後の結果画面でも縦横切り替えボタンほしい」)。
+// 演奏直後の自分の結果と、「みんなの結果を見る」のあとのチームの結果の両方で、縦横ボタンを押して横・縦を撮り、
+// ボタンが画面からはみ出していないかを見る。どちらも最後は縦へ戻す(チームの結果は、自分の結果で選んだ向きのまま開くかも見る)
+async function resultOrientation(s) {
+  const fits = (sels) => s.page.evaluate((sels) => {
+    const w = window.innerWidth, h = window.innerHeight;
+    const out = sels.map((sel) => {
+      const el = document.querySelector(sel);
+      if (!el) return `${sel}: 無い`;
+      const r = el.getBoundingClientRect();
+      return r.width > 0 && r.height > 0 && r.left >= -1 && r.top >= -1 && r.right <= w + 1 && r.bottom <= h + 1 ? '' : `${sel}: はみ出し(${Math.round(r.left)},${Math.round(r.top)},${Math.round(r.right)},${Math.round(r.bottom)})`;
+    }).filter(Boolean);
+    return { out, rotated: document.querySelector('[data-mh-view-rotation="true"]') ? '横' : '縦' };
+  }, sels);
+  const flip = async (where, toggle, sels, name) => {
+    if (!(await s.page.$(toggle))) { await s.addIssue('入口がない', `マルチの${where}に縦横切り替えボタンが無い`); return '無い'; }
+    const log = [];
+    for (const step of ['1回目', '2回目']) {
+      await s.page.click(toggle).catch(() => {});
+      await s.wait(1500);
+      const f = await fits(sels);
+      await s.shot(`${name}-${f.rotated}`);
+      if (f.out.length) await s.addIssue('はみ出し', `マルチの${where}を縦横ボタンで${f.rotated}にすると、ボタンが画面に収まらない: ${f.out.join(' / ')}`);
+      log.push(`${f.rotated}${f.out.length ? `(はみ出し${f.out.length})` : ''}`);
+    }
+    return log.join('→');
+  };
+  const own = await s.page.waitForFunction(() => !!document.querySelector('[data-rhythm-result]'), null, { timeout: 15000 }).then(() => true).catch(() => false);
+  const notes = [];
+  if (own) {
+    notes.push(`自分の結果 ${await flip('自分の結果の画面', '[data-rhythm-result-orientation] [data-rhythm-orientation-toggle]', ['[data-rhythm-result-orientation] button', '[data-rhythm-multi-result-back]'], 'multi-own-result')}`);
+    // 横のままチームの結果へ進み、向きが続いているかを見る
+    await s.page.click('[data-rhythm-result-orientation] [data-rhythm-orientation-toggle]').catch(() => {});
+    await s.wait(1200);
+    await s.page.click('[data-rhythm-multi-result-back]').catch(() => {});
+  }
+  const team = await s.page.waitForFunction(() => !!document.querySelector('[data-rhythm-multi-step="result"]'), null, { timeout: 20000 }).then(() => true).catch(() => false);
+  if (team) {
+    await s.wait(1500);
+    const kept = await fits([]);
+    await s.shot(`multi-team-result-${kept.rotated}`);
+    if (own && kept.rotated !== '横') await s.addIssue('向きがずれる', '自分の結果で横にしてから「みんなの結果を見る」へ進むと、チームの結果が縦に戻っていた');
+    notes.push(`チームの結果(開いたとき${kept.rotated}) ${await flip('チームの結果画面', '[data-rhythm-multi-result-orientation] [data-rhythm-orientation-toggle]', ['[data-rhythm-multi-result-orientation] button', '[data-rhythm-multi-member-stats]', '[data-rhythm-multi-result-next]'], 'multi-team-result')}`);
+    // 最後は縦へ戻す
+    if ((await fits([])).rotated === '横') { await s.page.click('[data-rhythm-multi-result-orientation] [data-rhythm-orientation-toggle]').catch(() => {}); await s.wait(1200); }
+  }
+  s.state.resultOrientation = notes.join(' / ') || '結果画面に着かなかった';
 }
 
 module.exports = { multiScenario, playInRoom, freeLeft, cpuCount };

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ba2f630674715f15
+// source-sha256: b756c1c3a720ece2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-10 11:21";
+const BUILD_DATE = "2026-10-10 11:34";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -34554,7 +34554,12 @@ const RhythmTapTest = ({
         paddingBottom: 'calc(.5rem + var(--mh-sa-bottom))'
       }
     }, React.createElement("div", {
-      className: multi || raidPlay ? "grid grid-cols-1 gap-2" : "grid grid-cols-2 gap-2"
+      className: multi ? "flex items-center gap-2" : ""
+    }, multi && React.createElement("div", {
+      "data-rhythm-result-orientation": true,
+      className: "shrink-0"
+    }, React.createElement(RhythmOrientationButton, null)), React.createElement("div", {
+      className: multi ? "grid min-w-0 flex-1 grid-cols-1 gap-2" : raidPlay ? "grid grid-cols-1 gap-2" : "grid grid-cols-2 gap-2"
     }, !multi && !raidPlay && React.createElement("button", {
       className: "min-h-[48px] rounded-xl bg-fuchsia-700 font-black",
       disabled: startLockRef.current,
@@ -34564,7 +34569,7 @@ const RhythmTapTest = ({
       "data-rhythm-raid-result-back": raidPlay ? "" : undefined,
       className: "min-h-[48px] rounded-xl bg-indigo-700 font-black",
       onClick: abort
-    }, multi && 'みんなの結果を見る', !multi && raidPlay && 'レイドの結果を見る', !multi && !raidPlay && React.createElement(React.Fragment, null, debugPlay ? '音ゲーデバッグへ戻る' : '曲えらびへ戻る')))))));
+    }, multi && 'みんなの結果を見る', !multi && raidPlay && 'レイドの結果を見る', !multi && !raidPlay && React.createElement(React.Fragment, null, debugPlay ? '音ゲーデバッグへ戻る' : '曲えらびへ戻る'))))))));
   }
   return React.createElement("main", {
     "data-rhythm-tap-test": true,
@@ -68704,6 +68709,9 @@ function RhythmMultiScreen({
     }, React.createElement("small", {
       className: "absolute -top-3.5 -translate-x-1/2 text-[9px] font-black text-slate-300"
     }, mk.id))))), React.createElement("div", {
+      "data-rhythm-multi-result-orientation": true,
+      className: "shrink-0 self-start"
+    }, React.createElement(RhythmOrientationButton, null)), React.createElement("div", {
       className: "flex w-16 shrink-0 flex-col items-center"
     }, React.createElement("b", {
       "data-rhythm-multi-team-rank": true,
