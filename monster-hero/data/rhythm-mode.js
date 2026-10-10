@@ -28291,9 +28291,68 @@ const rhythmEnsureHitEffects=area=>{
 // アニメーションが外れるか付くかはスタイルの計算だけで決まるので、それで流し直せる。
 // 判定のたびにページ全体の配置を計算し直していたのが、スタイルの計算だけになる
 // (実測: 叩いた10秒のうち、この読み取りに78ms。CPUを1/4に絞った環境)。
+// ── 叩くたびの CSS アニメーションの流し直し(2026-10-10 社長「すぐ直して入れる」) ──
+// 以前は印を外す → getComputedStyle で画面全体のスタイル計算を強制 → 印を付け直す、で流し直していた。
+// 叩くたびに全体の計算が走り、遅い端末では1回で数十ms かかっていた(CPU 3倍で 0.7秒のうち 57〜371ms)。
+// いまは印の値を「V」と「V--b」で交互に切り替える。ページの CSS のうち、下の印の「値がちょうど V」の決まりを、
+// 値「V--b」・アニメーションの名前「名前--b」(中身は同じキーフレーム)で、元の決まりのすぐ後ろへ複製しておく
+// (同じ詳細度・同じ順なので、効き方は元と同じ)。名前が変わるとアニメーションは最初から流れ直すので、計算を強制しなくてよい。
+const RHYTHM_RESTART_ATTRS=['burst','combo-pop','cutin-play','flash','judgment-pop','life-damage-show','life-hit','ring','side-hit','hit-kind'];
+const RHYTHM_RESTART_SUFFIX='--b';
+const RHYTHM_RESTART_STYLE={sheets:typeof WeakSet==='function'?new WeakSet():null,count:-1,ready:false};
+const rhythmRestartStylesInstall=()=>{
+  if(typeof document==='undefined'||!document.styleSheets||!RHYTHM_RESTART_STYLE.sheets)return false;
+  const sheets=Array.from(document.styleSheets);
+  if(RHYTHM_RESTART_STYLE.ready&&RHYTHM_RESTART_STYLE.count===sheets.length)return true;
+  const token=new RegExp('\\[data-rhythm-('+RHYTHM_RESTART_ATTRS.join('|')+')="([^"]*)"\\]','g');
+  const keyframes=new Map(),renamed=new Set();
+  const walk=(list,fn)=>{for(let i=0;i<list.length;i++){const rule=list[i];fn(rule,list,i);if(rule.cssRules&&!(typeof CSSKeyframesRule!=='undefined'&&rule instanceof CSSKeyframesRule))walk(rule.cssRules,fn);}};
+  const fresh=[];
+  for(const sheet of sheets){
+    let rules=null;try{rules=sheet.cssRules;}catch{continue;}
+    if(!rules)continue;
+    walk(rules,rule=>{if(typeof CSSKeyframesRule!=='undefined'&&rule instanceof CSSKeyframesRule&&!keyframes.has(rule.name))keyframes.set(rule.name,{rule,sheet});});
+    if(!RHYTHM_RESTART_STYLE.sheets.has(sheet))fresh.push({sheet,rules});
+  }
+  const names=[...keyframes.keys()].filter(name=>!name.endsWith(RHYTHM_RESTART_SUFFIX)).sort((a,b)=>b.length-a.length);
+  const nameRe=names.length?new RegExp('(^|[^\\w-])('+names.map(n=>n.replace(/[-\/\\^$*+?.()|[\]{}]/g,'\\$&')).join('|')+')(?![\\w-])','g'):null;
+  for(const {sheet,rules} of fresh){
+    // 複製は後ろから入れる(入れた位置より前の番号がずれないように)
+    const targets=[];
+    walk(rules,(rule,list,index)=>{if(rule.selectorText&&rule.selectorText.includes('[data-rhythm-')){token.lastIndex=0;if(token.test(rule.selectorText))targets.push({rule,list,index});}});
+    for(let k=targets.length-1;k>=0;k--){
+      const {rule,list,index}=targets[k];
+      const parts=rule.selectorText.split(',').filter(part=>{token.lastIndex=0;return token.test(part);});
+      if(!parts.length)continue;
+      const selector=parts.map(part=>part.replace(token,(m,attr,value)=>`[data-rhythm-${attr}="${value}${RHYTHM_RESTART_SUFFIX}"]`)).join(',');
+      const body=nameRe?rule.style.cssText.replace(nameRe,(m,lead,name)=>{renamed.add(name);return lead+name+RHYTHM_RESTART_SUFFIX;}):rule.style.cssText;
+      const parent=rule.parentRule&&typeof rule.parentRule.insertRule==='function'?rule.parentRule:sheet;
+      try{parent.insertRule(`${selector}{${body}}`,index+1);}catch{}
+    }
+    RHYTHM_RESTART_STYLE.sheets.add(sheet);
+  }
+  for(const name of renamed){
+    const dup=name+RHYTHM_RESTART_SUFFIX;if(keyframes.has(dup))continue;
+    const {rule,sheet}=keyframes.get(name);
+    try{sheet.insertRule(rule.cssText.replace(/^@(-webkit-)?keyframes\s+[^\s{]+/,m=>m.replace(/[^\s]+$/,dup)),sheet.cssRules.length);keyframes.set(dup,{rule:null,sheet});}catch{}
+  }
+  RHYTHM_RESTART_STYLE.count=document.styleSheets.length;RHYTHM_RESTART_STYLE.ready=true;
+  return true;
+};
 const rhythmRestartAnimations=entries=>{
   const list=(Array.isArray(entries)?entries:[]).filter(entry=>entry&&entry.el&&entry.attr);
   if(!list.length)return 0;
+  if(rhythmRestartStylesInstall()){
+    // 「V」と「V--b」を交互に。どちらも同じ見た目・同じ動きで、名前だけ違うアニメーションが最初から流れる
+    for(const entry of list){
+      const base=entry.value===undefined?'1':String(entry.value);
+      // いまの値に --b が付いていれば付けない値へ、付いていなければ付けた値へ(値が変わるときも、アニメーションの名前は必ず切り替わる)
+      const now=String(entry.el.dataset[entry.attr]||'');
+      entry.el.dataset[entry.attr]=now.endsWith(RHYTHM_RESTART_SUFFIX)?base:base+RHYTHM_RESTART_SUFFIX;
+    }
+    return list.length;
+  }
+  // CSS を読めない環境(検査の node など)では、今までどおり印を外して付け直す
   for(const entry of list)entry.el.dataset[entry.attr]='';
   // ここ1回だけ。印を外したことをスタイルの計算で確定させる(レイアウトは読まない)
   void getComputedStyle(list[0].el).animationName;
