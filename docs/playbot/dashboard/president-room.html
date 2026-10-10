@@ -68,12 +68,12 @@ section{display:flex;flex-direction:column;gap:10px}
 <div class="wrap">
   <header>
     <h1>モンヒロ社 社長室</h1>
-    <p class="lead">10/10 15:55 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。<br>モンスター Tier 表: <a href="https://claude.ai/artifact/3sUNc2pQgN5f4QdYYW5tW8">https://claude.ai/artifact/3sUNc2pQgN5f4QdYYW5tW8</a>(サイドバーにも固定)</p>
+    <p class="lead">10/10 15:57 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。<br>モンスター Tier 表: <a href="https://claude.ai/artifact/3sUNc2pQgN5f4QdYYW5tW8">https://claude.ai/artifact/3sUNc2pQgN5f4QdYYW5tW8</a>(サイドバーにも固定)</p>
   </header>
 
   <nav class="counts" aria-label="件数">
     <a class="count warn" href="#decide"><b>0</b><span>社長の判断待ち</span></a>
-    <a class="count" href="#work"><b>7</b><span>進行中</span></a>
+    <a class="count" href="#work"><b>8</b><span>進行中</span></a>
     <a class="count" href="#shipped"><b>57</b><span>公開したもの</span></a>
   </nav>
 
@@ -88,10 +88,15 @@ section{display:flex;flex-direction:column;gap:10px}
     <section id="work">
       <h2>進行中の作業</h2>
       <ul class="list">
+      <li id="r2610101530refcap">
+        <div class="row-title">参考譜面に寄せる作り方を道具にする(写し取った一覧は残さない)</div>
+        <div class="row-body">tools/mode/ に読み取り(参考動画→ノーツの一覧)・置き換え(→タップ/スライド/フリック)・検査(両手シミュレート)の3段を足す。読み取った一覧は作業用フォルダだけで、公開のリポジトリにもコーパスにも残さない。配信中の曲の譜面は触らない</div>
+        <div class="meta"><span>オンプくん(譜面係)</span><span>見込み 予定を早めて 15:52 に始めた。16:00〜19:00。読み取りの段で docs/ に進捗メモ</span></div>
+      </li>
       <li id="r2610101500sheri">
         <div class="row-title">新曲「sheriruth」: 参考譜面に寄せた MASTER の試作を見せる</div>
         <div class="row-body">MASTER の30秒ほどを参考譜面(地上4レーン+空中のアーク・スカイノーツ)に寄せて試作し、参考譜面の同じ区間と並べて見せる。アーク→スライド(両手2本同時もあり)、スカイノーツ→スライドの通り道上のタップかフリック。空中と地上の2段は再現できない。丸写しでなく同じ雰囲気・忙しさに寄せる</div>
-        <div class="meta"><span>部長テンポくん</span><span>見込み 社長の感想「色を分けないと見づらい」→ 空中と地上のタップ・2本のスライド・空中と地上の判定ラインの3つの色をはっきり分けて、比較動画を作り直す(試作ブランチだけ・公開しない)。そのあと進め方を社長に聞く</span></div>
+        <div class="meta"><span>部長テンポくん</span><span>見込み 社長の感想「色を分けないと見づらい」→ 空中と地上のタップ・2本のスライド・空中と地上の判定ラインの3つの色をはっきり分けて、比較動画を作り直す(試作ブランチだけ・公開しない)。そのあと進め方を社長に聞く。色分けの直し 16:35〜16:55</span></div>
       </li>
       <li id="r2610101330speed">
         <div class="row-title">Tier 表の実戦を速くする(実戦係の採用・役割分け・ボット用の早送り)</div>
@@ -170,11 +175,6 @@ section{display:flex;flex-direction:column;gap:10px}
       </li></ul>
       <h3 style="margin-top:14px">これからの予定(まだ始めていない)</h3>
       <ul class="list">
-      <li id="r2610101530refcap">
-        <div class="row-title">参考譜面に寄せる作り方を道具にする(写し取った一覧は残さない)</div>
-        <div class="row-body">tools/mode/ に読み取り(参考動画→ノーツの一覧)・置き換え(→タップ/スライド/フリック)・検査(両手シミュレート)の3段を足す。読み取った一覧は作業用フォルダだけで、公開のリポジトリにもコーパスにも残さない。配信中の曲の譜面は触らない</div>
-        <div class="meta"><span>オンプくん(譜面係)</span><span>見込み 試作のあと 18:45ごろ始め、21:45〜22:45 に終わる見込み。最初の10秒で読み取りの精度を確かめ、ずれていればその時点で知らせる</span></div>
-      </li>
       <li id="r2610100930api">
         <div class="row-title">Claude API をゲームに生かす案(保留)</div>
         <div class="row-body">費用は問題なし(毎月 $100 の API クレジット。Haiku 5.5 でひとこと1回 約0.007円)。社長の作業は APIキーを作って Supabase のシークレットに入れる5分ほど。SQL と Edge Function の公開は窓口が確認をとって行える。出した案(セリフ・助言・攻略相談・名前の見張り・おすすめ編成・困りごとの受付・質問検索・育成・AIのゲームマスター)はどれもしっくりこず、社長が「いったん保留」を選んだ</div>
