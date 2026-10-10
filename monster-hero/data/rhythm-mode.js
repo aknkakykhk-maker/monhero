@@ -24289,12 +24289,17 @@ const sheriruthMasterNotes=((t,h,f,s)=>[
   t(132313,0,3,0),t(132556,3,3,0),
 // </sheriruth-v3-master-notes>
 ])(mhTap,mhHoldV2,mhFlick,mhSlideV2);
+// 流れる速さの表(2026-10-10 社長の決定「音に合わせて画面が止まって動く演出」を公開版に入れる)。[時刻ms,倍率]。
+// 参考譜面で確かめた所(元の音源で約85.16〜85.41秒)と同じ、曲の 82.466秒から0.3秒止まり、1.8倍で取り戻して 83.132秒から元の速さ。
+// 止まっている間に判定のノーツは来ない(止まり終わりは次のノーツの0.17秒前・止まる間に次のノーツが判定線へ届かない)。判定の時刻は変わらない。
+// ★音源の頭の無音を 2594.75ms 切った(2026-10-10 社長の決定)あとの時刻。試作・空中の難易度も同じだけずらしてそろえる
+const SHERIRUTH_SCROLL_CHANGES=Object.freeze([[82466,0],[82762,1.8],[83132,1]]);
 const sheriruthCharts=Object.freeze({
-  EASY:mhChart(1,sheriruthEasyNotes,SHERIRUTH_DURATION_MS,6),
-  NORMAL:mhChart(3,sheriruthNormalNotes,SHERIRUTH_DURATION_MS,6),
-  HARD:mhChart(5,sheriruthHardNotes,SHERIRUTH_DURATION_MS,6),
-  EXPERT:mhChart(7,sheriruthExpertNotes,SHERIRUTH_DURATION_MS,6),
-  MASTER:mhChart(9,sheriruthMasterNotes,SHERIRUTH_DURATION_MS,6),
+  EASY:mhChart(1,sheriruthEasyNotes,SHERIRUTH_DURATION_MS,6,{scrollChanges:SHERIRUTH_SCROLL_CHANGES}),
+  NORMAL:mhChart(3,sheriruthNormalNotes,SHERIRUTH_DURATION_MS,6,{scrollChanges:SHERIRUTH_SCROLL_CHANGES}),
+  HARD:mhChart(5,sheriruthHardNotes,SHERIRUTH_DURATION_MS,6,{scrollChanges:SHERIRUTH_SCROLL_CHANGES}),
+  EXPERT:mhChart(7,sheriruthExpertNotes,SHERIRUTH_DURATION_MS,6,{scrollChanges:SHERIRUTH_SCROLL_CHANGES}),
+  MASTER:mhChart(9,sheriruthMasterNotes,SHERIRUTH_DURATION_MS,6,{scrollChanges:SHERIRUTH_SCROLL_CHANGES}),
 });
 const theCityBeneathTheCometsCharts=Object.freeze({
   EASY:mhChart(1,theCityBeneathTheCometsEasyNotes,THE_CITY_BENEATH_THE_COMETS_DURATION_MS,6),
