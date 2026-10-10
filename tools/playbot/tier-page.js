@@ -182,7 +182,7 @@ function build(d) {
     ['ひとこと', esc(a.理由)],
     a.強み ? ['強み', esc(a.強み)] : null,
     a.弱み ? ['弱み', esc(a.弱み)] : null,
-    a.合うモンスター && a.合うモンスター.length ? ['合うモンスター', refList('m', a.合うモンスター)] : null,
+    a.合うモンスター && a.合うモンスター.length ? ['合うモンスター', refList('m', a.合うモンスター)] : (a.合う子なし ? ['合うモンスター', esc(a.合う子なし)] : null),
   ]) + (a.回数 ? `<div class="tw"><table><thead><tr><th>難易度</th><th>Tier</th><th>試した回数</th></tr></thead><tbody>${DIFFS.map((k) => `<tr><td>${k}</td><td>${tier(a[k])}</td><td>${a.回数[k]}</td></tr>`).join('')}</tbody></table></div>` : '');
   const fullBody = (m) => kv([
     ['役', esc(m.役)],
