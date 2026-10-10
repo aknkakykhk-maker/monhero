@@ -78,6 +78,8 @@ const readBoard = (s) => s.page.evaluate(() => {
     needsPlace: /置き場所を選ぶ/.test((action && action.innerText) || ''),
     exPanel: !!document.querySelector('[data-tactics-ex-panel]'),
     exPass: (() => { const b = document.querySelector('[data-tactics-ex-pass]'); return !!b && !b.disabled; })(),
+    // 緊急回復(全員のライフ・ガッツ +30%。そのターンはカードを使えない。71-screen-battle.jsx の aria-label="緊急回復")
+    emergencyReady: (() => { const b = document.querySelector('button[aria-label="緊急回復"]'); return !!b && !b.disabled; })(),
     over: !action && !hand.length && /敗\s*北|GAME OVER|ゲームオーバー|RUN RESULT|ラン終了|ランの結果|最終結果|ALL CLEAR|全WAVE制覇|CHAMPION/.test(text) || /敗\s*北|DEBUG\s*勝\s*利/.test(text),
     cleared: /ALL CLEAR|全WAVE制覇|CHAMPION|優勝|完全制覇/.test(text), gameOver: /敗\s*北|GAME OVER|ゲームオーバー|全滅/.test(text),
   };
@@ -95,6 +97,29 @@ function threatOf(b) {
   if (/様子見|移動|回復|攻撃力アップ/.test(b.notice) && !b.aimedDamage) return 'none';
   if (b.aimedDamage > 0) return 'single';
   return 'none';
+}
+
+// 緊急回復を押すか(2026-10-10 ハカセくんの指示。それまでボットは一度も押していなかった)。
+//   全員のライフ・ガッツが上限の30%戻り、そのターンはカードを使えない(60-app.jsx の useEmergency。倒れた子にも貯まる)。
+//   「全滅の手前」だけで押す: 次の攻撃で倒れる子がいて、そのあと立っている子が1体以下になり、+30% なら持ちこたえる子がいる。
+//   使える回復カードがあるときは回復カードで(攻撃もできる)。ガードのカードがあり、倒れそうなのが1体で貫通撃でもなければ、守りの判断(②)に任せる
+//   PLAYBOT_TACTICS_EMERGENCY=0 で切れる(直す前と比べるため)
+function emergencyWhy(b) {
+  if (process.env.PLAYBOT_TACTICS_EMERGENCY === '0' || !b.emergencyReady) return '';
+  const alive = b.slots.filter((x) => x.occupied && !x.downed && x.hp);
+  if (!alive.length) return '';
+  const usable = (re) => b.hand.some((c) => c.usable && re.test(c.type));
+  // ① ゲームの AUTO と同じ条件(60-app.jsx 13001 付近 lacksOnlyGuts): 置けるカードが1枚もなく、ガッツさえ足りれば置ける。
+  //   ボットは前は捨てて5%ずつ戻していた。緊急回復は回数の上限なし(2026-10-10 ハカセくん・改善部の確認)
+  if (b.hand.length && !b.hand.some((c) => c.usable) && b.hand.some((c) => c.block === 'guts')) return 'ガッツが足りず、置けるカードが1枚もない(ゲームの AUTO と同じ条件)';
+  if (usable(/heal/)) return '';
+  const falling = alive.filter((x) => x.aimDamage > 0 && x.aimDamage >= x.hp.now);
+  // 回復はライフの上限で止まる
+  const saved = falling.filter((x) => x.aimDamage < Math.min(x.hp.max, x.hp.now + Math.floor(x.hp.max * 0.3)));
+  const standAfter = alive.length - falling.length;
+  if (!saved.length || standAfter >= 2) return '';
+  if (falling.length === 1 && threatOf(b) !== 'pierce' && usable(/guard/)) return '';
+  return `${falling.map((x) => x.name || '?').join('・')}が次の攻撃で倒れ、立っている子が${standAfter}体になる(回復カードなし。+30%で持ちこたえる)`;
 }
 
 // ---------- 押す ----------
@@ -177,6 +202,10 @@ function newMemory() {
 }
 const monOf = (mem, name) => (mem.mons[name] = mem.mons[name] || { dmg: 0, taken: 0, aimed: 0, gutsShort: 0, downs: 0, turns: 0 });
 
+// スタンのカード: アシカ(あつの挑発など・type debuff)と、ハムの固有技「おなら」(このターン、敵を行動不能にする)。
+//   ★おならは 2026-10-10 から(ハカセくんの直す順5)。前は普通の攻撃として先に撃ち、ためる・貫通の構えのターンに残っていなかった。
+//   PLAYBOT_TACTICS_HAM_STUN=0 で前の扱い
+const isStunCard = (c) => c.type === 'debuff' || (process.env.PLAYBOT_TACTICS_HAM_STUN !== '0' && c.type === 'unique' && /おなら/.test(c.label || ''));
 function decidePick(b, opts, ctx) {
   const alive = b.slots.filter((x) => x.occupied && !x.downed);
   const threat = threatOf(b);
@@ -244,7 +273,7 @@ function decidePick(b, opts, ctx) {
   }
   // ③ 止める
   if ((threat === 'charge' || threat === 'pierceCharge') && !ctx.stunned) {
-    const st = atkOpts.find((a) => a.o.card.type === 'debuff');
+    const st = atkOpts.find((a) => isStunCard(a.o.card));
     if (st) return { kind: 'attack', card: st.o.card, slot: st.slot, value: st.value, why: `${threat === 'charge' ? '必殺技のため' : '貫通撃の構え'}をスタンで止める`, stun: true };
   }
   // ④ 回復
@@ -252,7 +281,12 @@ function decidePick(b, opts, ctx) {
   const hpMax = b.slots.filter((x) => x.occupied).reduce((a, x) => a + (x.hp ? x.hp.max : 0), 0);
   const downed = b.slots.filter((x) => x.occupied && x.downed).length;
   const heal = opts.find((o) => o.card.type === 'heal');
-  if (heal && !ctx.healed && (downed > 0 || (hpMax && hpNow / hpMax < 0.35))) return { kind: 'support', card: heal.card, why: downed ? `倒れた子がいる(回復は倒れた子にも貯まる)` : `全体のライフが${Math.round((hpNow / hpMax) * 100)}%` };
+  // ★ターン終わりに自動回復(立っている子のライフ 上限の10%・ガッツ 5%。ポルツ・EX で増える。60-app.jsx の tacticsRegen)が入る。
+  //   回復は「次の攻撃を受けて、自動回復が入ったあと」の見込みで決める(2026-10-10 ハカセくんの直す順2。前は今のライフだけを見ていた)。
+  //   PLAYBOT_TACTICS_REGEN=0 で前の決め方に戻る(比べるため)
+  const regenOn = process.env.PLAYBOT_TACTICS_REGEN !== '0';
+  const hpSoon = !hpMax ? 1 : regenOn ? (Math.max(0, hpNow - (b.aimedDamage || 0)) + hpMax * 0.1) / hpMax : hpNow / hpMax;
+  if (heal && !ctx.healed && (downed > 0 || hpSoon < 0.35)) return { kind: 'support', card: heal.card, why: downed ? `倒れた子がいる(回復は倒れた子にも貯まる)` : `全体のライフが${Math.round((hpNow / hpMax) * 100)}%${regenOn ? `(次の攻撃と自動回復のあと ${Math.round(hpSoon * 100)}%)` : ''}` };
   // ④' あとから出たアシストカード。ガッツや手数を増やすものは、早めに使うほど得
   const richestG = alive.reduce((m, x) => Math.max(m, x.guts && x.guts.max ? x.guts.now / x.guts.max : 0), 0);
   const leanG = alive.some((x) => x.guts && x.guts.max && x.guts.now < x.guts.max * 0.35);
@@ -261,11 +295,11 @@ function decidePick(b, opts, ctx) {
   if (momo && leanG && !ctx.healed) return { kind: 'support', card: momo.card, why: 'ガッツが細った子がいる(ももすけ: ガッツ回復)' };
   if (kiki && !ctx.buffed && richestG >= 0.3 && b.enemy && b.enemy.hp > b.enemy.max * 0.3) return { kind: 'support', card: kiki.card, why: '次のターンからカードの上限を増やす(きき)' };
   if (poltz && !ctx.buffed && richestG >= 0.3 && b.enemy && b.enemy.hp > b.enemy.max * 0.4) return { kind: 'support', card: poltz.card, why: '受けるたびにガッツが戻るようにする(ポルツ)' };
-  if (meloso && !ctx.healed && (hpMax && hpNow / hpMax < 0.55)) return { kind: 'support', card: meloso.card, why: 'ライフが減っている(メロソ: 回復とガード)' };
+  if (meloso && !ctx.healed && hpSoon < 0.55) return { kind: 'support', card: meloso.card, why: 'ライフが減っている(メロソ: 回復とガード)' };
   // ⑤ 攻撃。★スタンのカード(あつの挑発など・type debuff)は「ためる」「貫通の構え」のターンまで取っておく。
   //   先に撃つと、必殺技(×2.5)を止められずに倒れる(2026-10-09 Master の WAVE 3)。とどめのときだけは使ってよい
   const keepStun = !lethal && !(threat === 'charge' || threat === 'pierceCharge');
-  const atkUse = keepStun ? atkOpts.filter((a) => a.o.card.type !== 'debuff') : atkOpts;
+  const atkUse = keepStun ? atkOpts.filter((a) => !isStunCard(a.o.card)) : atkOpts;
   if (atkUse.length) {
     const a = atkUse[0];
     return { kind: 'attack', card: a.o.card, slot: a.slot, value: a.value, why: lethal ? 'とどめ' : a.pull ? `敵を${DISTS[ctx.mainDist]}距離へ引き寄せる(通常技の段階が上がる)` : '見込みのダメージがいちばん大きい' };
@@ -284,7 +318,10 @@ function decidePick(b, opts, ctx) {
   }
   // ⑥ 支援
   // ★支援は20ガッツかかる。ガッツが細っているとき(いちばん多い子でも6割未満)は使わず、⑦の「捨ててガッツを戻す」へ回す
-  const richest = alive.reduce((m, x) => Math.max(m, x.guts && x.guts.max ? x.guts.now / x.guts.max : 0), 0);
+  //   ★自動回復を見込む: 20 払って、ターン終わりにガッツが上限の5%戻ったあとに4割残るなら使う(前は今のガッツが6割以上。PLAYBOT_TACTICS_REGEN=0 で前の決め方)
+  const richest = regenOn
+    ? alive.reduce((m, x) => Math.max(m, x.guts && x.guts.max ? (x.guts.now - 20 + x.guts.max * 0.05) / x.guts.max : 0), 0) + 0.2
+    : alive.reduce((m, x) => Math.max(m, x.guts && x.guts.max ? x.guts.now / x.guts.max : 0), 0);
   const buff = opts.find((o) => o.card.type === 'buff' && !/自傷/.test(o.card.label));
   if (buff && richest >= 0.6 && b.enemy && b.enemy.hp > b.enemy.max * 0.3 && !ctx.buffed) return { kind: 'support', card: buff.card, why: '攻撃が置けないので支援' };
   return null;
@@ -374,7 +411,11 @@ async function maybeUseEx(s, b, mem, log) {
     //   (2026-10-09: WAVE 1 の3連撃 132 ダメージに使い、2回とも WAVE 1 で使い切っていた)
     else if (role === 'shield' && x.name === 'ヤオビクニ') {
       const heavy = (threat === 'big' || threat === 'pierce' || threat === 'all') && b.slots.some((y) => y.occupied && !y.downed && y.aimDamage && y.hp && y.aimDamage >= y.hp.now * 0.4);
+      // ★予告の札が空でも、狙われた子が倒れる見込みなら使う(2026-10-10 Hard W6: ためた必殺技 1,453 がライフ 540 のヤオビクニへ。
+      //   札が「」と読まれて 'single' 扱いになり、EX を2回とも残したまま倒れ、そのランは最後まで使わなかった)
+      const lethal = b.slots.find((y) => y.occupied && !y.downed && y.aimDamage && y.hp && y.aimDamage >= y.hp.now);
       if (heavy) why = '必殺技・貫通撃・全体攻撃で大きく削られる予告(時間停止のEX)';
+      else if (lethal) why = `${lethal.name}が次の攻撃で倒れる見込み(時間停止のEX)`;
     }
     else if (role === 'shield' && bigHit) why = '重い攻撃の予告(守りのEX)';
     else if (role === 'dodge' && x.aimed && b.enemy && b.enemy.dist === DISTS[x.i] && bigHit) why = '狙われていて、敵と同じ距離(回避のEX)';
@@ -548,14 +589,22 @@ async function chooseBetween(s, mem, log) {
   const totalDmg = Object.values(mem.mons).reduce((a, m) => a + m.dmg, 0) || 1;
   // トレーニング
   if (scr.trainingName || scr.revive.length) {
-    if (scr.revive.length && !mem.reviveAsked) {
-      mem.reviveAsked = true;
+    // ★起こすと、その WAVE は誰も強化できない(BATTLE_NEW_MODE_PLAN.md 段階11)。主力が倒れたまま WAVE をまたがないよう、WAVE ごとに考える
+    //   (2026-10-10 ハカセくんの直す順3。前は mem.reviveAsked が1ランで1回きりで、2回目からは起こすかを考えていなかった)。
+    //   主力 = ダメージの3割以上を出した子・勇者モン(勇者特性は立っているときだけ効く)。PLAYBOT_TACTICS_REVIVE_EACH=0 で前の決め方
+    const eachWave = process.env.PLAYBOT_TACTICS_REVIVE_EACH !== '0';
+    const reviveKey = eachWave ? `w${log.data.waves.length}` : 'once';
+    mem.reviveAskedAt = mem.reviveAskedAt || {};
+    if (scr.revive.length && !mem.reviveAskedAt[reviveKey]) {
+      mem.reviveAskedAt[reviveKey] = true;
       const names = scr.revive.map((t) => (t.match(/^(\S+)を起こす/) || [])[1]).filter(Boolean);
       const alive = Object.keys(mem.lastParty || {}).length;
-      const key = names.find((nm) => (monOf(mem, nm).dmg / totalDmg) >= 0.35);
+      const key = eachWave
+        ? names.find((nm) => nm === log.data.build.hero) || names.find((nm) => (monOf(mem, nm).dmg / totalDmg) >= 0.3)
+        : names.find((nm) => (monOf(mem, nm).dmg / totalDmg) >= 0.35);
       if (key || names.length * 2 >= alive) {
         const nm = key || names[0];
-        log.note(`トレーニング: ${nm}を起こす(${key ? 'ダメージの多い子' : '半分以上が倒れている'})`);
+        log.note(`トレーニング: ${nm}を起こす(${key ? (nm === log.data.build.hero && eachWave ? '勇者モン' : 'ダメージの多い子') : '半分以上が倒れている'})`);
         log.data.build.training.push({ wave: log.data.waves.length, name: nm, picks: ['起こす'] });
         return press(new RegExp(`^${nm}を起こす`), 'トレーニング(起こす)');
       }
@@ -574,9 +623,24 @@ async function chooseBetween(s, mem, log) {
       //   同じ項目を2回選ぶと掛け算で効く。2026-10-09 までダメージ役にドミノ倒しを選び続けて、モッチーのライフが WAVE 5 でも最初の 720 のまま、
       //   敵の1発(1,000〜2,800)で倒れていた。基本は「丸太うけ+走り込み」。ガッツ切れが続く子だけ猛勉強を1つ混ぜる
       let plan = ['丸太うけ', '走り込み'];
+      // ★2026-10-10 ハカセくんの直す順4: ドミノ倒し(ちから)も選ぶ。丸太うけはガードの枚数(いちばん硬い子の丈夫さ ÷100 の段階で 2〜4枚。
+      //   60-app.jsx の guardCardCount・guardLevelDef)を増やすので、もう4枚に届いていれば選ばない。
+      //   傷んだ子(倒れた・ライフ半分未満)は今までどおり守り。ダメージを頭割り以上出している子は「ドミノ倒し+走り込み」(ライフも伸ばす)。
+      //   丈夫さは名簿の値 ×1.2(丸太うけ1回)で見積もる。PLAYBOT_TACTICS_TRAIN_V2=0 で前の決め方
+      const v2 = process.env.PLAYBOT_TACTICS_TRAIN_V2 !== '0';
+      mem.defEst = mem.defEst || {};
+      const defOf = (nm) => (mem.defEst[nm] != null ? mem.defEst[nm] : (ROSTER_BY_NAME[nm] || {}).def || 0);
+      const maxDef = Math.max(0, ...Object.keys(mem.lastParty || {}).map(defOf));
+      const guardFull = Math.min(4, 2 + Math.floor(Math.floor(maxDef / 100) / 2)) >= 4;
+      const hurt = m.downs > 0 || (hpRatio != null && hpRatio < 0.5);
+      const dealer = share >= 1 / members;
+      if (v2 && !hurt) plan = dealer ? ['ドミノ倒し', '走り込み'] : guardFull ? ['走り込み', 'ドミノ倒し'] : ['丸太うけ', '走り込み'];
       // ガッツの少ない子(元のガッツ 90 以下)は、詰まる前から猛勉強を混ぜる(ゴーレムは通常技4発でガッツが尽きていた)
       const baseGuts = (ROSTER_BY_NAME[scr.trainingName] || {}).guts;
-      if ((m.gutsShort >= 4 || (Number.isFinite(baseGuts) && baseGuts <= 90)) && !(hpRatio != null && hpRatio < 0.5)) plan = ['丸太うけ', '猛勉強'];
+      if ((m.gutsShort >= 4 || (Number.isFinite(baseGuts) && baseGuts <= 90)) && !(hpRatio != null && hpRatio < 0.5)) plan = v2 ? [plan[0], '猛勉強'] : ['丸太うけ', '猛勉強'];
+      // 丸太うけを選んだぶん、丈夫さの見積もりを上げる(2回目は1回目のあとの値にかかる)
+      mem.defCounted = mem.defCounted || {};
+      if (scr.picked === 0 && !mem.defCounted[tkey] && (mem.defCounted[tkey] = true)) mem.defEst[scr.trainingName] = defOf(scr.trainingName) * Math.pow(1.2, plan.filter((x) => x === '丸太うけ').length);
       const want = plan[scr.picked] || plan[0];
       if (scr.picked === 0 && !mem.trained[tkey]) log.data.build.training.push({ wave: log.data.waves.length, name: scr.trainingName, picks: plan });
       if (scr.picked === 0 && !mem.trained[tkey]) log.note(`トレーニング: ${scr.trainingName} → ${plan.join('・')}(ダメージの割合${Math.round(share * 100)}%・倒れた${m.downs}回・ガッツ不足${m.gutsShort}回)`);
@@ -638,7 +702,16 @@ async function chooseBetween(s, mem, log) {
   const ups = scr.buttons.filter((t) => /のレベルを1つ上げる$/.test(t));
   if (ups.length) {
     const ownerDmg = (t) => { const sk = t.replace(/のレベルを1つ上げる$/, ''); const o = mem.uniqueOwner[sk]; return o ? monOf(mem, o).dmg : 0; };
-    const best = ups.sort((a, z) => ownerDmg(z) - ownerDmg(a))[0];
+    // ★2026-10-10 ハカセくんの直す順5: 役ごとに上げる。前はダメージの多い子からだけで、回復・守り・ガッツの固有技(支援役)が上がらなかった。
+    //   ダメージ役(頭割り以上)2回に、ほかの子1回の割合で回す(上げた回数 ÷ 重み の少ない順、同じならダメージ順)。PLAYBOT_TACTICS_UNIQUE_ROLE=0 で前の決め方
+    mem.uniqueUpBy = mem.uniqueUpBy || {};
+    const skOf = (t) => t.replace(/のレベルを1つ上げる$/, '');
+    const owners = Object.keys(mem.lastParty || {}).length || 1;
+    const weight = (t) => (ownerDmg(t) / Math.max(1, totalDmg) >= 1 / owners ? 2 : 1);
+    const best = process.env.PLAYBOT_TACTICS_UNIQUE_ROLE === '0'
+      ? ups.sort((a, z) => ownerDmg(z) - ownerDmg(a))[0]
+      : ups.sort((a, z) => (mem.uniqueUpBy[skOf(a)] || 0) / weight(a) - (mem.uniqueUpBy[skOf(z)] || 0) / weight(z) || ownerDmg(z) - ownerDmg(a))[0];
+    mem.uniqueUpBy[skOf(best)] = (mem.uniqueUpBy[skOf(best)] || 0) + 1;
     mem.uniqueUps = (mem.uniqueUps || 0) + 1;
     if (mem.uniqueUps > 12) return false;
     log.note(`固有技: ${best.replace(/のレベルを1つ上げる$/, '')}を上げる`);
@@ -665,7 +738,22 @@ async function chooseBetween(s, mem, log) {
     const named = (t) => (/^きき/.test(t) ? 5 : 0) + (/^ポルツ/.test(t) ? (starved ? 5 : 3.5) : 0) + (/^ももすけ/.test(t) ? (starved ? 4.5 : 3) : 0) + (/^メロソ/.test(t) ? (hurt ? 3.5 : 2) : 0);
     const score = (t) => (/自傷/.test(t) ? -5 : 0) + atkPct(t) / 5 + (isHeal(t) ? (hurt ? 3 : 1.5) : 0) + named(t)
       + (isGuts(t) ? (starved ? 3.2 : 1.2) : 0) + (/被ダメ|軽減|守り/.test(t) ? (hurt ? 2.5 : 1) : 0) + (/行動を無効|スタン/.test(t) ? 2.5 : 0);
-    const best = cards.sort((a, z) => score(z) - score(a))[0];
+    let best = cards.sort((a, z) => score(z) - score(a))[0];
+    // PLAYBOT_TACTICS_ASSIST_ROTATE=1 … アシカを順番に試す(2026-10-10 ハカセくん・改善部の指摘 A3。ボットはほぼ毎回「あつ」を選び、
+    //   ドラ・かどみうむ・みゃる・ニコラオが実戦0〜1回のままだった)。新規習得のカードのうち、覚え書きで選ばれた回がいちばん少ないものを選ぶ。
+    //   同じ回数なら点数の高いほう。新規習得が無い(強化だけの)画面は今までどおり点数で選ぶ。既定は切(今のまま)
+    if (process.env.PLAYBOT_TACTICS_ASSIST_ROTATE === '1') {
+      const fresh = cards.filter((t) => /新規習得/.test(t));
+      if (fresh.length) {
+        // 数えるのはアシカ本人(「あつの挑発」「あつの暴言」は どちらも あつ)
+        const who = (c) => String(c).replace(/\+$/, '').split(/\s+/)[0].split('の')[0];
+        const picked = {};
+        for (const r of loadKnowledge().runs) for (const c of new Set((r.assists || []).map(who))) picked[c] = (picked[c] || 0) + 1;
+        const n = (t) => picked[who(t)] || 0;
+        best = fresh.sort((a, z) => n(a) - n(z) || score(z) - score(a))[0];
+        log.note(`アシストカード: 順番に試す(${who(best)} はこれまで ${n(best)} 回)`);
+      }
+    }
     // 理由は、点数にいちばん効いた項目で言う
     const parts = [['火力を伸ばす', atkPct(best) / 5], [hurt ? '被ダメージが多いので回復' : '回復の手段を持つ', isHeal(best) ? (hurt ? 3 : 1.5) : 0],
       [starved ? 'ガッツ不足が多い' : 'ガッツを補う', isGuts(best) ? (starved ? 3.2 : 1.2) : 0], ['守りを固める', /被ダメ|軽減|守り/.test(best) ? (hurt ? 2.5 : 1) : 0],
@@ -914,14 +1002,19 @@ function rememberRun(L, stats) {
     result: L.result, wave: stats.waveReached, turns: L.waves.reduce((a, w) => a + w.turns, 0), downs: L.waves.reduce((a, w) => a + w.downs, 0),
     lostAt: L.result === 'clear' ? null : (L.waves[L.waves.length - 1] || {}).enemy || null, dmg: Object.fromEntries(Object.entries(dmg).map(([m, d]) => [m, Math.round(d)])),
     // 子ごとの技の回数・間合い適性(2026-10-09 から)・勇者特性が効いた回数・EX を使った子
+    emergency: L.emergency || 0, // 緊急回復を押した回数(2026-10-10 から)
+    // ボットの版(2026-10-10 から)。arena-1 = アリーナくんの直し(緊急回復・自動回復の見込み・起こす・トレーニング・固有技の強化・おなら・時間停止)の入った版。
+    //   これが無い回は、それより前の版
+    //   切り替えごとの入/切(ハカセくんの頼み: Tier を「直したボットの回だけ」に絞れるように)。時間停止の直しは切れないので、bot がある回は全部入っている
+    bot: { ver: 'arena-1', ...Object.fromEntries(['EMERGENCY', 'REGEN', 'REVIVE_EACH', 'TRAIN_V2', 'UNIQUE_ROLE', 'HAM_STUN'].map((f) => [f.toLowerCase().replace(/_(\w)/g, (_, c) => c.toUpperCase()), process.env[`PLAYBOT_TACTICS_${f}`] !== '0'])), rotate: process.env.PLAYBOT_TACTICS_ASSIST_ROTATE === '1' },
     heroStyle: L.build.heroStyle || null, // 勇者モンの初期スタイル(剣士モッチー。2026-10-10 から。それより前は片手剣)
     use, traitHits: L.waves.reduce((a, w) => a + (w.traitHits || 0), 0),
     exBy: L.ex.reduce((o, e) => { if (e.mon) o[e.mon] = (o[e.mon] || 0) + 1; return o; }, {}),
     texts: Object.entries(texts).sort((a, b) => b[1] - a[1]).slice(0, 30),
   });
-  // 増えすぎないよう、新しい 300 回ぶんだけ持つ
-  k.runs = k.runs.slice(-300);
+  // 増えすぎないよう、新しい 1000 回ぶんだけ持つ(300 だと Tier の暫定外しの回数が古い順に消えるため、2026-10-10 アリーナくんが上げた。1回約 2.7KB)
+  k.runs = k.runs.slice(-1000);
   fs.writeFileSync(KNOWLEDGE, `${JSON.stringify(k, null, 1)}\n`);
 }
 
-module.exports = { readBattleLog, saveRoster, preferredOrder, rememberRun, readBoard, threatOf, evalHand, decidePick, placePick, playTurn, maybeUseEx, chooseBetween, makeLog, explain, newMemory, monOf, THREAT_JA };
+module.exports = { emergencyWhy, readBattleLog, saveRoster, preferredOrder, rememberRun, readBoard, threatOf, evalHand, decidePick, placePick, playTurn, maybeUseEx, chooseBetween, makeLog, explain, newMemory, monOf, THREAT_JA };
