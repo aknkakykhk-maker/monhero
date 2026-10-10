@@ -40,6 +40,13 @@ async function newPlayerScenario(s, { maxSteps = 150 } = {}) {
     if (setup) done.add(setup.label);
     await s.tap(pick, 'はじめての案内');
     await s.inspect();
+    // はじめての人に、れんしゅう(の案内)と時刻で流れるお話が同時に出ていないか(2026-10-10・改善部の指摘G8。れんしゅうのあとにお話を流す)
+    const both = await page.evaluate(() => {
+      const t = document.body.innerText;
+      const story = /第1部 ～ようこそ、夜祭へ～/.test(t);
+      return story && (/れんしゅう \d+ \/ \d+/.test(t) ? 'れんしゅう' : /新しいれんしゅうができたよ|どうする？/.test(t) ? 'れんしゅうの案内' : '');
+    });
+    if (both) await s.addIssue('会話が重なっている', `はじめての人に、ハロウィン・ナイトのお話と${both}が同時に出ている`);
   }
   const ms = Date.now() - t0;
   if (!reached) await s.addIssue('進めない', `はじめての人が ${maxSteps}手押しても「はじめての設定」を終えられない`);

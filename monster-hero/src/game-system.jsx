@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 27e5a809b3aefcc5
+// generated-sha256: 9a4b2ea836f049ed
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-10 10:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-10 11:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -44569,6 +44569,9 @@ function MonsterHeroGame() {
   const onboardingPreviewBackupRef = useRef(null);
   const tutorialShownRef = useRef(false);
   const battleTutorialGuideCheckedRef = useRef(false);
+  // 「バトルのれんしゅうの案内」を出すかどうかの判定が1回終わったか。終わるまで、時刻で流れるお話(ハロウィン・ナイトなど)はHOMEで流し始めない
+  // (2026-10-10・改善部の指摘G8。はじめての人に、れんしゅうの案内とお話が同時に重なって出ていた)。保存はしない
+  const [battleGuideChecked, setBattleGuideChecked] = useState(false);
   const highScoresRef = useRef({});
   useEffect(() => { highScoresRef.current = highScores; }, [highScores]);
   const [attemptCounts, setAttemptCounts] = useState({}); // 難易度別 挑戦回数(端末保存)
@@ -48694,8 +48697,11 @@ function MonsterHeroGame() {
   // 起動の途中やタイトルの上に重ねない
   useEffect(() => {
     if (!rhythmEventStoryPending) return;
+    // ★バトルのれんしゅうの案内の判定が終わり、れんしゅうの最中でないことも見る。
+    //   はじめての人は「れんしゅうの案内 →(見る/見ない)→ れんしゅう → HOME → お話」の順になり、重ならない(2026-10-10・G8)
     if (!(bootPhase === 'GAME' && gameState === 'HOME' && onboarded && !onboardingPreview
-      && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && !eventReplay)) return;
+      && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && !eventReplay
+      && battleGuideChecked && battleTutorialStep == null)) return;
     const storyId = rhythmEventStoryPending;
     setRhythmEventStoryPending(null);
     // ★流し始めたことを覚えておく(2026-09-14・ユーザー指摘「閉幕イベントが2回連続で流れた」)。
@@ -48706,7 +48712,7 @@ function MonsterHeroGame() {
       rhythmEventStoryStartedRef.current = [...rhythmEventStoryStartedRef.current, storyId];
     }
     setEventReplay({ id: storyId, step: 0, live: true });
-  }, [rhythmEventStoryPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay]);
+  }, [rhythmEventStoryPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay, battleGuideChecked, battleTutorialStep]);
   // タクティクスバトルの導入も同じ置き方で、HOMEで1度だけ流す。
   // ★ほかの会話が出ているあいだは待つ(重ねて出すと、どちらも読めない)
   useEffect(() => {
@@ -53930,11 +53936,14 @@ function MonsterHeroGame() {
         storeGet(BATTLE_TUTORIAL_SEEN_KEY, false, false),
         storeGet(BATTLE_TUTORIAL_GUIDE_SHOWN_KEY, false, false),
       ]);
+      // 村案内をまだ見ていない(これから流れる)ときは、案内の判定を先に延ばす。お話もその間は待つ(村案内のあと、ここへ戻って判定する)
       if (tourSeen !== true) { battleTutorialGuideCheckedRef.current = false; return; }
-      if (cancelled || seen === true || shown === true) return;
+      if (cancelled || seen === true || shown === true) { setBattleGuideChecked(true); return; }
       // 表示を決めた時点で記録し、「今は見ない」や再読込でも繰り返さない。
       await storeSet(BATTLE_TUTORIAL_GUIDE_SHOWN_KEY, true, false);
+      // 案内を出すと決めたのと同じタイミングで「判定が終わった」にする(案内が先に出て、お話はそのあとになる)
       if (!cancelled) { setTutorialKind('battleGuide'); setTutorialStep(0); }
+      setBattleGuideChecked(true);
     })();
     return () => { cancelled = true; };
   }, [bootPhase, gameState, dataLoaded, onboarded, tutorialStep]);

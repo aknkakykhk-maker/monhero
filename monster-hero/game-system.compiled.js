@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b00b3ccda232e578
+// source-sha256: 5ba3f4b34625676c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-10 10:27";
+const BUILD_DATE = "2026-10-10 11:06";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -72510,6 +72510,7 @@ function MonsterHeroGame() {
   const onboardingPreviewBackupRef = useRef(null);
   const tutorialShownRef = useRef(false);
   const battleTutorialGuideCheckedRef = useRef(false);
+  const [battleGuideChecked, setBattleGuideChecked] = useState(false);
   const highScoresRef = useRef({});
   useEffect(() => {
     highScoresRef.current = highScores;
@@ -76543,7 +76544,7 @@ function MonsterHeroGame() {
   };
   useEffect(() => {
     if (!rhythmEventStoryPending) return;
-    if (!(bootPhase === 'GAME' && gameState === 'HOME' && onboarded && !onboardingPreview && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && !eventReplay)) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME' && onboarded && !onboardingPreview && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && !eventReplay && battleGuideChecked && battleTutorialStep == null)) return;
     const storyId = rhythmEventStoryPending;
     setRhythmEventStoryPending(null);
     if (!rhythmEventStoryStartedRef.current.includes(storyId)) {
@@ -76554,7 +76555,7 @@ function MonsterHeroGame() {
       step: 0,
       live: true
     });
-  }, [rhythmEventStoryPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay]);
+  }, [rhythmEventStoryPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay, battleGuideChecked, battleTutorialStep]);
   useEffect(() => {
     if (!tacticsIntroPending) return;
     if (!(bootPhase === 'GAME' && gameState === 'HOME' && onboarded && !onboardingPreview && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && !rhythmEventStoryPending && !eventReplay)) return;
@@ -82730,12 +82731,16 @@ function MonsterHeroGame() {
         battleTutorialGuideCheckedRef.current = false;
         return;
       }
-      if (cancelled || seen === true || shown === true) return;
+      if (cancelled || seen === true || shown === true) {
+        setBattleGuideChecked(true);
+        return;
+      }
       await storeSet(BATTLE_TUTORIAL_GUIDE_SHOWN_KEY, true, false);
       if (!cancelled) {
         setTutorialKind('battleGuide');
         setTutorialStep(0);
       }
+      setBattleGuideChecked(true);
     })();
     return () => {
       cancelled = true;
