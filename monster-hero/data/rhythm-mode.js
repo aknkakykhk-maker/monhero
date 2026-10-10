@@ -30717,12 +30717,18 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       // 空中の段(試作): 手の色(左=水色・右=ピンク)。譜面のスライドに hand:'L'|'R' を書いたときだけ
       // 空中の段(試作): 高さのあるスライドは「空中の見せ方」で描く(社長: 左右は位置で分かるので色で分けない・地上のスライドは今の色のまま・空中は見せ方で分ける)
       if(rhythmSlideHasSky(note)){const th=rhythmSkyTheme();o.skySlideRgb=th.rgb;o.skySlideCore=th.core;}
+      // 空中スライドの印の追従(試作・2026-10-10 社長「空中は…こいつが勝手に動いてる」):
+      // 印は「指を置く目標」。指が帯に乗っている間だけ光らせ、外れている間は薄く欠けた見た目にする。
+      // 押さえた指の位置には小さな赤い受け(輪)を出し、印と指のずれが見えるようにする。
+      // note._trackOff / note._trackFinger が無いとき(押していない・追従を書かない曲)は今までどおり
+      const trackOn=!!(o.pressed&&!o.failed&&o.skySlideRgb&&typeof note._trackOff==='boolean');
+      const trackDim=trackOn&&note._trackOff?.4:1;
       if(o.pop===null){
         if(geo.slideShadow)drawSkyShadowBand(geo.slideShadow,o);
         if(geo.skyShadow&&!geo.slide)drawSkyShadowHead(geo,o);
         // 空中から始まる(高さのある)スライドは、頭から床へ細い支柱を下ろす(参考のアークと同じ・高さが分かるように)
         if(geo.slide&&geo.head&&o.pressed&&!o.failed&&o.skySlideRgb){
-          const hd=geo.head,r=Math.max(10,hd.w*.75),t=frameNow/90;ctx.globalAlpha=o.alpha;ctx.lineCap='round';
+          const hd=geo.head,r=Math.max(10,hd.w*.75),t=frameNow/90;ctx.globalAlpha=o.alpha*trackDim;ctx.lineCap='round';
           [[1,0],[0,1]].forEach(([dx,dy],k)=>{const len=r*(k?1.15:1)*(.85+.15*Math.sin(t+k));
             ctx.strokeStyle=`rgba(${o.skySlideRgb},.55)`;ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(hd.cx-dx*len,hd.cy-dy*len);ctx.lineTo(hd.cx+dx*len,hd.cy+dy*len);ctx.stroke();
             ctx.strokeStyle='rgba(255,255,255,.95)';ctx.lineWidth=1.6;ctx.beginPath();ctx.moveTo(hd.cx-dx*len,hd.cy-dy*len);ctx.lineTo(hd.cx+dx*len,hd.cy+dy*len);ctx.stroke();});
@@ -30733,7 +30739,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
         if(geo.slide)drawSlide(geo,o);
         drawEndBar(note,geo,o);
       }
-      const headOpts=o.pop===null?o:{...o,alpha:o.alpha*.95*(1-easeOut(o.pop)),brightness:1};
+      const headOpts=o.pop===null?{...o}:{...o,alpha:o.alpha*.95*(1-easeOut(o.pop)),brightness:1};
+      if(trackDim<1){headOpts.alpha=o.alpha*trackDim;headOpts.brightness=(Number(headOpts.brightness)||1)*.6;}
       // 押さえている最中の光は粒の下に敷く(粒の形は隠さない)。演出量「最小」では出さない
       if(o.pressed&&!o.failed&&o.pop===null&&effect!=='MINIMAL')drawHoldSpark(note,geo,o);
       // 空中のノーツも、既定(plate)ではふつうの板(drawHead)で描く。旧スタイルは drawSkyTap(箱・星など)
@@ -30746,6 +30753,16 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       if(!geo.skyShadow&&geo.head){const hw=geo.head.w*sizeScale/2+2,hh=Math.max(8,geo.head.h*(o.depthScale||1))/2+2;frameGround.push({x0:geo.head.cx-hw,x1:geo.head.cx+hw,y0:geo.head.cy-hh,y1:geo.head.cy+hh});
         const pts=geo.band||null;if(pts&&pts.length>1){let lo=1e9,hi=-1e9,top=pts[0].y,bot=pts[pts.length-1].y;for(const e of pts){lo=Math.min(lo,e.left);hi=Math.max(hi,e.right);}frameGround.push({x0:lo,x1:hi,y0:Math.min(top,bot),y1:Math.max(top,bot)});}
         if(geo.slide)for(const q of geo.slide){frameGround.push({x0:Math.min(q.l0,q.l1),x1:Math.max(q.r0,q.r1),y0:Math.min(q.y0,q.y1),y1:Math.max(q.y0,q.y1)});}}
+      // 押さえた指の位置の「受け」(細い赤い輪と点)。外れているときは印との間に細い点線を引く
+      if(trackOn&&note._trackFinger&&Number.isFinite(note._trackFinger.x)&&Number.isFinite(note._trackFinger.y)){
+        const fx=note._trackFinger.x,fy=note._trackFinger.y,off=note._trackOff===true;
+        ctx.save();ctx.globalAlpha=o.alpha;
+        if(off&&geo.head){ctx.strokeStyle='rgba(239,68,68,.55)';ctx.lineWidth=1.2;const ddx=geo.head.cx-fx,ddy=geo.head.cy-fy,dl=Math.hypot(ddx,ddy),dn=Math.min(24,Math.floor(dl/6));
+          ctx.beginPath();for(let i=0;i<dn;i++){const u0=i/dn,u1=(i+.45)/dn;ctx.moveTo(fx+ddx*u0,fy+ddy*u0);ctx.lineTo(fx+ddx*u1,fy+ddy*u1);}ctx.stroke();}
+        ctx.strokeStyle=off?'rgba(254,202,202,.95)':'rgba(239,68,68,.9)';ctx.lineWidth=off?1.8:1.4;ctx.beginPath();ctx.arc(fx,fy,off?10:8,0,Math.PI*2);ctx.stroke();
+        ctx.fillStyle=off?'rgba(254,202,202,.95)':'rgba(255,228,230,.95)';ctx.beginPath();ctx.arc(fx,fy,2,0,Math.PI*2);ctx.fill();
+        ctx.restore();
+      }
     },
     // マスモンの顔を1つ積む。bitmap は焼いた canvas、(cx,cy) は中心、size は一辺(どれも CSS px)。
     drawFace(bitmap,cx,cy,size,alpha=1){
