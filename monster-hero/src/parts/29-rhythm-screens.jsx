@@ -405,7 +405,7 @@ const RHYTHM_DIFFICULTY_TONE=Object.freeze({
   EXPERT:Object.freeze({badge:'from-rose-500 to-rose-700',dot:'bg-rose-400',    on:'border-rose-300 bg-rose-600 text-white',       off:'border-rose-400/40 text-rose-200',       text:'text-rose-300'}),
   MASTER:Object.freeze({badge:'from-fuchsia-500 to-fuchsia-700',dot:'bg-fuchsia-400', on:'border-fuchsia-300 bg-fuchsia-700 text-white', off:'border-fuchsia-400/40 text-fuchsia-200', text:'text-fuchsia-300'}),
   // 6段目 HELL。バトルの難易度「Hell」と同じ色(地 #7f1d1d=red-900・字 #f87171=red-400)
-  HELL:  Object.freeze({badge:'from-red-800 to-red-950',dot:'bg-red-400',       on:'border-red-400 bg-red-900 text-red-100',       off:'border-red-500/50 text-red-400',         text:'text-red-400'}),
+  HELL:  Object.freeze({badge:'from-red-800 to-red-950',dot:'bg-red-400',       on:'border-red-300 bg-red-900 text-red-100',       off:'border-red-500/70 bg-red-950/80 text-red-400',         text:'text-red-400'}),
 });
 const rhythmDifficultyTone=id=>RHYTHM_DIFFICULTY_TONE[id]||RHYTHM_DIFFICULTY_TONE.EASY;
 // 難易度の字の色だけを欲しいところへ。知らないidは灰に倒す(勝手にEASYの緑にしない)
@@ -1051,7 +1051,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
               data-rhythm-difficulty-locked={open?'0':'1'} disabled={!open}
               title={open?undefined:`${need}をクリアすると挑めます`}
               onClick={()=>{if(open)setDifficultyId(item.id);}}
-              className={`flex h-[52px] min-w-0 flex-1 flex-col items-center justify-center rounded-lg border-2 px-0.5 font-black leading-none [container-type:inline-size] landscape:h-[48px] ${open?(on?`${tone.on} shadow-[0_0_10px_rgba(255,255,255,.25)]`:`${tone.off} bg-slate-900/70`):'border-white/10 bg-slate-900/70 text-slate-500'}`}>
+              className={`flex h-[52px] min-w-0 flex-1 flex-col items-center justify-center rounded-lg border-2 px-0.5 font-black leading-none [container-type:inline-size] landscape:h-[48px]${available.length>5?' gap-px':''} ${open?(on?`${tone.on} shadow-[0_0_10px_rgba(255,255,255,.25)]`:`${tone.off} bg-slate-900/70`):'border-white/10 bg-slate-900/70 text-slate-500'}`}>
               {/* Lv.の数字を大きく、難易度の名前を小さく(2026-09-26・参考: バンドリの難易度の並び) */}
               <b className="block text-[18px] tabular-nums">{song.difficulties[item.id].level}</b>
               <span className="block text-[8px] tracking-wide">{open?item.id:`🔒${item.id}`}</span>

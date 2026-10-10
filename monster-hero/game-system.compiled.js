@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 46ba0fa713172483
+// source-sha256: 579cff4f4cded427
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-10 23:28";
+const BUILD_DATE = "2026-10-10 23:32";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -28649,8 +28649,8 @@ const RHYTHM_DIFFICULTY_TONE = Object.freeze({
   HELL: Object.freeze({
     badge: 'from-red-800 to-red-950',
     dot: 'bg-red-400',
-    on: 'border-red-400 bg-red-900 text-red-100',
-    off: 'border-red-500/50 text-red-400',
+    on: 'border-red-300 bg-red-900 text-red-100',
+    off: 'border-red-500/70 bg-red-950/80 text-red-400',
     text: 'text-red-400'
   })
 });
@@ -29437,7 +29437,7 @@ const RhythmSongSelect = ({
       onClick: () => {
         if (open) setDifficultyId(item.id);
       },
-      className: `flex h-[52px] min-w-0 flex-1 flex-col items-center justify-center rounded-lg border-2 px-0.5 font-black leading-none [container-type:inline-size] landscape:h-[48px] ${open ? on ? `${tone.on} shadow-[0_0_10px_rgba(255,255,255,.25)]` : `${tone.off} bg-slate-900/70` : 'border-white/10 bg-slate-900/70 text-slate-500'}`
+      className: `flex h-[52px] min-w-0 flex-1 flex-col items-center justify-center rounded-lg border-2 px-0.5 font-black leading-none [container-type:inline-size] landscape:h-[48px]${available.length > 5 ? ' gap-px' : ''} ${open ? on ? `${tone.on} shadow-[0_0_10px_rgba(255,255,255,.25)]` : `${tone.off} bg-slate-900/70` : 'border-white/10 bg-slate-900/70 text-slate-500'}`
     }, React.createElement("b", {
       className: "block text-[18px] tabular-nums"
     }, song.difficulties[item.id].level), React.createElement("span", {
