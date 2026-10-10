@@ -176,6 +176,14 @@ function topParties(cache, d) {
     .filter((x) => Number.isFinite(x.s)).sort((p, q) => q.s - p.s);
 }
 
+// その回に実際に戦った供モンの名前。r.allies(選んだつもりの供モン)は 2026-10-10 まで供モン選びの不具合で実際と違う回があった(209回中57回)。
+// tactics-tier.js membersOf と同じ順: 盤面から読んだ r.alliesSeen → dmg・use の名前(盤面から読むので正しい)→ r.allies
+const alliesOf = (r) => {
+  const seen = Array.isArray(r.alliesSeen) ? r.alliesSeen : null;
+  const board = [...Object.keys(r.dmg || {}), ...Object.keys(r.use || {})];
+  return [...new Set((seen || (board.length ? board : (r.allies || [])))).filter((n) => n && n !== r.hero)];
+};
+
 function writeAll(cache) {
   const L = []; const o = (t = '') => L.push(t);
   const pct = (x) => (Number.isFinite(x) ? `${Math.round(x * 100)}%` : '—');
@@ -191,7 +199,7 @@ function writeAll(cache) {
   try { realRuns = JSON.parse(fs.readFileSync(path.join(__dirname, 'tactics-knowledge.json'), 'utf8')).runs || []; } catch (e) { realRuns = []; }
   const realOf = (h, al, d) => {
     const want = al.map((x) => NAME[x]).sort().join(',');
-    const rs = realRuns.filter((r) => r.mode === 'tacticsPro' && r.difficulty === d && r.hero === NAME[h] && Array.isArray(r.allies) && r.allies.slice().sort().join(',') === want && ['clear', 'wipe', 'timeout'].includes(r.result));
+    const rs = realRuns.filter((r) => r.mode === 'tacticsPro' && r.difficulty === d && r.hero === NAME[h] && alliesOf(r).slice().sort().join(',') === want && ['clear', 'wipe', 'timeout'].includes(r.result));
     return rs.length ? { 回数: rs.length, クリア: rs.filter((r) => r.result === 'clear').length } : null;
   };
   // なぜ噛み合うか(機械が書く1〜2行): 得意な枠の分かれ方と EX の役

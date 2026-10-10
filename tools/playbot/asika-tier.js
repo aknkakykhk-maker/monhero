@@ -232,7 +232,7 @@ function realRecords() {
   const pair = {};
   for (const r of runs) {
     const h = ID_BY_NAME[r.hero]; if (!h) continue;
-    for (const an of new Set(r.allies || [])) {
+    for (const an of alliesOf(r)) {
       const a = ID_BY_NAME[an]; if (!a || a === h) continue;
       const k = `${h}|${a}|${r.difficulty}`;
       (pair[k] = pair[k] || []).push(reach(r) - meanBy[r.difficulty]);
@@ -240,6 +240,14 @@ function realRecords() {
   }
   return { runs, byCard, pair, meanBy };
 }
+
+// その回に実際に戦った供モンの名前。r.allies(選んだつもりの供モン)は 2026-10-10 まで供モン選びの不具合で実際と違う回があった(209回中57回)。
+// tactics-tier.js membersOf と同じ順: 盤面から読んだ r.alliesSeen → dmg・use の名前(盤面から読むので正しい)→ r.allies
+const alliesOf = (r) => {
+  const seen = Array.isArray(r.alliesSeen) ? r.alliesSeen : null;
+  const board = [...Object.keys(r.dmg || {}), ...Object.keys(r.use || {})];
+  return [...new Set((seen || (board.length ? board : (r.allies || [])))).filter((n) => n && n !== r.hero)];
+};
 
 // ---------- アシカの集計 ----------
 function analyzeAsika(cache, real) {
