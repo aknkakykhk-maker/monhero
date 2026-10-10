@@ -1,6 +1,7 @@
 // 長く遊んだときに、メモリが増え続けていないかを測る(2026-10-10・iPhone の Safari で「やっている最中に最初の画面へ戻る」問い合わせの調査用)。
 //
 //   node tools/memory-soak.js --mode quick  --cycles 8        クイックの周回(AUTO)を8回続ける
+//   node tools/memory-soak.js --mode auto  --minutes 10      クイックを AUTO で回し続ける(WAVEが進み、場面のBGMが次々に変わる。負けたら新しい周回へ)
 //   node tools/memory-soak.js --mode rhythm --songs 6         モンヒロビートを6曲続けて演奏する
 //   node tools/memory-soak.js --mode idle   --minutes 10      HOMEで放っておく(ゲームが勝手に増やしていないか)
 //
@@ -27,7 +28,7 @@ const PAGE_URL = process.env.SMOKE_URL || `http://localhost:${PORT}/monster-hero
 let playwright;
 try { playwright = require('playwright'); } catch { console.log('SKIP: playwright が入っていないので動かせません'); process.exit(0); }
 const { openSession } = require('./playbot/lib/session');
-const { battleScenario } = require('./playbot/scenarios/battle');
+const { battleScenario, enterQuickBattle } = require('./playbot/scenarios/battle');
 const { rhythmScenario } = require('./playbot/scenarios/rhythm');
 const { prepareVeteran } = require('./playbot/lib/seeds');
 
@@ -86,6 +87,28 @@ const makeRand = (seed) => { let t = seed >>> 0; return () => { t += 0x6D2B79F5;
         const r = await battleScenario(s, { manualTurns: 0, autoMs: 90000 });
         await sample(`クイック ${i}周`);
         if (!r.ok) console.log(`  (周回が進めなかった: ${r.note || ''})`);
+      }
+    } else if (MODE === 'auto') {
+      const end = Date.now() + MINUTES * 60000;
+      let n = 0, runs = 0;
+      const inBattle = () => s.page.evaluate(() => !!document.querySelector('button[aria-label^="AUTO"]'));
+      const startAuto = async () => {
+        const r = await enterQuickBattle(s, { system: 'systemQuick' });
+        if (!r.inBattle) return false;
+        await s.page.evaluate(() => document.querySelector('button[aria-label^="AUTO"]')?.click());
+        runs += 1;
+        return true;
+      };
+      let on = await startAuto();
+      while (Date.now() < end) {
+        await s.wait(30000); n += 1;
+        await sample(`AUTO ${n * 30}秒(${runs}周目)`);
+        if (!(await inBattle())) {
+          // 決着した。結果画面を閉じて、新しい周回へ
+          await s.dismissOverlays(10); await s.dismissOverlays(10);
+          on = await startAuto();
+          if (!on) { console.log('  (新しい周回を始められなかった)'); break; }
+        }
       }
     } else if (MODE === 'rhythm') {
       for (let i = 1; i <= SONGS; i++) {
