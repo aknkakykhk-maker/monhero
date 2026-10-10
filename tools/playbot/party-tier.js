@@ -30,6 +30,7 @@ const args = process.argv.slice(2);
 const argOf = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : d; };
 const DIFFS = ['Hard', 'Expert', 'Master'];
 const SIM_VER = 8; // sim/battle.js の版(asika-tier.js の SIM_VER と同じ意味)
+const ev = require('./evidence');
 const SIM_OPT = { exMode: 'best', assist: 'bot', assistPlay: 'best', training: 'bot', emergency: 'bot' };
 
 // ---------- 子プロセス: 1マス(勇者モン×供モン3体×難易度)を N 回まわして足し合わせる ----------
@@ -50,7 +51,9 @@ if (args[0] === '--worker') {
     if (t === 'end') process.exit(0);
     const acc = { key: t.key, n: 0, sum: 0, sq: 0, clear: 0, boss: 0, uses: 0, scenes: [] };
     for (let i = 0; i < t.runs; i++) {
-      const allies = joinOrder(t.allies, sim.mulberry32(sim.hashSeed(t.seed, 'join', t.hero, t.allies.join(','), i)));
+      // 基準(t.random): 同じ勇者モンで、供モンをふつうに(候補からくじで)選んだとき。sim/battle.js の表と同じ pickAllies
+      const allies = t.random ? sim.pickAllies(t.hero, sim.mulberry32(sim.hashSeed(t.seed, 'allies', t.hero, t.diff, i)))
+        : joinOrder(t.allies, sim.mulberry32(sim.hashSeed(t.seed, 'join', t.hero, t.allies.join(','), i)));
       const r = sim.simulateRun({ heroId: t.hero, allies, difficulty: t.diff, seed: sim.hashSeed(t.seed, 'party', i), ...SIM_OPT, ...(t.opt || {}), exLog: !!t.card });
       const reach = r.wave + (r.result === 'clear' ? 1 : 0);
       acc.n++; acc.sum += reach; acc.sq += reach * reach;
@@ -124,7 +127,7 @@ async function compute(cache) {
     const kept = !fresh && sec && JSON.stringify(sec.runs) === JSON.stringify(meta.runs) && sec.seed === meta.seed && sec.simVer === meta.simVer ? sec.cells || {} : {};
     const todo = tasks.filter((t) => !kept[t.key]);
     cache[name] = { ...meta, at: jstNow(), cells: kept };
-    console.error(`${name === 'scan' ? 'パーティの候補' : 'パーティの測り直し'}: ${tasks.length} マス(残してあった ${tasks.length - todo.length} マスは飛ばす)・並列 ${JOBS}`);
+    console.error(`${{ scan: 'パーティの候補', verify: 'パーティの測り直し', detail: 'アシカ・強化の比べ', heroBase: '勇者ごとの基準' }[name] || name}: ${tasks.length} マス(残してあった ${tasks.length - todo.length} マスは飛ばす)・並列 ${JOBS}`);
     await runTasks(todo, JOBS, (got) => { Object.assign(cache[name].cells, got); save(); });
     save();
   };
@@ -163,6 +166,12 @@ async function compute(cache) {
     }
   }
   await go('detail', { runs: DRUNS, seed: SEED + 2000, simVer: SIM_VER, top: DTOP }, dt);
+  // 6: 基準。上位に出た勇者モンごとに、供モンをふつうに(くじで)選んだときを同じ回数回す(根拠の「何と比べて」)
+  const bt = [];
+  for (const d of DIFFS) {
+    for (const hero of [...new Set(topParties(cache, d).slice(0, 5).map((x) => x.k.split('|')[0]))]) bt.push({ key: `${hero}|base|${d}`, hero, allies: [], random: true, diff: d, runs: VRUNS, seed: SEED + 3000 });
+  }
+  await go('heroBase', { runs: VRUNS, seed: SEED + 3000, simVer: SIM_VER }, bt);
 }
 const TRAININGS = ['bot', 'hpdef', 'atkhp', 'atk2', 'role'];
 const TRAINING_JA = { bot: '丸太うけ+走り込み(ガッツの少ない子は丸太うけ+猛勉強。いまのボット)', hpdef: '丸太うけ+走り込み(全員)', atkhp: 'ドミノ倒し+走り込み', atk2: 'ドミノ倒し×2', role: 'ダメージ役はドミノ倒し+走り込み・ほかは丸太うけ+走り込み' };
@@ -233,20 +242,53 @@ function writeAll(cache) {
       const THREAT_JA = { single: '単体', multi: '連続', big: '大技', all: '全体', pierce: '貫通', charge: 'ため', pierceCharge: '貫通のため', none: '攻撃なし' };
       const [th, thn] = top((y) => y[2]);
       const hp = sc.reduce((a, y) => a + y[3], 0) / sc.length;
-      return `${sim.TEACH_BY_ID[x.id].baseName}: WAVE の ${tb} ターン目が多い(${pct(tn / sc.length)})・敵の予告は ${THREAT_JA[th] || th}(${pct(thn / sc.length)})・いちばん細った子のライフ 平均 ${pct(hp)}(1ラン ${(x.c.uses / x.c.n).toFixed(1)} 回)`;
+      // 読み方: 上手な使い方がそのカードを置いたターンを数えた。ライフは「そのターンの、味方でいちばんライフの少ない子のライフの割合」の平均
+      return `${sim.TEACH_BY_ID[x.id].baseName}: 1ランに ${(x.c.uses / x.c.n).toFixed(1)} 回置く。置いたターンの ${pct(tn / sc.length)} が WAVE の ${tb} ターン目で、そのときの敵の予告は ${THREAT_JA[th] || th}がいちばん多い(${pct(thn / sc.length)})。置いたターンの、味方でいちばんライフの少ない子のライフは平均 ${pct(hp)}${hp >= 0.8 ? '(みんな元気なうちに置いている)' : hp < 0.5 ? '(細った子がいるときに置いている)' : ''}`;
     };
-    const pickBest = (keys, names) => {
+    const pickBest = (keys, names, botName) => {
       const xs = keys.map((kk) => ({ kk, c: D[`${kd}|${kk}`] })).filter((x) => x.c).map((x) => ({ ...x, ...diffOf(x.c) })).sort((p, q) => q.v - p.v);
       const b = xs[0];
-      return b && b.v > 2 * b.e ? { text: `${names[b.kk.split(':')[1]]}(いまのボットより ${d === 'Hard' ? `クリア ${sgn(b.v * 100, 0)} 点` : `WAVE ${sgn(b.v)}`})`, all: xs } : { text: 'いまのボットの選び方と同じくらい', all: xs };
+      const e = Math.max(...xs.map((y) => y.e).filter(Number.isFinite));
+      const width = d === 'Hard' ? `クリア率 ${ev.pm(2 * e * 100, 0)} 点` : `${ev.pm(2 * e)} WAVE`;
+      // 勧めるのは、表に出すぶれ(比べた中でいちばん大きい標準誤差の2倍)より差が大きいときだけ(線と表示をそろえる)
+      return b && b.v > 2 * e ? { text: `${names[b.kk.split(':')[1]]}にする(いまのボットの選び方より ${d === 'Hard' ? `クリア率 ${sgn(b.v * 100, 0)} 点` : `${sgn(b.v)} WAVE`}。${cache.detail.runs} 回のぶれは ${width})`, all: xs, firm: true, width }
+        : { text: `どれを選んでも差はぶれの中(${cache.detail.runs} 回で ${width})。いまのボットの選び方(${botName})でよい`, all: xs, firm: false, width };
     };
     return {
       base, cards, firm,
       優先: firm.map((x) => sim.TEACH_BY_ID[x.id].baseName),
       使いどころ: firm.slice(0, 3).map(scenes).filter(Boolean),
-      train: pickBest(TRAININGS.filter((x) => x !== 'bot').map((x) => `train:${x}`), TRAINING_JA),
-      unique: pickBest(UNIQUES.filter((x) => x !== 'bot').map((x) => `unique:${x}`), UNIQUE_JA),
+      train: ((botName) => pickBest(TRAININGS.filter((x) => x !== 'bot').map((x) => `train:${x}`), TRAINING_JA, botName))('丸太うけ+走り込み。ガッツの少ない子は丸太うけ+猛勉強'),
+      unique: ((botName) => pickBest(UNIQUES.filter((x) => x !== 'bot').map((x) => `unique:${x}`), UNIQUE_JA, botName))('それまでいちばんダメージを出した子の固有技へ'),
     };
+  };
+  // パーティの根拠(2026-10-10 社長「タップしたら詳細・ちゃんと根拠がある」)
+  const realCount = Object.fromEntries((j.モンスター || []).map((m) => [m.名前, Object.values(m.回数 || {}).reduce((a, b) => a + (Number(b) || 0), 0)]));
+  const partyEvidence = (x, d, base, nAll, det) => {
+    const [h, al] = x.k.split('|'); const allies = al.split(',');
+    const hb = cache.heroBase && cache.heroBase.cells[`${h}|base|${d}`];
+    const isHard = d === 'Hard';
+    const val = (c) => (isHard ? `${pct(rate(c, 'clear'))}(${c.n} 回中 ${c.clear} 回クリア)` : `${mean(c).toFixed(2)} WAVE(${c.n} 回中 ${c.clear} 回クリア)`);
+    const dv = (a, b) => (isHard ? `${sgn((a - b) * 100, 0)} 点` : `${sgn(a - b)} WAVE`);
+    const w = (e) => (isHard ? `${ev.pm(2 * e * 100, 0)} 点` : `${ev.pm(2 * e)} WAVE`);
+    const nums = [];
+    if (hb) nums.push({ 名前: POINT[d], 値: val(x.c), 基準: `同じ勇者モン(${NAME[h]})で、供モンをふつうに(候補からくじで)選んだとき ${val(hb)}`, 差: dv(x.s, scoreOf(hb, d)), ぶれ: w(Math.hypot(x.e, scoreSe(hb, d))) });
+    nums.push({ 名前: POINT[d], 値: val(x.c), 基準: `候補の全パーティ ${nAll} 組(勇者ごとに組み合わせの上位6体から3体)の平均 ${isHard ? pct(base) : `${base.toFixed(2)} WAVE`}`, 差: dv(x.s, base), ぶれ: w(x.e) });
+    const prov = [h, ...allies].map((id) => NAME[id]).filter((n) => provisional.has(n));
+    const rr = realOf(h, allies, d);
+    const unknown = [
+      prov.length ? `シミュレーターでは上位。${prov.map((n) => `${n}(実戦 ${realCount[n] || 0} 回)`).join('・')}は実戦の回数が少ないので、確かめ中` : '',
+      rr ? '' : 'この4体がそろった実戦はまだ無い',
+    ].filter(Boolean).join('。');
+    const cards = det && det.優先.length ? `アシカは ${det.優先.join(' → ')} を優先して取る` : 'アシカはどれを優先しても差はぶれの中';
+    const mechs = ['供モン選び', '供モンの加入', '間合い適性', 'WAVE 報酬の間合いボーナス', 'EX(26体・23種)', '固有技の効果(26体)', ...[h, ...allies].map((id) => ev.traitOf(NAME[id])),
+      ...(det && det.優先.length ? ['アシカの習得・強化'] : []), ...(det ? det.firm.map((c) => ({ oryo: 'アシカ(火力)', myaru: 'アシカ(火力)', kiki: 'アシカ(火力)', atsu: 'アシカ(守り・止める)', dra: 'アシカ(守り・止める)' }[c.id] || 'アシカ(回復・上限)')) : [])];
+    return ev.evidence({
+      count: `候補 ${cache.scan.runs[d]} 回 → 上位 ${cache.verify.runs} 回(別の種で測り直し)・アシカと強化の比べ 各 ${cache.detail ? cache.detail.runs : '—'} 回・基準 ${cache.heroBase ? cache.heroBase.runs : '—'} 回・実戦 ${rr ? rr.回数 : 0} 回`,
+      nums, mechs,
+      therefore: `候補の5体に ${allies.map((a) => NAME[a]).join('・')} を入れ、WAVE のあとに出た3体からこの並びの前の子を選ぶ。${cards}`,
+      unknown,
+    });
   };
   const REWARD = 'WAVE のあとに選べるのはトレーニング・供モン・固有技の強化・アシカだけ(間合いボーナスは与えたダメージから自動で付く)。ほかに選ぶごほうびは無い';
   o('# 4体パーティのおすすめ(タクティクスプロ)');
@@ -288,6 +330,7 @@ function writeAll(cache) {
           アシカ: det ? { 優先: det.優先, 使いどころ: det.使いどころ.length ? det.使いどころ : ['どのカードを優先しても同じくらい(ボットの選び方のままでよい)'] } : { 優先: [], 使いどころ: [] },
           強化: det ? { トレーニング: det.train.text, 固有技の強化: det.unique.text, ごほうび: REWARD } : { トレーニング: '', 固有技の強化: '', ごほうび: REWARD },
           実戦で確認: realOf(h, allies, d),
+          根拠: partyEvidence(x, d, base, scanAll.length, det),
         });
       }
     });
@@ -306,6 +349,7 @@ function writeAll(cache) {
       o(`- 固有技の強化ポイント: ${det.unique.text}(${det.unique.all.map((y) => `${UNIQUE_JA[y.kk.split(':')[1]]} ${d === 'Hard' ? sgn(y.v * 100, 0) : sgn(y.v)}`).join('・')})`);
       const rr = realOf(h, allies, d);
       o(`- 実戦: ${rr ? `${rr.回数} 回・クリア ${rr.クリア} 回` : 'まだ無い'}`);
+      ev.evidenceMd(partyEvidence(x, d, base, scanAll.length, det), '').forEach((t) => o(t));
     }
   }
   o();
