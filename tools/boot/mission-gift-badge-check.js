@@ -65,20 +65,22 @@ check('ギフト画面の受取可能判定も共通化されている', has('co
 // 一括受取
 // 2026-09-10(STEP 6-3)にミッション画面を MissionsScreen へ切り出したので、
 // 「本体の関数 → 画面の props → ボタン」の結線まで見る。処理の中身は本体側に残っている
-check('一括受取を画面へ渡している', has('onClaimBulk={claimMissionsBulk}'));
-check('一括受取ボタンがある', has('onClaimBulk(missionTab)') && has('一括受け取り'));
-check('対象が無ければ無効化する', has('disabled={!bulk.length}'));
+check('すべて受け取るを画面へ渡している', has('onClaimAll={claimAllMissions}'));
+check('「すべて受け取る」ボタンがある', has('onClaimAll()') && has('すべて受け取る') && has('data-mission-claim-all'));
+check('対象が無ければ無効化する', has('disabled={!total}'));
 check('個別受取を画面へ渡している', has('onClaim={claimMission}'));
 check('個別受取も残っている', has('onClaim(missionTab,m)'));
-check('個別・一括とも同じ送付処理を通る',
-  has('const claimMission = (type,mission) => sendMissionsToGiftBox(type,[mission]);') &&
-  has('const claimMissionsBulk = (type) => sendMissionsToGiftBox(type,missionClaimableList('));
-check('連打を同期ロックで止める', has('if(missionClaimingRef.current)return 0;'));
+check('個別・すべて受け取るとも同じ受け取り処理を通る',
+  has('const claimMission = (type,mission) => claimMissionRewards({ [type]:[mission] });') &&
+  has("const claimAllMissions = () => claimMissionRewards({ daily:'all', weekly:'all', monthly:'all' }, { includeBacklog:true });"));
+// ギフトを作って保存し、そのギフトを受け取って保存するまでを1つのロックの中で行う(割り込まれると、作ったギフトが消える)
+check('連打を同期ロックで止める', has('if (missionClaimingRef.current || giftClaimingRef.current) return null;'));
+check('ミッションの受け取り中は、ギフトの受け取りが古い一覧で保存し直さない', has('(!baseGifts && missionClaimingRef.current)'));
 check('ギフトIDは種別+期間+ミッションIDで固定', has('id:`gift_mission_${type}_${period}_${mission.id}`'));
 check('同じIDのギフトは二重に作らない', has('if(!nextGifts.some(g=>g?.id===gift.id)) nextGifts=[gift,...nextGifts];'));
 check('受取期限30日は維持', has('expiresAt:new Date(Date.now()+30*24*60*60*1000).toISOString()'));
-check('報酬は直接付与せずギフトへ送る', has("await storeSet('mh_gifts',nextGifts,false);") && has("await storeSet('mh_missions',reconciled,false);"));
-check('保存済みの進捗で判定し直す', has('const targets=(missionList||[]).filter(m=>m&&!state[sentKey].includes(m.id)&&missionValue(state,type,m)>=m.target);'));
+check('ギフトを作って保存してから、ミッションの受取履歴を保存する', has("await storeSet('mh_gifts',nextGifts,false);") && has("await storeSet('mh_missions',reconciled,false);"));
+check('保存済みの進捗で判定し直す', has('const targets=(list||[]).filter(m=>m&&!state[sentKey].includes(m.id)&&missionValue(state,type,m)>=m.target);'));
 
 // 編成の戻り先
 check('モンスター編成の決定でモンスタータブへ戻る', has("setManagementTab('monster');\n    setGameState('MB_MANAGEMENT');"));
