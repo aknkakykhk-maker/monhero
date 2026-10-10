@@ -106,7 +106,7 @@ section{display:flex;flex-direction:column;gap:10px}
       <li id="r2610101015mech">
         <div class="row-title">ゲームの機能(自動回復など)を全部踏まえて Tier を考える</div>
         <div class="row-body">機能の一覧表(mechanics.md・69機能)を作った。Tier の判断に入っている 60・一部 5・入っていない 4(緊急回復・強化ポイントのガッツ・供モンの間合い追いつき・魂格)。大きな見落としは、WAVE 報酬の間合いボーナスと固有技の強化がシミュレーターでずっと Lv0 のままだったこと、ボットが緊急回復を一度も押していないこと。入れる順番を決め、ダイスくん(シミュレーター)とアリーナくん(ボット)に割り振った。Tier 表のページに「まだ入れていない機能」を自動で出すようにした</div>
-        <div class="meta"><span>部長ハカセくん</span><span>見込み まだ入っていない機能は6つ(トレーニングの選び方・起こす判断・アシカの選び方・魂格・強化ポイントでガッツ・極限)。順に入れる</span><span>PR #2514・#2517・#2520・#2537・#2539・#2569</span></div><details class="more"><summary>くわしく見る: 機能の一覧表</summary><div class="md"><p>研究所:部長ハカセくんの資料(2026-10-10)。ゲームのコード(60-app.jsx・32-tactics-units.jsx・17/18/19/22 の parts・data/)と、シミュレーター <code>tools/playbot/sim/battle.js</code>(4版目)・ボット <code>tools/playbot/scenarios/tactics-brain.js</code> を読んで作った。研究の対象は Hard・Expert・Master。</p>
+        <div class="meta"><span>部長ハカセくん</span><span>見込み まだ入っていない機能は6つ(トレーニングの選び方・起こす判断・アシカの選び方・魂格・強化ポイントでガッツ・極限)。順に入れる</span><span>PR #2514・#2517・#2520・#2537・#2539・#2569・#2571</span></div><details class="more"><summary>くわしく見る: 機能の一覧表</summary><div class="md"><p>研究所:部長ハカセくんの資料(2026-10-10)。ゲームのコード(60-app.jsx・32-tactics-units.jsx・17/18/19/22 の parts・data/)と、シミュレーター <code>tools/playbot/sim/battle.js</code>(4版目)・ボット <code>tools/playbot/scenarios/tactics-brain.js</code> を読んで作った。研究の対象は Hard・Expert・Master。</p>
 <ul>
 <li>「シミュ」= シミュレーター、「ボット」= ブラウザのボット(実戦)。ボットは画面の見込みの数字(ダメージ・ガード・予告のダメージ)を読むので、式の中身は数字に乗るぶんだけ判断に入る</li>
 <li>「Tier」欄: どちらかに入っていれば「入っている(シミュ/実戦/両方)」。両方とも欠けがあれば「一部」。どちらにも無ければ「入っていない」</li>
