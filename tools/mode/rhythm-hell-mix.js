@@ -26,6 +26,9 @@ const args=process.argv.slice(2),argOf=k=>{const i=args.indexOf(k);return i>=0?a
 const SONGS={sheriruth:{marker:'sheriruth-v3',zero:711.6-2594.75,beat:324.342,levelRe:/const sheriruthHellChart=mhChart\((\d+),/,
   crosses:[75960,78550,83419],showcase:[[107900,112600],[130200,132100]]}};
 const BEAT_GAP=1.5;                      // 同じ親指が段を変えるまでの拍
+// 同じ側(レーンの左右)で高さ(地上⇔空中)を変えるまでの間(2026-10-12 社長「HELL の操作性をもっと改良して」・テンポくんの数え方)。
+// 親指の振り分けとは別に、画面の左半分・右半分ごとに見る。点は押し始めと、長押し・スライドの終わり(指が離れる高さ)。同時押し(0ms)は両手で取るので数えない
+const SIDE_GAP_MS=150;
 const PHRASE_BEATS=4;                    // タップの段を回す長さ(1小節)
 const PHRASE_MODES=['L','R','ground','both'];   // L=左手が空 / R=右手が空 / ground=両手とも地上 / both=両手が空(同時押しは片方だけ)
 const HELL_LANDSCAPE={...THUMB_PROFILES.landscape,name:'横持ち(HELL・高さの差39%)',skyDy:390*0.39};
@@ -40,6 +43,8 @@ const readBlock=(source,name)=>{
   new Function('t','h','s','return ['+block.body+']')(t,h,s);
   return notes;
 };
+// 画面のどちら側か(ノーツの真ん中のレーン座標が 3 より左なら左)。スライドは始まりと終わりで見る
+const sideOf=(n,end)=>{const c=n.k==='s'?n.pts[end?n.pts.length-1:0][1]+0.5:(n.sub+n.w/2)/2;return c<3?'L':'R';};
 const startOf=n=>n.k==='s'?n.pts[0][0]:n.t,endOf=n=>n.k==='s'?n.pts[n.pts.length-1][0]:n.k==='h'?n.end:n.t;
 const laneAt=(pts,at)=>{if(at<=pts[0][0])return pts[0][1];for(let i=1;i<pts.length;i++)if(at<=pts[i][0]){const r=(at-pts[i-1][0])/Math.max(1,pts[i][0]-pts[i-1][0]);return pts[i-1][1]+(pts[i][1]-pts[i-1][1])*r;}return pts[pts.length-1][1];};
 
@@ -54,7 +59,7 @@ const mix=(master,{zero,beat,crosses=[]})=>{
   const PROFILES=['down','up','hill'];let slideIndex=0;
   const phraseOf=at=>PHRASE_MODES[((Math.floor((at-zero)/(beat*PHRASE_BEATS))%PHRASE_MODES.length)+PHRASE_MODES.length)%PHRASE_MODES.length];
   const wantSky=(n)=>{const m=phraseOf(startOf(n));return m==='both'||m===n.hand;};
-  const fixedGround=n=>n.k==='h'||!!n.mon;
+  const fixedGround=n=>n.k==='h'||!!n.mon||!!n.pin;   // pin: 同じ側の高さの切り替えを避けるため段を固定したタップ(空中のこともある。前後は fix・backFix がその段へそろえる)
   // 交差する両手の長押し(2026-10-11 社長「スカイホールドのダブルで右と左で地上と空中でクロスさせるのもいれたいね」)。
   // 両手のスライドが重なる所で、真ん中に近いほうを横に動かない空中の長押し、もう片方を地上で空中の長押しの下をくぐって反対側へ渡らせる。
   // 渡るのは重なりの真ん中の1拍。遊ぶ人は交差のところで指を置き換える(右で押していたものが左指に変わる)。2本の形は固定し、前後のタップを合わせる
@@ -141,7 +146,52 @@ const mix=(master,{zero,beat,crosses=[]})=>{
           else if(n.k!=='s'&&!fixedGround(n)){n.want=pEnd;changed++;}
         }}}
     return changed;};
-  for(let i=0;i<40;i++){const a=fix(),b=backFix();if(!a&&!b)break;}
+  // 同じ側(レーンの左右)の続く2点で、150ms 以内に高さが変わる所を直す。空中を減らしすぎないよう、タップは前の点の高さにそろえ(前が空なら空のまま)、
+  // タップで直せないときだけスライドの形を替える
+  // そのタップをこの段にしても、同じ親指の前後のノーツと段を変える間(1.5拍)を守れるか
+  const handOk=(n,level)=>{const list=notes.filter(m=>m.hand===n.hand).sort((x,y)=>startOf(x)-startOf(y)),i=list.indexOf(n),p=list[i-1],q=list[i+1];
+    const pEnd=p&&(p.k==='s'?eLv(p):p.k==='h'?0:p.want),qStart=q&&(q.k==='s'?sLv(q):q.k==='h'?0:q.want);
+    return !(p&&startOf(n)-endOf(p)<gap&&pEnd!==level)&&!(q&&startOf(q)-endOf(n)<gap&&qStart!==level);};
+  const sideFix=()=>{let changed=0;
+    const ev=[];for(const n of notes){ev.push({n,at:startOf(n),end:false,side:sideOf(n,false)});if(n.k!=='t')ev.push({n,at:endOf(n),end:true,side:sideOf(n,true)});}
+    const lv=e=>e.n.k==='s'?(e.end?eLv(e.n):sLv(e.n)):e.n.k==='h'?0:e.n.want;
+    // スライドの片方の端だけ段を替える(もう片方の端と、行き来の形はなるべく残す)
+    const reshape=(n,s0,e0)=>s0===1&&e0===0?'down':s0===0&&e0===1?'up':s0===1&&e0===1?'sky':['hill','down','up'].includes(n.profile)?'hill':'ground';
+    // 段を固定する(タップは pin、スライドは端の段を決めて形を固定)。固定したものの前後は fix・backFix が親指の決まりどおりその段へそろえる
+    // 同じ親指で詰まって(1.5拍未満の間で)続くノーツの鎖の中に、段の違う固定のノーツ(ホールド・モンスター・固定したタップやスライド)があると、
+    // 固定どうしで親指の決まりを破り、fix と backFix が行ったり来たりするので固定しない
+    const lockedClash=(n,startLevel,endLevel=startLevel)=>{const list=notes.filter(m=>m.hand===n.hand).sort((x,y)=>startOf(x)-startOf(y)),i=list.indexOf(n);
+      const locked=m=>m.k==='t'||m.k==='h'?fixedGround(m):m.fixed;
+      const lvS=m=>m.k==='s'?sLv(m):m.k==='h'?0:m.want,lvE=m=>m.k==='s'?eLv(m):m.k==='h'?0:m.want;
+      for(let j=i-1;j>=0&&startOf(list[j+1])-endOf(list[j])<gap;j--)if(locked(list[j])){if(lvE(list[j])!==startLevel)return true;break;}
+      for(let j=i+1;j<list.length&&startOf(list[j])-endOf(list[j-1])<gap;j++)if(locked(list[j])){if(lvS(list[j])!==endLevel)return true;break;}
+      return false;};
+    const pinTo=(x,level)=>{const n=x.n;
+      if(n.k==='t'&&!n.mon&&!n.pin&&!lockedClash(n,level)){n.want=level;n.pin=true;return true;}
+      if(n.k==='s'&&!n.fixed){const s0=x.end?sLv(n):level,e0=x.end?level:eLv(n);if(lockedClash(n,s0,e0))return false;n.profile=reshape(n,s0,e0);n.fixed=true;return true;}
+      return false;};
+    for(const side of ['L','R']){const list=ev.filter(e=>e.side===side).sort((a,b)=>a.at-b.at||(a.end?-1:1));
+      for(let i=1;i<list.length;i++){const p=list[i-1],e=list[i],d=e.at-p.at;
+        if(p.n===e.n||d<=0||d>SIDE_GAP_MS||lv(p)===lv(e))continue;
+        if(process.env.HELL_SKIP&&process.env.HELL_SKIP.split(',').some(t=>Math.abs(+t-e.at)<200))continue;
+        // まず、タップを相手の段にそろえる(同じ親指の前後とも段がそろうときだけ。前が空なら空のまま残る)
+        if(!e.end&&e.n.k==='t'&&!fixedGround(e.n)&&handOk(e.n,lv(p))){e.n.want=lv(p);changed++;continue;}
+        if(!p.end&&p.n.k==='t'&&!fixedGround(p.n)&&handOk(p.n,lv(e))){p.n.want=lv(e);changed++;continue;}
+        // そろえられないときは、地上の側を空中へ上げて固定する(空中を減らさない)。上げられないもの(ホールド・モンスター・交差の形)なら、空中の側を地上へ固定する
+        // どちらで固定するかは、試しに当てて親指の決まりまで直し切ったあとの空中の数が多いほう(固定は1つでも、前後のフレーズごと地上へ連なって下りることがある)
+        const [low,high]=lv(e)===1?[p,e]:[e,p];
+        const snap=()=>notes.map(n=>[n.want,n.pin,n.profile,n.fixed]),restore=v=>notes.forEach((n,k)=>{[n.want,n.pin,n.profile,n.fixed]=v[k];});
+        const skyAmount=()=>notes.reduce((a,n)=>a+(n.k==='t'?n.want:n.k==='s'?sLv(n)+eLv(n):0),0);
+        const before=snap();let best=null;
+        for(const [x,level] of [[low,1],[high,0]]){
+          if(!pinTo(x,level)){restore(before);continue;}
+          let settled=false;for(let r=0;r<40;r++)if(!fix()&&!backFix()){settled=true;break;}
+          const score=settled?skyAmount():-1;restore(before);
+          if(score>=0&&(!best||score>best.score))best={x,level,score};}
+        if(best&&pinTo(best.x,best.level))changed++;
+      }}
+    return changed;};
+  for(let i=0;i<40;i++){const a=fix(),b=backFix(),c=sideFix();if(!a&&!b&&!c)break;}
   for(const n of notes){if(n.k==='s')shape(n,n.profile);else n.sky=n.want;delete n.want;delete n.fixed;delete n.profile;}
   notes.crossWindows=crossWindows;
   return notes;
