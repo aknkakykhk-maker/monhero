@@ -1232,20 +1232,59 @@ const RHYTHM_SCROLL_RUSH_REACH=.97;
 // だんだん変える(2026-10-11 Grievous Lady・社長「動くようになったときに速度が一瞬変わってる」):
 //   [時刻,'LERP',倍率] と書いた区切りは、その時刻で倍率がその値になり、次の区切りの倍率まで「だんだん」変わる(速さが段差にならない)。
 //   位置は2次の式になる。LERP を書かない表(公開中の曲・ほかの書き方)は今までとまったく同じ計算
+// すべる(2026-10-11 Grievous Lady・社長「弾性を再現して」「速度3/6/10で戻る量が変わらないように」):
+//   [時刻,'GLIDE',割合,山の位置] と書いた区間は、次の区切りまでの間に「道の長さ×割合」だけ動く(MOVE と同じくノーツ速度によらない)。
+//   ただし速さは段差にせず、区間の始まりの速さ → 山(山の位置=区間の何割の所・書かなければ半分) → 終わりの速さへ、だんだん変わる。
+//   始まりの速さは前の区間が一定の倍率ならその倍率、GLIDE・LERP の後なら0(止まり目で速さ0)。
+//   終わりの速さは次の区切りがふつうの倍率・LERP ならその倍率、それ以外(GLIDE・終わり)なら0。
+//   割合0の GLIDE は止まっている(前後が0のとき)。GLIDE を書かない表(公開中の曲・ほかの書き方)は今までとまったく同じ計算
+const rhythmScrollGlideRest=(raw,i,travel)=>{
+  let rest=0;
+  for(let j=i+1;j<raw.length;j++){
+    const e=raw[j],n=raw[j+1],sp=n?Number(n[0])-Number(e[0]):0;
+    if(e[1]==='GLIDE'){if(e[4]==='REST')break;rest+=Number(e[2])||0;continue;}
+    if(e[1]==='LERP'){const v0=Number.isFinite(Number(e[2]))?Number(e[2]):1;const v1=!n?v0:n[1]==='LERP'?(Number.isFinite(Number(n[2]))?Number(n[2]):1):typeof n[1]==='string'?0:Math.max(0,Number(n[1])||0);
+      rest+=sp*(v0+v1)/2/travel;continue;}
+    if(typeof e[1]==='string'||Number(e[1])>0)break;
+  }
+  return (Number(raw[i][2])||0)-rest;
+};
+const rhythmScrollGlide=(raw,i,travel)=>{
+  const c=raw[i],prev=raw[i-1],next=raw[i+1];
+  const t0=Number(c[0]),span=next?Number(next[0])-t0:0;
+  // [時刻,'GLIDE',残り,山の位置,'REST'] … 割合の代わりに「この区間の始まりで、演出の終わり(次のふつうの倍率の区切り)まで残っている道の割合」を書く。
+  //   後ろの区間(GLIDE・止まり・LERP)が動く量を引いて、この区間の割合を決める(LERP はノーツ速度で動く量が変わるので、その分をここで吸収する)
+  const f=c[4]==='REST'?rhythmScrollGlideRest(raw,i,travel):Number(c[2]);
+  if(!(span>0)||!Number.isFinite(f))return [[t0,0,true]];
+  const r=Number(c[3])>0&&Number(c[3])<1?Number(c[3]):.5;
+  // j 番目の区切りが一定の倍率で流れるときのその倍率(GLIDE・LERP・無いときは null)
+  const constOf=j=>{const e=raw[j];if(!e||e[1]==='GLIDE'||e[1]==='LERP')return null;
+    if(e[1]!=='MOVE'&&e[1]!=='RUSH'){const m=Number(e[1]);return Number.isFinite(m)&&m>=0?m:null;}
+    const n=raw[j+1],sp=n?Number(n[0])-Number(e[0]):0;if(!(sp>0))return 1;
+    if(e[1]==='MOVE'){const v=Number(e[2]);return Number.isFinite(v)?travel*v/sp:1;}
+    return travel*(Number(e[2])>0?Number(e[2]):RHYTHM_SCROLL_RUSH_REACH)/sp;};
+  const or0=v=>v==null?0:v;
+  const m0=prev?or0(constOf(i-1)):0;
+  const mEnd=next&&next[1]==='LERP'?(Number.isFinite(Number(next[2]))?Number(next[2]):1):or0(constOf(i+1));
+  const pk=2*travel*f/span-r*m0-(1-r)*mEnd;
+  return [[t0,m0,true],[t0+span*r,pk,true]];
+};
 const rhythmScrollBuild=(changes,travelMs)=>{
   const raw=(Array.isArray(changes)?changes:[]).filter(c=>Array.isArray(c)&&Number.isFinite(Number(c[0]))).slice().sort((a,b)=>Number(a[0])-Number(b[0]));
   const travel=Number(travelMs)>0?Number(travelMs):2150;
-  const list=raw.map((c,i)=>{
+  const list=raw.flatMap((c,i)=>c[1]==='GLIDE'?rhythmScrollGlide(raw,i,travel):[[c,i]]).map(x=>{
+    if(!Array.isArray(x[0]))return x;
+    const [c,i]=x;
     if(c[1]==='LERP'){const v=Number(c[2]);return [Number(c[0]),Number.isFinite(v)?v:1,true];}
     if(c[1]!=='RUSH'&&c[1]!=='MOVE')return [Number(c[0]),Number(c[1])];
     const next=raw[i+1],span=next?Number(next[0])-Number(c[0]):0;
-    if(c[1]==='MOVE'){const f=Number(c[2]);return [Number(c[0]),span>0&&Number.isFinite(f)?travel*f/span:1];}
+    if(c[1]==='MOVE'){const f=Number(c[2]);return [Number(c[0]),span>0&&Number.isFinite(f)?travel*f/span:1,'move'];}
     const reach=Number(c[2])>0?Number(c[2]):RHYTHM_SCROLL_RUSH_REACH;
     return [Number(c[0]),span>0?travel*reach/span:1];
-  }).filter(([t,m],i)=>Number.isFinite(t)&&Number.isFinite(m)&&(m>=0||raw[i][1]==='MOVE'||raw[i][1]==='LERP'));
+  }).filter(([t,m,l])=>Number.isFinite(t)&&Number.isFinite(m)&&(m>=0||l===true||l==='move'));
   if(!list.length)return {points:null,back:false,sufMin:null,lerp:false};
   // m1 … 区切りの終わりの倍率(LERP なら次の区切りの倍率、それ以外は m と同じ)
-  const m1Of=i=>list[i][2]&&i+1<list.length?list[i+1][1]:list[i][1];
+  const m1Of=i=>list[i][2]===true&&i+1<list.length?list[i+1][1]:list[i][1];
   const points=[{t:list[0][0],s:list[0][0],m:list[0][1],m1:m1Of(0)}];
   for(let i=1;i<list.length;i++){const p=points[points.length-1],span=list[i][0]-p.t;points.push({t:list[i][0],s:p.s+span*(p.m+p.m1)/2,m:list[i][1],m1:m1Of(i)});}
   const lerp=points.some(p=>p.m1!==p.m);
@@ -25123,16 +25162,18 @@ const grievousLadyMasterNotes=((t,h,f,s)=>[
 // </grievous-lady-v3-master-notes>
 ])(mhTap,mhHoldV2,mhFlick,mhSlideV2);
 // 流れる速さの表(2026-10-11・参考動画を1コマずつ測った形。社長「止まったり、さらに前に行ったり後ろに戻ったり」)。全難易度で同じ表を使う。
-// 'MOVE' は次の区切りまでに道の長さ×割合だけ動く(マイナスで奥へ戻る・ノーツ速度によらず同じ見え方)。拍0=2240ms(曲の頭に2秒の無音)・1拍=285.714ms。
-// A 拍56〜64: 'LERP'(速さをだんだん変える)で、ふだんの速さから奥へ戻り → 止まりかけ → だんだん加速して拍64でふだんの速さへちょうどつながる(速さの段差なし)
-// B 拍328〜336.5: 拍336.5 の同時押しは判定線の手前で待つ(組1)。後ろのノーツは止まる・一瞬(17ms)で前へ18%/後ろへ20%を音の強い所でくり返す → 奥へ38%戻る → 止まる → 加速
+// 'GLIDE' は次の区切りまでに道の長さ×割合だけ、なめらかに動く(マイナスで奥へ戻る・ノーツ速度によらず同じ見え方・折り返しは速さ0)。拍0=2240ms(曲の頭に2秒の無音)・1拍=285.714ms。
+// 位置は参考動画を1コマずつ測った「先頭のノーツの画面の高さ」に合わせた(2026-10-11 社長「弾性を再現して」「速度3/6/10で戻る量が変わらないように」)
+// A 拍56〜64: 拍56で叩く所でだんだん止まり → 減速しながら奥へ戻る(画面の高さ39%→9%) → 止まる → 流れ出して、判定線へ近づきながら速さを落とし、拍64で着いた瞬間にふだんの速さ(段差なし)
+// B 拍328〜336.5: 全部のノーツがそろって、ばねのように弾む(88%→28%→91%→35%→91%) → 奥へ戻る → だんだん加速して拍336.5で着いた瞬間にふだんの速さ(段差なし)。
+//   最後の戻り先は、流れ出し(0からふだんの速さまで)が動ける分で決まる(ノーツ速度が遅いほど判定線寄り・'GLIDE' の 'REST')
 // C 拍460.3〜464.25: 拍461.75 の同時押しは判定線の近くで待つ(組1)。後ろのノーツは止まる(56%) → 一瞬で後ろへ45% → 速く戻って57%で止まる → 拍464.25
 // 判定の時刻は音楽どおり(見た目の位置だけが変わる)。判定の前に判定線へ触れるノーツは0個(rhythmScrollEarlyTouches・grievous-lady-scroll-check.js)
-const GRIEVOUS_LADY_SCROLL_CHANGES=Object.freeze([[18240,"LERP",1],[18382.9,"LERP",-0.367],[19668.6,"LERP",-0.147],[19954.3,"LERP",0],[20325.7,"LERP",1.84],[20525.7,1],[95954.3,0],[96154.3,"MOVE",0.192],[96171.4,"MOVE",-0.184],[96268.6,0],[96411.4,"MOVE",0.184],[96525.7,"MOVE",-0.208],[96542.9,0],[96611.4,"MOVE",0.182],[96628.6,"MOVE",-0.121],[96711.4,"MOVE",0.121],[96811.4,"MOVE",-0.197],[96828.6,0],[97097.1,"MOVE",0.172],[97114.3,"MOVE",-0.221],[97268.6,"MOVE",-0.074],[97440,0],[97840,"MOVE",0.239],[98097.1,"MOVE",0.633],[98382.9,1],[133754.3,0],[134040,"MOVE",-0.232],[134057.1,"MOVE",0.24],[134197.1,0],[134525.7,"MOVE",0.725],[134882.9,1]].map(row=>Object.freeze(row)));
-// 組1(待っている同時押し): 参考では B の拍336.5・C の拍461.75 に叩く2個だけが判定線の近くで待ち、後ろのノーツだけが止まる・飛ぶ・戻るを見せていた。
-// その2個に scrollGroup:1 を付け、この表で流す(B は判定線の手前で拍328〜336.25、C は拍460.3〜461.55 待つ)
-const GRIEVOUS_LADY_SCROLL_GROUPS=Object.freeze({1:Object.freeze([[95840,"MOVE",0.516],[95954.3,0],[98311.4,"MOVE",0.034],[98382.9,1],[133654.3,"MOVE",0.227],[133754.3,0],[134111.4,"MOVE",0.323],[134168.6,1]].map(row=>Object.freeze(row)))});
-const GRIEVOUS_LADY_WAITING_MS=Object.freeze([98382.9,134168.6]);
+const GRIEVOUS_LADY_SCROLL_CHANGES=Object.freeze([[18154.3,"LERP",1],[18240,"GLIDE",-0.4169,0.05],[19768.6,"GLIDE",0],[19840,"GLIDE",0.8018,0.08],[20525.7,1],[95954.3,"LERP",1],[96054.3,"GLIDE",0],[96211.4,"GLIDE",-0.4553,0.3],[96382.9,"GLIDE",0],[96497.1,"GLIDE",0.469,0.55],[96668.6,"GLIDE",-0.3882,0.3],[96797.1,"GLIDE",0],[96834.3,"GLIDE",0.3882,0.5],[96940,"GLIDE",0],[97200,"GLIDE",0.0381,0.15,"REST"],[97625.7,"LERP",0],[98382.9,1],[133754.3,0],[134040,"MOVE",-0.232],[134057.1,"MOVE",0.24],[134197.1,0],[134525.7,"MOVE",0.725],[134882.9,1]].map(row=>Object.freeze(row)));
+// 組1(待っている同時押し): 参考では C の拍461.75 に叩く2個だけが判定線の近くで待ち、後ろのノーツだけが止まる・飛ぶ・戻るを見せていた。
+// その2個に scrollGroup:1 を付け、この表で流す(拍460.3〜461.55 待つ)
+const GRIEVOUS_LADY_SCROLL_GROUPS=Object.freeze({1:Object.freeze([[133654.3,"MOVE",0.227],[133754.3,0],[134111.4,"MOVE",0.323],[134168.6,1]].map(row=>Object.freeze(row)))});
+const GRIEVOUS_LADY_WAITING_MS=Object.freeze([134168.6]);
 // 演出の最中は判定線へノーツを来させない(参考どおり。2026-10-11 社長「動く演出の最中にノーツが来ていない。そこもちゃんと参考にしてる?」)。
 // [始まり,終わり] の間に時刻か終わりがかかるノーツを外す。ただし C の拍461.75(参考で同時押しを2個叩く所)だけは残す
 const GRIEVOUS_LADY_QUIET_SPANS=Object.freeze([[18240,20525.7],[95954.3,98382.9],[133811.4,134882.9]].map(row=>Object.freeze(row)));
