@@ -1186,7 +1186,7 @@ const RHYTHM_SKY_LOOK=Object.freeze({
   get box(){return RHYTHM_SKY_BOX_LOOKS[RHYTHM_SKY_BOX_VARIANT.id]||RHYTHM_SKY_BOX_LOOKS.z;}, // 案はデバッグで切り替える(RHYTHM_SKY_BOX_LOOKS)
   shadow:Object.freeze({rgb:'6,3,20',alpha:.22,radiusPx:3,insetPx:3,lineAlpha:.28,fadeRatio:.14}),
   star:Object.freeze({rgb:'255,255,255',radiusPx:17}),
-  line:Object.freeze({bandRgb:'150,118,235',bandAlpha:.38,bandPx:6,coreRgb:'165,135,245',coreAlpha:.95,corePx:2}),
+  line:Object.freeze({bandRgb:'150,118,235',bandAlpha:.38,bandPx:6,coreRgb:'165,135,245',coreAlpha:.95,corePx:2,marginPct:4}),
   floor:Object.freeze({topRgb:'48,34,108',topAlpha:.55,bottomRgb:'66,46,146',bottomAlpha:.88}),
 });
 // 空中スライドの手(2026-10-11・社長「参考どおり左右で色分け」)。譜面の note.hand('L'|'R')に従う。手が書いてないときは推測せず、
