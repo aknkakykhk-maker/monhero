@@ -190,7 +190,7 @@
   "sheriruth/normal": "60c7d5f6ba1b1b1c",
   "sheriruth/hard": "4129eb15814c539e",
   "sheriruth/expert": "18b8e33e6773dc32",
-  "sheriruth/master": "3d799b21ee88cdd0",
+  "sheriruth/master": "de76ea635d4c299e",
   "against_my_own_shadow/easy": "00f9a099a1032c06",
   "against_my_own_shadow/normal": "943a5232253b15a6",
   "against_my_own_shadow/hard": "ed91a70ce36c7cd8",
@@ -202,6 +202,13 @@
    "at": "2026-10-11 15:13",
    "reason": "初めての控え(2026-10-11 main の公開中の曲。Sheriruth HARD/EXPERT/MASTER の 44.335秒のタップは仕上げの道具の巻き添えでサブレーン3→4のまま。戻すかは窓口が決める)",
    "changedCount": 195
+  },
+  {
+   "at": "2026-10-11 15:48",
+   "reason": "Sheriruth MASTER を交差きつめ版へ差し替え(社長の OK)。44.335秒のタップは巻き添えで動いたが、押せない速すぎる2音の直しとして社長の OK で残す(ノーツ数・時刻・ランキングは不変)",
+   "changed": [
+    "sheriruth/master"
+   ]
   }
  ]
 }
