@@ -446,6 +446,8 @@ const rhythmMirrorNote = note => {
   if(Array.isArray(note.slidePoints))next.slidePoints=note.slidePoints.map(point=>point&&Number.isFinite(Number(point.lane))?{...point,lane:RHYTHM_MIRROR_LAST_LANE-Number(point.lane)}:point);
   // 横フリックの向きも左右を入れ替える(2026-09-26)
   if(note.flickDir==='left')next.flickDir='right';else if(note.flickDir==='right')next.flickDir='left';
+  // 空中のスライドの手の色(左=水色・右=ピンク)も左右を入れ替える(2026-10-10)。hand を書いたノーツ(空中ノーツの譜面)だけに効く
+  if(note.hand==='L')next.hand='R';else if(note.hand==='R')next.hand='L';
   if(Array.isArray(note.holdPoints))next.holdPoints=note.holdPoints.map(point=>{
     if(!point||typeof point!=='object')return point;
     const pw=Number(point.subLaneWidth),pointWidth=Number.isFinite(pw)&&pw>0?pw:w;
@@ -695,7 +697,8 @@ const normalizeRhythmBestRecords = value => {
   const source=value&&typeof value==='object'&&!Array.isArray(value)?value:{};
   return Object.fromEntries(RHYTHM_SONGS.map(song=>{
     const raw=source[song.songId];
-    const known=Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[id,normalizeRhythmBestRecord(raw?.[id])]));
+    // 5難易度は全曲、HELL などはその曲に譜面があるときだけ(rhythmSongDifficultyDefs)
+    const known=Object.fromEntries(rhythmSongDifficultyDefs(song).map(({id})=>[id,normalizeRhythmBestRecord(raw?.[id])]));
     // この版が知らない難易度の記録は、捨てずにそのまま残す(2026-10-10・MASTER の上の難易度を足す前の先回り)。
     // 新しい版で付いた記録を、古い版のまま開いた端末が保存し直して消してしまわないように(CLAUDE.md ⑦「消さない」)。
     // 知っている5難易度の読み方は今までどおり。知らない曲の記録はこれまでどおり持たない

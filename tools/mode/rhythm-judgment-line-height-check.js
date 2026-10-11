@@ -31,7 +31,14 @@ ok('上限は32%。これを超えると「まだ形が決まっていない」�
 ok('ライン・弾ける光・判定文字が同じ変数を見る',
   game.includes("bottom:'var(--mh-judgment-line-bottom,12%)'")
   &&game.includes("bottom:'calc(var(--mh-judgment-line-bottom,12%) + 38px)'")
-  &&data.includes('[data-rhythm-hit-effect]{position:absolute;bottom:var(--mh-judgment-line-bottom,12%);'));
+  // 弾ける光は、空中のノーツのときだけ空中の判定線まで持ち上げる(--rhythm-hit-lift・地上は0%)。基準の変数は同じ
+  &&data.includes('[data-rhythm-hit-effect]{position:absolute;bottom:calc(var(--mh-judgment-line-bottom,12%) + var(--rhythm-hit-lift,0%));'));
+// 2026-10-11 社長「地上は今まで通り、空中は地上と同じ仕組みを空中版の位置にする」:
+// 空中のノーツの判定の文字は、同じ変数から空中の判定線(RHYTHM_SKY_LIFT.ratio ぶん上)の38px上へ。空中のある譜面だけ地上の文字を下へ小さく出していた形は残さない
+ok('空中の判定の文字は、同じ変数から空中の判定線の38px上に出る(地上の文字はふつうの位置のまま)',
+  game.includes('data-rhythm-sky-judgment-display')
+  &&game.includes('bottom:`calc(var(--mh-judgment-line-bottom,12%) + ${(RHYTHM_SKY_LIFT.ratio*100).toFixed(2)}% + 38px)`')
+  &&!game.includes("calc(var(--mh-judgment-line-bottom,12%) - 64px)")&&!game.includes("scale(.78)"));
 ok('追従(HOLD/SLIDE)は、決めうちの.88ではなく実測した位置を見る',
   data.includes('rect.top+rect.height*RHYTHM_JUDGMENT_LINE_Y.ratio')
   &&game.includes('if(ready)RHYTHM_JUDGMENT_LINE_Y.set((lineRect.top-areaRect.top+lineRect.height/2)/areaRect.height);'));

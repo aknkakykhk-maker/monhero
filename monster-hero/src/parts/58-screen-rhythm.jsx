@@ -55,7 +55,9 @@ function RhythmSongSelectScreen({
   startQuickRunFromRhythm, wave, monsterSlots=[], raidChallenge=null,
 }) {
       const songs=rhythmDemoSongs(RHYTHM_SONGS);
-      const difficulties=rhythmDemoDifficultyList(RHYTHM_DIFFICULTIES);
+      // 5難易度 + HELL(HELL は譜面がある曲だけボタンに出る。rhythmDemoDifficulties が空の譜面を外す)
+      // レイドバトルへ挑んでいるあいだは5難易度だけ(HELL はレイドのダメージの表に無い)
+      const difficulties=rhythmDemoDifficultyList(raidChallenge?RHYTHM_DIFFICULTIES:RHYTHM_PLAY_DIFFICULTIES);
       // 今週の対象曲の名前。曲名はデータから引くので、ここに書き写さない。
       // 副題まで入れるのは rhythmSongFullName の役目(原曲とリミックスが同じ displayName を持つため)
       const eventSongTitles=rhythmEventNotice

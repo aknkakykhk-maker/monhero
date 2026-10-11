@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1c6c8db6ec6a74be
+// generated-sha256: 4c6ee1d772d129d2
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-11 17:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-11 17:48"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4564,6 +4564,8 @@ const rhythmMirrorNote = note => {
   if(Array.isArray(note.slidePoints))next.slidePoints=note.slidePoints.map(point=>point&&Number.isFinite(Number(point.lane))?{...point,lane:RHYTHM_MIRROR_LAST_LANE-Number(point.lane)}:point);
   // 横フリックの向きも左右を入れ替える(2026-09-26)
   if(note.flickDir==='left')next.flickDir='right';else if(note.flickDir==='right')next.flickDir='left';
+  // 空中のスライドの手の色(左=水色・右=ピンク)も左右を入れ替える(2026-10-10)。hand を書いたノーツ(空中ノーツの譜面)だけに効く
+  if(note.hand==='L')next.hand='R';else if(note.hand==='R')next.hand='L';
   if(Array.isArray(note.holdPoints))next.holdPoints=note.holdPoints.map(point=>{
     if(!point||typeof point!=='object')return point;
     const pw=Number(point.subLaneWidth),pointWidth=Number.isFinite(pw)&&pw>0?pw:w;
@@ -4813,7 +4815,8 @@ const normalizeRhythmBestRecords = value => {
   const source=value&&typeof value==='object'&&!Array.isArray(value)?value:{};
   return Object.fromEntries(RHYTHM_SONGS.map(song=>{
     const raw=source[song.songId];
-    const known=Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[id,normalizeRhythmBestRecord(raw?.[id])]));
+    // 5難易度は全曲、HELL などはその曲に譜面があるときだけ(rhythmSongDifficultyDefs)
+    const known=Object.fromEntries(rhythmSongDifficultyDefs(song).map(({id})=>[id,normalizeRhythmBestRecord(raw?.[id])]));
     // この版が知らない難易度の記録は、捨てずにそのまま残す(2026-10-10・MASTER の上の難易度を足す前の先回り)。
     // 新しい版で付いた記録を、古い版のまま開いた端末が保存し直して消してしまわないように(CLAUDE.md ⑦「消さない」)。
     // 知っている5難易度の読み方は今までどおり。知らない曲の記録はこれまでどおり持たない
@@ -11246,7 +11249,11 @@ const helpDataRows = (id) => {
     // 直接ヘルプへ手で書き写すと、しきい値を調整するたびヘルプだけ古くなるため、
     // rhythmRankForScoreへ各難易度のmaxScoreをそのまま渡して実データから表を作る
     case 'rhythmDifficultyRanks':
-      return (typeof RHYTHM_DIFFICULTIES !== 'undefined' ? RHYTHM_DIFFICULTIES : []).map(d =>
+      // HELL(6段目)は、公開している曲に HELL の譜面があるときだけ並べる(公開前の難易度の満点をヘルプに出さない)
+      return (typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : typeof RHYTHM_DIFFICULTIES !== 'undefined' ? RHYTHM_DIFFICULTIES : [])
+        .filter(d => (typeof RHYTHM_DIFFICULTIES !== 'undefined' && RHYTHM_DIFFICULTIES.some(x => x.id === d.id))
+          || (typeof rhythmDemoSongs !== 'undefined' && rhythmDemoSongs(RHYTHM_SONGS).some(song => song.difficulties?.[d.id]?.notes?.length > 0)))
+        .map(d =>
         [d.id, `満点 ${d.maxScore.toLocaleString()}点 → 上限ランク ${rhythmRankForScore(d.maxScore)}`]);
     // 体験版で遊べる難易度と、そのレベル・ノーツ数。ヘルプへ手で書き写すと、
     // 譜面を作り直すたびに数字だけ古くなるため、実データからそのまま表にする
@@ -11269,7 +11276,8 @@ const helpDataRows = (id) => {
     case 'rhythmDemoSongList': {
       const songs = typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS : [];
       const list = typeof rhythmDemoSongs !== 'undefined' ? rhythmDemoSongs(songs) : [];
-      const ids = typeof RHYTHM_DEMO_DIFFICULTY_IDS !== 'undefined' ? RHYTHM_DEMO_DIFFICULTY_IDS : [];
+      // HELL がある曲は「6難易度」と数える(譜面が無い難易度は下で外れる)
+      const ids = typeof RHYTHM_SELECTABLE_DIFFICULTY_IDS !== 'undefined' ? RHYTHM_SELECTABLE_DIFFICULTY_IDS : typeof RHYTHM_DEMO_DIFFICULTY_IDS !== 'undefined' ? RHYTHM_DEMO_DIFFICULTY_IDS : [];
       return list.map(song => {
         const charts = ids.map(id => song.difficulties[id]).filter(chart => chart && chart.notes && chart.notes.length > 0);
         if (!charts.length) return null;
@@ -11286,7 +11294,8 @@ const helpDataRows = (id) => {
     case 'rhythmDifficultySpread': {
       const songs = typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS : [];
       const list = typeof rhythmDemoSongs !== 'undefined' ? rhythmDemoSongs(songs) : [];
-      const ids = typeof RHYTHM_DEMO_DIFFICULTY_IDS !== 'undefined' ? RHYTHM_DEMO_DIFFICULTY_IDS : [];
+      // HELL の行も出す(譜面がある曲だけで幅を作る)
+      const ids = typeof RHYTHM_SELECTABLE_DIFFICULTY_IDS !== 'undefined' ? RHYTHM_SELECTABLE_DIFFICULTY_IDS : typeof RHYTHM_DEMO_DIFFICULTY_IDS !== 'undefined' ? RHYTHM_DEMO_DIFFICULTY_IDS : [];
       return ids.map(id => {
         const entries = list.map(song => ({ song, chart: song.difficulties[id] }))
           .filter(entry => entry.chart && entry.chart.notes && entry.chart.notes.length > 0
@@ -14884,7 +14893,9 @@ const saveRhythmMonsterSlots = async value => {
   const normalized=sanitizeRhythmMonsterSlotIds(value); await storeSet(RHYTHM_MONSTER_SLOT_KEY,normalized,false); return normalized;
 };
 const saveRhythmBestRecord = async (records,songId,difficultyId,value) => {
-  if(!RHYTHM_SONGS.some(song=>song.songId===songId)||!RHYTHM_DIFFICULTIES.some(item=>item.id===difficultyId)) return normalizeRhythmBestRecords(records);
+  const song=RHYTHM_SONGS.find(item=>item.songId===songId);
+  // HELL など5難易度の外の難易度は、その曲に譜面があるときだけ残す
+  if(!song||!rhythmSongDifficultyDefs(song).some(item=>item.id===difficultyId)) return normalizeRhythmBestRecords(records);
   const normalized=normalizeRhythmBestRecords(records);
   normalized[songId][difficultyId]=normalizeRhythmBestRecord(value);
   await storeSet(RHYTHM_BEST_RECORDS_KEY,normalized,false); return normalized;
@@ -18512,6 +18523,8 @@ const RHYTHM_DIFFICULTY_TONE=Object.freeze({
   HARD:  Object.freeze({badge:'from-amber-500 to-amber-700',dot:'bg-amber-400',   on:'border-amber-300 bg-amber-600 text-white',     off:'border-amber-400/40 text-amber-200',     text:'text-amber-300'}),
   EXPERT:Object.freeze({badge:'from-rose-500 to-rose-700',dot:'bg-rose-400',    on:'border-rose-300 bg-rose-600 text-white',       off:'border-rose-400/40 text-rose-200',       text:'text-rose-300'}),
   MASTER:Object.freeze({badge:'from-fuchsia-500 to-fuchsia-700',dot:'bg-fuchsia-400', on:'border-fuchsia-300 bg-fuchsia-700 text-white', off:'border-fuchsia-400/40 text-fuchsia-200', text:'text-fuchsia-300'}),
+  // 6段目 HELL。バトルの難易度「Hell」と同じ色(地 #7f1d1d=red-900・字 #f87171=red-400)
+  HELL:  Object.freeze({badge:'from-red-800 to-red-950',dot:'bg-red-400',       on:'border-red-300 bg-red-900 text-red-100',       off:'border-red-500/70 bg-red-950/80 text-red-400',         text:'text-red-400'}),
 });
 const rhythmDifficultyTone=id=>RHYTHM_DIFFICULTY_TONE[id]||RHYTHM_DIFFICULTY_TONE.EASY;
 // 難易度の字の色だけを欲しいところへ。知らないidは灰に倒す(勝手にEASYの緑にしない)
@@ -18762,6 +18775,9 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
   // 一覧からは消さずに鍵つきで見せる。「先に何をクリアすればよいか」が分かるようにするため。
   const unlocked=item=>!song||rhythmDifficultyUnlocked(song.songId,item.id,bestRecords);
   const openList=available.filter(unlocked);
+  // 鍵のかかったボタンの「◯◯で解放」は、いちばん長い文字に合わせて字の大きさをそろえる(HELL の「MASTERで解放」だけ小さくならないように)
+  const lockedFitText=song?available.filter(item=>!unlocked(item)).map(item=>`${rhythmDifficultyUnlockRequirement(item.id,song.songId)}で解放`)
+    .reduce((a,b)=>rhythmTitleFitEm(b)>rhythmTitleFitEm(a)?b:a,''):'';
   const picked=available.find(entry=>entry.id===difficultyId);
   const difficulty=(picked&&unlocked(picked)?picked:null)||openList[0]||null;
   const chart=song&&difficulty?song.difficulties[difficulty.id]:null;
@@ -19032,7 +19048,8 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
                     <small className="text-[8px] font-black text-white/80">Lv.</small>
                     <b {...(main?{'data-rhythm-song-row-level':''}:{})} className={`text-[14px] font-black leading-none tabular-nums text-white${spot('songLevel')}`}>{rowLevel(entry)}</b>
                   </span>
-                  {(difficulties||[]).map(item=>{
+                  {/* HELL など5難易度の外の難易度は、その曲に譜面があるときだけ◆を出す(HELL の無い曲は今までどおり5つ) */}
+                  {(difficulties||[]).filter(item=>RHYTHM_DIFFICULTIES.some(d=>d.id===item.id)||rhythmChartPlayable(entry,item.id)).map(item=>{
                     const playable=rhythmChartPlayable(entry,item.id);
                     const markId=rhythmAchievementMarkId(playable,playable?rhythmBestRecord(bestRecords,entry.songId,item.id):null);
                     const mark=RHYTHM_ACHIEVEMENT_MARKS[markId];
@@ -19157,7 +19174,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
               data-rhythm-difficulty-locked={open?'0':'1'} disabled={!open}
               title={open?undefined:`${need}をクリアすると挑めます`}
               onClick={()=>{if(open)setDifficultyId(item.id);}}
-              className={`flex h-[52px] min-w-0 flex-1 flex-col items-center justify-center rounded-lg border-2 px-0.5 font-black leading-none [container-type:inline-size] landscape:h-[48px] ${open?(on?`${tone.on} shadow-[0_0_10px_rgba(255,255,255,.25)]`:`${tone.off} bg-slate-900/70`):'border-white/10 bg-slate-900/70 text-slate-500'}`}>
+              className={`flex h-[52px] min-w-0 flex-1 flex-col items-center justify-center rounded-lg border-2 px-0.5 font-black leading-none [container-type:inline-size] landscape:h-[48px]${available.length>5?' gap-px':''} ${open?(on?`${tone.on} shadow-[0_0_10px_rgba(255,255,255,.25)]`:`${tone.off} bg-slate-900/70`):'border-white/10 bg-slate-900/70 text-slate-500'}`}>
               {/* Lv.の数字を大きく、難易度の名前を小さく(2026-09-26・参考: バンドリの難易度の並び) */}
               <b className="block text-[18px] tabular-nums">{song.difficulties[item.id].level}</b>
               <span className="block text-[8px] tracking-wide">{open?item.id:`🔒${item.id}`}</span>
@@ -19167,7 +19184,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
               {(()=>{const record=open?rhythmBestRecord(bestRecords,song.songId,item.id):null;
                 const text=open?(record&&record.played?record.bestScore.toLocaleString():'—'):`${need}で解放`;
                 return <span data-rhythm-difficulty-best={item.id} className="block max-w-full truncate text-[8px] font-black tabular-nums opacity-80"
-                  style={{fontSize:rhythmTitleFitSize(text,8,6,2)}}>{text}</span>;})()}
+                  style={{fontSize:rhythmTitleFitSize(open?text:lockedFitText,8,6,2)}}>{text}</span>;})()}
             </button>;
           })}
           </div>
@@ -19730,6 +19747,8 @@ const RHYTHM_SONG_INTRO_MS=3000;
 const rhythmSongIntroNow=()=>typeof performance!=='undefined'?performance.now():Date.now();
 const RHYTHM_SONG_INTRO_RETRY_MS=1400;
 const RHYTHM_SONG_INTRO_MAX_MS=6000;
+// 演奏前の準備(修理部)が幕の最長でも済まなかったとき、READY の前にもう一度だけ待つ上限
+const RHYTHM_PREPARE_WAIT_MAX_MS=3000;
 const RHYTHM_SONG_INTRO_CLOSE_MS=240;
 /* 演奏前の準備を幕へ渡す口(修理部ドライバーくんの「演奏前の準備」との決め事・2026-10-11)。
    rhythmSongIntroHold(promise) … 渡した Promise が済むまで幕を閉じない(何本でも。全部が済むまで待つ)。
@@ -19749,7 +19768,7 @@ const rhythmSongIntroHoldsDone=holds=>!holds||[...holds].every(entry=>entry.done
 let rhythmSongIntroLastKey='';
 // 幕の難易度札の色。曲えらびの難易度の色(RHYTHM_DIFFICULTY_TONE)と同じ色相。
 // Tailwindのクラスではなく色で持つのは、幕を外部CSSに頼らず必ず読める形で出すため
-const RHYTHM_SONG_INTRO_DIFFICULTY_COLORS=Object.freeze({EASY:'#059669',NORMAL:'#0284c7',HARD:'#d97706',EXPERT:'#e11d48',MASTER:'#a21caf'});
+const RHYTHM_SONG_INTRO_DIFFICULTY_COLORS=Object.freeze({EASY:'#059669',NORMAL:'#0284c7',HARD:'#d97706',EXPERT:'#e11d48',MASTER:'#a21caf',HELL:'#7f1d1d'});
 const rhythmSongIntroVisible=settings=>!!settings&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL';
 // 作曲者の行。composer を持つ曲はそれを、よその作品の曲(credit)はその紹介文を出す。どちらも無ければ出さない
 const rhythmSongIntroCredit=song=>{if(!song)return '';if(typeof song.composer==='string'&&song.composer.trim())return `作曲: ${song.composer.trim()}`;return song.credit&&typeof song.credit.text==='string'?song.credit.text:'';};
@@ -19790,30 +19809,32 @@ function RhythmSkyStage({plane}){
   const theme=rhythmSkyTheme();if(theme.fx)Object.assign(RHYTHM_SKY_FX,theme.fx);
   // 空中の面・縁・柱・判定線は道の線と同じ白〜薄紫(改善部: 赤い枠が画面を占めて今の曲と並べると浮く。赤はノーツだけにする)
   const c='221,214,254',f=v=>Number(v).toFixed(2),fr=plane.front;
-  return <svg data-rhythm-sky-stage viewBox="0 0 100 100" preserveAspectRatio="none" style={{position:'absolute',inset:0,width:'100%',height:'100%',pointerEvents:'none',overflow:'visible'}}>
+  return <svg data-rhythm-sky-stage viewBox="0 0 100 100" preserveAspectRatio="none" style={{position:'absolute',inset:0,width:'100%',height:'100%',pointerEvents:'none',overflow:'visible',zIndex:2}}>
     <style>{`@keyframes mhSkyFlow{from{transform:translateY(-12px)}to{transform:translateY(${f(fr.y)}px)}}[data-rhythm-sky-flow]{animation:mhSkyFlow 1.3s linear infinite}[data-rhythm-sky-flow="2"]{animation-delay:-.65s}@keyframes mhSkyPulse{0%,100%{opacity:.55}50%{opacity:1}}[data-rhythm-sky-pulse]{animation:mhSkyPulse 1.3s ease-in-out infinite}@media (prefers-reduced-motion:reduce){[data-rhythm-sky-flow],[data-rhythm-sky-pulse]{animation:none}}`}</style>
     <defs>
       <linearGradient id="mhSkyFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={`rgb(${c})`} stopOpacity="0"/><stop offset=".55" stopColor={`rgb(${c})`} stopOpacity=".04"/><stop offset="1" stopColor={`rgb(${c})`} stopOpacity=".2"/></linearGradient>
       <linearGradient id="mhSkyBand" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={`rgb(${c})`} stopOpacity="0"/><stop offset=".5" stopColor={`rgb(${c})`} stopOpacity=".22"/><stop offset="1" stopColor={`rgb(${c})`} stopOpacity="0"/></linearGradient>
       <linearGradient id="mhSkyPost" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stopColor={`rgb(${c})`} stopOpacity="0"/><stop offset="1" stopColor={`rgb(${c})`} stopOpacity=".55"/></linearGradient>
+      <linearGradient id="mhSkyFloor" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={`rgb(${RHYTHM_SKY_LOOK.floor.topRgb})`} stopOpacity={RHYTHM_SKY_LOOK.floor.topAlpha}/><stop offset="1" stopColor={`rgb(${RHYTHM_SKY_LOOK.floor.bottomRgb})`} stopOpacity={RHYTHM_SKY_LOOK.floor.bottomAlpha}/></linearGradient>
       <clipPath id="mhSkyClip"><polygon points={plane.poly}/></clipPath>
     </defs>
-    <polygon points={plane.poly} fill="url(#mhSkyFill)"/>
-    <g clipPath="url(#mhSkyClip)">
-      <rect data-rhythm-sky-flow="1" x="0" y="0" width="100" height="6" fill="url(#mhSkyBand)"/>
-      <rect data-rhythm-sky-flow="2" x="0" y="0" width="100" height="6" fill="url(#mhSkyBand)"/>
-    </g>
-    {plane.dividers.map((d,k)=><polyline key={k} points={d} fill="none" stroke={`rgb(${c})`} strokeOpacity=".16" strokeWidth="1" vectorEffect="non-scaling-stroke"/>)}
-    {[plane.leftEdge,plane.rightEdge].map((d,k)=><g key={k}><polyline points={d} fill="none" stroke={`rgb(${c})`} strokeOpacity=".14" strokeWidth="4" vectorEffect="non-scaling-stroke"/><polyline points={d} fill="none" stroke={theme.core} strokeOpacity=".5" strokeWidth="1" vectorEffect="non-scaling-stroke"/></g>)}
-    {/* 空中と地上の判定ラインの「高さの差」がいつも見えるように、レーンの区切りごとに2本をつなぐ薄い縦の光(社長「立体感」) */}
-    {plane.markers.slice(1,-1).map((x,k)=><line key={'c'+k} x1={f(x)} y1={f(fr.gy)} x2={f(x)} y2={f(fr.y)} stroke={`rgb(${c})`} strokeOpacity=".13" strokeWidth="1" vectorEffect="non-scaling-stroke"/>)}
-    {[fr.l,fr.r].map((x,k)=>{const w=1.4;return <polygon key={k} points={`${f(x-w)},${f(fr.gy)} ${f(x+w)},${f(fr.gy)} ${f(x+w*.5)},${f(fr.y)} ${f(x-w*.5)},${f(fr.y)}`} fill="url(#mhSkyPost)"/>;})}
-    {/* 空中の判定線(参考の Sky Input と同じく、床の幅を越えて画面の横いっぱいに、遠近で傾かない水平な2本線と薄い光の帯。床とは別の面だと分かるように) */}
-    <rect x="-2" y={f(fr.y-1.2)} width="104" height="2.4" fill="url(#mhSkyBand)" opacity=".55"/>
-    <line x1="-2" y1={f(fr.y-.35)} x2="102" y2={f(fr.y-.35)} stroke={theme.core} strokeOpacity=".6" strokeWidth="1" vectorEffect="non-scaling-stroke"/>
-    <line x1="-2" y1={f(fr.y+.35)} x2="102" y2={f(fr.y+.35)} stroke={theme.core} strokeOpacity=".6" strokeWidth="1" vectorEffect="non-scaling-stroke"/>
-    {plane.markers.map((x,k)=><polygon key={k} points={`${f(x)},${f(fr.y-.9)} ${f(x+.9)},${f(fr.y)} ${f(x)},${f(fr.y+.9)} ${f(x-.9)},${f(fr.y)}`} fill={theme.core} fillOpacity=".55"/>)}
+    {/* 案Z: 道(地面)を薄い紫の無地にする。床の影(床より暗い)が見えるように。参考の道も無地の紫。空中の譜面の曲だけ */}
+    <polygon points={plane.floor} fill="url(#mhSkyFloor)"/>
+    {/* 案Z(2026-10-11・社長の決定): 空中の面・縁・柱・字は無し。空中の判定の線は、道の外まで横いっぱいの薄紫の細い線1本だけ
+        (6px の淡い帯+中心2px。白は空中のものと押した光だけに使うので、線は白にしない) */}
+    <line x1="-2" y1={f(fr.y)} x2="102" y2={f(fr.y)} stroke={`rgb(${RHYTHM_SKY_LOOK.line.bandRgb})`} strokeOpacity={RHYTHM_SKY_LOOK.line.bandAlpha} strokeWidth={RHYTHM_SKY_LOOK.line.bandPx} vectorEffect="non-scaling-stroke"/>
+    <line x1="-2" y1={f(fr.y)} x2="102" y2={f(fr.y)} stroke={`rgb(${RHYTHM_SKY_LOOK.line.coreRgb})`} strokeOpacity={RHYTHM_SKY_LOOK.line.coreAlpha} strokeWidth={RHYTHM_SKY_LOOK.line.corePx} vectorEffect="non-scaling-stroke"/>
   </svg>;
+}
+// 縦画面の空中の高さの差を切り替える(デバッグ専用・2026-10-11 社長「中間を作って見比べる」)。保存は新しいキー mh_sky_lift_portrait_proto だけ。
+// 横画面は39%のまま。ふつうのプレイ(この画面を通らない)は16%のまま
+function RhythmSkyLiftSwitch(){
+  const read=()=>{try{const v=Number(localStorage.getItem('mh_sky_lift_portrait_proto'));return v===25||v===39?v:16;}catch(e){return 16;}};
+  const [value,setValue]=useState(read);
+  const pick=v=>{try{if(v===16)localStorage.removeItem('mh_sky_lift_portrait_proto');else localStorage.setItem('mh_sky_lift_portrait_proto',String(v));}catch(e){}setValue(v);};
+  return <section data-rhythm-sky-lift-switch className="mb-3 rounded-2xl border border-rose-400/50 bg-rose-950/25 p-3"><h3 className="text-xs font-black text-rose-100">縦画面の空中の高さの差(試作・見比べ用)</h3>
+    <p className="mt-1 text-[10px] font-bold text-rose-200/80">空中と地上の判定ラインの差(画面の高さに対する割合)。横画面は39%のまま。ここで選んだ値は縦画面の試作の HELL だけに効きます。</p>
+    <div className="mt-2 grid grid-cols-3 gap-2">{[16,25,39].map(v=><button key={v} type="button" data-rhythm-sky-lift={v} aria-pressed={value===v} onClick={()=>pick(v)} className={`min-h-[44px] rounded-xl text-sm font-black ${value===v?'bg-rose-600 text-white ring-2 ring-rose-200':'bg-slate-800 text-slate-300'}`}>{v}%{v===16?'(いま)':''}</button>)}</div></section>;
 }
 const RhythmMonsterNoteGuide=()=>{
   const ratios=rhythmMonsterNoteBaseRatios(RHYTHM_MONSTER_SLOT_MAX).map(ratio=>`${Math.round(ratio*100)}%`);
@@ -20116,7 +20137,9 @@ const RhythmChartNotePanel=({song,difficulty,chart})=>{
 // 演奏画面全体を作り直すのは、コンボの段・100のくぎり・ライフの状態(ふつう・ピンチ・DOWN など)が変わったときと、能力が出たときだけ(applyJudgment の coarseKey)。
 // ★見た目(要素・クラス・属性)は切り出す前とまったく同じ。値の出どころが view から hud に変わっただけ
 // ★ほかの場所の view.score・view.combo は「段が変わったときの値」なので、判定ごとの数字を出すところでは使わない(使うなら hud を読む)
-const rhythmHudInitial=()=>({score:0,combo:0,last:'',lastPrecise:false,fastSlow:'',lastDeltaMs:null,counts:null,life:RHYTHM_LIFE_MAX});
+const rhythmHudInitial=()=>({score:0,combo:0,last:'',lastPrecise:false,fastSlow:'',lastDeltaMs:null,skyLast:'',skyLastPrecise:false,skyFastSlow:'',skyDeltaMs:null,counts:null,life:RHYTHM_LIFE_MAX});
+// 空中のノーツか(判定の文字を空中の判定線の上に出す。2026-10-11 社長「地上は今まで通り、空中は地上と同じ仕組みを空中版の位置にする」)
+const rhythmNoteIsSky=note=>rhythmNoteSkyHeight(note)>0||rhythmSlideHasSky(note);
 const rhythmCreateHud=()=>{let state=rhythmHudInitial();const subs=new Set();
   return {get:()=>state,set(patch){state={...state,...patch};subs.forEach(fn=>fn());},subscribe(fn){subs.add(fn);return()=>{subs.delete(fn);};}};};
 const useRhythmHud=hud=>React.useSyncExternalStore(hud.subscribe,hud.get);
@@ -20147,7 +20170,7 @@ const RhythmHudLife=({hud,settings,isLandscape,lifeBoxRef,lifeDamageRef})=>{cons
   return <div ref={lifeBoxRef} data-rhythm-life data-life-state={lifeState} data-life-wide={isLandscape?'1':''} style={{'--mh-life-scale':rhythmFiniteInRange(settings.lifeDisplaySize,RHYTHM_LIFE_SIZE_MIN,RHYTHM_LIFE_SIZE_MAX,150)/100}} className="relative flex flex-nowrap items-center justify-end gap-x-1"><span aria-hidden="true" data-rhythm-life-heart className="leading-none text-rose-400" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{lifeState==='down'?'💔':'♥'}</span>{/* ★太さ・幅は「小さい端末(320px)でも台形の外の空きへ収まる」ところで止めてある。
         これ以上太く・広くすると tools/mode/rhythm-hud-wedge-check.js が落ちる。
         気づきやすさは大きさではなく、色・点滅・ひび割れ・減った量の数字で出す */}<div data-rhythm-life-track className="relative rounded-full border bg-slate-950/80"><i data-rhythm-life-bar aria-hidden="true" className="absolute inset-y-0 left-0 rounded-full" style={{width:`${(lifeRatio*100).toFixed(1)}%`,background:lifeRatio>.5?'linear-gradient(90deg,#34d399,#22d3ee)':lifeRatio>.25?'linear-gradient(90deg,#fbbf24,#fb923c)':'linear-gradient(90deg,#fb7185,#ef4444)',transition:settings.lightweightMode?'none':'width 140ms linear'}}/></div><b data-rhythm-life-value className="font-black leading-none tabular-nums text-slate-200" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{lifeState==='down'?'DOWN':life}</b>{/* 減った量(「-50」)を、減ったその場に一瞬だけ出す。中身はapplyJudgmentが直接書く */}<b ref={lifeDamageRef} data-rhythm-life-damage aria-hidden="true" className="pointer-events-none absolute right-0 top-full mt-0.5 text-[11px] font-black leading-none tabular-nums"/></div>;};
-const RhythmHudJudgment=({hud,settings,status,haloKeys,timingDisplay,judgmentTextRef})=>{const {last,lastPrecise,fastSlow,lastDeltaMs}=useRhythmHud(hud);
+const RhythmHudJudgment=({hud,settings,status,haloKeys,timingDisplay,judgmentTextRef,sky=false})=>{const h=useRhythmHud(hud);const last=sky?h.skyLast:h.last,lastPrecise=sky?h.skyLastPrecise:h.lastPrecise,fastSlow=sky?h.skyFastSlow:h.fastSlow,lastDeltaMs=sky?h.skyDeltaMs:h.lastDeltaMs;
   return <><b ref={judgmentTextRef} data-rhythm-judgment-text data-judgment={last||''} data-judgment-precise={lastPrecise?'1':''} data-halo={haloKeys&&settings.judgmentTextDisplay&&last&&status!=='error'&&status!=='loading'&&haloKeys.has(`${last}|${lastPrecise?'1':''}`)?'1':undefined} className="block text-[26px] font-black leading-none tracking-wide text-white">{status==='error'?'音源を再生できません':status==='loading'?'LOADING…':settings.judgmentTextDisplay?last:''}</b><small className={`mt-1 block min-h-[16px] text-xs font-black tracking-[0.24em] ${!settings.fastSlowDisplay?'text-transparent':fastSlow==='FAST'?'text-cyan-300':fastSlow==='SLOW'?'text-fuchsia-300':'text-transparent'}`}>{settings.fastSlowDisplay?(fastSlow?(timingDisplay!=='STANDARD'&&typeof lastDeltaMs==='number'?`${fastSlow} ${Math.round(Math.abs(lastDeltaMs))}ms`:fastSlow):'—'):'—'}</small></>;};
 // 演出の自動調整で下げた段。アプリを開いているあいだだけ覚えておき、次の曲もこの段から始める(保存はしない)
 // ★オプションで見た目の設定を保存し直したら0へ戻す(rhythmResetAutoEffect)。戻さないと、「全部のせ」を選び直しても
@@ -20216,12 +20239,18 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   // ref も付け直すため、タップのたびに一瞬止まって見える(2026-09-04の実機報告)。
   // ノーツを canvas 1枚へ描くか(発熱対策・2026-09-07)。公開フラグとデバッグ画面の上書きで決まり、演奏の途中では変えない
   const canvasNotes=useState(()=>rhythmCanvasNotesActive(RELEASE_FLAGS.rhythmCanvasNotes))[0];
+  // 演奏前の準備(rhythmPrepareActive・デバッグの切り替え)。画面を開いたときに一度だけ決める。
+  // prepareRef … この回の準備 {generation,promise,done,ms(準備にかかった時間),waitMs(READY の前に待った時間)}
+  const prepareOn=useState(()=>rhythmPrepareActive())[0];
+  const prepareRef=useRef(null);
   // 診断に足す1コマの重さと、そのときの描き方(2026-10-11)。壊れても診断の行は送れるよう、失敗したら null
   const rhythmFrameDiagOf=()=>{try{const area=typeof document!=='undefined'?document.querySelector('[data-rhythm-play-area]'):null,rect=area?area.getBoundingClientRect():null;
     return RHYTHM_FRAME_DIAG.snapshot({draw:!canvasNotes?'dom':RHYTHM_CANVAS_RENDERER.gpuBand?'gpu':String(RHYTHM_CANVAS_RENDERER.backend||'canvas'),gpu:rhythmWebglRendererName(),
       dpr:typeof window!=='undefined'?Math.round((window.devicePixelRatio||1)*100)/100:1,w:rect?Math.round(rect.width):0,h:rect?Math.round(rect.height):0,
       cores:typeof navigator!=='undefined'&&Number.isFinite(navigator.hardwareConcurrency)?navigator.hardwareConcurrency:0,
-      effect:String(settings?.stageEffect||''),fps:String(settings?.frameRateMode||''),light:!!settings?.lightweightMode});}catch(e){return null;}};
+      effect:String(settings?.stageEffect||''),fps:String(settings?.frameRateMode||''),light:!!settings?.lightweightMode,
+      // 演奏前の準備(prep: したか・prepMs: かかった時間・prepWaitMs: 幕が閉じたあと READY の前に待った時間)
+      prep:prepareOn?1:0,prepMs:prepareRef.current?prepareRef.current.ms:null,prepWaitMs:prepareRef.current?prepareRef.current.waitMs:null});}catch(e){return null;}};
   // 空中の段(試作・2026-10-10): 空中のノーツがある譜面だけ、空中の判定ラインを出し、指の高さで地上と空中を分ける
   const skyChart=useMemo(()=>rhythmChartHasSky(chart?.notes),[chart]);
   if(skyChart)RHYTHM_SKY_LIFT.set(orientationIsLandscape());
@@ -20234,7 +20263,8 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
     const left=pts.map(p=>`${f(p.l)},${f(p.y)}`),right=pts.map(p=>`${f(p.r)},${f(p.y)}`).reverse();
     const last=pts[pts.length-1];
     const dividers=Array.from({length:RHYTHM_LANE_COUNT-1},(_,k)=>pts.map(p=>{const y=p.gy/100;return `${f(rhythmProjectBoundary(k+1,y)*100)},${f(p.y)}`;}).join(' '));
-    return {poly:[...left,...right].join(' '),leftEdge:left.join(' '),rightEdge:pts.map(p=>`${f(p.r)},${f(p.y)}`).join(' '),dividers,front:{l:last.l,r:last.r,y:last.y,gy:last.gy},
+    const floorL=pts.map(p=>`${f(p.l)},${f(p.gy)}`),floorR=pts.map(p=>`${f(p.r)},${f(p.gy)}`).reverse();
+    return {floor:[...floorL,...floorR].join(' '),poly:[...left,...right].join(' '),leftEdge:left.join(' '),rightEdge:pts.map(p=>`${f(p.r)},${f(p.y)}`).join(' '),dividers,front:{l:last.l,r:last.r,y:last.y,gy:last.gy},
       markers:Array.from({length:RHYTHM_LANE_COUNT+1},(_,k)=>rhythmProjectBoundary(k,last.gy/100)*100),
       posts:[[last.l,last.gy,last.l,last.y],[last.r,last.gy,last.r,last.y]].map(a=>a.map(f))};
   })();
@@ -20353,7 +20383,7 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   // レーンの外側に空いている三角形へ、設定したマスモンを置いて拍に合わせて跳ねさせる。
   // 跳ねるのはCSSアニメーションなので毎フレームのJSは走らない。置き場所と大きさは
   // rhythmLayoutSideMonsters が、プレイエリアの大きさが変わったときだけ測り直す。
-  const sideMonsterRefs=useRef([]),screenFlashRef=useRef(null),touchSweepRef=useRef(null),judgmentTextRef=useRef(null),comboRef=useRef(null),judgmentBurstRef=useRef(null),comboRingRef=useRef(null);
+  const sideMonsterRefs=useRef([]),screenFlashRef=useRef(null),touchSweepRef=useRef(null),judgmentTextRef=useRef(null),skyJudgmentTextRef=useRef(null),skyJudgmentBurstRef=useRef(null),comboRef=useRef(null),judgmentBurstRef=useRef(null),comboRingRef=useRef(null);
   // 判定ごとに変わる表示の入れ物(rhythmCreateHud の説明を参照)
   const hudRef=useRef(null);if(!hudRef.current)hudRef.current=rhythmCreateHud();
   // 判定文字の光を焼いた絵にする(rhythmBakeJudgmentHalos の説明を参照)。演出量・軽量モードで影の枚数が変わるので、そのたびに焼き直す。
@@ -20755,7 +20785,7 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   },[isLandscape,view.status]);
   const stopFrame=useCallback(()=>{if(frameRef.current!==null)cancelAnimationFrame(frameRef.current);frameRef.current=null;},[]);
   const clearJudgmentTimer=useCallback(()=>{if(judgmentTimerRef.current!==null)clearTimeout(judgmentTimerRef.current);judgmentTimerRef.current=null;++judgmentRevisionRef.current;},[]);
-  const scheduleJudgmentClear=useCallback(()=>{if(judgmentTimerRef.current!==null)clearTimeout(judgmentTimerRef.current);const revision=++judgmentRevisionRef.current;judgmentTimerRef.current=setTimeout(()=>{if(revision!==judgmentRevisionRef.current)return;judgmentTimerRef.current=null;hudRef.current.set({last:'',lastPrecise:false,fastSlow:''});},RHYTHM_JUDGMENT_DISPLAY_MS);},[]);
+  const scheduleJudgmentClear=useCallback(()=>{if(judgmentTimerRef.current!==null)clearTimeout(judgmentTimerRef.current);const revision=++judgmentRevisionRef.current;judgmentTimerRef.current=setTimeout(()=>{if(revision!==judgmentRevisionRef.current)return;judgmentTimerRef.current=null;hudRef.current.set({last:'',lastPrecise:false,fastSlow:'',skyLast:'',skyLastPrecise:false,skyFastSlow:''});},RHYTHM_JUDGMENT_DISPLAY_MS);},[]);
   // 能力の発動表示(「ミーア　元気！」)は短時間で消す。判定表示とは別のタイマーで持つ
   const clearAbilityTimer=useCallback(()=>{if(abilityTimerRef.current!==null)clearTimeout(abilityTimerRef.current);abilityTimerRef.current=null;++abilityRevisionRef.current;},[]);
   /* カウントダウンの後始末。disposeRun がこれを呼ぶので、必ず disposeRun より前で定義する。
@@ -20966,11 +20996,12 @@ if(judgment!=='MISS'){
       }
     }
     // 判定文字を一度だけ弾ませる
-    const judgmentText=judgmentTextRef.current;
+    const skyHit=rhythmNoteIsSky(note);
+    const judgmentText=skyHit?skyJudgmentTextRef.current:judgmentTextRef.current;
     if(judgmentText)restarts.push({el:judgmentText,attr:'rhythmJudgmentPop'});
     // 判定の演出(オプション「判定の演出」)。GREAT 以上のとき、文字の後ろで光をはじけさせる。
     // 色の印は React を通さずここで直接付ける(弾ませ直すのと同じ瞬間にそろえるため)
-    const burst=judgmentBurstRef.current;
+    const burst=skyHit?skyJudgmentBurstRef.current:judgmentBurstRef.current;
     if(burst&&settingsLiveRef.current.judgmentFx===true&&(judgment==='GREAT'||judgment==='EXCELLENT'||judgment==='MARVELOUS')){burst.dataset.judgment=judgment;burst.dataset.judgmentPrecise=preciseHit?'1':'';restarts.push({el:burst,attr:'rhythmBurst'});}
     // コンボ数も1つ増えるたびに弾ませる(プロセカのように数字が跳ねる)
     const comboText=comboRef.current;
@@ -21070,7 +21101,8 @@ const showAbilityFlash=!!abilityFlash&&!rhythmMonsterEffectAtMost(settings.monst
 const score=run.lifeDepleted?run.lockedScore:run.score,lastDeltaMs=judgment!=='MISS'&&typeof deltaMs==='number'&&Number.isFinite(deltaMs)?deltaMs:null;
 // 判定ごとの表示(スコアの札・コンボ数・判定の文字・ライフの数字)は hud を書き換えるだけ(その4つの部品だけが作り直される)。
 // 演奏画面全体(setView)は、コンボの段・100のくぎり・ライフの状態が変わったときと、能力が出たときだけ作り直す
-hudRef.current.set({score,combo:run.combo,last:judgment,lastPrecise:preciseHit,fastSlow:side||'',lastDeltaMs,counts:{...run.counts},life:run.life});
+hudRef.current.set(rhythmNoteIsSky(note)?{score,combo:run.combo,skyLast:judgment,skyLastPrecise:preciseHit,skyFastSlow:side||'',skyDeltaMs:lastDeltaMs,counts:{...run.counts},life:run.life}
+  :{score,combo:run.combo,last:judgment,lastPrecise:preciseHit,fastSlow:side||'',lastDeltaMs,counts:{...run.counts},life:run.life});
 const coarseKey=`${rhythmComboTier(run.combo)}|${Math.floor(run.combo/RHYTHM_COMBO_MILESTONE_STEP)}|${rhythmLifeState(run.life)}`;
 if(showAbilityFlash||coarseKey!==run._viewCoarseKey){run._viewCoarseKey=coarseKey;setView(v=>({...v,score,combo:run.combo,maxCombo:run.maxCombo,last:judgment,lastPrecise:preciseHit,fastSlow:side||'',counts:{...run.counts},fast:run.fast,slow:run.slow,precise:run.precise,life:run.life,lastDeltaMs,...(showAbilityFlash?{ability:abilityFlash}:{})}));}scheduleJudgmentClear();
 /* 自己ベスト比(beatmania IIDX のペースメーカー)。「自己ベストを曲のここまでの割合で割り戻した点」との差。
@@ -21504,6 +21536,56 @@ if(RHYTHM_PERF.enabled)RHYTHM_PERF.tick(performance.now()-perfTickStart,perfTick
     };
     if(typeof requestAnimationFrame==='function')requestAnimationFrame(step);else setTimeout(step,16);
   });
+  /* 演奏前の準備(2026-10-11・修理部)。曲の最初のコマで初めて起きていた重い仕事を、幕のあいだに済ませる。
+     bot で測ると、曲の最初のコマの tick に「道の大きさを測る(measureTravel のレイアウトの強制)」「ノーツの canvas の描き込み先を作る」
+     「板・光を初めて描く」が乗っていた(CPU4倍で 1コマ 60ms 超)。ここで同じ仕事を1回しておく。
+     ・道の大きさは measureTravel が覚える(曲が始まるまで測り直さない。大きさが変わったときは今までどおり測り直す)
+     ・ノーツの canvas は、本番と同じ設定で、曲の頭のノーツを種類ごとに1つずつ道の真ん中へ描き、同じ処理の中ですぐ消す(画面には出ない)
+     失敗しても演奏は止めない(済んだ扱い)。幕を出した直後のコマを重くしないよう、1コマ待ってから始める */
+  const prepareRun=generation=>new Promise(resolve=>{
+    const t0=rhythmSongIntroNow();
+    const finish=()=>{const p=prepareRef.current;if(p&&p.generation===generation)p.ms=Math.round(rhythmSongIntroNow()-t0);resolve(true);};
+    const work=()=>{
+      try{
+        if(!mountedRef.current||generation!==generationRef.current){finish();return;}
+        const travel=measureTravel(),run=runRef.current;
+        if(canvasNotes&&travel&&travel.ready!==false&&run&&Array.isArray(run.notes)){
+          const R=RHYTHM_CANVAS_RENDERER,live=settingsLiveRef.current||{};
+          const opts={nowMs:rhythmSongIntroNow(),effect:settings.effectAmount,lightweight:settings.lightweightMode,maxDpr:noteCanvasMaxDprRef.current,sizeScale:settings.noteSize/100,bloom:live.noteBloom===true,motion:live.noteMotionFx===true};
+          if(R.begin(travel.rect,opts)){
+            const travelMs=rhythmTravelMsForSpeed(settings.noteSpeed),seen=new Set();
+            const yPx=travel.spawnY+rhythmProjectTravelProgress(.6)*travel.travelPx;
+            for(const note of run.notes){
+              if(seen.size>=12)break;
+              // 帯のある(ホールド・スライド)ノーツは形の計算が別なので、板だけ温める(帯は最初のコマで作る)
+              const monster=typeof monsterForNote==='function'&&!!monsterForNote(note),kind=`${rhythmNoteVisualType(note)}|${monster?1:0}|${rhythmNoteIsWide(note)?1:0}|${rhythmFlickDir(note)||''}`;
+              if(seen.has(kind))continue;seen.add(kind);
+              const t=note.timeMs,geo=rhythmNoteCanvasGeometry({...note,type:rhythmNoteHasBody(note)?'TAP':note.type},yPx,note.lane,travel.rect,travel.noteHeight,null,{chartNowMs:t,visualTime:t,travelMs,spawnY:travel.spawnY,travelPx:travel.travelPx,gpu:false},0);
+              const depthScale=Math.round((0.56+geo.scale*.44)*100)/100,brightness=Math.round((0.72+geo.scale*.28)*100)/100;
+              R.drawNote(note,geo,{failed:false,monster,wide:rhythmNoteIsWide(note),pressed:false,heldMs:0,alpha:1,pop:null,depthScale,brightness});
+            }
+            R.end();
+            // 描いたものは同じ処理の中で消す(次に画面へ出るのは消したあとの canvas)
+            if(R.begin(travel.rect,opts))R.end();
+          }
+        }
+        // 判定の文字: 最初のタップで初めて「その判定の見た目(グラデーション・光)」のスタイル計算と文字の形作りが起き、
+        // ページ全体のレイアウトと重なって長いコマになっていた。見えない写しで判定ごとに1度ずつ計算させてから捨てる
+        const area=playAreaRef.current,display=area&&area.querySelector('[data-rhythm-judgment-display]');
+        if(area&&display){
+          const sandbox=document.createElement('div');
+          sandbox.setAttribute('aria-hidden','true');
+          sandbox.style.cssText='position:absolute;inset:0;visibility:hidden;pointer-events:none;contain:strict;overflow:hidden';
+          const copy=display.cloneNode(true);copy.removeAttribute('data-rhythm-judgment-display');sandbox.appendChild(copy);area.appendChild(sandbox);
+          const text=copy.querySelector('[data-rhythm-judgment-text]'),sub=copy.querySelector('small');
+          if(text){for(const j of RHYTHM_JUDGMENTS)for(const precise of ['','1']){text.dataset.judgment=j.id;text.dataset.judgmentPrecise=precise;text.dataset.halo='1';text.textContent=j.id;if(sub)sub.textContent='FAST 12ms';void text.offsetWidth;}}
+          sandbox.remove();
+        }
+      }catch(e){}
+      finish();
+    };
+    if(typeof requestAnimationFrame==='function')requestAnimationFrame(()=>work());else setTimeout(work,16);
+  });
   const beginRun=async startBestValue=>{if(startLockRef.current)return;startLockRef.current=true;const generation=++generationRef.current;disposeRun();setLifeDownCount(0);setView({...initialView(),status:'loading'});hudRef.current.set(rhythmHudInitial());
 /* 曲が始まる前の幕。読み込みと同時に上げ、カウントダウンの前で閉じる(RHYTHM_SONG_INTRO_MS)。
    チュートリアル・タイミング調整は曲を見せる場面ではないので出さない */
@@ -21543,12 +21625,22 @@ setLuckyRush(false);setLuckyBanner(null);if(luckGaugeRef.current)luckGaugeRef.cu
    遊べる形になるまで待ってから鳴らす。待てない端末のために上限も置く */
 await waitUntilPlayable(generation);
 if(!mountedRef.current||generation!==generationRef.current){audio.stop();return;}
+/* 演奏前の準備(デバッグの切り替え「する」のとき)。曲の最初のコマで初めて起きていた重い仕事を、幕のあいだに済ませる。
+   幕の口(rhythmSongIntroHold)へ渡すので、幕は準備が済むまで閉じない(最長は幕の決め事どおり) */
+if(prepareOn){const promise=prepareRun(generation);prepareRef.current={generation,promise,done:false,ms:null,waitMs:0};promise.then(()=>{const p=prepareRef.current;if(p&&p.generation===generation)p.done=true;});rhythmSongIntroHold(promise);}
+else prepareRef.current=null;
 /* 画面がそろってから READY→3→2→1 と数え、そのあとで曲を鳴らす。
    選んだ瞬間に曲が始まると構える間が無い(2026-09-05・ユーザー指摘)。
    ここで数えているあいだにレイアウトも完全に固まる */
 /* 幕がまだ上がっていれば、閉じるのを待ってから数える。読み込みに時間がかかった端末ではもう閉じている */
 if(!await waitSongIntro(generation)){audio.stop();return;}
 if(!mountedRef.current||generation!==generationRef.current){audio.stop();return;}
+/* 幕が最長で閉じても準備が残っていたら、READY を出す前にもう一度だけ待つ(上限 RHYTHM_PREPARE_WAIT_MAX_MS)。
+   READY→3→2→1→曲 の間隔は変えない(合図の直後に曲が鳴らない間ができると構えがずれる・マクアケと決めた)。
+   マルチは全員の時間をそろえるので待たない(準備は裏で続く)。待った時間は診断(stats.frame.prepWaitMs)に残す */
+{const prep=prepareRef.current;if(prep&&prep.generation===generation&&!prep.done&&!multi){const t0=rhythmSongIntroNow();
+  await Promise.race([prep.promise,new Promise(resolve=>setTimeout(resolve,RHYTHM_PREPARE_WAIT_MAX_MS))]);prep.waitMs=Math.round(rhythmSongIntroNow()-t0);
+  if(!mountedRef.current||generation!==generationRef.current){audio.stop();return;}}}
 if(!await runCountdown(generation)){audio.stop();return;}
 if(!mountedRef.current||generation!==generationRef.current){audio.stop();return;}
 audio.start();
@@ -21562,13 +21654,15 @@ scheduleTick();};
   // 26-supabase.jsx の window.__mhTestHooks と同じ置き場所を使う
   useEffect(()=>{
     try{if(typeof window!=='undefined')window.__mhTestHooks={...(window.__mhTestHooks||{}),
+      // 演奏前の準備の結果(読むだけ・bot の前後比べ用): したか・かかった時間・READY の前に待った時間
+      rhythmPrepare:()=>{const p=prepareRef.current;return {on:prepareOn,ms:p?p.ms:null,waitMs:p?p.waitMs:null,done:p?!!p.done:null};},
       rhythmSongMs:()=>{const run=runRef.current;return run&&!run.finished&&!run.paused?Number(run.audio.songTimeMs())||0:null;},
       // 1ノーツずつの判定とずれ(読むだけ)。モンヒロくんが「自分が押した時刻・位置」と見比べて、
       // 押したのに取れない・判定のずれ・ホールドが切れた、を数える(tools/playbot/lib/feel.js・2026-10-07)
       rhythmNoteResults:()=>{const run=runRef.current;return run?run.notes.map(note=>({index:note.index,done:!!note.done,judgment:note._rhythmFinalJudgment??null,deltaMs:Number.isFinite(note._rhythmDeltaMs)?note._rhythmDeltaMs:null,holdJudgment:note.holdJudgment??null,holdDeltaMs:Number.isFinite(note.holdDeltaMs)?note.holdDeltaMs:null,endTimeMs:Number.isFinite(note.endTimeMs)?note.endTimeMs:null,releaseTargetMs:Number.isFinite(note._rhythmReleaseTargetMs)?note._rhythmReleaseTargetMs:null,endFlick:note.endFlick===true,releaseDone:note._rhythmReleaseDone===true,releaseJudgment:note._rhythmReleaseJudgment??null,releaseDeltaMs:Number.isFinite(note._rhythmReleaseDeltaMs)?note._rhythmReleaseDeltaMs:null})):null;},
       rhythmNotes:()=>{const run=runRef.current;return run?run.notes.map(note=>({index:note.index,type:note.type,timeMs:note.timeMs,skyHeight:rhythmNoteSkyHeight(note),endTimeMs:note.endTimeMs,lane:note.lane,subLane:note.subLane,subLaneWidth:note.subLaneWidth,slidePoints:Array.isArray(note.slidePoints)?note.slidePoints.map(pt=>({timeMs:pt.timeMs,lane:pt.lane})):null,done:!!note.done})):null;},
     };}catch(_){}
-    return()=>{try{if(window.__mhTestHooks){delete window.__mhTestHooks.rhythmSongMs;delete window.__mhTestHooks.rhythmNotes;delete window.__mhTestHooks.rhythmNoteResults;}}catch(_){}};
+    return()=>{try{if(window.__mhTestHooks){delete window.__mhTestHooks.rhythmSongMs;delete window.__mhTestHooks.rhythmPrepare;delete window.__mhTestHooks.rhythmNotes;delete window.__mhTestHooks.rhythmNoteResults;}}catch(_){}};
   },[]);
   useEffect(()=>{mountedRef.current=true;rhythmChartSwitchHold(true);beginRun(bestRecord);return()=>{mountedRef.current=false;rhythmChartSwitchHold(false);++generationRef.current;startLockRef.current=false;disposeRun();};},[]);
   // 演奏中にアプリを離れた(画面が隠れた)回数を診断で数える。直し方 autoPauseOnHidden を入れた端末では、離れた時点で自動で一時停止する
@@ -21621,7 +21715,7 @@ scheduleTick();};
       target.activePointerId=input.inputKey;
       if(handover){target.releasedAtMs=null;rhythmFloatingNoteRemove(target);}
       else{target.holdJudgment=judgment;target.holdDeltaMs=deltaMs;}
-      run.activePointers.set(input.inputKey,target.index);if(input.captureTarget&&input.pointerId!==undefined){try{input.captureTarget.setPointerCapture(input.pointerId);}catch{}}const side=rhythmFastSlow(deltaMs);hudRef.current.set({last:'HOLD',lastPrecise:false,fastSlow:side||''});scheduleJudgmentClear();return;}applyJudgment(target,judgment,deltaMs);});};
+      run.activePointers.set(input.inputKey,target.index);if(input.captureTarget&&input.pointerId!==undefined){try{input.captureTarget.setPointerCapture(input.pointerId);}catch{}}const side=rhythmFastSlow(deltaMs);hudRef.current.set(rhythmNoteIsSky(target)?{skyLast:'HOLD',skyLastPrecise:false,skyFastSlow:side||''}:{last:'HOLD',lastPrecise:false,fastSlow:side||''});scheduleJudgmentClear();return;}applyJudgment(target,judgment,deltaMs);});};
   const inputMoves=(inputKey,subLaneCoordinate)=>{const run=runRef.current,state=run?.inputFeedbackState?.get(inputKey);if(!state||!Number.isFinite(subLaneCoordinate))return;if(Math.abs(subLaneCoordinate-state.subLaneCoordinate)>=3)RHYTHM_PERF.touchJump();if(Math.abs(subLaneCoordinate-state.subLaneCoordinate)<RHYTHM_TAP_REJUDGE_MOVE_SUBLANES)return;const subLane=Math.max(0,Math.min(RHYTHM_SUB_LANE_COUNT-1,Math.floor(subLaneCoordinate)));if(subLane===state.subLane)return;state.subLane=subLane;state.subLaneCoordinate=subLaneCoordinate;if(state.empty)inputStarts([{lane:Math.floor(subLane/2),subLaneCoordinate,inputKey,rejudge:true}]);};
   // 押さえている帯へ先に置いてあった「控えの指」を探す。
   // 親指で遊ぶ人は「2本目を置いてから1本目を離す」ので、離した瞬間に渡せないと必ずMISSになる
@@ -22000,7 +22094,7 @@ scheduleTick();};
     それまでは戻って難易度ボタンを見ないと気づけなかった。
     ★前の記録がまだクリアしていなかったときだけ(=このプレイで初めて開いたときだけ)出す。
     ★練習・タイミング合わせ・デバッグから始めたプレイは記録に残らないので出さない */}
-{(()=>{if(tutorial||calibrating||debugPlay||multi||result.assist||result.cleared===false)return null;const before=runRef.current?.startBest;if(before&&before.clear===true)return null;/* 新曲は HARD のクリアで EXPERT と MASTER が一度に開く(2026-10-09・rhythmDifficultyUnlockRequirement)ので、開いたものを全部並べる */const openedIds=RHYTHM_DEMO_DIFFICULTY_IDS.filter(id=>rhythmDifficultyUnlockRequirement(id,song.songId)===difficulty.id&&rhythmChartPlayable(song,id));if(!openedIds.length)return null;const opened=openedIds.join('・');return <div data-rhythm-result-unlock={openedIds.join(',')} className="mx-auto my-3 max-w-xs rounded-2xl border-2 border-amber-300/70 bg-amber-500/15 px-3 py-2 text-center"><b className="block text-base font-black text-amber-100">🔓 {opened} が解放されました！</b><small className="mt-0.5 block text-[10px] font-bold text-amber-200/90">この曲の {openedIds.map(id=>`${id}（Lv.${song.difficulties[id].level}）`).join('・')} を曲えらびで選べます</small></div>;})()}
+{(()=>{if(tutorial||calibrating||debugPlay||multi||result.assist||result.cleared===false)return null;const before=runRef.current?.startBest;if(before&&before.clear===true)return null;/* 新曲は HARD のクリアで EXPERT と MASTER が一度に開く(2026-10-09・rhythmDifficultyUnlockRequirement)ので、開いたものを全部並べる */const openedIds=RHYTHM_SELECTABLE_DIFFICULTY_IDS.filter(id=>rhythmDifficultyUnlockRequirement(id,song.songId)===difficulty.id&&rhythmChartPlayable(song,id));if(!openedIds.length)return null;const opened=openedIds.join('・');return <div data-rhythm-result-unlock={openedIds.join(',')} className="mx-auto my-3 max-w-xs rounded-2xl border-2 border-amber-300/70 bg-amber-500/15 px-3 py-2 text-center"><b className="block text-base font-black text-amber-100">🔓 {opened} が解放されました！</b><small className="mt-0.5 block text-[10px] font-bold text-amber-200/90">この曲の {openedIds.map(id=>`${id}（Lv.${song.difficulties[id].level}）`).join('・')} を曲えらびで選べます</small></div>;})()}
 {result.luck&&(result.luck.draws>0||result.luck.points>0)&&<div data-rhythm-result-luck className="mx-auto my-2 max-w-xs rounded-2xl border border-lime-300/50 bg-lime-950/30 px-3 py-2 text-center [@container(min-width:680px)]:hidden"><small className="block text-[10px] font-black tracking-wider text-lime-200">🍀 ラッキーラッシュ</small><b className="mt-0.5 block text-lg font-black tabular-nums text-white">{Number(result.luck.points).toLocaleString()}pt</b><span className="mt-0.5 block text-[10px] font-bold text-lime-100">抽選 {result.luck.draws}回・RUSH {result.luck.rush}回{result.luck.bonus>0?`・おまけビートP +${result.luck.bonus}P`:''}</span></div>}
 {result.eventPointAward&&result.eventPointAward.amount>0&&<div data-rhythm-result-beat-points className="mx-auto my-3 max-w-xs rounded-2xl border border-violet-400/50 bg-violet-950/35 px-3 py-2 text-center [@container(min-width:680px)]:hidden"><small className="block text-[10px] font-black tracking-wider text-violet-200">🎟️ ビートP獲得</small><b className="mt-0.5 block text-2xl font-black text-white">+{result.eventPointAward.amount.toLocaleString()}P</b>{result.eventPointAward.multiScale>1&&<span data-rhythm-result-beat-points-multi className="mt-1 block text-[9px] font-black text-cyan-200">👥 みんなで対戦のボーナス(人数・連続) ×{result.eventPointAward.multiScale}</span>}{result.eventPointAward.target&&<span className="mt-1 block text-[9px] font-black text-amber-200">イベント対象曲 1.5倍</span>}{result.eventPointAward.lengthBonusPercent>0&&<span data-rhythm-result-beat-points-length className="mt-1 block text-[10px] font-black text-sky-200">曲の長さ +{result.eventPointAward.lengthBonusPercent}%</span>}{result.eventPointAward.campaign&&<span data-rhythm-result-beat-points-campaign className="mt-1 block text-[9px] font-black text-amber-200">ビートPアップキャンペーン いつもの{result.eventPointAward.boost}倍</span>}{result.eventPointAward.offEvent&&<span data-rhythm-result-beat-points-off-event className="mt-1 block text-[9px] font-black text-violet-200">イベント開催中はこの5倍もらえます</span>}</div>}{/* ライブログ(バンドリ！アワーノーツの演奏後の振り返り)。曲を8つの区間に分け、区間ごとに
     MARVELOUS・EXCELLENTの割合を棒の高さで、BAD・MISSの数を下の数字で出す。いちばん崩れた区間を一言で言う */}
@@ -22048,7 +22142,7 @@ scheduleTick();};
     {songIntro.skipped?<small data-rhythm-song-intro-wait style={{display:'block',marginTop:isLandscape?'6px':'10px',fontSize:'10px',fontWeight:700,color:'#a5f3fc'}}>まもなく はじまります</small>
       :songIntro.skippable&&!songIntro.short&&<small style={{display:'block',marginTop:isLandscape?'6px':'10px',fontSize:'10px',fontWeight:700,color:'#94a3b8'}}>タップでとばす</small>}
   </div>
-</div>;})()}<header data-rhythm-hud className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-2 px-3 pt-1.5"><div ref={hudLeftRef} data-rhythm-hud-left className="min-w-0 max-w-[35cqw] text-left landscape:max-w-[28cqw]"><div className="landscape:flex landscape:items-center landscape:gap-2"><RhythmHudScore hud={hudRef.current} maxScore={difficulty.maxScore} bestScore={bestRecord?.bestScore} rankFx={!settings.lightweightMode&&settings.effectAmount!=='MINIMAL'}/><div className="mt-1.5 flex max-w-[34cqw] flex-wrap items-center gap-1 landscape:mt-0 landscape:min-w-0 landscape:shrink"><span className="shrink-0 rounded bg-fuchsia-700/85 px-1.5 py-0.5 text-[9px] font-black leading-none">{difficulty.id}</span><small data-rhythm-mode-label className="text-[9px] font-bold leading-none tracking-[0.14em] text-cyan-300 landscape:hidden" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{calibrating?'タイミング合わせ':tutorial?'れんしゅう':debugPlay?debugChartLabel:`Lv.${chart.level}`}</small></div></div>{/* 曲名のとなり(レーンの外)に小さくジャケットを出す(2026-09-26・ユーザー指示「ジャケットは置くにもレーン外の曲名のあたりがいい」)。
+</div>;})()}<header data-rhythm-hud className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-2 px-3 pt-1.5"><div ref={hudLeftRef} data-rhythm-hud-left className="min-w-0 max-w-[35cqw] text-left landscape:max-w-[28cqw]"><div className="landscape:flex landscape:items-center landscape:gap-2"><RhythmHudScore hud={hudRef.current} maxScore={difficulty.maxScore} bestScore={bestRecord?.bestScore} rankFx={!settings.lightweightMode&&settings.effectAmount!=='MINIMAL'}/><div className="mt-1.5 flex max-w-[34cqw] flex-wrap items-center gap-1 landscape:mt-0 landscape:min-w-0 landscape:shrink"><span className={`shrink-0 rounded ${difficulty.id==='HELL'?'bg-red-900/90 text-red-200 ring-1 ring-red-500/70':'bg-fuchsia-700/85'} px-1.5 py-0.5 text-[9px] font-black leading-none`}>{difficulty.id}</span><small data-rhythm-mode-label className="text-[9px] font-bold leading-none tracking-[0.14em] text-cyan-300 landscape:hidden" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{calibrating?'タイミング合わせ':tutorial?'れんしゅう':debugPlay?debugChartLabel:`Lv.${chart.level}`}</small></div></div>{/* 曲名のとなり(レーンの外)に小さくジャケットを出す(2026-09-26・ユーザー指示「ジャケットは置くにもレーン外の曲名のあたりがいい」)。
     絵が無い曲は出さない。動かないので毎フレームの仕事は増えない。縦向きは左上の表示が道にかからないよう、絵のぶん曲名の幅を縮める */}
 <div data-rhythm-hud-songline data-hud-song-dim={hudSongDim?'1':undefined} className="mt-1 flex items-center gap-1.5 landscape:mt-0.5 landscape:min-w-0">{hudArtSrc&&<img data-rhythm-hud-art src={hudArtSrc} alt="" aria-hidden="true" decoding="async" draggable={false} className="h-7 w-7 shrink-0 rounded-md border border-white/25 object-cover landscape:h-6 landscape:w-6" style={{boxShadow:'0 1px 6px rgba(2,6,23,.8)'}}/>}<div data-rhythm-hud-song className="min-w-0 max-w-[31cqw] text-[10px] font-black text-slate-100 landscape:max-w-none" style={{maxWidth:hudArtSrc&&!isLandscape?'calc(31cqw - 34px)':undefined,display:'-webkit-box',WebkitLineClamp:isLandscape?'2':'3',WebkitBoxOrient:'vertical',overflow:'hidden',lineHeight:'1.25',textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>♪ {rhythmSongFullName(song)}</div></div></div><div data-rhythm-hud-right className="flex w-[33cqw] max-w-[33cqw] flex-col items-end gap-1.5">{/* ★縦持ちでも中身を右へそろえる(flex-col items-end)。ブロックのままだとポーズがライフの行の**左端**に並び、
     ライフ表示を大きくして行が左へ伸びると、ポーズもいっしょにレーンの上へ出ていた(2026-09-24・ユーザーの実機の指摘) */}<div className="flex flex-col items-end landscape:flex-row landscape:items-center landscape:gap-2"><RhythmHudLife hud={hudRef.current} settings={settings} isLandscape={isLandscape} lifeBoxRef={lifeBoxRef} lifeDamageRef={lifeDamageRef}/><button data-rhythm-pause aria-label="ポーズ" className="pointer-events-auto mt-1 flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-full border border-white/20 bg-slate-900/90 text-2xl font-black text-white shadow-[0_0_12px_rgba(103,232,249,0.18)] landscape:mt-0" onClick={pause}>Ⅱ</button></div><b ref={abilityBadgeRef} data-rhythm-ability-badge hidden className="mt-1 block text-right text-[9px] font-black leading-none tracking-[0.06em] text-amber-200 landscape:inline-block landscape:mt-0.5" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}/></div></header>{/* ===== 曲の進みぐあい・経過時間・自己ベスト比(2026-09-24) =====
@@ -22128,17 +22222,20 @@ scheduleTick();};
   <i data-rhythm-judgment-edge data-edge="top" aria-hidden="true" style={{position:'absolute',left:0,right:0,top:0,height:'1px',background:'linear-gradient(90deg,rgba(103,232,249,0),rgba(103,232,249,.55),rgba(103,232,249,0))'}}/>
   <i data-rhythm-judgment-edge data-edge="bottom" aria-hidden="true" style={{position:'absolute',left:0,right:0,bottom:0,height:'1px',background:'linear-gradient(90deg,rgba(103,232,249,0),rgba(103,232,249,.55),rgba(103,232,249,0))'}}/>
 </div>
-<div ref={judgmentLineRef} data-rhythm-judgment-line style={{position:'absolute',left:0,right:0,bottom:'var(--mh-judgment-line-bottom,12%)',height:'3px',background:'linear-gradient(90deg,#f0abfc,#cffafe,#f0abfc)',boxShadow:settings.lightweightMode||settings.effectAmount==='MINIMAL'?'none':settings.effectAmount==='LOW'?'0 0 8px #67e8f9':'0 0 18px #67e8f9,0 0 30px #c084fc'}}/>{skyPlane&&<RhythmSkyStage plane={skyPlane}/>}{skyChart&&<span data-rhythm-sky-label style={{position:'absolute',right:'2%',bottom:`calc(var(--mh-judgment-line-bottom,12%) + ${RHYTHM_SKY_LIFT.ratio*100}% + 5px)`,fontSize:'12px',fontWeight:800,letterSpacing:'.12em',color:'#ede9fe',textShadow:'0 0 6px rgb(167,139,250),0 0 2px #000',pointerEvents:'none'}}>SKY</span>}{skyChart&&<span data-rhythm-ground-label style={{position:'absolute',right:'2%',bottom:'calc(var(--mh-judgment-line-bottom,12%) - 20px)',zIndex:12,fontSize:'12px',fontWeight:800,letterSpacing:'.08em',color:'#f5d0fe',textShadow:'0 0 4px #000',pointerEvents:'none'}}>● GROUND</span>}{/* 演奏を始める前のカウントダウン。Tailwindに頼らず直接書くのは判定ラインと同じ理由で、
+<div ref={judgmentLineRef} data-rhythm-judgment-line style={{position:'absolute',left:0,right:0,bottom:'var(--mh-judgment-line-bottom,12%)',height:'3px',background:'linear-gradient(90deg,#f0abfc,#cffafe,#f0abfc)',boxShadow:settings.lightweightMode||settings.effectAmount==='MINIMAL'?'none':settings.effectAmount==='LOW'?'0 0 8px #67e8f9':'0 0 18px #67e8f9,0 0 30px #c084fc'}}/>{skyPlane&&<RhythmSkyStage plane={skyPlane}/>}{/* 案Z: SKY / GROUND の字は無し(線の位置と影で高さを見せる) */}{/* 演奏を始める前のカウントダウン。Tailwindに頼らず直接書くのは判定ラインと同じ理由で、
     CDNのCSSが間に合わなくても必ず読める大きさで出るようにするため */}
-{countdownStep!==null&&<div data-rhythm-countdown aria-live="assertive" style={{position:'absolute',inset:0,zIndex:20,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'8px',pointerEvents:'none',background:'rgba(2,6,23,.35)'}}><b data-rhythm-countdown-step style={{fontSize:countdownStep==='READY'?'44px':'88px',fontWeight:900,lineHeight:1,color:'#fff',letterSpacing:countdownStep==='READY'?'.12em':'0',textShadow:'0 0 18px rgba(103,232,249,.85),0 2px 10px rgba(2,6,23,.95)'}}>{countdownStep}</b><small style={{fontSize:'12px',fontWeight:900,color:'#a5f3fc',textShadow:'0 1px 6px rgba(2,6,23,.95)'}}>{resumeCountdown?'まもなく 再開します':'まもなく はじまります'}</small></div>}
-<div data-rhythm-judgment-display className="pointer-events-none absolute left-1/2 z-10 w-[88%] -translate-x-1/2 text-center" style={{bottom:skyChart?'calc(var(--mh-judgment-line-bottom,12%) - 64px)':'calc(var(--mh-judgment-line-bottom,12%) + 38px)',...(skyChart?{opacity:.8,transform:'translateX(-50%) scale(.78)'}:{})}}>{/* 判定文字の見た目(色のグラデーション・光・大きさ)は index.html が data-judgment ごとに持つ。
+{countdownStep!==null&&<div data-rhythm-countdown aria-live="assertive" style={{position:'absolute',inset:0,zIndex:20,...(prepareOn?{contain:'strict'}:{}),display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'8px',pointerEvents:'none',background:'rgba(2,6,23,.35)'}}><b data-rhythm-countdown-step style={{fontSize:countdownStep==='READY'?'44px':'88px',fontWeight:900,lineHeight:1,color:'#fff',letterSpacing:countdownStep==='READY'?'.12em':'0',textShadow:'0 0 18px rgba(103,232,249,.85),0 2px 10px rgba(2,6,23,.95)'}}>{countdownStep}</b><small style={{fontSize:'12px',fontWeight:900,color:'#a5f3fc',textShadow:'0 1px 6px rgba(2,6,23,.95)'}}>{resumeCountdown?'まもなく 再開します':'まもなく はじまります'}</small></div>}
+{/* 判定の文字(地上)。空中のある譜面でも、ふつうの難易度と同じ位置・大きさ・濃さ。
+    2026-10-11 社長「地上は今まで通り、空中は地上と同じ仕組みを空中版の位置にする」で、空中のある譜面だけ判定線の下へ小さく薄く出していた形(10-10・改善部 R3)をやめた。
+    空中のノーツの判定は、下の data-rhythm-sky-judgment-display が空中の判定線の上に出す */}<div data-rhythm-judgment-display className="pointer-events-none absolute left-1/2 z-10 w-[88%] -translate-x-1/2 text-center" style={{bottom:'calc(var(--mh-judgment-line-bottom,12%) + 38px)'}}>{/* 判定文字の見た目(色のグラデーション・光・大きさ)は index.html が data-judgment ごとに持つ。
       どれも文字を透かしてグラデーションを敷くので、色を1つだけ選ぶインラインstyleでは書けない。
       判定ラインで弾ける光の単色は data/rhythm-mode.js の RHYTHM_JUDGMENT_COLORS が正本で、
       文字のグラデーションにも必ずその色を含める(rhythm-hit-effect-check.js が突き合わせる)。
       ここが渡すのは「どの判定か」「ぴったりか」の2つだけ。
       text-[26px] と text-white は、判定がまだ無いとき(LOADING…など)の見た目 */}{settings.judgmentFx===true&&<i ref={judgmentBurstRef} data-rhythm-judgment-burst aria-hidden="true"/>}<RhythmHudJudgment hud={hudRef.current} settings={settings} status={view.status} haloKeys={haloKeys} timingDisplay={timingDisplay} judgmentTextRef={judgmentTextRef}/>{/* ずれメーター。判定文字のすぐ上へ置く(文字の位置は動かさない)。判定ラインのすぐ上は叩く指で隠れるため。
     帯の色は判定窓(MARVELOUS 金・EXCELLENT 紫・GREAT 赤・GOOD 緑・BAD 青)で、真ん中がぴったり */}
-{timingDisplay==='METER'&&<div data-rhythm-timing-meter aria-hidden="true" className="absolute bottom-full left-1/2 mb-1.5 h-[10px] w-[160px] -translate-x-1/2" style={{'--meter-mar':`${(55/185*50).toFixed(2)}%`,'--meter-exc':`${(100/185*50).toFixed(2)}%`,'--meter-gre':`${(150/185*50).toFixed(2)}%`,'--meter-goo':`${(170/185*50).toFixed(2)}%`}}><i data-rhythm-timing-meter-band/><i data-rhythm-timing-meter-center/>{Array.from({length:12},(_,i)=><i key={i} ref={el=>{meterTicksRef.current[i]=el;}} data-rhythm-timing-meter-tick style={{opacity:0}}/>)}</div>}</div>{/* 能力が出たら、どのマスモンの何が出たかを短時間だけ見せる(§3.5) */}
+{timingDisplay==='METER'&&<div data-rhythm-timing-meter aria-hidden="true" className="absolute bottom-full left-1/2 mb-1.5 h-[10px] w-[160px] -translate-x-1/2" style={{'--meter-mar':`${(55/185*50).toFixed(2)}%`,'--meter-exc':`${(100/185*50).toFixed(2)}%`,'--meter-gre':`${(150/185*50).toFixed(2)}%`,'--meter-goo':`${(170/185*50).toFixed(2)}%`}}><i data-rhythm-timing-meter-band/><i data-rhythm-timing-meter-center/>{Array.from({length:12},(_,i)=><i key={i} ref={el=>{meterTicksRef.current[i]=el;}} data-rhythm-timing-meter-tick style={{opacity:0}}/>)}</div>}</div>{/* 判定の文字(空中)。空中のノーツの判定だけを、地上と同じ出し方で空中の判定線の38px上に出す(地上と同時に叩いたら、それぞれの位置に1つずつ)。
+    空中の判定線は地上の判定線から、道の高さの RHYTHM_SKY_LIFT.ratio ぶん上(横 39%・縦は設定の 16/25/39%) */}{skyChart&&<div data-rhythm-sky-judgment-display className="pointer-events-none absolute left-1/2 z-10 w-[88%] -translate-x-1/2 text-center" style={{bottom:`calc(var(--mh-judgment-line-bottom,12%) + ${(RHYTHM_SKY_LIFT.ratio*100).toFixed(2)}% + 38px)`}}>{settings.judgmentFx===true&&<i ref={skyJudgmentBurstRef} data-rhythm-judgment-burst aria-hidden="true"/>}<RhythmHudJudgment sky hud={hudRef.current} settings={settings} status="sky" haloKeys={haloKeys} timingDisplay={timingDisplay} judgmentTextRef={skyJudgmentTextRef}/></div>}{/* 能力が出たら、どのマスモンの何が出たかを短時間だけ見せる(§3.5) */}
 {/* ラッキーラッシュ中は、プレイエリアのふちが金色に光る(ノーツより後ろ・入力に触らない) */}
 {luckyRush&&<div data-rhythm-lucky-rush aria-hidden="true"/>}
 {/* 演出を自動で控えめにしたお知らせ(設定「重いときは演出を自動で控えめに」)。2.5秒だけ出す */}
@@ -22164,7 +22261,7 @@ scheduleTick();};
       :{left:'12px',right:'12px',bottom:'1.5%',padding:'8px 12px'}}><b data-rhythm-calibration-title className="block font-black text-amber-200" style={{fontSize:isLandscape?'12px':'14px',lineHeight:1.2}}>かまえて（はじめの{RHYTHM_CALIBRATION_WARMUP_COUNT}回は数えません）</b><span data-rhythm-calibration-text className="mt-1 block font-bold text-slate-200" style={{fontSize:isLandscape?'9px':'11px',lineHeight:isLandscape?1.3:1.6}}>判定ラインにノーツが重なった瞬間に叩いてください。判定とFAST・SLOWはいつもどおり出ます</span></div>}{tutorial&&<div ref={tutorialBannerRef} data-rhythm-tutorial-banner className="pointer-events-none absolute inset-x-3 top-[14%] z-20 rounded-2xl border border-cyan-300/50 bg-slate-950/92 px-3 py-2.5 text-center shadow-[0_0_18px_rgba(34,211,238,.18)]"><b data-rhythm-tutorial-title className="block text-[14px] font-black text-cyan-100">{RHYTHM_TUTORIAL_STEPS[0].title}</b><span data-rhythm-tutorial-text className="mt-1 block text-[11px] font-bold leading-relaxed text-slate-200">{RHYTHM_TUTORIAL_STEPS[0].text}</span></div>}{view.status==='paused'&&!resumeCountdown&&<div data-rhythm-pause-menu data-rhythm-debug-play={debugPlay?'1':undefined} className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-3 bg-slate-950/95 p-5"><h3 className="text-2xl font-black">PAUSE</h3>{/* いま何を・どこまで遊んでいるか。止めた位置・スコア・コンボをここで見られる */}
 {(()=>{const endMs=Number.isFinite(Number(song.playDurationMs))?Number(song.playDurationMs):chart.durationMs;const ratio=endMs>0?Math.max(0,Math.min(1,pausedSongMs/endMs)):0;return <div data-rhythm-pause-info className="w-full max-w-sm rounded-2xl border border-white/10 bg-slate-900/80 px-3 py-2.5">
   <b className="block truncate text-[12px] font-black text-slate-100">♪ {rhythmSongFullName(song)}</b>
-  <div className="mt-1 flex items-center gap-1.5 text-[10px] font-black"><span className="shrink-0 rounded bg-fuchsia-700/85 px-1.5 py-0.5 leading-none">{difficulty.id}</span>{!calibrating&&!tutorial&&<span className="text-cyan-300">Lv.{chart.level}</span>}<span className="ml-auto tabular-nums text-slate-300">SCORE <b className="text-white">{hudRef.current.get().score.toLocaleString()}</b></span><span className="tabular-nums text-slate-300">COMBO <b className="text-white">{hudRef.current.get().combo}</b></span></div>
+  <div className="mt-1 flex items-center gap-1.5 text-[10px] font-black"><span className={`shrink-0 rounded ${difficulty.id==='HELL'?'bg-red-900/90 text-red-200 ring-1 ring-red-500/70':'bg-fuchsia-700/85'} px-1.5 py-0.5 leading-none`}>{difficulty.id}</span>{!calibrating&&!tutorial&&<span className="text-cyan-300">Lv.{chart.level}</span>}<span className="ml-auto tabular-nums text-slate-300">SCORE <b className="text-white">{hudRef.current.get().score.toLocaleString()}</b></span><span className="tabular-nums text-slate-300">COMBO <b className="text-white">{hudRef.current.get().combo}</b></span></div>
   <div className="mt-2 flex items-center gap-2"><div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-white/10"><i className="absolute inset-y-0 left-0 block rounded-full bg-gradient-to-r from-cyan-300 to-fuchsia-400" style={{width:`${(ratio*100).toFixed(1)}%`}}/></div><small data-rhythm-pause-time className="shrink-0 text-[10px] font-black tabular-nums text-slate-300">{rhythmClockLabel(pausedSongMs)} / {rhythmClockLabel(endMs)}</small></div>
 </div>;})()}
 <p className="text-[10px] font-bold text-slate-400">「再開」を押すと 3・2・1 と数えてから続きが始まります</p><button data-rhythm-pause-resume className="min-h-[48px] w-full rounded-xl bg-cyan-700 font-black" onClick={resume}>再開</button>{!multi&&!raidPlay&&<button data-rhythm-pause-restart className="min-h-[48px] w-full rounded-xl bg-fuchsia-700 font-black" onClick={restart}>リスタート</button>}<button data-rhythm-pause-exit className="min-h-[48px] w-full rounded-xl bg-rose-800 font-black" onClick={abort}>{multi&&'中断してルームへ戻る'}{!multi&&<>{calibrating?'やめてオプションへ戻る':tutorial?'練習をやめて曲えらびへ戻る':debugPlay?'中断して音ゲーデバッグへ戻る':'中断して曲えらびへ戻る'}</>}</button></div>}</div></main>;
@@ -31195,7 +31292,9 @@ function RhythmSongSelectScreen({
   startQuickRunFromRhythm, wave, monsterSlots=[], raidChallenge=null,
 }) {
       const songs=rhythmDemoSongs(RHYTHM_SONGS);
-      const difficulties=rhythmDemoDifficultyList(RHYTHM_DIFFICULTIES);
+      // 5難易度 + HELL(HELL は譜面がある曲だけボタンに出る。rhythmDemoDifficulties が空の譜面を外す)
+      // レイドバトルへ挑んでいるあいだは5難易度だけ(HELL はレイドのダメージの表に無い)
+      const difficulties=rhythmDemoDifficultyList(raidChallenge?RHYTHM_DIFFICULTIES:RHYTHM_PLAY_DIFFICULTIES);
       // 今週の対象曲の名前。曲名はデータから引くので、ここに書き写さない。
       // 副題まで入れるのは rhythmSongFullName の役目(原曲とリミックスが同じ displayName を持つため)
       const eventSongTitles=rhythmEventNotice
@@ -45247,6 +45346,7 @@ function MonsterHeroGame() {
   // ノーツの描き方の上書き(検証用・デバッグ限定)。'' = 公開設定に従う / 'dom' / 'canvas'
   const [rhythmCanvasPref,setRhythmCanvasPref]=useState(()=>rhythmCanvasNotesPreference());
   const [rhythmGpuBandPref,setRhythmGpuBandPref]=useState(()=>rhythmGpuBandPreference());
+  const [rhythmPreparePref,setRhythmPreparePref]=useState(()=>rhythmPreparePreference());
   // ホールド・スライドの離しの合図の遅れを、どこまで信じて戻すか(検証用・2026-10-11)。この端末だけの切り替え(mh_rhythm_fix_override_v1)
   const [rhythmReleaseAgeWide,setRhythmReleaseAgeWide]=useState(()=>rhythmTouchFixOn('releaseAgeWide'));
   const [rhythmStageGlPref,setRhythmStageGlPref]=useState(()=>rhythmStageGlPreference());
@@ -63230,6 +63330,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             {/* スライドの帯を GPU に一度だけ置いて描くかの切り替え(2026-10-11・作り替え B の S1)。社長の iPhone で今の描き方と比べてから既定にする(S3)。
                 プレイヤーの通常プレイには出ないので更新履歴・ヘルプには載せない */}
             <section data-rhythm-gpu-band-panel className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"><h3 className="text-xs font-black text-cyan-200">スライドの帯の描き方（検証用）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80">「GPU」はスライドの帯（地上・空中・影）の形を譜面を読んだときに一度だけ GPU に置き、毎コマは曲の位置だけ渡して描きます（帯が長い・多い曲で軽くするための試作）。選ぶとノーツは WebGL で描きます（「ノーツの描き方」で canvas・要素を選んでいるときはそちらが勝ちます）。WebGL が使えないときは今の描き方に戻ります。次の演奏から効きます。</p><div className="mt-2 flex gap-2">{[['','今の描き方'],['gpu','GPU']].map(([value,label])=><button key={value||'cpu'} type="button" data-rhythm-gpu-band-pref={value||'cpu'} aria-pressed={rhythmGpuBandPref===value} onClick={()=>setRhythmGpuBandPref(rhythmGpuBandSetPreference(value))} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmGpuBandPref===value?'bg-cyan-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></section>
+            {/* 演奏前の準備の切り替え(2026-10-11・修理部・社長「事前読み込みで改善されないの?」)。曲の最初のコマで初めて起きていた重い仕事を、曲の前の幕のあいだに済ませる。
+                bot の表で良くなったら既定にする。プレイヤーの通常プレイには出ないので更新履歴・ヘルプには載せない */}
+            <section data-rhythm-prepare-panel className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"><h3 className="text-xs font-black text-cyan-200">演奏前の準備（検証用）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80">「する」は、曲の最初のコマで初めて起きていた重い仕事（道の大きさを測る・ノーツの絵を描く準備）を、曲の前の幕のあいだに済ませます。準備が済むまで幕は閉じません（最長6秒）。次の演奏から効きます。</p><div className="mt-2 flex gap-2">{[['','既定（しない）'],['on','する'],['off','しない']].map(([value,label])=><button key={value||'default'} type="button" data-rhythm-prepare-pref={value||'default'} aria-pressed={rhythmPreparePref===value} onClick={()=>setRhythmPreparePref(rhythmPrepareSetPreference(value))} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmPreparePref===value?'bg-cyan-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></section>
             {/* ホールド・スライドを離した合図が遅れて届いたときに、離した時刻をどこまで戻すかの切り替え(2026-10-11 社長「たまに、ちゃんと押しているのに MISS」)。
                 標準は押した合図と同じ 0.08秒まで。社長の iPhone で「広く(0.3秒)」を試してから標準にするか決める。プレイヤーの通常プレイには出ないので更新履歴・ヘルプには載せない */}
             <section data-rhythm-release-age-panel className="mb-3 rounded-2xl border border-emerald-400/40 bg-emerald-950/20 p-3"><h3 className="text-xs font-black text-emerald-200">ホールドの離しの遅れの戻し方（検証用）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-emerald-100/80">iPhone では、指を離した合図が遅れて届くことがあり、終わりで離したのに「押しっぱなし」と数えられて MISS になることがあります。「広く」は、離した合図の遅れを 0.3秒まで戻し、押しっぱなしの MISS を決める前に 0.3秒待ちます（標準は 0.08秒）。押しっぱなしの MISS が出るのはその分だけ遅れます。この端末だけに効き、次の演奏から効きます。</p><div className="mt-2 flex gap-2">{[[false,'標準（0.08秒）'],[true,'広く（0.3秒）']].map(([value,label])=><button key={String(value)} type="button" data-rhythm-release-age-pref={value?'wide':'standard'} aria-pressed={rhythmReleaseAgeWide===value} onClick={()=>{rhythmTouchFixSetOverride('releaseAgeWide',value?true:null);setRhythmReleaseAgeWide(rhythmTouchFixOn('releaseAgeWide'));}} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmReleaseAgeWide===value?'bg-emerald-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></section>
@@ -63244,7 +63347,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div hidden={rhythmDebugTab!=='play'}>
             {/* デバッグ専用の試作曲(RHYTHM_PROTO_SONGS)。ここからだけ遊べる。遊んでも記録・報酬・ランキングには何も入らない(from:'proto')。
                 プレイヤーの通常プレイには出ないので、更新履歴・ヘルプには載せない */}
-            {RHYTHM_PROTO_SONGS.map(song=>{const track=rhythmSongTrack(song);return <section key={song.songId} data-rhythm-proto-song={song.songId} className="mb-3 rounded-2xl border border-rose-400/50 bg-rose-950/25 p-3"><div className="mb-2"><small className="text-[8px] text-rose-300">試作・{song.songId}</small><h3 className="font-black">{song.displayName} <span className="text-xs text-rose-200">{song.subtitle}</span></h3>{song.debugDescription&&<p className="mt-1 text-[10px] font-bold text-amber-200">{song.debugDescription}</p>}<p className="break-all text-[9px] text-slate-400">BGM: {song.bgmTrackId} / {track?.src||'未登録'}</p></div><div className="space-y-2">{RHYTHM_DIFFICULTIES.filter(difficulty=>song.difficulties[difficulty.id].notes.length>0).map(difficulty=>{const chart=song.difficulties[difficulty.id];return <button key={difficulty.id} type="button" data-rhythm-proto-start={difficulty.id} className="min-h-[44px] w-full rounded-xl bg-rose-700 font-black" onClick={()=>{setRhythmPlay({song,difficulty,from:'proto'});setGameState('RHYTHM_PLAY');}}>試作をプレイ（{difficulty.id} Lv.{chart.level}）</button>})}</div></section>})}
+            <RhythmSkyLiftSwitch/>
+            {RHYTHM_PROTO_SONGS.map(song=>{const track=rhythmSongTrack(song);return <section key={song.songId} data-rhythm-proto-song={song.songId} className="mb-3 rounded-2xl border border-rose-400/50 bg-rose-950/25 p-3"><div className="mb-2"><small className="text-[8px] text-rose-300">試作・{song.songId}</small><h3 className="font-black">{song.displayName} <span className="text-xs text-rose-200">{song.subtitle}</span></h3>{song.debugDescription&&<p className="mt-1 text-[10px] font-bold text-amber-200">{song.debugDescription}</p>}<p className="break-all text-[9px] text-slate-400">BGM: {song.bgmTrackId} / {track?.src||'未登録'}</p></div><div className="space-y-2">{RHYTHM_PLAY_DIFFICULTIES.filter(difficulty=>song.difficulties[difficulty.id]?.notes?.length>0).map(difficulty=>{const chart=song.difficulties[difficulty.id];return <button key={difficulty.id} type="button" data-rhythm-proto-start={difficulty.id} className={`min-h-[44px] w-full rounded-xl font-black ${difficulty.id==='HELL'?'bg-red-900 ring-1 ring-red-400/70':'bg-rose-700'}`} onClick={()=>{setRhythmPlay({song,difficulty,from:'proto'});setGameState('RHYTHM_PLAY');}}>{difficulty.id==='HELL'?'HELL をプレイ':'試作をプレイ'}（{difficulty.id} Lv.{chart.level}）</button>})}</div></section>})}
             {RHYTHM_SONGS.map(song=>{const track=rhythmSongTrack(song);return <section key={song.songId} className="mb-3 rounded-2xl border border-indigo-400/40 bg-indigo-950/30 p-3"><div className="mb-2"><small className="text-[8px] text-indigo-300">{song.songId}</small><h3 className="font-black">{song.displayName}</h3>{song.debugDescription&&<p className="mt-1 text-[10px] font-bold text-amber-200">{song.debugDescription}</p>}<p className="break-all text-[9px] text-slate-400">BGM: {song.bgmTrackId} / {track?.src||'未登録'}</p></div><div className="space-y-2">{RHYTHM_DIFFICULTIES.map(difficulty=>{const chart=song.difficulties[difficulty.id];const best=rhythmBestRecord(rhythmBestRecords,song.songId,difficulty.id);return <article key={difficulty.id} className="rounded-xl border border-white/10 bg-slate-900/80 p-2"><div className="flex items-center justify-between"><b className="text-xs text-cyan-200">{difficulty.id} Lv.{chart.level}</b><span className="text-[9px] font-mono">MAX {difficulty.maxScore.toLocaleString()}</span></div><p className="mt-1 text-[9px] text-slate-300">BEST {best.bestScore.toLocaleString()} / MAX COMBO {best.maxCombo} / {best.clear?'CLEAR':'未プレイ'}</p><p className="mt-1 break-words text-[8px] text-slate-500">{RHYTHM_JUDGMENT_IDS.map(id=>`${id} ${best.judgments[id]}`).join(' / ')}</p><p className="mt-1 text-[8px] text-slate-500">FC {best.fullCombo?'○':'-'} / ALL EXCELLENT {best.allExcellent?'○':'-'} / ALL MARVELOUS {best.allMarvelous?'○':'-'}</p>{chart.notes.length>0&&<button data-rhythm-tap-start className="mt-2 min-h-[44px] w-full rounded-xl bg-fuchsia-700 font-black" onClick={()=>{setRhythmPlay({song,difficulty,from:'debug'});setGameState('RHYTHM_PLAY');}}>リズムテストプレイ</button>}</article>})}</div></section>})}
             </div>
             {/* 譜面制作UIは初回入場では作らない。一度開いたら、編集中のドラフトを失わないよう表示だけ切り替える */}
