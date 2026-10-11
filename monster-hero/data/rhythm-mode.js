@@ -1181,6 +1181,8 @@ const RHYTHM_SKY_BOX_LOOK_LABELS=Object.freeze({z:'案Z 色の無いガラス',a
 // 今の案。毎コマ読むので localStorage は読み込み時と切り替えたときだけ読む
 const RHYTHM_SKY_BOX_VARIANT={id:(()=>{try{const v=typeof localStorage!=='undefined'?localStorage.getItem('mh_sky_box_look_proto'):'';return v&&RHYTHM_SKY_BOX_LOOKS[v]?v:'b';}catch(e){return 'b';}})(),
   set(id){const v=RHYTHM_SKY_BOX_LOOKS[id]?id:'b';this.id=v;try{if(v==='b')localStorage.removeItem('mh_sky_box_look_proto');else localStorage.setItem('mh_sky_box_look_proto',v);}catch(e){}}};
+// 空中スライドの白い縁を描き始める高さ(2D の drawSkySlideZ と GPU の帯の mode 8 で同じ値を使う)
+const RHYTHM_SKY_EDGE_FROM=0.042;
 const RHYTHM_SKY_LOOK=Object.freeze({
   arc:Object.freeze({rgb:'214,224,240',alpha:.58,minHalfWidthPx:4.5,edgeAlpha:.6,edgePx:1.2,left:'37,99,235',right:'236,72,153',centerLane:3}), // 帯=手の色(左手=青・右手=桃)で中まで色(58%)・縁と芯は白。手は note.hand、無いときはスライドの点のレーンの平均が centerLane より左なら左  // edge=帯の左右の白い縁(紫の床の上でも「白い帯」に見せる)
   core:Object.freeze({rgb:'255,255,255',alpha:.9,widthPx:3}),
@@ -1236,6 +1238,27 @@ const rhythmSlideSegmentStart=(points,t)=>{
   let lo=1,hi=n;
   while(lo<hi){const mid=(lo+hi)>>1;if(t<=Number(points[mid].timeMs))hi=mid;else lo=mid+1;}
   return lo;
+};
+// 空中スライドの高さが RHYTHM_SKY_EDGE_FROM を越えている時刻の範囲 [[始め,終わり],…](白い縁を描く所。2D と GPU で同じものを使う)。
+// 区間ごとの高さは曲がり方(ease)で単調に変わるので、越える時刻を区間ごとに二分探しで求める。点の並びごとに1回だけ数える
+const RHYTHM_SKY_EDGE_SPAN_CACHE=typeof WeakMap==='function'?new WeakMap():null;
+const rhythmSlideSkyEdgeSpans=note=>{
+  const points=Array.isArray(note?.slidePoints)?note.slidePoints:null;
+  if(!points||points.length<2||!rhythmSlideHasSky(note))return [];
+  const cached=RHYTHM_SKY_EDGE_SPAN_CACHE&&RHYTHM_SKY_EDGE_SPAN_CACHE.get(points);if(cached)return cached;
+  const E=RHYTHM_SKY_EDGE_FROM,h=point=>Math.max(0,Math.min(1,Number(point?.sky)||0)),spans=[];
+  let open=h(points[0])>E?Number(points[0].timeMs):null;
+  for(let i=1;i<points.length;i++){
+    const a=points[i-1],b=points[i],ha=h(a),hb=h(b),ta=Number(a.timeMs),tb=Number(b.timeMs);
+    if((ha>E)===(hb>E))continue;
+    const ease=rhythmSlideSegmentEase(note,a),span=Math.max(1,tb-ta);let lo=0,hi=1;
+    for(let k=0;k<32;k++){const mid=(lo+hi)/2,v=ha+(hb-ha)*rhythmSlideEaseProgress(ease,mid);if((v>E)===(ha>E))lo=mid;else hi=mid;}
+    const at=ta+span*(lo+hi)/2;
+    if(open==null)open=at;else{spans.push([open,at]);open=null;}
+  }
+  if(open!=null)spans.push([open,Number(points[points.length-1].timeMs)]);
+  if(RHYTHM_SKY_EDGE_SPAN_CACHE)RHYTHM_SKY_EDGE_SPAN_CACHE.set(points,spans);
+  return spans;
 };
 const rhythmSlideSkyAt=(note,chartTimeMs)=>{
   const points=Array.isArray(note?.slidePoints)?note.slidePoints:null;
@@ -24328,7 +24351,7 @@ const sheriruthHardNotes=((t,h,f,s)=>[
   s(41497,42633,[[41497,1,2],[41821,0.5,2],[42146,0,2],[42470,2,2],[42633,3,2]]),t(41578,9,3,0),t(41741,9,3,0),t(42065,6,3,0),
   t(42389,6,3,0),s(42795,44011,[[42795,4,2],[43119,4.5,2],[43444,5,2],[43768,3,2],[44011,1.5,2]]),t(42876,3,3,0),t(43038,3,3,0),
   t(43362,6,3,0),t(43687,3,3,0),t(44011,0,3,0),t(44173,0,3,0),
-  t(44173,3,3,0),t(44335,4,3,0),s(44416,48795,[[44416,1.5,2],[44740,3.5,2],[45065,2.5,2],[45389,1,2],[45713,1,2],[46038,3,2],[46362,2,2],[46686,3,2],[47011,3.5,2],[47335,3.5,2],[47659,3.5,2],[47984,3.5,2],[48308,2.5,2],[48632,1,2],[48795,0,2]]),t(44822,9,3,0),
+  t(44173,3,3,0),t(44335,3,3,0),s(44416,48795,[[44416,1.5,2],[44740,3.5,2],[45065,2.5,2],[45389,1,2],[45713,1,2],[46038,3,2],[46362,2,2],[46686,3,2],[47011,3.5,2],[47335,3.5,2],[47659,3.5,2],[47984,3.5,2],[48308,2.5,2],[48632,1,2],[48795,0,2]]),t(44822,9,3,0),
   t(45146,6,3,0),t(45308,6,3,0),t(45471,6,3,0),t(45795,6,3,0),
   t(46119,9,3,0),t(46768,9,3,0),t(46930,9,3,0),t(47254,9,3,0),
   t(47417,9,3,0),t(47903,9,3,0),t(48552,6,3,0),t(48714,6,3,0),
@@ -24439,7 +24462,7 @@ const sheriruthExpertNotes=((t,h,f,s)=>[
   t(41578,9,3,0),t(41741,9,3,0),t(42065,6,3,0),t(42389,6,3,0),
   s(42795,44011,[[42795,4,2],[42957,4,2],[43038,4.5,2],[43119,4.5,2],[43200,5,2],[43443,5,2],[43524,4.5,2],[43606,4,2],[44011,1.5,2]]),t(42876,3,3,0),t(43038,3,3,0),t(43362,6,3,0),
   t(43687,3,3,0),t(44011,0,3,0),t(44173,0,3,0),t(44173,3,3,0),
-  t(44335,4,3,0),s(44416,48795,[[44416,1.5,2],[44498,2,2],[44741,3.5,2],[44903,3.5,2],[45227,1.5,2],[45308,1.5,2],[45389,1,2],[45471,1,2],[45552,0.5,2],[45633,0.5,2],[46119,3.5,2],[46362,2,2],[46444,1.5,2],[46768,3.5,2],[48146,3.5,2],[48227,3,2],[48309,2.5,2],[48552,1,2],[48633,1,2],[48795,0,2]]),t(44822,9,3,0),t(45146,6,3,0),
+  t(44335,3,3,0),s(44416,48795,[[44416,1.5,2],[44498,2,2],[44741,3.5,2],[44903,3.5,2],[45227,1.5,2],[45308,1.5,2],[45389,1,2],[45471,1,2],[45552,0.5,2],[45633,0.5,2],[46119,3.5,2],[46362,2,2],[46444,1.5,2],[46768,3.5,2],[48146,3.5,2],[48227,3,2],[48309,2.5,2],[48552,1,2],[48633,1,2],[48795,0,2]]),t(44822,9,3,0),t(45146,6,3,0),
   t(45308,6,3,0),t(45471,6,3,0),t(45795,6,3,0),t(46119,9,3,0),
   t(46444,6,3,0),t(46768,9,3,0),t(46930,9,3,0),t(47254,9,3,0),
   t(47417,9,3,0),t(47903,9,3,0),t(48552,6,3,0),t(48714,6,3,0),
@@ -24583,7 +24606,7 @@ const sheriruthMasterNotes=((t,h,f,s)=>[
   s(41497,42633,[[41497,1,2],[41741,1,2],[41903,0,2],[42146,0,2],[42551,2.5,2],[42633,3,2]]),t(41578,9,3,0),t(41741,9,3,0),t(42065,6,3,0),
   t(42389,6,3,0),s(42795,44011,[[42795,4,2],[42957,4,2],[43038,4.5,2],[43119,4.5,2],[43200,5,2],[43443,5,2],[43524,4.5,2],[43606,4,2],[44011,1.5,2]]),t(42876,3,3,0),t(43038,3,3,0),
   t(43362,6,3,0),t(43687,3,3,0),t(44011,0,3,0),t(44173,0,3,0),
-  t(44173,3,3,0),t(44335,4,3,0),s(44416,48795,[[44416,1.5,2],[44498,2,2],[44741,3.5,2],[44903,3.5,2],[45227,1.5,2],[45308,1.5,2],[45389,1,2],[45471,1,2],[45552,0.5,2],[45633,0.5,2],[46119,3.5,2],[46362,2,2],[46444,1.5,2],[46768,3.5,2],[48146,3.5,2],[48227,3,2],[48309,2.5,2],[48552,1,2],[48633,1,2],[48795,0,2]]),t(44822,9,3,0),
+  t(44173,3,3,0),t(44335,3,3,0),s(44416,48795,[[44416,1.5,2],[44498,2,2],[44741,3.5,2],[44903,3.5,2],[45227,1.5,2],[45308,1.5,2],[45389,1,2],[45471,1,2],[45552,0.5,2],[45633,0.5,2],[46119,3.5,2],[46362,2,2],[46444,1.5,2],[46768,3.5,2],[48146,3.5,2],[48227,3,2],[48309,2.5,2],[48552,1,2],[48633,1,2],[48795,0,2]]),t(44822,9,3,0),
   t(45146,6,3,0),t(45308,6,3,0),t(45471,6,3,0),t(45795,6,3,0),
   t(46119,9,3,0),t(46444,6,3,0),t(46768,9,3,0),t(46930,9,3,0),
   t(47254,9,3,0),t(47417,9,3,0),t(47903,9,3,0),t(48552,6,3,0),
@@ -24750,7 +24773,7 @@ const sheriruthHellNotes=((t,h,f,s,T,F,S)=>[
   S(41497,42633,[[41497,1,2,1,0],[41741,1,2,1,0],[41903,0,2,1,0],[42146,0,2,1,0],[42551,2.5,2,1,0],[42633,3,2,1,0]],0,'L'),T(41578,9,3,1),T(41741,9,3,1),T(42065,6,3,1),
   T(42389,6,3,1),S(42795,44011,[[42795,4,2,1,0],[42957,4,2,1,0],[43038,4.5,2,1,0],[43119,4.5,2,1,0],[43200,5,2,1,0],[43281,5,2,0.75,0],[43362,5,2,0.5,0],[43443,5,2,0.25,0],[43524,4.5,2,0,0],[43606,4,2,0,0],[43687,3.5,2,0,0],[43768,3,2,0,0],[43849,2.5,2,0,0],[43930,2,2,0,0],[44011,1.5,2,0,0]],0,'R'),T(42876,3,3,1),T(43038,3,3,1),
   T(43362,6,3,1),T(43687,3,3,1),T(44011,0,3,1),t(44173,3,3,0),
-  T(44173,0,3,1),t(44335,4,3,0),S(44416,48795,[[44416,1.5,2,1,0],[44498,2,2,1,0],[44579,2.5,2,1,0],[44660,3,2,1,0],[44741,3.5,2,1,0],[44903,3.5,2,1,0],[44984,3,2,1,0],[45065,2.5,2,1,0],[45146,2,2,1,0],[45227,1.5,2,1,0],[45308,1.5,2,1,0],[45389,1,2,1,0],[45471,1,2,1,0],[45552,0.5,2,1,0],[45633,0.5,2,1,0],[45714,1,2,1,0],[45795,1.5,2,1,0],[45876,2,2,1,0],[45957,2.5,2,1,0],[46038,3,2,1,0],[46119,3.5,2,1,0],[46201,2.994,2,1,0],[46282,2.494,2,1,0],[46362,2,2,1,0],[46444,1.5,2,1,0],[46525,2,2,0.75,0],[46606,2.5,2,0.5,0],[46687,3,2,0.25,0],[46768,3.5,2,0,0],[48146,3.5,2,0,0],[48227,3,2,0,0],[48309,2.5,2,0,0],[48390,2,2,0,0],[48471,1.5,2,0,0],[48552,1,2,0,0],[48633,1,2,0,0],[48714,0.5,2,0,0],[48795,0,2,0,0]],0,'L'),T(44822,9,3,1),
+  T(44173,0,3,1),t(44335,3,3,0),S(44416,48795,[[44416,1.5,2,1,0],[44498,2,2,1,0],[44579,2.5,2,1,0],[44660,3,2,1,0],[44741,3.5,2,1,0],[44903,3.5,2,1,0],[44984,3,2,1,0],[45065,2.5,2,1,0],[45146,2,2,1,0],[45227,1.5,2,1,0],[45308,1.5,2,1,0],[45389,1,2,1,0],[45471,1,2,1,0],[45552,0.5,2,1,0],[45633,0.5,2,1,0],[45714,1,2,1,0],[45795,1.5,2,1,0],[45876,2,2,1,0],[45957,2.5,2,1,0],[46038,3,2,1,0],[46119,3.5,2,1,0],[46201,2.994,2,1,0],[46282,2.494,2,1,0],[46362,2,2,1,0],[46444,1.5,2,1,0],[46525,2,2,0.75,0],[46606,2.5,2,0.5,0],[46687,3,2,0.25,0],[46768,3.5,2,0,0],[48146,3.5,2,0,0],[48227,3,2,0,0],[48309,2.5,2,0,0],[48390,2,2,0,0],[48471,1.5,2,0,0],[48552,1,2,0,0],[48633,1,2,0,0],[48714,0.5,2,0,0],[48795,0,2,0,0]],0,'L'),T(44822,9,3,1),
   T(45146,6,3,1),T(45308,6,3,1),T(45471,6,3,1),T(45795,6,3,1),
   T(46119,9,3,1),T(46444,6,3,1),T(46768,9,3,1),T(46930,9,3,1),
   T(47254,9,3,1),T(47417,9,3,1),t(47903,9,3,0),t(48552,6,3,0),
@@ -30672,7 +30695,7 @@ const rhythmSlideSegmentQuads=(note,chartNowMs,travel,rect,noteHalfHeight=Number
     // 空中にある所も帯の太さは変えない(2026-10-10 社長「スライドの始まりのノーツのサイズがスライドラインと違う」。
     // 以前は参考のアークに寄せて高さ1で6割まで細くしていたが、始点の板の半分ほどになり幅が合わなかった)
     const thin=1;
-    return {y:y-lift,gy:y,left:rect.width*span.center-half*thin,right:rect.width*span.center+half*thin,sky:skyAt};
+    return {y:y-lift,gy:y,left:rect.width*span.center-half*thin,right:rect.width*span.center+half*thin,sky:skyAt,t:Number(point.timeMs)};
   };
   let firstIndex=0;
   while(firstIndex<source.length&&Number(source[firstIndex].timeMs)<=now)firstIndex++;
@@ -30697,7 +30720,7 @@ const rhythmSlideSegmentQuads=(note,chartNowMs,travel,rect,noteHalfHeight=Number
       // 見えている所の形は変わらない(押さえたときの光・流れる光も判定ライン寄りの範囲しか使わない)。空中のあるスライドは上の farPos で切る
       if(!hasSky&&from.y<-RHYTHM_SLIDE_OFFSCREEN_PX&&to.y<-RHYTHM_SLIDE_OFFSCREEN_PX&&(!RHYTHM_SCROLL.back||rhythmScrollMinAfter(timeMs,note.scrollGroup)>=rhythmScrollPos(timeMs,note.scrollGroup)))return quads;
       // 高さ(sky)は空中のあるスライドだけに付ける(地上だけのスライド=既存の全曲は、区切りの形を今までと同じにする)
-      quads.push(hasSky?{l0:from.left,r0:from.right,y0:from.y,l1:to.left,r1:to.right,y1:to.y,gy0:from.gy,gy1:to.gy,sky:(Number(from.sky)+Number(to.sky))/2||0}:{l0:from.left,r0:from.right,y0:from.y,l1:to.left,r1:to.right,y1:to.y});
+      quads.push(hasSky?{l0:from.left,r0:from.right,y0:from.y,l1:to.left,r1:to.right,y1:to.y,gy0:from.gy,gy1:to.gy,sky:(Number(from.sky)+Number(to.sky))/2||0,t0:from.t,t1:to.t}:{l0:from.left,r0:from.right,y0:from.y,l1:to.left,r1:to.right,y1:to.y});
       // travel.window … 判定ライン寄りの所だけ作る(帯を GPU で描くとき、押さえている光の範囲を出すためだけに使う)。
       // 押さえている光は一番下から max(90, 下端の半分)より上を使わないので、そこを過ぎたら終える
       if(travel.window){winBottom=Math.max(winBottom,from.y,to.y);if((hasSky?to.gy:to.y)<winBottom-Math.max(90,winBottom*.5)-12&&(!RHYTHM_SCROLL.back||rhythmScrollMinAfter(timeMs,note.scrollGroup)>=rhythmScrollPos(timeMs,note.scrollGroup)))return quads;}
@@ -30890,6 +30913,8 @@ const rhythmCreateGpuSlideBand=(gl,host)=>{
   // 塗り側。画素座標の大きな数は扱わない(GL2D と同じ理由。位置は頂点側で小さな値にしてから渡す)
   const BAND_FS='#ifdef GL_FRAGMENT_PRECISION_HIGH\nprecision highp float;\n#else\nprecision mediump float;\n#endif\n'+
     'varying float vT;varying float vSky;varying float vWave;varying float vG;uniform int uMode;uniform vec4 uColor;uniform vec4 uColor2;uniform float uAlpha;uniform float uZ;'+
+    // 白い縁(mode 8)を描く時刻の範囲(いまからの ms。rhythmSlideSkyEdgeSpans)。2D の drawSkySlideZ と同じ所で切る
+    'uniform vec2 uEdgeT[8];uniform int uEdgeN;'+
     // drawSlide の airOf と同じ(高さを1/32刻みにそろえる)
     'float air(){return floor(clamp(vSky*1.6,0.0,1.0)*32.0+0.5)/32.0;}'+
     'void main(){if(vT<-0.001)discard;vec4 c=uColor;'+
@@ -30898,7 +30923,7 @@ const rhythmCreateGpuSlideBand=(gl,host)=>{
     'else if(uMode==3){float a=air();if(a<=0.05)discard;c=vec4(uColor2.rgb,0.2*a);}'+
     'else if(uMode==4){float a=air();if(a<=0.05)discard;c=vec4(uColor.rgb,uColor.a*a*0.6);}'+
     'else if(uMode==7){if(vSky<=0.05)discard;}'+
-    'else if(uMode==8){if(vSky<=0.042)discard;c=uColor;}'+
+    'else if(uMode==8){bool on=false;for(int i=0;i<8;i++){if(i>=uEdgeN)break;if(vT>=uEdgeT[i].x&&vT<=uEdgeT[i].y)on=true;}if(!on)discard;c=uColor;}'+
     'else if(uMode==5){float t=clamp(vG,0.0,1.0);vec4 s0=vec4(245.0/255.0,243.0/255.0,1.0,0.56);vec4 s1=vec4(243.0/255.0,232.0/255.0,1.0,0.36);vec4 s2=vec4(243.0/255.0,232.0/255.0,1.0,0.2);'+
     'c=t<0.35?mix(s0,s1,t/0.35):mix(s1,s2,(t-0.35)/0.65);}'+
     'else if(uMode==6){if(vWave<=0.0)discard;c=vec4(243.0/255.0,232.0/255.0,1.0,vWave);}'+
@@ -30910,7 +30935,8 @@ const rhythmCreateGpuSlideBand=(gl,host)=>{
     ['aPrev','aCur','aNext','aSky','aMisc'].forEach((name,i)=>gl.bindAttribLocation(prog,i,name));
     gl.linkProgram(prog);if(!gl.getProgramParameter(prog,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(prog)||'band link');
   }catch(e){return null;}
-  const U={};['uM0','uM1','uView','uSnow','uTnow','uTravel','uSpawnY','uTravelPx','uHalfH','uW','uH','uLanes','uTop','uCurve','uRoad','uFar','uSkyK','uGround','uSize','uHw','uG0','uG1','uMode','uColor','uColor2','uAlpha','uPhase','uMinHw','uCore','uZ']
+  const edgeSpanBuf=new Float32Array(16);
+  const U={};['uM0','uM1','uView','uSnow','uTnow','uTravel','uSpawnY','uTravelPx','uHalfH','uW','uH','uLanes','uTop','uCurve','uRoad','uFar','uSkyK','uGround','uSize','uHw','uG0','uG1','uMode','uColor','uColor2','uAlpha','uPhase','uMinHw','uCore','uZ','uEdgeT','uEdgeN']
     .forEach(name=>{U[name]=gl.getUniformLocation(prog,name);});
   // 頂点1つ = 前(4)・いま(4)・次(4)・高さ(前・いま・次の3)・[線のどちら側(±1、0=ずらさない), 丸の向き cos, sin, 使わない](4)
   const REC=19,STRIDE=REC*4,DISC_SEG=12;
@@ -31115,6 +31141,8 @@ const rhythmCreateGpuSlideBand=(gl,host)=>{
       u1f('uHw',Number(o.hw)||0);u4f('uColor',rgba(o.color||'rgba(0,0,0,0)'));if(o.color2)u4f('uColor2',rgba(o.color2));
       u1f('uAlpha',Number.isFinite(Number(o.alpha))?Math.max(0,Math.min(1,Number(o.alpha))):1);u1f('uGround',o.ground?1:0);u1f('uMinHw',Number(o.minHw)||0);u1f('uCore',o.core?1:0);u1f('uZ',o.z?1:0);
       if(mode===5){u1f('uG0',Number(o.g0)||0);u1f('uG1',Number(o.g1)||0);}if(mode===6)u1f('uPhase',Number(o.phase)||0);
+      if(mode===8){const spans=Array.isArray(o.spans)?o.spans:[],now=cur.u.tnow+e.t0,n=Math.min(8,spans.length),buf=edgeSpanBuf;buf.fill(0);
+        for(let i=0;i<n;i++){buf[i*2]=spans[i][0]-now;buf[i*2+1]=spans[i][1]-now;}gl.uniform2fv(U.uEdgeT,buf);gl.uniform1i(U.uEdgeN,n);}
       if(o.stencil){const ref=host.nextStencil();gl.stencilFunc(gl.NOTEQUAL,ref,0xff);}else gl.stencilFunc(gl.ALWAYS,0,0xff);
       if(o.additive)gl.blendFuncSeparate(gl.ONE,gl.ONE,gl.ONE,gl.ONE_MINUS_SRC_ALPHA);
       if(range==='fill'){draw(dynBuf,cur.fill[0],cur.fill[1]);draw(e.buf,cur.sFill[0],cur.sFill[1]);if(o.additive)gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);return;}
@@ -31142,13 +31170,17 @@ const rhythmCreateGpuSlideBand=(gl,host)=>{
 const rhythmCreateGpuPlate=(gl,host)=>{
   if(!gl||!host)return null;
   // 位置は板の中心からのずれ(CSS の画素)で持つ。画面の画素座標の大きな数を塗り側へ渡さない(GL2D と同じ理由)
-  const PLATE_VS='attribute vec2 aCorner;uniform vec3 uM0;uniform vec3 uM1;uniform vec2 uView;uniform vec2 uCenter;uniform vec2 uExt;uniform vec2 uHalf;'+
-    'varying vec2 vP;varying float vT;'+
-    'void main(){vP=aCorner*uExt;vT=(vP.y+uHalf.y)/max(2.0*uHalf.y,1e-4);vec2 pos=uCenter+vP;'+
+  // 光の絵を描くとき(uGlowV)は、GL2D の drawImage と同じく四角の左上・右下(uRect。画面の CSS 画素)をそのまま位置にする。
+  // 中心からのずれで作ると、ふちが画素のちょうど真ん中に来たとき、GL2D と1画素ずれて塗る(丸めの違い)
+  const PLATE_VS='attribute vec2 aCorner;uniform vec3 uM0;uniform vec3 uM1;uniform vec2 uView;uniform vec2 uCenter;uniform vec2 uExt;uniform vec2 uHalf;uniform float uGlowV;uniform vec4 uRect;'+
+    'varying vec2 vP;varying float vT;varying vec2 vG;'+
+    'void main(){vP=aCorner*uExt;vT=(vP.y+uHalf.y)/max(2.0*uHalf.y,1e-4);vG=aCorner*0.5+0.5;vec2 pos=uGlowV>0.5?mix(uRect.xy,uRect.zw,vG):uCenter+vP;'+
     'vec2 q=vec2(dot(uM0,vec3(pos,1.0)),dot(uM1,vec3(pos,1.0)));vec2 c=q/uView*2.0-1.0;gl_Position=vec4(c.x,-c.y,0.0,1.0);}';
   const PLATE_FS='#ifdef GL_FRAGMENT_PRECISION_HIGH\nprecision highp float;\n#else\nprecision mediump float;\n#endif\n'+
-    'varying vec2 vP;varying float vT;uniform vec2 uHalf;uniform float uR;uniform float uSc;uniform float uAlpha;uniform float uS;'+
+    'varying vec2 vP;varying float vT;varying vec2 vG;uniform vec2 uHalf;uniform float uR;uniform float uSc;uniform float uAlpha;uniform float uS;'+
     'uniform float uOutW;uniform vec4 uOutC;uniform vec4 uRingC;uniform vec4 uGC[4];uniform vec4 uGT;uniform vec4 uBorderC;uniform vec4 uInsetC;uniform vec4 uFlags;uniform float uDark;'+
+    // 光の絵(3分割で貼る絵)を描くときの値。uGX: 光のふちまでの半分の幅・高さ / uGS: 端の幅・1枚で縮めるか・端の絵の幅・真ん中の絵の幅(絵の座標) / uGV: 1枚のときの絵の幅・絵の高さ(絵の座標)
+    'uniform float uGlow;uniform sampler2D uTex;uniform vec2 uGX;uniform vec4 uGS;uniform vec2 uGV;'+
     // 角の丸い四角(中心0・半分の大きさ b・角の丸み r。roundRectPath と同じく丸みは短い辺の半分まで)までの距離。内側が負
     'float sdR(vec2 p,vec2 b,float r){r=clamp(r,0.0,min(b.x,b.y));vec2 q=abs(p)-b+r;return length(max(q,0.0))+min(max(q.x,q.y),0.0)-r;}'+
     // 1画素のうち形の中に入る割合(画素の大きさ 1/uSc で、ふちをなめらかにする)
@@ -31163,7 +31195,11 @@ const rhythmCreateGpuPlate=(gl,host)=>{
     'if(t>=uGT.x)c=mix(uGC[0],uGC[1],uGT.y>uGT.x?clamp((t-uGT.x)/(uGT.y-uGT.x),0.0,1.0):1.0);'+
     'if(t>=uGT.y)c=mix(uGC[1],uGC[2],uGT.z>uGT.y?clamp((t-uGT.y)/(uGT.z-uGT.y),0.0,1.0):1.0);'+
     'if(t>=uGT.z)c=mix(uGC[2],uGC[3],uGT.w>uGT.z?clamp((t-uGT.z)/(uGT.w-uGT.z),0.0,1.0):1.0);return c;}'+
-    'void main(){acc=vec4(0.0);vec2 p=vP;vec2 H=uHalf;float W=2.0*H.x;float Hh=2.0*H.y;'+
+    // 光の絵: GL2D が draw3Slice で3枚の四角に貼るのと同じ絵の座標を、画素ごとに求めて貼る(重ね方は呼ぶ側が決める)
+    'void main(){if(uGlow>0.5){float GW=2.0*uGX.x;float gx=vG.x*GW;float c=uGS.x;float u;'+
+    'if(uGS.y>0.5)u=gx/GW*uGV.x;else if(gx<c)u=gx/c*uGS.z;else if(gx>=GW-c)u=uGS.z+uGS.w+(gx-(GW-c))/c*uGS.z;else u=uGS.z+(gx-c)/(GW-2.0*c)*uGS.w;'+
+    'gl_FragColor=texture2D(uTex,vec2(u,vG.y*uGV.y))*uAlpha;return;}'+
+    'acc=vec4(0.0);vec2 p=vP;vec2 H=uHalf;float W=2.0*H.x;float Hh=2.0*H.y;'+
     // 外の暗い縁取り(線の太さ uOutW を外側へ)
     'if(uOutW>0.0)over(uOutC,strokeC(sdR(p,H+uOutW*0.5,uR+uOutW*0.5),uOutW));'+
     // 輪(大きさ倍率 uS ぶん外の角の丸い四角に太さ 2uS)
@@ -31184,10 +31220,10 @@ const rhythmCreateGpuPlate=(gl,host)=>{
   try{
     prog=gl.createProgram();gl.attachShader(prog,compile(gl.VERTEX_SHADER,PLATE_VS));gl.attachShader(prog,compile(gl.FRAGMENT_SHADER,PLATE_FS));
     gl.bindAttribLocation(prog,0,'aCorner');gl.linkProgram(prog);if(!gl.getProgramParameter(prog,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(prog)||'plate link');
-    quad=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,quad);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
+    quad=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,quad);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1,/* 光の絵: GL2D の drawImage と同じ三角形の分け方(4番目から6つ) */-1,-1,1,-1,1,1,-1,-1,1,1,-1,1]),gl.STATIC_DRAW);
     host.rebind();
   }catch(e){return null;}
-  const U={};['uM0','uM1','uView','uCenter','uExt','uHalf','uR','uSc','uAlpha','uS','uOutW','uOutC','uRingC','uGC','uGT','uBorderC','uInsetC','uFlags','uDark']
+  const U={};['uM0','uM1','uView','uCenter','uExt','uHalf','uR','uSc','uAlpha','uS','uOutW','uOutC','uRingC','uGC','uGT','uBorderC','uInsetC','uFlags','uDark','uGlow','uTex','uGX','uGS','uGV','uGlowV','uRect']
     .forEach(name=>{U[name]=gl.getUniformLocation(prog,name);});
   const colorCache=new Map();
   const rgba=text=>{let c=colorCache.get(text);if(c)return c;const t=String(text||'').trim();
@@ -31206,12 +31242,14 @@ const rhythmCreateGpuPlate=(gl,host)=>{
   const u2f=(name,a,b)=>{const key=a+','+b;if(sent[name]!==key){gl.uniform2f(U[name],a,b);sent[name]=key;}};
   const u4f=(name,c)=>{const key=c[0]+','+c[1]+','+c[2]+','+c[3];if(sent[name]!==key){gl.uniform4f(U[name],c[0],c[1],c[2],c[3]);sent[name]=key;}};
   const NONE=[0,0,0,0];
-  let bound=false;
+  let bound=false,blendAdd=false;
+  // 重ね方。光の絵は GL2D の 'lighter' と同じ(色だけ足し、透明さはふつうに重ねる)、板はふつうの重ね方
+  const setBlend=add=>{if(add===blendAdd)return;blendAdd=add;if(add)gl.blendFuncSeparate(gl.ONE,gl.ONE,gl.ONE,gl.ONE_MINUS_SRC_ALPHA);else gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);};
   const bind=()=>{
     if(bound)return;
     host.flush();gl.useProgram(prog);gl.bindBuffer(gl.ARRAY_BUFFER,quad);
     gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,2,gl.FLOAT,false,8,0);for(let i=1;i<5;i++)gl.disableVertexAttribArray(i);
-    gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);gl.stencilFunc(gl.ALWAYS,0,0xff);bound=true;
+    gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);blendAdd=false;gl.stencilFunc(gl.ALWAYS,0,0xff);bound=true;
     // 位置の変換と画面の大きさ(uniform はシェーダーごとに残るので、変わったときだけ送る)
     const m=host.matrix(),view=host.view(),key=m.join(',')+'|'+view[0]+','+view[1];
     if(sent.m!==key){gl.uniform3f(U.uM0,m[0],m[2],m[4]);gl.uniform3f(U.uM1,m[1],m[3],m[5]);gl.uniform2f(U.uView,view[0],view[1]);u1f('uSc',Math.hypot(m[0],m[1])||1);sent.m=key;}
@@ -31221,11 +31259,27 @@ const rhythmCreateGpuPlate=(gl,host)=>{
   const api={
     // 板1枚。o: cx・cy(中心)・w・h・radius・alpha・sizeMul・outline(太さ。0=引かない)・outlineColor・ring・gradient・border・
     // inset・failed・wide・hold・dark(奥の暗さ 0〜1)・pressed。描けなかったら false(呼ぶ側が今までどおり描く)
+    // glows・glowCount: 板より先に描く光の絵(drawHead の pushHeadGlow の形)。glowAdditive で足し算にする。dpr は絵の画素の倍率
     draw(o){
       if(host.lost())return false;
-      if(!(o.alpha>0)||!(o.w>0)||!(o.h>0))return true;
+      const glowN=o.glows&&host.texture?o.glowCount|0:0;
+      if(!glowN&&(!(o.alpha>0)||!(o.w>0)||!(o.h>0)))return true;
       // ★GL2D が後回しにしている描画(光の絵など)を先に描き切る。描き切ると GL2D が自分の描き方へ戻すので、そのあと結び付け直す
       host.flush();bind();
+      if(glowN){
+        u1f('uGlow',1);u1f('uGlowV',1);setBlend(!!o.glowAdditive);
+        for(let i=0;i<glowN;i++){
+          const g=o.glows[i],entry=host.texture(g.canvas);if(!entry)continue;
+          const dpr=o.dpr||1,single=g.gx*2<=g.capW*2;
+          // 四角は draw3Slice と同じ計算で出す(left=cx-w/2-glow・top=cy-h/2-marginY・下は top+高さ)
+          const top=o.cy-g.h/2-g.my;
+          u4f('uRect',[o.cx-g.w/2-g.glow,top,o.cx+g.w/2+g.glow,top+(g.h+g.my*2)]);u2f('uGX',g.gx,g.gy);u1f('uAlpha',Math.max(0,Math.min(1,g.alpha)));
+          u4f('uGS',[g.capW,single?1:0,g.capW*dpr/entry.w,g.mid*dpr/entry.w]);u2f('uGV',g.sw*dpr/entry.w,g.sh*dpr/entry.h);
+          gl.bindTexture(gl.TEXTURE_2D,entry.tex);gl.drawArrays(gl.TRIANGLES,4,6);
+        }
+        u1f('uGlow',0);u1f('uGlowV',0);setBlend(false);
+        if(!(o.alpha>0)||!(o.w>0)||!(o.h>0))return true;
+      }
       const s=o.sizeMul,reach=Math.max(o.outline||0,o.ring?2*s:0)+2;
       u2f('uCenter',o.cx,o.cy);u2f('uHalf',o.w/2,o.h/2);u2f('uExt',o.w/2+reach,o.h/2+reach);
       u1f('uR',o.radius);u1f('uAlpha',Math.max(0,Math.min(1,o.alpha)));u1f('uS',s);
@@ -31627,6 +31681,8 @@ const rhythmCreateGL2D=canvas=>{
     // にじむ光を使うか(演奏画面が毎フレームの始めに決める)。gain は重ねる強さ
     setBloom(on,gain){bloomOn=!!on;if(Number.isFinite(gain))bloomGain=gain;if(!bloomOn)bloomList.length=0;},
     get bloomReady(){return !!bloom;},
+    // にじむ光を描くフレームか(足し算の光を覚えて使うので、光を別のシェーダーで描くと抜け落ちる)
+    get bloomActive(){return bloomOn;},
     // フレームの終わりに呼ぶ。覚えた光を小さな画像へ描き直し、横・縦にぼかして画面へ足し算で重ねる
     bloomFinish(){
       flushPending();releaseForeign();
@@ -31724,6 +31780,7 @@ const rhythmCreateGL2D=canvas=>{
           flush:()=>flushPending(),
           restore:restoreMain,
           claim:end=>{foreignEnd=end;},
+          texture:source=>textureOf(source),
           rebind:()=>gl.bindBuffer(gl.ARRAY_BUFFER,buf),
           matrix:()=>m,view:()=>{syncView();return [viewW,viewH];},lost:()=>lost,
         });}catch(e){plateApi=null;}
@@ -31848,6 +31905,22 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     }
     ctx.globalAlpha=1;
   };
+  // ノーツの板の光の絵(draw3Slice で貼るもの)を、描く順に覚える入れ物。GPU の板の部品へ渡すと、板と同じシェーダーで描ける
+  const headGlows=[{},{},{}];let headGlowCount=0;
+  const pushHeadGlow=(sprite,w,h,alpha)=>{
+    if(!sprite||headGlowCount>=headGlows.length)return;
+    const g=headGlows[headGlowCount++];
+    g.sprite=sprite;g.w=w;g.h=h;g.alpha=alpha;
+    // 板の部品へ渡す形: 中心からの半分の幅・高さ(光のふちまで)・端の幅・真ん中の幅・絵の幅と高さ
+    g.canvas=sprite.canvas;g.glow=sprite.glow;g.my=sprite.glow*(h/HEAD_H);g.gx=w/2+sprite.glow;g.gy=h/2+g.my;g.capW=sprite.capL;g.mid=sprite.mid;g.sw=sprite.w;g.sh=sprite.h;
+  };
+  const drawHeadGlows=(cx,cy)=>{
+    glowBegin();
+    for(let i=0;i<headGlowCount;i++){const g=headGlows[i];draw3Slice(g.sprite,cx,cy,g.w,g.h,g.alpha);}
+    glowEnd();
+  };
+  // 光の絵を板のシェーダーで描くか(既定は描く。検査で今までの描き方と画素で比べるときだけ切る: RHYTHM_CANVAS_RENDERER.plateGlow=false)
+  let plateGlowWanted=true;
   // 矢印(FLICK / 終点フリック)。三角にピンクの光(色は RHYTHM_NOTE_COLORS.FLICK)。
   const arrowSprite=(key,w,h,glows,gradientStops,edge)=>{
     const id=`arrow:${key}:${dpr}`;
@@ -31940,26 +32013,31 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     const w=geo.head.w*sizeMul,h=HEAD_H*HEAD_THICK*depthScale*sizeMul,cx=geo.head.cx,cy=geo.head.cy,radius=(wide?7:style.radius)*sizeMul;
     const x=cx-w/2,y=cy-h/2;
     ctx.globalAlpha=alpha;
-    glowBegin();
+    // 光の絵(3分割で貼るもの)を、描く順に並べる。使い回しの入れ物へ入れる(ノーツごとに配列を作らない)
+    headGlowCount=0;
     if(style.glow.length&&!failed){
-      const glow=effect==='MINIMAL'||lightweight?glowSprite(monster?'MONSTER':(style===HEADS.SKY?'SKY':note.type),style.radius,style.glow):null;
-      if(effect==='MINIMAL'||lightweight)draw3Slice(glow,cx,cy,w,h,alpha);
-      else draw3Slice(glowSprite(style.glowStrongKey,style.radius,style.glowStrong),cx,cy,w*1.04,h*1.25,alpha);
+      if(effect==='MINIMAL'||lightweight)pushHeadGlow(glowSprite(monster?'MONSTER':(style===HEADS.SKY?'SKY':note.type),style.radius,style.glow),w,h,alpha);
+      else pushHeadGlow(glowSprite(style.glowStrongKey,style.radius,style.glowStrong),w*1.04,h*1.25,alpha);
     }
     if(monster&&!failed){
       // 外側の光(::after)は 1.15 秒で薄く・濃くを繰り返す(opacity だけ)。内側(::before)は固定
       const pulse=.40+(.82-.40)*(0.5-0.5*Math.cos((frameNow/1150)*Math.PI));
-      draw3Slice(auraSprite('outer',6,4,9999,'rgba(216,180,254,.62)',AURA_OUTER_GLOWS,AURA_OUTER_DOTS),cx,cy,w,h,alpha*pulse);
-      draw3Slice(auraSprite('inner',1,-2,9999,'rgba(255,250,205,.98)',AURA_INNER_GLOWS),cx,cy,w,h,alpha);
+      pushHeadGlow(auraSprite('outer',6,4,9999,'rgba(216,180,254,.62)',AURA_OUTER_GLOWS,AURA_OUTER_DOTS),w,h,alpha*pulse);
+      pushHeadGlow(auraSprite('inner',1,-2,9999,'rgba(255,250,205,.98)',AURA_INNER_GLOWS),w,h,alpha);
     }
-    glowEnd();
-    ctx.globalAlpha=alpha;
-    const edgeNote=!failed&&(Number.isFinite(note.subLane)?(note.subLane<=0||note.subLane+(Number(note.subLaneWidth)||2)>=RHYTHM_SUB_LANE_COUNT):(Number(note.lane)<=0||Number(note.lane)>=RHYTHM_LANE_COUNT-1));
     // デバッグの「スライドの帯の描き方(検証用)」→ GPU のときは、板の本体(下の縁取り〜押さえている最中の白)を GPU で1回で描く(rhythmCreateGpuPlate)
     const plate=geo.gpu&&gpuBandWanted&&backend==='webgl'?ctx.plate:null;
+    // 光の絵も板のシェーダーで描く(2026-10-12・発熱の手当て④)。ノーツ1つごとに「光(GL2D)→ 板 → 矢印(GL2D)」と描き方が切り替わり、
+    // そのたびに GL2D の状態の送り直しが起きていたため。にじむ光(ブルーム)が入っているときは GL2D の足し算の光を覚えて使うので、今までどおり
+    const fuseGlow=!!plate&&plateGlowWanted&&headGlowCount>0&&!ctx.bloomActive;
+    if(!fuseGlow)drawHeadGlows(cx,cy);
+    ctx.globalAlpha=alpha;
+    const edgeNote=!failed&&(Number.isFinite(note.subLane)?(note.subLane<=0||note.subLane+(Number(note.subLaneWidth)||2)>=RHYTHM_SUB_LANE_COUNT):(Number(note.lane)<=0||Number(note.lane)>=RHYTHM_LANE_COUNT-1));
     const plateDone=!!plate&&plate.draw({cx,cy,w,h,radius,alpha,sizeMul,outline:failed?0:(edgeNote?3:2)*sizeMul,outlineColor:edgeNote?'rgba(2,6,23,.88)':'rgba(2,6,23,.62)',
       ring:style.ring,gradient:style.gradient,border:style.border,inset:style.inset,failed:!!failed,wide:!!(wide&&!monster),hold:rhythmNoteIsHold(note)&&!monster,
-      dark:brightness<1?Number((1-brightness).toFixed(3)):0,pressed:!!pressed});
+      dark:brightness<1?Number((1-brightness).toFixed(3)):0,pressed:!!pressed,
+      glows:fuseGlow?headGlows:null,glowCount:fuseGlow?headGlowCount:0,glowAdditive:additiveGlow,dpr});
+    if(fuseGlow&&!plateDone){drawHeadGlows(cx,cy);ctx.globalAlpha=alpha;}
     if(!plateDone){
       // ノーツの外周に暗い縁取りを1本引く(2026-10-07・ユーザー指摘「レーンのはじにハーフノーツが来たとき、道のふちと被って見にくい」)。
       // 道のふちの白い線に隣り合っても、ノーツの輪郭が埋もれない。位置も大きさも変えない(線を外へ描くだけ)。
@@ -32469,7 +32547,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     const S=skyStarSprite();glowBegin();ctx.globalAlpha=alpha;ctx.drawImage(S.canvas,px-S.w/2,py-S.h/2,S.w,S.h);ctx.globalAlpha=1;glowEnd();
   };
   // 空中のスライド(案Z): 高さのある区切りは、半透明(46%)の多角形+白い芯の線。地上に近い区切りは地上の帯のまま
-  const drawSkySlideZ=(quads,opts)=>{
+  const drawSkySlideZ=(quads,opts,note)=>{
     const {alpha}=opts,A=RHYTHM_SKY_LOOK.arc,C=RHYTHM_SKY_LOOK.core;ctx.globalAlpha=alpha;
     // 半幅は max(最小半幅, 譜面の幅の投影の半幅)。細くなりすぎる所だけ、中心を保って広げる
     const widen=(l,r)=>{const m=A.minHalfWidthPx,c=(l+r)/2,h=(r-l)/2;return h>=m?[l,r]:[c-m,c+m];};
@@ -32485,7 +32563,18 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     ctx.fillStyle=`rgba(${handRgb},${A.alpha})`;
     air.forEach(q=>{ctx.beginPath();ctx.moveTo(q.l0,q.y0);ctx.lineTo(q.r0,q.y0);ctx.lineTo(q.r1,q.y1);ctx.lineTo(q.l1,q.y1);ctx.closePath();ctx.fill();});
     // 左右の縁を白く(床の紫の上でも地上スライドの紫の帯と見分けられる)
-    if(air.length){ctx.strokeStyle=`rgba(255,255,255,${A.edgeAlpha})`;ctx.lineWidth=A.edgePx;ctx.lineCap='round';ctx.beginPath();air.forEach(q=>{ctx.moveTo(q.l0,q.y0);ctx.lineTo(q.l1,q.y1);ctx.moveTo(q.r0,q.y0);ctx.lineTo(q.r1,q.y1);});ctx.stroke();ctx.lineCap='butt';}
+    // 白い縁は、高さが RHYTHM_SKY_EDGE_FROM を越えている時刻の範囲(rhythmSlideSkyEdgeSpans)だけに描く(2026-10-12)。
+    // 区切りの平均で決めると、区切りの長さぶん(十数画素)GPU の帯(mode 8)と描き始め・描き終わりがずれていた。
+    // 時刻で決めると、2D と GPU で刻み方が違っても同じ所で切れる。範囲の端で切った所は角を丸めない
+    {const spans=rhythmSlideSkyEdgeSpans(note),whole=[],part=[];
+      if(spans.length)quads.forEach(q=>{const t0=Number(q.t0),t1=Number(q.t1);if(!Number.isFinite(t0)||!Number.isFinite(t1)||!(t1>t0))return;
+        const [l0,r0]=widen(q.l0,q.r0),[l1,r1]=widen(q.l1,q.r1);
+        for(const [a,b] of spans){if(b<=t0||a>=t1)continue;
+          if(a<=t0&&b>=t1){whole.push([l0,r0,q.y0,l1,r1,q.y1]);break;}
+          const k0=Math.max(0,(a-t0)/(t1-t0)),k1=Math.min(1,(b-t0)/(t1-t0)),at=k=>[l0+(l1-l0)*k,r0+(r1-r0)*k,q.y0+(q.y1-q.y0)*k];
+          part.push([...at(k0),...at(k1)]);}});
+      const stroke=(list,cap)=>{if(!list.length)return;ctx.lineCap=cap;ctx.beginPath();list.forEach(([a0,b0,y0,a1,b1,y1])=>{ctx.moveTo(a0,y0);ctx.lineTo(a1,y1);ctx.moveTo(b0,y0);ctx.lineTo(b1,y1);});ctx.stroke();};
+      ctx.strokeStyle=`rgba(255,255,255,${A.edgeAlpha})`;ctx.lineWidth=A.edgePx;stroke(whole,'round');stroke(part,'butt');ctx.lineCap='butt';}
     if(air.length){
       // 芯は、中心線の左右へ半幅ずつ(横に)ずらした細い帯。GPU の帯(mode 7・core)と同じ作りにして、画素までそろえる
       glowBegin();ctx.globalAlpha=alpha*C.alpha;ctx.fillStyle=`rgb(${C.rgb})`;const ch=C.widthPx/2;
@@ -32532,14 +32621,14 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     }else{ctx.strokeStyle=`rgba(${skyAccentRgb()},.16)`;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(sh.cx,sh.cy);ctx.lineTo(hd.cx,hd.cy);ctx.stroke();}
     ctx.globalAlpha=1;
   };
-  const drawSlide=(geo,opts)=>{
+  const drawSlide=(geo,opts,note)=>{
     // 指が帯から外れている間(slideOff)は、押さえている光を出さず、帯を暗くする(見た目だけ)
     const {failed,alpha}=opts,pressed=opts.pressed&&!opts.slideOff,dim=!!opts.slideOff&&!failed;
     if(!geo.slide||!geo.slide.length)return;
     // ノーツサイズが100%以外のときだけ、帯の左右を中心のまわりで倍率にした写しを作る(100%は元のまま)
     // 高さ(sky)も写す(2026-10-11。以前は写さず、ノーツサイズが100%以外だと空中のスライドが地上の色で描かれていた。帯を GPU で描く描き方との突き合わせで見つけた)
-    const quads=sizeScale===1?geo.slide:geo.slide.map(q=>{const [l0,r0]=sizeX(q.l0,q.r0),[l1,r1]=sizeX(q.l1,q.r1);return {l0,r0,y0:q.y0,l1,r1,y1:q.y1,sky:q.sky};});
-    if(!failed&&opts.skySlideRgb&&skyZOn()){drawSkySlideZ(quads,opts);return;}
+    const quads=sizeScale===1?geo.slide:geo.slide.map(q=>{const [l0,r0]=sizeX(q.l0,q.r0),[l1,r1]=sizeX(q.l1,q.r1);return {l0,r0,y0:q.y0,l1,r1,y1:q.y1,sky:q.sky,t0:q.t0,t1:q.t1};});
+    if(!failed&&opts.skySlideRgb&&skyZOn()){drawSkySlideZ(quads,opts,note);return;}
     ctx.globalAlpha=alpha;
     if(!failed&&effect!=='MINIMAL'&&!lightweight){
       // ぼかし(drop-shadow 5px)の代わりに、外周をなぞる太い半透明の線
@@ -32630,7 +32719,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       const A=RHYTHM_SKY_LOOK.arc,C=RHYTHM_SKY_LOOK.core;
       const handRgb=opts.skyHand==='L'?A.left:opts.skyHand==='R'?A.right:A.rgb;
       band.pass('fill',{mode:0,color:`rgba(${handRgb},${A.alpha})`,alpha,minHw:A.minHalfWidthPx,stencil:true});
-      band.pass('edges',{mode:8,hw:A.edgePx/2,color:`rgba(255,255,255,${A.edgeAlpha})`,alpha,minHw:A.minHalfWidthPx,stencil:true});
+      band.pass('edges',{mode:8,hw:A.edgePx/2,color:`rgba(255,255,255,${A.edgeAlpha})`,alpha,minHw:A.minHalfWidthPx,stencil:true,spans:rhythmSlideSkyEdgeSpans(note)});
       band.pass('fill',{mode:7,hw:C.widthPx/2,core:true,additive:true,color:`rgba(${C.rgb},${C.alpha})`,alpha,stencil:true});
       if(dim)band.pass('fill',{mode:0,color:`rgba(${RHYTHM_SLIDE_DIM.rgb},${RHYTHM_SLIDE_DIM.alpha})`,alpha,minHw:A.minHalfWidthPx,stencil:true});
       band.done();
@@ -33078,6 +33167,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     // いまスライドの帯を GPU で描けるか。演奏画面はこれが true のとき、帯を CPU で刻まないよう rhythmNoteCanvasGeometry へ gpu を渡す
     get gpuBand(){return gpuBandWanted&&backend==='webgl'&&!!ctx&&!!ctx.band;},
     get additiveGlow(){return additiveGlow;},set additiveGlow(v){additiveGlow=v!==false;},
+    get plateGlow(){return plateGlowWanted;},set plateGlow(v){plateGlowWanted=v!==false;},
     // 描き込み先が取れているか。WebGL の準備が途中で失敗すると、その canvas からは 2D も取り出せず
     // ctx が無いままになる(ノーツが1つも描かれない)。演奏画面はこれを見て canvas を作り直す
     get ready(){return !!ctx;},
@@ -33260,7 +33350,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
         }
         if(geo.skyShadow&&isSlide&&geo.head&&!skyZOn()){const sh=geo.skyShadow,hd=geo.head;ctx.globalAlpha=o.alpha*.7;ctx.strokeStyle=`rgba(${o.slideRgb||RHYTHM_NOTE_COLORS.SLIDE.rgb},.75)`;ctx.lineWidth=1.6;ctx.beginPath();ctx.moveTo(sh.cx,sh.cy);ctx.lineTo(hd.cx,hd.cy);ctx.stroke();ctx.globalAlpha=1;}
         if(geo.band)drawBand(geo,o);
-        if(geo.slide)drawSlide(geo,o);
+        if(geo.slide)drawSlide(geo,o,note);
         else if(geo.slideGpu)drawSlideGpu(note,geo,o);
         drawEndBar(note,geo,o);
       }

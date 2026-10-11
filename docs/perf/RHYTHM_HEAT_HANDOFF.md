@@ -21,13 +21,14 @@
 
 ## 次の候補
 
-1. **ノーツの板(drawHead)**: GPU の描き方でも 10〜11ms/秒(FREEDOM DiVE↓・60〜70秒・CPU1倍)。測りかけの内訳(1秒あたり):
+1. **ノーツの板(drawHead)** → 2026-10-12 済み(光の絵を板のシェーダーで描く。drawHead 約35%減)。残りは矢印(フリック)の GL2D への行き来だけ。以下は着手前の控え。: GPU の描き方でも 10〜11ms/秒(FREEDOM DiVE↓・60〜70秒・CPU1倍)。測りかけの内訳(1秒あたり):
    GL2D の描画の issue 9.1・applyState 3.8・bufferData 3.3・flushPending 2.6・draw3Slice(光の絵の貼り付け)1.8・releaseForeign 0.9・restoreMain 0.8。
    ノーツ1つごとに「光の絵(GL2D)→ 板(板のシェーダー)→ 矢印(GL2D)」と描き方が切り替わり、そのたびに GL2D の状態の送り直し(resetSent)が起きている。
    案: 板のシェーダーで光の絵(3分割)も一緒に描く(四角を光の外まで広げ、テクスチャを1枚渡す)→ 切り替えが無くなる。描く順は今と同じにできる。見た目は画素で突き合わせ(rhythm-gpu-band-check)
 2. **HELL**: オンプくん(session_01KxMEiw3EwFDLvXkiHxkA4S)が今の 2D と gpu の表・描き物ごとの内訳を測っている(docs/playbot/reports/2026-10-11/hell-perf/)。
    2D では HELL は MASTER と同じか軽かった。空中の赤い箱(drawSkyTap)・星は今の HELL では使われていない(空中のノーツは板と同じ作り)。
-   空中のスライドの白いふち(案Z)の GPU の描き始めが 2D と十数画素ずれる件は、HELL 公開前にテンポくんと直す(drawSlideGpu の skyZOn)
+   空中のスライドの白いふち(案Z)の GPU の描き始めが 2D と十数画素ずれる件 → 2026-10-12 済み。2D・GPU とも「高さが RHYTHM_SKY_EDGE_FROM(0.042)を越えている時刻の範囲」
+   (rhythmSlideSkyEdgeSpans)だけにふちを描く形にそろえた。GPU の見た目は変わらず、2D のふちの端が GPU と同じ所まで伸びる。静止画 docs/perf/skyedge/(左 前・右 後。-zoom は 前・後・GPU の拡大)
 3. 判定の文字・コンボの GPU 化: 文字が変わるたびのレイアウトは残っている(塗り直しの理由の記録で「Layout | Style changed | 判定の文字」が6秒で 260〜420回)。
    ただし1コマあたりのゲームの JS はもう 2〜3ms(この入れ物の CPU1倍)で、**ここから先は1つずつの効き目が小さくなる**。実機の stats.frame(early/late・startOver50)が数日たまってから、効きの大きい所を選ぶのがよい
 

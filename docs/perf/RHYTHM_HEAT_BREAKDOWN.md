@@ -107,6 +107,7 @@
 | ② 判定ごとの表示の部品は、要る値が変わったときだけ描き直す(useRhythmHudPick) | 本番 | #2798 |
 | ③ 重い飾り: 曲の準備中・演奏中は、隠れているアプリの外側の背景の絵(季節の SVG)を描かない | 本番 | #2802 |
 | ④ その1: 叩いた光の粒を焼いた丸で(既定は今の形・社長の判断待ち) | main(切り替え) | #2803 |
+| ④ その2: ノーツの板の光の絵(draw3Slice)も、板のシェーダーで描く(ノーツごとの描き方の切り替えを減らす。にじむ光が入っているときは今までどおり) | 本番。画素の突き合わせ(143譜面・579場面)は差が丸めの 1/255 がほとんど・最大 16/255。drawHead の時間は FREEDOM DiVE↓ 60〜70秒・CPU1倍で main 11.1/12.8 → 7.6/7.8 ms/秒(交互に2回)。全体の表(rhythm-perf-bench)は揺れの幅に収まり、良し悪しは言えない。RHYTHM_CANVAS_RENDERER.plateGlow=false で前の描き方 | claude/rhythm-heat-plate-glow |
 | ④ 残り(ノーツの板・判定の文字など) | 引き継ぎ。[`RHYTHM_HEAT_HANDOFF.md`](RHYTHM_HEAT_HANDOFF.md) | — |
 
 測り方の控え: 重さは `node tools/playbot/rhythm-perf-bench.js --songs sheriruth:MASTER,freedom_dive:MASTER --cpu 1,4 --draw gpu --roots main=<main の worktree>,new=.`。

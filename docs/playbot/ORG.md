@@ -68,7 +68,7 @@
 | 部長ハカセくん | 研究所 | ボットの担当・遊び方・戦い方 | タクティクスを Hard・Expert までクリア(#2380・#2388) | `session_01911k2UUtVGudFqekCw9DB9` |
 | ダイスくん | 研究所 | シミュレーター | 10/10 採用(社長が決めた) | `session_01DT3gL9ZEpezajUTxh9fEfB` |
 | アリーナくん | 研究所 | ブラウザの実戦 | 10/10 採用(社長が決めた) | `session_01GC6TmQQkN6wfT4a8EymrPz` |
-| オンプくん | ビート部 | 譜面係(譜面を作る道具の強化・参考譜面に寄せる作り方) | 10/10 採用(社長が決めた・モデルは Opus 5.5) | `session_01KxMEiw3EwFDLvXkiHxkA4S` |
+| オンプくん | ビート部 | 譜面係(譜面を作る道具の強化・参考譜面に寄せる作り方) | 10/10 採用(社長が決めた・モデルは Opus 5.5) | `session_01VDL1xQjh5sVox2CGCDkx8w` |
 | マクアケくん | ビート部 | 演出係(曲が始まる前の曲名・ジャケットの演出など) | 10/10 採用(社長「ビート部に新たに1人採用してやらせて」・モデルは Opus 5.5) | `session_01JgrcvWE4GJff7cTHDPoecb` |
 | リバースくん | ビート部 | 新曲係(Grievous Lady・止まる/飛ぶ/戻る流れの演出) | 10/11 採用(社長「全部今から並行で」・モデルは Opus 5.5) | `session_01DfgZpuPHnVgxrwQiurqUQ1` |
 | カゲくん | ビート部 | 新曲係(Against My Own Shadow・HELL なし) | 10/11 採用(社長「他のと同時に出来るならやって」・モデルは Opus 5.5) | `session_01Jqmiq5TioCr8iBg3nU8k77` |
