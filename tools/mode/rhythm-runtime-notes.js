@@ -212,6 +212,7 @@ const RELEASED_MARKERS=Object.freeze({
   journey:'journey-v3',
   sheriruth:'sheriruth-v3',
   grievous_lady:'grievous-lady-v3',
+  against_my_own_shadow:'against-my-own-shadow-v3',
 });
 
 // 曲id → 音源の一覧(tools/mode/authoring/rhythm-song-registry.json)のid。
@@ -257,6 +258,7 @@ const RELEASED_TRACKS=Object.freeze({
   journey:'journey',
   sheriruth:'sheriruth',
   grievous_lady:'grievous_lady',
+  against_my_own_shadow:'against_my_own_shadow',
 });
 
 module.exports={SLIDE_EASE_CODES,FLICK_DIR_CODES,heldSpan,HOLD_SHIFT_SUB,ROOT,RUNTIME,FINGER_GAP_SUB,loadRuntime,makeSpanAt,usableSpan,maxSeparation,

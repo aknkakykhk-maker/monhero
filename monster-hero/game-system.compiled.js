@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4ce9353637dd2839
+// source-sha256: 62a204bf51250fdf
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-11 13:14";
+const BUILD_DATE = "2026-10-11 14:49";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -5217,6 +5217,13 @@ const BGM_TRACKS = [{
   gain: 1,
   loop: true
 }, {
+  id: 'melo_against_my_own_shadow',
+  name: 'Against My Own Shadow',
+  creator: 'オリジナル',
+  src: 'audio/bgm-against-my-own-shadow.mp3',
+  gain: 1,
+  loop: true
+}, {
   id: 'melo_dullahan_clockwork_alt',
   name: '呪われた騎士の時計仕掛け -Another-',
   creator: 'オリジナル',
@@ -6491,6 +6498,7 @@ const Audio_ = (() => {
   };
   const AUDIO_CACHE_KEYS = {
     "audio/bgm-4u-hitasura.mp3": "f4fb42472438",
+    "audio/bgm-against-my-own-shadow.mp3": "ddce743e94fa",
     "audio/bgm-anima.mp3": "c81adf3d2fff",
     "audio/bgm-atsu-cup-theme.mp3": "e93502c4df76",
     "audio/bgm-battle-ichika.mp3": "ca746d1d2ba6",
@@ -30808,7 +30816,8 @@ const rhythmTouchDiagOf = ({
   inputTimes,
   assist,
   mirror,
-  cleared
+  cleared,
+  frame
 }) => {
   const bridge = RHYTHM_TOUCH_BRIDGE.snapshot(),
     miss = rhythmTouchNoInputMisses(notes, inputTimes);
@@ -30837,7 +30846,10 @@ const rhythmTouchDiagOf = ({
       cleared: !!cleared,
       playId: rhythmTouchDiagPlayId(),
       fixes: rhythmTouchFixesActive(),
-      timing: RHYTHM_TIMING_DIAG.snapshot()
+      timing: RHYTHM_TIMING_DIAG.snapshot(),
+      ...(frame && typeof frame === 'object' ? {
+        frame
+      } : {})
     }
   };
 };
@@ -31430,6 +31442,25 @@ const RhythmTapTest = ({
   monstersRef.current = monsters;
   const monsterSignature = monsters.map(m => m ? `${m.baseId}|${m.imageUrl}|${JSON.stringify(m.colors || null)}` : '-').join(',');
   const canvasNotes = useState(() => rhythmCanvasNotesActive(RELEASE_FLAGS.rhythmCanvasNotes))[0];
+  const rhythmFrameDiagOf = () => {
+    try {
+      const area = typeof document !== 'undefined' ? document.querySelector('[data-rhythm-play-area]') : null,
+        rect = area ? area.getBoundingClientRect() : null;
+      return RHYTHM_FRAME_DIAG.snapshot({
+        draw: !canvasNotes ? 'dom' : RHYTHM_CANVAS_RENDERER.gpuBand ? 'gpu' : String(RHYTHM_CANVAS_RENDERER.backend || 'canvas'),
+        gpu: rhythmWebglRendererName(),
+        dpr: typeof window !== 'undefined' ? Math.round((window.devicePixelRatio || 1) * 100) / 100 : 1,
+        w: rect ? Math.round(rect.width) : 0,
+        h: rect ? Math.round(rect.height) : 0,
+        cores: typeof navigator !== 'undefined' && Number.isFinite(navigator.hardwareConcurrency) ? navigator.hardwareConcurrency : 0,
+        effect: String(settings?.stageEffect || ''),
+        fps: String(settings?.frameRateMode || ''),
+        light: !!settings?.lightweightMode
+      });
+    } catch (e) {
+      return null;
+    }
+  };
   const skyChart = useMemo(() => rhythmChartHasSky(chart?.notes), [chart]);
   if (skyChart) RHYTHM_SKY_LIFT.set(orientationIsLandscape());
   const skyPlane = (() => {
@@ -32803,7 +32834,8 @@ const RhythmTapTest = ({
       inputTimes: run.inputTimes,
       assist: assistOn,
       mirror: mirrorOn,
-      cleared: !failed
+      cleared: !failed,
+      frame: rhythmFrameDiagOf()
     }) : null;
     if (touchDiag) void rhythmTouchDiagRecord(touchDiag);
     const touchReport = touchDiag && touchDiag.platform !== 'other' ? {
@@ -33012,7 +33044,7 @@ const RhythmTapTest = ({
         }
         lastDrawnMs = frameNowMs;
       }
-      const perfTickStart = RHYTHM_PERF.enabled ? performance.now() : 0;
+      const perfTickStart = typeof performance !== 'undefined' && performance.now ? performance.now() : 0;
       const songTimeMs = run.audio.songTimeMs();
       RHYTHM_PERF.songTime(songTimeMs);
       RHYTHM_TIMING_DIAG.frame(songTimeMs);
@@ -33222,7 +33254,11 @@ const RhythmTapTest = ({
       }
       const visitNote = note => {
         if (note.type === 'HOLD' && note.activePointerId !== null && songTimeMs >= note.endTimeMs + settings.judgmentTimingOffsetMs) {
-          if (RHYTHM_GESTURE_RUNTIME.settleHeld?.(note, songTimeMs) !== false && songTimeMs >= note.endTimeMs + settings.judgmentTimingOffsetMs) applyJudgment(note, note.holdJudgment || 'MISS', note.holdDeltaMs || 0);
+          const settled = RHYTHM_GESTURE_RUNTIME.settleHeld?.(note, songTimeMs);
+          const own = settled === null ? rhythmReleaseFallback(note, songTimeMs, settings.judgmentTimingOffsetMs) : null;
+          if (own) {
+            if (own.expiredWhileHeld) applyJudgment(note, 'MISS', own.deltaMs);
+          } else if (settled !== false && songTimeMs >= note.endTimeMs + settings.judgmentTimingOffsetMs) applyJudgment(note, note.holdJudgment || 'MISS', note.holdDeltaMs || 0);
         }
         if (!note.done && note.activePointerId === null && note.releasedAtMs != null) {
           const holdEndMs = note.endTimeMs + settings.judgmentTimingOffsetMs;
@@ -33431,6 +33467,7 @@ const RhythmTapTest = ({
         run.audio.fadeOut?.(RHYTHM_END_FADE_MS);
       }
       if (RHYTHM_PERF.enabled) RHYTHM_PERF.tick(performance.now() - perfTickStart, perfTickStart - frameNowMs);
+      RHYTHM_FRAME_DIAG.tick(frameNowMs, perfTickStart ? performance.now() - perfTickStart : NaN);
       if (songTimeMs >= playEndTimeMs || run.audio.ended()) finish();else frameRef.current = requestAnimationFrame(tick);
     };
     frameRef.current = requestAnimationFrame(tick);
@@ -33582,6 +33619,7 @@ const RhythmTapTest = ({
       return;
     }
     const startBest = normalizeRhythmBestRecord(startBestValue);
+    RHYTHM_FRAME_DIAG.reset();
     RHYTHM_TIMING_DIAG.reset();
     RHYTHM_TIMING_DIAG.meta(audio.info?.());
     RHYTHM_TOUCH_BRIDGE.reset();
@@ -33708,7 +33746,10 @@ const RhythmTapTest = ({
             holdDeltaMs: Number.isFinite(note.holdDeltaMs) ? note.holdDeltaMs : null,
             endTimeMs: Number.isFinite(note.endTimeMs) ? note.endTimeMs : null,
             releaseTargetMs: Number.isFinite(note._rhythmReleaseTargetMs) ? note._rhythmReleaseTargetMs : null,
-            endFlick: note.endFlick === true
+            endFlick: note.endFlick === true,
+            releaseDone: note._rhythmReleaseDone === true,
+            releaseJudgment: note._rhythmReleaseJudgment ?? null,
+            releaseDeltaMs: Number.isFinite(note._rhythmReleaseDeltaMs) ? note._rhythmReleaseDeltaMs : null
           })) : null;
         },
         rhythmNotes: () => {
@@ -33950,7 +33991,8 @@ const RhythmTapTest = ({
         return;
       }
       if (now >= holdEndMs - RHYTHM_HOLD_RELEASE_GRACE_MS) {
-        applyJudgment(note, note.holdJudgment || 'MISS', note.holdDeltaMs || 0);
+        const own = rhythmReleaseFallback(note, now, settings.judgmentTimingOffsetMs);
+        if (own) applyJudgment(note, own.judgment, own.deltaMs);else applyJudgment(note, note.holdJudgment || 'MISS', note.holdDeltaMs || 0);
       } else {
         note.releasedAtMs = now;
         rhythmFloatingNoteAdd(note);
@@ -73236,6 +73278,7 @@ function MonsterHeroGame() {
   const [rhythmStrip, setRhythmStrip] = useState(() => RHYTHM_STRIP.value);
   const [rhythmCanvasPref, setRhythmCanvasPref] = useState(() => rhythmCanvasNotesPreference());
   const [rhythmGpuBandPref, setRhythmGpuBandPref] = useState(() => rhythmGpuBandPreference());
+  const [rhythmReleaseAgeWide, setRhythmReleaseAgeWide] = useState(() => rhythmTouchFixOn('releaseAgeWide'));
   const [rhythmStageGlPref, setRhythmStageGlPref] = useState(() => rhythmStageGlPreference());
   const [rhythmChartToolsOpened, setRhythmChartToolsOpened] = useState(false);
   const [rhythmOptionsBack, setRhythmOptionsBack] = useState('RHYTHM_DEBUG');
@@ -97251,6 +97294,25 @@ function MonsterHeroGame() {
       "aria-pressed": rhythmGpuBandPref === value,
       onClick: () => setRhythmGpuBandPref(rhythmGpuBandSetPreference(value)),
       className: `min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmGpuBandPref === value ? 'bg-cyan-400 text-slate-900' : 'border border-white/20 bg-slate-900 text-slate-200'}`
+    }, label)))), React.createElement("section", {
+      "data-rhythm-release-age-panel": true,
+      className: "mb-3 rounded-2xl border border-emerald-400/40 bg-emerald-950/20 p-3"
+    }, React.createElement("h3", {
+      className: "text-xs font-black text-emerald-200"
+    }, "ホールドの離しの遅れの戻し方（検証用）"), React.createElement("p", {
+      className: "mt-1 text-[9px] font-bold leading-relaxed text-emerald-100/80"
+    }, "iPhone では、指を離した合図が遅れて届くことがあり、終わりで離したのに「押しっぱなし」と数えられて MISS になることがあります。「広く」は、離した合図の遅れを 0.3秒まで戻し、押しっぱなしの MISS を決める前に 0.3秒待ちます（標準は 0.08秒）。押しっぱなしの MISS が出るのはその分だけ遅れます。この端末だけに効き、次の演奏から効きます。"), React.createElement("div", {
+      className: "mt-2 flex gap-2"
+    }, [[false, '標準（0.08秒）'], [true, '広く（0.3秒）']].map(([value, label]) => React.createElement("button", {
+      key: String(value),
+      type: "button",
+      "data-rhythm-release-age-pref": value ? 'wide' : 'standard',
+      "aria-pressed": rhythmReleaseAgeWide === value,
+      onClick: () => {
+        rhythmTouchFixSetOverride('releaseAgeWide', value ? true : null);
+        setRhythmReleaseAgeWide(rhythmTouchFixOn('releaseAgeWide'));
+      },
+      className: `min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmReleaseAgeWide === value ? 'bg-emerald-400 text-slate-900' : 'border border-white/20 bg-slate-900 text-slate-200'}`
     }, label)))), React.createElement("section", {
       "data-rhythm-stage-gl-panel": true,
       className: "mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"

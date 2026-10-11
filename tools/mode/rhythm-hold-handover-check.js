@@ -148,8 +148,9 @@ check('引き継いだSLIDEがHOLDに化けない(元の種類でbindし直す)'
 // ---- game-system.jsx 側 ----
 check('途中で離しても、その場でMISSにしない',
   /else\{note\.releasedAtMs=now;rhythmFloatingNoteAdd\(note\);\}/.test(game));
+// 【2026-10-11】タッチ側が離しを判定していない(記録が途中で外れた)ときは、離した時刻で決める(rhythmReleaseFallback)。判定済みならこれまでどおり
 check('終わり際まで来ていれば、離しても成立させる',
-  /if\(now>=holdEndMs-RHYTHM_HOLD_RELEASE_GRACE_MS\)\{applyJudgment\(note,note\.holdJudgment\|\|'MISS',note\.holdDeltaMs\|\|0\);\}/.test(game));
+  game.includes("if(now>=holdEndMs-RHYTHM_HOLD_RELEASE_GRACE_MS){const own=rhythmReleaseFallback(note,now,settings.judgmentTimingOffsetMs);if(own)applyJudgment(note,own.judgment,own.deltaMs);else applyJudgment(note,note.holdJudgment||'MISS',note.holdDeltaMs||0);}"));
 check('浮いているノーツかどうかを見ている', /const handover=target\.releasedAtMs!=null;/.test(game));
 check('引き継いだら「浮いている」を解除する', /if\(handover\)\{target\.releasedAtMs=null;rhythmFloatingNoteRemove\(target\);\}/.test(game));
 check('引き継ぎでは始点の判定を書き換えない(持ち替えで得も損もしない)',
