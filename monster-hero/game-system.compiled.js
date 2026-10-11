@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9b2e789f9373bd58
+// source-sha256: 6f3aa4efce58c43a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-11 17:42";
+const BUILD_DATE = "2026-10-11 17:48";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -24690,6 +24690,492 @@ const storeList = async (prefix, shared = false) => {
   } catch {}
   return Object.keys(_memStore).filter(k => k.startsWith(prefix));
 };
+const ASSET_CACHE_KEY = 'mh_asset_prefetch_v1';
+const ASSET_CACHE_NAME = 'mh-assets-v1';
+const ASSET_CACHE_META = 'mh-assets-meta-v1';
+const ASSET_CACHE_DEFAULT_ENABLED = false;
+const ASSET_PACKS = [{
+  id: 'beat',
+  icon: '🎵',
+  label: 'モンヒロビート',
+  desc: '全曲の音源とジャケット'
+}, {
+  id: 'battle',
+  icon: '⚔️',
+  label: 'バトル',
+  desc: 'バトル・HOMEのBGM、モンスター・敵・演出・助手の画像'
+}, {
+  id: 'all',
+  icon: '📦',
+  label: '全部',
+  desc: 'モンヒロビートとバトルの両方'
+}];
+const ASSET_CORE_PREFIXES = ['data/images/', 'images/ui/', 'images/monster-icons/'];
+const ASSET_AUTO_BUDGET = {
+  cellular: 8 * 1024 * 1024,
+  unknown: 30 * 1024 * 1024,
+  wifi: 200 * 1024 * 1024
+};
+const ASSET_RECENT_SONG_LIMIT = 12;
+const normalizeAssetCacheSettings = raw => {
+  const src = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  return {
+    enabled: typeof src.enabled === 'boolean' ? src.enabled : ASSET_CACHE_DEFAULT_ENABLED,
+    auto: typeof src.auto === 'boolean' ? src.auto : true,
+    songs: Array.isArray(src.songs) ? src.songs.filter(s => typeof s === 'string' && s).slice(0, ASSET_RECENT_SONG_LIMIT) : []
+  };
+};
+const ASSET_CACHE = (() => {
+  let settings = normalizeAssetCacheSettings(null);
+  let manifest = null,
+    manifestPromise = null;
+  let job = null;
+  let status = {
+    packs: {},
+    usage: null,
+    quota: null,
+    persisted: null,
+    supported: false,
+    checkedAt: 0
+  };
+  const listeners = new Set();
+  const emit = () => {
+    for (const fn of [...listeners]) {
+      try {
+        fn();
+      } catch (e) {}
+    }
+  };
+  const supported = () => typeof window !== 'undefined' && typeof window.caches !== 'undefined' && typeof navigator !== 'undefined' && 'serviceWorker' in navigator && window.isSecureContext !== false && /^https?:$/.test(window.location.protocol);
+  const save = () => {
+    try {
+      localStorage.setItem(ASSET_CACHE_KEY, JSON.stringify(settings));
+    } catch (e) {}
+  };
+  const keyOf = (path, v) => `${path}?v=${v}`;
+  const absKey = (path, v) => new URL(keyOf(encodeURI(path), v), window.location.href).href;
+  const stripVersion = src => String(src || '').split('?')[0];
+  const ensureManifest = () => {
+    if (manifest) return Promise.resolve(manifest);
+    if (!manifestPromise) {
+      const build = typeof window !== 'undefined' && window.__mhGameBuild || Date.now();
+      manifestPromise = fetch(`asset-manifest.json?v=${build}`).then(res => res.ok ? res.json() : null).then(json => {
+        manifest = json && json.files && typeof json.id === 'string' ? json : null;
+        manifestPromise = null;
+        return manifest;
+      }).catch(() => {
+        manifestPromise = null;
+        return null;
+      });
+    }
+    return manifestPromise;
+  };
+  const filesOfPack = (m, packId) => Object.entries(m.files).filter(([, f]) => packId === 'all' || f.pack === packId);
+  const refreshStatus = async () => {
+    status = {
+      ...status,
+      supported: supported()
+    };
+    if (!status.supported) {
+      emit();
+      return status;
+    }
+    const m = await ensureManifest();
+    const have = new Set();
+    try {
+      if (!(await window.caches.has(ASSET_CACHE_NAME))) throw new Error('none');
+      const cache = await window.caches.open(ASSET_CACHE_NAME);
+      for (const req of await cache.keys()) {
+        const url = new URL(req.url);
+        const path = decodeURIComponent(url.pathname.slice(new URL('./', window.location.href).pathname.length));
+        have.add(`${path}?v=${url.searchParams.get('v')}`);
+      }
+    } catch (e) {}
+    const packs = {};
+    if (m) {
+      for (const p of ASSET_PACKS) {
+        const files = filesOfPack(m, p.id);
+        let count = 0,
+          bytes = 0,
+          haveCount = 0,
+          haveBytes = 0;
+        for (const [path, f] of files) {
+          count++;
+          bytes += f.size;
+          if (have.has(keyOf(path, f.v))) {
+            haveCount++;
+            haveBytes += f.size;
+          }
+        }
+        packs[p.id] = {
+          count,
+          bytes,
+          haveCount,
+          haveBytes
+        };
+      }
+    }
+    let usage = null,
+      quota = null,
+      persisted = null;
+    try {
+      if (navigator.storage && navigator.storage.estimate) ({
+        usage = null,
+        quota = null
+      } = await navigator.storage.estimate());
+    } catch (e) {}
+    try {
+      if (navigator.storage && navigator.storage.persisted) persisted = await navigator.storage.persisted();
+    } catch (e) {}
+    status = {
+      ...status,
+      packs,
+      usage,
+      quota,
+      persisted,
+      checkedAt: Date.now(),
+      manifestId: m && m.id
+    };
+    emit();
+    return status;
+  };
+  const register = async () => {
+    if (!supported()) return false;
+    try {
+      const reg = await navigator.serviceWorker.register('sw.js', {
+        scope: './',
+        updateViaCache: 'none'
+      });
+      try {
+        reg.update().catch(() => {});
+      } catch (e) {}
+      return true;
+    } catch (e) {
+      return false;
+    }
+  };
+  const unregister = async () => {
+    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
+    try {
+      const ctl = navigator.serviceWorker.controller;
+      if (ctl) {
+        await new Promise(resolve => {
+          const timer = setTimeout(resolve, 2000);
+          const onMsg = e => {
+            if (e.data && e.data.type === 'mh-asset-disabled') {
+              clearTimeout(timer);
+              navigator.serviceWorker.removeEventListener('message', onMsg);
+              resolve();
+            }
+          };
+          navigator.serviceWorker.addEventListener('message', onMsg);
+          ctl.postMessage({
+            type: 'mh-asset-disable'
+          });
+        });
+      }
+    } catch (e) {}
+    try {
+      for (const reg of await navigator.serviceWorker.getRegistrations()) {
+        const sw = reg.active || reg.waiting || reg.installing;
+        if (sw && /\/sw\.js(\?|$)/.test(sw.scriptURL)) await reg.unregister();
+      }
+    } catch (e) {}
+    try {
+      await window.caches.delete(ASSET_CACHE_NAME);
+      await window.caches.delete(ASSET_CACHE_META);
+    } catch (e) {}
+  };
+  const download = async packId => {
+    if (job || !settings.enabled || !supported() || !ASSET_PACKS.some(p => p.id === packId)) return false;
+    const j = job = {
+      packId,
+      preparing: true,
+      total: 0,
+      done: 0,
+      bytesTotal: 0,
+      bytesDone: 0,
+      failed: 0,
+      cancel: false,
+      error: null
+    };
+    emit();
+    const m = await ensureManifest();
+    if (!m || j.cancel) {
+      if (job === j) job = null;
+      emit();
+      return false;
+    }
+    try {
+      if (navigator.storage && navigator.storage.persist) await navigator.storage.persist();
+    } catch (e) {}
+    const cache = await window.caches.open(ASSET_CACHE_NAME);
+    const files = filesOfPack(m, packId);
+    const todo = [];
+    for (const [path, f] of files) {
+      if (!(await cache.match(absKey(path, f.v)))) todo.push([path, f]);
+    }
+    Object.assign(j, {
+      preparing: false,
+      total: todo.length,
+      bytesTotal: todo.reduce((s, [, f]) => s + f.size, 0)
+    });
+    emit();
+    let next = 0,
+      lastRecount = Date.now();
+    const worker = async () => {
+      while (!j.cancel && !j.error && next < todo.length) {
+        const [path, f] = todo[next++];
+        try {
+          const res = await fetch(keyOf(encodeURI(path), f.v), {
+            headers: {
+              'x-mh-prefetch': '1'
+            }
+          });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          await cache.put(absKey(path, f.v), res);
+          j.bytesDone += f.size;
+        } catch (e) {
+          if (e && (e.name === 'QuotaExceededError' || /quota/i.test(String(e.message)))) j.error = 'quota';else j.failed++;
+        }
+        j.done++;
+        emit();
+        if (Date.now() - lastRecount > 2000) {
+          lastRecount = Date.now();
+          refreshStatus();
+        }
+      }
+    };
+    await Promise.all([worker(), worker(), worker()]);
+    if (job === j) job = null;
+    await refreshStatus();
+    return !j.cancel && !j.error && !j.failed;
+  };
+  const cancel = () => {
+    if (job) {
+      job.cancel = true;
+      emit();
+    }
+  };
+  const remove = async packId => {
+    if (!supported()) return;
+    if (job) cancel();
+    const m = await ensureManifest();
+    try {
+      const cache = await window.caches.open(ASSET_CACHE_NAME);
+      if (packId === 'all' || !m) {
+        for (const req of await cache.keys()) await cache.delete(req);
+      } else {
+        for (const [path, f] of filesOfPack(m, packId)) await cache.delete(absKey(path, f.v));
+      }
+    } catch (e) {}
+    await refreshStatus();
+  };
+  const autoQueue = [];
+  const autoQueued = new Set();
+  let autoTimer = null,
+    autoBusy = false,
+    autoSpent = 0;
+  const songBusy = () => !!(window.__mhSongPrepBusy || window.__mhSongPlaying);
+  const connectionKind = () => {
+    const c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    if (!c) return 'unknown';
+    if (c.saveData) return 'off';
+    if (c.effectiveType === 'slow-2g' || c.effectiveType === '2g') return 'off';
+    if (c.type === 'cellular') return 'cellular';
+    if (c.type === 'wifi' || c.type === 'ethernet') return 'wifi';
+    return 'unknown';
+  };
+  const scheduleAuto = ms => {
+    if (autoTimer) return;
+    autoTimer = setTimeout(() => {
+      autoTimer = null;
+      pumpAuto();
+    }, ms);
+  };
+  const pumpAuto = async () => {
+    if (autoBusy || !settings.enabled || !settings.auto || !supported() || !autoQueue.length) return;
+    if (job || songBusy() || document.hidden) {
+      scheduleAuto(5000);
+      return;
+    }
+    const kind = connectionKind();
+    if (kind === 'off') return;
+    const budget = ASSET_AUTO_BUDGET[kind] || ASSET_AUTO_BUDGET.unknown;
+    const m = await ensureManifest();
+    if (!m) return;
+    autoBusy = true;
+    try {
+      const cache = await window.caches.open(ASSET_CACHE_NAME);
+      while (autoQueue.length && !job && !songBusy() && !document.hidden) {
+        const path = autoQueue.shift();
+        const f = m.files[path];
+        if (!f) continue;
+        if (await cache.match(absKey(path, f.v))) continue;
+        if (autoSpent + f.size > budget) {
+          autoQueue.length = 0;
+          break;
+        }
+        try {
+          const res = await fetch(keyOf(encodeURI(path), f.v), {
+            headers: {
+              'x-mh-prefetch': '1'
+            }
+          });
+          if (res.ok) {
+            await cache.put(absKey(path, f.v), res);
+            autoSpent += f.size;
+          }
+        } catch (e) {
+          break;
+        }
+        await new Promise(r => setTimeout(r, 600));
+      }
+    } catch (e) {}
+    autoBusy = false;
+    if (autoQueue.length) scheduleAuto(5000);
+  };
+  const enqueue = (paths, front = false) => {
+    const fresh = paths.filter(p => p && !autoQueued.has(p));
+    for (const p of fresh) autoQueued.add(p);
+    if (front) autoQueue.unshift(...fresh);else autoQueue.push(...fresh);
+    if (fresh.length) scheduleAuto(1500);
+  };
+  const songPaths = songId => {
+    const songs = typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS : [];
+    const song = songs.find(s => s && s.songId === songId);
+    if (!song) return [];
+    const track = typeof BGM_TRACK_BY_ID !== 'undefined' ? BGM_TRACK_BY_ID[song.bgmTrackId] : null;
+    return [track && track.src, stripVersion(song.artwork)].filter(Boolean);
+  };
+  const noteSong = (songId, {
+    front = true
+  } = {}) => {
+    if (typeof songId !== 'string' || !songId) return;
+    const paths = songPaths(songId);
+    if (!paths.length) return;
+    if (settings.songs[0] !== songId) {
+      settings = {
+        ...settings,
+        songs: [songId, ...settings.songs.filter(s => s !== songId)].slice(0, ASSET_RECENT_SONG_LIMIT)
+      };
+      save();
+    }
+    if (settings.enabled && settings.auto) enqueue(paths, front);
+  };
+  const startAuto = async () => {
+    if (!settings.enabled || !settings.auto) return;
+    const m = await ensureManifest();
+    if (!m) return;
+    enqueue(Object.keys(m.files).filter(p => ASSET_CORE_PREFIXES.some(pre => p.startsWith(pre))));
+    for (const songId of settings.songs) enqueue(songPaths(songId));
+  };
+  let listening = false;
+  const listen = () => {
+    if (listening || typeof window === 'undefined') return;
+    listening = true;
+    window.addEventListener('mh:song-prep-start', e => {
+      const id = e && e.detail && e.detail.songId;
+      if (id) noteSong(id, {
+        front: false
+      });
+    });
+    const resume = () => scheduleAuto(3000);
+    window.addEventListener('mh:song-prep-end', resume);
+    window.addEventListener('mh:song-play-end', resume);
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) resume();
+    });
+  };
+  return {
+    get enabled() {
+      return settings.enabled;
+    },
+    get auto() {
+      return settings.auto;
+    },
+    get job() {
+      return job;
+    },
+    get status() {
+      return status;
+    },
+    get supported() {
+      return supported();
+    },
+    subscribe(fn) {
+      listeners.add(fn);
+      return () => listeners.delete(fn);
+    },
+    restore() {
+      try {
+        settings = normalizeAssetCacheSettings(JSON.parse(localStorage.getItem(ASSET_CACHE_KEY) || 'null'));
+      } catch (e) {
+        settings = normalizeAssetCacheSettings(null);
+      }
+      if (!supported()) return settings.enabled;
+      listen();
+      if (settings.enabled) {
+        register();
+        setTimeout(startAuto, 8000);
+      }
+      return settings.enabled;
+    },
+    async setEnabled(next) {
+      settings = {
+        ...settings,
+        enabled: !!next
+      };
+      save();
+      if (settings.enabled) {
+        listen();
+        await register();
+        startAuto();
+      } else {
+        cancel();
+        autoQueue.length = 0;
+        autoQueued.clear();
+        await unregister();
+      }
+      await refreshStatus();
+      return settings.enabled;
+    },
+    setAuto(next) {
+      settings = {
+        ...settings,
+        auto: !!next
+      };
+      save();
+      if (settings.auto) startAuto();else {
+        autoQueue.length = 0;
+        autoQueued.clear();
+      }
+      emit();
+      return settings.auto;
+    },
+    refreshStatus,
+    download,
+    cancel,
+    remove,
+    noteSong
+  };
+})();
+function useAssetCacheState() {
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const off = ASSET_CACHE.subscribe(() => setTick(t => t + 1));
+    ASSET_CACHE.refreshStatus();
+    return off;
+  }, []);
+  return ASSET_CACHE;
+}
+const formatAssetMB = bytes => {
+  const n = Number(bytes);
+  if (!Number.isFinite(n) || n <= 0) return '0MB';
+  const mb = n / 1024 / 1024;
+  return mb >= 10 ? `${Math.round(mb)}MB` : `${mb.toFixed(1)}MB`;
+};
+ASSET_CACHE.restore();
 const SUPABASE_URL = 'https://zrzevudkbgtxlbvmuziy.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_D4WJBXJ1xE97amndZarEPw_0M4LAwOp';
 const SB_HEADERS = {
@@ -45799,6 +46285,124 @@ function SettingsMenuLink({
     className: "shrink-0 opacity-60"
   }));
 }
+function AssetDownloadPage({
+  onBack
+}) {
+  const asset = useAssetCacheState();
+  const {
+    packs,
+    usage
+  } = asset.status;
+  const job = asset.job;
+  return React.createElement("div", {
+    "data-mh-screen": true,
+    "data-asset-download-page": true,
+    className: SCREEN_SHELL_CLASS
+  }, React.createElement(ScreenHead, {
+    title: "ダウンロード",
+    accent: "text-emerald-200",
+    onBack: onBack,
+    backLabel: "設定へ戻る"
+  }), React.createElement("div", {
+    className: `${SCREEN_LIST_CLASS} w-full max-w-md mx-auto space-y-3 pb-4`
+  }, React.createElement("p", {
+    className: "px-1 text-[11px] font-bold leading-relaxed text-slate-300"
+  }, "曲や画像を前もってこの端末に入れておくと、はじめて開く画面や曲がすぐ始まります。アップデートで変わったものだけを入れ直し、古いものは自動で消えます。"), !asset.supported && React.createElement("p", {
+    "data-asset-unsupported": true,
+    className: "rounded-xl border border-amber-400/40 bg-amber-950/30 px-3 py-2 text-[11px] font-bold leading-relaxed text-amber-100"
+  }, "この端末・ブラウザでは前もって入れておくことができません。ふだんどおり、開いたときに読み込みます。"), ASSET_PACKS.map(pack => {
+    const st = packs[pack.id] || {
+      count: 0,
+      bytes: 0,
+      haveCount: 0,
+      haveBytes: 0
+    };
+    const complete = st.count > 0 && st.haveCount >= st.count;
+    const running = job && job.packId === pack.id;
+    const pct = running ? job.bytesTotal > 0 ? Math.floor(job.bytesDone / job.bytesTotal * 100) : 100 : st.bytes > 0 ? Math.floor(st.haveBytes / st.bytes * 100) : 0;
+    return React.createElement("section", {
+      key: pack.id,
+      "data-asset-pack": pack.id,
+      className: `${SCREEN_PANEL_CLASS} w-full text-left`
+    }, React.createElement("div", {
+      className: "flex items-center gap-3"
+    }, React.createElement("span", {
+      "aria-hidden": "true",
+      "data-icon": pack.icon,
+      className: "mh-emoji-icon w-8 shrink-0 text-center text-[22px] leading-none"
+    }), React.createElement("span", {
+      className: "min-w-0 flex-1"
+    }, React.createElement("b", {
+      className: "block text-[14px] font-black leading-tight text-slate-100"
+    }, pack.label, React.createElement("small", {
+      className: "ml-2 text-[11px] font-bold text-slate-400"
+    }, "約", formatAssetMB(st.bytes))), React.createElement("span", {
+      className: "mt-0.5 block text-[10px] font-bold leading-snug text-slate-400"
+    }, pack.desc))), React.createElement("div", {
+      className: "mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-800",
+      role: "progressbar",
+      "aria-valuemin": 0,
+      "aria-valuemax": 100,
+      "aria-valuenow": pct
+    }, React.createElement("div", {
+      className: `h-full rounded-full ${complete && !running ? 'bg-emerald-400' : 'bg-cyan-400'}`,
+      style: {
+        width: `${pct}%`
+      }
+    })), React.createElement("p", {
+      "data-asset-pack-progress": true,
+      className: "mt-1 text-[10px] font-bold text-slate-300"
+    }, running ? `ダウンロード中 ${pct}%(${formatAssetMB(job.bytesDone)} / ${formatAssetMB(job.bytesTotal)})` : complete ? 'この端末に入っています' : st.haveCount > 0 ? `一部が入っています(${formatAssetMB(st.haveBytes)} / ${formatAssetMB(st.bytes)})` : 'まだ入っていません'), running && job.error === 'quota' && React.createElement("p", {
+      className: "mt-1 text-[10px] font-bold text-amber-200"
+    }, "端末の空きが足りないため止まりました。"), React.createElement("div", {
+      className: "mt-2 grid grid-cols-2 gap-2"
+    }, running ? React.createElement("button", {
+      type: "button",
+      "data-asset-cancel": true,
+      onClick: () => asset.cancel(),
+      className: "min-h-[48px] rounded-xl border border-white/20 bg-slate-950 px-2 text-[12px] font-black text-slate-200 active:scale-95"
+    }, "取り消す") : React.createElement("button", {
+      type: "button",
+      "data-asset-download": pack.id,
+      disabled: !asset.supported || !!job || complete,
+      onClick: () => asset.download(pack.id),
+      className: "min-h-[48px] rounded-xl border border-emerald-400/60 bg-emerald-700 px-2 text-[12px] font-black text-white active:scale-95 disabled:opacity-40"
+    }, complete ? '入っています' : st.haveCount > 0 ? '残りを入れる' : 'ダウンロード'), React.createElement("button", {
+      type: "button",
+      "data-asset-remove": pack.id,
+      disabled: !asset.supported || st.haveCount === 0,
+      onClick: () => {
+        if (window.confirm(`${pack.label}をこの端末から消しますか？(セーブデータは消えません)`)) asset.remove(pack.id);
+      },
+      className: "min-h-[48px] rounded-xl border border-red-500/40 bg-red-950/50 px-2 text-[12px] font-black text-red-200 active:scale-95 disabled:opacity-40"
+    }, "端末から消す")));
+  }), React.createElement("section", {
+    "data-asset-auto": true,
+    className: `${SCREEN_PANEL_CLASS} w-full text-left`
+  }, React.createElement("b", {
+    className: "block text-[13px] font-black text-slate-200"
+  }, "自動で前もって入れる"), React.createElement("p", {
+    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
+  }, "よく使う画面の画像と、曲えらびで選んだ曲・遊んだ曲を、遊んでいないあいだに少しずつ入れます。演奏中は止まります。モバイル回線では少しだけにします。"), React.createElement("div", {
+    className: "mt-2 grid grid-cols-2 gap-2"
+  }, [{
+    id: true,
+    label: 'する'
+  }, {
+    id: false,
+    label: 'しない'
+  }].map(option => React.createElement("button", {
+    key: String(option.id),
+    type: "button",
+    "data-asset-auto-option": String(option.id),
+    "aria-pressed": asset.auto === option.id,
+    onClick: () => asset.setAuto(option.id),
+    className: `min-h-[48px] rounded-xl px-1 py-1.5 text-[12px] font-black active:scale-95 ${asset.auto === option.id ? 'border border-cyan-400 bg-cyan-600 text-white' : 'border border-white/10 bg-slate-950 text-slate-300'}`
+  }, option.label)))), React.createElement("p", {
+    "data-asset-usage": true,
+    className: "px-1 text-[10px] font-bold leading-relaxed text-slate-400"
+  }, Number.isFinite(usage) ? `このゲームがこの端末で使っている容量: 約${formatAssetMB(usage)}。` : '', "しばらく遊ばないと、端末が空きを作るために消すことがあります。消えても、開いたときにネットから読み込むので遊べます。セーブデータはここでは消えません。")));
+}
 function SettingsScreen({
   onBack,
   onOpenAudioSettings,
@@ -45820,7 +46424,11 @@ function SettingsScreen({
   battleFxAutoLoad
 }) {
   const [battleSettingsOpen, setBattleSettingsOpen] = useState(false);
+  const [assetDownloadOpen, setAssetDownloadOpen] = useState(false);
   const assistantBubble = useAssistantBubbleState();
+  if (assetDownloadOpen) return React.createElement(AssetDownloadPage, {
+    onBack: () => setAssetDownloadOpen(false)
+  });
   if (battleSettingsOpen) {
     return React.createElement("div", {
       "data-mh-screen": true,
@@ -45933,6 +46541,12 @@ function SettingsScreen({
     desc: "画面ごとにハロウィン／クラシックを選ぶ",
     onClick: onOpenScreenTheme,
     "data-open-screen-theme": true
+  }), ASSET_CACHE.enabled && React.createElement(SettingsMenuLink, {
+    icon: "📥",
+    label: "ダウンロード",
+    desc: "曲や画像を前もって端末に入れておく",
+    onClick: () => setAssetDownloadOpen(true),
+    "data-open-asset-download": true
   }), React.createElement(SettingsMenuLink, {
     icon: "💾",
     label: "データ引き継ぎ",
@@ -73512,6 +74126,7 @@ function MonsterHeroGame() {
   const [rhythmPerfOn, setRhythmPerfOn] = useState(() => RHYTHM_PERF.enabled);
   const [rhythmPerfStats, setRhythmPerfStats] = useState(null);
   const [battlePerfOn, setBattlePerfOn] = useState(() => BATTLE_PERF.enabled);
+  const [assetCacheOn, setAssetCacheOn] = useState(() => ASSET_CACHE.enabled);
   const [rhythmStrip, setRhythmStrip] = useState(() => RHYTHM_STRIP.value);
   const [rhythmCanvasPref, setRhythmCanvasPref] = useState(() => rhythmCanvasNotesPreference());
   const [rhythmGpuBandPref, setRhythmGpuBandPref] = useState(() => rhythmGpuBandPreference());
@@ -76248,6 +76863,9 @@ function MonsterHeroGame() {
       ...(preset ? preset.values : {})
     };
   }, [rhythmSettings]);
+  useEffect(() => {
+    if (String(gameState).startsWith('RHYTHM')) ASSET_CACHE.noteSong(rhythmSelectedSongId);
+  }, [rhythmSelectedSongId, gameState]);
   const rhythmPreviewSongId = gameState === 'RHYTHM_MULTI' && rhythmMultiPreviewSongId ? rhythmMultiPreviewSongId : rhythmSelectedSongId;
   const rhythmPreviewSong = rhythmDemoSongs(RHYTHM_SONGS).find(song => song.songId === rhythmPreviewSongId) || null;
   const rhythmPreviewTrackId = rhythmSettings.songPreviewEnabled && RHYTHM_PREVIEW_SCREENS.includes(gameState) && rhythmPreviewSong ? rhythmPreviewSong.bgmTrackId : '';
@@ -98210,7 +98828,15 @@ function MonsterHeroGame() {
       "data-debug-screen-error": true,
       onClick: () => setDebugThrowScreenError(true),
       className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
-    }, "⚠️ 画面エラーの受け止めを試す"), debugThrowScreenError && React.createElement(DebugThrowScreenError, null))))), gameState === 'RAID_JACK' && React.createElement(RaidJackScreen, {
+    }, "⚠️ 画面エラーの受け止めを試す"), debugThrowScreenError && React.createElement(DebugThrowScreenError, null), React.createElement("button", {
+      type: "button",
+      "data-asset-cache-toggle": true,
+      "aria-pressed": assetCacheOn,
+      onClick: async () => setAssetCacheOn(await ASSET_CACHE.setEnabled(!assetCacheOn)),
+      className: `w-full min-h-[52px] rounded-2xl px-3 py-2 text-left text-[12px] font-black active:scale-95 ${assetCacheOn ? 'border-2 border-emerald-300 bg-emerald-500 text-slate-900' : 'border-2 border-emerald-400/40 bg-emerald-950/30 text-emerald-100'}`
+    }, "📥 事前ダウンロード：", assetCacheOn ? 'ON' : 'OFF', React.createElement("small", {
+      className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
+    }, "設定に「ダウンロード」が出ます。OFFにすると、端末に入れた曲・画像を消します")))))), gameState === 'RAID_JACK' && React.createElement(RaidJackScreen, {
       initialTier: raidJackReturnTierRef.current,
       onBack: () => {
         raidJackReturnTierRef.current = 0;

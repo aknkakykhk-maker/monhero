@@ -74,6 +74,10 @@
       "role": "保存層(storeGet / storeSet / storeList / setStorageWriteBlocked)と音ゲー保存の薄い関数"
     },
     {
+      "file": "25-asset-cache.jsx",
+      "role": "事前ダウンロード(ASSET_CACHE。Service Worker の登録、まとまりごとのダウンロード・取り消し・削除、自動の前もって落とし)"
+    },
+    {
       "file": "26-supabase.jsx",
       "role": "全国ランキング(Supabase REST)。難易度キー、取得、送信、絆Lv、周回ID"
     },

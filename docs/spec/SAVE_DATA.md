@@ -37,6 +37,7 @@
 | `mh_home_art` | string / `'auto'` | ホーム画面アレンジ。値は `mh_title_art` と同じ |
 | `mh_screen_theme_v1` | object / 全部 `'auto'` | 画面テーマ。`{ menu, market, temple, battle, rhythm }` に `'auto'`/`'halloween'`/`'classic'`。`normalizeScreenTheme` で知らない項目・不正な値は `'auto'` に補う(docs/spec/SCREEN_THEME.md) |
 | `mh_battle_perf_v1` | boolean / false | バトルの性能計測のON/OFF(デバッグ限定)。`BATTLE_PERF` が持つ |
+| `mh_asset_prefetch_v1` | object / `{ enabled:false, auto:true, songs:[] }` | 事前ダウンロード(曲・画像を端末にためておく)の入/切・自動の前もって落とし・最近選んだ曲(最大12)。`normalizeAssetCacheSettings` で壊れた値は既定に戻す。ためた中身は localStorage ではなく Cache Storage(`mh-assets-v1`)にあり、切にすると消す(docs/spec/ASSET_PREFETCH.md) |
 | `mh_breeder_name` | string / `名無しのブリーダー` | 表示名（保存時最大10文字） |
 | `mh_breeder_icon` | string or null | 種IDまたは購入アイコンID |
 | `mh_breeder_xp` | number / `0` | 累計ブリーダーXP |
