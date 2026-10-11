@@ -24440,15 +24440,28 @@ const SHERIRUTH_CROSS_SLIDES=Object.freeze([
 ]);
 // 縦画面で同じ親指が81msで叩き直す所(85.12秒・102.88秒)を、左右の親指に分かれる位置へ(オンプくん・時刻とノーツ数は変えない)。[時刻,元のサブレーン,新しいサブレーン]
 const SHERIRUTH_CROSS_TAP_MOVES=Object.freeze([[85040,6,9],[85121,9,6],[102798,3,6]]);
-const sheriruthMasterNotesCross=Object.freeze(sheriruthMasterNotes.map(note=>{
+// 交差の版を作る: 公開版 MASTER のスライドの通り道を slides で差し替え、縦の押せない単打(SHERIRUTH_CROSS_TAP_MOVES)の位置を直す
+const sheriruthMasterNotesCrossWith=slides=>Object.freeze(sheriruthMasterNotes.map(note=>{
   if(note.type==='TAP'){
     const move=SHERIRUTH_CROSS_TAP_MOVES.find(([timeMs,subLane])=>timeMs===note.timeMs&&subLane===note.subLane);
-    return move?mhTap(note.timeMs,move[2],note.subLaneWidth):note;
+    return move?mhTap(note.timeMs,move[2],note.subLaneWidth,note.monsterSlot):note;
   }
   if(note.type!=='SLIDE')return note;
-  const swap=SHERIRUTH_CROSS_SLIDES.find(([timeMs])=>timeMs===note.timeMs);
+  const swap=slides.find(([timeMs])=>timeMs===note.timeMs);
   return swap?mhSlideV2(note.timeMs,note.endTimeMs,swap[2].map(([timeMs,lane])=>[timeMs,lane,2]),note.endFlick):note;
 }));
+const sheriruthMasterNotesCross=sheriruthMasterNotesCrossWith(SHERIRUTH_CROSS_SLIDES);
+// 交差をきつくした版(2026-10-11 社長「もうちょいクロス部分の緩やかさをきつくしてもよさそう」・オンプくんの下書き)。
+// 参考動画の交差を読み取ると、横切りは 0.75〜1.75拍(中央 約1.25拍)・1本の手で 1.7〜3.3レーン/拍(中央 約2)。
+// 上の版(2.5拍で約2レーン・0.8レーン/拍)の、横切る6か所だけを「待つ → 1拍でまっすぐ2レーン横切る → 待つ」に(2レーン/拍=参考の中央)。
+// 動くレーンを参考(3〜4)まで広げないのは、横持ちで親指が真ん中を2レーン越えると押せなくなるため。始まりと終わり・ノーツ数・時刻は上の版と同じ
+const SHERIRUTH_CROSS_STEEP_SLIDES=Object.freeze([
+  [106771,'R',[[106771,4],[106852,4],[107014,3],[107096,2.5],[107258,1.5],[107339,1.5],[107744,4],[107906,4],[107987,3.5],[108312,3.5],[108393,3],[108474,2.5],[108555,2],[108636,1.5],[109690,1.5],[109772,2],[109853,2.5],[109934,3],[110015,3.5],[110258,3.5],[110339,3],[110420,2.75],[110501,2],[110582,1.5],[110663,2],[110988,1.5],[111069,1],[111150,0.5],[111231,0],[111555,0],[111880,0.5],[111961,1],[112042,1.5],[112123,2],[112447,2],[112528,1.75],[112610,1.5],[112690,1.5],[112771,2],[112853,2],[112934,2.5],[113015,2.5],[113096,3],[113420,3],[113501,3.5],[113582,3.5],[113663,4],[113745,4.5],[113826,4.5],[113907,5],[113988,5],[114150,4],[114231,4],[114312,3.5],[114393,3.5],[114474,3],[114555,3.5],[114636,3.5],[114718,4],[114799,3.5],[114880,3.5],[114961,3],[115123,4],[115204,4],[115366,5],[115609,3.5],[115691,3],[115853,4],[115934,4],[116015,4.5],[116339,2.5]]],
+  [107339,'L',[[107339,0.5],[107582,0.5],[107663,1],[107906,1],[107987,1.5],[108312,1.5],[108393,2],[108474,2.5],[108555,3],[108636,3.5],[109690,3.5],[109772,3],[109853,2.5],[109934,2],[110015,1.5],[110258,1.5],[110339,1.25],[110420,1],[110501,0.75],[110582,0.5],[110663,0],[110988,0.5],[111069,1],[111150,1.5],[111231,2],[111555,2],[111880,1.5],[111961,1],[112042,0.5],[112123,0],[112366,0],[112447,0.25],[112528,0.25],[112609,0],[112690,0.5],[112771,0.5],[112853,1],[112934,1.5],[113015,1.5],[113096,2],[113501,2],[113582,2.5],[113663,2.5],[113745,3],[113907,3],[113988,3.5],[114069,3.5],[114150,3],[114231,3],[114312,2.5],[114393,2.5],[114636,1],[114718,0.5],[114799,0.5],[115042,2],[115123,2],[115204,1.5],[115285,1.5],[115366,1],[115447,1],[115528,1.5],[115609,1.5],[115691,2]]],
+  [127367,'L',[[127367,0.5],[128340,0.5],[128421,1],[130043,1],[130124,1.5],[130367,1.5],[130692,2],[130773,2.5],[130854,3],[130935,3.5],[131421,3.5],[131502,3],[131584,2.5],[131665,2],[131746,1.5],[131989,1.5]]],
+  [127772,'R',[[127772,4.5],[128826,4.5],[128908,4],[130286,4],[130367,3.5],[130692,3],[130773,2.5],[130854,2],[130935,1.5],[131421,1.5],[131502,2],[131584,2.5],[131665,3],[131746,3.5],[131989,3.5],[132070,3.25],[132151,3],[132232,2.75],[132475,2.5]]],
+]);
+const sheriruthMasterNotesCrossSteep=sheriruthMasterNotesCrossWith(SHERIRUTH_CROSS_STEEP_SLIDES);
 const sheriruthCharts=Object.freeze({
   EASY:mhChart(1,sheriruthEasyNotes,SHERIRUTH_DURATION_MS,6,{scrollChanges:SHERIRUTH_SCROLL_CHANGES}),
   NORMAL:mhChart(3,sheriruthNormalNotes,SHERIRUTH_DURATION_MS,6,{scrollChanges:SHERIRUTH_SCROLL_CHANGES}),
@@ -27447,6 +27460,17 @@ const RHYTHM_PROTO_SONGS=Object.freeze([
     bgmTrackId:'melo_sheriruth',
     difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[
       id,rhythmChartOnRoad(id==='MASTER'?mhChart(35,sheriruthMasterNotesCross,SHERIRUTH_DURATION_MS,6,{scrollChanges:SHERIRUTH_SCROLL_CHANGES}):emptyRhythmChart())
+    ])))
+  }),
+  // 交差をきつくした版(上の SHERIRUTH_CROSS_STEEP_SLIDES)。社長が上の版と見比べる
+  Object.freeze({
+    songId:'sheriruth_cross_steep',
+    displayName:'Sheriruth',
+    subtitle:'MASTER(交差あり・きつめ)',
+    debugDescription:'交差ありの版の横切りを、2.5拍かけてゆっくりから「待つ → 1拍でまっすぐ2レーン横切る → 待つ」に(参考動画の交差の中央の速さ)。ノーツ数・時刻は公開版のまま。遊んでも自己ベスト・ランキング・報酬には入らない',
+    bgmTrackId:'melo_sheriruth',
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[
+      id,rhythmChartOnRoad(id==='MASTER'?mhChart(35,sheriruthMasterNotesCrossSteep,SHERIRUTH_DURATION_MS,6,{scrollChanges:SHERIRUTH_SCROLL_CHANGES}):emptyRhythmChart())
     ])))
   }),
 ]);
