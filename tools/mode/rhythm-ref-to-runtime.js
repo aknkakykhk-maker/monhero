@@ -22,6 +22,13 @@ const DIR={'':0,left:1,right:2};
 const r=v=>Math.round(Number(v));
 const num=v=>Number(Number(v).toFixed(3));
 const items=[];
+// 空中のスライドの手(帯の色・水色=L/ピンク=R)。下書きに手が無いもの(親指の直しが位置で決めたもの)は、
+// 親指2本のモデル(rhythm-ref-tiers.js の thumbCheck)が選んだ手を書く(2026-10-11。前は無ければ R にしていて、
+// 左を通るスライドに R が付き、ゲームの譜面の見張りが「交差」と読んだ)
+let modelHands=null;
+const handOf=n=>{if(n.hand==='L'||n.hand==='R')return n.hand;
+  if(!modelHands){const {thumbCheck,THUMB_PROFILES}=require('./rhythm-ref-tiers.js');modelHands=thumbCheck(notes,THUMB_PROFILES.landscape,500).hands;}
+  return modelHands.get(n)==='L'?'L':'R';};
 for(const n of notes){
   if(n.k==='t'||n.k==='f'){
     const sky=!GROUND&&Number(n.sky)>0,at=r(n.t);
@@ -32,7 +39,7 @@ for(const n of notes){
   }else if(n.k==='s'&&Array.isArray(n.pts)&&n.pts.length>=2){
     const pts=n.pts,at=r(pts[0][0]),end=r(pts[pts.length-1][0]);
     const sky=!GROUND&&pts.some(p=>Number(p[3])>0);
-    if(sky)items.push([at,`S(${at},${end},[${pts.map(p=>`[${r(p[0])},${num(p[1])},${num(p[2])},${num(p[3])},${r(p[4]||0)}]`).join(',')}],${n.endFlick?1:0},'${n.hand==='L'?'L':'R'}')`]);
+    if(sky)items.push([at,`S(${at},${end},[${pts.map(p=>`[${r(p[0])},${num(p[1])},${num(p[2])},${num(p[3])},${r(p[4]||0)}]`).join(',')}],${n.endFlick?1:0},'${handOf(n)}')`]);
     else items.push([at,`s(${at},${end},[${pts.map(p=>`[${r(p[0])},${num(p[1])},${num(p[2])},${r(p[4]||0)}]`).join(',')}],${n.endFlick?1:0})`]);
   }
 }
