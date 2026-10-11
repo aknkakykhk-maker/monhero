@@ -136,11 +136,15 @@ const mime = f => ({ '.js': 'application/javascript', '.html': 'text/html', '.cs
     const areaEl = document.querySelector('[data-rhythm-play-area]'); const a = areaEl ? areaEl.getBoundingClientRect() : null;
     const rect = areaEl ? (RHYTHM_GESTURE_RUNTIME.areaRect(areaEl) || RHYTHM_VIEW_ROTATION.rectOf(areaEl)) : null;
     const y = areaEl ? window.__lineY() : 0;
-    const sub = (x) => rect ? rhythmSubLaneCoordinateAtPoint(a.left + x, a.top + y, rect) : null;
+    const sub = (x, dy = 0) => rect ? rhythmSubLaneCoordinateAtPoint(a.left + x, a.top + y + dy, rect) : null;
+    // 判定ラインより下を押した指は、ゲームが線の高さへ直した位置でも見る(rhythmSubLaneCoordinateAtLineIfBelow)。それも一緒に書く
+    const alt = (x, dy) => rect ? (rhythmSubLaneCoordinateAtLineIfBelow(a.left + x, a.top + y + dy, rect) ?? null) : null;
+    const OFF = 20;   // 指は線ちょうどより少し上や下を押しがち。上下 20px でも見る
     return n.map((x, i) => { const d = window.__drawnAtLine(x.index ?? i); const t = x._rhythmOriginalType || x.type;
       return { index: x.index ?? i, timeMs: Number(x.timeMs), type: t, sky: (Number(x.skyHeight) || 0) > 0 || (t === 'SLIDE' && window.__slideSkyAt && window.__slideSkyAt(x, Number(x.timeMs)) >= .5),
         judgment: r[i] && r[i].judgment || null,
-        drawn: d ? { cx: +d.cx.toFixed(1), w: +d.w.toFixed(1), dy: +d.dy.toFixed(1), subL: sub(d.cx - d.w * .4), subC: sub(d.cx), subR: sub(d.cx + d.w * .4) } : null }; });
+        drawn: d ? { cx: +d.cx.toFixed(1), w: +d.w.toFixed(1), dy: +d.dy.toFixed(1), subL: sub(d.cx - d.w * .4), subC: sub(d.cx), subR: sub(d.cx + d.w * .4),
+          up: [-.4, 0, .4].map(k => sub(d.cx + d.w * k, -OFF)), down: [-.4, 0, .4].map(k => sub(d.cx + d.w * k, OFF)), downAlt: [-.4, 0, .4].map(k => alt(d.cx + d.w * k, OFF)) } : null }; });
   }).catch(() => []);
   const area = await page.evaluate(() => { const e = document.querySelector('[data-rhythm-play-area]'); if (!e) return null; const r = e.getBoundingClientRect(); return { x: r.left, w: r.width, h: r.height, gpu: !!RHYTHM_CANVAS_RENDERER.gpuBand, backend: String(RHYTHM_CANVAS_RENDERER.backend || '') }; }).catch(() => null);
   fs.writeFileSync(OUT, JSON.stringify({ song: SONG, diff: DIFF, w: W, h: H, road: ROAD || 'default', draw: DRAW, safe: SAFE, area, errors, rows }));
