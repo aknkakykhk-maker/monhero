@@ -452,7 +452,10 @@ const RHYTHM_PREPARE_WAIT_MAX_MS=3000;
 // window.__mhSongPrepBusy … 決定の直後に true、曲が鳴り始める直前・やめたとき・画面を閉じたときに false('mh:song-prep-start' / 'mh:song-prep-end')
 // window.__mhSongPlaying … 曲が鳴り始めたら true、曲の終わり・やめたとき・画面を閉じたときに false('mh:song-play-start' / 'mh:song-play-end')
 // イベントは window へ出す CustomEvent(detail.songId)。値が変わったときだけ出す
+// あわせて、準備中か演奏中のあいだは :root に data-mh-song-active を付ける(index.html が、演奏画面に隠れているアプリの外側の背景の絵を描かない。
+// 季節の飾りの SVG の絵が、土台の層を塗り直すたびに描き直されて発熱の元になっていた。演奏画面が全部覆っているので見た目は同じ・2026-10-12)
 const rhythmSongSignal=(flag,eventBase,on,songId)=>{try{if(typeof window==='undefined')return;const next=!!on;if(!!window[flag]===next)return;window[flag]=next;
+  if(typeof document!=='undefined'&&document.documentElement){const root=document.documentElement;if(window.__mhSongPrepBusy||window.__mhSongPlaying)root.dataset.mhSongActive='1';else delete root.dataset.mhSongActive;}
   if(typeof CustomEvent==='function')window.dispatchEvent(new CustomEvent(`${eventBase}-${next?'start':'end'}`,{detail:{songId:songId||''}}));}catch(e){}};
 const rhythmSongPrepSignal=(on,songId)=>rhythmSongSignal('__mhSongPrepBusy','mh:song-prep',on,songId);
 const rhythmSongPlaySignal=(on,songId)=>rhythmSongSignal('__mhSongPlaying','mh:song-play',on,songId);
