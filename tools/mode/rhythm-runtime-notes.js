@@ -211,6 +211,7 @@ const RELEASED_MARKERS=Object.freeze({
   anima:'anima-v3',
   journey:'journey-v3',
   sheriruth:'sheriruth-v3',
+  grievous_lady:'grievous-lady-v3',
 });
 
 // 曲id → 音源の一覧(tools/mode/authoring/rhythm-song-registry.json)のid。
@@ -255,6 +256,7 @@ const RELEASED_TRACKS=Object.freeze({
   anima:'anima',
   journey:'journey',
   sheriruth:'sheriruth',
+  grievous_lady:'grievous_lady',
 });
 
 module.exports={SLIDE_EASE_CODES,FLICK_DIR_CODES,heldSpan,HOLD_SHIFT_SUB,ROOT,RUNTIME,FINGER_GAP_SUB,loadRuntime,makeSpanAt,usableSpan,maxSeparation,

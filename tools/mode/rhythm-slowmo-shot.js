@@ -51,7 +51,8 @@ fs.mkdirSync(OUT,{recursive:true});
   await page.getByRole('button',{name:'トップ画面へ進む'}).click({timeout:30000});
   await page.waitForFunction(()=>document.body.innerText.includes('モンヒロビート'),null,{timeout:40000});
   for(let i=0;i<6;i++){if(!(await clickText('受け取る|閉じる|OK|閉じる')))break;await page.waitForTimeout(250);}
-  await clickText('モンヒロビート');await page.waitForSelector('[data-rhythm-demo-start]',{timeout:30000});
+  // 入るとまずモードえらびが出る(2026-10-03〜)ので、曲えらびの印かモードえらびの印のどちらかを待つ(2026-10-11 直し)
+  await clickText('モンヒロビート');await page.waitForSelector('[data-rhythm-mode-solo],[data-rhythm-demo-start]',{timeout:30000});
   // 入るとまずモードえらび(2026-10-03)。出ていたらソロライブを押して曲えらびへ
   await page.waitForSelector('[data-rhythm-mode-solo],[data-rhythm-demo-start],[data-rhythm-demo-home]',{timeout:30000}).catch(()=>{});await page.evaluate(()=>document.querySelector('[data-rhythm-mode-solo]')?.click());
   for(let i=0;i<5;i++){if(!(await clickText('^確認$|受け取る|閉じる|OK|閉じる')))break;await page.waitForTimeout(300);}
@@ -68,11 +69,12 @@ fs.mkdirSync(OUT,{recursive:true});
   if(process.env.CSS)await page.addStyleTag({content:process.env.CSS});
   await page.waitForTimeout(800);
   // 曲の時計を「止めた位置 + (いまの performance.now − つないだ時の performance.now)」にする。仮想の時間ではこれが進む
-  await page.evaluate(([T,DIFF])=>{const f=window.__mhFrozen;f.base=f.t;f.p0=performance.now();f.song=T;window.__diff=DIFF;
+  await page.evaluate(([T,DIFF,SONG])=>{const f=window.__mhFrozen;f.base=f.t;f.p0=performance.now();f.song=T;window.__diff=DIFF;window.__songName=SONG;
     const proto=BaseAudioContext.prototype,desc=Object.getOwnPropertyDescriptor(proto,'currentTime');
     Object.defineProperty(proto,'currentTime',{configurable:true,get(){const z=window.__mhFrozen;if(z&&z.ctx===this)return z.base+(performance.now()-z.p0)/1000;return desc.get.call(this);}});
     // 自動で叩く(TAP・HOLD・FLICK)。曲の時刻がノーツの時刻を過ぎた瞬間に押す
-    const ch=RHYTHM_SONGS.find(x=>x.songId===(window.__songId||'monster_hero'));
+    // 自動で叩く譜面は、撮る曲(SONG の表示名)から引く。見つからなければ今までどおり Monster Hero(2026-10-11 直し)
+    const ch=RHYTHM_SONGS.find(x=>x.displayName===window.__songName)||RHYTHM_SONGS.find(x=>x.songId===(window.__songId||'monster_hero'));
     window.__autoTap=(chart)=>{const notes=[...chart.notes].sort((a,b)=>a.timeMs-b.timeMs);const area=document.querySelector('[data-rhythm-play-area]');
       const r=area.getBoundingClientRect();const line=area.querySelector('[data-rhythm-judgment-line]').getBoundingClientRect();const y=line.top+line.height/2,yr=(y-r.top)/r.height;
       const z=window.__mhFrozen;const songNow=()=>z.song*1000+(performance.now()-z.p0);
@@ -87,7 +89,7 @@ fs.mkdirSync(OUT,{recursive:true});
           fire(true,x,tid);const dur=n.type==='HOLD'?Math.max(40,(Number(n.endTimeMs)||(n.timeMs+(Number(n.durationMs)||0)))-n.timeMs):45;setTimeout(()=>fire(false,x,tid),dur);}
         requestAnimationFrame(step);};requestAnimationFrame(step);};
     window.__autoTap(ch.difficulties[window.__diff||'HARD']);
-  },[T,DIFF]);
+  },[T,DIFF,SONG]);
   const cdp=await page.context().newCDPSession(page);
   const advance=ms=>new Promise(res=>{cdp.once('Emulation.virtualTimeBudgetExpired',res);cdp.send('Emulation.setVirtualTimePolicy',{policy:'advance',budget:ms});});
   const FRAMES=Number(process.env.FRAMES||8),STEP=Number(process.env.STEP||83);
