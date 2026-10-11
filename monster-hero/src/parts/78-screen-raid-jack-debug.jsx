@@ -19,7 +19,7 @@ const RAID_JACK_DEBUG_NOW_CHOICES = Object.freeze([
   { id: 'after', label: '終了の1分後', at: () => Date.parse(RAID_JACK_EVENT.endAt) + 60000 },
 ]);
 
-const RaidJackDebugScreen = ({ onBack, onStartBattle, raidForce = false, onToggleRaidForce, realRules = false, onToggleRealRules, onOpenRaid, onGoHome, onPreviewDamageFx }) => {
+const RaidJackDebugScreen = ({ onBack, onStartBattle, raidForce = false, onToggleRaidForce, realRules = false, onToggleRealRules, onOpenRaid, onGoHome, onPreviewDamageFx, onPreviewRhythmResult }) => {
   const [nowChoice, setNowChoice] = useState('real');
   const [state, setState] = useState(() => raidJackDefaultState());
   const [log, setLog] = useState([]);
@@ -148,6 +148,9 @@ const RaidJackDebugScreen = ({ onBack, onStartBattle, raidForce = false, onToggl
             <button data-raid-damage-fx-hit className={`${btn} border-fuchsia-400/60 bg-fuchsia-950/40`} onClick={() => onPreviewDamageFx && onPreviewDamageFx('hit')}>ダメージ演出(ヒット)</button>
             <button data-raid-damage-fx-down className={`${btn} border-fuchsia-400/60 bg-fuchsia-950/40`} onClick={() => onPreviewDamageFx && onPreviewDamageFx('down')}>ダメージ演出(撃破)</button>
             <button data-raid-damage-fx-none className={`${btn} col-span-2 border-fuchsia-400/60 bg-fuchsia-950/40`} onClick={() => onPreviewDamageFx && onPreviewDamageFx('none')}>ダメージ演出(ダメージなし・アシスト)</button>
+            {/* モンヒロビート挑戦のあとの「レイドの結果」画面を、曲を遊ばずに見る(見本の数字・デバッグのイベントIDで出す。記録には何も書かない) */}
+            <button data-raid-rhythm-result-hit className={`${btn} border-sky-400/60 bg-sky-950/40`} onClick={() => onPreviewRhythmResult && onPreviewRhythmResult('hit')}>結果画面(モンヒロビート)</button>
+            <button data-raid-rhythm-result-pumpkin className={`${btn} border-sky-400/60 bg-sky-950/40`} onClick={() => onPreviewRhythmResult && onPreviewRhythmResult('pumpkin')}>結果画面(ぱんぷきん)</button>
           </div>
         </section>
 
