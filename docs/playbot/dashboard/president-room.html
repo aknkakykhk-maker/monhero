@@ -68,12 +68,12 @@ section{display:flex;flex-direction:column;gap:10px}
 <div class="wrap">
   <header>
     <h1>モンヒロ社 社長室</h1>
-    <p class="lead">10/11 08:57 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。<br>モンスター Tier 表: <a href="https://claude.ai/artifact/3sUNc2pQgN5f4QdYYW5tW8">https://claude.ai/artifact/3sUNc2pQgN5f4QdYYW5tW8</a>(サイドバーにも固定)</p>
+    <p class="lead">10/11 14:07 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。<br>モンスター Tier 表: <a href="https://claude.ai/artifact/3sUNc2pQgN5f4QdYYW5tW8">https://claude.ai/artifact/3sUNc2pQgN5f4QdYYW5tW8</a>(サイドバーにも固定)</p>
   </header>
 
   <nav class="counts" aria-label="件数">
     <a class="count warn" href="#decide"><b>0</b><span>社長の判断待ち</span></a>
-    <a class="count" href="#work"><b>3</b><span>進行中</span></a>
+    <a class="count" href="#work"><b>5</b><span>進行中</span></a>
     <a class="count" href="#shipped"><b>64</b><span>公開したもの</span></a>
   </nav>
 
@@ -88,10 +88,20 @@ section{display:flex;flex-direction:column;gap:10px}
     <section id="work">
       <h2>進行中の作業</h2>
       <ul class="list">
+      <li id="r2610111259genre">
+        <div class="row-title">モンヒロビートの全曲にジャンルを付ける(余裕のあるときに)</div>
+        
+        <div class="meta"><span>未定(余裕ができたら)</span><span>見込み 仕組み(RHYTHM_GENRES と曲の印 RHYTHM_SONG_GENRE_TAGS)はもうある。いまのタブは ALL・イベント・お気に入りだけで、曲に印は1つも付いていない。始めるときに、ジャンルの分け方の案(曲の一覧つき)を社長に選択式で聞いてから全曲に付ける。保存値の id は名前を変えない(original/collab は過去に半日出していたので同じ id で足し直す)</span></div>
+      </li>
+      <li id="r2610111245shadow">
+        <div class="row-title">新曲「Against My Own Shadow」(HELL なし・地上5難易度)</div>
+        
+        <div class="meta"><span>カゲくん(新曲係・新規採用)</span><span>見込み 難易度は社長が「強め」Lv.7/8/12/22/30 を選んだ。モンスターノーツ4個・最初のノーツを2秒より後に(曲の頭に0.5秒の無音)。検査のあと PR・マージで公開</span></div>
+      </li>
       <li id="r2610110855grievous">
         <div class="row-title">新曲「Grievous Lady」(HELL あり・止まる/前に飛ぶ/後ろに戻る演出)</div>
         <div class="row-body">素材はブランチ claude/incoming-grievous-lady。MASTER は全曲で最高難度、HELL は案Z の見た目・高さ39%で空中の難しさを足す</div>
-        <div class="meta"><span>リバースくん(新曲係・新規採用)</span><span>見込み 参考譜面の止まる/飛ぶ/戻るの測り・後ろに戻る演出の試作・計画と見込みをリバースくんが出す。新しいものはデバッグで社長が見てから本番</span></div>
+        <div class="meta"><span>リバースくん(新曲係・新規採用)</span><span>見込み デバッグモードに入れた(#2692〜#2705)。社長が遊んで指摘: 始まりのノーツが途中から出る(#2698 で直した)・押せない所(#2697/#2703 で0)・A の動き出しの速さの段差(#2705 で直した)。いま B の弾み(全部のノーツがそろって弾む)と A を参考どおりに作り直し中。社長の OK のあと公開</span></div>
       </li>
       <li id="r2610102320sky">
         <div class="row-title">Sheriruth: 空中ノーツの新しい難易度(MASTER の上の6段目)を足す</div>

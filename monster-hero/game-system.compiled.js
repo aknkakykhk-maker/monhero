@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 95855e361035ea5f
+// source-sha256: 10227a9a1fe03b80
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-11 14:08";
+const BUILD_DATE = "2026-10-11 14:42";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -30816,7 +30816,8 @@ const rhythmTouchDiagOf = ({
   inputTimes,
   assist,
   mirror,
-  cleared
+  cleared,
+  frame
 }) => {
   const bridge = RHYTHM_TOUCH_BRIDGE.snapshot(),
     miss = rhythmTouchNoInputMisses(notes, inputTimes);
@@ -30845,7 +30846,10 @@ const rhythmTouchDiagOf = ({
       cleared: !!cleared,
       playId: rhythmTouchDiagPlayId(),
       fixes: rhythmTouchFixesActive(),
-      timing: RHYTHM_TIMING_DIAG.snapshot()
+      timing: RHYTHM_TIMING_DIAG.snapshot(),
+      ...(frame && typeof frame === 'object' ? {
+        frame
+      } : {})
     }
   };
 };
@@ -31438,6 +31442,25 @@ const RhythmTapTest = ({
   monstersRef.current = monsters;
   const monsterSignature = monsters.map(m => m ? `${m.baseId}|${m.imageUrl}|${JSON.stringify(m.colors || null)}` : '-').join(',');
   const canvasNotes = useState(() => rhythmCanvasNotesActive(RELEASE_FLAGS.rhythmCanvasNotes))[0];
+  const rhythmFrameDiagOf = () => {
+    try {
+      const area = typeof document !== 'undefined' ? document.querySelector('[data-rhythm-play-area]') : null,
+        rect = area ? area.getBoundingClientRect() : null;
+      return RHYTHM_FRAME_DIAG.snapshot({
+        draw: !canvasNotes ? 'dom' : RHYTHM_CANVAS_RENDERER.gpuBand ? 'gpu' : String(RHYTHM_CANVAS_RENDERER.backend || 'canvas'),
+        gpu: rhythmWebglRendererName(),
+        dpr: typeof window !== 'undefined' ? Math.round((window.devicePixelRatio || 1) * 100) / 100 : 1,
+        w: rect ? Math.round(rect.width) : 0,
+        h: rect ? Math.round(rect.height) : 0,
+        cores: typeof navigator !== 'undefined' && Number.isFinite(navigator.hardwareConcurrency) ? navigator.hardwareConcurrency : 0,
+        effect: String(settings?.stageEffect || ''),
+        fps: String(settings?.frameRateMode || ''),
+        light: !!settings?.lightweightMode
+      });
+    } catch (e) {
+      return null;
+    }
+  };
   const skyChart = useMemo(() => rhythmChartHasSky(chart?.notes), [chart]);
   if (skyChart) RHYTHM_SKY_LIFT.set(orientationIsLandscape());
   const skyPlane = (() => {
@@ -32811,7 +32834,8 @@ const RhythmTapTest = ({
       inputTimes: run.inputTimes,
       assist: assistOn,
       mirror: mirrorOn,
-      cleared: !failed
+      cleared: !failed,
+      frame: rhythmFrameDiagOf()
     }) : null;
     if (touchDiag) void rhythmTouchDiagRecord(touchDiag);
     const touchReport = touchDiag && touchDiag.platform !== 'other' ? {
@@ -33020,7 +33044,7 @@ const RhythmTapTest = ({
         }
         lastDrawnMs = frameNowMs;
       }
-      const perfTickStart = RHYTHM_PERF.enabled ? performance.now() : 0;
+      const perfTickStart = typeof performance !== 'undefined' && performance.now ? performance.now() : 0;
       const songTimeMs = run.audio.songTimeMs();
       RHYTHM_PERF.songTime(songTimeMs);
       RHYTHM_TIMING_DIAG.frame(songTimeMs);
@@ -33439,6 +33463,7 @@ const RhythmTapTest = ({
         run.audio.fadeOut?.(RHYTHM_END_FADE_MS);
       }
       if (RHYTHM_PERF.enabled) RHYTHM_PERF.tick(performance.now() - perfTickStart, perfTickStart - frameNowMs);
+      RHYTHM_FRAME_DIAG.tick(frameNowMs, perfTickStart ? performance.now() - perfTickStart : NaN);
       if (songTimeMs >= playEndTimeMs || run.audio.ended()) finish();else frameRef.current = requestAnimationFrame(tick);
     };
     frameRef.current = requestAnimationFrame(tick);
@@ -33590,6 +33615,7 @@ const RhythmTapTest = ({
       return;
     }
     const startBest = normalizeRhythmBestRecord(startBestValue);
+    RHYTHM_FRAME_DIAG.reset();
     RHYTHM_TIMING_DIAG.reset();
     RHYTHM_TIMING_DIAG.meta(audio.info?.());
     RHYTHM_TOUCH_BRIDGE.reset();

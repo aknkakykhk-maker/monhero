@@ -38,7 +38,8 @@ notes=notes.filter(n=>{if(startOf(n)<firstOnset-gridMs){log.stopDropped++;return
 if(GROUND)for(const n of notes){if(n.sky){n.sky=0;}if(n.k==='s')for(const p of n.pts)p[3]=0;}
 for(const n of notes)if(n.k==='h')n.sky=0;
 // スライドの手は位置で決める(遊ぶ人もゲームも、下書きの左右は知らない。始まりの位置が左半分なら左手)
-const handByPos=()=>{for(const n of notes)if(n.k==='s')n.hand=n.pts[0][1]+0.5<3?'L':'R';};
+// (2026-10-11 #2699 から)スライドの手は書かない。親指モデル(thumbCheck)が先を見て選ぶ。ゲームの譜面にも手は残らないので、測り方がそろう
+const handByPos=()=>{for(const n of notes)if(n.k==='s'&&!(n.pts.some(p=>p[3]>0)))n.hand=null;};
 handByPos();
 // 両手のシミュレート(rhythm-hand-simulate.js)。空中ありのときは地上のノーツだけで数える(空中の高さを知らないので、空中と地上の重なりを押せないと読む)
 const Q=gridMs,slot=t=>Math.round((t-zeroMs)/Q);
@@ -57,7 +58,7 @@ const skyGap=()=>{
   if(GROUND)return;
   // 同じ親指(道の左右半分。スライドは hand)のノーツを「前のノーツの終わりから1.5拍以上あく所」で区切り、かたまりごとに段をそろえる。
   // かたまりの中で多いほうの段にそろえる(スライドも1つと数える)
-  const sideOf=n=>n.k==='s'?n.hand:(xOf(n)<3?'L':'R');
+  const sideOf=n=>n.k==='s'?(n.hand||(n.pts[0][1]+0.5<3?'L':'R')):(xOf(n)<3?'L':'R');
   const tierOf=n=>n.k==='s'?(n.pts.some(p=>p[3]>0)?1:0):n.k==='h'?0:(n.sky?1:0);
   for(const side of ['L','R']){
     const list=sorted().filter(n=>sideOf(n)===side);
@@ -97,14 +98,14 @@ for(;;){
   const t=startOf(n),base=score(local(t,null));
   let best=null;
   const variants=[];
-  if(n.k==='s'){for(const d of [-0.5,0.5,-1,1,-1.5,1.5,-2,2]){const v=JSON.parse(JSON.stringify(n));v.pts.forEach(p=>p[1]=Math.max(0,Math.min(6-p[2],p[1]+d)));v.hand=v.pts[0][1]+0.5<3?'L':'R';variants.push(v);}}
+  if(n.k==='s'){for(const d of [-0.5,0.5,-1,1,-1.5,1.5,-2,2]){const v=JSON.parse(JSON.stringify(n));v.pts.forEach(p=>p[1]=Math.max(0,Math.min(6-p[2],p[1]+d)));variants.push(v);}}
   else{// 元の位置に近い順に試す(同じ点数なら元に近いほう。左から順に試すと左手へ寄った)
     const subs=[];for(let sub=0;sub+n.w<=12;sub++)if(sub!==n.sub)subs.push(sub);subs.sort((x,y)=>Math.abs(x-n.sub)-Math.abs(y-n.sub));
     for(const sub of subs){const v={...n,sub};variants.push(v);}
     if(n.sky&&!GROUND)variants.push({...n,sky:0});}
   for(const v of variants){const sc=score(local(t,n,v));if(!best||sc<best.sc)best={sc,v};}
   const without=score(local(t,n,null));
-  if(best&&best.sc<base&&best.sc<=without){Object.assign(n,best.v);if(n.k==='s')n.hand=n.pts[0][1]+0.5<3?'L':'R';if(n.k==='s')log.shifted++;else log.moved++;}
+  if(best&&best.sc<base&&best.sc<=without){Object.assign(n,best.v);if(n.k==='s')log.shifted++;else log.moved++;}
   else{notes=notes.filter(x=>x!==n);if(n.k==='s')log.droppedSlides++;else log.dropped++;}
 }
 };
@@ -134,13 +135,13 @@ if(MIN_LEVEL){
     if(!addedNow)break;
   }
 }
-const gapCount=()=>{let bad=0;if(GROUND)return 0;for(const side of ['L','R']){const list=sorted().filter(n=>(n.k==='s'?n.hand:(xOf(n)<3?'L':'R'))===side);
+const gapCount=()=>{let bad=0;if(GROUND)return 0;for(const side of ['L','R']){const list=sorted().filter(n=>(n.k==='s'?(n.hand||(n.pts[0][1]+0.5<3?'L':'R')):(xOf(n)<3?'L':'R'))===side);
   for(let i=1;i<list.length;i++){const ta=list[i-1].k==='s'?(list[i-1].pts.some(p=>p[3]>0)?1:0):(list[i-1].sky?1:0),tb=list[i].k==='s'?(list[i].pts.some(p=>p[3]>0)?1:0):(list[i].sky?1:0);
     if(ta!==tb&&startOf(list[i])-endOf(list[i-1])<beatMs*SKY_GAP_BEATS-1)bad++;}}return bad;};
 for(let round=0;round<6;round++){skyGap();fixAll();if(!gapCount()&&!severe().length)break;}
 const fin=thumbCheck(sorted(),P,beatMs),st=chartStats(notes),simLeft=simIssues(notes).length;
 // 同じ親指が段を変える間が1.5拍に足りない所(空中ありのとき)
-let gapBad=0;if(!GROUND)for(const side of ['L','R']){const list=sorted().filter(n=>(n.k==='s'?n.hand:(xOf(n)<3?'L':'R'))===side);
+let gapBad=0;if(!GROUND)for(const side of ['L','R']){const list=sorted().filter(n=>(n.k==='s'?(n.hand||(n.pts[0][1]+0.5<3?'L':'R')):(xOf(n)<3?'L':'R'))===side);
   for(let i=1;i<list.length;i++){const ta=list[i-1].k==='s'?(list[i-1].pts.some(p=>p[3]>0)?1:0):(list[i-1].sky?1:0),tb=list[i].k==='s'?(list[i].pts.some(p=>p[3]>0)?1:0):(list[i].sky?1:0);
     if(ta!==tb&&startOf(list[i])-endOf(list[i-1])<beatMs*SKY_GAP_BEATS-1)gapBad++;}}
 fs.writeFileSync(OUT,JSON.stringify({track:TRACK,variant:GROUND?'ground':'sky',grid:SRC.grid,range:SRC.range,notes:sorted()},null,0));

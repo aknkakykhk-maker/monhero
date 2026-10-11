@@ -118,6 +118,20 @@ ok('戻る途中に置いたノーツは「判定の前に触れる」と数え�
 // 止まりの終わりにそのままふつうの速さで流すと、止まっている間ノーツが判定線の上で止まって見える(作り間違いの例)
 const sitting=R.rhythmScrollEarlyTouches([[T0,0],[T0+BEAT,1]],[{timeMs:T0+BEAT}],2150);
 ok('止まっている間に判定線の上で待つノーツも「判定の前に触れる」と数えられる',sitting.length===1);
+// ⑥ だんだん変える('LERP'): 速さが区切りで段差にならない・打ち切りと探し始めが総当たりと合う・判定はずれない
+const LERP_TABLE=[[T0,'LERP',1],[T0+BEAT*0.5,'LERP',-.37],[T0+BEAT*5,'LERP',-.15],[T0+BEAT*6,'LERP',0],[T0+BEAT*7.3,'LERP',1.84],[T0+BEAT*8,1]];
+{
+  R.rhythmScrollSet(LERP_TABLE,800);
+  let jump=0,where=0;const v=t=>(R.rhythmScrollPos(t+0.5)-R.rhythmScrollPos(t-0.5));
+  for(let t=T0-500;t<T0+BEAT*9;t+=1){const d=Math.abs(v(t+1)-v(t));if(d>jump){jump=d;where=t;}}
+  ok('だんだん変える表では、1ms ごとの倍率の変わり方が小さい(段差にならない)',jump<0.02,`最大 ${jump.toFixed(4)}(${Math.round(where-T0)}ms)`);
+  let bad=0;for(let x=T0-300;x<T0+BEAT*9;x+=7){let m=Infinity;for(let u=x;u<T0+BEAT*12;u+=1)m=Math.min(m,R.rhythmScrollPos(u));if(Math.abs(Math.min(m,R.rhythmScrollPos(T0+BEAT*12))-R.rhythmScrollMinAfter(x))>0.6)bad++;}
+  ok('だんだん変える表で、この先いちばん手前へ来る位置が総当たりと合う',bad===0,`違い ${bad}`);
+  let tb=0;for(let y=T0-200;y<R.rhythmScrollPos(T0+BEAT*9);y+=13){const t=R.rhythmScrollTimeAt(y);if(!Number.isFinite(t))continue;if(Math.abs(R.rhythmScrollPos(t)-y)>0.5)tb++;for(let u=T0-1000;u<t-2;u+=3)if(R.rhythmScrollPos(u)>=y+0.5){tb++;break;}}
+  ok('だんだん変える表で、拍の線の探し始めが「その位置へ初めて届く時刻」',tb===0,`違い ${tb}`);
+  const after=[];for(let k=0;k<10;k++)after.push({timeMs:T0+BEAT*(8+k*0.5)});
+  ok('だんだん変える表で、判定の前に判定線へ触れるノーツは0個',R.rhythmScrollEarlyTouches(LERP_TABLE,after,800).length===0);
+}
 R.rhythmScrollSet(null);
 console.log(failed?`\n✗ ${failed}件の失敗`:'\n✓ すべて通過');
 process.exit(failed?1:0);
