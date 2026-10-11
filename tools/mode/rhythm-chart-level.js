@@ -299,7 +299,12 @@ const LEVEL_OVERRIDES=Object.freeze({
   // 式が高く出たのは「同時押し」224・「押さえながら叩く」110 を1つずつ重く数えるため(この曲の同時押しは左右に離れた両手で取る形、
   // 押さえているのはゆっくり動く長いスライドが多く、数ほど難しくない)
   sheriruth:Object.freeze({MASTER:35}),
+  // デバッグの試作の枠の HELL も、曲の名前(試作の枠の songId)で書ける(2026-10-11 社長「ヘル2つの難易度は、両方デバッグしてみたときにまた数値の調整はすると思う」)。
+  // 書いた値が表示に出る(rhythm-hell-mix.js が譜面の Lv. に書く)。式の値(空中を地上と見なした Lv. の SKY_LEVEL_FACTOR 倍)は消えずに検査で並べて出る。
+  // 例: sheriruth_hell_debug:Object.freeze({HELL:50}), grievous_lady_hell:Object.freeze({MASTER:55}),
 });
+// 表示に出す Lv.: 上書き(社長の値)があればそれ、無ければ式の値
+const shownLevel=(songId,difficultyId,chart)=>{const o=LEVEL_OVERRIDES[songId];return o&&Number.isFinite(o[difficultyId])?o[difficultyId]:chartLevel(chart).level;};
 const songLevels=(song,difficulties)=>{
   const out={};
   let previous=null;
@@ -366,7 +371,7 @@ const writeRuntimeLevels=()=>{
 };
 
 module.exports={chartLevel,chartStrain,songLevels,levelFromRaw,loadRuntimeSongs,writeRuntimeLevels,LEVEL_MIN_NOTES,LEVEL_OVERRIDES,
-  LEVEL_ANCHOR,LEVEL_SCALE,LEVEL_GAMMA,LEVEL_MIN,LEVEL_MAX,WORK,SKY_LEVEL_FACTOR,chartHasSky};
+  LEVEL_ANCHOR,LEVEL_SCALE,LEVEL_GAMMA,LEVEL_MIN,LEVEL_MAX,WORK,SKY_LEVEL_FACTOR,chartHasSky,LEVEL_OVERRIDES,shownLevel};
 
 if(require.main===module){
   const verbose=process.argv.includes('--verbose');
