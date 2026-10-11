@@ -5,6 +5,7 @@
 //
 //   node tools/playbot/rhythm-hell-unlock-bot.js            印が偽のときに出ないこと+開く流れ(MASTER を2回演奏・約6分)
 //   node tools/playbot/rhythm-hell-unlock-bot.js --quick    印が偽で出ない・試すと鍵つきで出る・ノーツ数が試作と同じ、まで(演奏しない)
+//   node tools/playbot/rhythm-hell-unlock-bot.js --story    お話を「公開した日に全員へ」(RHYTHM_HELL_STORY_TRIGGER='release')と、空中の道の既定(演奏しない)
 //   --song grievous_lady                                    曲を変える(既定は sheriruth。RHYTHM_HELL_CHARTS にある曲)
 //
 // 確かめること:
@@ -27,6 +28,7 @@ const { touchInputSource } = require('./lib/touch-input');
 const ROOT = path.resolve(__dirname, '..', '..');
 const args = process.argv.slice(2);
 const QUICK = args.includes('--quick');
+const STORY = args.includes('--story');
 const argOf = (name, fallback) => { const i = args.indexOf(`--${name}`); return i >= 0 && args[i + 1] !== undefined ? args[i + 1] : fallback; };
 const SONG_ID = argOf('song', 'sheriruth');
 // 試作の枠で同じ譜面を持っている所(ノーツ数を突き合わせる)
@@ -88,6 +90,50 @@ async function backFromResult(s) {
   return s.page.evaluate(() => ({ story: !!document.querySelector('[role="dialog"][aria-label^="イベント回想: 空まで届くビート"]'), guide: !!document.querySelector('[data-rhythm-hell-guide]') }));
 }
 
+// 起動して HOME まで進む。★s.boot は途中の窓を閉じてしまうので、お話を見るときは自分で進める
+async function bootKeepStory(s) {
+  await s.boot({ toHome: false });
+  await s.tapLabel(/トップ画面へ進む/, 2200);
+}
+const storyShown = (s) => s.page.evaluate(() => !!document.querySelector('[role="dialog"][aria-label^="イベント回想: 空まで届くビート"]'));
+// ほかのお話(タクティクスの導入など)が先に流れたら、人と同じく「スキップ」で進めてから HELL のお話を待つ
+async function waitStory(s, ms) {
+  const t0 = Date.now();
+  while (Date.now() - t0 < ms) {
+    if (await storyShown(s)) return true;
+    await s.page.evaluate(() => { const d = document.querySelector('[role="dialog"][aria-label^="イベント回想: "]'); if (d) [...d.querySelectorAll('button')].find((b) => (b.innerText || '').trim() === 'スキップ')?.click(); });
+    await s.wait(500);
+  }
+  return false;
+}
+// 公開した日に全員へ: MASTER のクリアとは関係なく、HOME に着いたらお話 → 説明を1回だけ
+async function storyScenario(s) {
+  const trig = await s.page.evaluate(() => ({ trigger: RHYTHM_HELL_STORY_TRIGGER, sky: RHYTHM_SKY_LANE_LOOK.id }));
+  ok('お話の流し方の既定は「公開した日に全員へ」(release)', trig.trigger === 'release', trig.trigger);
+  ok('空中の道の既定は「案E はっきり」(em)', trig.sky === 'em', trig.sky);
+  ok('印が偽: HOME に着いてもお話は出ない', !(await waitStory(s, 6000)));
+  await s.page.evaluate(() => localStorage.setItem('mh_rhythm_hell_preview_proto', '1'));
+  await bootKeepStory(s);
+  const shown = await waitStory(s, 20000);
+  ok('印が真(試す): HOME に着くと、MASTER をクリアしていなくてもお話が出る', shown);
+  await s.page.screenshot({ path: path.join(OUT, 'release-story.png') });
+  await s.page.evaluate(() => [...document.querySelectorAll('button')].find((b) => (b.innerText || '').trim() === 'スキップ')?.click());
+  await s.wait(800);
+  ok('お話のあと(飛ばしても)説明が出る', await s.page.evaluate(() => !!document.querySelector('[data-rhythm-hell-guide]')));
+  for (let i = 0; i < 8 && (await s.page.evaluate(() => !!document.querySelector('[data-rhythm-hell-guide]'))); i++) {
+    await s.page.evaluate(() => { const g = document.querySelector('[data-rhythm-hell-guide]'); const b = [...g.querySelectorAll('button')].reverse().find((x) => x.offsetParent); b?.click(); });
+    await s.wait(500);
+  }
+  ok('説明を最後まで進めると閉じる', !(await s.page.evaluate(() => !!document.querySelector('[data-rhythm-hell-guide]'))));
+  const st = await storage(s);
+  ok('既読は試し用のキーに付き、本番のキーには付かない', st.preview === 'true' && st.real === null, `試し用 ${st.preview} / 本番 ${st.real}`);
+  ok('MASTER を遊ばずに済んだ(記録に MASTER のクリアは無い)', !(st.best && st.best.MASTER && st.best.MASTER.clear === true));
+  await bootKeepStory(s);
+  ok('読み込み直しても、お話は2回目は出ない', !(await waitStory(s, 10000)));
+  const sky = await s.page.evaluate(() => RHYTHM_SKY_LANE_LOOK.id);
+  ok('空中の道の既定は、試したあとも em のまま', sky === 'em', sky);
+}
+
 (async () => {
   const playwright = require('playwright');
   const server = await serve();
@@ -95,6 +141,7 @@ async function backFromResult(s) {
   const s = await openSession({ playwright, pageUrl: `http://localhost:${PORT}/monster-hero/index.html`, port: PORT, out: OUT, rand: makeRand(7), persona: 'HELL の開き方', report, viewport: { width: 844, height: 390 } });
   try {
     await prepareVeteran(s, { quiet: true });
+    if (STORY) { await bootKeepStory(s); await s.wait(3000); await storyScenario(s); throw Object.assign(new Error('quick'), { quick: true }); }
     await s.boot();
     // ① 印が偽
     const off = await hellState(s);

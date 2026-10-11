@@ -49,7 +49,8 @@
 ## 予約(Routine)
 
 - `trig_01E2AjPwkuR8jzkQKmPRL8bB` 10/12 2:00 JST: テンポくんの会話へ「全曲 EXPERT 以上のタップ位置の確認」。依頼文の報告先は SESSIONS.md の窓口
-- `trig_017XWi79YrfafB6vykxnKtKv` 毎晩 2:52 JST: 経理部ソロバンくん(新しい会話で SESSIONS.md を読み、長い会話の交代と報告)
+- `trig_01FuvY3248Vri3HqfvBmct78` 毎晩 2:52 JST: 窓口の会話へ「毎晩の会話の見張り」(旧ソロバンくん。旧 trig_017XWi79YrfafB6vykxnKtKv は止めた)
+- `trig_01USf7YmdA5gftzJW2JHzYCT` 10/14 10:00 JST: GPU の既定化の前後比べ(この会話へ)
 - 10/14 10:00 JST: GPU の既定化(#2765)の前後を本番の記録で比べる(新しい窓口が自分の会話に send_later で予約し直すこと。SQL は下)
 
 ```sql

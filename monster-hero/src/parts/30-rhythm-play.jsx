@@ -546,7 +546,7 @@ function RhythmSkyStage({plane}){
     <polygon points={plane.floor} fill="url(#mhSkyFloor)"/>
     {/* 空中のレーンの見える化(試作・2026-10-11 社長「空中レーンもうまいこと視覚化できないかな？邪魔にならない程度に」)。
         空中のレーン=地上の判定ラインの道幅(6レーン)をそのまま空中の判定線の高さへ持ち上げた範囲。
-        どの案も演奏の始めに1回置くだけの動かない線・面で、毎コマの描く数は増えない。デバッグの切り替え(RHYTHM_SKY_LANE_LOOK)で選ぶ。既定は「なし」 */}
+        どの案も演奏の始めに1回置くだけの動かない線・面で、毎コマの描く数は増えない。デバッグの切り替え(RHYTHM_SKY_LANE_LOOK)で選ぶ。既定は案E はっきり(RHYTHM_SKY_LANE_LOOK_DEFAULT) */}
     {skyLaneLook==='a'&&<g data-rhythm-sky-lane-look="a">
       <rect x={f(mk[0])} y={f(fr.y-2.4)} width={f(mk[mk.length-1]-mk[0])} height="3.6" fill="rgb(226,232,240)" fillOpacity=".07"/>
       <line x1={f(mk[0])} y1={f(fr.y-2.4)} x2={f(mk[mk.length-1])} y2={f(fr.y-2.4)} stroke="rgb(226,232,240)" strokeOpacity=".2" strokeWidth="1" vectorEffect="non-scaling-stroke"/>
@@ -613,10 +613,12 @@ function RhythmHellPreviewSwitch({onChange}){
       <button type="button" data-rhythm-hell-preview-reset onClick={resetSeen} className="min-h-[44px] rounded-xl bg-slate-700 text-[10px] font-black text-white">試したお話を未読に</button>
     </div></div>;
 }
-// 空中のレーンの見える化の案(デバッグ専用・2026-10-11)。保存は新しいキー mh_sky_lane_look_proto だけ。既定は「なし」(いままで)
-const RHYTHM_SKY_LANE_LOOK_LABELS=Object.freeze({none:'いま(なし)',a:'案A 判定線に薄い帯',b:'案B 区切りの目盛り',c:'案C 地上から細い柱',d1l:'案D1 面+端の柱(薄め)',d1m:'案D1 面+端の柱(やや見える)',d2l:'案D2 面+全部の柱(薄め)',d2m:'案D2 面+全部の柱(やや見える)',el:'案E 空中の道(薄め)',em:'案E 空中の道(はっきり)',elp:'案E 空中の道(薄め)+奥の柱'});
-const RHYTHM_SKY_LANE_LOOK={id:(()=>{try{const v=typeof localStorage!=='undefined'?localStorage.getItem('mh_sky_lane_look_proto'):'';return v&&RHYTHM_SKY_LANE_LOOK_LABELS[v]?v:'none';}catch(e){return 'none';}})(),
-  set(id){const v=RHYTHM_SKY_LANE_LOOK_LABELS[id]?id:'none';this.id=v;try{if(v==='none')localStorage.removeItem('mh_sky_lane_look_proto');else localStorage.setItem('mh_sky_lane_look_proto',v);}catch(e){}}};
+// 空中のレーンの見える化の案(デバッグ専用・2026-10-11)。保存は新しいキー mh_sky_lane_look_proto だけ。
+// 既定は「案E 空中の道(はっきり)」(2026-10-12 社長の決定)。既定と同じ案を選んだときはキーを消し、ほかの案(「なし」も)を選んだときだけ残す
+const RHYTHM_SKY_LANE_LOOK_DEFAULT='em';
+const RHYTHM_SKY_LANE_LOOK_LABELS=Object.freeze({none:'なし',a:'案A 判定線に薄い帯',b:'案B 区切りの目盛り',c:'案C 地上から細い柱',d1l:'案D1 面+端の柱(薄め)',d1m:'案D1 面+端の柱(やや見える)',d2l:'案D2 面+全部の柱(薄め)',d2m:'案D2 面+全部の柱(やや見える)',el:'案E 空中の道(薄め)',em:'案E 空中の道(はっきり・既定)',elp:'案E 空中の道(薄め)+奥の柱'});
+const RHYTHM_SKY_LANE_LOOK={id:(()=>{try{const v=typeof localStorage!=='undefined'?localStorage.getItem('mh_sky_lane_look_proto'):'';return v&&RHYTHM_SKY_LANE_LOOK_LABELS[v]?v:RHYTHM_SKY_LANE_LOOK_DEFAULT;}catch(e){return RHYTHM_SKY_LANE_LOOK_DEFAULT;}})(),
+  set(id){const v=RHYTHM_SKY_LANE_LOOK_LABELS[id]?id:RHYTHM_SKY_LANE_LOOK_DEFAULT;this.id=v;try{if(v===RHYTHM_SKY_LANE_LOOK_DEFAULT)localStorage.removeItem('mh_sky_lane_look_proto');else localStorage.setItem('mh_sky_lane_look_proto',v);}catch(e){}}};
 function RhythmSkyLaneLookSwitch(){
   const [value,setValue]=useState(()=>RHYTHM_SKY_LANE_LOOK.id);
   const pick=v=>{RHYTHM_SKY_LANE_LOOK.set(v);setValue(RHYTHM_SKY_LANE_LOOK.id);};
