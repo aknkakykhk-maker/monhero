@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c426a7d4d479e4fc
+// generated-sha256: c7862625aad861ce
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-12 05:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-12 05:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8510,11 +8510,14 @@ const RHYTHM_HELL_STORY_ID = 'rhythm_hell_story';
 const RHYTHM_HELL_STORY_SEEN_PREVIEW_KEY = 'mh_rhythm_hell_story_seen_preview_proto';
 const rhythmHellStorySeenKey = () => (typeof rhythmHellReleased === 'function' && rhythmHellReleased()) ? RHYTHM_HELL_STORY_SEEN_KEY : RHYTHM_HELL_STORY_SEEN_PREVIEW_KEY;
 // HELL が初めて開いたとき(その曲の MASTER を初めてクリアしたとき)の、お話「空まで届くビート」の流し方(2026-10-12・社長の決定 案A)。
-//   'after-result' … 結果画面を閉じたらすぐ、お話 → 説明(RhythmHellGuide)
-//   'home'         … 次に HOME へ着いたとき(ほかのお知らせの会話と同じ置き方)
+//   'release'      … HELL を公開した日に全員へ。公開後に HOME へ着いたとき、まだ見ていなければ1回だけ(MASTER のクリアとは関係なし)
+//                    (2026-10-12 社長の決定「HELL を公開した日に全員へ」。これが既定)
+//   'after-result' … その曲の MASTER を初めてクリアした結果画面を閉じたらすぐ、お話 → 説明(RhythmHellGuide)
+//   'home'         … その曲の MASTER を初めてクリアしたあと、次に HOME へ着いたとき
 //   'none'         … 流さない(回想からだけ見られる)
-// 一度見たら(飛ばしても)次からは出ない。ここを書き換えるだけで流し方が変わる
-const RHYTHM_HELL_STORY_TRIGGER = 'after-result';
+// 一度見たら(飛ばしても)次からは出ない。既読は mh_rhythm_hell_story_seen_v1(公開前は誰も書けないので、公開の日はまっさら)。
+// デバッグの「公開の印が真だったら」で見たぶんは別のキー(RHYTHM_HELL_STORY_SEEN_PREVIEW_KEY)。ここを書き換えるだけで流し方が変わる
+const RHYTHM_HELL_STORY_TRIGGER = 'release';
 const normalizeAssistantId = (value) => (typeof assistantIdOrDefault === 'function')
   ? assistantIdOrDefault(typeof value === 'string' ? value : null)
   : ((typeof DEFAULT_ASSISTANT_ID !== 'undefined' && DEFAULT_ASSISTANT_ID) || 'mua');
@@ -19907,7 +19910,7 @@ function RhythmSkyStage({plane}){
     <polygon points={plane.floor} fill="url(#mhSkyFloor)"/>
     {/* 空中のレーンの見える化(試作・2026-10-11 社長「空中レーンもうまいこと視覚化できないかな？邪魔にならない程度に」)。
         空中のレーン=地上の判定ラインの道幅(6レーン)をそのまま空中の判定線の高さへ持ち上げた範囲。
-        どの案も演奏の始めに1回置くだけの動かない線・面で、毎コマの描く数は増えない。デバッグの切り替え(RHYTHM_SKY_LANE_LOOK)で選ぶ。既定は「なし」 */}
+        どの案も演奏の始めに1回置くだけの動かない線・面で、毎コマの描く数は増えない。デバッグの切り替え(RHYTHM_SKY_LANE_LOOK)で選ぶ。既定は案E はっきり(RHYTHM_SKY_LANE_LOOK_DEFAULT) */}
     {skyLaneLook==='a'&&<g data-rhythm-sky-lane-look="a">
       <rect x={f(mk[0])} y={f(fr.y-2.4)} width={f(mk[mk.length-1]-mk[0])} height="3.6" fill="rgb(226,232,240)" fillOpacity=".07"/>
       <line x1={f(mk[0])} y1={f(fr.y-2.4)} x2={f(mk[mk.length-1])} y2={f(fr.y-2.4)} stroke="rgb(226,232,240)" strokeOpacity=".2" strokeWidth="1" vectorEffect="non-scaling-stroke"/>
@@ -19974,10 +19977,12 @@ function RhythmHellPreviewSwitch({onChange}){
       <button type="button" data-rhythm-hell-preview-reset onClick={resetSeen} className="min-h-[44px] rounded-xl bg-slate-700 text-[10px] font-black text-white">試したお話を未読に</button>
     </div></div>;
 }
-// 空中のレーンの見える化の案(デバッグ専用・2026-10-11)。保存は新しいキー mh_sky_lane_look_proto だけ。既定は「なし」(いままで)
-const RHYTHM_SKY_LANE_LOOK_LABELS=Object.freeze({none:'いま(なし)',a:'案A 判定線に薄い帯',b:'案B 区切りの目盛り',c:'案C 地上から細い柱',d1l:'案D1 面+端の柱(薄め)',d1m:'案D1 面+端の柱(やや見える)',d2l:'案D2 面+全部の柱(薄め)',d2m:'案D2 面+全部の柱(やや見える)',el:'案E 空中の道(薄め)',em:'案E 空中の道(はっきり)',elp:'案E 空中の道(薄め)+奥の柱'});
-const RHYTHM_SKY_LANE_LOOK={id:(()=>{try{const v=typeof localStorage!=='undefined'?localStorage.getItem('mh_sky_lane_look_proto'):'';return v&&RHYTHM_SKY_LANE_LOOK_LABELS[v]?v:'none';}catch(e){return 'none';}})(),
-  set(id){const v=RHYTHM_SKY_LANE_LOOK_LABELS[id]?id:'none';this.id=v;try{if(v==='none')localStorage.removeItem('mh_sky_lane_look_proto');else localStorage.setItem('mh_sky_lane_look_proto',v);}catch(e){}}};
+// 空中のレーンの見える化の案(デバッグ専用・2026-10-11)。保存は新しいキー mh_sky_lane_look_proto だけ。
+// 既定は「案E 空中の道(はっきり)」(2026-10-12 社長の決定)。既定と同じ案を選んだときはキーを消し、ほかの案(「なし」も)を選んだときだけ残す
+const RHYTHM_SKY_LANE_LOOK_DEFAULT='em';
+const RHYTHM_SKY_LANE_LOOK_LABELS=Object.freeze({none:'なし',a:'案A 判定線に薄い帯',b:'案B 区切りの目盛り',c:'案C 地上から細い柱',d1l:'案D1 面+端の柱(薄め)',d1m:'案D1 面+端の柱(やや見える)',d2l:'案D2 面+全部の柱(薄め)',d2m:'案D2 面+全部の柱(やや見える)',el:'案E 空中の道(薄め)',em:'案E 空中の道(はっきり・既定)',elp:'案E 空中の道(薄め)+奥の柱'});
+const RHYTHM_SKY_LANE_LOOK={id:(()=>{try{const v=typeof localStorage!=='undefined'?localStorage.getItem('mh_sky_lane_look_proto'):'';return v&&RHYTHM_SKY_LANE_LOOK_LABELS[v]?v:RHYTHM_SKY_LANE_LOOK_DEFAULT;}catch(e){return RHYTHM_SKY_LANE_LOOK_DEFAULT;}})(),
+  set(id){const v=RHYTHM_SKY_LANE_LOOK_LABELS[id]?id:RHYTHM_SKY_LANE_LOOK_DEFAULT;this.id=v;try{if(v===RHYTHM_SKY_LANE_LOOK_DEFAULT)localStorage.removeItem('mh_sky_lane_look_proto');else localStorage.setItem('mh_sky_lane_look_proto',v);}catch(e){}}};
 function RhythmSkyLaneLookSwitch(){
   const [value,setValue]=useState(()=>RHYTHM_SKY_LANE_LOOK.id);
   const pick=v=>{RHYTHM_SKY_LANE_LOOK.set(v);setValue(RHYTHM_SKY_LANE_LOOK.id);};
@@ -47029,6 +47034,8 @@ function MonsterHeroGame() {
   // 難易度 HELL のお話を見たか(RHYTHM_HELL_STORY_SEEN_KEY)と、そのあとの説明(RhythmHellGuide)の今のページ。
   // rhythmHellGuide … null なら出さない。{page, debugList, fromList}(閉じたあとに戻る一覧)
   const [rhythmHellStorySeenFlag, setRhythmHellStorySeenFlag] = useState(false);
+  // 既読を読み終えたか(読む前に「まだ見ていない」と取り違えて流さないため)
+  const [rhythmHellStorySeenLoaded, setRhythmHellStorySeenLoaded] = useState(false);
   const [rhythmHellGuide, setRhythmHellGuide] = useState(null);
   // HELL が初めて開いた演奏の結果画面を閉じたら、お話を流す(RHYTHM_HELL_STORY_TRIGGER が 'after-result' のとき)
   const rhythmHellStoryAfterResultRef = useRef(false);
@@ -49971,6 +49978,16 @@ function MonsterHeroGame() {
     }
     setEventReplay({ id: storyId, step: 0, live: true });
   }, [rhythmEventStoryPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay, battleGuideChecked, battleTutorialStep]);
+  // 難易度 HELL のお話を、公開した日に全員へ1回だけ流す(RHYTHM_HELL_STORY_TRIGGER が 'release'・2026-10-12 社長の決定)。
+  // 公開の印が偽なら何もしない(デバッグの「公開の印が真だったら」では試せる)。流すのは上の「HOME に着いたら流す」の置き方と同じ
+  useEffect(() => {
+    if (RHYTHM_HELL_STORY_TRIGGER !== 'release') return;
+    if (!(typeof rhythmHellOpen === 'function' && rhythmHellOpen())) return;
+    if (!rhythmHellStorySeenLoaded || rhythmHellStorySeenFlag) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
+    if (rhythmEventStoryStartedRef.current.includes(RHYTHM_HELL_STORY_ID)) return;
+    setRhythmEventStoryPending(RHYTHM_HELL_STORY_ID);
+  }, [rhythmHellStorySeenLoaded, rhythmHellStorySeenFlag, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
   // タクティクスバトルの導入も同じ置き方で、HOMEで1度だけ流す。
   // ★ほかの会話が出ているあいだは待つ(重ねて出すと、どちらも読めない)
   useEffect(() => {
@@ -51442,7 +51459,7 @@ function MonsterHeroGame() {
       // 公開前に読むと、まだ見せていないモードの会話を「未読」として抱えることになる
       // 難易度 HELL のお話を見たか。HELL の公開(rhythmHell)のあとだけ読む(公開前は回想にも出さないので要らない)
       if (EVENT_REPLAY_RELEASE_FLAGS.rhythmHell) {
-        try { setRhythmHellStorySeenFlag((await storeGet(rhythmHellStorySeenKey(), false, false)) === true); } catch {}
+        try { setRhythmHellStorySeenFlag((await storeGet(rhythmHellStorySeenKey(), false, false)) === true); setRhythmHellStorySeenLoaded(true); } catch {}
       }
       if (EVENT_REPLAY_RELEASE_FLAGS.tacticsBattle) {
         const tacticsIntroSeen = await storeGet(TACTICS_INTRO_SEEN_KEY, false, false);
@@ -63651,7 +63668,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <RhythmSkyLaneLookSwitch/>
             {/* 難易度 HELL のお話と説明(2026-10-11)。HELL の公開前に社長が確かめるためのもの。見たことにはしない(debug)。
                 デバッグ専用なので更新履歴・ヘルプには載せない */}
-            <section data-debug-rhythm-hell-story className="mb-3 rounded-2xl border border-pink-400/50 bg-pink-950/25 p-3"><h3 className="text-xs font-black text-pink-200">HELL のお話と説明（公開前の確認用）</h3><div className="mt-2 grid grid-cols-2 gap-2"><button type="button" data-debug-rhythm-hell-story-play onClick={()=>setEventReplay({id:RHYTHM_HELL_STORY_ID,step:0,debug:true})} className="min-h-[48px] rounded-xl bg-pink-700 px-2 text-xs font-black text-white">お話を見る（→説明）</button><button type="button" data-debug-rhythm-hell-guide-open onClick={()=>setRhythmHellGuide({page:0})} className="min-h-[48px] rounded-xl bg-slate-700 px-2 text-xs font-black text-white">説明だけ見る</button></div><RhythmHellPreviewSwitch onChange={async()=>{try{setRhythmHellStorySeenFlag((await storeGet(rhythmHellStorySeenKey(),false,false))===true);}catch{}}}/></section>
+            <section data-debug-rhythm-hell-story className="mb-3 rounded-2xl border border-pink-400/50 bg-pink-950/25 p-3"><h3 className="text-xs font-black text-pink-200">HELL のお話と説明（公開前の確認用）</h3><div className="mt-2 grid grid-cols-2 gap-2"><button type="button" data-debug-rhythm-hell-story-play onClick={()=>setEventReplay({id:RHYTHM_HELL_STORY_ID,step:0,debug:true})} className="min-h-[48px] rounded-xl bg-pink-700 px-2 text-xs font-black text-white">お話を見る（→説明）</button><button type="button" data-debug-rhythm-hell-guide-open onClick={()=>setRhythmHellGuide({page:0})} className="min-h-[48px] rounded-xl bg-slate-700 px-2 text-xs font-black text-white">説明だけ見る</button></div><RhythmHellPreviewSwitch onChange={async()=>{try{setRhythmHellStorySeenFlag((await storeGet(rhythmHellStorySeenKey(),false,false))===true);setRhythmHellStorySeenLoaded(true);rhythmEventStoryStartedRef.current=rhythmEventStoryStartedRef.current.filter(id=>id!==RHYTHM_HELL_STORY_ID);}catch{}}}/></section>
             {RHYTHM_PROTO_SONGS.map(song=>{const track=rhythmSongTrack(song);return <section key={song.songId} data-rhythm-proto-song={song.songId} className="mb-3 rounded-2xl border border-rose-400/50 bg-rose-950/25 p-3"><div className="mb-2"><small className="text-[8px] text-rose-300">試作・{song.songId}</small><h3 className="font-black">{song.displayName} <span className="text-xs text-rose-200">{song.subtitle}</span></h3>{song.debugDescription&&<p className="mt-1 text-[10px] font-bold text-amber-200">{song.debugDescription}</p>}<p className="break-all text-[9px] text-slate-400">BGM: {song.bgmTrackId} / {track?.src||'未登録'}</p></div><div className="space-y-2">{RHYTHM_PLAY_DIFFICULTIES.filter(difficulty=>song.difficulties[difficulty.id]?.notes?.length>0).map(difficulty=>{const chart=song.difficulties[difficulty.id];return <button key={difficulty.id} type="button" data-rhythm-proto-start={difficulty.id} className={`min-h-[44px] w-full rounded-xl font-black ${difficulty.id==='HELL'?'bg-red-900 ring-1 ring-red-400/70':'bg-rose-700'}`} onClick={()=>{setRhythmPlay({song,difficulty,from:'proto'});setGameState('RHYTHM_PLAY');}}>{difficulty.id==='HELL'?'HELL をプレイ':'試作をプレイ'}（{difficulty.id} Lv.{chart.level}）</button>})}</div></section>})}
             {/* 公開曲を from:'debug' で演奏する古い縦の一覧(「リズムテストプレイ」)は外した(2026-10-11 社長「むしろそれいらない機能じゃない？」)。
                 終わると自己ベストを保存してしまう作りだった。同じことは上の「全解放の曲えらび」(記録しない)でできる。

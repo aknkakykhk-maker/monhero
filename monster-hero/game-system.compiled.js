@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 46f474de20f15fee
+// source-sha256: 848d607c64d6548f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-12 05:20";
+const BUILD_DATE = "2026-10-12 05:27";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -11876,7 +11876,7 @@ const RHYTHM_HELL_STORY_SEEN_KEY = 'mh_rhythm_hell_story_seen_v1';
 const RHYTHM_HELL_STORY_ID = 'rhythm_hell_story';
 const RHYTHM_HELL_STORY_SEEN_PREVIEW_KEY = 'mh_rhythm_hell_story_seen_preview_proto';
 const rhythmHellStorySeenKey = () => typeof rhythmHellReleased === 'function' && rhythmHellReleased() ? RHYTHM_HELL_STORY_SEEN_KEY : RHYTHM_HELL_STORY_SEEN_PREVIEW_KEY;
-const RHYTHM_HELL_STORY_TRIGGER = 'after-result';
+const RHYTHM_HELL_STORY_TRIGGER = 'release';
 const normalizeAssistantId = value => typeof assistantIdOrDefault === 'function' ? assistantIdOrDefault(typeof value === 'string' ? value : null) : typeof DEFAULT_ASSISTANT_ID !== 'undefined' && DEFAULT_ASSISTANT_ID || 'mua';
 const ASSISTANT_BOND_KEY = 'mh_assistant_bond_v1';
 const assistantBondKeyFor = assistantId => {
@@ -31343,8 +31343,9 @@ function RhythmHellPreviewSwitch({
     className: "min-h-[44px] rounded-xl bg-slate-700 text-[10px] font-black text-white"
   }, "試したお話を未読に")));
 }
+const RHYTHM_SKY_LANE_LOOK_DEFAULT = 'em';
 const RHYTHM_SKY_LANE_LOOK_LABELS = Object.freeze({
-  none: 'いま(なし)',
+  none: 'なし',
   a: '案A 判定線に薄い帯',
   b: '案B 区切りの目盛り',
   c: '案C 地上から細い柱',
@@ -31353,23 +31354,23 @@ const RHYTHM_SKY_LANE_LOOK_LABELS = Object.freeze({
   d2l: '案D2 面+全部の柱(薄め)',
   d2m: '案D2 面+全部の柱(やや見える)',
   el: '案E 空中の道(薄め)',
-  em: '案E 空中の道(はっきり)',
+  em: '案E 空中の道(はっきり・既定)',
   elp: '案E 空中の道(薄め)+奥の柱'
 });
 const RHYTHM_SKY_LANE_LOOK = {
   id: (() => {
     try {
       const v = typeof localStorage !== 'undefined' ? localStorage.getItem('mh_sky_lane_look_proto') : '';
-      return v && RHYTHM_SKY_LANE_LOOK_LABELS[v] ? v : 'none';
+      return v && RHYTHM_SKY_LANE_LOOK_LABELS[v] ? v : RHYTHM_SKY_LANE_LOOK_DEFAULT;
     } catch (e) {
-      return 'none';
+      return RHYTHM_SKY_LANE_LOOK_DEFAULT;
     }
   })(),
   set(id) {
-    const v = RHYTHM_SKY_LANE_LOOK_LABELS[id] ? id : 'none';
+    const v = RHYTHM_SKY_LANE_LOOK_LABELS[id] ? id : RHYTHM_SKY_LANE_LOOK_DEFAULT;
     this.id = v;
     try {
-      if (v === 'none') localStorage.removeItem('mh_sky_lane_look_proto');else localStorage.setItem('mh_sky_lane_look_proto', v);
+      if (v === RHYTHM_SKY_LANE_LOOK_DEFAULT) localStorage.removeItem('mh_sky_lane_look_proto');else localStorage.setItem('mh_sky_lane_look_proto', v);
     } catch (e) {}
   }
 };
@@ -75923,6 +75924,7 @@ function MonsterHeroGame() {
   const [momosukeIntroStep, setMomosukeIntroStep] = useState(null);
   const [tacticsIntroSeenFlag, setTacticsIntroSeenFlag] = useState(false);
   const [rhythmHellStorySeenFlag, setRhythmHellStorySeenFlag] = useState(false);
+  const [rhythmHellStorySeenLoaded, setRhythmHellStorySeenLoaded] = useState(false);
   const [rhythmHellGuide, setRhythmHellGuide] = useState(null);
   const rhythmHellStoryAfterResultRef = useRef(false);
   const [tacticsIntroPending, setTacticsIntroPending] = useState(false);
@@ -78928,6 +78930,14 @@ function MonsterHeroGame() {
     });
   }, [rhythmEventStoryPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay, battleGuideChecked, battleTutorialStep]);
   useEffect(() => {
+    if (RHYTHM_HELL_STORY_TRIGGER !== 'release') return;
+    if (!(typeof rhythmHellOpen === 'function' && rhythmHellOpen())) return;
+    if (!rhythmHellStorySeenLoaded || rhythmHellStorySeenFlag) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
+    if (rhythmEventStoryStartedRef.current.includes(RHYTHM_HELL_STORY_ID)) return;
+    setRhythmEventStoryPending(RHYTHM_HELL_STORY_ID);
+  }, [rhythmHellStorySeenLoaded, rhythmHellStorySeenFlag, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  useEffect(() => {
     if (!tacticsIntroPending) return;
     if (!(bootPhase === 'GAME' && gameState === 'HOME' && onboarded && !onboardingPreview && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && !rhythmEventStoryPending && !eventReplay)) return;
     setTacticsIntroPending(false);
@@ -80252,6 +80262,7 @@ function MonsterHeroGame() {
       if (EVENT_REPLAY_RELEASE_FLAGS.rhythmHell) {
         try {
           setRhythmHellStorySeenFlag((await storeGet(rhythmHellStorySeenKey(), false, false)) === true);
+          setRhythmHellStorySeenLoaded(true);
         } catch {}
       }
       if (EVENT_REPLAY_RELEASE_FLAGS.tacticsBattle) {
@@ -98882,6 +98893,8 @@ function MonsterHeroGame() {
       onChange: async () => {
         try {
           setRhythmHellStorySeenFlag((await storeGet(rhythmHellStorySeenKey(), false, false)) === true);
+          setRhythmHellStorySeenLoaded(true);
+          rhythmEventStoryStartedRef.current = rhythmEventStoryStartedRef.current.filter(id => id !== RHYTHM_HELL_STORY_ID);
         } catch {}
       }
     })), RHYTHM_PROTO_SONGS.map(song => {

@@ -370,11 +370,14 @@ const RHYTHM_HELL_STORY_ID = 'rhythm_hell_story';
 const RHYTHM_HELL_STORY_SEEN_PREVIEW_KEY = 'mh_rhythm_hell_story_seen_preview_proto';
 const rhythmHellStorySeenKey = () => (typeof rhythmHellReleased === 'function' && rhythmHellReleased()) ? RHYTHM_HELL_STORY_SEEN_KEY : RHYTHM_HELL_STORY_SEEN_PREVIEW_KEY;
 // HELL が初めて開いたとき(その曲の MASTER を初めてクリアしたとき)の、お話「空まで届くビート」の流し方(2026-10-12・社長の決定 案A)。
-//   'after-result' … 結果画面を閉じたらすぐ、お話 → 説明(RhythmHellGuide)
-//   'home'         … 次に HOME へ着いたとき(ほかのお知らせの会話と同じ置き方)
+//   'release'      … HELL を公開した日に全員へ。公開後に HOME へ着いたとき、まだ見ていなければ1回だけ(MASTER のクリアとは関係なし)
+//                    (2026-10-12 社長の決定「HELL を公開した日に全員へ」。これが既定)
+//   'after-result' … その曲の MASTER を初めてクリアした結果画面を閉じたらすぐ、お話 → 説明(RhythmHellGuide)
+//   'home'         … その曲の MASTER を初めてクリアしたあと、次に HOME へ着いたとき
 //   'none'         … 流さない(回想からだけ見られる)
-// 一度見たら(飛ばしても)次からは出ない。ここを書き換えるだけで流し方が変わる
-const RHYTHM_HELL_STORY_TRIGGER = 'after-result';
+// 一度見たら(飛ばしても)次からは出ない。既読は mh_rhythm_hell_story_seen_v1(公開前は誰も書けないので、公開の日はまっさら)。
+// デバッグの「公開の印が真だったら」で見たぶんは別のキー(RHYTHM_HELL_STORY_SEEN_PREVIEW_KEY)。ここを書き換えるだけで流し方が変わる
+const RHYTHM_HELL_STORY_TRIGGER = 'release';
 const normalizeAssistantId = (value) => (typeof assistantIdOrDefault === 'function')
   ? assistantIdOrDefault(typeof value === 'string' ? value : null)
   : ((typeof DEFAULT_ASSISTANT_ID !== 'undefined' && DEFAULT_ASSISTANT_ID) || 'mua');
