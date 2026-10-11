@@ -529,6 +529,7 @@ function RhythmSkyStage({plane}){
     const k=skyLaneLook.endsWith('m')?{fill:'.1',div:'.22',edge:'.45',postOuter:'.32',postInner:'.1'}:{fill:'.055',div:'.13',edge:'.28',postOuter:'.2',postInner:'.06'};
     return {surface,dividers,k,allPosts:skyLaneLook.startsWith('d2')};
   })();
+  const skyELook=skyLaneLook==='em'?{fill:'.13',div:'.32',edge:'.6'}:skyLaneLook==='el'||skyLaneLook==='elp'?{fill:'.06',div:'.16',edge:'.32',posts:skyLaneLook==='elp'}:null;
   return <svg data-rhythm-sky-stage viewBox="0 0 100 100" preserveAspectRatio="none" style={{position:'absolute',inset:0,width:'100%',height:'100%',pointerEvents:'none',overflow:'visible',zIndex:2}}>
     <style>{`@keyframes mhSkyFlow{from{transform:translateY(-12px)}to{transform:translateY(${f(fr.y)}px)}}[data-rhythm-sky-flow]{animation:mhSkyFlow 1.3s linear infinite}[data-rhythm-sky-flow="2"]{animation-delay:-.65s}@keyframes mhSkyPulse{0%,100%{opacity:.55}50%{opacity:1}}[data-rhythm-sky-pulse]{animation:mhSkyPulse 1.3s ease-in-out infinite}@media (prefers-reduced-motion:reduce){[data-rhythm-sky-flow],[data-rhythm-sky-pulse]{animation:none}}`}</style>
     <defs>
@@ -564,6 +565,16 @@ function RhythmSkyStage({plane}){
       {skyLaneD.dividers.map((pts,k)=><polyline key={k} points={pts} fill="none" stroke="rgb(226,232,240)" strokeOpacity={k===0||k===skyLaneD.dividers.length-1?skyLaneD.k.edge:skyLaneD.k.div} strokeWidth="1" vectorEffect="non-scaling-stroke"/>)}
       {mk.map((x,k)=>(skyLaneD.allPosts||k===0||k===mk.length-1)&&<line key={`p${k}`} x1={f(x)} y1={f(fr.gy)} x2={f(x)} y2={f(fr.y)} stroke="rgb(226,232,240)" strokeOpacity={k===0||k===mk.length-1?skyLaneD.k.postOuter:skyLaneD.k.postInner} strokeWidth="1" vectorEffect="non-scaling-stroke"/>)}
     </g>}
+    {/* 案E(2026-10-11 社長「通常の地上のレーンを空中用に立体的にもう1本出すイメージ」): 地上の道と同じ透視・同じ6レーン・同じ幅の道を、
+        奥(道の上の端)から空中の判定線まで、まるごと空中の高さへ浮かせて描く(形は skyPlane の poly・dividers・leftEdge/rightEdge)。
+        中は半透明で地上の道とノーツが透ける。区切りとふちは地上より細く薄く。el(薄め)/ em(はっきり)、elp は薄め+奥で地上の道とつなぐ柱。
+        演奏の始めに1回置くだけ */}
+    {skyELook&&<g data-rhythm-sky-lane-look={skyLaneLook}>
+      <polygon points={plane.poly} fill="rgb(226,232,240)" fillOpacity={skyELook.fill}/>
+      {plane.dividers.map((pts,k)=><polyline key={k} points={pts} fill="none" stroke="rgb(226,232,240)" strokeOpacity={skyELook.div} strokeWidth=".8" vectorEffect="non-scaling-stroke"/>)}
+      {[plane.leftEdge,plane.rightEdge].map((pts,k)=><polyline key={`e${k}`} points={pts} fill="none" stroke="rgb(226,232,240)" strokeOpacity={skyELook.edge} strokeWidth="1.2" vectorEffect="non-scaling-stroke"/>)}
+      {skyELook.posts&&plane.farPosts.map((a,k)=><line key={`p${k}`} x1={a[0]} y1={a[1]} x2={a[2]} y2={a[3]} stroke="rgb(226,232,240)" strokeOpacity={skyELook.edge} strokeWidth="1" vectorEffect="non-scaling-stroke"/>)}
+    </g>}
     {/* 案Z(2026-10-11・社長の決定): 空中の面・縁・柱・字は無し。空中の判定の線は薄紫の細い線1本だけ
         (6px の淡い帯+中心2px。白は空中のものと押した光だけに使うので、線は白にしない)。
         2026-10-11 社長「空中線が左右に伸びすぎてマスモンにかかってるのが気になる」→ 横いっぱいをやめ、
@@ -585,7 +596,7 @@ function RhythmSkyLiftSwitch(){
 // SKY TAP の見た目の案を切り替える(デバッグ専用・2026-10-11 社長「スカイは透明だけどちょっと見にくい」)。保存は新しいキー mh_sky_box_look_proto だけ。
 // ふつうのプレイ(この画面を通らない)はいまの案Zのまま
 // 空中のレーンの見える化の案(デバッグ専用・2026-10-11)。保存は新しいキー mh_sky_lane_look_proto だけ。既定は「なし」(いままで)
-const RHYTHM_SKY_LANE_LOOK_LABELS=Object.freeze({none:'いま(なし)',a:'案A 判定線に薄い帯',b:'案B 区切りの目盛り',c:'案C 地上から細い柱',d1l:'案D1 面+端の柱(薄め)',d1m:'案D1 面+端の柱(やや見える)',d2l:'案D2 面+全部の柱(薄め)',d2m:'案D2 面+全部の柱(やや見える)'});
+const RHYTHM_SKY_LANE_LOOK_LABELS=Object.freeze({none:'いま(なし)',a:'案A 判定線に薄い帯',b:'案B 区切りの目盛り',c:'案C 地上から細い柱',d1l:'案D1 面+端の柱(薄め)',d1m:'案D1 面+端の柱(やや見える)',d2l:'案D2 面+全部の柱(薄め)',d2m:'案D2 面+全部の柱(やや見える)',el:'案E 空中の道(薄め)',em:'案E 空中の道(はっきり)',elp:'案E 空中の道(薄め)+奥の柱'});
 const RHYTHM_SKY_LANE_LOOK={id:(()=>{try{const v=typeof localStorage!=='undefined'?localStorage.getItem('mh_sky_lane_look_proto'):'';return v&&RHYTHM_SKY_LANE_LOOK_LABELS[v]?v:'none';}catch(e){return 'none';}})(),
   set(id){const v=RHYTHM_SKY_LANE_LOOK_LABELS[id]?id:'none';this.id=v;try{if(v==='none')localStorage.removeItem('mh_sky_lane_look_proto');else localStorage.setItem('mh_sky_lane_look_proto',v);}catch(e){}}};
 function RhythmSkyLaneLookSwitch(){
@@ -1038,7 +1049,10 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
         // 空中の判定線の高さで見えている道(地面)の左右の端。線の長さはここに合わせる(2026-10-11 社長: マスモンにかからないように)
         roadL:rhythmProjectBoundary(0,Math.max(0,last.y/100))*100,roadR:rhythmProjectBoundary(RHYTHM_LANE_COUNT,Math.max(0,last.y/100))*100},
       markers:Array.from({length:RHYTHM_LANE_COUNT+1},(_,k)=>rhythmProjectBoundary(k,last.gy/100)*100),
-      posts:[[last.l,last.gy,last.l,last.y],[last.r,last.gy,last.r,last.y]].map(a=>a.map(f))};
+      posts:[[last.l,last.gy,last.l,last.y],[last.r,last.gy,last.r,last.y]].map(a=>a.map(f)),
+      // 奥のほうで地上の道と空中の道をつなぐ柱(案E の elp)。左右のふちの、奥から4割の所
+      // (道の上の端では地上と空中が1点に寄って柱が見えないので、見える所まで手前へ出す)
+      farPosts:(p=>[[p.l,p.gy,p.l,p.y],[p.r,p.gy,p.r,p.y]].map(a=>a.map(f)))(pts[Math.round(steps*.4)])};
   })();
   // 交差の持ち替え(2026-10-11 社長「交差のときは指を置き換えている」)。タッチ側の見回りが2本の SLIDE の指と帯を結び直すとき、
   // 本体の「指→ノーツ」の表(run.activePointers・note.activePointerId)も同じ瞬間に入れ替える。表が想定と違えば断る(タッチ側も結び直さない)
