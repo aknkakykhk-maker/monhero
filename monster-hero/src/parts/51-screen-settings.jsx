@@ -45,7 +45,8 @@ function AssetDownloadPage({ onBack }) {
   return (
     <div data-mh-screen data-asset-download-page className={SCREEN_SHELL_CLASS}>
       <ScreenHead title="ダウンロード" accent="text-emerald-200" onBack={onBack} backLabel="設定へ戻る"/>
-      <div className={`${SCREEN_LIST_CLASS} w-full max-w-md mx-auto space-y-3 pb-4`}>
+      {/* 下の余白(pb-20)は、ハロウィンの画面のかぼちゃの飾り(背景の左右下・高さ約60px)に最後の行が隠れないため */}
+      <div className={`${SCREEN_LIST_CLASS} w-full max-w-md mx-auto space-y-3 pb-20`}>
         <p className="px-1 text-[11px] font-bold leading-relaxed text-slate-300">曲や画像を前もってこの端末に入れておくと、はじめて開く画面や曲がすぐ始まります。アップデートで変わったものだけを入れ直し、古いものは自動で消えます。</p>
         {!asset.supported && (
           <p data-asset-unsupported className="rounded-xl border border-amber-400/40 bg-amber-950/30 px-3 py-2 text-[11px] font-bold leading-relaxed text-amber-100">この端末・ブラウザでは前もって入れておくことができません。ふだんどおり、開いたときに読み込みます。</p>
@@ -87,8 +88,8 @@ function AssetDownloadPage({ onBack }) {
           );
         })}
         <section data-asset-auto className={`${SCREEN_PANEL_CLASS} w-full text-left`}>
-          <b className="block text-[13px] font-black text-slate-200">自動で前もって入れる</b>
-          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">よく使う画面の画像と、曲えらびで選んだ曲・遊んだ曲を、遊んでいないあいだに少しずつ入れます。演奏中は止まります。モバイル回線では少しだけにします。</p>
+          <b className="block text-[13px] font-black text-slate-200">自動ダウンロード</b>
+          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">よく使う画像と、選んだ曲・遊んだ曲を、すきまの時間に少しずつ入れます。演奏中は止まり、モバイル回線では控えめです。</p>
           <div className="mt-2 grid grid-cols-2 gap-2">
             {[{ id: true, label: 'する' }, { id: false, label: 'しない' }].map(option => (
               <button key={String(option.id)} type="button" data-asset-auto-option={String(option.id)} aria-pressed={asset.auto === option.id}
@@ -97,7 +98,7 @@ function AssetDownloadPage({ onBack }) {
             ))}
           </div>
         </section>
-        <p data-asset-usage className="px-1 text-[10px] font-bold leading-relaxed text-slate-400">
+        <p data-asset-usage className={`${SCREEN_PANEL_CLASS} w-full text-left text-[10px] font-bold leading-relaxed text-slate-400`}>
           {Number.isFinite(usage) ? `このゲームがこの端末で使っている容量: 約${formatAssetMB(usage)}。` : ''}
           しばらく遊ばないと、端末が空きを作るために消すことがあります。消えても、開いたときにネットから読み込むので遊べます。セーブデータはここでは消えません。
         </p>

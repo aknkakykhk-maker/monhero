@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8ffdd81d3ecff1e0
+// source-sha256: 5045bd0e2b00da40
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-11 17:53";
+const BUILD_DATE = "2026-10-11 17:59";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -46306,7 +46306,7 @@ function AssetDownloadPage({
     onBack: onBack,
     backLabel: "設定へ戻る"
   }), React.createElement("div", {
-    className: `${SCREEN_LIST_CLASS} w-full max-w-md mx-auto space-y-3 pb-4`
+    className: `${SCREEN_LIST_CLASS} w-full max-w-md mx-auto space-y-3 pb-20`
   }, React.createElement("p", {
     className: "px-1 text-[11px] font-bold leading-relaxed text-slate-300"
   }, "曲や画像を前もってこの端末に入れておくと、はじめて開く画面や曲がすぐ始まります。アップデートで変わったものだけを入れ直し、古いものは自動で消えます。"), !asset.supported && React.createElement("p", {
@@ -46383,9 +46383,9 @@ function AssetDownloadPage({
     className: `${SCREEN_PANEL_CLASS} w-full text-left`
   }, React.createElement("b", {
     className: "block text-[13px] font-black text-slate-200"
-  }, "自動で前もって入れる"), React.createElement("p", {
+  }, "自動ダウンロード"), React.createElement("p", {
     className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "よく使う画面の画像と、曲えらびで選んだ曲・遊んだ曲を、遊んでいないあいだに少しずつ入れます。演奏中は止まります。モバイル回線では少しだけにします。"), React.createElement("div", {
+  }, "よく使う画像と、選んだ曲・遊んだ曲を、すきまの時間に少しずつ入れます。演奏中は止まり、モバイル回線では控えめです。"), React.createElement("div", {
     className: "mt-2 grid grid-cols-2 gap-2"
   }, [{
     id: true,
@@ -46402,7 +46402,7 @@ function AssetDownloadPage({
     className: `min-h-[48px] rounded-xl px-1 py-1.5 text-[12px] font-black active:scale-95 ${asset.auto === option.id ? 'border border-cyan-400 bg-cyan-600 text-white' : 'border border-white/10 bg-slate-950 text-slate-300'}`
   }, option.label)))), React.createElement("p", {
     "data-asset-usage": true,
-    className: "px-1 text-[10px] font-bold leading-relaxed text-slate-400"
+    className: `${SCREEN_PANEL_CLASS} w-full text-left text-[10px] font-bold leading-relaxed text-slate-400`
   }, Number.isFinite(usage) ? `このゲームがこの端末で使っている容量: 約${formatAssetMB(usage)}。` : '', "しばらく遊ばないと、端末が空きを作るために消すことがあります。消えても、開いたときにネットから読み込むので遊べます。セーブデータはここでは消えません。")));
 }
 function SettingsScreen({
