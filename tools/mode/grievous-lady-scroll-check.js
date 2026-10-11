@@ -17,7 +17,7 @@ vm.runInNewContext(`${fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-m
 this.out={songs:[...RHYTHM_SONGS,...(typeof RHYTHM_PROTO_SONGS!=='undefined'?RHYTHM_PROTO_SONGS:[])],rhythmScrollSet,rhythmScrollPos,rhythmScrollEarlyTouches,proj:rhythmProjectTravelProgress};`,ctx);
 const R=ctx.out;
 const TRAVEL={3:5000,4:4000,5:3000,6:2150,7:1680,8:1300,9:1020,10:800};
-const BEAT=60000/210,ZERO=240,ms=b=>ZERO+b*BEAT;
+const BEAT=60000/210,ZERO=2240,ms=b=>ZERO+b*BEAT;
 const WINDOWS=[
   {name:'A',from:56,to:64,refHits:[]},
   {name:'B',from:328,to:336.5,refHits:[]},
