@@ -35,6 +35,17 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-10-11 21:44", type:'update', group:'rhythm', title:'モンヒロビート：新曲「Grievous Lady」を追加しました', status:'new',
+    image: 'images/song-art/grievous-lady.jpg?v=0933a2c340b4',
+    items:[
+      'モンヒロビートに Team Grimoire vs Laur の「Grievous Lady」（2分22秒）を追加しました。曲えらびからすぐ遊べます。',
+      '曲の途中で、ノーツの流れが止まったり、弾んだり、奥へ戻ったりする場面があります。判定のタイミングは音楽どおりなので、音を聞いて叩いてください。',
+      'レベルは EASY Lv.12 ／ NORMAL Lv.16 ／ HARD Lv.22 ／ EXPERT Lv.35 ／ MASTER Lv.50 です。',
+      'ノーツ数は 294 ／ 355 ／ 422 ／ 536 ／ 636 です。',
+    ],
+    assistantNotice: { id:'update_notice_grievous_lady_v1', type:'content' },
+  },
+  {
     date: "2026-10-11 18:55", type:'update', group:'rhythm', title:'モンヒロビート：曲の出だしが軽くなりました', status:'new',
     items:[
       'モンヒロビートで、曲が始まってすぐの数回のタップが重くなり、画面の動きが一瞬つかえることがありました。押したときの処理を軽くし、曲の出だしから途中と同じ軽さで叩けるようにしました。',

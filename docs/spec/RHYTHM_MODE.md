@@ -8503,3 +8503,17 @@ songId `anima` / bgmTrackId `melo_anima` / 譜面は MHB CHART ENGINE Rev.28。
 - **モンスターノーツ**: 5難易度とも4個ちょうど（生成器のまま。`rhythm-monster-four-check` OK）
 - **押せるか**: 両手のシミュレートで5難易度とも押せない0。横持ちの物差し（`rhythm-ref-tiers.js --song`）は EASY・NORMAL 0、
   HARD 届きにくい2、EXPERT 押せない1・交差8・届きにくい13、MASTER 押せない2・交差9・届きにくい21 で、既存の自動生成曲（ANiMA・crossing field・Rising Hope など）と同じ水準（統括部長の判断で譜面は削らない）
+
+## 「Grievous Lady」をモンヒロビートへ足した（2026-10-11）
+
+統括部長経由の依頼（Team Grimoire vs Laur・mp4 と参考譜面の動画・ジャケット1枚）。songId `grievous_lady`、BGM `melo_grievous_lady`（`creator:'Team Grimoire vs Laur'`）。
+音源の頭に2秒の無音を足し（最初のノーツを2秒より後にする）、210BPM・拍0=2240ms で解析した。
+
+- **譜面:** 参考譜面の動画から読み取った下書き（`tools/mode/rhythm-ref-*`・写しは `ref-work/` にだけ置く）を、横持ちの親指2本で押せる形に直して5難易度にした。
+  MASTER は参考の帯（アーク）を地上のスライドにし、交差する所は左右に分けた。薄い区間は音の立ち上がりにタップを足した。
+  レベル EASY 12 ／ NORMAL 16 ／ HARD 22 ／ EXPERT 35 ／ MASTER 50、ノーツ 294 ／ 355 ／ 422 ／ 536 ／ 636、モンスターノーツは各4個
+- **流れの演出:** 速さの表（`GRIEVOUS_LADY_SCROLL_CHANGES`）で、A 拍56〜64（減速しながら奥へ戻る）・B 拍328〜336.5（全部のノーツがそろってばねのように弾む）・
+  C 拍460.3〜463.25（待つ2個は組1・後ろは小さく沈んで戻る）。動く量は `'GLIDE'`（道の割合・ノーツ速度によらない・折り返しは速さ0）で書き、
+  着いた瞬間にふだんの速さへ段差なしでつなぐ。判定の時刻は音楽どおり。見張りは `tools/mode/grievous-lady-scroll-check.js`
+- **公開:** 地上の5難易度を `RHYTHM_DEMO_SONG_IDS` に入れ、公開中の譜面の控え（`rhythm-released-chart-lock.json`）に登録した。
+  HELL（空中あり・`grievous_lady_hell`）は `RHYTHM_PROTO_SONGS` のままデバッグ専用（`RELEASE_FLAGS.rhythmHell` は偽のまま）

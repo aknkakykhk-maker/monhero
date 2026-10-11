@@ -195,7 +195,12 @@
   "against_my_own_shadow/normal": "943a5232253b15a6",
   "against_my_own_shadow/hard": "ed91a70ce36c7cd8",
   "against_my_own_shadow/expert": "d65b891331b3df8c",
-  "against_my_own_shadow/master": "d3307acba6c515fd"
+  "against_my_own_shadow/master": "d3307acba6c515fd",
+  "grievous_lady/easy": "cfa4eb1fdc8a6145",
+  "grievous_lady/normal": "bb395c39cce17651",
+  "grievous_lady/hard": "406cee60ab2fb116",
+  "grievous_lady/expert": "e0ab70ed9b827bc2",
+  "grievous_lady/master": "a83cca959a1c5593"
  },
  "history": [
   {
@@ -208,6 +213,17 @@
    "reason": "Sheriruth MASTER を交差きつめ版へ差し替え(社長の OK)。44.335秒のタップは巻き添えで動いたが、押せない速すぎる2音の直しとして社長の OK で残す(ノーツ数・時刻・ランキングは不変)",
    "changed": [
     "sheriruth/master"
+   ]
+  },
+  {
+   "at": "2026-10-11 21:44",
+   "reason": "Grievous Lady の地上の5難易度を公開(社長「マスターまでは実装ok」・2026-10-11)",
+   "changed": [
+    "grievous_lady/easy",
+    "grievous_lady/normal",
+    "grievous_lady/hard",
+    "grievous_lady/expert",
+    "grievous_lady/master"
    ]
   }
  ]
