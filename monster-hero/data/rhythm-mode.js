@@ -30803,6 +30803,15 @@ const RHYTHM_SLIDE_DIM=Object.freeze({rgb:'6,4,18',alpha:.5});
 // (道の大きさを測る・ノーツの canvas の描き込み先を作る・板と光を初めて描く)を、曲の前の幕のあいだに済ませる。
 // デバッグ画面「演奏前の準備(検証用)」で出し入れする。'on' = する・'off' = しない・未設定 = 既定(する)。
 // 2026-10-11 社長の決定で既定を「する」にした(入れながら実機の stats.frame の startOver50・prepWaitMs を見て改良する)。何かあれば 'off' で戻せる
+// 叩いたときの光を、ふだんの描き方(2D canvas)でもノーツの canvas へ描く(2026-10-11・発熱の調べ)。
+// DOM の光の部品(粒・柱・十字)は CSS のアニメーションで動いていて、合成だけで済まずに毎コマ スタイルの再計算をさせていた
+// (FREEDOM DiVE↓ の6秒で粒だけ 3,450回。docs/perf/RHYTHM_HEAT_BREAKDOWN.md)。canvas 版は WebGL のときに使っている同じ絵。
+// デバッグ画面「叩いたときの光の描き方(検証用)」で出し入れする。'canvas' = canvas で描く・'dom' = 画面の要素で光らせる(今までの 2D)・未設定 = 既定(canvas)。
+// 2026-10-11 社長の判断で既定を canvas にした(DOM 版と並べた静止画を見て)。ノーツの canvas が使えないときは、今までどおり画面の要素で光らせる
+const RHYTHM_CANVAS_HITS_KEY='mh_rhythm_canvas_hits_v1';
+const rhythmCanvasHitsPreference=()=>{try{if(typeof localStorage==='undefined')return '';const v=localStorage.getItem(RHYTHM_CANVAS_HITS_KEY);return v==='canvas'||v==='dom'?v:'';}catch{return '';}};
+const rhythmCanvasHitsActive=()=>rhythmCanvasHitsPreference()!=='dom';
+const rhythmCanvasHitsSetPreference=value=>{const next=value==='canvas'||value==='dom'?value:'';try{if(typeof localStorage!=='undefined'){if(next)localStorage.setItem(RHYTHM_CANVAS_HITS_KEY,next);else localStorage.removeItem(RHYTHM_CANVAS_HITS_KEY);}}catch{}return next;};
 const RHYTHM_PREPARE_KEY='mh_rhythm_prepare_v1';
 const rhythmPreparePreference=()=>{try{if(typeof localStorage==='undefined')return '';const v=localStorage.getItem(RHYTHM_PREPARE_KEY);return v==='on'||v==='off'?v:'';}catch{return '';}};
 const rhythmPrepareSetPreference=value=>{const next=value==='on'||value==='off'?value:'';try{if(typeof localStorage!=='undefined'){if(next)localStorage.setItem(RHYTHM_PREPARE_KEY,next);else localStorage.removeItem(RHYTHM_PREPARE_KEY);}}catch{}return next;};

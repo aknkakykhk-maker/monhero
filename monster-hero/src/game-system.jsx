@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6960507400144435
+// generated-sha256: f184350d22120793
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-11 23:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-12 00:14"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -19879,6 +19879,7 @@ function RhythmSkyStage({plane}){
     const k=skyLaneLook.endsWith('m')?{fill:'.1',div:'.22',edge:'.45',postOuter:'.32',postInner:'.1'}:{fill:'.055',div:'.13',edge:'.28',postOuter:'.2',postInner:'.06'};
     return {surface,dividers,k,allPosts:skyLaneLook.startsWith('d2')};
   })();
+  const skyELook=skyLaneLook==='em'?{fill:'.13',div:'.32',edge:'.6'}:skyLaneLook==='el'||skyLaneLook==='elp'?{fill:'.06',div:'.16',edge:'.32',posts:skyLaneLook==='elp'}:null;
   return <svg data-rhythm-sky-stage viewBox="0 0 100 100" preserveAspectRatio="none" style={{position:'absolute',inset:0,width:'100%',height:'100%',pointerEvents:'none',overflow:'visible',zIndex:2}}>
     <style>{`@keyframes mhSkyFlow{from{transform:translateY(-12px)}to{transform:translateY(${f(fr.y)}px)}}[data-rhythm-sky-flow]{animation:mhSkyFlow 1.3s linear infinite}[data-rhythm-sky-flow="2"]{animation-delay:-.65s}@keyframes mhSkyPulse{0%,100%{opacity:.55}50%{opacity:1}}[data-rhythm-sky-pulse]{animation:mhSkyPulse 1.3s ease-in-out infinite}@media (prefers-reduced-motion:reduce){[data-rhythm-sky-flow],[data-rhythm-sky-pulse]{animation:none}}`}</style>
     <defs>
@@ -19914,6 +19915,16 @@ function RhythmSkyStage({plane}){
       {skyLaneD.dividers.map((pts,k)=><polyline key={k} points={pts} fill="none" stroke="rgb(226,232,240)" strokeOpacity={k===0||k===skyLaneD.dividers.length-1?skyLaneD.k.edge:skyLaneD.k.div} strokeWidth="1" vectorEffect="non-scaling-stroke"/>)}
       {mk.map((x,k)=>(skyLaneD.allPosts||k===0||k===mk.length-1)&&<line key={`p${k}`} x1={f(x)} y1={f(fr.gy)} x2={f(x)} y2={f(fr.y)} stroke="rgb(226,232,240)" strokeOpacity={k===0||k===mk.length-1?skyLaneD.k.postOuter:skyLaneD.k.postInner} strokeWidth="1" vectorEffect="non-scaling-stroke"/>)}
     </g>}
+    {/* 案E(2026-10-11 社長「通常の地上のレーンを空中用に立体的にもう1本出すイメージ」): 地上の道と同じ透視・同じ6レーン・同じ幅の道を、
+        奥(道の上の端)から空中の判定線まで、まるごと空中の高さへ浮かせて描く(形は skyPlane の poly・dividers・leftEdge/rightEdge)。
+        中は半透明で地上の道とノーツが透ける。区切りとふちは地上より細く薄く。el(薄め)/ em(はっきり)、elp は薄め+奥で地上の道とつなぐ柱。
+        演奏の始めに1回置くだけ */}
+    {skyELook&&<g data-rhythm-sky-lane-look={skyLaneLook}>
+      <polygon points={plane.poly} fill="rgb(226,232,240)" fillOpacity={skyELook.fill}/>
+      {plane.dividers.map((pts,k)=><polyline key={k} points={pts} fill="none" stroke="rgb(226,232,240)" strokeOpacity={skyELook.div} strokeWidth=".8" vectorEffect="non-scaling-stroke"/>)}
+      {[plane.leftEdge,plane.rightEdge].map((pts,k)=><polyline key={`e${k}`} points={pts} fill="none" stroke="rgb(226,232,240)" strokeOpacity={skyELook.edge} strokeWidth="1.2" vectorEffect="non-scaling-stroke"/>)}
+      {skyELook.posts&&plane.farPosts.map((a,k)=><line key={`p${k}`} x1={a[0]} y1={a[1]} x2={a[2]} y2={a[3]} stroke="rgb(226,232,240)" strokeOpacity={skyELook.edge} strokeWidth="1" vectorEffect="non-scaling-stroke"/>)}
+    </g>}
     {/* 案Z(2026-10-11・社長の決定): 空中の面・縁・柱・字は無し。空中の判定の線は薄紫の細い線1本だけ
         (6px の淡い帯+中心2px。白は空中のものと押した光だけに使うので、線は白にしない)。
         2026-10-11 社長「空中線が左右に伸びすぎてマスモンにかかってるのが気になる」→ 横いっぱいをやめ、
@@ -19935,7 +19946,7 @@ function RhythmSkyLiftSwitch(){
 // SKY TAP の見た目の案を切り替える(デバッグ専用・2026-10-11 社長「スカイは透明だけどちょっと見にくい」)。保存は新しいキー mh_sky_box_look_proto だけ。
 // ふつうのプレイ(この画面を通らない)はいまの案Zのまま
 // 空中のレーンの見える化の案(デバッグ専用・2026-10-11)。保存は新しいキー mh_sky_lane_look_proto だけ。既定は「なし」(いままで)
-const RHYTHM_SKY_LANE_LOOK_LABELS=Object.freeze({none:'いま(なし)',a:'案A 判定線に薄い帯',b:'案B 区切りの目盛り',c:'案C 地上から細い柱',d1l:'案D1 面+端の柱(薄め)',d1m:'案D1 面+端の柱(やや見える)',d2l:'案D2 面+全部の柱(薄め)',d2m:'案D2 面+全部の柱(やや見える)'});
+const RHYTHM_SKY_LANE_LOOK_LABELS=Object.freeze({none:'いま(なし)',a:'案A 判定線に薄い帯',b:'案B 区切りの目盛り',c:'案C 地上から細い柱',d1l:'案D1 面+端の柱(薄め)',d1m:'案D1 面+端の柱(やや見える)',d2l:'案D2 面+全部の柱(薄め)',d2m:'案D2 面+全部の柱(やや見える)',el:'案E 空中の道(薄め)',em:'案E 空中の道(はっきり)',elp:'案E 空中の道(薄め)+奥の柱'});
 const RHYTHM_SKY_LANE_LOOK={id:(()=>{try{const v=typeof localStorage!=='undefined'?localStorage.getItem('mh_sky_lane_look_proto'):'';return v&&RHYTHM_SKY_LANE_LOOK_LABELS[v]?v:'none';}catch(e){return 'none';}})(),
   set(id){const v=RHYTHM_SKY_LANE_LOOK_LABELS[id]?id:'none';this.id=v;try{if(v==='none')localStorage.removeItem('mh_sky_lane_look_proto');else localStorage.setItem('mh_sky_lane_look_proto',v);}catch(e){}}};
 function RhythmSkyLaneLookSwitch(){
@@ -20388,7 +20399,10 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
         // 空中の判定線の高さで見えている道(地面)の左右の端。線の長さはここに合わせる(2026-10-11 社長: マスモンにかからないように)
         roadL:rhythmProjectBoundary(0,Math.max(0,last.y/100))*100,roadR:rhythmProjectBoundary(RHYTHM_LANE_COUNT,Math.max(0,last.y/100))*100},
       markers:Array.from({length:RHYTHM_LANE_COUNT+1},(_,k)=>rhythmProjectBoundary(k,last.gy/100)*100),
-      posts:[[last.l,last.gy,last.l,last.y],[last.r,last.gy,last.r,last.y]].map(a=>a.map(f))};
+      posts:[[last.l,last.gy,last.l,last.y],[last.r,last.gy,last.r,last.y]].map(a=>a.map(f)),
+      // 奥のほうで地上の道と空中の道をつなぐ柱(案E の elp)。左右のふちの、奥から4割の所
+      // (道の上の端では地上と空中が1点に寄って柱が見えないので、見える所まで手前へ出す)
+      farPosts:(p=>[[p.l,p.gy,p.l,p.y],[p.r,p.gy,p.r,p.y]].map(a=>a.map(f)))(pts[Math.round(steps*.4)])};
   })();
   // 交差の持ち替え(2026-10-11 社長「交差のときは指を置き換えている」)。タッチ側の見回りが2本の SLIDE の指と帯を結び直すとき、
   // 本体の「指→ノーツ」の表(run.activePointers・note.activePointerId)も同じ瞬間に入れ替える。表が想定と違えば断る(タッチ側も結び直さない)
@@ -20439,7 +20453,9 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
     const onLost=()=>setWebglLost(true);
     if(canvas&&RHYTHM_CANVAS_RENDERER.backend==='webgl')canvas.addEventListener('webglcontextlost',onLost);
     // WebGL で描けたときだけ、叩いたときの光もこの canvas で描く(DOM の部品は動かさない)。2D の canvas・DOM 版は今までどおり
-    RHYTHM_CANVAS_RENDERER.enableHits(RHYTHM_CANVAS_RENDERER.backend==='webgl'?playAreaRef.current:null);
+    // 叩いたときの光: WebGL のときと、2D でも既定(デバッグの「叩いたときの光の描き方」で 画面の要素 を選んでいないとき)は、ノーツの canvas へ描く。
+    // canvas が取れていなければ enableHits が受け付けず、今までどおり画面の要素で光らせる
+    RHYTHM_CANVAS_RENDERER.enableHits(RHYTHM_CANVAS_RENDERER.backend==='webgl'||rhythmCanvasHitsActive()?playAreaRef.current:null);
     // 空中のノーツの弾け方(試作)は、2D の canvas でも canvas で描く(DOM の部品では形を変えられないため)
     RHYTHM_CANVAS_RENDERER.enableSkyHits(playAreaRef.current);
     return()=>{if(canvas)canvas.removeEventListener('webglcontextlost',onLost);RHYTHM_CANVAS_RENDERER.release();};},[canvasNotes,webglNotes]);
@@ -45502,6 +45518,7 @@ function MonsterHeroGame() {
   const [rhythmCanvasPref,setRhythmCanvasPref]=useState(()=>rhythmCanvasNotesPreference());
   const [rhythmGpuBandPref,setRhythmGpuBandPref]=useState(()=>rhythmGpuBandPreference());
   const [rhythmPreparePref,setRhythmPreparePref]=useState(()=>rhythmPreparePreference());
+  const [rhythmCanvasHitsPref,setRhythmCanvasHitsPref]=useState(()=>rhythmCanvasHitsPreference());
   // ホールド・スライドの離しの合図の遅れを、どこまで信じて戻すか(検証用・2026-10-11)。この端末だけの切り替え(mh_rhythm_fix_override_v1)
   const [rhythmReleaseAgeWide,setRhythmReleaseAgeWide]=useState(()=>rhythmTouchFixOn('releaseAgeWide'));
   const [rhythmStageGlPref,setRhythmStageGlPref]=useState(()=>rhythmStageGlPreference());
@@ -63552,6 +63569,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <section data-rhythm-gpu-band-panel className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"><h3 className="text-xs font-black text-cyan-200">スライドの帯の描き方（検証用）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80">「GPU」はスライドの帯（地上・空中・影）の形を譜面を読んだときに一度だけ GPU に置き、毎コマは曲の位置だけ渡して描きます（帯が長い・多い曲で軽くするための試作）。既定（GPU）は、ノーツを WebGL で描いているとき（描画方式が自動で GPU がある端末など）に使います。「GPU（WebGL も）」は描画方式に関係なくノーツを WebGL で描きます（「ノーツの描き方」で canvas・要素を選んでいるときはそちらが勝ちます）。「今の描き方」は使いません。WebGL が使えないときは今の描き方に戻ります。次の演奏から効きます。</p><div className="mt-2 flex gap-2">{[['','既定（GPU）'],['gpu','GPU（WebGL も）'],['off','今の描き方']].map(([value,label])=><button key={value||'default'} type="button" data-rhythm-gpu-band-pref={value||'default'} aria-pressed={rhythmGpuBandPref===value} onClick={()=>setRhythmGpuBandPref(rhythmGpuBandSetPreference(value))} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmGpuBandPref===value?'bg-cyan-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></section>
             {/* 演奏前の準備の切り替え(2026-10-11・修理部・社長「事前読み込みで改善されないの?」)。曲の最初のコマで初めて起きていた重い仕事を、曲の前の幕のあいだに済ませる。
                 2026-10-11 社長の決定で既定を「する」にした。何かあれば「しない」で戻す。見た目は変わらないので更新履歴・ヘルプには載せない */}
+            {/* 叩いたときの光の描き方の切り替え(2026-10-11・修理部・発熱の調べ)。DOM の光の部品は CSS のアニメーションが毎コマ スタイルの再計算をさせていた。
+                canvas 版は WebGL のときに使っている同じ絵。2026-10-11 社長の判断で既定を canvas にした。「画面の要素」で今までの描き方に戻せる */}
+            <section data-rhythm-canvas-hits-panel className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"><h3 className="text-xs font-black text-cyan-200">叩いたときの光の描き方（検証用）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80">「canvas」は、ノーツを叩いたときに判定ラインで弾ける光を、ノーツと同じ canvas へ描きます（WebGL の描き方で使っている絵と同じ）。既定は canvas です。「画面の要素」は今までの描き方（光の部品を画面の要素として動かす。発熱の元になっていた）です。次の演奏から効きます。</p><div className="mt-2 flex gap-2">{[['','既定（canvas）'],['canvas','canvas'],['dom','画面の要素']].map(([value,label])=><button key={value||'default'} type="button" data-rhythm-canvas-hits-pref={value||'default'} aria-pressed={rhythmCanvasHitsPref===value} onClick={()=>setRhythmCanvasHitsPref(rhythmCanvasHitsSetPreference(value))} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmCanvasHitsPref===value?'bg-cyan-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></section>
             <section data-rhythm-prepare-panel className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"><h3 className="text-xs font-black text-cyan-200">演奏前の準備（検証用）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80">「する」は、曲の最初のコマで初めて起きていた重い仕事（道の大きさを測る・ノーツの絵を描く準備）を、曲の前の幕のあいだに済ませます。準備が済むまで幕は閉じません（最長6秒）。次の演奏から効きます。</p><div className="mt-2 flex gap-2">{[['','既定（する）'],['on','する'],['off','しない']].map(([value,label])=><button key={value||'default'} type="button" data-rhythm-prepare-pref={value||'default'} aria-pressed={rhythmPreparePref===value} onClick={()=>setRhythmPreparePref(rhythmPrepareSetPreference(value))} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmPreparePref===value?'bg-cyan-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></section>
             {/* ホールド・スライドを離した合図が遅れて届いたときに、離した時刻をどこまで戻すかの切り替え(2026-10-11 社長「たまに、ちゃんと押しているのに MISS」)。
                 標準は押した合図と同じ 0.08秒まで。社長の iPhone で「広く(0.3秒)」を試してから標準にするか決める。プレイヤーの通常プレイには出ないので更新履歴・ヘルプには載せない */}

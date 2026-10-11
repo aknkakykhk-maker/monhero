@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: bb10cc27bf4ff135
+// source-sha256: 1d2479a5b0b804aa
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-11 23:51";
+const BUILD_DATE = "2026-10-12 00:14";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -31037,6 +31037,16 @@ function RhythmSkyStage({
       allPosts: skyLaneLook.startsWith('d2')
     };
   })();
+  const skyELook = skyLaneLook === 'em' ? {
+    fill: '.13',
+    div: '.32',
+    edge: '.6'
+  } : skyLaneLook === 'el' || skyLaneLook === 'elp' ? {
+    fill: '.06',
+    div: '.16',
+    edge: '.32',
+    posts: skyLaneLook === 'elp'
+  } : null;
   return React.createElement("svg", {
     "data-rhythm-sky-stage": true,
     viewBox: "0 0 100 100",
@@ -31197,6 +31207,38 @@ function RhythmSkyStage({
     strokeOpacity: k === 0 || k === mk.length - 1 ? skyLaneD.k.postOuter : skyLaneD.k.postInner,
     strokeWidth: "1",
     vectorEffect: "non-scaling-stroke"
+  }))), skyELook && React.createElement("g", {
+    "data-rhythm-sky-lane-look": skyLaneLook
+  }, React.createElement("polygon", {
+    points: plane.poly,
+    fill: "rgb(226,232,240)",
+    fillOpacity: skyELook.fill
+  }), plane.dividers.map((pts, k) => React.createElement("polyline", {
+    key: k,
+    points: pts,
+    fill: "none",
+    stroke: "rgb(226,232,240)",
+    strokeOpacity: skyELook.div,
+    strokeWidth: ".8",
+    vectorEffect: "non-scaling-stroke"
+  })), [plane.leftEdge, plane.rightEdge].map((pts, k) => React.createElement("polyline", {
+    key: `e${k}`,
+    points: pts,
+    fill: "none",
+    stroke: "rgb(226,232,240)",
+    strokeOpacity: skyELook.edge,
+    strokeWidth: "1.2",
+    vectorEffect: "non-scaling-stroke"
+  })), skyELook.posts && plane.farPosts.map((a, k) => React.createElement("line", {
+    key: `p${k}`,
+    x1: a[0],
+    y1: a[1],
+    x2: a[2],
+    y2: a[3],
+    stroke: "rgb(226,232,240)",
+    strokeOpacity: skyELook.edge,
+    strokeWidth: "1",
+    vectorEffect: "non-scaling-stroke"
   }))), React.createElement("line", {
     x1: f(fr.roadL - RHYTHM_SKY_LOOK.line.marginPct),
     y1: f(fr.y),
@@ -31259,7 +31301,10 @@ const RHYTHM_SKY_LANE_LOOK_LABELS = Object.freeze({
   d1l: '案D1 面+端の柱(薄め)',
   d1m: '案D1 面+端の柱(やや見える)',
   d2l: '案D2 面+全部の柱(薄め)',
-  d2m: '案D2 面+全部の柱(やや見える)'
+  d2m: '案D2 面+全部の柱(やや見える)',
+  el: '案E 空中の道(薄め)',
+  em: '案E 空中の道(はっきり)',
+  elp: '案E 空中の道(薄め)+奥の柱'
 });
 const RHYTHM_SKY_LANE_LOOK = {
   id: (() => {
@@ -32350,7 +32395,8 @@ const RhythmTapTest = ({
       markers: Array.from({
         length: RHYTHM_LANE_COUNT + 1
       }, (_, k) => rhythmProjectBoundary(k, last.gy / 100) * 100),
-      posts: [[last.l, last.gy, last.l, last.y], [last.r, last.gy, last.r, last.y]].map(a => a.map(f))
+      posts: [[last.l, last.gy, last.l, last.y], [last.r, last.gy, last.r, last.y]].map(a => a.map(f)),
+      farPosts: (p => [[p.l, p.gy, p.l, p.y], [p.r, p.gy, p.r, p.y]].map(a => a.map(f)))(pts[Math.round(steps * .4)])
     };
   })();
   useEffect(() => {
@@ -32416,7 +32462,7 @@ const RhythmTapTest = ({
     }
     const onLost = () => setWebglLost(true);
     if (canvas && RHYTHM_CANVAS_RENDERER.backend === 'webgl') canvas.addEventListener('webglcontextlost', onLost);
-    RHYTHM_CANVAS_RENDERER.enableHits(RHYTHM_CANVAS_RENDERER.backend === 'webgl' ? playAreaRef.current : null);
+    RHYTHM_CANVAS_RENDERER.enableHits(RHYTHM_CANVAS_RENDERER.backend === 'webgl' || rhythmCanvasHitsActive() ? playAreaRef.current : null);
     RHYTHM_CANVAS_RENDERER.enableSkyHits(playAreaRef.current);
     return () => {
       if (canvas) canvas.removeEventListener('webglcontextlost', onLost);
@@ -74528,6 +74574,7 @@ function MonsterHeroGame() {
   const [rhythmCanvasPref, setRhythmCanvasPref] = useState(() => rhythmCanvasNotesPreference());
   const [rhythmGpuBandPref, setRhythmGpuBandPref] = useState(() => rhythmGpuBandPreference());
   const [rhythmPreparePref, setRhythmPreparePref] = useState(() => rhythmPreparePreference());
+  const [rhythmCanvasHitsPref, setRhythmCanvasHitsPref] = useState(() => rhythmCanvasHitsPreference());
   const [rhythmReleaseAgeWide, setRhythmReleaseAgeWide] = useState(() => rhythmTouchFixOn('releaseAgeWide'));
   const [rhythmStageGlPref, setRhythmStageGlPref] = useState(() => rhythmStageGlPreference());
   const [rhythmChartToolsOpened, setRhythmChartToolsOpened] = useState(false);
@@ -98630,6 +98677,22 @@ function MonsterHeroGame() {
       "aria-pressed": rhythmGpuBandPref === value,
       onClick: () => setRhythmGpuBandPref(rhythmGpuBandSetPreference(value)),
       className: `min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmGpuBandPref === value ? 'bg-cyan-400 text-slate-900' : 'border border-white/20 bg-slate-900 text-slate-200'}`
+    }, label)))), React.createElement("section", {
+      "data-rhythm-canvas-hits-panel": true,
+      className: "mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"
+    }, React.createElement("h3", {
+      className: "text-xs font-black text-cyan-200"
+    }, "叩いたときの光の描き方（検証用）"), React.createElement("p", {
+      className: "mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80"
+    }, "「canvas」は、ノーツを叩いたときに判定ラインで弾ける光を、ノーツと同じ canvas へ描きます（WebGL の描き方で使っている絵と同じ）。既定は canvas です。「画面の要素」は今までの描き方（光の部品を画面の要素として動かす。発熱の元になっていた）です。次の演奏から効きます。"), React.createElement("div", {
+      className: "mt-2 flex gap-2"
+    }, [['', '既定（canvas）'], ['canvas', 'canvas'], ['dom', '画面の要素']].map(([value, label]) => React.createElement("button", {
+      key: value || 'default',
+      type: "button",
+      "data-rhythm-canvas-hits-pref": value || 'default',
+      "aria-pressed": rhythmCanvasHitsPref === value,
+      onClick: () => setRhythmCanvasHitsPref(rhythmCanvasHitsSetPreference(value)),
+      className: `min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmCanvasHitsPref === value ? 'bg-cyan-400 text-slate-900' : 'border border-white/20 bg-slate-900 text-slate-200'}`
     }, label)))), React.createElement("section", {
       "data-rhythm-prepare-panel": true,
       className: "mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"
