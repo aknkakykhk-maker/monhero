@@ -43,9 +43,15 @@ const all = pick(part, 'normalizeRhythmBestRecords');
 check('normalizeRhythmBestRecord と normalizeRhythmBestRecords が見つかる', !!one && !!all);
 if (!one || !all) process.exit(1);
 
+const RHYTHM_DIFFICULTIES = ['EASY', 'NORMAL', 'HARD', 'EXPERT', 'MASTER'].map((id) => ({ id }));
+const RHYTHM_PLAY_DIFFICULTIES = [...RHYTHM_DIFFICULTIES, { id: 'HELL' }];
 const ctx = {
-  RHYTHM_SONGS: [{ songId: 'song_a' }, { songId: 'song_b' }],
-  RHYTHM_DIFFICULTIES: ['EASY', 'NORMAL', 'HARD', 'EXPERT', 'MASTER'].map((id) => ({ id })),
+  // song_c だけが HELL の譜面を持つ(6段目は譜面がある曲だけ「知っている難易度」になる)
+  RHYTHM_SONGS: [{ songId: 'song_a', difficulties: {} }, { songId: 'song_b', difficulties: {} }, { songId: 'song_c', difficulties: { HELL: { notes: [1] } } }],
+  RHYTHM_DIFFICULTIES,
+  // data/rhythm-mode.js と同じ定義
+  rhythmSongDifficultyDefs: (song) => RHYTHM_PLAY_DIFFICULTIES.filter(({ id }) =>
+    RHYTHM_DIFFICULTIES.some((d) => d.id === id) || !!(song && song.difficulties && song.difficulties[id])),
   RHYTHM_JUDGMENT_IDS: ['MARVELOUS', 'EXCELLENT', 'GREAT', 'GOOD', 'BAD', 'MISS'],
   Object, Number, Math, Array, JSON, String,
 };
@@ -74,7 +80,12 @@ check('② 知らない難易度の記録がそのまま残る', JSON.stringify(
 check('③ 難易度らしくないキーは残さない', !('lowercase' in out.song_a));
 check('③ オブジェクトでない値は残さない', !('BROKEN' in out.song_a) && !('NULLISH' in out.song_a));
 check('④ 知らない曲の記録はこれまでどおり持たない', !('removed_song' in out), Object.keys(out).join(','));
-check('④ 曲の並びは RHYTHM_SONGS のまま', JSON.stringify(Object.keys(out)) === JSON.stringify(['song_a', 'song_b']));
+check('④ 曲の並びは RHYTHM_SONGS のまま', JSON.stringify(Object.keys(out)) === JSON.stringify(['song_a', 'song_b', 'song_c']));
+// ⑥ HELL(6段目)。譜面がある曲では知っている難易度として読み直し、無い曲には空の記録を足さない
+const hell = JSON.parse(JSON.stringify(normalize({ song_c: { HELL: { bestScore: '1050000', clear: true } } })));
+check('⑥ HELL がある曲は HELL を数に直して読む', hell.song_c.HELL && hell.song_c.HELL.bestScore === 1050000 && hell.song_c.HELL.played === true, JSON.stringify(hell.song_c.HELL));
+check('⑥ HELL が無い曲には HELL の空の記録を足さない', !('HELL' in out.song_a) && !('HELL' in out.song_b));
+check('⑥ HELL の記録が無くても、HELL がある曲では既定値で補う', out.song_c.HELL && out.song_c.HELL.bestScore === 0 && out.song_c.HELL.played === false);
 
 // 読み直しを2回通しても変わらない(保存のたびに崩れていかない)
 const twice = JSON.parse(JSON.stringify(normalize(normalize(saved))));
@@ -82,8 +93,8 @@ check('読み直しを2回通しても同じ', JSON.stringify(twice) === JSON.st
 
 // 何も無い・壊れた保存値
 const empty = JSON.parse(JSON.stringify(normalize(null)));
-check('保存値が無いときは5難易度の既定値だけ', Object.keys(empty.song_a).length === 5);
-check('配列が入っていても落ちない', Object.keys(JSON.parse(JSON.stringify(normalize([1, 2])))).length === 2);
+check('保存値が無いときは5難易度の既定値だけ(HELL がある曲は6つ)', Object.keys(empty.song_a).length === 5 && Object.keys(empty.song_c).length === 6);
+check('配列が入っていても落ちない', Object.keys(JSON.parse(JSON.stringify(normalize([1, 2])))).length === 3);
 
 // ⑤ 保存の入口
 const save = pick(storage, 'saveRhythmBestRecord');

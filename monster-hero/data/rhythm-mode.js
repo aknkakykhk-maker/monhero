@@ -13,6 +13,20 @@ const RHYTHM_DIFFICULTIES = Object.freeze([
   Object.freeze({ id:'EXPERT', maxScore:900000 }),
   Object.freeze({ id:'MASTER', maxScore:1000000 }),
 ]);
+// 6段目の難易度 HELL(2026-10-10・社長の決定。名前はバトルの「Hell」と同じ)。
+// 空中のノーツがある譜面を持つ曲だけに出す(譜面が無い曲は難易度のボタンに出ない)。その曲の MASTER を1回クリアすると開く。
+// ★2026-10-11 時点では公開している曲に HELL の譜面は無い(社長がデバッグで確かめてから公開)。仕組みだけ先に入れてあり、どの曲にも出ない。
+// ★上の RHYTHM_DIFFICULTIES(5難易度)へは入れない。5難易度を前提に数えているもの
+//   (全曲合算・週間・相棒・イベントの上乗せ・ミッション・称号・全国ランキングの合算)の数字を変えないため(社長の選択「含めない」)。
+//   全国ランキングへも送らない(rhythmRankingDifficultyKey が null を返す)。自己ベスト(mh_rhythm_best_v1)には残る
+const RHYTHM_EXTRA_DIFFICULTIES = Object.freeze([
+  Object.freeze({ id:'HELL', maxScore:1100000 }),
+]);
+// 曲えらび・演奏・自己ベストで扱う難易度の全部(5難易度 + HELL)
+const RHYTHM_PLAY_DIFFICULTIES = Object.freeze([...RHYTHM_DIFFICULTIES, ...RHYTHM_EXTRA_DIFFICULTIES]);
+// その曲が持っている難易度(5難易度は全曲・HELL などは譜面がある曲だけ)
+const rhythmSongDifficultyDefs = song => RHYTHM_PLAY_DIFFICULTIES.filter(({id}) =>
+  RHYTHM_DIFFICULTIES.some(d=>d.id===id) || !!(song && song.difficulties && song.difficulties[id]));
 // 判定の幅(ms)。ノーツの時刻からこれだけずれても、その判定になる。
 //
 // 【2026-09-05・実機で遊んだユーザーの指摘でゆるくした】
@@ -1148,9 +1162,31 @@ const RHYTHM_JUDGMENT_LINE_Y={
 // 入力: 空中の段がある譜面だけ、地上と空中の判定ラインの真ん中より上を押した指を「空中」とし、空中のノーツは空中の指でだけ取れる。
 //   スライドは高さを見た目にだけ付け、判定は今までどおり横の位置だけで追う。
 const RHYTHM_SKY_LIFT_RATIO=.16;
+
+// 空中の見た目(案Z・2026-10-11・社長の決定)の色・不透明度・太さを1か所に。描き方(2D の canvas / GPU)はこの値だけを読む(ドライバーくんの GPU の描き方と食い違わないように)。
+// 空中のものは全部「色の無いガラス」(白〜銀)。色が付いていれば地上。長さの単位は CSS px(縦390幅の縦持ち基準)
+const RHYTHM_SKY_LOOK=Object.freeze({
+  arc:Object.freeze({rgb:'214,224,240',alpha:.58,minHalfWidthPx:4.5,edgeAlpha:.6,edgePx:1.2,left:'37,99,235',right:'236,72,153',centerLane:3}), // 帯=手の色(左手=青・右手=桃)で中まで色(58%)・縁と芯は白。手は note.hand、無いときはスライドの点のレーンの平均が centerLane より左なら左  // edge=帯の左右の白い縁(紫の床の上でも「白い帯」に見せる)
+  core:Object.freeze({rgb:'255,255,255',alpha:.9,widthPx:3}),
+  box:Object.freeze({aspect:.2,farDim:.45,fill:'205,218,238',fillAlpha:.16,topAlpha:.62,topRatio:.36,frontFill:'200,215,240',frontAlpha:.4,thickRatio:.3,edge:'255,255,255',edgePx:1.6,minFacePx:5}),
+  shadow:Object.freeze({rgb:'6,3,20',alpha:.22,radiusPx:3,insetPx:3,lineAlpha:.28,fadeRatio:.14}),
+  star:Object.freeze({rgb:'255,255,255',radiusPx:17}),
+  line:Object.freeze({bandRgb:'150,118,235',bandAlpha:.38,bandPx:6,coreRgb:'165,135,245',coreAlpha:.95,corePx:2}),
+  floor:Object.freeze({topRgb:'48,34,108',topAlpha:.55,bottomRgb:'66,46,146',bottomAlpha:.88}),
+});
+// 空中スライドの手(2026-10-11・社長「参考どおり左右で色分け」)。譜面の note.hand('L'|'R')に従う。手が書いてないときは推測せず、
+// スライドの点のレーンの平均が真ん中(RHYTHM_SKY_LOOK.arc.centerLane)より左なら 'L'・そうでなければ 'R' の1つだけで決める
+const rhythmSkyHandOf=note=>{
+  if(note&&(note.hand==='L'||note.hand==='R'))return note.hand;
+  const pts=note&&Array.isArray(note.slidePoints)?note.slidePoints:[];let sum=0,n=0;
+  for(const p of pts){const lane=Number(p&&p.lane);if(Number.isFinite(lane)){sum+=lane;n++;}}
+  return n&&sum/n<RHYTHM_SKY_LOOK.arc.centerLane?'L':'R';
+};
+// 縦画面の空中の高さの差(2026-10-11・社長「中間を作って見比べる」)。デバッグ画面の切り替え(16/25/39%)だけが書く新しい保存キー。ふつうのプレイは書かないので16%のまま
+const rhythmSkyLiftPortrait=()=>{try{const v=Number(localStorage.getItem('mh_sky_lift_portrait_proto'));return v===25?.25:v===39?.39:RHYTHM_SKY_LIFT_RATIO;}catch(e){return RHYTHM_SKY_LIFT_RATIO;}};
 // 横画面では画面の高さが低いので、空中と地上の差を広げる(2026-10-10 社長「モンビーは縦でもできるけど基本は横使い」。
 // 参考動画(横画面)は差が画面の約39%。844×390 で 16% だと 62px しかなく、空中の段がつぶれて見えた)。演奏画面が向きに合わせて set する
-const RHYTHM_SKY_LIFT={ratio:RHYTHM_SKY_LIFT_RATIO,set(landscape){this.ratio=landscape?.25:RHYTHM_SKY_LIFT_RATIO;}};
+const RHYTHM_SKY_LIFT={ratio:RHYTHM_SKY_LIFT_RATIO,set(landscape){this.ratio=landscape?.39:rhythmSkyLiftPortrait();}};
 const rhythmNoteSkyHeight=note=>{const h=Number(note?.skyHeight);return Number.isFinite(h)&&h>0?Math.min(1,h):0;};
 // 毎コマ何百回も呼ばれるので、点の列ごとに1回だけ数えて覚える。演奏中のノーツは譜面のノーツの写しだが、
 // 点の列(slidePoints)は譜面の凍らせた配列をそのまま持つので、それを鍵にする(凍っていない列は覚えずに毎回数える)。
@@ -1746,6 +1782,7 @@ const RHYTHM_SLIDE_TRACKING_BY_DIFFICULTY = Object.freeze({
   HARD:   Object.freeze({ toleranceBonusLanes:.24, graceMs:175 }),
   EXPERT: Object.freeze({ toleranceBonusLanes:.12, graceMs:150 }),
   MASTER: Object.freeze({ toleranceBonusLanes:0,   graceMs:120 }),
+  HELL:   Object.freeze({ toleranceBonusLanes:0,   graceMs:120 }),
 });
 // 保存値も譜面も持たない「そのときの難易度」を判定へ渡すために、演奏を始めるときへ
 // ノーツ1つ1つへ焼き込む(makeRuntimeNotes)。関数の引数を増やさずに済み、
@@ -1935,14 +1972,14 @@ const rhythmSlideExpectedLane=(note,chartTimeMs)=>{
 // 「そのノーツのグレードを決める」ためだけに使う。1つずつノーツとして数えると
 // 満点も最大コンボも変わり、過去の記録と比べられなくなる(運用ルール⑦)。
 const RHYTHM_SLIDE_CHECKPOINT_BASE_MS=Object.freeze({
-  EASY:240, NORMAL:210, HARD:180, EXPERT:150, MASTER:125,
+  EASY:240, NORMAL:210, HARD:180, EXPERT:150, MASTER:125, HELL:125,
 });
 // 曲ごとの調整の物差し。BPMは実行時のデータに無いので、曲と難易度の**両方**を表す
 // 譜面のレベルを使う(同じMASTERでも かぜがそよぐ Lv.15 と SIX ÉTERNEL Lv.39 がある)。
 // 基準は配信中の譜面のレベルの中央値(HARD 13 / EXPERT 18 / MASTER 25)。
 // 基準どおりのレベルなら上の基準値そのまま、それより歯ごたえのある譜面ほど細かくなる。
 const RHYTHM_SLIDE_CHECKPOINT_REFERENCE_LEVEL=Object.freeze({
-  EASY:4, NORMAL:8, HARD:13, EXPERT:18, MASTER:25,
+  EASY:4, NORMAL:8, HARD:13, EXPERT:18, MASTER:25, HELL:25,
 });
 const RHYTHM_SLIDE_CHECKPOINT_MIN_MS=90;
 const RHYTHM_SLIDE_CHECKPOINT_MAX_MS=400;
@@ -24629,6 +24666,166 @@ const sheriruthMasterNotes=((t,h,f,s)=>[
   t(132313,0,3,0),t(132556,3,3,0),
 // </sheriruth-v3-master-notes>
 ])(mhTap,mhHoldV2,mhFlick,mhSlideV2);
+// HELL の譜面(2026-10-11 作り直し・オンプくんの下書き)。社長の決定 案Z(空中は色の無いガラス・地上は今の色・左右は位置)と高さの差39%に合わせ、
+// 同じ親指が段を変えるまで約1.5拍あける・届きにくい移動0・空中と地上の同時押し0(611ノーツ: 地上タップ432・空中タップ115・ホールド28・スライド31・空中スライド5)。
+// T=空中のタップ、S=手の決まったスライド(点ごとの [時刻,レーン,幅,高さ,なめらかさ]・最後は手)
+const sheriruthHellNotes=((t,h,f,s,T,F,S)=>[
+// <sheriruth-v3-hell-notes>
+  t(2820,3,3,0),h(2820,9,3,3306),h(3225,0,3,3630),t(3793,3,3,0),
+  h(3793,6,3,4198),t(4279,6,3,0),t(4766,0,3,0),t(4766,6,3,0),
+  t(4928,0,3,0),t(5333,0,3,0),t(5414,3,3,0),h(5495,0,3,5901),
+  t(5901,6,3,0),t(6387,0,3,0),h(6387,6,3,6793),t(6874,0,3,0),
+  t(6955,3,3,0),t(7360,3,3,0),t(7360,6,3,0),t(7523,3,3,0),
+  t(7685,9,3,0),t(7847,6,3,0),t(8009,6,3,0),t(8171,3,3,0),
+  t(8171,6,3,0),t(8333,3,3,0),t(8496,3,3,0),t(8496,9,3,0),
+  t(8658,3,3,0),t(8820,9,3,0),t(8982,3,3,0),t(8982,9,3,0),
+  t(9144,3,3,0),t(9306,3,3,0),t(9306,6,3,0),t(9469,3,3,0),
+  t(9469,6,3,0),t(9631,6,3,0),t(9631,3,3,0),t(9793,6,3,0),
+  t(9955,0,3,0),t(10117,3,3,0),t(10279,0,3,0),t(10279,3,3,0),
+  t(10442,3,3,0),t(10685,6,3,0),S(10928,11820,[[10928,1,2,0,0],[11009,1.5,2,0,0],[11090,1.5,2,0,0],[11171,2,2,0,0],[11252,2,2,0,0],[11334,2.5,2,0,0],[11415,2.5,2,0,0],[11496,3,2,0,0],[11577,3,2,0,0],[11658,3.5,2,0,0],[11820,3.5,2,0,0]],0,'L'),t(11090,6,3,0),
+  t(11415,9,3,0),t(11739,9,3,0),t(12063,9,3,0),t(12225,0,3,0),
+  t(12225,9,3,0),t(12388,9,3,0),t(12550,9,3,0),h(12631,0,3,12955),
+  t(13036,6,3,0),t(13199,6,3,0),t(13199,3,3,0),t(13523,0,3,0),
+  t(13523,9,3,0),t(13685,9,3,0),t(13685,0,3,0),t(13847,0,3,0),
+  t(14009,6,3,0),t(14172,0,3,0),h(14334,3,3,14658),t(14577,0,3,0),
+  t(14901,0,3,0),t(14982,9,3,0),t(15145,0,3,0),t(15307,0,3,0),
+  t(15469,0,3,0),t(15469,3,3,0),t(15631,0,3,0),h(15793,0,3,16442),
+  t(16118,9,3,0),t(16442,9,3,0),t(16604,3,3,0),t(16766,9,3,0),
+  h(16928,6,3,17334),t(16928,9,3,0),t(17091,9,3,0),t(17415,9,3,0),
+  t(17577,0,3,0),t(17577,9,3,0),t(17820,9,3,0),t(17901,3,3,0),
+  t(18064,9,3,0),t(18226,6,3,0),t(18226,9,3,0),t(18388,6,3,0),
+  T(18874,9,3),T(19037,3,3),T(19199,6,3),T(19199,3,3),
+  T(19361,6,3),T(19361,3,3),T(19686,3,3),T(19686,6,3),
+  T(20010,0,3),T(20010,6,3),T(20172,0,3),T(20334,3,3),
+  T(20578,3,3),T(20659,6,3),T(20740,3,3),T(20902,3,3),
+  T(20902,6,3),T(21064,6,3),T(21145,3,3),T(21307,9,3),
+  T(21469,1,2),T(21631,6,3),T(21631,3,3),T(21794,6,3),
+  T(21794,3,3),T(21956,3,3),T(21956,6,3),S(22118,22442,[[22118,1,2,1,0],[22280,2,2,1,0],[22361,2,2,1,0],[22442,2.5,2,1,0]],0,'L'),
+  T(22118,6,3),T(22280,6,3),T(22604,6,3),T(22604,9,3),
+  T(22767,9,3),t(23334,3,3,0),t(23577,6,3,0),t(23740,6,3,0),
+  T(24064,6,3),S(24388,25605,[[24388,2.5,2,0,0],[24469,3,2,0,0],[24550,3,2,0,0],[24632,3.5,2,0,0],[24713,4,2,0,0],[24794,3.5,2,0,0],[24875,3.5,2,0,0],[25037,2.5,2,0,0],[25442,5,2,0,0],[25605,5,2,0,0]],0,'R'),t(24713,3,3,1),t(25199,3,3,0),
+  S(25442,26578,[[25442,1,2,0,0],[25523,1.5,2,0,0],[25605,1.5,2,0,0],[25686,2,2,0,0],[25767,2,2,0,0],[25848,1.5,2,0,0],[25929,1.5,2,0,0],[26010,1,2,0,0],[26172,2,2,0,0],[26253,2,2,0,0],[26334,2.5,2,0,0],[26415,2,2,0,0],[26497,1.5,2,0,0],[26578,1,2,0,0]],0,'L'),t(25848,6,3,0),t(26172,9,3,0),t(26497,6,3,0),
+  S(26983,27875,[[26983,2.5,2,0,0],[27145,3.5,2,0,0],[27226,3.5,2,0,0],[27307,4,2,0,0],[27388,3.5,2,0,0],[27470,3,2,0,0],[27551,3,2,0,0],[27632,2.5,2,0,0],[27875,4,2,0,0]],0,'R'),S(27956,29253,[[27956,1,2,0,0],[28037,1.5,2,0,0],[28118,1.5,2,0,0],[28199,2,2,0,0],[28361,2,2,0,0],[28443,1.5,2,0,0],[28605,1.5,2,0,0],[28686,2,2,0,0],[28767,2,2,0,0],[28848,2.5,2,0,0],[28929,2.5,2,0,0],[29253,0.5,2,0,0]],0,'L'),t(28118,6,3,0),t(28280,6,3,0),
+  t(28443,6,3,0),t(28767,9,3,0),t(29091,6,3,0),t(29335,6,3,0),
+  S(29497,30145,[[29497,2.5,2,0,0],[29659,2.5,2,0,0],[29740,2.5,2,0,0],[29902,2.5,2,0,0],[29983,2,2,0,0],[30064,2,2,0,0],[30145,1.5,2,0,0]],0,'L'),t(29740,9,3,0),t(30064,6,3,0),t(30226,6,3,0),
+  t(30389,3,3,0),t(30389,6,3,0),S(30551,31524,[[30551,1,2,0,0],[30632,1.5,2,0,0],[30713,1.5,2,0,0],[30794,2,2,0,0],[30956,2,2,0,0],[31037,2.5,2,0,0],[31199,2.5,2,0,0],[31281,3,2,0,0],[31362,3,2,0,0],[31443,3.5,2,0,0],[31524,3.5,2,0,0]],0,'L'),t(30713,6,3,0),
+  t(30875,6,3,0),t(31281,9,3,0),t(31443,9,3,0),t(31605,9,3,0),
+  t(32010,3,3,0),t(32010,9,3,0),t(32335,0,3,0),t(32335,6,3,0),
+  h(32740,3,3,33713),h(32740,6,3,33308),t(33470,6,3,0),T(33794,6,3),
+  S(34037,35335,[[34037,3.5,2,1,0],[34119,3,2,1,0],[34362,1.5,2,1,0],[34524,1.5,2,1,0],[34686,2.5,2,1,0],[34767,2.5,2,1,0],[34929,3.5,2,1,0],[35092,3.5,2,1,0],[35173,4,2,1,0],[35335,4,2,1,0]],0,'R'),T(34443,0,3),T(34929,3,3),T(35092,3,3),
+  t(35740,6,3,0),t(35902,6,3,0),S(36065,38659,[[36065,3.5,2,0,0],[36389,1.5,2,0,0],[37686,1.5,2,0,0],[37848,2.5,2,0,0],[37930,3,2,0,0],[38092,4,2,0,0],[38173,4,2,0,0],[38335,5,2,0,0],[38659,5,2,0,0]],0,'R'),t(36065,3,3,0),
+  t(36389,0,3,0),t(36551,0,3,0),t(36713,0,3,0),t(36875,0,3,0),
+  t(37038,0,3,0),t(37524,0,3,0),t(38011,3,3,0),t(38173,3,3,0),
+  t(38335,3,3,0),t(38497,3,3,0),t(38659,3,3,0),S(38822,40038,[[38822,0.5,2,0,0],[38903,0.5,2,0,0],[38984,1,2,0,0],[39146,1,2,0,0],[39551,3.5,2,0,0],[39713,3.5,2,0,0],[39795,3,2,0,0],[40038,1.5,2,0,0]],0,'L'),
+  t(38822,9,3,0),t(39065,9,3,0),t(39470,9,3,0),t(39632,9,3,0),
+  S(40119,41335,[[40119,4.5,2,0,0],[40281,4.5,2,0,0],[40362,4,2,0,0],[40443,4,2,0,0],[40686,2.5,2,0,0],[40768,2,2,0,0],[40849,1.5,2,0,0],[41092,1.5,2,0,0],[41335,3,2,0,0]],0,'R'),t(40281,3,3,0),t(40605,0,3,0),t(40930,0,3,0),
+  t(41254,0,3,0),S(41497,42633,[[41497,1,2,0,0],[41741,1,2,0,0],[41903,0,2,0,0],[42146,0,2,0,0],[42551,2.5,2,0,0],[42633,3,2,0,0]],0,'L'),t(41578,9,3,0),t(41741,9,3,0),
+  t(42065,6,3,0),t(42389,6,3,0),S(42795,44011,[[42795,4,2,0,0],[42957,4,2,0,0],[43038,4.5,2,0,0],[43119,4.5,2,0,0],[43200,5,2,0,0],[43443,5,2,0,0],[43524,4.5,2,0,0],[43606,4,2,0,0],[44011,1.5,2,0,0]],0,'R'),t(42876,3,3,0),
+  t(43038,3,3,0),t(43362,6,3,0),t(43687,3,3,0),t(44011,0,3,0),
+  t(44173,0,3,0),t(44173,3,3,0),t(44335,3,3,0),S(44416,48795,[[44416,1.5,2,0,0],[44498,2,2,0,0],[44741,3.5,2,0,0],[44903,3.5,2,0,0],[45227,1.5,2,0,0],[45308,1.5,2,0,0],[45389,1,2,0,0],[45471,1,2,0,0],[45552,0.5,2,0,0],[45633,0.5,2,0,0],[46119,3.5,2,0,0],[46362,2,2,0,0],[46444,1.5,2,0,0],[46768,3.5,2,0,0],[48146,3.5,2,0,0],[48227,3,2,0,0],[48309,2.5,2,0,0],[48552,1,2,0,0],[48633,1,2,0,0],[48795,0,2,0,0]],0,'L'),
+  t(44822,9,3,0),t(45146,6,3,0),t(45308,6,3,0),t(45471,6,3,0),
+  t(45795,6,3,0),t(46119,9,3,0),t(46444,6,3,2),t(46768,9,3,0),
+  t(46930,9,3,0),t(47254,9,3,0),t(47417,9,3,0),t(47903,9,3,0),
+  t(48552,6,3,0),t(48714,6,3,0),t(48876,6,3,0),t(49201,0,3,0),
+  t(49363,0,3,0),S(49606,49930,[[49606,4,2,1,0],[49687,3.5,2,1,0],[49768,3.5,2,1,0],[49930,2.5,2,1,0]],0,'R'),T(50011,3,3),T(50336,6,3),
+  T(50498,6,3),t(50741,3,3,0),t(50984,0,3,0),t(51147,6,3,0),
+  t(51309,3,3,0),t(51309,6,3,0),t(51471,6,3,0),t(51471,3,3,0),
+  t(51633,3,3,0),t(51633,6,3,0),t(51795,3,3,0),t(51795,6,3,0),
+  t(51957,3,3,0),t(51957,6,3,0),h(52120,6,3,52849),t(52444,0,3,0),
+  h(52768,3,3,53336),T(53093,9,3),t(53417,0,3,0),t(53579,0,3,0),
+  t(53741,9,3,0),t(53741,0,3,0),t(53903,0,3,0),t(53903,9,3,0),
+  t(54066,0,3,0),t(54066,9,3,0),h(54309,3,3,54714),h(54714,9,3,55039),
+  t(54876,3,3,0),t(55363,3,3,0),t(55363,6,3,0),t(55525,3,3,0),
+  t(55525,6,3,0),t(55687,3,3,0),t(55687,6,3,0),t(55849,3,3,0),
+  t(56012,9,3,0),t(56174,0,3,0),t(56174,9,3,0),t(56336,9,3,0),
+  t(56336,0,3,0),t(56498,9,3,0),t(56498,0,3,0),t(56660,0,3,0),
+  t(56660,9,3,0),t(56823,9,3,0),t(56823,0,3,0),t(56985,0,3,0),
+  t(57147,0,3,0),t(57147,9,3,0),t(57309,0,3,0),t(57309,9,3,0),
+  t(57633,3,3,0),t(57633,9,3,0),t(57796,3,3,0),t(58120,0,3,0),
+  t(58120,3,3,0),t(58282,0,3,0),t(58444,0,3,0),t(58444,9,2,0),
+  t(58606,0,3,0),t(58606,9,3,0),t(58769,0,3,0),t(58769,9,3,0),
+  t(58931,9,3,0),t(59093,3,3,0),t(59255,3,3,0),t(59255,6,3,0),
+  S(59985,60715,[[59985,1,2,0,0],[60390,1,2,0,0],[60552,2,2,0,0],[60634,1.5,2,0,0],[60715,1,2,0,0]],0,'L'),S(60634,62174,[[60634,3,2,0,0],[60715,3.5,2,0,0],[60958,2,2,0,0],[61282,4,2,0,0],[61688,4,2,0,0],[61850,3,2,0,0],[62093,4.5,2,0,0],[62174,4,2,0,0]],0,'R'),t(60877,0,3,0),S(61769,62093,[[61769,1.5,2,0,0],[61850,2,2,0,0],[62093,0.5,2,0,0]],0,'L'),
+  t(62336,0,3,0),t(62336,9,3,0),t(62498,9,3,0),t(62661,0,3,0),
+  t(62823,6,3,0),t(62904,3,3,0),t(62985,6,3,0),t(63147,6,3,0),
+  t(63472,9,3,0),h(63634,3,3,63958),t(63634,9,3,0),t(63958,6,3,0),
+  t(64445,3,3,0),t(64445,6,3,0),t(64607,3,3,0),t(64607,6,3,0),
+  t(64769,3,3,0),t(64850,9,3,0),t(65093,0,3,0),t(65093,6,3,0),
+  t(65418,9,3,0),T(65742,0,3),t(66066,9,3,0),T(66391,0,3),
+  t(67039,9,3,0),t(67201,0,3,0),t(67201,9,3,0),t(67364,9,3,0),
+  t(67445,3,3,0),t(67688,0,3,0),t(67688,6,3,0),t(68012,9,3,0),
+  t(68174,6,3,0),t(68174,9,3,0),t(68337,6,3,0),t(68337,9,3,0),
+  t(68499,9,3,0),t(68823,0,3,0),t(68823,9,3,0),h(68985,9,3,69472),
+  h(69147,0,3,69553),t(69634,6,3,0),t(69796,0,3,0),t(69958,0,3,0),
+  t(69958,9,3,0),t(70121,0,3,0),t(70202,6,3,0),S(70283,71256,[[70283,0.5,2,0,0],[70769,0.5,2,0,0],[70850,1,2,0,0],[71256,1,2,0,0]],0,'L'),
+  t(70445,9,3,0),t(70607,9,3,0),t(70931,6,3,0),t(71094,6,3,0),
+  t(71256,6,3,0),t(71580,3,3,0),t(71580,9,3,0),S(71823,72553,[[71823,4.5,2,0,0],[72148,4.5,2,0,0],[72229,4,2,0,0],[72553,4,2,0,0]],0,'R'),
+  t(71904,6,3,0),t(72229,3,3,0),t(72634,0,3,0),t(72877,3,3,0),
+  t(72877,6,3,0),t(73202,0,3,0),t(73202,9,3,0),t(73364,9,3,0),
+  t(73445,0,3,0),t(73688,3,3,0),t(73688,6,3,0),t(73850,6,3,0),
+  t(74013,0,3,0),t(74175,9,3,0),t(74337,3,3,0),t(74499,9,3,0),
+  t(74742,6,3,0),t(74905,6,3,0),t(75067,9,2,0),t(75229,0,3,0),
+  t(75229,9,3,0),t(75391,0,3,0),t(75472,6,3,0),S(75634,77256,[[75634,2.5,2,0,0],[75715,2,2,0,0],[75797,2,2,0,0],[75878,1.5,2,0,0],[76040,2.5,2,0,0],[76121,2.5,2,0,0],[76445,4.5,2,0,0],[76526,4.5,2,0,0],[76607,5,2,0,0],[76688,5,2,0,0],[76770,4.5,2,0,0],[76851,4,2,0,0],[76932,4,2,0,0],[77013,3.5,2,0,0],[77094,3.5,2,0,0],[77256,2.5,2,0,0]],0,'R'),
+  t(75797,0,3,0),S(75959,77175,[[75959,0.5,2,0,0],[76445,3.5,2,0,0],[76688,3.5,2,0,0],[76770,3,2,0,0],[76851,3,2,0,0],[77013,2,2,0,0],[77094,2,2,0,0],[77175,1.5,2,0,0]],0,'L'),t(77418,0,3,0),t(77418,6,3,0),
+  t(77580,6,3,3),t(77743,3,3,0),t(77743,6,3,0),t(77905,3,3,0),
+  t(77905,6,3,0),S(78148,79851,[[78148,1.5,2,0,0],[78472,3.5,2,0,0],[78553,3.5,2,0,0],[78635,3,2,0,0],[79121,0,2,0,0],[79202,0,2,0,0],[79283,0.5,2,0,0],[79364,0.5,2,0,0],[79445,1,2,0,0],[79526,1,2,0,0],[79608,1.5,2,0,0],[79689,1.5,2,0,0],[79770,2,2,0,0],[79851,2,2,0,0]],0,'L'),t(78148,6,3,0),t(78391,9,3,0),
+  S(78553,79851,[[78553,4.5,2,0,0],[78635,4,2,0,0],[78716,3.5,2,0,0],[78797,3.5,2,0,0],[79040,2,2,0,0],[79121,2,2,0,0],[79202,1.5,2,0,0],[79526,3.5,2,0,0],[79608,3.5,2,0,0],[79689,3,2,0,0],[79851,3,2,0,0]],0,'R'),t(80175,6,3,0),t(80175,9,3,0),t(80337,6,3,0),
+  t(80337,9,3,0),t(80499,6,3,0),t(80499,9,3,0),S(80824,81391,[[80824,2.5,2,0,0],[80986,1.5,2,0,0],[81391,4,2,0,0]],0,'R'),
+  S(80986,81716,[[80986,0.5,2,0,0],[81472,3.5,2,0,0],[81554,3,2,0,0],[81716,2,2,0,0]],0,'L'),t(81554,9,3,0),t(81797,6,3,0),t(81878,3,3,0),
+  t(81959,6,3,0),t(82040,3,3,0),t(82364,3,3,0),t(82446,9,3,0),
+  t(82932,0,3,0),t(82932,9,3,0),t(83256,9,3,0),S(83337,84310,[[83337,1,2,0,0],[83419,1,2,0,0],[83500,1.5,2,0,0],[83581,1.5,2,0,0],[83662,2,2,0,0],[83743,2,2,0,0],[83824,2.5,2,0,0],[83905,2.5,2,0,0],[84148,1,2,0,0],[84229,1,2,0,0],[84310,1.5,2,0,0]],0,'L'),
+  S(83419,84310,[[83419,3.5,2,0,0],[83500,3.5,2,0,0],[83581,3,2,0,0],[83905,5,2,0,0],[83986,5,2,0,0],[84310,3,2,0,0]],0,'R'),t(84554,6,3,0),t(84554,9,3,0),t(84716,6,3,0),
+  t(84716,9,3,0),t(84878,6,3,0),t(84878,9,3,0),t(85040,6,3,0),
+  t(85121,9,3,0),h(85365,6,3,85770),S(85932,86986,[[85932,3.5,2,1,0],[86175,2,2,1,0],[86257,2.5,2,1,0],[86419,3.5,2,1,0],[86500,3,2,1,0],[86662,3,2,1,0],[86743,2.5,2,1,0],[86824,2.5,2,1,0],[86986,3.5,2,1,0]],0,'R'),S(86257,87716,[[86257,1.5,2,1,0],[86338,2,2,1,0],[86500,2,2,1,0],[86581,1.5,2,1,0],[86662,1.5,2,1,0],[86743,1,2,1,0],[86824,1,2,1,0],[87148,3,2,1,0],[87230,3.5,2,1,0],[87392,2.5,2,1,0],[87473,2.5,2,1,0],[87716,1,2,1,0]],0,'L'),
+  T(87311,9,3),T(87635,6,3),T(87797,6,3),T(87878,0,3),
+  T(87960,9,2),T(88122,3,3),T(88284,1,2),T(88365,6,3),
+  T(88527,3,3),T(88527,6,3),t(89176,9,3,0),t(89257,0,3,0),
+  t(89500,6,3,0),S(89662,89905,[[89662,1,2,0,0],[89905,2.5,2,0,0]],0,'L'),t(89662,6,3,0),t(89905,9,3,0),
+  t(90068,6,3,0),t(90230,9,3,0),t(90392,3,3,0),t(90392,9,3,0),
+  t(90554,3,3,0),t(90554,9,3,0),t(90716,9,3,0),t(90797,0,3,0),
+  t(90878,9,3,0),t(90959,0,3,0),h(91203,3,3,91933),T(91608,9,3),
+  t(92176,0,3,0),t(92338,0,3,0),T(92662,9,3),T(93392,3,3),
+  T(93554,3,3),T(93554,9,3),T(93798,3,3),T(93798,6,3),
+  T(94122,6,3),T(94284,0,3),T(94284,6,3),T(94446,6,3),
+  T(94609,3,3),T(94933,9,3),T(95014,3,3),T(95176,9,3),
+  T(95257,6,3),T(95500,9,3),T(95581,6,3),T(95744,6,3),
+  t(96149,6,3,0),t(96392,3,3,0),t(96392,9,3,0),t(96554,3,3,0),
+  t(96717,3,3,0),h(96717,9,3,97041),t(96879,3,3,0),t(97203,0,3,0),
+  t(97203,9,3,0),t(97365,9,3,0),t(97446,3,3,0),t(97527,9,3,0),
+  t(97690,0,3,0),t(97690,9,3,0),t(97852,0,3,0),t(97852,9,3,0),
+  t(98014,9,3,0),t(98014,0,3,0),t(98176,0,3,0),t(98176,9,3,0),
+  t(98419,9,3,0),t(98500,3,3,0),h(98663,3,3,98987),t(99149,9,3,0),
+  t(99311,0,3,0),t(99311,9,3,0),t(99473,0,3,0),t(99473,9,3,0),
+  t(99636,0,3,0),t(99798,6,3,0),t(99960,0,3,0),t(99960,6,3,0),
+  t(100122,0,3,0),t(100122,6,3,0),t(100284,0,3,0),t(100447,9,3,0),
+  t(100609,0,3,0),h(100690,6,3,101176),t(100771,0,3,0),t(101014,3,3,0),
+  T(101420,9,3),T(101582,9,3),t(101906,6,3,0),t(102068,6,3,0),
+  h(102230,6,3,102636),t(102393,3,3,0),t(102636,0,3,0),t(102798,3,3,0),
+  t(102879,0,3,0),t(103041,3,3,0),t(103203,0,3,0),t(103366,0,3,0),
+  h(103366,6,3,103690),t(103852,0,3,0),h(103933,9,3,104582),t(104258,6,3,0),
+  h(104663,0,3,105312),t(104906,6,3,0),t(105149,9,3,0),t(105393,9,3,0),
+  t(105474,0,3,0),t(105717,3,3,0),t(105717,9,3,0),t(105960,6,3,0),
+  t(105960,9,3,0),t(106122,6,3,4),t(106285,6,3,0),t(106366,3,3,0),
+  t(106447,6,3,0),t(106528,3,3,0),t(106609,6,3,0),S(106771,116339,[[106771,4,2,0,0],[106852,4,2,0,0],[107014,3,2,0,0],[107096,2.5,2,0,0],[107258,1.5,2,0,0],[107339,1.5,2,0,0],[107744,4,2,0,0],[107906,4,2,0,0],[107987,3.5,2,0,0],[108069,3.5,2,0,0],[108150,3,2,0,0],[108312,3,2,0,0],[108393,3.5,2,0,0],[108474,3.5,2,0,0],[108555,4,2,0,0],[108636,4,2,0,0],[108717,3.5,2,0,0],[108798,3.5,2,0,0],[108879,3,2,0,0],[108960,3,2,0,0],[109042,3.5,2,0,0],[109123,3.5,2,0,0],[109285,4.5,2,0,0],[109366,4.5,2,0,0],[109447,5,2,0,0],[109609,5,2,0,0],[109690,4.5,2,0,0],[109852,4.5,2,0,0],[109934,4,2,0,0],[110015,3.5,2,0,0],[110096,3.5,2,0,0],[110339,2,2,0,0],[110420,2,2,0,0],[110501,1.5,2,0,0],[110582,1.5,2,0,0],[110663,2,2,0,0],[110744,2,2,0,0],[110825,2.5,2,0,0],[110907,3,2,0,0],[110988,3.5,2,0,0],[111069,3.5,2,0,0],[111150,4,2,0,0],[111231,4,2,0,0],[111312,3.5,2,0,0],[111393,3.5,2,0,0],[111474,3,2,0,0],[111555,3,2,0,0],[111636,3.5,2,0,0],[111717,3.5,2,0,0],[111798,4,2,0,0],[111880,3.5,2,0,0],[111961,3.5,2,0,0],[112123,2.5,2,0,0],[112204,2.5,2,0,0],[112285,2,2,0,0],[112447,2,2,0,0],[112528,1.5,2,0,0],[112690,1.5,2,0,0],[112771,2,2,0,0],[112853,2,2,0,0],[112934,2.5,2,0,0],[113015,2.5,2,0,0],[113096,3,2,0,0],[113420,3,2,0,0],[113501,3.5,2,0,0],[113582,3.5,2,0,0],[113663,4,2,0,0],[113745,4.5,2,0,0],[113826,4.5,2,0,0],[113907,5,2,0,0],[113988,5,2,0,0],[114150,4,2,0,0],[114231,4,2,0,0],[114312,3.5,2,0,0],[114393,3.5,2,0,0],[114474,3,2,0,0],[114555,3.5,2,0,0],[114636,3.5,2,0,0],[114718,4,2,0,0],[114799,3.5,2,0,0],[114880,3.5,2,0,0],[114961,3,2,0,0],[115123,4,2,0,0],[115204,4,2,0,0],[115366,5,2,0,0],[115609,3.5,2,0,0],[115691,3,2,0,0],[115853,4,2,0,0],[115934,4,2,0,0],[116015,4.5,2,0,0],[116339,2.5,2,0,0]],0,'R'),
+  S(107339,115691,[[107339,0.5,2,0,0],[107582,0.5,2,0,0],[107663,1,2,0,0],[107906,1,2,0,0],[107987,1.5,2,0,0],[108069,1.5,2,0,0],[108150,2,2,0,0],[108312,2,2,0,0],[108474,1,2,0,0],[108555,1,2,0,0],[108636,1.5,2,0,0],[108717,1.5,2,0,0],[108798,2,2,0,0],[108960,2,2,0,0],[109042,1.5,2,0,0],[109123,1.5,2,0,0],[109204,1,2,0,0],[109285,1.5,2,0,0],[109366,1.5,2,0,0],[109609,3,2,0,0],[109690,3,2,0,0],[109771,3.5,2,0,0],[109852,3.5,2,0,0],[109934,3,2,0,0],[110258,1,2,0,0],[110339,1,2,0,0],[110420,0.5,2,0,0],[110582,0.5,2,0,0],[110663,0,2,0,0],[110988,0,2,0,0],[111150,1,2,0,0],[111231,1,2,0,0],[111393,2,2,0,0],[111474,2,2,0,0],[111555,1.5,2,0,0],[111636,1.5,2,0,0],[111717,1,2,0,0],[112366,1,2,0,0],[112447,0.5,2,0,0],[112528,0.5,2,0,0],[112609,0,2,0,0],[112690,0.5,2,0,0],[112771,0.5,2,0,0],[112853,1,2,0,0],[112934,1.5,2,0,0],[113015,1.5,2,0,0],[113096,2,2,0,0],[113501,2,2,0,0],[113582,2.5,2,0,0],[113663,2.5,2,0,0],[113745,3,2,0,0],[113907,3,2,0,0],[113988,3.5,2,0,0],[114069,3.5,2,0,0],[114150,3,2,0,0],[114231,3,2,0,0],[114312,2.5,2,0,0],[114393,2.5,2,0,0],[114636,1,2,0,0],[114718,0.5,2,0,0],[114799,0.5,2,0,0],[115042,2,2,0,0],[115123,2,2,0,0],[115204,1.5,2,0,0],[115285,1.5,2,0,0],[115366,1,2,0,0],[115447,1,2,0,0],[115528,1.5,2,0,0],[115609,1.5,2,0,0],[115691,2,2,0,0]],0,'L'),T(116501,0,3),T(117069,3,3),T(117312,9,3),
+  T(117393,0,3),T(117556,0,3),T(117637,9,3),T(117799,3,3),
+  T(117961,9,3),T(118123,9,3),T(118123,3,3),T(118610,0,3),
+  T(118610,9,3),T(118772,9,3),T(118772,0,3),T(118934,0,3),
+  T(118934,9,3),t(119502,9,3,0),t(119664,9,3,0),T(119988,0,3),
+  T(120231,0,3),T(120231,9,3),T(120394,0,3),T(120394,9,3),
+  T(120718,0,3),T(120718,9,3),T(120880,9,3),T(120880,0,3),
+  T(121205,9,3),T(121367,0,3),T(121367,9,3),T(121529,0,3),
+  T(121529,9,3),t(122177,6,3,0),h(122340,3,3,122745),T(122826,9,3),
+  T(122988,0,3),T(122988,9,3),T(123150,0,3),T(123150,9,3),
+  T(123394,9,3),t(123799,3,3,0),T(124123,9,3),T(124610,0,3),
+  T(124610,9,3),T(124772,0,3),T(124772,9,3),t(125583,6,3,0),
+  t(125583,1,2,0),t(125745,0,3,0),t(125907,0,3,0),t(125907,3,3,0),
+  t(126232,3,3,0),t(126313,9,3,0),t(126475,6,3,0),t(126637,9,3,0),
+  t(126718,3,3,0),t(126880,3,3,0),t(126880,9,3,0),t(127043,9,3,0),
+  t(127124,0,3,0),t(127286,9,3,0),S(127367,131989,[[127367,0.5,2,0,0],[128340,0.5,2,0,0],[128421,1,2,0,0],[130043,1,2,0,0],[130124,1.5,2,0,0],[131340,1.5,2,0,0],[131421,2,2,0,0],[131989,2,2,0,0]],0,'L'),t(127448,9,3,0),
+  S(127772,132475,[[127772,4.5,2,0,0],[128826,4.5,2,0,0],[128908,4,2,0,0],[130286,4,2,0,0],[130367,3.5,2,0,0],[131178,3.5,2,0,0],[131259,3,2,0,0],[131989,3,2,0,0],[132070,2.5,2,0,0],[132475,2.5,2,0,0]],0,'R'),t(132313,0,3,0),t(132556,3,3,0)
+// </sheriruth-v3-hell-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
 // 流れる速さの表(2026-10-10 社長の決定「音に合わせて画面が止まって動く演出」を公開版に入れる)。[時刻ms,倍率]。
 // 2026-10-11 社長「参考動画は2回か3回ぐらいテンポに合わせて止まっていて、かっこよかったから真似してほしい」で3回に作り直した。
 // 参考を1コマずつ測り直すと「叩く→止まる」を拍 258.5・260・261.5(この曲の 81959・82446・82932)で3回くり返していた。
@@ -24659,6 +24856,11 @@ const sheriruthCharts=Object.freeze({
   EXPERT:mhChart(7,sheriruthExpertNotes,SHERIRUTH_DURATION_MS,6,{scrollChanges:SHERIRUTH_SCROLL_CHANGES}),
   MASTER:mhChart(9,sheriruthMasterNotes,SHERIRUTH_DURATION_MS,6,{scrollChanges:SHERIRUTH_SCROLL_CHANGES}),
 });
+// 6段目 HELL(空中のノーツあり)。★まだ公開しない(2026-10-11 社長「デバッグで色々見てからやらないとだめ。特に重さをなくして」)。
+// 公開の Sheriruth には入れず、デバッグ画面の試作の枠(RHYTHM_PROTO_SONGS の sheriruth_hell_debug)からだけ遊べる。
+// Lv.47 は tools/mode/rhythm-chart-level.js の式(空中⇄地上の切り替えも数える)で出した値(rhythm-chart-level-check.js が式と一致するか見る)。
+// 公開するときは、sheriruth の difficulties を RHYTHM_PLAY_DIFFICULTIES で回して HELL:sheriruthHellChart を足し、レベル表は --write で出す
+const sheriruthHellChart=mhChart(47,sheriruthHellNotes,SHERIRUTH_DURATION_MS,6,{scrollChanges:SHERIRUTH_SCROLL_CHANGES});
 const GRIEVOUS_LADY_DURATION_MS=141912;
 const grievousLadyEasyNotes=((t,h,f,s)=>[
 // <grievous-lady-v3-easy-notes>
@@ -28721,7 +28923,7 @@ const rhythmSongClimaxAt=(songId,ms)=>{const spans=RHYTHM_SONG_CLIMAX[songId];if
 const RHYTHM_SONGS = Object.freeze(RHYTHM_SONG_ENTRIES.map(song=>{
   const pair=RHYTHM_SWITCHING_CHARTS[song.songId];
   if(!pair)return Object.freeze({...song,
-    difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>
+    difficulties:Object.freeze(Object.fromEntries(rhythmSongDifficultyDefs(song).map(({id})=>
       [id,rhythmChartWithLevel(song.songId,id,rhythmChartOnRoad(song.difficulties[id]))])))});
   // 時刻で入れ替わる曲。**参照するたびに**どちらかを選ぶ（getter）。
   // 選んだ結果は before / after ごとに1回だけ作って覚えるので、毎回の手間は時刻の比較だけ。
@@ -28754,6 +28956,18 @@ const RHYTHM_PROTO_SONGS=Object.freeze([
     bgmTrackId:'melo_sheriruth_proto',
     difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[
       id,rhythmChartOnRoad(id==='MASTER'?mhChart(47,sheriruthProtoMasterNotes,SHERIRUTH_PROTO_DURATION_MS,6,{scrollChanges:SHERIRUTH_PROTO_SCROLL_CHANGES}):emptyRhythmChart())
+    ])))
+  }),
+  // 公開前の6段目 HELL(2026-10-11 社長「HELL は準備まではしても、実装(公開)は勝手にしないで。デバッグで色々見てからやらないとだめ」)。
+  // 社長がデバッグ画面から遊んで確かめるための入口。音源は公開版の Sheriruth と同じ(譜面の時刻も公開版にそろえてある)
+  Object.freeze({
+    songId:'sheriruth_hell_debug',
+    displayName:'Sheriruth',
+    subtitle:'HELL(6段目・公開前)',
+    debugDescription:'公開前の6段目 HELL(空中のノーツあり・Lv.47・611ノーツ)。止まる演出は公開版と同じ。遊んでも自己ベスト・ランキング・報酬には入らない',
+    bgmTrackId:'melo_sheriruth',
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_PLAY_DIFFICULTIES.map(({id})=>[
+      id,rhythmChartOnRoad(id==='HELL'?sheriruthHellChart:emptyRhythmChart())
     ])))
   }),
   // 止まる演出の参考版(2026-10-11 社長「参考動画のようにできないの?」)。社長が本番の版と比べて遊ぶための試作。本番の譜面・表は変えない。
@@ -28907,14 +29121,19 @@ const RHYTHM_DEMO_DIFFICULTY_LABELS=Object.freeze({
   HARD:Object.freeze({name:'HARD', note:'いまの音ゲーでできることをひととおり。SLIDEと長押し中の別ノーツが入ります。'}),
   EXPERT:Object.freeze({name:'EXPERT', note:'同時押しの連なりや指をクロスさせる配置が入ります。'}),
   MASTER:Object.freeze({name:'MASTER', note:'端から端へ動くSLIDEまで、その曲でできることの全部。'}),
+  HELL:Object.freeze({name:'HELL', note:'空中のノーツが入る、いちばん上の難易度。その曲の MASTER をクリアすると開きます。'}),
 });
+// 曲えらびで選べる難易度(5難易度 + HELL)。RHYTHM_DEMO_DIFFICULTY_IDS は5難易度のまま
+// (全国ランキングの合算・イベントの上乗せ・ヘルプの表がそちらを数えるため)
+const RHYTHM_SELECTABLE_DIFFICULTY_IDS=Object.freeze([...RHYTHM_DEMO_DIFFICULTY_IDS,...RHYTHM_EXTRA_DIFFICULTIES.map(d=>d.id)]);
 // EXPERT と MASTER は「同じ曲の HARD をクリアしている」ことが条件。HARD を1回クリアすれば2つとも一度に開く
 // (2026-10-10・社長の選択「いまある曲も HARD 1回で開く」。改善部の提案 K1「全曲の MASTER を開けるのに92回・3〜4時間の遠回り」)。
 // それまでの移り変わり: 2026-09-05 に1段ずつ(HARD→EXPERT、EXPERT→MASTER)で始め、2026-10-09 に新曲だけ HARD で2つとも開くようにした(#2438)。
 // 判定に使うのは既にある自己ベスト(mh_rhythm_best_v1)の clear だけで、新しい保存キーは足さない。
-const RHYTHM_DIFFICULTY_UNLOCK_BY=Object.freeze({EXPERT:'HARD', MASTER:'HARD'});
+// HELL はその曲の MASTER を1回クリアすると開く(2026-10-10・社長の決定)
+const RHYTHM_DIFFICULTY_UNLOCK_BY=Object.freeze({EXPERT:'HARD', MASTER:'HARD', HELL:'MASTER'});
 // 1段ずつのころの条件。これで開いていた難易度(EXPERT のクリアで開いた MASTER)は、いまも開いたままにする(閉じ直さない)
-const RHYTHM_DIFFICULTY_STEP_UNLOCK_BY=Object.freeze({EXPERT:'HARD', MASTER:'EXPERT'});
+const RHYTHM_DIFFICULTY_STEP_UNLOCK_BY=Object.freeze({EXPERT:'HARD', MASTER:'EXPERT', HELL:'MASTER'});
 // 解放に必要な難易度id(いらない難易度はnull)。どの曲でも同じ(songId は前の呼び方のなごり。受け取って使わない)
 const rhythmDifficultyUnlockRequirement=(difficultyId,songId='')=>RHYTHM_DIFFICULTY_UNLOCK_BY[difficultyId]||null;
 // 記録の形が壊れていても「解放されていない」に倒す(勝手に開けない)。
@@ -28949,13 +29168,13 @@ const rhythmDemoSongs=songs=>RHYTHM_DEMO_SONG_IDS
   .filter(Boolean);
 // 体験版で選べる難易度そのもの(曲ごとの絞り込みは rhythmDemoDifficulties が行う)。
 const rhythmDemoDifficultyList=difficulties=>(difficulties||[])
-  .filter(difficulty=>RHYTHM_DEMO_DIFFICULTY_IDS.includes(difficulty.id));
+  .filter(difficulty=>RHYTHM_SELECTABLE_DIFFICULTY_IDS.includes(difficulty.id));
 // 体験版で選べる難易度だけを、譜面が入っているものに限って返す。
 // 譜面が空の難易度をボタンに出すと「押せるのに始まらない」状態になるため。
 const rhythmDemoDifficulties=(song,difficulties)=>{
   if(!song)return [];
   return (difficulties||[]).filter(difficulty=>{
-    if(!RHYTHM_DEMO_DIFFICULTY_IDS.includes(difficulty.id))return false;
+    if(!RHYTHM_SELECTABLE_DIFFICULTY_IDS.includes(difficulty.id))return false;
     const chart=song.difficulties?.[difficulty.id];
     return !!chart&&Array.isArray(chart.notes)&&chart.notes.length>0;
   });
@@ -30541,7 +30760,7 @@ const rhythmCreateGpuSlideBand=(gl,host)=>{
   const BAND_VS='attribute vec4 aPrev;attribute vec4 aCur;attribute vec4 aNext;attribute vec3 aSky;attribute vec4 aMisc;'+
     'uniform vec3 uM0;uniform vec3 uM1;uniform vec2 uView;'+
     'uniform float uSnow;uniform float uTnow;uniform float uTravel;uniform float uSpawnY;uniform float uTravelPx;uniform float uHalfH;uniform float uW;uniform float uH;'+
-    'uniform float uLanes;uniform float uTop;uniform float uCurve;uniform float uRoad;uniform float uFar;uniform float uSkyK;uniform float uGround;uniform float uSize;uniform float uHw;uniform float uG0;uniform float uG1;uniform float uPhase;'+
+    'uniform float uLanes;uniform float uTop;uniform float uCurve;uniform float uRoad;uniform float uFar;uniform float uSkyK;uniform float uGround;uniform float uSize;uniform float uHw;uniform float uG0;uniform float uG1;uniform float uPhase;uniform float uMinHw;uniform float uCore;'+
     'varying float vT;varying float vSky;varying float vWave;varying float vG;'+
     // rhythmProjectionDepth と同じ
     'float depth(float y){y=min(1.0,y);if(y<0.0&&uCurve==1.0)return max(0.0,uTop+(1.0-uTop)*y);return uTop+(1.0-uTop)*pow(clamp(y,0.0,1.0),uCurve);}'+
@@ -30549,15 +30768,15 @@ const rhythmCreateGpuSlideBand=(gl,host)=>{
     'float travelP(float p){float k=1.0/uFar;if(p<0.0)return p*(k-1.0)/(k*k)/(1.0-uFar);if(p>1.0)return 1.0+(p-1.0)*(k-1.0)/(1.0-uFar);return (1.0/(k-(k-1.0)*p)-uFar)/(1.0-uFar);}'+
     // rhythmSlideSegmentQuads の project と同じ(横は rhythmProjectBoundary、ノーツサイズの倍率は帯の中心のまわりで掛ける)
     'vec2 proj(vec4 p,float sky){float y=uSpawnY+travelP(1.0-(p.x-uSnow)/uTravel)*uTravelPx+uHalfH;float yr=min(1.0,y/uH);if(abs(aMisc.w-1.0)<0.5)yr=clamp(yr,0.0,1.0);float s=depth(yr)*uRoad;'+
-    'float x=uW*(0.5+((p.z+p.w*uSize)/uLanes-0.5)*s);float lift=uGround>0.5?0.0:uSkyK*depth(clamp(yr,0.0,1.0))*uRoad*sky;return vec2(x,y-lift);}'+
+    'float x=uW*(0.5+((p.z+p.w*uSize)/uLanes-0.5)*s);if(uMinHw>0.0&&p.w!=0.0){float hp=abs(p.w)*uSize/uLanes*s*uW;if(hp<uMinHw)x+=sign(p.w)*(uMinHw-hp);}float lift=uGround>0.5?0.0:uSkyK*depth(clamp(yr,0.0,1.0))*uRoad*sky;return vec2(x,y-lift);}'+
     // 譜面の点のつなぎ目(aMisc.w=2 来た側の線・3 出ていく側の線・4 角の丸): 画面の上で急に曲がる(約25度より大きい)ときだけ、
     // 角を伸ばさず線を2組に分けて丸を重ねる(2D の lineJoin round と同じ形)。緩い所は今までどおり角を伸ばし、丸は1点に縮めて描かない
-    'void main(){vec2 b=proj(aCur,aSky.y);vec2 pos=b;float f=aMisc.w;'+
+    'void main(){vec4 cu=aCur;if(uCore>0.5)cu.w=0.0;vec2 b=proj(cu,aSky.y);vec2 pos=b;float f=aMisc.w;'+
     'if(aMisc.x!=0.0||f>3.5){vec2 a=proj(aPrev,aSky.x);vec2 c=proj(aNext,aSky.z);vec2 d1=b-a;vec2 d2=c-b;float l1=length(d1);float l2=length(d2);'+
     'vec2 n1=l1>1e-4?vec2(-d1.y,d1.x)/l1:vec2(0.0);vec2 n2=l2>1e-4?vec2(-d2.y,d2.x)/l2:vec2(0.0);vec2 n=n1;float len=uHw;'+
     'bool sharp=f>1.5&&l1>1e-4&&l2>1e-4&&dot(n1,n2)<0.9;'+
     'if(aMisc.x!=0.0){if(sharp)n=f<2.5?n1:n2;else if(l1<=1e-4)n=n2;else if(l2>1e-4){vec2 m=n1+n2;float ml=length(m);if(ml>1e-4){n=m/ml;len=uHw/max(dot(n,n1),0.5);}}'+
-    'pos=b+n*len*aMisc.x;if(abs(f-1.0)<0.5){vec2 t=c-a;float tl=length(t);if(tl>1e-4)pos+=t/tl*uHw*aMisc.y;}}else if(sharp)pos=b+aMisc.yz*uHw;}else{pos=b+aMisc.yz*uHw;}'+
+    'pos=b+n*len*aMisc.x;if(abs(f-1.0)<0.5){vec2 t=c-a;float tl=length(t);if(tl>1e-4)pos+=t/tl*uHw*aMisc.y;}}else if(sharp)pos=b+aMisc.yz*uHw;}else{pos=b+aMisc.yz*uHw;if(uCore>0.5)pos.x+=sign(aCur.w)*uHw;}'+
       // 区切りの線(aMisc.w=1)は rhythmSlideCheckpointLines と同じく、奥行きを画面の中(0〜1)で決め、画面の高さより上下へ外れた線は描かない。
       // 線の端は aMisc.y(左-1・右+1)の向きへ太さの半分だけ伸ばす(端の丸の代わり。太さ2の線の丸と四角の差は1画素の角の欠けだけ)
       'if(abs(aMisc.w-1.0)<0.5&&(b.y<-uH||b.y>uH))pos=vec2(-1e5);'+
@@ -30568,14 +30787,16 @@ const rhythmCreateGpuSlideBand=(gl,host)=>{
     'vec2 q=vec2(dot(uM0,vec3(pos,1.0)),dot(uM1,vec3(pos,1.0)));vec2 cl=q/uView*2.0-1.0;gl_Position=vec4(cl.x,-cl.y,0.0,1.0);}';
   // 塗り側。画素座標の大きな数は扱わない(GL2D と同じ理由。位置は頂点側で小さな値にしてから渡す)
   const BAND_FS='#ifdef GL_FRAGMENT_PRECISION_HIGH\nprecision highp float;\n#else\nprecision mediump float;\n#endif\n'+
-    'varying float vT;varying float vSky;varying float vWave;varying float vG;uniform int uMode;uniform vec4 uColor;uniform vec4 uColor2;uniform float uAlpha;'+
+    'varying float vT;varying float vSky;varying float vWave;varying float vG;uniform int uMode;uniform vec4 uColor;uniform vec4 uColor2;uniform float uAlpha;uniform float uZ;'+
     // drawSlide の airOf と同じ(高さを1/32刻みにそろえる)
     'float air(){return floor(clamp(vSky*1.6,0.0,1.0)*32.0+0.5)/32.0;}'+
     'void main(){if(vT<-0.001)discard;vec4 c=uColor;'+
     'if(uMode==1){float a=air();if(a>0.0)c=vec4(uColor2.rgb,0.5-0.28*a);}'+
-    'else if(uMode==2){float a=clamp(vSky*1.4,0.0,1.0);if(a<=0.02)discard;c=vec4(2.0/255.0,0.0,10.0/255.0,0.85*(0.25+0.45*a));}'+
+    'else if(uMode==2){float a=clamp(vSky*1.4,0.0,1.0);if(a<=0.02)discard;c=vec4(2.0/255.0,0.0,10.0/255.0,0.85*(uZ>0.5?0.18+0.22*a:0.25+0.45*a));}'+
     'else if(uMode==3){float a=air();if(a<=0.05)discard;c=vec4(uColor2.rgb,0.2*a);}'+
     'else if(uMode==4){float a=air();if(a<=0.05)discard;c=vec4(uColor.rgb,uColor.a*a*0.6);}'+
+    'else if(uMode==7){if(vSky<=0.05)discard;}'+
+    'else if(uMode==8){if(vSky<=0.042)discard;c=uColor;}'+
     'else if(uMode==5){float t=clamp(vG,0.0,1.0);vec4 s0=vec4(245.0/255.0,243.0/255.0,1.0,0.56);vec4 s1=vec4(243.0/255.0,232.0/255.0,1.0,0.36);vec4 s2=vec4(243.0/255.0,232.0/255.0,1.0,0.2);'+
     'c=t<0.35?mix(s0,s1,t/0.35):mix(s1,s2,(t-0.35)/0.65);}'+
     'else if(uMode==6){if(vWave<=0.0)discard;c=vec4(243.0/255.0,232.0/255.0,1.0,vWave);}'+
@@ -30587,7 +30808,7 @@ const rhythmCreateGpuSlideBand=(gl,host)=>{
     ['aPrev','aCur','aNext','aSky','aMisc'].forEach((name,i)=>gl.bindAttribLocation(prog,i,name));
     gl.linkProgram(prog);if(!gl.getProgramParameter(prog,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(prog)||'band link');
   }catch(e){return null;}
-  const U={};['uM0','uM1','uView','uSnow','uTnow','uTravel','uSpawnY','uTravelPx','uHalfH','uW','uH','uLanes','uTop','uCurve','uRoad','uFar','uSkyK','uGround','uSize','uHw','uG0','uG1','uMode','uColor','uColor2','uAlpha','uPhase']
+  const U={};['uM0','uM1','uView','uSnow','uTnow','uTravel','uSpawnY','uTravelPx','uHalfH','uW','uH','uLanes','uTop','uCurve','uRoad','uFar','uSkyK','uGround','uSize','uHw','uG0','uG1','uMode','uColor','uColor2','uAlpha','uPhase','uMinHw','uCore','uZ']
     .forEach(name=>{U[name]=gl.getUniformLocation(prog,name);});
   // 頂点1つ = 前(4)・いま(4)・次(4)・高さ(前・いま・次の3)・[線のどちら側(±1、0=ずらさない), 丸の向き cos, sin, 使わない](4)
   const REC=19,STRIDE=REC*4,DISC_SEG=12;
@@ -30782,6 +31003,7 @@ const rhythmCreateGpuSlideBand=(gl,host)=>{
     // いまより後の区切りの線があるか
     get hasLines(){return !!(cur&&cur.lines);},
     // 1回ぶん塗る。range: 'fill'(帯の中)・'outline'(外周の線)・'edges'(左右のふちだけ。先の角と切り口の角の丸を含む)・'lines'(区切りの線)
+    // o.minHw=帯の最小の半幅(px) o.core=帯の真ん中の線(幅は hw) o.additive=色を足し算 o.z=影の濃さをZ版に
     // o.mode: 0=色 1=空中の帯 2=影 3=空中のふちの光 4=空中のふちの芯 5=押さえているときの明るさ 6=流れる光の波
     pass(range,o){
       if(!cur||host.lost())return;
@@ -30789,10 +31011,11 @@ const rhythmCreateGpuSlideBand=(gl,host)=>{
       const e=cur.e;
       const mode=o.mode|0;if(sent.uMode!==mode){gl.uniform1i(U.uMode,mode);sent.uMode=mode;}
       u1f('uHw',Number(o.hw)||0);u4f('uColor',rgba(o.color||'rgba(0,0,0,0)'));if(o.color2)u4f('uColor2',rgba(o.color2));
-      u1f('uAlpha',Number.isFinite(Number(o.alpha))?Math.max(0,Math.min(1,Number(o.alpha))):1);u1f('uGround',o.ground?1:0);
+      u1f('uAlpha',Number.isFinite(Number(o.alpha))?Math.max(0,Math.min(1,Number(o.alpha))):1);u1f('uGround',o.ground?1:0);u1f('uMinHw',Number(o.minHw)||0);u1f('uCore',o.core?1:0);u1f('uZ',o.z?1:0);
       if(mode===5){u1f('uG0',Number(o.g0)||0);u1f('uG1',Number(o.g1)||0);}if(mode===6)u1f('uPhase',Number(o.phase)||0);
       if(o.stencil){const ref=host.nextStencil();gl.stencilFunc(gl.NOTEQUAL,ref,0xff);}else gl.stencilFunc(gl.ALWAYS,0,0xff);
-      if(range==='fill'){draw(dynBuf,cur.fill[0],cur.fill[1]);draw(e.buf,cur.sFill[0],cur.sFill[1]);return;}
+      if(o.additive)gl.blendFuncSeparate(gl.ONE,gl.ONE,gl.ONE,gl.ONE_MINUS_SRC_ALPHA);
+      if(range==='fill'){draw(dynBuf,cur.fill[0],cur.fill[1]);draw(e.buf,cur.sFill[0],cur.sFill[1]);if(o.additive)gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);return;}
       if(range==='outline'){draw(dynBuf,cur.outline[0],cur.outline[1]);if(cur.sRight){draw(e.buf,cur.sRight[0],cur.sRight[1]);draw(e.buf,cur.sLeft[0],cur.sLeft[1]);}else draw(e.buf,cur.sOutline[0],cur.sOutline[1]);return;}
       if(range==='lines'){if(cur.lines)draw(e.cpBuf,cur.lines[0],cur.lines[1]);return;}
       // 左右のふちだけ(空中のふち): 先の線を抜いた2つの範囲
@@ -31436,7 +31659,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   // 粒の色は RHYTHM_NOTE_COLORS から作る(2026-09-26)。光は その色(濃い) → 白 → その色(薄い) の3層
   // 2026-09-27: 参考動画に寄せて、角の丸みを小さく(5→2)・真ん中に白い芯の帯・光を少し強く。厚みと色の種類は変えない
   // 赤は、フリックのピンク(#f472b6・#db2777)・横フリック左のオレンジ・判定 GREAT の赤(#f87171)から離した朱寄りの #ef4444 前後。芯は白で、縁と光だけが赤
-  const SKY_NOTE_COLOR=Object.freeze({hi:'#ffe4e6',mid:'#ef4444',lo:'#b91c1c',rgb:'239,68,68'});
+  const SKY_NOTE_COLOR=Object.freeze({hi:'#ffffff',mid:'#cbd5e1',lo:'#94a3b8',rgb:'203,213,225'});
   const SKY_ARROW_GLOWS=Object.freeze([[5,`rgba(${SKY_NOTE_COLOR.rgb},.95)`],[11,`rgba(${SKY_NOTE_COLOR.rgb},.6)`],[2,'rgba(2,6,23,.9)']]);
   // 空中のフリックの▲は、縁を白・中を赤にする(地上のピンクの▲は中まで塗ってあるので、縁の有無で分かれる)
   const SKY_ARROW_FILL=Object.freeze([[0,'#ff7b7b'],[1,'#e11d1d']]);
@@ -31695,7 +31918,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   // 押さえているあいだの光の色。ノーツの色(HOLD 緑・SLIDE 紫)ではなく、参考動画と同じ青白い光にする(2026-09-28)。
   // ノーツの色のままだと暗い道の上で「光っている」より「塗られている」に見えた。SLIDE だけ紫へ少し寄せて見分けを残す。
   // ノーツ本体・帯・終わりの横棒の色分けは変えない
-  const HOLD_SPARK_TINT=Object.freeze({HOLD:'96,200,255',SLIDE:'140,170,255'});
+  // SKY_L/SKY_R=案Zの空中スライドを押さえている指の下(帯と同じ手の色。左=青・右=桃)
+  const HOLD_SPARK_TINT=Object.freeze({HOLD:'96,200,255',SLIDE:'140,170,255',SKY_L:RHYTHM_SKY_LOOK.arc.left,SKY_R:RHYTHM_SKY_LOOK.arc.right});
   const holdSparkSprite=kind=>{
     const id=`spark:${kind}:${dpr}`;
     if(sprites.has(id))return sprites.get(id);
@@ -31731,7 +31955,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   const drawHoldSpark=(note,geo,opts)=>{
     const head=geo.head;if(!head)return;
     glowBegin();
-    const kind=rhythmNoteIsSlide(note)?'SLIDE':'HOLD',depth=opts.depthScale||1;
+    const kind=rhythmNoteIsSlide(note)?(opts.skySlideRgb&&(opts.skyHand==='L'||opts.skyHand==='R')&&skyZOn()?'SKY_'+opts.skyHand:'SLIDE'):'HOLD',depth=opts.depthScale||1;
     const w=Math.max(18,head.w*sizeScale),pulse=.5-.5*Math.cos(frameNow/140);
     // 溜め具合(0→1)。押さえ始めから0.7秒かけて、柱が伸び・光が強くなる(2026-09-28・ユーザー「もうちょい押し続けてる感じにしたい」)
     const charge=Math.min(1,Math.max(0,Number(opts.heldMs)||0)/700);
@@ -31888,7 +32112,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     if(!quads||!quads.length)return;
     // 空中の段(試作): 高さのあるスライドの床の影。高さがある所ほど濃い暗い帯(高さ=帯と影の離れ方が見える)
     quads.forEach(q=>{const a=Math.max(0,Math.min(1,(Number(q.sky)||0)*1.4));if(a<=.02)return;
-      ctx.globalAlpha=opts.alpha*(.25+.45*a);ctx.fillStyle='rgba(2,0,10,.85)';
+      ctx.globalAlpha=opts.alpha*(skyZOn()?.18+.22*a:.25+.45*a);ctx.fillStyle='rgba(2,0,10,.85)';
       ctx.beginPath();ctx.moveTo(q.l0,q.y0);ctx.lineTo(q.r0,q.y0);ctx.lineTo(q.r1,q.y1);ctx.lineTo(q.l1,q.y1);ctx.closePath();ctx.fill();});
     ctx.globalAlpha=1;
   };
@@ -32097,6 +32321,77 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     }
     ctx.globalAlpha=1;ctx.lineJoin='miter';
   };
+  // ── 空中の見た目 案Z(2026-10-11・社長の決定。docs/playbot/reports/2026-10-10/sky-design/ の v6)──
+  // 空中のものは全部「色の無いガラス」(白〜銀の半透明)・色が付いていれば地上。左右は位置で分ける。
+  // 箱=半透明の四角2枚(不透明度68%・上の面88%)+白い縁1.8px / 影=床より暗い角丸1枚(箱と同じ位置) / 帯=半透明の多角形1枚(46%)+白い芯の線(3px) / 星=白1種(半径17px)
+  const skyZOn=()=>skyTapStyle()==='plate';
+  // 空中タップの箱(2026-10-11・社長「白い部分の縦幅を小さく。白い箱が縁の延長みたいにあるだけで見分けがつく」):
+  // ふつうのノーツの板と同じ薄さの「枠」が主・本体はほぼ透明(後ろの道や地上ノーツが見える)・上の面と手前の縁だけ明るく・厚みは控えめ
+  // 箱の全体の高さ(上の面+手前の厚み)は「幅×aspect(参考は0.20)」。今の高さ(板の高さ×奥行き×1.3)が上限・最小は6px。
+  // 幅の狭い縦画面で、縦に厚い四角にならないように(2026-10-11 参考動画の測定: 箱は全体 21.5px/幅107px=0.20)
+  const skyBoxDims=(hd,opts)=>{const L=RHYTHM_SKY_LOOK.box,ds=Number(opts.depthScale)||1,W=Math.max(10,hd.w*sizeScale),capH=Math.max(L.minFacePx,hd.h*ds)*(1+L.thickRatio),total=Math.max(6,Math.min(capH,W*L.aspect)),faceH=total/(1+L.thickRatio),thick=total-faceH;return {faceH,thick,W};};
+  const drawGlassBox=(hd,opts)=>{
+    const L=RHYTHM_SKY_LOOK.box,{faceH,thick,W}=skyBoxDims(hd,opts),x0=hd.cx-W/2,y0=hd.cy-faceH/2;
+    // 奥の箱ほど枠・面を少し暗く(込み合う所で白い枠が格子のように交わって数えにくくならないように)
+    const near=Math.max(0,Math.min(1,((Number(opts.depthScale)||1)-.56)/.44));
+    ctx.globalAlpha=opts.alpha*(L.farDim+(1-L.farDim)*near);
+    ctx.fillStyle=`rgba(${L.fill},${L.fillAlpha})`;ctx.fillRect(x0,y0,W,faceH+thick);
+    ctx.fillStyle=`rgba(255,255,255,${L.topAlpha})`;ctx.fillRect(x0,y0,W,Math.max(2,faceH*L.topRatio));
+    ctx.fillStyle=`rgba(${L.frontFill},${L.frontAlpha})`;ctx.fillRect(x0,y0+faceH,W,thick);
+    ctx.strokeStyle=`rgb(${L.edge})`;ctx.lineWidth=L.edgePx;{const e=L.edgePx/2,xl=x0+e,xr=x0+W-e,yt=y0+e,yb=y0+faceH+thick-e;ctx.beginPath();ctx.moveTo(xl,yt);ctx.lineTo(xr,yt);ctx.lineTo(xr,yb);ctx.lineTo(xl,yb);ctx.closePath();ctx.stroke();}
+    ctx.beginPath();ctx.moveTo(x0,y0+faceH);ctx.lineTo(x0+W,y0+faceH);ctx.stroke();
+    ctx.globalAlpha=1;
+  };
+  const drawSkyShadowZ=(geo,opts)=>{
+    const sh=geo.skyShadow,hd=geo.head;if(!sh||!hd)return;
+    const L=RHYTHM_SKY_LOOK.shadow,{faceH,thick,W}=skyBoxDims(hd,opts),w=W-L.insetPx*2,h=Math.max(4,(faceH+thick)*.8);
+    // 影は地上の判定線に近づくほど消す(空中の箱が空中の線に来る瞬間に、影が地上の判定線の上に『黒い板』として来ないように)
+    const groundY=cssH*RHYTHM_JUDGMENT_LINE_Y.ratio,fade=Math.max(0,Math.min(1,(groundY-sh.cy-h/2)/(cssH*L.fadeRatio)));
+    ctx.globalAlpha=opts.alpha*fade;ctx.fillStyle=`rgba(${L.rgb},${L.alpha})`;
+    roundRectPath(ctx,sh.cx-w/2,sh.cy-h/2,w,h,L.radiusPx);ctx.fill();
+    const yTop=hd.cy+faceH/2+thick,yBot=sh.cy-h/2;
+    if(yBot-yTop>4){ctx.globalAlpha=opts.alpha*L.lineAlpha*Math.max(.35,fade);ctx.strokeStyle='#ffffff';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(hd.cx,yTop);ctx.lineTo(sh.cx,yBot);ctx.stroke();}
+    ctx.globalAlpha=1;
+  };
+  // 押した光の星(空中・白1種・半径17px)。焼いた1枚を加算で貼る
+  const skyStarSprite=()=>{
+    const id=`skystarz:${dpr}`;if(sprites.has(id))return sprites.get(id);
+    const R=RHYTHM_SKY_LOOK.star.radiusPx,rgb=RHYTHM_SKY_LOOK.star.rgb,S=makeSpriteCanvas(R*2+8,R*2+8),c=S.ctx,mx=R+4,my=R+4;
+    const g=c.createRadialGradient(mx,my,1,mx,my,R);g.addColorStop(0,`rgba(${rgb},.95)`);g.addColorStop(.3,`rgba(${rgb},.55)`);g.addColorStop(1,`rgba(${rgb},0)`);
+    c.fillStyle=g;c.beginPath();c.arc(mx,my,R,0,Math.PI*2);c.fill();
+    c.fillStyle=`rgba(${rgb},.9)`;
+    [[1,0,1.1],[0,1,1.1],[.7,.7,.7],[.7,-.7,.7]].forEach(([dx,dy,k])=>{const L=R*k;c.beginPath();c.moveTo(mx-dx*L,my-dy*L);c.lineTo(mx+dy*1.8,my+dx*1.8);c.lineTo(mx+dx*L,my+dy*L);c.lineTo(mx-dy*1.8,my-dx*1.8);c.closePath();c.fill();});
+    sprites.set(id,S);return S;
+  };
+  const drawSkyStarZ=(px,py,alpha)=>{
+    const S=skyStarSprite();glowBegin();ctx.globalAlpha=alpha;ctx.drawImage(S.canvas,px-S.w/2,py-S.h/2,S.w,S.h);ctx.globalAlpha=1;glowEnd();
+  };
+  // 空中のスライド(案Z): 高さのある区切りは、半透明(46%)の多角形+白い芯の線。地上に近い区切りは地上の帯のまま
+  const drawSkySlideZ=(quads,opts)=>{
+    const {alpha}=opts,A=RHYTHM_SKY_LOOK.arc,C=RHYTHM_SKY_LOOK.core;ctx.globalAlpha=alpha;
+    // 半幅は max(最小半幅, 譜面の幅の投影の半幅)。細くなりすぎる所だけ、中心を保って広げる
+    const widen=(l,r)=>{const m=A.minHalfWidthPx,c=(l+r)/2,h=(r-l)/2;return h>=m?[l,r]:[c-m,c+m];};
+    const air=quads.filter(q=>(Number(q.sky)||0)>.05).map(q=>{const [l0,r0]=widen(q.l0,q.r0),[l1,r1]=widen(q.l1,q.r1);return {l0,r0,y0:q.y0,l1,r1,y1:q.y1};});
+    // 空中スライドは、高さが低い区間も含めて全部「手の色」(左=青・右=桃)で中まで塗る
+    const handRgb=opts.skyHand==='L'?A.left:opts.skyHand==='R'?A.right:A.rgb;
+    quads.forEach(q=>{
+      if((Number(q.sky)||0)>.05)return;
+      const [l0,r0]=widen(q.l0,q.r0),[l1,r1]=widen(q.l1,q.r1);
+      ctx.fillStyle=`rgba(${handRgb},${A.alpha})`;
+      ctx.beginPath();ctx.moveTo(l0,q.y0);ctx.lineTo(r0,q.y0);ctx.lineTo(r1,q.y1);ctx.lineTo(l1,q.y1);ctx.closePath();ctx.fill();
+    });
+    ctx.fillStyle=`rgba(${handRgb},${A.alpha})`;
+    air.forEach(q=>{ctx.beginPath();ctx.moveTo(q.l0,q.y0);ctx.lineTo(q.r0,q.y0);ctx.lineTo(q.r1,q.y1);ctx.lineTo(q.l1,q.y1);ctx.closePath();ctx.fill();});
+    // 左右の縁を白く(床の紫の上でも地上スライドの紫の帯と見分けられる)
+    if(air.length){ctx.strokeStyle=`rgba(255,255,255,${A.edgeAlpha})`;ctx.lineWidth=A.edgePx;ctx.lineCap='round';ctx.beginPath();air.forEach(q=>{ctx.moveTo(q.l0,q.y0);ctx.lineTo(q.l1,q.y1);ctx.moveTo(q.r0,q.y0);ctx.lineTo(q.r1,q.y1);});ctx.stroke();ctx.lineCap='butt';}
+    if(air.length){
+      // 芯は、中心線の左右へ半幅ずつ(横に)ずらした細い帯。GPU の帯(mode 7・core)と同じ作りにして、画素までそろえる
+      glowBegin();ctx.globalAlpha=alpha*C.alpha;ctx.fillStyle=`rgb(${C.rgb})`;const ch=C.widthPx/2;
+      ctx.beginPath();air.forEach(q=>{const x0=(q.l0+q.r0)/2,x1=(q.l1+q.r1)/2;ctx.moveTo(x0-ch,q.y0);ctx.lineTo(x0+ch,q.y0);ctx.lineTo(x1+ch,q.y1);ctx.lineTo(x1-ch,q.y1);ctx.closePath();});
+      ctx.fill();glowEnd();
+    }
+    ctx.globalAlpha=1;
+  };
   const drawSkyShadowHead=(geo,opts)=>{
     const sh=geo.skyShadow,hd=geo.head;if(!sh||!hd)return;
     const w=sh.w*.42,h=Math.max(2,sh.h*.32);
@@ -32136,6 +32431,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     // ノーツサイズが100%以外のときだけ、帯の左右を中心のまわりで倍率にした写しを作る(100%は元のまま)
     // 高さ(sky)も写す(2026-10-11。以前は写さず、ノーツサイズが100%以外だと空中のスライドが地上の色で描かれていた。帯を GPU で描く描き方との突き合わせで見つけた)
     const quads=sizeScale===1?geo.slide:geo.slide.map(q=>{const [l0,r0]=sizeX(q.l0,q.r0),[l1,r1]=sizeX(q.l1,q.r1);return {l0,r0,y0:q.y0,l1,r1,y1:q.y1,sky:q.sky};});
+    if(!failed&&opts.skySlideRgb&&skyZOn()){drawSkySlideZ(quads,opts);return;}
     ctx.globalAlpha=alpha;
     if(!failed&&effect!=='MINIMAL'&&!lightweight){
       // ぼかし(drop-shadow 5px)の代わりに、外周をなぞる太い半透明の線
@@ -32221,6 +32517,16 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     if(!band)return;
     const {failed,alpha}=opts,pressed=opts.pressed&&!opts.slideOff,dim=!!opts.slideOff&&!failed;
     if(!band.slide(note,g.travel,g.rect,g.halfH,sizeScale))return;
+    if(!failed&&opts.skySlideRgb&&skyZOn()){
+      // 空中スライドのZ版(drawSkySlideZ と同じ値): 手の色で全体を塗り、空中の所だけ白い縁と白い芯
+      const A=RHYTHM_SKY_LOOK.arc,C=RHYTHM_SKY_LOOK.core;
+      const handRgb=opts.skyHand==='L'?A.left:opts.skyHand==='R'?A.right:A.rgb;
+      band.pass('fill',{mode:0,color:`rgba(${handRgb},${A.alpha})`,alpha,minHw:A.minHalfWidthPx,stencil:true});
+      band.pass('edges',{mode:8,hw:A.edgePx/2,color:`rgba(255,255,255,${A.edgeAlpha})`,alpha,minHw:A.minHalfWidthPx,stencil:true});
+      band.pass('fill',{mode:7,hw:C.widthPx/2,core:true,additive:true,color:`rgba(${C.rgb},${C.alpha})`,alpha,stencil:true});
+      band.done();
+      return;
+    }
     const base=opts.slideRgb||RHYTHM_NOTE_COLORS.SLIDE.rgb;
     if(!failed&&effect!=='MINIMAL'&&!lightweight)band.pass('outline',{mode:0,hw:3,color:`rgba(${base},.18)`,alpha,stencil:true});
     const groundFill=failed?'rgba(120,120,135,.48)':`rgba(${base},${opts.slideRgb?.62:.5})`;
@@ -32255,7 +32561,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   const drawSkyShadowGpu=(note,geo,opts)=>{
     const band=ctx.band,g=geo.slideGpu;
     if(!band||!band.slide(note,g.travel,g.rect,g.halfH,1))return;
-    band.pass('fill',{mode:2,ground:true,alpha:opts.alpha,stencil:false});
+    band.pass('fill',{mode:2,ground:true,z:skyZOn(),alpha:opts.alpha,stencil:false});
     band.done();
   };
   // 帯を GPU で描いたスライドの「地上のノーツの場所」(空中のノーツの線・影を重なる所で避けるため)。
@@ -32367,10 +32673,10 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       if(!Number.isFinite(index)||index<0||index>=RHYTHM_MAX_SUB_LANE_WIDTH||seen.has(index))continue;
       seen.add(index);
       const span=rhythmProjectSubLaneRange(index,1,ratio),x=span.left*cssW,w=Math.max(2,span.width*cssW);
-      ctx.fillStyle='rgb(239,68,68)';
+      ctx.fillStyle='rgb(255,255,255)';
       for(let k=0;k<slices;k++){const f=(k+1)/slices;ctx.globalAlpha=skyPressedAlpha*.12*f;ctx.fillRect(x,Y-up*f,w,up*f);}
       ctx.globalAlpha=skyPressedAlpha*.4;ctx.fillRect(x,Y,w,down);
-      ctx.globalAlpha=skyPressedAlpha*.9;ctx.fillStyle='rgb(254,202,202)';ctx.fillRect(x,Y-1,w,2);
+      ctx.globalAlpha=skyPressedAlpha*.9;ctx.fillStyle='rgb(255,255,255)';ctx.fillRect(x,Y-1,w,2);
       painted++;
     }
     glowEnd();ctx.globalAlpha=1;
@@ -32716,7 +33022,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
         const hit=hitSlots[slot];if(!hit)continue;
         const elapsed=now-hit.start,t=elapsed/hit.ms,end=hit.plume?Math.max(hit.ms,HIT_PLUME_MS):hit.ms;
         if(elapsed>=end){hitSlots[slot]=null;continue;}
-        touch();glowBegin();if(hit.sky){drawSkyStrike(hit,Math.max(0,Math.min(1,t)),hitY,Math.max(0,elapsed));drawSkyHit(hit,Math.max(0,Math.min(1,t)),hitY);}else drawOneHit(hit,Math.max(0,Math.min(1,t)),hitY,Math.max(0,elapsed));glowEnd();count++;
+        touch();glowBegin();if(hit.sky){if(!skyZOn())drawSkyStrike(hit,Math.max(0,Math.min(1,t)),hitY,Math.max(0,elapsed));drawSkyHit(hit,Math.max(0,Math.min(1,t)),hitY);}else drawOneHit(hit,Math.max(0,Math.min(1,t)),hitY,Math.max(0,elapsed));glowEnd();count++;
       }
       if(count){ctx.globalAlpha=1;ctx.setTransform(dpr,0,0,dpr,0,0);}
       return count;
@@ -32797,7 +33103,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       const o={failed:false,monster:false,wide:false,pressed:false,alpha:1,pop:null,depthScale:1,brightness:1,...opts};
       // 空中の段(試作): 手の色(左=水色・右=ピンク)。譜面のスライドに hand:'L'|'R' を書いたときだけ
       // 空中の段(試作): 高さのあるスライドは「空中の見せ方」で描く(社長: 左右は位置で分かるので色で分けない・地上のスライドは今の色のまま・空中は見せ方で分ける)
-      if(rhythmSlideHasSky(note)){const th=rhythmSkyTheme();o.skySlideRgb=th.rgb;o.skySlideCore=th.core;}
+      if(rhythmSlideHasSky(note)){const th=rhythmSkyTheme();o.skySlideRgb=th.rgb;o.skySlideCore=th.core;o.skyHand=rhythmSkyHandOf(note);}
       // 空中スライドの印の追従(試作・2026-10-10 社長「空中は…こいつが勝手に動いてる」):
       // 印は「指を置く目標」。指が帯に乗っている間だけ光らせ、外れている間は薄く欠けた見た目にする。
       // 押さえた指の位置には小さな赤い受け(輪)を出し、印と指のずれが見えるようにする。
@@ -32809,16 +33115,16 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       if(o.pop===null){
         if(geo.slideShadow)drawSkyShadowBand(geo.slideShadow,o);
         else if(geo.slideGpu&&rhythmSlideHasSky(note))drawSkyShadowGpu(note,geo,o);
-        if(geo.skyShadow&&!isSlide)drawSkyShadowHead(geo,o);
+        if(geo.skyShadow&&!isSlide){if(skyZOn())drawSkyShadowZ(geo,o);else drawSkyShadowHead(geo,o);}
         // 空中から始まる(高さのある)スライドは、頭から床へ細い支柱を下ろす(参考のアークと同じ・高さが分かるように)
-        if(isSlide&&geo.head&&o.pressed&&!o.failed&&o.skySlideRgb){
+        if(isSlide&&geo.head&&o.pressed&&!o.failed&&o.skySlideRgb&&!skyZOn()){
           const hd=geo.head,r=Math.max(10,hd.w*.75),t=frameNow/90;ctx.globalAlpha=o.alpha*trackDim;ctx.lineCap='round';
           [[1,0],[0,1]].forEach(([dx,dy],k)=>{const len=r*(k?1.15:1)*(.85+.15*Math.sin(t+k));
             ctx.strokeStyle=`rgba(${o.skySlideRgb},.55)`;ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(hd.cx-dx*len,hd.cy-dy*len);ctx.lineTo(hd.cx+dx*len,hd.cy+dy*len);ctx.stroke();
             ctx.strokeStyle='rgba(255,255,255,.95)';ctx.lineWidth=1.6;ctx.beginPath();ctx.moveTo(hd.cx-dx*len,hd.cy-dy*len);ctx.lineTo(hd.cx+dx*len,hd.cy+dy*len);ctx.stroke();});
           ctx.lineCap='butt';ctx.globalAlpha=1;
         }
-        if(geo.skyShadow&&isSlide&&geo.head){const sh=geo.skyShadow,hd=geo.head;ctx.globalAlpha=o.alpha*.7;ctx.strokeStyle=`rgba(${o.slideRgb||RHYTHM_NOTE_COLORS.SLIDE.rgb},.75)`;ctx.lineWidth=1.6;ctx.beginPath();ctx.moveTo(sh.cx,sh.cy);ctx.lineTo(hd.cx,hd.cy);ctx.stroke();ctx.globalAlpha=1;}
+        if(geo.skyShadow&&isSlide&&geo.head&&!skyZOn()){const sh=geo.skyShadow,hd=geo.head;ctx.globalAlpha=o.alpha*.7;ctx.strokeStyle=`rgba(${o.slideRgb||RHYTHM_NOTE_COLORS.SLIDE.rgb},.75)`;ctx.lineWidth=1.6;ctx.beginPath();ctx.moveTo(sh.cx,sh.cy);ctx.lineTo(hd.cx,hd.cy);ctx.stroke();ctx.globalAlpha=1;}
         if(geo.band)drawBand(geo,o);
         if(geo.slide)drawSlide(geo,o);
         else if(geo.slideGpu)drawSlideGpu(note,geo,o);
@@ -32830,7 +33136,20 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       if(o.pressed&&!o.failed&&o.pop===null&&effect!=='MINIMAL')drawHoldSpark(note,geo,o);
       // 空中のノーツも、既定(plate)ではふつうの板(drawHead)で描く。旧スタイルは drawSkyTap(箱・星など)
       const skyPlate=!!(geo.skyShadow&&!isSlide&&geo.head&&isSkyPlate(note));
-      if(skyPlate||!(geo.skyShadow&&!isSlide&&o.pop===null))drawHead(note,geo,headOpts);
+      // 案Z: 空中のタップ/フリックは半透明のガラスの箱(叩いて弾けるとき=popのときだけ従来の頭で描く)
+      const skyGlass=skyPlate&&o.pop===null&&!o.failed&&skyZOn();
+      if(skyGlass){
+        const gopts=trackDim<1?{...o,alpha:o.alpha*trackDim}:o;drawGlassBox(geo.head,gopts);
+        if(note.type==='FLICK'||note._rhythmOriginalType==='FLICK'){const hd=geo.head,fh=skyBoxDims(hd,o).faceH,ax=hd.cx,ay=hd.cy-fh/2-3,aw=Math.max(4,fh*.7);ctx.globalAlpha=o.alpha;ctx.fillStyle='#ffffff';ctx.beginPath();ctx.moveTo(ax,ay-aw);ctx.lineTo(ax+aw,ay);ctx.lineTo(ax-aw,ay);ctx.closePath();ctx.fill();ctx.globalAlpha=1;}
+      }else if(skyPlate||!(geo.skyShadow&&!isSlide&&o.pop===null))drawHead(note,geo,headOpts);
+      // 案Z: 空中のスライドを押している間、頭の板も帯と同じ手の色にする(指の下で「どっちの手か」が分かるように)
+      if(isSlide&&geo.head&&o.pressed&&!o.failed&&o.skySlideRgb&&skyZOn()&&(o.skyHand==='L'||o.skyHand==='R')){
+        const hrgb=o.skyHand==='L'?RHYTHM_SKY_LOOK.arc.left:RHYTHM_SKY_LOOK.arc.right,hd=geo.head,hw=hd.w*sizeScale,hh=HEAD_H*HEAD_THICK*(o.depthScale||1)*sizeScale;
+        ctx.globalAlpha=o.alpha*trackDim;roundRectPath(ctx,hd.cx-hw/2,hd.cy-hh/2,hw,hh,7*sizeScale);ctx.fillStyle=`rgba(${hrgb},.55)`;ctx.fill();
+        ctx.lineWidth=2.4*sizeScale;ctx.strokeStyle=`rgba(${hrgb},1)`;ctx.stroke();ctx.globalAlpha=1;
+      }
+      // 案Z: 空中のスライドを押している間は、頭に白い星(半径17px)
+      if(isSlide&&geo.head&&o.pressed&&!o.failed&&o.skySlideRgb&&skyZOn()&&effect!=='MINIMAL')drawSkyStarZ(geo.head.cx,geo.head.cy,o.alpha*trackDim);
       // 空中の段(試作): 空中の粒の見た目(案を比べるため4通り。localStorage 'mh_sky_tap_style_proto' で選ぶ・既定は gold)
       // 近づく細い輪(drawSkyGlow)は外した(2026-10-10 社長「参考動画を手本に」→ 参考は輪ではなく「奥は暗く手前は明るい」で近さを見せる。明るさは drawSkyTap 側)
       if(geo.skyShadow&&!isSlide&&geo.head&&o.pop===null&&!skyPlate)drawSkyTap(geo.head,o);
