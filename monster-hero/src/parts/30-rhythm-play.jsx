@@ -609,7 +609,7 @@ function RhythmSkyReachAdaptSwitch(){
 }
 // SKY TAP の見た目の案を切り替える(デバッグ専用・2026-10-11 社長「スカイは透明だけどちょっと見にくい」)。保存は新しいキー mh_sky_box_look_proto だけ。
 // ふつうのプレイ(この画面を通らない)はいまの案Zのまま
-// HELL の見やすさの案を切り替える(デバッグ専用・2026-10-12)。保存は新しいキー mh_hell_vis_proto だけ。既定は「いま」
+// HELL の見やすさの案を切り替える(デバッグ専用・2026-10-12)。保存は新しいキー mh_hell_vis_proto だけ。既定は案2 はっきり(RHYTHM_HELL_VIS_DEFAULT)
 function RhythmHellVisSwitch(){
   const [value,setValue]=useState(()=>RHYTHM_HELL_VIS.id);
   const pick=v=>{RHYTHM_HELL_VIS.set(v);setValue(RHYTHM_HELL_VIS.id);};
