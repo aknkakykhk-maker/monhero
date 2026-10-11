@@ -200,7 +200,7 @@
   "grievous_lady/normal": "bb395c39cce17651",
   "grievous_lady/hard": "406cee60ab2fb116",
   "grievous_lady/expert": "e0ab70ed9b827bc2",
-  "grievous_lady/master": "a83cca959a1c5593"
+  "grievous_lady/master": "9348316cb81ed3ef"
  },
  "history": [
   {
@@ -223,6 +223,13 @@
     "grievous_lady/normal",
     "grievous_lady/hard",
     "grievous_lady/expert",
+    "grievous_lady/master"
+   ]
+  },
+  {
+   "at": "2026-10-11 23:24",
+   "reason": "33.74秒のスライドの始まりが0.25刻みで押し始めを受け付けなかったのを0.5刻みへ(Grievous Lady MASTER)",
+   "changed": [
     "grievous_lady/master"
    ]
   }
