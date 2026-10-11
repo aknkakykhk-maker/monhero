@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b6b14764f53e2775
+// source-sha256: 0694cc774aeea38b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-11 17:32";
+const BUILD_DATE = "2026-10-11 17:40";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -35266,8 +35266,9 @@ const RhythmTapTest = ({
       "data-rhythm-song-intro-art": true,
       style: {
         position: 'relative',
-        flexShrink: 0,
-        width: isLandscape ? 'min(40vh,34vw,200px)' : 'min(58vw,34vh,240px)',
+        flex: '0 1 auto',
+        minHeight: '96px',
+        height: isLandscape ? 'min(54vh,40vw,320px)' : 'min(68vw,42vh,320px)',
         aspectRatio: '1 / 1',
         borderRadius: '14px',
         overflow: 'hidden'
@@ -35289,6 +35290,7 @@ const RhythmTapTest = ({
     })), React.createElement("div", {
       "data-rhythm-song-intro-text": true,
       style: {
+        flex: '0 0 auto',
         minWidth: 0,
         maxWidth: isLandscape ? 'min(72vw,560px)' : '88vw',
         textAlign: 'center'
