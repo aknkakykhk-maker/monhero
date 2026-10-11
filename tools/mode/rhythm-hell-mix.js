@@ -29,6 +29,7 @@ const BEAT_GAP=1.5;                      // 同じ親指が段を変えるまで
 // 同じ側(レーンの左右)で高さ(地上⇔空中)を変えるまでの間(2026-10-12 社長「HELL の操作性をもっと改良して」・テンポくんの数え方)。
 // 親指の振り分けとは別に、画面の左半分・右半分ごとに見る。点は押し始めと、長押し・スライドの終わり(指が離れる高さ)。同時押し(0ms)は両手で取るので数えない
 const SIDE_GAP_MS=150;
+const SIDE_KEEP_SKY=5;                    // 別々の指が取る2点を直すと、空中(タップ・スライドの端)がこれ以上減るなら直さない
 const PHRASE_BEATS=4;                    // タップの段を回す長さ(1小節)
 const PHRASE_MODES=['L','R','ground','both'];   // L=左手が空 / R=右手が空 / ground=両手とも地上 / both=両手が空(同時押しは片方だけ)
 const HELL_LANDSCAPE={...THUMB_PROFILES.landscape,name:'横持ち(HELL・高さの差39%)',skyDy:390*0.39};
@@ -173,7 +174,6 @@ const mix=(master,{zero,beat,crosses=[]})=>{
     for(const side of ['L','R']){const list=ev.filter(e=>e.side===side).sort((a,b)=>a.at-b.at||(a.end?-1:1));
       for(let i=1;i<list.length;i++){const p=list[i-1],e=list[i],d=e.at-p.at;
         if(p.n===e.n||d<=0||d>SIDE_GAP_MS||lv(p)===lv(e))continue;
-        if(process.env.HELL_SKIP&&process.env.HELL_SKIP.split(',').some(t=>Math.abs(+t-e.at)<200))continue;
         // まず、タップを相手の段にそろえる(同じ親指の前後とも段がそろうときだけ。前が空なら空のまま残る)
         if(!e.end&&e.n.k==='t'&&!fixedGround(e.n)&&handOk(e.n,lv(p))){e.n.want=lv(p);changed++;continue;}
         if(!p.end&&p.n.k==='t'&&!fixedGround(p.n)&&handOk(p.n,lv(e))){p.n.want=lv(e);changed++;continue;}
@@ -188,6 +188,9 @@ const mix=(master,{zero,beat,crosses=[]})=>{
           let settled=false;for(let r=0;r<40;r++)if(!fix()&&!backFix()){settled=true;break;}
           const score=settled?skyAmount():-1;restore(before);
           if(score>=0&&(!best||score>best.score))best={x,level,score};}
+        // 親指モデルでは別々の指が取る2点で、固定すると空中が SIDE_KEEP_SKY 以上減るときは残す(2026-10-12 窓口「空中を大きく減らさない」。
+        // 社長が案A(空中の受け付けを構えに合わせる)を試したあとに見直す)
+        if(best&&p.n.hand!==e.n.hand&&skyAmount()-best.score>=SIDE_KEEP_SKY)continue;
         if(best&&pinTo(best.x,best.level))changed++;
       }}
     return changed;};
@@ -203,6 +206,12 @@ const levelSwitchViolations=(notes,beat)=>{const out=[];
   for(const h of ['L','R']){const list=notes.filter(n=>n.hand===h).sort((a,b)=>startOf(a)-startOf(b));
     for(let i=1;i<list.length;i++)if(startLv(list[i])!==endLv(list[i-1])&&startOf(list[i])-endOf(list[i-1])<BEAT_GAP*beat-2)out.push(startOf(list[i]));}
   return out;};
+// 同じ側(レーンの左右)の続く2点で、SIDE_GAP_MS 以内に高さが変わる所(同時押しは除く)。テンポくんの数え方
+const sideSwitches=notes=>{const out=[],lv=(n,e)=>n.k==='s'?(n.pts[e?n.pts.length-1:0][3]>=0.5?1:0):(n.sky?1:0);
+  const ev=[];for(const n of notes){ev.push({n,at:startOf(n),e:false});if(n.k!=='t')ev.push({n,at:endOf(n),e:true});}
+  for(const side of ['L','R']){const l=ev.filter(x=>sideOf(x.n,x.e)===side).sort((a,b)=>a.at-b.at||(a.e?-1:1));
+    for(let i=1;i<l.length;i++){const p=l[i-1],x=l[i],d=x.at-p.at;if(p.n!==x.n&&d>0&&d<=SIDE_GAP_MS&&lv(p.n,p.e)!==lv(x.n,x.e))out.push(x.at);}}
+  return out.sort((a,b)=>a-b);};
 const counts=notes=>{const slides=notes.filter(n=>n.k==='s');
   const kind=s=>{const hs=s.pts.map(p=>p[3]);return hs.every(x=>x===0)?'地上だけ':hs.every(x=>x>0)?'空だけ':'行き来';};
   const c={地上タップ:notes.filter(n=>n.k==='t'&&!n.sky).length,空タップ:notes.filter(n=>n.k==='t'&&n.sky).length,ホールド:notes.filter(n=>n.k==='h').length,
@@ -238,6 +247,7 @@ if(require.main===module){
     const sim=simulateRuntime(rt.filter(n=>!(n.skyHeight>0)&&!(n.slidePoints&&n.slidePoints.some(p=>p.sky>0))));
     const viol=levelSwitchViolations(hell,conf.beat);
     console.log('数:',JSON.stringify(counts(hell)));
+    const ss=sideSwitches(hell);console.log(`同じ側で${SIDE_GAP_MS}ms以内に高さが変わる ${ss.length}件(別々の指で、直すと空中が${SIDE_KEEP_SKY}以上減るので残したもの)`+(ss.length?': '+ss.map(t=>(t/1000).toFixed(2)).join(' / '):''));
     console.log(`Lv.${level}(MASTER Lv.${mLevel}) | 横持ち(高さの差39%・交差の区間の外) 押せない${th.count.impossible}・交差${th.count.cross}・届きにくい${th.count.reach} | 両手のシミュレート(地上だけ) 押せない${sim.impossible} | 同じ親指が1.5拍未満で段を変える ${viol.length}`);
     if(th.count.impossible||th.count.cross||th.count.reach)console.log('  横持ち:',th.issues.filter(i=>i.kind!=='busy').slice(0,12).map(i=>`${(i.t/1000).toFixed(2)} ${i.kind} ${i.what} ${i.why}`).join(' / '));
     if(!args.includes('--write')){console.log('※ --write を付けると HELL のマーカーの内側と Lv. だけを書く');process.exit(0);}
@@ -258,4 +268,4 @@ if(require.main===module){
     console.log(`書いた: ${path.relative(rt0.ROOT,rt0.RUNTIME)} の <${conf.marker}-hell-notes> と HELL の Lv.${finalLevel}(ほかのマーカーは1バイトも変えていない)。この後 node tools/build.js`);
   }catch(e){console.error('止まった:',e.message);process.exit(1);}
 }
-module.exports={mix,readBlock,render,counts,levelSwitchViolations,toRuntime,HELL_LANDSCAPE,SONGS};
+module.exports={mix,readBlock,render,counts,levelSwitchViolations,sideSwitches,toRuntime,HELL_LANDSCAPE,SONGS};
