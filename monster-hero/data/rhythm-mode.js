@@ -32691,26 +32691,35 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   let hitArea=null,hitNext=0,skyHitArea=null;
   // 空中の段(試作): 空中の高さで押しているサブレーンと、その光の濃さ(設定「レーンの光」と同じ 0 / .35 / 1)
   let skyPressed=[],skyPressedAlpha=1;
-  // 空中の判定ラインの上で、押しているサブレーンを赤く光らせる(2026-10-10 社長「タップして光るレーンは、タップするところで地上と空中で変えるのは難しいかな?」)。
-  // 地上のレーンの光(下まで伸びる柱)の空中版。線から上へ短く伸びる光と、線の上の明るい筋。幅は空中の線の奥行きで投影したサブレーン1本ぶん。
-  // WebGL でも描けるように、グラデーションは使わず薄い四角を重ねる
-  const drawSkyPress=hitY=>{
+  // 空中の段で押しているサブレーンの光(2026-10-11 社長「地上のレーンを押したときの道の光と、空中レーンを押したときの道の光り方が違う」)。
+  // 地上の光(30-rhythm-play.jsx の RHYTHM_LANE_PRESS_GRADIENT・道の奥から手前まで伸びるサブレーンの柱)と同じ形・色・明るさを、
+  // 空中のノーツと同じ持ち上げ方(rhythmSkyLiftPx・奥ほど小さく持ち上げる)で空中の段へ写す。消え方も地上と同じ(離したらすぐ消える)。
+  // ★横の位置は地上の判定ラインの道幅で測る(指のサブレーンも空中のノーツもその幅で決まる)。以前は空中の線の高さの狭い道幅で
+  //   測っていたため、押した所から横へずれて光っていた(844×390 で約60px・hell-look L6)。
+  // WebGL でも描けるように、グラデーションは使わず、色を区切りごとに変えた薄い四角形(台形)を重ねる
+  const SKY_PRESS_STOPS=line=>[[0,56,189,248,.05],[.42,56,189,248,.1],[.58,56,189,248,.24],[line-.14,125,211,252,.5],[line-.03,224,242,254,.74],[line,248,250,252,.9],[line+.04,56,189,248,.72],[1,37,99,235,.55]];
+  const skyPressColor=(stops,t)=>{let a=stops[0],b=stops[stops.length-1];for(let k=1;k<stops.length;k++){if(t<=stops[k][0]){a=stops[k-1];b=stops[k];break;}}
+    const u=b[0]>a[0]?Math.max(0,Math.min(1,(t-a[0])/(b[0]-a[0]))):0,mix=n=>a[n]+(b[n]-a[n])*u;return [Math.round(mix(1)),Math.round(mix(2)),Math.round(mix(3)),mix(4)];};
+  const drawSkyPress=()=>{
     if(!skyPressed.length||!(skyPressedAlpha>0)||!cssW||!cssH)return 0;
-    const Y=hitY-cssH*RHYTHM_SKY_LIFT.ratio,ratio=rhythmSkyLineRatio(),up=cssH*.12,down=cssH*.02,slices=8;
+    const line=RHYTHM_JUDGMENT_LINE_Y.ratio,stops=SKY_PRESS_STOPS(line),slices=64,rect={height:cssH};
     const seen=new Set();let painted=0;
-    touch();ctx.setTransform(dpr,0,0,dpr,0,0);glowBegin();
+    touch();ctx.setTransform(dpr,0,0,dpr,0,0);
     for(const value of skyPressed){
       const index=Math.floor(Number(value));
       if(!Number.isFinite(index)||index<0||index>=RHYTHM_MAX_SUB_LANE_WIDTH||seen.has(index))continue;
       seen.add(index);
-      const span=rhythmProjectSubLaneRange(index,1,ratio),x=span.left*cssW,w=Math.max(2,span.width*cssW);
-      ctx.fillStyle='rgb(255,255,255)';
-      for(let k=0;k<slices;k++){const f=(k+1)/slices;ctx.globalAlpha=skyPressedAlpha*.12*f;ctx.fillRect(x,Y-up*f,w,up*f);}
-      ctx.globalAlpha=skyPressedAlpha*.4;ctx.fillRect(x,Y,w,down);
-      ctx.globalAlpha=skyPressedAlpha*.9;ctx.fillStyle='rgb(255,255,255)';ctx.fillRect(x,Y-1,w,2);
+      const at=t=>{const span=rhythmProjectSubLaneRange(index,1,t);return {l:span.left*cssW,r:(span.left+span.width)*cssW,y:t*cssH-rhythmSkyLiftPx(rect,t)};};
+      let top=at(0);
+      for(let k=1;k<=slices;k++){
+        const t=k/slices,bottom=at(t),c=skyPressColor(stops,(k-.5)/slices);
+        ctx.globalAlpha=skyPressedAlpha*c[3];ctx.fillStyle=`rgb(${c[0]},${c[1]},${c[2]})`;
+        ctx.beginPath();ctx.moveTo(top.l,top.y);ctx.lineTo(top.r,top.y);ctx.lineTo(bottom.r,bottom.y);ctx.lineTo(bottom.l,bottom.y);ctx.closePath();ctx.fill();
+        top=bottom;
+      }
       painted++;
     }
-    glowEnd();ctx.globalAlpha=1;
+    ctx.globalAlpha=1;
     return painted;
   };
   const hitSlots=new Array(RHYTHM_HIT_EFFECT_POOL).fill(null),hitFilters=new Map();
@@ -33048,7 +33057,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     drawHits(hitY){
       if(!ctx||!(hitArea||skyHitArea)||!Number.isFinite(hitY))return 0;
       const now=frameNow||(typeof performance!=='undefined'?performance.now():Date.now());let count=0;
-      if(skyHitArea&&skyPressed.length)count+=drawSkyPress(hitY);
+      if(skyHitArea&&skyPressed.length)count+=drawSkyPress();
       for(let slot=0;slot<hitSlots.length;slot++){
         const hit=hitSlots[slot];if(!hit)continue;
         const elapsed=now-hit.start,t=elapsed/hit.ms,end=hit.plume?Math.max(hit.ms,HIT_PLUME_MS):hit.ms;

@@ -67,6 +67,7 @@ const spread = (a) => { const s = a.filter(Number.isFinite); return s.length > 1
   for (const s of SONGS) {
     const rows = all.filter(x => x.song === s.song && x.diff === s.diff);
     if (!rows.length) continue;
+    const first5Lines = [];
     lines.push(`## ${s.song} ${s.diff}`, '');
     lines.push('| 版 | 描き方 | CPU | 1コマ 平均 | 95% | 99% | 最長 | 16.7超 | 33.3超 | メインのCPU | 待ちを含む | うちJS | 押して処理 平均/95% | 次のコマまで 95% | 最初のタップ | MISS |');
     lines.push('| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |');
@@ -77,7 +78,10 @@ const spread = (a) => { const s = a.filter(Number.isFinite); return s.length > 1
       lines.push(`| ${x.label} | ${DRAW_NAME[x.draw] || x.draw}${R[0].band ? '' : (x.draw === 'gpu' ? '(帯がGPUにならなかった)' : '')} | ${x.cpu}倍 | ${f1(g(r => r.frames.avg))}${w(r => r.frames.avg)} | ${f1(g(r => r.frames.p95))} | ${f1(g(r => r.frames.p99))} | ${f1(g(r => r.frames.max))} | ` +
         `${pctOf(r => r.frames.over16)} | ${pctOf(r => r.frames.over33)} | ${f1(g(r => r.main.cpu))}${w(r => r.main.cpu)} | ${f1(g(r => r.main.wall))} | ${f1(g(r => r.main.script))} | ` +
         `${f1(g(r => r.taps.handleAvg))}/${f1(g(r => r.taps.handleP95))} | ${f1(g(r => r.taps.frameP95))} | ${ft ? `${f1(ft.handle)}/${f1(ft.toFrame)}` : '-'} | ${g(r => r.miss)}/${R[0].notes} |`);
+      const f5 = R[0].taps.first5;
+      if (f5 && f5.length) first5Lines.push(`| ${x.label} | ${DRAW_NAME[x.draw] || x.draw} | ${x.cpu}倍 | ${f5.map(t => `${f1(t.handle)}/${t.toFrame == null ? '-' : f1(t.toFrame)}`).join(' ・ ')} | ${f1(R[0].taps.restHandleMed)}/${f1(R[0].taps.restFrameMed)} |`);
     }
+    if (first5Lines.length) lines.push('', '最初の5打(処理/画面に出るまで ms)と、6打目からの中央の値:', '', '| 版 | 描き方 | CPU | 1〜5打目 | 6打目から(中央) |', '| --- | --- | --- | --- | --- |', ...first5Lines);
     lines.push('');
   }
   const errs = all.flatMap(x => x.runs.flatMap(r => r.errors));
