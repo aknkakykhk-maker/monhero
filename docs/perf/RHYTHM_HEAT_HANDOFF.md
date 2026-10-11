@@ -21,7 +21,7 @@
 
 ## 次の候補
 
-1. **ノーツの板(drawHead)**: GPU の描き方でも 10〜11ms/秒(FREEDOM DiVE↓・60〜70秒・CPU1倍)。測りかけの内訳(1秒あたり):
+1. **ノーツの板(drawHead)** → 2026-10-12 済み(光の絵を板のシェーダーで描く。drawHead 約35%減)。残りは矢印(フリック)の GL2D への行き来だけ。以下は着手前の控え。: GPU の描き方でも 10〜11ms/秒(FREEDOM DiVE↓・60〜70秒・CPU1倍)。測りかけの内訳(1秒あたり):
    GL2D の描画の issue 9.1・applyState 3.8・bufferData 3.3・flushPending 2.6・draw3Slice(光の絵の貼り付け)1.8・releaseForeign 0.9・restoreMain 0.8。
    ノーツ1つごとに「光の絵(GL2D)→ 板(板のシェーダー)→ 矢印(GL2D)」と描き方が切り替わり、そのたびに GL2D の状態の送り直し(resetSent)が起きている。
    案: 板のシェーダーで光の絵(3分割)も一緒に描く(四角を光の外まで広げ、テクスチャを1枚渡す)→ 切り替えが無くなる。描く順は今と同じにできる。見た目は画素で突き合わせ(rhythm-gpu-band-check)
