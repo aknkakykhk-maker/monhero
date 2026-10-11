@@ -1176,20 +1176,43 @@ const RHYTHM_SKY_BOX_LOOKS=Object.freeze({
   a:Object.freeze({aspect:.2,farDim:.6,fill:'226,232,240',fillAlpha:.38,topAlpha:.95,topRatio:.4,frontFill:'226,232,240',frontAlpha:.7,thickRatio:.3,edge:'255,255,255',edgePx:2.6,minFacePx:5}),
   b:Object.freeze({aspect:.2,farDim:.6,fill:'239,68,68',fillAlpha:.62,topAlpha:.7,topRatio:.36,frontFill:'185,28,28',frontAlpha:.85,thickRatio:.3,edge:'254,202,202',edgePx:1.8,minFacePx:5}),
   c:Object.freeze({aspect:.2,farDim:.6,fill:'241,245,249',fillAlpha:.82,topAlpha:.95,topRatio:.36,frontFill:'148,163,184',frontAlpha:.9,thickRatio:.3,edge:'255,255,255',edgePx:1.8,minFacePx:5}),
+  // HELL の見やすさの案(2026-10-12 社長「HELL の視覚性をもっと改良して」)。b の板が暗く、道との明るさの差が約1.15倍しかなかった(地上のノーツは約2.8倍)
+  b2:Object.freeze({aspect:.2,farDim:.75,fill:'239,68,68',fillAlpha:.92,topAlpha:.9,topRatio:.36,frontFill:'185,28,28',frontAlpha:.95,thickRatio:.3,edge:'254,202,202',edgePx:2.2,minFacePx:6}),
+  b3:Object.freeze({aspect:.2,farDim:.85,fill:'248,113,113',fillAlpha:.95,topAlpha:.95,topRatio:.36,frontFill:'220,38,38',frontAlpha:.95,thickRatio:.3,edge:'255,255,255',edgePx:2.4,minFacePx:6}),
 });
-const RHYTHM_SKY_BOX_LOOK_LABELS=Object.freeze({z:'案Z 色の無いガラス',a:'案A 縁と面を明るく',b:'案B 赤い板(既定)',c:'案C 白い板'});
+const RHYTHM_SKY_BOX_LOOK_LABELS=Object.freeze({z:'案Z 色の無いガラス',a:'案A 縁と面を明るく',b:'案B 赤い板(既定)',c:'案C 白い板',b2:'案B2 赤い板(濃く)',b3:'案B3 赤い板(明るく・白い縁)'});
 // 今の案。毎コマ読むので localStorage は読み込み時と切り替えたときだけ読む
 const RHYTHM_SKY_BOX_VARIANT={id:(()=>{try{const v=typeof localStorage!=='undefined'?localStorage.getItem('mh_sky_box_look_proto'):'';return v&&RHYTHM_SKY_BOX_LOOKS[v]?v:'b';}catch(e){return 'b';}})(),
   set(id){const v=RHYTHM_SKY_BOX_LOOKS[id]?id:'b';this.id=v;try{if(v==='b')localStorage.removeItem('mh_sky_box_look_proto');else localStorage.setItem('mh_sky_box_look_proto',v);}catch(e){}}};
 // 空中スライドの白い縁を描き始める高さ(2D の drawSkySlideZ と GPU の帯の mode 8 で同じ値を使う)
 const RHYTHM_SKY_EDGE_FROM=0.042;
-const RHYTHM_SKY_LOOK=Object.freeze({
-  arc:Object.freeze({rgb:'214,224,240',alpha:.58,minHalfWidthPx:4.5,edgeAlpha:.6,edgePx:1.2,left:'37,99,235',right:'236,72,153',centerLane:3}), // 帯=手の色(左手=青・右手=桃)で中まで色(58%)・縁と芯は白。手は note.hand、無いときはスライドの点のレーンの平均が centerLane より左なら左  // edge=帯の左右の白い縁(紫の床の上でも「白い帯」に見せる)
-  core:Object.freeze({rgb:'255,255,255',alpha:.9,widthPx:3}),
-  get box(){return RHYTHM_SKY_BOX_LOOKS[RHYTHM_SKY_BOX_VARIANT.id]||RHYTHM_SKY_BOX_LOOKS.b;}, // 案はデバッグで切り替える(RHYTHM_SKY_BOX_LOOKS)
+// HELL の見やすさの案(デバッグ専用・2026-10-12 社長「HELL の視覚性・操作性をもっと改良して」)。保存は新しいキー mh_hell_vis_proto だけ。既定は now(いまのまま)。
+// 洗い出し(docs/proto/hell-visibility/)の数字: 空中の判定線が空中の道の手前の端より短く両端の2レーンが線の外に着く・空中の板が暗い・左手の空中スライドが透ける・空中の板の影と縦線が地上の道に並ぶ。
+// 案は RHYTHM_SKY_LOOK の値を上書きするだけ(描く数・形は同じ)。地上の5難易度には空中のものが無いので、見た目は変わらない
+const RHYTHM_HELL_VIS_PRESETS=Object.freeze({
+  now:Object.freeze({}),
+  v1:Object.freeze({box:'b2',arc:Object.freeze({left:'59,130,246',alpha:.72}),shadow:Object.freeze({alpha:.14,lineAlpha:.12}),line:Object.freeze({span:'sky'})}),
+  v2:Object.freeze({box:'b3',arc:Object.freeze({left:'96,165,250',right:'244,114,182',alpha:.82}),shadow:Object.freeze({alpha:.1,lineAlpha:0}),line:Object.freeze({span:'sky',coreRgb:'196,181,253',corePx:3,bandPx:8,bandAlpha:.45})}),
+});
+const RHYTHM_HELL_VIS_LABELS=Object.freeze({now:'いま',v1:'案1 控えめに見やすく',v2:'案2 はっきり見やすく'});
+const RHYTHM_HELL_VIS={id:(()=>{try{const v=typeof localStorage!=='undefined'?localStorage.getItem('mh_hell_vis_proto'):'';return v&&RHYTHM_HELL_VIS_PRESETS[v]?v:'now';}catch(e){return 'now';}})(),
+  set(id){const v=RHYTHM_HELL_VIS_PRESETS[id]?id:'now';this.id=v;try{if(v==='now')localStorage.removeItem('mh_hell_vis_proto');else localStorage.setItem('mh_hell_vis_proto',v);}catch(e){}}};
+// 値と案を重ねたものを、案ごとに1回だけ作って覚える(毎コマ何百回も読まれるので)
+const rhythmHellVisMerged=(()=>{const memo={};return (key,base)=>{const id=RHYTHM_HELL_VIS.id,k=id+':'+key;if(memo[k])return memo[k];
+  const over=(RHYTHM_HELL_VIS_PRESETS[id]||{})[key];return memo[k]=over?Object.freeze({...base,...over}):base;};})();
+const RHYTHM_SKY_LOOK_BASE=Object.freeze({
+  arc:Object.freeze({rgb:'214,224,240',alpha:.58,minHalfWidthPx:4.5,edgeAlpha:.6,edgePx:1.2,left:'37,99,235',right:'236,72,153',centerLane:3}),
   shadow:Object.freeze({rgb:'6,3,20',alpha:.22,radiusPx:3,insetPx:3,lineAlpha:.28,fadeRatio:.14}),
+  line:Object.freeze({bandRgb:'150,118,235',bandAlpha:.38,bandPx:6,coreRgb:'165,135,245',coreAlpha:.95,corePx:2,marginPct:4,span:'road'}),
+});
+const RHYTHM_SKY_LOOK=Object.freeze({
+  get arc(){return rhythmHellVisMerged('arc',RHYTHM_SKY_LOOK_BASE.arc);}, // 帯=手の色(左手=青・右手=桃)で中まで色(58%)・縁と芯は白。手は note.hand、無いときはスライドの点のレーンの平均が centerLane より左なら左  // edge=帯の左右の白い縁(紫の床の上でも「白い帯」に見せる)
+  core:Object.freeze({rgb:'255,255,255',alpha:.9,widthPx:3}),
+  get box(){const p=RHYTHM_HELL_VIS_PRESETS[RHYTHM_HELL_VIS.id];return RHYTHM_SKY_BOX_LOOKS[(p&&p.box)||RHYTHM_SKY_BOX_VARIANT.id]||RHYTHM_SKY_BOX_LOOKS.b;}, // 案はデバッグで切り替える(RHYTHM_SKY_BOX_LOOKS)
+  get shadow(){return rhythmHellVisMerged('shadow',RHYTHM_SKY_LOOK_BASE.shadow);},
   star:Object.freeze({rgb:'255,255,255',radiusPx:17}),
-  line:Object.freeze({bandRgb:'150,118,235',bandAlpha:.38,bandPx:6,coreRgb:'165,135,245',coreAlpha:.95,corePx:2,marginPct:4}),
+  // span … 'road'=空中の線の高さで見えている地上の道の幅+左右 marginPct(いま)/ 'sky'=空中の道の手前の端(空中のノーツが着く幅)
+  get line(){return rhythmHellVisMerged('line',RHYTHM_SKY_LOOK_BASE.line);},
   floor:Object.freeze({topRgb:'48,34,108',topAlpha:.55,bottomRgb:'66,46,146',bottomAlpha:.88}),
 });
 // 空中スライドの手(2026-10-11・社長「参考どおり左右で色分け」)。譜面の note.hand('L'|'R')に従う。手が書いてないときは推測せず、
