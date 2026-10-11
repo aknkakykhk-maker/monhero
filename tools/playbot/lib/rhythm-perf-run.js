@@ -42,7 +42,8 @@ const mime = f => ({ '.js': 'application/javascript', '.html': 'text/html', '.cs
 const pct = (sorted, p) => sorted.length ? sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * p))] : 0;
 const mean = (a) => a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0;
 
-// o: { root, song, diff, entry('select'|'debug'|'proto'), draw('canvas'|'webgl'|'gpu'|'auto'), cpu, landscape, from, to(null=曲の終わりまで), gpuArgs(true=GPU を使う設定で開く) }
+// o: { root, song, diff, entry('select'|'debug'|'proto'), draw('canvas'|'webgl'|'gpu'|'auto'), cpu, landscape, from, to(null=曲の終わりまで), gpuArgs(true=GPU を使う設定で開く),
+//      breakdown(true=内訳も返す: 関数の自分の時間の上位・funcs に並べた関数の含む時間・メインスレッドの仕事の種類), funcs }
 async function runOnce(o) {
   const ROOT = path.resolve(o.root || ROOT_DEFAULT);
   const mode = DRAW_MODES[o.draw || 'auto'];
@@ -130,10 +131,13 @@ async function runOnce(o) {
     await page.evaluate(() => { window.__ft = []; let last = performance.now(); const tick = (t) => { window.__ft.push([window.__mhTestHooks?.rhythmSongMs?.(), t - last]); last = t; if (window.__ft.length < 60000) requestAnimationFrame(tick); }; requestAnimationFrame(tick); });
     await page.waitForFunction((a) => (window.__mhTestHooks?.rhythmSongMs?.() ?? -1) >= a, FROM, { timeout: 600000, polling: 'raf' });
     await cdp.send('Performance.enable');
+    // o.atStart(page, cdp): 測り始めにページを調べる(内訳を出すときの、動いている CSS アニメーションの一覧など)
+    const atStart = typeof o.atStart === 'function' ? await o.atStart(page, cdp) : null;
     const m0 = Object.fromEntries((await cdp.send('Performance.getMetrics')).metrics.map(x => [x.name, x.value]));
     await cdp.send('Profiler.enable'); await cdp.send('Profiler.setSamplingInterval', { interval: 500 }); await cdp.send('Profiler.start');
     // メインスレッドの「CPU を本当に使った時間」(トレースの tdur)。GPU の仕事を待っている間(SwiftShader が遅いと長い)は数えない
-    await browser.startTracing(page, { categories: ['toplevel'] });
+    // breakdown のときは、メインスレッドの仕事の種類(スタイル・レイアウト・塗り・JS など)も取る
+    await browser.startTracing(page, { categories: o.breakdown ? ['toplevel', 'devtools.timeline', 'blink', 'v8'] : ['toplevel'] });
     const t0 = Date.now();
     // 終わり: 曲の時刻が TO を過ぎた、または曲が終わった(rhythmSongMs が null に戻る)
     await page.waitForFunction((b) => { const ms = window.__mhTestHooks?.rhythmSongMs?.(); return ms == null || ms >= b; }, TO, { timeout: 900000, polling: 'raf' });
@@ -169,6 +173,46 @@ async function runOnce(o) {
         const busiest = [...byThread.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
         for (const e of events) { if (e.ph === 'X' && `${e.pid}:${e.tid}` === busiest && /RunTask/.test(e.name)) { cpuUs += e.tdur || 0; wallUs += e.dur || 0; } }
     const judged = raw.results.filter(r => r.done);
+    // 内訳(o.breakdown): 関数の「自分の時間」の上位・指定した関数の「含む時間」・メインスレッドの仕事の種類ごとの CPU 時間(1コマあたり ms)
+    let breakdown = null;
+    if (o.breakdown) {
+      const self = new Map();
+      for (const [id, us] of cnt) { const cf = byId.get(id).callFrame; const key = `${cf.functionName || '(無名)'} ${String(cf.url || '').split('/').pop()}:${cf.lineNumber + 1}`; self.set(key, (self.get(key) || 0) + us); }
+      // 仕事の種類: いちばん外側の仕事(RunTask)の中の、ひとつ下の段の出来事ごとに tdur を足す(入れ子の重なりは数えない)
+      const kinds = new Map(), kinds2 = new Map();
+      const mine = events.filter(e => e.ph === 'X' && `${e.pid}:${e.tid}` === busiest).sort((a, b) => a.ts - b.ts || (b.dur || 0) - (a.dur || 0));
+      let task = null; const stack = [];
+      for (const e of mine) {
+        if (/RunTask/.test(e.name)) { task = e; stack.length = 0; continue; }
+        if (!task || e.ts >= task.ts + task.dur) continue;
+        while (stack.length && e.ts >= stack[stack.length - 1].ts + stack[stack.length - 1].dur) stack.pop();
+        if (!stack.length) kinds.set(e.name, (kinds.get(e.name) || 0) + (e.tdur || e.dur || 0));
+        // 2段目(描く準備の中の、スタイル・レイアウト・塗りなど)は「上の段 > 名前」で数える
+        else if (stack.length === 1) { const k = `${stack[0].name} > ${e.name}`; kinds2.set(k, (kinds2.get(k) || 0) + (e.tdur || e.dur || 0)); }
+        stack.push(e);
+      }
+      // スレッドごとの CPU 時間(いちばん外側の仕事の tdur)。発熱はメインスレッドだけでなく、合成・ラスタ・GPU の仕事も効く
+      const names = new Map(events.filter(e => e.ph === 'M' && e.name === 'thread_name').map(e => [`${e.pid}:${e.tid}`, e.args.name]));
+      const procs = new Map(events.filter(e => e.ph === 'M' && e.name === 'process_name').map(e => [e.pid, e.args.name]));
+      const threads = new Map();
+      for (const e of events) { if (e.ph !== 'X' || !/RunTask|ThreadControllerImpl::RunTask|ThreadPool_RunTask/.test(e.name)) continue; const k = `${procs.get(e.pid) || e.pid}/${names.get(`${e.pid}:${e.tid}`) || e.tid}`; threads.set(k, (threads.get(k) || 0) + (e.tdur || 0)); }
+      // ファイルごとの JS の自分の時間(ゲーム本体・音ゲーの描き方・React・ブラウザの中など)
+      const byFile = new Map();
+      for (const [id, us] of cnt) { const cf = byId.get(id).callFrame; const f = String(cf.url || '').split('/').pop().replace(/\?.*$/, '') || cf.functionName || '(なし)'; byFile.set(f, (byFile.get(f) || 0) + us); }
+      const per = (m, div) => [...m.entries()].map(([k, v]) => [k, v / div / frames]).sort((a, b) => b[1] - a[1]);
+      // 塗り直した要素(Paint の出来事の nodeId ごとの回数と面積)。毎コマ塗り直す大きな要素が、ラスタ(絵を画素にする仕事)を増やす
+      const paints = new Map();
+      for (const e of events) { if (e.name !== 'Paint' || !e.args || !e.args.data) continue; const d0 = e.args.data, c = d0.clip || []; const xs = c.filter((_, i) => i % 2 === 0), ys = c.filter((_, i) => i % 2 === 1);
+        const area = xs.length ? (Math.max(...xs) - Math.min(...xs)) * (Math.max(...ys) - Math.min(...ys)) : 0; const k = d0.nodeId || 0; const p0 = paints.get(k) || { n: 0, area: 0 }; p0.n++; p0.area += area; paints.set(k, p0); }
+      // メイン以外のスレッドの仕事の名前(いちばん外側の1段下)
+      const other = new Map();
+      { const by = new Map(); for (const e of events) { if (e.ph !== 'X') continue; const k = `${e.pid}:${e.tid}`; if (k === busiest) continue; if (!by.has(k)) by.set(k, []); by.get(k).push(e); }
+        for (const [k, list] of by) { list.sort((a, b) => a.ts - b.ts || (b.dur || 0) - (a.dur || 0)); let top = null; const tn = `${procs.get(Number(k.split(':')[0])) || ''}/${names.get(k) || ''}`;
+          for (const e of list) { if (!top || e.ts >= top.ts + top.dur) { top = e; continue; } if (e.ts >= top.ts && e.ts + (e.dur || 0) <= top.ts + top.dur && e !== top) { const kk = `${tn} ${top.name} > ${e.name}`; other.set(kk, (other.get(kk) || 0) + (e.tdur || e.dur || 0)); top = { ...top, ts: e.ts + (e.dur || 0), dur: top.ts + top.dur - (e.ts + (e.dur || 0)) }; } } } }
+      breakdown = { other: [...other.entries()].map(([k, v]) => [k, v / 1000 / frames]).sort((a, b) => b[1] - a[1]).slice(0, 30), paints: [...paints.entries()].sort((a, b) => b[1].area - a[1].area).slice(0, 20).map(([id, v]) => ({ id, n: v.n, areaPerFrame: v.area / frames })), self: per(self, 1000).slice(0, 150), incl: (o.funcs || []).map(k => [k, (incl.get(k) || 0) / 1000 / frames]), long: raw.ft.filter(([ms]) => ms != null && ms >= FROM && ms < TO).sort((a, b) => b[1] - a[1]).slice(0, 25).map(([ms, d]) => [Math.round(ms), Math.round(d)]), kinds: per(kinds, 1000).slice(0, 30), files: per(byFile, 1000).slice(0, 15), kinds2: per(kinds2, 1000).slice(0, 40), threads: per(threads, 1000).slice(0, 20) };
+    }
+    // o.atEnd(page, cdp, breakdown): 測り終わりにページを調べる(塗り直した要素の名前を引くなど)
+    const atEnd = typeof o.atEnd === 'function' ? await o.atEnd(page, cdp, breakdown) : null;
     return {
       song: o.song, diff: o.diff, draw: o.draw || 'auto', cpu: o.cpu || 1, size: `${W}x${H}`, renderer, backend: info.backend, band: info.band,
       range: [FROM, TO], wallSec, notes: info.notes, judged: judged.length, miss: judged.filter(r => r.j === 'MISS').length,
@@ -180,7 +224,7 @@ async function runOnce(o) {
         busyPct: d('TaskDuration') / (wallSec * 1000) * 100 },
       func: { tick: (incl.get('tick') || 0) / 1000 / frames, paintCanvasNote: (incl.get('paintCanvasNote') || 0) / 1000 / frames, bot: (incl.get('getBoundingClientRect') || 0) / 1000 / frames },
       taps: { n: taps.length, handleAvg: mean(handle), handleP95: pct(handle, .95), frameAvg: mean(toFrame), frameP95: pct(toFrame, .95), first: firstTap },
-      errors,
+      errors, breakdown, atStart, atEnd,
     };
   } finally { await browser.close(); }
 }
