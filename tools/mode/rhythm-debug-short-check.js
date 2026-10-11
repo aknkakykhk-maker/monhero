@@ -41,7 +41,9 @@ check('短縮値を持つのはデバッグ専用曲だけで、既存曲は従�
 // リスタートが新しいrunを作って音と入力を捨てるところは変わっていない
 check('リスタートは新run生成・入力と音声を破棄',game.includes('const restart=()=>{const startBest=runRef.current?.startBest;if(startBest)beginRun(startBest);};')// ライフ0(DOWN)の表示も、やり直しのときは一緒に戻す(2026-09-12に追加)
 // 判定のたびの表示は hud(外の入れ物)へ移した(a129602・2026-09-26)。やり直しでは hud も初期値へ戻す
-&&game.includes('disposeRun();setLifeDownCount(0);setView({...initialView(),status:\'loading\'});hudRef.current.set(rhythmHudInitial());')
+// 2026-10-11 f6707eed で「曲の準備中」の印(rhythmSongPrepSignal)が、捨てる所と表示を戻す所の間に入った。
+// 見張るのは「前のrunを捨ててから、DOWN・表示・hud を初期値へ戻す」順番なので、その1つだけを間に許す(順番の確かめ方は変えない)
+&&/disposeRun\(\);(?:rhythmSongPrepSignal\(true,song\.songId\);)?setLifeDownCount\(0\);setView\(\{\.\.\.initialView\(\),status:'loading'\}\);hudRef\.current\.set\(rhythmHudInitial\(\)\);/.test(game)
 // 2026-10-10 曲が始まる前に曲名とジャケットを出す幕(#2643)が、表示を戻す所と音を用意する所の間に入った(約930文字・10行)。
 // 見張りたいのは「表示を初期値へ戻してから、鳴らし始めない形で音を用意する」順番なので、間の長さだけ広げる(順番の確かめ方は変えない)
 &&/hudRef\.current\.set\(rhythmHudInitial\(\)\);[\s\S]{0,1500}?const audio=await Audio_\.startRhythmTrack\(song\.bgmTrackId,settings\.bgmVolume,\{autoStart:false\}\)/.test(game));
