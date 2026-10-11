@@ -23812,16 +23812,26 @@ const mhSkySlide=(timeMs,endTimeMs,points,endFlick,hand)=>{
 // モンスターノーツ(TAP の monsterSlot 1〜4)は、どの曲も各難易度に4個(2026-10-11 社長「どの曲も基本4個入るルール」)。
 // 4つそろっていない譜面だけ、足りない数を「曲の長さを5等分した位置」にいちばん近い単独の地上タップへ補い、時刻の順に1〜4を振り直す。
 // 4つそろっている譜面は何もしない(そのまま返す)
-const rhythmEnsureMonsterSlots=(notes,durationMs)=>{
+const rhythmEnsureMonsterSlots=(notes,durationMs,beat)=>{
+  // beat … {beatMs,zeroMs,avoid:[[始め,終わり],…]}。書けば、ビート部の置き方(2026-10-11 テンポくん)で選ぶ:
+  //   曲の20/40/60/80%にいちばん近い「拍の頭で前後1拍空いた単打」→ 前後半拍 → 拍の頭 → 同時押しでない単打 の順にゆるめる。演出の区間(avoid)は避ける
   const slots=new Set(notes.filter(n=>n.monsterSlot).map(n=>n.monsterSlot));
   if(slots.size>=4)return notes;
   const count=new Map();for(const n of notes)count.set(n.timeMs,(count.get(n.timeMs)||0)+1);
   const picked=new Set(notes.filter(n=>n.monsterSlot));
-  const free=notes.filter(n=>n.type==='TAP'&&!n.monsterSlot&&!(rhythmNoteSkyHeight(n)>0)&&count.get(n.timeMs)===1);
+  const avoid=Array.isArray(beat?.avoid)?beat.avoid:[];
+  const free=notes.filter(n=>n.type==='TAP'&&!n.monsterSlot&&!(rhythmNoteSkyHeight(n)>0)&&count.get(n.timeMs)===1&&!avoid.some(([a,b])=>n.timeMs>=a&&n.timeMs<=b));
+  const times=notes.map(n=>n.timeMs).sort((a,b)=>a-b);
+  const gapAround=t=>{let before=Infinity,after=Infinity;for(const x of times){if(x<t)before=t-x;else if(x>t){after=x-t;break;}}return Math.min(before,after);};
+  const onBeat=t=>beat&&Number(beat.beatMs)>0?Math.abs(((t-Number(beat.zeroMs))/Number(beat.beatMs))-Math.round((t-Number(beat.zeroMs))/Number(beat.beatMs)))<0.02:false;
+  const steps=beat&&Number(beat.beatMs)>0?[n=>onBeat(n.timeMs)&&gapAround(n.timeMs)>=Number(beat.beatMs)-1,n=>onBeat(n.timeMs)&&gapAround(n.timeMs)>=Number(beat.beatMs)/2-1,n=>onBeat(n.timeMs),()=>true]:[()=>true];
   for(let k=1;picked.size<4&&k<=4;k++){
     const target=Number(durationMs)*k/5;
     if([...picked].some(n=>Math.abs(n.timeMs-target)<Number(durationMs)/10))continue;
-    let best=null;for(const n of free)if(!picked.has(n)&&(!best||Math.abs(n.timeMs-target)<Math.abs(best.timeMs-target)))best=n;
+    let best=null;
+    // 各段階は目標から曲の長さの±10%以内で探す。どの段階でも無ければ範囲を外して探す
+    const near=n=>Math.abs(n.timeMs-target)<=Number(durationMs)/10;
+    for(const ok of [...steps.map(f=>n=>near(n)&&f(n)),()=>true]){for(const n of free)if(!picked.has(n)&&ok(n)&&(!best||Math.abs(n.timeMs-target)<Math.abs(best.timeMs-target)))best=n;if(best)break;}
     if(best)picked.add(best);
   }
   const order=[...picked].sort((a,b)=>a.timeMs-b.timeMs).slice(0,4);
@@ -25094,7 +25104,7 @@ const grievousLadyQuiet=notes=>Object.freeze(rhythmEnsureMonsterSlots(notes
     const start=Number(note.timeMs),end=Number(note.endTimeMs)>start?Number(note.endTimeMs):start;
     if(end===start&&Math.abs(start-GRIEVOUS_LADY_QUIET_KEEP_MS)<=40)return true;
     return !GRIEVOUS_LADY_QUIET_SPANS.some(([from,to])=>end>from+1&&start<to-1);
-  }),GRIEVOUS_LADY_DURATION_MS));
+  }),GRIEVOUS_LADY_DURATION_MS,{beatMs:285.7143,zeroMs:240,avoid:GRIEVOUS_LADY_QUIET_SPANS}));
 const grievousLadyCharts=Object.freeze({
   EASY:mhChart(1,grievousLadyQuiet(grievousLadyEasyNotes),GRIEVOUS_LADY_DURATION_MS,6,{scrollChanges:GRIEVOUS_LADY_SCROLL_CHANGES,scrollGroups:GRIEVOUS_LADY_SCROLL_GROUPS}),
   NORMAL:mhChart(3,grievousLadyQuiet(grievousLadyNormalNotes),GRIEVOUS_LADY_DURATION_MS,6,{scrollChanges:GRIEVOUS_LADY_SCROLL_CHANGES,scrollGroups:GRIEVOUS_LADY_SCROLL_GROUPS}),
