@@ -129,7 +129,8 @@ check('フリックせずに離すと、終端ちょうどでもMISS',note.holdJ
 check('フリックしなかったことが記録に残る',note._rhythmEndFlickDone===false);
 
 note=start('HOLD',true);
-frame(1800);frame(2000);frame(2200);
+// 【2026-10-11】MISS を決める前に遅れて届く離しの合図を 80ms 待つ(+185+80=+265ms で確定)
+frame(1800);frame(2000);frame(2200);frame(2300);
 check('押しっぱなしのまま終端を過ぎたら従来どおりMISSガードが働く',note.holdJudgment==='MISS',note.holdJudgment);
 
 // --- 7. 斜めのSLIDE(2026-09-14・ユーザー報告) ---
