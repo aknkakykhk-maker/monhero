@@ -1024,7 +1024,8 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
     const onLost=()=>setWebglLost(true);
     if(canvas&&RHYTHM_CANVAS_RENDERER.backend==='webgl')canvas.addEventListener('webglcontextlost',onLost);
     // WebGL で描けたときだけ、叩いたときの光もこの canvas で描く(DOM の部品は動かさない)。2D の canvas・DOM 版は今までどおり
-    RHYTHM_CANVAS_RENDERER.enableHits(RHYTHM_CANVAS_RENDERER.backend==='webgl'?playAreaRef.current:null);
+    // 叩いたときの光: WebGL のとき、またはデバッグの「叩いたときの光の描き方」で canvas を選んだとき(2D でも)は、ノーツの canvas へ描く
+    RHYTHM_CANVAS_RENDERER.enableHits(RHYTHM_CANVAS_RENDERER.backend==='webgl'||rhythmCanvasHitsPreference()==='canvas'?playAreaRef.current:null);
     // 空中のノーツの弾け方(試作)は、2D の canvas でも canvas で描く(DOM の部品では形を変えられないため)
     RHYTHM_CANVAS_RENDERER.enableSkyHits(playAreaRef.current);
     return()=>{if(canvas)canvas.removeEventListener('webglcontextlost',onLost);RHYTHM_CANVAS_RENDERER.release();};},[canvasNotes,webglNotes]);
