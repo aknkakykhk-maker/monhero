@@ -787,11 +787,11 @@
    "audio": "monster-hero/audio/bgm-grievous-lady.mp3",
    "chartIntensity": "extreme",
    "chartRevision": 28,
-   "audioSha256": "4f0cac7b97721d1d0f8734784b20425be41aedc84f6c2c3e184f31efbd546907",
-   "durationMs": 139932,
+   "audioSha256": "dac4aa4d3b724c03e0c7a38878f05eb0889f76512b5821f1fdc8ea62459a3ee0",
+   "durationMs": 141912,
    "analyzedTiming": {
     "bpm": 210,
-    "beatZeroMs": 240,
+    "beatZeroMs": 2240,
     "beatsPerBar": 4,
     "subdivisionsPerBeat": 4,
     "source": "command"
