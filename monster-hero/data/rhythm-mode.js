@@ -23779,6 +23779,24 @@ const mhSkySlide=(timeMs,endTimeMs,points,endFlick,hand)=>{
 // その親指(道の左半分=L・右半分=R)が叩くタップとフリックを空中(高さ1)へ移す。区間は tools/mode/rhythm-hell-plan.js が決める。
 // 同じ親指が地上と空中を行き来する所は1.5拍あける決まりなので、区間の切れ目の前後 gapMs/2 にあるその親指のノーツは抜く。
 // ホールド・スライドは区間にかからないように区間の側で避けてある(押さえている指を空中へ動かさない)
+// モンスターノーツ(TAP の monsterSlot 1〜4)は、どの曲も各難易度に4個(2026-10-11 社長「どの曲も基本4個入るルール」)。
+// 4つそろっていない譜面だけ、足りない数を「曲の長さを5等分した位置」にいちばん近い単独の地上タップへ補い、時刻の順に1〜4を振り直す。
+// 4つそろっている譜面は何もしない(そのまま返す)
+const rhythmEnsureMonsterSlots=(notes,durationMs)=>{
+  const slots=new Set(notes.filter(n=>n.monsterSlot).map(n=>n.monsterSlot));
+  if(slots.size>=4)return notes;
+  const count=new Map();for(const n of notes)count.set(n.timeMs,(count.get(n.timeMs)||0)+1);
+  const picked=new Set(notes.filter(n=>n.monsterSlot));
+  const free=notes.filter(n=>n.type==='TAP'&&!n.monsterSlot&&!(rhythmNoteSkyHeight(n)>0)&&count.get(n.timeMs)===1);
+  for(let k=1;picked.size<4&&k<=4;k++){
+    const target=Number(durationMs)*k/5;
+    if([...picked].some(n=>Math.abs(n.timeMs-target)<Number(durationMs)/10))continue;
+    let best=null;for(const n of free)if(!picked.has(n)&&(!best||Math.abs(n.timeMs-target)<Math.abs(best.timeMs-target)))best=n;
+    if(best)picked.add(best);
+  }
+  const order=[...picked].sort((a,b)=>a.timeMs-b.timeMs).slice(0,4);
+  return notes.map(n=>{const i=order.indexOf(n);if(i>=0)return Object.freeze({...n,monsterSlot:i+1});if(n.monsterSlot){const {monsterSlot,...rest}=n;return Object.freeze(rest);}return n;});
+};
 const rhythmHellThumb=note=>(Number(note.subLane)+Number(note.subLaneWidth||0)/2)<=6?'L':'R';
 const rhythmHellFromMaster=(notes,plan,gapMs)=>{
   const half=Number(gapMs)/2||0,blocks=Array.isArray(plan)?plan:[];
@@ -23786,9 +23804,10 @@ const rhythmHellFromMaster=(notes,plan,gapMs)=>{
   for(const note of notes){
     const thumb=rhythmHellThumb(note),t=Number(note.timeMs);
     const mine=blocks.filter(([from,to,th])=>th===thumb);
-    if(mine.some(([from,to])=>Math.abs(t-from)<half||Math.abs(t-to)<half))continue;
+    if(!note.monsterSlot&&mine.some(([from,to])=>Math.abs(t-from)<half||Math.abs(t-to)<half))continue;
     const inside=mine.some(([from,to])=>t>=from+half&&t<=to-half);
-    out.push(inside&&(note.type==='TAP'||note.type==='FLICK')&&!(Number(note.endTimeMs)>t)?Object.freeze({...note,skyHeight:1}):note);
+    // モンスターノーツは地上のまま(空中へ移さない・抜かない)
+    out.push(inside&&!note.monsterSlot&&(note.type==='TAP'||note.type==='FLICK')&&!(Number(note.endTimeMs)>t)?Object.freeze({...note,skyHeight:1}):note);
   }
   return out;
 };
@@ -25222,11 +25241,11 @@ const GRIEVOUS_LADY_SCROLL_CHANGES=Object.freeze([[16240,"MOVE",-0.17],[16811.4,
 // [始まり,終わり] の間に時刻か終わりがかかるノーツを外す。ただし C の拍461.75(参考で同時押しを2個叩く所)だけは残す
 const GRIEVOUS_LADY_QUIET_SPANS=Object.freeze([[16240,18525.7],[93954.3,96382.9],[131725.7,132525.7]].map(row=>Object.freeze(row)));
 const GRIEVOUS_LADY_QUIET_KEEP_MS=132168.6;
-const grievousLadyQuiet=notes=>Object.freeze(notes.filter(note=>{
+const grievousLadyQuiet=notes=>Object.freeze(rhythmEnsureMonsterSlots(notes.filter(note=>{
   const start=Number(note.timeMs),end=Number(note.endTimeMs)>start?Number(note.endTimeMs):start;
   if(end===start&&Math.abs(start-GRIEVOUS_LADY_QUIET_KEEP_MS)<=40)return true;
   return !GRIEVOUS_LADY_QUIET_SPANS.some(([from,to])=>end>from+1&&start<to-1);
-}));
+}),GRIEVOUS_LADY_DURATION_MS));
 const grievousLadyCharts=Object.freeze({
   EASY:mhChart(1,grievousLadyQuiet(grievousLadyEasyNotes),GRIEVOUS_LADY_DURATION_MS,6,{scrollChanges:GRIEVOUS_LADY_SCROLL_CHANGES}),
   NORMAL:mhChart(3,grievousLadyQuiet(grievousLadyNormalNotes),GRIEVOUS_LADY_DURATION_MS,6,{scrollChanges:GRIEVOUS_LADY_SCROLL_CHANGES}),
@@ -25237,7 +25256,7 @@ const grievousLadyCharts=Object.freeze({
 // HELL(デバッグ専用・2026-10-11)の空中の区間。tools/mode/rhythm-hell-plan.js --song grievous_lady --quiet 16240-18526,93954-96383,131725-132526 の出力。
 // 2小節ずつ「左の親指が空中→右の親指が空中→地上だけ」をくり返す。同じ親指が段を変える間は最短500ms(決まり1.5拍=429ms)・空中は全体の21%
 const GRIEVOUS_LADY_HELL_PLAN=Object.freeze([[9383,11811,"L"],[11954,14311,"R"],[23454,25811,"L"],[25311,27954,"R"],[30026,32169,"R"],[32311,34669,"L"],[39097,40811,"R"],[43669,45954,"R"],[46454,48026,"L"],[50526,52811,"L"],[57526,59811,"R"],[59526,61954,"L"],[64669,66526,"L"],[77811,80169,"L"],[80240,82526,"R"],[98954,100811,"R"],[100311,102811,"L"],[105669,107454,"L"],[107811,110311,"R"],[112669,114669,"R"],[114954,116311,"L"],[118954,120954,"L"],[121383,123526,"R"],[125454,128169,"R"],[128311,130526,"L"],[134669,137169,"R"]].map(row=>Object.freeze(row)));
-const grievousLadyHellNotes=rhythmHellFromMaster(grievousLadyQuiet(grievousLadyMasterNotes),GRIEVOUS_LADY_HELL_PLAN,285.7143*1.5);
+const grievousLadyHellNotes=rhythmEnsureMonsterSlots(rhythmHellFromMaster(grievousLadyQuiet(grievousLadyMasterNotes),GRIEVOUS_LADY_HELL_PLAN,285.7143*1.5),GRIEVOUS_LADY_DURATION_MS);
 const theCityBeneathTheCometsCharts=Object.freeze({
   EASY:mhChart(1,theCityBeneathTheCometsEasyNotes,THE_CITY_BENEATH_THE_COMETS_DURATION_MS,6),
   NORMAL:mhChart(3,theCityBeneathTheCometsNormalNotes,THE_CITY_BENEATH_THE_COMETS_DURATION_MS,6),
