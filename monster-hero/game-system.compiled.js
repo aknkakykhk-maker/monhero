@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f150361fc10ef4b7
+// source-sha256: 37a8f71f3d49c33a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-11 12:47";
+const BUILD_DATE = "2026-10-11 13:47";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -5210,6 +5210,13 @@ const BGM_TRACKS = [{
   gain: 1,
   loop: true
 }, {
+  id: 'melo_grievous_lady',
+  name: 'Grievous Lady',
+  creator: 'Team Grimoire vs Laur',
+  src: 'audio/bgm-grievous-lady.mp3',
+  gain: 1,
+  loop: true
+}, {
   id: 'melo_dullahan_clockwork_alt',
   name: '呪われた騎士の時計仕掛け -Another-',
   creator: 'オリジナル',
@@ -6512,6 +6519,7 @@ const Audio_ = (() => {
     "audio/bgm-freedom-dive.mp3": "34616b2fccd3",
     "audio/bgm-fusion.mp3": "6f0d4675789f",
     "audio/bgm-game-over.mp3": "d9fb75a7c827",
+    "audio/bgm-grievous-lady.mp3": "dac4aa4d3b72",
     "audio/bgm-haruka.mp3": "7a7164dbf152",
     "audio/bgm-home-ichika.mp3": "29295336d1af",
     "audio/bgm-journey.mp3": "bd51dcc8ef21",
@@ -30791,7 +30799,8 @@ const rhythmTouchDiagOf = ({
   inputTimes,
   assist,
   mirror,
-  cleared
+  cleared,
+  frame
 }) => {
   const bridge = RHYTHM_TOUCH_BRIDGE.snapshot(),
     miss = rhythmTouchNoInputMisses(notes, inputTimes);
@@ -30820,7 +30829,10 @@ const rhythmTouchDiagOf = ({
       cleared: !!cleared,
       playId: rhythmTouchDiagPlayId(),
       fixes: rhythmTouchFixesActive(),
-      timing: RHYTHM_TIMING_DIAG.snapshot()
+      timing: RHYTHM_TIMING_DIAG.snapshot(),
+      ...(frame && typeof frame === 'object' ? {
+        frame
+      } : {})
     }
   };
 };
@@ -31413,6 +31425,25 @@ const RhythmTapTest = ({
   monstersRef.current = monsters;
   const monsterSignature = monsters.map(m => m ? `${m.baseId}|${m.imageUrl}|${JSON.stringify(m.colors || null)}` : '-').join(',');
   const canvasNotes = useState(() => rhythmCanvasNotesActive(RELEASE_FLAGS.rhythmCanvasNotes))[0];
+  const rhythmFrameDiagOf = () => {
+    try {
+      const area = typeof document !== 'undefined' ? document.querySelector('[data-rhythm-play-area]') : null,
+        rect = area ? area.getBoundingClientRect() : null;
+      return RHYTHM_FRAME_DIAG.snapshot({
+        draw: !canvasNotes ? 'dom' : RHYTHM_CANVAS_RENDERER.gpuBand ? 'gpu' : String(RHYTHM_CANVAS_RENDERER.backend || 'canvas'),
+        gpu: rhythmWebglRendererName(),
+        dpr: typeof window !== 'undefined' ? Math.round((window.devicePixelRatio || 1) * 100) / 100 : 1,
+        w: rect ? Math.round(rect.width) : 0,
+        h: rect ? Math.round(rect.height) : 0,
+        cores: typeof navigator !== 'undefined' && Number.isFinite(navigator.hardwareConcurrency) ? navigator.hardwareConcurrency : 0,
+        effect: String(settings?.stageEffect || ''),
+        fps: String(settings?.frameRateMode || ''),
+        light: !!settings?.lightweightMode
+      });
+    } catch (e) {
+      return null;
+    }
+  };
   const skyChart = useMemo(() => rhythmChartHasSky(chart?.notes), [chart]);
   if (skyChart) RHYTHM_SKY_LIFT.set(orientationIsLandscape());
   const skyPlane = (() => {
@@ -31467,11 +31498,12 @@ const RhythmTapTest = ({
       RHYTHM_SKY_INPUT.active = false;
     };
   }, [skyChart]);
-  const scrollChanges = rawChart?.scrollChanges || null;
+  const scrollChanges = rawChart?.scrollChanges || null,
+    scrollGroups = rawChart?.scrollGroups || null;
   useEffect(() => {
-    rhythmScrollSet(scrollChanges, rhythmTravelMsForSpeed(settings.noteSpeed));
+    rhythmScrollSet(scrollChanges, rhythmTravelMsForSpeed(settings.noteSpeed), scrollGroups);
     return () => rhythmScrollSet(null);
-  }, [scrollChanges, settings.noteSpeed]);
+  }, [scrollChanges, scrollGroups, settings.noteSpeed]);
   const [autoQuality, setAutoQuality] = useState(() => rhythmAutoQualityMemory.level);
   const autoQualityAtStart = useState(() => rhythmAutoQualityMemory.level)[0];
   const autoQualityLevelRef = useRef(autoQuality);
@@ -32788,7 +32820,8 @@ const RhythmTapTest = ({
       inputTimes: run.inputTimes,
       assist: assistOn,
       mirror: mirrorOn,
-      cleared: !failed
+      cleared: !failed,
+      frame: rhythmFrameDiagOf()
     }) : null;
     if (touchDiag) void rhythmTouchDiagRecord(touchDiag);
     const touchReport = touchDiag && touchDiag.platform !== 'other' ? {
@@ -32997,7 +33030,7 @@ const RhythmTapTest = ({
         }
         lastDrawnMs = frameNowMs;
       }
-      const perfTickStart = RHYTHM_PERF.enabled ? performance.now() : 0;
+      const perfTickStart = typeof performance !== 'undefined' && performance.now ? performance.now() : 0;
       const songTimeMs = run.audio.songTimeMs();
       RHYTHM_PERF.songTime(songTimeMs);
       RHYTHM_TIMING_DIAG.frame(songTimeMs);
@@ -33127,7 +33160,7 @@ const RhythmTapTest = ({
           note._rhythmCanvasSettled = true;
           return;
         }
-        const progress = 1 - (rhythmScrollPos(note.timeMs) - rhythmScrollPos(visualTime)) / travelMs,
+        const progress = 1 - (rhythmScrollPos(note.timeMs, note.scrollGroup) - rhythmScrollPos(visualTime, note.scrollGroup)) / travelMs,
           visible = failedTrail || note.activePointerId !== null || progress >= -.1 && progress <= 1.18;
         if (!visible || !travel || !canvasReady) return;
         perfDrawn++;
@@ -33136,7 +33169,7 @@ const RhythmTapTest = ({
         if (clearFlash) yPx = travel.judgmentY;
         yPx = Math.round(yPx);
         const releaseTargetMs = rhythmReleaseTargetMs(note),
-          releaseProgress = 1 - (rhythmScrollPos(releaseTargetMs) - rhythmScrollPos(visualTime)) / travelMs,
+          releaseProgress = 1 - (rhythmScrollPos(releaseTargetMs, note.scrollGroup) - rhythmScrollPos(visualTime, note.scrollGroup)) / travelMs,
           releaseYpx = Math.round(travel.spawnY + rhythmProjectTravelProgress(releaseProgress) * travel.travelPx),
           bodyPx = Math.max(0, yPx - releaseYpx);
         const hasBody = rhythmNoteHasBody(note);
@@ -33261,7 +33294,7 @@ const RhythmTapTest = ({
           el.dataset.rhythmFailed = failedFlag;
           el._rhythmFailedFlag = failedFlag;
         }
-        const progress = 1 - (rhythmScrollPos(note.timeMs) - rhythmScrollPos(visualTime)) / travelMs,
+        const progress = 1 - (rhythmScrollPos(note.timeMs, note.scrollGroup) - rhythmScrollPos(visualTime, note.scrollGroup)) / travelMs,
           visible = failedTrail || note.activePointerId !== null || progress >= -.1 && progress <= 1.18;
         const nextOpacity = failedTrail ? '.34' : visible ? '1' : '0';
         if (el._rhythmOpacity !== nextOpacity) {
@@ -33285,7 +33318,7 @@ const RhythmTapTest = ({
           el._rhythmTransform = nextTransform;
         }
         const releaseTargetMs = rhythmReleaseTargetMs(note),
-          releaseProgress = 1 - (rhythmScrollPos(releaseTargetMs) - rhythmScrollPos(visualTime)) / travelMs,
+          releaseProgress = 1 - (rhythmScrollPos(releaseTargetMs, note.scrollGroup) - rhythmScrollPos(visualTime, note.scrollGroup)) / travelMs,
           releaseYpx = Math.round(travel.spawnY + rhythmProjectTravelProgress(releaseProgress) * travel.travelPx),
           bodyPx = Math.max(0, yPx - releaseYpx);
         if (note.type === 'HOLD') {
@@ -33333,7 +33366,7 @@ const RhythmTapTest = ({
       }
       run.scanFrom = scanFrom;
       const scanHorizonMs = visualTime + travelMs * 1.2,
-        scanHorizonScroll = rhythmScrollPos(visualTime) + travelMs * 1.2,
+        scanHorizonScroll = rhythmScrollNowMax(visualTime) + travelMs * 1.2,
         scrollTable = !!RHYTHM_SCROLL.points;
       const heldNotes = heldNotesRef.current;
       heldNotes.length = 0;
@@ -33416,6 +33449,7 @@ const RhythmTapTest = ({
         run.audio.fadeOut?.(RHYTHM_END_FADE_MS);
       }
       if (RHYTHM_PERF.enabled) RHYTHM_PERF.tick(performance.now() - perfTickStart, perfTickStart - frameNowMs);
+      RHYTHM_FRAME_DIAG.tick(frameNowMs, perfTickStart ? performance.now() - perfTickStart : NaN);
       if (songTimeMs >= playEndTimeMs || run.audio.ended()) finish();else frameRef.current = requestAnimationFrame(tick);
     };
     frameRef.current = requestAnimationFrame(tick);
@@ -33567,6 +33601,7 @@ const RhythmTapTest = ({
       return;
     }
     const startBest = normalizeRhythmBestRecord(startBestValue);
+    RHYTHM_FRAME_DIAG.reset();
     RHYTHM_TIMING_DIAG.reset();
     RHYTHM_TIMING_DIAG.meta(audio.info?.());
     RHYTHM_TOUCH_BRIDGE.reset();
@@ -43686,7 +43721,14 @@ const RaidJackDamageFx = ({
     className: "mh-rjdmg-slash mh-rjdmg-slash-b"
   }))), React.createElement("div", {
     className: "mh-rjdmg-name"
-  }, fx.tierName), hasLife && React.createElement("div", {
+  }, fx.tierName), fx.pumpkin ? React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "mh-rjdmg-bar mh-rjdmg-bar-inf",
+    "aria-hidden": "true"
+  }, React.createElement("div", {
+    className: "mh-rjdmg-bar-fill"
+  })), React.createElement("div", {
+    className: "mh-rjdmg-life"
+  }, "体力 ∞")) : hasLife && React.createElement(React.Fragment, null, React.createElement("div", {
     className: "mh-rjdmg-bar",
     "aria-hidden": "true"
   }, React.createElement("div", {
@@ -43696,9 +43738,9 @@ const RaidJackDamageFx = ({
       '--to': to,
       transform: `scaleX(${from})`
     }
-  })), hasLife && React.createElement("div", {
+  })), React.createElement("div", {
     className: "mh-rjdmg-life"
-  }, lifeAfter.toLocaleString(), " / ", fx.max.toLocaleString()), React.createElement("div", {
+  }, lifeAfter.toLocaleString(), " / ", fx.max.toLocaleString())), React.createElement("div", {
     className: `mh-rjdmg-damage${none ? ' mh-rjdmg-damage-none' : ''}`
   }, none ? React.createElement("b", null, fx.assist ? 'ダメージにならない' : 'ダメージ 0') : React.createElement(React.Fragment, null, React.createElement("small", null, "DAMAGE"), React.createElement("b", {
     style: {
@@ -71799,7 +71841,8 @@ const RaidJackDebugScreen = ({
   onToggleRealRules,
   onOpenRaid,
   onGoHome,
-  onPreviewDamageFx
+  onPreviewDamageFx,
+  onPreviewRhythmResult
 }) => {
   const [nowChoice, setNowChoice] = useState('real');
   const [state, setState] = useState(() => raidJackDefaultState());
@@ -72083,7 +72126,15 @@ const RaidJackDebugScreen = ({
     "data-raid-damage-fx-none": true,
     className: `${btn} col-span-2 border-fuchsia-400/60 bg-fuchsia-950/40`,
     onClick: () => onPreviewDamageFx && onPreviewDamageFx('none')
-  }, "ダメージ演出(ダメージなし・アシスト)"))), React.createElement("section", {
+  }, "ダメージ演出(ダメージなし・アシスト)"), React.createElement("button", {
+    "data-raid-rhythm-result-hit": true,
+    className: `${btn} border-sky-400/60 bg-sky-950/40`,
+    onClick: () => onPreviewRhythmResult && onPreviewRhythmResult('hit')
+  }, "結果画面(モンヒロビート)"), React.createElement("button", {
+    "data-raid-rhythm-result-pumpkin": true,
+    className: `${btn} border-sky-400/60 bg-sky-950/40`,
+    onClick: () => onPreviewRhythmResult && onPreviewRhythmResult('pumpkin')
+  }, "結果画面(ぱんぷきん)"))), React.createElement("section", {
     className: "rounded-2xl border border-orange-400/40 bg-orange-950/20 p-3 text-[11px] text-slate-100"
   }, React.createElement("div", {
     className: "mb-1 font-black text-orange-200"
@@ -89261,7 +89312,10 @@ function MonsterHeroGame() {
       opened,
       eventId: run.eventId,
       quickAward: null,
-      lifeLeft: Math.max(0, (startLife !== null ? startLife : tier.hp) - damage)
+      lifeLeft: Math.max(0, (startLife !== null ? startLife : tier.hp) - damage),
+      lifeBefore: startLife,
+      lifeMax: tier.hp,
+      pumpkin
     };
   };
   const exitRaidJackRhythmPlay = () => {
@@ -97921,6 +97975,37 @@ function MonsterHeroGame() {
         await openRaidJack();
       },
       onGoHome: returnToHome,
+      onPreviewRhythmResult: kind => {
+        const pumpkin = kind === 'pumpkin';
+        const t = pumpkin ? RAID_JACK_PUMPKIN : RAID_JACK_A_TIERS[2];
+        const hp = t.hp;
+        const before = Math.floor(hp * 0.6);
+        const damage = 523456;
+        setRaidJackResult({
+          way: 'rhythm',
+          songName: 'Monster Hero',
+          difficultyName: 'HARD',
+          score: 523456,
+          assist: false,
+          kind: 'a',
+          tierIndex: pumpkin ? RAID_JACK_A_TIERS.length - 1 : 2,
+          tierName: t.name,
+          reason: 'rhythm',
+          damage,
+          defeated: false,
+          turns: 0,
+          levelUps: 0,
+          growths: 0,
+          outcome: 'sent',
+          opened: false,
+          eventId: 'raid_jack_debug',
+          quickAward: null,
+          lifeLeft: pumpkin ? hp : Math.max(0, before - damage),
+          lifeBefore: pumpkin ? null : before,
+          lifeMax: hp,
+          pumpkin
+        });
+      },
       onPreviewDamageFx: kind => {
         const t = RAID_JACK_A_TIERS[2];
         const hp = t.hp;
@@ -104026,12 +104111,13 @@ function MonsterHeroGame() {
       }[r.outcome] || '';
       return React.createElement("div", {
         "data-raid-jack-result": true,
-        className: "fixed inset-0 flex flex-col items-center justify-center p-6 text-center",
+        className: "fixed inset-0 flex flex-col items-center justify-center overflow-y-auto p-6 text-center landscape:py-3",
         style: {
           position: 'fixed',
           inset: 0,
           zIndex: 81000,
-          backgroundColor: 'rgba(20,8,2,.97)'
+          backgroundColor: 'rgba(20,8,2,.97)',
+          justifyContent: 'safe center'
         }
       }, React.createElement(RaidJackResultStinger, {
         reason: r.reason
@@ -104066,7 +104152,7 @@ function MonsterHeroGame() {
         delay: 1400,
         duration: 1300,
         format: v => v.toLocaleString()
-      })), r.way === 'rhythm' ? React.createElement("div", {
+      })), r.way === 'rhythm' ? React.createElement(React.Fragment, null, React.createElement("div", {
         "data-raid-jack-rhythm-rows": true,
         className: "mt-2 grid grid-cols-2 gap-1 text-[10px] text-slate-200"
       }, React.createElement("span", null, "曲"), React.createElement("b", {
@@ -104075,9 +104161,24 @@ function MonsterHeroGame() {
         className: "text-right"
       }, r.score.toLocaleString()), r.assist && React.createElement(React.Fragment, null, React.createElement("span", null, "アシストモード"), React.createElement("b", {
         className: "text-right"
-      }, "ダメージにならない")), React.createElement("span", null, "ジャックの残りライフ(みんなの分を引いた計算)"), React.createElement("b", {
+      }, "ダメージにならない")), r.pumpkin ? React.createElement(React.Fragment, null, React.createElement("span", null, "体力"), React.createElement("b", {
         className: "text-right"
-      }, r.lifeLeft.toLocaleString())) : React.createElement("div", {
+      }, "∞")) : React.createElement(React.Fragment, null, React.createElement("span", null, "ジャックの残りライフ(みんなの分を引いた計算)"), React.createElement("b", {
+        className: "text-right"
+      }, r.lifeLeft.toLocaleString()))), !r.pumpkin && Number.isFinite(r.lifeBefore) && r.lifeMax > 0 && React.createElement("div", {
+        "data-raid-jack-life-bar": true,
+        className: "mt-2"
+      }, React.createElement("div", {
+        className: "mh-rjresult-bar",
+        "aria-hidden": "true"
+      }, React.createElement("i", {
+        style: {
+          '--from': Math.min(1, r.lifeBefore / r.lifeMax),
+          '--to': Math.min(1, r.lifeLeft / r.lifeMax)
+        }
+      })), React.createElement("div", {
+        className: "mt-0.5 text-right text-[9px] font-black text-red-200"
+      }, r.lifeBefore.toLocaleString(), " → ", r.lifeLeft.toLocaleString()))) : React.createElement("div", {
         className: "mt-2 grid grid-cols-2 gap-1 text-[10px] text-slate-200"
       }, React.createElement("span", null, "使ったターン"), React.createElement("b", {
         className: "text-right"
@@ -108687,6 +108788,21 @@ const createAnimationStyle = () => {
     .mh-rjdmg-slash-b { top: 52%; transform: rotate(20deg) translateX(60%); animation-name: mhRjSlashB; animation-delay: 1.1s; }
     .mh-rjdmg-name { position: relative; font-size: 14px; font-weight: 900; text-shadow: 0 2px 4px #000; animation: mhRjRise .4s ease-out .5s both; }
     .mh-rjdmg-bar { position: relative; width: min(78vw, 330px); height: 16px; overflow: hidden; border-radius: 9999px; border: 2px solid rgba(255,255,255,.3); background: rgba(2,6,23,.9); animation: mhRjRise .4s ease-out .6s both; }
+    /* ★「横向き」ボタンで画面を回しているとき(縦持ちのスマホ)は、vh / dvh が回す前の縦の長さのまま測られる。
+       ジャックの絵が大きくなりすぎて、いちばん下の DAMAGE の数字が画面の外へ押し出されていた(2026-10-11 社長の報告)。
+       回しているあいだは、器の高さ=端末の横幅(vw)・器の横幅=端末の縦(vh)で測り直す */
+    [data-mh-view-rotation="true"] .mh-rjdmg { gap: 3px; padding-top: 10px; padding-bottom: 26px; }
+    [data-mh-view-rotation="true"] .mh-rjdmg-stage { width: min(64vh, 270px, 26vw); }
+    [data-mh-view-rotation="true"] .mh-rjdmg-bar { width: min(78vh, 330px); }
+    [data-mh-view-rotation="true"] .mh-rjdmg-score b { font-size: 30px; }
+    /* 体力が減らない相手(ぱんぷきん): バーは満タンのまま、当たった瞬間に光る */
+    .mh-rjdmg-bar-inf .mh-rjdmg-bar-fill { animation: mhRjBarInf .7s ease-out 1.05s both; background: linear-gradient(90deg, #f97316, #facc15, #f97316); }
+    @keyframes mhRjBarInf { 0% { filter: brightness(1); } 30% { filter: brightness(2.2); } 100% { filter: brightness(1); } }
+    /* レイドの結果画面(モンヒロビート)の体力のバー。演奏前の体力から、いまの体力へ減っていく */
+    .mh-rjresult-bar { position: relative; height: 12px; overflow: hidden; border-radius: 9999px; border: 1px solid rgba(255,255,255,.3); background: rgba(2,6,23,.9); }
+    .mh-rjresult-bar > i { position: absolute; inset: 0; transform-origin: left center; background: linear-gradient(180deg, #fca5a5, #ef4444 45%, #991b1b); transform: scaleX(var(--from)); animation: mhRjResultBar 1.2s cubic-bezier(.2,.8,.3,1) 1.6s forwards; }
+    @keyframes mhRjResultBar { to { transform: scaleX(var(--to)); } }
+    @media (prefers-reduced-motion: reduce) { .mh-rjresult-bar > i { animation: none; transform: scaleX(var(--to)); } }
     .mh-rjdmg-bar-fill { height: 100%; width: 100%; transform-origin: left center; background: linear-gradient(180deg, #fca5a5, #ef4444 40%, #b91c1c 75%, #7f1d1d); animation: mhRjBarDrop 1.2s cubic-bezier(.2,.8,.3,1) 1.05s forwards; }
     .mh-rjdmg-life { position: relative; font-size: 10px; font-weight: 900; color: #fca5a5; font-variant-numeric: tabular-nums; animation: mhRjRise .4s ease-out .6s both; }
     .mh-rjdmg-damage { position: relative; text-align: center; opacity: 0; animation: mhRjSlam .55s cubic-bezier(.2,1.4,.4,1) 1s both; }

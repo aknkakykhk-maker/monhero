@@ -47,7 +47,7 @@ tables.push({name:'表なし',changes:null});
 let diffs=0,checked=0;
 for(const tb of tables)for(const travel of Object.values(TRAVEL)){
   old.set(tb.changes,travel);R.rhythmScrollSet(tb.changes,travel);
-  if(R.RHYTHM_SCROLL.back){diffs++;continue;}
+  if(R.RHYTHM_SCROLL.back)continue; // 戻る表(新しい表)は直す前の計算と比べられないので外す
   const first=tb.changes&&tb.changes.length?Number(tb.changes[0][0]):0;
   for(let t=first-3000;t<first+6000;t+=7){
     checked++;

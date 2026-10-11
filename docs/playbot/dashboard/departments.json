@@ -104,6 +104,11 @@
     "名前": "リバースくん",
     "担当": "新曲係(Grievous Lady・止まる/飛ぶ/戻る流れの演出)",
     "性格": "曲の「ため」と「ひっくり返し」に燃える演出好き。ただし遊び手が読めない仕掛けは作らない"
+   },
+   {
+    "名前": "カゲくん",
+    "担当": "新曲係(Against My Own Shadow・HELL なし)",
+    "性格": "影の濃い曲ほど燃える静かな職人。押しやすさと曲の重さの両方を譜面に残したい"
    }
   ],
   "得意": [
@@ -303,7 +308,7 @@
   "気をつけること": [
    "頼みごとごとに新しいセッションを立てるので、前の経緯は台帳で渡す"
   ],
-  "セッション": "部長ドライバーくん session_01UPffASX3yavnvax9F9gNen / ヤスリくん session_01Wyn2J3kuKNp9MmbffDj3oc / ピンセットくん session_01SPwyyGL5vwYvuDU9Bzts2t",
+  "セッション": "部長ドライバーくん session_01JBvGk6rrRBCgkPEFTiNMu8 / ヤスリくん session_01Wyn2J3kuKNp9MmbffDj3oc / ピンセットくん session_01SPwyyGL5vwYvuDU9Bzts2t",
   "状態": "待機",
   "部長性格": "無口な修理屋。測ってから直す。修理部のいちばん古株"
  },

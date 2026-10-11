@@ -782,6 +782,24 @@
     "subdivisionsPerBeat": 4,
     "source": "command"
    }
+  },
+  "grievous_lady": {
+   "audio": "monster-hero/audio/bgm-grievous-lady.mp3",
+   "chartIntensity": "extreme",
+   "chartRevision": 28,
+   "audioSha256": "dac4aa4d3b724c03e0c7a38878f05eb0889f76512b5821f1fdc8ea62459a3ee0",
+   "durationMs": 141912,
+   "analyzedTiming": {
+    "bpm": 210,
+    "beatZeroMs": 2240,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "chartIntensityByDifficulty": {
+    "EASY": "strong",
+    "NORMAL": "strong"
+   }
   }
  }
 }

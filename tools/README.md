@@ -354,6 +354,8 @@ SIX ÉTERNEL(BPM207)のEXPERTが毎秒4.56＝MASTERの上限4.6に迫ってい�
 
 `node mode/rhythm-timing-diag-check.js` は、実機でしか分からないことの診断(`stats.timing`)と、直し方の切り替え(`inputAgeCap` / `smoothSongClock` / `autoPauseOnHidden`・既定はすべて切ってある・この端末だけで入れる上書き `mh_rhythm_fix_override_v1`)が崩れていないかを確認する(2026-10-07)。報告ツール `rhythm-touch-diag.js --report` の「タイミングの診断」も見張る。
 
+`node mode/rhythm-frame-diag-check.js` は、演奏中の1コマの重さをタッチの診断の行へ足す仕組み(`stats.frame`・2026-10-11)を見張る。足すだけ・約200バイト・frame の無い古い行を読んでも壊れない・送り先は今までどおり、を確かめる。
+
 `node mode/rhythm-input-position-check.js` は、押した位置・時刻まわり(判定ラインより下の受付・道の外から滑ってきた指・押さえ始めの時計・疑似タップの時刻)の取り決めが消えていないかを文字で確認する(2026-10-07)。
 `node mode/rhythm-audio-independence-check.js` は、音ゲーのBGM専用gainがメインのbgmGainを経由せずdestinationへ直結していること、曲ごとの音量差はsafeTrackGainで正規化すること、タップ音がもともとメインのSE音量と無関係であること、そして全体ミュート(タイトルの「音がオフです」)だけは`window.__mhAudioEnabled`経由で両方に共通で効くことを確認する。
 `node mode/rhythm-failed-hold-trail-check.js` は、MISSになったHOLD／SLIDEを譜面上の終端まで薄いグレーで流し続け、TAP／FLICKは従来どおり消えること、判定・コンボ・スコアへ影響していないことを確認する。
