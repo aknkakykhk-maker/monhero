@@ -1625,6 +1625,37 @@ const rhythmInputAgeMs=(eventTimeStamp,nowPerfMs)=>{
   RHYTHM_TIMING_DIAG.ageUnbacked();
   return RHYTHM_INPUT_AGE_MAX_MS;
 };
+// 【2026-10-11・社長「たまに、ちゃんと押しているのに MISS になる」】HOLD/SLIDE を離した合図(touchend など)の遅れ。
+// iPhone では合図が遅れて届くことがあり(1曲あたり 0.15秒超が数十回)、終わりで離した合図が 0.25秒遅れて届くと「押しっぱなしで窓を過ぎた」と数えられて MISS になっていた
+// (10-10 の「離さないと MISS」の前は、押しっぱなしでも成功だったので表に出なかった)。押した合図と同じ物差しで、離した時刻を合図が起きた時刻へ戻す。
+// 標準は押した合図と同じ 0.08秒まで戻す。直し方 releaseAgeWide を入れた端末では、時刻だけ古い合図も 0.3秒まで信じる(離しを早めに数えるだけで、ほかのノーツを取り違える心配がないため)。
+// 診断の数(ageHist など)には数えない(押した合図の分布のまま)
+const rhythmReleaseAgeMs=(eventTimeStamp,nowPerfMs)=>{
+  const stamp=Number(eventTimeStamp),now=Number(nowPerfMs);
+  if(!Number.isFinite(stamp)||!Number.isFinite(now))return 0;
+  const age=now-stamp;
+  if(!(age>0))return 0;
+  if(age<=RHYTHM_INPUT_AGE_MAX_MS)return age;
+  if(rhythmInputAgeFloorMs>RHYTHM_INPUT_AGE_BASE_ALIGNED_MS)return 0;
+  return Math.min(age,rhythmReleaseWaitMs());
+};
+// 押しっぱなしで終わりの窓を過ぎたと決める前に、遅れて届く離しの合図を待つ長さ(上の rhythmReleaseAgeMs で戻せる上限と同じ)。
+// 決まり(窓の中で離せば成功・過ぎたら MISS)は変えず、MISS の文字が出るのがこの分だけ遅れる
+const rhythmReleaseWaitMs=()=>rhythmTouchFixOn('releaseAgeWide')?RHYTHM_INPUT_AGE_CAP_WIDE_MS:RHYTHM_INPUT_AGE_MAX_MS;
+// タッチ側の見回り(RHYTHM_GESTURE_RUNTIME)が離しを判定していない HOLD/SLIDE を、本体が決めるときの判定(2026-10-11)。
+// タッチ側の記録が途中で外れたホールドでは、本体が「終わり際なら離した時刻を見ずに押し始めの判定で成功」にしていて、
+// 押しっぱなしで窓を過ぎても成功になっていた(ボットで 64本中5本)。決まり(窓の中で離せば成功・過ぎたら MISS)をここでも当てる。
+//   songMs … 本体の曲の時刻(離した、または今の時刻) / offsetMs … 判定タイミングの調整。離しの的が分からないノーツは null(今までどおり)
+const rhythmReleaseFallback=(note,songMs,offsetMs)=>{
+  const target=Number(note&&note._rhythmReleaseTargetMs);
+  if(!note||!note._rhythmReleaseRequired||note._rhythmReleaseDone||!Number.isFinite(target))return null;
+  const releaseDelta=(Number(songMs)||0)-(target+(Number(offsetMs)||0));
+  const start=note.holdJudgment||'MISS';
+  const end=rhythmJudgeReleaseLenient(releaseDelta);
+  return {judgment:rhythmWorseJudgment(start,end),deltaMs:releaseDelta,
+    // 押さえたまま: 遅れて届く離しの合図を待つ時間まで過ぎたら MISS で決めてよい
+    expiredWhileHeld:releaseDelta>=RHYTHM_RELEASE_AUTO_MISS_ARM_MS+rhythmReleaseWaitMs()};
+};
 // ノーツを「もう誰も取れない」として見逃しMISSにする時刻。
 //
 // 【2026-09-11・「叩いたのにノーツが消えている」の対策】
@@ -2930,6 +2961,9 @@ const RHYTHM_TOUCH_FIXES={
   // 【2026-10-07 21時・ユーザー報告「昨日から色々直してかなりタップ抜けがひどくなった」】いったん標準では切る(10/6夕方の動きへ戻す)。
   // 端末の記録で、押したずれの中央値が30〜50ms早い側へ出ていた。補正の効きすぎを疑って、原因が分かるまで戻す
   inputAgeCap:false,
+  // releaseAgeWide … HOLD/SLIDE を離した合図の遅れを 0.3秒まで戻す(標準は 0.08秒)。2026-10-11 社長「たまに、ちゃんと押しているのに MISS」。
+  //                 まずデバッグ画面の「ホールドの離しの遅れの戻し方(検証用)」で社長の iPhone で試す。標準は切
+  releaseAgeWide:false,
   smoothSongClock:false,
   autoPauseOnHidden:true,
   allPlatforms:false,
@@ -3082,7 +3116,8 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
       session.note.endTimeMs=session.releaseTargetMs+RHYTHM_RELEASE_MAX_MS+1;
       session.autoCompletionDeferred=true;
     }
-    if(releaseDelta>=RHYTHM_RELEASE_AUTO_MISS_ARM_MS){
+    // 遅れて届く離しの合図(rhythmReleaseWaitMs)を待ってから決める
+    if(releaseDelta>=RHYTHM_RELEASE_AUTO_MISS_ARM_MS+rhythmReleaseWaitMs()){
       // 押しっぱなしのまま終わりの判定窓を過ぎた。MISS で確定する。
       session.expiredGuard=true;
       // 終点フリックを弾き終えたノーツだけは、指を置いたままでも「弾いて取った」ので MISS にしない
@@ -3347,7 +3382,8 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
     positions.set(String(key),pos);
     evaluatePosition(sessions.get(String(key)),pos);
   };
-  const release=(key,cancelled=false)=>{
+  // ageMs … 離した合図が起きてから届くまでの遅れ(rhythmReleaseAgeMs)。離した時刻をその分だけ戻す
+  const release=(key,cancelled=false,ageMs=0)=>{
     const id=String(key),session=sessions.get(id);
     positions.delete(id);
     if(!session){sessions.delete(id);return;}
@@ -3356,7 +3392,7 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
         session.startJudgment=session.note.holdJudgment;
         session.startDeltaMs=Number(session.note.holdDeltaMs)||0;
       }
-      const songNow=estimatedSongMs(session);
+      const songNow=estimatedSongMs(session)-Math.max(0,Number(ageMs)||0);
       const releaseDelta=songNow-(session.releaseTargetMs+session.offsetMs);
       // 終わりよりずっと手前で離したときは、指を持ち替えている途中かもしれない。
       // ここで終端判定を作って note.endTimeMs を書き換えてしまうと、
@@ -3444,7 +3480,7 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
   if(typeof document!=='undefined'){
     const captureTouchPositions=event=>{Array.from(event.changedTouches||[]).forEach(touch=>record(inputKey('touch',touch.identifier),touch.clientX,touch.clientY));};
     const captureTouchStart=event=>{if(event.target?.closest?.('[data-rhythm-play-area]'))RHYTHM_NOTE_SE_RUNTIME.warm();captureTouchPositions(event);};
-    const releaseTouches=event=>{Array.from(event.changedTouches||[]).forEach(touch=>release(inputKey('touch',touch.identifier),false));};
+    const releaseTouches=event=>{const age=rhythmReleaseAgeMs(event.timeStamp,nowPerf());Array.from(event.changedTouches||[]).forEach(touch=>release(inputKey('touch',touch.identifier),false,age));};
     const cancelTouches=event=>{Array.from(event.changedTouches||[]).forEach(touch=>release(inputKey('touch',touch.identifier),true));};
     document.addEventListener('touchstart',captureTouchStart,{capture:true,passive:true});
     document.addEventListener('touchmove',captureTouchPositions,{capture:true,passive:true});
@@ -3454,16 +3490,16 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
     document.addEventListener('touchcancel',cancelTouches,{capture:true,passive:true});
     document.addEventListener('pointerdown',event=>{if(event.pointerType!=='touch'){if(event.target?.closest?.('[data-rhythm-play-area]'))RHYTHM_NOTE_SE_RUNTIME.warm();record(inputKey('pointer',event.pointerId),event.clientX,event.clientY);}},true);
     document.addEventListener('pointermove',event=>{if(event.pointerType!=='touch'||RHYTHM_TOUCH_BRIDGE.isRecoveredPointer(event.pointerId))record(inputKey('pointer',event.pointerId),event.clientX,event.clientY);},true);
-    document.addEventListener('pointerup',event=>{if(event.pointerType!=='touch'||RHYTHM_TOUCH_BRIDGE.isRecoveredPointer(event.pointerId))release(inputKey('pointer',event.pointerId),false);},true);
+    document.addEventListener('pointerup',event=>{if(event.pointerType!=='touch'||RHYTHM_TOUCH_BRIDGE.isRecoveredPointer(event.pointerId))release(inputKey('pointer',event.pointerId),false,rhythmReleaseAgeMs(event.timeStamp,nowPerf()));},true);
     document.addEventListener('pointercancel',event=>{if(event.pointerType!=='touch'||RHYTHM_TOUCH_BRIDGE.isRecoveredPointer(event.pointerId))release(inputKey('pointer',event.pointerId),true);},true);
     document.addEventListener('click',event=>{const button=event.target?.closest?.('[data-rhythm-pause-menu] button');if(button&&/リスタート|中断/.test(button.textContent||''))clear();},true);
   }
 
   // 本体が「終わりまで押さえた」で成功を確定する直前に呼ぶ。毎コマの見回りと本体の確定が同じ瞬間を別々の時計で見ていて、
   // どちらが先に走るかで、押しっぱなしで窓を過ぎても成功になったり MISS になったりしていた(2026-10-11 社長「押しっぱなしでミス判定になるときがある」)。
-  // 終わりの判定はこちらの時計(離した時刻を測るのと同じ時計)1本で決める。こちらの時計でまだ窓の中なら、本体の確定を窓を過ぎるまで延ばす
+  // 終わりの判定はこちらの時計(離した時刻を測るのと同じ時計)1本で決める。こちらの時計でまだ窓の中なら、本体はまだ確定しない
   // (本体の時計が少し先に進んでいても、窓の中で離した指を「過ぎた」と見なさない)。判定の決まりは変えない。
-  // 戻り値 … true=見回りのあとで本体がいま確定してよい / false=まだ待つ(または、この指の見回りが無い)
+  // 戻り値 … true=見回りのあとで本体がいま確定してよい / false=まだ待つ / null=この指の見回りが無い
   const settleHeld=(note,songMs)=>{
     for(const session of sessions.values()){
       if(session.note!==note)continue;
@@ -3471,13 +3507,15 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
       const songNow=estimatedSongMs(session);
       checkHeldRelease(session,songNow);
       const releaseDelta=songNow-(session.releaseTargetMs+session.offsetMs);
-      if(releaseDelta>=RHYTHM_RELEASE_AUTO_MISS_ARM_MS)return true;
-      // まだ窓の中: 本体の確定を、こちらの時計で窓を過ぎるまで延ばす(延ばすのは本体の曲の時刻で測った残りの分だけ)
-      const wait=RHYTHM_RELEASE_AUTO_MISS_ARM_MS-releaseDelta;
-      note.endTimeMs=Math.max(Number(note.endTimeMs)||0,(Number(songMs)||0)-session.offsetMs+wait+1);
+      const missAt=RHYTHM_RELEASE_AUTO_MISS_ARM_MS+rhythmReleaseWaitMs();
+      if(releaseDelta>=missAt)return true;
+      // まだ窓の中(か、遅れて届く離しの合図を待っている間): 本体はここでは確定しない(次のコマでまた聞く)。
+      // ホールドの終わりの時刻(note.endTimeMs)はずらさない。ずらすと、待っている間に届いた離しが「終わりより前に離した(持ち替え)」と
+      // 見なされ、押しっぱなしのあとの離しが成功になっていた(ボットの表で見つけた)
       return false;
     }
-    return true;
+    // この指の見回りが無い(タッチ側の記録が途中で外れた): 本体が rhythmReleaseFallback で決める
+    return null;
   };
   return {bind,settleHeld,setInputAge,record,release,clear,slideVisualLaneForIndex,invalidateAreaRect,areaRect,_sessions:sessions};
 })();
