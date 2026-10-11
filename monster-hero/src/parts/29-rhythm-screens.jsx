@@ -629,7 +629,7 @@ const rhythmSelectNoticeOpen=(state,playedSongCount,isShortScreen)=>isShortScree
   :(!state.noticeTouched&&playedSongCount>=RHYTHM_NOTICE_FOLD_PLAYED_SONGS?false:state.noticeOpen);
 const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,noticeHidden=0,footer=null,emptyText='遊べる譜面がまだありません。',spotClass=null,
   songId='',difficultyId='',onSongId=null,onDifficultyId=null,view=null,onView=null,
-  listScrollTop=null,onListScrollTop=null,toolbarExtra=null,playLabel='決定',playDisabled=false,hideRandom=false})=>{
+  listScrollTop=null,onListScrollTop=null,toolbarExtra=null,playLabel='決定',playDisabled=false,hideRandom=false,unlockAll=false})=>{
   const spot=name=>(typeof spotClass==='function'?spotClass(name):'');
   // 演奏へ入る前に、タップ音を作り置きしておく
   useEffect(()=>{RHYTHM_NOTE_SE_RUNTIME.prepare?.();},[]);
@@ -654,7 +654,8 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
   const available=song?(difficulties||[]).filter(difficulty=>rhythmChartPlayable(song,difficulty.id)):[];
   // EXPERT・MASTERは、その曲のHARDをクリアするまで選べない(2026-09-05 に1段ずつで始め、2026-10-10 から HARD で2つとも開く)。
   // 一覧からは消さずに鍵つきで見せる。「先に何をクリアすればよいか」が分かるようにするため。
-  const unlocked=item=>!song||rhythmDifficultyUnlocked(song.songId,item.id,bestRecords);
+  // unlockAll … デバッグの全解放の曲えらび(RHYTHM_DEBUG_SELECT)だけが立てる。鍵を見ずに全部の難易度を選べる
+  const unlocked=item=>unlockAll||!song||rhythmDifficultyUnlocked(song.songId,item.id,bestRecords);
   const openList=available.filter(unlocked);
   // 鍵のかかったボタンの「◯◯で解放」は、いちばん長い文字に合わせて字の大きさをそろえる(HELL の「MASTERで解放」だけ小さくならないように)
   const lockedFitText=song?available.filter(item=>!unlocked(item)).map(item=>`${rhythmDifficultyUnlockRequirement(item.id,song.songId)}で解放`)

@@ -2237,6 +2237,7 @@ const HELP_SCREEN_COVERAGE = {
   // 対象外: DEBUG_SETTINGS と種族チャレンジ進行確認は開発用の隠し画面。
   // TRAINING_* は別担当のため触らない。
   RHYTHM_DEBUG:      'rhythm/rhythm-mode',
+  RHYTHM_DEBUG_SELECT: 'rhythm/rhythm-mode',
   RHYTHM_OPTIONS:    'rhythm/rhythm-options',
   RHYTHM_PLAY:       'rhythm/rhythm-play-screen',
   RHYTHM_DEMO_HOME:     'rhythm/rhythm-demo-song',
