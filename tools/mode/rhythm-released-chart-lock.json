@@ -188,9 +188,9 @@
   "journey/master": "726dd679c1a5ba96",
   "sheriruth/easy": "eb9cc276a1aff768",
   "sheriruth/normal": "60c7d5f6ba1b1b1c",
-  "sheriruth/hard": "4129eb15814c539e",
-  "sheriruth/expert": "18b8e33e6773dc32",
-  "sheriruth/master": "de76ea635d4c299e",
+  "sheriruth/hard": "ade7e332d991b653",
+  "sheriruth/expert": "561f78e023c3718e",
+  "sheriruth/master": "9b039380901b56a9",
   "against_my_own_shadow/easy": "00f9a099a1032c06",
   "against_my_own_shadow/normal": "943a5232253b15a6",
   "against_my_own_shadow/hard": "ed91a70ce36c7cd8",
@@ -231,6 +231,15 @@
    "reason": "33.74秒のスライドの始まりが0.25刻みで押し始めを受け付けなかったのを0.5刻みへ(Grievous Lady MASTER)",
    "changed": [
     "grievous_lady/master"
+   ]
+  },
+  {
+   "at": "2026-10-12 03:19",
+   "reason": "道具の巻き添えで動いた分を元に戻す(12459fdc9)",
+   "changed": [
+    "sheriruth/hard",
+    "sheriruth/expert",
+    "sheriruth/master"
    ]
   }
  ]
