@@ -3405,7 +3405,7 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
 
   // 本体が「終わりまで押さえた」で成功を確定する直前に呼ぶ。毎コマの見回りと本体の確定が同じ瞬間を別々の時計で見ていて、
   // どちらが先に走るかで、押しっぱなしで窓を過ぎても成功になったり MISS になったりしていた(2026-10-11 社長「押しっぱなしでミス判定になるときがある」)。
-  // 終わりの判定はこちらの時計(離した時刻を測るのと同じ時計)1本で決める。こちらの時計でまだ窓の中なら、本体の確定を窓を過ぎるまで延ばす
+  // 終わりの判定はこちらの時計(離した時刻を測るのと同じ時計)1本で決める。こちらの時計でまだ窓の中なら、本体はまだ確定しない
   // (本体の時計が少し先に進んでいても、窓の中で離した指を「過ぎた」と見なさない)。判定の決まりは変えない。
   // 戻り値 … true=見回りのあとで本体がいま確定してよい / false=まだ待つ / null=この指の見回りが無い
   const settleHeld=(note,songMs)=>{
@@ -3417,9 +3417,9 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
       const releaseDelta=songNow-(session.releaseTargetMs+session.offsetMs);
       const missAt=RHYTHM_RELEASE_AUTO_MISS_ARM_MS+rhythmReleaseWaitMs();
       if(releaseDelta>=missAt)return true;
-      // まだ窓の中(か、遅れて届く離しの合図を待っている間): 本体の確定を、こちらの時計でそこを過ぎるまで延ばす(延ばすのは残りの分だけ)
-      const wait=missAt-releaseDelta;
-      note.endTimeMs=Math.max(Number(note.endTimeMs)||0,(Number(songMs)||0)-session.offsetMs+wait+1);
+      // まだ窓の中(か、遅れて届く離しの合図を待っている間): 本体はここでは確定しない(次のコマでまた聞く)。
+      // ホールドの終わりの時刻(note.endTimeMs)はずらさない。ずらすと、待っている間に届いた離しが「終わりより前に離した(持ち替え)」と
+      // 見なされ、押しっぱなしのあとの離しが成功になっていた(ボットの表で見つけた)
       return false;
     }
     // この指の見回りが無い(タッチ側の記録が途中で外れた): 本体が rhythmReleaseFallback で決める
