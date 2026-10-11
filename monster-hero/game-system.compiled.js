@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 28fe30b3edae4183
+// source-sha256: 6e49b693dd3f4ed5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-11 14:56";
+const BUILD_DATE = "2026-10-11 16:15";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -30304,9 +30304,27 @@ const rhythmBakeMonsterFace = async (monster, dpr) => {
   };
 };
 const RHYTHM_RESUME_COUNTDOWN_STEPS = Object.freeze(['3', '2', '1']);
-const RHYTHM_SONG_INTRO_MS = 1800;
+const RHYTHM_SONG_INTRO_MS = 3000;
 const rhythmSongIntroNow = () => typeof performance !== 'undefined' ? performance.now() : Date.now();
-const RHYTHM_SONG_INTRO_RETRY_MS = 900;
+const RHYTHM_SONG_INTRO_RETRY_MS = 1400;
+const RHYTHM_SONG_INTRO_MAX_MS = 6000;
+const RHYTHM_SONG_INTRO_CLOSE_MS = 240;
+let rhythmSongIntroHolds = null;
+const rhythmSongIntroHold = promise => {
+  const holds = rhythmSongIntroHolds;
+  if (!holds || !promise || typeof promise.then !== 'function') return false;
+  const entry = {
+    done: false
+  };
+  holds.add(entry);
+  Promise.resolve(promise).then(() => {
+    entry.done = true;
+  }, () => {
+    entry.done = true;
+  });
+  return true;
+};
+const rhythmSongIntroHoldsDone = holds => !holds || [...holds].every(entry => entry.done);
 let rhythmSongIntroLastKey = '';
 const RHYTHM_SONG_INTRO_DIFFICULTY_COLORS = Object.freeze({
   EASY: '#059669',
@@ -33205,6 +33223,7 @@ const RhythmTapTest = ({
           monster,
           wide: rhythmNoteIsWide(note),
           pressed: note.type === 'HOLD' && note.activePointerId !== null,
+          slideOff: note.type === 'HOLD' && note.activePointerId !== null && RHYTHM_GESTURE_RUNTIME.slideOffForIndex(note.index),
           heldMs: songTimeMs - note.timeMs,
           alpha: failedTrail ? .34 : 1,
           pop: clearFlash ? Math.min(1, (songTimeMs - note._rhythmClearAt) / RHYTHM_CLEAR_FLASH_MS) : null,
@@ -33473,6 +33492,7 @@ const RhythmTapTest = ({
     frameRef.current = requestAnimationFrame(tick);
   }, [applyJudgment, chart.durationMs, finish, measureTravel, settings.frameRateMode, settings.stageEffect, settings.lightweightMode, settings.judgmentTimingOffsetMs, settings.noteSpeed, song.playDurationMs, stopFrame, tutorial, updateJudgmentBand]);
   const disposeRun = useCallback(() => {
+    if (songIntroRef.current && rhythmSongIntroHolds === songIntroRef.current.holds) rhythmSongIntroHolds = null;
     songIntroRef.current = null;
     setSongIntro(null);
     stopFrame();
@@ -33523,25 +33543,58 @@ const RhythmTapTest = ({
     step();
   });
   const waitSongIntro = generation => new Promise(resolve => {
+    const finish = intro => {
+      if (intro && rhythmSongIntroHolds === intro.holds) rhythmSongIntroHolds = null;
+      songIntroRef.current = null;
+      setSongIntro(null);
+      resolve(true);
+    };
     const step = () => {
       if (!mountedRef.current || generation !== generationRef.current) {
         resolve(false);
         return;
       }
-      const intro = songIntroRef.current;
-      if (!intro || intro.generation !== generation || intro.skipped || rhythmSongIntroNow() >= intro.endAt) {
-        songIntroRef.current = null;
-        setSongIntro(null);
-        resolve(true);
+      const intro = songIntroRef.current,
+        now = rhythmSongIntroNow();
+      if (!intro || intro.generation !== generation) {
+        finish(null);
         return;
       }
-      setTimeout(step, Math.max(16, Math.min(50, intro.endAt - rhythmSongIntroNow())));
+      if (intro.closingAt != null) {
+        if (now >= intro.closingAt) {
+          finish(intro);
+          return;
+        }
+        setTimeout(step, Math.max(16, intro.closingAt - now));
+        return;
+      }
+      const ready = now >= intro.maxEnd || (intro.skipped || now >= intro.minEnd) && rhythmSongIntroHoldsDone(intro.holds);
+      if (ready) {
+        if (!intro.visible) {
+          finish(intro);
+          return;
+        }
+        intro.closingAt = now + RHYTHM_SONG_INTRO_CLOSE_MS;
+        setSongIntro(v => v ? {
+          ...v,
+          closing: true
+        } : v);
+        setTimeout(step, RHYTHM_SONG_INTRO_CLOSE_MS);
+        return;
+      }
+      setTimeout(step, Math.max(16, Math.min(50, (intro.skipped ? intro.maxEnd : Math.max(intro.minEnd, now + 50)) - now)));
     };
     step();
   });
   const skipSongIntro = () => {
     const intro = songIntroRef.current;
-    if (intro && intro.skippable) intro.skipped = true;
+    if (intro && intro.skippable && !intro.skipped) {
+      intro.skipped = true;
+      setSongIntro(v => v ? {
+        ...v,
+        skipped: true
+      } : v);
+    }
   };
   const waitUntilPlayable = generation => new Promise(resolve => {
     const deadline = (typeof performance !== 'undefined' ? performance.now() : Date.now()) + RHYTHM_LAYOUT_WAIT_MAX_MS;
@@ -33582,13 +33635,20 @@ const RhythmTapTest = ({
       const introMs = tutorial || calibrating ? 0 : !multi && rhythmSongIntroLastKey === introKey ? RHYTHM_SONG_INTRO_RETRY_MS : RHYTHM_SONG_INTRO_MS;
       const introShown = introMs > 0 && rhythmSongIntroVisible(settings);
       if (introMs > 0) rhythmSongIntroLastKey = introKey;
-      const introWaitMs = introShown || multi ? introMs : 0;
-      songIntroRef.current = introWaitMs > 0 ? {
+      const holds = new Set();
+      rhythmSongIntroHolds = holds;
+      const introStart = rhythmSongIntroNow();
+      const introMinMs = introShown || multi ? introMs : 0;
+      songIntroRef.current = {
         generation,
-        endAt: rhythmSongIntroNow() + introWaitMs,
+        holds,
+        visible: introShown,
+        skippable: !multi,
         skipped: false,
-        skippable: !multi
-      } : null;
+        closingAt: null,
+        minEnd: introStart + introMinMs,
+        maxEnd: introStart + (multi ? introMinMs : Math.max(introMinMs, RHYTHM_SONG_INTRO_MAX_MS))
+      };
       setSongIntro(introShown ? {
         key: generation,
         ms: introMs,
@@ -35027,7 +35087,8 @@ const RhythmTapTest = ({
       key: songIntro.key,
       "data-rhythm-song-intro": true,
       "data-intro-short": songIntro.short ? '1' : undefined,
-      "data-intro-layout": isLandscape ? 'row' : 'column',
+      "data-intro-closing": songIntro.closing ? '1' : undefined,
+      "data-intro-layout": isLandscape ? 'landscape' : 'portrait',
       role: "status",
       "aria-live": "polite",
       onPointerDown: songIntro.skippable ? event => {
@@ -35039,20 +35100,20 @@ const RhythmTapTest = ({
         inset: 0,
         zIndex: 45,
         display: 'flex',
-        flexDirection: isLandscape ? 'row' : 'column',
+        flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: isLandscape ? '24px' : '16px',
-        padding: '16px calc(16px + var(--mh-sa-right,0px)) 16px calc(16px + var(--mh-sa-left,0px))',
+        gap: isLandscape ? '10px' : '16px',
+        padding: '12px calc(16px + var(--mh-sa-right,0px)) 12px calc(16px + var(--mh-sa-left,0px))',
         pointerEvents: 'auto',
-        '--intro-ms': `${songIntro.ms}ms`
+        '--intro-close-ms': `${RHYTHM_SONG_INTRO_CLOSE_MS}ms`
       }
     }, hudArtSrc && React.createElement("div", {
       "data-rhythm-song-intro-art": true,
       style: {
         position: 'relative',
         flexShrink: 0,
-        width: isLandscape ? 'min(48vh,200px)' : 'min(54vw,210px)',
+        width: isLandscape ? 'min(40vh,34vw,200px)' : 'min(58vw,34vh,240px)',
         aspectRatio: '1 / 1',
         borderRadius: '14px',
         overflow: 'hidden'
@@ -35075,8 +35136,8 @@ const RhythmTapTest = ({
       "data-rhythm-song-intro-text": true,
       style: {
         minWidth: 0,
-        maxWidth: isLandscape ? 'min(48vw,440px)' : '88vw',
-        textAlign: isLandscape ? 'left' : 'center'
+        maxWidth: isLandscape ? 'min(72vw,560px)' : '88vw',
+        textAlign: 'center'
       }
     }, React.createElement("small", {
       style: {
@@ -35092,8 +35153,8 @@ const RhythmTapTest = ({
       style: {
         display: 'block',
         overflowWrap: 'anywhere',
-        marginTop: '4px',
-        fontSize: isLandscape ? '26px' : '24px',
+        marginTop: isLandscape ? '2px' : '4px',
+        fontSize: isLandscape ? '21px' : '24px',
         fontWeight: 900,
         lineHeight: 1.25,
         color: '#fff',
@@ -35103,10 +35164,10 @@ const RhythmTapTest = ({
       "data-rhythm-song-intro-credit": true,
       style: {
         display: '-webkit-box',
-        WebkitLineClamp: 2,
+        WebkitLineClamp: isLandscape ? 1 : 2,
         WebkitBoxOrient: 'vertical',
         overflow: 'hidden',
-        margin: '4px 0 0',
+        margin: '3px 0 0',
         fontSize: '12px',
         fontWeight: 700,
         lineHeight: 1.4,
@@ -35116,9 +35177,9 @@ const RhythmTapTest = ({
       style: {
         display: 'flex',
         alignItems: 'center',
-        justifyContent: isLandscape ? 'flex-start' : 'center',
+        justifyContent: 'center',
         gap: '8px',
-        marginTop: '10px'
+        marginTop: isLandscape ? '6px' : '10px'
       }
     }, React.createElement("span", {
       "data-rhythm-song-intro-difficulty": true,
@@ -35140,10 +35201,19 @@ const RhythmTapTest = ({
         color: '#fff',
         fontVariantNumeric: 'tabular-nums'
       }
-    }, "Lv.", introLevel)), songIntro.skippable && !songIntro.short && React.createElement("small", {
+    }, "Lv.", introLevel)), songIntro.skipped ? React.createElement("small", {
+      "data-rhythm-song-intro-wait": true,
       style: {
         display: 'block',
-        marginTop: '10px',
+        marginTop: isLandscape ? '6px' : '10px',
+        fontSize: '10px',
+        fontWeight: 700,
+        color: '#a5f3fc'
+      }
+    }, "まもなく はじまります") : songIntro.skippable && !songIntro.short && React.createElement("small", {
+      style: {
+        display: 'block',
+        marginTop: isLandscape ? '6px' : '10px',
         fontSize: '10px',
         fontWeight: 700,
         color: '#94a3b8'
@@ -65769,7 +65839,7 @@ const rhythmMultiSelectSecLabel = sec => sec > 0 ? `${sec}秒` : 'なし';
 const RHYTHM_MULTI_READY_MS = 30000;
 const RHYTHM_MULTI_READY_GRACE_MS = 3000;
 const RHYTHM_MULTI_RESULT_MS = 45000;
-const RHYTHM_MULTI_PLAY_GRACE_MS = RHYTHM_MULTI_START_COUNTDOWN_SEC * 1000 + (typeof RHYTHM_SONG_INTRO_MS === 'number' ? RHYTHM_SONG_INTRO_MS : 1800) + 4 * 800 + 10000;
+const RHYTHM_MULTI_PLAY_GRACE_MS = RHYTHM_MULTI_START_COUNTDOWN_SEC * 1000 + (typeof RHYTHM_SONG_INTRO_MS === 'number' ? RHYTHM_SONG_INTRO_MS : 3000) + 4 * 800 + 10000;
 const RHYTHM_MULTI_QUEUE_MAX = 300;
 const RHYTHM_MULTI_PUBLIC_MATCH_WAIT_MS = 15000;
 const RHYTHM_MULTI_CHAT_MAX_LENGTH = 40;

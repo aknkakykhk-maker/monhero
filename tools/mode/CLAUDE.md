@@ -15,6 +15,8 @@
 
 **やってはいけない**: 配信中の曲の譜面を作り直して `monster-hero/data/rhythm-mode.js` へ書き戻す
 (`--release`)。既存の解析ファイル(`tools/mode/authoring/*-v3-audio.json`)を作り直す(`--reanalyze`)。
+公開中の譜面は `rhythm-released-chart-lock-check.js` が指紋で見張る(CI でも回る)。決まった直しで変えるときだけ
+`--update --reason "<理由>"` で控えを更新する。
 
 生成器を変えたら、**変更前のワークツリーを別に立てて生成結果を突き合わせ、ノーツ数が一致すること
 を確かめてから**コミットする。手順: [`docs/rules/SCOPE.md`](../../docs/rules/SCOPE.md)
