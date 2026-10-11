@@ -1166,7 +1166,7 @@ const RHYTHM_SKY_LIFT_RATIO=.16;
 // 空中の見た目(案Z・2026-10-11・社長の決定)の色・不透明度・太さを1か所に。描き方(2D の canvas / GPU)はこの値だけを読む(ドライバーくんの GPU の描き方と食い違わないように)。
 // 空中のものは全部「色の無いガラス」(白〜銀)。色が付いていれば地上。長さの単位は CSS px(縦390幅の縦持ち基準)
 const RHYTHM_SKY_LOOK=Object.freeze({
-  arc:Object.freeze({rgb:'214,224,240',alpha:.58,minHalfWidthPx:4.5,edgeAlpha:.6,edgePx:1.2,left:'59,130,246',right:'236,72,153',centerLane:3}), // 帯=手の色(左手=青・右手=桃)で中まで色(58%)・縁と芯は白。手は note.hand、無いときはスライドの点のレーンの平均が centerLane より左なら左  // edge=帯の左右の白い縁(紫の床の上でも「白い帯」に見せる)
+  arc:Object.freeze({rgb:'214,224,240',alpha:.58,minHalfWidthPx:4.5,edgeAlpha:.6,edgePx:1.2,left:'37,99,235',right:'236,72,153',centerLane:3}), // 帯=手の色(左手=青・右手=桃)で中まで色(58%)・縁と芯は白。手は note.hand、無いときはスライドの点のレーンの平均が centerLane より左なら左  // edge=帯の左右の白い縁(紫の床の上でも「白い帯」に見せる)
   core:Object.freeze({rgb:'255,255,255',alpha:.9,widthPx:3}),
   box:Object.freeze({aspect:.2,farDim:.45,fill:'205,218,238',fillAlpha:.16,topAlpha:.62,topRatio:.36,frontFill:'200,215,240',frontAlpha:.4,thickRatio:.3,edge:'255,255,255',edgePx:1.6,minFacePx:5}),
   shadow:Object.freeze({rgb:'6,3,20',alpha:.22,radiusPx:3,insetPx:3,lineAlpha:.28,fadeRatio:.14}),
