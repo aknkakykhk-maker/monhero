@@ -3280,16 +3280,18 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
   // 指 A が帯 X から外れたとき、別の指 B が押さえている帯 Y について「A は Y の上・B は X の上・B も Y から外れている」なら、指と帯を結び直す。
   //   ・1本の指で2本の帯を満たすことは今までどおり認めない(結び直すには、2本の指がそれぞれ相手の帯の上にいることが要る)
   //   ・指を交差させて追う遊び方は、どちらの指も自分の帯の上にいるので何も起きない
-  //   ・空中の段のあるスライド(手の色が決まっている)・終点フリックの受付中・本体が応じないときは結び直さない
+  //   ・終点フリックの受付中・本体が応じないときは結び直さない
+  //   ・空中の段のあるスライドも同じく結び直す(2026-10-11 社長「ヘルのデバッグモードは指の置き換えで判定外れる」)。追従と同じ測り方(横の位置)で見るので、空中と地上が混ざる組でもよい。
+  //     手の色(左=青・右=桃)は帯ごとのままで、持ち替えた指の側とは合わなくなる(色は押し方の目安で、判定には使わない)
   // 本体(30-rhythm-play.jsx)の「指→ノーツ」の表も同じ瞬間に入れ替える(setSlideSwapListener)。本体が応じなければ何もしない
   let slideSwapListener=null;
   const setSlideSwapListener=fn=>{slideSwapListener=typeof fn==='function'?fn:null;};
   const slideSwapAcrossFingers=session=>{
-    if(!slideSwapListener||!session||session.kind!=='SLIDE'||session.finished||session.endFlickArmed||!session.note||session.note.done||rhythmSlideHasSky(session.note))return false;
+    if(!slideSwapListener||!session||session.kind!=='SLIDE'||session.finished||session.endFlickArmed||!session.note||session.note.done)return false;
     const key=session.key,myPos=positions.get(key);
     if(!myPos)return false;
     for(const [otherKey,other] of sessions){
-      if(otherKey===key||!other||other===session||other.kind!=='SLIDE'||other.finished||other.endFlickArmed||!other.note||other.note.done||rhythmSlideHasSky(other.note))continue;
+      if(otherKey===key||!other||other===session||other.kind!=='SLIDE'||other.finished||other.endFlickArmed||!other.note||other.note.done)continue;
       const otherPos=positions.get(otherKey);
       if(!otherPos)continue;
       const myNow=estimatedSongMs(session)-session.offsetMs,otherNow=estimatedSongMs(other)-other.offsetMs;
@@ -3298,6 +3300,9 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
       sessions.set(key,other);sessions.set(otherKey,session);
       other.key=key;session.key=otherKey;
       session.trackingBadSincePerf=null;other.trackingBadSincePerf=null;
+      // 空中の帯の「外れ」の印も、新しく結んだ指で付け直す(古い指の外れが残って暗いままにならないように)
+      const box=areaRect();
+      for(const [s2,p2] of [[session,otherPos],[other,myPos]])if(rhythmSlideHasSky(s2.note)){s2.note._trackOff=false;s2.note._trackFinger=box?{x:Number(p2.clientX)-box.left,y:Number(p2.clientY)-box.top}:null;}
       RHYTHM_SLIDE_SWAPS.count++;
       return true;
     }
