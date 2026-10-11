@@ -7237,6 +7237,11 @@ function MonsterHeroGame() {
     setTacticsIntroSeenFlag(true);
     try { storeSet(TACTICS_INTRO_SEEN_KEY, true, false); } catch {}
   }, []);
+  // 難易度 HELL のお話を「見た」にする。回想の画面からは保存へ直接書かず、この関数を通す(event-replay-check が見張る)
+  const markRhythmHellStorySeen = useCallback(() => {
+    setRhythmHellStorySeenFlag(true);
+    try { storeSet(RHYTHM_HELL_STORY_SEEN_KEY, true, false); } catch {}
+  }, []);
   // イベント回想の解放判定。EVENT_REPLAYS側はunlockedKeyという「呼び名」しか持たないので、
   // その名前→実際のstateの対応をここで持つ(データファイルはgame-system.jsxの状態を見られないため)。
   // 今後イベントを増やすときは、そのイベントの既読フラグをここへ1行足すだけでよい
@@ -20610,7 +20615,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             &&!normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(RAID_JACK_HOWTO_STORY_ID)) setRhythmEventStoryPending(prev=>prev||RAID_JACK_HOWTO_STORY_ID);
           // 難易度 HELL のお話は、見終えたら続けて説明(RhythmHellGuide)を出す。一覧へ戻るのは説明を閉じたあと
           if(event&&event.id===RHYTHM_HELL_STORY_ID){
-            if(!eventReplay.debug){setRhythmHellStorySeenFlag(true);try{storeSet(RHYTHM_HELL_STORY_SEEN_KEY,true,false);}catch{}}
+            if(!eventReplay.debug) markRhythmHellStorySeen();
             setRhythmHellGuide({page:0,debugList:!!eventReplay.debugList,fromList:!!eventReplay.fromList});
             setEventReplay(null);return;
           }
@@ -20629,7 +20634,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           if(eventReplay.live&&!eventReplay.debug&&event&&event.id==='tactics_intro') markTacticsIntroSeen();
           // HELL のお話は飛ばしても説明は出す(遊び方は飛ばさずに知ってほしい)。見たにするのは本編で流したときだけ
           if(event&&event.id===RHYTHM_HELL_STORY_ID){
-            if(eventReplay.live&&!eventReplay.debug){setRhythmHellStorySeenFlag(true);try{storeSet(RHYTHM_HELL_STORY_SEEN_KEY,true,false);}catch{}}
+            if(eventReplay.live&&!eventReplay.debug) markRhythmHellStorySeen();
             setRhythmHellGuide({page:0,debugList:!!eventReplay.debugList,fromList:!!eventReplay.fromList});
             setEventReplay(null);return;
           }

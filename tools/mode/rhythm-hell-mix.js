@@ -198,10 +198,10 @@ if(require.main===module){
     const bad=names(source).filter(n=>(rt0.markerBlock(source,n)||{}).body!==(rt0.markerBlock(next,n)||{}).body);
     if(bad.length)throw new Error(`HELL のほかのマーカーまで変わりそうなので止めた: ${bad.join(' ')}`);
     fs.writeFileSync(rt0.RUNTIME,next);
-    // Lv. はゲームに読み込んだ形(道の上へ置き直したあと)で式を通した値にする(rhythm-chart-level-check.js が同じ値か見る)
+    // Lv. はゲームに読み込んだ形(道の上へ置き直したあと)で式を通した値にする。社長の値(rhythm-chart-level.js の LEVEL_OVERRIDES)があればそちら(rhythm-chart-level-check.js が同じ値か見る)
     const {spawnSync}=require('child_process');
     const probe=spawnSync(process.execPath,['-e',`const {loadRuntimeSongs,chartLevel}=require(${JSON.stringify(path.join(__dirname,'rhythm-chart-level.js'))});
-      const s=(loadRuntimeSongs().RHYTHM_PROTO_SONGS||[]).find(x=>x.songId===${JSON.stringify(songId+'_hell_debug')});console.log(chartLevel(s.difficulties.HELL).level);`],{encoding:'utf8'});
+      const {shownLevel}=require(${JSON.stringify(path.join(__dirname,'rhythm-chart-level.js'))});const s=(loadRuntimeSongs().RHYTHM_PROTO_SONGS||[]).find(x=>x.songId===${JSON.stringify(songId+'_hell_debug')});console.log(shownLevel(s.songId,'HELL',s.difficulties.HELL));`],{encoding:'utf8'});
     const runtimeLevel=Number(String(probe.stdout).trim());
     let finalLevel=level;
     if(Number.isFinite(runtimeLevel)&&runtimeLevel!==level){finalLevel=runtimeLevel;fs.writeFileSync(rt0.RUNTIME,fs.readFileSync(rt0.RUNTIME,'utf8').replace(conf.levelRe,m=>m.replace(/\(\d+,/,`(${runtimeLevel},`)));}
