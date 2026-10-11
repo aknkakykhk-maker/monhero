@@ -42,6 +42,13 @@ const CHANGELOG = [
     ],
   },
   {
+    date: "2026-10-11 23:06", type:'fix', group:'rhythm', title:'モンヒロビート：曲の前のジャケットが、どの曲でも同じ大きさで出るようにしました', status:'new',
+    items:[
+      '曲名が長い曲や紹介文がある曲では、曲が始まる前に出るジャケットが少し小さくなることがありました（画面の高さが低い横持ちで起きていました）。',
+      'どの曲でも同じ大きさで出るようにしました。長い曲名は2行まで、紹介文は1行で表示します。',
+    ],
+  },
+  {
     date: "2026-10-11 21:44", type:'update', group:'rhythm', title:'モンヒロビート：新曲「Grievous Lady」を追加しました', status:'new',
     image: 'images/song-art/grievous-lady.jpg?v=0933a2c340b4',
     items:[

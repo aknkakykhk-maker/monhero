@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a9a39f11b54585f8
+// source-sha256: 68e561dbbcdc7849
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-11 23:22";
+const BUILD_DATE = "2026-10-11 23:23";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -36043,7 +36043,8 @@ const RhythmTapTest = ({
       touchAction: 'none'
     }
   }, songIntro && (() => {
-    const introCredit = rhythmSongIntroCredit(song),
+    const introHint = songIntro.skipped ? 'まもなく はじまります' : songIntro.skippable && !songIntro.short ? 'タップでとばす' : '',
+      introCredit = rhythmSongIntroCredit(song),
       introLevel = Number(chart?.level),
       introColor = RHYTHM_SONG_INTRO_DIFFICULTY_COLORS[difficulty.id] || '#64748b';
     return React.createElement("div", {
@@ -36075,9 +36076,8 @@ const RhythmTapTest = ({
       "data-rhythm-song-intro-art": true,
       style: {
         position: 'relative',
-        flex: '0 1 auto',
-        minHeight: '96px',
-        height: isLandscape ? 'min(54vh,40vw,320px)' : 'min(68vw,42vh,320px)',
+        flex: '0 0 auto',
+        height: isLandscape ? 'min(50vh,40vw,320px)' : 'min(68vw,42vh,320px)',
         aspectRatio: '1 / 1',
         borderRadius: '14px',
         overflow: 'hidden'
@@ -36116,14 +36116,18 @@ const RhythmTapTest = ({
     }, "♪ LIVE START"), React.createElement("b", {
       "data-rhythm-song-intro-title": true,
       style: {
-        display: 'block',
+        display: '-webkit-box',
+        WebkitLineClamp: 2,
+        WebkitBoxOrient: 'vertical',
+        overflow: 'hidden',
         overflowWrap: 'anywhere',
-        marginTop: isLandscape ? '2px' : '4px',
-        fontSize: isLandscape ? '21px' : '24px',
+        padding: '0 8px 3px',
+        margin: isLandscape ? '1px -8px 0' : '4px -8px 0',
+        fontSize: isLandscape ? '20px' : '24px',
         fontWeight: 900,
         lineHeight: 1.25,
         color: '#fff',
-        textShadow: '0 0 14px rgba(103,232,249,.55),0 2px 8px rgba(2,6,23,.95)'
+        textShadow: '0 0 8px rgba(103,232,249,.5),0 2px 4px rgba(2,6,23,.95)'
       }
     }, rhythmSongFullName(song)), introCredit && React.createElement("p", {
       "data-rhythm-song-intro-credit": true,
@@ -36132,7 +36136,7 @@ const RhythmTapTest = ({
         WebkitLineClamp: isLandscape ? 1 : 2,
         WebkitBoxOrient: 'vertical',
         overflow: 'hidden',
-        margin: '3px 0 0',
+        margin: isLandscape ? '1px 0 0' : '3px 0 0',
         fontSize: '12px',
         fontWeight: 700,
         lineHeight: 1.4,
@@ -36144,7 +36148,7 @@ const RhythmTapTest = ({
         alignItems: 'center',
         justifyContent: 'center',
         gap: '8px',
-        marginTop: isLandscape ? '6px' : '10px'
+        marginTop: isLandscape ? '5px' : '10px'
       }
     }, React.createElement("span", {
       "data-rhythm-song-intro-difficulty": true,
@@ -36166,24 +36170,24 @@ const RhythmTapTest = ({
         color: '#fff',
         fontVariantNumeric: 'tabular-nums'
       }
-    }, "Lv.", introLevel)), songIntro.skipped ? React.createElement("small", {
-      "data-rhythm-song-intro-wait": true,
+    }, "Lv.", introLevel), isLandscape && introHint && React.createElement("small", {
+      "data-rhythm-song-intro-wait": songIntro.skipped ? '' : undefined,
       style: {
-        display: 'block',
-        marginTop: isLandscape ? '6px' : '10px',
+        marginLeft: '6px',
         fontSize: '10px',
         fontWeight: 700,
-        color: '#a5f3fc'
+        color: songIntro.skipped ? '#a5f3fc' : '#94a3b8'
       }
-    }, "まもなく はじまります") : songIntro.skippable && !songIntro.short && React.createElement("small", {
+    }, introHint)), !isLandscape && introHint && React.createElement("small", {
+      "data-rhythm-song-intro-wait": songIntro.skipped ? '' : undefined,
       style: {
         display: 'block',
-        marginTop: isLandscape ? '6px' : '10px',
+        marginTop: '10px',
         fontSize: '10px',
         fontWeight: 700,
-        color: '#94a3b8'
+        color: songIntro.skipped ? '#a5f3fc' : '#94a3b8'
       }
-    }, "タップでとばす")));
+    }, introHint)));
   })(), React.createElement("header", {
     "data-rhythm-hud": true,
     className: "pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-2 px-3 pt-1.5"
