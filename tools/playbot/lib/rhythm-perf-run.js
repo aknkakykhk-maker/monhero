@@ -72,6 +72,8 @@ async function runOnce(o) {
     });
     await context.addInitScript(() => { window.__mhSupabaseStubbed = true; });
     await context.addInitScript(seed(o.song, mode));
+    // o.storage: 演奏前に入れておく保存キー(文字列のまま。例 { mh_rhythm_prepare_v1: 'on' })。デバッグの切り替えの前後を比べる用
+    if (o.storage && typeof o.storage === 'object') await context.addInitScript((pairs) => { for (const [k, v] of pairs) { try { localStorage.setItem(k, v); } catch (e) { /* 保存できない環境は何もしない */ } } }, Object.entries(o.storage).map(([k, v]) => [k, String(v)]));
     await context.addInitScript(tapProbe);
     const page = await context.newPage();
     const cdp = await context.newCDPSession(page);
