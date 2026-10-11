@@ -130,7 +130,7 @@ async function runOnce(o) {
     await page.waitForFunction((a) => (window.__mhTestHooks?.rhythmSongMs?.() ?? -1) >= a - 1500, FROM, { timeout: 600000, polling: 200 });
     // 測るのは CPU を絞ってから(絞るのはメインスレッドだけ。GPU の仕事は絞られない)
     if (o.cpu > 1) await cdp.send('Emulation.setCPUThrottlingRate', { rate: o.cpu });
-    await page.evaluate(() => { window.__ft = []; let last = performance.now(); const tick = (t) => { window.__ft.push([window.__mhTestHooks?.rhythmSongMs?.(), t - last]); last = t; if (window.__ft.length < 60000) requestAnimationFrame(tick); }; requestAnimationFrame(tick); });
+    await page.evaluate(() => { window.__ft = []; let last = performance.now(); const tick = (t) => { window.__ft.push([window.__mhTestHooks?.rhythmSongMs?.(), t - last, t]); last = t; if (window.__ft.length < 60000) requestAnimationFrame(tick); }; requestAnimationFrame(tick); });
     await page.waitForFunction((a) => (window.__mhTestHooks?.rhythmSongMs?.() ?? -1) >= a, FROM, { timeout: 600000, polling: 'raf' });
     await cdp.send('Performance.enable');
     // o.atStart(page, cdp): 測り始めにページを調べる(内訳を出すときの、動いている CSS アニメーションの一覧など)
@@ -140,6 +140,9 @@ async function runOnce(o) {
     // メインスレッドの「CPU を本当に使った時間」(トレースの tdur)。GPU の仕事を待っている間(SwiftShader が遅いと長い)は数えない
     // breakdown のときは、メインスレッドの仕事の種類(スタイル・レイアウト・塗り・JS など)も取る
     await browser.startTracing(page, { categories: o.breakdown ? ['toplevel', 'devtools.timeline', 'blink', 'v8', ...(o.traceCats || [])] : ['toplevel'] });
+    // ★プロファイラとトレースを始める瞬間、ブラウザが数百ms止まる(測りの道具の分)。そのコマを曲の重さに数えないよう、
+    //   トレースを始め終わってからのコマだけを数える(2026-10-11。以前は測りの始まりと曲の頭が重なり、曲の頭に長いコマがあるように見えていた)
+    await page.evaluate(() => { window.__ftFrom = performance.now(); });
     const t0 = Date.now();
     // 終わり: 曲の時刻が TO を過ぎた、または曲が終わった(rhythmSongMs が null に戻る)
     await page.waitForFunction((b) => { const ms = window.__mhTestHooks?.rhythmSongMs?.(); return ms == null || ms >= b; }, TO, { timeout: 900000, polling: 'raf' });
@@ -148,7 +151,7 @@ async function runOnce(o) {
         const trace = JSON.parse((await browser.stopTracing()).toString('utf8'));
     const m1 = Object.fromEntries((await cdp.send('Performance.getMetrics')).metrics.map(x => [x.name, x.value]));
     if (o.cpu > 1) await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
-    const raw = await page.evaluate(() => ({ ft: window.__ft, taps: window.__mhTaps, results: (window.__mhTestHooks?.rhythmNoteResults?.() || []).map(r => ({ done: r.done, j: r.judgment })) }));
+    const raw = await page.evaluate(() => ({ ft: window.__ft.filter(([, d, t]) => t - d >= (window.__ftFrom || 0)), taps: window.__mhTaps, results: (window.__mhTestHooks?.rhythmNoteResults?.() || []).map(r => ({ done: r.done, j: r.judgment })) }));
     const ft = raw.ft.filter(([ms]) => ms != null && ms >= FROM && ms < TO).map(([, d]) => d).sort((x, y) => x - y);
     const taps = raw.taps.filter(t => t.songMs != null && t.songMs >= FROM && t.songMs < TO);
     const handle = taps.map(t => t.end - t.at).sort((x, y) => x - y), toFrame = taps.filter(t => t.frame != null).map(t => t.frame - t.at).sort((x, y) => x - y);
