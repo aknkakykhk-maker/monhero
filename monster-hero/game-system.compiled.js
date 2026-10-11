@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5bd21041fb46f1fe
+// source-sha256: 3c312b7aa9a34fb5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-11 22:46";
+const BUILD_DATE = "2026-10-11 23:08";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -31829,15 +31829,19 @@ const rhythmCreateHud = () => {
   };
 };
 const useRhythmHud = hud => React.useSyncExternalStore(hud.subscribe, hud.get);
+const useRhythmHudPick = (hud, pick) => React.useSyncExternalStore(hud.subscribe, () => pick(hud.get()));
+const rhythmHudCountsState = c => {
+  if (!c) return '';
+  if ((Number(c.BAD) || 0) + (Number(c.MISS) || 0) > 0) return 'broken';
+  return (Number(c.EXCELLENT) || 0) + (Number(c.GREAT) || 0) + (Number(c.GOOD) || 0) > 0 ? 'FC' : 'AM';
+};
 const RhythmHudScore = ({
   hud,
   maxScore,
   bestScore,
   rankFx = true
 }) => {
-  const {
-    score
-  } = useRhythmHud(hud);
+  const score = useRhythmHudPick(hud, h => h.score);
   const rankNextId = rhythmNextRankId(score, maxScore);
   const rankNextLabel = rankNextId ? `→${rankNextId}` : '★MAX';
   const rank = rhythmRankForScore(score);
@@ -31988,18 +31992,11 @@ const RhythmHudCombo = ({
   comboRef,
   comboRingRef
 }) => {
-  const {
-    combo,
-    counts
-  } = useRhythmHud(hud);
+  const combo = useRhythmHudPick(hud, h => h.combo),
+    countsState = useRhythmHudPick(hud, h => rhythmHudCountsState(h.counts));
   if (settings.comboDisplay === false || !(combo > 0)) return null;
   const comboTier = rhythmComboTier(combo);
-  const comboStatus = (() => {
-    if (settings.comboStatusDisplay === false || assistOn || !counts) return '';
-    const c = counts;
-    if ((Number(c.BAD) || 0) + (Number(c.MISS) || 0) > 0) return '';
-    return (Number(c.EXCELLENT) || 0) + (Number(c.GREAT) || 0) + (Number(c.GOOD) || 0) > 0 ? 'FC' : 'AM';
-  })();
+  const comboStatus = settings.comboStatusDisplay === false || assistOn || !countsState || countsState === 'broken' ? '' : countsState;
   return React.createElement("div", {
     "data-rhythm-combo-box": true,
     "data-combo-status": comboStatus,
@@ -32039,9 +32036,7 @@ const RhythmHudLife = ({
   lifeBoxRef,
   lifeDamageRef
 }) => {
-  const {
-    life
-  } = useRhythmHud(hud);
+  const life = useRhythmHudPick(hud, h => h.life);
   const lifeRatio = rhythmLifeRatio(life),
     lifeState = rhythmLifeState(life);
   return React.createElement("div", {
@@ -32094,11 +32089,10 @@ const RhythmHudJudgment = ({
   judgmentTextRef,
   sky = false
 }) => {
-  const h = useRhythmHud(hud);
-  const last = sky ? h.skyLast : h.last,
-    lastPrecise = sky ? h.skyLastPrecise : h.lastPrecise,
-    fastSlow = sky ? h.skyFastSlow : h.fastSlow,
-    lastDeltaMs = sky ? h.skyDeltaMs : h.lastDeltaMs;
+  const last = useRhythmHudPick(hud, h => sky ? h.skyLast : h.last),
+    lastPrecise = useRhythmHudPick(hud, h => sky ? h.skyLastPrecise : h.lastPrecise),
+    fastSlow = useRhythmHudPick(hud, h => sky ? h.skyFastSlow : h.fastSlow),
+    lastDeltaMs = useRhythmHudPick(hud, h => sky ? h.skyDeltaMs : h.lastDeltaMs);
   return React.createElement(React.Fragment, null, React.createElement("b", {
     ref: judgmentTextRef,
     "data-rhythm-judgment-text": true,
