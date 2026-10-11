@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 393b42a5448425cc
+// source-sha256: f7f646fb71dacbb7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-11 09:30";
+const BUILD_DATE = "2026-10-11 09:47";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -33078,7 +33078,10 @@ const RhythmTapTest = ({
             const t = rhythmBeatLineTime(roadGrid, zeroMs + k * beatMs),
               st = rhythmScrollPos(t);
             if (st < scrollNow - travelMs * .35) continue;
-            if (st > scrollNow + travelMs * 1.05) break;
+            if (st > scrollNow + travelMs * 1.05) {
+              if (!RHYTHM_SCROLL.back || rhythmScrollMinAfter(t) > scrollNow + travelMs * 1.05) break;
+              continue;
+            }
             if (t < 0) continue;
             const progress = 1 - (rhythmScrollPos(t) - rhythmScrollPos(visualTime)) / travelMs,
               y = travel.spawnY + rhythmProjectTravelProgress(progress) * travel.travelPx + travel.noteHeight / 2;
@@ -33342,7 +33345,7 @@ const RhythmTapTest = ({
       heldNotes.length = 0;
       for (let i = scanFrom; i < notes.length; i++) {
         const note = notes[i];
-        if (run.notesReady && run.notesAscending && (scrollTable ? rhythmScrollPos(note.timeMs) > scanHorizonScroll : note.timeMs > scanHorizonMs)) break;
+        if (run.notesReady && run.notesAscending && (scrollTable ? rhythmScrollMinAfter(note.timeMs) > scanHorizonScroll : note.timeMs > scanHorizonMs)) break;
         perfScanned++;
         visitNote(note);
         if (!note.done && note.activePointerId !== null && note.type === 'HOLD' && rhythmNoteHasBody(note)) heldNotes.push(note);

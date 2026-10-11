@@ -85,6 +85,9 @@ const LIMIT={avg:1.5,missing:.003,extra:.003,overBase:.3};
         // 止まる演出の曲は、止まっている最中の場面も
         const stops=Array.isArray(chart.scrollChanges)?chart.scrollChanges.filter(x=>Number(x[1])===0||x[1]==='RUSH'):[];
         if(stops.length){const st=stops[Math.floor(stops.length/2)];frames.push({t:Number(st[0])+60,variant:2});}
+        // 後ろに戻る演出(['MOVE',マイナス])の曲は、戻っている最中の場面も(2026-10-11 Grievous Lady の試作)
+        const backs=Array.isArray(chart.scrollChanges)?chart.scrollChanges.filter(x=>x[1]==='MOVE'&&Number(x[2])<0):[];
+        backs.slice(0,QUICK?1:3).forEach((bk,i)=>frames.push({t:Number(bk[0])+150+i*120,variant:i}));
         const R=RHYTHM_CANVAS_RENDERER;
         // variant ごとの見た目の違い(押さえている最中・取り損ね・流れる光・ノーツサイズ・演出量)
         const style=v=>({effect:v%5===4?'MINIMAL':'NORMAL',motion:v%3===1,sizeScale:v%4===3?.8:1,failEvery:v%5===2});
