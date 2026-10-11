@@ -268,7 +268,7 @@ const levelFromRaw=raw=>{
 // (2026-10-11 社長「空中あるだけで難易度2割増しぐらいの認識で数値設定したほうがいいよ」)。
 // 空中のノーツが無い譜面(地上の5難易度・公開中の曲)は、今までと1つも変わらない。
 // 生の値(strain.raw)は空中込みのまま返す(内訳で「空中⇄地上の切り替え」がどれだけ効いているかを見られるように)
-const SKY_LEVEL_FACTOR=1.2;
+const SKY_LEVEL_FACTOR=1.3;
 const chartHasSky=chart=>(chart&&Array.isArray(chart.notes)?chart.notes:[]).some(note=>Number(note&&note.skyHeight)>0
   ||(Array.isArray(note&&note.slidePoints)&&note.slidePoints.some(point=>Number(point&&point.sky)>0)));
 const groundedChart=chart=>({...chart,notes:chart.notes.map(note=>({...note,skyHeight:0,
