@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 42d6648dddd2dff4
+// generated-sha256: e2d08a3d04f77b4c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-11 23:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-11 23:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -18765,7 +18765,7 @@ const rhythmSelectNoticeOpen=(state,playedSongCount,isShortScreen)=>isShortScree
   :(!state.noticeTouched&&playedSongCount>=RHYTHM_NOTICE_FOLD_PLAYED_SONGS?false:state.noticeOpen);
 const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,noticeHidden=0,footer=null,emptyText='遊べる譜面がまだありません。',spotClass=null,
   songId='',difficultyId='',onSongId=null,onDifficultyId=null,view=null,onView=null,
-  listScrollTop=null,onListScrollTop=null,toolbarExtra=null,playLabel='決定',playDisabled=false,hideRandom=false})=>{
+  listScrollTop=null,onListScrollTop=null,toolbarExtra=null,playLabel='決定',playDisabled=false,hideRandom=false,unlockAll=false})=>{
   const spot=name=>(typeof spotClass==='function'?spotClass(name):'');
   // 演奏へ入る前に、タップ音を作り置きしておく
   useEffect(()=>{RHYTHM_NOTE_SE_RUNTIME.prepare?.();},[]);
@@ -18790,7 +18790,8 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
   const available=song?(difficulties||[]).filter(difficulty=>rhythmChartPlayable(song,difficulty.id)):[];
   // EXPERT・MASTERは、その曲のHARDをクリアするまで選べない(2026-09-05 に1段ずつで始め、2026-10-10 から HARD で2つとも開く)。
   // 一覧からは消さずに鍵つきで見せる。「先に何をクリアすればよいか」が分かるようにするため。
-  const unlocked=item=>!song||rhythmDifficultyUnlocked(song.songId,item.id,bestRecords);
+  // unlockAll … デバッグの全解放の曲えらび(RHYTHM_DEBUG_SELECT)だけが立てる。鍵を見ずに全部の難易度を選べる
+  const unlocked=item=>unlockAll||!song||rhythmDifficultyUnlocked(song.songId,item.id,bestRecords);
   const openList=available.filter(unlocked);
   // 鍵のかかったボタンの「◯◯で解放」は、いちばん長い文字に合わせて字の大きさをそろえる(HELL の「MASTERで解放」だけ小さくならないように)
   const lockedFitText=song?available.filter(item=>!unlocked(item)).map(item=>`${rhythmDifficultyUnlockRequirement(item.id,song.songId)}で解放`)
@@ -45484,6 +45485,11 @@ function MonsterHeroGame() {
     return (list[0]&&list[0].songId)||'';
   });
   const [rhythmSelectedDifficultyId,setRhythmSelectedDifficultyId]=useState('');
+  // デバッグの全解放の曲えらび(RHYTHM_DEBUG_SELECT・2026-10-11 社長の依頼)で選んでいる曲・難易度・並び。
+  // 通常の曲えらびの選択とは分けて持つ(デバッグで触っても、通常の画面の選択が動かないように)。保存はしない
+  const [rhythmDebugSelectSongId,setRhythmDebugSelectSongId]=useState('');
+  const [rhythmDebugSelectDifficultyId,setRhythmDebugSelectDifficultyId]=useState('');
+  const [rhythmDebugSelectView,setRhythmDebugSelectView]=useState(null);
   // 「📖 遊びかた」で開いている項目。null なら項目一覧。
   // 以前はモンビーの説明を全部つなげて1画面へ流していたので、ただの長文になっていた
   // (2026-09-06・ユーザー指摘「ただの文章の羅列で見にくすぎる」)。本ゲームのヘルプと同じ
@@ -49189,7 +49195,7 @@ function MonsterHeroGame() {
     // オンボーディングのプレビューで開く助手えらび。タイトルからの流れの中なので鳴らさない
     'ASSISTANT_SELECT',
     // デバッグ画面。プレイヤーの通常プレイには出ない
-    'DEBUG_SETTINGS', 'DEBUG_BATTLE_SETUP', 'DEBUG_DATA_SETUP', 'RHYTHM_DEBUG',
+    'DEBUG_SETTINGS', 'DEBUG_BATTLE_SETUP', 'DEBUG_DATA_SETUP', 'RHYTHM_DEBUG', 'RHYTHM_DEBUG_SELECT',
     'BREEDER_ICON_DEBUG', 'DYE_MASK_POSITION_DEBUG', 'MASU_PATTERN_DEBUG',
     'MONSTER_CHECK_DEBUG', 'MONSTER_IMAGE_DEBUG', 'SPECIES_CHALLENGE_DEBUG', 'TRANSCEND_DEBUG', 'RAID_JACK_DEBUG',
     'RPG_DEBUG_SETUP', 'RPG_DEBUG_BATTLE', 'RPG_DEBUG_RESULT',
@@ -63244,7 +63250,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 通算クリア回数を数える(スエゾービートのフレームの条件)。ライフを残して終えたときだけ。
           // 練習・アシストモードは上で除いてある。数えられなくても記録の保存は止めない
           if(result?.cleared!==false){ try{ setRhythmClearTotal(await addRhythmClearTotal()); }catch{} }
-          const records=await saveRhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id,merged);setRhythmBestRecords(records);void recordRhythmAchievements(records,{initialRecords:rhythmBestRecords});if(rhythmPlay.from==='demo'||rhythmPlay.from==='multi'||rhythmPlay.from==='raid')submitRhythmRankingScore(rhythmPlay.song,rhythmPlay.difficulty,result);}} onExit={()=>{if(rhythmPlay.from==='raid'){exitRaidJackRhythmPlay();return;}if(rhythmPlay.from==='multi'&&!RHYTHM_MULTI.hasReported(rhythmPlay.multiStartId))RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId,null,true,{diffId:rhythmPlay.difficulty.id});const back=rhythmPlay.from==='multi'?'RHYTHM_MULTI':rhythmPlay.from==='calibration'?'RHYTHM_OPTIONS':rhythmPlay.from==='debug'||rhythmPlay.from==='proto'?'RHYTHM_DEBUG':'RHYTHM_DEMO_HOME';setRhythmPlay(null);setGameState(back);}} debugPlay={rhythmPlay.from==='debug'||rhythmPlay.from==='proto'} tutorial={rhythmPlay.from==='tutorial'} calibrating={rhythmPlay.from==='calibration'} onApplyCalibration={async measured=>{
+          const records=await saveRhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id,merged);setRhythmBestRecords(records);void recordRhythmAchievements(records,{initialRecords:rhythmBestRecords});if(rhythmPlay.from==='demo'||rhythmPlay.from==='multi'||rhythmPlay.from==='raid')submitRhythmRankingScore(rhythmPlay.song,rhythmPlay.difficulty,result);}} onExit={()=>{if(rhythmPlay.from==='raid'){exitRaidJackRhythmPlay();return;}if(rhythmPlay.from==='multi'&&!RHYTHM_MULTI.hasReported(rhythmPlay.multiStartId))RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId,null,true,{diffId:rhythmPlay.difficulty.id});const back=rhythmPlay.from==='multi'?'RHYTHM_MULTI':rhythmPlay.from==='calibration'?'RHYTHM_OPTIONS':rhythmPlay.backTo==='RHYTHM_DEBUG_SELECT'?'RHYTHM_DEBUG_SELECT':rhythmPlay.from==='debug'||rhythmPlay.from==='proto'?'RHYTHM_DEBUG':'RHYTHM_DEMO_HOME';setRhythmPlay(null);setGameState(back);}} debugPlay={rhythmPlay.from==='debug'||rhythmPlay.from==='proto'} tutorial={rhythmPlay.from==='tutorial'} calibrating={rhythmPlay.from==='calibration'} onApplyCalibration={async measured=>{
           // 測った値をその場で設定へ入れて保存し、オプションへ戻す。
           // 判定窓・スコア・ランキングには触れない(入れるのは judgmentTimingOffsetMs だけ)
           const offsetMs=Number(measured&&measured.offsetMs);
@@ -63450,6 +63456,41 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           />
         )}
 
+        {gameState==='RHYTHM_DEBUG_SELECT'&&(()=>{
+          // デバッグの全解放の曲えらび(2026-10-11 社長の依頼)。デバッグ設定からしか来られない(プレイヤーには見えない)。
+          // 曲: 公開している曲・公開前の曲・デバッグ用の曲(RHYTHM_SONGS)と試作の枠(RHYTHM_PROTO_SONGS)を全部。
+          // 難易度: 5難易度と HELL。解放の鍵は見ない(unlockAll)。HELL の公開の印(RELEASE_FLAGS.rhythmHell)は触らない。
+          // 演奏は from:'proto'(周回の報酬・自己ベスト・クリア回数・実績・ランキングのどれにも入れない。CLAUDE.md ⑦)。
+          // 自己ベストの表示は読むだけ(書き換えない)
+          const songs=[...RHYTHM_SONGS,...RHYTHM_PROTO_SONGS];
+          return <main data-rhythm-debug-select className="relative flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white">
+            <header className="z-10 flex shrink-0 items-center gap-1 border-b border-amber-400/30 bg-slate-950/95 px-2 py-1" style={{paddingTop:'calc(0.25rem + var(--mh-sa-top))'}}>
+              <button type="button" aria-label="モンヒロビートのデバッグへ戻る" title="デバッグへ戻る" onClick={()=>setGameState('RHYTHM_DEBUG')}
+                className="min-h-[44px] min-w-[44px] shrink-0 text-slate-300"><ArrowLeft size={20}/></button>
+              <div className="min-w-0 flex-1">
+                <small className="flex items-center gap-1.5 text-[8px] font-black leading-none tracking-[0.2em] text-fuchsia-300">MONBEAT<span data-rhythm-debug-select-badge className="rounded-full border border-amber-300/70 bg-amber-500/20 px-1.5 py-px text-[8px] tracking-normal text-amber-100">デバッグ(記録しない)</span></small>
+                <h2 className="truncate text-sm font-black leading-tight tracking-widest text-cyan-200">🎵 曲えらび(全解放)</h2>
+              </div>
+              <RhythmOrientationButton/>
+              <button type="button" data-rhythm-debug-select-options onClick={()=>{setRhythmOptionsBack('RHYTHM_DEBUG_SELECT');setGameState('RHYTHM_OPTIONS');}}
+                aria-label="オプション" title="オプション"
+                className="flex min-h-[44px] min-w-[44px] shrink-0 flex-col items-center justify-center rounded-xl border border-cyan-300/50 bg-cyan-950/60 px-1 text-[9px] font-black text-cyan-100"><span aria-hidden="true" className="text-base leading-none">⚙️</span><span>オプション</span></button>
+            </header>
+            <RhythmSongSelect
+              songs={songs}
+              difficulties={RHYTHM_PLAY_DIFFICULTIES}
+              bestRecords={rhythmBestRecords}
+              unlockAll
+              songId={rhythmDebugSelectSongId}
+              difficultyId={rhythmDebugSelectDifficultyId}
+              onSongId={setRhythmDebugSelectSongId}
+              onDifficultyId={setRhythmDebugSelectDifficultyId}
+              view={rhythmDebugSelectView}
+              onView={setRhythmDebugSelectView}
+              playLabel="決定(記録しない)"
+              onPlay={(song,difficulty)=>{if(rhythmSettings.quietDuringPlay)RHYTHM_QUIET_MODE.enter();setRhythmPlay({song,difficulty,from:'proto',backTo:'RHYTHM_DEBUG_SELECT'});setGameState('RHYTHM_PLAY');}}/>
+          </main>;
+        })()}
         {gameState==='RHYTHM_DEBUG'&&(
           <main data-rhythm-debug-screen className="flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white" style={{paddingTop:'var(--mh-sa-top)'}}>
             <header className="z-10 flex shrink-0 items-center gap-2 border-b border-cyan-400/15 bg-slate-950/95 px-3 py-1"><button aria-label="デバッグ設定へ戻る" onClick={()=>setGameState('DEBUG_SETTINGS')} className="min-h-[44px] min-w-[44px] text-slate-300"><ArrowLeft size={20}/></button><div className="min-w-0 flex-1"><small className="block text-[8px] font-black text-cyan-300">DEBUG ONLY・STEP 1</small><h2 className="text-sm font-black">モンヒロビート 基盤確認</h2></div><button data-rhythm-options-open onClick={()=>{setRhythmOptionsBack('RHYTHM_DEBUG');setGameState('RHYTHM_OPTIONS');}} className="min-h-[44px] shrink-0 rounded-xl border border-cyan-300/60 bg-cyan-950 px-3 text-[10px] font-black text-cyan-100">⚙️ オプション</button></header>
@@ -63480,6 +63521,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <section className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/30 p-3"><h3 className="mb-2 text-xs font-black text-cyan-200">保存中の設定</h3><dl className="grid grid-cols-2 gap-x-2 gap-y-1 text-[9px]">{Object.entries(rhythmSettings).map(([key,value])=><React.Fragment key={key}><dt className="break-all text-slate-400">{key}</dt><dd className="break-all text-right font-mono text-white">{String(value)}</dd></React.Fragment>)}</dl></section>
             </div>
             <div hidden={rhythmDebugTab!=='play'}>
+            {/* 全解放の曲えらび(2026-10-11 社長の依頼「通常曲選択画面の全解放版を作ってそこでデバッグできるように」)。
+                通常の曲えらびと同じ部品(RhythmSongSelect)で、公開前の曲・試作の曲・HELL まで全部の難易度を選べる。
+                演奏は試作と同じ扱い(from:'proto')で、記録・報酬・ランキングには何も入らない。下の縦の一覧はしばらく残す */}
+            <button type="button" data-rhythm-debug-select-open onClick={()=>setGameState('RHYTHM_DEBUG_SELECT')}
+              className="mb-3 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl border border-cyan-300/70 bg-cyan-900/60 px-3 text-sm font-black text-cyan-50">
+              🎵 全解放の曲えらびを開く<span className="rounded-full bg-slate-950/70 px-2 py-0.5 text-[10px] text-amber-200">記録しない</span></button>
             {/* デバッグ専用の試作曲(RHYTHM_PROTO_SONGS)。ここからだけ遊べる。遊んでも記録・報酬・ランキングには何も入らない(from:'proto')。
                 プレイヤーの通常プレイには出ないので、更新履歴・ヘルプには載せない */}
             <RhythmSkyLiftSwitch/>
