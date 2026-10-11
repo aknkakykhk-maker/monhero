@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 62a204bf51250fdf
+// source-sha256: 0e9047e9df0a7bc2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-11 14:49";
+const BUILD_DATE = "2026-10-11 15:04";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -57032,7 +57032,8 @@ const HOME_RAID_JACK_WRAP_STYLE = Object.freeze({
   left: '50%',
   top: '44%',
   transform: 'translate(-50%,-50%)',
-  zIndex: 2,
+  zIndex: 4,
+  pointerEvents: 'none',
   width: '44%',
   maxWidth: '190px',
   minWidth: '120px'
@@ -57045,7 +57046,8 @@ const HOME_RAID_JACK_BUTTON_STYLE = Object.freeze({
   background: 'transparent',
   border: '0',
   padding: '0',
-  cursor: 'pointer'
+  cursor: 'pointer',
+  pointerEvents: 'auto'
 });
 const HOME_RAID_SAY_WIDTHS = Object.freeze([184, 168, 152, 136, 120]);
 const HOME_RAID_SAY_GAP = 6;
@@ -57323,7 +57325,8 @@ const HomeRaidJack = ({
       cursor: 'pointer',
       boxShadow: `0 0 12px ${speechAccent}66`,
       animation: 'storyPop .25s ease-out both',
-      zIndex: 2
+      zIndex: 2,
+      pointerEvents: 'auto'
     }
   }, React.createElement("span", {
     style: {

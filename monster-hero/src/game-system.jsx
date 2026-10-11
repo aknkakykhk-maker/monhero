@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3157105abda67bf1
+// generated-sha256: 26908122d432aa98
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-11 14:49"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-11 15:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -34949,13 +34949,17 @@ const HOME_RAID_JACK_CSS = `
 @keyframes mhRaidJackShadow{0%,100%{transform:scaleX(1.05);opacity:.5}50%{transform:scaleX(.7);opacity:.3}}
 @media(prefers-reduced-motion:reduce){.mh-home-raid-jack-img,.mh-home-raid-jack-shadow{animation:none}}
 `;
+// ★重なり順は施設(.mh-home-facilities の z-index:3)より前の 4(2026-10-11・社長の実機の指摘)。
+//   施設は建物ぶんの透明な押し場所を持つので、2のままだと右に置いた吹き出しが神殿・マーケットの押し場所の下になり、
+//   「▶ つぎ」を押すと施設が開いていた。枠そのものは押せなくして(pointerEvents:none)、吹き出しとジャック本体だけを押せるようにする
+//   (枠の余白で施設の押し場所をふさがない)。上の帯・みゅあ・ギフトなど(z-index:5)よりは後ろのまま
 const HOME_RAID_JACK_WRAP_STYLE = Object.freeze({
-  position:'absolute', left:'50%', top:'44%', transform:'translate(-50%,-50%)', zIndex:2,
+  position:'absolute', left:'50%', top:'44%', transform:'translate(-50%,-50%)', zIndex:4, pointerEvents:'none',
   width:'44%', maxWidth:'190px', minWidth:'120px',
 });
 const HOME_RAID_JACK_BUTTON_STYLE = Object.freeze({
   display:'flex', flexDirection:'column', alignItems:'center', width:'100%',
-  background:'transparent', border:'0', padding:'0', cursor:'pointer',
+  background:'transparent', border:'0', padding:'0', cursor:'pointer', pointerEvents:'auto',
 });
 // ★ジャックのひとこと(吹き出し)の置き場所を、その端末の画面で測って決める(2026-10-10・社長の実機の指摘)。
 //   iPhone縦では「M/B管理」「神殿」のボタンの下へ吹き出しがもぐって文の頭が隠れ、横では上の帯の裏へ隠れていた。
@@ -35110,7 +35114,7 @@ const HomeRaidJack = ({ eventId, onOpen }) => {
       style={{ position:'absolute', ...(sayPlace ? { left:sayPlace.left, top:sayPlace.top, width:sayPlace.width } : { left:'50%', bottom:'100%', marginLeft:-92, marginBottom:'4px', width:184 }),
         padding:'6px 10px', borderRadius:'14px', boxSizing:'border-box',
         border:`2px solid ${speechAccent}`, background:'#1c0a02ee', color:'#ffedd5', fontSize:'11px', fontWeight:900, lineHeight:1.45, textAlign:'left', cursor:'pointer',
-        boxShadow:`0 0 12px ${speechAccent}66`, animation:'storyPop .25s ease-out both', zIndex:2 }}>
+        boxShadow:`0 0 12px ${speechAccent}66`, animation:'storyPop .25s ease-out both', zIndex:2, pointerEvents:'auto' }}>
       <span style={{ display:'block' }}>{speech}</span>
       <span aria-hidden="true" style={{ display:'block', textAlign:'right', fontSize:'8px', opacity:.7 }}>▶ つぎ</span>
       {/* しっぽはジャックのほうへ向ける(上に置いたら下向き、右に置いたら左向き、左に置いたら右向き) */}
