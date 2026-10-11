@@ -84,7 +84,7 @@ async function openBondRanking(page, { bondTableExists }) {
   await page.waitForTimeout(3000);
   for (let i = 0; i < 8; i++) {
     const closed = await page.evaluate(() => {
-      const b = [...document.querySelectorAll('button')].find(x => /受け取|閉じる|あとで|スキップ/.test(x.textContent));
+      const b = [...document.querySelectorAll('button')].find(x => /受け取|閉じる|あとで|スキップ|^確認$/.test(x.textContent.trim()));
       if (b) b.click();
       return !!b;
     });
@@ -97,7 +97,8 @@ async function openBondRanking(page, { bondTableExists }) {
   await page.waitForTimeout(600);
   await page.evaluate(() => { const b = document.querySelector('[data-battle-system="systemClassic"]'); if (b) b.click(); });
   await page.waitForTimeout(1500);
-  await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => x.textContent.trim() === '絆Lv'); if (b) b.click(); });
+  // ★2026-10-11 タブの文字が「🏆絆Lv」になり、文字の一致で探すと空振りしていた。名前(aria-label)で探し、無ければ文字に「絆Lv」を含むものを押す
+  await page.evaluate(() => { const b = document.querySelector('button[aria-label="絆Lvランキング"]') || [...document.querySelectorAll('button')].find(x => /^\W*絆Lv$/u.test(x.textContent.trim())); if (b) b.click(); });
   await page.waitForTimeout(4000);
   const names = await page.evaluate(() => [...document.querySelectorAll('[data-ranking-kind="bond"]')].map(el => el.innerText.replace(/\s+/g, ' ')));
   // 「詳細 ›」は育て方(detail)が残っている個体だけ押せる。押せる/押せないの内訳も持ち帰る
