@@ -42,6 +42,15 @@ const CHANGELOG = [
     ],
   },
   {
+    date: "2026-10-11 10:25", type:'fix', group:'rhythm', title:'モンヒロビート：モンスターノーツが4回出ない譜面を直しました', status:'new',
+    items:[
+      'モンスターノーツの出番は、どの曲のどの難易度にも4回あるのが決まりですが、4回そろっていない譜面がありました。どれも4回出るように直しました。',
+      '直した譜面: Sheriruth（全難易度）／Journey MASTER／Monster Hero -Another- MASTER／Stay With Me ～Locked Fate～ MASTER／綺季一閃 ～花雪に舞う詠姫～ EXPERT・MASTER／綺季一閃 ～花雪に舞う詠姫～ battle remix MASTER／4U ～ひたすら～ MASTER／禁断のレジスタンス EXPERT／ビッグブリッヂの死闘 MASTER／ハルカ EXPERT／Crazy Party Night ～ぱんぷきんの逆襲～ full ver. EXPERT／Monster short ver. EXPERT・MASTER',
+      'Stay With Me ～Locked Fate～ remix の EXPERT は、同じ順番のモンスターノーツが2回出ていたので、1回にそろえました。',
+      'ノーツの数・位置・タイミングは変わりません。もともとあった単打の一部がモンスターノーツになります。スコアの計算も変わりません（モンスターノーツはライフを助ける能力だけです）。',
+    ],
+  },
+  {
     date: "2026-10-11 09:09", type:'fix', group:'rhythm', title:'モンヒロビート：ホールド・スライドを押しっぱなしにしたときの判定が毎回同じになりました', status:'new',
     items:[
       'ホールド・スライドは、終わりのバーが判定ラインに来たら指を離すと成功、押しっぱなしのまま過ぎるとMISSです。',

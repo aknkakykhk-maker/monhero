@@ -17,7 +17,7 @@ vm.runInNewContext(`${fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-m
 this.out={songs:[...RHYTHM_SONGS,...(typeof RHYTHM_PROTO_SONGS!=='undefined'?RHYTHM_PROTO_SONGS:[])],rhythmScrollSet,rhythmScrollPos,rhythmScrollEarlyTouches,proj:rhythmProjectTravelProgress};`,ctx);
 const R=ctx.out;
 const TRAVEL={3:5000,4:4000,5:3000,6:2150,7:1680,8:1300,9:1020,10:800};
-const BEAT=60000/210,ZERO=240,ms=b=>ZERO+b*BEAT;
+const BEAT=60000/210,ZERO=2240,ms=b=>ZERO+b*BEAT;
 const WINDOWS=[
   {name:'A',from:56,to:64,refHits:[]},
   {name:'B',from:328,to:336.5,refHits:[]},
@@ -28,6 +28,19 @@ const WINDOWS=[
 const K_REF=(1/(122.6-92))/(1/268),screenRef=p=>(1/(K_REF-(K_REF-1)*p)-1/K_REF)/(1-1/K_REF);
 const REF_WAITING=[['A',61.9,.48],['B',328.4,.54],['B',334,.345],['C',460.8,.56],['C',462.3,.57]];
 const songs=R.songs.filter(s=>/^grievous_lady/.test(s.songId));
+// ⑤ 押せるか(横持ち・親指2本): ゲームの譜面から、スライドの手は位置で決めて数える(遊ぶ人と同じ)。
+//    親指2本のモデル(rhythm-ref-tiers.js の thumbCheck)で押せない・指の交差・届きにくいが0、
+//    両手のシミュレート(rhythm-hand-simulate.js)で押せないが0(空中のある譜面は地上のノーツだけで数える)
+const {thumbCheck,THUMB_PROFILES}=require('./rhythm-ref-tiers.js');
+const {simulateNotes}=require('./rhythm-hand-simulate.js');
+const toDraft=n=>n.type==='SLIDE'?{k:'s',hand:(Number(n.slidePoints[0].lane)+0.5<3?'L':'R'),pts:n.slidePoints.map(p=>[Number(p.timeMs),Number(p.lane),Number(p.subLaneWidth),Number(p.sky)||0,0])}
+  :{k:n.type==='HOLD'?'h':n.type==='FLICK'?'f':'t',t:n.timeMs,end:n.endTimeMs,sub:n.subLane,w:n.subLaneWidth,sky:n.skyHeight>0?1:0};
+const pressable=notes=>{
+  const d=notes.map(toDraft),th=thumbCheck(d,THUMB_PROFILES.landscape,BEAT).count;
+  const Q=BEAT/4,slot=t=>Math.round((t-ZERO)/Q),ground=notes.filter(n=>!(n.skyHeight>0)&&!(n.slidePoints||[]).some(p=>p.sky>0));
+  const sim=simulateNotes(ground.map(n=>({...n,grid:slot(n.timeMs),durationGrids:Number(n.endTimeMs)>n.timeMs?slot(n.endTimeMs)-slot(n.timeMs):0})),{beatZeroMs:ZERO,gridMs:Q,subdivisionsPerBeat:4,beatsPerBar:4});
+  return {th,sim:sim.impossible|0};
+};
 ok('Grievous Lady の譜面がある',songs.length>0);
 for(const song of songs)for(const [id,chart] of Object.entries(song.difficulties||{})){
   const notes=(chart&&chart.notes)||[];if(!notes.length)continue;
@@ -36,6 +49,9 @@ for(const song of songs)for(const [id,chart] of Object.entries(song.difficulties
   // ①
   const early=[];for(const [sp,tr] of Object.entries(TRAVEL)){const e=R.rhythmScrollEarlyTouches(chart.scrollChanges,notes,tr,chart.scrollGroups);if(e.length)early.push(`速度${sp}:${e.length}個(${e.slice(0,3).map(n=>Math.round(n.timeMs)).join(',')})`);}
   ok(`${tag}: 判定の前に判定線へ触れるノーツ 0個(速度3〜10)`,early.length===0,early.join(' '));
+  { const r=pressable(notes);
+    ok(`${tag}: 横持ち・親指2本で押せる(押せない・交差・届きにくい0/両手のシミュレートの押せない0)`,!r.th.impossible&&!r.th.cross&&!r.th.reach&&!r.sim,
+      `親指モデル 押せない${r.th.impossible}・交差${r.th.cross}・届きにくい${r.th.reach}/両手のシミュレート 押せない${r.sim}`); }
   // ②
   const counts=WINDOWS.map(w=>{
     const inside=notes.filter(n=>{const a=Number(n.timeMs),b=Number(n.endTimeMs)>a?Number(n.endTimeMs):a;return b>ms(w.from)+1&&a<ms(w.to)-1;});
