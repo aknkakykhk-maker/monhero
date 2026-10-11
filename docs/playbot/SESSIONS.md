@@ -9,7 +9,7 @@
 | 部署 | 名前 | 会話の名前 | セッション |
 | --- | --- | --- | --- |
 | 窓口 | 統括部長モンヒロくん | 窓口 統括部長モンヒロくん(10/11〜) | session_014GTmSNS2ae9tRr57k3zFjC |
-| ビート部 | 部長テンポくん | ビート部 部長テンポくん(10/07〜) | session_01NS12tYT8MdGQhNjvw8dS56 |
+| ビート部 | 部長テンポくん | ビート部 部長テンポくん(10/12〜) | session_01SG7SEGSmUcyxyymHyDVipd |
 | ビート部 | オンプくん | ビート部 オンプくん(10/12〜) | session_01VDL1xQjh5sVox2CGCDkx8w |
 | ビート部 | マクアケくん | ビート部 マクアケくん(10/10〜) | session_01JgrcvWE4GJff7cTHDPoecb |
 | ビート部 | リバースくん | ビート部 リバースくん(10/10〜) | session_01DfgZpuPHnVgxrwQiurqUQ1 |
@@ -39,3 +39,4 @@
 | 【引き継ぎ済み】修理部 部長ドライバーくん(10/11) | session_01PMWiEFVgTqiNoqiniTWS7Y | 同上 |
 | 【引き継ぎ済み】修理部 部長ドライバーくん(10/11〜10/12) | session_01JBvGk6rrRBCgkPEFTiNMu8 | 同上 |
 | 【引き継ぎ済み】ビート部 オンプくん(10/10〜10/12) | session_01KxMEiw3EwFDLvXkiHxkA4S | session_01VDL1xQjh5sVox2CGCDkx8w |
+| 【引き継ぎ済み】ビート部 部長テンポくん(10/07〜10/12) | session_01NS12tYT8MdGQhNjvw8dS56 | session_01SG7SEGSmUcyxyymHyDVipd |

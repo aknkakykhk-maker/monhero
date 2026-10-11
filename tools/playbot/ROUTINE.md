@@ -18,7 +18,7 @@
 | --- | --- | --- | --- |
 | **統括部長:モンヒロくん** | 窓口・1号 | 社長の頼みを受けて中身を確かめ、各部へ振る・まとめて報告する・部をまたぐ決めごと | `session_014GTmSNS2ae9tRr57k3zFjC` |
 | **バトル部:部長ブレイブくん** | バトル班 | バトル・イベント(`--team battle`) | `session_01JEr9tDMYKaEM1yA1yBv46Z` |
-| **ビート部:部長テンポくん** | 音ゲー班 | モンヒロビート・マルチ・レイドビート(`--team rhythm`) | `session_01NS12tYT8MdGQhNjvw8dS56` |
+| **ビート部:部長テンポくん** | 音ゲー班 | モンヒロビート・マルチ・レイドビート(`--team rhythm`) | `session_01SG7SEGSmUcyxyymHyDVipd` |
 | **見回り部:部長マップくん** | はじめて・見回り班 | はじめての人の流れ・見回り・お話・見た目(`--team patrol`) | `session_01PHekXAt2C5NAZBXL1sh5gG` |
 | **守り部:部長ガードくん** | 守り班 | 時刻・数・意地悪な操作(`--team guard`) | `session_01X1m4SRfy1rxcJemHM8n5PU` |
 | **修理部:ドライバーくん** | 直し係 | 小さな直し。頼みごとごとに立てる(2人目からは新しい部員を採用し、こだわった名前と性格を付ける。社則17・18。いまいる「ドライバーくん2号」はそのまま) | 頼みごとごと |
@@ -66,7 +66,7 @@
 | 班 | `--team` | 担当 | セッション(いま) | 記録 |
 | --- | --- | --- | --- | --- |
 | バトル部:部長ブレイブくん | `battle` | バトル係(バトル・AUTO・タクティクス)・イベント係 | `session_01JEr9tDMYKaEM1yA1yBv46Z` | `docs/playbot/history/battle.md` |
-| ビート部:部長テンポくん | `rhythm` | 音ゲー係(音ゲー・ランキング・横画面)・マルチ係(マルチ・相棒)・レイド音ゲー係(どれも1人ずつ動く。班で約18分) | `session_01NS12tYT8MdGQhNjvw8dS56` | `docs/playbot/history/rhythm.md` |
+| ビート部:部長テンポくん | `rhythm` | 音ゲー係(音ゲー・ランキング・横画面)・マルチ係(マルチ・相棒)・レイド音ゲー係(どれも1人ずつ動く。班で約18分) | `session_01SG7SEGSmUcyxyymHyDVipd` | `docs/playbot/history/rhythm.md` |
 | 見回り部:部長マップくん | `patrol` | 新人係・見回り係(案内・探検)・ストーリー係・見た目係(見た目・小さい画面) | `session_01PHekXAt2C5NAZBXL1sh5gG` | `docs/playbot/history/patrol.md` |
 | 守り部:部長ガードくん | `guard` | 時間と保存係(久しぶり・時計)・数字係(育成・買い物)・意地悪係(意地悪・通信不良) | `session_01X1m4SRfy1rxcJemHM8n5PU` | `docs/playbot/history/guard.md` |
 
