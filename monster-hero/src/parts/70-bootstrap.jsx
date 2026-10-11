@@ -4181,6 +4181,21 @@ const createAnimationStyle = () => {
     .mh-rjdmg-slash-b { top: 52%; transform: rotate(20deg) translateX(60%); animation-name: mhRjSlashB; animation-delay: 1.1s; }
     .mh-rjdmg-name { position: relative; font-size: 14px; font-weight: 900; text-shadow: 0 2px 4px #000; animation: mhRjRise .4s ease-out .5s both; }
     .mh-rjdmg-bar { position: relative; width: min(78vw, 330px); height: 16px; overflow: hidden; border-radius: 9999px; border: 2px solid rgba(255,255,255,.3); background: rgba(2,6,23,.9); animation: mhRjRise .4s ease-out .6s both; }
+    /* ★「横向き」ボタンで画面を回しているとき(縦持ちのスマホ)は、vh / dvh が回す前の縦の長さのまま測られる。
+       ジャックの絵が大きくなりすぎて、いちばん下の DAMAGE の数字が画面の外へ押し出されていた(2026-10-11 社長の報告)。
+       回しているあいだは、器の高さ=端末の横幅(vw)・器の横幅=端末の縦(vh)で測り直す */
+    [data-mh-view-rotation="true"] .mh-rjdmg { gap: 3px; padding-top: 10px; padding-bottom: 26px; }
+    [data-mh-view-rotation="true"] .mh-rjdmg-stage { width: min(64vh, 270px, 26vw); }
+    [data-mh-view-rotation="true"] .mh-rjdmg-bar { width: min(78vh, 330px); }
+    [data-mh-view-rotation="true"] .mh-rjdmg-score b { font-size: 30px; }
+    /* 体力が減らない相手(ぱんぷきん): バーは満タンのまま、当たった瞬間に光る */
+    .mh-rjdmg-bar-inf .mh-rjdmg-bar-fill { animation: mhRjBarInf .7s ease-out 1.05s both; background: linear-gradient(90deg, #f97316, #facc15, #f97316); }
+    @keyframes mhRjBarInf { 0% { filter: brightness(1); } 30% { filter: brightness(2.2); } 100% { filter: brightness(1); } }
+    /* レイドの結果画面(モンヒロビート)の体力のバー。演奏前の体力から、いまの体力へ減っていく */
+    .mh-rjresult-bar { position: relative; height: 12px; overflow: hidden; border-radius: 9999px; border: 1px solid rgba(255,255,255,.3); background: rgba(2,6,23,.9); }
+    .mh-rjresult-bar > i { position: absolute; inset: 0; transform-origin: left center; background: linear-gradient(180deg, #fca5a5, #ef4444 45%, #991b1b); transform: scaleX(var(--from)); animation: mhRjResultBar 1.2s cubic-bezier(.2,.8,.3,1) 1.6s forwards; }
+    @keyframes mhRjResultBar { to { transform: scaleX(var(--to)); } }
+    @media (prefers-reduced-motion: reduce) { .mh-rjresult-bar > i { animation: none; transform: scaleX(var(--to)); } }
     .mh-rjdmg-bar-fill { height: 100%; width: 100%; transform-origin: left center; background: linear-gradient(180deg, #fca5a5, #ef4444 40%, #b91c1c 75%, #7f1d1d); animation: mhRjBarDrop 1.2s cubic-bezier(.2,.8,.3,1) 1.05s forwards; }
     .mh-rjdmg-life { position: relative; font-size: 10px; font-weight: 900; color: #fca5a5; font-variant-numeric: tabular-nums; animation: mhRjRise .4s ease-out .6s both; }
     .mh-rjdmg-damage { position: relative; text-align: center; opacity: 0; animation: mhRjSlam .55s cubic-bezier(.2,1.4,.4,1) 1s both; }

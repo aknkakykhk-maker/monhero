@@ -151,12 +151,20 @@ const RaidJackDamageFx = ({ fx, onDone }) => {
         {!none && <><i className="mh-rjdmg-slash mh-rjdmg-slash-a" /><i className="mh-rjdmg-slash mh-rjdmg-slash-b" /></>}
       </div>
       <div className="mh-rjdmg-name">{fx.tierName}</div>
-      {hasLife && (
-        <div className="mh-rjdmg-bar" aria-hidden="true">
-          <div className="mh-rjdmg-bar-fill" style={{ '--from': from, '--to': to, transform: `scaleX(${from})` }} />
-        </div>
+      {/* 体力が減らない相手(ぱんぷきん)は、満タンのバーを光らせて「∞」と出す。数字の「x / y」は出さない */}
+      {fx.pumpkin ? (
+        <>
+          <div className="mh-rjdmg-bar mh-rjdmg-bar-inf" aria-hidden="true"><div className="mh-rjdmg-bar-fill" /></div>
+          <div className="mh-rjdmg-life">体力 ∞</div>
+        </>
+      ) : hasLife && (
+        <>
+          <div className="mh-rjdmg-bar" aria-hidden="true">
+            <div className="mh-rjdmg-bar-fill" style={{ '--from': from, '--to': to, transform: `scaleX(${from})` }} />
+          </div>
+          <div className="mh-rjdmg-life">{lifeAfter.toLocaleString()} / {fx.max.toLocaleString()}</div>
+        </>
       )}
-      {hasLife && <div className="mh-rjdmg-life">{lifeAfter.toLocaleString()} / {fx.max.toLocaleString()}</div>}
       <div className={`mh-rjdmg-damage${none ? ' mh-rjdmg-damage-none' : ''}`}>
         {none
           ? <b>{fx.assist ? 'ダメージにならない' : 'ダメージ 0'}</b>
