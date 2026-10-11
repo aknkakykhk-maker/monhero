@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 848d607c64d6548f
+// source-sha256: 245a77a97c4aa0d4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-12 05:27";
+const BUILD_DATE = "2026-10-12 05:31";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -98760,7 +98760,7 @@ function MonsterHeroGame() {
       className: "mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80"
     }, "ノーツを叩いたときにはじける小さな粒を、canvas で描くときの描き方です。「焼いた丸」は一度作った丸の絵を貼るので軽くなります（見た目の差は粒のふちのわずかな違いだけ）。次の演奏から効きます。"), React.createElement("div", {
       className: "mt-2 flex gap-2"
-    }, [['', '既定（今の形）'], ['on', '焼いた丸'], ['off', '今の形']].map(([value, label]) => React.createElement("button", {
+    }, [['', '既定（焼いた丸）'], ['on', '焼いた丸'], ['off', '今までの形']].map(([value, label]) => React.createElement("button", {
       key: value || 'default',
       type: "button",
       "data-rhythm-hit-spark-pref": value || 'default',
