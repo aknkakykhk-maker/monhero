@@ -1162,6 +1162,17 @@ const RHYTHM_JUDGMENT_LINE_Y={
 // 入力: 空中の段がある譜面だけ、地上と空中の判定ラインの真ん中より上を押した指を「空中」とし、空中のノーツは空中の指でだけ取れる。
 //   スライドは高さを見た目にだけ付け、判定は今までどおり横の位置だけで追う。
 const RHYTHM_SKY_LIFT_RATIO=.16;
+// 空中の見た目(案Z・2026-10-11・社長の決定)の色・不透明度・太さを1か所に。描き方(2D の canvas / GPU)はこの値だけを読む(ドライバーくんの GPU の描き方と食い違わないように)。
+// 空中のものは全部「色の無いガラス」(白〜銀)。色が付いていれば地上。長さの単位は CSS px(縦390幅の縦持ち基準)
+const RHYTHM_SKY_LOOK=Object.freeze({
+  arc:Object.freeze({rgb:'214,224,240',alpha:.46,minHalfWidthPx:4.5}),
+  core:Object.freeze({rgb:'255,255,255',alpha:.9,widthPx:3}),
+  box:Object.freeze({fill:'205,218,238',fillAlpha:.16,topAlpha:.62,topRatio:.36,frontFill:'200,215,240',frontAlpha:.4,thickRatio:.3,edge:'255,255,255',edgePx:1.6,minFacePx:5}),
+  shadow:Object.freeze({rgb:'6,3,20',alpha:.5,radiusPx:3,insetPx:3,lineAlpha:.28}),
+  star:Object.freeze({rgb:'255,255,255',radiusPx:17}),
+  line:Object.freeze({bandRgb:'150,118,235',bandAlpha:.38,bandPx:6,coreRgb:'165,135,245',coreAlpha:.95,corePx:2}),
+  floor:Object.freeze({topRgb:'48,34,108',topAlpha:.55,bottomRgb:'66,46,146',bottomAlpha:.88}),
+});
 // 縦画面の空中の高さの差(2026-10-11・社長「中間を作って見比べる」)。デバッグ画面の切り替え(16/25/39%)だけが書く新しい保存キー。ふつうのプレイは書かないので16%のまま
 const rhythmSkyLiftPortrait=()=>{try{const v=Number(localStorage.getItem('mh_sky_lift_portrait_proto'));return v===25?.25:v===39?.39:RHYTHM_SKY_LIFT_RATIO;}catch(e){return RHYTHM_SKY_LIFT_RATIO;}};
 // 横画面では画面の高さが低いので、空中と地上の差を広げる(2026-10-10 社長「モンビーは縦でもできるけど基本は横使い」。
@@ -30367,34 +30378,33 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   const skyZOn=()=>skyTapStyle()==='plate';
   // 空中タップの箱(2026-10-11・社長「白い部分の縦幅を小さく。白い箱が縁の延長みたいにあるだけで見分けがつく」):
   // ふつうのノーツの板と同じ薄さの「枠」が主・本体はほぼ透明(後ろの道や地上ノーツが見える)・上の面と手前の縁だけ明るく・厚みは控えめ
-  const skyBoxDims=(hd,opts)=>{const ds=Number(opts.depthScale)||1,faceH=Math.max(5,hd.h*ds),thick=Math.max(2,faceH*.3),W=Math.max(10,hd.w*sizeScale);return {faceH,thick,W};};
+  const skyBoxDims=(hd,opts)=>{const L=RHYTHM_SKY_LOOK.box,ds=Number(opts.depthScale)||1,faceH=Math.max(L.minFacePx,hd.h*ds),thick=Math.max(2,faceH*L.thickRatio),W=Math.max(10,hd.w*sizeScale);return {faceH,thick,W};};
   const drawGlassBox=(hd,opts)=>{
-    const {faceH,thick,W}=skyBoxDims(hd,opts),x0=hd.cx-W/2,y0=hd.cy-faceH/2;
+    const L=RHYTHM_SKY_LOOK.box,{faceH,thick,W}=skyBoxDims(hd,opts),x0=hd.cx-W/2,y0=hd.cy-faceH/2;
     ctx.globalAlpha=opts.alpha;
-    ctx.fillStyle='rgba(205,218,238,.16)';ctx.fillRect(x0,y0,W,faceH+thick);               // 本体はほぼ透明
-    ctx.fillStyle='rgba(255,255,255,.62)';ctx.fillRect(x0,y0,W,Math.max(2,faceH*.36));      // 上の面だけ明るく
-    ctx.fillStyle='rgba(200,215,240,.4)';ctx.fillRect(x0,y0+faceH,W,thick);                 // 手前の厚み(控えめ)
-    ctx.strokeStyle='#ffffff';ctx.lineWidth=1.6;ctx.strokeRect(x0+.8,y0+.8,W-1.6,faceH+thick-1.6);
+    ctx.fillStyle=`rgba(${L.fill},${L.fillAlpha})`;ctx.fillRect(x0,y0,W,faceH+thick);
+    ctx.fillStyle=`rgba(255,255,255,${L.topAlpha})`;ctx.fillRect(x0,y0,W,Math.max(2,faceH*L.topRatio));
+    ctx.fillStyle=`rgba(${L.frontFill},${L.frontAlpha})`;ctx.fillRect(x0,y0+faceH,W,thick);
+    ctx.strokeStyle=`rgb(${L.edge})`;ctx.lineWidth=L.edgePx;ctx.strokeRect(x0+L.edgePx/2,y0+L.edgePx/2,W-L.edgePx,faceH+thick-L.edgePx);
     ctx.beginPath();ctx.moveTo(x0,y0+faceH);ctx.lineTo(x0+W,y0+faceH);ctx.stroke();
     ctx.globalAlpha=1;
   };
   const drawSkyShadowZ=(geo,opts)=>{
     const sh=geo.skyShadow,hd=geo.head;if(!sh||!hd)return;
-    const {faceH,thick,W}=skyBoxDims(hd,opts),w=W-6,h=Math.max(4,(faceH+thick)*.8);
-    ctx.globalAlpha=opts.alpha;ctx.fillStyle='rgba(6,3,20,.5)';
-    roundRectPath(ctx,sh.cx-w/2,sh.cy-h/2,w,h,3);ctx.fill();
-    // 箱から影へ、細い線(高さの手がかり)。箱の下の縁から影の上まで
+    const L=RHYTHM_SKY_LOOK.shadow,{faceH,thick,W}=skyBoxDims(hd,opts),w=W-L.insetPx*2,h=Math.max(4,(faceH+thick)*.8);
+    ctx.globalAlpha=opts.alpha;ctx.fillStyle=`rgba(${L.rgb},${L.alpha})`;
+    roundRectPath(ctx,sh.cx-w/2,sh.cy-h/2,w,h,L.radiusPx);ctx.fill();
     const yTop=hd.cy+faceH/2+thick,yBot=sh.cy-h/2;
-    if(yBot-yTop>4){ctx.globalAlpha=opts.alpha*.28;ctx.strokeStyle='#ffffff';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(hd.cx,yTop);ctx.lineTo(sh.cx,yBot);ctx.stroke();}
+    if(yBot-yTop>4){ctx.globalAlpha=opts.alpha*L.lineAlpha;ctx.strokeStyle='#ffffff';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(hd.cx,yTop);ctx.lineTo(sh.cx,yBot);ctx.stroke();}
     ctx.globalAlpha=1;
   };
   // 押した光の星(空中・白1種・半径17px)。焼いた1枚を加算で貼る
   const skyStarSprite=()=>{
     const id=`skystarz:${dpr}`;if(sprites.has(id))return sprites.get(id);
-    const R=17,S=makeSpriteCanvas(R*2+8,R*2+8),c=S.ctx,mx=R+4,my=R+4;
-    const g=c.createRadialGradient(mx,my,1,mx,my,R);g.addColorStop(0,'rgba(255,255,255,.95)');g.addColorStop(.3,'rgba(255,255,255,.55)');g.addColorStop(1,'rgba(255,255,255,0)');
+    const R=RHYTHM_SKY_LOOK.star.radiusPx,rgb=RHYTHM_SKY_LOOK.star.rgb,S=makeSpriteCanvas(R*2+8,R*2+8),c=S.ctx,mx=R+4,my=R+4;
+    const g=c.createRadialGradient(mx,my,1,mx,my,R);g.addColorStop(0,`rgba(${rgb},.95)`);g.addColorStop(.3,`rgba(${rgb},.55)`);g.addColorStop(1,`rgba(${rgb},0)`);
     c.fillStyle=g;c.beginPath();c.arc(mx,my,R,0,Math.PI*2);c.fill();
-    c.fillStyle='rgba(255,255,255,.9)';
+    c.fillStyle=`rgba(${rgb},.9)`;
     [[1,0,1.1],[0,1,1.1],[.7,.7,.7],[.7,-.7,.7]].forEach(([dx,dy,k])=>{const L=R*k;c.beginPath();c.moveTo(mx-dx*L,my-dy*L);c.lineTo(mx+dy*1.8,my+dx*1.8);c.lineTo(mx+dx*L,my+dy*L);c.lineTo(mx-dy*1.8,my-dx*1.8);c.closePath();c.fill();});
     sprites.set(id,S);return S;
   };
@@ -30403,15 +30413,19 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   };
   // 空中のスライド(案Z): 高さのある区切りは、半透明(46%)の多角形+白い芯の線。地上に近い区切りは地上の帯のまま
   const drawSkySlideZ=(quads,opts)=>{
-    const {alpha}=opts;ctx.globalAlpha=alpha;
-    const air=quads.filter(q=>(Number(q.sky)||0)>.05);
+    const {alpha}=opts,A=RHYTHM_SKY_LOOK.arc,C=RHYTHM_SKY_LOOK.core;ctx.globalAlpha=alpha;
+    // 半幅は max(最小半幅, 譜面の幅の投影の半幅)。細くなりすぎる所だけ、中心を保って広げる
+    const widen=(l,r)=>{const m=A.minHalfWidthPx,c=(l+r)/2,h=(r-l)/2;return h>=m?[l,r]:[c-m,c+m];};
+    const air=quads.filter(q=>(Number(q.sky)||0)>.05).map(q=>{const [l0,r0]=widen(q.l0,q.r0),[l1,r1]=widen(q.l1,q.r1);return {l0,r0,y0:q.y0,l1,r1,y1:q.y1};});
     quads.forEach(q=>{
-      const a=(Number(q.sky)||0)>.05;
-      ctx.fillStyle=a?'rgba(214,224,240,.46)':`rgba(${opts.slideRgb||RHYTHM_NOTE_COLORS.SLIDE.rgb},${opts.slideRgb?.62:.5})`;
+      if((Number(q.sky)||0)>.05)return;
+      ctx.fillStyle=`rgba(${opts.slideRgb||RHYTHM_NOTE_COLORS.SLIDE.rgb},${opts.slideRgb?.62:.5})`;
       ctx.beginPath();ctx.moveTo(q.l0,q.y0);ctx.lineTo(q.r0,q.y0);ctx.lineTo(q.r1,q.y1);ctx.lineTo(q.l1,q.y1);ctx.closePath();ctx.fill();
     });
+    ctx.fillStyle=`rgba(${A.rgb},${A.alpha})`;
+    air.forEach(q=>{ctx.beginPath();ctx.moveTo(q.l0,q.y0);ctx.lineTo(q.r0,q.y0);ctx.lineTo(q.r1,q.y1);ctx.lineTo(q.l1,q.y1);ctx.closePath();ctx.fill();});
     if(air.length){
-      glowBegin();ctx.globalAlpha=alpha*.9;ctx.strokeStyle='#ffffff';ctx.lineWidth=3;ctx.lineCap='round';ctx.lineJoin='round';
+      glowBegin();ctx.globalAlpha=alpha*C.alpha;ctx.strokeStyle=`rgb(${C.rgb})`;ctx.lineWidth=C.widthPx;ctx.lineCap='round';ctx.lineJoin='round';
       ctx.beginPath();air.forEach((q,i)=>{const x0=(q.l0+q.r0)/2,x1=(q.l1+q.r1)/2;if(i===0||Math.abs(air[i-1].y1-q.y0)>1.5)ctx.moveTo(x0,q.y0);else ctx.lineTo(x0,q.y0);ctx.lineTo(x1,q.y1);});
       ctx.stroke();ctx.lineCap='butt';glowEnd();
     }

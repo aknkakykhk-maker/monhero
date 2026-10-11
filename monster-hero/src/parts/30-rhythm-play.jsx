@@ -490,15 +490,15 @@ function RhythmSkyStage({plane}){
       <linearGradient id="mhSkyFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={`rgb(${c})`} stopOpacity="0"/><stop offset=".55" stopColor={`rgb(${c})`} stopOpacity=".04"/><stop offset="1" stopColor={`rgb(${c})`} stopOpacity=".2"/></linearGradient>
       <linearGradient id="mhSkyBand" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={`rgb(${c})`} stopOpacity="0"/><stop offset=".5" stopColor={`rgb(${c})`} stopOpacity=".22"/><stop offset="1" stopColor={`rgb(${c})`} stopOpacity="0"/></linearGradient>
       <linearGradient id="mhSkyPost" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stopColor={`rgb(${c})`} stopOpacity="0"/><stop offset="1" stopColor={`rgb(${c})`} stopOpacity=".55"/></linearGradient>
-      <linearGradient id="mhSkyFloor" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="rgb(48,34,108)" stopOpacity=".55"/><stop offset="1" stopColor="rgb(66,46,146)" stopOpacity=".88"/></linearGradient>
+      <linearGradient id="mhSkyFloor" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={`rgb(${RHYTHM_SKY_LOOK.floor.topRgb})`} stopOpacity={RHYTHM_SKY_LOOK.floor.topAlpha}/><stop offset="1" stopColor={`rgb(${RHYTHM_SKY_LOOK.floor.bottomRgb})`} stopOpacity={RHYTHM_SKY_LOOK.floor.bottomAlpha}/></linearGradient>
       <clipPath id="mhSkyClip"><polygon points={plane.poly}/></clipPath>
     </defs>
     {/* 案Z: 道(地面)を薄い紫の無地にする。床の影(床より暗い)が見えるように。参考の道も無地の紫。空中の譜面の曲だけ */}
     <polygon points={plane.floor} fill="url(#mhSkyFloor)"/>
     {/* 案Z(2026-10-11・社長の決定): 空中の面・縁・柱・字は無し。空中の判定の線は、道の外まで横いっぱいの薄紫の細い線1本だけ
         (6px の淡い帯+中心2px。白は空中のものと押した光だけに使うので、線は白にしない) */}
-    <line x1="-2" y1={f(fr.y)} x2="102" y2={f(fr.y)} stroke="rgb(150,118,235)" strokeOpacity=".38" strokeWidth="6" vectorEffect="non-scaling-stroke"/>
-    <line x1="-2" y1={f(fr.y)} x2="102" y2={f(fr.y)} stroke="rgb(165,135,245)" strokeOpacity=".95" strokeWidth="2" vectorEffect="non-scaling-stroke"/>
+    <line x1="-2" y1={f(fr.y)} x2="102" y2={f(fr.y)} stroke={`rgb(${RHYTHM_SKY_LOOK.line.bandRgb})`} strokeOpacity={RHYTHM_SKY_LOOK.line.bandAlpha} strokeWidth={RHYTHM_SKY_LOOK.line.bandPx} vectorEffect="non-scaling-stroke"/>
+    <line x1="-2" y1={f(fr.y)} x2="102" y2={f(fr.y)} stroke={`rgb(${RHYTHM_SKY_LOOK.line.coreRgb})`} strokeOpacity={RHYTHM_SKY_LOOK.line.coreAlpha} strokeWidth={RHYTHM_SKY_LOOK.line.corePx} vectorEffect="non-scaling-stroke"/>
   </svg>;
 }
 // 縦画面の空中の高さの差を切り替える(デバッグ専用・2026-10-11 社長「中間を作って見比べる」)。保存は新しいキー mh_sky_lift_portrait_proto だけ。

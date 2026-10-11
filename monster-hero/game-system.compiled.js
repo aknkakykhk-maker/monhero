@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ae1c0f96773ec544
+// source-sha256: e09446c6915a4954
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-11 08:21";
+const BUILD_DATE = "2026-10-11 09:00";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -30407,12 +30407,12 @@ function RhythmSkyStage({
     y2: "1"
   }, React.createElement("stop", {
     offset: "0",
-    stopColor: "rgb(48,34,108)",
-    stopOpacity: ".55"
+    stopColor: `rgb(${RHYTHM_SKY_LOOK.floor.topRgb})`,
+    stopOpacity: RHYTHM_SKY_LOOK.floor.topAlpha
   }), React.createElement("stop", {
     offset: "1",
-    stopColor: "rgb(66,46,146)",
-    stopOpacity: ".88"
+    stopColor: `rgb(${RHYTHM_SKY_LOOK.floor.bottomRgb})`,
+    stopOpacity: RHYTHM_SKY_LOOK.floor.bottomAlpha
   })), React.createElement("clipPath", {
     id: "mhSkyClip"
   }, React.createElement("polygon", {
@@ -30425,18 +30425,18 @@ function RhythmSkyStage({
     y1: f(fr.y),
     x2: "102",
     y2: f(fr.y),
-    stroke: "rgb(150,118,235)",
-    strokeOpacity: ".38",
-    strokeWidth: "6",
+    stroke: `rgb(${RHYTHM_SKY_LOOK.line.bandRgb})`,
+    strokeOpacity: RHYTHM_SKY_LOOK.line.bandAlpha,
+    strokeWidth: RHYTHM_SKY_LOOK.line.bandPx,
     vectorEffect: "non-scaling-stroke"
   }), React.createElement("line", {
     x1: "-2",
     y1: f(fr.y),
     x2: "102",
     y2: f(fr.y),
-    stroke: "rgb(165,135,245)",
-    strokeOpacity: ".95",
-    strokeWidth: "2",
+    stroke: `rgb(${RHYTHM_SKY_LOOK.line.coreRgb})`,
+    strokeOpacity: RHYTHM_SKY_LOOK.line.coreAlpha,
+    strokeWidth: RHYTHM_SKY_LOOK.line.corePx,
     vectorEffect: "non-scaling-stroke"
   }));
 }
