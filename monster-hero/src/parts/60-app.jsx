@@ -1624,6 +1624,8 @@ function MonsterHeroGame() {
   // rhythmHellGuide … null なら出さない。{page, debugList, fromList}(閉じたあとに戻る一覧)
   const [rhythmHellStorySeenFlag, setRhythmHellStorySeenFlag] = useState(false);
   const [rhythmHellGuide, setRhythmHellGuide] = useState(null);
+  // HELL が初めて開いた演奏の結果画面を閉じたら、お話を流す(RHYTHM_HELL_STORY_TRIGGER が 'after-result' のとき)
+  const rhythmHellStoryAfterResultRef = useRef(false);
   const [tacticsIntroPending, setTacticsIntroPending] = useState(false);
   // 助手との仲良し度。遊ぶほど増えて、呼び方と話す内容が変わる。
   // 助手ごとに完全に分けて持つので、切り替えてももう片方の進捗は消えない
@@ -6034,7 +6036,7 @@ function MonsterHeroGame() {
       // 公開前に読むと、まだ見せていないモードの会話を「未読」として抱えることになる
       // 難易度 HELL のお話を見たか。HELL の公開(rhythmHell)のあとだけ読む(公開前は回想にも出さないので要らない)
       if (EVENT_REPLAY_RELEASE_FLAGS.rhythmHell) {
-        try { setRhythmHellStorySeenFlag((await storeGet(RHYTHM_HELL_STORY_SEEN_KEY, false, false)) === true); } catch {}
+        try { setRhythmHellStorySeenFlag((await storeGet(rhythmHellStorySeenKey(), false, false)) === true); } catch {}
       }
       if (EVENT_REPLAY_RELEASE_FLAGS.tacticsBattle) {
         const tacticsIntroSeen = await storeGet(TACTICS_INTRO_SEEN_KEY, false, false);
@@ -7240,7 +7242,7 @@ function MonsterHeroGame() {
   // 難易度 HELL のお話を「見た」にする。回想の画面からは保存へ直接書かず、この関数を通す(event-replay-check が見張る)
   const markRhythmHellStorySeen = useCallback(() => {
     setRhythmHellStorySeenFlag(true);
-    try { storeSet(RHYTHM_HELL_STORY_SEEN_KEY, true, false); } catch {}
+    try { storeSet(rhythmHellStorySeenKey(), true, false); } catch {}
   }, []);
   // イベント回想の解放判定。EVENT_REPLAYS側はunlockedKeyという「呼び名」しか持たないので、
   // その名前→実際のstateの対応をここで持つ(データファイルはgame-system.jsxの状態を見られないため)。
@@ -17945,7 +17947,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 通算クリア回数を数える(スエゾービートのフレームの条件)。ライフを残して終えたときだけ。
           // 練習・アシストモードは上で除いてある。数えられなくても記録の保存は止めない
           if(result?.cleared!==false){ try{ setRhythmClearTotal(await addRhythmClearTotal()); }catch{} }
-          const records=await saveRhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id,merged);setRhythmBestRecords(records);void recordRhythmAchievements(records,{initialRecords:rhythmBestRecords});if(rhythmPlay.from==='demo'||rhythmPlay.from==='multi'||rhythmPlay.from==='raid')submitRhythmRankingScore(rhythmPlay.song,rhythmPlay.difficulty,result);}} onExit={()=>{if(rhythmPlay.from==='raid'){exitRaidJackRhythmPlay();return;}if(rhythmPlay.from==='multi'&&!RHYTHM_MULTI.hasReported(rhythmPlay.multiStartId))RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId,null,true,{diffId:rhythmPlay.difficulty.id});const back=rhythmPlay.from==='multi'?'RHYTHM_MULTI':rhythmPlay.from==='calibration'?'RHYTHM_OPTIONS':rhythmPlay.backTo==='RHYTHM_DEBUG_SELECT'?'RHYTHM_DEBUG_SELECT':rhythmPlay.from==='debug'||rhythmPlay.from==='proto'?'RHYTHM_DEBUG':'RHYTHM_DEMO_HOME';setRhythmPlay(null);setGameState(back);}} debugPlay={rhythmPlay.from==='debug'||rhythmPlay.from==='proto'} tutorial={rhythmPlay.from==='tutorial'} calibrating={rhythmPlay.from==='calibration'} onApplyCalibration={async measured=>{
+          const records=await saveRhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id,merged);setRhythmBestRecords(records);
+          // HELL が初めて開いたか(その曲の MASTER を初めてクリア・2026-10-12 案A)。公開の印が偽なら譜面が無いので、ここは何もしない。
+          // お話をまだ見ていなければ RHYTHM_HELL_STORY_TRIGGER のとおりに流す。開く条件そのものは rhythmDifficultyUnlocked(記録から数える)
+          if(rhythmPlay.from==='demo'&&typeof rhythmHellOpen==='function'&&rhythmHellOpen()&&rhythmChartPlayable(rhythmPlay.song,'HELL')
+            &&!rhythmDifficultyUnlocked(rhythmPlay.song.songId,'HELL',rhythmBestRecords)&&rhythmDifficultyUnlocked(rhythmPlay.song.songId,'HELL',records)
+            &&!rhythmHellStorySeenFlag){
+            if(RHYTHM_HELL_STORY_TRIGGER==='after-result')rhythmHellStoryAfterResultRef.current=true;
+            else if(RHYTHM_HELL_STORY_TRIGGER==='home')setRhythmEventStoryPending(prev=>prev||RHYTHM_HELL_STORY_ID);
+          }
+          void recordRhythmAchievements(records,{initialRecords:rhythmBestRecords});if(rhythmPlay.from==='demo'||rhythmPlay.from==='multi'||rhythmPlay.from==='raid')submitRhythmRankingScore(rhythmPlay.song,rhythmPlay.difficulty,result);}} onExit={()=>{if(rhythmPlay.from==='raid'){exitRaidJackRhythmPlay();return;}if(rhythmPlay.from==='multi'&&!RHYTHM_MULTI.hasReported(rhythmPlay.multiStartId))RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId,null,true,{diffId:rhythmPlay.difficulty.id});const back=rhythmPlay.from==='multi'?'RHYTHM_MULTI':rhythmPlay.from==='calibration'?'RHYTHM_OPTIONS':rhythmPlay.backTo==='RHYTHM_DEBUG_SELECT'?'RHYTHM_DEBUG_SELECT':rhythmPlay.from==='debug'||rhythmPlay.from==='proto'?'RHYTHM_DEBUG':'RHYTHM_DEMO_HOME';setRhythmPlay(null);setGameState(back);if(rhythmHellStoryAfterResultRef.current){rhythmHellStoryAfterResultRef.current=false;setEventReplay({id:RHYTHM_HELL_STORY_ID,step:0,live:true});}}} debugPlay={rhythmPlay.from==='debug'||rhythmPlay.from==='proto'} tutorial={rhythmPlay.from==='tutorial'} calibrating={rhythmPlay.from==='calibration'} onApplyCalibration={async measured=>{
           // 測った値をその場で設定へ入れて保存し、オプションへ戻す。
           // 判定窓・スコア・ランキングには触れない(入れるのは judgmentTimingOffsetMs だけ)
           const offsetMs=Number(measured&&measured.offsetMs);
@@ -18232,7 +18243,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <RhythmSkyLaneLookSwitch/>
             {/* 難易度 HELL のお話と説明(2026-10-11)。HELL の公開前に社長が確かめるためのもの。見たことにはしない(debug)。
                 デバッグ専用なので更新履歴・ヘルプには載せない */}
-            <section data-debug-rhythm-hell-story className="mb-3 rounded-2xl border border-pink-400/50 bg-pink-950/25 p-3"><h3 className="text-xs font-black text-pink-200">HELL のお話と説明（公開前の確認用）</h3><div className="mt-2 grid grid-cols-2 gap-2"><button type="button" data-debug-rhythm-hell-story-play onClick={()=>setEventReplay({id:RHYTHM_HELL_STORY_ID,step:0,debug:true})} className="min-h-[48px] rounded-xl bg-pink-700 px-2 text-xs font-black text-white">お話を見る（→説明）</button><button type="button" data-debug-rhythm-hell-guide-open onClick={()=>setRhythmHellGuide({page:0})} className="min-h-[48px] rounded-xl bg-slate-700 px-2 text-xs font-black text-white">説明だけ見る</button></div></section>
+            <section data-debug-rhythm-hell-story className="mb-3 rounded-2xl border border-pink-400/50 bg-pink-950/25 p-3"><h3 className="text-xs font-black text-pink-200">HELL のお話と説明（公開前の確認用）</h3><div className="mt-2 grid grid-cols-2 gap-2"><button type="button" data-debug-rhythm-hell-story-play onClick={()=>setEventReplay({id:RHYTHM_HELL_STORY_ID,step:0,debug:true})} className="min-h-[48px] rounded-xl bg-pink-700 px-2 text-xs font-black text-white">お話を見る（→説明）</button><button type="button" data-debug-rhythm-hell-guide-open onClick={()=>setRhythmHellGuide({page:0})} className="min-h-[48px] rounded-xl bg-slate-700 px-2 text-xs font-black text-white">説明だけ見る</button></div><RhythmHellPreviewSwitch onChange={async()=>{try{setRhythmHellStorySeenFlag((await storeGet(rhythmHellStorySeenKey(),false,false))===true);}catch{}}}/></section>
             {RHYTHM_PROTO_SONGS.map(song=>{const track=rhythmSongTrack(song);return <section key={song.songId} data-rhythm-proto-song={song.songId} className="mb-3 rounded-2xl border border-rose-400/50 bg-rose-950/25 p-3"><div className="mb-2"><small className="text-[8px] text-rose-300">試作・{song.songId}</small><h3 className="font-black">{song.displayName} <span className="text-xs text-rose-200">{song.subtitle}</span></h3>{song.debugDescription&&<p className="mt-1 text-[10px] font-bold text-amber-200">{song.debugDescription}</p>}<p className="break-all text-[9px] text-slate-400">BGM: {song.bgmTrackId} / {track?.src||'未登録'}</p></div><div className="space-y-2">{RHYTHM_PLAY_DIFFICULTIES.filter(difficulty=>song.difficulties[difficulty.id]?.notes?.length>0).map(difficulty=>{const chart=song.difficulties[difficulty.id];return <button key={difficulty.id} type="button" data-rhythm-proto-start={difficulty.id} className={`min-h-[44px] w-full rounded-xl font-black ${difficulty.id==='HELL'?'bg-red-900 ring-1 ring-red-400/70':'bg-rose-700'}`} onClick={()=>{setRhythmPlay({song,difficulty,from:'proto'});setGameState('RHYTHM_PLAY');}}>{difficulty.id==='HELL'?'HELL をプレイ':'試作をプレイ'}（{difficulty.id} Lv.{chart.level}）</button>})}</div></section>})}
             {/* 公開曲を from:'debug' で演奏する古い縦の一覧(「リズムテストプレイ」)は外した(2026-10-11 社長「むしろそれいらない機能じゃない？」)。
                 終わると自己ベストを保存してしまう作りだった。同じことは上の「全解放の曲えらび」(記録しない)でできる。

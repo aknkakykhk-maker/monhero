@@ -187,6 +187,8 @@
 | `mh_rhythm_six_lane_seen_v1` | `true` / 未設定 | 道が6レーンになり MASTER に横フリックが出ることを、曲えらびで一度だけ伝える助手の案内を見たか(未設定なら出す) |
 | `mh_tactics_intro_seen_v1` | `true` / 未設定 | タクティクスバトルの導入会話を見たか(β公開後に1度だけ流す) |
 | `mh_rhythm_hell_story_seen_v1` | `true` / 未設定 | 難易度 HELL のお話「空まで届くビート」を見たか(2026-10-11。HELL の公開まで読み書きしない。デバッグから見たぶんは立てない) |
+| `mh_rhythm_hell_story_seen_preview_proto` | `true` / 未設定 | デバッグの「公開の印が真だったら」で HELL のお話を見たか(2026-10-12)。本番のキー `mh_rhythm_hell_story_seen_v1` とは別にして、試した人が公開のときに見そびれないようにする |
+| `mh_rhythm_hell_preview_proto` | `'1'` / 未設定 | デバッグ専用。HELL の「公開の印が真だったら」を試す(2026-10-12)。本番の印 `RELEASE_FLAGS.rhythmHell` は変えない |
 | `mh_sky_box_look_proto` | `'z'`・`'a'`・`'c'` / 未設定 | デバッグ専用。SKY TAP の見た目の案を見比べるための選択(2026-10-11)。未設定なら既定の案B(赤い板・社長の決定)。ふつうのプレイは書かない |
 | `mh_sky_lane_look_proto` | `'a'`〜`'c'`・`'d1l'`・`'d1m'`・`'d2l'`・`'d2m'` / 未設定 | デバッグ専用。空中のレーンの見せ方の案を見比べるための選択(2026-10-11)。未設定なら「なし」(いままで)。ふつうのプレイは書かない |
 | `mh_tactics_ex_intro_seen_v1` | `true` / 未設定 | タクティクスで「距離枠をタップするとEXが開く」を一度だけ伝える案内を見たか(公開フラグ `tacticsExSkills` と同じで出し入れ) |
