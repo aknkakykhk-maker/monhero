@@ -53,7 +53,8 @@ const runtime=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js')
       const chart=song.difficulties[difficulty.id];
       const computed=levels[difficulty.id].level;
       // 数個しか無い確認用の型は測れない（そのときは譜面が持っている値をそのまま使う）
-      if(chart.totalNotes<LEVEL_MIN_NOTES)continue;
+      // HELL(6段目)は譜面がある曲だけにある。無い曲は測らない
+      if(!chart||chart.totalNotes<LEVEL_MIN_NOTES)continue;
       if(chart.level!==computed)mismatched.push(`${song.songId} ${difficulty.id}: 表 ${chart.level} / 計算 ${computed}`);
     }
   }
@@ -80,7 +81,7 @@ const runtime=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js')
   for(const song of RHYTHM_SONGS){
     const levels=RHYTHM_DIFFICULTIES
       .map(difficulty=>({id:difficulty.id,chart:song.difficulties[difficulty.id]}))
-      .filter(entry=>entry.chart.totalNotes>=LEVEL_MIN_NOTES);
+      .filter(entry=>entry.chart&&entry.chart.totalNotes>=LEVEL_MIN_NOTES);
     // テスト用の譜面は、難易度ごとに別々の確認内容を入れてあるので順番を持たない。
     // 曲えらびへ出る曲(RHYTHM_DEMO_SONG_IDS)は全部見る。以前は songId の綴りで
     // 拾っていたため、stay_with_me や kiki_issen のような正式曲が丸ごと外れていた。
@@ -95,13 +96,49 @@ const runtime=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js')
   check('本物の曲は、難易度が上がるほどレベルも上がる',broken.length===0,broken.join(' / '));
 }
 
+// --- 4b. 空中の段(HELL)は、空中のぶんだけが数字に効く(2026-10-10・社長「空中のぶんを数字に足す」) ---
+// 空中のノーツが無い譜面は1つも数字が変わらないこと、HELL は空中のぶんだけ MASTER より重くなることを見る。
+// Sheriruth の HELL は 2026-10-11 に案Z・高さの差39%で組み直した(MASTER の写しではない)ので、空中を地上へ戻すと
+// 空中⇄地上の切り替えのぶんだけ生の値が下がり、切り替えを1度も数えなくなることを見る
+{
+  const hasSky=chart=>(chart&&Array.isArray(chart.notes)?chart.notes:[]).some(note=>Number(note.skyHeight)>0
+    ||(Array.isArray(note.slidePoints)&&note.slidePoints.some(point=>Number(point.sky)>0)));
+  const grounded=chart=>({...chart,notes:chart.notes.map(note=>({...note,skyHeight:0,
+    ...(Array.isArray(note.slidePoints)?{slidePoints:note.slidePoints.map(point=>({...point,sky:0}))}:{})}))});
+  const skyless=[];
+  for(const song of RHYTHM_SONGS){
+    for(const difficulty of RHYTHM_DIFFICULTIES){
+      const chart=song.difficulties[difficulty.id];
+      if(!chart||hasSky(chart))continue;
+      const strain=chartStrain(chart);
+      if(strain&&strain.parts.skySwitch!==0)skyless.push(`${song.songId} ${difficulty.id}`);
+    }
+  }
+  check('空中のノーツが無い譜面では、空中⇄地上の切り替えを1度も数えない',skyless.length===0,skyless.join(' / '));
+  const sheriruth=RHYTHM_SONGS.find(song=>song.songId==='sheriruth');
+  // 公開前は HELL をデバッグの試作の枠(RHYTHM_PROTO_SONGS の sheriruth_hell_debug)に置いている。公開したら公開曲のほうを見る
+  const hellDebug=(loadRuntimeSongs().RHYTHM_PROTO_SONGS||[]).find(song=>song.songId==='sheriruth_hell_debug');
+  const hell=(sheriruth&&sheriruth.difficulties.HELL)||(hellDebug&&hellDebug.difficulties.HELL),master=sheriruth&&sheriruth.difficulties.MASTER;
+  check('Sheriruth HELL の譜面が見つかる(公開曲かデバッグの試作の枠)',!!(hell&&hell.notes&&hell.notes.length));
+  if(hell&&master){
+    // 公開前は表(RHYTHM_CHART_LEVELS)を通らないので、譜面に書いた Lv. が式の値と一致しているかも見る
+    check('Sheriruth HELL の Lv. が式で出した値と同じ',hell.level===chartLevel(hell).level,`譜面 Lv.${hell.level} / 式 Lv.${chartLevel(hell).level}`);
+    const back=chartStrain(grounded(hell)),masterStrain=chartStrain(master),hellStrain=chartStrain(hell);
+    check('Sheriruth HELL の空中を地上へ戻すと、空中のぶんだけ生の値が下がる',back.raw<hellStrain.raw&&back.parts.skySwitch===0&&hellStrain.parts.skySwitch>0,
+      `戻した HELL ${back.raw}(切り替え ${back.parts.skySwitch}) / HELL ${hellStrain.raw}(切り替え ${hellStrain.parts.skySwitch})`);
+    check('Sheriruth HELL は空中のぶん MASTER より重い',hellStrain.raw>masterStrain.raw&&hell.level>master.level,
+      `HELL 生${hellStrain.raw} Lv.${hell.level} / MASTER 生${masterStrain.raw} Lv.${master.level}`);
+  }
+}
+
 // --- 5. レベルが決めた範囲に収まっている ---
 {
   const out=[];
   for(const song of RHYTHM_SONGS){
     for(const difficulty of RHYTHM_DIFFICULTIES){
       const chart=song.difficulties[difficulty.id];
-      if(chart.totalNotes<LEVEL_MIN_NOTES)continue;
+      // HELL(6段目)は譜面がある曲だけにある。無い曲は測らない
+      if(!chart||chart.totalNotes<LEVEL_MIN_NOTES)continue;
       if(!(chart.level>=LEVEL_MIN&&chart.level<=LEVEL_MAX))out.push(`${song.songId} ${difficulty.id}=${chart.level}`);
     }
   }

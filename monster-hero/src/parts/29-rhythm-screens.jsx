@@ -404,6 +404,8 @@ const RHYTHM_DIFFICULTY_TONE=Object.freeze({
   HARD:  Object.freeze({badge:'from-amber-500 to-amber-700',dot:'bg-amber-400',   on:'border-amber-300 bg-amber-600 text-white',     off:'border-amber-400/40 text-amber-200',     text:'text-amber-300'}),
   EXPERT:Object.freeze({badge:'from-rose-500 to-rose-700',dot:'bg-rose-400',    on:'border-rose-300 bg-rose-600 text-white',       off:'border-rose-400/40 text-rose-200',       text:'text-rose-300'}),
   MASTER:Object.freeze({badge:'from-fuchsia-500 to-fuchsia-700',dot:'bg-fuchsia-400', on:'border-fuchsia-300 bg-fuchsia-700 text-white', off:'border-fuchsia-400/40 text-fuchsia-200', text:'text-fuchsia-300'}),
+  // 6段目 HELL。バトルの難易度「Hell」と同じ色(地 #7f1d1d=red-900・字 #f87171=red-400)
+  HELL:  Object.freeze({badge:'from-red-800 to-red-950',dot:'bg-red-400',       on:'border-red-300 bg-red-900 text-red-100',       off:'border-red-500/70 bg-red-950/80 text-red-400',         text:'text-red-400'}),
 });
 const rhythmDifficultyTone=id=>RHYTHM_DIFFICULTY_TONE[id]||RHYTHM_DIFFICULTY_TONE.EASY;
 // 難易度の字の色だけを欲しいところへ。知らないidは灰に倒す(勝手にEASYの緑にしない)
@@ -654,6 +656,9 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
   // 一覧からは消さずに鍵つきで見せる。「先に何をクリアすればよいか」が分かるようにするため。
   const unlocked=item=>!song||rhythmDifficultyUnlocked(song.songId,item.id,bestRecords);
   const openList=available.filter(unlocked);
+  // 鍵のかかったボタンの「◯◯で解放」は、いちばん長い文字に合わせて字の大きさをそろえる(HELL の「MASTERで解放」だけ小さくならないように)
+  const lockedFitText=song?available.filter(item=>!unlocked(item)).map(item=>`${rhythmDifficultyUnlockRequirement(item.id,song.songId)}で解放`)
+    .reduce((a,b)=>rhythmTitleFitEm(b)>rhythmTitleFitEm(a)?b:a,''):'';
   const picked=available.find(entry=>entry.id===difficultyId);
   const difficulty=(picked&&unlocked(picked)?picked:null)||openList[0]||null;
   const chart=song&&difficulty?song.difficulties[difficulty.id]:null;
@@ -924,7 +929,8 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
                     <small className="text-[8px] font-black text-white/80">Lv.</small>
                     <b {...(main?{'data-rhythm-song-row-level':''}:{})} className={`text-[14px] font-black leading-none tabular-nums text-white${spot('songLevel')}`}>{rowLevel(entry)}</b>
                   </span>
-                  {(difficulties||[]).map(item=>{
+                  {/* HELL など5難易度の外の難易度は、その曲に譜面があるときだけ◆を出す(HELL の無い曲は今までどおり5つ) */}
+                  {(difficulties||[]).filter(item=>RHYTHM_DIFFICULTIES.some(d=>d.id===item.id)||rhythmChartPlayable(entry,item.id)).map(item=>{
                     const playable=rhythmChartPlayable(entry,item.id);
                     const markId=rhythmAchievementMarkId(playable,playable?rhythmBestRecord(bestRecords,entry.songId,item.id):null);
                     const mark=RHYTHM_ACHIEVEMENT_MARKS[markId];
@@ -1049,7 +1055,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
               data-rhythm-difficulty-locked={open?'0':'1'} disabled={!open}
               title={open?undefined:`${need}をクリアすると挑めます`}
               onClick={()=>{if(open)setDifficultyId(item.id);}}
-              className={`flex h-[52px] min-w-0 flex-1 flex-col items-center justify-center rounded-lg border-2 px-0.5 font-black leading-none [container-type:inline-size] landscape:h-[48px] ${open?(on?`${tone.on} shadow-[0_0_10px_rgba(255,255,255,.25)]`:`${tone.off} bg-slate-900/70`):'border-white/10 bg-slate-900/70 text-slate-500'}`}>
+              className={`flex h-[52px] min-w-0 flex-1 flex-col items-center justify-center rounded-lg border-2 px-0.5 font-black leading-none [container-type:inline-size] landscape:h-[48px]${available.length>5?' gap-px':''} ${open?(on?`${tone.on} shadow-[0_0_10px_rgba(255,255,255,.25)]`:`${tone.off} bg-slate-900/70`):'border-white/10 bg-slate-900/70 text-slate-500'}`}>
               {/* Lv.の数字を大きく、難易度の名前を小さく(2026-09-26・参考: バンドリの難易度の並び) */}
               <b className="block text-[18px] tabular-nums">{song.difficulties[item.id].level}</b>
               <span className="block text-[8px] tracking-wide">{open?item.id:`🔒${item.id}`}</span>
@@ -1059,7 +1065,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
               {(()=>{const record=open?rhythmBestRecord(bestRecords,song.songId,item.id):null;
                 const text=open?(record&&record.played?record.bestScore.toLocaleString():'—'):`${need}で解放`;
                 return <span data-rhythm-difficulty-best={item.id} className="block max-w-full truncate text-[8px] font-black tabular-nums opacity-80"
-                  style={{fontSize:rhythmTitleFitSize(text,8,6,2)}}>{text}</span>;})()}
+                  style={{fontSize:rhythmTitleFitSize(open?text:lockedFitText,8,6,2)}}>{text}</span>;})()}
             </button>;
           })}
           </div>
@@ -1170,5 +1176,29 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
           className="mt-3 min-h-[52px] w-full rounded-xl bg-slate-700 text-sm font-black text-white">閉じる</button>
       </section>
     </div>}
+  </div>;
+};
+// ===== 難易度 HELL の説明(2026-10-11・社長の依頼) =====
+// お話「空まで届くビート」(rhythm_hell_story)のあとに1枚ずつ出す。文は data/assistants.js の RHYTHM_HELL_GUIDE_PAGES。
+// ★形や色の描写に頼らない(SKY TAP の見た目は変わるかもしれない・社長)。文字だけで読めるようにする
+// ★HELL はまだデバッグ専用。ここが出るのは、デバッグのボタンか、デバッグでお話を見終えたときだけ(公開の印 rhythmHell)。
+//   横持ちの低い画面(640×360)でも、見出し・本文・ボタンが1画面に収まる大きさにする
+const RhythmHellGuide=({pageIndex,onPage,onClose})=>{
+  const pages=typeof RHYTHM_HELL_GUIDE_PAGES!=='undefined'&&Array.isArray(RHYTHM_HELL_GUIDE_PAGES)?RHYTHM_HELL_GUIDE_PAGES:[];
+  if(!pages.length)return null;
+  const index=Math.max(0,Math.min(pages.length-1,Number(pageIndex)||0));
+  const page=pages[index],last=index===pages.length-1;
+  return <div data-rhythm-hell-guide role="dialog" aria-modal="true" aria-label={`HELL の遊び方 ${index+1}/${pages.length}`}
+    style={{position:'fixed',inset:0,zIndex:77500,display:'flex',alignItems:'center',justifyContent:'center',padding:'12px calc(16px + env(safe-area-inset-right)) 12px calc(16px + env(safe-area-inset-left))',background:'radial-gradient(ellipse at center,rgba(30,27,75,.96),rgba(2,6,23,.98) 72%)'}}>
+    <section data-rhythm-hell-guide-card style={{width:'100%',maxWidth:'460px',maxHeight:'100%',overflowY:'auto',borderRadius:'20px',border:'1px solid rgba(244,114,182,.45)',background:'rgba(15,23,42,.92)',boxShadow:'0 0 28px rgba(244,114,182,.25)',padding:'16px 18px'}}>
+      <small style={{display:'block',fontSize:'10px',fontWeight:900,letterSpacing:'.28em',color:'#f9a8d4'}}>HELL の遊び方 {index+1}/{pages.length}</small>
+      <h2 data-rhythm-hell-guide-title style={{margin:'6px 0 0',fontSize:'22px',fontWeight:900,lineHeight:1.25,color:'#fff'}}>{page.title}</h2>
+      <p data-rhythm-hell-guide-text style={{margin:'10px 0 0',fontSize:'14px',fontWeight:700,lineHeight:1.7,color:'#e2e8f0'}}>{page.text}</p>
+      <div aria-hidden="true" style={{display:'flex',justifyContent:'center',gap:'6px',marginTop:'14px'}}>{pages.map((_,i)=><i key={i} style={{display:'block',width:i===index?'18px':'6px',height:'6px',borderRadius:'999px',background:i===index?'#f472b6':'rgba(148,163,184,.5)'}}/>)}</div>
+      <div style={{display:'grid',gridTemplateColumns:index>0?'1fr 2fr':'1fr',gap:'8px',marginTop:'14px'}}>
+        {index>0&&<button type="button" data-rhythm-hell-guide-prev onClick={()=>onPage(index-1)} style={{minHeight:'48px',borderRadius:'14px',border:'1px solid rgba(148,163,184,.4)',background:'rgba(30,41,59,.9)',color:'#e2e8f0',fontSize:'14px',fontWeight:900}}>もどる</button>}
+        <button type="button" data-rhythm-hell-guide-next onClick={()=>last?onClose():onPage(index+1)} style={{minHeight:'48px',borderRadius:'14px',border:'0',background:'linear-gradient(135deg,#db2777,#7c3aed)',color:'#fff',fontSize:'14px',fontWeight:900}}>{last?'とじる':'つぎへ'}</button>
+      </div>
+    </section>
   </div>;
 };

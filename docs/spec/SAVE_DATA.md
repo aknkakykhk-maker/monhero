@@ -37,6 +37,7 @@
 | `mh_home_art` | string / `'auto'` | ホーム画面アレンジ。値は `mh_title_art` と同じ |
 | `mh_screen_theme_v1` | object / 全部 `'auto'` | 画面テーマ。`{ menu, market, temple, battle, rhythm }` に `'auto'`/`'halloween'`/`'classic'`。`normalizeScreenTheme` で知らない項目・不正な値は `'auto'` に補う(docs/spec/SCREEN_THEME.md) |
 | `mh_battle_perf_v1` | boolean / false | バトルの性能計測のON/OFF(デバッグ限定)。`BATTLE_PERF` が持つ |
+| `mh_asset_prefetch_v1` | object / `{ enabled:true, enabledChosen:false, auto:true, songs:[] }` | 事前ダウンロード(曲・画像を端末にためておく)の入/切・自動ダウンロード・最近選んだ曲(最大12)。`normalizeAssetCacheSettings` で壊れた値は既定に戻す。**`enabled` は `enabledChosen:true`(本人が入/切を押した)のときだけ読む**。既定が切だった 2026-10-11 の約20分に、曲を選んだだけで `enabled:false` が書かれた端末があるため(読み方だけで、保存値は書き換えない)。ためた中身は localStorage ではなく Cache Storage(`mh-assets-v1`)にあり、切にすると消す(docs/spec/ASSET_PREFETCH.md) |
 | `mh_breeder_name` | string / `名無しのブリーダー` | 表示名（保存時最大10文字） |
 | `mh_breeder_icon` | string or null | 種IDまたは購入アイコンID |
 | `mh_breeder_xp` | number / `0` | 累計ブリーダーXP |
@@ -183,6 +184,7 @@
 | `mh_rhythm_play_defaults_restored_v1` | `true` / 未設定 | モンヒロビートの設定の一度きりの戻し(ライブ背景「派手」→「シンプル」・フレームレート「省電力」→「端末に合わせる」。保存値がその当時の既定と同じときだけ)を済ませたか。二度走らせないためのフラグ(`restoreRhythmPlayDefaultsOnce`) |
 | `mh_rhythm_six_lane_seen_v1` | `true` / 未設定 | 道が6レーンになり MASTER に横フリックが出ることを、曲えらびで一度だけ伝える助手の案内を見たか(未設定なら出す) |
 | `mh_tactics_intro_seen_v1` | `true` / 未設定 | タクティクスバトルの導入会話を見たか(β公開後に1度だけ流す) |
+| `mh_rhythm_hell_story_seen_v1` | `true` / 未設定 | 難易度 HELL のお話「空まで届くビート」を見たか(2026-10-11。HELL の公開まで読み書きしない。デバッグから見たぶんは立てない) |
 | `mh_tactics_ex_intro_seen_v1` | `true` / 未設定 | タクティクスで「距離枠をタップするとEXが開く」を一度だけ伝える案内を見たか(公開フラグ `tacticsExSkills` と同じで出し入れ) |
 | `mh_profile_frame_v1` | string / `'none'` | 選んでいるプロフィールフレームのid(`data/breeder.js` の `PROFILE_FRAMES`)。ブリーダーアイコン(`mh_breeder_icon`)とは**独立した設定**で、アイコン側のキーは触らない。読み込みは必ず `normalizeProfileFrameId` を通し、値が無い・壊れている・知らないid・未公開(`released:false`)のidはすべて `'none'`(フレームなし)へ倒す |
 | `mh_quick_rhythm_intro_seen_v1` | boolean / `false` | クイック∞周回とモンビーの連携の案内(バトル画面)を見たか |
@@ -200,6 +202,7 @@
 | `mh_battle_select_assist_v1` | object / 未設定なら `{ modeSelectArt:true, modeSelectComment:true }` | モンヒロバトルの入口(`BATTLE_SYSTEM_SELECT`)で、助手の立ち絵・コメントを出すか(2026-10-08)。入口のトグルを押したときに書く。読むときは `false` のときだけ消し、それ以外・壊れた値は出す側へ倒す。モンヒロビート用のキーは流用しない |
 | `mh_masu_offering_intro_seen_v1` | `true` / 未設定 | 神殿の「お布施」の使い方案内を見たか(2026-10-05)。初めてお布施の画面を開いたときに1度だけ出し、閉じたときに `true` を書く。読むときは `=== true` のときだけ見た扱い |
 | `mh_rhythm_fix_override_v1` | object / 未設定なら `{}` | モンヒロビートの「実機でしか分からない直し方」(`RHYTHM_TOUCH_FIXES`)を、この端末だけで入れる/切る上書き(2026-10-07)。`{ 直し方の名前: boolean }`。**`storeSet` ではなく `localStorage` へ直接**書く(`rhythmTouchFixSetOverride`)。読むときは表にある名前の boolean だけ拾い、それ以外・壊れた値は捨てる(上書きなし=表のとおり)。いまゲームの画面からは書かない(検査と手で試すとき用) |
+| `mh_sky_lift_portrait_proto` | 文字列 `'25'` / `'39'` / 未設定(=16%) | **デバッグ専用**。縦画面の空中の段の高さの差(道の高さの 16%・25%・39%)を見比べる切り替え(2026-10-11・HELL の試作)。音ゲーデバッグの「プレイ」タブの切り替え(`RhythmSkyLiftSwitch`)だけが `localStorage` へ直接書き、16% を選ぶとキーを消す。読むときは `25`・`39` 以外(未設定・壊れた値)を 16% として読む(`rhythmSkyLiftPortrait`)。空中の段がある譜面(デバッグの試作の枠)だけに効き、通常プレイには何も起きない |
 | `mh_assistant_bubble_mode_v1` | `'ALWAYS'` / `'DAILY'` / `'OFF'` / 既定 `'ALWAYS'` | 助手の吹き出し(画面ごとのひとこと)の出し方(2026-10-10・改善G6)。設定画面のボタンで書く。`normalizeAssistantBubbleMode` で既定へ倒す。はじめての案内・`…Intro` の場面・HOMEの助手・助手の告知には効かない |
 | `mh_assistant_bubble_seen_v1` | object / 未設定なら空 | 「1日1回」のときに、その日に出した場面 `{ day:'YYYY-MM-DD'(朝5:00区切り), scenes:[場面のキー] }`。日が違う・壊れた値は空として読む(`normalizeAssistantBubbleSeen`) |
 

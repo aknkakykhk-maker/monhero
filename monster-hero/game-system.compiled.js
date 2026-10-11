@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 239378cf2357d747
+// source-sha256: ce15a0cbcf5aae50
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-11 17:57";
+const BUILD_DATE = "2026-10-11 18:43";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -389,6 +389,9 @@ const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
   },
   get rhythmMulti() {
     return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.rhythmMulti === true;
+  },
+  get rhythmHell() {
+    return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.rhythmHell === true;
   }
 });
 const eventReplayReleased = event => !event?.releaseFlag || EVENT_REPLAY_RELEASE_FLAGS[event.releaseFlag] === true;
@@ -5611,6 +5614,7 @@ const rhythmMirrorNote = note => {
     lane: RHYTHM_MIRROR_LAST_LANE - Number(point.lane)
   } : point);
   if (note.flickDir === 'left') next.flickDir = 'right';else if (note.flickDir === 'right') next.flickDir = 'left';
+  if (note.hand === 'L') next.hand = 'R';else if (note.hand === 'R') next.hand = 'L';
   if (Array.isArray(note.holdPoints)) next.holdPoints = note.holdPoints.map(point => {
     if (!point || typeof point !== 'object') return point;
     const pw = Number(point.subLaneWidth),
@@ -5900,7 +5904,7 @@ const normalizeRhythmBestRecords = value => {
   const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
   return Object.fromEntries(RHYTHM_SONGS.map(song => {
     const raw = source[song.songId];
-    const known = Object.fromEntries(RHYTHM_DIFFICULTIES.map(({
+    const known = Object.fromEntries(rhythmSongDifficultyDefs(song).map(({
       id
     }) => [id, normalizeRhythmBestRecord(raw?.[id])]));
     const extra = raw && typeof raw === 'object' && !Array.isArray(raw) ? Object.fromEntries(Object.entries(raw).filter(([id, record]) => !Object.prototype.hasOwnProperty.call(known, id) && /^[A-Z][A-Z0-9_]{0,23}$/.test(id) && record && typeof record === 'object' && !Array.isArray(record))) : {};
@@ -6124,6 +6128,7 @@ const rhythmAchievementPending = (ledger, rules, eligible) => {
 const pandoraBossBgmForBattle = (heroId, currentWave, enemyId) => heroId === 'Pandora' && (enemyId === 'Moo' || currentWave === 10) ? 'pandora_boss' : null;
 const eikiBossBgmForBattle = (heroId, currentWave, enemyId) => heroId === 'Eiki' && (enemyId === 'Moo' || currentWave === 10) ? 'eiki_boss' : null;
 const DEFAULT_BGM_ARRANGEMENT = Object.freeze({
+  rhythmHellStoryEvent: 'melo_sheriruth',
   title: 'monster_hero_theme_alt',
   home: 'original_home',
   management: 'original_profile',
@@ -6204,6 +6209,7 @@ const BGM_ARRANGEMENT_LEGACY_FALLBACK = Object.freeze({
 });
 const EVENT_BGM_SCENES = Object.freeze({
   kiki_intro: 'kikiIntro',
+  rhythm_hell_story: 'rhythmHellStoryEvent',
   momosuke_intro: 'momosukeIntro',
   monbeat_cup_2026_09: 'monbeatCupEvent',
   monbeat_cup_2026_09_thanks: 'monbeatCupEvent',
@@ -11526,6 +11532,7 @@ const RHYTHM_EVENT_POINTS_PUBLIC_RELEASE = true;
 const RELEASE_FLAGS = {
   speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE,
   tactics: TACTICS_MODE_PUBLIC_RELEASE,
+  rhythmHell: false,
   tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE,
   tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE,
   rhythmMode: RHYTHM_MODE_PUBLIC_RELEASE,
@@ -11863,6 +11870,8 @@ const ASSISTANT_SELECTED_KEY = 'mh_assistant_selected_v1';
 const KIKI_INTRO_SEEN_KEY = 'mh_kiki_intro_seen_v1';
 const MOMOSUKE_INTRO_SEEN_KEY = 'mh_momosuke_intro_seen_v1';
 const TACTICS_INTRO_SEEN_KEY = 'mh_tactics_intro_seen_v1';
+const RHYTHM_HELL_STORY_SEEN_KEY = 'mh_rhythm_hell_story_seen_v1';
+const RHYTHM_HELL_STORY_ID = 'rhythm_hell_story';
 const normalizeAssistantId = value => typeof assistantIdOrDefault === 'function' ? assistantIdOrDefault(typeof value === 'string' ? value : null) : typeof DEFAULT_ASSISTANT_ID !== 'undefined' && DEFAULT_ASSISTANT_ID || 'mua';
 const ASSISTANT_BOND_KEY = 'mh_assistant_bond_v1';
 const assistantBondKeyFor = assistantId => {
@@ -15871,7 +15880,7 @@ const helpDataRows = id => {
     case 'assistantBondActions':
       return Object.values(typeof ASSISTANT_BOND_ACTIONS !== 'undefined' && ASSISTANT_BOND_ACTIONS || {}).map(x => [x.label, `1回 +${x.amount} ／ 1日 ${x.dailyMax} まで`]);
     case 'rhythmDifficultyRanks':
-      return (typeof RHYTHM_DIFFICULTIES !== 'undefined' ? RHYTHM_DIFFICULTIES : []).map(d => [d.id, `満点 ${d.maxScore.toLocaleString()}点 → 上限ランク ${rhythmRankForScore(d.maxScore)}`]);
+      return (typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : typeof RHYTHM_DIFFICULTIES !== 'undefined' ? RHYTHM_DIFFICULTIES : []).filter(d => typeof RHYTHM_DIFFICULTIES !== 'undefined' && RHYTHM_DIFFICULTIES.some(x => x.id === d.id) || typeof rhythmDemoSongs !== 'undefined' && rhythmDemoSongs(RHYTHM_SONGS).some(song => song.difficulties?.[d.id]?.notes?.length > 0)).map(d => [d.id, `満点 ${d.maxScore.toLocaleString()}点 → 上限ランク ${rhythmRankForScore(d.maxScore)}`]);
     case 'rhythmDemoSongLevels':
       {
         const songs = typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS : [];
@@ -15890,7 +15899,7 @@ const helpDataRows = id => {
       {
         const songs = typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS : [];
         const list = typeof rhythmDemoSongs !== 'undefined' ? rhythmDemoSongs(songs) : [];
-        const ids = typeof RHYTHM_DEMO_DIFFICULTY_IDS !== 'undefined' ? RHYTHM_DEMO_DIFFICULTY_IDS : [];
+        const ids = typeof RHYTHM_SELECTABLE_DIFFICULTY_IDS !== 'undefined' ? RHYTHM_SELECTABLE_DIFFICULTY_IDS : typeof RHYTHM_DEMO_DIFFICULTY_IDS !== 'undefined' ? RHYTHM_DEMO_DIFFICULTY_IDS : [];
         return list.map(song => {
           const charts = ids.map(id => song.difficulties[id]).filter(chart => chart && chart.notes && chart.notes.length > 0);
           if (!charts.length) return null;
@@ -15904,7 +15913,7 @@ const helpDataRows = id => {
       {
         const songs = typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS : [];
         const list = typeof rhythmDemoSongs !== 'undefined' ? rhythmDemoSongs(songs) : [];
-        const ids = typeof RHYTHM_DEMO_DIFFICULTY_IDS !== 'undefined' ? RHYTHM_DEMO_DIFFICULTY_IDS : [];
+        const ids = typeof RHYTHM_SELECTABLE_DIFFICULTY_IDS !== 'undefined' ? RHYTHM_SELECTABLE_DIFFICULTY_IDS : typeof RHYTHM_DEMO_DIFFICULTY_IDS !== 'undefined' ? RHYTHM_DEMO_DIFFICULTY_IDS : [];
         return ids.map(id => {
           const entries = list.map(song => ({
             song,
@@ -24511,7 +24520,8 @@ const saveRhythmMonsterSlots = async value => {
   return normalized;
 };
 const saveRhythmBestRecord = async (records, songId, difficultyId, value) => {
-  if (!RHYTHM_SONGS.some(song => song.songId === songId) || !RHYTHM_DIFFICULTIES.some(item => item.id === difficultyId)) return normalizeRhythmBestRecords(records);
+  const song = RHYTHM_SONGS.find(item => item.songId === songId);
+  if (!song || !rhythmSongDifficultyDefs(song).some(item => item.id === difficultyId)) return normalizeRhythmBestRecords(records);
   const normalized = normalizeRhythmBestRecords(records);
   normalized[songId][difficultyId] = normalizeRhythmBestRecord(value);
   await storeSet(RHYTHM_BEST_RECORDS_KEY, normalized, false);
@@ -24688,6 +24698,494 @@ const storeList = async (prefix, shared = false) => {
   } catch {}
   return Object.keys(_memStore).filter(k => k.startsWith(prefix));
 };
+const ASSET_CACHE_KEY = 'mh_asset_prefetch_v1';
+const ASSET_CACHE_NAME = 'mh-assets-v1';
+const ASSET_CACHE_META = 'mh-assets-meta-v1';
+const ASSET_CACHE_DEFAULT_ENABLED = true;
+const ASSET_PACKS = [{
+  id: 'beat',
+  icon: '🎵',
+  label: 'モンヒロビート',
+  desc: '全曲の音源とジャケット'
+}, {
+  id: 'battle',
+  icon: '⚔️',
+  label: 'バトル',
+  desc: 'バトル・HOMEのBGM、モンスター・敵・演出・助手の画像'
+}, {
+  id: 'all',
+  icon: '📦',
+  label: '全部',
+  desc: 'モンヒロビートとバトルの両方'
+}];
+const ASSET_CORE_PREFIXES = ['data/images/', 'images/ui/', 'images/monster-icons/'];
+const ASSET_AUTO_BUDGET = {
+  cellular: 8 * 1024 * 1024,
+  unknown: 30 * 1024 * 1024,
+  wifi: 200 * 1024 * 1024
+};
+const ASSET_RECENT_SONG_LIMIT = 12;
+const normalizeAssetCacheSettings = raw => {
+  const src = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  return {
+    enabled: src.enabledChosen === true && typeof src.enabled === 'boolean' ? src.enabled : ASSET_CACHE_DEFAULT_ENABLED,
+    enabledChosen: src.enabledChosen === true,
+    auto: typeof src.auto === 'boolean' ? src.auto : true,
+    songs: Array.isArray(src.songs) ? src.songs.filter(s => typeof s === 'string' && s).slice(0, ASSET_RECENT_SONG_LIMIT) : []
+  };
+};
+const ASSET_CACHE = (() => {
+  let settings = normalizeAssetCacheSettings(null);
+  let manifest = null,
+    manifestPromise = null;
+  let job = null;
+  let status = {
+    packs: {},
+    usage: null,
+    quota: null,
+    persisted: null,
+    supported: false,
+    checkedAt: 0
+  };
+  const listeners = new Set();
+  const emit = () => {
+    for (const fn of [...listeners]) {
+      try {
+        fn();
+      } catch (e) {}
+    }
+  };
+  const supported = () => typeof window !== 'undefined' && typeof window.caches !== 'undefined' && typeof navigator !== 'undefined' && 'serviceWorker' in navigator && window.isSecureContext !== false && /^https?:$/.test(window.location.protocol);
+  const save = () => {
+    try {
+      localStorage.setItem(ASSET_CACHE_KEY, JSON.stringify(settings));
+    } catch (e) {}
+  };
+  const keyOf = (path, v) => `${path}?v=${v}`;
+  const absKey = (path, v) => new URL(keyOf(encodeURI(path), v), window.location.href).href;
+  const stripVersion = src => String(src || '').split('?')[0];
+  const ensureManifest = () => {
+    if (manifest) return Promise.resolve(manifest);
+    if (!manifestPromise) {
+      const build = typeof window !== 'undefined' && window.__mhGameBuild || Date.now();
+      manifestPromise = fetch(`asset-manifest.json?v=${build}`).then(res => res.ok ? res.json() : null).then(json => {
+        manifest = json && json.files && typeof json.id === 'string' ? json : null;
+        manifestPromise = null;
+        return manifest;
+      }).catch(() => {
+        manifestPromise = null;
+        return null;
+      });
+    }
+    return manifestPromise;
+  };
+  const filesOfPack = (m, packId) => Object.entries(m.files).filter(([, f]) => packId === 'all' || f.pack === packId);
+  const refreshStatus = async () => {
+    status = {
+      ...status,
+      supported: supported()
+    };
+    if (!status.supported) {
+      emit();
+      return status;
+    }
+    const m = await ensureManifest();
+    const have = new Set();
+    try {
+      if (!(await window.caches.has(ASSET_CACHE_NAME))) throw new Error('none');
+      const cache = await window.caches.open(ASSET_CACHE_NAME);
+      for (const req of await cache.keys()) {
+        const url = new URL(req.url);
+        const path = decodeURIComponent(url.pathname.slice(new URL('./', window.location.href).pathname.length));
+        have.add(`${path}?v=${url.searchParams.get('v')}`);
+      }
+    } catch (e) {}
+    const packs = {};
+    if (m) {
+      for (const p of ASSET_PACKS) {
+        const files = filesOfPack(m, p.id);
+        let count = 0,
+          bytes = 0,
+          haveCount = 0,
+          haveBytes = 0;
+        for (const [path, f] of files) {
+          count++;
+          bytes += f.size;
+          if (have.has(keyOf(path, f.v))) {
+            haveCount++;
+            haveBytes += f.size;
+          }
+        }
+        packs[p.id] = {
+          count,
+          bytes,
+          haveCount,
+          haveBytes
+        };
+      }
+    }
+    let usage = null,
+      quota = null,
+      persisted = null;
+    try {
+      if (navigator.storage && navigator.storage.estimate) ({
+        usage = null,
+        quota = null
+      } = await navigator.storage.estimate());
+    } catch (e) {}
+    try {
+      if (navigator.storage && navigator.storage.persisted) persisted = await navigator.storage.persisted();
+    } catch (e) {}
+    status = {
+      ...status,
+      packs,
+      usage,
+      quota,
+      persisted,
+      checkedAt: Date.now(),
+      manifestId: m && m.id
+    };
+    emit();
+    return status;
+  };
+  const register = async () => {
+    if (!supported()) return false;
+    try {
+      const reg = await navigator.serviceWorker.register('sw.js', {
+        scope: './',
+        updateViaCache: 'none'
+      });
+      try {
+        reg.update().catch(() => {});
+      } catch (e) {}
+      return true;
+    } catch (e) {
+      return false;
+    }
+  };
+  const unregister = async () => {
+    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
+    try {
+      const ctl = navigator.serviceWorker.controller;
+      if (ctl) {
+        await new Promise(resolve => {
+          const timer = setTimeout(resolve, 2000);
+          const onMsg = e => {
+            if (e.data && e.data.type === 'mh-asset-disabled') {
+              clearTimeout(timer);
+              navigator.serviceWorker.removeEventListener('message', onMsg);
+              resolve();
+            }
+          };
+          navigator.serviceWorker.addEventListener('message', onMsg);
+          ctl.postMessage({
+            type: 'mh-asset-disable'
+          });
+        });
+      }
+    } catch (e) {}
+    try {
+      for (const reg of await navigator.serviceWorker.getRegistrations()) {
+        const sw = reg.active || reg.waiting || reg.installing;
+        if (sw && /\/sw\.js(\?|$)/.test(sw.scriptURL)) await reg.unregister();
+      }
+    } catch (e) {}
+    try {
+      await window.caches.delete(ASSET_CACHE_NAME);
+      await window.caches.delete(ASSET_CACHE_META);
+    } catch (e) {}
+  };
+  const download = async packId => {
+    if (job || !settings.enabled || !supported() || !ASSET_PACKS.some(p => p.id === packId)) return false;
+    const j = job = {
+      packId,
+      preparing: true,
+      total: 0,
+      done: 0,
+      bytesTotal: 0,
+      bytesDone: 0,
+      failed: 0,
+      cancel: false,
+      error: null
+    };
+    emit();
+    const m = await ensureManifest();
+    if (!m || j.cancel) {
+      if (job === j) job = null;
+      emit();
+      return false;
+    }
+    try {
+      if (navigator.storage && navigator.storage.persist) await navigator.storage.persist();
+    } catch (e) {}
+    const cache = await window.caches.open(ASSET_CACHE_NAME);
+    const files = filesOfPack(m, packId);
+    const todo = [];
+    for (const [path, f] of files) {
+      if (!(await cache.match(absKey(path, f.v)))) todo.push([path, f]);
+    }
+    Object.assign(j, {
+      preparing: false,
+      total: todo.length,
+      bytesTotal: todo.reduce((s, [, f]) => s + f.size, 0)
+    });
+    emit();
+    let next = 0,
+      lastRecount = Date.now();
+    const worker = async () => {
+      while (!j.cancel && !j.error && next < todo.length) {
+        const [path, f] = todo[next++];
+        try {
+          const res = await fetch(keyOf(encodeURI(path), f.v), {
+            headers: {
+              'x-mh-prefetch': '1'
+            }
+          });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          await cache.put(absKey(path, f.v), res);
+          j.bytesDone += f.size;
+        } catch (e) {
+          if (e && (e.name === 'QuotaExceededError' || /quota/i.test(String(e.message)))) j.error = 'quota';else j.failed++;
+        }
+        j.done++;
+        emit();
+        if (Date.now() - lastRecount > 2000) {
+          lastRecount = Date.now();
+          refreshStatus();
+        }
+      }
+    };
+    await Promise.all([worker(), worker(), worker()]);
+    if (job === j) job = null;
+    await refreshStatus();
+    return !j.cancel && !j.error && !j.failed;
+  };
+  const cancel = () => {
+    if (job) {
+      job.cancel = true;
+      emit();
+    }
+  };
+  const remove = async packId => {
+    if (!supported()) return;
+    if (job) cancel();
+    const m = await ensureManifest();
+    try {
+      const cache = await window.caches.open(ASSET_CACHE_NAME);
+      if (packId === 'all' || !m) {
+        for (const req of await cache.keys()) await cache.delete(req);
+      } else {
+        for (const [path, f] of filesOfPack(m, packId)) await cache.delete(absKey(path, f.v));
+      }
+    } catch (e) {}
+    await refreshStatus();
+  };
+  const autoQueue = [];
+  const autoQueued = new Set();
+  let autoTimer = null,
+    autoBusy = false,
+    autoSpent = 0;
+  const songBusy = () => !!(window.__mhSongPrepBusy || window.__mhSongPlaying);
+  const connectionKind = () => {
+    const c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    if (!c) return 'unknown';
+    if (c.saveData) return 'off';
+    if (c.effectiveType === 'slow-2g' || c.effectiveType === '2g') return 'off';
+    if (c.type === 'cellular') return 'cellular';
+    if (c.type === 'wifi' || c.type === 'ethernet') return 'wifi';
+    return 'unknown';
+  };
+  const scheduleAuto = ms => {
+    if (autoTimer) return;
+    autoTimer = setTimeout(() => {
+      autoTimer = null;
+      pumpAuto();
+    }, ms);
+  };
+  const pumpAuto = async () => {
+    if (autoBusy || !settings.enabled || !settings.auto || !supported() || !autoQueue.length) return;
+    if (job || songBusy() || document.hidden) {
+      scheduleAuto(5000);
+      return;
+    }
+    const kind = connectionKind();
+    if (kind === 'off') return;
+    const budget = ASSET_AUTO_BUDGET[kind] || ASSET_AUTO_BUDGET.unknown;
+    const m = await ensureManifest();
+    if (!m) return;
+    autoBusy = true;
+    try {
+      const cache = await window.caches.open(ASSET_CACHE_NAME);
+      while (autoQueue.length && !job && !songBusy() && !document.hidden) {
+        const path = autoQueue.shift();
+        const f = m.files[path];
+        if (!f) continue;
+        if (await cache.match(absKey(path, f.v))) continue;
+        if (autoSpent + f.size > budget) {
+          autoQueue.length = 0;
+          break;
+        }
+        try {
+          const res = await fetch(keyOf(encodeURI(path), f.v), {
+            headers: {
+              'x-mh-prefetch': '1'
+            }
+          });
+          if (res.ok) {
+            await cache.put(absKey(path, f.v), res);
+            autoSpent += f.size;
+          }
+        } catch (e) {
+          break;
+        }
+        await new Promise(r => setTimeout(r, 600));
+      }
+    } catch (e) {}
+    autoBusy = false;
+    if (autoQueue.length) scheduleAuto(5000);
+  };
+  const enqueue = (paths, front = false) => {
+    const fresh = paths.filter(p => p && !autoQueued.has(p));
+    for (const p of fresh) autoQueued.add(p);
+    if (front) autoQueue.unshift(...fresh);else autoQueue.push(...fresh);
+    if (fresh.length) scheduleAuto(1500);
+  };
+  const songPaths = songId => {
+    const songs = typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS : [];
+    const song = songs.find(s => s && s.songId === songId);
+    if (!song) return [];
+    const track = typeof BGM_TRACK_BY_ID !== 'undefined' ? BGM_TRACK_BY_ID[song.bgmTrackId] : null;
+    return [track && track.src, stripVersion(song.artwork)].filter(Boolean);
+  };
+  const noteSong = (songId, {
+    front = true
+  } = {}) => {
+    if (typeof songId !== 'string' || !songId) return;
+    const paths = songPaths(songId);
+    if (!paths.length) return;
+    if (settings.songs[0] !== songId) {
+      settings = {
+        ...settings,
+        songs: [songId, ...settings.songs.filter(s => s !== songId)].slice(0, ASSET_RECENT_SONG_LIMIT)
+      };
+      save();
+    }
+    if (settings.enabled && settings.auto) enqueue(paths, front);
+  };
+  const startAuto = async () => {
+    if (!settings.enabled || !settings.auto) return;
+    const m = await ensureManifest();
+    if (!m) return;
+    enqueue(Object.keys(m.files).filter(p => ASSET_CORE_PREFIXES.some(pre => p.startsWith(pre))));
+    for (const songId of settings.songs) enqueue(songPaths(songId));
+  };
+  let listening = false;
+  const listen = () => {
+    if (listening || typeof window === 'undefined') return;
+    listening = true;
+    window.addEventListener('mh:song-prep-start', e => {
+      const id = e && e.detail && e.detail.songId;
+      if (id) noteSong(id, {
+        front: false
+      });
+    });
+    const resume = () => scheduleAuto(3000);
+    window.addEventListener('mh:song-prep-end', resume);
+    window.addEventListener('mh:song-play-end', resume);
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) resume();
+    });
+  };
+  return {
+    get enabled() {
+      return settings.enabled;
+    },
+    get auto() {
+      return settings.auto;
+    },
+    get job() {
+      return job;
+    },
+    get status() {
+      return status;
+    },
+    get supported() {
+      return supported();
+    },
+    subscribe(fn) {
+      listeners.add(fn);
+      return () => listeners.delete(fn);
+    },
+    restore() {
+      try {
+        settings = normalizeAssetCacheSettings(JSON.parse(localStorage.getItem(ASSET_CACHE_KEY) || 'null'));
+      } catch (e) {
+        settings = normalizeAssetCacheSettings(null);
+      }
+      if (!supported()) return settings.enabled;
+      listen();
+      if (settings.enabled) {
+        register();
+        setTimeout(startAuto, 8000);
+      }
+      return settings.enabled;
+    },
+    async setEnabled(next) {
+      settings = {
+        ...settings,
+        enabled: !!next,
+        enabledChosen: true
+      };
+      save();
+      if (settings.enabled) {
+        listen();
+        await register();
+        startAuto();
+      } else {
+        cancel();
+        autoQueue.length = 0;
+        autoQueued.clear();
+        await unregister();
+      }
+      await refreshStatus();
+      return settings.enabled;
+    },
+    setAuto(next) {
+      settings = {
+        ...settings,
+        auto: !!next
+      };
+      save();
+      if (settings.auto) startAuto();else {
+        autoQueue.length = 0;
+        autoQueued.clear();
+      }
+      emit();
+      return settings.auto;
+    },
+    refreshStatus,
+    download,
+    cancel,
+    remove,
+    noteSong
+  };
+})();
+function useAssetCacheState() {
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const off = ASSET_CACHE.subscribe(() => setTick(t => t + 1));
+    ASSET_CACHE.refreshStatus();
+    return off;
+  }, []);
+  return ASSET_CACHE;
+}
+const formatAssetMB = bytes => {
+  const n = Number(bytes);
+  if (!Number.isFinite(n) || n <= 0) return '0MB';
+  const mb = n / 1024 / 1024;
+  return mb >= 10 ? `${Math.round(mb)}MB` : `${mb.toFixed(1)}MB`;
+};
+ASSET_CACHE.restore();
 const SUPABASE_URL = 'https://zrzevudkbgtxlbvmuziy.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_D4WJBXJ1xE97amndZarEPw_0M4LAwOp';
 const SB_HEADERS = {
@@ -28660,6 +29158,13 @@ const RHYTHM_DIFFICULTY_TONE = Object.freeze({
     on: 'border-fuchsia-300 bg-fuchsia-700 text-white',
     off: 'border-fuchsia-400/40 text-fuchsia-200',
     text: 'text-fuchsia-300'
+  }),
+  HELL: Object.freeze({
+    badge: 'from-red-800 to-red-950',
+    dot: 'bg-red-400',
+    on: 'border-red-300 bg-red-900 text-red-100',
+    off: 'border-red-500/70 bg-red-950/80 text-red-400',
+    text: 'text-red-400'
   })
 });
 const rhythmDifficultyTone = id => RHYTHM_DIFFICULTY_TONE[id] || RHYTHM_DIFFICULTY_TONE.EASY;
@@ -28937,6 +29442,7 @@ const RhythmSongSelect = ({
   const available = song ? (difficulties || []).filter(difficulty => rhythmChartPlayable(song, difficulty.id)) : [];
   const unlocked = item => !song || rhythmDifficultyUnlocked(song.songId, item.id, bestRecords);
   const openList = available.filter(unlocked);
+  const lockedFitText = song ? available.filter(item => !unlocked(item)).map(item => `${rhythmDifficultyUnlockRequirement(item.id, song.songId)}で解放`).reduce((a, b) => rhythmTitleFitEm(b) > rhythmTitleFitEm(a) ? b : a, '') : '';
   const picked = available.find(entry => entry.id === difficultyId);
   const difficulty = (picked && unlocked(picked) ? picked : null) || openList[0] || null;
   const chart = song && difficulty ? song.difficulties[difficulty.id] : null;
@@ -29246,7 +29752,7 @@ const RhythmSongSelect = ({
       'data-rhythm-song-row-level': ''
     } : {}, {
       className: `text-[14px] font-black leading-none tabular-nums text-white${spot('songLevel')}`
-    }), rowLevel(entry))), (difficulties || []).map(item => {
+    }), rowLevel(entry))), (difficulties || []).filter(item => RHYTHM_DIFFICULTIES.some(d => d.id === item.id) || rhythmChartPlayable(entry, item.id)).map(item => {
       const playable = rhythmChartPlayable(entry, item.id);
       const markId = rhythmAchievementMarkId(playable, playable ? rhythmBestRecord(bestRecords, entry.songId, item.id) : null);
       const mark = RHYTHM_ACHIEVEMENT_MARKS[markId];
@@ -29445,7 +29951,7 @@ const RhythmSongSelect = ({
       onClick: () => {
         if (open) setDifficultyId(item.id);
       },
-      className: `flex h-[52px] min-w-0 flex-1 flex-col items-center justify-center rounded-lg border-2 px-0.5 font-black leading-none [container-type:inline-size] landscape:h-[48px] ${open ? on ? `${tone.on} shadow-[0_0_10px_rgba(255,255,255,.25)]` : `${tone.off} bg-slate-900/70` : 'border-white/10 bg-slate-900/70 text-slate-500'}`
+      className: `flex h-[52px] min-w-0 flex-1 flex-col items-center justify-center rounded-lg border-2 px-0.5 font-black leading-none [container-type:inline-size] landscape:h-[48px]${available.length > 5 ? ' gap-px' : ''} ${open ? on ? `${tone.on} shadow-[0_0_10px_rgba(255,255,255,.25)]` : `${tone.off} bg-slate-900/70` : 'border-white/10 bg-slate-900/70 text-slate-500'}`
     }, React.createElement("b", {
       className: "block text-[18px] tabular-nums"
     }, song.difficulties[item.id].level), React.createElement("span", {
@@ -29457,7 +29963,7 @@ const RhythmSongSelect = ({
         "data-rhythm-difficulty-best": item.id,
         className: "block max-w-full truncate text-[8px] font-black tabular-nums opacity-80",
         style: {
-          fontSize: rhythmTitleFitSize(text, 8, 6, 2)
+          fontSize: rhythmTitleFitSize(open ? text : lockedFitText, 8, 6, 2)
         }
       }, text);
     })());
@@ -29652,6 +30158,122 @@ const RhythmSongSelect = ({
     onClick: () => setSortOpen(false),
     className: "mt-3 min-h-[52px] w-full rounded-xl bg-slate-700 text-sm font-black text-white"
   }, "閉じる"))));
+};
+const RhythmHellGuide = ({
+  pageIndex,
+  onPage,
+  onClose
+}) => {
+  const pages = typeof RHYTHM_HELL_GUIDE_PAGES !== 'undefined' && Array.isArray(RHYTHM_HELL_GUIDE_PAGES) ? RHYTHM_HELL_GUIDE_PAGES : [];
+  if (!pages.length) return null;
+  const index = Math.max(0, Math.min(pages.length - 1, Number(pageIndex) || 0));
+  const page = pages[index],
+    last = index === pages.length - 1;
+  return React.createElement("div", {
+    "data-rhythm-hell-guide": true,
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": `HELL の遊び方 ${index + 1}/${pages.length}`,
+    style: {
+      position: 'fixed',
+      inset: 0,
+      zIndex: 77500,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '12px calc(16px + env(safe-area-inset-right)) 12px calc(16px + env(safe-area-inset-left))',
+      background: 'radial-gradient(ellipse at center,rgba(30,27,75,.96),rgba(2,6,23,.98) 72%)'
+    }
+  }, React.createElement("section", {
+    "data-rhythm-hell-guide-card": true,
+    style: {
+      width: '100%',
+      maxWidth: '460px',
+      maxHeight: '100%',
+      overflowY: 'auto',
+      borderRadius: '20px',
+      border: '1px solid rgba(244,114,182,.45)',
+      background: 'rgba(15,23,42,.92)',
+      boxShadow: '0 0 28px rgba(244,114,182,.25)',
+      padding: '16px 18px'
+    }
+  }, React.createElement("small", {
+    style: {
+      display: 'block',
+      fontSize: '10px',
+      fontWeight: 900,
+      letterSpacing: '.28em',
+      color: '#f9a8d4'
+    }
+  }, "HELL の遊び方 ", index + 1, "/", pages.length), React.createElement("h2", {
+    "data-rhythm-hell-guide-title": true,
+    style: {
+      margin: '6px 0 0',
+      fontSize: '22px',
+      fontWeight: 900,
+      lineHeight: 1.25,
+      color: '#fff'
+    }
+  }, page.title), React.createElement("p", {
+    "data-rhythm-hell-guide-text": true,
+    style: {
+      margin: '10px 0 0',
+      fontSize: '14px',
+      fontWeight: 700,
+      lineHeight: 1.7,
+      color: '#e2e8f0'
+    }
+  }, page.text), React.createElement("div", {
+    "aria-hidden": "true",
+    style: {
+      display: 'flex',
+      justifyContent: 'center',
+      gap: '6px',
+      marginTop: '14px'
+    }
+  }, pages.map((_, i) => React.createElement("i", {
+    key: i,
+    style: {
+      display: 'block',
+      width: i === index ? '18px' : '6px',
+      height: '6px',
+      borderRadius: '999px',
+      background: i === index ? '#f472b6' : 'rgba(148,163,184,.5)'
+    }
+  }))), React.createElement("div", {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: index > 0 ? '1fr 2fr' : '1fr',
+      gap: '8px',
+      marginTop: '14px'
+    }
+  }, index > 0 && React.createElement("button", {
+    type: "button",
+    "data-rhythm-hell-guide-prev": true,
+    onClick: () => onPage(index - 1),
+    style: {
+      minHeight: '48px',
+      borderRadius: '14px',
+      border: '1px solid rgba(148,163,184,.4)',
+      background: 'rgba(30,41,59,.9)',
+      color: '#e2e8f0',
+      fontSize: '14px',
+      fontWeight: 900
+    }
+  }, "もどる"), React.createElement("button", {
+    type: "button",
+    "data-rhythm-hell-guide-next": true,
+    onClick: () => last ? onClose() : onPage(index + 1),
+    style: {
+      minHeight: '48px',
+      borderRadius: '14px',
+      border: '0',
+      background: 'linear-gradient(135deg,#db2777,#7c3aed)',
+      color: '#fff',
+      fontSize: '14px',
+      fontWeight: 900
+    }
+  }, last ? 'とじる' : 'つぎへ'))));
 };
 const RHYTHM_HAPTICS = (() => {
   let holder = null,
@@ -30347,7 +30969,8 @@ const RHYTHM_SONG_INTRO_DIFFICULTY_COLORS = Object.freeze({
   NORMAL: '#0284c7',
   HARD: '#d97706',
   EXPERT: '#e11d48',
-  MASTER: '#a21caf'
+  MASTER: '#a21caf',
+  HELL: '#7f1d1d'
 });
 const rhythmSongIntroVisible = settings => !!settings && !settings.lightweightMode && settings.effectAmount !== 'MINIMAL';
 const rhythmSongIntroCredit = song => {
@@ -30385,7 +31008,8 @@ function RhythmSkyStage({
       width: '100%',
       height: '100%',
       pointerEvents: 'none',
-      overflow: 'visible'
+      overflow: 'visible',
+      zIndex: 2
     }
   }, React.createElement("style", null, `@keyframes mhSkyFlow{from{transform:translateY(-12px)}to{transform:translateY(${f(fr.y)}px)}}[data-rhythm-sky-flow]{animation:mhSkyFlow 1.3s linear infinite}[data-rhythm-sky-flow="2"]{animation-delay:-.65s}@keyframes mhSkyPulse{0%,100%{opacity:.55}50%{opacity:1}}[data-rhythm-sky-pulse]{animation:mhSkyPulse 1.3s ease-in-out infinite}@media (prefers-reduced-motion:reduce){[data-rhythm-sky-flow],[data-rhythm-sky-pulse]{animation:none}}`), React.createElement("defs", null, React.createElement("linearGradient", {
     id: "mhSkyFill",
@@ -30437,101 +31061,80 @@ function RhythmSkyStage({
     offset: "1",
     stopColor: `rgb(${c})`,
     stopOpacity: ".55"
+  })), React.createElement("linearGradient", {
+    id: "mhSkyFloor",
+    x1: "0",
+    y1: "0",
+    x2: "0",
+    y2: "1"
+  }, React.createElement("stop", {
+    offset: "0",
+    stopColor: `rgb(${RHYTHM_SKY_LOOK.floor.topRgb})`,
+    stopOpacity: RHYTHM_SKY_LOOK.floor.topAlpha
+  }), React.createElement("stop", {
+    offset: "1",
+    stopColor: `rgb(${RHYTHM_SKY_LOOK.floor.bottomRgb})`,
+    stopOpacity: RHYTHM_SKY_LOOK.floor.bottomAlpha
   })), React.createElement("clipPath", {
     id: "mhSkyClip"
   }, React.createElement("polygon", {
     points: plane.poly
   }))), React.createElement("polygon", {
-    points: plane.poly,
-    fill: "url(#mhSkyFill)"
-  }), React.createElement("g", {
-    clipPath: "url(#mhSkyClip)"
-  }, React.createElement("rect", {
-    "data-rhythm-sky-flow": "1",
-    x: "0",
-    y: "0",
-    width: "100",
-    height: "6",
-    fill: "url(#mhSkyBand)"
-  }), React.createElement("rect", {
-    "data-rhythm-sky-flow": "2",
-    x: "0",
-    y: "0",
-    width: "100",
-    height: "6",
-    fill: "url(#mhSkyBand)"
-  })), plane.dividers.map((d, k) => React.createElement("polyline", {
-    key: k,
-    points: d,
-    fill: "none",
-    stroke: `rgb(${c})`,
-    strokeOpacity: ".16",
-    strokeWidth: "1",
-    vectorEffect: "non-scaling-stroke"
-  })), [plane.leftEdge, plane.rightEdge].map((d, k) => React.createElement("g", {
-    key: k
-  }, React.createElement("polyline", {
-    points: d,
-    fill: "none",
-    stroke: `rgb(${c})`,
-    strokeOpacity: ".14",
-    strokeWidth: "4",
-    vectorEffect: "non-scaling-stroke"
-  }), React.createElement("polyline", {
-    points: d,
-    fill: "none",
-    stroke: theme.core,
-    strokeOpacity: ".5",
-    strokeWidth: "1",
-    vectorEffect: "non-scaling-stroke"
-  }))), plane.markers.slice(1, -1).map((x, k) => React.createElement("line", {
-    key: 'c' + k,
-    x1: f(x),
-    y1: f(fr.gy),
-    x2: f(x),
+    points: plane.floor,
+    fill: "url(#mhSkyFloor)"
+  }), React.createElement("line", {
+    x1: "-2",
+    y1: f(fr.y),
+    x2: "102",
     y2: f(fr.y),
-    stroke: `rgb(${c})`,
-    strokeOpacity: ".13",
-    strokeWidth: "1",
-    vectorEffect: "non-scaling-stroke"
-  })), [fr.l, fr.r].map((x, k) => {
-    const w = 1.4;
-    return React.createElement("polygon", {
-      key: k,
-      points: `${f(x - w)},${f(fr.gy)} ${f(x + w)},${f(fr.gy)} ${f(x + w * .5)},${f(fr.y)} ${f(x - w * .5)},${f(fr.y)}`,
-      fill: "url(#mhSkyPost)"
-    });
-  }), React.createElement("rect", {
-    x: "-2",
-    y: f(fr.y - 1.2),
-    width: "104",
-    height: "2.4",
-    fill: "url(#mhSkyBand)",
-    opacity: ".55"
-  }), React.createElement("line", {
-    x1: "-2",
-    y1: f(fr.y - .35),
-    x2: "102",
-    y2: f(fr.y - .35),
-    stroke: theme.core,
-    strokeOpacity: ".6",
-    strokeWidth: "1",
+    stroke: `rgb(${RHYTHM_SKY_LOOK.line.bandRgb})`,
+    strokeOpacity: RHYTHM_SKY_LOOK.line.bandAlpha,
+    strokeWidth: RHYTHM_SKY_LOOK.line.bandPx,
     vectorEffect: "non-scaling-stroke"
   }), React.createElement("line", {
     x1: "-2",
-    y1: f(fr.y + .35),
+    y1: f(fr.y),
     x2: "102",
-    y2: f(fr.y + .35),
-    stroke: theme.core,
-    strokeOpacity: ".6",
-    strokeWidth: "1",
+    y2: f(fr.y),
+    stroke: `rgb(${RHYTHM_SKY_LOOK.line.coreRgb})`,
+    strokeOpacity: RHYTHM_SKY_LOOK.line.coreAlpha,
+    strokeWidth: RHYTHM_SKY_LOOK.line.corePx,
     vectorEffect: "non-scaling-stroke"
-  }), plane.markers.map((x, k) => React.createElement("polygon", {
-    key: k,
-    points: `${f(x)},${f(fr.y - .9)} ${f(x + .9)},${f(fr.y)} ${f(x)},${f(fr.y + .9)} ${f(x - .9)},${f(fr.y)}`,
-    fill: theme.core,
-    fillOpacity: ".55"
-  })));
+  }));
+}
+function RhythmSkyLiftSwitch() {
+  const read = () => {
+    try {
+      const v = Number(localStorage.getItem('mh_sky_lift_portrait_proto'));
+      return v === 25 || v === 39 ? v : 16;
+    } catch (e) {
+      return 16;
+    }
+  };
+  const [value, setValue] = useState(read);
+  const pick = v => {
+    try {
+      if (v === 16) localStorage.removeItem('mh_sky_lift_portrait_proto');else localStorage.setItem('mh_sky_lift_portrait_proto', String(v));
+    } catch (e) {}
+    setValue(v);
+  };
+  return React.createElement("section", {
+    "data-rhythm-sky-lift-switch": true,
+    className: "mb-3 rounded-2xl border border-rose-400/50 bg-rose-950/25 p-3"
+  }, React.createElement("h3", {
+    className: "text-xs font-black text-rose-100"
+  }, "縦画面の空中の高さの差(試作・見比べ用)"), React.createElement("p", {
+    className: "mt-1 text-[10px] font-bold text-rose-200/80"
+  }, "空中と地上の判定ラインの差(画面の高さに対する割合)。横画面は39%のまま。ここで選んだ値は縦画面の試作の HELL だけに効きます。"), React.createElement("div", {
+    className: "mt-2 grid grid-cols-3 gap-2"
+  }, [16, 25, 39].map(v => React.createElement("button", {
+    key: v,
+    type: "button",
+    "data-rhythm-sky-lift": v,
+    "aria-pressed": value === v,
+    onClick: () => pick(v),
+    className: `min-h-[44px] rounded-xl text-sm font-black ${value === v ? 'bg-rose-600 text-white ring-2 ring-rose-200' : 'bg-slate-800 text-slate-300'}`
+  }, v, "%", v === 16 ? '(いま)' : ''))));
 }
 const RhythmMonsterNoteGuide = () => {
   const ratios = rhythmMonsterNoteBaseRatios(RHYTHM_MONSTER_SLOT_MAX).map(ratio => `${Math.round(ratio * 100)}%`);
@@ -31072,9 +31675,14 @@ const rhythmHudInitial = () => ({
   lastPrecise: false,
   fastSlow: '',
   lastDeltaMs: null,
+  skyLast: '',
+  skyLastPrecise: false,
+  skyFastSlow: '',
+  skyDeltaMs: null,
   counts: null,
   life: RHYTHM_LIFE_MAX
 });
+const rhythmNoteIsSky = note => rhythmNoteSkyHeight(note) > 0 || rhythmSlideHasSky(note);
 const rhythmCreateHud = () => {
   let state = rhythmHudInitial();
   const subs = new Set();
@@ -31358,14 +31966,14 @@ const RhythmHudJudgment = ({
   status,
   haloKeys,
   timingDisplay,
-  judgmentTextRef
+  judgmentTextRef,
+  sky = false
 }) => {
-  const {
-    last,
-    lastPrecise,
-    fastSlow,
-    lastDeltaMs
-  } = useRhythmHud(hud);
+  const h = useRhythmHud(hud);
+  const last = sky ? h.skyLast : h.last,
+    lastPrecise = sky ? h.skyLastPrecise : h.lastPrecise,
+    fastSlow = sky ? h.skyFastSlow : h.fastSlow,
+    lastDeltaMs = sky ? h.skyDeltaMs : h.lastDeltaMs;
   return React.createElement(React.Fragment, null, React.createElement("b", {
     ref: judgmentTextRef,
     "data-rhythm-judgment-text": true,
@@ -31528,7 +32136,10 @@ const RhythmTapTest = ({
       const y = p.gy / 100;
       return `${f(rhythmProjectBoundary(k + 1, y) * 100)},${f(p.y)}`;
     }).join(' '));
+    const floorL = pts.map(p => `${f(p.l)},${f(p.gy)}`),
+      floorR = pts.map(p => `${f(p.r)},${f(p.gy)}`).reverse();
     return {
+      floor: [...floorL, ...floorR].join(' '),
       poly: [...left, ...right].join(' '),
       leftEdge: left.join(' '),
       rightEdge: pts.map(p => `${f(p.r)},${f(p.y)}`).join(' '),
@@ -31779,6 +32390,8 @@ const RhythmTapTest = ({
     screenFlashRef = useRef(null),
     touchSweepRef = useRef(null),
     judgmentTextRef = useRef(null),
+    skyJudgmentTextRef = useRef(null),
+    skyJudgmentBurstRef = useRef(null),
     comboRef = useRef(null),
     judgmentBurstRef = useRef(null),
     comboRingRef = useRef(null);
@@ -32377,7 +32990,10 @@ const RhythmTapTest = ({
       hudRef.current.set({
         last: '',
         lastPrecise: false,
-        fastSlow: ''
+        fastSlow: '',
+        skyLast: '',
+        skyLastPrecise: false,
+        skyFastSlow: ''
       });
     }, RHYTHM_JUDGMENT_DISPLAY_MS);
   }, []);
@@ -32569,12 +33185,13 @@ const RhythmTapTest = ({
             }, RHYTHM_SIDE_CHEER_MS);
           }
         }
-        const judgmentText = judgmentTextRef.current;
+        const skyHit = rhythmNoteIsSky(note);
+        const judgmentText = skyHit ? skyJudgmentTextRef.current : judgmentTextRef.current;
         if (judgmentText) restarts.push({
           el: judgmentText,
           attr: 'rhythmJudgmentPop'
         });
-        const burst = judgmentBurstRef.current;
+        const burst = skyHit ? skyJudgmentBurstRef.current : judgmentBurstRef.current;
         if (burst && settingsLiveRef.current.judgmentFx === true && (judgment === 'GREAT' || judgment === 'EXCELLENT' || judgment === 'MARVELOUS')) {
           burst.dataset.judgment = judgment;
           burst.dataset.judgmentPrecise = preciseHit ? '1' : '';
@@ -32745,7 +33362,18 @@ const RhythmTapTest = ({
     const showAbilityFlash = !!abilityFlash && !rhythmMonsterEffectAtMost(settings.monsterNoteEffect, 'NONE');
     const score = run.lifeDepleted ? run.lockedScore : run.score,
       lastDeltaMs = judgment !== 'MISS' && typeof deltaMs === 'number' && Number.isFinite(deltaMs) ? deltaMs : null;
-    hudRef.current.set({
+    hudRef.current.set(rhythmNoteIsSky(note) ? {
+      score,
+      combo: run.combo,
+      skyLast: judgment,
+      skyLastPrecise: preciseHit,
+      skyFastSlow: side || '',
+      skyDeltaMs: lastDeltaMs,
+      counts: {
+        ...run.counts
+      },
+      life: run.life
+    } : {
       score,
       combo: run.combo,
       last: judgment,
@@ -34166,7 +34794,11 @@ const RhythmTapTest = ({
           } catch {}
         }
         const side = rhythmFastSlow(deltaMs);
-        hudRef.current.set({
+        hudRef.current.set(rhythmNoteIsSky(target) ? {
+          skyLast: 'HOLD',
+          skyLastPrecise: false,
+          skyFastSlow: side || ''
+        } : {
           last: 'HOLD',
           lastPrecise: false,
           fastSlow: side || ''
@@ -35123,7 +35755,7 @@ const RhythmTapTest = ({
       if (tutorial || calibrating || debugPlay || multi || result.assist || result.cleared === false) return null;
       const before = runRef.current?.startBest;
       if (before && before.clear === true) return null;
-      const openedIds = RHYTHM_DEMO_DIFFICULTY_IDS.filter(id => rhythmDifficultyUnlockRequirement(id, song.songId) === difficulty.id && rhythmChartPlayable(song, id));
+      const openedIds = RHYTHM_SELECTABLE_DIFFICULTY_IDS.filter(id => rhythmDifficultyUnlockRequirement(id, song.songId) === difficulty.id && rhythmChartPlayable(song, id));
       if (!openedIds.length) return null;
       const opened = openedIds.join('・');
       return React.createElement("div", {
@@ -35292,8 +35924,9 @@ const RhythmTapTest = ({
       "data-rhythm-song-intro-art": true,
       style: {
         position: 'relative',
-        flexShrink: 0,
-        width: isLandscape ? 'min(40vh,34vw,200px)' : 'min(58vw,34vh,240px)',
+        flex: '0 1 auto',
+        minHeight: '96px',
+        height: isLandscape ? 'min(54vh,40vw,320px)' : 'min(68vw,42vh,320px)',
         aspectRatio: '1 / 1',
         borderRadius: '14px',
         overflow: 'hidden'
@@ -35315,6 +35948,7 @@ const RhythmTapTest = ({
     })), React.createElement("div", {
       "data-rhythm-song-intro-text": true,
       style: {
+        flex: '0 0 auto',
         minWidth: 0,
         maxWidth: isLandscape ? 'min(72vw,560px)' : '88vw',
         textAlign: 'center'
@@ -35416,7 +36050,7 @@ const RhythmTapTest = ({
   }), React.createElement("div", {
     className: "mt-1.5 flex max-w-[34cqw] flex-wrap items-center gap-1 landscape:mt-0 landscape:min-w-0 landscape:shrink"
   }, React.createElement("span", {
-    className: "shrink-0 rounded bg-fuchsia-700/85 px-1.5 py-0.5 text-[9px] font-black leading-none"
+    className: `shrink-0 rounded ${difficulty.id === 'HELL' ? 'bg-red-900/90 text-red-200 ring-1 ring-red-500/70' : 'bg-fuchsia-700/85'} px-1.5 py-0.5 text-[9px] font-black leading-none`
   }, difficulty.id), React.createElement("small", {
     "data-rhythm-mode-label": true,
     className: "text-[9px] font-bold leading-none tracking-[0.14em] text-cyan-300 landscape:hidden",
@@ -35721,34 +36355,7 @@ const RhythmTapTest = ({
     }
   }), skyPlane && React.createElement(RhythmSkyStage, {
     plane: skyPlane
-  }), skyChart && React.createElement("span", {
-    "data-rhythm-sky-label": true,
-    style: {
-      position: 'absolute',
-      right: '2%',
-      bottom: `calc(var(--mh-judgment-line-bottom,12%) + ${RHYTHM_SKY_LIFT.ratio * 100}% + 5px)`,
-      fontSize: '12px',
-      fontWeight: 800,
-      letterSpacing: '.12em',
-      color: '#ede9fe',
-      textShadow: '0 0 6px rgb(167,139,250),0 0 2px #000',
-      pointerEvents: 'none'
-    }
-  }, "SKY"), skyChart && React.createElement("span", {
-    "data-rhythm-ground-label": true,
-    style: {
-      position: 'absolute',
-      right: '2%',
-      bottom: 'calc(var(--mh-judgment-line-bottom,12%) - 20px)',
-      zIndex: 12,
-      fontSize: '12px',
-      fontWeight: 800,
-      letterSpacing: '.08em',
-      color: '#f5d0fe',
-      textShadow: '0 0 4px #000',
-      pointerEvents: 'none'
-    }
-  }, "● GROUND"), countdownStep !== null && React.createElement("div", {
+  }), countdownStep !== null && React.createElement("div", {
     "data-rhythm-countdown": true,
     "aria-live": "assertive",
     style: {
@@ -35787,11 +36394,7 @@ const RhythmTapTest = ({
     "data-rhythm-judgment-display": true,
     className: "pointer-events-none absolute left-1/2 z-10 w-[88%] -translate-x-1/2 text-center",
     style: {
-      bottom: skyChart ? 'calc(var(--mh-judgment-line-bottom,12%) - 64px)' : 'calc(var(--mh-judgment-line-bottom,12%) + 38px)',
-      ...(skyChart ? {
-        opacity: .8,
-        transform: 'translateX(-50%) scale(.78)'
-      } : {})
+      bottom: 'calc(var(--mh-judgment-line-bottom,12%) + 38px)'
     }
   }, settings.judgmentFx === true && React.createElement("i", {
     ref: judgmentBurstRef,
@@ -35829,7 +36432,25 @@ const RhythmTapTest = ({
     style: {
       opacity: 0
     }
-  })))), luckyRush && React.createElement("div", {
+  })))), skyChart && React.createElement("div", {
+    "data-rhythm-sky-judgment-display": true,
+    className: "pointer-events-none absolute left-1/2 z-10 w-[88%] -translate-x-1/2 text-center",
+    style: {
+      bottom: `calc(var(--mh-judgment-line-bottom,12%) + ${(RHYTHM_SKY_LIFT.ratio * 100).toFixed(2)}% + 38px)`
+    }
+  }, settings.judgmentFx === true && React.createElement("i", {
+    ref: skyJudgmentBurstRef,
+    "data-rhythm-judgment-burst": true,
+    "aria-hidden": "true"
+  }), React.createElement(RhythmHudJudgment, {
+    sky: true,
+    hud: hudRef.current,
+    settings: settings,
+    status: "sky",
+    haloKeys: haloKeys,
+    timingDisplay: timingDisplay,
+    judgmentTextRef: skyJudgmentTextRef
+  })), luckyRush && React.createElement("div", {
     "data-rhythm-lucky-rush": true,
     "aria-hidden": "true"
   }), effectCapNotice > 0 && React.createElement("div", {
@@ -35923,7 +36544,7 @@ const RhythmTapTest = ({
     }, "♪ ", rhythmSongFullName(song)), React.createElement("div", {
       className: "mt-1 flex items-center gap-1.5 text-[10px] font-black"
     }, React.createElement("span", {
-      className: "shrink-0 rounded bg-fuchsia-700/85 px-1.5 py-0.5 leading-none"
+      className: `shrink-0 rounded ${difficulty.id === 'HELL' ? 'bg-red-900/90 text-red-200 ring-1 ring-red-500/70' : 'bg-fuchsia-700/85'} px-1.5 py-0.5 leading-none`
     }, difficulty.id), !calibrating && !tutorial && React.createElement("span", {
       className: "text-cyan-300"
     }, "Lv.", chart.level), React.createElement("span", {
@@ -45818,6 +46439,132 @@ function SettingsMenuLink({
     className: "shrink-0 opacity-60"
   }));
 }
+function AssetDownloadPage({
+  onBack
+}) {
+  const asset = useAssetCacheState();
+  const {
+    packs,
+    usage
+  } = asset.status;
+  const job = asset.job;
+  return React.createElement("div", {
+    "data-mh-screen": true,
+    "data-asset-download-page": true,
+    className: SCREEN_SHELL_CLASS
+  }, React.createElement(ScreenHead, {
+    title: "ダウンロード",
+    accent: "text-emerald-200",
+    onBack: onBack,
+    backLabel: "設定へ戻る"
+  }), React.createElement("div", {
+    className: `${SCREEN_LIST_CLASS} w-full max-w-md mx-auto space-y-3 pb-20`
+  }, React.createElement("p", {
+    className: "px-1 text-[11px] font-bold leading-relaxed text-slate-300"
+  }, "曲や画像を前もってこの端末に入れておくと、はじめて開く画面や曲がすぐ始まります。アップデートで変わったものだけを入れ直し、古いものは自動で消えます。"), asset.supported && !asset.enabled && React.createElement("div", {
+    "data-asset-disabled": true,
+    className: "rounded-xl border border-cyan-400/40 bg-cyan-950/30 px-3 py-2 text-[11px] font-bold leading-relaxed text-cyan-100"
+  }, React.createElement("p", null, "いまはダウンロードを使わない設定になっています。"), React.createElement("button", {
+    type: "button",
+    "data-asset-enable": true,
+    onClick: () => asset.setEnabled(true),
+    className: "mt-2 w-full min-h-[48px] rounded-xl border border-emerald-400/60 bg-emerald-700 px-2 text-[12px] font-black text-white active:scale-95"
+  }, "ダウンロードを使う")), !asset.supported && React.createElement("p", {
+    "data-asset-unsupported": true,
+    className: "rounded-xl border border-amber-400/40 bg-amber-950/30 px-3 py-2 text-[11px] font-bold leading-relaxed text-amber-100"
+  }, "この端末・ブラウザでは前もって入れておくことができません。ふだんどおり、開いたときに読み込みます。"), ASSET_PACKS.map(pack => {
+    const st = packs[pack.id] || {
+      count: 0,
+      bytes: 0,
+      haveCount: 0,
+      haveBytes: 0
+    };
+    const complete = st.count > 0 && st.haveCount >= st.count;
+    const running = job && job.packId === pack.id;
+    const pct = running ? job.bytesTotal > 0 ? Math.floor(job.bytesDone / job.bytesTotal * 100) : 100 : st.bytes > 0 ? Math.floor(st.haveBytes / st.bytes * 100) : 0;
+    return React.createElement("section", {
+      key: pack.id,
+      "data-asset-pack": pack.id,
+      className: `${SCREEN_PANEL_CLASS} w-full text-left`
+    }, React.createElement("div", {
+      className: "flex items-center gap-3"
+    }, React.createElement("span", {
+      "aria-hidden": "true",
+      "data-icon": pack.icon,
+      className: "mh-emoji-icon w-8 shrink-0 text-center text-[22px] leading-none"
+    }), React.createElement("span", {
+      className: "min-w-0 flex-1"
+    }, React.createElement("b", {
+      className: "block text-[14px] font-black leading-tight text-slate-100"
+    }, pack.label, React.createElement("small", {
+      className: "ml-2 text-[11px] font-bold text-slate-400"
+    }, "約", formatAssetMB(st.bytes))), React.createElement("span", {
+      className: "mt-0.5 block text-[10px] font-bold leading-snug text-slate-400"
+    }, pack.desc))), React.createElement("div", {
+      className: "mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-800",
+      role: "progressbar",
+      "aria-valuemin": 0,
+      "aria-valuemax": 100,
+      "aria-valuenow": pct
+    }, React.createElement("div", {
+      className: `h-full rounded-full ${complete && !running ? 'bg-emerald-400' : 'bg-cyan-400'}`,
+      style: {
+        width: `${pct}%`
+      }
+    })), React.createElement("p", {
+      "data-asset-pack-progress": true,
+      className: "mt-1 text-[10px] font-bold text-slate-300"
+    }, running ? `ダウンロード中 ${pct}%(${formatAssetMB(job.bytesDone)} / ${formatAssetMB(job.bytesTotal)})` : complete ? 'この端末に入っています' : st.haveCount > 0 ? `一部が入っています(${formatAssetMB(st.haveBytes)} / ${formatAssetMB(st.bytes)})` : 'まだ入っていません'), running && job.error === 'quota' && React.createElement("p", {
+      className: "mt-1 text-[10px] font-bold text-amber-200"
+    }, "端末の空きが足りないため止まりました。"), React.createElement("div", {
+      className: "mt-2 grid grid-cols-2 gap-2"
+    }, running ? React.createElement("button", {
+      type: "button",
+      "data-asset-cancel": true,
+      onClick: () => asset.cancel(),
+      className: "min-h-[48px] rounded-xl border border-white/20 bg-slate-950 px-2 text-[12px] font-black text-slate-200 active:scale-95"
+    }, "取り消す") : React.createElement("button", {
+      type: "button",
+      "data-asset-download": pack.id,
+      disabled: !asset.supported || !asset.enabled || !!job || complete,
+      onClick: () => asset.download(pack.id),
+      className: "min-h-[48px] rounded-xl border border-emerald-400/60 bg-emerald-700 px-2 text-[12px] font-black text-white active:scale-95 disabled:opacity-40"
+    }, complete ? '入っています' : st.haveCount > 0 ? '残りを入れる' : 'ダウンロード'), React.createElement("button", {
+      type: "button",
+      "data-asset-remove": pack.id,
+      disabled: !asset.supported || st.haveCount === 0,
+      onClick: () => {
+        if (window.confirm(`${pack.label}をこの端末から消しますか？(セーブデータは消えません)`)) asset.remove(pack.id);
+      },
+      className: "min-h-[48px] rounded-xl border border-red-500/40 bg-red-950/50 px-2 text-[12px] font-black text-red-200 active:scale-95 disabled:opacity-40"
+    }, "端末から消す")));
+  }), React.createElement("section", {
+    "data-asset-auto": true,
+    className: `${SCREEN_PANEL_CLASS} w-full text-left`
+  }, React.createElement("b", {
+    className: "block text-[13px] font-black text-slate-200"
+  }, "自動ダウンロード"), React.createElement("p", {
+    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
+  }, "よく使う画像と、選んだ曲・遊んだ曲を、すきまの時間に少しずつ入れます。演奏中は止まり、モバイル回線では控えめです。"), React.createElement("div", {
+    className: "mt-2 grid grid-cols-2 gap-2"
+  }, [{
+    id: true,
+    label: 'する'
+  }, {
+    id: false,
+    label: 'しない'
+  }].map(option => React.createElement("button", {
+    key: String(option.id),
+    type: "button",
+    "data-asset-auto-option": String(option.id),
+    "aria-pressed": asset.auto === option.id,
+    onClick: () => asset.setAuto(option.id),
+    className: `min-h-[48px] rounded-xl px-1 py-1.5 text-[12px] font-black active:scale-95 ${asset.auto === option.id ? 'border border-cyan-400 bg-cyan-600 text-white' : 'border border-white/10 bg-slate-950 text-slate-300'}`
+  }, option.label)))), React.createElement("p", {
+    "data-asset-usage": true,
+    className: `${SCREEN_PANEL_CLASS} w-full text-left text-[10px] font-bold leading-relaxed text-slate-400`
+  }, Number.isFinite(usage) ? `このゲームがこの端末で使っている容量: 約${formatAssetMB(usage)}。` : '', "しばらく遊ばないと、端末が空きを作るために消すことがあります。消えても、開いたときにネットから読み込むので遊べます。セーブデータはここでは消えません。")));
+}
 function SettingsScreen({
   onBack,
   onOpenAudioSettings,
@@ -45839,7 +46586,11 @@ function SettingsScreen({
   battleFxAutoLoad
 }) {
   const [battleSettingsOpen, setBattleSettingsOpen] = useState(false);
+  const [assetDownloadOpen, setAssetDownloadOpen] = useState(false);
   const assistantBubble = useAssistantBubbleState();
+  if (assetDownloadOpen) return React.createElement(AssetDownloadPage, {
+    onBack: () => setAssetDownloadOpen(false)
+  });
   if (battleSettingsOpen) {
     return React.createElement("div", {
       "data-mh-screen": true,
@@ -45952,6 +46703,12 @@ function SettingsScreen({
     desc: "画面ごとにハロウィン／クラシックを選ぶ",
     onClick: onOpenScreenTheme,
     "data-open-screen-theme": true
+  }), React.createElement(SettingsMenuLink, {
+    icon: "📥",
+    label: "ダウンロード",
+    desc: "曲や画像を前もって端末に入れておく",
+    onClick: () => setAssetDownloadOpen(true),
+    "data-open-asset-download": true
   }), React.createElement(SettingsMenuLink, {
     icon: "💾",
     label: "データ引き継ぎ",
@@ -48723,7 +49480,7 @@ function RhythmSongSelectScreen({
   raidChallenge = null
 }) {
   const songs = rhythmDemoSongs(RHYTHM_SONGS);
-  const difficulties = rhythmDemoDifficultyList(RHYTHM_DIFFICULTIES);
+  const difficulties = rhythmDemoDifficultyList(raidChallenge ? RHYTHM_DIFFICULTIES : RHYTHM_PLAY_DIFFICULTIES);
   const eventSongTitles = rhythmEventNotice ? rhythmEventNotice.songIds.map(songId => rhythmSongFullName(rhythmEventSong(songId, RHYTHM_SONGS)) || songId) : [];
   const beatPointReleased = RELEASE_FLAGS.rhythmEventPoints === true;
   const beatPointEvent = beatPointReleased ? rhythmLimitedEventAt(Date.now()) : null;
@@ -73531,6 +74288,7 @@ function MonsterHeroGame() {
   const [rhythmPerfOn, setRhythmPerfOn] = useState(() => RHYTHM_PERF.enabled);
   const [rhythmPerfStats, setRhythmPerfStats] = useState(null);
   const [battlePerfOn, setBattlePerfOn] = useState(() => BATTLE_PERF.enabled);
+  const [assetCacheOn, setAssetCacheOn] = useState(() => ASSET_CACHE.enabled);
   const [rhythmStrip, setRhythmStrip] = useState(() => RHYTHM_STRIP.value);
   const [rhythmCanvasPref, setRhythmCanvasPref] = useState(() => rhythmCanvasNotesPreference());
   const [rhythmGpuBandPref, setRhythmGpuBandPref] = useState(() => rhythmGpuBandPreference());
@@ -74825,6 +75583,8 @@ function MonsterHeroGame() {
   const [kikiIntroStep, setKikiIntroStep] = useState(null);
   const [momosukeIntroStep, setMomosukeIntroStep] = useState(null);
   const [tacticsIntroSeenFlag, setTacticsIntroSeenFlag] = useState(false);
+  const [rhythmHellStorySeenFlag, setRhythmHellStorySeenFlag] = useState(false);
+  const [rhythmHellGuide, setRhythmHellGuide] = useState(null);
   const [tacticsIntroPending, setTacticsIntroPending] = useState(false);
   const [assistantBonds, setAssistantBonds] = useState({});
   const assistantBondsRef = useRef({});
@@ -76267,6 +77027,9 @@ function MonsterHeroGame() {
       ...(preset ? preset.values : {})
     };
   }, [rhythmSettings]);
+  useEffect(() => {
+    if (String(gameState).startsWith('RHYTHM')) ASSET_CACHE.noteSong(rhythmSelectedSongId);
+  }, [rhythmSelectedSongId, gameState]);
   const rhythmPreviewSongId = gameState === 'RHYTHM_MULTI' && rhythmMultiPreviewSongId ? rhythmMultiPreviewSongId : rhythmSelectedSongId;
   const rhythmPreviewSong = rhythmDemoSongs(RHYTHM_SONGS).find(song => song.songId === rhythmPreviewSongId) || null;
   const rhythmPreviewTrackId = rhythmSettings.songPreviewEnabled && RHYTHM_PREVIEW_SCREENS.includes(gameState) && rhythmPreviewSong ? rhythmPreviewSong.bgmTrackId : '';
@@ -79146,6 +79909,11 @@ function MonsterHeroGame() {
           setMomosukeIntroSeenFlag(true);
         } catch {}
       }
+      if (EVENT_REPLAY_RELEASE_FLAGS.rhythmHell) {
+        try {
+          setRhythmHellStorySeenFlag((await storeGet(RHYTHM_HELL_STORY_SEEN_KEY, false, false)) === true);
+        } catch {}
+      }
       if (EVENT_REPLAY_RELEASE_FLAGS.tacticsBattle) {
         const tacticsIntroSeen = await storeGet(TACTICS_INTRO_SEEN_KEY, false, false);
         setTacticsIntroSeenFlag(tacticsIntroSeen === true);
@@ -80426,6 +81194,7 @@ function MonsterHeroGame() {
     kikiIntroSeen: kikiIntroSeenFlag,
     momosukeIntroSeen: momosukeIntroSeenFlag,
     tacticsIntroSeen: tacticsIntroSeenFlag,
+    rhythmHellStorySeen: rhythmHellStorySeenFlag,
     monbeatCupEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(MONBEAT_CUP_STORY_ID),
     monbeatCupThanksSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(MONBEAT_CUP_THANKS_STORY_ID),
     symphonyThanksSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_THANKS_STORY_ID),
@@ -97627,7 +98396,30 @@ function MonsterHeroGame() {
       className: "break-all text-right font-mono text-white"
     }, String(value))))))), React.createElement("div", {
       hidden: rhythmDebugTab !== 'play'
-    }, RHYTHM_PROTO_SONGS.map(song => {
+    }, React.createElement(RhythmSkyLiftSwitch, null), React.createElement("section", {
+      "data-debug-rhythm-hell-story": true,
+      className: "mb-3 rounded-2xl border border-pink-400/50 bg-pink-950/25 p-3"
+    }, React.createElement("h3", {
+      className: "text-xs font-black text-pink-200"
+    }, "HELL のお話と説明（公開前の確認用）"), React.createElement("div", {
+      className: "mt-2 grid grid-cols-2 gap-2"
+    }, React.createElement("button", {
+      type: "button",
+      "data-debug-rhythm-hell-story-play": true,
+      onClick: () => setEventReplay({
+        id: RHYTHM_HELL_STORY_ID,
+        step: 0,
+        debug: true
+      }),
+      className: "min-h-[48px] rounded-xl bg-pink-700 px-2 text-xs font-black text-white"
+    }, "お話を見る（→説明）"), React.createElement("button", {
+      type: "button",
+      "data-debug-rhythm-hell-guide-open": true,
+      onClick: () => setRhythmHellGuide({
+        page: 0
+      }),
+      className: "min-h-[48px] rounded-xl bg-slate-700 px-2 text-xs font-black text-white"
+    }, "説明だけ見る"))), RHYTHM_PROTO_SONGS.map(song => {
       const track = rhythmSongTrack(song);
       return React.createElement("section", {
         key: song.songId,
@@ -97647,13 +98439,13 @@ function MonsterHeroGame() {
         className: "break-all text-[9px] text-slate-400"
       }, "BGM: ", song.bgmTrackId, " / ", track?.src || '未登録')), React.createElement("div", {
         className: "space-y-2"
-      }, RHYTHM_DIFFICULTIES.filter(difficulty => song.difficulties[difficulty.id].notes.length > 0).map(difficulty => {
+      }, RHYTHM_PLAY_DIFFICULTIES.filter(difficulty => song.difficulties[difficulty.id]?.notes?.length > 0).map(difficulty => {
         const chart = song.difficulties[difficulty.id];
         return React.createElement("button", {
           key: difficulty.id,
           type: "button",
           "data-rhythm-proto-start": difficulty.id,
-          className: "min-h-[44px] w-full rounded-xl bg-rose-700 font-black",
+          className: `min-h-[44px] w-full rounded-xl font-black ${difficulty.id === 'HELL' ? 'bg-red-900 ring-1 ring-red-400/70' : 'bg-rose-700'}`,
           onClick: () => {
             setRhythmPlay({
               song,
@@ -97662,7 +98454,7 @@ function MonsterHeroGame() {
             });
             setGameState('RHYTHM_PLAY');
           }
-        }, "試作をプレイ（", difficulty.id, " Lv.", chart.level, "）");
+        }, difficulty.id === 'HELL' ? 'HELL をプレイ' : '試作をプレイ', "（", difficulty.id, " Lv.", chart.level, "）");
       })));
     }), RHYTHM_SONGS.map(song => {
       const track = rhythmSongTrack(song);
@@ -98229,7 +99021,15 @@ function MonsterHeroGame() {
       "data-debug-screen-error": true,
       onClick: () => setDebugThrowScreenError(true),
       className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
-    }, "⚠️ 画面エラーの受け止めを試す"), debugThrowScreenError && React.createElement(DebugThrowScreenError, null))))), gameState === 'RAID_JACK' && React.createElement(RaidJackScreen, {
+    }, "⚠️ 画面エラーの受け止めを試す"), debugThrowScreenError && React.createElement(DebugThrowScreenError, null), React.createElement("button", {
+      type: "button",
+      "data-asset-cache-toggle": true,
+      "aria-pressed": assetCacheOn,
+      onClick: async () => setAssetCacheOn(await ASSET_CACHE.setEnabled(!assetCacheOn)),
+      className: `w-full min-h-[52px] rounded-2xl px-3 py-2 text-left text-[12px] font-black active:scale-95 ${assetCacheOn ? 'border-2 border-emerald-300 bg-emerald-500 text-slate-900' : 'border-2 border-emerald-400/40 bg-emerald-950/30 text-emerald-100'}`
+    }, "📥 事前ダウンロード：", assetCacheOn ? 'ON' : 'OFF', React.createElement("small", {
+      className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
+    }, "設定に「ダウンロード」が出ます。OFFにすると、端末に入れた曲・画像を消します")))))), gameState === 'RAID_JACK' && React.createElement(RaidJackScreen, {
       initialTier: raidJackReturnTierRef.current,
       onBack: () => {
         raidJackReturnTierRef.current = 0;
@@ -100900,7 +101700,19 @@ function MonsterHeroGame() {
     })), React.createElement("button", {
       onClick: () => setShowAssistantPicker(false),
       className: "w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs"
-    }, "閉じる"))), showDebugStoryList && React.createElement("div", {
+    }, "閉じる"))), rhythmHellGuide && React.createElement(RhythmHellGuide, {
+      pageIndex: rhythmHellGuide.page,
+      onPage: page => setRhythmHellGuide(g => g && {
+        ...g,
+        page
+      }),
+      onClose: () => {
+        const g = rhythmHellGuide;
+        setRhythmHellGuide(null);
+        if (g && g.debugList) setShowDebugStoryList(true);
+        if (g && g.fromList) setShowEventReplayList(true);
+      }
+    }), showDebugStoryList && React.createElement("div", {
       "data-debug-story-overlay": true,
       className: "fixed inset-0 flex flex-col items-center justify-center p-5",
       style: {
@@ -102372,6 +103184,21 @@ function MonsterHeroGame() {
         if (event && RHYTHM_EVENT_STORY_IDS.includes(event.id) && !eventReplay.debug) void markRhythmEventStorySeen(event.id);
         if (event && event.id === RAID_JACK_HOWTO_AFTER_STORY_ID && eventReplay.live && !eventReplay.debug && RELEASE_FLAGS.raidJack === true && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(RAID_JACK_STORY_START_ID)) setRhythmEventStoryPending(prev => prev || RAID_JACK_STORY_START_ID);
         if (event && event.id === RAID_JACK_STORY_START_ID && eventReplay.live && !eventReplay.debug && RELEASE_FLAGS.raidJack === true && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(RAID_JACK_HOWTO_STORY_ID)) setRhythmEventStoryPending(prev => prev || RAID_JACK_HOWTO_STORY_ID);
+        if (event && event.id === RHYTHM_HELL_STORY_ID) {
+          if (!eventReplay.debug) {
+            setRhythmHellStorySeenFlag(true);
+            try {
+              storeSet(RHYTHM_HELL_STORY_SEEN_KEY, true, false);
+            } catch {}
+          }
+          setRhythmHellGuide({
+            page: 0,
+            debugList: !!eventReplay.debugList,
+            fromList: !!eventReplay.fromList
+          });
+          setEventReplay(null);
+          return;
+        }
         if (eventReplay.debugList) setShowDebugStoryList(true);
         if (eventReplay.fromList) setShowEventReplayList(true);
         setEventReplay(null);
@@ -102379,6 +103206,21 @@ function MonsterHeroGame() {
       const skip = () => {
         if (eventReplay.live && !eventReplay.debug && event && RHYTHM_EVENT_STORY_IDS.includes(event.id)) void markRhythmEventStorySeen(event.id);
         if (eventReplay.live && !eventReplay.debug && event && event.id === 'tactics_intro') markTacticsIntroSeen();
+        if (event && event.id === RHYTHM_HELL_STORY_ID) {
+          if (eventReplay.live && !eventReplay.debug) {
+            setRhythmHellStorySeenFlag(true);
+            try {
+              storeSet(RHYTHM_HELL_STORY_SEEN_KEY, true, false);
+            } catch {}
+          }
+          setRhythmHellGuide({
+            page: 0,
+            debugList: !!eventReplay.debugList,
+            fromList: !!eventReplay.fromList
+          });
+          setEventReplay(null);
+          return;
+        }
         if (eventReplay.debugList) setShowDebugStoryList(true);
         if (eventReplay.fromList) setShowEventReplayList(true);
         setEventReplay(null);
