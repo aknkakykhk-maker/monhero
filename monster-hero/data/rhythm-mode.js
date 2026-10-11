@@ -1167,7 +1167,7 @@ const RHYTHM_SKY_LIFT_RATIO=.16;
 const RHYTHM_SKY_LOOK=Object.freeze({
   arc:Object.freeze({rgb:'214,224,240',alpha:.46,minHalfWidthPx:4.5,edgeAlpha:.75,edgePx:1.2}),  // edge=帯の左右の白い縁(紫の床の上でも「白い帯」に見せる)
   core:Object.freeze({rgb:'255,255,255',alpha:.9,widthPx:3}),
-  box:Object.freeze({farDim:.45,fill:'205,218,238',fillAlpha:.16,topAlpha:.62,topRatio:.36,frontFill:'200,215,240',frontAlpha:.4,thickRatio:.3,edge:'255,255,255',edgePx:1.6,minFacePx:5}),
+  box:Object.freeze({aspect:.2,farDim:.45,fill:'205,218,238',fillAlpha:.16,topAlpha:.62,topRatio:.36,frontFill:'200,215,240',frontAlpha:.4,thickRatio:.3,edge:'255,255,255',edgePx:1.6,minFacePx:5}),
   shadow:Object.freeze({rgb:'6,3,20',alpha:.22,radiusPx:3,insetPx:3,lineAlpha:.28,fadeRatio:.14}),
   star:Object.freeze({rgb:'255,255,255',radiusPx:17}),
   line:Object.freeze({bandRgb:'150,118,235',bandAlpha:.38,bandPx:6,coreRgb:'165,135,245',coreAlpha:.95,corePx:2}),
@@ -30378,7 +30378,9 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   const skyZOn=()=>skyTapStyle()==='plate';
   // 空中タップの箱(2026-10-11・社長「白い部分の縦幅を小さく。白い箱が縁の延長みたいにあるだけで見分けがつく」):
   // ふつうのノーツの板と同じ薄さの「枠」が主・本体はほぼ透明(後ろの道や地上ノーツが見える)・上の面と手前の縁だけ明るく・厚みは控えめ
-  const skyBoxDims=(hd,opts)=>{const L=RHYTHM_SKY_LOOK.box,ds=Number(opts.depthScale)||1,faceH=Math.max(L.minFacePx,hd.h*ds),thick=Math.max(2,faceH*L.thickRatio),W=Math.max(10,hd.w*sizeScale);return {faceH,thick,W};};
+  // 箱の全体の高さ(上の面+手前の厚み)は「幅×aspect(参考は0.20)」。今の高さ(板の高さ×奥行き×1.3)が上限・最小は6px。
+  // 幅の狭い縦画面で、縦に厚い四角にならないように(2026-10-11 参考動画の測定: 箱は全体 21.5px/幅107px=0.20)
+  const skyBoxDims=(hd,opts)=>{const L=RHYTHM_SKY_LOOK.box,ds=Number(opts.depthScale)||1,W=Math.max(10,hd.w*sizeScale),capH=Math.max(L.minFacePx,hd.h*ds)*(1+L.thickRatio),total=Math.max(6,Math.min(capH,W*L.aspect)),faceH=total/(1+L.thickRatio),thick=total-faceH;return {faceH,thick,W};};
   const drawGlassBox=(hd,opts)=>{
     const L=RHYTHM_SKY_LOOK.box,{faceH,thick,W}=skyBoxDims(hd,opts),x0=hd.cx-W/2,y0=hd.cy-faceH/2;
     // 奥の箱ほど枠・面を少し暗く(込み合う所で白い枠が格子のように交わって数えにくくならないように)
