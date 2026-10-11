@@ -137,7 +137,7 @@ async function runOnce(o) {
     await cdp.send('Profiler.enable'); await cdp.send('Profiler.setSamplingInterval', { interval: 500 }); await cdp.send('Profiler.start');
     // メインスレッドの「CPU を本当に使った時間」(トレースの tdur)。GPU の仕事を待っている間(SwiftShader が遅いと長い)は数えない
     // breakdown のときは、メインスレッドの仕事の種類(スタイル・レイアウト・塗り・JS など)も取る
-    await browser.startTracing(page, { categories: o.breakdown ? ['toplevel', 'devtools.timeline', 'blink', 'v8'] : ['toplevel'] });
+    await browser.startTracing(page, { categories: o.breakdown ? ['toplevel', 'devtools.timeline', 'blink', 'v8', ...(o.traceCats || [])] : ['toplevel'] });
     const t0 = Date.now();
     // 終わり: 曲の時刻が TO を過ぎた、または曲が終わった(rhythmSongMs が null に戻る)
     await page.waitForFunction((b) => { const ms = window.__mhTestHooks?.rhythmSongMs?.(); return ms == null || ms >= b; }, TO, { timeout: 900000, polling: 'raf' });
@@ -212,7 +212,7 @@ async function runOnce(o) {
       breakdown = { other: [...other.entries()].map(([k, v]) => [k, v / 1000 / frames]).sort((a, b) => b[1] - a[1]).slice(0, 30), paints: [...paints.entries()].sort((a, b) => b[1].area - a[1].area).slice(0, 20).map(([id, v]) => ({ id, n: v.n, areaPerFrame: v.area / frames })), self: per(self, 1000).slice(0, 150), incl: (o.funcs || []).map(k => [k, (incl.get(k) || 0) / 1000 / frames]), long: raw.ft.filter(([ms]) => ms != null && ms >= FROM && ms < TO).sort((a, b) => b[1] - a[1]).slice(0, 25).map(([ms, d]) => [Math.round(ms), Math.round(d)]), kinds: per(kinds, 1000).slice(0, 30), files: per(byFile, 1000).slice(0, 15), kinds2: per(kinds2, 1000).slice(0, 40), threads: per(threads, 1000).slice(0, 20) };
     }
     // o.atEnd(page, cdp, breakdown): 測り終わりにページを調べる(塗り直した要素の名前を引くなど)
-    const atEnd = typeof o.atEnd === 'function' ? await o.atEnd(page, cdp, breakdown) : null;
+    const atEnd = typeof o.atEnd === 'function' ? await o.atEnd(page, cdp, breakdown, o.keepTrace ? events : null) : null;
     return {
       song: o.song, diff: o.diff, draw: o.draw || 'auto', cpu: o.cpu || 1, size: `${W}x${H}`, renderer, backend: info.backend, band: info.band,
       range: [FROM, TO], wallSec, notes: info.notes, judged: judged.length, miss: judged.filter(r => r.j === 'MISS').length,
