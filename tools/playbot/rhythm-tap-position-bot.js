@@ -150,7 +150,7 @@ const mime = f => ({ '.js': 'application/javascript', '.html': 'text/html', '.cs
     const OFF = 20;   // 指は線ちょうどより少し上や下を押しがち。上下 20px でも見る
     return n.map((x, i) => { const d = window.__drawnAtLine(x.index ?? i); const t = x._rhythmOriginalType || x.type;
       return { index: x.index ?? i, timeMs: Number(x.timeMs), type: t, sky: (Number(x.skyHeight) || 0) > 0 || (t === 'SLIDE' && window.__slideSkyAt && window.__slideSkyAt(x, Number(x.timeMs)) >= .5),
-        judgment: r[i] && r[i].judgment || null,
+        judgment: r[i] && r[i].judgment || null, deltaMs: r[i] && Number.isFinite(r[i].deltaMs) ? Math.round(r[i].deltaMs) : null,
         drawn: d ? { cx: +d.cx.toFixed(1), w: +d.w.toFixed(1), dy: +d.dy.toFixed(1), subL: sub(d.cx - d.w * .4), subC: sub(d.cx), subR: sub(d.cx + d.w * .4),
           up: [-.4, 0, .4].map(k => sub(d.cx + d.w * k, -OFF)), down: [-.4, 0, .4].map(k => sub(d.cx + d.w * k, OFF)), downAlt: [-.4, 0, .4].map(k => alt(d.cx + d.w * k, OFF)) } : null }; });
   }).catch(() => []);
