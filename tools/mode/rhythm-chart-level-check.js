@@ -122,13 +122,15 @@ const runtime=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js')
   check('Sheriruth HELL の譜面が見つかる(公開曲かデバッグの試作の枠)',!!(hell&&hell.notes&&hell.notes.length));
   if(hell&&master){
     // 公開前は表(RHYTHM_CHART_LEVELS)を通らないので、譜面に書いた Lv. が式の値と一致しているかも見る
-    check('Sheriruth HELL の Lv. が式で出した値と同じ',hell.level===chartLevel(hell).level,`譜面 Lv.${hell.level} / 式 Lv.${chartLevel(hell).level}`);
+    // 社長の値(LEVEL_OVERRIDES の sheriruth_hell_debug)があればその値、無ければ式の値と同じか
+    {const {shownLevel,LEVEL_OVERRIDES}=require('./rhythm-chart-level.js');const want=shownLevel('sheriruth_hell_debug','HELL',hell),over=(LEVEL_OVERRIDES.sheriruth_hell_debug||{}).HELL;
+      check(`Sheriruth HELL の Lv. が${Number.isFinite(over)?'社長の値':'式で出した値'}と同じ`,hell.level===want,`譜面 Lv.${hell.level} / ${Number.isFinite(over)?`社長の値 Lv.${over}・`:''}式 Lv.${chartLevel(hell).level}`);}
     const back=chartStrain(grounded(hell)),masterStrain=chartStrain(master),hellStrain=chartStrain(hell);
     check('Sheriruth HELL の空中を地上へ戻すと、空中のぶんだけ生の値が下がる',back.raw<hellStrain.raw&&back.parts.skySwitch===0&&hellStrain.parts.skySwitch>0,
       `戻した HELL ${back.raw}(切り替え ${back.parts.skySwitch}) / HELL ${hellStrain.raw}(切り替え ${hellStrain.parts.skySwitch})`);
     // 空中があるだけで2割増し(2026-10-11 社長): HELL の Lv. は、空中を地上と見なした Lv. の SKY_LEVEL_FACTOR 倍
     {const {SKY_LEVEL_FACTOR}=require('./rhythm-chart-level.js');const groundLv=chartLevel(grounded(hell)).level;
-      check(`Sheriruth HELL の Lv. は、空中を地上と見なした Lv. の ${SKY_LEVEL_FACTOR} 倍`,hell.level===Math.round(groundLv*SKY_LEVEL_FACTOR),`HELL Lv.${hell.level} / 地上と見なして Lv.${groundLv}`);}
+      check(`Sheriruth HELL の式の Lv. は、空中を地上と見なした Lv. の ${SKY_LEVEL_FACTOR} 倍`,chartLevel(hell).level===Math.round(groundLv*SKY_LEVEL_FACTOR),`式 Lv.${chartLevel(hell).level} / 地上と見なして Lv.${groundLv}`);}
     check('Sheriruth HELL は空中のぶん MASTER より重い',hellStrain.raw>masterStrain.raw&&hell.level>master.level,
       `HELL 生${hellStrain.raw} Lv.${hell.level} / MASTER 生${masterStrain.raw} Lv.${master.level}`);
   }
