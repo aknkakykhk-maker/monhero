@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 671e2d77a8c6a34d
+// source-sha256: 535ea88e417498e8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-11 14:34";
+const BUILD_DATE = "2026-10-11 14:46";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -33249,21 +33249,14 @@ const RhythmTapTest = ({
           const settled = RHYTHM_GESTURE_RUNTIME.settleHeld?.(note, songTimeMs);
           const own = settled === null ? rhythmReleaseFallback(note, songTimeMs, settings.judgmentTimingOffsetMs) : null;
           if (own) {
-            if (own.expiredWhileHeld) {
-              note._rhythmCompletedBy = 'held-own';
-              applyJudgment(note, 'MISS', own.deltaMs);
-            }
-          } else if (settled !== false && songTimeMs >= note.endTimeMs + settings.judgmentTimingOffsetMs) {
-            note._rhythmCompletedBy = 'held';
-            applyJudgment(note, note.holdJudgment || 'MISS', note.holdDeltaMs || 0);
-          }
+            if (own.expiredWhileHeld) applyJudgment(note, 'MISS', own.deltaMs);
+          } else if (settled !== false && songTimeMs >= note.endTimeMs + settings.judgmentTimingOffsetMs) applyJudgment(note, note.holdJudgment || 'MISS', note.holdDeltaMs || 0);
         }
         if (!note.done && note.activePointerId === null && note.releasedAtMs != null) {
           const holdEndMs = note.endTimeMs + settings.judgmentTimingOffsetMs;
           if (songTimeMs >= holdEndMs - RHYTHM_HOLD_RELEASE_GRACE_MS) {
             note.releasedAtMs = null;
             rhythmFloatingNoteRemove(note);
-            note._rhythmCompletedBy = 'floating-end';
             applyJudgment(note, note.holdJudgment || 'MISS', note.holdDeltaMs || 0);
           } else if (songTimeMs - note.releasedAtMs >= RHYTHM_HOLD_HANDOVER_GRACE_MS) {
             const releasedAt = note.releasedAtMs;
@@ -33748,8 +33741,7 @@ const RhythmTapTest = ({
             endFlick: note.endFlick === true,
             releaseDone: note._rhythmReleaseDone === true,
             releaseJudgment: note._rhythmReleaseJudgment ?? null,
-            releaseDeltaMs: Number.isFinite(note._rhythmReleaseDeltaMs) ? note._rhythmReleaseDeltaMs : null,
-            completedBy: note._rhythmCompletedBy ?? null
+            releaseDeltaMs: Number.isFinite(note._rhythmReleaseDeltaMs) ? note._rhythmReleaseDeltaMs : null
           })) : null;
         },
         rhythmNotes: () => {
@@ -33992,7 +33984,6 @@ const RhythmTapTest = ({
       }
       if (now >= holdEndMs - RHYTHM_HOLD_RELEASE_GRACE_MS) {
         const own = rhythmReleaseFallback(note, now, settings.judgmentTimingOffsetMs);
-        note._rhythmCompletedBy = own ? 'ended-own' : 'ended';
         if (own) applyJudgment(note, own.judgment, own.deltaMs);else applyJudgment(note, note.holdJudgment || 'MISS', note.holdDeltaMs || 0);
       } else {
         note.releasedAtMs = now;
