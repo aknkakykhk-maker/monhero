@@ -3060,6 +3060,8 @@ const rhythmTouchNoInputMisses=(notes,inputTimes)=>{
   });
   return {misses,noInput};
 };
+// 交差の持ち替えで指と帯を結び直した回数(検査・ボットが読む)
+const RHYTHM_SLIDE_SWAPS={count:0};
 const RHYTHM_GESTURE_RUNTIME=(()=>{
   const positions=new Map(),sessions=new Map();
   let raf=0;
@@ -3197,6 +3199,50 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
     // 追従が外れたことを理由にMISSにしてはいけない。
     session.trackingBadSincePerf=null;
   };
+  // SLIDE の帯から指が外れているか(追従の測り方そのもの)。pos が無いときは外れ
+  const slideFingerOff=(session,pos,chartNow)=>{
+    if(!session||!session.note||!pos)return true;
+    const target=rhythmSlideExpectedLane(session.note,chartNow),tolerance=rhythmSlideTrackingTolerance(session.note,chartNow);
+    const atLine=laneCoordinate(pos.clientX,pos.clientY);
+    const areaBox=areaRect();
+    const atFinger=areaBox?rhythmLaneCoordinateAtPoint(pos.clientX,pos.clientY,areaBox):null;
+    const off=actual=>actual===null||Math.abs(actual-target)>tolerance;
+    // 空中の段(試作・2026-10-10 社長「空中スライドのとき長押ししてたら、位置を合わせなくても勝手に判定オッケーになってない?」):
+    // 判定ラインより上を押さえた指は、見えている帯と同じ「判定ラインの幅で測った位置」(atFinger)だけで見る。
+    // 判定ラインの高さに直した位置(atLine)は奥の狭い道幅から外へ引き延ばすので、2つの許し幅を合わせると地上より広くなり、
+    // 指を動かさなくても1.5レーンほど動くアークを最後まで取れていた。空中の段が無い曲(既存の全曲)は今までどおり
+    const skyFinger=typeof RHYTHM_SKY_INPUT!=='undefined'&&RHYTHM_SKY_INPUT.active&&areaBox&&((Number(pos.clientY)-areaBox.top)/areaBox.height)<RHYTHM_JUDGMENT_LINE_Y.ratio;
+    return skyFinger?off(atFinger):off(atLine)&&off(atFinger);
+  };
+  // 【2026-10-11 社長「交差のときは指を置き換えている(右で押していた帯を、交わったら左の指で押さえる)」】
+  // 2本の SLIDE が交わる所では、親指を交差させずに、帯を反対の指へ持ち替えるのが横持ちの自然な押し方。
+  // 指はそれぞれの側に残り、帯のほうが入れ替わるので、帯を押さえ始めた指に縛ると、どちらの帯も「指が外れた」(暗くなる・判定の点を落とす)になっていた。
+  // 指 A が帯 X から外れたとき、別の指 B が押さえている帯 Y について「A は Y の上・B は X の上・B も Y から外れている」なら、指と帯を結び直す。
+  //   ・1本の指で2本の帯を満たすことは今までどおり認めない(結び直すには、2本の指がそれぞれ相手の帯の上にいることが要る)
+  //   ・指を交差させて追う遊び方は、どちらの指も自分の帯の上にいるので何も起きない
+  //   ・空中の段のあるスライド(手の色が決まっている)・終点フリックの受付中・本体が応じないときは結び直さない
+  // 本体(30-rhythm-play.jsx)の「指→ノーツ」の表も同じ瞬間に入れ替える(setSlideSwapListener)。本体が応じなければ何もしない
+  let slideSwapListener=null;
+  const setSlideSwapListener=fn=>{slideSwapListener=typeof fn==='function'?fn:null;};
+  const slideSwapAcrossFingers=session=>{
+    if(!slideSwapListener||!session||session.kind!=='SLIDE'||session.finished||session.endFlickArmed||!session.note||session.note.done||rhythmSlideHasSky(session.note))return false;
+    const key=session.key,myPos=positions.get(key);
+    if(!myPos)return false;
+    for(const [otherKey,other] of sessions){
+      if(otherKey===key||!other||other===session||other.kind!=='SLIDE'||other.finished||other.endFlickArmed||!other.note||other.note.done||rhythmSlideHasSky(other.note))continue;
+      const otherPos=positions.get(otherKey);
+      if(!otherPos)continue;
+      const myNow=estimatedSongMs(session)-session.offsetMs,otherNow=estimatedSongMs(other)-other.offsetMs;
+      if(slideFingerOff(other,myPos,otherNow)||slideFingerOff(session,otherPos,myNow)||!slideFingerOff(other,otherPos,otherNow))continue;
+      if(slideSwapListener(key,otherKey,session.note,other.note)!==true)return false;
+      sessions.set(key,other);sessions.set(otherKey,session);
+      other.key=key;session.key=otherKey;
+      session.trackingBadSincePerf=null;other.trackingBadSincePerf=null;
+      RHYTHM_SLIDE_SWAPS.count++;
+      return true;
+    }
+    return false;
+  };
   const evaluatePosition=(session,pos)=>{
     if(!session||session.finished||session.note.done||!pos)return;
     if(session.kind==='FLICK'){
@@ -3265,17 +3311,10 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
       // SLIDEは動く的を追うので、これまでどおり判定ラインの高さに直した位置で測る。
       // 加えて、指のその場の高さ(タップと同じ測り方)で測った位置も的の中なら、外れとは数えない。
       // 判定ラインより奥を押さえた指が中央寄りへずれて見えて、帯の上なのに外れになるのを防ぐ(厳しくなることはない)。
-      const target=rhythmSlideExpectedLane(session.note,chartNow),tolerance=rhythmSlideTrackingTolerance(session.note,chartNow);
-      const atLine=laneCoordinate(pos.clientX,pos.clientY);
       const areaBox=areaRect();
-      const atFinger=areaBox?rhythmLaneCoordinateAtPoint(pos.clientX,pos.clientY,areaBox):null;
-      const off=actual=>actual===null||Math.abs(actual-target)>tolerance;
-      // 空中の段(試作・2026-10-10 社長「空中スライドのとき長押ししてたら、位置を合わせなくても勝手に判定オッケーになってない?」):
-      // 判定ラインより上を押さえた指は、見えている帯と同じ「判定ラインの幅で測った位置」(atFinger)だけで見る。
-      // 判定ラインの高さに直した位置(atLine)は奥の狭い道幅から外へ引き延ばすので、2つの許し幅を合わせると地上より広くなり、
-      // 指を動かさなくても1.5レーンほど動くアークを最後まで取れていた。空中の段が無い曲(既存の全曲)は今までどおり
-      const skyFinger=typeof RHYTHM_SKY_INPUT!=='undefined'&&RHYTHM_SKY_INPUT.active&&areaBox&&((Number(pos.clientY)-areaBox.top)/areaBox.height)<RHYTHM_JUDGMENT_LINE_Y.ratio;
-      bad=skyFinger?off(atFinger):off(atLine)&&off(atFinger);
+      bad=slideFingerOff(session,pos,chartNow);
+      // 交差の持ち替え(slideSwapAcrossFingers): 外れたのが、2本の帯が入れ替わって相手の指の上へ移っただけなら、指と帯を結び直して外れにしない
+      if(bad&&slideSwapAcrossFingers(session))return;
       // 描き分け用(試作): いま指が帯から外れているか・指の位置(プレイエリアの中の px)。印の見せ方が読む(判定には使わない)
       if(session.note&&rhythmSlideHasSky(session.note)){session.note._trackOff=!!bad;session.note._trackFinger=areaBox?{x:Number(pos.clientX)-areaBox.left,y:Number(pos.clientY)-areaBox.top}:null;}
     }else if(chartNow>=Number(session.note?.endTimeMs)-RHYTHM_HOLD_END_TRACKING_SKIP_MS){
@@ -3531,7 +3570,7 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
     // この指の見回りが無い(タッチ側の記録が途中で外れた): 本体が rhythmReleaseFallback で決める
     return null;
   };
-  return {bind,settleHeld,setInputAge,record,release,clear,slideVisualLaneForIndex,slideOffForIndex,invalidateAreaRect,areaRect,_sessions:sessions};
+  return {bind,settleHeld,setInputAge,record,release,clear,slideVisualLaneForIndex,slideOffForIndex,invalidateAreaRect,areaRect,setSlideSwapListener,_sessions:sessions};
 })();
 
 // iPhoneのTouch.radiusXを既存projectionへ通し、実際の接触幅に応じたサブレーン領域として扱う。
@@ -25036,9 +25075,9 @@ const grievousLadyExpertNotes=((t,h,f,s)=>[
   t(132240,1,3),t(132311,4,3),t(132383,0,3),t(132454,4,3),
   t(132526,0,3),t(132669,4,3),t(132954,1,3),t(133026,6,3),
   t(133097,1,3),t(133383,1,3),t(133526,7,2),t(133740,7,2),
-  t(134169,2,2),t(134169,8,2),t(136811,6,2),t(137026,5,2),
-  t(137097,3,2),t(137811,5,2),t(138383,5,2),h(138383,0,3,138526),
-  s(138669,139097,[[138669,2.5,2,0],[139097,2.5,2,0]],0),t(139097,3,2),
+  t(134169,2,2),t(134169,8,2),t(134597,9,2),s(134883,136669,[[134883,3.5,2,0],[136669,3,2,0]],0),
+  t(136811,6,2),t(137026,5,2),t(137097,3,2),t(137811,5,2),
+  t(138383,5,2),h(138383,0,3,138526),s(138669,139097,[[138669,2.5,2,0],[139097,2.5,2,0]],0),t(139097,3,2),
 // </grievous-lady-v3-expert-notes>
 ])(mhTap,mhHoldV2,mhFlick,mhSlideV2);
 const grievousLadyMasterNotes=((t,h,f,s)=>[
@@ -25192,8 +25231,9 @@ const grievousLadyMasterNotes=((t,h,f,s)=>[
   t(132669,4,3),t(132740,0,3),t(132954,1,3),t(133026,6,3),
   t(133097,1,3),t(133169,6,3),t(133311,6,3),t(133383,1,3),
   t(133526,7,2),t(133740,7,2),t(134169,2,2),t(134169,8,2),
-  t(136811,6,2),t(137026,5,2),t(137097,3,2),t(137811,5,2),
-  t(138383,5,2),h(138383,0,3,138526),s(138669,139097,[[138669,2.5,2,0],[139097,2.5,2,0]],0),t(139097,3,2),
+  t(134597,3,2),t(134597,9,2),s(134883,136669,[[134883,3.5,2,0],[136669,3,2,0]],0),t(136811,6,2),
+  t(137026,5,2),t(137097,3,2),t(137811,5,2),t(138383,5,2),
+  h(138383,0,3,138526),s(138669,139097,[[138669,2.5,2,0],[139097,2.5,2,0]],0),t(139097,3,2),
 // </grievous-lady-v3-master-notes>
 ])(mhTap,mhHoldV2,mhFlick,mhSlideV2);
 // 流れる速さの表(2026-10-11・参考動画を1コマずつ測った形。社長「止まったり、さらに前に行ったり後ろに戻ったり」)。全難易度で同じ表を使う。
@@ -25202,17 +25242,17 @@ const grievousLadyMasterNotes=((t,h,f,s)=>[
 // A 拍56〜64: 拍56で叩く所でだんだん止まり → 減速しながら奥へ戻る(画面の高さ39%→9%) → 止まる → 流れ出して、判定線へ近づきながら速さを落とし、拍64で着いた瞬間にふだんの速さ(段差なし)
 // B 拍328〜336.5: 全部のノーツがそろって、ばねのように弾む(88%→28%→91%→35%→91%) → 奥へ戻る → だんだん加速して拍336.5で着いた瞬間にふだんの速さ(段差なし)。
 //   最後の戻り先は、流れ出し(0からふだんの速さまで)が動ける分で決まる(ノーツ速度が遅いほど判定線寄り・'GLIDE' の 'REST')
-// C 拍460.3〜464.25: 拍461.75 の同時押しは画面の高さ46%で待ち(組1)、判定線へ近づきながら減速して、着いた瞬間にふだんの速さ。
-//   後ろのノーツは止まって待ち、拍461.15〜461.7 に道の16%だけ小さく沈んで戻る(ばね) → 0からふだんの速さまでだんだん加速して拍464.25(一気に落とさない)
+// C 拍460.3〜463.25: 拍461.75 の同時押しは画面の高さ46%で待ち(組1)、判定線へ近づきながら減速して、着いた瞬間にふだんの速さ。
+//   後ろのノーツ(先頭は拍463.25 の2個)は12%で止まって待ち、拍461.15〜461.75 に 12→4→12% と小さく沈んで戻る(ばね) → 判定線へ近づきながら減速して、拍463.25 で着いた瞬間にふだんの速さ
 // 判定の時刻は音楽どおり(見た目の位置だけが変わる)。判定の前に判定線へ触れるノーツは0個(rhythmScrollEarlyTouches・grievous-lady-scroll-check.js)
-const GRIEVOUS_LADY_SCROLL_CHANGES=Object.freeze([[18154.3,"LERP",1],[18240,"GLIDE",-0.4169,0.05],[19768.6,"GLIDE",0],[19840,"GLIDE",0.8018,0.08],[20525.7,1],[95954.3,"LERP",1],[96054.3,"GLIDE",0],[96211.4,"GLIDE",-0.4553,0.3],[96382.9,"GLIDE",0],[96497.1,"GLIDE",0.469,0.55],[96668.6,"GLIDE",-0.3882,0.3],[96797.1,"GLIDE",0],[96834.3,"GLIDE",0.3882,0.5],[96940,"GLIDE",0],[97200,"GLIDE",0.0381,0.15,"REST"],[97625.7,"LERP",0],[98382.9,1],[133740,"LERP",1],[133782.9,"GLIDE",0],[133997.1,"GLIDE",-0.16,0.5],[134054.3,"GLIDE",0.16,0.5],[134154.3,"GLIDE",0],[134411.4,"LERP",0],[134882.9,1]].map(row=>Object.freeze(row)));
+const GRIEVOUS_LADY_SCROLL_CHANGES=Object.freeze([[18154.3,"LERP",1],[18240,"GLIDE",-0.4169,0.05],[19768.6,"GLIDE",0],[19840,"GLIDE",0.8018,0.08],[20525.7,1],[95954.3,"LERP",1],[96054.3,"GLIDE",0],[96211.4,"GLIDE",-0.4553,0.3],[96382.9,"GLIDE",0],[96497.1,"GLIDE",0.469,0.55],[96668.6,"GLIDE",-0.3882,0.3],[96797.1,"GLIDE",0],[96834.3,"GLIDE",0.3882,0.5],[96940,"GLIDE",0],[97200,"GLIDE",0.0381,0.15,"REST"],[97625.7,"LERP",0],[98382.9,1],[133740,"LERP",1],[133782.9,"GLIDE",0],[133997.1,"GLIDE",-0.1599,0.5],[134068.6,"GLIDE",0.1599,0.5],[134168.6,"GLIDE",0.7458,0.08],[134597.1,1]].map(row=>Object.freeze(row)));
 // 組1(待っている同時押し): 参考では C の拍461.75 に叩く2個だけが判定線の近くで待ち、後ろのノーツだけが止まる・飛ぶ・戻るを見せていた。
 // その2個に scrollGroup:1 を付け、この表で流す(拍460.3〜460.95 待つ)
 const GRIEVOUS_LADY_SCROLL_GROUPS=Object.freeze({1:Object.freeze([[133654.3,"LERP",1],[133754.3,"GLIDE",0],[133940,"GLIDE",0.3195,0.1],[134168.6,1]].map(row=>Object.freeze(row)))});
 const GRIEVOUS_LADY_WAITING_MS=Object.freeze([134168.6]);
 // 演出の最中は判定線へノーツを来させない(参考どおり。2026-10-11 社長「動く演出の最中にノーツが来ていない。そこもちゃんと参考にしてる?」)。
 // [始まり,終わり] の間に時刻か終わりがかかるノーツを外す。ただし C の拍461.75(参考で同時押しを2個叩く所)だけは残す
-const GRIEVOUS_LADY_QUIET_SPANS=Object.freeze([[18240,20525.7],[95954.3,98382.9],[133811.4,134882.9]].map(row=>Object.freeze(row)));
+const GRIEVOUS_LADY_QUIET_SPANS=Object.freeze([[18240,20525.7],[95954.3,98382.9],[133811.4,134596.6]].map(row=>Object.freeze(row)));
 const GRIEVOUS_LADY_QUIET_KEEP_MS=134168.6;
 const grievousLadyQuiet=notes=>Object.freeze(notes
   .map(note=>GRIEVOUS_LADY_WAITING_MS.some(at=>Math.abs(Number(note.timeMs)-at)<=40)?Object.freeze({...note,scrollGroup:1}):note)
@@ -25729,9 +25769,9 @@ const grievousLadyHellBaseNotes=((t,h,f,s,T,F,S)=>[
   t(132740,0,3),t(132954,1,3),T(133026,6,3),t(133097,1,3),
   T(133169,6,3),T(133311,6,3),T(133383,8,3),T(133454,5,3),
   T(133526,7,2),T(133740,7,2),T(134169,2,2),T(134169,8,2),
-  S(134883,136669,[[134883,3.5,2,1,0],[136669,3,2,1,0]],0,'R'),S(134883,136954,[[134883,1,2,0.75,0],[134954,1,2,1,0],[135169,2,2,1,0],[135454,1.5,2,1,0],[135740,2,2,1,0],[136597,1.5,2,1,0],[136954,2,2,1,0]],0,'L'),T(136811,6,2),T(137026,7,2),
-  T(137097,5,2),T(137811,5,2),T(138383,5,2),h(138383,0,3,138526),
-  S(138669,139097,[[138669,2.5,2,0.75,0],[139097,2.5,2,0.75,0]],0,'R'),T(139097,3,2),
+  T(134597,3,2),T(134597,7,2),S(134883,136669,[[134883,3.5,2,1,0],[136669,3,2,1,0]],0,'R'),S(134883,136954,[[134883,1,2,0.75,0],[134954,1,2,1,0],[135169,2,2,1,0],[135454,1.5,2,1,0],[135740,2,2,1,0],[136597,1.5,2,1,0],[136954,2,2,1,0]],0,'L'),
+  T(136811,6,2),T(137026,7,2),T(137097,5,2),T(137811,5,2),
+  T(138383,5,2),h(138383,0,3,138526),S(138669,139097,[[138669,2.5,2,0.75,0],[139097,2.5,2,0.75,0]],0,'R'),T(139097,3,2),
 // </grievous-lady-hell-notes>
 ])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
 const grievousLadyHellNotes=grievousLadyQuiet(grievousLadyHellBaseNotes);
@@ -27843,7 +27883,7 @@ const RHYTHM_CHART_LEVELS = Object.freeze({
   anima:Object.freeze({EASY:8,NORMAL:11,HARD:17,EXPERT:26,MASTER:44}),
   journey:Object.freeze({EASY:7,NORMAL:10,HARD:15,EXPERT:23,MASTER:36}),
   sheriruth:Object.freeze({EASY:9,NORMAL:14,HARD:22,EXPERT:33,MASTER:35}),
-  grievous_lady:Object.freeze({EASY:12,NORMAL:16,HARD:22,EXPERT:35,MASTER:49}),
+  grievous_lady:Object.freeze({EASY:12,NORMAL:16,HARD:22,EXPERT:35,MASTER:50}),
   against_my_own_shadow:Object.freeze({EASY:7,NORMAL:9,HARD:12,EXPERT:22,MASTER:29}),
   atsu_cup_theme_debug_short:Object.freeze({HARD:9}),
 // </rhythm-chart-levels>
