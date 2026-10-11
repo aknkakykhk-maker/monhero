@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2a719462761c8cc0
+// generated-sha256: 6fe8b51568ebaee1
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-11 23:35"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-11 23:42"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -22264,7 +22264,10 @@ scheduleTick();};
     ジャケットの大きさは画面の高さから決める(横持ち・360×640 でも文字まで収まる)。
     動きは index.html の [data-rhythm-song-intro] が持つ。出る動きは長さによらず同じで、閉じるときだけ data-intro-closing で消す
     (準備を待って延びても、途中で消えかけない)。タップで飛ばせる(マルチは飛ばせない) */}
-{songIntro&&(()=>{const introHint=songIntro.skipped?'まもなく はじまります':songIntro.skippable&&!songIntro.short?'タップでとばす':'',introCredit=rhythmSongIntroCredit(song),introLevel=Number(chart?.level),introColor=RHYTHM_SONG_INTRO_DIFFICULTY_COLORS[difficulty.id]||'#64748b';return <div key={songIntro.key} data-rhythm-song-intro data-intro-short={songIntro.short?'1':undefined} data-intro-closing={songIntro.closing?'1':undefined} data-intro-layout={isLandscape?'landscape':'portrait'} role="status" aria-live="polite" onPointerDown={songIntro.skippable?event=>{event.stopPropagation();skipSongIntro();}:undefined} style={{position:'absolute',inset:0,zIndex:45,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:isLandscape?'10px':'16px',padding:'12px calc(16px + var(--mh-sa-right,0px)) 12px calc(16px + var(--mh-sa-left,0px))',pointerEvents:'auto','--intro-close-ms':`${RHYTHM_SONG_INTRO_CLOSE_MS}ms`}}>
+{songIntro&&(()=>{const introTitle=rhythmSongFullName(song),
+  // 横持ちの曲名の字の大きさ。文字の幅(英数字はおよそ0.6字ぶん・かな漢字は1字ぶん)と、置ける幅から決める(20px〜13px)
+  introTitleFont=(()=>{const avail=Math.min((typeof window!=='undefined'?window.innerWidth:844)*.72,560)-16,em=[...String(introTitle)].reduce((n,ch)=>n+(/[\x20-\x7e]/.test(ch)?.6:1),0);return Math.max(13,Math.min(20,Math.floor(avail/Math.max(1,em))));})(),
+  introHint=songIntro.skipped?'まもなく はじまります':songIntro.skippable&&!songIntro.short?'タップでとばす':'',introCredit=rhythmSongIntroCredit(song),introLevel=Number(chart?.level),introColor=RHYTHM_SONG_INTRO_DIFFICULTY_COLORS[difficulty.id]||'#64748b';return <div key={songIntro.key} data-rhythm-song-intro data-intro-short={songIntro.short?'1':undefined} data-intro-closing={songIntro.closing?'1':undefined} data-intro-layout={isLandscape?'landscape':'portrait'} role="status" aria-live="polite" onPointerDown={songIntro.skippable?event=>{event.stopPropagation();skipSongIntro();}:undefined} style={{position:'absolute',inset:0,zIndex:45,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:isLandscape?'10px':'16px',padding:'12px calc(16px + var(--mh-sa-right,0px)) 12px calc(16px + var(--mh-sa-left,0px))',pointerEvents:'auto','--intro-close-ms':`${RHYTHM_SONG_INTRO_CLOSE_MS}ms`}}>
   {/* ジャケットの大きさ(2026-10-11 社長「ジャケット画像が小さかった」)。縦持ちは画面の幅の68%、横持ちは高さの54%を目安に、上限320px。
       ★高さで決めて幅は aspect-ratio で合わせ、縮んでよい(flexShrink:1)ことにする。曲名が長い・紹介文があるなどで下の文字が増えて
         画面に入りきらないときは、文字ではなくジャケットのほうが縮む(下限96px)。
@@ -22272,12 +22275,13 @@ scheduleTick();};
   {/* ★2026-10-11 社長「曲によってジャケットサイズ違う」: 文字が多い曲(紹介文がある・曲名が長い)でジャケットのほうが縮み、
         Safari のバーで高さが低い横持ち(667×320 など)では曲ごとに大きさが変わっていた。ジャケットは縮めず(flex 0 0)全曲同じ大きさにし、
         収まらない分は文字の側で吸収する(曲名は2行まで・紹介文は1行で省略・横持ちは「タップでとばす」を難易度と同じ行へ)。
-        横持ちの高さ50%は、いちばん文字の多い曲でも 667×320 に収まる大きさ(2026-10-11 に全40曲を 844×390・390×844・640×360・932×430・844×330・667×320 で測り、全曲同じ大きさ・はみ出し0を確かめた) */}
-  {hudArtSrc&&<div data-rhythm-song-intro-art style={{position:'relative',flex:'0 0 auto',height:isLandscape?'min(50vh,40vw,320px)':'min(68vw,42vh,320px)',aspectRatio:'1 / 1',borderRadius:'14px',overflow:'hidden'}}><img src={hudArtSrc} alt="" draggable={false} decoding="async" style={{display:'block',width:'100%',height:'100%',objectFit:'cover'}}/><i data-rhythm-song-intro-shine aria-hidden="true"/></div>}
+        横持ちは高さの54%(2026-10-11 社長が「前の大きさに戻して文字を詰める」を選んだ)。横持ちの曲名は1行で、長い曲名は字を小さくして収める
+        (introTitleFont。省略の「…」は最後の手段)。全40曲を 844×390・390×844・640×360・932×430・844×330・667×320 で測り、全曲同じ大きさ・はみ出し0を確かめた */}
+  {hudArtSrc&&<div data-rhythm-song-intro-art style={{position:'relative',flex:'0 0 auto',height:isLandscape?'min(54vh,40vw,320px)':'min(68vw,42vh,320px)',aspectRatio:'1 / 1',borderRadius:'14px',overflow:'hidden'}}><img src={hudArtSrc} alt="" draggable={false} decoding="async" style={{display:'block',width:'100%',height:'100%',objectFit:'cover'}}/><i data-rhythm-song-intro-shine aria-hidden="true"/></div>}
   <div data-rhythm-song-intro-text style={{flex:'0 0 auto',minWidth:0,maxWidth:isLandscape?'min(72vw,560px)':'88vw',textAlign:'center'}}>
     <small style={{display:'block',fontSize:'11px',fontWeight:900,letterSpacing:'.32em',color:'#a5f3fc',textShadow:'0 1px 6px rgba(2,6,23,.95)'}}>♪ LIVE START</small>
     {/* 曲名は2行まで。切り詰める箱の内側に余白を取り、文字の影が四角く切れないようにする */}
-    <b data-rhythm-song-intro-title style={{display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden',overflowWrap:'anywhere',padding:'0 8px 3px',margin:isLandscape?'1px -8px 0':'4px -8px 0',fontSize:isLandscape?'20px':'24px',fontWeight:900,lineHeight:1.25,color:'#fff',textShadow:'0 0 8px rgba(103,232,249,.5),0 2px 4px rgba(2,6,23,.95)'}}>{rhythmSongFullName(song)}</b>
+    <b data-rhythm-song-intro-title style={{...(isLandscape?{display:'block',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',fontSize:`${introTitleFont}px`}:{display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden',overflowWrap:'anywhere',fontSize:'24px'}),padding:'0 8px 3px',margin:isLandscape?'1px -8px 0':'4px -8px 0',fontWeight:900,lineHeight:1.25,color:'#fff',textShadow:'0 0 8px rgba(103,232,249,.5),0 2px 4px rgba(2,6,23,.95)'}}>{introTitle}</b>
     {introCredit&&<p data-rhythm-song-intro-credit style={{display:'-webkit-box',WebkitLineClamp:isLandscape?1:2,WebkitBoxOrient:'vertical',overflow:'hidden',margin:isLandscape?'1px 0 0':'3px 0 0',fontSize:'12px',fontWeight:700,lineHeight:1.4,color:'#cbd5e1'}}>{introCredit}</p>}
     <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:'8px',marginTop:isLandscape?'5px':'10px'}}><span data-rhythm-song-intro-difficulty style={{borderRadius:'999px',padding:'3px 12px',fontSize:'13px',fontWeight:900,letterSpacing:'.08em',color:'#fff',background:introColor,boxShadow:`0 0 12px ${introColor}`}}>{difficulty.id}</span>{Number.isFinite(introLevel)&&introLevel>0&&<b data-rhythm-song-intro-level style={{fontSize:'16px',fontWeight:900,color:'#fff',fontVariantNumeric:'tabular-nums'}}>Lv.{introLevel}</b>}
       {/* 横持ちは縦の場所が少ないので、案内を難易度と同じ行へ置く */}
@@ -63576,7 +63580,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 デバッグ専用なので更新履歴・ヘルプには載せない */}
             <section data-debug-rhythm-hell-story className="mb-3 rounded-2xl border border-pink-400/50 bg-pink-950/25 p-3"><h3 className="text-xs font-black text-pink-200">HELL のお話と説明（公開前の確認用）</h3><div className="mt-2 grid grid-cols-2 gap-2"><button type="button" data-debug-rhythm-hell-story-play onClick={()=>setEventReplay({id:RHYTHM_HELL_STORY_ID,step:0,debug:true})} className="min-h-[48px] rounded-xl bg-pink-700 px-2 text-xs font-black text-white">お話を見る（→説明）</button><button type="button" data-debug-rhythm-hell-guide-open onClick={()=>setRhythmHellGuide({page:0})} className="min-h-[48px] rounded-xl bg-slate-700 px-2 text-xs font-black text-white">説明だけ見る</button></div></section>
             {RHYTHM_PROTO_SONGS.map(song=>{const track=rhythmSongTrack(song);return <section key={song.songId} data-rhythm-proto-song={song.songId} className="mb-3 rounded-2xl border border-rose-400/50 bg-rose-950/25 p-3"><div className="mb-2"><small className="text-[8px] text-rose-300">試作・{song.songId}</small><h3 className="font-black">{song.displayName} <span className="text-xs text-rose-200">{song.subtitle}</span></h3>{song.debugDescription&&<p className="mt-1 text-[10px] font-bold text-amber-200">{song.debugDescription}</p>}<p className="break-all text-[9px] text-slate-400">BGM: {song.bgmTrackId} / {track?.src||'未登録'}</p></div><div className="space-y-2">{RHYTHM_PLAY_DIFFICULTIES.filter(difficulty=>song.difficulties[difficulty.id]?.notes?.length>0).map(difficulty=>{const chart=song.difficulties[difficulty.id];return <button key={difficulty.id} type="button" data-rhythm-proto-start={difficulty.id} className={`min-h-[44px] w-full rounded-xl font-black ${difficulty.id==='HELL'?'bg-red-900 ring-1 ring-red-400/70':'bg-rose-700'}`} onClick={()=>{setRhythmPlay({song,difficulty,from:'proto'});setGameState('RHYTHM_PLAY');}}>{difficulty.id==='HELL'?'HELL をプレイ':'試作をプレイ'}（{difficulty.id} Lv.{chart.level}）</button>})}</div></section>})}
-            {RHYTHM_SONGS.map(song=>{const track=rhythmSongTrack(song);return <section key={song.songId} className="mb-3 rounded-2xl border border-indigo-400/40 bg-indigo-950/30 p-3"><div className="mb-2"><small className="text-[8px] text-indigo-300">{song.songId}</small><h3 className="font-black">{song.displayName}</h3>{song.debugDescription&&<p className="mt-1 text-[10px] font-bold text-amber-200">{song.debugDescription}</p>}<p className="break-all text-[9px] text-slate-400">BGM: {song.bgmTrackId} / {track?.src||'未登録'}</p></div><div className="space-y-2">{RHYTHM_DIFFICULTIES.map(difficulty=>{const chart=song.difficulties[difficulty.id];const best=rhythmBestRecord(rhythmBestRecords,song.songId,difficulty.id);return <article key={difficulty.id} className="rounded-xl border border-white/10 bg-slate-900/80 p-2"><div className="flex items-center justify-between"><b className="text-xs text-cyan-200">{difficulty.id} Lv.{chart.level}</b><span className="text-[9px] font-mono">MAX {difficulty.maxScore.toLocaleString()}</span></div><p className="mt-1 text-[9px] text-slate-300">BEST {best.bestScore.toLocaleString()} / MAX COMBO {best.maxCombo} / {best.clear?'CLEAR':'未プレイ'}</p><p className="mt-1 break-words text-[8px] text-slate-500">{RHYTHM_JUDGMENT_IDS.map(id=>`${id} ${best.judgments[id]}`).join(' / ')}</p><p className="mt-1 text-[8px] text-slate-500">FC {best.fullCombo?'○':'-'} / ALL EXCELLENT {best.allExcellent?'○':'-'} / ALL MARVELOUS {best.allMarvelous?'○':'-'}</p>{chart.notes.length>0&&<button data-rhythm-tap-start className="mt-2 min-h-[44px] w-full rounded-xl bg-fuchsia-700 font-black" onClick={()=>{setRhythmPlay({song,difficulty,from:'debug'});setGameState('RHYTHM_PLAY');}}>リズムテストプレイ</button>}</article>})}</div></section>})}
+            {/* 公開曲を from:'debug' で演奏する古い縦の一覧(「リズムテストプレイ」)は外した(2026-10-11 社長「むしろそれいらない機能じゃない？」)。
+                終わると自己ベストを保存してしまう作りだった。同じことは上の「全解放の曲えらび」(記録しない)でできる。
+                これまでに保存された自己ベストはそのまま残す(CLAUDE.md ⑦) */}
             </div>
             {/* 譜面制作UIは初回入場では作らない。一度開いたら、編集中のドラフトを失わないよう表示だけ切り替える */}
             {rhythmChartToolsOpened&&<div data-rhythm-debug hidden={rhythmDebugTab!=='chart'}/>}
