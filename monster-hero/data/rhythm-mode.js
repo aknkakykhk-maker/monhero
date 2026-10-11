@@ -1229,60 +1229,76 @@ const RHYTHM_SCROLL_RUSH_REACH=.97;
 // 組(試作・2026-10-11 Grievous Lady): 譜面に scrollGroups:{番号:表} を書き、ノーツに scrollGroup:番号 を付けると、そのノーツだけ別の表で流れる
 //   (参考は「次に叩くノーツは判定線の近くで待ち、その後ろのノーツだけが止まる・飛ぶ・戻る」を2つの組で動かしていた)。
 //   組を持たないノーツ・組を書かない譜面(公開中の曲)は、今までどおり scrollChanges の1つの表だけで流れる
+// だんだん変える(2026-10-11 Grievous Lady・社長「動くようになったときに速度が一瞬変わってる」):
+//   [時刻,'LERP',倍率] と書いた区切りは、その時刻で倍率がその値になり、次の区切りの倍率まで「だんだん」変わる(速さが段差にならない)。
+//   位置は2次の式になる。LERP を書かない表(公開中の曲・ほかの書き方)は今までとまったく同じ計算
 const rhythmScrollBuild=(changes,travelMs)=>{
   const raw=(Array.isArray(changes)?changes:[]).filter(c=>Array.isArray(c)&&Number.isFinite(Number(c[0]))).slice().sort((a,b)=>Number(a[0])-Number(b[0]));
   const travel=Number(travelMs)>0?Number(travelMs):2150;
   const list=raw.map((c,i)=>{
+    if(c[1]==='LERP'){const v=Number(c[2]);return [Number(c[0]),Number.isFinite(v)?v:1,true];}
     if(c[1]!=='RUSH'&&c[1]!=='MOVE')return [Number(c[0]),Number(c[1])];
     const next=raw[i+1],span=next?Number(next[0])-Number(c[0]):0;
     if(c[1]==='MOVE'){const f=Number(c[2]);return [Number(c[0]),span>0&&Number.isFinite(f)?travel*f/span:1];}
     const reach=Number(c[2])>0?Number(c[2]):RHYTHM_SCROLL_RUSH_REACH;
     return [Number(c[0]),span>0?travel*reach/span:1];
-  }).filter(([t,m],i)=>Number.isFinite(t)&&Number.isFinite(m)&&(m>=0||raw[i][1]==='MOVE'));
-  if(!list.length)return {points:null,back:false,sufMin:null};
-  const points=[{t:list[0][0],s:list[0][0],m:list[0][1]}];
-  for(let i=1;i<list.length;i++){const p=points[points.length-1];points.push({t:list[i][0],s:p.s+(list[i][0]-p.t)*p.m,m:list[i][1]});}
-  const back=points.some(p=>p.m<0);
-  // sufMin[i] … 区切り i の時刻から先で S がいちばん小さくなる値(戻る区間のある表だけ使う)
+  }).filter(([t,m],i)=>Number.isFinite(t)&&Number.isFinite(m)&&(m>=0||raw[i][1]==='MOVE'||raw[i][1]==='LERP'));
+  if(!list.length)return {points:null,back:false,sufMin:null,lerp:false};
+  // m1 … 区切りの終わりの倍率(LERP なら次の区切りの倍率、それ以外は m と同じ)
+  const m1Of=i=>list[i][2]&&i+1<list.length?list[i+1][1]:list[i][1];
+  const points=[{t:list[0][0],s:list[0][0],m:list[0][1],m1:m1Of(0)}];
+  for(let i=1;i<list.length;i++){const p=points[points.length-1],span=list[i][0]-p.t;points.push({t:list[i][0],s:p.s+span*(p.m+p.m1)/2,m:list[i][1],m1:m1Of(i)});}
+  const lerp=points.some(p=>p.m1!==p.m);
+  const back=points.some(p=>p.m<0||p.m1<0);
+  // sufMin[i] … 区切り i の時刻から先で S がいちばん小さくなる値(戻る区間のある表だけ使う)。だんだん変わる区間は谷(倍率がマイナスからプラスへ変わる所)も見る
   let sufMin=null;
   if(back){
     sufMin=new Array(points.length);const last=points[points.length-1];
     sufMin[points.length-1]=last.m<0?-Infinity:last.s;
-    for(let i=points.length-2;i>=0;i--)sufMin[i]=Math.min(points[i].s,sufMin[i+1]);
+    for(let i=points.length-2;i>=0;i--){const v=rhythmScrollSegValley(points,i);sufMin[i]=Math.min(points[i].s,v,sufMin[i+1]);}
   }
-  return {points,back,sufMin};
+  return {points,back,sufMin,lerp};
 };
-// 速さの表(本体と全部の組)が前へ進むだけか。描く側が「時刻の順=画面の上の順」として先を打ち切ってよいかに使う
-// (rhythmScrollSet が、どれかの表に戻る(マイナスの速さ)があると RHYTHM_SCROLL.back を立てる)
-const rhythmScrollForward=()=>!RHYTHM_SCROLL.back;
+// 区切り i の中の S(dt)(dt は区切りの始まりからの時間)。だんだん変わる区間は2次の式
+const rhythmScrollSegAt=(points,i,dt)=>{const p=points[i],q=points[i+1];if(!q||p.m1===p.m)return p.s+dt*p.m;const span=q.t-p.t;return p.s+p.m*dt+(p.m1-p.m)*dt*dt/(2*span);};
+// 区切り i の中の谷(倍率がマイナスからプラスへ変わる所の S)。無ければ Infinity
+const rhythmScrollSegValley=(points,i)=>{const p=points[i],q=points[i+1];if(!q||!(p.m<0&&p.m1>0))return Infinity;const span=q.t-p.t,tau=span*p.m/(p.m-p.m1);return rhythmScrollSegAt(points,i,tau);};
+// 区切り i の中の山(倍率がプラスからマイナスへ変わる所の S)。無ければ -Infinity
+const rhythmScrollSegPeak=(points,i)=>{const p=points[i],q=points[i+1];if(!q||!(p.m>0&&p.m1<0))return -Infinity;const span=q.t-p.t,tau=span*p.m/(p.m-p.m1);return rhythmScrollSegAt(points,i,tau);};
 const rhythmScrollSet=(changes,travelMs,groups)=>{
   const main=rhythmScrollBuild(changes,travelMs);
-  RHYTHM_SCROLL.points=main.points;RHYTHM_SCROLL.back=main.back;RHYTHM_SCROLL.sufMin=main.sufMin;
+  RHYTHM_SCROLL.points=main.points;RHYTHM_SCROLL.back=main.back;RHYTHM_SCROLL.sufMin=main.sufMin;RHYTHM_SCROLL.lerp=main.lerp;
   RHYTHM_SCROLL.groups=null;
   if(groups&&typeof groups==='object'){
     const built={};let any=false;
-    for(const [key,table] of Object.entries(groups)){const g=rhythmScrollBuild(table,travelMs);built[key]=g;any=true;if(g.back)RHYTHM_SCROLL.back=true;}
+    for(const [key,table] of Object.entries(groups)){const g=rhythmScrollBuild(table,travelMs);built[key]=g;any=true;if(g.back)RHYTHM_SCROLL.back=true;if(g.lerp)RHYTHM_SCROLL.lerp=true;}
     if(any)RHYTHM_SCROLL.groups=built;
   }
 };
 // 組の表(無い組・組を持たないノーツは本体の表)
 const rhythmScrollTable=g=>(g!=null&&RHYTHM_SCROLL.groups&&RHYTHM_SCROLL.groups[g])||RHYTHM_SCROLL;
+// 速さの表(本体と全部の組)が前へ進むだけか。描く側が「時刻の順=画面の上の順」として先を打ち切ってよいかに使う
+// (rhythmScrollSet が、どれかの表に戻る(マイナスの速さ)があると RHYTHM_SCROLL.back を立てる)
+const rhythmScrollForward=()=>!RHYTHM_SCROLL.back;
 // 時刻 t まで積み上げた位置 S(t)。g … ノーツの組(note.scrollGroup。書かなければ本体の表)
 const rhythmScrollPos=(t,g)=>{
   const points=rhythmScrollTable(g).points,x=Number(t);
   if(!points||!(x>points[0].t))return x;
   let lo=0,hi=points.length-1;
   while(lo<hi){const mid=(lo+hi+1)>>1;if(points[mid].t<=x)lo=mid;else hi=mid-1;}
-  const p=points[lo];return p.s+(x-p.t)*p.m;
+  return rhythmScrollSegAt(points,lo,x-points[lo].t);
 };
 // S(t)=s になるいちばん早い時刻(拍の線を探し始める所に使う。拍の線は本体の表)。止まったまま届かないときは Infinity
 const rhythmScrollTimeAt=s=>{
   const points=RHYTHM_SCROLL.points,y=Number(s);
   if(!points||!(y>points[0].s))return y;
-  if(RHYTHM_SCROLL.back){
-    // 戻る区間のある表: S は増えたり減ったりするので、前から順に「初めて y に届く時刻」を探す(区切りは数十個なので毎コマでも軽い)
+  if(RHYTHM_SCROLL.back||RHYTHM_SCROLL.lerp){
+    // 戻る区間・だんだん変わる区間のある表: S は増えたり減ったりするので、前から順に「初めて y に届く時刻」を探す(区切りは数十個なので毎コマでも軽い)
     for(let i=0;i<points.length;i++){
       const p=points[i];if(p.s>=y)return p.t;
+      if(p.m1!==p.m&&i+1<points.length){const span=points[i+1].t-p.t;let prev=0;
+        for(let k=1;k<=32;k++){const dt=span*k/32;if(rhythmScrollSegAt(points,i,dt)>=y){let a=prev,b2=dt;for(let r=0;r<24;r++){const mid=(a+b2)/2;if(rhythmScrollSegAt(points,i,mid)>=y)b2=mid;else a=mid;}return p.t+b2;}prev=dt;}
+        continue;}
       const end=i+1<points.length?points[i+1].s:(p.m>0?Infinity:p.s);
       if(p.m>0&&end>=y)return p.t+(y-p.s)/p.m;
     }
@@ -1300,14 +1316,17 @@ const rhythmScrollMinAfterIn=(tbl,x)=>{
   if(!points||!tbl.back){
     if(!points||!(x>points[0].t))return x;
     let lo=0,hi=points.length-1;while(lo<hi){const mid=(lo+hi+1)>>1;if(points[mid].t<=x)lo=mid;else hi=mid-1;}
-    const p=points[lo];return p.s+(x-p.t)*p.m;
+    return rhythmScrollSegAt(points,lo,x-points[lo].t);
   }
   const suf=tbl.sufMin;
   if(!(x>points[0].t))return Math.min(x,suf[0]);
   let lo=0,hi=points.length-1;
   while(lo<hi){const mid=(lo+hi+1)>>1;if(points[mid].t<=x)lo=mid;else hi=mid-1;}
-  const p=points[lo],here=p.s+(x-p.t)*p.m;
-  return lo+1<points.length?Math.min(here,suf[lo+1]):(p.m<0?-Infinity:here);
+  const p=points[lo],here=rhythmScrollSegAt(points,lo,x-p.t);
+  if(lo+1>=points.length)return p.m<0?-Infinity:here;
+  // だんだん変わる区間で、x より後に谷があればそれも見る
+  let valley=Infinity;if(p.m<0&&p.m1>0){const span=points[lo+1].t-p.t,tau=span*p.m/(p.m-p.m1);if(p.t+tau>x)valley=rhythmScrollSegAt(points,lo,tau);}
+  return Math.min(here,valley,suf[lo+1]);
 };
 const rhythmScrollMinAfter=(t,g)=>{
   const x=Number(t);
@@ -1326,16 +1345,17 @@ const rhythmScrollNowMax=t=>{
 // 戻る・止まる表では、ノーツが判定の前に一度判定線へ触れてまた奥へ戻る、ということが起こりうる(遊び手が読めない)。これが0個であることを決まりにする。
 // 組のあるノーツは、その組の表で数える。いまの表(RHYTHM_SCROLL)は触らずに元へ戻す
 const rhythmScrollEarlyTouches=(changes,notes,travelMs,groups)=>{
-  const keep={points:RHYTHM_SCROLL.points,back:RHYTHM_SCROLL.back,sufMin:RHYTHM_SCROLL.sufMin,groups:RHYTHM_SCROLL.groups};
+  const keep={points:RHYTHM_SCROLL.points,back:RHYTHM_SCROLL.back,sufMin:RHYTHM_SCROLL.sufMin,groups:RHYTHM_SCROLL.groups,lerp:RHYTHM_SCROLL.lerp};
   rhythmScrollSet(changes,travelMs,groups);
   const out=[];
-  const maxUpTo=(x,g)=>{let m=rhythmScrollPos(x,g);for(const p of rhythmScrollTable(g).points||[]){if(p.t>x)break;if(p.s>m)m=p.s;}return m;};
+  const maxUpTo=(x,g)=>{let m=rhythmScrollPos(x,g);const pts=rhythmScrollTable(g).points||[];for(let i=0;i<pts.length;i++){const p=pts[i];if(p.t>x)break;if(p.s>m)m=p.s;
+    if(i+1<pts.length&&p.m>0&&p.m1<0){const span=pts[i+1].t-p.t,tau=span*p.m/(p.m-p.m1);if(p.t+tau<=x)m=Math.max(m,rhythmScrollSegAt(pts,i,tau));}}return m;};
   for(const note of Array.isArray(notes)?notes:[]){
     const t=Number(note&&note.timeMs);if(!Number.isFinite(t))continue;
     const g=note.scrollGroup;
     if(maxUpTo(t-50,g)>=rhythmScrollPos(t,g)-1e-6)out.push(note);
   }
-  RHYTHM_SCROLL.points=keep.points;RHYTHM_SCROLL.back=keep.back;RHYTHM_SCROLL.sufMin=keep.sufMin;RHYTHM_SCROLL.groups=keep.groups;
+  RHYTHM_SCROLL.points=keep.points;RHYTHM_SCROLL.back=keep.back;RHYTHM_SCROLL.sufMin=keep.sufMin;RHYTHM_SCROLL.groups=keep.groups;RHYTHM_SCROLL.lerp=keep.lerp;
   return out;
 };
 // 空中のノーツの手ごたえ(試作・2026-10-10・社長「見た目にもっと力いれてほしい」)。色は "r,g,b" の文字列。
@@ -25104,11 +25124,11 @@ const grievousLadyMasterNotes=((t,h,f,s)=>[
 ])(mhTap,mhHoldV2,mhFlick,mhSlideV2);
 // 流れる速さの表(2026-10-11・参考動画を1コマずつ測った形。社長「止まったり、さらに前に行ったり後ろに戻ったり」)。全難易度で同じ表を使う。
 // 'MOVE' は次の区切りまでに道の長さ×割合だけ動く(マイナスで奥へ戻る・ノーツ速度によらず同じ見え方)。拍0=2240ms(曲の頭に2秒の無音)・1拍=285.714ms。
-// A 拍56〜64: 奥へ37%ゆっくり戻る → 加速して拍64で判定線(参考: 先頭は道の84%→48%)
+// A 拍56〜64: 'LERP'(速さをだんだん変える)で、ふだんの速さから奥へ戻り → 止まりかけ → だんだん加速して拍64でふだんの速さへちょうどつながる(速さの段差なし)
 // B 拍328〜336.5: 拍336.5 の同時押しは判定線の手前で待つ(組1)。後ろのノーツは止まる・一瞬(17ms)で前へ18%/後ろへ20%を音の強い所でくり返す → 奥へ38%戻る → 止まる → 加速
 // C 拍460.3〜464.25: 拍461.75 の同時押しは判定線の近くで待つ(組1)。後ろのノーツは止まる(56%) → 一瞬で後ろへ45% → 速く戻って57%で止まる → 拍464.25
 // 判定の時刻は音楽どおり(見た目の位置だけが変わる)。判定の前に判定線へ触れるノーツは0個(rhythmScrollEarlyTouches・grievous-lady-scroll-check.js)
-const GRIEVOUS_LADY_SCROLL_CHANGES=Object.freeze([[18240,"MOVE",-0.233],[18811.4,"MOVE",-0.116],[19382.9,"MOVE",-0.049],[19954.3,"MOVE",0.089],[20240,"MOVE",0.17],[20382.9,"MOVE",0.539],[20525.7,1],[95954.3,0],[96154.3,"MOVE",0.192],[96171.4,"MOVE",-0.184],[96268.6,0],[96411.4,"MOVE",0.184],[96525.7,"MOVE",-0.208],[96542.9,0],[96611.4,"MOVE",0.182],[96628.6,"MOVE",-0.121],[96711.4,"MOVE",0.121],[96811.4,"MOVE",-0.197],[96828.6,0],[97097.1,"MOVE",0.172],[97114.3,"MOVE",-0.221],[97268.6,"MOVE",-0.074],[97440,0],[97840,"MOVE",0.239],[98097.1,"MOVE",0.633],[98382.9,1],[133754.3,0],[134040,"MOVE",-0.232],[134057.1,"MOVE",0.24],[134197.1,0],[134525.7,"MOVE",0.725],[134882.9,1]].map(row=>Object.freeze(row)));
+const GRIEVOUS_LADY_SCROLL_CHANGES=Object.freeze([[18240,"LERP",1],[18382.9,"LERP",-0.367],[19668.6,"LERP",-0.147],[19954.3,"LERP",0],[20325.7,"LERP",1.84],[20525.7,1],[95954.3,0],[96154.3,"MOVE",0.192],[96171.4,"MOVE",-0.184],[96268.6,0],[96411.4,"MOVE",0.184],[96525.7,"MOVE",-0.208],[96542.9,0],[96611.4,"MOVE",0.182],[96628.6,"MOVE",-0.121],[96711.4,"MOVE",0.121],[96811.4,"MOVE",-0.197],[96828.6,0],[97097.1,"MOVE",0.172],[97114.3,"MOVE",-0.221],[97268.6,"MOVE",-0.074],[97440,0],[97840,"MOVE",0.239],[98097.1,"MOVE",0.633],[98382.9,1],[133754.3,0],[134040,"MOVE",-0.232],[134057.1,"MOVE",0.24],[134197.1,0],[134525.7,"MOVE",0.725],[134882.9,1]].map(row=>Object.freeze(row)));
 // 組1(待っている同時押し): 参考では B の拍336.5・C の拍461.75 に叩く2個だけが判定線の近くで待ち、後ろのノーツだけが止まる・飛ぶ・戻るを見せていた。
 // その2個に scrollGroup:1 を付け、この表で流す(B は判定線の手前で拍328〜336.25、C は拍460.3〜461.55 待つ)
 const GRIEVOUS_LADY_SCROLL_GROUPS=Object.freeze({1:Object.freeze([[95840,"MOVE",0.516],[95954.3,0],[98311.4,"MOVE",0.034],[98382.9,1],[133654.3,"MOVE",0.227],[133754.3,0],[134111.4,"MOVE",0.323],[134168.6,1]].map(row=>Object.freeze(row)))});
