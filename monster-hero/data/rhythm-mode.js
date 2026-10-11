@@ -1198,6 +1198,11 @@ const RHYTHM_HELL_VIS_DEFAULT='v2';
 const RHYTHM_HELL_VIS_LABELS=Object.freeze({now:'前の見た目',v1:'案1 控えめに見やすく',v2:'案2 はっきり(既定)'});
 const RHYTHM_HELL_VIS={id:(()=>{try{const v=typeof localStorage!=='undefined'?localStorage.getItem('mh_hell_vis_proto'):'';return v&&RHYTHM_HELL_VIS_PRESETS[v]?v:RHYTHM_HELL_VIS_DEFAULT;}catch(e){return RHYTHM_HELL_VIS_DEFAULT;}})(),
   set(id){const v=RHYTHM_HELL_VIS_PRESETS[id]?id:RHYTHM_HELL_VIS_DEFAULT;this.id=v;try{if(v===RHYTHM_HELL_VIS_DEFAULT)localStorage.removeItem('mh_hell_vis_proto');else localStorage.setItem('mh_hell_vis_proto',v);}catch(e){}}};
+// 空中を叩いたときの手ごたえの案(デバッグ専用・2026-10-12)。保存は新しいキー mh_hell_sky_hit_proto だけ。既定は off(いまのまま)。
+// on … 案A 空中の線の高さに、地上と同じ「レーンの柱の光」を白紫で出す/案a 空中の判定の文字を空中の線のすぐ下に出す(来るノーツに重ならない)。
+// 洗い出し: 叩いた直後(+50ms)の明るい範囲が 空中 190画素/地上 2744画素/参考 約3870画素(docs/proto/hell-visibility/now-grievous-*-hit*)
+const RHYTHM_HELL_SKY_HIT={id:(()=>{try{const v=typeof localStorage!=='undefined'?localStorage.getItem('mh_hell_sky_hit_proto'):'';return v==='on'?'on':'off';}catch(e){return 'off';}})(),
+  set(id){const v=id==='on'?'on':'off';this.id=v;try{if(v==='off')localStorage.removeItem('mh_hell_sky_hit_proto');else localStorage.setItem('mh_hell_sky_hit_proto',v);}catch(e){}}};
 // 値と案を重ねたものを、案ごとに1回だけ作って覚える(毎コマ何百回も読まれるので)
 const rhythmHellVisMerged=(()=>{const memo={};return (key,base)=>{const id=RHYTHM_HELL_VIS.id,k=id+':'+key;if(memo[k])return memo[k];
   const over=(RHYTHM_HELL_VIS_PRESETS[id]||{})[key];return memo[k]=over?Object.freeze({...base,...over}):base;};})();
@@ -33077,8 +33082,10 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     const tint=accentRaw.split(',').map(v=>Math.round(Number(v)*.4+255*.6)).join(',');
     const C={core:'255,255,255',main,accent:tint};
     const Y=hitY-cssH*RHYTHM_SKY_LIFT.ratio;
-    const k=rhythmProjectionScale(rhythmSkyLineRatio())/Math.max(.01,rhythmProjectionScale(RHYTHM_JUDGMENT_LINE_Y.ratio));
-    const cx=cssW/2+(h.center*cssW-cssW/2)*k,W=Math.max(34,h.width*cssW*k);
+    // 横の位置と幅は地上の判定線のレーンのまま(2026-10-12)。空中のレーンは地上の判定線のレーンをそのまま持ち上げたもので、
+    // 空中のノーツは空中の道の手前の端(=地上の判定線の幅)に着く。それまでは空中の線の高さの道幅へ縮めて(倍率)描いていて、
+    // 外側のレーンほど光が内側へずれていた(Grievous Lady の HELL 10.3秒で、板の中心 x=623 に対して光が x≈530・約93px)
+    const cx=h.center*cssW,W=Math.max(34,h.width*cssW);
     const strong=h.judgment==='MARVELOUS'||h.judgment==='EXCELLENT'||h.precise,power=strong?1:(h.judgment==='GREAT'?.78:.55);
     const seg=(from,to)=>Math.max(0,Math.min(1,(p-from)/(to-from)));
     const poly=pts=>{ctx.beginPath();ctx.moveTo(pts[0],pts[1]);for(let i=2;i<pts.length;i+=2)ctx.lineTo(pts[i],pts[i+1]);ctx.closePath();};
@@ -33180,8 +33187,10 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   const SKY_STRIKE_RGB='239,68,68';
   const drawSkyStrike=(h,p,hitY,elapsed)=>{
     const Y=hitY-cssH*RHYTHM_SKY_LIFT.ratio;
-    const k=rhythmProjectionScale(rhythmSkyLineRatio())/Math.max(.01,rhythmProjectionScale(RHYTHM_JUDGMENT_LINE_Y.ratio));
-    const cx=cssW/2+(h.center*cssW-cssW/2)*k,W=Math.max(34,h.width*cssW*k);
+    // 横の位置と幅は地上の判定線のレーンのまま(2026-10-12)。空中のレーンは地上の判定線のレーンをそのまま持ち上げたもので、
+    // 空中のノーツは空中の道の手前の端(=地上の判定線の幅)に着く。それまでは空中の線の高さの道幅へ縮めて(倍率)描いていて、
+    // 外側のレーンほど光が内側へずれていた(Grievous Lady の HELL 10.3秒で、板の中心 x=623 に対して光が x≈530・約93px)
+    const cx=h.center*cssW,W=Math.max(34,h.width*cssW);
     const power=h.judgment==='GREAT'?.85:(h.judgment==='GOOD'||h.judgment==='BAD'?.6:1);
     // 楕円は24角形で描く(WebGL の描き込み先に ellipse が無いため・影と同じ作り)
     const oval=(x0,y0,rx,ry)=>{ctx.beginPath();for(let i=0;i<24;i++){const t=i/24*Math.PI*2,x=x0+Math.cos(t)*rx,y=y0+Math.sin(t)*ry;if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.closePath();};
@@ -33287,7 +33296,11 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
         const hit=hitSlots[slot];if(!hit)continue;
         const elapsed=now-hit.start,t=elapsed/hit.ms,end=hit.plume?Math.max(hit.ms,HIT_PLUME_MS):hit.ms;
         if(elapsed>=end){hitSlots[slot]=null;continue;}
-        touch();glowBegin();if(hit.sky){if(!skyZOn())drawSkyStrike(hit,Math.max(0,Math.min(1,t)),hitY,Math.max(0,elapsed));drawSkyHit(hit,Math.max(0,Math.min(1,t)),hitY);}else drawOneHit(hit,Math.max(0,Math.min(1,t)),hitY,Math.max(0,elapsed));glowEnd();count++;
+        touch();glowBegin();if(hit.sky){
+          // 案A(RHYTHM_HELL_SKY_HIT が on): 空中の線の高さに、地上と同じレーンの柱の光を白紫で。写しは光ごとに1回だけ作る。
+          // 白い十字の光(190×110px の絵)は空中の星と重なるので出さない(重さを増やさないため)
+          if(RHYTHM_HELL_SKY_HIT.id==='on'){const col=hit._skyColumn||(hit._skyColumn={...hit,sky:false,precise:false,big:false,plume:false,flick:'',flare:false,color:'#e9d5ff'});drawOneHit(col,Math.max(0,Math.min(1,t)),hitY-cssH*RHYTHM_SKY_LIFT.ratio,Math.max(0,elapsed));}
+          if(!skyZOn())drawSkyStrike(hit,Math.max(0,Math.min(1,t)),hitY,Math.max(0,elapsed));drawSkyHit(hit,Math.max(0,Math.min(1,t)),hitY);}else drawOneHit(hit,Math.max(0,Math.min(1,t)),hitY,Math.max(0,elapsed));glowEnd();count++;
       }
       if(count){ctx.globalAlpha=1;ctx.setTransform(dpr,0,0,dpr,0,0);}
       return count;
