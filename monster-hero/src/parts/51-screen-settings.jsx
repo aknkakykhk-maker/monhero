@@ -111,7 +111,7 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
   // バトル設定は設定画面の中の1ページ(2026-09-24 ユーザー指示「バトルの設定をバラにしないで、
   // 音量設定の上に作ってその中に細かい設定欄を作って」)。画面(gameState)は増やさず、ここで切り替える
   const [battleSettingsOpen, setBattleSettingsOpen] = useState(false);
-  // ダウンロード(事前ダウンロード)も設定画面の中の1ページ。いまはデバッグで入にしたときだけ出す(ASSET_CACHE.enabled)
+  // ダウンロード(事前ダウンロード)も設定画面の中の1ページ。既定で出る。DEBUG MENU で事前ダウンロードを切にしたときだけ隠れる(ASSET_CACHE.enabled)
   const [assetDownloadOpen, setAssetDownloadOpen] = useState(false);
   // 助手のひとことの出し方(21-assistant.jsx の ASSISTANT_BUBBLE_STORE。早期の return より前で読む)
   const assistantBubble = useAssistantBubbleState();
