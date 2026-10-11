@@ -105,7 +105,7 @@ const mime = f => ({ '.js': 'application/javascript', '.html': 'text/html', '.cs
     const drawn = window.__drawn = new Map();
     const R = RHYTHM_CANVAS_RENDERER, orig = R.drawNote.bind(R);
     R.drawNote = (note, geo, opts) => {
-      try { if (note && Number.isFinite(note.index) && geo && geo.head && !note.done) { const r = drawn.get(note.index) || [];
+      try { if (note && Number.isFinite(note.index) && geo && geo.head && !note.done && note.activePointerId == null) {   // 押される前のコマだけ(押されたスライド・ホールドは先頭が線に止まり、横も指に合わせて描かれる) const r = drawn.get(note.index) || [];
         const f = { cy: geo.centerY, cx: geo.head.cx, w: geo.head.w };
         if (!r.length || r[r.length - 1].cy !== f.cy) { r.push(f); if (r.length > 2) r.shift(); drawn.set(note.index, r); } } } catch {}
       return orig(note, geo, opts);
