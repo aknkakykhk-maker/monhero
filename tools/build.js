@@ -101,6 +101,12 @@ if (process.argv.includes('--check')) {
       process.exit(1);
     }
   }
+  // 事前ダウンロードの一覧(asset-manifest.json)が、いまの音源・画像の中身と合っているか。
+  // 古いままだと、差し替えた絵や音を端末が落とし直さない
+  {
+    const r = require('./build-asset-manifest').run({ check: true });
+    if (!r.ok) { console.error(`NG: ${r.reason}。node tools/build.js を実行してください`); process.exit(1); }
+  }
   console.log('OK: game-system.compiled.js は game-system.jsx の正規ビルドと一致しています');
   process.exit(0);
 }
@@ -137,6 +143,13 @@ if (process.argv.includes('--check')) {
   console.log(r.changed
     ? `tailwind.css を作り直しました(${Math.round(r.size / 1024)} KB / ${r.fingerprint})`
     : `tailwind.css は最新でした(${r.fingerprint})`);
+}
+
+// 事前ダウンロード(Service Worker)が使う音源・画像の一覧と版の印を作り直す(build-asset-manifest.js)
+{
+  const r = require('./build-asset-manifest').run();
+  if (!r.ok) { console.error(`NG: ${r.reason}`); process.exit(1); }
+  if (r.changed) console.log(`事前ダウンロードの一覧を書き直しました(${r.manifest.id} / ${Object.keys(r.manifest.files).length}件)`);
 }
 
 // 公開用ビルドではバージョン3箇所を先に同一時刻へ揃える。機能変更後に古い日時の
