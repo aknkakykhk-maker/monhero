@@ -30779,7 +30779,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     ctx.fillStyle=`rgba(${L.fill},${L.fillAlpha})`;ctx.fillRect(x0,y0,W,faceH+thick);
     ctx.fillStyle=`rgba(255,255,255,${L.topAlpha})`;ctx.fillRect(x0,y0,W,Math.max(2,faceH*L.topRatio));
     ctx.fillStyle=`rgba(${L.frontFill},${L.frontAlpha})`;ctx.fillRect(x0,y0+faceH,W,thick);
-    ctx.strokeStyle=`rgb(${L.edge})`;ctx.lineWidth=L.edgePx;ctx.strokeRect(x0+L.edgePx/2,y0+L.edgePx/2,W-L.edgePx,faceH+thick-L.edgePx);
+    ctx.strokeStyle=`rgb(${L.edge})`;ctx.lineWidth=L.edgePx;{const e=L.edgePx/2,xl=x0+e,xr=x0+W-e,yt=y0+e,yb=y0+faceH+thick-e;ctx.beginPath();ctx.moveTo(xl,yt);ctx.lineTo(xr,yt);ctx.lineTo(xr,yb);ctx.lineTo(xl,yb);ctx.closePath();ctx.stroke();}
     ctx.beginPath();ctx.moveTo(x0,y0+faceH);ctx.lineTo(x0+W,y0+faceH);ctx.stroke();
     ctx.globalAlpha=1;
   };
