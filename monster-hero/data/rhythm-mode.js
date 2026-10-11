@@ -24918,7 +24918,7 @@ const sheriruthCharts=Object.freeze({
 // 公開の Sheriruth には入れず、デバッグ画面の試作の枠(RHYTHM_PROTO_SONGS の sheriruth_hell_debug)からだけ遊べる。
 // Lv.47 は tools/mode/rhythm-chart-level.js の式(空中⇄地上の切り替えも数える)で出した値(rhythm-chart-level-check.js が式と一致するか見る)。
 // 公開するときは、sheriruth の difficulties を RHYTHM_PLAY_DIFFICULTIES で回して HELL:sheriruthHellChart を足し、レベル表は --write で出す
-const sheriruthHellChart=mhChart(54,sheriruthHellNotes,SHERIRUTH_DURATION_MS,6,{scrollChanges:SHERIRUTH_SCROLL_CHANGES});
+const sheriruthHellChart=mhChart(59,sheriruthHellNotes,SHERIRUTH_DURATION_MS,6,{scrollChanges:SHERIRUTH_SCROLL_CHANGES});
 const GRIEVOUS_LADY_DURATION_MS=141912;
 const grievousLadyEasyNotes=((t,h,f,s)=>[
 // <grievous-lady-v3-easy-notes>
