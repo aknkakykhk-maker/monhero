@@ -28,7 +28,7 @@ check('表示外noteは重いprojectionとpolygon更新をskip',game.includes("i
 // polygon の使い回し先は body 直下ではなく fill グループになった。作りの意図は同じ。
 check('polygon DOMは不足分だけ追加し通過済み区間を非表示で再利用',source.includes("if(!segment){segment=document.createElementNS")&&source.includes("fill.childNodes[index].style.display='none'")&&!source.includes('body.lastChild.remove()'));
 check('同一polygon pointsのsetAttributeを省略',source.includes("if(segment._rhythmPoints!==points){segment.setAttribute('points',points);segment._rhythmPoints=points;}"));
-check('SLIDE幅2の許容値と現在幅を使う追従判定',source.includes('const RHYTHM_SLIDE_TOLERANCE_LANES = .82;')&&source.includes('bad=Math.abs(actual-rhythmSlideExpectedLane(session.note,chartNow))>rhythmSlideTrackingTolerance(session.note,chartNow);'));
+check('SLIDE幅2の許容値と現在幅を使う追従判定',source.includes('const RHYTHM_SLIDE_TOLERANCE_LANES = .82;')&&source.includes('tolerance=rhythmSlideTrackingTolerance(session.note,chartNow);')&&source.includes('Math.abs(actual-target)>tolerance'));
 // 2026-09-12: 継ぎ目(10等分の境目)の縁取りをやめ、外周だけを1本の線でなぞる形にした。
 // 継ぎ目は判定と無関係なのに横線として見えていて、チェックポイントと見分けが付かなかったため。
 // 縁の濃さ(.56)はそのまま。「縁が残っていること」を、新しい作りに対して見る。
