@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: aaba897bd97d6a90
+// source-sha256: 3e9d8e979a16b841
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-11 23:35";
+const BUILD_DATE = "2026-10-11 23:42";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -5360,6 +5360,8 @@ const BGM_TRACK_BY_KEY = Object.fromEntries(BGM_TRACKS.filter(track => track.leg
 const rhythmSongTrack = song => BGM_TRACK_BY_ID[song?.bgmTrackId] || null;
 const RHYTHM_SETTINGS_KEY = 'mh_rhythm_settings_v1';
 const RHYTHM_SELECT_VIEW_KEY = 'mh_rhythm_select_v1';
+const RHYTHM_LAST_DIFFICULTY_KEY = 'mh_rhythm_last_difficulty_v1';
+const normalizeRhythmLastDifficulty = value => typeof value === 'string' && RHYTHM_DEMO_DIFFICULTY_IDS.includes(value) ? value : '';
 const RHYTHM_SORT_ORDERS = Object.freeze([Object.freeze({
   id: 'added',
   label: '入手順',
@@ -32562,8 +32564,12 @@ const RhythmTapTest = ({
   }))), React.createElement("div", {
     className: "pointer-events-none absolute inset-0",
     "aria-hidden": "true",
+    "data-rhythm-lane-press-layer": "",
     style: {
-      "--mh-lane-glow": settings.laneGlow === 'NONE' ? '0' : settings.laneGlow === 'LOW' ? '.35' : '1'
+      "--mh-lane-glow": settings.laneGlow === 'NONE' ? '0' : settings.laneGlow === 'LOW' ? '.35' : '1',
+      ...(skyChart ? {
+        zIndex: 3
+      } : null)
     }
   }, Array.from({
     length: RHYTHM_SUB_LANE_COUNT
@@ -32576,7 +32582,7 @@ const RhythmTapTest = ({
       clipPath: rhythmSubLanePolygon(subLane),
       background: RHYTHM_LANE_PRESS_GRADIENT
     }
-  })))), [settings.lightweightMode, settings.effectAmount, settings.laneGlow]);
+  })))), [settings.lightweightMode, settings.effectAmount, settings.laneGlow, skyChart]);
   const monsterForNote = note => {
     const slot = rhythmNoteMonsterSlot(note);
     return slot ? monstersRef.current[slot - 1] || null : null;
@@ -74531,6 +74537,11 @@ function MonsterHeroGame() {
     return list[0] && list[0].songId || '';
   });
   const [rhythmSelectedDifficultyId, setRhythmSelectedDifficultyId] = useState('');
+  const chooseRhythmDifficulty = id => {
+    setRhythmSelectedDifficultyId(id);
+    const value = normalizeRhythmLastDifficulty(id);
+    if (value) storeSet(RHYTHM_LAST_DIFFICULTY_KEY, value, false);
+  };
   const [rhythmDebugSelectSongId, setRhythmDebugSelectSongId] = useState('');
   const [rhythmDebugSelectDifficultyId, setRhythmDebugSelectDifficultyId] = useState('');
   const [rhythmDebugSelectView, setRhythmDebugSelectView] = useState(null);
@@ -74552,6 +74563,8 @@ function MonsterHeroGame() {
     setRhythmMonsterPickerOpen(false);
     setRhythmMonsterMessage('');
     setRhythmSelectView(normalizeRhythmSelectView(await storeGet(RHYTHM_SELECT_VIEW_KEY, DEFAULT_RHYTHM_SELECT_VIEW, false)));
+    const lastDifficulty = normalizeRhythmLastDifficulty(await storeGet(RHYTHM_LAST_DIFFICULTY_KEY, '', false));
+    if (lastDifficulty) setRhythmSelectedDifficultyId(prev => prev || lastDifficulty);
     setGameState(opts && typeof opts.to === 'string' ? opts.to : 'RHYTHM_MODE_SELECT');
   };
   const openRhythmDebug = async () => {
@@ -98346,7 +98359,7 @@ function MonsterHeroGame() {
       setQuickRunDetailOpen: setQuickRunDetailOpen,
       setQuickRunStartError: setQuickRunStartError,
       setQuickRunStopConfirm: setQuickRunStopConfirm,
-      setRhythmSelectedDifficultyId: setRhythmSelectedDifficultyId,
+      setRhythmSelectedDifficultyId: chooseRhythmDifficulty,
       setRhythmSelectedSongId: setRhythmSelectedSongId,
       spotClass: spotClass,
       startQuickRunFromRhythm: startQuickRunFromRhythm,
@@ -98759,54 +98772,6 @@ function MonsterHeroGame() {
             setGameState('RHYTHM_PLAY');
           }
         }, difficulty.id === 'HELL' ? 'HELL をプレイ' : '試作をプレイ', "（", difficulty.id, " Lv.", chart.level, "）");
-      })));
-    }), RHYTHM_SONGS.map(song => {
-      const track = rhythmSongTrack(song);
-      return React.createElement("section", {
-        key: song.songId,
-        className: "mb-3 rounded-2xl border border-indigo-400/40 bg-indigo-950/30 p-3"
-      }, React.createElement("div", {
-        className: "mb-2"
-      }, React.createElement("small", {
-        className: "text-[8px] text-indigo-300"
-      }, song.songId), React.createElement("h3", {
-        className: "font-black"
-      }, song.displayName), song.debugDescription && React.createElement("p", {
-        className: "mt-1 text-[10px] font-bold text-amber-200"
-      }, song.debugDescription), React.createElement("p", {
-        className: "break-all text-[9px] text-slate-400"
-      }, "BGM: ", song.bgmTrackId, " / ", track?.src || '未登録')), React.createElement("div", {
-        className: "space-y-2"
-      }, RHYTHM_DIFFICULTIES.map(difficulty => {
-        const chart = song.difficulties[difficulty.id];
-        const best = rhythmBestRecord(rhythmBestRecords, song.songId, difficulty.id);
-        return React.createElement("article", {
-          key: difficulty.id,
-          className: "rounded-xl border border-white/10 bg-slate-900/80 p-2"
-        }, React.createElement("div", {
-          className: "flex items-center justify-between"
-        }, React.createElement("b", {
-          className: "text-xs text-cyan-200"
-        }, difficulty.id, " Lv.", chart.level), React.createElement("span", {
-          className: "text-[9px] font-mono"
-        }, "MAX ", difficulty.maxScore.toLocaleString())), React.createElement("p", {
-          className: "mt-1 text-[9px] text-slate-300"
-        }, "BEST ", best.bestScore.toLocaleString(), " / MAX COMBO ", best.maxCombo, " / ", best.clear ? 'CLEAR' : '未プレイ'), React.createElement("p", {
-          className: "mt-1 break-words text-[8px] text-slate-500"
-        }, RHYTHM_JUDGMENT_IDS.map(id => `${id} ${best.judgments[id]}`).join(' / ')), React.createElement("p", {
-          className: "mt-1 text-[8px] text-slate-500"
-        }, "FC ", best.fullCombo ? '○' : '-', " / ALL EXCELLENT ", best.allExcellent ? '○' : '-', " / ALL MARVELOUS ", best.allMarvelous ? '○' : '-'), chart.notes.length > 0 && React.createElement("button", {
-          "data-rhythm-tap-start": true,
-          className: "mt-2 min-h-[44px] w-full rounded-xl bg-fuchsia-700 font-black",
-          onClick: () => {
-            setRhythmPlay({
-              song,
-              difficulty,
-              from: 'debug'
-            });
-            setGameState('RHYTHM_PLAY');
-          }
-        }, "リズムテストプレイ"));
       })));
     })), rhythmChartToolsOpened && React.createElement("div", {
       "data-rhythm-debug": true,

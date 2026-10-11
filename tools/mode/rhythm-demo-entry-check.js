@@ -160,7 +160,7 @@ ok('マスモン設定へ入れる',game.includes('data-rhythm-demo-monsters')&&
 //   並びを丸ごと固定で書かず「デバッグならデバッグ画面 / それ以外は曲えらび」を見る
 ok('体験版から始めたプレイは体験版ホームへ戻る',
   game.includes("setRhythmPlay({song,difficulty,from:'demo'})")
-  &&/const back=[^;]*rhythmPlay\.from==='debug'\?'RHYTHM_DEBUG':'RHYTHM_DEMO_HOME'/.test(game));
+  &&/const back=[^;]*rhythmPlay\.from==='debug'\|\|rhythmPlay\.from==='proto'\?'RHYTHM_DEBUG':'RHYTHM_DEMO_HOME'/.test(game));
 ok('あそびかた練習も曲えらびへ戻る',
   game.includes("from:'tutorial' }")&&!game.includes("from:'tutorial'?'RHYTHM_DEBUG'"));
 ok('設定を閉じたとき、開いた画面へ戻る',
