@@ -31288,7 +31288,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   // 押さえているあいだの光の色。ノーツの色(HOLD 緑・SLIDE 紫)ではなく、参考動画と同じ青白い光にする(2026-09-28)。
   // ノーツの色のままだと暗い道の上で「光っている」より「塗られている」に見えた。SLIDE だけ紫へ少し寄せて見分けを残す。
   // ノーツ本体・帯・終わりの横棒の色分けは変えない
-  const HOLD_SPARK_TINT=Object.freeze({HOLD:'96,200,255',SLIDE:'140,170,255'});
+  // SKY_L/SKY_R=案Zの空中スライドを押さえている指の下(帯と同じ手の色。左=青・右=桃)
+  const HOLD_SPARK_TINT=Object.freeze({HOLD:'96,200,255',SLIDE:'140,170,255',SKY_L:RHYTHM_SKY_LOOK.arc.left,SKY_R:RHYTHM_SKY_LOOK.arc.right});
   const holdSparkSprite=kind=>{
     const id=`spark:${kind}:${dpr}`;
     if(sprites.has(id))return sprites.get(id);
@@ -31324,7 +31325,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   const drawHoldSpark=(note,geo,opts)=>{
     const head=geo.head;if(!head)return;
     glowBegin();
-    const kind=rhythmNoteIsSlide(note)?'SLIDE':'HOLD',depth=opts.depthScale||1;
+    const kind=rhythmNoteIsSlide(note)?(opts.skySlideRgb&&(opts.skyHand==='L'||opts.skyHand==='R')&&skyZOn()?'SKY_'+opts.skyHand:'SLIDE'):'HOLD',depth=opts.depthScale||1;
     const w=Math.max(18,head.w*sizeScale),pulse=.5-.5*Math.cos(frameNow/140);
     // 溜め具合(0→1)。押さえ始めから0.7秒かけて、柱が伸び・光が強くなる(2026-09-28・ユーザー「もうちょい押し続けてる感じにしたい」)
     const charge=Math.min(1,Math.max(0,Number(opts.heldMs)||0)/700);
@@ -32507,6 +32508,12 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
         const gopts=trackDim<1?{...o,alpha:o.alpha*trackDim}:o;drawGlassBox(geo.head,gopts);
         if(note.type==='FLICK'||note._rhythmOriginalType==='FLICK'){const hd=geo.head,fh=skyBoxDims(hd,o).faceH,ax=hd.cx,ay=hd.cy-fh/2-3,aw=Math.max(4,fh*.7);ctx.globalAlpha=o.alpha;ctx.fillStyle='#ffffff';ctx.beginPath();ctx.moveTo(ax,ay-aw);ctx.lineTo(ax+aw,ay);ctx.lineTo(ax-aw,ay);ctx.closePath();ctx.fill();ctx.globalAlpha=1;}
       }else if(skyPlate||!(geo.skyShadow&&!isSlide&&o.pop===null))drawHead(note,geo,headOpts);
+      // 案Z: 空中のスライドを押している間、頭の板も帯と同じ手の色にする(指の下で「どっちの手か」が分かるように)
+      if(isSlide&&geo.head&&o.pressed&&!o.failed&&o.skySlideRgb&&skyZOn()&&(o.skyHand==='L'||o.skyHand==='R')){
+        const hrgb=o.skyHand==='L'?RHYTHM_SKY_LOOK.arc.left:RHYTHM_SKY_LOOK.arc.right,hd=geo.head,hw=hd.w*sizeScale,hh=HEAD_H*HEAD_THICK*(o.depthScale||1)*sizeScale;
+        ctx.globalAlpha=o.alpha*trackDim;roundRectPath(ctx,hd.cx-hw/2,hd.cy-hh/2,hw,hh,7*sizeScale);ctx.fillStyle=`rgba(${hrgb},.55)`;ctx.fill();
+        ctx.lineWidth=2.4*sizeScale;ctx.strokeStyle=`rgba(${hrgb},1)`;ctx.stroke();ctx.globalAlpha=1;
+      }
       // 案Z: 空中のスライドを押している間は、頭に白い星(半径17px)
       if(isSlide&&geo.head&&o.pressed&&!o.failed&&o.skySlideRgb&&skyZOn()&&effect!=='MINIMAL')drawSkyStarZ(geo.head.cx,geo.head.cy,o.alpha*trackDim);
       // 空中の段(試作): 空中の粒の見た目(案を比べるため4通り。localStorage 'mh_sky_tap_style_proto' で選ぶ・既定は gold)
