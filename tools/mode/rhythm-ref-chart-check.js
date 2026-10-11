@@ -142,5 +142,26 @@ ok('譜面コーパスの資料に「写しを残さない形でだけ使う」�
   ok('同じ時刻の点をまとめる',dedupeSlidePoints([{k:'s',pts:[[0,1,2,0,0],[100,2,2,0,0],[101,3,2,0,0]]}])[0].pts.length===2);
 }
 
+// ── 段1b 流れの速さ(rhythm-ref-flow.js)・段1c 並べた絵(rhythm-ref-compare.js) ──
+{
+  const {pOf,yOf,depthBack,screenBack,shiftScores,smoothShifts,peaksOf,N}=require('./rhythm-ref-flow.js');
+  const flowSrc=fs.readFileSync(path.join(__dirname,'rhythm-ref-flow.js'),'utf8'),cmpSrc=fs.readFileSync(path.join(__dirname,'rhythm-ref-compare.js'),'utf8');
+  const writes=src=>(src.match(/writeFileSync\(([^,]*)/g)||[]).map(m=>m.slice('writeFileSync('.length));
+  ok('段1b: 書き出し先を workDirFor で決め、どの書き込みも assertWorkPath を通す',/workDirFor\(track\)/.test(flowSrc)&&writes(flowSrc).length>0&&writes(flowSrc).every(w=>/^assertWorkPath\(/.test(w)),JSON.stringify(writes(flowSrc)));
+  ok('段1c: 書き出し先(compare/)を workDirFor で決め assertWorkPath を通す・ほかへ書かない',/assertWorkPath\(path\.join\(workDirFor\(track\),'compare'\)\)/.test(cmpSrc)&&writes(cmpSrc).length===0);
+  const g={vp:92,farY:123,judgeY:360};
+  ok('奥行き: 奥の端が0・判定線が1で、p と画面の高さが行き来しても戻る',Math.abs(pOf(g.farY,g))<1e-9&&Math.abs(pOf(g.judgeY,g)-1)<1e-9&&[0.1,0.5,0.9].every(p=>Math.abs(pOf(yOf(p,g),g)-p)<1e-9));
+  ok('奥行き%と見た目%: 判定線は0%・奥の端は100%で、真ん中の奥行きは見た目では奥寄りに見える',depthBack(1)===0&&depthBack(0)===100&&screenBack(1,g)===0&&screenBack(0,g)===100&&screenBack(0.5,g)>50);
+  // 合成の並び: 3つのノーツが 1コマ6刻み進む → 止まる → 4刻み戻る
+  const prof=ps=>{const a=new Float64Array(N);for(const p of ps)for(let i=0;i<N;i++)a[i]+=10*Math.exp(-(((i-p*(N-1))/2)**2));return a;};
+  const pos=[[0.2,0.4,0.6]];const steps=[...Array(8).fill(6),...Array(8).fill(0),...Array(8).fill(-4)];
+  for(const s of steps)pos.push(pos[pos.length-1].map(p=>p+s/(N-1)));
+  const profs=pos.map(prof),sg={corrMaxP:0.8};
+  const sm=smoothShifts([null,...profs.slice(1).map((b,i)=>shiftScores(profs[i],b,sg))],sg).slice(1).map(x=>x&&Math.round(x.dp*(N-1)));
+  ok('ずれ: 進む・止まる・戻るがコマごとに読める',sm.every((v,i)=>v===steps[i]),JSON.stringify(sm));
+  ok('待っているノーツ: 山の位置(p)が読める',JSON.stringify(peaksOf(prof([0.3,0.58,0.88]),{}).map(p=>Math.round(p*100)))==='[30,58,88]',JSON.stringify(peaksOf(prof([0.3,0.58,0.88]),{})));
+  ok('ずれ: 白いノーツが無いコマは「読めない」(止まると取り違えない)',shiftScores(new Float64Array(N),profs[0],{...sg,minEnergy:1})===null);
+}
+
 console.log(failed?`\n${failed}件 NG`:'\nすべて OK');
 process.exit(failed?1:0);

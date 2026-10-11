@@ -855,7 +855,18 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   // 演奏の途中で段が下がっても、作り直されない処理(毎フレームの処理・判定の処理)が最新の設定を読めるように
   const settingsLiveRef=useRef(settings);settingsLiveRef.current=settings;
   // タップ音を作り置きしておく(1回だけ。作り終わる前に叩いた音はクラシックで鳴る)
-  useEffect(()=>{RHYTHM_NOTE_SE_RUNTIME.prepare?.();},[]);
+  // 叩いたときの演出の流し直し用の CSS(rhythmRestartStylesInstall)も、曲の前の幕のうちに用意しておく。
+  // 2026-10-11 社長「最初なんだけど、押してる感じラグを感じる」: 最初に叩いたときに用意していたため、1回目の押しだけ
+  // CPU 3倍で処理 73〜99ms・次の絵まで 147〜207ms かかっていた(曲の途中は 3ms・44ms)。見た目・判定・時刻は変えない
+  useEffect(()=>{
+    RHYTHM_NOTE_SE_RUNTIME.prepare?.();
+    if(typeof setTimeout!=='function')return undefined;
+    // 演奏の部品は曲が始まるまでに小さな style を足すことがあるので、幕・READY・カウントダウンの間(最初の8秒)は0.4秒ごとに見る。
+    // 変わっていなければすぐ戻る(シートの数を数えるだけ)。最初の押しで決まりを差し込むと、ページ全体のスタイル計算がやり直しになる
+    const install=()=>{try{rhythmRestartStylesInstall();}catch{}};
+    const first=setTimeout(install,250),again=setInterval(install,400),stop=setTimeout(()=>clearInterval(again),8000);
+    return ()=>{clearTimeout(first);clearInterval(again);clearTimeout(stop);};
+  },[]);
   const stepEffectCapRef=useRef(null);
   // 下げたときは画面の上のほうへ一瞬だけ知らせる(黙って下がると「設定したのに演出が出ない」と思われるため)
   // 前の曲で下げた段のまま始めるときも、始めに1回知らせる(黙って控えめなまま始まらないように)
@@ -943,7 +954,7 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   const webglWanted=useState(()=>canvasNotes&&rhythmWebglNotesActive(settings.noteDrawMode))[0];
   const [webglLost,setWebglLost]=useState(false);
   const webglNotes=webglWanted&&!webglLost;
-  useEffect(()=>{if(!canvasNotes)return undefined;RHYTHM_CANVAS_RENDERER.attach(noteCanvasRef.current,{webgl:webglNotes});const canvas=noteCanvasRef.current;if(canvas)canvas.dataset.rhythmNoteBackend=RHYTHM_CANVAS_RENDERER.backend;
+  useEffect(()=>{if(!canvasNotes)return undefined;RHYTHM_CANVAS_RENDERER.attach(noteCanvasRef.current,{webgl:webglNotes,gpuBand:rhythmGpuBandPreference()==='gpu'});const canvas=noteCanvasRef.current;if(canvas)canvas.dataset.rhythmNoteBackend=RHYTHM_CANVAS_RENDERER.backend;
     // ★WebGL を頼んだのに描き込み先が取れなかった(準備の途中で失敗した)ときは、文脈を失ったときと同じく
     //   canvas を作り直して「ふつう」の描き方へ戻す。そのままだと判定は進むのにノーツが見えない(2026-09-26)
     if(webglNotes&&canvas&&RHYTHM_CANVAS_RENDERER.ready===false){setWebglLost(true);return()=>{RHYTHM_CANVAS_RENDERER.release();};}
@@ -1907,7 +1918,7 @@ const canvasReady=canvasNotes&&placeable&&RHYTHM_CANVAS_RENDERER.begin(travel.re
 const roadGrid=roadFxRef.current;
 if(roadGrid&&placeable){const {beatMs,zeroMs,bar}=roadGrid,phase=(visualTime-rhythmBeatZeroAt(roadGrid,visualTime))/beatMs,beatIndex=Math.floor(phase),since=(phase-beatIndex)*beatMs,onBar=((beatIndex%bar)+bar)%bar===0;
   if(canvasReady){const lines=roadLinesRef.current,areaH=travel.rect.height,areaW=travel.rect.width;let count=0;
-    const scrollNow=rhythmScrollPos(visualTime),beatFrom=rhythmScrollTimeAt(scrollNow-travelMs*.35);for(let k=Math.ceil(((Number.isFinite(beatFrom)?beatFrom:visualTime)-rhythmBeatZeroAt(roadGrid,visualTime))/beatMs)-1;count<64;k++){const t=rhythmBeatLineTime(roadGrid,zeroMs+k*beatMs),st=rhythmScrollPos(t);if(st<scrollNow-travelMs*.35)continue;if(st>scrollNow+travelMs*1.05)break;if(t<0)continue;
+    const scrollNow=rhythmScrollPos(visualTime),beatFrom=rhythmScrollTimeAt(scrollNow-travelMs*.35);for(let k=Math.ceil(((Number.isFinite(beatFrom)?beatFrom:visualTime)-rhythmBeatZeroAt(roadGrid,visualTime))/beatMs)-1;count<64;k++){const t=rhythmBeatLineTime(roadGrid,zeroMs+k*beatMs),st=rhythmScrollPos(t);if(st<scrollNow-travelMs*.35)continue;if(st>scrollNow+travelMs*1.05){if(!RHYTHM_SCROLL.back||rhythmScrollMinAfter(t)>scrollNow+travelMs*1.05)break;continue;}if(t<0)continue;
       const progress=1-(rhythmScrollPos(t)-rhythmScrollPos(visualTime))/travelMs,y=travel.spawnY+rhythmProjectTravelProgress(progress)*travel.travelPx+travel.noteHeight/2;
       if(!(y>=0&&y<=areaH))continue;const yr=y/areaH,o=count*6;
       lines[o]=y;lines[o+1]=rhythmProjectBoundary(0,yr)*areaW;lines[o+2]=rhythmProjectBoundary(RHYTHM_LANE_COUNT,yr)*areaW;lines[o+3]=((k%bar)+bar)%bar===0?1:0;lines[o+4]=rhythmProjectionScale(yr);
@@ -1924,6 +1935,8 @@ if(canvasReady)RHYTHM_CANVAS_RENDERER.drawHits(travel.hitY);
 
 // canvas 版のノーツ1個。見えるか・どこに置くかの決め方は DOM 版(下の visitNote)と同じ式。
 // 判定はここへ来る前に visitNote が済ませている。描くだけで、judgment・score・input には触らない
+// スライドの帯を GPU で描くか(作り替え B・デバッグの切り替え)。WebGL で帯の部品が作れたときだけ true
+const gpuBandNow=canvasReady&&RHYTHM_CANVAS_RENDERER.gpuBand;
 const paintCanvasNote=note=>{
   const failedTrail=note.done&&note._rhythmFinalJudgment==='MISS'&&rhythmNoteHasBody(note)&&songTimeMs<rhythmReleaseTargetMs(note);
   const clearFlash=note.done&&Number.isFinite(note._rhythmClearAt)&&songTimeMs-note._rhythmClearAt<RHYTHM_CLEAR_FLASH_MS;
@@ -1942,7 +1955,7 @@ const paintCanvasNote=note=>{
   // 帯を持つかは元の種類で決める。触った FLICK は判定のため type が 'HOLD' に化けているが帯は無い
   const hasBody=rhythmNoteHasBody(note);
   const activeSlideLane=RHYTHM_GESTURE_RUNTIME.slideVisualLaneForIndex(note.index),visualLane=activeSlideLane===null?note.lane:activeSlideLane;
-  const geo=rhythmNoteCanvasGeometry(note,yPx,visualLane,travel.rect,travel.noteHeight,hasBody?releaseYpx:null,{chartNowMs:songTimeMs-settings.judgmentTimingOffsetMs,visualTime,travelMs,spawnY:travel.spawnY,travelPx:travel.travelPx},hasBody?bodyPx:0);
+  const geo=rhythmNoteCanvasGeometry(note,yPx,visualLane,travel.rect,travel.noteHeight,hasBody?releaseYpx:null,{chartNowMs:songTimeMs-settings.judgmentTimingOffsetMs,visualTime,travelMs,spawnY:travel.spawnY,travelPx:travel.travelPx,gpu:gpuBandNow},hasBody?bodyPx:0);
   const monster=!!monsterForNote(note);
   const depthScale=Math.round((0.56+geo.scale*.44)*100)/100,brightness=Math.round((0.72+geo.scale*.28)*100)/100;
   RHYTHM_CANVAS_RENDERER.drawNote(note,geo,{failed:failedTrail,monster,wide:rhythmNoteIsWide(note),pressed:note.type==='HOLD'&&note.activePointerId!==null,heldMs:songTimeMs-note.timeMs,alpha:failedTrail?.34:1,pop:clearFlash?Math.min(1,(songTimeMs-note._rhythmClearAt)/RHYTHM_CLEAR_FLASH_MS):null,depthScale,brightness});
@@ -1975,7 +1988,10 @@ if(calibrating){const taps=Array.isArray(run.deltas)?run.deltas.length:0;
       if(body)body.textContent=now
         ?`いまのずれ ${now.rawMeanMs>0?'+':''}${now.rawMeanMs}ms（${counted}回ぶん）／ 判定とFAST・SLOWを見ながら、判定ラインに重なった瞬間に叩いてください`
         :'判定ラインにノーツが重なった瞬間に叩いてください。判定とFAST・SLOWはいつもどおり出ます';}}}
-const visitNote=note=>{if(note.type==='HOLD'&&note.activePointerId!==null&&songTimeMs>=note.endTimeMs+settings.judgmentTimingOffsetMs)applyJudgment(note,note.holdJudgment||'MISS',note.holdDeltaMs||0);
+// 押さえたまま終わりまで来た HOLD/SLIDE。確定する前にタッチ側の終わりの見回り(settleHeld)を1回走らせる。
+// 別々に走らせていたので、押しっぱなしで終わりの窓を過ぎても、どちらが先に走るかで成功にも MISS にもなっていた(2026-10-11)。
+// 見回りの時計でまだ終わりの窓の中なら、ここではまだ確定しない(窓の中で離した指を MISS にしない)
+const visitNote=note=>{if(note.type==='HOLD'&&note.activePointerId!==null&&songTimeMs>=note.endTimeMs+settings.judgmentTimingOffsetMs){if(RHYTHM_GESTURE_RUNTIME.settleHeld?.(note,songTimeMs)!==false&&songTimeMs>=note.endTimeMs+settings.judgmentTimingOffsetMs)applyJudgment(note,note.holdJudgment||'MISS',note.holdDeltaMs||0);}
 // 指を離したまま戻ってこなかったHOLD/SLIDE。持ち替えの猶予を過ぎた時点で失敗にする。
 // 終わりまで来ていたら、離していても成立させる(終わり際に離すぶんは元から許している)
 if(!note.done&&note.activePointerId===null&&note.releasedAtMs!=null){
@@ -2029,14 +2045,14 @@ while(scanFrom<notes.length){
   scanFrom++;
 }
 run.scanFrom=scanFrom;
-// 速さの表(試作)があるときは、見た目の位置 S で打ち切る(S は時刻が進めば減らない)
+// 速さの表(試作)があるときは、見た目の位置 S で打ち切る。戻る区間のある表は「この先いちばん手前へ来る位置」で打ち切る(戻らない表では S そのもの)
 const scanHorizonMs=visualTime+travelMs*1.2,scanHorizonScroll=rhythmScrollPos(visualTime)+travelMs*1.2,scrollTable=!!RHYTHM_SCROLL.points;
 // 押さえている HOLD/SLIDE を集めて、押さえている間の音(高い「シャラシャラ」)へ渡す(2026-09-28)。
 // 渡すだけで、判定・スコアには触らない。並びは使い回す(毎フレーム配列を作らない)
 const heldNotes=heldNotesRef.current;heldNotes.length=0;
 for(let i=scanFrom;i<notes.length;i++){
   const note=notes[i];
-  if(run.notesReady&&run.notesAscending&&(scrollTable?rhythmScrollPos(note.timeMs)>scanHorizonScroll:note.timeMs>scanHorizonMs))break;
+  if(run.notesReady&&run.notesAscending&&(scrollTable?rhythmScrollMinAfter(note.timeMs)>scanHorizonScroll:note.timeMs>scanHorizonMs))break;
   perfScanned++;
   visitNote(note);
   if(!note.done&&note.activePointerId!==null&&note.type==='HOLD'&&rhythmNoteHasBody(note))heldNotes.push(note);

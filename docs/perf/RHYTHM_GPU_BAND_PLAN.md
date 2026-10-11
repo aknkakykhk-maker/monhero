@@ -48,6 +48,50 @@
 判定は描き方と分かれている(`visitNote`・入力)ので触らない。
 リスク: iPhone Safari の GPU の文脈が落ちる件、ふちのなめらかさ(アンチエイリアス)のわずかな差(画素の突き合わせで許す幅を決めて社長に見せる)。
 
+## S1 でやったこと(2026-10-11・ドライバー)
+
+- `rhythmCreateGpuSlideBand`(rhythm-mode.js・`rhythmCreateGL2D` の手前): 帯の形を譜面の座標で一度だけ GPU に置く部品。
+  点1つ = [S(速さの表で積み上げた位置), T(時刻), c(帯の中心), ±hb(ふちまで)] と高さ sky。奥行きの投影・空中の持ち上げは頂点シェーダー(`BAND_VS`)で、
+  `rhythmSlideSegmentQuads` の project と同じ式。速さの表(`RHYTHM_SCROLL.points`)が変わったら作り直す。見えなくなって3秒で捨てる
+- 押さえている帯は、今の描き方と同じく「いまの位置から次の譜面の点まで」だけ毎コマ刻み直して渡す(刻む点が今の描き方とぴったり同じになる)。その先は GPU に置いた形
+- 外周(右のふち→先の角→先の線→先の角→左のふち)は1本の帯につなげて置き、残りの範囲を1回で描く。描く順・色・太さは `drawSlide` と同じ(`drawSlideGpu`)。影は `drawSkyShadowGpu`
+- 押さえている光(明るさの範囲・流れる筋)は判定ライン寄りしか使わないので、その範囲だけ CPU で刻む(`travel.window`)
+- 出し入れ: デバッグ画面「スライドの帯の描き方(検証用)」→ GPU(`mh_rhythm_gpu_band_v1`)。選ぶとノーツは WebGL で描く。
+  WebGL が取れない・文脈が落ちたときは、今までどおり 2D へ戻る(演奏画面の既存の仕組み)。帯の部品が作れなければ CPU で刻む
+- 突き合わせで見つけた今の描き方の不具合を1つ直した: ノーツサイズが100%以外だと、空中のスライドが地上の色で描かれていた(`drawSlide` の倍率の写しが高さを落としていた。試作の枠だけ)
+
+### 突き合わせ(`node tools/mode/rhythm-gpu-band-check.js`)
+
+公開中の全曲・全難易度+Sheriruth 全難易度+試作の枠(proto・止まる演出の参考版2曲)= スライドのある譜面 135本・1086場面(横844×390/縦390×700、
+ノーツ速さ3通り、押さえている最中・取り損ね・流れる光・ノーツサイズ80%・演出量 最小を混ぜる)。HELL は main に無いので、テンポくんのブランチの譜面を
+`--extra` で読ませて比べた(9場面)。
+
+| 比べたもの | 平均の差の最大(/255) |
+| --- | --- |
+| 新しい描き方 と 今の 2D | 1.296(全曲)/ 1.108(HELL) |
+| (参考)今の WebGL と 今の 2D | 1.296 / 1.093 |
+| 新しい描き方が今の WebGL より 2D から離れた分 | **0.041**(全曲)/ **0.016**(HELL) |
+
+抜け・余計な画素は 0.003% 以下。差はふちのなめらかさ(今の WebGL と同じ)と、区切りの継ぎ目の重ね塗りが無くなった分だけ。
+検査の基準: 平均の差 1.5/255 未満(既存の rhythm-webgl-notes-check と同じ)・抜けと余計 0.3% 未満・今の WebGL より 0.3/255 以上離れない。
+
+### 重さ(手元のブラウザ・CPU1倍・104〜112秒・ノーツを描く JS = paintCanvasNote の1秒あたり)
+
+※ 手元のブラウザは GPU が無く(ソフトウェアで描く)、忙しさが1秒あたり 980ms を超えて頭打ち。1コマの時間は iPhone の目安にならないので、JS の時間で比べる。
+
+| 曲 | 描き方 | ノーツを描く JS | うち帯(drawSlide/drawSlideGpu) | 形を作る(rhythmNoteCanvasGeometry) | 1コマ 平均/最長 |
+| --- | --- | --- | --- | --- | --- |
+| Sheriruth MASTER | 2D(今の既定) | 49.0ms | 12.6ms | 17.6ms(刻み 7.9・区切りの線 8.3) | 17.0 / 117ms |
+| Sheriruth MASTER | 今の WebGL | 48.2ms | 26.4ms | 8.8ms | 44.7 / 233ms ※ |
+| Sheriruth MASTER | **GPU の帯** | **30.6ms** | 13.2ms(うち帯の GPU 分 5.0・残りは区切りの線と押さえている光の GL2D) | 4.0ms | 34.2 / 200ms ※ |
+| FREEDOM DiVE↓ MASTER | 2D | 28.4ms | 1.4ms | 5.6ms | 17.2 / 133ms |
+| FREEDOM DiVE↓ MASTER | 今の WebGL | 34.4ms | 1.2ms | 4.0ms | 38.4 / 183ms ※ |
+| FREEDOM DiVE↓ MASTER | **GPU の帯** | **29.8ms** | 1.9ms | 2.4ms | 33.6 / 217ms ※ |
+
+※ WebGL の2行は手元のブラウザがソフトウェアで GPU を描くため頭打ち(忙しさ 980ms/秒)。1コマの時間は社長の iPhone で比べる(S3)。
+帯を刻む CPU の仕事(刻み・投影)は無くなった。残りの大きいもの: 区切りの線(`rhythmSlideCheckpointLines`・CPU で投影)と、
+ノーツの板(`drawHead`)。どちらも S2 で同じ土台へ移す。
+
 ## 測り方・確かめ方
 
 - 重さ: `node tools/playbot/rhythm-frame-perf.js --song sheriruth --diff MASTER --entry debug --from 104000 --to 112000`
@@ -61,4 +105,8 @@
 - `drawSlide`(rhythm-mode.js の canvas の描き方の中)と `rhythmSlideSegmentQuads` が今の正本。S1 の新しい描き方は、
   この2つと同じ形を出すことを画素で確かめる
 - 叩いたときの光などの DOM の流し直しは #2666 で済み。HELL はデバッグ専用のまま(テンポくんのブランチ claude/rhythm-hell)
+- **HELL のブランチを main へ入れるときの注意**: HELL 側で `drawSlide` の見た目(案Z: 半透明の帯+白い芯など)を変えているので、同じ変更を
+  `drawSlideGpu`(と影なら `drawSkyShadowGpu`、帯の色の決め方ならシェーダーの塗り側 `BAND_FS`)にも入れる。
+  入れたら `node tools/mode/rhythm-gpu-band-check.js` で、今の描き方と画素で同じかを確かめる
+- S2(ノーツの板・箱・星・叩いたときの光)は、この部品(`rhythmCreateGpuSlideBand`)の作り(GL2D の順番を保ったまま差し込む・頂点シェーダーで投影)に乗せる
 - 検査 `tools/ranking/profile-frame-browser-check.js` は、今夜の変更より前の main でも落ちる(この作業とは無関係)

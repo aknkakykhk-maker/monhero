@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d06aee1f940636a8
+// generated-sha256: 7157c9b0197e7ccb
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-11 10:35"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-11 10:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -19816,7 +19816,18 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   // 演奏の途中で段が下がっても、作り直されない処理(毎フレームの処理・判定の処理)が最新の設定を読めるように
   const settingsLiveRef=useRef(settings);settingsLiveRef.current=settings;
   // タップ音を作り置きしておく(1回だけ。作り終わる前に叩いた音はクラシックで鳴る)
-  useEffect(()=>{RHYTHM_NOTE_SE_RUNTIME.prepare?.();},[]);
+  // 叩いたときの演出の流し直し用の CSS(rhythmRestartStylesInstall)も、曲の前の幕のうちに用意しておく。
+  // 2026-10-11 社長「最初なんだけど、押してる感じラグを感じる」: 最初に叩いたときに用意していたため、1回目の押しだけ
+  // CPU 3倍で処理 73〜99ms・次の絵まで 147〜207ms かかっていた(曲の途中は 3ms・44ms)。見た目・判定・時刻は変えない
+  useEffect(()=>{
+    RHYTHM_NOTE_SE_RUNTIME.prepare?.();
+    if(typeof setTimeout!=='function')return undefined;
+    // 演奏の部品は曲が始まるまでに小さな style を足すことがあるので、幕・READY・カウントダウンの間(最初の8秒)は0.4秒ごとに見る。
+    // 変わっていなければすぐ戻る(シートの数を数えるだけ)。最初の押しで決まりを差し込むと、ページ全体のスタイル計算がやり直しになる
+    const install=()=>{try{rhythmRestartStylesInstall();}catch{}};
+    const first=setTimeout(install,250),again=setInterval(install,400),stop=setTimeout(()=>clearInterval(again),8000);
+    return ()=>{clearTimeout(first);clearInterval(again);clearTimeout(stop);};
+  },[]);
   const stepEffectCapRef=useRef(null);
   // 下げたときは画面の上のほうへ一瞬だけ知らせる(黙って下がると「設定したのに演出が出ない」と思われるため)
   // 前の曲で下げた段のまま始めるときも、始めに1回知らせる(黙って控えめなまま始まらないように)
@@ -19904,7 +19915,7 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   const webglWanted=useState(()=>canvasNotes&&rhythmWebglNotesActive(settings.noteDrawMode))[0];
   const [webglLost,setWebglLost]=useState(false);
   const webglNotes=webglWanted&&!webglLost;
-  useEffect(()=>{if(!canvasNotes)return undefined;RHYTHM_CANVAS_RENDERER.attach(noteCanvasRef.current,{webgl:webglNotes});const canvas=noteCanvasRef.current;if(canvas)canvas.dataset.rhythmNoteBackend=RHYTHM_CANVAS_RENDERER.backend;
+  useEffect(()=>{if(!canvasNotes)return undefined;RHYTHM_CANVAS_RENDERER.attach(noteCanvasRef.current,{webgl:webglNotes,gpuBand:rhythmGpuBandPreference()==='gpu'});const canvas=noteCanvasRef.current;if(canvas)canvas.dataset.rhythmNoteBackend=RHYTHM_CANVAS_RENDERER.backend;
     // ★WebGL を頼んだのに描き込み先が取れなかった(準備の途中で失敗した)ときは、文脈を失ったときと同じく
     //   canvas を作り直して「ふつう」の描き方へ戻す。そのままだと判定は進むのにノーツが見えない(2026-09-26)
     if(webglNotes&&canvas&&RHYTHM_CANVAS_RENDERER.ready===false){setWebglLost(true);return()=>{RHYTHM_CANVAS_RENDERER.release();};}
@@ -20868,7 +20879,7 @@ const canvasReady=canvasNotes&&placeable&&RHYTHM_CANVAS_RENDERER.begin(travel.re
 const roadGrid=roadFxRef.current;
 if(roadGrid&&placeable){const {beatMs,zeroMs,bar}=roadGrid,phase=(visualTime-rhythmBeatZeroAt(roadGrid,visualTime))/beatMs,beatIndex=Math.floor(phase),since=(phase-beatIndex)*beatMs,onBar=((beatIndex%bar)+bar)%bar===0;
   if(canvasReady){const lines=roadLinesRef.current,areaH=travel.rect.height,areaW=travel.rect.width;let count=0;
-    const scrollNow=rhythmScrollPos(visualTime),beatFrom=rhythmScrollTimeAt(scrollNow-travelMs*.35);for(let k=Math.ceil(((Number.isFinite(beatFrom)?beatFrom:visualTime)-rhythmBeatZeroAt(roadGrid,visualTime))/beatMs)-1;count<64;k++){const t=rhythmBeatLineTime(roadGrid,zeroMs+k*beatMs),st=rhythmScrollPos(t);if(st<scrollNow-travelMs*.35)continue;if(st>scrollNow+travelMs*1.05)break;if(t<0)continue;
+    const scrollNow=rhythmScrollPos(visualTime),beatFrom=rhythmScrollTimeAt(scrollNow-travelMs*.35);for(let k=Math.ceil(((Number.isFinite(beatFrom)?beatFrom:visualTime)-rhythmBeatZeroAt(roadGrid,visualTime))/beatMs)-1;count<64;k++){const t=rhythmBeatLineTime(roadGrid,zeroMs+k*beatMs),st=rhythmScrollPos(t);if(st<scrollNow-travelMs*.35)continue;if(st>scrollNow+travelMs*1.05){if(!RHYTHM_SCROLL.back||rhythmScrollMinAfter(t)>scrollNow+travelMs*1.05)break;continue;}if(t<0)continue;
       const progress=1-(rhythmScrollPos(t)-rhythmScrollPos(visualTime))/travelMs,y=travel.spawnY+rhythmProjectTravelProgress(progress)*travel.travelPx+travel.noteHeight/2;
       if(!(y>=0&&y<=areaH))continue;const yr=y/areaH,o=count*6;
       lines[o]=y;lines[o+1]=rhythmProjectBoundary(0,yr)*areaW;lines[o+2]=rhythmProjectBoundary(RHYTHM_LANE_COUNT,yr)*areaW;lines[o+3]=((k%bar)+bar)%bar===0?1:0;lines[o+4]=rhythmProjectionScale(yr);
@@ -20885,6 +20896,8 @@ if(canvasReady)RHYTHM_CANVAS_RENDERER.drawHits(travel.hitY);
 
 // canvas 版のノーツ1個。見えるか・どこに置くかの決め方は DOM 版(下の visitNote)と同じ式。
 // 判定はここへ来る前に visitNote が済ませている。描くだけで、judgment・score・input には触らない
+// スライドの帯を GPU で描くか(作り替え B・デバッグの切り替え)。WebGL で帯の部品が作れたときだけ true
+const gpuBandNow=canvasReady&&RHYTHM_CANVAS_RENDERER.gpuBand;
 const paintCanvasNote=note=>{
   const failedTrail=note.done&&note._rhythmFinalJudgment==='MISS'&&rhythmNoteHasBody(note)&&songTimeMs<rhythmReleaseTargetMs(note);
   const clearFlash=note.done&&Number.isFinite(note._rhythmClearAt)&&songTimeMs-note._rhythmClearAt<RHYTHM_CLEAR_FLASH_MS;
@@ -20903,7 +20916,7 @@ const paintCanvasNote=note=>{
   // 帯を持つかは元の種類で決める。触った FLICK は判定のため type が 'HOLD' に化けているが帯は無い
   const hasBody=rhythmNoteHasBody(note);
   const activeSlideLane=RHYTHM_GESTURE_RUNTIME.slideVisualLaneForIndex(note.index),visualLane=activeSlideLane===null?note.lane:activeSlideLane;
-  const geo=rhythmNoteCanvasGeometry(note,yPx,visualLane,travel.rect,travel.noteHeight,hasBody?releaseYpx:null,{chartNowMs:songTimeMs-settings.judgmentTimingOffsetMs,visualTime,travelMs,spawnY:travel.spawnY,travelPx:travel.travelPx},hasBody?bodyPx:0);
+  const geo=rhythmNoteCanvasGeometry(note,yPx,visualLane,travel.rect,travel.noteHeight,hasBody?releaseYpx:null,{chartNowMs:songTimeMs-settings.judgmentTimingOffsetMs,visualTime,travelMs,spawnY:travel.spawnY,travelPx:travel.travelPx,gpu:gpuBandNow},hasBody?bodyPx:0);
   const monster=!!monsterForNote(note);
   const depthScale=Math.round((0.56+geo.scale*.44)*100)/100,brightness=Math.round((0.72+geo.scale*.28)*100)/100;
   RHYTHM_CANVAS_RENDERER.drawNote(note,geo,{failed:failedTrail,monster,wide:rhythmNoteIsWide(note),pressed:note.type==='HOLD'&&note.activePointerId!==null,heldMs:songTimeMs-note.timeMs,alpha:failedTrail?.34:1,pop:clearFlash?Math.min(1,(songTimeMs-note._rhythmClearAt)/RHYTHM_CLEAR_FLASH_MS):null,depthScale,brightness});
@@ -20936,7 +20949,10 @@ if(calibrating){const taps=Array.isArray(run.deltas)?run.deltas.length:0;
       if(body)body.textContent=now
         ?`いまのずれ ${now.rawMeanMs>0?'+':''}${now.rawMeanMs}ms（${counted}回ぶん）／ 判定とFAST・SLOWを見ながら、判定ラインに重なった瞬間に叩いてください`
         :'判定ラインにノーツが重なった瞬間に叩いてください。判定とFAST・SLOWはいつもどおり出ます';}}}
-const visitNote=note=>{if(note.type==='HOLD'&&note.activePointerId!==null&&songTimeMs>=note.endTimeMs+settings.judgmentTimingOffsetMs)applyJudgment(note,note.holdJudgment||'MISS',note.holdDeltaMs||0);
+// 押さえたまま終わりまで来た HOLD/SLIDE。確定する前にタッチ側の終わりの見回り(settleHeld)を1回走らせる。
+// 別々に走らせていたので、押しっぱなしで終わりの窓を過ぎても、どちらが先に走るかで成功にも MISS にもなっていた(2026-10-11)。
+// 見回りの時計でまだ終わりの窓の中なら、ここではまだ確定しない(窓の中で離した指を MISS にしない)
+const visitNote=note=>{if(note.type==='HOLD'&&note.activePointerId!==null&&songTimeMs>=note.endTimeMs+settings.judgmentTimingOffsetMs){if(RHYTHM_GESTURE_RUNTIME.settleHeld?.(note,songTimeMs)!==false&&songTimeMs>=note.endTimeMs+settings.judgmentTimingOffsetMs)applyJudgment(note,note.holdJudgment||'MISS',note.holdDeltaMs||0);}
 // 指を離したまま戻ってこなかったHOLD/SLIDE。持ち替えの猶予を過ぎた時点で失敗にする。
 // 終わりまで来ていたら、離していても成立させる(終わり際に離すぶんは元から許している)
 if(!note.done&&note.activePointerId===null&&note.releasedAtMs!=null){
@@ -20990,14 +21006,14 @@ while(scanFrom<notes.length){
   scanFrom++;
 }
 run.scanFrom=scanFrom;
-// 速さの表(試作)があるときは、見た目の位置 S で打ち切る(S は時刻が進めば減らない)
+// 速さの表(試作)があるときは、見た目の位置 S で打ち切る。戻る区間のある表は「この先いちばん手前へ来る位置」で打ち切る(戻らない表では S そのもの)
 const scanHorizonMs=visualTime+travelMs*1.2,scanHorizonScroll=rhythmScrollPos(visualTime)+travelMs*1.2,scrollTable=!!RHYTHM_SCROLL.points;
 // 押さえている HOLD/SLIDE を集めて、押さえている間の音(高い「シャラシャラ」)へ渡す(2026-09-28)。
 // 渡すだけで、判定・スコアには触らない。並びは使い回す(毎フレーム配列を作らない)
 const heldNotes=heldNotesRef.current;heldNotes.length=0;
 for(let i=scanFrom;i<notes.length;i++){
   const note=notes[i];
-  if(run.notesReady&&run.notesAscending&&(scrollTable?rhythmScrollPos(note.timeMs)>scanHorizonScroll:note.timeMs>scanHorizonMs))break;
+  if(run.notesReady&&run.notesAscending&&(scrollTable?rhythmScrollMinAfter(note.timeMs)>scanHorizonScroll:note.timeMs>scanHorizonMs))break;
   perfScanned++;
   visitNote(note);
   if(!note.done&&note.activePointerId!==null&&note.type==='HOLD'&&rhythmNoteHasBody(note))heldNotes.push(note);
@@ -44756,6 +44772,7 @@ function MonsterHeroGame() {
   const [rhythmStrip,setRhythmStrip]=useState(()=>RHYTHM_STRIP.value);
   // ノーツの描き方の上書き(検証用・デバッグ限定)。'' = 公開設定に従う / 'dom' / 'canvas'
   const [rhythmCanvasPref,setRhythmCanvasPref]=useState(()=>rhythmCanvasNotesPreference());
+  const [rhythmGpuBandPref,setRhythmGpuBandPref]=useState(()=>rhythmGpuBandPreference());
   const [rhythmStageGlPref,setRhythmStageGlPref]=useState(()=>rhythmStageGlPreference());
   const [rhythmChartToolsOpened,setRhythmChartToolsOpened]=useState(false);
   // 音ゲー体験版の入口。デバッグ画面と同じ保存値を読むが、開く画面は体験版ホーム。
@@ -62730,6 +62747,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <section data-rhythm-perf-panel className="mb-3 rounded-2xl border border-amber-400/40 bg-amber-950/20 p-3"><div className="flex items-center justify-between gap-2"><h3 className="text-xs font-black text-amber-200">性能計測（デバッグ）</h3><button type="button" data-rhythm-perf-toggle aria-pressed={rhythmPerfOn} onClick={()=>{setRhythmPerfOn(RHYTHM_PERF.setEnabled(!rhythmPerfOn));setRhythmPerfStats(null);}} className={`min-h-[44px] rounded-xl px-3 text-[11px] font-black ${rhythmPerfOn?'bg-amber-500 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{rhythmPerfOn?'計測ON':'計測OFF'}</button></div><p className="mt-1 text-[9px] font-bold leading-relaxed text-amber-100/80">ONにしてからプレイすると、フレーム時間と1フレームあたりの負荷（レイアウト測定・DOM検索・SLIDE帯の更新数）を記録します。OFFのあいだは記録処理そのものが動きません（指の記録の行だけは、OFFでもいつも数えています）。「モンスターノーツ」の行が「ノーツを取る処理」よりはっきり大きければ、踏んだときに固まる原因はそこです。ノーツの動きが滑らかかどうかは「曲の時刻」の3つを見ます。ノーツの位置は曲の再生位置だけで決まるので、これが進まないフレームが多いと、フレームレートが60のままでもノーツは止まって飛ぶ動きになります。</p><div className="mt-2 flex gap-2"><button type="button" className="min-h-[40px] flex-1 rounded-xl border border-white/20 bg-slate-900 text-[11px] font-black text-slate-200" onClick={()=>setRhythmPerfStats(RHYTHM_PERF.snapshot())}>いまの記録を見る</button><button type="button" className="min-h-[40px] flex-1 rounded-xl border border-white/20 bg-slate-900 text-[11px] font-black text-slate-200" onClick={()=>{RHYTHM_PERF.reset();setRhythmPerfStats(null);}}>記録をクリア</button></div>{rhythmPerfStats&&<dl data-rhythm-perf-stats className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px]">{[['フレーム数',rhythmPerfStats.frames],['平均fps',rhythmPerfStats.fps.toFixed(1)],['平均フレーム',`${rhythmPerfStats.avgMs.toFixed(1)}ms`],['最悪フレーム',`${rhythmPerfStats.maxMs.toFixed(1)}ms`],...[['GPU(ノーツ)',rhythmPerfStats.gpuNotes],['GPU(背景)',rhythmPerfStats.gpuStage]].map(([label,g])=>[label,!g||g.supported===null?'—':g.supported===false?'この端末は測れない':g.count?`平均${g.avgMs.toFixed(2)}ms 最大${g.maxMs.toFixed(1)}ms`:'まだ届いていない']),['16.7ms超',rhythmPerfStats.over16],['25ms超',rhythmPerfStats.over25],['33ms超',rhythmPerfStats.over33],['50ms以上（自動調整が重いと数える）',rhythmPerfStats.over50??0],['レイアウト測定/frame',rhythmPerfStats.layoutReadsPerFrame.toFixed(2)],['DOM検索/frame',rhythmPerfStats.domQueriesPerFrame.toFixed(2)],['SLIDE帯更新/frame',rhythmPerfStats.slidePolygonsPerFrame.toFixed(2)],['ジェスチャーrAF',rhythmPerfStats.gestureFrames],['ノーツ再検索',rhythmPerfStats.noteRescans],['走査ノーツ/frame',rhythmPerfStats.notesScannedPerFrame.toFixed(1)],['実描画ノーツ/frame',rhythmPerfStats.notesDrawnPerFrame.toFixed(1)],['最悪frameの走査/実描画',`${rhythmPerfStats.worstFrameScanned} / ${rhythmPerfStats.worstFrameDrawn}`],['先頭スキップ/frame',rhythmPerfStats.headSkippedPerFrame.toFixed(1)],['走査の絞り込み',rhythmPerfStats.narrowed===null?'未計測':(rhythmPerfStats.narrowed?'有効':'無効(昇順でない譜面)')],['tick処理/frame',`${rhythmPerfStats.tickMsPerFrame.toFixed(2)}ms`],['最悪frameのtick処理',`${rhythmPerfStats.worstFrameTickMs.toFixed(1)}ms`],['tick処理の最大',`${rhythmPerfStats.maxTickMs.toFixed(1)}ms`],['frame開始→tick開始の遅れ',`${rhythmPerfStats.tickDelayMsPerFrame.toFixed(2)}ms`],['最悪frameの遅れ',`${rhythmPerfStats.worstFrameDelayMs.toFixed(1)}ms`],['遅れの最大',`${rhythmPerfStats.maxDelayMs.toFixed(1)}ms`],['曲の時刻の進み/frame',`${(rhythmPerfStats.songStepMsPerFrame??0).toFixed(2)}ms`],['曲の時刻が進まないframe',`${((rhythmPerfStats.songStallRate??0)*100).toFixed(1)}%`],['曲の時刻の最大の飛び',`${(rhythmPerfStats.songStepMaxMs??0).toFixed(1)}ms`],['ノーツを取る処理/回',`${(rhythmPerfStats.judgeMsAvg??0).toFixed(2)}ms（${rhythmPerfStats.judgeCount??0}回）`],['取る処理の最大',`${(rhythmPerfStats.judgeMsMax??0).toFixed(1)}ms`],['モンスターノーツ/回',`${(rhythmPerfStats.monsterJudgeMsAvg??0).toFixed(2)}ms（${rhythmPerfStats.monsterJudgeCount??0}回）`],['モンスターノーツの最大',`${(rhythmPerfStats.monsterJudgeMsMax??0).toFixed(1)}ms`],['指が触れた数（同時の最大）',`${rhythmPerfStats.touch?.starts??0}回（${rhythmPerfStats.touch?.maxTouches??0}本）`],['端末に指を取り消された',`${rhythmPerfStats.touch?.cancels??0}回（${rhythmPerfStats.touch?.cancelledTouches??0}本）`],['演奏エリアの外に触れた',`${rhythmPerfStats.touch?.outside??0}回`],['道の外で無視した指（押しても音も光も出ない）',`${rhythmPerfStats.touch?.ignored??0}回`],...(()=>{const b=typeof RHYTHM_TOUCH_BRIDGE!=='undefined'?RHYTHM_TOUCH_BRIDGE.snapshot():null;return b?[['ポインタだけ届いた指（取り戻した）',`${b.pointerOnly}回（${b.recovered}回）`],['ポインタとタッチが組になった',`${b.matched}回`],['50ms以上遅れて届いたタッチ',`${b.lateDelivery}回（最大${Math.round(b.maxDelayMs)}ms）`],['別の指のイベントで初めて見えた指',`${b.lateStart}回`]]:[];})(),['二本指ジェスチャー',`${rhythmPerfStats.touch?.gestures??0}回`],['空打ち',`${rhythmPerfStats.touch?.emptyTaps??0}回`],['指の飛び（3サブレーン以上）',`${rhythmPerfStats.touch?.jumps??0}回`]].map(([label,value])=><React.Fragment key={label}><dt className="text-slate-400">{label}</dt><dd className="text-right font-black text-amber-100">{value}</dd></React.Fragment>)}</dl>}{rhythmPerfStats&&Array.isArray(rhythmPerfStats.spikes)&&rhythmPerfStats.spikes.length>0&&<div data-rhythm-perf-spikes className="mt-2 rounded-xl border border-amber-400/30 bg-slate-950/60 p-2"><h4 className="text-[10px] font-black text-amber-200">飛んだフレーム（33ms超）を起きた順に{rhythmPerfStats.spikes.length}件</h4><p className="mt-1 text-[9px] font-bold leading-relaxed text-amber-100/70">「モンスター後」が小さい行が並ぶなら、踏んだあとの演出が原因です。「tick」が0msなら、その飛びはJSではなく描画側です。</p><ol className="mt-1 space-y-0.5 text-[9px] font-mono text-slate-300">{rhythmPerfStats.spikes.map((sp,i)=><li key={i}>{`${(sp.at/1000).toFixed(1)}s  ${sp.dt}ms  tick ${sp.tick}ms  遅れ ${sp.delay}ms  走査${sp.scan}/描画${sp.draw}  モンスター後 ${sp.mon<0?'—':`${sp.mon}ms`}`}</li>)}</ol></div>}{rhythmPerfStats&&Array.isArray(rhythmPerfStats.autoSteps)&&<div data-rhythm-perf-auto-steps className="mt-2 rounded-xl border border-cyan-400/30 bg-slate-950/60 p-2"><h4 className="text-[10px] font-black text-cyan-200">自動で下げた記録（{rhythmPerfStats.autoSteps.length}件）</h4><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/70">画質「自動」と「重いときは演出を自動で控えめに」が働いた時刻です。3秒のうち重いフレームが8%を超えると一段下げます。「重い」は、いちばん短い間隔の1.8倍か50ms以上のフレームです。下がりすぎる・下がらないと感じたら、この数字を教えてください。</p>{rhythmPerfStats.autoSteps.length?<ol className="mt-1 space-y-0.5 text-[9px] font-mono text-slate-300">{rhythmPerfStats.autoSteps.map((st,i)=><li key={i}>{`${(st.at/1000).toFixed(1)}s  ${st.kind}→${st.label}  重い ${st.slow}/${st.frames}フレーム（約${st.fps}fps）`}</li>)}</ol>:<p className="mt-1 text-[9px] font-bold text-slate-400">まだ一度も下げていません。</p>}</div>}</section><section data-rhythm-strip-panel className="mb-3 rounded-2xl border border-rose-400/40 bg-rose-950/20 p-3"><h3 className="text-xs font-black text-rose-200">装飾を切って切り分ける（デバッグ）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-rose-100/80">演奏画面の重そうな装飾を個別に消します。<b>次の演奏から効きます。</b>ONにして1曲プレイし、性能計測の「33ms超」が減るかを見てください。減ったものが原因です。判定・スコア・譜面には一切関わりません。</p><div className="mt-2 grid grid-cols-2 gap-2">{RHYTHM_STRIP_ITEMS.map(item=><button key={item.id} type="button" data-rhythm-strip-toggle={item.id} aria-pressed={rhythmStrip.split(/\s+/).includes(item.id)} onClick={()=>setRhythmStrip(RHYTHM_STRIP.toggle(item.id))} className={`min-h-[44px] rounded-xl px-2 text-[10px] font-black ${rhythmStrip.split(/\s+/).includes(item.id)?'bg-rose-500 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{item.label}</button>)}</div><button type="button" className="mt-2 min-h-[40px] w-full rounded-xl border border-white/20 bg-slate-900 text-[11px] font-black text-slate-200" onClick={()=>setRhythmStrip(RHYTHM_STRIP.set(''))}>ぜんぶ元に戻す</button></section>{/* ノーツの描き方(検証用・デバッグ限定)。canvas 1枚に描く方式(発熱対策)と要素で描く方式を、次の演奏から切り替える。
                 プレイヤーの通常プレイには出ないので更新履歴・ヘルプには載せない */}
             <section data-rhythm-canvas-panel className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"><h3 className="text-xs font-black text-cyan-200">ノーツの描き方（検証用）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80">canvas 1枚に描く方式（発熱対策）と、これまでの要素ごとに描く方式を切り替えます。次の演奏から効きます。「自動」は公開設定（いまは{RELEASE_FLAGS.rhythmCanvasNotes?'canvas':'要素'}）に従います。「WebGL」は canvas と同じ描き方を GPU で描く試作です（重さ・発熱を「性能計測」で canvas と比べるためのもの）。</p><div className="mt-2 flex gap-2">{[['','自動'],['dom','要素'],['canvas','canvas'],['webgl','WebGL']].map(([value,label])=><button key={value||'auto'} type="button" data-rhythm-canvas-pref={value||'auto'} aria-pressed={rhythmCanvasPref===value} onClick={()=>setRhythmCanvasPref(rhythmCanvasNotesSetPreference(value))} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmCanvasPref===value?'bg-cyan-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></section>
+            {/* スライドの帯を GPU に一度だけ置いて描くかの切り替え(2026-10-11・作り替え B の S1)。社長の iPhone で今の描き方と比べてから既定にする(S3)。
+                プレイヤーの通常プレイには出ないので更新履歴・ヘルプには載せない */}
+            <section data-rhythm-gpu-band-panel className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"><h3 className="text-xs font-black text-cyan-200">スライドの帯の描き方（検証用）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80">「GPU」はスライドの帯（地上・空中・影）の形を譜面を読んだときに一度だけ GPU に置き、毎コマは曲の位置だけ渡して描きます（帯が長い・多い曲で軽くするための試作）。選ぶとノーツは WebGL で描きます（「ノーツの描き方」で canvas・要素を選んでいるときはそちらが勝ちます）。WebGL が使えないときは今の描き方に戻ります。次の演奏から効きます。</p><div className="mt-2 flex gap-2">{[['','今の描き方'],['gpu','GPU']].map(([value,label])=><button key={value||'cpu'} type="button" data-rhythm-gpu-band-pref={value||'cpu'} aria-pressed={rhythmGpuBandPref===value} onClick={()=>setRhythmGpuBandPref(rhythmGpuBandSetPreference(value))} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmGpuBandPref===value?'bg-cyan-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></section>
             {/* ライブ背景を WebGL で描くかの切り替え(2026-09-26)。実機で重さ・発熱を CSS 版と比べるためのもの。
                 プレイヤーの通常プレイには出ないので更新履歴・ヘルプには載せない */}
             <section data-rhythm-stage-gl-panel className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"><h3 className="text-xs font-black text-cyan-200">ライブ背景の描き方（検証用）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80">ライブ背景（控えめ・派手）を、これまでの CSS の重ね合わせで描くか、WebGL の canvas 1枚で描くかを切り替えます。次の演奏から効きます。「自動」はノーツが WebGL で描かれるときだけ WebGL にします。</p><div className="mt-2 flex gap-2">{[['','自動'],['css','CSS'],['webgl','WebGL']].map(([value,label])=><button key={value||'auto'} type="button" data-rhythm-stage-gl-pref={value||'auto'} aria-pressed={rhythmStageGlPref===value} onClick={()=>setRhythmStageGlPref(rhythmStageGlSetPreference(value))} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmStageGlPref===value?'bg-cyan-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></section>
