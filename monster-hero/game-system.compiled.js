@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f7f646fb71dacbb7
+// source-sha256: f034b98fa3bdfd2b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-11 09:47";
+const BUILD_DATE = "2026-10-11 10:05";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -73211,6 +73211,7 @@ function MonsterHeroGame() {
   const [rhythmStrip, setRhythmStrip] = useState(() => RHYTHM_STRIP.value);
   const [rhythmCanvasPref, setRhythmCanvasPref] = useState(() => rhythmCanvasNotesPreference());
   const [rhythmGpuBandPref, setRhythmGpuBandPref] = useState(() => rhythmGpuBandPreference());
+  const [rhythmReleaseAgeWide, setRhythmReleaseAgeWide] = useState(() => rhythmTouchFixOn('releaseAgeWide'));
   const [rhythmStageGlPref, setRhythmStageGlPref] = useState(() => rhythmStageGlPreference());
   const [rhythmChartToolsOpened, setRhythmChartToolsOpened] = useState(false);
   const [rhythmOptionsBack, setRhythmOptionsBack] = useState('RHYTHM_DEBUG');
@@ -97223,6 +97224,25 @@ function MonsterHeroGame() {
       "aria-pressed": rhythmGpuBandPref === value,
       onClick: () => setRhythmGpuBandPref(rhythmGpuBandSetPreference(value)),
       className: `min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmGpuBandPref === value ? 'bg-cyan-400 text-slate-900' : 'border border-white/20 bg-slate-900 text-slate-200'}`
+    }, label)))), React.createElement("section", {
+      "data-rhythm-release-age-panel": true,
+      className: "mb-3 rounded-2xl border border-emerald-400/40 bg-emerald-950/20 p-3"
+    }, React.createElement("h3", {
+      className: "text-xs font-black text-emerald-200"
+    }, "ホールドの離しの遅れの戻し方（検証用）"), React.createElement("p", {
+      className: "mt-1 text-[9px] font-bold leading-relaxed text-emerald-100/80"
+    }, "iPhone では、指を離した合図が遅れて届くことがあり、終わりで離したのに「押しっぱなし」と数えられて MISS になることがあります。「広く」は、離した合図の遅れを 0.3秒まで戻し、押しっぱなしの MISS を決める前に 0.3秒待ちます（標準は 0.08秒）。押しっぱなしの MISS が出るのはその分だけ遅れます。この端末だけに効き、次の演奏から効きます。"), React.createElement("div", {
+      className: "mt-2 flex gap-2"
+    }, [[false, '標準（0.08秒）'], [true, '広く（0.3秒）']].map(([value, label]) => React.createElement("button", {
+      key: String(value),
+      type: "button",
+      "data-rhythm-release-age-pref": value ? 'wide' : 'standard',
+      "aria-pressed": rhythmReleaseAgeWide === value,
+      onClick: () => {
+        rhythmTouchFixSetOverride('releaseAgeWide', value ? true : null);
+        setRhythmReleaseAgeWide(rhythmTouchFixOn('releaseAgeWide'));
+      },
+      className: `min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmReleaseAgeWide === value ? 'bg-emerald-400 text-slate-900' : 'border border-white/20 bg-slate-900 text-slate-200'}`
     }, label)))), React.createElement("section", {
       "data-rhythm-stage-gl-panel": true,
       className: "mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"
