@@ -2,7 +2,7 @@
 // 押さえている帯の上に別のノーツが重なって「指が2本入らない」配置を、配信中の譜面から取り除く。
 //
 //   node tools/mode/rhythm-overlap-reach-fix.js            # 直す場所を数えるだけ
-//   node tools/mode/rhythm-overlap-reach-fix.js --write    # rhythm-mode.js のマーカーの内側だけ直す
+//   node tools/mode/rhythm-overlap-reach-fix.js --write --song <曲id>   # その曲のマーカーの内側だけ直す(--song は必須・カンマで複数)
 //   node tools/mode/rhythm-overlap-reach-fix.js --verbose  # 1件ずつ出す
 //
 // 【なぜ要るか】
@@ -30,12 +30,23 @@
 //   ② それでも入らなければ、幅を1つずつ細くして寄せ直す
 //   ③ どうしても入らない場合だけ、そのノーツを外す(件数を報告する)
 // 寄せ先は「ほかの同時押し」「105ms以内の前後の音」とも指が2本入ることを確かめてから決める。
+//
+// 【決めごと】既存曲の譜面は変えない(tools/mode/CLAUDE.md ⑩-2)。
+// 2026-10-11、--write が公開中の全曲を回っていたため、新曲を作るたび(rhythm-chart-v3-pipeline.js が呼ぶ)に
+// 公開中の Sheriruth の HARD・EXPERT・MASTER まで書き換えていた。--write は --song で指定した曲だけを書き、
+// ほかの曲のマーカーが1バイトでも変わるなら書く前に止める(rhythm-overlap-reach-check.js が見張る)。
 'use strict';
 const fs=require('fs');
 const rt0=require('./rhythm-runtime-notes.js');
 const {HAND_MODEL}=require('./rhythm-hand-model.js');
 
 const write=process.argv.includes('--write');
+const argOf=key=>{const i=process.argv.indexOf(key);return i>=0?process.argv[i+1]:undefined;};
+const onlySongs=argOf('--song')?argOf('--song').split(',').map(x=>x.trim()).filter(Boolean):null;
+// 書き出し先を変える(検査用。既定は rhythm-mode.js そのもの)
+const outPath=argOf('--out')||null;
+if(write&&!onlySongs){console.error('✗ --write には --song <曲id> が要ります(既存曲の譜面は変えない・tools/mode/CLAUDE.md ⑩-2)。');process.exit(1);}
+if(onlySongs)for(const id of onlySongs)if(!rt0.RELEASED_MARKERS[id]){console.error(`✗ ${id} は公開中の曲の表(rhythm-runtime-notes.js の RELEASED_MARKERS)に無い`);process.exit(1);}
 const verbose=process.argv.includes('--verbose');
 
 const runtime=rt0.loadRuntime();
@@ -92,17 +103,18 @@ const fits=(notes,index,candidate)=>{
 
 let totalBefore=0,totalBeforeFast=0,totalMoved=0,totalNarrowed=0,totalDropped=0,totalStraightened=0,changedCharts=0;
 let source=runtime.source;
-// 触ってよいのは先行公開5曲のマーカーだけ。ほかの譜面(v1・候補v2・デバッグ曲)を
+// 触ってよいのは --song で指定した曲のマーカーだけ。ほかの譜面(公開中のほかの曲・v1・候補・デバッグ曲)を
 // 巻き添えで書き換えていないことを、書き込む前に必ず確かめる
 // (tools/mode/rhythm-chart-v3-pipeline.js と同じ守り方)
-const OWN=new Set(Object.values(rt0.RELEASED_MARKERS)
+const targetSongs=onlySongs||Object.keys(rt0.RELEASED_MARKERS);
+const OWN=new Set(targetSongs.map(id=>rt0.RELEASED_MARKERS[id])
   .flatMap(marker=>['easy','normal','hard','expert','master'].map(d=>`${marker}-${d}`)));
 const snapshot=text=>[...text.matchAll(/\/\/ <([a-z0-9-]+)-notes>/g)]
   .map(match=>match[1]).filter(name=>!OWN.has(name))
   .map(name=>`${name}:${(rt0.markerBlock(text,name)||{body:''}).body}`);
 const beforeSnapshot=snapshot(source);
 
-for(const [songId,marker] of Object.entries(rt0.RELEASED_MARKERS)){
+for(const [songId,marker] of Object.entries(rt0.RELEASED_MARKERS).filter(([id])=>targetSongs.includes(id))){
   const song=runtime.RHYTHM_SONGS.find(entry=>entry.songId===songId);
   for(const difficulty of ['EASY','NORMAL','HARD','EXPERT','MASTER']){
     const chart=song.difficulties[difficulty];
@@ -184,13 +196,13 @@ console.log(`\n押せない重なり ${totalBefore}件 / 近いのに速い ${to
   +` → 寄せた ${totalMoved} ・ 細くして寄せた ${totalNarrowed} ・ 外した ${totalDropped}`
   +(totalStraightened?` ・ 曲線を直線へ戻した ${totalStraightened}`:''));
 if(!changedCharts){console.log('直すところはありません。');process.exit(0);}
-if(!write){console.log('※ --write を付けると rhythm-mode.js のマーカーの内側だけを直します。');process.exit(0);}
+if(!write){console.log('※ --write --song <曲id> を付けると、その曲の rhythm-mode.js のマーカーの内側だけを直します。');process.exit(0);}
 const afterSnapshot=snapshot(source);
 if(beforeSnapshot.length!==afterSnapshot.length
   ||beforeSnapshot.some((text,index)=>text!==afterSnapshot[index])){
-  console.error('✗ 先行公開5曲以外の譜面まで書き換えようとしました。中止します。');
+  console.error(`✗ 指定した曲(${targetSongs.join(', ')})以外の譜面まで書き換えようとしました。中止します。`);
   process.exit(1);
 }
-fs.writeFileSync(rt0.RUNTIME,source);
-console.log(`書き戻しました: monster-hero/data/rhythm-mode.js（先行公開5曲のマーカーの内側だけ）`);
+fs.writeFileSync(outPath||rt0.RUNTIME,source);
+console.log(`書き戻しました: ${outPath?outPath:'monster-hero/data/rhythm-mode.js'}（${targetSongs.join(', ')} のマーカーの内側だけ）`);
 console.log('※ この後は node tools/build.js を実行してください。');

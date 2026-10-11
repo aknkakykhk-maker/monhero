@@ -387,6 +387,14 @@ node tools/audio/rhythm-loudness-check.js --ffmpeg "$FF"   # 全曲の音量
 node tools/run-checks.js --area mode          # 175本・約14分。譜面まわり
 ```
 
+**ほかの曲の譜面が1バイトも変わっていないことを確かめる。**(2026-10-11、仕上げの道具が新曲のたびに Sheriruth の譜面を書き換えていた)
+
+```bash
+node tools/mode/rhythm-released-chart-lock-check.js    # 公開中の曲が控えと同じか(NG なら、その曲は元へ戻す)
+# 新曲を公開するときだけ、新曲を控えに入れる(ほかの曲が「変わった」と出ている間は打たない)
+node tools/mode/rhythm-released-chart-lock-check.js --update --reason "新曲 <曲名> を公開"
+```
+
 **起動時の読み込みが増えたのが譜面だけであることを確かめる。**
 
 ```bash
