@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1d2479a5b0b804aa
+// source-sha256: 432c32077cd6c5c0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-12 00:14";
+const BUILD_DATE = "2026-10-12 01:48";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -391,7 +391,7 @@ const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
     return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.rhythmMulti === true;
   },
   get rhythmHell() {
-    return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.rhythmHell === true;
+    return typeof rhythmHellOpen === 'function' ? rhythmHellOpen() : typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.rhythmHell === true;
   }
 });
 const eventReplayReleased = event => !event?.releaseFlag || EVENT_REPLAY_RELEASE_FLAGS[event.releaseFlag] === true;
@@ -11874,6 +11874,9 @@ const MOMOSUKE_INTRO_SEEN_KEY = 'mh_momosuke_intro_seen_v1';
 const TACTICS_INTRO_SEEN_KEY = 'mh_tactics_intro_seen_v1';
 const RHYTHM_HELL_STORY_SEEN_KEY = 'mh_rhythm_hell_story_seen_v1';
 const RHYTHM_HELL_STORY_ID = 'rhythm_hell_story';
+const RHYTHM_HELL_STORY_SEEN_PREVIEW_KEY = 'mh_rhythm_hell_story_seen_preview_proto';
+const rhythmHellStorySeenKey = () => typeof rhythmHellReleased === 'function' && rhythmHellReleased() ? RHYTHM_HELL_STORY_SEEN_KEY : RHYTHM_HELL_STORY_SEEN_PREVIEW_KEY;
+const RHYTHM_HELL_STORY_TRIGGER = 'after-result';
 const normalizeAssistantId = value => typeof assistantIdOrDefault === 'function' ? assistantIdOrDefault(typeof value === 'string' ? value : null) : typeof DEFAULT_ASSISTANT_ID !== 'undefined' && DEFAULT_ASSISTANT_ID || 'mua';
 const ASSISTANT_BOND_KEY = 'mh_assistant_bond_v1';
 const assistantBondKeyFor = assistantId => {
@@ -30940,6 +30943,10 @@ const rhythmSongSignal = (flag, eventBase, on, songId) => {
     const next = !!on;
     if (!!window[flag] === next) return;
     window[flag] = next;
+    if (typeof document !== 'undefined' && document.documentElement) {
+      const root = document.documentElement;
+      if (window.__mhSongPrepBusy || window.__mhSongPlaying) root.dataset.mhSongActive = '1';else delete root.dataset.mhSongActive;
+    }
     if (typeof CustomEvent === 'function') window.dispatchEvent(new CustomEvent(`${eventBase}-${next ? 'start' : 'end'}`, {
       detail: {
         songId: songId || ''
@@ -31292,6 +31299,49 @@ function RhythmSkyLiftSwitch() {
     onClick: () => pick(v),
     className: `min-h-[44px] rounded-xl text-sm font-black ${value === v ? 'bg-rose-600 text-white ring-2 ring-rose-200' : 'bg-slate-800 text-slate-300'}`
   }, v, "%", v === 16 ? '(いま)' : ''))));
+}
+function RhythmHellPreviewSwitch({
+  onChange
+}) {
+  const [on, setOn] = useState(() => typeof rhythmHellPreviewOn === 'function' && rhythmHellPreviewOn());
+  const set = v => {
+    try {
+      if (v) localStorage.setItem(RHYTHM_HELL_PREVIEW_KEY, '1');else localStorage.removeItem(RHYTHM_HELL_PREVIEW_KEY);
+    } catch (e) {}
+    setOn(v);
+    onChange && onChange();
+  };
+  const resetSeen = () => {
+    try {
+      localStorage.removeItem(RHYTHM_HELL_STORY_SEEN_PREVIEW_KEY);
+    } catch (e) {}
+    onChange && onChange();
+  };
+  return React.createElement("div", {
+    "data-rhythm-hell-preview": true,
+    className: "mt-3 border-t border-pink-400/30 pt-2"
+  }, React.createElement("p", {
+    className: "text-[10px] font-bold text-pink-200/90"
+  }, "公開の印が真だったら(試す)。入にすると、HELL のある曲で MASTER をクリアすると HELL が開き、初めてならお話 → 説明が出ます。本番の印は変わりません。"), React.createElement("div", {
+    className: "mt-2 grid grid-cols-3 gap-2"
+  }, React.createElement("button", {
+    type: "button",
+    "data-rhythm-hell-preview-pick": "off",
+    "aria-pressed": !on,
+    onClick: () => set(false),
+    className: `min-h-[44px] rounded-xl text-xs font-black ${!on ? 'bg-pink-700 text-white ring-2 ring-pink-200' : 'bg-slate-800 text-slate-300'}`
+  }, "切(いま)"), React.createElement("button", {
+    type: "button",
+    "data-rhythm-hell-preview-pick": "on",
+    "aria-pressed": on,
+    onClick: () => set(true),
+    className: `min-h-[44px] rounded-xl text-xs font-black ${on ? 'bg-pink-700 text-white ring-2 ring-pink-200' : 'bg-slate-800 text-slate-300'}`
+  }, "入"), React.createElement("button", {
+    type: "button",
+    "data-rhythm-hell-preview-reset": true,
+    onClick: resetSeen,
+    className: "min-h-[44px] rounded-xl bg-slate-700 text-[10px] font-black text-white"
+  }, "試したお話を未読に")));
 }
 const RHYTHM_SKY_LANE_LOOK_LABELS = Object.freeze({
   none: 'いま(なし)',
@@ -31939,15 +31989,19 @@ const rhythmCreateHud = () => {
   };
 };
 const useRhythmHud = hud => React.useSyncExternalStore(hud.subscribe, hud.get);
+const useRhythmHudPick = (hud, pick) => React.useSyncExternalStore(hud.subscribe, () => pick(hud.get()));
+const rhythmHudCountsState = c => {
+  if (!c) return '';
+  if ((Number(c.BAD) || 0) + (Number(c.MISS) || 0) > 0) return 'broken';
+  return (Number(c.EXCELLENT) || 0) + (Number(c.GREAT) || 0) + (Number(c.GOOD) || 0) > 0 ? 'FC' : 'AM';
+};
 const RhythmHudScore = ({
   hud,
   maxScore,
   bestScore,
   rankFx = true
 }) => {
-  const {
-    score
-  } = useRhythmHud(hud);
+  const score = useRhythmHudPick(hud, h => h.score);
   const rankNextId = rhythmNextRankId(score, maxScore);
   const rankNextLabel = rankNextId ? `→${rankNextId}` : '★MAX';
   const rank = rhythmRankForScore(score);
@@ -32098,18 +32152,11 @@ const RhythmHudCombo = ({
   comboRef,
   comboRingRef
 }) => {
-  const {
-    combo,
-    counts
-  } = useRhythmHud(hud);
+  const combo = useRhythmHudPick(hud, h => h.combo),
+    countsState = useRhythmHudPick(hud, h => rhythmHudCountsState(h.counts));
   if (settings.comboDisplay === false || !(combo > 0)) return null;
   const comboTier = rhythmComboTier(combo);
-  const comboStatus = (() => {
-    if (settings.comboStatusDisplay === false || assistOn || !counts) return '';
-    const c = counts;
-    if ((Number(c.BAD) || 0) + (Number(c.MISS) || 0) > 0) return '';
-    return (Number(c.EXCELLENT) || 0) + (Number(c.GREAT) || 0) + (Number(c.GOOD) || 0) > 0 ? 'FC' : 'AM';
-  })();
+  const comboStatus = settings.comboStatusDisplay === false || assistOn || !countsState || countsState === 'broken' ? '' : countsState;
   return React.createElement("div", {
     "data-rhythm-combo-box": true,
     "data-combo-status": comboStatus,
@@ -32149,9 +32196,7 @@ const RhythmHudLife = ({
   lifeBoxRef,
   lifeDamageRef
 }) => {
-  const {
-    life
-  } = useRhythmHud(hud);
+  const life = useRhythmHudPick(hud, h => h.life);
   const lifeRatio = rhythmLifeRatio(life),
     lifeState = rhythmLifeState(life);
   return React.createElement("div", {
@@ -32204,11 +32249,10 @@ const RhythmHudJudgment = ({
   judgmentTextRef,
   sky = false
 }) => {
-  const h = useRhythmHud(hud);
-  const last = sky ? h.skyLast : h.last,
-    lastPrecise = sky ? h.skyLastPrecise : h.lastPrecise,
-    fastSlow = sky ? h.skyFastSlow : h.fastSlow,
-    lastDeltaMs = sky ? h.skyDeltaMs : h.lastDeltaMs;
+  const last = useRhythmHudPick(hud, h => sky ? h.skyLast : h.last),
+    lastPrecise = useRhythmHudPick(hud, h => sky ? h.skyLastPrecise : h.lastPrecise),
+    fastSlow = useRhythmHudPick(hud, h => sky ? h.skyFastSlow : h.fastSlow),
+    lastDeltaMs = useRhythmHudPick(hud, h => sky ? h.skyDeltaMs : h.lastDeltaMs);
   return React.createElement(React.Fragment, null, React.createElement("b", {
     ref: judgmentTextRef,
     "data-rhythm-judgment-text": true,
@@ -74575,6 +74619,7 @@ function MonsterHeroGame() {
   const [rhythmGpuBandPref, setRhythmGpuBandPref] = useState(() => rhythmGpuBandPreference());
   const [rhythmPreparePref, setRhythmPreparePref] = useState(() => rhythmPreparePreference());
   const [rhythmCanvasHitsPref, setRhythmCanvasHitsPref] = useState(() => rhythmCanvasHitsPreference());
+  const [rhythmHitSparkPref, setRhythmHitSparkPref] = useState(() => rhythmHitSparkPreference());
   const [rhythmReleaseAgeWide, setRhythmReleaseAgeWide] = useState(() => rhythmTouchFixOn('releaseAgeWide'));
   const [rhythmStageGlPref, setRhythmStageGlPref] = useState(() => rhythmStageGlPreference());
   const [rhythmChartToolsOpened, setRhythmChartToolsOpened] = useState(false);
@@ -75879,6 +75924,7 @@ function MonsterHeroGame() {
   const [tacticsIntroSeenFlag, setTacticsIntroSeenFlag] = useState(false);
   const [rhythmHellStorySeenFlag, setRhythmHellStorySeenFlag] = useState(false);
   const [rhythmHellGuide, setRhythmHellGuide] = useState(null);
+  const rhythmHellStoryAfterResultRef = useRef(false);
   const [tacticsIntroPending, setTacticsIntroPending] = useState(false);
   const [assistantBonds, setAssistantBonds] = useState({});
   const assistantBondsRef = useRef({});
@@ -80205,7 +80251,7 @@ function MonsterHeroGame() {
       }
       if (EVENT_REPLAY_RELEASE_FLAGS.rhythmHell) {
         try {
-          setRhythmHellStorySeenFlag((await storeGet(RHYTHM_HELL_STORY_SEEN_KEY, false, false)) === true);
+          setRhythmHellStorySeenFlag((await storeGet(rhythmHellStorySeenKey(), false, false)) === true);
         } catch {}
       }
       if (EVENT_REPLAY_RELEASE_FLAGS.tacticsBattle) {
@@ -81482,6 +81528,12 @@ function MonsterHeroGame() {
     setTacticsIntroSeenFlag(true);
     try {
       storeSet(TACTICS_INTRO_SEEN_KEY, true, false);
+    } catch {}
+  }, []);
+  const markRhythmHellStorySeen = useCallback(() => {
+    setRhythmHellStorySeenFlag(true);
+    try {
+      storeSet(rhythmHellStorySeenKey(), true, false);
     } catch {}
   }, []);
   const EVENT_REPLAY_UNLOCK_FLAGS = {
@@ -98128,6 +98180,9 @@ function MonsterHeroGame() {
         }
         const records = await saveRhythmBestRecord(rhythmBestRecords, rhythmPlay.song.songId, rhythmPlay.difficulty.id, merged);
         setRhythmBestRecords(records);
+        if (rhythmPlay.from === 'demo' && typeof rhythmHellOpen === 'function' && rhythmHellOpen() && rhythmChartPlayable(rhythmPlay.song, 'HELL') && !rhythmDifficultyUnlocked(rhythmPlay.song.songId, 'HELL', rhythmBestRecords) && rhythmDifficultyUnlocked(rhythmPlay.song.songId, 'HELL', records) && !rhythmHellStorySeenFlag) {
+          if (RHYTHM_HELL_STORY_TRIGGER === 'after-result') rhythmHellStoryAfterResultRef.current = true;else if (RHYTHM_HELL_STORY_TRIGGER === 'home') setRhythmEventStoryPending(prev => prev || RHYTHM_HELL_STORY_ID);
+        }
         void recordRhythmAchievements(records, {
           initialRecords: rhythmBestRecords
         });
@@ -98144,6 +98199,14 @@ function MonsterHeroGame() {
         const back = rhythmPlay.from === 'multi' ? 'RHYTHM_MULTI' : rhythmPlay.from === 'calibration' ? 'RHYTHM_OPTIONS' : rhythmPlay.backTo === 'RHYTHM_DEBUG_SELECT' ? 'RHYTHM_DEBUG_SELECT' : rhythmPlay.from === 'debug' || rhythmPlay.from === 'proto' ? 'RHYTHM_DEBUG' : 'RHYTHM_DEMO_HOME';
         setRhythmPlay(null);
         setGameState(back);
+        if (rhythmHellStoryAfterResultRef.current) {
+          rhythmHellStoryAfterResultRef.current = false;
+          setEventReplay({
+            id: RHYTHM_HELL_STORY_ID,
+            step: 0,
+            live: true
+          });
+        }
       },
       debugPlay: rhythmPlay.from === 'debug' || rhythmPlay.from === 'proto',
       tutorial: rhythmPlay.from === 'tutorial',
@@ -98678,6 +98741,22 @@ function MonsterHeroGame() {
       onClick: () => setRhythmGpuBandPref(rhythmGpuBandSetPreference(value)),
       className: `min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmGpuBandPref === value ? 'bg-cyan-400 text-slate-900' : 'border border-white/20 bg-slate-900 text-slate-200'}`
     }, label)))), React.createElement("section", {
+      "data-rhythm-hit-spark-panel": true,
+      className: "mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"
+    }, React.createElement("h3", {
+      className: "text-xs font-black text-cyan-200"
+    }, "叩いたときの光の粒（検証用）"), React.createElement("p", {
+      className: "mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80"
+    }, "ノーツを叩いたときにはじける小さな粒を、canvas で描くときの描き方です。「焼いた丸」は一度作った丸の絵を貼るので軽くなります（見た目の差は粒のふちのわずかな違いだけ）。次の演奏から効きます。"), React.createElement("div", {
+      className: "mt-2 flex gap-2"
+    }, [['', '既定（今の形）'], ['on', '焼いた丸'], ['off', '今の形']].map(([value, label]) => React.createElement("button", {
+      key: value || 'default',
+      type: "button",
+      "data-rhythm-hit-spark-pref": value || 'default',
+      "aria-pressed": rhythmHitSparkPref === value,
+      onClick: () => setRhythmHitSparkPref(rhythmHitSparkSetPreference(value)),
+      className: `min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmHitSparkPref === value ? 'bg-cyan-400 text-slate-900' : 'border border-white/20 bg-slate-900 text-slate-200'}`
+    }, label)))), React.createElement("section", {
       "data-rhythm-canvas-hits-panel": true,
       className: "mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"
     }, React.createElement("h3", {
@@ -98799,7 +98878,13 @@ function MonsterHeroGame() {
         page: 0
       }),
       className: "min-h-[48px] rounded-xl bg-slate-700 px-2 text-xs font-black text-white"
-    }, "説明だけ見る"))), RHYTHM_PROTO_SONGS.map(song => {
+    }, "説明だけ見る")), React.createElement(RhythmHellPreviewSwitch, {
+      onChange: async () => {
+        try {
+          setRhythmHellStorySeenFlag((await storeGet(rhythmHellStorySeenKey(), false, false)) === true);
+        } catch {}
+      }
+    })), RHYTHM_PROTO_SONGS.map(song => {
       const track = rhythmSongTrack(song);
       return React.createElement("section", {
         key: song.songId,
@@ -103517,12 +103602,7 @@ function MonsterHeroGame() {
         if (event && event.id === RAID_JACK_HOWTO_AFTER_STORY_ID && eventReplay.live && !eventReplay.debug && RELEASE_FLAGS.raidJack === true && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(RAID_JACK_STORY_START_ID)) setRhythmEventStoryPending(prev => prev || RAID_JACK_STORY_START_ID);
         if (event && event.id === RAID_JACK_STORY_START_ID && eventReplay.live && !eventReplay.debug && RELEASE_FLAGS.raidJack === true && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(RAID_JACK_HOWTO_STORY_ID)) setRhythmEventStoryPending(prev => prev || RAID_JACK_HOWTO_STORY_ID);
         if (event && event.id === RHYTHM_HELL_STORY_ID) {
-          if (!eventReplay.debug) {
-            setRhythmHellStorySeenFlag(true);
-            try {
-              storeSet(RHYTHM_HELL_STORY_SEEN_KEY, true, false);
-            } catch {}
-          }
+          if (!eventReplay.debug) markRhythmHellStorySeen();
           setRhythmHellGuide({
             page: 0,
             debugList: !!eventReplay.debugList,
@@ -103539,12 +103619,7 @@ function MonsterHeroGame() {
         if (eventReplay.live && !eventReplay.debug && event && RHYTHM_EVENT_STORY_IDS.includes(event.id)) void markRhythmEventStorySeen(event.id);
         if (eventReplay.live && !eventReplay.debug && event && event.id === 'tactics_intro') markTacticsIntroSeen();
         if (event && event.id === RHYTHM_HELL_STORY_ID) {
-          if (eventReplay.live && !eventReplay.debug) {
-            setRhythmHellStorySeenFlag(true);
-            try {
-              storeSet(RHYTHM_HELL_STORY_SEEN_KEY, true, false);
-            } catch {}
-          }
+          if (eventReplay.live && !eventReplay.debug) markRhythmHellStorySeen();
           setRhythmHellGuide({
             page: 0,
             debugList: !!eventReplay.debugList,

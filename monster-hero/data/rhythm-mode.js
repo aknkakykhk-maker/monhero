@@ -26026,6 +26026,9 @@ const grievousLadyHellBaseNotes=((t,h,f,s,T,F,S)=>[
 // </grievous-lady-hell-notes>
 ])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
 const grievousLadyHellNotes=grievousLadyQuiet(grievousLadyHellBaseNotes);
+// Grievous Lady の HELL の譜面(2026-10-12)。試作の枠(grievous_lady_hell)と公開曲の HELL(RHYTHM_HELL_CHARTS)が同じものを指す。
+// Lv.60 は仮(社長の決定待ち)。流れの速さの演出と組は MASTER と同じ表
+const grievousLadyHellChart=mhChart(60,grievousLadyHellNotes,GRIEVOUS_LADY_DURATION_MS,6,{scrollChanges:GRIEVOUS_LADY_SCROLL_CHANGES,scrollGroups:GRIEVOUS_LADY_SCROLL_GROUPS});
 const theCityBeneathTheCometsCharts=Object.freeze({
   EASY:mhChart(1,theCityBeneathTheCometsEasyNotes,THE_CITY_BENEATH_THE_COMETS_DURATION_MS,6),
   NORMAL:mhChart(3,theCityBeneathTheCometsNormalNotes,THE_CITY_BENEATH_THE_COMETS_DURATION_MS,6),
@@ -28971,11 +28974,35 @@ const RHYTHM_SONG_CLIMAX=Object.freeze({
 // </rhythm-song-climax>
 });
 const rhythmSongClimaxAt=(songId,ms)=>{const spans=RHYTHM_SONG_CLIMAX[songId];if(!Array.isArray(spans)||!Number.isFinite(ms))return 0;for(const span of spans){if(!Array.isArray(span))continue;const [a,b,s]=span.map(Number);if(ms>=a&&ms<b)return s>0?Math.min(1,s):0;}return 0;};
+// ===== 難易度 HELL を公開曲へ付ける(2026-10-12・社長の決定 案A「その曲の MASTER をクリアするとその曲の HELL が開く」) =====
+// ★公開の印 RELEASE_FLAGS.rhythmHell が偽のあいだは、どの曲にも HELL は出ない(いままでと同じ)。
+//   曲の difficulties.HELL は「印が真のときだけ譜面を返す」読み取り口にしてあり、数え上げ(Object.keys など)にも出ない。
+//   印が偽のときは undefined を返すので、曲えらび・レベル表・ランキング・譜面の鍵の検査など、どこから見ても今と同じ。
+// 開く条件は RHYTHM_DIFFICULTY_UNLOCK_BY.HELL('MASTER')、お話の流し方は RHYTHM_HELL_STORY_TRIGGER(17-*.jsx)。どちらも1か所で変えられる。
+// HELL を付ける曲はここに足す({曲id: 譜面})。レベルは譜面の値(試作の枠と同じ)
+// Grievous Lady は社長の最初の頼み(2026-10-11 8:55「Grievous Lady(ヘルあり)」)。外すときはこの1行から消す
+const RHYTHM_HELL_CHARTS=Object.freeze({sheriruth:sheriruthHellChart,grievous_lady:grievousLadyHellChart});
+// デバッグの「公開の印が真だったら」(新しいキー・mh_rhythm_hell_preview_proto が '1')。本番の印は変えない
+const RHYTHM_HELL_PREVIEW_KEY='mh_rhythm_hell_preview_proto';
+const rhythmHellPreviewOn=()=>{try{return typeof localStorage!=='undefined'&&localStorage.getItem(RHYTHM_HELL_PREVIEW_KEY)==='1';}catch(e){return false;}};
+const rhythmHellReleased=()=>{try{return typeof RELEASE_FLAGS!=='undefined'&&RELEASE_FLAGS.rhythmHell===true;}catch(e){return false;}};
+// HELL を遊べるか(本番の印か、デバッグの「印が真だったら」)
+const rhythmHellOpen=()=>rhythmHellReleased()||rhythmHellPreviewOn();
+const rhythmWithHellChart=(songId,difficulties)=>{
+  const hell=RHYTHM_HELL_CHARTS[songId];
+  if(!hell||Object.prototype.hasOwnProperty.call(difficulties,'HELL'))return difficulties;
+  let made=null;
+  Object.defineProperty(difficulties,'HELL',{enumerable:false,get(){
+    if(!rhythmHellOpen())return undefined;
+    return made||(made=rhythmChartWithLevel(songId,'HELL',rhythmChartOnRoad(hell)));
+  }});
+  return difficulties;
+};
 const RHYTHM_SONGS = Object.freeze(RHYTHM_SONG_ENTRIES.map(song=>{
   const pair=RHYTHM_SWITCHING_CHARTS[song.songId];
   if(!pair)return Object.freeze({...song,
-    difficulties:Object.freeze(Object.fromEntries(rhythmSongDifficultyDefs(song).map(({id})=>
-      [id,rhythmChartWithLevel(song.songId,id,rhythmChartOnRoad(song.difficulties[id]))])))});
+    difficulties:Object.freeze(rhythmWithHellChart(song.songId,Object.fromEntries(rhythmSongDifficultyDefs(song).map(({id})=>
+      [id,rhythmChartWithLevel(song.songId,id,rhythmChartOnRoad(song.difficulties[id]))]))))});
   // 時刻で入れ替わる曲。**参照するたびに**どちらかを選ぶ（getter）。
   // 選んだ結果は before / after ごとに1回だけ作って覚えるので、毎回の手間は時刻の比較だけ。
   const resolved={before:null,after:null};
@@ -29053,7 +29080,7 @@ const RHYTHM_PROTO_SONGS=Object.freeze([
     debugDescription:'参考譜面の空中を土台に、親指2本で押せる形へ直した版(空中は全体の約2割・同じ親指が段を変える間は1.5拍以上・押せない0・指の交差0)。止まる・前へ飛ぶ・後ろへ戻る流れの演出は MASTER と同じ。遊んでも自己ベスト・ランキング・報酬には入らない',
     bgmTrackId:'melo_grievous_lady',
     difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[
-      id,rhythmChartOnRoad(id==='MASTER'?mhChart(60,grievousLadyHellNotes,GRIEVOUS_LADY_DURATION_MS,6,{scrollChanges:GRIEVOUS_LADY_SCROLL_CHANGES,scrollGroups:GRIEVOUS_LADY_SCROLL_GROUPS}):emptyRhythmChart())
+      id,rhythmChartOnRoad(id==='MASTER'?grievousLadyHellChart:emptyRhythmChart())
     ])))
   }),
 ]);
@@ -30812,6 +30839,12 @@ const RHYTHM_CANVAS_HITS_KEY='mh_rhythm_canvas_hits_v1';
 const rhythmCanvasHitsPreference=()=>{try{if(typeof localStorage==='undefined')return '';const v=localStorage.getItem(RHYTHM_CANVAS_HITS_KEY);return v==='canvas'||v==='dom'?v:'';}catch{return '';}};
 const rhythmCanvasHitsActive=()=>rhythmCanvasHitsPreference()!=='dom';
 const rhythmCanvasHitsSetPreference=value=>{const next=value==='canvas'||value==='dom'?value:'';try{if(typeof localStorage!=='undefined'){if(next)localStorage.setItem(RHYTHM_CANVAS_HITS_KEY,next);else localStorage.removeItem(RHYTHM_CANVAS_HITS_KEY);}}catch{}return next;};
+// 叩いたときの光の粒を、焼いた丸を貼る形で描く(2026-10-12・発熱の手当て ④)。光の重さが約2割減る。今の形(丸をそのつど塗る)との差は 1画素未満のふちだけ。
+// デバッグ画面「叩いたときの光の粒(検証用)」で出し入れする。'on' = 焼いた丸・'off' = 今の形・未設定 = 既定(いまは今の形。社長が静止画を見て決める)
+const RHYTHM_HIT_SPARK_KEY='mh_rhythm_hit_spark_v1';
+const rhythmHitSparkPreference=()=>{try{if(typeof localStorage==='undefined')return '';const v=localStorage.getItem(RHYTHM_HIT_SPARK_KEY);return v==='on'||v==='off'?v:'';}catch{return '';}};
+const rhythmHitSparkSetPreference=value=>{const next=value==='on'||value==='off'?value:'';try{if(typeof localStorage!=='undefined'){if(next)localStorage.setItem(RHYTHM_HIT_SPARK_KEY,next);else localStorage.removeItem(RHYTHM_HIT_SPARK_KEY);}}catch{}return next;};
+const rhythmHitSparkActive=()=>rhythmHitSparkPreference()==='on';
 const RHYTHM_PREPARE_KEY='mh_rhythm_prepare_v1';
 const rhythmPreparePreference=()=>{try{if(typeof localStorage==='undefined')return '';const v=localStorage.getItem(RHYTHM_PREPARE_KEY);return v==='on'||v==='off'?v:'';}catch{return '';}};
 const rhythmPrepareSetPreference=value=>{const next=value==='on'||value==='off'?value:'';try{if(typeof localStorage!=='undefined'){if(next)localStorage.setItem(RHYTHM_PREPARE_KEY,next);else localStorage.removeItem(RHYTHM_PREPARE_KEY);}}catch{}return next;};
@@ -32734,6 +32767,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     return f[0]===1&&f[1]===1?null:f;};
   // skyHitArea … 空中のノーツの弾け方(試作)だけは、2D の canvas でもここで描く(地上の光は WebGL のときだけ)
   let hitArea=null,hitNext=0,skyHitArea=null;
+  // 叩いたときの光の粒を焼いた丸で描くか(rhythmHitSparkActive)。毎コマ保存キーを読まないよう、描き込み先を付け替えるとき(attach)に1回だけ読む
+  let sparkSprites=false;
   // 空中の段(試作): 空中の高さで押しているサブレーンと、その光の濃さ(設定「レーンの光」と同じ 0 / .35 / 1)
   let skyPressed=[],skyPressedAlpha=1;
   // 空中の段で押しているサブレーンの光(2026-10-11 社長「地上のレーンを押したときの道の光と、空中レーンを押したときの道の光り方が違う」)。
@@ -32787,6 +32822,15 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     }catch(e){}
   };
   // 中心のフラッシュ(ふつう)。横長の楕円の放射グラデーションを1枚焼き、幅に合わせて伸ばして貼る(楕円なので伸ばしても形は同じ)
+  // はじける粒(5px の丸)は、焼いた丸を拡大・縮小して貼る(2026-10-12・発熱の手当て ④)。
+  // 丸をそのつど塗ると、WebGL の描き込み先では丸を細かい三角形に刻む仕事が1回の光で5つ起き、光の重さの大半だった。
+  // 貼る絵は続けて同じ絵ならまとめて1回で描ける。DOM 版も 5px の丸を画素にしてから拡大・縮小して重ねている
+  const hitSparkSprite=color=>{
+    const id=`hitspark:${color}:${dpr}`;
+    if(sprites.has(id))return sprites.get(id);
+    const s=makeSpriteCanvas(5,5),c=s.ctx;c.fillStyle=color;c.beginPath();c.arc(2.5,2.5,2.5,0,Math.PI*2);c.fill();
+    sprites.set(id,s);return s;
+  };
   const hitCoreSprite=(color,filter)=>{
     const id=`hitcore:${color}:${filter?filter.join(','):''}:${dpr}`;
     if(sprites.has(id))return sprites.get(id);
@@ -32989,8 +33033,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     if(f.o>.002&&f.s>0){
       ctx.globalAlpha=Math.min(1,f.o);ctx.setTransform(dpr,0,0,dpr,0,0);
       HIT_SPARK_OFFSETS.forEach(([ox,oy],i)=>{
-        ctx.fillStyle=h.precise?RHYTHM_JUDGMENT_RAINBOW[i]:h.color;
-        ctx.beginPath();ctx.arc(cx+ox*h.sparkScale*f.k,hitY+oy*h.sparkScale*f.k,2.5*f.s,0,Math.PI*2);ctx.fill();
+        if(sparkSprites){const r=2.5*f.s;ctx.drawImage(hitSparkSprite(h.precise?RHYTHM_JUDGMENT_RAINBOW[i]:h.color).canvas,cx+ox*h.sparkScale*f.k-r,hitY+oy*h.sparkScale*f.k-r,r*2,r*2);}
+        else{ctx.fillStyle=h.precise?RHYTHM_JUDGMENT_RAINBOW[i]:h.color;ctx.beginPath();ctx.arc(cx+ox*h.sparkScale*f.k,hitY+oy*h.sparkScale*f.k,2.5*f.s,0,Math.PI*2);ctx.fill();}
       });
     }
     // 白い十字の光(演出量「多め」では出さない)
@@ -33029,7 +33073,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   return {
     // options.webgl … 検証用。WebGL の描き込み先(rhythmCreateGL2D)で描く。作れなければ今までどおり 2D で描く
     // options.gpuBand … スライドの帯を GPU に置いて描く(WebGL のときだけ。作れなければ今までどおり CPU で刻む)
-    attach(next,options={}){canvas=next||null;backend='2d';ctx=null;gpuBandWanted=!!options.gpuBand;hitArea=null;skyHitArea=null;hitSlots.fill(null);pendingClear=false;blank=true;if(canvas&&options.webgl){ctx=rhythmCreateGL2D(canvas);if(ctx)backend='webgl';}if(canvas&&!ctx){try{ctx=canvas.getContext('2d');}catch(e){ctx=null;}}},
+    attach(next,options={}){sparkSprites=rhythmHitSparkActive();canvas=next||null;backend='2d';ctx=null;gpuBandWanted=!!options.gpuBand;hitArea=null;skyHitArea=null;hitSlots.fill(null);pendingClear=false;blank=true;if(canvas&&options.webgl){ctx=rhythmCreateGL2D(canvas);if(ctx)backend='webgl';}if(canvas&&!ctx){try{ctx=canvas.getContext('2d');}catch(e){ctx=null;}}},
     get backend(){return backend;},
     // いまスライドの帯を GPU で描けるか。演奏画面はこれが true のとき、帯を CPU で刻まないよう rhythmNoteCanvasGeometry へ gpu を渡す
     get gpuBand(){return gpuBandWanted&&backend==='webgl'&&!!ctx&&!!ctx.band;},
