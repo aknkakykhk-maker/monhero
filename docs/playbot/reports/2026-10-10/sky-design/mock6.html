@@ -1,0 +1,62 @@
+<!doctype html><meta charset="utf-8"><body style="margin:0;background:#000"><canvas id="c"></canvas>
+<script>
+const q=new URLSearchParams(location.search);const LAND=q.get('o')==='l';const R=parseFloat(q.get('r')||'.39');const GC=q.get('gc')||'white',AC=q.get('ac')||'ref',BUSY=q.get('busy')==='1';
+const W=LAND?844:390,H=LAND?390:640;const c=document.getElementById('c');const dpr=2;c.width=W*dpr;c.height=H*dpr;c.style.width=W+'px';c.style.height=H+'px';
+const x=c.getContext('2d');x.scale(dpr,dpr);
+const topY=LAND?14:30,botY=H-(LAND?6:30),gY=H-(LAND?46:84),sY=gY-R*H;
+const cx=W/2;const halfW=y=>{const t=(y-topY)/(botY-topY);return (LAND?70:46)+((LAND?330:182)-(LAND?70:46))*t;};
+const lane=(y,u)=>cx+halfW(y)*(u*2-1);
+// 背景(曲の絵のかわりに暗い紫)
+let g=x.createLinearGradient(0,0,0,H);g.addColorStop(0,'#1a1038');g.addColorStop(.5,'#120b2c');g.addColorStop(1,'#0a0618');x.fillStyle=g;x.fillRect(0,0,W,H);
+// 道: 無地の紫。レーンの線はほぼ見せない(区切りは地上の判定ラインの目盛りだけ)
+x.beginPath();x.moveTo(lane(topY,0),topY);x.lineTo(lane(topY,1),topY);x.lineTo(lane(botY,1),botY);x.lineTo(lane(botY,0),botY);x.closePath();
+g=x.createLinearGradient(0,topY,0,botY);g.addColorStop(0,'#1c1442');g.addColorStop(1,'#2a1d5c');x.fillStyle=g;x.fill();x.strokeStyle='rgba(200,180,255,.22)';x.lineWidth=1;x.stroke();
+// 地上の判定ライン: 太い紫
+x.fillStyle='rgba(192,132,252,.9)';x.fillRect(lane(gY,0)-4,gY-2,lane(gY,1)-lane(gY,0)+8,4);
+// 空中の判定ライン: 道の外まで横いっぱいの細い光の帯1本だけ(面・柱・字は無し)
+x.fillStyle='rgba(150,118,235,.38)';x.fillRect(0,sY-3,W,6);x.fillStyle='rgba(165,135,245,.95)';x.fillRect(0,sY-1,W,2);
+// ---- 地上のノーツ: 不透明な白い厚い板(上面+手前の厚み)・光らない ----
+const GCOL={TAP:['#f0f9ff','#38bdf8','#0284c7'],HOLD:['#ecfdf5','#34d399','#059669'],SLIDE:['#f5f3ff','#a78bfa','#7c3aed'],FLICK:['#fdf2f8','#f472b6','#db2777']};
+const groundPlate=(y,u0,u1,kind='TAP')=>{const a=lane(y,u0),b=lane(y,u1),h=LAND?7:9,th=LAND?4:5;
+ if(GC==='white'){x.fillStyle='#f4f6ff';x.fillRect(a,y-h/2,b-a,h);x.fillStyle='#aeb6d8';x.fillRect(a,y+h/2,b-a,th);x.fillStyle='rgba(255,255,255,.9)';x.fillRect(a,y-h/2,b-a,1);return;}
+ const [hi,mid,lo]=GCOL[kind];x.save();x.shadowColor=mid;x.shadowBlur=8;const gg=x.createLinearGradient(0,y-h/2,0,y+h/2+th);gg.addColorStop(0,hi);gg.addColorStop(.45,mid);gg.addColorStop(1,lo);x.fillStyle=gg;x.fillRect(a,y-h/2,b-a,h+th);x.restore();x.fillStyle='rgba(255,255,255,.85)';x.fillRect(a,y-h/2,b-a,1);};
+// ---- 空中のタップ: 半透明のガラスの箱(厚みあり・色は地上と同じ白〜薄い水色)+真下に同じ形の塗った灰色の影 ----
+const flo=y=>y+(gY-sY);
+const rr=(a,y,w,h,r)=>{x.beginPath();x.moveTo(a+r,y);x.arcTo(a+w,y,a+w,y+h,r);x.arcTo(a+w,y+h,a,y+h,r);x.arcTo(a,y+h,a,y,r);x.arcTo(a,y,a+w,y,r);x.closePath();};
+const shadow=(u0,u1,y)=>{const yy=flo(y);const a=lane(yy,u0)+3,b=lane(yy,u1)-3,h=LAND?10:13;x.fillStyle='rgba(6,3,20,.5)';rr(a,yy-h/2,b-a,h,3);x.fill();};
+const glassBox=(u0,u1,y)=>{const a=lane(y,u0),b=lane(y,u1),h=LAND?12:16,th=LAND?7:10;
+ x.fillStyle='rgba(205,218,238,.68)';x.fillRect(a,y-h/2,b-a,h+th);          // 下の色を薄くしか見せない(不透明度68%)
+ x.fillStyle='rgba(255,255,255,.88)';x.fillRect(a,y-h/2,b-a,h);              // 上の面は明るく
+ x.strokeStyle='rgba(255,255,255,1)';x.lineWidth=1.8;x.strokeRect(a+.9,y-h/2+.9,b-a-1.8,h+th-1.8);x.beginPath();x.moveTo(a,y+h/2);x.lineTo(b,y+h/2);x.stroke();};
+const air=BUSY?[[.1,.3,sY-330],[.62,.82,sY-290],[.36,.56,sY-250],[.1,.3,sY-210],[.66,.86,sY-170],[.34,.54,sY-130],[.12,.32,sY-95],[.6,.8,sY-62],[.38,.58,sY-34],[.62,.82,sY-10]]:[[.12,.34,sY-190],[.58,.80,sY-120],[.30,.50,sY-300]];
+air.forEach(([a,b,y])=>shadow(a,b,y));
+// 地上のノーツ(影より手前)
+if(BUSY){const ks=['TAP','FLICK','TAP','HOLD','TAP','SLIDE','TAP','FLICK','TAP'];for(let i=0;i<9;i++)groundPlate(gY-300+i*30,(i%3)*.3+.05,(i%3)*.3+.3,ks[i]);}else{groundPlate(gY-210,.1,.3,'TAP');groundPlate(gY-150,.62,.84,'FLICK');groundPlate(gY-80,.34,.54,'HOLD');groundPlate(gY-30,.6,.82,'SLIDE');}
+// ---- アーク: なめらかな半透明の帯。左手=青・右手=桃。手前の端(指のある点)は星形に光る ----
+const smooth=(pts)=>{x.moveTo(...pts[0]);for(let i=1;i<pts.length-1;i++){const mx=(pts[i][0]+pts[i+1][0])/2,my=(pts[i][1]+pts[i+1][1])/2;x.quadraticCurveTo(pts[i][0],pts[i][1],mx,my);}x.lineTo(...pts[pts.length-1]);};
+const arc=(pts,col,core)=>{
+ // 影: 同じ形を床へ(塗った灰色・細く)
+ x.beginPath();smooth(pts.map(p=>[p[0],flo(p[1])]));x.strokeStyle='rgba(6,3,20,.45)';x.lineWidth=5;x.lineCap='round';x.lineJoin='round';x.stroke();
+ // 帯(先細り: 奥が細く手前が太い)を線分の連なりで
+ const P=t=>{const k=t*(pts.length-1),j=Math.min(pts.length-2,Math.floor(k)),f=k-j;const m=(a,b)=>a+(b-a)*(f*f*(3-2*f));return [m(pts[j][0],pts[j+1][0]),m(pts[j][1],pts[j+1][1])];};
+ const N=90,Lp=[],Rp=[];for(let i=0;i<=N;i++){const t=i/N,p0=P(t),p1=P(Math.min(1,t+.01)),pm=P(Math.max(0,t-.01));const dx=p1[0]-pm[0],dy=p1[1]-pm[1],l=Math.hypot(dx,dy)||1,nx=-dy/l,ny=dx/l;const w=(4.5+t*(LAND?16:22));Lp.push([p0[0]+nx*w,p0[1]+ny*w]);Rp.push([p0[0]-nx*w,p0[1]-ny*w]);}
+ // 本体: 1枚の多角形を半透明(46%)で塗る(後ろの地上ノーツが透けて見える)
+ x.globalCompositeOperation='source-over';x.beginPath();x.moveTo(...Lp[0]);Lp.forEach(q=>x.lineTo(...q));Rp.reverse().forEach(q=>x.lineTo(...q));x.closePath();x.fillStyle=col;x.globalAlpha=.46;x.fill();x.globalAlpha=1;
+ // 芯: 細い明るい白の線
+ x.globalCompositeOperation='lighter';x.beginPath();for(let i=0;i<=N;i++){const q=P(i/N);i?x.lineTo(...q):x.moveTo(...q);}x.strokeStyle=core;x.globalAlpha=.9;x.lineWidth=3;x.lineCap='round';x.lineJoin='round';x.stroke();x.globalAlpha=1;
+ x.globalCompositeOperation='source-over';};
+const star=(px,py,r,col)=>{x.globalCompositeOperation='lighter';let gg=x.createRadialGradient(px,py,1,px,py,r);gg.addColorStop(0,'rgba(255,255,255,.95)');gg.addColorStop(.3,col);gg.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=gg;x.beginPath();x.arc(px,py,r,0,7);x.fill();
+ x.fillStyle='rgba(255,255,255,.9)';[[1,0],[0,1],[.7,.7],[.7,-.7]].forEach(([dx,dy],i)=>{const L=r*(i<2?1.1:.7);x.beginPath();x.moveTo(px-dx*L,py-dy*L);x.lineTo(px+dy*1.8,py+dx*1.8);x.lineTo(px+dx*L,py+dy*L);x.lineTo(px-dy*1.8,py-dx*1.8);x.closePath();x.fill();});x.globalCompositeOperation='source-over';};
+const GLASS=AC==='glass';const CL=GLASS?['rgb(214,224,240)','rgb(255,255,255)']:AC==='ref'?['rgb(56,189,248)','rgb(224,247,255)']:['rgb(59,91,255)','rgb(214,222,255)'],CR=GLASS?['rgb(214,224,240)','rgb(255,255,255)']:AC==='ref'?['rgb(244,114,182)','rgb(255,232,244)']:['rgb(255,77,109)','rgb(255,224,230)'];
+arc([[lane(topY+10,.30),topY+10],[lane(topY+60,.32),topY+60],[lane(sY-70,.34),sY-70],[lane(sY-14,.42),sY-14],[lane(sY,.45),sY]],CL[0],CL[1]);
+arc([[lane(topY+30,.66),topY+30],[lane(topY+90,.62),topY+90],[lane(sY-60,.64),sY-60],[lane(sY-10,.70),sY-10],[lane(sY,.72),sY]],CR[0],CR[1]);
+// 空中のガラスの箱は影・帯より手前
+air.forEach(([a,b,y])=>glassBox(a,b,y));
+// ---- 押した光: 地上も空中も同じ桃色の星を、当たった点に ----
+const SK=GLASS?'rgba(255,255,255,.55)':'rgba(244,114,182,.75)';star(lane(sY,.45),sY,17,SK);star(lane(sY,.72),sY,17,SK);
+star(lane(gY,.20),gY,24,'rgba(244,114,182,.75)');
+// 数字(コンボ): 道の真ん中に薄く
+x.fillStyle='rgba(255,255,255,.18)';x.font='bold '+(LAND?46:56)+'px sans-serif';x.textAlign='center';x.fillText('612',cx,gY-(LAND?60:110));
+// 高さの差の目盛り
+x.fillStyle='#fbbf24';x.font='bold 11px sans-serif';x.textAlign='left';x.fillText('高さの差 '+Math.round(R*100)+'% / 地上='+(GC==='white'?'白':'いまの色')+' / アーク='+(GLASS?'色なしのガラス':AC==='ref'?'青+桃(参考)':'青+赤(ずらし)'),8,H-10);
+</script>
