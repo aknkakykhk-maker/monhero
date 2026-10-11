@@ -1236,6 +1236,9 @@ const rhythmScrollSet=(changes,travelMs)=>{
   RHYTHM_SCROLL.points=points;
 };
 // 時刻 t まで積み上げた位置 S(t)
+// 速さの表が前へ進むだけか(倍率がどれもマイナスでない)。描く側が「時刻の順=画面の上の順」として先を打ち切ってよいかに使う
+// (2026-10-11 後ろに戻る(マイナスの速さ)の準備。いまは rhythmScrollSet がマイナスを捨てるので、いつも true)
+const rhythmScrollForward=()=>{const points=RHYTHM_SCROLL.points;if(!points)return true;if(points._forward===undefined)points._forward=points.every(p=>Number(p.m)>=0);return points._forward;};
 const rhythmScrollPos=t=>{
   const points=RHYTHM_SCROLL.points,x=Number(t);
   if(!points||!(x>points[0].t))return x;
@@ -29004,8 +29007,8 @@ const rhythmNoteCanvasGeometry=(note,yPx,visualLane,rect,noteHeight,releaseYpx=n
   if(rhythmNoteIsSlide(note)){
     if(slideTravel&&slideTravel.gpu){
       // 帯を GPU に置いて描く(作り替え B)。CPU では刻まず、描くのに要る値だけ渡す(形は RHYTHM_CANVAS_RENDERER が GPU で作る)
+      // 区切りの線も GPU に置いた形で描く(drawSlideGpu)ので、ここでは投影しない
       out.slideGpu={travel:slideTravel,rect,halfH:noteHeight/2};
-      out.checkpoints=rhythmSlideHasSky(note)?null:rhythmSlideCheckpointLines(note,slideTravel.chartNowMs,slideTravel,rect,noteHeight/2);
     }else if(slideTravel){
       out.slide=rhythmSlideSegmentQuads(note,slideTravel.chartNowMs,slideTravel,rect,noteHeight/2);
       // 空中のスライドは区切りの線を描かない(drawSlide が skySlideRgb のとき checkpoints を使わない)ので、作らない
@@ -29116,16 +29119,23 @@ const rhythmCreateGpuSlideBand=(gl,host)=>{
     // rhythmProjectTravelProgress と同じ
     'float travelP(float p){float k=1.0/uFar;if(p<0.0)return p*(k-1.0)/(k*k)/(1.0-uFar);if(p>1.0)return 1.0+(p-1.0)*(k-1.0)/(1.0-uFar);return (1.0/(k-(k-1.0)*p)-uFar)/(1.0-uFar);}'+
     // rhythmSlideSegmentQuads の project と同じ(横は rhythmProjectBoundary、ノーツサイズの倍率は帯の中心のまわりで掛ける)
-    'vec2 proj(vec4 p,float sky){float y=uSpawnY+travelP(1.0-(p.x-uSnow)/uTravel)*uTravelPx+uHalfH;float yr=min(1.0,y/uH);float s=depth(yr)*uRoad;'+
+    'vec2 proj(vec4 p,float sky){float y=uSpawnY+travelP(1.0-(p.x-uSnow)/uTravel)*uTravelPx+uHalfH;float yr=min(1.0,y/uH);if(abs(aMisc.w-1.0)<0.5)yr=clamp(yr,0.0,1.0);float s=depth(yr)*uRoad;'+
     'float x=uW*(0.5+((p.z+p.w*uSize)/uLanes-0.5)*s);float lift=uGround>0.5?0.0:uSkyK*depth(clamp(yr,0.0,1.0))*uRoad*sky;return vec2(x,y-lift);}'+
-    'void main(){vec2 b=proj(aCur,aSky.y);vec2 pos=b;'+
-    'if(aMisc.x!=0.0){vec2 a=proj(aPrev,aSky.x);vec2 c=proj(aNext,aSky.z);vec2 d1=b-a;vec2 d2=c-b;float l1=length(d1);float l2=length(d2);'+
+    // 譜面の点のつなぎ目(aMisc.w=2 来た側の線・3 出ていく側の線・4 角の丸): 画面の上で急に曲がる(約25度より大きい)ときだけ、
+    // 角を伸ばさず線を2組に分けて丸を重ねる(2D の lineJoin round と同じ形)。緩い所は今までどおり角を伸ばし、丸は1点に縮めて描かない
+    'void main(){vec2 b=proj(aCur,aSky.y);vec2 pos=b;float f=aMisc.w;'+
+    'if(aMisc.x!=0.0||f>3.5){vec2 a=proj(aPrev,aSky.x);vec2 c=proj(aNext,aSky.z);vec2 d1=b-a;vec2 d2=c-b;float l1=length(d1);float l2=length(d2);'+
     'vec2 n1=l1>1e-4?vec2(-d1.y,d1.x)/l1:vec2(0.0);vec2 n2=l2>1e-4?vec2(-d2.y,d2.x)/l2:vec2(0.0);vec2 n=n1;float len=uHw;'+
-    'if(l1<=1e-4)n=n2;else if(l2>1e-4){vec2 m=n1+n2;float ml=length(m);if(ml>1e-4){n=m/ml;len=uHw/max(dot(n,n1),0.5);}}'+
-    'pos=b+n*len*aMisc.x;}else{pos=b+aMisc.yz*uHw;}'+
+    'bool sharp=f>1.5&&l1>1e-4&&l2>1e-4&&dot(n1,n2)<0.9;'+
+    'if(aMisc.x!=0.0){if(sharp)n=f<2.5?n1:n2;else if(l1<=1e-4)n=n2;else if(l2>1e-4){vec2 m=n1+n2;float ml=length(m);if(ml>1e-4){n=m/ml;len=uHw/max(dot(n,n1),0.5);}}'+
+    'pos=b+n*len*aMisc.x;if(abs(f-1.0)<0.5){vec2 t=c-a;float tl=length(t);if(tl>1e-4)pos+=t/tl*uHw*aMisc.y;}}else if(sharp)pos=b+aMisc.yz*uHw;}else{pos=b+aMisc.yz*uHw;}'+
+      // 区切りの線(aMisc.w=1)は rhythmSlideCheckpointLines と同じく、奥行きを画面の中(0〜1)で決め、画面の高さより上下へ外れた線は描かない。
+      // 線の端は aMisc.y(左-1・右+1)の向きへ太さの半分だけ伸ばす(端の丸の代わり。太さ2の線の丸と四角の差は1画素の角の欠けだけ)
+      'if(abs(aMisc.w-1.0)<0.5&&(b.y<-uH||b.y>uH))pos=vec2(-1e5);'+
     // 流れる光の波の明るさは、drawSlide と同じく区切りの端(頂点)で決めて間をつなぐ
     'float w=0.5+0.5*cos(6.2831853*(pos.y/110.0-uPhase));vWave=w>0.3?(w-0.3)/0.7*0.3:0.0;'+
-    'vT=aCur.y-uTnow;vSky=aSky.y;vG=abs(uG1-uG0)>1e-4?(pos.y-uG0)/(uG1-uG0):0.0;'+
+    // 塗りと丸(aMisc.x=0)の色の高さは aSky.x。塗りは区切りごとに両端の平均の高さで1色(drawSlide の q.sky と同じ)にするため、区切りの両端に同じ値を置く
+    'vT=aCur.y-uTnow;vSky=aMisc.x==0.0&&f<3.5?aSky.x:aSky.y;vG=abs(uG1-uG0)>1e-4?(pos.y-uG0)/(uG1-uG0):0.0;'+
     'vec2 q=vec2(dot(uM0,vec3(pos,1.0)),dot(uM1,vec3(pos,1.0)));vec2 cl=q/uView*2.0-1.0;gl_Position=vec4(cl.x,-cl.y,0.0,1.0);}';
   // 塗り側。画素座標の大きな数は扱わない(GL2D と同じ理由。位置は頂点側で小さな値にしてから渡す)
   const BAND_FS='#ifdef GL_FRAGMENT_PRECISION_HIGH\nprecision highp float;\n#else\nprecision mediump float;\n#endif\n'+
@@ -29163,19 +29173,33 @@ const rhythmCreateGpuSlideBand=(gl,host)=>{
   const grow=need=>{if(scratch.length<need*REC){let size=scratch.length;while(size<need*REC)size*=2;const next=new Float32Array(size);next.set(scratch.subarray(0,count*REC));scratch=next;}};
   const vert=(a,b,c,side,cs,sn)=>{grow(count+1);const o=count*REC,d=scratch;
     d[o]=a[0];d[o+1]=a[1];d[o+2]=a[2];d[o+3]=a[3];d[o+4]=b[0];d[o+5]=b[1];d[o+6]=b[2];d[o+7]=b[3];d[o+8]=c[0];d[o+9]=c[1];d[o+10]=c[2];d[o+11]=c[3];
-    d[o+12]=a[4];d[o+13]=b[4];d[o+14]=c[4];d[o+15]=side;d[o+16]=cs;d[o+17]=sn;d[o+18]=0;count++;};
+    d[o+12]=a[4];d[o+13]=b[4];d[o+14]=c[4];d[o+15]=side;d[o+16]=cs;d[o+17]=sn;d[o+18]=flag;count++;};
+  // aMisc.w に入れる印(1=区切りの線)
+  let flag=0;
   // 帯(三角形の帯 TRIANGLE_STRIP)をつなぐ。前の帯の最後の頂点と次の帯の最初の頂点を繰り返して、間に面積0の三角形をはさむ
   const joinStrip=()=>{if(count>0){grow(count+1);scratch.copyWithin(count*REC,(count-1)*REC,count*REC);count++;return true;}return false;};
   const dupLast=()=>{grow(count+1);scratch.copyWithin(count*REC,(count-1)*REC,count*REC);count++;};
   // 折れ線(点の並び)を太さぶん左右へずらした帯。join のときは前の帯に面積0の三角形でつなげる(1回の描画にまとめる)
   // idx を渡すと、点 i の頂点の組が何番目から始まるかを書き込む
-  const polyline=(pts,join,idx)=>{const joined=join&&joinStrip();
-    for(let i=0;i<pts.length;i++){const a=pts[i-1]||pts[i],b=pts[i],c=pts[i+1]||pts[i];vert(a,b,c,1,0,0);if(i===0&&joined)dupLast();if(idx)idx[i]=count-1-(i===0&&joined?1:0);vert(a,b,c,-1,0,0);}};
+  // marks を渡すと、その番目の点(譜面の点のつなぎ目)に「来た側の線・角の丸・出ていく側の線」を置く(印 2・4・3)。
+  // 2D の線は角を丸くつなぐ(lineJoin round)ので、ジグザグのスライドの急な角を伸ばすと尖り、平均の向きで置くと細る。
+  // 急かどうかは画面の上の角度で決まるので、頂点シェーダーが決める(緩い所は今までと同じ形になり、丸は描かない)
+  const polyline=(pts,join,idx,marks)=>{const joined=join&&joinStrip(),keep=flag;
+    for(let i=0;i<pts.length;i++){const a=pts[i-1]||pts[i],b=pts[i],c=pts[i+1]||pts[i],split=marks&&marks.has(i)&&i>0&&i<pts.length-1;
+      if(split)flag=2;
+      vert(a,b,c,1,0,0);if(i===0&&joined)dupLast();if(idx)idx[i]=count-1-(i===0&&joined?1:0);vert(a,b,c,-1,0,0);
+      if(split){joinStrip();flag=4;for(let j=0;j<=DISC_SEG;j++){vert(a,b,c,0,unit[j][0],unit[j][1]);if(j===0)dupLast();if(j<DISC_SEG)vert(a,b,c,0,0,0);}
+        joinStrip();flag=3;vert(a,b,c,1,0,0);dupLast();vert(a,b,c,-1,0,0);flag=keep;}}};
   // 丸(つなぎ目・端)。ふちの点を順に回り、真ん中の点と交互に並べる
   const unit=[];for(let i=0;i<=DISC_SEG;i++){const a=i/DISC_SEG*Math.PI*2;unit.push([Math.cos(a),Math.sin(a)]);}
   const disc=(p,join)=>{const joined=join&&joinStrip();for(let i=0;i<=DISC_SEG;i++){vert(p,p,p,0,unit[i][0],unit[i][1]);if(i===0&&joined)dupLast();if(i<DISC_SEG)vert(p,p,p,0,0,0);}};
   // 帯の中の塗り(右・左の順に交互)
-  const fillStrip=(rights,lefts)=>{for(let i=0;i<rights.length;i++){vert(rights[i],rights[i],rights[i],0,0,0);vert(lefts[i],lefts[i],lefts[i],0,0,0);}};
+  // sky のときは、区切りごとに頂点を置き直し、色の高さ(前の点の高さの欄)を区切りの両端の平均にする(drawSlide の q.sky と同じ。
+  // 置き直す所は同じ位置の頂点が並ぶので面積0の三角形になる)。区切り i は 4i 番目から
+  const fillStrip=(rights,lefts,sky)=>{
+    if(!sky){for(let i=0;i<rights.length;i++){vert(rights[i],rights[i],rights[i],0,0,0);vert(lefts[i],lefts[i],lefts[i],0,0,0);}return;}
+    for(let i=0;i+1<rights.length;i++){const avg=((Number(rights[i][4])||0)+(Number(rights[i+1][4])||0))/2,tint=p=>{const q=p.slice();q[4]=avg;return q;};
+      for(let j=i;j<=i+1;j++){vert(tint(rights[j]),rights[j],rights[j],0,0,0);vert(tint(lefts[j]),lefts[j],lefts[j],0,0,0);}}};
   // 帯ごとの形(GPU に置いたもの)。点の並び(譜面の凍らせた配列)を鍵にする。速さの表(RHYTHM_SCROLL.points)が変わったら作り直す
   const entries=typeof WeakMap==='function'?new WeakMap():null,alive=new Set();
   let lastSweep=0;
@@ -29197,13 +29221,15 @@ const rhythmCreateGpuSlideBand=(gl,host)=>{
       at.push(R.length-1);
     }
     const L=R.map(mirror),N=R.length-1;
-    count=0;fillStrip(R,L);e.fill=[0,count];
+    count=0;fillStrip(R,L,e.hasSky);e.fill=[0,count];
     // 外周は1本の帯につなげて置く: 右のふち(始点→先)・先の右の角の丸・先の線・先の左の角の丸・左のふち(先→始点)。
     // いまの位置で切った残りは、この並びの「右のふちの途中〜左のふちの途中」の続いた範囲なので、1回で描ける(GPU への命令を少なくする)
     const rightIdx=[],leftRev=[];
-    polyline(R,false,rightIdx);
+    // 譜面の点(始点と終点を除く)のつなぎ目
+    const inner=at.slice(1,-1),marksR=new Set(inner),marksL=new Set(inner.map(k=>N-k));
+    polyline(R,false,rightIdx,marksR);
     e.discR=count+1;disc(R[N],true);e.capFrom=count+1;polyline([R[N],L[N]],true);e.capTo=count;disc(L[N],true);e.discLEnd=count;
-    polyline(L.slice().reverse(),true,leftRev);
+    polyline(L.slice().reverse(),true,leftRev,marksL);
     e.rightIdx=rightIdx;e.leftIdx=leftRev.reverse();
     e.R=R;e.at=at;
     e.buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,e.buf);gl.bufferData(gl.ARRAY_BUFFER,scratch.subarray(0,count*REC),gl.STATIC_DRAW);
@@ -29211,13 +29237,30 @@ const rhythmCreateGpuSlideBand=(gl,host)=>{
   };
   const now=()=>typeof performance!=='undefined'?performance.now():Date.now();
   // 見えなくなって3秒たった帯の形は捨てる(GPU の入れ物を持ち続けない)
-  const sweep=t=>{if(t-lastSweep<2000)return;lastSweep=t;for(const e of alive){if(t-e.usedAt>3000){alive.delete(e);try{gl.deleteBuffer(e.buf);}catch(err){}if(entries&&entries.get(e.key)===e)entries.delete(e.key);}}};
+  const sweep=t=>{if(t-lastSweep<2000)return;lastSweep=t;for(const e of alive){if(t-e.usedAt>3000){alive.delete(e);try{gl.deleteBuffer(e.buf);if(e.cpBuf)gl.deleteBuffer(e.cpBuf);}catch(err){}if(entries&&entries.get(e.key)===e)entries.delete(e.key);}}};
   const entryFor=note=>{
     const key=keyOf(note);if(!key||typeof key!=='object'||!entries)return null;
     let e=entries.get(key);
-    if(e&&e.scroll!==RHYTHM_SCROLL.points){alive.delete(e);try{gl.deleteBuffer(e.buf);}catch(err){}e=null;}
+    if(e&&e.scroll!==RHYTHM_SCROLL.points){alive.delete(e);try{gl.deleteBuffer(e.buf);if(e.cpBuf)gl.deleteBuffer(e.cpBuf);}catch(err){}e=null;}
     if(!e){const source=note._rhythmSlideRenderPoints||rhythmSlidePoints(note);if(!Array.isArray(source)||source.length<2)return null;e=build(note,source);e.key=key;entries.set(key,e);alive.add(e);}
     return e;
+  };
+  // 区切りの線(rhythmSlideCheckpointLines と同じ線)も、帯と同じ入れ物の後ろに一度だけ置く。線1本 = 頂点4つ(太さ2。端は頂点シェーダーで伸ばす)。
+  // 時刻の早い順に並べ、いまより後の線は「ある番目から最後まで」の続いた範囲になるので1回で描ける。点の並び(_rhythmSlideCheckpoints)が変わったら作り直す
+  const checkpointsOf=(note,e)=>{
+    const times=note?._rhythmSlideCheckpoints;
+    if(e.cpSrc===times)return e.cp;
+    if(e.cpBuf){try{gl.deleteBuffer(e.cpBuf);}catch(err){}e.cpBuf=null;}
+    e.cpSrc=times;e.cp=null;
+    if(!Array.isArray(times)||!times.length||e.hasSky)return null;
+    const list=times.map(Number).filter(Number.isFinite).sort((a,b)=>a-b);
+    if(!list.length)return null;
+    count=0;flag=1;const from=[];
+    list.forEach(at=>{const R=sampleOf(note,e,at,rhythmSlideExpectedLane(note,at)),L=mirror(R);from.push(count);const joined=joinStrip();vert(L,L,R,1,-1,0);if(joined)dupLast();vert(L,L,R,-1,-1,0);vert(L,R,R,1,1,0);vert(L,R,R,-1,1,0);});
+    flag=0;
+    e.cpBuf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,e.cpBuf);gl.bufferData(gl.ARRAY_BUFFER,scratch.subarray(0,count*REC),gl.STATIC_DRAW);
+    e.cp={times:list,from,end:count};
+    return e.cp;
   };
   const dynBuf=gl.createBuffer();
   // 毎コマ作る分(dyn)の区切り: 切り口の角の丸・いまの区間の塗り・右のふち・左のふち・切り口の線
@@ -29266,6 +29309,15 @@ const rhythmCreateGpuSlideBand=(gl,host)=>{
       // いまの位置で切る。rhythmSlideSegmentQuads と同じく、押さえている帯は「いまの位置から次の譜面の点まで」をその場で刻み直し、
       // その先は GPU に置いた形をそのまま使う(刻む点が今の描き方と同じになる)
       const source=e.source,N=e.R.length-1;
+      // 区切りの線: いま(chartNowMs)より後の線だけ(rhythmSlideCheckpointLines と同じ)。入れ物 scratch を使うので、毎コマ分を作る前に置く
+      const cp=checkpointsOf(note,e),cpNow=Number(travel.chartNowMs)||0;
+      if(cp){let lo=0,hi=cp.times.length;while(lo<hi){const mid=(lo+hi)>>1;if(cp.times[mid]<=cpNow)lo=mid+1;else hi=mid;}
+        // 画面の上の外(線の太さより上)の線は描かない(見えない線の三角形を GPU に渡さない)。速さの表が逆向き(マイナス)を含むときは位置が時刻の順に並ばないので切らない
+        let end=cp.times.length;
+        if(lo<end&&rhythmScrollForward()){const sNow=rhythmScrollPos(Number(travel.visualTime)),tr=Number(travel.travelMs),limit=-2;
+          const yOf=at=>Number(travel.spawnY)+rhythmProjectTravelProgress(1-(rhythmScrollPos(at)-sNow)/tr)*Number(travel.travelPx)+(Number(halfH)||0);
+          let a=lo,z=end;while(a<z){const mid=(a+z)>>1;if(yOf(cp.times[mid])<limit)z=mid;else a=mid+1;}end=a;}
+        c.lines=lo<end?[cp.from[lo],end<cp.times.length?cp.from[end]:cp.end]:null;}
       count=0;
       let fillFrom=0,edgeFrom=0;
       if(nowMs>e.t0){
@@ -29276,10 +29328,10 @@ const rhythmCreateGpuSlideBand=(gl,host)=>{
         D.push(e.R[k]);
         const Dl=D.map(mirror),next=k<N?[e.R[k+1]]:[];
         // 毎コマ作る分も1本につなぐ: いまの区間の塗り | 切り口の角の丸・右のふち・左のふち | 切り口の線
-        fillStrip(D,Dl);c.fill=[0,count];
-        const at=count;disc(Dl[0],false);disc(D[0],true);polyline([...D,...next],true);polyline([...Dl,...next.map(mirror)],true);c.edges=[at,count];
+        fillStrip(D,Dl,e.hasSky);c.fill=[0,count];
+        const at=count,mark=i<source.length-1?new Set([D.length-1]):null;disc(Dl[0],false);disc(D[0],true);polyline([...D,...next],true,null,mark);polyline([...Dl,...next.map(mirror)],true,null,mark);c.edges=[at,count];
         polyline([Dl[0],D[0]],true);c.outline=[at,count];
-        fillFrom=2*k;edgeFrom=k+1;
+        fillFrom=(e.hasSky?4:2)*k;edgeFrom=k+1;
       }else{
         const R0=e.R[0],L0=mirror(R0);
         c.fill=[0,0];disc(L0,false);disc(R0,true);c.edges=[0,count];polyline([L0,R0],true);c.outline=[0,count];
@@ -29287,11 +29339,20 @@ const rhythmCreateGpuSlideBand=(gl,host)=>{
       // 先(GPU に置いた形)から描く範囲。外周は「右のふちの点 edgeFrom 〜 左のふちの点 edgeFrom」(先の角と線を含む)
       c.sFill=[e.fill[0]+fillFrom,e.fill[1]];
       c.sOutline=edgeFrom<=N?[e.rightIdx[edgeFrom],e.leftIdx[edgeFrom]+2]:[e.discR,e.discLEnd];
+      // 画面の上の外(RHYTHM_SLIDE_OFFSCREEN_PX より上)へ出た先は GPU に渡さない(長いスライドの見えない分の三角形を減らす)。
+      // 譜面の点の番号 cut まで描き、外周は右のふち・左のふちの2回に分ける(先の角と線は画面の外)。持ち上げ(空中)は上へずらすだけなので、持ち上げる前の位置で決めてよい。
+      // 速さの表が逆向き(マイナス)を含むときは、位置が点の順に並ばないので切らない
+      c.sRight=null;
+      if(edgeFrom<=N&&rhythmScrollForward()){const u=c.u,yOf=k=>u.spawnY+rhythmProjectTravelProgress(1-(e.R[k][0]-u.snow)/u.travel)*u.travelPx+u.halfH;
+        let a=Math.max(edgeFrom,1),z=N+1;while(a<z){const mid=(a+z)>>1;if(yOf(mid)<-RHYTHM_SLIDE_OFFSCREEN_PX)z=mid;else a=mid+1;}
+        if(a<=N){c.sFill=[c.sFill[0],e.fill[0]+(e.hasSky?4*a:2*(a+1))];c.sRight=[e.rightIdx[edgeFrom],e.rightIdx[a]+2];c.sLeft=[e.leftIdx[a],e.leftIdx[edgeFrom]+2];}}
       gl.bindBuffer(gl.ARRAY_BUFFER,dynBuf);gl.bufferData(gl.ARRAY_BUFFER,scratch.subarray(0,count*REC),gl.STREAM_DRAW);
       cur=c;bound=false;uniformsFor=null;
       return true;
     },
-    // 1回ぶん塗る。range: 'fill'(帯の中)・'outline'(外周の線)・'edges'(左右のふちだけ。先の角と切り口の角の丸を含む)
+    // いまより後の区切りの線があるか
+    get hasLines(){return !!(cur&&cur.lines);},
+    // 1回ぶん塗る。range: 'fill'(帯の中)・'outline'(外周の線)・'edges'(左右のふちだけ。先の角と切り口の角の丸を含む)・'lines'(区切りの線)
     // o.mode: 0=色 1=空中の帯 2=影 3=空中のふちの光 4=空中のふちの芯 5=押さえているときの明るさ 6=流れる光の波
     pass(range,o){
       if(!cur||host.lost())return;
@@ -29303,16 +29364,17 @@ const rhythmCreateGpuSlideBand=(gl,host)=>{
       if(mode===5){u1f('uG0',Number(o.g0)||0);u1f('uG1',Number(o.g1)||0);}if(mode===6)u1f('uPhase',Number(o.phase)||0);
       if(o.stencil){const ref=host.nextStencil();gl.stencilFunc(gl.NOTEQUAL,ref,0xff);}else gl.stencilFunc(gl.ALWAYS,0,0xff);
       if(range==='fill'){draw(dynBuf,cur.fill[0],cur.fill[1]);draw(e.buf,cur.sFill[0],cur.sFill[1]);return;}
-      if(range==='outline'){draw(dynBuf,cur.outline[0],cur.outline[1]);draw(e.buf,cur.sOutline[0],cur.sOutline[1]);return;}
+      if(range==='outline'){draw(dynBuf,cur.outline[0],cur.outline[1]);if(cur.sRight){draw(e.buf,cur.sRight[0],cur.sRight[1]);draw(e.buf,cur.sLeft[0],cur.sLeft[1]);}else draw(e.buf,cur.sOutline[0],cur.sOutline[1]);return;}
+      if(range==='lines'){if(cur.lines)draw(e.cpBuf,cur.lines[0],cur.lines[1]);return;}
       // 左右のふちだけ(空中のふち): 先の線を抜いた2つの範囲
-      draw(dynBuf,cur.edges[0],cur.edges[1]);draw(e.buf,cur.sOutline[0],e.capFrom);draw(e.buf,e.capTo,cur.sOutline[1]);
+      draw(dynBuf,cur.edges[0],cur.edges[1]);if(cur.sRight){draw(e.buf,cur.sRight[0],cur.sRight[1]);draw(e.buf,cur.sLeft[0],cur.sLeft[1]);return;}draw(e.buf,cur.sOutline[0],e.capFrom);draw(e.buf,e.capTo,cur.sOutline[1]);
     },
     // GL2D の描き方へ戻す(帯を描き終えたら必ず呼ぶ)
     end(){if(bound){bound=false;host.restore();}},
     done(){api.end();cur=null;},
     // いま GPU に置いている帯の数(検査用)
     get size(){return alive.size;},
-    dispose(){for(const e of alive){try{gl.deleteBuffer(e.buf);}catch(err){}}alive.clear();try{gl.deleteBuffer(dynBuf);gl.deleteProgram(prog);}catch(err){}},
+    dispose(){for(const e of alive){try{gl.deleteBuffer(e.buf);if(e.cpBuf)gl.deleteBuffer(e.cpBuf);}catch(err){}}alive.clear();try{gl.deleteBuffer(dynBuf);gl.deleteProgram(prog);}catch(err){}},
   };
   return api;
 };
@@ -30613,15 +30675,9 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       }
     }
     if(motion&&!failed){const phase=frameNow/500;band.pass('fill',{mode:6,phase:phase-Math.floor(phase),alpha,stencil:false});}
+    // 区切りの線(drawSlide と同じ色・太さ・端は丸)。形は帯と一緒に GPU に置いてあり、CPU では投影しない(作り替え B の S2)
+    if(!opts.skySlideRgb&&band.hasLines)band.pass('lines',{mode:0,hw:1,color:failed?'rgba(190,190,200,.6)':'rgba(233,213,255,.85)',alpha,stencil:false});
     band.done();
-    ctx.globalAlpha=alpha;
-    const checkpoints=opts.skySlideRgb?null:geo.checkpoints;
-    if(checkpoints&&checkpoints.length){
-      // 区切りの線(drawSlide と同じ色・太さ)。1本ずつ頼まず、1回の線にまとめて GPU へ渡す(線どうしは重ならない)
-      ctx.strokeStyle=failed?'rgba(190,190,200,.6)':'rgba(233,213,255,.85)';ctx.lineWidth=2;ctx.lineCap='round';
-      ctx.beginPath();checkpoints.forEach(line=>{const [x1,x2]=sizeX(line.x1,line.x2);ctx.moveTo(x1,line.y);ctx.lineTo(x2,line.y);});ctx.stroke();
-      ctx.lineCap='butt';
-    }
     ctx.globalAlpha=1;
   };
   // 空中のスライドの床の影(drawSkyShadowBand と同じ色・濃さ。影は持ち上げる前の位置で、ノーツサイズの倍率は掛けない)
