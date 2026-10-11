@@ -39,6 +39,8 @@ PLAYBOT_PORT=8981 PLAYBOT_TACTICS_ALL=1 PLAYBOT_TACTICS_DIFF=Hard PLAYBOT_TACTIC
   回数不足4体: イブリース Hard ×2・ウンディーネ Expert ×1・ユグドラシル Expert ×1・Hard ×1・オボロゲソウ Expert ×1・Hard ×2
 - PR にしていないもの: 剣士モッチーの初期スタイルの直し(ブランチにプッシュ済み)・パーティの11本とふつうの回の記録・この表。Tier 表の作り直しもまだ
 - 早送り(修理部ドライバーくんの印)は、印が決まってから
+- 送り先: 窓口(統括部長)は 2026-10-11 に新しい会話 `session_014GTmSNS2ae9tRr57k3zFjC` へ移った(`docs/playbot/SESSIONS.md` の窓口の行が正)。上司はハカセくん `session_01911k2UUtVGudFqekCw9DB9`
+- 決まり(止めているあいだに増えたもの): Supabase には部署から直接触らない(SELECT も窓口へ頼む)/ 見積もりは AI が手を動かす時間で出す。ブラウザの実戦は「回数×1回の時間÷並べる本数」(1回 Hard 約21分・Expert 約11分・3本並べ)
 
 ## 実戦で回す表
 
