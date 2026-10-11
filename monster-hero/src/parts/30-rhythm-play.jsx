@@ -436,15 +436,15 @@ const RHYTHM_RESUME_COUNTDOWN_STEPS=Object.freeze(['3','2','1']);
    ・タップで飛ばせる。ただしマルチは全員同じ長さで待つ(飛ばすと開始がずれる)
    ・軽量モード・演出「最小」では出さない。マルチだけは見た目を出さなくても待つ時間はそろえる */
 // 2026-10-11 社長「ジャケットが出てから消えるまでが早い。伸ばして読み込みの猶予にするのもあり」。
-//   1.8秒→2.6秒(リトライ0.9秒→1.2秒)へ伸ばし、演奏前の準備(修理部・rhythmSongIntroHold)が済むまでは閉じない。
+//   1.8秒→3.0秒(リトライ0.9秒→1.4秒・社長が2案から選んだ)へ伸ばし、演奏前の準備(修理部・rhythmSongIntroHold)が済むまでは閉じない。
 //   ・最短 … RHYTHM_SONG_INTRO_MS(リトライは _RETRY_MS)。準備が早く済んでもここまでは出す
 //   ・最長 … RHYTHM_SONG_INTRO_MAX_MS。遅い端末で準備が済まなくても、ここで閉じてカウントダウンへ進む(準備は裏で続く)
 //   ・タップで飛ばしたとき … 最短は待たないが、準備が済むまでは閉じない(最長は同じ)
 //   ・マルチ … 全員そろえるため、最短=最長=RHYTHM_SONG_INTRO_MS(準備の待ちで延ばさない・飛ばせない)
 //   ・閉じるときは RHYTHM_SONG_INTRO_CLOSE_MS かけて消す(この時間も最短・最長の内側に数えない。カウントダウンはそのあと)
-const RHYTHM_SONG_INTRO_MS=2600;
+const RHYTHM_SONG_INTRO_MS=3000;
 const rhythmSongIntroNow=()=>typeof performance!=='undefined'?performance.now():Date.now();
-const RHYTHM_SONG_INTRO_RETRY_MS=1200;
+const RHYTHM_SONG_INTRO_RETRY_MS=1400;
 const RHYTHM_SONG_INTRO_MAX_MS=6000;
 const RHYTHM_SONG_INTRO_CLOSE_MS=240;
 /* 演奏前の準備を幕へ渡す口(修理部ドライバーくんの「演奏前の準備」との決め事・2026-10-11)。

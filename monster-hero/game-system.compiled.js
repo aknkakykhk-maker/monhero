@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: dc61e7df4e50bd40
+// source-sha256: a4d70824ba504118
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-11 15:43";
+const BUILD_DATE = "2026-10-11 15:58";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -30304,9 +30304,9 @@ const rhythmBakeMonsterFace = async (monster, dpr) => {
   };
 };
 const RHYTHM_RESUME_COUNTDOWN_STEPS = Object.freeze(['3', '2', '1']);
-const RHYTHM_SONG_INTRO_MS = 2600;
+const RHYTHM_SONG_INTRO_MS = 3000;
 const rhythmSongIntroNow = () => typeof performance !== 'undefined' ? performance.now() : Date.now();
-const RHYTHM_SONG_INTRO_RETRY_MS = 1200;
+const RHYTHM_SONG_INTRO_RETRY_MS = 1400;
 const RHYTHM_SONG_INTRO_MAX_MS = 6000;
 const RHYTHM_SONG_INTRO_CLOSE_MS = 240;
 let rhythmSongIntroHolds = null;
@@ -65839,7 +65839,7 @@ const rhythmMultiSelectSecLabel = sec => sec > 0 ? `${sec}秒` : 'なし';
 const RHYTHM_MULTI_READY_MS = 30000;
 const RHYTHM_MULTI_READY_GRACE_MS = 3000;
 const RHYTHM_MULTI_RESULT_MS = 45000;
-const RHYTHM_MULTI_PLAY_GRACE_MS = RHYTHM_MULTI_START_COUNTDOWN_SEC * 1000 + (typeof RHYTHM_SONG_INTRO_MS === 'number' ? RHYTHM_SONG_INTRO_MS : 2600) + 4 * 800 + 10000;
+const RHYTHM_MULTI_PLAY_GRACE_MS = RHYTHM_MULTI_START_COUNTDOWN_SEC * 1000 + (typeof RHYTHM_SONG_INTRO_MS === 'number' ? RHYTHM_SONG_INTRO_MS : 3000) + 4 * 800 + 10000;
 const RHYTHM_MULTI_QUEUE_MAX = 300;
 const RHYTHM_MULTI_PUBLIC_MATCH_WAIT_MS = 15000;
 const RHYTHM_MULTI_CHAT_MAX_LENGTH = 40;

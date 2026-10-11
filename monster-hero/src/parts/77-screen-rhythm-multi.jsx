@@ -50,7 +50,7 @@ const RHYTHM_MULTI_RESULT_MS = 45000;
 //   2026-10-10 から曲の前の幕(RHYTHM_SONG_INTRO_MS・30-rhythm-play.jsx)のぶんも足す。マルチは全員がこの長さだけ待つ
 //   (この部品だけを読み込む検査 rhythm-multi-check では 30 番が無いので、同じ値を控えに置く)
 const RHYTHM_MULTI_PLAY_GRACE_MS = RHYTHM_MULTI_START_COUNTDOWN_SEC * 1000
-  + (typeof RHYTHM_SONG_INTRO_MS === 'number' ? RHYTHM_SONG_INTRO_MS : 2600) + 4 * 800 + 10000;
+  + (typeof RHYTHM_SONG_INTRO_MS === 'number' ? RHYTHM_SONG_INTRO_MS : 3000) + 4 * 800 + 10000;
 // 演奏中に溜めておく知らせの上限(5人・数分のライブなら届かない量。超えたら古いものから捨てる)
 const RHYTHM_MULTI_QUEUE_MAX = 300;
 // 公開ルームは、2人以上いて、この時間だれも出入りしなければメンバー確定

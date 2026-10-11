@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: fd0dd50a92bd611b
+// generated-sha256: 4ae091e2a444f10d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-11 15:43"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-11 15:58"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -19384,15 +19384,15 @@ const RHYTHM_RESUME_COUNTDOWN_STEPS=Object.freeze(['3','2','1']);
    ・タップで飛ばせる。ただしマルチは全員同じ長さで待つ(飛ばすと開始がずれる)
    ・軽量モード・演出「最小」では出さない。マルチだけは見た目を出さなくても待つ時間はそろえる */
 // 2026-10-11 社長「ジャケットが出てから消えるまでが早い。伸ばして読み込みの猶予にするのもあり」。
-//   1.8秒→2.6秒(リトライ0.9秒→1.2秒)へ伸ばし、演奏前の準備(修理部・rhythmSongIntroHold)が済むまでは閉じない。
+//   1.8秒→3.0秒(リトライ0.9秒→1.4秒・社長が2案から選んだ)へ伸ばし、演奏前の準備(修理部・rhythmSongIntroHold)が済むまでは閉じない。
 //   ・最短 … RHYTHM_SONG_INTRO_MS(リトライは _RETRY_MS)。準備が早く済んでもここまでは出す
 //   ・最長 … RHYTHM_SONG_INTRO_MAX_MS。遅い端末で準備が済まなくても、ここで閉じてカウントダウンへ進む(準備は裏で続く)
 //   ・タップで飛ばしたとき … 最短は待たないが、準備が済むまでは閉じない(最長は同じ)
 //   ・マルチ … 全員そろえるため、最短=最長=RHYTHM_SONG_INTRO_MS(準備の待ちで延ばさない・飛ばせない)
 //   ・閉じるときは RHYTHM_SONG_INTRO_CLOSE_MS かけて消す(この時間も最短・最長の内側に数えない。カウントダウンはそのあと)
-const RHYTHM_SONG_INTRO_MS=2600;
+const RHYTHM_SONG_INTRO_MS=3000;
 const rhythmSongIntroNow=()=>typeof performance!=='undefined'?performance.now():Date.now();
-const RHYTHM_SONG_INTRO_RETRY_MS=1200;
+const RHYTHM_SONG_INTRO_RETRY_MS=1400;
 const RHYTHM_SONG_INTRO_MAX_MS=6000;
 const RHYTHM_SONG_INTRO_CLOSE_MS=240;
 /* 演奏前の準備を幕へ渡す口(修理部ドライバーくんの「演奏前の準備」との決め事・2026-10-11)。
@@ -40190,7 +40190,7 @@ const RHYTHM_MULTI_RESULT_MS = 45000;
 //   2026-10-10 から曲の前の幕(RHYTHM_SONG_INTRO_MS・30-rhythm-play.jsx)のぶんも足す。マルチは全員がこの長さだけ待つ
 //   (この部品だけを読み込む検査 rhythm-multi-check では 30 番が無いので、同じ値を控えに置く)
 const RHYTHM_MULTI_PLAY_GRACE_MS = RHYTHM_MULTI_START_COUNTDOWN_SEC * 1000
-  + (typeof RHYTHM_SONG_INTRO_MS === 'number' ? RHYTHM_SONG_INTRO_MS : 2600) + 4 * 800 + 10000;
+  + (typeof RHYTHM_SONG_INTRO_MS === 'number' ? RHYTHM_SONG_INTRO_MS : 3000) + 4 * 800 + 10000;
 // 演奏中に溜めておく知らせの上限(5人・数分のライブなら届かない量。超えたら古いものから捨てる)
 const RHYTHM_MULTI_QUEUE_MAX = 300;
 // 公開ルームは、2人以上いて、この時間だれも出入りしなければメンバー確定
