@@ -31385,7 +31385,12 @@ const rhythmCreateGL2D=canvas=>{
     'uniform vec4 uStopC[6];uniform float uStopT[6];uniform int uStops;'+
     'vec4 grad(){float t=clamp(vT,0.0,1.0);vec4 c=uStopC[0];'+
     'for(int i=1;i<6;i++){if(i>=uStops)break;float t0=uStopT[i-1];float t1=uStopT[i];if(t>=t0){float k=t1>t0?clamp((t-t0)/(t1-t0),0.0,1.0):1.0;c=mix(uStopC[i-1],uStopC[i],k);}}return c;}'+
-    'void main(){vec4 c;if(uMode==2){c=texture2D(uTex,vUv);gl_FragColor=c*uAlpha;}else{if(uMode==1)c=grad();else c=uColor;gl_FragColor=vec4(c.rgb*c.a,c.a)*uAlpha;}}';
+    // mode 3: 上の角だけ丸い四角(叩いたときの光の柱・hitBeamPath と同じ形)を、四角1枚で塗る。vUv はその点の位置(描く側の座標)。
+    // uRT: 左上・右下 / uRR: 角の丸み / uRS: 描く側の1単位が画面の何画素か(横・縦)。ふちは1画素ぶんなめらかにする。色は grad()
+    'uniform vec4 uRT;uniform float uRR;uniform vec2 uRS;'+
+    'float roundTop(vec2 p){float cx=clamp(0.5-max(uRT.x-p.x,p.x-uRT.z)*uRS.x,0.0,1.0);float cy=clamp(0.5-max(uRT.y-p.y,p.y-uRT.w)*uRS.y,0.0,1.0);float c=min(cx,cy);'+
+    'if(uRR>0.0&&p.y<uRT.y+uRR){float ox=p.x<uRT.x+uRR?uRT.x+uRR:(p.x>uRT.z-uRR?uRT.z-uRR:p.x);if(ox!=p.x){vec2 q=(p-vec2(ox,uRT.y+uRR))*uRS;float k=min(uRS.x,uRS.y);c=min(c,clamp(0.5-(length(q)-uRR*k),0.0,1.0));}}return c;}'+
+    'void main(){vec4 c;if(uMode==2){c=texture2D(uTex,vUv);gl_FragColor=c*uAlpha;}else if(uMode==3){c=grad();gl_FragColor=vec4(c.rgb*c.a,c.a)*uAlpha*roundTop(vUv);}else{if(uMode==1)c=grad();else c=uColor;gl_FragColor=vec4(c.rgb*c.a,c.a)*uAlpha;}}';
   let prog=null,loc=null,buf=null,lost=false,textures=new WeakMap(),stencilRef=0,viewW=0,viewH=0;
   let bandApi=null,bandTried=false;
   // ノーツの板を GPU で描く部品(rhythmCreateGpuPlate)。foreignEnd は、別のシェーダーを結び付けたままの部品が GL2D へ戻すための関数
@@ -31421,7 +31426,7 @@ const rhythmCreateGL2D=canvas=>{
     if(!gl.getProgramParameter(prog,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(prog)||'link');
     gl.useProgram(prog);
     loc={aPos:gl.getAttribLocation(prog,'aPos'),aUv:gl.getAttribLocation(prog,'aUv')};
-    ['uM0','uM1','uView','uMode','uColor','uTex','uAlpha','uG0','uG1','uStopC','uStopT','uStops'].forEach(name=>{loc[name]=gl.getUniformLocation(prog,name);});
+    ['uM0','uM1','uView','uMode','uColor','uTex','uAlpha','uG0','uG1','uStopC','uStopT','uStops','uRT','uRR','uRS'].forEach(name=>{loc[name]=gl.getUniformLocation(prog,name);});
     buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);
     gl.enableVertexAttribArray(loc.aPos);gl.vertexAttribPointer(loc.aPos,2,gl.FLOAT,false,16,0);
     gl.enableVertexAttribArray(loc.aUv);gl.vertexAttribPointer(loc.aUv,2,gl.FLOAT,false,16,8);
@@ -31470,7 +31475,8 @@ const rhythmCreateGL2D=canvas=>{
     if(mode!==sentMode){gl.uniform1i(loc.uMode,mode);sentMode=mode;}
     if(cc!==sentComp){if(cc==='lighter')gl.blendFuncSeparate(gl.ONE,gl.ONE,gl.ONE,gl.ONE_MINUS_SRC_ALPHA);else gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);sentComp=cc;}
     if(mode===0){const c=parseColor(paint);if(c[0]!==sentColor[0]||c[1]!==sentColor[1]||c[2]!==sentColor[2]||c[3]!==sentColor[3]){gl.uniform4f(loc.uColor,c[0],c[1],c[2],c[3]);sentColor=c.slice();}}
-    else if(mode===1){
+    if(mode===3){gl.uniform4f(loc.uRT,roundTopArgs[0],roundTopArgs[1],roundTopArgs[2],roundTopArgs[3]);gl.uniform1f(loc.uRR,roundTopArgs[4]);gl.uniform2f(loc.uRS,roundTopArgs[5],roundTopArgs[6]);}
+    if(mode===1||mode===3){
       const stops=paint.stops.slice().sort((a,b)=>a[0]-b[0]).slice(0,6);
       const cs=gradColors,ts=gradTimes;cs.fill(0);ts.fill(0);
       stops.forEach(([t,color],i)=>{const c=parseColor(color);cs.set(c,i*4);ts[i]=t;});
@@ -31507,6 +31513,8 @@ const rhythmCreateGL2D=canvas=>{
   // 同じ色の塗り。重なりを防ぐステンシルを使わないもの)は、GPU へ頼むのを待って1回にまとめる。光の3分割の絵などが1回になる。
   // ★待っている分は、状態が変わる前・画面を消す前・絵を捨てる前・その場の処理の終わり(マイクロタスク)に必ず描き切る。
   // ★入れ物は毎回新しく用意する(bufferData)ままにする。上書きの使い回しは iPhone で残像になった(上の issue の説明)
+  // mode 3(fillRoundTop)の形: 左上x・y・右下x・y・丸み・横と縦の倍率
+  const roundTopArgs=new Float32Array(7);
   let pend=null,pendQueued=false;
   const flushPending=()=>{if(pend){const p=pend;pend=null;issue(0,n,p.mode,p.paint,p.texture,false,p.m,p.alpha,p.comp);}n=0;};
   const queuePending=()=>{if(pendQueued)return;pendQueued=true;const run=()=>{pendQueued=false;flushPending();};if(typeof queueMicrotask==='function')queueMicrotask(run);else Promise.resolve().then(run);};
@@ -31698,6 +31706,17 @@ const rhythmCreateGL2D=canvas=>{
         if(!closed&&lineCap==='square'){/* ノーツでは使っていない */}
       }
       const paint=strokeStyle;flush(start,paint&&typeof paint==='object'&&paint.stops?1:0,paint);
+    },
+    // 上の角だけ丸い四角(hitBeamPath と同じ形)を、いまの fillStyle(グラデーション)で四角1枚で塗る(2026-10-12・叩いたときの光の柱)。
+    // 丸い角を細かい三角形に刻まない。にじむ光(ブルーム)が入っているときは足し算の光を覚えて描き直すので使わない(false を返す。呼ぶ側が今までどおり描く)
+    fillRoundTop(x,y,w,h,r){
+      const paint=fillStyle;
+      if(lost||!prog||bloomOn||!(w>0)||!(h>0)||!(paint&&typeof paint==='object'&&paint.stops))return false;
+      const sx=Math.hypot(m[0],m[1])||1,sy=Math.hypot(m[2],m[3])||1,ex=1/sx,ey=1/sy,x0=x-ex,y0=y-ey,x1=x+w+ex,y1=y+h+ey;
+      roundTopArgs[0]=x;roundTopArgs[1]=y;roundTopArgs[2]=x+w;roundTopArgs[3]=y+h;roundTopArgs[4]=Math.max(0,r);roundTopArgs[5]=sx;roundTopArgs[6]=sy;
+      const start=n;ensure((n+6)*4);
+      data.set([x0,y0,x0,y0,x1,y0,x1,y0,x1,y1,x1,y1,x0,y0,x0,y0,x1,y1,x1,y1,x0,y1,x0,y1],start*4);n=start+6;
+      flush(start,3,paint,null,false);return true;
     },
     fillRect(x,y,w,h){if(lost||!(w>0)||!(h>0))return;const start=n;quad(x,y,x+w,y,x+w,y+h,x,y+h);const paint=fillStyle;flush(start,paint&&typeof paint==='object'&&paint.stops?1:0,paint,false);},
     createLinearGradient(x0,y0,x1,y1){const g={x0,y0,x1,y1,stops:[],addColorStop(t,color){this.stops.push([Math.max(0,Math.min(1,Number(t)||0)),color]);}};return g;},
@@ -31967,6 +31986,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   };
   // 光の絵を板のシェーダーで描くか(既定は描く。検査で今までの描き方と画素で比べるときだけ切る: RHYTHM_CANVAS_RENDERER.plateGlow=false)
   let plateGlowWanted=true;
+  // 叩いたときの光の柱を GL2D の fillRoundTop で描くか(既定は描く。検査で今の描き方と比べるときだけ切る: RHYTHM_CANVAS_RENDERER.beamGpu=false)
+  let beamGpuWanted=true;
   // 矢印(FLICK / 終点フリック)。三角にピンクの光(色は RHYTHM_NOTE_COLORS.FLICK)。
   const arrowSprite=(key,w,h,glows,gradientStops,edge)=>{
     const id=`arrow:${key}:${dpr}`;
@@ -33150,7 +33171,9 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     if(f.o>.002){
       const BH=h.finish?Math.max(120,Math.min(260,hitY*.56)):Math.max(96,Math.min(200,hitY*.42));
       ctx.globalAlpha=Math.min(1,f.o);hitTransform(cx,hitY,f.sx,f.sy);
-      hitBeamPath(left,hitY-BH,W,BH);
+      // WebGL で GPU の帯の描き方のときは、形を刻まず四角1枚で塗る(GL2D の fillRoundTop)。塗れなければ今までどおり
+      const beamGpu=beamGpuWanted&&gpuBandWanted&&backend==='webgl'&&typeof ctx.fillRoundTop==='function';
+      if(!beamGpu)hitBeamPath(left,hitY-BH,W,BH);
       // 色の段は叩いた1回につき1度だけ作り、消えるまで使い回す(2026-09-27・柱を高く長くしたぶん、毎フレーム作り直さない)。
       // 判定ラインの高さが変わったら作り直す
       if(!h._beam||h._beamY!==hitY||h._beamH!==BH){
@@ -33163,7 +33186,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
         }
         h._beam=g;h._beamY=hitY;h._beamH=BH;
       }
-      ctx.fillStyle=h._beam;ctx.fill();
+      ctx.fillStyle=h._beam;
+      if(!beamGpu||!ctx.fillRoundTop(left,hitY-BH,W,BH,Math.max(0,Math.min(W/2,BH,14)))){if(beamGpu)hitBeamPath(left,hitY-BH,W,BH);ctx.fill();}
     }
     // はじける粒(7pxの丸が5つ)。フィルターはかからない
     f=hitFrame(HIT_KEYS.spark,p);
@@ -33218,6 +33242,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     get gpuBand(){return gpuBandWanted&&backend==='webgl'&&!!ctx&&!!ctx.band;},
     get additiveGlow(){return additiveGlow;},set additiveGlow(v){additiveGlow=v!==false;},
     get plateGlow(){return plateGlowWanted;},set plateGlow(v){plateGlowWanted=v!==false;},
+    get beamGpu(){return beamGpuWanted;},set beamGpu(v){beamGpuWanted=v!==false;},
     // 描き込み先が取れているか。WebGL の準備が途中で失敗すると、その canvas からは 2D も取り出せず
     // ctx が無いままになる(ノーツが1つも描かれない)。演奏画面はこれを見て canvas を作り直す
     get ready(){return !!ctx;},
