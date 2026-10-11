@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0c3f2871eb4f181b
+// source-sha256: bb49e39d7c368b6b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-11 23:39";
+const BUILD_DATE = "2026-10-11 23:59";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -32410,7 +32410,7 @@ const RhythmTapTest = ({
     }
     const onLost = () => setWebglLost(true);
     if (canvas && RHYTHM_CANVAS_RENDERER.backend === 'webgl') canvas.addEventListener('webglcontextlost', onLost);
-    RHYTHM_CANVAS_RENDERER.enableHits(RHYTHM_CANVAS_RENDERER.backend === 'webgl' ? playAreaRef.current : null);
+    RHYTHM_CANVAS_RENDERER.enableHits(RHYTHM_CANVAS_RENDERER.backend === 'webgl' || rhythmCanvasHitsActive() ? playAreaRef.current : null);
     RHYTHM_CANVAS_RENDERER.enableSkyHits(playAreaRef.current);
     return () => {
       if (canvas) canvas.removeEventListener('webglcontextlost', onLost);
@@ -36103,7 +36103,13 @@ const RhythmTapTest = ({
       touchAction: 'none'
     }
   }, songIntro && (() => {
-    const introHint = songIntro.skipped ? 'まもなく はじまります' : songIntro.skippable && !songIntro.short ? 'タップでとばす' : '',
+    const introTitle = rhythmSongFullName(song),
+      introTitleFont = (() => {
+        const avail = Math.min((typeof window !== 'undefined' ? window.innerWidth : 844) * .72, 560) - 16,
+          em = [...String(introTitle)].reduce((n, ch) => n + (/[\x20-\x7e]/.test(ch) ? .6 : 1), 0);
+        return Math.max(13, Math.min(20, Math.floor(avail / Math.max(1, em))));
+      })(),
+      introHint = songIntro.skipped ? 'まもなく はじまります' : songIntro.skippable && !songIntro.short ? 'タップでとばす' : '',
       introCredit = rhythmSongIntroCredit(song),
       introLevel = Number(chart?.level),
       introColor = RHYTHM_SONG_INTRO_DIFFICULTY_COLORS[difficulty.id] || '#64748b';
@@ -36137,7 +36143,7 @@ const RhythmTapTest = ({
       style: {
         position: 'relative',
         flex: '0 0 auto',
-        height: isLandscape ? 'min(50vh,40vw,320px)' : 'min(68vw,42vh,320px)',
+        height: isLandscape ? 'min(54vh,40vw,320px)' : 'min(68vw,42vh,320px)',
         aspectRatio: '1 / 1',
         borderRadius: '14px',
         overflow: 'hidden'
@@ -36176,20 +36182,28 @@ const RhythmTapTest = ({
     }, "♪ LIVE START"), React.createElement("b", {
       "data-rhythm-song-intro-title": true,
       style: {
-        display: '-webkit-box',
-        WebkitLineClamp: 2,
-        WebkitBoxOrient: 'vertical',
-        overflow: 'hidden',
-        overflowWrap: 'anywhere',
+        ...(isLandscape ? {
+          display: 'block',
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          fontSize: `${introTitleFont}px`
+        } : {
+          display: '-webkit-box',
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: 'vertical',
+          overflow: 'hidden',
+          overflowWrap: 'anywhere',
+          fontSize: '24px'
+        }),
         padding: '0 8px 3px',
         margin: isLandscape ? '1px -8px 0' : '4px -8px 0',
-        fontSize: isLandscape ? '20px' : '24px',
         fontWeight: 900,
         lineHeight: 1.25,
         color: '#fff',
         textShadow: '0 0 8px rgba(103,232,249,.5),0 2px 4px rgba(2,6,23,.95)'
       }
-    }, rhythmSongFullName(song)), introCredit && React.createElement("p", {
+    }, introTitle), introCredit && React.createElement("p", {
       "data-rhythm-song-intro-credit": true,
       style: {
         display: '-webkit-box',
@@ -74508,6 +74522,7 @@ function MonsterHeroGame() {
   const [rhythmCanvasPref, setRhythmCanvasPref] = useState(() => rhythmCanvasNotesPreference());
   const [rhythmGpuBandPref, setRhythmGpuBandPref] = useState(() => rhythmGpuBandPreference());
   const [rhythmPreparePref, setRhythmPreparePref] = useState(() => rhythmPreparePreference());
+  const [rhythmCanvasHitsPref, setRhythmCanvasHitsPref] = useState(() => rhythmCanvasHitsPreference());
   const [rhythmReleaseAgeWide, setRhythmReleaseAgeWide] = useState(() => rhythmTouchFixOn('releaseAgeWide'));
   const [rhythmStageGlPref, setRhythmStageGlPref] = useState(() => rhythmStageGlPreference());
   const [rhythmChartToolsOpened, setRhythmChartToolsOpened] = useState(false);
@@ -98611,6 +98626,22 @@ function MonsterHeroGame() {
       onClick: () => setRhythmGpuBandPref(rhythmGpuBandSetPreference(value)),
       className: `min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmGpuBandPref === value ? 'bg-cyan-400 text-slate-900' : 'border border-white/20 bg-slate-900 text-slate-200'}`
     }, label)))), React.createElement("section", {
+      "data-rhythm-canvas-hits-panel": true,
+      className: "mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"
+    }, React.createElement("h3", {
+      className: "text-xs font-black text-cyan-200"
+    }, "叩いたときの光の描き方（検証用）"), React.createElement("p", {
+      className: "mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80"
+    }, "「canvas」は、ノーツを叩いたときに判定ラインで弾ける光を、ノーツと同じ canvas へ描きます（WebGL の描き方で使っている絵と同じ）。既定は canvas です。「画面の要素」は今までの描き方（光の部品を画面の要素として動かす。発熱の元になっていた）です。次の演奏から効きます。"), React.createElement("div", {
+      className: "mt-2 flex gap-2"
+    }, [['', '既定（canvas）'], ['canvas', 'canvas'], ['dom', '画面の要素']].map(([value, label]) => React.createElement("button", {
+      key: value || 'default',
+      type: "button",
+      "data-rhythm-canvas-hits-pref": value || 'default',
+      "aria-pressed": rhythmCanvasHitsPref === value,
+      onClick: () => setRhythmCanvasHitsPref(rhythmCanvasHitsSetPreference(value)),
+      className: `min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmCanvasHitsPref === value ? 'bg-cyan-400 text-slate-900' : 'border border-white/20 bg-slate-900 text-slate-200'}`
+    }, label)))), React.createElement("section", {
       "data-rhythm-prepare-panel": true,
       className: "mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"
     }, React.createElement("h3", {
@@ -98752,54 +98783,6 @@ function MonsterHeroGame() {
             setGameState('RHYTHM_PLAY');
           }
         }, difficulty.id === 'HELL' ? 'HELL をプレイ' : '試作をプレイ', "（", difficulty.id, " Lv.", chart.level, "）");
-      })));
-    }), RHYTHM_SONGS.map(song => {
-      const track = rhythmSongTrack(song);
-      return React.createElement("section", {
-        key: song.songId,
-        className: "mb-3 rounded-2xl border border-indigo-400/40 bg-indigo-950/30 p-3"
-      }, React.createElement("div", {
-        className: "mb-2"
-      }, React.createElement("small", {
-        className: "text-[8px] text-indigo-300"
-      }, song.songId), React.createElement("h3", {
-        className: "font-black"
-      }, song.displayName), song.debugDescription && React.createElement("p", {
-        className: "mt-1 text-[10px] font-bold text-amber-200"
-      }, song.debugDescription), React.createElement("p", {
-        className: "break-all text-[9px] text-slate-400"
-      }, "BGM: ", song.bgmTrackId, " / ", track?.src || '未登録')), React.createElement("div", {
-        className: "space-y-2"
-      }, RHYTHM_DIFFICULTIES.map(difficulty => {
-        const chart = song.difficulties[difficulty.id];
-        const best = rhythmBestRecord(rhythmBestRecords, song.songId, difficulty.id);
-        return React.createElement("article", {
-          key: difficulty.id,
-          className: "rounded-xl border border-white/10 bg-slate-900/80 p-2"
-        }, React.createElement("div", {
-          className: "flex items-center justify-between"
-        }, React.createElement("b", {
-          className: "text-xs text-cyan-200"
-        }, difficulty.id, " Lv.", chart.level), React.createElement("span", {
-          className: "text-[9px] font-mono"
-        }, "MAX ", difficulty.maxScore.toLocaleString())), React.createElement("p", {
-          className: "mt-1 text-[9px] text-slate-300"
-        }, "BEST ", best.bestScore.toLocaleString(), " / MAX COMBO ", best.maxCombo, " / ", best.clear ? 'CLEAR' : '未プレイ'), React.createElement("p", {
-          className: "mt-1 break-words text-[8px] text-slate-500"
-        }, RHYTHM_JUDGMENT_IDS.map(id => `${id} ${best.judgments[id]}`).join(' / ')), React.createElement("p", {
-          className: "mt-1 text-[8px] text-slate-500"
-        }, "FC ", best.fullCombo ? '○' : '-', " / ALL EXCELLENT ", best.allExcellent ? '○' : '-', " / ALL MARVELOUS ", best.allMarvelous ? '○' : '-'), chart.notes.length > 0 && React.createElement("button", {
-          "data-rhythm-tap-start": true,
-          className: "mt-2 min-h-[44px] w-full rounded-xl bg-fuchsia-700 font-black",
-          onClick: () => {
-            setRhythmPlay({
-              song,
-              difficulty,
-              from: 'debug'
-            });
-            setGameState('RHYTHM_PLAY');
-          }
-        }, "リズムテストプレイ"));
       })));
     })), rhythmChartToolsOpened && React.createElement("div", {
       "data-rhythm-debug": true,
