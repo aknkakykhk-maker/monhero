@@ -26051,7 +26051,7 @@ const grievousLadyHellBaseNotes=((t,h,f,s,T,F,S)=>[
 const grievousLadyHellNotes=grievousLadyQuiet(grievousLadyHellBaseNotes);
 // Grievous Lady の HELL の譜面(2026-10-12)。試作の枠(grievous_lady_hell)と公開曲の HELL(RHYTHM_HELL_CHARTS)が同じものを指す。
 // Lv.60 は仮(社長の決定待ち)。流れの速さの演出と組は MASTER と同じ表
-const grievousLadyHellChart=mhChart(60,grievousLadyHellNotes,GRIEVOUS_LADY_DURATION_MS,6,{scrollChanges:GRIEVOUS_LADY_SCROLL_CHANGES,scrollGroups:GRIEVOUS_LADY_SCROLL_GROUPS});
+const grievousLadyHellChart=mhChart(65,grievousLadyHellNotes,GRIEVOUS_LADY_DURATION_MS,6,{scrollChanges:GRIEVOUS_LADY_SCROLL_CHANGES,scrollGroups:GRIEVOUS_LADY_SCROLL_GROUPS});
 const theCityBeneathTheCometsCharts=Object.freeze({
   EASY:mhChart(1,theCityBeneathTheCometsEasyNotes,THE_CITY_BENEATH_THE_COMETS_DURATION_MS,6),
   NORMAL:mhChart(3,theCityBeneathTheCometsNormalNotes,THE_CITY_BENEATH_THE_COMETS_DURATION_MS,6),
