@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 272636905b54ace2
+// generated-sha256: c3eff5164c34de22
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-11 17:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-11 17:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -19885,6 +19885,9 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   // 演奏前の準備(rhythmPrepareActive・デバッグの切り替え)。画面を開いたときに一度だけ決める。
   // prepareRef … この回の準備 {generation,promise,done,ms(準備にかかった時間),waitMs(READY の前に待った時間)}
   const prepareOn=useState(()=>rhythmPrepareActive())[0];
+  // 表示の層を分ける(rhythmLayersActive・デバッグの切り替え)。演奏画面を開いているあいだだけ :root に印を付ける(CSS は index.html)
+  const layersOn=useState(()=>rhythmLayersActive())[0];
+  useEffect(()=>{if(!layersOn||typeof document==='undefined')return undefined;const root=document.documentElement;root.dataset.rhythmLayers='1';return()=>{delete root.dataset.rhythmLayers;};},[layersOn]);
   const prepareRef=useRef(null);
   // 診断に足す1コマの重さと、そのときの描き方(2026-10-11)。壊れても診断の行は送れるよう、失敗したら null
   const rhythmFrameDiagOf=()=>{try{const area=typeof document!=='undefined'?document.querySelector('[data-rhythm-play-area]'):null,rect=area?area.getBoundingClientRect():null;
@@ -44906,6 +44909,7 @@ function MonsterHeroGame() {
   const [rhythmCanvasPref,setRhythmCanvasPref]=useState(()=>rhythmCanvasNotesPreference());
   const [rhythmGpuBandPref,setRhythmGpuBandPref]=useState(()=>rhythmGpuBandPreference());
   const [rhythmPreparePref,setRhythmPreparePref]=useState(()=>rhythmPreparePreference());
+  const [rhythmLayersPref,setRhythmLayersPref]=useState(()=>rhythmLayersPreference());
   // ホールド・スライドの離しの合図の遅れを、どこまで信じて戻すか(検証用・2026-10-11)。この端末だけの切り替え(mh_rhythm_fix_override_v1)
   const [rhythmReleaseAgeWide,setRhythmReleaseAgeWide]=useState(()=>rhythmTouchFixOn('releaseAgeWide'));
   const [rhythmStageGlPref,setRhythmStageGlPref]=useState(()=>rhythmStageGlPreference());
@@ -62889,6 +62893,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <section data-rhythm-gpu-band-panel className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"><h3 className="text-xs font-black text-cyan-200">スライドの帯の描き方（検証用）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80">「GPU」はスライドの帯（地上・空中・影）の形を譜面を読んだときに一度だけ GPU に置き、毎コマは曲の位置だけ渡して描きます（帯が長い・多い曲で軽くするための試作）。選ぶとノーツは WebGL で描きます（「ノーツの描き方」で canvas・要素を選んでいるときはそちらが勝ちます）。WebGL が使えないときは今の描き方に戻ります。次の演奏から効きます。</p><div className="mt-2 flex gap-2">{[['','今の描き方'],['gpu','GPU']].map(([value,label])=><button key={value||'cpu'} type="button" data-rhythm-gpu-band-pref={value||'cpu'} aria-pressed={rhythmGpuBandPref===value} onClick={()=>setRhythmGpuBandPref(rhythmGpuBandSetPreference(value))} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmGpuBandPref===value?'bg-cyan-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></section>
             {/* 演奏前の準備の切り替え(2026-10-11・修理部・社長「事前読み込みで改善されないの?」)。曲の最初のコマで初めて起きていた重い仕事を、曲の前の幕のあいだに済ませる。
                 bot の表で良くなったら既定にする。プレイヤーの通常プレイには出ないので更新履歴・ヘルプには載せない */}
+            {/* 表示の層の分け方の切り替え(2026-10-11・修理部・発熱の調べの B)。判定の文字・判定ライン・上の欄・コンボを自分の層で描かせ、画面全体の塗り直しを減らす。
+                bot の表と画素の突き合わせで良ければ既定にする。プレイヤーの通常プレイには出ないので更新履歴・ヘルプには載せない */}
+            <section data-rhythm-layers-panel className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"><h3 className="text-xs font-black text-cyan-200">表示の層の分け方（検証用）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80">「分ける」は、判定の文字・判定ライン・上の欄・コンボを、それぞれ自分の層で描きます。変わったときに画面全体を塗り直さなくなり、発熱を減らすための試作です。見た目は変わりません。次の演奏から効きます。</p><div className="mt-2 flex gap-2">{[['','既定（分けない）'],['on','分ける'],['off','分けない']].map(([value,label])=><button key={value||'default'} type="button" data-rhythm-layers-pref={value||'default'} aria-pressed={rhythmLayersPref===value} onClick={()=>setRhythmLayersPref(rhythmLayersSetPreference(value))} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmLayersPref===value?'bg-cyan-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></section>
             <section data-rhythm-prepare-panel className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"><h3 className="text-xs font-black text-cyan-200">演奏前の準備（検証用）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80">「する」は、曲の最初のコマで初めて起きていた重い仕事（道の大きさを測る・ノーツの絵を描く準備）を、曲の前の幕のあいだに済ませます。準備が済むまで幕は閉じません（最長6秒）。次の演奏から効きます。</p><div className="mt-2 flex gap-2">{[['','既定（しない）'],['on','する'],['off','しない']].map(([value,label])=><button key={value||'default'} type="button" data-rhythm-prepare-pref={value||'default'} aria-pressed={rhythmPreparePref===value} onClick={()=>setRhythmPreparePref(rhythmPrepareSetPreference(value))} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmPreparePref===value?'bg-cyan-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></section>
             {/* ホールド・スライドを離した合図が遅れて届いたときに、離した時刻をどこまで戻すかの切り替え(2026-10-11 社長「たまに、ちゃんと押しているのに MISS」)。
                 標準は押した合図と同じ 0.08秒まで。社長の iPhone で「広く(0.3秒)」を試してから標準にするか決める。プレイヤーの通常プレイには出ないので更新履歴・ヘルプには載せない */}

@@ -937,6 +937,9 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   // 演奏前の準備(rhythmPrepareActive・デバッグの切り替え)。画面を開いたときに一度だけ決める。
   // prepareRef … この回の準備 {generation,promise,done,ms(準備にかかった時間),waitMs(READY の前に待った時間)}
   const prepareOn=useState(()=>rhythmPrepareActive())[0];
+  // 表示の層を分ける(rhythmLayersActive・デバッグの切り替え)。演奏画面を開いているあいだだけ :root に印を付ける(CSS は index.html)
+  const layersOn=useState(()=>rhythmLayersActive())[0];
+  useEffect(()=>{if(!layersOn||typeof document==='undefined')return undefined;const root=document.documentElement;root.dataset.rhythmLayers='1';return()=>{delete root.dataset.rhythmLayers;};},[layersOn]);
   const prepareRef=useRef(null);
   // 診断に足す1コマの重さと、そのときの描き方(2026-10-11)。壊れても診断の行は送れるよう、失敗したら null
   const rhythmFrameDiagOf=()=>{try{const area=typeof document!=='undefined'?document.querySelector('[data-rhythm-play-area]'):null,rect=area?area.getBoundingClientRect():null;

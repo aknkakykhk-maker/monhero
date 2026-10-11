@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 64c27b6cf513f8e3
+// source-sha256: 55ad86996c0e3726
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-11 17:16";
+const BUILD_DATE = "2026-10-11 17:26";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -31462,6 +31462,15 @@ const RhythmTapTest = ({
   const monsterSignature = monsters.map(m => m ? `${m.baseId}|${m.imageUrl}|${JSON.stringify(m.colors || null)}` : '-').join(',');
   const canvasNotes = useState(() => rhythmCanvasNotesActive(RELEASE_FLAGS.rhythmCanvasNotes))[0];
   const prepareOn = useState(() => rhythmPrepareActive())[0];
+  const layersOn = useState(() => rhythmLayersActive())[0];
+  useEffect(() => {
+    if (!layersOn || typeof document === 'undefined') return undefined;
+    const root = document.documentElement;
+    root.dataset.rhythmLayers = '1';
+    return () => {
+      delete root.dataset.rhythmLayers;
+    };
+  }, [layersOn]);
   const prepareRef = useRef(null);
   const rhythmFrameDiagOf = () => {
     try {
@@ -73509,6 +73518,7 @@ function MonsterHeroGame() {
   const [rhythmCanvasPref, setRhythmCanvasPref] = useState(() => rhythmCanvasNotesPreference());
   const [rhythmGpuBandPref, setRhythmGpuBandPref] = useState(() => rhythmGpuBandPreference());
   const [rhythmPreparePref, setRhythmPreparePref] = useState(() => rhythmPreparePreference());
+  const [rhythmLayersPref, setRhythmLayersPref] = useState(() => rhythmLayersPreference());
   const [rhythmReleaseAgeWide, setRhythmReleaseAgeWide] = useState(() => rhythmTouchFixOn('releaseAgeWide'));
   const [rhythmStageGlPref, setRhythmStageGlPref] = useState(() => rhythmStageGlPreference());
   const [rhythmChartToolsOpened, setRhythmChartToolsOpened] = useState(false);
@@ -97525,6 +97535,22 @@ function MonsterHeroGame() {
       "aria-pressed": rhythmGpuBandPref === value,
       onClick: () => setRhythmGpuBandPref(rhythmGpuBandSetPreference(value)),
       className: `min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmGpuBandPref === value ? 'bg-cyan-400 text-slate-900' : 'border border-white/20 bg-slate-900 text-slate-200'}`
+    }, label)))), React.createElement("section", {
+      "data-rhythm-layers-panel": true,
+      className: "mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"
+    }, React.createElement("h3", {
+      className: "text-xs font-black text-cyan-200"
+    }, "表示の層の分け方（検証用）"), React.createElement("p", {
+      className: "mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80"
+    }, "「分ける」は、判定の文字・判定ライン・上の欄・コンボを、それぞれ自分の層で描きます。変わったときに画面全体を塗り直さなくなり、発熱を減らすための試作です。見た目は変わりません。次の演奏から効きます。"), React.createElement("div", {
+      className: "mt-2 flex gap-2"
+    }, [['', '既定（分けない）'], ['on', '分ける'], ['off', '分けない']].map(([value, label]) => React.createElement("button", {
+      key: value || 'default',
+      type: "button",
+      "data-rhythm-layers-pref": value || 'default',
+      "aria-pressed": rhythmLayersPref === value,
+      onClick: () => setRhythmLayersPref(rhythmLayersSetPreference(value)),
+      className: `min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmLayersPref === value ? 'bg-cyan-400 text-slate-900' : 'border border-white/20 bg-slate-900 text-slate-200'}`
     }, label)))), React.createElement("section", {
       "data-rhythm-prepare-panel": true,
       className: "mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"

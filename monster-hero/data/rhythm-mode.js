@@ -30531,6 +30531,13 @@ const RHYTHM_SLIDE_DIM=Object.freeze({rgb:'6,4,18',alpha:.5});
 // 演奏前の準備(2026-10-11・社長「事前読み込みで改善されないの?」)。曲の頭の最初のコマで初めて起きていた重い仕事
 // (道の大きさを測る・ノーツの canvas の描き込み先を作る・板と光を初めて描く)を、曲の前の幕のあいだに済ませる。
 // まずデバッグ画面「演奏前の準備(検証用)」で出し入れする。'on' = する・'off' = しない・未設定 = 既定(いまは しない)
+// 判定の文字・判定ライン・上の欄(スコアなど)・コンボを、それぞれ自分の層で描く(2026-10-11・発熱の調べの B)。
+// これらは画面全体の土台と同じ層にあり、変わるたびに土台を大きく塗り直させていた(6秒で75回。docs/perf/RHYTHM_HEAT_BREAKDOWN.md)。
+// まずデバッグ画面「表示の層の分け方(検証用)」で出し入れする。'on' = 分ける・'off' = 分けない・未設定 = 既定(いまは 分けない)
+const RHYTHM_LAYERS_KEY='mh_rhythm_layers_v1';
+const rhythmLayersPreference=()=>{try{if(typeof localStorage==='undefined')return '';const v=localStorage.getItem(RHYTHM_LAYERS_KEY);return v==='on'||v==='off'?v:'';}catch{return '';}};
+const rhythmLayersSetPreference=value=>{const next=value==='on'||value==='off'?value:'';try{if(typeof localStorage!=='undefined'){if(next)localStorage.setItem(RHYTHM_LAYERS_KEY,next);else localStorage.removeItem(RHYTHM_LAYERS_KEY);}}catch{}return next;};
+const rhythmLayersActive=()=>rhythmLayersPreference()==='on';
 const RHYTHM_PREPARE_KEY='mh_rhythm_prepare_v1';
 const rhythmPreparePreference=()=>{try{if(typeof localStorage==='undefined')return '';const v=localStorage.getItem(RHYTHM_PREPARE_KEY);return v==='on'||v==='off'?v:'';}catch{return '';}};
 const rhythmPrepareSetPreference=value=>{const next=value==='on'||value==='off'?value:'';try{if(typeof localStorage!=='undefined'){if(next)localStorage.setItem(RHYTHM_PREPARE_KEY,next);else localStorage.removeItem(RHYTHM_PREPARE_KEY);}}catch{}return next;};
