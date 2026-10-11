@@ -33,7 +33,7 @@ vm.runInContext(src+'\nglobalThis.__x={rhythmMatchInputBatch,RHYTHM_GESTURE_RUNT
   +'rhythmFloatingNoteAdd,rhythmFloatingNoteRemove,RHYTHM_HOLD_RELEASE_GRACE_MS,RHYTHM_HOLD_HANDOVER_GRACE_MS,'
   +'rhythmJudgeReleaseLenient,rhythmJudgeRelease,rhythmInputAgeMs,RHYTHM_INPUT_AGE_MAX_MS,RHYTHM_JUDGMENTS,'
   +'RHYTHM_INPUT_MATCH_WINDOW_MS,rhythmLaneCoordinateAtPoint,rhythmSubLaneCoordinateAtPoint,rhythmProjectBoundary,'
-  +'RHYTHM_FLICK_DISTANCE_PX,RHYTHM_FLICK_MAX_MS,RHYTHM_END_FLICK_ARM_MS,rhythmInputAgeResetFloor};',ctx);
+  +'RHYTHM_FLICK_DISTANCE_PX,RHYTHM_FLICK_MAX_MS,RHYTHM_END_FLICK_ARM_MS,rhythmInputAgeResetFloor,rhythmReleaseFallback};',ctx);
 const X=ctx.__x,match=X.rhythmMatchInputBatch,RT=X.RHYTHM_GESTURE_RUNTIME;
 const judgeTap=delta=>X.RHYTHM_JUDGMENTS.find(item=>item.windowMs!==null&&Math.abs(delta)<=item.windowMs)?.id||'MISS';
 
@@ -88,7 +88,12 @@ const tick=(run,now)=>{
   perfNow=now;
   if(rafCb){const cb=rafCb;cb();}
   run.notes.forEach(note=>{
-    if(note.type==='HOLD'&&note.activePointerId!==null&&now>=note.endTimeMs){note.done=true;run.judged.push({index:note.index,judgment:note.holdJudgment||'MISS'});}
+    // 本体の visitNote と同じ(2026-10-11): 確定する前にタッチ側の終わりの見回り(settleHeld)を走らせ、まだ窓の中・待ちの中なら確定しない
+    if(note.type==='HOLD'&&!note.done&&note.activePointerId!==null&&now>=note.endTimeMs){
+      const settled=RT.settleHeld(note,now);const own=settled===null?X.rhythmReleaseFallback(note,now,0):null;
+      if(own){if(own.expiredWhileHeld){note.done=true;run.judged.push({index:note.index,judgment:'MISS'});}}
+      else if(settled!==false&&now>=note.endTimeMs){note.done=true;run.judged.push({index:note.index,judgment:note.holdJudgment||'MISS'});}
+    }
     if(!note.done&&note.activePointerId===null&&note.releasedAtMs!=null&&now-note.releasedAtMs>=X.RHYTHM_HOLD_HANDOVER_GRACE_MS){
       note.releasedAtMs=null;X.rhythmFloatingNoteRemove(note);note.done=true;run.judged.push({index:note.index,judgment:'MISS'});
     }
@@ -182,7 +187,11 @@ section('HOLD: 始点・保持・少しずれる・HOLD中TAP・終点・遅い�
   const run=makeRun([hold(1000,2000,2,2)]);
   starts(run,[at('touch:1',2.5)],1000);
   RT.record('touch:1',0,0);   // 位置の追従は座標→レーンの変換が要るので、ここでは離す側だけを見る
-  tick(run,1500);tick(run,2100);tick(run,2250);
+  // 2026-10-11 から、押しっぱなしの MISS は遅れて届く離しの合図を待ってから決める(判定窓 + rhythmReleaseWaitMs)。待つ間はまだ決めない
+  const missAt=2000+vm.runInContext('RHYTHM_RELEASE_AUTO_MISS_ARM_MS+rhythmReleaseWaitMs()',ctx);
+  tick(run,1500);tick(run,2100);tick(run,missAt-10);
+  check('押しっぱなしでも、遅れて届く離しを待つ間はまだ確定しない',run.notes[0].holdJudgment!=='MISS',String(run.notes[0].holdJudgment));
+  tick(run,missAt+10);
   check('押しっぱなしで終わりの判定窓を過ぎたら MISS で確定する',run.notes[0].holdJudgment==='MISS',String(run.notes[0].holdJudgment));
 }
 {
