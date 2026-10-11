@@ -6,6 +6,9 @@
 //       [--min-level 48]           この Lv. に届くまで、音の立ち上がりへタップを足す(足すのは参考で密度の高い区間から)
 //       [--stop a-b,…]             止まる・動く演出の区間(中の打鍵は置かない・足さない)
 //       [--sky-gap-beats 1.5]      空中ありのとき: 同じ親指が地上と空中を行き来する間(足りない所は地上へそろえる)
+//       [--mix]                    空中ありのとき: かたまりを多いほうへそろえない(地上と空中が混ざる HELL 用・2026-10-11)。
+//                                  スライドは点ごとの高さをそのまま使い(床から空へ・空から床へ傾く形を残す)、
+//                                  同じ親指の前のノーツの終わりの段と、次のノーツの始まりの段が違い、間が足りない所だけを、次のノーツ(スライドなら始まりの点)を前の段へ合わせて直す
 //
 // 【何をするか】rhythm-ref-tiers.js の親指2本のモデル(thumbCheck・横持ち)で「押せない」「指が交差」「届きにくい」と出た所を、
 //   出た順に1つずつ直す。直し方は、そのノーツを別のレーンへ動かす(スライドは横へずらす)候補を全部試し、前後3秒の点数がいちばん下がるもの。
@@ -18,7 +21,7 @@ const {thumbCheck,THUMB_PROFILES,chartStats}=require('./rhythm-ref-tiers.js');
 const {simulateNotes}=require('./rhythm-hand-simulate.js');
 const args=process.argv.slice(2),get=(k,d)=>{const i=args.indexOf(`--${k}`);return i>=0?args[i+1]:d;};
 const TRACK=get('track'),IN=path.resolve(get('in','')),OUT=path.resolve(get('out',''));
-const GROUND=args.includes('--ground'),MIN_LEVEL=Number(get('min-level','0'))||0,SKY_GAP_BEATS=Number(get('sky-gap-beats','1.5'));
+const GROUND=args.includes('--ground'),MIX=args.includes('--mix')&&!args.includes('--ground'),MIN_LEVEL=Number(get('min-level','0'))||0,SKY_GAP_BEATS=Number(get('sky-gap-beats','1.5'));
 const STOPS=(get('stop','')||'').split(',').filter(Boolean).map(s=>s.split('-').map(Number));
 assertWorkPath(IN);assertWorkPath(OUT);
 const audio=JSON.parse(fs.readFileSync(path.join(REPO_ROOT,`tools/mode/authoring/${TRACK.replace(/_/g,'-')}-v3-audio.json`),'utf8'));
@@ -54,8 +57,28 @@ const sorted=()=>notes.sort((a,b)=>startOf(a)-startOf(b));
 const score=list=>thumbCheck(list,P,beatMs).issues.reduce((a,i)=>a+W[i.kind],0)+simIssues(list).length*100;
 const local=(t,except,extra)=>{const list=notes.filter(n=>n!==except&&endOf(n)>=t-3000&&startOf(n)<=t+3000);if(extra)list.push(extra);return list;};
 // 空中ありのとき: 同じ親指(道の左右半分)が地上と空中を行き来する間が足りなければ、空中を地上へそろえる
+// 段: スライドは始まりと終わりの点の高さで見る(--mix。高さ0.5以上を空中)
+const tierStart=n=>n.k==='s'?(MIX?(n.pts[0][3]>=.5?1:0):(n.pts.some(p=>p[3]>0)?1:0)):n.k==='h'?0:(n.sky?1:0);
+const tierEnd=n=>n.k==='s'?(MIX?(n.pts[n.pts.length-1][3]>=.5?1:0):(n.pts.some(p=>p[3]>0)?1:0)):n.k==='h'?0:(n.sky?1:0);
+const sideOfN=n=>n.k==='s'?(n.hand||(n.pts[0][1]+0.5<3?'L':'R')):(xOf(n)<3?'L':'R');
+const mixGap=()=>{
+  // 同じ親指で、前のノーツの終わりの段と次のノーツの始まりの段が違い、間が足りない所を直す。
+  // ① 次のノーツを前の段へ合わせる(タップ・フリックは段、スライドは始まりの点の高さ。ホールドは地上なので前を地上へ)
+  // ② それでも前後どちらかとぶつかって残る所は、2つとも地上へそろえる(ホールドは地上なので、地上なら必ず収まる)
+  const pairs=()=>{const out=[];for(const side of ['L','R']){const list=sorted().filter(n=>sideOfN(n)===side);
+    for(let i=1;i<list.length;i++){const a=list[i-1],b=list[i];if(startOf(b)-endOf(a)<beatMs*SKY_GAP_BEATS-1&&tierEnd(a)!==tierStart(b))out.push([a,b]);}}return out;};
+  const setTier=(n,tier,atEnd)=>{if(n.k==='t'||n.k==='f'){n.sky=tier;}else if(n.k==='s'){n.pts[atEnd?n.pts.length-1:0][3]=tier;}
+    tier?log.groundToSky=(log.groundToSky||0)+1:log.skyToGround++;};
+  for(let r=0;r<30;r++){const ps=pairs();if(!ps.length)return;let ch=0;
+    for(const [a,b] of ps){if(tierEnd(a)===tierStart(b))continue;
+      if(b.k==='h'){if(a.k!=='h'){setTier(a,0,true);ch++;}}else{setTier(b,tierEnd(a),false);ch++;}}
+    if(!ch)break;}
+  for(let r=0;r<30;r++){const ps=pairs();if(!ps.length)return;
+    for(const [a,b] of ps){if(a.k!=='h')setTier(a,0,true);if(b.k!=='h')setTier(b,0,false);}}
+};
 const skyGap=()=>{
   if(GROUND)return;
+  if(MIX)return mixGap();
   // 同じ親指(道の左右半分。スライドは hand)のノーツを「前のノーツの終わりから1.5拍以上あく所」で区切り、かたまりごとに段をそろえる。
   // かたまりの中で多いほうの段にそろえる(スライドも1つと数える)
   const sideOf=n=>n.k==='s'?(n.hand||(n.pts[0][1]+0.5<3?'L':'R')):(xOf(n)<3?'L':'R');
@@ -135,14 +158,14 @@ if(MIN_LEVEL){
     if(!addedNow)break;
   }
 }
-const gapCount=()=>{let bad=0;if(GROUND)return 0;for(const side of ['L','R']){const list=sorted().filter(n=>(n.k==='s'?(n.hand||(n.pts[0][1]+0.5<3?'L':'R')):(xOf(n)<3?'L':'R'))===side);
-  for(let i=1;i<list.length;i++){const ta=list[i-1].k==='s'?(list[i-1].pts.some(p=>p[3]>0)?1:0):(list[i-1].sky?1:0),tb=list[i].k==='s'?(list[i].pts.some(p=>p[3]>0)?1:0):(list[i].sky?1:0);
+const gapCount=()=>{let bad=0;if(GROUND)return 0;for(const side of ['L','R']){const list=sorted().filter(n=>sideOfN(n)===side);
+  for(let i=1;i<list.length;i++){const ta=tierEnd(list[i-1]),tb=tierStart(list[i]);
     if(ta!==tb&&startOf(list[i])-endOf(list[i-1])<beatMs*SKY_GAP_BEATS-1)bad++;}}return bad;};
 for(let round=0;round<6;round++){skyGap();fixAll();if(!gapCount()&&!severe().length)break;}
 const fin=thumbCheck(sorted(),P,beatMs),st=chartStats(notes),simLeft=simIssues(notes).length;
 // 同じ親指が段を変える間が1.5拍に足りない所(空中ありのとき)
-let gapBad=0;if(!GROUND)for(const side of ['L','R']){const list=sorted().filter(n=>(n.k==='s'?(n.hand||(n.pts[0][1]+0.5<3?'L':'R')):(xOf(n)<3?'L':'R'))===side);
-  for(let i=1;i<list.length;i++){const ta=list[i-1].k==='s'?(list[i-1].pts.some(p=>p[3]>0)?1:0):(list[i-1].sky?1:0),tb=list[i].k==='s'?(list[i].pts.some(p=>p[3]>0)?1:0):(list[i].sky?1:0);
+let gapBad=0;if(!GROUND)for(const side of ['L','R']){const list=sorted().filter(n=>sideOfN(n)===side);
+  for(let i=1;i<list.length;i++){const ta=tierEnd(list[i-1]),tb=tierStart(list[i]);
     if(ta!==tb&&startOf(list[i])-endOf(list[i-1])<beatMs*SKY_GAP_BEATS-1)gapBad++;}}
 fs.writeFileSync(OUT,JSON.stringify({track:TRACK,variant:GROUND?'ground':'sky',grid:SRC.grid,range:SRC.range,notes:sorted()},null,0));
 console.log(`直した(${GROUND?'地上だけ':'空中あり'}): レーンを動かした ${log.moved}・スライドをずらした ${log.shifted}・省いたノーツ ${log.dropped}・省いたスライド ${log.droppedSlides}・空中を地上へ ${log.skyToGround}・地上を空中へ ${log.groundToSky||0}・演出の区間と曲の前で外した ${log.stopDropped}・足した ${log.added}`);
