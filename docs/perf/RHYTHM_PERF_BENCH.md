@@ -72,3 +72,19 @@ from public.rhythm_touch_diagnostics
 where stats ? 'frame' and created_at > now() - interval '14 days'
 group by 1,2,3,4 order by plays desc limit 50;
 ```
+
+## 最初の結果(2026-10-11・曲の最後まで・横 844x390・GPU は SwiftShader)
+
+| 曲 | 描き方 | CPU | 1コマ 平均 | 33.3超 | メインのCPU(1コマ) | 押して処理 95% | MISS |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Sheriruth MASTER | 今の2D | 1倍 | 17.2 | 0.3% | 6.6 | 8.0 | 0 |
+| Sheriruth MASTER | 今の2D | 4倍 | 59.0 | 55.8% | 56.5 | 43.6 | 7 |
+| Sheriruth MASTER | GPUの帯 | 1倍 | 36.6 | 28.4% | 8.4 | 6.0 | 0 |
+| Sheriruth MASTER | GPUの帯 | 4倍 | 101.6 | 95.1% | 87.5 | 31.5 | 21 |
+| FREEDOM DiVE↓ MASTER | 今の2D | 1倍 | 17.6 | 0.3% | 7.2 | 10.9 | 0 |
+| FREEDOM DiVE↓ MASTER | 今の2D | 4倍 | 84.9 | 60.8% | 80.8 | 75.0 | 83 |
+| FREEDOM DiVE↓ MASTER | GPUの帯 | 1倍 | 33.4 | 21.5% | 7.4 | 5.6 | 0 |
+| FREEDOM DiVE↓ MASTER | GPUの帯 | 4倍 | 89.0 | 87.0% | 75.9 | 31.2 | 40 |
+
+- この Chromium では、GPU の帯のほうがメインの CPU も 1〜3割多い(WebGL の命令を作って送る分)。iPhone の Safari で同じかは、実機の数字(上の案)で確かめる
+- CPU 4倍に絞ると、どちらも 30コマ/秒を保てない。4倍が iPhone 相当かどうかも、実機の数字で決める
