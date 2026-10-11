@@ -31,15 +31,13 @@ const songs=R.songs.filter(s=>/^grievous_lady/.test(s.songId));
 // ⑤ 押せるか(横持ち・親指2本): ゲームの譜面から、スライドの手は位置で決めて数える(遊ぶ人と同じ)。
 //    親指2本のモデル(rhythm-ref-tiers.js の thumbCheck)で押せない・指の交差・届きにくいが0、
 //    両手のシミュレート(rhythm-hand-simulate.js)で押せないが0(空中のある譜面は地上のノーツだけで数える)
-const {thumbCheck,THUMB_PROFILES}=require('./rhythm-ref-tiers.js');
-const {simulateNotes}=require('./rhythm-hand-simulate.js');
-const toDraft=n=>n.type==='SLIDE'?{k:'s',hand:(Number(n.slidePoints[0].lane)+0.5<3?'L':'R'),pts:n.slidePoints.map(p=>[Number(p.timeMs),Number(p.lane),Number(p.subLaneWidth),Number(p.sky)||0,0])}
-  :{k:n.type==='HOLD'?'h':n.type==='FLICK'?'f':'t',t:n.timeMs,end:n.endTimeMs,sub:n.subLane,w:n.subLaneWidth,sky:n.skyHeight>0?1:0};
+// 物差しはオンプくんの rhythm-ref-tiers.js --song と同じ(fromRuntime・simulateRuntime・thumbCheck。スライドの手はモデルが選ぶ)。
+// 空中のスライドは点の sky を高さとして渡す(fromRuntime は skyHeight だけを読むため)
+const {thumbCheck,THUMB_PROFILES,fromRuntime,simulateRuntime}=require('./rhythm-ref-tiers.js');
 const pressable=notes=>{
-  const d=notes.map(toDraft),th=thumbCheck(d,THUMB_PROFILES.landscape,BEAT).count;
-  const Q=BEAT/4,slot=t=>Math.round((t-ZERO)/Q),ground=notes.filter(n=>!(n.skyHeight>0)&&!(n.slidePoints||[]).some(p=>p.sky>0));
-  const sim=simulateNotes(ground.map(n=>({...n,grid:slot(n.timeMs),durationGrids:Number(n.endTimeMs)>n.timeMs?slot(n.endTimeMs)-slot(n.timeMs):0})),{beatZeroMs:ZERO,gridMs:Q,subdivisionsPerBeat:4,beatsPerBar:4});
-  return {th,sim:sim.impossible|0};
+  const d=fromRuntime(notes).map((x,i)=>x.k==='s'&&notes[i].slidePoints?{...x,pts:x.pts.map((p,k)=>[p[0],p[1],p[2],Number(notes[i].slidePoints[k]?.sky)||p[3],p[4]]),hand:notes[i].hand||null}:x);
+  const ground=notes.filter(n=>!(n.skyHeight>0)&&!(n.slidePoints||[]).some(p=>p.sky>0));
+  return {th:thumbCheck(d,THUMB_PROFILES.landscape,500).count,sim:simulateRuntime(ground).impossible|0};
 };
 ok('Grievous Lady の譜面がある',songs.length>0);
 for(const song of songs)for(const [id,chart] of Object.entries(song.difficulties||{})){
