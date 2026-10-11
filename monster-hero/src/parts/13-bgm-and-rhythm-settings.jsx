@@ -120,6 +120,13 @@ const RHYTHM_SETTINGS_KEY = 'mh_rhythm_settings_v1';
 // 別キーにしたのは、演奏の設定を読み書きする経路へ画面の都合を混ぜないため。
 // 保存値が無い・壊れているときは既定へ落ちるので、これまでのユーザーもそのまま動く。
 const RHYTHM_SELECT_VIEW_KEY = 'mh_rhythm_select_v1';
+// 曲えらびで最後に選んだ難易度(2026-10-11 社長「モンビーで新たに始めるとイージーからの表示になるから、前のやつを引き継いで」)。
+// 新しいキーに難易度の名前(文字列)だけを入れる。読むときは normalizeRhythmLastDifficulty を必ず通す。
+// 入れてよいのは公開している5難易度だけ。HELL などまだ公開していない難易度・壊れた値は '' (今までどおり EASY から)。
+// その曲にその難易度が無い・まだ解放していないときは、曲えらびの部品が今までどおり選べるいちばん下(EASY)を出す。
+// デバッグの全解放の曲えらび(RHYTHM_DEBUG_SELECT)は別の入れ物を使うので、ここへは混ざらない
+const RHYTHM_LAST_DIFFICULTY_KEY = 'mh_rhythm_last_difficulty_v1';
+const normalizeRhythmLastDifficulty = value => (typeof value === 'string' && RHYTHM_DEMO_DIFFICULTY_IDS.includes(value)) ? value : '';
 // 並び順。id は保存値になるので、増やすことはあっても**名前は変えない**。
 const RHYTHM_SORT_ORDERS = Object.freeze([
   Object.freeze({ id:'added',  label:'入手順',  note:'追加された順。いつも同じ並びになります' }),
