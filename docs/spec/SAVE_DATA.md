@@ -176,6 +176,7 @@
 | `mh_rhythm_event_points_v1` | number / `0` | モンヒロビートの共通ビートP残高。プレイヤー向け名称のみ旧「イベントP」から変更し、互換性のため保存キーは維持する。0以上の整数へ正規化し、イベント終了時もリセットせず次回へ持ち越す。`docs/spec/RHYTHM_EVENT_POINTS.md` |
 | `mh_rhythm_event_reward_v1` | string[] / `[]` | イベント報酬を受け取り済みのイベントID。二重受取を防ぐためのフラグ(入賞しなかった場合もここへ入れて、問い合わせ直さないようにする。`docs/spec/RHYTHM_RANKING.md` §9.1) |
 | `mh_rhythm_canvas_v1` | `'canvas'` / `'dom'` / 未設定 | デバッグ画面の「ノーツの描き方」の上書き(未設定なら公開フラグに従う) |
+| `mh_rhythm_prepare_v1` | `'on'` / `'off'` / 未設定 | デバッグ画面の「演奏前の準備(検証用)」(未設定なら既定。いまは しない)。2026-10-11 |
 | `mh_rhythm_stage_gl_v1` | `'css'` / `'webgl'` / 未設定 | デバッグ画面の「ライブ背景の描き方」の上書き(未設定ならノーツが WebGL のときだけ WebGL) |
 | `mh_rhythm_look_intro_seen_v1` | `true` / 未設定 | 曲えらびで一度だけ出す「見た目の設定」の助手の案内を見たか(未設定なら出す) |
 | `mh_rhythm_play_defaults_restored_v1` | `true` / 未設定 | モンヒロビートの設定の一度きりの戻し(ライブ背景「派手」→「シンプル」・フレームレート「省電力」→「端末に合わせる」。保存値がその当時の既定と同じときだけ)を済ませたか。二度走らせないためのフラグ(`restoreRhythmPlayDefaultsOnce`) |

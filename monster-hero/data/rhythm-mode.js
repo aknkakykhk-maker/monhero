@@ -1535,8 +1535,10 @@ const rhythmInputAgeResetFloor=()=>{rhythmInputAgeFloorMs=Infinity;};
 // 読む側は stats.frame が無い古い行も読むので、無いときは「数字なし」として扱う(docs/perf/RHYTHM_PERF_BENCH.md)
 const RHYTHM_FRAME_DIAG=(()=>{
   const BINS=101;
-  let gapHist=null,tickHist=null,n=0,sum=0,max=0,over17=0,over34=0,over50=0,tickN=0,tickSum=0,last=0;
-  const reset=()=>{gapHist=new Uint32Array(BINS);tickHist=new Uint32Array(BINS);n=0;sum=0;max=0;over17=0;over34=0;over50=0;tickN=0;tickSum=0;last=0;};
+  // startOver50・startMax … 曲の最初の5秒(最初に数えたコマから START_MS)の 50ms 超のコマの数と最長(2026-10-11・演奏前の準備の効き目を実機で見る)
+  const START_MS=5000;
+  let gapHist=null,tickHist=null,n=0,sum=0,max=0,over17=0,over34=0,over50=0,tickN=0,tickSum=0,last=0,first=0,startOver50=0,startMax=0;
+  const reset=()=>{gapHist=new Uint32Array(BINS);tickHist=new Uint32Array(BINS);n=0;sum=0;max=0;over17=0;over34=0;over50=0;tickN=0;tickSum=0;last=0;first=0;startOver50=0;startMax=0;};
   reset();
   const pct=(hist,total,p)=>{if(!total)return null;const want=Math.ceil(total*p);let seen=0;for(let i=0;i<BINS;i++){seen+=hist[i];if(seen>=want)return i;}return BINS-1;};
   const r1=v=>Math.round(v*10)/10;
@@ -1546,7 +1548,9 @@ const RHYTHM_FRAME_DIAG=(()=>{
     tick(frameNowMs,tickMs){
       const t=Number(frameNowMs);
       if(Number.isFinite(t)){
-        if(last>0){const gap=t-last;if(gap>0&&gap<1000){n++;sum+=gap;if(gap>max)max=gap;if(gap>17.7)over17++;if(gap>34.3)over34++;if(gap>50)over50++;gapHist[Math.min(BINS-1,Math.floor(gap))]++;}}
+        if(last>0){const gap=t-last;if(gap>0&&gap<1000){n++;sum+=gap;if(gap>max)max=gap;if(gap>17.7)over17++;if(gap>34.3)over34++;if(gap>50)over50++;gapHist[Math.min(BINS-1,Math.floor(gap))]++;
+          if(t-first<=START_MS){if(gap>50)startOver50++;if(gap>startMax)startMax=gap;}}}
+        else first=t;
         last=t;
       }
       const d=Number(tickMs);
@@ -1554,7 +1558,7 @@ const RHYTHM_FRAME_DIAG=(()=>{
     },
     // meta … 描き方など(draw・gpu・dpr・w・h・cores・effect・fps・light)
     snapshot(meta){
-      return {n,avg:n?r1(sum/n):null,p95:pct(gapHist,n,.95),max:Math.round(max),over17,over34,over50,
+      return {n,avg:n?r1(sum/n):null,p95:pct(gapHist,n,.95),max:Math.round(max),over17,over34,over50,startOver50,startMax:Math.round(startMax),
         tickAvg:tickN?r1(tickSum/tickN):null,tickP95:pct(tickHist,tickN,.95),...(meta&&typeof meta==='object'?meta:{})};
     },
   };
@@ -30524,6 +30528,13 @@ const RHYTHM_NOTE_CANVAS_MAX_DPR=2;
 //   毎コマ刻み直して渡し(10〜20点)、その先は GPU に置いた形の途中から描く。刻む点が今の描き方と同じになる。
 // 押さえ始めたスライドで指が帯から外れている間の、帯の暗さ(見た目だけ。判定は変えない)。2D と GPU で同じ値を使う
 const RHYTHM_SLIDE_DIM=Object.freeze({rgb:'6,4,18',alpha:.5});
+// 演奏前の準備(2026-10-11・社長「事前読み込みで改善されないの?」)。曲の頭の最初のコマで初めて起きていた重い仕事
+// (道の大きさを測る・ノーツの canvas の描き込み先を作る・板と光を初めて描く)を、曲の前の幕のあいだに済ませる。
+// まずデバッグ画面「演奏前の準備(検証用)」で出し入れする。'on' = する・'off' = しない・未設定 = 既定(いまは しない)
+const RHYTHM_PREPARE_KEY='mh_rhythm_prepare_v1';
+const rhythmPreparePreference=()=>{try{if(typeof localStorage==='undefined')return '';const v=localStorage.getItem(RHYTHM_PREPARE_KEY);return v==='on'||v==='off'?v:'';}catch{return '';}};
+const rhythmPrepareSetPreference=value=>{const next=value==='on'||value==='off'?value:'';try{if(typeof localStorage!=='undefined'){if(next)localStorage.setItem(RHYTHM_PREPARE_KEY,next);else localStorage.removeItem(RHYTHM_PREPARE_KEY);}}catch{}return next;};
+const rhythmPrepareActive=()=>rhythmPreparePreference()==='on';
 const RHYTHM_GPU_BAND_KEY='mh_rhythm_gpu_band_v1';
 const rhythmGpuBandPreference=()=>{try{if(typeof localStorage==='undefined')return '';return localStorage.getItem(RHYTHM_GPU_BAND_KEY)==='gpu'?'gpu':'';}catch{return '';}};
 const rhythmGpuBandSetPreference=value=>{const next=value==='gpu'?'gpu':'';try{if(typeof localStorage!=='undefined'){if(next)localStorage.setItem(RHYTHM_GPU_BAND_KEY,next);else localStorage.removeItem(RHYTHM_GPU_BAND_KEY);}}catch{}return next;};

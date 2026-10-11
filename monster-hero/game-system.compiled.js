@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9e4a9bb653052dfd
+// source-sha256: 64c27b6cf513f8e3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-11 17:09";
+const BUILD_DATE = "2026-10-11 17:16";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -30308,6 +30308,7 @@ const RHYTHM_SONG_INTRO_MS = 3000;
 const rhythmSongIntroNow = () => typeof performance !== 'undefined' ? performance.now() : Date.now();
 const RHYTHM_SONG_INTRO_RETRY_MS = 1400;
 const RHYTHM_SONG_INTRO_MAX_MS = 6000;
+const RHYTHM_PREPARE_WAIT_MAX_MS = 3000;
 const RHYTHM_SONG_INTRO_CLOSE_MS = 240;
 let rhythmSongIntroHolds = null;
 const rhythmSongIntroHold = promise => {
@@ -31460,6 +31461,8 @@ const RhythmTapTest = ({
   monstersRef.current = monsters;
   const monsterSignature = monsters.map(m => m ? `${m.baseId}|${m.imageUrl}|${JSON.stringify(m.colors || null)}` : '-').join(',');
   const canvasNotes = useState(() => rhythmCanvasNotesActive(RELEASE_FLAGS.rhythmCanvasNotes))[0];
+  const prepareOn = useState(() => rhythmPrepareActive())[0];
+  const prepareRef = useRef(null);
   const rhythmFrameDiagOf = () => {
     try {
       const area = typeof document !== 'undefined' ? document.querySelector('[data-rhythm-play-area]') : null,
@@ -31473,7 +31476,10 @@ const RhythmTapTest = ({
         cores: typeof navigator !== 'undefined' && Number.isFinite(navigator.hardwareConcurrency) ? navigator.hardwareConcurrency : 0,
         effect: String(settings?.stageEffect || ''),
         fps: String(settings?.frameRateMode || ''),
-        light: !!settings?.lightweightMode
+        light: !!settings?.lightweightMode,
+        prep: prepareOn ? 1 : 0,
+        prepMs: prepareRef.current ? prepareRef.current.ms : null,
+        prepWaitMs: prepareRef.current ? prepareRef.current.waitMs : null
       });
     } catch (e) {
       return null;
@@ -33634,6 +33640,102 @@ const RhythmTapTest = ({
     };
     if (typeof requestAnimationFrame === 'function') requestAnimationFrame(step);else setTimeout(step, 16);
   });
+  const prepareRun = generation => new Promise(resolve => {
+    const t0 = rhythmSongIntroNow();
+    const finish = () => {
+      const p = prepareRef.current;
+      if (p && p.generation === generation) p.ms = Math.round(rhythmSongIntroNow() - t0);
+      resolve(true);
+    };
+    const work = () => {
+      try {
+        if (!mountedRef.current || generation !== generationRef.current) {
+          finish();
+          return;
+        }
+        const travel = measureTravel(),
+          run = runRef.current;
+        if (canvasNotes && travel && travel.ready !== false && run && Array.isArray(run.notes)) {
+          const R = RHYTHM_CANVAS_RENDERER,
+            live = settingsLiveRef.current || {};
+          const opts = {
+            nowMs: rhythmSongIntroNow(),
+            effect: settings.effectAmount,
+            lightweight: settings.lightweightMode,
+            maxDpr: noteCanvasMaxDprRef.current,
+            sizeScale: settings.noteSize / 100,
+            bloom: live.noteBloom === true,
+            motion: live.noteMotionFx === true
+          };
+          if (R.begin(travel.rect, opts)) {
+            const travelMs = rhythmTravelMsForSpeed(settings.noteSpeed),
+              seen = new Set();
+            const yPx = travel.spawnY + rhythmProjectTravelProgress(.6) * travel.travelPx;
+            for (const note of run.notes) {
+              if (seen.size >= 12) break;
+              const monster = typeof monsterForNote === 'function' && !!monsterForNote(note),
+                kind = `${rhythmNoteVisualType(note)}|${monster ? 1 : 0}|${rhythmNoteIsWide(note) ? 1 : 0}|${rhythmFlickDir(note) || ''}`;
+              if (seen.has(kind)) continue;
+              seen.add(kind);
+              const t = note.timeMs,
+                geo = rhythmNoteCanvasGeometry({
+                  ...note,
+                  type: rhythmNoteHasBody(note) ? 'TAP' : note.type
+                }, yPx, note.lane, travel.rect, travel.noteHeight, null, {
+                  chartNowMs: t,
+                  visualTime: t,
+                  travelMs,
+                  spawnY: travel.spawnY,
+                  travelPx: travel.travelPx,
+                  gpu: false
+                }, 0);
+              const depthScale = Math.round((0.56 + geo.scale * .44) * 100) / 100,
+                brightness = Math.round((0.72 + geo.scale * .28) * 100) / 100;
+              R.drawNote(note, geo, {
+                failed: false,
+                monster,
+                wide: rhythmNoteIsWide(note),
+                pressed: false,
+                heldMs: 0,
+                alpha: 1,
+                pop: null,
+                depthScale,
+                brightness
+              });
+            }
+            R.end();
+            if (R.begin(travel.rect, opts)) R.end();
+          }
+        }
+        const area = playAreaRef.current,
+          display = area && area.querySelector('[data-rhythm-judgment-display]');
+        if (area && display) {
+          const sandbox = document.createElement('div');
+          sandbox.setAttribute('aria-hidden', 'true');
+          sandbox.style.cssText = 'position:absolute;inset:0;visibility:hidden;pointer-events:none;contain:strict;overflow:hidden';
+          const copy = display.cloneNode(true);
+          copy.removeAttribute('data-rhythm-judgment-display');
+          sandbox.appendChild(copy);
+          area.appendChild(sandbox);
+          const text = copy.querySelector('[data-rhythm-judgment-text]'),
+            sub = copy.querySelector('small');
+          if (text) {
+            for (const j of RHYTHM_JUDGMENTS) for (const precise of ['', '1']) {
+              text.dataset.judgment = j.id;
+              text.dataset.judgmentPrecise = precise;
+              text.dataset.halo = '1';
+              text.textContent = j.id;
+              if (sub) sub.textContent = 'FAST 12ms';
+              void text.offsetWidth;
+            }
+          }
+          sandbox.remove();
+        }
+      } catch (e) {}
+      finish();
+    };
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => work());else setTimeout(work, 16);
+  });
   const beginRun = async startBestValue => {
     if (startLockRef.current) return;
     startLockRef.current = true;
@@ -33783,6 +33885,21 @@ const RhythmTapTest = ({
       audio.stop();
       return;
     }
+    if (prepareOn) {
+      const promise = prepareRun(generation);
+      prepareRef.current = {
+        generation,
+        promise,
+        done: false,
+        ms: null,
+        waitMs: 0
+      };
+      promise.then(() => {
+        const p = prepareRef.current;
+        if (p && p.generation === generation) p.done = true;
+      });
+      rhythmSongIntroHold(promise);
+    } else prepareRef.current = null;
     if (!(await waitSongIntro(generation))) {
       audio.stop();
       return;
@@ -33790,6 +33907,18 @@ const RhythmTapTest = ({
     if (!mountedRef.current || generation !== generationRef.current) {
       audio.stop();
       return;
+    }
+    {
+      const prep = prepareRef.current;
+      if (prep && prep.generation === generation && !prep.done && !multi) {
+        const t0 = rhythmSongIntroNow();
+        await Promise.race([prep.promise, new Promise(resolve => setTimeout(resolve, RHYTHM_PREPARE_WAIT_MAX_MS))]);
+        prep.waitMs = Math.round(rhythmSongIntroNow() - t0);
+        if (!mountedRef.current || generation !== generationRef.current) {
+          audio.stop();
+          return;
+        }
+      }
     }
     if (!(await runCountdown(generation))) {
       audio.stop();
@@ -33806,6 +33935,15 @@ const RhythmTapTest = ({
     try {
       if (typeof window !== 'undefined') window.__mhTestHooks = {
         ...(window.__mhTestHooks || {}),
+        rhythmPrepare: () => {
+          const p = prepareRef.current;
+          return {
+            on: prepareOn,
+            ms: p ? p.ms : null,
+            waitMs: p ? p.waitMs : null,
+            done: p ? !!p.done : null
+          };
+        },
         rhythmSongMs: () => {
           const run = runRef.current;
           return run && !run.finished && !run.paused ? Number(run.audio.songTimeMs()) || 0 : null;
@@ -33851,6 +33989,7 @@ const RhythmTapTest = ({
       try {
         if (window.__mhTestHooks) {
           delete window.__mhTestHooks.rhythmSongMs;
+          delete window.__mhTestHooks.rhythmPrepare;
           delete window.__mhTestHooks.rhythmNotes;
           delete window.__mhTestHooks.rhythmNoteResults;
         }
@@ -35590,6 +35729,9 @@ const RhythmTapTest = ({
       position: 'absolute',
       inset: 0,
       zIndex: 20,
+      ...(prepareOn ? {
+        contain: 'strict'
+      } : {}),
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
@@ -73366,6 +73508,7 @@ function MonsterHeroGame() {
   const [rhythmStrip, setRhythmStrip] = useState(() => RHYTHM_STRIP.value);
   const [rhythmCanvasPref, setRhythmCanvasPref] = useState(() => rhythmCanvasNotesPreference());
   const [rhythmGpuBandPref, setRhythmGpuBandPref] = useState(() => rhythmGpuBandPreference());
+  const [rhythmPreparePref, setRhythmPreparePref] = useState(() => rhythmPreparePreference());
   const [rhythmReleaseAgeWide, setRhythmReleaseAgeWide] = useState(() => rhythmTouchFixOn('releaseAgeWide'));
   const [rhythmStageGlPref, setRhythmStageGlPref] = useState(() => rhythmStageGlPreference());
   const [rhythmChartToolsOpened, setRhythmChartToolsOpened] = useState(false);
@@ -97382,6 +97525,22 @@ function MonsterHeroGame() {
       "aria-pressed": rhythmGpuBandPref === value,
       onClick: () => setRhythmGpuBandPref(rhythmGpuBandSetPreference(value)),
       className: `min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmGpuBandPref === value ? 'bg-cyan-400 text-slate-900' : 'border border-white/20 bg-slate-900 text-slate-200'}`
+    }, label)))), React.createElement("section", {
+      "data-rhythm-prepare-panel": true,
+      className: "mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"
+    }, React.createElement("h3", {
+      className: "text-xs font-black text-cyan-200"
+    }, "演奏前の準備（検証用）"), React.createElement("p", {
+      className: "mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80"
+    }, "「する」は、曲の最初のコマで初めて起きていた重い仕事（道の大きさを測る・ノーツの絵を描く準備）を、曲の前の幕のあいだに済ませます。準備が済むまで幕は閉じません（最長6秒）。次の演奏から効きます。"), React.createElement("div", {
+      className: "mt-2 flex gap-2"
+    }, [['', '既定（しない）'], ['on', 'する'], ['off', 'しない']].map(([value, label]) => React.createElement("button", {
+      key: value || 'default',
+      type: "button",
+      "data-rhythm-prepare-pref": value || 'default',
+      "aria-pressed": rhythmPreparePref === value,
+      onClick: () => setRhythmPreparePref(rhythmPrepareSetPreference(value)),
+      className: `min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmPreparePref === value ? 'bg-cyan-400 text-slate-900' : 'border border-white/20 bg-slate-900 text-slate-200'}`
     }, label)))), React.createElement("section", {
       "data-rhythm-release-age-panel": true,
       className: "mb-3 rounded-2xl border border-emerald-400/40 bg-emerald-950/20 p-3"
