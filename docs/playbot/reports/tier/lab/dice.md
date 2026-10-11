@@ -67,4 +67,5 @@
 - ライガーの Hard: best の雷狼影はボス戦の温存を入れてもボットより弱い(クリア 18% / 22%)。best の使い方を見直す
 - ボス戦の勝ち率が実戦より低い(26% / 41%)わけを調べる(トレーニングの選び方・デッキの簡略を疑っている)
 - 直したボット(arena-2)の実戦の回がたまったら、緊急回復 bot の設定で実戦と突き合わせる
+- 窓口(統括部長)は 2026-10-11 に session_014GTmSNS2ae9tRr57k3zFjC へ引っ越した(前の session_01MC7KZtt5oyrsS32Hc57TXv には送らない。正は docs/playbot/SESSIONS.md の窓口の行)
 - 決まり: 道具を回したら tactics-tier.js → tier-page.js --check を通し、同じ PR で tier.json・tier.html を入れる。マージは GitHub で merged=true を確かめてから知らせる
