@@ -16,6 +16,7 @@
 //   ・NORMAL: スライドを拍の頭のタップに置き換える。速い連打5以下
 //   ・EASY: スライドを2拍ごとのタップにし、8分(拍の半分)より詰まった所を抜き、左右半分の太いノーツ(幅6)にする
 //   ・どれも、レベルは rhythm-chart-level.js の式で測り、上限まで間引く
+//   ・モンスターノーツはどの難易度にも4個ちょうど(placeMonsters。置き方は生成器と同じ)
 //   ・押せるかは2つの物差しで数える: 既存の両手のシミュレート(rhythm-hand-simulate.js)と、
 //     画面の画素で測る親指2本のモデル(下の THUMB_PROFILES。横持ちは親指が左右の端から伸びる)
 //
@@ -42,8 +43,35 @@ const toRuntime=notes=>notes.map(n=>{
   if(n.k==='s'){const p=n.pts;return {type:'SLIDE',timeMs:p[0][0],endTimeMs:p[p.length-1][0],lane:p[0][1],endLane:p[p.length-1][1],subLaneWidth:p[0][2],
     slidePoints:p.map(([t,l,w])=>({timeMs:t,lane:l,subLaneWidth:w})),...(n.endFlick?{endFlick:true}:{})};}
   if(n.k==='h')return {type:'HOLD',timeMs:n.t,endTimeMs:n.end,lane:Math.floor(n.sub/2),subLane:n.sub,subLaneWidth:n.w};
-  return {type:n.k==='f'?'FLICK':'TAP',timeMs:n.t,lane:Math.floor(n.sub/2),subLane:n.sub,subLaneWidth:n.w};
+  return {type:n.k==='f'?'FLICK':'TAP',timeMs:n.t,lane:Math.floor(n.sub/2),subLane:n.sub,subLaneWidth:n.w,...(n.mon?{monsterSlot:n.mon}:{})};
 }).sort((a,b)=>a.timeMs-b.timeMs);
+
+// ── モンスターノーツ(2026-10-11 社長の決まり「どの曲のどの難易度にも4個ちょうど・TAP の枠1〜4を1個ずつ」)──
+// 置き方は生成器(rhythm-chart-v3-generate.js の 13.)と同じ: 曲の20/40/60/80%に一番近い単打(探すのは狙いの前後10%まで)。
+// 拍の頭で前後1拍空く → 前後半拍空く → 拍の頭 → 同時押しでない単打、の順にゆるめる。止まる/飛ぶ演出の区間(と止まり終わりから STOP_END_GAP_MS)は避ける。
+// 空中の打鍵には置かない(地上の単打だけ)。印は下書きのノーツの mon(1〜4)で持ち、toRuntime で monsterSlot になる
+const MONSTER_TARGETS=[.2,.4,.6,.8];
+const placeMonsters=(notes,{grid,stops=[]}={})=>{
+  const list=notes.map(n=>{if(!n.mon)return n;const {mon,...rest}=n;return rest;});
+  const starts=list.map(startOf),first=Math.min(...starts),last=Math.max(...list.map(endOf));
+  const Q=grid.beat/(grid.div||4),onBeat=t=>{const s=Math.round((t-grid.zero)/Q);return ((s%(grid.div||4))+(grid.div||4))%(grid.div||4)===0;};
+  const sorted=[...new Set(starts)].sort((a,b)=>a-b);
+  const gapOf=t=>{const i=sorted.indexOf(t);return Math.min(i>0?t-sorted[i-1]:Infinity,i<sorted.length-1?sorted[i+1]-t:Infinity);};
+  const single=list.filter(n=>n.k==='t'&&!n.sky&&starts.filter(t=>t===n.t).length===1&&!stops.some(([a,b])=>n.t>=a&&n.t<=b+STOP_END_GAP_MS));
+  const levels=[n=>onBeat(n.t)&&gapOf(n.t)>=grid.beat-2,n=>onBeat(n.t)&&gapOf(n.t)>=grid.beat/2-2,n=>onBeat(n.t),()=>true];
+  const used=new Set(),placed=[];
+  MONSTER_TARGETS.forEach((ratio,slot)=>{const target=first+(last-first)*ratio;
+    // 探すのは狙いの前後10%(となりの枠との中間)まで。その中で条件をゆるめ、それでも無いときだけ曲全体から探す
+    // (詰まった譜面で曲全体から「前後1拍空いた拍の頭」を探すと、80%の枠が曲の半ばへ飛ぶため)
+    const span=(last-first)*0.1;
+    for(const win of [span,Infinity]){let done=false;
+      for(const [lvIdx,ok] of levels.entries()){let best=null;
+        for(const n of single)if(!used.has(n)&&Math.abs(n.t-target)<=win&&ok(n)&&(!best||Math.abs(n.t-target)<Math.abs(best.t-target)))best=n;
+        if(best){used.add(best);placed.push({slot:slot+1,t:best.t,level:lvIdx,note:best});done=true;break;}}
+      if(done)break;}});
+  const slotOfNote=new Map(placed.map(p=>[p.note,p.slot]));
+  return {notes:list.map(n=>slotOfNote.has(n)?{...n,mon:slotOfNote.get(n)}:n),placed:placed.map(({note,...p})=>p)};
+};
 
 // レベル・最密4秒・最短間隔・叩く回数・速い連打
 const chartStats=notes=>{
@@ -143,7 +171,7 @@ const dedupeSlidePoints=notes=>notes.map(n=>{if(n.k!=='s')return n;const q=[n.pt
 // ── 難易度を作る ──
 const deriveTiers=(master,{grid,audio,stops=[],levels}={})=>{
   const Z=grid.zero,B=grid.beat,Q=B/(grid.div||4);
-  const M=dedupeSlidePoints(clearStops(master,stops));
+  const M=dedupeSlidePoints(clearStops(master,stops)).map(n=>{if(!n.mon)return n;const {mon,...rest}=n;return rest;});
   const onsets=(audio&&audio.onsets||[]).map(o=>[o.timeMs,o.strength||0]);
   const strengthAt=t=>{let s=0;for(const [ms,v] of onsets)if(Math.abs(ms-t)<=45)s=Math.max(s,v);return s;};
   const slotOf=t=>Math.round((t-Z)/Q),msOf=s=>Math.round(Z+s*Q);
@@ -224,7 +252,9 @@ const deriveTiers=(master,{grid,audio,stops=[],levels}={})=>{
   easy=fillLongGaps(easy,out.NORMAL,B*2,lv.EASY);
   const seen=new Set();
   out.EASY=easy.map(n=>n.k==='s'?n:{...n,sub:n.sub<=3?0:6,w:6}).filter(n=>{if(n.k==='s')return true;const k=n.t+'|'+n.sub;if(seen.has(k))return false;seen.add(k);return true;});
-  return {tiers:out,levels:lv};
+  // モンスターノーツは難易度ごとに4個(間引きで消えないよう、作り終えてから置く)
+  const monsters={};for(const d of Object.keys(out)){const r=placeMonsters(out[d],{grid,stops});out[d]=r.notes;monsters[d]=r.placed;}
+  return {tiers:out,levels:lv,monsters};
 };
 
 // 1つの難易度の数字(押せるかを2つの物差しで)
@@ -237,10 +267,12 @@ const tierReport=(notes,{grid,stops=[]})=>{
     :{type:n.k==='f'?'FLICK':'TAP',grid:slot(n.t),subLane:n.sub,subLaneWidth:n.w};
   const sim=simulateNotes(notes.map(toSim),{beatZeroMs:grid.zero,gridMs:Q,subdivisionsPerBeat:grid.div||4,beatsPerBar:4});
   const th=thumbCheck(notes,THUMB_PROFILES.landscape,grid.beat);
-  return {...s,simImpossible:sim.impossible|0,thumbs:th.count,stops:stopReport(notes,stops)};
+  const monsters=notes.filter(n=>n.mon).map(n=>({slot:n.mon,t:n.t})).sort((a,b)=>a.slot-b.slot);
+  return {...s,simImpossible:sim.impossible|0,thumbs:th.count,stops:stopReport(notes,stops),monsters};
 };
 const fmtReport=(d,r)=>`${d.padEnd(6)} ${r.notes}ノーツ ${JSON.stringify(r.kinds)} Lv.${r.level} 最密4秒${r.max4s} 最短${r.minGapMs}ms 叩く${r.hits} 速い連打${r.fast}`
   +` | 両手のシミュレート 押せない${r.simImpossible} | 横持ち `+THUMB_KINDS.map(([k,l])=>`${l}${r.thumbs[k]}`).join('・')
+  +` | モンスターノーツ ${r.monsters.length}個`+(r.monsters.length?`(${r.monsters.map(m=>`${m.slot}:${(m.t/1000).toFixed(2)}秒`).join(' ')})`:'')+(r.monsters.length===4?'':'(NG: 4個ちょうどにする)')
   +(r.stops.length?` | 止まる区間 `+r.stops.map(s=>`${s.from}〜${s.to}: 中${s.inside}・次まで${s.nextGapMs}ms${s.ok?'':'(NG)'}`).join(' / '):'');
 
 if(require.main===module){
@@ -269,4 +301,4 @@ if(require.main===module){
   }catch(e){console.error('止まった:',e.message);process.exit(1);}
 }
 
-module.exports={deriveTiers,chartStats,thumbCheck,THUMB_PROFILES,clearStops,stopReport,dedupeSlidePoints,toRuntime,tierReport,STOP_END_GAP_MS};
+module.exports={deriveTiers,placeMonsters,MONSTER_TARGETS,chartStats,thumbCheck,THUMB_PROFILES,clearStops,stopReport,dedupeSlidePoints,toRuntime,tierReport,STOP_END_GAP_MS};
