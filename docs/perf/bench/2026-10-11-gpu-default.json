@@ -1,0 +1,738 @@
+[
+ {
+  "label": "この版",
+  "song": "sheriruth",
+  "diff": "MASTER",
+  "entry": "debug",
+  "draw": "webgl",
+  "cpu": 1,
+  "runs": [
+   {
+    "song": "sheriruth",
+    "diff": "MASTER",
+    "draw": "webgl",
+    "cpu": 1,
+    "size": "844x390",
+    "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+    "backend": "webgl",
+    "band": false,
+    "range": [
+     1320,
+     133056
+    ],
+    "wallSec": 131.612,
+    "notes": 642,
+    "judged": 642,
+    "miss": 0,
+    "frames": {
+     "n": 2983,
+     "avg": 44.10931947703667,
+     "p50": 49.900000000001455,
+     "p95": 66.70000000000437,
+     "p99": 83.39999999999418,
+     "max": 116.70000000000073,
+     "over16": 2741,
+     "over33": 1613,
+     "over50": 633
+    },
+    "main": {
+     "cpu": 8.404262152195777,
+     "wall": 43.69934294334563,
+     "task": 44.697795172644994,
+     "script": 3.6458454575930275,
+     "style": 0.7212349983238351,
+     "layout": 2.059772712034864,
+     "busyPct": 101.30802890313954
+    },
+    "func": {
+     "tick": 3.890360040227958,
+     "paintCanvasNote": 1.8862115320147503,
+     "bot": 0.9489738518270199
+    },
+    "taps": {
+     "n": 642,
+     "handleAvg": 0.2320872273737118,
+     "handleP95": 0.40000000037252903,
+     "frameAvg": 42.448130841084115,
+     "frameP95": 64.40000000000146,
+     "first": {
+      "handle": 1.199999999254942,
+      "toFrame": 100.59999999962747
+     },
+     "first5": [
+      {
+       "handle": 1.199999999254942,
+       "toFrame": 100.59999999962747
+      },
+      {
+       "handle": 0.2000000011175871,
+       "toFrame": 87.30000000074506
+      },
+      {
+       "handle": 0.2999999988824129,
+       "toFrame": 27.599999999256397
+      },
+      {
+       "handle": 0.19999999925494194,
+       "toFrame": 36.29999999925349
+      },
+      {
+       "handle": 0.09999999962747097,
+       "toFrame": 34.099999999998545
+      }
+     ],
+     "restHandleMed": 0.19999999925494194,
+     "restFrameMed": 40.79999999962456
+    },
+    "errors": [],
+    "breakdown": null,
+    "atStart": null,
+    "atEnd": null
+   }
+  ]
+ },
+ {
+  "label": "この版",
+  "song": "sheriruth",
+  "diff": "MASTER",
+  "entry": "debug",
+  "draw": "webgl",
+  "cpu": 4,
+  "runs": [
+   {
+    "song": "sheriruth",
+    "diff": "MASTER",
+    "draw": "webgl",
+    "cpu": 4,
+    "size": "844x390",
+    "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+    "backend": "webgl",
+    "band": false,
+    "range": [
+     1320,
+     133056
+    ],
+    "wallSec": 129.077,
+    "notes": 642,
+    "judged": 642,
+    "miss": 8,
+    "frames": {
+     "n": 1419,
+     "avg": 90.89372797744906,
+     "p50": 83.39999999999418,
+     "p95": 150.09999999999127,
+     "p99": 200,
+     "max": 316.6999999999971,
+     "over16": 1406,
+     "over33": 1369,
+     "over50": 1220
+    },
+    "main": {
+     "cpu": 76.17910923185342,
+     "wall": 90.27071317829459,
+     "task": 95.05864622973927,
+     "script": 18.10815785764623,
+     "style": 3.9777315010570824,
+     "layout": 15.754870331219168,
+     "busyPct": 104.50213361017069
+    },
+    "func": {
+     "tick": 21.067959126145173,
+     "paintCanvasNote": 8.07424171952079,
+     "bot": 7.2899055673009165
+    },
+    "taps": {
+     "n": 642,
+     "handleAvg": 0.707788161997251,
+     "handleP95": 1.700000001117587,
+     "frameAvg": 105.27647975000349,
+     "frameP95": 162,
+     "first": {
+      "handle": 2.900000000372529,
+      "toFrame": 178.09999999962747
+     },
+     "first5": [
+      {
+       "handle": 2.900000000372529,
+       "toFrame": 178.09999999962747
+      },
+      {
+       "handle": 0.19999999925494194,
+       "toFrame": 145.19999999925494
+      },
+      {
+       "handle": 1.099999999627471,
+       "toFrame": 103.89999999850988
+      },
+      {
+       "handle": 1.599999999627471,
+       "toFrame": 130.7999999988824
+      },
+      {
+       "handle": 1.099999999627471,
+       "toFrame": 124.59999999962747
+      }
+     ],
+     "restHandleMed": 0.599999999627471,
+     "restFrameMed": 99.39999999925203
+    },
+    "errors": [],
+    "breakdown": null,
+    "atStart": null,
+    "atEnd": null
+   }
+  ]
+ },
+ {
+  "label": "この版",
+  "song": "sheriruth",
+  "diff": "MASTER",
+  "entry": "debug",
+  "draw": "gpu",
+  "cpu": 1,
+  "runs": [
+   {
+    "song": "sheriruth",
+    "diff": "MASTER",
+    "draw": "gpu",
+    "cpu": 1,
+    "size": "844x390",
+    "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+    "backend": "webgl",
+    "band": true,
+    "range": [
+     1320,
+     133056
+    ],
+    "wallSec": 131.514,
+    "notes": 642,
+    "judged": 642,
+    "miss": 0,
+    "frames": {
+     "n": 5102,
+     "avg": 25.77318698549565,
+     "p50": 16.80000000000291,
+     "p95": 33.40000000002328,
+     "p99": 50,
+     "max": 133.40000000000146,
+     "over16": 2536,
+     "over33": 235,
+     "over50": 46
+    },
+    "main": {
+     "cpu": 5.035863190905527,
+     "wall": 24.991654449235593,
+     "task": 25.52661230889847,
+     "script": 1.8692293218345748,
+     "style": 0.44999470795766366,
+     "layout": 1.111752254018032,
+     "busyPct": 99.02883039068084
+    },
+    "func": {
+     "tick": 1.9626985495883966,
+     "paintCanvasNote": 0.6459511956095649,
+     "bot": 0.5033363386907095
+    },
+    "taps": {
+     "n": 642,
+     "handleAvg": 0.2235202492211838,
+     "handleP95": 0.40000000037252903,
+     "frameAvg": 23.340809968842233,
+     "frameP95": 37.70000000037544,
+     "first": {
+      "handle": 0.8000000007450581,
+      "toFrame": 65.10000000074433
+     },
+     "first5": [
+      {
+       "handle": 0.8000000007450581,
+       "toFrame": 65.10000000074433
+      },
+      {
+       "handle": 0.2999999988824129,
+       "toFrame": 55.89999999962674
+      },
+      {
+       "handle": 0.30000000074505806,
+       "toFrame": 17.10000000074433
+      },
+      {
+       "handle": 0.2999999988824129,
+       "toFrame": 16.09999999962747
+      },
+      {
+       "handle": 0.09999999962747097,
+       "toFrame": 14.699999999254942
+      }
+     ],
+     "restHandleMed": 0.19999999925494194,
+     "restFrameMed": 23.10000000036962
+    },
+    "errors": [],
+    "breakdown": null,
+    "atStart": null,
+    "atEnd": null
+   }
+  ]
+ },
+ {
+  "label": "この版",
+  "song": "sheriruth",
+  "diff": "MASTER",
+  "entry": "debug",
+  "draw": "gpu",
+  "cpu": 4,
+  "runs": [
+   {
+    "song": "sheriruth",
+    "diff": "MASTER",
+    "draw": "gpu",
+    "cpu": 4,
+    "size": "844x390",
+    "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+    "backend": "webgl",
+    "band": true,
+    "range": [
+     1320,
+     133056
+    ],
+    "wallSec": 131.094,
+    "notes": 642,
+    "judged": 642,
+    "miss": 1,
+    "frames": {
+     "n": 2272,
+     "avg": 57.67812500000001,
+     "p50": 50,
+     "p95": 116.59999999999854,
+     "p99": 150,
+     "max": 383.29999999999563,
+     "over16": 2151,
+     "over33": 1603,
+     "over50": 1002
+    },
+    "main": {
+     "cpu": 48.24462015845071,
+     "wall": 57.029975792253516,
+     "task": 59.471664172535206,
+     "script": 11.03440360915493,
+     "style": 2.9109370598591546,
+     "layout": 9.851366197183099,
+     "busyPct": 103.07078966237965
+    },
+    "func": {
+     "tick": 12.485375440140846,
+     "paintCanvasNote": 3.4413908450704227,
+     "bot": 4.334275088028169
+    },
+    "taps": {
+     "n": 642,
+     "handleAvg": 0.8135514018790233,
+     "handleP95": 1.900000000372529,
+     "frameAvg": 77.6040498438479,
+     "frameP95": 121.60000000036962,
+     "first": {
+      "handle": 5,
+      "toFrame": 228.49999999962893
+     },
+     "first5": [
+      {
+       "handle": 5,
+       "toFrame": 228.49999999962893
+      },
+      {
+       "handle": 2.5,
+       "toFrame": 180.30000000037398
+      },
+      {
+       "handle": 0.599999999627471,
+       "toFrame": 41.2999999996282
+      },
+      {
+       "handle": 0.09999999962747097,
+       "toFrame": 89.20000000000073
+      },
+      {
+       "handle": 0.599999999627471,
+       "toFrame": 82.70000000000073
+      }
+     ],
+     "restHandleMed": 0.7000000011175871,
+     "restFrameMed": 72.30000000000291
+    },
+    "errors": [],
+    "breakdown": null,
+    "atStart": null,
+    "atEnd": null
+   }
+  ]
+ },
+ {
+  "label": "この版",
+  "song": "freedom_dive",
+  "diff": "MASTER",
+  "entry": "debug",
+  "draw": "webgl",
+  "cpu": 1,
+  "runs": [
+   {
+    "song": "freedom_dive",
+    "diff": "MASTER",
+    "draw": "webgl",
+    "cpu": 1,
+    "size": "844x390",
+    "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+    "backend": "webgl",
+    "band": false,
+    "range": [
+     305,
+     144326
+    ],
+    "wallSec": 143.488,
+    "notes": 814,
+    "judged": 814,
+    "miss": 0,
+    "frames": {
+     "n": 4357,
+     "avg": 32.92655496901507,
+     "p50": 33.30000000000291,
+     "p95": 50,
+     "p99": 66.69999999999709,
+     "max": 83.40000000000873,
+     "over16": 3233,
+     "over33": 927,
+     "over50": 194
+    },
+    "main": {
+     "cpu": 6.044488868487491,
+     "wall": 32.49088661923342,
+     "task": 33.19107183842093,
+     "script": 2.328956392012853,
+     "style": 0.4877463851273812,
+     "layout": 1.5550764287353684,
+     "busyPct": 100.78438615075824
+    },
+    "func": {
+     "tick": 2.1195747073674545,
+     "paintCanvasNote": 1.0565216892357128,
+     "bot": 0.3846401193481753
+    },
+    "taps": {
+     "n": 814,
+     "handleAvg": 0.19422604422558656,
+     "handleP95": 0.3999999985098839,
+     "frameAvg": 31.42997543032443,
+     "frameP95": 50.10000000074797,
+     "first": {
+      "handle": 1,
+      "toFrame": 33.7999999996282
+     },
+     "first5": [
+      {
+       "handle": 1,
+       "toFrame": 33.7999999996282
+      },
+      {
+       "handle": 0.40000000037252903,
+       "toFrame": 64.20000000074651
+      },
+      {
+       "handle": 0.2000000011175871,
+       "toFrame": 42.50000000111686
+      },
+      {
+       "handle": 0.2000000011175871,
+       "toFrame": 42.60000000074433
+      },
+      {
+       "handle": 0.40000000037252903,
+       "toFrame": 44.20000000000073
+      }
+     ],
+     "restHandleMed": 0.19999999925494194,
+     "restFrameMed": 30.60000000000582
+    },
+    "errors": [],
+    "breakdown": null,
+    "atStart": null,
+    "atEnd": null
+   }
+  ]
+ },
+ {
+  "label": "この版",
+  "song": "freedom_dive",
+  "diff": "MASTER",
+  "entry": "debug",
+  "draw": "webgl",
+  "cpu": 4,
+  "runs": [
+   {
+    "song": "freedom_dive",
+    "diff": "MASTER",
+    "draw": "webgl",
+    "cpu": 4,
+    "size": "844x390",
+    "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+    "backend": "webgl",
+    "band": false,
+    "range": [
+     305,
+     144326
+    ],
+    "wallSec": 143.089,
+    "notes": 814,
+    "judged": 814,
+    "miss": 18,
+    "frames": {
+     "n": 2069,
+     "avg": 69.12885451909116,
+     "p50": 66.69999999998254,
+     "p95": 116.70000000001164,
+     "p99": 150,
+     "max": 550,
+     "over16": 1981,
+     "over33": 1667,
+     "over50": 1260
+    },
+    "main": {
+     "cpu": 57.56866118898018,
+     "wall": 68.4506389560174,
+     "task": 70.35161817303046,
+     "script": 12.133180280328663,
+     "style": 2.78513194780087,
+     "layout": 11.915115514741421,
+     "busyPct": 101.72514868368638
+    },
+    "func": {
+     "tick": 12.138382310294828,
+     "paintCanvasNote": 4.985032382793619,
+     "bot": 3.3883963267278876
+    },
+    "taps": {
+     "n": 814,
+     "handleAvg": 0.6718673218769325,
+     "handleP95": 1.800000000745058,
+     "frameAvg": 86.15896805860143,
+     "frameP95": 127.19999999925494,
+     "first": {
+      "handle": 4.400000000372529,
+      "toFrame": 118.7999999996282
+     },
+     "first5": [
+      {
+       "handle": 4.400000000372529,
+       "toFrame": 118.7999999996282
+      },
+      {
+       "handle": 0.19999999925494194,
+       "toFrame": 116.59999999962747
+      },
+      {
+       "handle": 1.400000000372529,
+       "toFrame": 113.79999999999927
+      },
+      {
+       "handle": 0.09999999962747097,
+       "toFrame": 105.29999999999927
+      },
+      {
+       "handle": 1,
+       "toFrame": 97.49999999962893
+      }
+     ],
+     "restHandleMed": 0.5,
+     "restFrameMed": 82.79999999926076
+    },
+    "errors": [],
+    "breakdown": null,
+    "atStart": null,
+    "atEnd": null
+   }
+  ]
+ },
+ {
+  "label": "この版",
+  "song": "freedom_dive",
+  "diff": "MASTER",
+  "entry": "debug",
+  "draw": "gpu",
+  "cpu": 1,
+  "runs": [
+   {
+    "song": "freedom_dive",
+    "diff": "MASTER",
+    "draw": "gpu",
+    "cpu": 1,
+    "size": "844x390",
+    "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+    "backend": "webgl",
+    "band": true,
+    "range": [
+     305,
+     144326
+    ],
+    "wallSec": 143.913,
+    "notes": 814,
+    "judged": 814,
+    "miss": 0,
+    "frames": {
+     "n": 6451,
+     "avg": 22.305704541931462,
+     "p50": 16.69999999999709,
+     "p95": 33.40000000000873,
+     "p99": 50,
+     "max": 100,
+     "over16": 2041,
+     "over33": 133,
+     "over50": 30
+    },
+    "main": {
+     "cpu": 4.258890559603162,
+     "wall": 20.47318369245078,
+     "task": 20.935523019686872,
+     "script": 1.4175233297163232,
+     "style": 0.3737860796775693,
+     "layout": 1.0437081072701908,
+     "busyPct": 93.84493339726086
+    },
+    "func": {
+     "tick": 1.2460837079522555,
+     "paintCanvasNote": 0.4299307084172997,
+     "bot": 0.22930460393737404
+    },
+    "taps": {
+     "n": 814,
+     "handleAvg": 0.20405405398037202,
+     "handleP95": 0.30000000074505806,
+     "frameAvg": 20.32653562611927,
+     "frameP95": 32.79999999926076,
+     "first": {
+      "handle": 1,
+      "toFrame": 15.399999999626743
+     },
+     "first5": [
+      {
+       "handle": 1,
+       "toFrame": 15.399999999626743
+      },
+      {
+       "handle": 0.40000000037252903,
+       "toFrame": 23.39999999925567
+      },
+      {
+       "handle": 0.2999999988824129,
+       "toFrame": 21.299999998882413
+      },
+      {
+       "handle": 0.19999999925494194,
+       "toFrame": 12.49999999888314
+      },
+      {
+       "handle": 0.40000000037252903,
+       "toFrame": 15
+      }
+     ],
+     "restHandleMed": 0.19999999925494194,
+     "restFrameMed": 17.60000000000582
+    },
+    "errors": [],
+    "breakdown": null,
+    "atStart": null,
+    "atEnd": null
+   }
+  ]
+ },
+ {
+  "label": "この版",
+  "song": "freedom_dive",
+  "diff": "MASTER",
+  "entry": "debug",
+  "draw": "gpu",
+  "cpu": 4,
+  "runs": [
+   {
+    "song": "freedom_dive",
+    "diff": "MASTER",
+    "draw": "gpu",
+    "cpu": 4,
+    "size": "844x390",
+    "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+    "backend": "webgl",
+    "band": true,
+    "range": [
+     305,
+     144326
+    ],
+    "wallSec": 140.874,
+    "notes": 814,
+    "judged": 814,
+    "miss": 18,
+    "frames": {
+     "n": 2604,
+     "avg": 54.06847158218123,
+     "p50": 50,
+     "p95": 116.69999999999709,
+     "p99": 166.59999999999127,
+     "max": 266.70000000001164,
+     "over16": 2192,
+     "over33": 1459,
+     "over50": 1014
+    },
+    "main": {
+     "cpu": 45.76210752688172,
+     "wall": 53.306374423963135,
+     "task": 55.9655737327189,
+     "script": 9.503056451612903,
+     "style": 2.8038544546851,
+     "layout": 11.05598233486943,
+     "busyPct": 103.45014268069339
+    },
+    "func": {
+     "tick": 9.85515975422427,
+     "paintCanvasNote": 2.5508145161290323,
+     "bot": 3.270206989247312
+    },
+    "taps": {
+     "n": 814,
+     "handleAvg": 0.8326781326630301,
+     "handleP95": 2,
+     "frameAvg": 80.33452088412427,
+     "frameP95": 143.60000000036962,
+     "first": {
+      "handle": 6.5,
+      "toFrame": 440.39999999888096
+     },
+     "first5": [
+      {
+       "handle": 6.5,
+       "toFrame": 440.39999999888096
+      },
+      {
+       "handle": 0.900000000372529,
+       "toFrame": 377.7999999992535
+      },
+      {
+       "handle": 0.900000000372529,
+       "toFrame": 340.09999999999854
+      },
+      {
+       "handle": 0.599999999627471,
+       "toFrame": 307.39999999888096
+      },
+      {
+       "handle": 0.30000000074505806,
+       "toFrame": 301.5000000003711
+      }
+     ],
+     "restHandleMed": 0.7999999988824129,
+     "restFrameMed": 71.5
+    },
+    "errors": [],
+    "breakdown": null,
+    "atStart": null,
+    "atEnd": null
+   }
+  ]
+ }
+]

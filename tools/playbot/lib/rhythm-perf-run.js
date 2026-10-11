@@ -13,7 +13,8 @@ const { installPlayer } = require(path.join(ROOT_DEFAULT, 'tools/playbot/scenari
 const { touchInputSource } = require(path.join(ROOT_DEFAULT, 'tools/playbot/lib/touch-input.js'));
 
 // 描き方: canvas(今の 2D)・webgl(WebGL の描き込み先。帯は CPU で刻む)・gpu(WebGL+帯と区切りの線を GPU に置く)・auto(ゲームの自動)
-const DRAW_MODES = { canvas: { canvas: 'canvas', band: '' }, webgl: { canvas: 'webgl', band: '' }, gpu: { canvas: 'webgl', band: 'gpu' }, auto: { canvas: '', band: '' } };
+// ★2026-10-11 から GPU の帯が既定になったので、webgl(今の WebGL)は帯の切り替えを 'off' にして開く
+const DRAW_MODES = { canvas: { canvas: 'canvas', band: '' }, webgl: { canvas: 'webgl', band: 'off' }, gpu: { canvas: 'webgl', band: 'gpu' }, auto: { canvas: '', band: '' } };
 
 const seed = (songId, mode) => `(() => {
   const put = (k, v) => { if (localStorage.getItem(k) === null) localStorage.setItem(k, JSON.stringify(v)); };

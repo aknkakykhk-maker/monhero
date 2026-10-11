@@ -1573,8 +1573,13 @@ const RHYTHM_FRAME_DIAG=(()=>{
   const BINS=101;
   // startOver50・startMax … 曲の最初の5秒(最初に数えたコマから START_MS)の 50ms 超のコマの数と最長(2026-10-11・演奏前の準備の効き目を実機で見る)
   const START_MS=5000;
-  let gapHist=null,tickHist=null,n=0,sum=0,max=0,over17=0,over34=0,over50=0,tickN=0,tickSum=0,last=0,first=0,startOver50=0,startMax=0;
-  const reset=()=>{gapHist=new Uint32Array(BINS);tickHist=new Uint32Array(BINS);n=0;sum=0;max=0;over17=0;over34=0;over50=0;tickN=0;tickSum=0;last=0;first=0;startOver50=0;startMax=0;};
+  // early・late … 熱の物差し(2026-10-11・社長「普通の音ゲーより発熱がすごい・発熱でのかくつき」)。曲の最初の30秒と、2分を過ぎてからのコマを別に数える。
+  // 熱で端末が速さを落とすと後半が遅くなるので、その差で手当ての前後を比べる。2分に届かない曲は late が null
+  const EARLY_MS=30000,LATE_MS=120000;
+  const win=()=>({hist:new Uint32Array(BINS),n:0,sum:0,over34:0});
+  let gapHist=null,tickHist=null,n=0,sum=0,max=0,over17=0,over34=0,over50=0,tickN=0,tickSum=0,last=0,first=0,startOver50=0,startMax=0,early=null,late=null;
+  const reset=()=>{gapHist=new Uint32Array(BINS);tickHist=new Uint32Array(BINS);n=0;sum=0;max=0;over17=0;over34=0;over50=0;tickN=0;tickSum=0;last=0;first=0;startOver50=0;startMax=0;early=win();late=win();};
+  const addWin=(w,gap)=>{w.n++;w.sum+=gap;if(gap>34.3)w.over34++;w.hist[Math.min(BINS-1,Math.floor(gap))]++;};
   reset();
   const pct=(hist,total,p)=>{if(!total)return null;const want=Math.ceil(total*p);let seen=0;for(let i=0;i<BINS;i++){seen+=hist[i];if(seen>=want)return i;}return BINS-1;};
   const r1=v=>Math.round(v*10)/10;
@@ -1585,7 +1590,8 @@ const RHYTHM_FRAME_DIAG=(()=>{
       const t=Number(frameNowMs);
       if(Number.isFinite(t)){
         if(last>0){const gap=t-last;if(gap>0&&gap<1000){n++;sum+=gap;if(gap>max)max=gap;if(gap>17.7)over17++;if(gap>34.3)over34++;if(gap>50)over50++;gapHist[Math.min(BINS-1,Math.floor(gap))]++;
-          if(t-first<=START_MS){if(gap>50)startOver50++;if(gap>startMax)startMax=gap;}}}
+          if(t-first<=START_MS){if(gap>50)startOver50++;if(gap>startMax)startMax=gap;}
+          if(t-first<=EARLY_MS)addWin(early,gap);else if(t-first>=LATE_MS)addWin(late,gap);}}
         else first=t;
         last=t;
       }
@@ -1594,7 +1600,8 @@ const RHYTHM_FRAME_DIAG=(()=>{
     },
     // meta … 描き方など(draw・gpu・dpr・w・h・cores・effect・fps・light)
     snapshot(meta){
-      return {n,avg:n?r1(sum/n):null,p95:pct(gapHist,n,.95),max:Math.round(max),over17,over34,over50,startOver50,startMax:Math.round(startMax),
+      const winOf=w=>w&&w.n?{n:w.n,avg:r1(w.sum/w.n),p95:pct(w.hist,w.n,.95),over34:w.over34}:null;
+      return {n,avg:n?r1(sum/n):null,p95:pct(gapHist,n,.95),max:Math.round(max),over17,over34,over50,startOver50,startMax:Math.round(startMax),early:winOf(early),late:winOf(late),
         tickAvg:tickN?r1(tickSum/tickN):null,tickP95:pct(tickHist,tickN,.95),...(meta&&typeof meta==='object'?meta:{})};
     },
   };
@@ -30770,8 +30777,13 @@ const rhythmPreparePreference=()=>{try{if(typeof localStorage==='undefined')retu
 const rhythmPrepareSetPreference=value=>{const next=value==='on'||value==='off'?value:'';try{if(typeof localStorage!=='undefined'){if(next)localStorage.setItem(RHYTHM_PREPARE_KEY,next);else localStorage.removeItem(RHYTHM_PREPARE_KEY);}}catch{}return next;};
 const rhythmPrepareActive=()=>rhythmPreparePreference()!=='off';
 const RHYTHM_GPU_BAND_KEY='mh_rhythm_gpu_band_v1';
-const rhythmGpuBandPreference=()=>{try{if(typeof localStorage==='undefined')return '';return localStorage.getItem(RHYTHM_GPU_BAND_KEY)==='gpu'?'gpu':'';}catch{return '';}};
-const rhythmGpuBandSetPreference=value=>{const next=value==='gpu'?'gpu':'';try{if(typeof localStorage!=='undefined'){if(next)localStorage.setItem(RHYTHM_GPU_BAND_KEY,next);else localStorage.removeItem(RHYTHM_GPU_BAND_KEY);}}catch{}return next;};
+// 2026-10-11 社長の決定で、ノーツを WebGL で描いているときは GPU の帯・区切りの線・ノーツの板を既定で使う(本番の記録 stats.frame で前後を比べる)。
+// 値: 'gpu' = 使う(ノーツも WebGL で描く)・'off' = 使わない(今までの WebGL の描き方)・未設定 = 既定(WebGL のときは使う)。
+// 描画方式で Canvas を選んだ人は 2D のまま(この切り替えはノーツを WebGL にはしない。'gpu' を選んだときだけ WebGL にする)。
+// WebGL が作れない・GPU の帯の部品が作れない・途中で WebGL を取り上げられたときは、今までどおり 2D / CPU で刻む描き方へ戻る
+const rhythmGpuBandPreference=()=>{try{if(typeof localStorage==='undefined')return '';const v=localStorage.getItem(RHYTHM_GPU_BAND_KEY);return v==='gpu'||v==='off'?v:'';}catch{return '';}};
+const rhythmGpuBandActive=()=>rhythmGpuBandPreference()!=='off';
+const rhythmGpuBandSetPreference=value=>{const next=value==='gpu'||value==='off'?value:'';try{if(typeof localStorage!=='undefined'){if(next)localStorage.setItem(RHYTHM_GPU_BAND_KEY,next);else localStorage.removeItem(RHYTHM_GPU_BAND_KEY);}}catch{}return next;};
 const rhythmCreateGpuSlideBand=(gl,host)=>{
   if(!gl||!host)return null;
   const BAND_VS='attribute vec4 aPrev;attribute vec4 aCur;attribute vec4 aNext;attribute vec3 aSky;attribute vec4 aMisc;'+
