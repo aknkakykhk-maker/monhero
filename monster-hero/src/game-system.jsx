@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c559d7e1b49db38a
+// generated-sha256: bedfbd241d02d350
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-11 23:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-11 23:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4240,6 +4240,13 @@ const RHYTHM_SETTINGS_KEY = 'mh_rhythm_settings_v1';
 // 別キーにしたのは、演奏の設定を読み書きする経路へ画面の都合を混ぜないため。
 // 保存値が無い・壊れているときは既定へ落ちるので、これまでのユーザーもそのまま動く。
 const RHYTHM_SELECT_VIEW_KEY = 'mh_rhythm_select_v1';
+// 曲えらびで最後に選んだ難易度(2026-10-11 社長「モンビーで新たに始めるとイージーからの表示になるから、前のやつを引き継いで」)。
+// 新しいキーに難易度の名前(文字列)だけを入れる。読むときは normalizeRhythmLastDifficulty を必ず通す。
+// 入れてよいのは公開している5難易度だけ。HELL などまだ公開していない難易度・壊れた値は '' (今までどおり EASY から)。
+// その曲にその難易度が無い・まだ解放していないときは、曲えらびの部品が今までどおり選べるいちばん下(EASY)を出す。
+// デバッグの全解放の曲えらび(RHYTHM_DEBUG_SELECT)は別の入れ物を使うので、ここへは混ざらない
+const RHYTHM_LAST_DIFFICULTY_KEY = 'mh_rhythm_last_difficulty_v1';
+const normalizeRhythmLastDifficulty = value => (typeof value === 'string' && RHYTHM_DEMO_DIFFICULTY_IDS.includes(value)) ? value : '';
 // 並び順。id は保存値になるので、増やすことはあっても**名前は変えない**。
 const RHYTHM_SORT_ORDERS = Object.freeze([
   Object.freeze({ id:'added',  label:'入手順',  note:'追加された順。いつも同じ並びになります' }),
@@ -45479,6 +45486,13 @@ function MonsterHeroGame() {
     return (list[0]&&list[0].songId)||'';
   });
   const [rhythmSelectedDifficultyId,setRhythmSelectedDifficultyId]=useState('');
+  // 通常の曲えらびで難易度を選んだら、次に開いたときのために覚える(mh_rhythm_last_difficulty_v1)。
+  // 公開している5難易度だけを書く。保存に失敗しても画面は動かす
+  const chooseRhythmDifficulty=id=>{
+    setRhythmSelectedDifficultyId(id);
+    const value=normalizeRhythmLastDifficulty(id);
+    if(value)storeSet(RHYTHM_LAST_DIFFICULTY_KEY,value,false);
+  };
   // デバッグの全解放の曲えらび(RHYTHM_DEBUG_SELECT・2026-10-11 社長の依頼)で選んでいる曲・難易度・並び。
   // 通常の曲えらびの選択とは分けて持つ(デバッグで触っても、通常の画面の選択が動かないように)。保存はしない
   const [rhythmDebugSelectSongId,setRhythmDebugSelectSongId]=useState('');
@@ -45505,6 +45519,10 @@ function MonsterHeroGame() {
     void recordRhythmAchievements(records);   // 実績の台帳へそろえる(初回は、すでに取れていたぶんを取り込む。失敗しても入れる)
     setRhythmMonsterPickerOpen(false); setRhythmMonsterMessage('');
     setRhythmSelectView(normalizeRhythmSelectView(await storeGet(RHYTHM_SELECT_VIEW_KEY,DEFAULT_RHYTHM_SELECT_VIEW,false)));
+    // 前に選んだ難易度を引き継ぐ(2026-10-11)。保存値が無い・壊れている・公開していない難易度なら '' のまま(EASY から)。
+    // このセッションの中ですでに選んでいれば、そちらを優先する
+    const lastDifficulty=normalizeRhythmLastDifficulty(await storeGet(RHYTHM_LAST_DIFFICULTY_KEY,'',false));
+    if(lastDifficulty)setRhythmSelectedDifficultyId(prev=>prev||lastDifficulty);
     // どこから入っても、まずモードえらび(2026-10-03・ユーザー指示「モンビーを始めたときにまずモード選択画面」)。
     // ソロはそこから曲えらび(RHYTHM_DEMO_HOME)へ進む
     setGameState(opts&&typeof opts.to==='string'?opts.to:'RHYTHM_MODE_SELECT');
@@ -63382,7 +63400,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             setQuickRunDetailOpen={setQuickRunDetailOpen}
             setQuickRunStartError={setQuickRunStartError}
             setQuickRunStopConfirm={setQuickRunStopConfirm}
-            setRhythmSelectedDifficultyId={setRhythmSelectedDifficultyId}
+            setRhythmSelectedDifficultyId={chooseRhythmDifficulty}
             setRhythmSelectedSongId={setRhythmSelectedSongId}
             spotClass={spotClass}
             startQuickRunFromRhythm={startQuickRunFromRhythm}

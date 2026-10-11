@@ -35,6 +35,13 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-10-11 23:12", type:'update', group:'rhythm', title:'モンヒロビート：曲えらびで、前に選んだ難易度を覚えるようにしました', status:'new',
+    items:[
+      'モンヒロビートを始め直したとき、曲えらびの難易度が毎回 EASY に戻っていました。前に選んだ難易度を覚えて、次もその難易度から表示します。',
+      'その曲にまだ無い難易度や、まだ解放していない難易度のときは、これまでどおり EASY から表示します。',
+    ],
+  },
+  {
     date: "2026-10-11 21:44", type:'update', group:'rhythm', title:'モンヒロビート：新曲「Grievous Lady」を追加しました', status:'new',
     image: 'images/song-art/grievous-lady.jpg?v=0933a2c340b4',
     items:[

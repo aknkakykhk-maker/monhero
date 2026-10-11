@@ -163,6 +163,13 @@ function MonsterHeroGame() {
     return (list[0]&&list[0].songId)||'';
   });
   const [rhythmSelectedDifficultyId,setRhythmSelectedDifficultyId]=useState('');
+  // 通常の曲えらびで難易度を選んだら、次に開いたときのために覚える(mh_rhythm_last_difficulty_v1)。
+  // 公開している5難易度だけを書く。保存に失敗しても画面は動かす
+  const chooseRhythmDifficulty=id=>{
+    setRhythmSelectedDifficultyId(id);
+    const value=normalizeRhythmLastDifficulty(id);
+    if(value)storeSet(RHYTHM_LAST_DIFFICULTY_KEY,value,false);
+  };
   // デバッグの全解放の曲えらび(RHYTHM_DEBUG_SELECT・2026-10-11 社長の依頼)で選んでいる曲・難易度・並び。
   // 通常の曲えらびの選択とは分けて持つ(デバッグで触っても、通常の画面の選択が動かないように)。保存はしない
   const [rhythmDebugSelectSongId,setRhythmDebugSelectSongId]=useState('');
@@ -189,6 +196,10 @@ function MonsterHeroGame() {
     void recordRhythmAchievements(records);   // 実績の台帳へそろえる(初回は、すでに取れていたぶんを取り込む。失敗しても入れる)
     setRhythmMonsterPickerOpen(false); setRhythmMonsterMessage('');
     setRhythmSelectView(normalizeRhythmSelectView(await storeGet(RHYTHM_SELECT_VIEW_KEY,DEFAULT_RHYTHM_SELECT_VIEW,false)));
+    // 前に選んだ難易度を引き継ぐ(2026-10-11)。保存値が無い・壊れている・公開していない難易度なら '' のまま(EASY から)。
+    // このセッションの中ですでに選んでいれば、そちらを優先する
+    const lastDifficulty=normalizeRhythmLastDifficulty(await storeGet(RHYTHM_LAST_DIFFICULTY_KEY,'',false));
+    if(lastDifficulty)setRhythmSelectedDifficultyId(prev=>prev||lastDifficulty);
     // どこから入っても、まずモードえらび(2026-10-03・ユーザー指示「モンビーを始めたときにまずモード選択画面」)。
     // ソロはそこから曲えらび(RHYTHM_DEMO_HOME)へ進む
     setGameState(opts&&typeof opts.to==='string'?opts.to:'RHYTHM_MODE_SELECT');
@@ -18066,7 +18077,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             setQuickRunDetailOpen={setQuickRunDetailOpen}
             setQuickRunStartError={setQuickRunStartError}
             setQuickRunStopConfirm={setQuickRunStopConfirm}
-            setRhythmSelectedDifficultyId={setRhythmSelectedDifficultyId}
+            setRhythmSelectedDifficultyId={chooseRhythmDifficulty}
             setRhythmSelectedSongId={setRhythmSelectedSongId}
             spotClass={spotClass}
             startQuickRunFromRhythm={startQuickRunFromRhythm}
