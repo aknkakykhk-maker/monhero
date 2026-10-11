@@ -85,3 +85,9 @@
 1. いま: デバッグで入/切(`ASSET_CACHE_DEFAULT_ENABLED = false`)。切のあいだは SW を登録しない
 2. bot(`asset-prefetch-check.js`)と社長の静止画の確認
 3. 既定を入にする(`ASSET_CACHE_DEFAULT_ENABLED = true`)と同時に、更新履歴・ヘルプを書く(changelog-help-update スキル)
+
+## 画面(2026-10-11 の静止画)
+
+設定 → ダウンロード(いまはデバッグで入にしたときだけ出る)
+
+![設定のメニュー](asset-prefetch/settings-menu.jpg) ![ダウンロードのページ](asset-prefetch/download-page.jpg)
