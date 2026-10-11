@@ -1550,6 +1550,20 @@ const rhythmReleaseAgeMs=(eventTimeStamp,nowPerfMs)=>{
 // 押しっぱなしで終わりの窓を過ぎたと決める前に、遅れて届く離しの合図を待つ長さ(上の rhythmReleaseAgeMs で戻せる上限と同じ)。
 // 決まり(窓の中で離せば成功・過ぎたら MISS)は変えず、MISS の文字が出るのがこの分だけ遅れる
 const rhythmReleaseWaitMs=()=>rhythmTouchFixOn('releaseAgeWide')?RHYTHM_INPUT_AGE_CAP_WIDE_MS:RHYTHM_INPUT_AGE_MAX_MS;
+// タッチ側の見回り(RHYTHM_GESTURE_RUNTIME)が離しを判定していない HOLD/SLIDE を、本体が決めるときの判定(2026-10-11)。
+// タッチ側の記録が途中で外れたホールドでは、本体が「終わり際なら離した時刻を見ずに押し始めの判定で成功」にしていて、
+// 押しっぱなしで窓を過ぎても成功になっていた(ボットで 64本中5本)。決まり(窓の中で離せば成功・過ぎたら MISS)をここでも当てる。
+//   songMs … 本体の曲の時刻(離した、または今の時刻) / offsetMs … 判定タイミングの調整。離しの的が分からないノーツは null(今までどおり)
+const rhythmReleaseFallback=(note,songMs,offsetMs)=>{
+  const target=Number(note&&note._rhythmReleaseTargetMs);
+  if(!note||!note._rhythmReleaseRequired||note._rhythmReleaseDone||!Number.isFinite(target))return null;
+  const releaseDelta=(Number(songMs)||0)-(target+(Number(offsetMs)||0));
+  const start=note.holdJudgment||'MISS';
+  const end=rhythmJudgeReleaseLenient(releaseDelta);
+  return {judgment:rhythmWorseJudgment(start,end),deltaMs:releaseDelta,
+    // 押さえたまま: 遅れて届く離しの合図を待つ時間まで過ぎたら MISS で決めてよい
+    expiredWhileHeld:releaseDelta>=RHYTHM_RELEASE_AUTO_MISS_ARM_MS+rhythmReleaseWaitMs()};
+};
 // ノーツを「もう誰も取れない」として見逃しMISSにする時刻。
 //
 // 【2026-09-11・「叩いたのにノーツが消えている」の対策】
@@ -3393,7 +3407,7 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
   // どちらが先に走るかで、押しっぱなしで窓を過ぎても成功になったり MISS になったりしていた(2026-10-11 社長「押しっぱなしでミス判定になるときがある」)。
   // 終わりの判定はこちらの時計(離した時刻を測るのと同じ時計)1本で決める。こちらの時計でまだ窓の中なら、本体の確定を窓を過ぎるまで延ばす
   // (本体の時計が少し先に進んでいても、窓の中で離した指を「過ぎた」と見なさない)。判定の決まりは変えない。
-  // 戻り値 … true=見回りのあとで本体がいま確定してよい / false=まだ待つ(または、この指の見回りが無い)
+  // 戻り値 … true=見回りのあとで本体がいま確定してよい / false=まだ待つ / null=この指の見回りが無い
   const settleHeld=(note,songMs)=>{
     for(const session of sessions.values()){
       if(session.note!==note)continue;
@@ -3408,7 +3422,8 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
       note.endTimeMs=Math.max(Number(note.endTimeMs)||0,(Number(songMs)||0)-session.offsetMs+wait+1);
       return false;
     }
-    return true;
+    // この指の見回りが無い(タッチ側の記録が途中で外れた): 本体が rhythmReleaseFallback で決める
+    return null;
   };
   return {bind,settleHeld,setInputAge,record,release,clear,slideVisualLaneForIndex,invalidateAreaRect,areaRect,_sessions:sessions};
 })();

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 735256f1bf178ca9
+// source-sha256: 2947915e32b18bb8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -33222,7 +33222,11 @@ const RhythmTapTest = ({
       }
       const visitNote = note => {
         if (note.type === 'HOLD' && note.activePointerId !== null && songTimeMs >= note.endTimeMs + settings.judgmentTimingOffsetMs) {
-          if (RHYTHM_GESTURE_RUNTIME.settleHeld?.(note, songTimeMs) !== false && songTimeMs >= note.endTimeMs + settings.judgmentTimingOffsetMs) applyJudgment(note, note.holdJudgment || 'MISS', note.holdDeltaMs || 0);
+          const settled = RHYTHM_GESTURE_RUNTIME.settleHeld?.(note, songTimeMs);
+          const own = settled === null ? rhythmReleaseFallback(note, songTimeMs, settings.judgmentTimingOffsetMs) : null;
+          if (own) {
+            if (own.expiredWhileHeld) applyJudgment(note, 'MISS', own.deltaMs);
+          } else if (settled !== false && songTimeMs >= note.endTimeMs + settings.judgmentTimingOffsetMs) applyJudgment(note, note.holdJudgment || 'MISS', note.holdDeltaMs || 0);
         }
         if (!note.done && note.activePointerId === null && note.releasedAtMs != null) {
           const holdEndMs = note.endTimeMs + settings.judgmentTimingOffsetMs;
@@ -33950,7 +33954,8 @@ const RhythmTapTest = ({
         return;
       }
       if (now >= holdEndMs - RHYTHM_HOLD_RELEASE_GRACE_MS) {
-        applyJudgment(note, note.holdJudgment || 'MISS', note.holdDeltaMs || 0);
+        const own = rhythmReleaseFallback(note, now, settings.judgmentTimingOffsetMs);
+        if (own) applyJudgment(note, own.judgment, own.deltaMs);else applyJudgment(note, note.holdJudgment || 'MISS', note.holdDeltaMs || 0);
       } else {
         note.releasedAtMs = now;
         rhythmFloatingNoteAdd(note);
