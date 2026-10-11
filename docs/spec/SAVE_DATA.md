@@ -153,6 +153,7 @@
 | `mh_extreme_hs_<難易度>` / `mh_extreme_clears_<難易度>` | number / `0` | 極限チャレンジ(`EXTREME` `NIGHTMARE` `CHAOS` `ULTIMATE` `INFINITY` `GOD`)のハイスコアと完走回数 |
 | `mh_rhythm_settings_v1` | object / `DEFAULT_RHYTHM_SETTINGS` | モンビーの演奏設定(`normalizeRhythmSettings`)。2026-09-27 に `roadWidth`(`WIDE`/`STANDARD`/`NARROW`、横画面の道の幅)を足した。無い・知らない値は `WIDE`(それまでと同じ幅)へ補う。2026-09-28 に `noteSeHoldVolume`(押さえている間の溜める音の大きさ・0〜200・既定100)を足した 2026-10-03 に `multiLightLook`(boolean・既定 `true`。みんなで対戦のライブだけ見た目を「軽さ優先」に重ねる)を追加。無い既存の保存値は既定値で補う。2026-10-04 に `modeSelectArt` / `modeSelectComment`(boolean・既定 `true`。モードえらびの助手の立ち絵とコメントを出すか。無い保存値は `true` で補う)を追加。2026-10-03 に `multiLook`(`LIGHT`/`STANDARD`/`VIVID`/`OWN`・既定 `LIGHT`。対戦の演出の段階)を追加。無い保存値は `multiLightLook` から決める(ON→LIGHT・OFF→OWN)。選び直すときは `multiLightLook` も合わせて書く |
 | `mh_rhythm_select_v1` | object / `DEFAULT_RHYTHM_SELECT_VIEW` | 曲えらび画面の見え方(並び順など) |
+| `mh_rhythm_last_difficulty_v1` | string / `''` | 曲えらびで最後に選んだ難易度(2026-10-11)。`EASY`〜`MASTER` だけを入れる。無い・壊れている・公開していない難易度(HELL など)は `''` に正規化して EASY から(`normalizeRhythmLastDifficulty`)。デバッグの全解放の曲えらびの選択は入れない |
 | `mh_rhythm_best_v1` | object | 曲×難易度ごとの BEST(`normalizeRhythmBestRecords`) |
 | `mh_rhythm_achievements_v1` | object / 空の台帳 | モンヒロビートの実績の台帳(2026-10-05・`docs/spec/RHYTHM_ACHIEVEMENTS.md`)。`{v:1, items:{'曲:難易度:称号':{at:取った時刻ms(0=不明)}}, claimed:{'実績のid#報酬ルールのid':受け取った時刻ms}}`。称号は fullCombo・allExcellent・allMarvelous(上の称号は下の称号も含む)。**取れたかの正本は BEST のまま**(BESTには何も足さない)。受け取り済みの印は消さない。壊れた項目は読まずに捨てる。台帳が無い人は、モンヒロビートを開いたときに BEST から取り込む(1度きり・時刻は不明の0) |
 | `mh_rhythm_monsters_v1` | string[] | モンスターノーツ用のマスモン枠(`data/rhythm-mode.js`) |
@@ -186,7 +187,8 @@
 | `mh_rhythm_six_lane_seen_v1` | `true` / 未設定 | 道が6レーンになり MASTER に横フリックが出ることを、曲えらびで一度だけ伝える助手の案内を見たか(未設定なら出す) |
 | `mh_tactics_intro_seen_v1` | `true` / 未設定 | タクティクスバトルの導入会話を見たか(β公開後に1度だけ流す) |
 | `mh_rhythm_hell_story_seen_v1` | `true` / 未設定 | 難易度 HELL のお話「空まで届くビート」を見たか(2026-10-11。HELL の公開まで読み書きしない。デバッグから見たぶんは立てない) |
-| `mh_sky_box_look_proto` | `'a'`〜`'c'` / 未設定 | デバッグ専用。SKY TAP の見た目の案を見比べるための選択(2026-10-11)。未設定ならいまの案Z。ふつうのプレイは書かない |
+| `mh_sky_box_look_proto` | `'z'`・`'a'`・`'c'` / 未設定 | デバッグ専用。SKY TAP の見た目の案を見比べるための選択(2026-10-11)。未設定なら既定の案B(赤い板・社長の決定)。ふつうのプレイは書かない |
+| `mh_sky_lane_look_proto` | `'a'`〜`'c'`・`'d1l'`・`'d1m'`・`'d2l'`・`'d2m'` / 未設定 | デバッグ専用。空中のレーンの見せ方の案を見比べるための選択(2026-10-11)。未設定なら「なし」(いままで)。ふつうのプレイは書かない |
 | `mh_tactics_ex_intro_seen_v1` | `true` / 未設定 | タクティクスで「距離枠をタップするとEXが開く」を一度だけ伝える案内を見たか(公開フラグ `tacticsExSkills` と同じで出し入れ) |
 | `mh_profile_frame_v1` | string / `'none'` | 選んでいるプロフィールフレームのid(`data/breeder.js` の `PROFILE_FRAMES`)。ブリーダーアイコン(`mh_breeder_icon`)とは**独立した設定**で、アイコン側のキーは触らない。読み込みは必ず `normalizeProfileFrameId` を通し、値が無い・壊れている・知らないid・未公開(`released:false`)のidはすべて `'none'`(フレームなし)へ倒す |
 | `mh_quick_rhythm_intro_seen_v1` | boolean / `false` | クイック∞周回とモンビーの連携の案内(バトル画面)を見たか |

@@ -68,13 +68,13 @@ section{display:flex;flex-direction:column;gap:10px}
 <div class="wrap">
   <header>
     <h1>モンヒロ社 社長室</h1>
-    <p class="lead">10/11 17:42 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。<br>モンスター Tier 表: <a href="https://claude.ai/artifact/3sUNc2pQgN5f4QdYYW5tW8">https://claude.ai/artifact/3sUNc2pQgN5f4QdYYW5tW8</a>(サイドバーにも固定)</p>
+    <p class="lead">10/11 23:45 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。<br>モンスター Tier 表: <a href="https://claude.ai/artifact/3sUNc2pQgN5f4QdYYW5tW8">https://claude.ai/artifact/3sUNc2pQgN5f4QdYYW5tW8</a>(サイドバーにも固定)</p>
   </header>
 
   <nav class="counts" aria-label="件数">
     <a class="count warn" href="#decide"><b>0</b><span>社長の判断待ち</span></a>
-    <a class="count" href="#work"><b>5</b><span>進行中</span></a>
-    <a class="count" href="#shipped"><b>65</b><span>公開したもの</span></a>
+    <a class="count" href="#work"><b>4</b><span>進行中</span></a>
+    <a class="count" href="#shipped"><b>69</b><span>公開したもの</span></a>
   </nav>
 
   <section id="decide">
@@ -88,20 +88,15 @@ section{display:flex;flex-direction:column;gap:10px}
     <section id="work">
       <h2>進行中の作業</h2>
       <ul class="list">
-      <li id="r2610111742debugsel">
-        <div class="row-title">デバッグモードを使いやすく(モンヒロビートは通常の曲えらびの全解放版で)</div>
+      <li id="r2610111850heat">
+        <div class="row-title">明らかに普通の音ゲーより発熱すごいしそれに対して発熱でのかくつき影響度も高いよ → 全部やってほしいけど見た目は変わらないで</div>
         
-        <div class="meta"><span>未定(窓口の交代のあと)</span><span>見込み 窓口が新しい会話に移ったあとに着手。案: デバッグから入る「全解放の曲えらび」(ふつうの曲えらびと同じ見た目・ジャンルや並べ替え・横画面ボタンが使える・試作の枠の曲や HELL・デバッグ専用曲も並ぶ・自己ベストやランキングには記録しない)。今の縦一列の一覧は置き換え</span></div>
+        <div class="meta"><span>ドライバーくん</span><span>見込み GPU の描き方の既定化(#2765)・出だしの白い輪(#2756)・準備の既定化(#2752)は公開済み。残り: 叩いた光の canvas 版を既定に(社長 OK)→ DOM の書き換え削減 → 重い飾り → 残りの GPU 化。10/14 朝に本番の記録で前後を比べる</span><span>PR #2752・#2756・#2765</span></div>
       </li>
       <li id="r2610111259genre">
         <div class="row-title">モンヒロビートの全曲にジャンルを付ける(余裕のあるときに)</div>
         
         <div class="meta"><span>未定(余裕ができたら)</span><span>見込み 仕組み(RHYTHM_GENRES と曲の印 RHYTHM_SONG_GENRE_TAGS)はもうある。いまのタブは ALL・イベント・お気に入りだけで、曲に印は1つも付いていない。始めるときに、ジャンルの分け方の案(曲の一覧つき)を社長に選択式で聞いてから全曲に付ける。保存値の id は名前を変えない(original/collab は過去に半日出していたので同じ id で足し直す)</span></div>
-      </li>
-      <li id="r2610110855grievous">
-        <div class="row-title">新曲「Grievous Lady」(HELL あり・止まる/前に飛ぶ/後ろに戻る演出)</div>
-        <div class="row-body">素材はブランチ claude/incoming-grievous-lady。MASTER は全曲で最高難度、HELL は案Z の見た目・高さ39%で空中の難しさを足す</div>
-        <div class="meta"><span>リバースくん(新曲係・新規採用)</span><span>見込み デバッグモードに入れた(#2692〜#2705)。社長が遊んで指摘: 始まりのノーツが途中から出る(#2698 で直した)・押せない所(#2697/#2703 で0)・A の動き出しの速さの段差(#2705 で直した)。いま B の弾み(全部のノーツがそろって弾む)と A を参考どおりに作り直し中。社長の OK のあと公開</span></div>
       </li>
       <li id="r2610102320sky">
         <div class="row-title">Sheriruth: 空中ノーツの新しい難易度(MASTER の上の6段目)を足す</div>
@@ -115,6 +110,16 @@ section{display:flex;flex-direction:column;gap:10px}
       </li></ul>
       <h3 style="margin-top:14px">これからの予定(まだ始めていない)</h3>
       <ul class="list">
+      <li id="r2610112320tapcheck">
+        <div class="row-title">10/12の深夜2時から全曲エキスパート以上のノーツのタップ位置の確認作業をして。今まで押しづらいとかうまく反応しないのって判定位置のズレとかあるんじゃない？</div>
+        
+        <div class="meta"><span>部長テンポくん</span><span>見込み 10/12 2:00 に予約(trig_01E2AjPwkuR8jzkQKmPRL8bB)。全曲の EXPERT・MASTER を bot で流し、描かれた位置と受け付けの位置のずれを測る。朝に窓口へ要約</span></div>
+      </li>
+      <li id="r2610111915hellstory">
+        <div class="row-title">難易度【HELL】の実装のときにストーリーと説明をいれたいから作っといて。BGMはSheriruth</div>
+        
+        <div class="meta"><span>マクアケくん</span><span>見込み お話「空まで届くビート」と説明4枚をデバッグに組み込み済み。HELL の公開(RELEASE_FLAGS.rhythmHell)と同時に出す。開き方は案A(その曲の MASTER クリアで HELL が開く)</span><span>PR #2749</span></div>
+      </li>
       <li id="r2610101330speed">
         <div class="row-title">Tier 表の実戦を速くする(実戦係の採用・役割分け・ボット用の早送り)</div>
         <div class="row-body">いまは1回20〜30分・同時3本で1時間に6〜9回。①実戦係を1〜2人採用して並べる ②広く測るのはシミュレーター、実戦は上位・境目・ぶれの中の子・パーティに絞る ③デバッグ専用の早送り(通常プレイに出ない・保存とランキングに触れない・早送りあり/なしで結果が一致するのを数字で確かめてから使う)</div>
@@ -209,6 +214,26 @@ section{display:flex;flex-direction:column;gap:10px}
     <section id="shipped">
       <h2>公開したもの</h2>
       <ul class="list">
+      <li id="r2610112300lastdiff">
+        <div class="row-title">モンビーで新たに始めるとイージーからの表示になるから、これは前のやつを引き継いで</div>
+        <div class="row-body">曲えらびで前に選んだ難易度を覚える(mh_rhythm_last_difficulty_v1)</div>
+        <div class="meta"><span>カゲくん</span><span>PR #2779</span></div>
+      </li>
+      <li id="r2610111742debugsel">
+        <div class="row-title">デバッグモードを使いやすく(モンヒロビートは通常の曲えらびの全解放版で)</div>
+        <div class="row-body">デバッグに「全解放の曲えらび」(通常の曲えらびと同じ画面・横持ち・HELL 含む全難易度・記録しない)。古い縦の一覧は社長の判断で外した</div>
+        <div class="meta"><span>未定(窓口の交代のあと)</span><span>PR #2776・#2783</span></div>
+      </li>
+      <li id="r2610110855grievous">
+        <div class="row-title">新曲「Grievous Lady」(HELL あり・止まる/前に飛ぶ/後ろに戻る演出)</div>
+        <div class="row-body">素材はブランチ claude/incoming-grievous-lady。MASTER は全曲で最高難度、HELL は案Z の見た目・高さ39%で空中の難しさを足す</div>
+        <div class="meta"><span>リバースくん(新曲係・新規採用)</span><span>PR #2768・#2780</span></div>
+      </li>
+      <li id="r2610111714prefetch">
+        <div class="row-title">よくゲームである事前ダウンロード…どうせ作るならモンビー周り、バトル周り、全部とかそういうふうに作ったほうが良さそう</div>
+        <div class="row-body">設定 → ダウンロード(モンヒロビート/バトル/全部・自動ダウンロード 既定する)。1段目の保存値で行が消える不具合を #2747 で直した</div>
+        <div class="meta"><span>ストックくん</span><span>PR #2739・#2741・#2743・#2746・#2747</span></div>
+      </li>
       <li id="r2610111245shadow">
         <div class="row-title">新曲「Against My Own Shadow」(HELL なし・地上5難易度)</div>
         

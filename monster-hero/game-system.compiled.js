@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 777786414acb1c97
+// source-sha256: 243948323c4a2dca
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-11 23:47";
+const BUILD_DATE = "2026-10-11 23:49";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -5360,6 +5360,8 @@ const BGM_TRACK_BY_KEY = Object.fromEntries(BGM_TRACKS.filter(track => track.leg
 const rhythmSongTrack = song => BGM_TRACK_BY_ID[song?.bgmTrackId] || null;
 const RHYTHM_SETTINGS_KEY = 'mh_rhythm_settings_v1';
 const RHYTHM_SELECT_VIEW_KEY = 'mh_rhythm_select_v1';
+const RHYTHM_LAST_DIFFICULTY_KEY = 'mh_rhythm_last_difficulty_v1';
+const normalizeRhythmLastDifficulty = value => typeof value === 'string' && RHYTHM_DEMO_DIFFICULTY_IDS.includes(value) ? value : '';
 const RHYTHM_SORT_ORDERS = Object.freeze([Object.freeze({
   id: 'added',
   label: '入手順',
@@ -29415,7 +29417,8 @@ const RhythmSongSelect = ({
   toolbarExtra = null,
   playLabel = '決定',
   playDisabled = false,
-  hideRandom = false
+  hideRandom = false,
+  unlockAll = false
 }) => {
   const spot = name => typeof spotClass === 'function' ? spotClass(name) : '';
   useEffect(() => {
@@ -29440,7 +29443,7 @@ const RhythmSongSelect = ({
   };
   const song = playable.find(entry => entry.songId === songId) || playable[0] || null;
   const available = song ? (difficulties || []).filter(difficulty => rhythmChartPlayable(song, difficulty.id)) : [];
-  const unlocked = item => !song || rhythmDifficultyUnlocked(song.songId, item.id, bestRecords);
+  const unlocked = item => unlockAll || !song || rhythmDifficultyUnlocked(song.songId, item.id, bestRecords);
   const openList = available.filter(unlocked);
   const lockedFitText = song ? available.filter(item => !unlocked(item)).map(item => `${rhythmDifficultyUnlockRequirement(item.id, song.songId)}で解放`).reduce((a, b) => rhythmTitleFitEm(b) > rhythmTitleFitEm(a) ? b : a, '') : '';
   const picked = available.find(entry => entry.id === difficultyId);
@@ -30998,6 +31001,42 @@ function RhythmSkyStage({
   const c = '221,214,254',
     f = v => Number(v).toFixed(2),
     fr = plane.front;
+  const skyLaneLook = RHYTHM_SKY_LANE_LOOK.id,
+    mk = Array.isArray(plane.markers) ? plane.markers : [];
+  const skyLaneD = (() => {
+    if (!/^d[12][lm]$/.test(skyLaneLook)) return null;
+    const SKY_LANE_DEPTH = .14,
+      line = RHYTHM_JUDGMENT_LINE_Y.ratio,
+      base = rhythmProjectionScale(line),
+      steps = 8,
+      ys = [];
+    for (let i = 0; i <= steps; i++) ys.push(line - SKY_LANE_DEPTH + SKY_LANE_DEPTH * i / steps);
+    const lift = y => (y - RHYTHM_SKY_LIFT.ratio * rhythmProjectionScale(y) / base) * 100;
+    const at = (k, y) => `${f(rhythmProjectBoundary(k, y) * 100)},${f(lift(y))}`;
+    const surface = [...ys.map(y => at(0, y)), ...ys.slice().reverse().map(y => at(RHYTHM_LANE_COUNT, y))].join(' ');
+    const dividers = Array.from({
+      length: RHYTHM_LANE_COUNT + 1
+    }, (_, k) => ys.map(y => at(k, y)).join(' '));
+    const k = skyLaneLook.endsWith('m') ? {
+      fill: '.1',
+      div: '.22',
+      edge: '.45',
+      postOuter: '.32',
+      postInner: '.1'
+    } : {
+      fill: '.055',
+      div: '.13',
+      edge: '.28',
+      postOuter: '.2',
+      postInner: '.06'
+    };
+    return {
+      surface,
+      dividers,
+      k,
+      allPosts: skyLaneLook.startsWith('d2')
+    };
+  })();
   return React.createElement("svg", {
     "data-rhythm-sky-stage": true,
     viewBox: "0 0 100 100",
@@ -31082,19 +31121,95 @@ function RhythmSkyStage({
   }))), React.createElement("polygon", {
     points: plane.floor,
     fill: "url(#mhSkyFloor)"
+  }), skyLaneLook === 'a' && React.createElement("g", {
+    "data-rhythm-sky-lane-look": "a"
+  }, React.createElement("rect", {
+    x: f(mk[0]),
+    y: f(fr.y - 2.4),
+    width: f(mk[mk.length - 1] - mk[0]),
+    height: "3.6",
+    fill: "rgb(226,232,240)",
+    fillOpacity: ".07"
   }), React.createElement("line", {
-    x1: "-2",
+    x1: f(mk[0]),
+    y1: f(fr.y - 2.4),
+    x2: f(mk[mk.length - 1]),
+    y2: f(fr.y - 2.4),
+    stroke: "rgb(226,232,240)",
+    strokeOpacity: ".2",
+    strokeWidth: "1",
+    vectorEffect: "non-scaling-stroke"
+  }), mk.map((x, k) => React.createElement("line", {
+    key: k,
+    x1: f(x),
+    y1: f(fr.y - 2.4),
+    x2: f(x),
+    y2: f(fr.y + 1.2),
+    stroke: "rgb(226,232,240)",
+    strokeOpacity: k === 0 || k === mk.length - 1 ? '.35' : '.14',
+    strokeWidth: "1",
+    vectorEffect: "non-scaling-stroke"
+  }))), skyLaneLook === 'b' && React.createElement("g", {
+    "data-rhythm-sky-lane-look": "b"
+  }, mk.map((x, k) => React.createElement("line", {
+    key: k,
+    x1: f(x),
+    y1: f(fr.y - 3),
+    x2: f(x),
+    y2: f(fr.y + 1.4),
+    stroke: "rgb(226,232,240)",
+    strokeOpacity: k === 0 || k === mk.length - 1 ? '.5' : '.28',
+    strokeWidth: k === 0 || k === mk.length - 1 ? '1.6' : '1.1',
+    vectorEffect: "non-scaling-stroke"
+  }))), skyLaneLook === 'c' && React.createElement("g", {
+    "data-rhythm-sky-lane-look": "c"
+  }, mk.map((x, k) => React.createElement("line", {
+    key: k,
+    x1: f(x),
+    y1: f(fr.gy),
+    x2: f(x),
+    y2: f(fr.y),
+    stroke: "rgb(226,232,240)",
+    strokeOpacity: k === 0 || k === mk.length - 1 ? '.16' : '.07',
+    strokeWidth: "1",
+    vectorEffect: "non-scaling-stroke"
+  }))), skyLaneD && React.createElement("g", {
+    "data-rhythm-sky-lane-look": skyLaneLook
+  }, React.createElement("polygon", {
+    points: skyLaneD.surface,
+    fill: "rgb(226,232,240)",
+    fillOpacity: skyLaneD.k.fill
+  }), skyLaneD.dividers.map((pts, k) => React.createElement("polyline", {
+    key: k,
+    points: pts,
+    fill: "none",
+    stroke: "rgb(226,232,240)",
+    strokeOpacity: k === 0 || k === skyLaneD.dividers.length - 1 ? skyLaneD.k.edge : skyLaneD.k.div,
+    strokeWidth: "1",
+    vectorEffect: "non-scaling-stroke"
+  })), mk.map((x, k) => (skyLaneD.allPosts || k === 0 || k === mk.length - 1) && React.createElement("line", {
+    key: `p${k}`,
+    x1: f(x),
+    y1: f(fr.gy),
+    x2: f(x),
+    y2: f(fr.y),
+    stroke: "rgb(226,232,240)",
+    strokeOpacity: k === 0 || k === mk.length - 1 ? skyLaneD.k.postOuter : skyLaneD.k.postInner,
+    strokeWidth: "1",
+    vectorEffect: "non-scaling-stroke"
+  }))), React.createElement("line", {
+    x1: f(fr.roadL - RHYTHM_SKY_LOOK.line.marginPct),
     y1: f(fr.y),
-    x2: "102",
+    x2: f(fr.roadR + RHYTHM_SKY_LOOK.line.marginPct),
     y2: f(fr.y),
     stroke: `rgb(${RHYTHM_SKY_LOOK.line.bandRgb})`,
     strokeOpacity: RHYTHM_SKY_LOOK.line.bandAlpha,
     strokeWidth: RHYTHM_SKY_LOOK.line.bandPx,
     vectorEffect: "non-scaling-stroke"
   }), React.createElement("line", {
-    x1: "-2",
+    x1: f(fr.roadL - RHYTHM_SKY_LOOK.line.marginPct),
     y1: f(fr.y),
-    x2: "102",
+    x2: f(fr.roadR + RHYTHM_SKY_LOOK.line.marginPct),
     y2: f(fr.y),
     stroke: `rgb(${RHYTHM_SKY_LOOK.line.coreRgb})`,
     strokeOpacity: RHYTHM_SKY_LOOK.line.coreAlpha,
@@ -31135,6 +31250,57 @@ function RhythmSkyLiftSwitch() {
     onClick: () => pick(v),
     className: `min-h-[44px] rounded-xl text-sm font-black ${value === v ? 'bg-rose-600 text-white ring-2 ring-rose-200' : 'bg-slate-800 text-slate-300'}`
   }, v, "%", v === 16 ? '(いま)' : ''))));
+}
+const RHYTHM_SKY_LANE_LOOK_LABELS = Object.freeze({
+  none: 'いま(なし)',
+  a: '案A 判定線に薄い帯',
+  b: '案B 区切りの目盛り',
+  c: '案C 地上から細い柱',
+  d1l: '案D1 面+端の柱(薄め)',
+  d1m: '案D1 面+端の柱(やや見える)',
+  d2l: '案D2 面+全部の柱(薄め)',
+  d2m: '案D2 面+全部の柱(やや見える)'
+});
+const RHYTHM_SKY_LANE_LOOK = {
+  id: (() => {
+    try {
+      const v = typeof localStorage !== 'undefined' ? localStorage.getItem('mh_sky_lane_look_proto') : '';
+      return v && RHYTHM_SKY_LANE_LOOK_LABELS[v] ? v : 'none';
+    } catch (e) {
+      return 'none';
+    }
+  })(),
+  set(id) {
+    const v = RHYTHM_SKY_LANE_LOOK_LABELS[id] ? id : 'none';
+    this.id = v;
+    try {
+      if (v === 'none') localStorage.removeItem('mh_sky_lane_look_proto');else localStorage.setItem('mh_sky_lane_look_proto', v);
+    } catch (e) {}
+  }
+};
+function RhythmSkyLaneLookSwitch() {
+  const [value, setValue] = useState(() => RHYTHM_SKY_LANE_LOOK.id);
+  const pick = v => {
+    RHYTHM_SKY_LANE_LOOK.set(v);
+    setValue(RHYTHM_SKY_LANE_LOOK.id);
+  };
+  return React.createElement("section", {
+    "data-rhythm-sky-lane-look-switch": true,
+    className: "mb-3 rounded-2xl border border-rose-400/50 bg-rose-950/25 p-3"
+  }, React.createElement("h3", {
+    className: "text-xs font-black text-rose-100"
+  }, "空中のレーンの見せ方(試作・見比べ用)"), React.createElement("p", {
+    className: "mt-1 text-[10px] font-bold text-rose-200/80"
+  }, "ここで選んだ見せ方は試作の HELL だけに効きます。演奏の始めに1回置くだけで、重さは変わりません。"), React.createElement("div", {
+    className: "mt-2 grid grid-cols-2 gap-2"
+  }, Object.keys(RHYTHM_SKY_LANE_LOOK_LABELS).map(v => React.createElement("button", {
+    key: v,
+    type: "button",
+    "data-rhythm-sky-lane-look-pick": v,
+    "aria-pressed": value === v,
+    onClick: () => pick(v),
+    className: `min-h-[44px] rounded-xl px-1 text-xs font-black ${value === v ? 'bg-rose-600 text-white ring-2 ring-rose-200' : 'bg-slate-800 text-slate-300'}`
+  }, RHYTHM_SKY_LANE_LOOK_LABELS[v]))));
 }
 function RhythmSkyBoxLookSwitch() {
   const [value, setValue] = useState(() => RHYTHM_SKY_BOX_VARIANT.id);
@@ -32177,7 +32343,9 @@ const RhythmTapTest = ({
         l: last.l,
         r: last.r,
         y: last.y,
-        gy: last.gy
+        gy: last.gy,
+        roadL: rhythmProjectBoundary(0, Math.max(0, last.y / 100)) * 100,
+        roadR: rhythmProjectBoundary(RHYTHM_LANE_COUNT, Math.max(0, last.y / 100)) * 100
       },
       markers: Array.from({
         length: RHYTHM_LANE_COUNT + 1
@@ -32396,8 +32564,12 @@ const RhythmTapTest = ({
   }))), React.createElement("div", {
     className: "pointer-events-none absolute inset-0",
     "aria-hidden": "true",
+    "data-rhythm-lane-press-layer": "",
     style: {
-      "--mh-lane-glow": settings.laneGlow === 'NONE' ? '0' : settings.laneGlow === 'LOW' ? '.35' : '1'
+      "--mh-lane-glow": settings.laneGlow === 'NONE' ? '0' : settings.laneGlow === 'LOW' ? '.35' : '1',
+      ...(skyChart ? {
+        zIndex: 3
+      } : null)
     }
   }, Array.from({
     length: RHYTHM_SUB_LANE_COUNT
@@ -32410,7 +32582,7 @@ const RhythmTapTest = ({
       clipPath: rhythmSubLanePolygon(subLane),
       background: RHYTHM_LANE_PRESS_GRADIENT
     }
-  })))), [settings.lightweightMode, settings.effectAmount, settings.laneGlow]);
+  })))), [settings.lightweightMode, settings.effectAmount, settings.laneGlow, skyChart]);
   const monsterForNote = note => {
     const slot = rhythmNoteMonsterSlot(note);
     return slot ? monstersRef.current[slot - 1] || null : null;
@@ -35937,7 +36109,14 @@ const RhythmTapTest = ({
       touchAction: 'none'
     }
   }, songIntro && (() => {
-    const introCredit = rhythmSongIntroCredit(song),
+    const introTitle = rhythmSongFullName(song),
+      introTitleFont = (() => {
+        const avail = Math.min((typeof window !== 'undefined' ? window.innerWidth : 844) * .72, 560) - 16,
+          em = [...String(introTitle)].reduce((n, ch) => n + (/[\x20-\x7e]/.test(ch) ? .6 : 1), 0);
+        return Math.max(13, Math.min(20, Math.floor(avail / Math.max(1, em))));
+      })(),
+      introHint = songIntro.skipped ? 'まもなく はじまります' : songIntro.skippable && !songIntro.short ? 'タップでとばす' : '',
+      introCredit = rhythmSongIntroCredit(song),
       introLevel = Number(chart?.level),
       introColor = RHYTHM_SONG_INTRO_DIFFICULTY_COLORS[difficulty.id] || '#64748b';
     return React.createElement("div", {
@@ -35969,8 +36148,7 @@ const RhythmTapTest = ({
       "data-rhythm-song-intro-art": true,
       style: {
         position: 'relative',
-        flex: '0 1 auto',
-        minHeight: '96px',
+        flex: '0 0 auto',
         height: isLandscape ? 'min(54vh,40vw,320px)' : 'min(68vw,42vh,320px)',
         aspectRatio: '1 / 1',
         borderRadius: '14px',
@@ -36010,23 +36188,35 @@ const RhythmTapTest = ({
     }, "♪ LIVE START"), React.createElement("b", {
       "data-rhythm-song-intro-title": true,
       style: {
-        display: 'block',
-        overflowWrap: 'anywhere',
-        marginTop: isLandscape ? '2px' : '4px',
-        fontSize: isLandscape ? '21px' : '24px',
+        ...(isLandscape ? {
+          display: 'block',
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          fontSize: `${introTitleFont}px`
+        } : {
+          display: '-webkit-box',
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: 'vertical',
+          overflow: 'hidden',
+          overflowWrap: 'anywhere',
+          fontSize: '24px'
+        }),
+        padding: '0 8px 3px',
+        margin: isLandscape ? '1px -8px 0' : '4px -8px 0',
         fontWeight: 900,
         lineHeight: 1.25,
         color: '#fff',
-        textShadow: '0 0 14px rgba(103,232,249,.55),0 2px 8px rgba(2,6,23,.95)'
+        textShadow: '0 0 8px rgba(103,232,249,.5),0 2px 4px rgba(2,6,23,.95)'
       }
-    }, rhythmSongFullName(song)), introCredit && React.createElement("p", {
+    }, introTitle), introCredit && React.createElement("p", {
       "data-rhythm-song-intro-credit": true,
       style: {
         display: '-webkit-box',
         WebkitLineClamp: isLandscape ? 1 : 2,
         WebkitBoxOrient: 'vertical',
         overflow: 'hidden',
-        margin: '3px 0 0',
+        margin: isLandscape ? '1px 0 0' : '3px 0 0',
         fontSize: '12px',
         fontWeight: 700,
         lineHeight: 1.4,
@@ -36038,7 +36228,7 @@ const RhythmTapTest = ({
         alignItems: 'center',
         justifyContent: 'center',
         gap: '8px',
-        marginTop: isLandscape ? '6px' : '10px'
+        marginTop: isLandscape ? '5px' : '10px'
       }
     }, React.createElement("span", {
       "data-rhythm-song-intro-difficulty": true,
@@ -36060,24 +36250,24 @@ const RhythmTapTest = ({
         color: '#fff',
         fontVariantNumeric: 'tabular-nums'
       }
-    }, "Lv.", introLevel)), songIntro.skipped ? React.createElement("small", {
-      "data-rhythm-song-intro-wait": true,
+    }, "Lv.", introLevel), isLandscape && introHint && React.createElement("small", {
+      "data-rhythm-song-intro-wait": songIntro.skipped ? '' : undefined,
       style: {
-        display: 'block',
-        marginTop: isLandscape ? '6px' : '10px',
+        marginLeft: '6px',
         fontSize: '10px',
         fontWeight: 700,
-        color: '#a5f3fc'
+        color: songIntro.skipped ? '#a5f3fc' : '#94a3b8'
       }
-    }, "まもなく はじまります") : songIntro.skippable && !songIntro.short && React.createElement("small", {
+    }, introHint)), !isLandscape && introHint && React.createElement("small", {
+      "data-rhythm-song-intro-wait": songIntro.skipped ? '' : undefined,
       style: {
         display: 'block',
-        marginTop: isLandscape ? '6px' : '10px',
+        marginTop: '10px',
         fontSize: '10px',
         fontWeight: 700,
-        color: '#94a3b8'
+        color: songIntro.skipped ? '#a5f3fc' : '#94a3b8'
       }
-    }, "タップでとばす")));
+    }, introHint)));
   })(), React.createElement("header", {
     "data-rhythm-hud": true,
     className: "pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-2 px-3 pt-1.5"
@@ -74348,6 +74538,14 @@ function MonsterHeroGame() {
     return list[0] && list[0].songId || '';
   });
   const [rhythmSelectedDifficultyId, setRhythmSelectedDifficultyId] = useState('');
+  const chooseRhythmDifficulty = id => {
+    setRhythmSelectedDifficultyId(id);
+    const value = normalizeRhythmLastDifficulty(id);
+    if (value) storeSet(RHYTHM_LAST_DIFFICULTY_KEY, value, false);
+  };
+  const [rhythmDebugSelectSongId, setRhythmDebugSelectSongId] = useState('');
+  const [rhythmDebugSelectDifficultyId, setRhythmDebugSelectDifficultyId] = useState('');
+  const [rhythmDebugSelectView, setRhythmDebugSelectView] = useState(null);
   const [rhythmHelpTopicId, setRhythmHelpTopicId] = useState(null);
   const [rhythmSelectView, setRhythmSelectView] = useState(DEFAULT_RHYTHM_SELECT_VIEW);
   const saveRhythmSelectView = next => {
@@ -74366,6 +74564,8 @@ function MonsterHeroGame() {
     setRhythmMonsterPickerOpen(false);
     setRhythmMonsterMessage('');
     setRhythmSelectView(normalizeRhythmSelectView(await storeGet(RHYTHM_SELECT_VIEW_KEY, DEFAULT_RHYTHM_SELECT_VIEW, false)));
+    const lastDifficulty = normalizeRhythmLastDifficulty(await storeGet(RHYTHM_LAST_DIFFICULTY_KEY, '', false));
+    if (lastDifficulty) setRhythmSelectedDifficultyId(prev => prev || lastDifficulty);
     setGameState(opts && typeof opts.to === 'string' ? opts.to : 'RHYTHM_MODE_SELECT');
   };
   const openRhythmDebug = async () => {
@@ -78113,7 +78313,7 @@ function MonsterHeroGame() {
     TRAINING_INFO: 'trainingMenu',
     TRAINING_BOARD: 'trainingBoard'
   };
-  const BGM_SILENT_STATES = Object.freeze(['RHYTHM_PLAY', 'RHYTHM_DEMO_HOME', 'RHYTHM_DEMO_HELP', 'RHYTHM_DEMO_MONSTERS', 'RHYTHM_INFO', 'RHYTHM_OPTIONS', 'RHYTHM_RANKING', 'RHYTHM_MULTI', 'ASSISTANT_SELECT', 'DEBUG_SETTINGS', 'DEBUG_BATTLE_SETUP', 'DEBUG_DATA_SETUP', 'RHYTHM_DEBUG', 'BREEDER_ICON_DEBUG', 'DYE_MASK_POSITION_DEBUG', 'MASU_PATTERN_DEBUG', 'MONSTER_CHECK_DEBUG', 'MONSTER_IMAGE_DEBUG', 'SPECIES_CHALLENGE_DEBUG', 'TRANSCEND_DEBUG', 'RAID_JACK_DEBUG', 'RPG_DEBUG_SETUP', 'RPG_DEBUG_BATTLE', 'RPG_DEBUG_RESULT']);
+  const BGM_SILENT_STATES = Object.freeze(['RHYTHM_PLAY', 'RHYTHM_DEMO_HOME', 'RHYTHM_DEMO_HELP', 'RHYTHM_DEMO_MONSTERS', 'RHYTHM_INFO', 'RHYTHM_OPTIONS', 'RHYTHM_RANKING', 'RHYTHM_MULTI', 'ASSISTANT_SELECT', 'DEBUG_SETTINGS', 'DEBUG_BATTLE_SETUP', 'DEBUG_DATA_SETUP', 'RHYTHM_DEBUG', 'RHYTHM_DEBUG_SELECT', 'BREEDER_ICON_DEBUG', 'DYE_MASK_POSITION_DEBUG', 'MASU_PATTERN_DEBUG', 'MONSTER_CHECK_DEBUG', 'MONSTER_IMAGE_DEBUG', 'SPECIES_CHALLENGE_DEBUG', 'TRANSCEND_DEBUG', 'RAID_JACK_DEBUG', 'RPG_DEBUG_SETUP', 'RPG_DEBUG_BATTLE', 'RPG_DEBUG_RESULT']);
   const PROFILE_BGM_STATES = ['ROSTER', 'OWNED_MONSTERS', 'MASU_MONS', 'MASU_ENHANCE', 'MASU_TRANSCEND_ENHANCE', 'MASU_AUTO_ENHANCE', 'MASU_SOUL_TRAITS'];
   const MASU_ENHANCE_STATES = ['MASU_ENHANCE', 'MASU_TRANSCEND_ENHANCE', 'MASU_AUTO_ENHANCE', 'MASU_SOUL_TRAITS'];
   const RUN_PHASE_STATES = ['PICK_HERO', 'PICK_ALLY', 'PICK_SLOT', 'PICK_TEACHING', 'PICK_PRO_ALLIES', 'REWARD_PICK', 'UPGRADE_SKILL', 'WAVE_RESULT', 'CHAMPION', 'QUICK_GROWTH', 'QUICK_JOIN'];
@@ -97895,7 +98095,7 @@ function MonsterHeroGame() {
         if (rhythmPlay.from === 'multi' && !RHYTHM_MULTI.hasReported(rhythmPlay.multiStartId)) RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId, null, true, {
           diffId: rhythmPlay.difficulty.id
         });
-        const back = rhythmPlay.from === 'multi' ? 'RHYTHM_MULTI' : rhythmPlay.from === 'calibration' ? 'RHYTHM_OPTIONS' : rhythmPlay.from === 'debug' || rhythmPlay.from === 'proto' ? 'RHYTHM_DEBUG' : 'RHYTHM_DEMO_HOME';
+        const back = rhythmPlay.from === 'multi' ? 'RHYTHM_MULTI' : rhythmPlay.from === 'calibration' ? 'RHYTHM_OPTIONS' : rhythmPlay.backTo === 'RHYTHM_DEBUG_SELECT' ? 'RHYTHM_DEBUG_SELECT' : rhythmPlay.from === 'debug' || rhythmPlay.from === 'proto' ? 'RHYTHM_DEBUG' : 'RHYTHM_DEMO_HOME';
         setRhythmPlay(null);
         setGameState(back);
       },
@@ -98160,7 +98360,7 @@ function MonsterHeroGame() {
       setQuickRunDetailOpen: setQuickRunDetailOpen,
       setQuickRunStartError: setQuickRunStartError,
       setQuickRunStopConfirm: setQuickRunStopConfirm,
-      setRhythmSelectedDifficultyId: setRhythmSelectedDifficultyId,
+      setRhythmSelectedDifficultyId: chooseRhythmDifficulty,
       setRhythmSelectedSongId: setRhythmSelectedSongId,
       spotClass: spotClass,
       startQuickRunFromRhythm: startQuickRunFromRhythm,
@@ -98199,7 +98399,70 @@ function MonsterHeroGame() {
       setRhythmEventDivision: setRhythmEventDivision,
       setRhythmRankingDetail: setRhythmRankingDetail,
       setRhythmRankingTab: setRhythmRankingTab
-    }), gameState === 'RHYTHM_DEBUG' && React.createElement("main", {
+    }), gameState === 'RHYTHM_DEBUG_SELECT' && (() => {
+      const songs = [...RHYTHM_SONGS, ...RHYTHM_PROTO_SONGS];
+      return React.createElement("main", {
+        "data-rhythm-debug-select": true,
+        className: "relative flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white"
+      }, React.createElement("header", {
+        className: "z-10 flex shrink-0 items-center gap-1 border-b border-amber-400/30 bg-slate-950/95 px-2 py-1",
+        style: {
+          paddingTop: 'calc(0.25rem + var(--mh-sa-top))'
+        }
+      }, React.createElement("button", {
+        type: "button",
+        "aria-label": "モンヒロビートのデバッグへ戻る",
+        title: "デバッグへ戻る",
+        onClick: () => setGameState('RHYTHM_DEBUG'),
+        className: "min-h-[44px] min-w-[44px] shrink-0 text-slate-300"
+      }, React.createElement(ArrowLeft, {
+        size: 20
+      })), React.createElement("div", {
+        className: "min-w-0 flex-1"
+      }, React.createElement("small", {
+        className: "flex items-center gap-1.5 text-[8px] font-black leading-none tracking-[0.2em] text-fuchsia-300"
+      }, "MONBEAT", React.createElement("span", {
+        "data-rhythm-debug-select-badge": true,
+        className: "rounded-full border border-amber-300/70 bg-amber-500/20 px-1.5 py-px text-[8px] tracking-normal text-amber-100"
+      }, "デバッグ(記録しない)")), React.createElement("h2", {
+        className: "truncate text-sm font-black leading-tight tracking-widest text-cyan-200"
+      }, "🎵 曲えらび(全解放)")), React.createElement(RhythmOrientationButton, null), React.createElement("button", {
+        type: "button",
+        "data-rhythm-debug-select-options": true,
+        onClick: () => {
+          setRhythmOptionsBack('RHYTHM_DEBUG_SELECT');
+          setGameState('RHYTHM_OPTIONS');
+        },
+        "aria-label": "オプション",
+        title: "オプション",
+        className: "flex min-h-[44px] min-w-[44px] shrink-0 flex-col items-center justify-center rounded-xl border border-cyan-300/50 bg-cyan-950/60 px-1 text-[9px] font-black text-cyan-100"
+      }, React.createElement("span", {
+        "aria-hidden": "true",
+        className: "text-base leading-none"
+      }, "⚙️"), React.createElement("span", null, "オプション"))), React.createElement(RhythmSongSelect, {
+        songs: songs,
+        difficulties: RHYTHM_PLAY_DIFFICULTIES,
+        bestRecords: rhythmBestRecords,
+        unlockAll: true,
+        songId: rhythmDebugSelectSongId,
+        difficultyId: rhythmDebugSelectDifficultyId,
+        onSongId: setRhythmDebugSelectSongId,
+        onDifficultyId: setRhythmDebugSelectDifficultyId,
+        view: rhythmDebugSelectView,
+        onView: setRhythmDebugSelectView,
+        playLabel: "決定(記録しない)",
+        onPlay: (song, difficulty) => {
+          if (rhythmSettings.quietDuringPlay) RHYTHM_QUIET_MODE.enter();
+          setRhythmPlay({
+            song,
+            difficulty,
+            from: 'proto',
+            backTo: 'RHYTHM_DEBUG_SELECT'
+          });
+          setGameState('RHYTHM_PLAY');
+        }
+      }));
+    })(), gameState === 'RHYTHM_DEBUG' && React.createElement("main", {
       "data-rhythm-debug-screen": true,
       className: "flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white",
       style: {
@@ -98460,7 +98723,14 @@ function MonsterHeroGame() {
       className: "break-all text-right font-mono text-white"
     }, String(value))))))), React.createElement("div", {
       hidden: rhythmDebugTab !== 'play'
-    }, React.createElement(RhythmSkyLiftSwitch, null), React.createElement(RhythmSkyBoxLookSwitch, null), React.createElement("section", {
+    }, React.createElement("button", {
+      type: "button",
+      "data-rhythm-debug-select-open": true,
+      onClick: () => setGameState('RHYTHM_DEBUG_SELECT'),
+      className: "mb-3 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl border border-cyan-300/70 bg-cyan-900/60 px-3 text-sm font-black text-cyan-50"
+    }, "🎵 全解放の曲えらびを開く", React.createElement("span", {
+      className: "rounded-full bg-slate-950/70 px-2 py-0.5 text-[10px] text-amber-200"
+    }, "記録しない")), React.createElement(RhythmSkyLiftSwitch, null), React.createElement(RhythmSkyBoxLookSwitch, null), React.createElement(RhythmSkyLaneLookSwitch, null), React.createElement("section", {
       "data-debug-rhythm-hell-story": true,
       className: "mb-3 rounded-2xl border border-pink-400/50 bg-pink-950/25 p-3"
     }, React.createElement("h3", {
@@ -98519,54 +98789,6 @@ function MonsterHeroGame() {
             setGameState('RHYTHM_PLAY');
           }
         }, difficulty.id === 'HELL' ? 'HELL をプレイ' : '試作をプレイ', "（", difficulty.id, " Lv.", chart.level, "）");
-      })));
-    }), RHYTHM_SONGS.map(song => {
-      const track = rhythmSongTrack(song);
-      return React.createElement("section", {
-        key: song.songId,
-        className: "mb-3 rounded-2xl border border-indigo-400/40 bg-indigo-950/30 p-3"
-      }, React.createElement("div", {
-        className: "mb-2"
-      }, React.createElement("small", {
-        className: "text-[8px] text-indigo-300"
-      }, song.songId), React.createElement("h3", {
-        className: "font-black"
-      }, song.displayName), song.debugDescription && React.createElement("p", {
-        className: "mt-1 text-[10px] font-bold text-amber-200"
-      }, song.debugDescription), React.createElement("p", {
-        className: "break-all text-[9px] text-slate-400"
-      }, "BGM: ", song.bgmTrackId, " / ", track?.src || '未登録')), React.createElement("div", {
-        className: "space-y-2"
-      }, RHYTHM_DIFFICULTIES.map(difficulty => {
-        const chart = song.difficulties[difficulty.id];
-        const best = rhythmBestRecord(rhythmBestRecords, song.songId, difficulty.id);
-        return React.createElement("article", {
-          key: difficulty.id,
-          className: "rounded-xl border border-white/10 bg-slate-900/80 p-2"
-        }, React.createElement("div", {
-          className: "flex items-center justify-between"
-        }, React.createElement("b", {
-          className: "text-xs text-cyan-200"
-        }, difficulty.id, " Lv.", chart.level), React.createElement("span", {
-          className: "text-[9px] font-mono"
-        }, "MAX ", difficulty.maxScore.toLocaleString())), React.createElement("p", {
-          className: "mt-1 text-[9px] text-slate-300"
-        }, "BEST ", best.bestScore.toLocaleString(), " / MAX COMBO ", best.maxCombo, " / ", best.clear ? 'CLEAR' : '未プレイ'), React.createElement("p", {
-          className: "mt-1 break-words text-[8px] text-slate-500"
-        }, RHYTHM_JUDGMENT_IDS.map(id => `${id} ${best.judgments[id]}`).join(' / ')), React.createElement("p", {
-          className: "mt-1 text-[8px] text-slate-500"
-        }, "FC ", best.fullCombo ? '○' : '-', " / ALL EXCELLENT ", best.allExcellent ? '○' : '-', " / ALL MARVELOUS ", best.allMarvelous ? '○' : '-'), chart.notes.length > 0 && React.createElement("button", {
-          "data-rhythm-tap-start": true,
-          className: "mt-2 min-h-[44px] w-full rounded-xl bg-fuchsia-700 font-black",
-          onClick: () => {
-            setRhythmPlay({
-              song,
-              difficulty,
-              from: 'debug'
-            });
-            setGameState('RHYTHM_PLAY');
-          }
-        }, "リズムテストプレイ"));
       })));
     })), rhythmChartToolsOpened && React.createElement("div", {
       "data-rhythm-debug": true,
