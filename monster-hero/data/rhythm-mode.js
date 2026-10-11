@@ -31142,13 +31142,17 @@ const rhythmCreateGpuSlideBand=(gl,host)=>{
 const rhythmCreateGpuPlate=(gl,host)=>{
   if(!gl||!host)return null;
   // 位置は板の中心からのずれ(CSS の画素)で持つ。画面の画素座標の大きな数を塗り側へ渡さない(GL2D と同じ理由)
-  const PLATE_VS='attribute vec2 aCorner;uniform vec3 uM0;uniform vec3 uM1;uniform vec2 uView;uniform vec2 uCenter;uniform vec2 uExt;uniform vec2 uHalf;'+
-    'varying vec2 vP;varying float vT;'+
-    'void main(){vP=aCorner*uExt;vT=(vP.y+uHalf.y)/max(2.0*uHalf.y,1e-4);vec2 pos=uCenter+vP;'+
+  // 光の絵を描くとき(uGlowV)は、GL2D の drawImage と同じく四角の左上・右下(uRect。画面の CSS 画素)をそのまま位置にする。
+  // 中心からのずれで作ると、ふちが画素のちょうど真ん中に来たとき、GL2D と1画素ずれて塗る(丸めの違い)
+  const PLATE_VS='attribute vec2 aCorner;uniform vec3 uM0;uniform vec3 uM1;uniform vec2 uView;uniform vec2 uCenter;uniform vec2 uExt;uniform vec2 uHalf;uniform float uGlowV;uniform vec4 uRect;'+
+    'varying vec2 vP;varying float vT;varying vec2 vG;'+
+    'void main(){vP=aCorner*uExt;vT=(vP.y+uHalf.y)/max(2.0*uHalf.y,1e-4);vG=aCorner*0.5+0.5;vec2 pos=uGlowV>0.5?mix(uRect.xy,uRect.zw,vG):uCenter+vP;'+
     'vec2 q=vec2(dot(uM0,vec3(pos,1.0)),dot(uM1,vec3(pos,1.0)));vec2 c=q/uView*2.0-1.0;gl_Position=vec4(c.x,-c.y,0.0,1.0);}';
   const PLATE_FS='#ifdef GL_FRAGMENT_PRECISION_HIGH\nprecision highp float;\n#else\nprecision mediump float;\n#endif\n'+
-    'varying vec2 vP;varying float vT;uniform vec2 uHalf;uniform float uR;uniform float uSc;uniform float uAlpha;uniform float uS;'+
+    'varying vec2 vP;varying float vT;varying vec2 vG;uniform vec2 uHalf;uniform float uR;uniform float uSc;uniform float uAlpha;uniform float uS;'+
     'uniform float uOutW;uniform vec4 uOutC;uniform vec4 uRingC;uniform vec4 uGC[4];uniform vec4 uGT;uniform vec4 uBorderC;uniform vec4 uInsetC;uniform vec4 uFlags;uniform float uDark;'+
+    // 光の絵(3分割で貼る絵)を描くときの値。uGX: 光のふちまでの半分の幅・高さ / uGS: 端の幅・1枚で縮めるか・端の絵の幅・真ん中の絵の幅(絵の座標) / uGV: 1枚のときの絵の幅・絵の高さ(絵の座標)
+    'uniform float uGlow;uniform sampler2D uTex;uniform vec2 uGX;uniform vec4 uGS;uniform vec2 uGV;'+
     // 角の丸い四角(中心0・半分の大きさ b・角の丸み r。roundRectPath と同じく丸みは短い辺の半分まで)までの距離。内側が負
     'float sdR(vec2 p,vec2 b,float r){r=clamp(r,0.0,min(b.x,b.y));vec2 q=abs(p)-b+r;return length(max(q,0.0))+min(max(q.x,q.y),0.0)-r;}'+
     // 1画素のうち形の中に入る割合(画素の大きさ 1/uSc で、ふちをなめらかにする)
@@ -31163,7 +31167,11 @@ const rhythmCreateGpuPlate=(gl,host)=>{
     'if(t>=uGT.x)c=mix(uGC[0],uGC[1],uGT.y>uGT.x?clamp((t-uGT.x)/(uGT.y-uGT.x),0.0,1.0):1.0);'+
     'if(t>=uGT.y)c=mix(uGC[1],uGC[2],uGT.z>uGT.y?clamp((t-uGT.y)/(uGT.z-uGT.y),0.0,1.0):1.0);'+
     'if(t>=uGT.z)c=mix(uGC[2],uGC[3],uGT.w>uGT.z?clamp((t-uGT.z)/(uGT.w-uGT.z),0.0,1.0):1.0);return c;}'+
-    'void main(){acc=vec4(0.0);vec2 p=vP;vec2 H=uHalf;float W=2.0*H.x;float Hh=2.0*H.y;'+
+    // 光の絵: GL2D が draw3Slice で3枚の四角に貼るのと同じ絵の座標を、画素ごとに求めて貼る(重ね方は呼ぶ側が決める)
+    'void main(){if(uGlow>0.5){float GW=2.0*uGX.x;float gx=vG.x*GW;float c=uGS.x;float u;'+
+    'if(uGS.y>0.5)u=gx/GW*uGV.x;else if(gx<c)u=gx/c*uGS.z;else if(gx>=GW-c)u=uGS.z+uGS.w+(gx-(GW-c))/c*uGS.z;else u=uGS.z+(gx-c)/(GW-2.0*c)*uGS.w;'+
+    'gl_FragColor=texture2D(uTex,vec2(u,vG.y*uGV.y))*uAlpha;return;}'+
+    'acc=vec4(0.0);vec2 p=vP;vec2 H=uHalf;float W=2.0*H.x;float Hh=2.0*H.y;'+
     // 外の暗い縁取り(線の太さ uOutW を外側へ)
     'if(uOutW>0.0)over(uOutC,strokeC(sdR(p,H+uOutW*0.5,uR+uOutW*0.5),uOutW));'+
     // 輪(大きさ倍率 uS ぶん外の角の丸い四角に太さ 2uS)
@@ -31184,10 +31192,10 @@ const rhythmCreateGpuPlate=(gl,host)=>{
   try{
     prog=gl.createProgram();gl.attachShader(prog,compile(gl.VERTEX_SHADER,PLATE_VS));gl.attachShader(prog,compile(gl.FRAGMENT_SHADER,PLATE_FS));
     gl.bindAttribLocation(prog,0,'aCorner');gl.linkProgram(prog);if(!gl.getProgramParameter(prog,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(prog)||'plate link');
-    quad=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,quad);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
+    quad=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,quad);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1,/* 光の絵: GL2D の drawImage と同じ三角形の分け方(4番目から6つ) */-1,-1,1,-1,1,1,-1,-1,1,1,-1,1]),gl.STATIC_DRAW);
     host.rebind();
   }catch(e){return null;}
-  const U={};['uM0','uM1','uView','uCenter','uExt','uHalf','uR','uSc','uAlpha','uS','uOutW','uOutC','uRingC','uGC','uGT','uBorderC','uInsetC','uFlags','uDark']
+  const U={};['uM0','uM1','uView','uCenter','uExt','uHalf','uR','uSc','uAlpha','uS','uOutW','uOutC','uRingC','uGC','uGT','uBorderC','uInsetC','uFlags','uDark','uGlow','uTex','uGX','uGS','uGV','uGlowV','uRect']
     .forEach(name=>{U[name]=gl.getUniformLocation(prog,name);});
   const colorCache=new Map();
   const rgba=text=>{let c=colorCache.get(text);if(c)return c;const t=String(text||'').trim();
@@ -31206,12 +31214,14 @@ const rhythmCreateGpuPlate=(gl,host)=>{
   const u2f=(name,a,b)=>{const key=a+','+b;if(sent[name]!==key){gl.uniform2f(U[name],a,b);sent[name]=key;}};
   const u4f=(name,c)=>{const key=c[0]+','+c[1]+','+c[2]+','+c[3];if(sent[name]!==key){gl.uniform4f(U[name],c[0],c[1],c[2],c[3]);sent[name]=key;}};
   const NONE=[0,0,0,0];
-  let bound=false;
+  let bound=false,blendAdd=false;
+  // 重ね方。光の絵は GL2D の 'lighter' と同じ(色だけ足し、透明さはふつうに重ねる)、板はふつうの重ね方
+  const setBlend=add=>{if(add===blendAdd)return;blendAdd=add;if(add)gl.blendFuncSeparate(gl.ONE,gl.ONE,gl.ONE,gl.ONE_MINUS_SRC_ALPHA);else gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);};
   const bind=()=>{
     if(bound)return;
     host.flush();gl.useProgram(prog);gl.bindBuffer(gl.ARRAY_BUFFER,quad);
     gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,2,gl.FLOAT,false,8,0);for(let i=1;i<5;i++)gl.disableVertexAttribArray(i);
-    gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);gl.stencilFunc(gl.ALWAYS,0,0xff);bound=true;
+    gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);blendAdd=false;gl.stencilFunc(gl.ALWAYS,0,0xff);bound=true;
     // 位置の変換と画面の大きさ(uniform はシェーダーごとに残るので、変わったときだけ送る)
     const m=host.matrix(),view=host.view(),key=m.join(',')+'|'+view[0]+','+view[1];
     if(sent.m!==key){gl.uniform3f(U.uM0,m[0],m[2],m[4]);gl.uniform3f(U.uM1,m[1],m[3],m[5]);gl.uniform2f(U.uView,view[0],view[1]);u1f('uSc',Math.hypot(m[0],m[1])||1);sent.m=key;}
@@ -31221,11 +31231,27 @@ const rhythmCreateGpuPlate=(gl,host)=>{
   const api={
     // 板1枚。o: cx・cy(中心)・w・h・radius・alpha・sizeMul・outline(太さ。0=引かない)・outlineColor・ring・gradient・border・
     // inset・failed・wide・hold・dark(奥の暗さ 0〜1)・pressed。描けなかったら false(呼ぶ側が今までどおり描く)
+    // glows・glowCount: 板より先に描く光の絵(drawHead の pushHeadGlow の形)。glowAdditive で足し算にする。dpr は絵の画素の倍率
     draw(o){
       if(host.lost())return false;
-      if(!(o.alpha>0)||!(o.w>0)||!(o.h>0))return true;
+      const glowN=o.glows&&host.texture?o.glowCount|0:0;
+      if(!glowN&&(!(o.alpha>0)||!(o.w>0)||!(o.h>0)))return true;
       // ★GL2D が後回しにしている描画(光の絵など)を先に描き切る。描き切ると GL2D が自分の描き方へ戻すので、そのあと結び付け直す
       host.flush();bind();
+      if(glowN){
+        u1f('uGlow',1);u1f('uGlowV',1);setBlend(!!o.glowAdditive);
+        for(let i=0;i<glowN;i++){
+          const g=o.glows[i],entry=host.texture(g.canvas);if(!entry)continue;
+          const dpr=o.dpr||1,single=g.gx*2<=g.capW*2;
+          // 四角は draw3Slice と同じ計算で出す(left=cx-w/2-glow・top=cy-h/2-marginY・下は top+高さ)
+          const top=o.cy-g.h/2-g.my;
+          u4f('uRect',[o.cx-g.w/2-g.glow,top,o.cx+g.w/2+g.glow,top+(g.h+g.my*2)]);u2f('uGX',g.gx,g.gy);u1f('uAlpha',Math.max(0,Math.min(1,g.alpha)));
+          u4f('uGS',[g.capW,single?1:0,g.capW*dpr/entry.w,g.mid*dpr/entry.w]);u2f('uGV',g.sw*dpr/entry.w,g.sh*dpr/entry.h);
+          gl.bindTexture(gl.TEXTURE_2D,entry.tex);gl.drawArrays(gl.TRIANGLES,4,6);
+        }
+        u1f('uGlow',0);u1f('uGlowV',0);setBlend(false);
+        if(!(o.alpha>0)||!(o.w>0)||!(o.h>0))return true;
+      }
       const s=o.sizeMul,reach=Math.max(o.outline||0,o.ring?2*s:0)+2;
       u2f('uCenter',o.cx,o.cy);u2f('uHalf',o.w/2,o.h/2);u2f('uExt',o.w/2+reach,o.h/2+reach);
       u1f('uR',o.radius);u1f('uAlpha',Math.max(0,Math.min(1,o.alpha)));u1f('uS',s);
@@ -31627,6 +31653,8 @@ const rhythmCreateGL2D=canvas=>{
     // にじむ光を使うか(演奏画面が毎フレームの始めに決める)。gain は重ねる強さ
     setBloom(on,gain){bloomOn=!!on;if(Number.isFinite(gain))bloomGain=gain;if(!bloomOn)bloomList.length=0;},
     get bloomReady(){return !!bloom;},
+    // にじむ光を描くフレームか(足し算の光を覚えて使うので、光を別のシェーダーで描くと抜け落ちる)
+    get bloomActive(){return bloomOn;},
     // フレームの終わりに呼ぶ。覚えた光を小さな画像へ描き直し、横・縦にぼかして画面へ足し算で重ねる
     bloomFinish(){
       flushPending();releaseForeign();
@@ -31724,6 +31752,7 @@ const rhythmCreateGL2D=canvas=>{
           flush:()=>flushPending(),
           restore:restoreMain,
           claim:end=>{foreignEnd=end;},
+          texture:source=>textureOf(source),
           rebind:()=>gl.bindBuffer(gl.ARRAY_BUFFER,buf),
           matrix:()=>m,view:()=>{syncView();return [viewW,viewH];},lost:()=>lost,
         });}catch(e){plateApi=null;}
@@ -31848,6 +31877,22 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     }
     ctx.globalAlpha=1;
   };
+  // ノーツの板の光の絵(draw3Slice で貼るもの)を、描く順に覚える入れ物。GPU の板の部品へ渡すと、板と同じシェーダーで描ける
+  const headGlows=[{},{},{}];let headGlowCount=0;
+  const pushHeadGlow=(sprite,w,h,alpha)=>{
+    if(!sprite||headGlowCount>=headGlows.length)return;
+    const g=headGlows[headGlowCount++];
+    g.sprite=sprite;g.w=w;g.h=h;g.alpha=alpha;
+    // 板の部品へ渡す形: 中心からの半分の幅・高さ(光のふちまで)・端の幅・真ん中の幅・絵の幅と高さ
+    g.canvas=sprite.canvas;g.glow=sprite.glow;g.my=sprite.glow*(h/HEAD_H);g.gx=w/2+sprite.glow;g.gy=h/2+g.my;g.capW=sprite.capL;g.mid=sprite.mid;g.sw=sprite.w;g.sh=sprite.h;
+  };
+  const drawHeadGlows=(cx,cy)=>{
+    glowBegin();
+    for(let i=0;i<headGlowCount;i++){const g=headGlows[i];draw3Slice(g.sprite,cx,cy,g.w,g.h,g.alpha);}
+    glowEnd();
+  };
+  // 光の絵を板のシェーダーで描くか(既定は描く。検査で今までの描き方と画素で比べるときだけ切る: RHYTHM_CANVAS_RENDERER.plateGlow=false)
+  let plateGlowWanted=true;
   // 矢印(FLICK / 終点フリック)。三角にピンクの光(色は RHYTHM_NOTE_COLORS.FLICK)。
   const arrowSprite=(key,w,h,glows,gradientStops,edge)=>{
     const id=`arrow:${key}:${dpr}`;
@@ -31940,26 +31985,31 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     const w=geo.head.w*sizeMul,h=HEAD_H*HEAD_THICK*depthScale*sizeMul,cx=geo.head.cx,cy=geo.head.cy,radius=(wide?7:style.radius)*sizeMul;
     const x=cx-w/2,y=cy-h/2;
     ctx.globalAlpha=alpha;
-    glowBegin();
+    // 光の絵(3分割で貼るもの)を、描く順に並べる。使い回しの入れ物へ入れる(ノーツごとに配列を作らない)
+    headGlowCount=0;
     if(style.glow.length&&!failed){
-      const glow=effect==='MINIMAL'||lightweight?glowSprite(monster?'MONSTER':(style===HEADS.SKY?'SKY':note.type),style.radius,style.glow):null;
-      if(effect==='MINIMAL'||lightweight)draw3Slice(glow,cx,cy,w,h,alpha);
-      else draw3Slice(glowSprite(style.glowStrongKey,style.radius,style.glowStrong),cx,cy,w*1.04,h*1.25,alpha);
+      if(effect==='MINIMAL'||lightweight)pushHeadGlow(glowSprite(monster?'MONSTER':(style===HEADS.SKY?'SKY':note.type),style.radius,style.glow),w,h,alpha);
+      else pushHeadGlow(glowSprite(style.glowStrongKey,style.radius,style.glowStrong),w*1.04,h*1.25,alpha);
     }
     if(monster&&!failed){
       // 外側の光(::after)は 1.15 秒で薄く・濃くを繰り返す(opacity だけ)。内側(::before)は固定
       const pulse=.40+(.82-.40)*(0.5-0.5*Math.cos((frameNow/1150)*Math.PI));
-      draw3Slice(auraSprite('outer',6,4,9999,'rgba(216,180,254,.62)',AURA_OUTER_GLOWS,AURA_OUTER_DOTS),cx,cy,w,h,alpha*pulse);
-      draw3Slice(auraSprite('inner',1,-2,9999,'rgba(255,250,205,.98)',AURA_INNER_GLOWS),cx,cy,w,h,alpha);
+      pushHeadGlow(auraSprite('outer',6,4,9999,'rgba(216,180,254,.62)',AURA_OUTER_GLOWS,AURA_OUTER_DOTS),w,h,alpha*pulse);
+      pushHeadGlow(auraSprite('inner',1,-2,9999,'rgba(255,250,205,.98)',AURA_INNER_GLOWS),w,h,alpha);
     }
-    glowEnd();
-    ctx.globalAlpha=alpha;
-    const edgeNote=!failed&&(Number.isFinite(note.subLane)?(note.subLane<=0||note.subLane+(Number(note.subLaneWidth)||2)>=RHYTHM_SUB_LANE_COUNT):(Number(note.lane)<=0||Number(note.lane)>=RHYTHM_LANE_COUNT-1));
     // デバッグの「スライドの帯の描き方(検証用)」→ GPU のときは、板の本体(下の縁取り〜押さえている最中の白)を GPU で1回で描く(rhythmCreateGpuPlate)
     const plate=geo.gpu&&gpuBandWanted&&backend==='webgl'?ctx.plate:null;
+    // 光の絵も板のシェーダーで描く(2026-10-12・発熱の手当て④)。ノーツ1つごとに「光(GL2D)→ 板 → 矢印(GL2D)」と描き方が切り替わり、
+    // そのたびに GL2D の状態の送り直しが起きていたため。にじむ光(ブルーム)が入っているときは GL2D の足し算の光を覚えて使うので、今までどおり
+    const fuseGlow=!!plate&&plateGlowWanted&&headGlowCount>0&&!ctx.bloomActive;
+    if(!fuseGlow)drawHeadGlows(cx,cy);
+    ctx.globalAlpha=alpha;
+    const edgeNote=!failed&&(Number.isFinite(note.subLane)?(note.subLane<=0||note.subLane+(Number(note.subLaneWidth)||2)>=RHYTHM_SUB_LANE_COUNT):(Number(note.lane)<=0||Number(note.lane)>=RHYTHM_LANE_COUNT-1));
     const plateDone=!!plate&&plate.draw({cx,cy,w,h,radius,alpha,sizeMul,outline:failed?0:(edgeNote?3:2)*sizeMul,outlineColor:edgeNote?'rgba(2,6,23,.88)':'rgba(2,6,23,.62)',
       ring:style.ring,gradient:style.gradient,border:style.border,inset:style.inset,failed:!!failed,wide:!!(wide&&!monster),hold:rhythmNoteIsHold(note)&&!monster,
-      dark:brightness<1?Number((1-brightness).toFixed(3)):0,pressed:!!pressed});
+      dark:brightness<1?Number((1-brightness).toFixed(3)):0,pressed:!!pressed,
+      glows:fuseGlow?headGlows:null,glowCount:fuseGlow?headGlowCount:0,glowAdditive:additiveGlow,dpr});
+    if(fuseGlow&&!plateDone){drawHeadGlows(cx,cy);ctx.globalAlpha=alpha;}
     if(!plateDone){
       // ノーツの外周に暗い縁取りを1本引く(2026-10-07・ユーザー指摘「レーンのはじにハーフノーツが来たとき、道のふちと被って見にくい」)。
       // 道のふちの白い線に隣り合っても、ノーツの輪郭が埋もれない。位置も大きさも変えない(線を外へ描くだけ)。
@@ -33078,6 +33128,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     // いまスライドの帯を GPU で描けるか。演奏画面はこれが true のとき、帯を CPU で刻まないよう rhythmNoteCanvasGeometry へ gpu を渡す
     get gpuBand(){return gpuBandWanted&&backend==='webgl'&&!!ctx&&!!ctx.band;},
     get additiveGlow(){return additiveGlow;},set additiveGlow(v){additiveGlow=v!==false;},
+    get plateGlow(){return plateGlowWanted;},set plateGlow(v){plateGlowWanted=v!==false;},
     // 描き込み先が取れているか。WebGL の準備が途中で失敗すると、その canvas からは 2D も取り出せず
     // ctx が無いままになる(ノーツが1つも描かれない)。演奏画面はこれを見て canvas を作り直す
     get ready(){return !!ctx;},
