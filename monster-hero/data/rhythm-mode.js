@@ -1637,7 +1637,10 @@ const rhythmReleaseAgeMs=(eventTimeStamp,nowPerfMs)=>{
   if(!(age>0))return 0;
   if(age<=RHYTHM_INPUT_AGE_MAX_MS)return age;
   if(rhythmInputAgeFloorMs>RHYTHM_INPUT_AGE_BASE_ALIGNED_MS)return 0;
-  return Math.min(age,rhythmReleaseWaitMs());
+  // 0.08秒を超えて戻すのは、押した合図(rhythmInputAgeMs)と同じく、その間ゲームが本当に止まっていた(直前のコマが遅れの6割以上前だった)と見えたときだけ。
+  // コマは来ていたのに時刻だけ古い合図を信じると、ぴったり離したのに「早く離した」と数えてしまう(2026-10-11 社長の答え)
+  if(RHYTHM_TIMING_DIAG.stalledSince(nowPerfMs)>=age*RHYTHM_INPUT_AGE_STALL_SHARE)return Math.min(age,rhythmReleaseWaitMs());
+  return RHYTHM_INPUT_AGE_MAX_MS;
 };
 // 押しっぱなしで終わりの窓を過ぎたと決める前に、遅れて届く離しの合図を待つ長さ(上の rhythmReleaseAgeMs で戻せる上限と同じ)。
 // 決まり(窓の中で離せば成功・過ぎたら MISS)は変えず、MISS の文字が出るのがこの分だけ遅れる
