@@ -45,7 +45,7 @@ const seed = (songId) => `(() => {
   put('mh_breeder_name', 'テスト'); put('mh_breeder_icon', 'Mocchi'); put('mh_onboarded', true);
   put('mh_tutorial_seen_v1', true); put('mh_battle_tutorial_seen_v1', true); put('mh_battle_tutorial_guide_shown_v1', true);
   ${DRAW ? `localStorage.setItem('mh_rhythm_canvas_v1', ${JSON.stringify(DRAW)});` : ''}
-  ${BAND ? `localStorage.setItem('mh_rhythm_gpu_band_v1', ${JSON.stringify(BAND)});` : ''}
+  ${BAND ? `localStorage.setItem('mh_rhythm_gpu_band_v1', ${JSON.stringify(BAND)});` : DRAW === 'webgl' ? `localStorage.setItem('mh_rhythm_gpu_band_v1', 'off');` : ''}
   put('mh_rhythm_tutorial_seen_v1', true); put('mh_quick_rhythm_intro_seen_v1', true); put('mh_quick_rhythm_bg_seen_v1', true);
   put('mh_monster_roster', ['Suezo', 'Golem', 'Tiger', 'Ham', 'Pixie', 'Monol', 'Oboro', 'Mocchi']);
   // 上の難易度を開けておく(曲えらびから MASTER などを選べるように)

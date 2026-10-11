@@ -552,7 +552,12 @@ function MonsterHeroGame() {
     const rect = RHYTHM_VIEW_ROTATION.rectOf(e.currentTarget);
     return rect ? { x: p.x - rect.left, y: p.y - rect.top, clientX: p.x, clientY: p.y } : null;
   };
+  // 【2026-10-11 出だしの重さ】モンヒロビートの演奏エリアの中では、この白い輪は出さない(当たりの光は演奏画面が自分で出す)。
+  // 輪の位置合わせで外の箱を getBoundingClientRect で測ると、演奏中は判定の文字やコンボで画面が毎回少し変わっているため、
+  // その場で画面の計算をやり直させていた(曲の頭は初めての計算で特に重く、ボット・CPU 4倍で1打 30〜40ms)。輪の描き直し(React)も毎回走っていた
+  const rippleInRhythmPlay = (e) => !!(e.target && e.target.closest && e.target.closest('[data-rhythm-play-area]'));
   const rippleOnPointerDown = useCallback((e) => {
+    if (rippleInRhythmPlay(e)) return;
     rippleDragRef.current = true;
     rippleLastAtRef.current = performance.now();
     const at = ripplePoint(e);
@@ -18139,7 +18144,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <section data-rhythm-canvas-panel className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"><h3 className="text-xs font-black text-cyan-200">ノーツの描き方（検証用）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80">canvas 1枚に描く方式（発熱対策）と、これまでの要素ごとに描く方式を切り替えます。次の演奏から効きます。「自動」は公開設定（いまは{RELEASE_FLAGS.rhythmCanvasNotes?'canvas':'要素'}）に従います。「WebGL」は canvas と同じ描き方を GPU で描く試作です（重さ・発熱を「性能計測」で canvas と比べるためのもの）。</p><div className="mt-2 flex gap-2">{[['','自動'],['dom','要素'],['canvas','canvas'],['webgl','WebGL']].map(([value,label])=><button key={value||'auto'} type="button" data-rhythm-canvas-pref={value||'auto'} aria-pressed={rhythmCanvasPref===value} onClick={()=>setRhythmCanvasPref(rhythmCanvasNotesSetPreference(value))} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmCanvasPref===value?'bg-cyan-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></section>
             {/* スライドの帯を GPU に一度だけ置いて描くかの切り替え(2026-10-11・作り替え B の S1)。社長の iPhone で今の描き方と比べてから既定にする(S3)。
                 プレイヤーの通常プレイには出ないので更新履歴・ヘルプには載せない */}
-            <section data-rhythm-gpu-band-panel className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"><h3 className="text-xs font-black text-cyan-200">スライドの帯の描き方（検証用）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80">「GPU」はスライドの帯（地上・空中・影）の形を譜面を読んだときに一度だけ GPU に置き、毎コマは曲の位置だけ渡して描きます（帯が長い・多い曲で軽くするための試作）。選ぶとノーツは WebGL で描きます（「ノーツの描き方」で canvas・要素を選んでいるときはそちらが勝ちます）。WebGL が使えないときは今の描き方に戻ります。次の演奏から効きます。</p><div className="mt-2 flex gap-2">{[['','今の描き方'],['gpu','GPU']].map(([value,label])=><button key={value||'cpu'} type="button" data-rhythm-gpu-band-pref={value||'cpu'} aria-pressed={rhythmGpuBandPref===value} onClick={()=>setRhythmGpuBandPref(rhythmGpuBandSetPreference(value))} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmGpuBandPref===value?'bg-cyan-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></section>
+            <section data-rhythm-gpu-band-panel className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"><h3 className="text-xs font-black text-cyan-200">スライドの帯の描き方（検証用）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80">「GPU」はスライドの帯（地上・空中・影）の形を譜面を読んだときに一度だけ GPU に置き、毎コマは曲の位置だけ渡して描きます（帯が長い・多い曲で軽くするための試作）。既定（GPU）は、ノーツを WebGL で描いているとき（描画方式が自動で GPU がある端末など）に使います。「GPU（WebGL も）」は描画方式に関係なくノーツを WebGL で描きます（「ノーツの描き方」で canvas・要素を選んでいるときはそちらが勝ちます）。「今の描き方」は使いません。WebGL が使えないときは今の描き方に戻ります。次の演奏から効きます。</p><div className="mt-2 flex gap-2">{[['','既定（GPU）'],['gpu','GPU（WebGL も）'],['off','今の描き方']].map(([value,label])=><button key={value||'default'} type="button" data-rhythm-gpu-band-pref={value||'default'} aria-pressed={rhythmGpuBandPref===value} onClick={()=>setRhythmGpuBandPref(rhythmGpuBandSetPreference(value))} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmGpuBandPref===value?'bg-cyan-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></section>
             {/* 演奏前の準備の切り替え(2026-10-11・修理部・社長「事前読み込みで改善されないの?」)。曲の最初のコマで初めて起きていた重い仕事を、曲の前の幕のあいだに済ませる。
                 2026-10-11 社長の決定で既定を「する」にした。何かあれば「しない」で戻す。見た目は変わらないので更新履歴・ヘルプには載せない */}
             {/* 叩いたときの光の描き方の切り替え(2026-10-11・修理部・発熱の調べ)。DOM の光の部品は CSS のアニメーションが毎コマ スタイルの再計算をさせていた。
@@ -18161,6 +18166,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             {/* デバッグ専用の試作曲(RHYTHM_PROTO_SONGS)。ここからだけ遊べる。遊んでも記録・報酬・ランキングには何も入らない(from:'proto')。
                 プレイヤーの通常プレイには出ないので、更新履歴・ヘルプには載せない */}
             <RhythmSkyLiftSwitch/>
+            <RhythmSkyBoxLookSwitch/>
             {/* 難易度 HELL のお話と説明(2026-10-11)。HELL の公開前に社長が確かめるためのもの。見たことにはしない(debug)。
                 デバッグ専用なので更新履歴・ヘルプには載せない */}
             <section data-debug-rhythm-hell-story className="mb-3 rounded-2xl border border-pink-400/50 bg-pink-950/25 p-3"><h3 className="text-xs font-black text-pink-200">HELL のお話と説明（公開前の確認用）</h3><div className="mt-2 grid grid-cols-2 gap-2"><button type="button" data-debug-rhythm-hell-story-play onClick={()=>setEventReplay({id:RHYTHM_HELL_STORY_ID,step:0,debug:true})} className="min-h-[48px] rounded-xl bg-pink-700 px-2 text-xs font-black text-white">お話を見る（→説明）</button><button type="button" data-debug-rhythm-hell-guide-open onClick={()=>setRhythmHellGuide({page:0})} className="min-h-[48px] rounded-xl bg-slate-700 px-2 text-xs font-black text-white">説明だけ見る</button></div></section>

@@ -177,7 +177,7 @@
 | `mh_rhythm_event_points_v1` | number / `0` | モンヒロビートの共通ビートP残高。プレイヤー向け名称のみ旧「イベントP」から変更し、互換性のため保存キーは維持する。0以上の整数へ正規化し、イベント終了時もリセットせず次回へ持ち越す。`docs/spec/RHYTHM_EVENT_POINTS.md` |
 | `mh_rhythm_event_reward_v1` | string[] / `[]` | イベント報酬を受け取り済みのイベントID。二重受取を防ぐためのフラグ(入賞しなかった場合もここへ入れて、問い合わせ直さないようにする。`docs/spec/RHYTHM_RANKING.md` §9.1) |
 | `mh_rhythm_canvas_v1` | `'canvas'` / `'dom'` / 未設定 | デバッグ画面の「ノーツの描き方」の上書き(未設定なら公開フラグに従う) |
-| `mh_rhythm_gpu_band_v1` | `'gpu'` / 未設定 | デバッグ画面の「スライドの帯の描き方(検証用)」(未設定なら今の描き方。`'gpu'` で帯・区切りの線・ノーツの板を GPU で描く)。2026-10-11 |
+| `mh_rhythm_gpu_band_v1` | `'gpu'` / `'off'` / 未設定 | デバッグ画面の「スライドの帯の描き方(検証用)」。未設定 = 既定(2026-10-11 から、ノーツを WebGL で描いているときは帯・区切りの線・ノーツの板を GPU で描く)。`'gpu'` = 描画方式に関係なく WebGL+GPU。`'off'` = 使わない |
 | `mh_rhythm_prepare_v1` | `'on'` / `'off'` / 未設定 | デバッグ画面の「演奏前の準備(検証用)」(未設定なら既定。2026-10-11 から する) |
 | `mh_rhythm_canvas_hits_v1` | `'canvas'` / 未設定 | デバッグ画面の「叩いたときの光の描き方(検証用)」(未設定なら今までどおり。2D のときは画面の要素で光らせる)。2026-10-11 |
 | `mh_rhythm_stage_gl_v1` | `'css'` / `'webgl'` / 未設定 | デバッグ画面の「ライブ背景の描き方」の上書き(未設定ならノーツが WebGL のときだけ WebGL) |
@@ -186,6 +186,7 @@
 | `mh_rhythm_six_lane_seen_v1` | `true` / 未設定 | 道が6レーンになり MASTER に横フリックが出ることを、曲えらびで一度だけ伝える助手の案内を見たか(未設定なら出す) |
 | `mh_tactics_intro_seen_v1` | `true` / 未設定 | タクティクスバトルの導入会話を見たか(β公開後に1度だけ流す) |
 | `mh_rhythm_hell_story_seen_v1` | `true` / 未設定 | 難易度 HELL のお話「空まで届くビート」を見たか(2026-10-11。HELL の公開まで読み書きしない。デバッグから見たぶんは立てない) |
+| `mh_sky_box_look_proto` | `'a'`〜`'c'` / 未設定 | デバッグ専用。SKY TAP の見た目の案を見比べるための選択(2026-10-11)。未設定ならいまの案Z。ふつうのプレイは書かない |
 | `mh_tactics_ex_intro_seen_v1` | `true` / 未設定 | タクティクスで「距離枠をタップするとEXが開く」を一度だけ伝える案内を見たか(公開フラグ `tacticsExSkills` と同じで出し入れ) |
 | `mh_profile_frame_v1` | string / `'none'` | 選んでいるプロフィールフレームのid(`data/breeder.js` の `PROFILE_FRAMES`)。ブリーダーアイコン(`mh_breeder_icon`)とは**独立した設定**で、アイコン側のキーは触らない。読み込みは必ず `normalizeProfileFrameId` を通し、値が無い・壊れている・知らないid・未公開(`released:false`)のidはすべて `'none'`(フレームなし)へ倒す |
 | `mh_quick_rhythm_intro_seen_v1` | boolean / `false` | クイック∞周回とモンビーの連携の案内(バトル画面)を見たか |

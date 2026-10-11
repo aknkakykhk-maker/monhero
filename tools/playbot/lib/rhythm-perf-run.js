@@ -13,7 +13,8 @@ const { installPlayer } = require(path.join(ROOT_DEFAULT, 'tools/playbot/scenari
 const { touchInputSource } = require(path.join(ROOT_DEFAULT, 'tools/playbot/lib/touch-input.js'));
 
 // 描き方: canvas(今の 2D)・webgl(WebGL の描き込み先。帯は CPU で刻む)・gpu(WebGL+帯と区切りの線を GPU に置く)・auto(ゲームの自動)
-const DRAW_MODES = { canvas: { canvas: 'canvas', band: '' }, webgl: { canvas: 'webgl', band: '' }, gpu: { canvas: 'webgl', band: 'gpu' }, auto: { canvas: '', band: '' } };
+// ★2026-10-11 から GPU の帯が既定になったので、webgl(今の WebGL)は帯の切り替えを 'off' にして開く
+const DRAW_MODES = { canvas: { canvas: 'canvas', band: '' }, webgl: { canvas: 'webgl', band: 'off' }, gpu: { canvas: 'webgl', band: 'gpu' }, auto: { canvas: '', band: '' } };
 
 const seed = (songId, mode) => `(() => {
   const put = (k, v) => { if (localStorage.getItem(k) === null) localStorage.setItem(k, JSON.stringify(v)); };
@@ -30,10 +31,11 @@ const seed = (songId, mode) => `(() => {
 const tapProbe = () => {
   window.__mhTaps = [];
   const inArea = (e) => { const t = e.target; return !!(t && t.closest && t.closest('[data-rhythm-play-area]')); };
-  window.addEventListener('pointerdown', (e) => { if (inArea(e)) e.__mhStart = performance.now(); }, true);
+  window.addEventListener('pointerdown', (e) => { if (inArea(e)) { e.__mhStart = performance.now(); if (window.__mhTapProfile && window.__mhTaps.length < 5) { e.__mhProf = `tap${window.__mhTaps.length + 1}`; console.profile(e.__mhProf); } } }, true);
   window.addEventListener('pointerdown', (e) => {
     if (e.__mhStart == null) return;
     const rec = { at: e.timeStamp, start: e.__mhStart, end: performance.now(), frame: null, songMs: window.__mhTestHooks?.rhythmSongMs?.() ?? null };
+    if (e.__mhProf) console.profileEnd(e.__mhProf);
     window.__mhTaps.push(rec);
     requestAnimationFrame((t) => { rec.frame = t; });
   }, false);
@@ -77,6 +79,7 @@ async function runOnce(o) {
     await context.addInitScript(tapProbe);
     const page = await context.newPage();
     const cdp = await context.newCDPSession(page);
+    const tapProfiles = []; cdp.on('Profiler.consoleProfileFinished', (e) => tapProfiles.push(e));
     const errors = []; page.on('pageerror', (e) => errors.push(String(e).slice(0, 200)));
     await page.goto('https://sky.test/monster-hero/index.html', { waitUntil: 'load', timeout: 90000 });
     const clickText = (re) => page.evaluate((p) => { const b = [...document.querySelectorAll('button,summary')].find(x => new RegExp(p).test(x.textContent)); if (b) b.click(); return !!b; }, re);
@@ -136,7 +139,8 @@ async function runOnce(o) {
     // o.atStart(page, cdp): 測り始めにページを調べる(内訳を出すときの、動いている CSS アニメーションの一覧など)
     const atStart = typeof o.atStart === 'function' ? await o.atStart(page, cdp) : null;
     const m0 = Object.fromEntries((await cdp.send('Performance.getMetrics')).metrics.map(x => [x.name, x.value]));
-    await cdp.send('Profiler.enable'); await cdp.send('Profiler.setSamplingInterval', { interval: 500 }); await cdp.send('Profiler.start');
+    await cdp.send('Profiler.enable'); await cdp.send('Profiler.setSamplingInterval', { interval: process.env.TAP_PROFILE ? 100 : 500 }); await cdp.send('Profiler.start');
+    if (process.env.TAP_PROFILE) await page.evaluate(() => { window.__mhTapProfile = true; });
     // メインスレッドの「CPU を本当に使った時間」(トレースの tdur)。GPU の仕事を待っている間(SwiftShader が遅いと長い)は数えない
     // breakdown のときは、メインスレッドの仕事の種類(スタイル・レイアウト・塗り・JS など)も取る
     await browser.startTracing(page, { categories: o.breakdown ? ['toplevel', 'devtools.timeline', 'blink', 'v8', ...(o.traceCats || [])] : ['toplevel'] });
@@ -156,9 +160,21 @@ async function runOnce(o) {
     const taps = raw.taps.filter(t => t.songMs != null && t.songMs >= FROM && t.songMs < TO);
     const handle = taps.map(t => t.end - t.at).sort((x, y) => x - y), toFrame = taps.filter(t => t.frame != null).map(t => t.frame - t.at).sort((x, y) => x - y);
     const firstTap = raw.taps[0] ? { handle: raw.taps[0].end - raw.taps[0].at, toFrame: raw.taps[0].frame != null ? raw.taps[0].frame - raw.taps[0].at : null } : null;
+    // 最初の5打(出だしの重さ・2026-10-11)。曲の頭から5打それぞれの「処理」と「画面に出るまで」。途中(6打目以降)の中央の値と比べる
+    const first5 = raw.taps.slice(0, 5).map(t => ({ handle: t.end - t.at, toFrame: t.frame != null ? t.frame - t.at : null }));
+    const restFrame = raw.taps.slice(5).filter(t => t.frame != null).map(t => t.frame - t.at).sort((x, y) => x - y);
+    const restHandle = raw.taps.slice(5).map(t => t.end - t.at).sort((x, y) => x - y);
     // 関数ごとの含む時間
     const byId = new Map(profile.nodes.map(n => [n.id, n])), parent = new Map(); profile.nodes.forEach(n => (n.children || []).forEach(c => parent.set(c, n.id)));
     const cnt = new Map(); profile.samples.forEach((id, k) => cnt.set(id, (cnt.get(id) || 0) + (profile.timeDeltas[k] || 0)));
+    // TAP_PROFILE=1: 最初の5打それぞれの「押した処理」だけのプロファイル(console.profile で取る。時刻を合わせなくてよい)。出だしの重さの切り分け・2026-10-11
+    if (process.env.TAP_PROFILE) for (const fin of tapProfiles) {
+      const pr = fin.profile, by = new Map(pr.nodes.map(n => [n.id, n])), up = new Map(); pr.nodes.forEach(n => (n.children || []).forEach(c => up.set(c, n.id)));
+      const inc = new Map(); let total = 0;
+      pr.samples.forEach((id, i) => { const us = pr.timeDeltas[i] || 0; total += us; let x = id; const seen = new Set(); while (x != null) { const key = by.get(x).callFrame.functionName || '(無名)'; if (!seen.has(key)) { seen.add(key); inc.set(key, (inc.get(key) || 0) + us); } x = up.get(x); } });
+      const top = [...inc.entries()].filter(([q]) => q !== '(root)').sort((a, b) => b[1] - a[1]).slice(0, 22);
+      console.log(`  ${fin.title} 計${(total / 1000).toFixed(1)}ms: ` + top.map(([q, us]) => `${q} ${(us / 1000).toFixed(1)}`).join(' / '));
+    }
     const incl = new Map();
     for (const [id, us] of cnt) {
       let x = id; const seen = new Set();
@@ -228,7 +244,7 @@ async function runOnce(o) {
       main: { cpu: cpuUs / 1000 / frames, wall: wallUs / 1000 / frames, task: d('TaskDuration') / frames, script: d('ScriptDuration') / frames, style: d('RecalcStyleDuration') / frames, layout: d('LayoutDuration') / frames,
         busyPct: d('TaskDuration') / (wallSec * 1000) * 100 },
       func: { tick: (incl.get('tick') || 0) / 1000 / frames, paintCanvasNote: (incl.get('paintCanvasNote') || 0) / 1000 / frames, bot: (incl.get('getBoundingClientRect') || 0) / 1000 / frames },
-      taps: { n: taps.length, handleAvg: mean(handle), handleP95: pct(handle, .95), frameAvg: mean(toFrame), frameP95: pct(toFrame, .95), first: firstTap },
+      taps: { n: taps.length, handleAvg: mean(handle), handleP95: pct(handle, .95), frameAvg: mean(toFrame), frameP95: pct(toFrame, .95), first: firstTap, first5, restHandleMed: pct(restHandle, .5), restFrameMed: pct(restFrame, .5) },
       errors, breakdown, atStart, atEnd,
     };
   } finally { await browser.close(); }

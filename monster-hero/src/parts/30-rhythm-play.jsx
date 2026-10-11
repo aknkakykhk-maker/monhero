@@ -543,6 +543,15 @@ function RhythmSkyLiftSwitch(){
     <p className="mt-1 text-[10px] font-bold text-rose-200/80">空中と地上の判定ラインの差(画面の高さに対する割合)。横画面は39%のまま。ここで選んだ値は縦画面の試作の HELL だけに効きます。</p>
     <div className="mt-2 grid grid-cols-3 gap-2">{[16,25,39].map(v=><button key={v} type="button" data-rhythm-sky-lift={v} aria-pressed={value===v} onClick={()=>pick(v)} className={`min-h-[44px] rounded-xl text-sm font-black ${value===v?'bg-rose-600 text-white ring-2 ring-rose-200':'bg-slate-800 text-slate-300'}`}>{v}%{v===16?'(いま)':''}</button>)}</div></section>;
 }
+// SKY TAP の見た目の案を切り替える(デバッグ専用・2026-10-11 社長「スカイは透明だけどちょっと見にくい」)。保存は新しいキー mh_sky_box_look_proto だけ。
+// ふつうのプレイ(この画面を通らない)はいまの案Zのまま
+function RhythmSkyBoxLookSwitch(){
+  const [value,setValue]=useState(()=>RHYTHM_SKY_BOX_VARIANT.id);
+  const pick=v=>{RHYTHM_SKY_BOX_VARIANT.set(v);setValue(RHYTHM_SKY_BOX_VARIANT.id);};
+  return <section data-rhythm-sky-box-look-switch className="mb-3 rounded-2xl border border-rose-400/50 bg-rose-950/25 p-3"><h3 className="text-xs font-black text-rose-100">SKY TAP の見た目(試作・見比べ用)</h3>
+    <p className="mt-1 text-[10px] font-bold text-rose-200/80">ここで選んだ見た目は試作の HELL だけに効きます。描く数は変わりません。</p>
+    <div className="mt-2 grid grid-cols-2 gap-2">{Object.keys(RHYTHM_SKY_BOX_LOOKS).map(v=><button key={v} type="button" data-rhythm-sky-box-look={v} aria-pressed={value===v} onClick={()=>pick(v)} className={`min-h-[44px] rounded-xl px-1 text-xs font-black ${value===v?'bg-rose-600 text-white ring-2 ring-rose-200':'bg-slate-800 text-slate-300'}`}>{RHYTHM_SKY_BOX_LOOK_LABELS[v]}</button>)}</div></section>;
+}
 const RhythmMonsterNoteGuide=()=>{
   const ratios=rhythmMonsterNoteBaseRatios(RHYTHM_MONSTER_SLOT_MAX).map(ratio=>`${Math.round(ratio*100)}%`);
   return <section data-rhythm-monster-guide className="space-y-3">
@@ -957,7 +966,11 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
       cores:typeof navigator!=='undefined'&&Number.isFinite(navigator.hardwareConcurrency)?navigator.hardwareConcurrency:0,
       effect:String(settings?.stageEffect||''),fps:String(settings?.frameRateMode||''),light:!!settings?.lightweightMode,
       // 演奏前の準備(prep: したか・prepMs: かかった時間・prepWaitMs: 幕が閉じたあと READY の前に待った時間)
-      prep:prepareOn?1:0,prepMs:prepareRef.current?prepareRef.current.ms:null,prepWaitMs:prepareRef.current?prepareRef.current.waitMs:null});}catch(e){return null;}};
+      prep:prepareOn?1:0,prepMs:prepareRef.current?prepareRef.current.ms:null,prepWaitMs:prepareRef.current?prepareRef.current.waitMs:null,
+      // どちらの描き方で遊んだか(2026-10-11・GPU を既定にした前後を本番の記録で比べる): 描画方式の設定・GPU の帯の切り替え(default/gpu/off)・
+      // WebGL を使うつもりだったか・自動で 2D に戻ったか(作れなかった/途中で取り上げられた)・GPU の帯の部品が作れずに CPU で刻んだか
+      drawMode:String(settings?.noteDrawMode||''),gpuPref:rhythmGpuBandPreference()||'default',webglWanted:webglWanted?1:0,
+      fallback:webglWanted&&(webglLost||RHYTHM_CANVAS_RENDERER.backend!=='webgl')?1:0,bandFallback:webglWanted&&RHYTHM_CANVAS_RENDERER.backend==='webgl'&&rhythmGpuBandActive()&&!RHYTHM_CANVAS_RENDERER.gpuBand?1:0});}catch(e){return null;}};
   // 空中の段(試作・2026-10-10): 空中のノーツがある譜面だけ、空中の判定ラインを出し、指の高さで地上と空中を分ける
   const skyChart=useMemo(()=>rhythmChartHasSky(chart?.notes),[chart]);
   if(skyChart)RHYTHM_SKY_LIFT.set(orientationIsLandscape());
@@ -1017,7 +1030,7 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   const webglWanted=useState(()=>canvasNotes&&rhythmWebglNotesActive(settings.noteDrawMode))[0];
   const [webglLost,setWebglLost]=useState(false);
   const webglNotes=webglWanted&&!webglLost;
-  useEffect(()=>{if(!canvasNotes)return undefined;RHYTHM_CANVAS_RENDERER.attach(noteCanvasRef.current,{webgl:webglNotes,gpuBand:rhythmGpuBandPreference()==='gpu'});const canvas=noteCanvasRef.current;if(canvas)canvas.dataset.rhythmNoteBackend=RHYTHM_CANVAS_RENDERER.backend;
+  useEffect(()=>{if(!canvasNotes)return undefined;RHYTHM_CANVAS_RENDERER.attach(noteCanvasRef.current,{webgl:webglNotes,gpuBand:rhythmGpuBandActive()});const canvas=noteCanvasRef.current;if(canvas)canvas.dataset.rhythmNoteBackend=RHYTHM_CANVAS_RENDERER.backend;
     // ★WebGL を頼んだのに描き込み先が取れなかった(準備の途中で失敗した)ときは、文脈を失ったときと同じく
     //   canvas を作り直して「ふつう」の描き方へ戻す。そのままだと判定は進むのにノーツが見えない(2026-09-26)
     if(webglNotes&&canvas&&RHYTHM_CANVAS_RENDERER.ready===false){setWebglLost(true);return()=>{RHYTHM_CANVAS_RENDERER.release();};}
@@ -1492,8 +1505,16 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
     return()=>{clearTimeout(later);window.removeEventListener('resize',apply);};
   },[isLandscape,view.status]);
   const stopFrame=useCallback(()=>{if(frameRef.current!==null)cancelAnimationFrame(frameRef.current);frameRef.current=null;},[]);
-  const clearJudgmentTimer=useCallback(()=>{if(judgmentTimerRef.current!==null)clearTimeout(judgmentTimerRef.current);judgmentTimerRef.current=null;++judgmentRevisionRef.current;},[]);
-  const scheduleJudgmentClear=useCallback(()=>{if(judgmentTimerRef.current!==null)clearTimeout(judgmentTimerRef.current);const revision=++judgmentRevisionRef.current;judgmentTimerRef.current=setTimeout(()=>{if(revision!==judgmentRevisionRef.current)return;judgmentTimerRef.current=null;hudRef.current.set({last:'',lastPrecise:false,fastSlow:'',skyLast:'',skyLastPrecise:false,skyFastSlow:''});},RHYTHM_JUDGMENT_DISPLAY_MS);},[]);
+  /* 判定の文字を RHYTHM_JUDGMENT_DISPLAY_MS で消す予約。地上と空中で別々に持つ(2026-10-11 社長「HELL確認したら空中判定(マーベラス)がでっぱなし」)。
+     ★それまでは予約が1本で、地上の判定が来るたびに空中の文字の消える時刻まで先へ延びていた。地上のノーツが続くあいだ
+       空中の文字が残り、bot で Sheriruth HELL 最長2.6秒・Grievous Lady HELL 最長4.7秒残っていた。地上の消え方は変えていない */
+  const skyJudgmentTimerRef=useRef(null),skyJudgmentRevisionRef=useRef(0);
+  const clearJudgmentTimer=useCallback(()=>{if(judgmentTimerRef.current!==null)clearTimeout(judgmentTimerRef.current);judgmentTimerRef.current=null;++judgmentRevisionRef.current;
+    if(skyJudgmentTimerRef.current!==null)clearTimeout(skyJudgmentTimerRef.current);skyJudgmentTimerRef.current=null;++skyJudgmentRevisionRef.current;},[]);
+  const scheduleJudgmentClear=useCallback((sky=false)=>{
+    if(sky){if(skyJudgmentTimerRef.current!==null)clearTimeout(skyJudgmentTimerRef.current);const revision=++skyJudgmentRevisionRef.current;
+      skyJudgmentTimerRef.current=setTimeout(()=>{if(revision!==skyJudgmentRevisionRef.current)return;skyJudgmentTimerRef.current=null;hudRef.current.set({skyLast:'',skyLastPrecise:false,skyFastSlow:''});},RHYTHM_JUDGMENT_DISPLAY_MS);return;}
+    if(judgmentTimerRef.current!==null)clearTimeout(judgmentTimerRef.current);const revision=++judgmentRevisionRef.current;judgmentTimerRef.current=setTimeout(()=>{if(revision!==judgmentRevisionRef.current)return;judgmentTimerRef.current=null;hudRef.current.set({last:'',lastPrecise:false,fastSlow:''});},RHYTHM_JUDGMENT_DISPLAY_MS);},[]);
   // 能力の発動表示(「ミーア　元気！」)は短時間で消す。判定表示とは別のタイマーで持つ
   const clearAbilityTimer=useCallback(()=>{if(abilityTimerRef.current!==null)clearTimeout(abilityTimerRef.current);abilityTimerRef.current=null;++abilityRevisionRef.current;},[]);
   /* カウントダウンの後始末。disposeRun がこれを呼ぶので、必ず disposeRun より前で定義する。
@@ -1812,7 +1833,7 @@ const score=run.lifeDepleted?run.lockedScore:run.score,lastDeltaMs=judgment!=='M
 hudRef.current.set(rhythmNoteIsSky(note)?{score,combo:run.combo,skyLast:judgment,skyLastPrecise:preciseHit,skyFastSlow:side||'',skyDeltaMs:lastDeltaMs,counts:{...run.counts},life:run.life}
   :{score,combo:run.combo,last:judgment,lastPrecise:preciseHit,fastSlow:side||'',lastDeltaMs,counts:{...run.counts},life:run.life});
 const coarseKey=`${rhythmComboTier(run.combo)}|${Math.floor(run.combo/RHYTHM_COMBO_MILESTONE_STEP)}|${rhythmLifeState(run.life)}`;
-if(showAbilityFlash||coarseKey!==run._viewCoarseKey){run._viewCoarseKey=coarseKey;setView(v=>({...v,score,combo:run.combo,maxCombo:run.maxCombo,last:judgment,lastPrecise:preciseHit,fastSlow:side||'',counts:{...run.counts},fast:run.fast,slow:run.slow,precise:run.precise,life:run.life,lastDeltaMs,...(showAbilityFlash?{ability:abilityFlash}:{})}));}scheduleJudgmentClear();
+if(showAbilityFlash||coarseKey!==run._viewCoarseKey){run._viewCoarseKey=coarseKey;setView(v=>({...v,score,combo:run.combo,maxCombo:run.maxCombo,last:judgment,lastPrecise:preciseHit,fastSlow:side||'',counts:{...run.counts},fast:run.fast,slow:run.slow,precise:run.precise,life:run.life,lastDeltaMs,...(showAbilityFlash?{ability:abilityFlash}:{})}));}scheduleJudgmentClear(rhythmNoteIsSky(note));
 /* 自己ベスト比(beatmania IIDX のペースメーカー)。「自己ベストを曲のここまでの割合で割り戻した点」との差。
    前の記録が無い曲・練習・タイミング合わせでは出さない。★見た目だけで、スコアにも記録にも入れない */
 const paceEl=paceRef.current;
@@ -2426,7 +2447,7 @@ scheduleTick();};
       target.activePointerId=input.inputKey;
       if(handover){target.releasedAtMs=null;rhythmFloatingNoteRemove(target);}
       else{target.holdJudgment=judgment;target.holdDeltaMs=deltaMs;}
-      run.activePointers.set(input.inputKey,target.index);if(input.captureTarget&&input.pointerId!==undefined){try{input.captureTarget.setPointerCapture(input.pointerId);}catch{}}const side=rhythmFastSlow(deltaMs);hudRef.current.set(rhythmNoteIsSky(target)?{skyLast:'HOLD',skyLastPrecise:false,skyFastSlow:side||''}:{last:'HOLD',lastPrecise:false,fastSlow:side||''});scheduleJudgmentClear();return;}applyJudgment(target,judgment,deltaMs);});};
+      run.activePointers.set(input.inputKey,target.index);if(input.captureTarget&&input.pointerId!==undefined){try{input.captureTarget.setPointerCapture(input.pointerId);}catch{}}const side=rhythmFastSlow(deltaMs);hudRef.current.set(rhythmNoteIsSky(target)?{skyLast:'HOLD',skyLastPrecise:false,skyFastSlow:side||''}:{last:'HOLD',lastPrecise:false,fastSlow:side||''});scheduleJudgmentClear(rhythmNoteIsSky(target));return;}applyJudgment(target,judgment,deltaMs);});};
   const inputMoves=(inputKey,subLaneCoordinate)=>{const run=runRef.current,state=run?.inputFeedbackState?.get(inputKey);if(!state||!Number.isFinite(subLaneCoordinate))return;if(Math.abs(subLaneCoordinate-state.subLaneCoordinate)>=3)RHYTHM_PERF.touchJump();if(Math.abs(subLaneCoordinate-state.subLaneCoordinate)<RHYTHM_TAP_REJUDGE_MOVE_SUBLANES)return;const subLane=Math.max(0,Math.min(RHYTHM_SUB_LANE_COUNT-1,Math.floor(subLaneCoordinate)));if(subLane===state.subLane)return;state.subLane=subLane;state.subLaneCoordinate=subLaneCoordinate;if(state.empty)inputStarts([{lane:Math.floor(subLane/2),subLaneCoordinate,inputKey,rejudge:true}]);};
   // 押さえている帯へ先に置いてあった「控えの指」を探す。
   // 親指で遊ぶ人は「2本目を置いてから1本目を離す」ので、離した瞬間に渡せないと必ずMISSになる

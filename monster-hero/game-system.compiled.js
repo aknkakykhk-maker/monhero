@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: fa66bc9bd5f77338
+// source-sha256: af8f6cd4c2b3bb91
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-11 18:51";
+const BUILD_DATE = "2026-10-11 19:50";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -31136,6 +31136,30 @@ function RhythmSkyLiftSwitch() {
     className: `min-h-[44px] rounded-xl text-sm font-black ${value === v ? 'bg-rose-600 text-white ring-2 ring-rose-200' : 'bg-slate-800 text-slate-300'}`
   }, v, "%", v === 16 ? '(いま)' : ''))));
 }
+function RhythmSkyBoxLookSwitch() {
+  const [value, setValue] = useState(() => RHYTHM_SKY_BOX_VARIANT.id);
+  const pick = v => {
+    RHYTHM_SKY_BOX_VARIANT.set(v);
+    setValue(RHYTHM_SKY_BOX_VARIANT.id);
+  };
+  return React.createElement("section", {
+    "data-rhythm-sky-box-look-switch": true,
+    className: "mb-3 rounded-2xl border border-rose-400/50 bg-rose-950/25 p-3"
+  }, React.createElement("h3", {
+    className: "text-xs font-black text-rose-100"
+  }, "SKY TAP の見た目(試作・見比べ用)"), React.createElement("p", {
+    className: "mt-1 text-[10px] font-bold text-rose-200/80"
+  }, "ここで選んだ見た目は試作の HELL だけに効きます。描く数は変わりません。"), React.createElement("div", {
+    className: "mt-2 grid grid-cols-2 gap-2"
+  }, Object.keys(RHYTHM_SKY_BOX_LOOKS).map(v => React.createElement("button", {
+    key: v,
+    type: "button",
+    "data-rhythm-sky-box-look": v,
+    "aria-pressed": value === v,
+    onClick: () => pick(v),
+    className: `min-h-[44px] rounded-xl px-1 text-xs font-black ${value === v ? 'bg-rose-600 text-white ring-2 ring-rose-200' : 'bg-slate-800 text-slate-300'}`
+  }, RHYTHM_SKY_BOX_LOOK_LABELS[v]))));
+}
 const RhythmMonsterNoteGuide = () => {
   const ratios = rhythmMonsterNoteBaseRatios(RHYTHM_MONSTER_SLOT_MAX).map(ratio => `${Math.round(ratio * 100)}%`);
   return React.createElement("section", {
@@ -32102,7 +32126,12 @@ const RhythmTapTest = ({
         light: !!settings?.lightweightMode,
         prep: prepareOn ? 1 : 0,
         prepMs: prepareRef.current ? prepareRef.current.ms : null,
-        prepWaitMs: prepareRef.current ? prepareRef.current.waitMs : null
+        prepWaitMs: prepareRef.current ? prepareRef.current.waitMs : null,
+        drawMode: String(settings?.noteDrawMode || ''),
+        gpuPref: rhythmGpuBandPreference() || 'default',
+        webglWanted: webglWanted ? 1 : 0,
+        fallback: webglWanted && (webglLost || RHYTHM_CANVAS_RENDERER.backend !== 'webgl') ? 1 : 0,
+        bandFallback: webglWanted && RHYTHM_CANVAS_RENDERER.backend === 'webgl' && rhythmGpuBandActive() && !RHYTHM_CANVAS_RENDERER.gpuBand ? 1 : 0
       });
     } catch (e) {
       return null;
@@ -32207,7 +32236,7 @@ const RhythmTapTest = ({
     if (!canvasNotes) return undefined;
     RHYTHM_CANVAS_RENDERER.attach(noteCanvasRef.current, {
       webgl: webglNotes,
-      gpuBand: rhythmGpuBandPreference() === 'gpu'
+      gpuBand: rhythmGpuBandActive()
     });
     const canvas = noteCanvasRef.current;
     if (canvas) canvas.dataset.rhythmNoteBackend = RHYTHM_CANVAS_RENDERER.backend;
@@ -32976,12 +33005,31 @@ const RhythmTapTest = ({
     if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
     frameRef.current = null;
   }, []);
+  const skyJudgmentTimerRef = useRef(null),
+    skyJudgmentRevisionRef = useRef(0);
   const clearJudgmentTimer = useCallback(() => {
     if (judgmentTimerRef.current !== null) clearTimeout(judgmentTimerRef.current);
     judgmentTimerRef.current = null;
     ++judgmentRevisionRef.current;
+    if (skyJudgmentTimerRef.current !== null) clearTimeout(skyJudgmentTimerRef.current);
+    skyJudgmentTimerRef.current = null;
+    ++skyJudgmentRevisionRef.current;
   }, []);
-  const scheduleJudgmentClear = useCallback(() => {
+  const scheduleJudgmentClear = useCallback((sky = false) => {
+    if (sky) {
+      if (skyJudgmentTimerRef.current !== null) clearTimeout(skyJudgmentTimerRef.current);
+      const revision = ++skyJudgmentRevisionRef.current;
+      skyJudgmentTimerRef.current = setTimeout(() => {
+        if (revision !== skyJudgmentRevisionRef.current) return;
+        skyJudgmentTimerRef.current = null;
+        hudRef.current.set({
+          skyLast: '',
+          skyLastPrecise: false,
+          skyFastSlow: ''
+        });
+      }, RHYTHM_JUDGMENT_DISPLAY_MS);
+      return;
+    }
     if (judgmentTimerRef.current !== null) clearTimeout(judgmentTimerRef.current);
     const revision = ++judgmentRevisionRef.current;
     judgmentTimerRef.current = setTimeout(() => {
@@ -32990,10 +33038,7 @@ const RhythmTapTest = ({
       hudRef.current.set({
         last: '',
         lastPrecise: false,
-        fastSlow: '',
-        skyLast: '',
-        skyLastPrecise: false,
-        skyFastSlow: ''
+        fastSlow: ''
       });
     }, RHYTHM_JUDGMENT_DISPLAY_MS);
   }, []);
@@ -33409,7 +33454,7 @@ const RhythmTapTest = ({
         } : {})
       }));
     }
-    scheduleJudgmentClear();
+    scheduleJudgmentClear(rhythmNoteIsSky(note));
     const paceEl = paceRef.current;
     if (paceEl && settings.paceDisplay !== false && !tutorial && !calibrating && Number(run.startBestScore) > 0 && chart.totalNotes > 0) {
       const judged = RHYTHM_JUDGMENT_IDS.reduce((sum, id) => sum + (Number(run.counts[id]) || 0), 0);
@@ -34803,7 +34848,7 @@ const RhythmTapTest = ({
           lastPrecise: false,
           fastSlow: side || ''
         });
-        scheduleJudgmentClear();
+        scheduleJudgmentClear(rhythmNoteIsSky(target));
         return;
       }
       applyJudgment(target, judgment, deltaMs);
@@ -74707,7 +74752,9 @@ function MonsterHeroGame() {
       clientY: p.y
     } : null;
   };
+  const rippleInRhythmPlay = e => !!(e.target && e.target.closest && e.target.closest('[data-rhythm-play-area]'));
   const rippleOnPointerDown = useCallback(e => {
+    if (rippleInRhythmPlay(e)) return;
     rippleDragRef.current = true;
     rippleLastAtRef.current = performance.now();
     const at = ripplePoint(e);
@@ -98312,12 +98359,12 @@ function MonsterHeroGame() {
       className: "text-xs font-black text-cyan-200"
     }, "スライドの帯の描き方（検証用）"), React.createElement("p", {
       className: "mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80"
-    }, "「GPU」はスライドの帯（地上・空中・影）の形を譜面を読んだときに一度だけ GPU に置き、毎コマは曲の位置だけ渡して描きます（帯が長い・多い曲で軽くするための試作）。選ぶとノーツは WebGL で描きます（「ノーツの描き方」で canvas・要素を選んでいるときはそちらが勝ちます）。WebGL が使えないときは今の描き方に戻ります。次の演奏から効きます。"), React.createElement("div", {
+    }, "「GPU」はスライドの帯（地上・空中・影）の形を譜面を読んだときに一度だけ GPU に置き、毎コマは曲の位置だけ渡して描きます（帯が長い・多い曲で軽くするための試作）。既定（GPU）は、ノーツを WebGL で描いているとき（描画方式が自動で GPU がある端末など）に使います。「GPU（WebGL も）」は描画方式に関係なくノーツを WebGL で描きます（「ノーツの描き方」で canvas・要素を選んでいるときはそちらが勝ちます）。「今の描き方」は使いません。WebGL が使えないときは今の描き方に戻ります。次の演奏から効きます。"), React.createElement("div", {
       className: "mt-2 flex gap-2"
-    }, [['', '今の描き方'], ['gpu', 'GPU']].map(([value, label]) => React.createElement("button", {
-      key: value || 'cpu',
+    }, [['', '既定（GPU）'], ['gpu', 'GPU（WebGL も）'], ['off', '今の描き方']].map(([value, label]) => React.createElement("button", {
+      key: value || 'default',
       type: "button",
-      "data-rhythm-gpu-band-pref": value || 'cpu',
+      "data-rhythm-gpu-band-pref": value || 'default',
       "aria-pressed": rhythmGpuBandPref === value,
       onClick: () => setRhythmGpuBandPref(rhythmGpuBandSetPreference(value)),
       className: `min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmGpuBandPref === value ? 'bg-cyan-400 text-slate-900' : 'border border-white/20 bg-slate-900 text-slate-200'}`
@@ -98413,7 +98460,7 @@ function MonsterHeroGame() {
       className: "break-all text-right font-mono text-white"
     }, String(value))))))), React.createElement("div", {
       hidden: rhythmDebugTab !== 'play'
-    }, React.createElement(RhythmSkyLiftSwitch, null), React.createElement("section", {
+    }, React.createElement(RhythmSkyLiftSwitch, null), React.createElement(RhythmSkyBoxLookSwitch, null), React.createElement("section", {
       "data-debug-rhythm-hell-story": true,
       className: "mb-3 rounded-2xl border border-pink-400/50 bg-pink-950/25 p-3"
     }, React.createElement("h3", {
