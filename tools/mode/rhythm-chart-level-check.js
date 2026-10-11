@@ -126,6 +126,9 @@ const runtime=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js')
     const back=chartStrain(grounded(hell)),masterStrain=chartStrain(master),hellStrain=chartStrain(hell);
     check('Sheriruth HELL の空中を地上へ戻すと、空中のぶんだけ生の値が下がる',back.raw<hellStrain.raw&&back.parts.skySwitch===0&&hellStrain.parts.skySwitch>0,
       `戻した HELL ${back.raw}(切り替え ${back.parts.skySwitch}) / HELL ${hellStrain.raw}(切り替え ${hellStrain.parts.skySwitch})`);
+    // 空中があるだけで2割増し(2026-10-11 社長): HELL の Lv. は、空中を地上と見なした Lv. の SKY_LEVEL_FACTOR 倍
+    {const {SKY_LEVEL_FACTOR}=require('./rhythm-chart-level.js');const groundLv=chartLevel(grounded(hell)).level;
+      check(`Sheriruth HELL の Lv. は、空中を地上と見なした Lv. の ${SKY_LEVEL_FACTOR} 倍`,hell.level===Math.round(groundLv*SKY_LEVEL_FACTOR),`HELL Lv.${hell.level} / 地上と見なして Lv.${groundLv}`);}
     check('Sheriruth HELL は空中のぶん MASTER より重い',hellStrain.raw>masterStrain.raw&&hell.level>master.level,
       `HELL 生${hellStrain.raw} Lv.${hell.level} / MASTER 生${masterStrain.raw} Lv.${master.level}`);
   }
