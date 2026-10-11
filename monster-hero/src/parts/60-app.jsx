@@ -139,7 +139,7 @@ function MonsterHeroGame() {
   const [rhythmPerfStats,setRhythmPerfStats]=useState(null);
   // バトルの性能計測(デバッグ限定・既定OFF)。ONの記憶は専用キー mh_battle_perf_v1(BATTLE_PERF が持つ)
   const [battlePerfOn,setBattlePerfOn]=useState(()=>BATTLE_PERF.enabled);
-  // 事前ダウンロード(25-asset-cache.jsx)。いまはデバッグで入/切する。入のあいだだけ設定に「ダウンロード」が出る
+  // 事前ダウンロード(25-asset-cache.jsx)。既定は入。DEBUG MENU で入/切できる。入のあいだだけ設定に「ダウンロード」が出る
   const [assetCacheOn,setAssetCacheOn]=useState(()=>ASSET_CACHE.enabled);
   // 演奏画面の装飾を個別に切って、実機で何が重いかを切り分ける(デバッグ限定・新しい保存キー)
   const [rhythmStrip,setRhythmStrip]=useState(()=>RHYTHM_STRIP.value);
@@ -18359,7 +18359,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   {debugThrowScreenError&&<DebugThrowScreenError/>}
                   {/* 事前ダウンロード(2026-10-11)。ONにすると Service Worker を登録し、設定に「ダウンロード」が出る。
                       OFFにすると Service Worker を外し、端末にためた曲・画像を消す(セーブデータ・ランキングには触れない)。
-                      公開前の確かめ用なので、更新履歴・ヘルプにはまだ載せない */}
+                      既定は ON(2026-10-11 公開)。この切り替えボタン自体はデバッグ専用 */}
                   <button type="button" data-asset-cache-toggle aria-pressed={assetCacheOn} onClick={async()=>setAssetCacheOn(await ASSET_CACHE.setEnabled(!assetCacheOn))} className={`w-full min-h-[52px] rounded-2xl px-3 py-2 text-left text-[12px] font-black active:scale-95 ${assetCacheOn?'border-2 border-emerald-300 bg-emerald-500 text-slate-900':'border-2 border-emerald-400/40 bg-emerald-950/30 text-emerald-100'}`}>📥 事前ダウンロード：{assetCacheOn?'ON':'OFF'}<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">設定に「ダウンロード」が出ます。OFFにすると、端末に入れた曲・画像を消します</small></button>
                 </div>
               </details>

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: cddaa9decd4e34b6
+// generated-sha256: bfb0444156b4d840
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-11 18:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-11 18:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15040,13 +15040,15 @@ const storeList = async (prefix, shared=false) => {
 //   中身が変わったファイルは別の鍵になり、古い絵や音は出ない。一覧から消えた・版の違うものは SW が消す
 // ・保存データ(mh_*)・ランキングには触れない。この仕組みの記憶は専用キー mh_asset_prefetch_v1 だけ
 //   (入/切・自動の前もって落とし・最近選んだ曲)。読めない・壊れているときは既定値に戻す
-// ・はじめはデバッグで入れる(ASSET_CACHE_DEFAULT_ENABLED=false)。切にすると SW を外し、ためたものも消す
+// ・既定は入(ASSET_CACHE_DEFAULT_ENABLED)。DEBUG MENU の切り替えで切にすると SW を外し、ためたものも消す
 // ・演奏前の準備中・演奏中は、自動の前もって落としを止める(修理部ドライバーくんの印
 //   window.__mhSongPrepBusy / __mhSongPlaying と mh:song-prep-* / mh:song-play-* を見る)
 const ASSET_CACHE_KEY = 'mh_asset_prefetch_v1';
 const ASSET_CACHE_NAME = 'mh-assets-v1';
 const ASSET_CACHE_META = 'mh-assets-meta-v1';
-const ASSET_CACHE_DEFAULT_ENABLED = false;
+// 2026-10-11 社長の了承で既定を入にした(「既定『する』で公開」)。保存値が無い人(既存・新規とも)は入・自動ダウンロードも「する」。
+// 一度「しない」を選んだ人(auto:false)や、デバッグで切にした人(enabled:false)の保存値はそのまま使う(normalizeAssetCacheSettings)
+const ASSET_CACHE_DEFAULT_ENABLED = true;
 // 設定の「ダウンロード」に並べるまとまり。容量は一覧(asset-manifest.json)から出す
 const ASSET_PACKS = [
   { id: 'beat', icon: '🎵', label: 'モンヒロビート', desc: '全曲の音源とジャケット' },
@@ -29660,7 +29662,7 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
   // バトル設定は設定画面の中の1ページ(2026-09-24 ユーザー指示「バトルの設定をバラにしないで、
   // 音量設定の上に作ってその中に細かい設定欄を作って」)。画面(gameState)は増やさず、ここで切り替える
   const [battleSettingsOpen, setBattleSettingsOpen] = useState(false);
-  // ダウンロード(事前ダウンロード)も設定画面の中の1ページ。いまはデバッグで入にしたときだけ出す(ASSET_CACHE.enabled)
+  // ダウンロード(事前ダウンロード)も設定画面の中の1ページ。既定で出る。DEBUG MENU で事前ダウンロードを切にしたときだけ隠れる(ASSET_CACHE.enabled)
   const [assetDownloadOpen, setAssetDownloadOpen] = useState(false);
   // 助手のひとことの出し方(21-assistant.jsx の ASSISTANT_BUBBLE_STORE。早期の return より前で読む)
   const assistantBubble = useAssistantBubbleState();
@@ -45344,7 +45346,7 @@ function MonsterHeroGame() {
   const [rhythmPerfStats,setRhythmPerfStats]=useState(null);
   // バトルの性能計測(デバッグ限定・既定OFF)。ONの記憶は専用キー mh_battle_perf_v1(BATTLE_PERF が持つ)
   const [battlePerfOn,setBattlePerfOn]=useState(()=>BATTLE_PERF.enabled);
-  // 事前ダウンロード(25-asset-cache.jsx)。いまはデバッグで入/切する。入のあいだだけ設定に「ダウンロード」が出る
+  // 事前ダウンロード(25-asset-cache.jsx)。既定は入。DEBUG MENU で入/切できる。入のあいだだけ設定に「ダウンロード」が出る
   const [assetCacheOn,setAssetCacheOn]=useState(()=>ASSET_CACHE.enabled);
   // 演奏画面の装飾を個別に切って、実機で何が重いかを切り分ける(デバッグ限定・新しい保存キー)
   const [rhythmStrip,setRhythmStrip]=useState(()=>RHYTHM_STRIP.value);
@@ -63564,7 +63566,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   {debugThrowScreenError&&<DebugThrowScreenError/>}
                   {/* 事前ダウンロード(2026-10-11)。ONにすると Service Worker を登録し、設定に「ダウンロード」が出る。
                       OFFにすると Service Worker を外し、端末にためた曲・画像を消す(セーブデータ・ランキングには触れない)。
-                      公開前の確かめ用なので、更新履歴・ヘルプにはまだ載せない */}
+                      既定は ON(2026-10-11 公開)。この切り替えボタン自体はデバッグ専用 */}
                   <button type="button" data-asset-cache-toggle aria-pressed={assetCacheOn} onClick={async()=>setAssetCacheOn(await ASSET_CACHE.setEnabled(!assetCacheOn))} className={`w-full min-h-[52px] rounded-2xl px-3 py-2 text-left text-[12px] font-black active:scale-95 ${assetCacheOn?'border-2 border-emerald-300 bg-emerald-500 text-slate-900':'border-2 border-emerald-400/40 bg-emerald-950/30 text-emerald-100'}`}>📥 事前ダウンロード：{assetCacheOn?'ON':'OFF'}<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">設定に「ダウンロード」が出ます。OFFにすると、端末に入れた曲・画像を消します</small></button>
                 </div>
               </details>

@@ -4,7 +4,7 @@
 //
 // 説明の正本: docs/spec/ASSET_PREFETCH.md。見ること:
 //  ① 一覧(asset-manifest.json)が音源・画像の中身と合っている / SW が扱うのは音源と画像だけ(コードの形)
-//  ② ONで SW が登録され、ページを支配する。HTML・JS・CSS・JSON を SW が返していない(=ゲーム本体の更新を止めない)
+//  ② 既定で ON(保存値なし・壊れた値も)。SW が登録され、ページを支配する。HTML・JS・CSS・JSON を SW が返していない(=ゲーム本体の更新を止めない)
 //  ③ まとまりのダウンロードで、全部が端末に入る。取り消すと途中で止まる。端末から消すと0件になる
 //  ④ アップデートの真似(絵を1枚差し替え、一覧の版を変える)で、古い版が消え、新しい中身が返る
 //  ⑤ OFFで SW が外れ、ためたものが消える
@@ -81,7 +81,7 @@ const waitFor = async (page, fn, arg, timeout = 120000) => page.waitForFunction(
   try {
     await page.goto(BASE + 'index.html', { waitUntil: 'load' });
     await waitFor(page, () => typeof ASSET_CACHE !== 'undefined');
-    // ゲーム自身が起動のたびに書くキー(遊んだ時間・ランキングの控えなど)を、事前ダウンロードを使わずに
+    // ゲーム自身が起動のたびに書くキー(遊んだ時間・ランキングの控えなど)を、ダウンロードの操作をせずに
     // 同じ回数だけ開き直して先に調べる。比べるのはそれ以外のキー(SW は localStorage を触れないので、見るのはページ側)
     const control0 = await snapshotSave();
     for (let i = 0; i < 3; i++) { await page.reload({ waitUntil: 'load' }); await waitFor(page, () => typeof ASSET_CACHE !== 'undefined'); }
@@ -92,9 +92,16 @@ const waitFor = async (page, fn, arg, timeout = 120000) => page.waitForFunction(
     const save0 = await snapshotSave();
 
     console.log('② ONで登録・ゲーム本体には手を出さない');
-    check('最初は OFF(既定)で、SW は登録されていない', await page.evaluate(async () => !ASSET_CACHE.enabled && (await navigator.serviceWorker.getRegistrations()).length === 0));
-    await page.evaluate(() => ASSET_CACHE.setEnabled(true));
+    // 既定は入・自動ダウンロード「する」(2026-10-11 公開)。保存値が無い・壊れている人も既定値になり、
+    // 「しない」を選んだ人・切にした人の保存値は上書きしない(CLAUDE.md ⑦)
+    check('最初から ON・自動ダウンロード「する」(保存値なしの既定)', await page.evaluate(() => ASSET_CACHE.enabled && ASSET_CACHE.auto));
+    const norm = await page.evaluate(() => [null, 'こわれた', [1], { enabled: 'yes', auto: 3, songs: 'x' }, { auto: false }, { enabled: false }]
+      .map(v => normalizeAssetCacheSettings(v)));
+    check('保存値が無い・壊れているときは既定値(入・する)', norm.slice(0, 4).every(n => n.enabled === true && n.auto === true && Array.isArray(n.songs) && n.songs.length === 0));
+    check('「しない」を選んだ人・切にした人の保存値はそのまま', norm[4].enabled === true && norm[4].auto === false && norm[5].enabled === false && norm[5].auto === true);
     await waitFor(page, () => navigator.serviceWorker.ready.then(() => true));
+    // ここから先は件数を数えるので、自動ダウンロードは止めておく
+    await page.evaluate(() => ASSET_CACHE.setAuto(false));
     await page.reload({ waitUntil: 'load' });
     await waitFor(page, () => typeof ASSET_CACHE !== 'undefined' && !!navigator.serviceWorker.controller);
     check('ONにすると SW がページを支配する', await page.evaluate(() => !!navigator.serviceWorker.controller && ASSET_CACHE.enabled));
