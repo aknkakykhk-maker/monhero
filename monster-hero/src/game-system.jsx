@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: df28a2c04b216960
+// generated-sha256: 7a928dd80d73f32d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-11 10:05"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-11 13:05"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4188,6 +4188,7 @@ const BGM_TRACKS = [
   { id:'melo_anima', name:'ANiMA', creator:'オリジナル', src:'audio/bgm-anima.mp3', gain:1, loop:true },
   { id:'melo_journey', name:'Journey', creator:'DECO*27', src:'audio/bgm-journey.mp3', gain:1, loop:true },
   { id:'melo_sheriruth', name:'Sheriruth', creator:'Team Grimoire', src:'audio/bgm-sheriruth.mp3', gain:1, loop:true },
+  { id:'melo_grievous_lady', name:'Grievous Lady', creator:'Team Grimoire vs Laur', src:'audio/bgm-grievous-lady.mp3', gain:1, loop:true },
   { id:'melo_dullahan_clockwork_alt', name:'呪われた騎士の時計仕掛け -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-clockwork-alt.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost', name:'鋼鉄の亡霊', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost_alt', name:'鋼鉄の亡霊 -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost-alt.mp3', gain:1, loop:true },
@@ -5283,6 +5284,7 @@ const Audio_ = (() => {
     "audio/bgm-freedom-dive.mp3": "34616b2fccd3",
     "audio/bgm-fusion.mp3": "6f0d4675789f",
     "audio/bgm-game-over.mp3": "d9fb75a7c827",
+    "audio/bgm-grievous-lady.mp3": "4f0cac7b9772",
     "audio/bgm-haruka.mp3": "7a7164dbf152",
     "audio/bgm-home-ichika.mp3": "29295336d1af",
     "audio/bgm-journey.mp3": "bd51dcc8ef21",
@@ -19871,9 +19873,10 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   useEffect(()=>{RHYTHM_SKY_INPUT.active=skyChart;return()=>{RHYTHM_SKY_INPUT.active=false;};},[skyChart]);
   // 速さの表(試作・2026-10-10): 譜面に scrollChanges があるときだけ、ノーツの見た目の位置を表で変える(判定の時刻は変えない)。
   // アシスト・ミラーで作り変えた譜面にも効くよう、元の譜面から読む
-  const scrollChanges=rawChart?.scrollChanges||null;
+  const scrollChanges=rawChart?.scrollChanges||null,scrollGroups=rawChart?.scrollGroups||null;
   // 駆け込み('RUSH')は道の長さ(ノーツ速度で決まる)で速さを決めるので、ノーツ速度も渡す
-  useEffect(()=>{rhythmScrollSet(scrollChanges,rhythmTravelMsForSpeed(settings.noteSpeed));return()=>rhythmScrollSet(null);},[scrollChanges,settings.noteSpeed]);
+  // 組(scrollGroups)のある譜面は、ノーツごとに従う表を持つ(note.scrollGroup)
+  useEffect(()=>{rhythmScrollSet(scrollChanges,rhythmTravelMsForSpeed(settings.noteSpeed),scrollGroups);return()=>rhythmScrollSet(null);},[scrollChanges,scrollGroups,settings.noteSpeed]);
   // ノーツを描く canvas の画素密度の上限。演出量「最小」は2倍まで(以前から)、そのうえで画質の設定で下げる(2026-09-26)。
   // begin() と warmSprites() に**同じ値**を渡すこと(食い違うと焼いた光を捨てて作り直す)
   // 画質「自動」では、演奏中に詰まりが続くと一段ずつ下げる(tick が数える)。曲の途中で切り替えるのはノーツとマスモンの顔だけ。
@@ -20885,14 +20888,14 @@ const paintCanvasNote=note=>{
   // 走査の先頭(scanFrom)はこの印まで進めない(DOM 版が要素の非表示を待つのと同じ)。
   // これが無いと取った瞬間に走査から外れ、絵が隠れずに判定ラインへ残った(2026-09-07・実機「canvas 版でマスモンが残る」)
   if(note.done&&!failedTrail&&!clearFlash){note._rhythmCanvasSettled=true;return;}
-  const progress=1-(rhythmScrollPos(note.timeMs)-rhythmScrollPos(visualTime))/travelMs,visible=failedTrail||note.activePointerId!==null||(progress>=-.1&&progress<=1.18);
+  const progress=1-(rhythmScrollPos(note.timeMs,note.scrollGroup)-rhythmScrollPos(visualTime,note.scrollGroup))/travelMs,visible=failedTrail||note.activePointerId!==null||(progress>=-.1&&progress<=1.18);
   if(!visible||!travel||!canvasReady)return;
   perfDrawn++;
   let yPx=travel.spawnY+rhythmProjectTravelProgress(progress)*travel.travelPx;
   if(note.type==='HOLD'&&note.activePointerId!==null)yPx=travel.judgmentY;
   if(clearFlash)yPx=travel.judgmentY;
   yPx=Math.round(yPx);
-  const releaseTargetMs=rhythmReleaseTargetMs(note),releaseProgress=1-(rhythmScrollPos(releaseTargetMs)-rhythmScrollPos(visualTime))/travelMs,releaseYpx=Math.round(travel.spawnY+rhythmProjectTravelProgress(releaseProgress)*travel.travelPx),bodyPx=Math.max(0,yPx-releaseYpx);
+  const releaseTargetMs=rhythmReleaseTargetMs(note),releaseProgress=1-(rhythmScrollPos(releaseTargetMs,note.scrollGroup)-rhythmScrollPos(visualTime,note.scrollGroup))/travelMs,releaseYpx=Math.round(travel.spawnY+rhythmProjectTravelProgress(releaseProgress)*travel.travelPx),bodyPx=Math.max(0,yPx-releaseYpx);
   // 帯を持つかは元の種類で決める。触った FLICK は判定のため type が 'HOLD' に化けているが帯は無い
   const hasBody=rhythmNoteHasBody(note);
   const activeSlideLane=RHYTHM_GESTURE_RUNTIME.slideVisualLaneForIndex(note.index),visualLane=activeSlideLane===null?note.lane:activeSlideLane;
@@ -20969,9 +20972,9 @@ else if(el._rhythmClearFlag===true){delete el.dataset.rhythmClear;el._rhythmClea
 if(note.done&&!failedTrail&&!clearFlash){if(el._rhythmHidden!==true){el.style.display='none';el._rhythmHidden=true;}return;}
 if(el._rhythmHidden===true){el.style.display='';el._rhythmHidden=false;}
 const failedFlag=failedTrail?'true':'false';if(el._rhythmFailedFlag!==failedFlag){el.dataset.rhythmFailed=failedFlag;el._rhythmFailedFlag=failedFlag;}
-const progress=1-(rhythmScrollPos(note.timeMs)-rhythmScrollPos(visualTime))/travelMs,visible=failedTrail||note.activePointerId!==null||(progress>=-.1&&progress<=1.18);const nextOpacity=failedTrail?'.34':(visible?'1':'0');if(el._rhythmOpacity!==nextOpacity){el.style.opacity=nextOpacity;el._rhythmOpacity=nextOpacity;}const nextWillChange=visible?'transform, opacity':'';if(el._rhythmWillChange!==nextWillChange){el.style.willChange=nextWillChange;el._rhythmWillChange=nextWillChange;}
+const progress=1-(rhythmScrollPos(note.timeMs,note.scrollGroup)-rhythmScrollPos(visualTime,note.scrollGroup))/travelMs,visible=failedTrail||note.activePointerId!==null||(progress>=-.1&&progress<=1.18);const nextOpacity=failedTrail?'.34':(visible?'1':'0');if(el._rhythmOpacity!==nextOpacity){el.style.opacity=nextOpacity;el._rhythmOpacity=nextOpacity;}const nextWillChange=visible?'transform, opacity':'';if(el._rhythmWillChange!==nextWillChange){el.style.willChange=nextWillChange;el._rhythmWillChange=nextWillChange;}
 if(!visible||!travel)return;
-perfDrawn++;let yPx=travel.spawnY+rhythmProjectTravelProgress(progress)*travel.travelPx;if(note.type==='HOLD'&&note.activePointerId!==null)yPx=travel.judgmentY;if(clearFlash)yPx=travel.judgmentY;yPx=Math.round(yPx);/* 縦位置は1px刻みへ丸めてある。丸めた値が前のフレームと同じなら書き直さない。   見た目は1pxも変わらないのに、書けばそのノーツは合成のやり直し対象になる。   ノーツが奥にいるあいだ(遠近の効きで1フレームの移動が1px未満)はここで止まる */const nextTransform=`translate3d(0,${yPx}px,0)`;if(el._rhythmTransform!==nextTransform){el.style.transform=nextTransform;el._rhythmTransform=nextTransform;}const releaseTargetMs=rhythmReleaseTargetMs(note),releaseProgress=1-(rhythmScrollPos(releaseTargetMs)-rhythmScrollPos(visualTime))/travelMs,releaseYpx=Math.round(travel.spawnY+rhythmProjectTravelProgress(releaseProgress)*travel.travelPx),bodyPx=Math.max(0,yPx-releaseYpx);if(note.type==='HOLD'){/* 帯の長さもfilterも「変わったときだけ」書く。とくにfilterを毎フレーム書くと、押していない間もそのノーツが毎フレーム塗り直しになり、画面の広い端末ほど重くなる */const holdBody=`${Math.round(bodyPx)}px`;if(el._rhythmHoldBody!==holdBody){el.style.setProperty('--rhythm-hold-body',holdBody);el._rhythmHoldBody=holdBody;}const holdFilter=note.activePointerId!==null?'brightness(1.3)':'';if(el._rhythmHoldFilter!==holdFilter){el.style.filter=holdFilter;el._rhythmHoldFilter=holdFilter;}}if(note.type==='SLIDE'||note._rhythmOriginalType==='SLIDE'){/* HOLDの帯と同じで、SLIDEの帯の高さも変わったときだけ書く。   毎フレーム書くと、押していないSLIDEまで毎フレーム塗り直しの対象になる */const slideBody=`${Math.round(bodyPx)}px`;if(el._rhythmSlideBody!==slideBody){el.style.setProperty('--rhythm-slide-height',slideBody);el.style.setProperty('--rhythm-slide-visible-height',slideBody);el._rhythmSlideBody=slideBody;}}const activeSlideLane=RHYTHM_GESTURE_RUNTIME.slideVisualLaneForIndex(note.index),visualLane=activeSlideLane===null?note.lane:activeSlideLane;rhythmLayoutNoteVisual(el,note,yPx,visualLane,playAreaRef.current,releaseYpx,{chartNowMs:songTimeMs-settings.judgmentTimingOffsetMs,visualTime,travelMs,spawnY:travel.spawnY,travelPx:travel.travelPx},{rect:travel.rect,noteHeight:travel.noteHeight,bodyHeight:bodyPx});};
+perfDrawn++;let yPx=travel.spawnY+rhythmProjectTravelProgress(progress)*travel.travelPx;if(note.type==='HOLD'&&note.activePointerId!==null)yPx=travel.judgmentY;if(clearFlash)yPx=travel.judgmentY;yPx=Math.round(yPx);/* 縦位置は1px刻みへ丸めてある。丸めた値が前のフレームと同じなら書き直さない。   見た目は1pxも変わらないのに、書けばそのノーツは合成のやり直し対象になる。   ノーツが奥にいるあいだ(遠近の効きで1フレームの移動が1px未満)はここで止まる */const nextTransform=`translate3d(0,${yPx}px,0)`;if(el._rhythmTransform!==nextTransform){el.style.transform=nextTransform;el._rhythmTransform=nextTransform;}const releaseTargetMs=rhythmReleaseTargetMs(note),releaseProgress=1-(rhythmScrollPos(releaseTargetMs,note.scrollGroup)-rhythmScrollPos(visualTime,note.scrollGroup))/travelMs,releaseYpx=Math.round(travel.spawnY+rhythmProjectTravelProgress(releaseProgress)*travel.travelPx),bodyPx=Math.max(0,yPx-releaseYpx);if(note.type==='HOLD'){/* 帯の長さもfilterも「変わったときだけ」書く。とくにfilterを毎フレーム書くと、押していない間もそのノーツが毎フレーム塗り直しになり、画面の広い端末ほど重くなる */const holdBody=`${Math.round(bodyPx)}px`;if(el._rhythmHoldBody!==holdBody){el.style.setProperty('--rhythm-hold-body',holdBody);el._rhythmHoldBody=holdBody;}const holdFilter=note.activePointerId!==null?'brightness(1.3)':'';if(el._rhythmHoldFilter!==holdFilter){el.style.filter=holdFilter;el._rhythmHoldFilter=holdFilter;}}if(note.type==='SLIDE'||note._rhythmOriginalType==='SLIDE'){/* HOLDの帯と同じで、SLIDEの帯の高さも変わったときだけ書く。   毎フレーム書くと、押していないSLIDEまで毎フレーム塗り直しの対象になる */const slideBody=`${Math.round(bodyPx)}px`;if(el._rhythmSlideBody!==slideBody){el.style.setProperty('--rhythm-slide-height',slideBody);el.style.setProperty('--rhythm-slide-visible-height',slideBody);el._rhythmSlideBody=slideBody;}}const activeSlideLane=RHYTHM_GESTURE_RUNTIME.slideVisualLaneForIndex(note.index),visualLane=activeSlideLane===null?note.lane:activeSlideLane;rhythmLayoutNoteVisual(el,note,yPx,visualLane,playAreaRef.current,releaseYpx,{chartNowMs:songTimeMs-settings.judgmentTimingOffsetMs,visualTime,travelMs,spawnY:travel.spawnY,travelPx:travel.travelPx},{rect:travel.rect,noteHeight:travel.noteHeight,bodyHeight:bodyPx});};
 const notes=run.notes;
 // 末尾の打ち切りは「ノーツが時刻の昇順に並んでいる」ことが前提。譜面エディタなどから
 // 並び順が崩れた譜面が来た場合は絞り込まず、従来どおり全ノーツを見る(取りこぼさないため)。
@@ -20987,7 +20990,7 @@ while(scanFrom<notes.length){
 }
 run.scanFrom=scanFrom;
 // 速さの表(試作)があるときは、見た目の位置 S で打ち切る。戻る区間のある表は「この先いちばん手前へ来る位置」で打ち切る(戻らない表では S そのもの)
-const scanHorizonMs=visualTime+travelMs*1.2,scanHorizonScroll=rhythmScrollPos(visualTime)+travelMs*1.2,scrollTable=!!RHYTHM_SCROLL.points;
+const scanHorizonMs=visualTime+travelMs*1.2,scanHorizonScroll=rhythmScrollNowMax(visualTime)+travelMs*1.2,scrollTable=!!RHYTHM_SCROLL.points;
 // 押さえている HOLD/SLIDE を集めて、押さえている間の音(高い「シャラシャラ」)へ渡す(2026-09-28)。
 // 渡すだけで、判定・スコアには触らない。並びは使い回す(毎フレーム配列を作らない)
 const heldNotes=heldNotesRef.current;heldNotes.length=0;
@@ -27694,12 +27697,20 @@ const RaidJackDamageFx = ({ fx, onDone }) => {
         {!none && <><i className="mh-rjdmg-slash mh-rjdmg-slash-a" /><i className="mh-rjdmg-slash mh-rjdmg-slash-b" /></>}
       </div>
       <div className="mh-rjdmg-name">{fx.tierName}</div>
-      {hasLife && (
-        <div className="mh-rjdmg-bar" aria-hidden="true">
-          <div className="mh-rjdmg-bar-fill" style={{ '--from': from, '--to': to, transform: `scaleX(${from})` }} />
-        </div>
+      {/* 体力が減らない相手(ぱんぷきん)は、満タンのバーを光らせて「∞」と出す。数字の「x / y」は出さない */}
+      {fx.pumpkin ? (
+        <>
+          <div className="mh-rjdmg-bar mh-rjdmg-bar-inf" aria-hidden="true"><div className="mh-rjdmg-bar-fill" /></div>
+          <div className="mh-rjdmg-life">体力 ∞</div>
+        </>
+      ) : hasLife && (
+        <>
+          <div className="mh-rjdmg-bar" aria-hidden="true">
+            <div className="mh-rjdmg-bar-fill" style={{ '--from': from, '--to': to, transform: `scaleX(${from})` }} />
+          </div>
+          <div className="mh-rjdmg-life">{lifeAfter.toLocaleString()} / {fx.max.toLocaleString()}</div>
+        </>
       )}
-      {hasLife && <div className="mh-rjdmg-life">{lifeAfter.toLocaleString()} / {fx.max.toLocaleString()}</div>}
       <div className={`mh-rjdmg-damage${none ? ' mh-rjdmg-damage-none' : ''}`}>
         {none
           ? <b>{fx.assist ? 'ダメージにならない' : 'ダメージ 0'}</b>
@@ -43860,7 +43871,7 @@ const RAID_JACK_DEBUG_NOW_CHOICES = Object.freeze([
   { id: 'after', label: '終了の1分後', at: () => Date.parse(RAID_JACK_EVENT.endAt) + 60000 },
 ]);
 
-const RaidJackDebugScreen = ({ onBack, onStartBattle, raidForce = false, onToggleRaidForce, realRules = false, onToggleRealRules, onOpenRaid, onGoHome, onPreviewDamageFx }) => {
+const RaidJackDebugScreen = ({ onBack, onStartBattle, raidForce = false, onToggleRaidForce, realRules = false, onToggleRealRules, onOpenRaid, onGoHome, onPreviewDamageFx, onPreviewRhythmResult }) => {
   const [nowChoice, setNowChoice] = useState('real');
   const [state, setState] = useState(() => raidJackDefaultState());
   const [log, setLog] = useState([]);
@@ -43989,6 +44000,9 @@ const RaidJackDebugScreen = ({ onBack, onStartBattle, raidForce = false, onToggl
             <button data-raid-damage-fx-hit className={`${btn} border-fuchsia-400/60 bg-fuchsia-950/40`} onClick={() => onPreviewDamageFx && onPreviewDamageFx('hit')}>ダメージ演出(ヒット)</button>
             <button data-raid-damage-fx-down className={`${btn} border-fuchsia-400/60 bg-fuchsia-950/40`} onClick={() => onPreviewDamageFx && onPreviewDamageFx('down')}>ダメージ演出(撃破)</button>
             <button data-raid-damage-fx-none className={`${btn} col-span-2 border-fuchsia-400/60 bg-fuchsia-950/40`} onClick={() => onPreviewDamageFx && onPreviewDamageFx('none')}>ダメージ演出(ダメージなし・アシスト)</button>
+            {/* モンヒロビート挑戦のあとの「レイドの結果」画面を、曲を遊ばずに見る(見本の数字・デバッグのイベントIDで出す。記録には何も書かない) */}
+            <button data-raid-rhythm-result-hit className={`${btn} border-sky-400/60 bg-sky-950/40`} onClick={() => onPreviewRhythmResult && onPreviewRhythmResult('hit')}>結果画面(モンヒロビート)</button>
+            <button data-raid-rhythm-result-pumpkin className={`${btn} border-sky-400/60 bg-sky-950/40`} onClick={() => onPreviewRhythmResult && onPreviewRhythmResult('pumpkin')}>結果画面(ぱんぷきん)</button>
           </div>
         </section>
 
@@ -59079,7 +59093,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     return { way: 'rhythm', songName: song && song.displayName || '', difficultyName: difficulty && difficulty.id || '', score, assist,
       kind: 'a', tierIndex: run.tierIndex, tierName: pumpkin ? RAID_JACK_PUMPKIN.name : tier.name, reason: defeated ? 'defeated' : 'rhythm',
       damage, defeated, turns: 0, levelUps: 0, growths: 0, outcome, opened, eventId: run.eventId, quickAward: null,
-      lifeLeft: Math.max(0, (startLife !== null ? startLife : tier.hp) - damage) };
+      lifeLeft: Math.max(0, (startLife !== null ? startLife : tier.hp) - damage),
+      // 結果画面の体力のバー(演奏前 → いま)。演奏前の体力が取れなかったときは出さない
+      lifeBefore: startLife, lifeMax: tier.hp, pumpkin };
   };
   // 演奏の画面を出ていく(リザルトを見終えた・途中でやめた)。レイド画面へ戻って、結果を出す
   const exitRaidJackRhythmPlay = () => {
@@ -62994,7 +63010,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onClose:()=>setRaidJackDetailMon(null),accent:'indigo',readOnly:true,
             label:`${raidJackDetailMon.name}の詳細`,
           })}</>)}
-        {gameState==='RAID_JACK_DEBUG'&&(<RaidJackDebugScreen onBack={()=>setGameState('DEBUG_SETTINGS')} raidForce={raidJackDebugForce} onToggleRaidForce={()=>setRaidJackDebugForce(v=>!v)} realRules={raidJackDebugRealRules} onToggleRealRules={()=>setRaidJackDebugRealRules(v=>!v)} onOpenRaid={async()=>{setRaidJackDebugForce(true);await openRaidJack();}} onGoHome={returnToHome} onPreviewDamageFx={(kind)=>{const t=RAID_JACK_A_TIERS[2];const hp=t.hp;setRaidDamageFx(kind==='none'?{key:`preview-${Date.now()}`,tierIndex:2,tierName:t.name,score:0,damage:0,assist:true,lifeBefore:Math.floor(hp*0.6),max:hp,pumpkin:false}:{key:`preview-${Date.now()}`,tierIndex:2,tierName:t.name,score:523456,damage:kind==='down'?hp:523456,assist:false,lifeBefore:kind==='down'?Math.floor(hp*0.05):Math.floor(hp*0.6),max:hp,pumpkin:false});}} onStartBattle={(kind,tierIndex,opts)=>{
+        {gameState==='RAID_JACK_DEBUG'&&(<RaidJackDebugScreen onBack={()=>setGameState('DEBUG_SETTINGS')} raidForce={raidJackDebugForce} onToggleRaidForce={()=>setRaidJackDebugForce(v=>!v)} realRules={raidJackDebugRealRules} onToggleRealRules={()=>setRaidJackDebugRealRules(v=>!v)} onOpenRaid={async()=>{setRaidJackDebugForce(true);await openRaidJack();}} onGoHome={returnToHome} onPreviewRhythmResult={(kind)=>{const pumpkin=kind==='pumpkin';const t=pumpkin?RAID_JACK_PUMPKIN:RAID_JACK_A_TIERS[2];const hp=t.hp;const before=Math.floor(hp*0.6);const damage=523456;setRaidJackResult({way:'rhythm',songName:'Monster Hero',difficultyName:'HARD',score:523456,assist:false,kind:'a',tierIndex:pumpkin?RAID_JACK_A_TIERS.length-1:2,tierName:t.name,reason:'rhythm',damage,defeated:false,turns:0,levelUps:0,growths:0,outcome:'sent',opened:false,eventId:'raid_jack_debug',quickAward:null,lifeLeft:pumpkin?hp:Math.max(0,before-damage),lifeBefore:pumpkin?null:before,lifeMax:hp,pumpkin});}} onPreviewDamageFx={(kind)=>{const t=RAID_JACK_A_TIERS[2];const hp=t.hp;setRaidDamageFx(kind==='none'?{key:`preview-${Date.now()}`,tierIndex:2,tierName:t.name,score:0,damage:0,assist:true,lifeBefore:Math.floor(hp*0.6),max:hp,pumpkin:false}:{key:`preview-${Date.now()}`,tierIndex:2,tierName:t.name,score:523456,damage:kind==='down'?hp:523456,assist:false,lifeBefore:kind==='down'?Math.floor(hp*0.05):Math.floor(hp*0.6),max:hp,pumpkin:false});}} onStartBattle={(kind,tierIndex,opts)=>{
           // 回数は使わず、別のイベントID(raid_jack_debug)で送る確認用の入口。runMode は反映されてから始まる(useEffect)
           const isB=kind==='b'; const mode=isB?BATTLE_MODE_RAID_JACK_B:BATTLE_MODE_RAID_JACK_A;
           const list=isB?getActiveMonsterList():getUnlockedBaseMonsterList();
@@ -66127,7 +66143,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
         const r=raidJackResult;
         const reasonLabel=(r.way==='rhythm'?{defeated:'ジャックを倒した！',rhythm:'モンヒロビートで挑戦した',giveup:'途中でやめた'}:{defeated:'ジャックを倒した！',turns:'20ターンを使い切った',wipe:'全滅した',giveup:'リタイアした'})[r.reason]||'';
         const sendLabel={sent:'与ダメージを送りました',notready:'サーバーの準備中です(HOMEかレイド画面を開くと、自動で送り直します)',invalid:'この記録は送れませんでした',error:'通信できませんでした。通信のよい場所でHOMEかレイド画面を開くと、自動で送り直します'}[r.outcome]||'';
-        return (<div data-raid-jack-result className="fixed inset-0 flex flex-col items-center justify-center p-6 text-center" style={{position:'fixed',inset:0,zIndex:81000,backgroundColor:'rgba(20,8,2,.97)'}}>
+        return (<div data-raid-jack-result className="fixed inset-0 flex flex-col items-center justify-center overflow-y-auto p-6 text-center landscape:py-3" style={{position:'fixed',inset:0,zIndex:81000,backgroundColor:'rgba(20,8,2,.97)',justifyContent:'safe center'}}>
           <RaidJackResultStinger reason={r.reason}/>
           <div className="mh-rjresult-in text-[10px] font-black text-orange-300 tracking-[.35em] mb-2" style={{'--d':'900ms'}}>{r.kind==='b'?'マスモン':'ベースモン'}</div>
           <h2 className="mh-rjresult-in text-2xl font-black text-orange-100 mb-1" style={{'--d':'1000ms'}}>{r.tierName}</h2>
@@ -66135,7 +66151,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
           <div className="mh-rjresult-in w-full max-w-xs rounded-2xl border border-orange-400/50 bg-orange-950/30 p-4 text-left mb-3" style={{'--d':'1250ms'}}>
             <div className="text-[10px] text-orange-200 font-black mb-1">与えたダメージ</div>
             <div data-raid-jack-damage className="text-3xl font-black text-white text-right"><TrainingCountUp from={0} to={r.damage} delay={1400} duration={1300} format={v=>v.toLocaleString()}/></div>
-            {r.way==='rhythm'?<div data-raid-jack-rhythm-rows className="mt-2 grid grid-cols-2 gap-1 text-[10px] text-slate-200"><span>曲</span><b className="truncate text-right">{r.songName||'-'}{r.difficultyName?`(${r.difficultyName})`:''}</b><span>スコア</span><b className="text-right">{r.score.toLocaleString()}</b>{r.assist&&<><span>アシストモード</span><b className="text-right">ダメージにならない</b></>}<span>ジャックの残りライフ(みんなの分を引いた計算)</span><b className="text-right">{r.lifeLeft.toLocaleString()}</b></div>:<div className="mt-2 grid grid-cols-2 gap-1 text-[10px] text-slate-200"><span>使ったターン</span><b className="text-right">{r.turns} / {RAID_JACK_TURNS}</b>{r.kind==='a'&&<><span>ジャックの残りライフ(みんなの分を引いた計算)</span><b className="text-right">{r.lifeLeft.toLocaleString()}</b><span>固有技とアシカの成長</span><b data-raid-jack-levelups className="text-right">{r.levelUps}回</b><span hidden data-raid-jack-growths>{r.growths||0}</span></>}</div>}
+            {r.way==='rhythm'?<><div data-raid-jack-rhythm-rows className="mt-2 grid grid-cols-2 gap-1 text-[10px] text-slate-200"><span>曲</span><b className="truncate text-right">{r.songName||'-'}{r.difficultyName?`(${r.difficultyName})`:''}</b><span>スコア</span><b className="text-right">{r.score.toLocaleString()}</b>{r.assist&&<><span>アシストモード</span><b className="text-right">ダメージにならない</b></>}{r.pumpkin?<><span>体力</span><b className="text-right">∞</b></>:<><span>ジャックの残りライフ(みんなの分を引いた計算)</span><b className="text-right">{r.lifeLeft.toLocaleString()}</b></>}</div>{!r.pumpkin&&Number.isFinite(r.lifeBefore)&&r.lifeMax>0&&<div data-raid-jack-life-bar className="mt-2"><div className="mh-rjresult-bar" aria-hidden="true"><i style={{'--from':Math.min(1,r.lifeBefore/r.lifeMax),'--to':Math.min(1,r.lifeLeft/r.lifeMax)}}/></div><div className="mt-0.5 text-right text-[9px] font-black text-red-200">{r.lifeBefore.toLocaleString()} → {r.lifeLeft.toLocaleString()}</div></div>}</>:<div className="mt-2 grid grid-cols-2 gap-1 text-[10px] text-slate-200"><span>使ったターン</span><b className="text-right">{r.turns} / {RAID_JACK_TURNS}</b>{r.kind==='a'&&<><span>ジャックの残りライフ(みんなの分を引いた計算)</span><b className="text-right">{r.lifeLeft.toLocaleString()}</b><span>固有技とアシカの成長</span><b data-raid-jack-levelups className="text-right">{r.levelUps}回</b><span hidden data-raid-jack-growths>{r.growths||0}</span></>}</div>}
           </div>
           {r.opened&&<div className="mh-rjresult-in mh-rjresult-pop mb-2 text-sm font-black text-emerald-300" style={{'--d':'2700ms'}}>次の段階が開きました！</div>}
           {r.quickAward&&r.quickAward.loops>0&&(
@@ -70497,6 +70513,21 @@ const createAnimationStyle = () => {
     .mh-rjdmg-slash-b { top: 52%; transform: rotate(20deg) translateX(60%); animation-name: mhRjSlashB; animation-delay: 1.1s; }
     .mh-rjdmg-name { position: relative; font-size: 14px; font-weight: 900; text-shadow: 0 2px 4px #000; animation: mhRjRise .4s ease-out .5s both; }
     .mh-rjdmg-bar { position: relative; width: min(78vw, 330px); height: 16px; overflow: hidden; border-radius: 9999px; border: 2px solid rgba(255,255,255,.3); background: rgba(2,6,23,.9); animation: mhRjRise .4s ease-out .6s both; }
+    /* ★「横向き」ボタンで画面を回しているとき(縦持ちのスマホ)は、vh / dvh が回す前の縦の長さのまま測られる。
+       ジャックの絵が大きくなりすぎて、いちばん下の DAMAGE の数字が画面の外へ押し出されていた(2026-10-11 社長の報告)。
+       回しているあいだは、器の高さ=端末の横幅(vw)・器の横幅=端末の縦(vh)で測り直す */
+    [data-mh-view-rotation="true"] .mh-rjdmg { gap: 3px; padding-top: 10px; padding-bottom: 26px; }
+    [data-mh-view-rotation="true"] .mh-rjdmg-stage { width: min(64vh, 270px, 26vw); }
+    [data-mh-view-rotation="true"] .mh-rjdmg-bar { width: min(78vh, 330px); }
+    [data-mh-view-rotation="true"] .mh-rjdmg-score b { font-size: 30px; }
+    /* 体力が減らない相手(ぱんぷきん): バーは満タンのまま、当たった瞬間に光る */
+    .mh-rjdmg-bar-inf .mh-rjdmg-bar-fill { animation: mhRjBarInf .7s ease-out 1.05s both; background: linear-gradient(90deg, #f97316, #facc15, #f97316); }
+    @keyframes mhRjBarInf { 0% { filter: brightness(1); } 30% { filter: brightness(2.2); } 100% { filter: brightness(1); } }
+    /* レイドの結果画面(モンヒロビート)の体力のバー。演奏前の体力から、いまの体力へ減っていく */
+    .mh-rjresult-bar { position: relative; height: 12px; overflow: hidden; border-radius: 9999px; border: 1px solid rgba(255,255,255,.3); background: rgba(2,6,23,.9); }
+    .mh-rjresult-bar > i { position: absolute; inset: 0; transform-origin: left center; background: linear-gradient(180deg, #fca5a5, #ef4444 45%, #991b1b); transform: scaleX(var(--from)); animation: mhRjResultBar 1.2s cubic-bezier(.2,.8,.3,1) 1.6s forwards; }
+    @keyframes mhRjResultBar { to { transform: scaleX(var(--to)); } }
+    @media (prefers-reduced-motion: reduce) { .mh-rjresult-bar > i { animation: none; transform: scaleX(var(--to)); } }
     .mh-rjdmg-bar-fill { height: 100%; width: 100%; transform-origin: left center; background: linear-gradient(180deg, #fca5a5, #ef4444 40%, #b91c1c 75%, #7f1d1d); animation: mhRjBarDrop 1.2s cubic-bezier(.2,.8,.3,1) 1.05s forwards; }
     .mh-rjdmg-life { position: relative; font-size: 10px; font-weight: 900; color: #fca5a5; font-variant-numeric: tabular-nums; animation: mhRjRise .4s ease-out .6s both; }
     .mh-rjdmg-damage { position: relative; text-align: center; opacity: 0; animation: mhRjSlam .55s cubic-bezier(.2,1.4,.4,1) 1s both; }

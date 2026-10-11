@@ -94,7 +94,8 @@ ok('譜面コーパスの資料に「写しを残さない形でだけ使う」�
 
 // ── 段3 難易度を作る(rhythm-ref-tiers.js) ──
 {
-  const {deriveTiers,chartStats,thumbCheck,THUMB_PROFILES,stopReport,dedupeSlidePoints,STOP_END_GAP_MS}=require('./rhythm-ref-tiers.js');
+  const {deriveTiers,chartStats,thumbCheck,THUMB_PROFILES,stopReport,dedupeSlidePoints,STOP_END_GAP_MS,placeMonsters,toRuntime}=require('./rhythm-ref-tiers.js');
+  const startOf2=n=>n.k==='s'?n.pts[0][0]:n.t;
   const tiersSrc=fs.readFileSync(path.join(__dirname,'rhythm-ref-tiers.js'),'utf8');
   ok('段3も書き出し先を workDirFor で決め、assertWorkPath を通して書く',/workDirFor\(track\)/.test(tiersSrc)&&/writeFileSync\(assertWorkPath\(/.test(tiersSrc)&&(tiersSrc.match(/writeFileSync\(/g)||[]).length===1);
   // 作った MASTER: 16分の連打・同時押し・ホールド・左右のスライドを、決まった並びで置く
@@ -120,7 +121,7 @@ ok('譜面コーパスの資料に「写しを残さない形でだけ使う」�
   ok('段3: どの難易度もレベルの上限を超えない',['EXPERT','HARD','NORMAL','EASY'].every(d=>st[d].level<=levels[d]),JSON.stringify(levels));
   ok('段3: EXPERT の叩く回数・速い連打は MASTER の97%以下',st.EXPERT.hits<=Math.floor(st.MASTER.hits*0.97)&&st.EXPERT.fast<=Math.floor(st.MASTER.fast*0.97),
     `叩く ${st.EXPERT.hits}/${st.MASTER.hits} 速い ${st.EXPERT.fast}/${st.MASTER.fast}`);
-  const key=n=>JSON.stringify(n.k==='s'?['s',n.hand,n.pts[0][0]]:n);
+  const key=n=>{if(n.k==='s')return JSON.stringify(['s',n.hand,n.pts[0][0]]);const {mon,...rest}=n;return JSON.stringify(rest);};
   const mKeys=new Set(tiers.MASTER.map(key));
   ok('段3: EXPERT は MASTER の部分集合(足さない・動かさない)',tiers.EXPERT.every(n=>mKeys.has(key(n))));
   ok('段3: 止まる区間の中にノーツが無い',order.every(d=>stopReport(tiers[d],[stop])[0].inside===0));
@@ -139,7 +140,39 @@ ok('譜面コーパスの資料に「写しを残さない形でだけ使う」�
   ok('親指モデル: 左右に離れた拍ごとの打鍵は問題なし',kinds([0,1,2,3,4,5].map(i=>tap(1000+i*400,i%2?6:3))).length===0);
   const sr=stopReport([tap(1000,3),tap(2100,3)],[[1500,2000]])[0];
   ok(`止まる区間: 止まり終わりから次のノーツまで ${STOP_END_GAP_MS}ms 未満は NG`,!sr.ok&&sr.nextGapMs===100&&stopReport([tap(1000,3),tap(2200,3)],[[1500,2000]])[0].ok);
+  // モンスターノーツ(社長の決まり: どの難易度にも4個ちょうど・枠1〜4を1個ずつ)
+  ok('段3: どの難易度もモンスターノーツが4個ちょうどで、枠1〜4が1個ずつ',order.every(d=>JSON.stringify(tiers[d].filter(n=>n.mon).map(n=>n.mon).sort())==='[1,2,3,4]'),
+    JSON.stringify(Object.fromEntries(order.map(d=>[d,tiers[d].filter(n=>n.mon).map(n=>n.mon)]))));
+  ok('段3: モンスターノーツは地上の単打で、止まる区間と同時押しを避ける',order.every(d=>tiers[d].filter(n=>n.mon).every(n=>n.k==='t'&&!n.sky&&tiers[d].filter(m=>startOf2(m)===n.t).length===1&&stopReport([n],[stop])[0].inside===0)));
+  ok('段3: モンスターノーツは toRuntime で monsterSlot になる',toRuntime(tiers.MASTER).filter(n=>n.monsterSlot).length===4);
+  {const ts=[0,1,2,3,4,5,6,7,8,9,10].map(i=>tap(1000+i*B,3)),near=[...ts,tap(1000+2*B+B/4,9)];
+    const {placed}=placeMonsters(near,{grid:{zero:1000,beat:B,div:4}});
+    // 拍0〜10に1つずつ・2.25拍に1つ: 20%(2拍)は前後1拍空かないので、一番近い空いた拍の頭(1拍)へ。3拍も2.25拍が近いので選ばない
+    ok('置き方: 曲の20/40/60/80%に一番近い、前後1拍空いた拍の頭(詰まった所は避ける)',JSON.stringify(placed.map(p=>Math.round((p.t-1000)/B)))==='[1,4,6,8]'&&placed.every(p=>p.level===0),JSON.stringify(placed));
+    const few=placeMonsters([tap(1000,3),tap(1000+B/4,9),tap(1000+B/2,3),tap(1000+B*3/4,9),tap(1000+B,3)],{grid:{zero:1000,beat:B,div:4}}).placed;
+    ok('置き方: 空いた拍の頭が無ければ、拍の頭 → 単打の順にゆるめて必ず4個置く',few.length===4&&new Set(few.map(p=>p.t)).size===4,JSON.stringify(few));}
   ok('同じ時刻の点をまとめる',dedupeSlidePoints([{k:'s',pts:[[0,1,2,0,0],[100,2,2,0,0],[101,3,2,0,0]]}])[0].pts.length===2);
+}
+
+// ── 段1b 流れの速さ(rhythm-ref-flow.js)・段1c 並べた絵(rhythm-ref-compare.js) ──
+{
+  const {pOf,yOf,depthBack,screenBack,shiftScores,smoothShifts,peaksOf,N}=require('./rhythm-ref-flow.js');
+  const flowSrc=fs.readFileSync(path.join(__dirname,'rhythm-ref-flow.js'),'utf8'),cmpSrc=fs.readFileSync(path.join(__dirname,'rhythm-ref-compare.js'),'utf8');
+  const writes=src=>(src.match(/writeFileSync\(([^,]*)/g)||[]).map(m=>m.slice('writeFileSync('.length));
+  ok('段1b: 書き出し先を workDirFor で決め、どの書き込みも assertWorkPath を通す',/workDirFor\(track\)/.test(flowSrc)&&writes(flowSrc).length>0&&writes(flowSrc).every(w=>/^assertWorkPath\(/.test(w)),JSON.stringify(writes(flowSrc)));
+  ok('段1c: 書き出し先(compare/)を workDirFor で決め assertWorkPath を通す・ほかへ書かない',/assertWorkPath\(path\.join\(workDirFor\(track\),'compare'\)\)/.test(cmpSrc)&&writes(cmpSrc).length===0);
+  const g={vp:92,farY:123,judgeY:360};
+  ok('奥行き: 奥の端が0・判定線が1で、p と画面の高さが行き来しても戻る',Math.abs(pOf(g.farY,g))<1e-9&&Math.abs(pOf(g.judgeY,g)-1)<1e-9&&[0.1,0.5,0.9].every(p=>Math.abs(pOf(yOf(p,g),g)-p)<1e-9));
+  ok('奥行き%と見た目%: 判定線は0%・奥の端は100%で、真ん中の奥行きは見た目では奥寄りに見える',depthBack(1)===0&&depthBack(0)===100&&screenBack(1,g)===0&&screenBack(0,g)===100&&screenBack(0.5,g)>50);
+  // 合成の並び: 3つのノーツが 1コマ6刻み進む → 止まる → 4刻み戻る
+  const prof=ps=>{const a=new Float64Array(N);for(const p of ps)for(let i=0;i<N;i++)a[i]+=10*Math.exp(-(((i-p*(N-1))/2)**2));return a;};
+  const pos=[[0.2,0.4,0.6]];const steps=[...Array(8).fill(6),...Array(8).fill(0),...Array(8).fill(-4)];
+  for(const s of steps)pos.push(pos[pos.length-1].map(p=>p+s/(N-1)));
+  const profs=pos.map(prof),sg={corrMaxP:0.8};
+  const sm=smoothShifts([null,...profs.slice(1).map((b,i)=>shiftScores(profs[i],b,sg))],sg).slice(1).map(x=>x&&Math.round(x.dp*(N-1)));
+  ok('ずれ: 進む・止まる・戻るがコマごとに読める',sm.every((v,i)=>v===steps[i]),JSON.stringify(sm));
+  ok('待っているノーツ: 山の位置(p)が読める',JSON.stringify(peaksOf(prof([0.3,0.58,0.88]),{}).map(p=>Math.round(p*100)))==='[30,58,88]',JSON.stringify(peaksOf(prof([0.3,0.58,0.88]),{})));
+  ok('ずれ: 白いノーツが無いコマは「読めない」(止まると取り違えない)',shiftScores(new Float64Array(N),profs[0],{...sg,minEnergy:1})===null);
 }
 
 console.log(failed?`\n${failed}件 NG`:'\nすべて OK');

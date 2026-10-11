@@ -101,11 +101,14 @@ check('他モードと同じ「◯◯ランキング」の見出しにする',
   // 見出しは「モード名」の下に小さく「ランキング」を添える形になった(2026-09-22)。どちらの形でも「◯◯ランキング」と読める
   (source.includes('{`${mode.label}ランキング`}') || /\{mode\.label\}<\/h2><div[^>]*>ランキング<\/div>/.test(source)
     // 見出しは共通の ScreenHead(title=モード名・note="ランキング")になった(2026-10)
-    || /<ScreenHead[^>]*title=\{mode\.label\}[^>]*note="ランキング"/.test(source))
+    || /<ScreenHead[^>]*title=\{mode\.label\}[^>]*note="ランキング"/.test(source)
+    // モンヒロバトルの中の画面は専用の見出し BattleScreenHead(英字の小見出し付き)になった(2026-10-08)。モード名+note="ランキング"は同じ
+    || /<BattleScreenHead[^>]*title=\{mode\.label\}[^>]*note="ランキング"/.test(source))
     && !source.includes('`${mode.label}の記録`'));
 check('モードカードの導線も他モードと同じ「ランキング」表記',
   // モードカードのボタンは「🏆 このモードのランキング」にそろった(2026-09-22)。「の記録」へ戻っていないことを見る
-  (source.includes('🏆 {m.label}のランキング') || source.includes('🏆 このモードのランキング')) && !source.includes('🏅 {m.label}の記録'));
+  // モードカードの札を作り直して(2026-10-08)、ランキングのあるモードのボタンは「🏆 ランキング」になった(data-mode-ranking-link)
+  (source.includes('🏆 {m.label}のランキング') || source.includes('🏆 このモードのランキング') || /data-mode-ranking-link=\{m\.id\}[\s\S]{0,260}?>🏆 ランキング<\/button>/.test(source)) && !source.includes('🏅 {m.label}の記録'));
 check('種族で絞り込むタブがある', rankBody.includes('data-species-rank-tabs'));
 // タブは 全種族(種族を問わない全国ランキング) → 種族別(その種族の全国ランキング) → 自己ベスト。
 // ★タブの並び・取得キーの決め方・全種族キーの展開は
