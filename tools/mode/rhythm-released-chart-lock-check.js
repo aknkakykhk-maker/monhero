@@ -21,8 +21,10 @@ const DIFFS=['easy','normal','hard','expert','master'];
 const args=process.argv.slice(2),argOf=k=>{const i=args.indexOf(k);return i>=0?args[i+1]:undefined;};
 const source=fs.readFileSync(rt0.RUNTIME,'utf8');
 const hash=text=>crypto.createHash('sha256').update(text).digest('hex').slice(0,16);
+// 見張るのは、表に載っていて、しかも曲えらびに出ている(RHYTHM_DEMO_SONG_IDS)曲だけ。まだ公開していない曲(デバッグで確かめ中)は直してよい
+const DEMO=new Set(rt0.loadRuntime().RHYTHM_DEMO_SONG_IDS||[]);
 const current={};
-for(const [songId,marker] of Object.entries(rt0.RELEASED_MARKERS))for(const d of DIFFS){
+for(const [songId,marker] of Object.entries(rt0.RELEASED_MARKERS).filter(([id])=>DEMO.has(id)))for(const d of DIFFS){
   const block=rt0.markerBlock(source,`${marker}-${d}`);if(block)current[`${songId}/${d}`]=hash(block.body);}
 
 if(args.includes('--update')){

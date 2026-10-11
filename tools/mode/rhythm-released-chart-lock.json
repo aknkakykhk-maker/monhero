@@ -191,11 +191,6 @@
   "sheriruth/hard": "4129eb15814c539e",
   "sheriruth/expert": "18b8e33e6773dc32",
   "sheriruth/master": "3d799b21ee88cdd0",
-  "grievous_lady/easy": "cfa4eb1fdc8a6145",
-  "grievous_lady/normal": "bb395c39cce17651",
-  "grievous_lady/hard": "406cee60ab2fb116",
-  "grievous_lady/expert": "d3f2ecfad1af9963",
-  "grievous_lady/master": "0dd809d5d82540be",
   "against_my_own_shadow/easy": "00f9a099a1032c06",
   "against_my_own_shadow/normal": "943a5232253b15a6",
   "against_my_own_shadow/hard": "ed91a70ce36c7cd8",
@@ -204,9 +199,9 @@
  },
  "history": [
   {
-   "at": "2026-10-11 14:49",
-   "reason": "初めての控え(2026-10-11 main の公開中の譜面。Sheriruth HARD/EXPERT/MASTER の 44.335秒のタップは仕上げの道具の巻き添えでサブレーン3→4のまま。戻すかは窓口が決める)",
-   "changedCount": 200
+   "at": "2026-10-11 15:13",
+   "reason": "初めての控え(2026-10-11 main の公開中の曲。Sheriruth HARD/EXPERT/MASTER の 44.335秒のタップは仕上げの道具の巻き添えでサブレーン3→4のまま。戻すかは窓口が決める)",
+   "changedCount": 195
   }
  ]
 }
