@@ -544,9 +544,29 @@ function MonsterHeroGame() {
   const rippleLastPosRef = useRef({ x: 0, y: 0 });
   // 自前で画面を回しているときは、押した場所も箱も「回す前」でそろえないと
   // 波紋が見当違いの場所に出る(見た目だけの飾りだが、ずれると壊れて見える)
+  // 【2026-10-11 出だしの重さ】押すたびに外の箱を getBoundingClientRect で測ると、演奏中は判定の文字やコンボで画面が毎回少し変わっているため、
+  // その場で画面の計算(スタイル・レイアウト)をまとめてやり直させていた。曲の頭は初めての計算になるので重く、ボット(CPU 4倍)で 1打 30ms ほど。
+  // 外の箱の位置は、画面の大きさ・向き・スクロール・回し方が変わらない限り変わらないので、測った値を覚えておき、それらが変わったときだけ測り直す
+  const rippleRectRef = useRef(null);
+  useEffect(() => {
+    const clear = () => { rippleRectRef.current = null; };
+    window.addEventListener('resize', clear);
+    window.addEventListener('orientationchange', clear);
+    window.addEventListener('scroll', clear, { capture: true, passive: true });
+    const off = RHYTHM_VIEW_ROTATION.subscribe(clear);
+    return () => {
+      window.removeEventListener('resize', clear);
+      window.removeEventListener('orientationchange', clear);
+      window.removeEventListener('scroll', clear, { capture: true });
+      off();
+    };
+  }, []);
   const ripplePoint = (e) => {
     const p = RHYTHM_VIEW_ROTATION.point(e.clientX, e.clientY);
-    const rect = RHYTHM_VIEW_ROTATION.rectOf(e.currentTarget);
+    const el = e.currentTarget;
+    let cached = rippleRectRef.current;
+    if (!cached || cached.el !== el) { cached = { el, rect: RHYTHM_VIEW_ROTATION.rectOf(el) }; rippleRectRef.current = cached; }
+    const rect = cached.rect;
     return rect ? { x: p.x - rect.left, y: p.y - rect.top, clientX: p.x, clientY: p.y } : null;
   };
   const rippleOnPointerDown = useCallback((e) => {

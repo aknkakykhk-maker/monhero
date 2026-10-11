@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9b2e789f9373bd58
+// source-sha256: f58dc10487cffb5f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-11 17:42";
+const BUILD_DATE = "2026-10-11 18:02";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -73919,9 +73919,39 @@ function MonsterHeroGame() {
     x: 0,
     y: 0
   });
+  const rippleRectRef = useRef(null);
+  useEffect(() => {
+    const clear = () => {
+      rippleRectRef.current = null;
+    };
+    window.addEventListener('resize', clear);
+    window.addEventListener('orientationchange', clear);
+    window.addEventListener('scroll', clear, {
+      capture: true,
+      passive: true
+    });
+    const off = RHYTHM_VIEW_ROTATION.subscribe(clear);
+    return () => {
+      window.removeEventListener('resize', clear);
+      window.removeEventListener('orientationchange', clear);
+      window.removeEventListener('scroll', clear, {
+        capture: true
+      });
+      off();
+    };
+  }, []);
   const ripplePoint = e => {
     const p = RHYTHM_VIEW_ROTATION.point(e.clientX, e.clientY);
-    const rect = RHYTHM_VIEW_ROTATION.rectOf(e.currentTarget);
+    const el = e.currentTarget;
+    let cached = rippleRectRef.current;
+    if (!cached || cached.el !== el) {
+      cached = {
+        el,
+        rect: RHYTHM_VIEW_ROTATION.rectOf(el)
+      };
+      rippleRectRef.current = cached;
+    }
+    const rect = cached.rect;
     return rect ? {
       x: p.x - rect.left,
       y: p.y - rect.top,

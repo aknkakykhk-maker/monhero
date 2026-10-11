@@ -30,10 +30,11 @@ const seed = (songId, mode) => `(() => {
 const tapProbe = () => {
   window.__mhTaps = [];
   const inArea = (e) => { const t = e.target; return !!(t && t.closest && t.closest('[data-rhythm-play-area]')); };
-  window.addEventListener('pointerdown', (e) => { if (inArea(e)) e.__mhStart = performance.now(); }, true);
+  window.addEventListener('pointerdown', (e) => { if (inArea(e)) { e.__mhStart = performance.now(); if (window.__mhTapProfile && window.__mhTaps.length < 5) { e.__mhProf = `tap${window.__mhTaps.length + 1}`; console.profile(e.__mhProf); } } }, true);
   window.addEventListener('pointerdown', (e) => {
     if (e.__mhStart == null) return;
     const rec = { at: e.timeStamp, start: e.__mhStart, end: performance.now(), frame: null, songMs: window.__mhTestHooks?.rhythmSongMs?.() ?? null };
+    if (e.__mhProf) console.profileEnd(e.__mhProf);
     window.__mhTaps.push(rec);
     requestAnimationFrame((t) => { rec.frame = t; });
   }, false);
@@ -77,6 +78,7 @@ async function runOnce(o) {
     await context.addInitScript(tapProbe);
     const page = await context.newPage();
     const cdp = await context.newCDPSession(page);
+    const tapProfiles = []; cdp.on('Profiler.consoleProfileFinished', (e) => tapProfiles.push(e));
     const errors = []; page.on('pageerror', (e) => errors.push(String(e).slice(0, 200)));
     await page.goto('https://sky.test/monster-hero/index.html', { waitUntil: 'load', timeout: 90000 });
     const clickText = (re) => page.evaluate((p) => { const b = [...document.querySelectorAll('button,summary')].find(x => new RegExp(p).test(x.textContent)); if (b) b.click(); return !!b; }, re);
@@ -136,7 +138,8 @@ async function runOnce(o) {
     // o.atStart(page, cdp): 測り始めにページを調べる(内訳を出すときの、動いている CSS アニメーションの一覧など)
     const atStart = typeof o.atStart === 'function' ? await o.atStart(page, cdp) : null;
     const m0 = Object.fromEntries((await cdp.send('Performance.getMetrics')).metrics.map(x => [x.name, x.value]));
-    await cdp.send('Profiler.enable'); await cdp.send('Profiler.setSamplingInterval', { interval: 500 }); await cdp.send('Profiler.start');
+    await cdp.send('Profiler.enable'); await cdp.send('Profiler.setSamplingInterval', { interval: process.env.TAP_PROFILE ? 100 : 500 }); await cdp.send('Profiler.start');
+    if (process.env.TAP_PROFILE) await page.evaluate(() => { window.__mhTapProfile = true; });
     // メインスレッドの「CPU を本当に使った時間」(トレースの tdur)。GPU の仕事を待っている間(SwiftShader が遅いと長い)は数えない
     // breakdown のときは、メインスレッドの仕事の種類(スタイル・レイアウト・塗り・JS など)も取る
     await browser.startTracing(page, { categories: o.breakdown ? ['toplevel', 'devtools.timeline', 'blink', 'v8', ...(o.traceCats || [])] : ['toplevel'] });
@@ -163,6 +166,14 @@ async function runOnce(o) {
     // 関数ごとの含む時間
     const byId = new Map(profile.nodes.map(n => [n.id, n])), parent = new Map(); profile.nodes.forEach(n => (n.children || []).forEach(c => parent.set(c, n.id)));
     const cnt = new Map(); profile.samples.forEach((id, k) => cnt.set(id, (cnt.get(id) || 0) + (profile.timeDeltas[k] || 0)));
+    // TAP_PROFILE=1: 最初の5打それぞれの「押した処理」だけのプロファイル(console.profile で取る。時刻を合わせなくてよい)。出だしの重さの切り分け・2026-10-11
+    if (process.env.TAP_PROFILE) for (const fin of tapProfiles) {
+      const pr = fin.profile, by = new Map(pr.nodes.map(n => [n.id, n])), up = new Map(); pr.nodes.forEach(n => (n.children || []).forEach(c => up.set(c, n.id)));
+      const inc = new Map(); let total = 0;
+      pr.samples.forEach((id, i) => { const us = pr.timeDeltas[i] || 0; total += us; let x = id; const seen = new Set(); while (x != null) { const key = by.get(x).callFrame.functionName || '(無名)'; if (!seen.has(key)) { seen.add(key); inc.set(key, (inc.get(key) || 0) + us); } x = up.get(x); } });
+      const top = [...inc.entries()].filter(([q]) => q !== '(root)').sort((a, b) => b[1] - a[1]).slice(0, 22);
+      console.log(`  ${fin.title} 計${(total / 1000).toFixed(1)}ms: ` + top.map(([q, us]) => `${q} ${(us / 1000).toFixed(1)}`).join(' / '));
+    }
     const incl = new Map();
     for (const [id, us] of cnt) {
       let x = id; const seen = new Set();
