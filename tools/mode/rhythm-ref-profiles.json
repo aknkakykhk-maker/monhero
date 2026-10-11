@@ -86,6 +86,11 @@
   },
   "arcaea-hands-854": {
     "label": "Arcaea・タブレットを指で押す録画(854×480・30fps。Grievous Lady の reference-chart-hands.mp4)",
+    "combo": {
+      "region": "335,245,150,50",
+      "tickBeats": 0.5,
+      "_comment": "rhythm-ref-combo.js: コンボの数字がある所(x,y,w,h)。長いノーツは半拍ごとにコンボが1つ増える(Grievous Lady のコンボの読みにいちばん合った)"
+    },
     "flow": {
       "fps": 30,
       "plane": "ground",
