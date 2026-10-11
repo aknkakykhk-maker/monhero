@@ -30863,11 +30863,11 @@ const rhythmCanvasHitsPreference=()=>{try{if(typeof localStorage==='undefined')r
 const rhythmCanvasHitsActive=()=>rhythmCanvasHitsPreference()!=='dom';
 const rhythmCanvasHitsSetPreference=value=>{const next=value==='canvas'||value==='dom'?value:'';try{if(typeof localStorage!=='undefined'){if(next)localStorage.setItem(RHYTHM_CANVAS_HITS_KEY,next);else localStorage.removeItem(RHYTHM_CANVAS_HITS_KEY);}}catch{}return next;};
 // 叩いたときの光の粒を、焼いた丸を貼る形で描く(2026-10-12・発熱の手当て ④)。光の重さが約2割減る。今の形(丸をそのつど塗る)との差は 1画素未満のふちだけ。
-// デバッグ画面「叩いたときの光の粒(検証用)」で出し入れする。'on' = 焼いた丸・'off' = 今の形・未設定 = 既定(いまは今の形。社長が静止画を見て決める)
+// デバッグ画面「叩いたときの光の粒(検証用)」で出し入れする。'on' = 焼いた丸・'off' = 今の形・未設定 = 既定(焼いた丸。2026-10-12 社長が静止画を見て決めた)
 const RHYTHM_HIT_SPARK_KEY='mh_rhythm_hit_spark_v1';
 const rhythmHitSparkPreference=()=>{try{if(typeof localStorage==='undefined')return '';const v=localStorage.getItem(RHYTHM_HIT_SPARK_KEY);return v==='on'||v==='off'?v:'';}catch{return '';}};
 const rhythmHitSparkSetPreference=value=>{const next=value==='on'||value==='off'?value:'';try{if(typeof localStorage!=='undefined'){if(next)localStorage.setItem(RHYTHM_HIT_SPARK_KEY,next);else localStorage.removeItem(RHYTHM_HIT_SPARK_KEY);}}catch{}return next;};
-const rhythmHitSparkActive=()=>rhythmHitSparkPreference()==='on';
+const rhythmHitSparkActive=()=>rhythmHitSparkPreference()!=='off';
 const RHYTHM_PREPARE_KEY='mh_rhythm_prepare_v1';
 const rhythmPreparePreference=()=>{try{if(typeof localStorage==='undefined')return '';const v=localStorage.getItem(RHYTHM_PREPARE_KEY);return v==='on'||v==='off'?v:'';}catch{return '';}};
 const rhythmPrepareSetPreference=value=>{const next=value==='on'||value==='off'?value:'';try{if(typeof localStorage!=='undefined'){if(next)localStorage.setItem(RHYTHM_PREPARE_KEY,next);else localStorage.removeItem(RHYTHM_PREPARE_KEY);}}catch{}return next;};
