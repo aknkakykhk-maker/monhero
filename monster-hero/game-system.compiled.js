@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3e9d8e979a16b841
+// source-sha256: d964042cbc86101d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-11 23:42";
+const BUILD_DATE = "2026-10-11 23:57";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -32416,7 +32416,7 @@ const RhythmTapTest = ({
     }
     const onLost = () => setWebglLost(true);
     if (canvas && RHYTHM_CANVAS_RENDERER.backend === 'webgl') canvas.addEventListener('webglcontextlost', onLost);
-    RHYTHM_CANVAS_RENDERER.enableHits(RHYTHM_CANVAS_RENDERER.backend === 'webgl' ? playAreaRef.current : null);
+    RHYTHM_CANVAS_RENDERER.enableHits(RHYTHM_CANVAS_RENDERER.backend === 'webgl' || rhythmCanvasHitsActive() ? playAreaRef.current : null);
     RHYTHM_CANVAS_RENDERER.enableSkyHits(playAreaRef.current);
     return () => {
       if (canvas) canvas.removeEventListener('webglcontextlost', onLost);
@@ -74528,6 +74528,7 @@ function MonsterHeroGame() {
   const [rhythmCanvasPref, setRhythmCanvasPref] = useState(() => rhythmCanvasNotesPreference());
   const [rhythmGpuBandPref, setRhythmGpuBandPref] = useState(() => rhythmGpuBandPreference());
   const [rhythmPreparePref, setRhythmPreparePref] = useState(() => rhythmPreparePreference());
+  const [rhythmCanvasHitsPref, setRhythmCanvasHitsPref] = useState(() => rhythmCanvasHitsPreference());
   const [rhythmReleaseAgeWide, setRhythmReleaseAgeWide] = useState(() => rhythmTouchFixOn('releaseAgeWide'));
   const [rhythmStageGlPref, setRhythmStageGlPref] = useState(() => rhythmStageGlPreference());
   const [rhythmChartToolsOpened, setRhythmChartToolsOpened] = useState(false);
@@ -98630,6 +98631,22 @@ function MonsterHeroGame() {
       "aria-pressed": rhythmGpuBandPref === value,
       onClick: () => setRhythmGpuBandPref(rhythmGpuBandSetPreference(value)),
       className: `min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmGpuBandPref === value ? 'bg-cyan-400 text-slate-900' : 'border border-white/20 bg-slate-900 text-slate-200'}`
+    }, label)))), React.createElement("section", {
+      "data-rhythm-canvas-hits-panel": true,
+      className: "mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"
+    }, React.createElement("h3", {
+      className: "text-xs font-black text-cyan-200"
+    }, "叩いたときの光の描き方（検証用）"), React.createElement("p", {
+      className: "mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80"
+    }, "「canvas」は、ノーツを叩いたときに判定ラインで弾ける光を、ノーツと同じ canvas へ描きます（WebGL の描き方で使っている絵と同じ）。既定は canvas です。「画面の要素」は今までの描き方（光の部品を画面の要素として動かす。発熱の元になっていた）です。次の演奏から効きます。"), React.createElement("div", {
+      className: "mt-2 flex gap-2"
+    }, [['', '既定（canvas）'], ['canvas', 'canvas'], ['dom', '画面の要素']].map(([value, label]) => React.createElement("button", {
+      key: value || 'default',
+      type: "button",
+      "data-rhythm-canvas-hits-pref": value || 'default',
+      "aria-pressed": rhythmCanvasHitsPref === value,
+      onClick: () => setRhythmCanvasHitsPref(rhythmCanvasHitsSetPreference(value)),
+      className: `min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmCanvasHitsPref === value ? 'bg-cyan-400 text-slate-900' : 'border border-white/20 bg-slate-900 text-slate-200'}`
     }, label)))), React.createElement("section", {
       "data-rhythm-prepare-panel": true,
       className: "mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"
