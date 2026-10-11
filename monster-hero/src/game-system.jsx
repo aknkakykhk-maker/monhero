@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9588432f7b6a78ac
+// generated-sha256: c54899b281bb21af
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-12 07:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-12 07:24"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -19884,6 +19884,8 @@ function RhythmSkyStage({plane}){
   // 空中の面・縁・柱・判定線は道の線と同じ白〜薄紫(改善部: 赤い枠が画面を占めて今の曲と並べると浮く。赤はノーツだけにする)
   const c='221,214,254',f=v=>Number(v).toFixed(2),fr=plane.front;
   const skyLaneLook=RHYTHM_SKY_LANE_LOOK.id,mk=Array.isArray(plane.markers)?plane.markers:[];
+  // 空中の判定線の左右の端。'sky'(見やすさの案)は空中の道の手前の端=空中のノーツが着く幅。'road'(いま)は地上の道の幅+左右の余白
+  const skyLineX=RHYTHM_SKY_LOOK.line.span==='sky'?[fr.l,fr.r]:[fr.roadL-RHYTHM_SKY_LOOK.line.marginPct,fr.roadR+RHYTHM_SKY_LOOK.line.marginPct];
   // 案D の面と柱の形(0〜100 の座標)。面は空中の判定線から奥へ SKY_LANE_DEPTH だけ。持ち上げ方は skyPlane と同じ式
   const skyLaneD=(()=>{
     if(!/^d[12][lm]$/.test(skyLaneLook))return null;
@@ -19946,8 +19948,8 @@ function RhythmSkyStage({plane}){
         (6px の淡い帯+中心2px。白は空中のものと押した光だけに使うので、線は白にしない)。
         2026-10-11 社長「空中線が左右に伸びすぎてマスモンにかかってるのが気になる」→ 横いっぱいをやめ、
         線の高さで見えている道の幅(front.roadL/roadR)に左右 RHYTHM_SKY_LOOK.line.marginPct(プレイエリアの幅の%)だけ足した長さにする */}
-    <line x1={f(fr.roadL-RHYTHM_SKY_LOOK.line.marginPct)} y1={f(fr.y)} x2={f(fr.roadR+RHYTHM_SKY_LOOK.line.marginPct)} y2={f(fr.y)} stroke={`rgb(${RHYTHM_SKY_LOOK.line.bandRgb})`} strokeOpacity={RHYTHM_SKY_LOOK.line.bandAlpha} strokeWidth={RHYTHM_SKY_LOOK.line.bandPx} vectorEffect="non-scaling-stroke"/>
-    <line x1={f(fr.roadL-RHYTHM_SKY_LOOK.line.marginPct)} y1={f(fr.y)} x2={f(fr.roadR+RHYTHM_SKY_LOOK.line.marginPct)} y2={f(fr.y)} stroke={`rgb(${RHYTHM_SKY_LOOK.line.coreRgb})`} strokeOpacity={RHYTHM_SKY_LOOK.line.coreAlpha} strokeWidth={RHYTHM_SKY_LOOK.line.corePx} vectorEffect="non-scaling-stroke"/>
+    <line x1={f(skyLineX[0])} y1={f(fr.y)} x2={f(skyLineX[1])} y2={f(fr.y)} stroke={`rgb(${RHYTHM_SKY_LOOK.line.bandRgb})`} strokeOpacity={RHYTHM_SKY_LOOK.line.bandAlpha} strokeWidth={RHYTHM_SKY_LOOK.line.bandPx} vectorEffect="non-scaling-stroke"/>
+    <line x1={f(skyLineX[0])} y1={f(fr.y)} x2={f(skyLineX[1])} y2={f(fr.y)} stroke={`rgb(${RHYTHM_SKY_LOOK.line.coreRgb})`} strokeOpacity={RHYTHM_SKY_LOOK.line.coreAlpha} strokeWidth={RHYTHM_SKY_LOOK.line.corePx} vectorEffect="non-scaling-stroke"/>
   </svg>;
 }
 // 縦画面の空中の高さの差を切り替える(デバッグ専用・2026-10-11 社長「中間を作って見比べる」)。保存は新しいキー mh_sky_lift_portrait_proto だけ。
@@ -19971,6 +19973,14 @@ function RhythmSkyReachAdaptSwitch(){
 }
 // SKY TAP の見た目の案を切り替える(デバッグ専用・2026-10-11 社長「スカイは透明だけどちょっと見にくい」)。保存は新しいキー mh_sky_box_look_proto だけ。
 // ふつうのプレイ(この画面を通らない)はいまの案Zのまま
+// HELL の見やすさの案を切り替える(デバッグ専用・2026-10-12)。保存は新しいキー mh_hell_vis_proto だけ。既定は「いま」
+function RhythmHellVisSwitch(){
+  const [value,setValue]=useState(()=>RHYTHM_HELL_VIS.id);
+  const pick=v=>{RHYTHM_HELL_VIS.set(v);setValue(RHYTHM_HELL_VIS.id);};
+  return <section data-rhythm-hell-vis-switch className="mb-3 rounded-2xl border border-rose-400/50 bg-rose-950/25 p-3"><h3 className="text-xs font-black text-rose-100">HELL の見やすさ(試作・見比べ用)</h3>
+    <p className="mt-1 text-[10px] font-bold text-rose-200/80">空中の判定線の長さ・空中の板の明るさ・空中スライドの色・板の影をまとめて切り替えます。地上の5難易度は変わりません。演奏を始め直すと効きます。</p>
+    <div className="mt-2 grid grid-cols-3 gap-2">{Object.keys(RHYTHM_HELL_VIS_LABELS).map(v=><button key={v} type="button" data-rhythm-hell-vis-pick={v} aria-pressed={value===v} onClick={()=>pick(v)} className={`min-h-[44px] rounded-xl text-[11px] font-black ${value===v?'bg-rose-600 text-white ring-2 ring-rose-200':'bg-slate-800 text-slate-300'}`}>{RHYTHM_HELL_VIS_LABELS[v]}</button>)}</div></section>;
+}
 // HELL の「公開の印が真だったら」を試す(デバッグ専用・2026-10-12)。本番の印 RELEASE_FLAGS.rhythmHell は変えない。
 // 入にすると、HELL の譜面がある公開曲(RHYTHM_HELL_CHARTS)で MASTER をクリアすると HELL が開き、初めてのときはお話 → 説明が出る。
 // 保存は新しいキーだけ(mh_rhythm_hell_preview_proto・試したお話の既読 mh_rhythm_hell_story_seen_preview_proto)。自己ベストは本物の記録に残る
@@ -63676,6 +63686,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <RhythmSkyReachAdaptSwitch/>
             <RhythmSkyBoxLookSwitch/>
             <RhythmSkyLaneLookSwitch/>
+            <RhythmHellVisSwitch/>
             {/* 難易度 HELL のお話と説明(2026-10-11)。HELL の公開前に社長が確かめるためのもの。見たことにはしない(debug)。
                 デバッグ専用なので更新履歴・ヘルプには載せない */}
             <section data-debug-rhythm-hell-story className="mb-3 rounded-2xl border border-pink-400/50 bg-pink-950/25 p-3"><h3 className="text-xs font-black text-pink-200">HELL のお話と説明（公開前の確認用）</h3><div className="mt-2 grid grid-cols-2 gap-2"><button type="button" data-debug-rhythm-hell-story-play onClick={()=>setEventReplay({id:RHYTHM_HELL_STORY_ID,step:0,debug:true})} className="min-h-[48px] rounded-xl bg-pink-700 px-2 text-xs font-black text-white">お話を見る（→説明）</button><button type="button" data-debug-rhythm-hell-guide-open onClick={()=>setRhythmHellGuide({page:0})} className="min-h-[48px] rounded-xl bg-slate-700 px-2 text-xs font-black text-white">説明だけ見る</button></div><RhythmHellPreviewSwitch onChange={async()=>{try{setRhythmHellStorySeenFlag((await storeGet(rhythmHellStorySeenKey(),false,false))===true);setRhythmHellStorySeenLoaded(true);rhythmEventStoryStartedRef.current=rhythmEventStoryStartedRef.current.filter(id=>id!==RHYTHM_HELL_STORY_ID);}catch{}}}/></section>

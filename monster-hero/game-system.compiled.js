@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 39a7af01bf3ffafe
+// source-sha256: 89af73eb49f22dba
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-12 07:12";
+const BUILD_DATE = "2026-10-12 07:24";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -31010,6 +31010,7 @@ function RhythmSkyStage({
     fr = plane.front;
   const skyLaneLook = RHYTHM_SKY_LANE_LOOK.id,
     mk = Array.isArray(plane.markers) ? plane.markers : [];
+  const skyLineX = RHYTHM_SKY_LOOK.line.span === 'sky' ? [fr.l, fr.r] : [fr.roadL - RHYTHM_SKY_LOOK.line.marginPct, fr.roadR + RHYTHM_SKY_LOOK.line.marginPct];
   const skyLaneD = (() => {
     if (!/^d[12][lm]$/.test(skyLaneLook)) return null;
     const SKY_LANE_DEPTH = .14,
@@ -31247,18 +31248,18 @@ function RhythmSkyStage({
     strokeWidth: "1",
     vectorEffect: "non-scaling-stroke"
   }))), React.createElement("line", {
-    x1: f(fr.roadL - RHYTHM_SKY_LOOK.line.marginPct),
+    x1: f(skyLineX[0]),
     y1: f(fr.y),
-    x2: f(fr.roadR + RHYTHM_SKY_LOOK.line.marginPct),
+    x2: f(skyLineX[1]),
     y2: f(fr.y),
     stroke: `rgb(${RHYTHM_SKY_LOOK.line.bandRgb})`,
     strokeOpacity: RHYTHM_SKY_LOOK.line.bandAlpha,
     strokeWidth: RHYTHM_SKY_LOOK.line.bandPx,
     vectorEffect: "non-scaling-stroke"
   }), React.createElement("line", {
-    x1: f(fr.roadL - RHYTHM_SKY_LOOK.line.marginPct),
+    x1: f(skyLineX[0]),
     y1: f(fr.y),
-    x2: f(fr.roadR + RHYTHM_SKY_LOOK.line.marginPct),
+    x2: f(skyLineX[1]),
     y2: f(fr.y),
     stroke: `rgb(${RHYTHM_SKY_LOOK.line.coreRgb})`,
     strokeOpacity: RHYTHM_SKY_LOOK.line.coreAlpha,
@@ -31327,6 +31328,30 @@ function RhythmSkyReachAdaptSwitch() {
     onClick: () => set(v),
     className: `min-h-[44px] rounded-xl text-sm font-black ${on === v ? 'bg-rose-600 text-white ring-2 ring-rose-200' : 'bg-slate-800 text-slate-300'}`
   }, label))));
+}
+function RhythmHellVisSwitch() {
+  const [value, setValue] = useState(() => RHYTHM_HELL_VIS.id);
+  const pick = v => {
+    RHYTHM_HELL_VIS.set(v);
+    setValue(RHYTHM_HELL_VIS.id);
+  };
+  return React.createElement("section", {
+    "data-rhythm-hell-vis-switch": true,
+    className: "mb-3 rounded-2xl border border-rose-400/50 bg-rose-950/25 p-3"
+  }, React.createElement("h3", {
+    className: "text-xs font-black text-rose-100"
+  }, "HELL の見やすさ(試作・見比べ用)"), React.createElement("p", {
+    className: "mt-1 text-[10px] font-bold text-rose-200/80"
+  }, "空中の判定線の長さ・空中の板の明るさ・空中スライドの色・板の影をまとめて切り替えます。地上の5難易度は変わりません。演奏を始め直すと効きます。"), React.createElement("div", {
+    className: "mt-2 grid grid-cols-3 gap-2"
+  }, Object.keys(RHYTHM_HELL_VIS_LABELS).map(v => React.createElement("button", {
+    key: v,
+    type: "button",
+    "data-rhythm-hell-vis-pick": v,
+    "aria-pressed": value === v,
+    onClick: () => pick(v),
+    className: `min-h-[44px] rounded-xl text-[11px] font-black ${value === v ? 'bg-rose-600 text-white ring-2 ring-rose-200' : 'bg-slate-800 text-slate-300'}`
+  }, RHYTHM_HELL_VIS_LABELS[v]))));
 }
 function RhythmHellPreviewSwitch({
   onChange
@@ -98896,7 +98921,7 @@ function MonsterHeroGame() {
       className: "mb-3 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl border border-cyan-300/70 bg-cyan-900/60 px-3 text-sm font-black text-cyan-50"
     }, "🎵 全解放の曲えらびを開く", React.createElement("span", {
       className: "rounded-full bg-slate-950/70 px-2 py-0.5 text-[10px] text-amber-200"
-    }, "記録しない")), React.createElement(RhythmSkyLiftSwitch, null), React.createElement(RhythmSkyReachAdaptSwitch, null), React.createElement(RhythmSkyBoxLookSwitch, null), React.createElement(RhythmSkyLaneLookSwitch, null), React.createElement("section", {
+    }, "記録しない")), React.createElement(RhythmSkyLiftSwitch, null), React.createElement(RhythmSkyReachAdaptSwitch, null), React.createElement(RhythmSkyBoxLookSwitch, null), React.createElement(RhythmSkyLaneLookSwitch, null), React.createElement(RhythmHellVisSwitch, null), React.createElement("section", {
       "data-debug-rhythm-hell-story": true,
       className: "mb-3 rounded-2xl border border-pink-400/50 bg-pink-950/25 p-3"
     }, React.createElement("h3", {
