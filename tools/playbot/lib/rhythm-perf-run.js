@@ -156,6 +156,10 @@ async function runOnce(o) {
     const taps = raw.taps.filter(t => t.songMs != null && t.songMs >= FROM && t.songMs < TO);
     const handle = taps.map(t => t.end - t.at).sort((x, y) => x - y), toFrame = taps.filter(t => t.frame != null).map(t => t.frame - t.at).sort((x, y) => x - y);
     const firstTap = raw.taps[0] ? { handle: raw.taps[0].end - raw.taps[0].at, toFrame: raw.taps[0].frame != null ? raw.taps[0].frame - raw.taps[0].at : null } : null;
+    // 最初の5打(出だしの重さ・2026-10-11)。曲の頭から5打それぞれの「処理」と「画面に出るまで」。途中(6打目以降)の中央の値と比べる
+    const first5 = raw.taps.slice(0, 5).map(t => ({ handle: t.end - t.at, toFrame: t.frame != null ? t.frame - t.at : null }));
+    const restFrame = raw.taps.slice(5).filter(t => t.frame != null).map(t => t.frame - t.at).sort((x, y) => x - y);
+    const restHandle = raw.taps.slice(5).map(t => t.end - t.at).sort((x, y) => x - y);
     // 関数ごとの含む時間
     const byId = new Map(profile.nodes.map(n => [n.id, n])), parent = new Map(); profile.nodes.forEach(n => (n.children || []).forEach(c => parent.set(c, n.id)));
     const cnt = new Map(); profile.samples.forEach((id, k) => cnt.set(id, (cnt.get(id) || 0) + (profile.timeDeltas[k] || 0)));
@@ -228,7 +232,7 @@ async function runOnce(o) {
       main: { cpu: cpuUs / 1000 / frames, wall: wallUs / 1000 / frames, task: d('TaskDuration') / frames, script: d('ScriptDuration') / frames, style: d('RecalcStyleDuration') / frames, layout: d('LayoutDuration') / frames,
         busyPct: d('TaskDuration') / (wallSec * 1000) * 100 },
       func: { tick: (incl.get('tick') || 0) / 1000 / frames, paintCanvasNote: (incl.get('paintCanvasNote') || 0) / 1000 / frames, bot: (incl.get('getBoundingClientRect') || 0) / 1000 / frames },
-      taps: { n: taps.length, handleAvg: mean(handle), handleP95: pct(handle, .95), frameAvg: mean(toFrame), frameP95: pct(toFrame, .95), first: firstTap },
+      taps: { n: taps.length, handleAvg: mean(handle), handleP95: pct(handle, .95), frameAvg: mean(toFrame), frameP95: pct(toFrame, .95), first: firstTap, first5, restHandleMed: pct(restHandle, .5), restFrameMed: pct(restFrame, .5) },
       errors, breakdown, atStart, atEnd,
     };
   } finally { await browser.close(); }
