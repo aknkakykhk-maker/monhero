@@ -39,10 +39,10 @@ node tools/playbot/rhythm-perf-bench.js --songs sheriruth_hell_debug:HELL:proto 
 - CPU の絞り(4倍・6倍)はメインスレッドだけに効く(GPU の仕事は絞られない)
 - 同じ条件の揺れ: 1コマの平均で ±3ms ほど(2D・CPU1倍)。差を言うときは `--repeat 2` 以上で
 
-## 実機との合わせ込み(案。社長の確認待ち)
+## 実機との合わせ込み(2026-10-11 社長が了承・入れた)
 
 演奏画面は、1曲ごとにタッチの診断を `rhythm_touch_diagnostics` へ1行送っている(`stats` は jsonb・4KBまで。いまは約1KB)。
-**表・SQL・ランキングは変えず**、`stats` に次の `frame` を**足すだけ**にする(約200バイト)。ボットからは送らない(偽の Supabase)。
+**表・SQL・ランキングは変えず**、`stats` に次の `frame` を**足すだけ**にした(約200バイト)。ボットからは送らない(偽の Supabase)。詳しくは docs/spec/RHYTHM_TOUCH_DIAG.md「1コマの重さ」。
 
 ```
 stats.frame = {

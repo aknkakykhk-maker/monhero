@@ -1469,6 +1469,39 @@ const rhythmInputAgeResetFloor=()=>{rhythmInputAgeFloorMs=Infinity;};
 //   frames / stalls / maxStepMs … 曲の時計を1コマごとに読んだ数 / 前のコマと同じ値だった数(=止まって見える) / いちばん大きかった1コマの進み
 //   hidden … 演奏中にアプリを離れた(画面が隠れた)回数。pen … ペンで直接押した回数
 //   outLatMs / baseLatMs / hasTs / rate / headMs … その端末の出力遅延・基準遅延・getOutputTimestamp の有無・サンプルレート・曲の頭の無音の長さ
+// 演奏中の1コマの重さ(2026-10-11・社長「実機の数字で、2D と GPU のどちらが iPhone で軽いかを決める」)。
+// タッチの診断の行(rhythm_touch_diagnostics)の stats.frame に足すだけ(表・SQL・ランキングは変えない)。大きさは約250バイト。
+// 計測ON/OFF(RHYTHM_PERF)に関係なく、整数を足すだけで数える。1コマの間隔とゲームの1コマの JS の時間は 1ms 刻みの数の表で持ち、
+// 95% はその表から出す(並べ替えのための配列を持たない)。1秒以上の間隔(アプリを離れた・一時停止)は数えない。
+// 読む側は stats.frame が無い古い行も読むので、無いときは「数字なし」として扱う(docs/perf/RHYTHM_PERF_BENCH.md)
+const RHYTHM_FRAME_DIAG=(()=>{
+  const BINS=101;
+  let gapHist=null,tickHist=null,n=0,sum=0,max=0,over17=0,over34=0,over50=0,tickN=0,tickSum=0,last=0;
+  const reset=()=>{gapHist=new Uint32Array(BINS);tickHist=new Uint32Array(BINS);n=0;sum=0;max=0;over17=0;over34=0;over50=0;tickN=0;tickSum=0;last=0;};
+  reset();
+  const pct=(hist,total,p)=>{if(!total)return null;const want=Math.ceil(total*p);let seen=0;for(let i=0;i<BINS;i++){seen+=hist[i];if(seen>=want)return i;}return BINS-1;};
+  const r1=v=>Math.round(v*10)/10;
+  return {
+    reset,
+    // frameNowMs … requestAnimationFrame の時刻。tickMs … そのコマのゲームの処理(JS)の時間
+    tick(frameNowMs,tickMs){
+      const t=Number(frameNowMs);
+      if(Number.isFinite(t)){
+        if(last>0){const gap=t-last;if(gap>0&&gap<1000){n++;sum+=gap;if(gap>max)max=gap;if(gap>17.7)over17++;if(gap>34.3)over34++;if(gap>50)over50++;gapHist[Math.min(BINS-1,Math.floor(gap))]++;}}
+        last=t;
+      }
+      const d=Number(tickMs);
+      if(Number.isFinite(d)&&d>=0&&d<1000){tickN++;tickSum+=d;tickHist[Math.min(BINS-1,Math.floor(d))]++;}
+    },
+    // meta … 描き方など(draw・gpu・dpr・w・h・cores・effect・fps・light)
+    snapshot(meta){
+      return {n,avg:n?r1(sum/n):null,p95:pct(gapHist,n,.95),max:Math.round(max),over17,over34,over50,
+        tickAvg:tickN?r1(tickSum/tickN):null,tickP95:pct(tickHist,tickN,.95),...(meta&&typeof meta==='object'?meta:{})};
+    },
+  };
+})();
+// WebGL の描き手の名前(iPhone は 'Apple GPU')。画質「自動」の見極めで調べた名前を使い、まだ調べていなければ1回だけ調べる
+const rhythmWebglRendererName=()=>{try{rhythmWebglGpuUsable();}catch(e){}return rhythmWebglRendererNameCache||'';};
 const RHYTHM_TIMING_DIAG=(()=>{
   const zero=()=>({ageHist:[0,0,0,0,0,0],ageCapped:0,ageBacked:0,ageUnbacked:0,matchByAge:0,frames:0,stalls:0,maxStepMs:0,hidden:0,pen:0});
   let stats=zero(),meta={},lastSong=null,lastTick=0,lastStallAt=0,biasList=[];
@@ -29806,7 +29839,7 @@ const rhythmCanvasNotesPreference=()=>{try{if(typeof localStorage==='undefined')
 // 端末にちゃんとした GPU があるか(描画方式「自動」の見極め。2026-09-26)。
 // GPU が弱い・使えない端末では、ブラウザが CPU で WebGL を肩代わりする(SwiftShader など)。それだと Canvas より重いので使わない。
 // ★本番の canvas では調べない。一度 WebGL を作った canvas からは 2D を取り出せないため、見えない試し用の canvas で1回だけ調べ、結果を覚えておく。
-let rhythmWebglGpuUsableCache=null;
+let rhythmWebglGpuUsableCache=null,rhythmWebglRendererNameCache='';
 const rhythmWebglGpuUsable=()=>{
   if(rhythmWebglGpuUsableCache!==null)return rhythmWebglGpuUsableCache;
   let ok=false;
@@ -29817,7 +29850,8 @@ const rhythmWebglGpuUsable=()=>{
       if(gl){
         const info=gl.getExtension('WEBGL_debug_renderer_info');
         const name=String(info?gl.getParameter(info.UNMASKED_RENDERER_WEBGL):gl.getParameter(gl.RENDERER)||'');
-        ok=!/swiftshader|llvmpipe|softpipe|software|basic render/i.test(name)&&!!gl.getContextAttributes()?.stencil;
+        rhythmWebglRendererNameCache=name.slice(0,48);
+                ok=!/swiftshader|llvmpipe|softpipe|software|basic render/i.test(name)&&!!gl.getContextAttributes()?.stencil;
         try{const lose=gl.getExtension('WEBGL_lose_context');if(lose)lose.loseContext();}catch(e){}
       }
     }
