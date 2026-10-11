@@ -9,6 +9,8 @@
 //
 //   node tools/playbot/rhythm-cross-swap-bot.js --freeze 1 --from 104000 --to 134600 [--landscape 0] [--root <前の版の worktree>]
 //
+// 空中から始まるスライドの押し始めも、その時刻の高さで触る(HELL の行き来するスライド・2026-10-11)。
+//   node tools/playbot/rhythm-cross-swap-bot.js --entry proto --song sheriruth_hell_debug --diff HELL --from 0 --to 137000
 // 目安(2026-10-11・直したあと): 0 と 1 は4本とも MARVELOUS・暗い時間0。2 は 107.34秒が MISS・127.77秒が GOOD(直す前と同じ)
 const path = require('path'), fs = require('fs');
 const ROOT_DEFAULT = path.resolve(__dirname, '../..');
@@ -98,10 +100,11 @@ const mime = f => ({ '.js': 'application/javascript', '.html': 'text/html', '.cs
   // ボット(空中のノーツは空中の高さで押す)
   const target = 'const p = fingerAt(c, hab, null, now);';
   const src = installPlayer.toString();
-  const player = src.includes(target) ? src.replace(target, 'const p = (() => { const q = fingerAt(c, hab, null, now); const sh = Number(n.skyHeight) > 0 ? Number(n.skyHeight) : 0; if (!sh || typeof RHYTHM_SKY_LIFT === "undefined") return q; const rr = area.getBoundingClientRect(); return { x: q.x, y: q.y - rr.height * RHYTHM_SKY_LIFT.ratio * sh }; })();') : src;
+  const player = src.includes(target) ? src.replace(target, 'const p = (() => { const q = fingerAt(c, hab, null, now); const sh = Number(n.skyHeight) > 0 ? Number(n.skyHeight) : (window.__slideSkyAt ? window.__slideSkyAt(n, Number(n.timeMs) || 0) : 0); if (!sh || typeof RHYTHM_SKY_LIFT === "undefined") return q; const rr = area.getBoundingClientRect(); return { x: q.x, y: q.y - rr.height * RHYTHM_SKY_LIFT.ratio * sh }; })();') : src;
   const posLine = 'const pos = fingerAt(laneOfHold(a.n, now), a.hab, a.drift, now);';
   if (!player.includes(posLine)) throw new Error('ボットの押さえる指の行が見つからない');
-  const player2 = player.replace(posLine, 'const pos = (() => { const q = fingerAt(window.__laneFor ? window.__laneFor(a.n, now, laneOfHold) : laneOfHold(a.n, now), a.hab, a.drift, now); return q; })();');
+  // 押さえている間の指も、その時刻のスライドの高さに合わせて上げ下げする(人は帯の高さを目で追う。空中から始まる帯を地上へ戻して押さえると、指が飛んで離したことになる)
+const player2 = player.replace(posLine, 'const pos = (() => { const q = fingerAt(window.__laneFor ? window.__laneFor(a.n, now, laneOfHold) : laneOfHold(a.n, now), a.hab, a.drift, now); if (!window.__slideSkyAt || typeof RHYTHM_SKY_LIFT === "undefined") return q; const sh = window.__slideSkyAt(a.n, now); if (!(sh > 0)) return q; const rr = area.getBoundingClientRect(); return { x: q.x, y: q.y - rr.height * RHYTHM_SKY_LIFT.ratio * sh }; })();');
   await page.evaluate((mode) => {
     const pairs = [[[106771, 107339], 108420], [[127367, 127772], 130700]];
     // mode 2: 2本目の帯(107339・127772)を押さえる指が、交わったあと相手の帯(106771・127367)に乗ったまま進む(自分の帯は捨てる=失敗するはず)
@@ -125,6 +128,13 @@ const mime = f => ({ '.js': 'application/javascript', '.html': 'text/html', '.cs
       requestAnimationFrame(tick); };
     requestAnimationFrame(tick);
   }, Number(arg('freeze', 0)));
+  // 演奏中のノーツはスライドの点から高さ(sky)が抜けているので、元の譜面(曲の表)から高さを引く
+  await page.evaluate(([song, diff]) => {
+    const all = [...(typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS : []), ...(typeof RHYTHM_PROTO_SONGS !== 'undefined' ? RHYTHM_PROTO_SONGS : [])];
+    const chart = (all.find(s => s.songId === song) || { difficulties: {} }).difficulties[diff];
+    const map = new Map(); ((chart && chart.notes) || []).forEach(x => { if (Array.isArray(x.slidePoints)) map.set(Math.round(Number(x.timeMs)) + ':' + Number(x.lane), x); });
+    window.__slideSkyAt = (n, t) => { if (typeof rhythmSlideSkyAt !== 'function') return 0; const o = map.get(Math.round(Number(n.timeMs)) + ':' + Number(n.lane)) || n; return Array.isArray(o.slidePoints) ? rhythmSlideSkyAt(o, t) : 0; };
+  }, [SONG, DIFF]);
   const args = { sigma: 0, missRate: 0, seed: 7, human: false, persona: 'center', input: 'ios', dropRate: 0, lateRate: 0, touchSrc: touchInputSource };
   await page.evaluate(`(${player2})(${JSON.stringify(args)})`);
   await page.waitForFunction((a) => (window.__mhTestHooks?.rhythmSongMs?.() ?? -1) >= a - 1500, FROM, { timeout: 600000, polling: 200 });
@@ -137,6 +147,9 @@ const mime = f => ({ '.js': 'application/javascript', '.html': 'text/html', '.cs
   console.log('判定', JSON.stringify(await page.evaluate(() => { const r = window.__mhTestHooks.rhythmNoteResults?.() || [], n = window.__mhTestHooks.rhythmNotes?.() || []; const h = {}; r.forEach(x => { if (x && x.judgment) h[x.judgment] = (h[x.judgment] || 0) + 1; });
     const sl = n.map((x, i) => [x, r[i]]).filter(([x]) => x.type === 'SLIDE' && [106771, 107339, 127367, 127772].includes(Math.round(x.timeMs))).map(([x, y]) => [Math.round(x.timeMs), y && y.judgment, y && y.done]);
     return { 合計: h, 済み: r.filter(x => x && x.done).length, 交差のスライド: Object.keys(window.__offMs).map(i => ({ 始まり: Math.round(n[i].timeMs), 判定: r[i] && r[i].judgment, 暗かった秒: +(window.__offMs[i] / 1000).toFixed(2), 暗かった区間: window.__offSpans[i].slice(0, 8) })) }; })));
+  // 外れたノーツの一覧(BAD_LIST=1): 時刻・種類・空中の高さ(タップの高さ/スライドの押し始めの高さ)
+  if (process.env.BAD_LIST) console.log('外れたノーツ', JSON.stringify(await page.evaluate(() => { const r = window.__mhTestHooks.rhythmNoteResults?.() || [], n = window.__mhTestHooks.rhythmNotes?.() || [];
+    return n.map((x, i) => [x, r[i]]).filter(([, y]) => y && y.done && /BAD|MISS|GOOD/.test(y.judgment || '')).map(([x, y]) => [Math.round(x.timeMs), x._rhythmOriginalType || x.type, Number(x.skyHeight) || (window.__slideSkyAt ? +window.__slideSkyAt(x, x.timeMs).toFixed(2) : 0), y.judgment]); })));
   if (process.env.PERF_DEBUG) { console.log('区間の終わりの様子', JSON.stringify(await page.evaluate(() => { const r = window.__mhTestHooks.rhythmNoteResults?.() || []; return { 済み: r.filter(x => x.done).length, MISS: r.filter(x => x.judgment === 'MISS').length, 止め: !!document.querySelector('[data-rhythm-pause-menu]'), 文字: (document.querySelector('main')?.innerText || '').replace(/\s+/g, ' ').slice(0, 160) }; }))); const shot = require('path').join(require('os').tmpdir(), 'rhythm-frame-perf.png'); await page.screenshot({ path: shot }); console.log('画面:', shot); }
   const ft = (await page.evaluate(() => window.__ft)).filter(([m]) => m != null && m >= FROM && m < TO).map(([, d]) => d).sort((x, y) => x - y);
   const sec = (TO - FROM) / 1000;
