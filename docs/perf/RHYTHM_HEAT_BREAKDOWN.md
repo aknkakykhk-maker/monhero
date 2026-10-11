@@ -104,9 +104,11 @@
 | 演奏前の準備を既定に | 本番 | #2732・#2752 |
 | GPU の帯・区切りの線・板を既定(WebGL のとき)・熱の物差し(stats.frame の early/late・描き方) | 本番 | #2765 |
 | ① 叩いた光を 2D でも canvas 版に(社長が静止画を見て既定に) | 本番 | #2793(静止画 docs/perf/hitcmp/) |
-| ② 判定ごとの表示の部品は、要る値が変わったときだけ描き直す(useRhythmHudPick) | 検査済み・bot の表を測り直し中 | ブランチ claude/rhythm-hud-select |
-| ③ 重い飾り(影・ぼかし・光彩)を焼いた絵に | 未着手。まず GPU の既定の状態で、毎コマ効いている飾りを測る(tools の inval・layers の測り) | — |
-| ④ 残りの GPU 化(箱・星・影=HELL・判定の文字・コンボ) | 未着手。HELL 優先。マクアケくん・オンプくんと相談してから。RELEASE_FLAGS.rhythmHell は偽のまま | — |
+| ② 判定ごとの表示の部品は、要る値が変わったときだけ描き直す(useRhythmHudPick) | 本番 | #2798 |
+| ③ 重い飾り: 曲の準備中・演奏中は、隠れているアプリの外側の背景の絵(季節の SVG)を描かない | 本番 | #2802 |
+| ④ 残りの GPU 化 | 着手: 叩いたときの光を GPU で(板と同じ作り。GPU の描き方で一番大きい描き物・HELL でも 11.8ms/秒)。デバッグの切り替えで入れ、今の canvas 版と画素で突き合わせてから既定に。HELL の空中の箱・星は今は使われていない(空中のノーツは板と同じ作り) | ブランチ claude/rhythm-hell-gpu |
 
 測り方の控え: 重さは `node tools/playbot/rhythm-perf-bench.js --songs sheriruth:MASTER,freedom_dive:MASTER --cpu 1,4 --draw gpu --roots main=<main の worktree>,new=.`。
 **ほかの検査やビルドを並べて回さない**(CPU を取り合って表が乱れる。2026-10-11 に一度乱れて測り直した)。
+
+★main を取り込むとき、`monster-hero/index.html` は生成物ではない(手で足した CSS がある)。衝突したら main 側で上書きせず、両方を残す(2026-10-12 に一度消して足し直した)。
