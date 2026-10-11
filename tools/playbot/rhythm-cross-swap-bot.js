@@ -1,0 +1,159 @@
+#!/usr/bin/env node
+// 2本のスライドが交わる所の「指と帯の結び直し」を、ボットに Sheriruth MASTER を遊ばせて確かめる(2026-10-11 社長「交差のとき両方の帯が黒くなる」)。
+// 交差のスライド4本(106.77・107.34・127.37・127.77秒始まり)について、最後の判定と、帯が暗かった時間・区間(slideOffForIndex)を出す。
+// 指の動かし方(--freeze):
+//   0 … 指を交差させて、それぞれ押さえ始めた帯を最後まで追う
+//   1 … 社長の持ち替え。親指は交差させず、それぞれの側に残って、その側に来た帯を追う(交わる所で帯を反対の指へ渡す)
+//   2 … 2本目の帯の指が、交わったあと相手の帯に乗ったまま進む(自分の帯は捨てる=判定が落ちるのが正しい)
+// 本物の Supabase へは1件も送らない(偽の Supabase)。
+//
+//   node tools/playbot/rhythm-cross-swap-bot.js --freeze 1 --from 104000 --to 134600 [--landscape 0] [--root <前の版の worktree>]
+//
+// 目安(2026-10-11・直したあと): 0 と 1 は4本とも MARVELOUS・暗い時間0。2 は 107.34秒が MISS・127.77秒が GOOD(直す前と同じ)
+const path = require('path'), fs = require('fs');
+const ROOT_DEFAULT = path.resolve(__dirname, '../..');
+const arg = (name, fallback = null) => { const i = process.argv.indexOf(`--${name}`); return i >= 0 && i + 1 < process.argv.length ? process.argv[i + 1] : fallback; };
+const ROOT = path.resolve(arg('root', ROOT_DEFAULT));
+const SONG = arg('song', 'sheriruth'), DIFF = arg('diff', 'MASTER'), ENTRY = arg('entry', 'select');
+const FROM = Number(arg('from', 104000)), TO = Number(arg('to', 112000)), CPU = Number(arg('cpu', 1));
+const LAND = arg('landscape', '1') !== '0';
+const W = LAND ? 844 : 390, H = LAND ? 390 : 844;
+const FUNCS = ['paintCanvasNote', 'drawNote', 'drawSlide', 'drawHead', 'rhythmNoteCanvasGeometry', 'rhythmSlideSegmentQuads', 'rhythmSlideCheckpointLines', 'rhythmRestartAnimations', 'visitNote', 'tick',
+  ...String(arg('funcs', '')).split(',').filter(Boolean)];
+const { chromium } = require(path.join(ROOT_DEFAULT, 'tools/node_modules/playwright'));
+const { createFakeSupabase } = require(path.join(ROOT_DEFAULT, 'tools/playbot/lib/fake-supabase.js'));
+const { installPlayer } = require(path.join(ROOT_DEFAULT, 'tools/playbot/scenarios/rhythm.js'));
+const { touchInputSource } = require(path.join(ROOT_DEFAULT, 'tools/playbot/lib/touch-input.js'));
+
+const seed = (songId) => `(() => {
+  const put = (k, v) => { if (localStorage.getItem(k) === null) localStorage.setItem(k, JSON.stringify(v)); };
+  put('mh_breeder_name', 'テスト'); put('mh_breeder_icon', 'Mocchi'); put('mh_onboarded', true);
+  put('mh_tutorial_seen_v1', true); put('mh_battle_tutorial_seen_v1', true); put('mh_battle_tutorial_guide_shown_v1', true);
+  put('mh_rhythm_tutorial_seen_v1', true); put('mh_quick_rhythm_intro_seen_v1', true); put('mh_quick_rhythm_bg_seen_v1', true);
+  put('mh_monster_roster', ['Suezo', 'Golem', 'Tiger', 'Ham', 'Pixie', 'Monol', 'Oboro', 'Mocchi']);
+  // 上の難易度を開けておく(曲えらびから MASTER などを選べるように)
+  put('mh_rhythm_best_v1', { ${JSON.stringify(songId)}: Object.fromEntries(['EASY','NORMAL','HARD','EXPERT','MASTER'].map(d => [d, { bestScore: 900000, maxCombo: 10, played: true, clear: true }])) });
+})()`;
+const mime = f => ({ '.js': 'application/javascript', '.html': 'text/html', '.css': 'text/css', '.json': 'application/json', '.mp3': 'audio/mpeg', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.svg': 'image/svg+xml' })[path.extname(f)] || 'application/octet-stream';
+
+(async () => {
+  const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--autoplay-policy=no-user-gesture-required'] });
+  const context = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1, hasTouch: true });
+  const sb = createFakeSupabase();
+  await context.route('**/*', async (route) => {
+    const req = route.request(), u = req.url();
+    const m = u.match(/^https:\/\/sky\.test\/(.*)$/);
+    if (m) {
+      const f = path.join(ROOT, decodeURIComponent(m[1].split('?')[0]));
+      if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) return route.fulfill({ status: 404, body: '' });
+      return route.fulfill({ status: 200, body: fs.readFileSync(f), headers: { 'content-type': mime(f), 'access-control-allow-origin': '*' } });
+    }
+    if (/supabase\.co/.test(u)) {
+      if (req.method() === 'POST' && /\/rest\/v1\/(rhythm_play_logs|rhythm_touch_diagnostics)/.test(u)) return route.fulfill({ status: 400, headers: { 'content-type': 'application/json' }, body: '{"code":"23514"}' });
+      return sb.handle(route);
+    }
+    return route.abort();
+  });
+  await context.addInitScript(() => { window.__mhSupabaseStubbed = true; });
+  await context.addInitScript(seed(SONG));
+  const page = await context.newPage();
+  const cdp = await context.newCDPSession(page);
+  const errors = []; page.on('pageerror', (e) => errors.push(String(e).slice(0, 200)));
+  await page.goto('https://sky.test/monster-hero/index.html', { waitUntil: 'load', timeout: 90000 });
+  const clickText = (re) => page.evaluate((p) => { const b = [...document.querySelectorAll('button,summary')].find(x => new RegExp(p).test(x.textContent)); if (b) b.click(); return !!b; }, re);
+  const pointerDown = (sel) => page.evaluate((s) => { const b = s.aria ? document.querySelector(`button[aria-label="${s.aria}"]`) : [...document.querySelectorAll('button')].find(x => x.textContent.includes(s.text)); if (b) b.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); return !!b; }, sel);
+  const closeDialogs = async (n) => { for (let i = 0; i < n; i++) { if (!(await clickText('^(確認|受け取る|受け取|閉じる|OK|スキップ|あとで読む|あとで|この案内を閉じる)$'))) break; await page.waitForTimeout(500); } };
+  await page.waitForFunction(() => document.body.innerText.includes('TAP TO START'), null, { timeout: 90000 }).catch(() => {});
+  await pointerDown({ text: 'TAP TO START' }); await page.waitForTimeout(2500);
+  await page.waitForFunction(() => !!document.querySelector('button[aria-label="トップ画面へ進む"]'), null, { timeout: 40000 });
+  await pointerDown({ aria: 'トップ画面へ進む' }); await page.waitForTimeout(2500);
+  await closeDialogs(12);
+  let started = false;
+  if (ENTRY === 'select') {
+    await clickText('モンヒロビート$'); await page.waitForTimeout(2500); await closeDialogs(6);
+    await clickText('ソロライブ'); await page.waitForTimeout(2500); await closeDialogs(3);
+    // 曲の名前は曲えらびの表示名で探す(songId から表示名を引く)
+    const name = await page.evaluate((id) => (RHYTHM_SONGS.find(s => s.songId === id) || {}).displayName || id, SONG);
+    await clickText('^' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')); await page.waitForTimeout(1200);
+    await clickText(DIFF); await page.waitForTimeout(800);
+    started = await clickText('^(▶\\s*)?決定$');
+  } else {
+    await page.evaluate(() => document.querySelector('button[aria-label="設定"]')?.click()); await page.waitForTimeout(900);
+    await clickText('^ヘルプ'); await page.waitForTimeout(900);
+    await clickText('💊'); await page.waitForTimeout(1200);
+    await page.evaluate(() => { const s = [...document.querySelectorAll('summary')].find(x => /モンヒロビート/.test(x.textContent)); if (s) s.click(); });
+    await page.waitForTimeout(500);
+    await page.evaluate(() => document.querySelector('[data-debug-rhythm-mode]')?.click()); await page.waitForTimeout(1500);
+    started = await page.evaluate(([song, diff, entry]) => {
+      if (entry === 'proto') { const b = document.querySelector(`[data-rhythm-proto-song="${song}"] [data-rhythm-proto-start="${diff}"]`) || document.querySelector(`[data-rhythm-proto-song="${song}"] [data-rhythm-proto-start]`); if (b) b.click(); return !!b; }
+      const sec = [...document.querySelectorAll('section')].find(x => x.querySelector('small') && x.querySelector('small').textContent.trim() === song);
+      const art = sec && [...sec.querySelectorAll('article')].find(a => a.textContent.startsWith(diff + ' '));
+      const b = art && art.querySelector('[data-rhythm-tap-start]'); if (b) b.click(); return !!b;
+    }, [SONG, DIFF, ENTRY]);
+  }
+  if (!started) throw new Error(`曲を始められなかった(${ENTRY} ${SONG} ${DIFF})`);
+  await page.waitForFunction(() => !!document.querySelector('[data-rhythm-play-area]') && window.__mhTestHooks?.rhythmNotes?.(), null, { timeout: 30000, polling: 100 });
+  const playing = await page.evaluate(() => ({ notes: (window.__mhTestHooks.rhythmNotes() || []).length, title: (document.querySelector('[data-rhythm-play-area]')?.closest('main')?.innerText || '').split('\n').slice(0, 4).join(' ') }));
+  console.log(`演奏: ノーツ ${playing.notes} / ${playing.title.slice(0, 60)}`);
+  // ボット(空中のノーツは空中の高さで押す)
+  const target = 'const p = fingerAt(c, hab, null, now);';
+  const src = installPlayer.toString();
+  const player = src.includes(target) ? src.replace(target, 'const p = (() => { const q = fingerAt(c, hab, null, now); const sh = Number(n.skyHeight) > 0 ? Number(n.skyHeight) : 0; if (!sh || typeof RHYTHM_SKY_LIFT === "undefined") return q; const rr = area.getBoundingClientRect(); return { x: q.x, y: q.y - rr.height * RHYTHM_SKY_LIFT.ratio * sh }; })();') : src;
+  const posLine = 'const pos = fingerAt(laneOfHold(a.n, now), a.hab, a.drift, now);';
+  if (!player.includes(posLine)) throw new Error('ボットの押さえる指の行が見つからない');
+  const player2 = player.replace(posLine, 'const pos = (() => { const q = fingerAt(window.__laneFor ? window.__laneFor(a.n, now, laneOfHold) : laneOfHold(a.n, now), a.hab, a.drift, now); return q; })();');
+  await page.evaluate((mode) => {
+    const pairs = [[[106771, 107339], 108420], [[127367, 127772], 130700]];
+    // mode 2: 2本目の帯(107339・127772)を押さえる指が、交わったあと相手の帯(106771・127367)に乗ったまま進む(自分の帯は捨てる=失敗するはず)
+    const seen = {}; const partner = { 107339: 106771, 127772: 127367 };
+    window.__laneNote = (n, now) => { const t = Math.round(Number(n.timeMs)); seen[t] = n; if (mode !== 2 || !partner[t]) return n; const p = pairs.find(([ids]) => ids.includes(t)); return now >= p[1] && seen[partner[t]] ? seen[partner[t]] : n; };
+    // mode 1(社長の持ち替え): 指は親指を交差させず、それぞれの側に残る。右側で押し始めた指は、2本のうち右にある帯を、左の指は左にある帯を追う
+    // mode 2: 2本目の帯を押さえる指が、交わったあと相手の帯に乗ったまま進む(自分の帯は捨てる)
+    const other = { 106771: 107339, 107339: 106771, 127367: 127772, 127772: 127367 }; const startSide = {};
+    window.__laneFor = (n, now, f) => { const t = Math.round(Number(n.timeMs)); seen[t] = n; const o = seen[other[t]];
+      if (mode === 1 && o) { const mine = f(n, now), theirs = f(o, now); if (!startSide[t]) startSide[t] = mine >= theirs ? 'R' : 'L'; return startSide[t] === 'R' ? Math.max(mine, theirs) : Math.min(mine, theirs); }
+      if (mode === 2 && partner[t] && seen[partner[t]]) { const p = pairs.find(([ids]) => ids.includes(t)); if (now >= p[1]) return f(seen[partner[t]], now); }
+      return f(n, now); };
+    window.__freeze = (n, now) => { if (mode !== 1) return false; const t = Math.round(Number(n.timeMs)); const p = pairs.find(([ids]) => ids.includes(t)); return !!p && now >= p[1]; };
+    const notes = window.__mhTestHooks.rhythmNotes() || [];
+    const idx = notes.map((x, i) => [x, i]).filter(([x]) => [106771, 107339, 127367, 127772].includes(Math.round(Number(x.timeMs))) && ((x._rhythmOriginalType || x.type) === 'SLIDE')).map(([, i]) => i);
+    window.__offMs = Object.fromEntries(idx.map(i => [i, 0])); window.__offSpans = Object.fromEntries(idx.map(i => [i, []]));
+    let last = performance.now();
+    const tick = (t) => { const dt = t - last; last = t; const song = Math.round(window.__mhTestHooks.rhythmSongMs?.() ?? -1);
+      for (const i of idx) { const off = !!RHYTHM_GESTURE_RUNTIME.slideOffForIndex(i); if (off) window.__offMs[i] += dt; const sp = window.__offSpans[i]; const lastSp = sp[sp.length - 1];
+        if (off && (!lastSp || lastSp[1] != null)) sp.push([song, null]); else if (!off && lastSp && lastSp[1] == null) lastSp[1] = song; }
+      requestAnimationFrame(tick); };
+    requestAnimationFrame(tick);
+  }, Number(arg('freeze', 0)));
+  const args = { sigma: 0, missRate: 0, seed: 7, human: false, persona: 'center', input: 'ios', dropRate: 0, lateRate: 0, touchSrc: touchInputSource };
+  await page.evaluate(`(${player2})(${JSON.stringify(args)})`);
+  await page.waitForFunction((a) => (window.__mhTestHooks?.rhythmSongMs?.() ?? -1) >= a - 1500, FROM, { timeout: 600000, polling: 200 });
+  if (CPU > 1) await cdp.send('Emulation.setCPUThrottlingRate', { rate: CPU });
+  await page.evaluate(() => { window.__ft = []; let last = performance.now(); const tick = (t) => { window.__ft.push([window.__mhTestHooks?.rhythmSongMs?.(), t - last]); last = t; if (window.__ft.length < 30000) requestAnimationFrame(tick); }; requestAnimationFrame(tick); });
+  await page.waitForFunction((a) => (window.__mhTestHooks?.rhythmSongMs?.() ?? -1) >= a, FROM, { timeout: 600000, polling: 'raf' });
+  await cdp.send('Profiler.enable'); await cdp.send('Profiler.setSamplingInterval', { interval: 200 }); await cdp.send('Profiler.start');
+  await page.waitForFunction((b) => (window.__mhTestHooks?.rhythmSongMs?.() ?? -1) >= b, TO, { timeout: 600000, polling: 'raf' });
+  const { profile } = await cdp.send('Profiler.stop');
+  console.log('判定', JSON.stringify(await page.evaluate(() => { const r = window.__mhTestHooks.rhythmNoteResults?.() || [], n = window.__mhTestHooks.rhythmNotes?.() || []; const h = {}; r.forEach(x => { if (x && x.judgment) h[x.judgment] = (h[x.judgment] || 0) + 1; });
+    const sl = n.map((x, i) => [x, r[i]]).filter(([x]) => x.type === 'SLIDE' && [106771, 107339, 127367, 127772].includes(Math.round(x.timeMs))).map(([x, y]) => [Math.round(x.timeMs), y && y.judgment, y && y.done]);
+    return { 合計: h, 済み: r.filter(x => x && x.done).length, 交差のスライド: Object.keys(window.__offMs).map(i => ({ 始まり: Math.round(n[i].timeMs), 判定: r[i] && r[i].judgment, 暗かった秒: +(window.__offMs[i] / 1000).toFixed(2), 暗かった区間: window.__offSpans[i].slice(0, 8) })) }; })));
+  if (process.env.PERF_DEBUG) { console.log('区間の終わりの様子', JSON.stringify(await page.evaluate(() => { const r = window.__mhTestHooks.rhythmNoteResults?.() || []; return { 済み: r.filter(x => x.done).length, MISS: r.filter(x => x.judgment === 'MISS').length, 止め: !!document.querySelector('[data-rhythm-pause-menu]'), 文字: (document.querySelector('main')?.innerText || '').replace(/\s+/g, ' ').slice(0, 160) }; }))); const shot = require('path').join(require('os').tmpdir(), 'rhythm-frame-perf.png'); await page.screenshot({ path: shot }); console.log('画面:', shot); }
+  const ft = (await page.evaluate(() => window.__ft)).filter(([m]) => m != null && m >= FROM && m < TO).map(([, d]) => d).sort((x, y) => x - y);
+  const sec = (TO - FROM) / 1000;
+  const byId = new Map(profile.nodes.map(n => [n.id, n])), parent = new Map(); profile.nodes.forEach(n => (n.children || []).forEach(c => parent.set(c, n.id)));
+  const cnt = new Map(); profile.samples.forEach((id, k) => cnt.set(id, (cnt.get(id) || 0) + (profile.timeDeltas[k] || 0)));
+  const incl = new Map(); let busy = 0;
+  for (const [id, us] of cnt) {
+    if (byId.get(id).callFrame.functionName !== '(idle)') busy += us;
+    let x = id; const seen = new Set();
+    while (x != null) { const key = byId.get(x).callFrame.functionName || '(無名)'; if (!seen.has(key)) { seen.add(key); incl.set(key, (incl.get(key) || 0) + us); } x = parent.get(x); }
+  }
+  const avg = ft.length ? ft.reduce((p, q) => p + q, 0) / ft.length : 0;
+  console.log(`${SONG} ${DIFF} ${FROM / 1000}〜${TO / 1000}秒 CPU${CPU}倍 ${W}x${H}`);
+  console.log(`  1コマ: ${ft.length}コマ 平均${avg.toFixed(1)}ms 95%${(ft[Math.floor(ft.length * .95)] || 0).toFixed(0)}ms 最長${(ft[ft.length - 1] || 0).toFixed(0)}ms 50ms超${ft.filter(d => d > 50).length}`);
+  console.log(`  忙しさ: 1秒あたり ${(busy / 1000 / sec).toFixed(0)}ms`);
+  console.log(`  含む時間(1秒あたり ms): ${FUNCS.map(k => `${k} ${((incl.get(k) || 0) / 1000 / sec).toFixed(1)}`).join(' / ')}`);
+  console.log(`  (参考)getBoundingClientRect ${((incl.get('getBoundingClientRect') || 0) / 1000 / sec).toFixed(1)}ms はボットの分`);
+  if (errors.length) console.log(`  ページのエラー: ${errors.join(' | ')}`);
+  await context.close(); await browser.close();
+})().catch((e) => { console.error(e); process.exit(1); });
