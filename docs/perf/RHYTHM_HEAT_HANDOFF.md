@@ -27,7 +27,8 @@
    案: 板のシェーダーで光の絵(3分割)も一緒に描く(四角を光の外まで広げ、テクスチャを1枚渡す)→ 切り替えが無くなる。描く順は今と同じにできる。見た目は画素で突き合わせ(rhythm-gpu-band-check)
 2. **HELL**: オンプくん(session_01KxMEiw3EwFDLvXkiHxkA4S)が今の 2D と gpu の表・描き物ごとの内訳を測っている(docs/playbot/reports/2026-10-11/hell-perf/)。
    2D では HELL は MASTER と同じか軽かった。空中の赤い箱(drawSkyTap)・星は今の HELL では使われていない(空中のノーツは板と同じ作り)。
-   空中のスライドの白いふち(案Z)の GPU の描き始めが 2D と十数画素ずれる件は、HELL 公開前にテンポくんと直す(drawSlideGpu の skyZOn)
+   空中のスライドの白いふち(案Z)の GPU の描き始めが 2D と十数画素ずれる件 → 2026-10-12 済み。2D・GPU とも「高さが RHYTHM_SKY_EDGE_FROM(0.042)を越えている時刻の範囲」
+   (rhythmSlideSkyEdgeSpans)だけにふちを描く形にそろえた。GPU の見た目は変わらず、2D のふちの端が GPU と同じ所まで伸びる。静止画 docs/perf/skyedge/(左 前・右 後。-zoom は 前・後・GPU の拡大)
 3. 判定の文字・コンボの GPU 化: 文字が変わるたびのレイアウトは残っている(塗り直しの理由の記録で「Layout | Style changed | 判定の文字」が6秒で 260〜420回)。
    ただし1コマあたりのゲームの JS はもう 2〜3ms(この入れ物の CPU1倍)で、**ここから先は1つずつの効き目が小さくなる**。実機の stats.frame(early/late・startOver50)が数日たまってから、効きの大きい所を選ぶのがよい
 
