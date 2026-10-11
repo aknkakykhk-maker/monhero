@@ -20,7 +20,7 @@ check('終端到達でHOLDを自動確定',game.includes("note.type==='HOLD'&&no
 // 両方が同じ数字を見ないと成立しないため。2026-09-05に1か所へまとめた)
 check('終端100ms手前まで来ていれば離しても成立',
   data.includes('const RHYTHM_HOLD_RELEASE_GRACE_MS=100')
-  && game.includes("if(now>=holdEndMs-RHYTHM_HOLD_RELEASE_GRACE_MS){applyJudgment(note,note.holdJudgment||'MISS',note.holdDeltaMs||0);}"));
+  && game.includes("if(now>=holdEndMs-RHYTHM_HOLD_RELEASE_GRACE_MS){const own=rhythmReleaseFallback(note,now,settings.judgmentTimingOffsetMs);if(own)applyJudgment(note,own.judgment,own.deltaMs);else applyJudgment(note,note.holdJudgment||'MISS',note.holdDeltaMs||0);}"));
 check('それより早い離しは、持ち替えの猶予を待ってからMISS',
   /const RHYTHM_HOLD_HANDOVER_GRACE_MS=\d+;/.test(data)
   && game.includes('else{note.releasedAtMs=now;rhythmFloatingNoteAdd(note);}')

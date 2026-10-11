@@ -905,6 +905,9 @@ const MIRROR_FLICK=Object.freeze({
 //   配り方と種類だけを変え、曲全体のノーツ数の決め方は変えない。既存曲の作り方(Rev.24 まで)には入れない
 const BUILD_AND_HOLD_REVISION=25;
 const rev25=chartRevision>=BUILD_AND_HOLD_REVISION;
+// Rev.29: モンスターノーツはどの難易度にも必ず4個(2026-10-11 社長「どの曲も基本4個入るルールだよ」)。13. を見る
+const MONSTER_FOUR_REVISION=29;
+const rev29=chartRevision>=MONSTER_FOUR_REVISION;
 // 盛り上がる区切りの直前で持ち上げる小節の数 / 拾えなかった取り分を次の小節へ回す上限 / 盛り上がる区切りの繰り返しの小節の上乗せ(元の何分の1まで)
 const BUILD_UP=Object.freeze({rampBars:4,carryMax:2,climaxRepeatExtra:.5});
 // 難易度ごとの HOLD・SLIDE の上限の倍率と、ベースの伸びを材料にするか
@@ -2511,14 +2514,33 @@ const buildChart=(difficulty,options={})=>{
     });
   }
 
-  // --- 13. モンスターノーツ（曲の20/40/60/80%あたりへ1体ずつ・どの難易度も必ず4個） ---
+  // --- 13. モンスターノーツ（曲の20/40/60/80%あたりへ1体ずつ） ---
+  const monsterSlotGrids=[];
+  if(!rev29){
+    const first=notes[0].grid,last=notes[notes.length-1].grid;
+    const used=new Set();
+    COMMON.monsterTargets.forEach((ratio,slot)=>{
+      const target=first+(last-first)*ratio;
+      let bestIndex=-1,bestDistance=Infinity;
+      notes.forEach((note,index)=>{
+        if(note.type!=='TAP'||used.has(index)||note.chord)return;
+        if(note.grid%BEAT!==0)return;
+        const before=index>0?note.grid-notes[index-1].grid:Infinity;
+        const after=index<notes.length-1?notes[index+1].grid-note.grid:Infinity;
+        if(before<COMMON.monsterClearGrids||after<COMMON.monsterClearGrids)return;
+        const distance=Math.abs(note.grid-target);
+        if(distance<bestDistance){bestDistance=distance;bestIndex=index;}
+      });
+      if(bestIndex>=0){notes[bestIndex].monsterSlot=slot+1;used.add(bestIndex);monsterSlotGrids.push(notes[bestIndex].grid);}
+    });
+  }
+  // Rev.29 から(どの難易度も必ず4個)。Rev.28 までは上の作り方のまま(既存曲の譜面は1バイトも変えない・⑩-2)
   // 【2026-10-11 社長「どの曲も基本4個入るルールだよ」】前後1拍空いた拍の頭の単打が見つからないと、その枠を空けたままにしていた
   // (込んだ EXPERT・MASTER で3個以下の譜面が19できていた)。見つからなければ条件を1段ずつゆるめて、必ず置く:
   //   段0 拍の頭・前後に COMMON.monsterClearGrids 空き → 段1 拍の頭・その半分空き → 段2 拍の頭 → 段3 同時押しでない単打 → 段4 単打
   // 探すのは狙いの前後10%の中から(無ければ曲全体)。狙いの前後10%に段0がある譜面は、これまでと1つも変わらない。
   // tools/mode/rhythm-monster-four-check.js が公開曲の4個を見張る
-  const monsterSlotGrids=[];
-  {
+  else{
     const first=notes[0].grid,last=notes[notes.length-1].grid;
     const used=new Set();
     const gapOf=index=>Math.min(index>0?notes[index].grid-notes[index-1].grid:Infinity,index<notes.length-1?notes[index+1].grid-notes[index].grid:Infinity);

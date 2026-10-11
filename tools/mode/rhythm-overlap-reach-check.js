@@ -77,6 +77,23 @@ const missingCoordinate = note => {
   }
   return !Number.isFinite(Number(note.subLane)) || !Number.isFinite(Number(note.subLaneWidth));
 };
+// 【例外は名指しだけ】2本のスライドを別々の指で押さえ、途中で左右を入れ替わる「交差」は、2本の帯が互いの上を通るので必ず重なりに数えられる。
+// 社長が OK した交差だけを、曲・難易度・時刻・2本のスライド(始まりの時刻)で名指しして外す(2026-10-11 窓口の決定)。
+// ほかの曲・ほかの重なりは今までどおり NG。名指しした交差が譜面から消えたら、それも NG にする(古い例外を残さない)
+const INTENDED_CROSSINGS = [
+  { songId: 'sheriruth', difficulty: 'MASTER', timeMs: 111959, slides: [106771, 107339] },
+  { songId: 'sheriruth', difficulty: 'MASTER', timeMs: 130772, slides: [127367, 127772] },
+];
+const crossingSeen = new Set();
+const intendedCrossing = (songId, difficulty, notes, conflict) => {
+  const held = notes[conflict.heldIndex], note = notes[conflict.noteIndex];
+  if (!held || !note || held.type !== 'SLIDE' || note.type !== 'SLIDE') return false;
+  const pair = [Math.round(held.timeMs), Math.round(note.timeMs)].sort((a, b) => a - b).join(',');
+  const hit = INTENDED_CROSSINGS.findIndex(item => item.songId === songId && item.difficulty === difficulty
+    && item.timeMs === Math.round(conflict.timeMs) && item.slides.slice().sort((a, b) => a - b).join(',') === pair);
+  if (hit >= 0) crossingSeen.add(hit);
+  return hit >= 0;
+};
 let overlapTotal = 0, fastTotal = 0, missingTotal = 0;
 const worst = [];
 for (const songId of Object.keys(rt0.RELEASED_MARKERS)) {
@@ -88,7 +105,7 @@ for (const songId of Object.keys(rt0.RELEASED_MARKERS)) {
     missingTotal += missing.length;
     if (missing.length) worst.push(`${songId} ${difficulty}: 座標の欠け${missing.length}件`
       + ` 例: ${Math.round(missing[0].timeMs)}ms ${missing[0].type}`);
-    const overlap = rt0.overlapConflicts(chart.notes, spanAt);
+    const overlap = rt0.overlapConflicts(chart.notes, spanAt).filter(conflict => !intendedCrossing(songId, difficulty, chart.notes, conflict));
     const fast = rt0.fastPairConflicts(chart.notes, spanAt);
     overlapTotal += overlap.length;
     fastTotal += fast.length;
@@ -101,6 +118,8 @@ for (const songId of Object.keys(rt0.RELEASED_MARKERS)) {
 }
 check('ノーツの座標が欠けていない', missingTotal === 0, `${missingTotal}件`);
 check('押さえている帯に重なって指が入らない配置が無い', overlapTotal === 0, `${overlapTotal}件`);
+check('名指しした交差(例外)が、どれも譜面に今もある', INTENDED_CROSSINGS.every((_, index) => crossingSeen.has(index)),
+  INTENDED_CROSSINGS.filter((_, index) => !crossingSeen.has(index)).map(item => `${item.songId} ${item.difficulty} ${item.timeMs}ms`).join(' / '));
 check('指が2本入らない近さなのに速すぎる2音が無い', fastTotal === 0, `${fastTotal}件`);
 if (worst.length) worst.forEach(line => console.log(`   ${line}`));
 
@@ -112,7 +131,7 @@ const fixSource = fs.existsSync(fixPath) ? fs.readFileSync(fixPath, 'utf8') : ''
 check('直す道具は押さえている帯そのものを動かさない',
   fixSource.includes("const movable=note=>(note.type==='TAP'||note.type==='FLICK'||note.type==='HOLD')"));
 check('直す道具はほかの曲の譜面を巻き添えにしない',
-  fixSource.includes('先行公開5曲以外の譜面まで書き換えようとしました'));
+  fixSource.includes('以外の譜面まで書き換えようとしました')&&fixSource.includes("if(write&&!onlySongs)"));
 
 console.log(failed === 0 ? '\nすべてOK' : `\n${failed}件のNGがあります`);
 process.exit(failed === 0 ? 0 : 1);

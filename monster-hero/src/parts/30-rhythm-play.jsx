@@ -1967,7 +1967,7 @@ const paintCanvasNote=note=>{
   const geo=rhythmNoteCanvasGeometry(note,yPx,visualLane,travel.rect,travel.noteHeight,hasBody?releaseYpx:null,{chartNowMs:songTimeMs-settings.judgmentTimingOffsetMs,visualTime,travelMs,spawnY:travel.spawnY,travelPx:travel.travelPx,gpu:gpuBandNow},hasBody?bodyPx:0);
   const monster=!!monsterForNote(note);
   const depthScale=Math.round((0.56+geo.scale*.44)*100)/100,brightness=Math.round((0.72+geo.scale*.28)*100)/100;
-  RHYTHM_CANVAS_RENDERER.drawNote(note,geo,{failed:failedTrail,monster,wide:rhythmNoteIsWide(note),pressed:note.type==='HOLD'&&note.activePointerId!==null,heldMs:songTimeMs-note.timeMs,alpha:failedTrail?.34:1,pop:clearFlash?Math.min(1,(songTimeMs-note._rhythmClearAt)/RHYTHM_CLEAR_FLASH_MS):null,depthScale,brightness});
+  RHYTHM_CANVAS_RENDERER.drawNote(note,geo,{failed:failedTrail,monster,wide:rhythmNoteIsWide(note),pressed:note.type==='HOLD'&&note.activePointerId!==null,slideOff:note.type==='HOLD'&&note.activePointerId!==null&&RHYTHM_GESTURE_RUNTIME.slideOffForIndex(note.index),heldMs:songTimeMs-note.timeMs,alpha:failedTrail?.34:1,pop:clearFlash?Math.min(1,(songTimeMs-note._rhythmClearAt)/RHYTHM_CLEAR_FLASH_MS):null,depthScale,brightness});
   // マスモンの顔(焼いた絵)。以前の DOM 版と同じく、落下中は「奥行き×1.28倍」、
   // 取った瞬間は枠の大きさから2.1倍へ広がりながら消える(0.26秒・影なし)
   const monsterSlot=monster?rhythmNoteMonsterSlot(note):0,faceBitmap=monsterSlot?faceBitmapsRef.current[monsterSlot-1]:null;
@@ -2000,7 +2000,8 @@ if(calibrating){const taps=Array.isArray(run.deltas)?run.deltas.length:0;
 // 押さえたまま終わりまで来た HOLD/SLIDE。確定する前にタッチ側の終わりの見回り(settleHeld)を1回走らせる。
 // 別々に走らせていたので、押しっぱなしで終わりの窓を過ぎても、どちらが先に走るかで成功にも MISS にもなっていた(2026-10-11)。
 // 見回りの時計でまだ終わりの窓の中なら、ここではまだ確定しない(窓の中で離した指を MISS にしない)
-const visitNote=note=>{if(note.type==='HOLD'&&note.activePointerId!==null&&songTimeMs>=note.endTimeMs+settings.judgmentTimingOffsetMs){if(RHYTHM_GESTURE_RUNTIME.settleHeld?.(note,songTimeMs)!==false&&songTimeMs>=note.endTimeMs+settings.judgmentTimingOffsetMs)applyJudgment(note,note.holdJudgment||'MISS',note.holdDeltaMs||0);}
+// タッチ側の見回りが無いときは rhythmReleaseFallback で決める(押さえたまま窓を過ぎたら MISS・それまでは待つ)
+const visitNote=note=>{if(note.type==='HOLD'&&note.activePointerId!==null&&songTimeMs>=note.endTimeMs+settings.judgmentTimingOffsetMs){const settled=RHYTHM_GESTURE_RUNTIME.settleHeld?.(note,songTimeMs);const own=settled===null?rhythmReleaseFallback(note,songTimeMs,settings.judgmentTimingOffsetMs):null;if(own){if(own.expiredWhileHeld)applyJudgment(note,'MISS',own.deltaMs);}else if(settled!==false&&songTimeMs>=note.endTimeMs+settings.judgmentTimingOffsetMs)applyJudgment(note,note.holdJudgment||'MISS',note.holdDeltaMs||0);}
 // 指を離したまま戻ってこなかったHOLD/SLIDE。持ち替えの猶予を過ぎた時点で失敗にする。
 // 終わりまで来ていたら、離していても成立させる(終わり際に離すぶんは元から許している)
 if(!note.done&&note.activePointerId===null&&note.releasedAtMs!=null){
@@ -2233,7 +2234,7 @@ scheduleTick();};
       rhythmSongMs:()=>{const run=runRef.current;return run&&!run.finished&&!run.paused?Number(run.audio.songTimeMs())||0:null;},
       // 1ノーツずつの判定とずれ(読むだけ)。モンヒロくんが「自分が押した時刻・位置」と見比べて、
       // 押したのに取れない・判定のずれ・ホールドが切れた、を数える(tools/playbot/lib/feel.js・2026-10-07)
-      rhythmNoteResults:()=>{const run=runRef.current;return run?run.notes.map(note=>({index:note.index,done:!!note.done,judgment:note._rhythmFinalJudgment??null,deltaMs:Number.isFinite(note._rhythmDeltaMs)?note._rhythmDeltaMs:null,holdJudgment:note.holdJudgment??null,holdDeltaMs:Number.isFinite(note.holdDeltaMs)?note.holdDeltaMs:null,endTimeMs:Number.isFinite(note.endTimeMs)?note.endTimeMs:null,releaseTargetMs:Number.isFinite(note._rhythmReleaseTargetMs)?note._rhythmReleaseTargetMs:null,endFlick:note.endFlick===true})):null;},
+      rhythmNoteResults:()=>{const run=runRef.current;return run?run.notes.map(note=>({index:note.index,done:!!note.done,judgment:note._rhythmFinalJudgment??null,deltaMs:Number.isFinite(note._rhythmDeltaMs)?note._rhythmDeltaMs:null,holdJudgment:note.holdJudgment??null,holdDeltaMs:Number.isFinite(note.holdDeltaMs)?note.holdDeltaMs:null,endTimeMs:Number.isFinite(note.endTimeMs)?note.endTimeMs:null,releaseTargetMs:Number.isFinite(note._rhythmReleaseTargetMs)?note._rhythmReleaseTargetMs:null,endFlick:note.endFlick===true,releaseDone:note._rhythmReleaseDone===true,releaseJudgment:note._rhythmReleaseJudgment??null,releaseDeltaMs:Number.isFinite(note._rhythmReleaseDeltaMs)?note._rhythmReleaseDeltaMs:null})):null;},
       rhythmNotes:()=>{const run=runRef.current;return run?run.notes.map(note=>({index:note.index,type:note.type,timeMs:note.timeMs,skyHeight:rhythmNoteSkyHeight(note),endTimeMs:note.endTimeMs,lane:note.lane,subLane:note.subLane,subLaneWidth:note.subLaneWidth,slidePoints:Array.isArray(note.slidePoints)?note.slidePoints.map(pt=>({timeMs:pt.timeMs,lane:pt.lane})):null,done:!!note.done})):null;},
     };}catch(_){}
     return()=>{try{if(window.__mhTestHooks){delete window.__mhTestHooks.rhythmSongMs;delete window.__mhTestHooks.rhythmNotes;delete window.__mhTestHooks.rhythmNoteResults;}}catch(_){}};
@@ -2314,8 +2315,9 @@ scheduleTick();};
       if(input.releaseTarget&&input.pointerId!==undefined){try{if(input.releaseTarget.hasPointerCapture?.(input.pointerId))input.releaseTarget.releasePointerCapture(input.pointerId);}catch{}}
       return;
     }
-    // 終わり際まで来ていれば、そのまま成立させる
-    if(now>=holdEndMs-RHYTHM_HOLD_RELEASE_GRACE_MS){applyJudgment(note,note.holdJudgment||'MISS',note.holdDeltaMs||0);}
+    // 終わり際まで来ていれば、そのまま成立させる。タッチ側が離しを判定していないとき(記録が途中で外れた)は、
+    // 離した時刻で決める(押しっぱなしで窓を過ぎてから離したら MISS。2026-10-11)
+    if(now>=holdEndMs-RHYTHM_HOLD_RELEASE_GRACE_MS){const own=rhythmReleaseFallback(note,now,settings.judgmentTimingOffsetMs);if(own)applyJudgment(note,own.judgment,own.deltaMs);else applyJudgment(note,note.holdJudgment||'MISS',note.holdDeltaMs||0);}
     // まだ途中なら、すぐには失敗にしない。指を入れ替えている途中かもしれないので、
     // 猶予のあいだは「浮いている」ことだけ覚えておく(rAFのvisitNoteが時間切れを見る)
     else{note.releasedAtMs=now;rhythmFloatingNoteAdd(note);}if(input.releaseTarget&&input.pointerId!==undefined){try{if(input.releaseTarget.hasPointerCapture?.(input.pointerId))input.releaseTarget.releasePointerCapture(input.pointerId);}catch{}}});};
