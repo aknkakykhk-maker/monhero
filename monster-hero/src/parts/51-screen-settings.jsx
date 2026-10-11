@@ -36,12 +36,86 @@ function SettingsMenuLink({ icon, label, desc, onClick, disabled = false, accent
   );
 }
 
+// 設定の「ダウンロード」ページ(2026-10-11 社長依頼「よくゲームにある事前ダウンロード」)。
+// まとまり(ASSET_PACKS)ごとに、落とす・取り消す・消すと進み具合を出す。仕組みは 25-asset-cache.jsx(ASSET_CACHE)
+function AssetDownloadPage({ onBack }) {
+  const asset = useAssetCacheState();
+  const { packs, usage } = asset.status;
+  const job = asset.job;
+  return (
+    <div data-mh-screen data-asset-download-page className={SCREEN_SHELL_CLASS}>
+      <ScreenHead title="ダウンロード" accent="text-emerald-200" onBack={onBack} backLabel="設定へ戻る"/>
+      {/* 下の余白(pb-20)は、ハロウィンの画面のかぼちゃの飾り(背景の左右下・高さ約60px)に最後の行が隠れないため */}
+      <div className={`${SCREEN_LIST_CLASS} w-full max-w-md mx-auto space-y-3 pb-20`}>
+        <p className="px-1 text-[11px] font-bold leading-relaxed text-slate-300">曲や画像を前もってこの端末に入れておくと、はじめて開く画面や曲がすぐ始まります。アップデートで変わったものだけを入れ直し、古いものは自動で消えます。</p>
+        {!asset.supported && (
+          <p data-asset-unsupported className="rounded-xl border border-amber-400/40 bg-amber-950/30 px-3 py-2 text-[11px] font-bold leading-relaxed text-amber-100">この端末・ブラウザでは前もって入れておくことができません。ふだんどおり、開いたときに読み込みます。</p>
+        )}
+        {ASSET_PACKS.map(pack => {
+          const st = packs[pack.id] || { count: 0, bytes: 0, haveCount: 0, haveBytes: 0 };
+          const complete = st.count > 0 && st.haveCount >= st.count;
+          const running = job && job.packId === pack.id;
+          const pct = running
+            ? (job.bytesTotal > 0 ? Math.floor(job.bytesDone / job.bytesTotal * 100) : 100)
+            : (st.bytes > 0 ? Math.floor(st.haveBytes / st.bytes * 100) : 0);
+          return (
+            <section key={pack.id} data-asset-pack={pack.id} className={`${SCREEN_PANEL_CLASS} w-full text-left`}>
+              <div className="flex items-center gap-3">
+                <span aria-hidden="true" data-icon={pack.icon} className="mh-emoji-icon w-8 shrink-0 text-center text-[22px] leading-none"/>
+                <span className="min-w-0 flex-1">
+                  <b className="block text-[14px] font-black leading-tight text-slate-100">{pack.label}<small className="ml-2 text-[11px] font-bold text-slate-400">約{formatAssetMB(st.bytes)}</small></b>
+                  <span className="mt-0.5 block text-[10px] font-bold leading-snug text-slate-400">{pack.desc}</span>
+                </span>
+              </div>
+              <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-800" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
+                <div className={`h-full rounded-full ${complete && !running ? 'bg-emerald-400' : 'bg-cyan-400'}`} style={{ width: `${pct}%` }}/>
+              </div>
+              <p data-asset-pack-progress className="mt-1 text-[10px] font-bold text-slate-300">
+                {running
+                  ? `ダウンロード中 ${pct}%(${formatAssetMB(job.bytesDone)} / ${formatAssetMB(job.bytesTotal)})`
+                  : complete ? 'この端末に入っています' : st.haveCount > 0 ? `一部が入っています(${formatAssetMB(st.haveBytes)} / ${formatAssetMB(st.bytes)})` : 'まだ入っていません'}
+              </p>
+              {running && job.error === 'quota' && <p className="mt-1 text-[10px] font-bold text-amber-200">端末の空きが足りないため止まりました。</p>}
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                {running ? (
+                  <button type="button" data-asset-cancel onClick={() => asset.cancel()} className="min-h-[48px] rounded-xl border border-white/20 bg-slate-950 px-2 text-[12px] font-black text-slate-200 active:scale-95">取り消す</button>
+                ) : (
+                  <button type="button" data-asset-download={pack.id} disabled={!asset.supported || !!job || complete} onClick={() => asset.download(pack.id)} className="min-h-[48px] rounded-xl border border-emerald-400/60 bg-emerald-700 px-2 text-[12px] font-black text-white active:scale-95 disabled:opacity-40">{complete ? '入っています' : st.haveCount > 0 ? '残りを入れる' : 'ダウンロード'}</button>
+                )}
+                <button type="button" data-asset-remove={pack.id} disabled={!asset.supported || st.haveCount === 0} onClick={() => { if (window.confirm(`${pack.label}をこの端末から消しますか？(セーブデータは消えません)`)) asset.remove(pack.id); }} className="min-h-[48px] rounded-xl border border-red-500/40 bg-red-950/50 px-2 text-[12px] font-black text-red-200 active:scale-95 disabled:opacity-40">端末から消す</button>
+              </div>
+            </section>
+          );
+        })}
+        <section data-asset-auto className={`${SCREEN_PANEL_CLASS} w-full text-left`}>
+          <b className="block text-[13px] font-black text-slate-200">自動ダウンロード</b>
+          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">よく使う画像と、選んだ曲・遊んだ曲を、すきまの時間に少しずつ入れます。演奏中は止まり、モバイル回線では控えめです。</p>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            {[{ id: true, label: 'する' }, { id: false, label: 'しない' }].map(option => (
+              <button key={String(option.id)} type="button" data-asset-auto-option={String(option.id)} aria-pressed={asset.auto === option.id}
+                onClick={() => asset.setAuto(option.id)}
+                className={`min-h-[48px] rounded-xl px-1 py-1.5 text-[12px] font-black active:scale-95 ${asset.auto === option.id ? 'border border-cyan-400 bg-cyan-600 text-white' : 'border border-white/10 bg-slate-950 text-slate-300'}`}>{option.label}</button>
+            ))}
+          </div>
+        </section>
+        <p data-asset-usage className={`${SCREEN_PANEL_CLASS} w-full text-left text-[10px] font-bold leading-relaxed text-slate-400`}>
+          {Number.isFinite(usage) ? `このゲームがこの端末で使っている容量: 約${formatAssetMB(usage)}。` : ''}
+          しばらく遊ばないと、端末が空きを作るために消すことがあります。消えても、開いたときにネットから読み込むので遊べます。セーブデータはここでは消えません。
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onOpenTitleArt, onOpenHomeArt, onOpenScreenTheme, onOpenBackup, onOpenHelp, onOpenGameUpdate, gameUpdateDisabled, onReturnToTitle, updateNoticeStyle, onChangeUpdateNoticeStyle, battleScreenStyle, onChangeBattleScreenStyle, battleFxSettings, onChangeBattleFxSetting, battleFxAutoLoad }) {
   // バトル設定は設定画面の中の1ページ(2026-09-24 ユーザー指示「バトルの設定をバラにしないで、
   // 音量設定の上に作ってその中に細かい設定欄を作って」)。画面(gameState)は増やさず、ここで切り替える
   const [battleSettingsOpen, setBattleSettingsOpen] = useState(false);
+  // ダウンロード(事前ダウンロード)も設定画面の中の1ページ。既定で出る。DEBUG MENU で事前ダウンロードを切にしたときだけ隠れる(ASSET_CACHE.enabled)
+  const [assetDownloadOpen, setAssetDownloadOpen] = useState(false);
   // 助手のひとことの出し方(21-assistant.jsx の ASSISTANT_BUBBLE_STORE。早期の return より前で読む)
   const assistantBubble = useAssistantBubbleState();
+  if (assetDownloadOpen) return <AssetDownloadPage onBack={() => setAssetDownloadOpen(false)}/>;
   if (battleSettingsOpen) {
     return (
       <div data-mh-screen data-battle-settings-page className={SCREEN_SHELL_CLASS}>
@@ -109,6 +183,7 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
         <SettingsMenuLink icon="🖼️" label="タイトル画像アレンジ" desc="タイトル画面の絵を選ぶ" onClick={onOpenTitleArt} data-open-title-art/>
         <SettingsMenuLink icon="🏡" label="ホーム画面アレンジ" desc="ホーム画面の背景を選ぶ" onClick={onOpenHomeArt} data-open-home-art/>
         <SettingsMenuLink icon="🎨" label="画面テーマ" desc="画面ごとにハロウィン／クラシックを選ぶ" onClick={onOpenScreenTheme} data-open-screen-theme/>
+        {ASSET_CACHE.enabled && <SettingsMenuLink icon="📥" label="ダウンロード" desc="曲や画像を前もって端末に入れておく" onClick={() => setAssetDownloadOpen(true)} data-open-asset-download/>}
         <SettingsMenuLink icon="💾" label="データ引き継ぎ" desc="バックアップの保存と、別の端末での復元" onClick={onOpenBackup}/>
         <SettingsMenuLink icon="📚" label="ヘルプ" desc="遊び方・育て方・画面の説明" onClick={onOpenHelp}/>
         <SettingsMenuLink icon="🔄" label="ゲームを更新" desc="最新のゲームデータを読み込みます" onClick={onOpenGameUpdate} disabled={gameUpdateDisabled} accent="text-cyan-200"/>

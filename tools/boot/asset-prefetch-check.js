@@ -1,0 +1,197 @@
+// 事前ダウンロード(monster-hero/sw.js と 25-asset-cache.jsx の ASSET_CACHE)を実ブラウザで確かめる。
+//
+//   node tools/boot/asset-prefetch-check.js
+//
+// 説明の正本: docs/spec/ASSET_PREFETCH.md。見ること:
+//  ① 一覧(asset-manifest.json)が音源・画像の中身と合っている / SW が扱うのは音源と画像だけ(コードの形)
+//  ② 既定で ON(保存値なし・壊れた値も)。SW が登録され、ページを支配する。HTML・JS・CSS・JSON を SW が返していない(=ゲーム本体の更新を止めない)
+//  ③ まとまりのダウンロードで、全部が端末に入る。取り消すと途中で止まる。端末から消すと0件になる
+//  ④ アップデートの真似(絵を1枚差し替え、一覧の版を変える)で、古い版が消え、新しい中身が返る
+//  ⑤ OFFで SW が外れ、ためたものが消える
+//  ⑥ 保存データ(mh_* のうち事前ダウンロード専用キー以外)は最初から最後まで1文字も変わらない
+//
+// 配信は自前(ポート 8933。共有の 8899 とぶつけない)。差し替えの真似をするため、特定のパスだけ中身を入れ替えられる。
+const path = require('path');
+const fs = require('fs');
+const http = require('http');
+const { chromium } = require('playwright');
+
+const ROOT = path.resolve(__dirname, '..', '..');
+const GAME = path.join(ROOT, 'monster-hero');
+const PORT = 8933;
+const BASE = `http://localhost:${PORT}/monster-hero/`;
+const OWN_KEY = 'mh_asset_prefetch_v1';
+
+const results = [];
+const check = (name, ok, detail = '') => { results.push(!!ok); console.log(`  ${ok ? 'OK' : 'NG'}  ${name}${detail ? ' — ' + detail : ''}`); };
+
+// ---- ① コードと一覧の形 ----
+console.log('① 一覧とコードの形');
+{
+  const r = require('../build-asset-manifest').run({ check: true });
+  check('asset-manifest.json がいまの音源・画像と合っている', r.ok, r.reason || '');
+  const sw = fs.readFileSync(path.join(GAME, 'sw.js'), 'utf8');
+  check('SW が respondWith するのは audio/ images/ data/images/ の音源・画像(拡張子つき)だけ',
+    sw.includes("/^(audio|images|data\\/images)\\/.+\\.(mp3|png|jpe?g|webp)$/i.test(path)) return;") && (sw.match(/respondWith\(/g) || []).length === 1);
+  check('SW はページ本体(navigate)に respondWith しない', /req\.mode === 'navigate'\)[\s\S]{0,200}?return;\s*\}/.test(sw));
+  check('SW は Range つきの取得に手を出さない', /req\.headers\.has\('range'\)\) return;/.test(sw));
+  check('SW は localStorage に触れない', !/localStorage/.test(sw.replace(/\/\/.*$/gm, '')));
+  const part = fs.readFileSync(path.join(GAME, 'src', 'parts', '25-asset-cache.jsx'), 'utf8');
+  const keys = [...new Set([...part.matchAll(/['"](mh_[a-z0-9_]+)['"]/g)].map(m => m[1]))];
+  check('ページ側が使う保存キーは mh_asset_prefetch_v1 だけ', keys.length === 1 && keys[0] === OWN_KEY, keys.join(','));
+  check('ページ側は storeSet(セーブデータの保存)を使わない', !/storeSet\(/.test(part));
+}
+
+// ---- 配信(差し替えの真似ができる) ----
+const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css',
+  '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.svg': 'image/svg+xml',
+  '.mp3': 'audio/mpeg', '.mp4': 'video/mp4', '.PNG': 'image/png' };
+const overrides = new Map(); // 'monster-hero/xxx' → Buffer
+const serve = () => new Promise((resolve, reject) => {
+  const server = http.createServer((req, res) => {
+    const rel = decodeURIComponent(req.url.split('?')[0]).replace(/^\/+/, '');
+    const head = { 'Content-Type': MIME[path.extname(rel)] || MIME[path.extname(rel).toLowerCase()] || 'application/octet-stream', 'Cache-Control': 'no-cache' };
+    if (overrides.has(rel)) { res.writeHead(200, head); res.end(overrides.get(rel)); return; }
+    const file = path.join(ROOT, rel);
+    if (!file.startsWith(ROOT) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) { res.writeHead(404); res.end('not found'); return; }
+    res.writeHead(200, head);
+    fs.createReadStream(file).pipe(res);
+  });
+  server.on('error', reject);
+  server.listen(PORT, () => resolve(server));
+});
+
+const waitFor = async (page, fn, arg, timeout = 120000) => page.waitForFunction(fn, arg, { timeout, polling: 200 });
+
+(async () => {
+  const server = await serve();
+  const browser = await chromium.launch(fs.existsSync('/opt/pw-browsers/chromium') ? { executablePath: '/opt/pw-browsers/chromium' } : {});
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'allow' });
+  const page = await context.newPage();
+  const errors = [];
+  page.on('pageerror', e => errors.push(String(e)));
+  const fromSw = [];
+  page.on('response', r => { try { if (r.fromServiceWorker()) fromSw.push(r.url()); } catch (e) {} });
+  const snapshotSave = () => page.evaluate((own) => {
+    const out = {};
+    for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k !== own) out[k] = localStorage.getItem(k); }
+    return JSON.stringify(Object.keys(out).sort().map(k => [k, out[k]]));
+  }, OWN_KEY);
+  const status = () => page.evaluate(async () => { await ASSET_CACHE.refreshStatus(); return { packs: ASSET_CACHE.status.packs, job: ASSET_CACHE.job }; });
+  try {
+    await page.goto(BASE + 'index.html', { waitUntil: 'load' });
+    await waitFor(page, () => typeof ASSET_CACHE !== 'undefined');
+    // ゲーム自身が起動のたびに書くキー(遊んだ時間・ランキングの控えなど)を、ダウンロードの操作をせずに
+    // 同じ回数だけ開き直して先に調べる。比べるのはそれ以外のキー(SW は localStorage を触れないので、見るのはページ側)
+    const control0 = await snapshotSave();
+    for (let i = 0; i < 3; i++) { await page.reload({ waitUntil: 'load' }); await waitFor(page, () => typeof ASSET_CACHE !== 'undefined'); }
+    await page.waitForTimeout(3000);
+    const control1 = await snapshotSave();
+    const diffKeys = (x, y) => { const a = new Map(JSON.parse(x)), b = new Map(JSON.parse(y)); return [...new Set([...a.keys(), ...b.keys()])].filter(k => a.get(k) !== b.get(k)); };
+    const selfWritten = new Set(diffKeys(control0, control1));
+    const save0 = await snapshotSave();
+
+    console.log('② ONで登録・ゲーム本体には手を出さない');
+    // 既定は入・自動ダウンロード「する」(2026-10-11 公開)。保存値が無い・壊れている人も既定値になり、
+    // 「しない」を選んだ人・切にした人の保存値は上書きしない(CLAUDE.md ⑦)
+    check('最初から ON・自動ダウンロード「する」(保存値なしの既定)', await page.evaluate(() => ASSET_CACHE.enabled && ASSET_CACHE.auto));
+    const norm = await page.evaluate(() => [null, 'こわれた', [1], { enabled: 'yes', auto: 3, songs: 'x' }, { auto: false }, { enabled: false }]
+      .map(v => normalizeAssetCacheSettings(v)));
+    check('保存値が無い・壊れているときは既定値(入・する)', norm.slice(0, 4).every(n => n.enabled === true && n.auto === true && Array.isArray(n.songs) && n.songs.length === 0));
+    check('「しない」を選んだ人・切にした人の保存値はそのまま', norm[4].enabled === true && norm[4].auto === false && norm[5].enabled === false && norm[5].auto === true);
+    await waitFor(page, () => navigator.serviceWorker.ready.then(() => true));
+    // ここから先は件数を数えるので、自動ダウンロードは止めておく
+    await page.evaluate(() => ASSET_CACHE.setAuto(false));
+    await page.reload({ waitUntil: 'load' });
+    await waitFor(page, () => typeof ASSET_CACHE !== 'undefined' && !!navigator.serviceWorker.controller);
+    check('ONにすると SW がページを支配する', await page.evaluate(() => !!navigator.serviceWorker.controller && ASSET_CACHE.enabled));
+    await page.waitForTimeout(3000);
+    const codeFromSw = fromSw.filter(u => /\.(html|js|css|json)(\?|$)/.test(new URL(u).pathname + '?'));
+    check('HTML・JS・CSS・JSON を SW が返していない', codeFromSw.length === 0, codeFromSw.slice(0, 3).join(' '));
+    // 設定の「ダウンロード」が出る
+    const opened = await page.evaluate(() => typeof ASSET_PACKS !== 'undefined' && ASSET_PACKS.map(p => p.id).join(','));
+    check('まとまりは モンヒロビート・バトル・全部', opened === 'beat,battle,all', opened);
+
+    console.log('③ ダウンロード・取り消し・消す');
+    const battleBefore = (await status()).packs.battle.haveCount; // 遊んでいる画面が使った絵は SW が入れる(作りどおり)
+    const t0 = Date.now();
+    await page.evaluate(() => { ASSET_CACHE.download('beat'); });
+    check('2つ目のダウンロードは、1つ目が終わるまで始まらない', await page.evaluate(async () => (await ASSET_CACHE.download('battle')) === false));
+    await waitFor(page, () => !ASSET_CACHE.job, null, 300000);
+    let st = await status();
+    check('モンヒロビートを落とすと全部が端末に入る', st.packs.beat.haveCount === st.packs.beat.count && st.packs.beat.count > 0,
+      `${st.packs.beat.haveCount}/${st.packs.beat.count}件 ${(Date.now() - t0) / 1000}秒`);
+    check('モンヒロビートを落としても、バトルの件数は変わらない(まとまりが混ざらない)', st.packs.battle.haveCount === battleBefore, `${battleBefore}→${st.packs.battle.haveCount}件`);
+    await page.evaluate(() => { ASSET_CACHE.download('battle'); });
+    await waitFor(page, () => ASSET_CACHE.job && ASSET_CACHE.job.done >= 5);
+    await page.evaluate(() => ASSET_CACHE.cancel());
+    await waitFor(page, () => !ASSET_CACHE.job);
+    st = await status();
+    check('取り消すと途中で止まる', st.packs.battle.haveCount > 0 && st.packs.battle.haveCount < st.packs.battle.count, `${st.packs.battle.haveCount}/${st.packs.battle.count}件`);
+    await page.evaluate(() => ASSET_CACHE.remove('beat'));
+    st = await status();
+    check('モンヒロビートを端末から消すと0件', st.packs.beat.haveCount === 0);
+    check('ほかのまとまり(バトル)は消えない', st.packs.battle.haveCount > 0);
+
+    console.log('④ アップデートの真似');
+    // バトルで入っている絵を1枚選び、中身と一覧の版を差し替える
+    const target = await page.evaluate(async () => {
+      const m = await (await fetch('asset-manifest.json?t=' + Date.now())).json();
+      const cache = await caches.open('mh-assets-v1');
+      for (const [p, f] of Object.entries(m.files)) {
+        if (f.pack !== 'battle' || !/\.(png|jpg)$/i.test(p)) continue;
+        if (await cache.match(new URL(`${encodeURI(p)}?v=${f.v}`, location.href).href)) return { path: p, v: f.v, size: f.size };
+      }
+      return null;
+    });
+    check('差し替えの相手(端末に入っている絵)が見つかる', !!target, target && target.path);
+    if (target) {
+      const manifest = JSON.parse(fs.readFileSync(path.join(GAME, 'asset-manifest.json'), 'utf8'));
+      const newBody = Buffer.concat([fs.readFileSync(path.join(GAME, target.path)), Buffer.from('mh-new-version')]);
+      manifest.files[target.path] = { ...manifest.files[target.path], v: 'abcdef123456', size: newBody.length };
+      manifest.id = 'test-updated';
+      overrides.set(`monster-hero/${target.path}`, newBody);
+      overrides.set('monster-hero/asset-manifest.json', Buffer.from(JSON.stringify(manifest)));
+      await page.reload({ waitUntil: 'load' });
+      await waitFor(page, () => typeof ASSET_CACHE !== 'undefined' && !!navigator.serviceWorker.controller);
+      // 版のない取得(古い作りの <img>)でも、新しい中身が返る
+      const got = await page.evaluate(async (p) => (await (await fetch(encodeURI(p))).arrayBuffer()).byteLength, target.path);
+      check('版のない取得でも新しい中身が返る(古い絵が残らない)', got === newBody.length, `${got} / 新${newBody.length} / 旧${target.size}`);
+      const left = await page.evaluate(async (t) => {
+        const cache = await caches.open('mh-assets-v1');
+        return {
+          old: !!(await cache.match(new URL(`${encodeURI(t.path)}?v=${t.v}`, location.href).href)),
+          neu: !!(await cache.match(new URL(`${encodeURI(t.path)}?v=abcdef123456`, location.href).href)),
+        };
+      }, target);
+      check('古い版は自動で消える', !left.old);
+      check('新しい版は使った時点で入る', left.neu);
+      overrides.clear();
+      await page.reload({ waitUntil: 'load' });
+      await waitFor(page, () => typeof ASSET_CACHE !== 'undefined');
+    }
+
+    console.log('⑤ OFFで外す');
+    await page.evaluate(() => ASSET_CACHE.setEnabled(false));
+    const off = await page.evaluate(async () => ({
+      regs: (await navigator.serviceWorker.getRegistrations()).length,
+      caches: (await caches.keys()).filter(n => n.startsWith('mh-assets-')),
+    }));
+    check('OFFにすると SW が外れ、ためたものが消える', off.regs === 0 && off.caches.length === 0, JSON.stringify(off));
+
+    console.log('⑥ 保存データ');
+    const save1 = await snapshotSave();
+    const diff = diffKeys(save0, save1).filter(k => !selfWritten.has(k));
+    check('保存データ(事前ダウンロード専用キー・ゲームがひとりでに書くキー以外)が1文字も変わっていない', diff.length === 0,
+      diff.length ? diff.join(',') : `ゲームがひとりでに書くキー: ${[...selfWritten].join(',') || 'なし'}`);
+    check('ページで例外が出ていない', errors.length === 0, errors.slice(0, 2).join(' / '));
+  } catch (e) {
+    check('検査が最後まで走る', false, String(e && e.message || e).slice(0, 300));
+  } finally {
+    await browser.close();
+    server.close();
+  }
+  const ng = results.filter(ok => !ok).length;
+  console.log(ng ? `NG: ${ng}件` : `OK: ${results.length}件すべて通過`);
+  process.exit(ng ? 1 : 0);
+})();
