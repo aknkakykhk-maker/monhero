@@ -23,7 +23,7 @@
 | 研究所 | レフェリーくん | 研究所 レフェリーくん(10/10〜) | session_013j3vPELgtDfDhHcSzW81PR |
 | 研究所 | セコンドくん | 研究所 セコンドくん(10/10〜) | session_01VKTcSbgZtBChiibCjAYVgW |
 | 開発部 | クラフトくん | 開発部 クラフトくん(10/08〜) | session_01VRYhgmPT7CS6iFeyRbpz1p |
-| 修理部 | 部長ドライバーくん | 修理部 部長ドライバーくん(10/11〜) | session_01JBvGk6rrRBCgkPEFTiNMu8 |
+| 修理部 | 部長ドライバーくん | 修理部 部長ドライバーくん(10/12〜) | session_01QSmyXKq2qGHrvHDTCv2h2g |
 | 修理部 | ヤスリくん | 修理部 ヤスリくん(10/09〜) | session_01Wyn2J3kuKNp9MmbffDj3oc |
 | 修理部 | ピンセットくん | 修理部 ピンセットくん(10/09〜) | session_01SPwyyGL5vwYvuDU9Bzts2t |
 | 修理部 | ストックくん | 修理部 ストックくん(10/11〜) | session_0169T9CNRwoH1QW1vKpEsUy5 |
@@ -34,6 +34,7 @@
 | 会話の名前 | セッション | 引き継ぎ先 |
 | --- | --- | --- |
 | 【引き継ぎ済み】窓口 統括部長モンヒロくん(10/06〜10/11) | session_01MC7KZtt5oyrsS32Hc57TXv | session_014GTmSNS2ae9tRr57k3zFjC |
-| 【引き継ぎ済み】修理部 部長ドライバーくん(10/09〜10/10) | session_01UPffASX3yavnvax9F9gNen | session_01JBvGk6rrRBCgkPEFTiNMu8 |
+| 【引き継ぎ済み】修理部 部長ドライバーくん(10/09〜10/10) | session_01UPffASX3yavnvax9F9gNen | session_01QSmyXKq2qGHrvHDTCv2h2g |
 | 【引き継ぎ済み】修理部 部長ドライバーくん(10/10〜10/11) | session_01PQypYmPaJHsU6DPLrCT1DR | 同上 |
 | 【引き継ぎ済み】修理部 部長ドライバーくん(10/11) | session_01PMWiEFVgTqiNoqiniTWS7Y | 同上 |
+| 【引き継ぎ済み】修理部 部長ドライバーくん(10/11〜10/12) | session_01JBvGk6rrRBCgkPEFTiNMu8 | 同上 |
