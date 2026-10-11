@@ -1169,21 +1169,22 @@ const RHYTHM_SKY_LIFT_RATIO=.16;
 // z=いまの案Z(色の無いガラス)/ a=色は無いまま縁と面を明るく / b=赤い板 / c=白い板。
 // どの案も値を替えるだけで、描く数・形(厚みの比 0.20・影の扱い)は同じ(HISTORY 10/11 10:33)。
 // 色は地上のノーツ(水色・緑・紫・ピンク・オレンジ・黄緑・金)と SKY SLIDE(青・桃)のどれとも重ならないものだけ。
-// 選ぶのはデバッグ画面の切り替え(新しい保存キー mh_sky_box_look_proto)だけ。ふつうのプレイは z のまま。社長が選ぶまで既定は替えない
+// 2026-10-11 社長の決定で既定は b(赤い板)。HISTORY 10/11 10:33 の「空中の箱は色の無いガラス(案Z)」を上書き。
+// デバッグ画面の切り替え(保存キー mh_sky_box_look_proto)で、ほかの案と見比べられる(未設定なら b)
 const RHYTHM_SKY_BOX_LOOKS=Object.freeze({
   z:Object.freeze({aspect:.2,farDim:.45,fill:'205,218,238',fillAlpha:.16,topAlpha:.62,topRatio:.36,frontFill:'200,215,240',frontAlpha:.4,thickRatio:.3,edge:'255,255,255',edgePx:1.6,minFacePx:5}),
   a:Object.freeze({aspect:.2,farDim:.6,fill:'226,232,240',fillAlpha:.38,topAlpha:.95,topRatio:.4,frontFill:'226,232,240',frontAlpha:.7,thickRatio:.3,edge:'255,255,255',edgePx:2.6,minFacePx:5}),
   b:Object.freeze({aspect:.2,farDim:.6,fill:'239,68,68',fillAlpha:.62,topAlpha:.7,topRatio:.36,frontFill:'185,28,28',frontAlpha:.85,thickRatio:.3,edge:'254,202,202',edgePx:1.8,minFacePx:5}),
   c:Object.freeze({aspect:.2,farDim:.6,fill:'241,245,249',fillAlpha:.82,topAlpha:.95,topRatio:.36,frontFill:'148,163,184',frontAlpha:.9,thickRatio:.3,edge:'255,255,255',edgePx:1.8,minFacePx:5}),
 });
-const RHYTHM_SKY_BOX_LOOK_LABELS=Object.freeze({z:'いま(色の無いガラス)',a:'案A 縁と面を明るく',b:'案B 赤い板',c:'案C 白い板'});
+const RHYTHM_SKY_BOX_LOOK_LABELS=Object.freeze({z:'案Z 色の無いガラス',a:'案A 縁と面を明るく',b:'案B 赤い板(既定)',c:'案C 白い板'});
 // 今の案。毎コマ読むので localStorage は読み込み時と切り替えたときだけ読む
-const RHYTHM_SKY_BOX_VARIANT={id:(()=>{try{const v=typeof localStorage!=='undefined'?localStorage.getItem('mh_sky_box_look_proto'):'';return v&&RHYTHM_SKY_BOX_LOOKS[v]?v:'z';}catch(e){return 'z';}})(),
-  set(id){const v=RHYTHM_SKY_BOX_LOOKS[id]?id:'z';this.id=v;try{if(v==='z')localStorage.removeItem('mh_sky_box_look_proto');else localStorage.setItem('mh_sky_box_look_proto',v);}catch(e){}}};
+const RHYTHM_SKY_BOX_VARIANT={id:(()=>{try{const v=typeof localStorage!=='undefined'?localStorage.getItem('mh_sky_box_look_proto'):'';return v&&RHYTHM_SKY_BOX_LOOKS[v]?v:'b';}catch(e){return 'b';}})(),
+  set(id){const v=RHYTHM_SKY_BOX_LOOKS[id]?id:'b';this.id=v;try{if(v==='b')localStorage.removeItem('mh_sky_box_look_proto');else localStorage.setItem('mh_sky_box_look_proto',v);}catch(e){}}};
 const RHYTHM_SKY_LOOK=Object.freeze({
   arc:Object.freeze({rgb:'214,224,240',alpha:.58,minHalfWidthPx:4.5,edgeAlpha:.6,edgePx:1.2,left:'37,99,235',right:'236,72,153',centerLane:3}), // 帯=手の色(左手=青・右手=桃)で中まで色(58%)・縁と芯は白。手は note.hand、無いときはスライドの点のレーンの平均が centerLane より左なら左  // edge=帯の左右の白い縁(紫の床の上でも「白い帯」に見せる)
   core:Object.freeze({rgb:'255,255,255',alpha:.9,widthPx:3}),
-  get box(){return RHYTHM_SKY_BOX_LOOKS[RHYTHM_SKY_BOX_VARIANT.id]||RHYTHM_SKY_BOX_LOOKS.z;}, // 案はデバッグで切り替える(RHYTHM_SKY_BOX_LOOKS)
+  get box(){return RHYTHM_SKY_BOX_LOOKS[RHYTHM_SKY_BOX_VARIANT.id]||RHYTHM_SKY_BOX_LOOKS.b;}, // 案はデバッグで切り替える(RHYTHM_SKY_BOX_LOOKS)
   shadow:Object.freeze({rgb:'6,3,20',alpha:.22,radiusPx:3,insetPx:3,lineAlpha:.28,fadeRatio:.14}),
   star:Object.freeze({rgb:'255,255,255',radiusPx:17}),
   line:Object.freeze({bandRgb:'150,118,235',bandAlpha:.38,bandPx:6,coreRgb:'165,135,245',coreAlpha:.95,corePx:2,marginPct:4}),
@@ -32732,12 +32733,14 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   // ★横の位置は地上の判定ラインの道幅で測る(指のサブレーンも空中のノーツもその幅で決まる)。以前は空中の線の高さの狭い道幅で
   //   測っていたため、押した所から横へずれて光っていた(844×390 で約60px・hell-look L6)。
   // WebGL でも描けるように、グラデーションは使わず、色を区切りごとに変えた薄い四角形(台形)を重ねる
+  // 空中の光を描く高さの範囲(道の高さに対する割合)。空中の判定線(地上の判定ラインを持ち上げた所)から、奥へ SKY_PRESS_FROM・手前へ SKY_PRESS_TO
+  const SKY_PRESS_FROM=.22,SKY_PRESS_TO=.06;
   const SKY_PRESS_STOPS=line=>[[0,56,189,248,.05],[.42,56,189,248,.1],[.58,56,189,248,.24],[line-.14,125,211,252,.5],[line-.03,224,242,254,.74],[line,248,250,252,.9],[line+.04,56,189,248,.72],[1,37,99,235,.55]];
   const skyPressColor=(stops,t)=>{let a=stops[0],b=stops[stops.length-1];for(let k=1;k<stops.length;k++){if(t<=stops[k][0]){a=stops[k-1];b=stops[k];break;}}
     const u=b[0]>a[0]?Math.max(0,Math.min(1,(t-a[0])/(b[0]-a[0]))):0,mix=n=>a[n]+(b[n]-a[n])*u;return [Math.round(mix(1)),Math.round(mix(2)),Math.round(mix(3)),mix(4)];};
   const drawSkyPress=()=>{
     if(!skyPressed.length||!(skyPressedAlpha>0)||!cssW||!cssH)return 0;
-    const line=RHYTHM_JUDGMENT_LINE_Y.ratio,stops=SKY_PRESS_STOPS(line),slices=64,rect={height:cssH};
+    const line=RHYTHM_JUDGMENT_LINE_Y.ratio,stops=SKY_PRESS_STOPS(line),slices=24,rect={height:cssH};
     const seen=new Set();let painted=0;
     touch();ctx.setTransform(dpr,0,0,dpr,0,0);
     for(const value of skyPressed){
@@ -32745,10 +32748,13 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       if(!Number.isFinite(index)||index<0||index>=RHYTHM_MAX_SUB_LANE_WIDTH||seen.has(index))continue;
       seen.add(index);
       const at=t=>{const span=rhythmProjectSubLaneRange(index,1,t);return {l:span.left*cssW,r:(span.left+span.width)*cssW,y:t*cssH-rhythmSkyLiftPx(rect,t)};};
-      let top=at(0);
+      // 描くのは空中の判定線のまわりの明るい所だけ(SKY_PRESS_FROM〜SKY_PRESS_TO)。空中のレーンは地上の判定ラインの道幅のまま持ち上げた形なので、
+      // 道の奥まで伸ばすと、描かれた道のふちの外へ斜めにはみ出して見えた(2026-10-11 窓口の指摘)。上の端は薄くして消す
+      const t0=Math.max(0,line-SKY_PRESS_FROM),t1=Math.min(1,line+SKY_PRESS_TO);
+      let top=at(t0);
       for(let k=1;k<=slices;k++){
-        const t=k/slices,bottom=at(t),c=skyPressColor(stops,(k-.5)/slices);
-        ctx.globalAlpha=skyPressedAlpha*c[3];ctx.fillStyle=`rgb(${c[0]},${c[1]},${c[2]})`;
+        const tm=t0+(t1-t0)*(k-.5)/slices,t=t0+(t1-t0)*k/slices,bottom=at(t),c=skyPressColor(stops,tm),fade=Math.min(1,(tm-t0)/(SKY_PRESS_FROM*.5));
+        ctx.globalAlpha=skyPressedAlpha*c[3]*fade;ctx.fillStyle=`rgb(${c[0]},${c[1]},${c[2]})`;
         ctx.beginPath();ctx.moveTo(top.l,top.y);ctx.lineTo(top.r,top.y);ctx.lineTo(bottom.r,bottom.y);ctx.lineTo(bottom.l,bottom.y);ctx.closePath();ctx.fill();
         top=bottom;
       }
