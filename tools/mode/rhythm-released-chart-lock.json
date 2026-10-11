@@ -188,9 +188,9 @@
   "journey/master": "726dd679c1a5ba96",
   "sheriruth/easy": "eb9cc276a1aff768",
   "sheriruth/normal": "60c7d5f6ba1b1b1c",
-  "sheriruth/hard": "4129eb15814c539e",
-  "sheriruth/expert": "18b8e33e6773dc32",
-  "sheriruth/master": "3d799b21ee88cdd0",
+  "sheriruth/hard": "ade7e332d991b653",
+  "sheriruth/expert": "561f78e023c3718e",
+  "sheriruth/master": "9b039380901b56a9",
   "against_my_own_shadow/easy": "00f9a099a1032c06",
   "against_my_own_shadow/normal": "943a5232253b15a6",
   "against_my_own_shadow/hard": "ed91a70ce36c7cd8",
@@ -202,6 +202,15 @@
    "at": "2026-10-11 15:13",
    "reason": "初めての控え(2026-10-11 main の公開中の曲。Sheriruth HARD/EXPERT/MASTER の 44.335秒のタップは仕上げの道具の巻き添えでサブレーン3→4のまま。戻すかは窓口が決める)",
    "changedCount": 195
+  },
+  {
+   "at": "2026-10-11 15:24",
+   "reason": "Sheriruth MASTER を交差きつめ版へ差し替え(社長の OK)・44.335秒のタップを巻き添え前のレーンへ戻す",
+   "changed": [
+    "sheriruth/hard",
+    "sheriruth/expert",
+    "sheriruth/master"
+   ]
   }
  ]
 }
