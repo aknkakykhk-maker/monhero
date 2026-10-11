@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3cf98cba8da96d52
+// source-sha256: 82032f90362edbdf
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-11 23:26";
+const BUILD_DATE = "2026-10-11 23:28";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -5360,6 +5360,8 @@ const BGM_TRACK_BY_KEY = Object.fromEntries(BGM_TRACKS.filter(track => track.leg
 const rhythmSongTrack = song => BGM_TRACK_BY_ID[song?.bgmTrackId] || null;
 const RHYTHM_SETTINGS_KEY = 'mh_rhythm_settings_v1';
 const RHYTHM_SELECT_VIEW_KEY = 'mh_rhythm_select_v1';
+const RHYTHM_LAST_DIFFICULTY_KEY = 'mh_rhythm_last_difficulty_v1';
+const normalizeRhythmLastDifficulty = value => typeof value === 'string' && RHYTHM_DEMO_DIFFICULTY_IDS.includes(value) ? value : '';
 const RHYTHM_SORT_ORDERS = Object.freeze([Object.freeze({
   id: 'added',
   label: '入手順',
@@ -74517,6 +74519,11 @@ function MonsterHeroGame() {
     return list[0] && list[0].songId || '';
   });
   const [rhythmSelectedDifficultyId, setRhythmSelectedDifficultyId] = useState('');
+  const chooseRhythmDifficulty = id => {
+    setRhythmSelectedDifficultyId(id);
+    const value = normalizeRhythmLastDifficulty(id);
+    if (value) storeSet(RHYTHM_LAST_DIFFICULTY_KEY, value, false);
+  };
   const [rhythmDebugSelectSongId, setRhythmDebugSelectSongId] = useState('');
   const [rhythmDebugSelectDifficultyId, setRhythmDebugSelectDifficultyId] = useState('');
   const [rhythmDebugSelectView, setRhythmDebugSelectView] = useState(null);
@@ -74538,6 +74545,8 @@ function MonsterHeroGame() {
     setRhythmMonsterPickerOpen(false);
     setRhythmMonsterMessage('');
     setRhythmSelectView(normalizeRhythmSelectView(await storeGet(RHYTHM_SELECT_VIEW_KEY, DEFAULT_RHYTHM_SELECT_VIEW, false)));
+    const lastDifficulty = normalizeRhythmLastDifficulty(await storeGet(RHYTHM_LAST_DIFFICULTY_KEY, '', false));
+    if (lastDifficulty) setRhythmSelectedDifficultyId(prev => prev || lastDifficulty);
     setGameState(opts && typeof opts.to === 'string' ? opts.to : 'RHYTHM_MODE_SELECT');
   };
   const openRhythmDebug = async () => {
@@ -98332,7 +98341,7 @@ function MonsterHeroGame() {
       setQuickRunDetailOpen: setQuickRunDetailOpen,
       setQuickRunStartError: setQuickRunStartError,
       setQuickRunStopConfirm: setQuickRunStopConfirm,
-      setRhythmSelectedDifficultyId: setRhythmSelectedDifficultyId,
+      setRhythmSelectedDifficultyId: chooseRhythmDifficulty,
       setRhythmSelectedSongId: setRhythmSelectedSongId,
       spotClass: spotClass,
       startQuickRunFromRhythm: startQuickRunFromRhythm,
