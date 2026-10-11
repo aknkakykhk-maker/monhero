@@ -26,7 +26,7 @@ const WINDOWS=[
 // 待っているノーツの位置(参考動画を測った値・参考の道の奥行きで奥の端0〜判定線1)。[拍, 参考の先頭の位置]
 // 参考の道は奥の端が判定線の約8.8倍の遠さ(こちらは2.5倍)なので、比べるのは「道の上での画面の高さ」(奥の端0〜判定線1)
 const K_REF=(1/(122.6-92))/(1/268),screenRef=p=>(1/(K_REF-(K_REF-1)*p)-1/K_REF)/(1-1/K_REF);
-const REF_WAITING=[['C',460.8,.56],['C',462.3,.57]];
+const REF_WAITING=[];
 // A・B の先頭のノーツ(A は拍64・B は拍336.5 で叩く)の画面の高さ(%)。参考動画を1コマずつ測った値(折り返し・止まりの所)。
 // ノーツ速度3/6/10のどれでも、差が6以内であること(道の割合で動かすので速度によらない)。
 // 最後の流れ出しは、着いた瞬間にふだんの速さへ段差なしでつなぐ(窓口の案1・2026-10-11)ので、参考とは比べず「段差」を見る
@@ -82,12 +82,12 @@ for(const song of songs)for(const [id,chart] of Object.entries(song.difficulties
       });
       console.log(`      ${tag} 速度${sp} 待っているノーツの先頭(画面の高さ) … ${waits.join(' ・ ')}`);
       // 組1(判定線の近くで待つ同時押し)。参考: C は約88%(参考の奥行き)。B は全部のノーツがそろって弾むので組を使わない
-      const pairs=[['C',461,.88]].map(([n,b,ref])=>{
+      const pairs=[['C',460.6,.88]].map(([n,b,ref])=>{
         const now=ms(b),near=notes.filter(x=>x.scrollGroup&&Number(x.timeMs)>now).map(x=>R.proj(1-(R.rhythmScrollPos(x.timeMs,x.scrollGroup)-R.rhythmScrollPos(now,x.scrollGroup))/tr));
         return `${n} 拍${b}: 参考${Math.round(screenRef(ref)*100)}% / こちら${near.length?Math.round(Math.max(...near)*100)+'%':'無し'}`;});
       console.log(`      ${tag} 速度${sp} 判定線の近くで待つ同時押し(画面の高さ) … ${pairs.join(' ・ ')}`);
-      for(const [n,end] of [['A',64],['B',336.5]]){
-        const t=ms(end),before=(R.rhythmScrollPos(t)-R.rhythmScrollPos(t-1))/1,after=(R.rhythmScrollPos(t+1)-R.rhythmScrollPos(t))/1;
+      for(const [n,end,g] of [['A',64],['B',336.5],['C',464.25],['C の待つ2個',461.75,1]]){
+        const t=ms(end),before=(R.rhythmScrollPos(t,g)-R.rhythmScrollPos(t-1,g))/1,after=(R.rhythmScrollPos(t+1,g)-R.rhythmScrollPos(t,g))/1;
         ok(`${tag} 速度${sp}: ${n} の流れ出しは着いた瞬間にふだんの速さ(段差0.05以内)`,Math.abs(before-after)<=.05,`着く直前 ふだんの${before.toFixed(2)}倍 → 着いた後 ${after.toFixed(2)}倍`);
       }
       let maxStep=0,where=0;
