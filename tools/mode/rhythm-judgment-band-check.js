@@ -176,6 +176,10 @@ const GOOD_MS=judgmentWindow('GOOD'),MARVELOUS_MS=judgmentWindow('MARVELOUS');
         // まっ赤に塗りつぶしても画面の色は rgb(14,20,36) のまま変わらなかった。
         // そこで「帯を消す前と後で画面の色がどれだけ変わるか」を画素で測る。
         const sharp=require(path.join(ROOT,'tools/node_modules/sharp'));
+        // 曲の前の幕(曲名とジャケット・暗い面。2026-10-11 #2723 から最短2.6秒〜最長6秒)が残っているあいだは、帯がその下に隠れて写らない。
+        // カウントダウンより長く出ることがあるので、幕が消えるのも待ってから撮る(待たずに撮って、帯が見えないと誤って落ちていた)
+        await page.waitForFunction(()=>!document.querySelector('[data-rhythm-song-intro]'),
+          undefined,{timeout:30000}).catch(()=>{});
         // カウントダウンの幕(35%の暗さ)が残っているあいだも色が沈むので、消えてから撮る
         await page.waitForFunction(()=>!document.querySelector('[data-rhythm-countdown]'),
           undefined,{timeout:30000}).catch(()=>{});
