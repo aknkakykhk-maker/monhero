@@ -8,6 +8,8 @@
 //   ① 吹き出しの中を格子状に測り、どの点でもいちばん上にあるのが吹き出し(elementFromPoint)
 //   ② 「▶ つぎ」を実際に押す(マウスの位置で押すので、上にかぶったものがあればそちらが反応する)とセリフが進み、HOMEのまま
 //   ③ HOMEのほかのボタン(施設の札・ミッション・ギフト・更新履歴・みゅあ)の真ん中は、そのボタン自身が押せる(ジャックがふさがない)
+//   ④ 施設の押せる範囲は、見えている札とそのまわり8pxだけ(札の外4pxは押せる・札の外14pxは押せない・高さ44px以上)。
+//      以前は建物ぶんの透明な箱が押し場所で、札の外の何もない所でも施設が開いていた
 // 通信はすべて差し替える(Supabaseへは出ない)。
 const http = require('http');
 const path = require('path');
@@ -36,7 +38,7 @@ const serve = () => new Promise((resolve) => {
 let failed = 0;
 const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failed++; };
 
-const SIZES = [[390, 844], [360, 640], [430, 932], [844, 390], [667, 375]];
+const SIZES = [[390, 844], [360, 640], [430, 932], [320, 568], [844, 390], [667, 375]];   // 320×568 は背の低い端末の位置替え(max-height:620)も通る
 const LINES_PER_SIZE = 6;
 
 (async () => {
@@ -173,6 +175,28 @@ const LINES_PER_SIZE = 6;
         });
         if (cover.length) coverBad.push(`${probe.side}: ${cover.join('・')}`);
       }
+      // ④ 施設の押せる範囲(吹き出し・ジャックの位置には左右されないので、1回だけ測る)
+      const hit = await page.evaluate(() => {
+        const bad = [];
+        document.querySelectorAll('.mh-home-facility').forEach((btn) => {
+          const name = btn.getAttribute('aria-label');
+          const r = btn.querySelector(':scope > span').getBoundingClientRect();
+          const owns = (x, y) => { if (x < 0 || y < 0 || x >= innerWidth || y >= innerHeight) return null; const t = document.elementFromPoint(x, y); return !!t && btn.contains(t); };
+          const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+          if (owns(cx, cy) === false) bad.push(`${name}: 札の真ん中が押せない`);
+          if (r.height + 16 < 44) bad.push(`${name}: 押せる高さが44px未満(${Math.round(r.height + 16)})`);
+          for (const [dx, dy, side] of [[-1, 0, '左'], [1, 0, '右'], [0, -1, '上'], [0, 1, '下']]) {
+            const edgeX = dx < 0 ? r.left : dx > 0 ? r.right : cx, edgeY = dy < 0 ? r.top : dy > 0 ? r.bottom : cy;
+            const near = owns(edgeX + dx * 4, edgeY + dy * 4), far = owns(edgeX + dx * 14, edgeY + dy * 14);
+            // 札のすぐ外(4px)は、ほかのボタンや吹き出しが上にあるときを除いて押せる
+            const nearTop = document.elementFromPoint(edgeX + dx * 4, edgeY + dy * 4);
+            if (near === false && nearTop && !nearTop.closest('button, [role="button"], a[href], .mh-home-assistant, .mh-home-status')) bad.push(`${name}: 札の${side}4pxが押せない`);
+            if (far === true) bad.push(`${name}: 札の${side}14pxの何もない所でも押せてしまう`);
+          }
+        });
+        return bad;
+      });
+      check(`${tag}: 施設は札とそのまわり8pxだけが押せる(札の外の何もない所では開かない)`, hit.length === 0, hit.slice(0, 3).join(' | '));
       check(`${tag}: 吹き出しの中のどこを押しても、いちばん上は吹き出し(${LINES_PER_SIZE}セリフ)`, gridBad.length === 0, gridBad.slice(0, 2).join(' | '));
       check(`${tag}: 「▶ つぎ」を押すとセリフが進み、施設は開かない`, tapBad.length === 0, tapBad.slice(0, 2).join(' | '));
       check(`${tag}: ほかのボタンの真ん中を、ジャックと吹き出しがふさがない`, coverBad.length === 0, coverBad.slice(0, 2).join(' | '));
