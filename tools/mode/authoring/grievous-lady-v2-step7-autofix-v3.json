@@ -27,41 +27,28 @@
  },
  "difficulties": {
   "EASY": {
-   "noteCount": 472,
-   "fixCount": 1,
-   "passes": 1,
+   "noteCount": 369,
+   "fixCount": 0,
+   "passes": 0,
    "before": {
     "impossible": 0,
-    "strained": 2,
+    "strained": 0,
     "reach": 0,
     "hardJumps": 0,
     "overSteps": 0,
-    "spread": 128,
-    "cost": 328
+    "spread": 89,
+    "cost": 89
    },
    "after": {
     "impossible": 0,
-    "strained": 1,
+    "strained": 0,
     "reach": 0,
     "hardJumps": 0,
     "overSteps": 0,
-    "spread": 128,
-    "cost": 228
+    "spread": 89,
+    "cost": 89
    },
-   "fixes": [
-    {
-     "grid": 1832,
-     "bar": 114,
-     "timeMs": 131097,
-     "type": "TAP",
-     "move": "サブレーン7→5",
-     "pass": 1,
-     "costBefore": 328,
-     "costAfter": 228,
-     "impossibleAfter": 0,
-     "strainedAfter": 1
-    }
-   ]
+   "fixes": []
   },
   "NORMAL": {
    "noteCount": 420,
