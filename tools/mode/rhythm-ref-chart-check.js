@@ -151,6 +151,23 @@ ok('譜面コーパスの資料に「写しを残さない形でだけ使う」�
     ok('置き方: 曲の20/40/60/80%に一番近い、前後1拍空いた拍の頭(詰まった所は避ける)',JSON.stringify(placed.map(p=>Math.round((p.t-1000)/B)))==='[1,4,6,8]'&&placed.every(p=>p.level===0),JSON.stringify(placed));
     const few=placeMonsters([tap(1000,3),tap(1000+B/4,9),tap(1000+B/2,3),tap(1000+B*3/4,9),tap(1000+B,3)],{grid:{zero:1000,beat:B,div:4}}).placed;
     ok('置き方: 空いた拍の頭が無ければ、拍の頭 → 単打の順にゆるめて必ず4個置く',few.length===4&&new Set(few.map(p=>p.t)).size===4,JSON.stringify(few));}
+  // 先読みの割り振り・物差しのそろえ(2026-10-11 窓口の決定 A)
+  {const {fromRuntime,simulateRuntime,THUMB_BEAM}=require('./rhythm-ref-tiers.js');
+    const tp=(t,sub,w=2)=>({k:'t',t,sub,w,sky:0,dir:''}),hold=(t,end,sub,w=2)=>({k:'h',t,end,sub,w});
+    const cnt=notes=>thumbCheck(notes,THUMB_PROFILES.landscape,B).count;
+    const look=cnt([tp(1000,6),tp(1081,8)]);
+    ok('先読み: 真ん中寄りの次に81ms後の右がある所は、先に左手で取る(同じ親指の叩き直し・交差にしない)',look.impossible===0&&look.cross===0,JSON.stringify(look));
+    const lone=cnt([{k:'s',hand:null,pts:[[1000,1,2,0,0],[2000,5,2,0,0]]}]),pinned=cnt([hold(900,2100,10),{k:'s',hand:'L',pts:[[1000,1,2,0,0],[2000,5,2,0,0]]}]);
+    ok('真ん中越え: 反対の手が空いていれば届きにくい(押せないにしない)・ホールドでふさがっていれば押せない',lone.impossible===0&&lone.reach>0&&pinned.impossible>0,JSON.stringify([lone,pinned]));
+    const fast=cnt([hold(900,1400,0),tp(1000,9),tp(1150,5)]);
+    ok('速さはレーン毎秒で比べる: 横持ちで2レーンを150ms(13レーン/秒・上限18)は押せる',fast.impossible===0,JSON.stringify(fast));
+    const same=cnt([tp(1000,6),tp(1071,6)]);
+    ok('71ms後に同じ所: 同じ指では間に合わず、2本の指も入らないので押せない(両手のシミュレートと同じ決まり)',same.impossible===1,JSON.stringify(same));
+    const rt=[{type:'TAP',timeMs:1000,lane:1,subLane:2,subLaneWidth:2},{type:'HOLD',timeMs:1500,endTimeMs:2000,lane:4,subLane:8,subLaneWidth:2},
+      {type:'SLIDE',timeMs:2500,endTimeMs:3000,lane:1,endLane:2,subLaneWidth:2,slidePoints:[{timeMs:2500,lane:1,subLaneWidth:2},{timeMs:3000,lane:2,subLaneWidth:2}]}];
+    const fr=fromRuntime(rt);
+    ok('公開中の譜面を読む: fromRuntime で下書きの形になり、スライドの手は thumbCheck が選ぶ',fr.length===3&&fr[2].k==='s'&&fr[2].hand===null&&thumbCheck(fr,THUMB_PROFILES.landscape,B).hands.get(fr[2])==='L');
+    ok('公開中の譜面を両手のシミュレートで測れる(格子の1目盛り=1ms)',simulateRuntime(rt).impossible===0&&THUMB_BEAM>=8);}
   ok('同じ時刻の点をまとめる',dedupeSlidePoints([{k:'s',pts:[[0,1,2,0,0],[100,2,2,0,0],[101,3,2,0,0]]}])[0].pts.length===2);
 }
 
