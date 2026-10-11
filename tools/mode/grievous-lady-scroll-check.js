@@ -14,7 +14,7 @@ let failed=0;
 const ok=(name,cond,detail='')=>{console.log(`${cond?'OK':'NG'}: ${name}${detail?` — ${detail}`:''}`);if(!cond)failed++;};
 const ctx={Object,Number,Math,JSON,Array,String,Date,Infinity,NaN};
 vm.runInNewContext(`${fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js'),'utf8')}
-this.out={songs:[...RHYTHM_SONGS,...(typeof RHYTHM_PROTO_SONGS!=='undefined'?RHYTHM_PROTO_SONGS:[])],rhythmScrollSet,rhythmScrollPos,rhythmScrollEarlyTouches};`,ctx);
+this.out={songs:[...RHYTHM_SONGS,...(typeof RHYTHM_PROTO_SONGS!=='undefined'?RHYTHM_PROTO_SONGS:[])],rhythmScrollSet,rhythmScrollPos,rhythmScrollEarlyTouches,proj:rhythmProjectTravelProgress};`,ctx);
 const R=ctx.out;
 const TRAVEL={3:5000,4:4000,5:3000,6:2150,7:1680,8:1300,9:1020,10:800};
 const BEAT=60000/210,ZERO=240,ms=b=>ZERO+b*BEAT;
@@ -23,7 +23,9 @@ const WINDOWS=[
   {name:'B',from:328,to:336.5,refHits:[]},
   {name:'C',from:460.2,to:463,refHits:[461.75]},
 ];
-// 待っているノーツの位置(参考動画を測った値・道の奥の端0〜判定線1)。[拍, 参考の先頭の位置]
+// 待っているノーツの位置(参考動画を測った値・参考の道の奥行きで奥の端0〜判定線1)。[拍, 参考の先頭の位置]
+// 参考の道は奥の端が判定線の約8.8倍の遠さ(こちらは2.5倍)なので、比べるのは「道の上での画面の高さ」(奥の端0〜判定線1)
+const K_REF=(1/(122.6-92))/(1/268),screenRef=p=>(1/(K_REF-(K_REF-1)*p)-1/K_REF)/(1-1/K_REF);
 const REF_WAITING=[['A',61.9,.48],['B',328.4,.54],['B',334,.345],['C',460.8,.56],['C',462.3,.57]];
 const songs=R.songs.filter(s=>/^grievous_lady/.test(s.songId));
 ok('Grievous Lady の譜面がある',songs.length>0);
@@ -50,9 +52,9 @@ for(const song of songs)for(const [id,chart] of Object.entries(song.difficulties
         const now=ms(b),sNow=R.rhythmScrollPos(now);
         const ahead=notes.filter(x=>Number(x.timeMs)>now).map(x=>1-(R.rhythmScrollPos(x.timeMs)-sNow)/tr).filter(p=>p>=0&&p<=1);
         const lead=ahead.length?Math.max(...ahead):null;
-        return `${n} 拍${b}: 参考${Math.round(ref*100)}% / こちら${lead==null?'見えない':Math.round(lead*100)+'%'}`;
+        return `${n} 拍${b}: 参考${Math.round(screenRef(ref)*100)}% / こちら${lead==null?'見えない':Math.round(R.proj(lead)*100)+'%'}`;
       });
-      console.log(`      ${tag} 速度${sp} 待っているノーツの先頭 … ${waits.join(' ・ ')}`);
+      console.log(`      ${tag} 速度${sp} 待っているノーツの先頭(画面の高さ) … ${waits.join(' ・ ')}`);
       let maxStep=0,where=0;
       for(const w of WINDOWS)for(let t=ms(w.from)-200;t<ms(w.to)+200;t+=1000/60){const d=Math.abs(R.rhythmScrollPos(t+1000/60)-R.rhythmScrollPos(t))/tr;if(d>maxStep){maxStep=d;where=t;}}
       console.log(`      ${tag} 速度${sp} 演出の中で1コマに動く量の最大 道の${(maxStep*100).toFixed(1)}%(拍${((where-ZERO)/BEAT).toFixed(2)})・ふだんは${(1000/60/tr*100).toFixed(1)}%`);

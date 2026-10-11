@@ -25236,16 +25236,16 @@ const grievousLadyMasterNotes=((t,h,f,s)=>[
 // B 拍328〜336.5: 止まる・一瞬(17ms)で前へ18%/後ろへ20%を音の強い所でくり返す → 奥へ38%戻る → 止まる(先頭34%) → 加速して拍336.5
 // C 拍460.2〜463: 止まる(56%) → 一瞬で後ろへ45% → 加速して拍461.75 の同時押しを叩く → 次が57%で止まる → 拍463
 // 判定の時刻は音楽どおり(見た目の位置だけが変わる)。判定の前に判定線へ触れるノーツは0個(rhythmScrollEarlyTouches・grievous-lady-scroll-check.js)
-const GRIEVOUS_LADY_SCROLL_CHANGES=Object.freeze([[16240,"MOVE",-0.17],[16811.4,"MOVE",-0.13],[17382.9,"MOVE",-0.07],[17954.3,"MOVE",0.12],[18240,"MOVE",0.16],[18382.9,"MOVE",0.25],[18525.7,1],[93954.3,0],[94154.3,"MOVE",0.18],[94171.4,"MOVE",-0.17],[94268.6,0],[94411.4,"MOVE",0.17],[94525.7,"MOVE",-0.2],[94542.9,0],[94611.4,"MOVE",0.18],[94628.6,"MOVE",-0.11],[94711.4,"MOVE",0.11],[94811.4,"MOVE",-0.2],[94828.6,0],[95097.1,"MOVE",0.18],[95114.3,"MOVE",-0.25],[95268.6,"MOVE",-0.13],[95440,0],[95840,"MOVE",0.33],[96097.1,"MOVE",0.33],[96382.9,1],[131725.7,0],[132040,"MOVE",-0.45],[132057.1,"MOVE",0.35],[132111.4,"MOVE",0.54],[132168.6,0],[132440,"MOVE",0.43],[132525.7,1]].map(row=>Object.freeze(row)));
+const GRIEVOUS_LADY_SCROLL_CHANGES=Object.freeze([[16240,"MOVE",-0.233],[16811.4,"MOVE",-0.116],[17382.9,"MOVE",-0.049],[17954.3,"MOVE",0.089],[18240,"MOVE",0.17],[18382.9,"MOVE",0.539],[18525.7,1],[93954.3,0],[94154.3,"MOVE",0.192],[94171.4,"MOVE",-0.184],[94268.6,0],[94411.4,"MOVE",0.184],[94525.7,"MOVE",-0.208],[94542.9,0],[94611.4,"MOVE",0.182],[94628.6,"MOVE",-0.121],[94711.4,"MOVE",0.121],[94811.4,"MOVE",-0.197],[94828.6,0],[95097.1,"MOVE",0.172],[95114.3,"MOVE",-0.221],[95268.6,"MOVE",-0.074],[95440,0],[95840,"MOVE",0.239],[96097.1,"MOVE",0.633],[96382.9,1],[131725.7,0],[132040,"MOVE",-0.232],[132057.1,"MOVE",0.162],[132111.4,"MOVE",0.804],[132168.6,0],[132440,"MOVE",0.725],[132525.7,1]].map(row=>Object.freeze(row)));
 // 演出の最中は判定線へノーツを来させない(参考どおり。2026-10-11 社長「動く演出の最中にノーツが来ていない。そこもちゃんと参考にしてる?」)。
 // [始まり,終わり] の間に時刻か終わりがかかるノーツを外す。ただし C の拍461.75(参考で同時押しを2個叩く所)だけは残す
 const GRIEVOUS_LADY_QUIET_SPANS=Object.freeze([[16240,18525.7],[93954.3,96382.9],[131725.7,132525.7]].map(row=>Object.freeze(row)));
 const GRIEVOUS_LADY_QUIET_KEEP_MS=132168.6;
-const grievousLadyQuiet=notes=>Object.freeze(rhythmEnsureMonsterSlots(notes.filter(note=>{
+const grievousLadyQuiet=notes=>Object.freeze(notes.filter(note=>{
   const start=Number(note.timeMs),end=Number(note.endTimeMs)>start?Number(note.endTimeMs):start;
   if(end===start&&Math.abs(start-GRIEVOUS_LADY_QUIET_KEEP_MS)<=40)return true;
   return !GRIEVOUS_LADY_QUIET_SPANS.some(([from,to])=>end>from+1&&start<to-1);
-}),GRIEVOUS_LADY_DURATION_MS));
+}));
 const grievousLadyCharts=Object.freeze({
   EASY:mhChart(1,grievousLadyQuiet(grievousLadyEasyNotes),GRIEVOUS_LADY_DURATION_MS,6,{scrollChanges:GRIEVOUS_LADY_SCROLL_CHANGES}),
   NORMAL:mhChart(3,grievousLadyQuiet(grievousLadyNormalNotes),GRIEVOUS_LADY_DURATION_MS,6,{scrollChanges:GRIEVOUS_LADY_SCROLL_CHANGES}),
