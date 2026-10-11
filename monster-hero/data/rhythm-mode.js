@@ -24432,6 +24432,34 @@ const sheriruthCharts=Object.freeze({
   EXPERT:mhChart(7,sheriruthExpertNotes,SHERIRUTH_DURATION_MS,6,{scrollChanges:SHERIRUTH_SCROLL_CHANGES}),
   MASTER:mhChart(9,sheriruthMasterNotes,SHERIRUTH_DURATION_MS,6,{scrollChanges:SHERIRUTH_SCROLL_CHANGES}),
 });
+const GRIEVOUS_LADY_DURATION_MS=139932;
+const grievousLadyEasyNotes=((t,h,f,s)=>[
+// <grievous-lady-v3-easy-notes>
+// </grievous-lady-v3-easy-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2);
+const grievousLadyNormalNotes=((t,h,f,s)=>[
+// <grievous-lady-v3-normal-notes>
+// </grievous-lady-v3-normal-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2);
+const grievousLadyHardNotes=((t,h,f,s)=>[
+// <grievous-lady-v3-hard-notes>
+// </grievous-lady-v3-hard-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2);
+const grievousLadyExpertNotes=((t,h,f,s)=>[
+// <grievous-lady-v3-expert-notes>
+// </grievous-lady-v3-expert-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2);
+const grievousLadyMasterNotes=((t,h,f,s)=>[
+// <grievous-lady-v3-master-notes>
+// </grievous-lady-v3-master-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2);
+const grievousLadyCharts=Object.freeze({
+  EASY:mhChart(1,grievousLadyEasyNotes,GRIEVOUS_LADY_DURATION_MS),
+  NORMAL:mhChart(3,grievousLadyNormalNotes,GRIEVOUS_LADY_DURATION_MS),
+  HARD:mhChart(5,grievousLadyHardNotes,GRIEVOUS_LADY_DURATION_MS),
+  EXPERT:mhChart(7,grievousLadyExpertNotes,GRIEVOUS_LADY_DURATION_MS),
+  MASTER:mhChart(9,grievousLadyMasterNotes,GRIEVOUS_LADY_DURATION_MS),
+});
 const theCityBeneathTheCometsCharts=Object.freeze({
   EASY:mhChart(1,theCityBeneathTheCometsEasyNotes,THE_CITY_BENEATH_THE_COMETS_DURATION_MS,6),
   NORMAL:mhChart(3,theCityBeneathTheCometsNormalNotes,THE_CITY_BENEATH_THE_COMETS_DURATION_MS,6),
@@ -26540,6 +26568,7 @@ const RHYTHM_CHART_LEVELS = Object.freeze({
   anima:Object.freeze({EASY:8,NORMAL:11,HARD:17,EXPERT:26,MASTER:44}),
   journey:Object.freeze({EASY:7,NORMAL:10,HARD:15,EXPERT:23,MASTER:36}),
   sheriruth:Object.freeze({EASY:9,NORMAL:14,HARD:22,EXPERT:33,MASTER:35}),
+  grievous_lady:Object.freeze({EASY:1,NORMAL:3,HARD:5,EXPERT:7,MASTER:9}),
   atsu_cup_theme_debug_short:Object.freeze({HARD:9}),
 // </rhythm-chart-levels>
 });
@@ -27129,6 +27158,15 @@ const RHYTHM_SONG_ENTRIES = [
     ])))
   }),
   Object.freeze({
+    songId:'grievous_lady',
+    displayName:'Grievous Lady',
+    bgmTrackId:'melo_grievous_lady',
+    artwork:'images/song-art/grievous-lady.jpg',
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[
+      id,grievousLadyCharts[id]||emptyRhythmChart()
+    ])))
+  }),
+  Object.freeze({
     songId:'atsu_cup_theme_debug_short',
     displayName:'あつ杯テーマ DEBUG 60s',
     debugDescription:'約60秒の総合テスト（正式候補・WIDTH TESTとは別）',
@@ -27293,6 +27331,7 @@ const RHYTHM_SONG_BEATS=Object.freeze({
   anima:[326.9755,200,4],
   journey:[468.749,272.3,4],
   sheriruth:[324.342,711.6,4],
+  grievous_lady:[285.7143,240,4],
 });
 // 4つ目は曲のつなぎ目(2026-10-03・元の曲の録音を切り貼りした short ver.)。[[つなぎ目の時刻ms, そこから先の拍のずれms], …]。
 // 5つ目は拍のずれの曲線(2026-10-05・テンポが少しずつ変わる曲)。[[時刻ms, ずれms], …] を直線でつなぐ。
