@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: bf8dd70876a0bc34
+// source-sha256: 39a7af01bf3ffafe
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-12 05:38";
+const BUILD_DATE = "2026-10-12 07:12";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -31300,6 +31300,34 @@ function RhythmSkyLiftSwitch() {
     className: `min-h-[44px] rounded-xl text-sm font-black ${value === v ? 'bg-rose-600 text-white ring-2 ring-rose-200' : 'bg-slate-800 text-slate-300'}`
   }, v, "%", v === 16 ? '(いま)' : ''))));
 }
+function RhythmSkyReachAdaptSwitch() {
+  const [on, setOn] = useState(() => !!RHYTHM_SKY_REACH_ADAPT.on);
+  const set = v => {
+    try {
+      if (v) localStorage.setItem('mh_sky_reach_adapt_proto', '1');else localStorage.removeItem('mh_sky_reach_adapt_proto');
+    } catch (e) {}
+    RHYTHM_SKY_REACH_ADAPT.on = v;
+    RHYTHM_SKY_REACH_ADAPT.reset();
+    setOn(v);
+  };
+  return React.createElement("section", {
+    "data-rhythm-sky-reach-adapt": true,
+    className: "mb-3 rounded-2xl border border-rose-400/50 bg-rose-950/25 p-3"
+  }, React.createElement("h3", {
+    className: "text-xs font-black text-rose-100"
+  }, "空中の受け付けを構えに合わせる(試作・見比べ用)"), React.createElement("p", {
+    className: "mt-1 text-[10px] font-bold text-rose-200/80"
+  }, "親指で判定ラインより下を押す人は、空中へ指を上げきれずに空中のノーツが取れないことがあります。入にすると、地上を押す深さのぶんだけ空中の受け付けの境目を下げます。空中のある HELL だけに効きます。"), React.createElement("div", {
+    className: "mt-2 grid grid-cols-2 gap-2"
+  }, [[false, '切(いま)'], [true, '入']].map(([v, label]) => React.createElement("button", {
+    key: label,
+    type: "button",
+    "data-rhythm-sky-reach-adapt-pick": v ? 'on' : 'off',
+    "aria-pressed": on === v,
+    onClick: () => set(v),
+    className: `min-h-[44px] rounded-xl text-sm font-black ${on === v ? 'bg-rose-600 text-white ring-2 ring-rose-200' : 'bg-slate-800 text-slate-300'}`
+  }, label))));
+}
 function RhythmHellPreviewSwitch({
   onChange
 }) {
@@ -32461,8 +32489,10 @@ const RhythmTapTest = ({
   }, []);
   useEffect(() => {
     RHYTHM_SKY_INPUT.active = skyChart;
+    RHYTHM_SKY_REACH_ADAPT.reset();
     return () => {
       RHYTHM_SKY_INPUT.active = false;
+      RHYTHM_SKY_REACH_ADAPT.reset();
     };
   }, [skyChart]);
   const scrollChanges = rawChart?.scrollChanges || null,
@@ -98866,7 +98896,7 @@ function MonsterHeroGame() {
       className: "mb-3 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl border border-cyan-300/70 bg-cyan-900/60 px-3 text-sm font-black text-cyan-50"
     }, "🎵 全解放の曲えらびを開く", React.createElement("span", {
       className: "rounded-full bg-slate-950/70 px-2 py-0.5 text-[10px] text-amber-200"
-    }, "記録しない")), React.createElement(RhythmSkyLiftSwitch, null), React.createElement(RhythmSkyBoxLookSwitch, null), React.createElement(RhythmSkyLaneLookSwitch, null), React.createElement("section", {
+    }, "記録しない")), React.createElement(RhythmSkyLiftSwitch, null), React.createElement(RhythmSkyReachAdaptSwitch, null), React.createElement(RhythmSkyBoxLookSwitch, null), React.createElement(RhythmSkyLaneLookSwitch, null), React.createElement("section", {
       "data-debug-rhythm-hell-story": true,
       className: "mb-3 rounded-2xl border border-pink-400/50 bg-pink-950/25 p-3"
     }, React.createElement("h3", {
