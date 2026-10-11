@@ -211,7 +211,6 @@ const RELEASED_MARKERS=Object.freeze({
   anima:'anima-v3',
   journey:'journey-v3',
   sheriruth:'sheriruth-v3',
-  grievous_lady:'grievous-lady-v3',
   against_my_own_shadow:'against-my-own-shadow-v3',
 });
 
