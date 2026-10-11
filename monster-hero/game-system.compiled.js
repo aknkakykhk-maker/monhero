@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 68e561dbbcdc7849
+// source-sha256: ed380363a3519844
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-11 23:23";
+const BUILD_DATE = "2026-10-11 23:26";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -31003,6 +31003,40 @@ function RhythmSkyStage({
     fr = plane.front;
   const skyLaneLook = RHYTHM_SKY_LANE_LOOK.id,
     mk = Array.isArray(plane.markers) ? plane.markers : [];
+  const skyLaneD = (() => {
+    if (!/^d[12][lm]$/.test(skyLaneLook)) return null;
+    const SKY_LANE_DEPTH = .14,
+      line = RHYTHM_JUDGMENT_LINE_Y.ratio,
+      base = rhythmProjectionScale(line),
+      steps = 8,
+      ys = [];
+    for (let i = 0; i <= steps; i++) ys.push(line - SKY_LANE_DEPTH + SKY_LANE_DEPTH * i / steps);
+    const lift = y => (y - RHYTHM_SKY_LIFT.ratio * rhythmProjectionScale(y) / base) * 100;
+    const at = (k, y) => `${f(rhythmProjectBoundary(k, y) * 100)},${f(lift(y))}`;
+    const surface = [...ys.map(y => at(0, y)), ...ys.slice().reverse().map(y => at(RHYTHM_LANE_COUNT, y))].join(' ');
+    const dividers = Array.from({
+      length: RHYTHM_LANE_COUNT + 1
+    }, (_, k) => ys.map(y => at(k, y)).join(' '));
+    const k = skyLaneLook.endsWith('m') ? {
+      fill: '.1',
+      div: '.22',
+      edge: '.45',
+      postOuter: '.32',
+      postInner: '.1'
+    } : {
+      fill: '.055',
+      div: '.13',
+      edge: '.28',
+      postOuter: '.2',
+      postInner: '.06'
+    };
+    return {
+      surface,
+      dividers,
+      k,
+      allPosts: skyLaneLook.startsWith('d2')
+    };
+  })();
   return React.createElement("svg", {
     "data-rhythm-sky-stage": true,
     viewBox: "0 0 100 100",
@@ -31139,6 +31173,30 @@ function RhythmSkyStage({
     strokeOpacity: k === 0 || k === mk.length - 1 ? '.16' : '.07',
     strokeWidth: "1",
     vectorEffect: "non-scaling-stroke"
+  }))), skyLaneD && React.createElement("g", {
+    "data-rhythm-sky-lane-look": skyLaneLook
+  }, React.createElement("polygon", {
+    points: skyLaneD.surface,
+    fill: "rgb(226,232,240)",
+    fillOpacity: skyLaneD.k.fill
+  }), skyLaneD.dividers.map((pts, k) => React.createElement("polyline", {
+    key: k,
+    points: pts,
+    fill: "none",
+    stroke: "rgb(226,232,240)",
+    strokeOpacity: k === 0 || k === skyLaneD.dividers.length - 1 ? skyLaneD.k.edge : skyLaneD.k.div,
+    strokeWidth: "1",
+    vectorEffect: "non-scaling-stroke"
+  })), mk.map((x, k) => (skyLaneD.allPosts || k === 0 || k === mk.length - 1) && React.createElement("line", {
+    key: `p${k}`,
+    x1: f(x),
+    y1: f(fr.gy),
+    x2: f(x),
+    y2: f(fr.y),
+    stroke: "rgb(226,232,240)",
+    strokeOpacity: k === 0 || k === mk.length - 1 ? skyLaneD.k.postOuter : skyLaneD.k.postInner,
+    strokeWidth: "1",
+    vectorEffect: "non-scaling-stroke"
   }))), React.createElement("line", {
     x1: f(fr.roadL - RHYTHM_SKY_LOOK.line.marginPct),
     y1: f(fr.y),
@@ -31197,7 +31255,11 @@ const RHYTHM_SKY_LANE_LOOK_LABELS = Object.freeze({
   none: 'いま(なし)',
   a: '案A 判定線に薄い帯',
   b: '案B 区切りの目盛り',
-  c: '案C 地上から細い柱'
+  c: '案C 地上から細い柱',
+  d1l: '案D1 面+端の柱(薄め)',
+  d1m: '案D1 面+端の柱(やや見える)',
+  d2l: '案D2 面+全部の柱(薄め)',
+  d2m: '案D2 面+全部の柱(やや見える)'
 });
 const RHYTHM_SKY_LANE_LOOK = {
   id: (() => {
