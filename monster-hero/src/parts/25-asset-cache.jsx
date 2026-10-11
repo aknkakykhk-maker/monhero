@@ -33,7 +33,11 @@ const ASSET_RECENT_SONG_LIMIT = 12;
 const normalizeAssetCacheSettings = (raw) => {
   const src = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
   return {
-    enabled: typeof src.enabled === 'boolean' ? src.enabled : ASSET_CACHE_DEFAULT_ENABLED,
+    // 入/切は、本人が切り替えたとき(enabledChosen:true)だけ保存値を使う。
+    // 既定が切だったころ(2026-10-11 #2739〜#2743)に、曲を選んだだけで enabled:false が書かれていた端末がある。
+    // それは本人の選択ではないので、印の無い enabled は読まずに既定で読む(読み方を変えるだけで、保存値は書き換えない)
+    enabled: src.enabledChosen === true && typeof src.enabled === 'boolean' ? src.enabled : ASSET_CACHE_DEFAULT_ENABLED,
+    enabledChosen: src.enabledChosen === true,
     auto: typeof src.auto === 'boolean' ? src.auto : true,
     songs: Array.isArray(src.songs) ? src.songs.filter(s => typeof s === 'string' && s).slice(0, ASSET_RECENT_SONG_LIMIT) : [],
   };
@@ -297,7 +301,7 @@ const ASSET_CACHE = (() => {
       return settings.enabled;
     },
     async setEnabled(next) {
-      settings = { ...settings, enabled: !!next };
+      settings = { ...settings, enabled: !!next, enabledChosen: true };
       save();
       if (settings.enabled) { listen(); await register(); startAuto(); } else { cancel(); autoQueue.length = 0; autoQueued.clear(); await unregister(); }
       await refreshStatus();
