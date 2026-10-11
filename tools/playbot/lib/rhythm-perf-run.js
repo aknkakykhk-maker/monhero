@@ -107,11 +107,16 @@ async function runOnce(o) {
       await page.evaluate(() => { const s = [...document.querySelectorAll('summary')].find(x => /モンヒロビート/.test(x.textContent)); if (s) s.click(); });
       await page.waitForTimeout(500);
       await page.evaluate(() => document.querySelector('[data-debug-rhythm-mode]')?.click()); await page.waitForTimeout(1500);
-      started = await page.evaluate(([song, diff, ent]) => {
+      started = await page.evaluate(async ([song, diff, ent]) => {
         if (ent === 'proto') { const b = document.querySelector(`[data-rhythm-proto-song="${song}"] [data-rhythm-proto-start="${diff}"]`) || document.querySelector(`[data-rhythm-proto-song="${song}"] [data-rhythm-proto-start]`); if (b) b.click(); return !!b; }
-        const sec = [...document.querySelectorAll('section')].find(x => x.querySelector('small') && x.querySelector('small').textContent.trim() === song);
-        const art = sec && [...sec.querySelectorAll('article')].find(a => a.textContent.startsWith(diff + ' '));
-        const b = art && art.querySelector('[data-rhythm-tap-start]'); if (b) b.click(); return !!b;
+        // 公開曲は、デバッグの全解放の曲えらび(記録しない・2026-10-11 古い縦の一覧を外した)から始める。曲は id で探す(同じ曲名の版があるため)
+        document.querySelector('[data-rhythm-debug-select-open]')?.click();
+        await new Promise(r => setTimeout(r, 1200));
+        const target = [...RHYTHM_SONGS, ...RHYTHM_PROTO_SONGS].find(x => x.songId === song); if (!target) return false;
+        const row = [...document.querySelectorAll('[data-rhythm-debug-select] [data-rhythm-song-row]')].find(r => r.textContent.includes(target.displayName) && (!target.subtitle || r.textContent.includes(target.subtitle)));
+        if (!row) return false; row.click(); await new Promise(r => setTimeout(r, 500));
+        document.querySelector('[data-rhythm-debug-select] [data-rhythm-difficulty="' + diff + '"]')?.click(); await new Promise(r => setTimeout(r, 400));
+        const b = document.querySelector('[data-rhythm-debug-select] [data-rhythm-demo-start="' + diff + '"]'); if (b) b.click(); return !!b;
       }, [o.song, o.diff, entry]);
     }
     if (!started) throw new Error(`曲を始められなかった(${entry} ${o.song} ${o.diff})`);
