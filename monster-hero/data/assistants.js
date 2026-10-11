@@ -6860,6 +6860,44 @@ const ASSISTANT_RAID_JACK_RHYTHM_STORY = [
 ];
 const ASSISTANT_RAID_JACK_RHYTHM_STORY_CALLS = { mua: 'ドラケン／もも', kiki: 'ドラさん', momosuke: 'ドラちゃん／みゅあねぇ', dra: 'みゅあ／靴下さん／もも' };
 
+// ---- 難易度 HELL のお話「空まで届くビート」と、そのあとの説明(2026-10-11・社長の依頼「HELL の実装のときにストーリーと説明をいれたい。BGM は Sheriruth」) ----
+// 台本は社長の確認済み(窓口経由・2026-10-11)。空中のノーツの名前は「SKY TAP」「SKY SLIDE」(社長が選んだ)。
+//   ・「箱」「ガラス」の言い方はしない(見た目は変わるかもしれない。社長「区別してるだけで色違いの通常ノーツの扱い」)
+//   ・SKY SLIDE は「地上の SLIDE と同じで、高いところを流れるだけ」として書く。新しい操作のように説明しない
+//   ・「アーク」は使わない。「モンビー」は みゅあ・ももすけ のセリフだけ
+// ★HELL はまだデバッグ専用(社長の OK まで普通のプレイヤーには出さない・HISTORY 10/11 02:05)。
+//   お話も公開の印(releaseFlag: 'rhythmHell')の後ろに置く。デバッグの「全ストーリーを確認」と、
+//   モンヒロビートのデバッグ画面の「HELL のお話を見る」から何度でも見られる。
+// ★流すきっかけ(社長が選んだ案A): HELL がある曲の MASTER をクリアすると、その曲の HELL が開く。
+//   初めてどれかの HELL が開いた結果画面のあとに、お話 → 説明(RHYTHM_HELL_GUIDE_PAGES)。HELL を公開するときにつなぐ
+const RHYTHM_HELL_STORY = [
+  { who:'dra',      e:'normal',   t:'みゅあ、今の MASTER、最後まで鳴らしきったな' },
+  { who:'mua',      e:'excited',  t:'えへへ、手がまだじんじんしてる！ でもドラケン、上のほう……光ってない？' },
+  { who:'kiki',     e:'surprise', t:'判定ラインの上に、もう1本ラインが浮かんでいまつ。さっきまでは無かったでつ。' },
+  { who:'momosuke', e:'surprise', t:'うそ、レーンの上にもうひとつ判定ラインがある……！ ノーツが上を流れてくる♡' },
+  { who:'dra',      e:'normal',   t:'地上だけじゃ収まりきらなかったんだ。強く叩きすぎて、ビートが空まで届いちまった' },
+  { who:'mua',      e:'surprise', t:'空まで!? それって、モンビーにまだ上があるってこと？' },
+  { who:'kiki',     e:'normal',   t:'MASTER のさらに上、「HELL」でつ。地上のノーツに、空のノーツが重なって流れてきまつ。' },
+  { who:'momosuke', e:'normal',   t:'空のノーツは、上のラインで取るの。地上と同じ高さを押しても届かないから気をつけてね' },
+  { who:'dra',      e:'normal',   t:'上を流れてくる TAP が SKY TAP だ。上の判定ラインに重なったら、その高さを叩くんだ' },
+  { who:'mua',      e:'normal',   t:'叩き方はいつもの TAP と同じなんだね。じゃあ、上を流れてる帯は？' },
+  { who:'kiki',     e:'normal',   t:'あれは SKY SLIDE でつ。地上の SLIDE と同じで、高いところを流れるだけでつ。' },
+  { who:'momosuke', e:'wink',     t:'青なら左手、ピンクなら右手で取ると楽だよ♡ どっちの手で取るかの目印なの' },
+  { who:'mua',      e:'troubled', t:'地上も見て、空も見て……目がふたつじゃ足りないかも～！' },
+  { who:'dra',      e:'happy',    t:'最初は上のラインだけ見てみろ。体が先に覚える' },
+  { who:'kiki',     e:'normal',   t:'遊び方は、このあとの説明と、ヘルプの「HELL」にまとめておきまつ。' },
+  { who:'momosuke', e:'excited',  t:'空まで届くビート、ももも聞いてみたい♡' },
+  { who:'mua',      e:'excited',  t:'よーし、モンビーの空、取りにいこう！ 地獄だって、ビートで乗りこえる！' },
+];
+const RHYTHM_HELL_STORY_CALLS = { mua: 'ドラケン／もも', kiki: 'ドラさん', momosuke: 'ドラちゃん／みゅあねぇ', dra: 'みゅあ／靴下さん／もも' };
+// お話のあとに出す説明(1枚ずつ)。ヘルプの HELL の項目(公開のときに入れる)もこの文に合わせる
+const RHYTHM_HELL_GUIDE_PAGES = Object.freeze([
+  Object.freeze({ title:'HELL とは', text:'MASTER のさらに上の難易度です。地上のノーツに、空のノーツが重なって流れてきます。HELL がある曲は、その曲の MASTER をクリアすると HELL が遊べるようになります。' }),
+  Object.freeze({ title:'SKY TAP', text:'上の判定ラインで叩く TAP です。上の判定ラインに重なったら、地上の判定ラインより上のあたりを叩きます。横の位置は、地上と同じレーンで合わせます。' }),
+  Object.freeze({ title:'SKY SLIDE', text:'地上の SLIDE と同じで、高いところを流れるだけです。押さえたまま帯の道すじを指でなぞり、終わりの横棒が来たら離します（離さないと MISS）。帯の色は、青なら左手・桃なら右手という、取る手の目印です。' }),
+  Object.freeze({ title:'両手の親指で', text:'横持ちで、左右の親指を1本ずつ使います。地上のノーツは今までどおり、空のノーツ（SKY TAP・SKY SLIDE）は判定ラインより上を叩きます。最初は上のラインだけを見て、慣れたら地上と合わせましょう。' }),
+]);
+
 const EVENT_REPLAYS = [
   // ぱんぷきん×ジャックのストーリー(2026-10-04・台本は docs/spec/RAID_JACK_STORY.md)。**公開するまでは回想にも出さない**(releaseFlag)。
   // 第1部(halloween_night_2026_part1)は時刻で流れる既存のもの。ここは第1.5部から終章まで。
@@ -6915,6 +6953,9 @@ const EVENT_REPLAYS = [
   // レイドの遊び方(2026-10-04)。第1部を見終えたあとにHOMEで1度だけ続けて流れ、そのあとは回想から見返せる。**公開するまでは回想にも出さない**(releaseFlag)
   // モンヒロビート挑戦のサブストーリー(2026-10-06)。公開と同時にHOMEで1度だけ流れ、そのあとは回想から見返せる。**公開するまでは回想にも出さない**(releaseFlag)
   { id: 'raid_jack_rhythm_story_2026_10_06', date: '2026-10-06 18:37', title: 'ドラのビート ～音でジャックへ～', script: ASSISTANT_RAID_JACK_RHYTHM_STORY, calls: ASSISTANT_RAID_JACK_RHYTHM_STORY_CALLS, unlockedKey: 'raidJackRhythmStorySeen', releaseFlag: 'raidJackRhythm', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, group: 'halloween' },
+  // 難易度 HELL のお話(2026-10-11)。公開の印 rhythmHell が立つまでは回想にも出さない(デバッグの「全ストーリーを確認」には出る)。
+  // 見たかどうかは新しいキー mh_rhythm_hell_story_seen_v1(60-app.jsx の EVENT_REPLAY_UNLOCK_FLAGS の rhythmHellStorySeen)
+  { id: 'rhythm_hell_story', date: '2026-10-11 18:30', title: '空まで届くビート ～難易度 HELL～', script: RHYTHM_HELL_STORY, calls: RHYTHM_HELL_STORY_CALLS, unlockedKey: 'rhythmHellStorySeen', releaseFlag: 'rhythmHell', group: 'update' },
   { id: 'raid_jack_howto_2026_10_04', date: '2026-10-04 08:02', title: 'カボチャの大王ジャック ～レイドの遊び方～', script: ASSISTANT_RAID_JACK_HOWTO, calls: ASSISTANT_RAID_JACK_HOWTO_CALLS, unlockedKey: 'raidJackHowtoSeen', releaseFlag: 'raidJack', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, group: 'halloween' },
 ];
 

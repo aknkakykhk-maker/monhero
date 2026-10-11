@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f4cc3441322a7989
+// generated-sha256: 8fb7445faf2da105
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-11 18:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-11 18:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -299,6 +299,8 @@ const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
   // 「公開前」扱いになって HOME で流れず回想にも出なかった(ユーザー報告「ストーリー流れなかった」)。
   // 見張り: tools/boot/event-replay-release-flag-check.js
   get rhythmMulti() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.rhythmMulti === true; },
+  // 難易度 HELL のお話(rhythm_hell_story・2026-10-11)。HELL の公開まで回想にも出さない
+  get rhythmHell() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.rhythmHell === true; },
 });
 const eventReplayReleased = (event) => !event?.releaseFlag || EVENT_REPLAY_RELEASE_FLAGS[event.releaseFlag] === true;
 // 画面に並べるイベント回想。3か所(プロフィール・回想一覧・再生)が同じ並びを見るための唯一の入口
@@ -5001,7 +5003,7 @@ const eikiBossBgmForBattle = (heroId, currentWave, enemyId) =>
   heroId === 'Eiki' && (enemyId === 'Moo' || currentWave === 10) ? 'eiki_boss' : null;
 // 既存の battle / dullahan / boss はチャレンジ用として維持し、保存済み設定との互換性を守る。
 // 追加したモード別専用戦キーは、旧セーブでは従来その場面で使っていた dullahan / boss の選択を継承する。
-const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ title:'monster_hero_theme_alt', home:'original_home', management:'original_profile', market:'original_market', temple:'original_fusion', trainingMenu:'original_home', trainingBoard:'original_home', battle:'original_battle', dullahan:'original_dullahan', boss:'original_boss', quickBattle:'original_battle', quickDullahan:'original_dullahan', quickMoo:'original_boss', proBattle:'original_pro_battle_01', proDullahan:'melo_dullahan_steel_ghost', proMoo:'original_pro_battle_02', extremeBattle:'ichika_battle', extremeDullahan:'melo_dullahan_clockwork', extremeMoo:'ichika_boss', speciesBattle:'original_battle', speciesDullahan:'original_dullahan', speciesMoo:'original_boss', tacticsIntroEvent:'close_to_your_heart_alt', tacticsBattle:'senjou_no_shippuu', tacticsMidBoss:'melo_the_city_beneath_the_comets', tacticsBoss:'makutsu_no_senritsu', autoBattle:'monster_hero_theme', autoVictoryJingle:'off', autoPostWaveBgm:'off', autoRepeatResultBgm:'off', clear:'ichika_clear', enhance:'original_enhance', result:'original_result', gameOver:'original_game_over', kikiIntro:'original_event_01', momosukeIntro:'six_eternel_remix', monbeatCupEvent:'kaze_ga_soyogu', symphonyEvent:'melo_mou_hitotsu_no_sekai_e', rhythmMultiEvent:'melo_haruka', masuCallEvent:'six_eternel',halloweenNightEvent:'melo_crazy_party_night_full', rhythmModeSelect:'pandora_boss_remix' });
+const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ rhythmHellStoryEvent:'melo_sheriruth', title:'monster_hero_theme_alt', home:'original_home', management:'original_profile', market:'original_market', temple:'original_fusion', trainingMenu:'original_home', trainingBoard:'original_home', battle:'original_battle', dullahan:'original_dullahan', boss:'original_boss', quickBattle:'original_battle', quickDullahan:'original_dullahan', quickMoo:'original_boss', proBattle:'original_pro_battle_01', proDullahan:'melo_dullahan_steel_ghost', proMoo:'original_pro_battle_02', extremeBattle:'ichika_battle', extremeDullahan:'melo_dullahan_clockwork', extremeMoo:'ichika_boss', speciesBattle:'original_battle', speciesDullahan:'original_dullahan', speciesMoo:'original_boss', tacticsIntroEvent:'close_to_your_heart_alt', tacticsBattle:'senjou_no_shippuu', tacticsMidBoss:'melo_the_city_beneath_the_comets', tacticsBoss:'makutsu_no_senritsu', autoBattle:'monster_hero_theme', autoVictoryJingle:'off', autoPostWaveBgm:'off', autoRepeatResultBgm:'off', clear:'ichika_clear', enhance:'original_enhance', result:'original_result', gameOver:'original_game_over', kikiIntro:'original_event_01', momosukeIntro:'six_eternel_remix', monbeatCupEvent:'kaze_ga_soyogu', symphonyEvent:'melo_mou_hitotsu_no_sekai_e', rhythmMultiEvent:'melo_haruka', masuCallEvent:'six_eternel',halloweenNightEvent:'melo_crazy_party_night_full', rhythmModeSelect:'pandora_boss_remix' });
 // 設定欄を足したときに「前からある近い設定」を引き継ぐための対応表。
 // 種族チャレンジの3枠はチャレンジと同じ曲から始めるので、まだ自分で選んでいない人には
 // そのときのチャレンジの設定(自分で変えていればその曲)がそのまま入る
@@ -5033,7 +5035,8 @@ const BGM_ARRANGEMENT_LEGACY_FALLBACK = Object.freeze({ quickMoo:'boss', proDull
 // 通常再生・イベント回想の両方で同じ曲が鳴る(画面側の分岐を増やさない)
 // 会話イベントのid → BGMの枠。枠を足したら DEFAULT_BGM_ARRANGEMENT にも既定曲を書く
 // (既存プレイヤーの保存値には新しい枠が無いので、normalizeBgmArrangement が既定で埋める)
-const EVENT_BGM_SCENES = Object.freeze({ kiki_intro:'kikiIntro', momosuke_intro:'momosukeIntro', monbeat_cup_2026_09:'monbeatCupEvent', monbeat_cup_2026_09_thanks:'monbeatCupEvent', symphony_2026_09_17:'symphonyEvent', symphony_2026_09_17_thanks:'symphonyEvent', tactics_intro:'tacticsIntroEvent', beat_point_always_2026_09_24:'monbeatCupEvent', rhythm_six_lane_2026_09_26:'monbeatCupEvent', beat_point_up_2026_09_28:'monbeatCupEvent', rhythm_multi_friends_2026_10_03:'rhythmMultiEvent', rhythm_masu_call_2026_10_07:'masuCallEvent', halloween_night_2026_part1:'halloweenNightEvent', raid_jack_howto_2026_10_04:'halloweenNightEvent', raid_jack_rhythm_story_2026_10_06:'halloweenNightEvent', raid_jack_story_1b:'halloweenNightEvent', raid_jack_story_2:'halloweenNightEvent', raid_jack_story_3:'halloweenNightEvent', raid_jack_story_4:'halloweenNightEvent', raid_jack_story_5:'halloweenNightEvent', raid_jack_story_6:'halloweenNightEvent', raid_jack_ending_cleared:'halloweenNightEvent', raid_jack_ending_notcleared:'halloweenNightEvent' });
+// rhythm_hell_story … 難易度 HELL のお話(2026-10-11)。既定は Sheriruth(社長の指定)。BGMアレンジの画面に枠を並べるのは HELL の公開のとき
+const EVENT_BGM_SCENES = Object.freeze({ kiki_intro:'kikiIntro', rhythm_hell_story:'rhythmHellStoryEvent', momosuke_intro:'momosukeIntro', monbeat_cup_2026_09:'monbeatCupEvent', monbeat_cup_2026_09_thanks:'monbeatCupEvent', symphony_2026_09_17:'symphonyEvent', symphony_2026_09_17_thanks:'symphonyEvent', tactics_intro:'tacticsIntroEvent', beat_point_always_2026_09_24:'monbeatCupEvent', rhythm_six_lane_2026_09_26:'monbeatCupEvent', beat_point_up_2026_09_28:'monbeatCupEvent', rhythm_multi_friends_2026_10_03:'rhythmMultiEvent', rhythm_masu_call_2026_10_07:'masuCallEvent', halloween_night_2026_part1:'halloweenNightEvent', raid_jack_howto_2026_10_04:'halloweenNightEvent', raid_jack_rhythm_story_2026_10_06:'halloweenNightEvent', raid_jack_story_1b:'halloweenNightEvent', raid_jack_story_2:'halloweenNightEvent', raid_jack_story_3:'halloweenNightEvent', raid_jack_story_4:'halloweenNightEvent', raid_jack_story_5:'halloweenNightEvent', raid_jack_story_6:'halloweenNightEvent', raid_jack_ending_cleared:'halloweenNightEvent', raid_jack_ending_notcleared:'halloweenNightEvent' });
 const BGM_PRO_DEFAULT_MIGRATION_KEY = 'mh_bgm_pro_default_migrated_v1';
 const BGM_PRO_PREVIOUS_DEFAULTS = Object.freeze({ proBattle:'original_battle', proDullahan:'original_dullahan', proMoo:'original_boss' });
 // 既定曲を入れ替えたときの移行のしかたは毎回同じ(「以前の既定のままの枠だけ新しい既定へ」)なので、
@@ -8201,7 +8204,11 @@ const RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE = true;
 const RHYTHM_EVENT_POINTS_PUBLIC_RELEASE = true;
 // ★tacticsBattle は「β公開のあいだも開く枠」。ヘルプは、β版で遊べる人にも要る
 //   (tactics は本公開だけ。両方を1つのフラグにすると、本公開前の告知まで出てしまう)
+// ★rhythmHell … 難易度 HELL(空中のノーツ SKY TAP・SKY SLIDE)。社長の OK まで偽(HISTORY 10/11 02:05「HELL はデバッグで色々見てから」)。
+//   いまこの印の後ろにあるのは HELL のお話「空まで届くビート」(回想・BGM設定の枠)。HELL を公開するときに真にし、
+//   ヘルプの HELL の項目・更新履歴・お話を流すきっかけ(案A: その曲の MASTER クリアで開く)を同じ回で入れる
 const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tactics: TACTICS_MODE_PUBLIC_RELEASE,
+  rhythmHell: false,
   tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE,
   // タクティクスのEXスキル。遊べる入口(β版を含む)があって、EXの公開フラグも立っているときだけ
   tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, rhythmMulti:RHYTHM_MULTI_PUBLIC_RELEASE, friends:FRIENDS_PUBLIC_RELEASE, raidJackRhythm: RAID_JACK_RHYTHM_PUBLIC_RELEASE, get raidJack() { try { return RAID_JACK_PUBLIC_RELEASE === true && Date.now() >= Date.parse(RAID_JACK_START_AT); } catch (e) { return false; } }, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE, rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE, rhythmWeeklyRanking:RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE, rhythmEventPoints:RHYTHM_EVENT_POINTS_PUBLIC_RELEASE };
@@ -8486,6 +8493,10 @@ const MOMOSUKE_INTRO_SEEN_KEY = 'mh_momosuke_intro_seen_v1';
 // タクティクスバトルの導入会話を見たか。β公開してから1度だけ流すための判定に使う。
 // ★新しいキーを足すだけ。既存の mh_*_intro_seen_v1 は一切触らない(CLAUDE.md ⑦)
 const TACTICS_INTRO_SEEN_KEY = 'mh_tactics_intro_seen_v1';
+// 難易度 HELL のお話「空まで届くビート」を見たか(2026-10-11・新しいキー。既存のキーには触らない・CLAUDE.md ⑦)。
+// デバッグから見たぶんは立てない。HELL の公開(RELEASE_FLAGS.rhythmHell)までは読みにも行かない
+const RHYTHM_HELL_STORY_SEEN_KEY = 'mh_rhythm_hell_story_seen_v1';
+const RHYTHM_HELL_STORY_ID = 'rhythm_hell_story';
 const normalizeAssistantId = (value) => (typeof assistantIdOrDefault === 'function')
   ? assistantIdOrDefault(typeof value === 'string' ? value : null)
   : ((typeof DEFAULT_ASSISTANT_ID !== 'undefined' && DEFAULT_ASSISTANT_ID) || 'mua');
@@ -19301,6 +19312,30 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
           className="mt-3 min-h-[52px] w-full rounded-xl bg-slate-700 text-sm font-black text-white">閉じる</button>
       </section>
     </div>}
+  </div>;
+};
+// ===== 難易度 HELL の説明(2026-10-11・社長の依頼) =====
+// お話「空まで届くビート」(rhythm_hell_story)のあとに1枚ずつ出す。文は data/assistants.js の RHYTHM_HELL_GUIDE_PAGES。
+// ★形や色の描写に頼らない(SKY TAP の見た目は変わるかもしれない・社長)。文字だけで読めるようにする
+// ★HELL はまだデバッグ専用。ここが出るのは、デバッグのボタンか、デバッグでお話を見終えたときだけ(公開の印 rhythmHell)。
+//   横持ちの低い画面(640×360)でも、見出し・本文・ボタンが1画面に収まる大きさにする
+const RhythmHellGuide=({pageIndex,onPage,onClose})=>{
+  const pages=typeof RHYTHM_HELL_GUIDE_PAGES!=='undefined'&&Array.isArray(RHYTHM_HELL_GUIDE_PAGES)?RHYTHM_HELL_GUIDE_PAGES:[];
+  if(!pages.length)return null;
+  const index=Math.max(0,Math.min(pages.length-1,Number(pageIndex)||0));
+  const page=pages[index],last=index===pages.length-1;
+  return <div data-rhythm-hell-guide role="dialog" aria-modal="true" aria-label={`HELL の遊び方 ${index+1}/${pages.length}`}
+    style={{position:'fixed',inset:0,zIndex:77500,display:'flex',alignItems:'center',justifyContent:'center',padding:'12px calc(16px + env(safe-area-inset-right)) 12px calc(16px + env(safe-area-inset-left))',background:'radial-gradient(ellipse at center,rgba(30,27,75,.96),rgba(2,6,23,.98) 72%)'}}>
+    <section data-rhythm-hell-guide-card style={{width:'100%',maxWidth:'460px',maxHeight:'100%',overflowY:'auto',borderRadius:'20px',border:'1px solid rgba(244,114,182,.45)',background:'rgba(15,23,42,.92)',boxShadow:'0 0 28px rgba(244,114,182,.25)',padding:'16px 18px'}}>
+      <small style={{display:'block',fontSize:'10px',fontWeight:900,letterSpacing:'.28em',color:'#f9a8d4'}}>HELL の遊び方 {index+1}/{pages.length}</small>
+      <h2 data-rhythm-hell-guide-title style={{margin:'6px 0 0',fontSize:'22px',fontWeight:900,lineHeight:1.25,color:'#fff'}}>{page.title}</h2>
+      <p data-rhythm-hell-guide-text style={{margin:'10px 0 0',fontSize:'14px',fontWeight:700,lineHeight:1.7,color:'#e2e8f0'}}>{page.text}</p>
+      <div aria-hidden="true" style={{display:'flex',justifyContent:'center',gap:'6px',marginTop:'14px'}}>{pages.map((_,i)=><i key={i} style={{display:'block',width:i===index?'18px':'6px',height:'6px',borderRadius:'999px',background:i===index?'#f472b6':'rgba(148,163,184,.5)'}}/>)}</div>
+      <div style={{display:'grid',gridTemplateColumns:index>0?'1fr 2fr':'1fr',gap:'8px',marginTop:'14px'}}>
+        {index>0&&<button type="button" data-rhythm-hell-guide-prev onClick={()=>onPage(index-1)} style={{minHeight:'48px',borderRadius:'14px',border:'1px solid rgba(148,163,184,.4)',background:'rgba(30,41,59,.9)',color:'#e2e8f0',fontSize:'14px',fontWeight:900}}>もどる</button>}
+        <button type="button" data-rhythm-hell-guide-next onClick={()=>last?onClose():onPage(index+1)} style={{minHeight:'48px',borderRadius:'14px',border:'0',background:'linear-gradient(135deg,#db2777,#7c3aed)',color:'#fff',fontSize:'14px',fontWeight:900}}>{last?'とじる':'つぎへ'}</button>
+      </div>
+    </section>
   </div>;
 };
 
@@ -46816,6 +46851,10 @@ function MonsterHeroGame() {
   const [momosukeIntroStep, setMomosukeIntroStep] = useState(null);
   // タクティクスバトルの導入会話。公開してから、HOMEで1度だけ流す
   const [tacticsIntroSeenFlag, setTacticsIntroSeenFlag] = useState(false);
+  // 難易度 HELL のお話を見たか(RHYTHM_HELL_STORY_SEEN_KEY)と、そのあとの説明(RhythmHellGuide)の今のページ。
+  // rhythmHellGuide … null なら出さない。{page, debugList, fromList}(閉じたあとに戻る一覧)
+  const [rhythmHellStorySeenFlag, setRhythmHellStorySeenFlag] = useState(false);
+  const [rhythmHellGuide, setRhythmHellGuide] = useState(null);
   const [tacticsIntroPending, setTacticsIntroPending] = useState(false);
   // 助手との仲良し度。遊ぶほど増えて、呼び方と話す内容が変わる。
   // 助手ごとに完全に分けて持つので、切り替えてももう片方の進捗は消えない
@@ -51224,6 +51263,10 @@ function MonsterHeroGame() {
       else if (!wasOnboarded && momosukeIntroSeen !== true) { try { await storeSet(MOMOSUKE_INTRO_SEEN_KEY, true, false); setMomosukeIntroSeenFlag(true); } catch {} }
       // タクティクスバトルの導入。**公開しているときだけ**見に行く。
       // 公開前に読むと、まだ見せていないモードの会話を「未読」として抱えることになる
+      // 難易度 HELL のお話を見たか。HELL の公開(rhythmHell)のあとだけ読む(公開前は回想にも出さないので要らない)
+      if (EVENT_REPLAY_RELEASE_FLAGS.rhythmHell) {
+        try { setRhythmHellStorySeenFlag((await storeGet(RHYTHM_HELL_STORY_SEEN_KEY, false, false)) === true); } catch {}
+      }
       if (EVENT_REPLAY_RELEASE_FLAGS.tacticsBattle) {
         const tacticsIntroSeen = await storeGet(TACTICS_INTRO_SEEN_KEY, false, false);
         setTacticsIntroSeenFlag(tacticsIntroSeen === true);
@@ -52430,6 +52473,7 @@ function MonsterHeroGame() {
   // 今後イベントを増やすときは、そのイベントの既読フラグをここへ1行足すだけでよい
   const EVENT_REPLAY_UNLOCK_FLAGS = { kikiIntroSeen: kikiIntroSeenFlag, momosukeIntroSeen: momosukeIntroSeenFlag,
     tacticsIntroSeen: tacticsIntroSeenFlag,
+    rhythmHellStorySeen: rhythmHellStorySeenFlag,
     monbeatCupEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(MONBEAT_CUP_STORY_ID),
     monbeatCupThanksSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(MONBEAT_CUP_THANKS_STORY_ID),
     symphonyThanksSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_THANKS_STORY_ID),
@@ -63366,6 +63410,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             {/* デバッグ専用の試作曲(RHYTHM_PROTO_SONGS)。ここからだけ遊べる。遊んでも記録・報酬・ランキングには何も入らない(from:'proto')。
                 プレイヤーの通常プレイには出ないので、更新履歴・ヘルプには載せない */}
             <RhythmSkyLiftSwitch/>
+            {/* 難易度 HELL のお話と説明(2026-10-11)。HELL の公開前に社長が確かめるためのもの。見たことにはしない(debug)。
+                デバッグ専用なので更新履歴・ヘルプには載せない */}
+            <section data-debug-rhythm-hell-story className="mb-3 rounded-2xl border border-pink-400/50 bg-pink-950/25 p-3"><h3 className="text-xs font-black text-pink-200">HELL のお話と説明（公開前の確認用）</h3><div className="mt-2 grid grid-cols-2 gap-2"><button type="button" data-debug-rhythm-hell-story-play onClick={()=>setEventReplay({id:RHYTHM_HELL_STORY_ID,step:0,debug:true})} className="min-h-[48px] rounded-xl bg-pink-700 px-2 text-xs font-black text-white">お話を見る（→説明）</button><button type="button" data-debug-rhythm-hell-guide-open onClick={()=>setRhythmHellGuide({page:0})} className="min-h-[48px] rounded-xl bg-slate-700 px-2 text-xs font-black text-white">説明だけ見る</button></div></section>
             {RHYTHM_PROTO_SONGS.map(song=>{const track=rhythmSongTrack(song);return <section key={song.songId} data-rhythm-proto-song={song.songId} className="mb-3 rounded-2xl border border-rose-400/50 bg-rose-950/25 p-3"><div className="mb-2"><small className="text-[8px] text-rose-300">試作・{song.songId}</small><h3 className="font-black">{song.displayName} <span className="text-xs text-rose-200">{song.subtitle}</span></h3>{song.debugDescription&&<p className="mt-1 text-[10px] font-bold text-amber-200">{song.debugDescription}</p>}<p className="break-all text-[9px] text-slate-400">BGM: {song.bgmTrackId} / {track?.src||'未登録'}</p></div><div className="space-y-2">{RHYTHM_PLAY_DIFFICULTIES.filter(difficulty=>song.difficulties[difficulty.id]?.notes?.length>0).map(difficulty=>{const chart=song.difficulties[difficulty.id];return <button key={difficulty.id} type="button" data-rhythm-proto-start={difficulty.id} className={`min-h-[44px] w-full rounded-xl font-black ${difficulty.id==='HELL'?'bg-red-900 ring-1 ring-red-400/70':'bg-rose-700'}`} onClick={()=>{setRhythmPlay({song,difficulty,from:'proto'});setGameState('RHYTHM_PLAY');}}>{difficulty.id==='HELL'?'HELL をプレイ':'試作をプレイ'}（{difficulty.id} Lv.{chart.level}）</button>})}</div></section>})}
             {RHYTHM_SONGS.map(song=>{const track=rhythmSongTrack(song);return <section key={song.songId} className="mb-3 rounded-2xl border border-indigo-400/40 bg-indigo-950/30 p-3"><div className="mb-2"><small className="text-[8px] text-indigo-300">{song.songId}</small><h3 className="font-black">{song.displayName}</h3>{song.debugDescription&&<p className="mt-1 text-[10px] font-bold text-amber-200">{song.debugDescription}</p>}<p className="break-all text-[9px] text-slate-400">BGM: {song.bgmTrackId} / {track?.src||'未登録'}</p></div><div className="space-y-2">{RHYTHM_DIFFICULTIES.map(difficulty=>{const chart=song.difficulties[difficulty.id];const best=rhythmBestRecord(rhythmBestRecords,song.songId,difficulty.id);return <article key={difficulty.id} className="rounded-xl border border-white/10 bg-slate-900/80 p-2"><div className="flex items-center justify-between"><b className="text-xs text-cyan-200">{difficulty.id} Lv.{chart.level}</b><span className="text-[9px] font-mono">MAX {difficulty.maxScore.toLocaleString()}</span></div><p className="mt-1 text-[9px] text-slate-300">BEST {best.bestScore.toLocaleString()} / MAX COMBO {best.maxCombo} / {best.clear?'CLEAR':'未プレイ'}</p><p className="mt-1 break-words text-[8px] text-slate-500">{RHYTHM_JUDGMENT_IDS.map(id=>`${id} ${best.judgments[id]}`).join(' / ')}</p><p className="mt-1 text-[8px] text-slate-500">FC {best.fullCombo?'○':'-'} / ALL EXCELLENT {best.allExcellent?'○':'-'} / ALL MARVELOUS {best.allMarvelous?'○':'-'}</p>{chart.notes.length>0&&<button data-rhythm-tap-start className="mt-2 min-h-[44px] w-full rounded-xl bg-fuchsia-700 font-black" onClick={()=>{setRhythmPlay({song,difficulty,from:'debug'});setGameState('RHYTHM_PLAY');}}>リズムテストプレイ</button>}</article>})}</div></section>})}
             </div>
@@ -64871,6 +64918,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </div>
         )}
 
+        {/* 難易度 HELL の説明(お話「空まで届くビート」のあと・デバッグのボタン)。閉じたら、来た一覧へ戻る */}
+        {rhythmHellGuide&&<RhythmHellGuide pageIndex={rhythmHellGuide.page} onPage={page=>setRhythmHellGuide(g=>g&&({...g,page}))}
+          onClose={()=>{const g=rhythmHellGuide;setRhythmHellGuide(null);if(g&&g.debugList)setShowDebugStoryList(true);if(g&&g.fromList)setShowEventReplayList(true);}}/>}
         {/* デバッグ設定の「全ストーリーを確認」。公開フラグ・閲覧済みに関係なく全部を開ける。再生しても何も保存しない(debug)。
             終わる・スキップするとこの一覧へ戻る(debugList) */}
         {showDebugStoryList&&(
@@ -65741,6 +65791,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             &&!normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(RAID_JACK_STORY_START_ID)) setRhythmEventStoryPending(prev=>prev||RAID_JACK_STORY_START_ID);
           if(event&&event.id===RAID_JACK_STORY_START_ID&&eventReplay.live&&!eventReplay.debug&&RELEASE_FLAGS.raidJack===true
             &&!normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(RAID_JACK_HOWTO_STORY_ID)) setRhythmEventStoryPending(prev=>prev||RAID_JACK_HOWTO_STORY_ID);
+          // 難易度 HELL のお話は、見終えたら続けて説明(RhythmHellGuide)を出す。一覧へ戻るのは説明を閉じたあと
+          if(event&&event.id===RHYTHM_HELL_STORY_ID){
+            if(!eventReplay.debug){setRhythmHellStorySeenFlag(true);try{storeSet(RHYTHM_HELL_STORY_SEEN_KEY,true,false);}catch{}}
+            setRhythmHellGuide({page:0,debugList:!!eventReplay.debugList,fromList:!!eventReplay.fromList});
+            setEventReplay(null);return;
+          }
           if(eventReplay.debugList) setShowDebugStoryList(true);
           if(eventReplay.fromList) setShowEventReplayList(true);
           setEventReplay(null);
@@ -65754,6 +65810,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const skip=()=>{
           if(eventReplay.live&&!eventReplay.debug&&event&&RHYTHM_EVENT_STORY_IDS.includes(event.id)) void markRhythmEventStorySeen(event.id);
           if(eventReplay.live&&!eventReplay.debug&&event&&event.id==='tactics_intro') markTacticsIntroSeen();
+          // HELL のお話は飛ばしても説明は出す(遊び方は飛ばさずに知ってほしい)。見たにするのは本編で流したときだけ
+          if(event&&event.id===RHYTHM_HELL_STORY_ID){
+            if(eventReplay.live&&!eventReplay.debug){setRhythmHellStorySeenFlag(true);try{storeSet(RHYTHM_HELL_STORY_SEEN_KEY,true,false);}catch{}}
+            setRhythmHellGuide({page:0,debugList:!!eventReplay.debugList,fromList:!!eventReplay.fromList});
+            setEventReplay(null);return;
+          }
           if(eventReplay.debugList) setShowDebugStoryList(true);
           if(eventReplay.fromList) setShowEventReplayList(true);
           setEventReplay(null);
