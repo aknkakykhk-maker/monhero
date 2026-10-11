@@ -82,13 +82,21 @@ const mime = f => ({ '.js': 'application/javascript', '.html': 'text/html', '.cs
     document.querySelector('[data-rhythm-debug-select-open]')?.click();
     await new Promise(r => setTimeout(r, 1200));
     const target = [...RHYTHM_SONGS, ...RHYTHM_PROTO_SONGS].find(x => x.songId === song); if (!target) return false;
-    const row = [...document.querySelectorAll('[data-rhythm-debug-select] [data-rhythm-song-row]')].find(r => r.textContent.includes(target.displayName) && (!target.subtitle || r.textContent.includes(target.subtitle)));
+    // 曲の行は代表の版の id を持つ(版は1行にまとまる・RHYTHM_SONG_VERSION_GROUPS)。行を id で選び、版の切り替えがあればその版を押す
+    const group = (typeof RHYTHM_SONG_VERSION_GROUPS !== 'undefined' ? RHYTHM_SONG_VERSION_GROUPS : []).find(g => g.some(([id]) => id === song));
+    const ids = group ? group.map(([id]) => id) : [song];
+    const row = [...document.querySelectorAll('[data-rhythm-debug-select] [data-rhythm-song-row]')].find(r => ids.includes(r.getAttribute('data-rhythm-song-row')));
     if (!row) return false; row.click(); await new Promise(r => setTimeout(r, 500));
+    const v = document.querySelector('[data-rhythm-debug-select] [data-rhythm-song-version="' + song + '"]'); if (v) { v.click(); await new Promise(r => setTimeout(r, 400)); }
     document.querySelector('[data-rhythm-debug-select] [data-rhythm-difficulty="' + diff + '"]')?.click(); await new Promise(r => setTimeout(r, 400));
     const b = document.querySelector('[data-rhythm-debug-select] [data-rhythm-demo-start="' + diff + '"]'); if (b) b.click(); return !!b;
   }, [SONG, DIFF, ENTRY]);
   if (!started) throw new Error(`曲を始められなかった(${ENTRY} ${SONG} ${DIFF})`);
   await page.waitForFunction(() => !!document.querySelector('[data-rhythm-play-area]') && window.__mhTestHooks?.rhythmNotes?.(), null, { timeout: 30000, polling: 100 });
+  // 始まった譜面が目当ての譜面か(ノーツの数と時刻)。違えば止める(別の曲・別の版を測ってしまわないように)
+  const same = await page.evaluate(([song, diff]) => { const all = [...RHYTHM_SONGS, ...RHYTHM_PROTO_SONGS]; const c = (all.find(x => x.songId === song) || { difficulties: {} }).difficulties[diff]; const n = window.__mhTestHooks.rhythmNotes() || [];
+    return !!c && c.notes.length === n.length && c.notes.every((x, i) => Math.round(x.timeMs) === Math.round(n[i].timeMs)); }, [SONG, DIFF]);
+  if (!same) throw new Error(`始まった譜面が ${SONG} ${DIFF} と違う`);
   const info = await page.evaluate(() => ({ notes: (window.__mhTestHooks.rhythmNotes() || []).length, title: (document.querySelector('[data-rhythm-play-area]')?.closest('main')?.innerText || '').split('\n').slice(0, 4).join(' ') }));
   console.log(`演奏: ノーツ ${info.notes} / ${info.title.slice(0, 60)} / ${W}x${H} 道${ROAD || '既定'} ${DRAW} セーフ${SAFE}`);
 
