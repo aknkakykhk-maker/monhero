@@ -106,7 +106,8 @@
 | ① 叩いた光を 2D でも canvas 版に(社長が静止画を見て既定に) | 本番 | #2793(静止画 docs/perf/hitcmp/) |
 | ② 判定ごとの表示の部品は、要る値が変わったときだけ描き直す(useRhythmHudPick) | 本番 | #2798 |
 | ③ 重い飾り: 曲の準備中・演奏中は、隠れているアプリの外側の背景の絵(季節の SVG)を描かない | 本番 | #2802 |
-| ④ 残りの GPU 化 | 着手: 叩いたときの光を GPU で(板と同じ作り。GPU の描き方で一番大きい描き物・HELL でも 11.8ms/秒)。デバッグの切り替えで入れ、今の canvas 版と画素で突き合わせてから既定に。HELL の空中の箱・星は今は使われていない(空中のノーツは板と同じ作り) | ブランチ claude/rhythm-hell-gpu |
+| ④ その1: 叩いた光の粒を焼いた丸で(既定は今の形・社長の判断待ち) | main(切り替え) | #2803 |
+| ④ 残り(ノーツの板・判定の文字など) | 引き継ぎ。[`RHYTHM_HEAT_HANDOFF.md`](RHYTHM_HEAT_HANDOFF.md) | — |
 
 測り方の控え: 重さは `node tools/playbot/rhythm-perf-bench.js --songs sheriruth:MASTER,freedom_dive:MASTER --cpu 1,4 --draw gpu --roots main=<main の worktree>,new=.`。
 **ほかの検査やビルドを並べて回さない**(CPU を取り合って表が乱れる。2026-10-11 に一度乱れて測り直した)。
