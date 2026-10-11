@@ -240,6 +240,23 @@ section('SLIDE: 追従・折り返し・SLIDE中TAP');
   check('折り返しの経路も時間で補間される',Math.abs(laneAt(1500)-2)<1e-9&&Math.abs(laneAt(2000)-4)<1e-9&&Math.abs(laneAt(2250)-3)<1e-9);
 }
 
+section('SLIDE: 指が帯から外れている間の印(帯を暗くする見た目だけ・判定は変えない)');
+{
+  reset();
+  const run=makeRun([slide([[1000,0],[3000,0]],2),hold(1500,2500,8,2)]);
+  check('押さえる前は外れの印が無い(帯は暗くならない)',RT.slideOffForIndex(0)===false);
+  starts(run,[at('touch:1',.5)],1000);
+  const session=[...RT._sessions.values()].find(item=>item.kind==='SLIDE');
+  check('帯の上を押さえている間は印が無い',RT.slideOffForIndex(0)===false);
+  const before=JSON.stringify(run.notes[0]);
+  session.trackingBadSincePerf=1234;
+  check('外れ始めの記録があれば印が立つ',RT.slideOffForIndex(0)===true);
+  check('印を読んでもノーツの判定の状態は変わらない',JSON.stringify(run.notes[0])===before);
+  check('ほかのノーツには印が立たない',RT.slideOffForIndex(1)===false&&RT.slideOffForIndex(7)===false);
+  session.trackingBadSincePerf=null;
+  check('帯に戻れば印が消える',RT.slideOffForIndex(0)===false);
+}
+
 section('FLICK: 成立・不成立・終点フリック');
 {
   reset();

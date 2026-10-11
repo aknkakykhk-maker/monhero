@@ -30,6 +30,8 @@ const PAGE=`<!doctype html><html><head><meta charset="utf-8"><style>html,body{ma
 </body></html>`;
 // 許す幅。ふちのなめらかさ(アンチエイリアス)と、帯の刻み方(今の描き方はいまの位置から刻み、新しい描き方は譜面の点から刻む)の差だけが出る
 // bigOver: 差の大きい画素(どれかの値が64以上違う)が、今の WebGL と 2D の間より何画素多いか。細い線(区切りの線)の抜けは平均の差に埋もれるので、これで見る
+//   色は「濃さを掛けた色」(画面に重ねたときに出る色)で比べる(2026-10-11)。ほぼ透明な画素(薄い光のふち)は、濃さを掛ける前の色だと
+//   なめらかさのわずかな違い(1画素の5%)でも 64 以上ずれて数えられてしまう(ノーツの板を GPU で描いたときに演出量 最小の場面で出た)
 const LIMIT={avg:1.5,missing:.003,extra:.003,overBase:.3,bigOver:200};
 (async()=>{
   let playwright;
@@ -112,7 +114,7 @@ const LIMIT={avg:1.5,missing:.003,extra:.003,overBase:.3,bigOver:200};
             const isSlide=rhythmNoteIsSlide(note);if(isSlide){drawnSlides++;if(geo.slideGpu){gpuSlides++;if(!rhythmSlideHasSky(note))lines+=rhythmSlideCheckpointLines(note,visualTime,{chartNowMs:visualTime,visualTime,travelMs,spawnY,travelPx},rect,noteHeight/2).length;}}
             const failedNote=st.failEvery&&isSlide&&(note.index??note.timeMs)%2===1;
             const depthScale=Math.round((0.56+geo.scale*.44)*100)/100,brightness=Math.round((0.72+geo.scale*.28)*100)/100;
-            R.drawNote(note,geo,{failed:failedNote,monster:false,wide:rhythmNoteIsWide(note),pressed:holding&&!failedNote,heldMs:visualTime-note.timeMs,alpha:failedNote?.34:1,pop:null,depthScale,brightness});
+            R.drawNote(note,geo,{failed:failedNote,monster:false,wide:rhythmNoteIsWide(note),pressed:holding&&!failedNote,slideOff:holding&&isSlide&&!failedNote&&(note.index??note.timeMs)%3===0/* 指が帯から外れて暗くなる状態も2Dと突き合わせる */,heldMs:visualTime-note.timeMs,alpha:failedNote?.34:1,pop:null,depthScale,brightness});
           }
           R.end();
           return {drawnSlides,gpuSlides,lines};
@@ -128,7 +130,7 @@ const LIMIT={avg:1.5,missing:.003,extra:.003,overBase:.3,bigOver:200};
           frames.forEach((fr,i)=>{drawFrame(fr,false);results[i].B=snap(cv);const n=drawFrame(fr,true);results[i].C=snap(cv);results[i].n=n;});R.release();R.additiveGlow=true;}
         const BIG=64;
         const cmp=(X,Y)=>{let sum=0,opaqueX=0,opaqueY=0,missing=0,extra=0,big=0;
-          for(let i=0;i<X.length;i+=4){let d=0;for(let k=0;k<4;k++){const e=Math.abs(X[i+k]-Y[i+k]);sum+=e;if(e>d)d=e;}if(d>=BIG)big++;if(X[i+3]>128){opaqueX++;if(Y[i+3]<32)missing++;}if(Y[i+3]>128){opaqueY++;if(X[i+3]<32)extra++;}}
+          for(let i=0;i<X.length;i+=4){let d=0;const ax=X[i+3]/255,ay=Y[i+3]/255;for(let k=0;k<4;k++){const e=Math.abs(X[i+k]-Y[i+k]);sum+=e;const p=k<3?Math.abs(X[i+k]*ax-Y[i+k]*ay):e;if(p>d)d=p;}if(d>=BIG)big++;if(X[i+3]>128){opaqueX++;if(Y[i+3]<32)missing++;}if(Y[i+3]>128){opaqueY++;if(X[i+3]<32)extra++;}}
           return {avg:sum/X.length,missing:opaqueX?missing/opaqueX:0,extra:opaqueY?extra/opaqueY:0,opaque:opaqueX,big};};
         const toUrl=(data,diffWith)=>{const s=document.createElement('canvas');s.width=size.w*2;s.height=size.h*2;const x=s.getContext('2d');const img=x.createImageData(s.width,s.height);
           if(diffWith){for(let i=0;i<data.length;i+=4){let d=0;for(let k=0;k<4;k++)d=Math.max(d,Math.abs(data[i+k]-diffWith[i+k]));img.data[i]=Math.min(255,d*4);img.data[i+1]=d>24?255:0;img.data[i+2]=0;img.data[i+3]=255;}}
