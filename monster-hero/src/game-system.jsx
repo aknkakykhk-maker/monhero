@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: dafc8e6af8441edb
+// generated-sha256: 478c84de6a3f84ee
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-11 19:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-11 19:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -19884,6 +19884,15 @@ function RhythmSkyLiftSwitch(){
   return <section data-rhythm-sky-lift-switch className="mb-3 rounded-2xl border border-rose-400/50 bg-rose-950/25 p-3"><h3 className="text-xs font-black text-rose-100">縦画面の空中の高さの差(試作・見比べ用)</h3>
     <p className="mt-1 text-[10px] font-bold text-rose-200/80">空中と地上の判定ラインの差(画面の高さに対する割合)。横画面は39%のまま。ここで選んだ値は縦画面の試作の HELL だけに効きます。</p>
     <div className="mt-2 grid grid-cols-3 gap-2">{[16,25,39].map(v=><button key={v} type="button" data-rhythm-sky-lift={v} aria-pressed={value===v} onClick={()=>pick(v)} className={`min-h-[44px] rounded-xl text-sm font-black ${value===v?'bg-rose-600 text-white ring-2 ring-rose-200':'bg-slate-800 text-slate-300'}`}>{v}%{v===16?'(いま)':''}</button>)}</div></section>;
+}
+// SKY TAP の見た目の案を切り替える(デバッグ専用・2026-10-11 社長「スカイは透明だけどちょっと見にくい」)。保存は新しいキー mh_sky_box_look_proto だけ。
+// ふつうのプレイ(この画面を通らない)はいまの案Zのまま
+function RhythmSkyBoxLookSwitch(){
+  const [value,setValue]=useState(()=>RHYTHM_SKY_BOX_VARIANT.id);
+  const pick=v=>{RHYTHM_SKY_BOX_VARIANT.set(v);setValue(RHYTHM_SKY_BOX_VARIANT.id);};
+  return <section data-rhythm-sky-box-look-switch className="mb-3 rounded-2xl border border-rose-400/50 bg-rose-950/25 p-3"><h3 className="text-xs font-black text-rose-100">SKY TAP の見た目(試作・見比べ用)</h3>
+    <p className="mt-1 text-[10px] font-bold text-rose-200/80">ここで選んだ見た目は試作の HELL だけに効きます。描く数は変わりません。</p>
+    <div className="mt-2 grid grid-cols-2 gap-2">{Object.keys(RHYTHM_SKY_BOX_LOOKS).map(v=><button key={v} type="button" data-rhythm-sky-box-look={v} aria-pressed={value===v} onClick={()=>pick(v)} className={`min-h-[44px] rounded-xl px-1 text-xs font-black ${value===v?'bg-rose-600 text-white ring-2 ring-rose-200':'bg-slate-800 text-slate-300'}`}>{RHYTHM_SKY_BOX_LOOK_LABELS[v]}</button>)}</div></section>;
 }
 const RhythmMonsterNoteGuide=()=>{
   const ratios=rhythmMonsterNoteBaseRatios(RHYTHM_MONSTER_SLOT_MAX).map(ratio=>`${Math.round(ratio*100)}%`);
@@ -63434,6 +63443,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             {/* デバッグ専用の試作曲(RHYTHM_PROTO_SONGS)。ここからだけ遊べる。遊んでも記録・報酬・ランキングには何も入らない(from:'proto')。
                 プレイヤーの通常プレイには出ないので、更新履歴・ヘルプには載せない */}
             <RhythmSkyLiftSwitch/>
+            <RhythmSkyBoxLookSwitch/>
             {/* 難易度 HELL のお話と説明(2026-10-11)。HELL の公開前に社長が確かめるためのもの。見たことにはしない(debug)。
                 デバッグ専用なので更新履歴・ヘルプには載せない */}
             <section data-debug-rhythm-hell-story className="mb-3 rounded-2xl border border-pink-400/50 bg-pink-950/25 p-3"><h3 className="text-xs font-black text-pink-200">HELL のお話と説明（公開前の確認用）</h3><div className="mt-2 grid grid-cols-2 gap-2"><button type="button" data-debug-rhythm-hell-story-play onClick={()=>setEventReplay({id:RHYTHM_HELL_STORY_ID,step:0,debug:true})} className="min-h-[48px] rounded-xl bg-pink-700 px-2 text-xs font-black text-white">お話を見る（→説明）</button><button type="button" data-debug-rhythm-hell-guide-open onClick={()=>setRhythmHellGuide({page:0})} className="min-h-[48px] rounded-xl bg-slate-700 px-2 text-xs font-black text-white">説明だけ見る</button></div></section>

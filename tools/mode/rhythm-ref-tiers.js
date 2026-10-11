@@ -81,7 +81,7 @@ const placeMonsters=(notes,{grid,stops=[]}={})=>{
 const fromRuntime=notes=>(notes||[]).map(n=>{
   const sky=Number(n.skyHeight)>0?1:0;
   if(n.type==='SLIDE')return {k:'s',hand:n.hand||null,endFlick:!!n.endFlick,pts:(n.slidePoints&&n.slidePoints.length?n.slidePoints:[{timeMs:n.timeMs,lane:n.lane,subLaneWidth:n.subLaneWidth},{timeMs:n.endTimeMs,lane:n.endLane??n.lane,subLaneWidth:n.subLaneWidth}])
-    .map(p=>[Number(p.timeMs),Number(p.lane),Number(p.subLaneWidth)||2,Number(p.skyHeight??p.height)||0,0])};
+    .map(p=>[Number(p.timeMs),Number(p.lane),Number(p.subLaneWidth)||2,Number(p.sky??p.skyHeight??p.height)||0,0])};
   if(n.type==='HOLD')return {k:'h',t:Number(n.timeMs),end:Number(n.endTimeMs),sub:Number(n.subLane),w:Number(n.subLaneWidth)||2,sky};
   return {k:n.type==='FLICK'?'f':'t',t:Number(n.timeMs),sub:Number(n.subLane),w:Number(n.subLaneWidth)||2,sky,dir:n.direction||'',...(n.monsterSlot?{mon:n.monsterSlot}:{})};
 });
@@ -152,7 +152,8 @@ const thumbCheck=(notes,prof=THUMB_PROFILES.landscape,beatMs=500,{beam=THUMB_BEA
     return out;
   };
   const apply=(hd,n,h,t,x,y)=>{const st=hd[h]={...hd[h]};
-    st.x=n.k==='s'?slideX(n,endOf(n)):x;st.y=n.k==='s'?0:y;st.last=n.k==='s'?endOf(n):t;
+    // スライドの高さは点の4つめ(空中 0〜1)。終わりの高さを親指の位置にする
+    st.x=n.k==='s'?slideX(n,endOf(n)):x;st.y=n.k==='s'?(Number(n.pts[n.pts.length-1][3])||0):y;st.last=n.k==='s'?endOf(n):t;
     st.span=n.k==='s'||n.k==='h'?null:usableTouchSpan({subLane:n.sub,subLaneWidth:n.w});
     if(n.k==='s'){st.slide=n;st.busyUntil=endOf(n);}else if(n.k==='h')st.busyUntil=n.end;};
   const groups=[];for(const n of list){const g=groups[groups.length-1];if(g&&Math.abs(startOf(g[0])-startOf(n))<5)g.push(n);else groups.push([n]);}
@@ -167,7 +168,7 @@ const thumbCheck=(notes,prof=THUMB_PROFILES.landscape,beatMs=500,{beam=THUMB_BEA
     for(const st0 of states)for(const sp of slidePlans){
       const hd={...st0.hd};let cost=st0.cost,log=st0.log;
       S.forEach((s,i)=>{const h=sp[i],x0=s.pts[0][1]+0.5;
-        for(const iss of judge(hd,h,t,x0,0,null)){cost+=W[iss.kind];log={iss:{t,x:x0,what:`スライド(${h})の始まり`,...iss},prev:log};}
+        for(const iss of judge(hd,h,t,x0,Number(s.pts[0][3])||0,null)){cost+=W[iss.kind];log={iss:{t,x:x0,what:`スライド(${h})の始まり`,...iss},prev:log};}
         if(!s.hand)cost+=sideCost(x0,h);
         log={pick:[s,h],prev:log};apply(hd,s,h,t,null,0);});
       let taps=T0;const fr=['L','R'].filter(h=>free(hd,h,t));
