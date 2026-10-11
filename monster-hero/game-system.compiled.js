@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d760c49aab05999b
+// source-sha256: ee33bc25e133a869
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-11 18:17";
+const BUILD_DATE = "2026-10-11 18:30";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -24701,7 +24701,7 @@ const storeList = async (prefix, shared = false) => {
 const ASSET_CACHE_KEY = 'mh_asset_prefetch_v1';
 const ASSET_CACHE_NAME = 'mh-assets-v1';
 const ASSET_CACHE_META = 'mh-assets-meta-v1';
-const ASSET_CACHE_DEFAULT_ENABLED = false;
+const ASSET_CACHE_DEFAULT_ENABLED = true;
 const ASSET_PACKS = [{
   id: 'beat',
   icon: '🎵',
@@ -24728,7 +24728,8 @@ const ASSET_RECENT_SONG_LIMIT = 12;
 const normalizeAssetCacheSettings = raw => {
   const src = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
   return {
-    enabled: typeof src.enabled === 'boolean' ? src.enabled : ASSET_CACHE_DEFAULT_ENABLED,
+    enabled: src.enabledChosen === true && typeof src.enabled === 'boolean' ? src.enabled : ASSET_CACHE_DEFAULT_ENABLED,
+    enabledChosen: src.enabledChosen === true,
     auto: typeof src.auto === 'boolean' ? src.auto : true,
     songs: Array.isArray(src.songs) ? src.songs.filter(s => typeof s === 'string' && s).slice(0, ASSET_RECENT_SONG_LIMIT) : []
   };
@@ -25132,7 +25133,8 @@ const ASSET_CACHE = (() => {
     async setEnabled(next) {
       settings = {
         ...settings,
-        enabled: !!next
+        enabled: !!next,
+        enabledChosen: true
       };
       save();
       if (settings.enabled) {
@@ -46433,7 +46435,15 @@ function AssetDownloadPage({
     className: `${SCREEN_LIST_CLASS} w-full max-w-md mx-auto space-y-3 pb-20`
   }, React.createElement("p", {
     className: "px-1 text-[11px] font-bold leading-relaxed text-slate-300"
-  }, "曲や画像を前もってこの端末に入れておくと、はじめて開く画面や曲がすぐ始まります。アップデートで変わったものだけを入れ直し、古いものは自動で消えます。"), !asset.supported && React.createElement("p", {
+  }, "曲や画像を前もってこの端末に入れておくと、はじめて開く画面や曲がすぐ始まります。アップデートで変わったものだけを入れ直し、古いものは自動で消えます。"), asset.supported && !asset.enabled && React.createElement("div", {
+    "data-asset-disabled": true,
+    className: "rounded-xl border border-cyan-400/40 bg-cyan-950/30 px-3 py-2 text-[11px] font-bold leading-relaxed text-cyan-100"
+  }, React.createElement("p", null, "いまはダウンロードを使わない設定になっています。"), React.createElement("button", {
+    type: "button",
+    "data-asset-enable": true,
+    onClick: () => asset.setEnabled(true),
+    className: "mt-2 w-full min-h-[48px] rounded-xl border border-emerald-400/60 bg-emerald-700 px-2 text-[12px] font-black text-white active:scale-95"
+  }, "ダウンロードを使う")), !asset.supported && React.createElement("p", {
     "data-asset-unsupported": true,
     className: "rounded-xl border border-amber-400/40 bg-amber-950/30 px-3 py-2 text-[11px] font-bold leading-relaxed text-amber-100"
   }, "この端末・ブラウザでは前もって入れておくことができません。ふだんどおり、開いたときに読み込みます。"), ASSET_PACKS.map(pack => {
@@ -46490,7 +46500,7 @@ function AssetDownloadPage({
     }, "取り消す") : React.createElement("button", {
       type: "button",
       "data-asset-download": pack.id,
-      disabled: !asset.supported || !!job || complete,
+      disabled: !asset.supported || !asset.enabled || !!job || complete,
       onClick: () => asset.download(pack.id),
       className: "min-h-[48px] rounded-xl border border-emerald-400/60 bg-emerald-700 px-2 text-[12px] font-black text-white active:scale-95 disabled:opacity-40"
     }, complete ? '入っています' : st.haveCount > 0 ? '残りを入れる' : 'ダウンロード'), React.createElement("button", {
@@ -46667,7 +46677,7 @@ function SettingsScreen({
     desc: "画面ごとにハロウィン／クラシックを選ぶ",
     onClick: onOpenScreenTheme,
     "data-open-screen-theme": true
-  }), ASSET_CACHE.enabled && React.createElement(SettingsMenuLink, {
+  }), React.createElement(SettingsMenuLink, {
     icon: "📥",
     label: "ダウンロード",
     desc: "曲や画像を前もって端末に入れておく",

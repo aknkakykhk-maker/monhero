@@ -4,7 +4,7 @@
 //
 // 説明の正本: docs/spec/ASSET_PREFETCH.md。見ること:
 //  ① 一覧(asset-manifest.json)が音源・画像の中身と合っている / SW が扱うのは音源と画像だけ(コードの形)
-//  ② ONで SW が登録され、ページを支配する。HTML・JS・CSS・JSON を SW が返していない(=ゲーム本体の更新を止めない)
+//  ② 既定で ON(保存値なし・壊れた値も)。SW が登録され、ページを支配する。HTML・JS・CSS・JSON を SW が返していない(=ゲーム本体の更新を止めない)
 //  ③ まとまりのダウンロードで、全部が端末に入る。取り消すと途中で止まる。端末から消すと0件になる
 //  ④ アップデートの真似(絵を1枚差し替え、一覧の版を変える)で、古い版が消え、新しい中身が返る
 //  ⑤ OFFで SW が外れ、ためたものが消える
@@ -40,6 +40,9 @@ console.log('① 一覧とコードの形');
   const keys = [...new Set([...part.matchAll(/['"](mh_[a-z0-9_]+)['"]/g)].map(m => m[1]))];
   check('ページ側が使う保存キーは mh_asset_prefetch_v1 だけ', keys.length === 1 && keys[0] === OWN_KEY, keys.join(','));
   check('ページ側は storeSet(セーブデータの保存)を使わない', !/storeSet\(/.test(part));
+  check('本人が入/切を押したときだけ enabledChosen を書く', /enabled: !!next, enabledChosen: true/.test(part) && (part.match(/enabledChosen: true/g) || []).length === 1);
+  const settingsSrc = fs.readFileSync(path.join(GAME, 'src', 'parts', '51-screen-settings.jsx'), 'utf8');
+  check('設定の「ダウンロード」の行は、入/切に関係なく出す', /\n\s*<SettingsMenuLink icon="📥"[^\n]*data-open-asset-download\/>/.test(settingsSrc) && !/ASSET_CACHE\.enabled && <SettingsMenuLink/.test(settingsSrc));
 }
 
 // ---- 配信(差し替えの真似ができる) ----
@@ -81,7 +84,7 @@ const waitFor = async (page, fn, arg, timeout = 120000) => page.waitForFunction(
   try {
     await page.goto(BASE + 'index.html', { waitUntil: 'load' });
     await waitFor(page, () => typeof ASSET_CACHE !== 'undefined');
-    // ゲーム自身が起動のたびに書くキー(遊んだ時間・ランキングの控えなど)を、事前ダウンロードを使わずに
+    // ゲーム自身が起動のたびに書くキー(遊んだ時間・ランキングの控えなど)を、ダウンロードの操作をせずに
     // 同じ回数だけ開き直して先に調べる。比べるのはそれ以外のキー(SW は localStorage を触れないので、見るのはページ側)
     const control0 = await snapshotSave();
     for (let i = 0; i < 3; i++) { await page.reload({ waitUntil: 'load' }); await waitFor(page, () => typeof ASSET_CACHE !== 'undefined'); }
@@ -92,9 +95,19 @@ const waitFor = async (page, fn, arg, timeout = 120000) => page.waitForFunction(
     const save0 = await snapshotSave();
 
     console.log('② ONで登録・ゲーム本体には手を出さない');
-    check('最初は OFF(既定)で、SW は登録されていない', await page.evaluate(async () => !ASSET_CACHE.enabled && (await navigator.serviceWorker.getRegistrations()).length === 0));
-    await page.evaluate(() => ASSET_CACHE.setEnabled(true));
+    // 既定は入・自動ダウンロード「する」(2026-10-11 公開)。保存値が無い・壊れている人も既定値になり、
+    // 「しない」を選んだ人・切にした人の保存値は上書きしない(CLAUDE.md ⑦)
+    check('最初から ON・自動ダウンロード「する」(保存値なしの既定)', await page.evaluate(() => ASSET_CACHE.enabled && ASSET_CACHE.auto));
+    const norm = await page.evaluate(() => [null, 'こわれた', [1], { enabled: 'yes', auto: 3, songs: 'x' },
+      { auto: false }, { enabled: false, enabledChosen: true }, { enabled: false, auto: true, songs: ['a'] }]
+      .map(v => normalizeAssetCacheSettings(v)));
+    check('保存値が無い・壊れているときは既定値(入・する)', norm.slice(0, 4).every(n => n.enabled === true && n.auto === true && Array.isArray(n.songs) && n.songs.length === 0));
+    check('「しない」を選んだ人・本人が切にした人の保存値はそのまま', norm[4].enabled === true && norm[4].auto === false && norm[5].enabled === false && norm[5].auto === true);
+    check('既定が切だったころに書かれた enabled:false(本人の印なし)は、既定(入)で読む・ほかの保存値は残す',
+      norm[6].enabled === true && norm[6].auto === true && norm[6].songs.join() === 'a');
     await waitFor(page, () => navigator.serviceWorker.ready.then(() => true));
+    // ここから先は件数を数えるので、自動ダウンロードは止めておく
+    await page.evaluate(() => ASSET_CACHE.setAuto(false));
     await page.reload({ waitUntil: 'load' });
     await waitFor(page, () => typeof ASSET_CACHE !== 'undefined' && !!navigator.serviceWorker.controller);
     check('ONにすると SW がページを支配する', await page.evaluate(() => !!navigator.serviceWorker.controller && ASSET_CACHE.enabled));
@@ -171,6 +184,27 @@ const waitFor = async (page, fn, arg, timeout = 120000) => page.waitForFunction(
       caches: (await caches.keys()).filter(n => n.startsWith('mh-assets-')),
     }));
     check('OFFにすると SW が外れ、ためたものが消える', off.regs === 0 && off.caches.length === 0, JSON.stringify(off));
+
+    console.log('⑦ 既定が切だったころに曲を選んだ端末');
+    {
+      const ctx2 = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'allow' });
+      await ctx2.addInitScript((key) => { if (!sessionStorage.getItem('seeded')) { sessionStorage.setItem('seeded', '1'); localStorage.setItem(key, JSON.stringify({ enabled: false, auto: true, songs: ['six_eternel'] })); } }, OWN_KEY);
+      const p2 = await ctx2.newPage();
+      await p2.goto(BASE + 'index.html', { waitUntil: 'load' });
+      await waitFor(p2, () => typeof ASSET_CACHE !== 'undefined');
+      const st2 = await p2.evaluate(async () => ({ enabled: ASSET_CACHE.enabled, auto: ASSET_CACHE.auto, reg: !!(await navigator.serviceWorker.getRegistration()) }));
+      check('1段目の保存値(enabled:false・印なし)で開くと入になり、自動ダウンロードも「する」', st2.enabled && st2.auto, JSON.stringify(st2));
+      await waitFor(p2, () => navigator.serviceWorker.getRegistration().then(r => !!r));
+      check('そのとき SW が登録される', true);
+      // 本人が切にしたら、開き直しても切のまま
+      await p2.evaluate(() => ASSET_CACHE.setEnabled(false));
+      await p2.reload({ waitUntil: 'load' });
+      await waitFor(p2, () => typeof ASSET_CACHE !== 'undefined');
+      const st3 = await p2.evaluate(async () => ({ enabled: ASSET_CACHE.enabled, regs: (await navigator.serviceWorker.getRegistrations()).length, saved: JSON.parse(localStorage.getItem('mh_asset_prefetch_v1')) }));
+      check('本人が切にした人は、開き直しても切のまま(SW も登録しない)', !st3.enabled && st3.regs === 0, JSON.stringify(st3));
+      check('切り替えても、最近選んだ曲などほかの保存値は残る', Array.isArray(st3.saved.songs) && st3.saved.songs.includes('six_eternel'));
+      await ctx2.close();
+    }
 
     console.log('⑥ 保存データ');
     const save1 = await snapshotSave();

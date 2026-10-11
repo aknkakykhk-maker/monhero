@@ -9,13 +9,15 @@
 //   中身が変わったファイルは別の鍵になり、古い絵や音は出ない。一覧から消えた・版の違うものは SW が消す
 // ・保存データ(mh_*)・ランキングには触れない。この仕組みの記憶は専用キー mh_asset_prefetch_v1 だけ
 //   (入/切・自動の前もって落とし・最近選んだ曲)。読めない・壊れているときは既定値に戻す
-// ・はじめはデバッグで入れる(ASSET_CACHE_DEFAULT_ENABLED=false)。切にすると SW を外し、ためたものも消す
+// ・既定は入(ASSET_CACHE_DEFAULT_ENABLED)。DEBUG MENU の切り替えで切にすると SW を外し、ためたものも消す
 // ・演奏前の準備中・演奏中は、自動の前もって落としを止める(修理部ドライバーくんの印
 //   window.__mhSongPrepBusy / __mhSongPlaying と mh:song-prep-* / mh:song-play-* を見る)
 const ASSET_CACHE_KEY = 'mh_asset_prefetch_v1';
 const ASSET_CACHE_NAME = 'mh-assets-v1';
 const ASSET_CACHE_META = 'mh-assets-meta-v1';
-const ASSET_CACHE_DEFAULT_ENABLED = false;
+// 2026-10-11 社長の了承で既定を入にした(「既定『する』で公開」)。保存値が無い人(既存・新規とも)は入・自動ダウンロードも「する」。
+// 一度「しない」を選んだ人(auto:false)や、デバッグで切にした人(enabled:false)の保存値はそのまま使う(normalizeAssetCacheSettings)
+const ASSET_CACHE_DEFAULT_ENABLED = true;
 // 設定の「ダウンロード」に並べるまとまり。容量は一覧(asset-manifest.json)から出す
 const ASSET_PACKS = [
   { id: 'beat', icon: '🎵', label: 'モンヒロビート', desc: '全曲の音源とジャケット' },
@@ -31,7 +33,11 @@ const ASSET_RECENT_SONG_LIMIT = 12;
 const normalizeAssetCacheSettings = (raw) => {
   const src = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
   return {
-    enabled: typeof src.enabled === 'boolean' ? src.enabled : ASSET_CACHE_DEFAULT_ENABLED,
+    // 入/切は、本人が切り替えたとき(enabledChosen:true)だけ保存値を使う。
+    // 既定が切だったころ(2026-10-11 #2739〜#2743)に、曲を選んだだけで enabled:false が書かれていた端末がある。
+    // それは本人の選択ではないので、印の無い enabled は読まずに既定で読む(読み方を変えるだけで、保存値は書き換えない)
+    enabled: src.enabledChosen === true && typeof src.enabled === 'boolean' ? src.enabled : ASSET_CACHE_DEFAULT_ENABLED,
+    enabledChosen: src.enabledChosen === true,
     auto: typeof src.auto === 'boolean' ? src.auto : true,
     songs: Array.isArray(src.songs) ? src.songs.filter(s => typeof s === 'string' && s).slice(0, ASSET_RECENT_SONG_LIMIT) : [],
   };
@@ -295,7 +301,7 @@ const ASSET_CACHE = (() => {
       return settings.enabled;
     },
     async setEnabled(next) {
-      settings = { ...settings, enabled: !!next };
+      settings = { ...settings, enabled: !!next, enabledChosen: true };
       save();
       if (settings.enabled) { listen(); await register(); startAuto(); } else { cancel(); autoQueue.length = 0; autoQueued.clear(); await unregister(); }
       await refreshStatus();
