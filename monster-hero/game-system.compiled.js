@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c5df48d43e20f3fc
+// source-sha256: 44e2f423ae68f91f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-12 00:43";
+const BUILD_DATE = "2026-10-12 00:50";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -391,7 +391,7 @@ const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
     return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.rhythmMulti === true;
   },
   get rhythmHell() {
-    return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.rhythmHell === true;
+    return typeof rhythmHellOpen === 'function' ? rhythmHellOpen() : typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.rhythmHell === true;
   }
 });
 const eventReplayReleased = event => !event?.releaseFlag || EVENT_REPLAY_RELEASE_FLAGS[event.releaseFlag] === true;
@@ -11874,6 +11874,9 @@ const MOMOSUKE_INTRO_SEEN_KEY = 'mh_momosuke_intro_seen_v1';
 const TACTICS_INTRO_SEEN_KEY = 'mh_tactics_intro_seen_v1';
 const RHYTHM_HELL_STORY_SEEN_KEY = 'mh_rhythm_hell_story_seen_v1';
 const RHYTHM_HELL_STORY_ID = 'rhythm_hell_story';
+const RHYTHM_HELL_STORY_SEEN_PREVIEW_KEY = 'mh_rhythm_hell_story_seen_preview_proto';
+const rhythmHellStorySeenKey = () => typeof rhythmHellReleased === 'function' && rhythmHellReleased() ? RHYTHM_HELL_STORY_SEEN_KEY : RHYTHM_HELL_STORY_SEEN_PREVIEW_KEY;
+const RHYTHM_HELL_STORY_TRIGGER = 'after-result';
 const normalizeAssistantId = value => typeof assistantIdOrDefault === 'function' ? assistantIdOrDefault(typeof value === 'string' ? value : null) : typeof DEFAULT_ASSISTANT_ID !== 'undefined' && DEFAULT_ASSISTANT_ID || 'mua';
 const ASSISTANT_BOND_KEY = 'mh_assistant_bond_v1';
 const assistantBondKeyFor = assistantId => {
@@ -31296,6 +31299,49 @@ function RhythmSkyLiftSwitch() {
     onClick: () => pick(v),
     className: `min-h-[44px] rounded-xl text-sm font-black ${value === v ? 'bg-rose-600 text-white ring-2 ring-rose-200' : 'bg-slate-800 text-slate-300'}`
   }, v, "%", v === 16 ? '(いま)' : ''))));
+}
+function RhythmHellPreviewSwitch({
+  onChange
+}) {
+  const [on, setOn] = useState(() => typeof rhythmHellPreviewOn === 'function' && rhythmHellPreviewOn());
+  const set = v => {
+    try {
+      if (v) localStorage.setItem(RHYTHM_HELL_PREVIEW_KEY, '1');else localStorage.removeItem(RHYTHM_HELL_PREVIEW_KEY);
+    } catch (e) {}
+    setOn(v);
+    onChange && onChange();
+  };
+  const resetSeen = () => {
+    try {
+      localStorage.removeItem(RHYTHM_HELL_STORY_SEEN_PREVIEW_KEY);
+    } catch (e) {}
+    onChange && onChange();
+  };
+  return React.createElement("div", {
+    "data-rhythm-hell-preview": true,
+    className: "mt-3 border-t border-pink-400/30 pt-2"
+  }, React.createElement("p", {
+    className: "text-[10px] font-bold text-pink-200/90"
+  }, "公開の印が真だったら(試す)。入にすると、HELL のある曲で MASTER をクリアすると HELL が開き、初めてならお話 → 説明が出ます。本番の印は変わりません。"), React.createElement("div", {
+    className: "mt-2 grid grid-cols-3 gap-2"
+  }, React.createElement("button", {
+    type: "button",
+    "data-rhythm-hell-preview-pick": "off",
+    "aria-pressed": !on,
+    onClick: () => set(false),
+    className: `min-h-[44px] rounded-xl text-xs font-black ${!on ? 'bg-pink-700 text-white ring-2 ring-pink-200' : 'bg-slate-800 text-slate-300'}`
+  }, "切(いま)"), React.createElement("button", {
+    type: "button",
+    "data-rhythm-hell-preview-pick": "on",
+    "aria-pressed": on,
+    onClick: () => set(true),
+    className: `min-h-[44px] rounded-xl text-xs font-black ${on ? 'bg-pink-700 text-white ring-2 ring-pink-200' : 'bg-slate-800 text-slate-300'}`
+  }, "入"), React.createElement("button", {
+    type: "button",
+    "data-rhythm-hell-preview-reset": true,
+    onClick: resetSeen,
+    className: "min-h-[44px] rounded-xl bg-slate-700 text-[10px] font-black text-white"
+  }, "試したお話を未読に")));
 }
 const RHYTHM_SKY_LANE_LOOK_LABELS = Object.freeze({
   none: 'いま(なし)',
@@ -75877,6 +75923,7 @@ function MonsterHeroGame() {
   const [tacticsIntroSeenFlag, setTacticsIntroSeenFlag] = useState(false);
   const [rhythmHellStorySeenFlag, setRhythmHellStorySeenFlag] = useState(false);
   const [rhythmHellGuide, setRhythmHellGuide] = useState(null);
+  const rhythmHellStoryAfterResultRef = useRef(false);
   const [tacticsIntroPending, setTacticsIntroPending] = useState(false);
   const [assistantBonds, setAssistantBonds] = useState({});
   const assistantBondsRef = useRef({});
@@ -80203,7 +80250,7 @@ function MonsterHeroGame() {
       }
       if (EVENT_REPLAY_RELEASE_FLAGS.rhythmHell) {
         try {
-          setRhythmHellStorySeenFlag((await storeGet(RHYTHM_HELL_STORY_SEEN_KEY, false, false)) === true);
+          setRhythmHellStorySeenFlag((await storeGet(rhythmHellStorySeenKey(), false, false)) === true);
         } catch {}
       }
       if (EVENT_REPLAY_RELEASE_FLAGS.tacticsBattle) {
@@ -81485,7 +81532,7 @@ function MonsterHeroGame() {
   const markRhythmHellStorySeen = useCallback(() => {
     setRhythmHellStorySeenFlag(true);
     try {
-      storeSet(RHYTHM_HELL_STORY_SEEN_KEY, true, false);
+      storeSet(rhythmHellStorySeenKey(), true, false);
     } catch {}
   }, []);
   const EVENT_REPLAY_UNLOCK_FLAGS = {
@@ -98132,6 +98179,9 @@ function MonsterHeroGame() {
         }
         const records = await saveRhythmBestRecord(rhythmBestRecords, rhythmPlay.song.songId, rhythmPlay.difficulty.id, merged);
         setRhythmBestRecords(records);
+        if (rhythmPlay.from === 'demo' && typeof rhythmHellOpen === 'function' && rhythmHellOpen() && rhythmChartPlayable(rhythmPlay.song, 'HELL') && !rhythmDifficultyUnlocked(rhythmPlay.song.songId, 'HELL', rhythmBestRecords) && rhythmDifficultyUnlocked(rhythmPlay.song.songId, 'HELL', records) && !rhythmHellStorySeenFlag) {
+          if (RHYTHM_HELL_STORY_TRIGGER === 'after-result') rhythmHellStoryAfterResultRef.current = true;else if (RHYTHM_HELL_STORY_TRIGGER === 'home') setRhythmEventStoryPending(prev => prev || RHYTHM_HELL_STORY_ID);
+        }
         void recordRhythmAchievements(records, {
           initialRecords: rhythmBestRecords
         });
@@ -98148,6 +98198,14 @@ function MonsterHeroGame() {
         const back = rhythmPlay.from === 'multi' ? 'RHYTHM_MULTI' : rhythmPlay.from === 'calibration' ? 'RHYTHM_OPTIONS' : rhythmPlay.backTo === 'RHYTHM_DEBUG_SELECT' ? 'RHYTHM_DEBUG_SELECT' : rhythmPlay.from === 'debug' || rhythmPlay.from === 'proto' ? 'RHYTHM_DEBUG' : 'RHYTHM_DEMO_HOME';
         setRhythmPlay(null);
         setGameState(back);
+        if (rhythmHellStoryAfterResultRef.current) {
+          rhythmHellStoryAfterResultRef.current = false;
+          setEventReplay({
+            id: RHYTHM_HELL_STORY_ID,
+            step: 0,
+            live: true
+          });
+        }
       },
       debugPlay: rhythmPlay.from === 'debug' || rhythmPlay.from === 'proto',
       tutorial: rhythmPlay.from === 'tutorial',
@@ -98803,7 +98861,13 @@ function MonsterHeroGame() {
         page: 0
       }),
       className: "min-h-[48px] rounded-xl bg-slate-700 px-2 text-xs font-black text-white"
-    }, "説明だけ見る"))), RHYTHM_PROTO_SONGS.map(song => {
+    }, "説明だけ見る")), React.createElement(RhythmHellPreviewSwitch, {
+      onChange: async () => {
+        try {
+          setRhythmHellStorySeenFlag((await storeGet(rhythmHellStorySeenKey(), false, false)) === true);
+        } catch {}
+      }
+    })), RHYTHM_PROTO_SONGS.map(song => {
       const track = rhythmSongTrack(song);
       return React.createElement("section", {
         key: song.songId,

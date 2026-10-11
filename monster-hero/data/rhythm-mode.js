@@ -26026,6 +26026,9 @@ const grievousLadyHellBaseNotes=((t,h,f,s,T,F,S)=>[
 // </grievous-lady-hell-notes>
 ])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
 const grievousLadyHellNotes=grievousLadyQuiet(grievousLadyHellBaseNotes);
+// Grievous Lady の HELL の譜面(2026-10-12)。試作の枠(grievous_lady_hell)と公開曲の HELL(RHYTHM_HELL_CHARTS)が同じものを指す。
+// Lv.60 は仮(社長の決定待ち)。流れの速さの演出と組は MASTER と同じ表
+const grievousLadyHellChart=mhChart(60,grievousLadyHellNotes,GRIEVOUS_LADY_DURATION_MS,6,{scrollChanges:GRIEVOUS_LADY_SCROLL_CHANGES,scrollGroups:GRIEVOUS_LADY_SCROLL_GROUPS});
 const theCityBeneathTheCometsCharts=Object.freeze({
   EASY:mhChart(1,theCityBeneathTheCometsEasyNotes,THE_CITY_BENEATH_THE_COMETS_DURATION_MS,6),
   NORMAL:mhChart(3,theCityBeneathTheCometsNormalNotes,THE_CITY_BENEATH_THE_COMETS_DURATION_MS,6),
@@ -28971,11 +28974,35 @@ const RHYTHM_SONG_CLIMAX=Object.freeze({
 // </rhythm-song-climax>
 });
 const rhythmSongClimaxAt=(songId,ms)=>{const spans=RHYTHM_SONG_CLIMAX[songId];if(!Array.isArray(spans)||!Number.isFinite(ms))return 0;for(const span of spans){if(!Array.isArray(span))continue;const [a,b,s]=span.map(Number);if(ms>=a&&ms<b)return s>0?Math.min(1,s):0;}return 0;};
+// ===== 難易度 HELL を公開曲へ付ける(2026-10-12・社長の決定 案A「その曲の MASTER をクリアするとその曲の HELL が開く」) =====
+// ★公開の印 RELEASE_FLAGS.rhythmHell が偽のあいだは、どの曲にも HELL は出ない(いままでと同じ)。
+//   曲の difficulties.HELL は「印が真のときだけ譜面を返す」読み取り口にしてあり、数え上げ(Object.keys など)にも出ない。
+//   印が偽のときは undefined を返すので、曲えらび・レベル表・ランキング・譜面の鍵の検査など、どこから見ても今と同じ。
+// 開く条件は RHYTHM_DIFFICULTY_UNLOCK_BY.HELL('MASTER')、お話の流し方は RHYTHM_HELL_STORY_TRIGGER(17-*.jsx)。どちらも1か所で変えられる。
+// HELL を付ける曲はここに足す({曲id: 譜面})。レベルは譜面の値(試作の枠と同じ)
+// Grievous Lady は社長の最初の頼み(2026-10-11 8:55「Grievous Lady(ヘルあり)」)。外すときはこの1行から消す
+const RHYTHM_HELL_CHARTS=Object.freeze({sheriruth:sheriruthHellChart,grievous_lady:grievousLadyHellChart});
+// デバッグの「公開の印が真だったら」(新しいキー・mh_rhythm_hell_preview_proto が '1')。本番の印は変えない
+const RHYTHM_HELL_PREVIEW_KEY='mh_rhythm_hell_preview_proto';
+const rhythmHellPreviewOn=()=>{try{return typeof localStorage!=='undefined'&&localStorage.getItem(RHYTHM_HELL_PREVIEW_KEY)==='1';}catch(e){return false;}};
+const rhythmHellReleased=()=>{try{return typeof RELEASE_FLAGS!=='undefined'&&RELEASE_FLAGS.rhythmHell===true;}catch(e){return false;}};
+// HELL を遊べるか(本番の印か、デバッグの「印が真だったら」)
+const rhythmHellOpen=()=>rhythmHellReleased()||rhythmHellPreviewOn();
+const rhythmWithHellChart=(songId,difficulties)=>{
+  const hell=RHYTHM_HELL_CHARTS[songId];
+  if(!hell||Object.prototype.hasOwnProperty.call(difficulties,'HELL'))return difficulties;
+  let made=null;
+  Object.defineProperty(difficulties,'HELL',{enumerable:false,get(){
+    if(!rhythmHellOpen())return undefined;
+    return made||(made=rhythmChartWithLevel(songId,'HELL',rhythmChartOnRoad(hell)));
+  }});
+  return difficulties;
+};
 const RHYTHM_SONGS = Object.freeze(RHYTHM_SONG_ENTRIES.map(song=>{
   const pair=RHYTHM_SWITCHING_CHARTS[song.songId];
   if(!pair)return Object.freeze({...song,
-    difficulties:Object.freeze(Object.fromEntries(rhythmSongDifficultyDefs(song).map(({id})=>
-      [id,rhythmChartWithLevel(song.songId,id,rhythmChartOnRoad(song.difficulties[id]))])))});
+    difficulties:Object.freeze(rhythmWithHellChart(song.songId,Object.fromEntries(rhythmSongDifficultyDefs(song).map(({id})=>
+      [id,rhythmChartWithLevel(song.songId,id,rhythmChartOnRoad(song.difficulties[id]))]))))});
   // 時刻で入れ替わる曲。**参照するたびに**どちらかを選ぶ（getter）。
   // 選んだ結果は before / after ごとに1回だけ作って覚えるので、毎回の手間は時刻の比較だけ。
   const resolved={before:null,after:null};
@@ -29053,7 +29080,7 @@ const RHYTHM_PROTO_SONGS=Object.freeze([
     debugDescription:'参考譜面の空中を土台に、親指2本で押せる形へ直した版(空中は全体の約2割・同じ親指が段を変える間は1.5拍以上・押せない0・指の交差0)。止まる・前へ飛ぶ・後ろへ戻る流れの演出は MASTER と同じ。遊んでも自己ベスト・ランキング・報酬には入らない',
     bgmTrackId:'melo_grievous_lady',
     difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[
-      id,rhythmChartOnRoad(id==='MASTER'?mhChart(60,grievousLadyHellNotes,GRIEVOUS_LADY_DURATION_MS,6,{scrollChanges:GRIEVOUS_LADY_SCROLL_CHANGES,scrollGroups:GRIEVOUS_LADY_SCROLL_GROUPS}):emptyRhythmChart())
+      id,rhythmChartOnRoad(id==='MASTER'?grievousLadyHellChart:emptyRhythmChart())
     ])))
   }),
 ]);

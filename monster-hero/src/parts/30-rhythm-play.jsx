@@ -598,6 +598,21 @@ function RhythmSkyLiftSwitch(){
 }
 // SKY TAP の見た目の案を切り替える(デバッグ専用・2026-10-11 社長「スカイは透明だけどちょっと見にくい」)。保存は新しいキー mh_sky_box_look_proto だけ。
 // ふつうのプレイ(この画面を通らない)はいまの案Zのまま
+// HELL の「公開の印が真だったら」を試す(デバッグ専用・2026-10-12)。本番の印 RELEASE_FLAGS.rhythmHell は変えない。
+// 入にすると、HELL の譜面がある公開曲(RHYTHM_HELL_CHARTS)で MASTER をクリアすると HELL が開き、初めてのときはお話 → 説明が出る。
+// 保存は新しいキーだけ(mh_rhythm_hell_preview_proto・試したお話の既読 mh_rhythm_hell_story_seen_preview_proto)。自己ベストは本物の記録に残る
+function RhythmHellPreviewSwitch({onChange}){
+  const [on,setOn]=useState(()=>typeof rhythmHellPreviewOn==='function'&&rhythmHellPreviewOn());
+  const set=v=>{try{if(v)localStorage.setItem(RHYTHM_HELL_PREVIEW_KEY,'1');else localStorage.removeItem(RHYTHM_HELL_PREVIEW_KEY);}catch(e){}setOn(v);onChange&&onChange();};
+  const resetSeen=()=>{try{localStorage.removeItem(RHYTHM_HELL_STORY_SEEN_PREVIEW_KEY);}catch(e){}onChange&&onChange();};
+  return <div data-rhythm-hell-preview className="mt-3 border-t border-pink-400/30 pt-2">
+    <p className="text-[10px] font-bold text-pink-200/90">公開の印が真だったら(試す)。入にすると、HELL のある曲で MASTER をクリアすると HELL が開き、初めてならお話 → 説明が出ます。本番の印は変わりません。</p>
+    <div className="mt-2 grid grid-cols-3 gap-2">
+      <button type="button" data-rhythm-hell-preview-pick="off" aria-pressed={!on} onClick={()=>set(false)} className={`min-h-[44px] rounded-xl text-xs font-black ${!on?'bg-pink-700 text-white ring-2 ring-pink-200':'bg-slate-800 text-slate-300'}`}>切(いま)</button>
+      <button type="button" data-rhythm-hell-preview-pick="on" aria-pressed={on} onClick={()=>set(true)} className={`min-h-[44px] rounded-xl text-xs font-black ${on?'bg-pink-700 text-white ring-2 ring-pink-200':'bg-slate-800 text-slate-300'}`}>入</button>
+      <button type="button" data-rhythm-hell-preview-reset onClick={resetSeen} className="min-h-[44px] rounded-xl bg-slate-700 text-[10px] font-black text-white">試したお話を未読に</button>
+    </div></div>;
+}
 // 空中のレーンの見える化の案(デバッグ専用・2026-10-11)。保存は新しいキー mh_sky_lane_look_proto だけ。既定は「なし」(いままで)
 const RHYTHM_SKY_LANE_LOOK_LABELS=Object.freeze({none:'いま(なし)',a:'案A 判定線に薄い帯',b:'案B 区切りの目盛り',c:'案C 地上から細い柱',d1l:'案D1 面+端の柱(薄め)',d1m:'案D1 面+端の柱(やや見える)',d2l:'案D2 面+全部の柱(薄め)',d2m:'案D2 面+全部の柱(やや見える)',el:'案E 空中の道(薄め)',em:'案E 空中の道(はっきり)',elp:'案E 空中の道(薄め)+奥の柱'});
 const RHYTHM_SKY_LANE_LOOK={id:(()=>{try{const v=typeof localStorage!=='undefined'?localStorage.getItem('mh_sky_lane_look_proto'):'';return v&&RHYTHM_SKY_LANE_LOOK_LABELS[v]?v:'none';}catch(e){return 'none';}})(),
