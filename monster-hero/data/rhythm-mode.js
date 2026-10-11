@@ -29403,7 +29403,7 @@ const rhythmCreateGpuSlideBand=(gl,host)=>{
   const BAND_VS='attribute vec4 aPrev;attribute vec4 aCur;attribute vec4 aNext;attribute vec3 aSky;attribute vec4 aMisc;'+
     'uniform vec3 uM0;uniform vec3 uM1;uniform vec2 uView;'+
     'uniform float uSnow;uniform float uTnow;uniform float uTravel;uniform float uSpawnY;uniform float uTravelPx;uniform float uHalfH;uniform float uW;uniform float uH;'+
-    'uniform float uLanes;uniform float uTop;uniform float uCurve;uniform float uRoad;uniform float uFar;uniform float uSkyK;uniform float uGround;uniform float uSize;uniform float uHw;uniform float uG0;uniform float uG1;uniform float uPhase;'+
+    'uniform float uLanes;uniform float uTop;uniform float uCurve;uniform float uRoad;uniform float uFar;uniform float uSkyK;uniform float uGround;uniform float uSize;uniform float uHw;uniform float uG0;uniform float uG1;uniform float uPhase;uniform float uMinHw;uniform float uCore;'+
     'varying float vT;varying float vSky;varying float vWave;varying float vG;'+
     // rhythmProjectionDepth と同じ
     'float depth(float y){y=min(1.0,y);if(y<0.0&&uCurve==1.0)return max(0.0,uTop+(1.0-uTop)*y);return uTop+(1.0-uTop)*pow(clamp(y,0.0,1.0),uCurve);}'+
@@ -29411,26 +29411,27 @@ const rhythmCreateGpuSlideBand=(gl,host)=>{
     'float travelP(float p){float k=1.0/uFar;if(p<0.0)return p*(k-1.0)/(k*k)/(1.0-uFar);if(p>1.0)return 1.0+(p-1.0)*(k-1.0)/(1.0-uFar);return (1.0/(k-(k-1.0)*p)-uFar)/(1.0-uFar);}'+
     // rhythmSlideSegmentQuads の project と同じ(横は rhythmProjectBoundary、ノーツサイズの倍率は帯の中心のまわりで掛ける)
     'vec2 proj(vec4 p,float sky){float y=uSpawnY+travelP(1.0-(p.x-uSnow)/uTravel)*uTravelPx+uHalfH;float yr=min(1.0,y/uH);float s=depth(yr)*uRoad;'+
-    'float x=uW*(0.5+((p.z+p.w*uSize)/uLanes-0.5)*s);float lift=uGround>0.5?0.0:uSkyK*depth(clamp(yr,0.0,1.0))*uRoad*sky;return vec2(x,y-lift);}'+
-    'void main(){vec2 b=proj(aCur,aSky.y);vec2 pos=b;'+
+    'float x=uW*(0.5+((p.z+p.w*uSize)/uLanes-0.5)*s);if(uMinHw>0.0&&p.w!=0.0){float hp=abs(p.w)*uSize/uLanes*s*uW;if(hp<uMinHw)x+=sign(p.w)*(uMinHw-hp);}float lift=uGround>0.5?0.0:uSkyK*depth(clamp(yr,0.0,1.0))*uRoad*sky;return vec2(x,y-lift);}'+
+    'void main(){vec4 cu=aCur;if(uCore>0.5)cu.w=0.0;vec2 b=proj(cu,aSky.y);vec2 pos=b;'+
     'if(aMisc.x!=0.0){vec2 a=proj(aPrev,aSky.x);vec2 c=proj(aNext,aSky.z);vec2 d1=b-a;vec2 d2=c-b;float l1=length(d1);float l2=length(d2);'+
     'vec2 n1=l1>1e-4?vec2(-d1.y,d1.x)/l1:vec2(0.0);vec2 n2=l2>1e-4?vec2(-d2.y,d2.x)/l2:vec2(0.0);vec2 n=n1;float len=uHw;'+
     'if(l1<=1e-4)n=n2;else if(l2>1e-4){vec2 m=n1+n2;float ml=length(m);if(ml>1e-4){n=m/ml;len=uHw/max(dot(n,n1),0.5);}}'+
-    'pos=b+n*len*aMisc.x;}else{pos=b+aMisc.yz*uHw;}'+
+    'pos=b+n*len*aMisc.x;}else{pos=b+aMisc.yz*uHw;if(uCore>0.5)pos.x+=sign(aCur.w)*uHw;}'+
     // 流れる光の波の明るさは、drawSlide と同じく区切りの端(頂点)で決めて間をつなぐ
     'float w=0.5+0.5*cos(6.2831853*(pos.y/110.0-uPhase));vWave=w>0.3?(w-0.3)/0.7*0.3:0.0;'+
     'vT=aCur.y-uTnow;vSky=aSky.y;vG=abs(uG1-uG0)>1e-4?(pos.y-uG0)/(uG1-uG0):0.0;'+
     'vec2 q=vec2(dot(uM0,vec3(pos,1.0)),dot(uM1,vec3(pos,1.0)));vec2 cl=q/uView*2.0-1.0;gl_Position=vec4(cl.x,-cl.y,0.0,1.0);}';
   // 塗り側。画素座標の大きな数は扱わない(GL2D と同じ理由。位置は頂点側で小さな値にしてから渡す)
   const BAND_FS='#ifdef GL_FRAGMENT_PRECISION_HIGH\nprecision highp float;\n#else\nprecision mediump float;\n#endif\n'+
-    'varying float vT;varying float vSky;varying float vWave;varying float vG;uniform int uMode;uniform vec4 uColor;uniform vec4 uColor2;uniform float uAlpha;'+
+    'varying float vT;varying float vSky;varying float vWave;varying float vG;uniform int uMode;uniform vec4 uColor;uniform vec4 uColor2;uniform float uAlpha;uniform float uZ;'+
     // drawSlide の airOf と同じ(高さを1/32刻みにそろえる)
     'float air(){return floor(clamp(vSky*1.6,0.0,1.0)*32.0+0.5)/32.0;}'+
     'void main(){if(vT<-0.001)discard;vec4 c=uColor;'+
     'if(uMode==1){float a=air();if(a>0.0)c=vec4(uColor2.rgb,0.5-0.28*a);}'+
-    'else if(uMode==2){float a=clamp(vSky*1.4,0.0,1.0);if(a<=0.02)discard;c=vec4(2.0/255.0,0.0,10.0/255.0,0.85*(0.25+0.45*a));}'+
+    'else if(uMode==2){float a=clamp(vSky*1.4,0.0,1.0);if(a<=0.02)discard;c=vec4(2.0/255.0,0.0,10.0/255.0,0.85*(uZ>0.5?0.18+0.22*a:0.25+0.45*a));}'+
     'else if(uMode==3){float a=air();if(a<=0.05)discard;c=vec4(uColor2.rgb,0.2*a);}'+
     'else if(uMode==4){float a=air();if(a<=0.05)discard;c=vec4(uColor.rgb,uColor.a*a*0.6);}'+
+    'else if(uMode==7){if(vSky<=0.05)discard;}'+
     'else if(uMode==5){float t=clamp(vG,0.0,1.0);vec4 s0=vec4(245.0/255.0,243.0/255.0,1.0,0.56);vec4 s1=vec4(243.0/255.0,232.0/255.0,1.0,0.36);vec4 s2=vec4(243.0/255.0,232.0/255.0,1.0,0.2);'+
     'c=t<0.35?mix(s0,s1,t/0.35):mix(s1,s2,(t-0.35)/0.65);}'+
     'else if(uMode==6){if(vWave<=0.0)discard;c=vec4(243.0/255.0,232.0/255.0,1.0,vWave);}'+
@@ -29442,7 +29443,7 @@ const rhythmCreateGpuSlideBand=(gl,host)=>{
     ['aPrev','aCur','aNext','aSky','aMisc'].forEach((name,i)=>gl.bindAttribLocation(prog,i,name));
     gl.linkProgram(prog);if(!gl.getProgramParameter(prog,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(prog)||'band link');
   }catch(e){return null;}
-  const U={};['uM0','uM1','uView','uSnow','uTnow','uTravel','uSpawnY','uTravelPx','uHalfH','uW','uH','uLanes','uTop','uCurve','uRoad','uFar','uSkyK','uGround','uSize','uHw','uG0','uG1','uMode','uColor','uColor2','uAlpha','uPhase']
+  const U={};['uM0','uM1','uView','uSnow','uTnow','uTravel','uSpawnY','uTravelPx','uHalfH','uW','uH','uLanes','uTop','uCurve','uRoad','uFar','uSkyK','uGround','uSize','uHw','uG0','uG1','uMode','uColor','uColor2','uAlpha','uPhase','uMinHw','uCore','uZ']
     .forEach(name=>{U[name]=gl.getUniformLocation(prog,name);});
   // 頂点1つ = 前(4)・いま(4)・次(4)・高さ(前・いま・次の3)・[線のどちら側(±1、0=ずらさない), 丸の向き cos, sin, 使わない](4)
   const REC=19,STRIDE=REC*4,DISC_SEG=12;
@@ -29586,6 +29587,7 @@ const rhythmCreateGpuSlideBand=(gl,host)=>{
       return true;
     },
     // 1回ぶん塗る。range: 'fill'(帯の中)・'outline'(外周の線)・'edges'(左右のふちだけ。先の角と切り口の角の丸を含む)
+    // o.minHw=帯の最小の半幅(px) o.core=帯の真ん中の線(幅は hw) o.additive=色を足し算 o.z=影の濃さをZ版に
     // o.mode: 0=色 1=空中の帯 2=影 3=空中のふちの光 4=空中のふちの芯 5=押さえているときの明るさ 6=流れる光の波
     pass(range,o){
       if(!cur||host.lost())return;
@@ -29593,10 +29595,11 @@ const rhythmCreateGpuSlideBand=(gl,host)=>{
       const e=cur.e;
       const mode=o.mode|0;if(sent.uMode!==mode){gl.uniform1i(U.uMode,mode);sent.uMode=mode;}
       u1f('uHw',Number(o.hw)||0);u4f('uColor',rgba(o.color||'rgba(0,0,0,0)'));if(o.color2)u4f('uColor2',rgba(o.color2));
-      u1f('uAlpha',Number.isFinite(Number(o.alpha))?Math.max(0,Math.min(1,Number(o.alpha))):1);u1f('uGround',o.ground?1:0);
+      u1f('uAlpha',Number.isFinite(Number(o.alpha))?Math.max(0,Math.min(1,Number(o.alpha))):1);u1f('uGround',o.ground?1:0);u1f('uMinHw',Number(o.minHw)||0);u1f('uCore',o.core?1:0);u1f('uZ',o.z?1:0);
       if(mode===5){u1f('uG0',Number(o.g0)||0);u1f('uG1',Number(o.g1)||0);}if(mode===6)u1f('uPhase',Number(o.phase)||0);
       if(o.stencil){const ref=host.nextStencil();gl.stencilFunc(gl.NOTEQUAL,ref,0xff);}else gl.stencilFunc(gl.ALWAYS,0,0xff);
-      if(range==='fill'){draw(dynBuf,cur.fill[0],cur.fill[1]);draw(e.buf,cur.sFill[0],cur.sFill[1]);return;}
+      if(o.additive)gl.blendFuncSeparate(gl.ONE,gl.ONE,gl.ONE,gl.ONE_MINUS_SRC_ALPHA);
+      if(range==='fill'){draw(dynBuf,cur.fill[0],cur.fill[1]);draw(e.buf,cur.sFill[0],cur.sFill[1]);if(o.additive)gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);return;}
       if(range==='outline'){draw(dynBuf,cur.outline[0],cur.outline[1]);draw(e.buf,cur.sOutline[0],cur.sOutline[1]);return;}
       // 左右のふちだけ(空中のふち): 先の線を抜いた2つの範囲
       draw(dynBuf,cur.edges[0],cur.edges[1]);draw(e.buf,cur.sOutline[0],e.capFrom);draw(e.buf,e.capTo,cur.sOutline[1]);
@@ -30954,6 +30957,16 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     if(!band)return;
     const {failed,alpha,pressed}=opts;
     if(!band.slide(note,g.travel,g.rect,g.halfH,sizeScale))return;
+    if(!failed&&opts.skySlideRgb&&skyZOn()){
+      // 空中スライドのZ版(drawSkySlideZ と同じ値): 手の色で全体を塗り、空中の所だけ白い縁と白い芯
+      const A=RHYTHM_SKY_LOOK.arc,C=RHYTHM_SKY_LOOK.core;
+      const handRgb=opts.skyHand==='L'?A.left:opts.skyHand==='R'?A.right:A.rgb;
+      band.pass('fill',{mode:0,color:`rgba(${handRgb},${A.alpha})`,alpha,minHw:A.minHalfWidthPx,stencil:true});
+      band.pass('edges',{mode:7,hw:A.edgePx/2,color:`rgba(255,255,255,${A.edgeAlpha})`,alpha,minHw:A.minHalfWidthPx,stencil:true});
+      band.pass('fill',{mode:7,hw:C.widthPx/2,core:true,additive:true,color:`rgba(${C.rgb},${C.alpha})`,alpha,stencil:true});
+      band.done();
+      return;
+    }
     const base=opts.slideRgb||RHYTHM_NOTE_COLORS.SLIDE.rgb;
     if(!failed&&effect!=='MINIMAL'&&!lightweight)band.pass('outline',{mode:0,hw:3,color:`rgba(${base},.18)`,alpha,stencil:true});
     const groundFill=failed?'rgba(120,120,135,.48)':`rgba(${base},${opts.slideRgb?.62:.5})`;
@@ -30993,7 +31006,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   const drawSkyShadowGpu=(note,geo,opts)=>{
     const band=ctx.band,g=geo.slideGpu;
     if(!band||!band.slide(note,g.travel,g.rect,g.halfH,1))return;
-    band.pass('fill',{mode:2,ground:true,alpha:opts.alpha,stencil:false});
+    band.pass('fill',{mode:2,ground:true,z:skyZOn(),alpha:opts.alpha,stencil:false});
     band.done();
   };
   // 帯を GPU で描いたスライドの「地上のノーツの場所」(空中のノーツの線・影を重なる所で避けるため)。
