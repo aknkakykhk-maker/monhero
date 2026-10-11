@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d7702a5c8472c9ca
+// source-sha256: 9bc3a9336de93273
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-11 09:09";
+const BUILD_DATE = "2026-10-11 09:21";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -31501,7 +31501,8 @@ const RhythmTapTest = ({
   useEffect(() => {
     if (!canvasNotes) return undefined;
     RHYTHM_CANVAS_RENDERER.attach(noteCanvasRef.current, {
-      webgl: webglNotes
+      webgl: webglNotes,
+      gpuBand: rhythmGpuBandPreference() === 'gpu'
     });
     const canvas = noteCanvasRef.current;
     if (canvas) canvas.dataset.rhythmNoteBackend = RHYTHM_CANVAS_RENDERER.backend;
@@ -33121,6 +33122,7 @@ const RhythmTapTest = ({
         }
       }
       if (canvasReady) RHYTHM_CANVAS_RENDERER.drawHits(travel.hitY);
+      const gpuBandNow = canvasReady && RHYTHM_CANVAS_RENDERER.gpuBand;
       const paintCanvasNote = note => {
         const failedTrail = note.done && note._rhythmFinalJudgment === 'MISS' && rhythmNoteHasBody(note) && songTimeMs < rhythmReleaseTargetMs(note);
         const clearFlash = note.done && Number.isFinite(note._rhythmClearAt) && songTimeMs - note._rhythmClearAt < RHYTHM_CLEAR_FLASH_MS;
@@ -33148,7 +33150,8 @@ const RhythmTapTest = ({
           visualTime,
           travelMs,
           spawnY: travel.spawnY,
-          travelPx: travel.travelPx
+          travelPx: travel.travelPx,
+          gpu: gpuBandNow
         }, hasBody ? bodyPx : 0);
         const monster = !!monsterForNote(note);
         const depthScale = Math.round((0.56 + geo.scale * .44) * 100) / 100,
@@ -73205,6 +73208,7 @@ function MonsterHeroGame() {
   const [battlePerfOn, setBattlePerfOn] = useState(() => BATTLE_PERF.enabled);
   const [rhythmStrip, setRhythmStrip] = useState(() => RHYTHM_STRIP.value);
   const [rhythmCanvasPref, setRhythmCanvasPref] = useState(() => rhythmCanvasNotesPreference());
+  const [rhythmGpuBandPref, setRhythmGpuBandPref] = useState(() => rhythmGpuBandPreference());
   const [rhythmStageGlPref, setRhythmStageGlPref] = useState(() => rhythmStageGlPreference());
   const [rhythmChartToolsOpened, setRhythmChartToolsOpened] = useState(false);
   const [rhythmOptionsBack, setRhythmOptionsBack] = useState('RHYTHM_DEBUG');
@@ -97201,6 +97205,22 @@ function MonsterHeroGame() {
       "aria-pressed": rhythmCanvasPref === value,
       onClick: () => setRhythmCanvasPref(rhythmCanvasNotesSetPreference(value)),
       className: `min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmCanvasPref === value ? 'bg-cyan-400 text-slate-900' : 'border border-white/20 bg-slate-900 text-slate-200'}`
+    }, label)))), React.createElement("section", {
+      "data-rhythm-gpu-band-panel": true,
+      className: "mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"
+    }, React.createElement("h3", {
+      className: "text-xs font-black text-cyan-200"
+    }, "スライドの帯の描き方（検証用）"), React.createElement("p", {
+      className: "mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80"
+    }, "「GPU」はスライドの帯（地上・空中・影）の形を譜面を読んだときに一度だけ GPU に置き、毎コマは曲の位置だけ渡して描きます（帯が長い・多い曲で軽くするための試作）。選ぶとノーツは WebGL で描きます（「ノーツの描き方」で canvas・要素を選んでいるときはそちらが勝ちます）。WebGL が使えないときは今の描き方に戻ります。次の演奏から効きます。"), React.createElement("div", {
+      className: "mt-2 flex gap-2"
+    }, [['', '今の描き方'], ['gpu', 'GPU']].map(([value, label]) => React.createElement("button", {
+      key: value || 'cpu',
+      type: "button",
+      "data-rhythm-gpu-band-pref": value || 'cpu',
+      "aria-pressed": rhythmGpuBandPref === value,
+      onClick: () => setRhythmGpuBandPref(rhythmGpuBandSetPreference(value)),
+      className: `min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmGpuBandPref === value ? 'bg-cyan-400 text-slate-900' : 'border border-white/20 bg-slate-900 text-slate-200'}`
     }, label)))), React.createElement("section", {
       "data-rhythm-stage-gl-panel": true,
       className: "mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"
