@@ -1523,6 +1523,21 @@ const rhythmSkyTheme=()=>{try{const v=typeof localStorage!=='undefined'?localSto
 // 空中のノーツは「地上の判定ラインより少し上(RHYTHM_SKY_ACCEPT_BELOW)まで」、地上のノーツは「空中の判定ラインより少し下から」受け付ける。
 // あいだは両方を受け付けて、時刻と位置の近いほうを取る(親指で狙った線より下を押すくせがあっても取れるように・2026-10-10 人の指のくせの試しで空中のタップがほぼ全部取れなかったため)
 const RHYTHM_SKY_ACCEPT_BELOW=.035,RHYTHM_GROUND_ACCEPT_ABOVE=.05;
+// 空中の受け付けの下の境目を、その人の構えに合わせて下げる(試作・既定は切・デバッグ専用 mh_sky_reach_adapt_proto・2026-10-12 社長「HELL の操作性」)。
+// 親指で地上の線より下を押す人は、空中へ指を上げても線のすぐ上で止まりやすく、固定の境目(線の少し上)に届かず空中が断られていた
+// (横持ちの人の指のくせのボットで、高さを半分しか上げ下げしないと Sheriruth HELL の MISS が 2→13、増えたのは全部 地上→空中の直後の空中ノーツ)。
+// 地上のノーツを取れた押下の、線より下の深さ(画面の高さに対する割合)を直近16回ぶん覚え、その中央値ぶん境目を下げる。真ん中を押す人は今と同じ。
+// 空中の段のある譜面(HELL)の判定にだけ効く(RHYTHM_SKY_INPUT.active のときだけ呼ばれる)。地上の5難易度・公開曲は変わらない
+const RHYTHM_SKY_REACH_ADAPT_MAX=.2;
+const RHYTHM_SKY_REACH_ADAPT={
+  on:(()=>{try{return typeof localStorage!=='undefined'&&localStorage.getItem('mh_sky_reach_adapt_proto')==='1';}catch(e){return false;}})(),
+  depths:[],
+  note(touchRatio){if(!this.on||!Number.isFinite(touchRatio))return;this.depths.push(touchRatio-RHYTHM_JUDGMENT_LINE_Y.ratio);if(this.depths.length>16)this.depths.shift();},
+  offset(){if(!this.on||this.depths.length<4)return 0;const sorted=[...this.depths].sort((a,b)=>a-b);return Math.max(0,Math.min(RHYTHM_SKY_REACH_ADAPT_MAX,sorted[sorted.length>>1]));},
+  reset(){this.depths.length=0;},
+};
+// 空中のノーツを受ける下の境目(これより上を押せば空中)
+const rhythmSkyAcceptLimit=()=>RHYTHM_JUDGMENT_LINE_Y.ratio-RHYTHM_SKY_ACCEPT_BELOW+RHYTHM_SKY_REACH_ADAPT.offset();
 const rhythmSkyTouch=(clientY,rect)=>{
   if(!RHYTHM_SKY_INPUT.active||!rect||!(Number(rect.height)>0))return null;
   return (Number(clientY)-Number(rect.top))/Number(rect.height);
@@ -1534,7 +1549,7 @@ const rhythmSkyAccepts=(note,touchRatio)=>{
   if(!RHYTHM_SKY_INPUT.active||!Number.isFinite(touchRatio))return true;
   // 地上のノーツは、空中の線と地上の線のまん中より下を押したときだけ取る(2026-10-10 社長「中身がついてきてない」を受けて、
   // 地上のタップを空中の線のすぐ下で押しても取れていた(77個中60個)のを直した。前は空中の線の5%下から下を全部地上として受けていた)
-  return rhythmNoteSkyHeight(note)>0?touchRatio<RHYTHM_JUDGMENT_LINE_Y.ratio-RHYTHM_SKY_ACCEPT_BELOW:touchRatio>rhythmSkyLineRatio()+Math.max(RHYTHM_GROUND_ACCEPT_ABOVE,RHYTHM_SKY_LIFT.ratio*.5);
+  return rhythmNoteSkyHeight(note)>0?touchRatio<rhythmSkyAcceptLimit():touchRatio>rhythmSkyLineRatio()+Math.max(RHYTHM_GROUND_ACCEPT_ABOVE,RHYTHM_SKY_LIFT.ratio*.5);
 };
 // HOLD/SLIDEを押さえ続けているあいだの「指がどのレーンにいるか」。
 //
@@ -4019,7 +4034,7 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
       // 少し低く押しただけで断られるので、高さを問わない(人の指のくせのボットで見つけた)
       if(RHYTHM_SKY_INPUT.active&&rhythmNoteIsSlide(note)&&rhythmSlideHasSky(note)&&rhythmSlideSkyAt(note,Number(note.timeMs)||0)>=.5){
         const ratio=Number(input?.sky);
-        if(Number.isFinite(ratio)&&!(ratio<RHYTHM_JUDGMENT_LINE_Y.ratio-RHYTHM_SKY_ACCEPT_BELOW))return false;
+        if(Number.isFinite(ratio)&&!(ratio<rhythmSkyAcceptLimit()))return false;
       }
       const span=inputSpan(note);
       if(!span)return note.lane===lane;
@@ -4274,6 +4289,8 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
     if(!picked)return {input,target:null,deltaMs:null};
     claimed.add(pickedIndex);
     if(tapOnly)RHYTHM_TOUCH_SPAN_RUNTIME.claimSyntheticTarget(key,picked);
+    // 空中の段のある譜面で地上のノーツを取れた押下の深さを覚える(空中の境目をその人の構えに合わせる試作・既定は切)
+    if(RHYTHM_SKY_INPUT.active&&RHYTHM_SKY_REACH_ADAPT.on&&!tapOnly&&!(rhythmNoteIsSlide(picked)?rhythmSlideHasSky(picked)&&rhythmSlideSkyAt(picked,Number(picked.timeMs)||0)>=.5:rhythmNoteSkyHeight(picked)>0))RHYTHM_SKY_REACH_ADAPT.note(Number(input?.sky));
     // 浮いていたSLIDEを引き継ぐときは、bind へ「元の種類」を渡す。
     // bind が note.type を 'HOLD' へ書き換えているので、picked.type だけを見ると
     // 持ち替えた瞬間にSLIDEが普通のHOLDへ変わり、経路の追従が消える

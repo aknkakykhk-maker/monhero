@@ -11,6 +11,9 @@
 //
 // 空中から始まるスライドの押し始めも、その時刻の高さで触る(HELL の行き来するスライド・2026-10-11)。
 //   node tools/playbot/rhythm-cross-swap-bot.js --entry proto --song sheriruth_hell_debug --diff HELL --from 0 --to 137000
+//   --persona thumb|lean|normal --seed 3 --sigma 28 で人の指のくせを入れる(既定は くせ無し)
+//   --sky-adapt 空中の受け付けを構えに合わせる試作(mh_sky_reach_adapt_proto)を入にして遊ぶ
+//   --travel 0.5 [--travel-ms 250] 親指の上下が届ききらない人(空中⇔地上を続けて押すとき、高さの半分の所で押す)
 // 目安(2026-10-11・直したあと): 0 と 1 は4本とも MARVELOUS・暗い時間0。2 は 107.34秒が MISS・127.77秒が GOOD(直す前と同じ)
 const path = require('path'), fs = require('fs');
 const ROOT_DEFAULT = path.resolve(__dirname, '../..');
@@ -29,6 +32,7 @@ const { touchInputSource } = require(path.join(ROOT_DEFAULT, 'tools/playbot/lib/
 
 const seed = (songId) => `(() => {
   const put = (k, v) => { if (localStorage.getItem(k) === null) localStorage.setItem(k, JSON.stringify(v)); };
+  ${process.argv.includes('--sky-adapt') ? "localStorage.setItem('mh_sky_reach_adapt_proto', '1');" : ''}
   put('mh_breeder_name', 'テスト'); put('mh_breeder_icon', 'Mocchi'); put('mh_onboarded', true);
   put('mh_tutorial_seen_v1', true); put('mh_battle_tutorial_seen_v1', true); put('mh_battle_tutorial_guide_shown_v1', true);
   put('mh_rhythm_tutorial_seen_v1', true); put('mh_quick_rhythm_intro_seen_v1', true); put('mh_quick_rhythm_bg_seen_v1', true);
@@ -105,7 +109,7 @@ const mime = f => ({ '.js': 'application/javascript', '.html': 'text/html', '.cs
   // ボット(空中のノーツは空中の高さで押す)
   const target = 'const p = fingerAt(c, hab, null, now);';
   const src = installPlayer.toString();
-  const player = src.includes(target) ? src.replace(target, 'const p = (() => { const q = fingerAt(c, hab, null, now); const sh = Number(n.skyHeight) > 0 ? Number(n.skyHeight) : (window.__slideSkyAt ? window.__slideSkyAt(n, Number(n.timeMs) || 0) : 0); if (!sh || typeof RHYTHM_SKY_LIFT === "undefined") return q; const rr = area.getBoundingClientRect(); return { x: q.x, y: q.y - rr.height * RHYTHM_SKY_LIFT.ratio * sh }; })();') : src;
+  const player = src.includes(target) ? src.replace(target, 'const p = (window.__travel || ((n, c, now, p) => p))(n, c, now, (() => { const q = fingerAt(c, hab, null, now); const sh = Number(n.skyHeight) > 0 ? Number(n.skyHeight) : (window.__slideSkyAt ? window.__slideSkyAt(n, Number(n.timeMs) || 0) : 0); if (!sh || typeof RHYTHM_SKY_LIFT === "undefined") return q; const rr = area.getBoundingClientRect(); return { x: q.x, y: q.y - rr.height * RHYTHM_SKY_LIFT.ratio * sh }; })());') : src;
   const posLine = 'const pos = fingerAt(laneOfHold(a.n, now), a.hab, a.drift, now);';
   if (!player.includes(posLine)) throw new Error('ボットの押さえる指の行が見つからない');
   // 押さえている間の指も、その時刻のスライドの高さに合わせて上げ下げする(人は帯の高さを目で追う。空中から始まる帯を地上へ戻して押さえると、指が飛んで離したことになる)
@@ -140,7 +144,25 @@ const player2 = player.replace(posLine, 'const pos = (() => { const q = fingerAt
     const map = new Map(); ((chart && chart.notes) || []).forEach(x => { if (Array.isArray(x.slidePoints)) map.set(Math.round(Number(x.timeMs)) + ':' + Number(x.lane), x); });
     window.__slideSkyAt = (n, t) => { if (typeof rhythmSlideSkyAt !== 'function') return 0; const o = map.get(Math.round(Number(n.timeMs)) + ':' + Number(n.lane)) || n; return Array.isArray(o.slidePoints) ? rhythmSlideSkyAt(o, t) : 0; };
   }, [SONG, DIFF]);
-  const args = { sigma: 0, missRate: 0, seed: 7, human: false, persona: 'center', input: 'ios', dropRate: 0, lateRate: 0, touchSrc: touchInputSource };
+  // --persona thumb|lean|normal で人の指のくせ(手前を押す・横のばらつき・時刻のずれ)を入れる(HELL の操作のしやすさの洗い出し・2026-10-12)。既定は くせ無しの center
+  const PERSONA = arg('persona', 'center'), HUMAN = PERSONA !== 'center';
+  const args = { sigma: HUMAN ? Number(arg('sigma', 28)) : 0, missRate: 0, seed: Number(arg('seed', 7)), human: HUMAN, persona: PERSONA, input: 'ios', dropRate: 0, lateRate: 0, touchSrc: touchInputSource };
+  // --travel u: 親指の上下が届ききらない人(HELL の操作のしやすさの洗い出し・2026-10-12)。同じ側の指が --travel-ms 以内に高さを変えて押すとき、
+  // 空中の高さ(RHYTHM_SKY_LIFT)の u 倍だけ手前で止まる(地上→空中は低めに、空中→地上は高めに押す)。既定は 0(くせ無し)
+  const TRAVEL = Number(arg('travel', 0)), TRAVEL_MS = Number(arg('travel-ms', 250));
+  if (TRAVEL > 0) await page.evaluate(([u, win]) => {
+    const last = { L: null, R: null };
+    window.__travelLog = { up: 0, down: 0 };
+    window.__travel = (n, c, now, p) => {
+      const side = c < 2.5 ? 'L' : 'R';
+      const sh = Number(n.skyHeight) > 0 ? Number(n.skyHeight) : (window.__slideSkyAt ? window.__slideSkyAt(n, Number(n.timeMs) || 0) : 0);
+      const sky = sh >= .5, prev = last[side]; last[side] = { sky, now };
+      if (!prev || prev.sky === sky || now - prev.now > win) return p;
+      const rr = document.querySelector('[data-rhythm-play-area]').getBoundingClientRect(), d = rr.height * RHYTHM_SKY_LIFT.ratio * u;
+      window.__travelLog[sky ? 'up' : 'down']++;
+      return { x: p.x, y: p.y + (sky ? d : -d) };
+    };
+  }, [TRAVEL, TRAVEL_MS]);
   await page.evaluate(`(${player2})(${JSON.stringify(args)})`);
   await page.waitForFunction((a) => (window.__mhTestHooks?.rhythmSongMs?.() ?? -1) >= a - 1500, FROM, { timeout: 600000, polling: 200 });
   if (CPU > 1) await cdp.send('Emulation.setCPUThrottlingRate', { rate: CPU });
@@ -153,6 +175,7 @@ const player2 = player.replace(posLine, 'const pos = (() => { const q = fingerAt
     const sl = n.map((x, i) => [x, r[i]]).filter(([x]) => x.type === 'SLIDE' && [106771, 107339, 127367, 127772].includes(Math.round(x.timeMs))).map(([x, y]) => [Math.round(x.timeMs), y && y.judgment, y && y.done]);
     return { 合計: h, 済み: r.filter(x => x && x.done).length, 交差のスライド: Object.keys(window.__offMs).map(i => ({ 始まり: Math.round(n[i].timeMs), 判定: r[i] && r[i].judgment, 暗かった秒: +(window.__offMs[i] / 1000).toFixed(2), 暗かった区間: window.__offSpans[i].slice(0, 8) })) }; })));
   // 外れたノーツの一覧(BAD_LIST=1): 時刻・種類・空中の高さ(タップの高さ/スライドの押し始めの高さ)
+  if (TRAVEL > 0) console.log('届ききらずに押した回数', JSON.stringify(await page.evaluate(() => window.__travelLog)));
   if (process.env.BAD_LIST) console.log('外れたノーツ', JSON.stringify(await page.evaluate(() => { const r = window.__mhTestHooks.rhythmNoteResults?.() || [], n = window.__mhTestHooks.rhythmNotes?.() || [];
     return n.map((x, i) => [x, r[i]]).filter(([, y]) => y && y.done && /BAD|MISS|GOOD/.test(y.judgment || '')).map(([x, y]) => [Math.round(x.timeMs), x._rhythmOriginalType || x.type, Number(x.skyHeight) || (window.__slideSkyAt ? +window.__slideSkyAt(x, x.timeMs).toFixed(2) : 0), y.judgment]); })));
   if (process.env.PERF_DEBUG) { console.log('区間の終わりの様子', JSON.stringify(await page.evaluate(() => { const r = window.__mhTestHooks.rhythmNoteResults?.() || []; return { 済み: r.filter(x => x.done).length, MISS: r.filter(x => x.judgment === 'MISS').length, 止め: !!document.querySelector('[data-rhythm-pause-menu]'), 文字: (document.querySelector('main')?.innerText || '').replace(/\s+/g, ' ').slice(0, 160) }; }))); const shot = require('path').join(require('os').tmpdir(), 'rhythm-frame-perf.png'); await page.screenshot({ path: shot }); console.log('画面:', shot); }
