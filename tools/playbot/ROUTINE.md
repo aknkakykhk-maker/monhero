@@ -50,6 +50,7 @@
 | | オンプくん | 譜面係: 譜面を作る道具 `tools/mode/` の強化・新曲の譜面の質・参考譜面に寄せる作り方(`tools/mode/CLAUDE.md` の ⑩-2 を守る。セッション `session_01KxMEiw3EwFDLvXkiHxkA4S`・Opus 5.5) |
 | | マクアケくん | 演出係: 曲が始まる前の曲名・ジャケットなど、モンヒロビートの見せ場の演出(判定・曲の頭をずらさない。セッション `session_01JgrcvWE4GJff7cTHDPoecb`・Opus 5.5) |
 | | リバースくん | 新曲係: Grievous Lady(HELL あり)と流れの速さの演出(止まる・前に飛ぶ・後ろに戻る)。セッション `session_01DfgZpuPHnVgxrwQiurqUQ1`・Opus 5.5 |
+| | カゲくん | 新曲係: Against My Own Shadow(HELL なし・地上5難易度)。セッション `session_01Jqmiq5TioCr8iBg3nU8k77`・Opus 5.5 |
 | 見回り部 | ルーキーくん | はじめての人の流れ(`new`) |
 | | パトロールくん | 画面の案内・探検(`walk`) |
 | | ストーリーくん | お話(`story`) |
