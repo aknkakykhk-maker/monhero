@@ -29030,7 +29030,7 @@ const rhythmSlideSegmentQuads=(note,chartNowMs,travel,rect,noteHalfHeight=Number
       quads.push(hasSky?{l0:from.left,r0:from.right,y0:from.y,l1:to.left,r1:to.right,y1:to.y,gy0:from.gy,gy1:to.gy,sky:(Number(from.sky)+Number(to.sky))/2||0}:{l0:from.left,r0:from.right,y0:from.y,l1:to.left,r1:to.right,y1:to.y});
       // travel.window … 判定ライン寄りの所だけ作る(帯を GPU で描くとき、押さえている光の範囲を出すためだけに使う)。
       // 押さえている光は一番下から max(90, 下端の半分)より上を使わないので、そこを過ぎたら終える
-      if(travel.window){winBottom=Math.max(winBottom,from.y,to.y);if((hasSky?to.gy:to.y)<winBottom-Math.max(90,winBottom*.5)-12)return quads;}
+      if(travel.window){winBottom=Math.max(winBottom,from.y,to.y);if((hasSky?to.gy:to.y)<winBottom-Math.max(90,winBottom*.5)-12&&(!RHYTHM_SCROLL.back||rhythmScrollMinAfter(timeMs)>=rhythmScrollPos(timeMs)))return quads;}
       from=to;
       if(rhythmScrollMinAfter(timeMs)>farPos)return quads;
     }
