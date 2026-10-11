@@ -797,6 +797,7 @@
     "source": "command"
    },
    "chartIntensityByDifficulty": {
+    "EASY": "strong",
     "NORMAL": "strong"
    }
   }
