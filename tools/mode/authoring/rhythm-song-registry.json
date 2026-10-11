@@ -800,6 +800,20 @@
     "EASY": "strong",
     "NORMAL": "strong"
    }
+  },
+  "against_my_own_shadow": {
+   "audio": "monster-hero/audio/bgm-against-my-own-shadow.mp3",
+   "chartIntensity": "strong",
+   "chartRevision": 28,
+   "audioSha256": "ddce743e94fa705c2a38f6fbacb841baf487057046887f3facf219e34f94285c",
+   "durationMs": 118044,
+   "analyzedTiming": {
+    "bpm": 143.137,
+    "beatZeroMs": 2022.9,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
   }
  }
 }
