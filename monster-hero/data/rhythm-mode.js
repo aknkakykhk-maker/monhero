@@ -1221,19 +1221,33 @@ const RHYTHM_SCROLL={points:null};
 //    1 より大きくすると道の外(見えない奥)に置ける)。
 //   道の長さで速さを決めるので、ノーツ速度3でも10でも同じ見え方になる。'RUSH' を書かない表(公開中の曲)は今までとまったく同じ計算
 const RHYTHM_SCROLL_RUSH_REACH=.97;
+// 動かす(試作・2026-10-11 Grievous Lady「後ろに戻る」):
+//   [時刻,'MOVE',割合] と書いた区間は、次の区切りまでの間に「道の長さ×割合」だけ動く。割合がマイナスなら奥へ戻り、0なら止まる。
+//   RUSH と同じく道の長さで決めるので、ノーツ速度3でも10でも同じ見え方になる。
+//   戻る区間(倍率がマイナス)がある表だけ RHYTHM_SCROLL.back が true になり、打ち切りの所は「この先いちばん手前へ来る位置」(rhythmScrollMinAfter)で判断する。
+//   戻る区間の無い表(公開中の曲)は back が false で、今までとまったく同じ計算
 const rhythmScrollSet=(changes,travelMs)=>{
   const raw=(Array.isArray(changes)?changes:[]).filter(c=>Array.isArray(c)&&Number.isFinite(Number(c[0]))).slice().sort((a,b)=>Number(a[0])-Number(b[0]));
   const travel=Number(travelMs)>0?Number(travelMs):2150;
   const list=raw.map((c,i)=>{
-    if(c[1]!=='RUSH')return [Number(c[0]),Number(c[1])];
+    if(c[1]!=='RUSH'&&c[1]!=='MOVE')return [Number(c[0]),Number(c[1])];
     const next=raw[i+1],span=next?Number(next[0])-Number(c[0]):0;
+    if(c[1]==='MOVE'){const f=Number(c[2]);return [Number(c[0]),span>0&&Number.isFinite(f)?travel*f/span:1];}
     const reach=Number(c[2])>0?Number(c[2]):RHYTHM_SCROLL_RUSH_REACH;
     return [Number(c[0]),span>0?travel*reach/span:1];
-  }).filter(([t,m])=>Number.isFinite(t)&&Number.isFinite(m)&&m>=0);
-  if(!list.length){RHYTHM_SCROLL.points=null;return;}
+  }).filter(([t,m],i)=>Number.isFinite(t)&&Number.isFinite(m)&&(m>=0||raw[i][1]==='MOVE'));
+  if(!list.length){RHYTHM_SCROLL.points=null;RHYTHM_SCROLL.back=false;RHYTHM_SCROLL.sufMin=null;return;}
   const points=[{t:list[0][0],s:list[0][0],m:list[0][1]}];
   for(let i=1;i<list.length;i++){const p=points[points.length-1];points.push({t:list[i][0],s:p.s+(list[i][0]-p.t)*p.m,m:list[i][1]});}
   RHYTHM_SCROLL.points=points;
+  RHYTHM_SCROLL.back=points.some(p=>p.m<0);
+  // sufMin[i] … 区切り i の時刻から先で S がいちばん小さくなる値(戻る区間のある表だけ使う)
+  if(RHYTHM_SCROLL.back){
+    const suf=new Array(points.length);const last=points[points.length-1];
+    suf[points.length-1]=last.m<0?-Infinity:last.s;
+    for(let i=points.length-2;i>=0;i--)suf[i]=Math.min(points[i].s,suf[i+1]);
+    RHYTHM_SCROLL.sufMin=suf;
+  }else RHYTHM_SCROLL.sufMin=null;
 };
 // 時刻 t まで積み上げた位置 S(t)
 const rhythmScrollPos=t=>{
@@ -1247,9 +1261,45 @@ const rhythmScrollPos=t=>{
 const rhythmScrollTimeAt=s=>{
   const points=RHYTHM_SCROLL.points,y=Number(s);
   if(!points||!(y>points[0].s))return y;
+  if(RHYTHM_SCROLL.back){
+    // 戻る区間のある表: S は増えたり減ったりするので、前から順に「初めて y に届く時刻」を探す(区切りは数十個なので毎コマでも軽い)
+    for(let i=0;i<points.length;i++){
+      const p=points[i];if(p.s>=y)return p.t;
+      const end=i+1<points.length?points[i+1].s:(p.m>0?Infinity:p.s);
+      if(p.m>0&&end>=y)return p.t+(y-p.s)/p.m;
+    }
+    return Infinity;
+  }
   let lo=0,hi=points.length-1;
   while(lo<hi){const mid=(lo+hi+1)>>1;if(points[mid].s<y)lo=mid;else hi=mid-1;}
   const p=points[lo];return p.m>0?p.t+(y-p.s)/p.m:(lo+1<points.length?points[lo+1].t:Infinity);
+};
+// 時刻 t から先で S がいちばん小さくなる値(= この先いちばん手前へ来る位置)。打ち切りの判断に使う。
+// 戻る区間の無い表(と表が無いとき)は S(t) そのもの(今までの「S(t) が先なら打ち切る」と同じになる)
+const rhythmScrollMinAfter=t=>{
+  const points=RHYTHM_SCROLL.points,x=Number(t);
+  if(!points||!RHYTHM_SCROLL.back)return rhythmScrollPos(x);
+  const suf=RHYTHM_SCROLL.sufMin;
+  if(!(x>points[0].t))return Math.min(x,suf[0]);
+  let lo=0,hi=points.length-1;
+  while(lo<hi){const mid=(lo+hi+1)>>1;if(points[mid].t<=x)lo=mid;else hi=mid-1;}
+  const p=points[lo],here=p.s+(x-p.t)*p.m;
+  return lo+1<points.length?Math.min(here,suf[lo+1]):(p.m<0?-Infinity:here);
+};
+// 譜面を作るときの見張り用(演奏中は使わない): 判定の時刻より 50ms 以上前に、判定線(またはそれより手前)へ来てしまうノーツを返す。
+// 戻る・止まる表では、ノーツが判定の前に一度判定線へ触れてまた奥へ戻る、ということが起こりうる(遊び手が読めない)。これが0個であることを決まりにする。
+// いまの表(RHYTHM_SCROLL)は触らずに元へ戻す
+const rhythmScrollEarlyTouches=(changes,notes,travelMs)=>{
+  const keep={points:RHYTHM_SCROLL.points,back:RHYTHM_SCROLL.back,sufMin:RHYTHM_SCROLL.sufMin};
+  rhythmScrollSet(changes,travelMs);
+  const points=RHYTHM_SCROLL.points||[],out=[];
+  const maxUpTo=x=>{let m=rhythmScrollPos(x);for(const p of points){if(p.t>x)break;if(p.s>m)m=p.s;}return m;};
+  for(const note of Array.isArray(notes)?notes:[]){
+    const t=Number(note&&note.timeMs);if(!Number.isFinite(t))continue;
+    if(maxUpTo(t-50)>=rhythmScrollPos(t)-1e-6)out.push(note);
+  }
+  RHYTHM_SCROLL.points=keep.points;RHYTHM_SCROLL.back=keep.back;RHYTHM_SCROLL.sufMin=keep.sufMin;
+  return out;
 };
 // 空中のノーツの手ごたえ(試作・2026-10-10・社長「見た目にもっと力いれてほしい」)。色は "r,g,b" の文字列。
 // ピンセットくんの色の案で差し替えるのはここだけ(core=芯の白っぽい光・main=金・accent=差し色の水色)
@@ -28657,7 +28707,8 @@ const rhythmSlideSegmentPolygons=(note,chartNowMs,travel,rect,noteHalfHeight=Num
       const ratio=step/RHYTHM_SLIDE_SEGMENT_STEPS,timeMs=fromTime+spanMs*ratio;
       const to=step===RHYTHM_SLIDE_SEGMENT_STEPS?project(toPoint):project({timeMs,lane:rhythmSlideExpectedLane(note,timeMs)});
       // canvas 版(rhythmSlideSegmentQuads)と同じく、区切りがまるごと画面の上から RHYTHM_SLIDE_OFFSCREEN_PX より外へ出たら、その先は作らない
-      if(from.y<-RHYTHM_SLIDE_OFFSCREEN_PX&&to.y<-RHYTHM_SLIDE_OFFSCREEN_PX)break outer;
+      // 戻る区間のある表では、この先がまた手前へ来ることがあるので、この先がここより手前へ来ないときだけ打ち切る(戻る区間の無い表は今までどおり)
+      if(from.y<-RHYTHM_SLIDE_OFFSCREEN_PX&&to.y<-RHYTHM_SLIDE_OFFSCREEN_PX&&(!RHYTHM_SCROLL.back||rhythmScrollMinAfter(timeMs)>=rhythmScrollPos(timeMs)))break outer;
       segments.push(`${from.left.toFixed(2)},${from.y.toFixed(2)} ${from.right.toFixed(2)},${from.y.toFixed(2)} ${to.right.toFixed(2)},${to.y.toFixed(2)} ${to.left.toFixed(2)},${to.y.toFixed(2)}`);
       rights.push(`${to.right.toFixed(2)},${to.y.toFixed(2)}`);
       lefts.push(`${to.left.toFixed(2)},${to.y.toFixed(2)}`);
@@ -28974,14 +29025,14 @@ const rhythmSlideSegmentQuads=(note,chartNowMs,travel,rect,noteHalfHeight=Number
       // 地上だけのスライドは、奥へ行くほど上へ上がる一方なので、区切りがまるごと画面の上から RHYTHM_SLIDE_OFFSCREEN_PX より外へ出たら、
       // そこから先も全部見えない。作らずに終える(2026-10-10 社長「Sheriruth だけカクカク」: 10秒・90点のスライドを毎コマ全部作っていた)。
       // 見えている所の形は変わらない(押さえたときの光・流れる光も判定ライン寄りの範囲しか使わない)。空中のあるスライドは上の farPos で切る
-      if(!hasSky&&from.y<-RHYTHM_SLIDE_OFFSCREEN_PX&&to.y<-RHYTHM_SLIDE_OFFSCREEN_PX)return quads;
+      if(!hasSky&&from.y<-RHYTHM_SLIDE_OFFSCREEN_PX&&to.y<-RHYTHM_SLIDE_OFFSCREEN_PX&&(!RHYTHM_SCROLL.back||rhythmScrollMinAfter(timeMs)>=rhythmScrollPos(timeMs)))return quads;
       // 高さ(sky)は空中のあるスライドだけに付ける(地上だけのスライド=既存の全曲は、区切りの形を今までと同じにする)
       quads.push(hasSky?{l0:from.left,r0:from.right,y0:from.y,l1:to.left,r1:to.right,y1:to.y,gy0:from.gy,gy1:to.gy,sky:(Number(from.sky)+Number(to.sky))/2||0}:{l0:from.left,r0:from.right,y0:from.y,l1:to.left,r1:to.right,y1:to.y});
       // travel.window … 判定ライン寄りの所だけ作る(帯を GPU で描くとき、押さえている光の範囲を出すためだけに使う)。
       // 押さえている光は一番下から max(90, 下端の半分)より上を使わないので、そこを過ぎたら終える
       if(travel.window){winBottom=Math.max(winBottom,from.y,to.y);if((hasSky?to.gy:to.y)<winBottom-Math.max(90,winBottom*.5)-12)return quads;}
       from=to;
-      if(rhythmScrollPos(timeMs)>farPos)return quads;
+      if(rhythmScrollMinAfter(timeMs)>farPos)return quads;
     }
     fromPoint=toPoint;
   }
@@ -30645,8 +30696,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     for(;i<source.length;i++){
       const time=Number(source[i].timeMs),p=proj(time,source[i].lane);
       frameGround.push({x0:Math.min(prev.l,p.l),x1:Math.max(prev.r,p.r),y0:Math.min(prev.y,p.y),y1:Math.max(prev.y,p.y)});
-      if(!hasSky&&prev.y<-RHYTHM_SLIDE_OFFSCREEN_PX&&p.y<-RHYTHM_SLIDE_OFFSCREEN_PX)break;
-      if(rhythmScrollPos(time)>farPos)break;
+      if(!hasSky&&prev.y<-RHYTHM_SLIDE_OFFSCREEN_PX&&p.y<-RHYTHM_SLIDE_OFFSCREEN_PX&&(!RHYTHM_SCROLL.back||rhythmScrollMinAfter(time)>=rhythmScrollPos(time)))break;
+      if(rhythmScrollMinAfter(time)>farPos)break;
       prev=p;
     }
   };
