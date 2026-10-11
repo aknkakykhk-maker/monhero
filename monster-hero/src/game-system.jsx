@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 35b38b3fbf4f4cd4
+// generated-sha256: a6317215cd01a3de
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-12 00:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-12 00:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -20296,7 +20296,12 @@ const rhythmNoteIsSky=note=>rhythmNoteSkyHeight(note)>0||rhythmSlideHasSky(note)
 const rhythmCreateHud=()=>{let state=rhythmHudInitial();const subs=new Set();
   return {get:()=>state,set(patch){state={...state,...patch};subs.forEach(fn=>fn());},subscribe(fn){subs.add(fn);return()=>{subs.delete(fn);};}};};
 const useRhythmHud=hud=>React.useSyncExternalStore(hud.subscribe,hud.get);
-const RhythmHudScore=({hud,maxScore,bestScore,rankFx=true})=>{const {score}=useRhythmHud(hud);
+// 要る値だけを読む(2026-10-11・発熱の手当て ②)。pick は数・文字など比べられる値を返すこと。値が変わらなければ React はその部品を描き直さない
+// (以前は1つ変わるとスコア・コンボ・ライフ・判定の文字の4つがそろって描き直されていた。ライフは MISS 以外では変わらない)
+const useRhythmHudPick=(hud,pick)=>React.useSyncExternalStore(hud.subscribe,()=>pick(hud.get()));
+// コンボの横の FC / AM の印に要るのは「BAD・MISS があるか」「EXCELLENT・GREAT・GOOD があるか」だけ
+const rhythmHudCountsState=c=>{if(!c)return '';if((Number(c.BAD)||0)+(Number(c.MISS)||0)>0)return 'broken';return (Number(c.EXCELLENT)||0)+(Number(c.GREAT)||0)+(Number(c.GOOD)||0)>0?'FC':'AM';};
+const RhythmHudScore=({hud,maxScore,bestScore,rankFx=true})=>{const score=useRhythmHudPick(hud,h=>h.score);
   const rankNextId=rhythmNextRankId(score,maxScore);const rankNextLabel=rankNextId?`→${rankNextId}`:'★MAX';
   // S 以上のランクに上がった瞬間(2026-09-29・参考動画から)。ランクの丸が弾み、光の輪が広がって「S RANK!」が少しだけ出る。
   // 上がったときだけ(やり直しでスコアが0へ戻ったときは光らない)。Web Animations の transform と opacity だけ。
@@ -20312,18 +20317,18 @@ const RhythmHudScore=({hud,maxScore,bestScore,rankFx=true})=>{const {score}=useR
     }catch(_){}},[rank,rankFx]);
   return <div className="flex items-center gap-1.5"><div ref={rankBadgeRef} className={`relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-current bg-slate-950/85 landscape:h-7 landscape:w-7 ${RHYTHM_RANK_COLORS[rank]}`} style={{boxShadow:'0 0 8px rgba(103,232,249,.35)'}}><b data-rhythm-rank className="text-sm font-black leading-none" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{rank}</b>{rankFx&&<><i ref={rankRingRef} data-rhythm-rank-ring aria-hidden="true" style={{position:'absolute',inset:-3,borderRadius:'9999px',border:'2px solid currentColor',boxShadow:'0 0 12px currentColor',opacity:0,pointerEvents:'none'}}/><b ref={rankPopRef} data-rhythm-rank-pop aria-hidden="true" style={{position:'absolute',left:-2,top:'100%',marginTop:2,zIndex:2,whiteSpace:'nowrap',fontSize:11,fontWeight:900,fontStyle:'italic',lineHeight:1,padding:'2px 6px',borderRadius:9999,background:'rgba(2,6,23,.88)',boxShadow:'0 0 10px currentColor',textShadow:'0 0 6px currentColor',opacity:0,pointerEvents:'none'}}/></>}</div><div className="min-w-0 landscape:min-w-0"><div className="flex items-center gap-0.5 landscape:hidden"><div data-rhythm-rank-gauge className="relative h-1.5 w-14 overflow-hidden rounded-full border border-white/25 bg-slate-950/80"><i aria-hidden="true" className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-cyan-300 to-fuchsia-300" style={{width:`${rhythmRankProgress(score)}%`}}/></div><b data-rhythm-rank-next className="shrink-0 text-[9px] font-black leading-none text-slate-300">{rankNextLabel}</b></div><b data-rhythm-score className="mt-0.5 block font-black leading-none tabular-nums landscape:mt-0" style={{fontSize:'min(18px,4.6cqw)',textShadow:'0 1px 6px rgba(2,6,23,.96)'}}>{score.toLocaleString()}</b><small className="mt-0.5 block text-[9px] font-bold leading-none text-slate-300 landscape:hidden" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>BEST {Number(bestScore||0).toLocaleString()}</small></div></div>;};
 // フルコンボ・オールマーベラスが続いているか(comboStatus)。AM=ここまで全部MARVELOUS / FC=ここまでBAD・MISSなし / 空=切れた。アシストモードでは出さない
-const RhythmHudCombo=({hud,settings,assistOn,comboPosition,isLandscape,comboRef,comboRingRef})=>{const {combo,counts}=useRhythmHud(hud);
+const RhythmHudCombo=({hud,settings,assistOn,comboPosition,isLandscape,comboRef,comboRingRef})=>{const combo=useRhythmHudPick(hud,h=>h.combo),countsState=useRhythmHudPick(hud,h=>rhythmHudCountsState(h.counts));
   if(settings.comboDisplay===false||!(combo>0))return null;
   const comboTier=rhythmComboTier(combo);
-  const comboStatus=(()=>{if(settings.comboStatusDisplay===false||assistOn||!counts)return '';const c=counts;if((Number(c.BAD)||0)+(Number(c.MISS)||0)>0)return '';return (Number(c.EXCELLENT)||0)+(Number(c.GREAT)||0)+(Number(c.GOOD)||0)>0?'FC':'AM';})();
+  const comboStatus=settings.comboStatusDisplay===false||assistOn||!countsState||countsState==='broken'?'':countsState;
   return <div data-rhythm-combo-box data-combo-status={comboStatus} data-combo-tier={String(comboTier)} data-combo-pos={comboPosition} data-combo-wide={isLandscape?'1':''} aria-hidden="true" style={{'--mh-combo-opacity':rhythmFiniteInRange(settings.comboOpacity,RHYTHM_COMBO_OPACITY_MIN,RHYTHM_COMBO_OPACITY_MAX,100)/100}} className="pointer-events-none absolute z-[2] text-center"><b ref={comboRef} data-rhythm-combo data-combo-tier={String(comboTier)} className="block font-black leading-none tabular-nums text-white" style={{'--mh-combo-scale':rhythmComboTierScale(comboTier),'--mh-combo-size':rhythmFiniteInRange(settings.comboSize,RHYTHM_COMBO_SIZE_MIN,RHYTHM_COMBO_SIZE_MAX,100)/100}}>{combo}</b>{settings.comboMilestoneFx===true&&<i ref={comboRingRef} data-rhythm-combo-ring aria-hidden="true"/>}<span data-rhythm-combo-label className="mt-1 block font-black leading-none tracking-[0.36em]">COMBO</span>{comboStatus&&<span data-rhythm-combo-status-mark={comboStatus} className="block font-black leading-none">{comboStatus==='AM'?'ALL MARVELOUS':'FULL COMBO'}</span>}</div>;};
 // ライフの数字とバー。演奏画面全体が知る必要があるのはライフの状態(rhythmLifeState)だけなので、数字はここだけが作り直す
-const RhythmHudLife=({hud,settings,isLandscape,lifeBoxRef,lifeDamageRef})=>{const {life}=useRhythmHud(hud);
+const RhythmHudLife=({hud,settings,isLandscape,lifeBoxRef,lifeDamageRef})=>{const life=useRhythmHudPick(hud,h=>h.life);
   const lifeRatio=rhythmLifeRatio(life),lifeState=rhythmLifeState(life);
   return <div ref={lifeBoxRef} data-rhythm-life data-life-state={lifeState} data-life-wide={isLandscape?'1':''} style={{'--mh-life-scale':rhythmFiniteInRange(settings.lifeDisplaySize,RHYTHM_LIFE_SIZE_MIN,RHYTHM_LIFE_SIZE_MAX,150)/100}} className="relative flex flex-nowrap items-center justify-end gap-x-1"><span aria-hidden="true" data-rhythm-life-heart className="leading-none text-rose-400" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{lifeState==='down'?'💔':'♥'}</span>{/* ★太さ・幅は「小さい端末(320px)でも台形の外の空きへ収まる」ところで止めてある。
         これ以上太く・広くすると tools/mode/rhythm-hud-wedge-check.js が落ちる。
         気づきやすさは大きさではなく、色・点滅・ひび割れ・減った量の数字で出す */}<div data-rhythm-life-track className="relative rounded-full border bg-slate-950/80"><i data-rhythm-life-bar aria-hidden="true" className="absolute inset-y-0 left-0 rounded-full" style={{width:`${(lifeRatio*100).toFixed(1)}%`,background:lifeRatio>.5?'linear-gradient(90deg,#34d399,#22d3ee)':lifeRatio>.25?'linear-gradient(90deg,#fbbf24,#fb923c)':'linear-gradient(90deg,#fb7185,#ef4444)',transition:settings.lightweightMode?'none':'width 140ms linear'}}/></div><b data-rhythm-life-value className="font-black leading-none tabular-nums text-slate-200" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{lifeState==='down'?'DOWN':life}</b>{/* 減った量(「-50」)を、減ったその場に一瞬だけ出す。中身はapplyJudgmentが直接書く */}<b ref={lifeDamageRef} data-rhythm-life-damage aria-hidden="true" className="pointer-events-none absolute right-0 top-full mt-0.5 text-[11px] font-black leading-none tabular-nums"/></div>;};
-const RhythmHudJudgment=({hud,settings,status,haloKeys,timingDisplay,judgmentTextRef,sky=false})=>{const h=useRhythmHud(hud);const last=sky?h.skyLast:h.last,lastPrecise=sky?h.skyLastPrecise:h.lastPrecise,fastSlow=sky?h.skyFastSlow:h.fastSlow,lastDeltaMs=sky?h.skyDeltaMs:h.lastDeltaMs;
+const RhythmHudJudgment=({hud,settings,status,haloKeys,timingDisplay,judgmentTextRef,sky=false})=>{const last=useRhythmHudPick(hud,h=>sky?h.skyLast:h.last),lastPrecise=useRhythmHudPick(hud,h=>sky?h.skyLastPrecise:h.lastPrecise),fastSlow=useRhythmHudPick(hud,h=>sky?h.skyFastSlow:h.fastSlow),lastDeltaMs=useRhythmHudPick(hud,h=>sky?h.skyDeltaMs:h.lastDeltaMs);
   return <><b ref={judgmentTextRef} data-rhythm-judgment-text data-judgment={last||''} data-judgment-precise={lastPrecise?'1':''} data-halo={haloKeys&&settings.judgmentTextDisplay&&last&&status!=='error'&&status!=='loading'&&haloKeys.has(`${last}|${lastPrecise?'1':''}`)?'1':undefined} className="block text-[26px] font-black leading-none tracking-wide text-white">{status==='error'?'音源を再生できません':status==='loading'?'LOADING…':settings.judgmentTextDisplay?last:''}</b><small className={`mt-1 block min-h-[16px] text-xs font-black tracking-[0.24em] ${!settings.fastSlowDisplay?'text-transparent':fastSlow==='FAST'?'text-cyan-300':fastSlow==='SLOW'?'text-fuchsia-300':'text-transparent'}`}>{settings.fastSlowDisplay?(fastSlow?(timingDisplay!=='STANDARD'&&typeof lastDeltaMs==='number'?`${fastSlow} ${Math.round(Math.abs(lastDeltaMs))}ms`:fastSlow):'—'):'—'}</small></>;};
 // 演出の自動調整で下げた段。アプリを開いているあいだだけ覚えておき、次の曲もこの段から始める(保存はしない)
 // ★オプションで見た目の設定を保存し直したら0へ戻す(rhythmResetAutoEffect)。戻さないと、「全部のせ」を選び直しても

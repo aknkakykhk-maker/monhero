@@ -94,3 +94,19 @@
 
 - 内訳を取る: `runOnce({..., breakdown: true, funcs: [...]})`。返す `breakdown` に、関数の自分の時間・指定した関数の含む時間・メインの仕事の種類(2段目まで)・スレッドごと・塗り直した要素・長いコマ(曲の時刻)
 - `atStart(page, cdp)`・`atEnd(page, cdp, breakdown, events)` で、測る区間の頭と終わりにページを調べられる(層ごとの塗り直しは CDP の LayerTree.layerPainted で数えた)
+
+## 発熱の手当ての進み具合(止まったときに再開するための控え・ドライバー)
+
+社長の決定(2026-10-11)「全部やる・見た目は変えない」の ①〜⑤ と、GPU の既定化。窓口は session_014GTmSNS2ae9tRr57k3zFjC(10/12 から)。
+
+| 項目 | 状態 | PR・場所 |
+| --- | --- | --- |
+| 演奏前の準備を既定に | 本番 | #2732・#2752 |
+| GPU の帯・区切りの線・板を既定(WebGL のとき)・熱の物差し(stats.frame の early/late・描き方) | 本番 | #2765 |
+| ① 叩いた光を 2D でも canvas 版に(社長が静止画を見て既定に) | 本番 | #2793(静止画 docs/perf/hitcmp/) |
+| ② 判定ごとの表示の部品は、要る値が変わったときだけ描き直す(useRhythmHudPick) | 検査済み・bot の表を測り直し中 | ブランチ claude/rhythm-hud-select |
+| ③ 重い飾り(影・ぼかし・光彩)を焼いた絵に | 未着手。まず GPU の既定の状態で、毎コマ効いている飾りを測る(tools の inval・layers の測り) | — |
+| ④ 残りの GPU 化(箱・星・影=HELL・判定の文字・コンボ) | 未着手。HELL 優先。マクアケくん・オンプくんと相談してから。RELEASE_FLAGS.rhythmHell は偽のまま | — |
+
+測り方の控え: 重さは `node tools/playbot/rhythm-perf-bench.js --songs sheriruth:MASTER,freedom_dive:MASTER --cpu 1,4 --draw gpu --roots main=<main の worktree>,new=.`。
+**ほかの検査やビルドを並べて回さない**(CPU を取り合って表が乱れる。2026-10-11 に一度乱れて測り直した)。
