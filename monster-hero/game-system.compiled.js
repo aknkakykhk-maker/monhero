@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b11cb7ceb8cec4f1
+// source-sha256: ce15a0cbcf5aae50
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-11 18:34";
+const BUILD_DATE = "2026-10-11 18:43";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -30931,6 +30931,21 @@ const rhythmSongIntroNow = () => typeof performance !== 'undefined' ? performanc
 const RHYTHM_SONG_INTRO_RETRY_MS = 1400;
 const RHYTHM_SONG_INTRO_MAX_MS = 6000;
 const RHYTHM_PREPARE_WAIT_MAX_MS = 3000;
+const rhythmSongSignal = (flag, eventBase, on, songId) => {
+  try {
+    if (typeof window === 'undefined') return;
+    const next = !!on;
+    if (!!window[flag] === next) return;
+    window[flag] = next;
+    if (typeof CustomEvent === 'function') window.dispatchEvent(new CustomEvent(`${eventBase}-${next ? 'start' : 'end'}`, {
+      detail: {
+        songId: songId || ''
+      }
+    }));
+  } catch (e) {}
+};
+const rhythmSongPrepSignal = (on, songId) => rhythmSongSignal('__mhSongPrepBusy', 'mh:song-prep', on, songId);
+const rhythmSongPlaySignal = (on, songId) => rhythmSongSignal('__mhSongPlaying', 'mh:song-play', on, songId);
 const RHYTHM_SONG_INTRO_CLOSE_MS = 240;
 let rhythmSongIntroHolds = null;
 const rhythmSongIntroHold = promise => {
@@ -33437,6 +33452,7 @@ const RhythmTapTest = ({
     const run = runRef.current;
     if (!run || run.finished || run.paused) return;
     run.finished = true;
+    rhythmSongPlaySignal(false, song.songId);
     stopFrame();
     RHYTHM_NOTE_SE_RUNTIME.holdStopAll();
     RHYTHM_GESTURE_RUNTIME.clear();
@@ -34141,6 +34157,8 @@ const RhythmTapTest = ({
     frameRef.current = requestAnimationFrame(tick);
   }, [applyJudgment, chart.durationMs, finish, measureTravel, settings.frameRateMode, settings.stageEffect, settings.lightweightMode, settings.judgmentTimingOffsetMs, settings.noteSpeed, song.playDurationMs, stopFrame, tutorial, updateJudgmentBand]);
   const disposeRun = useCallback(() => {
+    rhythmSongPrepSignal(false, song.songId);
+    rhythmSongPlaySignal(false, song.songId);
     if (songIntroRef.current && rhythmSongIntroHolds === songIntroRef.current.holds) rhythmSongIntroHolds = null;
     songIntroRef.current = null;
     setSongIntro(null);
@@ -34369,6 +34387,7 @@ const RhythmTapTest = ({
     startLockRef.current = true;
     const generation = ++generationRef.current;
     disposeRun();
+    rhythmSongPrepSignal(true, song.songId);
     setLifeDownCount(0);
     setView({
       ...initialView(),
@@ -34414,6 +34433,7 @@ const RhythmTapTest = ({
       return;
     }
     if (!audio) {
+      rhythmSongPrepSignal(false, song.songId);
       startLockRef.current = false;
       songIntroRef.current = null;
       setSongIntro(null);
@@ -34513,21 +34533,25 @@ const RhythmTapTest = ({
       audio.stop();
       return;
     }
-    if (prepareOn) {
-      const promise = prepareRun(generation);
-      prepareRef.current = {
-        generation,
-        promise,
-        done: false,
-        ms: null,
-        waitMs: 0
-      };
-      promise.then(() => {
-        const p = prepareRef.current;
-        if (p && p.generation === generation) p.done = true;
-      });
-      rhythmSongIntroHold(promise);
-    } else prepareRef.current = null;
+    try {
+      if (prepareOn) {
+        const promise = prepareRun(generation).catch(() => true);
+        prepareRef.current = {
+          generation,
+          promise,
+          done: false,
+          ms: null,
+          waitMs: 0
+        };
+        promise.then(() => {
+          const p = prepareRef.current;
+          if (p && p.generation === generation) p.done = true;
+        });
+        rhythmSongIntroHold(promise);
+      } else prepareRef.current = null;
+    } catch (e) {
+      prepareRef.current = null;
+    }
     if (!(await waitSongIntro(generation))) {
       audio.stop();
       return;
@@ -34556,7 +34580,9 @@ const RhythmTapTest = ({
       audio.stop();
       return;
     }
+    rhythmSongPrepSignal(false, song.songId);
     audio.start();
+    rhythmSongPlaySignal(true, song.songId);
     scheduleTick();
   };
   useEffect(() => {
@@ -98303,7 +98329,7 @@ function MonsterHeroGame() {
       className: "mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80"
     }, "「する」は、曲の最初のコマで初めて起きていた重い仕事（道の大きさを測る・ノーツの絵を描く準備）を、曲の前の幕のあいだに済ませます。準備が済むまで幕は閉じません（最長6秒）。次の演奏から効きます。"), React.createElement("div", {
       className: "mt-2 flex gap-2"
-    }, [['', '既定（しない）'], ['on', 'する'], ['off', 'しない']].map(([value, label]) => React.createElement("button", {
+    }, [['', '既定（する）'], ['on', 'する'], ['off', 'しない']].map(([value, label]) => React.createElement("button", {
       key: value || 'default',
       type: "button",
       "data-rhythm-prepare-pref": value || 'default',

@@ -30757,11 +30757,12 @@ const RHYTHM_NOTE_CANVAS_MAX_DPR=2;
 const RHYTHM_SLIDE_DIM=Object.freeze({rgb:'6,4,18',alpha:.5});
 // 演奏前の準備(2026-10-11・社長「事前読み込みで改善されないの?」)。曲の頭の最初のコマで初めて起きていた重い仕事
 // (道の大きさを測る・ノーツの canvas の描き込み先を作る・板と光を初めて描く)を、曲の前の幕のあいだに済ませる。
-// まずデバッグ画面「演奏前の準備(検証用)」で出し入れする。'on' = する・'off' = しない・未設定 = 既定(いまは しない)
+// デバッグ画面「演奏前の準備(検証用)」で出し入れする。'on' = する・'off' = しない・未設定 = 既定(する)。
+// 2026-10-11 社長の決定で既定を「する」にした(入れながら実機の stats.frame の startOver50・prepWaitMs を見て改良する)。何かあれば 'off' で戻せる
 const RHYTHM_PREPARE_KEY='mh_rhythm_prepare_v1';
 const rhythmPreparePreference=()=>{try{if(typeof localStorage==='undefined')return '';const v=localStorage.getItem(RHYTHM_PREPARE_KEY);return v==='on'||v==='off'?v:'';}catch{return '';}};
 const rhythmPrepareSetPreference=value=>{const next=value==='on'||value==='off'?value:'';try{if(typeof localStorage!=='undefined'){if(next)localStorage.setItem(RHYTHM_PREPARE_KEY,next);else localStorage.removeItem(RHYTHM_PREPARE_KEY);}}catch{}return next;};
-const rhythmPrepareActive=()=>rhythmPreparePreference()==='on';
+const rhythmPrepareActive=()=>rhythmPreparePreference()!=='off';
 const RHYTHM_GPU_BAND_KEY='mh_rhythm_gpu_band_v1';
 const rhythmGpuBandPreference=()=>{try{if(typeof localStorage==='undefined')return '';return localStorage.getItem(RHYTHM_GPU_BAND_KEY)==='gpu'?'gpu':'';}catch{return '';}};
 const rhythmGpuBandSetPreference=value=>{const next=value==='gpu'?'gpu':'';try{if(typeof localStorage!=='undefined'){if(next)localStorage.setItem(RHYTHM_GPU_BAND_KEY,next);else localStorage.removeItem(RHYTHM_GPU_BAND_KEY);}}catch{}return next;};
