@@ -551,7 +551,12 @@ function MonsterHeroGame() {
     const rect = RHYTHM_VIEW_ROTATION.rectOf(e.currentTarget);
     return rect ? { x: p.x - rect.left, y: p.y - rect.top, clientX: p.x, clientY: p.y } : null;
   };
+  // 【2026-10-11 出だしの重さ】モンヒロビートの演奏エリアの中では、この白い輪は出さない(当たりの光は演奏画面が自分で出す)。
+  // 輪の位置合わせで外の箱を getBoundingClientRect で測ると、演奏中は判定の文字やコンボで画面が毎回少し変わっているため、
+  // その場で画面の計算をやり直させていた(曲の頭は初めての計算で特に重く、ボット・CPU 4倍で1打 30〜40ms)。輪の描き直し(React)も毎回走っていた
+  const rippleInRhythmPlay = (e) => !!(e.target && e.target.closest && e.target.closest('[data-rhythm-play-area]'));
   const rippleOnPointerDown = useCallback((e) => {
+    if (rippleInRhythmPlay(e)) return;
     rippleDragRef.current = true;
     rippleLastAtRef.current = performance.now();
     const at = ripplePoint(e);

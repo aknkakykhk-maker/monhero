@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: fdfaee38b5ade4af
+// generated-sha256: 2adb9ebcb1305b10
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-11 18:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-11 19:14"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -45823,7 +45823,12 @@ function MonsterHeroGame() {
     const rect = RHYTHM_VIEW_ROTATION.rectOf(e.currentTarget);
     return rect ? { x: p.x - rect.left, y: p.y - rect.top, clientX: p.x, clientY: p.y } : null;
   };
+  // 【2026-10-11 出だしの重さ】モンヒロビートの演奏エリアの中では、この白い輪は出さない(当たりの光は演奏画面が自分で出す)。
+  // 輪の位置合わせで外の箱を getBoundingClientRect で測ると、演奏中は判定の文字やコンボで画面が毎回少し変わっているため、
+  // その場で画面の計算をやり直させていた(曲の頭は初めての計算で特に重く、ボット・CPU 4倍で1打 30〜40ms)。輪の描き直し(React)も毎回走っていた
+  const rippleInRhythmPlay = (e) => !!(e.target && e.target.closest && e.target.closest('[data-rhythm-play-area]'));
   const rippleOnPointerDown = useCallback((e) => {
+    if (rippleInRhythmPlay(e)) return;
     rippleDragRef.current = true;
     rippleLastAtRef.current = performance.now();
     const at = ripplePoint(e);
