@@ -99,7 +99,8 @@ ok('サイズはノーツ頭の描画scaleだけで、帯・ENDバー・入力hi
   &&!game.includes('rhythmMatchInputBatch(run.notes,inputs,now,settings.noteSize'));
 ok('表示と入力で同じ判定offsetを使い窓幅は不変',game.includes('visualTime=songTimeMs-settings.judgmentTimingOffsetMs')&&game.includes('rhythmMatchInputBatch(run.notes,inputs,now,settings.judgmentTimingOffsetMs)')&&game.includes('const rhythmJudgeTap = deltaMs => RHYTHM_JUDGMENTS.find'));
 // 判定の文字と FAST/SLOW は、判定のたびに作り直さないよう hud(useRhythmHud)から読むようにした(a129602・2026-09-26)
-ok('表示切替・レーン発光は入力を消さない',game.includes('settings.judgmentTextDisplay?last')&&game.includes('settings.fastSlowDisplay?(fastSlow')&&game.includes('useRhythmHud(hud)')&&game.includes("settings.laneGlow==='NONE'?'0'")&&game.includes('inputStarts(starts,ageMs)'));
+// 2026-10-12: 要る値だけを読む useRhythmHudPick(hud, 取り出し方) に変わった(#2798)ので、それを見る
+ok('表示切替・レーン発光は入力を消さない',game.includes('settings.judgmentTextDisplay?last')&&game.includes('settings.fastSlowDisplay?(fastSlow')&&game.includes('useRhythmHudPick(hud,')&&game.includes("settings.laneGlow==='NONE'?'0'")&&game.includes('inputStarts(starts,ageMs)'));
 // 振動は 2026-09-05 に作り直した（iPhoneには Vibration API が無く、8msは短すぎた）。
 // 見ているのは「対応していない端末で落ちない・黙って何も起きないままにしない」こと。
 ok('振動未対応を安全に扱う',
