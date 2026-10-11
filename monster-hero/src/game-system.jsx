@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4c6ee1d772d129d2
+// generated-sha256: 88f35e0f81a6ee43
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-11 17:48"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-11 17:56"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -29590,7 +29590,8 @@ function AssetDownloadPage({ onBack }) {
   return (
     <div data-mh-screen data-asset-download-page className={SCREEN_SHELL_CLASS}>
       <ScreenHead title="ダウンロード" accent="text-emerald-200" onBack={onBack} backLabel="設定へ戻る"/>
-      <div className={`${SCREEN_LIST_CLASS} w-full max-w-md mx-auto space-y-3 pb-4`}>
+      {/* 下の余白(pb-20)は、ハロウィンの画面のかぼちゃの飾り(背景の左右下・高さ約60px)に最後の行が隠れないため */}
+      <div className={`${SCREEN_LIST_CLASS} w-full max-w-md mx-auto space-y-3 pb-20`}>
         <p className="px-1 text-[11px] font-bold leading-relaxed text-slate-300">曲や画像を前もってこの端末に入れておくと、はじめて開く画面や曲がすぐ始まります。アップデートで変わったものだけを入れ直し、古いものは自動で消えます。</p>
         {!asset.supported && (
           <p data-asset-unsupported className="rounded-xl border border-amber-400/40 bg-amber-950/30 px-3 py-2 text-[11px] font-bold leading-relaxed text-amber-100">この端末・ブラウザでは前もって入れておくことができません。ふだんどおり、開いたときに読み込みます。</p>
@@ -29632,8 +29633,8 @@ function AssetDownloadPage({ onBack }) {
           );
         })}
         <section data-asset-auto className={`${SCREEN_PANEL_CLASS} w-full text-left`}>
-          <b className="block text-[13px] font-black text-slate-200">自動で前もって入れる</b>
-          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">よく使う画面の画像と、曲えらびで選んだ曲・遊んだ曲を、遊んでいないあいだに少しずつ入れます。演奏中は止まります。モバイル回線では少しだけにします。</p>
+          <b className="block text-[13px] font-black text-slate-200">自動ダウンロード</b>
+          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">よく使う画像と、選んだ曲・遊んだ曲を、すきまの時間に少しずつ入れます。演奏中は止まり、モバイル回線では控えめです。</p>
           <div className="mt-2 grid grid-cols-2 gap-2">
             {[{ id: true, label: 'する' }, { id: false, label: 'しない' }].map(option => (
               <button key={String(option.id)} type="button" data-asset-auto-option={String(option.id)} aria-pressed={asset.auto === option.id}
@@ -29642,7 +29643,7 @@ function AssetDownloadPage({ onBack }) {
             ))}
           </div>
         </section>
-        <p data-asset-usage className="px-1 text-[10px] font-bold leading-relaxed text-slate-400">
+        <p data-asset-usage className={`${SCREEN_PANEL_CLASS} w-full text-left text-[10px] font-bold leading-relaxed text-slate-400`}>
           {Number.isFinite(usage) ? `このゲームがこの端末で使っている容量: 約${formatAssetMB(usage)}。` : ''}
           しばらく遊ばないと、端末が空きを作るために消すことがあります。消えても、開いたときにネットから読み込むので遊べます。セーブデータはここでは消えません。
         </p>
