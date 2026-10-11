@@ -39,6 +39,9 @@ description: Add a new song to モンヒロビート (the rhythm-game mode of �
   (**https だけ通る**関門 `changelogSafeLink` を経由する)。**宣伝の文面は教えてもらった事実だけで書く**。
   作者名は `BGM_TRACKS` の `creator` へ入れる
 - 難易度が既存の帯から大きく外れるときは `chartIntensity:'extreme'` を使う
+- **モンスターノーツは、どの難易度にも4個ちょうど**(TAP の枠1〜4を1個ずつ。2026-10-11 社長「どの曲も基本4個入るルールだよ」)。
+  生成器は必ず4個置く。手で書いた・写した譜面は `t(時刻,サブレーン,幅,枠)` の4つ目で付ける(ノーツの数・時刻は変えない)。
+  `node tools/mode/rhythm-monster-four-check.js` が公開曲の全難易度を見張る(例外の表は持たない。4個でない譜面は直す)
   (`challengeFactor` は5難易度まとめて効き、上げすぎるとレベルがむしろ下がる)
 
 
