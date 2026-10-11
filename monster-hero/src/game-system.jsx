@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: cb68697e42450e63
+// generated-sha256: fdfaee38b5ade4af
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-11 18:43"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-11 18:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -20833,8 +20833,16 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
     return()=>{clearTimeout(later);window.removeEventListener('resize',apply);};
   },[isLandscape,view.status]);
   const stopFrame=useCallback(()=>{if(frameRef.current!==null)cancelAnimationFrame(frameRef.current);frameRef.current=null;},[]);
-  const clearJudgmentTimer=useCallback(()=>{if(judgmentTimerRef.current!==null)clearTimeout(judgmentTimerRef.current);judgmentTimerRef.current=null;++judgmentRevisionRef.current;},[]);
-  const scheduleJudgmentClear=useCallback(()=>{if(judgmentTimerRef.current!==null)clearTimeout(judgmentTimerRef.current);const revision=++judgmentRevisionRef.current;judgmentTimerRef.current=setTimeout(()=>{if(revision!==judgmentRevisionRef.current)return;judgmentTimerRef.current=null;hudRef.current.set({last:'',lastPrecise:false,fastSlow:'',skyLast:'',skyLastPrecise:false,skyFastSlow:''});},RHYTHM_JUDGMENT_DISPLAY_MS);},[]);
+  /* 判定の文字を RHYTHM_JUDGMENT_DISPLAY_MS で消す予約。地上と空中で別々に持つ(2026-10-11 社長「HELL確認したら空中判定(マーベラス)がでっぱなし」)。
+     ★それまでは予約が1本で、地上の判定が来るたびに空中の文字の消える時刻まで先へ延びていた。地上のノーツが続くあいだ
+       空中の文字が残り、bot で Sheriruth HELL 最長2.6秒・Grievous Lady HELL 最長4.7秒残っていた。地上の消え方は変えていない */
+  const skyJudgmentTimerRef=useRef(null),skyJudgmentRevisionRef=useRef(0);
+  const clearJudgmentTimer=useCallback(()=>{if(judgmentTimerRef.current!==null)clearTimeout(judgmentTimerRef.current);judgmentTimerRef.current=null;++judgmentRevisionRef.current;
+    if(skyJudgmentTimerRef.current!==null)clearTimeout(skyJudgmentTimerRef.current);skyJudgmentTimerRef.current=null;++skyJudgmentRevisionRef.current;},[]);
+  const scheduleJudgmentClear=useCallback((sky=false)=>{
+    if(sky){if(skyJudgmentTimerRef.current!==null)clearTimeout(skyJudgmentTimerRef.current);const revision=++skyJudgmentRevisionRef.current;
+      skyJudgmentTimerRef.current=setTimeout(()=>{if(revision!==skyJudgmentRevisionRef.current)return;skyJudgmentTimerRef.current=null;hudRef.current.set({skyLast:'',skyLastPrecise:false,skyFastSlow:''});},RHYTHM_JUDGMENT_DISPLAY_MS);return;}
+    if(judgmentTimerRef.current!==null)clearTimeout(judgmentTimerRef.current);const revision=++judgmentRevisionRef.current;judgmentTimerRef.current=setTimeout(()=>{if(revision!==judgmentRevisionRef.current)return;judgmentTimerRef.current=null;hudRef.current.set({last:'',lastPrecise:false,fastSlow:''});},RHYTHM_JUDGMENT_DISPLAY_MS);},[]);
   // 能力の発動表示(「ミーア　元気！」)は短時間で消す。判定表示とは別のタイマーで持つ
   const clearAbilityTimer=useCallback(()=>{if(abilityTimerRef.current!==null)clearTimeout(abilityTimerRef.current);abilityTimerRef.current=null;++abilityRevisionRef.current;},[]);
   /* カウントダウンの後始末。disposeRun がこれを呼ぶので、必ず disposeRun より前で定義する。
@@ -21153,7 +21161,7 @@ const score=run.lifeDepleted?run.lockedScore:run.score,lastDeltaMs=judgment!=='M
 hudRef.current.set(rhythmNoteIsSky(note)?{score,combo:run.combo,skyLast:judgment,skyLastPrecise:preciseHit,skyFastSlow:side||'',skyDeltaMs:lastDeltaMs,counts:{...run.counts},life:run.life}
   :{score,combo:run.combo,last:judgment,lastPrecise:preciseHit,fastSlow:side||'',lastDeltaMs,counts:{...run.counts},life:run.life});
 const coarseKey=`${rhythmComboTier(run.combo)}|${Math.floor(run.combo/RHYTHM_COMBO_MILESTONE_STEP)}|${rhythmLifeState(run.life)}`;
-if(showAbilityFlash||coarseKey!==run._viewCoarseKey){run._viewCoarseKey=coarseKey;setView(v=>({...v,score,combo:run.combo,maxCombo:run.maxCombo,last:judgment,lastPrecise:preciseHit,fastSlow:side||'',counts:{...run.counts},fast:run.fast,slow:run.slow,precise:run.precise,life:run.life,lastDeltaMs,...(showAbilityFlash?{ability:abilityFlash}:{})}));}scheduleJudgmentClear();
+if(showAbilityFlash||coarseKey!==run._viewCoarseKey){run._viewCoarseKey=coarseKey;setView(v=>({...v,score,combo:run.combo,maxCombo:run.maxCombo,last:judgment,lastPrecise:preciseHit,fastSlow:side||'',counts:{...run.counts},fast:run.fast,slow:run.slow,precise:run.precise,life:run.life,lastDeltaMs,...(showAbilityFlash?{ability:abilityFlash}:{})}));}scheduleJudgmentClear(rhythmNoteIsSky(note));
 /* 自己ベスト比(beatmania IIDX のペースメーカー)。「自己ベストを曲のここまでの割合で割り戻した点」との差。
    前の記録が無い曲・練習・タイミング合わせでは出さない。★見た目だけで、スコアにも記録にも入れない */
 const paceEl=paceRef.current;
@@ -21767,7 +21775,7 @@ scheduleTick();};
       target.activePointerId=input.inputKey;
       if(handover){target.releasedAtMs=null;rhythmFloatingNoteRemove(target);}
       else{target.holdJudgment=judgment;target.holdDeltaMs=deltaMs;}
-      run.activePointers.set(input.inputKey,target.index);if(input.captureTarget&&input.pointerId!==undefined){try{input.captureTarget.setPointerCapture(input.pointerId);}catch{}}const side=rhythmFastSlow(deltaMs);hudRef.current.set(rhythmNoteIsSky(target)?{skyLast:'HOLD',skyLastPrecise:false,skyFastSlow:side||''}:{last:'HOLD',lastPrecise:false,fastSlow:side||''});scheduleJudgmentClear();return;}applyJudgment(target,judgment,deltaMs);});};
+      run.activePointers.set(input.inputKey,target.index);if(input.captureTarget&&input.pointerId!==undefined){try{input.captureTarget.setPointerCapture(input.pointerId);}catch{}}const side=rhythmFastSlow(deltaMs);hudRef.current.set(rhythmNoteIsSky(target)?{skyLast:'HOLD',skyLastPrecise:false,skyFastSlow:side||''}:{last:'HOLD',lastPrecise:false,fastSlow:side||''});scheduleJudgmentClear(rhythmNoteIsSky(target));return;}applyJudgment(target,judgment,deltaMs);});};
   const inputMoves=(inputKey,subLaneCoordinate)=>{const run=runRef.current,state=run?.inputFeedbackState?.get(inputKey);if(!state||!Number.isFinite(subLaneCoordinate))return;if(Math.abs(subLaneCoordinate-state.subLaneCoordinate)>=3)RHYTHM_PERF.touchJump();if(Math.abs(subLaneCoordinate-state.subLaneCoordinate)<RHYTHM_TAP_REJUDGE_MOVE_SUBLANES)return;const subLane=Math.max(0,Math.min(RHYTHM_SUB_LANE_COUNT-1,Math.floor(subLaneCoordinate)));if(subLane===state.subLane)return;state.subLane=subLane;state.subLaneCoordinate=subLaneCoordinate;if(state.empty)inputStarts([{lane:Math.floor(subLane/2),subLaneCoordinate,inputKey,rejudge:true}]);};
   // 押さえている帯へ先に置いてあった「控えの指」を探す。
   // 親指で遊ぶ人は「2本目を置いてから1本目を離す」ので、離した瞬間に渡せないと必ずMISSになる
