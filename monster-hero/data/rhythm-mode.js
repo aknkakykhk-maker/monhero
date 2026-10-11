@@ -1200,10 +1200,15 @@ const RHYTHM_HELL_VIS_LABELS=Object.freeze({now:'前の見た目',v1:'案1 控�
 const RHYTHM_HELL_VIS={id:(()=>{try{const v=typeof localStorage!=='undefined'?localStorage.getItem('mh_hell_vis_proto'):'';return v&&RHYTHM_HELL_VIS_PRESETS[v]?v:RHYTHM_HELL_VIS_DEFAULT;}catch(e){return RHYTHM_HELL_VIS_DEFAULT;}})(),
   set(id){const v=RHYTHM_HELL_VIS_PRESETS[id]?id:RHYTHM_HELL_VIS_DEFAULT;this.id=v;try{if(v===RHYTHM_HELL_VIS_DEFAULT)localStorage.removeItem('mh_hell_vis_proto');else localStorage.setItem('mh_hell_vis_proto',v);}catch(e){}}};
 // 空中を叩いたときの手ごたえの案(デバッグ専用・2026-10-12)。保存は新しいキー mh_hell_sky_hit_proto だけ。既定は off(いまのまま)。
-// on … 案A 空中の線の高さに、地上と同じ「レーンの柱の光」を白紫で出す/案a 空中の判定の文字を空中の線のすぐ下に出す(来るノーツに重ならない)。
+// on … 案A 空中の線の高さに、地上と同じ「レーンの柱の光」を白紫で出す(CPU 4倍で1コマ約+5ms。ドライバーくんが GPU で軽くしてから既定にする)。
+// 判定の文字の位置(案a)は RHYTHM_HELL_SKY_TEXT へ分けた(2026-10-12 社長「軽くしてから入れる」)。
 // 洗い出し: 叩いた直後(+50ms)の明るい範囲が 空中 190画素/地上 2744画素/参考 約3870画素(docs/proto/hell-visibility/now-grievous-*-hit*)
 const RHYTHM_HELL_SKY_HIT={id:(()=>{try{const v=typeof localStorage!=='undefined'?localStorage.getItem('mh_hell_sky_hit_proto'):'';return v==='on'?'on':'off';}catch(e){return 'off';}})(),
   set(id){const v=id==='on'?'on':'off';this.id=v;try{if(v==='off')localStorage.removeItem('mh_hell_sky_hit_proto');else localStorage.setItem('mh_hell_sky_hit_proto',v);}catch(e){}}};
+// 空中の判定の文字の位置(案a・デバッグ専用・2026-10-12)。保存は新しいキー mh_hell_sky_text_proto だけ。
+// 既定は below(空中の線のすぐ下・来るノーツに重ならない・社長の決定)。above(前の位置=空中の線の38px上)を選んだときだけキーに残す。重さは変わらない
+const RHYTHM_HELL_SKY_TEXT={id:(()=>{try{const v=typeof localStorage!=='undefined'?localStorage.getItem('mh_hell_sky_text_proto'):'';return v==='above'?'above':'below';}catch(e){return 'below';}})(),
+  set(id){const v=id==='above'?'above':'below';this.id=v;try{if(v==='below')localStorage.removeItem('mh_hell_sky_text_proto');else localStorage.setItem('mh_hell_sky_text_proto',v);}catch(e){}}};
 // 値と案を重ねたものを、案ごとに1回だけ作って覚える(毎コマ何百回も読まれるので)
 const rhythmHellVisMerged=(()=>{const memo={};return (key,base)=>{const id=RHYTHM_HELL_VIS.id,k=id+':'+key;if(memo[k])return memo[k];
   const over=(RHYTHM_HELL_VIS_PRESETS[id]||{})[key];return memo[k]=over?Object.freeze({...base,...over}):base;};})();
