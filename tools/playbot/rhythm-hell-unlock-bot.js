@@ -4,7 +4,8 @@
 // ★公開の印 RELEASE_FLAGS.rhythmHell は偽のまま。デバッグの「公開の印が真だったら」(mh_rhythm_hell_preview_proto)で試す。
 //
 //   node tools/playbot/rhythm-hell-unlock-bot.js            印が偽のときに出ないこと+開く流れ(MASTER を2回演奏・約6分)
-//   node tools/playbot/rhythm-hell-unlock-bot.js --quick    印が偽のときに出ないことだけ(演奏しない)
+//   node tools/playbot/rhythm-hell-unlock-bot.js --quick    印が偽で出ない・試すと鍵つきで出る・ノーツ数が試作と同じ、まで(演奏しない)
+//   --song grievous_lady                                    曲を変える(既定は sheriruth。RHYTHM_HELL_CHARTS にある曲)
 //
 // 確かめること:
 //   ① 印が偽: Sheriruth に HELL が無い(曲えらびにも数え上げにも出ない)
@@ -26,7 +27,10 @@ const { touchInputSource } = require('./lib/touch-input');
 const ROOT = path.resolve(__dirname, '..', '..');
 const args = process.argv.slice(2);
 const QUICK = args.includes('--quick');
-const SONG_ID = 'sheriruth';
+const argOf = (name, fallback) => { const i = args.indexOf(`--${name}`); return i >= 0 && args[i + 1] !== undefined ? args[i + 1] : fallback; };
+const SONG_ID = argOf('song', 'sheriruth');
+// 試作の枠で同じ譜面を持っている所(ノーツ数を突き合わせる)
+const PROTO_OF = { sheriruth: ['sheriruth_hell_debug', 'HELL'], grievous_lady: ['grievous_lady_hell', 'MASTER'] };
 const PORT = 8991;
 const OUT = path.join(ROOT, 'tools', 'out', 'playbot', 'hell-unlock');
 fs.mkdirSync(OUT, { recursive: true });
@@ -95,15 +99,20 @@ async function backFromResult(s) {
     // ① 印が偽
     const off = await hellState(s);
     ok('印が偽: 公開の印は偽のまま', off.released === false && off.open === false);
-    ok('印が偽: Sheriruth に HELL は出ない(譜面・難易度の一覧・数え上げのどれにも)', !off.chart && !off.defs && !off.keys, JSON.stringify(off));
-    if (QUICK) throw Object.assign(new Error('quick'), { quick: true });
+    ok(`印が偽: ${SONG_ID} に HELL は出ない(譜面・難易度の一覧・数え上げのどれにも)`, !off.chart && !off.defs && !off.keys, JSON.stringify(off));
     // ② 印が真(試す)。HARD・EXPERT はクリア済み、MASTER は未クリアの記録にする
     await s.page.evaluate(() => localStorage.setItem('mh_rhythm_hell_preview_proto', '1'));
     await s.boot();
     const on = await hellState(s);
     ok('印が真(試す): HELL の譜面が出る', on.open && on.chart && on.defs, JSON.stringify(on));
     ok('印が真(試す): 数え上げ(Object.keys)には出ない(レベル表・集計を変えない)', !on.keys);
+    const counts = await s.page.evaluate(([id, proto]) => { const a = RHYTHM_SONGS.find((x) => x.songId === id).difficulties.HELL, b = RHYTHM_PROTO_SONGS.find((x) => x.songId === proto[0]); const c = b && b.difficulties[proto[1]];
+      return { hell: a ? a.notes.length : 0, proto: c ? c.notes.length : null, sky: a ? a.notes.filter((n) => rhythmNoteIsSky(n)).length : 0, level: a ? a.level : null }; }, [SONG_ID, PROTO_OF[SONG_ID] || ['', '']]);
+    ok('印が真(試す): HELL の譜面は試作の枠と同じ(ノーツ数)・空中のノーツがある', counts.hell > 0 && counts.hell === counts.proto && counts.sky > 0, JSON.stringify(counts));
     const title = await s.page.evaluate((id) => rhythmSongFullName(RHYTHM_SONGS.find((x) => x.songId === id)), SONG_ID);
+    const lock = await s.page.evaluate((id) => { const all = JSON.parse(localStorage.getItem('mh_rhythm_best_v1') || '{}'); return rhythmDifficultyUnlocked(id, 'HELL', all) ? 'open' : rhythmDifficultyUnlockRequirement('HELL', id); }, SONG_ID);
+    ok('印が真(試す): MASTER を未クリアなら HELL は鍵つき(MASTERで解放)', lock === 'MASTER', lock);
+    if (QUICK) throw Object.assign(new Error('quick'), { quick: true });
     // ③ MASTER をクリア(openSoloLive が HARD・EXPERT のクリアを入れる)
     const r1 = await playMaster(s, title);
     ok('MASTER を最後まで演奏できる', r1.ok, r1.why || `${r1.notes}ノーツ`);
