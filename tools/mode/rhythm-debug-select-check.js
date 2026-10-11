@@ -52,8 +52,10 @@ const selectSong=(page,songId)=>page.evaluate((songId)=>{
   if(!row)return 'no-row';
   row.click();return 'ok';
 },songId);
-// mhdev_* は遊んでいるあいだ15秒ごとに書き直す診断用の印(50-error-boundary.jsx)。ゲームの記録ではないので突き合わせから外す
-const snapshot=page=>page.evaluate(()=>{const o={};for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(/^mhdev_/.test(k))continue;o[k]=localStorage.getItem(k);}return o;});
+// 演奏と関係なく時間で書き直す値は突き合わせから外す。ゲームの記録ではない:
+//   mhdev_*        … 遊んでいるあいだ15秒ごとに書き直す診断用の印(50-error-boundary.jsx)
+//   mh_playtime_v1 … 画面が見えているあいだ数えて60秒ごとに保存する「遊んだ時間」(どの画面にいても増える)
+const snapshot=page=>page.evaluate(()=>{const o={};for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(/^mhdev_/.test(k)||k==='mh_playtime_v1')continue;o[k]=localStorage.getItem(k);}return o;});
 
 (async()=>{
   const browser=await playwright.chromium.launch({executablePath:'/opt/pw-browsers/chromium',args:['--autoplay-policy=no-user-gesture-required']});
@@ -123,7 +125,7 @@ const snapshot=page=>page.evaluate(()=>{const o={};for(let i=0;i<localStorage.le
       await page.waitForTimeout(6000);
       for(let i=0;i<10;i++){
         if(await page.locator('[data-rhythm-debug-select]').count())break;
-        await page.evaluate(()=>{const b=[...document.querySelectorAll('button')].find(x=>/^(曲えらびへ|曲えらびへ戻る|閉じる|もどる|戻る|OK|次へ)/.test(x.textContent.trim()));if(b)b.click();});
+        await page.evaluate(()=>{const b=[...document.querySelectorAll('button')].find(x=>/(へ戻る|^閉じる|^OK|^次へ)$/.test(x.textContent.trim()));if(b)b.click();});
         await page.waitForTimeout(1200);
       }
     }
