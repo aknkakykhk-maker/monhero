@@ -1165,10 +1165,10 @@ const RHYTHM_SKY_LIFT_RATIO=.16;
 // 空中の見た目(案Z・2026-10-11・社長の決定)の色・不透明度・太さを1か所に。描き方(2D の canvas / GPU)はこの値だけを読む(ドライバーくんの GPU の描き方と食い違わないように)。
 // 空中のものは全部「色の無いガラス」(白〜銀)。色が付いていれば地上。長さの単位は CSS px(縦390幅の縦持ち基準)
 const RHYTHM_SKY_LOOK=Object.freeze({
-  arc:Object.freeze({rgb:'214,224,240',alpha:.46,minHalfWidthPx:4.5}),
+  arc:Object.freeze({rgb:'214,224,240',alpha:.46,minHalfWidthPx:4.5,edgeAlpha:.75,edgePx:1.2}),  // edge=帯の左右の白い縁(紫の床の上でも「白い帯」に見せる)
   core:Object.freeze({rgb:'255,255,255',alpha:.9,widthPx:3}),
-  box:Object.freeze({fill:'205,218,238',fillAlpha:.16,topAlpha:.62,topRatio:.36,frontFill:'200,215,240',frontAlpha:.4,thickRatio:.3,edge:'255,255,255',edgePx:1.6,minFacePx:5}),
-  shadow:Object.freeze({rgb:'6,3,20',alpha:.5,radiusPx:3,insetPx:3,lineAlpha:.28}),
+  box:Object.freeze({farDim:.45,fill:'205,218,238',fillAlpha:.16,topAlpha:.62,topRatio:.36,frontFill:'200,215,240',frontAlpha:.4,thickRatio:.3,edge:'255,255,255',edgePx:1.6,minFacePx:5}),
+  shadow:Object.freeze({rgb:'6,3,20',alpha:.22,radiusPx:3,insetPx:3,lineAlpha:.28,fadeRatio:.14}),
   star:Object.freeze({rgb:'255,255,255',radiusPx:17}),
   line:Object.freeze({bandRgb:'150,118,235',bandAlpha:.38,bandPx:6,coreRgb:'165,135,245',coreAlpha:.95,corePx:2}),
   floor:Object.freeze({topRgb:'48,34,108',topAlpha:.55,bottomRgb:'66,46,146',bottomAlpha:.88}),
@@ -30381,7 +30381,9 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   const skyBoxDims=(hd,opts)=>{const L=RHYTHM_SKY_LOOK.box,ds=Number(opts.depthScale)||1,faceH=Math.max(L.minFacePx,hd.h*ds),thick=Math.max(2,faceH*L.thickRatio),W=Math.max(10,hd.w*sizeScale);return {faceH,thick,W};};
   const drawGlassBox=(hd,opts)=>{
     const L=RHYTHM_SKY_LOOK.box,{faceH,thick,W}=skyBoxDims(hd,opts),x0=hd.cx-W/2,y0=hd.cy-faceH/2;
-    ctx.globalAlpha=opts.alpha;
+    // 奥の箱ほど枠・面を少し暗く(込み合う所で白い枠が格子のように交わって数えにくくならないように)
+    const near=Math.max(0,Math.min(1,((Number(opts.depthScale)||1)-.56)/.44));
+    ctx.globalAlpha=opts.alpha*(L.farDim+(1-L.farDim)*near);
     ctx.fillStyle=`rgba(${L.fill},${L.fillAlpha})`;ctx.fillRect(x0,y0,W,faceH+thick);
     ctx.fillStyle=`rgba(255,255,255,${L.topAlpha})`;ctx.fillRect(x0,y0,W,Math.max(2,faceH*L.topRatio));
     ctx.fillStyle=`rgba(${L.frontFill},${L.frontAlpha})`;ctx.fillRect(x0,y0+faceH,W,thick);
@@ -30392,10 +30394,12 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   const drawSkyShadowZ=(geo,opts)=>{
     const sh=geo.skyShadow,hd=geo.head;if(!sh||!hd)return;
     const L=RHYTHM_SKY_LOOK.shadow,{faceH,thick,W}=skyBoxDims(hd,opts),w=W-L.insetPx*2,h=Math.max(4,(faceH+thick)*.8);
-    ctx.globalAlpha=opts.alpha;ctx.fillStyle=`rgba(${L.rgb},${L.alpha})`;
+    // 影は地上の判定線に近づくほど消す(空中の箱が空中の線に来る瞬間に、影が地上の判定線の上に『黒い板』として来ないように)
+    const groundY=cssH*RHYTHM_JUDGMENT_LINE_Y.ratio,fade=Math.max(0,Math.min(1,(groundY-sh.cy-h/2)/(cssH*L.fadeRatio)));
+    ctx.globalAlpha=opts.alpha*fade;ctx.fillStyle=`rgba(${L.rgb},${L.alpha})`;
     roundRectPath(ctx,sh.cx-w/2,sh.cy-h/2,w,h,L.radiusPx);ctx.fill();
     const yTop=hd.cy+faceH/2+thick,yBot=sh.cy-h/2;
-    if(yBot-yTop>4){ctx.globalAlpha=opts.alpha*L.lineAlpha;ctx.strokeStyle='#ffffff';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(hd.cx,yTop);ctx.lineTo(sh.cx,yBot);ctx.stroke();}
+    if(yBot-yTop>4){ctx.globalAlpha=opts.alpha*L.lineAlpha*Math.max(.35,fade);ctx.strokeStyle='#ffffff';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(hd.cx,yTop);ctx.lineTo(sh.cx,yBot);ctx.stroke();}
     ctx.globalAlpha=1;
   };
   // 押した光の星(空中・白1種・半径17px)。焼いた1枚を加算で貼る
@@ -30424,6 +30428,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     });
     ctx.fillStyle=`rgba(${A.rgb},${A.alpha})`;
     air.forEach(q=>{ctx.beginPath();ctx.moveTo(q.l0,q.y0);ctx.lineTo(q.r0,q.y0);ctx.lineTo(q.r1,q.y1);ctx.lineTo(q.l1,q.y1);ctx.closePath();ctx.fill();});
+    // 左右の縁を白く(床の紫の上でも地上スライドの紫の帯と見分けられる)
+    if(air.length){ctx.strokeStyle=`rgba(255,255,255,${A.edgeAlpha})`;ctx.lineWidth=A.edgePx;ctx.lineCap='round';ctx.beginPath();air.forEach(q=>{ctx.moveTo(q.l0,q.y0);ctx.lineTo(q.l1,q.y1);ctx.moveTo(q.r0,q.y0);ctx.lineTo(q.r1,q.y1);});ctx.stroke();ctx.lineCap='butt';}
     if(air.length){
       glowBegin();ctx.globalAlpha=alpha*C.alpha;ctx.strokeStyle=`rgb(${C.rgb})`;ctx.lineWidth=C.widthPx;ctx.lineCap='round';ctx.lineJoin='round';
       ctx.beginPath();air.forEach((q,i)=>{const x0=(q.l0+q.r0)/2,x1=(q.l1+q.r1)/2;if(i===0||Math.abs(air[i-1].y1-q.y0)>1.5)ctx.moveTo(x0,q.y0);else ctx.lineTo(x0,q.y0);ctx.lineTo(x1,q.y1);});
