@@ -134,6 +134,22 @@
 - リバースくんの「速さの組」(scrollGroup・#2692)を取り込み、先の打ち切りもノーツの組の表で出す。どれかの表に戻る速さがあるとき(`RHYTHM_SCROLL.back`)は切らない。
   Grievous Lady の突き合わせ(`--song grievous_lady`)も同じ絵
 
+## S2 の続き(次の人へ・2026-10-11 ドライバー)
+
+ここまでで main にあるもの: #2693(重さを測る bot)・#2694(S2 その1: 区切りの線)・#2700(実機の1コマの重さ stats.frame)。
+
+1. **空中のスライドの見た目(案Z)の GPU 側**: テンポくんのブランチ `claude/rhythm-hell` に、もう `drawSlideGpu` の `skyZOn()` の分岐と
+   手の色(左=青・右=桃・帯の中まで)・白い縁と芯が入っている(c8f4d39)。ピンセットくんの 2D 側とそろえるのは向こうのブランチで進んでいる。
+   こちらがやること: 向こうが #2694 を取り込んだら、そのブランチで `node tools/mode/rhythm-gpu-band-check.js --extra <HELL の譜面>` を回し、
+   2D と画素で同じかを確かめる(HELL の譜面の出し方: そのブランチの rhythm-mode.js を node の vm で読み、`rhythmChartOnRoad(sheriruthHellChart)` を
+   `[{songId,difficulties:{HELL:{notes,scrollChanges,level}}}]` の形で書き出す)。箱の細さ(厚み÷幅 0.20)は確定
+2. **ノーツの板(drawHead)を GPU へ**: 次の大物。板は 3-slice の光の絵+角丸の板+グラデーション。帯と同じく「譜面の座標で一度だけ置き、
+   頂点シェーダーで投影」にする。ノーツの位置は `rhythmScrollPos(t, note.scrollGroup)`(リバースくんの速さの組)で出す。
+   突き合わせは `rhythm-gpu-band-check.js` の場面に板も入っているので、そのまま使える(板は今は GL2D で描いている)
+3. **重さの判定は bot で**: `node tools/playbot/rhythm-perf-bench.js --roots main=<前の版>,new=. --draw gpu --cpu 1,4`。
+   この入れ物は本物の GPU が無いので「メインのCPU」で比べる。2D と GPU のどちらが iPhone で軽いかは、実機の stats.frame がそろってから
+   (読む SELECT は docs/perf/RHYTHM_PERF_BENCH.md。読むのは窓口経由)
+
 ## 測り方・確かめ方
 
 - 重さ: `node tools/playbot/rhythm-frame-perf.js --song sheriruth --diff MASTER --entry debug --from 104000 --to 112000`
