@@ -171,10 +171,14 @@ check('送信に失敗したときだけ専用キー(mh_rhythm_rank_pending_v1)�
 check('退避する記録に上限があり、際限なく増やさない',
   game.includes('const RHYTHM_RANKING_PENDING_MAX = 20;')
   &&game.includes('list.slice(-RHYTHM_RANKING_PENDING_MAX)'));
-// みんなで対戦(from===multi)も、2026-10-02 のユーザー指示「ランキングにも反映するようにして」で送る側に入った
-check('体験版(from===demo)とみんなで対戦(from===multi)のプレイだけ送信し、デバッグプレイは送信しない',
-  /if\(rhythmPlay\.from==='demo'\|\|rhythmPlay\.from==='multi'\)submitRhythmRankingScore\(rhythmPlay\.song,rhythmPlay\.difficulty,result\);/.test(game)
-  &&!/rhythmPlay\.from==='debug'[^;]{0,40}submitRhythmRankingScore/.test(game));
+// みんなで対戦(from===multi)も、2026-10-02 のユーザー指示「ランキングにも反映するようにして」で送る側に入った。
+// レイドバトルのモンヒロビート挑戦(from===raid)も、2026-10-07 のユーザー指示「両方つなげる」(#2265)で送る側に入った
+check('体験版(from===demo)・みんなで対戦(from===multi)・レイドの挑戦(from===raid)のプレイだけ送信し、デバッグ・試作のプレイは送信しない',
+  /if\(rhythmPlay\.from==='demo'\|\|rhythmPlay\.from==='multi'\|\|rhythmPlay\.from==='raid'\)submitRhythmRankingScore\(rhythmPlay\.song,rhythmPlay\.difficulty,result\);/.test(game)
+  &&!/rhythmPlay\.from==='(debug|proto)'[^;]{0,40}submitRhythmRankingScore/.test(game)
+  // 試作(全解放の曲えらびを含む)は、送信より前で何もせずに抜ける
+  &&/if\(rhythmPlay\.from==='proto'\)return;/.test(game)
+  &&game.indexOf("if(rhythmPlay.from==='proto')return;")<game.indexOf('submitRhythmRankingScore(rhythmPlay.song,rhythmPlay.difficulty,result)'));
 check('BEST記録の保存(saveRhythmBestRecord)は送信の有無に関わらず必ず行う(先に呼んでいる)',(()=>{
   const idx=game.indexOf("const records=await saveRhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId");
   const submitIdx=game.indexOf("submitRhythmRankingScore(rhythmPlay.song,rhythmPlay.difficulty,result)");
