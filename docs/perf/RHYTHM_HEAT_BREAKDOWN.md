@@ -107,6 +107,7 @@
 | ② 判定ごとの表示の部品は、要る値が変わったときだけ描き直す(useRhythmHudPick) | 本番 | #2798 |
 | ③ 重い飾り: 曲の準備中・演奏中は、隠れているアプリの外側の背景の絵(季節の SVG)を描かない | 本番 | #2802 |
 | ④ その1: 叩いた光の粒を焼いた丸で(既定は今の形・社長の判断待ち) | main(切り替え) | #2803 |
+| ④ その2: ノーツの板の光の絵(draw3Slice)も、板のシェーダーで描く(ノーツごとの描き方の切り替えを減らす。にじむ光が入っているときは今までどおり) | 作り済み・画素で突き合わせ済み(差は丸めの 1/255 がほとんど・最大 16/255)。重さの測りはこれから | ブランチ claude/rhythm-heat-plate-glow |
 | ④ 残り(ノーツの板・判定の文字など) | 引き継ぎ。[`RHYTHM_HEAT_HANDOFF.md`](RHYTHM_HEAT_HANDOFF.md) | — |
 
 測り方の控え: 重さは `node tools/playbot/rhythm-perf-bench.js --songs sheriruth:MASTER,freedom_dive:MASTER --cpu 1,4 --draw gpu --roots main=<main の worktree>,new=.`。
