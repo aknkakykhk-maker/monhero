@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f2518e1f9c618606
+// source-sha256: b748b5d25a7acf1b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-11 17:03";
+const BUILD_DATE = "2026-10-11 17:08";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -31047,9 +31047,14 @@ const rhythmHudInitial = () => ({
   lastPrecise: false,
   fastSlow: '',
   lastDeltaMs: null,
+  skyLast: '',
+  skyLastPrecise: false,
+  skyFastSlow: '',
+  skyDeltaMs: null,
   counts: null,
   life: RHYTHM_LIFE_MAX
 });
+const rhythmNoteIsSky = note => rhythmNoteSkyHeight(note) > 0 || rhythmSlideHasSky(note);
 const rhythmCreateHud = () => {
   let state = rhythmHudInitial();
   const subs = new Set();
@@ -31333,14 +31338,14 @@ const RhythmHudJudgment = ({
   status,
   haloKeys,
   timingDisplay,
-  judgmentTextRef
+  judgmentTextRef,
+  sky = false
 }) => {
-  const {
-    last,
-    lastPrecise,
-    fastSlow,
-    lastDeltaMs
-  } = useRhythmHud(hud);
+  const h = useRhythmHud(hud);
+  const last = sky ? h.skyLast : h.last,
+    lastPrecise = sky ? h.skyLastPrecise : h.lastPrecise,
+    fastSlow = sky ? h.skyFastSlow : h.fastSlow,
+    lastDeltaMs = sky ? h.skyDeltaMs : h.lastDeltaMs;
   return React.createElement(React.Fragment, null, React.createElement("b", {
     ref: judgmentTextRef,
     "data-rhythm-judgment-text": true,
@@ -31752,6 +31757,8 @@ const RhythmTapTest = ({
     screenFlashRef = useRef(null),
     touchSweepRef = useRef(null),
     judgmentTextRef = useRef(null),
+    skyJudgmentTextRef = useRef(null),
+    skyJudgmentBurstRef = useRef(null),
     comboRef = useRef(null),
     judgmentBurstRef = useRef(null),
     comboRingRef = useRef(null);
@@ -32350,7 +32357,10 @@ const RhythmTapTest = ({
       hudRef.current.set({
         last: '',
         lastPrecise: false,
-        fastSlow: ''
+        fastSlow: '',
+        skyLast: '',
+        skyLastPrecise: false,
+        skyFastSlow: ''
       });
     }, RHYTHM_JUDGMENT_DISPLAY_MS);
   }, []);
@@ -32542,12 +32552,13 @@ const RhythmTapTest = ({
             }, RHYTHM_SIDE_CHEER_MS);
           }
         }
-        const judgmentText = judgmentTextRef.current;
+        const skyHit = rhythmNoteIsSky(note);
+        const judgmentText = skyHit ? skyJudgmentTextRef.current : judgmentTextRef.current;
         if (judgmentText) restarts.push({
           el: judgmentText,
           attr: 'rhythmJudgmentPop'
         });
-        const burst = judgmentBurstRef.current;
+        const burst = skyHit ? skyJudgmentBurstRef.current : judgmentBurstRef.current;
         if (burst && settingsLiveRef.current.judgmentFx === true && (judgment === 'GREAT' || judgment === 'EXCELLENT' || judgment === 'MARVELOUS')) {
           burst.dataset.judgment = judgment;
           burst.dataset.judgmentPrecise = preciseHit ? '1' : '';
@@ -32718,7 +32729,18 @@ const RhythmTapTest = ({
     const showAbilityFlash = !!abilityFlash && !rhythmMonsterEffectAtMost(settings.monsterNoteEffect, 'NONE');
     const score = run.lifeDepleted ? run.lockedScore : run.score,
       lastDeltaMs = judgment !== 'MISS' && typeof deltaMs === 'number' && Number.isFinite(deltaMs) ? deltaMs : null;
-    hudRef.current.set({
+    hudRef.current.set(rhythmNoteIsSky(note) ? {
+      score,
+      combo: run.combo,
+      skyLast: judgment,
+      skyLastPrecise: preciseHit,
+      skyFastSlow: side || '',
+      skyDeltaMs: lastDeltaMs,
+      counts: {
+        ...run.counts
+      },
+      life: run.life
+    } : {
       score,
       combo: run.combo,
       last: judgment,
@@ -33995,7 +34017,11 @@ const RhythmTapTest = ({
           } catch {}
         }
         const side = rhythmFastSlow(deltaMs);
-        hudRef.current.set({
+        hudRef.current.set(rhythmNoteIsSky(target) ? {
+          skyLast: 'HOLD',
+          skyLastPrecise: false,
+          skyFastSlow: side || ''
+        } : {
           last: 'HOLD',
           lastPrecise: false,
           fastSlow: side || ''
@@ -35586,11 +35612,7 @@ const RhythmTapTest = ({
     "data-rhythm-judgment-display": true,
     className: "pointer-events-none absolute left-1/2 z-10 w-[88%] -translate-x-1/2 text-center",
     style: {
-      bottom: skyChart ? 'calc(var(--mh-judgment-line-bottom,12%) - 64px)' : 'calc(var(--mh-judgment-line-bottom,12%) + 38px)',
-      ...(skyChart ? {
-        opacity: .8,
-        transform: 'translateX(-50%) scale(.78)'
-      } : {})
+      bottom: 'calc(var(--mh-judgment-line-bottom,12%) + 38px)'
     }
   }, settings.judgmentFx === true && React.createElement("i", {
     ref: judgmentBurstRef,
@@ -35628,7 +35650,25 @@ const RhythmTapTest = ({
     style: {
       opacity: 0
     }
-  })))), luckyRush && React.createElement("div", {
+  })))), skyChart && React.createElement("div", {
+    "data-rhythm-sky-judgment-display": true,
+    className: "pointer-events-none absolute left-1/2 z-10 w-[88%] -translate-x-1/2 text-center",
+    style: {
+      bottom: `calc(var(--mh-judgment-line-bottom,12%) + ${(RHYTHM_SKY_LIFT.ratio * 100).toFixed(2)}% + 38px)`
+    }
+  }, settings.judgmentFx === true && React.createElement("i", {
+    ref: skyJudgmentBurstRef,
+    "data-rhythm-judgment-burst": true,
+    "aria-hidden": "true"
+  }), React.createElement(RhythmHudJudgment, {
+    sky: true,
+    hud: hudRef.current,
+    settings: settings,
+    status: "sky",
+    haloKeys: haloKeys,
+    timingDisplay: timingDisplay,
+    judgmentTextRef: skyJudgmentTextRef
+  })), luckyRush && React.createElement("div", {
     "data-rhythm-lucky-rush": true,
     "aria-hidden": "true"
   }), effectCapNotice > 0 && React.createElement("div", {
