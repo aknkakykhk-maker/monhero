@@ -3470,6 +3470,13 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
     }
     return null;
   };
+  // 押さえ始めたスライドで、指がいま帯から外れているか(見た目だけ。判定には使わない)。外れ始めからグレース前でも true
+  const slideOffForIndex=index=>{
+    for(const session of sessions.values()){
+      if(session.kind==='SLIDE'&&session.note?.index===index&&!session.note.done)return session.trackingBadSincePerf!=null;
+    }
+    return false;
+  };
   const clear=()=>{
     positions.clear();
     sessions.clear();
@@ -3517,7 +3524,7 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
     // この指の見回りが無い(タッチ側の記録が途中で外れた): 本体が rhythmReleaseFallback で決める
     return null;
   };
-  return {bind,settleHeld,setInputAge,record,release,clear,slideVisualLaneForIndex,invalidateAreaRect,areaRect,_sessions:sessions};
+  return {bind,settleHeld,setInputAge,record,release,clear,slideVisualLaneForIndex,slideOffForIndex,invalidateAreaRect,areaRect,_sessions:sessions};
 })();
 
 // iPhoneのTouch.radiusXを既存projectionへ通し、実際の接触幅に応じたサブレーン領域として扱う。
@@ -24607,15 +24614,28 @@ const SHERIRUTH_CROSS_SLIDES=Object.freeze([
 ]);
 // 縦画面で同じ親指が81msで叩き直す所(85.12秒・102.88秒)を、左右の親指に分かれる位置へ(オンプくん・時刻とノーツ数は変えない)。[時刻,元のサブレーン,新しいサブレーン]
 const SHERIRUTH_CROSS_TAP_MOVES=Object.freeze([[85040,6,9],[85121,9,6],[102798,3,6]]);
-const sheriruthMasterNotesCross=Object.freeze(sheriruthMasterNotes.map(note=>{
+// 交差の版を作る: 公開版 MASTER のスライドの通り道を slides で差し替え、縦の押せない単打(SHERIRUTH_CROSS_TAP_MOVES)の位置を直す
+const sheriruthMasterNotesCrossWith=slides=>Object.freeze(sheriruthMasterNotes.map(note=>{
   if(note.type==='TAP'){
     const move=SHERIRUTH_CROSS_TAP_MOVES.find(([timeMs,subLane])=>timeMs===note.timeMs&&subLane===note.subLane);
-    return move?mhTap(note.timeMs,move[2],note.subLaneWidth):note;
+    return move?mhTap(note.timeMs,move[2],note.subLaneWidth,note.monsterSlot):note;
   }
   if(note.type!=='SLIDE')return note;
-  const swap=SHERIRUTH_CROSS_SLIDES.find(([timeMs])=>timeMs===note.timeMs);
+  const swap=slides.find(([timeMs])=>timeMs===note.timeMs);
   return swap?mhSlideV2(note.timeMs,note.endTimeMs,swap[2].map(([timeMs,lane])=>[timeMs,lane,2]),note.endFlick):note;
 }));
+const sheriruthMasterNotesCross=sheriruthMasterNotesCrossWith(SHERIRUTH_CROSS_SLIDES);
+// 交差をきつくした版(2026-10-11 社長「もうちょいクロス部分の緩やかさをきつくしてもよさそう」・オンプくんの下書き)。
+// 参考動画の交差を読み取ると、横切りは 0.75〜1.75拍(中央 約1.25拍)・1本の手で 1.7〜3.3レーン/拍(中央 約2)。
+// 上の版(2.5拍で約2レーン・0.8レーン/拍)の、横切る6か所だけを「待つ → 1拍でまっすぐ2レーン横切る → 待つ」に(2レーン/拍=参考の中央)。
+// 動くレーンを参考(3〜4)まで広げないのは、横持ちで親指が真ん中を2レーン越えると押せなくなるため。始まりと終わり・ノーツ数・時刻は上の版と同じ
+const SHERIRUTH_CROSS_STEEP_SLIDES=Object.freeze([
+  [106771,'R',[[106771,4],[106852,4],[107014,3],[107096,2.5],[107258,1.5],[107339,1.5],[107744,4],[107906,4],[107987,3.5],[108312,3.5],[108393,3],[108474,2.5],[108555,2],[108636,1.5],[109690,1.5],[109772,2],[109853,2.5],[109934,3],[110015,3.5],[110258,3.5],[110339,3],[110420,2.75],[110501,2],[110582,1.5],[110663,2],[110988,1.5],[111069,1],[111150,0.5],[111231,0],[111555,0],[111880,0.5],[111961,1],[112042,1.5],[112123,2],[112447,2],[112528,1.75],[112610,1.5],[112690,1.5],[112771,2],[112853,2],[112934,2.5],[113015,2.5],[113096,3],[113420,3],[113501,3.5],[113582,3.5],[113663,4],[113745,4.5],[113826,4.5],[113907,5],[113988,5],[114150,4],[114231,4],[114312,3.5],[114393,3.5],[114474,3],[114555,3.5],[114636,3.5],[114718,4],[114799,3.5],[114880,3.5],[114961,3],[115123,4],[115204,4],[115366,5],[115609,3.5],[115691,3],[115853,4],[115934,4],[116015,4.5],[116339,2.5]]],
+  [107339,'L',[[107339,0.5],[107582,0.5],[107663,1],[107906,1],[107987,1.5],[108312,1.5],[108393,2],[108474,2.5],[108555,3],[108636,3.5],[109690,3.5],[109772,3],[109853,2.5],[109934,2],[110015,1.5],[110258,1.5],[110339,1.25],[110420,1],[110501,0.75],[110582,0.5],[110663,0],[110988,0.5],[111069,1],[111150,1.5],[111231,2],[111555,2],[111880,1.5],[111961,1],[112042,0.5],[112123,0],[112366,0],[112447,0.25],[112528,0.25],[112609,0],[112690,0.5],[112771,0.5],[112853,1],[112934,1.5],[113015,1.5],[113096,2],[113501,2],[113582,2.5],[113663,2.5],[113745,3],[113907,3],[113988,3.5],[114069,3.5],[114150,3],[114231,3],[114312,2.5],[114393,2.5],[114636,1],[114718,0.5],[114799,0.5],[115042,2],[115123,2],[115204,1.5],[115285,1.5],[115366,1],[115447,1],[115528,1.5],[115609,1.5],[115691,2]]],
+  [127367,'L',[[127367,0.5],[128340,0.5],[128421,1],[130043,1],[130124,1.5],[130367,1.5],[130692,2],[130773,2.5],[130854,3],[130935,3.5],[131421,3.5],[131502,3],[131584,2.5],[131665,2],[131746,1.5],[131989,1.5]]],
+  [127772,'R',[[127772,4.5],[128826,4.5],[128908,4],[130286,4],[130367,3.5],[130692,3],[130773,2.5],[130854,2],[130935,1.5],[131421,1.5],[131502,2],[131584,2.5],[131665,3],[131746,3.5],[131989,3.5],[132070,3.25],[132151,3],[132232,2.75],[132475,2.5]]],
+]);
+const sheriruthMasterNotesCrossSteep=sheriruthMasterNotesCrossWith(SHERIRUTH_CROSS_STEEP_SLIDES);
 const sheriruthCharts=Object.freeze({
   EASY:mhChart(1,sheriruthEasyNotes,SHERIRUTH_DURATION_MS,6,{scrollChanges:SHERIRUTH_SCROLL_CHANGES}),
   NORMAL:mhChart(3,sheriruthNormalNotes,SHERIRUTH_DURATION_MS,6,{scrollChanges:SHERIRUTH_SCROLL_CHANGES}),
@@ -28754,6 +28774,17 @@ const RHYTHM_PROTO_SONGS=Object.freeze([
       id,rhythmChartOnRoad(id==='MASTER'?mhChart(35,sheriruthMasterNotesCross,SHERIRUTH_DURATION_MS,6,{scrollChanges:SHERIRUTH_SCROLL_CHANGES}):emptyRhythmChart())
     ])))
   }),
+  // 交差をきつくした版(上の SHERIRUTH_CROSS_STEEP_SLIDES)。社長が上の版と見比べる
+  Object.freeze({
+    songId:'sheriruth_cross_steep',
+    displayName:'Sheriruth',
+    subtitle:'MASTER(交差あり・きつめ)',
+    debugDescription:'交差ありの版の横切りを、2.5拍かけてゆっくりから「待つ → 1拍でまっすぐ2レーン横切る → 待つ」に(参考動画の交差の中央の速さ)。ノーツ数・時刻は公開版のまま。遊んでも自己ベスト・ランキング・報酬には入らない',
+    bgmTrackId:'melo_sheriruth',
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[
+      id,rhythmChartOnRoad(id==='MASTER'?mhChart(35,sheriruthMasterNotesCrossSteep,SHERIRUTH_DURATION_MS,6,{scrollChanges:SHERIRUTH_SCROLL_CHANGES}):emptyRhythmChart())
+    ])))
+  }),
   // Grievous Lady の HELL(2026-10-11・社長「MASTER で最高難度、HELL はそこに空中のぶんの難しさが乗るイメージ」)。社長がデバッグで見てから本番へ。
   // 参考譜面の空中を土台にした譜面(grievousLadyHellNotes)。流れの速さの演出と組は MASTER と同じ表
   Object.freeze({
@@ -30397,6 +30428,8 @@ const rhythmNoteCanvasGeometry=(note,yPx,visualLane,rect,noteHeight,releaseYpx=n
   const projectedWidth=rect.width*projected.width,width=Math.min(projectedWidth,Math.max(4,projectedWidth*rhythmHeadWidthRatio(note)));
   const out={centerY,yRatio,scale:projected.scale,head:{cx:rect.width*projected.center,cy:centerY,w:width,h:noteHeight},band:null,slide:null,checkpoints:null,end:null};
   const height=Math.max(0,Number(bodyHeight)||0);
+  // GPU の帯の描き方のとき(ノーツの板も GPU で描く・drawHead)
+  if(slideTravel&&slideTravel.gpu)out.gpu=true;
   if(rhythmNoteIsSlide(note)){
     if(slideTravel&&slideTravel.gpu){
       // 帯を GPU に置いて描く(作り替え B)。CPU では刻まず、描くのに要る値だけ渡す(形は RHYTHM_CANVAS_RENDERER が GPU で作る)
@@ -30497,6 +30530,8 @@ const RHYTHM_NOTE_CANVAS_MAX_DPR=2;
 //   角(帯の先の左右の角・いまの位置で切った所の左右の角)は丸(disc)を重ねて、2D の lineJoin:'round' と同じ形にする。
 // 【いまの位置で切る】押さえている帯は、今の描き方(rhythmSlideSegmentQuads)と同じく「いまの位置から次の譜面の点まで」だけを
 //   毎コマ刻み直して渡し(10〜20点)、その先は GPU に置いた形の途中から描く。刻む点が今の描き方と同じになる。
+// 押さえ始めたスライドで指が帯から外れている間の、帯の暗さ(見た目だけ。判定は変えない)。2D と GPU で同じ値を使う
+const RHYTHM_SLIDE_DIM=Object.freeze({rgb:'6,4,18',alpha:.5});
 const RHYTHM_GPU_BAND_KEY='mh_rhythm_gpu_band_v1';
 const rhythmGpuBandPreference=()=>{try{if(typeof localStorage==='undefined')return '';return localStorage.getItem(RHYTHM_GPU_BAND_KEY)==='gpu'?'gpu':'';}catch{return '';}};
 const rhythmGpuBandSetPreference=value=>{const next=value==='gpu'?'gpu':'';try{if(typeof localStorage!=='undefined'){if(next)localStorage.setItem(RHYTHM_GPU_BAND_KEY,next);else localStorage.removeItem(RHYTHM_GPU_BAND_KEY);}}catch{}return next;};
@@ -30772,6 +30807,116 @@ const rhythmCreateGpuSlideBand=(gl,host)=>{
   return api;
 };
 
+// ===================== ノーツの板を GPU で1回で描く(作り替え B の S2・2026-10-11 ドライバー) =====================
+// drawHead の板の本体(外の暗い縁取り・輪・グラデーションの塗り・白い縁・白い芯・太いノーツの両端の棒・ホールドの横線・
+// 奥ほど暗く・押さえている最中の白)を、四角1枚(三角形2つ)で描く。形は塗り側で「角の丸い四角までの距離」から出し、
+// 各層を drawHead と同じ順・同じ色で重ねる(重ね方はどれも source-over なので、塗り側で順に重ねてから1度だけ画面へ重ねても同じ色になる)。
+// GL2D は角の丸い線を細かい三角形と継ぎ目の丸に刻んでいて(1枚で数百の三角形・数回の描画)、板の JS の大半がそれだった。
+// 光(3分割の絵)と矢印は今までどおり GL2D の drawImage。使うのはデバッグの「スライドの帯の描き方(検証用)」→ GPU のときだけ
+const rhythmCreateGpuPlate=(gl,host)=>{
+  if(!gl||!host)return null;
+  // 位置は板の中心からのずれ(CSS の画素)で持つ。画面の画素座標の大きな数を塗り側へ渡さない(GL2D と同じ理由)
+  const PLATE_VS='attribute vec2 aCorner;uniform vec3 uM0;uniform vec3 uM1;uniform vec2 uView;uniform vec2 uCenter;uniform vec2 uExt;uniform vec2 uHalf;'+
+    'varying vec2 vP;varying float vT;'+
+    'void main(){vP=aCorner*uExt;vT=(vP.y+uHalf.y)/max(2.0*uHalf.y,1e-4);vec2 pos=uCenter+vP;'+
+    'vec2 q=vec2(dot(uM0,vec3(pos,1.0)),dot(uM1,vec3(pos,1.0)));vec2 c=q/uView*2.0-1.0;gl_Position=vec4(c.x,-c.y,0.0,1.0);}';
+  const PLATE_FS='#ifdef GL_FRAGMENT_PRECISION_HIGH\nprecision highp float;\n#else\nprecision mediump float;\n#endif\n'+
+    'varying vec2 vP;varying float vT;uniform vec2 uHalf;uniform float uR;uniform float uSc;uniform float uAlpha;uniform float uS;'+
+    'uniform float uOutW;uniform vec4 uOutC;uniform vec4 uRingC;uniform vec4 uGC[4];uniform vec4 uGT;uniform vec4 uBorderC;uniform vec4 uInsetC;uniform vec4 uFlags;uniform float uDark;'+
+    // 角の丸い四角(中心0・半分の大きさ b・角の丸み r。roundRectPath と同じく丸みは短い辺の半分まで)までの距離。内側が負
+    'float sdR(vec2 p,vec2 b,float r){r=clamp(r,0.0,min(b.x,b.y));vec2 q=abs(p)-b+r;return length(max(q,0.0))+min(max(q.x,q.y),0.0)-r;}'+
+    // 1画素のうち形の中に入る割合(画素の大きさ 1/uSc で、ふちをなめらかにする)
+    'float fillC(float d){return clamp(0.5-d*uSc,0.0,1.0);}'+
+    'float strokeC(float d,float lw){return clamp(fillC(d-lw*0.5)-fillC(d+lw*0.5),0.0,1.0);}'+
+    // 四角(左上 r.xy・右下 r.zw)と1画素の重なり(fillRect と同じ)
+    'float rectC(vec2 p,vec4 r){vec2 h=vec2(0.5/uSc);vec2 a=clamp((min(p+h,r.zw)-max(p-h,r.xy))*uSc,0.0,1.0);return a.x*a.y;}'+
+    'vec4 acc;'+
+    'void over(vec4 c,float cov){float a=c.a*cov*uAlpha;acc=vec4(c.rgb*a,a)+acc*(1.0-a);}'+
+    // fillGradient(4つまでの色。位置 uGT)
+    'vec4 grad(float t){t=clamp(t,0.0,1.0);vec4 c=uGC[0];'+
+    'if(t>=uGT.x)c=mix(uGC[0],uGC[1],uGT.y>uGT.x?clamp((t-uGT.x)/(uGT.y-uGT.x),0.0,1.0):1.0);'+
+    'if(t>=uGT.y)c=mix(uGC[1],uGC[2],uGT.z>uGT.y?clamp((t-uGT.y)/(uGT.z-uGT.y),0.0,1.0):1.0);'+
+    'if(t>=uGT.z)c=mix(uGC[2],uGC[3],uGT.w>uGT.z?clamp((t-uGT.z)/(uGT.w-uGT.z),0.0,1.0):1.0);return c;}'+
+    'void main(){acc=vec4(0.0);vec2 p=vP;vec2 H=uHalf;float W=2.0*H.x;float Hh=2.0*H.y;'+
+    // 外の暗い縁取り(線の太さ uOutW を外側へ)
+    'if(uOutW>0.0)over(uOutC,strokeC(sdR(p,H+uOutW*0.5,uR+uOutW*0.5),uOutW));'+
+    // 輪(大きさ倍率 uS ぶん外の角の丸い四角に太さ 2uS)
+    'if(uRingC.a>0.0)over(uRingC,strokeC(sdR(p,H+uS,uR+1.0),2.0*uS));'+
+    'float d=sdR(p,H,uR);float fc=fillC(d);'+
+    'over(grad(vT),fc);over(uBorderC,strokeC(d,1.0));'+
+    'float x0=-H.x+uR*0.5;float x1=x0+max(0.0,W-uR);float y0=-H.y+1.0;'+
+    'if(uFlags.x>0.5)over(uInsetC,rectC(p,vec4(x0,y0,x1,y0+1.0)));'+
+    'else{float hh=max(1.0,Hh*0.22);over(vec4(1.0,1.0,1.0,0.62),rectC(p,vec4(x0,y0,x1,y0+hh)));over(vec4(1.0,1.0,1.0,0.26),rectC(p,vec4(x0,y0+Hh*0.22,x1,y0+Hh*0.22+hh)));}'+
+    // 太いノーツの両端の白い棒(上 .95 → 下 .55 のグラデーション)
+    'if(uFlags.y>0.5){vec4 bar=vec4(1.0,1.0,1.0,mix(0.95,0.55,clamp(vT,0.0,1.0)));over(bar,rectC(p,vec4(-H.x+1.0,y0,-H.x+4.0,H.y-1.0)));over(bar,rectC(p,vec4(H.x-4.0,y0,H.x-1.0,H.y-1.0)));}'+
+    'if(uFlags.z>0.5)over(vec4(8.0/255.0,47.0/255.0,73.0/255.0,0.55),rectC(p,vec4(-H.x+W*0.24,-1.0,-H.x+W*0.76,1.0)));'+
+    'if(uDark>0.0)over(vec4(2.0/255.0,6.0/255.0,23.0/255.0,uDark),fc);'+
+    'if(uFlags.w>0.5)over(vec4(1.0,1.0,1.0,0.4),fc);'+
+    'gl_FragColor=acc;}';
+  const compile=(type,src)=>{const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(s)||'plate shader');return s;};
+  let prog=null,quad=null;
+  try{
+    prog=gl.createProgram();gl.attachShader(prog,compile(gl.VERTEX_SHADER,PLATE_VS));gl.attachShader(prog,compile(gl.FRAGMENT_SHADER,PLATE_FS));
+    gl.bindAttribLocation(prog,0,'aCorner');gl.linkProgram(prog);if(!gl.getProgramParameter(prog,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(prog)||'plate link');
+    quad=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,quad);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
+    host.rebind();
+  }catch(e){return null;}
+  const U={};['uM0','uM1','uView','uCenter','uExt','uHalf','uR','uSc','uAlpha','uS','uOutW','uOutC','uRingC','uGC','uGT','uBorderC','uInsetC','uFlags','uDark']
+    .forEach(name=>{U[name]=gl.getUniformLocation(prog,name);});
+  const colorCache=new Map();
+  const rgba=text=>{let c=colorCache.get(text);if(c)return c;const t=String(text||'').trim();
+    if(t[0]==='#'){const h=t.slice(1),f=h.length===3||h.length===4?h.split('').map(ch=>ch+ch).join(''):h;c=[parseInt(f.slice(0,2),16)/255,parseInt(f.slice(2,4),16)/255,parseInt(f.slice(4,6),16)/255,f.length>=8?parseInt(f.slice(6,8),16)/255:1];}
+    else{const m=t.match(/rgba?\(([^)]*)\)/i);const p=m?m[1].split(/[\s,\/]+/).filter(Boolean).map(Number):[0,0,0,0];c=[(p[0]||0)/255,(p[1]||0)/255,(p[2]||0)/255,p.length>3?p[3]:1];}
+    colorCache.set(text,c);return c;};
+  // グラデーションの色の並び(fillGradient と同じ読み方)を、4色・4つの位置へそろえて覚える
+  const gradCache=new Map();
+  const gradOf=stops=>{let g=gradCache.get(stops);if(g)return g;
+    const list=stops.map((stop,index)=>Array.isArray(stop)?[stop[1],stop[0]]:[index/(stops.length-1),stop]).slice(0,4);
+    while(list.length<4)list.push(list[list.length-1]);
+    g={colors:new Float32Array(16),times:list.map(s=>Number(s[0])||0)};list.forEach((s,i)=>g.colors.set(rgba(s[1]),i*4));gradCache.set(stops,g);return g;};
+  // 送った値の覚え(同じ値は送り直さない)。GL2D に戻ったら(end)、次に結び付けるとき行列と画面の大きさを送り直す
+  const sent={};
+  const u1f=(name,v)=>{if(sent[name]!==v){gl.uniform1f(U[name],v);sent[name]=v;}};
+  const u2f=(name,a,b)=>{const key=a+','+b;if(sent[name]!==key){gl.uniform2f(U[name],a,b);sent[name]=key;}};
+  const u4f=(name,c)=>{const key=c[0]+','+c[1]+','+c[2]+','+c[3];if(sent[name]!==key){gl.uniform4f(U[name],c[0],c[1],c[2],c[3]);sent[name]=key;}};
+  const NONE=[0,0,0,0];
+  let bound=false;
+  const bind=()=>{
+    if(bound)return;
+    host.flush();gl.useProgram(prog);gl.bindBuffer(gl.ARRAY_BUFFER,quad);
+    gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,2,gl.FLOAT,false,8,0);for(let i=1;i<5;i++)gl.disableVertexAttribArray(i);
+    gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);gl.stencilFunc(gl.ALWAYS,0,0xff);bound=true;
+    // 位置の変換と画面の大きさ(uniform はシェーダーごとに残るので、変わったときだけ送る)
+    const m=host.matrix(),view=host.view(),key=m.join(',')+'|'+view[0]+','+view[1];
+    if(sent.m!==key){gl.uniform3f(U.uM0,m[0],m[2],m[4]);gl.uniform3f(U.uM1,m[1],m[3],m[5]);gl.uniform2f(U.uView,view[0],view[1]);u1f('uSc',Math.hypot(m[0],m[1])||1);sent.m=key;}
+    // GL2D の次の描画の前に、GL2D の描き方へ戻してもらう
+    host.claim(api.end);
+  };
+  const api={
+    // 板1枚。o: cx・cy(中心)・w・h・radius・alpha・sizeMul・outline(太さ。0=引かない)・outlineColor・ring・gradient・border・
+    // inset・failed・wide・hold・dark(奥の暗さ 0〜1)・pressed。描けなかったら false(呼ぶ側が今までどおり描く)
+    draw(o){
+      if(host.lost())return false;
+      if(!(o.alpha>0)||!(o.w>0)||!(o.h>0))return true;
+      // ★GL2D が後回しにしている描画(光の絵など)を先に描き切る。描き切ると GL2D が自分の描き方へ戻すので、そのあと結び付け直す
+      host.flush();bind();
+      const s=o.sizeMul,reach=Math.max(o.outline||0,o.ring?2*s:0)+2;
+      u2f('uCenter',o.cx,o.cy);u2f('uHalf',o.w/2,o.h/2);u2f('uExt',o.w/2+reach,o.h/2+reach);
+      u1f('uR',o.radius);u1f('uAlpha',Math.max(0,Math.min(1,o.alpha)));u1f('uS',s);
+      u1f('uOutW',o.outline||0);u4f('uOutC',o.outline?rgba(o.outlineColor):NONE);u4f('uRingC',o.ring?rgba(o.ring):NONE);
+      const g=gradOf(o.gradient);if(sent.uGC!==g){gl.uniform4fv(U.uGC,g.colors);gl.uniform4f(U.uGT,g.times[0],g.times[1],g.times[2],g.times[3]);sent.uGC=g;}
+      u4f('uBorderC',rgba(o.border));u4f('uInsetC',rgba(o.inset));
+      u4f('uFlags',[o.failed?1:0,o.wide?1:0,o.hold?1:0,o.pressed?1:0]);u1f('uDark',o.dark>0?o.dark:0);
+      gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
+      return true;
+    },
+    // GL2D の描き方へ戻す
+    end(){if(bound){bound=false;host.restore();}},
+    dispose(){try{gl.deleteBuffer(quad);gl.deleteProgram(prog);}catch(e){}},
+  };
+  return api;
+};
+
 // ===================== ノーツを WebGL で描く(検証用・2026-09-26) =====================
 // ユーザー指示「WebGL をデバッグ的に作ることは可能？ → 進めて」。デバッグ画面の「ノーツの描き方」で
 // 「WebGL」を選んだときだけ使う(mh_rhythm_canvas_v1 = 'webgl')。プレイヤーの画面は何も変わらない。
@@ -30817,6 +30962,8 @@ const rhythmCreateGL2D=canvas=>{
     'void main(){vec4 c;if(uMode==2){c=texture2D(uTex,vUv);gl_FragColor=c*uAlpha;}else{if(uMode==1)c=grad();else c=uColor;gl_FragColor=vec4(c.rgb*c.a,c.a)*uAlpha;}}';
   let prog=null,loc=null,buf=null,lost=false,textures=new WeakMap(),stencilRef=0,viewW=0,viewH=0;
   let bandApi=null,bandTried=false;
+  // ノーツの板を GPU で描く部品(rhythmCreateGpuPlate)。foreignEnd は、別のシェーダーを結び付けたままの部品が GL2D へ戻すための関数
+  let plateApi=null,plateTried=false,foreignEnd=null;
   // ── にじむ光(ブルーム。2026-09-26・ユーザー指示「見た目の向上＋軽量化」の3。オプションで入れた人だけ・既定は切る) ──
   // 足し算で描いた光だけを、画面の1/4の大きさの見えない画像へ描き直し、横・縦にぼかして、画面の上へ足し算で重ねる。
   // 小さな画像をぼかすだけなので、画面全体をぼかすより軽い。作業用の画像は画面の大きさが変わったときだけ作り直す
@@ -30857,7 +31004,7 @@ const rhythmCreateGL2D=canvas=>{
     gl.uniform1i(loc.uTex,0);gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,true);gl.activeTexture(gl.TEXTURE0);
     textures=new WeakMap();stencilRef=0;viewW=viewH=0;resetSent();bloom=null;bloomList=[];
     // スライドの帯を GPU に置く描き方(作り替え B)。文脈を作り直したら、前の文脈で作ったものは使えないので作り直させる
-    bandApi=null;bandTried=false;
+    bandApi=null;bandTried=false;plateApi=null;plateTried=false;foreignEnd=null;
   };
   try{init();}catch(e){return null;}
   canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();lost=true;},false);
@@ -30909,9 +31056,15 @@ const rhythmCreateGL2D=canvas=>{
     if(needStencil){stencilRef++;if(stencilRef>255){gl.clear(gl.STENCIL_BUFFER_BIT);stencilRef=1;}gl.stencilFunc(gl.NOTEQUAL,stencilRef,0xff);sentStencil=stencilRef;}
     else if(sentStencil!==0){gl.stencilFunc(gl.ALWAYS,0,0xff);sentStencil=0;}
   };
+  // GL2D の描き方(シェーダー・入れ物・頂点の並び)へ戻し、覚えていた状態は送り直させる
+  const restoreMain=()=>{gl.useProgram(prog);gl.bindBuffer(gl.ARRAY_BUFFER,buf);gl.enableVertexAttribArray(0);gl.enableVertexAttribArray(1);for(let i=2;i<5;i++)gl.disableVertexAttribArray(i);
+    gl.vertexAttribPointer(0,2,gl.FLOAT,false,16,0);gl.vertexAttribPointer(1,2,gl.FLOAT,false,16,8);resetSent();};
+  // 板の部品が自分のシェーダーを結び付けたままなら、GL2D へ戻してもらう(GL2D・帯・ブルームが描く前に必ず呼ぶ)
+  const releaseForeign=()=>{if(foreignEnd){const f=foreignEnd;foreignEnd=null;f();}};
   const issue=(from,to,mode,paint,texture,needStencil,mm,aa,cc)=>{
     const count=to-from;
     if(lost||!prog||!(count>0))return;
+    releaseForeign();
     applyState(mode,paint,texture,needStencil,mm,aa,cc);
     // にじむ光(ブルーム)が入っているときは、足し算で描いた光だけを覚えておき、フレームの終わりに小さな画像へ描き直す
     if(bloomOn&&cc==='lighter')bloomList.push({verts:data.slice(from*4,to*4),mode,paint,texture,mm,aa});
@@ -31150,7 +31303,7 @@ const rhythmCreateGL2D=canvas=>{
     get bloomReady(){return !!bloom;},
     // フレームの終わりに呼ぶ。覚えた光を小さな画像へ描き直し、横・縦にぼかして画面へ足し算で重ねる
     bloomFinish(){
-      flushPending();
+      flushPending();releaseForeign();
       if(!bloomOn||!bloomList.length||lost||!prog){bloomList.length=0;return;}
       try{
         syncView();
@@ -31226,19 +31379,32 @@ const rhythmCreateGL2D=canvas=>{
       if(lost||!prog)return null;
       if(!bandTried){bandTried=true;
         try{bandApi=rhythmCreateGpuSlideBand(gl,{
-          flush:()=>flushPending(),
+          flush:()=>{flushPending();releaseForeign();},
           // 「1画素1度」の番号を1つ進める(GL2D の線と同じ数え方。255回で消して数え直す)
           nextStencil:()=>{stencilRef++;if(stencilRef>255){gl.clear(gl.STENCIL_BUFFER_BIT);stencilRef=1;}return stencilRef;},
           // 帯を描き終えたら、GL2D の描き方(シェーダー・入れ物・頂点の並び)へ戻し、覚えていた状態は送り直させる
-          restore:()=>{gl.useProgram(prog);gl.bindBuffer(gl.ARRAY_BUFFER,buf);for(let i=2;i<5;i++)gl.disableVertexAttribArray(i);
-            gl.vertexAttribPointer(0,2,gl.FLOAT,false,16,0);gl.vertexAttribPointer(1,2,gl.FLOAT,false,16,8);resetSent();},
+          restore:restoreMain,
           rebind:()=>gl.bindBuffer(gl.ARRAY_BUFFER,buf),
           matrix:()=>m,view:()=>{syncView();return [viewW,viewH];},lost:()=>lost,
         });}catch(e){bandApi=null;}
       }
       return bandApi;
     },
-    dispose(){pend=null;n=0;gpuTimer.dispose();if(bandApi){try{bandApi.dispose();}catch(e){}bandApi=null;}try{const lose=gl.getExtension('WEBGL_lose_context');if(lose)lose.loseContext();}catch(e){}},
+    // ノーツの板を GPU で1回で描く部品(rhythmCreateGpuPlate)。初めて使うときに作る。作れなければ null(今までどおり GL2D で描く)
+    get plate(){
+      if(lost||!prog)return null;
+      if(!plateTried){plateTried=true;
+        try{plateApi=rhythmCreateGpuPlate(gl,{
+          flush:()=>flushPending(),
+          restore:restoreMain,
+          claim:end=>{foreignEnd=end;},
+          rebind:()=>gl.bindBuffer(gl.ARRAY_BUFFER,buf),
+          matrix:()=>m,view:()=>{syncView();return [viewW,viewH];},lost:()=>lost,
+        });}catch(e){plateApi=null;}
+      }
+      return plateApi;
+    },
+    dispose(){pend=null;n=0;foreignEnd=null;gpuTimer.dispose();if(bandApi){try{bandApi.dispose();}catch(e){}bandApi=null;}if(plateApi){try{plateApi.dispose();}catch(e){}plateApi=null;}try{const lose=gl.getExtension('WEBGL_lose_context');if(lose)lose.loseContext();}catch(e){}},
   };
   return ctx;
 };
@@ -31462,33 +31628,40 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     }
     glowEnd();
     ctx.globalAlpha=alpha;
-    // ノーツの外周に暗い縁取りを1本引く(2026-10-07・ユーザー指摘「レーンのはじにハーフノーツが来たとき、道のふちと被って見にくい」)。
-    // 道のふちの白い線に隣り合っても、ノーツの輪郭が埋もれない。位置も大きさも変えない(線を外へ描くだけ)。
-    // 道のはじ(左右のふちに接している)のノーツは、白い線のすぐ隣なので太めにする
-    if(!failed){
-      const edgeNote=Number.isFinite(note.subLane)?(note.subLane<=0||note.subLane+(Number(note.subLaneWidth)||2)>=RHYTHM_SUB_LANE_COUNT):(Number(note.lane)<=0||Number(note.lane)>=RHYTHM_LANE_COUNT-1);
-      const outline=(edgeNote?3:2)*sizeMul;
-      ctx.lineWidth=outline;ctx.strokeStyle=edgeNote?'rgba(2,6,23,.88)':'rgba(2,6,23,.62)';
-      roundRectPath(ctx,x-outline/2,y-outline/2,w+outline,h+outline,radius+outline/2);ctx.stroke();
+    const edgeNote=!failed&&(Number.isFinite(note.subLane)?(note.subLane<=0||note.subLane+(Number(note.subLaneWidth)||2)>=RHYTHM_SUB_LANE_COUNT):(Number(note.lane)<=0||Number(note.lane)>=RHYTHM_LANE_COUNT-1));
+    // デバッグの「スライドの帯の描き方(検証用)」→ GPU のときは、板の本体(下の縁取り〜押さえている最中の白)を GPU で1回で描く(rhythmCreateGpuPlate)
+    const plate=geo.gpu&&gpuBandWanted&&backend==='webgl'?ctx.plate:null;
+    const plateDone=!!plate&&plate.draw({cx,cy,w,h,radius,alpha,sizeMul,outline:failed?0:(edgeNote?3:2)*sizeMul,outlineColor:edgeNote?'rgba(2,6,23,.88)':'rgba(2,6,23,.62)',
+      ring:style.ring,gradient:style.gradient,border:style.border,inset:style.inset,failed:!!failed,wide:!!(wide&&!monster),hold:rhythmNoteIsHold(note)&&!monster,
+      dark:brightness<1?Number((1-brightness).toFixed(3)):0,pressed:!!pressed});
+    if(!plateDone){
+      // ノーツの外周に暗い縁取りを1本引く(2026-10-07・ユーザー指摘「レーンのはじにハーフノーツが来たとき、道のふちと被って見にくい」)。
+      // 道のふちの白い線に隣り合っても、ノーツの輪郭が埋もれない。位置も大きさも変えない(線を外へ描くだけ)。
+      // 道のはじ(左右のふちに接している)のノーツは、白い線のすぐ隣なので太めにする
+      if(!failed){
+        const outline=(edgeNote?3:2)*sizeMul;
+        ctx.lineWidth=outline;ctx.strokeStyle=edgeNote?'rgba(2,6,23,.88)':'rgba(2,6,23,.62)';
+        roundRectPath(ctx,x-outline/2,y-outline/2,w+outline,h+outline,radius+outline/2);ctx.stroke();
+      }
+      if(style.ring){ctx.lineWidth=2*sizeMul;ctx.strokeStyle=style.ring;roundRectPath(ctx,x-1*sizeMul,y-1*sizeMul,w+2*sizeMul,h+2*sizeMul,radius+1);ctx.stroke();}
+      roundRectPath(ctx,x,y,w,h,radius);
+      ctx.fillStyle=fillGradient(x,y,h,style.gradient);ctx.fill();
+      ctx.lineWidth=1;ctx.strokeStyle=style.border;ctx.stroke();
+      // 上端の白い筋(inset 0 1px 0)
+      // 上半分の白い芯(以前は上端の白い筋1本だった)
+      // 白い芯は半透明の四角を2段塗るだけにする(ノーツごとにグラデーションを作らない。上と同じ実測で JS が重かった)
+      if(!failed){ctx.fillStyle='rgba(255,255,255,.62)';ctx.fillRect(x+radius/2,y+1,Math.max(0,w-radius),Math.max(1,h*.22));ctx.fillStyle='rgba(255,255,255,.26)';ctx.fillRect(x+radius/2,y+1+h*.22,Math.max(0,w-radius),Math.max(1,h*.22));}
+      else{ctx.fillStyle=style.inset;ctx.fillRect(x+radius/2,y+1,Math.max(0,w-radius),1);}
+      if(wide&&!monster){
+        const bar=ctx.createLinearGradient(0,y,0,y+h);bar.addColorStop(0,'rgba(255,255,255,.95)');bar.addColorStop(1,'rgba(255,255,255,.55)');
+        ctx.fillStyle=bar;ctx.fillRect(x+1,y+1,3,h-2);ctx.fillRect(x+w-4,y+1,3,h-2);
+      }
+      if(rhythmNoteIsHold(note)&&!monster){ctx.fillStyle='rgba(8,47,73,.55)';ctx.fillRect(x+w*.24,cy-1,w*.52,2);}
+      // 奥ほど暗い(filter:brightness 相当。不透明な粒の上では黒を (1-明るさ) の濃さで重ねると同じ色になる)
+      if(brightness<1){roundRectPath(ctx,x,y,w,h,radius);ctx.fillStyle=`rgba(2,6,23,${(1-brightness).toFixed(3)})`;ctx.fill();}
+      // 押さえている最中は粒を白く明るくする(以前は .22)
+      if(pressed){roundRectPath(ctx,x,y,w,h,radius);ctx.fillStyle='rgba(255,255,255,.4)';ctx.fill();}
     }
-    if(style.ring){ctx.lineWidth=2*sizeMul;ctx.strokeStyle=style.ring;roundRectPath(ctx,x-1*sizeMul,y-1*sizeMul,w+2*sizeMul,h+2*sizeMul,radius+1);ctx.stroke();}
-    roundRectPath(ctx,x,y,w,h,radius);
-    ctx.fillStyle=fillGradient(x,y,h,style.gradient);ctx.fill();
-    ctx.lineWidth=1;ctx.strokeStyle=style.border;ctx.stroke();
-    // 上端の白い筋(inset 0 1px 0)
-    // 上半分の白い芯(以前は上端の白い筋1本だった)
-    // 白い芯は半透明の四角を2段塗るだけにする(ノーツごとにグラデーションを作らない。上と同じ実測で JS が重かった)
-    if(!failed){ctx.fillStyle='rgba(255,255,255,.62)';ctx.fillRect(x+radius/2,y+1,Math.max(0,w-radius),Math.max(1,h*.22));ctx.fillStyle='rgba(255,255,255,.26)';ctx.fillRect(x+radius/2,y+1+h*.22,Math.max(0,w-radius),Math.max(1,h*.22));}
-    else{ctx.fillStyle=style.inset;ctx.fillRect(x+radius/2,y+1,Math.max(0,w-radius),1);}
-    if(wide&&!monster){
-      const bar=ctx.createLinearGradient(0,y,0,y+h);bar.addColorStop(0,'rgba(255,255,255,.95)');bar.addColorStop(1,'rgba(255,255,255,.55)');
-      ctx.fillStyle=bar;ctx.fillRect(x+1,y+1,3,h-2);ctx.fillRect(x+w-4,y+1,3,h-2);
-    }
-    if(rhythmNoteIsHold(note)&&!monster){ctx.fillStyle='rgba(8,47,73,.55)';ctx.fillRect(x+w*.24,cy-1,w*.52,2);}
-    // 奥ほど暗い(filter:brightness 相当。不透明な粒の上では黒を (1-明るさ) の濃さで重ねると同じ色になる)
-    if(brightness<1){roundRectPath(ctx,x,y,w,h,radius);ctx.fillStyle=`rgba(2,6,23,${(1-brightness).toFixed(3)})`;ctx.fill();}
-    // 押さえている最中は粒を白く明るくする(以前は .22)
-    if(pressed){roundRectPath(ctx,x,y,w,h,radius);ctx.fillStyle='rgba(255,255,255,.4)';ctx.fill();}
     const sideDir=rhythmNoteVisualType(note)==='FLICK'&&!failed?rhythmFlickDir(note):'';
     if(sideDir){
       // 横フリック: 向きの山形は粒の**すぐ上**に並べる(上フリックの矢印と同じ置き方)。
@@ -31956,7 +32129,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     ctx.globalAlpha=1;
   };
   const drawSlide=(geo,opts)=>{
-    const {failed,alpha,pressed}=opts;
+    // 指が帯から外れている間(slideOff)は、押さえている光を出さず、帯を暗くする(見た目だけ)
+    const {failed,alpha}=opts,pressed=opts.pressed&&!opts.slideOff,dim=!!opts.slideOff&&!failed;
     if(!geo.slide||!geo.slide.length)return;
     // ノーツサイズが100%以外のときだけ、帯の左右を中心のまわりで倍率にした写しを作る(100%は元のまま)
     // 高さ(sky)も写す(2026-10-11。以前は写さず、ノーツサイズが100%以外だと空中のスライドが地上の色で描かれていた。帯を GPU で描く描き方との突き合わせで見つけた)
@@ -32013,6 +32187,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     ctx.lineWidth=failed?1:opts.slideHand?2.8:1.6;ctx.lineJoin='round';ctx.strokeStyle=failed?'rgba(190,190,200,.5)':opts.slideHand==='R'?'rgba(237,233,254,.9)':opts.slideRgb?`rgba(${opts.slideRgb},.95)`:'rgba(243,232,255,.82)';ctx.stroke();
     // 押さえている最中は帯を明るくする(2026-09-26。以前はSLIDEだけ何も変わらなかった)。外周の道すじをそのまま塗る
     let top=Infinity,bottom=-Infinity;quads.forEach(q=>{top=Math.min(top,q.y0,q.y1);bottom=Math.max(bottom,q.y0,q.y1);});
+    // 指が外れている間は、帯を暗くする(外周の道すじをそのまま塗る)
+    if(dim){ctx.fillStyle=`rgba(${RHYTHM_SLIDE_DIM.rgb},${RHYTHM_SLIDE_DIM.alpha})`;ctx.fill();}
     // 押さえている最中は帯を明るくする。判定ライン寄りほど明るく(2026-09-28・参考動画。以前は一様に .30)
     if(pressed&&!failed){const pg=ctx.createLinearGradient(0,bottom,0,Math.max(top,bottom-Math.max(90,bottom*.5)));pg.addColorStop(0,'rgba(245,243,255,.56)');pg.addColorStop(.35,'rgba(243,232,255,.36)');pg.addColorStop(1,'rgba(243,232,255,.2)');ctx.fillStyle=pg;ctx.fill();}
     if(pressed&&!failed&&effect!=='MINIMAL'&&!lightweight){
@@ -32021,7 +32197,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     }
     // ノーツの動き: 帯の上を、判定ライン(画面の下)へ向かって光の波が流れる。明るさは画面の高さで決めるので(波長110px・0.5秒で1波長)、
     // 区切りごとに上端と下端の明るさを縦のグラデーションでつなげば、区切りの継ぎ目で段にならない
-    if(motion&&!failed){
+    if(motion&&!failed&&!dim){
       const glow=y=>{const wave=.5+.5*Math.cos(2*Math.PI*(y/110-frameNow/500));return wave>.3?((wave-.3)/.7*.3).toFixed(3):'0';};
       quads.forEach(q=>{const a0=glow(q.y0),a1=glow(q.y1);if(a0==='0'&&a1==='0')return;
         const g=ctx.createLinearGradient(0,q.y0,0,q.y1);g.addColorStop(0,`rgba(243,232,255,${a0})`);g.addColorStop(1,`rgba(243,232,255,${a1})`);
@@ -32042,7 +32218,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   const drawSlideGpu=(note,geo,opts)=>{
     const band=ctx.band,g=geo.slideGpu;
     if(!band)return;
-    const {failed,alpha,pressed}=opts;
+    const {failed,alpha}=opts,pressed=opts.pressed&&!opts.slideOff,dim=!!opts.slideOff&&!failed;
     if(!band.slide(note,g.travel,g.rect,g.halfH,sizeScale))return;
     const base=opts.slideRgb||RHYTHM_NOTE_COLORS.SLIDE.rgb;
     if(!failed&&effect!=='MINIMAL'&&!lightweight)band.pass('outline',{mode:0,hw:3,color:`rgba(${base},.18)`,alpha,stencil:true});
@@ -32054,6 +32230,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     }else band.pass('fill',{mode:0,color:groundFill,alpha,stencil:false});
     const lw=failed?1:opts.slideHand?2.8:1.6;
     band.pass('outline',{mode:0,hw:lw/2,color:failed?'rgba(190,190,200,.5)':opts.slideHand==='R'?'rgba(237,233,254,.9)':opts.slideRgb?`rgba(${opts.slideRgb},.95)`:'rgba(243,232,255,.82)',alpha,stencil:true});
+    if(dim)band.pass('fill',{mode:0,color:`rgba(${RHYTHM_SLIDE_DIM.rgb},${RHYTHM_SLIDE_DIM.alpha})`,alpha,stencil:true});
     if(pressed&&!failed){
       const raw=rhythmSlideSegmentQuads(note,g.travel.chartNowMs,{...g.travel,window:true},g.rect,g.halfH);
       if(raw.length){
@@ -32067,7 +32244,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
         }
       }
     }
-    if(motion&&!failed){const phase=frameNow/500;band.pass('fill',{mode:6,phase:phase-Math.floor(phase),alpha,stencil:false});}
+    if(motion&&!failed&&!dim){const phase=frameNow/500;band.pass('fill',{mode:6,phase:phase-Math.floor(phase),alpha,stencil:false});}
     // 区切りの線(drawSlide と同じ色・太さ・端は丸)。形は帯と一緒に GPU に置いてあり、CPU では投影しない(作り替え B の S2)
     if(!opts.skySlideRgb&&band.hasLines)band.pass('lines',{mode:0,hw:1,color:failed?'rgba(190,190,200,.6)':'rgba(233,213,255,.85)',alpha,stencil:false});
     band.done();

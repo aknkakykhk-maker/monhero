@@ -112,7 +112,7 @@ const fixSource = fs.existsSync(fixPath) ? fs.readFileSync(fixPath, 'utf8') : ''
 check('直す道具は押さえている帯そのものを動かさない',
   fixSource.includes("const movable=note=>(note.type==='TAP'||note.type==='FLICK'||note.type==='HOLD')"));
 check('直す道具はほかの曲の譜面を巻き添えにしない',
-  fixSource.includes('先行公開5曲以外の譜面まで書き換えようとしました'));
+  fixSource.includes('以外の譜面まで書き換えようとしました')&&fixSource.includes("if(write&&!onlySongs)"));
 
 console.log(failed === 0 ? '\nすべてOK' : `\n${failed}件のNGがあります`);
 process.exit(failed === 0 ? 0 : 1);
