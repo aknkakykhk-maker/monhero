@@ -42,10 +42,17 @@ const songs=R.songs.filter(s=>/^grievous_lady/.test(s.songId));
 // 物差しはオンプくんの rhythm-ref-tiers.js --song と同じ(fromRuntime・simulateRuntime・thumbCheck。スライドの手はモデルが選ぶ)。
 // 空中のスライドは点の sky を高さとして渡す(fromRuntime は skyHeight だけを読むため)
 const {thumbCheck,THUMB_PROFILES,fromRuntime,simulateRuntime}=require('./rhythm-ref-tiers.js');
-const pressable=notes=>{
+// HELL の交差する両手の長押し(2026-10-11 社長「スカイホールドのダブルで右と左で地上と空中でクロスさせる」)。
+// 真ん中の空中の長押しの下を、もう片方の手のスライドが地上でくぐって反対側へ渡る。遊ぶ人は交差のところで指を置き換える。
+// 親指モデルは指の置き換えを表せないので、押せない・交差・届きにくいは、両手が重なってから2本とも離して1拍までの区間の中だけ数えない(区間の外は0のまま)
+const HELL_CROSS_WINDOWS=[[14334,18455],[67263,71455],[134763,137240]];
+const pressable=(notes,songId)=>{
   const d=fromRuntime(notes).map((x,i)=>x.k==='s'&&notes[i].slidePoints?{...x,pts:x.pts.map((p,k)=>[p[0],p[1],p[2],Number(notes[i].slidePoints[k]?.sky)||p[3],p[4]]),hand:notes[i].hand||null}:x);
   const ground=notes.filter(n=>!(n.skyHeight>0)&&!(n.slidePoints||[]).some(p=>p.sky>0));
-  return {th:thumbCheck(d,THUMB_PROFILES.landscape,500).count,sim:simulateRuntime(ground).impossible|0};
+  const windows=songId==='grievous_lady_hell'?HELL_CROSS_WINDOWS:[];
+  const issues=thumbCheck(d,THUMB_PROFILES.landscape,500).issues.filter(i=>!windows.some(([a,b])=>i.t>=a&&i.t<=b));
+  const th={impossible:0,cross:0,reach:0};for(const i of issues)if(i.kind in th)th[i.kind]++;
+  return {th,sim:simulateRuntime(ground).impossible|0};
 };
 ok('Grievous Lady の譜面がある',songs.length>0);
 for(const song of songs)for(const [id,chart] of Object.entries(song.difficulties||{})){
@@ -55,7 +62,7 @@ for(const song of songs)for(const [id,chart] of Object.entries(song.difficulties
   // ①
   const early=[];for(const [sp,tr] of Object.entries(TRAVEL)){const e=R.rhythmScrollEarlyTouches(chart.scrollChanges,notes,tr,chart.scrollGroups);if(e.length)early.push(`速度${sp}:${e.length}個(${e.slice(0,3).map(n=>Math.round(n.timeMs)).join(',')})`);}
   ok(`${tag}: 判定の前に判定線へ触れるノーツ 0個(速度3〜10)`,early.length===0,early.join(' '));
-  { const r=pressable(notes);
+  { const r=pressable(notes,song.songId);
     ok(`${tag}: 横持ち・親指2本で押せる(押せない・交差・届きにくい0/両手のシミュレートの押せない0)`,!r.th.impossible&&!r.th.cross&&!r.th.reach&&!r.sim,
       `親指モデル 押せない${r.th.impossible}・交差${r.th.cross}・届きにくい${r.th.reach}/両手のシミュレート 押せない${r.sim}`); }
   // ②
