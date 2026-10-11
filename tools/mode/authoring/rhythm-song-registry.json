@@ -795,6 +795,9 @@
     "beatsPerBar": 4,
     "subdivisionsPerBeat": 4,
     "source": "command"
+   },
+   "chartIntensityByDifficulty": {
+    "NORMAL": "strong"
    }
   }
  }
