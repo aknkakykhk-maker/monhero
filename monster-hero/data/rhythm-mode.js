@@ -32390,6 +32390,12 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       ctx.beginPath();air.forEach(q=>{const x0=(q.l0+q.r0)/2,x1=(q.l1+q.r1)/2;ctx.moveTo(x0-ch,q.y0);ctx.lineTo(x0+ch,q.y0);ctx.lineTo(x1+ch,q.y1);ctx.lineTo(x1-ch,q.y1);ctx.closePath();});
       ctx.fill();glowEnd();
     }
+    // 指が帯から外れている間(slideOff)は、帯・縁・芯をまとめて暗くする(見た目だけ。地上のスライドと同じ RHYTHM_SLIDE_DIM)
+    if(opts.slideOff){
+      ctx.globalAlpha=alpha;ctx.fillStyle=`rgba(${RHYTHM_SLIDE_DIM.rgb},${RHYTHM_SLIDE_DIM.alpha})`;ctx.beginPath();
+      quads.forEach(q=>{const [l0,r0]=widen(q.l0,q.r0),[l1,r1]=widen(q.l1,q.r1);ctx.moveTo(l0,q.y0);ctx.lineTo(r0,q.y0);ctx.lineTo(r1,q.y1);ctx.lineTo(l1,q.y1);ctx.closePath();});
+      ctx.fill();
+    }
     ctx.globalAlpha=1;
   };
   const drawSkyShadowHead=(geo,opts)=>{
@@ -32524,6 +32530,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       band.pass('fill',{mode:0,color:`rgba(${handRgb},${A.alpha})`,alpha,minHw:A.minHalfWidthPx,stencil:true});
       band.pass('edges',{mode:8,hw:A.edgePx/2,color:`rgba(255,255,255,${A.edgeAlpha})`,alpha,minHw:A.minHalfWidthPx,stencil:true});
       band.pass('fill',{mode:7,hw:C.widthPx/2,core:true,additive:true,color:`rgba(${C.rgb},${C.alpha})`,alpha,stencil:true});
+      if(dim)band.pass('fill',{mode:0,color:`rgba(${RHYTHM_SLIDE_DIM.rgb},${RHYTHM_SLIDE_DIM.alpha})`,alpha,minHw:A.minHalfWidthPx,stencil:true});
       band.done();
       return;
     }
