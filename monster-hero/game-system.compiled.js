@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ca5cac4d1f29d9ed
+// source-sha256: 76418df413fdeb8e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-12 00:03";
+const BUILD_DATE = "2026-10-12 00:10";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -81484,6 +81484,12 @@ function MonsterHeroGame() {
       storeSet(TACTICS_INTRO_SEEN_KEY, true, false);
     } catch {}
   }, []);
+  const markRhythmHellStorySeen = useCallback(() => {
+    setRhythmHellStorySeenFlag(true);
+    try {
+      storeSet(RHYTHM_HELL_STORY_SEEN_KEY, true, false);
+    } catch {}
+  }, []);
   const EVENT_REPLAY_UNLOCK_FLAGS = {
     kikiIntroSeen: kikiIntroSeenFlag,
     momosukeIntroSeen: momosukeIntroSeenFlag,
@@ -103517,12 +103523,7 @@ function MonsterHeroGame() {
         if (event && event.id === RAID_JACK_HOWTO_AFTER_STORY_ID && eventReplay.live && !eventReplay.debug && RELEASE_FLAGS.raidJack === true && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(RAID_JACK_STORY_START_ID)) setRhythmEventStoryPending(prev => prev || RAID_JACK_STORY_START_ID);
         if (event && event.id === RAID_JACK_STORY_START_ID && eventReplay.live && !eventReplay.debug && RELEASE_FLAGS.raidJack === true && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(RAID_JACK_HOWTO_STORY_ID)) setRhythmEventStoryPending(prev => prev || RAID_JACK_HOWTO_STORY_ID);
         if (event && event.id === RHYTHM_HELL_STORY_ID) {
-          if (!eventReplay.debug) {
-            setRhythmHellStorySeenFlag(true);
-            try {
-              storeSet(RHYTHM_HELL_STORY_SEEN_KEY, true, false);
-            } catch {}
-          }
+          if (!eventReplay.debug) markRhythmHellStorySeen();
           setRhythmHellGuide({
             page: 0,
             debugList: !!eventReplay.debugList,
@@ -103539,12 +103540,7 @@ function MonsterHeroGame() {
         if (eventReplay.live && !eventReplay.debug && event && RHYTHM_EVENT_STORY_IDS.includes(event.id)) void markRhythmEventStorySeen(event.id);
         if (eventReplay.live && !eventReplay.debug && event && event.id === 'tactics_intro') markTacticsIntroSeen();
         if (event && event.id === RHYTHM_HELL_STORY_ID) {
-          if (eventReplay.live && !eventReplay.debug) {
-            setRhythmHellStorySeenFlag(true);
-            try {
-              storeSet(RHYTHM_HELL_STORY_SEEN_KEY, true, false);
-            } catch {}
-          }
+          if (eventReplay.live && !eventReplay.debug) markRhythmHellStorySeen();
           setRhythmHellGuide({
             page: 0,
             debugList: !!eventReplay.debugList,
