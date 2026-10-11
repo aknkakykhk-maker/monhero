@@ -15,7 +15,7 @@
 //   node tools/mode/rhythm-gpu-band-check.js --quick    譜面ごとの場面を減らして速く(手元の確かめ用)
 //   node tools/mode/rhythm-gpu-band-check.js --song sheriruth   その曲だけ
 //   node tools/mode/rhythm-gpu-band-check.js --song <曲> --dump <フォルダ>  場面ごとに 今の2D・今のWebGL・新しい描き方・差 の画像を書き出す(差を目で見る用)
-//   node tools/mode/rhythm-gpu-band-check.js --extra <譜面.json>  まだ main に無い譜面(HELL など)も比べる。[{songId,difficulties:{名前:{notes,scrollChanges}}}] の形
+//   node tools/mode/rhythm-gpu-band-check.js --extra <譜面.json>  まだ main に無い譜面(HELL など)も比べる。[{songId,difficulties:{名前:{notes,scrollChanges,scrollGroups}}}] の形
 const fs=require('fs'),path=require('path'),http=require('http');
 // 番号はほかの検査と重ねない(まとめて回したときにぶつかるため)
 const ROOT=path.resolve(__dirname,'../..'),PORT=Number(process.env.GPU_BAND_PORT)||9187;
@@ -71,7 +71,7 @@ const LIMIT={avg:1.5,missing:.003,extra:.003,overBase:.3};
         const hash=[...(c.songId+'/'+c.id)].reduce((a,ch)=>(a*31+ch.charCodeAt(0))>>>0,7);
         const size=SIZES[hash%SIZES.length],rect={width:size.w,height:size.h};
         const noteHeight=20,travelMs=[2150,1300,3000][(hash>>>3)%3],spawnY=-noteHeight,judgmentY=rect.height*.86-noteHeight/2,travelPx=judgmentY-spawnY;
-        rhythmScrollSet(chart.scrollChanges,travelMs);
+        rhythmScrollSet(chart.scrollChanges,travelMs,chart.scrollGroups);
         RHYTHM_SKY_LIFT.set(size.w>size.h);
         const slides=notes.filter(n=>rhythmNoteIsSlide(n));
         // 場面: スライドを譜面全体から均等に選び、「近づいてくる所」と「押さえている最中」を描く
@@ -96,13 +96,13 @@ const LIMIT={avg:1.5,missing:.003,extra:.003,overBase:.3};
           R.begin(rect,{nowMs:1000+fr.variant*137,effect:st.effect,lightweight:false,maxDpr:2,sizeScale:st.sizeScale,motion:st.motion});
           let drawnSlides=0,gpuSlides=0;
           for(const note of notes){
-            const progress=1-(rhythmScrollPos(note.timeMs)-rhythmScrollPos(visualTime))/travelMs;
+            const progress=1-(rhythmScrollPos(note.timeMs,note.scrollGroup)-rhythmScrollPos(visualTime,note.scrollGroup))/travelMs;
             const hasBody=rhythmNoteHasBody(note),end=rhythmReleaseTargetMs(note);
             const holding=hasBody&&note.timeMs<=visualTime&&visualTime<end;
             const visible=holding||(progress>=-.1&&progress<=1.18);
             if(!visible)continue;
             const yPx=Math.round(spawnY+rhythmProjectTravelProgress(progress)*travelPx);
-            const releaseProgress=1-(rhythmScrollPos(end)-rhythmScrollPos(visualTime))/travelMs,releaseYpx=Math.round(spawnY+rhythmProjectTravelProgress(releaseProgress)*travelPx),bodyPx=Math.max(0,yPx-releaseYpx);
+            const releaseProgress=1-(rhythmScrollPos(end,note.scrollGroup)-rhythmScrollPos(visualTime,note.scrollGroup))/travelMs,releaseYpx=Math.round(spawnY+rhythmProjectTravelProgress(releaseProgress)*travelPx),bodyPx=Math.max(0,yPx-releaseYpx);
             const geo=rhythmNoteCanvasGeometry(note,yPx,note.lane,rect,noteHeight,hasBody?releaseYpx:null,{chartNowMs:visualTime,visualTime,travelMs,spawnY,travelPx,gpu},hasBody?bodyPx:0);
             const isSlide=rhythmNoteIsSlide(note);if(isSlide){drawnSlides++;if(geo.slideGpu)gpuSlides++;}
             const failedNote=st.failEvery&&isSlide&&(note.index??note.timeMs)%2===1;

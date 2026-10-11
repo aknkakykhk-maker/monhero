@@ -34,7 +34,7 @@ for(const song of songs)for(const [id,chart] of Object.entries(song.difficulties
   const tag=`${song.songId}/${id}`;
   ok(`${tag}: 速さの表がある`,Array.isArray(chart.scrollChanges)&&chart.scrollChanges.length>0);
   // ①
-  const early=[];for(const [sp,tr] of Object.entries(TRAVEL)){const e=R.rhythmScrollEarlyTouches(chart.scrollChanges,notes,tr);if(e.length)early.push(`速度${sp}:${e.length}個(${e.slice(0,3).map(n=>Math.round(n.timeMs)).join(',')})`);}
+  const early=[];for(const [sp,tr] of Object.entries(TRAVEL)){const e=R.rhythmScrollEarlyTouches(chart.scrollChanges,notes,tr,chart.scrollGroups);if(e.length)early.push(`速度${sp}:${e.length}個(${e.slice(0,3).map(n=>Math.round(n.timeMs)).join(',')})`);}
   ok(`${tag}: 判定の前に判定線へ触れるノーツ 0個(速度3〜10)`,early.length===0,early.join(' '));
   // ②
   const counts=WINDOWS.map(w=>{
@@ -47,7 +47,7 @@ for(const song of songs)for(const [id,chart] of Object.entries(song.difficulties
   // ③④(速度6と10で見る)
   if(id==='MASTER'||id==='HELL'){
     for(const sp of [6,10]){
-      const tr=TRAVEL[sp];R.rhythmScrollSet(chart.scrollChanges,tr);
+      const tr=TRAVEL[sp];R.rhythmScrollSet(chart.scrollChanges,tr,chart.scrollGroups);
       const waits=REF_WAITING.map(([n,b,ref])=>{
         const now=ms(b),sNow=R.rhythmScrollPos(now);
         const ahead=notes.filter(x=>Number(x.timeMs)>now).map(x=>1-(R.rhythmScrollPos(x.timeMs)-sNow)/tr).filter(p=>p>=0&&p<=1);
@@ -55,6 +55,11 @@ for(const song of songs)for(const [id,chart] of Object.entries(song.difficulties
         return `${n} 拍${b}: 参考${Math.round(screenRef(ref)*100)}% / こちら${lead==null?'見えない':Math.round(R.proj(lead)*100)+'%'}`;
       });
       console.log(`      ${tag} 速度${sp} 待っているノーツの先頭(画面の高さ) … ${waits.join(' ・ ')}`);
+      // 組1(判定線の近くで待つ同時押し)。参考: B は道の約97%・C は約88%(参考の奥行き)
+      const pairs=[['B',332,.97],['C',461,.88]].map(([n,b,ref])=>{
+        const now=ms(b),near=notes.filter(x=>x.scrollGroup&&Number(x.timeMs)>now).map(x=>R.proj(1-(R.rhythmScrollPos(x.timeMs,x.scrollGroup)-R.rhythmScrollPos(now,x.scrollGroup))/tr));
+        return `${n} 拍${b}: 参考${Math.round(screenRef(ref)*100)}% / こちら${near.length?Math.round(Math.max(...near)*100)+'%':'無し'}`;});
+      console.log(`      ${tag} 速度${sp} 判定線の近くで待つ同時押し(画面の高さ) … ${pairs.join(' ・ ')}`);
       let maxStep=0,where=0;
       for(const w of WINDOWS)for(let t=ms(w.from)-200;t<ms(w.to)+200;t+=1000/60){const d=Math.abs(R.rhythmScrollPos(t+1000/60)-R.rhythmScrollPos(t))/tr;if(d>maxStep){maxStep=d;where=t;}}
       console.log(`      ${tag} 速度${sp} 演出の中で1コマに動く量の最大 道の${(maxStep*100).toFixed(1)}%(拍${((where-ZERO)/BEAT).toFixed(2)})・ふだんは${(1000/60/tr*100).toFixed(1)}%`);
