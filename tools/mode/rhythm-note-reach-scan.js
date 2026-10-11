@@ -24,6 +24,7 @@
 //   node tools/mode/rhythm-note-reach-scan.js --song grievous_lady --diff MASTER --list
 //   node tools/mode/rhythm-note-reach-scan.js --json out.json  ノーツごとの「見た目の幅」と「取れる幅」を書き出す
 //                                                              (見えている位置と受け付けの位置のずれを画面で確かめるときの元)
+//   node tools/mode/rhythm-note-reach-scan.js --fast --check  速い形(真ん中と和音だけ・1分ほど)。どこを押しても取れないノーツは真ん中でも取れないので、ここで見つかる
 //   node tools/mode/rhythm-note-reach-scan.js --check         取れない・真ん中で取れない・和音で取れない が1つでもあれば落ちる
 const fs = require('fs');
 const path = require('path');
@@ -32,6 +33,7 @@ const ROOT = path.resolve(__dirname, '../..');
 const argv = process.argv.slice(2);
 const arg = (name, def = null) => { const i = argv.indexOf('--' + name); return i >= 0 && argv[i + 1] && !argv[i + 1].startsWith('--') ? argv[i + 1] : def; };
 const flag = name => argv.includes('--' + name);
+const FAST = flag('fast');   // 速い形: 左右へずらして幅を測るのをやめ、見た目の真ん中と和音だけを見る(検査 rhythm-note-reach-check.js が使う)
 const ONLY_SONG = arg('song'), ONLY_DIFF = arg('diff'), JSON_OUT = arg('json'), LIST = flag('list'), CHECK = flag('check');
 const STEP = Number(arg('step', 0.05));
 
@@ -90,6 +92,7 @@ for (const { songId, diff, chart, proto } of charts) {
       const hit = (c) => { const r = G.rhythmMatchInputBatch(notes, [{ inputKey: 'touch:scan', lane: laneOf(c), subLaneCoordinate: c, subLaneCoordinateAtLine: null, sky: sky ? ratio : null }], t, 0)[0];
         return !!r && r.target === n; };
       let lo = null, hi = null;
+      if (FAST) { if (!hit(Math.min(S - 1e-6, Math.max(0, center)))) found.真ん中で取れない.push(tag(n) + ` 見た目${vis.start.toFixed(2)}〜${vis.end.toFixed(2)}`); continue; }
       for (let c = Math.max(0, vis.start - 2); c < Math.min(S, vis.end + 2) - 1e-9; c += STEP) if (hit(c)) { if (lo === null) lo = c; hi = c; }
       const width = lo === null ? 0 : hi - lo + STEP, visWidth = vis.end - vis.start;
       const rec = { songId, diff, proto, timeMs: Number(n.timeMs), type: n._rhythmOriginalType || n.type, sky: isSkyNote(n), visual: [+vis.start.toFixed(2), +vis.end.toFixed(2)], reach: lo === null ? null : [+lo.toFixed(2), +(hi + STEP).toFixed(2)] };
@@ -108,7 +111,7 @@ for (const { songId, diff, chart, proto } of charts) {
 }
 G.RHYTHM_SKY_INPUT.active = false;
 
-console.log(`譜面 ${charts.length} / ノーツ ${total}(1本の指を ${STEP} サブレーンずつずらして測った)`);
+console.log(`譜面 ${charts.length} / ノーツ ${total}(${FAST ? '見た目の真ん中と和音だけを見た' : `1本の指を ${STEP} サブレーンずつずらして測った`})`);
 for (const [k, v] of Object.entries(found)) {
   console.log(`${k}: ${v.length}`);
   if (v.length && (LIST || k !== '幅が狭い')) v.slice(0, LIST ? 1e9 : 20).forEach(x => console.log('  ' + x));
