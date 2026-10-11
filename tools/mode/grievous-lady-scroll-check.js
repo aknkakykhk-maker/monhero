@@ -69,8 +69,8 @@ for(const song of songs)for(const [id,chart] of Object.entries(song.difficulties
         return `${n} 拍${b}: 参考${Math.round(screenRef(ref)*100)}% / こちら${lead==null?'見えない':Math.round(R.proj(lead)*100)+'%'}`;
       });
       console.log(`      ${tag} 速度${sp} 待っているノーツの先頭(画面の高さ) … ${waits.join(' ・ ')}`);
-      // 組1(判定線の近くで待つ同時押し)。参考: B は道の約97%・C は約88%(参考の奥行き)
-      const pairs=[['B',332,.97],['C',461,.88]].map(([n,b,ref])=>{
+      // 組1(判定線の近くで待つ同時押し)。参考: B は道の約99%・C は約88%(参考の奥行き)
+      const pairs=[['B',332,.99],['C',461,.88]].map(([n,b,ref])=>{
         const now=ms(b),near=notes.filter(x=>x.scrollGroup&&Number(x.timeMs)>now).map(x=>R.proj(1-(R.rhythmScrollPos(x.timeMs,x.scrollGroup)-R.rhythmScrollPos(now,x.scrollGroup))/tr));
         return `${n} 拍${b}: 参考${Math.round(screenRef(ref)*100)}% / こちら${near.length?Math.round(Math.max(...near)*100)+'%':'無し'}`;});
       console.log(`      ${tag} 速度${sp} 判定線の近くで待つ同時押し(画面の高さ) … ${pairs.join(' ・ ')}`);
