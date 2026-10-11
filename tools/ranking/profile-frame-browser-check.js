@@ -222,7 +222,8 @@ async function run() {
   await page.evaluate(() => { const b = document.querySelector('[data-battle-system="systemClassic"]'); if (b) b.click(); });
   await page.waitForTimeout(1500);
   await page.evaluate(() => {
-    const b = [...document.querySelectorAll('button')].find(x => x.textContent.trim() === 'ブリーダーLv');
+    // タブの文字は「🏆ブリーダーLv」(2026-10-08 に 🏆 が付いた)。絵文字に左右されないよう、aria-label(「ブリーダーLvランキング」)で探す
+    const b = document.querySelector('button[aria-label="ブリーダーLvランキング"]');
     if (b) b.click();
   });
   await page.waitForTimeout(3500);
@@ -252,7 +253,7 @@ async function run() {
   // ⑥ 絆Lv・総合力タブ(bond_levels から読む。rankings とは別テーブル)
   const openTab = async (label, kind) => {
     await page.evaluate((t) => {
-      const b = [...document.querySelectorAll('button')].find(x => x.textContent.trim() === t);
+      const b = document.querySelector(`button[aria-label="${t}ランキング"]`);
       if (b) b.click();
     }, label);
     await page.waitForTimeout(3500);

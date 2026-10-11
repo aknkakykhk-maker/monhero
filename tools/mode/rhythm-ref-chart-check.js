@@ -94,7 +94,8 @@ ok('譜面コーパスの資料に「写しを残さない形でだけ使う」�
 
 // ── 段3 難易度を作る(rhythm-ref-tiers.js) ──
 {
-  const {deriveTiers,chartStats,thumbCheck,THUMB_PROFILES,stopReport,dedupeSlidePoints,STOP_END_GAP_MS}=require('./rhythm-ref-tiers.js');
+  const {deriveTiers,chartStats,thumbCheck,THUMB_PROFILES,stopReport,dedupeSlidePoints,STOP_END_GAP_MS,placeMonsters,toRuntime}=require('./rhythm-ref-tiers.js');
+  const startOf2=n=>n.k==='s'?n.pts[0][0]:n.t;
   const tiersSrc=fs.readFileSync(path.join(__dirname,'rhythm-ref-tiers.js'),'utf8');
   ok('段3も書き出し先を workDirFor で決め、assertWorkPath を通して書く',/workDirFor\(track\)/.test(tiersSrc)&&/writeFileSync\(assertWorkPath\(/.test(tiersSrc)&&(tiersSrc.match(/writeFileSync\(/g)||[]).length===1);
   // 作った MASTER: 16分の連打・同時押し・ホールド・左右のスライドを、決まった並びで置く
@@ -120,7 +121,7 @@ ok('譜面コーパスの資料に「写しを残さない形でだけ使う」�
   ok('段3: どの難易度もレベルの上限を超えない',['EXPERT','HARD','NORMAL','EASY'].every(d=>st[d].level<=levels[d]),JSON.stringify(levels));
   ok('段3: EXPERT の叩く回数・速い連打は MASTER の97%以下',st.EXPERT.hits<=Math.floor(st.MASTER.hits*0.97)&&st.EXPERT.fast<=Math.floor(st.MASTER.fast*0.97),
     `叩く ${st.EXPERT.hits}/${st.MASTER.hits} 速い ${st.EXPERT.fast}/${st.MASTER.fast}`);
-  const key=n=>JSON.stringify(n.k==='s'?['s',n.hand,n.pts[0][0]]:n);
+  const key=n=>{if(n.k==='s')return JSON.stringify(['s',n.hand,n.pts[0][0]]);const {mon,...rest}=n;return JSON.stringify(rest);};
   const mKeys=new Set(tiers.MASTER.map(key));
   ok('段3: EXPERT は MASTER の部分集合(足さない・動かさない)',tiers.EXPERT.every(n=>mKeys.has(key(n))));
   ok('段3: 止まる区間の中にノーツが無い',order.every(d=>stopReport(tiers[d],[stop])[0].inside===0));
@@ -139,6 +140,34 @@ ok('譜面コーパスの資料に「写しを残さない形でだけ使う」�
   ok('親指モデル: 左右に離れた拍ごとの打鍵は問題なし',kinds([0,1,2,3,4,5].map(i=>tap(1000+i*400,i%2?6:3))).length===0);
   const sr=stopReport([tap(1000,3),tap(2100,3)],[[1500,2000]])[0];
   ok(`止まる区間: 止まり終わりから次のノーツまで ${STOP_END_GAP_MS}ms 未満は NG`,!sr.ok&&sr.nextGapMs===100&&stopReport([tap(1000,3),tap(2200,3)],[[1500,2000]])[0].ok);
+  // モンスターノーツ(社長の決まり: どの難易度にも4個ちょうど・枠1〜4を1個ずつ)
+  ok('段3: どの難易度もモンスターノーツが4個ちょうどで、枠1〜4が1個ずつ',order.every(d=>JSON.stringify(tiers[d].filter(n=>n.mon).map(n=>n.mon).sort())==='[1,2,3,4]'),
+    JSON.stringify(Object.fromEntries(order.map(d=>[d,tiers[d].filter(n=>n.mon).map(n=>n.mon)]))));
+  ok('段3: モンスターノーツは地上の単打で、止まる区間と同時押しを避ける',order.every(d=>tiers[d].filter(n=>n.mon).every(n=>n.k==='t'&&!n.sky&&tiers[d].filter(m=>startOf2(m)===n.t).length===1&&stopReport([n],[stop])[0].inside===0)));
+  ok('段3: モンスターノーツは toRuntime で monsterSlot になる',toRuntime(tiers.MASTER).filter(n=>n.monsterSlot).length===4);
+  {const ts=[0,1,2,3,4,5,6,7,8,9,10].map(i=>tap(1000+i*B,3)),near=[...ts,tap(1000+2*B+B/4,9)];
+    const {placed}=placeMonsters(near,{grid:{zero:1000,beat:B,div:4}});
+    // 拍0〜10に1つずつ・2.25拍に1つ: 20%(2拍)は前後1拍空かないので、一番近い空いた拍の頭(1拍)へ。3拍も2.25拍が近いので選ばない
+    ok('置き方: 曲の20/40/60/80%に一番近い、前後1拍空いた拍の頭(詰まった所は避ける)',JSON.stringify(placed.map(p=>Math.round((p.t-1000)/B)))==='[1,4,6,8]'&&placed.every(p=>p.level===0),JSON.stringify(placed));
+    const few=placeMonsters([tap(1000,3),tap(1000+B/4,9),tap(1000+B/2,3),tap(1000+B*3/4,9),tap(1000+B,3)],{grid:{zero:1000,beat:B,div:4}}).placed;
+    ok('置き方: 空いた拍の頭が無ければ、拍の頭 → 単打の順にゆるめて必ず4個置く',few.length===4&&new Set(few.map(p=>p.t)).size===4,JSON.stringify(few));}
+  // 先読みの割り振り・物差しのそろえ(2026-10-11 窓口の決定 A)
+  {const {fromRuntime,simulateRuntime,THUMB_BEAM}=require('./rhythm-ref-tiers.js');
+    const tp=(t,sub,w=2)=>({k:'t',t,sub,w,sky:0,dir:''}),hold=(t,end,sub,w=2)=>({k:'h',t,end,sub,w});
+    const cnt=notes=>thumbCheck(notes,THUMB_PROFILES.landscape,B).count;
+    const look=cnt([tp(1000,6),tp(1081,8)]);
+    ok('先読み: 真ん中寄りの次に81ms後の右がある所は、先に左手で取る(同じ親指の叩き直し・交差にしない)',look.impossible===0&&look.cross===0,JSON.stringify(look));
+    const lone=cnt([{k:'s',hand:null,pts:[[1000,1,2,0,0],[2000,5,2,0,0]]}]),pinned=cnt([hold(900,2100,10),{k:'s',hand:'L',pts:[[1000,1,2,0,0],[2000,5,2,0,0]]}]);
+    ok('真ん中越え: 反対の手が空いていれば届きにくい(押せないにしない)・ホールドでふさがっていれば押せない',lone.impossible===0&&lone.reach>0&&pinned.impossible>0,JSON.stringify([lone,pinned]));
+    const fast=cnt([hold(900,1400,0),tp(1000,9),tp(1150,5)]);
+    ok('速さはレーン毎秒で比べる: 横持ちで2レーンを150ms(13レーン/秒・上限18)は押せる',fast.impossible===0,JSON.stringify(fast));
+    const same=cnt([tp(1000,6),tp(1071,6)]);
+    ok('71ms後に同じ所: 同じ指では間に合わず、2本の指も入らないので押せない(両手のシミュレートと同じ決まり)',same.impossible===1,JSON.stringify(same));
+    const rt=[{type:'TAP',timeMs:1000,lane:1,subLane:2,subLaneWidth:2},{type:'HOLD',timeMs:1500,endTimeMs:2000,lane:4,subLane:8,subLaneWidth:2},
+      {type:'SLIDE',timeMs:2500,endTimeMs:3000,lane:1,endLane:2,subLaneWidth:2,slidePoints:[{timeMs:2500,lane:1,subLaneWidth:2},{timeMs:3000,lane:2,subLaneWidth:2}]}];
+    const fr=fromRuntime(rt);
+    ok('公開中の譜面を読む: fromRuntime で下書きの形になり、スライドの手は thumbCheck が選ぶ',fr.length===3&&fr[2].k==='s'&&fr[2].hand===null&&thumbCheck(fr,THUMB_PROFILES.landscape,B).hands.get(fr[2])==='L');
+    ok('公開中の譜面を両手のシミュレートで測れる(格子の1目盛り=1ms)',simulateRuntime(rt).impossible===0&&THUMB_BEAM>=8);}
   ok('同じ時刻の点をまとめる',dedupeSlidePoints([{k:'s',pts:[[0,1,2,0,0],[100,2,2,0,0],[101,3,2,0,0]]}])[0].pts.length===2);
 }
 

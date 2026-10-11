@@ -35,6 +35,40 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-10-11 14:34", type:'fix', group:'rhythm', title:'モンヒロビート：ホールド・スライドを正しく離したのにMISSになることがあったのを直しました', status:'new',
+    items:[
+      'iPhoneなどで、指を離した合図が少し遅れて届いたとき、終わりのバーで正しく離していても「押しっぱなし」と数えられてMISSになることがありました。',
+      '離した合図が遅れて届いても、実際に指を離した時刻で判定するようにしました。',
+      '押しっぱなしのまま終わりを過ぎたときにMISSになる決まりは、これまでどおりです（たまに成功になってしまっていた所もそろえました）。',
+    ],
+  },
+  {
+    date: "2026-10-11 13:31", type:'update', group:'rhythm', title:'モンヒロビート：新曲「Against My Own Shadow」を追加しました', status:'new',
+    image: 'images/song-art/against-my-own-shadow.jpg?v=2768a9055013',
+    items:[
+      'モンヒロビートに「Against My Own Shadow」（1分58秒）を追加しました。曲えらびからすぐ遊べます。',
+      'レベルは EASY Lv.7 ／ NORMAL Lv.9 ／ HARD Lv.12 ／ EXPERT Lv.22 ／ MASTER Lv.29 です。',
+      'ノーツ数は 130 ／ 158 ／ 210 ／ 337 ／ 397 です。',
+    ],
+    assistantNotice: { id:'update_notice_against_my_own_shadow_v1', type:'content' },
+  },
+  {
+    date: "2026-10-11 10:36", type:'fix', group:'rhythm', title:'モンヒロビートでレイドに挑んだあと、横向きでも与えたダメージが見えるようになりました', status:'new',
+    items:[
+      'モンヒロビートの「横向き」で遊んだとき、演奏のあとに出る画面で、いちばん下の与えたダメージの数字が画面からはみ出していました。横向きでも、スコア・ジャックの体力のバー・与えたダメージが全部見えるようにしました。',
+      'そのあとのレイドの結果にも、ジャックの体力のバーを出しました。演奏前の体力から、与えたダメージのぶん減っていく様子が見られます。',
+    ],
+  },
+  {
+    date: "2026-10-11 10:25", type:'fix', group:'rhythm', title:'モンヒロビート：モンスターノーツが4回出ない譜面を直しました', status:'new',
+    items:[
+      'モンスターノーツの出番は、どの曲のどの難易度にも4回あるのが決まりですが、4回そろっていない譜面がありました。どれも4回出るように直しました。',
+      '直した譜面: Sheriruth（全難易度）／Journey MASTER／Monster Hero -Another- MASTER／Stay With Me ～Locked Fate～ MASTER／綺季一閃 ～花雪に舞う詠姫～ EXPERT・MASTER／綺季一閃 ～花雪に舞う詠姫～ battle remix MASTER／4U ～ひたすら～ MASTER／禁断のレジスタンス EXPERT／ビッグブリッヂの死闘 MASTER／ハルカ EXPERT／Crazy Party Night ～ぱんぷきんの逆襲～ full ver. EXPERT／Monster short ver. EXPERT・MASTER',
+      'Stay With Me ～Locked Fate～ remix の EXPERT は、同じ順番のモンスターノーツが2回出ていたので、1回にそろえました。',
+      'ノーツの数・位置・タイミングは変わりません。もともとあった単打の一部がモンスターノーツになります。スコアの計算も変わりません（モンスターノーツはライフを助ける能力だけです）。',
+    ],
+  },
+  {
     date: "2026-10-11 09:09", type:'fix', group:'rhythm', title:'モンヒロビート：ホールド・スライドを押しっぱなしにしたときの判定が毎回同じになりました', status:'new',
     items:[
       'ホールド・スライドは、終わりのバーが判定ラインに来たら指を離すと成功、押しっぱなしのまま過ぎるとMISSです。',
