@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 13021cc28299222f
+// source-sha256: 389ac5fdf64e0aa4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-12 07:56";
+const BUILD_DATE = "2026-10-12 08:02";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -31354,11 +31354,23 @@ function RhythmHellVisSwitch() {
   }, RHYTHM_HELL_VIS_LABELS[v]))));
 }
 function RhythmHellSkyHitSwitch() {
-  const [value, setValue] = useState(() => RHYTHM_HELL_SKY_HIT.id);
+  const [value, setValue] = useState(() => RHYTHM_HELL_SKY_HIT.id),
+    [text, setText] = useState(() => RHYTHM_HELL_SKY_TEXT.id);
   const pick = v => {
     RHYTHM_HELL_SKY_HIT.set(v);
     setValue(RHYTHM_HELL_SKY_HIT.id);
   };
+  const pickText = v => {
+    RHYTHM_HELL_SKY_TEXT.set(v);
+    setText(RHYTHM_HELL_SKY_TEXT.id);
+  };
+  const btn = (on, label, onClick, key) => React.createElement("button", {
+    key: key,
+    type: "button",
+    "aria-pressed": on,
+    onClick: onClick,
+    className: `min-h-[44px] rounded-xl text-[11px] font-black ${on ? 'bg-rose-600 text-white ring-2 ring-rose-200' : 'bg-slate-800 text-slate-300'}`
+  }, label);
   return React.createElement("section", {
     "data-rhythm-hell-sky-hit-switch": true,
     className: "mb-3 rounded-2xl border border-rose-400/50 bg-rose-950/25 p-3"
@@ -31366,16 +31378,21 @@ function RhythmHellSkyHitSwitch() {
     className: "text-xs font-black text-rose-100"
   }, "空中を叩いたときの手ごたえ(試作・見比べ用)"), React.createElement("p", {
     className: "mt-1 text-[10px] font-bold text-rose-200/80"
-  }, "入: 空中の線の高さにレーンの柱の光(白紫)を出し、空中の判定の文字を空中の線のすぐ下に出します。地上の5難易度は変わりません。演奏を始め直すと効きます。"), React.createElement("div", {
-    className: "mt-2 grid grid-cols-2 gap-2"
-  }, [['off', 'いま'], ['on', '柱の光+文字を線の下']].map(([v, l]) => React.createElement("button", {
+  }, "柱の光: 空中の線の高さにレーンの柱の光(白紫)。少し重いので既定は切(軽くしてから既定にする)。判定の文字: 既定は空中の線のすぐ下。地上の5難易度は変わりません。演奏を始め直すと効きます。"), React.createElement("div", {
+    className: "mt-2 grid grid-cols-2 gap-2",
+    "data-rhythm-hell-sky-hit-row": true
+  }, [['off', '柱の光 切(既定)'], ['on', '柱の光 入']].map(([v, l]) => React.createElement("span", {
     key: v,
-    type: "button",
     "data-rhythm-hell-sky-hit-pick": v,
-    "aria-pressed": value === v,
-    onClick: () => pick(v),
-    className: `min-h-[44px] rounded-xl text-[11px] font-black ${value === v ? 'bg-rose-600 text-white ring-2 ring-rose-200' : 'bg-slate-800 text-slate-300'}`
-  }, l))));
+    className: "contents"
+  }, btn(value === v, l, () => pick(v), v)))), React.createElement("div", {
+    className: "mt-2 grid grid-cols-2 gap-2",
+    "data-rhythm-hell-sky-text-row": true
+  }, [['below', '文字 線の下(既定)'], ['above', '文字 線の上(前)']].map(([v, l]) => React.createElement("span", {
+    key: v,
+    "data-rhythm-hell-sky-text-pick": v,
+    className: "contents"
+  }, btn(text === v, l, () => pickText(v), v)))));
 }
 function RhythmHellPreviewSwitch({
   onChange
@@ -36841,7 +36858,7 @@ const RhythmTapTest = ({
     "data-rhythm-sky-judgment-display": true,
     className: "pointer-events-none absolute left-1/2 z-10 w-[88%] -translate-x-1/2 text-center",
     style: {
-      bottom: `calc(var(--mh-judgment-line-bottom,12%) + ${(RHYTHM_SKY_LIFT.ratio * 100).toFixed(2)}% ${RHYTHM_HELL_SKY_HIT.id === 'on' ? '- 64px' : '+ 38px'})`
+      bottom: `calc(var(--mh-judgment-line-bottom,12%) + ${(RHYTHM_SKY_LIFT.ratio * 100).toFixed(2)}% ${RHYTHM_HELL_SKY_TEXT.id === 'below' ? '- 64px' : '+ 38px'})`
     }
   }, settings.judgmentFx === true && React.createElement("i", {
     ref: skyJudgmentBurstRef,
