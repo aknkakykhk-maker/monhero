@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a41d0fa4d4f57e76
+// source-sha256: e492f7fffb89ef49
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-11 22:02";
+const BUILD_DATE = "2026-10-11 22:14";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -30998,6 +30998,8 @@ function RhythmSkyStage({
   const c = '221,214,254',
     f = v => Number(v).toFixed(2),
     fr = plane.front;
+  const skyLaneLook = RHYTHM_SKY_LANE_LOOK.id,
+    mk = Array.isArray(plane.markers) ? plane.markers : [];
   return React.createElement("svg", {
     "data-rhythm-sky-stage": true,
     viewBox: "0 0 100 100",
@@ -31082,7 +31084,59 @@ function RhythmSkyStage({
   }))), React.createElement("polygon", {
     points: plane.floor,
     fill: "url(#mhSkyFloor)"
+  }), skyLaneLook === 'a' && React.createElement("g", {
+    "data-rhythm-sky-lane-look": "a"
+  }, React.createElement("rect", {
+    x: f(mk[0]),
+    y: f(fr.y - 2.4),
+    width: f(mk[mk.length - 1] - mk[0]),
+    height: "3.6",
+    fill: "rgb(226,232,240)",
+    fillOpacity: ".07"
   }), React.createElement("line", {
+    x1: f(mk[0]),
+    y1: f(fr.y - 2.4),
+    x2: f(mk[mk.length - 1]),
+    y2: f(fr.y - 2.4),
+    stroke: "rgb(226,232,240)",
+    strokeOpacity: ".2",
+    strokeWidth: "1",
+    vectorEffect: "non-scaling-stroke"
+  }), mk.map((x, k) => React.createElement("line", {
+    key: k,
+    x1: f(x),
+    y1: f(fr.y - 2.4),
+    x2: f(x),
+    y2: f(fr.y + 1.2),
+    stroke: "rgb(226,232,240)",
+    strokeOpacity: k === 0 || k === mk.length - 1 ? '.35' : '.14',
+    strokeWidth: "1",
+    vectorEffect: "non-scaling-stroke"
+  }))), skyLaneLook === 'b' && React.createElement("g", {
+    "data-rhythm-sky-lane-look": "b"
+  }, mk.map((x, k) => React.createElement("line", {
+    key: k,
+    x1: f(x),
+    y1: f(fr.y - 3),
+    x2: f(x),
+    y2: f(fr.y + 1.4),
+    stroke: "rgb(226,232,240)",
+    strokeOpacity: k === 0 || k === mk.length - 1 ? '.5' : '.28',
+    strokeWidth: k === 0 || k === mk.length - 1 ? '1.6' : '1.1',
+    vectorEffect: "non-scaling-stroke"
+  }))), skyLaneLook === 'c' && React.createElement("g", {
+    "data-rhythm-sky-lane-look": "c"
+  }, mk.map((x, k) => React.createElement("line", {
+    key: k,
+    x1: f(x),
+    y1: f(fr.gy),
+    x2: f(x),
+    y2: f(fr.y),
+    stroke: "rgb(226,232,240)",
+    strokeOpacity: k === 0 || k === mk.length - 1 ? '.16' : '.07',
+    strokeWidth: "1",
+    vectorEffect: "non-scaling-stroke"
+  }))), React.createElement("line", {
     x1: "-2",
     y1: f(fr.y),
     x2: "102",
@@ -31135,6 +31189,53 @@ function RhythmSkyLiftSwitch() {
     onClick: () => pick(v),
     className: `min-h-[44px] rounded-xl text-sm font-black ${value === v ? 'bg-rose-600 text-white ring-2 ring-rose-200' : 'bg-slate-800 text-slate-300'}`
   }, v, "%", v === 16 ? '(いま)' : ''))));
+}
+const RHYTHM_SKY_LANE_LOOK_LABELS = Object.freeze({
+  none: 'いま(なし)',
+  a: '案A 判定線に薄い帯',
+  b: '案B 区切りの目盛り',
+  c: '案C 地上から細い柱'
+});
+const RHYTHM_SKY_LANE_LOOK = {
+  id: (() => {
+    try {
+      const v = typeof localStorage !== 'undefined' ? localStorage.getItem('mh_sky_lane_look_proto') : '';
+      return v && RHYTHM_SKY_LANE_LOOK_LABELS[v] ? v : 'none';
+    } catch (e) {
+      return 'none';
+    }
+  })(),
+  set(id) {
+    const v = RHYTHM_SKY_LANE_LOOK_LABELS[id] ? id : 'none';
+    this.id = v;
+    try {
+      if (v === 'none') localStorage.removeItem('mh_sky_lane_look_proto');else localStorage.setItem('mh_sky_lane_look_proto', v);
+    } catch (e) {}
+  }
+};
+function RhythmSkyLaneLookSwitch() {
+  const [value, setValue] = useState(() => RHYTHM_SKY_LANE_LOOK.id);
+  const pick = v => {
+    RHYTHM_SKY_LANE_LOOK.set(v);
+    setValue(RHYTHM_SKY_LANE_LOOK.id);
+  };
+  return React.createElement("section", {
+    "data-rhythm-sky-lane-look-switch": true,
+    className: "mb-3 rounded-2xl border border-rose-400/50 bg-rose-950/25 p-3"
+  }, React.createElement("h3", {
+    className: "text-xs font-black text-rose-100"
+  }, "空中のレーンの見せ方(試作・見比べ用)"), React.createElement("p", {
+    className: "mt-1 text-[10px] font-bold text-rose-200/80"
+  }, "ここで選んだ見せ方は試作の HELL だけに効きます。演奏の始めに1回置くだけで、重さは変わりません。"), React.createElement("div", {
+    className: "mt-2 grid grid-cols-2 gap-2"
+  }, Object.keys(RHYTHM_SKY_LANE_LOOK_LABELS).map(v => React.createElement("button", {
+    key: v,
+    type: "button",
+    "data-rhythm-sky-lane-look-pick": v,
+    "aria-pressed": value === v,
+    onClick: () => pick(v),
+    className: `min-h-[44px] rounded-xl px-1 text-xs font-black ${value === v ? 'bg-rose-600 text-white ring-2 ring-rose-200' : 'bg-slate-800 text-slate-300'}`
+  }, RHYTHM_SKY_LANE_LOOK_LABELS[v]))));
 }
 function RhythmSkyBoxLookSwitch() {
   const [value, setValue] = useState(() => RHYTHM_SKY_BOX_VARIANT.id);
@@ -98443,7 +98544,7 @@ function MonsterHeroGame() {
       className: "break-all text-right font-mono text-white"
     }, String(value))))))), React.createElement("div", {
       hidden: rhythmDebugTab !== 'play'
-    }, React.createElement(RhythmSkyLiftSwitch, null), React.createElement(RhythmSkyBoxLookSwitch, null), React.createElement("section", {
+    }, React.createElement(RhythmSkyLiftSwitch, null), React.createElement(RhythmSkyBoxLookSwitch, null), React.createElement(RhythmSkyLaneLookSwitch, null), React.createElement("section", {
       "data-debug-rhythm-hell-story": true,
       className: "mb-3 rounded-2xl border border-pink-400/50 bg-pink-950/25 p-3"
     }, React.createElement("h3", {
