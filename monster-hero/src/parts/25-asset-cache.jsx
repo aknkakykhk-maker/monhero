@@ -9,13 +9,15 @@
 //   中身が変わったファイルは別の鍵になり、古い絵や音は出ない。一覧から消えた・版の違うものは SW が消す
 // ・保存データ(mh_*)・ランキングには触れない。この仕組みの記憶は専用キー mh_asset_prefetch_v1 だけ
 //   (入/切・自動の前もって落とし・最近選んだ曲)。読めない・壊れているときは既定値に戻す
-// ・はじめはデバッグで入れる(ASSET_CACHE_DEFAULT_ENABLED=false)。切にすると SW を外し、ためたものも消す
+// ・既定は入(ASSET_CACHE_DEFAULT_ENABLED)。DEBUG MENU の切り替えで切にすると SW を外し、ためたものも消す
 // ・演奏前の準備中・演奏中は、自動の前もって落としを止める(修理部ドライバーくんの印
 //   window.__mhSongPrepBusy / __mhSongPlaying と mh:song-prep-* / mh:song-play-* を見る)
 const ASSET_CACHE_KEY = 'mh_asset_prefetch_v1';
 const ASSET_CACHE_NAME = 'mh-assets-v1';
 const ASSET_CACHE_META = 'mh-assets-meta-v1';
-const ASSET_CACHE_DEFAULT_ENABLED = false;
+// 2026-10-11 社長の了承で既定を入にした(「既定『する』で公開」)。保存値が無い人(既存・新規とも)は入・自動ダウンロードも「する」。
+// 一度「しない」を選んだ人(auto:false)や、デバッグで切にした人(enabled:false)の保存値はそのまま使う(normalizeAssetCacheSettings)
+const ASSET_CACHE_DEFAULT_ENABLED = true;
 // 設定の「ダウンロード」に並べるまとまり。容量は一覧(asset-manifest.json)から出す
 const ASSET_PACKS = [
   { id: 'beat', icon: '🎵', label: 'モンヒロビート', desc: '全曲の音源とジャケット' },
