@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 88cb973008260e2c
+// generated-sha256: 76f0a5fb038a62b9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-11 08:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-11 09:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -20859,7 +20859,7 @@ const canvasReady=canvasNotes&&placeable&&RHYTHM_CANVAS_RENDERER.begin(travel.re
 const roadGrid=roadFxRef.current;
 if(roadGrid&&placeable){const {beatMs,zeroMs,bar}=roadGrid,phase=(visualTime-rhythmBeatZeroAt(roadGrid,visualTime))/beatMs,beatIndex=Math.floor(phase),since=(phase-beatIndex)*beatMs,onBar=((beatIndex%bar)+bar)%bar===0;
   if(canvasReady){const lines=roadLinesRef.current,areaH=travel.rect.height,areaW=travel.rect.width;let count=0;
-    const scrollNow=rhythmScrollPos(visualTime),beatFrom=rhythmScrollTimeAt(scrollNow-travelMs*.35);for(let k=Math.ceil(((Number.isFinite(beatFrom)?beatFrom:visualTime)-rhythmBeatZeroAt(roadGrid,visualTime))/beatMs)-1;count<64;k++){const t=rhythmBeatLineTime(roadGrid,zeroMs+k*beatMs),st=rhythmScrollPos(t);if(st<scrollNow-travelMs*.35)continue;if(st>scrollNow+travelMs*1.05)break;if(t<0)continue;
+    const scrollNow=rhythmScrollPos(visualTime),beatFrom=rhythmScrollTimeAt(scrollNow-travelMs*.35);for(let k=Math.ceil(((Number.isFinite(beatFrom)?beatFrom:visualTime)-rhythmBeatZeroAt(roadGrid,visualTime))/beatMs)-1;count<64;k++){const t=rhythmBeatLineTime(roadGrid,zeroMs+k*beatMs),st=rhythmScrollPos(t);if(st<scrollNow-travelMs*.35)continue;if(st>scrollNow+travelMs*1.05){if(!RHYTHM_SCROLL.back||rhythmScrollMinAfter(t)>scrollNow+travelMs*1.05)break;continue;}if(t<0)continue;
       const progress=1-(rhythmScrollPos(t)-rhythmScrollPos(visualTime))/travelMs,y=travel.spawnY+rhythmProjectTravelProgress(progress)*travel.travelPx+travel.noteHeight/2;
       if(!(y>=0&&y<=areaH))continue;const yr=y/areaH,o=count*6;
       lines[o]=y;lines[o+1]=rhythmProjectBoundary(0,yr)*areaW;lines[o+2]=rhythmProjectBoundary(RHYTHM_LANE_COUNT,yr)*areaW;lines[o+3]=((k%bar)+bar)%bar===0?1:0;lines[o+4]=rhythmProjectionScale(yr);
@@ -20983,14 +20983,14 @@ while(scanFrom<notes.length){
   scanFrom++;
 }
 run.scanFrom=scanFrom;
-// 速さの表(試作)があるときは、見た目の位置 S で打ち切る(S は時刻が進めば減らない)
+// 速さの表(試作)があるときは、見た目の位置 S で打ち切る。戻る区間のある表は「この先いちばん手前へ来る位置」で打ち切る(戻らない表では S そのもの)
 const scanHorizonMs=visualTime+travelMs*1.2,scanHorizonScroll=rhythmScrollPos(visualTime)+travelMs*1.2,scrollTable=!!RHYTHM_SCROLL.points;
 // 押さえている HOLD/SLIDE を集めて、押さえている間の音(高い「シャラシャラ」)へ渡す(2026-09-28)。
 // 渡すだけで、判定・スコアには触らない。並びは使い回す(毎フレーム配列を作らない)
 const heldNotes=heldNotesRef.current;heldNotes.length=0;
 for(let i=scanFrom;i<notes.length;i++){
   const note=notes[i];
-  if(run.notesReady&&run.notesAscending&&(scrollTable?rhythmScrollPos(note.timeMs)>scanHorizonScroll:note.timeMs>scanHorizonMs))break;
+  if(run.notesReady&&run.notesAscending&&(scrollTable?rhythmScrollMinAfter(note.timeMs)>scanHorizonScroll:note.timeMs>scanHorizonMs))break;
   perfScanned++;
   visitNote(note);
   if(!note.done&&note.activePointerId!==null&&note.type==='HOLD'&&rhythmNoteHasBody(note))heldNotes.push(note);
