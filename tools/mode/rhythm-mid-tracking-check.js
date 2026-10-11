@@ -197,6 +197,20 @@ const advance=ms=>{
   runtime.clear();
 }
 
+// --- SLIDE: 空中と地上を行き来するスライド(HELL・2026-10-11 社長「空中スライドが地上に降りてきたり」) ---
+// 押し始めたあとは横の位置だけで追うので、高さ(点の sky)が空→地上→空と変わっても、経路どおりに追えば最後まで落ちない
+{
+  const note={type:'SLIDE',timeMs:1000,endTimeMs:3000,lane:0,endLane:4,
+    slidePoints:[{timeMs:1000,lane:0,sky:1},{timeMs:1500,lane:1,sky:1},{timeMs:2000,lane:2,sky:0},{timeMs:2500,lane:3,sky:0},{timeMs:3000,lane:4,sky:1}],
+    subLaneWidth:2,activePointerId:'p1',holdJudgment:'MARVELOUS',holdDeltaMs:0,done:false};
+  now=0;
+  runtime.record('touch:1',clientXFor(0),clientY);
+  runtime.bind('touch:1',note,'SLIDE',1000,0);
+  for(let i=1;i<=10;i++){advance(100);const expectedLane=i*0.2;runtime.record('touch:1',clientXFor(expectedLane),clientY);}
+  check('SLIDE: 空中と地上を行き来するスライドも、経路どおりに追う限り途中失敗しない',note.holdJudgment==='MARVELOUS','holdJudgment='+note.holdJudgment);
+  runtime.clear();
+}
+
 // --- SLIDE: 外れても打ち切らない。落ちるのはチェックポイントだけ ---
 //
 // 【2026-09-12・ユーザー指示】
