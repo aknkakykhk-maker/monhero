@@ -1986,7 +1986,10 @@ if(calibrating){const taps=Array.isArray(run.deltas)?run.deltas.length:0;
       if(body)body.textContent=now
         ?`いまのずれ ${now.rawMeanMs>0?'+':''}${now.rawMeanMs}ms（${counted}回ぶん）／ 判定とFAST・SLOWを見ながら、判定ラインに重なった瞬間に叩いてください`
         :'判定ラインにノーツが重なった瞬間に叩いてください。判定とFAST・SLOWはいつもどおり出ます';}}}
-const visitNote=note=>{if(note.type==='HOLD'&&note.activePointerId!==null&&songTimeMs>=note.endTimeMs+settings.judgmentTimingOffsetMs)applyJudgment(note,note.holdJudgment||'MISS',note.holdDeltaMs||0);
+// 押さえたまま終わりまで来た HOLD/SLIDE。確定する前にタッチ側の終わりの見回り(settleHeld)を1回走らせる。
+// 別々に走らせていたので、押しっぱなしで終わりの窓を過ぎても、どちらが先に走るかで成功にも MISS にもなっていた(2026-10-11)。
+// 見回りの時計でまだ終わりの窓の中なら、ここではまだ確定しない(窓の中で離した指を MISS にしない)
+const visitNote=note=>{if(note.type==='HOLD'&&note.activePointerId!==null&&songTimeMs>=note.endTimeMs+settings.judgmentTimingOffsetMs){if(RHYTHM_GESTURE_RUNTIME.settleHeld?.(note,songTimeMs)!==false&&songTimeMs>=note.endTimeMs+settings.judgmentTimingOffsetMs)applyJudgment(note,note.holdJudgment||'MISS',note.holdDeltaMs||0);}
 // 指を離したまま戻ってこなかったHOLD/SLIDE。持ち替えの猶予を過ぎた時点で失敗にする。
 // 終わりまで来ていたら、離していても成立させる(終わり際に離すぶんは元から許している)
 if(!note.done&&note.activePointerId===null&&note.releasedAtMs!=null){

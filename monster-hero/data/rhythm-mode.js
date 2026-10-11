@@ -2977,6 +2977,31 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
     const elapsed=Math.max(0,nowPerf()-session.startPerfMs);
     return session.startSongMs+elapsed;
   };
+  // 押さえている HOLD/SLIDE の終わりの見回り(終わりの窓が近づいたら本体の自動成功を窓の直後まで延期し、押しっぱなしで窓を過ぎたら MISS)。
+  // 毎コマの tick と、本体が「終わりまで押さえた」で成功を確定する直前(settleHeld)の両方から呼ぶ
+  const checkHeldRelease=(session,songNow)=>{
+    if(!session||!session.releaseRequired||session.note.done)return;
+    const releaseDelta=songNow-(session.releaseTargetMs+session.offsetMs);
+    if(!session.autoCompletionDeferred&&releaseDelta>=-RHYTHM_RELEASE_DEFER_ARM_MS){
+      // 本体の「終端到達で自動成功」を終端判定窓の直後まで延期する。
+      session.note.endTimeMs=session.releaseTargetMs+RHYTHM_RELEASE_MAX_MS+1;
+      session.autoCompletionDeferred=true;
+    }
+    if(releaseDelta>=RHYTHM_RELEASE_AUTO_MISS_ARM_MS){
+      // 押しっぱなしのまま終わりの判定窓を過ぎた。MISS で確定する。
+      session.expiredGuard=true;
+      // 終点フリックを弾き終えたノーツだけは、指を置いたままでも「弾いて取った」ので MISS にしない
+      // (経路が速くて早い確定を見送ったとき、弾いても取れないノーツになってしまう)。
+      const start=session.startJudgment||session.note.holdJudgment||'MISS';
+      const lateJudgment=rhythmWorseJudgment(start,RHYTHM_RELEASE_LATE_FLOOR);
+      const lateFloor=session.kind==='SLIDE'
+        ?rhythmSlideTrackingFloor(session.checkpointPassed,session.checkpointIndex):null;
+      const flickTaken=session.endFlickRequired&&session.endFlickDone;
+      session.note.holdJudgment=(session.failed||!flickTaken)?'MISS'
+        :lateFloor?rhythmWorseJudgment(lateJudgment,lateFloor):lateJudgment;
+      session.note.holdDeltaMs=releaseDelta;
+    }
+  };
   const finishGesture=(session,success)=>{
     if(!session||session.note.done||session.finished)return;
     session.finished=true;
@@ -3211,28 +3236,7 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
         evaluatePosition(session,pos);
         evaluateCheckpoints(session,perf);
       }
-      if(session.releaseRequired&&!session.note.done){
-        const releaseDelta=estimatedSongMs(session)-(session.releaseTargetMs+session.offsetMs);
-        if(!session.autoCompletionDeferred&&releaseDelta>=-RHYTHM_RELEASE_DEFER_ARM_MS){
-          // 本体の「終端到達で自動成功」を終端判定窓の直後まで延期する。
-          session.note.endTimeMs=session.releaseTargetMs+RHYTHM_RELEASE_MAX_MS+1;
-          session.autoCompletionDeferred=true;
-        }
-        if(releaseDelta>=RHYTHM_RELEASE_AUTO_MISS_ARM_MS){
-          // 押しっぱなしのまま終わりの判定窓を過ぎた。MISS で確定する。
-          session.expiredGuard=true;
-          // 終点フリックを弾き終えたノーツだけは、指を置いたままでも「弾いて取った」ので MISS にしない
-          // (経路が速くて早い確定を見送ったとき、弾いても取れないノーツになってしまう)。
-          const start=session.startJudgment||session.note.holdJudgment||'MISS';
-          const lateJudgment=rhythmWorseJudgment(start,RHYTHM_RELEASE_LATE_FLOOR);
-          const lateFloor=session.kind==='SLIDE'
-            ?rhythmSlideTrackingFloor(session.checkpointPassed,session.checkpointIndex):null;
-          const flickTaken=session.endFlickRequired&&session.endFlickDone;
-          session.note.holdJudgment=(session.failed||!flickTaken)?'MISS'
-            :lateFloor?rhythmWorseJudgment(lateJudgment,lateFloor):lateJudgment;
-          session.note.holdDeltaMs=releaseDelta;
-        }
-      }
+      checkHeldRelease(session,estimatedSongMs(session));
     });
     RHYTHM_PERF.gestureFrame();
     if(sessions.size&&typeof requestAnimationFrame==='function')raf=requestAnimationFrame(tick);
@@ -3360,7 +3364,27 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
     document.addEventListener('click',event=>{const button=event.target?.closest?.('[data-rhythm-pause-menu] button');if(button&&/リスタート|中断/.test(button.textContent||''))clear();},true);
   }
 
-  return {bind,setInputAge,record,release,clear,slideVisualLaneForIndex,invalidateAreaRect,areaRect,_sessions:sessions};
+  // 本体が「終わりまで押さえた」で成功を確定する直前に呼ぶ。毎コマの見回りと本体の確定が同じ瞬間を別々の時計で見ていて、
+  // どちらが先に走るかで、押しっぱなしで窓を過ぎても成功になったり MISS になったりしていた(2026-10-11 社長「押しっぱなしでミス判定になるときがある」)。
+  // 終わりの判定はこちらの時計(離した時刻を測るのと同じ時計)1本で決める。こちらの時計でまだ窓の中なら、本体の確定を窓を過ぎるまで延ばす
+  // (本体の時計が少し先に進んでいても、窓の中で離した指を「過ぎた」と見なさない)。判定の決まりは変えない。
+  // 戻り値 … true=見回りのあとで本体がいま確定してよい / false=まだ待つ(または、この指の見回りが無い)
+  const settleHeld=(note,songMs)=>{
+    for(const session of sessions.values()){
+      if(session.note!==note)continue;
+      if(!session.releaseRequired||note.done)return true;
+      const songNow=estimatedSongMs(session);
+      checkHeldRelease(session,songNow);
+      const releaseDelta=songNow-(session.releaseTargetMs+session.offsetMs);
+      if(releaseDelta>=RHYTHM_RELEASE_AUTO_MISS_ARM_MS)return true;
+      // まだ窓の中: 本体の確定を、こちらの時計で窓を過ぎるまで延ばす(延ばすのは本体の曲の時刻で測った残りの分だけ)
+      const wait=RHYTHM_RELEASE_AUTO_MISS_ARM_MS-releaseDelta;
+      note.endTimeMs=Math.max(Number(note.endTimeMs)||0,(Number(songMs)||0)-session.offsetMs+wait+1);
+      return false;
+    }
+    return true;
+  };
+  return {bind,settleHeld,setInputAge,record,release,clear,slideVisualLaneForIndex,invalidateAreaRect,areaRect,_sessions:sessions};
 })();
 
 // iPhoneのTouch.radiusXを既存projectionへ通し、実際の接触幅に応じたサブレーン領域として扱う。
