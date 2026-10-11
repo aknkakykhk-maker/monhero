@@ -2511,23 +2511,35 @@ const buildChart=(difficulty,options={})=>{
     });
   }
 
-  // --- 13. モンスターノーツ（曲の20/40/60/80%あたりへ1体ずつ） ---
+  // --- 13. モンスターノーツ（曲の20/40/60/80%あたりへ1体ずつ・どの難易度も必ず4個） ---
+  // 【2026-10-11 社長「どの曲も基本4個入るルールだよ」】前後1拍空いた拍の頭の単打が見つからないと、その枠を空けたままにしていた
+  // (込んだ EXPERT・MASTER で3個以下の譜面が19できていた)。見つからなければ条件を1段ずつゆるめて、必ず置く:
+  //   段0 拍の頭・前後に COMMON.monsterClearGrids 空き → 段1 拍の頭・その半分空き → 段2 拍の頭 → 段3 同時押しでない単打 → 段4 単打
+  // 段0で見つかる譜面は、これまでと1つも変わらない。tools/mode/rhythm-monster-four-check.js が公開曲の4個を見張る
   const monsterSlotGrids=[];
   {
     const first=notes[0].grid,last=notes[notes.length-1].grid;
     const used=new Set();
+    const gapOf=index=>Math.min(index>0?notes[index].grid-notes[index-1].grid:Infinity,index<notes.length-1?notes[index+1].grid-notes[index].grid:Infinity);
+    const tiers=[
+      (note,index)=>!note.chord&&note.grid%BEAT===0&&gapOf(index)>=COMMON.monsterClearGrids,
+      (note,index)=>!note.chord&&note.grid%BEAT===0&&gapOf(index)>=COMMON.monsterClearGrids/2,
+      note=>!note.chord&&note.grid%BEAT===0,
+      note=>!note.chord,
+      ()=>true,
+    ];
     COMMON.monsterTargets.forEach((ratio,slot)=>{
       const target=first+(last-first)*ratio;
-      let bestIndex=-1,bestDistance=Infinity;
-      notes.forEach((note,index)=>{
-        if(note.type!=='TAP'||used.has(index)||note.chord)return;
-        if(note.grid%BEAT!==0)return;
-        const before=index>0?note.grid-notes[index-1].grid:Infinity;
-        const after=index<notes.length-1?notes[index+1].grid-note.grid:Infinity;
-        if(before<COMMON.monsterClearGrids||after<COMMON.monsterClearGrids)return;
-        const distance=Math.abs(note.grid-target);
-        if(distance<bestDistance){bestDistance=distance;bestIndex=index;}
-      });
+      let bestIndex=-1;
+      for(const fits of tiers){
+        let bestDistance=Infinity;
+        notes.forEach((note,index)=>{
+          if(note.type!=='TAP'||used.has(index)||!fits(note,index))return;
+          const distance=Math.abs(note.grid-target);
+          if(distance<bestDistance){bestDistance=distance;bestIndex=index;}
+        });
+        if(bestIndex>=0)break;
+      }
       if(bestIndex>=0){notes[bestIndex].monsterSlot=slot+1;used.add(bestIndex);monsterSlotGrids.push(notes[bestIndex].grid);}
     });
   }
