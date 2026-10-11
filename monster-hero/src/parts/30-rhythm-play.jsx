@@ -516,6 +516,7 @@ function RhythmSkyStage({plane}){
   const theme=rhythmSkyTheme();if(theme.fx)Object.assign(RHYTHM_SKY_FX,theme.fx);
   // 空中の面・縁・柱・判定線は道の線と同じ白〜薄紫(改善部: 赤い枠が画面を占めて今の曲と並べると浮く。赤はノーツだけにする)
   const c='221,214,254',f=v=>Number(v).toFixed(2),fr=plane.front;
+  const skyLaneLook=RHYTHM_SKY_LANE_LOOK.id,mk=Array.isArray(plane.markers)?plane.markers:[];
   return <svg data-rhythm-sky-stage viewBox="0 0 100 100" preserveAspectRatio="none" style={{position:'absolute',inset:0,width:'100%',height:'100%',pointerEvents:'none',overflow:'visible',zIndex:2}}>
     <style>{`@keyframes mhSkyFlow{from{transform:translateY(-12px)}to{transform:translateY(${f(fr.y)}px)}}[data-rhythm-sky-flow]{animation:mhSkyFlow 1.3s linear infinite}[data-rhythm-sky-flow="2"]{animation-delay:-.65s}@keyframes mhSkyPulse{0%,100%{opacity:.55}50%{opacity:1}}[data-rhythm-sky-pulse]{animation:mhSkyPulse 1.3s ease-in-out infinite}@media (prefers-reduced-motion:reduce){[data-rhythm-sky-flow],[data-rhythm-sky-pulse]{animation:none}}`}</style>
     <defs>
@@ -527,6 +528,20 @@ function RhythmSkyStage({plane}){
     </defs>
     {/* 案Z: 道(地面)を薄い紫の無地にする。床の影(床より暗い)が見えるように。参考の道も無地の紫。空中の譜面の曲だけ */}
     <polygon points={plane.floor} fill="url(#mhSkyFloor)"/>
+    {/* 空中のレーンの見える化(試作・2026-10-11 社長「空中レーンもうまいこと視覚化できないかな？邪魔にならない程度に」)。
+        空中のレーン=地上の判定ラインの道幅(6レーン)をそのまま空中の判定線の高さへ持ち上げた範囲。
+        どの案も演奏の始めに1回置くだけの動かない線・面で、毎コマの描く数は増えない。デバッグの切り替え(RHYTHM_SKY_LANE_LOOK)で選ぶ。既定は「なし」 */}
+    {skyLaneLook==='a'&&<g data-rhythm-sky-lane-look="a">
+      <rect x={f(mk[0])} y={f(fr.y-2.4)} width={f(mk[mk.length-1]-mk[0])} height="3.6" fill="rgb(226,232,240)" fillOpacity=".07"/>
+      <line x1={f(mk[0])} y1={f(fr.y-2.4)} x2={f(mk[mk.length-1])} y2={f(fr.y-2.4)} stroke="rgb(226,232,240)" strokeOpacity=".2" strokeWidth="1" vectorEffect="non-scaling-stroke"/>
+      {mk.map((x,k)=><line key={k} x1={f(x)} y1={f(fr.y-2.4)} x2={f(x)} y2={f(fr.y+1.2)} stroke="rgb(226,232,240)" strokeOpacity={k===0||k===mk.length-1?'.35':'.14'} strokeWidth="1" vectorEffect="non-scaling-stroke"/>)}
+    </g>}
+    {skyLaneLook==='b'&&<g data-rhythm-sky-lane-look="b">
+      {mk.map((x,k)=><line key={k} x1={f(x)} y1={f(fr.y-3)} x2={f(x)} y2={f(fr.y+1.4)} stroke="rgb(226,232,240)" strokeOpacity={k===0||k===mk.length-1?'.5':'.28'} strokeWidth={k===0||k===mk.length-1?'1.6':'1.1'} vectorEffect="non-scaling-stroke"/>)}
+    </g>}
+    {skyLaneLook==='c'&&<g data-rhythm-sky-lane-look="c">
+      {mk.map((x,k)=><line key={k} x1={f(x)} y1={f(fr.gy)} x2={f(x)} y2={f(fr.y)} stroke="rgb(226,232,240)" strokeOpacity={k===0||k===mk.length-1?'.16':'.07'} strokeWidth="1" vectorEffect="non-scaling-stroke"/>)}
+    </g>}
     {/* 案Z(2026-10-11・社長の決定): 空中の面・縁・柱・字は無し。空中の判定の線は薄紫の細い線1本だけ
         (6px の淡い帯+中心2px。白は空中のものと押した光だけに使うので、線は白にしない)。
         2026-10-11 社長「空中線が左右に伸びすぎてマスモンにかかってるのが気になる」→ 横いっぱいをやめ、
@@ -547,6 +562,17 @@ function RhythmSkyLiftSwitch(){
 }
 // SKY TAP の見た目の案を切り替える(デバッグ専用・2026-10-11 社長「スカイは透明だけどちょっと見にくい」)。保存は新しいキー mh_sky_box_look_proto だけ。
 // ふつうのプレイ(この画面を通らない)はいまの案Zのまま
+// 空中のレーンの見える化の案(デバッグ専用・2026-10-11)。保存は新しいキー mh_sky_lane_look_proto だけ。既定は「なし」(いままで)
+const RHYTHM_SKY_LANE_LOOK_LABELS=Object.freeze({none:'いま(なし)',a:'案A 判定線に薄い帯',b:'案B 区切りの目盛り',c:'案C 地上から細い柱'});
+const RHYTHM_SKY_LANE_LOOK={id:(()=>{try{const v=typeof localStorage!=='undefined'?localStorage.getItem('mh_sky_lane_look_proto'):'';return v&&RHYTHM_SKY_LANE_LOOK_LABELS[v]?v:'none';}catch(e){return 'none';}})(),
+  set(id){const v=RHYTHM_SKY_LANE_LOOK_LABELS[id]?id:'none';this.id=v;try{if(v==='none')localStorage.removeItem('mh_sky_lane_look_proto');else localStorage.setItem('mh_sky_lane_look_proto',v);}catch(e){}}};
+function RhythmSkyLaneLookSwitch(){
+  const [value,setValue]=useState(()=>RHYTHM_SKY_LANE_LOOK.id);
+  const pick=v=>{RHYTHM_SKY_LANE_LOOK.set(v);setValue(RHYTHM_SKY_LANE_LOOK.id);};
+  return <section data-rhythm-sky-lane-look-switch className="mb-3 rounded-2xl border border-rose-400/50 bg-rose-950/25 p-3"><h3 className="text-xs font-black text-rose-100">空中のレーンの見せ方(試作・見比べ用)</h3>
+    <p className="mt-1 text-[10px] font-bold text-rose-200/80">ここで選んだ見せ方は試作の HELL だけに効きます。演奏の始めに1回置くだけで、重さは変わりません。</p>
+    <div className="mt-2 grid grid-cols-2 gap-2">{Object.keys(RHYTHM_SKY_LANE_LOOK_LABELS).map(v=><button key={v} type="button" data-rhythm-sky-lane-look-pick={v} aria-pressed={value===v} onClick={()=>pick(v)} className={`min-h-[44px] rounded-xl px-1 text-xs font-black ${value===v?'bg-rose-600 text-white ring-2 ring-rose-200':'bg-slate-800 text-slate-300'}`}>{RHYTHM_SKY_LANE_LOOK_LABELS[v]}</button>)}</div></section>;
+}
 function RhythmSkyBoxLookSwitch(){
   const [value,setValue]=useState(()=>RHYTHM_SKY_BOX_VARIANT.id);
   const pick=v=>{RHYTHM_SKY_BOX_VARIANT.set(v);setValue(RHYTHM_SKY_BOX_VARIANT.id);};
