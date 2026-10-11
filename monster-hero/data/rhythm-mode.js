@@ -3470,6 +3470,13 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
     }
     return null;
   };
+  // 押さえ始めたスライドで、指がいま帯から外れているか(見た目だけ。判定には使わない)。外れ始めからグレース前でも true
+  const slideOffForIndex=index=>{
+    for(const session of sessions.values()){
+      if(session.kind==='SLIDE'&&session.note?.index===index&&!session.note.done)return session.trackingBadSincePerf!=null;
+    }
+    return false;
+  };
   const clear=()=>{
     positions.clear();
     sessions.clear();
@@ -3517,7 +3524,7 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
     // この指の見回りが無い(タッチ側の記録が途中で外れた): 本体が rhythmReleaseFallback で決める
     return null;
   };
-  return {bind,settleHeld,setInputAge,record,release,clear,slideVisualLaneForIndex,invalidateAreaRect,areaRect,_sessions:sessions};
+  return {bind,settleHeld,setInputAge,record,release,clear,slideVisualLaneForIndex,slideOffForIndex,invalidateAreaRect,areaRect,_sessions:sessions};
 })();
 
 // iPhoneのTouch.radiusXを既存projectionへ通し、実際の接触幅に応じたサブレーン領域として扱う。
@@ -30523,6 +30530,8 @@ const RHYTHM_NOTE_CANVAS_MAX_DPR=2;
 //   角(帯の先の左右の角・いまの位置で切った所の左右の角)は丸(disc)を重ねて、2D の lineJoin:'round' と同じ形にする。
 // 【いまの位置で切る】押さえている帯は、今の描き方(rhythmSlideSegmentQuads)と同じく「いまの位置から次の譜面の点まで」だけを
 //   毎コマ刻み直して渡し(10〜20点)、その先は GPU に置いた形の途中から描く。刻む点が今の描き方と同じになる。
+// 押さえ始めたスライドで指が帯から外れている間の、帯の暗さ(見た目だけ。判定は変えない)。2D と GPU で同じ値を使う
+const RHYTHM_SLIDE_DIM=Object.freeze({rgb:'6,4,18',alpha:.5});
 const RHYTHM_GPU_BAND_KEY='mh_rhythm_gpu_band_v1';
 const rhythmGpuBandPreference=()=>{try{if(typeof localStorage==='undefined')return '';return localStorage.getItem(RHYTHM_GPU_BAND_KEY)==='gpu'?'gpu':'';}catch{return '';}};
 const rhythmGpuBandSetPreference=value=>{const next=value==='gpu'?'gpu':'';try{if(typeof localStorage!=='undefined'){if(next)localStorage.setItem(RHYTHM_GPU_BAND_KEY,next);else localStorage.removeItem(RHYTHM_GPU_BAND_KEY);}}catch{}return next;};
@@ -32120,7 +32129,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     ctx.globalAlpha=1;
   };
   const drawSlide=(geo,opts)=>{
-    const {failed,alpha,pressed}=opts;
+    // 指が帯から外れている間(slideOff)は、押さえている光を出さず、帯を暗くする(見た目だけ)
+    const {failed,alpha}=opts,pressed=opts.pressed&&!opts.slideOff,dim=!!opts.slideOff&&!failed;
     if(!geo.slide||!geo.slide.length)return;
     // ノーツサイズが100%以外のときだけ、帯の左右を中心のまわりで倍率にした写しを作る(100%は元のまま)
     // 高さ(sky)も写す(2026-10-11。以前は写さず、ノーツサイズが100%以外だと空中のスライドが地上の色で描かれていた。帯を GPU で描く描き方との突き合わせで見つけた)
@@ -32177,6 +32187,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     ctx.lineWidth=failed?1:opts.slideHand?2.8:1.6;ctx.lineJoin='round';ctx.strokeStyle=failed?'rgba(190,190,200,.5)':opts.slideHand==='R'?'rgba(237,233,254,.9)':opts.slideRgb?`rgba(${opts.slideRgb},.95)`:'rgba(243,232,255,.82)';ctx.stroke();
     // 押さえている最中は帯を明るくする(2026-09-26。以前はSLIDEだけ何も変わらなかった)。外周の道すじをそのまま塗る
     let top=Infinity,bottom=-Infinity;quads.forEach(q=>{top=Math.min(top,q.y0,q.y1);bottom=Math.max(bottom,q.y0,q.y1);});
+    // 指が外れている間は、帯を暗くする(外周の道すじをそのまま塗る)
+    if(dim){ctx.fillStyle=`rgba(${RHYTHM_SLIDE_DIM.rgb},${RHYTHM_SLIDE_DIM.alpha})`;ctx.fill();}
     // 押さえている最中は帯を明るくする。判定ライン寄りほど明るく(2026-09-28・参考動画。以前は一様に .30)
     if(pressed&&!failed){const pg=ctx.createLinearGradient(0,bottom,0,Math.max(top,bottom-Math.max(90,bottom*.5)));pg.addColorStop(0,'rgba(245,243,255,.56)');pg.addColorStop(.35,'rgba(243,232,255,.36)');pg.addColorStop(1,'rgba(243,232,255,.2)');ctx.fillStyle=pg;ctx.fill();}
     if(pressed&&!failed&&effect!=='MINIMAL'&&!lightweight){
@@ -32185,7 +32197,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     }
     // ノーツの動き: 帯の上を、判定ライン(画面の下)へ向かって光の波が流れる。明るさは画面の高さで決めるので(波長110px・0.5秒で1波長)、
     // 区切りごとに上端と下端の明るさを縦のグラデーションでつなげば、区切りの継ぎ目で段にならない
-    if(motion&&!failed){
+    if(motion&&!failed&&!dim){
       const glow=y=>{const wave=.5+.5*Math.cos(2*Math.PI*(y/110-frameNow/500));return wave>.3?((wave-.3)/.7*.3).toFixed(3):'0';};
       quads.forEach(q=>{const a0=glow(q.y0),a1=glow(q.y1);if(a0==='0'&&a1==='0')return;
         const g=ctx.createLinearGradient(0,q.y0,0,q.y1);g.addColorStop(0,`rgba(243,232,255,${a0})`);g.addColorStop(1,`rgba(243,232,255,${a1})`);
@@ -32206,7 +32218,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   const drawSlideGpu=(note,geo,opts)=>{
     const band=ctx.band,g=geo.slideGpu;
     if(!band)return;
-    const {failed,alpha,pressed}=opts;
+    const {failed,alpha}=opts,pressed=opts.pressed&&!opts.slideOff,dim=!!opts.slideOff&&!failed;
     if(!band.slide(note,g.travel,g.rect,g.halfH,sizeScale))return;
     const base=opts.slideRgb||RHYTHM_NOTE_COLORS.SLIDE.rgb;
     if(!failed&&effect!=='MINIMAL'&&!lightweight)band.pass('outline',{mode:0,hw:3,color:`rgba(${base},.18)`,alpha,stencil:true});
@@ -32218,6 +32230,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     }else band.pass('fill',{mode:0,color:groundFill,alpha,stencil:false});
     const lw=failed?1:opts.slideHand?2.8:1.6;
     band.pass('outline',{mode:0,hw:lw/2,color:failed?'rgba(190,190,200,.5)':opts.slideHand==='R'?'rgba(237,233,254,.9)':opts.slideRgb?`rgba(${opts.slideRgb},.95)`:'rgba(243,232,255,.82)',alpha,stencil:true});
+    if(dim)band.pass('fill',{mode:0,color:`rgba(${RHYTHM_SLIDE_DIM.rgb},${RHYTHM_SLIDE_DIM.alpha})`,alpha,stencil:true});
     if(pressed&&!failed){
       const raw=rhythmSlideSegmentQuads(note,g.travel.chartNowMs,{...g.travel,window:true},g.rect,g.halfH);
       if(raw.length){
@@ -32231,7 +32244,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
         }
       }
     }
-    if(motion&&!failed){const phase=frameNow/500;band.pass('fill',{mode:6,phase:phase-Math.floor(phase),alpha,stencil:false});}
+    if(motion&&!failed&&!dim){const phase=frameNow/500;band.pass('fill',{mode:6,phase:phase-Math.floor(phase),alpha,stencil:false});}
     // 区切りの線(drawSlide と同じ色・太さ・端は丸)。形は帯と一緒に GPU に置いてあり、CPU では投影しない(作り替え B の S2)
     if(!opts.skySlideRgb&&band.hasLines)band.pass('lines',{mode:0,hw:1,color:failed?'rgba(190,190,200,.6)':'rgba(233,213,255,.85)',alpha,stencil:false});
     band.done();
