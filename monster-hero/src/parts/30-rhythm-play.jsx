@@ -932,6 +932,20 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
       markers:Array.from({length:RHYTHM_LANE_COUNT+1},(_,k)=>rhythmProjectBoundary(k,last.gy/100)*100),
       posts:[[last.l,last.gy,last.l,last.y],[last.r,last.gy,last.r,last.y]].map(a=>a.map(f))};
   })();
+  // 交差の持ち替え(2026-10-11 社長「交差のときは指を置き換えている」)。タッチ側の見回りが2本の SLIDE の指と帯を結び直すとき、
+  // 本体の「指→ノーツ」の表(run.activePointers・note.activePointerId)も同じ瞬間に入れ替える。表が想定と違えば断る(タッチ側も結び直さない)
+  useEffect(()=>{
+    RHYTHM_GESTURE_RUNTIME.setSlideSwapListener?.((keyA,keyB,noteA,noteB)=>{
+      const run=runRef.current;
+      if(!run||run.finished||run.paused)return false;
+      const indexA=run.activePointers.get(keyA),indexB=run.activePointers.get(keyB);
+      if(indexA===undefined||indexB===undefined||run.notes[indexA]!==noteA||run.notes[indexB]!==noteB)return false;
+      run.activePointers.set(keyA,indexB);run.activePointers.set(keyB,indexA);
+      noteA.activePointerId=keyB;noteB.activePointerId=keyA;
+      return true;
+    });
+    return()=>RHYTHM_GESTURE_RUNTIME.setSlideSwapListener?.(null);
+  },[]);
   useEffect(()=>{RHYTHM_SKY_INPUT.active=skyChart;return()=>{RHYTHM_SKY_INPUT.active=false;};},[skyChart]);
   // 速さの表(試作・2026-10-10): 譜面に scrollChanges があるときだけ、ノーツの見た目の位置を表で変える(判定の時刻は変えない)。
   // アシスト・ミラーで作り変えた譜面にも効くよう、元の譜面から読む

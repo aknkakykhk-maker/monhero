@@ -3056,6 +3056,8 @@ const rhythmTouchNoInputMisses=(notes,inputTimes)=>{
   });
   return {misses,noInput};
 };
+// 交差の持ち替えで指と帯を結び直した回数(検査・ボットが読む)
+const RHYTHM_SLIDE_SWAPS={count:0};
 const RHYTHM_GESTURE_RUNTIME=(()=>{
   const positions=new Map(),sessions=new Map();
   let raf=0;
@@ -3193,6 +3195,50 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
     // 追従が外れたことを理由にMISSにしてはいけない。
     session.trackingBadSincePerf=null;
   };
+  // SLIDE の帯から指が外れているか(追従の測り方そのもの)。pos が無いときは外れ
+  const slideFingerOff=(session,pos,chartNow)=>{
+    if(!session||!session.note||!pos)return true;
+    const target=rhythmSlideExpectedLane(session.note,chartNow),tolerance=rhythmSlideTrackingTolerance(session.note,chartNow);
+    const atLine=laneCoordinate(pos.clientX,pos.clientY);
+    const areaBox=areaRect();
+    const atFinger=areaBox?rhythmLaneCoordinateAtPoint(pos.clientX,pos.clientY,areaBox):null;
+    const off=actual=>actual===null||Math.abs(actual-target)>tolerance;
+    // 空中の段(試作・2026-10-10 社長「空中スライドのとき長押ししてたら、位置を合わせなくても勝手に判定オッケーになってない?」):
+    // 判定ラインより上を押さえた指は、見えている帯と同じ「判定ラインの幅で測った位置」(atFinger)だけで見る。
+    // 判定ラインの高さに直した位置(atLine)は奥の狭い道幅から外へ引き延ばすので、2つの許し幅を合わせると地上より広くなり、
+    // 指を動かさなくても1.5レーンほど動くアークを最後まで取れていた。空中の段が無い曲(既存の全曲)は今までどおり
+    const skyFinger=typeof RHYTHM_SKY_INPUT!=='undefined'&&RHYTHM_SKY_INPUT.active&&areaBox&&((Number(pos.clientY)-areaBox.top)/areaBox.height)<RHYTHM_JUDGMENT_LINE_Y.ratio;
+    return skyFinger?off(atFinger):off(atLine)&&off(atFinger);
+  };
+  // 【2026-10-11 社長「交差のときは指を置き換えている(右で押していた帯を、交わったら左の指で押さえる)」】
+  // 2本の SLIDE が交わる所では、親指を交差させずに、帯を反対の指へ持ち替えるのが横持ちの自然な押し方。
+  // 指はそれぞれの側に残り、帯のほうが入れ替わるので、帯を押さえ始めた指に縛ると、どちらの帯も「指が外れた」(暗くなる・判定の点を落とす)になっていた。
+  // 指 A が帯 X から外れたとき、別の指 B が押さえている帯 Y について「A は Y の上・B は X の上・B も Y から外れている」なら、指と帯を結び直す。
+  //   ・1本の指で2本の帯を満たすことは今までどおり認めない(結び直すには、2本の指がそれぞれ相手の帯の上にいることが要る)
+  //   ・指を交差させて追う遊び方は、どちらの指も自分の帯の上にいるので何も起きない
+  //   ・空中の段のあるスライド(手の色が決まっている)・終点フリックの受付中・本体が応じないときは結び直さない
+  // 本体(30-rhythm-play.jsx)の「指→ノーツ」の表も同じ瞬間に入れ替える(setSlideSwapListener)。本体が応じなければ何もしない
+  let slideSwapListener=null;
+  const setSlideSwapListener=fn=>{slideSwapListener=typeof fn==='function'?fn:null;};
+  const slideSwapAcrossFingers=session=>{
+    if(!slideSwapListener||!session||session.kind!=='SLIDE'||session.finished||session.endFlickArmed||!session.note||session.note.done||rhythmSlideHasSky(session.note))return false;
+    const key=session.key,myPos=positions.get(key);
+    if(!myPos)return false;
+    for(const [otherKey,other] of sessions){
+      if(otherKey===key||!other||other===session||other.kind!=='SLIDE'||other.finished||other.endFlickArmed||!other.note||other.note.done||rhythmSlideHasSky(other.note))continue;
+      const otherPos=positions.get(otherKey);
+      if(!otherPos)continue;
+      const myNow=estimatedSongMs(session)-session.offsetMs,otherNow=estimatedSongMs(other)-other.offsetMs;
+      if(slideFingerOff(other,myPos,otherNow)||slideFingerOff(session,otherPos,myNow)||!slideFingerOff(other,otherPos,otherNow))continue;
+      if(slideSwapListener(key,otherKey,session.note,other.note)!==true)return false;
+      sessions.set(key,other);sessions.set(otherKey,session);
+      other.key=key;session.key=otherKey;
+      session.trackingBadSincePerf=null;other.trackingBadSincePerf=null;
+      RHYTHM_SLIDE_SWAPS.count++;
+      return true;
+    }
+    return false;
+  };
   const evaluatePosition=(session,pos)=>{
     if(!session||session.finished||session.note.done||!pos)return;
     if(session.kind==='FLICK'){
@@ -3261,17 +3307,10 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
       // SLIDEは動く的を追うので、これまでどおり判定ラインの高さに直した位置で測る。
       // 加えて、指のその場の高さ(タップと同じ測り方)で測った位置も的の中なら、外れとは数えない。
       // 判定ラインより奥を押さえた指が中央寄りへずれて見えて、帯の上なのに外れになるのを防ぐ(厳しくなることはない)。
-      const target=rhythmSlideExpectedLane(session.note,chartNow),tolerance=rhythmSlideTrackingTolerance(session.note,chartNow);
-      const atLine=laneCoordinate(pos.clientX,pos.clientY);
       const areaBox=areaRect();
-      const atFinger=areaBox?rhythmLaneCoordinateAtPoint(pos.clientX,pos.clientY,areaBox):null;
-      const off=actual=>actual===null||Math.abs(actual-target)>tolerance;
-      // 空中の段(試作・2026-10-10 社長「空中スライドのとき長押ししてたら、位置を合わせなくても勝手に判定オッケーになってない?」):
-      // 判定ラインより上を押さえた指は、見えている帯と同じ「判定ラインの幅で測った位置」(atFinger)だけで見る。
-      // 判定ラインの高さに直した位置(atLine)は奥の狭い道幅から外へ引き延ばすので、2つの許し幅を合わせると地上より広くなり、
-      // 指を動かさなくても1.5レーンほど動くアークを最後まで取れていた。空中の段が無い曲(既存の全曲)は今までどおり
-      const skyFinger=typeof RHYTHM_SKY_INPUT!=='undefined'&&RHYTHM_SKY_INPUT.active&&areaBox&&((Number(pos.clientY)-areaBox.top)/areaBox.height)<RHYTHM_JUDGMENT_LINE_Y.ratio;
-      bad=skyFinger?off(atFinger):off(atLine)&&off(atFinger);
+      bad=slideFingerOff(session,pos,chartNow);
+      // 交差の持ち替え(slideSwapAcrossFingers): 外れたのが、2本の帯が入れ替わって相手の指の上へ移っただけなら、指と帯を結び直して外れにしない
+      if(bad&&slideSwapAcrossFingers(session))return;
       // 描き分け用(試作): いま指が帯から外れているか・指の位置(プレイエリアの中の px)。印の見せ方が読む(判定には使わない)
       if(session.note&&rhythmSlideHasSky(session.note)){session.note._trackOff=!!bad;session.note._trackFinger=areaBox?{x:Number(pos.clientX)-areaBox.left,y:Number(pos.clientY)-areaBox.top}:null;}
     }else if(chartNow>=Number(session.note?.endTimeMs)-RHYTHM_HOLD_END_TRACKING_SKIP_MS){
@@ -3527,7 +3566,7 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
     // この指の見回りが無い(タッチ側の記録が途中で外れた): 本体が rhythmReleaseFallback で決める
     return null;
   };
-  return {bind,settleHeld,setInputAge,record,release,clear,slideVisualLaneForIndex,slideOffForIndex,invalidateAreaRect,areaRect,_sessions:sessions};
+  return {bind,settleHeld,setInputAge,record,release,clear,slideVisualLaneForIndex,slideOffForIndex,invalidateAreaRect,areaRect,setSlideSwapListener,_sessions:sessions};
 })();
 
 // iPhoneのTouch.radiusXを既存projectionへ通し、実際の接触幅に応じたサブレーン領域として扱う。
