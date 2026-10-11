@@ -543,6 +543,15 @@ function RhythmSkyLiftSwitch(){
     <p className="mt-1 text-[10px] font-bold text-rose-200/80">空中と地上の判定ラインの差(画面の高さに対する割合)。横画面は39%のまま。ここで選んだ値は縦画面の試作の HELL だけに効きます。</p>
     <div className="mt-2 grid grid-cols-3 gap-2">{[16,25,39].map(v=><button key={v} type="button" data-rhythm-sky-lift={v} aria-pressed={value===v} onClick={()=>pick(v)} className={`min-h-[44px] rounded-xl text-sm font-black ${value===v?'bg-rose-600 text-white ring-2 ring-rose-200':'bg-slate-800 text-slate-300'}`}>{v}%{v===16?'(いま)':''}</button>)}</div></section>;
 }
+// SKY TAP の見た目の案を切り替える(デバッグ専用・2026-10-11 社長「スカイは透明だけどちょっと見にくい」)。保存は新しいキー mh_sky_box_look_proto だけ。
+// ふつうのプレイ(この画面を通らない)はいまの案Zのまま
+function RhythmSkyBoxLookSwitch(){
+  const [value,setValue]=useState(()=>RHYTHM_SKY_BOX_VARIANT.id);
+  const pick=v=>{RHYTHM_SKY_BOX_VARIANT.set(v);setValue(RHYTHM_SKY_BOX_VARIANT.id);};
+  return <section data-rhythm-sky-box-look-switch className="mb-3 rounded-2xl border border-rose-400/50 bg-rose-950/25 p-3"><h3 className="text-xs font-black text-rose-100">SKY TAP の見た目(試作・見比べ用)</h3>
+    <p className="mt-1 text-[10px] font-bold text-rose-200/80">ここで選んだ見た目は試作の HELL だけに効きます。描く数は変わりません。</p>
+    <div className="mt-2 grid grid-cols-2 gap-2">{Object.keys(RHYTHM_SKY_BOX_LOOKS).map(v=><button key={v} type="button" data-rhythm-sky-box-look={v} aria-pressed={value===v} onClick={()=>pick(v)} className={`min-h-[44px] rounded-xl px-1 text-xs font-black ${value===v?'bg-rose-600 text-white ring-2 ring-rose-200':'bg-slate-800 text-slate-300'}`}>{RHYTHM_SKY_BOX_LOOK_LABELS[v]}</button>)}</div></section>;
+}
 const RhythmMonsterNoteGuide=()=>{
   const ratios=rhythmMonsterNoteBaseRatios(RHYTHM_MONSTER_SLOT_MAX).map(ratio=>`${Math.round(ratio*100)}%`);
   return <section data-rhythm-monster-guide className="space-y-3">

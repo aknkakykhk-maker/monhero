@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4da3d08945b2ec04
+// source-sha256: 95752604af0eb99c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-11 19:41";
+const BUILD_DATE = "2026-10-11 19:44";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -31135,6 +31135,30 @@ function RhythmSkyLiftSwitch() {
     onClick: () => pick(v),
     className: `min-h-[44px] rounded-xl text-sm font-black ${value === v ? 'bg-rose-600 text-white ring-2 ring-rose-200' : 'bg-slate-800 text-slate-300'}`
   }, v, "%", v === 16 ? '(いま)' : ''))));
+}
+function RhythmSkyBoxLookSwitch() {
+  const [value, setValue] = useState(() => RHYTHM_SKY_BOX_VARIANT.id);
+  const pick = v => {
+    RHYTHM_SKY_BOX_VARIANT.set(v);
+    setValue(RHYTHM_SKY_BOX_VARIANT.id);
+  };
+  return React.createElement("section", {
+    "data-rhythm-sky-box-look-switch": true,
+    className: "mb-3 rounded-2xl border border-rose-400/50 bg-rose-950/25 p-3"
+  }, React.createElement("h3", {
+    className: "text-xs font-black text-rose-100"
+  }, "SKY TAP の見た目(試作・見比べ用)"), React.createElement("p", {
+    className: "mt-1 text-[10px] font-bold text-rose-200/80"
+  }, "ここで選んだ見た目は試作の HELL だけに効きます。描く数は変わりません。"), React.createElement("div", {
+    className: "mt-2 grid grid-cols-2 gap-2"
+  }, Object.keys(RHYTHM_SKY_BOX_LOOKS).map(v => React.createElement("button", {
+    key: v,
+    type: "button",
+    "data-rhythm-sky-box-look": v,
+    "aria-pressed": value === v,
+    onClick: () => pick(v),
+    className: `min-h-[44px] rounded-xl px-1 text-xs font-black ${value === v ? 'bg-rose-600 text-white ring-2 ring-rose-200' : 'bg-slate-800 text-slate-300'}`
+  }, RHYTHM_SKY_BOX_LOOK_LABELS[v]))));
 }
 const RhythmMonsterNoteGuide = () => {
   const ratios = rhythmMonsterNoteBaseRatios(RHYTHM_MONSTER_SLOT_MAX).map(ratio => `${Math.round(ratio * 100)}%`);
@@ -98414,7 +98438,7 @@ function MonsterHeroGame() {
       className: "break-all text-right font-mono text-white"
     }, String(value))))))), React.createElement("div", {
       hidden: rhythmDebugTab !== 'play'
-    }, React.createElement(RhythmSkyLiftSwitch, null), React.createElement("section", {
+    }, React.createElement(RhythmSkyLiftSwitch, null), React.createElement(RhythmSkyBoxLookSwitch, null), React.createElement("section", {
       "data-debug-rhythm-hell-story": true,
       className: "mb-3 rounded-2xl border border-pink-400/50 bg-pink-950/25 p-3"
     }, React.createElement("h3", {
