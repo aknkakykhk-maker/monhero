@@ -83,7 +83,9 @@ for(;;){
   let best=null;
   const variants=[];
   if(n.k==='s'){for(const d of [-0.5,0.5,-1,1,-1.5,1.5,-2,2]){const v=JSON.parse(JSON.stringify(n));v.pts.forEach(p=>p[1]=Math.max(0,Math.min(6-p[2],p[1]+d)));variants.push(v);}}
-  else{for(let sub=0;sub+n.w<=12;sub++)if(sub!==n.sub){const v={...n,sub};variants.push(v);}
+  else{// 元の位置に近い順に試す(同じ点数なら元に近いほう。左から順に試すと左手へ寄った)
+    const subs=[];for(let sub=0;sub+n.w<=12;sub++)if(sub!==n.sub)subs.push(sub);subs.sort((x,y)=>Math.abs(x-n.sub)-Math.abs(y-n.sub));
+    for(const sub of subs){const v={...n,sub};variants.push(v);}
     if(n.sky&&!GROUND)variants.push({...n,sky:0});}
   for(const v of variants){const sc=score(local(t,n,v));if(!best||sc<best.sc)best={sc,v};}
   const without=score(local(t,n,null));
@@ -107,7 +109,9 @@ if(MIN_LEVEL){
     for(const o of order){
       if(busyAt(o.t))continue;
       const base=score(local(o.t,null));let pick=null;
-      for(const sub of [1,4,7,10,0,3,6,9]){const v={k:'t',t:o.t,sub,w:3,sky:0,dir:'',added:1};const sc=score(local(o.t,null,v));if(sc<=base&&(!pick||sc<pick.sc))pick={sc,v};}
+      // 前後2小節で少ないほうの手の側から試す(足したノーツで左右の偏りを作らない)
+      const nearL=notes.filter(n=>Math.abs(startOf(n)-o.t)<beatMs*8&&xOf(n)<3).length,nearR=notes.filter(n=>Math.abs(startOf(n)-o.t)<beatMs*8&&xOf(n)>=3).length;
+      for(const sub of nearL<=nearR?[1,4,0,3,7,10,6,9]:[7,10,6,9,1,4,0,3]){const v={k:'t',t:o.t,sub,w:3,sky:0,dir:'',added:1};const sc=score(local(o.t,null,v));if(sc<=base&&(!pick||sc<pick.sc))pick={sc,v};}
       if(pick){notes.push(pick.v);log.added++;addedNow++;}
       if(addedNow%15===0){level=chartStats(sorted()).level;if(level>=MIN_LEVEL)break;}
     }
