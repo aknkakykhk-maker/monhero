@@ -164,6 +164,13 @@ const FORCE_CHECKS = [
   // 入力の割り当て(rhythmMatchInputBatch)は、片側を直すともう片側が静かに壊れる。
   // 2026-09-18、持ち替えの直しが「押さえている上に重なるノーツを叩けない」を生んだ
   { re: /^monster-hero\/data\/rhythm-mode\.js$/, checks: ['mode/rhythm-tap-during-hold-check.js', 'mode/rhythm-finger-swap-check.js'], why: '押さえながら叩く・指の持ち替え' },
+  // 公開中の全譜面の中身を見張る検査(どれも1〜8秒)。「rhythm」「mode」の語は300本以上に当たるので、
+  // 上限40本で落ちて素通りしていた。2026-10-12、ノーツを1つ動かしたら「押せない近さの2音」が出たのに
+  // rhythm-overlap-reach-check が選ばれず、main で NG になった(#2808 → #2821 で戻した)
+  { re: /^monster-hero\/data\/rhythm-mode\.js$/,
+    checks: ['mode/rhythm-overlap-reach-check.js', 'mode/rhythm-note-reach-check.js', 'mode/rhythm-released-chart-lock-check.js',
+      'mode/rhythm-monster-four-check.js', 'mode/rhythm-slide-start-lane-check.js', 'mode/rhythm-expert-master-order-check.js'],
+    why: '公開中の譜面の中身(押せない配置・取れないノーツ・指紋・モンスターノーツ4個・スライドの始まり・EXPERT と MASTER の順)' },
 ];
 
 function tokensOf(file) {
