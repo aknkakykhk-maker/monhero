@@ -1162,10 +1162,11 @@ const RHYTHM_JUDGMENT_LINE_Y={
 // 入力: 空中の段がある譜面だけ、地上と空中の判定ラインの真ん中より上を押した指を「空中」とし、空中のノーツは空中の指でだけ取れる。
 //   スライドは高さを見た目にだけ付け、判定は今までどおり横の位置だけで追う。
 const RHYTHM_SKY_LIFT_RATIO=.16;
+
 // 空中の見た目(案Z・2026-10-11・社長の決定)の色・不透明度・太さを1か所に。描き方(2D の canvas / GPU)はこの値だけを読む(ドライバーくんの GPU の描き方と食い違わないように)。
 // 空中のものは全部「色の無いガラス」(白〜銀)。色が付いていれば地上。長さの単位は CSS px(縦390幅の縦持ち基準)
 const RHYTHM_SKY_LOOK=Object.freeze({
-  arc:Object.freeze({rgb:'214,224,240',alpha:.46,minHalfWidthPx:4.5,edgeAlpha:.75,edgePx:1.2}),  // edge=帯の左右の白い縁(紫の床の上でも「白い帯」に見せる)
+  arc:Object.freeze({rgb:'214,224,240',alpha:.58,minHalfWidthPx:4.5,edgeAlpha:.6,edgePx:1.2,left:'59,130,246',right:'236,72,153',centerLane:3}), // 帯=手の色(左手=青・右手=桃)で中まで色(58%)・縁と芯は白。手は note.hand、無いときはスライドの点のレーンの平均が centerLane より左なら左  // edge=帯の左右の白い縁(紫の床の上でも「白い帯」に見せる)
   core:Object.freeze({rgb:'255,255,255',alpha:.9,widthPx:3}),
   box:Object.freeze({aspect:.2,farDim:.45,fill:'205,218,238',fillAlpha:.16,topAlpha:.62,topRatio:.36,frontFill:'200,215,240',frontAlpha:.4,thickRatio:.3,edge:'255,255,255',edgePx:1.6,minFacePx:5}),
   shadow:Object.freeze({rgb:'6,3,20',alpha:.22,radiusPx:3,insetPx:3,lineAlpha:.28,fadeRatio:.14}),
@@ -1173,6 +1174,14 @@ const RHYTHM_SKY_LOOK=Object.freeze({
   line:Object.freeze({bandRgb:'150,118,235',bandAlpha:.38,bandPx:6,coreRgb:'165,135,245',coreAlpha:.95,corePx:2}),
   floor:Object.freeze({topRgb:'48,34,108',topAlpha:.55,bottomRgb:'66,46,146',bottomAlpha:.88}),
 });
+// 空中スライドの手(2026-10-11・社長「参考どおり左右で色分け」)。譜面の note.hand('L'|'R')に従う。手が書いてないときは推測せず、
+// スライドの点のレーンの平均が真ん中(RHYTHM_SKY_LOOK.arc.centerLane)より左なら 'L'・そうでなければ 'R' の1つだけで決める
+const rhythmSkyHandOf=note=>{
+  if(note&&(note.hand==='L'||note.hand==='R'))return note.hand;
+  const pts=note&&Array.isArray(note.slidePoints)?note.slidePoints:[];let sum=0,n=0;
+  for(const p of pts){const lane=Number(p&&p.lane);if(Number.isFinite(lane)){sum+=lane;n++;}}
+  return n&&sum/n<RHYTHM_SKY_LOOK.arc.centerLane?'L':'R';
+};
 // 縦画面の空中の高さの差(2026-10-11・社長「中間を作って見比べる」)。デバッグ画面の切り替え(16/25/39%)だけが書く新しい保存キー。ふつうのプレイは書かないので16%のまま
 const rhythmSkyLiftPortrait=()=>{try{const v=Number(localStorage.getItem('mh_sky_lift_portrait_proto'));return v===25?.25:v===39?.39:RHYTHM_SKY_LIFT_RATIO;}catch(e){return RHYTHM_SKY_LIFT_RATIO;}};
 // 横画面では画面の高さが低いので、空中と地上の差を広げる(2026-10-10 社長「モンビーは縦でもできるけど基本は横使い」。
@@ -30423,12 +30432,15 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     // 半幅は max(最小半幅, 譜面の幅の投影の半幅)。細くなりすぎる所だけ、中心を保って広げる
     const widen=(l,r)=>{const m=A.minHalfWidthPx,c=(l+r)/2,h=(r-l)/2;return h>=m?[l,r]:[c-m,c+m];};
     const air=quads.filter(q=>(Number(q.sky)||0)>.05).map(q=>{const [l0,r0]=widen(q.l0,q.r0),[l1,r1]=widen(q.l1,q.r1);return {l0,r0,y0:q.y0,l1,r1,y1:q.y1};});
+    // 空中スライドは、高さが低い区間も含めて全部「手の色」(左=青・右=桃)で中まで塗る
+    const handRgb=opts.skyHand==='L'?A.left:opts.skyHand==='R'?A.right:A.rgb;
     quads.forEach(q=>{
       if((Number(q.sky)||0)>.05)return;
-      ctx.fillStyle=`rgba(${opts.slideRgb||RHYTHM_NOTE_COLORS.SLIDE.rgb},${opts.slideRgb?.62:.5})`;
-      ctx.beginPath();ctx.moveTo(q.l0,q.y0);ctx.lineTo(q.r0,q.y0);ctx.lineTo(q.r1,q.y1);ctx.lineTo(q.l1,q.y1);ctx.closePath();ctx.fill();
+      const [l0,r0]=widen(q.l0,q.r0),[l1,r1]=widen(q.l1,q.r1);
+      ctx.fillStyle=`rgba(${handRgb},${A.alpha})`;
+      ctx.beginPath();ctx.moveTo(l0,q.y0);ctx.lineTo(r0,q.y0);ctx.lineTo(r1,q.y1);ctx.lineTo(l1,q.y1);ctx.closePath();ctx.fill();
     });
-    ctx.fillStyle=`rgba(${A.rgb},${A.alpha})`;
+    ctx.fillStyle=`rgba(${handRgb},${A.alpha})`;
     air.forEach(q=>{ctx.beginPath();ctx.moveTo(q.l0,q.y0);ctx.lineTo(q.r0,q.y0);ctx.lineTo(q.r1,q.y1);ctx.lineTo(q.l1,q.y1);ctx.closePath();ctx.fill();});
     // 左右の縁を白く(床の紫の上でも地上スライドの紫の帯と見分けられる)
     if(air.length){ctx.strokeStyle=`rgba(255,255,255,${A.edgeAlpha})`;ctx.lineWidth=A.edgePx;ctx.lineCap='round';ctx.beginPath();air.forEach(q=>{ctx.moveTo(q.l0,q.y0);ctx.lineTo(q.l1,q.y1);ctx.moveTo(q.r0,q.y0);ctx.lineTo(q.r1,q.y1);});ctx.stroke();ctx.lineCap='butt';}
@@ -31069,7 +31081,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       const o={failed:false,monster:false,wide:false,pressed:false,alpha:1,pop:null,depthScale:1,brightness:1,...opts};
       // 空中の段(試作): 手の色(左=水色・右=ピンク)。譜面のスライドに hand:'L'|'R' を書いたときだけ
       // 空中の段(試作): 高さのあるスライドは「空中の見せ方」で描く(社長: 左右は位置で分かるので色で分けない・地上のスライドは今の色のまま・空中は見せ方で分ける)
-      if(rhythmSlideHasSky(note)){const th=rhythmSkyTheme();o.skySlideRgb=th.rgb;o.skySlideCore=th.core;}
+      if(rhythmSlideHasSky(note)){const th=rhythmSkyTheme();o.skySlideRgb=th.rgb;o.skySlideCore=th.core;o.skyHand=rhythmSkyHandOf(note);}
       // 空中スライドの印の追従(試作・2026-10-10 社長「空中は…こいつが勝手に動いてる」):
       // 印は「指を置く目標」。指が帯に乗っている間だけ光らせ、外れている間は薄く欠けた見た目にする。
       // 押さえた指の位置には小さな赤い受け(輪)を出し、印と指のずれが見えるようにする。
