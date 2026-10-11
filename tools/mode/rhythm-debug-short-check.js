@@ -46,8 +46,9 @@ check('リスタートは新run生成・入力と音声を破棄',game.includes(
 // 見張りたいのは「表示を初期値へ戻してから、鳴らし始めない形で音を用意する」順番なので、間の長さだけ広げる(順番の確かめ方は変えない)
 &&/hudRef\.current\.set\(rhythmHudInitial\(\)\);[\s\S]{0,1500}?const audio=await Audio_\.startRhythmTrack\(song\.bgmTrackId,settings\.bgmVolume,\{autoStart:false\}\)/.test(game));
 // どこから始めたプレイかを from で持つようにしたので 'debug' が付く(2026-09-05)。
+// 2026-10-11 古い縦の一覧を外し、デバッグの演奏は全解放の曲えらびの「決定」から始める(from:'proto'・戻り先つき)。
 // 音を鳴らし始めるのがボタンのonClick経路のまま(自動クリックを挟んでいない)ことは変わらない
-check('音声開始は直接ボタンonClick経路',game.includes("onClick={()=>{setRhythmPlay({song,difficulty,from:'debug'});setGameState('RHYTHM_PLAY');}}")&&!game.includes("data-rhythm-tap-start')?.click"));
+check('音声開始は直接ボタンonClick経路',game.includes("setRhythmPlay({song,difficulty,from:'proto',backTo:'RHYTHM_DEBUG_SELECT'});setGameState('RHYTHM_PLAY');}}")&&!game.includes("data-rhythm-tap-start')?.click"));
 check('DOM判定ラインを維持',game.includes('data-rhythm-judgment-line')&&!game.includes('<line data-rhythm-judgment-line'));
 const formal=JSON.parse(read('monster-hero/debug/atsu-cup-theme-easy-formal-candidate-v1.json'));
 check('正式EASY候補v1を未完成フル尺候補のまま維持',formal.noteCount===78&&formal.notes.length===78&&formal.typeCounts.TAP===72&&formal.typeCounts.HOLD===6&&formal.earReviewGrids.length===22&&formal.reviewRequired===true&&formal.runtimeConnected===false);
