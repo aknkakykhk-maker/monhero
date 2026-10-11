@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8d09494313193327
+// generated-sha256: 1c6c8db6ec6a74be
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-11 17:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-11 17:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15017,6 +15017,342 @@ const storeList = async (prefix, shared=false) => {
   return Object.keys(_memStore).filter(k => k.startsWith(prefix));
 };
 
+// ---- part: 25-asset-cache.jsx ----
+// ==== 事前ダウンロード(ASSET_CACHE) ====
+//
+// 曲や画像を前もって端末へためておく仕組みのページ側(2026-10-11 社長依頼「よくゲームにある事前ダウンロード」)。
+// 説明の正本は docs/spec/ASSET_PREFETCH.md。Service Worker 本体は monster-hero/sw.js、
+// 一覧(ファイルごとの版の印)は monster-hero/asset-manifest.json(tools/build-asset-manifest.js がビルドで作る)。
+//
+// 【決めごと】
+// ・ためる置き場は Cache Storage の 'mh-assets-v1' だけ。鍵は「パス?v=<中身のハッシュ>」なので、
+//   中身が変わったファイルは別の鍵になり、古い絵や音は出ない。一覧から消えた・版の違うものは SW が消す
+// ・保存データ(mh_*)・ランキングには触れない。この仕組みの記憶は専用キー mh_asset_prefetch_v1 だけ
+//   (入/切・自動の前もって落とし・最近選んだ曲)。読めない・壊れているときは既定値に戻す
+// ・はじめはデバッグで入れる(ASSET_CACHE_DEFAULT_ENABLED=false)。切にすると SW を外し、ためたものも消す
+// ・演奏前の準備中・演奏中は、自動の前もって落としを止める(修理部ドライバーくんの印
+//   window.__mhSongPrepBusy / __mhSongPlaying と mh:song-prep-* / mh:song-play-* を見る)
+const ASSET_CACHE_KEY = 'mh_asset_prefetch_v1';
+const ASSET_CACHE_NAME = 'mh-assets-v1';
+const ASSET_CACHE_META = 'mh-assets-meta-v1';
+const ASSET_CACHE_DEFAULT_ENABLED = false;
+// 設定の「ダウンロード」に並べるまとまり。容量は一覧(asset-manifest.json)から出す
+const ASSET_PACKS = [
+  { id: 'beat', icon: '🎵', label: 'モンヒロビート', desc: '全曲の音源とジャケット' },
+  { id: 'battle', icon: '⚔️', label: 'バトル', desc: 'バトル・HOMEのBGM、モンスター・敵・演出・助手の画像' },
+  { id: 'all', icon: '📦', label: '全部', desc: 'モンヒロビートとバトルの両方' },
+];
+// 自動の前もって落としで、まず落とす「よく使う画面の画像」(背景・タイトル・画面の部品・顔アイコン)
+const ASSET_CORE_PREFIXES = ['data/images/', 'images/ui/', 'images/monster-icons/'];
+// 自動の前もって落としで1回の起動に落とす上限(バイト)。モバイル回線では少なく、わからない端末(iPhone)は控えめに
+const ASSET_AUTO_BUDGET = { cellular: 8 * 1024 * 1024, unknown: 30 * 1024 * 1024, wifi: 200 * 1024 * 1024 };
+const ASSET_RECENT_SONG_LIMIT = 12;
+
+const normalizeAssetCacheSettings = (raw) => {
+  const src = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  return {
+    enabled: typeof src.enabled === 'boolean' ? src.enabled : ASSET_CACHE_DEFAULT_ENABLED,
+    auto: typeof src.auto === 'boolean' ? src.auto : true,
+    songs: Array.isArray(src.songs) ? src.songs.filter(s => typeof s === 'string' && s).slice(0, ASSET_RECENT_SONG_LIMIT) : [],
+  };
+};
+
+const ASSET_CACHE = (() => {
+  let settings = normalizeAssetCacheSettings(null);
+  let manifest = null, manifestPromise = null;
+  let job = null;               // まとまりのダウンロード中: { packId, total, done, bytesTotal, bytesDone, failed, cancel, error }
+  let status = { packs: {}, usage: null, quota: null, persisted: null, supported: false, checkedAt: 0 };
+  const listeners = new Set();
+  const emit = () => { for (const fn of [...listeners]) { try { fn(); } catch (e) {} } };
+  const supported = () => typeof window !== 'undefined' && typeof window.caches !== 'undefined'
+    && typeof navigator !== 'undefined' && 'serviceWorker' in navigator && window.isSecureContext !== false
+    && /^https?:$/.test(window.location.protocol);
+  const save = () => { try { localStorage.setItem(ASSET_CACHE_KEY, JSON.stringify(settings)); } catch (e) {} };
+  const keyOf = (path, v) => `${path}?v=${v}`;
+  const absKey = (path, v) => new URL(keyOf(encodeURI(path), v), window.location.href).href;
+  const stripVersion = (src) => String(src || '').split('?')[0];
+
+  const ensureManifest = () => {
+    if (manifest) return Promise.resolve(manifest);
+    if (!manifestPromise) {
+      const build = (typeof window !== 'undefined' && window.__mhGameBuild) || Date.now();
+      manifestPromise = fetch(`asset-manifest.json?v=${build}`)
+        .then(res => (res.ok ? res.json() : null))
+        .then(json => { manifest = json && json.files && typeof json.id === 'string' ? json : null; manifestPromise = null; return manifest; })
+        .catch(() => { manifestPromise = null; return null; });
+    }
+    return manifestPromise;
+  };
+  const filesOfPack = (m, packId) => Object.entries(m.files).filter(([, f]) => packId === 'all' || f.pack === packId);
+
+  // 端末にあるもの(版も一覧と同じもの)を数え直す
+  const refreshStatus = async () => {
+    status = { ...status, supported: supported() };
+    if (!status.supported) { emit(); return status; }
+    const m = await ensureManifest();
+    const have = new Set();
+    try {
+      // window.caches.open は無ければ空の置き場を作ってしまうので、あるときだけ開く
+      if (!(await window.caches.has(ASSET_CACHE_NAME))) throw new Error('none');
+      const cache = await window.caches.open(ASSET_CACHE_NAME);
+      for (const req of await cache.keys()) {
+        const url = new URL(req.url);
+        const path = decodeURIComponent(url.pathname.slice(new URL('./', window.location.href).pathname.length));
+        have.add(`${path}?v=${url.searchParams.get('v')}`);
+      }
+    } catch (e) {}
+    const packs = {};
+    if (m) {
+      for (const p of ASSET_PACKS) {
+        const files = filesOfPack(m, p.id);
+        let count = 0, bytes = 0, haveCount = 0, haveBytes = 0;
+        for (const [path, f] of files) {
+          count++; bytes += f.size;
+          if (have.has(keyOf(path, f.v))) { haveCount++; haveBytes += f.size; }
+        }
+        packs[p.id] = { count, bytes, haveCount, haveBytes };
+      }
+    }
+    let usage = null, quota = null, persisted = null;
+    try { if (navigator.storage && navigator.storage.estimate) ({ usage = null, quota = null } = await navigator.storage.estimate()); } catch (e) {}
+    try { if (navigator.storage && navigator.storage.persisted) persisted = await navigator.storage.persisted(); } catch (e) {}
+    status = { ...status, packs, usage, quota, persisted, checkedAt: Date.now(), manifestId: m && m.id };
+    emit();
+    return status;
+  };
+
+  const register = async () => {
+    if (!supported()) return false;
+    try {
+      const reg = await navigator.serviceWorker.register('sw.js', { scope: './', updateViaCache: 'none' });
+      try { reg.update().catch(() => {}); } catch (e) {}
+      return true;
+    } catch (e) { return false; }
+  };
+  // 切にしたとき: SW を外し、ためたものを消す(保存データ・ランキングには触れない)
+  const unregister = async () => {
+    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
+    // 外しても、このページを閉じるまでは SW が動き続ける。先に「何もためない」にしてもらう
+    try {
+      const ctl = navigator.serviceWorker.controller;
+      if (ctl) {
+        await new Promise((resolve) => {
+          const timer = setTimeout(resolve, 2000);
+          const onMsg = (e) => { if (e.data && e.data.type === 'mh-asset-disabled') { clearTimeout(timer); navigator.serviceWorker.removeEventListener('message', onMsg); resolve(); } };
+          navigator.serviceWorker.addEventListener('message', onMsg);
+          ctl.postMessage({ type: 'mh-asset-disable' });
+        });
+      }
+    } catch (e) {}
+    try {
+      for (const reg of await navigator.serviceWorker.getRegistrations()) {
+        const sw = reg.active || reg.waiting || reg.installing;
+        if (sw && /\/sw\.js(\?|$)/.test(sw.scriptURL)) await reg.unregister();
+      }
+    } catch (e) {}
+    try { await window.caches.delete(ASSET_CACHE_NAME); await window.caches.delete(ASSET_CACHE_META); } catch (e) {}
+  };
+
+  // ---- まとまりのダウンロード ----
+  const download = async (packId) => {
+    if (job || !settings.enabled || !supported() || !ASSET_PACKS.some(p => p.id === packId)) return false;
+    // 最初の await より前に job を置く(2つ同時に始めると、進み具合を取り合う)
+    const j = job = { packId, preparing: true, total: 0, done: 0, bytesTotal: 0, bytesDone: 0, failed: 0, cancel: false, error: null };
+    emit();
+    const m = await ensureManifest();
+    if (!m || j.cancel) { if (job === j) job = null; emit(); return false; }
+    try { if (navigator.storage && navigator.storage.persist) await navigator.storage.persist(); } catch (e) {}
+    const cache = await window.caches.open(ASSET_CACHE_NAME);
+    const files = filesOfPack(m, packId);
+    const todo = [];
+    for (const [path, f] of files) { if (!(await cache.match(absKey(path, f.v)))) todo.push([path, f]); }
+    Object.assign(j, { preparing: false, total: todo.length, bytesTotal: todo.reduce((s, [, f]) => s + f.size, 0) });
+    emit();
+    let next = 0, lastRecount = Date.now();
+    const worker = async () => {
+      while (!j.cancel && !j.error && next < todo.length) {
+        const [path, f] = todo[next++];
+        try {
+          const res = await fetch(keyOf(encodeURI(path), f.v), { headers: { 'x-mh-prefetch': '1' } });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          await cache.put(absKey(path, f.v), res);
+          j.bytesDone += f.size;
+        } catch (e) {
+          if (e && (e.name === 'QuotaExceededError' || /quota/i.test(String(e.message)))) j.error = 'quota';
+          else j.failed++;
+        }
+        j.done++;
+        emit();
+        // ほかのまとまり(全部など)と使っている容量の表示も、2秒ごとに数え直す
+        if (Date.now() - lastRecount > 2000) { lastRecount = Date.now(); refreshStatus(); }
+      }
+    };
+    // 3本ずつ並べて取る(多すぎると、遊んでいる画面の読み込みが詰まる)
+    await Promise.all([worker(), worker(), worker()]);
+    if (job === j) job = null;
+    await refreshStatus();
+    return !j.cancel && !j.error && !j.failed;
+  };
+  const cancel = () => { if (job) { job.cancel = true; emit(); } };
+  const remove = async (packId) => {
+    if (!supported()) return;
+    if (job) cancel();
+    const m = await ensureManifest();
+    try {
+      const cache = await window.caches.open(ASSET_CACHE_NAME);
+      if (packId === 'all' || !m) {
+        for (const req of await cache.keys()) await cache.delete(req);
+      } else {
+        for (const [path, f] of filesOfPack(m, packId)) await cache.delete(absKey(path, f.v));
+      }
+    } catch (e) {}
+    await refreshStatus();
+  };
+
+  // ---- 自動の前もって落とし ----
+  const autoQueue = [];
+  const autoQueued = new Set();
+  let autoTimer = null, autoBusy = false, autoSpent = 0;
+  const songBusy = () => !!(window.__mhSongPrepBusy || window.__mhSongPlaying);
+  const connectionKind = () => {
+    const c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    if (!c) return 'unknown';
+    if (c.saveData) return 'off';
+    if (c.effectiveType === 'slow-2g' || c.effectiveType === '2g') return 'off';
+    if (c.type === 'cellular') return 'cellular';
+    if (c.type === 'wifi' || c.type === 'ethernet') return 'wifi';
+    return 'unknown';
+  };
+  const scheduleAuto = (ms) => {
+    if (autoTimer) return;
+    autoTimer = setTimeout(() => { autoTimer = null; pumpAuto(); }, ms);
+  };
+  const pumpAuto = async () => {
+    if (autoBusy || !settings.enabled || !settings.auto || !supported() || !autoQueue.length) return;
+    // 遊びのじゃまをしない: まとめてダウンロード中・演奏の準備中・演奏中・画面が裏のときは待つ
+    if (job || songBusy() || document.hidden) { scheduleAuto(5000); return; }
+    const kind = connectionKind();
+    if (kind === 'off') return;
+    const budget = ASSET_AUTO_BUDGET[kind] || ASSET_AUTO_BUDGET.unknown;
+    const m = await ensureManifest();
+    if (!m) return;
+    autoBusy = true;
+    try {
+      const cache = await window.caches.open(ASSET_CACHE_NAME);
+      while (autoQueue.length && !job && !songBusy() && !document.hidden) {
+        const path = autoQueue.shift();
+        const f = m.files[path];
+        if (!f) continue;
+        if (await cache.match(absKey(path, f.v))) continue;
+        if (autoSpent + f.size > budget) { autoQueue.length = 0; break; }
+        try {
+          const res = await fetch(keyOf(encodeURI(path), f.v), { headers: { 'x-mh-prefetch': '1' } });
+          if (res.ok) { await cache.put(absKey(path, f.v), res); autoSpent += f.size; }
+        } catch (e) { break; }
+        // 1つずつ、間をあけて取る(通信を占有しない)
+        await new Promise(r => setTimeout(r, 600));
+      }
+    } catch (e) {}
+    autoBusy = false;
+    if (autoQueue.length) scheduleAuto(5000);
+  };
+  const enqueue = (paths, front = false) => {
+    const fresh = paths.filter(p => p && !autoQueued.has(p));
+    for (const p of fresh) autoQueued.add(p);
+    if (front) autoQueue.unshift(...fresh); else autoQueue.push(...fresh);
+    if (fresh.length) scheduleAuto(1500);
+  };
+  const songPaths = (songId) => {
+    const songs = typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS : [];
+    const song = songs.find(s => s && s.songId === songId);
+    if (!song) return [];
+    const track = typeof BGM_TRACK_BY_ID !== 'undefined' ? BGM_TRACK_BY_ID[song.bgmTrackId] : null;
+    return [track && track.src, stripVersion(song.artwork)].filter(Boolean);
+  };
+  // 曲えらびで選んだ曲・遊んだ曲を覚えて、前もって落とす
+  const noteSong = (songId, { front = true } = {}) => {
+    if (typeof songId !== 'string' || !songId) return;
+    const paths = songPaths(songId);
+    if (!paths.length) return;
+    if (settings.songs[0] !== songId) {
+      settings = { ...settings, songs: [songId, ...settings.songs.filter(s => s !== songId)].slice(0, ASSET_RECENT_SONG_LIMIT) };
+      save();
+    }
+    if (settings.enabled && settings.auto) enqueue(paths, front);
+  };
+  const startAuto = async () => {
+    if (!settings.enabled || !settings.auto) return;
+    const m = await ensureManifest();
+    if (!m) return;
+    enqueue(Object.keys(m.files).filter(p => ASSET_CORE_PREFIXES.some(pre => p.startsWith(pre))));
+    for (const songId of settings.songs) enqueue(songPaths(songId));
+  };
+
+  let listening = false;
+  const listen = () => {
+    if (listening || typeof window === 'undefined') return;
+    listening = true;
+    window.addEventListener('mh:song-prep-start', (e) => { const id = e && e.detail && e.detail.songId; if (id) noteSong(id, { front: false }); });
+    const resume = () => scheduleAuto(3000);
+    window.addEventListener('mh:song-prep-end', resume);
+    window.addEventListener('mh:song-play-end', resume);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) resume(); });
+  };
+
+  return {
+    get enabled() { return settings.enabled; },
+    get auto() { return settings.auto; },
+    get job() { return job; },
+    get status() { return status; },
+    get supported() { return supported(); },
+    subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
+    // 起動時に1回呼ぶ(70-bootstrap 相当の場所から)
+    restore() {
+      try { settings = normalizeAssetCacheSettings(JSON.parse(localStorage.getItem(ASSET_CACHE_KEY) || 'null')); } catch (e) { settings = normalizeAssetCacheSettings(null); }
+      if (!supported()) return settings.enabled;
+      listen();
+      if (settings.enabled) { register(); setTimeout(startAuto, 8000); }
+      return settings.enabled;
+    },
+    async setEnabled(next) {
+      settings = { ...settings, enabled: !!next };
+      save();
+      if (settings.enabled) { listen(); await register(); startAuto(); } else { cancel(); autoQueue.length = 0; autoQueued.clear(); await unregister(); }
+      await refreshStatus();
+      return settings.enabled;
+    },
+    setAuto(next) {
+      settings = { ...settings, auto: !!next };
+      save();
+      if (settings.auto) startAuto(); else { autoQueue.length = 0; autoQueued.clear(); }
+      emit();
+      return settings.auto;
+    },
+    refreshStatus, download, cancel, remove, noteSong,
+  };
+})();
+
+// 画面から状態を見るためのフック。開いているあいだだけ数え直す
+function useAssetCacheState() {
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const off = ASSET_CACHE.subscribe(() => setTick(t => t + 1));
+    ASSET_CACHE.refreshStatus();
+    return off;
+  }, []);
+  return ASSET_CACHE;
+}
+
+const formatAssetMB = (bytes) => {
+  const n = Number(bytes);
+  if (!Number.isFinite(n) || n <= 0) return '0MB';
+  const mb = n / 1024 / 1024;
+  return mb >= 10 ? `${Math.round(mb)}MB` : `${mb.toFixed(1)}MB`;
+};
+
+// 起動時に記憶を読み、入なら SW を登録する(BATTLE_PERF と同じく、読み込んだ時点で1回だけ)
+ASSET_CACHE.restore();
+
 // ---- part: 26-supabase.jsx ----
 // ===== Supabase shared ranking (REST API via fetch) =====
 const SUPABASE_URL = 'https://zrzevudkbgtxlbvmuziy.supabase.co';
@@ -29148,12 +29484,85 @@ function SettingsMenuLink({ icon, label, desc, onClick, disabled = false, accent
   );
 }
 
+// 設定の「ダウンロード」ページ(2026-10-11 社長依頼「よくゲームにある事前ダウンロード」)。
+// まとまり(ASSET_PACKS)ごとに、落とす・取り消す・消すと進み具合を出す。仕組みは 25-asset-cache.jsx(ASSET_CACHE)
+function AssetDownloadPage({ onBack }) {
+  const asset = useAssetCacheState();
+  const { packs, usage } = asset.status;
+  const job = asset.job;
+  return (
+    <div data-mh-screen data-asset-download-page className={SCREEN_SHELL_CLASS}>
+      <ScreenHead title="ダウンロード" accent="text-emerald-200" onBack={onBack} backLabel="設定へ戻る"/>
+      <div className={`${SCREEN_LIST_CLASS} w-full max-w-md mx-auto space-y-3 pb-4`}>
+        <p className="px-1 text-[11px] font-bold leading-relaxed text-slate-300">曲や画像を前もってこの端末に入れておくと、はじめて開く画面や曲がすぐ始まります。アップデートで変わったものだけを入れ直し、古いものは自動で消えます。</p>
+        {!asset.supported && (
+          <p data-asset-unsupported className="rounded-xl border border-amber-400/40 bg-amber-950/30 px-3 py-2 text-[11px] font-bold leading-relaxed text-amber-100">この端末・ブラウザでは前もって入れておくことができません。ふだんどおり、開いたときに読み込みます。</p>
+        )}
+        {ASSET_PACKS.map(pack => {
+          const st = packs[pack.id] || { count: 0, bytes: 0, haveCount: 0, haveBytes: 0 };
+          const complete = st.count > 0 && st.haveCount >= st.count;
+          const running = job && job.packId === pack.id;
+          const pct = running
+            ? (job.bytesTotal > 0 ? Math.floor(job.bytesDone / job.bytesTotal * 100) : 100)
+            : (st.bytes > 0 ? Math.floor(st.haveBytes / st.bytes * 100) : 0);
+          return (
+            <section key={pack.id} data-asset-pack={pack.id} className={`${SCREEN_PANEL_CLASS} w-full text-left`}>
+              <div className="flex items-center gap-3">
+                <span aria-hidden="true" data-icon={pack.icon} className="mh-emoji-icon w-8 shrink-0 text-center text-[22px] leading-none"/>
+                <span className="min-w-0 flex-1">
+                  <b className="block text-[14px] font-black leading-tight text-slate-100">{pack.label}<small className="ml-2 text-[11px] font-bold text-slate-400">約{formatAssetMB(st.bytes)}</small></b>
+                  <span className="mt-0.5 block text-[10px] font-bold leading-snug text-slate-400">{pack.desc}</span>
+                </span>
+              </div>
+              <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-800" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
+                <div className={`h-full rounded-full ${complete && !running ? 'bg-emerald-400' : 'bg-cyan-400'}`} style={{ width: `${pct}%` }}/>
+              </div>
+              <p data-asset-pack-progress className="mt-1 text-[10px] font-bold text-slate-300">
+                {running
+                  ? `ダウンロード中 ${pct}%(${formatAssetMB(job.bytesDone)} / ${formatAssetMB(job.bytesTotal)})`
+                  : complete ? 'この端末に入っています' : st.haveCount > 0 ? `一部が入っています(${formatAssetMB(st.haveBytes)} / ${formatAssetMB(st.bytes)})` : 'まだ入っていません'}
+              </p>
+              {running && job.error === 'quota' && <p className="mt-1 text-[10px] font-bold text-amber-200">端末の空きが足りないため止まりました。</p>}
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                {running ? (
+                  <button type="button" data-asset-cancel onClick={() => asset.cancel()} className="min-h-[48px] rounded-xl border border-white/20 bg-slate-950 px-2 text-[12px] font-black text-slate-200 active:scale-95">取り消す</button>
+                ) : (
+                  <button type="button" data-asset-download={pack.id} disabled={!asset.supported || !!job || complete} onClick={() => asset.download(pack.id)} className="min-h-[48px] rounded-xl border border-emerald-400/60 bg-emerald-700 px-2 text-[12px] font-black text-white active:scale-95 disabled:opacity-40">{complete ? '入っています' : st.haveCount > 0 ? '残りを入れる' : 'ダウンロード'}</button>
+                )}
+                <button type="button" data-asset-remove={pack.id} disabled={!asset.supported || st.haveCount === 0} onClick={() => { if (window.confirm(`${pack.label}をこの端末から消しますか？(セーブデータは消えません)`)) asset.remove(pack.id); }} className="min-h-[48px] rounded-xl border border-red-500/40 bg-red-950/50 px-2 text-[12px] font-black text-red-200 active:scale-95 disabled:opacity-40">端末から消す</button>
+              </div>
+            </section>
+          );
+        })}
+        <section data-asset-auto className={`${SCREEN_PANEL_CLASS} w-full text-left`}>
+          <b className="block text-[13px] font-black text-slate-200">自動で前もって入れる</b>
+          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">よく使う画面の画像と、曲えらびで選んだ曲・遊んだ曲を、遊んでいないあいだに少しずつ入れます。演奏中は止まります。モバイル回線では少しだけにします。</p>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            {[{ id: true, label: 'する' }, { id: false, label: 'しない' }].map(option => (
+              <button key={String(option.id)} type="button" data-asset-auto-option={String(option.id)} aria-pressed={asset.auto === option.id}
+                onClick={() => asset.setAuto(option.id)}
+                className={`min-h-[48px] rounded-xl px-1 py-1.5 text-[12px] font-black active:scale-95 ${asset.auto === option.id ? 'border border-cyan-400 bg-cyan-600 text-white' : 'border border-white/10 bg-slate-950 text-slate-300'}`}>{option.label}</button>
+            ))}
+          </div>
+        </section>
+        <p data-asset-usage className="px-1 text-[10px] font-bold leading-relaxed text-slate-400">
+          {Number.isFinite(usage) ? `このゲームがこの端末で使っている容量: 約${formatAssetMB(usage)}。` : ''}
+          しばらく遊ばないと、端末が空きを作るために消すことがあります。消えても、開いたときにネットから読み込むので遊べます。セーブデータはここでは消えません。
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onOpenTitleArt, onOpenHomeArt, onOpenScreenTheme, onOpenBackup, onOpenHelp, onOpenGameUpdate, gameUpdateDisabled, onReturnToTitle, updateNoticeStyle, onChangeUpdateNoticeStyle, battleScreenStyle, onChangeBattleScreenStyle, battleFxSettings, onChangeBattleFxSetting, battleFxAutoLoad }) {
   // バトル設定は設定画面の中の1ページ(2026-09-24 ユーザー指示「バトルの設定をバラにしないで、
   // 音量設定の上に作ってその中に細かい設定欄を作って」)。画面(gameState)は増やさず、ここで切り替える
   const [battleSettingsOpen, setBattleSettingsOpen] = useState(false);
+  // ダウンロード(事前ダウンロード)も設定画面の中の1ページ。いまはデバッグで入にしたときだけ出す(ASSET_CACHE.enabled)
+  const [assetDownloadOpen, setAssetDownloadOpen] = useState(false);
   // 助手のひとことの出し方(21-assistant.jsx の ASSISTANT_BUBBLE_STORE。早期の return より前で読む)
   const assistantBubble = useAssistantBubbleState();
+  if (assetDownloadOpen) return <AssetDownloadPage onBack={() => setAssetDownloadOpen(false)}/>;
   if (battleSettingsOpen) {
     return (
       <div data-mh-screen data-battle-settings-page className={SCREEN_SHELL_CLASS}>
@@ -29221,6 +29630,7 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
         <SettingsMenuLink icon="🖼️" label="タイトル画像アレンジ" desc="タイトル画面の絵を選ぶ" onClick={onOpenTitleArt} data-open-title-art/>
         <SettingsMenuLink icon="🏡" label="ホーム画面アレンジ" desc="ホーム画面の背景を選ぶ" onClick={onOpenHomeArt} data-open-home-art/>
         <SettingsMenuLink icon="🎨" label="画面テーマ" desc="画面ごとにハロウィン／クラシックを選ぶ" onClick={onOpenScreenTheme} data-open-screen-theme/>
+        {ASSET_CACHE.enabled && <SettingsMenuLink icon="📥" label="ダウンロード" desc="曲や画像を前もって端末に入れておく" onClick={() => setAssetDownloadOpen(true)} data-open-asset-download/>}
         <SettingsMenuLink icon="💾" label="データ引き継ぎ" desc="バックアップの保存と、別の端末での復元" onClick={onOpenBackup}/>
         <SettingsMenuLink icon="📚" label="ヘルプ" desc="遊び方・育て方・画面の説明" onClick={onOpenHelp}/>
         <SettingsMenuLink icon="🔄" label="ゲームを更新" desc="最新のゲームデータを読み込みます" onClick={onOpenGameUpdate} disabled={gameUpdateDisabled} accent="text-cyan-200"/>
@@ -44830,6 +45240,8 @@ function MonsterHeroGame() {
   const [rhythmPerfStats,setRhythmPerfStats]=useState(null);
   // バトルの性能計測(デバッグ限定・既定OFF)。ONの記憶は専用キー mh_battle_perf_v1(BATTLE_PERF が持つ)
   const [battlePerfOn,setBattlePerfOn]=useState(()=>BATTLE_PERF.enabled);
+  // 事前ダウンロード(25-asset-cache.jsx)。いまはデバッグで入/切する。入のあいだだけ設定に「ダウンロード」が出る
+  const [assetCacheOn,setAssetCacheOn]=useState(()=>ASSET_CACHE.enabled);
   // 演奏画面の装飾を個別に切って、実機で何が重いかを切り分ける(デバッグ限定・新しい保存キー)
   const [rhythmStrip,setRhythmStrip]=useState(()=>RHYTHM_STRIP.value);
   // ノーツの描き方の上書き(検証用・デバッグ限定)。'' = 公開設定に従う / 'dom' / 'canvas'
@@ -47635,6 +48047,8 @@ function MonsterHeroGame() {
     const preset=RHYTHM_LOOK_PRESETS.find(item=>item.id===id)||RHYTHM_LOOK_PRESETS.find(item=>item.id==='LIGHT');
     return {...rhythmSettings,...(preset?preset.values:{})};
   },[rhythmSettings]);
+  // 曲えらびで選んだ曲を、事前ダウンロード(入のときだけ)が前もって落とす
+  useEffect(()=>{if(String(gameState).startsWith('RHYTHM'))ASSET_CACHE.noteSong(rhythmSelectedSongId);},[rhythmSelectedSongId,gameState]);
   const rhythmPreviewSongId=gameState==='RHYTHM_MULTI'&&rhythmMultiPreviewSongId?rhythmMultiPreviewSongId:rhythmSelectedSongId;
   const rhythmPreviewSong=rhythmDemoSongs(RHYTHM_SONGS).find(song=>song.songId===rhythmPreviewSongId)||null;
   const rhythmPreviewTrackId=rhythmSettings.songPreviewEnabled&&RHYTHM_PREVIEW_SCREENS.includes(gameState)&&rhythmPreviewSong
@@ -63039,6 +63453,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   {/* 画面エラーの受け止め(MhErrorBoundary)を実際に試す。押すとこの画面の描画で例外が起き、真っ白の代わりに「ホームへ戻る」が出るはず */}
                   <button data-debug-screen-error onClick={()=>setDebugThrowScreenError(true)} className="min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95">⚠️ 画面エラーの受け止めを試す</button>
                   {debugThrowScreenError&&<DebugThrowScreenError/>}
+                  {/* 事前ダウンロード(2026-10-11)。ONにすると Service Worker を登録し、設定に「ダウンロード」が出る。
+                      OFFにすると Service Worker を外し、端末にためた曲・画像を消す(セーブデータ・ランキングには触れない)。
+                      公開前の確かめ用なので、更新履歴・ヘルプにはまだ載せない */}
+                  <button type="button" data-asset-cache-toggle aria-pressed={assetCacheOn} onClick={async()=>setAssetCacheOn(await ASSET_CACHE.setEnabled(!assetCacheOn))} className={`w-full min-h-[52px] rounded-2xl px-3 py-2 text-left text-[12px] font-black active:scale-95 ${assetCacheOn?'border-2 border-emerald-300 bg-emerald-500 text-slate-900':'border-2 border-emerald-400/40 bg-emerald-950/30 text-emerald-100'}`}>📥 事前ダウンロード：{assetCacheOn?'ON':'OFF'}<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">設定に「ダウンロード」が出ます。OFFにすると、端末に入れた曲・画像を消します</small></button>
                 </div>
               </details>
 
