@@ -42,6 +42,24 @@ const CHANGELOG = [
     ],
   },
   {
+    date: "2026-10-11 14:34", type:'fix', group:'rhythm', title:'モンヒロビート：ホールド・スライドを正しく離したのにMISSになることがあったのを直しました', status:'new',
+    items:[
+      'iPhoneなどで、指を離した合図が少し遅れて届いたとき、終わりのバーで正しく離していても「押しっぱなし」と数えられてMISSになることがありました。',
+      '離した合図が遅れて届いても、実際に指を離した時刻で判定するようにしました。',
+      '押しっぱなしのまま終わりを過ぎたときにMISSになる決まりは、これまでどおりです（たまに成功になってしまっていた所もそろえました）。',
+    ],
+  },
+  {
+    date: "2026-10-11 13:31", type:'update', group:'rhythm', title:'モンヒロビート：新曲「Against My Own Shadow」を追加しました', status:'new',
+    image: 'images/song-art/against-my-own-shadow.jpg?v=2768a9055013',
+    items:[
+      'モンヒロビートに「Against My Own Shadow」（1分58秒）を追加しました。曲えらびからすぐ遊べます。',
+      'レベルは EASY Lv.7 ／ NORMAL Lv.9 ／ HARD Lv.12 ／ EXPERT Lv.22 ／ MASTER Lv.29 です。',
+      'ノーツ数は 130 ／ 158 ／ 210 ／ 337 ／ 397 です。',
+    ],
+    assistantNotice: { id:'update_notice_against_my_own_shadow_v1', type:'content' },
+  },
+  {
     date: "2026-10-11 10:36", type:'fix', group:'rhythm', title:'モンヒロビートでレイドに挑んだあと、横向きでも与えたダメージが見えるようになりました', status:'new',
     items:[
       'モンヒロビートの「横向き」で遊んだとき、演奏のあとに出る画面で、いちばん下の与えたダメージの数字が画面からはみ出していました。横向きでも、スコア・ジャックの体力のバー・与えたダメージが全部見えるようにしました。',

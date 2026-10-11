@@ -8484,3 +8484,22 @@ songId `anima` / bgmTrackId `melo_anima` / 譜面は MHB CHART ENGINE Rev.28。
   1.5 で 8 / 9 / 16 / 21 / 30 ／ `strong`＋MASTER だけ `extreme` で MASTER 41 ／
   全部 `extreme` は EXPERT が MASTER より叩く回数が多くなり（703回 / 669回）出荷できない。
   テンポが 128 なので、どの候補でも速さは16分まで。難しさは量（毎秒ノーツ・最も混む4秒）で上がる
+
+## 「Against My Own Shadow」をモンヒロビートへ足した（2026-10-11）
+
+統括部長経由の依頼（mp3 1本とジャケット1枚・作者名の情報なし → 作者の分からない曲のこれまでどおり `creator:'オリジナル'`）。songId `against_my_own_shadow` / bgmTrackId `melo_against_my_own_shadow` / 譜面は MHB CHART ENGINE Rev.28。地上の5難易度だけ（HELL はなし）。
+
+- **ジャケット**: 元絵 1254×1254 の正方形を 512×512 の JPEG へ（fit:cover・quality 80・mozjpeg・72KB）。顔とタイトル文字が切れていないことを目で確かめた
+- **音量**: 元は -16.76 LUFS / -4.39 dBTP。×1.36 で **-14.08 LUFS / -2.01 dBTP**（×1.374 では mp3 にしたあと -0.79 dBTP になり上限を超えたので下げた）。長さ 118.0 秒
+- **頭に2秒の無音を足した**（2026-10-11 社長の決定「最初のノーツは2秒より後」）。足さないと MASTER の最初のノーツが 1.91 秒。
+  1秒では生成器が足した無音の手前の音にもノーツを置いて 1.86 秒になったので2秒にし、最初のノーツは 2.44 秒（EASY・NORMAL は 2.86 秒）
+- **テンポ**: 自動判定の 143.14 BPM / 4拍子（警告なし）。候補を比べて ±43ms の乗りが 143.14 → 86%・71.57 → 43%・107.36 → 63%。
+  190.85（4/3倍）は ±43ms が 100% になるが、16分が 79ms と細かく素通りになるだけ（±15ms は 40% で 143.14 の 42% と変わらない）。
+  無音を足したあとは `--bpm 143.137 --beat-zero 2022.9`（元の拍の頭 22.9ms＋2秒）で解析した
+- **歯ごたえは社長が激しさの中間（`chartIntensity:'strong'`）と決めた**（`challengeFactor` は書かない）。
+  無音を足す前の候補: 自動 5 / 6 / 9 / 13 / 19（MASTER が公開曲でいちばん軽い側）／ `strong` 7 / 8 / 12 / 22 / 30 ／ `challengeFactor` 1.25 で 8 / 10 / 15 / 22 / 28 ／
+  `extreme` 9 / 12 / 14 / 27 / 33 は EXPERT と MASTER の体感の順が逆転して `rhythm-expert-master-order-check` が落ちる。
+  無音を足して作り直した公開版は EASY 7 / NORMAL 9 / HARD 12 / EXPERT 22 / MASTER 29、ノーツ 130 / 158 / 210 / 337 / 397。MASTER の最も混む4秒は 26打・最短 104ms（16分）
+- **モンスターノーツ**: 5難易度とも4個ちょうど（生成器のまま。`rhythm-monster-four-check` OK）
+- **押せるか**: 両手のシミュレートで5難易度とも押せない0。横持ちの物差し（`rhythm-ref-tiers.js --song`）は EASY・NORMAL 0、
+  HARD 届きにくい2、EXPERT 押せない1・交差8・届きにくい13、MASTER 押せない2・交差9・届きにくい21 で、既存の自動生成曲（ANiMA・crossing field・Rising Hope など）と同じ水準（統括部長の判断で譜面は削らない）

@@ -39,7 +39,12 @@ note=fresh('HOLD','GREAT',80);now=1500;runtime.release('touch:1');check('始点�
 check('早すぎる離しは今までどおりMISS',rhythmJudgeRelease(-186)==='MISS');
 note=fresh();now=1000;runtime.release('touch:1',true);check('touchcancel/pointercancelはMISS',note.holdJudgment==='MISS');
 note=fresh();now=1090;let cb=rafCb;cb&&cb();check('終端100ms前から旧自動成功を判定窓の直後(+186ms)へ延期',note.endTimeMs===2186);
-now=1220;cb=rafCb;cb&&cb();check('押しっぱなしは判定窓(+185ms)を過ぎたらMISSで確定する',note.holdJudgment==='MISS');
+// 【2026-10-11】押しっぱなしの MISS を決める前に、遅れて届く離しの合図を待つ(標準 80ms・rhythmReleaseWaitMs)。決まりは同じで、確定が待つ分だけ遅れる
+now=1220;cb=rafCb;cb&&cb();check('押しっぱなしでも、遅れて届く離しを待つ間(+185〜+265ms)はまだ確定しない',note.holdJudgment!=='MISS');
+now=1270;cb=rafCb;cb&&cb();check('押しっぱなしは判定窓(+185ms)と待ち(80ms)を過ぎたらMISSで確定する',note.holdJudgment==='MISS');
+// 待っている間に届いた離しの合図は、合図が起きた時刻で判定する(届いた時刻ではない)
+note=fresh();now=1090;cb=rafCb;cb&&cb();now=1240;runtime.release('touch:1',false,70);check('+240ms に届いた離しでも、合図が起きたのが +170ms なら GOOD(窓の中)',note.holdJudgment==='GOOD');
+note=fresh();now=1090;cb=rafCb;cb&&cb();now=1240;runtime.release('touch:1',false,0);check('遅れの無い +240ms の離しは MISS(窓の外)',note.holdJudgment==='MISS');
 
 note=fresh('SLIDE');const session=[...runtime._sessions.values()][0];session.failed=true;now=1000;runtime.release('touch:1');check('SLIDE途中追従失敗は終端が合ってもMISS',note.holdJudgment==='MISS');
 check('HOLDもruntimeへbindする',source.includes("originalType==='HOLD'||originalType==='FLICK'||originalType==='SLIDE'"));

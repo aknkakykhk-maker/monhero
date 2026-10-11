@@ -112,7 +112,10 @@
 //        (Emerald Rush は 150.0 → 153.0 BPM)は、1つのテンポの格子から拍が最大で1拍近くずれる。なめらかな揺れ(Rev.21/23)は
 //        幅の上限(格子の間隔の0.45倍)を超えると使わないので、人が測った「時刻ごとの拍のずれ」の点を音源の一覧の `warpPoints` に書き、
 //        その曲だけ点のあいだを直線でつないだずれを使う(つなぎ目の段差 Rev.26 と同じ通り道)。書いていない曲は Rev.27 と同じ譜面
-//   29〜 … 作法の重みを遊んだ感想(譜面メモ)から学び直したリビジョン。rhythm-chart-learn.js --write が
+//   29 … モンスターノーツを必ず4個(2026-10-11・社長「どの曲も基本4個入るルールだよ」)。曲の20/40/60/80%に近い単打を
+//        「拍の頭で前後1拍空く → 前後半拍 → 拍の頭 → 同時押しでない単打 → 単打」の順にゆるめて、狙いの前後10%(無ければ曲全体)から必ず選ぶ。
+//        Rev.28 までは条件に合う単打が無いとその枠を空けていた(公開曲で19譜面が3個以下だった・手で4個に直した)
+//   30〜 … 作法の重みを遊んだ感想(譜面メモ)から学び直したリビジョン。rhythm-chart-learn.js --write が
 //        tools/mode/authoring/chart-knowledge-weights.json へ書き足すと、自動でここが最新リビジョンになる。
 //        遊んだ記録から学ぶ調整値(tools/mode/authoring/chart-play-tuning.json)も同じ番号の並びへ書き足す。
 //        学び直しは「作り方の最新(CHART_REVISION_CODE_LATEST)・重みの最新・調整値の最新のいちばん大きいもの＋1」を次の番号にする
@@ -123,7 +126,7 @@ const CHART_ENGINE_NAME='MHB CHART ENGINE';
 const chartRevisionLabel=revision=>`${CHART_ENGINE_NAME} Rev.${revision}`;
 const CHART_REVISION_LEGACY=1;
 // 作り方(コード)を改良した最新のリビジョン。改良を足したらここを上げる
-const CHART_REVISION_CODE_LATEST=28;
+const CHART_REVISION_CODE_LATEST=29;
 // 最新リビジョンは、作法の重みを書き足したリビジョンまで自動で上がる(学び直すたびに新しいリビジョンになる)
 const {latestKnowledgeRevision}=require('./rhythm-chart-knowledge.js');
 const {latestPlayTuningRevision}=require('./rhythm-chart-play-tuning.js');
