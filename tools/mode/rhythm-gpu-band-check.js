@@ -112,7 +112,7 @@ const LIMIT={avg:1.5,missing:.003,extra:.003,overBase:.3,bigOver:200};
             const isSlide=rhythmNoteIsSlide(note);if(isSlide){drawnSlides++;if(geo.slideGpu){gpuSlides++;if(!rhythmSlideHasSky(note))lines+=rhythmSlideCheckpointLines(note,visualTime,{chartNowMs:visualTime,visualTime,travelMs,spawnY,travelPx},rect,noteHeight/2).length;}}
             const failedNote=st.failEvery&&isSlide&&(note.index??note.timeMs)%2===1;
             const depthScale=Math.round((0.56+geo.scale*.44)*100)/100,brightness=Math.round((0.72+geo.scale*.28)*100)/100;
-            R.drawNote(note,geo,{failed:failedNote,monster:false,wide:rhythmNoteIsWide(note),pressed:holding&&!failedNote,heldMs:visualTime-note.timeMs,alpha:failedNote?.34:1,pop:null,depthScale,brightness});
+            R.drawNote(note,geo,{failed:failedNote,monster:false,wide:rhythmNoteIsWide(note),pressed:holding&&!failedNote,slideOff:holding&&isSlide&&!failedNote&&(note.index??note.timeMs)%3===0/* 指が帯から外れて暗くなる状態も2Dと突き合わせる */,heldMs:visualTime-note.timeMs,alpha:failedNote?.34:1,pop:null,depthScale,brightness});
           }
           R.end();
           return {drawnSlides,gpuSlides,lines};
