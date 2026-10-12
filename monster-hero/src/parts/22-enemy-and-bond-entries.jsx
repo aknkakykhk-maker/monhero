@@ -450,6 +450,20 @@ const BATTLE_MONSTER_FX = Object.freeze({
     inner: Object.freeze({ dmg:'⚔️', taken:'🛡️', combo:'💫', heal:'💖', guts:'⚡', crit:'🎯' }) }),
   // 剣士モッチー(ソード・コンバージョン): いまの型を 剣だけ / 剣と盾 / 剣2本 で出す
   swordStyle: Object.freeze({ sword:'🗡️', shield:'🗡️🛡️', dual:'⚔️' }),
+  // ---- 区切り2(2026-10-12): EXが効いているあいだの見た目 ----
+  // モッチー(ガッツ全開っちー)・ミタラシ(ドラゴンだっちー): 絵の後ろのオーラ。残り1ターンは小さくなる
+  aura: Object.freeze({
+    Mocchi:    Object.freeze({ mark:'🔥', color:'#facc15' }),
+    Mitarashi: Object.freeze({ mark:'🐉', color:'#22d3ee' }),
+  }),
+  // ハム(ハムボクシング): カウンターの数だけグローブ
+  glove: Object.freeze({ mark:'🥊', max:3 }),
+  // ミーア(オン・ステージ!): 絵の上からのスポットライト。ボルテージが上がるほど明るい
+  spotlight: Object.freeze({ color:'#fde68a', minOpacity:0.2, maxOpacity:0.85 }),
+  // ザン(血踊): 回避した数だけ、赤い残像が増える
+  afterimage: Object.freeze({ max:3, color:'#ef4444' }),
+  // ライガー(雷狼影): ためる間は雷の数だけ ⚡、雷纏のあいだは体に稲妻をまとう
+  thunder: Object.freeze({ mark:'⚡', max:5, color:'#facc15' }),
 });
 const BATTLE_STACK_MARK_ORDER = Object.freeze(Object.keys(BATTLE_STACK_MARKS));
 // { kind: 数 } から、出す順に並べた [{ kind, count, mark, img, label }] を作る。知らない種類・0は出さない。

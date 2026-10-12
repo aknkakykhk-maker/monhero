@@ -66,7 +66,8 @@ check('タブの見出しが「◯◯種」になっている',
   source.includes('label:`${l.name}種`'));
 // 絞り込みは血統idで行う。名前で比べていると、同じ種族の別モンスターが弾かれる
 check('絞り込みを血統idで行っている',
-  source.includes('bondRankingAll.filter(x => bondEntryLineageId(x) === bondRankMonFilter)'));
+  // 同じ人の同じモンスターを1体だけにした一覧(bondRankingShown・2026-10-07)を、血統idで絞る
+  source.includes('bondRankingShown.filter(x => bondEntryLineageId(x) === bondRankMonFilter)'));
 check('モンスター名での絞り込みが残っていない',
   !source.includes("bondRankingAll.filter(x => x.monName === bondRankMonFilter)"));
 // 記録にモンスターidが無い古い記録でも、名前から種を引き当てて種族を決められること

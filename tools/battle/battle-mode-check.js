@@ -340,7 +340,9 @@ check('加入のステータス変化と固有技上昇を1画面で出す',
 // --- ⑤ 画面 ---
 // 演出は自動で進めず、必ずタップを待つ
 check('演出はタップするまで進まない',
-  has('const QuickStepScreen = ({ onDone, accent =') && !has('setTimeout(finish') && has("onClick={finish}") && has('タップして次へ'));
+  has('const QuickStepScreen = ({ onDone, accent =')
+    // ★探すのはクイックの演出(QuickStepScreen)の中だけ。レイドのダメージ演出(RaidJackDamageFx)は約4秒で自動で進む作り(2026-10-06 ユーザー指示)なので数えない
+    && !grab(source, 'const QuickStepScreen = ({ onDone, accent =', '\n};').includes('setTimeout(finish') && has("onClick={finish}") && has('タップして次へ'));
 check('連打しても1回だけ進む', has('if (doneRef.current) return; doneRef.current = true; onDone();') && has("if (quickAdvanceRef.current === 'growth') return;"));
 check('モードのタブがある', has('{PUBLIC_BATTLE_MODES.map(mode=>{') && has('setBattleMode(mode.id);setBattleMenuTab(\'difficulty\');'));
 check('タブの横に説明の「？」がある', has('aria-label={`${mode.label}の説明`}') && has('setModeInfoId(mode.id)'));
@@ -515,7 +517,8 @@ check('新しい3画面がある',
 // HOMEの名前も正式名称の「モンヒロバトル」にした(CLAUDE.md ⑤)
 check('ふだんの「モンヒロバトル」は仕組みの選択へ入る',
   has('onOpenBattle={openBattleSystemSelect}')
-    && has("const openBattleSystemSelect = () => { setModeSelectTab('mode'); setGameState('BATTLE_SYSTEM_SELECT'); };")
+    && // 入口のランキングタブ(systemRankTab・2026-10-10)を閉じてから入る
+    has("const openBattleSystemSelect = () => { setModeSelectTab('mode'); setSystemRankTab(null); setGameState('BATTLE_SYSTEM_SELECT'); };")
     && has('onClick={onOpenBattle} aria-label="モンヒロバトル"'));
 check('旧バトル画面はデバッグからだけ開ける',
   has('旧バトル画面を開く（見比べ用）')
@@ -530,7 +533,8 @@ const MODE_LIST_LINE = 'const modes=battleSystemModes(battleSystem,{debugBattle}
 check('モード選択は極限チャレンジもクイックも出さず、残りを横スライドで並べる',
   has(MODE_LIST_LINE) && count(MODE_LIST_LINE) === 2
     && has('aria-label="前のモード"') && has('aria-label="次のモード"')
-    && has('snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2.5'),
+    // モードカードは色のタイル(mhbt-tile・2026-10-10 の作り直し)。横スライドの1枚の幅と高さはそのまま
+    && has('mhbt-tile snap-center shrink-0 w-[82%] h-[366px]'),
   'モード一覧はモード選択と難易度選択の2か所とも同じ並べ方');
 // 極限の一覧は「公開ぶんだけ」の共通定義(PUBLIC_EXTREME_DIFFICULTIES)へまとまった
 check('モードカードは選択難易度固定でなくモード内最高スコアを表示する',
@@ -541,7 +545,8 @@ check('モードカードは選択難易度固定でなくモード内最高ス�
     && has("ranked?`${modeBestScore.toLocaleString()} pt`"));
 check('上のタブはモード選択・ブリーダーLv・絆Lv・総合力の4つ',
   has("{[['mode','モード選択'],['breeder','ブリーダーLv'],['bond','絆Lv'],['power','総合力']].map(([key,label])=>(")
-    && has('grid grid-cols-4 gap-1 mb-2 shrink-0 rounded-xl bg-slate-900/60'));
+    // タブの見た目は共通の mhbs-tabs(2026-10-10 の作り直し)。4つ並べるのは同じ
+    && has('mhbs-tabs grid-cols-4 mb-2 shrink-0'));
 // 総合力は絆Lvと同じ一覧を並べ直すだけなので、取得は 'bond' を呼ぶ。
 // タブ名をそのまま levelKind へ渡すと、存在しない 'power' の取得になって一覧が永久に空になる
 check("総合力タブの取得は levelKind='bond' を呼ぶ",
@@ -574,7 +579,9 @@ check('クイック難易度画面に同じ高さで状態が分かる3択を出
     && has("[QUICK_REWARD_POLICY_DIAMOND,'ダイヤ優先','経験値0・ダイヤ×2']")
     && has('grid grid-cols-3 gap-1') && has('aria-pressed={selected}') && has('min-h-[44px]'));
 check('クイックの全難易度カードは報酬方針で外寸とボタン位置が変わらない',
-  has("quick?'h-[384px] flex flex-col':''") && has("${quick?'mt-auto':''}")
+  // 2026-10-10 に色のタイルへ作り直してから、固定の高さ(h-[384px])は持たない。報酬方針で変わるのは字だけで、
+  // ボタンの段を mt-auto で下へ寄せているので、外寸とボタンの位置は変わらない(2026-10-12 に3つの方針を実際に測って確かめた)
+  /data-difficulty-card=\{key\}[^\n]*className=\{`mhbt-tile[^`]*flex flex-col/.test(source) && has('<div className="mt-auto grid grid-cols-[minmax(0,1fr)] gap-1.5 pt-2">')
     && has('data-difficulty-card={key}') && has('data-difficulty-carousel'));
 // ★見た目は組み直したが、守りたいのは「折り返さない(whitespace-nowrap)」ことと
 //   「経験値・虹のプシュケー・ダイヤの3行が同じ大きさで並ぶ」こと
@@ -590,7 +597,8 @@ check('全モードのクリアが共通の虹のプシュケー付与処理を�
 // ランキングの一覧は共通の描画を呼ぶだけにして、画面ごとに作り直さない
 check('ランキングの一覧を複製していない',
   count('const renderScoreRankingBody = ') === 1 && count('const renderBreederRankingBody = ') === 1 && count('const renderBondRankingBody = ') === 1
-    && count('renderScoreRankingBody(') === 2 && count('renderBreederRankingBody()') === 2 && count('renderBondRankingBody()') === 2);
+    // ブリーダーLv・絆Lvは、ランキング画面・モード選択のタブ・入口(仕組みの選択)のタブの3か所から共通の描画を呼ぶ(入口のタブは2026-10-10)
+    && count('renderScoreRankingBody(') === 2 && count('renderBreederRankingBody()') === 3 && count('renderBondRankingBody()') === 3);
 check('既存のバトル画面のランキングも同じ描画を使う',
   has("{rankingKind==='score'&&renderScoreRankingBody(BATTLE_MODE_CHALLENGE)}")
     && has("{rankingKind==='breeder'&&renderBreederRankingBody()}") && has("{rankingKind==='bond'&&renderBondRankingBody()}"));

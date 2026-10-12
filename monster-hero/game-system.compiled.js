@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c40bb937a81ac513
+// source-sha256: 5e02efad8c778f1e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-12 16:16";
+const BUILD_DATE = "2026-10-12 16:23";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -17213,6 +17213,34 @@ const BATTLE_MONSTER_FX = Object.freeze({
     sword: '🗡️',
     shield: '🗡️🛡️',
     dual: '⚔️'
+  }),
+  aura: Object.freeze({
+    Mocchi: Object.freeze({
+      mark: '🔥',
+      color: '#facc15'
+    }),
+    Mitarashi: Object.freeze({
+      mark: '🐉',
+      color: '#22d3ee'
+    })
+  }),
+  glove: Object.freeze({
+    mark: '🥊',
+    max: 3
+  }),
+  spotlight: Object.freeze({
+    color: '#fde68a',
+    minOpacity: 0.2,
+    maxOpacity: 0.85
+  }),
+  afterimage: Object.freeze({
+    max: 3,
+    color: '#ef4444'
+  }),
+  thunder: Object.freeze({
+    mark: '⚡',
+    max: 5,
+    color: '#facc15'
   })
 });
 const BATTLE_STACK_MARK_ORDER = Object.freeze(Object.keys(BATTLE_STACK_MARKS));
@@ -61181,19 +61209,72 @@ const BattleStackMarks = ({
 const BattleMonsterFx = ({
   fx,
   imgSrc,
+  monId,
   calm = false
 }) => {
   if (!fx) return null;
   const T = BATTLE_MONSTER_FX;
-  const clones = Math.min(T.avoidClone.max, Math.max(0, Math.floor(Number(fx.avoid) || 0)));
+  const n = (v, max) => Math.min(max, Math.max(0, Math.floor(Number(v) || 0)));
+  const clones = n(fx.avoid, T.avoidClone.max);
   const pr = fx.present || null;
   const style = typeof fx.swordStyle === 'string' && T.swordStyle[fx.swordStyle] ? fx.swordStyle : null;
-  if (!clones && !pr && !style) return null;
+  const aura = fx.exEffect === 'statBoost' && T.aura[monId] ? T.aura[monId] : null;
+  const gloves = fx.exEffect === 'counter' ? n(fx.counter, T.glove.max) : 0;
+  const volt = fx.exEffect === 'stage' && fx.voltage ? fx.voltage : null;
+  const after = fx.exEffect === 'dodgeCombo' ? n(fx.dodges, T.afterimage.max) : 0;
+  const thunder = fx.exEffect === 'thunder' && fx.thunder ? fx.thunder : null;
+  if (!clones && !pr && !style && !aura && !gloves && !volt && !after && !thunder) return null;
+  const fading = Number(fx.exTurns) === 1;
   return React.createElement("div", {
     "data-monster-fx": true,
     className: `mh-mfx pointer-events-none${calm ? ' is-calm' : ''}`,
     "aria-hidden": "true"
-  }, imgSrc && Array.from({
+  }, aura && React.createElement("span", {
+    "data-mfx-aura": monId,
+    className: `mh-mfx-aura${fading ? ' is-fading' : ''}`,
+    style: {
+      '--mfx-c': aura.color
+    }
+  }, React.createElement("i", null, aura.mark)), volt && React.createElement("span", {
+    "data-mfx-spotlight": volt.value,
+    className: "mh-mfx-spot",
+    style: {
+      '--mfx-c': T.spotlight.color,
+      opacity: T.spotlight.minOpacity + (T.spotlight.maxOpacity - T.spotlight.minOpacity) * (volt.max > 0 ? Math.min(1, volt.value / volt.max) : 0)
+    }
+  }), imgSrc && Array.from({
+    length: after
+  }, (_, k) => React.createElement("img", {
+    key: `a${k}`,
+    "data-mfx-afterimage": k,
+    className: `mh-mfx-after a${k}`,
+    src: imgSrc,
+    alt: "",
+    draggable: false,
+    style: {
+      '--mfx-c': T.afterimage.color
+    }
+  })), gloves > 0 && React.createElement("span", {
+    "data-mfx-glove": gloves,
+    className: "mh-mfx-glove"
+  }, Array.from({
+    length: gloves
+  }, (_, k) => React.createElement("i", {
+    key: k
+  }, T.glove.mark))), thunder && (thunder.phase === 'wrap' ? React.createElement("span", {
+    "data-mfx-thunder": "wrap",
+    className: "mh-mfx-wrap",
+    style: {
+      '--mfx-c': T.thunder.color
+    }
+  }, React.createElement("i", null, T.thunder.mark), React.createElement("i", null, T.thunder.mark)) : n(thunder.charge, T.thunder.max) > 0 && React.createElement("span", {
+    "data-mfx-thunder": n(thunder.charge, T.thunder.max),
+    className: "mh-mfx-spark"
+  }, Array.from({
+    length: n(thunder.charge, T.thunder.max)
+  }, (_, k) => React.createElement("i", {
+    key: k
+  }, T.thunder.mark)))), imgSrc && Array.from({
     length: clones
   }, (_, k) => React.createElement("img", {
     key: k,
@@ -63682,6 +63763,7 @@ function BattleScreen({
     }), tacticsNewLayout && !ecoBattleView && !liteBattleView && typeof tacticsSlotCountersAt === 'function' && React.createElement(BattleMonsterFx, {
       fx: debugStackMarks && debugStackMarks.fx && debugStackMarks.fx[i] ? debugStackMarks.fx[i] : tacticsSlotCountersAt(i),
       imgSrc: s?.imgUrl,
+      monId: s?.id,
       calm: battleFx.idleMotion === 'OFF'
     }), slotHitKind && (() => {
       const hitFx = TACTICS_SLOT_FX_STYLE[slotHitKind];
@@ -86673,6 +86755,29 @@ function MonsterHeroGame() {
       };
     }
     if (unit.id === 'KenshiMocchi' && def && def.duration === 'style') out.swordStyle = tacticsExStyleOf(def, tacticsExState, slotIdx, unit.id) || 'sword';
+    const eff = tacticsExActiveEffect(tacticsExState, slotIdx, unit.id, tacticsExNow);
+    if (eff) {
+      out.exEffect = eff;
+      if (eff === 'counter') {
+        const ct = tacticsExCounterOf(tacticsExState, tacticsUnits, slotIdx, tacticsExNow);
+        if (ct) out.counter = ct.counter;
+      }
+      if (eff === 'stage') {
+        const v = tacticsExVoltageOf(tacticsExState, tacticsUnits, tacticsExNow);
+        if (v) out.voltage = {
+          value: v.voltage,
+          max: v.max
+        };
+      }
+      if (eff === 'thunder') {
+        const th = tacticsExThunderOf(tacticsExState, tacticsUnits, slotIdx, tacticsExNow);
+        if (th) out.thunder = {
+          phase: th.phase,
+          charge: th.charge
+        };
+      }
+      if (eff === 'dodgeCombo') out.dodges = tacticsSafeInt(normalizeTacticsExState(tacticsExState).effects?.[slotIdx]?.dodges, 0);
+    }
     return out;
   };
   const tacticsCritFixedNow = (slotIdx, card = null) => {

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f603c276bb658279
+// generated-sha256: 14d17f8f9741b4f6
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-12 16:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-12 16:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -12171,6 +12171,20 @@ const BATTLE_MONSTER_FX = Object.freeze({
     inner: Object.freeze({ dmg:'⚔️', taken:'🛡️', combo:'💫', heal:'💖', guts:'⚡', crit:'🎯' }) }),
   // 剣士モッチー(ソード・コンバージョン): いまの型を 剣だけ / 剣と盾 / 剣2本 で出す
   swordStyle: Object.freeze({ sword:'🗡️', shield:'🗡️🛡️', dual:'⚔️' }),
+  // ---- 区切り2(2026-10-12): EXが効いているあいだの見た目 ----
+  // モッチー(ガッツ全開っちー)・ミタラシ(ドラゴンだっちー): 絵の後ろのオーラ。残り1ターンは小さくなる
+  aura: Object.freeze({
+    Mocchi:    Object.freeze({ mark:'🔥', color:'#facc15' }),
+    Mitarashi: Object.freeze({ mark:'🐉', color:'#22d3ee' }),
+  }),
+  // ハム(ハムボクシング): カウンターの数だけグローブ
+  glove: Object.freeze({ mark:'🥊', max:3 }),
+  // ミーア(オン・ステージ!): 絵の上からのスポットライト。ボルテージが上がるほど明るい
+  spotlight: Object.freeze({ color:'#fde68a', minOpacity:0.2, maxOpacity:0.85 }),
+  // ザン(血踊): 回避した数だけ、赤い残像が増える
+  afterimage: Object.freeze({ max:3, color:'#ef4444' }),
+  // ライガー(雷狼影): ためる間は雷の数だけ ⚡、雷纏のあいだは体に稲妻をまとう
+  thunder: Object.freeze({ mark:'⚡', max:5, color:'#facc15' }),
 });
 const BATTLE_STACK_MARK_ORDER = Object.freeze(Object.keys(BATTLE_STACK_MARKS));
 // { kind: 数 } から、出す順に並べた [{ kind, count, mark, img, label }] を作る。知らない種類・0は出さない。
@@ -36965,15 +36979,33 @@ const BattleStackMarks = ({ counts, side, full = 0, className = '' }) => {
 // ★モンスターごとの演出(2026-10-12 社長の決定)。絵柄は BATTLE_MONSTER_FX の1か所。
 //   fx … { avoid, present:{ jackpot, kind }, swordStyle }(tacticsSlotCountersAt が作る)。imgSrc … 分身に使うその子の絵。
 //   calm … 「待機中の動き：止める」のとき(動きを止めて形だけ出す。端末の「動きを減らす」は CSS で止める)
-const BattleMonsterFx = ({ fx, imgSrc, calm = false }) => {
+const BattleMonsterFx = ({ fx, imgSrc, monId, calm = false }) => {
   if (!fx) return null;
   const T = BATTLE_MONSTER_FX;
-  const clones = Math.min(T.avoidClone.max, Math.max(0, Math.floor(Number(fx.avoid) || 0)));
+  const n = (v, max) => Math.min(max, Math.max(0, Math.floor(Number(v) || 0)));
+  const clones = n(fx.avoid, T.avoidClone.max);
   const pr = fx.present || null;
   const style = typeof fx.swordStyle === 'string' && T.swordStyle[fx.swordStyle] ? fx.swordStyle : null;
-  if (!clones && !pr && !style) return null;
+  // 区切り2(EXが効いているあいだ)
+  const aura = fx.exEffect === 'statBoost' && T.aura[monId] ? T.aura[monId] : null;
+  const gloves = fx.exEffect === 'counter' ? n(fx.counter, T.glove.max) : 0;
+  const volt = fx.exEffect === 'stage' && fx.voltage ? fx.voltage : null;
+  const after = fx.exEffect === 'dodgeCombo' ? n(fx.dodges, T.afterimage.max) : 0;
+  const thunder = fx.exEffect === 'thunder' && fx.thunder ? fx.thunder : null;
+  if (!clones && !pr && !style && !aura && !gloves && !volt && !after && !thunder) return null;
+  const fading = Number(fx.exTurns) === 1;
   return (
     <div data-monster-fx className={`mh-mfx pointer-events-none${calm ? ' is-calm' : ''}`} aria-hidden="true">
+      {aura && <span data-mfx-aura={monId} className={`mh-mfx-aura${fading ? ' is-fading' : ''}`} style={{ '--mfx-c': aura.color }}><i>{aura.mark}</i></span>}
+      {volt && <span data-mfx-spotlight={volt.value} className="mh-mfx-spot"
+        style={{ '--mfx-c': T.spotlight.color, opacity: T.spotlight.minOpacity + (T.spotlight.maxOpacity - T.spotlight.minOpacity) * (volt.max > 0 ? Math.min(1, volt.value / volt.max) : 0) }}/>}
+      {imgSrc && Array.from({ length: after }, (_, k) => (
+        <img key={`a${k}`} data-mfx-afterimage={k} className={`mh-mfx-after a${k}`} src={imgSrc} alt="" draggable={false} style={{ '--mfx-c': T.afterimage.color }} />
+      ))}
+      {gloves > 0 && <span data-mfx-glove={gloves} className="mh-mfx-glove">{Array.from({ length: gloves }, (_, k) => <i key={k}>{T.glove.mark}</i>)}</span>}
+      {thunder && (thunder.phase === 'wrap'
+        ? <span data-mfx-thunder="wrap" className="mh-mfx-wrap" style={{ '--mfx-c': T.thunder.color }}><i>{T.thunder.mark}</i><i>{T.thunder.mark}</i></span>
+        : n(thunder.charge, T.thunder.max) > 0 && <span data-mfx-thunder={n(thunder.charge, T.thunder.max)} className="mh-mfx-spark">{Array.from({ length: n(thunder.charge, T.thunder.max) }, (_, k) => <i key={k}>{T.thunder.mark}</i>)}</span>)}
       {imgSrc && Array.from({ length: clones }, (_, k) => (
         <img key={k} data-mfx-clone={k} className={`mh-mfx-clone c${k}`} src={imgSrc} alt="" draggable={false} style={{ opacity: T.avoidClone.opacity }} />
       ))}
@@ -38567,7 +38599,7 @@ function BattleScreen({
                 {/* ★貯まった数(クッキー・黒音符など)を「マーク×数」で常に出す(2026-10-12 社長の依頼)。タクティクスの枠は絵の左下、ほかのモードの縦長の枠は名前の帯のすぐ下(下の端は間合いの札がある) */}
                 <BattleStackMarks counts={allyStackCounts[i]} side="ally" full={SWEET_STACK_MAX} className={tacticsNewLayout?'mh-stack-marks-ally':'mh-stack-marks-ally mh-stack-marks-ally-top'}/>
                 {/* モンスターごとの演出(ゴーストの分身・スネグーラチカのプレゼント・剣士モッチーの型)。タクティクスの枠だけ・軽量表示では出さない */}
-                {tacticsNewLayout&&!ecoBattleView&&!liteBattleView&&typeof tacticsSlotCountersAt==='function'&&<BattleMonsterFx fx={debugStackMarks&&debugStackMarks.fx&&debugStackMarks.fx[i]?debugStackMarks.fx[i]:tacticsSlotCountersAt(i)} imgSrc={s?.imgUrl} calm={battleFx.idleMotion==='OFF'}/>}
+                {tacticsNewLayout&&!ecoBattleView&&!liteBattleView&&typeof tacticsSlotCountersAt==='function'&&<BattleMonsterFx fx={debugStackMarks&&debugStackMarks.fx&&debugStackMarks.fx[i]?debugStackMarks.fx[i]:tacticsSlotCountersAt(i)} imgSrc={s?.imgUrl} monId={s?.id} calm={battleFx.idleMotion==='OFF'}/>}
                 {slotHitKind&&(()=>{
                   const hitFx=TACTICS_SLOT_FX_STYLE[slotHitKind];
                   return(<div data-tactics-hit-fx={slotHitKind} className="absolute inset-0 z-[58] pointer-events-none overflow-visible">
@@ -56376,6 +56408,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       if(pr&&pr.kinds.length) out.present={ jackpot:pr.jackpot, kind:pr.kinds[0] };
     }
     if(unit.id==='KenshiMocchi'&&def&&def.duration==='style') out.swordStyle=tacticsExStyleOf(def,tacticsExState,slotIdx,unit.id)||'sword';
+    // 区切り2: いま効いているEXの種類と、その中身(カウンター・ボルテージ・雷・回避した数)
+    const eff=tacticsExActiveEffect(tacticsExState,slotIdx,unit.id,tacticsExNow);
+    if(eff){
+      out.exEffect=eff;
+      if(eff==='counter'){ const ct=tacticsExCounterOf(tacticsExState,tacticsUnits,slotIdx,tacticsExNow); if(ct) out.counter=ct.counter; }
+      if(eff==='stage'){ const v=tacticsExVoltageOf(tacticsExState,tacticsUnits,tacticsExNow); if(v) out.voltage={ value:v.voltage, max:v.max }; }
+      if(eff==='thunder'){ const th=tacticsExThunderOf(tacticsExState,tacticsUnits,slotIdx,tacticsExNow); if(th) out.thunder={ phase:th.phase, charge:th.charge }; }
+      if(eff==='dodgeCombo') out.dodges=tacticsSafeInt(normalizeTacticsExState(tacticsExState).effects?.[slotIdx]?.dodges,0);
+    }
     return out;
   };
   // 会心が確定する攻撃(タクティクスだけ)。オフリィアボイドの完全回避が残っている子の攻撃と、
