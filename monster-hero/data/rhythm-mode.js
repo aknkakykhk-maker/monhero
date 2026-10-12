@@ -1186,6 +1186,9 @@ const RHYTHM_SKY_BOX_VARIANT={id:(()=>{try{const v=typeof localStorage!=='undefi
   set(id){const v=RHYTHM_SKY_BOX_LOOKS[id]?id:'b';this.id=v;try{if(v==='b')localStorage.removeItem('mh_sky_box_look_proto');else localStorage.setItem('mh_sky_box_look_proto',v);}catch(e){}}};
 // 空中スライドの白い縁を描き始める高さ(2D の drawSkySlideZ と GPU の帯の mode 8 で同じ値を使う)
 const RHYTHM_SKY_EDGE_FROM=0.042;
+// ノーツの外の暗い縁取り(2026-10-07 道のふちと重なっても見やすくするため)。端も中も同じ(2026-10-12 社長の指示で、端の値にそろえた)
+const RHYTHM_NOTE_OUTLINE_PX=3;
+const RHYTHM_NOTE_OUTLINE_COLOR='rgba(2,6,23,.88)';
 // HELL の見やすさの案(デバッグ専用・2026-10-12 社長「HELL の視覚性・操作性をもっと改良して」)。保存は新しいキー mh_hell_vis_proto だけ。既定は v2(案2 はっきり・2026-10-12 社長の決定)。既定と同じ案を選んだときはキーを消し、ほかの案(「いま」も)を選んだときだけ残す。
 // 洗い出し(docs/proto/hell-visibility/)の数字: 空中の判定線が空中の道の手前の端より短く両端の2レーンが線の外に着く・空中の板が暗い・左手の空中スライドが透ける・空中の板の影と縦線が地上の道に並ぶ。
 // 案は RHYTHM_SKY_LOOK の値を上書きするだけ(描く数・形は同じ)。地上の5難易度には空中のものが無いので、見た目は変わらない
@@ -32173,8 +32176,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     const fuseGlow=!!plate&&plateGlowWanted&&headGlowCount>0&&!ctx.bloomActive;
     if(!fuseGlow)drawHeadGlows(cx,cy);
     ctx.globalAlpha=alpha;
-    const edgeNote=!failed&&(Number.isFinite(note.subLane)?(note.subLane<=0||note.subLane+(Number(note.subLaneWidth)||2)>=RHYTHM_SUB_LANE_COUNT):(Number(note.lane)<=0||Number(note.lane)>=RHYTHM_LANE_COUNT-1));
-    const plateDone=!!plate&&plate.draw({cx,cy,w,h,radius,alpha,sizeMul,outline:failed?0:(edgeNote?3:2)*sizeMul,outlineColor:edgeNote?'rgba(2,6,23,.88)':'rgba(2,6,23,.62)',
+    // ノーツの外の暗い縁取りは、端も中も同じ太さ・濃さ(2026-10-12 社長「端と中で同じ太さ・濃さにそろえて」。それまでは端だけ太く濃くしていた)
+    const plateDone=!!plate&&plate.draw({cx,cy,w,h,radius,alpha,sizeMul,outline:failed?0:RHYTHM_NOTE_OUTLINE_PX*sizeMul,outlineColor:RHYTHM_NOTE_OUTLINE_COLOR,
       ring:style.ring,gradient:style.gradient,border:style.border,inset:style.inset,failed:!!failed,wide:!!(wide&&!monster),hold:rhythmNoteIsHold(note)&&!monster,
       dark:brightness<1?Number((1-brightness).toFixed(3)):0,pressed:!!pressed,
       glows:fuseGlow?headGlows:null,glowCount:fuseGlow?headGlowCount:0,glowAdditive:additiveGlow,dpr});
@@ -32182,10 +32185,10 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     if(!plateDone){
       // ノーツの外周に暗い縁取りを1本引く(2026-10-07・ユーザー指摘「レーンのはじにハーフノーツが来たとき、道のふちと被って見にくい」)。
       // 道のふちの白い線に隣り合っても、ノーツの輪郭が埋もれない。位置も大きさも変えない(線を外へ描くだけ)。
-      // 道のはじ(左右のふちに接している)のノーツは、白い線のすぐ隣なので太めにする
+      // 太さ・濃さは端も中も同じ(RHYTHM_NOTE_OUTLINE_PX・COLOR。2026-10-12 までは道のはじのノーツだけ太く濃くしていた)
       if(!failed){
-        const outline=(edgeNote?3:2)*sizeMul;
-        ctx.lineWidth=outline;ctx.strokeStyle=edgeNote?'rgba(2,6,23,.88)':'rgba(2,6,23,.62)';
+        const outline=RHYTHM_NOTE_OUTLINE_PX*sizeMul;
+        ctx.lineWidth=outline;ctx.strokeStyle=RHYTHM_NOTE_OUTLINE_COLOR;
         roundRectPath(ctx,x-outline/2,y-outline/2,w+outline,h+outline,radius+outline/2);ctx.stroke();
       }
       if(style.ring){ctx.lineWidth=2*sizeMul;ctx.strokeStyle=style.ring;roundRectPath(ctx,x-1*sizeMul,y-1*sizeMul,w+2*sizeMul,h+2*sizeMul,radius+1);ctx.stroke();}
