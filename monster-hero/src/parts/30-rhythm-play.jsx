@@ -639,16 +639,16 @@ function RhythmJudgeTextPosSwitch(){
 // 空中のタップを上フリックと見分けやすくする案を切り替える(デバッグ専用・2026-10-12)。保存は新しいキー mh_sky_tap_distinct_proto だけ。既定は「いま」
 function RhythmSkyTapDistinctSwitch(){
   const [value,setValue]=useState(()=>RHYTHM_SKY_TAP_DISTINCT.id);
-  const [flick,setFlick]=useState(()=>{try{return localStorage.getItem('mh_flick_up_color_proto')||'pink';}catch(e){return 'pink';}});
+  const [skyColor,setSkyColor]=useState(()=>RHYTHM_SKY_NOTE_COLOR.id);
   const pick=v=>{RHYTHM_SKY_TAP_DISTINCT.set(v);setValue(RHYTHM_SKY_TAP_DISTINCT.id);};
-  const pickFlick=v=>{try{if(v==='pink')localStorage.removeItem('mh_flick_up_color_proto');else localStorage.setItem('mh_flick_up_color_proto',v);}catch(e){}setFlick(v);};
-  const [monsterLook,setMonsterLook]=useState(()=>{try{return localStorage.getItem('mh_monster_note_gold_proto')||'now';}catch(e){return 'now';}});
-  const pickMonsterLook=v=>{try{if(v==='now')localStorage.removeItem('mh_monster_note_gold_proto');else localStorage.setItem('mh_monster_note_gold_proto',v);}catch(e){}setMonsterLook(v);};
+  const pickSkyColor=v=>{RHYTHM_SKY_NOTE_COLOR.set(v);setSkyColor(RHYTHM_SKY_NOTE_COLOR.id);};
+  const [monsterLook,setMonsterLook]=useState(()=>RHYTHM_MONSTER_GOLD_ID);
+  const pickMonsterLook=v=>{try{if(v===RHYTHM_MONSTER_GOLD_DEFAULT)localStorage.removeItem('mh_monster_note_gold_proto');else localStorage.setItem('mh_monster_note_gold_proto',v);}catch(e){}setMonsterLook(v);};
   const btn=(on,label,onClick,key,attr)=><button key={key} type="button" {...attr} aria-pressed={on} onClick={onClick} className={`min-h-[44px] rounded-xl text-[11px] font-black ${on?'bg-rose-600 text-white ring-2 ring-rose-200':'bg-slate-800 text-slate-300'}`}>{label}</button>;
   return <section data-rhythm-sky-tap-distinct-switch className="mb-3 rounded-2xl border border-rose-400/50 bg-rose-950/25 p-3"><h3 className="text-xs font-black text-rose-100">空中のタップと上フリックの見分け(試作・見比べ用)</h3>
-    <p className="mt-1 text-[10px] font-bold text-rose-200/80">空中のタップの板(演奏を始め直すと効く)と、上フリックの色・マスモンのノーツの金色(どちらも読み込み直すと効く)を変えます。水色・青・緑・紫・オレンジ・黄緑とはぶつけていません(レモン黄は金と近いので、マスモンの金とは組みません)。</p>
+    <p className="mt-1 text-[10px] font-bold text-rose-200/80">上から、空中のタップの板/空中のノーツの色の組(タップ・右手の長押し。組は板の案より先に効く)/マスモンのノーツの金色。上の2つは演奏を始め直すと、金色は読み込み直すと効きます。上フリックはピンクのままで、水色・青・緑・紫・オレンジ・黄緑・金とはぶつけていません。</p>
     <div className="mt-2 grid grid-cols-2 gap-2">{Object.keys(RHYTHM_SKY_TAP_DISTINCT_LABELS).map(v=>btn(value===v,RHYTHM_SKY_TAP_DISTINCT_LABELS[v],()=>pick(v),v,{'data-rhythm-sky-tap-distinct-pick':v}))}</div>
-    <div className="mt-2 grid grid-cols-3 gap-2">{Object.keys(RHYTHM_FLICK_UP_LABELS).map(v=>btn(flick===v,RHYTHM_FLICK_UP_LABELS[v],()=>pickFlick(v),v,{'data-rhythm-flick-up-color-pick':v}))}</div>
+    <div className="mt-2 grid grid-cols-2 gap-2">{Object.keys(RHYTHM_SKY_NOTE_COLOR_LABELS).map(v=>btn(skyColor===v,RHYTHM_SKY_NOTE_COLOR_LABELS[v],()=>pickSkyColor(v),v,{'data-rhythm-sky-note-color-pick':v}))}</div>
     <div className="mt-2 grid grid-cols-3 gap-2">{Object.keys(RHYTHM_MONSTER_GOLD_LABELS).map(v=>btn(monsterLook===v,RHYTHM_MONSTER_GOLD_LABELS[v],()=>pickMonsterLook(v),v,{'data-rhythm-monster-gold-pick':v}))}</div></section>;
 }
 // HELL の「公開の印が真だったら」を試す(デバッグ専用・2026-10-12)。本番の印 RELEASE_FLAGS.rhythmHell は変えない。
