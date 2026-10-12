@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9f6464efedb6f064
+// generated-sha256: ac1fa45e0960e11d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-13 07:36"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-13 08:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -32361,7 +32361,7 @@ function RhythmRankingScreen({
       const refresh=()=>{
         if(boardTab)loadRhythmEventRanking&&loadRhythmEventRanking(boardKind,eventDivisionId);
         else if(totalTabOpen)loadRhythmTotalRanking&&loadRhythmTotalRanking();
-        else loadRhythmRanking(song);
+        else loadRhythmRanking(song,rhythmRanking.difficultyId||'ALL');
       };
       // ランク(S/SS/…)を決める点数。回数ボーナス込みの点だと満点を超えてしまうので、
       // 素点が返っているときはそちらを使う(素点が無い＝加点なしの集計ならそのまま)
@@ -32581,6 +32581,14 @@ function RhythmRankingScreen({
           {/* 「この曲」がどの曲かを出す(2026-10-07・ユーザー報告「トップのランキングから飛ぶと『この曲』の欄があるのに、どの曲か分からない」)。
               曲えらびを通らずに開いても、見ている曲(最後に選んでいた曲)が分かるようにする */}
           {songTab&&song&&<p data-rhythm-ranking-song className="mb-2 truncate text-center text-[11px] font-black text-amber-100">{rhythmSongFullName(song)||song.displayName}</p>}
+          {/* 難易度の切り替え(2026-10-13 社長「曲ごとの難易度別も表示させよう」)。既定は全難易度(いままでの表。その人のいちばん高いスコア1件で並べる。足し算ではないので「合算」と書かない・2026-10-13 社長)。
+              並べるのは、その曲に譜面がある難易度だけ。HELL は公開の印が真のときだけ(rhythmScoredDifficultyIds) */}
+          {songTab&&song&&(()=>{const chartIds=rhythmDemoDifficulties(song,RHYTHM_PLAY_DIFFICULTIES).map(d=>d.id);
+            const ids=['ALL',...rhythmScoredDifficultyIds().filter(id=>chartIds.includes(id))];const cur=rhythmRanking.difficultyId||'ALL';
+            return <div data-rhythm-ranking-diffs className="mb-2 flex gap-1.5 overflow-x-auto pb-0.5">{ids.map(id=>(
+              <button key={id} type="button" data-rhythm-ranking-diff={id} aria-pressed={cur===id} onClick={()=>loadRhythmRanking(song,id)}
+                className={`min-h-[44px] shrink-0 rounded-lg border px-2.5 text-[10px] font-black ${cur===id?'border-amber-300/70 bg-amber-500/20 text-amber-100':'border-white/15 bg-slate-900/70 text-slate-300'}`}>
+                {id==='ALL'?'全難易度':(RHYTHM_DEMO_DIFFICULTY_LABELS[id]?.name||id)}</button>))}</div>;})()}
           {songTab&&rhythmRanking.status==='loading'&&<p data-rhythm-ranking-loading className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">読み込み中…</p>}
           {songTab&&rhythmRanking.status==='error'&&<p data-rhythm-ranking-error className="rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200">読み込めませんでした。電波の良い場所で「更新」をお試しください。</p>}
           {songTab&&rhythmRanking.status==='ready'&&rhythmRanking.entries.length===0&&<p data-rhythm-ranking-empty className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">まだ記録がありません。最初の1件になってみましょう。</p>}
@@ -48696,7 +48704,8 @@ function MonsterHeroGame() {
   // モンビー(音ゲー)の全国ランキング(2026-09-04)。読み込み状態・一覧・詳細モーダルの中身を持つ。
   // 既存のrankingsテーブル・列を増やさず、difficulty列へRhythm-<songId>-<難易度id>を
   // 入れるだけで対応する(data/rhythm-mode.jsのrhythmRankingDifficultyKey等を参照)。
-  const [rhythmRanking, setRhythmRanking] = useState({ status:'idle', entries:[], error:null, songId:null });
+  // difficultyId … 'ALL'=全難易度(既定・その人のいちばん高い1件)/ 難易度id=その難易度だけ(2026-10-13 社長「曲ごとの難易度別も表示させよう」)
+  const [rhythmRanking, setRhythmRanking] = useState({ status:'idle', entries:[], error:null, songId:null, difficultyId:'ALL' });
   // ── 選んでいる曲を鳴らし続ける ─────────────────────────────────────────────
   // 【2026-09-05・ユーザー指示】
   // 「全国ランキング、マスモン設定、オプション場面で音楽がない。選んでいた音楽が鳴り続けるようにして」
@@ -49024,15 +49033,20 @@ function MonsterHeroGame() {
   // (RHYTHM_RANKING_DISPLAY_LIMIT)ぶん集まるか、行が尽きるか、ページ数の上限
   // (RHYTHM_RANKING_MAX_PAGES)に達するまでページ送りする(ブリーダーLvランキングの
   // sbFetchAllBreederRowsと同じ考え方)
-  const loadRhythmRanking = useCallback(async (song) => {
+  // 第2引数で難易度を1つに絞れる(2026-10-13)。省くと全難易度(いままでどおり)。取りに行くキーを1つにするだけで、
+  // 表・送信・合算の集計は変えない(記録はもともと Rhythm-<曲>-<難易度> の1行ずつ)
+  const loadRhythmRanking = useCallback(async (song, difficultyId = 'ALL') => {
     if (!song) return;
+    const diff = difficultyId && difficultyId !== 'ALL' ? difficultyId : 'ALL';
     const requestId = ++rhythmRankingRequestRef.current;
-    setRhythmRanking({ status:'loading', entries:[], error:null, songId:song.songId });
+    setRhythmRanking({ status:'loading', entries:[], error:null, songId:song.songId, difficultyId:diff });
     try {
       await settleRhythmRankingSubmit();
       if (rhythmRankingRequestRef.current !== requestId) return;
-      const keys = rhythmRankingCombinedMembers(song.songId);
+      const keys = diff === 'ALL' ? rhythmRankingCombinedMembers(song.songId)
+        : [rhythmRankingDifficultyKey(song.songId, diff)].filter(Boolean);
       let rows = [];
+      if (!keys.length) { setRhythmRanking({ status:'ready', entries:[], error:null, songId:song.songId, difficultyId:diff }); return; }
       for (let page = 0; page < RHYTHM_RANKING_MAX_PAGES; page++) {
         const pageRows = await sbFetchRhythmRankings(keys, RHYTHM_RANKING_FETCH_LIMIT, page * RHYTHM_RANKING_FETCH_LIMIT, `rhythm-rank-${song.songId}-${Date.now()}-${page}`);
         if (rhythmRankingRequestRef.current !== requestId) return;
@@ -49041,11 +49055,11 @@ function MonsterHeroGame() {
         if (!Array.isArray(pageRows) || pageRows.length < RHYTHM_RANKING_FETCH_LIMIT) break;
       }
       const entries = rhythmRankingDedupeByUser(rows).slice(0, RHYTHM_RANKING_DISPLAY_LIMIT).map(rhythmRankingEntryFromRow);
-      setRhythmRanking({ status:'ready', entries, error:null, songId:song.songId });
+      setRhythmRanking({ status:'ready', entries, error:null, songId:song.songId, difficultyId:diff });
     } catch (e) {
       if (rhythmRankingRequestRef.current !== requestId) return;
       console.error('[rhythm-ranking] fetch failed:', e && e.message ? e.message : e);
-      setRhythmRanking({ status:'error', entries:[], error:e?.message || String(e), songId:song.songId });
+      setRhythmRanking({ status:'error', entries:[], error:e?.message || String(e), songId:song.songId, difficultyId:diff });
     }
   }, [settleRhythmRankingSubmit]);
   // 曲を終えたときに全国ランキングへ1件送信する。呼び出し側(onComplete)で
