@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ceb0b840bf96a635
+// generated-sha256: 517d179f4fff2f64
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-12 18:24"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-12 18:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -20097,6 +20097,14 @@ function RhythmJudgeTextPosSwitch(){
   return <section data-rhythm-judge-text-pos-switch className="mb-3 rounded-2xl border border-cyan-400/50 bg-cyan-950/25 p-3"><h3 className="text-xs font-black text-cyan-100">地上の判定の文字の置き場所(試作・見比べ用)</h3>
     <p className="mt-1 text-[10px] font-bold text-cyan-200/80">叩く直前のノーツが判定の文字の下を通らないようにする案です。EASY〜MASTER に効きます(空中のある譜面ではいまのまま)。判定は変わりません。演奏を始め直すと効きます。</p>
     <div className="mt-2 grid grid-cols-2 gap-2">{Object.keys(RHYTHM_JUDGE_TEXT_POS_LABELS).map(v=><button key={v} type="button" data-rhythm-judge-text-pos-pick={v} aria-pressed={value===v} onClick={()=>pick(v)} className={`min-h-[44px] rounded-xl text-[11px] font-black ${value===v?'bg-cyan-700 text-white ring-2 ring-cyan-200':'bg-slate-800 text-slate-300'}`}>{RHYTHM_JUDGE_TEXT_POS_LABELS[v]}</button>)}</div></section>;
+}
+// 空中のタップを上フリックと見分けやすくする案を切り替える(デバッグ専用・2026-10-12)。保存は新しいキー mh_sky_tap_distinct_proto だけ。既定は「いま」
+function RhythmSkyTapDistinctSwitch(){
+  const [value,setValue]=useState(()=>RHYTHM_SKY_TAP_DISTINCT.id);
+  const pick=v=>{RHYTHM_SKY_TAP_DISTINCT.set(v);setValue(RHYTHM_SKY_TAP_DISTINCT.id);};
+  return <section data-rhythm-sky-tap-distinct-switch className="mb-3 rounded-2xl border border-rose-400/50 bg-rose-950/25 p-3"><h3 className="text-xs font-black text-rose-100">空中のタップと上フリックの見分け(試作・見比べ用)</h3>
+    <p className="mt-1 text-[10px] font-bold text-rose-200/80">上フリックはピンクの板に白っぽい縁と上の三角。空中のタップの板の見た目だけを変えます(地上のノーツは変わりません)。演奏を始め直すと効きます。</p>
+    <div className="mt-2 grid grid-cols-2 gap-2">{Object.keys(RHYTHM_SKY_TAP_DISTINCT_LABELS).map(v=><button key={v} type="button" data-rhythm-sky-tap-distinct-pick={v} aria-pressed={value===v} onClick={()=>pick(v)} className={`min-h-[44px] rounded-xl text-[11px] font-black ${value===v?'bg-rose-600 text-white ring-2 ring-rose-200':'bg-slate-800 text-slate-300'}`}>{RHYTHM_SKY_TAP_DISTINCT_LABELS[v]}</button>)}</div></section>;
 }
 // HELL の「公開の印が真だったら」を試す(デバッグ専用・2026-10-12)。本番の印 RELEASE_FLAGS.rhythmHell は変えない。
 // 入にすると、HELL の譜面がある公開曲(RHYTHM_HELL_CHARTS)で MASTER をクリアすると HELL が開き、初めてのときはお話 → 説明が出る。
@@ -64013,6 +64021,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <RhythmSkyLaneLookSwitch/>
             <RhythmHellVisSwitch/>
             <RhythmHellSkyHitSwitch/>
+            <RhythmSkyTapDistinctSwitch/>
             <RhythmJudgeTextPosSwitch/>
             {/* 難易度 HELL のお話と説明(2026-10-11)。HELL の公開前に社長が確かめるためのもの。見たことにはしない(debug)。
                 デバッグ専用なので更新履歴・ヘルプには載せない */}
