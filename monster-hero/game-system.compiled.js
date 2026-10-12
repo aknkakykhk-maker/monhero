@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5bc304a46d2f2c29
+// source-sha256: cb33b2753ce263bb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-12 16:58";
+const BUILD_DATE = "2026-10-12 17:03";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -17298,6 +17298,32 @@ const BATTLE_MONSTER_FX = Object.freeze({
   sprout: Object.freeze({
     mark: '🌱',
     n: 3
+  }),
+  pandoraBox: Object.freeze({
+    mark: '📦',
+    lid: '🟪',
+    angles: Object.freeze({
+      3: 0,
+      2: -25,
+      1: -60
+    })
+  }),
+  springRing: Object.freeze({
+    color: '#38bdf8'
+  }),
+  cookiePile: Object.freeze({
+    mark: '🍪',
+    perMark: 4,
+    max: 3
+  }),
+  noteStaff: Object.freeze({
+    mark: '🎵',
+    perMark: 2,
+    max: 5
+  }),
+  coinSpin: Object.freeze({
+    mark: '🪙',
+    max: 3
   })
 });
 const BATTLE_STACK_MARK_ORDER = Object.freeze(Object.keys(BATTLE_STACK_MARKS));
@@ -61267,9 +61293,11 @@ const BattleMonsterFx = ({
   fx,
   imgSrc,
   monId,
+  stacks = null,
   calm = false
 }) => {
-  if (!fx) return null;
+  if (!fx && !stacks) return null;
+  fx = fx || {};
   const T = BATTLE_MONSTER_FX;
   const n = (v, max) => Math.min(max, Math.max(0, Math.floor(Number(v) || 0)));
   const clones = n(fx.avoid, T.avoidClone.max);
@@ -61285,7 +61313,14 @@ const BattleMonsterFx = ({
   const overlay = fx.exEffect && T.overlay[monId] ? T.overlay[monId] : null;
   const film = !!fx.coverFilm,
     sprout = !!fx.sprout;
-  if (!clones && !pr && !style && !aura && !gloves && !volt && !after && !thunder && !scatter && !leaves && !overlay && !film && !sprout) return null;
+  const box = fx.exEffect === 'pandoraBox' ? Math.max(1, Math.min(3, Math.floor(Number(fx.exTurns) || 3))) : 0;
+  const ring = !!fx.springRing;
+  const st = stacks || {};
+  const pile = monId === 'Melody' && Number(st.cookie) > 0 ? n(Math.ceil(Number(st.cookie) / T.cookiePile.perMark), T.cookiePile.max) : 0;
+  const staff = monId === 'Kuromy' && Number(st.note) > 0 ? n(Math.ceil(Number(st.note) / T.noteStaff.perMark), T.noteStaff.max) : 0;
+  const coins = monId === 'Spooky' ? n((Number(st.fateAtk) || 0) + (Number(st.fateCombo) || 0), T.coinSpin.max) : 0;
+  const stackFull = monId === 'Melody' && Number(st.cookie) >= SWEET_STACK_MAX || monId === 'Kuromy' && Number(st.note) >= SWEET_STACK_MAX;
+  if (!clones && !pr && !style && !aura && !gloves && !volt && !after && !thunder && !scatter && !leaves && !overlay && !film && !sprout && !box && !ring && !pile && !staff && !coins) return null;
   const fading = Number(fx.exTurns) === 1;
   return React.createElement("div", {
     "data-monster-fx": true,
@@ -61389,7 +61424,43 @@ const BattleMonsterFx = ({
     length: T.sprout.n
   }, (_, k) => React.createElement("i", {
     key: k
-  }, T.sprout.mark))), leaves > 0 && React.createElement("span", {
+  }, T.sprout.mark))), ring && React.createElement("span", {
+    "data-mfx-spring": "ring",
+    className: "mh-mfx-spring",
+    style: {
+      '--mfx-c': T.springRing.color
+    }
+  }), box > 0 && React.createElement("span", {
+    "data-mfx-pandora": box,
+    className: "mh-mfx-pbox"
+  }, React.createElement("i", {
+    className: "lid",
+    style: {
+      transform: `rotate(${T.pandoraBox.angles[box] || 0}deg)`
+    }
+  }, T.pandoraBox.lid), React.createElement("i", null, T.pandoraBox.mark)), pile > 0 && React.createElement("span", {
+    "data-mfx-cookie-pile": pile,
+    className: `mh-mfx-pile${stackFull ? ' is-full' : ''}`
+  }, Array.from({
+    length: pile
+  }, (_, k) => React.createElement("i", {
+    key: k
+  }, T.cookiePile.mark))), staff > 0 && React.createElement("span", {
+    "data-mfx-note-staff": staff,
+    className: `mh-mfx-staff${stackFull ? ' is-full' : ''}`
+  }, Array.from({
+    length: staff
+  }, (_, k) => React.createElement("i", {
+    key: k,
+    className: `n${k}`
+  }, T.noteStaff.mark))), coins > 0 && React.createElement("span", {
+    "data-mfx-coin": coins,
+    className: "mh-mfx-coin"
+  }, Array.from({
+    length: coins
+  }, (_, k) => React.createElement("i", {
+    key: k
+  }, T.coinSpin.mark))), leaves > 0 && React.createElement("span", {
     "data-mfx-leaf": leaves,
     className: "mh-mfx-leaf"
   }, Array.from({
@@ -63864,6 +63935,7 @@ function BattleScreen({
       fx: debugStackMarks && debugStackMarks.fx && debugStackMarks.fx[i] ? debugStackMarks.fx[i] : tacticsSlotCountersAt(i),
       imgSrc: s?.imgUrl,
       monId: s?.id,
+      stacks: allyStackCounts[i],
       calm: battleFx.idleMotion === 'OFF'
     }), slotHitKind && (() => {
       const hitFx = TACTICS_SLOT_FX_STYLE[slotHitKind];
@@ -86889,6 +86961,8 @@ function MonsterHeroGame() {
     const coverSlot = tacticsExCoverSlot(tacticsExState, tacticsUnits, tacticsExNow);
     if (coverSlot != null && coverSlot !== slotIdx) out.coverFilm = true;
     if (tacticsUnits.some((u, j) => u && tacticsExActiveEffect(tacticsExState, j, u.id, tacticsExNow) === 'partyBoost')) out.sprout = true;
+    const effs = normalizeTacticsExState(tacticsExState).effects;
+    if (tacticsUnits.some((u, j) => u && tacticsExActiveEffect(tacticsExState, j, u.id, tacticsExNow) === 'lifeSpring' && effs?.[j]?.target === slotIdx)) out.springRing = true;
     return out;
   };
   const tacticsCritFixedNow = (slotIdx, card = null) => {
