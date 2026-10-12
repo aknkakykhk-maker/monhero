@@ -18,8 +18,8 @@
 
 | もの | 中身 | 1か所の値 |
 | --- | --- | --- |
-| HELL がある曲 | Sheriruth(Lv.59・638ノーツ・うち空260)/ Grievous Lady(Lv.65・649ノーツ・うち空221) | `data/rhythm-mode.js` の `RHYTHM_HELL_CHARTS`(曲を外すときはその1行を消す) |
-| レベル | 譜面の値(空中は地上と見なした Lv. の1.3倍・#2815)。レベル表 `RHYTHM_CHART_LEVELS` には HELL の行が無く、譜面の値がそのまま出る | `sheriruthHellChart` / `grievousLadyHellChart` の `mhChart(<Lv>, …)` |
+| HELL がある曲 | Sheriruth(Lv.54・642ノーツ・うち空239)/ Grievous Lady(Lv.60・649ノーツ・うち空220)/ 風がそよぐ場所(Lv.23・193ノーツ・うち空19・空中の入口) | `data/rhythm-mode.js` の `RHYTHM_HELL_CHARTS`(曲を外すときはその1行を消す) |
+| レベル | 譜面の値(空中は地上と見なした Lv. の1.2倍・10/12 夕方に3割→2割へ戻した)。レベル表 `RHYTHM_CHART_LEVELS` には HELL の行が無く、譜面の値がそのまま出る | `sheriruthHellChart` / `grievousLadyHellChart` の `mhChart(<Lv>, …)` |
 | 開く条件 | その曲の MASTER を1回クリアすると、その曲の HELL が開く。結果画面に「🔓 HELL が解放されました！」 | `data/rhythm-mode.js` の `RHYTHM_DIFFICULTY_UNLOCK_BY.HELL`(`'MASTER'`) |
 | お話 | 公開後に HOME へ着いたとき、まだ見ていない全員に「空まで届くビート」→ 説明4枚を1回だけ(MASTER のクリアとは関係なし) | `RHYTHM_HELL_STORY_TRIGGER`(`'release'`。ほかに `'after-result'`・`'home'`・`'none'`) |
 | お話の既読 | `mh_rhythm_hell_story_seen_v1`。印が偽のあいだは誰も書けないので、公開の日はまっさら。デバッグの「印が真だったら」で見たぶんは別のキー `mh_rhythm_hell_story_seen_preview_proto` | `rhythmHellStorySeenKey()`(17-*.jsx) |
@@ -50,7 +50,7 @@
     items:[
       'Sheriruth と Grievous Lady に、6段目の難易度 HELL が加わりました。地上のノーツに加えて、空から SKY TAP と SKY SLIDE が流れてきます。',
       'その曲の MASTER を1回クリアすると、その曲の HELL が遊べるようになります。',
-      'レベルは Sheriruth Lv.59 ／ Grievous Lady Lv.65 です。',
+      'レベルは Sheriruth Lv.54 ／ Grievous Lady Lv.60 ／ 風がそよぐ場所 Lv.23 です。',
       'ノーツ数は Sheriruth 638 ／ Grievous Lady 649 です。',
       'SKY TAP（赤い板）は、地上の判定ラインより上にある紫の線で叩きます。横の位置は地上と同じレーンです。',
       'SKY SLIDE は、押さえたまま帯をなぞります。帯が青なら左手、桃なら右手が取る目印です。',
