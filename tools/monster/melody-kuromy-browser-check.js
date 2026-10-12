@@ -10,6 +10,7 @@
 //   ③ EX「おねがい♪メロディボックス」を使うと、クッキーの数が文に出て、札が消える(0個へ戻る)
 //   ④ クロミーで同じく、攻撃を当てると黒音符が貯まり、EX「悪夢全開！メロディ・キー」で敵の状態の列に「悪夢全開」が出る
 //   ⑤ 貯まった数は、その子の枠にも「マーク×数」(data-stack-mark)で常に出て、札の数と合う(0個でも×0で出る。2026-10-12 社長の依頼)
+//      EXの札には残り回数(EX×数)、EXを使うと枠に残りターン(⏳nT)が出る
 const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分類フォルダから見た1つ上
 // タクティクス専用 EXスキル(STEP1: 共通基盤)を、実際のブラウザで操作して確かめる。
 // 設計の正本: docs/spec/TACTICS_EX_SKILLS.md
@@ -348,7 +349,14 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
       check('バトル画面の札にクッキーの数が出る', /🍪\d+\/10/.test(await bodyText()));
       const m1 = await slotMark(mSlot, 'cookie'), c1 = await chipCount('🍪');
       check('枠のクッキーのマークの数が、札の数と合う', m1 && c1 > 0 && m1.count === c1 && m1.inSlot, `${JSON.stringify(m1)} / 札 ${c1}`);
+      const exBefore = await page.evaluate((i) => document.querySelector(`[data-tactics-ex-mark="${i}"]`)?.textContent.trim() || '', mSlot);
+      check('EXの札に、あと何回使えるかが「EX×数」で出る', /^EX×\d+$/.test(exBefore), exBefore);
       check('使える状態になったEXを使える', await useEx(mSlot));
+      const exTurns = await slotMark(mSlot, 'exTurns');
+      check('EXを使うと、枠に残りターン(⏳nT)が出る', exTurns && exTurns.count >= 1 && exTurns.inSlot, JSON.stringify(exTurns));
+      // MK_SHOT=<フォルダ> を付けると、残りターンが減っていく所を静止画に残す(報告用)
+      const shotDir = process.env.MK_SHOT || '';
+      if (shotDir) await page.screenshot({ path: `${shotDir}/real-melody-ex-${exTurns ? exTurns.count : 0}T.png` });
       const pm2 = await pops();
       check('使うとカットインとポップアップが出る', pm2.some(t => /EX おねがい♪メロディボックス！/.test(t)), pm2.slice(-6).join(' / '));
       await page.evaluate(() => document.querySelector('[data-battle-log-open], button[aria-label="ログ"]')?.click());
@@ -360,6 +368,14 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
       const m2 = await slotMark(mSlot, 'cookie');
       check('使うと枠のマークも×0に戻る', m2 && m2.count === 0, JSON.stringify(m2));
       check('EXを使ったあともターンを進められる', await playAttackTurn(true));
+      const exTurns2 = await slotMark(mSlot, 'exTurns');
+      check('ターンを進めると、残りターンが1つ減る', exTurns && exTurns2 && exTurns2.count === exTurns.count - 1, `${exTurns && exTurns.count} → ${exTurns2 && exTurns2.count}`);
+      if (shotDir && exTurns2) await page.screenshot({ path: `${shotDir}/real-melody-ex-${exTurns2.count}T.png` });
+      if (exTurns2 && exTurns2.count > 1 && await playAttackTurn(true)) {
+        const exTurns3 = await slotMark(mSlot, 'exTurns');
+        check('残りターンが1になると、赤く光る札になる', !!exTurns3 && exTurns3.count === 1 && await page.evaluate((i) => document.querySelector(`button[data-slot-index="${i}"] [data-stack-mark="exTurns"]`)?.getAttribute('data-stack-last') === 'true', mSlot), JSON.stringify(exTurns3));
+        if (shotDir && exTurns3) await page.screenshot({ path: `${shotDir}/real-melody-ex-${exTurns3.count}T.png` });
+      }
     }
 
     // ---- クロミー ----
