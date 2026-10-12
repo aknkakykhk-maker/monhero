@@ -29,7 +29,8 @@ const BEAT_GAP=1.5;                      // 同じ親指が段を変えるまで
 // 同じ側(レーンの左右)で高さ(地上⇔空中)を変えるまでの間(2026-10-12 社長「HELL の操作性をもっと改良して」・テンポくんの数え方)。
 // 親指の振り分けとは別に、画面の左半分・右半分ごとに見る。点は押し始めと、長押し・スライドの終わり(指が離れる高さ)。同時押し(0ms)は両手で取るので数えない
 const SIDE_GAP_MS=150;
-const SIDE_KEEP_SKY=5;                    // 別々の指が取る2点を直すと、空中(タップ・スライドの端)がこれ以上減るなら直さない
+// 地上から空中へ上げる押し始めは、同じ側の地上の点からこれだけあける(テンポくんの「上下が半分しか届かない」条件・rhythm-chart-hand-rules.js の SKY_RAISE_MS)
+const SKY_RAISE_MS=require('./rhythm-chart-hand-rules.js').SKY_RAISE_MS;
 const PHRASE_BEATS=4;                    // タップの段を回す長さ(1小節)
 const PHRASE_MODES=['L','R','ground','both'];   // L=左手が空 / R=右手が空 / ground=両手とも地上 / both=両手が空(同時押しは片方だけ)
 const HELL_LANDSCAPE={...THUMB_PROFILES.landscape,name:'横持ち(HELL・高さの差39%)',skyDy:390*0.39};
@@ -172,8 +173,15 @@ const mix=(master,{zero,beat,crosses=[]})=>{
       if(n.k==='s'&&!n.fixed){const s0=x.end?sLv(n):level,e0=x.end?level:eLv(n);if(lockedClash(n,s0,e0))return false;n.profile=reshape(n,s0,e0);n.fixed=true;return true;}
       return false;};
     for(const side of ['L','R']){const list=ev.filter(e=>e.side===side).sort((a,b)=>a.at-b.at||(a.end?-1:1));
-      for(let i=1;i<list.length;i++){const p=list[i-1],e=list[i],d=e.at-p.at;
-        if(p.n===e.n||d<=0||d>SIDE_GAP_MS||lv(p)===lv(e))continue;
+      for(let i=1;i<list.length;i++){
+        // 比べる相手は、同時の点(和音の相手)を飛ばした、その前の点(同じ側で同時に地上と空中を押す和音も、手前の地上から数える)
+        let j=i-1;while(j>0&&list[i].at-list[j].at<=2)j--;
+        const p=list[j],e=list[i],d=e.at-p.at;
+        // 下ろす・長押しの終わりは SIDE_GAP_MS、地上から空中の押し始めへ上げるのは SKY_RAISE_MS
+        const limit=!e.end&&lv(p)===0&&lv(e)===1?Math.max(SIDE_GAP_MS,SKY_RAISE_MS):SIDE_GAP_MS;
+        if(p.n===e.n||d<=0||d>limit||lv(p)===lv(e))continue;
+        // 手前の同時の点のどれかが同じ高さなら、その高さの指がある(和音で押し分けている)ので直さない
+        if(list.some(q=>q!==e&&q.n!==e.n&&Math.abs(q.at-p.at)<=2&&lv(q)===lv(e)))continue;
         // まず、タップを相手の段にそろえる(同じ親指の前後とも段がそろうときだけ。前が空なら空のまま残る)
         if(!e.end&&e.n.k==='t'&&!fixedGround(e.n)&&handOk(e.n,lv(p))){e.n.want=lv(p);changed++;continue;}
         if(!p.end&&p.n.k==='t'&&!fixedGround(p.n)&&handOk(p.n,lv(e))){p.n.want=lv(e);changed++;continue;}
@@ -188,9 +196,6 @@ const mix=(master,{zero,beat,crosses=[]})=>{
           let settled=false;for(let r=0;r<40;r++)if(!fix()&&!backFix()){settled=true;break;}
           const score=settled?skyAmount():-1;restore(before);
           if(score>=0&&(!best||score>best.score))best={x,level,score};}
-        // 親指モデルでは別々の指が取る2点で、固定すると空中が SIDE_KEEP_SKY 以上減るときは残す(2026-10-12 窓口「空中を大きく減らさない」。
-        // 社長が案A(空中の受け付けを構えに合わせる)を試したあとに見直す)
-        if(best&&p.n.hand!==e.n.hand&&skyAmount()-best.score>=SIDE_KEEP_SKY)continue;
         if(best&&pinTo(best.x,best.level))changed++;
       }}
     return changed;};
@@ -247,7 +252,7 @@ if(require.main===module){
     const sim=simulateRuntime(rt.filter(n=>!(n.skyHeight>0)&&!(n.slidePoints&&n.slidePoints.some(p=>p.sky>0))));
     const viol=levelSwitchViolations(hell,conf.beat);
     console.log('数:',JSON.stringify(counts(hell)));
-    const ss=sideSwitches(hell);console.log(`同じ側で${SIDE_GAP_MS}ms以内に高さが変わる ${ss.length}件(別々の指で、直すと空中が${SIDE_KEEP_SKY}以上減るので残したもの)`+(ss.length?': '+ss.map(t=>(t/1000).toFixed(2)).join(' / '):''));
+    const ss=sideSwitches(hell);console.log(`同じ側で${SIDE_GAP_MS}ms以内に高さが変わる ${ss.length}件`+(ss.length?': '+ss.map(t=>(t/1000).toFixed(2)).join(' / '):''));
     // 共通の物差し(rhythm-chart-hand-rules.js・検査 rhythm-chart-hand-rules-check.js と同じ数え方)で、ほかの手の決まりも出す(作り方は変えない・目安)
     {const HR=require('./rhythm-chart-hand-rules.js'),res=HR.analyze(rt);
       for(const k of ['skyAfterGround','besideHeldBand'])console.log(`  目安: ${HR.RULE_LABELS[k]} ${res[k].length}件`+(res[k].length?': '+res[k].slice(0,12).map(x=>(x.at/1000).toFixed(2)).join(' / ')+(res[k].length>12?' …':''):''));
