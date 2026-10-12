@@ -10812,6 +10812,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const coverSlot=tacticsExCoverSlot(tacticsExState,tacticsUnits,tacticsExNow);
     if(coverSlot!=null&&coverSlot!==slotIdx) out.coverFilm=true;
     if(tacticsUnits.some((u,j)=>u&&tacticsExActiveEffect(tacticsExState,j,u.id,tacticsExNow)==='partyBoost')) out.sprout=true;
+    // 区切り5: 生命の泉(ウンディーネ)の対象の子の枠へ水の輪
+    const effs=normalizeTacticsExState(tacticsExState).effects;
+    if(tacticsUnits.some((u,j)=>u&&tacticsExActiveEffect(tacticsExState,j,u.id,tacticsExNow)==='lifeSpring'&&effs?.[j]?.target===slotIdx)) out.springRing=true;
     return out;
   };
   // 会心が確定する攻撃(タクティクスだけ)。オフリィアボイドの完全回避が残っている子の攻撃と、
