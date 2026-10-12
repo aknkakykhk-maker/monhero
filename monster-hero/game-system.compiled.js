@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2f0e38fcb46fb0ae
+// source-sha256: 974aaed5569b78da
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-12 15:50";
+const BUILD_DATE = "2026-10-12 16:00";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -88771,7 +88771,7 @@ function MonsterHeroGame() {
             globalComboRate: getPermaBuff('globalComboDmgPct') + localGlobalComboAdd,
             mainCanCrit: false,
             comboFinalMultiplier: soulAttack.comboFinalMultiplier,
-            exCombos: withFateCombo(tacticsExCombosAt(slotIdx, true), livePermaBuff('fateStacks', null), slotIdx),
+            exCombos: withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx, true), livePermaBuff('fateStacks', null), slotIdx), blackNoteEffectAt(slotIdx, stunMon?.id).combo),
             critDmgMult: tacticsExMultiBuffNow(slotIdx).critDmg
           });
           totalDmg += d;
