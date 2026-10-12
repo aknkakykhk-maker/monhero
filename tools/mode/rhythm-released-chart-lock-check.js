@@ -50,6 +50,10 @@ const unlocked=Object.keys(current).filter(k=>lock.charts[k]===undefined);
 ok(`公開中の譜面(${Object.keys(lock.charts).length}譜面)が控えと1バイトも変わらない`,!changed.length,
   `変わった: ${changed.join(' ')}。意図した変更なら node tools/mode/rhythm-released-chart-lock-check.js --update --reason "<理由>"、そうでなければ元へ戻す`);
 ok('控えにある譜面が消えていない',!missing.length,missing.join(' '));
+// 目印の行(// <…-notes>)にノーツが乗っていない。乗っているとコメントとして読み飛ばされ、ゲームからそのノーツが消える
+// (2026-10-12: HELL の道具が改行なしで書き込み、Sheriruth HELL・風がそよぐ場所 HELL の最初の4ノーツが落ちていた)
+{const onMarker=[...source.matchAll(/\/\/ <([a-z0-9-]+)-notes>([^\n]*)/g)].filter(m=>/[tThHfFsS]\(/.test(m[2])).map(m=>m[1]);
+  ok('目印の行にノーツが乗っていない(コメントとして読み飛ばされない)',onMarker.length===0,onMarker.join(' '));}
 if(unlocked.length)console.log(`(まだ控えに無い譜面 ${unlocked.length}: ${unlocked.join(' ')}。公開したら --update で控えに入れる)`);
 
 // 直しの道具の書き方
