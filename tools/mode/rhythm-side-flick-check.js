@@ -73,11 +73,10 @@ ok('書き出し: 向きがあれば4つ目に番号・無ければ今までど�
 const pipeline=fs.readFileSync(path.join(__dirname,'rhythm-chart-v3-pipeline.js'),'utf8');
 ok('パイプラインも同じ番号で書き出す',pipeline.includes('FLICK_DIR_CODES.indexOf(note.flickDir)'));
 
-// 5. 自動譜面制作はRev.4のMASTERだけに付ける
+// 5. 自動譜面制作は MASTER だけに付ける(2026-10-12 から最新リビジョンだけを作るので、向きはいつも払う指の動きで決める)
 const generator=fs.readFileSync(path.join(__dirname,'rhythm-chart-v3-generate.js'),'utf8');
-ok('自動譜面制作: Rev.4以上で、MASTERの譜面だけに横フリックを付ける',
-  generator.includes('const sideFlick=chartRevision>=4;')&&generator.includes('if(sideFlick&&results.MASTER){')
-  &&(generator.match(/applySideFlicks\(/g)||[]).length===2);
+ok('自動譜面制作: MASTERの譜面だけに、払う指の動きで向きを決めた横フリックを付ける',
+  generator.includes('if(results.MASTER){')&&generator.includes('side=assignSideFlickDirs(r.notes,timing);'));
 
 // 6. 配信中の譜面は横フリックを書いていない(=今までと同じ)ことを数えて残す
 let flicks=0,side=0;

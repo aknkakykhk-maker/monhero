@@ -13,8 +13,7 @@
 //   ・決めつけない: 曲の音の裏づけが無いときは、どの作法も 0(何もしない)
 //   ・学び直しの式: 1回で ±20% まで／区間が少ないと動かさない／0〜2 に収まる
 //   ・リビジョンの数え方: 重みを書き足したリビジョンまで最新リビジョンが上がる。前のリビジョンの重みは消えない
-//   ・実際にRev.6・Rev.7で生成し、Rev.7は作法が効き、ノーツに印が残り、押せない配置・ノーツ数・質を悪くしない。
-//     Rev.6以前の生成には作法の印が一切付かない(公開中の譜面を作り直しても同じものができる)
+//   ・実際に最新リビジョンで生成し、作法が効いてノーツに印が残る(2026-10-12 から最新だけを作る)
 'use strict';
 const fs=require('fs'),path=require('path'),os=require('os');
 const {spawnSync}=require('child_process');
@@ -23,8 +22,6 @@ const knowledge=require('./rhythm-chart-knowledge.js');
 const {nextWeight,authoringMatches,MAX_STEP,MIN_EVIDENCE}=require('./rhythm-chart-learn.js');
 const {CHART_REVISION_LATEST,CHART_REVISION_CODE_LATEST,chartRevisionOf}=require('./rhythm-chart-v3-revision.js');
 const {PATTERN_BY_ID}=require('./rhythm-chart-v3-patterns.js');
-const {reportFor:qualityReportFor}=require('./rhythm-chart-quality-report.js');
-const {reportFor:fitReportFor}=require('./rhythm-note-type-fit.js');
 const arg=(name,fallback=null)=>{const i=process.argv.indexOf(name);return i>=0&&i+1<process.argv.length?process.argv[i+1]:fallback;};
 let failed=0;
 const ok=(name,cond,detail='')=>{console.log(`${cond?'OK':'NG'}: ${name}${detail?` — ${detail}`:''}`);if(!cond)failed++;};
@@ -112,55 +109,31 @@ for(const entry of KNOWLEDGE){
   ok('最新リビジョンの重みが全部の作法にある',KNOWLEDGE.every(entry=>Number.isFinite(weights[entry.id])));
 }
 
-// ── 5. Rev.6・Rev.7で実際に作って比べる ─────────────────────────────────────────
+// ── 5. 最新リビジョンで実際に作る ─────────────────────────────────────────
+// 2026-10-12 から作れるのは最新リビジョンだけ(古い版との比べ「Rev.6 より悪くしない」は、Rev.7 を入れたときの一度きりの見張りだったので外した)
 const tracks=(arg('--tracks','nothing_without_you,dullahan,kindan_no_resistance,monster_hero_theme')||'').split(',').filter(Boolean);
 const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'chart-knowledge-'));
 try{
-  const AXES=['playability','musicality','readability','flow','variety','difficultyFit'];
-  const sum={6:{notes:0,impossible:0,marked:0,axes:{},flickFit:0,chordFit:0,fitN:0},7:{notes:0,impossible:0,marked:0,axes:{},flickFit:0,chordFit:0,fitN:0}};
-  const fired={};let badIds=0,chordPartnerMarked=0,rows=0;
+  let marked=0,badIds=0,chordPartnerMarked=0;const fired={};
   for(const trackId of tracks){
-    for(const revision of [6,7]){
-      const dir=path.join(tmp,`${trackId}-r${revision}`);
-      fs.mkdirSync(dir,{recursive:true});
-      const run=spawnSync(process.execPath,[path.join(ROOT,'tools/mode/rhythm-chart-v3-generate.js'),'--track',trackId,
-        '--chart-revision',String(revision),'--write','--output-dir',dir],{cwd:ROOT,encoding:'utf8',maxBuffer:1<<26});
-      if(run.status!==0){ok(`${trackId} Rev.${revision}を生成できる`,false,(run.stderr||'').split('\n')[0]);continue;}
-      const quality=qualityReportFor(trackId,{dir,source:'v3'});
-      const fit=fitReportFor(trackId,{dir,source:'v3'});
-      for(const file of fs.readdirSync(dir).filter(f=>f.endsWith('.json'))){
-        const chart=JSON.parse(fs.readFileSync(path.join(dir,file),'utf8'));
-        if(!Array.isArray(chart.notes))continue;
-        for(const note of chart.notes){
-          if(!Array.isArray(note.knowledge))continue;
-          sum[revision].marked++;
-          if(note.chord)chordPartnerMarked++;
-          for(const id of note.knowledge){if(!knowledge.KNOWLEDGE_BY_ID[id])badIds++;fired[id]=(fired[id]||0)+1;}
-        }
-        if(revision===6&&chart.knowledge)sum[6].marked++;
-      }
-      for(const [difficulty,report] of Object.entries(quality.difficulties)){
-        const s=sum[revision];
-        s.notes+=report.noteCount;s.impossible+=report.gate.impossible;
-        for(const axis of AXES)s.axes[axis]=(s.axes[axis]||0)+(Number(report.scores[axis])||0);
-        const m=fit.difficulties[difficulty];
-        if(m){s.flickFit+=m.flickFit||0;s.chordFit+=m.chordFit||0;s.fitN++;}
-        if(revision===7)rows++;
+    const dir=path.join(tmp,trackId);
+    fs.mkdirSync(dir,{recursive:true});
+    const run=spawnSync(process.execPath,[path.join(ROOT,'tools/mode/rhythm-chart-v3-generate.js'),'--track',trackId,
+      '--write','--output-dir',dir],{cwd:ROOT,encoding:'utf8',maxBuffer:1<<26});
+    if(run.status!==0){ok(`${trackId} を最新リビジョンで生成できる`,false,(run.stderr||'').split('\n')[0]);continue;}
+    for(const file of fs.readdirSync(dir).filter(f=>f.endsWith('.json'))){
+      const chart=JSON.parse(fs.readFileSync(path.join(dir,file),'utf8'));
+      if(!Array.isArray(chart.notes))continue;
+      for(const note of chart.notes){
+        if(!Array.isArray(note.knowledge))continue;
+        marked++;
+        if(note.chord)chordPartnerMarked++;
+        for(const id of note.knowledge){if(!knowledge.KNOWLEDGE_BY_ID[id])badIds++;fired[id]=(fired[id]||0)+1;}
       }
     }
   }
-  ok('Rev.6以前の生成には作法の印が付かない',sum[6].marked===0,`${sum[6].marked}件`);
-  ok('Rev.7は作法が効いてノーツに印が残る',sum[7].marked>0,Object.entries(fired).map(([id,n])=>`${id} ${n}`).join(' / '));
+  ok('最新リビジョンは作法が効いてノーツに印が残る',marked>0,Object.entries(fired).map(([id,n])=>`${id} ${n}`).join(' / '));
   ok('印は既知の作法だけ・同時押しの2本目には付けない',badIds===0&&chordPartnerMarked===0);
-  ok('Rev.7で押せない配置を増やしていない',sum[7].impossible<=sum[6].impossible,`Rev.6 ${sum[6].impossible} → Rev.7 ${sum[7].impossible}`);
-  ok('Rev.7でノーツ数を大きく変えていない',Math.abs(sum[7].notes-sum[6].notes)<=sum[6].notes*.03,`Rev.6 ${sum[6].notes} → Rev.7 ${sum[7].notes}`);
-  const avg=(s,axis)=>rows?s.axes[axis]/rows:0;
-  const worse=AXES.filter(axis=>avg(sum[7],axis)<avg(sum[6],axis)-3);
-  ok('Rev.7で質の6軸がどれも3点より下がらない',worse.length===0,
-    AXES.map(axis=>`${axis} ${avg(sum[6],axis).toFixed(0)}→${avg(sum[7],axis).toFixed(0)}`).join(' / '));
-  const fitAvg=(s,key)=>s.fitN?s[key]/s.fitN:0;
-  ok('Rev.7でノーツの種類が音に合う割合を下げていない',fitAvg(sum[7],'flickFit')>=fitAvg(sum[6],'flickFit')-.05&&fitAvg(sum[7],'chordFit')>=fitAvg(sum[6],'chordFit')-.05,
-    `フリック ${Math.round(fitAvg(sum[6],'flickFit')*100)}%→${Math.round(fitAvg(sum[7],'flickFit')*100)}% / 同時押し ${Math.round(fitAvg(sum[6],'chordFit')*100)}%→${Math.round(fitAvg(sum[7],'chordFit')*100)}%`);
 }finally{
   fs.rmSync(tmp,{recursive:true,force:true});
 }
