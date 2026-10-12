@@ -49,6 +49,14 @@ check('新しい記録が先頭に来る', log[0].at === t0 + 19 * MIN && log[11
 check('壊れた記録は落ちずに捨てる', r.normalizeReloadLog('x').length === 0 && r.normalizeReloadLog([null, 1, 'a', { at: 'x' }, { at: t0 }]).length === 1);
 check('記録を足さない呼び出しでも壊れない', r.pushReloadLog(log, null).length === 12);
 check('画面に出す1行に、分・画面・音の本数・メモリが入る', (() => { const t = r.describeReloadLogEntry(fg); return /63分遊んだあと/.test(t) && /画面 BATTLE/.test(t) && /音のデータ 5本/.test(t) && /メモリ 120MB/.test(t) && /遊んでいる最中に読み込み直された/.test(t); })());
+// 2026-10-12 音の大きさ(持っている分・起動してから解いた合計・回数)を記録に足した。古い印・記録には無いので null として読む
+const mk2 = marker({ audioMB: 180, decodedMB: 3260, decodeCount: 70 });
+const fg2 = r.buildReloadLogEntry(mk2, t0 + 65 * MIN, 'reload');
+check('音の大きさ(MB・解いた合計・回数)が記録に入る', fg2 && fg2.audioMB === 180 && fg2.decodedMB === 3260 && fg2.decodeCount === 70, JSON.stringify(fg2));
+check('古い印(音の大きさが無い)でも読めて、null になる', fg.audioMB === null && fg.decodedMB === null && fg.decodeCount === null);
+check('画面に出す1行に、音の大きさと解いた合計が入る', (() => { const t = r.describeReloadLogEntry(fg2); return /音のデータ 5本\(180MB\)/.test(t) && /音を解いた合計 3260MB・70回/.test(t); })());
+check('古い記録(音の大きさが無い)も1行にできる', !/解いた合計/.test(r.describeReloadLogEntry(fg)) && /音のデータ 5本/.test(r.describeReloadLogEntry(fg)));
+check('音の大きさの値が壊れていても落ちない', r.normalizeSessionMarker({ startedAt: t0, lastBeat: t0, audioMB: 'あ', decodedMB: {}, decodeCount: null }).audioMB === null);
 check('メモリが取れない端末(iPhone)でも1行にできる', (() => { const t = r.describeReloadLogEntry({ ...fg, heapMB: null }); return !/メモリ/.test(t) && /63分遊んだあと/.test(t); })());
 
 // ---- 後半: 実ブラウザ ----
@@ -91,6 +99,7 @@ check('メモリが取れない端末(iPhone)でも1行にできる', (() => { c
     const beat = await read('mhdev_session_marker_v1');
     check('15秒ほどで印が書き直される', beat.lastBeat > first.lastBeat, `${first.lastBeat} → ${beat.lastBeat}`);
     check('印に画面と音のデータの本数が入る', typeof beat.screen === 'string' && Number.isFinite(beat.audioBuffers), JSON.stringify(beat));
+    check('印に音の大きさ(持っている分・解いた合計・回数)が入る', Number.isFinite(beat.audioMB) && Number.isFinite(beat.decodedMB) && Number.isFinite(beat.decodeCount), JSON.stringify(beat));
 
     // 裏に回る → state が hidden、戻る → running、pagehide → closed
     await page.evaluate(() => { Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' }); document.dispatchEvent(new Event('visibilitychange')); });
