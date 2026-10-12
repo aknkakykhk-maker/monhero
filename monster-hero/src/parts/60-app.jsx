@@ -10808,6 +10808,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       const d=raidExDefOf(u.id), r=d?tacticsExRemainOf(d,tacticsExState,j,u.id,tacticsExNow):null;
       out.leafShield=Math.max(out.leafShield||0, r&&r.turns>0?r.turns:1);
     }
+    // 区切り4: みんなをかばう(モノリス)は、かばってもらうほかの味方の枠へ。緑のめぐみ(プラント)は味方全員の枠へ
+    const coverSlot=tacticsExCoverSlot(tacticsExState,tacticsUnits,tacticsExNow);
+    if(coverSlot!=null&&coverSlot!==slotIdx) out.coverFilm=true;
+    if(tacticsUnits.some((u,j)=>u&&tacticsExActiveEffect(tacticsExState,j,u.id,tacticsExNow)==='partyBoost')) out.sprout=true;
     return out;
   };
   // 会心が確定する攻撃(タクティクスだけ)。オフリィアボイドの完全回避が残っている子の攻撃と、

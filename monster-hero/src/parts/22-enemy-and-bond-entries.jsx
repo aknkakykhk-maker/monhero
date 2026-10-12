@@ -475,6 +475,18 @@ const BATTLE_MONSTER_FX = Object.freeze({
   }),
   // ユグドラシル(世界樹の守り): 味方全員の枠に葉っぱの盾。残りターンの数だけ葉が付く
   leafShield: Object.freeze({ mark:'🍃', max:3 }),
+  // ---- 区切り4(2026-10-12) ----
+  //   kind … beam(目から敵へ光の線) / crack(ひびと赤く光る拳) / mist(薄い霧) / clock(止まった時計と青白い色)
+  overlay: Object.freeze({
+    Suezo:     Object.freeze({ kind:'beam',  mark:'👁️', color:'#38bdf8' }),   // サイコロックオン
+    Golem:     Object.freeze({ kind:'crack', mark:'👊', color:'#ef4444' }),   // 捨て身
+    Oboro:     Object.freeze({ kind:'mist',  mark:'',   color:'#e2e8f0' }),   // おぼろ返し
+    Yaobikuni: Object.freeze({ kind:'clock', mark:'⏱️', color:'#93c5fd' }),   // 悠久の刻
+  }),
+  // モノリス(みんなをかばう): ほかの味方の枠に、モノリスがかばう薄い盾の膜
+  coverFilm: Object.freeze({ mark:'🛡️', color:'#a5b4fc' }),
+  // プラント(緑のめぐみ): 味方全員の枠の下の端に若葉
+  sprout: Object.freeze({ mark:'🌱', n:3 }),
 });
 const BATTLE_STACK_MARK_ORDER = Object.freeze(Object.keys(BATTLE_STACK_MARKS));
 // { kind: 数 } から、出す順に並べた [{ kind, count, mark, img, label }] を作る。知らない種類・0は出さない。

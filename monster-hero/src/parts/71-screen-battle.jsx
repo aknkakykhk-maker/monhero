@@ -666,7 +666,10 @@ const BattleMonsterFx = ({ fx, imgSrc, monId, calm = false }) => {
   // 区切り3
   const scatter = fx.exEffect && T.scatter[monId] ? T.scatter[monId] : null;
   const leaves = n(fx.leafShield, T.leafShield.max);
-  if (!clones && !pr && !style && !aura && !gloves && !volt && !after && !thunder && !scatter && !leaves) return null;
+  // 区切り4
+  const overlay = fx.exEffect && T.overlay[monId] ? T.overlay[monId] : null;
+  const film = !!fx.coverFilm, sprout = !!fx.sprout;
+  if (!clones && !pr && !style && !aura && !gloves && !volt && !after && !thunder && !scatter && !leaves && !overlay && !film && !sprout) return null;
   const fading = Number(fx.exTurns) === 1;
   return (
     <div data-monster-fx className={`mh-mfx pointer-events-none${calm ? ' is-calm' : ''}`} aria-hidden="true">
@@ -693,6 +696,9 @@ const BattleMonsterFx = ({ fx, imgSrc, monId, calm = false }) => {
       {scatter && (scatter.kind === 'ring'
         ? <span data-mfx-scatter="ring" className="mh-mfx-ring" style={{ '--mfx-c': scatter.color }}/>
         : <span data-mfx-scatter={scatter.kind} className={`mh-mfx-scatter is-${scatter.kind}`}>{scatter.marks.map((m, k) => <i key={k} className={`s${k}`}>{m}</i>)}</span>)}
+      {overlay && <span data-mfx-overlay={overlay.kind} className={`mh-mfx-ov is-${overlay.kind}`} style={{ '--mfx-c': overlay.color }}>{overlay.mark ? <i>{overlay.mark}</i> : null}</span>}
+      {film && <span data-mfx-cover="film" className="mh-mfx-film" style={{ '--mfx-c': T.coverFilm.color }}><i>{T.coverFilm.mark}</i></span>}
+      {sprout && <span data-mfx-sprout={T.sprout.n} className="mh-mfx-sprout">{Array.from({ length: T.sprout.n }, (_, k) => <i key={k}>{T.sprout.mark}</i>)}</span>}
       {leaves > 0 && <span data-mfx-leaf={leaves} className="mh-mfx-leaf">{Array.from({ length: leaves }, (_, k) => <i key={k}>{T.leafShield.mark}</i>)}</span>}
     </div>
   );
