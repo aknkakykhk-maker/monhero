@@ -22,8 +22,10 @@ vm.createContext(context);
 vm.runInContext(`${block}\nthis.out={RHYTHM_RANKS,rhythmRankForScore,rhythmNextRankId};`,context);
 const {RHYTHM_RANKS,rhythmRankForScore,rhythmNextRankId}=context.out;
 
-check('ランクは10段階、G→F→E→D→C→B→A→S→SS→Mの並び',
-  RHYTHM_RANKS.map(r=>r.id).join(',')==='M,SS,S,A,B,C,D,E,F,G');
+// MF は 2026-10-12 社長の決定(「105万のランク【MF】で」)。HELL の満点(105万)でだけ届く、M の1つ上
+check('ランクは11段階、G→F→E→D→C→B→A→S→SS→M→MFの並び',
+  RHYTHM_RANKS.map(r=>r.id).join(',')==='MF,M,SS,S,A,B,C,D,E,F,G');
+check('105万点(HELL満点)はMF・104万9999点はM',rhythmRankForScore(1050000)==='MF'&&rhythmRankForScore(1049999)==='M');
 check('しきい値は降順で重複が無い',
   RHYTHM_RANKS.every((rank,index)=>index===0||rank.min<RHYTHM_RANKS[index-1].min));
 check('最低ランクGのしきい値は0',RHYTHM_RANKS[RHYTHM_RANKS.length-1].min===0);
@@ -54,7 +56,9 @@ check('難易度が上がるほど、その満点で届く上限ランクも下�
 
 // --- 次のランク(rhythmNextRankId) ---
 check('0点の次はF',rhythmNextRankId(0)==='F');
-check('最上位(M、100万点)の次は無い(null)',rhythmNextRankId(1000000)===null);
+check('最上位(MF、105万点)の次は無い(null)',rhythmNextRankId(1050000)===null);
+check('MASTER満点(100万)では、MFは届かないので次は無い(null)',rhythmNextRankId(1000000,1000000)===null);
+check('HELL(満点105万)では、Mの次はMF',rhythmNextRankId(1000000,1050000)==='MF');
 check('境界値ちょうどでは、そのランクの1つ上を返す(以上判定と矛盾しない)',
   rhythmNextRankId(800000)==='SS'&&rhythmNextRankId(799999)==='S');
 check('マイナスや壊れた値もG扱いの次(F)になる',
@@ -94,7 +98,7 @@ check('maxScoreを渡さない/0以下/壊れているときは今までどお�
 // 見るのは「全部のランクに色がある」ことだけにする
 const rankColorBlock=(game.match(/const RHYTHM_RANK_COLORS = Object\.freeze\(\{([\s\S]*?)\}\);/)||[])[1]||'';
 check('ランク色マップを持つ',
-  ['G','F','E','D','C','B','A','S','SS','M'].every(rank=>new RegExp(`(^|[\\s,])${rank}:'text-[a-z]+-\\d{3}'`).test(rankColorBlock)));
+  ['G','F','E','D','C','B','A','S','SS','M','MF'].every(rank=>new RegExp(`(^|[\\s,])${rank}:'text-[a-z]+-\\d{3}'`).test(rankColorBlock)));
 check('HUDのSCORE横にライブランクを表示',
   game.includes('data-rhythm-rank')&&game.includes('RHYTHM_RANK_COLORS[rank]')&&game.includes('const rank=rhythmRankForScore(score);'));  // スコアの札の部品(RhythmHudScore)が hud のスコアから出す(2026-09-27)
 check('リザルト画面にも大きくランクを表示',

@@ -16,11 +16,14 @@ const RHYTHM_DIFFICULTIES = Object.freeze([
 // 6段目の難易度 HELL(2026-10-10・社長の決定。名前はバトルの「Hell」と同じ)。
 // 空中のノーツがある譜面を持つ曲だけに出す(譜面が無い曲は難易度のボタンに出ない)。その曲の MASTER を1回クリアすると開く。
 // ★2026-10-11 時点では公開している曲に HELL の譜面は無い(社長がデバッグで確かめてから公開)。仕組みだけ先に入れてあり、どの曲にも出ない。
-// ★上の RHYTHM_DIFFICULTIES(5難易度)へは入れない。5難易度を前提に数えているもの
-//   (全曲合算・週間・相棒・イベントの上乗せ・ミッション・称号・全国ランキングの合算)の数字を変えないため(社長の選択「含めない」)。
-//   全国ランキングへも送らない(rhythmRankingDifficultyKey が null を返す)。自己ベスト(mh_rhythm_best_v1)には残る
+// ★上の RHYTHM_DIFFICULTIES(5難易度)とは分けて持つ(HELL の譜面がある曲だけに出すため)。
+// 2026-10-12 社長の決定「満点を105万にしてランキングには乗るようにして/105万のランク【MF】で」(10/11 の「含めない」を置き換え):
+//   満点は 1,050,000(MASTER の満点 100万の1つ上のランク MF に、HELL の満点でだけ届く)。
+//   全国ランキング(曲ごと・合算)・全曲合算・週間・相棒・イベントの上乗せ・称号・フレンドの実績にも入れる(rhythmScoredDifficultyIds)。
+//   モンヒロビートのミッションはもともと無い(17-*.jsx の MISSION_DEFS)ので、ミッションは変わらない。
+//   ただし公開の印(RELEASE_FLAGS.rhythmHell)が偽のあいだは、ランキングへ送らない(rhythmRankingDifficultyKey が null を返す)
 const RHYTHM_EXTRA_DIFFICULTIES = Object.freeze([
-  Object.freeze({ id:'HELL', maxScore:1100000 }),
+  Object.freeze({ id:'HELL', maxScore:1050000 }),
 ]);
 // 曲えらび・演奏・自己ベストで扱う難易度の全部(5難易度 + HELL)
 const RHYTHM_PLAY_DIFFICULTIES = Object.freeze([...RHYTHM_DIFFICULTIES, ...RHYTHM_EXTRA_DIFFICULTIES]);
@@ -103,7 +106,9 @@ const RHYTHM_SCORE_WEIGHTS = Object.freeze({ judgment:.9, combo:.1 });
 // 「EASY→B / NORMAL→A / HARD→S / EXPERT→SS / MASTER→M」に変え、Mは
 // MASTERの満点(100万点)でしか届かないようにしている。Gだけは0のまま(最下段なので
 // これ以上下げられない)。
+// MF(2026-10-12 社長の決定「105万のランク【MF】で」)は HELL の満点(105万)でだけ届く、M の1つ上
 const RHYTHM_RANKS = Object.freeze([
+  Object.freeze({ id:'MF', min:1050000 }),
   Object.freeze({ id:'M', min:1000000 }),
   Object.freeze({ id:'SS', min:900000 }),
   Object.freeze({ id:'S', min:800000 }),
@@ -29470,8 +29475,12 @@ const RHYTHM_RANKING_PREFIX='Rhythm';
 const RHYTHM_RANKING_SEPARATOR='-';
 // songId(monster_hero_theme_candidate等)はアンダースコアのみでハイフンを含まないため、
 // この区切り文字で3つに割ればsongIdを壊さず難易度idまで取り出せる
+// ランキング・合算・週間・相棒・イベントの上乗せ・ミッション・称号で数える難易度(2026-10-12 社長の決定で HELL も入れる)。
+// HELL は公開の印(RELEASE_FLAGS.rhythmHell)が真のときだけ(デバッグの「印が真だったら」では入れない=送らない)
+const rhythmScoredDifficultyIds=()=>(typeof rhythmHellReleased==='function'&&rhythmHellReleased())?[...RHYTHM_DEMO_DIFFICULTY_IDS,...RHYTHM_EXTRA_DIFFICULTIES.map(d=>d.id)]:RHYTHM_DEMO_DIFFICULTY_IDS;
+const rhythmScoredDifficulty=difficultyId=>rhythmScoredDifficultyIds().includes(difficultyId);
 const rhythmRankingDifficultyKey=(songId,difficultyId)=>{
-  if(!songId||!RHYTHM_DIFFICULTIES.some(d=>d.id===difficultyId))return null;
+  if(!songId||!rhythmScoredDifficulty(difficultyId))return null;
   return `${RHYTHM_RANKING_PREFIX}${RHYTHM_RANKING_SEPARATOR}${songId}${RHYTHM_RANKING_SEPARATOR}${difficultyId}`;
 };
 // ランキングキーから曲と難易度へ戻す。知らない形式や難易度はnull(既存キーとして扱わない)
@@ -29479,13 +29488,16 @@ const parseRhythmRankingDifficultyKey=(key)=>{
   const parts=String(key??'').trim().split(RHYTHM_RANKING_SEPARATOR);
   if(parts.length!==3||parts[0]!==RHYTHM_RANKING_PREFIX)return null;
   const [,songId,difficultyId]=parts;
-  if(!songId||!RHYTHM_DIFFICULTIES.some(d=>d.id===difficultyId))return null;
+  // 読むほうは HELL の行も受ける(公開前は送らないので、行は無い)
+  if(!songId||!RHYTHM_PLAY_DIFFICULTIES.some(d=>d.id===difficultyId))return null;
   return {songId,difficultyId};
 };
 // 「難易度合算」ランキングを取りに行くときに展開する、実在するキーの一覧。
 // 体験版で遊べる難易度(RHYTHM_DEMO_DIFFICULTY_IDS)だけを対象にする。
 // 将来EXPERT/MASTERを体験版へ追加したときは、そちらの定数を増やすだけで自動的に対象へ入る
-const rhythmRankingCombinedMembers=(songId)=>RHYTHM_DEMO_DIFFICULTY_IDS
+// HELL は、公開後に HELL の譜面がある曲だけ(RHYTHM_HELL_CHARTS)
+const rhythmRankingCombinedMembers=(songId)=>rhythmScoredDifficultyIds()
+  .filter(difficultyId=>RHYTHM_DIFFICULTIES.some(d=>d.id===difficultyId)||(typeof RHYTHM_HELL_CHARTS!=='undefined'&&!!RHYTHM_HELL_CHARTS[songId]))
   .map(difficultyId=>rhythmRankingDifficultyKey(songId,difficultyId))
   .filter(Boolean);
 // 1ページで受け取る生の行数、ユーザーごとに畳んだあと画面へ出す件数、
@@ -29542,9 +29554,13 @@ const rhythmRankingEntryFromRow=(row)=>{
 // ★曲数をどこにも書かない(docs/spec/RHYTHM_RANKING.md §5.1)。
 //   公開曲を1行足したら、分母も達成率も自動で付いてくる。数字を書き写した場所を作らない。
 const rhythmTotalRankingSongCount=(songs)=>rhythmDemoSongs(songs||[]).length;
-// 全曲すべてでMASTER満点を取ったときの合計(公開曲数 × MASTERの満点)
-const rhythmTotalRankingMaxScore=(songs)=>rhythmTotalRankingSongCount(songs)
-  *RHYTHM_DIFFICULTIES.reduce((max,d)=>Math.max(max,Number(d.maxScore)||0),0);
+// 全曲すべてでいちばん上の難易度の満点を取ったときの合計(曲ごとに、数える難易度のうち満点が最大のもの。
+// HELL の公開後は HELL の譜面がある曲だけ 105万、ほかは MASTER の 100万)
+const rhythmSongTopMaxScore=(songId)=>(typeof rhythmScoredDifficultyIds==='function'?rhythmScoredDifficultyIds():RHYTHM_DIFFICULTIES.map(d=>d.id))
+  .filter(id=>RHYTHM_DIFFICULTIES.some(d=>d.id===id)||(typeof RHYTHM_HELL_CHARTS!=='undefined'&&!!RHYTHM_HELL_CHARTS[songId]))
+  .reduce((max,id)=>Math.max(max,Number(((typeof RHYTHM_PLAY_DIFFICULTIES!=='undefined'?RHYTHM_PLAY_DIFFICULTIES:RHYTHM_DIFFICULTIES).find(d=>d.id===id)||{}).maxScore)||0),0);
+const rhythmTotalRankingMaxScore=(songs)=>rhythmDemoSongs(songs||[])
+  .reduce((sum,song)=>sum+rhythmSongTopMaxScore(song&&song.songId),0);
 // 理論満点に対してどこまで来たか(%)。曲が増えると誰の値も下がるが、それが正しい
 // (まだ遊んでいない曲があるということなので)
 const rhythmTotalRankingProgress=(totalScore,songs)=>{

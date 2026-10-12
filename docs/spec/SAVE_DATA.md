@@ -189,6 +189,7 @@
 | `mh_tactics_intro_seen_v1` | `true` / 未設定 | タクティクスバトルの導入会話を見たか(β公開後に1度だけ流す) |
 | `mh_rhythm_hell_story_seen_v1` | `true` / 未設定 | 難易度 HELL のお話「空まで届くビート」を見たか(2026-10-11。HELL の公開まで読み書きしない。デバッグから見たぶんは立てない) |
 | `mh_rhythm_hell_story_seen_preview_proto` | `true` / 未設定 | デバッグの「公開の印が真だったら」で HELL のお話を見たか(2026-10-12)。本番のキー `mh_rhythm_hell_story_seen_v1` とは別にして、試した人が公開のときに見そびれないようにする |
+| `mh_rhythm_hell_best_rescaled_v1` | `true` / 未設定 | 一度きりの移行の完了の印(2026-10-12)。HELL の満点を 110万→105万にしたので、`mh_rhythm_best_v1` の各曲の `HELL.bestScore` を一度だけ 105/110 倍(切り捨て)に縮める。印を先に立ててから書き直すので二重に縮めない。5難易度の記録には触らない。記録が無い端末にも印だけ立つ(起動時の移行・60-app.jsx。計算は `rescaleRhythmHellBestScores`) |
 | `mh_rhythm_hell_preview_proto` | `'1'` / 未設定 | デバッグ専用。HELL の「公開の印が真だったら」を試す(2026-10-12)。本番の印 `RELEASE_FLAGS.rhythmHell` は変えない |
 | `mh_sky_box_look_proto` | `'z'`・`'a'`・`'c'` / 未設定 | デバッグ専用。SKY TAP の見た目の案を見比べるための選択(2026-10-11)。未設定なら既定の案B(赤い板・社長の決定)。ふつうのプレイは書かない |
 | `mh_sky_lane_look_proto` | `'none'`・`'a'`〜`'c'`・`'d1l'`・`'d1m'`・`'d2l'`・`'d2m'`・`'el'`・`'elp'` / 未設定 | デバッグ専用。空中のレーンの見せ方の案を見比べるための選択(2026-10-11)。未設定なら案E はっきり(`'em'`・2026-10-12 社長の決定で既定。それまでは「なし」)。ふつうのプレイは書かない |

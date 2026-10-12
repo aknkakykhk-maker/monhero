@@ -45,6 +45,8 @@ check('プロフィールフレームの正規化を抽出できる',frameBlock.
 const context={};
 vm.createContext(context);
 vm.runInContext(
+  // HELL の公開の印を切り替えて確かめるための代わり(本物は RELEASE_FLAGS.rhythmHell を読む)
+  `var __hellOn=false;const rhythmHellReleased=()=>__hellOn;const RHYTHM_HELL_CHARTS={sheriruth:{}};\n`+
   `${frameBlock}\n${difficultiesBlock}\n${demoIdsLine}\n${rankingBlock}\n`+
   `this.out={RHYTHM_RANKING_PREFIX,RHYTHM_RANKING_SEPARATOR,RHYTHM_DEMO_DIFFICULTY_IDS,rhythmRankingDifficultyKey,parseRhythmRankingDifficultyKey,rhythmRankingCombinedMembers,rhythmRankingDedupeByUser,rhythmRankingEntryFromRow,RHYTHM_RANKING_FETCH_LIMIT,RHYTHM_RANKING_DISPLAY_LIMIT};`,
   context
@@ -52,6 +54,15 @@ vm.runInContext(
 const {RHYTHM_RANKING_PREFIX,RHYTHM_DEMO_DIFFICULTY_IDS,rhythmRankingDifficultyKey,parseRhythmRankingDifficultyKey,rhythmRankingCombinedMembers,rhythmRankingDedupeByUser,rhythmRankingEntryFromRow,RHYTHM_RANKING_FETCH_LIMIT,RHYTHM_RANKING_DISPLAY_LIMIT}=context.out;
 
 check('キーの接頭辞はRhythm',RHYTHM_RANKING_PREFIX==='Rhythm');
+// HELL(2026-10-12 社長の決定でランキングに入れる)。公開の印が偽なら送らない・真なら送る
+check('HELL: 公開の印が偽ならキーを作らない(送らない)',rhythmRankingDifficultyKey('sheriruth','HELL')===null);
+check('HELL: 公開の印が偽なら合算のキーに入らない',!rhythmRankingCombinedMembers('sheriruth').some(k=>/-HELL$/.test(k)));
+vm.runInContext('__hellOn=true',context);
+check('HELL: 公開の印が真ならキーを作る',rhythmRankingDifficultyKey('sheriruth','HELL')==='Rhythm-sheriruth-HELL');
+check('HELL: 公開の印が真なら、HELL の譜面がある曲だけ合算のキーに入る',
+  rhythmRankingCombinedMembers('sheriruth').includes('Rhythm-sheriruth-HELL')&&!rhythmRankingCombinedMembers('other_song').some(k=>/-HELL$/.test(k)));
+check('HELL: 送った行は読める(曲と難易度へ戻る)',JSON.stringify(parseRhythmRankingDifficultyKey('Rhythm-sheriruth-HELL'))===JSON.stringify({songId:'sheriruth',difficultyId:'HELL'}));
+vm.runInContext('__hellOn=false',context);
 check('キー生成: songId+難易度idからRhythm-<song>-<難易度>を作る',
   rhythmRankingDifficultyKey('monster_hero_theme_candidate','HARD')==='Rhythm-monster_hero_theme_candidate-HARD');
 check('キー生成: 知らない難易度idはnull',rhythmRankingDifficultyKey('song','UNKNOWN')===null);

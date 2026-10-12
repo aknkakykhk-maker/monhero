@@ -542,6 +542,8 @@ const RHYTHM_RANK_COLORS = Object.freeze({
   G:'text-slate-400', F:'text-purple-300', E:'text-cyan-300', D:'text-teal-300',
   C:'text-green-300', B:'text-pink-300', A:'text-red-400', S:'text-yellow-400',
   SS:'text-yellow-200', M:'text-fuchsia-300',
+  // MF は HELL の満点でだけ届く最上位(2026-10-12)。間合い適性には無い記号なので、ほかのランクと重ならない橙にする
+  MF:'text-orange-300',
 });
 const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   bgmVolume:100, noteSpeed:6, noteSize:100, noteStartPosition:0, displayTimingOffsetMs:0, judgmentTimingOffsetMs:0,
@@ -699,6 +701,22 @@ const normalizeRhythmBestRecord = value => {
     played:source.played===true||source.clear===true,clear:source.clear===true,
     fullCombo:source.fullCombo===true,allExcellent:source.allExcellent===true,allMarvelous:source.allMarvelous===true,
     judgments:Object.fromEntries(RHYTHM_JUDGMENT_IDS.map(id=>[id,count(source.judgments?.[id]??source[id])])),};
+};
+// HELL の満点を 110万→105万にした(2026-10-12 社長の決定)。110万満点のころにデバッグで付いた HELL の自己ベストを、
+// 一度だけ 105/110 に縮める(新しい満点の上を超えないように。割合はそのまま)。5難易度の記録には触らない。
+// 二重に縮めないよう、先に完了の印(新しいキー)を立ててから記録を書き直す。印は記録が無い端末にも立てる
+const RHYTHM_HELL_BEST_RESCALED_KEY = 'mh_rhythm_hell_best_rescaled_v1';
+const rescaleRhythmHellBestScores = value => {
+  const source=value&&typeof value==='object'&&!Array.isArray(value)?value:null;
+  if(!source)return {changed:false,next:value};
+  let changed=false;const next={...source};
+  Object.keys(source).forEach(songId=>{
+    const rec=source[songId],hell=rec&&typeof rec==='object'&&!Array.isArray(rec)?rec.HELL:null;
+    const score=hell&&typeof hell==='object'?Number(hell.bestScore):NaN;
+    if(!Number.isFinite(score)||score<=0)return;
+    next[songId]={...rec,HELL:{...hell,bestScore:Math.floor(score*1050000/1100000)}};changed=true;
+  });
+  return {changed,next};
 };
 const normalizeRhythmBestRecords = value => {
   const source=value&&typeof value==='object'&&!Array.isArray(value)?value:{};

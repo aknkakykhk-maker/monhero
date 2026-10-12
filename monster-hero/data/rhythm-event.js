@@ -516,8 +516,10 @@ const rhythmEventPointExchangePreview = ({ offer, eventPoints=0, gold=0, ownedIt
 //   「加点すれば50位以内に入るはずの人」が一覧から消える(並べ替えはサーバーがしている)。
 //   実体は docs/sql/rankings/RHYTHM_EVENT_BONUS_APPLY.sql。
 // ★ここの数字を変えても**SQLは流し直さない**。割合は問い合わせのたびに渡している。
+// HELL(2026-10-12 社長の決定でイベントの上乗せにも入れる)は MASTER の次の段(+0.2%刻みの続き)。
+// HELL の行は公開の印が真になるまで送られないので、それまでは効かない
 const RHYTHM_EVENT_PLAY_BONUS_RATES = Object.freeze({
-  EASY: 0.001, NORMAL: 0.002, HARD: 0.003, EXPERT: 0.005, MASTER: 0.007,
+  EASY: 0.001, NORMAL: 0.002, HARD: 0.003, EXPERT: 0.005, MASTER: 0.007, HELL: 0.009,
 });
 // そのイベントで回数ボーナスを使うか。使わないイベント(週間など)では null を返し、
 // 呼ぶ側は加点なしの集計へ回る
