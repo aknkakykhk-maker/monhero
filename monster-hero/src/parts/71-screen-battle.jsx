@@ -663,7 +663,10 @@ const BattleMonsterFx = ({ fx, imgSrc, monId, calm = false }) => {
   const volt = fx.exEffect === 'stage' && fx.voltage ? fx.voltage : null;
   const after = fx.exEffect === 'dodgeCombo' ? n(fx.dodges, T.afterimage.max) : 0;
   const thunder = fx.exEffect === 'thunder' && fx.thunder ? fx.thunder : null;
-  if (!clones && !pr && !style && !aura && !gloves && !volt && !after && !thunder) return null;
+  // 区切り3
+  const scatter = fx.exEffect && T.scatter[monId] ? T.scatter[monId] : null;
+  const leaves = n(fx.leafShield, T.leafShield.max);
+  if (!clones && !pr && !style && !aura && !gloves && !volt && !after && !thunder && !scatter && !leaves) return null;
   const fading = Number(fx.exTurns) === 1;
   return (
     <div data-monster-fx className={`mh-mfx pointer-events-none${calm ? ' is-calm' : ''}`} aria-hidden="true">
@@ -687,6 +690,10 @@ const BattleMonsterFx = ({ fx, imgSrc, monId, calm = false }) => {
         </span>
       )}
       {style && <span data-mfx-sword={style} className="mh-mfx-sword">{T.swordStyle[style]}</span>}
+      {scatter && (scatter.kind === 'ring'
+        ? <span data-mfx-scatter="ring" className="mh-mfx-ring" style={{ '--mfx-c': scatter.color }}/>
+        : <span data-mfx-scatter={scatter.kind} className={`mh-mfx-scatter is-${scatter.kind}`}>{scatter.marks.map((m, k) => <i key={k} className={`s${k}`}>{m}</i>)}</span>)}
+      {leaves > 0 && <span data-mfx-leaf={leaves} className="mh-mfx-leaf">{Array.from({ length: leaves }, (_, k) => <i key={k}>{T.leafShield.mark}</i>)}</span>}
     </div>
   );
 };

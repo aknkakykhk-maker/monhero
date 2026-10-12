@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 14d17f8f9741b4f6
+// generated-sha256: 588089901d98b6ff
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-12 16:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-12 16:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -12185,6 +12185,17 @@ const BATTLE_MONSTER_FX = Object.freeze({
   afterimage: Object.freeze({ max:3, color:'#ef4444' }),
   // ライガー(雷狼影): ためる間は雷の数だけ ⚡、雷纏のあいだは体に稲妻をまとう
   thunder: Object.freeze({ mark:'⚡', max:5, color:'#facc15' }),
+  // ---- 区切り3(2026-10-12): EXが効いているあいだ、絵のまわりに舞う・回るもの ----
+  //   kind … petals(上から舞い落ちる) / orbit(まわりを回る) / feathers(ゆっくり落ちる) / ring(後ろで回る輪) / sweets(跳ねる)
+  scatter: Object.freeze({
+    Eiki:    Object.freeze({ kind:'petals',   marks:Object.freeze(['🌸', '🌸', '🌸']) }),       // 緋桜瞬歩
+    Pixie:   Object.freeze({ kind:'orbit',    marks:Object.freeze(['✨', '⭐', '✨']) }),        // お気に入りの魔法
+    Iblis:   Object.freeze({ kind:'feathers', marks:Object.freeze(['🪶', '🪶', '🪶']) }),        // 堕天の烙印(黒い羽根)
+    Ark:     Object.freeze({ kind:'ring',     marks:Object.freeze([]), color:'#fbbf24' }),       // 抗えぬ宿命を追え(輪廻の環)
+    MelWhip: Object.freeze({ kind:'sweets',   marks:Object.freeze(['🍬', '🍰', '🍭']) }),       // スイーツパラダイス
+  }),
+  // ユグドラシル(世界樹の守り): 味方全員の枠に葉っぱの盾。残りターンの数だけ葉が付く
+  leafShield: Object.freeze({ mark:'🍃', max:3 }),
 });
 const BATTLE_STACK_MARK_ORDER = Object.freeze(Object.keys(BATTLE_STACK_MARKS));
 // { kind: 数 } から、出す順に並べた [{ kind, count, mark, img, label }] を作る。知らない種類・0は出さない。
@@ -36992,7 +37003,10 @@ const BattleMonsterFx = ({ fx, imgSrc, monId, calm = false }) => {
   const volt = fx.exEffect === 'stage' && fx.voltage ? fx.voltage : null;
   const after = fx.exEffect === 'dodgeCombo' ? n(fx.dodges, T.afterimage.max) : 0;
   const thunder = fx.exEffect === 'thunder' && fx.thunder ? fx.thunder : null;
-  if (!clones && !pr && !style && !aura && !gloves && !volt && !after && !thunder) return null;
+  // 区切り3
+  const scatter = fx.exEffect && T.scatter[monId] ? T.scatter[monId] : null;
+  const leaves = n(fx.leafShield, T.leafShield.max);
+  if (!clones && !pr && !style && !aura && !gloves && !volt && !after && !thunder && !scatter && !leaves) return null;
   const fading = Number(fx.exTurns) === 1;
   return (
     <div data-monster-fx className={`mh-mfx pointer-events-none${calm ? ' is-calm' : ''}`} aria-hidden="true">
@@ -37016,6 +37030,10 @@ const BattleMonsterFx = ({ fx, imgSrc, monId, calm = false }) => {
         </span>
       )}
       {style && <span data-mfx-sword={style} className="mh-mfx-sword">{T.swordStyle[style]}</span>}
+      {scatter && (scatter.kind === 'ring'
+        ? <span data-mfx-scatter="ring" className="mh-mfx-ring" style={{ '--mfx-c': scatter.color }}/>
+        : <span data-mfx-scatter={scatter.kind} className={`mh-mfx-scatter is-${scatter.kind}`}>{scatter.marks.map((m, k) => <i key={k} className={`s${k}`}>{m}</i>)}</span>)}
+      {leaves > 0 && <span data-mfx-leaf={leaves} className="mh-mfx-leaf">{Array.from({ length: leaves }, (_, k) => <i key={k}>{T.leafShield.mark}</i>)}</span>}
     </div>
   );
 };
@@ -56416,6 +56434,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       if(eff==='stage'){ const v=tacticsExVoltageOf(tacticsExState,tacticsUnits,tacticsExNow); if(v) out.voltage={ value:v.voltage, max:v.max }; }
       if(eff==='thunder'){ const th=tacticsExThunderOf(tacticsExState,tacticsUnits,slotIdx,tacticsExNow); if(th) out.thunder={ phase:th.phase, charge:th.charge }; }
       if(eff==='dodgeCombo') out.dodges=tacticsSafeInt(normalizeTacticsExState(tacticsExState).effects?.[slotIdx]?.dodges,0);
+    }
+    // 区切り3: 世界樹の守り(ユグドラシル)は味方全員に効くので、だれが使っても全員の枠へ「あと何ターン」を渡す
+    for(let j=0;j<tacticsUnits.length;j++){
+      const u=tacticsUnits[j]; if(!u) continue;
+      if(tacticsExActiveEffect(tacticsExState,j,u.id,tacticsExNow)!=='partyGuard') continue;
+      const d=raidExDefOf(u.id), r=d?tacticsExRemainOf(d,tacticsExState,j,u.id,tacticsExNow):null;
+      out.leafShield=Math.max(out.leafShield||0, r&&r.turns>0?r.turns:1);
     }
     return out;
   };
