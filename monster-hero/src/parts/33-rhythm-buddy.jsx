@@ -23,7 +23,11 @@ const RHYTHM_BUDDY_LEVEL_MAX = 100;
 const RHYTHM_BUDDY_TRAIT_LEVEL = 30;
 // 1体が覚えておく曲の数(なじみ)。超えたら回数の少ない曲から忘れる
 const RHYTHM_BUDDY_SONG_KEEP = 80;
-const RHYTHM_BUDDY_DIFF_IDS = Object.freeze(['EASY', 'NORMAL', 'HARD', 'EXPERT', 'MASTER']);
+// HELL は 2026-10-12 社長の決定で相棒にも入れる(保存の形は項目が1つ増えるだけ。既存の5難易度の値は変えない)。
+// 画面とランキングへ出すのは公開の印が真のときだけ(rhythmBuddyShownDiffIds)
+const RHYTHM_BUDDY_DIFF_IDS = Object.freeze(['EASY', 'NORMAL', 'HARD', 'EXPERT', 'MASTER', 'HELL']);
+const rhythmBuddyShownDiffIds = () => ((typeof rhythmHellReleased === 'function' && rhythmHellReleased())
+  ? RHYTHM_BUDDY_DIFF_IDS : RHYTHM_BUDDY_DIFF_IDS.filter((id) => id !== 'HELL'));
 // 相棒が取ったスコアを覚えておく回数(伸びのグラフ)
 const RHYTHM_BUDDY_RECENT_KEEP = 30;
 // 長い曲(のんびり屋が育つ・強い)のしきい
@@ -332,7 +336,7 @@ const rhythmBuddyTraitScores = (mon, lean) => {
   const total = Math.max(1, m.lives);
   const share = (n) => Math.min(1, n / total);
   const low = share(m.diffs.EASY + m.diffs.NORMAL + m.diffs.HARD);
-  const high = share(m.diffs.EXPERT + m.diffs.MASTER);
+  const high = share(m.diffs.EXPERT + m.diffs.MASTER + m.diffs.HELL);
   const topDiff = share(Math.max(...RHYTHM_BUDDY_DIFF_IDS.map((id) => m.diffs[id])));
   const variety = Math.min(1, Object.keys(m.songs).length / total * 1.5);
   const scores = {
@@ -402,7 +406,7 @@ const rhythmBuddyAccuracy = ({ mon, songId, diffId, durationMs, mood, chartLevel
   const d = Math.max(0, RHYTHM_BUDDY_DIFF_IDS.indexOf(diffId));
   const mastery = rhythmBuddyMastery(m.diffs[RHYTHM_BUDDY_DIFF_IDS[d]]);
   // 譜面のLv.が分からないときは、難易度の種類からだいたいの値を使う
-  const chartLv = Number(chartLevel) > 0 ? Number(chartLevel) : [7, 9, 14, 19, 26][d];
+  const chartLv = Number(chartLevel) > 0 ? Number(chartLevel) : [7, 9, 14, 19, 26, 32][d];
   // はじめのうちほど大きく伸び、育ちきると人より上手
   let acc = 0.68 + 0.27 * rhythmBuddyGrowthRate(level);
   // 遊んだ曲ほど得意になる(2026-10-07・ユーザー指示)。最大 +0.06(無理なく叩けるLv.も最大+5)

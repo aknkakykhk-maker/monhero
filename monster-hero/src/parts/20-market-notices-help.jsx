@@ -622,7 +622,8 @@ const helpDataRows = (id) => {
     // イベントの回数ボーナス。難易度ごとの割合を実データから出す
     // (ヘルプへ手で書き写すと、割合を変えたときに古いままになる)
     case 'rhythmEventPlayBonus':
-      return RHYTHM_DEMO_DIFFICULTY_IDS.map(id =>
+      // HELL は公開の印が真のときだけ並ぶ(rhythmScoredDifficultyIds)
+      return (typeof rhythmScoredDifficultyIds === 'function' ? rhythmScoredDifficultyIds() : RHYTHM_DEMO_DIFFICULTY_IDS).map(id =>
         [RHYTHM_DEMO_DIFFICULTY_LABELS[id]?.name || id, rhythmEventPlayBonusPercentText(id)]);
     // 極限チャレンジの難易度。閲覧可能な準備中難易度も倍率は実データから出す
     case 'extremeDifficulties':
