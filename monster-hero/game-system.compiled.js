@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a493509f60d6574f
+// source-sha256: d267e9bce23d1995
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-12 21:22";
+const BUILD_DATE = "2026-10-12 21:32";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -31541,7 +31541,7 @@ function RhythmSkyReachAdaptSwitch() {
   const [on, setOn] = useState(() => !!RHYTHM_SKY_REACH_ADAPT.on);
   const set = v => {
     try {
-      if (v) localStorage.setItem('mh_sky_reach_adapt_proto', '1');else localStorage.removeItem('mh_sky_reach_adapt_proto');
+      localStorage.setItem('mh_sky_reach_adapt_proto', v ? '1' : '0');
     } catch (e) {}
     RHYTHM_SKY_REACH_ADAPT.on = v;
     RHYTHM_SKY_REACH_ADAPT.reset();
@@ -31554,9 +31554,9 @@ function RhythmSkyReachAdaptSwitch() {
     className: "text-xs font-black text-rose-100"
   }, "空中の受け付けを構えに合わせる(試作・見比べ用)"), React.createElement("p", {
     className: "mt-1 text-[10px] font-bold text-rose-200/80"
-  }, "親指で判定ラインより下を押す人は、空中へ指を上げきれずに空中のノーツが取れないことがあります。入にすると、地上を押す深さのぶんだけ空中の受け付けの境目を下げます。空中のある HELL だけに効きます。"), React.createElement("div", {
+  }, "親指で判定ラインより下を押す人は、空中へ指を上げきれずに空中のノーツが取れないことがあります。入(既定)のときは、地上を押す深さのぶんだけ空中の受け付けの境目を下げます。空中のある HELL だけに効きます。"), React.createElement("div", {
     className: "mt-2 grid grid-cols-2 gap-2"
-  }, [[false, '切(いま)'], [true, '入']].map(([v, label]) => React.createElement("button", {
+  }, [[false, '切'], [true, '入(既定)']].map(([v, label]) => React.createElement("button", {
     key: label,
     type: "button",
     "data-rhythm-sky-reach-adapt-pick": v ? 'on' : 'off',
@@ -31656,33 +31656,19 @@ function RhythmJudgeTextPosSwitch() {
 }
 function RhythmSkyTapDistinctSwitch() {
   const [value, setValue] = useState(() => RHYTHM_SKY_TAP_DISTINCT.id);
-  const [flick, setFlick] = useState(() => {
-    try {
-      return localStorage.getItem('mh_flick_up_color_proto') || 'pink';
-    } catch (e) {
-      return 'pink';
-    }
-  });
+  const [skyColor, setSkyColor] = useState(() => RHYTHM_SKY_NOTE_COLOR.id);
   const pick = v => {
     RHYTHM_SKY_TAP_DISTINCT.set(v);
     setValue(RHYTHM_SKY_TAP_DISTINCT.id);
   };
-  const pickFlick = v => {
-    try {
-      if (v === 'pink') localStorage.removeItem('mh_flick_up_color_proto');else localStorage.setItem('mh_flick_up_color_proto', v);
-    } catch (e) {}
-    setFlick(v);
+  const pickSkyColor = v => {
+    RHYTHM_SKY_NOTE_COLOR.set(v);
+    setSkyColor(RHYTHM_SKY_NOTE_COLOR.id);
   };
-  const [monsterLook, setMonsterLook] = useState(() => {
-    try {
-      return localStorage.getItem('mh_monster_note_gold_proto') || 'now';
-    } catch (e) {
-      return 'now';
-    }
-  });
+  const [monsterLook, setMonsterLook] = useState(() => RHYTHM_MONSTER_GOLD_ID);
   const pickMonsterLook = v => {
     try {
-      if (v === 'now') localStorage.removeItem('mh_monster_note_gold_proto');else localStorage.setItem('mh_monster_note_gold_proto', v);
+      if (v === RHYTHM_MONSTER_GOLD_DEFAULT) localStorage.removeItem('mh_monster_note_gold_proto');else localStorage.setItem('mh_monster_note_gold_proto', v);
     } catch (e) {}
     setMonsterLook(v);
   };
@@ -31701,14 +31687,14 @@ function RhythmSkyTapDistinctSwitch() {
     className: "text-xs font-black text-rose-100"
   }, "空中のタップと上フリックの見分け(試作・見比べ用)"), React.createElement("p", {
     className: "mt-1 text-[10px] font-bold text-rose-200/80"
-  }, "空中のタップの板(演奏を始め直すと効く)と、上フリックの色・マスモンのノーツの金色(どちらも読み込み直すと効く)を変えます。水色・青・緑・紫・オレンジ・黄緑とはぶつけていません(レモン黄は金と近いので、マスモンの金とは組みません)。"), React.createElement("div", {
+  }, "上から、空中のタップの板/空中のノーツの色の組(タップ・右手の長押し。組は板の案より先に効く)/マスモンのノーツの金色。上の2つは演奏を始め直すと、金色は読み込み直すと効きます。上フリックはピンクのままで、水色・青・緑・紫・オレンジ・黄緑・金とはぶつけていません。"), React.createElement("div", {
     className: "mt-2 grid grid-cols-2 gap-2"
   }, Object.keys(RHYTHM_SKY_TAP_DISTINCT_LABELS).map(v => btn(value === v, RHYTHM_SKY_TAP_DISTINCT_LABELS[v], () => pick(v), v, {
     'data-rhythm-sky-tap-distinct-pick': v
   }))), React.createElement("div", {
-    className: "mt-2 grid grid-cols-3 gap-2"
-  }, Object.keys(RHYTHM_FLICK_UP_LABELS).map(v => btn(flick === v, RHYTHM_FLICK_UP_LABELS[v], () => pickFlick(v), v, {
-    'data-rhythm-flick-up-color-pick': v
+    className: "mt-2 grid grid-cols-2 gap-2"
+  }, Object.keys(RHYTHM_SKY_NOTE_COLOR_LABELS).map(v => btn(skyColor === v, RHYTHM_SKY_NOTE_COLOR_LABELS[v], () => pickSkyColor(v), v, {
+    'data-rhythm-sky-note-color-pick': v
   }))), React.createElement("div", {
     className: "mt-2 grid grid-cols-3 gap-2"
   }, Object.keys(RHYTHM_MONSTER_GOLD_LABELS).map(v => btn(monsterLook === v, RHYTHM_MONSTER_GOLD_LABELS[v], () => pickMonsterLook(v), v, {
