@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1d846925c527121b
+// generated-sha256: 4b047884167be05f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-12 13:42"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-12 14:07"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5199,6 +5199,10 @@ const Audio_ = (() => {
   let ctxTimeMark = null, ctxRebuildCount = 0, toneLoadFailed = false;
   const buffers = new Map();
   const loadingBuffers = new Map();
+  // 解いた音の大きさの数え(読み込み直しの記録に残す。メモリ不足の原因を探る手がかり)。
+  //   decodedBytes … 起動してから解いた音の合計(手放して読み直した分も足していく) / decodedCount … 解いた回数
+  let decodedBytes = 0, decodedCount = 0;
+  const bufferBytes = (buffer) => { try { return Math.max(0, Math.floor(buffer.length * buffer.numberOfChannels * 4)); } catch (e) { return 0; } };
   // ★曲えらびの試聴と演奏で読んだ曲の音は、直近の数曲ぶんだけ持っておく(2026-09-27 の点検で見つけた)。
   //   解いた音は1曲で数十〜百MBあり、以前は一度読んだら二度と捨てなかったので、試聴しながら
   //   何曲も眺めるだけで数百MBに増え、iPhone ではメモリ不足で落ちる・発熱の原因になり得た。
@@ -5465,7 +5469,7 @@ const Audio_ = (() => {
     const request = fetch(audioUrlWithKey(url), { cache: 'force-cache' }).then((res) => {
       if (!res.ok) throw new Error(`audio fetch failed: ${res.status}`);
       return res.arrayBuffer();
-    }).then((data) => decode(ctx, data)).then((buffer) => { buffers.set(url, buffer); return buffer; })
+    }).then((data) => decode(ctx, data)).then((buffer) => { buffers.set(url, buffer); decodedBytes += bufferBytes(buffer); decodedCount += 1; return buffer; })
       .finally(() => loadingBuffers.delete(url));
     loadingBuffers.set(url, request);
     return request;
@@ -5800,6 +5804,11 @@ const Audio_ = (() => {
       bgmVolumePct, seVolumePct,
       // 持っている解いた音の数と、そのうち試聴・演奏で読んだ曲の数(直近 SONG_BUFFER_KEEP 曲まで)
       bufferCount: buffers.size, songBufferCount: songBufferOrder.length,
+      // 持っている曲の名前(古い順)。同じ曲を手放しては読み直していないかを調べるための読み取り
+      songBufferNames: songBufferOrder.map(url => String(url).split('/').pop()),
+      // 持っている音の大きさ(MB)と、起動してから解いた合計(MB)・回数。同じ曲を手放しては読み直すと、後ろの2つだけが増え続ける
+      keptAudioMB: Math.round([...buffers.values()].reduce((sum, b) => sum + bufferBytes(b), 0) / 1048576),
+      decodedMB: Math.round(decodedBytes / 1048576), decodeCount: decodedCount,
       ctxState: ctx ? ctx.state : 'none',
       sampleRate: ctx ? Math.round(ctx.sampleRate) : 0,
       // getAudioCtx()を呼ばない(見ただけで出口を作らない)。作る前は判定しようがないので false。
@@ -29713,6 +29722,8 @@ const normalizeSessionMarker = (value) => {
     screen: typeof value.screen === 'string' ? value.screen.slice(0, 40) : '',
     audioBuffers: reloadNum(value.audioBuffers),
     heapMB: reloadNum(value.heapMB),
+    // 音の大きさ(MB): 持っている分 / 起動してから解いた合計 / 解いた回数。無い(古い印)は null
+    audioMB: reloadNum(value.audioMB), decodedMB: reloadNum(value.decodedMB), decodeCount: reloadNum(value.decodeCount),
     nav: typeof value.nav === 'string' ? value.nav.slice(0, 20) : '',
   };
 };
@@ -29728,6 +29739,7 @@ const normalizeReloadLog = (value) => (Array.isArray(value) ? value : []).map(en
     screen: typeof entry.screen === 'string' ? entry.screen.slice(0, 40) : '',
     audioBuffers: reloadNum(entry.audioBuffers),
     heapMB: reloadNum(entry.heapMB),
+    audioMB: reloadNum(entry.audioMB), decodedMB: reloadNum(entry.decodedMB), decodeCount: reloadNum(entry.decodeCount),
     nav: typeof entry.nav === 'string' ? entry.nav.slice(0, 20) : '',
   };
 }).filter(Boolean).slice(0, RELOAD_LOG_LIMIT);
@@ -29744,6 +29756,7 @@ const buildReloadLogEntry = (previous, now, nav = '') => {
     screen: prev.screen,
     audioBuffers: prev.audioBuffers,
     heapMB: prev.heapMB,
+    audioMB: prev.audioMB, decodedMB: prev.decodedMB, decodeCount: prev.decodeCount,
     nav: String(nav || '').slice(0, 20),
   };
 };
@@ -29754,7 +29767,7 @@ const reloadWriteJson = (key, value) => { try { window.localStorage.setItem(key,
 const describeReloadLogEntry = (entry) => {
   const when = new Date(entry.at).toLocaleString('ja-JP', { timeZone:'Asia/Tokyo', month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' });
   const head = entry.kind === 'background' ? '裏に回ったあと読み込み直された' : '遊んでいる最中に読み込み直された';
-  const parts = [`${entry.minutes}分遊んだあと`, entry.screen ? `画面 ${entry.screen}` : '', Number.isFinite(entry.audioBuffers) ? `音のデータ ${entry.audioBuffers}本` : '', Number.isFinite(entry.heapMB) ? `メモリ ${entry.heapMB}MB` : ''].filter(Boolean);
+  const parts = [`${entry.minutes}分遊んだあと`, entry.screen ? `画面 ${entry.screen}` : '', Number.isFinite(entry.audioBuffers) ? `音のデータ ${entry.audioBuffers}本${Number.isFinite(entry.audioMB) ? `(${entry.audioMB}MB)` : ''}` : '', Number.isFinite(entry.decodedMB) ? `音を解いた合計 ${entry.decodedMB}MB・${Number.isFinite(entry.decodeCount) ? entry.decodeCount : '?'}回` : '', Number.isFinite(entry.heapMB) ? `メモリ ${entry.heapMB}MB` : ''].filter(Boolean);
   return `${when} 起動 — ${head}(${parts.join('・')})`;
 };
 // 音の設定の「音が出ないとき」の下に出す、前回までの記録(読み取りだけ。端末の外へは出さない)。
@@ -49949,12 +49962,18 @@ function MonsterHeroGame() {
     try { const e = window.performance.getEntriesByType('navigation')[0]; nav = e && e.type ? e.type : ''; } catch (e) {}
     const entry = buildReloadLogEntry(reloadReadJson(RELOAD_MARKER_KEY), startedAt, nav);
     if (entry) reloadWriteJson(RELOAD_LOG_KEY, pushReloadLog(reloadReadJson(RELOAD_LOG_KEY), entry));
-    const marker = { id:`${startedAt.toString(36)}${Math.floor(Math.random() * 1e6).toString(36)}`, startedAt, lastBeat:startedAt, state:'running', screen:'', audioBuffers:null, heapMB:null, nav };
+    const marker = { id:`${startedAt.toString(36)}${Math.floor(Math.random() * 1e6).toString(36)}`, startedAt, lastBeat:startedAt, state:'running', screen:'', audioBuffers:null, heapMB:null, audioMB:null, decodedMB:null, decodeCount:null, nav };
     const write = (state) => {
       marker.lastBeat = Math.max(marker.startedAt, Date.now());
       marker.state = state;
       marker.screen = String(gameStateForBackRef.current || '');
-      try { const d = Audio_.diagnose(); marker.audioBuffers = Number.isFinite(d && d.bufferCount) ? d.bufferCount : null; } catch (e) {}
+      try {
+        const d = Audio_.diagnose();
+        marker.audioBuffers = Number.isFinite(d && d.bufferCount) ? d.bufferCount : null;
+        marker.audioMB = Number.isFinite(d && d.keptAudioMB) ? d.keptAudioMB : null;
+        marker.decodedMB = Number.isFinite(d && d.decodedMB) ? d.decodedMB : null;
+        marker.decodeCount = Number.isFinite(d && d.decodeCount) ? d.decodeCount : null;
+      } catch (e) {}
       try { const m = window.performance && window.performance.memory; marker.heapMB = m && Number.isFinite(m.usedJSHeapSize) ? Math.round(m.usedJSHeapSize / 1048576) : null; } catch (e) {}
       reloadWriteJson(RELOAD_MARKER_KEY, marker);
     };

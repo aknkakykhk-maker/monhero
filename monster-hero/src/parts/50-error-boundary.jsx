@@ -74,6 +74,8 @@ const normalizeSessionMarker = (value) => {
     screen: typeof value.screen === 'string' ? value.screen.slice(0, 40) : '',
     audioBuffers: reloadNum(value.audioBuffers),
     heapMB: reloadNum(value.heapMB),
+    // 音の大きさ(MB): 持っている分 / 起動してから解いた合計 / 解いた回数。無い(古い印)は null
+    audioMB: reloadNum(value.audioMB), decodedMB: reloadNum(value.decodedMB), decodeCount: reloadNum(value.decodeCount),
     nav: typeof value.nav === 'string' ? value.nav.slice(0, 20) : '',
   };
 };
@@ -89,6 +91,7 @@ const normalizeReloadLog = (value) => (Array.isArray(value) ? value : []).map(en
     screen: typeof entry.screen === 'string' ? entry.screen.slice(0, 40) : '',
     audioBuffers: reloadNum(entry.audioBuffers),
     heapMB: reloadNum(entry.heapMB),
+    audioMB: reloadNum(entry.audioMB), decodedMB: reloadNum(entry.decodedMB), decodeCount: reloadNum(entry.decodeCount),
     nav: typeof entry.nav === 'string' ? entry.nav.slice(0, 20) : '',
   };
 }).filter(Boolean).slice(0, RELOAD_LOG_LIMIT);
@@ -105,6 +108,7 @@ const buildReloadLogEntry = (previous, now, nav = '') => {
     screen: prev.screen,
     audioBuffers: prev.audioBuffers,
     heapMB: prev.heapMB,
+    audioMB: prev.audioMB, decodedMB: prev.decodedMB, decodeCount: prev.decodeCount,
     nav: String(nav || '').slice(0, 20),
   };
 };
@@ -115,7 +119,7 @@ const reloadWriteJson = (key, value) => { try { window.localStorage.setItem(key,
 const describeReloadLogEntry = (entry) => {
   const when = new Date(entry.at).toLocaleString('ja-JP', { timeZone:'Asia/Tokyo', month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' });
   const head = entry.kind === 'background' ? '裏に回ったあと読み込み直された' : '遊んでいる最中に読み込み直された';
-  const parts = [`${entry.minutes}分遊んだあと`, entry.screen ? `画面 ${entry.screen}` : '', Number.isFinite(entry.audioBuffers) ? `音のデータ ${entry.audioBuffers}本` : '', Number.isFinite(entry.heapMB) ? `メモリ ${entry.heapMB}MB` : ''].filter(Boolean);
+  const parts = [`${entry.minutes}分遊んだあと`, entry.screen ? `画面 ${entry.screen}` : '', Number.isFinite(entry.audioBuffers) ? `音のデータ ${entry.audioBuffers}本${Number.isFinite(entry.audioMB) ? `(${entry.audioMB}MB)` : ''}` : '', Number.isFinite(entry.decodedMB) ? `音を解いた合計 ${entry.decodedMB}MB・${Number.isFinite(entry.decodeCount) ? entry.decodeCount : '?'}回` : '', Number.isFinite(entry.heapMB) ? `メモリ ${entry.heapMB}MB` : ''].filter(Boolean);
   return `${when} 起動 — ${head}(${parts.join('・')})`;
 };
 // 音の設定の「音が出ないとき」の下に出す、前回までの記録(読み取りだけ。端末の外へは出さない)。

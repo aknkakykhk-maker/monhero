@@ -4505,12 +4505,18 @@ function MonsterHeroGame() {
     try { const e = window.performance.getEntriesByType('navigation')[0]; nav = e && e.type ? e.type : ''; } catch (e) {}
     const entry = buildReloadLogEntry(reloadReadJson(RELOAD_MARKER_KEY), startedAt, nav);
     if (entry) reloadWriteJson(RELOAD_LOG_KEY, pushReloadLog(reloadReadJson(RELOAD_LOG_KEY), entry));
-    const marker = { id:`${startedAt.toString(36)}${Math.floor(Math.random() * 1e6).toString(36)}`, startedAt, lastBeat:startedAt, state:'running', screen:'', audioBuffers:null, heapMB:null, nav };
+    const marker = { id:`${startedAt.toString(36)}${Math.floor(Math.random() * 1e6).toString(36)}`, startedAt, lastBeat:startedAt, state:'running', screen:'', audioBuffers:null, heapMB:null, audioMB:null, decodedMB:null, decodeCount:null, nav };
     const write = (state) => {
       marker.lastBeat = Math.max(marker.startedAt, Date.now());
       marker.state = state;
       marker.screen = String(gameStateForBackRef.current || '');
-      try { const d = Audio_.diagnose(); marker.audioBuffers = Number.isFinite(d && d.bufferCount) ? d.bufferCount : null; } catch (e) {}
+      try {
+        const d = Audio_.diagnose();
+        marker.audioBuffers = Number.isFinite(d && d.bufferCount) ? d.bufferCount : null;
+        marker.audioMB = Number.isFinite(d && d.keptAudioMB) ? d.keptAudioMB : null;
+        marker.decodedMB = Number.isFinite(d && d.decodedMB) ? d.decodedMB : null;
+        marker.decodeCount = Number.isFinite(d && d.decodeCount) ? d.decodeCount : null;
+      } catch (e) {}
       try { const m = window.performance && window.performance.memory; marker.heapMB = m && Number.isFinite(m.usedJSHeapSize) ? Math.round(m.usedJSHeapSize / 1048576) : null; } catch (e) {}
       reloadWriteJson(RELOAD_MARKER_KEY, marker);
     };
