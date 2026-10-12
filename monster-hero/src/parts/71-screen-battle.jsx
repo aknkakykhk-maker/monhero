@@ -650,8 +650,9 @@ const BattleStackMarks = ({ counts, side, full = 0, className = '' }) => {
 // ★モンスターごとの演出(2026-10-12 社長の決定)。絵柄は BATTLE_MONSTER_FX の1か所。
 //   fx … { avoid, present:{ jackpot, kind }, swordStyle }(tacticsSlotCountersAt が作る)。imgSrc … 分身に使うその子の絵。
 //   calm … 「待機中の動き：止める」のとき(動きを止めて形だけ出す。端末の「動きを減らす」は CSS で止める)
-const BattleMonsterFx = ({ fx, imgSrc, monId, calm = false }) => {
-  if (!fx) return null;
+const BattleMonsterFx = ({ fx, imgSrc, monId, stacks = null, calm = false }) => {
+  if (!fx && !stacks) return null;
+  fx = fx || {};
   const T = BATTLE_MONSTER_FX;
   const n = (v, max) => Math.min(max, Math.max(0, Math.floor(Number(v) || 0)));
   const clones = n(fx.avoid, T.avoidClone.max);
@@ -666,7 +667,18 @@ const BattleMonsterFx = ({ fx, imgSrc, monId, calm = false }) => {
   // 区切り3
   const scatter = fx.exEffect && T.scatter[monId] ? T.scatter[monId] : null;
   const leaves = n(fx.leafShield, T.leafShield.max);
-  if (!clones && !pr && !style && !aura && !gloves && !volt && !after && !thunder && !scatter && !leaves) return null;
+  // 区切り4
+  const overlay = fx.exEffect && T.overlay[monId] ? T.overlay[monId] : null;
+  const film = !!fx.coverFilm, sprout = !!fx.sprout;
+  // 区切り5。メロディー・クロミー・スプーキーは、枠の「マーク×数」と同じ数(stacks)から作る
+  const box = fx.exEffect === 'pandoraBox' ? Math.max(1, Math.min(3, Math.floor(Number(fx.exTurns) || 3))) : 0;
+  const ring = !!fx.springRing;
+  const st = stacks || {};
+  const pile = monId === 'Melody' && Number(st.cookie) > 0 ? n(Math.ceil(Number(st.cookie) / T.cookiePile.perMark), T.cookiePile.max) : 0;
+  const staff = monId === 'Kuromy' && Number(st.note) > 0 ? n(Math.ceil(Number(st.note) / T.noteStaff.perMark), T.noteStaff.max) : 0;
+  const coins = monId === 'Spooky' ? n((Number(st.fateAtk) || 0) + (Number(st.fateCombo) || 0), T.coinSpin.max) : 0;
+  const stackFull = (monId === 'Melody' && Number(st.cookie) >= SWEET_STACK_MAX) || (monId === 'Kuromy' && Number(st.note) >= SWEET_STACK_MAX);
+  if (!clones && !pr && !style && !aura && !gloves && !volt && !after && !thunder && !scatter && !leaves && !overlay && !film && !sprout && !box && !ring && !pile && !staff && !coins) return null;
   const fading = Number(fx.exTurns) === 1;
   return (
     <div data-monster-fx className={`mh-mfx pointer-events-none${calm ? ' is-calm' : ''}`} aria-hidden="true">
@@ -693,6 +705,14 @@ const BattleMonsterFx = ({ fx, imgSrc, monId, calm = false }) => {
       {scatter && (scatter.kind === 'ring'
         ? <span data-mfx-scatter="ring" className="mh-mfx-ring" style={{ '--mfx-c': scatter.color }}/>
         : <span data-mfx-scatter={scatter.kind} className={`mh-mfx-scatter is-${scatter.kind}`}>{scatter.marks.map((m, k) => <i key={k} className={`s${k}`}>{m}</i>)}</span>)}
+      {overlay && <span data-mfx-overlay={overlay.kind} className={`mh-mfx-ov is-${overlay.kind}`} style={{ '--mfx-c': overlay.color }}>{overlay.mark ? <i>{overlay.mark}</i> : null}</span>}
+      {film && <span data-mfx-cover="film" className="mh-mfx-film" style={{ '--mfx-c': T.coverFilm.color }}><i>{T.coverFilm.mark}</i></span>}
+      {sprout && <span data-mfx-sprout={T.sprout.n} className="mh-mfx-sprout">{Array.from({ length: T.sprout.n }, (_, k) => <i key={k}>{T.sprout.mark}</i>)}</span>}
+      {ring && <span data-mfx-spring="ring" className="mh-mfx-spring" style={{ '--mfx-c': T.springRing.color }}/>}
+      {box > 0 && <span data-mfx-pandora={box} className="mh-mfx-pbox"><i className="lid" style={{ transform: `rotate(${T.pandoraBox.angles[box] || 0}deg)` }}>{T.pandoraBox.lid}</i><i>{T.pandoraBox.mark}</i></span>}
+      {pile > 0 && <span data-mfx-cookie-pile={pile} className={`mh-mfx-pile${stackFull ? ' is-full' : ''}`}>{Array.from({ length: pile }, (_, k) => <i key={k}>{T.cookiePile.mark}</i>)}</span>}
+      {staff > 0 && <span data-mfx-note-staff={staff} className={`mh-mfx-staff${stackFull ? ' is-full' : ''}`}>{Array.from({ length: staff }, (_, k) => <i key={k} className={`n${k}`}>{T.noteStaff.mark}</i>)}</span>}
+      {coins > 0 && <span data-mfx-coin={coins} className="mh-mfx-coin">{Array.from({ length: coins }, (_, k) => <i key={k}>{T.coinSpin.mark}</i>)}</span>}
       {leaves > 0 && <span data-mfx-leaf={leaves} className="mh-mfx-leaf">{Array.from({ length: leaves }, (_, k) => <i key={k}>{T.leafShield.mark}</i>)}</span>}
     </div>
   );
@@ -2277,7 +2297,7 @@ function BattleScreen({
                 {/* ★貯まった数(クッキー・黒音符など)を「マーク×数」で常に出す(2026-10-12 社長の依頼)。タクティクスの枠は絵の左下、ほかのモードの縦長の枠は名前の帯のすぐ下(下の端は間合いの札がある) */}
                 <BattleStackMarks counts={allyStackCounts[i]} side="ally" full={SWEET_STACK_MAX} className={tacticsNewLayout?'mh-stack-marks-ally':'mh-stack-marks-ally mh-stack-marks-ally-top'}/>
                 {/* モンスターごとの演出(ゴーストの分身・スネグーラチカのプレゼント・剣士モッチーの型)。タクティクスの枠だけ・軽量表示では出さない */}
-                {tacticsNewLayout&&!ecoBattleView&&!liteBattleView&&typeof tacticsSlotCountersAt==='function'&&<BattleMonsterFx fx={debugStackMarks&&debugStackMarks.fx&&debugStackMarks.fx[i]?debugStackMarks.fx[i]:tacticsSlotCountersAt(i)} imgSrc={s?.imgUrl} monId={s?.id} calm={battleFx.idleMotion==='OFF'}/>}
+                {tacticsNewLayout&&!ecoBattleView&&!liteBattleView&&typeof tacticsSlotCountersAt==='function'&&<BattleMonsterFx fx={debugStackMarks&&debugStackMarks.fx&&debugStackMarks.fx[i]?debugStackMarks.fx[i]:tacticsSlotCountersAt(i)} imgSrc={s?.imgUrl} monId={s?.id} stacks={allyStackCounts[i]} calm={battleFx.idleMotion==='OFF'}/>}
                 {slotHitKind&&(()=>{
                   const hitFx=TACTICS_SLOT_FX_STYLE[slotHitKind];
                   return(<div data-tactics-hit-fx={slotHitKind} className="absolute inset-0 z-[58] pointer-events-none overflow-visible">
