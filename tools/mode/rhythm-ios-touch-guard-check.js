@@ -81,7 +81,9 @@ const fire = (page, kind, selector) => page.evaluate(([kind, selector]) => {
 
     await page.evaluate(() => { RHYTHM_PERF.setEnabled(false); document.querySelector('[data-rhythm-demo-start]').click(); });   // 計測OFFのままでも指の記録は数える
     await page.waitForSelector('[data-rhythm-play-area]', { timeout: 30000 });
-    await page.waitForTimeout(6000);   // カウントダウンが終わって演奏が始まるまで
+    // 曲の前の幕(最短3秒・準備が済むまで最長6秒)とカウントダウンが終わって、演奏が始まるまで待つ。
+    // 前は6秒の決め打ちで、幕が入ってからは6秒の時点でまだカウントダウン中になり、ポーズのボタンが効かずに「ポーズ中」の2項目が落ちていた(2026-10-12)
+    await page.waitForFunction(() => !document.querySelector('[data-rhythm-song-intro]') && !document.querySelector('[data-rhythm-countdown-step]') && (window.__mhTestHooks?.rhythmSongMs?.() || 0) > 300, null, { timeout: 30000 });
     await page.evaluate(() => RHYTHM_PERF.reset());
 
     check('演奏中、演奏エリアの外で触れた指の touchstart を止める', (await fire(page, 'touchstart', 'document')) === true);

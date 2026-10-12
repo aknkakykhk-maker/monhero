@@ -160,8 +160,9 @@ const player2 = player.replace(posLine, 'const pos = (() => { const q = fingerAt
       // 同じ手かどうかは、ボットが割り振った手で見る(押さえている手のそばのノーツは反対の手・scenarios/rhythm.js の版2)
       const side = hab && Number.isFinite(hab.hand) ? (hab.hand === 0 ? 'L' : 'R') : c < 2.5 ? 'L' : 'R';
       const sh = Number(n.skyHeight) > 0 ? Number(n.skyHeight) : (window.__slideSkyAt ? window.__slideSkyAt(n, Number(n.timeMs) || 0) : 0);
-      const sky = sh >= .5, prev = last[side]; last[side] = { sky, now };
-      if (!prev || prev.sky === sky || now - prev.now > win) return p;
+      const sky = sh >= .5, prev = last[side], t = Math.round(Number(n.timeMs)); last[side] = { sky, now, t };
+      // 同じ時刻(和音)は高さの切り替えに数えない(版3)。1本の手で同時に地上と空中は押さないので、和音は両手に分かれている
+      if (!prev || prev.sky === sky || prev.t === t || now - prev.now > win) return p;
       const rr = document.querySelector('[data-rhythm-play-area]').getBoundingClientRect(), d = rr.height * RHYTHM_SKY_LIFT.ratio * u;
       window.__travelLog[sky ? 'up' : 'down']++;
       return { x: p.x, y: p.y + (sky ? d : -d) };

@@ -123,12 +123,25 @@ function installPlayer({ sigma, missRate, seed, human = true, persona = '', inpu
   // 手の割り振り(版2・2026-10-12): 左右は位置で決めるが、その手がまだ HOLD/SLIDE を押さえている最中なら、反対の手で押す
   // (押さえている親指で別のノーツは叩けない。前は位置だけで決めていたので、帯の隣のタップを押さえている手と同じ手と見なし、
   //  押さえている指を「同じ手のつられ」で最大50px動かしていた。Grievous Lady HELL 33.74秒の途中切れ)。両手とも押さえていれば位置のまま
-  const holding = [];
-  [...notes].sort((a, b) => a.timeMs - b.timeMs).forEach((n) => {
-    const busy = new Set(holding.filter((x) => x.n !== n && x.n.timeMs < n.timeMs && x.end > n.timeMs).map((x) => x.hand));
-    const byPos = handOf(centerOf(n));
-    const hand = busy.has(byPos) && !busy.has(1 - byPos) ? 1 - byPos : byPos;
-    if (hand !== byPos) handSwaps += 1;
+  // 和音(版3・2026-10-12): 同じ時刻のノーツが同じ手に重なり、反対の手があいていれば、反対の側に近いほうを反対の手で押す
+  // (前は位置だけで決めていたので、右側の地上+空中の和音を右手1本で押していた。Sheriruth HELL 80.17秒)
+  const holding = [], groupHand = new Map(), sorted = [...notes].sort((a, b) => a.timeMs - b.timeMs);
+  const handFor = (n) => {
+    if (groupHand.has(n.index)) return groupHand.get(n.index);
+    const group = sorted.filter((m) => m.timeMs === n.timeMs);
+    const busy = new Set(holding.filter((x) => x.n.timeMs < n.timeMs && x.end > n.timeMs).map((x) => x.hand));
+    const picks = group.map((m) => { const byPos = handOf(centerOf(m)); return { m, byPos, hand: busy.has(byPos) && !busy.has(1 - byPos) ? 1 - byPos : byPos }; });
+    for (const h of [0, 1]) {
+      const same = picks.filter((x) => x.hand === h);
+      if (same.length < 2 || busy.has(1 - h) || picks.some((x) => x.hand === 1 - h)) continue;
+      const move = same.reduce((best, x) => (h === 1 ? centerOf(x.m) < centerOf(best.m) : centerOf(x.m) > centerOf(best.m)) ? x : best);
+      move.hand = 1 - h;
+    }
+    picks.forEach((x) => { groupHand.set(x.m.index, x.hand); if (x.hand !== x.byPos) handSwaps += 1; });
+    return groupHand.get(n.index);
+  };
+  sorted.forEach((n) => {
+    const hand = handFor(n);
     const prev = lastOfHand[hand];
     const gap = prev ? n.timeMs - prev.timeMs : Infinity;
     const second = human && gap < 160;
@@ -154,8 +167,8 @@ function installPlayer({ sigma, missRate, seed, human = true, persona = '', inpu
   const botLagged = (r) => r.lag >= BOT_LAG_MS || Math.abs(r.sentDelta) >= 70;
   const nearLate = (r) => r.lateMs > 0 || r.dropped || lateTimes.some((t) => Math.abs(r.at - t) <= 1000);
   const diag = { tap: { n: 0, miss: 0, crowdedN: 0, missCrowded: 0, missInBand: 0, missInBandCrowded: 0, secondN: 0, secondMiss: 0 }, fingerLeft: 0, edgeHolds: 0, overlaps: 0, holds: 0, driftEvents: 0, bigDrifts: 0, bandHolds: 0 };
-  // playerVersion: 2 = 押さえている手のそばのノーツを反対の手に割り振る版(2026-10-12)。それより前の記録(印なし)と数字を混ぜない
-  const stats = { planned: plan.length, skipped, taps: 0, done: false, human, who, playerVersion: 2, handSwaps, input: inputStats, suspects, diag, habit: habit.map((h) => ({ depth: +h.depth.toFixed(2), lat: +h.lat.toFixed(2), inward: +h.inward.toFixed(2) })) };
+  // playerVersion: 2 = 押さえている手のそばのノーツを反対の手に割り振る版、3 = 同じ時刻の和音を両手に分ける版(2026-10-12)。それより前の記録と数字を混ぜない
+  const stats = { planned: plan.length, skipped, taps: 0, done: false, human, who, playerVersion: 3, handSwaps, input: inputStats, suspects, diag, habit: habit.map((h) => ({ depth: +h.depth.toFixed(2), lat: +h.lat.toFixed(2), inward: +h.inward.toFixed(2) })) };
   const lerpLane = (pts, t) => {
     if (!pts || pts.length < 2) return null;
     if (t <= pts[0].timeMs) return pts[0].lane;
