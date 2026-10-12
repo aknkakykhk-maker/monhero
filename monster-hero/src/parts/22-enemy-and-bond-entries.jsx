@@ -425,7 +425,7 @@ const BATTLE_STACK_MARKS = Object.freeze({
   cookie:     Object.freeze({ mark:'🍪', img:'', label:'クッキー', showZero:true }),          // メロディー(メロディの手作りクッキー)
   note:       Object.freeze({ mark:'🎵', img:'', label:'黒音符', showZero:true }),            // クロミー(クロミノート)
   bow:        Object.freeze({ mark:'🎀', img:'', label:'旋律' }),              // メロディ・ボゥの旋律(使った子の枠)
-  kenshi:     Object.freeze({ mark:'⚔️', img:'', label:'連撃パワー' }),        // 剣士モッチー(ソードスキル)
+  kenshi:     Object.freeze({ mark:'💥', img:'', label:'連撃パワー' }),        // 剣士モッチー(ソードスキル)。⚔️ は二刀流の演出に使うので分ける(2026-10-12 社長の決定)
   trickAtk:   Object.freeze({ mark:'💪', img:'', label:'トリック(ちから)' }),  // ゴースト・スプーキー(トリックスタート)
   trickDef:   Object.freeze({ mark:'🛡️', img:'', label:'トリック(丈夫さ)' }),
   trickRegen: Object.freeze({ mark:'💚', img:'', label:'トリック(回復)' }),
@@ -438,6 +438,18 @@ const BATTLE_STACK_MARKS = Object.freeze({
   aquaPrison: Object.freeze({ mark:'💧', img:'', label:'水牢' }),              // 敵: ウンディーネ種のアクアフィールド
   aquaFreeze: Object.freeze({ mark:'❄️', img:'', label:'氷結' }),
   roar:       Object.freeze({ mark:'📢', img:'', label:'咆哮' }),              // 敵: 自分にかけた攻撃アップ
+});
+// ★モンスターごとの演出(2026-10-12 社長の決定「3体を入れて、残りも順に」。案の一覧は docs/proto/monster-visuals/README.md)。
+//   「マーク×数」の上乗せで、数字の代わりにはしない。置くのは枠の絵のまわりだけ。軽量表示・超省エネでは出さない。
+//   絵柄はここ1か所で差し替える(mark は絵文字。img に画像のパスを入れると、絵文字の代わりにその絵を出す)
+const BATTLE_MONSTER_FX = Object.freeze({
+  // ゴースト(オフリィアボイド): 完全回避の数だけ、その子の絵の半透明の分身を浮かべる。回避を使うと1匹ずつ消える
+  avoidClone: Object.freeze({ max: 2, opacity: 0.5 }),
+  // スネグーラチカ(クリスマスプレゼント): 効いているあいだ箱を出し、角に中身の絵。大当たりは金色に光る箱
+  present: Object.freeze({ mark:'🎁', img:'', jackpotMark:'✨',
+    inner: Object.freeze({ dmg:'⚔️', taken:'🛡️', combo:'💫', heal:'💖', guts:'⚡', crit:'🎯' }) }),
+  // 剣士モッチー(ソード・コンバージョン): いまの型を 剣だけ / 剣と盾 / 剣2本 で出す
+  swordStyle: Object.freeze({ sword:'🗡️', shield:'🗡️🛡️', dual:'⚔️' }),
 });
 const BATTLE_STACK_MARK_ORDER = Object.freeze(Object.keys(BATTLE_STACK_MARKS));
 // { kind: 数 } から、出す順に並べた [{ kind, count, mark, img, label }] を作る。知らない種類・0は出さない。

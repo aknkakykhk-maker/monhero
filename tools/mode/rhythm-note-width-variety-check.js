@@ -123,7 +123,9 @@ check('プレイ画面のノーツへ data-rhythm-note-wide を付けている',
 // --- 帯の描画が「時刻」を基準に幅を変える ---
 check('帯は幅が変わる時刻の高さを必ず頂点にする',
   source.includes('const holdAnchors=')&&source.includes('holdAnchors.map(anchor=>anchor.ratio)')
-  &&source.includes('const yAtMs=timeMs=>')&&source.includes('rhythmProjectTravelProgress(1-(Number(timeMs)-visualTime)/travelMs)'));
+  &&source.includes('const yAtMs=timeMs=>')
+  // 2026-10-10 から速さの変わる曲に合わせ、時刻ではなく流れた位置(rhythmScrollPos)の差で落下曲線を引く形になった
+  &&(source.includes('rhythmProjectTravelProgress(1-(Number(timeMs)-visualTime)/travelMs)')||source.includes('rhythmProjectTravelProgress(1-(rhythmScrollPos(timeMs,note.scrollGroup)-rhythmScrollPos(visualTime,note.scrollGroup))/travelMs)')));
 check('幅の変わり目は高さの比ではなく実際の落下曲線から出す',
   source.includes('rhythmHoldSpanAt(note,timeMs)')&&source.includes('.sort((a,b)=>a.ratio-b.ratio)'));
 

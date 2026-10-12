@@ -647,6 +647,31 @@ const BattleStackMarks = ({ counts, side, full = 0, className = '' }) => {
     </div>
   );
 };
+// ★モンスターごとの演出(2026-10-12 社長の決定)。絵柄は BATTLE_MONSTER_FX の1か所。
+//   fx … { avoid, present:{ jackpot, kind }, swordStyle }(tacticsSlotCountersAt が作る)。imgSrc … 分身に使うその子の絵。
+//   calm … 「待機中の動き：止める」のとき(動きを止めて形だけ出す。端末の「動きを減らす」は CSS で止める)
+const BattleMonsterFx = ({ fx, imgSrc, calm = false }) => {
+  if (!fx) return null;
+  const T = BATTLE_MONSTER_FX;
+  const clones = Math.min(T.avoidClone.max, Math.max(0, Math.floor(Number(fx.avoid) || 0)));
+  const pr = fx.present || null;
+  const style = typeof fx.swordStyle === 'string' && T.swordStyle[fx.swordStyle] ? fx.swordStyle : null;
+  if (!clones && !pr && !style) return null;
+  return (
+    <div data-monster-fx className={`mh-mfx pointer-events-none${calm ? ' is-calm' : ''}`} aria-hidden="true">
+      {imgSrc && Array.from({ length: clones }, (_, k) => (
+        <img key={k} data-mfx-clone={k} className={`mh-mfx-clone c${k}`} src={imgSrc} alt="" draggable={false} style={{ opacity: T.avoidClone.opacity }} />
+      ))}
+      {pr && (
+        <span data-mfx-present={pr.jackpot ? 'jackpot' : (pr.kind || 'on')} className={`mh-mfx-present${pr.jackpot ? ' is-jackpot' : ''}`}>
+          {T.present.img ? <img src={T.present.img} alt="" draggable={false} /> : <i>{T.present.mark}</i>}
+          <b>{pr.jackpot ? T.present.jackpotMark : (T.present.inner[pr.kind] || '')}</b>
+        </span>
+      )}
+      {style && <span data-mfx-sword={style} className="mh-mfx-sword">{T.swordStyle[style]}</span>}
+    </div>
+  );
+};
 const TacticsDiscardZones = ({ full, used, limit }) => {
   const g = tacticsDiscardGeo();
   if (!g || typeof ReactDOM === 'undefined') return null;
@@ -2226,6 +2251,8 @@ function BattleScreen({
                   style={{'--ex-c1':battleCutinThemeOf(tacticsExCutin).c1,'--ex-c2':battleCutinThemeOf(tacticsExCutin).c2,...(tacticsExCutin.ms?{animationDuration:`${tacticsExCutin.ms}ms`}:{})}}><i/><i/></span>}
                 {/* ★貯まった数(クッキー・黒音符など)を「マーク×数」で常に出す(2026-10-12 社長の依頼)。タクティクスの枠は絵の左下、ほかのモードの縦長の枠は名前の帯のすぐ下(下の端は間合いの札がある) */}
                 <BattleStackMarks counts={allyStackCounts[i]} side="ally" full={SWEET_STACK_MAX} className={tacticsNewLayout?'mh-stack-marks-ally':'mh-stack-marks-ally mh-stack-marks-ally-top'}/>
+                {/* モンスターごとの演出(ゴーストの分身・スネグーラチカのプレゼント・剣士モッチーの型)。タクティクスの枠だけ・軽量表示では出さない */}
+                {tacticsNewLayout&&!ecoBattleView&&!liteBattleView&&typeof tacticsSlotCountersAt==='function'&&<BattleMonsterFx fx={debugStackMarks&&debugStackMarks.fx&&debugStackMarks.fx[i]?debugStackMarks.fx[i]:tacticsSlotCountersAt(i)} imgSrc={s?.imgUrl} calm={battleFx.idleMotion==='OFF'}/>}
                 {slotHitKind&&(()=>{
                   const hitFx=TACTICS_SLOT_FX_STYLE[slotHitKind];
                   return(<div data-tactics-hit-fx={slotHitKind} className="absolute inset-0 z-[58] pointer-events-none overflow-visible">

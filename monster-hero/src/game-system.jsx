@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6d53a1c783e27ea6
+// generated-sha256: f603c276bb658279
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-12 16:05"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-12 16:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -12146,7 +12146,7 @@ const BATTLE_STACK_MARKS = Object.freeze({
   cookie:     Object.freeze({ mark:'🍪', img:'', label:'クッキー', showZero:true }),          // メロディー(メロディの手作りクッキー)
   note:       Object.freeze({ mark:'🎵', img:'', label:'黒音符', showZero:true }),            // クロミー(クロミノート)
   bow:        Object.freeze({ mark:'🎀', img:'', label:'旋律' }),              // メロディ・ボゥの旋律(使った子の枠)
-  kenshi:     Object.freeze({ mark:'⚔️', img:'', label:'連撃パワー' }),        // 剣士モッチー(ソードスキル)
+  kenshi:     Object.freeze({ mark:'💥', img:'', label:'連撃パワー' }),        // 剣士モッチー(ソードスキル)。⚔️ は二刀流の演出に使うので分ける(2026-10-12 社長の決定)
   trickAtk:   Object.freeze({ mark:'💪', img:'', label:'トリック(ちから)' }),  // ゴースト・スプーキー(トリックスタート)
   trickDef:   Object.freeze({ mark:'🛡️', img:'', label:'トリック(丈夫さ)' }),
   trickRegen: Object.freeze({ mark:'💚', img:'', label:'トリック(回復)' }),
@@ -12159,6 +12159,18 @@ const BATTLE_STACK_MARKS = Object.freeze({
   aquaPrison: Object.freeze({ mark:'💧', img:'', label:'水牢' }),              // 敵: ウンディーネ種のアクアフィールド
   aquaFreeze: Object.freeze({ mark:'❄️', img:'', label:'氷結' }),
   roar:       Object.freeze({ mark:'📢', img:'', label:'咆哮' }),              // 敵: 自分にかけた攻撃アップ
+});
+// ★モンスターごとの演出(2026-10-12 社長の決定「3体を入れて、残りも順に」。案の一覧は docs/proto/monster-visuals/README.md)。
+//   「マーク×数」の上乗せで、数字の代わりにはしない。置くのは枠の絵のまわりだけ。軽量表示・超省エネでは出さない。
+//   絵柄はここ1か所で差し替える(mark は絵文字。img に画像のパスを入れると、絵文字の代わりにその絵を出す)
+const BATTLE_MONSTER_FX = Object.freeze({
+  // ゴースト(オフリィアボイド): 完全回避の数だけ、その子の絵の半透明の分身を浮かべる。回避を使うと1匹ずつ消える
+  avoidClone: Object.freeze({ max: 2, opacity: 0.5 }),
+  // スネグーラチカ(クリスマスプレゼント): 効いているあいだ箱を出し、角に中身の絵。大当たりは金色に光る箱
+  present: Object.freeze({ mark:'🎁', img:'', jackpotMark:'✨',
+    inner: Object.freeze({ dmg:'⚔️', taken:'🛡️', combo:'💫', heal:'💖', guts:'⚡', crit:'🎯' }) }),
+  // 剣士モッチー(ソード・コンバージョン): いまの型を 剣だけ / 剣と盾 / 剣2本 で出す
+  swordStyle: Object.freeze({ sword:'🗡️', shield:'🗡️🛡️', dual:'⚔️' }),
 });
 const BATTLE_STACK_MARK_ORDER = Object.freeze(Object.keys(BATTLE_STACK_MARKS));
 // { kind: 数 } から、出す順に並べた [{ kind, count, mark, img, label }] を作る。知らない種類・0は出さない。
@@ -36950,6 +36962,31 @@ const BattleStackMarks = ({ counts, side, full = 0, className = '' }) => {
     </div>
   );
 };
+// ★モンスターごとの演出(2026-10-12 社長の決定)。絵柄は BATTLE_MONSTER_FX の1か所。
+//   fx … { avoid, present:{ jackpot, kind }, swordStyle }(tacticsSlotCountersAt が作る)。imgSrc … 分身に使うその子の絵。
+//   calm … 「待機中の動き：止める」のとき(動きを止めて形だけ出す。端末の「動きを減らす」は CSS で止める)
+const BattleMonsterFx = ({ fx, imgSrc, calm = false }) => {
+  if (!fx) return null;
+  const T = BATTLE_MONSTER_FX;
+  const clones = Math.min(T.avoidClone.max, Math.max(0, Math.floor(Number(fx.avoid) || 0)));
+  const pr = fx.present || null;
+  const style = typeof fx.swordStyle === 'string' && T.swordStyle[fx.swordStyle] ? fx.swordStyle : null;
+  if (!clones && !pr && !style) return null;
+  return (
+    <div data-monster-fx className={`mh-mfx pointer-events-none${calm ? ' is-calm' : ''}`} aria-hidden="true">
+      {imgSrc && Array.from({ length: clones }, (_, k) => (
+        <img key={k} data-mfx-clone={k} className={`mh-mfx-clone c${k}`} src={imgSrc} alt="" draggable={false} style={{ opacity: T.avoidClone.opacity }} />
+      ))}
+      {pr && (
+        <span data-mfx-present={pr.jackpot ? 'jackpot' : (pr.kind || 'on')} className={`mh-mfx-present${pr.jackpot ? ' is-jackpot' : ''}`}>
+          {T.present.img ? <img src={T.present.img} alt="" draggable={false} /> : <i>{T.present.mark}</i>}
+          <b>{pr.jackpot ? T.present.jackpotMark : (T.present.inner[pr.kind] || '')}</b>
+        </span>
+      )}
+      {style && <span data-mfx-sword={style} className="mh-mfx-sword">{T.swordStyle[style]}</span>}
+    </div>
+  );
+};
 const TacticsDiscardZones = ({ full, used, limit }) => {
   const g = tacticsDiscardGeo();
   if (!g || typeof ReactDOM === 'undefined') return null;
@@ -38529,6 +38566,8 @@ function BattleScreen({
                   style={{'--ex-c1':battleCutinThemeOf(tacticsExCutin).c1,'--ex-c2':battleCutinThemeOf(tacticsExCutin).c2,...(tacticsExCutin.ms?{animationDuration:`${tacticsExCutin.ms}ms`}:{})}}><i/><i/></span>}
                 {/* ★貯まった数(クッキー・黒音符など)を「マーク×数」で常に出す(2026-10-12 社長の依頼)。タクティクスの枠は絵の左下、ほかのモードの縦長の枠は名前の帯のすぐ下(下の端は間合いの札がある) */}
                 <BattleStackMarks counts={allyStackCounts[i]} side="ally" full={SWEET_STACK_MAX} className={tacticsNewLayout?'mh-stack-marks-ally':'mh-stack-marks-ally mh-stack-marks-ally-top'}/>
+                {/* モンスターごとの演出(ゴーストの分身・スネグーラチカのプレゼント・剣士モッチーの型)。タクティクスの枠だけ・軽量表示では出さない */}
+                {tacticsNewLayout&&!ecoBattleView&&!liteBattleView&&typeof tacticsSlotCountersAt==='function'&&<BattleMonsterFx fx={debugStackMarks&&debugStackMarks.fx&&debugStackMarks.fx[i]?debugStackMarks.fx[i]:tacticsSlotCountersAt(i)} imgSrc={s?.imgUrl} calm={battleFx.idleMotion==='OFF'}/>}
                 {slotHitKind&&(()=>{
                   const hitFx=TACTICS_SLOT_FX_STYLE[slotHitKind];
                   return(<div data-tactics-hit-fx={slotHitKind} className="absolute inset-0 z-[58] pointer-events-none overflow-visible">
@@ -56331,6 +56370,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if(rm&&rm.kind==='turns'&&rm.turns>0) out.exTurns=rm.turns;
     const avoid=tacticsExAvoidLeftOf(tacticsExState,tacticsUnits,slotIdx,tacticsExNow); if(avoid>0) out.avoid=avoid;
     const konjo=tacticsExKonjoLeftOf(tacticsExState,tacticsUnits,slotIdx,tacticsExNow); if(konjo>0) out.konjo=konjo;
+    // モンスターごとの演出に使うもの(BATTLE_MONSTER_FX)。プレゼントは使ったスネグーラチカの枠、型は剣士モッチーの枠にだけ付ける
+    if(def&&def.effect==='present'&&isTacticsExEffectActive(tacticsExState,slotIdx,unit.id,tacticsExNow)){
+      const pr=tacticsExPresentOf(tacticsExState,tacticsUnits,tacticsExNow);
+      if(pr&&pr.kinds.length) out.present={ jackpot:pr.jackpot, kind:pr.kinds[0] };
+    }
+    if(unit.id==='KenshiMocchi'&&def&&def.duration==='style') out.swordStyle=tacticsExStyleOf(def,tacticsExState,slotIdx,unit.id)||'sword';
     return out;
   };
   // 会心が確定する攻撃(タクティクスだけ)。オフリィアボイドの完全回避が残っている子の攻撃と、

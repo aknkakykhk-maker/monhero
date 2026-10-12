@@ -37,7 +37,8 @@ assert(has('if(isBusy||autoBattleRef.current) return;'), '手動カード選択�
 assert(has('const canAct=!autoBattle&&!isBusy'), 'AUTO中のACTION無効化がありません');
 assert(has('disabled={isBusy||autoBattle||!battleTutorialAllowsEmergency}'), 'AUTO中の緊急回復無効化がありません');
 assert(has('await turnPromise;'), 'AUTOが緊急回復を含むターン処理の完了を待っていません');
-assert(has("setSelectedCards([]);setCardAssignments({});setPendingCard(null);setFocusedCard(null);setSkillPicker(null);"), 'AUTO開始時に手動選択を破棄していません');
+// 2026-10-05(69e0a1cd1)にタクティクスの捨て札を足し、破棄する並びに setDiscardCards([]) が入った
+assert(has("setSelectedCards([]);setDiscardCards([]);setCardAssignments({});setPendingCard(null);setFocusedCard(null);setSkillPicker(null);"), 'AUTO開始時に手動選択を破棄していません');
 assert(has('const stopAutoBattle = () => {'), 'AUTO停止helperがありません');
 assert(has('autoBattleRef.current = false;\n    autoTurnScheduledRef.current = false;\n    autoPostWaveScheduledRef.current = false;\n    setAutoBattle(false);'), 'AUTO停止helperがref・予約・stateを停止していません');
 assert(has('autoPostWaveScheduledRef.current = false;'), 'AUTO停止helperがWAVE後の予約を停止していません');
@@ -62,7 +63,8 @@ assert(has("window.addEventListener('pagehide', onMaybeHidden);"), 'pagehideでA
 assert(has("const onMaybeHidden = () => {\n      if (typeof document !== 'undefined' && document.visibilityState !== 'hidden') return;\n      onHidden();\n    };"), 'pagehideの停止が「本当に裏へ回ったときだけ onHidden を呼ぶ」形になっていません');
 assert(!/const onVisible = \(\) => \{[^}]*setAutoBattleEnabled|const onVisible = \(\) => \{[^}]*setAutoBattle\(/.test(source), '画面復帰時にAUTOを再開しています');
 assert(!/gameState==='REWARD_PICK'\)stopAutoBattle|gameState==='WAVE_RESULT'\)stopAutoBattle/.test(source), '通常WAVE後の選択画面でAUTOを停止しています');
-assert(has('const usedHandIndexes=new Set(usedCardEntries.map(entry=>entry.handIndex));'), '明示entriesで使用した手札を消費していません');
+// 2026-10-05(69e0a1cd1)から、捨てた札(discardIdx)もいっしょに消費する
+assert(has('const usedHandIndexes=new Set([...usedCardEntries.map(entry=>entry.handIndex),...discardIdx]);'), '明示entriesで使用した手札を消費していません');
 assert(!has("'mh_auto_battle"), 'AUTO ON/OFFを新しい保存キーへ保存しています');
 
 console.log('OK: AUTOの連続実行・同期ロック・停止条件・手動操作の排他を確認');
