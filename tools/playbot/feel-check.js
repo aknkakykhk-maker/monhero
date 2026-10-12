@@ -34,5 +34,12 @@ check('ホールドが切れた(途中で終わりの時刻が前へ動いた)',
 check('受付の端で押さえて切れたものは別に数える', a.summary.holdBrokenAtEdge === 1 && a.summary.edgeProbes === 1);
 check('遅れて届いた分のずれは早取りにしない', !a.stolen.some((x) => x.index === 6));
 check('判定のずれの中央値を出す', Number.isFinite(a.summary.errorMedianMs));
+// 手の割り振り(版2・2026-10-12): 押さえている手のそばに来たノーツは反対の手で押す(押さえている親指で別のノーツは叩けない)
+{
+  const src = require('fs').readFileSync(require('path').join(__dirname, 'scenarios/rhythm.js'), 'utf8');
+  check('手の割り振り: その手が HOLD/SLIDE を押さえている最中なら反対の手で押す', /busy\.has\(byPos\) && !busy\.has\(1 - byPos\) \? 1 - byPos : byPos/.test(src));
+  check('手の割り振り: 押すときの指のくせ・つられも、割り振った手で決める', src.includes('fingerHabit(c, pl.second, pl.hand)'));
+  check('手の割り振り: 結果に版の印(playerVersion: 2)を付け、前の記録と混ぜない', src.includes('playerVersion: 2'));
+}
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
