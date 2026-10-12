@@ -30067,10 +30067,21 @@ const rhythmHitEffectColor=judgment=>RHYTHM_HIT_EFFECT_COLORS[String(judgment||'
 // 色はノーツの色にそろえる(上=ピンク・左=オレンジ・右=黄緑。ユーザーが見本を見て選んだ)。上向きの絵を1色につき1回だけ焼き、払った向きへ傾けて貼る。
 // 終点フリック(ホールド・スライドの最後で払う)も上向きの炎を出す(同じくユーザー指示)。
 // canvas 版(WebGL のとき・RHYTHM_CANVAS_RENDERER.drawPlume)と CSS 版([data-rhythm-hit-effect]>em)は、同じ絵・同じ長さ・同じ傾きで描く
+// 上フリックの色の案(デバッグ専用・2026-10-12 社長「スカイノーツと上フリック見分けつきづらい」「色が似てるからでしょ」)。
+// 保存は新しいキー mh_flick_up_color_proto だけ。既定は pink(今のまま)。読み込み時に1回だけ読む(ノーツの絵を作るときに使うため。切り替えたら読み込み直すと効く)。
+// 水色(地上のタップ)・青(左手の空中の長押し)・緑(ホールド)・紫(スライド)・オレンジ/黄緑(横フリック)・金(判定の光)・赤(空中のタップ)とはぶつけない
+const RHYTHM_FLICK_UP_PALETTES=Object.freeze({
+  pink:Object.freeze({hi:'#fdf2f8',mid:'#f472b6',lo:'#db2777',rgb:'244,114,182',label:'ピンク'}),
+  fuchsia:Object.freeze({hi:'#fdf4ff',mid:'#d946ef',lo:'#a21caf',rgb:'217,70,239',label:'マゼンタ紫'}),
+  silver:Object.freeze({hi:'#ffffff',mid:'#e2e8f0',lo:'#94a3b8',rgb:'226,232,240',label:'白銀'}),
+});
+const RHYTHM_FLICK_UP_LABELS=Object.freeze({pink:'いま(ピンク)',fuchsia:'上フリックをマゼンタ紫に',silver:'上フリックを白銀に'});
+const RHYTHM_FLICK_UP_COLOR_ID=(()=>{try{const v=typeof localStorage!=='undefined'?localStorage.getItem('mh_flick_up_color_proto'):'';return v&&RHYTHM_FLICK_UP_PALETTES[v]?v:'pink';}catch(e){return 'pink';}})();
+const RHYTHM_FLICK_UP_COLOR=RHYTHM_FLICK_UP_PALETTES[RHYTHM_FLICK_UP_COLOR_ID];
 const RHYTHM_FLICK_PLUME=Object.freeze({
   ms:460,w:160,h:420,wispW:48,wispH:150,wisps:14,sparks:10,cssWisps:6,
   tilt:Object.freeze({up:0,left:-34,right:34}),
-  rgb:Object.freeze({up:'244,114,182',left:'251,146,60',right:'163,230,53'}),
+  rgb:Object.freeze({up:RHYTHM_FLICK_UP_COLOR.rgb,left:'251,146,60',right:'163,230,53'}),
 });
 // 炎の絵を c(左上が原点・幅 W・高さ H)へ描く。根元が下の中央、先が上。同じ乱数の並びなので、いつ描いても同じ絵になる
 const rhythmPaintFlickPlume=(c,W,H,rgb)=>{
@@ -31954,7 +31965,7 @@ const RHYTHM_NOTE_COLORS=Object.freeze({
   TAP:  Object.freeze({hi:'#f0f9ff',mid:'#38bdf8',lo:'#0284c7',rgb:'56,189,248',label:'水色'}),
   HOLD: Object.freeze({hi:'#ecfdf5',mid:'#34d399',lo:'#059669',rgb:'52,211,153',label:'緑'}),
   SLIDE:Object.freeze({hi:'#f5f3ff',mid:'#a78bfa',lo:'#7c3aed',rgb:'167,139,250',label:'紫'}),
-  FLICK:Object.freeze({hi:'#fdf2f8',mid:'#f472b6',lo:'#db2777',rgb:'244,114,182',label:'ピンク'}),
+  FLICK:RHYTHM_FLICK_UP_COLOR, // 既定はピンク(#f472b6)。案はデバッグの切り替え RHYTHM_FLICK_UP_COLOR_ID
   LEFT: Object.freeze({hi:'#fff7ed',mid:'#fb923c',lo:'#ea580c',rgb:'251,146,60',label:'オレンジ'}),
   RIGHT:Object.freeze({hi:'#f7fee7',mid:'#a3e635',lo:'#4d7c0f',rgb:'163,230,53',label:'黄緑'}),
 });
