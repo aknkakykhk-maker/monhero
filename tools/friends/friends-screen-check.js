@@ -448,7 +448,7 @@ const serve = (flagOn) => new Promise(resolve => {
       // 割り込む別の案内だけを閉じる(フレンドの知らせの「あとで」は押さない)
       for (let round = 0; round < 40; round++) {
         if (await page.evaluate(() => !!document.querySelector('[data-friend-request-notice]'))) break;
-        await clickText('^(受け取る|閉じる|OK|確認|次へ|はじめる|決定|スキップ|あとで)$'); // マーケットの告知などの「あとで」も閉じる。フレンドの知らせが出たら上で抜けるので、そちらの「あとで」は押さない
+        await clickText('^(受け取る|閉じる|OK|確認|次へ|はじめる|決定|スキップ|あとで|あとで読む)$'); // マーケットの告知などの「あとで」も閉じる。フレンドの知らせが出たら上で抜けるので、そちらの「あとで」は押さない
         await page.waitForTimeout(400);
       }
       out.noticeShown = await page.evaluate(() => !!document.querySelector('[data-friend-request-notice]'));
@@ -538,9 +538,10 @@ const serve = (flagOn) => new Promise(resolve => {
       await page.getByRole('button', { name: 'TAP TO START' }).click({ force: true });
       await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
       // 割り込む別の案内を閉じながら、申請の確認が出るのを待つ
+      // 起動時のお知らせのまとめ(新しいお知らせが◯件)は「あとで読む」で閉じる(2026-10-09 から。新曲の告知が重なると出る)
       for (let round = 0; round < 60; round++) {
         if (await page.evaluate(() => !!document.querySelector('[data-confirm-sheet]'))) break;
-        await clickText('^(受け取る|閉じる|OK|確認|次へ|はじめる|決定|スキップ|あとで)$');
+        await clickText('^(受け取る|閉じる|OK|確認|次へ|はじめる|決定|スキップ|あとで|あとで読む)$');
         await page.waitForTimeout(400);
       }
       out.sheet = await page.evaluate(() => (document.querySelector('[data-confirm-sheet]') || {}).innerText || '');
