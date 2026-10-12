@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 682daf1077ed6f02
+// generated-sha256: bd904145f96a3245
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-12 20:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-12 20:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -20061,13 +20061,14 @@ function RhythmSkyLiftSwitch(){
     <div className="mt-2 grid grid-cols-3 gap-2">{[16,25,39].map(v=><button key={v} type="button" data-rhythm-sky-lift={v} aria-pressed={value===v} onClick={()=>pick(v)} className={`min-h-[44px] rounded-xl text-sm font-black ${value===v?'bg-rose-600 text-white ring-2 ring-rose-200':'bg-slate-800 text-slate-300'}`}>{v}%{v===16?'(いま)':''}</button>)}</div></section>;
 }
 // 空中の受け付けの境目を、その人の構えに合わせて下げる(デバッグ専用・2026-10-12 社長「HELL の操作性」)。保存は新しいキー mh_sky_reach_adapt_proto だけ。
-// 切(いま)は境目が固定(地上の線の少し上)。入にすると、地上を線より下で押す人ほど空中の境目も下がる。次の演奏から効く
+// 既定は入(2026-10-12 社長の決定)。切は境目が固定(地上の線の少し上)。入は、地上を線より下で押す人ほど空中の境目も下がる。次の演奏から効く
 function RhythmSkyReachAdaptSwitch(){
   const [on,setOn]=useState(()=>!!RHYTHM_SKY_REACH_ADAPT.on);
-  const set=v=>{try{if(v)localStorage.setItem('mh_sky_reach_adapt_proto','1');else localStorage.removeItem('mh_sky_reach_adapt_proto');}catch(e){}RHYTHM_SKY_REACH_ADAPT.on=v;RHYTHM_SKY_REACH_ADAPT.reset();setOn(v);};
+  // 選んだ値は '1'(入)/'0'(切)で残す(既定は入。切を選んだ人の選択を消さない)
+  const set=v=>{try{localStorage.setItem('mh_sky_reach_adapt_proto',v?'1':'0');}catch(e){}RHYTHM_SKY_REACH_ADAPT.on=v;RHYTHM_SKY_REACH_ADAPT.reset();setOn(v);};
   return <section data-rhythm-sky-reach-adapt className="mb-3 rounded-2xl border border-rose-400/50 bg-rose-950/25 p-3"><h3 className="text-xs font-black text-rose-100">空中の受け付けを構えに合わせる(試作・見比べ用)</h3>
-    <p className="mt-1 text-[10px] font-bold text-rose-200/80">親指で判定ラインより下を押す人は、空中へ指を上げきれずに空中のノーツが取れないことがあります。入にすると、地上を押す深さのぶんだけ空中の受け付けの境目を下げます。空中のある HELL だけに効きます。</p>
-    <div className="mt-2 grid grid-cols-2 gap-2">{[[false,'切(いま)'],[true,'入']].map(([v,label])=><button key={label} type="button" data-rhythm-sky-reach-adapt-pick={v?'on':'off'} aria-pressed={on===v} onClick={()=>set(v)} className={`min-h-[44px] rounded-xl text-sm font-black ${on===v?'bg-rose-600 text-white ring-2 ring-rose-200':'bg-slate-800 text-slate-300'}`}>{label}</button>)}</div></section>;
+    <p className="mt-1 text-[10px] font-bold text-rose-200/80">親指で判定ラインより下を押す人は、空中へ指を上げきれずに空中のノーツが取れないことがあります。入(既定)のときは、地上を押す深さのぶんだけ空中の受け付けの境目を下げます。空中のある HELL だけに効きます。</p>
+    <div className="mt-2 grid grid-cols-2 gap-2">{[[false,'切'],[true,'入(既定)']].map(([v,label])=><button key={label} type="button" data-rhythm-sky-reach-adapt-pick={v?'on':'off'} aria-pressed={on===v} onClick={()=>set(v)} className={`min-h-[44px] rounded-xl text-sm font-black ${on===v?'bg-rose-600 text-white ring-2 ring-rose-200':'bg-slate-800 text-slate-300'}`}>{label}</button>)}</div></section>;
 }
 // SKY TAP の見た目の案を切り替える(デバッグ専用・2026-10-11 社長「スカイは透明だけどちょっと見にくい」)。保存は新しいキー mh_sky_box_look_proto だけ。
 // ふつうのプレイ(この画面を通らない)はいまの案Zのまま

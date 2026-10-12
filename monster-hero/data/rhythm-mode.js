@@ -1546,14 +1546,15 @@ const rhythmSkyTheme=()=>{try{const v=typeof localStorage!=='undefined'?localSto
 // 空中のノーツは「地上の判定ラインより少し上(RHYTHM_SKY_ACCEPT_BELOW)まで」、地上のノーツは「空中の判定ラインより少し下から」受け付ける。
 // あいだは両方を受け付けて、時刻と位置の近いほうを取る(親指で狙った線より下を押すくせがあっても取れるように・2026-10-10 人の指のくせの試しで空中のタップがほぼ全部取れなかったため)
 const RHYTHM_SKY_ACCEPT_BELOW=.035,RHYTHM_GROUND_ACCEPT_ABOVE=.05;
-// 空中の受け付けの下の境目を、その人の構えに合わせて下げる(試作・既定は切・デバッグ専用 mh_sky_reach_adapt_proto・2026-10-12 社長「HELL の操作性」)。
+// 空中の受け付けの下の境目を、その人の構えに合わせて下げる(既定は入・デバッグの切り替え mh_sky_reach_adapt_proto・2026-10-12 社長「HELL の操作性」)。
 // 親指で地上の線より下を押す人は、空中へ指を上げても線のすぐ上で止まりやすく、固定の境目(線の少し上)に届かず空中が断られていた
 // (横持ちの人の指のくせのボットで、高さを半分しか上げ下げしないと Sheriruth HELL の MISS が 2→13、増えたのは全部 地上→空中の直後の空中ノーツ)。
 // 地上のノーツを取れた押下の、線より下の深さ(画面の高さに対する割合)を直近16回ぶん覚え、その中央値ぶん境目を下げる。真ん中を押す人は今と同じ。
 // 空中の段のある譜面(HELL)の判定にだけ効く(RHYTHM_SKY_INPUT.active のときだけ呼ばれる)。地上の5難易度・公開曲は変わらない
 const RHYTHM_SKY_REACH_ADAPT_MAX=.2;
 const RHYTHM_SKY_REACH_ADAPT={
-  on:(()=>{try{return typeof localStorage!=='undefined'&&localStorage.getItem('mh_sky_reach_adapt_proto')==='1';}catch(e){return false;}})(),
+  // 既定は入(2026-10-12 社長の決定)。保存値 '0' の人だけ切、'1' は入、無ければ入(読めないときも入)
+  on:(()=>{try{return !(typeof localStorage!=='undefined'&&localStorage.getItem('mh_sky_reach_adapt_proto')==='0');}catch(e){return true;}})(),
   depths:[],
   note(touchRatio){if(!this.on||!Number.isFinite(touchRatio))return;this.depths.push(touchRatio-RHYTHM_JUDGMENT_LINE_Y.ratio);if(this.depths.length>16)this.depths.shift();},
   offset(){if(!this.on||this.depths.length<4)return 0;const sorted=[...this.depths].sort((a,b)=>a-b);return Math.max(0,Math.min(RHYTHM_SKY_REACH_ADAPT_MAX,sorted[sorted.length>>1]));},

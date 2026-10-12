@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0b11ce0870f6c974
+// source-sha256: 7906bb1d3a72fa60
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-12 20:04";
+const BUILD_DATE = "2026-10-12 20:41";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -31541,7 +31541,7 @@ function RhythmSkyReachAdaptSwitch() {
   const [on, setOn] = useState(() => !!RHYTHM_SKY_REACH_ADAPT.on);
   const set = v => {
     try {
-      if (v) localStorage.setItem('mh_sky_reach_adapt_proto', '1');else localStorage.removeItem('mh_sky_reach_adapt_proto');
+      localStorage.setItem('mh_sky_reach_adapt_proto', v ? '1' : '0');
     } catch (e) {}
     RHYTHM_SKY_REACH_ADAPT.on = v;
     RHYTHM_SKY_REACH_ADAPT.reset();
@@ -31554,9 +31554,9 @@ function RhythmSkyReachAdaptSwitch() {
     className: "text-xs font-black text-rose-100"
   }, "空中の受け付けを構えに合わせる(試作・見比べ用)"), React.createElement("p", {
     className: "mt-1 text-[10px] font-bold text-rose-200/80"
-  }, "親指で判定ラインより下を押す人は、空中へ指を上げきれずに空中のノーツが取れないことがあります。入にすると、地上を押す深さのぶんだけ空中の受け付けの境目を下げます。空中のある HELL だけに効きます。"), React.createElement("div", {
+  }, "親指で判定ラインより下を押す人は、空中へ指を上げきれずに空中のノーツが取れないことがあります。入(既定)のときは、地上を押す深さのぶんだけ空中の受け付けの境目を下げます。空中のある HELL だけに効きます。"), React.createElement("div", {
     className: "mt-2 grid grid-cols-2 gap-2"
-  }, [[false, '切(いま)'], [true, '入']].map(([v, label]) => React.createElement("button", {
+  }, [[false, '切'], [true, '入(既定)']].map(([v, label]) => React.createElement("button", {
     key: label,
     type: "button",
     "data-rhythm-sky-reach-adapt-pick": v ? 'on' : 'off',

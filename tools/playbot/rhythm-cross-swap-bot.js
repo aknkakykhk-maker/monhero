@@ -13,7 +13,7 @@
 //   node tools/playbot/rhythm-cross-swap-bot.js --entry proto --song sheriruth_hell_debug --diff HELL --from 0 --to 137000
 //   --persona thumb|lean|normal --seed 3 --sigma 28 で人の指のくせを入れる(既定は くせ無し)
 //   --no-nudge 押さえている指がつられて動くくせだけ止める / --watch 33740 帯の暗さを見張るスライドの始まり(ms)
-//   --sky-adapt 空中の受け付けを構えに合わせる試作(mh_sky_reach_adapt_proto)を入にして遊ぶ
+//   --sky-adapt / --no-sky-adapt 空中の受け付けを構えに合わせる案A(mh_sky_reach_adapt_proto)を入/切にして遊ぶ(書かなければゲームの既定=入・2026-10-12 から)
 //   --travel 0.5 [--travel-ms 250] 親指の上下が届ききらない人(空中⇔地上を続けて押すとき、高さの半分の所で押す)
 // 目安(2026-10-11・直したあと): 0 と 1 は4本とも MARVELOUS・暗い時間0。2 は 107.34秒が MISS・127.77秒が GOOD(直す前と同じ)
 const path = require('path'), fs = require('fs');
@@ -33,7 +33,7 @@ const { touchInputSource } = require(path.join(ROOT_DEFAULT, 'tools/playbot/lib/
 
 const seed = (songId) => `(() => {
   const put = (k, v) => { if (localStorage.getItem(k) === null) localStorage.setItem(k, JSON.stringify(v)); };
-  ${process.argv.includes('--sky-adapt') ? "localStorage.setItem('mh_sky_reach_adapt_proto', '1');" : ''}
+  ${process.argv.includes('--no-sky-adapt') ? "localStorage.setItem('mh_sky_reach_adapt_proto', '0');" : process.argv.includes('--sky-adapt') ? "localStorage.setItem('mh_sky_reach_adapt_proto', '1');" : ''}
   put('mh_breeder_name', 'テスト'); put('mh_breeder_icon', 'Mocchi'); put('mh_onboarded', true);
   put('mh_tutorial_seen_v1', true); put('mh_battle_tutorial_seen_v1', true); put('mh_battle_tutorial_guide_shown_v1', true);
   put('mh_rhythm_tutorial_seen_v1', true); put('mh_quick_rhythm_intro_seen_v1', true); put('mh_quick_rhythm_bg_seen_v1', true);

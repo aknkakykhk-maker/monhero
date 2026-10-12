@@ -2,8 +2,8 @@
 // 空中の受け付けの境目を、その人の構えに合わせて下げる試作(RHYTHM_SKY_REACH_ADAPT・2026-10-12 社長「HELL の操作性」)を見張る。
 // 親指で地上の線より下を押す人は、空中へ指を上げきれずに空中が断られていた(人の指のくせのボット・高さを半分しか上げ下げしないと
 // Sheriruth HELL の MISS 2→13)。地上を取れた押下の深さの中央値ぶん、空中の境目を下げる。
-//   ・既定は切(デバッグの mh_sky_reach_adapt_proto が '1' のときだけ入)
-//   ・切のときの境目は今までと同じ(地上の線の少し上)
+//   ・既定は入(2026-10-12 社長の決定)。デバッグの mh_sky_reach_adapt_proto が '0' のときだけ切。選んだ値は '1'/'0' で残す
+//   ・切のときの境目は前と同じ(地上の線の少し上)
 //   ・空中の段の無い譜面(地上の5難易度・公開曲)では覚えない・効かない
 //   ・覚えるのは地上のノーツを取れたときだけ。下げる量には上限がある
 //
@@ -23,10 +23,10 @@ const sky = { type: 'TAP', timeMs: 1000, lane: 2, subLane: 4, subLaneWidth: 2, s
 const ground = (t, i) => ({ type: 'TAP', timeMs: t, lane: 2, subLane: 4, subLaneWidth: 2, done: false, activePointerId: null, index: i });
 const tap = (G, notes, t, ratio) => G.rhythmMatchInputBatch(notes, [{ inputKey: 'touch:' + t, lane: 2, subLaneCoordinate: 5, subLaneCoordinateAtLine: null, sky: ratio }], t, 0)[0];
 
-{ // 既定は切・境目は今までと同じ
-  const G = load();
+{ // 切('0')を選んだ人: 境目は前と同じ
+  const G = load({ mh_sky_reach_adapt_proto: '0' });
   const base = G.RHYTHM_JUDGMENT_LINE_Y.ratio - G.RHYTHM_SKY_ACCEPT_BELOW;
-  check('既定は切', G.RHYTHM_SKY_REACH_ADAPT.on === false);
+  check("'0' を選んだ人は切", G.RHYTHM_SKY_REACH_ADAPT.on === false);
   G.RHYTHM_SKY_INPUT.active = true;
   const notes = [0, 1, 2, 3, 4, 5].map(k => ground(100 + k * 300, k));
   notes.forEach(n => tap(G, notes, n.timeMs, G.RHYTHM_JUDGMENT_LINE_Y.ratio + .15));
@@ -50,7 +50,7 @@ const tap = (G, notes, t, ratio) => G.rhythmMatchInputBatch(notes, [{ inputKey: 
   // 線の少し上で押した空中のタップ: 切なら断られ、入なら取れる
   const at = line + .02;
   check('入: 地上の線の近くで押した空中のタップを受ける', G.rhythmSkyAccepts(sky, at) === true);
-  const G2 = load(); G2.RHYTHM_SKY_INPUT.active = true;
+  const G2 = load({ mh_sky_reach_adapt_proto: '0' }); G2.RHYTHM_SKY_INPUT.active = true;
   check('切: 同じ押下の空中のタップは今までどおり断る', G2.rhythmSkyAccepts(sky, at) === false);
   // 空中を取れても覚えない
   const before = G.RHYTHM_SKY_REACH_ADAPT.depths.length;
@@ -62,6 +62,12 @@ const tap = (G, notes, t, ratio) => G.rhythmMatchInputBatch(notes, [{ inputKey: 
   check('下げる量には上限がある', Math.abs(G.rhythmSkyAcceptLimit() - (base + G.RHYTHM_SKY_REACH_ADAPT_MAX)) < 1e-9, `上限 ${G.RHYTHM_SKY_REACH_ADAPT_MAX}`);
   G.RHYTHM_SKY_REACH_ADAPT.reset();
   check('演奏が変われば覚え直す(reset)', G.RHYTHM_SKY_REACH_ADAPT.depths.length === 0);
+}
+{ // 既定は入(保存値が無い人)。'1' を選んだ人も入
+  check('保存値が無い人は入(既定)', load().RHYTHM_SKY_REACH_ADAPT.on === true);
+  check('localStorage が無い・読めないときも入', (() => { const ctx = { console, performance: { now: () => 0 } }; vm.runInNewContext(`${fs.readFileSync(path.join(ROOT, 'monster-hero/data/rhythm-mode.js'), 'utf8')}\nthis.on=RHYTHM_SKY_REACH_ADAPT.on;`, ctx); return ctx.on === true; })());
+  const play = fs.readFileSync(path.join(ROOT, 'monster-hero/src/parts/30-rhythm-play.jsx'), 'utf8');
+  check("切り替えは '1'/'0' で残す(切を選んだ人の選択を消さない)", play.includes("localStorage.setItem('mh_sky_reach_adapt_proto',v?'1':'0')") && !play.includes("localStorage.removeItem('mh_sky_reach_adapt_proto')"));
 }
 { // 演奏画面: 譜面が変わるたびに覚えた深さを消す・切り替えはデバッグの画面だけ
   const play = fs.readFileSync(path.join(ROOT, 'monster-hero/src/parts/30-rhythm-play.jsx'), 'utf8');

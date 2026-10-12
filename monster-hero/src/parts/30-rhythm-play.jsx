@@ -599,13 +599,14 @@ function RhythmSkyLiftSwitch(){
     <div className="mt-2 grid grid-cols-3 gap-2">{[16,25,39].map(v=><button key={v} type="button" data-rhythm-sky-lift={v} aria-pressed={value===v} onClick={()=>pick(v)} className={`min-h-[44px] rounded-xl text-sm font-black ${value===v?'bg-rose-600 text-white ring-2 ring-rose-200':'bg-slate-800 text-slate-300'}`}>{v}%{v===16?'(いま)':''}</button>)}</div></section>;
 }
 // 空中の受け付けの境目を、その人の構えに合わせて下げる(デバッグ専用・2026-10-12 社長「HELL の操作性」)。保存は新しいキー mh_sky_reach_adapt_proto だけ。
-// 切(いま)は境目が固定(地上の線の少し上)。入にすると、地上を線より下で押す人ほど空中の境目も下がる。次の演奏から効く
+// 既定は入(2026-10-12 社長の決定)。切は境目が固定(地上の線の少し上)。入は、地上を線より下で押す人ほど空中の境目も下がる。次の演奏から効く
 function RhythmSkyReachAdaptSwitch(){
   const [on,setOn]=useState(()=>!!RHYTHM_SKY_REACH_ADAPT.on);
-  const set=v=>{try{if(v)localStorage.setItem('mh_sky_reach_adapt_proto','1');else localStorage.removeItem('mh_sky_reach_adapt_proto');}catch(e){}RHYTHM_SKY_REACH_ADAPT.on=v;RHYTHM_SKY_REACH_ADAPT.reset();setOn(v);};
+  // 選んだ値は '1'(入)/'0'(切)で残す(既定は入。切を選んだ人の選択を消さない)
+  const set=v=>{try{localStorage.setItem('mh_sky_reach_adapt_proto',v?'1':'0');}catch(e){}RHYTHM_SKY_REACH_ADAPT.on=v;RHYTHM_SKY_REACH_ADAPT.reset();setOn(v);};
   return <section data-rhythm-sky-reach-adapt className="mb-3 rounded-2xl border border-rose-400/50 bg-rose-950/25 p-3"><h3 className="text-xs font-black text-rose-100">空中の受け付けを構えに合わせる(試作・見比べ用)</h3>
-    <p className="mt-1 text-[10px] font-bold text-rose-200/80">親指で判定ラインより下を押す人は、空中へ指を上げきれずに空中のノーツが取れないことがあります。入にすると、地上を押す深さのぶんだけ空中の受け付けの境目を下げます。空中のある HELL だけに効きます。</p>
-    <div className="mt-2 grid grid-cols-2 gap-2">{[[false,'切(いま)'],[true,'入']].map(([v,label])=><button key={label} type="button" data-rhythm-sky-reach-adapt-pick={v?'on':'off'} aria-pressed={on===v} onClick={()=>set(v)} className={`min-h-[44px] rounded-xl text-sm font-black ${on===v?'bg-rose-600 text-white ring-2 ring-rose-200':'bg-slate-800 text-slate-300'}`}>{label}</button>)}</div></section>;
+    <p className="mt-1 text-[10px] font-bold text-rose-200/80">親指で判定ラインより下を押す人は、空中へ指を上げきれずに空中のノーツが取れないことがあります。入(既定)のときは、地上を押す深さのぶんだけ空中の受け付けの境目を下げます。空中のある HELL だけに効きます。</p>
+    <div className="mt-2 grid grid-cols-2 gap-2">{[[false,'切'],[true,'入(既定)']].map(([v,label])=><button key={label} type="button" data-rhythm-sky-reach-adapt-pick={v?'on':'off'} aria-pressed={on===v} onClick={()=>set(v)} className={`min-h-[44px] rounded-xl text-sm font-black ${on===v?'bg-rose-600 text-white ring-2 ring-rose-200':'bg-slate-800 text-slate-300'}`}>{label}</button>)}</div></section>;
 }
 // SKY TAP の見た目の案を切り替える(デバッグ専用・2026-10-11 社長「スカイは透明だけどちょっと見にくい」)。保存は新しいキー mh_sky_box_look_proto だけ。
 // ふつうのプレイ(この画面を通らない)はいまの案Zのまま
