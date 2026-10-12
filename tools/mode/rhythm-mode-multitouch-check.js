@@ -47,7 +47,7 @@ console.log('\n--- 押しているレーンの表示（指とポインタの合�
   check('ポインタ側が自分のぶんだけで上書きしていない',
     !/setPressedLanes\(run\.activePointerFeedback\.values\(\)\)/.test(play));
   check('タッチ側は指のぶんを覚えてから合流して渡す',
-    /liveTouchSubLanesRef\.current=liveSubLanes;setPressedLanes\(pressedLanesNow\(\)\);/.test(play));
+    /liveTouchSubLanesRef\.current=liveSubLanes;(?:liveTouchSkySubLanesRef\.current=liveSkySubLanes;)?setPressedLanes\(pressedLanesNow\(\)\);/.test(play)); // 2026-10 から空中のサブレーンも同じ所で覚える
   check('ポインタが離れても、残っている指の光を消さない',
     !/else setPressedLanes\(\[\]\);/.test(play)&&/else setPressedLanes\(pressedLanesNow\(\)\);/.test(play));
 }
