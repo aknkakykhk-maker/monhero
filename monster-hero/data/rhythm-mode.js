@@ -30923,7 +30923,7 @@ const rhythmHitSparkActive=()=>rhythmHitSparkPreference()!=='off';
 // 判定の文字の大きさを、判定が変わったら一度で変える(2026-10-12・発熱の手当て ④)。
 // 今は判定ごとの文字の大きさ(24〜34px)を 0.12秒かけてなめらかに変えていて(index.html の transition:font-size)、そのあいだ毎コマ画面の組み直しが起きる。
 // 入にすると、なめらかに変える動きだけを止める(弾む動き・色・光は今のまま)。デバッグ画面「判定の文字の大きさの変わり方(検証用)」で出し入れする。
-// 'on' = 一度で変える・'off' = 今の形・未設定 = 既定(今の形。社長が静止画を見て決める)
+// 'on' = 一度で変える・'off' = 今までの形(なめらかに)・未設定 = 既定(一度で。2026-10-12 社長が静止画を見て決めた。'off' を保存した人はそのまま)
 const RHYTHM_JUDGMENT_SNAP_KEY='mh_rhythm_judgment_snap_v1';
 // 地上の判定の文字の置き場所の案(デバッグ専用・2026-10-12 社長「ヘルで改良した良い部分はマスター以下にも取り入れて」)。
 // HELL で空中の判定の文字を、来るノーツに重ならない所へ移した考え方を、地上の文字にも試す。保存は新しいキー mh_rhythm_judge_text_pos_proto だけ。既定は now(いまのまま)。
@@ -30937,7 +30937,7 @@ const RHYTHM_JUDGE_TEXT_POS={id:(()=>{try{const v=typeof localStorage!=='undefin
   set(id){const v=RHYTHM_JUDGE_TEXT_POS_LABELS[id]?id:'now';this.id=v;try{if(v==='now')localStorage.removeItem('mh_rhythm_judge_text_pos_proto');else localStorage.setItem('mh_rhythm_judge_text_pos_proto',v);}catch(e){}}};
 const rhythmJudgmentSnapPreference=()=>{try{if(typeof localStorage==='undefined')return '';const v=localStorage.getItem(RHYTHM_JUDGMENT_SNAP_KEY);return v==='on'||v==='off'?v:'';}catch{return '';}};
 const rhythmJudgmentSnapSetPreference=value=>{const next=value==='on'||value==='off'?value:'';try{if(typeof localStorage!=='undefined'){if(next)localStorage.setItem(RHYTHM_JUDGMENT_SNAP_KEY,next);else localStorage.removeItem(RHYTHM_JUDGMENT_SNAP_KEY);}}catch{}return next;};
-const rhythmJudgmentSnapActive=()=>rhythmJudgmentSnapPreference()==='on';
+const rhythmJudgmentSnapActive=()=>rhythmJudgmentSnapPreference()!=='off';
 const RHYTHM_PREPARE_KEY='mh_rhythm_prepare_v1';
 const rhythmPreparePreference=()=>{try{if(typeof localStorage==='undefined')return '';const v=localStorage.getItem(RHYTHM_PREPARE_KEY);return v==='on'||v==='off'?v:'';}catch{return '';}};
 const rhythmPrepareSetPreference=value=>{const next=value==='on'||value==='off'?value:'';try{if(typeof localStorage!=='undefined'){if(next)localStorage.setItem(RHYTHM_PREPARE_KEY,next);else localStorage.removeItem(RHYTHM_PREPARE_KEY);}}catch{}return next;};

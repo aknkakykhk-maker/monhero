@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 281f33f84d8dc0ee
+// source-sha256: 6996015d5d84f83b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-12 14:42";
+const BUILD_DATE = "2026-10-12 15:01";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -99129,7 +99129,7 @@ function MonsterHeroGame() {
       className: "mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80"
     }, "判定の文字（PERFECT など）は判定ごとに大きさが違い、今は 0.12秒かけてなめらかに大きさを変えています（そのあいだ毎コマ画面の組み直しが起きます）。「一度で」は大きさをすぐに変えます。弾む動き・色・光は変わりません。次の演奏から効きます。"), React.createElement("div", {
       className: "mt-2 flex gap-2"
-    }, [['', '既定（なめらかに）'], ['on', '一度で'], ['off', 'なめらかに']].map(([value, label]) => React.createElement("button", {
+    }, [['', '既定（一度で）'], ['on', '一度で'], ['off', 'なめらかに']].map(([value, label]) => React.createElement("button", {
       key: value || 'default',
       type: "button",
       "data-rhythm-judgment-snap-pref": value || 'default',
