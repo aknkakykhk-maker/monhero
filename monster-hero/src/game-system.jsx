@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 09e85aa39611e1de
+// generated-sha256: 9f6464efedb6f064
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-13 07:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-13 07:36"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -21664,7 +21664,9 @@ const paintCanvasNote=note=>{
   // 取り終えたノーツは、弾ける演出が済んでからマスモンの絵を隠し、「片付け済み」の印を付ける。
   // 走査の先頭(scanFrom)はこの印まで進めない(DOM 版が要素の非表示を待つのと同じ)。
   // これが無いと取った瞬間に走査から外れ、絵が隠れずに判定ラインへ残った(2026-09-07・実機「canvas 版でマスモンが残る」)
-  if(note.done&&!failedTrail&&!clearFlash){note._rhythmCanvasSettled=true;return;}
+  // 取り損ねた残りは約0.3秒で消す(rhythmFailedTrailFade)。消え切ったら取り終えたノーツと同じく片付ける
+  const failFade=failedTrail?rhythmFailedTrailFade(note,songTimeMs):1;
+  if(note.done&&(!failedTrail||failFade<=0)&&!clearFlash){note._rhythmCanvasSettled=true;return;}
   const progress=1-(rhythmScrollPos(note.timeMs,note.scrollGroup)-rhythmScrollPos(visualTime,note.scrollGroup))/travelMs,visible=failedTrail||note.activePointerId!==null||(progress>=-.1&&progress<=1.18);
   if(!visible||!travel||!canvasReady)return;
   perfDrawn++;
@@ -21679,7 +21681,7 @@ const paintCanvasNote=note=>{
   const geo=rhythmNoteCanvasGeometry(note,yPx,visualLane,travel.rect,travel.noteHeight,hasBody?releaseYpx:null,{chartNowMs:songTimeMs-settings.judgmentTimingOffsetMs,visualTime,travelMs,spawnY:travel.spawnY,travelPx:travel.travelPx,gpu:gpuBandNow},hasBody?bodyPx:0);
   const monster=!!monsterForNote(note);
   const depthScale=Math.round((0.56+geo.scale*.44)*100)/100,brightness=Math.round((0.72+geo.scale*.28)*100)/100;
-  RHYTHM_CANVAS_RENDERER.drawNote(note,geo,{failed:failedTrail,monster,wide:rhythmNoteIsWide(note),pressed:note.type==='HOLD'&&note.activePointerId!==null,slideOff:note.type==='HOLD'&&note.activePointerId!==null&&RHYTHM_GESTURE_RUNTIME.slideOffForIndex(note.index),heldMs:songTimeMs-note.timeMs,alpha:failedTrail?.34:1,pop:clearFlash?Math.min(1,(songTimeMs-note._rhythmClearAt)/RHYTHM_CLEAR_FLASH_MS):null,depthScale,brightness});
+  RHYTHM_CANVAS_RENDERER.drawNote(note,geo,{failed:failedTrail,monster,wide:rhythmNoteIsWide(note),pressed:note.type==='HOLD'&&note.activePointerId!==null,slideOff:note.type==='HOLD'&&note.activePointerId!==null&&RHYTHM_GESTURE_RUNTIME.slideOffForIndex(note.index),heldMs:songTimeMs-note.timeMs,alpha:failedTrail?.34*failFade:1,pop:clearFlash?Math.min(1,(songTimeMs-note._rhythmClearAt)/RHYTHM_CLEAR_FLASH_MS):null,depthScale,brightness});
   // マスモンの顔(焼いた絵)。以前の DOM 版と同じく、落下中は「奥行き×1.28倍」、
   // 取った瞬間は枠の大きさから2.1倍へ広がりながら消える(0.26秒・影なし)
   const monsterSlot=monster?rhythmNoteMonsterSlot(note):0,faceBitmap=monsterSlot?faceBitmapsRef.current[monsterSlot-1]:null;
@@ -21737,7 +21739,7 @@ if(!note.done&&note.activePointerId===null&&note.releasedAtMs!=null){
 if(!note.done&&note.activePointerId===null&&note.releasedAtMs==null&&!placeable&&songTimeMs-(note.timeMs+settings.judgmentTimingOffsetMs)>RHYTHM_MISS_RECLAIM_MS){note.done=true;note._rhythmUnplaceable=true;return;}
 if(!note.done&&note.activePointerId===null&&note.releasedAtMs==null&&songTimeMs-(note.timeMs+settings.judgmentTimingOffsetMs)>RHYTHM_MISS_RECLAIM_MS)applyJudgment(note,'MISS',songTimeMs-note.timeMs);if(canvasNotes){paintCanvasNote(note);return;}
 const el=laneRefs.current[note.index];if(!el)return;
-// 失敗したHOLD/SLIDEはその場で消さず、譜面上の終端まで薄いグレーで流し続ける。
+// 失敗したHOLD/SLIDEは薄いグレーにして、約0.3秒で消す(2026-10-12 以前は譜面上の終端まで流し続けていた)。
 // 「もう取れない」ことが見えるようにするための表示だけの扱いで、判定・スコアには関与しない。
 const failedTrail=note.done&&note._rhythmFinalJudgment==='MISS'&&rhythmNoteHasBody(note)&&songTimeMs<rhythmReleaseTargetMs(note);
 // 終わったノーツは毎フレーム display を書き直さない。曲が進むほど終わったノーツが増え、
@@ -21747,10 +21749,12 @@ const failedTrail=note.done&&note._rhythmFinalJudgment==='MISS'&&rhythmNoteHasBo
 const clearFlash=note.done&&Number.isFinite(note._rhythmClearAt)&&songTimeMs-note._rhythmClearAt<RHYTHM_CLEAR_FLASH_MS;
 if(clearFlash){if(el._rhythmClearFlag!==true){el.dataset.rhythmClear='1';el._rhythmClearFlag=true;}}
 else if(el._rhythmClearFlag===true){delete el.dataset.rhythmClear;el._rhythmClearFlag=false;}
-if(note.done&&!failedTrail&&!clearFlash){if(el._rhythmHidden!==true){el.style.display='none';el._rhythmHidden=true;}return;}
+// 取り損ねた残りは約0.3秒で消す(canvas 版と同じ rhythmFailedTrailFade)
+const failFade=failedTrail?rhythmFailedTrailFade(note,songTimeMs):1;
+if(note.done&&(!failedTrail||failFade<=0)&&!clearFlash){if(el._rhythmHidden!==true){el.style.display='none';el._rhythmHidden=true;}return;}
 if(el._rhythmHidden===true){el.style.display='';el._rhythmHidden=false;}
 const failedFlag=failedTrail?'true':'false';if(el._rhythmFailedFlag!==failedFlag){el.dataset.rhythmFailed=failedFlag;el._rhythmFailedFlag=failedFlag;}
-const progress=1-(rhythmScrollPos(note.timeMs,note.scrollGroup)-rhythmScrollPos(visualTime,note.scrollGroup))/travelMs,visible=failedTrail||note.activePointerId!==null||(progress>=-.1&&progress<=1.18);const nextOpacity=failedTrail?'.34':(visible?'1':'0');if(el._rhythmOpacity!==nextOpacity){el.style.opacity=nextOpacity;el._rhythmOpacity=nextOpacity;}const nextWillChange=visible?'transform, opacity':'';if(el._rhythmWillChange!==nextWillChange){el.style.willChange=nextWillChange;el._rhythmWillChange=nextWillChange;}
+const progress=1-(rhythmScrollPos(note.timeMs,note.scrollGroup)-rhythmScrollPos(visualTime,note.scrollGroup))/travelMs,visible=failedTrail||note.activePointerId!==null||(progress>=-.1&&progress<=1.18);const nextOpacity=failedTrail?String(Math.round(34*failFade)/100):(visible?'1':'0');if(el._rhythmOpacity!==nextOpacity){el.style.opacity=nextOpacity;el._rhythmOpacity=nextOpacity;}const nextWillChange=visible?'transform, opacity':'';if(el._rhythmWillChange!==nextWillChange){el.style.willChange=nextWillChange;el._rhythmWillChange=nextWillChange;}
 if(!visible||!travel)return;
 perfDrawn++;let yPx=travel.spawnY+rhythmProjectTravelProgress(progress)*travel.travelPx;if(note.type==='HOLD'&&note.activePointerId!==null)yPx=travel.judgmentY;if(clearFlash)yPx=travel.judgmentY;yPx=Math.round(yPx);/* 縦位置は1px刻みへ丸めてある。丸めた値が前のフレームと同じなら書き直さない。   見た目は1pxも変わらないのに、書けばそのノーツは合成のやり直し対象になる。   ノーツが奥にいるあいだ(遠近の効きで1フレームの移動が1px未満)はここで止まる */const nextTransform=`translate3d(0,${yPx}px,0)`;if(el._rhythmTransform!==nextTransform){el.style.transform=nextTransform;el._rhythmTransform=nextTransform;}const releaseTargetMs=rhythmReleaseTargetMs(note),releaseProgress=1-(rhythmScrollPos(releaseTargetMs,note.scrollGroup)-rhythmScrollPos(visualTime,note.scrollGroup))/travelMs,releaseYpx=Math.round(travel.spawnY+rhythmProjectTravelProgress(releaseProgress)*travel.travelPx),bodyPx=Math.max(0,yPx-releaseYpx);if(note.type==='HOLD'){/* 帯の長さもfilterも「変わったときだけ」書く。とくにfilterを毎フレーム書くと、押していない間もそのノーツが毎フレーム塗り直しになり、画面の広い端末ほど重くなる */const holdBody=`${Math.round(bodyPx)}px`;if(el._rhythmHoldBody!==holdBody){el.style.setProperty('--rhythm-hold-body',holdBody);el._rhythmHoldBody=holdBody;}const holdFilter=note.activePointerId!==null?'brightness(1.3)':'';if(el._rhythmHoldFilter!==holdFilter){el.style.filter=holdFilter;el._rhythmHoldFilter=holdFilter;}}if(note.type==='SLIDE'||note._rhythmOriginalType==='SLIDE'){/* HOLDの帯と同じで、SLIDEの帯の高さも変わったときだけ書く。   毎フレーム書くと、押していないSLIDEまで毎フレーム塗り直しの対象になる */const slideBody=`${Math.round(bodyPx)}px`;if(el._rhythmSlideBody!==slideBody){el.style.setProperty('--rhythm-slide-height',slideBody);el.style.setProperty('--rhythm-slide-visible-height',slideBody);el._rhythmSlideBody=slideBody;}}const activeSlideLane=RHYTHM_GESTURE_RUNTIME.slideVisualLaneForIndex(note.index),visualLane=activeSlideLane===null?note.lane:activeSlideLane;rhythmLayoutNoteVisual(el,note,yPx,visualLane,playAreaRef.current,releaseYpx,{chartNowMs:songTimeMs-settings.judgmentTimingOffsetMs,visualTime,travelMs,spawnY:travel.spawnY,travelPx:travel.travelPx},{rect:travel.rect,noteHeight:travel.noteHeight,bodyHeight:bodyPx});};
 const notes=run.notes;

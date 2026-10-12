@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0af24c941c744c08
+// source-sha256: bca6843b4db66e9d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-13 07:11";
+const BUILD_DATE = "2026-10-13 07:36";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -34598,7 +34598,8 @@ const RhythmTapTest = ({
       const paintCanvasNote = note => {
         const failedTrail = note.done && note._rhythmFinalJudgment === 'MISS' && rhythmNoteHasBody(note) && songTimeMs < rhythmReleaseTargetMs(note);
         const clearFlash = note.done && Number.isFinite(note._rhythmClearAt) && songTimeMs - note._rhythmClearAt < RHYTHM_CLEAR_FLASH_MS;
-        if (note.done && !failedTrail && !clearFlash) {
+        const failFade = failedTrail ? rhythmFailedTrailFade(note, songTimeMs) : 1;
+        if (note.done && (!failedTrail || failFade <= 0) && !clearFlash) {
           note._rhythmCanvasSettled = true;
           return;
         }
@@ -34635,7 +34636,7 @@ const RhythmTapTest = ({
           pressed: note.type === 'HOLD' && note.activePointerId !== null,
           slideOff: note.type === 'HOLD' && note.activePointerId !== null && RHYTHM_GESTURE_RUNTIME.slideOffForIndex(note.index),
           heldMs: songTimeMs - note.timeMs,
-          alpha: failedTrail ? .34 : 1,
+          alpha: failedTrail ? .34 * failFade : 1,
           pop: clearFlash ? Math.min(1, (songTimeMs - note._rhythmClearAt) / RHYTHM_CLEAR_FLASH_MS) : null,
           depthScale,
           brightness
@@ -34725,7 +34726,8 @@ const RhythmTapTest = ({
           delete el.dataset.rhythmClear;
           el._rhythmClearFlag = false;
         }
-        if (note.done && !failedTrail && !clearFlash) {
+        const failFade = failedTrail ? rhythmFailedTrailFade(note, songTimeMs) : 1;
+        if (note.done && (!failedTrail || failFade <= 0) && !clearFlash) {
           if (el._rhythmHidden !== true) {
             el.style.display = 'none';
             el._rhythmHidden = true;
@@ -34743,7 +34745,7 @@ const RhythmTapTest = ({
         }
         const progress = 1 - (rhythmScrollPos(note.timeMs, note.scrollGroup) - rhythmScrollPos(visualTime, note.scrollGroup)) / travelMs,
           visible = failedTrail || note.activePointerId !== null || progress >= -.1 && progress <= 1.18;
-        const nextOpacity = failedTrail ? '.34' : visible ? '1' : '0';
+        const nextOpacity = failedTrail ? String(Math.round(34 * failFade) / 100) : visible ? '1' : '0';
         if (el._rhythmOpacity !== nextOpacity) {
           el.style.opacity = nextOpacity;
           el._rhythmOpacity = nextOpacity;
