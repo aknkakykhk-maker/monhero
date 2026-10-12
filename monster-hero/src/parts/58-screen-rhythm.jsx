@@ -714,7 +714,7 @@ function RhythmRankingScreen({
       const refresh=()=>{
         if(boardTab)loadRhythmEventRanking&&loadRhythmEventRanking(boardKind,eventDivisionId);
         else if(totalTabOpen)loadRhythmTotalRanking&&loadRhythmTotalRanking();
-        else loadRhythmRanking(song);
+        else loadRhythmRanking(song,rhythmRanking.difficultyId||'ALL');
       };
       // ランク(S/SS/…)を決める点数。回数ボーナス込みの点だと満点を超えてしまうので、
       // 素点が返っているときはそちらを使う(素点が無い＝加点なしの集計ならそのまま)
@@ -934,6 +934,14 @@ function RhythmRankingScreen({
           {/* 「この曲」がどの曲かを出す(2026-10-07・ユーザー報告「トップのランキングから飛ぶと『この曲』の欄があるのに、どの曲か分からない」)。
               曲えらびを通らずに開いても、見ている曲(最後に選んでいた曲)が分かるようにする */}
           {songTab&&song&&<p data-rhythm-ranking-song className="mb-2 truncate text-center text-[11px] font-black text-amber-100">{rhythmSongFullName(song)||song.displayName}</p>}
+          {/* 難易度の切り替え(2026-10-13 社長「曲ごとの難易度別も表示させよう」)。既定は全難易度(いままでの表。その人のいちばん高いスコア1件で並べる。足し算ではないので「合算」と書かない・2026-10-13 社長)。
+              並べるのは、その曲に譜面がある難易度だけ。HELL は公開の印が真のときだけ(rhythmScoredDifficultyIds) */}
+          {songTab&&song&&(()=>{const chartIds=rhythmDemoDifficulties(song,RHYTHM_PLAY_DIFFICULTIES).map(d=>d.id);
+            const ids=['ALL',...rhythmScoredDifficultyIds().filter(id=>chartIds.includes(id))];const cur=rhythmRanking.difficultyId||'ALL';
+            return <div data-rhythm-ranking-diffs className="mb-2 flex gap-1.5 overflow-x-auto pb-0.5">{ids.map(id=>(
+              <button key={id} type="button" data-rhythm-ranking-diff={id} aria-pressed={cur===id} onClick={()=>loadRhythmRanking(song,id)}
+                className={`min-h-[44px] shrink-0 rounded-lg border px-2.5 text-[10px] font-black ${cur===id?'border-amber-300/70 bg-amber-500/20 text-amber-100':'border-white/15 bg-slate-900/70 text-slate-300'}`}>
+                {id==='ALL'?'全難易度':(RHYTHM_DEMO_DIFFICULTY_LABELS[id]?.name||id)}</button>))}</div>;})()}
           {songTab&&rhythmRanking.status==='loading'&&<p data-rhythm-ranking-loading className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">読み込み中…</p>}
           {songTab&&rhythmRanking.status==='error'&&<p data-rhythm-ranking-error className="rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200">読み込めませんでした。電波の良い場所で「更新」をお試しください。</p>}
           {songTab&&rhythmRanking.status==='ready'&&rhythmRanking.entries.length===0&&<p data-rhythm-ranking-empty className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">まだ記録がありません。最初の1件になってみましょう。</p>}

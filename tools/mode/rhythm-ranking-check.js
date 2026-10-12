@@ -147,7 +147,8 @@ check('取得はoffsetを受け取れる(ページ送りに使う)',
 // 同じプレイヤーの行だけで埋まり、他プレイヤーがユーザー集約後に消えてしまう。
 // ユニークな人数が集まるかページが尽きるまで送るループになっているかを確認する
 check('loadRhythmRankingは、ユニークな人数(表示件数ぶん)が集まるかページが尽きるまでページ送りする',(()=>{
-  const at=game.indexOf('const loadRhythmRanking = useCallback(async (song) => {');
+  // 2026-10-13 に難易度を1つに絞る第2引数を足した(既定は全難易度=いままでどおり)
+  const at=game.indexOf("const loadRhythmRanking = useCallback(async (song, difficultyId = 'ALL') => {");
   const end=game.indexOf('submitRhythmRankingScore',at);
   const block=at>=0&&end>at?game.slice(at,end):'';
   return block.includes('for (let page = 0; page < RHYTHM_RANKING_MAX_PAGES; page++) {')

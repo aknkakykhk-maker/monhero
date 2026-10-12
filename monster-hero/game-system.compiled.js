@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f3492e68ff0e7295
+// source-sha256: eee3382ac0f886fe
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-13 07:41";
+const BUILD_DATE = "2026-10-13 08:02";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -51027,7 +51027,7 @@ function RhythmRankingScreen({
     loadRhythmEventRanking && loadRhythmEventRanking(boardKind, divisionId);
   };
   const refresh = () => {
-    if (boardTab) loadRhythmEventRanking && loadRhythmEventRanking(boardKind, eventDivisionId);else if (totalTabOpen) loadRhythmTotalRanking && loadRhythmTotalRanking();else loadRhythmRanking(song);
+    if (boardTab) loadRhythmEventRanking && loadRhythmEventRanking(boardKind, eventDivisionId);else if (totalTabOpen) loadRhythmTotalRanking && loadRhythmTotalRanking();else loadRhythmRanking(song, rhythmRanking.difficultyId || 'ALL');
   };
   const eventRankScore = entry => entry && entry.baseScore !== null && entry.baseScore !== undefined ? entry.baseScore : entry?.score || 0;
   const totalRow = (entry, rank, mine) => React.createElement("div", {
@@ -51265,7 +51265,22 @@ function RhythmRankingScreen({
   }, eventRow(entry, index + 1, !!eventBoard.self && entry.identityKey === eventBoard.self.identityKey))))))), songTab && song && React.createElement("p", {
     "data-rhythm-ranking-song": true,
     className: "mb-2 truncate text-center text-[11px] font-black text-amber-100"
-  }, rhythmSongFullName(song) || song.displayName), songTab && rhythmRanking.status === 'loading' && React.createElement("p", {
+  }, rhythmSongFullName(song) || song.displayName), songTab && song && (() => {
+    const chartIds = rhythmDemoDifficulties(song, RHYTHM_PLAY_DIFFICULTIES).map(d => d.id);
+    const ids = ['ALL', ...rhythmScoredDifficultyIds().filter(id => chartIds.includes(id))];
+    const cur = rhythmRanking.difficultyId || 'ALL';
+    return React.createElement("div", {
+      "data-rhythm-ranking-diffs": true,
+      className: "mb-2 flex gap-1.5 overflow-x-auto pb-0.5"
+    }, ids.map(id => React.createElement("button", {
+      key: id,
+      type: "button",
+      "data-rhythm-ranking-diff": id,
+      "aria-pressed": cur === id,
+      onClick: () => loadRhythmRanking(song, id),
+      className: `min-h-[44px] shrink-0 rounded-lg border px-2.5 text-[10px] font-black ${cur === id ? 'border-amber-300/70 bg-amber-500/20 text-amber-100' : 'border-white/15 bg-slate-900/70 text-slate-300'}`
+    }, id === 'ALL' ? '全難易度' : RHYTHM_DEMO_DIFFICULTY_LABELS[id]?.name || id)));
+  })(), songTab && rhythmRanking.status === 'loading' && React.createElement("p", {
     "data-rhythm-ranking-loading": true,
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
   }, "読み込み中…"), songTab && rhythmRanking.status === 'error' && React.createElement("p", {
@@ -78124,7 +78139,8 @@ function MonsterHeroGame() {
     status: 'idle',
     entries: [],
     error: null,
-    songId: null
+    songId: null,
+    difficultyId: 'ALL'
   });
   const [rhythmMultiPreviewSongId, setRhythmMultiPreviewSongId] = useState('');
   const rhythmMultiPlaySettings = useMemo(() => {
@@ -78531,20 +78547,32 @@ function MonsterHeroGame() {
       } catch (_) {}
     }, ms));
   }, [refreshRhythmRankingPending]);
-  const loadRhythmRanking = useCallback(async song => {
+  const loadRhythmRanking = useCallback(async (song, difficultyId = 'ALL') => {
     if (!song) return;
+    const diff = difficultyId && difficultyId !== 'ALL' ? difficultyId : 'ALL';
     const requestId = ++rhythmRankingRequestRef.current;
     setRhythmRanking({
       status: 'loading',
       entries: [],
       error: null,
-      songId: song.songId
+      songId: song.songId,
+      difficultyId: diff
     });
     try {
       await settleRhythmRankingSubmit();
       if (rhythmRankingRequestRef.current !== requestId) return;
-      const keys = rhythmRankingCombinedMembers(song.songId);
+      const keys = diff === 'ALL' ? rhythmRankingCombinedMembers(song.songId) : [rhythmRankingDifficultyKey(song.songId, diff)].filter(Boolean);
       let rows = [];
+      if (!keys.length) {
+        setRhythmRanking({
+          status: 'ready',
+          entries: [],
+          error: null,
+          songId: song.songId,
+          difficultyId: diff
+        });
+        return;
+      }
       for (let page = 0; page < RHYTHM_RANKING_MAX_PAGES; page++) {
         const pageRows = await sbFetchRhythmRankings(keys, RHYTHM_RANKING_FETCH_LIMIT, page * RHYTHM_RANKING_FETCH_LIMIT, `rhythm-rank-${song.songId}-${Date.now()}-${page}`);
         if (rhythmRankingRequestRef.current !== requestId) return;
@@ -78557,7 +78585,8 @@ function MonsterHeroGame() {
         status: 'ready',
         entries,
         error: null,
-        songId: song.songId
+        songId: song.songId,
+        difficultyId: diff
       });
     } catch (e) {
       if (rhythmRankingRequestRef.current !== requestId) return;
@@ -78566,7 +78595,8 @@ function MonsterHeroGame() {
         status: 'error',
         entries: [],
         error: e?.message || String(e),
-        songId: song.songId
+        songId: song.songId,
+        difficultyId: diff
       });
     }
   }, [settleRhythmRankingSubmit]);
