@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ca4a4ae99469fcaf
+// source-sha256: f3492e68ff0e7295
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-13 07:37";
+const BUILD_DATE = "2026-10-13 07:41";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -5738,7 +5738,8 @@ const RHYTHM_RANK_COLORS = Object.freeze({
   A: 'text-red-400',
   S: 'text-yellow-400',
   SS: 'text-yellow-200',
-  M: 'text-fuchsia-300'
+  M: 'text-fuchsia-300',
+  MF: 'text-orange-300'
 });
 const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   bgmVolume: 100,
@@ -5900,6 +5901,36 @@ const normalizeRhythmBestRecord = value => {
     allExcellent: source.allExcellent === true,
     allMarvelous: source.allMarvelous === true,
     judgments: Object.fromEntries(RHYTHM_JUDGMENT_IDS.map(id => [id, count(source.judgments?.[id] ?? source[id])]))
+  };
+};
+const RHYTHM_HELL_BEST_RESCALED_KEY = 'mh_rhythm_hell_best_rescaled_v1';
+const rescaleRhythmHellBestScores = value => {
+  const source = value && typeof value === 'object' && !Array.isArray(value) ? value : null;
+  if (!source) return {
+    changed: false,
+    next: value
+  };
+  let changed = false;
+  const next = {
+    ...source
+  };
+  Object.keys(source).forEach(songId => {
+    const rec = source[songId],
+      hell = rec && typeof rec === 'object' && !Array.isArray(rec) ? rec.HELL : null;
+    const score = hell && typeof hell === 'object' ? Number(hell.bestScore) : NaN;
+    if (!Number.isFinite(score) || score <= 0) return;
+    next[songId] = {
+      ...rec,
+      HELL: {
+        ...hell,
+        bestScore: Math.floor(score * 1050000 / 1100000)
+      }
+    };
+    changed = true;
+  });
+  return {
+    changed,
+    next
   };
 };
 const normalizeRhythmBestRecords = value => {
@@ -15837,7 +15868,7 @@ const helpDataRows = id => {
         return [`${index + 1}位`, `${HERO_PROOF_SHARD_ITEM.emoji} ${HERO_PROOF_SHARD_ITEM.name}×${reward.count}` + ` ／ 💗 虹のプシュケー×${reward.psyche.toLocaleString()}` + ` ／ 💎 ダイヤ×${reward.gold.toLocaleString()}`];
       });
     case 'rhythmEventPlayBonus':
-      return RHYTHM_DEMO_DIFFICULTY_IDS.map(id => [RHYTHM_DEMO_DIFFICULTY_LABELS[id]?.name || id, rhythmEventPlayBonusPercentText(id)]);
+      return (typeof rhythmScoredDifficultyIds === 'function' ? rhythmScoredDifficultyIds() : RHYTHM_DEMO_DIFFICULTY_IDS).map(id => [RHYTHM_DEMO_DIFFICULTY_LABELS[id]?.name || id, rhythmEventPlayBonusPercentText(id)]);
     case 'extremeDifficulties':
       return PUBLIC_EXTREME_DIFFICULTIES.map(s => [s.label, s.available ? `敵×${s.power} ／ スコア×${s.score} ／ 経験値×${s.xp} ／ ダイヤ×${s.gold} ／ 虹のプシュケー ${s.psyche}個` : '？？？（未実装）']);
     case 'speciesChallengeLineages':
@@ -24772,7 +24803,7 @@ const RHYTHM_ACHIEVEMENT_GRANTERS = {};
 const rhythmAchievementEligible = (songId, difficultyId) => {
   const song = RHYTHM_SONGS.find(item => item.songId === songId);
   if (!song || !rhythmDemoSongs([song]).length) return false;
-  return rhythmDemoDifficulties(song, RHYTHM_DIFFICULTIES).some(item => item.id === difficultyId);
+  return (typeof rhythmScoredDifficultyIds === 'function' ? rhythmScoredDifficultyIds() : RHYTHM_DIFFICULTIES.map(d => d.id)).includes(difficultyId) && rhythmDemoDifficulties(song, typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : RHYTHM_DIFFICULTIES).some(item => item.id === difficultyId);
 };
 let rhythmAchievementQueue = Promise.resolve();
 const rhythmAchievementEnqueue = task => {
@@ -34567,7 +34598,8 @@ const RhythmTapTest = ({
       const paintCanvasNote = note => {
         const failedTrail = note.done && note._rhythmFinalJudgment === 'MISS' && rhythmNoteHasBody(note) && songTimeMs < rhythmReleaseTargetMs(note);
         const clearFlash = note.done && Number.isFinite(note._rhythmClearAt) && songTimeMs - note._rhythmClearAt < RHYTHM_CLEAR_FLASH_MS;
-        if (note.done && !failedTrail && !clearFlash) {
+        const failFade = failedTrail ? rhythmFailedTrailFade(note, songTimeMs) : 1;
+        if (note.done && (!failedTrail || failFade <= 0) && !clearFlash) {
           note._rhythmCanvasSettled = true;
           return;
         }
@@ -34604,7 +34636,7 @@ const RhythmTapTest = ({
           pressed: note.type === 'HOLD' && note.activePointerId !== null,
           slideOff: note.type === 'HOLD' && note.activePointerId !== null && RHYTHM_GESTURE_RUNTIME.slideOffForIndex(note.index),
           heldMs: songTimeMs - note.timeMs,
-          alpha: failedTrail ? .34 : 1,
+          alpha: failedTrail ? .34 * failFade : 1,
           pop: clearFlash ? Math.min(1, (songTimeMs - note._rhythmClearAt) / RHYTHM_CLEAR_FLASH_MS) : null,
           depthScale,
           brightness
@@ -34694,7 +34726,8 @@ const RhythmTapTest = ({
           delete el.dataset.rhythmClear;
           el._rhythmClearFlag = false;
         }
-        if (note.done && !failedTrail && !clearFlash) {
+        const failFade = failedTrail ? rhythmFailedTrailFade(note, songTimeMs) : 1;
+        if (note.done && (!failedTrail || failFade <= 0) && !clearFlash) {
           if (el._rhythmHidden !== true) {
             el.style.display = 'none';
             el._rhythmHidden = true;
@@ -34712,7 +34745,7 @@ const RhythmTapTest = ({
         }
         const progress = 1 - (rhythmScrollPos(note.timeMs, note.scrollGroup) - rhythmScrollPos(visualTime, note.scrollGroup)) / travelMs,
           visible = failedTrail || note.activePointerId !== null || progress >= -.1 && progress <= 1.18;
-        const nextOpacity = failedTrail ? '.34' : visible ? '1' : '0';
+        const nextOpacity = failedTrail ? String(Math.round(34 * failFade) / 100) : visible ? '1' : '0';
         if (el._rhythmOpacity !== nextOpacity) {
           el.style.opacity = nextOpacity;
           el._rhythmOpacity = nextOpacity;
@@ -36008,6 +36041,7 @@ const RhythmTapTest = ({
     const index = rhythmResultHeroIndex(sideArtUrls, runRef.current?.abilityCounts, runRef.current?.heroSeed);
     const heroArt = index >= 0 ? sideArtUrls[index] : '';
     const rankTier = result.cleared === false ? 0 : {
+      MF: 5,
       M: 5,
       SS: 4,
       S: 3,
@@ -40163,7 +40197,8 @@ const RHYTHM_BUDDY_FREE_PER_DAY = 3;
 const RHYTHM_BUDDY_LEVEL_MAX = 100;
 const RHYTHM_BUDDY_TRAIT_LEVEL = 30;
 const RHYTHM_BUDDY_SONG_KEEP = 80;
-const RHYTHM_BUDDY_DIFF_IDS = Object.freeze(['EASY', 'NORMAL', 'HARD', 'EXPERT', 'MASTER']);
+const RHYTHM_BUDDY_DIFF_IDS = Object.freeze(['EASY', 'NORMAL', 'HARD', 'EXPERT', 'MASTER', 'HELL']);
+const rhythmBuddyShownDiffIds = () => typeof rhythmHellReleased === 'function' && rhythmHellReleased() ? RHYTHM_BUDDY_DIFF_IDS : RHYTHM_BUDDY_DIFF_IDS.filter(id => id !== 'HELL');
 const RHYTHM_BUDDY_RECENT_KEEP = 30;
 const RHYTHM_BUDDY_LONG_SONG_MS = 150000;
 const RHYTHM_BUDDY_TRAITS = Object.freeze([Object.freeze({
@@ -40640,7 +40675,7 @@ const rhythmBuddyTraitScores = (mon, lean) => {
   const total = Math.max(1, m.lives);
   const share = n => Math.min(1, n / total);
   const low = share(m.diffs.EASY + m.diffs.NORMAL + m.diffs.HARD);
-  const high = share(m.diffs.EXPERT + m.diffs.MASTER);
+  const high = share(m.diffs.EXPERT + m.diffs.MASTER + m.diffs.HELL);
   const topDiff = share(Math.max(...RHYTHM_BUDDY_DIFF_IDS.map(id => m.diffs[id])));
   const variety = Math.min(1, Object.keys(m.songs).length / total * 1.5);
   const scores = {
@@ -40713,7 +40748,7 @@ const rhythmBuddyAccuracy = ({
   } = rhythmBuddyLevelInfo(m.exp);
   const d = Math.max(0, RHYTHM_BUDDY_DIFF_IDS.indexOf(diffId));
   const mastery = rhythmBuddyMastery(m.diffs[RHYTHM_BUDDY_DIFF_IDS[d]]);
-  const chartLv = Number(chartLevel) > 0 ? Number(chartLevel) : [7, 9, 14, 19, 26][d];
+  const chartLv = Number(chartLevel) > 0 ? Number(chartLevel) : [7, 9, 14, 19, 26, 32][d];
   let acc = 0.68 + 0.27 * rhythmBuddyGrowthRate(level);
   acc += 0.6 * rhythmBuddySongSkill(m.songs[songId], m.trait);
   const masteryRate = m.trait === 'stubborn' ? 2 : 1;
@@ -43685,9 +43720,7 @@ const friendsRhythmSummary = bestRecords => {
     const byDifficulty = bestRecords && bestRecords[song.songId];
     if (!byDifficulty) return;
     let pick = null;
-    RHYTHM_DIFFICULTIES.forEach(({
-      id
-    }, index) => {
+    (typeof rhythmScoredDifficultyIds === 'function' ? rhythmScoredDifficultyIds() : RHYTHM_DIFFICULTIES.map(d => d.id)).forEach((id, index) => {
       const rec = byDifficulty[id];
       if (rec && rec.played) pick = {
         s: song.songId,
@@ -43713,7 +43746,9 @@ const friendsRhythmSummary = bestRecords => {
 };
 const friendsRhythmAchievements = bestRecords => {
   const songs = rhythmDemoSongs(RHYTHM_SONGS);
-  const list = rhythmDemoDifficultyList(RHYTHM_DIFFICULTIES);
+  const scoredIds = typeof rhythmScoredDifficultyIds === 'function' ? rhythmScoredDifficultyIds() : RHYTHM_DIFFICULTIES.map(d => d.id);
+  const scored = (typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : RHYTHM_DIFFICULTIES).filter(d => scoredIds.includes(d.id));
+  const list = rhythmDemoDifficultyList(scored);
   return list.map(({
     id
   }) => {
@@ -43726,7 +43761,7 @@ const friendsRhythmAchievements = bestRecords => {
       am: 0
     };
     songs.forEach(song => {
-      if (!rhythmDemoDifficulties(song, RHYTHM_DIFFICULTIES).some(x => x.id === id)) return;
+      if (!rhythmDemoDifficulties(song, scored).some(x => x.id === id)) return;
       row.total += 1;
       const rec = bestRecords && bestRecords[song.songId] && bestRecords[song.songId][id];
       if (!rec) return;
@@ -45461,6 +45496,7 @@ const raidJackHomeLines = (tierId, rate, pumpkin = false) => {
 };
 const RHYTHM_BUDDY_RANK_TABLE = 'rhythm_buddy_ranks';
 const RHYTHM_BUDDY_RANK_SELECT = 'user_name,breeder_id,individual_id,monster_id,mon_name,icon,profile_frame,colors,beat_level,beat_exp,lives,' + 'score_easy,score_normal,score_hard,score_expert,score_master,best_songs,updated_at';
+const rhythmBuddyRankSelect = () => RHYTHM_BUDDY_RANK_SELECT + (rhythmBuddyShownDiffIds().includes('HELL') ? ',score_hell' : '');
 const RHYTHM_BUDDY_RANK_FETCH_LIMIT = 150;
 const RHYTHM_BUDDY_RANK_SHOW_LIMIT = 50;
 const RHYTHM_BUDDY_RANK_SYNC_KEY = 'mh_rhythm_buddy_rank_sync_v1';
@@ -45499,7 +45535,7 @@ const rhythmBuddyRankRows = (userName, icon, masuMons, store, profileFrame = nul
       lives: Math.floor(m.lives)
     };
     const songs = {};
-    RHYTHM_BUDDY_DIFF_IDS.forEach(id => {
+    rhythmBuddyShownDiffIds().forEach(id => {
       const b = m.best[id];
       row[rhythmBuddyScoreColumn(id)] = b ? Math.floor(b.score) : null;
       if (b && b.songId) songs[id] = b.songId;
@@ -45525,7 +45561,7 @@ const normalizeRhythmBuddyRankSync = raw => {
 const rhythmBuddyRankEntryFromRow = row => {
   if (!row || typeof row !== 'object' || !row.individual_id || !ALL_PLAYER_MONSTERS[row.monster_id]) return null;
   const scores = {};
-  RHYTHM_BUDDY_DIFF_IDS.forEach(id => {
+  rhythmBuddyShownDiffIds().forEach(id => {
     const n = Number(row[rhythmBuddyScoreColumn(id)]);
     if (Number.isFinite(n) && n > 0) scores[id] = Math.floor(n);
   });
@@ -45563,7 +45599,7 @@ const sbFetchRhythmBuddyRanks = async (kind, diffId = 'MASTER') => {
   const column = rhythmBuddyScoreColumn(diffId);
   const order = kind === 'score' ? `${column}.desc.nullslast,updated_at.asc` : 'beat_level.desc.nullslast,beat_exp.desc.nullslast,updated_at.asc';
   const filter = kind === 'score' ? `&${column}=gt.0` : '&beat_level=gt.0';
-  const url = `${SUPABASE_URL}/rest/v1/${RHYTHM_BUDDY_RANK_TABLE}?select=${RHYTHM_BUDDY_RANK_SELECT}${filter}` + `&order=${order}&limit=${RHYTHM_BUDDY_RANK_FETCH_LIMIT}`;
+  const url = `${SUPABASE_URL}/rest/v1/${RHYTHM_BUDDY_RANK_TABLE}?select=${rhythmBuddyRankSelect()}${filter}` + `&order=${order}&limit=${RHYTHM_BUDDY_RANK_FETCH_LIMIT}`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 8000);
   try {
@@ -51269,7 +51305,7 @@ function RhythmRankingScreen({
     const baseScore = rhythmRankingDetail.baseScore === null || rhythmRankingDetail.baseScore === undefined ? null : Number(rhythmRankingDetail.baseScore);
     const bonusScore = Number(rhythmRankingDetail.bonusScore) || 0;
     const playCount = Number(rhythmRankingDetail.playCount) || 0;
-    const playCountRows = rhythmEventPlayCountRows(rhythmRankingDetail.playCounts, RHYTHM_DEMO_DIFFICULTY_IDS);
+    const playCountRows = rhythmEventPlayCountRows(rhythmRankingDetail.playCounts, RHYTHM_DEMO_DIFFICULTY_IDS.concat(rhythmScoredDifficultyIds().filter(id => !RHYTHM_DEMO_DIFFICULTY_IDS.includes(id))));
     return React.createElement("div", {
       "data-rhythm-ranking-detail-modal": true,
       className: "fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-3",
@@ -51449,7 +51485,7 @@ function RhythmRankingScreen({
     className: "text-fuchsia-200"
   }, "回数ボーナス"), "\u3000対象曲を遊んだ回数ぶん、自分のベストスコアに加点されます（上限なし）。ランキングに出ている点は加点込みで、「詳細」「内訳」から素点との内訳を見られます。", React.createElement("ul", {
     className: "mt-1 space-y-0.5"
-  }, RHYTHM_DEMO_DIFFICULTY_IDS.map(id => React.createElement("li", {
+  }, rhythmScoredDifficultyIds().map(id => React.createElement("li", {
     key: id,
     className: "flex items-baseline gap-2"
   }, React.createElement("b", {
@@ -71808,7 +71844,7 @@ function RhythmMultiScreen({
         chartLevel: song && song.difficulties && song.difficulties[cpuRow.res.diffId] ? Number(song.difficulties[cpuRow.res.diffId].level) || 0 : 0,
         humans: team.rows.filter(row => !row.m.cpu).length,
         score: cpuRow.res.score,
-        maxScore: ((typeof RHYTHM_DIFFICULTIES !== 'undefined' ? RHYTHM_DIFFICULTIES : []).find(d => d.id === cpuRow.res.diffId) || {}).maxScore || 0
+        maxScore: ((typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : []).find(d => d.id === cpuRow.res.diffId) || {}).maxScore || 0
       })));
     })(), React.createElement("div", {
       className: "mt-auto flex shrink-0 gap-2 border-t border-white/10 bg-slate-950/90 px-3 pt-2 landscape:justify-end landscape:border-t-0 landscape:bg-transparent [@media(max-height:440px)]:pt-1 [[data-mh-view-rotation=true]_&]:pt-1",
@@ -72352,7 +72388,7 @@ const rhythmBuddyMakeBrain = songs => ({
     const song = (songs || []).find(x => x.songId === songId);
     const chart = song && song.difficulties ? song.difficulties[diffId] : null;
     const totalNotes = chart ? Number(chart.totalNotes) > 0 ? Number(chart.totalNotes) : Array.isArray(chart.notes) ? chart.notes.length : 300 : 300;
-    const diffDef = (typeof RHYTHM_DIFFICULTIES !== 'undefined' ? RHYTHM_DIFFICULTIES : []).find(d => d.id === diffId);
+    const diffDef = (typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : []).find(d => d.id === diffId);
     const mon = RHYTHM_BUDDY_STORE.get().mons[masuId];
     const mood = rhythmBuddyMood(masuId, rhythmBuddyDayKey(Date.now()), mon);
     return rhythmBuddyPlay({
@@ -72389,12 +72425,12 @@ const rhythmBuddyMakeBrain = songs => ({
     const mood = rhythmBuddyMood(masuId, rhythmBuddyDayKey(Date.now()), mon);
     let scene = kind;
     if (kind === 'result') {
-      const diffDef = (typeof RHYTHM_DIFFICULTIES !== 'undefined' ? RHYTHM_DIFFICULTIES : []).find(d => d.id === diffId);
+      const diffDef = (typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : []).find(d => d.id === diffId);
       const ratio = Number(score) / (diffDef && diffDef.maxScore || 1000000);
       scene = mvp ? 'mvp' : ratio >= 0.9 ? 'high' : ratio >= 0.7 ? 'mid' : 'low';
     }
     if (kind === 'reactResult') {
-      const diffDef = (typeof RHYTHM_DIFFICULTIES !== 'undefined' ? RHYTHM_DIFFICULTIES : []).find(d => d.id === diffId);
+      const diffDef = (typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : []).find(d => d.id === diffId);
       const ratio = Number(score) / (diffDef && diffDef.maxScore || 1000000);
       scene = quit ? 'hQuit' : Number(fc) > 0 ? 'hFull' : mvp ? 'hMvp' : ratio >= 0.9 ? 'hHigh' : ratio < 0.6 ? Number(missRate) >= 0.15 && Math.random() < 0.5 ? 'hMiss' : 'hLow' : '';
       if (!scene) return '';
@@ -72672,7 +72708,8 @@ const rhythmBuddyDiffShort = Object.freeze({
   NORMAL: 'NORMAL',
   HARD: 'HARD',
   EXPERT: 'EXPERT',
-  MASTER: 'MASTER'
+  MASTER: 'MASTER',
+  HELL: 'HELL'
 });
 function RhythmBuddyScoreChart({
   recent,
@@ -72894,7 +72931,7 @@ function RhythmBuddyDetail({
     className: "rounded-xl bg-slate-950/60 p-2"
   }, React.createElement("h4", {
     className: "mb-1 text-[10px] font-black text-slate-400"
-  }, "難易度の慣れ"), RHYTHM_BUDDY_DIFF_IDS.map(id => {
+  }, "難易度の慣れ"), rhythmBuddyShownDiffIds().map(id => {
     const v = rhythmBuddyMastery(m.diffs[id]);
     return React.createElement("div", {
       key: id,
@@ -73710,7 +73747,7 @@ function RhythmBuddyRankDetail({
     className: "mb-1 block text-[12px] font-black text-lime-100"
   }, "難易度ごとの最高スコア"), React.createElement("ul", {
     className: "space-y-1"
-  }, RHYTHM_BUDDY_DIFF_IDS.map(id => React.createElement("li", {
+  }, rhythmBuddyShownDiffIds().map(id => React.createElement("li", {
     key: id,
     className: "flex items-center gap-2 text-[11px] font-bold"
   }, React.createElement("span", {
@@ -73837,7 +73874,7 @@ function RhythmBuddyRankingBoard({
   }, "フレンドだけ")), kind === 'score' && React.createElement("div", {
     "data-rhythm-buddy-ranking-diffs": true,
     className: "flex gap-1.5 overflow-x-auto"
-  }, RHYTHM_BUDDY_DIFF_IDS.map(id => React.createElement("button", {
+  }, rhythmBuddyShownDiffIds().map(id => React.createElement("button", {
     key: id,
     type: "button",
     onClick: () => setDiffId(id),
@@ -80660,6 +80697,14 @@ function MonsterHeroGame() {
         await storeSet('mh_unique_lineage_dedupe_migrated_v1', true, false);
       }
       const compensationNotice = await storeGet('mh_masu_level_cap_compensation_notice_v1', null, false);
+      try {
+        if ((await storeGet(RHYTHM_HELL_BEST_RESCALED_KEY, false, false)) !== true) {
+          const hellBestBefore = await storeGet(RHYTHM_BEST_RECORDS_KEY, {}, false);
+          await storeSet(RHYTHM_HELL_BEST_RESCALED_KEY, true, false);
+          const hellBestRescaled = rescaleRhythmHellBestScores(hellBestBefore);
+          if (hellBestRescaled.changed) await storeSet(RHYTHM_BEST_RECORDS_KEY, hellBestRescaled.next, false);
+        }
+      } catch (e) {}
       setQuickRhythmIntroSeen((await storeGet(QUICK_RHYTHM_INTRO_KEY, false, false)) === true);
       setQuickRhythmBackgroundSeen((await storeGet(QUICK_RHYTHM_BACKGROUND_KEY, false, false)) === true);
       setRhythmSixLaneIntroSeen((await storeGet(RHYTHM_SIX_LANE_INTRO_KEY, false, false)) === true);

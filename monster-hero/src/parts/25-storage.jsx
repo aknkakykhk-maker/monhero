@@ -162,7 +162,8 @@ const RHYTHM_ACHIEVEMENT_GRANTERS = {};
 const rhythmAchievementEligible = (songId,difficultyId) => {
   const song=RHYTHM_SONGS.find(item=>item.songId===songId);
   if(!song||!rhythmDemoSongs([song]).length)return false;
-  return rhythmDemoDifficulties(song,RHYTHM_DIFFICULTIES).some(item=>item.id===difficultyId);
+  // HELL は公開の印が真になってから(2026-10-12 社長の決定で称号にも入れる)
+  return (typeof rhythmScoredDifficultyIds==='function'?rhythmScoredDifficultyIds():RHYTHM_DIFFICULTIES.map((d)=>d.id)).includes(difficultyId)&&rhythmDemoDifficulties(song,typeof RHYTHM_PLAY_DIFFICULTIES!=='undefined'?RHYTHM_PLAY_DIFFICULTIES:RHYTHM_DIFFICULTIES).some(item=>item.id===difficultyId);
 };
 // 「読む → 待つ → 書く」なので、待たずに続けて呼ぶと古い値を書き戻してしまう(ビートPで一度踏んだ)。
 // 台帳に触る処理は、前の処理が書き終わってから次を始める順番待ちにする

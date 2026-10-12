@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 129a6373f2612023
+// generated-sha256: 272960796b00a3f2
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-13 07:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-13 07:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4663,6 +4663,8 @@ const RHYTHM_RANK_COLORS = Object.freeze({
   G:'text-slate-400', F:'text-purple-300', E:'text-cyan-300', D:'text-teal-300',
   C:'text-green-300', B:'text-pink-300', A:'text-red-400', S:'text-yellow-400',
   SS:'text-yellow-200', M:'text-fuchsia-300',
+  // MF は HELL の満点でだけ届く最上位(2026-10-12)。間合い適性には無い記号なので、ほかのランクと重ならない橙にする
+  MF:'text-orange-300',
 });
 const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   bgmVolume:100, noteSpeed:6, noteSize:100, noteStartPosition:0, displayTimingOffsetMs:0, judgmentTimingOffsetMs:0,
@@ -4820,6 +4822,22 @@ const normalizeRhythmBestRecord = value => {
     played:source.played===true||source.clear===true,clear:source.clear===true,
     fullCombo:source.fullCombo===true,allExcellent:source.allExcellent===true,allMarvelous:source.allMarvelous===true,
     judgments:Object.fromEntries(RHYTHM_JUDGMENT_IDS.map(id=>[id,count(source.judgments?.[id]??source[id])])),};
+};
+// HELL の満点を 110万→105万にした(2026-10-12 社長の決定)。110万満点のころにデバッグで付いた HELL の自己ベストを、
+// 一度だけ 105/110 に縮める(新しい満点の上を超えないように。割合はそのまま)。5難易度の記録には触らない。
+// 二重に縮めないよう、先に完了の印(新しいキー)を立ててから記録を書き直す。印は記録が無い端末にも立てる
+const RHYTHM_HELL_BEST_RESCALED_KEY = 'mh_rhythm_hell_best_rescaled_v1';
+const rescaleRhythmHellBestScores = value => {
+  const source=value&&typeof value==='object'&&!Array.isArray(value)?value:null;
+  if(!source)return {changed:false,next:value};
+  let changed=false;const next={...source};
+  Object.keys(source).forEach(songId=>{
+    const rec=source[songId],hell=rec&&typeof rec==='object'&&!Array.isArray(rec)?rec.HELL:null;
+    const score=hell&&typeof hell==='object'?Number(hell.bestScore):NaN;
+    if(!Number.isFinite(score)||score<=0)return;
+    next[songId]={...rec,HELL:{...hell,bestScore:Math.floor(score*1050000/1100000)}};changed=true;
+  });
+  return {changed,next};
 };
 const normalizeRhythmBestRecords = value => {
   const source=value&&typeof value==='object'&&!Array.isArray(value)?value:{};
@@ -11175,7 +11193,8 @@ const helpDataRows = (id) => {
     // イベントの回数ボーナス。難易度ごとの割合を実データから出す
     // (ヘルプへ手で書き写すと、割合を変えたときに古いままになる)
     case 'rhythmEventPlayBonus':
-      return RHYTHM_DEMO_DIFFICULTY_IDS.map(id =>
+      // HELL は公開の印が真のときだけ並ぶ(rhythmScoredDifficultyIds)
+      return (typeof rhythmScoredDifficultyIds === 'function' ? rhythmScoredDifficultyIds() : RHYTHM_DEMO_DIFFICULTY_IDS).map(id =>
         [RHYTHM_DEMO_DIFFICULTY_LABELS[id]?.name || id, rhythmEventPlayBonusPercentText(id)]);
     // 極限チャレンジの難易度。閲覧可能な準備中難易度も倍率は実データから出す
     case 'extremeDifficulties':
@@ -15041,7 +15060,8 @@ const RHYTHM_ACHIEVEMENT_GRANTERS = {};
 const rhythmAchievementEligible = (songId,difficultyId) => {
   const song=RHYTHM_SONGS.find(item=>item.songId===songId);
   if(!song||!rhythmDemoSongs([song]).length)return false;
-  return rhythmDemoDifficulties(song,RHYTHM_DIFFICULTIES).some(item=>item.id===difficultyId);
+  // HELL は公開の印が真になってから(2026-10-12 社長の決定で称号にも入れる)
+  return (typeof rhythmScoredDifficultyIds==='function'?rhythmScoredDifficultyIds():RHYTHM_DIFFICULTIES.map((d)=>d.id)).includes(difficultyId)&&rhythmDemoDifficulties(song,typeof RHYTHM_PLAY_DIFFICULTIES!=='undefined'?RHYTHM_PLAY_DIFFICULTIES:RHYTHM_DIFFICULTIES).some(item=>item.id===difficultyId);
 };
 // 「読む → 待つ → 書く」なので、待たずに続けて呼ぶと古い値を書き戻してしまう(ビートPで一度踏んだ)。
 // 台帳に触る処理は、前の処理が書き終わってから次を始める順番待ちにする
@@ -21644,7 +21664,9 @@ const paintCanvasNote=note=>{
   // 取り終えたノーツは、弾ける演出が済んでからマスモンの絵を隠し、「片付け済み」の印を付ける。
   // 走査の先頭(scanFrom)はこの印まで進めない(DOM 版が要素の非表示を待つのと同じ)。
   // これが無いと取った瞬間に走査から外れ、絵が隠れずに判定ラインへ残った(2026-09-07・実機「canvas 版でマスモンが残る」)
-  if(note.done&&!failedTrail&&!clearFlash){note._rhythmCanvasSettled=true;return;}
+  // 取り損ねた残りは約0.3秒で消す(rhythmFailedTrailFade)。消え切ったら取り終えたノーツと同じく片付ける
+  const failFade=failedTrail?rhythmFailedTrailFade(note,songTimeMs):1;
+  if(note.done&&(!failedTrail||failFade<=0)&&!clearFlash){note._rhythmCanvasSettled=true;return;}
   const progress=1-(rhythmScrollPos(note.timeMs,note.scrollGroup)-rhythmScrollPos(visualTime,note.scrollGroup))/travelMs,visible=failedTrail||note.activePointerId!==null||(progress>=-.1&&progress<=1.18);
   if(!visible||!travel||!canvasReady)return;
   perfDrawn++;
@@ -21659,7 +21681,7 @@ const paintCanvasNote=note=>{
   const geo=rhythmNoteCanvasGeometry(note,yPx,visualLane,travel.rect,travel.noteHeight,hasBody?releaseYpx:null,{chartNowMs:songTimeMs-settings.judgmentTimingOffsetMs,visualTime,travelMs,spawnY:travel.spawnY,travelPx:travel.travelPx,gpu:gpuBandNow},hasBody?bodyPx:0);
   const monster=!!monsterForNote(note);
   const depthScale=Math.round((0.56+geo.scale*.44)*100)/100,brightness=Math.round((0.72+geo.scale*.28)*100)/100;
-  RHYTHM_CANVAS_RENDERER.drawNote(note,geo,{failed:failedTrail,monster,wide:rhythmNoteIsWide(note),pressed:note.type==='HOLD'&&note.activePointerId!==null,slideOff:note.type==='HOLD'&&note.activePointerId!==null&&RHYTHM_GESTURE_RUNTIME.slideOffForIndex(note.index),heldMs:songTimeMs-note.timeMs,alpha:failedTrail?.34:1,pop:clearFlash?Math.min(1,(songTimeMs-note._rhythmClearAt)/RHYTHM_CLEAR_FLASH_MS):null,depthScale,brightness});
+  RHYTHM_CANVAS_RENDERER.drawNote(note,geo,{failed:failedTrail,monster,wide:rhythmNoteIsWide(note),pressed:note.type==='HOLD'&&note.activePointerId!==null,slideOff:note.type==='HOLD'&&note.activePointerId!==null&&RHYTHM_GESTURE_RUNTIME.slideOffForIndex(note.index),heldMs:songTimeMs-note.timeMs,alpha:failedTrail?.34*failFade:1,pop:clearFlash?Math.min(1,(songTimeMs-note._rhythmClearAt)/RHYTHM_CLEAR_FLASH_MS):null,depthScale,brightness});
   // マスモンの顔(焼いた絵)。以前の DOM 版と同じく、落下中は「奥行き×1.28倍」、
   // 取った瞬間は枠の大きさから2.1倍へ広がりながら消える(0.26秒・影なし)
   const monsterSlot=monster?rhythmNoteMonsterSlot(note):0,faceBitmap=monsterSlot?faceBitmapsRef.current[monsterSlot-1]:null;
@@ -21717,7 +21739,7 @@ if(!note.done&&note.activePointerId===null&&note.releasedAtMs!=null){
 if(!note.done&&note.activePointerId===null&&note.releasedAtMs==null&&!placeable&&songTimeMs-(note.timeMs+settings.judgmentTimingOffsetMs)>RHYTHM_MISS_RECLAIM_MS){note.done=true;note._rhythmUnplaceable=true;return;}
 if(!note.done&&note.activePointerId===null&&note.releasedAtMs==null&&songTimeMs-(note.timeMs+settings.judgmentTimingOffsetMs)>RHYTHM_MISS_RECLAIM_MS)applyJudgment(note,'MISS',songTimeMs-note.timeMs);if(canvasNotes){paintCanvasNote(note);return;}
 const el=laneRefs.current[note.index];if(!el)return;
-// 失敗したHOLD/SLIDEはその場で消さず、譜面上の終端まで薄いグレーで流し続ける。
+// 失敗したHOLD/SLIDEは薄いグレーにして、約0.3秒で消す(2026-10-12 以前は譜面上の終端まで流し続けていた)。
 // 「もう取れない」ことが見えるようにするための表示だけの扱いで、判定・スコアには関与しない。
 const failedTrail=note.done&&note._rhythmFinalJudgment==='MISS'&&rhythmNoteHasBody(note)&&songTimeMs<rhythmReleaseTargetMs(note);
 // 終わったノーツは毎フレーム display を書き直さない。曲が進むほど終わったノーツが増え、
@@ -21727,10 +21749,12 @@ const failedTrail=note.done&&note._rhythmFinalJudgment==='MISS'&&rhythmNoteHasBo
 const clearFlash=note.done&&Number.isFinite(note._rhythmClearAt)&&songTimeMs-note._rhythmClearAt<RHYTHM_CLEAR_FLASH_MS;
 if(clearFlash){if(el._rhythmClearFlag!==true){el.dataset.rhythmClear='1';el._rhythmClearFlag=true;}}
 else if(el._rhythmClearFlag===true){delete el.dataset.rhythmClear;el._rhythmClearFlag=false;}
-if(note.done&&!failedTrail&&!clearFlash){if(el._rhythmHidden!==true){el.style.display='none';el._rhythmHidden=true;}return;}
+// 取り損ねた残りは約0.3秒で消す(canvas 版と同じ rhythmFailedTrailFade)
+const failFade=failedTrail?rhythmFailedTrailFade(note,songTimeMs):1;
+if(note.done&&(!failedTrail||failFade<=0)&&!clearFlash){if(el._rhythmHidden!==true){el.style.display='none';el._rhythmHidden=true;}return;}
 if(el._rhythmHidden===true){el.style.display='';el._rhythmHidden=false;}
 const failedFlag=failedTrail?'true':'false';if(el._rhythmFailedFlag!==failedFlag){el.dataset.rhythmFailed=failedFlag;el._rhythmFailedFlag=failedFlag;}
-const progress=1-(rhythmScrollPos(note.timeMs,note.scrollGroup)-rhythmScrollPos(visualTime,note.scrollGroup))/travelMs,visible=failedTrail||note.activePointerId!==null||(progress>=-.1&&progress<=1.18);const nextOpacity=failedTrail?'.34':(visible?'1':'0');if(el._rhythmOpacity!==nextOpacity){el.style.opacity=nextOpacity;el._rhythmOpacity=nextOpacity;}const nextWillChange=visible?'transform, opacity':'';if(el._rhythmWillChange!==nextWillChange){el.style.willChange=nextWillChange;el._rhythmWillChange=nextWillChange;}
+const progress=1-(rhythmScrollPos(note.timeMs,note.scrollGroup)-rhythmScrollPos(visualTime,note.scrollGroup))/travelMs,visible=failedTrail||note.activePointerId!==null||(progress>=-.1&&progress<=1.18);const nextOpacity=failedTrail?String(Math.round(34*failFade)/100):(visible?'1':'0');if(el._rhythmOpacity!==nextOpacity){el.style.opacity=nextOpacity;el._rhythmOpacity=nextOpacity;}const nextWillChange=visible?'transform, opacity':'';if(el._rhythmWillChange!==nextWillChange){el.style.willChange=nextWillChange;el._rhythmWillChange=nextWillChange;}
 if(!visible||!travel)return;
 perfDrawn++;let yPx=travel.spawnY+rhythmProjectTravelProgress(progress)*travel.travelPx;if(note.type==='HOLD'&&note.activePointerId!==null)yPx=travel.judgmentY;if(clearFlash)yPx=travel.judgmentY;yPx=Math.round(yPx);/* 縦位置は1px刻みへ丸めてある。丸めた値が前のフレームと同じなら書き直さない。   見た目は1pxも変わらないのに、書けばそのノーツは合成のやり直し対象になる。   ノーツが奥にいるあいだ(遠近の効きで1フレームの移動が1px未満)はここで止まる */const nextTransform=`translate3d(0,${yPx}px,0)`;if(el._rhythmTransform!==nextTransform){el.style.transform=nextTransform;el._rhythmTransform=nextTransform;}const releaseTargetMs=rhythmReleaseTargetMs(note),releaseProgress=1-(rhythmScrollPos(releaseTargetMs,note.scrollGroup)-rhythmScrollPos(visualTime,note.scrollGroup))/travelMs,releaseYpx=Math.round(travel.spawnY+rhythmProjectTravelProgress(releaseProgress)*travel.travelPx),bodyPx=Math.max(0,yPx-releaseYpx);if(note.type==='HOLD'){/* 帯の長さもfilterも「変わったときだけ」書く。とくにfilterを毎フレーム書くと、押していない間もそのノーツが毎フレーム塗り直しになり、画面の広い端末ほど重くなる */const holdBody=`${Math.round(bodyPx)}px`;if(el._rhythmHoldBody!==holdBody){el.style.setProperty('--rhythm-hold-body',holdBody);el._rhythmHoldBody=holdBody;}const holdFilter=note.activePointerId!==null?'brightness(1.3)':'';if(el._rhythmHoldFilter!==holdFilter){el.style.filter=holdFilter;el._rhythmHoldFilter=holdFilter;}}if(note.type==='SLIDE'||note._rhythmOriginalType==='SLIDE'){/* HOLDの帯と同じで、SLIDEの帯の高さも変わったときだけ書く。   毎フレーム書くと、押していないSLIDEまで毎フレーム塗り直しの対象になる */const slideBody=`${Math.round(bodyPx)}px`;if(el._rhythmSlideBody!==slideBody){el.style.setProperty('--rhythm-slide-height',slideBody);el.style.setProperty('--rhythm-slide-visible-height',slideBody);el._rhythmSlideBody=slideBody;}}const activeSlideLane=RHYTHM_GESTURE_RUNTIME.slideVisualLaneForIndex(note.index),visualLane=activeSlideLane===null?note.lane:activeSlideLane;rhythmLayoutNoteVisual(el,note,yPx,visualLane,playAreaRef.current,releaseYpx,{chartNowMs:songTimeMs-settings.judgmentTimingOffsetMs,visualTime,travelMs,spawnY:travel.spawnY,travelPx:travel.travelPx},{rect:travel.rect,noteHeight:travel.noteHeight,bodyHeight:bodyPx});};
 const notes=run.notes;
@@ -22253,7 +22277,7 @@ scheduleTick();};
     //   M=5 / SS=4 / S=3 / A=2 / B・C=1 / それ以下=0。
     // ★失敗(FAILED)は段に関わらず出さない。派手に祝う画面ではないため。
     // ★演出量と軽量モードはここでも効かせる(器へそのまま渡して、CSS側で止める)。
-    const rankTier=result.cleared===false?0:({M:5,SS:4,S:3,A:2,B:1,C:1}[rank]||0);
+    const rankTier=result.cleared===false?0:({MF:5,M:5,SS:4,S:3,A:2,B:1,C:1}[rank]||0);
     return <main data-rhythm-result data-rank={rank} data-rank-tier={String(rankTier)}
       data-rhythm-effect={settings.effectAmount} data-rhythm-lightweight={settings.lightweightMode?'true':'false'}
       className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white [container-type:inline-size] landscape:pl-[var(--mh-sa-left)] landscape:pr-[var(--mh-sa-right)]" style={{paddingTop:'var(--mh-sa-top)'}}>
@@ -25126,7 +25150,11 @@ const RHYTHM_BUDDY_LEVEL_MAX = 100;
 const RHYTHM_BUDDY_TRAIT_LEVEL = 30;
 // 1体が覚えておく曲の数(なじみ)。超えたら回数の少ない曲から忘れる
 const RHYTHM_BUDDY_SONG_KEEP = 80;
-const RHYTHM_BUDDY_DIFF_IDS = Object.freeze(['EASY', 'NORMAL', 'HARD', 'EXPERT', 'MASTER']);
+// HELL は 2026-10-12 社長の決定で相棒にも入れる(保存の形は項目が1つ増えるだけ。既存の5難易度の値は変えない)。
+// 画面とランキングへ出すのは公開の印が真のときだけ(rhythmBuddyShownDiffIds)
+const RHYTHM_BUDDY_DIFF_IDS = Object.freeze(['EASY', 'NORMAL', 'HARD', 'EXPERT', 'MASTER', 'HELL']);
+const rhythmBuddyShownDiffIds = () => ((typeof rhythmHellReleased === 'function' && rhythmHellReleased())
+  ? RHYTHM_BUDDY_DIFF_IDS : RHYTHM_BUDDY_DIFF_IDS.filter((id) => id !== 'HELL'));
 // 相棒が取ったスコアを覚えておく回数(伸びのグラフ)
 const RHYTHM_BUDDY_RECENT_KEEP = 30;
 // 長い曲(のんびり屋が育つ・強い)のしきい
@@ -25435,7 +25463,7 @@ const rhythmBuddyTraitScores = (mon, lean) => {
   const total = Math.max(1, m.lives);
   const share = (n) => Math.min(1, n / total);
   const low = share(m.diffs.EASY + m.diffs.NORMAL + m.diffs.HARD);
-  const high = share(m.diffs.EXPERT + m.diffs.MASTER);
+  const high = share(m.diffs.EXPERT + m.diffs.MASTER + m.diffs.HELL);
   const topDiff = share(Math.max(...RHYTHM_BUDDY_DIFF_IDS.map((id) => m.diffs[id])));
   const variety = Math.min(1, Object.keys(m.songs).length / total * 1.5);
   const scores = {
@@ -25505,7 +25533,7 @@ const rhythmBuddyAccuracy = ({ mon, songId, diffId, durationMs, mood, chartLevel
   const d = Math.max(0, RHYTHM_BUDDY_DIFF_IDS.indexOf(diffId));
   const mastery = rhythmBuddyMastery(m.diffs[RHYTHM_BUDDY_DIFF_IDS[d]]);
   // 譜面のLv.が分からないときは、難易度の種類からだいたいの値を使う
-  const chartLv = Number(chartLevel) > 0 ? Number(chartLevel) : [7, 9, 14, 19, 26][d];
+  const chartLv = Number(chartLevel) > 0 ? Number(chartLevel) : [7, 9, 14, 19, 26, 32][d];
   // はじめのうちほど大きく伸び、育ちきると人より上手
   let acc = 0.68 + 0.27 * rhythmBuddyGrowthRate(level);
   // 遊んだ曲ほど得意になる(2026-10-07・ユーザー指示)。最大 +0.06(無理なく叩けるLv.も最大+5)
@@ -27313,7 +27341,8 @@ const friendsRhythmSummary = (bestRecords) => {
     const byDifficulty = bestRecords && bestRecords[song.songId];
     if (!byDifficulty) return;
     let pick = null;
-    RHYTHM_DIFFICULTIES.forEach(({ id }, index) => {
+    // HELL は公開の印が真になってから(2026-10-12)
+    (typeof rhythmScoredDifficultyIds==='function'?rhythmScoredDifficultyIds():RHYTHM_DIFFICULTIES.map((d)=>d.id)).forEach((id, index) => {
       const rec = byDifficulty[id];
       if (rec && rec.played) pick = { s: song.songId, d: id, sc: friendsInt(rec.bestScore), f: rec.allMarvelous ? 3 : rec.allExcellent ? 2 : rec.fullCombo ? 1 : 0, order: index };
     });
@@ -27326,11 +27355,14 @@ const friendsRhythmSummary = (bestRecords) => {
 // 返す形: [{ d:難易度id, total:分母, clear, fc, ae, am }]。フルコンボ以上は上位の称号も数に含める(AM ⊂ AE ⊂ FC)
 const friendsRhythmAchievements = (bestRecords) => {
   const songs = rhythmDemoSongs(RHYTHM_SONGS);
-  const list = rhythmDemoDifficultyList(RHYTHM_DIFFICULTIES);
+  // HELL は公開の印が真になってから。分母は HELL の譜面がある曲の数(2026-10-12)
+  const scoredIds = (typeof rhythmScoredDifficultyIds==='function'?rhythmScoredDifficultyIds():RHYTHM_DIFFICULTIES.map((d)=>d.id));
+  const scored = (typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : RHYTHM_DIFFICULTIES).filter((d) => scoredIds.includes(d.id));
+  const list = rhythmDemoDifficultyList(scored);
   return list.map(({ id }) => {
     const row = { d: id, total: 0, clear: 0, fc: 0, ae: 0, am: 0 };
     songs.forEach((song) => {
-      if (!rhythmDemoDifficulties(song, RHYTHM_DIFFICULTIES).some((x) => x.id === id)) return;
+      if (!rhythmDemoDifficulties(song, scored).some((x) => x.id === id)) return;
       row.total += 1;
       const rec = bestRecords && bestRecords[song.songId] && bestRecords[song.songId][id];
       if (!rec) return;
@@ -28731,6 +28763,9 @@ const raidJackHomeLines = (tierId, rate, pumpkin = false) => {
 const RHYTHM_BUDDY_RANK_TABLE = 'rhythm_buddy_ranks';
 const RHYTHM_BUDDY_RANK_SELECT = 'user_name,breeder_id,individual_id,monster_id,mon_name,icon,profile_frame,colors,beat_level,beat_exp,lives,'
   + 'score_easy,score_normal,score_hard,score_expert,score_master,best_songs,updated_at';
+// HELL の列(score_hell)は、HELL の公開の日に SQL で足す(docs/sql/rhythm-buddy-ranks/RHYTHM_BUDDY_RANKS_HELL_APPLY.sql)。
+// 公開の印が真のときだけ読み書きする(列が無いうちに送ると、行ごと断られるため)
+const rhythmBuddyRankSelect = () => RHYTHM_BUDDY_RANK_SELECT + (rhythmBuddyShownDiffIds().includes('HELL') ? ',score_hell' : '');
 // 並べる順に取る件数(1行が小さいので、同じ人の古い行の整理ぶんを含めて多めに取る)
 const RHYTHM_BUDDY_RANK_FETCH_LIMIT = 150;
 const RHYTHM_BUDDY_RANK_SHOW_LIMIT = 50;
@@ -28770,7 +28805,7 @@ const rhythmBuddyRankRows = (userName, icon, masuMons, store, profileFrame = nul
       lives: Math.floor(m.lives),
     };
     const songs = {};
-    RHYTHM_BUDDY_DIFF_IDS.forEach((id) => {
+    rhythmBuddyShownDiffIds().forEach((id) => {
       const b = m.best[id];
       row[rhythmBuddyScoreColumn(id)] = b ? Math.floor(b.score) : null;
       if (b && b.songId) songs[id] = b.songId;
@@ -28794,7 +28829,7 @@ const normalizeRhythmBuddyRankSync = (raw) => {
 const rhythmBuddyRankEntryFromRow = (row) => {
   if (!row || typeof row !== 'object' || !row.individual_id || !ALL_PLAYER_MONSTERS[row.monster_id]) return null;
   const scores = {};
-  RHYTHM_BUDDY_DIFF_IDS.forEach((id) => {
+  rhythmBuddyShownDiffIds().forEach((id) => {
     const n = Number(row[rhythmBuddyScoreColumn(id)]);
     if (Number.isFinite(n) && n > 0) scores[id] = Math.floor(n);
   });
@@ -28834,7 +28869,7 @@ const sbFetchRhythmBuddyRanks = async (kind, diffId = 'MASTER') => {
   const order = kind === 'score' ? `${column}.desc.nullslast,updated_at.asc`
     : 'beat_level.desc.nullslast,beat_exp.desc.nullslast,updated_at.asc';
   const filter = kind === 'score' ? `&${column}=gt.0` : '&beat_level=gt.0';
-  const url = `${SUPABASE_URL}/rest/v1/${RHYTHM_BUDDY_RANK_TABLE}?select=${RHYTHM_BUDDY_RANK_SELECT}${filter}`
+  const url = `${SUPABASE_URL}/rest/v1/${RHYTHM_BUDDY_RANK_TABLE}?select=${rhythmBuddyRankSelect()}${filter}`
     + `&order=${order}&limit=${RHYTHM_BUDDY_RANK_FETCH_LIMIT}`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 8000);
@@ -32579,7 +32614,7 @@ function RhythmRankingScreen({
           const playCount=Number(rhythmRankingDetail.playCount)||0;
           // 難易度ごとの回数(2026-09-12・ユーザー指示「難易度別回数の内訳もあったほうがいい」)。
           // 返ってこない環境(SQL未適用)では空になり、この段は出ない
-          const playCountRows=rhythmEventPlayCountRows(rhythmRankingDetail.playCounts,RHYTHM_DEMO_DIFFICULTY_IDS);
+          const playCountRows=rhythmEventPlayCountRows(rhythmRankingDetail.playCounts,RHYTHM_DEMO_DIFFICULTY_IDS.concat(rhythmScoredDifficultyIds().filter(id=>!RHYTHM_DEMO_DIFFICULTY_IDS.includes(id))));
           return (
           <div data-rhythm-ranking-detail-modal className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-3" onClick={()=>setRhythmRankingDetail(null)}>
             <div className="w-full max-w-md rounded-2xl border border-amber-300/40 bg-slate-900 p-4" onClick={e=>e.stopPropagation()}>
@@ -32706,7 +32741,7 @@ function RhythmRankingScreen({
                 className="rounded-2xl border border-fuchsia-300/40 bg-fuchsia-500/5 p-2 text-[10px] leading-tight text-slate-200">
                 <b className="text-fuchsia-200">回数ボーナス</b>　対象曲を遊んだ回数ぶん、自分のベストスコアに加点されます（上限なし）。ランキングに出ている点は加点込みで、「詳細」「内訳」から素点との内訳を見られます。
                 <ul className="mt-1 space-y-0.5">
-                  {RHYTHM_DEMO_DIFFICULTY_IDS.map(id=>(
+                  {rhythmScoredDifficultyIds().map(id=>(
                     <li key={id} className="flex items-baseline gap-2">
                       <b className="w-14 shrink-0 font-black text-fuchsia-200">{RHYTHM_DEMO_DIFFICULTY_LABELS[id]?.name||id}</b>
                       <span className="min-w-0 flex-1 text-slate-200">{rhythmEventPlayBonusPercentText(id)}</span>
@@ -43737,7 +43772,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
             <RhythmBuddyGrowth key={masu.id} masu={masu} round={room.round} songId={room.songId} diffId={cpuRow.res.diffId} durationMs={song ? Number(song.playDurationMs) || 0 : 0} teamRank={team.rank}
               chartLevel={song && song.difficulties && song.difficulties[cpuRow.res.diffId] ? Number(song.difficulties[cpuRow.res.diffId].level) || 0 : 0}
               humans={team.rows.filter((row) => !row.m.cpu).length}
-              score={cpuRow.res.score} maxScore={((typeof RHYTHM_DIFFICULTIES !== 'undefined' ? RHYTHM_DIFFICULTIES : []).find((d) => d.id === cpuRow.res.diffId) || {}).maxScore || 0} />
+              score={cpuRow.res.score} maxScore={((typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : []).find((d) => d.id === cpuRow.res.diffId) || {}).maxScore || 0} />
           ))}</div>;
         })()}
         <div className="mt-auto flex shrink-0 gap-2 border-t border-white/10 bg-slate-950/90 px-3 pt-2 landscape:justify-end landscape:border-t-0 landscape:bg-transparent [@media(max-height:440px)]:pt-1 [[data-mh-view-rotation=true]_&]:pt-1" style={{ paddingBottom: 'calc(.4rem + var(--mh-sa-bottom))' }}>
@@ -44083,7 +44118,7 @@ const rhythmBuddyMakeBrain = (songs) => ({
     const song = (songs || []).find((x) => x.songId === songId);
     const chart = song && song.difficulties ? song.difficulties[diffId] : null;
     const totalNotes = chart ? (Number(chart.totalNotes) > 0 ? Number(chart.totalNotes) : Array.isArray(chart.notes) ? chart.notes.length : 300) : 300;
-    const diffDef = (typeof RHYTHM_DIFFICULTIES !== 'undefined' ? RHYTHM_DIFFICULTIES : []).find((d) => d.id === diffId);
+    const diffDef = (typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : []).find((d) => d.id === diffId);
     const mon = RHYTHM_BUDDY_STORE.get().mons[masuId];
     const mood = rhythmBuddyMood(masuId, rhythmBuddyDayKey(Date.now()), mon);
     return rhythmBuddyPlay({
@@ -44100,13 +44135,13 @@ const rhythmBuddyMakeBrain = (songs) => ({
     const mood = rhythmBuddyMood(masuId, rhythmBuddyDayKey(Date.now()), mon);
     let scene = kind;
     if (kind === 'result') {
-      const diffDef = (typeof RHYTHM_DIFFICULTIES !== 'undefined' ? RHYTHM_DIFFICULTIES : []).find((d) => d.id === diffId);
+      const diffDef = (typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : []).find((d) => d.id === diffId);
       const ratio = Number(score) / ((diffDef && diffDef.maxScore) || 1000000);
       scene = mvp ? 'mvp' : ratio >= 0.9 ? 'high' : ratio >= 0.7 ? 'mid' : 'low';
     }
     // 部屋のほかの人(自分を含む)の結果への反応。目立つ結果(MVP・フルコン・高得点・伸びなかった・途中でやめた)だけに反応する
     if (kind === 'reactResult') {
-      const diffDef = (typeof RHYTHM_DIFFICULTIES !== 'undefined' ? RHYTHM_DIFFICULTIES : []).find((d) => d.id === diffId);
+      const diffDef = (typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : []).find((d) => d.id === diffId);
       const ratio = Number(score) / ((diffDef && diffDef.maxScore) || 1000000);
       scene = quit ? 'hQuit' : Number(fc) > 0 ? 'hFull' : mvp ? 'hMvp' : ratio >= 0.9 ? 'hHigh' : ratio < 0.6 ? (Number(missRate) >= 0.15 && Math.random() < 0.5 ? 'hMiss' : 'hLow') : '';
       if (!scene) return '';
@@ -44244,7 +44279,7 @@ function RhythmBuddyAllowance({ freeLeft, tickets, className = '', compact = fal
     </p>
   );
 }
-const rhythmBuddyDiffShort = Object.freeze({ EASY: 'EASY', NORMAL: 'NORMAL', HARD: 'HARD', EXPERT: 'EXPERT', MASTER: 'MASTER' });
+const rhythmBuddyDiffShort = Object.freeze({ EASY: 'EASY', NORMAL: 'NORMAL', HARD: 'HARD', EXPERT: 'EXPERT', MASTER: 'MASTER', HELL: 'HELL' });
 
 // スコアの伸び(最近30回)。横は古い→新しい、縦は「その難易度の満点の何%か」(難易度ごとに満点が違うため)。
 // 1本の線なので凡例は付けない。点を押すと、その回の曲・難易度・スコアを下に出す。数字の一覧も開ける
@@ -44368,7 +44403,7 @@ function RhythmBuddyDetail({ masu, mon, dayKey, songName, onBack }) {
       </section>
       <section className="rounded-xl bg-slate-950/60 p-2">
         <h4 className="mb-1 text-[10px] font-black text-slate-400">難易度の慣れ</h4>
-        {RHYTHM_BUDDY_DIFF_IDS.map((id) => {
+        {rhythmBuddyShownDiffIds().map((id) => {
           const v = rhythmBuddyMastery(m.diffs[id]);
           return (
             <div key={id} className="flex items-center gap-2 py-0.5">
@@ -44816,7 +44851,7 @@ function RhythmBuddyRankDetail({ entry, onClose, renderBreederIcon = null, songN
       <section data-rhythm-buddy-rank-detail-scores className="rounded-2xl border border-lime-300/25 bg-slate-900/80 p-2">
         <b className="mb-1 block text-[12px] font-black text-lime-100">難易度ごとの最高スコア</b>
         <ul className="space-y-1">
-          {RHYTHM_BUDDY_DIFF_IDS.map((id) => (
+          {rhythmBuddyShownDiffIds().map((id) => (
             <li key={id} className="flex items-center gap-2 text-[11px] font-bold">
               <span className="w-16 shrink-0 text-slate-400">{rhythmBuddyDiffShort[id]}</span>
               {entry.scores[id]
@@ -44879,7 +44914,7 @@ function RhythmBuddyRankingBoard({ renderBreederIcon = null, selfName = '', onCl
       )}
       {kind === 'score' && (
         <div data-rhythm-buddy-ranking-diffs className="flex gap-1.5 overflow-x-auto">
-          {RHYTHM_BUDDY_DIFF_IDS.map((id) => <button key={id} type="button" onClick={() => setDiffId(id)} className={chip(diffId === id)}>{rhythmBuddyDiffShort[id]}</button>)}
+          {rhythmBuddyShownDiffIds().map((id) => <button key={id} type="button" onClick={() => setDiffId(id)} className={chip(diffId === id)}>{rhythmBuddyDiffShort[id]}</button>)}
         </div>
       )}
       <div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto">
@@ -51368,6 +51403,16 @@ function MonsterHeroGame() {
         await storeSet('mh_unique_lineage_dedupe_migrated_v1', true, false);
       }
       const compensationNotice = await storeGet('mh_masu_level_cap_compensation_notice_v1', null, false);
+      // HELL の満点を 105万にした(2026-10-12)。デバッグで 110万満点のころに付いた HELL の自己ベストを一度だけ 105/110 に縮める。
+      // 二重に縮めないよう、先に完了の印を立ててから記録を書き直す(計算は rescaleRhythmHellBestScores。5難易度には触らない)
+      try {
+        if (await storeGet(RHYTHM_HELL_BEST_RESCALED_KEY, false, false) !== true) {
+          const hellBestBefore = await storeGet(RHYTHM_BEST_RECORDS_KEY, {}, false);
+          await storeSet(RHYTHM_HELL_BEST_RESCALED_KEY, true, false);
+          const hellBestRescaled = rescaleRhythmHellBestScores(hellBestBefore);
+          if (hellBestRescaled.changed) await storeSet(RHYTHM_BEST_RECORDS_KEY, hellBestRescaled.next, false);
+        }
+      } catch (e) { /* 縮められなくても起動は止めない */ }
       // 画面のなかの使い方案内(PR8)。「見た」と保存されているときだけ出さない。
       // ★以前は既定値を true にして「読めなかったら出さない」つもりだったが、storeGet は
       //   キーが無いときも既定値を返すので、保存が無い＝見た扱いになり、

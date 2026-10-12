@@ -2574,7 +2574,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
             <RhythmBuddyGrowth key={masu.id} masu={masu} round={room.round} songId={room.songId} diffId={cpuRow.res.diffId} durationMs={song ? Number(song.playDurationMs) || 0 : 0} teamRank={team.rank}
               chartLevel={song && song.difficulties && song.difficulties[cpuRow.res.diffId] ? Number(song.difficulties[cpuRow.res.diffId].level) || 0 : 0}
               humans={team.rows.filter((row) => !row.m.cpu).length}
-              score={cpuRow.res.score} maxScore={((typeof RHYTHM_DIFFICULTIES !== 'undefined' ? RHYTHM_DIFFICULTIES : []).find((d) => d.id === cpuRow.res.diffId) || {}).maxScore || 0} />
+              score={cpuRow.res.score} maxScore={((typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : []).find((d) => d.id === cpuRow.res.diffId) || {}).maxScore || 0} />
           ))}</div>;
         })()}
         <div className="mt-auto flex shrink-0 gap-2 border-t border-white/10 bg-slate-950/90 px-3 pt-2 landscape:justify-end landscape:border-t-0 landscape:bg-transparent [@media(max-height:440px)]:pt-1 [[data-mh-view-rotation=true]_&]:pt-1" style={{ paddingBottom: 'calc(.4rem + var(--mh-sa-bottom))' }}>

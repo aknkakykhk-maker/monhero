@@ -967,7 +967,7 @@ function RhythmRankingScreen({
           const playCount=Number(rhythmRankingDetail.playCount)||0;
           // 難易度ごとの回数(2026-09-12・ユーザー指示「難易度別回数の内訳もあったほうがいい」)。
           // 返ってこない環境(SQL未適用)では空になり、この段は出ない
-          const playCountRows=rhythmEventPlayCountRows(rhythmRankingDetail.playCounts,RHYTHM_DEMO_DIFFICULTY_IDS);
+          const playCountRows=rhythmEventPlayCountRows(rhythmRankingDetail.playCounts,RHYTHM_DEMO_DIFFICULTY_IDS.concat(rhythmScoredDifficultyIds().filter(id=>!RHYTHM_DEMO_DIFFICULTY_IDS.includes(id))));
           return (
           <div data-rhythm-ranking-detail-modal className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-3" onClick={()=>setRhythmRankingDetail(null)}>
             <div className="w-full max-w-md rounded-2xl border border-amber-300/40 bg-slate-900 p-4" onClick={e=>e.stopPropagation()}>
@@ -1094,7 +1094,7 @@ function RhythmRankingScreen({
                 className="rounded-2xl border border-fuchsia-300/40 bg-fuchsia-500/5 p-2 text-[10px] leading-tight text-slate-200">
                 <b className="text-fuchsia-200">回数ボーナス</b>　対象曲を遊んだ回数ぶん、自分のベストスコアに加点されます（上限なし）。ランキングに出ている点は加点込みで、「詳細」「内訳」から素点との内訳を見られます。
                 <ul className="mt-1 space-y-0.5">
-                  {RHYTHM_DEMO_DIFFICULTY_IDS.map(id=>(
+                  {rhythmScoredDifficultyIds().map(id=>(
                     <li key={id} className="flex items-baseline gap-2">
                       <b className="w-14 shrink-0 font-black text-fuchsia-200">{RHYTHM_DEMO_DIFFICULTY_LABELS[id]?.name||id}</b>
                       <span className="min-w-0 flex-1 text-slate-200">{rhythmEventPlayBonusPercentText(id)}</span>

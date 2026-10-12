@@ -5672,6 +5672,16 @@ function MonsterHeroGame() {
         await storeSet('mh_unique_lineage_dedupe_migrated_v1', true, false);
       }
       const compensationNotice = await storeGet('mh_masu_level_cap_compensation_notice_v1', null, false);
+      // HELL の満点を 105万にした(2026-10-12)。デバッグで 110万満点のころに付いた HELL の自己ベストを一度だけ 105/110 に縮める。
+      // 二重に縮めないよう、先に完了の印を立ててから記録を書き直す(計算は rescaleRhythmHellBestScores。5難易度には触らない)
+      try {
+        if (await storeGet(RHYTHM_HELL_BEST_RESCALED_KEY, false, false) !== true) {
+          const hellBestBefore = await storeGet(RHYTHM_BEST_RECORDS_KEY, {}, false);
+          await storeSet(RHYTHM_HELL_BEST_RESCALED_KEY, true, false);
+          const hellBestRescaled = rescaleRhythmHellBestScores(hellBestBefore);
+          if (hellBestRescaled.changed) await storeSet(RHYTHM_BEST_RECORDS_KEY, hellBestRescaled.next, false);
+        }
+      } catch (e) { /* 縮められなくても起動は止めない */ }
       // 画面のなかの使い方案内(PR8)。「見た」と保存されているときだけ出さない。
       // ★以前は既定値を true にして「読めなかったら出さない」つもりだったが、storeGet は
       //   キーが無いときも既定値を返すので、保存が無い＝見た扱いになり、

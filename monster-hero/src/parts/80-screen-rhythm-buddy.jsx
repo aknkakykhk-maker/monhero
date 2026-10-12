@@ -135,7 +135,7 @@ const rhythmBuddyMakeBrain = (songs) => ({
     const song = (songs || []).find((x) => x.songId === songId);
     const chart = song && song.difficulties ? song.difficulties[diffId] : null;
     const totalNotes = chart ? (Number(chart.totalNotes) > 0 ? Number(chart.totalNotes) : Array.isArray(chart.notes) ? chart.notes.length : 300) : 300;
-    const diffDef = (typeof RHYTHM_DIFFICULTIES !== 'undefined' ? RHYTHM_DIFFICULTIES : []).find((d) => d.id === diffId);
+    const diffDef = (typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : []).find((d) => d.id === diffId);
     const mon = RHYTHM_BUDDY_STORE.get().mons[masuId];
     const mood = rhythmBuddyMood(masuId, rhythmBuddyDayKey(Date.now()), mon);
     return rhythmBuddyPlay({
@@ -152,13 +152,13 @@ const rhythmBuddyMakeBrain = (songs) => ({
     const mood = rhythmBuddyMood(masuId, rhythmBuddyDayKey(Date.now()), mon);
     let scene = kind;
     if (kind === 'result') {
-      const diffDef = (typeof RHYTHM_DIFFICULTIES !== 'undefined' ? RHYTHM_DIFFICULTIES : []).find((d) => d.id === diffId);
+      const diffDef = (typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : []).find((d) => d.id === diffId);
       const ratio = Number(score) / ((diffDef && diffDef.maxScore) || 1000000);
       scene = mvp ? 'mvp' : ratio >= 0.9 ? 'high' : ratio >= 0.7 ? 'mid' : 'low';
     }
     // 部屋のほかの人(自分を含む)の結果への反応。目立つ結果(MVP・フルコン・高得点・伸びなかった・途中でやめた)だけに反応する
     if (kind === 'reactResult') {
-      const diffDef = (typeof RHYTHM_DIFFICULTIES !== 'undefined' ? RHYTHM_DIFFICULTIES : []).find((d) => d.id === diffId);
+      const diffDef = (typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : []).find((d) => d.id === diffId);
       const ratio = Number(score) / ((diffDef && diffDef.maxScore) || 1000000);
       scene = quit ? 'hQuit' : Number(fc) > 0 ? 'hFull' : mvp ? 'hMvp' : ratio >= 0.9 ? 'hHigh' : ratio < 0.6 ? (Number(missRate) >= 0.15 && Math.random() < 0.5 ? 'hMiss' : 'hLow') : '';
       if (!scene) return '';
@@ -296,7 +296,7 @@ function RhythmBuddyAllowance({ freeLeft, tickets, className = '', compact = fal
     </p>
   );
 }
-const rhythmBuddyDiffShort = Object.freeze({ EASY: 'EASY', NORMAL: 'NORMAL', HARD: 'HARD', EXPERT: 'EXPERT', MASTER: 'MASTER' });
+const rhythmBuddyDiffShort = Object.freeze({ EASY: 'EASY', NORMAL: 'NORMAL', HARD: 'HARD', EXPERT: 'EXPERT', MASTER: 'MASTER', HELL: 'HELL' });
 
 // スコアの伸び(最近30回)。横は古い→新しい、縦は「その難易度の満点の何%か」(難易度ごとに満点が違うため)。
 // 1本の線なので凡例は付けない。点を押すと、その回の曲・難易度・スコアを下に出す。数字の一覧も開ける
@@ -420,7 +420,7 @@ function RhythmBuddyDetail({ masu, mon, dayKey, songName, onBack }) {
       </section>
       <section className="rounded-xl bg-slate-950/60 p-2">
         <h4 className="mb-1 text-[10px] font-black text-slate-400">難易度の慣れ</h4>
-        {RHYTHM_BUDDY_DIFF_IDS.map((id) => {
+        {rhythmBuddyShownDiffIds().map((id) => {
           const v = rhythmBuddyMastery(m.diffs[id]);
           return (
             <div key={id} className="flex items-center gap-2 py-0.5">
@@ -868,7 +868,7 @@ function RhythmBuddyRankDetail({ entry, onClose, renderBreederIcon = null, songN
       <section data-rhythm-buddy-rank-detail-scores className="rounded-2xl border border-lime-300/25 bg-slate-900/80 p-2">
         <b className="mb-1 block text-[12px] font-black text-lime-100">難易度ごとの最高スコア</b>
         <ul className="space-y-1">
-          {RHYTHM_BUDDY_DIFF_IDS.map((id) => (
+          {rhythmBuddyShownDiffIds().map((id) => (
             <li key={id} className="flex items-center gap-2 text-[11px] font-bold">
               <span className="w-16 shrink-0 text-slate-400">{rhythmBuddyDiffShort[id]}</span>
               {entry.scores[id]
@@ -931,7 +931,7 @@ function RhythmBuddyRankingBoard({ renderBreederIcon = null, selfName = '', onCl
       )}
       {kind === 'score' && (
         <div data-rhythm-buddy-ranking-diffs className="flex gap-1.5 overflow-x-auto">
-          {RHYTHM_BUDDY_DIFF_IDS.map((id) => <button key={id} type="button" onClick={() => setDiffId(id)} className={chip(diffId === id)}>{rhythmBuddyDiffShort[id]}</button>)}
+          {rhythmBuddyShownDiffIds().map((id) => <button key={id} type="button" onClick={() => setDiffId(id)} className={chip(diffId === id)}>{rhythmBuddyDiffShort[id]}</button>)}
         </div>
       )}
       <div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto">
