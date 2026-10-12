@@ -114,6 +114,7 @@ jobs:
           node tools/mode/rhythm-reward-gift-check.js
           node tools/ranking/pending-resend-check.js
           node tools/mode/rhythm-keyframe-blur-check.js
+          node tools/mode/quick-extreme-special-rules-check.js
       # 譜面の道具（手のモデル・押せるかの判定・自動修正）を触ったときだけ重い検査を回す。
       # 毎回だと35秒×毎コミット。実際にこの6ファイルが変わるのは3か月で数回しかない。
       # 逆に、ここを回していなかったせいで #1369（1本の指の叩き直しに下限を入れた）の
