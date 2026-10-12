@@ -1078,6 +1078,9 @@ function MonsterHeroGame() {
   // ★メロディ・ボゥの旋律(クロミーの固有技)で積んだ「与ダメ+5%」の数。使った子の枠ごと(どのモードも枠の番号)。
   //   バトル(ラン)が終わるまで残り、使うたびに重なる。片付けはスタックと同じ resetSweetStack
   const bowStackRef = useRef({});
+  // ★「マーク×数」の静止画を撮るための差し込み口(2026-10-12)。自動操作のブラウザ(navigator.webdriver)のときだけ作る。
+  //   ふつうに遊ぶ人のブラウザでは window に何も足さず、debugStackMarks は null のまま(表示も効き目も変わらない)
+  const [debugStackMarks, setDebugStackMarks] = useState(null);
   const [bowStackView, setBowStackView] = useState({});
   const bowAtkMultAt = (slotIdx) => (Number.isInteger(slotIdx) ? bowAtkMultOf(bowStackRef.current[String(slotIdx)]) : 1);
   const addBowStackAt = (slotIdx) => {
@@ -1095,6 +1098,12 @@ function MonsterHeroGame() {
     const next = { ...sweetStackRef.current.bySlot, [key]: sweetStackCountOf(n) };
     sweetStackRef.current = { bySlot: next }; setSweetStackView(next);
   };
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof navigator === 'undefined' || navigator.webdriver !== true) return undefined;
+    // 形: { ally: { <枠の番号>: { cookie: 5, ... } }, enemy: { aquaPrison: 2, ... } }。null で元に戻す。見た目だけで効き目は変えない
+    window.__mhStackMarksDebug = { set: (v) => setDebugStackMarks(v && typeof v === 'object' ? v : null) };
+    return () => { delete window.__mhStackMarksDebug; };
+  }, []);
   // 行動1回ぶん貯める(本人の行動だけ。sweetStackGainOf が決める)。actorId はカードを使った子
   const gainSweetStack = (slotIdx, actorId, card, hit = false) => {
     const owner = sweetOwnerAt(slotIdx);
@@ -10467,6 +10476,18 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if (getWaveBuff('enemyTakenDmgBonus') > 0) add('taken', '⬆', '敵の被ダメ上昇', `+${Math.round(getWaveBuff('enemyTakenDmgBonus') * 100)}%`, 'text-orange-200 border-orange-400/60', 'このWAVEのあいだ続く', `+${Math.round(getWaveBuff('enemyTakenDmgBonus') * 100)}%`);
     if (enemy.roarStacks > 0) add('roar', '📢', '咆哮', `×${enemy.roarStacks}`, 'text-red-200 border-red-400/60', '敵の攻撃が上がっている(元には戻らない)', `×${enemy.roarStacks}`);
     return list;
+  })();
+  // ★敵に重なってかかる状態の数(2026-10-12 社長の依頼)。敵の絵の隅に「マーク×数」で常に出す(絵柄は BATTLE_STACK_MARKS)。
+  //   数の出どころは上の enemyDebuffs と同じ(水牢・氷結はタクティクスのアクアフィールド、咆哮は敵の roarStacks)
+  const enemyStackCounts = (() => {
+    if (!enemy) return {};
+    const aq = isTacticsMode(runMode) ? tacticsExAquaOf(tacticsExState, tacticsUnits, { wave, turn: turnCount }) : null;
+    return {
+      aquaPrison: aq && aq.active && aq.route === 'prison' ? aq.stacks : 0,
+      aquaFreeze: aq && aq.active && aq.route === 'freeze' ? aq.stacks : 0,
+      roar: Math.max(0, Math.floor(Number(enemy.roarStacks) || 0)),
+      ...(debugStackMarks && debugStackMarks.enemy ? debugStackMarks.enemy : {}),
+    };
   })();
   const iceLockEnemyDamageMult = iceLockActive ? 0.7 : 1.0;
   const heroDist = slots.findIndex(isHeroSlotMon);
@@ -20262,7 +20283,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             setShowQuitConfirm={setShowQuitConfirm} setShowSoulBattleEffects={setShowSoulBattleEffects}
             setSkillPicker={setSkillPicker} setSlotSettle={setSlotSettle} slotMaxUses={slotMaxUses}
             slotSettle={slotSettle} slotSkill={slotSkill} slotUniqueChoice={slotUniqueChoice} slots={slots}
-            tacticsUnits={isTacticsMode(runMode)?tacticsUnits:null} tacticsCanAssign={tacticsCanAssign} tacticsCardBlock={tacticsCardBlock} enemyDebuffs={enemyDebuffs} discardCards={discardCards} actionUsed={actionUsed} tacticsSlotFx={tacticsSlotFx} tacticsCardGenre={cardGenreLabel} tacticsCardScope={cardScopeLabel}
+            tacticsUnits={isTacticsMode(runMode)?tacticsUnits:null} tacticsCanAssign={tacticsCanAssign} tacticsCardBlock={tacticsCardBlock} enemyDebuffs={enemyDebuffs} enemyStackCounts={enemyStackCounts} debugStackMarks={debugStackMarks} discardCards={discardCards} actionUsed={actionUsed} tacticsSlotFx={tacticsSlotFx} tacticsCardGenre={cardGenreLabel} tacticsCardScope={cardScopeLabel}
             soulBattleParty={soulBattleParty} soulCoordinationCardBonus={soulCoordinationCardBonus}
             suppressCardClickRef={suppressCardClickRef} teachingFx={teachingFx} totalTurnCount={totalTurnCount}
             turnCount={turnCount} ultimateDistanceBreakLevels={ultimateDistanceBreakLevels}

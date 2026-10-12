@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: fd4d2bea5f636a50
+// generated-sha256: 5562f715586ea4e6
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-12 14:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-12 14:42"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -12138,6 +12138,31 @@ const COOKIE_DMG_FROM = 10, COOKIE_DMG_UP = 0.15;
 const BLACK_NOTE_DMG_PER = 0.03;
 const BLACK_NOTE_CRIT_FROM = 5, BLACK_NOTE_CRIT_ADD = 0.1;
 const BLACK_NOTE_COMBO_FROM = 10, BLACK_NOTE_COMBO_RATE = 0.15;
+// ★バトル画面の「マーク×数」(2026-10-12 社長の依頼「スタックがいくら貯まってるのか一目でわかるように」)。
+//   貯まる数(味方)と、敵に重なってかかる状態を、その子の枠・敵の絵の隅に「マーク×数」で常に出す。
+//   ★絵柄はここ1か所で差し替える。mark は絵文字。img に画像のパス(例 'images/ui/stack-cookie.png')を入れると、絵文字の代わりにその絵を出す。
+//   label は読み上げと詳細の言い方。並び順もこの順(味方の枠に複数付くとき)
+const BATTLE_STACK_MARKS = Object.freeze({
+  cookie:     Object.freeze({ mark:'🍪', img:'', label:'クッキー', showZero:true }),          // メロディー(メロディの手作りクッキー)
+  note:       Object.freeze({ mark:'🎵', img:'', label:'黒音符', showZero:true }),            // クロミー(クロミノート)
+  bow:        Object.freeze({ mark:'🎀', img:'', label:'旋律' }),              // メロディ・ボゥの旋律(使った子の枠)
+  kenshi:     Object.freeze({ mark:'⚔️', img:'', label:'連撃パワー' }),        // 剣士モッチー(ソードスキル)
+  trickAtk:   Object.freeze({ mark:'💪', img:'', label:'トリック(ちから)' }),  // ゴースト・スプーキー(トリックスタート)
+  trickDef:   Object.freeze({ mark:'🛡️', img:'', label:'トリック(丈夫さ)' }),
+  trickRegen: Object.freeze({ mark:'💚', img:'', label:'トリック(回復)' }),
+  fateCombo:  Object.freeze({ mark:'🎲', img:'', label:'運命(連撃)' }),        // 運命のコイン・運命の輪
+  fateAtk:    Object.freeze({ mark:'🪙', img:'', label:'運命(ちから)' }),
+  aquaPrison: Object.freeze({ mark:'💧', img:'', label:'水牢' }),              // 敵: ウンディーネ種のアクアフィールド
+  aquaFreeze: Object.freeze({ mark:'❄️', img:'', label:'氷結' }),
+  roar:       Object.freeze({ mark:'📢', img:'', label:'咆哮' }),              // 敵: 自分にかけた攻撃アップ
+});
+const BATTLE_STACK_MARK_ORDER = Object.freeze(Object.keys(BATTLE_STACK_MARKS));
+// { kind: 数 } から、出す順に並べた [{ kind, count, mark, img, label }] を作る。知らない種類・0は出さない。
+// ただし showZero の種類(クッキー・黒音符=その子の特性そのもの)は、持ち主なら0でも「×0」で出す(貯まる物があると分かるように)
+const battleStackMarkItems = (counts) => BATTLE_STACK_MARK_ORDER
+  .filter((kind) => counts && Object.prototype.hasOwnProperty.call(counts, kind))
+  .map((kind) => ({ kind, count: Math.max(0, Math.floor(Number(counts[kind]) || 0)), ...BATTLE_STACK_MARKS[kind] }))
+  .filter((it) => it.count > 0 || it.showZero);
 const sweetStackTraitOf = (id) => (id && Object.prototype.hasOwnProperty.call(SWEET_STACK_TRAITS, id) ? SWEET_STACK_TRAITS[id] : null);
 const sweetStackCountOf = (n) => Math.min(SWEET_STACK_MAX, Math.max(0, Math.floor(Number(n) || 0)));
 // その行動で増える数。ownerId=特性を持つ子(既存5モードは勇者モン・タクティクスはその枠の子)、actorId=カードを使った子。
@@ -36904,6 +36929,22 @@ const inTacticsDiscardZone = (x, y) => {
   const g = tacticsDiscardGeo();
   return !!g && y >= g.enemyTop && y < g.slotTop;
 };
+// ★「マーク×数」(2026-10-12 社長の依頼)。味方の枠・敵の絵の隅に、貯まった数・重なった状態を常に出す。
+//   counts … { kind: 数 }(kind は BATTLE_STACK_MARKS のキー)。絵柄・言い方は BATTLE_STACK_MARKS の1か所で差し替える。
+//   side … 'ally' | 'enemy'。full … 満タンにする数(クッキー・黒音符の上限で光らせる)
+const BattleStackMarks = ({ counts, side, full = 0, className = '' }) => {
+  const items = battleStackMarkItems(counts);
+  if (!items.length) return null;
+  return (
+    <div data-stack-marks={side} role="img" aria-label={items.map((it) => `${it.label}${it.count}`).join('、')} className={`mh-stack-marks pointer-events-none ${className}`}>
+      {items.map((it) => (
+        <span key={it.kind} data-stack-mark={it.kind} data-stack-count={it.count} data-stack-full={full > 0 && it.showZero && it.count >= full ? 'true' : undefined} className="mh-stack-mark">
+          {it.img ? <img src={it.img} alt="" draggable={false} /> : <i aria-hidden="true">{it.mark}</i>}<b>×{it.count}</b>
+        </span>
+      ))}
+    </div>
+  );
+};
 const TacticsDiscardZones = ({ full, used, limit }) => {
   const g = tacticsDiscardGeo();
   if (!g || typeof ReactDOM === 'undefined') return null;
@@ -36961,7 +37002,7 @@ function BattleScreen({
   setShowBattleLog, setShowDeckInfo, setShowEnemyInfo, setShowHeroInfo, setShowQuitConfirm,
   setShowSoulBattleEffects, setSkillPicker, setSlotSettle, slotMaxUses, slotSettle, slotSkill,
   slotUniqueChoice, slots, soulBattleParty, soulCoordinationCardBonus, suppressCardClickRef,
-  tacticsCanAssign, tacticsCardBlock, enemyDebuffs, discardCards, actionUsed, tacticsCardGenre, tacticsCardScope, tacticsSlotFx, tacticsUnits,
+  tacticsCanAssign, tacticsCardBlock, enemyDebuffs, enemyStackCounts, debugStackMarks, discardCards, actionUsed, tacticsCardGenre, tacticsCardScope, tacticsSlotFx, tacticsUnits,
   tacticsExInfo, activateTacticsEx, tacticsExCutin, tacticsExTurnUsed, passTacticsTurn, tacticsCoverSlot,
   tacticsExIntroVisible, dismissTacticsExIntro, tacticsPandoraForms, trickStartView, sweetStackView, bowStackView, fateWheelView, enemyConfuseTurns, luckBanners,
   teachingFx, totalTurnCount, turnCount, ultimateDistanceBreakLevels, ultraBattleView, enemyDefeating,
@@ -36971,6 +37012,32 @@ function BattleScreen({
   // ★いくつ付いても高さが変わらないようにするための状態。ここが無いと、
   //   札が3行4行に伸びて敵の絵・緊急のボタン・与ダメの数字を押し出す
   const [buffDetail, setBuffDetail] = useState(false);
+  // ★味方の枠ごとの「マーク×数」(2026-10-12 社長の依頼)。{ 枠の番号: { kind: 数 } }。
+  //   数の出どころは下の強化の札と同じ(クッキー・黒音符・旋律・トリックスタート・運命・連撃パワー)。既存5モードの 'party' は勇者モンの枠
+  const allyStackCounts = (() => {
+    const out = {};
+    const put = (i, kind, n, keepZero = false) => {
+      if (!Number.isInteger(i) || i < 0) return;
+      const c = Math.max(0, Math.floor(Number(n) || 0));
+      if (c <= 0 && !keepZero) return;
+      out[i] = { ...(out[i] || {}), [kind]: ((out[i] && out[i][kind]) || 0) + c };
+    };
+    const slotOfKey = (key) => (key === 'party' ? heroDist : Number(key));
+    // クッキー・黒音符は、その特性の持ち主なら0個でも出す(既存5モードは勇者モン、タクティクスは持っている子の枠)
+    if (Array.isArray(tacticsUnits)) slots.forEach((m, i) => { const t = sweetStackTraitOf(m?.id); if (t) put(i, t.kind === 'cookie' ? 'cookie' : 'note', 0, true); });
+    else { const t = sweetStackTraitOf(mainHero?.id); if (t) put(heroDist, t.kind === 'cookie' ? 'cookie' : 'note', 0, true); }
+    Object.entries(sweetStackView || {}).forEach(([key, n]) => {
+      const i = slotOfKey(key), t = sweetStackTraitOf(key === 'party' ? mainHero?.id : slots[i]?.id);
+      if (t) put(i, t.kind === 'cookie' ? 'cookie' : 'note', sweetStackCountOf(n), true);
+    });
+    Object.entries(bowStackView || {}).forEach(([key, n]) => put(Number(key), 'bow', n));
+    Object.entries(trickStartView || {}).forEach(([key, st]) => { const i = slotOfKey(key); put(i, 'trickAtk', st?.atk); put(i, 'trickDef', st?.def); put(i, 'trickRegen', st?.regen); });
+    const fate = getPermaBuff('fateStacks', null);
+    Object.keys(fate?.bySlot || {}).forEach((key) => { const st = fateSlotStacksOf(fate, key); put(Number(key), 'fateCombo', st.combo); put(Number(key), 'fateAtk', st.atk); });
+    if (getPermaBuff('kenshiComboPower') > 0) { const k = slots.findIndex((m) => m?.id === 'KenshiMocchi'); put(k >= 0 ? k : heroDist, 'kenshi', getPermaBuff('kenshiComboPower')); }
+    if (debugStackMarks && debugStackMarks.ally) Object.entries(debugStackMarks.ally).forEach(([i, c]) => { out[Number(i)] = { ...(c || {}) }; });
+    return out;
+  })();
   // 敵のデバフの詳細(名前の横の簡易表示を押すと開く)
   const [enemyDebuffOpen, setEnemyDebuffOpen] = useState(false);
   // レイドバトル(A)のターンごとの強化の表示(2026-10-04・ユーザー指示「ターン毎の強化がもうちょいわかるような表示がほしい」)。
@@ -37375,7 +37442,7 @@ function BattleScreen({
             <div className="flex-1 min-h-0 px-2 py-1.5 flex flex-col gap-1.5 overflow-hidden">
               {enemy&&(
                 <section className="rounded-xl border border-red-900/70 bg-slate-900/95 px-2 py-1.5">
-                  <div className="flex items-center justify-between gap-2 text-[10px] font-black"><span className="min-w-0 truncate text-red-200">{enemy.name}</span><span className="shrink-0 font-mono text-red-300">{Math.max(0,enemy.hp).toLocaleString()} / {enemy.maxHp.toLocaleString()}</span></div>
+                  <div className="flex items-center justify-between gap-2 text-[10px] font-black"><span className="min-w-0 truncate text-red-200">{enemy.name}</span><span className="flex shrink-0 items-center gap-1"><BattleStackMarks counts={enemyStackCounts} side="enemy" className="mh-stack-marks-enemy"/><span className="shrink-0 font-mono text-red-300">{Math.max(0,enemy.hp).toLocaleString()} / {enemy.maxHp.toLocaleString()}</span></span></div>
                   <div className="mt-1 h-2 overflow-hidden rounded-full bg-slate-800"><div className="h-full bg-red-600" style={{width:`${(Math.max(0,enemy.hp)/enemy.maxHp)*100}%`}}/></div>
                   <div className="mt-1 flex items-center justify-center gap-3">
                     {/* 超省エネは敵の絵を出さない(2026-10-01・ユーザー指示「もっと画面情報減らしてエコに」)。名前・ライフ・距離・技名の文字だけ */}
@@ -37385,7 +37452,7 @@ function BattleScreen({
                 </section>
               )}
               <section className="rounded-xl border border-indigo-900/70 bg-slate-900/95 px-2 py-1.5">
-                <div data-ultra-ally-slots className="grid grid-cols-4 gap-1">{slots.map((s,i)=><div key={i} className={`flex h-[42px] min-w-0 flex-col items-center justify-center rounded-lg border px-0.5 py-1 text-center ${RANGE_STYLES[i].bg} ${RANGE_STYLES[i].border}`}><div className="w-full truncate text-[10px] font-black text-white">{s?.name||'---'}</div><div className="mt-1 text-[10px] font-black">{RANGE_LABELS[i]}距離</div></div>)}</div>
+                <div data-ultra-ally-slots className="grid grid-cols-4 gap-1">{slots.map((s,i)=><div key={i} className={`flex h-[42px] min-w-0 flex-col items-center justify-center rounded-lg border px-0.5 py-1 text-center ${RANGE_STYLES[i].bg} ${RANGE_STYLES[i].border}`}><div className="w-full truncate text-[10px] font-black text-white">{s?.name||'---'}</div>{/* 超省エネも、貯まった数は「マーク×数」で距離の字の横に出す */}<div className="mt-1 flex max-w-full items-center justify-center gap-0.5 text-[10px] font-black"><span className="shrink-0">{RANGE_LABELS[i]}距離</span><BattleStackMarks counts={allyStackCounts[i]} side="ally" full={SWEET_STACK_MAX} className="mh-stack-marks-inline"/></div></div>)}</div>
                 <div className="mt-1.5 space-y-1">
                   <div><div className="flex justify-between text-[10px] font-black text-pink-300"><span>味方のライフ</span><span className="font-mono">{hp.toLocaleString()} / {effectiveMaxHp.toLocaleString()}</span></div><div className="h-1.5 overflow-hidden rounded-full bg-slate-800"><div className="h-full bg-pink-500" style={{width:`${(hp/effectiveMaxHp)*100}%`}}/></div></div>
                   <div><div className="flex justify-between text-[10px] font-black text-amber-300"><span>ガッツ</span><span className="font-mono">{Math.floor(guts).toLocaleString()} / {effectiveMaxGuts.toLocaleString()}</span></div><div className="h-1.5 overflow-hidden rounded-full bg-slate-800"><div className="h-full bg-amber-400" style={{width:`${(guts/effectiveMaxGuts)*100}%`}}/></div></div>
@@ -37436,7 +37503,9 @@ function BattleScreen({
           <div data-enemy-bar className={`shrink-0 bg-slate-950/95 border-b border-red-900/40 px-4 py-1 z-[6400] shadow-[0_4px_12px_rgba(0,0,0,0.6)]${battleTutorialSpotClass('enemyBar')}`}>
             <div className="flex justify-between items-center text-[11px] font-black italic uppercase tracking-tighter mb-0.5">
               <span className={`flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5 leading-none ${wave===10?'text-red-500 animate-pulse':'text-slate-200'}`}><Skull size={11} className="shrink-0"/><span className="max-w-[34vw] truncate">{enemy.name}</span><span className={`shrink-0 px-1.5 py-0.5 rounded-full text-[10px] text-white font-bold border ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border}`}>{RANGE_LABELS[enemyDist]}</span>{Array.isArray(enemyDebuffs)&&enemyDebuffs.length>0&&<button type="button" data-enemy-debuffs={enemyDebuffs.length} aria-expanded={enemyDebuffOpen} aria-label={`敵の状態 ${enemyDebuffs.map(d=>`${d.label} ${d.value}`).join('、')}（押すと詳細）`} onClick={()=>setEnemyDebuffOpen(v=>!v)} className="mh-hit-expand relative shrink-0 inline-flex items-center gap-1 rounded-full border border-white/25 bg-black/60 px-1.5 py-0.5 text-[10px] not-italic font-black leading-none tracking-normal normal-case text-slate-100 active:scale-95">{enemyDebuffs.map(d=>(<span key={d.key} data-enemy-debuff={d.key} aria-label={`${d.label} ${d.value}`} className={`inline-flex items-center gap-px ${d.tone.split(' ')[0]}`}><span aria-hidden="true">{d.mark}</span>{d.short?<span className="font-mono">{d.short}</span>:null}</span>))}<span aria-hidden="true" className="text-slate-300">{enemyDebuffOpen?'▲':'▼'}</span></button>}</span>
-              <span className="text-red-500 flex items-center gap-1 font-mono drop-shadow-[0_1px_3px_rgba(0,0,0,1)]">{Math.max(0,enemy.hp).toLocaleString()} / {enemy.maxHp.toLocaleString()}</span>
+              {/* ★敵に重なってかかっている状態(水牢・氷結・咆哮)を「マーク×数」で常に出す(2026-10-12 社長の依頼)。
+                  敵の絵の隅は、技名の帯・次の行動の札と重なり、横持ちでは絵ごと隠れるので、どの画面でも見えるライフの帯の右端(数字の左)に置く */}
+              <span className="flex shrink-0 items-center gap-1"><BattleStackMarks counts={enemyStackCounts} side="enemy" className="mh-stack-marks-enemy"/><span className="text-red-500 flex items-center gap-1 font-mono drop-shadow-[0_1px_3px_rgba(0,0,0,1)]">{Math.max(0,enemy.hp).toLocaleString()} / {enemy.maxHp.toLocaleString()}</span></span>
             </div>
             {/* 敵のライフ(2026-09-22 ユーザー指示「全体的に安っぽい作りをなんとかしたい」)。
                 ★細い線だったものを、ガラスの筒に色が入っているように見せる。
@@ -38451,6 +38520,8 @@ function BattleScreen({
                 {/* アシストカード・緊急回復のカットインは、効き目が乗る枠をまとめて光らせる(slotIndexes) */}
                 {tacticsExCutin&&(tacticsExCutin.slotIndex===i||(tacticsExCutin.slotIndexes||[]).includes(i))&&<span key={tacticsExCutin.key} data-tactics-ex-aura={tacticsExCutin.effect||'default'} className="ex-aura" aria-hidden="true"
                   style={{'--ex-c1':battleCutinThemeOf(tacticsExCutin).c1,'--ex-c2':battleCutinThemeOf(tacticsExCutin).c2,...(tacticsExCutin.ms?{animationDuration:`${tacticsExCutin.ms}ms`}:{})}}><i/><i/></span>}
+                {/* ★貯まった数(クッキー・黒音符など)を「マーク×数」で常に出す(2026-10-12 社長の依頼)。タクティクスの枠は絵の左下、ほかのモードの縦長の枠は名前の帯のすぐ下(下の端は間合いの札がある) */}
+                <BattleStackMarks counts={allyStackCounts[i]} side="ally" full={SWEET_STACK_MAX} className={tacticsNewLayout?'mh-stack-marks-ally':'mh-stack-marks-ally mh-stack-marks-ally-top'}/>
                 {slotHitKind&&(()=>{
                   const hitFx=TACTICS_SLOT_FX_STYLE[slotHitKind];
                   return(<div data-tactics-hit-fx={slotHitKind} className="absolute inset-0 z-[58] pointer-events-none overflow-visible">
@@ -46545,6 +46616,9 @@ function MonsterHeroGame() {
   // ★メロディ・ボゥの旋律(クロミーの固有技)で積んだ「与ダメ+5%」の数。使った子の枠ごと(どのモードも枠の番号)。
   //   バトル(ラン)が終わるまで残り、使うたびに重なる。片付けはスタックと同じ resetSweetStack
   const bowStackRef = useRef({});
+  // ★「マーク×数」の静止画を撮るための差し込み口(2026-10-12)。自動操作のブラウザ(navigator.webdriver)のときだけ作る。
+  //   ふつうに遊ぶ人のブラウザでは window に何も足さず、debugStackMarks は null のまま(表示も効き目も変わらない)
+  const [debugStackMarks, setDebugStackMarks] = useState(null);
   const [bowStackView, setBowStackView] = useState({});
   const bowAtkMultAt = (slotIdx) => (Number.isInteger(slotIdx) ? bowAtkMultOf(bowStackRef.current[String(slotIdx)]) : 1);
   const addBowStackAt = (slotIdx) => {
@@ -46562,6 +46636,12 @@ function MonsterHeroGame() {
     const next = { ...sweetStackRef.current.bySlot, [key]: sweetStackCountOf(n) };
     sweetStackRef.current = { bySlot: next }; setSweetStackView(next);
   };
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof navigator === 'undefined' || navigator.webdriver !== true) return undefined;
+    // 形: { ally: { <枠の番号>: { cookie: 5, ... } }, enemy: { aquaPrison: 2, ... } }。null で元に戻す。見た目だけで効き目は変えない
+    window.__mhStackMarksDebug = { set: (v) => setDebugStackMarks(v && typeof v === 'object' ? v : null) };
+    return () => { delete window.__mhStackMarksDebug; };
+  }, []);
   // 行動1回ぶん貯める(本人の行動だけ。sweetStackGainOf が決める)。actorId はカードを使った子
   const gainSweetStack = (slotIdx, actorId, card, hit = false) => {
     const owner = sweetOwnerAt(slotIdx);
@@ -55934,6 +56014,18 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if (getWaveBuff('enemyTakenDmgBonus') > 0) add('taken', '⬆', '敵の被ダメ上昇', `+${Math.round(getWaveBuff('enemyTakenDmgBonus') * 100)}%`, 'text-orange-200 border-orange-400/60', 'このWAVEのあいだ続く', `+${Math.round(getWaveBuff('enemyTakenDmgBonus') * 100)}%`);
     if (enemy.roarStacks > 0) add('roar', '📢', '咆哮', `×${enemy.roarStacks}`, 'text-red-200 border-red-400/60', '敵の攻撃が上がっている(元には戻らない)', `×${enemy.roarStacks}`);
     return list;
+  })();
+  // ★敵に重なってかかる状態の数(2026-10-12 社長の依頼)。敵の絵の隅に「マーク×数」で常に出す(絵柄は BATTLE_STACK_MARKS)。
+  //   数の出どころは上の enemyDebuffs と同じ(水牢・氷結はタクティクスのアクアフィールド、咆哮は敵の roarStacks)
+  const enemyStackCounts = (() => {
+    if (!enemy) return {};
+    const aq = isTacticsMode(runMode) ? tacticsExAquaOf(tacticsExState, tacticsUnits, { wave, turn: turnCount }) : null;
+    return {
+      aquaPrison: aq && aq.active && aq.route === 'prison' ? aq.stacks : 0,
+      aquaFreeze: aq && aq.active && aq.route === 'freeze' ? aq.stacks : 0,
+      roar: Math.max(0, Math.floor(Number(enemy.roarStacks) || 0)),
+      ...(debugStackMarks && debugStackMarks.enemy ? debugStackMarks.enemy : {}),
+    };
   })();
   const iceLockEnemyDamageMult = iceLockActive ? 0.7 : 1.0;
   const heroDist = slots.findIndex(isHeroSlotMon);
@@ -65729,7 +65821,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             setShowQuitConfirm={setShowQuitConfirm} setShowSoulBattleEffects={setShowSoulBattleEffects}
             setSkillPicker={setSkillPicker} setSlotSettle={setSlotSettle} slotMaxUses={slotMaxUses}
             slotSettle={slotSettle} slotSkill={slotSkill} slotUniqueChoice={slotUniqueChoice} slots={slots}
-            tacticsUnits={isTacticsMode(runMode)?tacticsUnits:null} tacticsCanAssign={tacticsCanAssign} tacticsCardBlock={tacticsCardBlock} enemyDebuffs={enemyDebuffs} discardCards={discardCards} actionUsed={actionUsed} tacticsSlotFx={tacticsSlotFx} tacticsCardGenre={cardGenreLabel} tacticsCardScope={cardScopeLabel}
+            tacticsUnits={isTacticsMode(runMode)?tacticsUnits:null} tacticsCanAssign={tacticsCanAssign} tacticsCardBlock={tacticsCardBlock} enemyDebuffs={enemyDebuffs} enemyStackCounts={enemyStackCounts} debugStackMarks={debugStackMarks} discardCards={discardCards} actionUsed={actionUsed} tacticsSlotFx={tacticsSlotFx} tacticsCardGenre={cardGenreLabel} tacticsCardScope={cardScopeLabel}
             soulBattleParty={soulBattleParty} soulCoordinationCardBonus={soulCoordinationCardBonus}
             suppressCardClickRef={suppressCardClickRef} teachingFx={teachingFx} totalTurnCount={totalTurnCount}
             turnCount={turnCount} ultimateDistanceBreakLevels={ultimateDistanceBreakLevels}
