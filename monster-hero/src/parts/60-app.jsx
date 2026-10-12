@@ -18333,6 +18333,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <RhythmSkyLaneLookSwitch/>
             <RhythmHellVisSwitch/>
             <RhythmHellSkyHitSwitch/>
+            <RhythmSkyTapDistinctSwitch/>
             <RhythmJudgeTextPosSwitch/>
             {/* 難易度 HELL のお話と説明(2026-10-11)。HELL の公開前に社長が確かめるためのもの。見たことにはしない(debug)。
                 デバッグ専用なので更新履歴・ヘルプには載せない */}

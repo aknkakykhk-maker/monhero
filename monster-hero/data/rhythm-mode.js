@@ -1179,8 +1179,17 @@ const RHYTHM_SKY_BOX_LOOKS=Object.freeze({
   // HELL の見やすさの案(2026-10-12 社長「HELL の視覚性をもっと改良して」)。b の板が暗く、道との明るさの差が約1.15倍しかなかった(地上のノーツは約2.8倍)
   b2:Object.freeze({aspect:.2,farDim:.75,fill:'239,68,68',fillAlpha:.92,topAlpha:.9,topRatio:.36,frontFill:'185,28,28',frontAlpha:.95,thickRatio:.3,edge:'254,202,202',edgePx:2.2,minFacePx:6}),
   b3:Object.freeze({aspect:.2,farDim:.85,fill:'248,113,113',fillAlpha:.95,topAlpha:.95,topRatio:.36,frontFill:'220,38,38',frontAlpha:.95,thickRatio:.3,edge:'255,255,255',edgePx:2.4,minFacePx:6}),
+  // 上フリック(ピンクの板・白っぽい縁・上の三角)と見分けやすくする案(2026-10-12 社長「スカイノーツと上フリック見分けつきづらい」)
+  block:Object.freeze({aspect:.34,farDim:.85,fill:'220,38,38',fillAlpha:.97,topAlpha:.9,topRatio:.32,frontFill:'127,29,29',frontAlpha:.98,thickRatio:.75,edge:'254,202,202',edgePx:1.8,minFacePx:6}),
+  deep:Object.freeze({aspect:.2,farDim:.85,fill:'200,30,30',fillAlpha:.97,topAlpha:.9,topRatio:.36,frontFill:'127,29,29',frontAlpha:.98,thickRatio:.3,edge:'255,255,255',edgePx:3.4,minFacePx:6}),
 });
-const RHYTHM_SKY_BOX_LOOK_LABELS=Object.freeze({z:'案Z 色の無いガラス',a:'案A 縁と面を明るく',b:'案B 赤い板(既定)',c:'案C 白い板',b2:'案B2 赤い板(濃く)',b3:'案B3 赤い板(明るく・白い縁)'});
+const RHYTHM_SKY_BOX_LOOK_LABELS=Object.freeze({z:'案Z 色の無いガラス',a:'案A 縁と面を明るく',b:'案B 赤い板(既定)',c:'案C 白い板',b2:'案B2 赤い板(濃く)',b3:'案B3 赤い板(明るく・白い縁)',block:'厚い赤い角材',deep:'深い赤+太い白い縁'});
+// 空中のタップを上フリックと見分けやすくする案(デバッグ専用・2026-10-12)。保存は新しいキー mh_sky_tap_distinct_proto だけ。既定は off(今のまま)。
+// 入っていれば、見やすさの案(RHYTHM_HELL_VIS)や空中の板の案より先にこの板を使う。white=案C 白い板/block=厚い赤い角材/deep=深い赤+太い白い縁
+const RHYTHM_SKY_TAP_DISTINCT_LABELS=Object.freeze({off:'いま',white:'案1 白い板',block:'案2 厚い赤い角材',deep:'案3 深い赤+太い白い縁'});
+const RHYTHM_SKY_TAP_DISTINCT_BOX=Object.freeze({white:'c',block:'block',deep:'deep'});
+const RHYTHM_SKY_TAP_DISTINCT={id:(()=>{try{const v=typeof localStorage!=='undefined'?localStorage.getItem('mh_sky_tap_distinct_proto'):'';return v&&RHYTHM_SKY_TAP_DISTINCT_LABELS[v]?v:'off';}catch(e){return 'off';}})(),
+  set(id){const v=RHYTHM_SKY_TAP_DISTINCT_LABELS[id]?id:'off';this.id=v;try{if(v==='off')localStorage.removeItem('mh_sky_tap_distinct_proto');else localStorage.setItem('mh_sky_tap_distinct_proto',v);}catch(e){}}};
 // 今の案。毎コマ読むので localStorage は読み込み時と切り替えたときだけ読む
 const RHYTHM_SKY_BOX_VARIANT={id:(()=>{try{const v=typeof localStorage!=='undefined'?localStorage.getItem('mh_sky_box_look_proto'):'';return v&&RHYTHM_SKY_BOX_LOOKS[v]?v:'b';}catch(e){return 'b';}})(),
   set(id){const v=RHYTHM_SKY_BOX_LOOKS[id]?id:'b';this.id=v;try{if(v==='b')localStorage.removeItem('mh_sky_box_look_proto');else localStorage.setItem('mh_sky_box_look_proto',v);}catch(e){}}};
@@ -1223,7 +1232,7 @@ const RHYTHM_SKY_LOOK_BASE=Object.freeze({
 const RHYTHM_SKY_LOOK=Object.freeze({
   get arc(){return rhythmHellVisMerged('arc',RHYTHM_SKY_LOOK_BASE.arc);}, // 帯=手の色(左手=青・右手=桃)で中まで色(58%)・縁と芯は白。手は note.hand、無いときはスライドの点のレーンの平均が centerLane より左なら左  // edge=帯の左右の白い縁(紫の床の上でも「白い帯」に見せる)
   core:Object.freeze({rgb:'255,255,255',alpha:.9,widthPx:3}),
-  get box(){const p=RHYTHM_HELL_VIS_PRESETS[RHYTHM_HELL_VIS.id];return RHYTHM_SKY_BOX_LOOKS[(p&&p.box)||RHYTHM_SKY_BOX_VARIANT.id]||RHYTHM_SKY_BOX_LOOKS.b;}, // 案はデバッグで切り替える(RHYTHM_SKY_BOX_LOOKS)
+  get box(){const p=RHYTHM_HELL_VIS_PRESETS[RHYTHM_HELL_VIS.id];return RHYTHM_SKY_BOX_LOOKS[RHYTHM_SKY_TAP_DISTINCT_BOX[RHYTHM_SKY_TAP_DISTINCT.id]||(p&&p.box)||RHYTHM_SKY_BOX_VARIANT.id]||RHYTHM_SKY_BOX_LOOKS.b;}, // 案はデバッグで切り替える(RHYTHM_SKY_BOX_LOOKS)
   get shadow(){return rhythmHellVisMerged('shadow',RHYTHM_SKY_LOOK_BASE.shadow);},
   star:Object.freeze({rgb:'255,255,255',radiusPx:17}),
   // span … 'road'=空中の線の高さで見えている地上の道の幅+左右 marginPct(いま)/ 'sky'=空中の道の手前の端(空中のノーツが着く幅)

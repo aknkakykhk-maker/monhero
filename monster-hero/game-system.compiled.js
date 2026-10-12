@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 600f6fc63d46dadb
+// source-sha256: 388a9c147e4758fc
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-12 18:24";
+const BUILD_DATE = "2026-10-12 18:30";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -31653,6 +31653,30 @@ function RhythmJudgeTextPosSwitch() {
     onClick: () => pick(v),
     className: `min-h-[44px] rounded-xl text-[11px] font-black ${value === v ? 'bg-cyan-700 text-white ring-2 ring-cyan-200' : 'bg-slate-800 text-slate-300'}`
   }, RHYTHM_JUDGE_TEXT_POS_LABELS[v]))));
+}
+function RhythmSkyTapDistinctSwitch() {
+  const [value, setValue] = useState(() => RHYTHM_SKY_TAP_DISTINCT.id);
+  const pick = v => {
+    RHYTHM_SKY_TAP_DISTINCT.set(v);
+    setValue(RHYTHM_SKY_TAP_DISTINCT.id);
+  };
+  return React.createElement("section", {
+    "data-rhythm-sky-tap-distinct-switch": true,
+    className: "mb-3 rounded-2xl border border-rose-400/50 bg-rose-950/25 p-3"
+  }, React.createElement("h3", {
+    className: "text-xs font-black text-rose-100"
+  }, "空中のタップと上フリックの見分け(試作・見比べ用)"), React.createElement("p", {
+    className: "mt-1 text-[10px] font-bold text-rose-200/80"
+  }, "上フリックはピンクの板に白っぽい縁と上の三角。空中のタップの板の見た目だけを変えます(地上のノーツは変わりません)。演奏を始め直すと効きます。"), React.createElement("div", {
+    className: "mt-2 grid grid-cols-2 gap-2"
+  }, Object.keys(RHYTHM_SKY_TAP_DISTINCT_LABELS).map(v => React.createElement("button", {
+    key: v,
+    type: "button",
+    "data-rhythm-sky-tap-distinct-pick": v,
+    "aria-pressed": value === v,
+    onClick: () => pick(v),
+    className: `min-h-[44px] rounded-xl text-[11px] font-black ${value === v ? 'bg-rose-600 text-white ring-2 ring-rose-200' : 'bg-slate-800 text-slate-300'}`
+  }, RHYTHM_SKY_TAP_DISTINCT_LABELS[v]))));
 }
 function RhythmHellPreviewSwitch({
   onChange
@@ -99643,7 +99667,7 @@ function MonsterHeroGame() {
       className: "mb-3 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl border border-cyan-300/70 bg-cyan-900/60 px-3 text-sm font-black text-cyan-50"
     }, "🎵 全解放の曲えらびを開く", React.createElement("span", {
       className: "rounded-full bg-slate-950/70 px-2 py-0.5 text-[10px] text-amber-200"
-    }, "記録しない")), React.createElement(RhythmSkyLiftSwitch, null), React.createElement(RhythmSkyReachAdaptSwitch, null), React.createElement(RhythmSkyBoxLookSwitch, null), React.createElement(RhythmSkyLaneLookSwitch, null), React.createElement(RhythmHellVisSwitch, null), React.createElement(RhythmHellSkyHitSwitch, null), React.createElement(RhythmJudgeTextPosSwitch, null), React.createElement("section", {
+    }, "記録しない")), React.createElement(RhythmSkyLiftSwitch, null), React.createElement(RhythmSkyReachAdaptSwitch, null), React.createElement(RhythmSkyBoxLookSwitch, null), React.createElement(RhythmSkyLaneLookSwitch, null), React.createElement(RhythmHellVisSwitch, null), React.createElement(RhythmHellSkyHitSwitch, null), React.createElement(RhythmSkyTapDistinctSwitch, null), React.createElement(RhythmJudgeTextPosSwitch, null), React.createElement("section", {
       "data-debug-rhythm-hell-story": true,
       className: "mb-3 rounded-2xl border border-pink-400/50 bg-pink-950/25 p-3"
     }, React.createElement("h3", {
