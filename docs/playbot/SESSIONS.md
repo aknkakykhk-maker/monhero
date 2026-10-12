@@ -10,13 +10,13 @@
 | --- | --- | --- | --- |
 | 窓口 | 統括部長モンヒロくん | 窓口 統括部長モンヒロくん(10/11〜) | session_014GTmSNS2ae9tRr57k3zFjC |
 | ビート部 | 部長テンポくん | ビート部 部長テンポくん(10/12〜) | session_01SG7SEGSmUcyxyymHyDVipd |
-| ビート部 | オンプくん | ビート部 オンプくん(10/12〜) | session_01VDL1xQjh5sVox2CGCDkx8w |
+| ビート部 | オンプくん | ビート部 オンプくん(10/13〜) | session_01WaDzrhPE2Q6PDmeAgFPTwG |
 | ビート部 | マクアケくん | ビート部 マクアケくん(10/10〜) | session_01JgrcvWE4GJff7cTHDPoecb |
 | ビート部 | リバースくん | ビート部 リバースくん(10/10〜) | session_01DfgZpuPHnVgxrwQiurqUQ1 |
 | ビート部 | カゲくん | ビート部 カゲくん(10/11〜) | session_01Jqmiq5TioCr8iBg3nU8k77 |
-| バトル部 | 部長ブレイブくん | バトル部 部長ブレイブくん(10/07〜) | session_01JEr9tDMYKaEM1yA1yBv46Z |
+| バトル部 | 部長ブレイブくん | バトル部 部長ブレイブくん(10/13〜) | session_01JVCTL76hMSV1TP5Z9RMnui |
 | 見回り部 | 部長マップくん | 見回り部 部長マップくん(10/07〜) | session_01PHekXAt2C5NAZBXL1sh5gG |
-| 守り部 | 部長ガードくん | 守り部 部長ガードくん(10/07〜) | session_01X1m4SRfy1rxcJemHM8n5PU |
+| 守り部 | 部長ガードくん | 守り部 部長ガードくん(10/13〜) | session_012TESL6HTwLnNNvrMJLnHAN |
 | 研究所 | 部長ハカセくん | 研究所 部長ハカセくん(10/07〜) | session_01911k2UUtVGudFqekCw9DB9 |
 | 研究所 | ダイスくん | 研究所 ダイスくん(10/10〜) | session_01DT3gL9ZEpezajUTxh9fEfB |
 | 研究所 | アリーナくん | 研究所 アリーナくん(10/10〜) | session_01GC6TmQQkN6wfT4a8EymrPz |
@@ -40,3 +40,6 @@
 | 【引き継ぎ済み】修理部 部長ドライバーくん(10/11〜10/12) | session_01JBvGk6rrRBCgkPEFTiNMu8 | 同上 |
 | 【引き継ぎ済み】ビート部 オンプくん(10/10〜10/12) | session_01KxMEiw3EwFDLvXkiHxkA4S | session_01VDL1xQjh5sVox2CGCDkx8w |
 | 【引き継ぎ済み】ビート部 部長テンポくん(10/07〜10/12) | session_01NS12tYT8MdGQhNjvw8dS56 | session_01SG7SEGSmUcyxyymHyDVipd |
+| 【引き継ぎ済み】ビート部 オンプくん(10/12〜10/13) | session_01VDL1xQjh5sVox2CGCDkx8w | session_01WaDzrhPE2Q6PDmeAgFPTwG |
+| 【引き継ぎ済み】バトル部 部長ブレイブくん(10/07〜10/13) | session_01JEr9tDMYKaEM1yA1yBv46Z | session_01JVCTL76hMSV1TP5Z9RMnui |
+| 【引き継ぎ済み】守り部 部長ガードくん(10/07〜10/13) | session_01X1m4SRfy1rxcJemHM8n5PU | session_012TESL6HTwLnNNvrMJLnHAN |
