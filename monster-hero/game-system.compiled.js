@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d14deb7fade5d825
+// source-sha256: ee75b29af49e000f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-12 14:07";
+const BUILD_DATE = "2026-10-12 14:37";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -31409,6 +31409,30 @@ function RhythmHellSkyHitSwitch() {
     className: "contents"
   }, btn(text === v, l, () => pickText(v), v)))));
 }
+function RhythmJudgeTextPosSwitch() {
+  const [value, setValue] = useState(() => RHYTHM_JUDGE_TEXT_POS.id);
+  const pick = v => {
+    RHYTHM_JUDGE_TEXT_POS.set(v);
+    setValue(RHYTHM_JUDGE_TEXT_POS.id);
+  };
+  return React.createElement("section", {
+    "data-rhythm-judge-text-pos-switch": true,
+    className: "mb-3 rounded-2xl border border-cyan-400/50 bg-cyan-950/25 p-3"
+  }, React.createElement("h3", {
+    className: "text-xs font-black text-cyan-100"
+  }, "地上の判定の文字の置き場所(試作・見比べ用)"), React.createElement("p", {
+    className: "mt-1 text-[10px] font-bold text-cyan-200/80"
+  }, "叩く直前のノーツが判定の文字の下を通らないようにする案です。EASY〜MASTER に効きます(空中のある譜面ではいまのまま)。判定は変わりません。演奏を始め直すと効きます。"), React.createElement("div", {
+    className: "mt-2 grid grid-cols-2 gap-2"
+  }, Object.keys(RHYTHM_JUDGE_TEXT_POS_LABELS).map(v => React.createElement("button", {
+    key: v,
+    type: "button",
+    "data-rhythm-judge-text-pos-pick": v,
+    "aria-pressed": value === v,
+    onClick: () => pick(v),
+    className: `min-h-[44px] rounded-xl text-[11px] font-black ${value === v ? 'bg-cyan-700 text-white ring-2 ring-cyan-200' : 'bg-slate-800 text-slate-300'}`
+  }, RHYTHM_JUDGE_TEXT_POS_LABELS[v]))));
+}
 function RhythmHellPreviewSwitch({
   onChange
 }) {
@@ -32463,6 +32487,7 @@ const RhythmTapTest = ({
     liveTouchSubLanesRef = useRef([]),
     liveTouchSkySubLanesRef = useRef([]);
   const [judgmentSnap] = useState(() => rhythmJudgmentSnapActive());
+  const [judgeTextPos] = useState(() => RHYTHM_JUDGE_TEXT_POS.id);
   const tutorialBannerRef = useRef(null),
     tutorialStepRef = useRef(null);
   const calibrationBannerRef = useRef(null),
@@ -36832,9 +36857,13 @@ const RhythmTapTest = ({
     }
   }, resumeCountdown ? 'まもなく 再開します' : 'まもなく はじまります')), React.createElement("div", {
     "data-rhythm-judgment-display": true,
+    "data-rhythm-judge-text-pos": !skyChart && judgeTextPos !== 'now' ? judgeTextPos : undefined,
     className: "pointer-events-none absolute left-1/2 z-10 w-[88%] -translate-x-1/2 text-center",
     style: {
-      bottom: 'calc(var(--mh-judgment-line-bottom,12%) + 38px)'
+      bottom: !skyChart && (judgeTextPos === 'raise' || judgeTextPos === 'both') ? 'calc(var(--mh-judgment-line-bottom,12%) + 26%)' : 'calc(var(--mh-judgment-line-bottom,12%) + 38px)',
+      ...(!skyChart && (judgeTextPos === 'fade' || judgeTextPos === 'both') ? {
+        opacity: .55
+      } : null)
     }
   }, settings.judgmentFx === true && React.createElement("i", {
     ref: judgmentBurstRef,
@@ -99012,7 +99041,7 @@ function MonsterHeroGame() {
       className: "mb-3 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl border border-cyan-300/70 bg-cyan-900/60 px-3 text-sm font-black text-cyan-50"
     }, "🎵 全解放の曲えらびを開く", React.createElement("span", {
       className: "rounded-full bg-slate-950/70 px-2 py-0.5 text-[10px] text-amber-200"
-    }, "記録しない")), React.createElement(RhythmSkyLiftSwitch, null), React.createElement(RhythmSkyReachAdaptSwitch, null), React.createElement(RhythmSkyBoxLookSwitch, null), React.createElement(RhythmSkyLaneLookSwitch, null), React.createElement(RhythmHellVisSwitch, null), React.createElement(RhythmHellSkyHitSwitch, null), React.createElement("section", {
+    }, "記録しない")), React.createElement(RhythmSkyLiftSwitch, null), React.createElement(RhythmSkyReachAdaptSwitch, null), React.createElement(RhythmSkyBoxLookSwitch, null), React.createElement(RhythmSkyLaneLookSwitch, null), React.createElement(RhythmHellVisSwitch, null), React.createElement(RhythmHellSkyHitSwitch, null), React.createElement(RhythmJudgeTextPosSwitch, null), React.createElement("section", {
       "data-debug-rhythm-hell-story": true,
       className: "mb-3 rounded-2xl border border-pink-400/50 bg-pink-950/25 p-3"
     }, React.createElement("h3", {
