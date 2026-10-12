@@ -938,9 +938,10 @@ function RhythmRankingScreen({
               並べるのは、その曲に譜面がある難易度だけ。HELL は公開の印が真のときだけ(rhythmScoredDifficultyIds) */}
           {songTab&&song&&(()=>{const chartIds=rhythmDemoDifficulties(song,RHYTHM_PLAY_DIFFICULTIES).map(d=>d.id);
             const ids=['ALL',...rhythmScoredDifficultyIds().filter(id=>chartIds.includes(id))];const cur=rhythmRanking.difficultyId||'ALL';
-            return <div data-rhythm-ranking-diffs className="mb-2 flex gap-1.5 overflow-x-auto pb-0.5">{ids.map(id=>(
+            /* 7つ(全難易度+5難易度+HELL)まで、縦390幅でも切れずに並ぶよう等分する(2026-10-13 窓口「MASTER が途中で切れている」) */
+            return <div data-rhythm-ranking-diffs className="mb-2 flex gap-1">{ids.map(id=>(
               <button key={id} type="button" data-rhythm-ranking-diff={id} aria-pressed={cur===id} onClick={()=>loadRhythmRanking(song,id)}
-                className={`min-h-[44px] shrink-0 rounded-lg border px-2.5 text-[10px] font-black ${cur===id?'border-amber-300/70 bg-amber-500/20 text-amber-100':'border-white/15 bg-slate-900/70 text-slate-300'}`}>
+                className={`min-h-[44px] min-w-0 flex-1 basis-0 rounded-lg border px-0.5 text-[9px] font-black leading-tight tracking-tight ${cur===id?'border-amber-300/70 bg-amber-500/20 text-amber-100':'border-white/15 bg-slate-900/70 text-slate-300'}`}>
                 {id==='ALL'?'全難易度':(RHYTHM_DEMO_DIFFICULTY_LABELS[id]?.name||id)}</button>))}</div>;})()}
           {songTab&&rhythmRanking.status==='loading'&&<p data-rhythm-ranking-loading className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">読み込み中…</p>}
           {songTab&&rhythmRanking.status==='error'&&<p data-rhythm-ranking-error className="rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200">読み込めませんでした。電波の良い場所で「更新」をお試しください。</p>}
