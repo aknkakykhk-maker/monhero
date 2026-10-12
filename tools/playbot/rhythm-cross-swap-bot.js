@@ -13,6 +13,7 @@
 //   node tools/playbot/rhythm-cross-swap-bot.js --entry proto --song sheriruth_hell_debug --diff HELL --from 0 --to 137000
 //   --persona thumb|lean|normal --seed 3 --sigma 28 で人の指のくせを入れる(既定は くせ無し)
 //   --no-nudge 押さえている指がつられて動くくせだけ止める / --watch 33740 帯の暗さを見張るスライドの始まり(ms)
+//   --touch-log <ファイル> 指の合図を曲の時刻つきで書き出す([時刻ms, s|m|e, 指の番号, x, y])
 //   --sky-adapt / --no-sky-adapt 空中の受け付けを構えに合わせる案A(mh_sky_reach_adapt_proto)を入/切にして遊ぶ(書かなければゲームの既定=入・2026-10-12 から)
 //   --travel 0.5 [--travel-ms 250] 親指の上下が届ききらない人(空中⇔地上を続けて押すとき、高さの半分の所で押す)
 // 目安(2026-10-11・直したあと): 0 と 1 は4本とも MARVELOUS・暗い時間0。2 は 107.34秒が MISS・127.77秒が GOOD(直す前と同じ)
@@ -171,6 +172,13 @@ const player2 = player.replace(posLine, 'const pos = (() => { const q = fingerAt
   // --no-nudge: 押さえている指が、もう片方の指が近くを押した勢いでつられて動くくせ(scenarios/rhythm.js)だけを止める。乱数の引き方は同じにして、ほかのくせはそのまま
   const player3 = process.argv.includes('--no-nudge') ? player2.replace('a.drift = { at: now,', 'a.drift = ((d) => window.__noNudge ? a.drift : d)({ at: now,').replace('downU.y * rand() * 6 };', 'downU.y * rand() * 6 });') : player2;
   if (process.argv.includes('--no-nudge')) { if (player3 === player2) throw new Error('つられの行が見つからない'); await page.evaluate(() => { window.__noNudge = true; }); }
+  // --touch-log <ファイル>: 指の合図(touchstart/move/end)を曲の時刻つきで控えて書き出す(指どうしの近さ・交差を見る・2026-10-13)
+  if (arg('touch-log')) await page.evaluate(() => {
+    window.__touchLog = [];
+    const rec = (e) => { const t = window.__mhTestHooks?.rhythmSongMs?.(); if (t == null || window.__touchLog.length > 400000) return;
+      for (const c of e.changedTouches) window.__touchLog.push([Math.round(t), e.type[5], c.identifier, Math.round(c.clientX), Math.round(c.clientY)]); };
+    for (const k of ['touchstart', 'touchmove', 'touchend']) document.addEventListener(k, rec, { capture: true, passive: true });
+  });
   await page.evaluate(`(${player3})(${JSON.stringify(args)})`);
   await page.waitForFunction((a) => (window.__mhTestHooks?.rhythmSongMs?.() ?? -1) >= a - 1500, FROM, { timeout: 600000, polling: 200 });
   if (CPU > 1) await cdp.send('Emulation.setCPUThrottlingRate', { rate: CPU });
@@ -184,6 +192,8 @@ const player2 = player.replace(posLine, 'const pos = (() => { const q = fingerAt
     return { 合計: h, 済み: r.filter(x => x && x.done).length, 見張ったスライド: Object.keys(window.__offMs).map(i => ({ 始まり: Math.round(n[i].timeMs), 判定: r[i] && r[i].judgment, 暗かった秒: +(window.__offMs[i] / 1000).toFixed(2), 暗かった区間: window.__offSpans[i].slice(0, 8) })) }; })));
   // 外れたノーツの一覧(BAD_LIST=1): 時刻・種類・空中の高さ(タップの高さ/スライドの押し始めの高さ)
   if (TRAVEL > 0) console.log('届ききらずに押した回数', JSON.stringify(await page.evaluate(() => window.__travelLog)));
+  if (arg('touch-log')) { const area = await page.evaluate(() => { const r = document.querySelector('[data-rhythm-play-area]').getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height, line: RHYTHM_JUDGMENT_LINE_Y.ratio, sky: typeof rhythmSkyLineRatio === 'function' ? rhythmSkyLineRatio() : null }; });
+    fs.writeFileSync(arg('touch-log'), JSON.stringify({ area, log: await page.evaluate(() => window.__touchLog) })); }
   if (process.env.BAD_LIST) console.log('外れたノーツ', JSON.stringify(await page.evaluate(() => { const r = window.__mhTestHooks.rhythmNoteResults?.() || [], n = window.__mhTestHooks.rhythmNotes?.() || [];
     return n.map((x, i) => [x, r[i]]).filter(([, y]) => y && y.done && /BAD|MISS|GOOD/.test(y.judgment || '')).map(([x, y]) => [Math.round(x.timeMs), x._rhythmOriginalType || x.type, Number(x.skyHeight) || (window.__slideSkyAt ? +window.__slideSkyAt(x, x.timeMs).toFixed(2) : 0), y.judgment]); })));
   if (process.env.PERF_DEBUG) { console.log('区間の終わりの様子', JSON.stringify(await page.evaluate(() => { const r = window.__mhTestHooks.rhythmNoteResults?.() || []; return { 済み: r.filter(x => x.done).length, MISS: r.filter(x => x.judgment === 'MISS').length, 止め: !!document.querySelector('[data-rhythm-pause-menu]'), 文字: (document.querySelector('main')?.innerText || '').replace(/\s+/g, ' ').slice(0, 160) }; }))); const shot = require('path').join(require('os').tmpdir(), 'rhythm-frame-perf.png'); await page.screenshot({ path: shot }); console.log('画面:', shot); }
