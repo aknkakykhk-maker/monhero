@@ -164,22 +164,29 @@ async function storyScenario(s) {
     const r1 = await playMaster(s, title);
     ok('MASTER を最後まで演奏できる', r1.ok, r1.why || `${r1.notes}ノーツ`);
     ok('結果画面に「HELL が解放されました」', /HELL/.test(r1.unlock || ''), r1.unlock || r1.text);
-    // ④ 戻る → お話 → 飛ばす → 説明 → 閉じる
+    // ④ 戻る。お話の流し方(RHYTHM_HELL_STORY_TRIGGER)で確かめることが変わる。
+    //   'after-result' … 結果画面を閉じたらお話 → 飛ばしても説明 → 閉じる
+    //   'release'(2026-10-12 社長の決定・既定) … お話は公開後に HOME へ着いたとき全員へ(--story が確かめる)。結果画面のあとには出ない
+    const trigger = await s.page.evaluate(() => RHYTHM_HELL_STORY_TRIGGER);
     const after = await backFromResult(s);
-    ok('曲えらびへ戻ると、お話「空まで届くビート」が出る', after.story, JSON.stringify(after));
-    await s.page.screenshot({ path: path.join(OUT, 'story.png') });
-    await s.page.evaluate(() => [...document.querySelectorAll('button')].find((b) => (b.innerText || '').trim() === 'スキップ')?.click());
-    await s.wait(800);
-    const guide = await s.page.evaluate(() => !!document.querySelector('[data-rhythm-hell-guide]'));
-    ok('お話を飛ばしても、説明(HELL の遊び方)は出る', guide);
-    await s.page.screenshot({ path: path.join(OUT, 'guide.png') });
-    for (let i = 0; i < 8 && (await s.page.evaluate(() => !!document.querySelector('[data-rhythm-hell-guide]'))); i++) {
-      await s.page.evaluate(() => { const g = document.querySelector('[data-rhythm-hell-guide]'); const b = [...g.querySelectorAll('button')].reverse().find((x) => x.offsetParent); b?.click(); });
-      await s.wait(500);
+    if (trigger === 'after-result') {
+      ok('曲えらびへ戻ると、お話「空まで届くビート」が出る', after.story, JSON.stringify(after));
+      await s.page.screenshot({ path: path.join(OUT, 'story.png') });
+      await s.page.evaluate(() => [...document.querySelectorAll('button')].find((b) => (b.innerText || '').trim() === 'スキップ')?.click());
+      await s.wait(800);
+      const guide = await s.page.evaluate(() => !!document.querySelector('[data-rhythm-hell-guide]'));
+      ok('お話を飛ばしても、説明(HELL の遊び方)は出る', guide);
+      await s.page.screenshot({ path: path.join(OUT, 'guide.png') });
+      for (let i = 0; i < 8 && (await s.page.evaluate(() => !!document.querySelector('[data-rhythm-hell-guide]'))); i++) {
+        await s.page.evaluate(() => { const g = document.querySelector('[data-rhythm-hell-guide]'); const b = [...g.querySelectorAll('button')].reverse().find((x) => x.offsetParent); b?.click(); });
+        await s.wait(500);
+      }
+      ok('説明を最後まで進めると閉じる', !(await s.page.evaluate(() => !!document.querySelector('[data-rhythm-hell-guide]'))));
+    } else {
+      ok(`お話の流し方が「${trigger}」なので、曲えらびへ戻ってもお話も説明も出ない(HOME で流す・--story で確かめる)`, !after.story && !after.guide, JSON.stringify(after));
     }
-    ok('説明を最後まで進めると閉じる', !(await s.page.evaluate(() => !!document.querySelector('[data-rhythm-hell-guide]'))));
     const st1 = await storage(s);
-    ok('既読は試し用のキーに付く', st1.preview === 'true', String(st1.preview));
+    if (trigger === 'after-result') ok('既読は試し用のキーに付く', st1.preview === 'true', String(st1.preview));
     ok('本番の既読のキー(mh_rhythm_hell_story_seen_v1)には付かない', st1.real === null, String(st1.real));
     ok('MASTER のクリアが記録に残る', !!(st1.best && st1.best.MASTER && st1.best.MASTER.clear === true));
     const sel = await s.page.evaluate(() => [...document.querySelectorAll('button')].map((b) => (b.innerText || '').replace(/\s+/g, ' ').trim()).filter((t) => /HELL/.test(t)));
