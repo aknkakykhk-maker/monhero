@@ -2,7 +2,7 @@
 // 区間ごとに良い候補を継ぎ合わせる(2026-09-26・MHB CHART ENGINE 強化の段5)。
 //
 //   node tools/mode/rhythm-chart-v3-splice.js --track <曲id>                       # 候補4本で試して、良くなるかを出すだけ
-//   node tools/mode/rhythm-chart-v3-splice.js --track <曲id> --count 6 --chart-revision 10
+//   node tools/mode/rhythm-chart-v3-splice.js --track <曲id> --count 6
 //   node tools/mode/rhythm-chart-v3-splice.js --track <曲id> --input-dir <dir>     # 解析ファイルの置き場を変える
 //   node tools/mode/rhythm-chart-v3-splice.js --track <曲id> --output-dir <dir>    # 継ぎ合わせた譜面(自動修正の前)を書き出す
 //   node tools/mode/rhythm-chart-v3-splice.js --track <曲id> --apply               # 公開の流れ(パイプライン)から呼ぶ。Rev.12 以降の曲だけ、
@@ -30,18 +30,14 @@ const {spawnSync}=require('child_process');
 const {measureFeel,CONCERN_WEIGHTS}=require('./rhythm-chart-feel-report.js');
 const {simulateNotes}=require('./rhythm-hand-simulate.js');
 const {setHandModelFlags}=require('./rhythm-hand-model.js');
-const {chartRevisionOf,handModelFlagsForRevision}=require('./rhythm-chart-v3-revision.js');
+const {CHART_REVISION_LATEST,chartRevisionOf,handModelFlagsForRevision}=require('./rhythm-chart-v3-revision.js');
 const {playChart,segmentCost}=require('./rhythm-virtual-player.js');
 const {playTuningForRevision}=require('./rhythm-chart-play-tuning.js');
-// 仮想プレイヤーを差し替えの費用に使うのは Rev.18 から。1候補あたり遊ばせる回数
-const VIRTUAL_SPLICE_REVISION=18,VIRTUAL_SPLICE_RUNS=60;
-// 継ぎ目をまたいだ同じ枠のモンスターノーツを1つにする(下の build)
-const MONSTER_DEDUPE_REVISION=21;
-// 表示だけ小数1桁に丸める(Rev.18 から仮想プレイヤーの費用が小数になる。Rev.17 までは .5 刻みなので表示も変わらない)
+// 仮想プレイヤーを差し替えの費用に使うときの、1候補あたり遊ばせる回数
+const VIRTUAL_SPLICE_RUNS=60;
+// 表示だけ小数1桁に丸める(仮想プレイヤーの費用が小数になる)
 const round1=value=>value==null?value:Math.round(value*10)/10;
 const {measure:measureQuality,AXES}=require('./rhythm-chart-quality-report.js');
-// 公開の流れで差し替えるのは、このリビジョン以降の曲だけ(それより前の曲の作り方は変えない)
-const SPLICE_REVISION=12;
 
 const ROOT=path.resolve(__dirname,'..','..');
 const arg=(name,fallback=null)=>{const i=process.argv.indexOf(name);return i>=0&&i+1<process.argv.length?process.argv[i+1]:fallback;};
@@ -62,10 +58,9 @@ const spliceCharts=(charts,audio)=>{
   const startsMs=sections.map(section=>timing.beatZeroMs+section.startBar*BAR*gridMs);
   const labelOf=index=>sections[index].label||`#${index}`;
   // 候補ごとの区切りの気になり点
-  // Rev.18: 仮想プレイヤー(rhythm-virtual-player.js)を候補ごとに遊ばせ、区切りごとの見込みのミスとばらつきも費用に足す
-  //   (公開前に、つまずく区切りを別の候補に替える)。ばらつき・ミスの倍率は遊んだ記録から学ぶ調整値。Rev.17 までは足さない
-  const revision=chartRevisionOf(charts[0]);
-  const virtualParams=revision>=VIRTUAL_SPLICE_REVISION?(()=>{const t=playTuningForRevision(revision);return {sigmaScale:t.virtualSigmaScale,missScale:t.virtualMissScale};})():null;
+  // 仮想プレイヤー(rhythm-virtual-player.js)を候補ごとに遊ばせ、区切りごとの見込みのミスとばらつきも費用に足す
+  //   (公開前に、つまずく区切りを別の候補に替える)。ばらつき・ミスの倍率は遊んだ記録から学ぶ調整値
+  const virtualParams=(()=>{const t=playTuningForRevision(CHART_REVISION_LATEST);return {sigmaScale:t.virtualSigmaScale,missScale:t.virtualMissScale};})();
   const costs=charts.map(chart=>{
     const feel=measureFeel(chart,audio,{withQuality:false,segmentStartsMs:startsMs});
     const bySection=new Array(sections.length).fill(0);
@@ -91,9 +86,9 @@ const spliceCharts=(charts,audio)=>{
     const notes=[];
     charts.forEach((chart,k)=>{for(const note of chart.notes){if(chosen[sectionOfGrid(note.grid)]===k)notes.push(JSON.parse(JSON.stringify(note)));}});
     notes.sort((a,b)=>a.grid-b.grid||(Number(a.subLane)||0)-(Number(b.subLane)||0));
-    // Rev.21 から: モンスターノーツ(monsterSlot)は1体1回。候補ごとに置き場所が少しずつ違うので、区切りの継ぎ目をまたいで
+    // モンスターノーツ(monsterSlot)は1体1回。候補ごとに置き場所が少しずつ違うので、区切りの継ぎ目をまたいで
     // 同じ枠が2つ残ることがある(2026-09-29、SIX ÉTERNEL ドパガキリミックスの EXPERT で枠4が 2.2秒あけて2回出た)。先に来たほうだけ残す
-    if(revision>=MONSTER_DEDUPE_REVISION){
+    {
       const seen=new Set();
       for(const note of notes){
         if(!note.monsterSlot)continue;
@@ -137,7 +132,7 @@ const spliceGate=(charts,audio,result)=>{
 
 // 差し替えたあとも気になり点が高い区切りがあるか(悪い区間だけ作り直す二段目の合図)。
 //   区切りの気になり点が SPLICE_BAD_MIN 以上、かつ区切りの中央値の2倍以上
-const SPLICE_BAD_MIN=3,SPLICE_EXTRA_COUNT=4,SPLICE_RETRY_REVISION=14;
+const SPLICE_BAD_MIN=3,SPLICE_EXTRA_COUNT=4;
 const badSections=result=>{
   const list=(result.sectionCosts||[]).slice().sort((a,b)=>a-b);
   if(!list.length)return [];
@@ -145,7 +140,7 @@ const badSections=result=>{
   return (result.sectionCosts||[]).map((cost,i)=>({cost,i})).filter(x=>x.cost>=SPLICE_BAD_MIN&&x.cost>=median*2).map(x=>x.i);
 };
 
-module.exports={spliceCharts,spliceGate,badSections,SPLICE_MIN_GAIN,SPLICE_REVISION,SPLICE_BAD_MIN,SPLICE_EXTRA_COUNT,SPLICE_RETRY_REVISION};
+module.exports={spliceCharts,spliceGate,badSections,SPLICE_MIN_GAIN,SPLICE_BAD_MIN,SPLICE_EXTRA_COUNT};
 
 if(require.main===module){
   const trackId=arg('--track','monster_hero_theme'),dashed=trackId.replace(/_/g,'-');
@@ -155,12 +150,7 @@ if(require.main===module){
   const authoringDir=path.join(ROOT,'tools/mode/authoring');
   // --apply の書き出し先(生成器が譜面を書いた場所)。既定は authoring/
   const chartDir=arg('--chart-dir',null)?path.resolve(ROOT,arg('--chart-dir')):authoringDir;
-  const registry=JSON.parse(fs.readFileSync(path.join(authoringDir,'rhythm-song-registry.json'),'utf8'));
-  // --chart-revision があればそれで試す(生成器と同じ。一覧は書き換えない)
-  const songRevision=revision!=null?chartRevisionOf({chartRevision:Number(revision)}):chartRevisionOf((registry.songs||{})[trackId]);
-  if(apply){
-    if(songRevision<SPLICE_REVISION){console.log(`区間の差し替え: Rev.${songRevision} の曲なので差し替えない（Rev.${SPLICE_REVISION} から）`);process.exit(0);}
-  }
+  // --chart-revision は生成器へそのまま渡す(作れるのは最新リビジョンだけ)
   const audioFile=path.join(inputDir?path.resolve(ROOT,inputDir):path.join(ROOT,'tools/mode/authoring'),`${dashed}-v3-audio.json`);
   const audio=JSON.parse(fs.readFileSync(audioFile,'utf8'));
   const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'v3-splice-'));
@@ -179,10 +169,10 @@ if(require.main===module){
       if(!fs.existsSync(file(0)))continue;
       let charts=Array.from({length:count},(_,v)=>JSON.parse(fs.readFileSync(file(v),'utf8')));
       let result=spliceCharts(charts,audio);
-      // 二段目(Rev.14 から): 差し替えても気になり点の高い区切りが残るなら、候補を SPLICE_EXTRA_COUNT 本足して選び直す(悪い区間だけ作り直す)
+      // 二段目: 差し替えても気になり点の高い区切りが残るなら、候補を SPLICE_EXTRA_COUNT 本足して選び直す(悪い区間だけ作り直す)
       const bad=badSections(result);
       let regenerated='';
-      if(bad.length&&songRevision>=SPLICE_RETRY_REVISION){
+      if(bad.length){
         for(let v=count;v<count+SPLICE_EXTRA_COUNT;v++)makeVariant(v);
         const more=Array.from({length:SPLICE_EXTRA_COUNT},(_,k)=>JSON.parse(fs.readFileSync(file(count+k),'utf8')));
         const retry=spliceCharts(charts.concat(more),audio);

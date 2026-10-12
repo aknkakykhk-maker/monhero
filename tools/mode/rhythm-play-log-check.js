@@ -5,7 +5,7 @@
 //   ・SQL: 新しい表を作るだけ(ほかの表に触らない)。予行演習は rollback で終わる。ゲームが送る形を表の制約が通す
 //   ・道具側: 同じ端末の記録は上限まで・左右反転は数えない。低音の遅れと1本の線は、記録に証拠があるときだけ、その向きへ動く。
 //     仮想プレイヤーのばらつきの倍率は、実際の記録に合わせて動く
-//   ・生成器: 調整値がすべて0の Rev.17 は Rev.16 と同じ譜面。調整値を入れると譜面が変わる
+//   ・生成器: 最新リビジョンで、調整値を入れると譜面が変わる
 'use strict';
 const fs=require('fs'),os=require('os'),path=require('path'),vm=require('vm');
 const {spawnSync}=require('child_process');
@@ -111,10 +111,10 @@ try{
       {cwd:ROOT,encoding:'utf8',env,maxBuffer:64*1024*1024});
     return r.status===0?JSON.parse(fs.readFileSync(path.join(dir,'only-my-railgun-v3-chart-hard.json'),'utf8')).notes:null;
   };
-  const n16=generate(16,null,'r16'),n17=generate(17,null,'r17'),n17t=generate(17,{lowLagFactor:1,lineBoost:.6,lineDemote:.3},'r17t');
-  ok('調整値がすべて0の Rev.17 は Rev.16 と同じ譜面',!!n16&&JSON.stringify(n16)===JSON.stringify(n17));
-  ok('調整値を入れると譜面が変わる',!!n17t&&JSON.stringify(n17t)!==JSON.stringify(n16));
-  const {CHART_REVISION_CODE_LATEST}=require('./rhythm-chart-v3-revision.js');
+  // 2026-10-12 から作れるのは最新リビジョンだけ。Rev.16 との比べは外し、最新リビジョンで「調整値がすべて0」と「入れたとき」で譜面が変わるかを見る
+  const {CHART_REVISION_CODE_LATEST,CHART_REVISION_LATEST}=require('./rhythm-chart-v3-revision.js');
+  const nZero=generate(CHART_REVISION_LATEST,{lowLagFactor:0,lineBoost:0,lineDemote:0},'zero'),nTuned=generate(CHART_REVISION_LATEST,{lowLagFactor:1,lineBoost:.6,lineDemote:.3},'tuned');
+  ok('調整値を入れると譜面が変わる(最新リビジョン)',!!nZero&&!!nTuned&&JSON.stringify(nTuned)!==JSON.stringify(nZero));
   ok('作り方の最新は Rev.17 以上',CHART_REVISION_CODE_LATEST>=17);
   const revisionSource=fs.readFileSync(path.join(__dirname,'rhythm-chart-v3-revision.js'),'utf8');
   ok('調整値を書き足すと、それが最新リビジョンになる',/Math\.max\(CHART_REVISION_CODE_LATEST,latestKnowledgeRevision\(\),latestPlayTuningRevision\(\)\)/.test(revisionSource));
