@@ -51,18 +51,24 @@ const eventsOf=notes=>{const ev=[];
   return ev.sort((a,b)=>a.at-b.at||(a.end?-1:1));};
 const bySide=(ev,side)=>ev.filter(e=>e.side===side);
 
+// 同じ側で、その点より前のいちばん近い時刻の点(同時のものはまとめて)。同じノーツの点と、同時押し(SAME_TIME_MS 以内)は除く
+const previousGroup=(l,i)=>{const e=l[i];let j=i-1;
+  while(j>=0&&(l[j].n===e.n||e.at-l[j].at<=SAME_TIME_MS))j--;
+  if(j<0)return null;const at=l[j].at,group=[];
+  for(let k=j;k>=0&&at-l[k].at<=SAME_TIME_MS;k--)if(l[k].n!==e.n)group.push(l[k]);
+  return {at,group};};
+// 手前の同時の点のどれかが同じ高さなら、その高さの指がある(和音で地上と空中を押し分けている・2026-10-12)ので切り替えに数えない
 const sideHeightSwitch=(notes,gap=SIDE_GAP_MS)=>{const out=[],ev=eventsOf(notes);
   for(const side of ['L','R']){const l=bySide(ev,side);
-    for(let i=1;i<l.length;i++){const p=l[i-1],e=l[i],d=e.at-p.at;
-      if(p.n!==e.n&&d>SAME_TIME_MS&&d<=gap&&p.level!==e.level)out.push({at:e.at,side,gapMs:Math.round(d),from:p.level?'空中':'地上',to:e.level?'空中':'地上'});}}
+    for(let i=1;i<l.length;i++){const e=l[i],prev=previousGroup(l,i);if(!prev)continue;const d=e.at-prev.at;
+      if(d<=gap&&!prev.group.some(p=>p.level===e.level))out.push({at:e.at,side,gapMs:Math.round(d),from:e.level?'地上':'空中',to:e.level?'空中':'地上'});}}
   return out.sort((a,b)=>a.at-b.at);};
 
 const skyAfterGround=(notes,gap=SKY_RAISE_MS)=>{const out=[],ev=eventsOf(notes);
   for(const side of ['L','R']){const l=bySide(ev,side);
     for(let i=1;i<l.length;i++){const e=l[i];if(e.end||e.level!==1)continue;
-      // 同じ側で、前にある地上の点のうち最も近いもの(同じノーツ・同時押しは除く)
-      for(let j=i-1;j>=0;j--){const p=l[j],d=e.at-p.at;if(d>gap)break;if(p.n===e.n||d<=SAME_TIME_MS)continue;
-        if(p.level===0){out.push({at:e.at,side,gapMs:Math.round(d),what:e.n.type==='SLIDE'?'空中から始まるスライド':'空中のタップ'});}break;}}}
+      const prev=previousGroup(l,i);if(!prev)continue;const d=e.at-prev.at;
+      if(d<=gap&&prev.group.every(p=>p.level===0))out.push({at:e.at,side,gapMs:Math.round(d),what:e.n.type==='SLIDE'?'空中から始まるスライド':'空中のタップ'});}}
   return out.sort((a,b)=>a.at-b.at);};
 
 const besideHeldBand=notes=>{const out=[],longs=notes.filter(isLong);
