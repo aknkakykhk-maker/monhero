@@ -431,6 +431,10 @@ const BATTLE_STACK_MARKS = Object.freeze({
   trickRegen: Object.freeze({ mark:'💚', img:'', label:'トリック(回復)' }),
   fateCombo:  Object.freeze({ mark:'🎲', img:'', label:'運命(連撃)' }),        // 運命のコイン・運命の輪
   fateAtk:    Object.freeze({ mark:'🪙', img:'', label:'運命(ちから)' }),
+  // 残りターン・残り回数(2026-10-12 社長の追加依頼)。unit:'T' は「⏳2T」のように残りターンで出し、1になったら目立たせる
+  exTurns:    Object.freeze({ mark:'⏳', img:'', label:'EXの残りターン', unit:'T' }),   // タクティクスのEX(ターンで切れるもの)
+  avoid:      Object.freeze({ mark:'👻', img:'', label:'完全回避の残り' }),            // ゴースト(オフリィアボイド)
+  konjo:      Object.freeze({ mark:'🔥', img:'', label:'根性の残り' }),                // ウンディーネ(生命の泉)で付いた根性
   aquaPrison: Object.freeze({ mark:'💧', img:'', label:'水牢' }),              // 敵: ウンディーネ種のアクアフィールド
   aquaFreeze: Object.freeze({ mark:'❄️', img:'', label:'氷結' }),
   roar:       Object.freeze({ mark:'📢', img:'', label:'咆哮' }),              // 敵: 自分にかけた攻撃アップ

@@ -637,10 +637,11 @@ const BattleStackMarks = ({ counts, side, full = 0, className = '' }) => {
   const items = battleStackMarkItems(counts);
   if (!items.length) return null;
   return (
-    <div data-stack-marks={side} role="img" aria-label={items.map((it) => `${it.label}${it.count}`).join('、')} className={`mh-stack-marks pointer-events-none ${className}`}>
+    <div data-stack-marks={side} role="img" aria-label={items.map((it) => `${it.label}${it.count}${it.unit === 'T' ? 'ターン' : ''}`).join('、')} className={`mh-stack-marks pointer-events-none ${className}`}>
       {items.map((it) => (
-        <span key={it.kind} data-stack-mark={it.kind} data-stack-count={it.count} data-stack-full={full > 0 && it.showZero && it.count >= full ? 'true' : undefined} className="mh-stack-mark">
-          {it.img ? <img src={it.img} alt="" draggable={false} /> : <i aria-hidden="true">{it.mark}</i>}<b>×{it.count}</b>
+        <span key={it.kind} data-stack-mark={it.kind} data-stack-count={it.count} data-stack-full={full > 0 && it.showZero && it.count >= full ? 'true' : undefined}
+          data-stack-last={it.unit === 'T' && it.count === 1 ? 'true' : undefined} className="mh-stack-mark">
+          {it.img ? <img src={it.img} alt="" draggable={false} /> : <i aria-hidden="true">{it.mark}</i>}<b>{it.unit === 'T' ? `${it.count}T` : `×${it.count}`}</b>
         </span>
       ))}
     </div>
@@ -703,7 +704,7 @@ function BattleScreen({
   setShowBattleLog, setShowDeckInfo, setShowEnemyInfo, setShowHeroInfo, setShowQuitConfirm,
   setShowSoulBattleEffects, setSkillPicker, setSlotSettle, slotMaxUses, slotSettle, slotSkill,
   slotUniqueChoice, slots, soulBattleParty, soulCoordinationCardBonus, suppressCardClickRef,
-  tacticsCanAssign, tacticsCardBlock, enemyDebuffs, enemyStackCounts, debugStackMarks, discardCards, actionUsed, tacticsCardGenre, tacticsCardScope, tacticsSlotFx, tacticsUnits,
+  tacticsCanAssign, tacticsCardBlock, enemyDebuffs, enemyStackCounts, debugStackMarks, tacticsSlotCountersAt, discardCards, actionUsed, tacticsCardGenre, tacticsCardScope, tacticsSlotFx, tacticsUnits,
   tacticsExInfo, activateTacticsEx, tacticsExCutin, tacticsExTurnUsed, passTacticsTurn, tacticsCoverSlot,
   tacticsExIntroVisible, dismissTacticsExIntro, tacticsPandoraForms, trickStartView, sweetStackView, bowStackView, fateWheelView, enemyConfuseTurns, luckBanners,
   teachingFx, totalTurnCount, turnCount, ultimateDistanceBreakLevels, ultraBattleView, enemyDefeating,
@@ -736,6 +737,8 @@ function BattleScreen({
     const fate = getPermaBuff('fateStacks', null);
     Object.keys(fate?.bySlot || {}).forEach((key) => { const st = fateSlotStacksOf(fate, key); put(Number(key), 'fateCombo', st.combo); put(Number(key), 'fateAtk', st.atk); });
     if (getPermaBuff('kenshiComboPower') > 0) { const k = slots.findIndex((m) => m?.id === 'KenshiMocchi'); put(k >= 0 ? k : heroDist, 'kenshi', getPermaBuff('kenshiComboPower')); }
+    // タクティクスのEXの残りターン・完全回避・根性の残り(2026-10-12 社長の追加依頼)
+    if (typeof tacticsSlotCountersAt === 'function') slots.forEach((m, i) => { if (!m) return; const c = tacticsSlotCountersAt(i) || {}; put(i, 'exTurns', c.exTurns); put(i, 'avoid', c.avoid); put(i, 'konjo', c.konjo); });
     if (debugStackMarks && debugStackMarks.ally) Object.entries(debugStackMarks.ally).forEach(([i, c]) => { out[Number(i)] = { ...(c || {}) }; });
     return out;
   })();
@@ -2315,7 +2318,7 @@ function BattleScreen({
                     「勇者モン選択時だけ効く特性」が効いているのか判断できないため */}
                 {/* 縁を回る光。回すのは中の大きな光の輪(transform)だけにして、塗りを毎コマ描き直さない(70-bootstrap の data-slot-ring) */}
                 {tacticsNewLayout&&<i aria-hidden="true" data-slot-ring/>}
-                <div data-slot-head={tacticsNewLayout?i:undefined} className={`${tacticsNewLayout?'col-span-2 row-start-1 h-[18px] justify-start gap-0.5 pr-[84px] backdrop-blur-sm':'h-[18px] justify-center'} shrink-0 flex items-center px-1 border-b z-20 ${isHeroSlotMon(s)?'bg-amber-400/10 border-amber-200/20':'bg-white/[.025] border-white/[.055]'}`}>{tacticsNewLayout&&<span className={`mr-1 shrink-0 rounded px-1 py-0.5 text-[8px] font-black leading-none ${RANGE_STYLES[i].labelBg}`}>{RANGE_LABELS[i]}</span>}{isHeroSlotMon(s)&&<Crown size={8} className="shrink-0 mr-0.5 text-amber-300"/>}<span className={`text-[10px] font-black truncate uppercase leading-none ${isHeroSlotMon(s)?'text-amber-100':'text-white'}`}>{s?.name||'---'}</span>{assignedCount>0&&!tacticsNewLayout&&<span className="ml-1 text-[10px] font-black text-indigo-300">×{assignedCount}</span>}{tacticsNewLayout&&slotExInfo&&(<span data-tactics-ex-mark={i} data-tactics-ex-state={slotExInfo.badge.text} className={`absolute right-1 top-[3px] max-w-[80px] truncate rounded px-1 py-0.5 text-[8px] font-black leading-none ${slotExInfo.badge.active?'bg-fuchsia-600 text-white ring-1 ring-fuchsia-200':'bg-black/70 text-fuchsia-200 ring-1 ring-fuchsia-400/60'}`}>EX{slotExInfo.badge.text!=='EX'?` ${slotExInfo.badge.text}`:''}</span>)}{slotBuffMarks.map(mark=>(<span key={mark.text} data-tactics-slot-buff={mark.text} className={`ml-1 shrink-0 text-[8px] font-black leading-none ${mark.cls}`}>{mark.text}</span>))}</div>
+                <div data-slot-head={tacticsNewLayout?i:undefined} className={`${tacticsNewLayout?'col-span-2 row-start-1 h-[18px] justify-start gap-0.5 pr-[84px] backdrop-blur-sm':'h-[18px] justify-center'} shrink-0 flex items-center px-1 border-b z-20 ${isHeroSlotMon(s)?'bg-amber-400/10 border-amber-200/20':'bg-white/[.025] border-white/[.055]'}`}>{tacticsNewLayout&&<span className={`mr-1 shrink-0 rounded px-1 py-0.5 text-[8px] font-black leading-none ${RANGE_STYLES[i].labelBg}`}>{RANGE_LABELS[i]}</span>}{isHeroSlotMon(s)&&<Crown size={8} className="shrink-0 mr-0.5 text-amber-300"/>}<span className={`text-[10px] font-black truncate uppercase leading-none ${isHeroSlotMon(s)?'text-amber-100':'text-white'}`}>{s?.name||'---'}</span>{assignedCount>0&&!tacticsNewLayout&&<span className="ml-1 text-[10px] font-black text-indigo-300">×{assignedCount}</span>}{tacticsNewLayout&&slotExInfo&&(<span data-tactics-ex-mark={i} data-tactics-ex-state={slotExInfo.badge.text} className={`absolute right-1 top-[3px] max-w-[80px] truncate rounded px-1 py-0.5 text-[8px] font-black leading-none ${slotExInfo.badge.active?'bg-fuchsia-600 text-white ring-1 ring-fuchsia-200':'bg-black/70 text-fuchsia-200 ring-1 ring-fuchsia-400/60'}`}>EX{slotExInfo.badge.text!=='EX'?` ${slotExInfo.badge.text}`:(slotExInfo.badge.uses!=null?`×${slotExInfo.badge.uses}`:'')}</span>)}{slotBuffMarks.map(mark=>(<span key={mark.text} data-tactics-slot-buff={mark.text} className={`ml-1 shrink-0 text-[8px] font-black leading-none ${mark.cls}`}>{mark.text}</span>))}</div>
                 {(()=>{const uOptions=getAvailableUniquesForSlot(s,ownedUniques,i); if(uOptions.length<2) return null; const curKey=activeSlotUniqueKey(slotUniqueChoice,i,s); const curIdx=Math.max(0,uOptions.findIndex(o=>o.key===curKey));
                   return(<div onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation(); if(isBusy||autoBattleRef.current)return; cycleActiveUniqueForSlot(i);}} className={`${tacticsNewLayout?'absolute left-1 top-[20px]':'shrink-0'} z-20 flex items-center justify-center gap-0.5 bg-purple-700/90 border-b border-purple-300/50 py-0.5 active:scale-95${autoBattle?' opacity-40':''}`}>
                     <RefreshCcw size={7} className="text-white"/><span className="text-[10px] font-black text-white leading-none">固有技 {curIdx+1}/{uOptions.length}</span>
@@ -2364,7 +2367,7 @@ function BattleScreen({
                           🎯は枠の横幅をまるごと使う上の段(data-tactics-slot-top-row)へ出す */}
                       {!tacticsNewLayout&&slotExInfo&&(<div data-tactics-ex-mark={i} data-tactics-ex-state={slotExInfo.badge.text}
                         className={`flex max-w-full items-center gap-0.5 rounded px-1 py-0.5 leading-none shadow ${slotExInfo.badge.active?'bg-fuchsia-600 text-white ring-1 ring-fuchsia-200':'bg-black/70 text-fuchsia-200 ring-1 ring-fuchsia-400/60'}`}>
-                        <span style={{fontSize:'7px'}} className="shrink-0 font-black">EX</span>
+                        <span style={{fontSize:'7px'}} className="shrink-0 font-black">EX{slotExInfo.badge.text==='EX'&&slotExInfo.badge.uses!=null?`×${slotExInfo.badge.uses}`:''}</span>
                         {slotExInfo.badge.text!=='EX'&&<span style={{fontSize:'8px'}} className="truncate min-w-0 font-black">{slotExInfo.badge.text}</span>}
                       </div>)}
                       {(()=>{const chipEls=slotAssignedCards.map(({idx,card})=>{
