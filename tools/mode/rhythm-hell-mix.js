@@ -248,6 +248,10 @@ if(require.main===module){
     const viol=levelSwitchViolations(hell,conf.beat);
     console.log('数:',JSON.stringify(counts(hell)));
     const ss=sideSwitches(hell);console.log(`同じ側で${SIDE_GAP_MS}ms以内に高さが変わる ${ss.length}件(別々の指で、直すと空中が${SIDE_KEEP_SKY}以上減るので残したもの)`+(ss.length?': '+ss.map(t=>(t/1000).toFixed(2)).join(' / '):''));
+    // 共通の物差し(rhythm-chart-hand-rules.js・検査 rhythm-chart-hand-rules-check.js と同じ数え方)で、ほかの手の決まりも出す(作り方は変えない・目安)
+    {const HR=require('./rhythm-chart-hand-rules.js'),res=HR.analyze(rt);
+      for(const k of ['skyAfterGround','besideHeldBand'])console.log(`  目安: ${HR.RULE_LABELS[k]} ${res[k].length}件`+(res[k].length?': '+res[k].slice(0,12).map(x=>(x.at/1000).toFixed(2)).join(' / ')+(res[k].length>12?' …':''):''));
+      if(res.sideHeightSwitch.length!==ss.length)console.log(`  ※ 共通の物差しでは ${res.sideHeightSwitch.length}件(ゲームの形へ写したあとで数えたため)`);}
     console.log(`Lv.${level}(MASTER Lv.${mLevel}) | 横持ち(高さの差39%・交差の区間の外) 押せない${th.count.impossible}・交差${th.count.cross}・届きにくい${th.count.reach} | 両手のシミュレート(地上だけ) 押せない${sim.impossible} | 同じ親指が1.5拍未満で段を変える ${viol.length}`);
     if(th.count.impossible||th.count.cross||th.count.reach)console.log('  横持ち:',th.issues.filter(i=>i.kind!=='busy').slice(0,12).map(i=>`${(i.t/1000).toFixed(2)} ${i.kind} ${i.what} ${i.why}`).join(' / '));
     if(!args.includes('--write')){console.log('※ --write を付けると HELL のマーカーの内側と Lv. だけを書く');process.exit(0);}

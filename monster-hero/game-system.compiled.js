@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d28b282b929c003d
+// source-sha256: 758a45629ce1c2d6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-12 13:42";
+const BUILD_DATE = "2026-10-12 15:07";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -6423,6 +6423,15 @@ const Audio_ = (() => {
     toneLoadFailed = false;
   const buffers = new Map();
   const loadingBuffers = new Map();
+  let decodedBytes = 0,
+    decodedCount = 0;
+  const bufferBytes = buffer => {
+    try {
+      return Math.max(0, Math.floor(buffer.length * buffer.numberOfChannels * 4));
+    } catch (e) {
+      return 0;
+    }
+  };
   const SONG_BUFFER_KEEP = 4;
   const songBufferOrder = [];
   let bgmSource = null,
@@ -6742,6 +6751,8 @@ const Audio_ = (() => {
       return res.arrayBuffer();
     }).then(data => decode(ctx, data)).then(buffer => {
       buffers.set(url, buffer);
+      decodedBytes += bufferBytes(buffer);
+      decodedCount += 1;
       return buffer;
     }).finally(() => loadingBuffers.delete(url));
     loadingBuffers.set(url, request);
@@ -7320,6 +7331,10 @@ const Audio_ = (() => {
       seVolumePct,
       bufferCount: buffers.size,
       songBufferCount: songBufferOrder.length,
+      songBufferNames: songBufferOrder.map(url => String(url).split('/').pop()),
+      keptAudioMB: Math.round([...buffers.values()].reduce((sum, b) => sum + bufferBytes(b), 0) / 1048576),
+      decodedMB: Math.round(decodedBytes / 1048576),
+      decodeCount: decodedCount,
       ctxState: ctx ? ctx.state : 'none',
       sampleRate: ctx ? Math.round(ctx.sampleRate) : 0,
       stalled: ctx && !pageHidden ? ctxClockStalled() : false,
@@ -17096,6 +17111,92 @@ const BLACK_NOTE_CRIT_FROM = 5,
   BLACK_NOTE_CRIT_ADD = 0.1;
 const BLACK_NOTE_COMBO_FROM = 10,
   BLACK_NOTE_COMBO_RATE = 0.15;
+const BATTLE_STACK_MARKS = Object.freeze({
+  cookie: Object.freeze({
+    mark: '🍪',
+    img: '',
+    label: 'クッキー',
+    showZero: true
+  }),
+  note: Object.freeze({
+    mark: '🎵',
+    img: '',
+    label: '黒音符',
+    showZero: true
+  }),
+  bow: Object.freeze({
+    mark: '🎀',
+    img: '',
+    label: '旋律'
+  }),
+  kenshi: Object.freeze({
+    mark: '⚔️',
+    img: '',
+    label: '連撃パワー'
+  }),
+  trickAtk: Object.freeze({
+    mark: '💪',
+    img: '',
+    label: 'トリック(ちから)'
+  }),
+  trickDef: Object.freeze({
+    mark: '🛡️',
+    img: '',
+    label: 'トリック(丈夫さ)'
+  }),
+  trickRegen: Object.freeze({
+    mark: '💚',
+    img: '',
+    label: 'トリック(回復)'
+  }),
+  fateCombo: Object.freeze({
+    mark: '🎲',
+    img: '',
+    label: '運命(連撃)'
+  }),
+  fateAtk: Object.freeze({
+    mark: '🪙',
+    img: '',
+    label: '運命(ちから)'
+  }),
+  exTurns: Object.freeze({
+    mark: '⏳',
+    img: '',
+    label: 'EXの残りターン',
+    unit: 'T'
+  }),
+  avoid: Object.freeze({
+    mark: '👻',
+    img: '',
+    label: '完全回避の残り'
+  }),
+  konjo: Object.freeze({
+    mark: '🔥',
+    img: '',
+    label: '根性の残り'
+  }),
+  aquaPrison: Object.freeze({
+    mark: '💧',
+    img: '',
+    label: '水牢'
+  }),
+  aquaFreeze: Object.freeze({
+    mark: '❄️',
+    img: '',
+    label: '氷結'
+  }),
+  roar: Object.freeze({
+    mark: '📢',
+    img: '',
+    label: '咆哮'
+  })
+});
+const BATTLE_STACK_MARK_ORDER = Object.freeze(Object.keys(BATTLE_STACK_MARKS));
+const battleStackMarkItems = counts => BATTLE_STACK_MARK_ORDER.filter(kind => counts && Object.prototype.hasOwnProperty.call(counts, kind)).map(kind => ({
+  kind,
+  count: Math.max(0, Math.floor(Number(counts[kind]) || 0)),
+  ...BATTLE_STACK_MARKS[kind]
+})).filter(it => it.count > 0 || it.showZero);
 const sweetStackTraitOf = id => id && Object.prototype.hasOwnProperty.call(SWEET_STACK_TRAITS, id) ? SWEET_STACK_TRAITS[id] : null;
 const sweetStackCountOf = n => Math.min(SWEET_STACK_MAX, Math.max(0, Math.floor(Number(n) || 0)));
 const sweetStackGainOf = (ownerId, actorId, card, hit = false) => {
@@ -31394,6 +31495,30 @@ function RhythmHellSkyHitSwitch() {
     className: "contents"
   }, btn(text === v, l, () => pickText(v), v)))));
 }
+function RhythmJudgeTextPosSwitch() {
+  const [value, setValue] = useState(() => RHYTHM_JUDGE_TEXT_POS.id);
+  const pick = v => {
+    RHYTHM_JUDGE_TEXT_POS.set(v);
+    setValue(RHYTHM_JUDGE_TEXT_POS.id);
+  };
+  return React.createElement("section", {
+    "data-rhythm-judge-text-pos-switch": true,
+    className: "mb-3 rounded-2xl border border-cyan-400/50 bg-cyan-950/25 p-3"
+  }, React.createElement("h3", {
+    className: "text-xs font-black text-cyan-100"
+  }, "地上の判定の文字の置き場所(試作・見比べ用)"), React.createElement("p", {
+    className: "mt-1 text-[10px] font-bold text-cyan-200/80"
+  }, "叩く直前のノーツが判定の文字の下を通らないようにする案です。EASY〜MASTER に効きます(空中のある譜面ではいまのまま)。判定は変わりません。演奏を始め直すと効きます。"), React.createElement("div", {
+    className: "mt-2 grid grid-cols-2 gap-2"
+  }, Object.keys(RHYTHM_JUDGE_TEXT_POS_LABELS).map(v => React.createElement("button", {
+    key: v,
+    type: "button",
+    "data-rhythm-judge-text-pos-pick": v,
+    "aria-pressed": value === v,
+    onClick: () => pick(v),
+    className: `min-h-[44px] rounded-xl text-[11px] font-black ${value === v ? 'bg-cyan-700 text-white ring-2 ring-cyan-200' : 'bg-slate-800 text-slate-300'}`
+  }, RHYTHM_JUDGE_TEXT_POS_LABELS[v]))));
+}
 function RhythmHellPreviewSwitch({
   onChange
 }) {
@@ -32448,6 +32573,7 @@ const RhythmTapTest = ({
     liveTouchSubLanesRef = useRef([]),
     liveTouchSkySubLanesRef = useRef([]);
   const [judgmentSnap] = useState(() => rhythmJudgmentSnapActive());
+  const [judgeTextPos] = useState(() => RHYTHM_JUDGE_TEXT_POS.id);
   const tutorialBannerRef = useRef(null),
     tutorialStepRef = useRef(null);
   const calibrationBannerRef = useRef(null),
@@ -36817,9 +36943,13 @@ const RhythmTapTest = ({
     }
   }, resumeCountdown ? 'まもなく 再開します' : 'まもなく はじまります')), React.createElement("div", {
     "data-rhythm-judgment-display": true,
+    "data-rhythm-judge-text-pos": !skyChart && judgeTextPos !== 'now' ? judgeTextPos : undefined,
     className: "pointer-events-none absolute left-1/2 z-10 w-[88%] -translate-x-1/2 text-center",
     style: {
-      bottom: 'calc(var(--mh-judgment-line-bottom,12%) + 38px)'
+      bottom: !skyChart && (judgeTextPos === 'raise' || judgeTextPos === 'both') ? 'calc(var(--mh-judgment-line-bottom,12%) + 26%)' : 'calc(var(--mh-judgment-line-bottom,12%) + 38px)',
+      ...(!skyChart && (judgeTextPos === 'fade' || judgeTextPos === 'both') ? {
+        opacity: .55
+      } : null)
     }
   }, settings.judgmentFx === true && React.createElement("i", {
     ref: judgmentBurstRef,
@@ -46732,6 +46862,9 @@ const normalizeSessionMarker = value => {
     screen: typeof value.screen === 'string' ? value.screen.slice(0, 40) : '',
     audioBuffers: reloadNum(value.audioBuffers),
     heapMB: reloadNum(value.heapMB),
+    audioMB: reloadNum(value.audioMB),
+    decodedMB: reloadNum(value.decodedMB),
+    decodeCount: reloadNum(value.decodeCount),
     nav: typeof value.nav === 'string' ? value.nav.slice(0, 20) : ''
   };
 };
@@ -46747,6 +46880,9 @@ const normalizeReloadLog = value => (Array.isArray(value) ? value : []).map(entr
     screen: typeof entry.screen === 'string' ? entry.screen.slice(0, 40) : '',
     audioBuffers: reloadNum(entry.audioBuffers),
     heapMB: reloadNum(entry.heapMB),
+    audioMB: reloadNum(entry.audioMB),
+    decodedMB: reloadNum(entry.decodedMB),
+    decodeCount: reloadNum(entry.decodeCount),
     nav: typeof entry.nav === 'string' ? entry.nav.slice(0, 20) : ''
   };
 }).filter(Boolean).slice(0, RELOAD_LOG_LIMIT);
@@ -46762,6 +46898,9 @@ const buildReloadLogEntry = (previous, now, nav = '') => {
     screen: prev.screen,
     audioBuffers: prev.audioBuffers,
     heapMB: prev.heapMB,
+    audioMB: prev.audioMB,
+    decodedMB: prev.decodedMB,
+    decodeCount: prev.decodeCount,
     nav: String(nav || '').slice(0, 20)
   };
 };
@@ -46791,7 +46930,7 @@ const describeReloadLogEntry = entry => {
     minute: '2-digit'
   });
   const head = entry.kind === 'background' ? '裏に回ったあと読み込み直された' : '遊んでいる最中に読み込み直された';
-  const parts = [`${entry.minutes}分遊んだあと`, entry.screen ? `画面 ${entry.screen}` : '', Number.isFinite(entry.audioBuffers) ? `音のデータ ${entry.audioBuffers}本` : '', Number.isFinite(entry.heapMB) ? `メモリ ${entry.heapMB}MB` : ''].filter(Boolean);
+  const parts = [`${entry.minutes}分遊んだあと`, entry.screen ? `画面 ${entry.screen}` : '', Number.isFinite(entry.audioBuffers) ? `音のデータ ${entry.audioBuffers}本${Number.isFinite(entry.audioMB) ? `(${entry.audioMB}MB)` : ''}` : '', Number.isFinite(entry.decodedMB) ? `音を解いた合計 ${entry.decodedMB}MB・${Number.isFinite(entry.decodeCount) ? entry.decodeCount : '?'}回` : '', Number.isFinite(entry.heapMB) ? `メモリ ${entry.heapMB}MB` : ''].filter(Boolean);
   return `${when} 起動 — ${head}(${parts.join('・')})`;
 };
 function ReloadLogPanel() {
@@ -60987,6 +61126,34 @@ const inTacticsDiscardZone = (x, y) => {
   const g = tacticsDiscardGeo();
   return !!g && y >= g.enemyTop && y < g.slotTop;
 };
+const BattleStackMarks = ({
+  counts,
+  side,
+  full = 0,
+  className = ''
+}) => {
+  const items = battleStackMarkItems(counts);
+  if (!items.length) return null;
+  return React.createElement("div", {
+    "data-stack-marks": side,
+    role: "img",
+    "aria-label": items.map(it => `${it.label}${it.count}${it.unit === 'T' ? 'ターン' : ''}`).join('、'),
+    className: `mh-stack-marks pointer-events-none ${className}`
+  }, items.map(it => React.createElement("span", {
+    key: it.kind,
+    "data-stack-mark": it.kind,
+    "data-stack-count": it.count,
+    "data-stack-full": full > 0 && it.showZero && it.count >= full ? 'true' : undefined,
+    "data-stack-last": it.unit === 'T' && it.count === 1 ? 'true' : undefined,
+    className: "mh-stack-mark"
+  }, it.img ? React.createElement("img", {
+    src: it.img,
+    alt: "",
+    draggable: false
+  }) : React.createElement("i", {
+    "aria-hidden": "true"
+  }, it.mark), React.createElement("b", null, it.unit === 'T' ? `${it.count}T` : `×${it.count}`))));
+};
 const TacticsDiscardZones = ({
   full,
   used,
@@ -61174,6 +61341,9 @@ function BattleScreen({
   tacticsCanAssign,
   tacticsCardBlock,
   enemyDebuffs,
+  enemyStackCounts,
+  debugStackMarks,
+  tacticsSlotCountersAt,
   discardCards,
   actionUsed,
   tacticsCardGenre,
@@ -61206,6 +61376,61 @@ function BattleScreen({
   wave
 }) {
   const [buffDetail, setBuffDetail] = useState(false);
+  const allyStackCounts = (() => {
+    const out = {};
+    const put = (i, kind, n, keepZero = false) => {
+      if (!Number.isInteger(i) || i < 0) return;
+      const c = Math.max(0, Math.floor(Number(n) || 0));
+      if (c <= 0 && !keepZero) return;
+      out[i] = {
+        ...(out[i] || {}),
+        [kind]: (out[i] && out[i][kind] || 0) + c
+      };
+    };
+    const slotOfKey = key => key === 'party' ? heroDist : Number(key);
+    if (Array.isArray(tacticsUnits)) slots.forEach((m, i) => {
+      const t = sweetStackTraitOf(m?.id);
+      if (t) put(i, t.kind === 'cookie' ? 'cookie' : 'note', 0, true);
+    });else {
+      const t = sweetStackTraitOf(mainHero?.id);
+      if (t) put(heroDist, t.kind === 'cookie' ? 'cookie' : 'note', 0, true);
+    }
+    Object.entries(sweetStackView || {}).forEach(([key, n]) => {
+      const i = slotOfKey(key),
+        t = sweetStackTraitOf(key === 'party' ? mainHero?.id : slots[i]?.id);
+      if (t) put(i, t.kind === 'cookie' ? 'cookie' : 'note', sweetStackCountOf(n), true);
+    });
+    Object.entries(bowStackView || {}).forEach(([key, n]) => put(Number(key), 'bow', n));
+    Object.entries(trickStartView || {}).forEach(([key, st]) => {
+      const i = slotOfKey(key);
+      put(i, 'trickAtk', st?.atk);
+      put(i, 'trickDef', st?.def);
+      put(i, 'trickRegen', st?.regen);
+    });
+    const fate = getPermaBuff('fateStacks', null);
+    Object.keys(fate?.bySlot || {}).forEach(key => {
+      const st = fateSlotStacksOf(fate, key);
+      put(Number(key), 'fateCombo', st.combo);
+      put(Number(key), 'fateAtk', st.atk);
+    });
+    if (getPermaBuff('kenshiComboPower') > 0) {
+      const k = slots.findIndex(m => m?.id === 'KenshiMocchi');
+      put(k >= 0 ? k : heroDist, 'kenshi', getPermaBuff('kenshiComboPower'));
+    }
+    if (typeof tacticsSlotCountersAt === 'function') slots.forEach((m, i) => {
+      if (!m) return;
+      const c = tacticsSlotCountersAt(i) || {};
+      put(i, 'exTurns', c.exTurns);
+      put(i, 'avoid', c.avoid);
+      put(i, 'konjo', c.konjo);
+    });
+    if (debugStackMarks && debugStackMarks.ally) Object.entries(debugStackMarks.ally).forEach(([i, c]) => {
+      out[Number(i)] = {
+        ...(c || {})
+      };
+    });
+    return out;
+  })();
   const [enemyDebuffOpen, setEnemyDebuffOpen] = useState(false);
   const raidGrowthOn = runMode === BATTLE_MODE_RAID_JACK_A;
   const raidGrowth = raidGrowthOn ? raidJackGrowthAt(turnCount) : null;
@@ -61644,8 +61869,14 @@ function BattleScreen({
   }, React.createElement("span", {
     className: "min-w-0 truncate text-red-200"
   }, enemy.name), React.createElement("span", {
+    className: "flex shrink-0 items-center gap-1"
+  }, React.createElement(BattleStackMarks, {
+    counts: enemyStackCounts,
+    side: "enemy",
+    className: "mh-stack-marks-enemy"
+  }), React.createElement("span", {
     className: "shrink-0 font-mono text-red-300"
-  }, Math.max(0, enemy.hp).toLocaleString(), " / ", enemy.maxHp.toLocaleString())), React.createElement("div", {
+  }, Math.max(0, enemy.hp).toLocaleString(), " / ", enemy.maxHp.toLocaleString()))), React.createElement("div", {
     className: "mt-1 h-2 overflow-hidden rounded-full bg-slate-800"
   }, React.createElement("div", {
     className: "h-full bg-red-600",
@@ -61679,8 +61910,15 @@ function BattleScreen({
   }, React.createElement("div", {
     className: "w-full truncate text-[10px] font-black text-white"
   }, s?.name || '---'), React.createElement("div", {
-    className: "mt-1 text-[10px] font-black"
-  }, RANGE_LABELS[i], "距離")))), React.createElement("div", {
+    className: "mt-1 flex max-w-full items-center justify-center gap-0.5 text-[10px] font-black"
+  }, React.createElement("span", {
+    className: "shrink-0"
+  }, RANGE_LABELS[i], "距離"), React.createElement(BattleStackMarks, {
+    counts: allyStackCounts[i],
+    side: "ally",
+    full: SWEET_STACK_MAX,
+    className: "mh-stack-marks-inline"
+  }))))), React.createElement("div", {
     className: "mt-1.5 space-y-1"
   }, React.createElement("div", null, React.createElement("div", {
     className: "flex justify-between text-[10px] font-black text-pink-300"
@@ -61834,8 +62072,14 @@ function BattleScreen({
     "aria-hidden": "true",
     className: "text-slate-300"
   }, enemyDebuffOpen ? '▲' : '▼'))), React.createElement("span", {
+    className: "flex shrink-0 items-center gap-1"
+  }, React.createElement(BattleStackMarks, {
+    counts: enemyStackCounts,
+    side: "enemy",
+    className: "mh-stack-marks-enemy"
+  }), React.createElement("span", {
     className: "text-red-500 flex items-center gap-1 font-mono drop-shadow-[0_1px_3px_rgba(0,0,0,1)]"
-  }, Math.max(0, enemy.hp).toLocaleString(), " / ", enemy.maxHp.toLocaleString())), React.createElement("div", {
+  }, Math.max(0, enemy.hp).toLocaleString(), " / ", enemy.maxHp.toLocaleString()))), React.createElement("div", {
     "data-enemy-hpbar": true,
     className: "relative h-[14px] overflow-hidden rounded-full border-2 border-white/25 bg-slate-950",
     style: {
@@ -63367,7 +63611,12 @@ function BattleScreen({
           animationDuration: `${tacticsExCutin.ms}ms`
         } : {})
       }
-    }, React.createElement("i", null), React.createElement("i", null)), slotHitKind && (() => {
+    }, React.createElement("i", null), React.createElement("i", null)), React.createElement(BattleStackMarks, {
+      counts: allyStackCounts[i],
+      side: "ally",
+      full: SWEET_STACK_MAX,
+      className: tacticsNewLayout ? 'mh-stack-marks-ally' : 'mh-stack-marks-ally mh-stack-marks-ally-top'
+    }), slotHitKind && (() => {
       const hitFx = TACTICS_SLOT_FX_STYLE[slotHitKind];
       return React.createElement("div", {
         "data-tactics-hit-fx": slotHitKind,
@@ -63528,7 +63777,7 @@ function BattleScreen({
       "data-tactics-ex-mark": i,
       "data-tactics-ex-state": slotExInfo.badge.text,
       className: `absolute right-1 top-[3px] max-w-[80px] truncate rounded px-1 py-0.5 text-[8px] font-black leading-none ${slotExInfo.badge.active ? 'bg-fuchsia-600 text-white ring-1 ring-fuchsia-200' : 'bg-black/70 text-fuchsia-200 ring-1 ring-fuchsia-400/60'}`
-    }, "EX", slotExInfo.badge.text !== 'EX' ? ` ${slotExInfo.badge.text}` : ''), slotBuffMarks.map(mark => React.createElement("span", {
+    }, "EX", slotExInfo.badge.text !== 'EX' ? ` ${slotExInfo.badge.text}` : slotExInfo.badge.uses != null ? `×${slotExInfo.badge.uses}` : ''), slotBuffMarks.map(mark => React.createElement("span", {
       key: mark.text,
       "data-tactics-slot-buff": mark.text,
       className: `ml-1 shrink-0 text-[8px] font-black leading-none ${mark.cls}`
@@ -63605,7 +63854,7 @@ function BattleScreen({
         fontSize: '7px'
       },
       className: "shrink-0 font-black"
-    }, "EX"), slotExInfo.badge.text !== 'EX' && React.createElement("span", {
+    }, "EX", slotExInfo.badge.text === 'EX' && slotExInfo.badge.uses != null ? `×${slotExInfo.badge.uses}` : ''), slotExInfo.badge.text !== 'EX' && React.createElement("span", {
       style: {
         fontSize: '8px'
       },
@@ -75513,6 +75762,7 @@ function MonsterHeroGame() {
     setBowStackView({});
   };
   const bowStackRef = useRef({});
+  const [debugStackMarks, setDebugStackMarks] = useState(null);
   const [bowStackView, setBowStackView] = useState({});
   const bowAtkMultAt = slotIdx => Number.isInteger(slotIdx) ? bowAtkMultOf(bowStackRef.current[String(slotIdx)]) : 1;
   const addBowStackAt = slotIdx => {
@@ -75542,6 +75792,15 @@ function MonsterHeroGame() {
     };
     setSweetStackView(next);
   };
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof navigator === 'undefined' || navigator.webdriver !== true) return undefined;
+    window.__mhStackMarksDebug = {
+      set: v => setDebugStackMarks(v && typeof v === 'object' ? v : null)
+    };
+    return () => {
+      delete window.__mhStackMarksDebug;
+    };
+  }, []);
   const gainSweetStack = (slotIdx, actorId, card, hit = false) => {
     const owner = sweetOwnerAt(slotIdx);
     const gain = sweetStackGainOf(owner, actorId, card, hit);
@@ -78955,6 +79214,9 @@ function MonsterHeroGame() {
       screen: '',
       audioBuffers: null,
       heapMB: null,
+      audioMB: null,
+      decodedMB: null,
+      decodeCount: null,
       nav
     };
     const write = state => {
@@ -78964,6 +79226,9 @@ function MonsterHeroGame() {
       try {
         const d = Audio_.diagnose();
         marker.audioBuffers = Number.isFinite(d && d.bufferCount) ? d.bufferCount : null;
+        marker.audioMB = Number.isFinite(d && d.keptAudioMB) ? d.keptAudioMB : null;
+        marker.decodedMB = Number.isFinite(d && d.decodedMB) ? d.decodedMB : null;
+        marker.decodeCount = Number.isFinite(d && d.decodeCount) ? d.decodeCount : null;
       } catch (e) {}
       try {
         const m = window.performance && window.performance.memory;
@@ -86074,8 +86339,8 @@ function MonsterHeroGame() {
       wave,
       turn: turnCount
     }) : null;
-    if (aquaNow && aquaNow.active && aquaNow.route === 'prison' && aquaNow.stacks > 0) add('aquaPrison', '🌊', '水牢', `${aquaNow.stacks}つ・あと${aquaNow.turnsLeft}T`, 'text-sky-200 border-sky-400/60', `敵の与ダメージ-${Math.round((1 - aquaNow.enemyDmgMult) * 100)}%(水牢1つごとに-10%)`);
-    if (aquaNow && aquaNow.active && aquaNow.route === 'freeze' && aquaNow.stacks > 0) add('aquaFreeze', '🧊', '氷結', `${aquaNow.stacks}つ・あと${aquaNow.turnsLeft}T`, 'text-cyan-200 border-cyan-400/60', `敵の被ダメージ+${aquaNow.stacks * 10}%(氷結1つごとに+10%)`);
+    if (aquaNow && aquaNow.active && aquaNow.route === 'prison' && aquaNow.stacks > 0) add('aquaPrison', '🌊', '水牢', `${aquaNow.stacks}つ・あと${aquaNow.turnsLeft}T`, 'text-sky-200 border-sky-400/60', `敵の与ダメージ-${Math.round((1 - aquaNow.enemyDmgMult) * 100)}%(水牢1つごとに-10%)`, `${aquaNow.turnsLeft}T`);
+    if (aquaNow && aquaNow.active && aquaNow.route === 'freeze' && aquaNow.stacks > 0) add('aquaFreeze', '🧊', '氷結', `${aquaNow.stacks}つ・あと${aquaNow.turnsLeft}T`, 'text-cyan-200 border-cyan-400/60', `敵の被ダメージ+${aquaNow.stacks * 10}%(氷結1つごとに+10%)`, `${aquaNow.turnsLeft}T`);
     if (aquaNow && aquaNow.active && aquaNow.finale) add('aquaFinale', '🌊', 'アクアフィナーレ', '被ダメ大幅アップ', 'text-sky-100 border-sky-300/70', '敵の被ダメージが大きく上がっている');
     const nightmare = isTacticsMode(runMode) ? tacticsExNightmareEnemyOf(tacticsExState, tacticsUnits, {
       wave,
@@ -86090,6 +86355,19 @@ function MonsterHeroGame() {
     if (getWaveBuff('enemyTakenDmgBonus') > 0) add('taken', '⬆', '敵の被ダメ上昇', `+${Math.round(getWaveBuff('enemyTakenDmgBonus') * 100)}%`, 'text-orange-200 border-orange-400/60', 'このWAVEのあいだ続く', `+${Math.round(getWaveBuff('enemyTakenDmgBonus') * 100)}%`);
     if (enemy.roarStacks > 0) add('roar', '📢', '咆哮', `×${enemy.roarStacks}`, 'text-red-200 border-red-400/60', '敵の攻撃が上がっている(元には戻らない)', `×${enemy.roarStacks}`);
     return list;
+  })();
+  const enemyStackCounts = (() => {
+    if (!enemy) return {};
+    const aq = isTacticsMode(runMode) ? tacticsExAquaOf(tacticsExState, tacticsUnits, {
+      wave,
+      turn: turnCount
+    }) : null;
+    return {
+      aquaPrison: aq && aq.active && aq.route === 'prison' ? aq.stacks : 0,
+      aquaFreeze: aq && aq.active && aq.route === 'freeze' ? aq.stacks : 0,
+      roar: Math.max(0, Math.floor(Number(enemy.roarStacks) || 0)),
+      ...(debugStackMarks && debugStackMarks.enemy ? debugStackMarks.enemy : {})
+    };
   })();
   const iceLockEnemyDamageMult = iceLockActive ? 0.7 : 1.0;
   const heroDist = slots.findIndex(isHeroSlotMon);
@@ -86307,6 +86585,20 @@ function MonsterHeroGame() {
   const tacticsExAvoidLeftNow = slotIdx => {
     const live = tacticsExLiveRef.current;
     return live.enabled && Number.isInteger(slotIdx) ? tacticsExAvoidLeftOf(tacticsExStateRef.current, tacticsUnitsRef.current, slotIdx, live.now) : 0;
+  };
+  const tacticsSlotCountersAt = slotIdx => {
+    if (!tacticsExEnabled || !Number.isInteger(slotIdx) || !Array.isArray(tacticsUnits)) return {};
+    const unit = tacticsUnits[slotIdx];
+    if (!unit) return {};
+    const out = {};
+    const def = raidExDefOf(unit.id);
+    const rm = def ? tacticsExRemainOf(def, tacticsExState, slotIdx, unit.id, tacticsExNow) : null;
+    if (rm && rm.kind === 'turns' && rm.turns > 0) out.exTurns = rm.turns;
+    const avoid = tacticsExAvoidLeftOf(tacticsExState, tacticsUnits, slotIdx, tacticsExNow);
+    if (avoid > 0) out.avoid = avoid;
+    const konjo = tacticsExKonjoLeftOf(tacticsExState, tacticsUnits, slotIdx, tacticsExNow);
+    if (konjo > 0) out.konjo = konjo;
+    return out;
   };
   const tacticsCritFixedNow = (slotIdx, card = null) => {
     if (!isTacticsMode(runMode)) return false;
@@ -87948,7 +88240,8 @@ function MonsterHeroGame() {
         };
         return {
           text: 'EX',
-          active: false
+          active: false,
+          uses: Number.isFinite(remaining.left) ? remaining.left : null
         };
       })(),
       statusLines: (() => {
@@ -98876,7 +99169,7 @@ function MonsterHeroGame() {
       className: "mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80"
     }, "判定の文字（PERFECT など）は判定ごとに大きさが違い、今は 0.12秒かけてなめらかに大きさを変えています（そのあいだ毎コマ画面の組み直しが起きます）。「一度で」は大きさをすぐに変えます。弾む動き・色・光は変わりません。次の演奏から効きます。"), React.createElement("div", {
       className: "mt-2 flex gap-2"
-    }, [['', '既定（なめらかに）'], ['on', '一度で'], ['off', 'なめらかに']].map(([value, label]) => React.createElement("button", {
+    }, [['', '既定（一度で）'], ['on', '一度で'], ['off', 'なめらかに']].map(([value, label]) => React.createElement("button", {
       key: value || 'default',
       type: "button",
       "data-rhythm-judgment-snap-pref": value || 'default',
@@ -98982,7 +99275,7 @@ function MonsterHeroGame() {
       className: "mb-3 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl border border-cyan-300/70 bg-cyan-900/60 px-3 text-sm font-black text-cyan-50"
     }, "🎵 全解放の曲えらびを開く", React.createElement("span", {
       className: "rounded-full bg-slate-950/70 px-2 py-0.5 text-[10px] text-amber-200"
-    }, "記録しない")), React.createElement(RhythmSkyLiftSwitch, null), React.createElement(RhythmSkyReachAdaptSwitch, null), React.createElement(RhythmSkyBoxLookSwitch, null), React.createElement(RhythmSkyLaneLookSwitch, null), React.createElement(RhythmHellVisSwitch, null), React.createElement(RhythmHellSkyHitSwitch, null), React.createElement("section", {
+    }, "記録しない")), React.createElement(RhythmSkyLiftSwitch, null), React.createElement(RhythmSkyReachAdaptSwitch, null), React.createElement(RhythmSkyBoxLookSwitch, null), React.createElement(RhythmSkyLaneLookSwitch, null), React.createElement(RhythmHellVisSwitch, null), React.createElement(RhythmHellSkyHitSwitch, null), React.createElement(RhythmJudgeTextPosSwitch, null), React.createElement("section", {
       "data-debug-rhythm-hell-story": true,
       className: "mb-3 rounded-2xl border border-pink-400/50 bg-pink-950/25 p-3"
     }, React.createElement("h3", {
@@ -103176,6 +103469,9 @@ function MonsterHeroGame() {
       tacticsCanAssign: tacticsCanAssign,
       tacticsCardBlock: tacticsCardBlock,
       enemyDebuffs: enemyDebuffs,
+      enemyStackCounts: enemyStackCounts,
+      debugStackMarks: debugStackMarks,
+      tacticsSlotCountersAt: isTacticsMode(runMode) ? tacticsSlotCountersAt : null,
       discardCards: discardCards,
       actionUsed: actionUsed,
       tacticsSlotFx: tacticsSlotFx,

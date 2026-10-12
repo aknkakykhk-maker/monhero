@@ -9,6 +9,8 @@
 //   ② メロディーのカードでターンを進めると、クッキーが貯まり、バトル画面の札に出る
 //   ③ EX「おねがい♪メロディボックス」を使うと、クッキーの数が文に出て、札が消える(0個へ戻る)
 //   ④ クロミーで同じく、攻撃を当てると黒音符が貯まり、EX「悪夢全開！メロディ・キー」で敵の状態の列に「悪夢全開」が出る
+//   ⑤ 貯まった数は、その子の枠にも「マーク×数」(data-stack-mark)で常に出て、札の数と合う(0個でも×0で出る。2026-10-12 社長の依頼)
+//      EXの札には残り回数(EX×数)、EXを使うと枠に残りターン(⏳nT)が出る
 const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分類フォルダから見た1つ上
 // タクティクス専用 EXスキル(STEP1: 共通基盤)を、実際のブラウザで操作して確かめる。
 // 設計の正本: docs/spec/TACTICS_EX_SKILLS.md
@@ -324,6 +326,17 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
     check('タクティクスプロをメロディーで始められる', started === 'ok', started);
     if (started === 'ok') {
       const mSlot = await heroSlot();
+      // 枠の「マーク×数」。{ count, inSlot } … 数と、枠の中に収まっているか
+      const slotMark = (slot, kind) => page.evaluate(([i, k]) => {
+        const box = document.querySelector(`button[data-slot-index="${i}"]`);
+        const m = box && box.querySelector(`[data-stack-mark="${k}"]`);
+        if (!m) return null;
+        const a = box.getBoundingClientRect(), b = m.getBoundingClientRect();
+        return { count: Number(m.getAttribute('data-stack-count')), inSlot: b.left >= a.left && b.right <= a.right && b.top >= a.top && b.bottom <= a.bottom };
+      }, [slot, kind]);
+      const chipCount = async (mark) => { const m = (await bodyText()).match(new RegExp(mark + '(\\d+)\\/10')); return m ? Number(m[1]) : 0; };
+      const m0 = await slotMark(mSlot, 'cookie');
+      check('メロディーの枠に、0個でもクッキーのマーク(×0)が出る', m0 && m0.count === 0 && m0.inSlot, JSON.stringify(m0));
       await tapSlot(mSlot);
       const p0 = await panel();
       check('クッキー0個のうちは、EXを使えず理由が出る', p0 && !p0.canUse && /クッキーが1つも無い/.test(p0.why), p0 ? `${p0.name} / ${p0.why}` : '詳細が開かない');
@@ -334,7 +347,16 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
       check('メロディーのカードでターンを進められた', played > 0, `${played}回`);
       check('カードを使うとクッキーが増える(🍪 クッキー n/10)', pm.some(t => /🍪 クッキー \d+\/10/.test(t)), pm.slice(0, 10).join(' / '));
       check('バトル画面の札にクッキーの数が出る', /🍪\d+\/10/.test(await bodyText()));
+      const m1 = await slotMark(mSlot, 'cookie'), c1 = await chipCount('🍪');
+      check('枠のクッキーのマークの数が、札の数と合う', m1 && c1 > 0 && m1.count === c1 && m1.inSlot, `${JSON.stringify(m1)} / 札 ${c1}`);
+      const exBefore = await page.evaluate((i) => document.querySelector(`[data-tactics-ex-mark="${i}"]`)?.textContent.trim() || '', mSlot);
+      check('EXの札に、あと何回使えるかが「EX×数」で出る', /^EX×\d+$/.test(exBefore), exBefore);
       check('使える状態になったEXを使える', await useEx(mSlot));
+      const exTurns = await slotMark(mSlot, 'exTurns');
+      check('EXを使うと、枠に残りターン(⏳nT)が出る', exTurns && exTurns.count >= 1 && exTurns.inSlot, JSON.stringify(exTurns));
+      // MK_SHOT=<フォルダ> を付けると、残りターンが減っていく所を静止画に残す(報告用)
+      const shotDir = process.env.MK_SHOT || '';
+      if (shotDir) await page.screenshot({ path: `${shotDir}/real-melody-ex-${exTurns ? exTurns.count : 0}T.png` });
       const pm2 = await pops();
       check('使うとカットインとポップアップが出る', pm2.some(t => /EX おねがい♪メロディボックス！/.test(t)), pm2.slice(-6).join(' / '));
       await page.evaluate(() => document.querySelector('[data-battle-log-open], button[aria-label="ログ"]')?.click());
@@ -343,7 +365,17 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
       await page.evaluate(() => [...document.querySelectorAll('button')].find(x => x.offsetParent && /^(閉じる|×)$/.test(x.textContent.trim()))?.click());
       await page.waitForTimeout(400);
       check('使うとクッキーは0個に戻り、札が消える', !/🍪\d+\/10/.test(await bodyText()));
+      const m2 = await slotMark(mSlot, 'cookie');
+      check('使うと枠のマークも×0に戻る', m2 && m2.count === 0, JSON.stringify(m2));
       check('EXを使ったあともターンを進められる', await playAttackTurn(true));
+      const exTurns2 = await slotMark(mSlot, 'exTurns');
+      check('ターンを進めると、残りターンが1つ減る', exTurns && exTurns2 && exTurns2.count === exTurns.count - 1, `${exTurns && exTurns.count} → ${exTurns2 && exTurns2.count}`);
+      if (shotDir && exTurns2) await page.screenshot({ path: `${shotDir}/real-melody-ex-${exTurns2.count}T.png` });
+      if (exTurns2 && exTurns2.count > 1 && await playAttackTurn(true)) {
+        const exTurns3 = await slotMark(mSlot, 'exTurns');
+        check('残りターンが1になると、赤く光る札になる', !!exTurns3 && exTurns3.count === 1 && await page.evaluate((i) => document.querySelector(`button[data-slot-index="${i}"] [data-stack-mark="exTurns"]`)?.getAttribute('data-stack-last') === 'true', mSlot), JSON.stringify(exTurns3));
+        if (shotDir && exTurns3) await page.screenshot({ path: `${shotDir}/real-melody-ex-${exTurns3.count}T.png` });
+      }
     }
 
     // ---- クロミー ----
@@ -357,6 +389,9 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
       check('クロミーの攻撃でターンを進められた', played > 0, `${played}回`);
       check('攻撃を当てると黒音符が増える(🎵 黒音符 n/10)', pk.some(t => /🎵 黒音符 \d+\/10/.test(t)), pk.slice(0, 10).join(' / '));
       check('バトル画面の札に黒音符の数が出る', /🎵\d+\/10/.test(await bodyText()));
+      const k1 = await page.evaluate((i) => { const m = document.querySelector(`button[data-slot-index="${i}"] [data-stack-mark="note"]`); return m ? Number(m.getAttribute('data-stack-count')) : null; }, kSlot);
+      const kc = ((await bodyText()).match(/🎵(\d+)\/10/) || [])[1];
+      check('枠の黒音符のマークの数が、札の数と合う', k1 != null && k1 > 0 && String(k1) === kc, `マーク ${k1} / 札 ${kc}`);
       check('EX「悪夢全開！メロディ・キー」を使える', await useEx(kSlot));
       const pk2 = await pops();
       check('使うとカットインとポップアップが出る', pk2.some(t => /EX 悪夢全開！メロディ・キー！/.test(t)), pk2.slice(-6).join(' / '));
