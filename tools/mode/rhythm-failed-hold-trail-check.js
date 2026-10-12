@@ -1,7 +1,9 @@
-// 失敗したHOLD / SLIDEを、その場で消さずに終端まで薄いグレーで流し続けることを確かめる。
+// 失敗したHOLD / SLIDEを、その場で消さずに薄いグレーへ落とし、約0.3秒で消すことを確かめる。
 //
 // 途中で失敗したロングノーツがいきなり消えると、「取り損ねたのか、そもそも無かったのか」が
-// 分からない。表示だけを薄いグレーへ落として最後まで流し、復活しないことを見せる。
+// 分からない。表示だけを薄いグレーへ落として、復活しないことを見せる。
+// 以前は終端まで流し続けていたが、長いスライドだと数秒間「透明なノーツ」が流れてくるように見えたので、
+// 約0.3秒で消すことにした(2026-10-12 社長の決定・rhythmFailedTrailFade)。
 // 判定・コンボ・スコアはここでは一切変えない。
 //
 //   node tools/mode/rhythm-failed-hold-trail-check.js
@@ -26,9 +28,9 @@ check('元の種類を見る補助関数がある(触った FLICK を帯持ち�
 // 消す・薄くするという扱いは変えていないが、毎フレーム同じ値を書き直さないようにしたので
 // (遊んでいるうちに重くなる原因だった)、書き方が「変わったときだけ書く」形になっている。
 // 取れたHOLD / SLIDE / FLICKは、消える前に一瞬だけ判定ラインで光る(2026-09-04に追加)。
-// 「失敗したHOLD / SLIDEを終端まで薄く流す」扱いは変えておらず、光っていないノーツは従来どおり消える。
-check('TAP・終端を過ぎたノーツは従来どおりその場で消す(取れたときの短い光のあいだだけ残る)',
-  game.includes("if(note.done&&!failedTrail&&!clearFlash){if(el._rhythmHidden!==true){el.style.display='none';el._rhythmHidden=true;}return;}")
+// 失敗したHOLD / SLIDEは薄いグレーで約0.3秒見せてから消す。光っていないノーツは従来どおり消える。
+check('TAP・終端を過ぎたノーツ・消え切った失敗ノーツはその場で消す(取れたときの短い光のあいだだけ残る)',
+  game.includes("if(note.done&&(!failedTrail||failFade<=0)&&!clearFlash){if(el._rhythmHidden!==true){el.style.display='none';el._rhythmHidden=true;}return;}")
   &&game.includes('const clearFlash=note.done&&Number.isFinite(note._rhythmClearAt)&&songTimeMs-note._rhythmClearAt<RHYTHM_CLEAR_FLASH_MS;'));
 check('光るのは取れたときだけで、失敗したノーツは薄いグレーのまま(扱いを混ぜない)',
   game.includes("const clearedGesture=judgment!=='MISS'&&")
@@ -37,8 +39,11 @@ check('消したノーツへ毎フレーム同じ指示を書き直さない',
   game.includes('if(el._rhythmHidden===true){el.style.display=\'\';el._rhythmHidden=false;}'));
 check('失敗中は判定範囲外になっても表示を続ける',
   game.includes('visible=failedTrail||note.activePointerId!==null||(progress>=-.1&&progress<=1.18)'));
-check('失敗中は薄く表示する',
-  game.includes("const nextOpacity=failedTrail?'.34':(visible?'1':'0');"));
+check('失敗中は薄く表示し、約0.3秒で消す(DOM 版・canvas 版とも)',
+  game.includes("const nextOpacity=failedTrail?String(Math.round(34*failFade)/100):(visible?'1':'0');")
+  &&game.includes("alpha:failedTrail?.34*failFade:1")
+  &&(game.match(/const failFade=failedTrail\?rhythmFailedTrailFade\(note,songTimeMs\):1;/g)||[]).length===2
+  &&data.includes('const RHYTHM_FAILED_TRAIL_FADE_MS=300;'));
 check('見え方が変わったときだけ書き込む',
   game.includes("if(el._rhythmOpacity!==nextOpacity){el.style.opacity=nextOpacity;el._rhythmOpacity=nextOpacity;}"));
 // 比較相手はDOM(dataset)ではなく要素へ覚えた値。書き込む条件は同じで、

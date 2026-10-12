@@ -787,6 +787,17 @@ const rhythmNoteVisualType=note=>note?._rhythmOriginalType||note?.type;
 const rhythmNoteIsHold=note=>rhythmNoteVisualType(note)==='HOLD';
 // 帯を持つ(=取り損ねたとき終端まで薄く流す)のは、元が HOLD か SLIDE のノーツだけ
 const rhythmNoteHasBody=note=>rhythmNoteIsHold(note)||rhythmNoteIsSlide(note);
+// 取り損ねた HOLD / SLIDE の残り(体と終わりの棒)の濃さの倍率(1→0)。以前は終端まで薄い灰色で流し続けていたが、
+// 長いスライドだと数秒間「透明なノーツ」が流れてくるように見えた(2026-10-12 社長「途中で透明っぽいノーツが流れてくる」)。
+// 取り損ねた残りを初めて描いた時刻(曲の時刻)から RHYTHM_FAILED_TRAIL_FADE_MS で消す。見た目だけで、判定・スコア・ライフ・コンボには関わらない。
+// 時刻は演奏ごとに作り直すノーツ(makeRuntimeNotes)へ持たせる。曲の時刻が戻ったら(巻き戻し)そこから数え直す
+const RHYTHM_FAILED_TRAIL_FADE_MS=300;
+const rhythmFailedTrailFade=(note,songMs)=>{
+  if(!note)return 0;
+  const now=Number(songMs)||0;
+  if(!Number.isFinite(note._rhythmFailSeenMs)||now<note._rhythmFailSeenMs)note._rhythmFailSeenMs=now;
+  return Math.max(0,Math.min(1,1-(now-note._rhythmFailSeenMs)/RHYTHM_FAILED_TRAIL_FADE_MS));
+};
 const rhythmSlideAuthoredLane=lane=>{
   const value=Number(lane),doubled=Math.round(value*2);
   if(!Number.isFinite(value)||Math.abs(value*2-doubled)>1e-6||doubled<0||doubled>RHYTHM_SUB_LANE_COUNT-2)return null;
