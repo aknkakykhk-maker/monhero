@@ -30925,6 +30925,16 @@ const rhythmHitSparkActive=()=>rhythmHitSparkPreference()!=='off';
 // 入にすると、なめらかに変える動きだけを止める(弾む動き・色・光は今のまま)。デバッグ画面「判定の文字の大きさの変わり方(検証用)」で出し入れする。
 // 'on' = 一度で変える・'off' = 今の形・未設定 = 既定(今の形。社長が静止画を見て決める)
 const RHYTHM_JUDGMENT_SNAP_KEY='mh_rhythm_judgment_snap_v1';
+// 地上の判定の文字の置き場所の案(デバッグ専用・2026-10-12 社長「ヘルで改良した良い部分はマスター以下にも取り入れて」)。
+// HELL で空中の判定の文字を、来るノーツに重ならない所へ移した考え方を、地上の文字にも試す。保存は新しいキー mh_rhythm_judge_text_pos_proto だけ。既定は now(いまのまま)。
+//   now   … 地上の判定線の38px上(いま。叩く直前のノーツが文字の下を通る)
+//   raise … 案A 道の中ほど(判定線から演奏の場所の高さの26%上)へ上げる。そこを通るノーツは、まだ叩くまで間がある
+//   fade  … 案B 位置はいまのまま、文字を半分透かす(下を通るノーツが見える)
+//   both  … 案C A と B の両方
+// 空中のノーツがある譜面(HELL)では、空中の判定の文字とぶつからないよう、どの案でもいまの置き場所・濃さのまま。判定の仕組みは変えない(見た目だけ)
+const RHYTHM_JUDGE_TEXT_POS_LABELS=Object.freeze({now:'いま',raise:'案A 道の中ほどへ上げる',fade:'案B いまの位置で半分透かす',both:'案C 上げて透かす'});
+const RHYTHM_JUDGE_TEXT_POS={id:(()=>{try{const v=typeof localStorage!=='undefined'?localStorage.getItem('mh_rhythm_judge_text_pos_proto'):'';return v&&RHYTHM_JUDGE_TEXT_POS_LABELS[v]?v:'now';}catch(e){return 'now';}})(),
+  set(id){const v=RHYTHM_JUDGE_TEXT_POS_LABELS[id]?id:'now';this.id=v;try{if(v==='now')localStorage.removeItem('mh_rhythm_judge_text_pos_proto');else localStorage.setItem('mh_rhythm_judge_text_pos_proto',v);}catch(e){}}};
 const rhythmJudgmentSnapPreference=()=>{try{if(typeof localStorage==='undefined')return '';const v=localStorage.getItem(RHYTHM_JUDGMENT_SNAP_KEY);return v==='on'||v==='off'?v:'';}catch{return '';}};
 const rhythmJudgmentSnapSetPreference=value=>{const next=value==='on'||value==='off'?value:'';try{if(typeof localStorage!=='undefined'){if(next)localStorage.setItem(RHYTHM_JUDGMENT_SNAP_KEY,next);else localStorage.removeItem(RHYTHM_JUDGMENT_SNAP_KEY);}}catch{}return next;};
 const rhythmJudgmentSnapActive=()=>rhythmJudgmentSnapPreference()==='on';

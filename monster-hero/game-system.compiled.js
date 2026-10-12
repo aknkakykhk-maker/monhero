@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4a2d4d4ed490ceac
+// source-sha256: 281f33f84d8dc0ee
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-12 14:40";
+const BUILD_DATE = "2026-10-12 14:42";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -6423,6 +6423,15 @@ const Audio_ = (() => {
     toneLoadFailed = false;
   const buffers = new Map();
   const loadingBuffers = new Map();
+  let decodedBytes = 0,
+    decodedCount = 0;
+  const bufferBytes = buffer => {
+    try {
+      return Math.max(0, Math.floor(buffer.length * buffer.numberOfChannels * 4));
+    } catch (e) {
+      return 0;
+    }
+  };
   const SONG_BUFFER_KEEP = 4;
   const songBufferOrder = [];
   let bgmSource = null,
@@ -6742,6 +6751,8 @@ const Audio_ = (() => {
       return res.arrayBuffer();
     }).then(data => decode(ctx, data)).then(buffer => {
       buffers.set(url, buffer);
+      decodedBytes += bufferBytes(buffer);
+      decodedCount += 1;
       return buffer;
     }).finally(() => loadingBuffers.delete(url));
     loadingBuffers.set(url, request);
@@ -7320,6 +7331,10 @@ const Audio_ = (() => {
       seVolumePct,
       bufferCount: buffers.size,
       songBufferCount: songBufferOrder.length,
+      songBufferNames: songBufferOrder.map(url => String(url).split('/').pop()),
+      keptAudioMB: Math.round([...buffers.values()].reduce((sum, b) => sum + bufferBytes(b), 0) / 1048576),
+      decodedMB: Math.round(decodedBytes / 1048576),
+      decodeCount: decodedCount,
       ctxState: ctx ? ctx.state : 'none',
       sampleRate: ctx ? Math.round(ctx.sampleRate) : 0,
       stalled: ctx && !pageHidden ? ctxClockStalled() : false,
@@ -31464,6 +31479,30 @@ function RhythmHellSkyHitSwitch() {
     className: "contents"
   }, btn(text === v, l, () => pickText(v), v)))));
 }
+function RhythmJudgeTextPosSwitch() {
+  const [value, setValue] = useState(() => RHYTHM_JUDGE_TEXT_POS.id);
+  const pick = v => {
+    RHYTHM_JUDGE_TEXT_POS.set(v);
+    setValue(RHYTHM_JUDGE_TEXT_POS.id);
+  };
+  return React.createElement("section", {
+    "data-rhythm-judge-text-pos-switch": true,
+    className: "mb-3 rounded-2xl border border-cyan-400/50 bg-cyan-950/25 p-3"
+  }, React.createElement("h3", {
+    className: "text-xs font-black text-cyan-100"
+  }, "地上の判定の文字の置き場所(試作・見比べ用)"), React.createElement("p", {
+    className: "mt-1 text-[10px] font-bold text-cyan-200/80"
+  }, "叩く直前のノーツが判定の文字の下を通らないようにする案です。EASY〜MASTER に効きます(空中のある譜面ではいまのまま)。判定は変わりません。演奏を始め直すと効きます。"), React.createElement("div", {
+    className: "mt-2 grid grid-cols-2 gap-2"
+  }, Object.keys(RHYTHM_JUDGE_TEXT_POS_LABELS).map(v => React.createElement("button", {
+    key: v,
+    type: "button",
+    "data-rhythm-judge-text-pos-pick": v,
+    "aria-pressed": value === v,
+    onClick: () => pick(v),
+    className: `min-h-[44px] rounded-xl text-[11px] font-black ${value === v ? 'bg-cyan-700 text-white ring-2 ring-cyan-200' : 'bg-slate-800 text-slate-300'}`
+  }, RHYTHM_JUDGE_TEXT_POS_LABELS[v]))));
+}
 function RhythmHellPreviewSwitch({
   onChange
 }) {
@@ -32518,6 +32557,7 @@ const RhythmTapTest = ({
     liveTouchSubLanesRef = useRef([]),
     liveTouchSkySubLanesRef = useRef([]);
   const [judgmentSnap] = useState(() => rhythmJudgmentSnapActive());
+  const [judgeTextPos] = useState(() => RHYTHM_JUDGE_TEXT_POS.id);
   const tutorialBannerRef = useRef(null),
     tutorialStepRef = useRef(null);
   const calibrationBannerRef = useRef(null),
@@ -36887,9 +36927,13 @@ const RhythmTapTest = ({
     }
   }, resumeCountdown ? 'まもなく 再開します' : 'まもなく はじまります')), React.createElement("div", {
     "data-rhythm-judgment-display": true,
+    "data-rhythm-judge-text-pos": !skyChart && judgeTextPos !== 'now' ? judgeTextPos : undefined,
     className: "pointer-events-none absolute left-1/2 z-10 w-[88%] -translate-x-1/2 text-center",
     style: {
-      bottom: 'calc(var(--mh-judgment-line-bottom,12%) + 38px)'
+      bottom: !skyChart && (judgeTextPos === 'raise' || judgeTextPos === 'both') ? 'calc(var(--mh-judgment-line-bottom,12%) + 26%)' : 'calc(var(--mh-judgment-line-bottom,12%) + 38px)',
+      ...(!skyChart && (judgeTextPos === 'fade' || judgeTextPos === 'both') ? {
+        opacity: .55
+      } : null)
     }
   }, settings.judgmentFx === true && React.createElement("i", {
     ref: judgmentBurstRef,
@@ -46802,6 +46846,9 @@ const normalizeSessionMarker = value => {
     screen: typeof value.screen === 'string' ? value.screen.slice(0, 40) : '',
     audioBuffers: reloadNum(value.audioBuffers),
     heapMB: reloadNum(value.heapMB),
+    audioMB: reloadNum(value.audioMB),
+    decodedMB: reloadNum(value.decodedMB),
+    decodeCount: reloadNum(value.decodeCount),
     nav: typeof value.nav === 'string' ? value.nav.slice(0, 20) : ''
   };
 };
@@ -46817,6 +46864,9 @@ const normalizeReloadLog = value => (Array.isArray(value) ? value : []).map(entr
     screen: typeof entry.screen === 'string' ? entry.screen.slice(0, 40) : '',
     audioBuffers: reloadNum(entry.audioBuffers),
     heapMB: reloadNum(entry.heapMB),
+    audioMB: reloadNum(entry.audioMB),
+    decodedMB: reloadNum(entry.decodedMB),
+    decodeCount: reloadNum(entry.decodeCount),
     nav: typeof entry.nav === 'string' ? entry.nav.slice(0, 20) : ''
   };
 }).filter(Boolean).slice(0, RELOAD_LOG_LIMIT);
@@ -46832,6 +46882,9 @@ const buildReloadLogEntry = (previous, now, nav = '') => {
     screen: prev.screen,
     audioBuffers: prev.audioBuffers,
     heapMB: prev.heapMB,
+    audioMB: prev.audioMB,
+    decodedMB: prev.decodedMB,
+    decodeCount: prev.decodeCount,
     nav: String(nav || '').slice(0, 20)
   };
 };
@@ -46861,7 +46914,7 @@ const describeReloadLogEntry = entry => {
     minute: '2-digit'
   });
   const head = entry.kind === 'background' ? '裏に回ったあと読み込み直された' : '遊んでいる最中に読み込み直された';
-  const parts = [`${entry.minutes}分遊んだあと`, entry.screen ? `画面 ${entry.screen}` : '', Number.isFinite(entry.audioBuffers) ? `音のデータ ${entry.audioBuffers}本` : '', Number.isFinite(entry.heapMB) ? `メモリ ${entry.heapMB}MB` : ''].filter(Boolean);
+  const parts = [`${entry.minutes}分遊んだあと`, entry.screen ? `画面 ${entry.screen}` : '', Number.isFinite(entry.audioBuffers) ? `音のデータ ${entry.audioBuffers}本${Number.isFinite(entry.audioMB) ? `(${entry.audioMB}MB)` : ''}` : '', Number.isFinite(entry.decodedMB) ? `音を解いた合計 ${entry.decodedMB}MB・${Number.isFinite(entry.decodeCount) ? entry.decodeCount : '?'}回` : '', Number.isFinite(entry.heapMB) ? `メモリ ${entry.heapMB}MB` : ''].filter(Boolean);
   return `${when} 起動 — ${head}(${parts.join('・')})`;
 };
 function ReloadLogPanel() {
@@ -79136,6 +79189,9 @@ function MonsterHeroGame() {
       screen: '',
       audioBuffers: null,
       heapMB: null,
+      audioMB: null,
+      decodedMB: null,
+      decodeCount: null,
       nav
     };
     const write = state => {
@@ -79145,6 +79201,9 @@ function MonsterHeroGame() {
       try {
         const d = Audio_.diagnose();
         marker.audioBuffers = Number.isFinite(d && d.bufferCount) ? d.bufferCount : null;
+        marker.audioMB = Number.isFinite(d && d.keptAudioMB) ? d.keptAudioMB : null;
+        marker.decodedMB = Number.isFinite(d && d.decodedMB) ? d.decodedMB : null;
+        marker.decodeCount = Number.isFinite(d && d.decodeCount) ? d.decodeCount : null;
       } catch (e) {}
       try {
         const m = window.performance && window.performance.memory;
@@ -99176,7 +99235,7 @@ function MonsterHeroGame() {
       className: "mb-3 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl border border-cyan-300/70 bg-cyan-900/60 px-3 text-sm font-black text-cyan-50"
     }, "🎵 全解放の曲えらびを開く", React.createElement("span", {
       className: "rounded-full bg-slate-950/70 px-2 py-0.5 text-[10px] text-amber-200"
-    }, "記録しない")), React.createElement(RhythmSkyLiftSwitch, null), React.createElement(RhythmSkyReachAdaptSwitch, null), React.createElement(RhythmSkyBoxLookSwitch, null), React.createElement(RhythmSkyLaneLookSwitch, null), React.createElement(RhythmHellVisSwitch, null), React.createElement(RhythmHellSkyHitSwitch, null), React.createElement("section", {
+    }, "記録しない")), React.createElement(RhythmSkyLiftSwitch, null), React.createElement(RhythmSkyReachAdaptSwitch, null), React.createElement(RhythmSkyBoxLookSwitch, null), React.createElement(RhythmSkyLaneLookSwitch, null), React.createElement(RhythmHellVisSwitch, null), React.createElement(RhythmHellSkyHitSwitch, null), React.createElement(RhythmJudgeTextPosSwitch, null), React.createElement("section", {
       "data-debug-rhythm-hell-story": true,
       className: "mb-3 rounded-2xl border border-pink-400/50 bg-pink-950/25 p-3"
     }, React.createElement("h3", {

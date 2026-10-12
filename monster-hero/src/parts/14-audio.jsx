@@ -7,6 +7,10 @@ const Audio_ = (() => {
   let ctxTimeMark = null, ctxRebuildCount = 0, toneLoadFailed = false;
   const buffers = new Map();
   const loadingBuffers = new Map();
+  // 解いた音の大きさの数え(読み込み直しの記録に残す。メモリ不足の原因を探る手がかり)。
+  //   decodedBytes … 起動してから解いた音の合計(手放して読み直した分も足していく) / decodedCount … 解いた回数
+  let decodedBytes = 0, decodedCount = 0;
+  const bufferBytes = (buffer) => { try { return Math.max(0, Math.floor(buffer.length * buffer.numberOfChannels * 4)); } catch (e) { return 0; } };
   // ★曲えらびの試聴と演奏で読んだ曲の音は、直近の数曲ぶんだけ持っておく(2026-09-27 の点検で見つけた)。
   //   解いた音は1曲で数十〜百MBあり、以前は一度読んだら二度と捨てなかったので、試聴しながら
   //   何曲も眺めるだけで数百MBに増え、iPhone ではメモリ不足で落ちる・発熱の原因になり得た。
@@ -273,7 +277,7 @@ const Audio_ = (() => {
     const request = fetch(audioUrlWithKey(url), { cache: 'force-cache' }).then((res) => {
       if (!res.ok) throw new Error(`audio fetch failed: ${res.status}`);
       return res.arrayBuffer();
-    }).then((data) => decode(ctx, data)).then((buffer) => { buffers.set(url, buffer); return buffer; })
+    }).then((data) => decode(ctx, data)).then((buffer) => { buffers.set(url, buffer); decodedBytes += bufferBytes(buffer); decodedCount += 1; return buffer; })
       .finally(() => loadingBuffers.delete(url));
     loadingBuffers.set(url, request);
     return request;
@@ -608,6 +612,11 @@ const Audio_ = (() => {
       bgmVolumePct, seVolumePct,
       // 持っている解いた音の数と、そのうち試聴・演奏で読んだ曲の数(直近 SONG_BUFFER_KEEP 曲まで)
       bufferCount: buffers.size, songBufferCount: songBufferOrder.length,
+      // 持っている曲の名前(古い順)。同じ曲を手放しては読み直していないかを調べるための読み取り
+      songBufferNames: songBufferOrder.map(url => String(url).split('/').pop()),
+      // 持っている音の大きさ(MB)と、起動してから解いた合計(MB)・回数。同じ曲を手放しては読み直すと、後ろの2つだけが増え続ける
+      keptAudioMB: Math.round([...buffers.values()].reduce((sum, b) => sum + bufferBytes(b), 0) / 1048576),
+      decodedMB: Math.round(decodedBytes / 1048576), decodeCount: decodedCount,
       ctxState: ctx ? ctx.state : 'none',
       sampleRate: ctx ? Math.round(ctx.sampleRate) : 0,
       // getAudioCtx()を呼ばない(見ただけで出口を作らない)。作る前は判定しようがないので false。
