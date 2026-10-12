@@ -220,15 +220,7 @@ node tools/build.js --check
 
 `mode/rhythm-chart-focus.js` は、主役の追跡(Rev.9〜)。音の層の解析から小節ごとに「ドラム / 歌・主旋律 / 混ざり」のどれを追うかを決め(切り替えにコストを付けた動的計画法)、追っている層に合う打点を拾う優先度で後押しする。`node mode/rhythm-chart-rev9-check.js` が、決め方・後押しの向き・層の解析が無い曲では Rev.8 と同じになること・狙いどおりに選び直していることを見張る。
 
-`node mode/rhythm-chart-rev10-check.js` は、Rev.10(動きの使い回しを避ける)を見張る。実際に Rev.9 と Rev.10 で作り、リズムの違う所で同じ動きの並びが出る割合(気持ちよさの物差しの単調さ)がはっきり減ること・ノーツの数がほとんど変わらないこと・押せない配置を作らないこと・写しの数を減らさないことを確かめる。
-
-`node mode/rhythm-chart-rev11-check.js` は、Rev.11(繰り返すたびの発展とラスサビ・主役に合わせた種類)を見張る。ラスサビのある dullahan を Rev.10 と Rev.11 で作り、発展の回の小節に元の小節には無い FLICK・同時押しが足されること、新しく FLICK になった音がどれも FLICK にふさわしい音であること、写し率を大きく下げないこと、押せない配置を作らないことを確かめる。
-
-`node mode/rhythm-chart-rev13-check.js` は、Rev.13(旋律の有無)を見張る。旋律の音高がほとんど取れない小節では主役の追跡が「メロディを追う」を選ばないこと、旋律の有無を渡さなければ Rev.12 までと同じ決め方であること、実際に作るとメロディを追う小節が旋律の取れる小節へ絞られることを確かめる。
-
-`node mode/rhythm-chart-rev14-check.js` は、Rev.14(手と種類の仕上げ)を見張る。手のモデルの SLIDE の曲線と親指の左右が切り替えたときだけ効くこと、左右を区別すると交差する割り振りが減ること、自動修正が曲線の途中も見ること、終点フリックが旋律の息継ぎに付き HOLD の太さの形が伴奏の変化と合うこと、候補が HARD でもよく分かれることを確かめる。
-
-`node mode/rhythm-chart-rev15-check.js` は、Rev.15(旋律の上下に沿って動かす)を見張る。2曲×5難易度を Rev.14 と Rev.15 で作り、旋律と逆向きの動きが半分以下になること、押せない配置が無いこと、ノーツ数が1%以内で変わらないことを確かめる。
+`node mode/rhythm-chart-generate-latest-check.js` は、譜面の作り方が最新リビジョンだけであることを見張る(2026-10-12)。最新以外の `--chart-revision` で止まる・作った譜面の番号が最新・どの難易度もモンスターノーツ4個。前のリビジョンごとの検査(rev8〜rev25・rev29)は古い作り方と一緒に外した(git の記録 c2094ad53 にある)。本文: `docs/rules/CHART_ENGINE.md`
 
 `node mode/rhythm-play-log.js --fetch --report --learn --write` は、モンヒロビートの遊んだ記録(サーバーの rhythm_play_logs)を読み、譜面ごとの押す時刻のばらつき・ミス・低音の聞こえ方を測って、生成器の調整値(`authoring/chart-play-tuning.json`)を学ぶ(2026-09-28・MHB CHART ENGINE Rev.17)。`--import <file>` で JSON / JSONL からも取り込める。仕組みは `docs/spec/RHYTHM_PLAY_LOG.md`。`mode/rhythm-chart-low-lag.js` は低音の打点の遅れを測り、`mode/rhythm-chart-play-tuning.js` はリビジョンごとの調整値を読む。`node mode/rhythm-play-log-check.js` が、ゲームの送り方・SQL・学び方(作り物の記録で)・調整値0の Rev.17 が Rev.16 と同じ譜面になることを見張る。
 
@@ -237,10 +229,6 @@ node tools/build.js --check
 `node mode/rhythm-touch-diag.js --fetch --report` は、モンヒロビートのタッチの診断(サーバーの rhythm_touch_diagnostics・2026-09-30)を読み、iPhone と Android を比べて、指がどの段階で消えているか(ブラウザがタッチを落とした・ブラウザより手前で消えた・同時5本・取り消し・処理の遅れ・道の外)を判定する。つながらないときは `--import <file>`。見張りは `mode/rhythm-touch-diag-check.js`(SQLを手元の PostgreSQL 16 で流す)と `mode/rhythm-touch-bridge-check.js`(実際に曲を流し、タッチを落とした状況を作って取り戻しと二重防止を見る)。仕組みは `docs/spec/RHYTHM_TOUCH_DIAG.md`。
 
 `node mode/rhythm-virtual-player.js --track <曲id> [--difficulty MASTER] [--runs 200]` は、仮想プレイヤーに作者用の譜面を遊ばせ、ミスの見込み・押す時刻のばらつき・いちばんつまずく区間を出す(2026-09-28・Rev.18 の区間の差し替えも使う)。`node mode/rhythm-virtual-player-check.js` が見張る。`mode/rhythm-chart-repeats.js` は4つの手がかりの多数決で繰り返しを見つけ(Rev.18)、`node mode/rhythm-chart-rev18-check.js` が見張る。写した小節のリズムをそろえる Rev.19 は `node mode/rhythm-chart-rev19-check.js`、歯ごたえをテンポの数字から切り離す Rev.20 は `node mode/rhythm-chart-rev20-check.js` が見張る。`node mode/rhythm-chart-tempo-warp.js` は、テンポの揺れ(Rev.21)に合わせる曲と揺れの幅を一覧する(なめらかに揺れ、半分の区間で確かめた曲だけ。`node mode/rhythm-chart-rev21-check.js` が見張る。Rev.23 の読み方 v2 は `node mode/rhythm-chart-rev23-check.js`)。`node mode/rhythm-chart-ending.js` は、曲の終わりの余韻(Rev.22)で締める曲と最後の一発を一覧する(`node mode/rhythm-chart-rev22-check.js` が見張る)。`node mode/rhythm-check-spots.js --all --write` は、曲ごとの「ここを確かめて」リスト(`docs/spec/RHYTHM_CHECK_SPOTS.md`)を作る(2026-09-29・気になり点・仮想プレイヤーのつまずき・弱い音・音から離れたノーツ・急に詰まる所・出だしと終わりを秒数付きで)。`node mode/rhythm-robot-play.js --all --parallel 3`(`python3 tools/serve.py` を立てた状態で)は、ロボットに本物のゲームで全曲・全難易度を通しで遊ばせ、ノーツの時刻ぴったりのタッチで MARVELOUS にならないノーツを探す。`node mode/rhythm-visual-sync-check.js`(`python3 tools/serve.py` を立てた状態で)は、本物のゲームをブラウザで遊ばせ、縦・端末ごと横・横画面ボタンで回す、の3つで、ノーツが判定ラインに見える時刻と曲の時刻のずれを1コマずつ測る(2026-09-29・どれも中央 ±1ms)。
-
-`node mode/rhythm-chart-rev24-check.js` は、MHB CHART ENGINE Rev.24(大きな一発を左右対称の同時フリックに・2026-09-29)を見張る。Dullahan を Rev.23 と Rev.24 で作り、EASY〜HARD が同じノーツであること、EXPERT・MASTER に同じ時刻・道の真ん中をはさんで左右対称の FLICK 2本の組があること(MASTER は外向きに払う)、組の前後が空いていること、向きの付け直しと自動修正(step7)のあとも位置と向きが変わらないことを確かめる。
-
-`node mode/rhythm-chart-rev25-check.js` は、MHB CHART ENGINE Rev.25(サビ前後の密度を保つ・長いノーツを増やす・2026-09-30・CHUNITHM の譜面との比べ合わせから)を見張る。Rising Hope を Rev.24 と Rev.25 で作り、曲全体のノーツ数が ±3% 以内のまま、MASTER のサビに入る前後(50〜60秒)と終盤(70〜80秒)の密度が上がること、EXPERT・MASTER の HOLD・SLIDE が増えること(ベースの伸びも材料にする)、自動修正(step7)のあとも同じ時刻・同じ場所に重なるノーツが無いことを確かめる。
 
 `node mode/rhythm-chart-rev26-check.js` は、MHB CHART ENGINE Rev.26(曲のつなぎ目の段差・2026-10-03)と、激しさの中間 `strong` を見張る。音源の一覧の `splices` を書いた曲だけつなぎ目から先に一定のずれを返すこと、ゲームの拍の表(`RHYTHM_SONG_BEATS` の4つ目)が同じ値であること、拍の線の計算がつなぎ目の前後で正しいこと、譜面のノーツがつなぎ目の前は格子・後ろは格子+ずれに乗ること、`strong` が `extreme` の倍率の平方根で作られていることを確かめる。
 

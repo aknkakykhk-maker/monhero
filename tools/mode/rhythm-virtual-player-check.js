@@ -3,7 +3,7 @@
 //   ・同じ譜面なら毎回同じ結果(乱数は曲と難易度から決めた種)
 //   ・難しい譜面ほどミスが多く、押す時刻がばらつく。詰まった譜面は、まばらな譜面よりミスが多い
 //   ・手のシミュレートが「押せない」と言うノーツは、ミスの見込みが上がる
-//   ・区間の差し替えは Rev.18 からだけ仮想プレイヤーを使う(Rev.17 までは今までどおり)
+//   ・区間の差し替えは仮想プレイヤーを使う
 'use strict';
 const fs=require('fs'),path=require('path');
 const {playChart,noteModel}=require('./rhythm-virtual-player.js');
@@ -41,7 +41,8 @@ const easy=read('freedom-dive-v3-fixed-easy.json'),master=read('freedom-dive-v3-
 }
 {
   const splice=fs.readFileSync(path.join(__dirname,'rhythm-chart-v3-splice.js'),'utf8');
-  ok('区間の差し替えは Rev.18 からだけ仮想プレイヤーを使う',/const VIRTUAL_SPLICE_REVISION=18,/.test(splice)&&/const virtualParams=revision>=VIRTUAL_SPLICE_REVISION\?/.test(splice)&&/if\(virtualParams\)\{/.test(splice));
+  // 2026-10-12 から最新リビジョンだけを作るので、区間の差し替えはいつも仮想プレイヤーを使う(倍率は最新リビジョンの遊んだ記録の調整値)
+  ok('区間の差し替えは仮想プレイヤーを使う(倍率は最新リビジョンの調整値)',/const virtualParams=\(\(\)=>\{const t=playTuningForRevision\(CHART_REVISION_LATEST\);/.test(splice)&&/if\(virtualParams\)\{/.test(splice));
 }
 console.log(failed?`\n✗ ${failed}件NG`:'\n✓ 仮想プレイヤーは期待どおり');
 process.exit(failed?1:0);

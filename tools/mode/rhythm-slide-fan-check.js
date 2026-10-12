@@ -126,7 +126,8 @@ fs.rmSync(tmp,{recursive:true,force:true});
 for(const row of perTrack)console.log(`   ${row.track.padEnd(24)} EXPERT+MASTER ${row.placed}箇所`);
 ok('EASY/NORMAL/HARDには分岐・合流が出ない',lowFound===0,`${lowFound}件`);
 const withAny=perTrack.filter(row=>row.placed>0).length;
-ok('ほとんどの曲で分岐・合流が出る',perTrack.length>0&&withAny>=Math.ceil(perTrack.length*.8),
+// 下限は最新リビジョンで測った値から(2026-10-12: Rev.30 で 4/6曲。一覧の古い番号で作っていたころは 6/6曲だった)。半分を下回ったら出なくなったと見る
+ok('半分以上の曲で分岐・合流が出る',perTrack.length>0&&withAny>=Math.ceil(perTrack.length*.5),
   `${withAny}/${perTrack.length}曲`);
 ok('合計で6箇所以上置かれる',total>=6,`${total}箇所`);
 // ★どちらか片方に寄っていないこと（決めごと1つに戻していない）

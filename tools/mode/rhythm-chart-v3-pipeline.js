@@ -28,7 +28,6 @@ const path=require('path');
 const {spawnSync}=require('child_process');
 const {criticalWarnings,formatWarnings}=require('./rhythm-audio-warnings.js');
 const {SLIDE_EASE_CODES,FLICK_DIR_CODES}=require('./rhythm-runtime-notes.js');
-const {chartRevisionOf}=require('./rhythm-chart-v3-revision.js');
 
 const ROOT=path.resolve(__dirname,'..','..');
 const arg=(name,fallback=null)=>{const i=process.argv.indexOf(name);return i>=0&&i+1<process.argv.length?process.argv[i+1]:fallback;};
@@ -70,9 +69,7 @@ else console.log(`✓ 音源解析は既にある（やり直すなら --reanaly
 // Rev.9〜: 主役の追跡が使う音の層の解析(<曲>-v3-layers.json)。無い・いまの解析ファイルと合わないときだけ作る
 //   (既存の解析ファイルは読むだけ。層の解析は別のファイル)
 {
-  const registryFile=path.join(ROOT,'tools/mode/authoring/rhythm-song-registry.json');
-  const registry=fs.existsSync(registryFile)?JSON.parse(fs.readFileSync(registryFile,'utf8')):{songs:{}};
-  if(chartRevisionOf((registry.songs||{})[trackId])>=9){
+  {
     const layersFile=path.join(ROOT,`tools/mode/authoring/${dashed}-v3-layers.json`);
     const audioSha=fs.existsSync(audioFile)?require('crypto').createHash('sha256').update(fs.readFileSync(audioFile)).digest('hex'):null;
     let fresh=false;
