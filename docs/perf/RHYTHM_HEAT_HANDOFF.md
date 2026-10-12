@@ -56,3 +56,46 @@
   - 差はすべて「(program)」(JS の外。この入れ物では GPU の塗りを CPU で真似る分を含む)に出る。main 35.7〜38.6 / 新しい版 41.1〜45.4ms
   - つまり「入」で重くなるのは形を作る計算ではなく、**柱を塗る面積(画素の数)**。塗り側の計算を増やした新しい版は、この入れ物ではかえって重い → 取り下げ
 - この入れ物の (program) は本物の GPU の重さとは違う。実機での差は、手ごたえ A を入にした端末の stats.frame(early/late)で見るのが確か
+
+### 実機で入/切を比べる(2026-10-12 社長「実機で測ってから決める」・読むのは窓口)
+
+- 記録が送られるのは**公開曲の HELL**(先行で開く印を入れたとき。`song_id` は `sheriruth` / `grievous_lady`、`difficulty` は `HELL`)だけ。
+  試作の枠(`sheriruth_hell_debug` など)は送る曲の一覧(RHYTHM_DEMO_SONG_IDS)に無いので、**試作の枠で遊んだ分は記録に残らない**
+- 入/切は `stats.frame.skyHit`(`on` / `off`)に残る(この日のビルドから。それより前の行は空)
+- 比べる SELECT(読むだけ):
+
+```sql
+select platform, song_id, stats->'frame'->>'draw' as draw, coalesce(stats->'frame'->>'skyHit','(なし)') as sky_hit,
+       count(*) as plays,
+       round(avg((stats->'frame'->>'avg')::numeric),1) as frame_avg,
+       round(avg((stats->'frame'->>'p95')::numeric),1) as frame_p95,
+       round(avg((stats->'frame'->>'tickAvg')::numeric),2) as tick_avg,
+       round(avg((stats->'frame'->'early'->>'avg')::numeric),1) as early_avg,
+       round(avg((stats->'frame'->'late'->>'avg')::numeric),1) as late_avg,
+       round(sum((stats->'frame'->>'over34')::numeric)/nullif(sum((stats->'frame'->>'n')::numeric),0)*100,2) as over34_pct
+from public.rhythm_touch_diagnostics
+where difficulty = 'HELL' and stats ? 'frame' and created_at > '2026-10-12'
+group by 1,2,3,4 order by 2,3,4;
+```
+
+- 見方: 同じ曲・同じ `draw` の行で、`sky_hit` が `on` と `off` を並べる。
+  - `frame_avg`(1コマの平均)と `over34_pct`(33.3ms を超えたコマの割合)が、入で目立って増えていなければ、入にしても重さは気にならない
+  - 1回ずつは揺れる(ボットでも ±3ms)。入/切それぞれ **3回以上**そろってから比べる
+  - 熱の影響は `late_avg`(2分を過ぎてから)。入/切を続けて遊ぶと後の回ほど熱くなるので、交互に遊ぶのがよい
+
+## 判定の文字の組み直しを入れ物の中だけにする試し(2026-10-12・ドライバー・取り下げ)
+
+- 試したこと: 判定の文字の入れ物(`data-rhythm-judgment-display`)の大きさを演奏の最初に1回測って固定し、CSS の `contain: size layout style` を付ける(デバッグの切り替え・既定は切)
+- 分かったこと: 判定の文字(`data-rhythm-judgment-text` の `<b>`)の**高さそのものが演奏中に 26→34px と毎コマ変わる**(Sheriruth MASTER 40〜46秒を 50ms ごとに記録。
+  弾む動き `mhRhythmJudgmentPopVivid` は transform だけなので、高さを動かしているのは別の指定。まだ突き止めていない)。
+  入れ物の高さを固定すると、文字と FAST/SLOW の位置が数画素ずれる(画素で突き合わせて確認)→ 見た目が変わるので取り下げ
+- `rhythmRestartAnimations` はすでにレイアウトを読まない形(名前を交互に切り替える)になっている。判定ごとの組み直しは、文字・高さが変わること自体から来る
+- 次に見るなら: 判定の文字の高さを毎コマ動かしている指定を突き止める(それが font-size や line-height の動きなら、transform へ置き換えると組み直しが消えるが、文字の描かれ方がわずかに変わるので社長の判断が要る)
+- この入れ物の1コマの時間は、同じ条件でも 22〜46ms と揺れて比べにならなかった(全体の重さの比べは実機の記録で)
+
+## 判定の文字の大きさを一度で変える切り替え(2026-10-12・ドライバー・既定は今の形)
+
+- 判定の文字の高さを毎コマ動かしていたのは `index.html` の `transition:font-size .12s`(判定ごとに 24〜34px と大きさが違い、変わるたびに 0.12秒かけて大きさを変える。そのあいだ毎コマ組み直し)
+- デバッグの切り替え「判定の文字の大きさの変わり方(検証用)」(`mh_rhythm_judgment_snap_v1`)を「一度で」にすると、演奏画面に `data-rhythm-judgment-snap="1"` が付き、その transition だけを止める。弾む動き・色・光は今のまま
+- 静止画: `docs/perf/judgsnap/2026-10-12-judgsnap-pop.jpg`(判定の演出あり)・`-nopop.jpg`(なし)。GREAT→MARVELOUS に変わって 0・40・80・120ms の4段、左が今の形・右が一度で。120ms では画素まで同じ
+- 既定にするかは社長が静止画を見て決める。重さの効き目は実機の記録(10/14 の比べ)で

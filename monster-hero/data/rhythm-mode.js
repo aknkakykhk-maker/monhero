@@ -30920,6 +30920,14 @@ const RHYTHM_HIT_SPARK_KEY='mh_rhythm_hit_spark_v1';
 const rhythmHitSparkPreference=()=>{try{if(typeof localStorage==='undefined')return '';const v=localStorage.getItem(RHYTHM_HIT_SPARK_KEY);return v==='on'||v==='off'?v:'';}catch{return '';}};
 const rhythmHitSparkSetPreference=value=>{const next=value==='on'||value==='off'?value:'';try{if(typeof localStorage!=='undefined'){if(next)localStorage.setItem(RHYTHM_HIT_SPARK_KEY,next);else localStorage.removeItem(RHYTHM_HIT_SPARK_KEY);}}catch{}return next;};
 const rhythmHitSparkActive=()=>rhythmHitSparkPreference()!=='off';
+// 判定の文字の大きさを、判定が変わったら一度で変える(2026-10-12・発熱の手当て ④)。
+// 今は判定ごとの文字の大きさ(24〜34px)を 0.12秒かけてなめらかに変えていて(index.html の transition:font-size)、そのあいだ毎コマ画面の組み直しが起きる。
+// 入にすると、なめらかに変える動きだけを止める(弾む動き・色・光は今のまま)。デバッグ画面「判定の文字の大きさの変わり方(検証用)」で出し入れする。
+// 'on' = 一度で変える・'off' = 今の形・未設定 = 既定(今の形。社長が静止画を見て決める)
+const RHYTHM_JUDGMENT_SNAP_KEY='mh_rhythm_judgment_snap_v1';
+const rhythmJudgmentSnapPreference=()=>{try{if(typeof localStorage==='undefined')return '';const v=localStorage.getItem(RHYTHM_JUDGMENT_SNAP_KEY);return v==='on'||v==='off'?v:'';}catch{return '';}};
+const rhythmJudgmentSnapSetPreference=value=>{const next=value==='on'||value==='off'?value:'';try{if(typeof localStorage!=='undefined'){if(next)localStorage.setItem(RHYTHM_JUDGMENT_SNAP_KEY,next);else localStorage.removeItem(RHYTHM_JUDGMENT_SNAP_KEY);}}catch{}return next;};
+const rhythmJudgmentSnapActive=()=>rhythmJudgmentSnapPreference()==='on';
 const RHYTHM_PREPARE_KEY='mh_rhythm_prepare_v1';
 const rhythmPreparePreference=()=>{try{if(typeof localStorage==='undefined')return '';const v=localStorage.getItem(RHYTHM_PREPARE_KEY);return v==='on'||v==='off'?v:'';}catch{return '';}};
 const rhythmPrepareSetPreference=value=>{const next=value==='on'||value==='off'?value:'';try{if(typeof localStorage!=='undefined'){if(next)localStorage.setItem(RHYTHM_PREPARE_KEY,next);else localStorage.removeItem(RHYTHM_PREPARE_KEY);}}catch{}return next;};
