@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7e010ecdf8c306a5
+// source-sha256: d28b282b929c003d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-12 13:17";
+const BUILD_DATE = "2026-10-12 13:42";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -32447,6 +32447,7 @@ const RhythmTapTest = ({
     glowNodesRef = useRef(null),
     liveTouchSubLanesRef = useRef([]),
     liveTouchSkySubLanesRef = useRef([]);
+  const [judgmentSnap] = useState(() => rhythmJudgmentSnapActive());
   const tutorialBannerRef = useRef(null),
     tutorialStepRef = useRef(null);
   const calibrationBannerRef = useRef(null),
@@ -36622,6 +36623,7 @@ const RhythmTapTest = ({
   }, "DOWN")), React.createElement("div", {
     ref: playAreaRef,
     "data-rhythm-play-area": true,
+    "data-rhythm-judgment-snap": judgmentSnap ? '1' : undefined,
     "data-rhythm-judgment-fx": settings.judgmentFx === true && !settings.lightweightMode && settings.effectAmount !== 'MINIMAL' ? '1' : undefined,
     "data-rhythm-counting": countdownStep !== null ? '1' : undefined,
     "data-rhythm-strip": RHYTHM_STRIP.value || undefined,
@@ -74718,6 +74720,7 @@ function MonsterHeroGame() {
   const [rhythmPreparePref, setRhythmPreparePref] = useState(() => rhythmPreparePreference());
   const [rhythmCanvasHitsPref, setRhythmCanvasHitsPref] = useState(() => rhythmCanvasHitsPreference());
   const [rhythmHitSparkPref, setRhythmHitSparkPref] = useState(() => rhythmHitSparkPreference());
+  const [rhythmJudgmentSnapPref, setRhythmJudgmentSnapPref] = useState(() => rhythmJudgmentSnapPreference());
   const [rhythmReleaseAgeWide, setRhythmReleaseAgeWide] = useState(() => rhythmTouchFixOn('releaseAgeWide'));
   const [rhythmStageGlPref, setRhythmStageGlPref] = useState(() => rhythmStageGlPreference());
   const [rhythmChartToolsOpened, setRhythmChartToolsOpened] = useState(false);
@@ -98864,6 +98867,22 @@ function MonsterHeroGame() {
       "aria-pressed": rhythmHitSparkPref === value,
       onClick: () => setRhythmHitSparkPref(rhythmHitSparkSetPreference(value)),
       className: `min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmHitSparkPref === value ? 'bg-cyan-400 text-slate-900' : 'border border-white/20 bg-slate-900 text-slate-200'}`
+    }, label)))), React.createElement("section", {
+      "data-rhythm-judgment-snap-panel": true,
+      className: "mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"
+    }, React.createElement("h3", {
+      className: "text-xs font-black text-cyan-200"
+    }, "判定の文字の大きさの変わり方（検証用）"), React.createElement("p", {
+      className: "mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80"
+    }, "判定の文字（PERFECT など）は判定ごとに大きさが違い、今は 0.12秒かけてなめらかに大きさを変えています（そのあいだ毎コマ画面の組み直しが起きます）。「一度で」は大きさをすぐに変えます。弾む動き・色・光は変わりません。次の演奏から効きます。"), React.createElement("div", {
+      className: "mt-2 flex gap-2"
+    }, [['', '既定（なめらかに）'], ['on', '一度で'], ['off', 'なめらかに']].map(([value, label]) => React.createElement("button", {
+      key: value || 'default',
+      type: "button",
+      "data-rhythm-judgment-snap-pref": value || 'default',
+      "aria-pressed": rhythmJudgmentSnapPref === value,
+      onClick: () => setRhythmJudgmentSnapPref(rhythmJudgmentSnapSetPreference(value)),
+      className: `min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmJudgmentSnapPref === value ? 'bg-cyan-400 text-slate-900' : 'border border-white/20 bg-slate-900 text-slate-200'}`
     }, label)))), React.createElement("section", {
       "data-rhythm-canvas-hits-panel": true,
       className: "mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"
