@@ -23,7 +23,7 @@
 // ・領域の中身はできるだけ「探して決める」。フォルダの *-check.js を集め、ci は yml を読む。
 //   一覧を手で写すと、検査を足したときにここへ書き忘れて「回っているつもり」になる。
 // ・並列にはしない。実ブラウザ検査が固定ポート(8899 / 8977 など)を使うため、ぶつかる。
-// ・playwright が入っていない環境では、それを要る検査を SKIP として数える(NG にはしない)。
+// ・playwright が入っていない環境では、それを要る検査を SKIP として数える(NG にはしない)。react・canvas も同じ。
 // ・既存の GitHub Actions は触らない。CI に何を足すかは、この結果(所要時間)を見て別途決める。
 const fs = require('fs');
 const path = require('path');
@@ -329,6 +329,8 @@ function scriptMeta(command) {
     // 自分で serve.py や http.createServer を立てる検査。共有の配信と同じポートを取り合うので、その間は共有側を止める
     ownServer: /spawn(?:Sync)?\([^\n]*(?:serve\.py|python)|createServer\(/.test(src),
     needsPlaywright: /require\(['"]playwright['"]\)/.test(src),
+    // react で画面を組み立てて確かめる検査。CI は依存を --omit=optional で入れるので react が無い(2026-10-12)
+    needsReact: /require\(['"]react['"]\)/.test(src),
     needsCanvas: /require\(['"]canvas['"]\)|loadDyeModule\(/.test(src),
   };
 }
@@ -438,6 +440,7 @@ async function main() {
 
   const hasPlaywright = canResolve('playwright');
   const hasCanvas = canResolve('canvas');
+  const hasReact = canResolve('react');
   // 共有の配信(serve.py)は、要る検査の直前に起動し、自分で配信を立てる検査の前には止める(ポートの取り合いを避ける)
   let server = null;
   const ensureServer = async () => { if (!server && opts.server) { server = await startServer(); console.log(`  (${server.note})`); } };
@@ -453,6 +456,7 @@ async function main() {
       if (!meta.exists) res = { status: 'MISSING', sec: 0, output: '' };
       else if (meta.needsPlaywright && !hasPlaywright) res = { status: 'SKIP', sec: 0, output: 'playwright が無い' };
       else if (meta.needsCanvas && !hasCanvas) res = { status: 'SKIP', sec: 0, output: 'canvas が無い' };
+      else if (meta.needsReact && !hasReact) res = { status: 'SKIP', sec: 0, output: 'react が無い' };
       else {
         if (meta.ownServer) await releaseServer(); else if (meta.needsServer) await ensureServer();
         res = runOne(command, opts.timeoutSec);
