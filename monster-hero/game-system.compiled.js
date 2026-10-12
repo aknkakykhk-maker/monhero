@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b0ab0954c7fab659
+// source-sha256: 179b2ae07c2b4c59
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-12 17:37";
+const BUILD_DATE = "2026-10-12 18:10";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -36869,11 +36869,7 @@ const RhythmTapTest = ({
     style: {
       textShadow: '0 1px 3px rgba(2,6,23,1),0 0 6px rgba(2,6,23,.9)'
     }
-  })), lifeState === 'down' && React.createElement("div", {
-    "data-rhythm-down-vignette": true,
-    "aria-hidden": "true",
-    className: "pointer-events-none absolute inset-0 z-20"
-  }), lifeDownSlam && React.createElement("div", {
+  })), lifeDownSlam && React.createElement("div", {
     "data-rhythm-life-down-slam": true,
     "aria-hidden": "true",
     className: "pointer-events-none absolute inset-x-0 top-[32%] z-40 text-center"
@@ -37041,6 +37037,13 @@ const RhythmTapTest = ({
     }
   }), skyPlane && React.createElement(RhythmSkyStage, {
     plane: skyPlane
+  }), lifeState === 'down' && React.createElement("div", {
+    "data-rhythm-down-vignette": true,
+    "aria-hidden": "true",
+    className: "pointer-events-none absolute inset-0",
+    style: {
+      zIndex: canvasNotes ? 4 : 1
+    }
   }), countdownStep !== null && React.createElement("div", {
     "data-rhythm-countdown": true,
     "aria-live": "assertive",
