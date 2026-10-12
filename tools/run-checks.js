@@ -7,6 +7,8 @@
 //   node tools/run-checks.js --area all             … 全部(30分以上かかる)
 //   node tools/run-checks.js --changed              … いま変更しているファイルから、要る検査だけを選んで回す
 //   node tools/run-checks.js --changed --plan       … 選んだ検査を出すだけ(実行しない)
+//   node tools/run-checks.js --area always          … いつも回す短い検査(run-checks-always.json。--changed でも毎回回す)
+//   node tools/run-checks.js --measure-always       … いつも回す短い検査の一覧を測り直して書き直す(ブラウザを使わず1秒未満で通るもの)
 //   オプション: --limit N(選ぶ上限。既定40) --wide(当たった領域を丸ごと) --base <ref>(そのrefとの差も見る)
 //   オプション: --skip-file <ファイル>(1行1検査。# で始まる行は無視。その検査を回さない)
 //   オプション: --no-server(実ブラウザ検査用の配信を起動しない) --timeout <秒> --json <出力先>
@@ -94,7 +96,18 @@ const EXTRA_TOKENS = [
 ];
 
 // ファイル名の語では拾えないので、検査そのものを名指しするもの
+// いつも回す短い検査(2026-10-12)。ファイル名の語で選ぶ仕組みでは、名前の語が当たらない検査が素通りする
+// (同じ日に quick-extreme-special-rules-check と save-keys-check が main で落ちたまま気づかれなかった)。
+// ブラウザを使わず1本1秒未満で通るものは、変更の中身に関係なく毎回回す。一覧は --measure-always で作り直す
+const ALWAYS_FILE = path.join(TOOLS_DIR, 'run-checks-always.json');
+function alwaysChecks() {
+  try { const j = JSON.parse(fs.readFileSync(ALWAYS_FILE, 'utf8')); return Array.isArray(j.checks) ? j.checks.filter(c => typeof c === 'string' && fs.existsSync(path.join(TOOLS_DIR, c.split(' ')[0]))) : []; }
+  catch { return []; }
+}
 const FORCE_CHECKS = [
+  // 保存キー(mh_*)は docs/spec/SAVE_DATA.md の一覧に載せる決まり。本体・データを触ったら必ず確かめる
+  // (2026-10-12・新しいキーを一覧に書き忘れて main で落ちた。ファイル名の語では拾えない)
+  { re: /^monster-hero\/(src\/parts\/.+\.jsx|data\/.+\.js|index\.html)$|^docs\/spec\/SAVE_DATA\.md$/, checks: ['boot/save-keys-check.js'], why: '保存キーが SAVE_DATA.md の一覧に載っているか' },
   { re: /^(CLAUDE|AGENTS|README)\.md$|^docs\/|^\.claude\/skills\//, checks: ['rules-index-check.js'], why: 'ルールと資料' },
   // 新モード(tactics)の分岐が入っているファイル。ファイル名の語(app・parts)では拾えないので名指しする。
   // 「isTacticsMode で締めたつもり」が既存5モードへ漏れると、遊んでいる人の記録に直に効く
@@ -244,9 +257,12 @@ function planForChanges(files, areas, wide, limit) {
   }
   const required = core ? areas.get('required').slice() : [];
   for (const c of required) if (!reasons.has(c)) reasons.set(c, 'ゲーム本体を触った（CLAUDE.md ⑥ の必須検査）');
+  // いつも回す短い検査(上限の数には入れない)。生成物だけの変更では足さない
+  if (files.some(f => !GENERATED_RE.test(f))) for (const c of areas.get('always') || []) if (!required.includes(c)) { required.push(c); if (!reasons.has(c)) reasons.set(c, 'いつも回す短い検査（run-checks-always.json）'); }
   const rest = [...reasons.keys()].filter(c => !required.includes(c))
     .sort((a, b) => (rank.get(a) - rank.get(b)) || a.localeCompare(b));
-  const room = wide ? rest.length : Math.max(0, limit - required.length);
+  // 上限(--limit)から引くのは必須検査だけ。いつも回す短い検査は数に入れない
+  const room = wide ? rest.length : Math.max(0, limit - (core ? areas.get('required').length : 0));
   const picked = [...required, ...rest.slice(0, room)];
   return { picked, reasons, core, dropped: rest.length - Math.min(room, rest.length) };
 }
@@ -258,6 +274,7 @@ function parseArgs(argv) {
     if (a === '--list') opts.list = true;
     else if (a === '--changed') opts.changed = true;
     else if (a === '--plan' || a === '--dry-run') opts.plan = true;
+    else if (a === '--measure-always') opts.measureAlways = true;
     else if (a === '--wide') opts.wide = true;
     else if (a === '--limit') opts.limit = Number(argv[++i]) || opts.limit;
     else if (a === '--base') opts.base = argv[++i];
@@ -289,6 +306,7 @@ function discoverAreas() {
   areas.set('required', REQUIRED.slice());
   areas.set('ci', ciCommands());
   areas.set('docs', ['rules-index-check.js']);
+  areas.set('always', alwaysChecks());
   const rootChecks = fs.readdirSync(TOOLS_DIR).filter(f => f.endsWith('-check.js')).sort();
   areas.set('root', rootChecks);
   for (const dir of fs.readdirSync(TOOLS_DIR).sort()) {
@@ -350,10 +368,32 @@ function runOne(command, timeoutSec) {
   return { status: r.status === 0 ? 'OK' : 'NG', sec, output, code: r.status };
 }
 
+// いつも回す短い検査の一覧を測り直す。ブラウザ・配信を使う検査は除き、1本ずつ5秒まで回して、1秒未満で通ったものだけを残す
+function measureAlways(areas) {
+  const list = [];
+  for (const [name, checks] of areas) if (!['required', 'ci', 'always'].includes(name)) for (const c of checks) if (!list.includes(c)) list.push(c);
+  const keep = []; let total = 0, browser = 0, slow = 0, failed = [];
+  for (const c of list) {
+    const file = path.join(TOOLS_DIR, c.split(' ')[0]);
+    let src = ''; try { src = fs.readFileSync(file, 'utf8'); } catch { continue; }
+    if (/playwright|chromium|puppeteer|createServer|serve\.py|8899|launch\(/.test(src)) { browser++; continue; }
+    const t0 = Date.now(); const r = spawnSync(process.execPath, [file, ...c.split(' ').slice(1)], { cwd: REPO_ROOT, timeout: 5000, encoding: 'utf8' }); const ms = Date.now() - t0;
+    if (r.status !== 0) { failed.push(c); continue; }
+    if (ms >= 1000) { slow++; continue; }
+    keep.push(c); total += ms;
+  }
+  keep.sort();
+  const doc = { _説明: `run-checks.js --changed が、変更の中身に関係なく毎回回す短い検査(ブラウザを使わず、1本1秒未満で通るもの)。作り直しは node tools/run-checks.js --measure-always(${new Date().toISOString().slice(0, 10)} 作成。そのときの合計 約${Math.round(total / 1000)}秒)`, checks: keep };
+  fs.writeFileSync(ALWAYS_FILE, JSON.stringify(doc, null, 1) + '\n');
+  console.log(`いつも回す短い検査 ${keep.length} 本(合計 約${Math.round(total / 1000)}秒)・ブラウザで除外 ${browser}・1秒以上 ${slow}・いま落ちている ${failed.length}`);
+  for (const c of failed) console.log(`  いま落ちている: ${c}`);
+}
+
 async function main() {
   const opts = parseArgs(process.argv.slice(2));
   const areas = discoverAreas();
 
+  if (opts.measureAlways) { measureAlways(areas); return; }
   if (opts.changed) {
     const files = changedFiles(opts.base);
     const { picked, reasons, core, dropped } = planForChanges(files, areas, opts.wide, opts.limit);
