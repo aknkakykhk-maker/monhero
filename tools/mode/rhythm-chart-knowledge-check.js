@@ -96,7 +96,9 @@ for(const entry of KNOWLEDGE){
   const file=knowledge.readWeightsFile();
   const numbers=Object.keys(file.revisions).map(Number);
   ok('重みの置き場が読める',file.schemaVersion===1&&numbers.length>0&&numbers.every(n=>Number.isInteger(n)&&n>=knowledge.KNOWLEDGE_BASE_REVISION));
-  ok('最新リビジョンは、重みを書き足したリビジョンまで上がる',CHART_REVISION_LATEST===Math.max(CHART_REVISION_CODE_LATEST,...numbers)&&CHART_REVISION_LATEST>=knowledge.latestKnowledgeRevision());
+  // 最新リビジョンは、遊んだ記録の調整値(rhythm-chart-play-tuning.js)を書き足したリビジョンでも上がる(2026-10-11 の週次学習で Rev.30 が足された)
+  const {latestPlayTuningRevision}=require('./rhythm-chart-play-tuning.js');
+  ok('最新リビジョンは、重みを書き足したリビジョンまで上がる',CHART_REVISION_LATEST===Math.max(CHART_REVISION_CODE_LATEST,latestPlayTuningRevision(),...numbers)&&CHART_REVISION_LATEST>=knowledge.latestKnowledgeRevision());
   ok('Rev.7以降はリビジョンとして読める',chartRevisionOf({chartRevision:7})===7&&chartRevisionOf({chartRevision:CHART_REVISION_LATEST})===CHART_REVISION_LATEST);
   let shapeOk=true;
   for(const [key,revision] of Object.entries(file.revisions)){
