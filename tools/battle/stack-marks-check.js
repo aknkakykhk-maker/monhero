@@ -8,6 +8,7 @@
 //   ② 味方の枠(タクティクス・ほかのモード)・敵のライフの帯・超省エネの両方に出している(画面の直し忘れを防ぐ)
 //   ③ 数の出どころが強化の札・敵の状態と同じ(クッキー・黒音符・旋律・トリック・運命・連撃パワー / 水牢・氷結・咆哮)
 //   ④ 静止画用の差し込み口は自動操作のブラウザ(navigator.webdriver)のときだけ作る
+//   ⑥ モンスターごとの演出(ゴースト・スネグーラチカ・剣士モッチー)は BATTLE_MONSTER_FX の1か所。タクティクスの枠だけ・軽量表示では出さない・止める設定で止める
 //   ⑤ 残りターン(EX・⏳nT)・残り回数(完全回避👻・根性🔥・EX×数)も同じ作りで出す(2026-10-12 社長の追加依頼)
 const fs = require('fs');
 const path = require('path');
@@ -45,6 +46,10 @@ const sc = app.slice(app.indexOf('const tacticsSlotCountersAt = (slotIdx) => {')
 check('⑤ EXの残りターン・完全回避・根性の残りを、詳細と同じ関数から作る', /tacticsExRemainOf\(/.test(sc) && /tacticsExAvoidLeftOf\(/.test(sc) && /tacticsExKonjoLeftOf\(/.test(sc) && /tacticsSlotCountersAt\(i\)/.test(battle));
 check('⑤ 使っていないEXの札に、残り回数(EX×数)を出す', /uses:Number\.isFinite\(remaining\.left\)\?remaining\.left:null/.test(app) && (battle.match(/slotExInfo\.badge\.uses!=null\?`×\$\{slotExInfo\.badge\.uses\}`/g) || []).length === 2);
 check('⑤ 敵の水牢・氷結にも、名前の横の札に残りターンを出す', /add\('aquaPrison'[^\n]*`\$\{aquaNow\.turnsLeft\}T`\);/.test(app) && /add\('aquaFreeze'[^\n]*`\$\{aquaNow\.turnsLeft\}T`\);/.test(app));
+check('⑥ 連撃パワーのマークは 💥(二刀流の演出 ⚔️ と分ける)', ctx.T.kenshi.mark === '💥');
+check('⑥ 演出の表 BATTLE_MONSTER_FX(分身・プレゼント・剣の型)が1か所にある', /const BATTLE_MONSTER_FX = Object\.freeze\(\{[\s\S]{0,1200}avoidClone[\s\S]{0,800}present[\s\S]{0,800}swordStyle: Object\.freeze\(\{ sword:'🗡️', shield:'🗡️🛡️', dual:'⚔️' \}\)/.test(entries));
+check('⑥ 演出はタクティクスの枠だけ・軽量表示と超省エネでは出さない・「待機中の動き：止める」で止める', /tacticsNewLayout&&!ecoBattleView&&!liteBattleView&&typeof tacticsSlotCountersAt==='function'&&<BattleMonsterFx /.test(battle) && /calm=\{battleFx\.idleMotion==='OFF'\}/.test(battle) && !/data-ultra-battle-view[\s\S]{0,4000}<BattleMonsterFx/.test(battle.slice(battle.indexOf('data-ultra-battle-view'), battle.indexOf('data-ultra-battle-view') + 4000)));
+check('⑥ 分身の数は完全回避の残りから、プレゼントと型は詳細と同じ関数から作る', /if\(def&&def\.effect==='present'&&isTacticsExEffectActive\(/.test(sc + app.slice(app.indexOf('const tacticsSlotCountersAt'), app.indexOf('const tacticsSlotCountersAt') + 2000)) && /out\.swordStyle=tacticsExStyleOf\(/.test(app) && /Math\.min\(T\.avoidClone\.max, Math\.max\(0, Math\.floor\(Number\(fx\.avoid\)/.test(battle));
 const html = read('monster-hero/index.html');
 check('見た目のCSS(.mh-stack-mark)がある', /\.mh-stack-mark \{/.test(html) && /\.mh-stack-marks-ally-top \{/.test(html));
 

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4240b5b573d22b46
+// source-sha256: fe2324dd8c56eb4e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-12 15:46";
+const BUILD_DATE = "2026-10-12 15:52";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -17130,7 +17130,7 @@ const BATTLE_STACK_MARKS = Object.freeze({
     label: '旋律'
   }),
   kenshi: Object.freeze({
-    mark: '⚔️',
+    mark: '💥',
     img: '',
     label: '連撃パワー'
   }),
@@ -17189,6 +17189,30 @@ const BATTLE_STACK_MARKS = Object.freeze({
     mark: '📢',
     img: '',
     label: '咆哮'
+  })
+});
+const BATTLE_MONSTER_FX = Object.freeze({
+  avoidClone: Object.freeze({
+    max: 2,
+    opacity: 0.5
+  }),
+  present: Object.freeze({
+    mark: '🎁',
+    img: '',
+    jackpotMark: '✨',
+    inner: Object.freeze({
+      dmg: '⚔️',
+      taken: '🛡️',
+      combo: '💫',
+      heal: '💖',
+      guts: '⚡',
+      crit: '🎯'
+    })
+  }),
+  swordStyle: Object.freeze({
+    sword: '🗡️',
+    shield: '🗡️🛡️',
+    dual: '⚔️'
   })
 });
 const BATTLE_STACK_MARK_ORDER = Object.freeze(Object.keys(BATTLE_STACK_MARKS));
@@ -61154,6 +61178,45 @@ const BattleStackMarks = ({
     "aria-hidden": "true"
   }, it.mark), React.createElement("b", null, it.unit === 'T' ? `${it.count}T` : `×${it.count}`))));
 };
+const BattleMonsterFx = ({
+  fx,
+  imgSrc,
+  calm = false
+}) => {
+  if (!fx) return null;
+  const T = BATTLE_MONSTER_FX;
+  const clones = Math.min(T.avoidClone.max, Math.max(0, Math.floor(Number(fx.avoid) || 0)));
+  const pr = fx.present || null;
+  const style = typeof fx.swordStyle === 'string' && T.swordStyle[fx.swordStyle] ? fx.swordStyle : null;
+  if (!clones && !pr && !style) return null;
+  return React.createElement("div", {
+    "data-monster-fx": true,
+    className: `mh-mfx pointer-events-none${calm ? ' is-calm' : ''}`,
+    "aria-hidden": "true"
+  }, imgSrc && Array.from({
+    length: clones
+  }, (_, k) => React.createElement("img", {
+    key: k,
+    "data-mfx-clone": k,
+    className: `mh-mfx-clone c${k}`,
+    src: imgSrc,
+    alt: "",
+    draggable: false,
+    style: {
+      opacity: T.avoidClone.opacity
+    }
+  })), pr && React.createElement("span", {
+    "data-mfx-present": pr.jackpot ? 'jackpot' : pr.kind || 'on',
+    className: `mh-mfx-present${pr.jackpot ? ' is-jackpot' : ''}`
+  }, T.present.img ? React.createElement("img", {
+    src: T.present.img,
+    alt: "",
+    draggable: false
+  }) : React.createElement("i", null, T.present.mark), React.createElement("b", null, pr.jackpot ? T.present.jackpotMark : T.present.inner[pr.kind] || '')), style && React.createElement("span", {
+    "data-mfx-sword": style,
+    className: "mh-mfx-sword"
+  }, T.swordStyle[style]));
+};
 const TacticsDiscardZones = ({
   full,
   used,
@@ -63616,6 +63679,10 @@ function BattleScreen({
       side: "ally",
       full: SWEET_STACK_MAX,
       className: tacticsNewLayout ? 'mh-stack-marks-ally' : 'mh-stack-marks-ally mh-stack-marks-ally-top'
+    }), tacticsNewLayout && !ecoBattleView && !liteBattleView && typeof tacticsSlotCountersAt === 'function' && React.createElement(BattleMonsterFx, {
+      fx: debugStackMarks && debugStackMarks.fx && debugStackMarks.fx[i] ? debugStackMarks.fx[i] : tacticsSlotCountersAt(i),
+      imgSrc: s?.imgUrl,
+      calm: battleFx.idleMotion === 'OFF'
     }), slotHitKind && (() => {
       const hitFx = TACTICS_SLOT_FX_STYLE[slotHitKind];
       return React.createElement("div", {
@@ -86598,6 +86665,14 @@ function MonsterHeroGame() {
     if (avoid > 0) out.avoid = avoid;
     const konjo = tacticsExKonjoLeftOf(tacticsExState, tacticsUnits, slotIdx, tacticsExNow);
     if (konjo > 0) out.konjo = konjo;
+    if (def && def.effect === 'present' && isTacticsExEffectActive(tacticsExState, slotIdx, unit.id, tacticsExNow)) {
+      const pr = tacticsExPresentOf(tacticsExState, tacticsUnits, tacticsExNow);
+      if (pr && pr.kinds.length) out.present = {
+        jackpot: pr.jackpot,
+        kind: pr.kinds[0]
+      };
+    }
+    if (unit.id === 'KenshiMocchi' && def && def.duration === 'style') out.swordStyle = tacticsExStyleOf(def, tacticsExState, slotIdx, unit.id) || 'sword';
     return out;
   };
   const tacticsCritFixedNow = (slotIdx, card = null) => {
