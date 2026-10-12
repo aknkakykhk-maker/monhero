@@ -417,6 +417,31 @@ const COOKIE_DMG_FROM = 10, COOKIE_DMG_UP = 0.15;
 const BLACK_NOTE_DMG_PER = 0.03;
 const BLACK_NOTE_CRIT_FROM = 5, BLACK_NOTE_CRIT_ADD = 0.1;
 const BLACK_NOTE_COMBO_FROM = 10, BLACK_NOTE_COMBO_RATE = 0.15;
+// ★バトル画面の「マーク×数」(2026-10-12 社長の依頼「スタックがいくら貯まってるのか一目でわかるように」)。
+//   貯まる数(味方)と、敵に重なってかかる状態を、その子の枠・敵の絵の隅に「マーク×数」で常に出す。
+//   ★絵柄はここ1か所で差し替える。mark は絵文字。img に画像のパス(例 'images/ui/stack-cookie.png')を入れると、絵文字の代わりにその絵を出す。
+//   label は読み上げと詳細の言い方。並び順もこの順(味方の枠に複数付くとき)
+const BATTLE_STACK_MARKS = Object.freeze({
+  cookie:     Object.freeze({ mark:'🍪', img:'', label:'クッキー', showZero:true }),          // メロディー(メロディの手作りクッキー)
+  note:       Object.freeze({ mark:'🎵', img:'', label:'黒音符', showZero:true }),            // クロミー(クロミノート)
+  bow:        Object.freeze({ mark:'🎀', img:'', label:'旋律' }),              // メロディ・ボゥの旋律(使った子の枠)
+  kenshi:     Object.freeze({ mark:'⚔️', img:'', label:'連撃パワー' }),        // 剣士モッチー(ソードスキル)
+  trickAtk:   Object.freeze({ mark:'💪', img:'', label:'トリック(ちから)' }),  // ゴースト・スプーキー(トリックスタート)
+  trickDef:   Object.freeze({ mark:'🛡️', img:'', label:'トリック(丈夫さ)' }),
+  trickRegen: Object.freeze({ mark:'💚', img:'', label:'トリック(回復)' }),
+  fateCombo:  Object.freeze({ mark:'🎲', img:'', label:'運命(連撃)' }),        // 運命のコイン・運命の輪
+  fateAtk:    Object.freeze({ mark:'🪙', img:'', label:'運命(ちから)' }),
+  aquaPrison: Object.freeze({ mark:'💧', img:'', label:'水牢' }),              // 敵: ウンディーネ種のアクアフィールド
+  aquaFreeze: Object.freeze({ mark:'❄️', img:'', label:'氷結' }),
+  roar:       Object.freeze({ mark:'📢', img:'', label:'咆哮' }),              // 敵: 自分にかけた攻撃アップ
+});
+const BATTLE_STACK_MARK_ORDER = Object.freeze(Object.keys(BATTLE_STACK_MARKS));
+// { kind: 数 } から、出す順に並べた [{ kind, count, mark, img, label }] を作る。知らない種類・0は出さない。
+// ただし showZero の種類(クッキー・黒音符=その子の特性そのもの)は、持ち主なら0でも「×0」で出す(貯まる物があると分かるように)
+const battleStackMarkItems = (counts) => BATTLE_STACK_MARK_ORDER
+  .filter((kind) => counts && Object.prototype.hasOwnProperty.call(counts, kind))
+  .map((kind) => ({ kind, count: Math.max(0, Math.floor(Number(counts[kind]) || 0)), ...BATTLE_STACK_MARKS[kind] }))
+  .filter((it) => it.count > 0 || it.showZero);
 const sweetStackTraitOf = (id) => (id && Object.prototype.hasOwnProperty.call(SWEET_STACK_TRAITS, id) ? SWEET_STACK_TRAITS[id] : null);
 const sweetStackCountOf = (n) => Math.min(SWEET_STACK_MAX, Math.max(0, Math.floor(Number(n) || 0)));
 // その行動で増える数。ownerId=特性を持つ子(既存5モードは勇者モン・タクティクスはその枠の子)、actorId=カードを使った子。

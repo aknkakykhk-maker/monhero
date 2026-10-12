@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d28b282b929c003d
+// source-sha256: 4a2d4d4ed490ceac
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-12 13:42";
+const BUILD_DATE = "2026-10-12 14:40";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -17096,6 +17096,76 @@ const BLACK_NOTE_CRIT_FROM = 5,
   BLACK_NOTE_CRIT_ADD = 0.1;
 const BLACK_NOTE_COMBO_FROM = 10,
   BLACK_NOTE_COMBO_RATE = 0.15;
+const BATTLE_STACK_MARKS = Object.freeze({
+  cookie: Object.freeze({
+    mark: '🍪',
+    img: '',
+    label: 'クッキー',
+    showZero: true
+  }),
+  note: Object.freeze({
+    mark: '🎵',
+    img: '',
+    label: '黒音符',
+    showZero: true
+  }),
+  bow: Object.freeze({
+    mark: '🎀',
+    img: '',
+    label: '旋律'
+  }),
+  kenshi: Object.freeze({
+    mark: '⚔️',
+    img: '',
+    label: '連撃パワー'
+  }),
+  trickAtk: Object.freeze({
+    mark: '💪',
+    img: '',
+    label: 'トリック(ちから)'
+  }),
+  trickDef: Object.freeze({
+    mark: '🛡️',
+    img: '',
+    label: 'トリック(丈夫さ)'
+  }),
+  trickRegen: Object.freeze({
+    mark: '💚',
+    img: '',
+    label: 'トリック(回復)'
+  }),
+  fateCombo: Object.freeze({
+    mark: '🎲',
+    img: '',
+    label: '運命(連撃)'
+  }),
+  fateAtk: Object.freeze({
+    mark: '🪙',
+    img: '',
+    label: '運命(ちから)'
+  }),
+  aquaPrison: Object.freeze({
+    mark: '💧',
+    img: '',
+    label: '水牢'
+  }),
+  aquaFreeze: Object.freeze({
+    mark: '❄️',
+    img: '',
+    label: '氷結'
+  }),
+  roar: Object.freeze({
+    mark: '📢',
+    img: '',
+    label: '咆哮'
+  })
+});
+const BATTLE_STACK_MARK_ORDER = Object.freeze(Object.keys(BATTLE_STACK_MARKS));
+const battleStackMarkItems = counts => BATTLE_STACK_MARK_ORDER.filter(kind => counts && Object.prototype.hasOwnProperty.call(counts, kind)).map(kind => ({
+  kind,
+  count: Math.max(0, Math.floor(Number(counts[kind]) || 0)),
+  ...BATTLE_STACK_MARKS[kind]
+})).filter(it => it.count > 0 || it.showZero);
 const sweetStackTraitOf = id => id && Object.prototype.hasOwnProperty.call(SWEET_STACK_TRAITS, id) ? SWEET_STACK_TRAITS[id] : null;
 const sweetStackCountOf = n => Math.min(SWEET_STACK_MAX, Math.max(0, Math.floor(Number(n) || 0)));
 const sweetStackGainOf = (ownerId, actorId, card, hit = false) => {
@@ -60987,6 +61057,33 @@ const inTacticsDiscardZone = (x, y) => {
   const g = tacticsDiscardGeo();
   return !!g && y >= g.enemyTop && y < g.slotTop;
 };
+const BattleStackMarks = ({
+  counts,
+  side,
+  full = 0,
+  className = ''
+}) => {
+  const items = battleStackMarkItems(counts);
+  if (!items.length) return null;
+  return React.createElement("div", {
+    "data-stack-marks": side,
+    role: "img",
+    "aria-label": items.map(it => `${it.label}${it.count}`).join('、'),
+    className: `mh-stack-marks pointer-events-none ${className}`
+  }, items.map(it => React.createElement("span", {
+    key: it.kind,
+    "data-stack-mark": it.kind,
+    "data-stack-count": it.count,
+    "data-stack-full": full > 0 && it.showZero && it.count >= full ? 'true' : undefined,
+    className: "mh-stack-mark"
+  }, it.img ? React.createElement("img", {
+    src: it.img,
+    alt: "",
+    draggable: false
+  }) : React.createElement("i", {
+    "aria-hidden": "true"
+  }, it.mark), React.createElement("b", null, "×", it.count))));
+};
 const TacticsDiscardZones = ({
   full,
   used,
@@ -61174,6 +61271,8 @@ function BattleScreen({
   tacticsCanAssign,
   tacticsCardBlock,
   enemyDebuffs,
+  enemyStackCounts,
+  debugStackMarks,
   discardCards,
   actionUsed,
   tacticsCardGenre,
@@ -61206,6 +61305,54 @@ function BattleScreen({
   wave
 }) {
   const [buffDetail, setBuffDetail] = useState(false);
+  const allyStackCounts = (() => {
+    const out = {};
+    const put = (i, kind, n, keepZero = false) => {
+      if (!Number.isInteger(i) || i < 0) return;
+      const c = Math.max(0, Math.floor(Number(n) || 0));
+      if (c <= 0 && !keepZero) return;
+      out[i] = {
+        ...(out[i] || {}),
+        [kind]: (out[i] && out[i][kind] || 0) + c
+      };
+    };
+    const slotOfKey = key => key === 'party' ? heroDist : Number(key);
+    if (Array.isArray(tacticsUnits)) slots.forEach((m, i) => {
+      const t = sweetStackTraitOf(m?.id);
+      if (t) put(i, t.kind === 'cookie' ? 'cookie' : 'note', 0, true);
+    });else {
+      const t = sweetStackTraitOf(mainHero?.id);
+      if (t) put(heroDist, t.kind === 'cookie' ? 'cookie' : 'note', 0, true);
+    }
+    Object.entries(sweetStackView || {}).forEach(([key, n]) => {
+      const i = slotOfKey(key),
+        t = sweetStackTraitOf(key === 'party' ? mainHero?.id : slots[i]?.id);
+      if (t) put(i, t.kind === 'cookie' ? 'cookie' : 'note', sweetStackCountOf(n), true);
+    });
+    Object.entries(bowStackView || {}).forEach(([key, n]) => put(Number(key), 'bow', n));
+    Object.entries(trickStartView || {}).forEach(([key, st]) => {
+      const i = slotOfKey(key);
+      put(i, 'trickAtk', st?.atk);
+      put(i, 'trickDef', st?.def);
+      put(i, 'trickRegen', st?.regen);
+    });
+    const fate = getPermaBuff('fateStacks', null);
+    Object.keys(fate?.bySlot || {}).forEach(key => {
+      const st = fateSlotStacksOf(fate, key);
+      put(Number(key), 'fateCombo', st.combo);
+      put(Number(key), 'fateAtk', st.atk);
+    });
+    if (getPermaBuff('kenshiComboPower') > 0) {
+      const k = slots.findIndex(m => m?.id === 'KenshiMocchi');
+      put(k >= 0 ? k : heroDist, 'kenshi', getPermaBuff('kenshiComboPower'));
+    }
+    if (debugStackMarks && debugStackMarks.ally) Object.entries(debugStackMarks.ally).forEach(([i, c]) => {
+      out[Number(i)] = {
+        ...(c || {})
+      };
+    });
+    return out;
+  })();
   const [enemyDebuffOpen, setEnemyDebuffOpen] = useState(false);
   const raidGrowthOn = runMode === BATTLE_MODE_RAID_JACK_A;
   const raidGrowth = raidGrowthOn ? raidJackGrowthAt(turnCount) : null;
@@ -61644,8 +61791,14 @@ function BattleScreen({
   }, React.createElement("span", {
     className: "min-w-0 truncate text-red-200"
   }, enemy.name), React.createElement("span", {
+    className: "flex shrink-0 items-center gap-1"
+  }, React.createElement(BattleStackMarks, {
+    counts: enemyStackCounts,
+    side: "enemy",
+    className: "mh-stack-marks-enemy"
+  }), React.createElement("span", {
     className: "shrink-0 font-mono text-red-300"
-  }, Math.max(0, enemy.hp).toLocaleString(), " / ", enemy.maxHp.toLocaleString())), React.createElement("div", {
+  }, Math.max(0, enemy.hp).toLocaleString(), " / ", enemy.maxHp.toLocaleString()))), React.createElement("div", {
     className: "mt-1 h-2 overflow-hidden rounded-full bg-slate-800"
   }, React.createElement("div", {
     className: "h-full bg-red-600",
@@ -61679,8 +61832,15 @@ function BattleScreen({
   }, React.createElement("div", {
     className: "w-full truncate text-[10px] font-black text-white"
   }, s?.name || '---'), React.createElement("div", {
-    className: "mt-1 text-[10px] font-black"
-  }, RANGE_LABELS[i], "距離")))), React.createElement("div", {
+    className: "mt-1 flex max-w-full items-center justify-center gap-0.5 text-[10px] font-black"
+  }, React.createElement("span", {
+    className: "shrink-0"
+  }, RANGE_LABELS[i], "距離"), React.createElement(BattleStackMarks, {
+    counts: allyStackCounts[i],
+    side: "ally",
+    full: SWEET_STACK_MAX,
+    className: "mh-stack-marks-inline"
+  }))))), React.createElement("div", {
     className: "mt-1.5 space-y-1"
   }, React.createElement("div", null, React.createElement("div", {
     className: "flex justify-between text-[10px] font-black text-pink-300"
@@ -61834,8 +61994,14 @@ function BattleScreen({
     "aria-hidden": "true",
     className: "text-slate-300"
   }, enemyDebuffOpen ? '▲' : '▼'))), React.createElement("span", {
+    className: "flex shrink-0 items-center gap-1"
+  }, React.createElement(BattleStackMarks, {
+    counts: enemyStackCounts,
+    side: "enemy",
+    className: "mh-stack-marks-enemy"
+  }), React.createElement("span", {
     className: "text-red-500 flex items-center gap-1 font-mono drop-shadow-[0_1px_3px_rgba(0,0,0,1)]"
-  }, Math.max(0, enemy.hp).toLocaleString(), " / ", enemy.maxHp.toLocaleString())), React.createElement("div", {
+  }, Math.max(0, enemy.hp).toLocaleString(), " / ", enemy.maxHp.toLocaleString()))), React.createElement("div", {
     "data-enemy-hpbar": true,
     className: "relative h-[14px] overflow-hidden rounded-full border-2 border-white/25 bg-slate-950",
     style: {
@@ -63367,7 +63533,12 @@ function BattleScreen({
           animationDuration: `${tacticsExCutin.ms}ms`
         } : {})
       }
-    }, React.createElement("i", null), React.createElement("i", null)), slotHitKind && (() => {
+    }, React.createElement("i", null), React.createElement("i", null)), React.createElement(BattleStackMarks, {
+      counts: allyStackCounts[i],
+      side: "ally",
+      full: SWEET_STACK_MAX,
+      className: tacticsNewLayout ? 'mh-stack-marks-ally' : 'mh-stack-marks-ally mh-stack-marks-ally-top'
+    }), slotHitKind && (() => {
       const hitFx = TACTICS_SLOT_FX_STYLE[slotHitKind];
       return React.createElement("div", {
         "data-tactics-hit-fx": slotHitKind,
@@ -75513,6 +75684,7 @@ function MonsterHeroGame() {
     setBowStackView({});
   };
   const bowStackRef = useRef({});
+  const [debugStackMarks, setDebugStackMarks] = useState(null);
   const [bowStackView, setBowStackView] = useState({});
   const bowAtkMultAt = slotIdx => Number.isInteger(slotIdx) ? bowAtkMultOf(bowStackRef.current[String(slotIdx)]) : 1;
   const addBowStackAt = slotIdx => {
@@ -75542,6 +75714,15 @@ function MonsterHeroGame() {
     };
     setSweetStackView(next);
   };
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof navigator === 'undefined' || navigator.webdriver !== true) return undefined;
+    window.__mhStackMarksDebug = {
+      set: v => setDebugStackMarks(v && typeof v === 'object' ? v : null)
+    };
+    return () => {
+      delete window.__mhStackMarksDebug;
+    };
+  }, []);
   const gainSweetStack = (slotIdx, actorId, card, hit = false) => {
     const owner = sweetOwnerAt(slotIdx);
     const gain = sweetStackGainOf(owner, actorId, card, hit);
@@ -86090,6 +86271,19 @@ function MonsterHeroGame() {
     if (getWaveBuff('enemyTakenDmgBonus') > 0) add('taken', '⬆', '敵の被ダメ上昇', `+${Math.round(getWaveBuff('enemyTakenDmgBonus') * 100)}%`, 'text-orange-200 border-orange-400/60', 'このWAVEのあいだ続く', `+${Math.round(getWaveBuff('enemyTakenDmgBonus') * 100)}%`);
     if (enemy.roarStacks > 0) add('roar', '📢', '咆哮', `×${enemy.roarStacks}`, 'text-red-200 border-red-400/60', '敵の攻撃が上がっている(元には戻らない)', `×${enemy.roarStacks}`);
     return list;
+  })();
+  const enemyStackCounts = (() => {
+    if (!enemy) return {};
+    const aq = isTacticsMode(runMode) ? tacticsExAquaOf(tacticsExState, tacticsUnits, {
+      wave,
+      turn: turnCount
+    }) : null;
+    return {
+      aquaPrison: aq && aq.active && aq.route === 'prison' ? aq.stacks : 0,
+      aquaFreeze: aq && aq.active && aq.route === 'freeze' ? aq.stacks : 0,
+      roar: Math.max(0, Math.floor(Number(enemy.roarStacks) || 0)),
+      ...(debugStackMarks && debugStackMarks.enemy ? debugStackMarks.enemy : {})
+    };
   })();
   const iceLockEnemyDamageMult = iceLockActive ? 0.7 : 1.0;
   const heroDist = slots.findIndex(isHeroSlotMon);
@@ -103176,6 +103370,8 @@ function MonsterHeroGame() {
       tacticsCanAssign: tacticsCanAssign,
       tacticsCardBlock: tacticsCardBlock,
       enemyDebuffs: enemyDebuffs,
+      enemyStackCounts: enemyStackCounts,
+      debugStackMarks: debugStackMarks,
       discardCards: discardCards,
       actionUsed: actionUsed,
       tacticsSlotFx: tacticsSlotFx,
