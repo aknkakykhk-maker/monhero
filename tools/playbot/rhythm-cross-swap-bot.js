@@ -12,6 +12,7 @@
 // 空中から始まるスライドの押し始めも、その時刻の高さで触る(HELL の行き来するスライド・2026-10-11)。
 //   node tools/playbot/rhythm-cross-swap-bot.js --entry proto --song sheriruth_hell_debug --diff HELL --from 0 --to 137000
 //   --persona thumb|lean|normal --seed 3 --sigma 28 で人の指のくせを入れる(既定は くせ無し)
+//   --no-nudge 押さえている指がつられて動くくせだけ止める / --watch 33740 帯の暗さを見張るスライドの始まり(ms)
 //   --sky-adapt 空中の受け付けを構えに合わせる試作(mh_sky_reach_adapt_proto)を入にして遊ぶ
 //   --travel 0.5 [--travel-ms 250] 親指の上下が届ききらない人(空中⇔地上を続けて押すとき、高さの半分の所で押す)
 // 目安(2026-10-11・直したあと): 0 と 1 は4本とも MARVELOUS・暗い時間0。2 は 107.34秒が MISS・127.77秒が GOOD(直す前と同じ)
@@ -114,6 +115,8 @@ const mime = f => ({ '.js': 'application/javascript', '.html': 'text/html', '.cs
   if (!player.includes(posLine)) throw new Error('ボットの押さえる指の行が見つからない');
   // 押さえている間の指も、その時刻のスライドの高さに合わせて上げ下げする(人は帯の高さを目で追う。空中から始まる帯を地上へ戻して押さえると、指が飛んで離したことになる)
 const player2 = player.replace(posLine, 'const pos = (() => { const q = fingerAt(window.__laneFor ? window.__laneFor(a.n, now, laneOfHold) : laneOfHold(a.n, now), a.hab, a.drift, now); if (!window.__slideSkyAt || typeof RHYTHM_SKY_LIFT === "undefined") return q; const sh = window.__slideSkyAt(a.n, now); if (!(sh > 0)) return q; const rr = area.getBoundingClientRect(); return { x: q.x, y: q.y - rr.height * RHYTHM_SKY_LIFT.ratio * sh }; })();');
+  // --watch 33740,35000 で、帯の暗さ(slideOffForIndex)を見張るスライドの始まり(ms)を変える(既定は Sheriruth の交差の4本)
+  if (arg('watch')) await page.evaluate((w) => { window.__watchMs = w; }, String(arg('watch')).split(',').map(Number));
   await page.evaluate((mode) => {
     const pairs = [[[106771, 107339], 108420], [[127367, 127772], 130700]];
     // mode 2: 2本目の帯(107339・127772)を押さえる指が、交わったあと相手の帯(106771・127367)に乗ったまま進む(自分の帯は捨てる=失敗するはず)
@@ -128,7 +131,7 @@ const player2 = player.replace(posLine, 'const pos = (() => { const q = fingerAt
       return f(n, now); };
     window.__freeze = (n, now) => { if (mode !== 1) return false; const t = Math.round(Number(n.timeMs)); const p = pairs.find(([ids]) => ids.includes(t)); return !!p && now >= p[1]; };
     const notes = window.__mhTestHooks.rhythmNotes() || [];
-    const idx = notes.map((x, i) => [x, i]).filter(([x]) => [106771, 107339, 127367, 127772].includes(Math.round(Number(x.timeMs))) && ((x._rhythmOriginalType || x.type) === 'SLIDE')).map(([, i]) => i);
+    const idx = notes.map((x, i) => [x, i]).filter(([x]) => (window.__watchMs || [106771, 107339, 127367, 127772]).includes(Math.round(Number(x.timeMs))) && ((x._rhythmOriginalType || x.type) === 'SLIDE')).map(([, i]) => i);
     window.__offMs = Object.fromEntries(idx.map(i => [i, 0])); window.__offSpans = Object.fromEntries(idx.map(i => [i, []]));
     let last = performance.now();
     const tick = (t) => { const dt = t - last; last = t; const song = Math.round(window.__mhTestHooks.rhythmSongMs?.() ?? -1);
@@ -163,7 +166,10 @@ const player2 = player.replace(posLine, 'const pos = (() => { const q = fingerAt
       return { x: p.x, y: p.y + (sky ? d : -d) };
     };
   }, [TRAVEL, TRAVEL_MS]);
-  await page.evaluate(`(${player2})(${JSON.stringify(args)})`);
+  // --no-nudge: 押さえている指が、もう片方の指が近くを押した勢いでつられて動くくせ(scenarios/rhythm.js)だけを止める。乱数の引き方は同じにして、ほかのくせはそのまま
+  const player3 = process.argv.includes('--no-nudge') ? player2.replace('a.drift = { at: now,', 'a.drift = ((d) => window.__noNudge ? a.drift : d)({ at: now,').replace('downU.y * rand() * 6 };', 'downU.y * rand() * 6 });') : player2;
+  if (process.argv.includes('--no-nudge')) { if (player3 === player2) throw new Error('つられの行が見つからない'); await page.evaluate(() => { window.__noNudge = true; }); }
+  await page.evaluate(`(${player3})(${JSON.stringify(args)})`);
   await page.waitForFunction((a) => (window.__mhTestHooks?.rhythmSongMs?.() ?? -1) >= a - 1500, FROM, { timeout: 600000, polling: 200 });
   if (CPU > 1) await cdp.send('Emulation.setCPUThrottlingRate', { rate: CPU });
   await page.evaluate(() => { window.__ft = []; let last = performance.now(); const tick = (t) => { window.__ft.push([window.__mhTestHooks?.rhythmSongMs?.(), t - last]); last = t; if (window.__ft.length < 30000) requestAnimationFrame(tick); }; requestAnimationFrame(tick); });
@@ -173,7 +179,7 @@ const player2 = player.replace(posLine, 'const pos = (() => { const q = fingerAt
   const { profile } = await cdp.send('Profiler.stop');
   console.log('判定', JSON.stringify(await page.evaluate(() => { const r = window.__mhTestHooks.rhythmNoteResults?.() || [], n = window.__mhTestHooks.rhythmNotes?.() || []; const h = {}; r.forEach(x => { if (x && x.judgment) h[x.judgment] = (h[x.judgment] || 0) + 1; });
     const sl = n.map((x, i) => [x, r[i]]).filter(([x]) => x.type === 'SLIDE' && [106771, 107339, 127367, 127772].includes(Math.round(x.timeMs))).map(([x, y]) => [Math.round(x.timeMs), y && y.judgment, y && y.done]);
-    return { 合計: h, 済み: r.filter(x => x && x.done).length, 交差のスライド: Object.keys(window.__offMs).map(i => ({ 始まり: Math.round(n[i].timeMs), 判定: r[i] && r[i].judgment, 暗かった秒: +(window.__offMs[i] / 1000).toFixed(2), 暗かった区間: window.__offSpans[i].slice(0, 8) })) }; })));
+    return { 合計: h, 済み: r.filter(x => x && x.done).length, 見張ったスライド: Object.keys(window.__offMs).map(i => ({ 始まり: Math.round(n[i].timeMs), 判定: r[i] && r[i].judgment, 暗かった秒: +(window.__offMs[i] / 1000).toFixed(2), 暗かった区間: window.__offSpans[i].slice(0, 8) })) }; })));
   // 外れたノーツの一覧(BAD_LIST=1): 時刻・種類・空中の高さ(タップの高さ/スライドの押し始めの高さ)
   if (TRAVEL > 0) console.log('届ききらずに押した回数', JSON.stringify(await page.evaluate(() => window.__travelLog)));
   if (process.env.BAD_LIST) console.log('外れたノーツ', JSON.stringify(await page.evaluate(() => { const r = window.__mhTestHooks.rhythmNoteResults?.() || [], n = window.__mhTestHooks.rhythmNotes?.() || [];
