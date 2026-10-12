@@ -56,3 +56,29 @@
   - 差はすべて「(program)」(JS の外。この入れ物では GPU の塗りを CPU で真似る分を含む)に出る。main 35.7〜38.6 / 新しい版 41.1〜45.4ms
   - つまり「入」で重くなるのは形を作る計算ではなく、**柱を塗る面積(画素の数)**。塗り側の計算を増やした新しい版は、この入れ物ではかえって重い → 取り下げ
 - この入れ物の (program) は本物の GPU の重さとは違う。実機での差は、手ごたえ A を入にした端末の stats.frame(early/late)で見るのが確か
+
+### 実機で入/切を比べる(2026-10-12 社長「実機で測ってから決める」・読むのは窓口)
+
+- 記録が送られるのは**公開曲の HELL**(先行で開く印を入れたとき。`song_id` は `sheriruth` / `grievous_lady`、`difficulty` は `HELL`)だけ。
+  試作の枠(`sheriruth_hell_debug` など)は送る曲の一覧(RHYTHM_DEMO_SONG_IDS)に無いので、**試作の枠で遊んだ分は記録に残らない**
+- 入/切は `stats.frame.skyHit`(`on` / `off`)に残る(この日のビルドから。それより前の行は空)
+- 比べる SELECT(読むだけ):
+
+```sql
+select platform, song_id, stats->'frame'->>'draw' as draw, coalesce(stats->'frame'->>'skyHit','(なし)') as sky_hit,
+       count(*) as plays,
+       round(avg((stats->'frame'->>'avg')::numeric),1) as frame_avg,
+       round(avg((stats->'frame'->>'p95')::numeric),1) as frame_p95,
+       round(avg((stats->'frame'->>'tickAvg')::numeric),2) as tick_avg,
+       round(avg((stats->'frame'->'early'->>'avg')::numeric),1) as early_avg,
+       round(avg((stats->'frame'->'late'->>'avg')::numeric),1) as late_avg,
+       round(sum((stats->'frame'->>'over34')::numeric)/nullif(sum((stats->'frame'->>'n')::numeric),0)*100,2) as over34_pct
+from public.rhythm_touch_diagnostics
+where difficulty = 'HELL' and stats ? 'frame' and created_at > '2026-10-12'
+group by 1,2,3,4 order by 2,3,4;
+```
+
+- 見方: 同じ曲・同じ `draw` の行で、`sky_hit` が `on` と `off` を並べる。
+  - `frame_avg`(1コマの平均)と `over34_pct`(33.3ms を超えたコマの割合)が、入で目立って増えていなければ、入にしても重さは気にならない
+  - 1回ずつは揺れる(ボットでも ±3ms)。入/切それぞれ **3回以上**そろってから比べる
+  - 熱の影響は `late_avg`(2分を過ぎてから)。入/切を続けて遊ぶと後の回ほど熱くなるので、交互に遊ぶのがよい

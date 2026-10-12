@@ -1081,6 +1081,8 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
       dpr:typeof window!=='undefined'?Math.round((window.devicePixelRatio||1)*100)/100:1,w:rect?Math.round(rect.width):0,h:rect?Math.round(rect.height):0,
       cores:typeof navigator!=='undefined'&&Number.isFinite(navigator.hardwareConcurrency)?navigator.hardwareConcurrency:0,
       effect:String(settings?.stageEffect||''),fps:String(settings?.frameRateMode||''),light:!!settings?.lightweightMode,
+      // 空中を叩いたときの手ごたえ A(デバッグの切り替え・既定は off)。実機で入/切の重さを比べるため(2026-10-12 社長「実機で測ってから決める」)
+      skyHit:typeof RHYTHM_HELL_SKY_HIT==='object'?String(RHYTHM_HELL_SKY_HIT.id||''):'',
       // 演奏前の準備(prep: したか・prepMs: かかった時間・prepWaitMs: 幕が閉じたあと READY の前に待った時間)
       prep:prepareOn?1:0,prepMs:prepareRef.current?prepareRef.current.ms:null,prepWaitMs:prepareRef.current?prepareRef.current.waitMs:null,
       // どちらの描き方で遊んだか(2026-10-11・GPU を既定にした前後を本番の記録で比べる): 描画方式の設定・GPU の帯の切り替え(default/gpu/off)・
