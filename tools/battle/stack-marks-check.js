@@ -54,6 +54,10 @@ check('⑦ 区切り2: モッチー・ミタラシのオーラ・ハムのグロ
 check('⑦ 区切り2の中身は、効いているEXの種類と詳細と同じ関数(カウンター・ボルテージ・雷)から作る', /const eff=tacticsExActiveEffect\(tacticsExState,slotIdx,unit\.id,tacticsExNow\);/.test(app) && /tacticsExCounterOf\(tacticsExState/.test(app) && /tacticsExVoltageOf\(tacticsExState/.test(app) && /tacticsExThunderOf\(tacticsExState/.test(app) && /monId=\{s\?\.id\}/.test(battle));
 check('⑧ 区切り3: エイキ・ピクシー・イブリース・アーク・メルホイップの演出と、ユグドラシルの葉っぱの盾が表にある', /scatter: Object\.freeze\(\{[\s\S]{0,200}Eiki:[\s\S]{0,200}Pixie:[\s\S]{0,200}Iblis:[\s\S]{0,200}Ark:[\s\S]{0,200}MelWhip:/.test(entries) && /leafShield: Object\.freeze\(\{ mark:'🍃', max:3 \}\)/.test(entries));
 check('⑧ 世界樹の守りは、だれが使っても味方全員の枠へ残りターンを渡す', /!=='partyGuard'\) continue;[\s\S]{0,240}out\.leafShield=Math\.max\(/.test(app));
+check('⑨ 区切り4: スエゾー・ゴーレム・オボロゲソウ・ヤオビクニの演出と、モノリスの盾の膜・プラントの若葉が表にある', /overlay: Object\.freeze\(\{[\s\S]{0,200}Suezo:[\s\S]{0,200}Golem:[\s\S]{0,200}Oboro:[\s\S]{0,200}Yaobikuni:/.test(entries) && /coverFilm: Object\.freeze/.test(entries) && /sprout: Object\.freeze\(\{ mark:'🌱', n:3 \}\)/.test(entries));
+check('⑨ かばう膜はモノリス以外の味方の枠へ、若葉は味方全員の枠へ', /const coverSlot=tacticsExCoverSlot\([^\n]*\);\s*\n\s*if\(coverSlot!=null&&coverSlot!==slotIdx\) out\.coverFilm=true;/.test(app) && /==='partyBoost'\)\) out\.sprout=true;/.test(app));
+check('⑩ 区切り5: パンドラの箱・ウンディーネの水の輪・メロディーのクッキー・クロミーの五線・スプーキーのコインが表にある', /pandoraBox: Object\.freeze/.test(entries) && /springRing: Object\.freeze/.test(entries) && /cookiePile: Object\.freeze/.test(entries) && /noteStaff: Object\.freeze/.test(entries) && /coinSpin: Object\.freeze/.test(entries));
+check('⑩ メロディー・クロミー・スプーキーは枠の「マーク×数」と同じ数から作り、水の輪は生命の泉の対象の子の枠へ', /stacks=\{allyStackCounts\[i\]\}/.test(battle) && /==='lifeSpring'&&effs\?\.\[j\]\?\.target===slotIdx\)\) out\.springRing=true;/.test(app));
 const html = read('monster-hero/index.html');
 check('見た目のCSS(.mh-stack-mark)がある', /\.mh-stack-mark \{/.test(html) && /\.mh-stack-marks-ally-top \{/.test(html));
 

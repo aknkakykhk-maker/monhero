@@ -475,6 +475,29 @@ const BATTLE_MONSTER_FX = Object.freeze({
   }),
   // ユグドラシル(世界樹の守り): 味方全員の枠に葉っぱの盾。残りターンの数だけ葉が付く
   leafShield: Object.freeze({ mark:'🍃', max:3 }),
+  // ---- 区切り4(2026-10-12) ----
+  //   kind … beam(目から敵へ光の線) / crack(ひびと赤く光る拳) / mist(薄い霧) / clock(止まった時計と青白い色)
+  overlay: Object.freeze({
+    Suezo:     Object.freeze({ kind:'beam',  mark:'👁️', color:'#38bdf8' }),   // サイコロックオン
+    Golem:     Object.freeze({ kind:'crack', mark:'👊', color:'#ef4444' }),   // 捨て身
+    Oboro:     Object.freeze({ kind:'mist',  mark:'',   color:'#e2e8f0' }),   // おぼろ返し
+    Yaobikuni: Object.freeze({ kind:'clock', mark:'⏱️', color:'#93c5fd' }),   // 悠久の刻
+  }),
+  // モノリス(みんなをかばう): ほかの味方の枠に、モノリスがかばう薄い盾の膜
+  coverFilm: Object.freeze({ mark:'🛡️', color:'#a5b4fc' }),
+  // プラント(緑のめぐみ): 味方全員の枠の下の端に若葉
+  sprout: Object.freeze({ mark:'🌱', n:3 }),
+  // ---- 区切り5(2026-10-12) ----
+  // パンドラ(パンドラの箱): 残りターンが減るほど箱のふたが開いていく(3以上=閉じている / 2=少し / 1=大きく)
+  pandoraBox: Object.freeze({ mark:'📦', lid:'🟪', angles:Object.freeze({ 3:0, 2:-25, 1:-60 }) }),
+  // ウンディーネ(生命の泉): 対象の子の足もとに水の輪
+  springRing: Object.freeze({ color:'#38bdf8' }),
+  // メロディー: クッキーの数に応じて小皿のクッキーが増える(perMark 個で1枚・最大 max 枚)。満タンで光る
+  cookiePile: Object.freeze({ mark:'🍪', perMark:4, max:3 }),
+  // クロミー: 黒音符の数に応じて五線の音符が増える。満タンで紫に光る
+  noteStaff: Object.freeze({ mark:'🎵', perMark:2, max:5 }),
+  // スプーキー: 運命で積んだ数だけコインが回る
+  coinSpin: Object.freeze({ mark:'🪙', max:3 }),
 });
 const BATTLE_STACK_MARK_ORDER = Object.freeze(Object.keys(BATTLE_STACK_MARKS));
 // { kind: 数 } から、出す順に並べた [{ kind, count, mark, img, label }] を作る。知らない種類・0は出さない。

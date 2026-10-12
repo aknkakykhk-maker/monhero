@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 588089901d98b6ff
+// generated-sha256: 55464ac38f325b26
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-12 16:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-12 17:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -12196,6 +12196,29 @@ const BATTLE_MONSTER_FX = Object.freeze({
   }),
   // ユグドラシル(世界樹の守り): 味方全員の枠に葉っぱの盾。残りターンの数だけ葉が付く
   leafShield: Object.freeze({ mark:'🍃', max:3 }),
+  // ---- 区切り4(2026-10-12) ----
+  //   kind … beam(目から敵へ光の線) / crack(ひびと赤く光る拳) / mist(薄い霧) / clock(止まった時計と青白い色)
+  overlay: Object.freeze({
+    Suezo:     Object.freeze({ kind:'beam',  mark:'👁️', color:'#38bdf8' }),   // サイコロックオン
+    Golem:     Object.freeze({ kind:'crack', mark:'👊', color:'#ef4444' }),   // 捨て身
+    Oboro:     Object.freeze({ kind:'mist',  mark:'',   color:'#e2e8f0' }),   // おぼろ返し
+    Yaobikuni: Object.freeze({ kind:'clock', mark:'⏱️', color:'#93c5fd' }),   // 悠久の刻
+  }),
+  // モノリス(みんなをかばう): ほかの味方の枠に、モノリスがかばう薄い盾の膜
+  coverFilm: Object.freeze({ mark:'🛡️', color:'#a5b4fc' }),
+  // プラント(緑のめぐみ): 味方全員の枠の下の端に若葉
+  sprout: Object.freeze({ mark:'🌱', n:3 }),
+  // ---- 区切り5(2026-10-12) ----
+  // パンドラ(パンドラの箱): 残りターンが減るほど箱のふたが開いていく(3以上=閉じている / 2=少し / 1=大きく)
+  pandoraBox: Object.freeze({ mark:'📦', lid:'🟪', angles:Object.freeze({ 3:0, 2:-25, 1:-60 }) }),
+  // ウンディーネ(生命の泉): 対象の子の足もとに水の輪
+  springRing: Object.freeze({ color:'#38bdf8' }),
+  // メロディー: クッキーの数に応じて小皿のクッキーが増える(perMark 個で1枚・最大 max 枚)。満タンで光る
+  cookiePile: Object.freeze({ mark:'🍪', perMark:4, max:3 }),
+  // クロミー: 黒音符の数に応じて五線の音符が増える。満タンで紫に光る
+  noteStaff: Object.freeze({ mark:'🎵', perMark:2, max:5 }),
+  // スプーキー: 運命で積んだ数だけコインが回る
+  coinSpin: Object.freeze({ mark:'🪙', max:3 }),
 });
 const BATTLE_STACK_MARK_ORDER = Object.freeze(Object.keys(BATTLE_STACK_MARKS));
 // { kind: 数 } から、出す順に並べた [{ kind, count, mark, img, label }] を作る。知らない種類・0は出さない。
@@ -36990,8 +37013,9 @@ const BattleStackMarks = ({ counts, side, full = 0, className = '' }) => {
 // ★モンスターごとの演出(2026-10-12 社長の決定)。絵柄は BATTLE_MONSTER_FX の1か所。
 //   fx … { avoid, present:{ jackpot, kind }, swordStyle }(tacticsSlotCountersAt が作る)。imgSrc … 分身に使うその子の絵。
 //   calm … 「待機中の動き：止める」のとき(動きを止めて形だけ出す。端末の「動きを減らす」は CSS で止める)
-const BattleMonsterFx = ({ fx, imgSrc, monId, calm = false }) => {
-  if (!fx) return null;
+const BattleMonsterFx = ({ fx, imgSrc, monId, stacks = null, calm = false }) => {
+  if (!fx && !stacks) return null;
+  fx = fx || {};
   const T = BATTLE_MONSTER_FX;
   const n = (v, max) => Math.min(max, Math.max(0, Math.floor(Number(v) || 0)));
   const clones = n(fx.avoid, T.avoidClone.max);
@@ -37006,7 +37030,18 @@ const BattleMonsterFx = ({ fx, imgSrc, monId, calm = false }) => {
   // 区切り3
   const scatter = fx.exEffect && T.scatter[monId] ? T.scatter[monId] : null;
   const leaves = n(fx.leafShield, T.leafShield.max);
-  if (!clones && !pr && !style && !aura && !gloves && !volt && !after && !thunder && !scatter && !leaves) return null;
+  // 区切り4
+  const overlay = fx.exEffect && T.overlay[monId] ? T.overlay[monId] : null;
+  const film = !!fx.coverFilm, sprout = !!fx.sprout;
+  // 区切り5。メロディー・クロミー・スプーキーは、枠の「マーク×数」と同じ数(stacks)から作る
+  const box = fx.exEffect === 'pandoraBox' ? Math.max(1, Math.min(3, Math.floor(Number(fx.exTurns) || 3))) : 0;
+  const ring = !!fx.springRing;
+  const st = stacks || {};
+  const pile = monId === 'Melody' && Number(st.cookie) > 0 ? n(Math.ceil(Number(st.cookie) / T.cookiePile.perMark), T.cookiePile.max) : 0;
+  const staff = monId === 'Kuromy' && Number(st.note) > 0 ? n(Math.ceil(Number(st.note) / T.noteStaff.perMark), T.noteStaff.max) : 0;
+  const coins = monId === 'Spooky' ? n((Number(st.fateAtk) || 0) + (Number(st.fateCombo) || 0), T.coinSpin.max) : 0;
+  const stackFull = (monId === 'Melody' && Number(st.cookie) >= SWEET_STACK_MAX) || (monId === 'Kuromy' && Number(st.note) >= SWEET_STACK_MAX);
+  if (!clones && !pr && !style && !aura && !gloves && !volt && !after && !thunder && !scatter && !leaves && !overlay && !film && !sprout && !box && !ring && !pile && !staff && !coins) return null;
   const fading = Number(fx.exTurns) === 1;
   return (
     <div data-monster-fx className={`mh-mfx pointer-events-none${calm ? ' is-calm' : ''}`} aria-hidden="true">
@@ -37033,6 +37068,14 @@ const BattleMonsterFx = ({ fx, imgSrc, monId, calm = false }) => {
       {scatter && (scatter.kind === 'ring'
         ? <span data-mfx-scatter="ring" className="mh-mfx-ring" style={{ '--mfx-c': scatter.color }}/>
         : <span data-mfx-scatter={scatter.kind} className={`mh-mfx-scatter is-${scatter.kind}`}>{scatter.marks.map((m, k) => <i key={k} className={`s${k}`}>{m}</i>)}</span>)}
+      {overlay && <span data-mfx-overlay={overlay.kind} className={`mh-mfx-ov is-${overlay.kind}`} style={{ '--mfx-c': overlay.color }}>{overlay.mark ? <i>{overlay.mark}</i> : null}</span>}
+      {film && <span data-mfx-cover="film" className="mh-mfx-film" style={{ '--mfx-c': T.coverFilm.color }}><i>{T.coverFilm.mark}</i></span>}
+      {sprout && <span data-mfx-sprout={T.sprout.n} className="mh-mfx-sprout">{Array.from({ length: T.sprout.n }, (_, k) => <i key={k}>{T.sprout.mark}</i>)}</span>}
+      {ring && <span data-mfx-spring="ring" className="mh-mfx-spring" style={{ '--mfx-c': T.springRing.color }}/>}
+      {box > 0 && <span data-mfx-pandora={box} className="mh-mfx-pbox"><i className="lid" style={{ transform: `rotate(${T.pandoraBox.angles[box] || 0}deg)` }}>{T.pandoraBox.lid}</i><i>{T.pandoraBox.mark}</i></span>}
+      {pile > 0 && <span data-mfx-cookie-pile={pile} className={`mh-mfx-pile${stackFull ? ' is-full' : ''}`}>{Array.from({ length: pile }, (_, k) => <i key={k}>{T.cookiePile.mark}</i>)}</span>}
+      {staff > 0 && <span data-mfx-note-staff={staff} className={`mh-mfx-staff${stackFull ? ' is-full' : ''}`}>{Array.from({ length: staff }, (_, k) => <i key={k} className={`n${k}`}>{T.noteStaff.mark}</i>)}</span>}
+      {coins > 0 && <span data-mfx-coin={coins} className="mh-mfx-coin">{Array.from({ length: coins }, (_, k) => <i key={k}>{T.coinSpin.mark}</i>)}</span>}
       {leaves > 0 && <span data-mfx-leaf={leaves} className="mh-mfx-leaf">{Array.from({ length: leaves }, (_, k) => <i key={k}>{T.leafShield.mark}</i>)}</span>}
     </div>
   );
@@ -38617,7 +38660,7 @@ function BattleScreen({
                 {/* ★貯まった数(クッキー・黒音符など)を「マーク×数」で常に出す(2026-10-12 社長の依頼)。タクティクスの枠は絵の左下、ほかのモードの縦長の枠は名前の帯のすぐ下(下の端は間合いの札がある) */}
                 <BattleStackMarks counts={allyStackCounts[i]} side="ally" full={SWEET_STACK_MAX} className={tacticsNewLayout?'mh-stack-marks-ally':'mh-stack-marks-ally mh-stack-marks-ally-top'}/>
                 {/* モンスターごとの演出(ゴーストの分身・スネグーラチカのプレゼント・剣士モッチーの型)。タクティクスの枠だけ・軽量表示では出さない */}
-                {tacticsNewLayout&&!ecoBattleView&&!liteBattleView&&typeof tacticsSlotCountersAt==='function'&&<BattleMonsterFx fx={debugStackMarks&&debugStackMarks.fx&&debugStackMarks.fx[i]?debugStackMarks.fx[i]:tacticsSlotCountersAt(i)} imgSrc={s?.imgUrl} monId={s?.id} calm={battleFx.idleMotion==='OFF'}/>}
+                {tacticsNewLayout&&!ecoBattleView&&!liteBattleView&&typeof tacticsSlotCountersAt==='function'&&<BattleMonsterFx fx={debugStackMarks&&debugStackMarks.fx&&debugStackMarks.fx[i]?debugStackMarks.fx[i]:tacticsSlotCountersAt(i)} imgSrc={s?.imgUrl} monId={s?.id} stacks={allyStackCounts[i]} calm={battleFx.idleMotion==='OFF'}/>}
                 {slotHitKind&&(()=>{
                   const hitFx=TACTICS_SLOT_FX_STYLE[slotHitKind];
                   return(<div data-tactics-hit-fx={slotHitKind} className="absolute inset-0 z-[58] pointer-events-none overflow-visible">
@@ -56442,6 +56485,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       const d=raidExDefOf(u.id), r=d?tacticsExRemainOf(d,tacticsExState,j,u.id,tacticsExNow):null;
       out.leafShield=Math.max(out.leafShield||0, r&&r.turns>0?r.turns:1);
     }
+    // 区切り4: みんなをかばう(モノリス)は、かばってもらうほかの味方の枠へ。緑のめぐみ(プラント)は味方全員の枠へ
+    const coverSlot=tacticsExCoverSlot(tacticsExState,tacticsUnits,tacticsExNow);
+    if(coverSlot!=null&&coverSlot!==slotIdx) out.coverFilm=true;
+    if(tacticsUnits.some((u,j)=>u&&tacticsExActiveEffect(tacticsExState,j,u.id,tacticsExNow)==='partyBoost')) out.sprout=true;
+    // 区切り5: 生命の泉(ウンディーネ)の対象の子の枠へ水の輪
+    const effs=normalizeTacticsExState(tacticsExState).effects;
+    if(tacticsUnits.some((u,j)=>u&&tacticsExActiveEffect(tacticsExState,j,u.id,tacticsExNow)==='lifeSpring'&&effs?.[j]?.target===slotIdx)) out.springRing=true;
     return out;
   };
   // 会心が確定する攻撃(タクティクスだけ)。オフリィアボイドの完全回避が残っている子の攻撃と、
