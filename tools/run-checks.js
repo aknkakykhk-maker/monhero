@@ -169,8 +169,8 @@ const FORCE_CHECKS = [
   // rhythm-overlap-reach-check が選ばれず、main で NG になった(#2808 → #2821 で戻した)
   { re: /^monster-hero\/data\/rhythm-mode\.js$/,
     checks: ['mode/rhythm-overlap-reach-check.js', 'mode/rhythm-note-reach-check.js', 'mode/rhythm-released-chart-lock-check.js',
-      'mode/rhythm-monster-four-check.js', 'mode/rhythm-slide-start-lane-check.js', 'mode/rhythm-expert-master-order-check.js'],
-    why: '公開中の譜面の中身(押せない配置・取れないノーツ・指紋・モンスターノーツ4個・スライドの始まり・EXPERT と MASTER の順)' },
+      'mode/rhythm-monster-four-check.js', 'mode/rhythm-slide-start-lane-check.js', 'mode/rhythm-expert-master-order-check.js', 'mode/rhythm-chart-hand-rules-check.js'],
+    why: '公開中の譜面の中身(押せない配置・取れないノーツ・指紋・モンスターノーツ4個・スライドの始まり・EXPERT と MASTER の順・手の決まり)' },
 ];
 
 function tokensOf(file) {

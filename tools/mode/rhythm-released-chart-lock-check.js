@@ -36,6 +36,8 @@ if(args.includes('--update')){
     charts:current,history:[...(old.history||[]),{at,reason,...(changed.length<=20?{changed}:{changedCount:changed.length})}]};
   fs.writeFileSync(LOCK,JSON.stringify(next,null,1)+'\n');
   console.log(`控えを更新した(${changed.length}譜面): ${changed.join(' ')||'なし'}`);
+  // 公開中の譜面のノーツを動かしたら、押せない配置と手の決まりも必ず見る(2026-10-12: #2808 でタップを1つ戻したら押せない近さの2音になり、#2821 で遊ばれていた形へ戻した)
+  if(changed.length)console.log('  続けて回す: node tools/mode/rhythm-overlap-reach-check.js && node tools/mode/rhythm-chart-hand-rules-check.js(遊ばれていた形を変えるときは、変える前の形が何を避けていたかも確かめる)');
   process.exit(0);
 }
 
