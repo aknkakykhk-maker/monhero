@@ -265,10 +265,10 @@ const levelFromRaw=raw=>{
 };
 
 // 空中のノーツがある譜面(HELL)は、空中を地上と見なした難しさの SKY_LEVEL_FACTOR 倍をレベルにする
-// (2026-10-11 社長「空中あるだけで難易度2割増しぐらいの認識で数値設定したほうがいいよ」)。
+// (2026-10-11 社長「空中あるだけで難易度2割増しぐらいの認識で数値設定したほうがいいよ」→ 10/12 朝に3割 → 同日夕方「マスターの2割増しぐらいをベース難易度に」で2割へ戻した)。
 // 空中のノーツが無い譜面(地上の5難易度・公開中の曲)は、今までと1つも変わらない。
 // 生の値(strain.raw)は空中込みのまま返す(内訳で「空中⇄地上の切り替え」がどれだけ効いているかを見られるように)
-const SKY_LEVEL_FACTOR=1.3;
+const SKY_LEVEL_FACTOR=1.2;
 const chartHasSky=chart=>(chart&&Array.isArray(chart.notes)?chart.notes:[]).some(note=>Number(note&&note.skyHeight)>0
   ||(Array.isArray(note&&note.slidePoints)&&note.slidePoints.some(point=>Number(point&&point.sky)>0)));
 const groundedChart=chart=>({...chart,notes:chart.notes.map(note=>({...note,skyHeight:0,
