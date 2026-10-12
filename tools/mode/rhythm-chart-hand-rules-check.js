@@ -38,6 +38,11 @@ let ng=0;const ok=(name,cond,detail='')=>{console.log(`${cond?'OK':'NG'}: ${name
   // 左で押さえている間に左へタップ、右も押さえている → 反対の手もふさがっている
   ok('押さえている帯と同じ側のノーツで、反対の手もふさがっているものを数える',R.analyze([H(1000,3000,0),H(1000,3000,10),T(2000,2)]).besideHeldBand.length===1);
   ok('反対の手が空いていれば数えない',R.analyze([H(1000,3000,0),T(2000,2)]).besideHeldBand.length===0);
+  // 右手が右端で長押し中に、右側の地上タップ(サブレーン8)を左手で叩き、143ms後に左側の空中タップへ上がる(テンポくん 52.60秒の型)。
+  // レーンの左右で手を分けると「右の地上 → 左の空中」で別の手に見えるが、長押し中の手は使えないので、どちらも左手
+  {const a=R.analyze([H(1000,3000,10),T(2000,8),T(2143,4,1)]);
+    ok('長押し中の手は使えないとして、反対の手の高さの切り替えを数える(レーンの左右では見えない形)',a.heldHandSwitch.length===1&&a.sideHeightSwitch.length===0&&a.skyAfterGround.length===0,JSON.stringify(a.heldHandSwitch));}
+  ok('長押しが無ければ、長押し中の手の数え方では数えない',R.analyze([T(2000,8),T(2143,4,1)]).heldHandSwitch.length===0);
 }
 
 // ── 2〜4. 公開中の譜面と HELL ──

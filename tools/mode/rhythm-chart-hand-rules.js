@@ -87,13 +87,46 @@ const fastSameSide=(notes,gap=FAST_SAME_SIDE_MS)=>{const out=[],ev=eventsOf(note
     for(let i=1;i<l.length;i++){const d=l[i].at-l[i-1].at;if(d>SAME_TIME_MS&&d<gap)out.push({at:l[i].at,side,gapMs:Math.round(d)});}}
   return out.sort((a,b)=>a.at-b.at);};
 
-const RULES={sideHeightSwitch,skyAfterGround,besideHeldBand,fastSameSide};
+// 長押し中の手は使えない、として手を割り振る(2026-10-12 テンポくん「片方の手が長押し中で、もう片方の手が両側を受け持つ所が見えない」)。
+//   長押し(HOLD・SLIDE)を押さえている手は、その間ほかのノーツを叩けない。押さえている間に来るノーツは、レーンの側に関係なく反対の手。
+//   長押しの手は、書いてあればその手(hand)、無ければ始まりのレーンの側。始まりの時にもう片方の長押しを押さえていれば、その反対の手。
+//   両手とも押さえているときはレーンの側のまま。点は押し始めと長押しの終わり(終わりは押さえていた手)
+const handEventsOf=notes=>{
+  const sorted=notes.filter(n=>n&&Number.isFinite(n.timeMs)).slice().sort((a,b)=>a.timeMs-b.timeMs);
+  const held=[];const handOf=new Map();
+  for(const n of sorted){
+    for(let i=held.length-1;i>=0;i--)if(endOf(held[i])<=n.timeMs+SAME_TIME_MS)held.splice(i,1);
+    const busy=held.filter(h=>h!==n&&h.timeMs<n.timeMs-SAME_TIME_MS).map(h=>handOf.get(h));
+    let hand=sideAt(n,n.timeMs);
+    if(isLong(n)&&(n.hand==='L'||n.hand==='R'))hand=n.hand;
+    else if(busy.length===1)hand=busy[0]==='L'?'R':'L';
+    handOf.set(n,hand);
+    if(isLong(n))held.push(n);
+  }
+  const ev=[];
+  for(const n of sorted){const hand=handOf.get(n);
+    ev.push({n,at:n.timeMs,end:false,hand,level:levelAt(n,n.timeMs)});
+    if(isLong(n)){const e=endOf(n);ev.push({n,at:e,end:true,hand,level:levelAt(n,e)});}}
+  return ev.sort((a,b)=>a.at-b.at||(a.end?-1:1));};
+// 長押し中の手を使えないとして割り振った手で、150ms 以内の高さの切り替え・地上から 250ms 以内の空中を数える。
+// レーンの左右で数える sideHeightSwitch・skyAfterGround で見つかる所は除く(この割り振りで新しく見える所だけ)
+const heldHandSwitch=notes=>{const out=[],ev=handEventsOf(notes);
+  const seen=new Set([...sideHeightSwitch(notes),...skyAfterGround(notes)].map(x=>x.at));
+  for(const hand of ['L','R']){const l=ev.filter(e=>e.hand===hand);
+    for(let i=1;i<l.length;i++){const e=l[i],prev=previousGroup(l,i);if(!prev)continue;const d=e.at-prev.at;
+      const raise=!e.end&&e.level===1&&prev.group.every(p=>p.level===0);
+      const limit=raise?Math.max(SIDE_GAP_MS,SKY_RAISE_MS):SIDE_GAP_MS;
+      if(d<=limit&&!prev.group.some(p=>p.level===e.level)&&!seen.has(e.at))
+        out.push({at:e.at,side:hand,gapMs:Math.round(d),from:e.level?'地上':'空中',to:e.level?'空中':'地上'});}}
+  return out.sort((a,b)=>a.at-b.at);};
+
+const RULES={sideHeightSwitch,skyAfterGround,besideHeldBand,fastSameSide,heldHandSwitch};
 const RULE_LABELS={sideHeightSwitch:`同じ側で${SIDE_GAP_MS}ms以内に高さが変わる`,skyAfterGround:`同じ側の地上から${SKY_RAISE_MS}ms以内に空中`,
-  besideHeldBand:'押さえている帯と同じ側で、反対の手もふさがっている',fastSameSide:`同じ側の押し始めが${FAST_SAME_SIDE_MS}ms未満`};
+  besideHeldBand:'押さえている帯と同じ側で、反対の手もふさがっている',heldHandSwitch:'長押し中の手を使えないとして、反対の手で高さの切り替えが近い',fastSameSide:`同じ側の押し始めが${FAST_SAME_SIDE_MS}ms未満`};
 const analyze=notes=>Object.fromEntries(Object.entries(RULES).map(([k,f])=>[k,f(notes||[])]));
 const countsOf=notes=>Object.fromEntries(Object.entries(analyze(notes)).map(([k,v])=>[k,v.length]));
 
-module.exports={SIDE_GAP_MS,SKY_RAISE_MS,FAST_SAME_SIDE_MS,centerAt,sideAt,levelAt,eventsOf,sideHeightSwitch,skyAfterGround,besideHeldBand,fastSameSide,RULES,RULE_LABELS,analyze,countsOf};
+module.exports={SIDE_GAP_MS,SKY_RAISE_MS,FAST_SAME_SIDE_MS,centerAt,sideAt,levelAt,eventsOf,handEventsOf,heldHandSwitch,sideHeightSwitch,skyAfterGround,besideHeldBand,fastSameSide,RULES,RULE_LABELS,analyze,countsOf};
 
 if(require.main===module){
   const args=process.argv.slice(2),argOf=k=>{const i=args.indexOf(k);return i>=0?args[i+1]:undefined;};
