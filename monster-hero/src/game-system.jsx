@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 588089901d98b6ff
+// generated-sha256: 37081da2a2051e46
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-12 16:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-12 16:47"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -12196,6 +12196,18 @@ const BATTLE_MONSTER_FX = Object.freeze({
   }),
   // ユグドラシル(世界樹の守り): 味方全員の枠に葉っぱの盾。残りターンの数だけ葉が付く
   leafShield: Object.freeze({ mark:'🍃', max:3 }),
+  // ---- 区切り4(2026-10-12) ----
+  //   kind … beam(目から敵へ光の線) / crack(ひびと赤く光る拳) / mist(薄い霧) / clock(止まった時計と青白い色)
+  overlay: Object.freeze({
+    Suezo:     Object.freeze({ kind:'beam',  mark:'👁️', color:'#38bdf8' }),   // サイコロックオン
+    Golem:     Object.freeze({ kind:'crack', mark:'👊', color:'#ef4444' }),   // 捨て身
+    Oboro:     Object.freeze({ kind:'mist',  mark:'',   color:'#e2e8f0' }),   // おぼろ返し
+    Yaobikuni: Object.freeze({ kind:'clock', mark:'⏱️', color:'#93c5fd' }),   // 悠久の刻
+  }),
+  // モノリス(みんなをかばう): ほかの味方の枠に、モノリスがかばう薄い盾の膜
+  coverFilm: Object.freeze({ mark:'🛡️', color:'#a5b4fc' }),
+  // プラント(緑のめぐみ): 味方全員の枠の下の端に若葉
+  sprout: Object.freeze({ mark:'🌱', n:3 }),
 });
 const BATTLE_STACK_MARK_ORDER = Object.freeze(Object.keys(BATTLE_STACK_MARKS));
 // { kind: 数 } から、出す順に並べた [{ kind, count, mark, img, label }] を作る。知らない種類・0は出さない。
@@ -37006,7 +37018,10 @@ const BattleMonsterFx = ({ fx, imgSrc, monId, calm = false }) => {
   // 区切り3
   const scatter = fx.exEffect && T.scatter[monId] ? T.scatter[monId] : null;
   const leaves = n(fx.leafShield, T.leafShield.max);
-  if (!clones && !pr && !style && !aura && !gloves && !volt && !after && !thunder && !scatter && !leaves) return null;
+  // 区切り4
+  const overlay = fx.exEffect && T.overlay[monId] ? T.overlay[monId] : null;
+  const film = !!fx.coverFilm, sprout = !!fx.sprout;
+  if (!clones && !pr && !style && !aura && !gloves && !volt && !after && !thunder && !scatter && !leaves && !overlay && !film && !sprout) return null;
   const fading = Number(fx.exTurns) === 1;
   return (
     <div data-monster-fx className={`mh-mfx pointer-events-none${calm ? ' is-calm' : ''}`} aria-hidden="true">
@@ -37033,6 +37048,9 @@ const BattleMonsterFx = ({ fx, imgSrc, monId, calm = false }) => {
       {scatter && (scatter.kind === 'ring'
         ? <span data-mfx-scatter="ring" className="mh-mfx-ring" style={{ '--mfx-c': scatter.color }}/>
         : <span data-mfx-scatter={scatter.kind} className={`mh-mfx-scatter is-${scatter.kind}`}>{scatter.marks.map((m, k) => <i key={k} className={`s${k}`}>{m}</i>)}</span>)}
+      {overlay && <span data-mfx-overlay={overlay.kind} className={`mh-mfx-ov is-${overlay.kind}`} style={{ '--mfx-c': overlay.color }}>{overlay.mark ? <i>{overlay.mark}</i> : null}</span>}
+      {film && <span data-mfx-cover="film" className="mh-mfx-film" style={{ '--mfx-c': T.coverFilm.color }}><i>{T.coverFilm.mark}</i></span>}
+      {sprout && <span data-mfx-sprout={T.sprout.n} className="mh-mfx-sprout">{Array.from({ length: T.sprout.n }, (_, k) => <i key={k}>{T.sprout.mark}</i>)}</span>}
       {leaves > 0 && <span data-mfx-leaf={leaves} className="mh-mfx-leaf">{Array.from({ length: leaves }, (_, k) => <i key={k}>{T.leafShield.mark}</i>)}</span>}
     </div>
   );
@@ -56442,6 +56460,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       const d=raidExDefOf(u.id), r=d?tacticsExRemainOf(d,tacticsExState,j,u.id,tacticsExNow):null;
       out.leafShield=Math.max(out.leafShield||0, r&&r.turns>0?r.turns:1);
     }
+    // 区切り4: みんなをかばう(モノリス)は、かばってもらうほかの味方の枠へ。緑のめぐみ(プラント)は味方全員の枠へ
+    const coverSlot=tacticsExCoverSlot(tacticsExState,tacticsUnits,tacticsExNow);
+    if(coverSlot!=null&&coverSlot!==slotIdx) out.coverFilm=true;
+    if(tacticsUnits.some((u,j)=>u&&tacticsExActiveEffect(tacticsExState,j,u.id,tacticsExNow)==='partyBoost')) out.sprout=true;
     return out;
   };
   // 会心が確定する攻撃(タクティクスだけ)。オフリィアボイドの完全回避が残っている子の攻撃と、

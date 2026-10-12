@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3539dbe9e01aa8d9
+// source-sha256: a30146019fc14170
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-12 16:41";
+const BUILD_DATE = "2026-10-12 16:47";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -17268,6 +17268,36 @@ const BATTLE_MONSTER_FX = Object.freeze({
   leafShield: Object.freeze({
     mark: '🍃',
     max: 3
+  }),
+  overlay: Object.freeze({
+    Suezo: Object.freeze({
+      kind: 'beam',
+      mark: '👁️',
+      color: '#38bdf8'
+    }),
+    Golem: Object.freeze({
+      kind: 'crack',
+      mark: '👊',
+      color: '#ef4444'
+    }),
+    Oboro: Object.freeze({
+      kind: 'mist',
+      mark: '',
+      color: '#e2e8f0'
+    }),
+    Yaobikuni: Object.freeze({
+      kind: 'clock',
+      mark: '⏱️',
+      color: '#93c5fd'
+    })
+  }),
+  coverFilm: Object.freeze({
+    mark: '🛡️',
+    color: '#a5b4fc'
+  }),
+  sprout: Object.freeze({
+    mark: '🌱',
+    n: 3
   })
 });
 const BATTLE_STACK_MARK_ORDER = Object.freeze(Object.keys(BATTLE_STACK_MARKS));
@@ -61252,7 +61282,10 @@ const BattleMonsterFx = ({
   const thunder = fx.exEffect === 'thunder' && fx.thunder ? fx.thunder : null;
   const scatter = fx.exEffect && T.scatter[monId] ? T.scatter[monId] : null;
   const leaves = n(fx.leafShield, T.leafShield.max);
-  if (!clones && !pr && !style && !aura && !gloves && !volt && !after && !thunder && !scatter && !leaves) return null;
+  const overlay = fx.exEffect && T.overlay[monId] ? T.overlay[monId] : null;
+  const film = !!fx.coverFilm,
+    sprout = !!fx.sprout;
+  if (!clones && !pr && !style && !aura && !gloves && !volt && !after && !thunder && !scatter && !leaves && !overlay && !film && !sprout) return null;
   const fading = Number(fx.exTurns) === 1;
   return React.createElement("div", {
     "data-monster-fx": true,
@@ -61337,7 +61370,26 @@ const BattleMonsterFx = ({
   }, scatter.marks.map((m, k) => React.createElement("i", {
     key: k,
     className: `s${k}`
-  }, m)))), leaves > 0 && React.createElement("span", {
+  }, m)))), overlay && React.createElement("span", {
+    "data-mfx-overlay": overlay.kind,
+    className: `mh-mfx-ov is-${overlay.kind}`,
+    style: {
+      '--mfx-c': overlay.color
+    }
+  }, overlay.mark ? React.createElement("i", null, overlay.mark) : null), film && React.createElement("span", {
+    "data-mfx-cover": "film",
+    className: "mh-mfx-film",
+    style: {
+      '--mfx-c': T.coverFilm.color
+    }
+  }, React.createElement("i", null, T.coverFilm.mark)), sprout && React.createElement("span", {
+    "data-mfx-sprout": T.sprout.n,
+    className: "mh-mfx-sprout"
+  }, Array.from({
+    length: T.sprout.n
+  }, (_, k) => React.createElement("i", {
+    key: k
+  }, T.sprout.mark))), leaves > 0 && React.createElement("span", {
     "data-mfx-leaf": leaves,
     className: "mh-mfx-leaf"
   }, Array.from({
@@ -86834,6 +86886,9 @@ function MonsterHeroGame() {
         r = d ? tacticsExRemainOf(d, tacticsExState, j, u.id, tacticsExNow) : null;
       out.leafShield = Math.max(out.leafShield || 0, r && r.turns > 0 ? r.turns : 1);
     }
+    const coverSlot = tacticsExCoverSlot(tacticsExState, tacticsUnits, tacticsExNow);
+    if (coverSlot != null && coverSlot !== slotIdx) out.coverFilm = true;
+    if (tacticsUnits.some((u, j) => u && tacticsExActiveEffect(tacticsExState, j, u.id, tacticsExNow) === 'partyBoost')) out.sprout = true;
     return out;
   };
   const tacticsCritFixedNow = (slotIdx, card = null) => {
