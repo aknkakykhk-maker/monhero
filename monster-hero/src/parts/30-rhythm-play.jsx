@@ -1057,7 +1057,7 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   const rawChart=song.difficulties[difficulty.id];
   const transformedChart=useMemo(()=>assistOn||mirrorOn?rhythmTransformChart(song.difficulties[difficulty.id],{mirror:mirrorOn,assist:assistOn}):null,[song.songId,difficulty.id,assistOn,mirrorOn]);
   const chart=transformedChart||rawChart,laneRefs=useRef([]),runRef=useRef(null),frameRef=useRef(null),heldNotesRef=useRef([]),playAreaRef=useRef(null),judgmentLineRef=useRef(null),judgmentBandRef=useRef(null),judgmentTimerRef=useRef(null),judgmentRevisionRef=useRef(0),startLockRef=useRef(false),generationRef=useRef(0),mountedRef=useRef(false),glowNodesRef=useRef(null),liveTouchSubLanesRef=useRef([]),liveTouchSkySubLanesRef=useRef([]);
-  // 判定の文字の大きさを一度で変えるか(デバッグの切り替え・既定は今の形)。演奏の始めに1回だけ読む
+  // 判定の文字の大きさを一度で変えるか(デバッグの切り替え・既定は一度で)。演奏の始めに1回だけ読む
   const [judgmentSnap]=useState(()=>rhythmJudgmentSnapActive());
   // 地上の判定の文字の置き場所の案(デバッグ・既定は今のまま)。演奏の始めに1回だけ読む。空中のある譜面では使わない
   const [judgeTextPos]=useState(()=>RHYTHM_JUDGE_TEXT_POS.id);
