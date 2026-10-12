@@ -30074,10 +30074,17 @@ const RHYTHM_FLICK_UP_PALETTES=Object.freeze({
   pink:Object.freeze({hi:'#fdf2f8',mid:'#f472b6',lo:'#db2777',rgb:'244,114,182',label:'ピンク'}),
   fuchsia:Object.freeze({hi:'#fdf4ff',mid:'#d946ef',lo:'#a21caf',rgb:'217,70,239',label:'マゼンタ紫'}),
   silver:Object.freeze({hi:'#ffffff',mid:'#e2e8f0',lo:'#94a3b8',rgb:'226,232,240',label:'白銀'}),
+  // 2026-10-12 社長「上フリックをもっと違う色に」: ピンク〜赤〜紫の系統から大きく離れた色
+  lemon:Object.freeze({hi:'#fefce8',mid:'#fde047',lo:'#ca8a04',rgb:'253,224,71',label:'レモン黄'}),
+  white:Object.freeze({hi:'#ffffff',mid:'#f8fafc',lo:'#64748b',rgb:'248,250,252',label:'白(縁は灰)'}),
 });
-const RHYTHM_FLICK_UP_LABELS=Object.freeze({pink:'いま(ピンク)',fuchsia:'上フリックをマゼンタ紫に',silver:'上フリックを白銀に'});
+const RHYTHM_FLICK_UP_LABELS=Object.freeze({pink:'いま(ピンク)',fuchsia:'上フリックをマゼンタ紫に',silver:'上フリックを白銀に',lemon:'上フリックをレモン黄に',white:'上フリックを白(縁は灰)に'});
 const RHYTHM_FLICK_UP_COLOR_ID=(()=>{try{const v=typeof localStorage!=='undefined'?localStorage.getItem('mh_flick_up_color_proto'):'';return v&&RHYTHM_FLICK_UP_PALETTES[v]?v:'pink';}catch(e){return 'pink';}})();
 const RHYTHM_FLICK_UP_COLOR=RHYTHM_FLICK_UP_PALETTES[RHYTHM_FLICK_UP_COLOR_ID];
+// マスモンのノーツを金色にする案(デバッグ専用・2026-10-12)。保存は新しいキー mh_monster_note_gold_proto だけ。既定は now(今の形)。読み込み時に1回だけ読む
+//   gold … 金の板(光はふつう)/ goldGlow … 金の板+金の光を強く
+const RHYTHM_MONSTER_GOLD_LABELS=Object.freeze({now:'マスモン いまの形',gold:'マスモン 金の板',goldGlow:'マスモン 金の板+強い光'});
+const RHYTHM_MONSTER_GOLD_ID=(()=>{try{const v=typeof localStorage!=='undefined'?localStorage.getItem('mh_monster_note_gold_proto'):'';return v&&RHYTHM_MONSTER_GOLD_LABELS[v]?v:'now';}catch(e){return 'now';}})();
 const RHYTHM_FLICK_PLUME=Object.freeze({
   ms:460,w:160,h:420,wispW:48,wispH:150,wisps:14,sparks:10,cssWisps:6,
   tilt:Object.freeze({up:0,left:-34,right:34}),
@@ -31995,7 +32002,10 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     // 横フリック(左・右)。粒も矢印も同じ色
     LEFT:   headOf(RHYTHM_NOTE_COLORS.LEFT),
     RIGHT:  headOf(RHYTHM_NOTE_COLORS.RIGHT),
-    MONSTER:{radius:5,gradient:['#fef3c7','#f59e0b'],border:'rgba(255,255,255,.72)',inset:'rgba(255,255,255,.58)',ring:'#fde68a',glow:[[12,'rgba(217,70,239,.32)'],[5,'rgba(253,224,71,.72)'],[10,'rgba(217,70,239,.42)'],[14,'rgba(34,211,238,.24)']]},
+    // マスモンのノーツ。既定は今の形(薄い金→琥珀の板に紫・水色の光)。デバッグの案 RHYTHM_MONSTER_GOLD_ID(2026-10-12 社長「モンスターノーツは金とかにしたい」)
+    MONSTER:RHYTHM_MONSTER_GOLD_ID==='gold'?{radius:5,gradient:['#fffbeb',['#fde047',.38],['#eab308',.7],'#a16207'],border:'rgba(255,251,235,.95)',inset:'rgba(255,255,255,.7)',ring:'#fde047',glow:[[12,'rgba(234,179,8,.55)'],[5,'rgba(254,240,138,.8)'],[10,'rgba(202,138,4,.4)']]}
+      :RHYTHM_MONSTER_GOLD_ID==='goldGlow'?{radius:5,gradient:['#fffbeb',['#fde047',.38],['#eab308',.7],'#a16207'],border:'rgba(255,251,235,.98)',inset:'rgba(255,255,255,.8)',ring:'#fef08a',glow:[[16,'rgba(234,179,8,.75)'],[6,'rgba(254,240,138,.95)'],[14,'rgba(250,204,21,.55)']]}
+      :{radius:5,gradient:['#fef3c7','#f59e0b'],border:'rgba(255,255,255,.72)',inset:'rgba(255,255,255,.58)',ring:'#fde68a',glow:[[12,'rgba(217,70,239,.32)'],[5,'rgba(253,224,71,.72)'],[10,'rgba(217,70,239,.42)'],[14,'rgba(34,211,238,.24)']]},
     // 空中のノーツ(2026-10-10 社長「空中ノーツが四角すぎて違和感がある。普通のノーツのようにうまく表現できない？」)。
     // ふつうのノーツと同じ作り(板の形・角の丸み・光り方・質感)で、色だけ空中用の明るい赤。暗いれんが色ではなく光らせる。違いは位置と床の影で出す
     SKY:    headOf(SKY_NOTE_COLOR),
