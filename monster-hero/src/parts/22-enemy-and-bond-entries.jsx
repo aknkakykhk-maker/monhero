@@ -419,7 +419,7 @@ const BLACK_NOTE_CRIT_FROM = 5, BLACK_NOTE_CRIT_ADD = 0.1;
 const BLACK_NOTE_COMBO_FROM = 10, BLACK_NOTE_COMBO_RATE = 0.15;
 // ★バトル画面の「マーク×数」(2026-10-12 社長の依頼「スタックがいくら貯まってるのか一目でわかるように」)。
 //   貯まる数(味方)と、敵に重なってかかる状態を、その子の枠・敵の絵の隅に「マーク×数」で常に出す。
-//   ★絵柄はここ1か所で差し替える。mark は絵文字。img に画像のパス(例 'images/ui/stack-cookie.png')を入れると、絵文字の代わりにその絵を出す。
+//   ★絵柄はここ1か所で差し替える。mark は絵文字。img に画像のパス(images/ の下に置いた絵)を入れると、絵文字の代わりにその絵を出す。
 //   label は読み上げと詳細の言い方。並び順もこの順(味方の枠に複数付くとき)
 const BATTLE_STACK_MARKS = Object.freeze({
   cookie:     Object.freeze({ mark:'🍪', img:'', label:'クッキー', showZero:true }),          // メロディー(メロディの手作りクッキー)
