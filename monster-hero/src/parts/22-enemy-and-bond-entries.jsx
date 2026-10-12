@@ -419,7 +419,7 @@ const BLACK_NOTE_CRIT_FROM = 5, BLACK_NOTE_CRIT_ADD = 0.1;
 const BLACK_NOTE_COMBO_FROM = 10, BLACK_NOTE_COMBO_RATE = 0.15;
 // ★バトル画面の「マーク×数」(2026-10-12 社長の依頼「スタックがいくら貯まってるのか一目でわかるように」)。
 //   貯まる数(味方)と、敵に重なってかかる状態を、その子の枠・敵の絵の隅に「マーク×数」で常に出す。
-//   ★絵柄はここ1か所で差し替える。mark は絵文字。img に画像のパス(例 'images/ui/stack-cookie.png')を入れると、絵文字の代わりにその絵を出す。
+//   ★絵柄はここ1か所で差し替える。mark は絵文字。img に画像のパス(images/ の下に置いた絵)を入れると、絵文字の代わりにその絵を出す。
 //   label は読み上げと詳細の言い方。並び順もこの順(味方の枠に複数付くとき)
 const BATTLE_STACK_MARKS = Object.freeze({
   cookie:     Object.freeze({ mark:'🍪', img:'', label:'クッキー', showZero:true }),          // メロディー(メロディの手作りクッキー)
@@ -431,6 +431,10 @@ const BATTLE_STACK_MARKS = Object.freeze({
   trickRegen: Object.freeze({ mark:'💚', img:'', label:'トリック(回復)' }),
   fateCombo:  Object.freeze({ mark:'🎲', img:'', label:'運命(連撃)' }),        // 運命のコイン・運命の輪
   fateAtk:    Object.freeze({ mark:'🪙', img:'', label:'運命(ちから)' }),
+  // 残りターン・残り回数(2026-10-12 社長の追加依頼)。unit:'T' は「⏳2T」のように残りターンで出し、1になったら目立たせる
+  exTurns:    Object.freeze({ mark:'⏳', img:'', label:'EXの残りターン', unit:'T' }),   // タクティクスのEX(ターンで切れるもの)
+  avoid:      Object.freeze({ mark:'👻', img:'', label:'完全回避の残り' }),            // ゴースト(オフリィアボイド)
+  konjo:      Object.freeze({ mark:'🔥', img:'', label:'根性の残り' }),                // ウンディーネ(生命の泉)で付いた根性
   aquaPrison: Object.freeze({ mark:'💧', img:'', label:'水牢' }),              // 敵: ウンディーネ種のアクアフィールド
   aquaFreeze: Object.freeze({ mark:'❄️', img:'', label:'氷結' }),
   roar:       Object.freeze({ mark:'📢', img:'', label:'咆哮' }),              // 敵: 自分にかけた攻撃アップ
