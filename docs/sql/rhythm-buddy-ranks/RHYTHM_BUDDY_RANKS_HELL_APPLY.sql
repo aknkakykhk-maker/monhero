@@ -1,5 +1,6 @@
 -- マスモンランキング(public.rhythm_buddy_ranks)へ、難易度 HELL の最高スコアの列 score_hell を足す(2026-10-12)。
 -- 社長の決定「HELL もランキング(相棒を含む)に入れる」。流すのは HELL の公開(RELEASE_FLAGS.rhythmHell を真にする)より前。
+-- ★2026-10-13 本番へ流し済み(社長の依頼で窓口が実行。score_hell は integer で入り、既存の18行とも null)。
 -- 読み取り専用: いいえ。本番変更が残るか: はい(列・制約・索引を足すだけ)。
 -- 既存の行・列は消さず・書き換えない(既存の行の score_hell は null)。rankings / bond_levels には触らない。
 -- ゲームは公開の印が真になるまで score_hell を読み書きしないので、流すのが公開より前でも後でも、それまでの動きは変わらない。

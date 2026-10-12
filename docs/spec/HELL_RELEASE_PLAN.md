@@ -8,7 +8,7 @@
 | # | すること | 場所 | いまの値 |
 | --- | --- | --- | --- |
 | 1 | 公開の印を真にする | `src/parts/17-release-changelog-login-missions.jsx` の `RELEASE_FLAGS.rhythmHell` | `false` |
-| 1.5 | マスモンランキングの SQL(`docs/sql/rhythm-buddy-ranks/RHYTHM_BUDDY_RANKS_HELL_APPLY.sql`)を社長に流してもらう(印より先) | Supabase | 未 |
+| 1.5 | マスモンランキングの SQL(`docs/sql/rhythm-buddy-ranks/RHYTHM_BUDDY_RANKS_HELL_APPLY.sql`)を社長に流してもらう(印より先) | Supabase | **流し済み(2026-10-13)** |
 | 2 | 更新履歴を1件足す(下の §3 を貼り、**日時はその時の実時刻**に直す) | `data/changelog.js` の `const CHANGELOG = [` の直後 | 未記入(下書きは §3) |
 | 3 | ビルドと検査(§4) | — | — |
 | 4 | コミット → PR → マージ(CLAUDE.md ②③) | — | — |
@@ -35,7 +35,7 @@
 - モンヒロビートのミッションはもともと無いので、変わらない
 - 自己ベストは `mh_rhythm_best_v1` の `HELL` の欄。110万満点のころにデバッグで付いた値は、起動時に一度だけ 105/110 に縮める(`mh_rhythm_hell_best_rescaled_v1`)
 - 全国ランキング(`rankings`)の表・ビューは難易度で絞っていないので SQL は要らない
-- ⚠️ **マスモンランキングには SQL が要る**(列 `score_hell` を足す)。**印を真にする前に**社長に流してもらう:
+- マスモンランキングの SQL(列 `score_hell` を足す)は **2026-10-13 に本番へ流し済み**(18行とも null)。印を真にする前に流す必要があったもの:
   `docs/sql/rhythm-buddy-ranks/RHYTHM_BUDDY_RANKS_HELL_APPLY.sql`。流さないまま印を真にすると、マスモンランキングの読み書きが断られる
 
 ### 公開しても残るもの(デバッグ専用・プレイヤーには出ない)

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5f46e284308031c6
+// source-sha256: e85b513cee08fa69
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-13 08:23";
+const BUILD_DATE = "2026-10-13 08:33";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -51271,14 +51271,14 @@ function RhythmRankingScreen({
     const cur = rhythmRanking.difficultyId || 'ALL';
     return React.createElement("div", {
       "data-rhythm-ranking-diffs": true,
-      className: "mb-2 flex gap-1.5 overflow-x-auto pb-0.5"
+      className: "mb-2 flex gap-1"
     }, ids.map(id => React.createElement("button", {
       key: id,
       type: "button",
       "data-rhythm-ranking-diff": id,
       "aria-pressed": cur === id,
       onClick: () => loadRhythmRanking(song, id),
-      className: `min-h-[44px] shrink-0 rounded-lg border px-2.5 text-[10px] font-black ${cur === id ? 'border-amber-300/70 bg-amber-500/20 text-amber-100' : 'border-white/15 bg-slate-900/70 text-slate-300'}`
+      className: `min-h-[44px] min-w-0 flex-1 basis-0 rounded-lg border px-0.5 text-[9px] font-black leading-tight tracking-tight ${cur === id ? 'border-amber-300/70 bg-amber-500/20 text-amber-100' : 'border-white/15 bg-slate-900/70 text-slate-300'}`
     }, id === 'ALL' ? '全難易度' : RHYTHM_DEMO_DIFFICULTY_LABELS[id]?.name || id)));
   })(), songTab && rhythmRanking.status === 'loading' && React.createElement("p", {
     "data-rhythm-ranking-loading": true,
