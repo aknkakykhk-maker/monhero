@@ -1197,21 +1197,26 @@ const RHYTHM_SKY_TAP_DISTINCT={id:(()=>{try{const v=typeof localStorage!=='undef
 // 保存は新しいキー mh_sky_note_color_proto だけ。既定は off(今のまま=空中のタップ 明るい赤・右手の空中の長押し 桃)。
 // 上フリックのピンクから離し、水色・青・緑・紫・オレンジ・黄緑・金(マスモンのノーツに使うかもしれない)とぶつけない。左手の空中の長押しは青のまま。
 // 入っていれば、空中のタップの見分けの案(RHYTHM_SKY_TAP_DISTINCT)より先にこの板を使う。描く数・形は同じで、色の値だけ替える
-const RHYTHM_SKY_NOTE_COLOR_LABELS=Object.freeze({off:'いま(赤・桃・白い縁)',thin:'いまの色・縁を薄く',k1:'組1 深い赤・マゼンタ紫(縁を薄く)',k2:'組2 白銀・深い赤(縁を薄く)',k3:'組3 深い赤・白銀(縁を薄く)'});
-// box … 板の案(省くと今の板)/ right … 右手の空中の長押しの色(省くと今の桃)/ edge … 板の縁の色(板より少し明るい同じ系統。白い縁をやめる)。
-// 縁を薄くする組は、板の縁を 1px にし、長押しの帯の白い縁も薄く細くする(2026-10-12 社長「スカイノーツの白縁が濃すぎるのも見にくい原因かも」)
+// 2026-10-12 社長の決定「スカイノーツは組3で、右スライドは変えなくていい」: 既定は deep(空中のタップ=深い赤・縁を細く薄く)。右手の空中の長押しは今の桃のまま(縁も)。
+// 既定と同じ組を選んだときはキーを消し、ほかの組(off=前の見た目を含む)を選んだ人の値はそのまま残して使う
+const RHYTHM_SKY_NOTE_COLOR_DEFAULT='deep';
+const RHYTHM_SKY_NOTE_COLOR_LABELS=Object.freeze({deep:'空中のタップ 深い赤・縁を薄く(既定)',off:'前の見た目(明るい赤・白い縁)',thin:'前の色・縁を薄く',k1:'組1 深い赤・マゼンタ紫(縁を薄く)',k2:'組2 白銀・深い赤(縁を薄く)',k3:'組3 深い赤・白銀(縁を薄く)'});
+// box … 板の案(省くと今の板)/ right … 右手の空中の長押しの色(省くと今の桃)/ edge … 板の縁の色(板より少し明るい同じ系統。白い縁をやめる)/ arcEdge … 長押しの帯の白い縁も薄く細くする。
+// 縁を薄くする組は、板の縁を 1px にする(2026-10-12 社長「スカイノーツの白縁が濃すぎるのも見にくい原因かも」)
 const RHYTHM_SKY_THIN_EDGE=Object.freeze({boxEdgePx:1,arcEdgeAlpha:.22,arcEdgePx:.8});
 const RHYTHM_SKY_NOTE_COLOR_COMBOS=Object.freeze({
-  thin:Object.freeze({edge:'252,165,165'}),
-  k1:Object.freeze({box:'red2',right:'217,70,239',edge:'239,90,90'}),
-  k2:Object.freeze({box:'silver',right:'220,38,38',edge:'241,245,249'}),
-  k3:Object.freeze({box:'red2',right:'226,232,240',edge:'239,90,90'}),
+  deep:Object.freeze({box:'red2',edge:'239,90,90'}),
+  off:Object.freeze({}),
+  thin:Object.freeze({edge:'252,165,165',arcEdge:true}),
+  k1:Object.freeze({box:'red2',right:'217,70,239',edge:'239,90,90',arcEdge:true}),
+  k2:Object.freeze({box:'silver',right:'220,38,38',edge:'241,245,249',arcEdge:true}),
+  k3:Object.freeze({box:'red2',right:'226,232,240',edge:'239,90,90',arcEdge:true}),
 });
-const RHYTHM_SKY_NOTE_COLOR={id:(()=>{try{const v=typeof localStorage!=='undefined'?localStorage.getItem('mh_sky_note_color_proto'):'';return v&&RHYTHM_SKY_NOTE_COLOR_COMBOS[v]?v:'off';}catch(e){return 'off';}})(),
-  set(id){const v=RHYTHM_SKY_NOTE_COLOR_COMBOS[id]?id:'off';this.id=v;try{if(v==='off')localStorage.removeItem('mh_sky_note_color_proto');else localStorage.setItem('mh_sky_note_color_proto',v);}catch(e){}}};
+const RHYTHM_SKY_NOTE_COLOR={id:(()=>{try{const v=typeof localStorage!=='undefined'?localStorage.getItem('mh_sky_note_color_proto'):'';return v&&RHYTHM_SKY_NOTE_COLOR_COMBOS[v]?v:RHYTHM_SKY_NOTE_COLOR_DEFAULT;}catch(e){return RHYTHM_SKY_NOTE_COLOR_DEFAULT;}})(),
+  set(id){const v=RHYTHM_SKY_NOTE_COLOR_COMBOS[id]?id:RHYTHM_SKY_NOTE_COLOR_DEFAULT;this.id=v;try{if(v===RHYTHM_SKY_NOTE_COLOR_DEFAULT)localStorage.removeItem('mh_sky_note_color_proto');else localStorage.setItem('mh_sky_note_color_proto',v);}catch(e){}}};
 // 組の値を重ねた帯・板を、元の値と組ごとに1回だけ作って覚える(毎コマ読まれるので)
 const rhythmSkyComboMemo=(()=>{const memo=new Map();return (base,id,make)=>{let m=memo.get(base);if(!m){m={};memo.set(base,m);}return m[id]||(m[id]=Object.freeze(make()));};})();
-const rhythmSkyComboArc=(arc,id,k)=>rhythmSkyComboMemo(arc,id,()=>({...arc,...(k.right?{right:k.right}:{}),...(k.edge?{edgeAlpha:RHYTHM_SKY_THIN_EDGE.arcEdgeAlpha,edgePx:RHYTHM_SKY_THIN_EDGE.arcEdgePx}:{})}));
+const rhythmSkyComboArc=(arc,id,k)=>rhythmSkyComboMemo(arc,id,()=>({...arc,...(k.right?{right:k.right}:{}),...(k.arcEdge?{edgeAlpha:RHYTHM_SKY_THIN_EDGE.arcEdgeAlpha,edgePx:RHYTHM_SKY_THIN_EDGE.arcEdgePx}:{})}));
 const rhythmSkyComboBox=(box,id,k)=>k.edge?rhythmSkyComboMemo(box,id,()=>({...box,edge:k.edge,edgePx:RHYTHM_SKY_THIN_EDGE.boxEdgePx})):box;
 // 今の案。毎コマ読むので localStorage は読み込み時と切り替えたときだけ読む
 const RHYTHM_SKY_BOX_VARIANT={id:(()=>{try{const v=typeof localStorage!=='undefined'?localStorage.getItem('mh_sky_box_look_proto'):'';return v&&RHYTHM_SKY_BOX_LOOKS[v]?v:'b';}catch(e){return 'b';}})(),
@@ -1256,7 +1261,7 @@ const RHYTHM_SKY_LOOK_BASE=Object.freeze({
 const RHYTHM_SKY_LOOK=Object.freeze({
   get arc(){const a=rhythmHellVisMerged('arc',RHYTHM_SKY_LOOK_BASE.arc),id=RHYTHM_SKY_NOTE_COLOR.id,k=RHYTHM_SKY_NOTE_COLOR_COMBOS[id];return k?rhythmSkyComboArc(a,id,k):a;}, // 帯=手の色(左手=青・右手=桃)で中まで色(58%)・縁と芯は白。手は note.hand、無いときはスライドの点のレーンの平均が centerLane より左なら左  // edge=帯の左右の白い縁(紫の床の上でも「白い帯」に見せる)
   core:Object.freeze({rgb:'255,255,255',alpha:.9,widthPx:3}),
-  get box(){const p=RHYTHM_HELL_VIS_PRESETS[RHYTHM_HELL_VIS.id],id=RHYTHM_SKY_NOTE_COLOR.id,k=RHYTHM_SKY_NOTE_COLOR_COMBOS[id];const b=RHYTHM_SKY_BOX_LOOKS[(k&&k.box)||RHYTHM_SKY_TAP_DISTINCT_BOX[RHYTHM_SKY_TAP_DISTINCT.id]||(p&&p.box)||RHYTHM_SKY_BOX_VARIANT.id]||RHYTHM_SKY_BOX_LOOKS.b;return k?rhythmSkyComboBox(b,id,k):b;}, // 案はデバッグで切り替える(RHYTHM_SKY_BOX_LOOKS)
+  get box(){const p=RHYTHM_HELL_VIS_PRESETS[RHYTHM_HELL_VIS.id],id=RHYTHM_SKY_NOTE_COLOR.id,k=RHYTHM_SKY_NOTE_COLOR_COMBOS[id],d=RHYTHM_SKY_TAP_DISTINCT_BOX[RHYTHM_SKY_TAP_DISTINCT.id];const b=RHYTHM_SKY_BOX_LOOKS[d||(k&&k.box)||(p&&p.box)||RHYTHM_SKY_BOX_VARIANT.id]||RHYTHM_SKY_BOX_LOOKS.b;return k&&!d?rhythmSkyComboBox(b,id,k):b;}, // 空中のタップの見分けの案(デバッグ)を選んだときはそれを、無ければ色の組、無ければ見やすさの案の板
   get shadow(){return rhythmHellVisMerged('shadow',RHYTHM_SKY_LOOK_BASE.shadow);},
   star:Object.freeze({rgb:'255,255,255',radiusPx:17}),
   // span … 'road'=空中の線の高さで見えている地上の道の幅+左右 marginPct(いま)/ 'sky'=空中の道の手前の端(空中のノーツが着く幅)
