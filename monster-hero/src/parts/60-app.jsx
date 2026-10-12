@@ -10786,6 +10786,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if(rm&&rm.kind==='turns'&&rm.turns>0) out.exTurns=rm.turns;
     const avoid=tacticsExAvoidLeftOf(tacticsExState,tacticsUnits,slotIdx,tacticsExNow); if(avoid>0) out.avoid=avoid;
     const konjo=tacticsExKonjoLeftOf(tacticsExState,tacticsUnits,slotIdx,tacticsExNow); if(konjo>0) out.konjo=konjo;
+    // モンスターごとの演出に使うもの(BATTLE_MONSTER_FX)。プレゼントは使ったスネグーラチカの枠、型は剣士モッチーの枠にだけ付ける
+    if(def&&def.effect==='present'&&isTacticsExEffectActive(tacticsExState,slotIdx,unit.id,tacticsExNow)){
+      const pr=tacticsExPresentOf(tacticsExState,tacticsUnits,tacticsExNow);
+      if(pr&&pr.kinds.length) out.present={ jackpot:pr.jackpot, kind:pr.kinds[0] };
+    }
+    if(unit.id==='KenshiMocchi'&&def&&def.duration==='style') out.swordStyle=tacticsExStyleOf(def,tacticsExState,slotIdx,unit.id)||'sword';
     return out;
   };
   // 会心が確定する攻撃(タクティクスだけ)。オフリィアボイドの完全回避が残っている子の攻撃と、
