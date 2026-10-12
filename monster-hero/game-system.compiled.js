@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 37c885f765e18392
+// source-sha256: a493509f60d6574f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-12 20:53";
+const BUILD_DATE = "2026-10-12 21:22";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -31614,10 +31614,10 @@ function RhythmHellSkyHitSwitch() {
     className: "text-xs font-black text-rose-100"
   }, "空中を叩いたときの手ごたえ(試作・見比べ用)"), React.createElement("p", {
     className: "mt-1 text-[10px] font-bold text-rose-200/80"
-  }, "柱の光: 空中の線の高さにレーンの柱の光(白紫)。既定は入(実機で重くならなかった)。判定の文字: 既定は空中の線のすぐ下。地上の5難易度は変わりません。演奏を始め直すと効きます。"), React.createElement("div", {
-    className: "mt-2 grid grid-cols-2 gap-2",
+  }, "柱の光: 空中の線の高さにレーンの柱の光(白紫)。既定は空中のレーンの奥まで伸ばす形(短い柱も選べる)。判定の文字: 既定は空中の線のすぐ下。地上の5難易度は変わりません。演奏を始め直すと効きます。"), React.createElement("div", {
+    className: "mt-2 grid grid-cols-3 gap-2",
     "data-rhythm-hell-sky-hit-row": true
-  }, [['off', '柱の光 切'], ['on', '柱の光 入(既定)']].map(([v, l]) => React.createElement("span", {
+  }, [['off', '柱の光 切'], ['on', '短い柱'], ['far', '奥まで(既定)']].map(([v, l]) => React.createElement("span", {
     key: v,
     "data-rhythm-hell-sky-hit-pick": v,
     className: "contents"
