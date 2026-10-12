@@ -450,6 +450,31 @@ const BATTLE_MONSTER_FX = Object.freeze({
     inner: Object.freeze({ dmg:'⚔️', taken:'🛡️', combo:'💫', heal:'💖', guts:'⚡', crit:'🎯' }) }),
   // 剣士モッチー(ソード・コンバージョン): いまの型を 剣だけ / 剣と盾 / 剣2本 で出す
   swordStyle: Object.freeze({ sword:'🗡️', shield:'🗡️🛡️', dual:'⚔️' }),
+  // ---- 区切り2(2026-10-12): EXが効いているあいだの見た目 ----
+  // モッチー(ガッツ全開っちー)・ミタラシ(ドラゴンだっちー): 絵の後ろのオーラ。残り1ターンは小さくなる
+  aura: Object.freeze({
+    Mocchi:    Object.freeze({ mark:'🔥', color:'#facc15' }),
+    Mitarashi: Object.freeze({ mark:'🐉', color:'#22d3ee' }),
+  }),
+  // ハム(ハムボクシング): カウンターの数だけグローブ
+  glove: Object.freeze({ mark:'🥊', max:3 }),
+  // ミーア(オン・ステージ!): 絵の上からのスポットライト。ボルテージが上がるほど明るい
+  spotlight: Object.freeze({ color:'#fde68a', minOpacity:0.2, maxOpacity:0.85 }),
+  // ザン(血踊): 回避した数だけ、赤い残像が増える
+  afterimage: Object.freeze({ max:3, color:'#ef4444' }),
+  // ライガー(雷狼影): ためる間は雷の数だけ ⚡、雷纏のあいだは体に稲妻をまとう
+  thunder: Object.freeze({ mark:'⚡', max:5, color:'#facc15' }),
+  // ---- 区切り3(2026-10-12): EXが効いているあいだ、絵のまわりに舞う・回るもの ----
+  //   kind … petals(上から舞い落ちる) / orbit(まわりを回る) / feathers(ゆっくり落ちる) / ring(後ろで回る輪) / sweets(跳ねる)
+  scatter: Object.freeze({
+    Eiki:    Object.freeze({ kind:'petals',   marks:Object.freeze(['🌸', '🌸', '🌸']) }),       // 緋桜瞬歩
+    Pixie:   Object.freeze({ kind:'orbit',    marks:Object.freeze(['✨', '⭐', '✨']) }),        // お気に入りの魔法
+    Iblis:   Object.freeze({ kind:'feathers', marks:Object.freeze(['🪶', '🪶', '🪶']) }),        // 堕天の烙印(黒い羽根)
+    Ark:     Object.freeze({ kind:'ring',     marks:Object.freeze([]), color:'#fbbf24' }),       // 抗えぬ宿命を追え(輪廻の環)
+    MelWhip: Object.freeze({ kind:'sweets',   marks:Object.freeze(['🍬', '🍰', '🍭']) }),       // スイーツパラダイス
+  }),
+  // ユグドラシル(世界樹の守り): 味方全員の枠に葉っぱの盾。残りターンの数だけ葉が付く
+  leafShield: Object.freeze({ mark:'🍃', max:3 }),
 });
 const BATTLE_STACK_MARK_ORDER = Object.freeze(Object.keys(BATTLE_STACK_MARKS));
 // { kind: 数 } から、出す順に並べた [{ kind, count, mark, img, label }] を作る。知らない種類・0は出さない。

@@ -19,6 +19,17 @@
   (`real` の付くものは実際の状態。ほかは数を差し込んで撮ったもの)
 - 連撃パワーのマークは ⚔️ → 💥 に替えた
 
+### 区切り2(2026-10-12 公開): モッチー・ミタラシ・ハム・ミーア・ザン・ライガー
+
+- EXが効いているあいだだけ出す。中身は詳細と同じ関数(tacticsExActiveEffect / Counter / Voltage / Thunder)から作る
+- 静止画(実寸・数は差し込み): `b2-mocchi-3T` / `b2-mocchi-1T`(残り1で小さく)、`b2-mitarashi`、`b2-ham-1` / `b2-ham-3`、
+  `b2-mia-v2` / `b2-mia-v10`、`b2-zan-1` / `b2-zan-3`、`b2-tiger-charge3` / `b2-tiger-wrap`、まとめ `b2-closeup`
+
+### 区切り3(2026-10-12 公開): エイキ・アーク・イブリース・ピクシー・ユグドラシル・メルホイップ
+
+- 舞う・回るもの(scatter)と、ユグドラシルの葉っぱの盾(leafShield・味方全員の枠に、残りターンの数だけ葉)
+- 静止画(実寸・数は差し込み): `b3-eiki` / `b3-ark` / `b3-iblis` / `b3-pixie` / `b3-melwhip` / `b3-yggdrasil-3` → `b3-yggdrasil-1`、まとめ `b3-closeup`
+
 ## 見本の静止画(実寸・iPhone 375×667 のタクティクス・本番に入れる前)
 
 | 子 | 静止画 | 中身 |

@@ -10792,6 +10792,22 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       if(pr&&pr.kinds.length) out.present={ jackpot:pr.jackpot, kind:pr.kinds[0] };
     }
     if(unit.id==='KenshiMocchi'&&def&&def.duration==='style') out.swordStyle=tacticsExStyleOf(def,tacticsExState,slotIdx,unit.id)||'sword';
+    // 区切り2: いま効いているEXの種類と、その中身(カウンター・ボルテージ・雷・回避した数)
+    const eff=tacticsExActiveEffect(tacticsExState,slotIdx,unit.id,tacticsExNow);
+    if(eff){
+      out.exEffect=eff;
+      if(eff==='counter'){ const ct=tacticsExCounterOf(tacticsExState,tacticsUnits,slotIdx,tacticsExNow); if(ct) out.counter=ct.counter; }
+      if(eff==='stage'){ const v=tacticsExVoltageOf(tacticsExState,tacticsUnits,tacticsExNow); if(v) out.voltage={ value:v.voltage, max:v.max }; }
+      if(eff==='thunder'){ const th=tacticsExThunderOf(tacticsExState,tacticsUnits,slotIdx,tacticsExNow); if(th) out.thunder={ phase:th.phase, charge:th.charge }; }
+      if(eff==='dodgeCombo') out.dodges=tacticsSafeInt(normalizeTacticsExState(tacticsExState).effects?.[slotIdx]?.dodges,0);
+    }
+    // 区切り3: 世界樹の守り(ユグドラシル)は味方全員に効くので、だれが使っても全員の枠へ「あと何ターン」を渡す
+    for(let j=0;j<tacticsUnits.length;j++){
+      const u=tacticsUnits[j]; if(!u) continue;
+      if(tacticsExActiveEffect(tacticsExState,j,u.id,tacticsExNow)!=='partyGuard') continue;
+      const d=raidExDefOf(u.id), r=d?tacticsExRemainOf(d,tacticsExState,j,u.id,tacticsExNow):null;
+      out.leafShield=Math.max(out.leafShield||0, r&&r.turns>0?r.turns:1);
+    }
     return out;
   };
   // 会心が確定する攻撃(タクティクスだけ)。オフリィアボイドの完全回避が残っている子の攻撃と、
