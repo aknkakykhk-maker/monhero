@@ -1182,14 +1182,37 @@ const RHYTHM_SKY_BOX_LOOKS=Object.freeze({
   // 上フリック(ピンクの板・白っぽい縁・上の三角)と見分けやすくする案(2026-10-12 社長「スカイノーツと上フリック見分けつきづらい」)
   block:Object.freeze({aspect:.34,farDim:.85,fill:'220,38,38',fillAlpha:.97,topAlpha:.9,topRatio:.32,frontFill:'127,29,29',frontAlpha:.98,thickRatio:.75,edge:'254,202,202',edgePx:1.8,minFacePx:6}),
   deep:Object.freeze({aspect:.2,farDim:.85,fill:'200,30,30',fillAlpha:.97,topAlpha:.9,topRatio:.36,frontFill:'127,29,29',frontAlpha:.98,thickRatio:.3,edge:'255,255,255',edgePx:3.4,minFacePx:6}),
+  // 空中のノーツの色の組(RHYTHM_SKY_NOTE_COLOR)で使う板。red2=深い赤(縁はふつうの太さ)/silver=白銀
+  red2:Object.freeze({aspect:.2,farDim:.85,fill:'200,30,30',fillAlpha:.97,topAlpha:.9,topRatio:.36,frontFill:'127,29,29',frontAlpha:.98,thickRatio:.3,edge:'254,202,202',edgePx:2.4,minFacePx:6}),
+  silver:Object.freeze({aspect:.2,farDim:.85,fill:'226,232,240',fillAlpha:.95,topAlpha:.95,topRatio:.36,frontFill:'100,116,139',frontAlpha:.95,thickRatio:.3,edge:'255,255,255',edgePx:2.4,minFacePx:6}),
 });
-const RHYTHM_SKY_BOX_LOOK_LABELS=Object.freeze({z:'案Z 色の無いガラス',a:'案A 縁と面を明るく',b:'案B 赤い板(既定)',c:'案C 白い板',b2:'案B2 赤い板(濃く)',b3:'案B3 赤い板(明るく・白い縁)',block:'厚い赤い角材',deep:'深い赤+太い白い縁'});
+const RHYTHM_SKY_BOX_LOOK_LABELS=Object.freeze({z:'案Z 色の無いガラス',a:'案A 縁と面を明るく',b:'案B 赤い板(既定)',c:'案C 白い板',b2:'案B2 赤い板(濃く)',b3:'案B3 赤い板(明るく・白い縁)',block:'厚い赤い角材',deep:'深い赤+太い白い縁',red2:'深い赤',silver:'白銀'});
 // 空中のタップを上フリックと見分けやすくする案(デバッグ専用・2026-10-12)。保存は新しいキー mh_sky_tap_distinct_proto だけ。既定は off(今のまま)。
 // 入っていれば、見やすさの案(RHYTHM_HELL_VIS)や空中の板の案より先にこの板を使う。white=案C 白い板/block=厚い赤い角材/deep=深い赤+太い白い縁
 const RHYTHM_SKY_TAP_DISTINCT_LABELS=Object.freeze({off:'いま',white:'案1 白い板',block:'案2 厚い赤い角材',deep:'案3 深い赤+太い白い縁'});
 const RHYTHM_SKY_TAP_DISTINCT_BOX=Object.freeze({white:'c',block:'block',deep:'deep'});
 const RHYTHM_SKY_TAP_DISTINCT={id:(()=>{try{const v=typeof localStorage!=='undefined'?localStorage.getItem('mh_sky_tap_distinct_proto'):'';return v&&RHYTHM_SKY_TAP_DISTINCT_LABELS[v]?v:'off';}catch(e){return 'off';}})(),
   set(id){const v=RHYTHM_SKY_TAP_DISTINCT_LABELS[id]?id:'off';this.id=v;try{if(v==='off')localStorage.removeItem('mh_sky_tap_distinct_proto');else localStorage.setItem('mh_sky_tap_distinct_proto',v);}catch(e){}}};
+// 空中のノーツの色の組(デバッグ専用・2026-10-12 社長「上フリックの色を変えると戸惑う人がいる。スカイノーツを変えるほうがいい」)。
+// 保存は新しいキー mh_sky_note_color_proto だけ。既定は off(今のまま=空中のタップ 明るい赤・右手の空中の長押し 桃)。
+// 上フリックのピンクから離し、水色・青・緑・紫・オレンジ・黄緑・金(マスモンのノーツに使うかもしれない)とぶつけない。左手の空中の長押しは青のまま。
+// 入っていれば、空中のタップの見分けの案(RHYTHM_SKY_TAP_DISTINCT)より先にこの板を使う。描く数・形は同じで、色の値だけ替える
+const RHYTHM_SKY_NOTE_COLOR_LABELS=Object.freeze({off:'いま(赤・桃・白い縁)',thin:'いまの色・縁を薄く',k1:'組1 深い赤・マゼンタ紫(縁を薄く)',k2:'組2 白銀・深い赤(縁を薄く)',k3:'組3 深い赤・白銀(縁を薄く)'});
+// box … 板の案(省くと今の板)/ right … 右手の空中の長押しの色(省くと今の桃)/ edge … 板の縁の色(板より少し明るい同じ系統。白い縁をやめる)。
+// 縁を薄くする組は、板の縁を 1px にし、長押しの帯の白い縁も薄く細くする(2026-10-12 社長「スカイノーツの白縁が濃すぎるのも見にくい原因かも」)
+const RHYTHM_SKY_THIN_EDGE=Object.freeze({boxEdgePx:1,arcEdgeAlpha:.22,arcEdgePx:.8});
+const RHYTHM_SKY_NOTE_COLOR_COMBOS=Object.freeze({
+  thin:Object.freeze({edge:'252,165,165'}),
+  k1:Object.freeze({box:'red2',right:'217,70,239',edge:'239,90,90'}),
+  k2:Object.freeze({box:'silver',right:'220,38,38',edge:'241,245,249'}),
+  k3:Object.freeze({box:'red2',right:'226,232,240',edge:'239,90,90'}),
+});
+const RHYTHM_SKY_NOTE_COLOR={id:(()=>{try{const v=typeof localStorage!=='undefined'?localStorage.getItem('mh_sky_note_color_proto'):'';return v&&RHYTHM_SKY_NOTE_COLOR_COMBOS[v]?v:'off';}catch(e){return 'off';}})(),
+  set(id){const v=RHYTHM_SKY_NOTE_COLOR_COMBOS[id]?id:'off';this.id=v;try{if(v==='off')localStorage.removeItem('mh_sky_note_color_proto');else localStorage.setItem('mh_sky_note_color_proto',v);}catch(e){}}};
+// 組の値を重ねた帯・板を、元の値と組ごとに1回だけ作って覚える(毎コマ読まれるので)
+const rhythmSkyComboMemo=(()=>{const memo=new Map();return (base,id,make)=>{let m=memo.get(base);if(!m){m={};memo.set(base,m);}return m[id]||(m[id]=Object.freeze(make()));};})();
+const rhythmSkyComboArc=(arc,id,k)=>rhythmSkyComboMemo(arc,id,()=>({...arc,...(k.right?{right:k.right}:{}),...(k.edge?{edgeAlpha:RHYTHM_SKY_THIN_EDGE.arcEdgeAlpha,edgePx:RHYTHM_SKY_THIN_EDGE.arcEdgePx}:{})}));
+const rhythmSkyComboBox=(box,id,k)=>k.edge?rhythmSkyComboMemo(box,id,()=>({...box,edge:k.edge,edgePx:RHYTHM_SKY_THIN_EDGE.boxEdgePx})):box;
 // 今の案。毎コマ読むので localStorage は読み込み時と切り替えたときだけ読む
 const RHYTHM_SKY_BOX_VARIANT={id:(()=>{try{const v=typeof localStorage!=='undefined'?localStorage.getItem('mh_sky_box_look_proto'):'';return v&&RHYTHM_SKY_BOX_LOOKS[v]?v:'b';}catch(e){return 'b';}})(),
   set(id){const v=RHYTHM_SKY_BOX_LOOKS[id]?id:'b';this.id=v;try{if(v==='b')localStorage.removeItem('mh_sky_box_look_proto');else localStorage.setItem('mh_sky_box_look_proto',v);}catch(e){}}};
@@ -1231,9 +1254,9 @@ const RHYTHM_SKY_LOOK_BASE=Object.freeze({
   line:Object.freeze({bandRgb:'150,118,235',bandAlpha:.38,bandPx:6,coreRgb:'165,135,245',coreAlpha:.95,corePx:2,marginPct:4,span:'road'}),
 });
 const RHYTHM_SKY_LOOK=Object.freeze({
-  get arc(){return rhythmHellVisMerged('arc',RHYTHM_SKY_LOOK_BASE.arc);}, // 帯=手の色(左手=青・右手=桃)で中まで色(58%)・縁と芯は白。手は note.hand、無いときはスライドの点のレーンの平均が centerLane より左なら左  // edge=帯の左右の白い縁(紫の床の上でも「白い帯」に見せる)
+  get arc(){const a=rhythmHellVisMerged('arc',RHYTHM_SKY_LOOK_BASE.arc),id=RHYTHM_SKY_NOTE_COLOR.id,k=RHYTHM_SKY_NOTE_COLOR_COMBOS[id];return k?rhythmSkyComboArc(a,id,k):a;}, // 帯=手の色(左手=青・右手=桃)で中まで色(58%)・縁と芯は白。手は note.hand、無いときはスライドの点のレーンの平均が centerLane より左なら左  // edge=帯の左右の白い縁(紫の床の上でも「白い帯」に見せる)
   core:Object.freeze({rgb:'255,255,255',alpha:.9,widthPx:3}),
-  get box(){const p=RHYTHM_HELL_VIS_PRESETS[RHYTHM_HELL_VIS.id];return RHYTHM_SKY_BOX_LOOKS[RHYTHM_SKY_TAP_DISTINCT_BOX[RHYTHM_SKY_TAP_DISTINCT.id]||(p&&p.box)||RHYTHM_SKY_BOX_VARIANT.id]||RHYTHM_SKY_BOX_LOOKS.b;}, // 案はデバッグで切り替える(RHYTHM_SKY_BOX_LOOKS)
+  get box(){const p=RHYTHM_HELL_VIS_PRESETS[RHYTHM_HELL_VIS.id],id=RHYTHM_SKY_NOTE_COLOR.id,k=RHYTHM_SKY_NOTE_COLOR_COMBOS[id];const b=RHYTHM_SKY_BOX_LOOKS[(k&&k.box)||RHYTHM_SKY_TAP_DISTINCT_BOX[RHYTHM_SKY_TAP_DISTINCT.id]||(p&&p.box)||RHYTHM_SKY_BOX_VARIANT.id]||RHYTHM_SKY_BOX_LOOKS.b;return k?rhythmSkyComboBox(b,id,k):b;}, // 案はデバッグで切り替える(RHYTHM_SKY_BOX_LOOKS)
   get shadow(){return rhythmHellVisMerged('shadow',RHYTHM_SKY_LOOK_BASE.shadow);},
   star:Object.freeze({rgb:'255,255,255',radiusPx:17}),
   // span … 'road'=空中の線の高さで見えている地上の道の幅+左右 marginPct(いま)/ 'sky'=空中の道の手前の端(空中のノーツが着く幅)
@@ -30068,24 +30091,14 @@ const rhythmHitEffectColor=judgment=>RHYTHM_HIT_EFFECT_COLORS[String(judgment||'
 // 色はノーツの色にそろえる(上=ピンク・左=オレンジ・右=黄緑。ユーザーが見本を見て選んだ)。上向きの絵を1色につき1回だけ焼き、払った向きへ傾けて貼る。
 // 終点フリック(ホールド・スライドの最後で払う)も上向きの炎を出す(同じくユーザー指示)。
 // canvas 版(WebGL のとき・RHYTHM_CANVAS_RENDERER.drawPlume)と CSS 版([data-rhythm-hit-effect]>em)は、同じ絵・同じ長さ・同じ傾きで描く
-// 上フリックの色の案(デバッグ専用・2026-10-12 社長「スカイノーツと上フリック見分けつきづらい」「色が似てるからでしょ」)。
-// 保存は新しいキー mh_flick_up_color_proto だけ。既定は pink(今のまま)。読み込み時に1回だけ読む(ノーツの絵を作るときに使うため。切り替えたら読み込み直すと効く)。
-// 水色(地上のタップ)・青(左手の空中の長押し)・緑(ホールド)・紫(スライド)・オレンジ/黄緑(横フリック)・金(判定の光)・赤(空中のタップ)とはぶつけない
-const RHYTHM_FLICK_UP_PALETTES=Object.freeze({
-  pink:Object.freeze({hi:'#fdf2f8',mid:'#f472b6',lo:'#db2777',rgb:'244,114,182',label:'ピンク'}),
-  fuchsia:Object.freeze({hi:'#fdf4ff',mid:'#d946ef',lo:'#a21caf',rgb:'217,70,239',label:'マゼンタ紫'}),
-  silver:Object.freeze({hi:'#ffffff',mid:'#e2e8f0',lo:'#94a3b8',rgb:'226,232,240',label:'白銀'}),
-  // 2026-10-12 社長「上フリックをもっと違う色に」: ピンク〜赤〜紫の系統から大きく離れた色
-  lemon:Object.freeze({hi:'#fefce8',mid:'#fde047',lo:'#ca8a04',rgb:'253,224,71',label:'レモン黄'}),
-  white:Object.freeze({hi:'#ffffff',mid:'#f8fafc',lo:'#64748b',rgb:'248,250,252',label:'白(縁は灰)'}),
-});
-const RHYTHM_FLICK_UP_LABELS=Object.freeze({pink:'いま(ピンク)',fuchsia:'上フリックをマゼンタ紫に',silver:'上フリックを白銀に',lemon:'上フリックをレモン黄に',white:'上フリックを白(縁は灰)に'});
-const RHYTHM_FLICK_UP_COLOR_ID=(()=>{try{const v=typeof localStorage!=='undefined'?localStorage.getItem('mh_flick_up_color_proto'):'';return v&&RHYTHM_FLICK_UP_PALETTES[v]?v:'pink';}catch(e){return 'pink';}})();
-const RHYTHM_FLICK_UP_COLOR=RHYTHM_FLICK_UP_PALETTES[RHYTHM_FLICK_UP_COLOR_ID];
-// マスモンのノーツを金色にする案(デバッグ専用・2026-10-12)。保存は新しいキー mh_monster_note_gold_proto だけ。既定は now(今の形)。読み込み時に1回だけ読む
-//   gold … 金の板(光はふつう)/ goldGlow … 金の板+金の光を強く
-const RHYTHM_MONSTER_GOLD_LABELS=Object.freeze({now:'マスモン いまの形',gold:'マスモン 金の板',goldGlow:'マスモン 金の板+強い光'});
-const RHYTHM_MONSTER_GOLD_ID=(()=>{try{const v=typeof localStorage!=='undefined'?localStorage.getItem('mh_monster_note_gold_proto'):'';return v&&RHYTHM_MONSTER_GOLD_LABELS[v]?v:'now';}catch(e){return 'now';}})();
+// 上フリックの色はピンクのまま(2026-10-12 社長の決定「今までの上フリックの色を変えると戸惑う人がいる。スカイノーツを変えるほうがいい」)。
+// 色の案の切り替え(mh_flick_up_color_proto)は外した。見分けは空中のノーツの色の組(RHYTHM_SKY_NOTE_COLOR)で付ける
+const RHYTHM_FLICK_UP_COLOR=Object.freeze({hi:'#fdf2f8',mid:'#f472b6',lo:'#db2777',rgb:'244,114,182',label:'ピンク'});
+// マスモンのノーツの色(2026-10-12 社長の決定で既定は gold=金の板・全難易度)。デバッグで見比べる切り替えの保存は mh_monster_note_gold_proto だけ。読み込み時に1回だけ読む
+//   gold … 金の板(既定。キーは消す)/ goldGlow … 金の板+金の光を強く / now … 前の形(琥珀色の板)。既定以外を選んだ人の値はそのまま残して使う
+const RHYTHM_MONSTER_GOLD_DEFAULT='gold';
+const RHYTHM_MONSTER_GOLD_LABELS=Object.freeze({gold:'マスモン 金の板(既定)',goldGlow:'マスモン 金の板+強い光',now:'マスモン 前の形'});
+const RHYTHM_MONSTER_GOLD_ID=(()=>{try{const v=typeof localStorage!=='undefined'?localStorage.getItem('mh_monster_note_gold_proto'):'';return v&&RHYTHM_MONSTER_GOLD_LABELS[v]?v:RHYTHM_MONSTER_GOLD_DEFAULT;}catch(e){return RHYTHM_MONSTER_GOLD_DEFAULT;}})();
 const RHYTHM_FLICK_PLUME=Object.freeze({
   ms:460,w:160,h:420,wispW:48,wispH:150,wisps:14,sparks:10,cssWisps:6,
   tilt:Object.freeze({up:0,left:-34,right:34}),
@@ -31973,7 +31986,7 @@ const RHYTHM_NOTE_COLORS=Object.freeze({
   TAP:  Object.freeze({hi:'#f0f9ff',mid:'#38bdf8',lo:'#0284c7',rgb:'56,189,248',label:'水色'}),
   HOLD: Object.freeze({hi:'#ecfdf5',mid:'#34d399',lo:'#059669',rgb:'52,211,153',label:'緑'}),
   SLIDE:Object.freeze({hi:'#f5f3ff',mid:'#a78bfa',lo:'#7c3aed',rgb:'167,139,250',label:'紫'}),
-  FLICK:RHYTHM_FLICK_UP_COLOR, // 既定はピンク(#f472b6)。案はデバッグの切り替え RHYTHM_FLICK_UP_COLOR_ID
+  FLICK:RHYTHM_FLICK_UP_COLOR, // ピンク(#f472b6)
   LEFT: Object.freeze({hi:'#fff7ed',mid:'#fb923c',lo:'#ea580c',rgb:'251,146,60',label:'オレンジ'}),
   RIGHT:Object.freeze({hi:'#f7fee7',mid:'#a3e635',lo:'#4d7c0f',rgb:'163,230,53',label:'黄緑'}),
 });
