@@ -24,7 +24,11 @@ const args=process.argv.slice(2),argOf=k=>{const i=args.indexOf(k);return i>=0?a
 // crosses: 交差する両手の長押し(片手が空・片手が地上)を入れる所(両手のスライドが重なる所の始まりの時刻・音で選んだ)。
 // showcase: MASTER にもともとある交差の見せ場(社長が決めた形・押せないの例外はこの中だけ)
 const SONGS={sheriruth:{marker:'sheriruth-v3',zero:711.6-2594.75,beat:324.342,levelRe:/const sheriruthHellChart=mhChart\((\d+),/,
-  crosses:[75960,78550,83419],showcase:[[107900,112600],[130200,132100]]}};
+  crosses:[75960,78550,83419],showcase:[[107900,112600],[130200,132100]]},
+  // 風がそよぐ場所(2026-10-12 社長「もう1曲だけ簡単な曲のヘルも作ってみるのが良いと思う」)。空中のノーツを覚える入口なので gentle:
+  // 空中は片手だけが空の小節の、拍の頭のタップだけ(スライド・ホールドは地上のまま・両手が空の小節は作らない)。交差の見せ場は置かない。
+  // 土台はいま遊ばれている切り替わったあとの譜面(-v4-・RHYTHM_EVENT の after)
+  kaze_ga_soyogu:{marker:'kaze-ga-soyogu-v4',zero:209,beat:60000/118.88,levelRe:/const kazeGaSoyoguHellChart=mhChart\((\d+),/,gentle:true}};
 const BEAT_GAP=1.5;                      // 同じ親指が段を変えるまでの拍
 // 同じ側(レーンの左右)で高さ(地上⇔空中)を変えるまでの間(2026-10-12 社長「HELL の操作性をもっと改良して」・テンポくんの数え方)。
 // 親指の振り分けとは別に、画面の左半分・右半分ごとに見る。点は押し始めと、長押し・スライドの終わり(指が離れる高さ)。同時押し(0ms)は両手で取るので数えない
@@ -42,7 +46,9 @@ const readBlock=(source,name)=>{
   const t=(at,sub,w,mon)=>notes.push({k:'t',t:at,sub,w,sky:0,...(mon?{mon}:{})});
   const h=(at,sub,w,end)=>notes.push({k:'h',t:at,sub,w,end,sky:0});
   const s=(at,end,pts,ef)=>notes.push({k:'s',hand:null,endFlick:!!ef,pts:pts.map(p=>[p[0],p[1],p[2]??2,0,0])});
-  new Function('t','h','s','return ['+block.body+']')(t,h,s);
+  // フリック(風がそよぐ場所の MASTER にある)。書いてあった引数のまま書き戻す。HELL では地上のまま(fixedGround)
+  const f=(at,sub,w,...rest)=>notes.push({k:'f',t:at,sub,w,args:[at,sub,w,...rest],sky:0});
+  new Function('t','h','s','f','return ['+block.body+']')(t,h,s,f);
   return notes;
 };
 // 画面のどちら側か(ノーツの真ん中のレーン座標が 3 より左なら左)。スライドは始まりと終わりで見る
@@ -50,7 +56,7 @@ const sideOf=(n,end)=>{const c=n.k==='s'?n.pts[end?n.pts.length-1:0][1]+0.5:(n.s
 const startOf=n=>n.k==='s'?n.pts[0][0]:n.t,endOf=n=>n.k==='s'?n.pts[n.pts.length-1][0]:n.k==='h'?n.end:n.t;
 const laneAt=(pts,at)=>{if(at<=pts[0][0])return pts[0][1];for(let i=1;i<pts.length;i++)if(at<=pts[i][0]){const r=(at-pts[i-1][0])/Math.max(1,pts[i][0]-pts[i-1][0]);return pts[i-1][1]+(pts[i][1]-pts[i-1][1])*r;}return pts[pts.length-1][1];};
 
-const mix=(master,{zero,beat,crosses=[]})=>{
+const mix=(master,{zero,beat,crosses=[],gentle=false})=>{
   // 格子へ寄せる。元の譜面に近い時刻(3ms以内)があればその時刻を使う(丸め方が1ms違うと、2本のスライドの間がその瞬間だけ詰まる)
   const chartTimes=[...new Set(master.flatMap(n=>n.k==='s'?n.pts.map(p=>p[0]):[n.t,n.end].filter(x=>x!=null)))].sort((a,b)=>a-b);
   const Q=beat/4,snap=at=>{const g=Math.round(zero+Math.round((at-zero)/Q)*Q);const near=chartTimes.find(x=>Math.abs(x-g)<=3);return near!=null?near:g;};
@@ -60,8 +66,12 @@ const mix=(master,{zero,beat,crosses=[]})=>{
   // スライドの形: 2拍以上は「降りる・上がる・上がって降りる」を順に。短いものは段の回し方に従う(行き来しない)
   const PROFILES=['down','up','hill'];let slideIndex=0;
   const phraseOf=at=>PHRASE_MODES[((Math.floor((at-zero)/(beat*PHRASE_BEATS))%PHRASE_MODES.length)+PHRASE_MODES.length)%PHRASE_MODES.length];
-  const wantSky=(n)=>{const m=phraseOf(startOf(n));return m==='both'||m===n.hand;};
-  const fixedGround=n=>n.k==='h'||!!n.mon||!!n.pin;   // pin: 同じ側の高さの切り替えを避けるため段を固定したタップ(空中のこともある。前後は fix・backFix がその段へそろえる)
+  // gentle: 拍の頭(3ms 以内)のタップだけを空にする・両手が空の小節は片手(その音の手)だけ
+  const onBeat=at=>{const k=(at-zero)/beat;return Math.abs(k-Math.round(k))*beat<=3;};
+  const wantSky=(n)=>{const m=phraseOf(startOf(n));
+    if(gentle)return n.k==='t'&&onBeat(n.t)&&m===n.hand;
+    return m==='both'||m===n.hand;};
+  const fixedGround=n=>n.k==='h'||n.k==='f'||!!n.mon||!!n.pin;   // pin: 同じ側の高さの切り替えを避けるため段を固定したタップ(空中のこともある。前後は fix・backFix がその段へそろえる)
   // 交差する両手の長押し(2026-10-11 社長「スカイホールドのダブルで右と左で地上と空中でクロスさせるのもいれたいね」)。
   // 両手のスライドが重なる所で、真ん中に近いほうを横に動かない空中の長押し、もう片方を地上で空中の長押しの下をくぐって反対側へ渡らせる。
   // 渡るのは重なりの真ん中の1拍。遊ぶ人は交差のところで指を置き換える(右で押していたものが左指に変わる)。2本の形は固定し、前後のタップを合わせる
@@ -95,7 +105,9 @@ const mix=(master,{zero,beat,crosses=[]})=>{
   }
   for(const n of notes){
     if(n.fixed)continue;
-    if(n.k==='s'){n.profile=endOf(n)-startOf(n)>=2*beat-2?PROFILES[slideIndex++%PROFILES.length]:(wantSky(n)?'sky':'ground');}
+    // gentle のスライドは地上のまま形を固定する(あとの段の直しで空へ上げない)
+    if(n.k==='s'&&gentle){n.profile='ground';n.fixed=true;}
+    else if(n.k==='s'){n.profile=endOf(n)-startOf(n)>=2*beat-2?PROFILES[slideIndex++%PROFILES.length]:(wantSky(n)?'sky':'ground');}
     else n.want=fixedGround(n)?0:(wantSky(n)?1:0);
   }
   // 同時押しは片方だけ空(両手が空の回では、右手を地上に残す)
@@ -226,13 +238,16 @@ const counts=notes=>{const slides=notes.filter(n=>n.k==='s');
 const render=notes=>{const items=notes.slice().sort((a,b)=>startOf(a)-startOf(b)||(a.k==='s'?1:-1)).map(n=>
   n.k==='s'?`S(${startOf(n)},${endOf(n)},${JSON.stringify(n.pts)},${n.endFlick?1:0},'${n.hand}')`
   :n.k==='h'?`h(${n.t},${n.sub},${n.w},${n.end})`
+  :n.k==='f'?`f(${n.args.join(',')})`
   :n.sky?`T(${n.t},${n.sub},${n.w},1)`:`t(${n.t},${n.sub},${n.w},${n.mon||0})`);
   const lines=[];for(let i=0;i<items.length;i+=4)lines.push('  '+items.slice(i,i+4).join(',')+',');
-  return lines.join('\n')+'\n';};
+  // 改行から始める(目印の行 // <…-hell-notes> にくっつくと、最初の行がコメントとして読み飛ばされる・2026-10-12 に4ノーツ落ちていたのを直した)
+  return '\n'+lines.join('\n')+'\n';};
 // ゲームのノーツの形(レベルの式・両手のシミュレートへ渡す)
 const toRuntime=notes=>notes.map(n=>n.k==='s'?{type:'SLIDE',timeMs:startOf(n),endTimeMs:endOf(n),lane:n.pts[0][1],endLane:n.pts[n.pts.length-1][1],subLaneWidth:n.pts[0][2],hand:n.hand,
   slidePoints:n.pts.map(p=>({timeMs:p[0],lane:p[1],subLaneWidth:p[2],sky:p[3]}))}
   :n.k==='h'?{type:'HOLD',timeMs:n.t,endTimeMs:n.end,lane:Math.floor(n.sub/2),subLane:n.sub,subLaneWidth:n.w}
+  :n.k==='f'?{type:'FLICK',timeMs:n.t,lane:Math.floor(n.sub/2),subLane:n.sub,subLaneWidth:n.w}
   :{type:'TAP',timeMs:n.t,lane:Math.floor(n.sub/2),subLane:n.sub,subLaneWidth:n.w,...(n.sky?{skyHeight:1}:{}),...(n.mon?{monsterSlot:n.mon}:{})}).sort((a,b)=>a.timeMs-b.timeMs);
 
 if(require.main===module){
