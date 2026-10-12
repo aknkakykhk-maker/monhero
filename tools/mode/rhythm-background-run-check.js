@@ -139,10 +139,13 @@ const seed = () => {
     check('クイックで∞周回を始められる', await startQuickInfinityRun(), await autoLabel());
 
     // ---- ① 入口が出る ----
-    const hasEntry = await page.evaluate(() => !!document.querySelector('[data-quick-to-rhythm]'));
+    // 入口はバトル画面(gameState==='BATTLE')のときだけ出る。WAVE の切り替わりのあいだは消えるので、1回だけ見ると
+    // その一瞬を引いて落ちていた(2026-10-12・回すたびに別の項目で落ちる)。出るまで待ってから確かめ、押す
+    const hasEntry = await page.waitForSelector('[data-quick-to-rhythm]', { timeout: 20000 }).then(() => true).catch(() => false);
     check('∞周回中のバトル画面にモンビーへの入口が出る', hasEntry);
 
     // ---- ② モンビーへ移っても周回が止まらない ----
+    await page.waitForSelector('[data-quick-to-rhythm]', { timeout: 20000 }).catch(() => {});
     const before = await readProgress();
     await clickSelector('[data-quick-to-rhythm]');
     // openRhythmDemo は設定・記録の読み込みを待ってから画面を切り替える。

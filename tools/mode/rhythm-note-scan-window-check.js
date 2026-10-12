@@ -33,10 +33,10 @@ check('走査の内訳と絞り込みの有無を計測へ渡している',
 // tickへ入るまでの遅れ(tickへ入る前にメインスレッドが塞がっていた時間)も一緒に渡す。
 check('tick本体の処理時間と、tickへ入るまでの遅れを計測している',
   game.includes('RHYTHM_PERF.tick(performance.now()-perfTickStart,perfTickStart-frameNowMs);')
-  &&game.includes('const perfTickStart=RHYTHM_PERF.enabled?performance.now():0;'));
+  &&game.includes('const perfTickStart=typeof performance!==\'undefined\'&&performance.now?performance.now():0;')); // 2026-10-11 から1コマの重さの記録(RHYTHM_FRAME_DIAG)にも使うので、計測OFFでも時刻を取る
 check('出番がまだ遠いノーツで打ち切る',
-  game.includes('const scanHorizonMs=visualTime+travelMs*1.2;')
-  &&game.includes('if(run.notesReady&&run.notesAscending&&note.timeMs>scanHorizonMs)break;'));
+  game.includes('const scanHorizonMs=visualTime+travelMs*1.2')
+  &&game.includes('note.timeMs>scanHorizonMs))break;')); // 2026-10 から速さの組(戻る区間)のときは位置で打ち切る形が加わった
 // 末尾の打ち切りは「時刻の昇順」が前提。譜面エディタなどから並び順が崩れた譜面が来ても
 // 取りこぼさないよう、昇順でないときは絞り込まず全ノーツを見る形になっていること。
 check('昇順でない譜面のときは打ち切りを自動で止める',
