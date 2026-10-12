@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 281f33f84d8dc0ee
+// source-sha256: 159a97e464787dd8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-12 14:42";
+const BUILD_DATE = "2026-10-12 15:05";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -17158,6 +17158,22 @@ const BATTLE_STACK_MARKS = Object.freeze({
     mark: '🪙',
     img: '',
     label: '運命(ちから)'
+  }),
+  exTurns: Object.freeze({
+    mark: '⏳',
+    img: '',
+    label: 'EXの残りターン',
+    unit: 'T'
+  }),
+  avoid: Object.freeze({
+    mark: '👻',
+    img: '',
+    label: '完全回避の残り'
+  }),
+  konjo: Object.freeze({
+    mark: '🔥',
+    img: '',
+    label: '根性の残り'
   }),
   aquaPrison: Object.freeze({
     mark: '💧',
@@ -61121,13 +61137,14 @@ const BattleStackMarks = ({
   return React.createElement("div", {
     "data-stack-marks": side,
     role: "img",
-    "aria-label": items.map(it => `${it.label}${it.count}`).join('、'),
+    "aria-label": items.map(it => `${it.label}${it.count}${it.unit === 'T' ? 'ターン' : ''}`).join('、'),
     className: `mh-stack-marks pointer-events-none ${className}`
   }, items.map(it => React.createElement("span", {
     key: it.kind,
     "data-stack-mark": it.kind,
     "data-stack-count": it.count,
     "data-stack-full": full > 0 && it.showZero && it.count >= full ? 'true' : undefined,
+    "data-stack-last": it.unit === 'T' && it.count === 1 ? 'true' : undefined,
     className: "mh-stack-mark"
   }, it.img ? React.createElement("img", {
     src: it.img,
@@ -61135,7 +61152,7 @@ const BattleStackMarks = ({
     draggable: false
   }) : React.createElement("i", {
     "aria-hidden": "true"
-  }, it.mark), React.createElement("b", null, "×", it.count))));
+  }, it.mark), React.createElement("b", null, it.unit === 'T' ? `${it.count}T` : `×${it.count}`))));
 };
 const TacticsDiscardZones = ({
   full,
@@ -61326,6 +61343,7 @@ function BattleScreen({
   enemyDebuffs,
   enemyStackCounts,
   debugStackMarks,
+  tacticsSlotCountersAt,
   discardCards,
   actionUsed,
   tacticsCardGenre,
@@ -61399,6 +61417,13 @@ function BattleScreen({
       const k = slots.findIndex(m => m?.id === 'KenshiMocchi');
       put(k >= 0 ? k : heroDist, 'kenshi', getPermaBuff('kenshiComboPower'));
     }
+    if (typeof tacticsSlotCountersAt === 'function') slots.forEach((m, i) => {
+      if (!m) return;
+      const c = tacticsSlotCountersAt(i) || {};
+      put(i, 'exTurns', c.exTurns);
+      put(i, 'avoid', c.avoid);
+      put(i, 'konjo', c.konjo);
+    });
     if (debugStackMarks && debugStackMarks.ally) Object.entries(debugStackMarks.ally).forEach(([i, c]) => {
       out[Number(i)] = {
         ...(c || {})
@@ -63752,7 +63777,7 @@ function BattleScreen({
       "data-tactics-ex-mark": i,
       "data-tactics-ex-state": slotExInfo.badge.text,
       className: `absolute right-1 top-[3px] max-w-[80px] truncate rounded px-1 py-0.5 text-[8px] font-black leading-none ${slotExInfo.badge.active ? 'bg-fuchsia-600 text-white ring-1 ring-fuchsia-200' : 'bg-black/70 text-fuchsia-200 ring-1 ring-fuchsia-400/60'}`
-    }, "EX", slotExInfo.badge.text !== 'EX' ? ` ${slotExInfo.badge.text}` : ''), slotBuffMarks.map(mark => React.createElement("span", {
+    }, "EX", slotExInfo.badge.text !== 'EX' ? ` ${slotExInfo.badge.text}` : slotExInfo.badge.uses != null ? `×${slotExInfo.badge.uses}` : ''), slotBuffMarks.map(mark => React.createElement("span", {
       key: mark.text,
       "data-tactics-slot-buff": mark.text,
       className: `ml-1 shrink-0 text-[8px] font-black leading-none ${mark.cls}`
@@ -63829,7 +63854,7 @@ function BattleScreen({
         fontSize: '7px'
       },
       className: "shrink-0 font-black"
-    }, "EX"), slotExInfo.badge.text !== 'EX' && React.createElement("span", {
+    }, "EX", slotExInfo.badge.text === 'EX' && slotExInfo.badge.uses != null ? `×${slotExInfo.badge.uses}` : ''), slotExInfo.badge.text !== 'EX' && React.createElement("span", {
       style: {
         fontSize: '8px'
       },
@@ -86314,8 +86339,8 @@ function MonsterHeroGame() {
       wave,
       turn: turnCount
     }) : null;
-    if (aquaNow && aquaNow.active && aquaNow.route === 'prison' && aquaNow.stacks > 0) add('aquaPrison', '🌊', '水牢', `${aquaNow.stacks}つ・あと${aquaNow.turnsLeft}T`, 'text-sky-200 border-sky-400/60', `敵の与ダメージ-${Math.round((1 - aquaNow.enemyDmgMult) * 100)}%(水牢1つごとに-10%)`);
-    if (aquaNow && aquaNow.active && aquaNow.route === 'freeze' && aquaNow.stacks > 0) add('aquaFreeze', '🧊', '氷結', `${aquaNow.stacks}つ・あと${aquaNow.turnsLeft}T`, 'text-cyan-200 border-cyan-400/60', `敵の被ダメージ+${aquaNow.stacks * 10}%(氷結1つごとに+10%)`);
+    if (aquaNow && aquaNow.active && aquaNow.route === 'prison' && aquaNow.stacks > 0) add('aquaPrison', '🌊', '水牢', `${aquaNow.stacks}つ・あと${aquaNow.turnsLeft}T`, 'text-sky-200 border-sky-400/60', `敵の与ダメージ-${Math.round((1 - aquaNow.enemyDmgMult) * 100)}%(水牢1つごとに-10%)`, `${aquaNow.turnsLeft}T`);
+    if (aquaNow && aquaNow.active && aquaNow.route === 'freeze' && aquaNow.stacks > 0) add('aquaFreeze', '🧊', '氷結', `${aquaNow.stacks}つ・あと${aquaNow.turnsLeft}T`, 'text-cyan-200 border-cyan-400/60', `敵の被ダメージ+${aquaNow.stacks * 10}%(氷結1つごとに+10%)`, `${aquaNow.turnsLeft}T`);
     if (aquaNow && aquaNow.active && aquaNow.finale) add('aquaFinale', '🌊', 'アクアフィナーレ', '被ダメ大幅アップ', 'text-sky-100 border-sky-300/70', '敵の被ダメージが大きく上がっている');
     const nightmare = isTacticsMode(runMode) ? tacticsExNightmareEnemyOf(tacticsExState, tacticsUnits, {
       wave,
@@ -86560,6 +86585,20 @@ function MonsterHeroGame() {
   const tacticsExAvoidLeftNow = slotIdx => {
     const live = tacticsExLiveRef.current;
     return live.enabled && Number.isInteger(slotIdx) ? tacticsExAvoidLeftOf(tacticsExStateRef.current, tacticsUnitsRef.current, slotIdx, live.now) : 0;
+  };
+  const tacticsSlotCountersAt = slotIdx => {
+    if (!tacticsExEnabled || !Number.isInteger(slotIdx) || !Array.isArray(tacticsUnits)) return {};
+    const unit = tacticsUnits[slotIdx];
+    if (!unit) return {};
+    const out = {};
+    const def = raidExDefOf(unit.id);
+    const rm = def ? tacticsExRemainOf(def, tacticsExState, slotIdx, unit.id, tacticsExNow) : null;
+    if (rm && rm.kind === 'turns' && rm.turns > 0) out.exTurns = rm.turns;
+    const avoid = tacticsExAvoidLeftOf(tacticsExState, tacticsUnits, slotIdx, tacticsExNow);
+    if (avoid > 0) out.avoid = avoid;
+    const konjo = tacticsExKonjoLeftOf(tacticsExState, tacticsUnits, slotIdx, tacticsExNow);
+    if (konjo > 0) out.konjo = konjo;
+    return out;
   };
   const tacticsCritFixedNow = (slotIdx, card = null) => {
     if (!isTacticsMode(runMode)) return false;
@@ -88201,7 +88240,8 @@ function MonsterHeroGame() {
         };
         return {
           text: 'EX',
-          active: false
+          active: false,
+          uses: Number.isFinite(remaining.left) ? remaining.left : null
         };
       })(),
       statusLines: (() => {
@@ -103431,6 +103471,7 @@ function MonsterHeroGame() {
       enemyDebuffs: enemyDebuffs,
       enemyStackCounts: enemyStackCounts,
       debugStackMarks: debugStackMarks,
+      tacticsSlotCountersAt: isTacticsMode(runMode) ? tacticsSlotCountersAt : null,
       discardCards: discardCards,
       actionUsed: actionUsed,
       tacticsSlotFx: tacticsSlotFx,
