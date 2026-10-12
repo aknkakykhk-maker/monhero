@@ -38,8 +38,9 @@ check('判定のずれの中央値を出す', Number.isFinite(a.summary.errorMed
 {
   const src = require('fs').readFileSync(require('path').join(__dirname, 'scenarios/rhythm.js'), 'utf8');
   check('手の割り振り: その手が HOLD/SLIDE を押さえている最中なら反対の手で押す', /busy\.has\(byPos\) && !busy\.has\(1 - byPos\) \? 1 - byPos : byPos/.test(src));
+  check('手の割り振り: 同じ時刻の和音が同じ手に重なり、反対の手があいていれば分ける', src.includes('same.length < 2 || busy.has(1 - h)') && src.includes('move.hand = 1 - h'));
   check('手の割り振り: 押すときの指のくせ・つられも、割り振った手で決める', src.includes('fingerHabit(c, pl.second, pl.hand)'));
-  check('手の割り振り: 結果に版の印(playerVersion: 2)を付け、前の記録と混ぜない', src.includes('playerVersion: 2'));
+  check('手の割り振り: 結果に版の印(playerVersion: 3)を付け、前の記録と混ぜない', src.includes('playerVersion: 3'));
 }
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
