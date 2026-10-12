@@ -110,7 +110,7 @@ const mime = f => ({ '.js': 'application/javascript', '.html': 'text/html', '.cs
   // ボット(空中のノーツは空中の高さで押す)
   const target = 'const p = fingerAt(c, hab, null, now);';
   const src = installPlayer.toString();
-  const player = src.includes(target) ? src.replace(target, 'const p = (window.__travel || ((n, c, now, p) => p))(n, c, now, (() => { const q = fingerAt(c, hab, null, now); const sh = Number(n.skyHeight) > 0 ? Number(n.skyHeight) : (window.__slideSkyAt ? window.__slideSkyAt(n, Number(n.timeMs) || 0) : 0); if (!sh || typeof RHYTHM_SKY_LIFT === "undefined") return q; const rr = area.getBoundingClientRect(); return { x: q.x, y: q.y - rr.height * RHYTHM_SKY_LIFT.ratio * sh }; })());') : src;
+  const player = src.includes(target) ? src.replace(target, 'const p = (window.__travel || ((n, c, now, p) => p))(n, c, now, (() => { const q = fingerAt(c, hab, null, now); const sh = Number(n.skyHeight) > 0 ? Number(n.skyHeight) : (window.__slideSkyAt ? window.__slideSkyAt(n, Number(n.timeMs) || 0) : 0); if (!sh || typeof RHYTHM_SKY_LIFT === "undefined") return q; const rr = area.getBoundingClientRect(); return { x: q.x, y: q.y - rr.height * RHYTHM_SKY_LIFT.ratio * sh }; })(), hab);') : src;
   const posLine = 'const pos = fingerAt(laneOfHold(a.n, now), a.hab, a.drift, now);';
   if (!player.includes(posLine)) throw new Error('ボットの押さえる指の行が見つからない');
   // 押さえている間の指も、その時刻のスライドの高さに合わせて上げ下げする(人は帯の高さを目で追う。空中から始まる帯を地上へ戻して押さえると、指が飛んで離したことになる)
@@ -156,8 +156,9 @@ const player2 = player.replace(posLine, 'const pos = (() => { const q = fingerAt
   if (TRAVEL > 0) await page.evaluate(([u, win]) => {
     const last = { L: null, R: null };
     window.__travelLog = { up: 0, down: 0 };
-    window.__travel = (n, c, now, p) => {
-      const side = c < 2.5 ? 'L' : 'R';
+    window.__travel = (n, c, now, p, hab) => {
+      // 同じ手かどうかは、ボットが割り振った手で見る(押さえている手のそばのノーツは反対の手・scenarios/rhythm.js の版2)
+      const side = hab && Number.isFinite(hab.hand) ? (hab.hand === 0 ? 'L' : 'R') : c < 2.5 ? 'L' : 'R';
       const sh = Number(n.skyHeight) > 0 ? Number(n.skyHeight) : (window.__slideSkyAt ? window.__slideSkyAt(n, Number(n.timeMs) || 0) : 0);
       const sky = sh >= .5, prev = last[side]; last[side] = { sky, now };
       if (!prev || prev.sky === sky || now - prev.now > win) return p;
