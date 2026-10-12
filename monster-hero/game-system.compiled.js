@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7906bb1d3a72fa60
+// source-sha256: 2cc191cb934b2bae
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-12 20:41";
+const BUILD_DATE = "2026-10-12 21:01";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -31614,10 +31614,10 @@ function RhythmHellSkyHitSwitch() {
     className: "text-xs font-black text-rose-100"
   }, "空中を叩いたときの手ごたえ(試作・見比べ用)"), React.createElement("p", {
     className: "mt-1 text-[10px] font-bold text-rose-200/80"
-  }, "柱の光: 空中の線の高さにレーンの柱の光(白紫)。少し重いので既定は切(軽くしてから既定にする)。判定の文字: 既定は空中の線のすぐ下。地上の5難易度は変わりません。演奏を始め直すと効きます。"), React.createElement("div", {
+  }, "柱の光: 空中の線の高さにレーンの柱の光(白紫)。既定は入(実機で重くならなかった)。判定の文字: 既定は空中の線のすぐ下。地上の5難易度は変わりません。演奏を始め直すと効きます。"), React.createElement("div", {
     className: "mt-2 grid grid-cols-2 gap-2",
     "data-rhythm-hell-sky-hit-row": true
-  }, [['off', '柱の光 切(既定)'], ['on', '柱の光 入']].map(([v, l]) => React.createElement("span", {
+  }, [['off', '柱の光 切'], ['on', '柱の光 入(既定)']].map(([v, l]) => React.createElement("span", {
     key: v,
     "data-rhythm-hell-sky-hit-pick": v,
     className: "contents"
@@ -31656,33 +31656,19 @@ function RhythmJudgeTextPosSwitch() {
 }
 function RhythmSkyTapDistinctSwitch() {
   const [value, setValue] = useState(() => RHYTHM_SKY_TAP_DISTINCT.id);
-  const [flick, setFlick] = useState(() => {
-    try {
-      return localStorage.getItem('mh_flick_up_color_proto') || 'pink';
-    } catch (e) {
-      return 'pink';
-    }
-  });
+  const [skyColor, setSkyColor] = useState(() => RHYTHM_SKY_NOTE_COLOR.id);
   const pick = v => {
     RHYTHM_SKY_TAP_DISTINCT.set(v);
     setValue(RHYTHM_SKY_TAP_DISTINCT.id);
   };
-  const pickFlick = v => {
-    try {
-      if (v === 'pink') localStorage.removeItem('mh_flick_up_color_proto');else localStorage.setItem('mh_flick_up_color_proto', v);
-    } catch (e) {}
-    setFlick(v);
+  const pickSkyColor = v => {
+    RHYTHM_SKY_NOTE_COLOR.set(v);
+    setSkyColor(RHYTHM_SKY_NOTE_COLOR.id);
   };
-  const [monsterLook, setMonsterLook] = useState(() => {
-    try {
-      return localStorage.getItem('mh_monster_note_gold_proto') || 'now';
-    } catch (e) {
-      return 'now';
-    }
-  });
+  const [monsterLook, setMonsterLook] = useState(() => RHYTHM_MONSTER_GOLD_ID);
   const pickMonsterLook = v => {
     try {
-      if (v === 'now') localStorage.removeItem('mh_monster_note_gold_proto');else localStorage.setItem('mh_monster_note_gold_proto', v);
+      if (v === RHYTHM_MONSTER_GOLD_DEFAULT) localStorage.removeItem('mh_monster_note_gold_proto');else localStorage.setItem('mh_monster_note_gold_proto', v);
     } catch (e) {}
     setMonsterLook(v);
   };
@@ -31701,14 +31687,14 @@ function RhythmSkyTapDistinctSwitch() {
     className: "text-xs font-black text-rose-100"
   }, "空中のタップと上フリックの見分け(試作・見比べ用)"), React.createElement("p", {
     className: "mt-1 text-[10px] font-bold text-rose-200/80"
-  }, "空中のタップの板(演奏を始め直すと効く)と、上フリックの色・マスモンのノーツの金色(どちらも読み込み直すと効く)を変えます。水色・青・緑・紫・オレンジ・黄緑とはぶつけていません(レモン黄は金と近いので、マスモンの金とは組みません)。"), React.createElement("div", {
+  }, "上から、空中のタップの板/空中のノーツの色の組(タップ・右手の長押し。組は板の案より先に効く)/マスモンのノーツの金色。上の2つは演奏を始め直すと、金色は読み込み直すと効きます。上フリックはピンクのままで、水色・青・緑・紫・オレンジ・黄緑・金とはぶつけていません。"), React.createElement("div", {
     className: "mt-2 grid grid-cols-2 gap-2"
   }, Object.keys(RHYTHM_SKY_TAP_DISTINCT_LABELS).map(v => btn(value === v, RHYTHM_SKY_TAP_DISTINCT_LABELS[v], () => pick(v), v, {
     'data-rhythm-sky-tap-distinct-pick': v
   }))), React.createElement("div", {
-    className: "mt-2 grid grid-cols-3 gap-2"
-  }, Object.keys(RHYTHM_FLICK_UP_LABELS).map(v => btn(flick === v, RHYTHM_FLICK_UP_LABELS[v], () => pickFlick(v), v, {
-    'data-rhythm-flick-up-color-pick': v
+    className: "mt-2 grid grid-cols-2 gap-2"
+  }, Object.keys(RHYTHM_SKY_NOTE_COLOR_LABELS).map(v => btn(skyColor === v, RHYTHM_SKY_NOTE_COLOR_LABELS[v], () => pickSkyColor(v), v, {
+    'data-rhythm-sky-note-color-pick': v
   }))), React.createElement("div", {
     className: "mt-2 grid grid-cols-3 gap-2"
   }, Object.keys(RHYTHM_MONSTER_GOLD_LABELS).map(v => btn(monsterLook === v, RHYTHM_MONSTER_GOLD_LABELS[v], () => pickMonsterLook(v), v, {

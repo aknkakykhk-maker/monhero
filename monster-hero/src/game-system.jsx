@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: bd904145f96a3245
+// generated-sha256: 72fe2d30cc5ded6f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-12 20:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-12 21:01"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -20080,15 +20080,15 @@ function RhythmHellVisSwitch(){
     <p className="mt-1 text-[10px] font-bold text-rose-200/80">空中の判定線の長さ・空中の板の明るさ・空中スライドの色・板の影をまとめて切り替えます。地上の5難易度は変わりません。演奏を始め直すと効きます。</p>
     <div className="mt-2 grid grid-cols-3 gap-2">{Object.keys(RHYTHM_HELL_VIS_LABELS).map(v=><button key={v} type="button" data-rhythm-hell-vis-pick={v} aria-pressed={value===v} onClick={()=>pick(v)} className={`min-h-[44px] rounded-xl text-[11px] font-black ${value===v?'bg-rose-600 text-white ring-2 ring-rose-200':'bg-slate-800 text-slate-300'}`}>{RHYTHM_HELL_VIS_LABELS[v]}</button>)}</div></section>;
 }
-// 空中を叩いたときの手ごたえの案を切り替える(デバッグ専用・2026-10-12)。保存は新しいキー mh_hell_sky_hit_proto(柱の光・既定は切)と mh_hell_sky_text_proto(判定の文字の位置・既定は線の下)だけ
+// 空中を叩いたときの手ごたえの案を切り替える(デバッグ専用・2026-10-12)。保存は新しいキー mh_hell_sky_hit_proto(柱の光・既定は入)と mh_hell_sky_text_proto(判定の文字の位置・既定は線の下)だけ
 function RhythmHellSkyHitSwitch(){
   const [value,setValue]=useState(()=>RHYTHM_HELL_SKY_HIT.id),[text,setText]=useState(()=>RHYTHM_HELL_SKY_TEXT.id);
   const pick=v=>{RHYTHM_HELL_SKY_HIT.set(v);setValue(RHYTHM_HELL_SKY_HIT.id);};
   const pickText=v=>{RHYTHM_HELL_SKY_TEXT.set(v);setText(RHYTHM_HELL_SKY_TEXT.id);};
   const btn=(on,label,onClick,key)=><button key={key} type="button" aria-pressed={on} onClick={onClick} className={`min-h-[44px] rounded-xl text-[11px] font-black ${on?'bg-rose-600 text-white ring-2 ring-rose-200':'bg-slate-800 text-slate-300'}`}>{label}</button>;
   return <section data-rhythm-hell-sky-hit-switch className="mb-3 rounded-2xl border border-rose-400/50 bg-rose-950/25 p-3"><h3 className="text-xs font-black text-rose-100">空中を叩いたときの手ごたえ(試作・見比べ用)</h3>
-    <p className="mt-1 text-[10px] font-bold text-rose-200/80">柱の光: 空中の線の高さにレーンの柱の光(白紫)。少し重いので既定は切(軽くしてから既定にする)。判定の文字: 既定は空中の線のすぐ下。地上の5難易度は変わりません。演奏を始め直すと効きます。</p>
-    <div className="mt-2 grid grid-cols-2 gap-2" data-rhythm-hell-sky-hit-row>{[['off','柱の光 切(既定)'],['on','柱の光 入']].map(([v,l])=><span key={v} data-rhythm-hell-sky-hit-pick={v} className="contents">{btn(value===v,l,()=>pick(v),v)}</span>)}</div>
+    <p className="mt-1 text-[10px] font-bold text-rose-200/80">柱の光: 空中の線の高さにレーンの柱の光(白紫)。既定は入(実機で重くならなかった)。判定の文字: 既定は空中の線のすぐ下。地上の5難易度は変わりません。演奏を始め直すと効きます。</p>
+    <div className="mt-2 grid grid-cols-2 gap-2" data-rhythm-hell-sky-hit-row>{[['off','柱の光 切'],['on','柱の光 入(既定)']].map(([v,l])=><span key={v} data-rhythm-hell-sky-hit-pick={v} className="contents">{btn(value===v,l,()=>pick(v),v)}</span>)}</div>
     <div className="mt-2 grid grid-cols-2 gap-2" data-rhythm-hell-sky-text-row>{[['below','文字 線の下(既定)'],['above','文字 線の上(前)']].map(([v,l])=><span key={v} data-rhythm-hell-sky-text-pick={v} className="contents">{btn(text===v,l,()=>pickText(v),v)}</span>)}</div></section>;
 }
 // 地上の判定の文字の置き場所の案を切り替える(デバッグ専用・2026-10-12)。保存は新しいキー mh_rhythm_judge_text_pos_proto だけ。既定は「いま」
@@ -20102,16 +20102,16 @@ function RhythmJudgeTextPosSwitch(){
 // 空中のタップを上フリックと見分けやすくする案を切り替える(デバッグ専用・2026-10-12)。保存は新しいキー mh_sky_tap_distinct_proto だけ。既定は「いま」
 function RhythmSkyTapDistinctSwitch(){
   const [value,setValue]=useState(()=>RHYTHM_SKY_TAP_DISTINCT.id);
-  const [flick,setFlick]=useState(()=>{try{return localStorage.getItem('mh_flick_up_color_proto')||'pink';}catch(e){return 'pink';}});
+  const [skyColor,setSkyColor]=useState(()=>RHYTHM_SKY_NOTE_COLOR.id);
   const pick=v=>{RHYTHM_SKY_TAP_DISTINCT.set(v);setValue(RHYTHM_SKY_TAP_DISTINCT.id);};
-  const pickFlick=v=>{try{if(v==='pink')localStorage.removeItem('mh_flick_up_color_proto');else localStorage.setItem('mh_flick_up_color_proto',v);}catch(e){}setFlick(v);};
-  const [monsterLook,setMonsterLook]=useState(()=>{try{return localStorage.getItem('mh_monster_note_gold_proto')||'now';}catch(e){return 'now';}});
-  const pickMonsterLook=v=>{try{if(v==='now')localStorage.removeItem('mh_monster_note_gold_proto');else localStorage.setItem('mh_monster_note_gold_proto',v);}catch(e){}setMonsterLook(v);};
+  const pickSkyColor=v=>{RHYTHM_SKY_NOTE_COLOR.set(v);setSkyColor(RHYTHM_SKY_NOTE_COLOR.id);};
+  const [monsterLook,setMonsterLook]=useState(()=>RHYTHM_MONSTER_GOLD_ID);
+  const pickMonsterLook=v=>{try{if(v===RHYTHM_MONSTER_GOLD_DEFAULT)localStorage.removeItem('mh_monster_note_gold_proto');else localStorage.setItem('mh_monster_note_gold_proto',v);}catch(e){}setMonsterLook(v);};
   const btn=(on,label,onClick,key,attr)=><button key={key} type="button" {...attr} aria-pressed={on} onClick={onClick} className={`min-h-[44px] rounded-xl text-[11px] font-black ${on?'bg-rose-600 text-white ring-2 ring-rose-200':'bg-slate-800 text-slate-300'}`}>{label}</button>;
   return <section data-rhythm-sky-tap-distinct-switch className="mb-3 rounded-2xl border border-rose-400/50 bg-rose-950/25 p-3"><h3 className="text-xs font-black text-rose-100">空中のタップと上フリックの見分け(試作・見比べ用)</h3>
-    <p className="mt-1 text-[10px] font-bold text-rose-200/80">空中のタップの板(演奏を始め直すと効く)と、上フリックの色・マスモンのノーツの金色(どちらも読み込み直すと効く)を変えます。水色・青・緑・紫・オレンジ・黄緑とはぶつけていません(レモン黄は金と近いので、マスモンの金とは組みません)。</p>
+    <p className="mt-1 text-[10px] font-bold text-rose-200/80">上から、空中のタップの板/空中のノーツの色の組(タップ・右手の長押し。組は板の案より先に効く)/マスモンのノーツの金色。上の2つは演奏を始め直すと、金色は読み込み直すと効きます。上フリックはピンクのままで、水色・青・緑・紫・オレンジ・黄緑・金とはぶつけていません。</p>
     <div className="mt-2 grid grid-cols-2 gap-2">{Object.keys(RHYTHM_SKY_TAP_DISTINCT_LABELS).map(v=>btn(value===v,RHYTHM_SKY_TAP_DISTINCT_LABELS[v],()=>pick(v),v,{'data-rhythm-sky-tap-distinct-pick':v}))}</div>
-    <div className="mt-2 grid grid-cols-3 gap-2">{Object.keys(RHYTHM_FLICK_UP_LABELS).map(v=>btn(flick===v,RHYTHM_FLICK_UP_LABELS[v],()=>pickFlick(v),v,{'data-rhythm-flick-up-color-pick':v}))}</div>
+    <div className="mt-2 grid grid-cols-2 gap-2">{Object.keys(RHYTHM_SKY_NOTE_COLOR_LABELS).map(v=>btn(skyColor===v,RHYTHM_SKY_NOTE_COLOR_LABELS[v],()=>pickSkyColor(v),v,{'data-rhythm-sky-note-color-pick':v}))}</div>
     <div className="mt-2 grid grid-cols-3 gap-2">{Object.keys(RHYTHM_MONSTER_GOLD_LABELS).map(v=>btn(monsterLook===v,RHYTHM_MONSTER_GOLD_LABELS[v],()=>pickMonsterLook(v),v,{'data-rhythm-monster-gold-pick':v}))}</div></section>;
 }
 // HELL の「公開の印が真だったら」を試す(デバッグ専用・2026-10-12)。本番の印 RELEASE_FLAGS.rhythmHell は変えない。
