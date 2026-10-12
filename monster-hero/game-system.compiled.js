@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5e02efad8c778f1e
+// source-sha256: ad83befda27380f7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-12 16:23";
+const BUILD_DATE = "2026-10-12 16:29";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -17241,6 +17241,33 @@ const BATTLE_MONSTER_FX = Object.freeze({
     mark: '⚡',
     max: 5,
     color: '#facc15'
+  }),
+  scatter: Object.freeze({
+    Eiki: Object.freeze({
+      kind: 'petals',
+      marks: Object.freeze(['🌸', '🌸', '🌸'])
+    }),
+    Pixie: Object.freeze({
+      kind: 'orbit',
+      marks: Object.freeze(['✨', '⭐', '✨'])
+    }),
+    Iblis: Object.freeze({
+      kind: 'feathers',
+      marks: Object.freeze(['🪶', '🪶', '🪶'])
+    }),
+    Ark: Object.freeze({
+      kind: 'ring',
+      marks: Object.freeze([]),
+      color: '#fbbf24'
+    }),
+    MelWhip: Object.freeze({
+      kind: 'sweets',
+      marks: Object.freeze(['🍬', '🍰', '🍭'])
+    })
+  }),
+  leafShield: Object.freeze({
+    mark: '🍃',
+    max: 3
   })
 });
 const BATTLE_STACK_MARK_ORDER = Object.freeze(Object.keys(BATTLE_STACK_MARKS));
@@ -61223,7 +61250,9 @@ const BattleMonsterFx = ({
   const volt = fx.exEffect === 'stage' && fx.voltage ? fx.voltage : null;
   const after = fx.exEffect === 'dodgeCombo' ? n(fx.dodges, T.afterimage.max) : 0;
   const thunder = fx.exEffect === 'thunder' && fx.thunder ? fx.thunder : null;
-  if (!clones && !pr && !style && !aura && !gloves && !volt && !after && !thunder) return null;
+  const scatter = fx.exEffect && T.scatter[monId] ? T.scatter[monId] : null;
+  const leaves = n(fx.leafShield, T.leafShield.max);
+  if (!clones && !pr && !style && !aura && !gloves && !volt && !after && !thunder && !scatter && !leaves) return null;
   const fading = Number(fx.exTurns) === 1;
   return React.createElement("div", {
     "data-monster-fx": true,
@@ -61296,7 +61325,26 @@ const BattleMonsterFx = ({
   }) : React.createElement("i", null, T.present.mark), React.createElement("b", null, pr.jackpot ? T.present.jackpotMark : T.present.inner[pr.kind] || '')), style && React.createElement("span", {
     "data-mfx-sword": style,
     className: "mh-mfx-sword"
-  }, T.swordStyle[style]));
+  }, T.swordStyle[style]), scatter && (scatter.kind === 'ring' ? React.createElement("span", {
+    "data-mfx-scatter": "ring",
+    className: "mh-mfx-ring",
+    style: {
+      '--mfx-c': scatter.color
+    }
+  }) : React.createElement("span", {
+    "data-mfx-scatter": scatter.kind,
+    className: `mh-mfx-scatter is-${scatter.kind}`
+  }, scatter.marks.map((m, k) => React.createElement("i", {
+    key: k,
+    className: `s${k}`
+  }, m)))), leaves > 0 && React.createElement("span", {
+    "data-mfx-leaf": leaves,
+    className: "mh-mfx-leaf"
+  }, Array.from({
+    length: leaves
+  }, (_, k) => React.createElement("i", {
+    key: k
+  }, T.leafShield.mark))));
 };
 const TacticsDiscardZones = ({
   full,
@@ -86777,6 +86825,14 @@ function MonsterHeroGame() {
         };
       }
       if (eff === 'dodgeCombo') out.dodges = tacticsSafeInt(normalizeTacticsExState(tacticsExState).effects?.[slotIdx]?.dodges, 0);
+    }
+    for (let j = 0; j < tacticsUnits.length; j++) {
+      const u = tacticsUnits[j];
+      if (!u) continue;
+      if (tacticsExActiveEffect(tacticsExState, j, u.id, tacticsExNow) !== 'partyGuard') continue;
+      const d = raidExDefOf(u.id),
+        r = d ? tacticsExRemainOf(d, tacticsExState, j, u.id, tacticsExNow) : null;
+      out.leafShield = Math.max(out.leafShield || 0, r && r.turns > 0 ? r.turns : 1);
     }
     return out;
   };

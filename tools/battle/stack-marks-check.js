@@ -52,6 +52,8 @@ check('⑥ 演出はタクティクスの枠だけ・軽量表示と超省エネ
 check('⑥ 分身の数は完全回避の残りから、プレゼントと型は詳細と同じ関数から作る', /if\(def&&def\.effect==='present'&&isTacticsExEffectActive\(/.test(sc + app.slice(app.indexOf('const tacticsSlotCountersAt'), app.indexOf('const tacticsSlotCountersAt') + 2000)) && /out\.swordStyle=tacticsExStyleOf\(/.test(app) && /const n = \(v, max\) => Math\.min\(max, Math\.max\(0, Math\.floor\(Number\(v\) \|\| 0\)\)\);\s*\n\s*const clones = n\(fx\.avoid, T\.avoidClone\.max\);/.test(battle));
 check('⑦ 区切り2: モッチー・ミタラシのオーラ・ハムのグローブ・ミーアのスポットライト・ザンの残像・ライガーの雷が表にある', /aura: Object\.freeze\(\{[\s\S]{0,200}Mocchi:[\s\S]{0,120}Mitarashi:/.test(entries) && /glove: Object\.freeze\(\{ mark:'🥊', max:3 \}\)/.test(entries) && /spotlight: Object\.freeze/.test(entries) && /afterimage: Object\.freeze/.test(entries) && /thunder: Object\.freeze\(\{ mark:'⚡'/.test(entries));
 check('⑦ 区切り2の中身は、効いているEXの種類と詳細と同じ関数(カウンター・ボルテージ・雷)から作る', /const eff=tacticsExActiveEffect\(tacticsExState,slotIdx,unit\.id,tacticsExNow\);/.test(app) && /tacticsExCounterOf\(tacticsExState/.test(app) && /tacticsExVoltageOf\(tacticsExState/.test(app) && /tacticsExThunderOf\(tacticsExState/.test(app) && /monId=\{s\?\.id\}/.test(battle));
+check('⑧ 区切り3: エイキ・ピクシー・イブリース・アーク・メルホイップの演出と、ユグドラシルの葉っぱの盾が表にある', /scatter: Object\.freeze\(\{[\s\S]{0,200}Eiki:[\s\S]{0,200}Pixie:[\s\S]{0,200}Iblis:[\s\S]{0,200}Ark:[\s\S]{0,200}MelWhip:/.test(entries) && /leafShield: Object\.freeze\(\{ mark:'🍃', max:3 \}\)/.test(entries));
+check('⑧ 世界樹の守りは、だれが使っても味方全員の枠へ残りターンを渡す', /!=='partyGuard'\) continue;[\s\S]{0,240}out\.leafShield=Math\.max\(/.test(app));
 const html = read('monster-hero/index.html');
 check('見た目のCSS(.mh-stack-mark)がある', /\.mh-stack-mark \{/.test(html) && /\.mh-stack-marks-ally-top \{/.test(html));
 

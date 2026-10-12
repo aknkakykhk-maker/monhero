@@ -10801,6 +10801,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       if(eff==='thunder'){ const th=tacticsExThunderOf(tacticsExState,tacticsUnits,slotIdx,tacticsExNow); if(th) out.thunder={ phase:th.phase, charge:th.charge }; }
       if(eff==='dodgeCombo') out.dodges=tacticsSafeInt(normalizeTacticsExState(tacticsExState).effects?.[slotIdx]?.dodges,0);
     }
+    // 区切り3: 世界樹の守り(ユグドラシル)は味方全員に効くので、だれが使っても全員の枠へ「あと何ターン」を渡す
+    for(let j=0;j<tacticsUnits.length;j++){
+      const u=tacticsUnits[j]; if(!u) continue;
+      if(tacticsExActiveEffect(tacticsExState,j,u.id,tacticsExNow)!=='partyGuard') continue;
+      const d=raidExDefOf(u.id), r=d?tacticsExRemainOf(d,tacticsExState,j,u.id,tacticsExNow):null;
+      out.leafShield=Math.max(out.leafShield||0, r&&r.turns>0?r.turns:1);
+    }
     return out;
   };
   // 会心が確定する攻撃(タクティクスだけ)。オフリィアボイドの完全回避が残っている子の攻撃と、
