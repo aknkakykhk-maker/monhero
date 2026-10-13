@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f94a757347275277
+// source-sha256: dfa4a36f84472ba5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-13 12:04";
+const BUILD_DATE = "2026-10-13 12:09";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -31363,7 +31363,8 @@ const rhythmAbilityRows = () => Object.values(RHYTHM_MONSTER_ABILITIES).map(abil
 }));
 const rhythmSlotAbility = masu => masu && masu.baseId ? rhythmMonsterAbilityForLineage(monsterLineageOf(masu.baseId).main.id) : null;
 function RhythmSkyStage({
-  plane
+  plane,
+  still = false
 }) {
   const theme = rhythmSkyTheme();
   if (theme.fx) Object.assign(RHYTHM_SKY_FX, theme.fx);
@@ -31419,6 +31420,7 @@ function RhythmSkyStage({
   } : null;
   return React.createElement("svg", {
     "data-rhythm-sky-stage": true,
+    "data-rhythm-sky-still": still ? '1' : undefined,
     viewBox: "0 0 100 100",
     preserveAspectRatio: "none",
     style: {
@@ -31430,7 +31432,7 @@ function RhythmSkyStage({
       overflow: 'visible',
       zIndex: 2
     }
-  }, React.createElement("style", null, `@keyframes mhSkyFlow{from{transform:translateY(-12px)}to{transform:translateY(${f(fr.y)}px)}}[data-rhythm-sky-flow]{animation:mhSkyFlow 1.3s linear infinite}[data-rhythm-sky-flow="2"]{animation-delay:-.65s}@keyframes mhSkyPulse{0%,100%{opacity:.55}50%{opacity:1}}[data-rhythm-sky-pulse]{animation:mhSkyPulse 1.3s ease-in-out infinite}@media (prefers-reduced-motion:reduce){[data-rhythm-sky-flow],[data-rhythm-sky-pulse]{animation:none}}`), React.createElement("defs", null, React.createElement("linearGradient", {
+  }, React.createElement("style", null, `[data-rhythm-sky-still] *{animation:none!important}@keyframes mhSkyFlow{from{transform:translateY(-12px)}to{transform:translateY(${f(fr.y)}px)}}[data-rhythm-sky-flow]{animation:mhSkyFlow 1.3s linear infinite}[data-rhythm-sky-flow="2"]{animation-delay:-.65s}@keyframes mhSkyPulse{0%,100%{opacity:.55}50%{opacity:1}}[data-rhythm-sky-pulse]{animation:mhSkyPulse 1.3s ease-in-out infinite}@media (prefers-reduced-motion:reduce){[data-rhythm-sky-flow],[data-rhythm-sky-pulse]{animation:none}}`), React.createElement("defs", null, React.createElement("linearGradient", {
     id: "mhSkyFill",
     x1: "0",
     y1: "0",
@@ -32924,6 +32926,8 @@ const RhythmTapTest = ({
     }
   };
   const skyChart = useMemo(() => rhythmChartHasSky(chart?.notes), [chart]);
+  RHYTHM_ROAD_WIDTH.set(orientationIsLandscape() ? RHYTHM_ROAD_WIDTHS[settings.roadWidth] || 1 : 1);
+  const [skyLineTick, setSkyLineTick] = useState(0);
   if (skyChart) RHYTHM_SKY_LIFT.set(orientationIsLandscape());
   const skyPlane = (() => {
     if (!skyChart) return null;
@@ -33708,14 +33712,29 @@ const RhythmTapTest = ({
   }, [roadFactor]);
   useEffect(() => () => RHYTHM_ROAD_WIDTH.reset(), []);
   const laneCoverStyle = useMemo(() => {
-    const percent = rhythmFiniteStep(settings.laneCover, RHYTHM_LANE_COVER_MIN, RHYTHM_LANE_COVER_MAX, RHYTHM_LANE_COVER_STEP, 0);
+    let percent = rhythmFiniteStep(settings.laneCover, RHYTHM_LANE_COVER_MIN, RHYTHM_LANE_COVER_MAX, RHYTHM_LANE_COVER_STEP, 0);
+    if (!(percent > 0)) return null;
+    const line = RHYTHM_JUDGMENT_LINE_Y.ratio,
+      base = rhythmProjectionScale(line);
+    const skyAt = y => {
+      if (!skyChart || !(base > 0)) return 0;
+      let lo = 0,
+        hi = line;
+      for (let k = 0; k < 18; k++) {
+        const m = (lo + hi) / 2;
+        if (m - RHYTHM_SKY_LIFT.ratio * rhythmProjectionScale(m) / base < y) lo = m;else hi = m;
+      }
+      return rhythmProjectionScale(lo);
+    };
+    if (skyChart) percent = Math.min(percent, Math.max(0, (line - RHYTHM_SKY_LIFT.ratio) * 100 - 8));
     if (!(percent > 0)) return null;
     const steps = 8,
       left = [],
       right = [];
     for (let i = 0; i <= steps; i++) {
       const t = i / steps,
-        half = Math.min(50, 50 * rhythmProjectionScale(t * percent / 100) + 1);
+        y = t * percent / 100,
+        half = Math.min(50, 50 * Math.max(rhythmProjectionScale(y), skyAt(y)) + 1);
       left.push(`${(50 - half).toFixed(2)}% ${(t * 100).toFixed(2)}%`);
       right.unshift(`${(50 + half).toFixed(2)}% ${(t * 100).toFixed(2)}%`);
     }
@@ -33725,7 +33744,7 @@ const RhythmTapTest = ({
       clipPath: clip,
       WebkitClipPath: clip
     };
-  }, [settings.laneCover, roadFactor]);
+  }, [settings.laneCover, roadFactor, skyChart, isLandscape, skyLineTick]);
   const hudLeftRef = useRef(null);
   const RHYTHM_CLOCK_SIDE_MIN_WIDTH = 100;
   const [clockPlace, setClockPlace] = useState(null);
@@ -33893,7 +33912,12 @@ const RhythmTapTest = ({
     const spawnY = -noteHeight + settings.noteStartPosition / 100 * areaRect.height * .2;
     const judgmentY = lineRect.top - areaRect.top + lineRect.height / 2 - noteHeight / 2;
     const ready = rhythmTravelLooksReady(areaRect, lineRect);
-    if (ready) RHYTHM_JUDGMENT_LINE_Y.set((lineRect.top - areaRect.top + lineRect.height / 2) / areaRect.height);
+    if (ready) {
+      const lineRatio = (lineRect.top - areaRect.top + lineRect.height / 2) / areaRect.height,
+        moved = Math.abs(lineRatio - RHYTHM_JUDGMENT_LINE_Y.ratio) > .002;
+      RHYTHM_JUDGMENT_LINE_Y.set(lineRatio);
+      if (moved) setSkyLineTick(n => n + 1);
+    }
     const result = {
       spawnY,
       judgmentY,
@@ -34265,7 +34289,8 @@ const RhythmTapTest = ({
       rhythmSpawnTapJudgment(playAreaRef.current, {
         centerRatio: span && span.center,
         judgment,
-        side: rhythmFastSlow(deltaMs)
+        side: rhythmFastSlow(deltaMs),
+        sky: rhythmNoteSkyHeight(note) > 0
       });
     }
     if (settings.timingDisplay === 'METER' && judgment !== 'MISS' && typeof deltaMs === 'number' && Number.isFinite(deltaMs)) {
@@ -37212,7 +37237,8 @@ const RhythmTapTest = ({
       boxShadow: settings.lightweightMode || settings.effectAmount === 'MINIMAL' ? 'none' : settings.effectAmount === 'LOW' ? '0 0 8px #67e8f9' : '0 0 18px #67e8f9,0 0 30px #c084fc'
     }
   }), skyPlane && React.createElement(RhythmSkyStage, {
-    plane: skyPlane
+    plane: skyPlane,
+    still: settings.lightweightMode === true || settings.effectAmount === 'MINIMAL'
   }), lifeState === 'down' && React.createElement("div", {
     "data-rhythm-down-vignette": true,
     "aria-hidden": "true",

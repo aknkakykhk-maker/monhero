@@ -29861,7 +29861,7 @@ const installRhythmGeometryStyles=()=>{
     /* 叩いた場所の判定(オプション「叩いた場所に判定」・2026-09-29)。判定ラインのそのレーンの少し上に小さく出す。
        既定は見えない(opacity:0)。出すときは演奏画面の処理が Web Animations で transform と opacity だけを動かす */
     [data-rhythm-tap-judgments]{position:absolute;inset:0;pointer-events:none;z-index:7;overflow:hidden}
-    [data-rhythm-tap-judgment]{position:absolute;bottom:calc(var(--mh-judgment-line-bottom,12%) + 9px);left:50%;opacity:0;
+    [data-rhythm-tap-judgment]{position:absolute;bottom:calc(var(--mh-judgment-line-bottom,12%) + 9px + var(--rhythm-tap-lift,0%));left:50%;opacity:0;
       transform:translate(-50%,0);display:flex;flex-direction:column;align-items:center;line-height:1;white-space:nowrap;
       font-weight:900;letter-spacing:.02em;text-shadow:0 1px 2px rgba(0,0,0,.85),0 0 6px rgba(0,0,0,.6)}
     [data-rhythm-tap-judgment]>b{font-size:clamp(8px,2.3vw,12px)}
@@ -30458,7 +30458,8 @@ const rhythmSpawnHitEffect=(area,{centerRatio,widthRatio,judgment,monster=false,
 // 要素は RHYTHM_TAP_JUDGMENT_POOL 個を使い回すので DOM は増えない。動かすのは transform と opacity だけ(Web Animations)。
 // 見た目だけで、判定・スコアには触らない
 const RHYTHM_TAP_JUDGMENT_POOL=8,RHYTHM_TAP_JUDGMENT_MS=420;
-const rhythmSpawnTapJudgment=(area,{centerRatio,judgment,side=null})=>{
+// sky … 空中のノーツ(HELL)のときは空中の判定線の高さに出す(2026-10-13・叩いた光と同じ持ち上げ。それまでは地上の線に出ていた)
+const rhythmSpawnTapJudgment=(area,{centerRatio,judgment,side=null,sky=false})=>{
   if(!area||typeof document==='undefined'||!judgment||judgment==='MISS')return false;
   let layer=area.querySelector('[data-rhythm-tap-judgments]');
   if(!layer||!layer._rhythmPool){
@@ -30470,6 +30471,7 @@ const rhythmSpawnTapJudgment=(area,{centerRatio,judgment,side=null})=>{
   layer._rhythmNext=(layer._rhythmNext+1)%layer._rhythmPool.length;
   item.style.left=`${(Math.max(.03,Math.min(.97,Number(centerRatio)||.5))*100).toFixed(2)}%`;
   item.style.color=rhythmHitEffectColor(judgment);
+  item.style.setProperty('--rhythm-tap-lift',sky?`${(RHYTHM_SKY_LIFT.ratio*100).toFixed(2)}%`:'0%');
   item.firstChild.textContent=String(judgment);
   item.lastChild.textContent=judgment==='MARVELOUS'?'':(side==='FAST'||side==='SLOW'?side:'');
   item.setAttribute('data-side',judgment==='MARVELOUS'?'':String(side||''));
