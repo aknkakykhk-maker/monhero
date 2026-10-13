@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 62e2e9234281218a
+// generated-sha256: 63104cee9efc5fca
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-13 14:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-13 15:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -12326,11 +12326,12 @@ const BATTLE_MONSTER_FX = Object.freeze({
 });
 const BATTLE_STACK_MARK_ORDER = Object.freeze(Object.keys(BATTLE_STACK_MARKS));
 // { kind: 数 } から、出す順に並べた [{ kind, count, mark, img, label }] を作る。知らない種類・0は出さない。
-// ただし showZero の種類(クッキー・黒音符=その子の特性そのもの)は、持ち主なら0でも「×0」で出す(貯まる物があると分かるように)
+// ★クッキー・黒音符(showZero)も、0のときは出さない(2026-10-13 社長の決定。もとは「×0」で出していた)。
+//   showZero は「満タンで光る」札の目印としてだけ使う
 const battleStackMarkItems = (counts) => BATTLE_STACK_MARK_ORDER
   .filter((kind) => counts && Object.prototype.hasOwnProperty.call(counts, kind))
   .map((kind) => ({ kind, count: Math.max(0, Math.floor(Number(counts[kind]) || 0)), ...BATTLE_STACK_MARKS[kind] }))
-  .filter((it) => it.count > 0 || it.showZero);
+  .filter((it) => it.count > 0);
 const sweetStackTraitOf = (id) => (id && Object.prototype.hasOwnProperty.call(SWEET_STACK_TRAITS, id) ? SWEET_STACK_TRAITS[id] : null);
 const sweetStackCountOf = (n) => Math.min(SWEET_STACK_MAX, Math.max(0, Math.floor(Number(n) || 0)));
 // その行動で増える数。ownerId=特性を持つ子(既存5モードは勇者モン・タクティクスはその枠の子)、actorId=カードを使った子。

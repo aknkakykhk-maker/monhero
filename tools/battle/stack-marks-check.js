@@ -20,16 +20,17 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
 
 const entries = read('monster-hero/src/parts/22-enemy-and-bond-entries.jsx');
 const start = entries.indexOf('const BATTLE_STACK_MARKS = Object.freeze({');
-const end = entries.indexOf('.filter((it) => it.count > 0 || it.showZero);', start);
+const end = entries.indexOf('.filter((it) => it.count > 0);', start);
 check('① 絵柄の表 BATTLE_STACK_MARKS と並べる関数がある', start >= 0 && end > start);
 const ctx = {};
 vm.createContext(ctx);
-vm.runInContext(entries.slice(start, end + '.filter((it) => it.count > 0 || it.showZero);'.length) + '\nthis.T = BATTLE_STACK_MARKS; this.items = battleStackMarkItems;', ctx);
+vm.runInContext(entries.slice(start, end + '.filter((it) => it.count > 0);'.length) + '\nthis.T = BATTLE_STACK_MARKS; this.items = battleStackMarkItems;', ctx);
 const want = ['cookie', 'note', 'bow', 'kenshi', 'trickAtk', 'trickDef', 'trickRegen', 'fateCombo', 'fateAtk', 'exTurns', 'avoid', 'konjo', 'aquaPrison', 'aquaFreeze', 'roar'];
 check('① 味方6種(9つ)+残りターン・回数3つ+敵3種のマークがそろっている', want.every((k) => ctx.T[k] && typeof ctx.T[k].mark === 'string' && ctx.T[k].mark && typeof ctx.T[k].img === 'string' && ctx.T[k].label), want.filter((k) => !ctx.T[k]).join(','));
 check('① 水牢は水滴・氷結は氷の結晶(社長の例のとおり)', ctx.T.aquaPrison.mark === '💧' && ctx.T.aquaFreeze.mark === '❄️');
 const it = ctx.items({ cookie: 0, note: 3, bow: 0, roar: 2, unknown: 5 });
-check('① クッキー・黒音符は0でも出し、ほかの0と知らない種類は出さない', JSON.stringify(it.map((x) => `${x.kind}${x.count}`)) === JSON.stringify(['cookie0', 'note3', 'roar2']), JSON.stringify(it.map((x) => `${x.kind}${x.count}`)));
+// ★2026-10-13 社長の決定: クッキー・黒音符も0なら出さない(もとは「×0」で出していた)
+check('① 0のもの(クッキー・黒音符も)と知らない種類は出さない', JSON.stringify(it.map((x) => `${x.kind}${x.count}`)) === JSON.stringify(['note3', 'roar2']), JSON.stringify(it.map((x) => `${x.kind}${x.count}`)));
 
 const battle = read('monster-hero/src/parts/71-screen-battle.jsx');
 check('② 部品 BattleStackMarks がある(img があれば絵、なければ絵文字)', /const BattleStackMarks = /.test(battle) && /it\.img \? <img src=\{it\.img\}/.test(battle));
