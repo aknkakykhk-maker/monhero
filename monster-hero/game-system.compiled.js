@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8fe5509960def596
+// source-sha256: f165598ebcbff1ff
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-14 06:28";
+const BUILD_DATE = "2026-10-14 06:54";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -28989,7 +28989,8 @@ const RhythmOptions = ({
   const hellNow = () => ({
     hit: RHYTHM_HELL_SKY_HIT.id,
     text: RHYTHM_HELL_SKY_TEXT.id,
-    lane: RHYTHM_SKY_LANE_LOOK.id
+    lane: RHYTHM_SKY_LANE_LOOK.id,
+    skyLine: RHYTHM_SKY_LINE_OFFSET.pct
   });
   const [hellDraft, setHellDraft] = useState(hellNow);
   const [hellSaved, setHellSaved] = useState(hellNow);
@@ -28998,6 +28999,7 @@ const RhythmOptions = ({
     RHYTHM_HELL_SKY_HIT.set(hellDraft.hit);
     RHYTHM_HELL_SKY_TEXT.set(hellDraft.text);
     RHYTHM_SKY_LANE_LOOK.set(hellDraft.lane);
+    RHYTHM_SKY_LINE_OFFSET.set(hellDraft.skyLine);
     const now = hellNow();
     setHellDraft(now);
     setHellSaved(now);
@@ -29050,11 +29052,15 @@ const RhythmOptions = ({
     coarse = step * 10,
     suffix = '',
     decimals = 0,
-    label = ''
+    label = '',
+    source = null,
+    onSet = null,
+    slider = false
   } = {}) => {
-    const value = Number(draft[key]),
+    const value = Number((source || draft)[key]),
       percent = Math.max(0, Math.min(100, (value - min) / (max - min) * 100));
-    const nudge = amount => set(key, rhythmNudgeOptionValue(value, min, max, step, amount));
+    const put = (k, v) => onSet ? onSet(v) : set(k, v);
+    const nudge = amount => put(key, rhythmNudgeOptionValue(value, min, max, step, amount));
     const display = `${decimals > 0 ? value.toFixed(decimals) : value}${suffix}`;
     const sign = amount => `${amount > 0 ? '+' : ''}${decimals > 0 ? Number(amount).toFixed(decimals) : amount}`;
     const button = (amount, dim) => React.createElement("button", {
@@ -29080,7 +29086,7 @@ const RhythmOptions = ({
     }, button(-coarse), button(-fine, true), React.createElement("output", {
       "aria-live": "polite",
       className: `rounded-lg border-2 border-cyan-300/70 bg-white px-1 text-center font-black tabular-nums text-slate-900 whitespace-nowrap ${wide ? 'min-h-[38px] text-[13px] leading-[34px]' : 'min-h-[46px] text-[14px] leading-[42px]'}`
-    }, display), button(fine, true), button(coarse)), !wide && React.createElement("input", {
+    }, display), button(fine, true), button(coarse)), (!wide || slider) && React.createElement("input", {
       type: "range",
       "data-rhythm-option-slider": key,
       "aria-label": `${key}を変える`,
@@ -29088,7 +29094,7 @@ const RhythmOptions = ({
       max: max,
       step: step,
       value: value,
-      onChange: e => set(key, rhythmSnapOptionValue(e.target.value, min, max, step)),
+      onChange: e => put(key, rhythmSnapOptionValue(e.target.value, min, max, step)),
       className: "mh-rhythm-range h-3 w-full cursor-pointer appearance-none rounded-full border border-white/15 bg-slate-950",
       style: {
         background: `linear-gradient(90deg,#d946ef 0%,#22d3ee ${percent}%,#020617 ${percent}%,#020617 100%)`
@@ -29297,11 +29303,98 @@ const RhythmOptions = ({
     className: head
   }, "◆ 見え方"), React.createElement("div", {
     className: wide ? `mt-1 ${grid}` : `mt-3 ${grid}`
-  }, field('判定ラインの高さ', stepper('judgmentLineHeight', RHYTHM_JUDGMENT_LINE_HEIGHT_MIN, RHYTHM_JUDGMENT_LINE_HEIGHT_MAX, RHYTHM_JUDGMENT_LINE_HEIGHT_STEP, {
-    fine: RHYTHM_JUDGMENT_LINE_HEIGHT_STEP,
-    coarse: RHYTHM_JUDGMENT_LINE_HEIGHT_STEP * 4,
-    suffix: '%'
-  }), 'タップする判定ラインを、画面の下から何％の高さに置くかです。大きくするほど上へ上がり、指が届きやすくなります（12％が2026-09-13より前の位置です）。ノーツも弾ける光も判定文字も一緒に上がります。判定の幅（秒数）・スコア・譜面は変わりません。ただしレーンは奥へ行くほど狭くなるので、上げすぎると横の幅が狭く感じられます。', {
+  }, field('判定ラインの位置', (() => {
+    const L = 1 - (Number(draft.judgmentLineHeight) || 0) / 100,
+      base = wide ? .39 : rhythmSkyLiftPortrait(),
+      skyOn = hellReleased;
+    const ratio = rhythmSkyLiftWith(base, skyOn ? hellDraft.skyLine : 0),
+      skyY = L - ratio,
+      lim = rhythmSkyAcceptLimitWith(L, base, ratio, 0),
+      from = rhythmGroundAcceptFromWith(L, base);
+    const pct = v => `${(Math.max(0, Math.min(1, v)) * 100).toFixed(2)}%`;
+    return React.createElement("div", {
+      "data-rhythm-line-position": true,
+      className: "space-y-2"
+    }, React.createElement("div", {
+      "data-rhythm-line-preview": true,
+      className: `relative mx-auto overflow-hidden rounded-xl border border-white/15 bg-slate-950 ${wide ? 'h-[120px] w-full' : 'h-[210px] w-[64%]'}`
+    }, React.createElement("div", {
+      className: "absolute inset-0",
+      style: {
+        clipPath: 'polygon(41% 0,59% 0,100% 100%,0 100%)',
+        background: 'rgba(76,29,149,.5)'
+      }
+    }, React.createElement("div", {
+      "data-rhythm-line-preview-ground-band": true,
+      className: "absolute inset-x-0 bottom-0",
+      style: {
+        top: pct(skyOn ? from : 0),
+        background: 'rgba(34,211,238,.26)'
+      }
+    }), skyOn && React.createElement("div", {
+      "data-rhythm-line-preview-sky-band": true,
+      className: "absolute inset-x-0 top-0",
+      style: {
+        height: pct(lim),
+        background: 'rgba(244,114,182,.26)'
+      }
+    }), skyOn && lim > from && React.createElement("div", {
+      "data-rhythm-line-preview-both": true,
+      className: "absolute inset-x-0",
+      style: {
+        top: pct(from),
+        height: pct(lim - from),
+        background: 'repeating-linear-gradient(135deg,rgba(244,114,182,.42) 0 5px,rgba(34,211,238,.42) 5px 10px)'
+      }
+    }), React.createElement("div", {
+      "data-rhythm-line-preview-ground": true,
+      className: "absolute inset-x-0 h-[3px] -translate-y-1/2 bg-cyan-200 shadow-[0_0_6px_rgba(165,243,252,.9)]",
+      style: {
+        top: pct(L)
+      }
+    }), skyOn && React.createElement("div", {
+      "data-rhythm-line-preview-skyline": true,
+      className: "absolute inset-x-0 h-[3px] -translate-y-1/2 bg-pink-200 shadow-[0_0_6px_rgba(251,207,232,.9)]",
+      style: {
+        top: pct(skyY)
+      }
+    }))), React.createElement("p", {
+      className: "flex flex-wrap justify-center gap-x-3 gap-y-0.5 text-[10px] font-black text-slate-300"
+    }, React.createElement("span", null, React.createElement("i", {
+      className: "mr-1 inline-block h-2 w-3 rounded-sm align-middle",
+      style: {
+        background: 'rgba(34,211,238,.75)'
+      }
+    }), "地上を受け付ける範囲"), skyOn && React.createElement("span", null, React.createElement("i", {
+      className: "mr-1 inline-block h-2 w-3 rounded-sm align-middle",
+      style: {
+        background: 'rgba(244,114,182,.75)'
+      }
+    }), "空中を受け付ける範囲"), skyOn && React.createElement("span", null, React.createElement("i", {
+      className: "mr-1 inline-block h-2 w-3 rounded-sm align-middle",
+      style: {
+        background: 'repeating-linear-gradient(135deg,rgba(244,114,182,.8) 0 3px,rgba(34,211,238,.8) 3px 6px)'
+      }
+    }), "両方(近いほうを取る)")), stepper('judgmentLineHeight', RHYTHM_JUDGMENT_LINE_HEIGHT_MIN, RHYTHM_JUDGMENT_LINE_HEIGHT_MAX, RHYTHM_JUDGMENT_LINE_HEIGHT_STEP, {
+      fine: RHYTHM_JUDGMENT_LINE_HEIGHT_STEP,
+      coarse: RHYTHM_JUDGMENT_LINE_HEIGHT_STEP * 4,
+      suffix: '%',
+      label: '地上の判定ライン(画面の下からの高さ)',
+      slider: true
+    }), skyOn && stepper('skyLine', -RHYTHM_SKY_LINE_OFFSET_MAX_PCT, RHYTHM_SKY_LINE_OFFSET_MAX_PCT, RHYTHM_SKY_LINE_OFFSET_STEP_PCT, {
+      fine: RHYTHM_SKY_LINE_OFFSET_STEP_PCT,
+      coarse: 2,
+      suffix: '%',
+      decimals: 1,
+      label: '空中の判定ライン(上が＋・0が今の位置)',
+      source: hellDraft,
+      onSet: v => setHellDraft(d => ({
+        ...d,
+        skyLine: rhythmNormalizeSkyLineOffset(v)
+      })),
+      slider: true
+    }));
+  })(), 'タップする判定ラインを、画面の下から何％の高さに置くかです。大きくするほど上へ上がり、指が届きやすくなります（12％が2026-09-13より前の位置です）。ノーツも弾ける光も判定文字も一緒に上がります。判定の幅（秒数）・スコア・譜面は変わりません。ただしレーンは奥へ行くほど狭くなるので、上げすぎると横の幅が狭く感じられます。' + (hellReleased ? '\n空中の判定ライン(HELL)は、地上の判定ラインからの高さを上下にずらします。空中の線・空中のノーツ・空中を受け付ける範囲が一緒に動きます(地上を受け付ける範囲は変わりません)。上へずらしすぎると、空中を受け付ける範囲が地上の範囲に届いたところで止まります。地上の判定ラインを動かすと、空中の線も一緒に動きます。押す時刻(判定の幅)とスコアは変わりません。' : ''), {
     full: true
   }), field('ノーツの出る位置', stepper('noteStartPosition', -100, 100, 5, {
     fine: 5,

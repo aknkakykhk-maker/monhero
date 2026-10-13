@@ -1293,7 +1293,17 @@ const rhythmSkyHandOf=note=>{
 const rhythmSkyLiftPortrait=()=>{try{const v=Number(localStorage.getItem('mh_sky_lift_portrait_proto'));return v===25?.25:v===39?.39:RHYTHM_SKY_LIFT_RATIO;}catch(e){return RHYTHM_SKY_LIFT_RATIO;}};
 // 横画面では画面の高さが低いので、空中と地上の差を広げる(2026-10-10 社長「モンビーは縦でもできるけど基本は横使い」。
 // 参考動画(横画面)は差が画面の約39%。844×390 で 16% だと 62px しかなく、空中の段がつぶれて見えた)。演奏画面が向きに合わせて set する
-const RHYTHM_SKY_LIFT={ratio:RHYTHM_SKY_LIFT_RATIO,set(landscape){this.ratio=landscape?.39:rhythmSkyLiftPortrait();}};
+// 空中の判定線の位置の調整(2026-10-13 社長「判定ラインを空中と地上で別々に上下にずらせるように。実際の受け付ける範囲も見ながら」)。
+// 地上の線は今ある「判定ラインの高さ」(judgmentLineHeight)のまま。空中の線は地上の線からの高さ(RHYTHM_SKY_LIFT)を、この値(画面の高さの%・上が+)だけ足し引きする。
+// 空中のノーツ・空中の線・空中の光は、みな RHYTHM_SKY_LIFT.ratio から位置を決めるので、一緒に動く。空中の受け付ける範囲も一緒に動く(rhythmSkyAcceptLimit)。
+// 保存は新しいキー mh_rhythm_sky_line_offset_v1 だけ。既定は0(今の位置)。0.5刻み・±8% に収め、壊れていたら0
+const RHYTHM_SKY_LINE_OFFSET_MAX_PCT=8,RHYTHM_SKY_LINE_OFFSET_STEP_PCT=.5;
+const rhythmNormalizeSkyLineOffset=value=>{const n=Number(value);if(!Number.isFinite(n))return 0;const snapped=Math.round(n/RHYTHM_SKY_LINE_OFFSET_STEP_PCT)*RHYTHM_SKY_LINE_OFFSET_STEP_PCT;return Math.max(-RHYTHM_SKY_LINE_OFFSET_MAX_PCT,Math.min(RHYTHM_SKY_LINE_OFFSET_MAX_PCT,snapped))||0;};
+const RHYTHM_SKY_LINE_OFFSET={pct:(()=>{try{const v=typeof localStorage!=='undefined'?localStorage.getItem('mh_rhythm_sky_line_offset_v1'):null;return v===null?0:rhythmNormalizeSkyLineOffset(v);}catch(e){return 0;}})(),
+  set(value){const v=rhythmNormalizeSkyLineOffset(value);this.pct=v;try{if(v===0)localStorage.removeItem('mh_rhythm_sky_line_offset_v1');else localStorage.setItem('mh_rhythm_sky_line_offset_v1',String(v));}catch(e){}}};
+// base … 向きで決まる元の高さ(横 39%・縦 16%)。ratio … それに空中の線のずらしを足した、実際の高さ
+const rhythmSkyLiftWith=(base,pct)=>Math.max(.06,Math.min(.6,base+(Number(pct)||0)/100));
+const RHYTHM_SKY_LIFT={ratio:RHYTHM_SKY_LIFT_RATIO,base:RHYTHM_SKY_LIFT_RATIO,set(landscape){this.base=landscape?.39:rhythmSkyLiftPortrait();this.ratio=rhythmSkyLiftWith(this.base,RHYTHM_SKY_LINE_OFFSET.pct);}};
 const rhythmNoteSkyHeight=note=>{const h=Number(note?.skyHeight);return Number.isFinite(h)&&h>0?Math.min(1,h):0;};
 // 毎コマ何百回も呼ばれるので、点の列ごとに1回だけ数えて覚える。演奏中のノーツは譜面のノーツの写しだが、
 // 点の列(slidePoints)は譜面の凍らせた配列をそのまま持つので、それを鍵にする(凍っていない列は覚えずに毎回数える)。
@@ -1603,7 +1613,13 @@ const RHYTHM_SKY_REACH_ADAPT={
   reset(){this.depths.length=0;},
 };
 // 空中のノーツを受ける下の境目(これより上を押せば空中)
-const rhythmSkyAcceptLimit=()=>RHYTHM_JUDGMENT_LINE_Y.ratio-RHYTHM_SKY_ACCEPT_BELOW+RHYTHM_SKY_REACH_ADAPT.offset();
+// 地上のノーツを受ける上の端(これより下を押せば地上)。空中の線のずらしでは動かない(元の高さ base で数える)。地上の線を動かすと一緒に動く
+const rhythmGroundAcceptFromWith=(line,base)=>line-base+Math.max(RHYTHM_GROUND_ACCEPT_ABOVE,base*.5);
+const rhythmGroundAcceptFrom=()=>rhythmGroundAcceptFromWith(RHYTHM_JUDGMENT_LINE_Y.ratio,RHYTHM_SKY_LIFT.base);
+// 空中のノーツを受ける下の端(これより上を押せば空中)。空中の線のずらしと一緒に動く(上へずらせば上へ)。案A の自動の動きは、ここを起点に今までどおり足す。
+// 地上の範囲の上の端より上へは行かない(どちらも受け付けない隙間を作らない)。ずらしが0なら今までと同じ値
+const rhythmSkyAcceptLimitWith=(line,base,ratio,adapt=0)=>Math.max(line-RHYTHM_SKY_ACCEPT_BELOW+adapt-(ratio-base),rhythmGroundAcceptFromWith(line,base));
+const rhythmSkyAcceptLimit=()=>rhythmSkyAcceptLimitWith(RHYTHM_JUDGMENT_LINE_Y.ratio,RHYTHM_SKY_LIFT.base,RHYTHM_SKY_LIFT.ratio,RHYTHM_SKY_REACH_ADAPT.offset());
 const rhythmSkyTouch=(clientY,rect)=>{
   if(!RHYTHM_SKY_INPUT.active||!rect||!(Number(rect.height)>0))return null;
   return (Number(clientY)-Number(rect.top))/Number(rect.height);
@@ -1615,7 +1631,7 @@ const rhythmSkyAccepts=(note,touchRatio)=>{
   if(!RHYTHM_SKY_INPUT.active||!Number.isFinite(touchRatio))return true;
   // 地上のノーツは、空中の線と地上の線のまん中より下を押したときだけ取る(2026-10-10 社長「中身がついてきてない」を受けて、
   // 地上のタップを空中の線のすぐ下で押しても取れていた(77個中60個)のを直した。前は空中の線の5%下から下を全部地上として受けていた)
-  return rhythmNoteSkyHeight(note)>0?touchRatio<rhythmSkyAcceptLimit():touchRatio>rhythmSkyLineRatio()+Math.max(RHYTHM_GROUND_ACCEPT_ABOVE,RHYTHM_SKY_LIFT.ratio*.5);
+  return rhythmNoteSkyHeight(note)>0?touchRatio<rhythmSkyAcceptLimit():touchRatio>rhythmGroundAcceptFrom();
 };
 // HOLD/SLIDEを押さえ続けているあいだの「指がどのレーンにいるか」。
 //
