@@ -46,10 +46,21 @@
 
 - これから作る新曲・新しい HELL から当てはめる。公開中の曲の譜面は変えない(⑩-2)
 - **HELL**: `rhythm-chart-v3-generate.js --difficulty HELL` が、曲の解析から HELL の量・できること(PROFILES.HELL・DENSITY_TARGET.HELL)で骨組みを一から作り、
-  `rhythm-hell-mix.js` が曲の設定 `source:'audio'` のときその骨組みを読んで空中・上下の交差を付ける(MASTER の譜面は読まない)。Lv. は作った譜面から道具で出す
+  `rhythm-hell-mix.js` が曲の設定 `source:'audio'` のときその骨組みを読んで空中・上下の交差を付ける(MASTER の譜面は読まない)。Lv. は作った譜面から道具で出す(空中を測る式・下の節)
 - **5難易度(EASY〜MASTER)**: いまの道具は「同じ音の順位の上から何個取るか」で分けている(下の難易度は上の難易度の部分集合)。
   新しい決まりに合わせて難易度ごとに組み立てる形へ変えるのは道具の大きな作り替えになるので、次の新曲の前に別で見積もる(まだ変えていない)
 - 参考動画がある曲(Sheriruth・Grievous Lady の HELL)は、参考の譜面を土台にしてよい
+
+## HELL の Lv. は空中の難しさを測って出す(2026-10-13 社長の決定)
+
+「今後作るものは測る形で。今あるものは変えなくていい。あくまでもこれから作るものに対応」。
+
+- `rhythm-chart-level.js` の `chartLevel` は、空中のある譜面を**空中込みでそのまま測る**(一律の `SKY_LEVEL_FACTOR` 倍はやめた)。1ノーツの重さに次を足す:
+  地上⇔空中の切り替え(前からの `skySwitch`)・250ms より速い切り替えほど重く(`skySwitchFast`)・上下に分かれた交差1回ぶん(`skyCross`・帯の途中で起きるのでその時刻の仕事として足す)・
+  片手が空中・片手が地上で押さえている最中のノーツ(`skySplit`)。空中の無い譜面では一度も起きないので、地上の5難易度の Lv. は1つも変わらない
+- 公開中の HELL 3曲は表示を前の値のまま固定(`LEVEL_OVERRIDES`: Sheriruth 54・Grievous Lady 60・風がそよぐ場所 23・古い試作の Sheriruth 47)。
+  `rhythm-chart-level-check.js` が固定値と、新しい式が空中を地上と見なした Lv. を下回らないことを見張る
+- 参考: 新しい式で測ると Sheriruth 49・Grievous Lady 52・風がそよぐ場所 20(表示は変えない)。Against My Own Shadow の HELL(作り直し)から新しい式の値を出す
 
 ## 公開中の譜面のノーツを動かす・戻すとき
 

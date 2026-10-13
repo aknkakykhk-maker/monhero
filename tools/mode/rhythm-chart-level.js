@@ -100,7 +100,12 @@ const WORK=Object.freeze({
   // 指の交差(cross)と同じ重さで足す(どちらも「いま押さえている・触っている所とは別の所を狙い直す」動き。2026-10-10・社長「空中のぶんを数字に足す」)。
   // 空中のノーツが無い譜面では一度も起きないので、既存の曲の数字は変わらない
   skySwitch:.45,
+  // 空中の難しさをそのまま測る(2026-10-13 社長「今後作るものは測る形で」。一律の SKY_LEVEL_FACTOR のかわり)。空中の無い譜面では一度も起きない
+  skySwitchFast:.45,      // 地上⇔空中の切り替えが SKY_FAST_MS より速いほど足す(最大この値)
+  skyCross:1.2,           // 上下に分かれた交差1回ぶん(帯の途中で両手が入れ替わる動き。その時刻に仕事として足す)
+  skySplit:.25,           // 片手が空中・片手が地上で押さえている最中のノーツ(高さの違う長押しを押さえながら叩く)
 });
+const SKY_FAST_MS=250;
 
 const clamp=(value,lo,hi)=>Math.max(lo,Math.min(hi,value));
 // 空中の高さ1が、横に何レーンぶんの距離か。
@@ -148,6 +153,8 @@ const noteWork=(note,previous,context)=>{
   if(context.held)work+=WORK.whileHeld;
   if(context.cross)work+=WORK.cross;
   if(context.skySwitch)work+=WORK.skySwitch;
+  if(context.skySwitchFast)work+=WORK.skySwitchFast*context.skySwitchFast;
+  if(context.skySplit)work+=WORK.skySplit;
   // 5. SLIDEの経路（折り返しの多さ と 追従の速さ）
   if(note.type==='SLIDE'&&Array.isArray(note.slidePoints)&&note.slidePoints.length>=2){
     const points=note.slidePoints;
@@ -215,9 +222,16 @@ const chartStrain=chart=>{
     if(Math.abs(noteLane-holdLane)<.5)return false;
     return holdLane<=2?noteLane<holdLane:noteLane>holdLane;
   };
+  // 空中の難しさ(空中のある譜面だけ・2026-10-13)。上下に分かれた交差の時刻と、長押しのその時刻の高さ
+  const sky=chartHasSky(chart),HR=sky?require('./rhythm-chart-hand-rules.js'):null;
+  const skyCrossTimes=[];
+  if(sky)for(let i=0;i<sustains.length;i++)for(let j=i+1;j<sustains.length;j++){const a=sustains[i],b=sustains[j];
+    const s0=Math.max(a.startMs,b.startMs),e0=Math.min(a.endMs,b.endMs);if(e0-s0<10)continue;let prev=0;
+    for(let t=s0;t<=e0;t+=10){const d=HR.centerAt(a.note,t)-HR.centerAt(b.note,t),sg=Math.abs(d)<1e-6?0:Math.sign(d);
+      if(sg&&prev&&sg!==prev&&HR.levelAt(a.note,t)!==HR.levelAt(b.note,t))skyCrossTimes.push(t);if(sg)prev=sg;}}
   const works=[];
   let previous=null;
-  const parts={gap:0,lane:0,thin:0,chord:0,chordChain:0,flick:0,held:0,cross:0,slide:0,skySwitch:0};
+  const parts={gap:0,lane:0,thin:0,chord:0,chordChain:0,flick:0,held:0,cross:0,slide:0,skySwitch:0,...(sky?{skySwitchFast:0,skyCross:0,skySplit:0}:{})};
   for(const note of notes){
     const timeMs=Number(note.timeMs)||0;
     const chordGapLanes=chordGapOf(note);
@@ -226,7 +240,13 @@ const chartStrain=chart=>{
     const cross=held&&crossOf(note,timeMs);
     // 空中(高さ半分以上)と地上の切り替え。同時押しの相方が違う段なのも切り替えに数える(並べた順で直前になる)
     const skySwitch=!!previous&&(noteTouchSky(note)>=.5)!==(noteTouchSky(previous)>=.5);
-    const work=noteWork(note,previous,{chordGapLanes,held,chordChain,cross,skySwitch});
+    const gapMs=previous?Math.max(1,timeMs-(Number(previous.timeMs)||0)):Infinity;
+    const skySwitchFast=sky&&skySwitch&&gapMs<SKY_FAST_MS?(SKY_FAST_MS-gapMs)/SKY_FAST_MS:0;
+    const noteSky=noteTouchSky(note)>=.5?1:0;
+    const skySplit=sky&&sustains.some(span=>span.note!==note&&span.startMs<timeMs-1&&timeMs<span.endMs&&HR.levelAt(span.note,timeMs)!==noteSky);
+    const work=noteWork(note,previous,{chordGapLanes,held,chordChain,cross,skySwitch,skySwitchFast,skySplit});
+    if(skySwitchFast)parts.skySwitchFast++;
+    if(skySplit)parts.skySplit++;
     works.push({timeMs,work});
     if(chordGapLanes!=null)parts.chord++;
     if(chordChain)parts.chordChain++;
@@ -237,6 +257,8 @@ const chartStrain=chart=>{
     if((Number(note.subLaneWidth)||2)<=2)parts.thin++;
     previous=note;
   }
+  // 上下に分かれた交差は、その時刻に1回ぶんの仕事として足す(帯の途中で起きるので、ノーツの重さには乗らない)
+  for(const t of skyCrossTimes){works.push({timeMs:t,work:WORK.skyCross});parts.skyCross++;}
   // 4秒の窓（1秒ずつずらす）で、毎秒の仕事量を出す
   const step=1000;
   const windows=[];
@@ -264,7 +286,8 @@ const levelFromRaw=raw=>{
   return clamp(Math.round(LEVEL_SCALE*Math.pow(raw,LEVEL_GAMMA)/10),LEVEL_MIN,LEVEL_MAX);
 };
 
-// 空中のノーツがある譜面(HELL)は、空中を地上と見なした難しさの SKY_LEVEL_FACTOR 倍をレベルにする
+// (前の式・2026-10-13 まで)空中のノーツがある譜面(HELL)は、空中を地上と見なした難しさの SKY_LEVEL_FACTOR 倍をレベルにしていた。
+// いまは空中の難しさを1ノーツの重さに足して測る(chartLevel)。SKY_LEVEL_FACTOR は比べるための値(skyFactorLevel)と、公開中の HELL の固定値の根拠として残す
 // (2026-10-11 社長「空中あるだけで難易度2割増しぐらいの認識で数値設定したほうがいいよ」→ 10/12 朝に3割 → 同日夕方「マスターの2割増しぐらいをベース難易度に」で2割へ戻した)。
 // 空中のノーツが無い譜面(地上の5難易度・公開中の曲)は、今までと1つも変わらない。
 // 生の値(strain.raw)は空中込みのまま返す(内訳で「空中⇄地上の切り替え」がどれだけ効いているかを見られるように)
@@ -277,8 +300,11 @@ const chartLevel=chart=>{
   const strain=chartStrain(chart);
   if(!strain)return {level:0,strain:null};
   if(!chartHasSky(chart))return {level:levelFromRaw(strain.raw),strain};
+  // 空中のある譜面(HELL)は、空中の難しさを1ノーツの重さに足した生の値をそのまま Lv. にする(2026-10-13 社長「今後作るものは測る形で」)。
+  //   一律の SKY_LEVEL_FACTOR 倍はやめた。公開中の HELL 3曲の表示は LEVEL_OVERRIDES で前の値のまま(「今あるものは変えなくていい」)。
+  //   groundLevel(空中を地上と見なした Lv.)・skyFactorLevel(前の式の値)は比べるために返す
   const ground=chartStrain(groundedChart(chart)),groundLevel=levelFromRaw(ground.raw);
-  return {level:clamp(Math.round(groundLevel*SKY_LEVEL_FACTOR),LEVEL_MIN,LEVEL_MAX),strain,groundLevel};
+  return {level:levelFromRaw(strain.raw),strain,groundLevel,skyFactorLevel:clamp(Math.round(groundLevel*SKY_LEVEL_FACTOR),LEVEL_MIN,LEVEL_MAX)};
 };
 
 // --- 1曲ぶんのレベルを、難易度の順に並べて出す ---
@@ -302,6 +328,13 @@ const LEVEL_OVERRIDES=Object.freeze({
   // デバッグの試作の枠の HELL も、曲の名前(試作の枠の songId)で書ける(2026-10-11 社長「ヘル2つの難易度は、両方デバッグしてみたときにまた数値の調整はすると思う」)。
   // 書いた値が表示に出る(rhythm-hell-mix.js が譜面の Lv. に書く)。式の値(空中を地上と見なした Lv. の SKY_LEVEL_FACTOR 倍)は消えずに検査で並べて出る。
   // 例: sheriruth_hell_debug:Object.freeze({HELL:50}), grievous_lady_hell:Object.freeze({MASTER:55}),
+  // 2026-10-13 社長「(HELL の Lv. は)今後作るものは測る形で。今あるものは変えなくていい」: 空中を測る新しい式に変えても、
+  // 公開中の HELL 3曲(と古い試作の Sheriruth)の表示は前の式(空中を地上と見なした Lv. の 1.2倍)の値のまま。
+  // 新しい式の値は検査(rhythm-chart-level-check.js)で並べて出る。これから作る HELL は書かない(新しい式の値が出る)
+  sheriruth_hell_debug:Object.freeze({HELL:54}),
+  grievous_lady_hell:Object.freeze({MASTER:60}),
+  kaze_ga_soyogu_hell_debug:Object.freeze({HELL:23}),
+  sheriruth_proto:Object.freeze({MASTER:47}),
 });
 // 表示に出す Lv.: 上書き(社長の値)があればそれ、無ければ式の値
 const shownLevel=(songId,difficultyId,chart)=>{const o=LEVEL_OVERRIDES[songId];return o&&Number.isFinite(o[difficultyId])?o[difficultyId]:chartLevel(chart).level;};
