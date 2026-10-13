@@ -89,7 +89,9 @@ const mix=(master,{zero,beat,crosses=[],gentle=false,crossUpper='hold'})=>{
     //   (深く越えると、越えた指が相手の親指に寄る。Against My Own Shadow の 39〜41秒で 1.5レーン越えて 43〜57px・テンポくんの bot)
     const depth=crossUpper==='mover'?1:Math.max(1,Math.abs(x0-L0));
     const xEnd=Math.max(0,Math.min(5,Math.round((L0-side*depth)*4)/4));
-    const mid=(a+b)/2,c0=snap(mid-beat/2),c1=snap(mid+beat/2);
+    // 越える瞬間: 今までは重なりの真ん中。動く帯が空中のとき(crossUpper:'mover')は、重なりの終わりの約0.33秒前に寄せて、交差したままの時間を短くする
+    //   (交差が長いと、越えた指が相手の親指に寄ったまま。Against My Own Shadow の 39〜41秒・テンポくんの bot)
+    const mid=(a+b)/2,crossAt=crossUpper==='mover'?Math.max(mid,b-330):mid,c0=snap(crossAt-beat/2),c1=Math.min(snap(crossAt+beat/2),b);
     // 横に動かないのは両手が重なってから(それより前は元の通り道。前から止めると、同じ時刻の反対の手のタップと重なることがある)
     const holdLane=t=>t<a?Math.round(laneAt(hold.pts,t)*1000)/1000:L0;
     hold.pts=[...new Set([...hold.pts.map(p=>p[0]),a])].sort((x,y)=>x-y).filter(t=>t>=startOf(hold)&&t<=endOf(hold)).map(t=>[t,holdLane(t),hold.pts[0][2],1,0]);hold.profile='sky';hold.fixed=true;
