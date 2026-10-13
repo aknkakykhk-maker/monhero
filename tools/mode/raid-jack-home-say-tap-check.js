@@ -62,6 +62,8 @@ const LINES_PER_SIZE = 6;
       localStorage.setItem('mh_onboarded', JSON.stringify(true));
       localStorage.setItem('mh_tutorial_seen_v1', JSON.stringify(true));
       localStorage.setItem('mh_rhythm_tutorial_seen_v1', JSON.stringify(true));
+      // HELL の公開(2026-10-13)後は、HOME に着くと HELL のお話と説明が一度だけ流れる。検査では見たことにしておく
+      localStorage.setItem('mh_rhythm_hell_story_seen_v1', JSON.stringify(true));
       localStorage.setItem('mh_battle_tutorial_seen_v1', JSON.stringify(true));
       localStorage.setItem('mh_battle_tutorial_guide_shown_v1', JSON.stringify(true));
       localStorage.setItem('mh_inherited_unique_level_compensation_v1', JSON.stringify(true));
@@ -104,6 +106,12 @@ const LINES_PER_SIZE = 6;
     await page.locator('[data-raid-force-toggle]').click();
     await page.locator('[data-raid-go-home]').click();
     await page.locator('[data-home-raid-jack]').waitFor({ timeout: 20000 });
+    // HOMEの上に出る案内(お知らせのまとめの「あとで読む」・HELL の遊び方の「つぎへ」)を先に閉じる(2026-10-13 から HOME に出る)
+    for (let i = 0; i < 20; i++) {
+      const did = await page.evaluate(() => { const b = document.querySelector('[data-update-guide-bundle-later], [data-rhythm-hell-guide-next]'); if (!b) return false; b.click(); return true; });
+      if (!did) break;
+      await page.waitForTimeout(300);
+    }
     for (let i = 0; i < 60; i++) {
       const next = page.locator('button[aria-label="次へ"], button:has-text("次へ"), button:has-text("はじめる"), button:has-text("閉じる"), button:has-text("あとで")').filter({ visible: true }).first();
       if (await next.count() === 0) break;

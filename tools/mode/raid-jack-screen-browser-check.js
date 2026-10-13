@@ -75,6 +75,8 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
       localStorage.setItem('mh_tutorial_seen_v1', JSON.stringify(true));
       localStorage.setItem('mh_rhythm_tutorial_seen_v1', JSON.stringify(true));   // 初めてのモンヒロビートの案内(モンヒロビート挑戦の検査で曲えらびを開くため)
       localStorage.setItem('mh_battle_tutorial_seen_v1', JSON.stringify(true));
+      // HELL の公開(2026-10-13)後は、HOME に着くと HELL のお話と説明が一度だけ流れる。検査では見たことにしておく
+      localStorage.setItem('mh_rhythm_hell_story_seen_v1', JSON.stringify(true));
       localStorage.setItem('mh_battle_tutorial_guide_shown_v1', JSON.stringify(true));
       localStorage.setItem('mh_inherited_unique_level_compensation_v1', JSON.stringify(true));
       localStorage.setItem('mh_inherited_unique_level_compensation_pending_v1', JSON.stringify(false));
@@ -136,6 +138,12 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     check('強制表示がONになる', /HOMEに出す: ON/.test(await page.locator('[data-raid-jack-debug]').innerText()));
     await page.locator('[data-raid-go-home]').click();
     await page.locator('[data-home-raid-jack]').waitFor({ timeout: 20000 });
+    // HOMEの上に出る案内(お知らせのまとめの「あとで読む」・HELL の遊び方の「つぎへ」)を先に閉じる(2026-10-13 から HOME に出る)
+    for (let i = 0; i < 20; i++) {
+      const did = await page.evaluate(() => { const b = document.querySelector('[data-update-guide-bundle-later], [data-rhythm-hell-guide-next]'); if (!b) return false; b.click(); return true; });
+      if (!did) break;
+      await page.waitForTimeout(300);
+    }
     // HOMEを開いたとき重なる導入(新しい助手の紹介など)は、読み終えて閉じる
     for (let i = 0; i < 60; i++) {
       const next = page.locator('button[aria-label="次へ"], button:has-text("次へ"), button:has-text("はじめる"), button:has-text("閉じる"), button:has-text("あとで")').filter({ visible: true }).first();
@@ -160,13 +168,14 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     check('跳ねる動き(アニメーション)が付いている', await page.locator('[data-home-raid-jack] img').first().evaluate((el) => getComputedStyle(el).animationName.includes('mhRaidJackHop')));
     await page.waitForTimeout(1500);
     check('共有HPバーに「あらわれた」と残りHPが出る(段階2が挑戦中)', /ジャック子爵があらわれた/.test(await page.locator('[data-home-raid-jack]').innerText()) && /2,700,000/.test(await page.locator('[data-home-raid-jack]').innerText()), (await page.locator('[data-home-raid-jack]').innerText()).replace(/\s+/g, ' '));
+    // 炎は施設より後ろの別の層(data-home-raid-aura-wrap)で描く(2026-10-13・炎が施設の札にかぶったため。raid-jack-home-aura-check.js)
     check('HOMEのジャックにオーラ(炎の舌)が出ている', await page.evaluate(() => {
-      const el = document.querySelector('[data-home-raid-jack] [data-jack-aura]');
+      const el = document.querySelector('[data-home-raid-aura-wrap] [data-jack-aura]');
       return !!el && el.querySelectorAll('[data-jack-aura-el] > ins').length >= 5;
     }));
     // 撮影用: RAID_HOME_TIER を渡すと、HOMEのオーラの段階の数字だけを差し替えて撮る(色・輪の見え方の確認用。炎の本数は変わらない)
     if (SHOT && process.env.RAID_HOME_TIER) {
-      await page.evaluate((t) => { const el = document.querySelector('[data-home-raid-jack] [data-jack-aura]'); if (el) el.setAttribute('data-jack-aura', t); }, process.env.RAID_HOME_TIER);
+      await page.evaluate((t) => { const el = document.querySelector('[data-home-raid-aura-wrap] [data-jack-aura]'); if (el) el.setAttribute('data-jack-aura', t); }, process.env.RAID_HOME_TIER);
       await page.waitForTimeout(900);
     }
     if (SHOT) await page.screenshot({ path: `${SHOT}/home-jack.png` });
@@ -390,7 +399,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await page.locator('[data-home-raid-pumpkin="true"]').waitFor({ timeout: 30000 });
     const homeBtn = await page.locator('[data-home-raid-jack]').innerText();
     check('HOME: 大王を倒したあとは「ぱんぷきんが遊びに来た！」と出て、共有HPバーは出ない', /ぱんぷきんが遊びに来た/.test(homeBtn) && !/共有HP/.test(homeBtn), homeBtn.replace(/\s+/g, ' ').slice(0, 100));
-    check('HOME: ぱんぷきんの絵が出て、ジャックの絵・オーラは出ない', (await page.locator('[data-home-raid-jack] img[src*="pumpkin-icon"]').count()) === 1 && (await page.locator('[data-home-raid-jack] img[src*="jack.png"], [data-home-raid-jack] img[src*="jack-pose"]').count()) === 0 && (await page.locator('[data-home-raid-jack] [data-jack-aura-el]').count()) === 0);
+    check('HOME: ぱんぷきんの絵が出て、ジャックの絵・オーラは出ない', (await page.locator('[data-home-raid-jack] img[src*="pumpkin-icon"]').count()) === 1 && (await page.locator('[data-home-raid-jack] img[src*="jack.png"], [data-home-raid-jack] img[src*="jack-pose"]').count()) === 0 && (await page.locator('[data-home-raid-jack] [data-jack-aura-el], [data-home-raid-aura-wrap] [data-jack-aura-el]').count()) === 0);
     if (SHOT) await page.screenshot({ path: `${SHOT}/home-pumpkin.png` });
     const size = await page.evaluate(() => ({ s: document.documentElement.scrollWidth, c: document.documentElement.clientWidth }));
     check('画面が横にはみ出さない', size.s <= size.c + 1, `${size.s} / ${size.c}`);
