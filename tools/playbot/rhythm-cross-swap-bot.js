@@ -13,6 +13,8 @@
 //   node tools/playbot/rhythm-cross-swap-bot.js --entry proto --song sheriruth_hell_debug --diff HELL --from 0 --to 137000
 //   --persona thumb|lean|normal --seed 3 --sigma 28 で人の指のくせを入れる(既定は くせ無し)
 //   --no-nudge 押さえている指がつられて動くくせだけ止める / --watch 33740 帯の暗さを見張るスライドの始まり(ms)
+//   --freeze 3 [--swap-skip 66800-68300] 時間が重なって横に交わるスライドの組を自動で見つけて持ち替える(区間を外すと指を交差させる)
+//   --touch-log <ファイル> 指の合図を曲の時刻つきで書き出す([時刻ms, s|m|e, 指の番号, x, y])
 //   --sky-adapt / --no-sky-adapt 空中の受け付けを構えに合わせる案A(mh_sky_reach_adapt_proto)を入/切にして遊ぶ(書かなければゲームの既定=入・2026-10-12 から)
 //   --travel 0.5 [--travel-ms 250] 親指の上下が届ききらない人(空中⇔地上を続けて押すとき、高さの半分の所で押す)
 // 目安(2026-10-11・直したあと): 0 と 1 は4本とも MARVELOUS・暗い時間0。2 は 107.34秒が MISS・127.77秒が GOOD(直す前と同じ)
@@ -117,6 +119,7 @@ const mime = f => ({ '.js': 'application/javascript', '.html': 'text/html', '.cs
 const player2 = player.replace(posLine, 'const pos = (() => { const q = fingerAt(window.__laneFor ? window.__laneFor(a.n, now, laneOfHold) : laneOfHold(a.n, now), a.hab, a.drift, now); if (!window.__slideSkyAt || typeof RHYTHM_SKY_LIFT === "undefined") return q; const sh = window.__slideSkyAt(a.n, now); if (!(sh > 0)) return q; const rr = area.getBoundingClientRect(); return { x: q.x, y: q.y - rr.height * RHYTHM_SKY_LIFT.ratio * sh }; })();');
   // --watch 33740,35000 で、帯の暗さ(slideOffForIndex)を見張るスライドの始まり(ms)を変える(既定は Sheriruth の交差の4本)
   if (arg('watch')) await page.evaluate((w) => { window.__watchMs = w; }, String(arg('watch')).split(',').map(Number));
+  if (arg('swap-skip')) await page.evaluate((w) => { window.__swapSkip = w; }, String(arg('swap-skip')).split(',').map((r) => r.split('-').map(Number)));
   await page.evaluate((mode) => {
     const pairs = [[[106771, 107339], 108420], [[127367, 127772], 130700]];
     // mode 2: 2本目の帯(107339・127772)を押さえる指が、交わったあと相手の帯(106771・127367)に乗ったまま進む(自分の帯は捨てる=失敗するはず)
@@ -129,6 +132,31 @@ const player2 = player.replace(posLine, 'const pos = (() => { const q = fingerAt
       if (mode === 1 && o) { const mine = f(n, now), theirs = f(o, now); if (!startSide[t]) startSide[t] = mine >= theirs ? 'R' : 'L'; return startSide[t] === 'R' ? Math.max(mine, theirs) : Math.min(mine, theirs); }
       if (mode === 2 && partner[t] && seen[partner[t]]) { const p = pairs.find(([ids]) => ids.includes(t)); if (now >= p[1]) return f(seen[partner[t]], now); }
       return f(n, now); };
+    // mode 3(自動の持ち替え・2026-10-13): 時間が重なって横に交わるスライドの組を譜面から見つけ、指はそれぞれの側に残って、その側に来た帯を追う。
+    // 高さもその側の帯に合わせる(__bandAt)。--swap-skip 66800-68300 の区間は持ち替えない(指を交差させる)
+    if (mode === 3) {
+      const skip = window.__swapSkip || [];
+      const sl = (window.__mhTestHooks.rhythmNotes() || []).filter((x) => (x._rhythmOriginalType || x.type) === 'SLIDE' && Array.isArray(x.slidePoints) && x.slidePoints.length);
+      const lin = (n, t) => { const q = n.slidePoints; if (t <= q[0].timeMs) return +q[0].lane; for (let i = 1; i < q.length; i++) if (t <= q[i].timeMs) { const a = q[i - 1], b = q[i]; return +a.lane + (+b.lane - +a.lane) * (t - a.timeMs) / Math.max(1, b.timeMs - a.timeMs); } return +q[q.length - 1].lane; };
+      const key = (n) => Math.round(+n.timeMs) + ':' + n.lane, pair = new Map();
+      for (let i = 0; i < sl.length; i++) for (let j = i + 1; j < sl.length; j++) {
+        const a = sl[i], b = sl[j], s0 = Math.max(a.timeMs, b.timeMs), e0 = Math.min(+a.endTimeMs, +b.endTimeMs);
+        if (e0 - s0 < 60 || skip.some(([x, y]) => s0 < y && e0 > x)) continue;
+        let sgn = 0, crossed = false;
+        for (let t = s0; t <= e0; t += 20) { const d = Math.sign(lin(a, t) - lin(b, t)); if (!d) continue; if (sgn && d !== sgn) { crossed = true; break; } sgn = d; }
+        if (crossed) { pair.set(key(a), { o: b, s: s0, e: e0 }); pair.set(key(b), { o: a, s: s0, e: e0 }); }
+      }
+      window.__pairs3 = [...pair.entries()].map(([k, v]) => [k, Math.round(v.s), Math.round(v.e)]);
+      const side3 = {}, lastBand = {};
+      // 重なりが終わったあとは、最後に追っていた帯をそのまま追う(ゲームは交わる所で指を反対の帯へ結び直している)
+      const pick = (n, now, f) => { const q = pair.get(key(n)), k = key(n); if (!q || now < q.s) return null;
+        if (now > q.e) return lastBand[k] === q.o ? { lane: f(q.o, now), band: q.o } : null;
+        const mine = f(n, now), theirs = f(q.o, now);
+        if (!side3[k]) side3[k] = mine >= theirs ? 'R' : 'L'; const useMine = side3[k] === 'R' ? mine >= theirs : mine <= theirs; lastBand[k] = useMine ? n : q.o; return { lane: useMine ? mine : theirs, band: lastBand[k] }; };
+      window.__laneFor = (n, now, f) => { const r = pick(n, now, f); return r ? r.lane : f(n, now); };
+      window.__bandAt = (n, now) => { const r = pick(n, now, lin); return r ? r.band : n; };
+      window.__untilFor = (a, now) => { const band = lastBand[key(a.n)]; return band && band !== a.n ? a.until + (Number(band.endTimeMs) - Number(a.n.endTimeMs)) : a.until; };
+    }
     window.__freeze = (n, now) => { if (mode !== 1) return false; const t = Math.round(Number(n.timeMs)); const p = pairs.find(([ids]) => ids.includes(t)); return !!p && now >= p[1]; };
     const notes = window.__mhTestHooks.rhythmNotes() || [];
     const idx = notes.map((x, i) => [x, i]).filter(([x]) => (window.__watchMs || [106771, 107339, 127367, 127772]).includes(Math.round(Number(x.timeMs))) && ((x._rhythmOriginalType || x.type) === 'SLIDE')).map(([, i]) => i);
@@ -147,6 +175,7 @@ const player2 = player.replace(posLine, 'const pos = (() => { const q = fingerAt
     const map = new Map(); ((chart && chart.notes) || []).forEach(x => { if (Array.isArray(x.slidePoints)) map.set(Math.round(Number(x.timeMs)) + ':' + Number(x.lane), x); });
     window.__slideSkyAt = (n, t) => { if (typeof rhythmSlideSkyAt !== 'function') return 0; const o = map.get(Math.round(Number(n.timeMs)) + ':' + Number(n.lane)) || n; return Array.isArray(o.slidePoints) ? rhythmSlideSkyAt(o, t) : 0; };
   }, [SONG, DIFF]);
+  if (Number(arg('freeze', 0)) === 3) { await page.evaluate(() => { const orig = window.__slideSkyAt; window.__slideSkyAt = (n, t) => orig(window.__bandAt ? window.__bandAt(n, t) : n, t); }); console.log('持ち替えの組', JSON.stringify(await page.evaluate(() => window.__pairs3))); }
   // --persona thumb|lean|normal で人の指のくせ(手前を押す・横のばらつき・時刻のずれ)を入れる(HELL の操作のしやすさの洗い出し・2026-10-12)。既定は くせ無しの center
   const PERSONA = arg('persona', 'center'), HUMAN = PERSONA !== 'center';
   const args = { sigma: HUMAN ? Number(arg('sigma', 28)) : 0, missRate: 0, seed: Number(arg('seed', 7)), human: HUMAN, persona: PERSONA, input: 'ios', dropRate: 0, lateRate: 0, touchSrc: touchInputSource };
@@ -169,8 +198,18 @@ const player2 = player.replace(posLine, 'const pos = (() => { const q = fingerAt
     };
   }, [TRAVEL, TRAVEL_MS]);
   // --no-nudge: 押さえている指が、もう片方の指が近くを押した勢いでつられて動くくせ(scenarios/rhythm.js)だけを止める。乱数の引き方は同じにして、ほかのくせはそのまま
-  const player3 = process.argv.includes('--no-nudge') ? player2.replace('a.drift = { at: now,', 'a.drift = ((d) => window.__noNudge ? a.drift : d)({ at: now,').replace('downU.y * rand() * 6 };', 'downU.y * rand() * 6 });') : player2;
-  if (process.argv.includes('--no-nudge')) { if (player3 === player2) throw new Error('つられの行が見つからない'); await page.evaluate(() => { window.__noNudge = true; }); }
+  // 持ち替え(mode 3)で反対の帯を受け持った指は、その帯の終わりまで押さえる(__untilFor が無ければ今までどおり自分の帯の終わり)
+  if (!player2.includes('if (now >= a.until) {')) throw new Error('指を離す行が見つからない');
+  const player2b = player2.replace('if (now >= a.until) {', 'if (now >= (window.__untilFor ? window.__untilFor(a, now) : a.until)) {');
+  const player3 = process.argv.includes('--no-nudge') ? player2b.replace('a.drift = { at: now,', 'a.drift = ((d) => window.__noNudge ? a.drift : d)({ at: now,').replace('downU.y * rand() * 6 };', 'downU.y * rand() * 6 });') : player2b;
+  if (process.argv.includes('--no-nudge')) { if (player3 === player2b) throw new Error('つられの行が見つからない'); await page.evaluate(() => { window.__noNudge = true; }); }
+  // --touch-log <ファイル>: 指の合図(touchstart/move/end)を曲の時刻つきで控えて書き出す(指どうしの近さ・交差を見る・2026-10-13)
+  if (arg('touch-log')) await page.evaluate(() => {
+    window.__touchLog = [];
+    const rec = (e) => { const t = window.__mhTestHooks?.rhythmSongMs?.(); if (t == null || window.__touchLog.length > 400000) return;
+      for (const c of e.changedTouches) window.__touchLog.push([Math.round(t), e.type[5], c.identifier, Math.round(c.clientX), Math.round(c.clientY)]); };
+    for (const k of ['touchstart', 'touchmove', 'touchend']) document.addEventListener(k, rec, { capture: true, passive: true });
+  });
   await page.evaluate(`(${player3})(${JSON.stringify(args)})`);
   await page.waitForFunction((a) => (window.__mhTestHooks?.rhythmSongMs?.() ?? -1) >= a - 1500, FROM, { timeout: 600000, polling: 200 });
   if (CPU > 1) await cdp.send('Emulation.setCPUThrottlingRate', { rate: CPU });
@@ -184,6 +223,8 @@ const player2 = player.replace(posLine, 'const pos = (() => { const q = fingerAt
     return { 合計: h, 済み: r.filter(x => x && x.done).length, 見張ったスライド: Object.keys(window.__offMs).map(i => ({ 始まり: Math.round(n[i].timeMs), 判定: r[i] && r[i].judgment, 暗かった秒: +(window.__offMs[i] / 1000).toFixed(2), 暗かった区間: window.__offSpans[i].slice(0, 8) })) }; })));
   // 外れたノーツの一覧(BAD_LIST=1): 時刻・種類・空中の高さ(タップの高さ/スライドの押し始めの高さ)
   if (TRAVEL > 0) console.log('届ききらずに押した回数', JSON.stringify(await page.evaluate(() => window.__travelLog)));
+  if (arg('touch-log')) { const area = await page.evaluate(() => { const r = document.querySelector('[data-rhythm-play-area]').getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height, line: RHYTHM_JUDGMENT_LINE_Y.ratio, sky: typeof rhythmSkyLineRatio === 'function' ? rhythmSkyLineRatio() : null }; });
+    fs.writeFileSync(arg('touch-log'), JSON.stringify({ area, log: await page.evaluate(() => window.__touchLog) })); }
   if (process.env.BAD_LIST) console.log('外れたノーツ', JSON.stringify(await page.evaluate(() => { const r = window.__mhTestHooks.rhythmNoteResults?.() || [], n = window.__mhTestHooks.rhythmNotes?.() || [];
     return n.map((x, i) => [x, r[i]]).filter(([, y]) => y && y.done && /BAD|MISS|GOOD/.test(y.judgment || '')).map(([x, y]) => [Math.round(x.timeMs), x._rhythmOriginalType || x.type, Number(x.skyHeight) || (window.__slideSkyAt ? +window.__slideSkyAt(x, x.timeMs).toFixed(2) : 0), y.judgment]); })));
   if (process.env.PERF_DEBUG) { console.log('区間の終わりの様子', JSON.stringify(await page.evaluate(() => { const r = window.__mhTestHooks.rhythmNoteResults?.() || []; return { 済み: r.filter(x => x.done).length, MISS: r.filter(x => x.judgment === 'MISS').length, 止め: !!document.querySelector('[data-rhythm-pause-menu]'), 文字: (document.querySelector('main')?.innerText || '').replace(/\s+/g, ' ').slice(0, 160) }; }))); const shot = require('path').join(require('os').tmpdir(), 'rhythm-frame-perf.png'); await page.screenshot({ path: shot }); console.log('画面:', shot); }

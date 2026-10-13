@@ -34,7 +34,7 @@
 ## 部員(ビート部)と見ていること
 | 部員 | 会話 | いま見ていること |
 | --- | --- | --- |
-| オンプくん | session_01VDL1xQjh5sVox2CGCDkx8w(10/12〜) | 譜面の下書き・HELL の譜面・譜面の検査 |
+| オンプくん | session_01WaDzrhPE2Q6PDmeAgFPTwG(10/13〜) | 譜面の下書き・HELL の譜面・譜面の検査 |
 | マクアケくん | session_01JgrcvWE4GJff7cTHDPoecb | 曲紹介の幕・空中のタップの箱・空中を押した光・空中のレーンの見せ方の案(#2772)。道の床と空中の判定線には触らない約束 |
 | リバースくん | session_01DfgZpuPHnVgxrwQiurqUQ1 | Grievous Lady の譜面(#2780 で 33.74秒の始まりを直した)・HELL の Grievous Lady |
 | カゲくん | session_01Jqmiq5TioCr8iBg3nU8k77 | 新曲係(Against My Own Shadow ほか) |

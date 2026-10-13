@@ -50,7 +50,7 @@ const rankColors = readMap(rhythmSrc, 'RHYTHM_RANK_COLORS');
 const aptColors = readMap(widgetSrc, 'DIST_APTITUDE_COLOR');
 
 // --- ② 全ランクぶんそろっている ---
-const RANKS = ['G', 'F', 'E', 'D', 'C', 'B', 'A', 'S', 'SS', 'M'];
+const RANKS = ['G', 'F', 'E', 'D', 'C', 'B', 'A', 'S', 'SS', 'M', 'MF'];
 check('モンビーのランクが G〜M までそろっている',
   RANKS.every(r => rankColors[r]), RANKS.filter(r => !rankColors[r]).join(', ') || '');
 

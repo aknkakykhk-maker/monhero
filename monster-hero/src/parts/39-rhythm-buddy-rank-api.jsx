@@ -6,6 +6,9 @@
 const RHYTHM_BUDDY_RANK_TABLE = 'rhythm_buddy_ranks';
 const RHYTHM_BUDDY_RANK_SELECT = 'user_name,breeder_id,individual_id,monster_id,mon_name,icon,profile_frame,colors,beat_level,beat_exp,lives,'
   + 'score_easy,score_normal,score_hard,score_expert,score_master,best_songs,updated_at';
+// HELL の列(score_hell)は、HELL の公開の日に SQL で足す(docs/sql/rhythm-buddy-ranks/RHYTHM_BUDDY_RANKS_HELL_APPLY.sql)。
+// 公開の印が真のときだけ読み書きする(列が無いうちに送ると、行ごと断られるため)
+const rhythmBuddyRankSelect = () => RHYTHM_BUDDY_RANK_SELECT + (rhythmBuddyShownDiffIds().includes('HELL') ? ',score_hell' : '');
 // 並べる順に取る件数(1行が小さいので、同じ人の古い行の整理ぶんを含めて多めに取る)
 const RHYTHM_BUDDY_RANK_FETCH_LIMIT = 150;
 const RHYTHM_BUDDY_RANK_SHOW_LIMIT = 50;
@@ -45,7 +48,7 @@ const rhythmBuddyRankRows = (userName, icon, masuMons, store, profileFrame = nul
       lives: Math.floor(m.lives),
     };
     const songs = {};
-    RHYTHM_BUDDY_DIFF_IDS.forEach((id) => {
+    rhythmBuddyShownDiffIds().forEach((id) => {
       const b = m.best[id];
       row[rhythmBuddyScoreColumn(id)] = b ? Math.floor(b.score) : null;
       if (b && b.songId) songs[id] = b.songId;
@@ -69,7 +72,7 @@ const normalizeRhythmBuddyRankSync = (raw) => {
 const rhythmBuddyRankEntryFromRow = (row) => {
   if (!row || typeof row !== 'object' || !row.individual_id || !ALL_PLAYER_MONSTERS[row.monster_id]) return null;
   const scores = {};
-  RHYTHM_BUDDY_DIFF_IDS.forEach((id) => {
+  rhythmBuddyShownDiffIds().forEach((id) => {
     const n = Number(row[rhythmBuddyScoreColumn(id)]);
     if (Number.isFinite(n) && n > 0) scores[id] = Math.floor(n);
   });
@@ -109,7 +112,7 @@ const sbFetchRhythmBuddyRanks = async (kind, diffId = 'MASTER') => {
   const order = kind === 'score' ? `${column}.desc.nullslast,updated_at.asc`
     : 'beat_level.desc.nullslast,beat_exp.desc.nullslast,updated_at.asc';
   const filter = kind === 'score' ? `&${column}=gt.0` : '&beat_level=gt.0';
-  const url = `${SUPABASE_URL}/rest/v1/${RHYTHM_BUDDY_RANK_TABLE}?select=${RHYTHM_BUDDY_RANK_SELECT}${filter}`
+  const url = `${SUPABASE_URL}/rest/v1/${RHYTHM_BUDDY_RANK_TABLE}?select=${rhythmBuddyRankSelect()}${filter}`
     + `&order=${order}&limit=${RHYTHM_BUDDY_RANK_FETCH_LIMIT}`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 8000);

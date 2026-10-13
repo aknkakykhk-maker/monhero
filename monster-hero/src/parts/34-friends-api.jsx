@@ -603,7 +603,8 @@ const friendsRhythmSummary = (bestRecords) => {
     const byDifficulty = bestRecords && bestRecords[song.songId];
     if (!byDifficulty) return;
     let pick = null;
-    RHYTHM_DIFFICULTIES.forEach(({ id }, index) => {
+    // HELL は公開の印が真になってから(2026-10-12)
+    (typeof rhythmScoredDifficultyIds==='function'?rhythmScoredDifficultyIds():RHYTHM_DIFFICULTIES.map((d)=>d.id)).forEach((id, index) => {
       const rec = byDifficulty[id];
       if (rec && rec.played) pick = { s: song.songId, d: id, sc: friendsInt(rec.bestScore), f: rec.allMarvelous ? 3 : rec.allExcellent ? 2 : rec.fullCombo ? 1 : 0, order: index };
     });
@@ -616,11 +617,14 @@ const friendsRhythmSummary = (bestRecords) => {
 // 返す形: [{ d:難易度id, total:分母, clear, fc, ae, am }]。フルコンボ以上は上位の称号も数に含める(AM ⊂ AE ⊂ FC)
 const friendsRhythmAchievements = (bestRecords) => {
   const songs = rhythmDemoSongs(RHYTHM_SONGS);
-  const list = rhythmDemoDifficultyList(RHYTHM_DIFFICULTIES);
+  // HELL は公開の印が真になってから。分母は HELL の譜面がある曲の数(2026-10-12)
+  const scoredIds = (typeof rhythmScoredDifficultyIds==='function'?rhythmScoredDifficultyIds():RHYTHM_DIFFICULTIES.map((d)=>d.id));
+  const scored = (typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : RHYTHM_DIFFICULTIES).filter((d) => scoredIds.includes(d.id));
+  const list = rhythmDemoDifficultyList(scored);
   return list.map(({ id }) => {
     const row = { d: id, total: 0, clear: 0, fc: 0, ae: 0, am: 0 };
     songs.forEach((song) => {
-      if (!rhythmDemoDifficulties(song, RHYTHM_DIFFICULTIES).some((x) => x.id === id)) return;
+      if (!rhythmDemoDifficulties(song, scored).some((x) => x.id === id)) return;
       row.total += 1;
       const rec = bestRecords && bestRecords[song.songId] && bestRecords[song.songId][id];
       if (!rec) return;
