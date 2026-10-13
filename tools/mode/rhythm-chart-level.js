@@ -103,13 +103,20 @@ const WORK=Object.freeze({
   // 社長が遊んで違和感の無かった表示(54・60・23)に近づくように4つの重みを組み合わせで探した。ずれの最大がいちばん小さい組
   // (Sheriruth 57(+3)・Grievous Lady 56(-4)・風がそよぐ場所 22(-1))。表示は空中を地上と見なした値の一律1.2倍なので、
   // 空中の量を数える式ではこれより近づかない(Sheriruth は切り替えが多く、Grievous Lady は地上だけでも重い)。社長が遊んで微調整する
-  skySwitch:1,            // (前 .45)空中のノーツが無い譜面では一度も起きない
+  // 2026-10-13 夜(2回目) 同じ側の速い連打(sameHandFast)を足して4曲(公開中3曲の表示 54・60・23 と、社長の体感の AMOS HELL 42)で合わせ直した:
+  // Sheriruth 54(0)・Grievous Lady 60(0)・風がそよぐ場所 21(-2)・AMOS 42(0)。切り替えの2つは少し戻した(Sheriruth が先に高く出るため)
+  skySwitch:.7,           // (前 1 ← .45)空中のノーツが無い譜面では一度も起きない
   // 空中の難しさをそのまま測る(2026-10-13 社長「今後作るものは測る形で」。一律の SKY_LEVEL_FACTOR のかわり)。空中の無い譜面では一度も起きない
-  skySwitchFast:1.6,      // (前 .45)地上⇔空中の切り替えが SKY_FAST_MS より速いほど足す(最大この値)
+  skySwitchFast:1,        // (前 1.6 ← .45)地上⇔空中の切り替えが SKY_FAST_MS より速いほど足す(最大この値)
   skyCross:1.2,           // 上下に分かれた交差1回ぶん(帯の途中で両手が入れ替わる動き。その時刻に仕事として足す)
   skySplit:.5,            // (前 .25)片手が空中・片手が地上で押さえている最中のノーツ(高さの違う長押しを押さえながら叩く)
+  // 同じ側の親指で続けて叩く間隔が、叩き直しの快適な間隔(HAND_MODEL.restrikeComfortMs・150ms)より短いほど足す(最大この値)。空中の無い譜面では数えない。
+  // 2026-10-13 夜 社長が AMOS HELL を遊んで「Lv.42 はありそう」(式では36)。AMOS は約0.1秒おきの速い続きの8割近くが同じ側(Sheriruth・Grievous Lady は4割強)で、
+  // 「1つ前のノーツとの間隔」だけを見る詰まり具合(1.)では、左右交互の連打と同じ側の連打が同じ重さになっていた
+  sameHandFast:6,
 });
 const SKY_FAST_MS=250;
+
 
 const clamp=(value,lo,hi)=>Math.max(lo,Math.min(hi,value));
 // 空中の高さ1が、横に何レーンぶんの距離か。
@@ -159,6 +166,7 @@ const noteWork=(note,previous,context)=>{
   if(context.skySwitch)work+=WORK.skySwitch;
   if(context.skySwitchFast)work+=WORK.skySwitchFast*context.skySwitchFast;
   if(context.skySplit)work+=WORK.skySplit;
+  if(context.sameHandFast)work+=WORK.sameHandFast*context.sameHandFast;
   // 5. SLIDEの経路（折り返しの多さ と 追従の速さ）
   if(note.type==='SLIDE'&&Array.isArray(note.slidePoints)&&note.slidePoints.length>=2){
     const points=note.slidePoints;
@@ -235,7 +243,8 @@ const chartStrain=chart=>{
       if(sg&&prev&&sg!==prev&&HR.levelAt(a.note,t)!==HR.levelAt(b.note,t))skyCrossTimes.push(t);if(sg)prev=sg;}}
   const works=[];
   let previous=null;
-  const parts={gap:0,lane:0,thin:0,chord:0,chordChain:0,flick:0,held:0,cross:0,slide:0,skySwitch:0,...(sky?{skySwitchFast:0,skyCross:0,skySplit:0}:{})};
+  const lastByHand={};
+  const parts={gap:0,lane:0,thin:0,chord:0,chordChain:0,flick:0,held:0,cross:0,slide:0,skySwitch:0,...(sky?{skySwitchFast:0,skyCross:0,skySplit:0,sameHandFast:0}:{})};
   for(const note of notes){
     const timeMs=Number(note.timeMs)||0;
     const chordGapLanes=chordGapOf(note);
@@ -248,7 +257,12 @@ const chartStrain=chart=>{
     const skySwitchFast=sky&&skySwitch&&gapMs<SKY_FAST_MS?(SKY_FAST_MS-gapMs)/SKY_FAST_MS:0;
     const noteSky=noteTouchSky(note)>=.5?1:0;
     const skySplit=sky&&sustains.some(span=>span.note!==note&&span.startMs<timeMs-1&&timeMs<span.endMs&&HR.levelAt(span.note,timeMs)!==noteSky);
-    const work=noteWork(note,previous,{chordGapLanes,held,chordChain,cross,skySwitch,skySwitchFast,skySplit});
+    // 触る点が左半分なら左手・右半分なら右手(同じ瞬間の同時押しどうしは数えない)
+    const hand=noteTouchLane(note)<3?'L':'R',handGap=lastByHand[hand]!=null?timeMs-lastByHand[hand]:Infinity;
+    const sameHandFast=sky&&handGap>8&&handGap<HAND_MODEL.restrikeComfortMs?(HAND_MODEL.restrikeComfortMs-handGap)/HAND_MODEL.restrikeComfortMs:0;
+    lastByHand[hand]=timeMs;
+    const work=noteWork(note,previous,{chordGapLanes,held,chordChain,cross,skySwitch,skySwitchFast,skySplit,sameHandFast});
+    if(sameHandFast)parts.sameHandFast++;
     if(skySwitchFast)parts.skySwitchFast++;
     if(skySplit)parts.skySplit++;
     works.push({timeMs,work});
@@ -446,7 +460,8 @@ if(require.main===module){
           +`  生${String(strain.raw).padEnd(6)} ピーク${String(strain.peak).padEnd(6)} 平均${String(strain.average).padEnd(6)}`
           +`  ${strain.notes}ノーツ/${strain.seconds}秒 (毎秒${strain.notesPerSecond})`
           +`  細${strain.parts.thin} 同時${strain.parts.chord} 押しながら${strain.parts.held} フリック${strain.parts.flick}`
-          +(strain.parts.skySwitch?`  空中⇄地上${strain.parts.skySwitch}`:''));
+          +(strain.parts.skySwitch?`  空中⇄地上${strain.parts.skySwitch}`:'')
+          +(strain.parts.sameHandFast?`  同じ側の速い連打${strain.parts.sameHandFast}`:''));
       }
     }
   }
