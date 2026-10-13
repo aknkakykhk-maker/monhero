@@ -68,7 +68,8 @@ check('⑤ 敵の元の攻撃力は atkBeforeRoar を使い、図鑑の baseAtk 
 check('⑤ 咆哮で攻撃力を上げるときに、上がる前の値を atkBeforeRoar に残す', /atkBeforeRoar:Number\.isFinite\(Number\(prev\.atkBeforeRoar\)\)\?prev\.atkBeforeRoar:Math\.max\(0,Number\(prev\.atk\)\|\|0\),atk:Math\.floor\(Math\.max\(0,Number\(prev\.atk\)\|\|0\)\*TACTICS_ROAR_ATK_RATE\)/.test(app));
 
 // ⑥ 札の濃さ
-const mark = (html.match(/\.mh-stack-mark \{[\s\S]*?\}/) || [''])[0];
+// 行の頭の .mh-stack-mark { を探す(「3つ以上のとき」の .mh-stack-marks[...] .mh-stack-mark { に当たらないように)
+const mark = (html.match(/\n\s*\.mh-stack-mark \{[\s\S]*?\}/) || [''])[0];
 const alpha = Number((mark.match(/background: rgba\([^)]*,\s*([\d.]+)\)/) || [])[1]);
 check('⑥ マーク×数の地は薄い(不透明度0.5以下)', Number.isFinite(alpha) && alpha <= 0.5, String(alpha));
 check('⑥ 字に縁取り(text-shadow)がある', /text-shadow:/.test(mark));
