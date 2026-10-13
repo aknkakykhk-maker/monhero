@@ -699,7 +699,7 @@ function PickSlotScreen({
             data-ph-range={i} data-ph-on={open&&allowed?'':undefined}
             className={`mh-phase-enter mh-phase-card mh-ph-frame relative overflow-hidden min-h-[96px] rounded-2xl border-2 flex flex-col items-center justify-center gap-1 px-1 py-2 transition-all active:scale-90${scenarioPicksSlot(i)?battleTutorialSpotClass('slots'):''} ${open?(allowed?'':'opacity-20'):'opacity-75 saturate-50'}`}><i aria-hidden="true" className="mh-ph-ring"/>
           <span aria-hidden="true" className="mh-ph-sparkle"/>
-          <span className={`relative text-[10px] font-black uppercase px-3 py-0.5 rounded-full ${RANGE_STYLES[i].labelBg} ${RANGE_STYLES[i].text} border border-white/30 shadow-md`} style={{boxShadow:'0 0 10px rgba(var(--mh-rc),.6), inset 0 1px 0 rgba(255,255,255,.35)'}}>{RANGE_LABELS[i]}距離</span>
+          <span className={`relative text-[10px] font-black uppercase px-3 py-0.5 rounded-full ${RANGE_STYLES[i].labelBg} border border-white/30 shadow-md`} style={{boxShadow:'0 0 10px rgba(var(--mh-rc),.6), inset 0 1px 0 rgba(255,255,255,.35)'}}>{RANGE_LABELS[i]}距離</span>
           {open?(<>
             <PlusCircle className={`relative text-white/70${allowed?' animate-pulse':''}`} size={20}/>
             <span className={`relative text-[9px] font-black px-2 py-0.5 rounded-full border ${DIST_APTITUDE_COLOR[grade]}`}>{grade} {perSlotApt?'この距離で':'合流後'} {formatAptPct(after)}</span>

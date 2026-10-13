@@ -359,7 +359,7 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
         await page.waitForTimeout(100);
         const o = await overlaps(slot);
         check(`${label} ${name}: マーク4つと7桁の予測ダメージが重ならない`, o.marks === 4 && o.preview && o.hits.length === 0, `マーク${o.marks} 予測${o.preview ? 'あり' : 'なし'} ${o.hits.slice(0, 4).join(' / ')}`);
-        if (shotDir && (name === '390' || name === 'fold')) {
+        if (shotDir && (name === '390' || name === 'fold' || name === 'landscape')) {
           const el = page.locator(`button[data-slot-index="${slot}"]`);
           await el.screenshot({ path: `${shotDir}/${label}-${name}-slot.png` }).catch(() => {});
           await page.screenshot({ path: `${shotDir}/${label}-${name}.png` });
