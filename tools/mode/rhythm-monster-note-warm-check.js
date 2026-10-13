@@ -10,6 +10,7 @@
 //   ・演奏画面が、焼けたモンスターノーツの顔の絵(plain・glow)を前もって GPU へ渡す(渡していないと、そのノーツが出た瞬間に渡す)
 //   ・演奏の前に、カットインの絵を読み解いておく(img.decode)
 //   ・モンスターノーツの音を、曲の前に聞こえない音量(0)で1回通しておく(最初に取った瞬間だけ重かった・2026-10-13 2件目)
+//   ・能力名の文字を、同じ書式で見えないまま最初から置いておく(最初のモンスターノーツで文字の形を用意して重かった)
 //   ・ライフの帯は幅(width)を動かさず、幅いっぱいの帯を切り抜いて(clip-path)出す。幅を動かすと動くあいだ毎コマ並べ直しが起きる(「元気」・MISS のとき)
 const fs = require('fs');
 const path = require('path');
@@ -36,5 +37,10 @@ const barAt = play.indexOf('data-rhythm-life-bar '), bar = barAt < 0 ? '' : play
 check('ライフの帯は幅を動かさず、切り抜き(clip-path)と色の大きさ(background-size)で長さを出す', !!bar && /width:'100%'/.test(bar) && /clipPath:`inset\(0 \$\{\(100-lifeRatio\*100\)\.toFixed\(1\)\}% 0 0 round 999px\)`/.test(bar) && /backgroundSize:`\$\{\(lifeRatio\*100\)\.toFixed\(1\)\}% 100%`/.test(bar), bar.slice(0, 80));
 check('ライフの帯の動きは140msのまま(幅の動きではない)', /'clip-path 140ms linear,background-size 140ms linear'/.test(bar) && !/width 140ms/.test(bar));
 check('ライフの帯の色はまとめ書き(background)にしない(色が変わると大きさが元へ戻るため)', /backgroundImage:lifeRatio>\.5\?/.test(bar) && !/[{,]background:/.test(bar));
+const warmAt = play.indexOf('data-rhythm-ability-warm'), flashAt = play.indexOf('data-rhythm-ability-flash ');
+const warmTag = warmAt < 0 ? '' : play.slice(warmAt, play.indexOf('</div>', warmAt));
+const flashCls = flashAt < 0 ? '' : (play.slice(flashAt, flashAt + 400).match(/className="([^"]*)"/) || [])[1] || '';
+check('能力名の文字を、見えないまま(visibility:hidden)最初から置いておく', !!warmTag && /visibility:'hidden'/.test(warmTag) && /aria-hidden="true"/.test(warmTag) && /m\.ability\.name/.test(warmTag));
+check('置いておく能力名は、表示と同じ文字の大きさ・太さ(text-lg font-black)', /text-lg font-black/.test(warmTag) && /text-lg/.test(flashCls) && /font-black/.test(flashCls), flashCls.slice(0, 60));
 console.log(failed ? `\n${failed} 件 NG` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
