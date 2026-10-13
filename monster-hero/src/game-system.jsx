@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1c4dd1c59b4908d2
+// generated-sha256: d6a2e916a9ca65f8
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-13 13:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-13 13:42"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -18381,6 +18381,14 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
   const [leaveAsk,setLeaveAsk]=useState(false);
   // どのタブを見ているか。これも設定ではないので保存しない
   const [tab,setTab]=useState('live');
+  // HELL(空中のノーツ)の設定3つ(2026-10-13 社長「他の項目と同じ並びに普通の項目として」)。公開の印 rhythmHell が真のときだけ出す。
+  // 保存は今あるキー(mh_hell_sky_hit_proto・mh_hell_sky_text_proto・mh_sky_lane_look_proto)をそのまま使い、値の意味も既定も変えない。
+  // ほかの設定と同じく「保存」を押したときに書く(画面の上では下書き)
+  const hellReleased=typeof rhythmHellReleased==='function'&&rhythmHellReleased();
+  const hellNow=()=>({hit:RHYTHM_HELL_SKY_HIT.id,text:RHYTHM_HELL_SKY_TEXT.id,lane:RHYTHM_SKY_LANE_LOOK.id});
+  const [hellDraft,setHellDraft]=useState(hellNow);
+  const [hellSaved,setHellSaved]=useState(hellNow);
+  const saveHell=()=>{if(!hellReleased)return;RHYTHM_HELL_SKY_HIT.set(hellDraft.hit);RHYTHM_HELL_SKY_TEXT.set(hellDraft.text);RHYTHM_SKY_LANE_LOOK.set(hellDraft.lane);const now=hellNow();setHellDraft(now);setHellSaved(now);};
   const previewRef=useRef(null);
   const scrollRef=useRef(null);
   // 【2026-09-13・ユーザー指摘】縦横ボタンで横にしたオプション画面のスクリーンショット。
@@ -18405,7 +18413,7 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
     };
   },[]);
   useEffect(()=>()=>{previewRef.current?.stop();previewRef.current=null;},[]);
-  const savedValue=normalizeRhythmSettings(value),dirty=JSON.stringify(draft)!==JSON.stringify(savedValue);
+  const savedValue=normalizeRhythmSettings(value),dirty=JSON.stringify(draft)!==JSON.stringify(savedValue)||(hellReleased&&JSON.stringify(hellDraft)!==JSON.stringify(hellSaved));
   const set=(key,next)=>{setDraft(current=>normalizeRhythmSettings({...current,[key]:next}));setMessage('');};
   // タブを変えたら先頭から見せる(前のタブの位置に残ると、開いた先が途中から見える)
   const changeTab=id=>{setTab(id);try{scrollRef.current?.scrollTo({top:0});}catch(_){}};
@@ -18465,6 +18473,8 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
   // onPick … 選んだ直後に呼ぶ(タップ音の種類は、選んだその場で鳴らして聞き比べられるようにする)
   // 6つ(タップ音のセット)は3つずつ2段。5つ並べると1つだけ次の段へこぼれる
   const segments=(key,items,onPick=null)=><div className={`grid ${items.length===6?'grid-cols-3 [&>button:nth-child(3n)]:border-r-0 [&>button:nth-child(-n+3)]:border-b [&>button:nth-child(-n+3)]:border-b-white/10':items.length>=5?'grid-cols-5':items.length>=4?'grid-cols-4':items.length===2?'grid-cols-2':'grid-cols-3'} overflow-hidden rounded-xl border border-white/20`}>{items.map(([id,text])=><button type="button" key={id} data-rhythm-option-choice={`${key}:${id}`} aria-pressed={draft[key]===id} onClick={()=>{set(key,id);if(onPick)onPick(id);}} className={`border-r border-white/10 px-1 text-[10px] font-black last:border-r-0 ${wide?'min-h-[38px]':'min-h-[44px]'} ${draft[key]===id?'bg-cyan-600 text-white':'bg-slate-900 text-slate-300'}`}>{text}</button>)}</div>;
+  // HELL の設定の選び方(segments と同じ見た目で、下書き hellDraft を書き換える)
+  const hellSegments=(name,items)=><div className={`grid ${items.length===2?'grid-cols-2':'grid-cols-3'} overflow-hidden rounded-xl border border-white/20`}>{items.map(([id,text])=><button type="button" key={id} data-rhythm-option-choice={`hell-${name}:${id}`} aria-pressed={hellDraft[name]===id} onClick={()=>{setHellDraft(cur=>({...cur,[name]:id}));setMessage('');}} className={`border-r border-white/10 px-1 text-[10px] font-black last:border-r-0 ${wide?'min-h-[38px]':'min-h-[44px]'} ${hellDraft[name]===id?'bg-cyan-600 text-white':'bg-slate-900 text-slate-300'}`}>{text}</button>)}</div>;
   // 1項目=1枠。頭に帯のラベルを置く(参考にした画面と同じ形)。
   // ★ここは項目の「入れ物」なので、余白・字の大きさは2026-09-05に広げたまま触らない。
   // ★数値のように横幅の要る項目は wide。縦持ち(2列)ではぶち抜き、
@@ -18484,10 +18494,10 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
   // 横向きは幅が広いので3列。縦向きは2列のまま(1列にすると1つずつしか見えない)
   const grid=`grid gap-2.5 ${wide?'grid-cols-3 gap-2':'grid-cols-2'}`;
   const previewBgm=async()=>{previewRef.current?.stop();previewRef.current=null;const audio=await Audio_.startRhythmTrack('atsu_cup_theme',draft.bgmVolume);previewRef.current=audio;if(!audio)setMessage('BGMを再生できませんでした');};
-  const resetDraft=()=>{setDraft(normalizeRhythmSettings(DEFAULT_RHYTHM_SETTINGS));setMessage('画面上の値を戻しました（未保存）');};
-  const saveDraft=async()=>{const saved=await onSave(draft);setDraft(saved);setMessage('保存しました');};
+  const resetDraft=()=>{setDraft(normalizeRhythmSettings(DEFAULT_RHYTHM_SETTINGS));setHellDraft({hit:'far',text:'below',lane:RHYTHM_SKY_LANE_LOOK_DEFAULT});setMessage('画面上の値を戻しました（未保存）');};
+  const saveDraft=async()=>{saveHell();const saved=await onSave(draft);setDraft(saved);setMessage('保存しました');};
   const requestBack=()=>{if(dirty){setLeaveAsk(true);return;}onBack();};
-  const saveAndBack=async()=>{await onSave(draft);setLeaveAsk(false);onBack();};
+  const saveAndBack=async()=>{saveHell();await onSave(draft);setLeaveAsk(false);onBack();};
   // 【2026-09-13・ユーザー指示】「今の仕様はみにくすぎるし実用性がない / 特に横画面は終わってる /
   //   普通に実際の画面を使ってやればいい / そこで判定も合わせて出して調整するのが1番合うとおもう」。
   // ★それまでは専用の小さな画面(1本のレーンに目印が降りるだけ)だった。本番と見た目も
@@ -18597,6 +18607,8 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
 {/* 判定の文字を叩いた場所にも(2026-09-29・参考動画から)。既定は OFF */}
 {field('叩いた場所に判定',toggle('judgmentAtTap'),
               'ノーツを叩いたとき、判定ラインのその場所にも小さく判定の文字（MARVELOUS・GREAT など）を出します。既定は「OFF」です。\nいつもの真ん中の大きな判定はそのまま出ます。左右どちらの手がずれているかを見分けたいときに使います。判定・スコアは変わりません。')}
+{hellReleased&&field('空中の判定の文字の位置',hellSegments('text',[['below','線の下'],['above','線の上']]),
+  'HELL で空中のノーツを叩いたときの判定の文字（MARVELOUS など）を、空中の判定線の下に出すか上に出すかです。既定は「線の下」で、流れてくる空中のノーツに文字が重なりません。')}
 </div>
 </section>
 <section data-rhythm-options-group="画面の数字と表示" className={card}>
@@ -18614,6 +18626,8 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
 {field('演奏中は曲名を薄くする',toggle('hudSongFade'),
               '演奏が始まって4秒たつと、左上の曲名とジャケットを薄くします。目線を道に集めやすくするためです。既定は「ON」です。\nポーズ中は元の濃さに戻ります。スコア・ランク・ライフの表示は薄くなりません。')}
 {field('レーン発光',segments('laneGlow',RHYTHM_LANE_GLOW_LABELS),null,{full:true})}
+{hellReleased&&field('空中の道の見え方',hellSegments('lane',[['em','はっきり'],['el','控えめ'],['none','なし']]),
+  'HELL で、空中のノーツが流れてくる空中の道をどれくらいはっきり出すかです。既定は「はっきり」です。「なし」にすると、空中の判定線だけになります。判定・スコアは変わりません。',{full:true})}
 </div>
 </section>
 <section data-rhythm-options-group="マスモン" className={card}>
@@ -18747,6 +18761,8 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
 {/* 重いときは演出を自動で控えめにする(2026-09-27)。既定は ON */}
 {field('重いときは演出を自動で控えめに',toggle('autoEffectDown'),
               '演奏中にカクつきが続いたら、重い演出から順に自動で控えめにします。既定は「ON」です。保存してある設定は変わらず、アプリを開き直すと元に戻ります。判定・スコアは変わりません。\n下げる順番は、にじむ光 → ライブ背景「ライブ」を「派手」に → 道の演出・ノーツの動き → 判定の演出・コンボの節目 → ライブ背景を「控えめ」→「シンプル」です。\n画質を「自動」にしているときは、先に画質を下げ、それでもカクつくときに演出を下げます。')}
+{hellReleased&&field('空中を叩いた柱の光',hellSegments('hit',[['far','奥まで'],['on','短い'],['off','出さない']]),
+  'HELL で空中のノーツを叩いたとき、空中の判定線から立ち上がる光の柱です。既定は「奥まで」で、空中の道に沿って奥の端まで伸びます。「短い」は地上と同じ長さ、「出さない」で光の柱を出しません。判定・スコアは変わりません。',{full:true})}
 </div>
 </section>
 <section data-rhythm-options-group="端末" className={card}>

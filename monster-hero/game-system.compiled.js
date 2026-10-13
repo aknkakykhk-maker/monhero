@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6b14984e08ad4507
+// source-sha256: b6ad26dfe9b1b6d4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-13 13:21";
+const BUILD_DATE = "2026-10-13 13:42";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -28985,6 +28985,23 @@ const RhythmOptions = ({
   const [message, setMessage] = useState('');
   const [leaveAsk, setLeaveAsk] = useState(false);
   const [tab, setTab] = useState('live');
+  const hellReleased = typeof rhythmHellReleased === 'function' && rhythmHellReleased();
+  const hellNow = () => ({
+    hit: RHYTHM_HELL_SKY_HIT.id,
+    text: RHYTHM_HELL_SKY_TEXT.id,
+    lane: RHYTHM_SKY_LANE_LOOK.id
+  });
+  const [hellDraft, setHellDraft] = useState(hellNow);
+  const [hellSaved, setHellSaved] = useState(hellNow);
+  const saveHell = () => {
+    if (!hellReleased) return;
+    RHYTHM_HELL_SKY_HIT.set(hellDraft.hit);
+    RHYTHM_HELL_SKY_TEXT.set(hellDraft.text);
+    RHYTHM_SKY_LANE_LOOK.set(hellDraft.lane);
+    const now = hellNow();
+    setHellDraft(now);
+    setHellSaved(now);
+  };
   const previewRef = useRef(null);
   const scrollRef = useRef(null);
   const [wide, setWide] = useState(() => orientationIsLandscape());
@@ -29005,7 +29022,7 @@ const RhythmOptions = ({
     previewRef.current = null;
   }, []);
   const savedValue = normalizeRhythmSettings(value),
-    dirty = JSON.stringify(draft) !== JSON.stringify(savedValue);
+    dirty = JSON.stringify(draft) !== JSON.stringify(savedValue) || hellReleased && JSON.stringify(hellDraft) !== JSON.stringify(hellSaved);
   const set = (key, next) => {
     setDraft(current => normalizeRhythmSettings({
       ...current,
@@ -29111,6 +29128,22 @@ const RhythmOptions = ({
     },
     className: `border-r border-white/10 px-1 text-[10px] font-black last:border-r-0 ${wide ? 'min-h-[38px]' : 'min-h-[44px]'} ${draft[key] === id ? 'bg-cyan-600 text-white' : 'bg-slate-900 text-slate-300'}`
   }, text)));
+  const hellSegments = (name, items) => React.createElement("div", {
+    className: `grid ${items.length === 2 ? 'grid-cols-2' : 'grid-cols-3'} overflow-hidden rounded-xl border border-white/20`
+  }, items.map(([id, text]) => React.createElement("button", {
+    type: "button",
+    key: id,
+    "data-rhythm-option-choice": `hell-${name}:${id}`,
+    "aria-pressed": hellDraft[name] === id,
+    onClick: () => {
+      setHellDraft(cur => ({
+        ...cur,
+        [name]: id
+      }));
+      setMessage('');
+    },
+    className: `border-r border-white/10 px-1 text-[10px] font-black last:border-r-0 ${wide ? 'min-h-[38px]' : 'min-h-[44px]'} ${hellDraft[name] === id ? 'bg-cyan-600 text-white' : 'bg-slate-900 text-slate-300'}`
+  }, text)));
   const field = (title, control, description = null, {
     full = false
   } = {}) => React.createElement("div", {
@@ -29136,9 +29169,15 @@ const RhythmOptions = ({
   };
   const resetDraft = () => {
     setDraft(normalizeRhythmSettings(DEFAULT_RHYTHM_SETTINGS));
+    setHellDraft({
+      hit: 'far',
+      text: 'below',
+      lane: RHYTHM_SKY_LANE_LOOK_DEFAULT
+    });
     setMessage('画面上の値を戻しました（未保存）');
   };
   const saveDraft = async () => {
+    saveHell();
     const saved = await onSave(draft);
     setDraft(saved);
     setMessage('保存しました');
@@ -29151,6 +29190,7 @@ const RhythmOptions = ({
     onBack();
   };
   const saveAndBack = async () => {
+    saveHell();
     await onSave(draft);
     setLeaveAsk(false);
     onBack();
@@ -29320,7 +29360,7 @@ const RhythmOptions = ({
     className: wide ? `mt-1 ${grid}` : `mt-3 ${grid}`
   }, field('ずれの表示', segments('timingDisplay', RHYTHM_TIMING_DISPLAY_LABELS), '叩いたタイミングのずれの見せ方です。既定は「FAST/SLOW」です（osu!・Arcaea などにある表示です）。\n「FAST/SLOW」＝これまでどおり、早い・遅いだけを出します。\n「数字も」＝「FAST 23ms」のように、どれだけずれたかを数字でも出します。\n「メーターも」＝数字に加えて、判定ラインのすぐ上に「ずれメーター」を出します。真ん中の白い線がぴったりで、左が早い・右が遅いです。直近12回のずれが目盛りで並び、古いものほど薄くなります。帯の色は判定の色（金＝MARVELOUS・紫＝EXCELLENT・赤＝GREAT・緑＝GOOD・青＝BAD）です。\nFAST/SLOW表示をOFFにしているときは、数字も出ません。判定・スコアはどれでも変わりません。', {
     full: true
-  }), field('叩いた場所に判定', toggle('judgmentAtTap'), 'ノーツを叩いたとき、判定ラインのその場所にも小さく判定の文字（MARVELOUS・GREAT など）を出します。既定は「OFF」です。\nいつもの真ん中の大きな判定はそのまま出ます。左右どちらの手がずれているかを見分けたいときに使います。判定・スコアは変わりません。'))), React.createElement("section", {
+  }), field('叩いた場所に判定', toggle('judgmentAtTap'), 'ノーツを叩いたとき、判定ラインのその場所にも小さく判定の文字（MARVELOUS・GREAT など）を出します。既定は「OFF」です。\nいつもの真ん中の大きな判定はそのまま出ます。左右どちらの手がずれているかを見分けたいときに使います。判定・スコアは変わりません。'), hellReleased && field('空中の判定の文字の位置', hellSegments('text', [['below', '線の下'], ['above', '線の上']]), 'HELL で空中のノーツを叩いたときの判定の文字（MARVELOUS など）を、空中の判定線の下に出すか上に出すかです。既定は「線の下」で、流れてくる空中のノーツに文字が重なりません。'))), React.createElement("section", {
     "data-rhythm-options-group": "画面の数字と表示",
     className: card
   }, !wide && React.createElement("h3", {
@@ -29334,6 +29374,8 @@ const RhythmOptions = ({
   }), '画面の右上に出るライフ（♥のゲージと数字）の大きさです。100%が2026-09-13より前の大きさで、既定は150%です。ゲージは長さも太さも倍率どおりに伸び、数字も大きくなります。横画面ではもともとの長さが倍あるので、そのぶん長く伸びます。ハートだけは伸びをゆるめてあります（ここが行の高さを決めていて、大きくするとポーズボタンがレーンの台形へ寄ってしまうため）。ライフの減り方・DOWNの決まりは変わりません。', {
     full: true
   }), field('演奏中は曲名を薄くする', toggle('hudSongFade'), '演奏が始まって4秒たつと、左上の曲名とジャケットを薄くします。目線を道に集めやすくするためです。既定は「ON」です。\nポーズ中は元の濃さに戻ります。スコア・ランク・ライフの表示は薄くなりません。'), field('レーン発光', segments('laneGlow', RHYTHM_LANE_GLOW_LABELS), null, {
+    full: true
+  }), hellReleased && field('空中の道の見え方', hellSegments('lane', [['em', 'はっきり'], ['el', '控えめ'], ['none', 'なし']]), 'HELL で、空中のノーツが流れてくる空中の道をどれくらいはっきり出すかです。既定は「はっきり」です。「なし」にすると、空中の判定線だけになります。判定・スコアは変わりません。', {
     full: true
   }))), React.createElement("section", {
     "data-rhythm-options-group": "マスモン",
@@ -29533,7 +29575,9 @@ const RhythmOptions = ({
     full: true
   }), field('道の演出', toggle('roadFx'), '演奏中の道(レーン)を、曲に合わせて動かします。既定は「OFF」です。判定・スコア・叩く位置は変わりません。\n曲の拍ごとに細い線が奥から流れてきて、小節の頭では明るい線になります。道の左右のふちが拍に合わせて光り、道の奥はもやに溶けて、その先の光が小節ごとに脈打ちます。\n少し重くなるので、端末が熱くなるときは OFF のままにしてください。演出量が「最小」のときと軽量モードでは出ません。\n変えた設定は、次に遊ぶ曲から使われます。'), field('判定の演出', toggle('judgmentFx'), 'GREAT 以上の判定のとき、判定の文字の後ろで光がはじけ、文字が大きく弾みます。既定は「OFF」です。判定・スコアは変わりません。\n光の色は判定の色（GREAT は赤、EXCELLENT は桃紫、MARVELOUS は金）で、ぴったりの MARVELOUS では虹色の光が走ります。\n判定のたびに動くので少し重くなります。演出量が「最小」のときと軽量モードでは出ません。'), field('ノーツの動き', toggle('noteMotionFx'), 'フリックの矢印と、SLIDE の帯に動きを付けます。既定は「OFF」です。判定・スコア・叩く位置は変わりません。\n上へ払うフリックは矢印が3段に重なり、光が下から上へ流れます。横へ払うフリックは、払う向きへ山形の残像が流れます。SLIDE は、帯の上を判定ラインへ向かって光の波が流れます。\n演出量が「最小」のときと軽量モードでは出ません。'), field('コンボの節目', toggle('comboMilestoneFx'), 'コンボが100のくぎりに届くたび（100・200・300…）、コンボ数のまわりに金の光の輪が広がります。既定は「OFF」です。判定・スコアは変わりません。\n「100 COMBO」の大きな数字は、この設定に関係なくこれまでどおり出ます。コンボ数を出さない設定のときは、光の輪も出ません。演出量が「最小」のときと軽量モードでは出ません。'), field('盛り上がりの光', toggle('climaxFx'), 'サビなど曲がいちばん盛り上がるところに入ると、道の両側に光の筋が奥から流れてきます。既定は「OFF」です。判定・スコア・叩く位置は変わりません。\n盛り上がるところは曲ごとに決まっていて、そこを抜けると光はゆっくり消えます。曲の中でもとくに盛り上がるところほど光が濃くなります。\n演出量が「最小」のときと軽量モードでは出ません。'), field('にじむ光', toggle('noteBloom'), 'ノーツの光や、ノーツを取ったときの光のまわりを、ふわっとにじませます。既定は「OFF」です。判定・スコアは変わりません。\n描画方式が「WebGL」のとき(「自動」で WebGL になっているときを含む)だけ効きます。「Canvas」のときは何も変わりません。\n光を小さな絵にぼかしてから重ねるので、GPU の仕事が少し増えます。端末が熱くなるときは OFF にしてください。演出量「最小」と軽量モードでは出しません。'), field('モンスターノーツの演出', segments('monsterNoteEffect', RHYTHM_MONSTER_EFFECT_LABELS), 'モンスターノーツを取ったときの演出の強さです。重い順に「多め」「標準」「少なめ」「最小」の4段で、既定は「標準」です。\n「多め」＝画面全体が金色に光り、粒も大きく、そのマスモンが大きく跳ねます。\n「標準」＝全画面の光をやめます（いちばん重いのがこの描き直しです）。粒と跳ねは残ります。\n「少なめ」＝光る粒もふつうのノーツと同じになり、跳ねもやめます。\n「最小」＝ノーツに乗るマスモンの絵を出さなくなります。この絵だけはふつうのノーツと違って、流れているあいだずっと位置と大きさを書き換えているので、ここを止めるといちばん効きます。さらに、取ったその瞬間に走っていた両サイドのマスモンへの反応（見た目の切り替えと700msのタイマー）も丸ごとやめます。どれがモンスターノーツかは金色の粒で分かります。能力名の大きな表示も出ません。\nどの段でも、音・振動・能力の効果はそのまま残ります（効いていることは左上のバッジでも分かります）。', {
     full: true
-  }), field('重いときは演出を自動で控えめに', toggle('autoEffectDown'), '演奏中にカクつきが続いたら、重い演出から順に自動で控えめにします。既定は「ON」です。保存してある設定は変わらず、アプリを開き直すと元に戻ります。判定・スコアは変わりません。\n下げる順番は、にじむ光 → ライブ背景「ライブ」を「派手」に → 道の演出・ノーツの動き → 判定の演出・コンボの節目 → ライブ背景を「控えめ」→「シンプル」です。\n画質を「自動」にしているときは、先に画質を下げ、それでもカクつくときに演出を下げます。'))), React.createElement("section", {
+  }), field('重いときは演出を自動で控えめに', toggle('autoEffectDown'), '演奏中にカクつきが続いたら、重い演出から順に自動で控えめにします。既定は「ON」です。保存してある設定は変わらず、アプリを開き直すと元に戻ります。判定・スコアは変わりません。\n下げる順番は、にじむ光 → ライブ背景「ライブ」を「派手」に → 道の演出・ノーツの動き → 判定の演出・コンボの節目 → ライブ背景を「控えめ」→「シンプル」です。\n画質を「自動」にしているときは、先に画質を下げ、それでもカクつくときに演出を下げます。'), hellReleased && field('空中を叩いた柱の光', hellSegments('hit', [['far', '奥まで'], ['on', '短い'], ['off', '出さない']]), 'HELL で空中のノーツを叩いたとき、空中の判定線から立ち上がる光の柱です。既定は「奥まで」で、空中の道に沿って奥の端まで伸びます。「短い」は地上と同じ長さ、「出さない」で光の柱を出しません。判定・スコアは変わりません。', {
+    full: true
+  }))), React.createElement("section", {
     "data-rhythm-options-group": "端末",
     className: card
   }, !wide && React.createElement("h3", {
