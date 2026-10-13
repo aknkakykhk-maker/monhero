@@ -23,11 +23,9 @@
 作る譜面が変わる強化は `CHART_REVISION_CODE_LATEST` を最新リビジョンの次にし、変更前のワークツリーと出力を突き合わせる。
 本文: [`docs/rules/CHART_ENGINE.md`](../../docs/rules/CHART_ENGINE.md)。呼び名は「MHB CHART ENGINE Rev.30」(「版30」とは書かない)。
 
-**空中のノーツがある譜面(HELL)の Lv.** は、空中の難しさ(地上⇔空中の速い切り替え・上下の交差・片手が空中で片手が地上の時間)を1ノーツの重さに足して**測って出す**
-(2026-10-13 社長「今後作るものは測る形で。今あるものは変えなくていい」・`rhythm-chart-level.js`)。一律の1.2倍(`SKY_LEVEL_FACTOR`)はやめた。
-公開中の HELL 3曲の表示は前の値のまま(`LEVEL_OVERRIDES`)。空中の無い譜面(地上の5難易度・公開中の曲)の Lv. はこれで1つも変わらない。
+**HELL の Lv.** は空中の難しさを1ノーツの重さに足して**測って出す**(2026-10-13・`rhythm-chart-level.js`。一律1.2倍はやめた)。
+公開中の HELL 3曲の表示は前の値のまま(`LEVEL_OVERRIDES`)。空中の無い譜面の Lv. は変わらない。本文: `docs/rules/CHART_ENGINE.md`
 HELL は `rhythm-hell-mix.js --song <曲> --write` で作る(MASTER を土台に、空と地上が混ざって行き来する形・交差する両手の長押し)。
-(2026-10-13〜 参考動画の無い曲は曲の設定に `source:'audio'` を書き、MASTER を土台にせず曲の解析から一から作る。Against My Own Shadow から)
 
 **手の決まり**(同じ側で地上⇔空中は **150ms 以上**・空中は地上から250ms以上が目安・押さえている帯と同じ側は反対の手が空いているときだけ・
 同じ側の押し始めは90ms未満にしない)は `rhythm-chart-hand-rules-check.js` が見張る。**公開中の譜面のノーツを動かす・戻すとき**は
