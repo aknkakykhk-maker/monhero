@@ -1,0 +1,72 @@
+<title>Claude 使用率</title>
+<style>
+:root{--bg:#f3f5f8;--panel:#ffffff;--fg:#18202c;--muted:#5b6676;--line:#dde2ea;--grid:#e8ecf2;--warn:#a35200;
+--s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--s4:#eda100;--s5:#e87ba4;--s6:#008300;--s7:#6250d6;--s8:#e34948;
+--font-head:"M PLUS Rounded 1c","Hiragino Maru Gothic ProN","Hiragino Sans",sans-serif;--font-body:"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP",system-ui,sans-serif}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#11161e;--panel:#19202b;--fg:#e8edf4;--muted:#9aa6b6;--line:#2a3442;--grid:#232c39;--warn:#ffb35c;
+--s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181;--s6:#008300;--s7:#9085e9;--s8:#e66767;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#11161e;--panel:#19202b;--fg:#e8edf4;--muted:#9aa6b6;--line:#2a3442;--grid:#232c39;--warn:#ffb35c;
+--s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181;--s6:#008300;--s7:#9085e9;--s8:#e66767;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:15px;line-height:1.6}
+.wrap{max-width:44rem;margin:0 auto;padding:20px 16px 40px;display:flex;flex-direction:column;gap:22px}
+h1,h2{font-family:var(--font-head);margin:0}
+h1{font-size:24px;font-weight:800}
+h2{font-size:17px;font-weight:800}
+.lead,.note{margin:4px 0 0;color:var(--muted);font-size:13px}
+.notice{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:13px;color:var(--muted)}
+.notice b{color:var(--fg)}
+section{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 14px 10px;display:flex;flex-direction:column;gap:8px;min-width:0}
+svg{width:100%;height:auto;display:block;overflow:visible}
+svg .grid{stroke:var(--grid);stroke-width:1}
+svg .base{stroke:var(--line);stroke-width:1}
+svg .ax{fill:var(--muted);font-size:10px;font-variant-numeric:tabular-nums}
+svg .val{fill:var(--fg);font-size:11px;font-weight:700;font-variant-numeric:tabular-nums}
+svg .hit{fill:transparent}
+svg .hit:hover{fill:var(--grid);opacity:.5}
+.s1{fill:var(--s1);background:var(--s1)}
+.s2{fill:var(--s2);background:var(--s2)}
+.s3{fill:var(--s3);background:var(--s3)}
+.s4{fill:var(--s4);background:var(--s4)}
+.s5{fill:var(--s5);background:var(--s5)}
+.s6{fill:var(--s6);background:var(--s6)}
+.s7{fill:var(--s7);background:var(--s7)}
+.s8{fill:var(--s8);background:var(--s8)}
+.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.tile span{font-size:12px;color:var(--muted)}
+.tile b{font-family:var(--font-head);font-size:26px;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums}
+.tile b small{font-size:13px;margin-left:2px}
+.tile b.warn{color:var(--warn)}
+.legend{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:var(--muted)}
+.legend li{display:flex;align-items:center;gap:5px}
+.sw{display:inline-block;width:10px;height:10px;border-radius:3px;flex:none}
+.tbl{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+.tbl caption{text-align:left;color:var(--muted);font-size:12px;padding-bottom:4px}
+.tbl th,.tbl td{border-top:1px solid var(--line);padding:5px 6px;text-align:right}
+.tbl th:first-child,.tbl td:first-child{text-align:left;display:flex;align-items:center;gap:6px}
+.tbl th{color:var(--muted);font-weight:600}
+.empty{margin:0;padding:18px 4px;color:var(--muted);font-size:13px;text-align:center}
+@media (max-width:420px){.tile b{font-size:21px}}
+</style>
+<div class="wrap">
+  <header>
+    <h1>Claude 使用率(目安)</h1>
+    <p class="lead">10/13 15:48 更新 / まとめ: 統括部長モンヒロくん</p>
+  </header>
+  <p class="notice"><b>目安です。</b>各部署の会話の使用量(費用の記録)を毎晩足し、まだ社長の使用量画面の値で合わせていないので、%ではなくドル(目安の費用)で出しています。週の切り替わりはまだ聞いていないので、仮に月曜0時で区切っています。</p>
+  <p class="empty">記録がたまると出ます(今週の見込み)。いまの記録は 0 回。</p>
+  <section>
+    <h2>日ごと</h2>
+    <p class="empty">記録がたまると出ます(日ごとのグラフ)。いまの記録は 0 回。</p>
+    <p class="note">夜中の記録(2:52)は前の日の分として数えています。棒を押すと値が出ます。</p>
+  </section>
+  <section>
+    <h2>週ごと</h2>
+    <p class="empty">記録がたまると出ます(週ごとのグラフ)。いまの記録は 0 回。</p>
+  </section>
+  <section>
+    <h2>部署ごとの内訳(日ごと)</h2>
+    <p class="empty">記録がたまると出ます(部署ごとの内訳)。いまの記録は 0 回。</p>
+  </section>
+</div>
