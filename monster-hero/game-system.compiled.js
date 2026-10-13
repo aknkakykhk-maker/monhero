@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 637fa16d7ea427c0
+// source-sha256: b237098890d490f7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-13 09:52";
+const BUILD_DATE = "2026-10-13 10:55";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -75115,7 +75115,8 @@ const RaidJackPrepScreen = ({
   onBack,
   onStart,
   restore = null,
-  onOpenDetail
+  onOpenDetail,
+  onOpenTeachingDetail
 }) => {
   const isB = kind === 'b';
   const maxTeach = RAID_JACK_TEACHING_MAX;
@@ -75132,6 +75133,14 @@ const RaidJackPrepScreen = ({
     if (prev.includes(k)) return prev.filter(x => x !== k);
     return prev.length >= RAID_JACK_ALLY_MAX ? prev : [...prev, k];
   });
+  const teachGrowTurns = RAID_JACK_LEVEL_UP_TURNS.slice(0, RAID_JACK_TEACHING_MAX_LEVEL);
+  const teachDetailInfo = isB ? {
+    startLevel: RAID_JACK_TEACHING_MAX_LEVEL,
+    note: `このイベントでは Lv.${RAID_JACK_TEACHING_MAX_LEVEL}(最大)から始まります。戦闘中は成長しません`
+  } : {
+    startLevel: 0,
+    note: `このイベントでは Lv.0 から始まり、${teachGrowTurns.join('・')}ターン目に1段階ずつ強くなります(最大 Lv.${RAID_JACK_TEACHING_MAX_LEVEL})`
+  };
   const toggleTeach = id => setTeachIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : prev.length >= maxTeach ? maxTeach === 1 ? [id] : prev : [...prev, id]);
   const tile = (mon, on, onClick, attrs) => React.createElement("div", {
     key: keyOf(mon),
@@ -75208,19 +75217,34 @@ const RaidJackPrepScreen = ({
     className: "mb-1 text-[11px] font-black text-orange-200"
   }, "アシカ(", maxTeach, "つまで)", React.createElement("span", {
     className: "ml-1 text-[9px] text-slate-300"
-  }, teachIds.length, " / ", maxTeach)), React.createElement("div", {
+  }, teachIds.length, " / ", maxTeach), typeof onOpenTeachingDetail === 'function' && React.createElement("span", {
+    className: "ml-1 text-[9px] font-normal text-slate-300"
+  }, "右上の ", React.createElement("b", {
+    className: "text-sky-200"
+  }, "i"), " で効果が見られます")), React.createElement("div", {
     className: "text-[9px] text-slate-300"
   }, isB ? '最大レベルから始まります(戦闘中は成長しません)' : '固有技は3・5・8・11ターン目に2段階ずつ、アシカは3・5ターン目に1段階ずつ強くなります(3枚まで選べます)'), React.createElement("div", {
     className: "mt-1 grid grid-cols-4 gap-1.5"
-  }, (Array.isArray(teachings) ? teachings : []).map(t => React.createElement("button", {
-    type: "button",
+  }, (Array.isArray(teachings) ? teachings : []).map(t => React.createElement("div", {
     key: t.id,
+    className: "relative"
+  }, React.createElement("button", {
+    type: "button",
     "data-raid-teach": t.id,
     onClick: () => toggleTeach(t.id),
-    className: `flex flex-col items-center rounded-xl border-2 p-1 text-center active:scale-95 ${teachIds.includes(t.id) ? 'border-orange-300 bg-orange-950/50' : 'border-white/10 bg-slate-900/60'}`
+    className: `flex w-full flex-col items-center rounded-xl border-2 p-1 text-center active:scale-95 ${teachIds.includes(t.id) ? 'border-orange-300 bg-orange-950/50' : 'border-white/10 bg-slate-900/60'}`
   }, cardIconNode(t.icon, 40, t.id), React.createElement("span", {
     className: "mt-0.5 w-full truncate text-[9px] font-black text-slate-100"
-  }, t.baseName))))), React.createElement("div", {
+  }, t.baseName)), typeof onOpenTeachingDetail === 'function' && React.createElement("button", {
+    type: "button",
+    "data-raid-teach-detail": t.id,
+    "aria-label": `${t.baseName}の効果を見る`,
+    onClick: e => {
+      e.stopPropagation();
+      onOpenTeachingDetail(t, teachDetailInfo);
+    },
+    className: "mh-hit-expand absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full border border-sky-300/60 bg-slate-800 text-[11px] font-black leading-none text-sky-200 shadow active:scale-90"
+  }, "i"))))), React.createElement("div", {
     className: "rounded-2xl border border-white/10 bg-black/30 p-3 text-[10px] text-slate-300"
   }, "ライフ ", tier.hp.toLocaleString(), " / 技 ", tier.actionCount, "本 / 20ターンで終わります。始めると今日の挑戦回数を1回使います。途中でやめても回数は戻りませんが、そこまでのダメージは記録されます。")), React.createElement("div", {
     className: SCREEN_FOOTER_CLASS
@@ -100421,12 +100445,19 @@ function MonsterHeroGame() {
         return unlocked.length > 0 ? unlocked : getActiveTeachingCards();
       })(),
       onOpenDetail: mon => setRaidJackDetailMon(mon),
+      onOpenTeachingDetail: (t, info) => setRosterDetailTeaching({
+        ...t,
+        detailStartLvl: info && Number.isFinite(info.startLevel) ? info.startLevel : null,
+        detailNote: info && info.note ? info.note : ''
+      }),
       onBack: () => {
         setRaidJackDetailMon(null);
+        setRosterDetailTeaching(null);
         setGameState('RAID_JACK');
       },
       onStart: args => {
         setRaidJackDetailMon(null);
+        setRosterDetailTeaching(null);
         return beginRaidJackPlacement(args);
       }
     }), raidJackDetailMon && renderMonsterDetailModal({
@@ -101634,7 +101665,7 @@ function MonsterHeroGame() {
       }
     }), rosterDetailTeaching && (() => {
       const owned = ownedTeachings.find(ot => ot.id === rosterDetailTeaching.id);
-      const currentLvl = owned ? owned.evoLevel : -1;
+      const currentLvl = Number.isFinite(rosterDetailTeaching.detailStartLvl) ? rosterDetailTeaching.detailStartLvl : owned ? owned.evoLevel : -1;
       return React.createElement("div", {
         className: "fixed inset-0 flex items-center justify-center p-6",
         style: {
@@ -101649,7 +101680,10 @@ function MonsterHeroGame() {
         className: "text-6xl mb-2 shrink-0"
       }, cardIconNode(rosterDetailTeaching.icon, 76, rosterDetailTeaching.id)), React.createElement("h3", {
         className: "text-lg font-black text-white mb-4 shrink-0"
-      }, BREEDER_EVO_NAMES[rosterDetailTeaching.id][Math.max(currentLvl, 0)]), React.createElement("div", {
+      }, rosterDetailTeaching.detailNote ? rosterDetailTeaching.baseName || BREEDER_EVO_NAMES[rosterDetailTeaching.id][0] : BREEDER_EVO_NAMES[rosterDetailTeaching.id][Math.max(currentLvl, 0)]), rosterDetailTeaching.detailNote && React.createElement("div", {
+        "data-teach-detail-note": true,
+        className: "-mt-5 mb-1 w-full shrink-0 text-center text-[11px] font-bold leading-snug text-amber-200"
+      }, rosterDetailTeaching.detailNote), React.createElement("div", {
         className: "w-full space-y-2 mb-4 overflow-y-auto min-h-0 flex-1"
       }, getFullEvolutionDetails(rosterDetailTeaching).map(info => {
         const isCurrent = info.lvl === currentLvl;
@@ -101663,7 +101697,7 @@ function MonsterHeroGame() {
           className: `text-[11px] font-black ${isCurrent ? 'text-purple-300' : isNext ? 'text-amber-300' : 'text-slate-400'}`
         }, "Lv.", info.lvl, " ", info.name), isCurrent && React.createElement("span", {
           className: "text-[10px] bg-purple-500 text-white px-1.5 rounded-full leading-none py-0.5"
-        }, "所持"), !owned && info.lvl === 0 && React.createElement("span", {
+        }, rosterDetailTeaching.detailNote ? '開始' : '所持'), !owned && !rosterDetailTeaching.detailNote && info.lvl === 0 && React.createElement("span", {
           className: "text-[10px] bg-slate-600 text-white px-1.5 rounded-full leading-none py-0.5"
         }, "未習得")), React.createElement("div", {
           className: "text-[11px] leading-relaxed text-slate-300"
