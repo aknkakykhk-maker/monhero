@@ -29738,6 +29738,10 @@ const installRhythmGeometryStyles=()=>{
     /* 立ち上がる光の柱: 判定ラインから上へ抜ける(チュウニズムの光柱) */
     /* 高さは道の4割ほど(2026-09-27・参考動画)。canvas 版(drawOneHit)の min(200, 判定ラインまでの高さ×0.42) とそろえる */
     [data-rhythm-hit-effect][data-hit-finish="1"]>b{height:clamp(120px,45vh,260px)}
+    /* 空中の柱の光の「奥まで」(2026-10-13): 道の幅いっぱいに広げ、JS が作った台形(奥ほど細い)で切り抜く。色は canvas 版の空中の柱と同じ白紫(#e9d5ff)で、7割まで残す */
+    [data-rhythm-hit-effect][data-hit-sky-far="1"]>b{left:var(--rhythm-far-left,0);right:auto;width:var(--rhythm-far-w,100%);height:var(--rhythm-far-h,200px);
+      border-radius:0;clip-path:var(--rhythm-far-clip,none);
+      background:linear-gradient(to top,#e9d5ff 0%,rgba(255,255,255,.4) 70%,rgba(255,255,255,.14) 100%)}
     [data-rhythm-hit-effect]>b{left:0;right:0;bottom:0;height:clamp(96px,34vh,200px);border-radius:14px 14px 0 0;
       transform-origin:bottom center;
       background:linear-gradient(to top,var(--rhythm-hit-color,#fff) 0%,rgba(255,255,255,.32) 42%,rgba(255,255,255,0) 100%)}
@@ -30387,6 +30391,24 @@ const rhythmSpawnHitEffect=(area,{centerRatio,widthRatio,judgment,monster=false,
   item.style.setProperty('--rhythm-hit-color',monster?'#fde047':(sky?`rgb(${RHYTHM_SKY_FX.main})`:rhythmHitEffectColor(judgment)));
   // 空中のノーツ(試作)は、空中の判定ラインの高さで弾ける(DOM の部品で描く端末向け。形は地上と同じで、色と高さだけ変える)
   item.style.setProperty('--rhythm-hit-lift',sky&&!monster?`${(RHYTHM_SKY_LIFT.ratio*100).toFixed(2)}%`:'0%');
+  // 空中の柱の光の「奥まで」(RHYTHM_HELL_SKY_HIT が far)を DOM でも出す(2026-10-13 社長「奥まで出ていない」。DOM の部品で描く端末では、
+  // 地上と同じ短い柱を持ち上げるだけだった)。柱(b)を道の幅いっぱいに広げ、canvas 版の drawFarBeam と同じ台形(奥ほど細い)で切り抜く
+  const skyFar=sky&&!monster&&typeof RHYTHM_HELL_SKY_HIT!=='undefined'&&RHYTHM_HELL_SKY_HIT.id==='far';
+  item.dataset.hitSkyFar=skyFar?'1':'';
+  if(skyFar){
+    const H=Number(area.clientHeight)||0,line=RHYTHM_JUDGMENT_LINE_Y.ratio,sl=rhythmProjectionScale(line);
+    const c=Math.max(0,Math.min(1,Number(centerRatio)||.5)),w=width;
+    if(H>0&&sl>0){
+      const rect={height:H},fl=Math.max(0,.5+(c-w/2-.5)/sl),fr=Math.min(1,.5+(c+w/2-.5)/sl),N=12,pts=[];
+      for(let k=0;k<=N;k++){const t=line*(1-k/N),s=rhythmProjectionScale(t);pts.push({l:.5+(fl-.5)*s,r:.5+(fr-.5)*s,y:t*H-rhythmSkyLiftPx(rect,t)});}
+      const y0=pts[0].y,top=pts[N].y,h=Math.max(1,y0-top),py=y=>((y-top)/h*100).toFixed(2)+'%',px=x=>(x*100).toFixed(2)+'%';
+      const poly=[...pts.map(p=>`${px(p.r)} ${py(p.y)}`),...pts.slice().reverse().map(p=>`${px(p.l)} ${py(p.y)}`)].join(',');
+      item.style.setProperty('--rhythm-far-h',`${h.toFixed(1)}px`);
+      item.style.setProperty('--rhythm-far-left',`${(-(c-w/2)/w*100).toFixed(2)}%`);
+      item.style.setProperty('--rhythm-far-w',`${(100/w).toFixed(2)}%`);
+      item.style.setProperty('--rhythm-far-clip',`polygon(${poly})`);
+    }else item.dataset.hitSkyFar='';
+  }
   // MARVELOUSだけ、はじける粒を1つずつ違う色にして虹にする(2026-09-12)。
   // 単色のまま虹に見せる手が無いので、粒そのものの色をCSS変数で配る。
   // ★モンスターノーツは金色を優先する(そちらが特別扱いなので、虹で上書きしない)
@@ -33336,8 +33358,10 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       for(let k=0;k<=FAR_BEAM_SLICES;k++){const t=line*(1-k/FAR_BEAM_SLICES),s=rhythmProjectionScale(t);pts.push({l:(.5+(fl-.5)*s)*cssW,r:(.5+(fr-.5)*s)*cssW,y:t*cssH-rhythmSkyLiftPx(rect,t)+off});}
       const top=pts[pts.length-1].y,g=ctx.createLinearGradient(0,hitY,0,top);
       const base=hitFilter(hitRgba(h.color),h.filter.beam),white=hitFilter([255,255,255,.32],h.filter.beam);
-      [0,1/3,2/3,1].forEach(u=>g.addColorStop(.42*u,hitText(hitPremulMix(base,white,u))));
-      g.addColorStop(1,hitText([white[0],white[1],white[2],0]));
+      // 色は道の7割まで残し、奥の端にも薄い光を残す(2026-10-13 社長「奥までに設定しても奥まで出ていない」。
+      // それまでは4割で白へ移り、奥の端で0になっていたので、スマホでは奥の半分がほとんど見えなかった)
+      [0,1/3,2/3,1].forEach(u=>g.addColorStop(.7*u,hitText(hitPremulMix(base,white,u))));
+      g.addColorStop(1,hitText([white[0],white[1],white[2],.14]));
       h._farKey=key;h._farPts=pts;h._farFill=g;
     }
     const pts=h._farPts;
