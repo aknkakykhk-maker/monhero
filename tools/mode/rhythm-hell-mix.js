@@ -31,7 +31,7 @@ const SONGS={sheriruth:{marker:'sheriruth-v3',zero:711.6-2594.75,beat:324.342,le
   kaze_ga_soyogu:{marker:'kaze-ga-soyogu-v4',zero:209,beat:60000/118.88,levelRe:/const kazeGaSoyoguHellChart=mhChart\((\d+),/,gentle:true},
   // Against My Own Shadow(2026-10-13 社長「中くらいの HELL」)。拍は解析ファイル(authoring/against-my-own-shadow-v3-audio.json の timing)。
   // crosses は MASTER で両手の長押しが重なる所(10.72・39.23・94.24秒の2本目の始まり)
-  against_my_own_shadow:{marker:'against-my-own-shadow-v3',zero:2022.9,beat:419.1788,levelRe:/const againstMyOwnShadowHellChart=mhChart\((\d+),/,crosses:[10720,39230,94240],crossUpper:'mover'}};
+  against_my_own_shadow:{marker:'against-my-own-shadow-v3',zero:2022.9,beat:419.1788,levelRe:/const againstMyOwnShadowHellChart=mhChart\((\d+),/,crosses:[10720,39230,94240],crossUpper:'mover',crossDepth:[1,0.5,1]}};
 const BEAT_GAP=1.5;                      // 同じ親指が段を変えるまでの拍
 // 同じ側(レーンの左右)で高さ(地上⇔空中)を変えるまでの間(2026-10-12 社長「HELL の操作性をもっと改良して」・テンポくんの数え方)。
 // 親指の振り分けとは別に、画面の左半分・右半分ごとに見る。点は押し始めと、長押し・スライドの終わり(指が離れる高さ)。同時押し(0ms)は両手で取るので数えない
@@ -59,7 +59,7 @@ const sideOf=(n,end)=>{const c=n.k==='s'?n.pts[end?n.pts.length-1:0][1]+0.5:(n.s
 const startOf=n=>n.k==='s'?n.pts[0][0]:n.t,endOf=n=>n.k==='s'?n.pts[n.pts.length-1][0]:n.k==='h'?n.end:n.t;
 const laneAt=(pts,at)=>{if(at<=pts[0][0])return pts[0][1];for(let i=1;i<pts.length;i++)if(at<=pts[i][0]){const r=(at-pts[i-1][0])/Math.max(1,pts[i][0]-pts[i-1][0]);return pts[i-1][1]+(pts[i][1]-pts[i-1][1])*r;}return pts[pts.length-1][1];};
 
-const mix=(master,{zero,beat,crosses=[],gentle=false,crossUpper='hold'})=>{
+const mix=(master,{zero,beat,crosses=[],gentle=false,crossUpper='hold',crossDepth=null})=>{
   // 格子へ寄せる。元の譜面に近い時刻(3ms以内)があればその時刻を使う(丸め方が1ms違うと、2本のスライドの間がその瞬間だけ詰まる)
   const chartTimes=[...new Set(master.flatMap(n=>n.k==='s'?n.pts.map(p=>p[0]):[n.t,n.end].filter(x=>x!=null)))].sort((a,b)=>a-b);
   const Q=beat/4,snap=at=>{const g=Math.round(zero+Math.round((at-zero)/Q)*Q);const near=chartTimes.find(x=>Math.abs(x-g)<=3);return near!=null?near:g;};
@@ -87,7 +87,8 @@ const mix=(master,{zero,beat,crosses=[],gentle=false,crossUpper='hold'})=>{
     const hold=pair[k],mover=pair[1-k],L0=Math.round(lanes[k]*4)/4,x0=lanes[1-k],side=x0<L0?-1:1;
     // 越える深さ: 今までは元の間隔と同じだけ反対側へ(1レーン以上)。動く帯が空中のとき(crossUpper:'mover')は1レーンまで
     //   (深く越えると、越えた指が相手の親指に寄る。Against My Own Shadow の 39〜41秒で 1.5レーン越えて 43〜57px・テンポくんの bot)
-    const depth=crossUpper==='mover'?1:Math.max(1,Math.abs(x0-L0));
+    //   crossDepth(交差ごとの深さの並び)を書いた曲は、その値(Against My Own Shadow の2つめは 0.5・越えた先で左手の親指の線に寄ったため)
+    const ci=crosses.indexOf(at),depth=crossUpper==='mover'?(Array.isArray(crossDepth)&&Number.isFinite(crossDepth[ci])?crossDepth[ci]:1):Math.max(1,Math.abs(x0-L0));
     const xEnd=Math.max(0,Math.min(5,Math.round((L0-side*depth)*4)/4));
     // 越える瞬間: 今までは重なりの真ん中。動く帯が空中のとき(crossUpper:'mover')は、重なりの終わりの約0.33秒前に寄せて、交差したままの時間を短くする
     //   (交差が長いと、越えた指が相手の親指に寄ったまま。Against My Own Shadow の 39〜41秒・テンポくんの bot)
