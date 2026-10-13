@@ -13,7 +13,7 @@
 | ビート部 | オンプくん | ビート部 オンプくん(10/13〜) | session_01WaDzrhPE2Q6PDmeAgFPTwG |
 | ビート部 | マクアケくん | ビート部 マクアケくん(10/10〜) | session_01JgrcvWE4GJff7cTHDPoecb |
 | ビート部 | リバースくん | ビート部 リバースくん(10/10〜) | session_01DfgZpuPHnVgxrwQiurqUQ1 |
-| ビート部 | カゲくん | ビート部 カゲくん(10/11〜) | session_01Jqmiq5TioCr8iBg3nU8k77 |
+| ビート部 | カゲくん | ビート部 カゲくん(10/13〜) | session_01CDD9oDTcNPzYzw1txYJndF |
 | バトル部 | 部長ブレイブくん | バトル部 部長ブレイブくん(10/13〜) | session_01JVCTL76hMSV1TP5Z9RMnui |
 | 見回り部 | 部長マップくん | 見回り部 部長マップくん(10/07〜) | session_01PHekXAt2C5NAZBXL1sh5gG |
 | 守り部 | 部長ガードくん | 守り部 部長ガードくん(10/13〜) | session_012TESL6HTwLnNNvrMJLnHAN |
@@ -44,3 +44,4 @@
 | 【引き継ぎ済み】バトル部 部長ブレイブくん(10/07〜10/13) | session_01JEr9tDMYKaEM1yA1yBv46Z | session_01JVCTL76hMSV1TP5Z9RMnui |
 | 【引き継ぎ済み】守り部 部長ガードくん(10/07〜10/13) | session_01X1m4SRfy1rxcJemHM8n5PU | session_012TESL6HTwLnNNvrMJLnHAN |
 | 【引き継ぎ済み】改善部 部長ダメダシくん(10/09〜10/13)(まだしまっていない) | session_01PJpWvkdmV4DQzZ3mp7c7EC | session_013PjVKh5sdbiJbni1W5pZhr |
+| 【引き継ぎ済み】ビート部 カゲくん(10/11〜10/13)(まだしまっていない) | session_01Jqmiq5TioCr8iBg3nU8k77 | session_01CDD9oDTcNPzYzw1txYJndF |
