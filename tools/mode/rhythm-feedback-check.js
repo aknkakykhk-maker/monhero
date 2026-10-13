@@ -86,7 +86,7 @@ check('小数の目盛りでも誤差が残らない',
   [1,1.1,2.5,6,11.9,12].map(v=>rhythmSnapOptionValue(v,1,12,.1)).join(' / '));
 check('つまんで動かせるスライダーがある',
   game.includes('<input type="range" data-rhythm-option-slider={key}')
-  &&game.includes('onChange={e=>set(key,rhythmSnapOptionValue(e.target.value,min,max,step))}'));
+  &&game.includes('onChange={e=>put(key,rhythmSnapOptionValue(e.target.value,min,max,step))}'));
 check('粗く/細かく動かすボタンも残っている',
   game.includes('aria-label={`${key}を${sign(amount)}`}')
   &&game.includes('data-rhythm-option-nudge={`${key}${sign(amount)}`}')
