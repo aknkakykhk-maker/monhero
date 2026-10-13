@@ -1258,17 +1258,64 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
 // ★形や色の描写に頼らない(SKY TAP の見た目は変わるかもしれない・社長)。文字だけで読めるようにする
 // ★HELL はまだデバッグ専用。ここが出るのは、デバッグのボタンか、デバッグでお話を見終えたときだけ(公開の印 rhythmHell)。
 //   横持ちの低い画面(640×360)でも、見出し・本文・ボタンが1画面に収まる大きさにする
+// ===== HELL の説明の動画(2026-10-13 社長「動画で説明したい」) =====
+// 動画は data/rhythm-mode.js の RHYTHM_HELL_GUIDE_VIDEOS から名前で引く(説明の video と、ヘルプの {t:'video'})。
+// 無音・自動再生・繰り返し(iPhone でも自動で流れるよう muted playsInline)。sound のある動画だけ「音ありで見る」を出し、押すと音つきで最初から。
+// 読み込み前は暗い枠、読めなかったら枠ごと出さない(文だけの今の形に戻る)
+const rhythmHellGuideVideo=(id)=>{try{const v=typeof RHYTHM_HELL_GUIDE_VIDEOS!=='undefined'&&RHYTHM_HELL_GUIDE_VIDEOS?RHYTHM_HELL_GUIDE_VIDEOS[id]:null;return v&&typeof v.src==='string'&&Number(v.w)>0&&Number(v.h)>0?v:null;}catch(e){return null;}};
+const RhythmHellVideo=({id})=>{
+  const info=rhythmHellGuideVideo(id);
+  const ref=useRef(null);
+  const [failed,setFailed]=useState(false);
+  const [ready,setReady]=useState(false);
+  const [sound,setSound]=useState(false);
+  useEffect(()=>{setFailed(false);setReady(false);setSound(false);},[id]);
+  useEffect(()=>()=>{try{if(ref.current)ref.current.pause();}catch(e){}},[]);
+  if(!info||failed)return null;
+  const toggleSound=()=>{
+    const el=ref.current;if(!el)return;
+    const next=!sound;setSound(next);el.muted=!next;
+    if(next){try{el.currentTime=0;}catch(e){}}
+    try{const p=el.play();if(p&&typeof p.catch==='function')p.catch(()=>{el.muted=true;setSound(false);});}catch(e){}
+  };
+  return <div data-rhythm-hell-video={id} style={{width:'100%'}}>
+    <div style={{position:'relative',width:'100%',height:0,paddingTop:`${(info.h/info.w*100).toFixed(3)}%`,borderRadius:'12px',overflow:'hidden',background:'rgba(2,6,23,.9)',border:'1px solid rgba(148,163,184,.25)'}}>
+      {/* webm(VP9)と mp4(H.264)の、再生できる方をブラウザが選ぶ。どちらも読めなかったら(最後の source の error)枠ごと消す */}
+      <video ref={ref} key={info.src} muted={!sound} autoPlay loop playsInline preload="auto"
+        onLoadedData={()=>setReady(true)} onError={()=>setFailed(true)}
+        style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',opacity:ready?1:0,transition:'opacity .2s'}}>
+        {typeof info.webm==='string'&&<source src={info.webm} type="video/webm"/>}
+        <source src={info.src} type="video/mp4" onError={()=>setFailed(true)}/>
+      </video>
+    </div>
+    {info.sound&&<button type="button" data-rhythm-hell-video-sound onClick={toggleSound} aria-pressed={sound}
+      style={{marginTop:'6px',minHeight:'36px',width:'100%',borderRadius:'10px',border:'1px solid rgba(148,163,184,.4)',background:'rgba(30,41,59,.9)',color:'#e2e8f0',fontSize:'12px',fontWeight:900}}>{sound?'🔇 音を消す':'🔊 音ありで見る'}</button>}
+  </div>;
+};
 const RhythmHellGuide=({pageIndex,onPage,onClose})=>{
   const pages=typeof RHYTHM_HELL_GUIDE_PAGES!=='undefined'&&Array.isArray(RHYTHM_HELL_GUIDE_PAGES)?RHYTHM_HELL_GUIDE_PAGES:[];
   if(!pages.length)return null;
   const index=Math.max(0,Math.min(pages.length-1,Number(pageIndex)||0));
   const page=pages[index],last=index===pages.length-1;
+  const video=rhythmHellGuideVideo(page.video)?page.video:null;
+  // 次のページの動画は先に読み込んでおく(事前ダウンロードには入れていないため)
+  const nextVideo=!last?rhythmHellGuideVideo(pages[index+1]&&pages[index+1].video):null;
+  // 動画のあるページは横に広げる(横持ちでは 動画|文 の2列、狭い画面では縦に並ぶ)
   return <div data-rhythm-hell-guide role="dialog" aria-modal="true" aria-label={`HELL の遊び方 ${index+1}/${pages.length}`}
     style={{position:'fixed',inset:0,zIndex:77500,display:'flex',alignItems:'center',justifyContent:'center',padding:'12px calc(16px + env(safe-area-inset-right)) 12px calc(16px + env(safe-area-inset-left))',background:'radial-gradient(ellipse at center,rgba(30,27,75,.96),rgba(2,6,23,.98) 72%)'}}>
-    <section data-rhythm-hell-guide-card style={{width:'100%',maxWidth:'460px',maxHeight:'100%',overflowY:'auto',borderRadius:'20px',border:'1px solid rgba(244,114,182,.45)',background:'rgba(15,23,42,.92)',boxShadow:'0 0 28px rgba(244,114,182,.25)',padding:'16px 18px'}}>
+    <section data-rhythm-hell-guide-card style={{width:'100%',maxWidth:video?'760px':'460px',maxHeight:'100%',overflowY:'auto',borderRadius:'20px',border:'1px solid rgba(244,114,182,.45)',background:'rgba(15,23,42,.92)',boxShadow:'0 0 28px rgba(244,114,182,.25)',padding:'16px 18px'}}>
       <small style={{display:'block',fontSize:'10px',fontWeight:900,letterSpacing:'.28em',color:'#f9a8d4'}}>HELL の遊び方 {index+1}/{pages.length}</small>
-      <h2 data-rhythm-hell-guide-title style={{margin:'6px 0 0',fontSize:'22px',fontWeight:900,lineHeight:1.25,color:'#fff'}}>{page.title}</h2>
-      <p data-rhythm-hell-guide-text style={{margin:'10px 0 0',fontSize:'14px',fontWeight:700,lineHeight:1.7,color:'#e2e8f0'}}>{page.text}</p>
+      <div style={video?{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))',gap:'12px 16px',alignItems:'start',marginTop:'6px'}:undefined}>
+        {video&&<RhythmHellVideo id={video}/>}
+        <div>
+          <h2 data-rhythm-hell-guide-title style={{margin:video?0:'6px 0 0',fontSize:'22px',fontWeight:900,lineHeight:1.25,color:'#fff'}}>{page.title}</h2>
+          <p data-rhythm-hell-guide-text style={{margin:'10px 0 0',fontSize:'14px',fontWeight:700,lineHeight:1.7,color:'#e2e8f0'}}>{page.text}</p>
+        </div>
+      </div>
+      {nextVideo&&<video key={nextVideo.src} muted playsInline preload="auto" aria-hidden="true" tabIndex={-1} style={{position:'absolute',width:'1px',height:'1px',opacity:0,pointerEvents:'none'}}>
+        {typeof nextVideo.webm==='string'&&<source src={nextVideo.webm} type="video/webm"/>}
+        <source src={nextVideo.src} type="video/mp4"/>
+      </video>}
       <div aria-hidden="true" style={{display:'flex',justifyContent:'center',gap:'6px',marginTop:'14px'}}>{pages.map((_,i)=><i key={i} style={{display:'block',width:i===index?'18px':'6px',height:'6px',borderRadius:'999px',background:i===index?'#f472b6':'rgba(148,163,184,.5)'}}/>)}</div>
       <div style={{display:'grid',gridTemplateColumns:index>0?'1fr 2fr':'1fr',gap:'8px',marginTop:'14px'}}>
         {index>0&&<button type="button" data-rhythm-hell-guide-prev onClick={()=>onPage(index-1)} style={{minHeight:'48px',borderRadius:'14px',border:'1px solid rgba(148,163,184,.4)',background:'rgba(30,41,59,.9)',color:'#e2e8f0',fontSize:'14px',fontWeight:900}}>もどる</button>}
