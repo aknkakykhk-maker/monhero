@@ -111,7 +111,9 @@ async function storyScenario(s) {
   const trig = await s.page.evaluate(() => ({ trigger: RHYTHM_HELL_STORY_TRIGGER, sky: RHYTHM_SKY_LANE_LOOK.id }));
   ok('お話の流し方の既定は「公開した日に全員へ」(release)', trig.trigger === 'release', trig.trigger);
   ok('空中の道の既定は「案E はっきり」(em)', trig.sky === 'em', trig.sky);
-  ok('印が偽: HOME に着いてもお話は出ない', !(await waitStory(s, 6000)));
+  // 公開(RELEASE_FLAGS.rhythmHell が真)のあとは「印が偽」の項目は確かめない(2026-10-13 HELL 公開)
+  const relStory = await s.page.evaluate(() => typeof RELEASE_FLAGS === 'object' && RELEASE_FLAGS.rhythmHell === true);
+  if (!relStory) ok('印が偽: HOME に着いてもお話は出ない', !(await waitStory(s, 6000)));
   await s.page.evaluate(() => localStorage.setItem('mh_rhythm_hell_preview_proto', '1'));
   await bootKeepStory(s);
   const shown = await waitStory(s, 20000);
@@ -145,8 +147,10 @@ async function storyScenario(s) {
     await s.boot();
     // ① 印が偽
     const off = await hellState(s);
-    ok('印が偽: 公開の印は偽のまま', off.released === false && off.open === false);
-    ok(`印が偽: ${SONG_ID} に HELL は出ない(譜面・難易度の一覧・数え上げのどれにも)`, !off.chart && !off.defs && !off.keys, JSON.stringify(off));
+    if (off.released !== true) {
+      ok('印が偽: 公開の印は偽のまま', off.released === false && off.open === false);
+      ok(`印が偽: ${SONG_ID} に HELL は出ない(譜面・難易度の一覧・数え上げのどれにも)`, !off.chart && !off.defs && !off.keys, JSON.stringify(off));
+    }
     // ② 印が真(試す)。HARD・EXPERT はクリア済み、MASTER は未クリアの記録にする
     await s.page.evaluate(() => localStorage.setItem('mh_rhythm_hell_preview_proto', '1'));
     await s.boot();
