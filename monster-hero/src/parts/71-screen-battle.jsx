@@ -647,6 +647,91 @@ const BattleStackMarks = ({ counts, side, full = 0, className = '' }) => {
     </div>
   );
 };
+// ★バトル中にモンスターを押したときの「能力・かかっている効果」(2026-10-13 社長の依頼
+//   「モンスターをタップすると能力含め詳細バフも見れるようにして」)。味方も敵も同じ形で出す。
+//   値はすべて渡されたものをそのまま出す(味方: battleUnitStatusOf・強化の札・マーク×数、敵: battleEnemyStatus・enemyDebuffs)。
+//   side … 'ally' | 'enemy'。chips … 強化の札(battleBuffChips の戻り値)。marks … マーク×数の数({ kind: 数 })
+const BattleUnitDetailBody = ({ side, status, chips = [], marks = null, debuffs = [] }) => {
+  if (!status) return null;
+  const stat = (key, label, cls, value, sub) => (
+    <div data-unit-stat={key} className="min-w-0 rounded-lg bg-black/40 px-2 py-1">
+      <div className={`text-[9px] font-black ${cls}`}>{label}</div>
+      <div className="text-[13px] font-mono font-black leading-tight text-white">{value}</div>
+      {sub && <div className="text-[9px] font-bold leading-tight text-slate-400">{sub}</div>}
+    </div>
+  );
+  const changed = (s) => s && s.now !== s.base;
+  const statOf = (key, label, cls, s) => stat(key, label, cls,
+    <span className={changed(s) ? (s.now > s.base ? 'text-emerald-200' : 'text-rose-200') : ''}>{s.now.toLocaleString()}</span>,
+    `元の値 ${s.base.toLocaleString()}`);
+  const row = (key, mark, label, value, note, tone = '') => (
+    <li key={key} data-unit-effect={key} className={`rounded-lg border border-white/10 bg-black/40 px-2 py-1 ${tone}`}>
+      <div className="flex min-w-0 flex-wrap items-baseline gap-x-1.5 text-[12px] font-black leading-snug">
+        {mark != null && <span className="shrink-0">{mark}</span>}<span className="break-words">{label}</span>{value ? <span className="break-words text-white">{value}</span> : null}
+      </div>
+      {note ? <div className="text-[10px] font-bold leading-snug text-slate-300">{note}</div> : null}
+    </li>
+  );
+  const list = (key, title, rows) => (
+    <section data-unit-effects={key} className="mt-2">
+      <div className="mb-1 text-[10px] font-black text-slate-400">{title}</div>
+      {rows.length ? <ul className="space-y-1">{rows}</ul> : <p className="text-[11px] font-bold text-slate-500">ありません</p>}
+    </section>
+  );
+  if (side === 'enemy') {
+    return (
+      <div data-unit-detail-body="enemy">
+        <div className="grid grid-cols-2 gap-1.5">
+          {stat('hp', 'ライフ', 'text-pink-400', `${status.hp.toLocaleString()} / ${status.maxHp.toLocaleString()}`)}
+          {statOf('atk', '攻撃力', 'text-red-400', status.atk)}
+        </div>
+        {list('enemy', 'かかっている効果', (Array.isArray(debuffs) ? debuffs : []).map((d) => row(d.key, d.mark, d.label, d.value, d.note, d.tone)))}
+      </div>
+    );
+  }
+  const markRows = battleStackMarkItems(marks).map((it) => row(`mark-${it.kind}`, it.img ? <img src={it.img} alt="" className="inline h-3.5 w-3.5 object-contain" /> : it.mark, it.label,
+    it.unit === 'T' ? `あと${it.count}ターン` : `×${it.count}`, ''));
+  const own = (chips || []).filter((c) => c.owner === status.slot);
+  const team = (chips || []).filter((c) => c.owner == null);
+  const lineRows = (status.lines || []).map((l) => row(l.key, null, l.label, l.value, l.note));
+  const chipRow = (c) => row(c.key, c.mark, c.label, c.value, '', c.tone);
+  const apt = status.aptPct;
+  return (
+    <div data-unit-detail-body="ally">
+      <div className="grid grid-cols-2 gap-1.5">
+        {stat('hp', 'ライフ', 'text-pink-400', `${status.hp.toLocaleString()} / ${status.maxHp.toLocaleString()}`, status.baseMaxHp !== status.maxHp ? `元の上限 ${status.baseMaxHp.toLocaleString()}` : '')}
+        {stat('guts', 'ガッツ', 'text-amber-400', `${status.guts.toLocaleString()} / ${status.maxGuts.toLocaleString()}`, status.baseMaxGuts !== status.maxGuts ? `元の上限 ${status.baseMaxGuts.toLocaleString()}` : '')}
+        {statOf('atk', 'ちから', 'text-red-400', status.atk)}
+        {statOf('def', '丈夫さ', 'text-emerald-400', status.def)}
+      </div>
+      <div data-unit-stat="apt" className="mt-1 text-[10px] font-black text-cyan-300">この枠の間合い適性 {apt >= 0 ? '+' : ''}{apt}%</div>
+      {status.tactics
+        ? <>{list('own', 'この子にかかっている効果', [...markRows, ...lineRows, ...own.map(chipRow)])}{list('team', '味方全員にかかっている効果', team.map(chipRow))}</>
+        : list('team', 'かかっている効果(パーティ全体)', [...markRows, ...lineRows, ...own.map(chipRow), ...team.map(chipRow)])}
+    </div>
+  );
+};
+// 詳細の窓(タクティクス以外の味方・敵)。タクティクスの味方は EX の窓の「能力・効果」の切り替えで同じ中身を出す
+const BattleUnitDetailPanel = ({ side, status, chips, marks, debuffs, onClose }) => {
+  if (!status) return null;
+  return ReactDOM.createPortal((
+    <div data-battle-unit-detail={side === 'enemy' ? 'enemy' : status.slot} role="dialog" aria-modal="true" aria-label={`${status.name}の詳細`}
+      className="fixed inset-0 z-[70000] flex items-center justify-center bg-black/70 px-4" style={{ paddingTop: 'calc(1rem + env(safe-area-inset-top))', paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }} onClick={onClose}>
+      <div className={`w-full max-w-[340px] rounded-3xl border-2 bg-slate-900 px-4 py-3 shadow-2xl text-white ${side === 'enemy' ? 'border-red-400/60' : 'border-sky-400/60'}`} style={{ maxHeight: '100%', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-2">
+          {status.imgUrl && <img src={status.imgUrl} alt="" className="h-10 w-10 shrink-0 object-contain" />}
+          <div className="min-w-0">
+            <div className="text-[10px] font-black text-slate-400">{side === 'enemy' ? '敵の詳細' : 'モンスターの詳細'}</div>
+            <div className="break-words text-[16px] font-black leading-tight">{status.name}</div>
+          </div>
+        </div>
+        {status.downed && <p className="mt-1 text-[11px] font-black text-emerald-300">ダウン中(ライフが上限まで戻ると立ち上がります)</p>}
+        <div className="mt-2"><BattleUnitDetailBody side={side} status={status} chips={chips} marks={marks} debuffs={debuffs} /></div>
+        <button type="button" data-battle-unit-detail-close onClick={onClose} className="mt-3 min-h-[44px] w-full rounded-xl border border-white/20 bg-slate-800 text-[13px] font-black text-slate-200 active:scale-95">閉じる</button>
+      </div>
+    </div>
+  ), document.body);
+};
 // ★モンスターごとの演出(2026-10-12 社長の決定)。絵柄は BATTLE_MONSTER_FX の1か所。
 //   fx … { avoid, present:{ jackpot, kind }, swordStyle }(tacticsSlotCountersAt が作る)。imgSrc … 分身に使うその子の絵。
 //   calm … 「待機中の動き：止める」のとき(動きを止めて形だけ出す。端末の「動きを減らす」は CSS で止める)
@@ -774,7 +859,7 @@ function BattleScreen({
   setShowBattleLog, setShowDeckInfo, setShowEnemyInfo, setShowHeroInfo, setShowQuitConfirm,
   setShowSoulBattleEffects, setSkillPicker, setSlotSettle, slotMaxUses, slotSettle, slotSkill,
   slotUniqueChoice, slots, soulBattleParty, soulCoordinationCardBonus, suppressCardClickRef,
-  tacticsCanAssign, tacticsCardBlock, enemyDebuffs, enemyStackCounts, debugStackMarks, tacticsSlotCountersAt, discardCards, actionUsed, tacticsCardGenre, tacticsCardScope, tacticsSlotFx, tacticsUnits,
+  tacticsCanAssign, tacticsCardBlock, enemyDebuffs, battleUnitStatusOf, battleEnemyStatus, enemyStackCounts, debugStackMarks, tacticsSlotCountersAt, discardCards, actionUsed, tacticsCardGenre, tacticsCardScope, tacticsSlotFx, tacticsUnits,
   tacticsExInfo, activateTacticsEx, tacticsExCutin, tacticsExTurnUsed, passTacticsTurn, tacticsCoverSlot,
   tacticsExIntroVisible, dismissTacticsExIntro, tacticsPandoraForms, trickStartView, sweetStackView, bowStackView, fateWheelView, enemyConfuseTurns, luckBanners,
   teachingFx, totalTurnCount, turnCount, ultimateDistanceBreakLevels, ultraBattleView, enemyDefeating,
@@ -786,6 +871,98 @@ function BattleScreen({
   const [buffDetail, setBuffDetail] = useState(false);
   // ★味方の枠ごとの「マーク×数」(2026-10-12 社長の依頼)。{ 枠の番号: { kind: 数 } }。
   //   数の出どころは下の強化の札と同じ(クッキー・黒音符・旋律・トリックスタート・運命・連撃パワー)。既存5モードの 'party' は勇者モンの枠
+  // 強化の札の中身(2026-10-13: 帯とモンスターの詳細の2か所で使うので関数にまとめた。文面と色はここ1か所)
+  const battleBuffChips = () => {
+            const chips=[];
+            // ★`icon` という名前は使わない。カードの絵は cardIconNode() を通す決まりがあり、
+            //   card-icon-check.js が `c.icon` をそのまま描く書き方を禁じている
+            const chip=(key,mark,label,value,tone,opts)=>{const o=opts||{};chips.push({key,mark,label,value,tone,short:o.short!=null?o.short:value,pulse:!!o.pulse,glow:o.glow||'',owner:Number.isInteger(o.owner)?o.owner:null});};
+            // owner … その子だけに効く札の枠の番号(モンスターの詳細で「この子の効果」に分ける)。全員に効く札は null
+            const ownerOf=(key)=>key==='party'?heroDist:Number(key);
+            const atkPct=Math.floor((getPermaBuff('atkPct')+getPermaBuff('muaAtkPct'))*100);
+            if(atkPct>0) chip('atk',<Sword size={9}/>,'攻撃力',`+${atkPct}%`,'text-red-500 border-red-500/50');
+            const dmgCutPct=Math.floor(getPermaBuff('dmgCutPct')*100);
+            if(dmgCutPct>0) chip('dmgCut',<Shield size={9}/>,'被ダメ',`-${dmgCutPct}%`,'text-emerald-500 border-emerald-500/50');
+            const defPct=Math.floor(getPermaBuff('defPct')*100);
+            if(defPct>0) chip('def',<Shield size={9}/>,'丈夫さ',`+${defPct}%`,'text-emerald-500 border-emerald-500/50');
+            const muaHpPct=Math.floor(getPermaBuff('muaHpPct')*100);
+            if(muaHpPct>0) chip('muaHp',<Heart size={9}/>,'ライフ',`+${muaHpPct}%`,'text-pink-500 border-pink-500/50');
+            const muaGutsPct=Math.floor(getPermaBuff('muaGutsPct')*100);
+            if(muaGutsPct>0) chip('muaGuts',<Zap size={9}/>,'ガッツ',`+${muaGutsPct}%`,'text-amber-500 border-amber-500/50');
+            const critRate=Math.round(getPermaBuff('critRatePct')*100);
+            if(critRate>0) chip('critRate',<Sparkles size={9}/>,'クリ率',`+${critRate}%`,'text-yellow-400 border-yellow-400/50');
+            const critDmg=Math.round(getPermaBuff('critDmgPct')*100);
+            if(critDmg>0) chip('critDmg',<Sparkles size={9}/>,'クリダメ',`+${critDmg}%`,'text-yellow-400 border-yellow-400/50');
+            const comboDmg=Math.round(getPermaBuff('comboDmgPct')*100);
+            if(comboDmg>0) chip('combo',<Sword size={9}/>,'連撃',`+${comboDmg}%`,'text-cyan-400 border-cyan-400/50');
+            if(getPermaBuff('globalComboDmgPct')>0) chip('globalCombo',<Sword size={9}/>,'全体連撃',`+${Math.round(getPermaBuff('globalComboDmgPct')*100)}%`,'text-sky-300 border-sky-300/50');
+            if(kikiCardBonus>0) chip('kikiCard',<PlusCircle size={9}/>,'カード上限',`+1（残り${Math.ceil(getPermaBuff('kikiCardBonusTurns'))}T）`,'text-violet-300 border-violet-300/50',{short:'+1'});
+            // ソードスキル(剣士モッチー)。連撃パワーは3たまるごとに永久追加連撃へ変わるので、
+            // 両方が見えないと進み具合が分からない
+            if(getPermaBuff('kenshiComboPower')>0||getPermaBuff('kenshiExtraCombo')>0){
+              const kenshiExtra=getPermaBuff('kenshiExtraCombo');
+              chip('kenshi',<Sword size={9}/>,'連撃パワー',
+                `${getPermaBuff('kenshiComboPower')}/${KENSHI_COMBO_POWER_MAX}${kenshiExtra>0?`・追加連撃 +${kenshiExtra}`:''}`,
+                'text-violet-300 border-violet-300/50',{short:`${getPermaBuff('kenshiComboPower')}/${KENSHI_COMBO_POWER_MAX}`});
+            }
+            chip('autoHp',<Heart size={9}/>,'ライフ回復',`${Math.round(getPermaBuff('autoHpRecovery',0.1)*100)}%`,
+              getPermaBuff('autoHpRecovery',0.1)>=0.1?'text-rose-400 border-rose-400/50':'text-red-400 border-red-400/50');
+            chip('autoGuts',<Zap size={9}/>,'ガッツ回復',
+              `${Math.round(applyIceRulerAutoGutsRecovery(Math.max(0,0.05+(getPermaBuff('autoHpRecovery',0.1)-0.1))+getPermaBuff('gutsRecoverPct'),mainHero?.id,iceLockActive,heroDist,enemyDist)*100)}%`,
+              'text-amber-400 border-amber-400/50');
+            // ポルツの待機。あと何回ぶん敵の攻撃で発動するかを出す(0になったら消える。得た効果は残る)
+            if(getPermaBuff('poltzCharges')>0) chip('poltz',<Zap size={9}/>,BREEDER_EVO_NAMES.poltz[Math.max(0,Math.min(getPermaBuff('poltzTier'),2))],`×${Math.floor(getPermaBuff('poltzCharges'))}`,'text-lime-300 border-lime-400/50',{pulse:true});
+            // トリックスタート(ゴースト・スプーキー)で積んだもの。WAVEのあいだだけ残る。
+            //   既存5モードはパーティに1つ('party')、タクティクスは持っている子ごと(枠の番号)
+            Object.entries(trickStartView||{}).forEach(([key,st])=>{
+              const parts=[st?.atk>0?`ち+${st.atk*20}%`:null,st?.def>0?`丈+${st.def*20}%`:null,st?.regen>0?`回+${st.regen*5}%`:null].filter(Boolean);
+              if(!parts.length) return;
+              const who=key==='party'?'':(slots[Number(key)]?.name||'');
+              chip(`trick${key}`,<Sparkles size={9}/>,`${who}トリック`,parts.join(' '),'text-violet-300 border-violet-400/50',{short:parts.join(' '),owner:ownerOf(key)});
+            });
+            // メロディーのクッキー・クロミーの黒音符(勇者特性)。ランのあいだ持ち越す。
+            //   既存5モードはパーティに1つ('party')、タクティクスは持っている子ごと(枠の番号)。値は いまの数/上限 と効いている段階
+            Object.entries(sweetStackView||{}).forEach(([key,n])=>{
+              const ownerId=key==='party'?mainHero?.id:slots[Number(key)]?.id;
+              const trait=sweetStackTraitOf(ownerId), count=sweetStackCountOf(n);
+              if(!trait||count<=0) return;
+              const who=key==='party'?'':(slots[Number(key)]?.name||'');
+              chip(`sweet${key}`,<Sparkles size={9}/>,`${who}${trait.label}`,`${trait.icon}${count}/${SWEET_STACK_MAX} ${sweetStackEffectText(ownerId,count)}`,
+                trait.kind==='cookie'?'text-pink-300 border-pink-400/50':'text-fuchsia-300 border-fuchsia-400/50',{short:`${trait.icon}${count}/${SWEET_STACK_MAX}`,owner:ownerOf(key),pulse:count>=SWEET_STACK_MAX,
+                // ★クッキーが満タン(EXの使いどき)は、点滅だけだと目立たない。ピンクの光の縁取りも付ける(2026-10-09 ユーザー指示「クッキーが満タンで光る」)
+                glow:trait.kind==='cookie'&&count>=SWEET_STACK_MAX?'mh-cookie-full':''});
+            });
+            // メロディ・ボゥの旋律(クロミーの固有技)で積んだ与ダメ。使った子の枠ごと。ランが終わるまで残る
+            Object.entries(bowStackView||{}).forEach(([key,n])=>{
+              const c=Math.max(0,Math.floor(Number(n)||0));
+              if(c>0) chip(`bow${key}`,<Sword size={9}/>,`${slots[Number(key)]?.name||''}旋律`,`与ダメ+${c*5}%`,'text-fuchsia-300 border-fuchsia-400/50',{short:`+${c*5}%`,owner:ownerOf(key)});
+            });
+            // 運命のコイン・運命の輪(ゴースト・スプーキー)で積んだもの。ランが終わるまで残る(その子の攻撃だけに効く)
+            {
+              const fate=getPermaBuff('fateStacks',null);
+              Object.keys(fate?.bySlot||{}).forEach(key=>{
+                const st=fateSlotStacksOf(fate,key);
+                const parts=[st.combo>0?`連撃+${st.combo*10}%`:null,st.atk>0?`ち+${st.atk*15}%`:null].filter(Boolean);
+                if(parts.length) chip(`fate${key}`,<Star size={9}/>,`${slots[Number(key)]?.name||''}運命`,parts.join(' '),'text-amber-300 border-amber-400/50',{short:parts.join(' '),owner:ownerOf(key)});
+              });
+              if(fateCount(fate?.coinGuts)>0) chip('fateCoinGuts',<Zap size={9}/>,'運命のコイン消費',`+${fateCount(fate.coinGuts)*20}%`,'text-slate-300 border-slate-400/50');
+            }
+            // === ターン限定バフ（都度表示） ===
+            if(getNextTurnBuff('melosoFullRecoveryMult',0)>0) chip('meloso',<Heart size={9}/>,'次ターン全回復','','text-rose-300 border-rose-400/50',{pulse:true});
+            if(getTurnBuff('atkMult',1.0)>1) chip('boost',<Sparkles size={9}/>,'Boost',`x${getTurnBuff('atkMult',1.0).toFixed(1)}`,'text-red-500 border-red-500/50',{pulse:true});
+            if(getTurnBuff('guaranteedCrit',false)) chip('critFix',<Target size={9}/>,'会心予約','','text-orange-400 border-orange-500/50',{pulse:true});
+            if(getTurnBuff('zeroGuts',false)||getNextTurnBuff('zeroGuts',false)) chip('zeroGuts',<Star size={9}/>,'0消費中','','text-blue-400 border-blue-500/50',{pulse:true});
+            if(getNextTurnBuff('reflect',false)) chip('reflectNext',<RefreshCcw size={9}/>,'次反射','','text-purple-400 border-purple-500/50',{pulse:true});
+            if(getTurnBuff('reflect',false)) chip('reflectNow',<RefreshCcw size={9}/>,'反射待機','','text-purple-300 border-purple-400',{pulse:true});
+            // 敵の咆哮(2026-09-20 ユーザー指摘「咆哮の効果が分からない」)。
+            // ★ポップアップは一瞬で消えるので、いま何回かかっているかがどこにも出ていなかった。
+            //   敵の攻撃そのものを上げる(元に戻らない)ので、札に出し続ける
+            if(getNextTurnBuff('takenDamageMult',1.0)<1) chip('takenNext',<Shield size={9}/>,'次T被ダメ',`-${Math.round((1-getNextTurnBuff('takenDamageMult',1.0))*100)}%`,'text-pink-400 border-pink-500/50',{pulse:true});
+            if(getTurnBuff('takenDamageMult',1.0)<1) chip('takenNow',<Shield size={9}/>,'被ダメ',`-${Math.round((1-getTurnBuff('takenDamageMult',1.0))*100)}%`,'text-pink-300 border-pink-400',{pulse:true});
+            if(getNextTurnBuff('gutsCostMult',1.0)>1) chip('costNext',<Zap size={9}/>,'次ターン消費ガッツ',`+${Math.round((getNextTurnBuff('gutsCostMult',1.0)-1)*100)}%`,'text-amber-400 border-amber-500/50',{pulse:true});
+            if(getTurnBuff('gutsCostMult',1.0)>1) chip('costNow',<Zap size={9}/>,'消費ガッツ',`+${Math.round((getTurnBuff('gutsCostMult',1.0)-1)*100)}%`,'text-amber-300 border-amber-400',{pulse:true});
+            return chips;
+  };
   const allyStackCounts = (() => {
     const out = {};
     const put = (i, kind, n, keepZero = false) => {
@@ -845,7 +1022,11 @@ function BattleScreen({
   const [exPanelSlot, setExPanelSlotRaw] = useState(null);
   // スタイル式のEX(ソード・コンバージョン)は「EXスキルを使用」のあとに選択肢を出す。開き直したら選ぶ前に戻す
   const [exChoosing, setExChoosing] = useState(false);
-  const setExPanelSlot = (slot) => { setExChoosing(false); setExPanelSlotRaw(slot); };
+  // EX の窓の中の切り替え。'ex' … EXスキル / 'status' … 能力・かかっている効果(2026-10-13)。開くたびに EXスキルから
+  const [exTab, setExTab] = useState('ex');
+  const setExPanelSlot = (slot) => { setExChoosing(false); setExTab('ex'); setExPanelSlotRaw(slot); };
+  // タクティクス以外の味方・敵を押したときの詳細。{ side:'ally', slot } | { side:'enemy' } | null
+  const [unitDetail, setUnitDetail] = useState(null);
   const exPanel = exPanelSlot!=null&&tacticsExInfo ? tacticsExInfo(exPanelSlot) : null;
   // タクティクスの戦闘ロジックは旧/新UIで共通。ここでは表示だけを設定値で切り替える。
   // tacticsUnits の有無は「タクティクス戦か」の判定として維持し、CLASSICでは新UIを出さない。
@@ -1576,7 +1757,7 @@ function BattleScreen({
                 「敵も攻撃時は距離枠じゃなくてモンスターだけ動かしたほうがいい」)。動きは data-enemy-attack を見て CSS が絵へ掛ける。
                 移動(距離が変わる)は立ち位置ごと動く動きなので、今までどおり丸枠ごと動かす。ムーは作りが別なので対象外 */}
             {/* data-attack-target: 味方の攻撃モーションが狙う場所(measureAttackAim)。名前は変えない */}
-            <div data-enemy-ring={enemyDist} data-enemy-attack={enemyImageOnlyAttack?(enemyAttackFx?.kind==='charge'?'charge':'fly'):undefined} data-enemy-motion={enemyMotion||undefined} data-enemy-skill={!enemyIsMoo&&enemySkillNow||undefined} data-em-idle={!enemyIsMoo&&emSet?.idle||undefined} data-em-body={!enemyIsMoo&&emSpec?.[0]||undefined} data-em-fx={!enemyIsMoo&&emSpec?.[1]||undefined} data-em-emo={!enemyIsMoo&&emSpec?.[3]||undefined} data-enemy-hurt={!enemyIsMoo&&enemyHurtNow?'true':undefined} className={`rounded-full transition-all duration-500 border-4 relative bg-black/35 ${RANGE_STYLES[enemyDist].border} ${RANGE_STYLES[enemyDist].shadow} ${RANGE_STYLES[enemyDist].glow} shadow-[0_0_50px]`} data-attack-target style={{...emDurStyle,...(enemyAttackAnim&&!ecoBattleView&&!enemyImageOnlyAttack?{padding:'clamp(6px,1.5dvh,16px)',animation:(enemyAttackFx?.kind==='move'?(isMooBoss(enemy?.id)?'enemyMoveSlideMoo 1000ms ease-in-out forwards':'enemyMoveSlide 1000ms ease-in-out forwards'):enemyAttackFx?.kind==='charge'?'enemyChargeShake 1100ms ease-in-out forwards':'enemyAttackFly 450ms ease-in forwards'), ...(isMooBoss(enemy?.id)&&enemyAttackFx?.kind!=='move'?{top:'3dvh'}:{}),...(!isMooBoss(enemy?.id)&&enemyAttackFx?.kind!=='move'?{zIndex:9999}:{})}:{padding:'clamp(6px,1.5dvh,16px)',...(isMooBoss(enemy?.id)?{top:'3dvh'}:{})})}}>
+            <div data-enemy-ring={enemyDist} data-enemy-tap-detail data-enemy-attack={enemyImageOnlyAttack?(enemyAttackFx?.kind==='charge'?'charge':'fly'):undefined} data-enemy-motion={enemyMotion||undefined} data-enemy-skill={!enemyIsMoo&&enemySkillNow||undefined} data-em-idle={!enemyIsMoo&&emSet?.idle||undefined} data-em-body={!enemyIsMoo&&emSpec?.[0]||undefined} data-em-fx={!enemyIsMoo&&emSpec?.[1]||undefined} data-em-emo={!enemyIsMoo&&emSpec?.[3]||undefined} data-enemy-hurt={!enemyIsMoo&&enemyHurtNow?'true':undefined} className={`rounded-full transition-all duration-500 border-4 relative bg-black/35 ${RANGE_STYLES[enemyDist].border} ${RANGE_STYLES[enemyDist].shadow} ${RANGE_STYLES[enemyDist].glow} shadow-[0_0_50px]`} data-attack-target onClick={()=>{ /* ★敵を押すと、能力とかかっている効果の詳細を開く(2026-10-13)。戦闘の動きの最中・オートのあいだ・練習中は開かない */ if(isBusy||autoBattle||battleTutorialStep!=null||!enemy) return; setUnitDetail({side:'enemy'}); }} style={{...emDurStyle,...(enemyAttackAnim&&!ecoBattleView&&!enemyImageOnlyAttack?{padding:'clamp(6px,1.5dvh,16px)',animation:(enemyAttackFx?.kind==='move'?(isMooBoss(enemy?.id)?'enemyMoveSlideMoo 1000ms ease-in-out forwards':'enemyMoveSlide 1000ms ease-in-out forwards'):enemyAttackFx?.kind==='charge'?'enemyChargeShake 1100ms ease-in-out forwards':'enemyAttackFly 450ms ease-in forwards'), ...(isMooBoss(enemy?.id)&&enemyAttackFx?.kind!=='move'?{top:'3dvh'}:{}),...(!isMooBoss(enemy?.id)&&enemyAttackFx?.kind!=='move'?{zIndex:9999}:{})}:{padding:'clamp(6px,1.5dvh,16px)',...(isMooBoss(enemy?.id)?{top:'3dvh'}:{})})}}>
               {/* 足元の影(2026-09-22 ユーザー指示「全体的に安っぽい作りをなんとかしたい」)。
                   丸枠の塗りを落としたぶん、影が無いと宙に浮いて見える。絵(z-[1])より下へ敷く。
                   ★丸枠は transform を持つので重ね順の島になる。この中に置けば絵の下に必ず入る */}
@@ -1823,92 +2004,7 @@ function BattleScreen({
             //   どちらの見た目でも周りの高さは変わらないので、下の画面が動かない。
             // ★札を1つずつ書くのをやめ、いったん配列にしてから並べる。
             //   文面と色をここ1か所に置くと、2つの見た目がずれない。
-            const chips=[];
-            // ★`icon` という名前は使わない。カードの絵は cardIconNode() を通す決まりがあり、
-            //   card-icon-check.js が `c.icon` をそのまま描く書き方を禁じている
-            const chip=(key,mark,label,value,tone,opts)=>{const o=opts||{};chips.push({key,mark,label,value,tone,short:o.short!=null?o.short:value,pulse:!!o.pulse,glow:o.glow||''});};
-            const atkPct=Math.floor((getPermaBuff('atkPct')+getPermaBuff('muaAtkPct'))*100);
-            if(atkPct>0) chip('atk',<Sword size={9}/>,'攻撃力',`+${atkPct}%`,'text-red-500 border-red-500/50');
-            const dmgCutPct=Math.floor(getPermaBuff('dmgCutPct')*100);
-            if(dmgCutPct>0) chip('dmgCut',<Shield size={9}/>,'被ダメ',`-${dmgCutPct}%`,'text-emerald-500 border-emerald-500/50');
-            const defPct=Math.floor(getPermaBuff('defPct')*100);
-            if(defPct>0) chip('def',<Shield size={9}/>,'丈夫さ',`+${defPct}%`,'text-emerald-500 border-emerald-500/50');
-            const muaHpPct=Math.floor(getPermaBuff('muaHpPct')*100);
-            if(muaHpPct>0) chip('muaHp',<Heart size={9}/>,'ライフ',`+${muaHpPct}%`,'text-pink-500 border-pink-500/50');
-            const muaGutsPct=Math.floor(getPermaBuff('muaGutsPct')*100);
-            if(muaGutsPct>0) chip('muaGuts',<Zap size={9}/>,'ガッツ',`+${muaGutsPct}%`,'text-amber-500 border-amber-500/50');
-            const critRate=Math.round(getPermaBuff('critRatePct')*100);
-            if(critRate>0) chip('critRate',<Sparkles size={9}/>,'クリ率',`+${critRate}%`,'text-yellow-400 border-yellow-400/50');
-            const critDmg=Math.round(getPermaBuff('critDmgPct')*100);
-            if(critDmg>0) chip('critDmg',<Sparkles size={9}/>,'クリダメ',`+${critDmg}%`,'text-yellow-400 border-yellow-400/50');
-            const comboDmg=Math.round(getPermaBuff('comboDmgPct')*100);
-            if(comboDmg>0) chip('combo',<Sword size={9}/>,'連撃',`+${comboDmg}%`,'text-cyan-400 border-cyan-400/50');
-            if(getPermaBuff('globalComboDmgPct')>0) chip('globalCombo',<Sword size={9}/>,'全体連撃',`+${Math.round(getPermaBuff('globalComboDmgPct')*100)}%`,'text-sky-300 border-sky-300/50');
-            if(kikiCardBonus>0) chip('kikiCard',<PlusCircle size={9}/>,'カード上限',`+1（残り${Math.ceil(getPermaBuff('kikiCardBonusTurns'))}T）`,'text-violet-300 border-violet-300/50',{short:'+1'});
-            // ソードスキル(剣士モッチー)。連撃パワーは3たまるごとに永久追加連撃へ変わるので、
-            // 両方が見えないと進み具合が分からない
-            if(getPermaBuff('kenshiComboPower')>0||getPermaBuff('kenshiExtraCombo')>0){
-              const kenshiExtra=getPermaBuff('kenshiExtraCombo');
-              chip('kenshi',<Sword size={9}/>,'連撃パワー',
-                `${getPermaBuff('kenshiComboPower')}/${KENSHI_COMBO_POWER_MAX}${kenshiExtra>0?`・追加連撃 +${kenshiExtra}`:''}`,
-                'text-violet-300 border-violet-300/50',{short:`${getPermaBuff('kenshiComboPower')}/${KENSHI_COMBO_POWER_MAX}`});
-            }
-            chip('autoHp',<Heart size={9}/>,'ライフ回復',`${Math.round(getPermaBuff('autoHpRecovery',0.1)*100)}%`,
-              getPermaBuff('autoHpRecovery',0.1)>=0.1?'text-rose-400 border-rose-400/50':'text-red-400 border-red-400/50');
-            chip('autoGuts',<Zap size={9}/>,'ガッツ回復',
-              `${Math.round(applyIceRulerAutoGutsRecovery(Math.max(0,0.05+(getPermaBuff('autoHpRecovery',0.1)-0.1))+getPermaBuff('gutsRecoverPct'),mainHero?.id,iceLockActive,heroDist,enemyDist)*100)}%`,
-              'text-amber-400 border-amber-400/50');
-            // ポルツの待機。あと何回ぶん敵の攻撃で発動するかを出す(0になったら消える。得た効果は残る)
-            if(getPermaBuff('poltzCharges')>0) chip('poltz',<Zap size={9}/>,BREEDER_EVO_NAMES.poltz[Math.max(0,Math.min(getPermaBuff('poltzTier'),2))],`×${Math.floor(getPermaBuff('poltzCharges'))}`,'text-lime-300 border-lime-400/50',{pulse:true});
-            // トリックスタート(ゴースト・スプーキー)で積んだもの。WAVEのあいだだけ残る。
-            //   既存5モードはパーティに1つ('party')、タクティクスは持っている子ごと(枠の番号)
-            Object.entries(trickStartView||{}).forEach(([key,st])=>{
-              const parts=[st?.atk>0?`ち+${st.atk*20}%`:null,st?.def>0?`丈+${st.def*20}%`:null,st?.regen>0?`回+${st.regen*5}%`:null].filter(Boolean);
-              if(!parts.length) return;
-              const who=key==='party'?'':(slots[Number(key)]?.name||'');
-              chip(`trick${key}`,<Sparkles size={9}/>,`${who}トリック`,parts.join(' '),'text-violet-300 border-violet-400/50',{short:parts.join(' ')});
-            });
-            // メロディーのクッキー・クロミーの黒音符(勇者特性)。ランのあいだ持ち越す。
-            //   既存5モードはパーティに1つ('party')、タクティクスは持っている子ごと(枠の番号)。値は いまの数/上限 と効いている段階
-            Object.entries(sweetStackView||{}).forEach(([key,n])=>{
-              const ownerId=key==='party'?mainHero?.id:slots[Number(key)]?.id;
-              const trait=sweetStackTraitOf(ownerId), count=sweetStackCountOf(n);
-              if(!trait||count<=0) return;
-              const who=key==='party'?'':(slots[Number(key)]?.name||'');
-              chip(`sweet${key}`,<Sparkles size={9}/>,`${who}${trait.label}`,`${trait.icon}${count}/${SWEET_STACK_MAX} ${sweetStackEffectText(ownerId,count)}`,
-                trait.kind==='cookie'?'text-pink-300 border-pink-400/50':'text-fuchsia-300 border-fuchsia-400/50',{short:`${trait.icon}${count}/${SWEET_STACK_MAX}`,pulse:count>=SWEET_STACK_MAX,
-                // ★クッキーが満タン(EXの使いどき)は、点滅だけだと目立たない。ピンクの光の縁取りも付ける(2026-10-09 ユーザー指示「クッキーが満タンで光る」)
-                glow:trait.kind==='cookie'&&count>=SWEET_STACK_MAX?'mh-cookie-full':''});
-            });
-            // メロディ・ボゥの旋律(クロミーの固有技)で積んだ与ダメ。使った子の枠ごと。ランが終わるまで残る
-            Object.entries(bowStackView||{}).forEach(([key,n])=>{
-              const c=Math.max(0,Math.floor(Number(n)||0));
-              if(c>0) chip(`bow${key}`,<Sword size={9}/>,`${slots[Number(key)]?.name||''}旋律`,`与ダメ+${c*5}%`,'text-fuchsia-300 border-fuchsia-400/50',{short:`+${c*5}%`});
-            });
-            // 運命のコイン・運命の輪(ゴースト・スプーキー)で積んだもの。ランが終わるまで残る(その子の攻撃だけに効く)
-            {
-              const fate=getPermaBuff('fateStacks',null);
-              Object.keys(fate?.bySlot||{}).forEach(key=>{
-                const st=fateSlotStacksOf(fate,key);
-                const parts=[st.combo>0?`連撃+${st.combo*10}%`:null,st.atk>0?`ち+${st.atk*15}%`:null].filter(Boolean);
-                if(parts.length) chip(`fate${key}`,<Star size={9}/>,`${slots[Number(key)]?.name||''}運命`,parts.join(' '),'text-amber-300 border-amber-400/50',{short:parts.join(' ')});
-              });
-              if(fateCount(fate?.coinGuts)>0) chip('fateCoinGuts',<Zap size={9}/>,'運命のコイン消費',`+${fateCount(fate.coinGuts)*20}%`,'text-slate-300 border-slate-400/50');
-            }
-            // === ターン限定バフ（都度表示） ===
-            if(getNextTurnBuff('melosoFullRecoveryMult',0)>0) chip('meloso',<Heart size={9}/>,'次ターン全回復','','text-rose-300 border-rose-400/50',{pulse:true});
-            if(getTurnBuff('atkMult',1.0)>1) chip('boost',<Sparkles size={9}/>,'Boost',`x${getTurnBuff('atkMult',1.0).toFixed(1)}`,'text-red-500 border-red-500/50',{pulse:true});
-            if(getTurnBuff('guaranteedCrit',false)) chip('critFix',<Target size={9}/>,'会心予約','','text-orange-400 border-orange-500/50',{pulse:true});
-            if(getTurnBuff('zeroGuts',false)||getNextTurnBuff('zeroGuts',false)) chip('zeroGuts',<Star size={9}/>,'0消費中','','text-blue-400 border-blue-500/50',{pulse:true});
-            if(getNextTurnBuff('reflect',false)) chip('reflectNext',<RefreshCcw size={9}/>,'次反射','','text-purple-400 border-purple-500/50',{pulse:true});
-            if(getTurnBuff('reflect',false)) chip('reflectNow',<RefreshCcw size={9}/>,'反射待機','','text-purple-300 border-purple-400',{pulse:true});
-            // 敵の咆哮(2026-09-20 ユーザー指摘「咆哮の効果が分からない」)。
-            // ★ポップアップは一瞬で消えるので、いま何回かかっているかがどこにも出ていなかった。
-            //   敵の攻撃そのものを上げる(元に戻らない)ので、札に出し続ける
-            if(getNextTurnBuff('takenDamageMult',1.0)<1) chip('takenNext',<Shield size={9}/>,'次T被ダメ',`-${Math.round((1-getNextTurnBuff('takenDamageMult',1.0))*100)}%`,'text-pink-400 border-pink-500/50',{pulse:true});
-            if(getTurnBuff('takenDamageMult',1.0)<1) chip('takenNow',<Shield size={9}/>,'被ダメ',`-${Math.round((1-getTurnBuff('takenDamageMult',1.0))*100)}%`,'text-pink-300 border-pink-400',{pulse:true});
-            if(getNextTurnBuff('gutsCostMult',1.0)>1) chip('costNext',<Zap size={9}/>,'次ターン消費ガッツ',`+${Math.round((getNextTurnBuff('gutsCostMult',1.0)-1)*100)}%`,'text-amber-400 border-amber-500/50',{pulse:true});
-            if(getTurnBuff('gutsCostMult',1.0)>1) chip('costNow',<Zap size={9}/>,'消費ガッツ',`+${Math.round((getTurnBuff('gutsCostMult',1.0)-1)*100)}%`,'text-amber-300 border-amber-400',{pulse:true});
+            const chips=battleBuffChips();
             if(!chips.length) return null;
             return (
               <div data-battle-buffs={chips.length} data-battle-buffs-mode={buffDetail?'detail':'icon'}
@@ -2267,7 +2363,7 @@ function BattleScreen({
                 };
                 return <span data-pandora-pair className="relative inline-block" style={{ width: ph, height: ph }}>{fig(PANDORA_DEVIL_IMG, 'devil', 0)}{fig(PANDORA_ANGEL_IMG, 'angel', ph - pw)}</span>;
               })() : null;
-              return(<button key={i} data-slot-index={i} data-tactics-ex-on={slotExInfo&&slotExInfo.active&&slotExInfo.def?(slotExInfo.def.effect||'default'):undefined} data-tactics-aimed={slotAimed?'true':undefined} data-distance-broken={distanceBroken?'true':undefined} data-distance-break-level={distanceBroken?distanceBreakLevel:undefined} aria-label={`${RANGE_LABELS[i]}距離${distanceBroken?`（BREAK Lv${distanceBreakLevel}・与ダメージ${distanceBreakPercent}%）`:''}`} onClick={()=>{
+              return(<button key={i} data-slot-index={i} data-slot-assignable={pendingCard!=null&&canAssign?'true':undefined} data-tactics-ex-on={slotExInfo&&slotExInfo.active&&slotExInfo.def?(slotExInfo.def.effect||'default'):undefined} data-tactics-aimed={slotAimed?'true':undefined} data-distance-broken={distanceBroken?'true':undefined} data-distance-break-level={distanceBroken?distanceBreakLevel:undefined} aria-label={`${RANGE_LABELS[i]}距離${distanceBroken?`（BREAK Lv${distanceBreakLevel}・与ダメージ${distanceBreakPercent}%）`:''}`} onClick={()=>{
                 if(isBusy||autoBattleRef.current)return;
                 if(pendingCard!=null && canAssign){
                   setCardAssignments(p=>({...p,[pendingCard]:i}));
@@ -2282,6 +2378,9 @@ function BattleScreen({
                   setExPanelSlot(i);
                   // 自分で開けたなら、使い方案内はもう要らない
                   if(tacticsExIntroVisible&&dismissTacticsExIntro) dismissTacticsExIntro();
+                } else if(pendingCard==null && !dragState?.active && battleTutorialStep==null && typeof battleUnitStatusOf==='function' && battleUnitStatusOf(i)){
+                  // ★EXを持たない子・タクティクス以外のモードは、カードを置く途中でないときのタップで能力と効果の詳細を開く(2026-10-13)
+                  setUnitDetail({side:'ally',slot:i});
                 }
               }} disabled={isBusy||autoBattle} className={`relative ${tacticsNewLayout?'rounded-[18px] border grid grid-cols-[40%_60%] grid-rows-[18px_minmax(0,1fr)] items-stretch bg-[linear-gradient(145deg,rgba(15,23,42,.88),rgba(5,10,24,.96))] backdrop-blur-[3px] shadow-[inset_0_1px_0_rgba(255,255,255,.09),inset_0_0_18px_rgba(99,102,241,.035),0_7px_20px_rgba(0,0,0,.24)]':'rounded-2xl border-2 flex flex-col items-stretch'} overflow-visible transition-all ${RANGE_STYLES[i].slotGlow||''} ${tacticsNewLayout?'':RANGE_STYLES[i].bg} ${distanceBroken?'border-red-400':tacticsNewLayout?'border-white/[.10]':' '+RANGE_STYLES[i].border} ${(canAssign||(dragState?.active&&dragOverSlot===i))?'ring-2 ring-yellow-400 scale-105 z-10 shadow-lg animate-pulse':'opacity-100'} ${assignedCount>0?'ring-2 ring-indigo-500/80':''} ${tacticsNewLayout&&!s?'opacity-65 shadow-none border-white/[.06]':''} ${dragState?.active&&dragOverSlot===i?'ring-4 ring-green-400 scale-110':''} ${slotSettle===i?'ring-4 ring-white':''}`} style={{...((isAnimating&&!tacticsNewLayout?{zIndex:9999, animation:themedAttack?undefined:attackMotionAnimation(attackAnim), ...attackAimStyle}:(distanceBroken?{backgroundColor:distanceBreakLevel>=2?'rgb(12,2,5)':'rgb(24,5,25)',boxShadow:`inset 0 0 0 ${Math.min(4,distanceBreakLevel+1)}px rgba(248,113,113,.95), inset 0 0 ${28+distanceBreakLevel*8}px rgba(76,5,25,.98), 0 0 ${9+distanceBreakLevel*4}px rgba(220,38,38,.65)`,...(slotHitShake||{})}:(slotSettle===i?{animation:'slotSettle 400ms ease-out'}:(slotHitShake||undefined))))||{}), ...(isAnimating&&tacticsNewLayout?{zIndex:6500}:{})}}>
                 {/* ★狙われている枠。カードを置ける黄色の輪・ドラッグ中の緑の輪と重ならないよう、
@@ -2760,6 +2859,21 @@ function BattleScreen({
             {/* ★画面の真ん中に出す、ほかのダイアログと同じ大きさのカード(2026-09-23 ユーザー指摘「枠のサイズ感おかしくない？」)。
                 下から出す形は横幅いっぱいで枠線が画面の端で切れ、下の余白もホームバーのぶんが二重に空いていた */}
             <div data-tactics-ex-card className="w-full max-w-[340px] rounded-3xl border-2 border-fuchsia-400/60 bg-slate-900 px-4 py-3 shadow-2xl text-white" style={{maxHeight:'100%',overflowY:'auto'}} onClick={e=>e.stopPropagation()}>
+              {/* ★EXスキルと「能力・効果」の切り替え(2026-10-13 社長「モンスターをタップすると能力含め詳細バフも見れるように」)。
+                  タップで開くのは今までどおりEXスキルの側。切り替えると、その子の能力・かかっている効果を出す */}
+              <div data-unit-detail-tabs className="mb-2 grid grid-cols-2 gap-1 rounded-xl bg-black/40 p-1">
+                {[['ex','EXスキル'],['status','能力・効果']].map(([id,label])=>(
+                  <button key={id} type="button" data-unit-detail-tab={id} aria-pressed={exTab===id} onClick={()=>setExTab(id)}
+                    className={`min-h-[34px] rounded-lg text-[12px] font-black active:scale-95 ${exTab===id?'bg-fuchsia-600 text-white':'text-slate-300'}`}>{label}</button>
+                ))}
+              </div>
+              {exTab==='status'?(
+                <div data-tactics-unit-detail={exPanel.slot}>
+                  <div className="mb-2 break-words text-[16px] font-black leading-tight">{exPanel.monName}</div>
+                  {typeof battleUnitStatusOf==='function'&&<BattleUnitDetailBody side="ally" status={battleUnitStatusOf(exPanel.slot)} chips={battleBuffChips()} marks={allyStackCounts[exPanel.slot]}/>}
+                  <button type="button" data-tactics-ex-close onClick={()=>setExPanelSlot(null)} className="mt-3 min-h-[44px] w-full rounded-xl border border-white/20 bg-slate-800 text-[13px] font-black text-slate-200 active:scale-95">閉じる</button>
+                </div>
+              ):(<>
               <div className="flex items-center gap-2">
                 <span className="shrink-0 rounded-md bg-fuchsia-600 px-1.5 py-0.5 text-[10px] font-black leading-none">EX</span>
                 <span data-tactics-ex-mon className="min-w-0 truncate text-[12px] font-black text-slate-300">{exPanel.monName}</span>
@@ -2822,9 +2936,13 @@ function BattleScreen({
                 <button type="button" data-tactics-ex-use disabled={!exPanel.check.ok} onClick={()=>{ if(exPanel.styleOptions||exPanel.targetOptions){ setExChoosing(true); return; } if(activateTacticsEx&&activateTacticsEx(exPanel.slot)) setExPanelSlot(null); }} className={`min-h-[44px] flex-[2] rounded-xl border-2 text-[14px] font-black active:scale-95 ${exPanel.check.ok?'border-fuchsia-300 bg-fuchsia-600 text-white shadow-[0_0_14px_rgba(217,70,239,.5)]':'border-slate-600 bg-slate-800 text-slate-500'}`}>EXスキルを使用</button>
               </div>
               )}
+              </>)}
             </div>
           </div>
         ), document.body)}
+        {unitDetail&&(unitDetail.side==='enemy'
+          ? <BattleUnitDetailPanel side="enemy" status={typeof battleEnemyStatus==='function'?battleEnemyStatus():null} debuffs={enemyDebuffs} onClose={()=>setUnitDetail(null)}/>
+          : <BattleUnitDetailPanel side="ally" status={typeof battleUnitStatusOf==='function'?battleUnitStatusOf(unitDetail.slot):null} chips={battleBuffChips()} marks={allyStackCounts[unitDetail.slot]} onClose={()=>setUnitDetail(null)}/>)}
         {showBattleMenu&&ReactDOM.createPortal((
           <div className="fixed inset-0 z-[70000] flex items-start justify-end bg-black/70 p-2" onClick={()=>setShowBattleMenu(false)}>
             <div data-battle-menu className="mt-11 flex w-[190px] flex-col gap-1.5 rounded-2xl border border-white/20 bg-slate-900 p-2 shadow-2xl" onClick={e=>e.stopPropagation()}>

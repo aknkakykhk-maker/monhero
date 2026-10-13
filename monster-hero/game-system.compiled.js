@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: fd504ef4af8bfc1f
+// source-sha256: 474ea6d63c818b29
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-13 11:35";
+const BUILD_DATE = "2026-10-13 11:38";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -61391,6 +61391,135 @@ const BattleStackMarks = ({
     "aria-hidden": "true"
   }, it.mark), React.createElement("b", null, it.unit === 'T' ? `${it.count}T` : `×${it.count}`))));
 };
+const BattleUnitDetailBody = ({
+  side,
+  status,
+  chips = [],
+  marks = null,
+  debuffs = []
+}) => {
+  if (!status) return null;
+  const stat = (key, label, cls, value, sub) => React.createElement("div", {
+    "data-unit-stat": key,
+    className: "min-w-0 rounded-lg bg-black/40 px-2 py-1"
+  }, React.createElement("div", {
+    className: `text-[9px] font-black ${cls}`
+  }, label), React.createElement("div", {
+    className: "text-[13px] font-mono font-black leading-tight text-white"
+  }, value), sub && React.createElement("div", {
+    className: "text-[9px] font-bold leading-tight text-slate-400"
+  }, sub));
+  const changed = s => s && s.now !== s.base;
+  const statOf = (key, label, cls, s) => stat(key, label, cls, React.createElement("span", {
+    className: changed(s) ? s.now > s.base ? 'text-emerald-200' : 'text-rose-200' : ''
+  }, s.now.toLocaleString()), `元の値 ${s.base.toLocaleString()}`);
+  const row = (key, mark, label, value, note, tone = '') => React.createElement("li", {
+    key: key,
+    "data-unit-effect": key,
+    className: `rounded-lg border border-white/10 bg-black/40 px-2 py-1 ${tone}`
+  }, React.createElement("div", {
+    className: "flex min-w-0 flex-wrap items-baseline gap-x-1.5 text-[12px] font-black leading-snug"
+  }, mark != null && React.createElement("span", {
+    className: "shrink-0"
+  }, mark), React.createElement("span", {
+    className: "break-words"
+  }, label), value ? React.createElement("span", {
+    className: "break-words text-white"
+  }, value) : null), note ? React.createElement("div", {
+    className: "text-[10px] font-bold leading-snug text-slate-300"
+  }, note) : null);
+  const list = (key, title, rows) => React.createElement("section", {
+    "data-unit-effects": key,
+    className: "mt-2"
+  }, React.createElement("div", {
+    className: "mb-1 text-[10px] font-black text-slate-400"
+  }, title), rows.length ? React.createElement("ul", {
+    className: "space-y-1"
+  }, rows) : React.createElement("p", {
+    className: "text-[11px] font-bold text-slate-500"
+  }, "ありません"));
+  if (side === 'enemy') {
+    return React.createElement("div", {
+      "data-unit-detail-body": "enemy"
+    }, React.createElement("div", {
+      className: "grid grid-cols-2 gap-1.5"
+    }, stat('hp', 'ライフ', 'text-pink-400', `${status.hp.toLocaleString()} / ${status.maxHp.toLocaleString()}`), statOf('atk', '攻撃力', 'text-red-400', status.atk)), list('enemy', 'かかっている効果', (Array.isArray(debuffs) ? debuffs : []).map(d => row(d.key, d.mark, d.label, d.value, d.note, d.tone))));
+  }
+  const markRows = battleStackMarkItems(marks).map(it => row(`mark-${it.kind}`, it.img ? React.createElement("img", {
+    src: it.img,
+    alt: "",
+    className: "inline h-3.5 w-3.5 object-contain"
+  }) : it.mark, it.label, it.unit === 'T' ? `あと${it.count}ターン` : `×${it.count}`, ''));
+  const own = (chips || []).filter(c => c.owner === status.slot);
+  const team = (chips || []).filter(c => c.owner == null);
+  const lineRows = (status.lines || []).map(l => row(l.key, null, l.label, l.value, l.note));
+  const chipRow = c => row(c.key, c.mark, c.label, c.value, '', c.tone);
+  const apt = status.aptPct;
+  return React.createElement("div", {
+    "data-unit-detail-body": "ally"
+  }, React.createElement("div", {
+    className: "grid grid-cols-2 gap-1.5"
+  }, stat('hp', 'ライフ', 'text-pink-400', `${status.hp.toLocaleString()} / ${status.maxHp.toLocaleString()}`, status.baseMaxHp !== status.maxHp ? `元の上限 ${status.baseMaxHp.toLocaleString()}` : ''), stat('guts', 'ガッツ', 'text-amber-400', `${status.guts.toLocaleString()} / ${status.maxGuts.toLocaleString()}`, status.baseMaxGuts !== status.maxGuts ? `元の上限 ${status.baseMaxGuts.toLocaleString()}` : ''), statOf('atk', 'ちから', 'text-red-400', status.atk), statOf('def', '丈夫さ', 'text-emerald-400', status.def)), React.createElement("div", {
+    "data-unit-stat": "apt",
+    className: "mt-1 text-[10px] font-black text-cyan-300"
+  }, "この枠の間合い適性 ", apt >= 0 ? '+' : '', apt, "%"), status.tactics ? React.createElement(React.Fragment, null, list('own', 'この子にかかっている効果', [...markRows, ...lineRows, ...own.map(chipRow)]), list('team', '味方全員にかかっている効果', team.map(chipRow))) : list('team', 'かかっている効果(パーティ全体)', [...markRows, ...lineRows, ...own.map(chipRow), ...team.map(chipRow)]));
+};
+const BattleUnitDetailPanel = ({
+  side,
+  status,
+  chips,
+  marks,
+  debuffs,
+  onClose
+}) => {
+  if (!status) return null;
+  return ReactDOM.createPortal(React.createElement("div", {
+    "data-battle-unit-detail": side === 'enemy' ? 'enemy' : status.slot,
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": `${status.name}の詳細`,
+    className: "fixed inset-0 z-[70000] flex items-center justify-center bg-black/70 px-4",
+    style: {
+      paddingTop: 'calc(1rem + env(safe-area-inset-top))',
+      paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+    },
+    onClick: onClose
+  }, React.createElement("div", {
+    className: `w-full max-w-[340px] rounded-3xl border-2 bg-slate-900 px-4 py-3 shadow-2xl text-white ${side === 'enemy' ? 'border-red-400/60' : 'border-sky-400/60'}`,
+    style: {
+      maxHeight: '100%',
+      overflowY: 'auto'
+    },
+    onClick: e => e.stopPropagation()
+  }, React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, status.imgUrl && React.createElement("img", {
+    src: status.imgUrl,
+    alt: "",
+    className: "h-10 w-10 shrink-0 object-contain"
+  }), React.createElement("div", {
+    className: "min-w-0"
+  }, React.createElement("div", {
+    className: "text-[10px] font-black text-slate-400"
+  }, side === 'enemy' ? '敵の詳細' : 'モンスターの詳細'), React.createElement("div", {
+    className: "break-words text-[16px] font-black leading-tight"
+  }, status.name))), status.downed && React.createElement("p", {
+    className: "mt-1 text-[11px] font-black text-emerald-300"
+  }, "ダウン中(ライフが上限まで戻ると立ち上がります)"), React.createElement("div", {
+    className: "mt-2"
+  }, React.createElement(BattleUnitDetailBody, {
+    side: side,
+    status: status,
+    chips: chips,
+    marks: marks,
+    debuffs: debuffs
+  })), React.createElement("button", {
+    type: "button",
+    "data-battle-unit-detail-close": true,
+    onClick: onClose,
+    className: "mt-3 min-h-[44px] w-full rounded-xl border border-white/20 bg-slate-800 text-[13px] font-black text-slate-200 active:scale-95"
+  }, "閉じる"))), document.body);
+};
 const BattleMonsterFx = ({
   fx,
   imgSrc,
@@ -61758,6 +61887,8 @@ function BattleScreen({
   tacticsCanAssign,
   tacticsCardBlock,
   enemyDebuffs,
+  battleUnitStatusOf,
+  battleEnemyStatus,
   enemyStackCounts,
   debugStackMarks,
   tacticsSlotCountersAt,
@@ -61793,6 +61924,185 @@ function BattleScreen({
   wave
 }) {
   const [buffDetail, setBuffDetail] = useState(false);
+  const battleBuffChips = () => {
+    const chips = [];
+    const chip = (key, mark, label, value, tone, opts) => {
+      const o = opts || {};
+      chips.push({
+        key,
+        mark,
+        label,
+        value,
+        tone,
+        short: o.short != null ? o.short : value,
+        pulse: !!o.pulse,
+        glow: o.glow || '',
+        owner: Number.isInteger(o.owner) ? o.owner : null
+      });
+    };
+    const ownerOf = key => key === 'party' ? heroDist : Number(key);
+    const atkPct = Math.floor((getPermaBuff('atkPct') + getPermaBuff('muaAtkPct')) * 100);
+    if (atkPct > 0) chip('atk', React.createElement(Sword, {
+      size: 9
+    }), '攻撃力', `+${atkPct}%`, 'text-red-500 border-red-500/50');
+    const dmgCutPct = Math.floor(getPermaBuff('dmgCutPct') * 100);
+    if (dmgCutPct > 0) chip('dmgCut', React.createElement(Shield, {
+      size: 9
+    }), '被ダメ', `-${dmgCutPct}%`, 'text-emerald-500 border-emerald-500/50');
+    const defPct = Math.floor(getPermaBuff('defPct') * 100);
+    if (defPct > 0) chip('def', React.createElement(Shield, {
+      size: 9
+    }), '丈夫さ', `+${defPct}%`, 'text-emerald-500 border-emerald-500/50');
+    const muaHpPct = Math.floor(getPermaBuff('muaHpPct') * 100);
+    if (muaHpPct > 0) chip('muaHp', React.createElement(Heart, {
+      size: 9
+    }), 'ライフ', `+${muaHpPct}%`, 'text-pink-500 border-pink-500/50');
+    const muaGutsPct = Math.floor(getPermaBuff('muaGutsPct') * 100);
+    if (muaGutsPct > 0) chip('muaGuts', React.createElement(Zap, {
+      size: 9
+    }), 'ガッツ', `+${muaGutsPct}%`, 'text-amber-500 border-amber-500/50');
+    const critRate = Math.round(getPermaBuff('critRatePct') * 100);
+    if (critRate > 0) chip('critRate', React.createElement(Sparkles, {
+      size: 9
+    }), 'クリ率', `+${critRate}%`, 'text-yellow-400 border-yellow-400/50');
+    const critDmg = Math.round(getPermaBuff('critDmgPct') * 100);
+    if (critDmg > 0) chip('critDmg', React.createElement(Sparkles, {
+      size: 9
+    }), 'クリダメ', `+${critDmg}%`, 'text-yellow-400 border-yellow-400/50');
+    const comboDmg = Math.round(getPermaBuff('comboDmgPct') * 100);
+    if (comboDmg > 0) chip('combo', React.createElement(Sword, {
+      size: 9
+    }), '連撃', `+${comboDmg}%`, 'text-cyan-400 border-cyan-400/50');
+    if (getPermaBuff('globalComboDmgPct') > 0) chip('globalCombo', React.createElement(Sword, {
+      size: 9
+    }), '全体連撃', `+${Math.round(getPermaBuff('globalComboDmgPct') * 100)}%`, 'text-sky-300 border-sky-300/50');
+    if (kikiCardBonus > 0) chip('kikiCard', React.createElement(PlusCircle, {
+      size: 9
+    }), 'カード上限', `+1（残り${Math.ceil(getPermaBuff('kikiCardBonusTurns'))}T）`, 'text-violet-300 border-violet-300/50', {
+      short: '+1'
+    });
+    if (getPermaBuff('kenshiComboPower') > 0 || getPermaBuff('kenshiExtraCombo') > 0) {
+      const kenshiExtra = getPermaBuff('kenshiExtraCombo');
+      chip('kenshi', React.createElement(Sword, {
+        size: 9
+      }), '連撃パワー', `${getPermaBuff('kenshiComboPower')}/${KENSHI_COMBO_POWER_MAX}${kenshiExtra > 0 ? `・追加連撃 +${kenshiExtra}` : ''}`, 'text-violet-300 border-violet-300/50', {
+        short: `${getPermaBuff('kenshiComboPower')}/${KENSHI_COMBO_POWER_MAX}`
+      });
+    }
+    chip('autoHp', React.createElement(Heart, {
+      size: 9
+    }), 'ライフ回復', `${Math.round(getPermaBuff('autoHpRecovery', 0.1) * 100)}%`, getPermaBuff('autoHpRecovery', 0.1) >= 0.1 ? 'text-rose-400 border-rose-400/50' : 'text-red-400 border-red-400/50');
+    chip('autoGuts', React.createElement(Zap, {
+      size: 9
+    }), 'ガッツ回復', `${Math.round(applyIceRulerAutoGutsRecovery(Math.max(0, 0.05 + (getPermaBuff('autoHpRecovery', 0.1) - 0.1)) + getPermaBuff('gutsRecoverPct'), mainHero?.id, iceLockActive, heroDist, enemyDist) * 100)}%`, 'text-amber-400 border-amber-400/50');
+    if (getPermaBuff('poltzCharges') > 0) chip('poltz', React.createElement(Zap, {
+      size: 9
+    }), BREEDER_EVO_NAMES.poltz[Math.max(0, Math.min(getPermaBuff('poltzTier'), 2))], `×${Math.floor(getPermaBuff('poltzCharges'))}`, 'text-lime-300 border-lime-400/50', {
+      pulse: true
+    });
+    Object.entries(trickStartView || {}).forEach(([key, st]) => {
+      const parts = [st?.atk > 0 ? `ち+${st.atk * 20}%` : null, st?.def > 0 ? `丈+${st.def * 20}%` : null, st?.regen > 0 ? `回+${st.regen * 5}%` : null].filter(Boolean);
+      if (!parts.length) return;
+      const who = key === 'party' ? '' : slots[Number(key)]?.name || '';
+      chip(`trick${key}`, React.createElement(Sparkles, {
+        size: 9
+      }), `${who}トリック`, parts.join(' '), 'text-violet-300 border-violet-400/50', {
+        short: parts.join(' '),
+        owner: ownerOf(key)
+      });
+    });
+    Object.entries(sweetStackView || {}).forEach(([key, n]) => {
+      const ownerId = key === 'party' ? mainHero?.id : slots[Number(key)]?.id;
+      const trait = sweetStackTraitOf(ownerId),
+        count = sweetStackCountOf(n);
+      if (!trait || count <= 0) return;
+      const who = key === 'party' ? '' : slots[Number(key)]?.name || '';
+      chip(`sweet${key}`, React.createElement(Sparkles, {
+        size: 9
+      }), `${who}${trait.label}`, `${trait.icon}${count}/${SWEET_STACK_MAX} ${sweetStackEffectText(ownerId, count)}`, trait.kind === 'cookie' ? 'text-pink-300 border-pink-400/50' : 'text-fuchsia-300 border-fuchsia-400/50', {
+        short: `${trait.icon}${count}/${SWEET_STACK_MAX}`,
+        owner: ownerOf(key),
+        pulse: count >= SWEET_STACK_MAX,
+        glow: trait.kind === 'cookie' && count >= SWEET_STACK_MAX ? 'mh-cookie-full' : ''
+      });
+    });
+    Object.entries(bowStackView || {}).forEach(([key, n]) => {
+      const c = Math.max(0, Math.floor(Number(n) || 0));
+      if (c > 0) chip(`bow${key}`, React.createElement(Sword, {
+        size: 9
+      }), `${slots[Number(key)]?.name || ''}旋律`, `与ダメ+${c * 5}%`, 'text-fuchsia-300 border-fuchsia-400/50', {
+        short: `+${c * 5}%`,
+        owner: ownerOf(key)
+      });
+    });
+    {
+      const fate = getPermaBuff('fateStacks', null);
+      Object.keys(fate?.bySlot || {}).forEach(key => {
+        const st = fateSlotStacksOf(fate, key);
+        const parts = [st.combo > 0 ? `連撃+${st.combo * 10}%` : null, st.atk > 0 ? `ち+${st.atk * 15}%` : null].filter(Boolean);
+        if (parts.length) chip(`fate${key}`, React.createElement(Star, {
+          size: 9
+        }), `${slots[Number(key)]?.name || ''}運命`, parts.join(' '), 'text-amber-300 border-amber-400/50', {
+          short: parts.join(' '),
+          owner: ownerOf(key)
+        });
+      });
+      if (fateCount(fate?.coinGuts) > 0) chip('fateCoinGuts', React.createElement(Zap, {
+        size: 9
+      }), '運命のコイン消費', `+${fateCount(fate.coinGuts) * 20}%`, 'text-slate-300 border-slate-400/50');
+    }
+    if (getNextTurnBuff('melosoFullRecoveryMult', 0) > 0) chip('meloso', React.createElement(Heart, {
+      size: 9
+    }), '次ターン全回復', '', 'text-rose-300 border-rose-400/50', {
+      pulse: true
+    });
+    if (getTurnBuff('atkMult', 1.0) > 1) chip('boost', React.createElement(Sparkles, {
+      size: 9
+    }), 'Boost', `x${getTurnBuff('atkMult', 1.0).toFixed(1)}`, 'text-red-500 border-red-500/50', {
+      pulse: true
+    });
+    if (getTurnBuff('guaranteedCrit', false)) chip('critFix', React.createElement(Target, {
+      size: 9
+    }), '会心予約', '', 'text-orange-400 border-orange-500/50', {
+      pulse: true
+    });
+    if (getTurnBuff('zeroGuts', false) || getNextTurnBuff('zeroGuts', false)) chip('zeroGuts', React.createElement(Star, {
+      size: 9
+    }), '0消費中', '', 'text-blue-400 border-blue-500/50', {
+      pulse: true
+    });
+    if (getNextTurnBuff('reflect', false)) chip('reflectNext', React.createElement(RefreshCcw, {
+      size: 9
+    }), '次反射', '', 'text-purple-400 border-purple-500/50', {
+      pulse: true
+    });
+    if (getTurnBuff('reflect', false)) chip('reflectNow', React.createElement(RefreshCcw, {
+      size: 9
+    }), '反射待機', '', 'text-purple-300 border-purple-400', {
+      pulse: true
+    });
+    if (getNextTurnBuff('takenDamageMult', 1.0) < 1) chip('takenNext', React.createElement(Shield, {
+      size: 9
+    }), '次T被ダメ', `-${Math.round((1 - getNextTurnBuff('takenDamageMult', 1.0)) * 100)}%`, 'text-pink-400 border-pink-500/50', {
+      pulse: true
+    });
+    if (getTurnBuff('takenDamageMult', 1.0) < 1) chip('takenNow', React.createElement(Shield, {
+      size: 9
+    }), '被ダメ', `-${Math.round((1 - getTurnBuff('takenDamageMult', 1.0)) * 100)}%`, 'text-pink-300 border-pink-400', {
+      pulse: true
+    });
+    if (getNextTurnBuff('gutsCostMult', 1.0) > 1) chip('costNext', React.createElement(Zap, {
+      size: 9
+    }), '次ターン消費ガッツ', `+${Math.round((getNextTurnBuff('gutsCostMult', 1.0) - 1) * 100)}%`, 'text-amber-400 border-amber-500/50', {
+      pulse: true
+    });
+    if (getTurnBuff('gutsCostMult', 1.0) > 1) chip('costNow', React.createElement(Zap, {
+      size: 9
+    }), '消費ガッツ', `+${Math.round((getTurnBuff('gutsCostMult', 1.0) - 1) * 100)}%`, 'text-amber-300 border-amber-400', {
+      pulse: true
+    });
+    return chips;
+  };
   const allyStackCounts = (() => {
     const out = {};
     const put = (i, kind, n, keepZero = false) => {
@@ -61874,10 +62184,13 @@ function BattleScreen({
   const [showBattleMenu, setShowBattleMenu] = useState(false);
   const [exPanelSlot, setExPanelSlotRaw] = useState(null);
   const [exChoosing, setExChoosing] = useState(false);
+  const [exTab, setExTab] = useState('ex');
   const setExPanelSlot = slot => {
     setExChoosing(false);
+    setExTab('ex');
     setExPanelSlotRaw(slot);
   };
+  const [unitDetail, setUnitDetail] = useState(null);
   const exPanel = exPanelSlot != null && tacticsExInfo ? tacticsExInfo(exPanelSlot) : null;
   const tacticsNewLayout = Array.isArray(tacticsUnits) && normalizeBattleScreenStyle(battleScreenStyle) === 'TACTICS_NEW';
   const battleFx = normalizeBattleFxSettings(battleFxSettings);
@@ -62904,6 +63217,7 @@ function BattleScreen({
     }
   }, enemyNoticeCard()), React.createElement("div", {
     "data-enemy-ring": enemyDist,
+    "data-enemy-tap-detail": true,
     "data-enemy-attack": enemyImageOnlyAttack ? enemyAttackFx?.kind === 'charge' ? 'charge' : 'fly' : undefined,
     "data-enemy-motion": enemyMotion || undefined,
     "data-enemy-skill": !enemyIsMoo && enemySkillNow || undefined,
@@ -62914,6 +63228,12 @@ function BattleScreen({
     "data-enemy-hurt": !enemyIsMoo && enemyHurtNow ? 'true' : undefined,
     className: `rounded-full transition-all duration-500 border-4 relative bg-black/35 ${RANGE_STYLES[enemyDist].border} ${RANGE_STYLES[enemyDist].shadow} ${RANGE_STYLES[enemyDist].glow} shadow-[0_0_50px]`,
     "data-attack-target": true,
+    onClick: () => {
+      if (isBusy || autoBattle || battleTutorialStep != null || !enemy) return;
+      setUnitDetail({
+        side: 'enemy'
+      });
+    },
     style: {
       ...emDurStyle,
       ...(enemyAttackAnim && !ecoBattleView && !enemyImageOnlyAttack ? {
@@ -63305,176 +63625,7 @@ function BattleScreen({
       }, RANGE_LABELS[i]));
     })));
   })(), (() => {
-    const chips = [];
-    const chip = (key, mark, label, value, tone, opts) => {
-      const o = opts || {};
-      chips.push({
-        key,
-        mark,
-        label,
-        value,
-        tone,
-        short: o.short != null ? o.short : value,
-        pulse: !!o.pulse,
-        glow: o.glow || ''
-      });
-    };
-    const atkPct = Math.floor((getPermaBuff('atkPct') + getPermaBuff('muaAtkPct')) * 100);
-    if (atkPct > 0) chip('atk', React.createElement(Sword, {
-      size: 9
-    }), '攻撃力', `+${atkPct}%`, 'text-red-500 border-red-500/50');
-    const dmgCutPct = Math.floor(getPermaBuff('dmgCutPct') * 100);
-    if (dmgCutPct > 0) chip('dmgCut', React.createElement(Shield, {
-      size: 9
-    }), '被ダメ', `-${dmgCutPct}%`, 'text-emerald-500 border-emerald-500/50');
-    const defPct = Math.floor(getPermaBuff('defPct') * 100);
-    if (defPct > 0) chip('def', React.createElement(Shield, {
-      size: 9
-    }), '丈夫さ', `+${defPct}%`, 'text-emerald-500 border-emerald-500/50');
-    const muaHpPct = Math.floor(getPermaBuff('muaHpPct') * 100);
-    if (muaHpPct > 0) chip('muaHp', React.createElement(Heart, {
-      size: 9
-    }), 'ライフ', `+${muaHpPct}%`, 'text-pink-500 border-pink-500/50');
-    const muaGutsPct = Math.floor(getPermaBuff('muaGutsPct') * 100);
-    if (muaGutsPct > 0) chip('muaGuts', React.createElement(Zap, {
-      size: 9
-    }), 'ガッツ', `+${muaGutsPct}%`, 'text-amber-500 border-amber-500/50');
-    const critRate = Math.round(getPermaBuff('critRatePct') * 100);
-    if (critRate > 0) chip('critRate', React.createElement(Sparkles, {
-      size: 9
-    }), 'クリ率', `+${critRate}%`, 'text-yellow-400 border-yellow-400/50');
-    const critDmg = Math.round(getPermaBuff('critDmgPct') * 100);
-    if (critDmg > 0) chip('critDmg', React.createElement(Sparkles, {
-      size: 9
-    }), 'クリダメ', `+${critDmg}%`, 'text-yellow-400 border-yellow-400/50');
-    const comboDmg = Math.round(getPermaBuff('comboDmgPct') * 100);
-    if (comboDmg > 0) chip('combo', React.createElement(Sword, {
-      size: 9
-    }), '連撃', `+${comboDmg}%`, 'text-cyan-400 border-cyan-400/50');
-    if (getPermaBuff('globalComboDmgPct') > 0) chip('globalCombo', React.createElement(Sword, {
-      size: 9
-    }), '全体連撃', `+${Math.round(getPermaBuff('globalComboDmgPct') * 100)}%`, 'text-sky-300 border-sky-300/50');
-    if (kikiCardBonus > 0) chip('kikiCard', React.createElement(PlusCircle, {
-      size: 9
-    }), 'カード上限', `+1（残り${Math.ceil(getPermaBuff('kikiCardBonusTurns'))}T）`, 'text-violet-300 border-violet-300/50', {
-      short: '+1'
-    });
-    if (getPermaBuff('kenshiComboPower') > 0 || getPermaBuff('kenshiExtraCombo') > 0) {
-      const kenshiExtra = getPermaBuff('kenshiExtraCombo');
-      chip('kenshi', React.createElement(Sword, {
-        size: 9
-      }), '連撃パワー', `${getPermaBuff('kenshiComboPower')}/${KENSHI_COMBO_POWER_MAX}${kenshiExtra > 0 ? `・追加連撃 +${kenshiExtra}` : ''}`, 'text-violet-300 border-violet-300/50', {
-        short: `${getPermaBuff('kenshiComboPower')}/${KENSHI_COMBO_POWER_MAX}`
-      });
-    }
-    chip('autoHp', React.createElement(Heart, {
-      size: 9
-    }), 'ライフ回復', `${Math.round(getPermaBuff('autoHpRecovery', 0.1) * 100)}%`, getPermaBuff('autoHpRecovery', 0.1) >= 0.1 ? 'text-rose-400 border-rose-400/50' : 'text-red-400 border-red-400/50');
-    chip('autoGuts', React.createElement(Zap, {
-      size: 9
-    }), 'ガッツ回復', `${Math.round(applyIceRulerAutoGutsRecovery(Math.max(0, 0.05 + (getPermaBuff('autoHpRecovery', 0.1) - 0.1)) + getPermaBuff('gutsRecoverPct'), mainHero?.id, iceLockActive, heroDist, enemyDist) * 100)}%`, 'text-amber-400 border-amber-400/50');
-    if (getPermaBuff('poltzCharges') > 0) chip('poltz', React.createElement(Zap, {
-      size: 9
-    }), BREEDER_EVO_NAMES.poltz[Math.max(0, Math.min(getPermaBuff('poltzTier'), 2))], `×${Math.floor(getPermaBuff('poltzCharges'))}`, 'text-lime-300 border-lime-400/50', {
-      pulse: true
-    });
-    Object.entries(trickStartView || {}).forEach(([key, st]) => {
-      const parts = [st?.atk > 0 ? `ち+${st.atk * 20}%` : null, st?.def > 0 ? `丈+${st.def * 20}%` : null, st?.regen > 0 ? `回+${st.regen * 5}%` : null].filter(Boolean);
-      if (!parts.length) return;
-      const who = key === 'party' ? '' : slots[Number(key)]?.name || '';
-      chip(`trick${key}`, React.createElement(Sparkles, {
-        size: 9
-      }), `${who}トリック`, parts.join(' '), 'text-violet-300 border-violet-400/50', {
-        short: parts.join(' ')
-      });
-    });
-    Object.entries(sweetStackView || {}).forEach(([key, n]) => {
-      const ownerId = key === 'party' ? mainHero?.id : slots[Number(key)]?.id;
-      const trait = sweetStackTraitOf(ownerId),
-        count = sweetStackCountOf(n);
-      if (!trait || count <= 0) return;
-      const who = key === 'party' ? '' : slots[Number(key)]?.name || '';
-      chip(`sweet${key}`, React.createElement(Sparkles, {
-        size: 9
-      }), `${who}${trait.label}`, `${trait.icon}${count}/${SWEET_STACK_MAX} ${sweetStackEffectText(ownerId, count)}`, trait.kind === 'cookie' ? 'text-pink-300 border-pink-400/50' : 'text-fuchsia-300 border-fuchsia-400/50', {
-        short: `${trait.icon}${count}/${SWEET_STACK_MAX}`,
-        pulse: count >= SWEET_STACK_MAX,
-        glow: trait.kind === 'cookie' && count >= SWEET_STACK_MAX ? 'mh-cookie-full' : ''
-      });
-    });
-    Object.entries(bowStackView || {}).forEach(([key, n]) => {
-      const c = Math.max(0, Math.floor(Number(n) || 0));
-      if (c > 0) chip(`bow${key}`, React.createElement(Sword, {
-        size: 9
-      }), `${slots[Number(key)]?.name || ''}旋律`, `与ダメ+${c * 5}%`, 'text-fuchsia-300 border-fuchsia-400/50', {
-        short: `+${c * 5}%`
-      });
-    });
-    {
-      const fate = getPermaBuff('fateStacks', null);
-      Object.keys(fate?.bySlot || {}).forEach(key => {
-        const st = fateSlotStacksOf(fate, key);
-        const parts = [st.combo > 0 ? `連撃+${st.combo * 10}%` : null, st.atk > 0 ? `ち+${st.atk * 15}%` : null].filter(Boolean);
-        if (parts.length) chip(`fate${key}`, React.createElement(Star, {
-          size: 9
-        }), `${slots[Number(key)]?.name || ''}運命`, parts.join(' '), 'text-amber-300 border-amber-400/50', {
-          short: parts.join(' ')
-        });
-      });
-      if (fateCount(fate?.coinGuts) > 0) chip('fateCoinGuts', React.createElement(Zap, {
-        size: 9
-      }), '運命のコイン消費', `+${fateCount(fate.coinGuts) * 20}%`, 'text-slate-300 border-slate-400/50');
-    }
-    if (getNextTurnBuff('melosoFullRecoveryMult', 0) > 0) chip('meloso', React.createElement(Heart, {
-      size: 9
-    }), '次ターン全回復', '', 'text-rose-300 border-rose-400/50', {
-      pulse: true
-    });
-    if (getTurnBuff('atkMult', 1.0) > 1) chip('boost', React.createElement(Sparkles, {
-      size: 9
-    }), 'Boost', `x${getTurnBuff('atkMult', 1.0).toFixed(1)}`, 'text-red-500 border-red-500/50', {
-      pulse: true
-    });
-    if (getTurnBuff('guaranteedCrit', false)) chip('critFix', React.createElement(Target, {
-      size: 9
-    }), '会心予約', '', 'text-orange-400 border-orange-500/50', {
-      pulse: true
-    });
-    if (getTurnBuff('zeroGuts', false) || getNextTurnBuff('zeroGuts', false)) chip('zeroGuts', React.createElement(Star, {
-      size: 9
-    }), '0消費中', '', 'text-blue-400 border-blue-500/50', {
-      pulse: true
-    });
-    if (getNextTurnBuff('reflect', false)) chip('reflectNext', React.createElement(RefreshCcw, {
-      size: 9
-    }), '次反射', '', 'text-purple-400 border-purple-500/50', {
-      pulse: true
-    });
-    if (getTurnBuff('reflect', false)) chip('reflectNow', React.createElement(RefreshCcw, {
-      size: 9
-    }), '反射待機', '', 'text-purple-300 border-purple-400', {
-      pulse: true
-    });
-    if (getNextTurnBuff('takenDamageMult', 1.0) < 1) chip('takenNext', React.createElement(Shield, {
-      size: 9
-    }), '次T被ダメ', `-${Math.round((1 - getNextTurnBuff('takenDamageMult', 1.0)) * 100)}%`, 'text-pink-400 border-pink-500/50', {
-      pulse: true
-    });
-    if (getTurnBuff('takenDamageMult', 1.0) < 1) chip('takenNow', React.createElement(Shield, {
-      size: 9
-    }), '被ダメ', `-${Math.round((1 - getTurnBuff('takenDamageMult', 1.0)) * 100)}%`, 'text-pink-300 border-pink-400', {
-      pulse: true
-    });
-    if (getNextTurnBuff('gutsCostMult', 1.0) > 1) chip('costNext', React.createElement(Zap, {
-      size: 9
-    }), '次ターン消費ガッツ', `+${Math.round((getNextTurnBuff('gutsCostMult', 1.0) - 1) * 100)}%`, 'text-amber-400 border-amber-500/50', {
-      pulse: true
-    });
-    if (getTurnBuff('gutsCostMult', 1.0) > 1) chip('costNow', React.createElement(Zap, {
-      size: 9
-    }), '消費ガッツ', `+${Math.round((getTurnBuff('gutsCostMult', 1.0) - 1) * 100)}%`, 'text-amber-300 border-amber-400', {
-      pulse: true
-    });
+    const chips = battleBuffChips();
     if (!chips.length) return null;
     return React.createElement("div", {
       "data-battle-buffs": chips.length,
@@ -63974,6 +64125,7 @@ function BattleScreen({
     return React.createElement("button", {
       key: i,
       "data-slot-index": i,
+      "data-slot-assignable": pendingCard != null && canAssign ? 'true' : undefined,
       "data-tactics-ex-on": slotExInfo && slotExInfo.active && slotExInfo.def ? slotExInfo.def.effect || 'default' : undefined,
       "data-tactics-aimed": slotAimed ? 'true' : undefined,
       "data-distance-broken": distanceBroken ? 'true' : undefined,
@@ -63996,6 +64148,11 @@ function BattleScreen({
         } else if (pendingCard == null && !dragState?.active && tacticsExInfo && tacticsExInfo(i)) {
           setExPanelSlot(i);
           if (tacticsExIntroVisible && dismissTacticsExIntro) dismissTacticsExIntro();
+        } else if (pendingCard == null && !dragState?.active && battleTutorialStep == null && typeof battleUnitStatusOf === 'function' && battleUnitStatusOf(i)) {
+          setUnitDetail({
+            side: 'ally',
+            slot: i
+          });
         }
       },
       disabled: isBusy || autoBattle,
@@ -64905,6 +65062,30 @@ function BattleScreen({
     },
     onClick: e => e.stopPropagation()
   }, React.createElement("div", {
+    "data-unit-detail-tabs": true,
+    className: "mb-2 grid grid-cols-2 gap-1 rounded-xl bg-black/40 p-1"
+  }, [['ex', 'EXスキル'], ['status', '能力・効果']].map(([id, label]) => React.createElement("button", {
+    key: id,
+    type: "button",
+    "data-unit-detail-tab": id,
+    "aria-pressed": exTab === id,
+    onClick: () => setExTab(id),
+    className: `min-h-[34px] rounded-lg text-[12px] font-black active:scale-95 ${exTab === id ? 'bg-fuchsia-600 text-white' : 'text-slate-300'}`
+  }, label))), exTab === 'status' ? React.createElement("div", {
+    "data-tactics-unit-detail": exPanel.slot
+  }, React.createElement("div", {
+    className: "mb-2 break-words text-[16px] font-black leading-tight"
+  }, exPanel.monName), typeof battleUnitStatusOf === 'function' && React.createElement(BattleUnitDetailBody, {
+    side: "ally",
+    status: battleUnitStatusOf(exPanel.slot),
+    chips: battleBuffChips(),
+    marks: allyStackCounts[exPanel.slot]
+  }), React.createElement("button", {
+    type: "button",
+    "data-tactics-ex-close": true,
+    onClick: () => setExPanelSlot(null),
+    className: "mt-3 min-h-[44px] w-full rounded-xl border border-white/20 bg-slate-800 text-[13px] font-black text-slate-200 active:scale-95"
+  }, "閉じる")) : React.createElement(React.Fragment, null, React.createElement("div", {
     className: "flex items-center gap-2"
   }, React.createElement("span", {
     className: "shrink-0 rounded-md bg-fuchsia-600 px-1.5 py-0.5 text-[10px] font-black leading-none"
@@ -65048,7 +65229,18 @@ function BattleScreen({
       if (activateTacticsEx && activateTacticsEx(exPanel.slot)) setExPanelSlot(null);
     },
     className: `min-h-[44px] flex-[2] rounded-xl border-2 text-[14px] font-black active:scale-95 ${exPanel.check.ok ? 'border-fuchsia-300 bg-fuchsia-600 text-white shadow-[0_0_14px_rgba(217,70,239,.5)]' : 'border-slate-600 bg-slate-800 text-slate-500'}`
-  }, "EXスキルを使用")))), document.body), showBattleMenu && ReactDOM.createPortal(React.createElement("div", {
+  }, "EXスキルを使用"))))), document.body), unitDetail && (unitDetail.side === 'enemy' ? React.createElement(BattleUnitDetailPanel, {
+    side: "enemy",
+    status: typeof battleEnemyStatus === 'function' ? battleEnemyStatus() : null,
+    debuffs: enemyDebuffs,
+    onClose: () => setUnitDetail(null)
+  }) : React.createElement(BattleUnitDetailPanel, {
+    side: "ally",
+    status: typeof battleUnitStatusOf === 'function' ? battleUnitStatusOf(unitDetail.slot) : null,
+    chips: battleBuffChips(),
+    marks: allyStackCounts[unitDetail.slot],
+    onClose: () => setUnitDetail(null)
+  })), showBattleMenu && ReactDOM.createPortal(React.createElement("div", {
     className: "fixed inset-0 z-[70000] flex items-start justify-end bg-black/70 p-2",
     onClick: () => setShowBattleMenu(false)
   }, React.createElement("div", {
@@ -87621,6 +87813,67 @@ function MonsterHeroGame() {
     return (unit ? resolveEffectiveMaxStat(normalizeTacticsUnit(unit).def, getPermaBuff('defPct')) : effectiveDef) * trickMult;
   };
   const guardValueOf = (flat, mult, slotIdx = null) => flat > 0 || mult > 0 ? Math.floor(flat + guardDefFor(slotIdx) * mult) : 0;
+  const battleUnitStatusOf = slotIdx => {
+    const mon = Number.isInteger(slotIdx) ? slots[slotIdx] : null;
+    if (!mon) return null;
+    const tactics = isTacticsMode(runMode);
+    const u = tactics ? normalizeTacticsUnit(tacticsUnits[slotIdx]) : null;
+    if (tactics && !u) return null;
+    const exInfo = tactics ? tacticsExInfo(slotIdx) : null;
+    const exStats = exInfo && exInfo.stats && exInfo.stats.changed ? exInfo.stats : null;
+    const atkBase = tactics ? u.atk : atk;
+    const defBase = tactics ? u.def : def;
+    const atkNow = Math.floor((tactics ? exStats ? exStats.atk : u.atk : atk) * trickStartAtkMult(trickStartStacksAt(slotIdx)) * fateAtkMult(getPermaBuff('fateStacks', null), slotIdx));
+    const defNow = Math.floor((tactics ? resolveEffectiveMaxStat(exStats ? exStats.def : u.def, getPermaBuff('defPct')) : effectiveDef) * trickStartDefMult(trickStartStacksAt(tactics ? slotIdx : null)));
+    const aptPct = (getMonsterAptPct(mon, specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty), wave)[slotIdx] || 0) * 100;
+    const lines = [];
+    if (tactics && tacticsSlotAtkMult(slotIdx) > 1) lines.push({
+      key: 'myaru',
+      label: 'みゃるの薬',
+      value: `攻撃 ×${tacticsSlotAtkMult(slotIdx).toFixed(1)}`,
+      note: 'このターン'
+    });
+    if (exInfo && exInfo.active) lines.push({
+      key: 'ex',
+      label: `EX「${exInfo.def.name}」`,
+      value: exInfo.styleLabel || '効果中',
+      note: exInfo.remainText || exInfo.durationText || ''
+    });
+    return {
+      slot: slotIdx,
+      name: mon.masuName || mon.name,
+      imgUrl: mon.imgUrl || '',
+      tactics,
+      isHero: isHeroSlotMon(mon),
+      downed: !!(u && u.downed),
+      hp: tactics ? u.hp : hp,
+      maxHp: tactics ? u.maxHp : effectiveMaxHp,
+      baseMaxHp: tactics ? u.baseMaxHp : maxHp,
+      guts: tactics ? u.guts : guts,
+      maxGuts: tactics ? u.maxGuts : effectiveMaxGuts,
+      baseMaxGuts: tactics ? u.baseMaxGuts : maxGuts,
+      atk: {
+        now: atkNow,
+        base: atkBase
+      },
+      def: {
+        now: defNow,
+        base: defBase
+      },
+      aptPct: Math.round(aptPct * 10) / 10,
+      lines
+    };
+  };
+  const battleEnemyStatus = () => enemy ? {
+    name: enemy.name,
+    hp: Math.max(0, Number(enemy.hp) || 0),
+    maxHp: Math.max(0, Number(enemy.maxHp) || 0),
+    atk: {
+      now: Math.max(0, Math.floor(Number(enemy.atk) || 0)),
+      base: Number.isFinite(Number(enemy.atkBeforeRoar)) ? Math.floor(Number(enemy.atkBeforeRoar)) : Math.max(0, Math.floor(Number(enemy.atk) || 0))
+    },
+    dist: enemyDist
+  } : null;
   const tacticsSpreadGuardValue = slotIdx => {
     const halvedRate = cardEffectMultiplier({
       type: 'guard'
@@ -87785,7 +88038,8 @@ function MonsterHeroGame() {
       setEnemy(prev => prev ? {
         ...prev,
         hp: revived.hp,
-        atk: revived.atk
+        atk: revived.atk,
+        atkBeforeRoar: revived.atk
       } : prev);
       setEnemyRevivalReveal({
         revivalNumber: revived.revivalNumber,
@@ -87988,6 +88242,7 @@ function MonsterHeroGame() {
         const roarStacks = tacticsRoarStacksRef.current;
         setEnemy(prev => prev ? {
           ...prev,
+          atkBeforeRoar: Number.isFinite(Number(prev.atkBeforeRoar)) ? prev.atkBeforeRoar : Math.max(0, Number(prev.atk) || 0),
           atk: Math.floor(Math.max(0, Number(prev.atk) || 0) * TACTICS_ROAR_ATK_RATE),
           roarStacks
         } : prev);
@@ -103994,6 +104249,8 @@ function MonsterHeroGame() {
       tacticsCanAssign: tacticsCanAssign,
       tacticsCardBlock: tacticsCardBlock,
       enemyDebuffs: enemyDebuffs,
+      battleUnitStatusOf: battleUnitStatusOf,
+      battleEnemyStatus: battleEnemyStatus,
       enemyStackCounts: enemyStackCounts,
       debugStackMarks: debugStackMarks,
       tacticsSlotCountersAt: isTacticsMode(runMode) ? tacticsSlotCountersAt : null,
