@@ -25,10 +25,10 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
   // 保存は今あるキー(mh_hell_sky_hit_proto・mh_hell_sky_text_proto・mh_sky_lane_look_proto)をそのまま使い、値の意味も既定も変えない。
   // ほかの設定と同じく「保存」を押したときに書く(画面の上では下書き)
   const hellReleased=typeof rhythmHellReleased==='function'&&rhythmHellReleased();
-  const hellNow=()=>({hit:RHYTHM_HELL_SKY_HIT.id,text:RHYTHM_HELL_SKY_TEXT.id,lane:RHYTHM_SKY_LANE_LOOK.id,skyLine:RHYTHM_SKY_LINE_OFFSET.pct});
+  const hellNow=()=>({hit:RHYTHM_HELL_SKY_HIT.id,text:RHYTHM_HELL_SKY_TEXT.id,lane:RHYTHM_SKY_LANE_LOOK.id,skyLine:RHYTHM_SKY_LINE_OFFSET.pct,groundW:RHYTHM_ACCEPT_WIDTH.ground,skyW:RHYTHM_ACCEPT_WIDTH.sky});
   const [hellDraft,setHellDraft]=useState(hellNow);
   const [hellSaved,setHellSaved]=useState(hellNow);
-  const saveHell=()=>{if(!hellReleased)return;RHYTHM_HELL_SKY_HIT.set(hellDraft.hit);RHYTHM_HELL_SKY_TEXT.set(hellDraft.text);RHYTHM_SKY_LANE_LOOK.set(hellDraft.lane);RHYTHM_SKY_LINE_OFFSET.set(hellDraft.skyLine);const now=hellNow();setHellDraft(now);setHellSaved(now);};
+  const saveHell=()=>{if(!hellReleased)return;RHYTHM_HELL_SKY_HIT.set(hellDraft.hit);RHYTHM_HELL_SKY_TEXT.set(hellDraft.text);RHYTHM_SKY_LANE_LOOK.set(hellDraft.lane);RHYTHM_SKY_LINE_OFFSET.set(hellDraft.skyLine);RHYTHM_ACCEPT_WIDTH.set('ground',hellDraft.groundW);RHYTHM_ACCEPT_WIDTH.set('sky',hellDraft.skyW);const now=hellNow();setHellDraft(now);setHellSaved(now);};
   const previewRef=useRef(null);
   const scrollRef=useRef(null);
   // 【2026-09-13・ユーザー指摘】縦横ボタンで横にしたオプション画面のスクリーンショット。
@@ -201,7 +201,7 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
     範囲は演奏と同じ式(rhythmSkyAcceptLimitWith / rhythmGroundAcceptFromWith)で数える。案A の自動の動きは人によって演奏中に足されるので、見本には入れない */}
 {field('判定ラインの位置',(()=>{
               const L=1-(Number(draft.judgmentLineHeight)||0)/100,base=wide?.39:rhythmSkyLiftPortrait(),skyOn=hellReleased;
-              const ratio=rhythmSkyLiftWith(base,skyOn?hellDraft.skyLine:0),skyY=L-ratio,lim=rhythmSkyAcceptLimitWith(L,base,ratio,0),from=rhythmGroundAcceptFromWith(L,base);
+              const ratio=rhythmSkyLiftWith(base,skyOn?hellDraft.skyLine:0),skyY=L-ratio,lim=rhythmSkyAcceptLimitWith(L,base,ratio,0,skyOn?hellDraft.skyW:100),from=rhythmGroundAcceptFromWith(L,base,skyOn?hellDraft.groundW:100);
               const pct=v=>`${(Math.max(0,Math.min(1,v))*100).toFixed(2)}%`;
               return <div data-rhythm-line-position className="space-y-2">
                 <div data-rhythm-line-preview className={`relative mx-auto overflow-hidden rounded-xl border border-white/15 bg-slate-950 ${wide?'h-[120px] w-full':'h-[210px] w-[64%]'}`}>
@@ -219,10 +219,12 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
                   {skyOn&&<span><i className="mr-1 inline-block h-2 w-3 rounded-sm align-middle" style={{background:'repeating-linear-gradient(135deg,rgba(244,114,182,.8) 0 3px,rgba(34,211,238,.8) 3px 6px)'}}/>両方(近いほうを取る)</span>}
                 </p>
                 {stepper('judgmentLineHeight',RHYTHM_JUDGMENT_LINE_HEIGHT_MIN,RHYTHM_JUDGMENT_LINE_HEIGHT_MAX,RHYTHM_JUDGMENT_LINE_HEIGHT_STEP,{fine:RHYTHM_JUDGMENT_LINE_HEIGHT_STEP,coarse:RHYTHM_JUDGMENT_LINE_HEIGHT_STEP*4,suffix:'%',label:'地上の判定ライン(画面の下からの高さ)',slider:true})}
+                {skyOn&&stepper('groundW',RHYTHM_ACCEPT_WIDTH_MIN_PCT,100,RHYTHM_ACCEPT_WIDTH_STEP_PCT,{fine:RHYTHM_ACCEPT_WIDTH_STEP_PCT,coarse:RHYTHM_ACCEPT_WIDTH_STEP_PCT*2,suffix:'%',label:'地上を受け付ける範囲の広さ(線より上のはみ出し・100%が今の広さ)',source:hellDraft,onSet:v=>setHellDraft(d=>({...d,groundW:rhythmNormalizeAcceptWidth(v)})),slider:true})}
                 {skyOn&&stepper('skyLine',-RHYTHM_SKY_LINE_OFFSET_MAX_PCT,RHYTHM_SKY_LINE_OFFSET_MAX_PCT,RHYTHM_SKY_LINE_OFFSET_STEP_PCT,{fine:RHYTHM_SKY_LINE_OFFSET_STEP_PCT,coarse:2,suffix:'%',decimals:1,label:'空中の判定ライン(上が＋・0が今の位置)',source:hellDraft,onSet:v=>setHellDraft(d=>({...d,skyLine:rhythmNormalizeSkyLineOffset(v)})),slider:true})}
+                {skyOn&&stepper('skyW',RHYTHM_ACCEPT_WIDTH_MIN_PCT,100,RHYTHM_ACCEPT_WIDTH_STEP_PCT,{fine:RHYTHM_ACCEPT_WIDTH_STEP_PCT,coarse:RHYTHM_ACCEPT_WIDTH_STEP_PCT*2,suffix:'%',label:'空中を受け付ける範囲の広さ(線より下のはみ出し・100%が今の広さ)',source:hellDraft,onSet:v=>setHellDraft(d=>({...d,skyW:rhythmNormalizeAcceptWidth(v)})),slider:true})}
               </div>;
             })(),
-              'タップする判定ラインを、画面の下から何％の高さに置くかです。大きくするほど上へ上がり、指が届きやすくなります（12％が2026-09-13より前の位置です）。ノーツも弾ける光も判定文字も一緒に上がります。判定の幅（秒数）・スコア・譜面は変わりません。ただしレーンは奥へ行くほど狭くなるので、上げすぎると横の幅が狭く感じられます。'+(hellReleased?'\n空中の判定ライン(HELL)は、地上の判定ラインからの高さを上下にずらします。空中の線・空中のノーツ・空中を受け付ける範囲が一緒に動きます(地上を受け付ける範囲は変わりません)。上へずらしすぎると、空中を受け付ける範囲が地上の範囲に届いたところで止まります。地上の判定ラインを動かすと、空中の線も一緒に動きます。押す時刻(判定の幅)とスコアは変わりません。':''),{full:true})}
+              'タップする判定ラインを、画面の下から何％の高さに置くかです。大きくするほど上へ上がり、指が届きやすくなります（12％が2026-09-13より前の位置です）。ノーツも弾ける光も判定文字も一緒に上がります。判定の幅（秒数）・スコア・譜面は変わりません。ただしレーンは奥へ行くほど狭くなるので、上げすぎると横の幅が狭く感じられます。'+(hellReleased?'\n空中の判定ライン(HELL)は、地上の判定ラインからの高さを上下にずらします。空中の線・空中のノーツ・空中を受け付ける範囲が一緒に動きます(地上を受け付ける範囲は変わりません)。上へずらしすぎると、空中を受け付ける範囲が地上の範囲に届いたところで止まります。「受け付ける範囲の広さ」は、地上と空中の境目の側だけを狭めます(空中は線より下へのはみ出し、地上は線より上へのはみ出し。100%が今の広さで、50%まで)。狭めると、境目のあたりを押したときにもう一方のノーツを取り違えにくくなりますが、線から離れた所を押すと空振りになります。地上の判定ラインを動かすと、空中の線も一緒に動きます。押す時刻(判定の幅)とスコアは変わりません。':''),{full:true})}
 {/* 【2026-09-05・ユーザー指示】「ノーツの開始位置（奥行き）もオプションで調整できるようにしたい」 */}
 {field('ノーツの出る位置',stepper('noteStartPosition',-100,100,5,{fine:5,coarse:25}),
               'ノーツが画面のどのあたりから出てくるかを変えます。マイナスにすると奥（画面の上の外側）から、プラスにすると手前寄りから出てきます。判定ラインの位置・判定のタイミング・判定窓・スコアは変わりません。ノーツが流れてくる時間も変わらないので、手前から出すほど見えているあいだの動きは速く見えます。',{full:true})}
