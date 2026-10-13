@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1afcec3be7007801
+// generated-sha256: 790811bfbf0064ed
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-13 11:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-13 11:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -37116,7 +37116,8 @@ const BattleUnitDetailBody = ({ side, status, chips = [], marks = null, debuffs 
       </div>
     );
   }
-  const markRows = battleStackMarkItems(marks).map((it) => row(`mark-${it.kind}`, it.img ? <img src={it.img} alt="" className="inline h-3.5 w-3.5 object-contain" /> : it.mark, it.label,
+  // 数が0のもの(クッキー・黒音符の×0)は効いていないので、一覧には出さない(帯の札も0なら出さない。2026-10-13 窓口の指摘)
+  const markRows = battleStackMarkItems(marks).filter((it) => it.count > 0).map((it) => row(`mark-${it.kind}`, it.img ? <img src={it.img} alt="" className="inline h-3.5 w-3.5 object-contain" /> : it.mark, it.label,
     it.unit === 'T' ? `あと${it.count}ターン` : `×${it.count}`, ''));
   const own = (chips || []).filter((c) => c.owner === status.slot);
   const team = (chips || []).filter((c) => c.owner == null);
