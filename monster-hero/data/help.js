@@ -531,6 +531,7 @@ const HELP_CATEGORIES = [
         assistant:'MASTERのさらに上が HELL だよ。空から来るノーツは、上の判定ラインで叩いてね♪', expression:'happy',
         blocks:[
           {t:'p',text:'HELL は MASTER のさらに上の難易度です。地上のノーツに加えて、空のノーツ（SKY TAP・SKY SLIDE）が流れてきます。HELL がある曲だけ、曲えらびの難易度に HELL が並びます。'},
+          {t:'video',video:'play',title:'HELL のプレイ映像',text:'Grievous Lady の HELL を、ノーツの速さ10で最後まで遊んだときの終わりの20秒です。「音ありで見る」を押すと、曲といっしょに最初から流れます。'},
           {t:'steps',items:[
             'HELL がある曲で、MASTER を1回クリアする（ライフを残して最後まで遊ぶ）',
             'その曲の HELL が選べるようになる（開くのはクリアした曲の HELL だけ）',

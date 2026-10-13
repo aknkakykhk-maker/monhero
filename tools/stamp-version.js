@@ -114,6 +114,7 @@ const IMAGE_HOST_FILES = [
   'data/rhythm-event.js',
   'data/changelog.js',
   // 覚醒ムーの必殺技ムービー(movies/…mp4)。敵データの specialMovie から参照している
+  // (HELL の説明の動画 movies/hell-guide-*.mp4・.webm は data/rhythm-mode.js の RHYTHM_HELL_GUIDE_VIDEOS から)
   'data/enemy-monsters.js',
 ];
 let imageCount = 0, imageChanged = 0;
@@ -121,7 +122,7 @@ for (const rel of IMAGE_HOST_FILES) {
   const hostPath = path.join(REPO_ROOT, 'monster-hero', rel);
   if (!fs.existsSync(hostPath)) continue;
   const before = fs.readFileSync(hostPath, 'utf8');
-  const after = before.replace(/(["'])((?:images\/[^"'?]+\.(?:png|jpe?g|webp|PNG))|(?:movies\/[^"'?]+\.mp4))(?:\?v=[0-9a-f]*)?\1/g, (match, quote, imgRel) => {
+  const after = before.replace(/(["'])((?:images\/[^"'?]+\.(?:png|jpe?g|webp|PNG))|(?:movies\/[^"'?]+\.(?:mp4|webm)))(?:\?v=[0-9a-f]*)?\1/g, (match, quote, imgRel) => {
     const imgPath = path.join(REPO_ROOT, 'monster-hero', imgRel);
     if (!fs.existsSync(imgPath)) {
       console.error(`NG: ${rel} が参照している ${imgRel} が見つかりませんでした`);

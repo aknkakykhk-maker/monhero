@@ -57,6 +57,8 @@ const AssistantFace = ({ who, size = 88, accent, expression = null }) => {
 };
 // ヘルプ本文のブロックを描く。ヘルプ画面と助手の詳細で同じ見た目にするため1か所にまとめる
 const renderHelpBlocks = (blocks, accent) => (blocks || []).map((b, i) => {
+  // 動画(2026-10-13・HELL のプレイ映像)。video は data/rhythm-mode.js の RHYTHM_HELL_GUIDE_VIDEOS の名前。読めないときは見出しだけ残る
+  if(b.t==='video') return <div key={i} data-help-video className="rounded-2xl p-3 border" style={{borderColor:`${accent}55`,backgroundColor:'rgba(0,0,0,0.5)'}}>{b.title&&<div className="text-[11px] font-black text-white mb-2">{b.title}</div>}{typeof RhythmHellVideo==='function'&&<RhythmHellVideo id={b.video}/>}{b.text&&<div className="text-[12px] text-slate-300 leading-relaxed mt-2">{b.text}</div>}</div>;
   if(b.t==='note') return <div key={i} className="rounded-2xl p-4 border" style={{borderColor:`${accent}55`,backgroundColor:'rgba(0,0,0,0.5)'}}>{b.title&&<div className="text-[11px] font-black text-white mb-1">{b.title}</div>}<div className="text-[12px] text-slate-300 leading-relaxed">{b.text}</div></div>;
   if(b.t==='list') return <ul key={i} className="text-[12px] text-slate-300 leading-relaxed space-y-2 list-disc pl-5">{b.items.map((x,j)=><li key={j}>{x}</li>)}</ul>;
   if(b.t==='steps') return <div key={i} className="space-y-2.5">{b.items.map((x,j)=>(<div key={j} className="flex items-start gap-3"><span className="shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-black text-black" style={{backgroundColor:accent}}>{j+1}</span><span className="text-[12px] text-slate-300 leading-relaxed pt-0.5">{x}</span></div>))}</div>;
