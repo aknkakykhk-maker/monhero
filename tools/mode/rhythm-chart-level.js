@@ -352,7 +352,7 @@ const LEVEL_OVERRIDES=Object.freeze({
   sheriruth_hell_debug:Object.freeze({HELL:54}),
   grievous_lady_hell:Object.freeze({MASTER:60}),
   kaze_ga_soyogu_hell_debug:Object.freeze({HELL:23}),
-  // Against My Own Shadow の HELL は新しい式で測った 42 のまま公開した(2026-10-13 夜 社長「実装してオーケー」)。公開したので、式を直しても表示が動かないよう固定する
+  // Against My Own Shadow の HELL は新しい式で測った値(社長の体感42)。公開したので表示を固定する(2026-10-13)
   against_my_own_shadow_hell_debug:Object.freeze({HELL:42}),
   sheriruth_proto:Object.freeze({MASTER:47}),
 });

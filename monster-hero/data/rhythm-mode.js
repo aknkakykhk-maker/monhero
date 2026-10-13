@@ -26009,11 +26009,11 @@ const againstMyOwnShadowCharts=Object.freeze({
   EXPERT:mhChart(7,againstMyOwnShadowExpertNotes,AGAINST_MY_OWN_SHADOW_DURATION_MS,6),
   MASTER:mhChart(9,againstMyOwnShadowMasterNotes,AGAINST_MY_OWN_SHADOW_DURATION_MS,6),
 });
-// 6段目 HELL(空中のノーツあり・2026-10-13 社長「中くらいの HELL を作り始める」→ Against My Own Shadow)。2026-10-13 夜に公開(RHYTHM_HELL_CHARTS・社長「実装してオーケー」)。
+// 6段目 HELL(空中のノーツあり・2026-10-13 社長「中くらいの HELL を作り始める」→ Against My Own Shadow)。2026-10-13 社長「AMOSは実装してオーケー」で公開(RHYTHM_HELL_CHARTS)。
 // 2026-10-13 社長「ヘル用に作り直して」: MASTER を土台にせず、曲の解析から HELL 用に一から作る(rhythm-chart-v3-generate.js --difficulty HELL の骨組み)。
 // 地上と空中が混ざる形・左右の手のスライドが重なる所は上下に分かれた交差(上の帯が越える・水平クロス0)。
 // tools/mode/rhythm-hell-mix.js --song against_my_own_shadow --write で目印の内側と Lv. を書く(手で書き換えない)。
-// 公開曲の HELL(RHYTHM_HELL_CHARTS)と、デバッグ画面の試作の枠(RHYTHM_PROTO_SONGS の against_my_own_shadow_hell_debug)が同じものを指す
+// デバッグ画面の試作の枠(RHYTHM_PROTO_SONGS の against_my_own_shadow_hell_debug)と、公開の印の後ろの RHYTHM_HELL_CHARTS が同じ譜面を指す
 const againstMyOwnShadowHellNotes=((t,h,f,s,T,F,S)=>[
 // <against-my-own-shadow-v3-hell-notes>
   t(2442,5,3,0),t(2652,7,3,0),t(2861,5,3,0),t(2966,8,2,0),
@@ -29315,7 +29315,7 @@ const rhythmSongClimaxAt=(songId,ms)=>{const spans=RHYTHM_SONG_CLIMAX[songId];if
 // HELL を付ける曲はここに足す({曲id: 譜面})。レベルは譜面の値(試作の枠と同じ)
 // Grievous Lady は社長の最初の頼み(2026-10-11 8:55「Grievous Lady(ヘルあり)」)。外すときはこの1行から消す
 // 風がそよぐ場所は空中を覚える入口の HELL(2026-10-12 社長)
-// Against My Own Shadow は中くらいの HELL(2026-10-13 社長「AMOS の HELL は実装してオーケー」)。曲の解析から HELL 用に作った譜面
+// Against My Own Shadow は中くらいの HELL(2026-10-13 社長「AMOSは実装してオーケー」)
 const RHYTHM_HELL_CHARTS=Object.freeze({sheriruth:sheriruthHellChart,grievous_lady:grievousLadyHellChart,kaze_ga_soyogu:kazeGaSoyoguHellChart,against_my_own_shadow:againstMyOwnShadowHellChart});
 // HELL の説明の動画(2026-10-13 社長「ストーリー用にヘルの説明用の動画を撮って、動画で説明したい」)。ボットの自動演奏をノーツの速さ10で撮ったもの。
 // src は mp4(H.264・iPhone)、webm は VP9(Chrome など。どちらでも同じ中身)。説明(RHYTHM_HELL_GUIDE_PAGES の video)とヘルプ(help.js の {t:'video'})は、ここの名前で引く。撮り直したらファイルを替えるだけ(?v= は build が付ける)
@@ -29420,11 +29420,11 @@ const RHYTHM_PROTO_SONGS=Object.freeze([
   }),
   // Grievous Lady の HELL(2026-10-11・社長「MASTER で最高難度、HELL はそこに空中のぶんの難しさが乗るイメージ」)。社長がデバッグで見てから本番へ。
   // 参考譜面の空中を土台にした譜面(grievousLadyHellNotes)。流れの速さの演出と組は MASTER と同じ表
-  // 中くらいの HELL(2026-10-13 社長「今すぐ中くらいの HELL を作り始める」→ Against My Own Shadow)。音源は公開版と同じ。2026-10-13 夜に公開(公開曲の HELL と同じ譜面)
+  // 中くらいの HELL(2026-10-13 社長「今すぐ中くらいの HELL を作り始める」→ Against My Own Shadow)。音源は公開版と同じ。社長が確認してから公開を決める
   Object.freeze({
     songId:'against_my_own_shadow_hell_debug',
     displayName:'Against My Own Shadow',
-    subtitle:'HELL(6段目)',
+    subtitle:'HELL(6段目・中くらい)',
     debugDescription:'中くらいの HELL。MASTER の写しではなく、曲の解析から HELL 用に一から作った譜面(地上と空中が混ざる形・交差は上下に分ける)。遊んでも記録しない。',
     bgmTrackId:'melo_against_my_own_shadow',
     difficulties:Object.freeze(Object.fromEntries(RHYTHM_PLAY_DIFFICULTIES.map(({id})=>[
