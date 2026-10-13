@@ -35,6 +35,15 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    // 2026-10-13 社長「マルチでヘルがない」「マルチも通常と同じ仕様にして」
+    date: "2026-10-13 22:57", type:'update', group:'rhythm', title:'モンヒロビートのマルチでも HELL をえらべるようになりました', status:'new',
+    items:[
+      'フリーマッチとプライベートルームの難易度えらびで、HELL のある曲では HELL もえらべます。',
+      'えらべるのは、ひとりで遊ぶときと同じく、その曲の MASTER をクリアしているときです。まだのときは「MASTERで解放」と出ます。',
+      '空中のノーツ・判定・満点・ランク・自己ベストやランキングへの記録は、ひとりで遊ぶ HELL と同じです。',
+    ],
+  },
+  {
     // 2026-10-13 社長「AMOSは実装してオーケー」
     date: "2026-10-13 22:12", type:'update', group:'rhythm', title:'モンヒロビート：「Against My Own Shadow」に難易度 HELL が加わりました', status:'new',
     image:'images/song-art/against-my-own-shadow.jpg?v=2768a9055013',
