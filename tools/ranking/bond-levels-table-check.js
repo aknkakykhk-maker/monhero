@@ -121,7 +121,10 @@ async function openFirstDetail(page) {
   if (!clicked) return { clicked: false, text: '' };
   await page.waitForTimeout(1500);
   const text = await page.evaluate(() => {
-    const dlg = document.querySelector('[role="dialog"]');
+    // HELL の公開(2026-10-13)後は、起動時に「HELL の遊び方」の窓も role=dialog で出ているので、
+    // それを除いた最後の窓(いま開いた絆Lvの詳細)を見る
+    const dlg = [...document.querySelectorAll('[role="dialog"]')]
+      .filter(d => !d.closest('[data-rhythm-hell-guide]') && !d.querySelector('[data-rhythm-hell-guide]')).pop();
     return dlg ? dlg.innerText.replace(/\s+/g, ' ') : '';
   });
   return { clicked: true, text };
