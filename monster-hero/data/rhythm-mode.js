@@ -26011,12 +26011,12 @@ const againstMyOwnShadowHellNotes=((t,h,f,s,T,F,S)=>[
   t(3071,9,3,0),t(3280,7,3,0),t(3490,10,2,0),t(3595,7,4,0),
   t(3700,5,3,0),f(3909,8,4),t(4328,7,3,0),t(4433,8,4,0),
   h(4538,8,2,4957),t(5062,9,3,0),t(5481,5,3,0),t(5900,10,2,0),
-  t(6005,5,3,0),S(6215,7891,[[6215,4,2,0,0],[6424,4,2,0,0],[6529,4.5,2,0,0],[6634,5,2,0,0],[6739,4.498,2,0,0],[6843,4,3,0,0],[6948,4,3,0.25,0],[7053,5,3,0.5,0],[7158,5,2,0.75,0],[7263,5,3,1,0],[7891,5,2,1,0]],0,'R'),t(6948,6,4,0),t(7263,5,3,0),
+  t(6005,5,3,0),S(6215,7891,[[6215,4,2,0,0],[6424,4,2,0,0],[6529,4.5,2,0,0],[6634,5,2,0,0],[6739,4.498,2,0,0],[6843,4,3,0,0],[6948,4,3,0.25,0],[7053,5,3,0.5,0],[7158,5,2,0.75,0],[7263,5,3,1,0],[7891,5,2,1,0]],0,'R'),t(6948,3,4,0),t(7263,5,3,0),
   T(7996,8,2,1),T(8101,6,2,1),t(8206,3,4,0),T(8415,6,2,1),
   t(8415,2,2,0),T(8625,8,2,1),t(8625,4,2,0),T(8835,6,2,1),
   t(8835,2,2,0),T(9044,8,2,1),t(9044,4,2,0),t(9254,0,4,0),
-  h(9359,0,3,9883),t(10197,5,2,0),S(10302,11978,[[10302,1.5,3,0,0],[10930,3.5,2,0,0],[11454,3,2,0,0],[11978,3,2,0,0]],0,'L'),t(10721,5,3,0),
-  t(11140,5,3,0),t(11350,9,3,0),t(11559,9,3,0),t(12188,5,2,0),
+  h(9359,0,3,9883),t(10197,5,2,0),S(10302,11978,[[10302,1.5,3,0,0],[10930,3.5,2,0,0],[11454,3,2,0,0],[11978,3,2,0,0]],0,'L'),t(10721,10,2,0),
+  t(11140,10,2,0),t(11350,9,3,0),t(11559,9,3,0),t(12188,5,2,0),
   t(12188,1,2,0),t(12398,6,2,0),t(12398,2,2,0),t(12607,8,2,0),
   t(12607,4,2,0),t(12817,9,2,0),t(12817,5,2,0),t(13026,1,4,0),
   t(13131,0,2,0),t(13236,1,4,0),t(13341,4,2,0),t(13550,1,3,0),
@@ -26053,7 +26053,7 @@ const againstMyOwnShadowHellNotes=((t,h,f,s,T,F,S)=>[
   t(50124,9,3,0),h(50438,8,4,51381),t(51486,5,3,0),t(51800,8,2,0),
   t(51905,5,3,0),t(52115,3,4,0),h(52324,1,2,53791),t(52744,4,3,0),
   t(53163,4,3,0),t(53896,0,3,0),t(54001,1,3,0),S(54315,55259,[[54315,1.5,3,0,0],[54420,1,2,0,0],[54525,1,2,0,0],[54630,1,2,0.25,0],[54735,0,2,0.5,0],[54839,0,2,0.75,0],[54944,1,2,1,0],[55049,1.5,2,1,0],[55154,2.5,2,1,0],[55259,2.5,3,1,0]],0,'R'),
-  T(54735,0,3,1),t(55363,0,1,0),h(55678,1,2,56726),t(56935,8,3,0),
+  T(54735,3,3,1),t(55363,0,1,0),h(55678,1,2,56726),t(56935,8,3,0),
   t(56935,3,3,0),t(57250,0,2,0),h(57355,4,3,59031),t(57774,0,3,0),
   t(57983,8,2,0),t(58193,8,3,0),t(59136,0,2,0),t(59241,3,3,0),
   t(59346,1,4,0),t(59555,5,4,0),t(59660,7,4,0),t(59765,3,3,0),
@@ -26067,9 +26067,9 @@ const againstMyOwnShadowHellNotes=((t,h,f,s,T,F,S)=>[
   t(67310,6,2,0),t(67415,7,4,0),t(67624,8,3,0),t(67624,3,3,0),
   t(67834,6,2,0),t(67834,2,2,0),t(68044,8,2,0),t(68044,4,2,0),
   t(68253,6,2,0),t(68253,2,2,0),t(68568,6,2,0),t(68672,3,3,0),
-  h(68987,2,2,69930),t(69511,0,3,3),t(70035,0,2,0),t(70349,3,4,0),
+  h(68987,2,2,69930),t(69511,5,3,3),t(70035,0,2,0),t(70349,3,4,0),
   t(70663,6,2,0),S(70768,72445,[[70768,4,3,0,0],[70873,3,3,0,0],[70978,2,2,0,0],[71083,2,2,0,0],[71187,2,2,0.25,0],[71292,2.25,3,0.5,0],[71397,2.5,2,0.75,0],[71502,2.5,3,1,0],[71607,2.5,2,1,0],[71711,2.749,3,1,0],[71816,3,2,0.75,0],[71921,3,3,0.5,0],[72026,3,2,0.25,0],[72131,3.502,3,0,0],[72235,4,2,0,0],[72340,4.5,3,0,0],[72445,4,3,0,0]],0,'L'),T(71187,8,2,1),T(71397,9,3,1),
-  T(71607,9,3,1),T(71816,7,3,1),t(72655,7,3,0),t(72759,6,2,0),
+  T(71607,9,3,1),T(71816,9,3,1),t(72655,7,3,0),t(72759,6,2,0),
   t(72864,3,3,0),t(72969,1,3,0),t(73074,0,2,0),t(73283,3,3,0),
   t(73388,1,3,0),S(73493,74436,[[73493,2,3,0,0],[73598,0,2,0,0],[73912,0,2,0,0],[74017,0.5,2,0,0],[74226,0.5,2,0,0],[74331,0,2,0,0],[74436,0,3,0,0]],0,'L'),t(73912,2,2,0),t(74541,2,2,0),
   t(74750,4,2,0),t(74855,2,2,0),t(74960,3,3,0),t(75274,6,2,0),
@@ -26094,7 +26094,7 @@ const againstMyOwnShadowHellNotes=((t,h,f,s,T,F,S)=>[
   t(89317,7,3,0),t(89526,5,3,0),h(89631,7,2,90470),f(90050,10,2),
   t(90679,8,3,0),t(90679,3,3,0),t(90889,7,3,0),t(91203,5,3,0),
   t(91308,10,2,0),f(91518,9,3),f(91937,7,3,2),f(91937,2,3,1),
-  h(92146,8,2,93194),t(92566,9,3,4),t(93299,7,4,0),t(93404,6,2,0),
+  h(92146,8,2,93194),t(92566,4,3,4),t(93299,7,4,0),t(93404,6,2,0),
   S(93613,95290,[[93613,4,3,0,0],[93823,3,3,0,0],[94033,3,3,0,0],[94242,2.5,3,0,0],[95290,2.5,3,0,0]],0,'R'),S(94242,94871,[[94242,0,2,1,0],[94347,0,2,1,0],[94766,3.25,2,1,0],[94871,3.25,2,1,0]],0,'L'),t(95500,6,6,0),t(95919,6,3,0),
   t(95919,1,3,0),t(96338,5,3,0),t(96548,10,2,0),t(96757,7,3,0),
   t(96862,5,3,0),t(97176,9,3,0),h(97281,7,2,98958),t(97700,10,2,0),
@@ -33271,9 +33271,43 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   const SKY_PRESS_STOPS=line=>[[0,56,189,248,.05],[.42,56,189,248,.1],[.58,56,189,248,.24],[line-.14,125,211,252,.5],[line-.03,224,242,254,.74],[line,248,250,252,.9],[line+.04,56,189,248,.72],[1,37,99,235,.55]];
   const skyPressColor=(stops,t)=>{let a=stops[0],b=stops[stops.length-1];for(let k=1;k<stops.length;k++){if(t<=stops[k][0]){a=stops[k-1];b=stops[k];break;}}
     const u=b[0]>a[0]?Math.max(0,Math.min(1,(t-a[0])/(b[0]-a[0]))):0,mix=n=>a[n]+(b[n]-a[n])*u;return [Math.round(mix(1)),Math.round(mix(2)),Math.round(mix(3)),mix(4)];};
+  // 空中のサブレーンを、空中の判定線(t=line)から道の奥の端(t=0)まで、道の形(奥ほど細い)に沿って写す形(「奥まで」のときの押した光・叩いた光の柱で共用)。
+  // 横の位置は地上の判定ラインの道幅で測り、道のふち(0〜1)の内側へ収めてから、奥へ rhythmProjectionScale で細め、空中のノーツと同じ持ち上げ方(rhythmSkyLiftPx)で上げる。
+  // 描くたびにその場の道の形(判定ラインの高さ・道の幅・画面の大きさ)から作る。決め打ちの長さは使わない
+  // (2026-10-13 社長の iPhone「奥まで出ていない」「判定ラインより低い位置から出てる」。押した光が空中の判定線の上 0.22・下 0.06 だけだった)
+  const skyFarColumn=(left,right,slices)=>{
+    const line=RHYTHM_JUDGMENT_LINE_Y.ratio,sl=rhythmProjectionScale(line),rect={height:cssH};
+    if(!(sl>0)||!(right>left))return null;
+    const fl=Math.max(0,.5+(left-.5)/sl),fr=Math.min(1,.5+(right-.5)/sl);
+    if(!(fr>fl))return null;
+    const pts=[];
+    for(let k=0;k<=slices;k++){const t=line*(1-k/slices),s=rhythmProjectionScale(t);pts.push({t,l:(.5+(fl-.5)*s)*cssW,r:(.5+(fr-.5)*s)*cssW,y:t*cssH-rhythmSkyLiftPx(rect,t)});}
+    return pts;
+  };
   const drawSkyPress=()=>{
     if(!skyPressed.length||!(skyPressedAlpha>0)||!cssW||!cssH)return 0;
     const line=RHYTHM_JUDGMENT_LINE_Y.ratio,stops=SKY_PRESS_STOPS(line),slices=24,rect={height:cssH};
+    // 「奥まで」(既定): 地上の押した光と同じ色の段で、空中の判定線から道の奥の端まで。判定線より手前(下)には出さない
+    if(RHYTHM_HELL_SKY_HIT.id==='far'){
+      const seen=new Set();let painted=0;
+      touch();ctx.setTransform(dpr,0,0,dpr,0,0);
+      for(const value of skyPressed){
+        const index=Math.floor(Number(value));
+        if(!Number.isFinite(index)||index<0||index>=RHYTHM_MAX_SUB_LANE_WIDTH||seen.has(index))continue;
+        seen.add(index);
+        const span=rhythmProjectSubLaneRange(index,1,line),pts=skyFarColumn(span.left,span.left+span.width,slices);
+        if(!pts)continue;
+        // pts[0] が空中の判定線、pts[slices] が道の奥の端。区切りごとに色を変えた台形を重ねる(WebGL・どの canvas でも同じに描ける)
+        for(let k=1;k<pts.length;k++){
+          const a=pts[k-1],b=pts[k],c=skyPressColor(stops,(a.t+b.t)/2);
+          ctx.globalAlpha=skyPressedAlpha*c[3];ctx.fillStyle=`rgb(${c[0]},${c[1]},${c[2]})`;
+          ctx.beginPath();ctx.moveTo(a.l,a.y);ctx.lineTo(a.r,a.y);ctx.lineTo(b.r,b.y);ctx.lineTo(b.l,b.y);ctx.closePath();ctx.fill();
+        }
+        painted++;
+      }
+      ctx.globalAlpha=1;
+      return painted;
+    }
     const wallL=rhythmProjectBoundary(0,line)*cssW,wallR=rhythmProjectBoundary(RHYTHM_LANE_COUNT,line)*cssW;
     const seen=new Set();let painted=0;
     touch();ctx.setTransform(dpr,0,0,dpr,0,0);
@@ -33496,27 +33530,27 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   // 地上の判定ラインの道幅で測った位置を空中のノーツと同じ持ち上げ方(rhythmSkyLiftPx)で奥へ写した台形の帯へ塗る。
   // 形と色の段は光ごとに1回だけ作る(道の幅・画面の大きさ・高さが変わったら作り直す)
   const FAR_BEAM_SLICES=12;
-  const drawFarBeam=(h,alpha,hitY)=>{
-    const line=RHYTHM_JUDGMENT_LINE_Y.ratio,sl=rhythmProjectionScale(line);
-    if(!(sl>0)||!(alpha>.002))return;
-    const key=`${cssW}|${cssH}|${hitY}|${RHYTHM_ROAD_WIDTH.factor}`;
-    if(h._farKey!==key){
-      // 光の幅はレーンより少し広い(×1.15)ので、道のふち(0〜1)の内側へ収める
-      const rect={height:cssH},fl=Math.max(0,.5+(h.center-h.width/2-.5)/sl),fr=Math.min(1,.5+(h.center+h.width/2-.5)/sl),off=hitY-(line*cssH-rhythmSkyLiftPx(rect,line));
-      const pts=[];
-      for(let k=0;k<=FAR_BEAM_SLICES;k++){const t=line*(1-k/FAR_BEAM_SLICES),s=rhythmProjectionScale(t);pts.push({l:(.5+(fl-.5)*s)*cssW,r:(.5+(fr-.5)*s)*cssW,y:t*cssH-rhythmSkyLiftPx(rect,t)+off});}
-      const top=pts[pts.length-1].y,g=ctx.createLinearGradient(0,hitY,0,top);
+  const drawFarBeam=(h,alpha)=>{
+    if(!(alpha>.002))return;
+    // 形は描くたびに、その場の道の形から作る(skyFarColumn)。下の端は空中の判定線そのもの(判定線より下へは出さない)。
+    // 光の幅はレーンより少し広い(×1.15)ので、道のふち(0〜1)の内側へ収める(skyFarColumn の中)
+    const pts=skyFarColumn(h.center-h.width/2,h.center+h.width/2,FAR_BEAM_SLICES);
+    if(!pts)return;
+    const bottom=pts[0].y,top=pts[pts.length-1].y;
+    if(h._farTop!==top||h._farBottom!==bottom){
+      const g=ctx.createLinearGradient(0,bottom,0,top);
       const base=hitFilter(hitRgba(h.color),h.filter.beam),white=hitFilter([255,255,255,.32],h.filter.beam);
-      // 色は道の7割まで残し、奥の端にも薄い光を残す(2026-10-13 社長「奥までに設定しても奥まで出ていない」。
-      // それまでは4割で白へ移り、奥の端で0になっていたので、スマホでは奥の半分がほとんど見えなかった)
+      // 色は道の7割まで残し、奥の端にも薄い光を残す(2026-10-13 社長「奥までに設定しても奥まで出ていない」)
       [0,1/3,2/3,1].forEach(u=>g.addColorStop(.7*u,hitText(hitPremulMix(base,white,u))));
       g.addColorStop(1,hitText([white[0],white[1],white[2],.14]));
-      h._farKey=key;h._farPts=pts;h._farFill=g;
+      h._farTop=top;h._farBottom=bottom;h._farFill=g;
     }
-    const pts=h._farPts;
+    // 1枚の多角形(左のふちを奥へ・右のふちを手前へ)で塗る。区切りの継ぎ目が出ない
     ctx.setTransform(dpr,0,0,dpr,0,0);ctx.globalAlpha=Math.min(1,alpha);ctx.fillStyle=h._farFill;
-    for(let k=1;k<pts.length;k++){const a=pts[k-1],b=pts[k];
-      ctx.beginPath();ctx.moveTo(a.l,a.y);ctx.lineTo(a.r,a.y);ctx.lineTo(b.r,b.y);ctx.lineTo(b.l,b.y);ctx.closePath();ctx.fill();}
+    ctx.beginPath();ctx.moveTo(pts[0].l,pts[0].y);
+    for(let k=1;k<pts.length;k++)ctx.lineTo(pts[k].l,pts[k].y);
+    for(let k=pts.length-1;k>=0;k--)ctx.lineTo(pts[k].r,pts[k].y);
+    ctx.closePath();ctx.fill();
   };
   const drawOneHit=(h,p,hitY,elapsed=0)=>{
     const W=h.width*cssW,cx=h.center*cssW,left=cx-W/2;
@@ -33535,7 +33569,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     }
     // 立ち上がる光の柱(判定ラインから上へ、道の4割ほど。96〜200px。CSS の clamp(96px,34vh,200px) とそろえる)
     f=hitFrame(h.big?HIT_KEYS.beamBig:HIT_KEYS.beam,p);
-    if(f.o>.002&&h.far)drawFarBeam(h,f.o,hitY);
+    if(f.o>.002&&h.far)drawFarBeam(h,f.o);
     else if(f.o>.002){
       const BH=h.finish?Math.max(120,Math.min(260,hitY*.56)):Math.max(96,Math.min(200,hitY*.42));
       ctx.globalAlpha=Math.min(1,f.o);hitTransform(cx,hitY,f.sx,f.sy);

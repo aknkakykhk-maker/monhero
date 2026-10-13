@@ -3992,6 +3992,27 @@ if(ending&&ending.active){
     (r.notice||(r.notice=[])).push(`スライドの曲線: ${eased.notes}本・${eased.segments}区間`+(eased.reverted?`（重なるので直線へ戻した ${eased.reverted}本）`:''));
   }
 }
+// 押さえている帯の中(同じ高さで重なる・幅1が絡む半レーン)にノーツを置かない(2026-10-13 社長「ホールド・スライド中に同じところにノーツを出すのはやめたほうがいい」)。
+//   新しい曲だけに効く。決まりより前からある曲(rhythm-held-band-existing.json の tracks)は、作る譜面を1つも変えない
+//   (--held-band-rule を付けると前からある曲にも効かせて出せる。確かめる用・公開中の譜面は書き換えない)。
+//   置き直し方は共通の物差し(rhythm-chart-hand-rules.js の fixHeldBand): 時刻はそのまま、帯を押さえていない手の側へ。入らないものは取り除く(モンスターノーツは左右を反対側へ写す)
+{
+  const existing=JSON.parse(fs.readFileSync(path.join(__dirname,'rhythm-held-band-existing.json'),'utf8')).tracks||[];
+  if(!existing.includes(trackId)||process.argv.includes('--held-band-rule')){
+    const {fixHeldBand}=require('./rhythm-chart-hand-rules.js'),K=100;
+    for(const difficulty of targets){
+      const r=results[difficulty];
+      const rt=r.notes.map(n=>{const o={type:n.type,timeMs:n.grid*K,lane:n.lane,subLane:n.subLane,subLaneWidth:n.subLaneWidth};
+        if(n.type==='HOLD'){o.endTimeMs=(n.grid+(Number(n.durationGrids)||0))*K;if(Array.isArray(n.holdPoints))o.holdPoints=n.holdPoints.map(p=>({timeMs:p.grid*K,subLane:p.subLane,subLaneWidth:p.subLaneWidth}));}
+        if(n.type==='SLIDE'){const pts=n.slidePoints||[];o.endTimeMs=(pts.length?pts[pts.length-1].grid:n.grid+(Number(n.durationGrids)||0))*K;o.slidePoints=pts.map(p=>({timeMs:p.grid*K,lane:p.lane,subLaneWidth:p.subLaneWidth}));}
+        Object.defineProperty(o,'src',{value:n});return o;});
+      const res=fixHeldBand(rt,{lanes:SUB_LANES,canRemove:o=>!o.src.monsterSlot,canMirror:o=>!!o.src.monsterSlot});
+      for(const o of rt)if((o.type==='TAP'||o.type==='FLICK')&&(o.src.subLane!==o.subLane||o.src.subLaneWidth!==o.subLaneWidth)){o.src.subLane=o.subLane;o.src.subLaneWidth=o.subLaneWidth;o.src.lane=Math.floor(o.subLane/2);}
+      if(res.removed.length){const gone=new Set(res.removed.map(o=>o.src));r.notes=r.notes.filter(n=>!gone.has(n));}
+      if(res.moved||res.removed.length||res.mirrored||res.left)(r.notice||(r.notice=[])).push(`押さえている帯の中のノーツ: 帯の外へ${res.moved}個・取り除き${res.removed.length}個・左右を写す${res.mirrored}個`+(res.left?`・直せず${res.left}個(検査が止める)`:''));
+    }
+  }
+}
 if(results.MASTER){
   // 払う指の動きで向きを決める(自動修正がレーンを動かしたあと、step7 でも同じ決め方で付け直す)
   const r=results.MASTER,side=assignSideFlickDirs(r.notes,timing);
