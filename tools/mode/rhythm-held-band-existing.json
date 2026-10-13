@@ -46,7 +46,7 @@
   "toriko",
   "wrath_of_the_thorn_king"
  ],
- "chartsNote": "この日の時点で置かない形が残っている譜面と件数(公開中の譜面は変えない・直すかは社長が決める。Grievous Lady HELL は 2026-10-13 に直して0)。検査はこれを上限に見る。ここに無い譜面は0件でなければならない",
+ "chartsNote": "この日の時点で置かない形が残っている譜面と件数(公開中の譜面は変えない・直すかは社長が決める。Grievous Lady HELL・Against My Own Shadow の EXPERT と MASTER は 2026-10-13 に直して0)。検査はこれを上限に見る。ここに無い譜面は0件でなければならない",
  "charts": {
   "width_test/EXPERT": 1,
   "monster_hero_theme_candidate_v2/EXPERT": 2,
@@ -126,8 +126,6 @@
   "sheriruth/HARD": 1,
   "grievous_lady/HARD": 2,
   "grievous_lady/EXPERT": 6,
-  "grievous_lady/MASTER": 7,
-  "against_my_own_shadow/EXPERT": 23,
-  "against_my_own_shadow/MASTER": 16
+  "grievous_lady/MASTER": 7
  }
 }

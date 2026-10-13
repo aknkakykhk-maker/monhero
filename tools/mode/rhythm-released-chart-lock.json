@@ -194,8 +194,8 @@
   "against_my_own_shadow/easy": "00f9a099a1032c06",
   "against_my_own_shadow/normal": "943a5232253b15a6",
   "against_my_own_shadow/hard": "ed91a70ce36c7cd8",
-  "against_my_own_shadow/expert": "d65b891331b3df8c",
-  "against_my_own_shadow/master": "d3307acba6c515fd",
+  "against_my_own_shadow/expert": "89b559b705dbbc28",
+  "against_my_own_shadow/master": "b8b108bc93a5789d",
   "grievous_lady/easy": "cfa4eb1fdc8a6145",
   "grievous_lady/normal": "bb395c39cce17651",
   "grievous_lady/hard": "406cee60ab2fb116",
@@ -249,6 +249,14 @@
     "sheriruth/hard",
     "sheriruth/expert",
     "sheriruth/master"
+   ]
+  },
+  {
+   "at": "2026-10-13 23:04",
+   "reason": "2026-10-13 社長の決定: Against My Own Shadow の EXPERT・MASTER の押さえている帯の中のノーツ(EXPERT 23・MASTER 16)を、時刻・幅・ノーツ数はそのまま帯の外へ置き直す",
+   "changed": [
+    "against_my_own_shadow/expert",
+    "against_my_own_shadow/master"
    ]
   }
  ]
