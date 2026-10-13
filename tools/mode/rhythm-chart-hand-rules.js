@@ -135,6 +135,22 @@ const flatCross=notes=>{const out=[],longs=(notes||[]).filter(isLong);
         if(la===lb)out.push({at:t,side:centerAt(a,t)<3?'L':'R',level:la?'空中どうし':'地上どうし',pair:`${a.type} ${a.timeMs}〜${endOf(a)} × ${b.type} ${b.timeMs}〜${endOf(b)}`});}
       if(sg)prev=sg;}}
   return out.sort((x,y)=>x.at-y.at);};
+// 押さえている帯の中のノーツ(2026-10-13 社長「地上ホールドなどと同じ位置に通常ノーツが来る。物理的に押せないから直したほうがいい」)。
+//   長押し(HOLD・SLIDE)を押さえている最中(始まりと終わりの間)に、同じ高さで、その時刻の帯の幅と横に重なる位置へ別のノーツ(タップ・フリック・別の長押しの始まり)が来る所。
+//   帯の上には押さえている親指が乗っているので、もう片方の親指はそこへ入れない。高さが違えば(空中の線と地上の線)別の場所なので数えない。
+//   幅はレーン単位(サブレーン2つで1レーン)。HELL では0にする(rhythm-hell-mix.js が作らない・rhythm-chart-hand-rules-check.js が見張る)
+const widthAt=(n,at)=>{const pts=pointsOf(n),w=p=>num(p&&p.subLaneWidth!=null?p.subLaneWidth:undefined,num(n.subLaneWidth,2))/2;
+  if(!pts||!pts.length)return w(null);let p=pts[0];for(const q of pts)if(q.timeMs<=at+0.5)p=q;return w(p);};
+const spanAt=(n,at)=>{const c=centerAt(n,at),w=widthAt(n,at);return [c-w/2,c+w/2];};
+const onHeldBand=notes=>{const out=[],list=(notes||[]).filter(n=>n&&Number.isFinite(n.timeMs)),longs=list.filter(isLong);
+  for(const h of longs){const a=h.timeMs,b=endOf(h);
+    for(const n of list){if(n===h||n.timeMs<=a+SAME_TIME_MS||n.timeMs>=b-SAME_TIME_MS)continue;
+      if(levelAt(h,n.timeMs)!==levelAt(n,n.timeMs))continue;
+      const [h0,h1]=spanAt(h,n.timeMs),[n0,n1]=spanAt(n,n.timeMs),overlap=Math.min(h1,n1)-Math.max(h0,n0);
+      if(overlap>1e-6)out.push({at:n.timeMs,side:sideAt(n,n.timeMs),type:n.type,note:n,level:levelAt(n,n.timeMs)?'空中':'地上',
+        lanes:`${n0.toFixed(2)}〜${n1.toFixed(2)}`,held:`${h.type} ${a}〜${b}`,heldNote:h,heldSpan:[h0,h1],heldLanes:`${h0.toFixed(2)}〜${h1.toFixed(2)}`,overlap:Math.round(overlap*100)/100});}}
+  return out.sort((x,y)=>x.at-y.at);};
+const ON_HELD_BAND_LABEL='押さえている帯の中(同じ高さで横に重なる位置)に別のノーツ(HELL は0にする)';
 const FLAT_CROSS_LABEL='同じ高さのまま左右が入れ替わる(水平クロス・HELL は0にする)';
 const RULES={sideHeightSwitch,skyAfterGround,besideHeldBand,fastSameSide,heldHandSwitch};
 const RULE_LABELS={sideHeightSwitch:`同じ側で${SIDE_GAP_MS}ms以内に高さが変わる`,skyAfterGround:`同じ側の地上から${SKY_RAISE_MS}ms以内に空中`,
@@ -142,7 +158,7 @@ const RULE_LABELS={sideHeightSwitch:`同じ側で${SIDE_GAP_MS}ms以内に高さ
 const analyze=notes=>Object.fromEntries(Object.entries(RULES).map(([k,f])=>[k,f(notes||[])]));
 const countsOf=notes=>Object.fromEntries(Object.entries(analyze(notes)).map(([k,v])=>[k,v.length]));
 
-module.exports={flatCross,hasSky,FLAT_CROSS_LABEL,SIDE_GAP_MS,SKY_RAISE_MS,FAST_SAME_SIDE_MS,centerAt,sideAt,levelAt,eventsOf,handEventsOf,heldHandSwitch,sideHeightSwitch,skyAfterGround,besideHeldBand,fastSameSide,RULES,RULE_LABELS,analyze,countsOf};
+module.exports={flatCross,hasSky,FLAT_CROSS_LABEL,onHeldBand,spanAt,ON_HELD_BAND_LABEL,SIDE_GAP_MS,SKY_RAISE_MS,FAST_SAME_SIDE_MS,centerAt,sideAt,levelAt,eventsOf,handEventsOf,heldHandSwitch,sideHeightSwitch,skyAfterGround,besideHeldBand,fastSameSide,RULES,RULE_LABELS,analyze,countsOf};
 
 if(require.main===module){
   const args=process.argv.slice(2),argOf=k=>{const i=args.indexOf(k);return i>=0?args[i+1]:undefined;};
@@ -158,5 +174,6 @@ if(require.main===module){
   for(const d of diffs){const c=song.difficulties[d];if(!c)continue;const res=analyze(c.notes);
     console.log(`== ${song.songId}/${d}`);
     if(hasSky(c.notes)){const fc=flatCross(c.notes);console.log(`  ${FLAT_CROSS_LABEL}: ${fc.length}件`+(fc.length?' — '+fc.slice(0,12).map(x=>`${(x.at/1000).toFixed(2)}(${x.level})`).join(' '):''));}
+    {const ob=onHeldBand(c.notes);console.log(`  ${ON_HELD_BAND_LABEL}: ${ob.length}件`+(ob.length?' — '+ob.slice(0,12).map(x=>`${(x.at/1000).toFixed(3)} ${x.type} ${x.level} ${x.lanes}(押さえ ${x.held} ${x.heldLanes})`).join(' / '):''));}
     for(const [k,list] of Object.entries(res))console.log(`  ${RULE_LABELS[k]}: ${list.length}件`+(list.length?' — '+list.slice(0,12).map(x=>`${(x.at/1000).toFixed(2)}${x.side}`+(x.gapMs!=null?`(${x.gapMs})`:'')).join(' ')+(list.length>12?' …':''):''));}
 }
