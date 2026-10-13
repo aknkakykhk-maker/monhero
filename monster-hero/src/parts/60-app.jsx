@@ -11233,6 +11233,48 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   };
   const guardValueOf = (flat, mult, slotIdx = null) =>
     (flat > 0 || mult > 0) ? Math.floor(flat + guardDefFor(slotIdx) * mult) : 0;
+  // ★バトル中にモンスターを押したときの詳細(2026-10-13 社長の依頼「モンスターをタップすると能力含め詳細バフも見れるように」)。
+  //   いまの値はダメージの計算と同じ関数・同じ掛け算から作る(手で書き写さない)。
+  //   ちから … 攻撃の計算(attackerAtk)と同じ「その子のちから × トリックスタート × 運命」。
+  //   丈夫さ … 被ダメージ・ガードの計算(guardDefFor)と同じ「丈夫さ+% × トリックスタート」。
+  //   画面に出すものなので、EXの力・丈夫さは詳細パネル(tacticsExInfo)と同じく描いている時点の状態から読む。
+  //   与ダメの倍率(攻撃力+%・Boost など)は、強化の札の一覧を画面側でそのまま並べる
+  const battleUnitStatusOf = (slotIdx) => {
+    const mon = Number.isInteger(slotIdx) ? slots[slotIdx] : null;
+    if (!mon) return null;
+    const tactics = isTacticsMode(runMode);
+    const u = tactics ? normalizeTacticsUnit(tacticsUnits[slotIdx]) : null;
+    if (tactics && !u) return null;
+    const exInfo = tactics ? tacticsExInfo(slotIdx) : null;
+    const exStats = exInfo && exInfo.stats && exInfo.stats.changed ? exInfo.stats : null;
+    const atkBase = tactics ? u.atk : atk;
+    const defBase = tactics ? u.def : def;
+    const atkNow = Math.floor((tactics ? (exStats ? exStats.atk : u.atk) : atk)
+      * trickStartAtkMult(trickStartStacksAt(slotIdx)) * fateAtkMult(getPermaBuff('fateStacks', null), slotIdx));
+    const defNow = Math.floor((tactics ? resolveEffectiveMaxStat(exStats ? exStats.def : u.def, getPermaBuff('defPct')) : effectiveDef)
+      * trickStartDefMult(trickStartStacksAt(tactics ? slotIdx : null)));
+    const aptPct = (getMonsterAptPct(mon, specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty), wave)[slotIdx] || 0) * 100;
+    // その子だけに効いている、強化の札に出ないもの(みゃるの薬の攻撃バフ・EXスキル)
+    const lines = [];
+    if (tactics && tacticsSlotAtkMult(slotIdx) > 1) lines.push({ key: 'myaru', label: 'みゃるの薬', value: `攻撃 ×${tacticsSlotAtkMult(slotIdx).toFixed(1)}`, note: 'このターン' });
+    if (exInfo && exInfo.active) lines.push({ key: 'ex', label: `EX「${exInfo.def.name}」`, value: exInfo.styleLabel || '効果中', note: exInfo.remainText || exInfo.durationText || '' });
+    return {
+      slot: slotIdx, name: mon.masuName || mon.name, imgUrl: mon.imgUrl || '', tactics, isHero: isHeroSlotMon(mon),
+      downed: !!(u && u.downed),
+      hp: tactics ? u.hp : hp, maxHp: tactics ? u.maxHp : effectiveMaxHp, baseMaxHp: tactics ? u.baseMaxHp : maxHp,
+      guts: tactics ? u.guts : guts, maxGuts: tactics ? u.maxGuts : effectiveMaxGuts, baseMaxGuts: tactics ? u.baseMaxGuts : maxGuts,
+      atk: { now: atkNow, base: atkBase }, def: { now: defNow, base: defBase },
+      aptPct: Math.round(aptPct * 10) / 10, lines,
+    };
+  };
+  // 敵の詳細の能力。攻撃力は咆哮で上がる前の値(atkBeforeRoar)を元の値として添える。
+  //   ★敵の baseAtk は図鑑の素の値(難易度で掛ける前)なので使わない。咆哮していなければ元の値=いまの値
+  const battleEnemyStatus = () => (enemy ? {
+    name: enemy.name, hp: Math.max(0, Number(enemy.hp) || 0), maxHp: Math.max(0, Number(enemy.maxHp) || 0),
+    atk: { now: Math.max(0, Math.floor(Number(enemy.atk) || 0)),
+      base: Number.isFinite(Number(enemy.atkBeforeRoar)) ? Math.floor(Number(enemy.atkBeforeRoar)) : Math.max(0, Math.floor(Number(enemy.atk) || 0)) },
+    dist: enemyDist,
+  } : null);
   // ★全体ガード(2体以上が別々に構えた)のとき、構えていない子にも付くガード力。
   //   計算はクラシックと同じ「固定値 + その子の丈夫さ × ガード段階の倍率」だが、
   //   **2枚目以降のカードと同じ半減**がかかる(2026-09-22 ユーザー指示
@@ -11398,7 +11440,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       enemyRevivedHpRef.current=revived.hp;
       setEnemySkillName(null);
       Audio_.se.enemySpecial();
-      setEnemy(prev=>prev?{...prev,hp:revived.hp,atk:revived.atk}:prev);
+      setEnemy(prev=>prev?{...prev,hp:revived.hp,atk:revived.atk,atkBeforeRoar:revived.atk}:prev); // 復活後の攻撃力を、詳細に出す元の値にもする
       setEnemyRevivalReveal({revivalNumber:revived.revivalNumber,remaining:revived.remaining});
       addPopup('死者の再起！','enemy','text-slate-100 font-black text-3xl drop-shadow-[0_0_18px_rgba(148,163,184,0.9)]');
       triggerShake(true);
@@ -11582,7 +11624,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         //   ポップアップは一瞬で消えるので、いま何回かかっているかが分からなかった。
         //   ここで一緒に入れておけば、強化の札とSCANが同じ値を出せる
         const roarStacks = tacticsRoarStacksRef.current;
-        setEnemy(prev=>prev?{...prev,atk:Math.floor(Math.max(0,Number(prev.atk)||0)*TACTICS_ROAR_ATK_RATE),roarStacks}:prev);
+        setEnemy(prev=>prev?{...prev,atkBeforeRoar:Number.isFinite(Number(prev.atkBeforeRoar))?prev.atkBeforeRoar:Math.max(0,Number(prev.atk)||0),atk:Math.floor(Math.max(0,Number(prev.atk)||0)*TACTICS_ROAR_ATK_RATE),roarStacks}:prev);
         addPopup(`咆哮！ 敵の攻撃が上がった（${roarStacks}回目）`,'enemy','text-orange-300 font-black text-xl drop-shadow-md');
         triggerShake(true);
         await battleWait(1100);
@@ -20348,7 +20390,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             setShowQuitConfirm={setShowQuitConfirm} setShowSoulBattleEffects={setShowSoulBattleEffects}
             setSkillPicker={setSkillPicker} setSlotSettle={setSlotSettle} slotMaxUses={slotMaxUses}
             slotSettle={slotSettle} slotSkill={slotSkill} slotUniqueChoice={slotUniqueChoice} slots={slots}
-            tacticsUnits={isTacticsMode(runMode)?tacticsUnits:null} tacticsCanAssign={tacticsCanAssign} tacticsCardBlock={tacticsCardBlock} enemyDebuffs={enemyDebuffs} enemyStackCounts={enemyStackCounts} debugStackMarks={debugStackMarks} tacticsSlotCountersAt={isTacticsMode(runMode)?tacticsSlotCountersAt:null} discardCards={discardCards} actionUsed={actionUsed} tacticsSlotFx={tacticsSlotFx} tacticsCardGenre={cardGenreLabel} tacticsCardScope={cardScopeLabel}
+            tacticsUnits={isTacticsMode(runMode)?tacticsUnits:null} tacticsCanAssign={tacticsCanAssign} tacticsCardBlock={tacticsCardBlock} enemyDebuffs={enemyDebuffs} battleUnitStatusOf={battleUnitStatusOf} battleEnemyStatus={battleEnemyStatus} enemyStackCounts={enemyStackCounts} debugStackMarks={debugStackMarks} tacticsSlotCountersAt={isTacticsMode(runMode)?tacticsSlotCountersAt:null} discardCards={discardCards} actionUsed={actionUsed} tacticsSlotFx={tacticsSlotFx} tacticsCardGenre={cardGenreLabel} tacticsCardScope={cardScopeLabel}
             soulBattleParty={soulBattleParty} soulCoordinationCardBonus={soulCoordinationCardBonus}
             suppressCardClickRef={suppressCardClickRef} teachingFx={teachingFx} totalTurnCount={totalTurnCount}
             turnCount={turnCount} ultimateDistanceBreakLevels={ultimateDistanceBreakLevels}
