@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 49430873f12c2923
+// source-sha256: 40a5c45852c68e78
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-13 12:09";
+const BUILD_DATE = "2026-10-13 12:46";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -16106,6 +16106,21 @@ const AssistantFace = ({
   }, who.emoji));
 };
 const renderHelpBlocks = (blocks, accent) => (blocks || []).map((b, i) => {
+  if (b.t === 'video') return React.createElement("div", {
+    key: i,
+    "data-help-video": true,
+    className: "rounded-2xl p-3 border",
+    style: {
+      borderColor: `${accent}55`,
+      backgroundColor: 'rgba(0,0,0,0.5)'
+    }
+  }, b.title && React.createElement("div", {
+    className: "text-[11px] font-black text-white mb-2"
+  }, b.title), typeof RhythmHellVideo === 'function' && React.createElement(RhythmHellVideo, {
+    id: b.video
+  }), b.text && React.createElement("div", {
+    className: "text-[12px] text-slate-300 leading-relaxed mt-2"
+  }, b.text));
   if (b.t === 'note') return React.createElement("div", {
     key: i,
     className: "rounded-2xl p-4 border",
@@ -30527,6 +30542,112 @@ const RhythmSongSelect = ({
     className: "mt-3 min-h-[52px] w-full rounded-xl bg-slate-700 text-sm font-black text-white"
   }, "閉じる"))));
 };
+const rhythmHellGuideVideo = id => {
+  try {
+    const v = typeof RHYTHM_HELL_GUIDE_VIDEOS !== 'undefined' && RHYTHM_HELL_GUIDE_VIDEOS ? RHYTHM_HELL_GUIDE_VIDEOS[id] : null;
+    return v && typeof v.src === 'string' && Number(v.w) > 0 && Number(v.h) > 0 ? v : null;
+  } catch (e) {
+    return null;
+  }
+};
+const RhythmHellVideo = ({
+  id
+}) => {
+  const info = rhythmHellGuideVideo(id);
+  const ref = useRef(null);
+  const [failed, setFailed] = useState(false);
+  const [ready, setReady] = useState(false);
+  const [sound, setSound] = useState(false);
+  useEffect(() => {
+    setFailed(false);
+    setReady(false);
+    setSound(false);
+  }, [id]);
+  useEffect(() => () => {
+    try {
+      if (ref.current) ref.current.pause();
+    } catch (e) {}
+  }, []);
+  if (!info || failed) return null;
+  const toggleSound = () => {
+    const el = ref.current;
+    if (!el) return;
+    const next = !sound;
+    setSound(next);
+    el.muted = !next;
+    if (next) {
+      try {
+        el.currentTime = 0;
+      } catch (e) {}
+    }
+    try {
+      const p = el.play();
+      if (p && typeof p.catch === 'function') p.catch(() => {
+        el.muted = true;
+        setSound(false);
+      });
+    } catch (e) {}
+  };
+  return React.createElement("div", {
+    "data-rhythm-hell-video": id,
+    style: {
+      width: '100%'
+    }
+  }, React.createElement("div", {
+    style: {
+      position: 'relative',
+      width: '100%',
+      height: 0,
+      paddingTop: `${(info.h / info.w * 100).toFixed(3)}%`,
+      borderRadius: '12px',
+      overflow: 'hidden',
+      background: 'rgba(2,6,23,.9)',
+      border: '1px solid rgba(148,163,184,.25)'
+    }
+  }, React.createElement("video", {
+    ref: ref,
+    key: info.src,
+    muted: !sound,
+    autoPlay: true,
+    loop: true,
+    playsInline: true,
+    preload: "auto",
+    onLoadedData: () => setReady(true),
+    onError: () => setFailed(true),
+    style: {
+      position: 'absolute',
+      inset: 0,
+      width: '100%',
+      height: '100%',
+      objectFit: 'cover',
+      opacity: ready ? 1 : 0,
+      transition: 'opacity .2s'
+    }
+  }, typeof info.webm === 'string' && React.createElement("source", {
+    src: info.webm,
+    type: "video/webm"
+  }), React.createElement("source", {
+    src: info.src,
+    type: "video/mp4",
+    onError: () => setFailed(true)
+  }))), info.sound && React.createElement("button", {
+    type: "button",
+    "data-rhythm-hell-video-sound": true,
+    onClick: toggleSound,
+    "aria-pressed": sound,
+    style: {
+      marginTop: '6px',
+      minHeight: '36px',
+      width: '100%',
+      borderRadius: '10px',
+      border: '1px solid rgba(148,163,184,.4)',
+      background: 'rgba(30,41,59,.9)',
+      color: '#e2e8f0',
+      fontSize: '12px',
+      fontWeight: 900
+    }
+  }, sound ? '🔇 音を消す' : '🔊 音ありで見る'));
+};
 const RhythmHellGuide = ({
   pageIndex,
   onPage,
@@ -30537,6 +30658,8 @@ const RhythmHellGuide = ({
   const index = Math.max(0, Math.min(pages.length - 1, Number(pageIndex) || 0));
   const page = pages[index],
     last = index === pages.length - 1;
+  const video = rhythmHellGuideVideo(page.video) ? page.video : null;
+  const nextVideo = !last ? rhythmHellGuideVideo(pages[index + 1] && pages[index + 1].video) : null;
   return React.createElement("div", {
     "data-rhythm-hell-guide": true,
     role: "dialog",
@@ -30556,7 +30679,7 @@ const RhythmHellGuide = ({
     "data-rhythm-hell-guide-card": true,
     style: {
       width: '100%',
-      maxWidth: '460px',
+      maxWidth: video ? '760px' : '460px',
       maxHeight: '100%',
       overflowY: 'auto',
       borderRadius: '20px',
@@ -30573,10 +30696,20 @@ const RhythmHellGuide = ({
       letterSpacing: '.28em',
       color: '#f9a8d4'
     }
-  }, "HELL の遊び方 ", index + 1, "/", pages.length), React.createElement("h2", {
+  }, "HELL の遊び方 ", index + 1, "/", pages.length), React.createElement("div", {
+    style: video ? {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))',
+      gap: '12px 16px',
+      alignItems: 'start',
+      marginTop: '6px'
+    } : undefined
+  }, video && React.createElement(RhythmHellVideo, {
+    id: video
+  }), React.createElement("div", null, React.createElement("h2", {
     "data-rhythm-hell-guide-title": true,
     style: {
-      margin: '6px 0 0',
+      margin: video ? 0 : '6px 0 0',
       fontSize: '22px',
       fontWeight: 900,
       lineHeight: 1.25,
@@ -30591,7 +30724,27 @@ const RhythmHellGuide = ({
       lineHeight: 1.7,
       color: '#e2e8f0'
     }
-  }, page.text), React.createElement("div", {
+  }, page.text))), nextVideo && React.createElement("video", {
+    key: nextVideo.src,
+    muted: true,
+    playsInline: true,
+    preload: "auto",
+    "aria-hidden": "true",
+    tabIndex: -1,
+    style: {
+      position: 'absolute',
+      width: '1px',
+      height: '1px',
+      opacity: 0,
+      pointerEvents: 'none'
+    }
+  }, typeof nextVideo.webm === 'string' && React.createElement("source", {
+    src: nextVideo.webm,
+    type: "video/webm"
+  }), React.createElement("source", {
+    src: nextVideo.src,
+    type: "video/mp4"
+  })), React.createElement("div", {
     "aria-hidden": "true",
     style: {
       display: 'flex',

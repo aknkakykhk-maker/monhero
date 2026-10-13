@@ -6892,10 +6892,12 @@ const RHYTHM_HELL_STORY = [
 const RHYTHM_HELL_STORY_CALLS = { mua: 'ドラケン／もも', kiki: 'ドラさん', momosuke: 'ドラちゃん／みゅあねぇ', dra: 'みゅあ／靴下さん／もも' };
 // お話のあとに出す説明(1枚ずつ)。ヘルプの HELL の項目(公開のときに入れる)もこの文に合わせる
 const RHYTHM_HELL_GUIDE_PAGES = Object.freeze([
-  Object.freeze({ title:'HELL とは', text:'MASTER のさらに上の難易度です。地上のノーツに、空のノーツが重なって流れてきます。HELL がある曲は、その曲の MASTER をクリアすると HELL が遊べるようになります。' }),
-  Object.freeze({ title:'SKY TAP', text:'上の判定ラインで叩く TAP です。上の判定ラインに重なったら、地上の判定ラインより上のあたりを叩きます。横の位置は、地上と同じレーンで合わせます。' }),
-  Object.freeze({ title:'SKY SLIDE', text:'地上の SLIDE と同じで、高いところを流れるだけです。押さえたまま帯の道すじを指でなぞり、終わりの横棒が来たら離します（離さないと MISS）。帯の色は、青なら左手・桃なら右手という、取る手の目印です。' }),
-  Object.freeze({ title:'両手の親指で', text:'横持ちで、左右の親指を1本ずつ使います。地上のノーツは今までどおり、空のノーツ（SKY TAP・SKY SLIDE）は判定ラインより上を叩きます。最初は上のラインだけを見て、慣れたら地上と合わせましょう。' }),
+  Object.freeze({ title:'HELL とは', video:'hell', text:'MASTER のさらに上の難易度です。地上のノーツに、空のノーツが重なって流れてきます。HELL がある曲は、その曲の MASTER をクリアすると HELL が遊べるようになります。' }),
+  Object.freeze({ title:'SKY TAP', video:'sky_tap', text:'上の判定ラインで叩く TAP です。上の判定ラインに重なったら、地上の判定ラインより上のあたりを叩きます。横の位置は、地上と同じレーンで合わせます。' }),
+  Object.freeze({ title:'SKY SLIDE', video:'sky_slide', text:'地上の SLIDE と同じで、高いところを流れるだけです。押さえたまま帯の道すじを指でなぞり、終わりの横棒が来たら離します（離さないと MISS）。帯の色は、青なら左手・桃なら右手という、取る手の目印です。' }),
+  Object.freeze({ title:'両手の親指で', video:'hands', text:'横持ちで、左右の親指を1本ずつ使います。地上のノーツは今までどおり、空のノーツ（SKY TAP・SKY SLIDE）は判定ラインより上を叩きます。最初は上のラインだけを見て、慣れたら地上と合わせましょう。' }),
+  // 最後の1枚は遊んでいる様子(2026-10-13 社長「どんな感じか見てもらうための動画」)。動画は rhythm-mode.js の RHYTHM_HELL_GUIDE_VIDEOS
+  Object.freeze({ title:'HELL のプレイ映像', video:'play', text:'Grievous Lady の HELL を、ノーツの速さ10で最後まで遊んだときの終わりの20秒です。「音ありで見る」を押すと、曲といっしょに最初から流れます。' }),
 ]);
 
 const EVENT_REPLAYS = [

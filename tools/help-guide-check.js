@@ -41,7 +41,8 @@ check('カテゴリに必要な項目がそろっている',
 check('項目のidがカテゴリ内で重複していない', categories.every(c => new Set(c.topics.map(t => t.id)).size === c.topics.length));
 check('項目に必要な項目がそろっている', topics.every(t => t.id && t.emoji && t.title && Array.isArray(t.blocks) && t.blocks.length > 0));
 
-const BLOCK_TYPES = ['p', 'note', 'list', 'steps', 'kv', 'data'];
+// video は動画(2026-10-13・HELL のプレイ映像)。名前は data/rhythm-mode.js の RHYTHM_HELL_GUIDE_VIDEOS にあるもの
+const BLOCK_TYPES = ['p', 'note', 'list', 'steps', 'kv', 'data', 'video'];
 const blocks = topics.flatMap(t => t.blocks);
 check('ブロックの種類が想定内', blocks.every(b => BLOCK_TYPES.includes(b.t)), [...new Set(blocks.map(b => b.t))].join('/'));
 check('本文のブロックが空でない', blocks.every(b => {
@@ -71,7 +72,14 @@ check('ヘルプを開くと必ずカテゴリ一覧から始まる',
 check('戻るは1階層ずつ戻る', has('const goBack = () => { if(topic) setHelpTopicId(null); else if(cat) setHelpCatId(null); else setShowHelp(false); };'));
 check('カテゴリの色をそのまま使う(Tailwindの動的クラスに頼らない)', has('style={{borderColor:c.color,backgroundColor:\'rgba(15,23,42,0.85)\'}}'));
 check('画面はデータから作る(本文をJSXに直書きしていない)', has('{HELP_GUIDE.map(c=>(') && has('{cat.topics.map((t,i)=>(') && has('(blocks || []).map((b, i) => {'));
-check('ブロックの種類ごとに描き分ける', ['b.t===\'note\'', 'b.t===\'list\'', 'b.t===\'steps\'', 'b.t===\'kv\'', 'b.t===\'data\''].every(has));
+check('ブロックの種類ごとに描き分ける', ['b.t===\'note\'', 'b.t===\'list\'', 'b.t===\'steps\'', 'b.t===\'kv\'', 'b.t===\'data\'', 'b.t===\'video\''].every(has));
+{
+  const rm = fs.readFileSync(path.join(__dirname, '..', 'monster-hero', 'data', 'rhythm-mode.js'), 'utf8');
+  const m = rm.match(/const RHYTHM_HELL_GUIDE_VIDEOS=Object\.freeze\(\{([\s\S]*?)\n\}\);/);
+  const names = m ? [...m[1].matchAll(/^\s*([a-z_]+):Object\.freeze/gm)].map((x) => x[1]) : [];
+  const bad = blocks.filter((b) => b.t === 'video' && !names.includes(b.video)).map((b) => String(b.video));
+  check('動画のブロックの名前が RHYTHM_HELL_GUIDE_VIDEOS にある', bad.length === 0, bad.join(' / '));
+}
 check('助手ボタンと吹き出しがある', has('aria-label="助手のひとことを開く"') && has('<AssistantBubble key={`${helpCatId||\'\'}/${helpTopicId||\'\'}`}'));
 check('助手は開いている階層に応じて話す', has("const assistantLine = topic ? topic.assistant : cat ? cat.assistant : null;") && has("const assistantScene = (!cat && !topic) ? 'helpTop' : null;"));
 check('項目を開いているときは本文を詳細として渡す', has('const assistantHelpRef = topic ? `${cat.id}/${topic.id}` : null;'));

@@ -29187,6 +29187,16 @@ const rhythmSongClimaxAt=(songId,ms)=>{const spans=RHYTHM_SONG_CLIMAX[songId];if
 // Grievous Lady は社長の最初の頼み(2026-10-11 8:55「Grievous Lady(ヘルあり)」)。外すときはこの1行から消す
 // 風がそよぐ場所は空中を覚える入口の HELL(2026-10-12 社長)
 const RHYTHM_HELL_CHARTS=Object.freeze({sheriruth:sheriruthHellChart,grievous_lady:grievousLadyHellChart,kaze_ga_soyogu:kazeGaSoyoguHellChart});
+// HELL の説明の動画(2026-10-13 社長「ストーリー用にヘルの説明用の動画を撮って、動画で説明したい」)。ボットの自動演奏をノーツの速さ10で撮ったもの。
+// src は mp4(H.264・iPhone)、webm は VP9(Chrome など。どちらでも同じ中身)。説明(RHYTHM_HELL_GUIDE_PAGES の video)とヘルプ(help.js の {t:'video'})は、ここの名前で引く。撮り直したらファイルを替えるだけ(?v= は build が付ける)
+// play は曲の音つき(既定は無音で流し、「音ありで見る」で音を出す)。事前ダウンロードには入れない(movies/ は Range で取るため・ASSET_PREFETCH.md)
+const RHYTHM_HELL_GUIDE_VIDEOS=Object.freeze({
+  hell:Object.freeze({src:'movies/hell-guide-hell.mp4?v=6b7b6822f91e',webm:'movies/hell-guide-hell.webm?v=9ac04925c1a7',w:640,h:262}),
+  sky_tap:Object.freeze({src:'movies/hell-guide-sky-tap.mp4?v=76fe49cbd775',webm:'movies/hell-guide-sky-tap.webm?v=654fec3d70f8',w:640,h:262}),
+  sky_slide:Object.freeze({src:'movies/hell-guide-sky-slide.mp4?v=bd01b1b6e6d2',webm:'movies/hell-guide-sky-slide.webm?v=17415794ea6b',w:640,h:262}),
+  hands:Object.freeze({src:'movies/hell-guide-hands.mp4?v=8380785a12e2',webm:'movies/hell-guide-hands.webm?v=527f9b08282a',w:640,h:262}),
+  play:Object.freeze({src:'movies/hell-guide-play.mp4?v=d17f2bd5364d',webm:'movies/hell-guide-play.webm?v=500365aa2306',w:640,h:296,sound:true}),
+});
 // デバッグの「公開の印が真だったら」(新しいキー・mh_rhythm_hell_preview_proto が '1')。本番の印は変えない
 const RHYTHM_HELL_PREVIEW_KEY='mh_rhythm_hell_preview_proto';
 const rhythmHellPreviewOn=()=>{try{return typeof localStorage!=='undefined'&&localStorage.getItem(RHYTHM_HELL_PREVIEW_KEY)==='1';}catch(e){return false;}};
