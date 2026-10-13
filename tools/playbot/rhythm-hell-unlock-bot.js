@@ -111,7 +111,9 @@ async function storyScenario(s) {
   const trig = await s.page.evaluate(() => ({ trigger: RHYTHM_HELL_STORY_TRIGGER, sky: RHYTHM_SKY_LANE_LOOK.id }));
   ok('お話の流し方の既定は「公開した日に全員へ」(release)', trig.trigger === 'release', trig.trigger);
   ok('空中の道の既定は「案E はっきり」(em)', trig.sky === 'em', trig.sky);
-  ok('印が偽: HOME に着いてもお話は出ない', !(await waitStory(s, 6000)));
+  // 公開(RELEASE_FLAGS.rhythmHell が真)のあとは「印が偽」の項目は確かめない(2026-10-13 HELL 公開)
+  const relStory = await s.page.evaluate(() => typeof RELEASE_FLAGS === 'object' && RELEASE_FLAGS.rhythmHell === true);
+  if (!relStory) ok('印が偽: HOME に着いてもお話は出ない', !(await waitStory(s, 6000)));
   await s.page.evaluate(() => localStorage.setItem('mh_rhythm_hell_preview_proto', '1'));
   await bootKeepStory(s);
   const shown = await waitStory(s, 20000);
@@ -126,7 +128,9 @@ async function storyScenario(s) {
   }
   ok('説明を最後まで進めると閉じる', !(await s.page.evaluate(() => !!document.querySelector('[data-rhythm-hell-guide]'))));
   const st = await storage(s);
-  ok('既読は試し用のキーに付き、本番のキーには付かない', st.preview === 'true' && st.real === null, `試し用 ${st.preview} / 本番 ${st.real}`);
+  // 公開後(印が真)は本番のキーに付くのが正しい(2026-10-13 HELL 公開)
+  if (relStory) ok('公開後: 既読は本番のキーに付く', st.real === 'true', `試し用 ${st.preview} / 本番 ${st.real}`);
+  else ok('既読は試し用のキーに付き、本番のキーには付かない', st.preview === 'true' && st.real === null, `試し用 ${st.preview} / 本番 ${st.real}`);
   ok('MASTER を遊ばずに済んだ(記録に MASTER のクリアは無い)', !(st.best && st.best.MASTER && st.best.MASTER.clear === true));
   await bootKeepStory(s);
   ok('読み込み直しても、お話は2回目は出ない', !(await waitStory(s, 10000)));
@@ -145,8 +149,10 @@ async function storyScenario(s) {
     await s.boot();
     // ① 印が偽
     const off = await hellState(s);
-    ok('印が偽: 公開の印は偽のまま', off.released === false && off.open === false);
-    ok(`印が偽: ${SONG_ID} に HELL は出ない(譜面・難易度の一覧・数え上げのどれにも)`, !off.chart && !off.defs && !off.keys, JSON.stringify(off));
+    if (off.released !== true) {
+      ok('印が偽: 公開の印は偽のまま', off.released === false && off.open === false);
+      ok(`印が偽: ${SONG_ID} に HELL は出ない(譜面・難易度の一覧・数え上げのどれにも)`, !off.chart && !off.defs && !off.keys, JSON.stringify(off));
+    }
     // ② 印が真(試す)。HARD・EXPERT はクリア済み、MASTER は未クリアの記録にする
     await s.page.evaluate(() => localStorage.setItem('mh_rhythm_hell_preview_proto', '1'));
     await s.boot();
@@ -187,7 +193,7 @@ async function storyScenario(s) {
     }
     const st1 = await storage(s);
     if (trigger === 'after-result') ok('既読は試し用のキーに付く', st1.preview === 'true', String(st1.preview));
-    ok('本番の既読のキー(mh_rhythm_hell_story_seen_v1)には付かない', st1.real === null, String(st1.real));
+    if (off.released !== true) ok('本番の既読のキー(mh_rhythm_hell_story_seen_v1)には付かない', st1.real === null, String(st1.real));
     ok('MASTER のクリアが記録に残る', !!(st1.best && st1.best.MASTER && st1.best.MASTER.clear === true));
     const sel = await s.page.evaluate(() => [...document.querySelectorAll('button')].map((b) => (b.innerText || '').replace(/\s+/g, ' ').trim()).filter((t) => /HELL/.test(t)));
     ok('曲えらびで HELL が選べる(「MASTERで解放」ではない)', sel.length > 0 && !sel.some((t) => /MASTERで解放/.test(t)), sel.join(' / '));
