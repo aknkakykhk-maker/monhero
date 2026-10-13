@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c9d6230fc48103db
+// source-sha256: c793198b7b6cc21f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-13 23:48";
+const BUILD_DATE = "2026-10-14 00:17";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -33074,9 +33074,12 @@ const RhythmHudLife = ({
     "aria-hidden": "true",
     className: "absolute inset-y-0 left-0 rounded-full",
     style: {
-      width: `${(lifeRatio * 100).toFixed(1)}%`,
-      background: lifeRatio > .5 ? 'linear-gradient(90deg,#34d399,#22d3ee)' : lifeRatio > .25 ? 'linear-gradient(90deg,#fbbf24,#fb923c)' : 'linear-gradient(90deg,#fb7185,#ef4444)',
-      transition: settings.lightweightMode ? 'none' : 'width 140ms linear'
+      width: '100%',
+      backgroundImage: lifeRatio > .5 ? 'linear-gradient(90deg,#34d399,#22d3ee)' : lifeRatio > .25 ? 'linear-gradient(90deg,#fbbf24,#fb923c)' : 'linear-gradient(90deg,#fb7185,#ef4444)',
+      backgroundSize: `${(lifeRatio * 100).toFixed(1)}% 100%`,
+      backgroundRepeat: 'no-repeat',
+      clipPath: `inset(0 ${(100 - lifeRatio * 100).toFixed(1)}% 0 0 round 999px)`,
+      transition: settings.lightweightMode ? 'none' : 'clip-path 140ms linear,background-size 140ms linear'
     }
   })), React.createElement("b", {
     "data-rhythm-life-value": true,
@@ -37719,7 +37722,14 @@ const RhythmTapTest = ({
     className: `block font-black leading-none tabular-nums landscape:text-4xl ${comboMilestoneStage >= 3 ? 'text-6xl' : 'text-5xl'}`
   }, comboMilestone), React.createElement("small", {
     className: "mt-1 block text-sm font-black tracking-[0.3em]"
-  }, "COMBO")), view.ability && React.createElement("div", {
+  }, "COMBO")), monsters.some(m => m && m.ability) && React.createElement("div", {
+    "data-rhythm-ability-warm": true,
+    "aria-hidden": "true",
+    className: "pointer-events-none absolute left-0 top-0 whitespace-nowrap rounded-full border-2 px-4 py-1.5 text-lg font-black",
+    style: {
+      visibility: 'hidden'
+    }
+  }, monsters.filter(m => m && m.ability).map(m => m.ability.name).join(''), "！"), view.ability && React.createElement("div", {
     "data-rhythm-ability-flash": true,
     className: "pointer-events-none absolute left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded-full border-2 border-amber-200 bg-slate-950/90 px-4 py-1.5 text-lg font-black text-amber-100",
     style: {

@@ -2594,6 +2594,8 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
   const prepare=typeIn=>{
     // 押さえているあいだの音も、ここで作っておく(押した瞬間に作ると一瞬かたまる)。画面の表示を待たせないよう少しあとで
     {const audio=context();if(audio&&typeof setTimeout==='function')setTimeout(()=>{try{holdLoop(audio);}catch{}},60);}
+    // モンスターノーツの音も、聞こえない音量で1回通しておく(最初に取った瞬間に用意すると一瞬止まる・2026-10-13)
+    if(typeof setTimeout==='function')setTimeout(()=>{try{playMonster({silent:true});}catch{}},120);
     const type=rhythmNoteSeTypeOf(typeIn||readSettings().type);
     if(!RHYTHM_NOTE_SE_DESIGNS[type])return Promise.resolve(null);
     const hit=banks.get(type);if(hit)return hit.promise;
@@ -2843,20 +2845,22 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
   //   ・上へ駆け上がる3音(C6→E6→G6)を短い間隔で重ねる
   //   ・その下へ、丸い低音(C4)を1つ置いて厚みを出す
   // 既存のタップ音と同じ設定(音量・ON/OFF・全体ミュート)を読み、専用の保存キーは増やさない。
-  const playMonster=()=>{
+  // silent … 曲の前に、聞こえない音量(0)で同じ道を1回通しておく(2026-10-13 社長報告「最初のモンスターノーツでかくつく」)。
+  //   最初に鳴らすときだけ、音の部品の用意と処理の初回の重さで、取った瞬間が一瞬止まっていた。鳴る音・音量は変えない
+  const playMonster=({silent=false}={})=>{
     const settings=readSettings();
     if(!settings.enabled||settings.volume<=0||!rhythmAudioGloballyEnabled())return false;
     const audio=context();
     if(!audio)return false;
-    if(audio.state==='suspended'&&typeof audio.resume==='function')audio.resume().catch(()=>{});
+    if(!silent&&audio.state==='suspended'&&typeof audio.resume==='function')audio.resume().catch(()=>{});
     const now=audio.currentTime,volume=settings.volume/100;
     const tone=(type,freq,start,sustain,peak)=>{
       const oscillator=audio.createOscillator(),gain=audio.createGain();
       oscillator.type=type;
       oscillator.frequency.setValueAtTime(freq,start);
-      gain.gain.setValueAtTime(.0001,start);
-      gain.gain.exponentialRampToValueAtTime(rhythmNoteSeLevel(peak,volume),start+.008);
-      gain.gain.exponentialRampToValueAtTime(.0001,start+sustain);
+      gain.gain.setValueAtTime(silent?0:.0001,start);
+      if(!silent){gain.gain.exponentialRampToValueAtTime(rhythmNoteSeLevel(peak,volume),start+.008);
+      gain.gain.exponentialRampToValueAtTime(.0001,start+sustain);}
       oscillator.connect(gain);gain.connect(output(audio));
       oscillator.start(start);oscillator.stop(start+sustain+.02);
       oscillator.onended=()=>{try{oscillator.disconnect();gain.disconnect();}catch{}};
