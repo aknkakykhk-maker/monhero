@@ -135,6 +135,55 @@ const flatCross=notes=>{const out=[],longs=(notes||[]).filter(isLong);
         if(la===lb)out.push({at:t,side:centerAt(a,t)<3?'L':'R',level:la?'空中どうし':'地上どうし',pair:`${a.type} ${a.timeMs}〜${endOf(a)} × ${b.type} ${b.timeMs}〜${endOf(b)}`});}
       if(sg)prev=sg;}}
   return out.sort((x,y)=>x.at-y.at);};
+// 押さえている帯の中のノーツ(2026-10-13 社長「ホールド・スライド中に同じところにノーツを出すのはやめたほうがいい」
+//   「地上と空中なら同じ位置でも良いけど、地上同士・空中同士は無理。半レーン被りならまだしも。ただ、1レーンのノーツに半レーン被りはかなり厳しい」)。
+//   長押し(HOLD・SLIDE)を押さえている最中(始まりと終わりの間)に、同じ高さ(地上どうし・空中どうし)で、その時刻の帯の幅と横に重なる位置へ来る別のノーツ。
+//   スライドはその時刻にいる位置で見る。高さが違えば(地上の押さえと空中のノーツ)同じ位置でもよい(数えない)。幅はレーン単位(サブレーン2つで1レーン)。
+//   kind(重なり方):
+//     overlap   … 半レーンより深く重なる                                   → 置かない
+//     halfThin  … 半レーンまでの重なりで、押さえている帯か来るノーツが幅1レーン以下 → 置かない(「かなり厳しい」)
+//     halfMid   … 半レーンまでの重なりで、細いほうが幅1.5レーン                 → 置かない(決まりの「幅2以上なら許す」に入らないので、止める側に倒した)
+//     halfWide  … 半レーンまでの重なりで、両方とも幅2レーン以上                  → 許す(数だけ出す)
+//   置かない形(blocked)は、HELL(rhythm-hell-mix.js)と新曲の5難易度(rhythm-chart-v3-generate.js)が作らず、rhythm-chart-hand-rules-check.js が止める
+const widthAt=(n,at)=>{const pts=pointsOf(n),w=p=>num(p&&p.subLaneWidth!=null?p.subLaneWidth:undefined,num(n.subLaneWidth,2))/2;
+  if(!pts||!pts.length)return w(null);let p=pts[0];for(const q of pts)if(q.timeMs<=at+0.5)p=q;return w(p);};
+const spanAt=(n,at)=>{const c=centerAt(n,at),w=widthAt(n,at);return [c-w/2,c+w/2];};
+const HELD_BAND_HALF=.5,EPS=1e-6;
+const HELD_BAND_KINDS=Object.freeze({overlap:'重なる',halfThin:'半レーン(幅1が絡む)',halfMid:'半レーン(細いほうが幅1.5)',halfWide:'半レーン(両方幅2以上・許す)'});
+const heldBandKind=(overlap,wh,wn)=>{if(overlap>HELD_BAND_HALF+EPS)return 'overlap';const thin=Math.min(wh,wn);return thin<=1+EPS?'halfThin':thin>=2-EPS?'halfWide':'halfMid';};
+const onHeldBand=notes=>{const out=[],list=(notes||[]).filter(n=>n&&Number.isFinite(n.timeMs)),longs=list.filter(isLong);
+  for(const h of longs){const a=h.timeMs,b=endOf(h);
+    for(const n of list){if(n===h||n.timeMs<=a+SAME_TIME_MS||n.timeMs>=b-SAME_TIME_MS)continue;
+      if(levelAt(h,n.timeMs)!==levelAt(n,n.timeMs))continue;
+      const [h0,h1]=spanAt(h,n.timeMs),[n0,n1]=spanAt(n,n.timeMs),overlap=Math.min(h1,n1)-Math.max(h0,n0);
+      if(overlap>EPS){const kind=heldBandKind(overlap,h1-h0,n1-n0);
+        out.push({at:n.timeMs,side:sideAt(n,n.timeMs),type:n.type,note:n,level:levelAt(n,n.timeMs)?'空中':'地上',kind,blocked:kind!=='halfWide',
+        lanes:`${n0.toFixed(2)}〜${n1.toFixed(2)}`,held:`${h.type} ${a}〜${b}`,heldNote:h,heldSpan:[h0,h1],heldLanes:`${h0.toFixed(2)}〜${h1.toFixed(2)}`,overlap:Math.round(overlap*100)/100});}}}
+  return out.sort((x,y)=>x.at-y.at);};
+const heldBandBlocked=notes=>onHeldBand(notes).filter(x=>x.blocked);
+const ON_HELD_BAND_LABEL='押さえている帯の中(同じ高さで重なる・幅1が絡む半レーン)に別のノーツ(置かない)';
+// 置かない形のタップ・フリックを、帯の外へ置き直す(ゲームの形のノーツをその場で書き換える。HELL と新曲の5難易度の道具が使う)。
+//   時刻はそのまま(音に合わせたまま)。向きは帯を押さえていない手の側(押さえている手の側へ出すと、空いている親指が押さえている親指を越えて交差する)、入らなければ反対の向き。
+//   帯の端から半レーン(サブレーン1つ)あけて、入らなければあけずに・幅を詰めて(幅2まで)。置き直した先は同じ時刻のノーツ・同じ高さの帯と少しも重ならない所。
+//   それでも入らないものは、canRemove(n) なら取り除き、canMirror(n) なら左右を反対側へ写す(モンスターノーツ)。どれもできなければ残す(検査が止める)
+const fixHeldBand=(notes,{canRemove=()=>true,canMirror=()=>false,lanes=12}={})=>{const done={moved:0,removed:[],mirrored:0,left:0},stuck=new Set();
+  for(let r=0;r<400;r++){const bad=heldBandBlocked(notes).find(v=>(v.type==='TAP'||v.type==='FLICK')&&!stuck.has(v.note));if(!bad)break;
+    const n=bad.note,[h0,h1]=bad.heldSpan,hh=bad.heldNote,holdHand=hh.hand==='L'||hh.hand==='R'?hh.hand:sideAt(hh,hh.timeMs),level=levelAt(n,n.timeMs);
+    const fits=(sub,w)=>{if(sub<0||sub+w>lanes)return false;const a=sub/2,b=(sub+w)/2;
+      for(const m of notes){if(m===n||levelAt(m,n.timeMs)!==level)continue;
+        const covers=Math.abs(m.timeMs-n.timeMs)<=SAME_TIME_MS||isLong(m)&&m.timeMs<n.timeMs-SAME_TIME_MS&&n.timeMs<endOf(m)-SAME_TIME_MS;if(!covers)continue;
+        const [m0,m1]=spanAt(m,n.timeMs);if(Math.min(b,m1)-Math.max(a,m0)>EPS)return false;}
+      return true;};
+    const w0=num(n.subLaneWidth,2);let placed=false;
+    for(const away of holdHand==='L'?[1,-1]:[-1,1])for(const gap of [1,0])for(const w of [...new Set([w0,Math.max(2,w0-1),2])]){if(placed)break;
+      const sub=away>0?Math.ceil(h1*2-EPS)+gap:Math.floor(h0*2+EPS)-gap-w;
+      if(fits(sub,w)){n.subLane=sub;n.subLaneWidth=w;n.lane=Math.floor(sub/2);placed=true;}}
+    if(placed){done.moved++;continue;}
+    const mirror=lanes-num(n.subLane,0)-w0;
+    if(canRemove(n)){notes.splice(notes.indexOf(n),1);done.removed.push(n);}
+    else if(canMirror(n)&&fits(mirror,w0)){n.subLane=mirror;n.lane=Math.floor(mirror/2);done.mirrored++;stuck.add(n);}
+    else{stuck.add(n);done.left++;}}
+  return done;};
 const FLAT_CROSS_LABEL='同じ高さのまま左右が入れ替わる(水平クロス・HELL は0にする)';
 const RULES={sideHeightSwitch,skyAfterGround,besideHeldBand,fastSameSide,heldHandSwitch};
 const RULE_LABELS={sideHeightSwitch:`同じ側で${SIDE_GAP_MS}ms以内に高さが変わる`,skyAfterGround:`同じ側の地上から${SKY_RAISE_MS}ms以内に空中`,
@@ -142,7 +191,7 @@ const RULE_LABELS={sideHeightSwitch:`同じ側で${SIDE_GAP_MS}ms以内に高さ
 const analyze=notes=>Object.fromEntries(Object.entries(RULES).map(([k,f])=>[k,f(notes||[])]));
 const countsOf=notes=>Object.fromEntries(Object.entries(analyze(notes)).map(([k,v])=>[k,v.length]));
 
-module.exports={flatCross,hasSky,FLAT_CROSS_LABEL,SIDE_GAP_MS,SKY_RAISE_MS,FAST_SAME_SIDE_MS,centerAt,sideAt,levelAt,eventsOf,handEventsOf,heldHandSwitch,sideHeightSwitch,skyAfterGround,besideHeldBand,fastSameSide,RULES,RULE_LABELS,analyze,countsOf};
+module.exports={flatCross,hasSky,FLAT_CROSS_LABEL,onHeldBand,heldBandBlocked,fixHeldBand,spanAt,ON_HELD_BAND_LABEL,HELD_BAND_KINDS,SIDE_GAP_MS,SKY_RAISE_MS,FAST_SAME_SIDE_MS,centerAt,sideAt,levelAt,eventsOf,handEventsOf,heldHandSwitch,sideHeightSwitch,skyAfterGround,besideHeldBand,fastSameSide,RULES,RULE_LABELS,analyze,countsOf};
 
 if(require.main===module){
   const args=process.argv.slice(2),argOf=k=>{const i=args.indexOf(k);return i>=0?args[i+1]:undefined;};
@@ -158,5 +207,7 @@ if(require.main===module){
   for(const d of diffs){const c=song.difficulties[d];if(!c)continue;const res=analyze(c.notes);
     console.log(`== ${song.songId}/${d}`);
     if(hasSky(c.notes)){const fc=flatCross(c.notes);console.log(`  ${FLAT_CROSS_LABEL}: ${fc.length}件`+(fc.length?' — '+fc.slice(0,12).map(x=>`${(x.at/1000).toFixed(2)}(${x.level})`).join(' '):''));}
+    {const ob=onHeldBand(c.notes),bl=ob.filter(x=>x.blocked);console.log(`  ${ON_HELD_BAND_LABEL}: ${bl.length}件(`+Object.entries(HELD_BAND_KINDS).map(([k,l])=>`${l} ${ob.filter(x=>x.kind===k).length}`).join('・')+')'
+      +(bl.length?' — '+bl.slice(0,12).map(x=>`${(x.at/1000).toFixed(3)} ${x.type} ${x.level} ${x.lanes}(押さえ ${x.held} ${x.heldLanes}・${HELD_BAND_KINDS[x.kind]})`).join(' / '):''));}
     for(const [k,list] of Object.entries(res))console.log(`  ${RULE_LABELS[k]}: ${list.length}件`+(list.length?' — '+list.slice(0,12).map(x=>`${(x.at/1000).toFixed(2)}${x.side}`+(x.gapMs!=null?`(${x.gapMs})`:'')).join(' ')+(list.length>12?' …':''):''));}
 }
