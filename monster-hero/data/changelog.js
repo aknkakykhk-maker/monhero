@@ -35,6 +35,14 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    // 2026-10-13 夜 社長「Against My Own Shadow のマスターの被りって、さっき決めたルール的にアウトだよね?」→「MASTER と EXPERT を直す」
+    date: "2026-10-13 23:07", type:'fix', group:'rhythm', title:'モンヒロビート「Against My Own Shadow」の EXPERT と MASTER で、押さえているノーツに重なって押しにくかったノーツを直しました', status:'new',
+    items:[
+      'ホールドやスライドを押さえている最中に、押さえている所に重なる位置へ来ていたノーツを、押さえていない手の側へずらしました。',
+      'ノーツのタイミング・数・レベルは変わりません。',
+    ],
+  },
+  {
     // 2026-10-13 社長「AMOSは実装してオーケー」
     date: "2026-10-13 22:12", type:'update', group:'rhythm', title:'モンヒロビート：「Against My Own Shadow」に難易度 HELL が加わりました', status:'new',
     image:'images/song-art/against-my-own-shadow.jpg?v=2768a9055013',

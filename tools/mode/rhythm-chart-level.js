@@ -343,6 +343,10 @@ const LEVEL_OVERRIDES=Object.freeze({
   // 式が高く出たのは「同時押し」224・「押さえながら叩く」110 を1つずつ重く数えるため(この曲の同時押しは左右に離れた両手で取る形、
   // 押さえているのはゆっくり動く長いスライドが多く、数ほど難しくない)
   sheriruth:Object.freeze({MASTER:35}),
+  // 2026-10-13 夜 社長「(Against My Own Shadow の)マスターの被りって、さっき決めたルール的にアウトだよね?」→ MASTER と EXPERT の押さえている帯の中のノーツを
+  // 帯の外へ置き直した(時刻・幅・ノーツ数は同じ)。帯から外すと横の動きが少し増え、EXPERT の式の値が 22.44→22.58 で丸めると 23 になる。
+  // どこへ置いても 22.5 を越える(1か所ずつ候補を比べても 22.53)。直したのは押せなかった所なので、表示は前の Lv.22 のまま(社長「Lv. は変えない」)
+  against_my_own_shadow:Object.freeze({EXPERT:22}),
   // デバッグの試作の枠の HELL も、曲の名前(試作の枠の songId)で書ける(2026-10-11 社長「ヘル2つの難易度は、両方デバッグしてみたときにまた数値の調整はすると思う」)。
   // 書いた値が表示に出る(rhythm-hell-mix.js が譜面の Lv. に書く)。式の値(空中を地上と見なした Lv. の SKY_LEVEL_FACTOR 倍)は消えずに検査で並べて出る。
   // 例: sheriruth_hell_debug:Object.freeze({HELL:50}), grievous_lady_hell:Object.freeze({MASTER:55}),

@@ -165,7 +165,8 @@ const ON_HELD_BAND_LABEL='押さえている帯の中(同じ高さで重なる�
 //   時刻はそのまま(音に合わせたまま)。向きは帯を押さえていない手の側(押さえている手の側へ出すと、空いている親指が押さえている親指を越えて交差する)、入らなければ反対の向き。
 //   帯の端から半レーン(サブレーン1つ)あけて、入らなければあけずに・幅を詰めて(幅2まで)。置き直した先は同じ時刻のノーツ・同じ高さの帯と少しも重ならない所。
 //   それでも入らないものは、canRemove(n) なら取り除き、canMirror(n) なら左右を反対側へ写す(モンスターノーツ)。どれもできなければ残す(検査が止める)
-const fixHeldBand=(notes,{canRemove=()=>true,canMirror=()=>false,lanes=12}={})=>{const done={moved:0,removed:[],mirrored:0,left:0},stuck=new Set();
+//   keepWidth: 幅を詰めない(公開中の譜面を直すとき。置き場所だけ変える)。gaps: 帯の端からあける量(サブレーン)の候補の順
+const fixHeldBand=(notes,{canRemove=()=>true,canMirror=()=>false,lanes=12,keepWidth=false,gaps=[1,0]}={})=>{const done={moved:0,removed:[],mirrored:0,left:0},stuck=new Set();
   for(let r=0;r<400;r++){const bad=heldBandBlocked(notes).find(v=>(v.type==='TAP'||v.type==='FLICK')&&!stuck.has(v.note));if(!bad)break;
     const n=bad.note,[h0,h1]=bad.heldSpan,hh=bad.heldNote,holdHand=hh.hand==='L'||hh.hand==='R'?hh.hand:sideAt(hh,hh.timeMs),level=levelAt(n,n.timeMs);
     const fits=(sub,w)=>{if(sub<0||sub+w>lanes)return false;const a=sub/2,b=(sub+w)/2;
@@ -174,7 +175,7 @@ const fixHeldBand=(notes,{canRemove=()=>true,canMirror=()=>false,lanes=12}={})=>
         const [m0,m1]=spanAt(m,n.timeMs);if(Math.min(b,m1)-Math.max(a,m0)>EPS)return false;}
       return true;};
     const w0=num(n.subLaneWidth,2);let placed=false;
-    for(const away of holdHand==='L'?[1,-1]:[-1,1])for(const gap of [1,0])for(const w of [...new Set([w0,Math.max(2,w0-1),2])]){if(placed)break;
+    for(const away of holdHand==='L'?[1,-1]:[-1,1])for(const gap of gaps)for(const w of keepWidth?[w0]:[...new Set([w0,Math.max(2,w0-1),2])]){if(placed)break;
       const sub=away>0?Math.ceil(h1*2-EPS)+gap:Math.floor(h0*2+EPS)-gap-w;
       if(fits(sub,w)){n.subLane=sub;n.subLaneWidth=w;n.lane=Math.floor(sub/2);placed=true;}}
     if(placed){done.moved++;continue;}
