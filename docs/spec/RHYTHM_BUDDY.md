@@ -208,6 +208,22 @@ AIは使わない(サーバーも契約も要らない)まま、5.3 のおしゃ
   - 状況反応: 入室の時間帯あいさつ(`timeMorning`ほか)・遊んだ回数に触れる `bondHello`/`bondJoin`・ビートLv.UPの `lvUp`・性格決定の `traitNew`(`RHYTHM_MULTI.noteBuddyGrowth`)・ミス多めの人への `hMiss`。
   - 保存データは増やしていない(記憶は部屋の中だけ)。検査: `rhythm-buddy-convo-check.js`(52場面・約850セリフ)・`rhythm-buddy-check.js`(B-11c)。
 
+### 5.5 個体差(2026-10-13・社長指示「性格のほかにも個体差を」→ A〜G 全部とプロフィール)
+
+案: [`docs/proto/buddy-individuality/README.md`](../proto/buddy-individuality/README.md)。部品は `33-rhythm-buddy-persona.jsx`。
+
+- 同じ性格でも1体ずつ話し方が違う。性格の束を置き換えず、上に重ねる(性格の言葉づかいは崩さない)。
+  - A 一人称(`RHYTHM_BUDDY_SELF_WORDS`)。既存のセリフの「私」「ぼく」もその子の一人称で話す(`rhythmBuddyPersonaSelf`)
+  - B 人の呼び方(`RHYTHM_BUDDY_CALLS`)。先頭は性格の既定(`RHYTHM_BUDDY_HONORIFICS`)で、いちばん出やすい。「マスター」「相棒」などは「{who}さん」を名前ごと置き換える(`vars.call`)
+  - C 口ぐせ(`RHYTHM_BUDDY_QUIRKS`)。3回に1回くらい、文の頭か終わりに付ける(40文字に収まるときだけ・超不機嫌の日は付けない)
+  - D 好きな曲=いちばん多く一緒に遊んだ曲(2回以上)/苦手な曲=3回以上遊んだ曲のうち最近のスコアの平均がいちばん低い曲(`rhythmBuddyPersonaSongs`)
+  - E 叩き方のくせ(`RHYTHM_BUDDY_HABITS`)。**セリフと表示だけ。演奏(判定・スコア)には使わない**
+  - F 好物・趣味 / G 誕生日(うるう日は出さない。日本時間の暦の日付で当日なら、呼ばれたとき・ひとりごとでお祝いの一言 `pBday`)
+- 決め方: D 以外は個体番号から(`rhythmBuddyPersona(masuId, trait)`)。性格が決まる前は「性格なし」の候補から、決まったら性格に合う候補から選び直す。性格と合わない組み合わせは表に入れない。
+- 場面(`RHYTHM_BUDDY_PERSONA_TALK`): pJoin・pLike・pSongDis・pHigh・pLow・pDislike・pFood・pHobby・pHabit・pBday。もとの場面からときどき振り替える(超不機嫌の日は誕生日だけ)。振り替えた文が入りきらなければ、もとの場面で話す。
+- 見せ方: マスモンの詳細に「プロフィール」(一人称・呼び方・口ぐせ・好物・趣味・誕生日・叩き方のくせ・好きな曲・苦手な曲)。誕生日の当日は 🎂 の一行。
+- 保存データは増やしていない(D は `mh_rhythm_buddy_v1` を読むだけ)。検査: `rhythm-buddy-persona-check.js`。
+
 ## 6. 保存(CLAUDE.md ⑦)
 
 - 新しいキー `mh_rhythm_buddy_v1`: `{ day, used, mons: { [masuId]: 育ち具合 } }`。

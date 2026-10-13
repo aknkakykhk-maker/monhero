@@ -165,6 +165,7 @@
   "mode/rhythm-buddy-convo-check.js",
   "mode/rhythm-buddy-rank-check.js",
   "mode/rhythm-buddy-talk-check.js",
+  "mode/rhythm-buddy-persona-check.js",
   "mode/rhythm-canvas-geometry-check.js",
   "mode/rhythm-catch-up-check.js",
   "mode/rhythm-chart-authoring-ui-check.js",
