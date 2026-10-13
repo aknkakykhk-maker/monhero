@@ -35,6 +35,17 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    // 2026-10-13 夜 社長「AMOS(Against My Own Shadow)の HELL は実装してオーケー」
+    date: "2026-10-13 22:12", type:'update', group:'rhythm', title:'モンヒロビート：「Against My Own Shadow」に難易度 HELL が加わりました', status:'new',
+    items:[
+      'Against My Own Shadow に、6段目の難易度 HELL が加わりました。地上と空のノーツが混ざって流れてくる、中くらいの難しさの HELL です。',
+      'Against My Own Shadow の MASTER を1回クリアすると、HELL が遊べるようになります。',
+      'レベルは HELL Lv.42 です。',
+      'ノーツ数は 438 です。',
+      'HELL のスコアは、ほかの HELL と同じく満点 1,050,000点で、自己ベストや全国ランキング（曲ごと・総合・週間）、マスモンランキングにも入ります。',
+    ],
+  },
+  {
     // 2026-10-13 社長「ホールド・スライド中に同じところにノーツを出すのはやめたほうがいい」「1レーンのノーツに半レーン被りはかなり厳しい」(公開中の Grievous Lady HELL を直すのは社長の了承済み)
     date: "2026-10-13 21:04", type:'fix', group:'rhythm', title:'モンヒロビート「Grievous Lady」HELL で、押さえているスライドに重なって押しにくかったノーツを直しました', status:'new',
     items:[

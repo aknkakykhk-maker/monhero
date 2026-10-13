@@ -32,7 +32,7 @@ const STORY = args.includes('--story');
 const argOf = (name, fallback) => { const i = args.indexOf(`--${name}`); return i >= 0 && args[i + 1] !== undefined ? args[i + 1] : fallback; };
 const SONG_ID = argOf('song', 'sheriruth');
 // 試作の枠で同じ譜面を持っている所(ノーツ数を突き合わせる)
-const PROTO_OF = { sheriruth: ['sheriruth_hell_debug', 'HELL'], grievous_lady: ['grievous_lady_hell', 'MASTER'], kaze_ga_soyogu: ['kaze_ga_soyogu_hell_debug', 'HELL'] };
+const PROTO_OF = { sheriruth: ['sheriruth_hell_debug', 'HELL'], grievous_lady: ['grievous_lady_hell', 'MASTER'], kaze_ga_soyogu: ['kaze_ga_soyogu_hell_debug', 'HELL'], against_my_own_shadow: ['against_my_own_shadow_hell_debug', 'HELL'] };
 const PORT = 8991;
 const OUT = path.join(ROOT, 'tools', 'out', 'playbot', 'hell-unlock');
 fs.mkdirSync(OUT, { recursive: true });
