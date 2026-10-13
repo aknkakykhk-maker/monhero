@@ -100,8 +100,11 @@ function build(data) {
       <div class="tile"><span>週の切り替わりまで</span><b>${S.forecast.remainDays.toFixed(1)}<small>日</small></b></div>
     </div>` : waiting('今週の見込み');
 
-  const resetNote = S.resetKnown ? `週の切り替わり: 毎週${U.DOW[data.weekResetDow]}曜 ${data.weekResetHour}時` : '週の切り替わりはまだ聞いていないので、仮に月曜0時で区切っています';
-  const calNote = S.cal ? `${esc(S.cal.from.at)} に社長の使用量画面で見た ${esc(S.cal.from.percent)}% に合わせています` : 'まだ社長の使用量画面の値で合わせていないので、%ではなくドル(目安の費用)で出しています';
+  const resetNote = S.resetKnown ? `週の切り替わり: 毎週${U.DOW[data.weekResetDow]}曜 ${data.weekResetHour}:00` : '週の切り替わりはまだ聞いていないので、仮に月曜0時で区切っています';
+  const calNote = S.cal
+    ? `社長の使用量画面の値(${esc(S.cal.base.at)} ${esc(S.cal.base.percent)}% → ${esc(S.cal.from.at)} ${esc(S.cal.from.percent)}%)の差で「1%あたりの量」を割り出して合わせています`
+    : `「1%あたりの量」は割り出し中です(社長の使用量画面の値が同じ週に2回そろうと出ます。いまは ${S.calibrations} 回)。それまでは%ではなくドル(目安の費用)で出しています`;
+  const startNote = data.recordStart ? `%の計算は ${esc(data.recordStart)} から数えています` : '';
   const updatedAt = new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
   return `<title>Claude 使用率</title>
@@ -153,7 +156,7 @@ ${[1, 2, 3, 4, 5, 6, 7, 8].map((i) => `.s${i}{fill:var(--s${i});background:var(-
     <h1>Claude 使用率(目安)</h1>
     <p class="lead">${esc(updatedAt)} 更新 / まとめ: 統括部長モンヒロくん</p>
   </header>
-  <p class="notice"><b>目安です。</b>各部署の会話の使用量(費用の記録)を毎晩足し、${calNote}。${esc(resetNote)}。</p>
+  <p class="notice"><b>目安です。</b>各部署の会話の使用量(費用の記録)を毎晩足し、${calNote}。${esc(resetNote)}。${startNote ? startNote + '。' : ''}5時間ごとの制限は入れていません(週の制限だけ)。</p>
   ${tiles}
   <section>
     <h2>日ごと</h2>

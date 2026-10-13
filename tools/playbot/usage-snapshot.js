@@ -4,7 +4,10 @@
 //   node tools/playbot/usage-snapshot.js --add '{"at":"2026-10-14 02:52","sessions":{"session_…":{"name":"窓口 統括部長モンヒロくん","dept":"窓口","cost_usd":12.3,"used_tokens":456789}}}'
 //       毎晩の記録(get_session の usage.cost_usd。値は累積のまま書く)。同じ at の記録があれば置き換える
 //   node tools/playbot/usage-snapshot.js --calibrate '{"at":"2026-10-14 09:00","percent":37}'
-//       社長が claude.ai の使用量画面で見た週の%。total_cost_usd を省くと、その時点の週の合計を記録から数える
+//       社長が claude.ai の使用量画面で見た週の%。同じころ(前後60分)に --add の記録も1つ取る。
+//       同じ週の2点の差で「1%あたりの量」を割り出す。週の切り替わり(木曜20:00)ちょうどにも記録を取ると、その週の0%の点になる
+//   node tools/playbot/usage-snapshot.js --start "2026-10-15 20:00"
+//       %の計算(日ごと・週ごと)を数え始める時刻。それより前の記録は割り出しにだけ使う
 //   node tools/playbot/usage-snapshot.js --reset <曜日0〜6(0=日)> <時0〜23>
 //       週の切り替わり(社長に聞いて書く)
 //   いずれも --data <usage.json> で別のファイルに書ける(試すとき)
@@ -19,7 +22,7 @@ const FILE = at('--data') ? path.resolve(at('--data')) : U.DEFAULT_FILE;
 const fail = (msg) => { console.error('NG: ' + msg); process.exit(1); };
 
 const raw = fs.existsSync(FILE) ? JSON.parse(fs.readFileSync(FILE, 'utf8')) : {};
-const data = { weekResetDow: null, weekResetHour: null, calibrations: [], snapshots: [], ...raw };
+const data = { weekResetDow: null, weekResetHour: null, recordStart: null, calibrations: [], snapshots: [], ...raw };
 
 function parseJson(s, what) {
   try { return JSON.parse(s); } catch (e) { return fail(`${what} の JSON が読めません(${e.message})`); }
@@ -37,10 +40,13 @@ if (at('--add') != null) {
   const c = parseJson(at('--calibrate'), '--calibrate');
   if (U.parseAt(c.at) == null) fail('at は "2026-10-14 09:00" の形(日本時間)にする');
   if (!Number.isFinite(c.percent) || c.percent < 0 || c.percent > 100) fail('percent は 0〜100 の数にする');
-  if (c.total_cost_usd != null && !(Number.isFinite(c.total_cost_usd) && c.total_cost_usd > 0)) fail('total_cost_usd は正の数にする(省けば記録から数える)');
   data.calibrations = data.calibrations.filter((x) => x.at !== c.at);
   data.calibrations.push(c);
   console.log(`合わせた: ${c.at} に週 ${c.percent}%`);
+} else if (at('--start') != null) {
+  if (U.parseAt(at('--start')) == null) fail('--start は "2026-10-15 20:00" の形(日本時間)にする');
+  data.recordStart = at('--start');
+  console.log(`%の計算の始まり: ${data.recordStart}`);
 } else if (argv.includes('--reset')) {
   const ri = argv.indexOf('--reset');
   const dow = Number(argv[ri + 1]), hour = Number(argv[ri + 2]);
@@ -48,7 +54,7 @@ if (at('--add') != null) {
   data.weekResetDow = dow; data.weekResetHour = hour;
   console.log(`週の切り替わり: 毎週${U.DOW[dow]}曜 ${hour}時`);
 } else {
-  fail('--add / --calibrate / --reset のどれかを付ける(使い方はこのファイルの頭)');
+  fail('--add / --calibrate / --start / --reset のどれかを付ける(使い方はこのファイルの頭)');
 }
 
 fs.writeFileSync(FILE, JSON.stringify(data, null, 1) + '\n');
