@@ -33271,9 +33271,43 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   const SKY_PRESS_STOPS=line=>[[0,56,189,248,.05],[.42,56,189,248,.1],[.58,56,189,248,.24],[line-.14,125,211,252,.5],[line-.03,224,242,254,.74],[line,248,250,252,.9],[line+.04,56,189,248,.72],[1,37,99,235,.55]];
   const skyPressColor=(stops,t)=>{let a=stops[0],b=stops[stops.length-1];for(let k=1;k<stops.length;k++){if(t<=stops[k][0]){a=stops[k-1];b=stops[k];break;}}
     const u=b[0]>a[0]?Math.max(0,Math.min(1,(t-a[0])/(b[0]-a[0]))):0,mix=n=>a[n]+(b[n]-a[n])*u;return [Math.round(mix(1)),Math.round(mix(2)),Math.round(mix(3)),mix(4)];};
+  // 空中のサブレーンを、空中の判定線(t=line)から道の奥の端(t=0)まで、道の形(奥ほど細い)に沿って写す形(「奥まで」のときの押した光・叩いた光の柱で共用)。
+  // 横の位置は地上の判定ラインの道幅で測り、道のふち(0〜1)の内側へ収めてから、奥へ rhythmProjectionScale で細め、空中のノーツと同じ持ち上げ方(rhythmSkyLiftPx)で上げる。
+  // 描くたびにその場の道の形(判定ラインの高さ・道の幅・画面の大きさ)から作る。決め打ちの長さは使わない
+  // (2026-10-13 社長の iPhone「奥まで出ていない」「判定ラインより低い位置から出てる」。押した光が空中の判定線の上 0.22・下 0.06 だけだった)
+  const skyFarColumn=(left,right,slices)=>{
+    const line=RHYTHM_JUDGMENT_LINE_Y.ratio,sl=rhythmProjectionScale(line),rect={height:cssH};
+    if(!(sl>0)||!(right>left))return null;
+    const fl=Math.max(0,.5+(left-.5)/sl),fr=Math.min(1,.5+(right-.5)/sl);
+    if(!(fr>fl))return null;
+    const pts=[];
+    for(let k=0;k<=slices;k++){const t=line*(1-k/slices),s=rhythmProjectionScale(t);pts.push({t,l:(.5+(fl-.5)*s)*cssW,r:(.5+(fr-.5)*s)*cssW,y:t*cssH-rhythmSkyLiftPx(rect,t)});}
+    return pts;
+  };
   const drawSkyPress=()=>{
     if(!skyPressed.length||!(skyPressedAlpha>0)||!cssW||!cssH)return 0;
     const line=RHYTHM_JUDGMENT_LINE_Y.ratio,stops=SKY_PRESS_STOPS(line),slices=24,rect={height:cssH};
+    // 「奥まで」(既定): 地上の押した光と同じ色の段で、空中の判定線から道の奥の端まで。判定線より手前(下)には出さない
+    if(RHYTHM_HELL_SKY_HIT.id==='far'){
+      const seen=new Set();let painted=0;
+      touch();ctx.setTransform(dpr,0,0,dpr,0,0);
+      for(const value of skyPressed){
+        const index=Math.floor(Number(value));
+        if(!Number.isFinite(index)||index<0||index>=RHYTHM_MAX_SUB_LANE_WIDTH||seen.has(index))continue;
+        seen.add(index);
+        const span=rhythmProjectSubLaneRange(index,1,line),pts=skyFarColumn(span.left,span.left+span.width,slices);
+        if(!pts)continue;
+        // pts[0] が空中の判定線、pts[slices] が道の奥の端。区切りごとに色を変えた台形を重ねる(WebGL・どの canvas でも同じに描ける)
+        for(let k=1;k<pts.length;k++){
+          const a=pts[k-1],b=pts[k],c=skyPressColor(stops,(a.t+b.t)/2);
+          ctx.globalAlpha=skyPressedAlpha*c[3];ctx.fillStyle=`rgb(${c[0]},${c[1]},${c[2]})`;
+          ctx.beginPath();ctx.moveTo(a.l,a.y);ctx.lineTo(a.r,a.y);ctx.lineTo(b.r,b.y);ctx.lineTo(b.l,b.y);ctx.closePath();ctx.fill();
+        }
+        painted++;
+      }
+      ctx.globalAlpha=1;
+      return painted;
+    }
     const wallL=rhythmProjectBoundary(0,line)*cssW,wallR=rhythmProjectBoundary(RHYTHM_LANE_COUNT,line)*cssW;
     const seen=new Set();let painted=0;
     touch();ctx.setTransform(dpr,0,0,dpr,0,0);
@@ -33492,27 +33526,27 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   // 地上の判定ラインの道幅で測った位置を空中のノーツと同じ持ち上げ方(rhythmSkyLiftPx)で奥へ写した台形の帯へ塗る。
   // 形と色の段は光ごとに1回だけ作る(道の幅・画面の大きさ・高さが変わったら作り直す)
   const FAR_BEAM_SLICES=12;
-  const drawFarBeam=(h,alpha,hitY)=>{
-    const line=RHYTHM_JUDGMENT_LINE_Y.ratio,sl=rhythmProjectionScale(line);
-    if(!(sl>0)||!(alpha>.002))return;
-    const key=`${cssW}|${cssH}|${hitY}|${RHYTHM_ROAD_WIDTH.factor}`;
-    if(h._farKey!==key){
-      // 光の幅はレーンより少し広い(×1.15)ので、道のふち(0〜1)の内側へ収める
-      const rect={height:cssH},fl=Math.max(0,.5+(h.center-h.width/2-.5)/sl),fr=Math.min(1,.5+(h.center+h.width/2-.5)/sl),off=hitY-(line*cssH-rhythmSkyLiftPx(rect,line));
-      const pts=[];
-      for(let k=0;k<=FAR_BEAM_SLICES;k++){const t=line*(1-k/FAR_BEAM_SLICES),s=rhythmProjectionScale(t);pts.push({l:(.5+(fl-.5)*s)*cssW,r:(.5+(fr-.5)*s)*cssW,y:t*cssH-rhythmSkyLiftPx(rect,t)+off});}
-      const top=pts[pts.length-1].y,g=ctx.createLinearGradient(0,hitY,0,top);
+  const drawFarBeam=(h,alpha)=>{
+    if(!(alpha>.002))return;
+    // 形は描くたびに、その場の道の形から作る(skyFarColumn)。下の端は空中の判定線そのもの(判定線より下へは出さない)。
+    // 光の幅はレーンより少し広い(×1.15)ので、道のふち(0〜1)の内側へ収める(skyFarColumn の中)
+    const pts=skyFarColumn(h.center-h.width/2,h.center+h.width/2,FAR_BEAM_SLICES);
+    if(!pts)return;
+    const bottom=pts[0].y,top=pts[pts.length-1].y;
+    if(h._farTop!==top||h._farBottom!==bottom){
+      const g=ctx.createLinearGradient(0,bottom,0,top);
       const base=hitFilter(hitRgba(h.color),h.filter.beam),white=hitFilter([255,255,255,.32],h.filter.beam);
-      // 色は道の7割まで残し、奥の端にも薄い光を残す(2026-10-13 社長「奥までに設定しても奥まで出ていない」。
-      // それまでは4割で白へ移り、奥の端で0になっていたので、スマホでは奥の半分がほとんど見えなかった)
+      // 色は道の7割まで残し、奥の端にも薄い光を残す(2026-10-13 社長「奥までに設定しても奥まで出ていない」)
       [0,1/3,2/3,1].forEach(u=>g.addColorStop(.7*u,hitText(hitPremulMix(base,white,u))));
       g.addColorStop(1,hitText([white[0],white[1],white[2],.14]));
-      h._farKey=key;h._farPts=pts;h._farFill=g;
+      h._farTop=top;h._farBottom=bottom;h._farFill=g;
     }
-    const pts=h._farPts;
+    // 1枚の多角形(左のふちを奥へ・右のふちを手前へ)で塗る。区切りの継ぎ目が出ない
     ctx.setTransform(dpr,0,0,dpr,0,0);ctx.globalAlpha=Math.min(1,alpha);ctx.fillStyle=h._farFill;
-    for(let k=1;k<pts.length;k++){const a=pts[k-1],b=pts[k];
-      ctx.beginPath();ctx.moveTo(a.l,a.y);ctx.lineTo(a.r,a.y);ctx.lineTo(b.r,b.y);ctx.lineTo(b.l,b.y);ctx.closePath();ctx.fill();}
+    ctx.beginPath();ctx.moveTo(pts[0].l,pts[0].y);
+    for(let k=1;k<pts.length;k++)ctx.lineTo(pts[k].l,pts[k].y);
+    for(let k=pts.length-1;k>=0;k--)ctx.lineTo(pts[k].r,pts[k].y);
+    ctx.closePath();ctx.fill();
   };
   const drawOneHit=(h,p,hitY,elapsed=0)=>{
     const W=h.width*cssW,cx=h.center*cssW,left=cx-W/2;
@@ -33531,7 +33565,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     }
     // 立ち上がる光の柱(判定ラインから上へ、道の4割ほど。96〜200px。CSS の clamp(96px,34vh,200px) とそろえる)
     f=hitFrame(h.big?HIT_KEYS.beamBig:HIT_KEYS.beam,p);
-    if(f.o>.002&&h.far)drawFarBeam(h,f.o,hitY);
+    if(f.o>.002&&h.far)drawFarBeam(h,f.o);
     else if(f.o>.002){
       const BH=h.finish?Math.max(120,Math.min(260,hitY*.56)):Math.max(96,Math.min(200,hitY*.42));
       ctx.globalAlpha=Math.min(1,f.o);hitTransform(cx,hitY,f.sx,f.sy);
