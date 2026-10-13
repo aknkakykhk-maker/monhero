@@ -75,6 +75,20 @@ const audioDraft=(trackId,variant=0)=>{
     else if(n.type==='FLICK'){const dir=['','left','right'].indexOf(n.flickDir);notes.push({k:'f',t:at,sub:n.subLane,w:n.subLaneWidth,args:[at,n.subLane,n.subLaneWidth,...(dir>0?[dir]:[])],sky:0});}
     else notes.push({k:'t',t:at,sub:n.subLane,w:n.subLaneWidth,sky:0,...(n.monsterSlot?{mon:n.monsterSlot}:{})});}
   fs.rmSync(dir,{recursive:true,force:true});
+  // 押しにくさが固まる2つの型を直す(2026-10-13 テンポくんの bot・Against My Own Shadow の作り直し)
+  //   ① 幅1のホールドは幅2に(端の細いホールドを、構えのくせで外す。36.29秒)。12サブレーンの中に収める
+  //   ② 押さえているホールドのすぐ隣(半レーン未満)のタップ・フリックは、ホールドから離れる向きへ半レーン(サブレーン1つ)ずらす(帯の隣の片寄り。97.70・98.02秒)
+  for(const n of notes)if(n.k==='h'&&n.w<2){n.w=2;if(n.sub+n.w>12)n.sub=12-n.w;}
+  //   重なっている・端で寄せられないときは、ホールドを1つ細くしてから(幅2まで)、それでも入らなければタップの幅を詰める(幅2まで)
+  for(const n of notes){if(n.k!=='t'&&n.k!=='f')continue;
+    const h=notes.find(m=>m.k==='h'&&m.t<n.t-2&&n.t<m.end-2);if(!h)continue;
+    const right=n.sub+n.w/2>=h.sub+h.w/2;
+    for(let r=0;r<3;r++){
+      if(right){const want=h.sub+h.w+1;if(n.sub>=want)break;
+        if(want+n.w<=12)n.sub=want;else if(h.w>2){h.w-=1;continue;}else if(12-want>=2){n.sub=want;n.w=12-want;}break;}
+      else{const want=h.sub-1-n.w;if(n.sub<=want)break;
+        if(want>=0)n.sub=want;else if(h.w>2){h.sub+=1;h.w-=1;continue;}else if(h.sub-1>=2){n.sub=0;n.w=h.sub-1;}break;}}
+    if(n.args){n.args[1]=n.sub;n.args[2]=n.w;}}
   // 横持ちの物差し(HELL・高さの差39%)で「押せない」と出るタップは取り除く(譜面を作る道具の両手のシミュレートより厳しい。
   //   同時に来る2つの間が0〜0.5レーン・反対の手がふさがったまま真ん中を越える、など。2026-10-13 Against My Own Shadow で10件)
   for(let r=0;r<40;r++){const th=thumbCheck(notes,HELL_LANDSCAPE,timing.beatMs);const bad=th.issues.find(i=>i.kind==='impossible'&&/タップ/.test(i.what));if(!bad)break;
