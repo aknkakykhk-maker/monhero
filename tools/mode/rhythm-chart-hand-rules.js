@@ -142,15 +142,14 @@ const flatCross=notes=>{const out=[],longs=(notes||[]).filter(isLong);
 //   kind(重なり方):
 //     overlap   … 半レーンより深く重なる                                   → 置かない
 //     halfThin  … 半レーンまでの重なりで、押さえている帯か来るノーツが幅1レーン以下 → 置かない(「かなり厳しい」)
-//     halfMid   … 半レーンまでの重なりで、細いほうが幅1.5レーン                 → 置かない(決まりの「幅2以上なら許す」に入らないので、止める側に倒した)
-//     halfWide  … 半レーンまでの重なりで、両方とも幅2レーン以上                  → 許す(数だけ出す)
+//     halfWide  … 半レーンまでの重なりで、両方とも幅1.5レーン以上                → 許す(数だけ出す。幅1.5も許す・2026-10-13 社長)
 //   置かない形(blocked)は、HELL(rhythm-hell-mix.js)と新曲の5難易度(rhythm-chart-v3-generate.js)が作らず、rhythm-chart-hand-rules-check.js が止める
 const widthAt=(n,at)=>{const pts=pointsOf(n),w=p=>num(p&&p.subLaneWidth!=null?p.subLaneWidth:undefined,num(n.subLaneWidth,2))/2;
   if(!pts||!pts.length)return w(null);let p=pts[0];for(const q of pts)if(q.timeMs<=at+0.5)p=q;return w(p);};
 const spanAt=(n,at)=>{const c=centerAt(n,at),w=widthAt(n,at);return [c-w/2,c+w/2];};
 const HELD_BAND_HALF=.5,EPS=1e-6;
-const HELD_BAND_KINDS=Object.freeze({overlap:'重なる',halfThin:'半レーン(幅1が絡む)',halfMid:'半レーン(細いほうが幅1.5)',halfWide:'半レーン(両方幅2以上・許す)'});
-const heldBandKind=(overlap,wh,wn)=>{if(overlap>HELD_BAND_HALF+EPS)return 'overlap';const thin=Math.min(wh,wn);return thin<=1+EPS?'halfThin':thin>=2-EPS?'halfWide':'halfMid';};
+const HELD_BAND_KINDS=Object.freeze({overlap:'重なる',halfThin:'半レーン(幅1が絡む)',halfWide:'半レーン(両方幅1.5以上・許す)'});
+const heldBandKind=(overlap,wh,wn)=>overlap>HELD_BAND_HALF+EPS?'overlap':Math.min(wh,wn)<=1+EPS?'halfThin':'halfWide';
 const onHeldBand=notes=>{const out=[],list=(notes||[]).filter(n=>n&&Number.isFinite(n.timeMs)),longs=list.filter(isLong);
   for(const h of longs){const a=h.timeMs,b=endOf(h);
     for(const n of list){if(n===h||n.timeMs<=a+SAME_TIME_MS||n.timeMs>=b-SAME_TIME_MS)continue;

@@ -13,7 +13,7 @@
 //   4. HELL(試作の枠)は件数と場所を出すだけ(公開前・直すかは社長が決める)
 //   5. HELL の交差は上下に分ける: 同じ高さのまま左右が入れ替わる「水平クロス」が0(2026-10-13 社長「クロスのときは上下を活用してほしい」)
 //   6. 押さえている帯の中にノーツを置かない(2026-10-13 社長「ホールド・スライド中に同じところにノーツを出すのはやめたほうがいい」)。
-//      同じ高さで重なる・幅1が絡む半レーンの重なりは0件(地上の押さえと空中のノーツは同じ位置でもよい・両方幅2以上の半レーンは許す)。
+//      同じ高さで重なる・幅1が絡む半レーンの重なりは0件(地上の押さえと空中のノーツは同じ位置でもよい・両方幅1.5以上の半レーンは許す)。
 //      決まりより前からある譜面は rhythm-held-band-existing.json の件数を上限に見るだけ(公開中の譜面は変えない・直すかは社長が決める)。新しい曲・新しい HELL は0
 'use strict';
 const fs=require('fs'),path=require('path');
@@ -56,7 +56,7 @@ let ng=0;const ok=(name,cond,detail='')=>{console.log(`${cond?'OK':'NG'}: ${name
   {const W=(t,sub,w,sky=0)=>({...T(t,sub,sky),subLaneWidth:w}),HW=(t,e,sub,w)=>({...H(t,e,sub),subLaneWidth:w});
     const k=list=>R.onHeldBand(list).map(x=>x.kind).join(',');
     ok('同じ高さで同じ位置は「重なる」、半レーンずれは幅1が絡めば「半レーン(幅1が絡む)」で、どちらも置かない形',k([H(1000,2000,2),T(1500,2)])==='overlap'&&k([H(1000,2000,2),T(1500,3)])==='halfThin'&&R.heldBandBlocked([H(1000,2000,2),T(1500,3)]).length===1);
-    ok('両方とも幅2レーン以上の半レーンの重なりは許す(数だけ)',k([HW(1000,2000,2,4),W(1500,5,4)])==='halfWide'&&R.heldBandBlocked([HW(1000,2000,2,4),W(1500,5,4)]).length===0);
+    ok('両方とも幅1.5レーン以上の半レーンの重なりは許す(数だけ)',k([HW(1000,2000,2,4),W(1500,5,4)])==='halfWide'&&k([HW(1000,2000,2,3),W(1500,4,3)])==='halfWide'&&R.heldBandBlocked([HW(1000,2000,2,3),W(1500,4,3)]).length===0);
     ok('帯の外(端が接するだけ)・地上の押さえと空中のノーツ・押さえる前と離した後は数えない',R.onHeldBand([H(1000,2000,2),T(1500,4)]).length===0&&R.onHeldBand([H(1000,2000,2),T(1500,2,1)]).length===0
       &&R.onHeldBand([H(1000,2000,2),T(1000,2),T(2000,2)]).length===0);
     ok('空中のスライドの帯の中の空中のタップも数える',R.heldBandBlocked([S(1000,2000,1,1,1),T(1500,2,1)]).length===1);
@@ -105,6 +105,6 @@ for(const s of runtime.RHYTHM_PROTO_SONGS||[])for(const [d,c] of Object.entries(
     if(!c||!Array.isArray(c.notes))continue;const key=`${s.songId}/${d}`,all=R.onHeldBand(c.notes),list=all.filter(x=>x.blocked),limit=caps[key]||0;wide+=all.length-list.length;
     if(list.length>limit)bad.push(`${key} ${list.length}件`+(limit?`(上限${limit})`:'')+` ${list.slice(0,6).map(x=>`${(x.at/1000).toFixed(2)}秒(${R.HELD_BAND_KINDS[x.kind]})`).join(' ')}`);}
   ok('押さえている帯の中にノーツを置かない(前からある譜面は控えの件数より増えない・新しい譜面は0)',bad.length===0,bad.slice(0,6).join(' / '));
-  console.log(`参考: 両方幅2以上の半レーンの重なり(許す) ${wide}件 / 控えに残っている置かない形 ${Object.values(caps).reduce((a,b)=>a+b,0)}件(${Object.keys(caps).length}譜面)`);}
+  console.log(`参考: 両方幅1.5以上の半レーンの重なり(許す) ${wide}件 / 控えに残っている置かない形 ${Object.values(caps).reduce((a,b)=>a+b,0)}件(${Object.keys(caps).length}譜面)`);}
 console.log(ng?`\n✗ ${ng}件NG`:'\nすべてOK');
 process.exit(ng?1:0);

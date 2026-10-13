@@ -33,7 +33,10 @@ const SONGS={sheriruth:{marker:'sheriruth-v3',zero:711.6-2594.75,beat:324.342,le
   // crosses は MASTER で両手の長押しが重なる所(10.72・39.23・94.24秒の2本目の始まり)
   against_my_own_shadow:{marker:'against-my-own-shadow-v3',zero:2022.9,beat:419.1788,levelRe:/const againstMyOwnShadowHellChart=mhChart\((\d+),/,
     // 2026-10-13 社長「ヘル用に作り直して」: MASTER を土台にせず、曲の解析から作る(source:'audio')。交差は音から自動で選ぶ
-    source:'audio',variant:3,crosses:'auto',crossUpper:'mover',crossDepth:0.75}};
+    // crossDepth:-1(前 0.75): 94.2〜94.9秒の左手の空中スライドは、右手の地上スライドの真ん中を越えずに手前1レーン(レーン1.5)で止める。
+    //   越えると、交わる所で帯を持ち替える遊び方では親指が空中と地上を入れ替えることになり押せない(テンポくんの bot・持ち替え --freeze 3 で
+    //   93.61・94.24秒の2本が3種とも MISS。指を交差させる遊び方 --freeze 0 では MISS 0)。左右が入れ替わらなければ、どちらの遊び方でも押せる
+    source:'audio',variant:3,crosses:'auto',crossUpper:'mover',crossDepth:-1}};
 const BEAT_GAP=1.5;                      // 同じ親指が段を変えるまでの拍
 // 同じ側(レーンの左右)で高さ(地上⇔空中)を変えるまでの間(2026-10-12 社長「HELL の操作性をもっと改良して」・テンポくんの数え方)。
 // 親指の振り分けとは別に、画面の左半分・右半分ごとに見る。点は押し始めと、長押し・スライドの終わり(指が離れる高さ)。同時押し(0ms)は両手で取るので数えない
@@ -135,6 +138,7 @@ const mix=(master,{zero,beat,crosses=[],gentle=false,crossUpper='hold',crossDept
     // 越える深さ: 今までは元の間隔と同じだけ反対側へ(1レーン以上)。動く帯が空中のとき(crossUpper:'mover')は1レーンまで
     //   (深く越えると、越えた指が相手の親指に寄る。Against My Own Shadow の 39〜41秒で 1.5レーン越えて 43〜57px・テンポくんの bot)
     //   crossDepth(交差ごとの深さの並び)を書いた曲は、その値(Against My Own Shadow の2つめは 0.5・越えた先で左手の親指の線に寄ったため)
+    //   負の値は越えない(相手の帯の真ん中の手前その分で止める・左右が入れ替わらない。Against My Own Shadow は -1)
     const ci=crossList.indexOf(at),depth=crossUpper==='mover'?(Array.isArray(crossDepth)&&Number.isFinite(crossDepth[ci])?crossDepth[ci]:Number.isFinite(crossDepth)?crossDepth:1):Math.max(1,Math.abs(x0-L0));
     const xEnd=Math.max(0,Math.min(5,Math.round((L0-side*depth)*4)/4));
     // 越える瞬間: 今までは重なりの真ん中。動く帯が空中のとき(crossUpper:'mover')は、重なりの終わりの約0.33秒前に寄せて、交差したままの時間を短くする
