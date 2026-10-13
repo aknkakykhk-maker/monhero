@@ -501,11 +501,12 @@ const BATTLE_MONSTER_FX = Object.freeze({
 });
 const BATTLE_STACK_MARK_ORDER = Object.freeze(Object.keys(BATTLE_STACK_MARKS));
 // { kind: 数 } から、出す順に並べた [{ kind, count, mark, img, label }] を作る。知らない種類・0は出さない。
-// ただし showZero の種類(クッキー・黒音符=その子の特性そのもの)は、持ち主なら0でも「×0」で出す(貯まる物があると分かるように)
+// ★クッキー・黒音符(showZero)も、0のときは出さない(2026-10-13 社長の決定。もとは「×0」で出していた)。
+//   showZero は「満タンで光る」札の目印としてだけ使う
 const battleStackMarkItems = (counts) => BATTLE_STACK_MARK_ORDER
   .filter((kind) => counts && Object.prototype.hasOwnProperty.call(counts, kind))
   .map((kind) => ({ kind, count: Math.max(0, Math.floor(Number(counts[kind]) || 0)), ...BATTLE_STACK_MARKS[kind] }))
-  .filter((it) => it.count > 0 || it.showZero);
+  .filter((it) => it.count > 0);
 const sweetStackTraitOf = (id) => (id && Object.prototype.hasOwnProperty.call(SWEET_STACK_TRAITS, id) ? SWEET_STACK_TRAITS[id] : null);
 const sweetStackCountOf = (n) => Math.min(SWEET_STACK_MAX, Math.max(0, Math.floor(Number(n) || 0)));
 // その行動で増える数。ownerId=特性を持つ子(既存5モードは勇者モン・タクティクスはその枠の子)、actorId=カードを使った子。

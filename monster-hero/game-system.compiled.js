@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: aa4df96c172a686e
+// source-sha256: 38bb73bf92f4b871
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-13 14:53";
+const BUILD_DATE = "2026-10-13 15:09";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -17501,7 +17501,7 @@ const battleStackMarkItems = counts => BATTLE_STACK_MARK_ORDER.filter(kind => co
   kind,
   count: Math.max(0, Math.floor(Number(counts[kind]) || 0)),
   ...BATTLE_STACK_MARKS[kind]
-})).filter(it => it.count > 0 || it.showZero);
+})).filter(it => it.count > 0);
 const sweetStackTraitOf = id => id && Object.prototype.hasOwnProperty.call(SWEET_STACK_TRAITS, id) ? SWEET_STACK_TRAITS[id] : null;
 const sweetStackCountOf = n => Math.min(SWEET_STACK_MAX, Math.max(0, Math.floor(Number(n) || 0)));
 const sweetStackGainOf = (ownerId, actorId, card, hit = false) => {
