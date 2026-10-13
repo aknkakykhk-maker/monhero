@@ -9,7 +9,7 @@
 //   ② メロディーのカードでターンを進めると、クッキーが貯まり、バトル画面の札に出る
 //   ③ EX「おねがい♪メロディボックス」を使うと、クッキーの数が文に出て、札が消える(0個へ戻る)
 //   ④ クロミーで同じく、攻撃を当てると黒音符が貯まり、EX「悪夢全開！メロディ・キー」で敵の状態の列に「悪夢全開」が出る
-//   ⑤ 貯まった数は、その子の枠にも「マーク×数」(data-stack-mark)で常に出て、札の数と合う(0個でも×0で出る。2026-10-12 社長の依頼)
+//   ⑤ 貯まった数は、その子の枠にも「マーク×数」(data-stack-mark)で常に出て、札の数と合う(0個のときは出さない。2026-10-13 社長の決定)
 //      EXの札には残り回数(EX×数)、EXを使うと枠に残りターン(⏳nT)が出る
 const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分類フォルダから見た1つ上
 // タクティクス専用 EXスキル(STEP1: 共通基盤)を、実際のブラウザで操作して確かめる。
@@ -336,7 +336,7 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
       }, [slot, kind]);
       const chipCount = async (mark) => { const m = (await bodyText()).match(new RegExp(mark + '(\\d+)\\/10')); return m ? Number(m[1]) : 0; };
       const m0 = await slotMark(mSlot, 'cookie');
-      check('メロディーの枠に、0個でもクッキーのマーク(×0)が出る', m0 && m0.count === 0 && m0.inSlot, JSON.stringify(m0));
+      check('クッキー0個のうちは、メロディーの枠にクッキーのマークを出さない(×0は出さない)', m0 === null, JSON.stringify(m0));
       await tapSlot(mSlot);
       const p0 = await panel();
       check('クッキー0個のうちは、EXを使えず理由が出る', p0 && !p0.canUse && /クッキーが1つも無い/.test(p0.why), p0 ? `${p0.name} / ${p0.why}` : '詳細が開かない');
@@ -366,7 +366,7 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
       await page.waitForTimeout(400);
       check('使うとクッキーは0個に戻り、札が消える', !/🍪\d+\/10/.test(await bodyText()));
       const m2 = await slotMark(mSlot, 'cookie');
-      check('使うと枠のマークも×0に戻る', m2 && m2.count === 0, JSON.stringify(m2));
+      check('使って0個に戻ると、枠のクッキーのマークも消える', m2 === null, JSON.stringify(m2));
       check('EXを使ったあともターンを進められる', await playAttackTurn(true));
       const exTurns2 = await slotMark(mSlot, 'exTurns');
       check('ターンを進めると、残りターンが1つ減る', exTurns && exTurns2 && exTurns2.count === exTurns.count - 1, `${exTurns && exTurns.count} → ${exTurns2 && exTurns2.count}`);

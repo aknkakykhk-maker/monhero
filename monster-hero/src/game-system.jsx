@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f5e7c66cbf3113f3
+// generated-sha256: 022f7bb2af468e17
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-13 15:35"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-13 16:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -9429,11 +9429,13 @@ const reconcileMasuPoints = (masu) => {
   const missing = earned - (aptSpent + statSpent + (masu.distAptPoints || 0));
   return missing > 0 ? { ...masu, distAptPoints: (masu.distAptPoints || 0) + missing } : masu;
 };
+// labelBg … 距離の札(零/近/中/遠)。字は4つとも白い字+黒い縁取り(mh-range-label・index.html)。地の色だけ距離ごとに変える
+//   (2026-10-13 社長「縁を付けて中を白くするとかはどう? 全距離統一で」。もとは近だけ黄の地に黒い字だった)
 const RANGE_STYLES = {
-  0: { bg: "bg-red-950/90", border: "border-red-500", text: "text-red-400", shadow: "shadow-red-500/50", glow: "drop-shadow-[0_0_15px_rgba(239,68,68,0.9)]", slotBg: "bg-red-900/50", labelBg: "bg-red-600 text-white", slotGlow: "shadow-[inset_0_1px_0_rgba(255,255,255,.22),0_0_14px_rgba(239,68,68,0.38),0_4px_12px_rgba(0,0,0,.55)]" },
-  1: { bg: "bg-yellow-950/90", border: "border-yellow-500", text: "text-yellow-400", shadow: "shadow-yellow-500/50", glow: "drop-shadow-[0_0_15px_rgba(234,179,8,0.9)]", slotBg: "bg-yellow-900/50", labelBg: "bg-yellow-600 text-black", slotGlow: "shadow-[inset_0_1px_0_rgba(255,255,255,.22),0_0_14px_rgba(234,179,8,0.38),0_4px_12px_rgba(0,0,0,.55)]" },
-  2: { bg: "bg-emerald-950/90", border: "border-emerald-500", text: "text-emerald-400", shadow: "shadow-emerald-500/50", glow: "drop-shadow-[0_0_15px_rgba(16,185,129,0.9)]", slotBg: "bg-emerald-900/50", labelBg: "bg-emerald-600 text-white", slotGlow: "shadow-[inset_0_1px_0_rgba(255,255,255,.22),0_0_14px_rgba(16,185,129,0.38),0_4px_12px_rgba(0,0,0,.55)]" },
-  3: { bg: "bg-blue-950/90", border: "border-blue-500", text: "text-blue-400", shadow: "shadow-blue-500/50", glow: "drop-shadow-[0_0_15px_rgba(59,130,246,0.9)]", slotBg: "bg-blue-900/50", labelBg: "bg-blue-600 text-white", slotGlow: "shadow-[inset_0_1px_0_rgba(255,255,255,.22),0_0_14px_rgba(59,130,246,0.38),0_4px_12px_rgba(0,0,0,.55)]" }
+  0: { bg: "bg-red-950/90", border: "border-red-500", text: "text-red-400", shadow: "shadow-red-500/50", glow: "drop-shadow-[0_0_15px_rgba(239,68,68,0.9)]", slotBg: "bg-red-900/50", labelBg: "bg-red-600 mh-range-label", slotGlow: "shadow-[inset_0_1px_0_rgba(255,255,255,.22),0_0_14px_rgba(239,68,68,0.38),0_4px_12px_rgba(0,0,0,.55)]" },
+  1: { bg: "bg-yellow-950/90", border: "border-yellow-500", text: "text-yellow-400", shadow: "shadow-yellow-500/50", glow: "drop-shadow-[0_0_15px_rgba(234,179,8,0.9)]", slotBg: "bg-yellow-900/50", labelBg: "bg-yellow-600 mh-range-label", slotGlow: "shadow-[inset_0_1px_0_rgba(255,255,255,.22),0_0_14px_rgba(234,179,8,0.38),0_4px_12px_rgba(0,0,0,.55)]" },
+  2: { bg: "bg-emerald-950/90", border: "border-emerald-500", text: "text-emerald-400", shadow: "shadow-emerald-500/50", glow: "drop-shadow-[0_0_15px_rgba(16,185,129,0.9)]", slotBg: "bg-emerald-900/50", labelBg: "bg-emerald-600 mh-range-label", slotGlow: "shadow-[inset_0_1px_0_rgba(255,255,255,.22),0_0_14px_rgba(16,185,129,0.38),0_4px_12px_rgba(0,0,0,.55)]" },
+  3: { bg: "bg-blue-950/90", border: "border-blue-500", text: "text-blue-400", shadow: "shadow-blue-500/50", glow: "drop-shadow-[0_0_15px_rgba(59,130,246,0.9)]", slotBg: "bg-blue-900/50", labelBg: "bg-blue-600 mh-range-label", slotGlow: "shadow-[inset_0_1px_0_rgba(255,255,255,.22),0_0_14px_rgba(59,130,246,0.38),0_4px_12px_rgba(0,0,0,.55)]" }
 };
 
 const AUTO_SETTINGS_KEY = 'mh_auto_settings_v1';
@@ -12326,11 +12328,12 @@ const BATTLE_MONSTER_FX = Object.freeze({
 });
 const BATTLE_STACK_MARK_ORDER = Object.freeze(Object.keys(BATTLE_STACK_MARKS));
 // { kind: 数 } から、出す順に並べた [{ kind, count, mark, img, label }] を作る。知らない種類・0は出さない。
-// ただし showZero の種類(クッキー・黒音符=その子の特性そのもの)は、持ち主なら0でも「×0」で出す(貯まる物があると分かるように)
+// ★クッキー・黒音符(showZero)も、0のときは出さない(2026-10-13 社長の決定。もとは「×0」で出していた)。
+//   showZero は「満タンで光る」札の目印としてだけ使う
 const battleStackMarkItems = (counts) => BATTLE_STACK_MARK_ORDER
   .filter((kind) => counts && Object.prototype.hasOwnProperty.call(counts, kind))
   .map((kind) => ({ kind, count: Math.max(0, Math.floor(Number(counts[kind]) || 0)), ...BATTLE_STACK_MARKS[kind] }))
-  .filter((it) => it.count > 0 || it.showZero);
+  .filter((it) => it.count > 0);
 const sweetStackTraitOf = (id) => (id && Object.prototype.hasOwnProperty.call(SWEET_STACK_TRAITS, id) ? SWEET_STACK_TRAITS[id] : null);
 const sweetStackCountOf = (n) => Math.min(SWEET_STACK_MAX, Math.max(0, Math.floor(Number(n) || 0)));
 // その行動で増える数。ownerId=特性を持つ子(既存5モードは勇者モン・タクティクスはその枠の子)、actorId=カードを使った子。
@@ -35766,7 +35769,7 @@ function PickSlotScreen({
             data-ph-range={i} data-ph-on={open&&allowed?'':undefined}
             className={`mh-phase-enter mh-phase-card mh-ph-frame relative overflow-hidden min-h-[96px] rounded-2xl border-2 flex flex-col items-center justify-center gap-1 px-1 py-2 transition-all active:scale-90${scenarioPicksSlot(i)?battleTutorialSpotClass('slots'):''} ${open?(allowed?'':'opacity-20'):'opacity-75 saturate-50'}`}><i aria-hidden="true" className="mh-ph-ring"/>
           <span aria-hidden="true" className="mh-ph-sparkle"/>
-          <span className={`relative text-[10px] font-black uppercase px-3 py-0.5 rounded-full ${RANGE_STYLES[i].labelBg} ${RANGE_STYLES[i].text} border border-white/30 shadow-md`} style={{boxShadow:'0 0 10px rgba(var(--mh-rc),.6), inset 0 1px 0 rgba(255,255,255,.35)'}}>{RANGE_LABELS[i]}距離</span>
+          <span className={`relative text-[10px] font-black uppercase px-3 py-0.5 rounded-full ${RANGE_STYLES[i].labelBg} border border-white/30 shadow-md`} style={{boxShadow:'0 0 10px rgba(var(--mh-rc),.6), inset 0 1px 0 rgba(255,255,255,.35)'}}>{RANGE_LABELS[i]}距離</span>
           {open?(<>
             <PlusCircle className={`relative text-white/70${allowed?' animate-pulse':''}`} size={20}/>
             <span className={`relative text-[9px] font-black px-2 py-0.5 rounded-full border ${DIST_APTITUDE_COLOR[grade]}`}>{grade} {perSlotApt?'この距離で':'合流後'} {formatAptPct(after)}</span>
