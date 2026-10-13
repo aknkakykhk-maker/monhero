@@ -369,7 +369,8 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
           ownKinds: [...p.querySelectorAll('[data-unit-effects="own"] [data-unit-effect]')].map((e) => e.getAttribute('data-unit-effect')) };
       });
       check('「能力・効果」にライフ・ガッツ・ちから・丈夫さ・間合い適性が出る', !!ally && /\d+ \/ \d+/.test(ally.hp) && /\d+ \/ \d+/.test(ally.guts) && /元の値 \d/.test(ally.atk) && /元の値 \d/.test(ally.def) && /間合い適性/.test(ally.apt), ally && `${ally.hp} | ${ally.guts} | ${ally.atk} | ${ally.def} | ${ally.apt}`);
-      check('この子の効果に、枠のマーク(クッキーなど)が名前と数つきで出る', !!ally && ally.ownKinds.some((k) => /^mark-/.test(k)) && /クッキー/.test(ally.text), ally && ally.ownKinds.join(','));
+      check('この子の効果に、枠のマーク(EXの残りターンなど)が名前と数つきで出る', !!ally && ally.ownKinds.some((k) => /^mark-/.test(k)), ally && ally.ownKinds.join(','));
+      check('数が0のマーク(クッキー×0など)は、この子の効果に出さない', !!ally && !/×0(?!\d)/.test(ally.text), ally && ally.text.slice(0, 200));
       check('味方全員の効果(ライフ回復・ガッツ回復など)が出る', !!ally && ally.team >= 2 && /ライフ回復/.test(ally.text), ally && String(ally.team));
       check('能力・効果の窓は幅390で字がはみ出さない', (await overflowIn('[data-tactics-ex-card]')).length === 0, (await overflowIn('[data-tactics-ex-card]')).join(' / '));
       await shot('detail-ally-tactics');
