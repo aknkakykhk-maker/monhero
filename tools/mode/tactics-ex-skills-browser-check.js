@@ -65,6 +65,9 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
       localStorage.setItem('mh_inherited_unique_level_compensation_v1', JSON.stringify(true));
       localStorage.setItem('mh_inherited_unique_level_compensation_pending_v1', JSON.stringify(false));
       localStorage.setItem('mh_tactics_intro_seen_v1', JSON.stringify(true));
+      // HELL の公開(#2931)で、HOME に来た人へ1回だけお話と遊び方の説明が出る。画面全体を覆う窓なので、ほかの紹介と同じく見たことにしてから始める
+      //   (2026-10-13: 下準備に無く、説明が開いたままバトルへ進んで、説明の動画が枠を押す邪魔をしていた。プレイヤーは閉じないと進めないので起きない)
+      localStorage.setItem('mh_rhythm_hell_story_seen_v1', JSON.stringify(true));
       // 剣士モッチー(円盤石で解放するレア)も勇者モンに選べるようにする。検査のまっさらなデータだけの話
       localStorage.setItem('mh_unlocked_monsters', JSON.stringify(['Mocchi','Suezo','Golem','Tiger','Ham','Pixie','Monol','Oboro','KenshiMocchi','Mia','Snegurochka','Undine','Yaobikuni','Pandora','Plant']));
     });
