@@ -276,7 +276,7 @@ check('画質「自動」は詰まりが続いたときだけ一段下げ、上�
   &&gameSrc.includes('aq.slow/aq.frames>RHYTHM_AUTO_QUALITY_SLOW_RATIO&&stepAutoQualityRef.current')
   &&/stepAutoQualityRef\.current=\(\)=>setAutoQuality\(level=>\{[^}]*Math\.min\(RHYTHM_RENDER_QUALITY_STEPS\.length-1,Math\.max\(0,index\)\+1\)/.test(gameSrc));
 check('canvas 版は取り終えたノーツを片付ける(弾け終わる)まで走査の先頭を進めない',
-  gameSrc.includes("if(note.done&&(!failedTrail||failFade<=0)&&!clearFlash){note._rhythmCanvasSettled=true;return;}")
+  gameSrc.includes("if(note.done&&!failedTrail&&!clearFlash){note._rhythmCanvasSettled=true;return;}")
   &&gameSrc.includes("canvasNotes?head._rhythmCanvasSettled===true:(headEl?headEl._rhythmHidden===true:true)"));
 check('失敗表示フラグをdatasetから毎フレーム読み直さない',
   gameSrc.includes('el._rhythmFailedFlag!==failedFlag')

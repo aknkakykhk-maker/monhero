@@ -1,9 +1,9 @@
-// 失敗したHOLD / SLIDEを、その場で消さずに薄いグレーへ落とし、約0.3秒で消すことを確かめる。
+// 失敗したHOLD / SLIDEを、その場で消さずに薄いグレーへ落とし、帯の終わりまで流すことを確かめる。
 //
 // 途中で失敗したロングノーツがいきなり消えると、「取り損ねたのか、そもそも無かったのか」が
 // 分からない。表示だけを薄いグレーへ落として、復活しないことを見せる。
-// 以前は終端まで流し続けていたが、長いスライドだと数秒間「透明なノーツ」が流れてくるように見えたので、
-// 約0.3秒で消すことにした(2026-10-12 社長の決定・rhythmFailedTrailFade)。
+// 2026-10-13 午前に「約0.3秒で消す」を入れたが、社長「消すなんてルール決めたことない」で、終わりまで薄く流す形へ戻した
+// (地上・空中・全難易度・ひとりもマルチも同じ。灰色はホールドと同じくらいの濃さ RHYTHM_FAILED_SLIDE_FILL)。
 // 判定・コンボ・スコアはここでは一切変えない。
 //
 //   node tools/mode/rhythm-failed-hold-trail-check.js
@@ -28,9 +28,10 @@ check('元の種類を見る補助関数がある(触った FLICK を帯持ち�
 // 消す・薄くするという扱いは変えていないが、毎フレーム同じ値を書き直さないようにしたので
 // (遊んでいるうちに重くなる原因だった)、書き方が「変わったときだけ書く」形になっている。
 // 取れたHOLD / SLIDE / FLICKは、消える前に一瞬だけ判定ラインで光る(2026-09-04に追加)。
-// 失敗したHOLD / SLIDEは薄いグレーで約0.3秒見せてから消す。光っていないノーツは従来どおり消える。
-check('TAP・終端を過ぎたノーツ・消え切った失敗ノーツはその場で消す(取れたときの短い光のあいだだけ残る)',
-  game.includes("if(note.done&&(!failedTrail||failFade<=0)&&!clearFlash){if(el._rhythmHidden!==true){el.style.display='none';el._rhythmHidden=true;}return;}")
+// 失敗したHOLD / SLIDEは薄いグレーで帯の終わりまで見せる。光っていないノーツは従来どおり消える。
+check('TAP・終端を過ぎたノーツはその場で消す(取れたときの短い光と、失敗した帯の終わりまでのあいだだけ残る)',
+  game.includes("if(note.done&&!failedTrail&&!clearFlash){if(el._rhythmHidden!==true){el.style.display='none';el._rhythmHidden=true;}return;}")
+  &&game.includes("if(note.done&&!failedTrail&&!clearFlash){note._rhythmCanvasSettled=true;return;}")
   &&game.includes('const clearFlash=note.done&&Number.isFinite(note._rhythmClearAt)&&songTimeMs-note._rhythmClearAt<RHYTHM_CLEAR_FLASH_MS;'));
 check('光るのは取れたときだけで、失敗したノーツは薄いグレーのまま(扱いを混ぜない)',
   game.includes("const clearedGesture=judgment!=='MISS'&&")
@@ -39,19 +40,13 @@ check('消したノーツへ毎フレーム同じ指示を書き直さない',
   game.includes('if(el._rhythmHidden===true){el.style.display=\'\';el._rhythmHidden=false;}'));
 check('失敗中は判定範囲外になっても表示を続ける',
   game.includes('visible=failedTrail||note.activePointerId!==null||(progress>=-.1&&progress<=1.18)'));
-check('失敗中は薄く表示し、約0.3秒で消す(DOM 版・canvas 版とも)',
-  game.includes("const nextOpacity=failedTrail?String(Math.round(34*failFade)/100):(visible?'1':'0');")
-  &&game.includes("alpha:skyCutTrail?RHYTHM_SKY_CUT_TRAIL_ALPHA:failedTrail?.34*failFade:1")
-  &&game.includes("const failFade=failedTrail&&!skyCutTrail?rhythmFailedTrailFade(note,songTimeMs):1;")
-  &&game.includes("const failFade=failedTrail&&note._rhythmSkyCut!==true?rhythmFailedTrailFade(note,songTimeMs):1;")
-  &&data.includes('const RHYTHM_FAILED_TRAIL_FADE_MS=300;'));
-// 例外は1つだけ: HELL の空中のスライドが押さえている途中で切れて MISS になったもの(_rhythmSkyCut)は、
-// 地上のスライド(外れても切れずに終わりまで流れる)とそろえて、残りの帯を元の形のまま終わりまで薄く流す(2026-10-13 社長「途中で外れて MISS になったときに消える」)
-check('空中のスライドが途中で切れたときだけ、残りの帯を終わりまで流す(印は切る所で付ける)',
-  game.includes('const skyCutTrail=failedTrail&&note._rhythmSkyCut===true;')
-  &&game.includes('failed:failedTrail&&!skyCutTrail,')
-  &&data.includes("if(session.kind==='SLIDE')session.note._rhythmSkyCut=true;")
-  &&/const RHYTHM_SKY_CUT_TRAIL_ALPHA=\.\d+;/.test(data));
+check('失敗中は薄い灰色のまま帯の終わりまで流す(途中で消さない・DOM 版・canvas 版とも)',
+  game.includes("const nextOpacity=failedTrail?'0.34':(visible?'1':'0');")
+  &&game.includes('failed:failedTrail,')
+  &&game.includes("alpha:failedTrail?.34:1")
+  &&game.includes("const failedTrail=note.done&&note._rhythmFinalJudgment==='MISS'&&rhythmNoteHasBody(note)&&songTimeMs<rhythmReleaseTargetMs(note);")
+  &&!game.includes('rhythmFailedTrailFade')&&!data.includes('rhythmFailedTrailFade')
+  &&/const RHYTHM_FAILED_SLIDE_FILL='rgba\(135,145,160,\.8\)';/.test(data));
 check('見え方が変わったときだけ書き込む',
   game.includes("if(el._rhythmOpacity!==nextOpacity){el.style.opacity=nextOpacity;el._rhythmOpacity=nextOpacity;}"));
 // 比較相手はDOM(dataset)ではなく要素へ覚えた値。書き込む条件は同じで、
