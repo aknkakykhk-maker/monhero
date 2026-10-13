@@ -59,8 +59,9 @@ const hellState = (s) => s.page.evaluate((id) => {
   return { keys: Object.keys(song.difficulties).includes('HELL'), defs: rhythmSongDifficultyDefs(song).some((d) => d.id === 'HELL'),
     chart: !!(song.difficulties.HELL && song.difficulties.HELL.notes && song.difficulties.HELL.notes.length), open: rhythmHellOpen(), released: rhythmHellReleased() };
 }, SONG_ID);
-const storage = (s) => s.page.evaluate(() => ({ preview: localStorage.getItem('mh_rhythm_hell_story_seen_preview_proto'), real: localStorage.getItem('mh_rhythm_hell_story_seen_v1'),
-  best: (() => { try { return JSON.parse(localStorage.getItem('mh_rhythm_best_v1') || '{}').sheriruth || null; } catch { return null; } })() }));
+// 記録は --song の曲のものを見る(2026-10-13 まで sheriruth と決め打ちで、ほかの曲では「MASTER のクリアが残る」が NG になっていた)
+const storage = (s) => s.page.evaluate((id) => ({ preview: localStorage.getItem('mh_rhythm_hell_story_seen_preview_proto'), real: localStorage.getItem('mh_rhythm_hell_story_seen_v1'),
+  best: (() => { try { return JSON.parse(localStorage.getItem('mh_rhythm_best_v1') || '{}')[id] || null; } catch { return null; } })() }), SONG_ID);
 
 // MASTER を人の指で最後まで演奏する。クリアしたか(結果画面の表示)を返す
 async function playMaster(s, title) {
@@ -199,7 +200,7 @@ async function storyScenario(s) {
     ok('曲えらびで HELL が選べる(「MASTERで解放」ではない)', sel.length > 0 && !sel.some((t) => /MASTERで解放/.test(t)), sel.join(' / '));
     await s.page.screenshot({ path: path.join(OUT, 'select-after.png') });
     // ⑥ もう一度「MASTER を初めてクリア」にしても、お話は2回目は出ない
-    await s.page.evaluate(() => { const all = JSON.parse(localStorage.getItem('mh_rhythm_best_v1') || '{}'); if (all.sheriruth) delete all.sheriruth.MASTER; localStorage.setItem('mh_rhythm_best_v1', JSON.stringify(all)); });
+    await s.page.evaluate((id) => { const all = JSON.parse(localStorage.getItem('mh_rhythm_best_v1') || '{}'); if (all[id]) delete all[id].MASTER; localStorage.setItem('mh_rhythm_best_v1', JSON.stringify(all)); }, SONG_ID);
     await s.boot();
     const r2 = await playMaster(s, title);
     ok('2回目: MASTER をクリアすると、結果画面には HELL の解放が出る', r2.ok && /HELL/.test(r2.unlock || ''), r2.why || r2.unlock);

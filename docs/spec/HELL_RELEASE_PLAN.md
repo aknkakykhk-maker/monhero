@@ -19,7 +19,7 @@
 
 | もの | 中身 | 1か所の値 |
 | --- | --- | --- |
-| HELL がある曲 | Sheriruth(Lv.54・642ノーツ・うち空239)/ Grievous Lady(Lv.60・649ノーツ・うち空220)/ 風がそよぐ場所(Lv.23・193ノーツ・うち空19・空中の入口) | `data/rhythm-mode.js` の `RHYTHM_HELL_CHARTS`(曲を外すときはその1行を消す) |
+| HELL がある曲 | Sheriruth(Lv.54・642ノーツ・うち空239)/ Grievous Lady(Lv.60・649ノーツ・うち空220)/ 風がそよぐ場所(Lv.23・193ノーツ・うち空19・空中の入口)/ Against My Own Shadow(Lv.42・438ノーツ・うち空40・中くらい・2026-10-13 夜に追加) | `data/rhythm-mode.js` の `RHYTHM_HELL_CHARTS`(曲を外すときはその1行を消す) |
 | レベル | 譜面の値(空中は地上と見なした Lv. の1.2倍・10/12 夕方に3割→2割へ戻した)。レベル表 `RHYTHM_CHART_LEVELS` には HELL の行が無く、譜面の値がそのまま出る | `sheriruthHellChart` / `grievousLadyHellChart` の `mhChart(<Lv>, …)` |
 | 開く条件 | その曲の MASTER を1回クリアすると、その曲の HELL が開く。結果画面に「🔓 HELL が解放されました！」 | `data/rhythm-mode.js` の `RHYTHM_DIFFICULTY_UNLOCK_BY.HELL`(`'MASTER'`) |
 | お話 | 公開後に HOME へ着いたとき、まだ見ていない全員に「空まで届くビート」→ 説明5枚(動画つき)を1回だけ(MASTER のクリアとは関係なし) | `RHYTHM_HELL_STORY_TRIGGER`(`'release'`。ほかに `'after-result'`・`'home'`・`'none'`) |
