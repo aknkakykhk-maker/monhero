@@ -22,6 +22,8 @@ const DAY_CUTOFF_HOUR = 6;
 // 部署の並び。色はこの順で固定(部署が増えても塗り替えない)。8番目以降は「その他」にまとめる
 const DEPT_ORDER = ['窓口', 'ビート部', 'バトル部', '見回り部', '守り部', '研究所', '修理部'];
 const OTHER = 'その他';
+// 記録のあいだがこれより空いたら、残り%の線をつながない(毎晩の記録なら24時間あく)
+const GAP_HOURS = 30;
 
 const AT_RE = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})$/;
 // 日本時間の "YYYY-MM-DD HH:MM" を、日本時間の壁時計のまま数える(UTC として扱うことで時差を持ち込まない)
@@ -203,7 +205,43 @@ function summarize(data, now = null) {
       forecast = { soFar: cur.value, end: cur.value + pace * remain, remainDays: remain, weekLabel: cur.label, resetAt: ws + 7 * 86400000 };
     }
   }
-  return { days, weeks, depts, cal, unit, forecast, snapshots: data.snapshots.length, calibrations: data.calibrations.length, resetKnown: data.weekResetDow != null, data };
+  // 残り%の移り変わり(記録の時刻ごと)。週の使用%は、同じ週の合わせ込みがあればそこを起点に、無ければ週の始まり(0%)から足す。
+  // 記録のあいだが GAP_HOURS より空いた所と、週の区切りでは線をつながない
+  const line = [];
+  if (cal) {
+    const usedAt = (t) => {
+      const ws = weekStartOf(t, data);
+      const anchors = data.calibrations.map((c) => ({ t: parseAt(c.at), p: c.percent })).filter((c) => weekStartOf(c.t, data) === ws);
+      if (anchors.length) {
+        const a = anchors.reduce((best, c) => (Math.abs(c.t - t) < Math.abs(best.t - t) ? c : best));
+        return a.p + cal.rate * (cumulativeAt(ivs, t) - cumulativeAt(ivs, a.t));
+      }
+      const base = Math.max(ws, from);
+      if (t < base || !ivs.length || ivs[0].start > base) return null;
+      return cal.rate * (cumulativeAt(ivs, t) - cumulativeAt(ivs, base));
+    };
+    const times = data.snapshots.map((x) => parseAt(x.at)).filter((t) => t >= from);
+    // 週の始まりも点にする(残り100%)。前後の記録がそろっているときだけ
+    const firstT = ivs.length ? ivs[0].start : Infinity;
+    const lastT2 = ivs.length ? ivs[ivs.length - 1].end : -Infinity;
+    for (let ws = weekStartOf(firstT, data) + 7 * 86400000; ws <= lastT2; ws += 7 * 86400000) if (ws >= from && !times.includes(ws)) times.push(ws);
+    times.sort((x, y) => x - y);
+    let prev = null;
+    for (const t of times) {
+      const u = usedAt(t);
+      if (u == null) { prev = null; continue; }
+      const used = Math.max(0, Math.min(100, u));
+      const ws = weekStartOf(t, data);
+      const isStart = t === ws;
+      // 最初の点・記録が空いた所・週が変わった所(週の始まりの点を含む)では線を切る
+      const brk = !prev || (t - prev.t) > GAP_HOURS * 3600000 || weekStartOf(prev.t, data) !== ws;
+      line.push({ t, remain: isStart ? 100 : 100 - used, used: isStart ? 0 : used, brk, week: ws });
+      prev = { t };
+    }
+  }
+  const lastAt = data.snapshots.length ? data.snapshots[data.snapshots.length - 1].at : null;
+  const resetNext = lastEnd != null ? weekStartOf(lastEnd, data) + 7 * 86400000 : null;
+  return { days, weeks, depts, cal, unit, forecast, line, lastAt, resetNext, snapshots: data.snapshots.length, calibrations: data.calibrations.length, resetKnown: data.weekResetDow != null, data };
 }
 
 module.exports = { load, normalize, validateSnapshot, summarize, parseAt, ymd, md, DOW, DEPT_ORDER, OTHER, DEFAULT_FILE, deptKey, weekStartOf };
