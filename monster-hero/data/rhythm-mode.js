@@ -795,23 +795,10 @@ const rhythmNoteVisualType=note=>note?._rhythmOriginalType||note?.type;
 const rhythmNoteIsHold=note=>rhythmNoteVisualType(note)==='HOLD';
 // 帯を持つ(=取り損ねたとき終端まで薄く流す)のは、元が HOLD か SLIDE のノーツだけ
 const rhythmNoteHasBody=note=>rhythmNoteIsHold(note)||rhythmNoteIsSlide(note);
-// 取り損ねた HOLD / SLIDE の残り(体と終わりの棒)の濃さの倍率(1→0)。以前は終端まで薄い灰色で流し続けていたが、
-// 長いスライドだと数秒間「透明なノーツ」が流れてくるように見えた(2026-10-12 社長「途中で透明っぽいノーツが流れてくる」)。
-// 取り損ねた残りを初めて描いた時刻(曲の時刻)から RHYTHM_FAILED_TRAIL_FADE_MS で消す。見た目だけで、判定・スコア・ライフ・コンボには関わらない。
-// 時刻は演奏ごとに作り直すノーツ(makeRuntimeNotes)へ持たせる。曲の時刻が戻ったら(巻き戻し)そこから数え直す
-const RHYTHM_FAILED_TRAIL_FADE_MS=300;
 // 取り損ねたスライドの帯の灰色(2D・GPU の帯で共用)。地上のホールドの取り損ね(灰色の段 .9→.7)と同じくらいの濃さにそろえる
 // (2026-10-13 社長「空中のスライドが途中で外れて MISS になったときに消える」。以前の .48 はホールドの約6割の濃さで、
 // 色のついた帯が急に暗い灰色へ変わり、道の上ではほとんど見えなかった)
 const RHYTHM_FAILED_SLIDE_FILL='rgba(135,145,160,.8)';
-// 空中のスライドが途中で切れて MISS になったあと、残りの帯を元の形のまま終わりまで流すときの濃さ(地上の外れた帯と同じく薄く)
-const RHYTHM_SKY_CUT_TRAIL_ALPHA=.42;
-const rhythmFailedTrailFade=(note,songMs)=>{
-  if(!note)return 0;
-  const now=Number(songMs)||0;
-  if(!Number.isFinite(note._rhythmFailSeenMs)||now<note._rhythmFailSeenMs)note._rhythmFailSeenMs=now;
-  return Math.max(0,Math.min(1,1-(now-note._rhythmFailSeenMs)/RHYTHM_FAILED_TRAIL_FADE_MS));
-};
 const rhythmSlideAuthoredLane=lane=>{
   const value=Number(lane),doubled=Math.round(value*2);
   if(!Number.isFinite(value)||Math.abs(value*2-doubled)>1e-6||doubled<0||doubled>RHYTHM_SUB_LANE_COUNT-2)return null;
@@ -3566,9 +3553,6 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
     if(elapsedPerf<graceMs)return;
     session.note.holdJudgment='MISS';
     session.failed=true;
-    // 空中のスライドは、判定はここで MISS に決まっても、見た目は地上のスライド(外れても切れずに終わりまで流れる)と同じく、
-    // 残りの帯を元の形のまま終わりまで薄く流す(2026-10-13 社長「途中で外れて MISS になったときに消える」)。描く側(paintCanvasNote)がこの印を見る
-    if(session.kind==='SLIDE')session.note._rhythmSkyCut=true;
     // 猶予を超えて外れたままなら、指を離すのを待たずその場でMISS確定する。
     // endTimeMsを現在より少し前へ寄せ、本体(scheduleTick)の「endTimeMs到達で
     // 既存applyJudgmentを呼ぶ」経路をそのまま使ってグレー表示へ切り替える(新しい判定経路は作らない)。
