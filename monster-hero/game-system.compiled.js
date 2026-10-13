@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3fe61a51709d00f0
+// source-sha256: 80e35d9f17e785e0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-13 13:48";
+const BUILD_DATE = "2026-10-13 14:40";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -62318,6 +62318,7 @@ const BattleStackMarks = ({
   if (!items.length) return null;
   return React.createElement("div", {
     "data-stack-marks": side,
+    "data-stack-many": items.length >= 3 ? 'true' : undefined,
     role: "img",
     "aria-label": items.map(it => `${it.label}${it.count}${it.unit === 'T' ? 'ターン' : ''}`).join('、'),
     className: `mh-stack-marks pointer-events-none ${className}`
@@ -65130,11 +65131,11 @@ function BattleScreen({
           animationDuration: `${tacticsExCutin.ms}ms`
         } : {})
       }
-    }, React.createElement("i", null), React.createElement("i", null)), React.createElement(BattleStackMarks, {
+    }, React.createElement("i", null), React.createElement("i", null)), tacticsNewLayout && React.createElement(BattleStackMarks, {
       counts: allyStackCounts[i],
       side: "ally",
       full: SWEET_STACK_MAX,
-      className: tacticsNewLayout ? 'mh-stack-marks-ally' : 'mh-stack-marks-ally mh-stack-marks-ally-top'
+      className: "mh-stack-marks-ally"
     }), tacticsNewLayout && !ecoBattleView && !liteBattleView && typeof tacticsSlotCountersAt === 'function' && React.createElement(BattleMonsterFx, {
       fx: debugStackMarks && debugStackMarks.fx && debugStackMarks.fx[i] ? debugStackMarks.fx[i] : tacticsSlotCountersAt(i),
       imgSrc: s?.imgUrl,
@@ -65367,10 +65368,15 @@ function BattleScreen({
           fontSize: '7px'
         }
       }, "🛡 ", slotRushGuard ? '連撃ガード' : '全体', " ", gv);
-    })(), (slotAssignedCards.length > 0 || previewDmg > 0 || previewGuard > 0 || slotAimHit || slotExInfo) && React.createElement("div", {
+    })(), (slotAssignedCards.length > 0 || previewDmg > 0 || previewGuard > 0 || slotAimHit || slotExInfo || !tacticsNewLayout && battleStackMarkItems(allyStackCounts[i]).length > 0) && React.createElement("div", {
       "data-tactics-slot-marks": true,
       className: `${tacticsNewLayout ? `absolute left-full w-[150%] overflow-hidden items-stretch justify-start px-1.5 ${slotAimHit || previewDmg > 0 || previewGuard > 0 ? 'top-[15px] h-[calc(100%-46px)]' : 'top-px h-[calc(100%-31px)]'}` : 'absolute top-0 left-0 right-0 items-center px-0.5'} flex flex-col gap-px z-[60] pointer-events-none`
-    }, !tacticsNewLayout && slotExInfo && React.createElement("div", {
+    }, !tacticsNewLayout && React.createElement(BattleStackMarks, {
+      counts: allyStackCounts[i],
+      side: "ally",
+      full: SWEET_STACK_MAX,
+      className: "mh-stack-marks-flow"
+    }), !tacticsNewLayout && slotExInfo && React.createElement("div", {
       "data-tactics-ex-mark": i,
       "data-tactics-ex-state": slotExInfo.badge.text,
       className: `flex max-w-full items-center gap-0.5 rounded px-1 py-0.5 leading-none shadow ${slotExInfo.badge.active ? 'bg-fuchsia-600 text-white ring-1 ring-fuchsia-200' : 'bg-black/70 text-fuchsia-200 ring-1 ring-fuchsia-400/60'}`

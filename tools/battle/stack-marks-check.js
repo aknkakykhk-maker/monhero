@@ -33,7 +33,11 @@ check('① クッキー・黒音符は0でも出し、ほかの0と知らない�
 
 const battle = read('monster-hero/src/parts/71-screen-battle.jsx');
 check('② 部品 BattleStackMarks がある(img があれば絵、なければ絵文字)', /const BattleStackMarks = /.test(battle) && /it\.img \? <img src=\{it\.img\}/.test(battle));
-check('② 味方の枠に出している(タクティクスとほかのモードで置き場所を分ける)', /<BattleStackMarks counts=\{allyStackCounts\[i\]\} side="ally"[^>]*tacticsNewLayout\?'mh-stack-marks-ally':'mh-stack-marks-ally mh-stack-marks-ally-top'/.test(battle));
+// ★2026-10-13: クラシックなど縦長の枠は、予測ダメージ・置いたカードと同じ縦積みの欄(data-tactics-slot-marks)の先頭へ移した
+//   (社長「極限チャレンジ/GOD で 💥×1 が予測ダメージと重なる」)。重ならないことは stack-marks-overlap-browser-check.js が幅4種で測る
+check('② 味方の枠に出している(タクティクスは絵の左下・ほかのモードは縦積みの欄の先頭)',
+  /\{tacticsNewLayout&&<BattleStackMarks counts=\{allyStackCounts\[i\]\} side="ally"[^>]*className="mh-stack-marks-ally"\/>\}/.test(battle)
+  && /\{!tacticsNewLayout&&<BattleStackMarks counts=\{allyStackCounts\[i\]\} side="ally"[^>]*className="mh-stack-marks-flow"\/>\}/.test(battle));
 check('② 敵はライフの帯に出している(通常と超省エネの2か所)', (battle.match(/<BattleStackMarks counts=\{enemyStackCounts\} side="enemy"/g) || []).length === 2);
 check('② 超省エネの味方の欄にも出している', /data-ultra-ally-slots[\s\S]{0,700}<BattleStackMarks counts=\{allyStackCounts\[i\]\}/.test(battle));
 check('③ 味方の数は強化の札と同じ出どころから作る', ['sweetStackView', 'bowStackView', 'trickStartView', "getPermaBuff('fateStacks', null)", "getPermaBuff('kenshiComboPower')"].every((w) => battle.slice(battle.indexOf('const allyStackCounts = (() => {'), battle.indexOf('const allyStackCounts = (() => {') + 3000).includes(w)));
@@ -59,7 +63,7 @@ check('⑨ かばう膜はモノリス以外の味方の枠へ、若葉は味方
 check('⑩ 区切り5: パンドラの箱・ウンディーネの水の輪・メロディーのクッキー・クロミーの五線・スプーキーのコインが表にある', /pandoraBox: Object\.freeze/.test(entries) && /springRing: Object\.freeze/.test(entries) && /cookiePile: Object\.freeze/.test(entries) && /noteStaff: Object\.freeze/.test(entries) && /coinSpin: Object\.freeze/.test(entries));
 check('⑩ メロディー・クロミー・スプーキーは枠の「マーク×数」と同じ数から作り、水の輪は生命の泉の対象の子の枠へ', /stacks=\{allyStackCounts\[i\]\}/.test(battle) && /==='lifeSpring'&&effs\?\.\[j\]\?\.target===slotIdx\)\) out\.springRing=true;/.test(app));
 const html = read('monster-hero/index.html');
-check('見た目のCSS(.mh-stack-mark)がある', /\.mh-stack-mark \{/.test(html) && /\.mh-stack-marks-ally-top \{/.test(html));
+check('見た目のCSS(.mh-stack-mark)がある', /\.mh-stack-mark \{/.test(html) && /\.mh-stack-marks-flow \{/.test(html) && /\.mh-stack-marks\[data-stack-many="true"\] \.mh-stack-mark \{/.test(html));
 
 if (failed) { console.log(`\n${failed}件 NG`); process.exit(1); }
 console.log('\nすべてOK');
