@@ -26,7 +26,7 @@
 | お話の既読 | `mh_rhythm_hell_story_seen_v1`。印が偽のあいだは誰も書けないので、公開の日はまっさら。デバッグの「印が真だったら」で見たぶんは別のキー `mh_rhythm_hell_story_seen_preview_proto` | `rhythmHellStorySeenKey()`(17-*.jsx) |
 | 回想 | プロフィールの「イベント回想」に「空まで届くビート ～難易度 HELL～」が出る | `data/assistants.js` の `EVENT_REPLAYS`(`releaseFlag:'rhythmHell'`) |
 | ヘルプ | 「難易度 HELL と空のノーツ」(モンヒロビート → ノーツと操作)が出る | `data/help.js` の `id:'rhythm-hell'`(`releaseFlag:'rhythmHell'`) |
-| 見た目の既定 | 見やすさ 案2(`RHYTHM_HELL_VIS_DEFAULT='v2'`)・空中の道 Eはっきり(`RHYTHM_SKY_LANE_LOOK_DEFAULT='em'`)・空中のタップ 深い赤・縁を細く薄く(`RHYTHM_SKY_NOTE_COLOR_DEFAULT='deep'`・右手の空中の長押しは桃のまま。前後の絵 `docs/proto/sky-tap-deep/`)・空中の判定の文字は線の下(`RHYTHM_HELL_SKY_TEXT` 既定 `below`)・空中を叩いた柱の光は切(`RHYTHM_HELL_SKY_HIT`。ドライバーくんが軽くしてから) | `data/rhythm-mode.js`・`30-rhythm-play.jsx` |
+| 見た目の既定 | 見やすさ 案2(`RHYTHM_HELL_VIS_DEFAULT='v2'`)・空中の道 Eはっきり(`RHYTHM_SKY_LANE_LOOK_DEFAULT='em'`)・空中のタップ 深い赤・縁を細く薄く(`RHYTHM_SKY_NOTE_COLOR_DEFAULT='deep'`・右手の空中の長押しは桃のまま。前後の絵 `docs/proto/sky-tap-deep/`)・空中の判定の文字は線の下(`RHYTHM_HELL_SKY_TEXT` 既定 `below`)・空中を叩いた柱の光は入・地上と同じく奥まで(`RHYTHM_HELL_SKY_HIT` 既定 `far`。#2887・#2891。重さは公開後に本番の記録で見直す) | `data/rhythm-mode.js`・`30-rhythm-play.jsx` |
 
 ### 記録とランキング(2026-10-12 社長の決定「満点を105万にしてランキングには乗るようにして/105万のランク【MF】で」)
 
@@ -91,4 +91,5 @@ node tools/playbot/rhythm-hell-unlock-bot.js --story   # お話が HOME で1回�
 ## 5. 社長に聞いてから決めること
 
 - ~~助手の告知を付けるか~~ → **付けない**に決まった(2026-10-12 社長)
-- 空中を叩いた柱の光を既定にするか(ドライバーくんが軽くしたあと)
+- ~~空中を叩いた柱の光を既定にするか~~ → **入・奥まで**に決まった(2026-10-12 社長)
+- 公開する日(社長がデバッグで遊んで OK を出してから)
