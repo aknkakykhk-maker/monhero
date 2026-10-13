@@ -33518,9 +33518,9 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     const W=h.width*cssW,cx=h.center*cssW,left=cx-W/2;
     // フリックの炎の羽は、ほかの光より長く残る(0.46秒)。ほかの光は元の長さで終える
     if(h.plume){drawPlume(h,elapsed,hitY);if(p>=1)return;}
-    // 中心のフラッシュ(判定ラインの上下7px・幅いっぱい)
+    // 中心のフラッシュ(判定ラインの上下7px・幅いっぱい)。beamOnly(演出量「最小」・軽量モードの空中の柱)では柱だけを描く
     let f=hitFrame(h.big?HIT_KEYS.coreBig:HIT_KEYS.core,p);
-    if(f.o>.002){
+    if(f.o>.002&&!h.beamOnly){
       ctx.globalAlpha=Math.min(1,f.o);hitTransform(cx,hitY,f.sx,f.sy);
       if(h.precise){
         roundRectPath(ctx,left,hitY-7,W,14,7);
@@ -33552,7 +33552,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     }
     // はじける粒(7pxの丸が5つ)。フィルターはかからない
     f=hitFrame(HIT_KEYS.spark,p);
-    if(f.o>.002&&f.s>0){
+    if(f.o>.002&&f.s>0&&!h.beamOnly){
       ctx.globalAlpha=Math.min(1,f.o);ctx.setTransform(dpr,0,0,dpr,0,0);
       HIT_SPARK_OFFSETS.forEach(([ox,oy],i)=>{
         if(sparkSprites){const r=2.5*f.s;ctx.drawImage(hitSparkSprite(h.precise?RHYTHM_JUDGMENT_RAINBOW[i]:h.color).canvas,cx+ox*h.sparkScale*f.k-r,hitY+oy*h.sparkScale*f.k-r,r*2,r*2);}
@@ -33663,13 +33663,18 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     // 空中の高さで押しているサブレーン(演奏画面が指の出入りのたびに渡す)。alpha は設定「レーンの光」の濃さ
     setSkyPressed(coordinates,alpha=1){skyPressed=Array.isArray(coordinates)?coordinates.slice():[];skyPressedAlpha=Number.isFinite(Number(alpha))?Math.max(0,Math.min(1,Number(alpha))):1;},
     skyHitsFor(area){return !!skyHitArea&&!!ctx&&area===skyHitArea;},
-    // DOM の部品と同じく10枠を順に使い回す(11個目は1個目を切って上書きする)。演出量「最小」・軽量モードでは出さない
+    // DOM の部品と同じく10枠を順に使い回す(11個目は1個目を切って上書きする)。演出量「最小」・軽量モードでは出さない。
+    // ただし HELL の空中の柱の光(オプション「空中を叩いた柱の光」)だけは出す(柱だけ。中心の光・粒・星は出さない)。
+    // 2026-10-13 社長「奥までに設定しても短いまま」: 演出量「最小」(見た目のおまかせ「軽さ優先」)と軽量モードでは柱がまるごと出ず、
+    // 押している間の短い光(drawSkyPress)だけが見えていた。光は叩いた1回につき台形1つで、形と色の段は1回だけ作るので重さはほぼ増えない
     pushHit(hit){
-      if(!(hit.sky?(hitArea||skyHitArea):hitArea)||effect==='MINIMAL'||lightweight)return;
+      if(!(hit.sky?(hitArea||skyHitArea):hitArea))return;
+      const lite=effect==='MINIMAL'||lightweight;
+      if(lite&&!(hit.sky&&!hit.big&&RHYTHM_HELL_SKY_HIT.id!=='off'))return;
       const key=`${hit.judgment||''}|${hit.precise?'1':''}`;
       const plume=!hit.big&&!!hit.flick&&HIT_PLUME_TILT[hit.flick]!==undefined;
       hitSlots[hitNext]={...hit,filter:hitFilters.get(key)||{core:null,beam:null},start:typeof performance!=='undefined'?performance.now():Date.now(),
-        ms:hit.sky?RHYTHM_SKY_HIT_MS:RHYTHM_HIT_EFFECT_MS[hit.big?'MONSTER':'NORMAL'],flare:effect!=='LOW',plume:plume&&!hit.sky,seed:plume&&!hit.sky?(Math.random()*4294967296)>>>0:0};
+        ms:hit.sky?RHYTHM_SKY_HIT_MS:RHYTHM_HIT_EFFECT_MS[hit.big?'MONSTER':'NORMAL'],flare:effect!=='LOW',plume:plume&&!hit.sky,seed:plume&&!hit.sky?(Math.random()*4294967296)>>>0:0,beamOnly:lite};
       hitNext=(hitNext+1)%hitSlots.length;
     },
     // begin() のすぐあと(ノーツより先)に呼ぶ。hitY は判定ラインの下端(光の入れ物の bottom)の高さ
@@ -33685,6 +33690,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
           // 案A(RHYTHM_HELL_SKY_HIT が on): 空中の線の高さに、地上と同じレーンの柱の光を白紫で。写しは光ごとに1回だけ作る。
           // 白い十字の光(190×110px の絵)は空中の星と重なるので出さない(重さを増やさないため)
           if(RHYTHM_HELL_SKY_HIT.id!=='off'){const col=hit._skyColumn||(hit._skyColumn={...hit,sky:false,precise:false,big:false,plume:false,flick:'',flare:false,color:'#e9d5ff',far:RHYTHM_HELL_SKY_HIT.id==='far'});drawOneHit(col,Math.max(0,Math.min(1,t)),hitY-cssH*RHYTHM_SKY_LIFT.ratio,Math.max(0,elapsed));}
+          // 演出量「最小」・軽量モードでは柱だけ(pushHit の beamOnly)
+          if(hit.beamOnly){glowEnd();count++;continue;}
           if(!skyZOn())drawSkyStrike(hit,Math.max(0,Math.min(1,t)),hitY,Math.max(0,elapsed));drawSkyHit(hit,Math.max(0,Math.min(1,t)),hitY);}else drawOneHit(hit,Math.max(0,Math.min(1,t)),hitY,Math.max(0,elapsed));glowEnd();count++;
       }
       if(count){ctx.globalAlpha=1;ctx.setTransform(dpr,0,0,dpr,0,0);}
