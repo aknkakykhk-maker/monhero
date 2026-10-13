@@ -29234,7 +29234,9 @@ const RHYTHM_SONGS = Object.freeze(RHYTHM_SONG_ENTRIES.map(song=>{
   for(const {id} of RHYTHM_DIFFICULTIES){
     Object.defineProperty(difficulties,id,{enumerable:true,get(){return chartsOf(rhythmChartSwitchDone())[id];}});
   }
-  return Object.freeze({...song,difficulties:Object.freeze(difficulties)});
+  // 時刻で入れ替わる曲(風がそよぐ場所など)にも HELL を付ける。HELL は入れ替わらない1つの譜面
+  // (2026-10-13 公開後に「風がそよぐ場所の HELL が出ていない」。こちらの枝で付け忘れていた)
+  return Object.freeze({...song,difficulties:Object.freeze(rhythmWithHellChart(song.songId,difficulties))});
 }));
 
 // デバッグ専用の試作曲(空中のノーツ・止まって動く演出の試作。2026-10-10 社長「プライベートでやるの毎回だるいから、普通にデバッグモードに入れてくんない?」)。
