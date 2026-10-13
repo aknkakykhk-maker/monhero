@@ -12,8 +12,8 @@
 ## 定期の仕事(新しい会話へ付け替えが要る)
 | 名前 | trigger | いつ | いまの状態 |
 | --- | --- | --- | --- |
-| 改善部の毎日の指摘 | `trig_011t1rzmm6ez4wYBTKHnYQPB` | 毎晩 20:50 | **止めてある**(enabled=false)。前の会話に結び付いたまま |
-| 改善部の週1の指摘 | `trig_01EA42tddxTYcdoVBamoBTEP` | 土曜 9:47 | 動いている。前の会話に結び付いたまま |
+| 改善部の毎日の指摘 | `trig_016rmk9u8Zv7vu32ofdrPYN1` | 毎晩 20:50 | 動いている(2026-10-13 窓口が新しい会話へ付け替えて再開。旧 `trig_011t1rzmm6ez4wYBTKHnYQPB` は止めた) |
+| 改善部の週1の指摘 | `trig_01ANj5SXxjoznW9hr6Pk97VX` | 土曜 9:47 | 動いている(2026-10-13 付け替え。旧 `trig_01EA42tddxTYcdoVBamoBTEP` は止めた) |
 
 - どちらも **結び付け先(persistent_session_id)が前の会話**、文面の報告先も **前の窓口 session_01MC7…** のまま。新しい会話に付け替え、文面の報告先を新しい窓口に直してから再開する(付け替えは窓口か新しい改善部が `update_trigger` で。消して作り直すと履歴が消えるので、作り直さない)
 
