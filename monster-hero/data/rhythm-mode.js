@@ -804,6 +804,8 @@ const RHYTHM_FAILED_TRAIL_FADE_MS=300;
 // (2026-10-13 社長「空中のスライドが途中で外れて MISS になったときに消える」。以前の .48 はホールドの約6割の濃さで、
 // 色のついた帯が急に暗い灰色へ変わり、道の上ではほとんど見えなかった)
 const RHYTHM_FAILED_SLIDE_FILL='rgba(135,145,160,.8)';
+// 空中のスライドが途中で切れて MISS になったあと、残りの帯を元の形のまま終わりまで流すときの濃さ(地上の外れた帯と同じく薄く)
+const RHYTHM_SKY_CUT_TRAIL_ALPHA=.42;
 const rhythmFailedTrailFade=(note,songMs)=>{
   if(!note)return 0;
   const now=Number(songMs)||0;
@@ -3564,6 +3566,9 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
     if(elapsedPerf<graceMs)return;
     session.note.holdJudgment='MISS';
     session.failed=true;
+    // 空中のスライドは、判定はここで MISS に決まっても、見た目は地上のスライド(外れても切れずに終わりまで流れる)と同じく、
+    // 残りの帯を元の形のまま終わりまで薄く流す(2026-10-13 社長「途中で外れて MISS になったときに消える」)。描く側(paintCanvasNote)がこの印を見る
+    if(session.kind==='SLIDE')session.note._rhythmSkyCut=true;
     // 猶予を超えて外れたままなら、指を離すのを待たずその場でMISS確定する。
     // endTimeMsを現在より少し前へ寄せ、本体(scheduleTick)の「endTimeMs到達で
     // 既存applyJudgmentを呼ぶ」経路をそのまま使ってグレー表示へ切り替える(新しい判定経路は作らない)。

@@ -41,9 +41,17 @@ check('失敗中は判定範囲外になっても表示を続ける',
   game.includes('visible=failedTrail||note.activePointerId!==null||(progress>=-.1&&progress<=1.18)'));
 check('失敗中は薄く表示し、約0.3秒で消す(DOM 版・canvas 版とも)',
   game.includes("const nextOpacity=failedTrail?String(Math.round(34*failFade)/100):(visible?'1':'0');")
-  &&game.includes("alpha:failedTrail?.34*failFade:1")
-  &&(game.match(/const failFade=failedTrail\?rhythmFailedTrailFade\(note,songTimeMs\):1;/g)||[]).length===2
+  &&game.includes("alpha:skyCutTrail?RHYTHM_SKY_CUT_TRAIL_ALPHA:failedTrail?.34*failFade:1")
+  &&game.includes("const failFade=failedTrail&&!skyCutTrail?rhythmFailedTrailFade(note,songTimeMs):1;")
+  &&game.includes("const failFade=failedTrail&&note._rhythmSkyCut!==true?rhythmFailedTrailFade(note,songTimeMs):1;")
   &&data.includes('const RHYTHM_FAILED_TRAIL_FADE_MS=300;'));
+// 例外は1つだけ: HELL の空中のスライドが押さえている途中で切れて MISS になったもの(_rhythmSkyCut)は、
+// 地上のスライド(外れても切れずに終わりまで流れる)とそろえて、残りの帯を元の形のまま終わりまで薄く流す(2026-10-13 社長「途中で外れて MISS になったときに消える」)
+check('空中のスライドが途中で切れたときだけ、残りの帯を終わりまで流す(印は切る所で付ける)',
+  game.includes('const skyCutTrail=failedTrail&&note._rhythmSkyCut===true;')
+  &&game.includes('failed:failedTrail&&!skyCutTrail,')
+  &&data.includes("if(session.kind==='SLIDE')session.note._rhythmSkyCut=true;")
+  &&/const RHYTHM_SKY_CUT_TRAIL_ALPHA=\.\d+;/.test(data));
 check('見え方が変わったときだけ書き込む',
   game.includes("if(el._rhythmOpacity!==nextOpacity){el.style.opacity=nextOpacity;el._rhythmOpacity=nextOpacity;}"));
 // 比較相手はDOM(dataset)ではなく要素へ覚えた値。書き込む条件は同じで、

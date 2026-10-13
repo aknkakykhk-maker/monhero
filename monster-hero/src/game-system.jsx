@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: fa355961e0b56dfb
+// generated-sha256: ca961985e8902341
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-13 20:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-13 21:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -21902,7 +21902,10 @@ const paintCanvasNote=note=>{
   // 走査の先頭(scanFrom)はこの印まで進めない(DOM 版が要素の非表示を待つのと同じ)。
   // これが無いと取った瞬間に走査から外れ、絵が隠れずに判定ラインへ残った(2026-09-07・実機「canvas 版でマスモンが残る」)
   // 取り損ねた残りは約0.3秒で消す(rhythmFailedTrailFade)。消え切ったら取り終えたノーツと同じく片付ける
-  const failFade=failedTrail?rhythmFailedTrailFade(note,songTimeMs):1;
+  // 空中のスライドが途中で切れて MISS になったもの(_rhythmSkyCut)は、0.3秒で消さず、残りの帯を元の形のまま終わりまで薄く流す
+  // (地上のスライドは外れても切れずに終わりまで流れるので、それとそろえる・2026-10-13 社長「途中で外れて MISS になったときに消える」)
+  const skyCutTrail=failedTrail&&note._rhythmSkyCut===true;
+  const failFade=failedTrail&&!skyCutTrail?rhythmFailedTrailFade(note,songTimeMs):1;
   if(note.done&&(!failedTrail||failFade<=0)&&!clearFlash){note._rhythmCanvasSettled=true;return;}
   const progress=1-(rhythmScrollPos(note.timeMs,note.scrollGroup)-rhythmScrollPos(visualTime,note.scrollGroup))/travelMs,visible=failedTrail||note.activePointerId!==null||(progress>=-.1&&progress<=1.18);
   if(!visible||!travel||!canvasReady)return;
@@ -21918,7 +21921,7 @@ const paintCanvasNote=note=>{
   const geo=rhythmNoteCanvasGeometry(note,yPx,visualLane,travel.rect,travel.noteHeight,hasBody?releaseYpx:null,{chartNowMs:songTimeMs-settings.judgmentTimingOffsetMs,visualTime,travelMs,spawnY:travel.spawnY,travelPx:travel.travelPx,gpu:gpuBandNow},hasBody?bodyPx:0);
   const monster=!!monsterForNote(note);
   const depthScale=Math.round((0.56+geo.scale*.44)*100)/100,brightness=Math.round((0.72+geo.scale*.28)*100)/100;
-  RHYTHM_CANVAS_RENDERER.drawNote(note,geo,{failed:failedTrail,monster,wide:rhythmNoteIsWide(note),pressed:note.type==='HOLD'&&note.activePointerId!==null,slideOff:note.type==='HOLD'&&note.activePointerId!==null&&RHYTHM_GESTURE_RUNTIME.slideOffForIndex(note.index),heldMs:songTimeMs-note.timeMs,alpha:failedTrail?.34*failFade:1,pop:clearFlash?Math.min(1,(songTimeMs-note._rhythmClearAt)/RHYTHM_CLEAR_FLASH_MS):null,depthScale,brightness});
+  RHYTHM_CANVAS_RENDERER.drawNote(note,geo,{failed:failedTrail&&!skyCutTrail,monster,wide:rhythmNoteIsWide(note),pressed:note.type==='HOLD'&&note.activePointerId!==null,slideOff:note.type==='HOLD'&&note.activePointerId!==null&&RHYTHM_GESTURE_RUNTIME.slideOffForIndex(note.index),heldMs:songTimeMs-note.timeMs,alpha:skyCutTrail?RHYTHM_SKY_CUT_TRAIL_ALPHA:failedTrail?.34*failFade:1,pop:clearFlash?Math.min(1,(songTimeMs-note._rhythmClearAt)/RHYTHM_CLEAR_FLASH_MS):null,depthScale,brightness});
   // マスモンの顔(焼いた絵)。以前の DOM 版と同じく、落下中は「奥行き×1.28倍」、
   // 取った瞬間は枠の大きさから2.1倍へ広がりながら消える(0.26秒・影なし)
   const monsterSlot=monster?rhythmNoteMonsterSlot(note):0,faceBitmap=monsterSlot?faceBitmapsRef.current[monsterSlot-1]:null;
@@ -21987,7 +21990,7 @@ const clearFlash=note.done&&Number.isFinite(note._rhythmClearAt)&&songTimeMs-not
 if(clearFlash){if(el._rhythmClearFlag!==true){el.dataset.rhythmClear='1';el._rhythmClearFlag=true;}}
 else if(el._rhythmClearFlag===true){delete el.dataset.rhythmClear;el._rhythmClearFlag=false;}
 // 取り損ねた残りは約0.3秒で消す(canvas 版と同じ rhythmFailedTrailFade)
-const failFade=failedTrail?rhythmFailedTrailFade(note,songTimeMs):1;
+const failFade=failedTrail&&note._rhythmSkyCut!==true?rhythmFailedTrailFade(note,songTimeMs):1;
 if(note.done&&(!failedTrail||failFade<=0)&&!clearFlash){if(el._rhythmHidden!==true){el.style.display='none';el._rhythmHidden=true;}return;}
 if(el._rhythmHidden===true){el.style.display='';el._rhythmHidden=false;}
 const failedFlag=failedTrail?'true':'false';if(el._rhythmFailedFlag!==failedFlag){el.dataset.rhythmFailed=failedFlag;el._rhythmFailedFlag=failedFlag;}
