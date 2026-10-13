@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d19ac5bafb83c7e6
+// source-sha256: c9d6230fc48103db
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-13 23:46";
+const BUILD_DATE = "2026-10-13 23:48";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -73337,23 +73337,33 @@ function RhythmMultiScreen({
       onClick: () => onChangeMultiLook(c.id),
       className: `min-h-[26px] rounded-full border px-1.5 text-[10px] font-black leading-none ${multiLook === c.id ? 'border-emerald-300 bg-emerald-600 text-white' : 'border-white/20 bg-slate-800 text-slate-300'}`
     }, c.label))))), React.createElement("div", {
-      className: "grid grid-cols-5 gap-1.5 landscape:flex-1"
+      "data-rhythm-multi-difficulties": drawnDiffs.length,
+      className: "grid gap-1.5 landscape:flex-1",
+      style: {
+        gridTemplateColumns: `repeat(${Math.max(1, drawnDiffs.length)},minmax(0,1fr))`
+      }
     }, drawnDiffs.map(d => {
       const open = drawnOpenDiffs.some(x => x.id === d.id);
+      const need = open ? null : rhythmDifficultyUnlockRequirement(d.id, drawnSong ? drawnSong.songId : '');
       const level = drawnSong && drawnSong.difficulties && drawnSong.difficulties[d.id] ? Number(drawnSong.difficulties[d.id].level) || 0 : 0;
       const active = shownDiffId === d.id;
       return React.createElement("button", {
         key: d.id,
         type: "button",
         "data-rhythm-multi-difficulty": d.id,
+        "data-rhythm-multi-difficulty-locked": open ? '0' : '1',
         disabled: !open || iAmReady,
         onClick: () => RHYTHM_MULTI.setDiff(d.id),
+        title: need ? `${need}をクリアすると挑めます` : undefined,
         className: `flex min-h-[52px] flex-col items-center justify-center rounded-full border-2 text-[9px] font-black disabled:opacity-40 ${active ? 'border-fuchsia-300 bg-fuchsia-600 text-white' : 'border-white/20 bg-slate-800 text-slate-200'}`
       }, React.createElement("span", {
         className: "text-base leading-none"
       }, level || '-'), React.createElement("span", {
         className: "leading-tight"
-      }, open ? d.id : '🔒'));
+      }, open ? d.id : `🔒${d.id}`), need && React.createElement("small", {
+        "data-rhythm-multi-difficulty-need": d.id,
+        className: "block max-w-full whitespace-normal text-center text-[7px] leading-[1.05] opacity-80 [word-break:keep-all]"
+      }, need, "で", React.createElement("wbr", null), "解放"));
     })), React.createElement("button", {
       "data-rhythm-multi-ready": true,
       type: "button",
@@ -100489,8 +100499,8 @@ function MonsterHeroGame() {
       onRefundBuddyTicket: refundBuddyTicket,
       onOpenMasuBeat: () => openMasuBeat(gameState),
       songs: rhythmDemoSongs(RHYTHM_SONGS),
-      difficultiesOf: song => rhythmDemoDifficulties(song, RHYTHM_DIFFICULTIES),
-      difficultyList: rhythmDemoDifficultyList(RHYTHM_DIFFICULTIES),
+      difficultiesOf: song => rhythmDemoDifficulties(song, RHYTHM_PLAY_DIFFICULTIES),
+      difficultyList: rhythmDemoDifficultyList(RHYTHM_PLAY_DIFFICULTIES),
       bestRecords: rhythmBestRecords,
       onPreviewSong: setRhythmMultiPreviewSongId,
       onUserGesture: () => {

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 50ab46eb458eb319
+// generated-sha256: 5461fdca7ca8dd5b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-13 23:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-13 23:48"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -44600,16 +44600,19 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
               </div>
             </div>
           )}
-          <div className="grid grid-cols-5 gap-1.5 landscape:flex-1">
+          {/* 難易度のボタン。HELL のある曲は6つ並ぶ(2026-10-13 社長「マルチも通常と同じ仕様にして」)。鍵つきは、ひとりのときと同じく「◯◯で解放」を出す */}
+          <div data-rhythm-multi-difficulties={drawnDiffs.length} className="grid gap-1.5 landscape:flex-1" style={{ gridTemplateColumns: `repeat(${Math.max(1, drawnDiffs.length)},minmax(0,1fr))` }}>
             {drawnDiffs.map((d) => {
               const open = drawnOpenDiffs.some((x) => x.id === d.id);
+              const need = open ? null : rhythmDifficultyUnlockRequirement(d.id, drawnSong ? drawnSong.songId : '');
               const level = drawnSong && drawnSong.difficulties && drawnSong.difficulties[d.id] ? Number(drawnSong.difficulties[d.id].level) || 0 : 0;
               const active = shownDiffId === d.id;
               return (
-                <button key={d.id} type="button" data-rhythm-multi-difficulty={d.id} disabled={!open || iAmReady} onClick={() => RHYTHM_MULTI.setDiff(d.id)}
+                <button key={d.id} type="button" data-rhythm-multi-difficulty={d.id} data-rhythm-multi-difficulty-locked={open ? '0' : '1'} disabled={!open || iAmReady} onClick={() => RHYTHM_MULTI.setDiff(d.id)} title={need ? `${need}をクリアすると挑めます` : undefined}
                   className={`flex min-h-[52px] flex-col items-center justify-center rounded-full border-2 text-[9px] font-black disabled:opacity-40 ${active ? 'border-fuchsia-300 bg-fuchsia-600 text-white' : 'border-white/20 bg-slate-800 text-slate-200'}`}>
                   <span className="text-base leading-none">{level || '-'}</span>
-                  <span className="leading-tight">{open ? d.id : '🔒'}</span>
+                  <span className="leading-tight">{open ? d.id : `🔒${d.id}`}</span>
+                  {need && <small data-rhythm-multi-difficulty-need={d.id} className="block max-w-full whitespace-normal text-center text-[7px] leading-[1.05] opacity-80 [word-break:keep-all]">{need}で<wbr />解放</small>}
                 </button>
               );
             })}
@@ -64602,7 +64605,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {/* モードえらび(RHYTHM_MODE_SELECT)と対戦(RHYTHM_MULTI)は同じ部品で描く。部屋に入る処理(フリーマッチ・
             ルーム作成・入室・フレンドの招待)はモードえらびの画面に並べ、入れたら RHYTHM_MULTI へ移る。
             key で分けて、画面が変わったら部品の中の状態を作り直す */}
-        {(gameState==='RHYTHM_MULTI'||gameState==='RHYTHM_MODE_SELECT')&&<RhythmMultiScreen key={gameState} profile={{name:breederName,level:breederLevel.level,icon:breederIcon,frame:profileFrameId}} resolveIconUrl={resolveIconUrl} masuMons={masuMons} masuPicker={{entries:unifiedMonsterEntriesSingleType.filter(e=>e.type==='masu'),renderSortFilterBar:renderMonsterSortFilterBar,renderCardBody:renderMonsterCardBody,cardClass:MONSTER_CARD_CLASS,cardStyle:MONSTER_CARD_STYLE}} buddyTickets={ownedItemCount(ownedItems, RHYTHM_BUDDY_TICKET_ITEM_ID)} onUseBuddyTicket={consumeBuddyTicket} onRefundBuddyTicket={refundBuddyTicket} onOpenMasuBeat={()=>openMasuBeat(gameState)} songs={rhythmDemoSongs(RHYTHM_SONGS)} difficultiesOf={song=>rhythmDemoDifficulties(song,RHYTHM_DIFFICULTIES)} difficultyList={rhythmDemoDifficultyList(RHYTHM_DIFFICULTIES)} bestRecords={rhythmBestRecords} onPreviewSong={setRhythmMultiPreviewSongId}
+        {(gameState==='RHYTHM_MULTI'||gameState==='RHYTHM_MODE_SELECT')&&<RhythmMultiScreen key={gameState} profile={{name:breederName,level:breederLevel.level,icon:breederIcon,frame:profileFrameId}} resolveIconUrl={resolveIconUrl} masuMons={masuMons} masuPicker={{entries:unifiedMonsterEntriesSingleType.filter(e=>e.type==='masu'),renderSortFilterBar:renderMonsterSortFilterBar,renderCardBody:renderMonsterCardBody,cardClass:MONSTER_CARD_CLASS,cardStyle:MONSTER_CARD_STYLE}} buddyTickets={ownedItemCount(ownedItems, RHYTHM_BUDDY_TICKET_ITEM_ID)} onUseBuddyTicket={consumeBuddyTicket} onRefundBuddyTicket={refundBuddyTicket} onOpenMasuBeat={()=>openMasuBeat(gameState)} songs={rhythmDemoSongs(RHYTHM_SONGS)} difficultiesOf={song=>rhythmDemoDifficulties(song,RHYTHM_PLAY_DIFFICULTIES)} difficultyList={rhythmDemoDifficultyList(RHYTHM_PLAY_DIFFICULTIES)} bestRecords={rhythmBestRecords} onPreviewSong={setRhythmMultiPreviewSongId}
           onUserGesture={()=>{/* 全画面と画面ロック防止は、指で押した直後しか許されない。準備完了を押したこの場で頼んでおく(ひとりのときの「決定」と同じ) */if(rhythmSettings.quietDuringPlay)RHYTHM_QUIET_MODE.enter();}}
           multiLook={rhythmSettings.multiLook||'LIGHT'}
           onChangeMultiLook={async(id)=>{const saved=await saveRhythmSettings({...rhythmSettings,multiLook:id,multiLightLook:id!=='OWN'});setRhythmSettings(saved);}}
