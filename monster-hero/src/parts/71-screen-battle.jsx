@@ -637,7 +637,7 @@ const BattleStackMarks = ({ counts, side, full = 0, className = '' }) => {
   const items = battleStackMarkItems(counts);
   if (!items.length) return null;
   return (
-    <div data-stack-marks={side} role="img" aria-label={items.map((it) => `${it.label}${it.count}${it.unit === 'T' ? 'ターン' : ''}`).join('、')} className={`mh-stack-marks pointer-events-none ${className}`}>
+    <div data-stack-marks={side} data-stack-many={items.length >= 3 ? 'true' : undefined} role="img" aria-label={items.map((it) => `${it.label}${it.count}${it.unit === 'T' ? 'ターン' : ''}`).join('、')} className={`mh-stack-marks pointer-events-none ${className}`}>
       {items.map((it) => (
         <span key={it.kind} data-stack-mark={it.kind} data-stack-count={it.count} data-stack-full={full > 0 && it.showZero && it.count >= full ? 'true' : undefined}
           data-stack-last={it.unit === 'T' && it.count === 1 ? 'true' : undefined} className="mh-stack-mark">
@@ -2395,7 +2395,8 @@ function BattleScreen({
                 {tacticsExCutin&&(tacticsExCutin.slotIndex===i||(tacticsExCutin.slotIndexes||[]).includes(i))&&<span key={tacticsExCutin.key} data-tactics-ex-aura={tacticsExCutin.effect||'default'} className="ex-aura" aria-hidden="true"
                   style={{'--ex-c1':battleCutinThemeOf(tacticsExCutin).c1,'--ex-c2':battleCutinThemeOf(tacticsExCutin).c2,...(tacticsExCutin.ms?{animationDuration:`${tacticsExCutin.ms}ms`}:{})}}><i/><i/></span>}
                 {/* ★貯まった数(クッキー・黒音符など)を「マーク×数」で常に出す(2026-10-12 社長の依頼)。タクティクスの枠は絵の左下、ほかのモードの縦長の枠は名前の帯のすぐ下(下の端は間合いの札がある) */}
-                <BattleStackMarks counts={allyStackCounts[i]} side="ally" full={SWEET_STACK_MAX} className={tacticsNewLayout?'mh-stack-marks-ally':'mh-stack-marks-ally mh-stack-marks-ally-top'}/>
+                {/* ★クラシックなど縦長の枠は、下の縦積みの欄(data-tactics-slot-marks)の先頭へ入れる(予測ダメージ・置いたカードと重ならない。2026-10-13) */}
+                {tacticsNewLayout&&<BattleStackMarks counts={allyStackCounts[i]} side="ally" full={SWEET_STACK_MAX} className="mh-stack-marks-ally"/>}
                 {/* モンスターごとの演出(ゴーストの分身・スネグーラチカのプレゼント・剣士モッチーの型)。タクティクスの枠だけ・軽量表示では出さない */}
                 {tacticsNewLayout&&!ecoBattleView&&!liteBattleView&&typeof tacticsSlotCountersAt==='function'&&<BattleMonsterFx fx={debugStackMarks&&debugStackMarks.fx&&debugStackMarks.fx[i]?debugStackMarks.fx[i]:tacticsSlotCountersAt(i)} imgSrc={s?.imgUrl} monId={s?.id} stacks={allyStackCounts[i]} calm={battleFx.idleMotion==='OFF'}/>}
                 {slotHitKind&&(()=>{
@@ -2531,12 +2532,13 @@ function BattleScreen({
                         覆ってよいのは絵だけ、という切り分けにしている */}
                   {/* ★EXスキルの札も同じ縦積みの先頭に入れる。名前の行へ入れると名前が切れる
                       (2026-09-23 ユーザー指摘「名前が切れてる」)。二刀流／片手持ちのような「いまの状態」をここで出す */}
-                  {(slotAssignedCards.length>0||previewDmg>0||previewGuard>0||slotAimHit||slotExInfo)&&(
+                  {(slotAssignedCards.length>0||previewDmg>0||previewGuard>0||slotAimHit||slotExInfo||(!tacticsNewLayout&&battleStackMarkItems(allyStackCounts[i]).length>0))&&(
                     <div data-tactics-slot-marks className={`${tacticsNewLayout?`absolute left-full w-[150%] overflow-hidden items-stretch justify-start px-1.5 ${(slotAimHit||previewDmg>0||previewGuard>0)?'top-[15px] h-[calc(100%-46px)]':'top-px h-[calc(100%-31px)]'}`:'absolute top-0 left-0 right-0 items-center px-0.5'} flex flex-col gap-px z-[60] pointer-events-none`}>
                       {/* ★置いたカードは2列×3段(2026-09-24 ユーザー指示「ダメージ予測を1番上に置いて、その下に2列3段」
                           「カード×4とかは確かにいらない」)。ガードやアシストカードを足すと1体に5枚まで置けるので、
                           1枚1段ではライフ・ガッツの行まで届いていた。高さはライフの行の上までに切ってある。
                           🎯は枠の横幅をまるごと使う上の段(data-tactics-slot-top-row)へ出す */}
+                      {!tacticsNewLayout&&<BattleStackMarks counts={allyStackCounts[i]} side="ally" full={SWEET_STACK_MAX} className="mh-stack-marks-flow"/>}
                       {!tacticsNewLayout&&slotExInfo&&(<div data-tactics-ex-mark={i} data-tactics-ex-state={slotExInfo.badge.text}
                         className={`flex max-w-full items-center gap-0.5 rounded px-1 py-0.5 leading-none shadow ${slotExInfo.badge.active?'bg-fuchsia-600 text-white ring-1 ring-fuchsia-200':'bg-black/70 text-fuchsia-200 ring-1 ring-fuchsia-400/60'}`}>
                         <span style={{fontSize:'7px'}} className="shrink-0 font-black">EX{slotExInfo.badge.text==='EX'&&slotExInfo.badge.uses!=null?`×${slotExInfo.badge.uses}`:''}</span>
