@@ -689,7 +689,8 @@ const BattleUnitDetailBody = ({ side, status, chips = [], marks = null, debuffs 
       </div>
     );
   }
-  const markRows = battleStackMarkItems(marks).map((it) => row(`mark-${it.kind}`, it.img ? <img src={it.img} alt="" className="inline h-3.5 w-3.5 object-contain" /> : it.mark, it.label,
+  // 数が0のもの(クッキー・黒音符の×0)は効いていないので、一覧には出さない(帯の札も0なら出さない。2026-10-13 窓口の指摘)
+  const markRows = battleStackMarkItems(marks).filter((it) => it.count > 0).map((it) => row(`mark-${it.kind}`, it.img ? <img src={it.img} alt="" className="inline h-3.5 w-3.5 object-contain" /> : it.mark, it.label,
     it.unit === 'T' ? `あと${it.count}ターン` : `×${it.count}`, ''));
   const own = (chips || []).filter((c) => c.owner === status.slot);
   const team = (chips || []).filter((c) => c.owner == null);
