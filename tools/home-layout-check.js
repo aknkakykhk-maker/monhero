@@ -15,6 +15,9 @@ const { chromium } = require('playwright');
 const root = path.resolve(__dirname, '..');
 const source = fs.readFileSync(path.join(root, 'monster-hero/src/game-system.jsx'), 'utf8');
 // createAnimationStyle のCSSから、HOMEに関する行だけを集める
+// 右上の枠を桁が多いときだけ広げる計算(69-screen-home.jsx の homeWalletGrowPx)を、本物の1行から作る
+const growLine = (source.match(/^const homeWalletGrowPx=.*$/m) || [''])[0];
+const homeWalletGrowPx = growLine ? new Function(`${growLine}; return homeWalletGrowPx;`)() : null;
 const css = source.split('\n').filter(l => l.includes('.mh-home-')).join('\n')
   .replace(/^\s*`?/, '').replace(/`;?\s*$/, '');
 
@@ -39,7 +42,7 @@ ${css}
 <main class="mh-home-scene">
   <header class="mh-home-status">
     <button class="mh-home-player"><div class="mh-home-avatar"></div><div class="mh-home-player-copy"><strong>あつ</strong><span>ブリーダー Lv.38</span><div class="mh-home-xp"><i style="width:60%"></i></div><small>414 / 651 XP</small></div></button>
-    <section class="mh-home-wallet"><div><b>19,003</b><small>ダイヤ</small></div><div><b>138</b><small>ブリーダーP</small></div><button class="mh-home-settings"><span>設定</span></button></section>
+    <section class="mh-home-wallet"><div><svg width="14" height="14"></svg><b style="--len:6">19,003</b><small>ダイヤ</small></div><div><svg width="14" height="14"></svg><b style="--len:3">138</b><small>ブリーダーP</small></div><button class="mh-home-settings"><svg width="20" height="20"></svg><span>設定</span></button></section>
   </header>
   <nav class="mh-home-facilities">
     <button class="mh-home-facility management"><span>M/B管理</span></button>
@@ -136,6 +139,26 @@ const SIZES = [
     const cut = res.facilities.filter(f => f.bottom > res.height + 0.5 || f.top < -0.5);
     check('  施設のラベルが上下に切れない', cut.length === 0,
       cut.map(f => `${f.name}(上${Math.round(f.top)} 下${Math.round(f.bottom)} / 画面高${res.height})`).join(', '));
+    // ⑥ 右上の枠(ダイヤ・ブリーダーP)は桁が増えても高さが変わらない(2026-10-13 社長「8桁で『ダイヤ』が縦に折れた」)。
+    //    0・8桁・10桁で、数とラベルが1行のまま・枠とプロフィールの高さが同じかを見る
+    const walletAt = async (gold, bp) => page.evaluate(([g, p, grow]) => {
+      document.querySelector('.mh-home-wallet').style.setProperty('--wal-grow', `${grow}px`);
+      const rows = document.querySelectorAll('.mh-home-wallet>div');
+      [[rows[0], g], [rows[1], p]].forEach(([row, value]) => {
+        const b = row.querySelector('b'); const text = Number(value).toLocaleString('en');
+        b.textContent = text; b.style.setProperty('--len', String(text.length));
+      });
+      const lines = el => { const r = document.createRange(); r.selectNodeContents(el); return new Set([...r.getClientRects()].map(x => Math.round(x.top))).size; };
+      const wrapped = [...document.querySelectorAll('.mh-home-wallet>div b,.mh-home-wallet>div small')].filter(el => lines(el) > 1).map(el => el.textContent);
+      return { wallet: document.querySelector('.mh-home-wallet').getBoundingClientRect().height, player: document.querySelector('.mh-home-player').getBoundingClientRect().height, wrapped };
+    }, [gold, bp, homeWalletGrowPx(Number(gold).toLocaleString('en'), Number(bp).toLocaleString('en'))]);
+    check('  右上の枠を広げる計算(homeWalletGrowPx)を本物から取り出せる', typeof homeWalletGrowPx === 'function');
+    const base = await walletAt(0, 0);
+    for (const [label, gold, bp] of [['8桁', 54065882, 54065882], ['10桁', 1234567890, 1234567890]]) {
+      const w = await walletAt(gold, bp);
+      check(`  右上の枠が${label}でも1行のまま・高さが変わらない`, w.wrapped.length === 0 && Math.abs(w.wallet - base.wallet) < 0.5 && Math.abs(w.player - base.player) < 0.5,
+        `枠 ${Math.round(base.wallet)}→${Math.round(w.wallet)}px / プロフィール ${Math.round(base.player)}→${Math.round(w.player)}px${w.wrapped.length ? ` / 折り返し ${w.wrapped.join(',')}` : ''}`);
+    }
     await page.close();
   }
   await browser.close();
