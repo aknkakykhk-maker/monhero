@@ -9,6 +9,8 @@
 //   ・描き込み先に、絵を前もって GPU へ渡す口(preloadImage)がある
 //   ・演奏画面が、焼けたモンスターノーツの顔の絵(plain・glow)を前もって GPU へ渡す(渡していないと、そのノーツが出た瞬間に渡す)
 //   ・演奏の前に、カットインの絵を読み解いておく(img.decode)
+//   ・モンスターノーツの音を、曲の前に聞こえない音量(0)で1回通しておく(最初に取った瞬間だけ重かった・2026-10-13 2件目)
+//   ・ライフの帯は幅(width)を動かさず、幅いっぱいの帯を切り抜いて(clip-path)出す。幅を動かすと動くあいだ毎コマ並べ直しが起きる(「元気」・MISS のとき)
 const fs = require('fs');
 const path = require('path');
 const ROOT = path.resolve(__dirname, '..', '..');
@@ -28,5 +30,11 @@ check('描き込み先に、絵を前もって GPU へ渡す口(preloadImage)が
 check('焼けたモンスターノーツの顔の絵を、すぐ GPU へ渡す', /faceBitmapsRef\.current\[index\]=face;RHYTHM_CANVAS_RENDERER\.preloadImage\(face\.plain\);RHYTHM_CANVAS_RENDERER\.preloadImage\(face\.glow\);/.test(play));
 check('演奏を始めるときにも、顔の絵を GPU へ渡す(焼き上がりが先だったときの分)', /faceBitmapsRef\.current\.forEach\(face=>\{if\(face\)\{RHYTHM_CANVAS_RENDERER\.preloadImage\(face\.plain\)/.test(play));
 check('演奏の前に、カットインの絵を読み解いておく(img.decode)', /cutInRefs\.current\.forEach\(el=>\{const img=el&&el\.querySelector\('img'\);if\(img&&typeof img\.decode==='function'\)img\.decode\(\)/.test(play));
+check('モンスターノーツの音に、聞こえない音量で通す道(silent)がある', /const playMonster=\(\{silent=false\}=\{\}\)=>\{/.test(mode) && /gain\.gain\.setValueAtTime\(silent\?0:\.0001,start\);\s*if\(!silent\)\{gain\.gain\.exponentialRampToValueAtTime/.test(mode));
+check('音の作り置き(prepare)で、モンスターノーツの音を聞こえない音量で1回通す', /setTimeout\(\(\)=>\{try\{playMonster\(\{silent:true\}\);\}catch\{\}\},120\);/.test(mode));
+const barAt = play.indexOf('data-rhythm-life-bar '), bar = barAt < 0 ? '' : play.slice(barAt, play.indexOf('}}/>', barAt));
+check('ライフの帯は幅を動かさず、切り抜き(clip-path)と色の大きさ(background-size)で長さを出す', !!bar && /width:'100%'/.test(bar) && /clipPath:`inset\(0 \$\{\(100-lifeRatio\*100\)\.toFixed\(1\)\}% 0 0 round 999px\)`/.test(bar) && /backgroundSize:`\$\{\(lifeRatio\*100\)\.toFixed\(1\)\}% 100%`/.test(bar), bar.slice(0, 80));
+check('ライフの帯の動きは140msのまま(幅の動きではない)', /'clip-path 140ms linear,background-size 140ms linear'/.test(bar) && !/width 140ms/.test(bar));
+check('ライフの帯の色はまとめ書き(background)にしない(色が変わると大きさが元へ戻るため)', /backgroundImage:lifeRatio>\.5\?/.test(bar) && !/[{,]background:/.test(bar));
 console.log(failed ? `\n${failed} 件 NG` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
