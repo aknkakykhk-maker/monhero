@@ -120,13 +120,29 @@ const heldHandSwitch=notes=>{const out=[],ev=handEventsOf(notes);
         out.push({at:e.at,side:hand,gapMs:Math.round(d),from:e.level?'地上':'空中',to:e.level?'空中':'地上'});}}
   return out.sort((a,b)=>a.at-b.at);};
 
+// 水平クロス(2026-10-13 社長「ヘル譜面で水平クロスは意味ないから、クロスのときは上下を活用してほしい」)。
+//   2本の長押し(HOLD・SLIDE)が同じ時間に押さえられていて、左右が入れ替わる瞬間に、2本が同じ高さ(地上どうし・空中どうし)のもの。
+//   HELL の交差は上下に分ける(交わる瞬間は片方が空中・片方が地上)。上下に分かれていれば親指の先どうしは当たらない。
+//   公開中の地上だけの譜面(交差の持ち替え #2770 で遊ぶ形)は数えない。空中のある譜面(HELL)だけで使い、0を見張る(rhythm-chart-hand-rules-check.js)
+const FLAT_CROSS_STEP_MS=10;
+const hasSky=notes=>(notes||[]).some(n=>Number(n.skyHeight)>0||(n.slidePoints||[]).some(p=>Number(p.sky)>0));
+const flatCross=notes=>{const out=[],longs=(notes||[]).filter(isLong);
+  for(let i=0;i<longs.length;i++)for(let j=i+1;j<longs.length;j++){const a=longs[i],b=longs[j];
+    const s=Math.max(a.timeMs,b.timeMs),e=Math.min(endOf(a),endOf(b));if(e-s<FLAT_CROSS_STEP_MS)continue;
+    let prev=0;
+    for(let t=s;t<=e;t+=FLAT_CROSS_STEP_MS){const d=centerAt(a,t)-centerAt(b,t),sg=Math.abs(d)<1e-6?0:Math.sign(d);
+      if(sg&&prev&&sg!==prev){const la=levelAt(a,t),lb=levelAt(b,t);
+        if(la===lb)out.push({at:t,side:centerAt(a,t)<3?'L':'R',level:la?'空中どうし':'地上どうし',pair:`${a.type} ${a.timeMs}〜${endOf(a)} × ${b.type} ${b.timeMs}〜${endOf(b)}`});}
+      if(sg)prev=sg;}}
+  return out.sort((x,y)=>x.at-y.at);};
+const FLAT_CROSS_LABEL='同じ高さのまま左右が入れ替わる(水平クロス・HELL は0にする)';
 const RULES={sideHeightSwitch,skyAfterGround,besideHeldBand,fastSameSide,heldHandSwitch};
 const RULE_LABELS={sideHeightSwitch:`同じ側で${SIDE_GAP_MS}ms以内に高さが変わる`,skyAfterGround:`同じ側の地上から${SKY_RAISE_MS}ms以内に空中`,
   besideHeldBand:'押さえている帯と同じ側で、反対の手もふさがっている',heldHandSwitch:'長押し中の手を使えないとして、反対の手で高さの切り替えが近い',fastSameSide:`同じ側の押し始めが${FAST_SAME_SIDE_MS}ms未満`};
 const analyze=notes=>Object.fromEntries(Object.entries(RULES).map(([k,f])=>[k,f(notes||[])]));
 const countsOf=notes=>Object.fromEntries(Object.entries(analyze(notes)).map(([k,v])=>[k,v.length]));
 
-module.exports={SIDE_GAP_MS,SKY_RAISE_MS,FAST_SAME_SIDE_MS,centerAt,sideAt,levelAt,eventsOf,handEventsOf,heldHandSwitch,sideHeightSwitch,skyAfterGround,besideHeldBand,fastSameSide,RULES,RULE_LABELS,analyze,countsOf};
+module.exports={flatCross,hasSky,FLAT_CROSS_LABEL,SIDE_GAP_MS,SKY_RAISE_MS,FAST_SAME_SIDE_MS,centerAt,sideAt,levelAt,eventsOf,handEventsOf,heldHandSwitch,sideHeightSwitch,skyAfterGround,besideHeldBand,fastSameSide,RULES,RULE_LABELS,analyze,countsOf};
 
 if(require.main===module){
   const args=process.argv.slice(2),argOf=k=>{const i=args.indexOf(k);return i>=0?args[i+1]:undefined;};
@@ -141,5 +157,6 @@ if(require.main===module){
   const diffs=argOf('--diff')?[argOf('--diff')]:Object.keys(song.difficulties||{});
   for(const d of diffs){const c=song.difficulties[d];if(!c)continue;const res=analyze(c.notes);
     console.log(`== ${song.songId}/${d}`);
+    if(hasSky(c.notes)){const fc=flatCross(c.notes);console.log(`  ${FLAT_CROSS_LABEL}: ${fc.length}件`+(fc.length?' — '+fc.slice(0,12).map(x=>`${(x.at/1000).toFixed(2)}(${x.level})`).join(' '):''));}
     for(const [k,list] of Object.entries(res))console.log(`  ${RULE_LABELS[k]}: ${list.length}件`+(list.length?' — '+list.slice(0,12).map(x=>`${(x.at/1000).toFixed(2)}${x.side}`+(x.gapMs!=null?`(${x.gapMs})`:'')).join(' ')+(list.length>12?' …':''):''));}
 }
