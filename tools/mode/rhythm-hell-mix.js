@@ -278,27 +278,14 @@ const mix=(master,{zero,beat,crosses=[],gentle=false,crossUpper='hold',crossDept
     return changed;};
   for(let i=0;i<40;i++){const a=fix(),b=backFix(),c=sideFix();if(!a&&!b&&!c)break;}
   for(const n of notes){if(n.k==='s')shape(n,n.profile);else n.sky=n.want;delete n.want;delete n.fixed;delete n.profile;}
-  // 押さえている帯の中(同じ高さで横に重なる位置)に来るタップ・フリックを、帯の外へ出す(2026-10-13 社長「地上ホールドなどと同じ位置に通常ノーツが来る。物理的に押せない」)。
-  //   時刻はそのまま(音に合わせたまま)、帯から離れる向きへ、帯の端から半レーン(サブレーン1つ)あけて置き直す。入らなければ、あけずに・幅を詰めて(幅2まで)。
-  //   それでも入らないもの(端の帯の外側など)は取り除く(モンスターノーツは左右を反対側へ写す)。0件の曲(Sheriruth・風がそよぐ場所)では何もしない
-  const bandFix=()=>{const HR=require('./rhythm-chart-hand-rules.js');let changed=0;
-    for(let r=0;r<60;r++){const rt=toRuntime(notes),bad=HR.onHeldBand(rt).find(v=>v.type==='TAP'||v.type==='FLICK');if(!bad)break;
-      const n=notes.find(m=>(m.k==='t'||m.k==='f')&&Math.abs(m.t-bad.at)<=2&&m.sub===bad.note.subLane&&m.w===bad.note.subLaneWidth&&!!m.sky===(bad.level==='空中'));if(!n)break;
-      // 向きは、帯を押さえていない手の側(押さえている手の側へ出すと、空いている親指が押さえている親指を越えて交差する)。入らなければ反対の向き
-      const [h0,h1]=bad.heldSpan,hh=bad.heldNote,holdHand=hh.hand==='L'||hh.hand==='R'?hh.hand:HR.sideAt(hh,hh.timeMs),level=n.sky?1:0;
-      // 置き直した先が、同じ時刻のほかのノーツ・同じ高さで押さえている帯と重ならないか
-      const fits=(sub,w)=>{if(sub<0||sub+w>12)return false;const a=sub/2,b=(sub+w)/2;
-        for(const m of rt){if(m===bad.note)continue;const lv=HR.levelAt(m,n.t);if(lv!==level)continue;
-          const covers=Math.abs(m.timeMs-n.t)<=2||(m.type==='HOLD'||m.type==='SLIDE')&&m.timeMs<n.t-2&&n.t<m.endTimeMs-2;if(!covers)continue;
-          const [m0,m1]=HR.spanAt(m,n.t);if(Math.min(b,m1)-Math.max(a,m0)>1e-6)return false;}
-        return true;};
-      let placed=false;
-      for(const away of holdHand==='L'?[1,-1]:[-1,1])for(const gap of [1,0])for(const w of [...new Set([n.w,Math.max(2,n.w-1),2])]){if(placed)break;
-        const sub=away>0?Math.ceil(h1*2-1e-6)+gap:Math.floor(h0*2+1e-6)-gap-w;
-        if(fits(sub,w)){n.sub=sub;n.w=w;if(n.args){n.args[1]=sub;n.args[2]=w;}placed=true;}}
-      if(!placed){if(n.mon&&!n.mirrored&&fits(12-n.sub-n.w,n.w)){n.sub=12-n.sub-n.w;n.mirrored=true;}else if(!n.mon)notes.splice(notes.indexOf(n),1);else break;}
-      changed++;}
-    return changed;};
+  // 押さえている帯の中(同じ高さで重なる・幅1が絡む半レーン)に来るタップ・フリックを、帯の外へ出す(2026-10-13 社長「ホールド・スライド中に同じところにノーツを出すのはやめたほうがいい」)。
+  //   置き直し方は共通の物差し(rhythm-chart-hand-rules.js の fixHeldBand): 時刻はそのまま、帯を押さえていない手の側へ。入らないものは取り除く(モンスターノーツは左右を反対側へ写す)。
+  //   0件の曲(Sheriruth・風がそよぐ場所)では何もしない
+  const bandFix=()=>{const HR=require('./rhythm-chart-hand-rules.js'),rt=notes.map(n=>{const r=toRuntime([n])[0];Object.defineProperty(r,'src',{value:n});return r;});
+    const res=HR.fixHeldBand(rt,{canRemove:r=>!r.src.mon,canMirror:r=>!!r.src.mon&&!r.src.mirrored});
+    for(const r of rt)if((r.type==='TAP'||r.type==='FLICK')&&(r.src.sub!==r.subLane||r.src.w!==r.subLaneWidth)){const n=r.src;if(n.mon&&r.subLane===12-n.sub-n.w&&r.subLaneWidth===n.w)n.mirrored=true;n.sub=r.subLane;n.w=r.subLaneWidth;if(n.args){n.args[1]=n.sub;n.args[2]=n.w;}}
+    for(const r of res.removed)notes.splice(notes.indexOf(r.src),1);
+    return res.moved+res.removed.length+res.mirrored;};
   bandFix();
   // 最後の手直し(2026-10-13 Against My Own Shadow で、上の直しで残った所があった): 共通の物差し(rhythm-chart-hand-rules.js)で
   // 同じ側の150ms以内の高さの切り替え・地上から250ms以内の空中が残っていれば、そこに関わる空中のタップ(モンスター以外)を地上へ下ろす。
@@ -386,6 +373,7 @@ if(require.main===module){
     {const HR=require('./rhythm-chart-hand-rules.js'),res=HR.analyze(rt);
       for(const k of ['skyAfterGround','besideHeldBand'])console.log(`  目安: ${HR.RULE_LABELS[k]} ${res[k].length}件`+(res[k].length?': '+res[k].slice(0,12).map(x=>(x.at/1000).toFixed(2)).join(' / ')+(res[k].length>12?' …':''):''));
       {const fc=HR.flatCross(rt);console.log(`  ${HR.FLAT_CROSS_LABEL} ${fc.length}件`+(fc.length?': '+fc.map(x=>`${(x.at/1000).toFixed(2)}(${x.level})`).join(' / ')+' ← HELL の交差は上下に分ける(書いたあと rhythm-chart-hand-rules-check.js が NG にする)':''));}
+      {const hb=HR.heldBandBlocked(rt);console.log(`  ${HR.ON_HELD_BAND_LABEL} ${hb.length}件`+(hb.length?': '+hb.map(x=>`${(x.at/1000).toFixed(2)}(${HR.HELD_BAND_KINDS[x.kind]})`).join(' / ')+' ← 書いたあと rhythm-chart-hand-rules-check.js が NG にする':''));}
       if(res.sideHeightSwitch.length!==ss.length)console.log(`  ※ 共通の物差しでは ${res.sideHeightSwitch.length}件(ゲームの形へ写したあとで数えたため)`);}
     console.log(`Lv.${level}(MASTER Lv.${mLevel}) | 横持ち(高さの差39%・交差の区間の外) 押せない${th.count.impossible}・交差${th.count.cross}・届きにくい${th.count.reach} | 両手のシミュレート(地上だけ) 押せない${sim.impossible} | 同じ親指が1.5拍未満で段を変える ${viol.length}`);
     if(th.count.impossible||th.count.cross||th.count.reach)console.log('  横持ち:',th.issues.filter(i=>i.kind!=='busy').slice(0,12).map(i=>`${(i.t/1000).toFixed(2)} ${i.kind} ${i.what} ${i.why}`).join(' / '));

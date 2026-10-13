@@ -12,8 +12,9 @@
 //   3. 空中の無い公開譜面は、空中の決まり(sideHeightSwitch・skyAfterGround)が0件
 //   4. HELL(試作の枠)は件数と場所を出すだけ(公開前・直すかは社長が決める)
 //   5. HELL の交差は上下に分ける: 同じ高さのまま左右が入れ替わる「水平クロス」が0(2026-10-13 社長「クロスのときは上下を活用してほしい」)
-//   6. HELL は押さえている帯の中(同じ高さで横に重なる位置)にノーツを置かない: 0件(2026-10-13 社長「物理的に押せないから直したほうがいい」)。
-//      公開中の HELL(Grievous Lady)は今の件数より増えていないことだけ見る(公開中の譜面は変えない・直すかは社長が決める)
+//   6. 押さえている帯の中にノーツを置かない(2026-10-13 社長「ホールド・スライド中に同じところにノーツを出すのはやめたほうがいい」)。
+//      同じ高さで重なる・幅1が絡む半レーンの重なりは0件(地上の押さえと空中のノーツは同じ位置でもよい・両方幅2以上の半レーンは許す)。
+//      決まりより前からある譜面は rhythm-held-band-existing.json の件数を上限に見るだけ(公開中の譜面は変えない・直すかは社長が決める)。新しい曲・新しい HELL は0
 'use strict';
 const fs=require('fs'),path=require('path');
 const R=require('./rhythm-chart-hand-rules.js');
@@ -51,11 +52,17 @@ let ng=0;const ok=(name,cond,detail='')=>{console.log(`${cond?'OK':'NG'}: ${name
     ok('同じ高さのまま左右が入れ替わる2本を、水平クロスに数える',R.flatCross([X(1000,2000,1,4,1,1),X(1000,2000,4,1,1,1)]).length===1&&R.flatCross([X(1000,2000,1,4,0,0),X(1000,2000,4,1,0,0)]).length===1);
     ok('交わる瞬間に片方が空中・片方が地上なら、水平クロスに数えない',R.flatCross([X(1000,2000,1,4,1,1),X(1000,2000,4,1,0,0)]).length===0);
     ok('入れ替わらない2本は数えない',R.flatCross([X(1000,2000,1,2,1,1),X(1000,2000,4,5,1,1)]).length===0);}
-  // 押さえている帯の中: 左で押さえている幅2のホールド(サブレーン2〜3)の上・端に重なるタップは数え、帯の外・高さ違い・押さえる前後は数えない
-  ok('押さえている帯と横に重なるタップを数える',R.onHeldBand([H(1000,2000,2),T(1500,3)]).length===1&&R.onHeldBand([H(1000,2000,2),T(1500,2)]).length===1);
-  ok('帯の外(端が接するだけ)・高さが違う・押さえる前と離した後は数えない',R.onHeldBand([H(1000,2000,2),T(1500,4)]).length===0&&R.onHeldBand([H(1000,2000,2),T(1500,2,1)]).length===0
-    &&R.onHeldBand([H(1000,2000,2),T(1000,2),T(2000,2)]).length===0);
-  ok('空中のスライドの帯の中の空中のタップも数える',R.onHeldBand([S(1000,2000,1,1,1),T(1500,2,1)]).length===1);
+  // 押さえている帯の中: 幅1レーン(サブレーン2つ)のホールド(サブレーン2〜3)に、同じ位置のタップは「重なる」、半レーンずれたタップは「幅1が絡む半レーン」。どちらも置かない形
+  {const W=(t,sub,w,sky=0)=>({...T(t,sub,sky),subLaneWidth:w}),HW=(t,e,sub,w)=>({...H(t,e,sub),subLaneWidth:w});
+    const k=list=>R.onHeldBand(list).map(x=>x.kind).join(',');
+    ok('同じ高さで同じ位置は「重なる」、半レーンずれは幅1が絡めば「半レーン(幅1が絡む)」で、どちらも置かない形',k([H(1000,2000,2),T(1500,2)])==='overlap'&&k([H(1000,2000,2),T(1500,3)])==='halfThin'&&R.heldBandBlocked([H(1000,2000,2),T(1500,3)]).length===1);
+    ok('両方とも幅2レーン以上の半レーンの重なりは許す(数だけ)',k([HW(1000,2000,2,4),W(1500,5,4)])==='halfWide'&&R.heldBandBlocked([HW(1000,2000,2,4),W(1500,5,4)]).length===0);
+    ok('帯の外(端が接するだけ)・地上の押さえと空中のノーツ・押さえる前と離した後は数えない',R.onHeldBand([H(1000,2000,2),T(1500,4)]).length===0&&R.onHeldBand([H(1000,2000,2),T(1500,2,1)]).length===0
+      &&R.onHeldBand([H(1000,2000,2),T(1000,2),T(2000,2)]).length===0);
+    ok('空中のスライドの帯の中の空中のタップも数える',R.heldBandBlocked([S(1000,2000,1,1,1),T(1500,2,1)]).length===1);
+    // 直す道具: 左手で押さえている帯の上のタップを、時刻はそのまま、右(押さえていない手の側)へ半レーンあけて置き直す
+    {const list=[H(1000,2000,2),T(1500,2)],res=R.fixHeldBand(list);
+      ok('直す道具は、帯の上のタップを押さえていない手の側へ置き直す(時刻はそのまま)',res.moved===1&&list[1].timeMs===1500&&list[1].subLane===5&&R.heldBandBlocked(list).length===0,JSON.stringify(list[1]));}}
 }
 
 // ── 2〜4. 公開中の譜面と HELL ──
@@ -92,12 +99,12 @@ for(const s of runtime.RHYTHM_PROTO_SONGS||[])for(const [d,c] of Object.entries(
     if(!c||!Array.isArray(c.notes)||!R.hasSky(c.notes))continue;
     for(const x of R.flatCross(c.notes))flats.push(`${s.songId}/${d} ${(x.at/1000).toFixed(2)}秒(${x.level})`);}
   ok('HELL の交差は上下に分かれている(水平クロス0)',flats.length===0,flats.slice(0,8).join(' / '));}
-// 6. HELL は押さえている帯の中にノーツを置かない(2026-10-13 社長の決定)。公開中の HELL は今の件数を上限にして見るだけ
-{const RELEASED_HELL_ON_BAND={'grievous_lady_hell/MASTER':5};const bad=[];
-  for(const s of runtime.RHYTHM_PROTO_SONGS||[])for(const [d,c] of Object.entries(s.difficulties||{})){
-    if(!c||!Array.isArray(c.notes)||!R.hasSky(c.notes))continue;const key=`${s.songId}/${d}`,list=R.onHeldBand(c.notes),limit=RELEASED_HELL_ON_BAND[key]||0;
-    if(list.length)console.log(`参考: ${key} ${R.ON_HELD_BAND_LABEL} ${list.length}件(${list.slice(0,8).map(x=>(x.at/1000).toFixed(2)).join(' ')})`+(limit?` ※公開中・上限${limit}`:''));
-    if(list.length>limit)bad.push(`${key} ${list.length}件`+(limit?`(上限${limit})`:'')+` ${list.slice(0,6).map(x=>`${(x.at/1000).toFixed(2)}秒`).join(' ')}`);}
-  ok('HELL は押さえている帯の中にノーツを置かない(公開中の HELL は今の件数より増えない)',bad.length===0,bad.join(' / '));}
+// 6. 押さえている帯の中にノーツを置かない(2026-10-13 社長の決定)。前からある譜面は控えの件数を上限に、新しい譜面は0
+{const caps=JSON.parse(fs.readFileSync(path.join(__dirname,'rhythm-held-band-existing.json'),'utf8')).charts||{},bad=[];let wide=0;
+  for(const s of [...(runtime.RHYTHM_SONGS||[]),...(runtime.RHYTHM_PROTO_SONGS||[])])for(const [d,c] of Object.entries(s.difficulties||{})){
+    if(!c||!Array.isArray(c.notes))continue;const key=`${s.songId}/${d}`,all=R.onHeldBand(c.notes),list=all.filter(x=>x.blocked),limit=caps[key]||0;wide+=all.length-list.length;
+    if(list.length>limit)bad.push(`${key} ${list.length}件`+(limit?`(上限${limit})`:'')+` ${list.slice(0,6).map(x=>`${(x.at/1000).toFixed(2)}秒(${R.HELD_BAND_KINDS[x.kind]})`).join(' ')}`);}
+  ok('押さえている帯の中にノーツを置かない(前からある譜面は控えの件数より増えない・新しい譜面は0)',bad.length===0,bad.slice(0,6).join(' / '));
+  console.log(`参考: 両方幅2以上の半レーンの重なり(許す) ${wide}件 / 控えに残っている置かない形 ${Object.values(caps).reduce((a,b)=>a+b,0)}件(${Object.keys(caps).length}譜面)`);}
 console.log(ng?`\n✗ ${ng}件NG`:'\nすべてOK');
 process.exit(ng?1:0);

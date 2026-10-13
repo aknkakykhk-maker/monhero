@@ -31,7 +31,8 @@ HELL は `rhythm-hell-mix.js --song <曲> --write` で作る(MASTER を土台に
 同じ側の押し始めは90ms未満にしない)は `rhythm-chart-hand-rules-check.js` が見張る。**公開中の譜面のノーツを動かす・戻すとき**は
 `rhythm-overlap-reach-check.js` と手の決まりの検査も回す(#2808→#2821)。本文: [`docs/rules/CHART_ENGINE.md`](../../docs/rules/CHART_ENGINE.md)
 **HELL の交差は上下に分ける**(同じ高さのまま左右が入れ替わる「水平クロス」は作らない・2026-10-13)。同じ検査が HELL で0を見張る
-**HELL は押さえている帯の中(同じ高さで横に重なる位置)にノーツを置かない**(2026-10-13・`onHeldBand`)。同じ検査が HELL で0を見張る
+**押さえている帯の中にノーツを置かない**(2026-10-13): 同じ高さで重なる・幅1が絡む半レーンの重なりは不可(地上と空中なら同じ位置でもよい)。
+HELL と新曲の5難易度の道具が直し、同じ検査が止める(前からある譜面の上限は `rhythm-held-band-existing.json`)
 
 **参考動画がない限り、各難易度は難易度ごとに作る**(2026-10-13 社長の決定)。上の難易度を下の難易度の写し+割増しで作らない。
 HELL は `rhythm-chart-v3-generate.js --difficulty HELL` で曲の解析から骨組みを作り、`rhythm-hell-mix.js` の `source:'audio'` で空中を付ける。本文: [`docs/rules/CHART_ENGINE.md`](../../docs/rules/CHART_ENGINE.md)
