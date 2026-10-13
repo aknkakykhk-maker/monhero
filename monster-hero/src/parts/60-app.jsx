@@ -18587,7 +18587,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           restore={raidJackPrep.restore||null}
           teachings={(()=>{const unlocked=TEACHING_CARDS.filter(t=>unlockedTeachingIds.includes(t.id));return unlocked.length>0?unlocked:getActiveTeachingCards();})()}
           onOpenDetail={(mon)=>setRaidJackDetailMon(mon)}
-          onBack={()=>{setRaidJackDetailMon(null);setGameState('RAID_JACK');}} onStart={(args)=>{setRaidJackDetailMon(null);return beginRaidJackPlacement(args);}}/>
+          onOpenTeachingDetail={(t,info)=>setRosterDetailTeaching({...t,detailStartLvl:info&&Number.isFinite(info.startLevel)?info.startLevel:null,detailNote:info&&info.note?info.note:''})}
+          onBack={()=>{setRaidJackDetailMon(null);setRosterDetailTeaching(null);setGameState('RAID_JACK');}} onStart={(args)=>{setRaidJackDetailMon(null);setRosterDetailTeaching(null);return beginRaidJackPlacement(args);}}/>
           {raidJackDetailMon&&renderMonsterDetailModal({
             mon:raidJackDetailMon,
             masu:raidJackDetailMon.masuId?getMasuMon(raidJackDetailMon.masuId):null,
@@ -19069,14 +19070,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 extraAfterApt: renderUniqueSkillPointBox(getMasuMon(rosterDetailMon.masuId), updated=>setRosterDetailMon(mergeMasuIntoMon(updated))) }
             : { marketDiscIcon:rosterDetailMon.marketDiscIcon, marketDiscName:rosterDetailMon.marketDiscName },
         })}
-        {rosterDetailTeaching&&(()=>{const owned=ownedTeachings.find(ot=>ot.id===rosterDetailTeaching.id); const currentLvl=owned?owned.evoLevel:-1; return(
+        {/* アシカの詳細。編成画面のほか、イベントの編成からも開く(そのときは detailStartLvl = 始まる段・detailNote = 育ち方の一言が付く) */}
+        {rosterDetailTeaching&&(()=>{const owned=ownedTeachings.find(ot=>ot.id===rosterDetailTeaching.id); const currentLvl=Number.isFinite(rosterDetailTeaching.detailStartLvl)?rosterDetailTeaching.detailStartLvl:(owned?owned.evoLevel:-1); return(
           <div className="fixed inset-0 flex items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:31000}}>
             <div className="bg-slate-900 border-2 border-purple-500 rounded-2xl p-6 w-full max-w-xs flex flex-col items-center gap-4 shadow-2xl h-auto max-h-full">
               <div className="text-6xl mb-2 shrink-0">{cardIconNode(rosterDetailTeaching.icon,76,rosterDetailTeaching.id)}</div>
-              <h3 className="text-lg font-black text-white mb-4 shrink-0">{BREEDER_EVO_NAMES[rosterDetailTeaching.id][Math.max(currentLvl,0)]}</h3>
+              <h3 className="text-lg font-black text-white mb-4 shrink-0">{rosterDetailTeaching.detailNote?(rosterDetailTeaching.baseName||BREEDER_EVO_NAMES[rosterDetailTeaching.id][0]):BREEDER_EVO_NAMES[rosterDetailTeaching.id][Math.max(currentLvl,0)]}</h3>
+              {rosterDetailTeaching.detailNote&&<div data-teach-detail-note className="-mt-5 mb-1 w-full shrink-0 text-center text-[11px] font-bold leading-snug text-amber-200">{rosterDetailTeaching.detailNote}</div>}
               <div className="w-full space-y-2 mb-4 overflow-y-auto min-h-0 flex-1">
                 {getFullEvolutionDetails(rosterDetailTeaching).map(info=>{const isCurrent=info.lvl===currentLvl; const isNext=info.lvl===currentLvl+1;
-                  return(<div key={info.lvl} className={`p-2 rounded-xl border ${isCurrent?'bg-purple-900/50 border-purple-400':isNext?'bg-amber-900/30 border-amber-500/50':'bg-black/30 border-white/5'}`}><div className="flex justify-between items-center mb-1"><span className={`text-[11px] font-black ${isCurrent?'text-purple-300':isNext?'text-amber-300':'text-slate-400'}`}>Lv.{info.lvl} {info.name}</span>{isCurrent&&<span className="text-[10px] bg-purple-500 text-white px-1.5 rounded-full leading-none py-0.5">所持</span>}{!owned&&info.lvl===0&&<span className="text-[10px] bg-slate-600 text-white px-1.5 rounded-full leading-none py-0.5">未習得</span>}</div><div className="text-[11px] leading-relaxed text-slate-300">{info.desc}</div></div>);
+                  return(<div key={info.lvl} className={`p-2 rounded-xl border ${isCurrent?'bg-purple-900/50 border-purple-400':isNext?'bg-amber-900/30 border-amber-500/50':'bg-black/30 border-white/5'}`}><div className="flex justify-between items-center mb-1"><span className={`text-[11px] font-black ${isCurrent?'text-purple-300':isNext?'text-amber-300':'text-slate-400'}`}>Lv.{info.lvl} {info.name}</span>{isCurrent&&<span className="text-[10px] bg-purple-500 text-white px-1.5 rounded-full leading-none py-0.5">{rosterDetailTeaching.detailNote?'開始':'所持'}</span>}{!owned&&!rosterDetailTeaching.detailNote&&info.lvl===0&&<span className="text-[10px] bg-slate-600 text-white px-1.5 rounded-full leading-none py-0.5">未習得</span>}</div><div className="text-[11px] leading-relaxed text-slate-300">{info.desc}</div></div>);
                 })}
               </div>
               <button onClick={()=>setRosterDetailTeaching(null)} className="w-full min-h-[52px] bg-purple-600 text-white rounded-xl font-black shadow-lg text-sm shrink-0 active:scale-[.98]">閉じる</button>

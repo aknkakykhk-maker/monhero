@@ -265,6 +265,30 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await page.locator('[role="dialog"][aria-label$="の詳細"]').getByRole('button', { name: '閉じる' }).last().click();
     await page.locator('[role="dialog"][aria-label$="の詳細"]').waitFor({ state: 'detached', timeout: 10000 });
     check('詳細を閉じると編成画面に戻り、選んだ状態は変わらない', (await page.locator('[data-raid-jack-prep]').count()) === 1 && (await page.locator('[data-raid-hero]').first().getAttribute('class')) === heroBefore && !(await page.locator('[data-raid-prep-start]').isDisabled()));
+    // アシカの効果も、選ぶ画面から見られる(2026-10-13・ユーザー指示)。札の右上の i で、通常の編成と同じ詳細の窓を開く。
+    // 押しても選ぶ/外すは変わらない。窓には正式名称・各段の効果(バトル中と同じ getDynamicDesc の文)・このイベントでの育ち方が出る
+    const teachCount = await page.locator('[data-raid-teach]').count();
+    check('アシカの札すべての右上に i がある', teachCount > 0 && (await page.locator('[data-raid-teach-detail]').count()) === teachCount, `札${teachCount}枚`);
+    const teachId = await page.locator('[data-raid-teach]').first().getAttribute('data-raid-teach');
+    const teachBefore = await page.locator('[data-raid-teach]').first().getAttribute('class');
+    const teachSelBefore = await page.locator('[data-raid-jack-prep]').innerText();
+    if (SHOT) {
+      await page.locator('[data-raid-teach]').first().scrollIntoViewIfNeeded();
+      await page.screenshot({ path: `${SHOT}/raid-prep-teach-i.png` });
+    }
+    await page.locator(`[data-raid-teach-detail="${teachId}"]`).click();
+    await page.locator('[data-teach-detail-note]').waitFor({ timeout: 10000 });
+    if (SHOT) await page.screenshot({ path: `${SHOT}/raid-prep-teach-detail.png` });
+    const teachDlg = await page.locator('[data-teach-detail-note]').locator('xpath=..').innerText();
+    check('アシカの詳細に3段の効果とこのイベントでの育ち方が出る', /Lv\.0/.test(teachDlg) && /Lv\.1/.test(teachDlg) && /Lv\.2/.test(teachDlg) && /このイベントでは Lv\.0 から始まり、3・5ターン目/.test(teachDlg), teachDlg.replace(/\s+/g, ' ').slice(0, 160));
+    const clipped = await page.evaluate(() => {
+      const box = document.querySelector('[data-teach-detail-note]').parentElement;
+      return [...box.querySelectorAll('h3, div, span')].filter((el) => el.children.length === 0 && el.scrollWidth > el.clientWidth + 1).map((el) => el.textContent.slice(0, 20));
+    });
+    check('アシカの詳細の文字が幅390で切れない', clipped.length === 0, clipped.join(' / '));
+    await page.locator('[data-teach-detail-note]').locator('xpath=..').getByRole('button', { name: '閉じる' }).click();
+    await page.locator('[data-teach-detail-note]').waitFor({ state: 'detached', timeout: 10000 });
+    check('アシカの詳細を閉じても、選ぶ/外すは変わらない', (await page.locator('[data-raid-teach]').first().getAttribute('class')) === teachBefore && (await page.locator('[data-raid-jack-prep]').innerText()) === teachSelBefore);
     posts.length = 0;
     await page.locator('[data-raid-prep-start]').click();
     // 通常バトルと同じ配置画面で、勇者モン→供モンの順に、距離(立ち位置)を自分で選ぶ(2026-10-05・「勇者モンの距離が固定になってる」)

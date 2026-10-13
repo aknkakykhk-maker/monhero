@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 331536458f0ac5a5
+// generated-sha256: 38da3164588228b1
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-12 21:32"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-13 10:44"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -45607,7 +45607,7 @@ const RaidJackScreen = ({ initialTier = 0, onBack, onChallenge, onPurchase, onCl
 };
 
 // 編成。A: 解放済みのベースモンから / B: 編成に入れているマスモンから。勇者1体+供モン最大3体。アシカは A=1枚 / B=3枚まで
-const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, onStart, restore = null, onOpenDetail }) => {
+const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, onStart, restore = null, onOpenDetail, onOpenTeachingDetail }) => {
   const isB = kind === 'b';
   const maxTeach = RAID_JACK_TEACHING_MAX;   // レイドバトルもグランドスラムも、アシカは3枚まで(数字は 35-raid-jack.jsx)
   const tier = raidJackTierAt(kind, tierIndex);
@@ -45624,6 +45624,11 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
     if (prev.includes(k)) return prev.filter((x) => x !== k);
     return prev.length >= RAID_JACK_ALLY_MAX ? prev : [...prev, k];
   });
+  // 詳細の窓に出す「どの段から始まり、いつ強くなるか」。数字は戦闘の中身と同じ定数から作る(60-app.jsx の raidJack の開始処理)
+  const teachGrowTurns = RAID_JACK_LEVEL_UP_TURNS.slice(0, RAID_JACK_TEACHING_MAX_LEVEL);
+  const teachDetailInfo = isB
+    ? { startLevel: RAID_JACK_TEACHING_MAX_LEVEL, note: `このイベントでは Lv.${RAID_JACK_TEACHING_MAX_LEVEL}(最大)から始まります。戦闘中は成長しません` }
+    : { startLevel: 0, note: `このイベントでは Lv.0 から始まり、${teachGrowTurns.join('・')}ターン目に1段階ずつ強くなります(最大 Lv.${RAID_JACK_TEACHING_MAX_LEVEL})` };
   const toggleTeach = (id) => setTeachIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : (prev.length >= maxTeach ? (maxTeach === 1 ? [id] : prev) : [...prev, id])));
   // 選ぶときにモンスターの詳細(ステータス・技・適性など)を見られる(2026-10-05・ユーザー指示)。
   // 詳細のボタンは、選ぶボタンの入れ子にならないよう、外側のdivの右上に重ねて置く(押しても選択は変わらない)
@@ -45665,16 +45670,23 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
           </div>
         </section>
         <section className="rounded-2xl border border-white/10 bg-black/30 p-3">
-          <div className="mb-1 text-[11px] font-black text-orange-200">アシカ({maxTeach}つまで)<span className="ml-1 text-[9px] text-slate-300">{teachIds.length} / {maxTeach}</span></div>
+          <div className="mb-1 text-[11px] font-black text-orange-200">アシカ({maxTeach}つまで)<span className="ml-1 text-[9px] text-slate-300">{teachIds.length} / {maxTeach}</span>{typeof onOpenTeachingDetail === 'function' && <span className="ml-1 text-[9px] font-normal text-slate-300">右上の <b className="text-sky-200">i</b> で効果が見られます</span>}</div>
           <div className="text-[9px] text-slate-300">{isB ? '最大レベルから始まります(戦闘中は成長しません)' : '固有技は3・5・8・11ターン目に2段階ずつ、アシカは3・5ターン目に1段階ずつ強くなります(3枚まで選べます)'}</div>
           <div className="mt-1 grid grid-cols-4 gap-1.5">
             {(Array.isArray(teachings) ? teachings : []).map((t) => (
-              <button type="button" key={t.id} data-raid-teach={t.id} onClick={() => toggleTeach(t.id)}
-                className={`flex flex-col items-center rounded-xl border-2 p-1 text-center active:scale-95 ${teachIds.includes(t.id) ? 'border-orange-300 bg-orange-950/50' : 'border-white/10 bg-slate-900/60'}`}>
+              <div key={t.id} className="relative">
+              <button type="button" data-raid-teach={t.id} onClick={() => toggleTeach(t.id)}
+                className={`flex w-full flex-col items-center rounded-xl border-2 p-1 text-center active:scale-95 ${teachIds.includes(t.id) ? 'border-orange-300 bg-orange-950/50' : 'border-white/10 bg-slate-900/60'}`}>
                 {/* 手札のカードと同じ見え方(きき のように全身の絵は、カード用の拡大・位置の補正で顔に寄せる) */}
                 {cardIconNode(t.icon, 40, t.id)}
                 <span className="mt-0.5 w-full truncate text-[9px] font-black text-slate-100">{t.baseName}</span>
               </button>
+              {/* アシカの効果も見られるようにする(2026-10-13・ユーザー指示)。モンスターの札と同じ右上の i。押しても選ぶ/外すは変わらない */}
+              {typeof onOpenTeachingDetail === 'function' && (
+                <button type="button" data-raid-teach-detail={t.id} aria-label={`${t.baseName}の効果を見る`} onClick={(e) => { e.stopPropagation(); onOpenTeachingDetail(t, teachDetailInfo); }}
+                  className="mh-hit-expand absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full border border-sky-300/60 bg-slate-800 text-[11px] font-black leading-none text-sky-200 shadow active:scale-90">i</button>
+              )}
+              </div>
             ))}
           </div>
         </section>
@@ -64283,7 +64295,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           restore={raidJackPrep.restore||null}
           teachings={(()=>{const unlocked=TEACHING_CARDS.filter(t=>unlockedTeachingIds.includes(t.id));return unlocked.length>0?unlocked:getActiveTeachingCards();})()}
           onOpenDetail={(mon)=>setRaidJackDetailMon(mon)}
-          onBack={()=>{setRaidJackDetailMon(null);setGameState('RAID_JACK');}} onStart={(args)=>{setRaidJackDetailMon(null);return beginRaidJackPlacement(args);}}/>
+          onOpenTeachingDetail={(t,info)=>setRosterDetailTeaching({...t,detailStartLvl:info&&Number.isFinite(info.startLevel)?info.startLevel:null,detailNote:info&&info.note?info.note:''})}
+          onBack={()=>{setRaidJackDetailMon(null);setRosterDetailTeaching(null);setGameState('RAID_JACK');}} onStart={(args)=>{setRaidJackDetailMon(null);setRosterDetailTeaching(null);return beginRaidJackPlacement(args);}}/>
           {raidJackDetailMon&&renderMonsterDetailModal({
             mon:raidJackDetailMon,
             masu:raidJackDetailMon.masuId?getMasuMon(raidJackDetailMon.masuId):null,
@@ -64765,14 +64778,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 extraAfterApt: renderUniqueSkillPointBox(getMasuMon(rosterDetailMon.masuId), updated=>setRosterDetailMon(mergeMasuIntoMon(updated))) }
             : { marketDiscIcon:rosterDetailMon.marketDiscIcon, marketDiscName:rosterDetailMon.marketDiscName },
         })}
-        {rosterDetailTeaching&&(()=>{const owned=ownedTeachings.find(ot=>ot.id===rosterDetailTeaching.id); const currentLvl=owned?owned.evoLevel:-1; return(
+        {/* アシカの詳細。編成画面のほか、イベントの編成からも開く(そのときは detailStartLvl = 始まる段・detailNote = 育ち方の一言が付く) */}
+        {rosterDetailTeaching&&(()=>{const owned=ownedTeachings.find(ot=>ot.id===rosterDetailTeaching.id); const currentLvl=Number.isFinite(rosterDetailTeaching.detailStartLvl)?rosterDetailTeaching.detailStartLvl:(owned?owned.evoLevel:-1); return(
           <div className="fixed inset-0 flex items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:31000}}>
             <div className="bg-slate-900 border-2 border-purple-500 rounded-2xl p-6 w-full max-w-xs flex flex-col items-center gap-4 shadow-2xl h-auto max-h-full">
               <div className="text-6xl mb-2 shrink-0">{cardIconNode(rosterDetailTeaching.icon,76,rosterDetailTeaching.id)}</div>
-              <h3 className="text-lg font-black text-white mb-4 shrink-0">{BREEDER_EVO_NAMES[rosterDetailTeaching.id][Math.max(currentLvl,0)]}</h3>
+              <h3 className="text-lg font-black text-white mb-4 shrink-0">{rosterDetailTeaching.detailNote?(rosterDetailTeaching.baseName||BREEDER_EVO_NAMES[rosterDetailTeaching.id][0]):BREEDER_EVO_NAMES[rosterDetailTeaching.id][Math.max(currentLvl,0)]}</h3>
+              {rosterDetailTeaching.detailNote&&<div data-teach-detail-note className="-mt-5 mb-1 w-full shrink-0 text-center text-[11px] font-bold leading-snug text-amber-200">{rosterDetailTeaching.detailNote}</div>}
               <div className="w-full space-y-2 mb-4 overflow-y-auto min-h-0 flex-1">
                 {getFullEvolutionDetails(rosterDetailTeaching).map(info=>{const isCurrent=info.lvl===currentLvl; const isNext=info.lvl===currentLvl+1;
-                  return(<div key={info.lvl} className={`p-2 rounded-xl border ${isCurrent?'bg-purple-900/50 border-purple-400':isNext?'bg-amber-900/30 border-amber-500/50':'bg-black/30 border-white/5'}`}><div className="flex justify-between items-center mb-1"><span className={`text-[11px] font-black ${isCurrent?'text-purple-300':isNext?'text-amber-300':'text-slate-400'}`}>Lv.{info.lvl} {info.name}</span>{isCurrent&&<span className="text-[10px] bg-purple-500 text-white px-1.5 rounded-full leading-none py-0.5">所持</span>}{!owned&&info.lvl===0&&<span className="text-[10px] bg-slate-600 text-white px-1.5 rounded-full leading-none py-0.5">未習得</span>}</div><div className="text-[11px] leading-relaxed text-slate-300">{info.desc}</div></div>);
+                  return(<div key={info.lvl} className={`p-2 rounded-xl border ${isCurrent?'bg-purple-900/50 border-purple-400':isNext?'bg-amber-900/30 border-amber-500/50':'bg-black/30 border-white/5'}`}><div className="flex justify-between items-center mb-1"><span className={`text-[11px] font-black ${isCurrent?'text-purple-300':isNext?'text-amber-300':'text-slate-400'}`}>Lv.{info.lvl} {info.name}</span>{isCurrent&&<span className="text-[10px] bg-purple-500 text-white px-1.5 rounded-full leading-none py-0.5">{rosterDetailTeaching.detailNote?'開始':'所持'}</span>}{!owned&&!rosterDetailTeaching.detailNote&&info.lvl===0&&<span className="text-[10px] bg-slate-600 text-white px-1.5 rounded-full leading-none py-0.5">未習得</span>}</div><div className="text-[11px] leading-relaxed text-slate-300">{info.desc}</div></div>);
                 })}
               </div>
               <button onClick={()=>setRosterDetailTeaching(null)} className="w-full min-h-[52px] bg-purple-600 text-white rounded-xl font-black shadow-lg text-sm shrink-0 active:scale-[.98]">閉じる</button>
