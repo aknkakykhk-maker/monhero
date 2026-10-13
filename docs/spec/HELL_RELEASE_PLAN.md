@@ -22,11 +22,15 @@
 | HELL がある曲 | Sheriruth(Lv.54・642ノーツ・うち空239)/ Grievous Lady(Lv.60・649ノーツ・うち空220)/ 風がそよぐ場所(Lv.23・193ノーツ・うち空19・空中の入口) | `data/rhythm-mode.js` の `RHYTHM_HELL_CHARTS`(曲を外すときはその1行を消す) |
 | レベル | 譜面の値(空中は地上と見なした Lv. の1.2倍・10/12 夕方に3割→2割へ戻した)。レベル表 `RHYTHM_CHART_LEVELS` には HELL の行が無く、譜面の値がそのまま出る | `sheriruthHellChart` / `grievousLadyHellChart` の `mhChart(<Lv>, …)` |
 | 開く条件 | その曲の MASTER を1回クリアすると、その曲の HELL が開く。結果画面に「🔓 HELL が解放されました！」 | `data/rhythm-mode.js` の `RHYTHM_DIFFICULTY_UNLOCK_BY.HELL`(`'MASTER'`) |
-| お話 | 公開後に HOME へ着いたとき、まだ見ていない全員に「空まで届くビート」→ 説明4枚を1回だけ(MASTER のクリアとは関係なし) | `RHYTHM_HELL_STORY_TRIGGER`(`'release'`。ほかに `'after-result'`・`'home'`・`'none'`) |
+| お話 | 公開後に HOME へ着いたとき、まだ見ていない全員に「空まで届くビート」→ 説明5枚(動画つき)を1回だけ(MASTER のクリアとは関係なし) | `RHYTHM_HELL_STORY_TRIGGER`(`'release'`。ほかに `'after-result'`・`'home'`・`'none'`) |
 | お話の既読 | `mh_rhythm_hell_story_seen_v1`。印が偽のあいだは誰も書けないので、公開の日はまっさら。デバッグの「印が真だったら」で見たぶんは別のキー `mh_rhythm_hell_story_seen_preview_proto` | `rhythmHellStorySeenKey()`(17-*.jsx) |
 | 回想 | プロフィールの「イベント回想」に「空まで届くビート ～難易度 HELL～」が出る | `data/assistants.js` の `EVENT_REPLAYS`(`releaseFlag:'rhythmHell'`) |
 | ヘルプ | 「難易度 HELL と空のノーツ」(モンヒロビート → ノーツと操作)が出る | `data/help.js` の `id:'rhythm-hell'`(`releaseFlag:'rhythmHell'`) |
 | 見た目の既定 | 見やすさ 案2(`RHYTHM_HELL_VIS_DEFAULT='v2'`)・空中の道 Eはっきり(`RHYTHM_SKY_LANE_LOOK_DEFAULT='em'`)・空中のタップ 深い赤・縁を細く薄く(`RHYTHM_SKY_NOTE_COLOR_DEFAULT='deep'`・右手の空中の長押しは桃のまま。前後の絵 `docs/proto/sky-tap-deep/`)・空中の判定の文字は線の下(`RHYTHM_HELL_SKY_TEXT` 既定 `below`)・空中を叩いた柱の光は入・地上と同じく奥まで(`RHYTHM_HELL_SKY_HIT` 既定 `far`。#2887・#2891。重さは公開後に本番の記録で見直す) | `data/rhythm-mode.js`・`30-rhythm-play.jsx` |
+
+| オプション | HELL の設定3つが、ほかの項目と同じ並びで出る。「表示」タブ: 空中の判定の文字の位置(線の下/線の上)・空中の道の見え方(はっきり/控えめ/なし)、「軽さ・演出」タブ: 空中を叩いた柱の光(奥まで/短い/出さない)。保存キーはデバッグと同じ `*_proto` のまま(2026-10-13) | `29-rhythm-screens.jsx` の `hellReleased`(`rhythmHellReleased()`) |
+| オプションの効き方 | 地上の設定(ノーツの速さ・サイズ・レーンカバー・叩いた場所に判定・軽量モード など)は HELL の空中のノーツにも同じように効く(項目ごとの表 `docs/proto/hell-options/README.md`・#2926) | — |
+| 説明動画 | HELL の遊び方の説明(5枚)が動画つき・5枚目「HELL のプレイ映像」。ヘルプの HELL の項目からもプレイ映像を見返せる(リバースくん・#2929・印の後ろ) | `29-rhythm-screens.jsx` の `RhythmHellGuide`/`RhythmHellVideo`・`data/assistants.js` の `RHYTHM_HELL_GUIDE_PAGES`・`data/rhythm-mode.js` の `RHYTHM_HELL_GUIDE_VIDEOS`・`movies/hell-guide-*` |
 
 ### 記録とランキング(2026-10-12 社長の決定「満点を105万にしてランキングには乗るようにして/105万のランク【MF】で」)
 
@@ -43,6 +47,7 @@
 
 - デバッグの試作の枠 `sheriruth_hell_debug`・`grievous_lady_hell`(同じ譜面を指している)
 - デバッグの切り替え(見やすさ・空中の道・空中の板・手ごたえ・「公開の印が真だったら」)と、その新しいキー(`*_proto`)
+  - うち空中の道・柱の光・空中の判定の文字の位置の3つは、公開後はオプションにも出る(同じキーを読み書きする)
 
 ## 3. 更新履歴の下書き(公開の日に貼る)
 
@@ -62,6 +67,8 @@
       'HELL が遊べるようになった日に、助手のお話「空まで届くビート」と遊び方の説明が1度だけ流れます。プロフィールの「イベント回想」から見返せます。',
       'HELL の満点は 1,050,000点です。満点を取ったときだけ、M のさらに上のランク「MF」が付きます。',
       'HELL のスコアは自己ベストに残り、全国ランキング（曲ごと・全曲の合算・週間）やマスモンランキング、イベントにも入ります。',
+      'オプションの「表示」タブと「軽さ・演出」タブで、空中の判定の文字の位置・空中の道の見え方・空中を叩いた柱の光を変えられます。ノーツの速さやノーツサイズなど、いつもの設定は HELL でもそのまま効きます。',
+      '遊び方の説明は動画つきです。ヘルプの「難易度 HELL と空のノーツ」から、HELL のプレイ映像をいつでも見返せます。',
     ],
   },
 ```
@@ -85,8 +92,10 @@ node tools/boot/event-replay-check.js
 node tools/playbot/rhythm-hell-unlock-bot.js --story   # お話が HOME で1回だけ流れるか
 ```
 
-- ⚠️ `rhythm-hell-unlock-bot.js` は「印が偽なら出ない」を最初に確かめる作りなので、**印を真にしたら最初の2項目が NG になる**。
-  公開の PR で、印が真のときは「印が偽」の項目を飛ばすように直す(ボットは CI には入っていない)
+- ⚠️ `rhythm-hell-unlock-bot.js` は「印が偽なら出ない」を最初に確かめる作りなので、**印を真にしたら「印が偽」の項目が NG になる**。
+  直す場所(2026-10-13 時点): `tools/playbot/rhythm-hell-unlock-bot.js` の 148〜149行(① 印が偽: 公開の印は偽のまま / HELL は出ない)と 114行(`--story` の「印が偽: HOME に着いてもお話は出ない」)。
+  公開の PR で、`RELEASE_FLAGS.rhythmHell` が真のときはこの3項目を飛ばす(または「印が真: 出る」に入れ替える)。ボットは CI には入っていない
+- 公開の印を真にしたら、オプションの HELL の3項目が出ることも確かめる(「表示」「軽さ・演出」タブ。印が偽のあいだは出ないことは、この3項目を足した PR で実際のブラウザで確かめた)
 - 公開前に、デバッグの「公開の印が真だったら」で、MASTER クリア → HELL が開く → お話 → 説明、を一度通しておく(`node tools/playbot/rhythm-hell-unlock-bot.js` の通し版・約6分)
 
 ## 5. 社長に聞いてから決めること
