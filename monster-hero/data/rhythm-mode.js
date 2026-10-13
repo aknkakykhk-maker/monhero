@@ -1613,13 +1613,32 @@ const RHYTHM_SKY_REACH_ADAPT={
   reset(){this.depths.length=0;},
 };
 // 空中のノーツを受ける下の境目(これより上を押せば空中)
-// 地上のノーツを受ける上の端(これより下を押せば地上)。空中の線のずらしでは動かない(元の高さ base で数える)。地上の線を動かすと一緒に動く
-const rhythmGroundAcceptFromWith=(line,base)=>line-base+Math.max(RHYTHM_GROUND_ACCEPT_ABOVE,base*.5);
-const rhythmGroundAcceptFrom=()=>rhythmGroundAcceptFromWith(RHYTHM_JUDGMENT_LINE_Y.ratio,RHYTHM_SKY_LIFT.base);
+// 受け付ける範囲の広さ(2026-10-14 社長「地上と空中の判定ラインは決まった範囲だけど、狭くする方はオプションでできるようにできない?」)。
+// 地上・空中それぞれ % で、100(今の広さ・上限)〜50(下限)。狭める向きは「地上と空中の境目の側」だけ(押し間違いが起きるのは境目のあたりなので)。
+//   空中: 空中の線より下へはみ出して受け付けている部分(空中の線〜空中の下の端)を縮める。空中の線より上は今のまま
+//   地上: 地上の線より上へはみ出して受け付けている部分(地上の上の端〜地上の線)を縮める。地上の線より下は今のまま
+// 下限50%: 縦の画面(390×844)で、境目の側の受け付けが空中は線の下 約53px、地上は線の上 約33px 残る。指の押す位置のばらつき(ボットの人の指のくせ σ=28px)より
+// 広く残し、線をねらって押せば空振りしない幅にするため。保存は新しいキー mh_rhythm_ground_accept_pct_v1 / mh_rhythm_sky_accept_pct_v1。5%刻み。壊れていたら100
+const RHYTHM_ACCEPT_WIDTH_MIN_PCT=50,RHYTHM_ACCEPT_WIDTH_STEP_PCT=5;
+const rhythmNormalizeAcceptWidth=value=>{const n=Number(value);if(!Number.isFinite(n))return 100;const snapped=Math.round(n/RHYTHM_ACCEPT_WIDTH_STEP_PCT)*RHYTHM_ACCEPT_WIDTH_STEP_PCT;return Math.max(RHYTHM_ACCEPT_WIDTH_MIN_PCT,Math.min(100,snapped));};
+const rhythmReadAcceptWidth=key=>{try{const v=typeof localStorage!=='undefined'?localStorage.getItem(key):null;return v===null?100:rhythmNormalizeAcceptWidth(v);}catch(e){return 100;}};
+const RHYTHM_ACCEPT_WIDTH={ground:rhythmReadAcceptWidth('mh_rhythm_ground_accept_pct_v1'),sky:rhythmReadAcceptWidth('mh_rhythm_sky_accept_pct_v1'),
+  set(which,value){if(which!=='ground'&&which!=='sky')return;const v=rhythmNormalizeAcceptWidth(value),key=which==='ground'?'mh_rhythm_ground_accept_pct_v1':'mh_rhythm_sky_accept_pct_v1';this[which]=v;
+    try{if(v===100)localStorage.removeItem(key);else localStorage.setItem(key,String(v));}catch(e){}}};
+// 地上のノーツを受ける上の端(これより下を押せば地上)。空中の線のずらしでは動かない(元の高さ base で数える)。地上の線を動かすと一緒に動く。
+// widthPct で、地上の線より上の部分だけを縮める(100なら今までと同じ値)
+const rhythmGroundAcceptFromWith=(line,base,widthPct=100)=>line-(base-Math.max(RHYTHM_GROUND_ACCEPT_ABOVE,base*.5))*Math.max(0,Math.min(1,widthPct/100));
+const rhythmGroundAcceptFrom=()=>rhythmGroundAcceptFromWith(RHYTHM_JUDGMENT_LINE_Y.ratio,RHYTHM_SKY_LIFT.base,RHYTHM_ACCEPT_WIDTH.ground);
 // 空中のノーツを受ける下の端(これより上を押せば空中)。空中の線のずらしと一緒に動く(上へずらせば上へ)。案A の自動の動きは、ここを起点に今までどおり足す。
-// 地上の範囲の上の端より上へは行かない(どちらも受け付けない隙間を作らない)。ずらしが0なら今までと同じ値
-const rhythmSkyAcceptLimitWith=(line,base,ratio,adapt=0)=>Math.max(line-RHYTHM_SKY_ACCEPT_BELOW+adapt-(ratio-base),rhythmGroundAcceptFromWith(line,base));
-const rhythmSkyAcceptLimit=()=>rhythmSkyAcceptLimitWith(RHYTHM_JUDGMENT_LINE_Y.ratio,RHYTHM_SKY_LIFT.base,RHYTHM_SKY_LIFT.ratio,RHYTHM_SKY_REACH_ADAPT.offset());
+// 地上の範囲(今の広さ)の上の端より上へは行かない(どちらも受け付けない隙間を作らない)。ずらしが0・広さ100なら今までと同じ値。
+// widthPct が100未満のときは、空中の線より下の部分を縮める。案A はその狭めた範囲の外へは広げない(狭めた下の端で止まる)
+const rhythmSkyAcceptLimitWith=(line,base,ratio,adapt=0,widthPct=100)=>{
+  const floor=rhythmGroundAcceptFromWith(line,base),full=Math.max(line-RHYTHM_SKY_ACCEPT_BELOW+adapt-(ratio-base),floor);
+  if(!(widthPct<100))return full;
+  const skyLine=line-ratio,plain=Math.max(line-RHYTHM_SKY_ACCEPT_BELOW-(ratio-base),floor),narrowed=skyLine+Math.max(0,plain-skyLine)*Math.max(0,widthPct/100);
+  return Math.min(full,narrowed);
+};
+const rhythmSkyAcceptLimit=()=>rhythmSkyAcceptLimitWith(RHYTHM_JUDGMENT_LINE_Y.ratio,RHYTHM_SKY_LIFT.base,RHYTHM_SKY_LIFT.ratio,RHYTHM_SKY_REACH_ADAPT.offset(),RHYTHM_ACCEPT_WIDTH.sky);
 const rhythmSkyTouch=(clientY,rect)=>{
   if(!RHYTHM_SKY_INPUT.active||!rect||!(Number(rect.height)>0))return null;
   return (Number(clientY)-Number(rect.top))/Number(rect.height);

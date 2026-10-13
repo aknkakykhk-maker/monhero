@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f165598ebcbff1ff
+// source-sha256: e548bf3ac6a1b450
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-14 06:54";
+const BUILD_DATE = "2026-10-14 07:35";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -28990,7 +28990,9 @@ const RhythmOptions = ({
     hit: RHYTHM_HELL_SKY_HIT.id,
     text: RHYTHM_HELL_SKY_TEXT.id,
     lane: RHYTHM_SKY_LANE_LOOK.id,
-    skyLine: RHYTHM_SKY_LINE_OFFSET.pct
+    skyLine: RHYTHM_SKY_LINE_OFFSET.pct,
+    groundW: RHYTHM_ACCEPT_WIDTH.ground,
+    skyW: RHYTHM_ACCEPT_WIDTH.sky
   });
   const [hellDraft, setHellDraft] = useState(hellNow);
   const [hellSaved, setHellSaved] = useState(hellNow);
@@ -29000,6 +29002,8 @@ const RhythmOptions = ({
     RHYTHM_HELL_SKY_TEXT.set(hellDraft.text);
     RHYTHM_SKY_LANE_LOOK.set(hellDraft.lane);
     RHYTHM_SKY_LINE_OFFSET.set(hellDraft.skyLine);
+    RHYTHM_ACCEPT_WIDTH.set('ground', hellDraft.groundW);
+    RHYTHM_ACCEPT_WIDTH.set('sky', hellDraft.skyW);
     const now = hellNow();
     setHellDraft(now);
     setHellSaved(now);
@@ -29309,8 +29313,8 @@ const RhythmOptions = ({
       skyOn = hellReleased;
     const ratio = rhythmSkyLiftWith(base, skyOn ? hellDraft.skyLine : 0),
       skyY = L - ratio,
-      lim = rhythmSkyAcceptLimitWith(L, base, ratio, 0),
-      from = rhythmGroundAcceptFromWith(L, base);
+      lim = rhythmSkyAcceptLimitWith(L, base, ratio, 0, skyOn ? hellDraft.skyW : 100),
+      from = rhythmGroundAcceptFromWith(L, base, skyOn ? hellDraft.groundW : 100);
     const pct = v => `${(Math.max(0, Math.min(1, v)) * 100).toFixed(2)}%`;
     return React.createElement("div", {
       "data-rhythm-line-position": true,
@@ -29381,6 +29385,17 @@ const RhythmOptions = ({
       suffix: '%',
       label: '地上の判定ライン(画面の下からの高さ)',
       slider: true
+    }), skyOn && stepper('groundW', RHYTHM_ACCEPT_WIDTH_MIN_PCT, 100, RHYTHM_ACCEPT_WIDTH_STEP_PCT, {
+      fine: RHYTHM_ACCEPT_WIDTH_STEP_PCT,
+      coarse: RHYTHM_ACCEPT_WIDTH_STEP_PCT * 2,
+      suffix: '%',
+      label: '地上を受け付ける範囲の広さ(線より上のはみ出し・100%が今の広さ)',
+      source: hellDraft,
+      onSet: v => setHellDraft(d => ({
+        ...d,
+        groundW: rhythmNormalizeAcceptWidth(v)
+      })),
+      slider: true
     }), skyOn && stepper('skyLine', -RHYTHM_SKY_LINE_OFFSET_MAX_PCT, RHYTHM_SKY_LINE_OFFSET_MAX_PCT, RHYTHM_SKY_LINE_OFFSET_STEP_PCT, {
       fine: RHYTHM_SKY_LINE_OFFSET_STEP_PCT,
       coarse: 2,
@@ -29393,8 +29408,19 @@ const RhythmOptions = ({
         skyLine: rhythmNormalizeSkyLineOffset(v)
       })),
       slider: true
+    }), skyOn && stepper('skyW', RHYTHM_ACCEPT_WIDTH_MIN_PCT, 100, RHYTHM_ACCEPT_WIDTH_STEP_PCT, {
+      fine: RHYTHM_ACCEPT_WIDTH_STEP_PCT,
+      coarse: RHYTHM_ACCEPT_WIDTH_STEP_PCT * 2,
+      suffix: '%',
+      label: '空中を受け付ける範囲の広さ(線より下のはみ出し・100%が今の広さ)',
+      source: hellDraft,
+      onSet: v => setHellDraft(d => ({
+        ...d,
+        skyW: rhythmNormalizeAcceptWidth(v)
+      })),
+      slider: true
     }));
-  })(), 'タップする判定ラインを、画面の下から何％の高さに置くかです。大きくするほど上へ上がり、指が届きやすくなります（12％が2026-09-13より前の位置です）。ノーツも弾ける光も判定文字も一緒に上がります。判定の幅（秒数）・スコア・譜面は変わりません。ただしレーンは奥へ行くほど狭くなるので、上げすぎると横の幅が狭く感じられます。' + (hellReleased ? '\n空中の判定ライン(HELL)は、地上の判定ラインからの高さを上下にずらします。空中の線・空中のノーツ・空中を受け付ける範囲が一緒に動きます(地上を受け付ける範囲は変わりません)。上へずらしすぎると、空中を受け付ける範囲が地上の範囲に届いたところで止まります。地上の判定ラインを動かすと、空中の線も一緒に動きます。押す時刻(判定の幅)とスコアは変わりません。' : ''), {
+  })(), 'タップする判定ラインを、画面の下から何％の高さに置くかです。大きくするほど上へ上がり、指が届きやすくなります（12％が2026-09-13より前の位置です）。ノーツも弾ける光も判定文字も一緒に上がります。判定の幅（秒数）・スコア・譜面は変わりません。ただしレーンは奥へ行くほど狭くなるので、上げすぎると横の幅が狭く感じられます。' + (hellReleased ? '\n空中の判定ライン(HELL)は、地上の判定ラインからの高さを上下にずらします。空中の線・空中のノーツ・空中を受け付ける範囲が一緒に動きます(地上を受け付ける範囲は変わりません)。上へずらしすぎると、空中を受け付ける範囲が地上の範囲に届いたところで止まります。「受け付ける範囲の広さ」は、地上と空中の境目の側だけを狭めます(空中は線より下へのはみ出し、地上は線より上へのはみ出し。100%が今の広さで、50%まで)。狭めると、境目のあたりを押したときにもう一方のノーツを取り違えにくくなりますが、線から離れた所を押すと空振りになります。地上の判定ラインを動かすと、空中の線も一緒に動きます。押す時刻(判定の幅)とスコアは変わりません。' : ''), {
     full: true
   }), field('ノーツの出る位置', stepper('noteStartPosition', -100, 100, 5, {
     fine: 5,
