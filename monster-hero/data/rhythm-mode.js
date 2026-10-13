@@ -800,6 +800,12 @@ const rhythmNoteHasBody=note=>rhythmNoteIsHold(note)||rhythmNoteIsSlide(note);
 // 取り損ねた残りを初めて描いた時刻(曲の時刻)から RHYTHM_FAILED_TRAIL_FADE_MS で消す。見た目だけで、判定・スコア・ライフ・コンボには関わらない。
 // 時刻は演奏ごとに作り直すノーツ(makeRuntimeNotes)へ持たせる。曲の時刻が戻ったら(巻き戻し)そこから数え直す
 const RHYTHM_FAILED_TRAIL_FADE_MS=300;
+// 取り損ねたスライドの帯の灰色(2D・GPU の帯で共用)。地上のホールドの取り損ね(灰色の段 .9→.7)と同じくらいの濃さにそろえる
+// (2026-10-13 社長「空中のスライドが途中で外れて MISS になったときに消える」。以前の .48 はホールドの約6割の濃さで、
+// 色のついた帯が急に暗い灰色へ変わり、道の上ではほとんど見えなかった)
+const RHYTHM_FAILED_SLIDE_FILL='rgba(135,145,160,.8)';
+// 空中のスライドが途中で切れて MISS になったあと、残りの帯を元の形のまま終わりまで流すときの濃さ(地上の外れた帯と同じく薄く)
+const RHYTHM_SKY_CUT_TRAIL_ALPHA=.42;
 const rhythmFailedTrailFade=(note,songMs)=>{
   if(!note)return 0;
   const now=Number(songMs)||0;
@@ -3560,6 +3566,9 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
     if(elapsedPerf<graceMs)return;
     session.note.holdJudgment='MISS';
     session.failed=true;
+    // 空中のスライドは、判定はここで MISS に決まっても、見た目は地上のスライド(外れても切れずに終わりまで流れる)と同じく、
+    // 残りの帯を元の形のまま終わりまで薄く流す(2026-10-13 社長「途中で外れて MISS になったときに消える」)。描く側(paintCanvasNote)がこの印を見る
+    if(session.kind==='SLIDE')session.note._rhythmSkyCut=true;
     // 猶予を超えて外れたままなら、指を離すのを待たずその場でMISS確定する。
     // endTimeMsを現在より少し前へ寄せ、本体(scheduleTick)の「endTimeMs到達で
     // 既存applyJudgmentを呼ぶ」経路をそのまま使ってグレー表示へ切り替える(新しい判定経路は作らない)。
@@ -33039,7 +33048,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       ctx.lineTo(quads[0].l0,quads[0].y0);ctx.closePath();
       ctx.lineWidth=6;ctx.lineJoin='round';ctx.strokeStyle=`rgba(${opts.slideRgb||RHYTHM_NOTE_COLORS.SLIDE.rgb},.18)`;ctx.stroke();
     }
-    ctx.fillStyle=failed?'rgba(120,120,135,.48)':`rgba(${opts.slideRgb||RHYTHM_NOTE_COLORS.SLIDE.rgb},${opts.slideRgb?.62:.5})`;
+    ctx.fillStyle=failed?RHYTHM_FAILED_SLIDE_FILL:`rgba(${opts.slideRgb||RHYTHM_NOTE_COLORS.SLIDE.rgb},${opts.slideRgb?.62:.5})`;
     // 継ぎ目(10等分の境目)は判定と無関係なので線を引かない。塗りだけ。
     if(!failed&&opts.skySlideRgb){
       // 空中の段: 高さのある区切りは、空中の色を薄く(半透明の帯)。高さが上がるほど空中の見せ方に寄せる。
@@ -33127,7 +33136,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     }
     const base=opts.slideRgb||RHYTHM_NOTE_COLORS.SLIDE.rgb;
     if(!failed&&effect!=='MINIMAL'&&!lightweight)band.pass('outline',{mode:0,hw:3,color:`rgba(${base},.18)`,alpha,stencil:true});
-    const groundFill=failed?'rgba(120,120,135,.48)':`rgba(${base},${opts.slideRgb?.62:.5})`;
+    const groundFill=failed?RHYTHM_FAILED_SLIDE_FILL:`rgba(${base},${opts.slideRgb?.62:.5})`;
     if(!failed&&opts.skySlideRgb){
       band.pass('fill',{mode:1,color:groundFill,color2:`rgba(${opts.skySlideRgb},1)`,alpha,stencil:true});
       band.pass('edges',{mode:3,hw:2,color2:`rgba(${opts.skySlideRgb},1)`,alpha,stencil:true});
