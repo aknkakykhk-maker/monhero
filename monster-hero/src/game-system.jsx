@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9396a2abca8aeedc
+// generated-sha256: 53c1b50b4bc89637
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-13 12:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-13 12:35"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7257,6 +7257,59 @@ const monsterArtMaskSize = (className, style) => {
 };
 // マスモンの画像を、部位別の染色(masuColors配列)を反映して表示するコンポーネント。
 // 部位分割データが無いモンスターは画像全体を染め直した1枚を表示する。
+// 部位ごとの染め絵を、型(マスク)で切り抜いて元の絵に重ね、1枚の絵に焼く(2026-10-13・社長「染色がずれてる?」)。
+// 前は CSS の mask-image で重ねていたが、Android の折りたたみ(Chrome 系)のチャットのアイコンで型が効かず、
+// 部位ごとの染め絵がまるごと重なって「全身1色」「灰色の影だけ」に見えていた。焼いた1枚を <img> で出せば、
+// 端末の型の描き方に左右されない。重ね方は bakeDyedMonsterCanvas・CSS の mask と同じ(型のアルファで切り抜く・同じ縦横比で全面に重ねる)。
+// 焼いた絵は blob: のURLで渡す(data URL へ書き出すと画面と同じ所で止まる。40体で合計2秒)。片づけは染め絵と同じ仕組み
+// (_dyeBlobRetain / _dyeBlobRelease・控えから捨てるときに _dyeBlobEvict)。同じ組み合わせは控えから返す
+const DYED_BAKE_MAX_SIDE = 768;
+const DYED_BAKE_CACHE_MAX = 64;
+const _dyedBakeCache = new Map();
+const _bakeDyedLayers = (key, src, layers) => {
+  const hit = _dyedBakeCache.get(key);
+  if (hit) { _dyedBakeCache.delete(key); _dyedBakeCache.set(key, hit); return hit; }
+  const promise = (async () => {
+    try {
+      if (typeof document === 'undefined') return null;
+      const base = await _loadArtImage(src);
+      if (!base) return null;
+      const natW = base.naturalWidth || base.width, natH = base.naturalHeight || base.height;
+      if (!(natW > 0) || !(natH > 0)) return null;
+      const scale = Math.min(1, DYED_BAKE_MAX_SIDE / Math.max(natW, natH));
+      const w = Math.max(1, Math.round(natW * scale)), h = Math.max(1, Math.round(natH * scale));
+      const out = document.createElement('canvas'); out.width = w; out.height = h;
+      const layer = document.createElement('canvas'); layer.width = w; layer.height = h;
+      const ctx = out.getContext('2d'), lctx = layer.getContext('2d');
+      if (!ctx || !lctx) return null;
+      ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+      lctx.imageSmoothingEnabled = true; lctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(base, 0, 0, w, h);
+      for (const l of layers) {
+        if (!l) continue;
+        _dyeBlobRetain(l.url);
+        const [recolored, mask] = await Promise.all([_loadArtImage(l.url), _loadArtImage(l.mask)]).finally(() => _dyeBlobRelease(l.url));
+        if (!recolored || !mask) return null;   // 1枚でも読めなければ焼かない(前の重ね方へ戻す)
+        lctx.globalCompositeOperation = 'source-over';
+        lctx.clearRect(0, 0, w, h);
+        lctx.drawImage(recolored, 0, 0, w, h);
+        lctx.globalCompositeOperation = 'destination-in';
+        lctx.drawImage(mask, 0, 0, w, h);
+        lctx.globalCompositeOperation = 'source-over';
+        ctx.globalAlpha = l.alpha / 100;
+        ctx.drawImage(layer, 0, 0);
+        ctx.globalAlpha = 1;
+      }
+      const blob = await new Promise((done) => { try { out.toBlob(done, 'image/png'); } catch (_) { done(null); } });
+      return blob && window.URL && typeof window.URL.createObjectURL === 'function' ? window.URL.createObjectURL(blob) : null;
+    } catch (e) { return null; }
+  })();
+  _dyedBakeCache.set(key, promise);
+  while (_dyedBakeCache.size > DYED_BAKE_CACHE_MAX) { const oldKey = _dyedBakeCache.keys().next().value; const old = _dyedBakeCache.get(oldKey); _dyedBakeCache.delete(oldKey); _dyeBlobEvict(old); }
+  // 焼けなかったものは控えに残さない(次に描くときにもう一度試す)
+  promise.then((url) => { if (!url && _dyedBakeCache.get(key) === promise) _dyedBakeCache.delete(key); });
+  return promise;
+};
 const DyedMonsterImage = ({ baseId, src, masuColors, alt, className, style: rawStyle, draggable, debugMaskPlacement = null }) => {
   const style = monsterArtFitStyle(baseId, rawStyle);
   const maskSize = monsterArtMaskSize(className, style);
@@ -7300,6 +7353,31 @@ const DyedMonsterImage = ({ baseId, src, masuColors, alt, className, style: rawS
       });
     return () => { cancelled = true; };
   }, [baseId, src, colorKey]);
+  // 型を重ねる子は、そろったら1枚に焼く(型の調整画面 debugMaskPlacement のときは、動かしながら見るので焼かない)。
+  // baked: undefined = 焼いている途中(元の絵を出す)/ null = 焼けなかった(前の CSS の重ね方)/ 文字列 = 焼いた絵
+  const bakeLayers = (hues && hues.length > 0 && masks && !debugMaskPlacement && colors.some(Boolean))
+    ? hues.map((_, idx) => {
+      const url = colors[idx] && masks[idx] && recolored[_recoloredKey(idx, colors[idx])];
+      return url ? { url, mask: masks[idx], alpha: colorAlphaOf(colors[idx]) } : null;
+    })
+    : null;
+  // 染め絵を作り終えたか(作れなかった色は控えに null で入る。その部位は重ねないだけで、ほかの部位は焼く)
+  const bakeReady = !!bakeLayers && hues.every((_, idx) => !colors[idx] || !masks[idx] || Object.prototype.hasOwnProperty.call(recolored, _recoloredKey(idx, colors[idx])));
+  const bakeKey = bakeReady ? [baseId, src, ...bakeLayers.map((l) => (l ? `${l.url}#${l.alpha}` : '-'))].join('|') : '';
+  const [baked, setBaked] = useState({ key: '', url: undefined });
+  // 表示している焼いた絵は片づけない(控えから捨てられても、使い終わるまで残す)
+  useEffect(() => {
+    const url = baked.url;
+    if (!url) return undefined;
+    _dyeBlobRetain(url);
+    return () => _dyeBlobRelease(url);
+  }, [baked.url]);
+  useEffect(() => {
+    if (!bakeKey) return undefined;
+    let cancelled = false;
+    _bakeDyedLayers(bakeKey, src, bakeLayers).then((url) => { if (!cancelled) setBaked({ key: bakeKey, url: url || null }); });
+    return () => { cancelled = true; };
+  }, [bakeKey]);
   if (!hues || hues.length === 0) {
     const recoloredSrc = colors[0] && recolored[_recoloredKey(0, colors[0])];
     const alpha = colorAlphaOf(colors[0]);
@@ -7317,6 +7395,11 @@ const DyedMonsterImage = ({ baseId, src, masuColors, alt, className, style: rawS
   }
   if (!masks || !colors.some(Boolean)) {
     return <img src={src} alt={alt} draggable={draggable} className={className} style={style}/>;
+  }
+  if (!debugMaskPlacement) {
+    const bakedUrl = bakeKey && baked.key === bakeKey ? baked.url : undefined;
+    if (bakedUrl) return <img src={bakedUrl} alt={alt} draggable={draggable} className={className} style={style}/>;
+    if (bakedUrl === undefined) return <img src={src} alt={alt} draggable={draggable} className={className} style={style}/>;
   }
   return (
     <div className={className} style={{...style, position:'relative', overflow:'hidden'}}>
