@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 69d92d4b99603a8f
+// source-sha256: 104dc98850c44489
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-13 23:08";
+const BUILD_DATE = "2026-10-14 00:26";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -35043,9 +35043,7 @@ const RhythmTapTest = ({
       const paintCanvasNote = note => {
         const failedTrail = note.done && note._rhythmFinalJudgment === 'MISS' && rhythmNoteHasBody(note) && songTimeMs < rhythmReleaseTargetMs(note);
         const clearFlash = note.done && Number.isFinite(note._rhythmClearAt) && songTimeMs - note._rhythmClearAt < RHYTHM_CLEAR_FLASH_MS;
-        const skyCutTrail = failedTrail && note._rhythmSkyCut === true;
-        const failFade = failedTrail && !skyCutTrail ? rhythmFailedTrailFade(note, songTimeMs) : 1;
-        if (note.done && (!failedTrail || failFade <= 0) && !clearFlash) {
+        if (note.done && !failedTrail && !clearFlash) {
           note._rhythmCanvasSettled = true;
           return;
         }
@@ -35076,13 +35074,13 @@ const RhythmTapTest = ({
         const depthScale = Math.round((0.56 + geo.scale * .44) * 100) / 100,
           brightness = Math.round((0.72 + geo.scale * .28) * 100) / 100;
         RHYTHM_CANVAS_RENDERER.drawNote(note, geo, {
-          failed: failedTrail && !skyCutTrail,
+          failed: failedTrail,
           monster,
           wide: rhythmNoteIsWide(note),
           pressed: note.type === 'HOLD' && note.activePointerId !== null,
           slideOff: note.type === 'HOLD' && note.activePointerId !== null && RHYTHM_GESTURE_RUNTIME.slideOffForIndex(note.index),
           heldMs: songTimeMs - note.timeMs,
-          alpha: skyCutTrail ? RHYTHM_SKY_CUT_TRAIL_ALPHA : failedTrail ? .34 * failFade : 1,
+          alpha: failedTrail ? .34 : 1,
           pop: clearFlash ? Math.min(1, (songTimeMs - note._rhythmClearAt) / RHYTHM_CLEAR_FLASH_MS) : null,
           depthScale,
           brightness
@@ -35172,8 +35170,7 @@ const RhythmTapTest = ({
           delete el.dataset.rhythmClear;
           el._rhythmClearFlag = false;
         }
-        const failFade = failedTrail && note._rhythmSkyCut !== true ? rhythmFailedTrailFade(note, songTimeMs) : 1;
-        if (note.done && (!failedTrail || failFade <= 0) && !clearFlash) {
+        if (note.done && !failedTrail && !clearFlash) {
           if (el._rhythmHidden !== true) {
             el.style.display = 'none';
             el._rhythmHidden = true;
@@ -35191,7 +35188,7 @@ const RhythmTapTest = ({
         }
         const progress = 1 - (rhythmScrollPos(note.timeMs, note.scrollGroup) - rhythmScrollPos(visualTime, note.scrollGroup)) / travelMs,
           visible = failedTrail || note.activePointerId !== null || progress >= -.1 && progress <= 1.18;
-        const nextOpacity = failedTrail ? String(Math.round(34 * failFade) / 100) : visible ? '1' : '0';
+        const nextOpacity = failedTrail ? '0.34' : visible ? '1' : '0';
         if (el._rhythmOpacity !== nextOpacity) {
           el.style.opacity = nextOpacity;
           el._rhythmOpacity = nextOpacity;
@@ -73340,23 +73337,33 @@ function RhythmMultiScreen({
       onClick: () => onChangeMultiLook(c.id),
       className: `min-h-[26px] rounded-full border px-1.5 text-[10px] font-black leading-none ${multiLook === c.id ? 'border-emerald-300 bg-emerald-600 text-white' : 'border-white/20 bg-slate-800 text-slate-300'}`
     }, c.label))))), React.createElement("div", {
-      className: "grid grid-cols-5 gap-1.5 landscape:flex-1"
+      "data-rhythm-multi-difficulties": drawnDiffs.length,
+      className: "grid gap-1.5 landscape:flex-1",
+      style: {
+        gridTemplateColumns: `repeat(${Math.max(1, drawnDiffs.length)},minmax(0,1fr))`
+      }
     }, drawnDiffs.map(d => {
       const open = drawnOpenDiffs.some(x => x.id === d.id);
+      const need = open ? null : rhythmDifficultyUnlockRequirement(d.id, drawnSong ? drawnSong.songId : '');
       const level = drawnSong && drawnSong.difficulties && drawnSong.difficulties[d.id] ? Number(drawnSong.difficulties[d.id].level) || 0 : 0;
       const active = shownDiffId === d.id;
       return React.createElement("button", {
         key: d.id,
         type: "button",
         "data-rhythm-multi-difficulty": d.id,
+        "data-rhythm-multi-difficulty-locked": open ? '0' : '1',
         disabled: !open || iAmReady,
         onClick: () => RHYTHM_MULTI.setDiff(d.id),
+        title: need ? `${need}をクリアすると挑めます` : undefined,
         className: `flex min-h-[52px] flex-col items-center justify-center rounded-full border-2 text-[9px] font-black disabled:opacity-40 ${active ? 'border-fuchsia-300 bg-fuchsia-600 text-white' : 'border-white/20 bg-slate-800 text-slate-200'}`
       }, React.createElement("span", {
         className: "text-base leading-none"
       }, level || '-'), React.createElement("span", {
         className: "leading-tight"
-      }, open ? d.id : '🔒'));
+      }, open ? d.id : `🔒${d.id}`), need && React.createElement("small", {
+        "data-rhythm-multi-difficulty-need": d.id,
+        className: "block max-w-full whitespace-normal text-center text-[7px] leading-[1.05] opacity-80 [word-break:keep-all]"
+      }, need, "で", React.createElement("wbr", null), "解放"));
     })), React.createElement("button", {
       "data-rhythm-multi-ready": true,
       type: "button",
@@ -100492,8 +100499,8 @@ function MonsterHeroGame() {
       onRefundBuddyTicket: refundBuddyTicket,
       onOpenMasuBeat: () => openMasuBeat(gameState),
       songs: rhythmDemoSongs(RHYTHM_SONGS),
-      difficultiesOf: song => rhythmDemoDifficulties(song, RHYTHM_DIFFICULTIES),
-      difficultyList: rhythmDemoDifficultyList(RHYTHM_DIFFICULTIES),
+      difficultiesOf: song => rhythmDemoDifficulties(song, RHYTHM_PLAY_DIFFICULTIES),
+      difficultyList: rhythmDemoDifficultyList(RHYTHM_PLAY_DIFFICULTIES),
       bestRecords: rhythmBestRecords,
       onPreviewSong: setRhythmMultiPreviewSongId,
       onUserGesture: () => {
