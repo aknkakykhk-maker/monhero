@@ -28,7 +28,10 @@ const SONGS={sheriruth:{marker:'sheriruth-v3',zero:711.6-2594.75,beat:324.342,le
   // 風がそよぐ場所(2026-10-12 社長「もう1曲だけ簡単な曲のヘルも作ってみるのが良いと思う」)。空中のノーツを覚える入口なので gentle:
   // 空中は片手だけが空の小節の、拍の頭のタップだけ(スライド・ホールドは地上のまま・両手が空の小節は作らない)。交差の見せ場は置かない。
   // 土台はいま遊ばれている切り替わったあとの譜面(-v4-・RHYTHM_EVENT の after)
-  kaze_ga_soyogu:{marker:'kaze-ga-soyogu-v4',zero:209,beat:60000/118.88,levelRe:/const kazeGaSoyoguHellChart=mhChart\((\d+),/,gentle:true}};
+  kaze_ga_soyogu:{marker:'kaze-ga-soyogu-v4',zero:209,beat:60000/118.88,levelRe:/const kazeGaSoyoguHellChart=mhChart\((\d+),/,gentle:true},
+  // Against My Own Shadow(2026-10-13 社長「中くらいの HELL」)。拍は解析ファイル(authoring/against-my-own-shadow-v3-audio.json の timing)。
+  // crosses は MASTER で両手の長押しが重なる所(10.72・39.23・94.24秒の2本目の始まり)
+  against_my_own_shadow:{marker:'against-my-own-shadow-v3',zero:2022.9,beat:419.1788,levelRe:/const againstMyOwnShadowHellChart=mhChart\((\d+),/,crosses:[10720,39230,94240],crossUpper:'mover'}};
 const BEAT_GAP=1.5;                      // 同じ親指が段を変えるまでの拍
 // 同じ側(レーンの左右)で高さ(地上⇔空中)を変えるまでの間(2026-10-12 社長「HELL の操作性をもっと改良して」・テンポくんの数え方)。
 // 親指の振り分けとは別に、画面の左半分・右半分ごとに見る。点は押し始めと、長押し・スライドの終わり(指が離れる高さ)。同時押し(0ms)は両手で取るので数えない
@@ -56,7 +59,7 @@ const sideOf=(n,end)=>{const c=n.k==='s'?n.pts[end?n.pts.length-1:0][1]+0.5:(n.s
 const startOf=n=>n.k==='s'?n.pts[0][0]:n.t,endOf=n=>n.k==='s'?n.pts[n.pts.length-1][0]:n.k==='h'?n.end:n.t;
 const laneAt=(pts,at)=>{if(at<=pts[0][0])return pts[0][1];for(let i=1;i<pts.length;i++)if(at<=pts[i][0]){const r=(at-pts[i-1][0])/Math.max(1,pts[i][0]-pts[i-1][0]);return pts[i-1][1]+(pts[i][1]-pts[i-1][1])*r;}return pts[pts.length-1][1];};
 
-const mix=(master,{zero,beat,crosses=[],gentle=false})=>{
+const mix=(master,{zero,beat,crosses=[],gentle=false,crossUpper='hold'})=>{
   // 格子へ寄せる。元の譜面に近い時刻(3ms以内)があればその時刻を使う(丸め方が1ms違うと、2本のスライドの間がその瞬間だけ詰まる)
   const chartTimes=[...new Set(master.flatMap(n=>n.k==='s'?n.pts.map(p=>p[0]):[n.t,n.end].filter(x=>x!=null)))].sort((a,b)=>a-b);
   const Q=beat/4,snap=at=>{const g=Math.round(zero+Math.round((at-zero)/Q)*Q);const near=chartTimes.find(x=>Math.abs(x-g)<=3);return near!=null?near:g;};
@@ -101,6 +104,15 @@ const mix=(master,{zero,beat,crosses=[],gentle=false})=>{
     const laneOf=t=>t<a?laneAt(mover.pts,t):t<=c0?x0:t>=c1?xEnd:x0+(xEnd-x0)*(t-c0)/(c1-c0);
     const times=[...new Set([...mover.pts.map(p=>p[0]),a,c0,c1].filter(t=>t>=startOf(mover)&&t<=endOf(mover)))].sort((x,y)=>x-y);
     mover.pts=times.map(t=>[t,Math.round(laneOf(t)*1000)/1000,mover.pts[0][2],0,0]);mover.profile='ground';mover.fixed=true;
+    // crossUpper:'mover'(2026-10-13〜・HELL の交差は上の帯が越える): 上下を入れ替え、横へ動いて越える帯を空中、止まっている帯を地上にする。
+    //   止まっている空中の帯の下を地上の帯がくぐると、くぐった親指が上の親指の腹に当たる(Grievous Lady HELL の調べ・docs/playbot/shots/2026-10-13-gl-hell-cross/)。
+    //   動く帯は、重なりの1拍前から重なりの始まりまでに地上から空へ上げる。書かない曲(Sheriruth・風がそよぐ場所)は今までどおり
+    if(crossUpper==='mover'){
+      hold.pts=hold.pts.map(p=>[p[0],p[1],p[2],0,0]);hold.profile='ground';
+      const r0=Math.max(startOf(mover),snap(a-beat));
+      mover.pts=[...new Set([...mover.pts.map(p=>p[0]),r0])].sort((x,y)=>x-y).map(t=>{const o=mover.pts.find(p=>p[0]===t);const lane=o?o[1]:Math.round(laneAt(mover.pts,t)*1000)/1000;
+        const sky=t>=a?1:t<=r0?(r0===startOf(mover)&&t===r0?1:0):Math.round((t-r0)/Math.max(1,a-r0)*4)/4;return [t,lane,mover.pts[0][2],sky,0];});
+      mover.profile='custom';}
     crossWindows.push([a-120,b+120]);   // 押せない・交差の例外は両手が重なっている所だけ
   }
   for(const n of notes){
@@ -213,6 +225,21 @@ const mix=(master,{zero,beat,crosses=[],gentle=false})=>{
     return changed;};
   for(let i=0;i<40;i++){const a=fix(),b=backFix(),c=sideFix();if(!a&&!b&&!c)break;}
   for(const n of notes){if(n.k==='s')shape(n,n.profile);else n.sky=n.want;delete n.want;delete n.fixed;delete n.profile;}
+  // 最後の手直し(2026-10-13 Against My Own Shadow で、上の直しで残った所があった): 共通の物差し(rhythm-chart-hand-rules.js)で
+  // 同じ側の150ms以内の高さの切り替え・地上から250ms以内の空中が残っていれば、そこに関わる空中のタップ(モンスター以外)を地上へ下ろす。
+  // 残りが0の曲(Sheriruth・風がそよぐ場所)では何もしない(出力は1文字も変わらない)
+  {const HR=require('./rhythm-chart-hand-rules.js');
+    for(let r=0;r<60;r++){const rt=toRuntime(notes),res=[...HR.sideHeightSwitch(rt),...HR.skyAfterGround(rt)];if(!res.length)break;
+      let moved=false;
+      for(const v of res){const side=v.side;
+        // その時刻の点と、同じ側でその直前の点のうち、空中のタップを下ろす(その時刻のものを先に)
+        const cands=notes.filter(n=>n.k==='t'&&n.sky&&!n.mon&&sideOf(n)===side&&n.t<=v.at+2&&n.t>=v.at-Math.max(SIDE_GAP_MS,SKY_RAISE_MS)-2).sort((a,b)=>Math.abs(b.t-v.at)>Math.abs(a.t-v.at)?-1:1);
+        if(cands.length){cands[0].sky=0;moved=true;break;}
+        // タップが無ければ、その時刻の近くで空中で終わる・空中から始まるスライドの端を地上へ下ろす(交差の区間のものは触らない)
+        const W=Math.max(SIDE_GAP_MS,SKY_RAISE_MS)+2,inCross=t=>(crossWindows||[]).some(([a,b])=>t>=a&&t<=b);
+        const sl=notes.find(n=>n.k==='s'&&!inCross(startOf(n))&&((Math.abs(endOf(n)-v.at)<=W&&n.pts[n.pts.length-1][3]>=0.5&&sideOf(n,true)===side)||(Math.abs(startOf(n)-v.at)<=2&&n.pts[0][3]>=0.5&&sideOf(n)===side)));
+        if(sl){if(Math.abs(startOf(sl)-v.at)<=2&&sl.pts[0][3]>=0.5)sl.pts[0][3]=0;else sl.pts[sl.pts.length-1][3]=0;moved=true;break;}}
+      if(!moved)break;}}
   notes.crossWindows=crossWindows;
   return notes;
 };
