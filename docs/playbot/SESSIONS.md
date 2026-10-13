@@ -27,7 +27,7 @@
 | 修理部 | ヤスリくん | 修理部 ヤスリくん(10/09〜) | session_01Wyn2J3kuKNp9MmbffDj3oc |
 | 修理部 | ピンセットくん | 修理部 ピンセットくん(10/09〜) | session_01SPwyyGL5vwYvuDU9Bzts2t |
 | 修理部 | ストックくん | 修理部 ストックくん(10/11〜) | session_0169T9CNRwoH1QW1vKpEsUy5 |
-| 改善部 | 部長ダメダシくん | 改善部 部長ダメダシくん(10/09〜) | session_01PJpWvkdmV4DQzZ3mp7c7EC |
+| 改善部 | 部長ダメダシくん | 改善部 部長ダメダシくん(10/13〜) | session_013PjVKh5sdbiJbni1W5pZhr |
 
 ## 引き継ぎ済み(しまった。2026-10-12 14:49 社長の OK でアーカイブ済み。中身は読める・戻せる)
 
@@ -43,3 +43,4 @@
 | 【引き継ぎ済み】ビート部 オンプくん(10/12〜10/13) | session_01VDL1xQjh5sVox2CGCDkx8w | session_01WaDzrhPE2Q6PDmeAgFPTwG |
 | 【引き継ぎ済み】バトル部 部長ブレイブくん(10/07〜10/13) | session_01JEr9tDMYKaEM1yA1yBv46Z | session_01JVCTL76hMSV1TP5Z9RMnui |
 | 【引き継ぎ済み】守り部 部長ガードくん(10/07〜10/13) | session_01X1m4SRfy1rxcJemHM8n5PU | session_012TESL6HTwLnNNvrMJLnHAN |
+| 【引き継ぎ済み】改善部 部長ダメダシくん(10/09〜10/13)(まだしまっていない) | session_01PJpWvkdmV4DQzZ3mp7c7EC | session_013PjVKh5sdbiJbni1W5pZhr |
