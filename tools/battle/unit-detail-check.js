@@ -35,7 +35,9 @@ check('① 枠のタップは、カードの置き場所の操作 → EX の窓 
 check('① 詳細を開くのは setUnitDetail({side:\'ally\',slot:i}) だけ', detailBranch > 0 && /setUnitDetail\(\{side:'ally',slot:i\}\)/.test(battle.slice(detailBranch, detailBranch + 400)));
 
 // ② 敵のタップ
-const enemyTap = battle.match(/data-enemy-tap-detail onClick=\{\(\)=>\{[\s\S]{0,400}?setUnitDetail\(\{side:'enemy'\}\); \}\}/);
+// onClick は丸枠の書き出し(data-* と className)より後ろに置く(moo-notice-visibility-check が書き出しの形を読む)
+const enemyTag = battle.slice(battle.indexOf('data-enemy-tap-detail'), battle.indexOf('data-enemy-tap-detail') + 4000);
+const enemyTap = enemyTag.match(/onClick=\{\(\)=>\{[\s\S]{0,400}?setUnitDetail\(\{side:'enemy'\}\); \}\}/);
 check('② 敵のタップは、動きの最中・オート・練習中には開かない', !!enemyTap && /isBusy\|\|autoBattle\|\|battleTutorialStep!=null\|\|!enemy\) return;/.test(enemyTap[0]), enemyTap ? enemyTap[0].slice(0, 200) : '見つからない');
 
 // ③ 値の出どころ
