@@ -245,7 +245,8 @@ const rhythmBuddyLevelInfo = (exp) => {
   return { level, into: level >= RHYTHM_BUDDY_LEVEL_MAX ? 0 : rest, need };
 };
 // 1ライブの経験値。難しい難易度・高いチームランクほど多い
-const RHYTHM_BUDDY_RANK_EXP = Object.freeze({ M: 30, SS: 26, S: 22, A: 18, B: 14, C: 10, D: 7, E: 5, F: 3, G: 0 });
+// MF(HELL の満点でだけ届く)は +50(2026-10-13 社長の決定)
+const RHYTHM_BUDDY_RANK_EXP = Object.freeze({ MF: 50, M: 30, SS: 26, S: 22, A: 18, B: 14, C: 10, D: 7, E: 5, F: 3, G: 0 });
 // 今日の調子で経験値(成長)が変わる(2026-10-07・ユーザー指示「成長率を機嫌によって変えたい」)。
 // 真面目は「調子の影響を受けにくい」ので、倍率の差を半分にする。返り値は経験値にかける倍率
 const rhythmBuddyMoodExpScale = (moodId, trait = '') => {

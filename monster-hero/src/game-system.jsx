@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 60cf9fbdb5a618c2
+// generated-sha256: ae8f690835ee45e5
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-13 08:33"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-13 09:52"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -25372,7 +25372,8 @@ const rhythmBuddyLevelInfo = (exp) => {
   return { level, into: level >= RHYTHM_BUDDY_LEVEL_MAX ? 0 : rest, need };
 };
 // 1ライブの経験値。難しい難易度・高いチームランクほど多い
-const RHYTHM_BUDDY_RANK_EXP = Object.freeze({ M: 30, SS: 26, S: 22, A: 18, B: 14, C: 10, D: 7, E: 5, F: 3, G: 0 });
+// MF(HELL の満点でだけ届く)は +50(2026-10-13 社長の決定)
+const RHYTHM_BUDDY_RANK_EXP = Object.freeze({ MF: 50, M: 30, SS: 26, S: 22, A: 18, B: 14, C: 10, D: 7, E: 5, F: 3, G: 0 });
 // 今日の調子で経験値(成長)が変わる(2026-10-07・ユーザー指示「成長率を機嫌によって変えたい」)。
 // 真面目は「調子の影響を受けにくい」ので、倍率の差を半分にする。返り値は経験値にかける倍率
 const rhythmBuddyMoodExpScale = (moodId, trait = '') => {
@@ -32735,7 +32736,7 @@ function RhythmRankingScreen({
                   何度も遊ぶ意味が伝わらないので、報酬の表と同じ場所で先に伝える */}
               {eventWeekly&&<p data-rhythm-week-score-rule
                 className="rounded-2xl border border-fuchsia-300/40 bg-fuchsia-500/5 p-2 text-[10px] leading-tight text-slate-200">
-                <b className="text-fuchsia-200">スコアの数え方</b>　その週に遊んだぶんを<b className="text-white">すべて足します</b>。曲も難易度も問わず、同じ曲を何度遊んでもそのつど積み上がります（上限なし）。満点は難易度ごとに違います（EASY 60万〜MASTER 100万）。「総合」タブが曲ごとのベストを合計するのに対し、こちらは<b className="text-white">遊んだ量</b>で競います。
+                <b className="text-fuchsia-200">スコアの数え方</b>　その週に遊んだぶんを<b className="text-white">すべて足します</b>。曲も難易度も問わず、同じ曲を何度遊んでもそのつど積み上がります（上限なし）。満点は難易度ごとに違います（EASY 80万〜MASTER 100万）。「総合」タブが曲ごとのベストを合計するのに対し、こちらは<b className="text-white">遊んだ量</b>で競います。
               </p>}
               {/* ∞周回の倍率(2026-09-11・ユーザー指示「イベント時は対象曲は3倍」)。
                   報酬の表と同じ場所に置く。対象曲を遊ぶ理由が順位だけではなくなるため */}
