@@ -11,6 +11,7 @@
 //      新しい曲を足したら --update --reason で控えに足す(そのとき件数を見て、多ければ置き方を直してから足す)
 //   3. 空中の無い公開譜面は、空中の決まり(sideHeightSwitch・skyAfterGround)が0件
 //   4. HELL(試作の枠)は件数と場所を出すだけ(公開前・直すかは社長が決める)
+//   5. HELL の交差は上下に分ける: 同じ高さのまま左右が入れ替わる「水平クロス」が0(2026-10-13 社長「クロスのときは上下を活用してほしい」)
 'use strict';
 const fs=require('fs'),path=require('path');
 const R=require('./rhythm-chart-hand-rules.js');
@@ -43,6 +44,11 @@ let ng=0;const ok=(name,cond,detail='')=>{console.log(`${cond?'OK':'NG'}: ${name
   {const a=R.analyze([H(1000,3000,10),T(2000,8),T(2143,4,1)]);
     ok('長押し中の手は使えないとして、反対の手の高さの切り替えを数える(レーンの左右では見えない形)',a.heldHandSwitch.length===1&&a.sideHeightSwitch.length===0&&a.skyAfterGround.length===0,JSON.stringify(a.heldHandSwitch));}
   ok('長押しが無ければ、長押し中の手の数え方では数えない',R.analyze([T(2000,8),T(2143,4,1)]).heldHandSwitch.length===0);
+  // 水平クロス: 左の帯が右へ・右の帯が左へ動いて入れ替わる。同じ高さなら数え、交わる瞬間に高さが分かれていれば数えない
+  {const X=(t,e,from,to,skyA,skyB)=>({type:'SLIDE',timeMs:t,endTimeMs:e,lane:from,endLane:to,subLaneWidth:2,slidePoints:[{timeMs:t,lane:from,subLaneWidth:2,sky:skyA},{timeMs:e,lane:to,subLaneWidth:2,sky:skyB}]});
+    ok('同じ高さのまま左右が入れ替わる2本を、水平クロスに数える',R.flatCross([X(1000,2000,1,4,1,1),X(1000,2000,4,1,1,1)]).length===1&&R.flatCross([X(1000,2000,1,4,0,0),X(1000,2000,4,1,0,0)]).length===1);
+    ok('交わる瞬間に片方が空中・片方が地上なら、水平クロスに数えない',R.flatCross([X(1000,2000,1,4,1,1),X(1000,2000,4,1,0,0)]).length===0);
+    ok('入れ替わらない2本は数えない',R.flatCross([X(1000,2000,1,2,1,1),X(1000,2000,4,5,1,1)]).length===0);}
 }
 
 // ── 2〜4. 公開中の譜面と HELL ──
@@ -73,5 +79,11 @@ for(const s of runtime.RHYTHM_PROTO_SONGS||[])for(const [d,c] of Object.entries(
   if(!c||!Array.isArray(c.notes)||!c.notes.some(n=>Number(n.skyHeight)>0||(n.slidePoints||[]).some(p=>Number(p.sky)>0)))continue;
   const res=R.analyze(c.notes);
   console.log(`参考: ${s.songId}/${d} `+Object.entries(res).map(([k,v])=>`${R.RULE_LABELS[k]} ${v.length}`+(v.length&&k!=='fastSameSide'?`(${v.slice(0,8).map(x=>(x.at/1000).toFixed(2)).join(' ')}${v.length>8?' …':''})`:'')).join(' / '));}
+// 5. HELL(空中のある譜面)の交差は上下に分ける: 同じ高さのまま左右が入れ替わる水平クロスは0(2026-10-13 社長の決定)
+{const flats=[];
+  for(const s of runtime.RHYTHM_PROTO_SONGS||[])for(const [d,c] of Object.entries(s.difficulties||{})){
+    if(!c||!Array.isArray(c.notes)||!R.hasSky(c.notes))continue;
+    for(const x of R.flatCross(c.notes))flats.push(`${s.songId}/${d} ${(x.at/1000).toFixed(2)}秒(${x.level})`);}
+  ok('HELL の交差は上下に分かれている(水平クロス0)',flats.length===0,flats.slice(0,8).join(' / '));}
 console.log(ng?`\n✗ ${ng}件NG`:'\nすべてOK');
 process.exit(ng?1:0);
