@@ -5,6 +5,7 @@
 //   node tools/mode/rhythm-chart-v3-generate.js --write             # authoring/ へ書き出す
 //   node tools/mode/rhythm-chart-v3-generate.js --difficulty HARD
 //   node tools/mode/rhythm-chart-v3-generate.js --explain HARD      # どう組み立てたかを並べて見る
+//   node tools/mode/rhythm-chart-v3-generate.js --track <曲> --difficulty HELL --output-dir <場所> --write   # HELL の骨組み(rhythm-hell-mix.js が使う)
 //
 // 入力: tools/mode/authoring/<track>-v3-audio.json
 //       （V3音源解析ひとつ。テンポ・拍子・区切り・盛り上がり・打点・音の高さが全部入っている）
@@ -19,6 +20,9 @@
 // 3. HOLDの長さ・SLIDEの経路を**実際の音**（伸びている区間・音の高さの動き）から決める
 // 4. 難易度を独立に作らず、**同じ優先順位の上位から何個取るか**だけで分ける
 //    （EASYで覚えた形がそのまま上位難易度にも出る＝学習曲線になる）
+//    ★2026-10-13 社長の決定「参考動画がない限り、各難易度を難易度ごとにちゃんと作る」。これから作る曲から当てはめる。
+//      HELL は --difficulty HELL で、HELL の量・できること(PROFILES.HELL)で一から組み立てる(MASTER の譜面は使わない)。
+//      5難易度をこの決まりの形へ作り替えるのは別の見積もり(docs/rules/CHART_ENGINE.md「各難易度は難易度ごとに作る」)
 'use strict';
 const fs=require('fs');
 const path=require('path');
@@ -176,6 +180,27 @@ const PROFILES=Object.freeze({
     glideSlide:Object.freeze({perMinute:.6,minOnsets:4,maxGapGrids:2,maxGrids:16,
       minHeightRange:.11,minMoves:3,spacingGrids:32}),
     accentWidth:6,accentPerMinute:3.2}),
+  // HELL(2026-10-13 社長「ヘル用に作り直して」「参考動画がない限り、各難易度を難易度ごとにちゃんと作る」)。
+  //   --difficulty HELL を付けたときだけ作る(DIFFICULTIES には入れない=5難易度の出力は1音も変わらない)。
+  //   MASTER の譜面を写すのではなく、曲の解析から HELL の量・できることで一から組み立てる。空中は rhythm-hell-mix.js が付ける。
+  //   MASTER との違い: 量(DENSITY_TARGET.HELL)が多い・跳びと連打が長い・両手の長押し(heldPair)と2本の同時スライド(doubleSlide)が
+  //   多い(空中の見せ場の素になる)・同時押しの連なりと交差が多い
+  HELL:Object.freeze({level:10,lattice:1,maxLaneStep:4,maxRun:10,
+    types:['TAP','HOLD','FLICK','SLIDE'],widths:[1,2,3,4],narrowRate:.24,tapDuringHold:true,
+    holdPerMinute:9.6,slidePerMinute:7.2,flickPerMinute:11.2,endFlickPerMinute:4,
+    chord:Object.freeze({perMinute:8.4,minGapLanes:1,onBeat:false,clearGrids:1,minWidth:2,spacingGrids:5,edge:false}),
+    sweep:Object.freeze({perMinute:4,minGrids:5,minSpanLanes:3.5,maxLaneSpeed:10,clearBeats:.5}),
+    chordRun:Object.freeze({perMinute:3.2,maxLength:5,minStepMs:130,maxLaneSpeed:10,
+      width:2,shapes:['swing','parallel','open'],spacingGrids:16}),
+    crossPerMinute:3,
+    heldPair:Object.freeze({perMinute:2.8,minOverlapGrids:6,minGapLanes:1.25}),
+    doubleSlide:Object.freeze({perMinute:2,minGrids:5,minPartnerSpanLanes:.5,minOwnSpanLanes:1,
+      minGapLanes:1.25,maxLaneSpeed:10,minStrength:.4,minIntensity:.4,maxCoveredNotes:4,spacingGrids:24}),
+    slideFan:Object.freeze({perMinute:1.2,minParentGrids:8,minOwnGrids:4,minGapLanes:1.25,
+      minOwnSpanLanes:1,minOpenLanes:.5,maxLaneSpeed:10,maxCoveredNotes:2,spacingGrids:32}),
+    glideSlide:Object.freeze({perMinute:.8,minOnsets:4,maxGapGrids:2,maxGrids:16,
+      minHeightRange:.11,minMoves:3,spacingGrids:28}),
+    accentWidth:6,accentPerMinute:3.6}),
 });
 // HOLD・SLIDE・FLICK・同時押し・区切りの一発は、曲の長さに比例させる。
 // 「1曲に何個」で持つと、30秒の曲では多すぎ、6分の曲では足りなくなる（実際そうなった）。
@@ -220,6 +245,8 @@ const DENSITY_TARGET=Object.freeze({
   HARD:  Object.freeze({perBeat:.85,minPerSecond:1.28,maxPerSecond:3.2,hardMaxPerSecond:3.9}),
   EXPERT:Object.freeze({perBeat:1.03,minPerSecond:1.68,maxPerSecond:4.0,hardMaxPerSecond:4.7}),
   MASTER:Object.freeze({perBeat:1.19,minPerSecond:1.92,maxPerSecond:4.6,hardMaxPerSecond:5.4}),
+  // HELL(--difficulty HELL のときだけ)。MASTER より1段多い量。空中のぶんの重さは別に乗る
+  HELL:  Object.freeze({perBeat:1.42,minPerSecond:2.3,maxPerSecond:5.4,hardMaxPerSecond:6.2}),
 });
 
 // --- 曲ごとの「激しさ」（上位難易度の歯ごたえだけを強める） ---
@@ -280,6 +307,9 @@ const INTENSITY_STYLES=Object.freeze({
       tapDuringHold:true,minGapLanes:.85,maxLaneStep:1,density:2.6,ceiling:5.6}),
     MASTER:Object.freeze({narrow:4.5,chord:5,chordRun:4,cross:3.5,hold:1.3,flick:1.35,
       tapDuringHold:true,minGapLanes:.8,maxLaneStep:1,density:3,ceiling:6.4}),
+    // HELL(--difficulty HELL のときだけ)。MASTER の1段上
+    HELL:Object.freeze({narrow:4.5,chord:5,chordRun:4,cross:3.5,hold:1.35,flick:1.35,
+      tapDuringHold:true,minGapLanes:.8,maxLaneStep:1,density:3.4,ceiling:7}),
   }),
 });
 // strong … extreme の半分の強さ(2026-10-03・ユーザー判断「自動と extreme の中間ぐらい」)。
@@ -292,7 +322,7 @@ INTENSITY_STYLES_STRONG:{
     :typeof value==='number'&&value>0?Math.round(Math.sqrt(value)*1000)/1000:value;
   // 16分裏は「拍が立っていない曲」の既定(OFF_BEAT_KEEP .35)と extreme(1)の中間まで残す
   const extreme=INTENSITY_STYLES.extreme,strong={offBeatKeep:.65,useBassSustains:extreme.useBassSustains};
-  for(const difficulty of ['EASY','NORMAL','HARD','EXPERT','MASTER'])
+  for(const difficulty of ['EASY','NORMAL','HARD','EXPERT','MASTER','HELL'])
     strong[difficulty]=Object.freeze(Object.fromEntries(Object.entries(extreme[difficulty]).map(([key,value])=>[key,half(key,value)])));
   INTENSITY_STYLES_EXTRA.strong=Object.freeze(strong);
 }
@@ -300,7 +330,7 @@ INTENSITY_STYLES_STRONG:{
 //   16分裏の残し方などの曲まるごとの設定は持たない(曲の chartIntensity のものを使う)
 INTENSITY_STYLES_MILD:{
   const strong=INTENSITY_STYLES_EXTRA.strong,mild={};
-  for(const difficulty of ['EASY','NORMAL','HARD','EXPERT','MASTER'])
+  for(const difficulty of ['EASY','NORMAL','HARD','EXPERT','MASTER','HELL'])
     mild[difficulty]=Object.freeze(Object.fromEntries(Object.entries(strong[difficulty]).map(([key,value])=>[key,
       key==='ceiling'||key==='tapDuringHold'||key==='maxLaneStep'||key==='lattice'?value
         :typeof value==='number'&&value>0?Math.round(Math.sqrt(value)*1000)/1000:value])));
@@ -863,6 +893,7 @@ const sectionRoleForBar=bar=>{const section=sectionForBar(bar);return section?se
 const MIRROR_FLICK=Object.freeze({
   EXPERT:Object.freeze({perMinute:.8,max:3,spacingBars:8,minIntensity:.5,clearBeats:.75,width:3,gapSub:2,directions:false}),
   MASTER:Object.freeze({perMinute:1.2,max:5,spacingBars:6,minIntensity:.4,clearBeats:.5,width:3,gapSub:2,directions:true}),
+  HELL:Object.freeze({perMinute:1.4,max:6,spacingBars:6,minIntensity:.4,clearBeats:.5,width:3,gapSub:2,directions:true}),
 });
 // Rev.25: サビ前後の密度を保つ・長いノーツを増やす(2026-09-30・CHUNITHM の譜面との比べ合わせから。ユーザー判断)。
 //   Rising Hope の MASTER を人の譜面(CHUNITHM AIR MASTER)と10秒ごとに比べると、密度の流れは相関0.81で似ていたが、
@@ -877,6 +908,7 @@ const LONG_NOTES=Object.freeze({
   HARD:Object.freeze({hold:1.25,slide:1.25,bass:false}),
   EXPERT:Object.freeze({hold:1.4,slide:1.5,bass:true}),
   MASTER:Object.freeze({hold:1.6,slide:1.8,bass:true}),
+  HELL:Object.freeze({hold:1.7,slide:2,bass:true}),
 });
 // 小節の取り分に使う盛り上がりの位置(Rev.25)。盛り上がる区切りの直前 rampBars 小節は、その区切りの値へ段々に近づけ、
 // 盛り上がる区切りの中では区切りの値より下げない(長い区切りの中で小節の値が下がると、サビの後半が薄くなっていた)

@@ -31,7 +31,9 @@ const SONGS={sheriruth:{marker:'sheriruth-v3',zero:711.6-2594.75,beat:324.342,le
   kaze_ga_soyogu:{marker:'kaze-ga-soyogu-v4',zero:209,beat:60000/118.88,levelRe:/const kazeGaSoyoguHellChart=mhChart\((\d+),/,gentle:true},
   // Against My Own Shadow(2026-10-13 社長「中くらいの HELL」)。拍は解析ファイル(authoring/against-my-own-shadow-v3-audio.json の timing)。
   // crosses は MASTER で両手の長押しが重なる所(10.72・39.23・94.24秒の2本目の始まり)
-  against_my_own_shadow:{marker:'against-my-own-shadow-v3',zero:2022.9,beat:419.1788,levelRe:/const againstMyOwnShadowHellChart=mhChart\((\d+),/,crosses:[10720,39230,94240],crossUpper:'mover',crossDepth:[1,0.5,1]}};
+  against_my_own_shadow:{marker:'against-my-own-shadow-v3',zero:2022.9,beat:419.1788,levelRe:/const againstMyOwnShadowHellChart=mhChart\((\d+),/,
+    // 2026-10-13 社長「ヘル用に作り直して」: MASTER を土台にせず、曲の解析から作る(source:'audio')。交差は音から自動で選ぶ
+    source:'audio',variant:3,crosses:'auto',crossUpper:'mover',crossDepth:0.75}};
 const BEAT_GAP=1.5;                      // 同じ親指が段を変えるまでの拍
 // 同じ側(レーンの左右)で高さ(地上⇔空中)を変えるまでの間(2026-10-12 社長「HELL の操作性をもっと改良して」・テンポくんの数え方)。
 // 親指の振り分けとは別に、画面の左半分・右半分ごとに見る。点は押し始めと、長押し・スライドの終わり(指が離れる高さ)。同時押し(0ms)は両手で取るので数えない
@@ -54,6 +56,30 @@ const readBlock=(source,name)=>{
   new Function('t','h','s','f','return ['+block.body+']')(t,h,s,f);
   return notes;
 };
+// 曲の解析から HELL の骨組みを作る(2026-10-13 社長「ヘル用に作り直して」「参考動画がない限り、各難易度を難易度ごとにちゃんと作る」)。
+//   MASTER の譜面は読まない。譜面を作る道具(rhythm-chart-v3-generate.js)を --difficulty HELL で回し、出た譜面を下書きの形へ直す。
+//   時刻への直し方は rhythm-chart-v3-pipeline.js の runtimeRow と同じ(拍の頭+格子×格子の長さ+テンポの揺れ)
+const audioDraft=(trackId,variant=0)=>{
+  const os=require('os'),{spawnSync}=require('child_process'),{tempoWarpForChart}=require('./rhythm-chart-tempo-warp.js');
+  const dashed=trackId.replace(/_/g,'-'),dir=fs.mkdtempSync(path.join(os.tmpdir(),'mh-hell-'));
+  const r=spawnSync(process.execPath,[path.join(__dirname,'rhythm-chart-v3-generate.js'),'--track',trackId,'--difficulty','HELL','--variant',String(variant),'--output-dir',dir,'--write'],{encoding:'utf8'});
+  if(r.status!==0)throw new Error('HELL の骨組みを作れなかった: '+String(r.stderr||r.stdout).slice(-400));
+  const chart=JSON.parse(fs.readFileSync(path.join(dir,`${dashed}-v3-chart-hell.json`),'utf8'));
+  const audio=JSON.parse(fs.readFileSync(path.join(__dirname,'authoring',`${dashed}-v3-audio.json`),'utf8'));
+  const timing=audio.timing,gridMs=timing.gridMs||timing.beatMs/timing.subdivisionsPerBeat,warp=tempoWarpForChart(chart,audio);
+  const T=g=>Math.round(timing.beatZeroMs+g*gridMs+warp.at(g));
+  const notes=[];
+  for(const n of chart.notes){const at=T(n.grid);
+    if(n.type==='SLIDE')notes.push({k:'s',hand:null,endFlick:n.endFlick===true,pts:n.slidePoints.map(p=>[T(p.grid),p.lane,p.subLaneWidth??2,0,0])});
+    else if(n.type==='HOLD')notes.push({k:'h',t:at,sub:n.subLane,w:n.subLaneWidth,end:T(n.grid+n.durationGrids),sky:0});
+    else if(n.type==='FLICK'){const dir=['','left','right'].indexOf(n.flickDir);notes.push({k:'f',t:at,sub:n.subLane,w:n.subLaneWidth,args:[at,n.subLane,n.subLaneWidth,...(dir>0?[dir]:[])],sky:0});}
+    else notes.push({k:'t',t:at,sub:n.subLane,w:n.subLaneWidth,sky:0,...(n.monsterSlot?{mon:n.monsterSlot}:{})});}
+  fs.rmSync(dir,{recursive:true,force:true});
+  // 横持ちの物差し(HELL・高さの差39%)で「押せない」と出るタップは取り除く(譜面を作る道具の両手のシミュレートより厳しい。
+  //   同時に来る2つの間が0〜0.5レーン・反対の手がふさがったまま真ん中を越える、など。2026-10-13 Against My Own Shadow で10件)
+  for(let r=0;r<40;r++){const th=thumbCheck(notes,HELL_LANDSCAPE,timing.beatMs);const bad=th.issues.find(i=>i.kind==='impossible'&&/タップ/.test(i.what));if(!bad)break;
+    const k=notes.findIndex(n=>(n.k==='t'||n.k==='f')&&!n.mon&&Math.abs(n.t-bad.t)<=2);if(k<0)break;notes.splice(k,1);}
+  return notes;};
 // 画面のどちら側か(ノーツの真ん中のレーン座標が 3 より左なら左)。スライドは始まりと終わりで見る
 const sideOf=(n,end)=>{const c=n.k==='s'?n.pts[end?n.pts.length-1:0][1]+0.5:(n.sub+n.w/2)/2;return c<3?'L':'R';};
 const startOf=n=>n.k==='s'?n.pts[0][0]:n.t,endOf=n=>n.k==='s'?n.pts[n.pts.length-1][0]:n.k==='h'?n.end:n.t;
@@ -79,7 +105,14 @@ const mix=(master,{zero,beat,crosses=[],gentle=false,crossUpper='hold',crossDept
   // 両手のスライドが重なる所で、真ん中に近いほうを横に動かない空中の長押し、もう片方を地上で空中の長押しの下をくぐって反対側へ渡らせる。
   // 渡るのは重なりの真ん中の1拍。遊ぶ人は交差のところで指を置き換える(右で押していたものが左指に変わる)。2本の形は固定し、前後のタップを合わせる
   const crossWindows=[];
-  for(const at of crosses){
+  // crosses:'auto'(2026-10-13・HELL を曲の解析から作るとき): 左右の手のスライドが0.3秒以上重なる所を、時刻の順に4秒以上あけて最大6か所選ぶ
+  const crossList=crosses==='auto'?(()=>{const out=[];const sl=notes.filter(n=>n.k==='s').sort((a,b)=>startOf(a)-startOf(b));
+    for(let i=0;i<sl.length;i++)for(let j=i+1;j<sl.length;j++){const a=sl[i],b=sl[j];if(a.hand===b.hand)continue;
+      const s0=Math.max(startOf(a),startOf(b)),e0=Math.min(endOf(a),endOf(b));if(e0-s0<300)continue;
+      if(notes.filter(n=>n.k==='s'&&startOf(n)<=s0+5&&endOf(n)>=s0+5).length!==2)continue;
+      if(out.every(t=>Math.abs(t-s0)>=4000))out.push(s0);}
+    return out.sort((x,y)=>x-y).slice(0,6);})():crosses;
+  for(const at of crossList){
     const pair=notes.filter(n=>n.k==='s'&&startOf(n)<=at+5&&endOf(n)>=at+5);
     if(pair.length!==2||pair[0].hand===pair[1].hand)throw new Error(`${at}ms に左右のスライド2本が無い(交差の長押しを置けない)`);
     const a=Math.max(...pair.map(startOf)),b=Math.min(...pair.map(endOf));
@@ -88,7 +121,7 @@ const mix=(master,{zero,beat,crosses=[],gentle=false,crossUpper='hold',crossDept
     // 越える深さ: 今までは元の間隔と同じだけ反対側へ(1レーン以上)。動く帯が空中のとき(crossUpper:'mover')は1レーンまで
     //   (深く越えると、越えた指が相手の親指に寄る。Against My Own Shadow の 39〜41秒で 1.5レーン越えて 43〜57px・テンポくんの bot)
     //   crossDepth(交差ごとの深さの並び)を書いた曲は、その値(Against My Own Shadow の2つめは 0.5・越えた先で左手の親指の線に寄ったため)
-    const ci=crosses.indexOf(at),depth=crossUpper==='mover'?(Array.isArray(crossDepth)&&Number.isFinite(crossDepth[ci])?crossDepth[ci]:1):Math.max(1,Math.abs(x0-L0));
+    const ci=crossList.indexOf(at),depth=crossUpper==='mover'?(Array.isArray(crossDepth)&&Number.isFinite(crossDepth[ci])?crossDepth[ci]:Number.isFinite(crossDepth)?crossDepth:1):Math.max(1,Math.abs(x0-L0));
     const xEnd=Math.max(0,Math.min(5,Math.round((L0-side*depth)*4)/4));
     // 越える瞬間: 今までは重なりの真ん中。動く帯が空中のとき(crossUpper:'mover')は、重なりの終わりの約0.33秒前に寄せて、交差したままの時間を短くする
     //   (交差が長いと、越えた指が相手の親指に寄ったまま。Against My Own Shadow の 39〜41秒・テンポくんの bot)
@@ -246,6 +279,15 @@ const mix=(master,{zero,beat,crosses=[],gentle=false,crossUpper='hold',crossDept
         const sl=notes.find(n=>n.k==='s'&&!inCross(startOf(n))&&((Math.abs(endOf(n)-v.at)<=W&&n.pts[n.pts.length-1][3]>=0.5&&sideOf(n,true)===side)||(Math.abs(startOf(n)-v.at)<=2&&n.pts[0][3]>=0.5&&sideOf(n)===side)));
         if(sl){if(Math.abs(startOf(sl)-v.at)<=2&&sl.pts[0][3]>=0.5)sl.pts[0][3]=0;else sl.pts[sl.pts.length-1][3]=0;moved=true;break;}}
       if(!moved)break;}}
+  // 空中を付けたあとにも、横持ちの物差しで「押せない」と出る地上のタップ・フリックが交差の区間の外に残っていれば取り除く
+  //   (骨組みのときと手の割り振りが変わって見えることがある。0件の曲では何もしない)
+  for(let r=0;r<20;r++){const th=thumbCheck(notes,HELL_LANDSCAPE,beat);
+    const bad=th.issues.find(i=>i.kind==='impossible'&&/タップ/.test(i.what)&&!crossWindows.some(([a,b])=>i.t>=a&&i.t<=b));if(!bad)break;
+    const k=notes.findIndex(n=>(n.k==='t'||n.k==='f')&&!n.mon&&!n.sky&&Math.abs(n.t-bad.t)<=2);
+    // モンスターノーツは1曲に4個の決まりがあるので取り除かず、左右を反対側へ写す(ふさがっていない手の側へ)
+    if(k<0){const m=notes.find(n=>n.k==='t'&&n.mon&&!n.sky&&Math.abs(n.t-bad.t)<=2&&!n.mirrored);if(!m)break;m.sub=12-m.sub-m.w;m.hand=m.hand==='L'?'R':'L';m.mirrored=true;continue;}
+    notes.splice(k,1);}
+  for(const n of notes)delete n.mirrored;
   notes.crossWindows=crossWindows;
   return notes;
 };
@@ -287,7 +329,8 @@ if(require.main===module){
   try{
     const songId=argOf('--song');const conf=SONGS[songId];if(!conf)throw new Error(`--song は ${Object.keys(SONGS).join('/')} のどれか`);
     const source=fs.readFileSync(rt0.RUNTIME,'utf8');
-    const master=readBlock(source,`${conf.marker}-master`),before=readBlock(source,`${conf.marker}-master`);
+    // source:'audio' の曲は MASTER を読まず、曲の解析から HELL の骨組みを作る(before は比べるための MASTER)
+    const master=conf.source==='audio'?audioDraft(songId,conf.variant||0):readBlock(source,`${conf.marker}-master`),before=readBlock(source,`${conf.marker}-master`);
     const oldHell=rt0.markerBlock(source,`${conf.marker}-hell`);
     const hell=mix(master,conf);
     const {chartLevel}=require('./rhythm-chart-level.js');
@@ -326,4 +369,4 @@ if(require.main===module){
     console.log(`書いた: ${path.relative(rt0.ROOT,rt0.RUNTIME)} の <${conf.marker}-hell-notes> と HELL の Lv.${finalLevel}(ほかのマーカーは1バイトも変えていない)。この後 node tools/build.js`);
   }catch(e){console.error('止まった:',e.message);process.exit(1);}
 }
-module.exports={mix,readBlock,render,counts,levelSwitchViolations,sideSwitches,toRuntime,HELL_LANDSCAPE,SONGS};
+module.exports={mix,readBlock,audioDraft,render,counts,levelSwitchViolations,sideSwitches,toRuntime,HELL_LANDSCAPE,SONGS};
