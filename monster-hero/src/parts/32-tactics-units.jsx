@@ -1847,20 +1847,29 @@ const tacticsExMultiBuffOf = (state, units, slot, now) => {
 };
 // ---- ピクシー(guaranteeUnique): 効いているあいだ、毎ターン固有技カードを手札へ出す ----
 // 出す子の枠(効いていなければ null)。次のターンに効くかを見たいときは、now にそのターンを渡す
+// ★固有技を出す子は2体以上いることがある(パンドラとピクシーなど)。全員の枠は tacticsExUniqueGuaranteeSlots(枠の番号の小さい順)。
+//   この関数はそのうち最初の1体(以前からの呼び出し・検査のため残す)
 const tacticsExUniqueGuaranteeSlot = (state, units, now) => {
+  const all = tacticsExUniqueGuaranteeSlots(state, units, now);
+  return all.length ? all[0] : null;
+};
+const tacticsExUniqueGuaranteeSlots = (state, units, now) => {
   const effects = normalizeTacticsExState(state).effects;
-  const hit = Object.keys(effects).map(Number).find(slot => {
+  return Object.keys(effects).map(Number).sort((a, b) => a - b).filter(slot => {
     const unit = Array.isArray(units) ? units[slot] : null;
     if (!unit) return false;
     const kind = tacticsExActiveEffect(state, slot, unit.id, now);
     // パンドラの箱も、効いているあいだ毎ターン固有技を手札へ出す
     return (effects[slot].guaranteeUnique === true && kind === 'multiBuff') || (kind === 'pandoraBox' && !!(effects[slot].pandoraBoxCfg && effects[slot].pandoraBoxCfg.guaranteeUnique));
   });
-  return hit == null ? null : hit;
 };
 // 手札に predicate を満たすカードが無ければ、山札→捨て札の順で探して手札へ入れる。
-// 手札がいっぱい(5枚)なら、いちばん後ろの別のカードを山札の底へ戻して入れ替える。見つからなければそのまま
-const ensureTacticsExUniqueInHand = ({ hand, deck, graveyard }, predicate, handMax = 5) => {
+// 手札がいっぱい(5枚)なら、いちばん後ろの別のカードを山札の底へ戻して、**同じ位置**で入れ替える。見つからなければそのまま。
+// keep(card, index) … 入れ替えで手札から出さないカード(ほかの子の出すべき固有技・選んでいるカード)。後ろから見て最初に keep でないカードと入れ替える。
+//   全部 keep なら入れない(2026-10-13 不具合報告「パンドラとピクシーの EX を同じターンに使うと、片方の固有技が来ない」。
+//   後から使った子の固有技が、先に出したもう片方の固有技を押し出していた)。
+//   位置を変えずに入れ替えるので、選んでいるカード・置いたカードの番号はずれない
+const ensureTacticsExUniqueInHand = ({ hand, deck, graveyard }, predicate, handMax = 5, keep = null) => {
   const h = Array.isArray(hand) ? hand.slice() : [], d = Array.isArray(deck) ? deck.slice() : [], g = Array.isArray(graveyard) ? graveyard.slice() : [];
   if (h.some(predicate)) return { hand: h, deck: d, graveyard: g, moved: false };
   let card = null;
@@ -1868,7 +1877,14 @@ const ensureTacticsExUniqueInHand = ({ hand, deck, graveyard }, predicate, handM
   if (at >= 0) card = d.splice(at, 1)[0];
   else { at = g.findIndex(predicate); if (at >= 0) card = g.splice(at, 1)[0]; }
   if (!card) return { hand: h, deck: d, graveyard: g, moved: false };
-  if (h.length >= handMax) { const out = h.pop(); if (out) d.push(out); }
+  if (h.length >= handMax) {
+    let out = h.length - 1;
+    while (out >= 0 && typeof keep === 'function' && keep(h[out], out)) out -= 1;
+    if (out < 0) return { hand: hand.slice(), deck: deck.slice(), graveyard: graveyard.slice(), moved: false };
+    d.push(h[out]);
+    h[out] = card;
+    return { hand: h, deck: d, graveyard: g, moved: true };
+  }
   h.push(card);
   return { hand: h, deck: d, graveyard: g, moved: true };
 };

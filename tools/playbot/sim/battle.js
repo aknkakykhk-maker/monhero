@@ -594,7 +594,9 @@ function useEx(st, slot, choice = null) {
     if (u) st.units = G.recoverTacticsGutsAt(G.healTacticsAt(units, slot, Math.max(0, u.maxHp - u.hp)), slot, Math.max(0, u.maxGuts - u.guts));
   }
   if (def.guaranteeUnique || (def.pandoraBox && def.pandoraBox.guaranteeUnique)) {
-    const ens = G.ensureTacticsExUniqueInHand({ hand: st.hand, deck: st.deck, graveyard: st.graveyard }, (c) => c && c.type === 'unique' && c.ownerSlotIdx === slot);
+    // ほかの子が出している固有技は押し出さない(60-app.jsx と同じ。2026-10-13 不具合報告)
+    const keepSlots = G.tacticsExUniqueGuaranteeSlots(st.ex, st.units, { wave: st.wave, turn: st.turn }).filter((s2) => s2 !== slot);
+    const ens = G.ensureTacticsExUniqueInHand({ hand: st.hand, deck: st.deck, graveyard: st.graveyard }, (c) => c && c.type === 'unique' && c.ownerSlotIdx === slot, 5, (c) => !!c && c.type === 'unique' && keepSlots.includes(c.ownerSlotIdx));
     if (ens.moved) { st.hand = ens.hand; st.deck = ens.deck; st.graveyard = ens.graveyard; }
   }
   if (def.effect === 'present' && def.present) {
@@ -1125,8 +1127,9 @@ function playTurn(st) {
   }
   // お気に入りの魔法・パンドラの箱: 次のターンの手札に固有技を必ず出す(60-app.jsx 12927)
   {
-    const fav = G.tacticsExUniqueGuaranteeSlot(st.ex, st.units, { wave: st.wave, turn: st.turn + 1 });
-    if (fav != null) { const e = G.ensureTacticsExUniqueInHand({ hand: st.hand, deck: st.deck, graveyard: st.graveyard }, (c) => c && c.type === 'unique' && c.ownerSlotIdx === fav); st.hand = e.hand; st.deck = e.deck; st.graveyard = e.graveyard; }
+    // 出す子が2体以上なら全員ぶん(60-app.jsx と同じ)
+    const favs = G.tacticsExUniqueGuaranteeSlots(st.ex, st.units, { wave: st.wave, turn: st.turn + 1 });
+    favs.forEach((fav) => { const e = G.ensureTacticsExUniqueInHand({ hand: st.hand, deck: st.deck, graveyard: st.graveyard }, (c) => c && c.type === 'unique' && c.ownerSlotIdx === fav, 5, (c) => !!c && c.type === 'unique' && favs.includes(c.ownerSlotIdx)); st.hand = e.hand; st.deck = e.deck; st.graveyard = e.graveyard; });
   }
   // クロスカウンターを出したハムのカウンター+1(60-app.jsx commitTacticsExCrossCounters 10660)
   Object.keys(crossed).forEach((k) => { st.ex = G.addTacticsExCounter(st.ex, st.units, now, Number(k), 1); });
