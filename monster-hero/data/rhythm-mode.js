@@ -33412,6 +33412,10 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     hitFlareSprite();sparkDotSprite();for(const rgb of Object.values(HIT_PLUME_RGB)){hitPlumeSprite(rgb);hitWispSprite(rgb);}
     for(const judgment of ['MARVELOUS','EXCELLENT','GREAT','GOOD','BAD']){const f=hitFilters.get(`${judgment}|`);hitCoreSprite(rhythmHitEffectColor(judgment),f?f.core:null);}
     const monster=hitFilters.get('|');hitCoreSprite('#fde047',monster?monster.core:null);
+    // はじける粒(5px の丸)も色ごとに焼いておく(2026-10-13 社長報告「モンスターノーツを取った瞬間に一瞬かくつく」)。
+    // 焼いていなかったので、モンスターノーツの金色の粒は**最初に取った瞬間**に絵を作って GPU へ送っていた(計測で確かめた)
+    for(const judgment of ['MARVELOUS','EXCELLENT','GREAT','GOOD','BAD'])hitSparkSprite(rhythmHitEffectColor(judgment));
+    RHYTHM_JUDGMENT_RAINBOW.forEach(color=>hitSparkSprite(color));hitSparkSprite('#fde047');
   };
   // (ox,oy) を中心に拡大(sx,sy)→回転(deg)。CSS の transform:scale() rotate() と同じ順
   const hitTransform=(ox,oy,sx,sy,deg=0)=>{
@@ -33655,6 +33659,9 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       if(ctx&&backend==='webgl'&&typeof ctx.preloadImage==='function')for(const sprite of sprites.values())if(sprite&&sprite.canvas)ctx.preloadImage(sprite.canvas);
       return sprites.size-before;
     },
+    // 演奏の前に、絵を GPU へ渡しておく(WebGL のときだけ。2D・まだ描き込み先が無いときは何もしない)。
+    // モンスターノーツの顔の絵は、渡していないと**そのノーツが画面に出た瞬間**に渡すことになる(2026-10-13)
+    preloadImage(source){if(source&&ctx&&backend==='webgl'&&typeof ctx.preloadImage==='function')ctx.preloadImage(source);},
     release(){if(ctx&&backend==='webgl'&&typeof ctx.dispose==='function')ctx.dispose();canvas=null;ctx=null;backend='2d';sprites.clear();hitArea=null;skyHitArea=null;skyPressed=[];hitSlots.fill(null);},
     // 叩いたときの光をこの canvas で描くか(検証用・WebGL のときだけ演奏画面が area を渡す)。null で DOM の部品へ戻す
     enableHits(area){hitArea=area&&ctx?area:null;hitSlots.fill(null);hitNext=0;if(hitArea)readHitFilters(hitArea);},
