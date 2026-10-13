@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: bd3fa91d06ae026e
+// source-sha256: c252bd7a18f841da
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-13 16:17";
+const BUILD_DATE = "2026-10-13 16:23";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -59782,6 +59782,17 @@ const HOME_RAID_JACK_WRAP_STYLE = Object.freeze({
   maxWidth: '190px',
   minWidth: '120px'
 });
+const HOME_RAID_JACK_AURA_WRAP_STYLE = Object.freeze({
+  ...HOME_RAID_JACK_WRAP_STYLE,
+  zIndex: 2
+});
+const HOME_RAID_JACK_AURA_BOX_STYLE = Object.freeze({
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  width: '100%',
+  visibility: 'hidden'
+});
 const HOME_RAID_JACK_BUTTON_STYLE = Object.freeze({
   display: 'flex',
   flexDirection: 'column',
@@ -60030,7 +60041,111 @@ const HomeRaidJack = ({
   const speechLines = raidJackHomeLines(tier.id, rate, allDone);
   const speech = speechLines[lineNo % speechLines.length];
   const speechAccent = allDone ? '#fdba74' : '#fb923c';
-  return React.createElement("div", {
+  const tierNo = Number(String(tier.id).slice(1)) || 0;
+  const shadowEl = React.createElement("span", {
+    className: "mh-home-raid-jack-shadow",
+    "aria-hidden": "true",
+    style: {
+      display: 'block',
+      width: '70%',
+      height: '8px',
+      marginTop: '-6px',
+      borderRadius: '50%',
+      background: '#0008',
+      filter: 'blur(3px)'
+    }
+  });
+  const labelEl = React.createElement("span", {
+    style: {
+      display: 'block',
+      width: '100%',
+      marginTop: '6px',
+      padding: '3px 6px',
+      borderRadius: '10px',
+      border: '1px solid #fdba74aa',
+      background: '#1c0a02d9',
+      color: '#ffedd5',
+      fontSize: '10px',
+      fontWeight: 900,
+      textAlign: 'center',
+      lineHeight: 1.3
+    }
+  }, React.createElement("span", {
+    style: {
+      display: 'block'
+    }
+  }, allDone ? `${RAID_JACK_PUMPKIN.name}が遊びに来た！` : `${tier.name}があらわれた！`), allDone ? React.createElement("span", {
+    "data-home-raid-pumpkin-note": true,
+    style: {
+      display: 'block',
+      marginTop: '2px',
+      fontSize: '8px',
+      opacity: .9
+    }
+  }, "ジャックを倒した！あそんでダメージを競おう") : React.createElement(React.Fragment, null, React.createElement("span", {
+    style: {
+      display: 'block',
+      height: '7px',
+      marginTop: '3px',
+      borderRadius: '999px',
+      overflow: 'hidden',
+      background: '#000a',
+      border: '1px solid #fff3'
+    },
+    role: "progressbar",
+    "aria-valuemin": 0,
+    "aria-valuemax": tier.hp,
+    "aria-valuenow": left
+  }, React.createElement("span", {
+    style: {
+      display: 'block',
+      height: '100%',
+      width: `${rate * 100}%`,
+      background: '#f97316'
+    }
+  })), totals === null ? React.createElement("span", {
+    style: {
+      display: 'block',
+      fontSize: '8px',
+      opacity: .8
+    }
+  }, "準備中") : totals === undefined ? React.createElement("span", {
+    style: {
+      display: 'block',
+      fontSize: '8px',
+      opacity: .8
+    }
+  }, "…") : React.createElement("span", {
+    style: {
+      display: 'block',
+      fontSize: '8px',
+      opacity: .85
+    }
+  }, "共有HP ", left.toLocaleString())));
+  return React.createElement(React.Fragment, null, !allDone && React.createElement("div", {
+    "aria-hidden": "true",
+    "data-home-raid-aura-wrap": true,
+    style: HOME_RAID_JACK_AURA_WRAP_STYLE
+  }, React.createElement("div", {
+    style: HOME_RAID_JACK_AURA_BOX_STYLE
+  }, React.createElement("span", {
+    "data-jack-aura": tierNo || undefined,
+    style: {
+      position: 'relative',
+      display: 'block',
+      width: '100%',
+      aspectRatio: '1024 / 640'
+    }
+  }, React.createElement("span", {
+    style: {
+      position: 'absolute',
+      pointerEvents: 'none',
+      visibility: 'visible',
+      inset: `${-20 - tierNo * 8}% ${-10 - tierNo * 5}% -6%`
+    }
+  }, React.createElement(JackAuraLayer, {
+    tier: tierNo
+  }))), shadowEl, labelEl)), React.createElement("div", {
     ref: wrapRef,
     "data-home-raid-jack-wrap": true,
     style: HOME_RAID_JACK_WRAP_STYLE
@@ -60138,16 +60253,7 @@ const HomeRaidJack = ({
       width: '100%',
       aspectRatio: '1024 / 640'
     }
-  }, !allDone && React.createElement("span", {
-    "aria-hidden": "true",
-    style: {
-      position: 'absolute',
-      pointerEvents: 'none',
-      inset: `${-20 - (Number(String(tier.id).slice(1)) || 0) * 8}% ${-10 - (Number(String(tier.id).slice(1)) || 0) * 5}% -6%`
-    }
-  }, React.createElement(JackAuraLayer, {
-    tier: Number(String(tier.id).slice(1)) || 0
-  })), allDone ? React.createElement("img", {
+  }, allDone ? React.createElement("img", {
     className: "mh-home-raid-jack-img",
     src: PUMPKIN_ICON_IMG,
     alt: "",
@@ -60192,85 +60298,7 @@ const HomeRaidJack = ({
       filter: `drop-shadow(0 6px 10px #000a) ${raidJackAuraGlowFilter(Number(String(tier.id).slice(1)) || 0, 0.8)}`,
       pointerEvents: 'none'
     }
-  }))), React.createElement("span", {
-    className: "mh-home-raid-jack-shadow",
-    "aria-hidden": "true",
-    style: {
-      display: 'block',
-      width: '70%',
-      height: '8px',
-      marginTop: '-6px',
-      borderRadius: '50%',
-      background: '#0008',
-      filter: 'blur(3px)'
-    }
-  }), React.createElement("span", {
-    style: {
-      display: 'block',
-      width: '100%',
-      marginTop: '6px',
-      padding: '3px 6px',
-      borderRadius: '10px',
-      border: '1px solid #fdba74aa',
-      background: '#1c0a02d9',
-      color: '#ffedd5',
-      fontSize: '10px',
-      fontWeight: 900,
-      textAlign: 'center',
-      lineHeight: 1.3
-    }
-  }, React.createElement("span", {
-    style: {
-      display: 'block'
-    }
-  }, allDone ? `${RAID_JACK_PUMPKIN.name}が遊びに来た！` : `${tier.name}があらわれた！`), allDone ? React.createElement("span", {
-    "data-home-raid-pumpkin-note": true,
-    style: {
-      display: 'block',
-      marginTop: '2px',
-      fontSize: '8px',
-      opacity: .9
-    }
-  }, "ジャックを倒した！あそんでダメージを競おう") : React.createElement(React.Fragment, null, React.createElement("span", {
-    style: {
-      display: 'block',
-      height: '7px',
-      marginTop: '3px',
-      borderRadius: '999px',
-      overflow: 'hidden',
-      background: '#000a',
-      border: '1px solid #fff3'
-    },
-    role: "progressbar",
-    "aria-valuemin": 0,
-    "aria-valuemax": tier.hp,
-    "aria-valuenow": left
-  }, React.createElement("span", {
-    style: {
-      display: 'block',
-      height: '100%',
-      width: `${rate * 100}%`,
-      background: '#f97316'
-    }
-  })), totals === null ? React.createElement("span", {
-    style: {
-      display: 'block',
-      fontSize: '8px',
-      opacity: .8
-    }
-  }, "準備中") : totals === undefined ? React.createElement("span", {
-    style: {
-      display: 'block',
-      fontSize: '8px',
-      opacity: .8
-    }
-  }, "…") : React.createElement("span", {
-    style: {
-      display: 'block',
-      fontSize: '8px',
-      opacity: .85
-    }
-  }, "共有HP ", left.toLocaleString())))));
+  }))), shadowEl, labelEl)));
 };
 const homeWalletGrowPx = (goldText, bpText) => Math.min(24, Math.max(0, Math.ceil(String(goldText).length * 6.4 - 50), Math.ceil(String(bpText).length * 6.4 - 29)));
 function HomeScreen({
