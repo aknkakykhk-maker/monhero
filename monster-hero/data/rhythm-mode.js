@@ -26119,7 +26119,7 @@ const againstMyOwnShadowHellNotes=((t,h,f,s,T,F,S)=>[
   t(116564,9,3,0),t(116668,7,3,0),
 // </against-my-own-shadow-v3-hell-notes>
 ])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
-const againstMyOwnShadowHellChart=mhChart(36,againstMyOwnShadowHellNotes,AGAINST_MY_OWN_SHADOW_DURATION_MS,6);
+const againstMyOwnShadowHellChart=mhChart(42,againstMyOwnShadowHellNotes,AGAINST_MY_OWN_SHADOW_DURATION_MS,6);
 // HELL(デバッグ専用・2026-10-11)。参考譜面の空中(空中のタップ・高さのあるスライド)を土台に、親指2本で押せる形へ直した譜面
 // (tools/mode/rhythm-ref-thumbfix.js。同じ親指が地上と空中を行き来する間は1.5拍以上・押せない0・指の交差0)。速さの演出と組は MASTER と同じ
 // 2026-10-13 社長の決定「案3 X のまま」: 上下に交わる3か所(15.4・67.7・135.7秒)で、右手の空中スライドも左へ1レーン動かし、左手の地上スライドとすれ違う X にした
