@@ -128,7 +128,9 @@ async function storyScenario(s) {
   }
   ok('説明を最後まで進めると閉じる', !(await s.page.evaluate(() => !!document.querySelector('[data-rhythm-hell-guide]'))));
   const st = await storage(s);
-  ok('既読は試し用のキーに付き、本番のキーには付かない', st.preview === 'true' && st.real === null, `試し用 ${st.preview} / 本番 ${st.real}`);
+  // 公開後(印が真)は本番のキーに付くのが正しい(2026-10-13 HELL 公開)
+  if (relStory) ok('公開後: 既読は本番のキーに付く', st.real === 'true', `試し用 ${st.preview} / 本番 ${st.real}`);
+  else ok('既読は試し用のキーに付き、本番のキーには付かない', st.preview === 'true' && st.real === null, `試し用 ${st.preview} / 本番 ${st.real}`);
   ok('MASTER を遊ばずに済んだ(記録に MASTER のクリアは無い)', !(st.best && st.best.MASTER && st.best.MASTER.clear === true));
   await bootKeepStory(s);
   ok('読み込み直しても、お話は2回目は出ない', !(await waitStory(s, 10000)));
@@ -191,7 +193,7 @@ async function storyScenario(s) {
     }
     const st1 = await storage(s);
     if (trigger === 'after-result') ok('既読は試し用のキーに付く', st1.preview === 'true', String(st1.preview));
-    ok('本番の既読のキー(mh_rhythm_hell_story_seen_v1)には付かない', st1.real === null, String(st1.real));
+    if (off.released !== true) ok('本番の既読のキー(mh_rhythm_hell_story_seen_v1)には付かない', st1.real === null, String(st1.real));
     ok('MASTER のクリアが記録に残る', !!(st1.best && st1.best.MASTER && st1.best.MASTER.clear === true));
     const sel = await s.page.evaluate(() => [...document.querySelectorAll('button')].map((b) => (b.innerText || '').replace(/\s+/g, ' ').trim()).filter((t) => /HELL/.test(t)));
     ok('曲えらびで HELL が選べる(「MASTERで解放」ではない)', sel.length > 0 && !sel.some((t) => /MASTERで解放/.test(t)), sel.join(' / '));
