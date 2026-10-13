@@ -19,7 +19,7 @@ const SECONDS=Number(process.argv[2]||30);
 (async()=>{
   const browser=await playwright.chromium.launch({executablePath:'/opt/pw-browsers/chromium',args:['--autoplay-policy=no-user-gesture-required']});
   let bad=0;
-  for(const id of ['sheriruth_hell_debug','grievous_lady_hell','kaze_ga_soyogu_hell_debug']){
+  for(const id of ['sheriruth_hell_debug','grievous_lady_hell','kaze_ga_soyogu_hell_debug','against_my_own_shadow_hell_debug']){
     const page=await browser.newPage({viewport:{width:844,height:390}});
     await page.addInitScript(()=>{const put=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
       put('mh_breeder_name','あつ');put('mh_breeder_icon','🐣');put('mh_intro_done',true);put('mh_onboarded',true);

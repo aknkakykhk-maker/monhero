@@ -120,7 +120,7 @@ const mime = f => ({ '.js': 'application/javascript', '.html': 'text/html', '.cs
     const sub = (x, dy = 0) => rhythmSubLaneCoordinateAtPoint(a.left + x, a.top + lineY + dy, inRect);
     const alt = (x, dy) => rhythmSubLaneCoordinateAtLineIfBelow(a.left + x, a.top + lineY + dy, inRect) ?? null;
     const all = [...RHYTHM_SONGS, ...RHYTHM_PROTO_SONGS];
-    const targets = list ? list.map(([s, d]) => [s, d]) : [...RHYTHM_DEMO_SONG_IDS.flatMap(id => ['EXPERT', 'MASTER'].map(d => [id, d])), ['sheriruth_hell_debug', 'HELL'], ['kaze_ga_soyogu_hell_debug', 'HELL'], ['grievous_lady_hell', 'MASTER']];
+    const targets = list ? list.map(([s, d]) => [s, d]) : [...RHYTHM_DEMO_SONG_IDS.flatMap(id => ['EXPERT', 'MASTER'].map(d => [id, d])), ['sheriruth_hell_debug', 'HELL'], ['kaze_ga_soyogu_hell_debug', 'HELL'], ['grievous_lady_hell', 'MASTER'], ['against_my_own_shadow_hell_debug', 'HELL']];
     const res = [];
     for (const [song, diff] of targets) {
       const c = (all.find(x => x.songId === song) || { difficulties: {} }).difficulties[diff]; if (!c || !c.notes || !c.notes.length) continue;

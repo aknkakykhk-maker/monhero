@@ -132,7 +132,7 @@ const runtime=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js')
     // 1ノーツの重さに足した生の値そのもの(一律の倍率ではない)で、空中を地上と見なした Lv. より下にならない
     {const {levelFromRaw}=require('./rhythm-chart-level.js');const groundLv=chartLevel(grounded(hell)).level,lv=chartLevel(hell);
       check('Sheriruth HELL の式の Lv. は、空中込みの生の値から測った値(空中を地上と見なした Lv. 以上)',lv.level===levelFromRaw(lv.strain.raw)&&lv.level>=groundLv,`式 Lv.${lv.level} / 地上と見なして Lv.${groundLv}`);}
-    // 公開中の HELL 3曲(と古い試作の Sheriruth)の表示は、前の式の値のまま(LEVEL_OVERRIDES で固定)
+    // 公開中の HELL 4曲(と古い試作の Sheriruth)の表示は、公開したときの値のまま(LEVEL_OVERRIDES で固定。Against My Own Shadow は新しい式の 42 で公開)
     {const {shownLevel,loadRuntimeSongs:loadSongs}=require('./rhythm-chart-level.js');const all=[...(loadSongs().RHYTHM_PROTO_SONGS||[])];
       for(const [id,d,want] of [['sheriruth_hell_debug','HELL',54],['grievous_lady_hell','MASTER',60],['kaze_ga_soyogu_hell_debug','HELL',23],['against_my_own_shadow_hell_debug','HELL',42]]){
         const s=all.find(x=>x.songId===id),c=s&&s.difficulties[d];

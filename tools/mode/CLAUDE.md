@@ -24,7 +24,7 @@
 本文: [`docs/rules/CHART_ENGINE.md`](../../docs/rules/CHART_ENGINE.md)。呼び名は「MHB CHART ENGINE Rev.30」(「版30」とは書かない)。
 
 **HELL の Lv.** は空中の難しさを1ノーツの重さに足して**測って出す**(2026-10-13・`rhythm-chart-level.js`。一律1.2倍はやめた)。
-公開中の HELL 3曲の表示は前の値のまま(`LEVEL_OVERRIDES`)。空中の無い譜面の Lv. は変わらない。本文: `docs/rules/CHART_ENGINE.md`
+公開中の HELL の表示は公開したときの値のまま(`LEVEL_OVERRIDES`)。空中の無い譜面の Lv. は変わらない。本文: `docs/rules/CHART_ENGINE.md`
 HELL は `rhythm-hell-mix.js --song <曲> --write` で作る(MASTER を土台に、空と地上が混ざって行き来する形・交差する両手の長押し)。
 
 **手の決まり**(同じ側で地上⇔空中は **150ms 以上**・空中は地上から250ms以上が目安・押さえている帯と同じ側は反対の手が空いているときだけ・
