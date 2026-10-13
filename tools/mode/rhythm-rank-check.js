@@ -2,7 +2,7 @@
 //
 // 難易度ごとの割合(%)ではなく絶対スコアのしきい値で判定する。%基準だとEASYで100%を
 // 出してもMASTERで100%を出しても同じ最上位ランクになってしまうが、絶対値にすることで
-// EASYの最大60万点はどれだけ極めてもBが上限になり、MASTERの満点(100万点)だけがMへ届く
+// EASYの最大80万点(2026-10-13 までは60万)はどれだけ極めてもBが上限になり、MASTERの満点(100万点)だけがMへ届く
 // (2026-09-04、ユーザー指示でしきい値を1段ずつ上へシフトし、EXPERT満点はSSどまりにした)。
 //
 //   node tools/mode/rhythm-rank-check.js
@@ -36,14 +36,15 @@ check('マイナスや壊れた値もGへ落ちる(下振れしない)',
 check('100万点(MASTER満点)はM',rhythmRankForScore(1000000)==='M');
 check('境界値ちょうどは上のランクに含める(以上判定)',
   rhythmRankForScore(1000000)==='M'&&rhythmRankForScore(999999)==='SS'
-  &&rhythmRankForScore(900000)==='SS'&&rhythmRankForScore(899999)==='S');
+  &&rhythmRankForScore(950000)==='SS'&&rhythmRankForScore(949999)==='S'
+  &&rhythmRankForScore(600000)==='F'&&rhythmRankForScore(599999)==='G');
 
-// 難易度が低いほど最大ランクも低いこと(絶対値しきい値による自然な帰結)
-const maxScoreByDifficulty={EASY:600000,NORMAL:700000,HARD:800000,EXPERT:900000,MASTER:1000000};
-check('EASY満点(60万)の上限ランクはB',rhythmRankForScore(maxScoreByDifficulty.EASY)==='B');
-check('NORMAL満点(70万)の上限ランクはA',rhythmRankForScore(maxScoreByDifficulty.NORMAL)==='A');
-check('HARD満点(80万)の上限ランクはS',rhythmRankForScore(maxScoreByDifficulty.HARD)==='S');
-check('EXPERT満点(90万)の上限ランクはSS',rhythmRankForScore(maxScoreByDifficulty.EXPERT)==='SS');
+// 難易度が低いほど最大ランクも低いこと(絶対値しきい値による自然な帰結)。満点・境目は 2026-10-13 から5万刻み
+const maxScoreByDifficulty={EASY:800000,NORMAL:850000,HARD:900000,EXPERT:950000,MASTER:1000000};
+check('EASY満点(80万)の上限ランクはB',rhythmRankForScore(maxScoreByDifficulty.EASY)==='B');
+check('NORMAL満点(85万)の上限ランクはA',rhythmRankForScore(maxScoreByDifficulty.NORMAL)==='A');
+check('HARD満点(90万)の上限ランクはS',rhythmRankForScore(maxScoreByDifficulty.HARD)==='S');
+check('EXPERT満点(95万)の上限ランクはSS',rhythmRankForScore(maxScoreByDifficulty.EXPERT)==='SS');
 check('MASTER満点(100万)だけがMに届く(EXPERT満点はSSどまり)',
   rhythmRankForScore(maxScoreByDifficulty.MASTER)==='M'&&rhythmRankForScore(maxScoreByDifficulty.EXPERT)!=='M');
 const order=['EASY','NORMAL','HARD','EXPERT','MASTER'],rankOrder=RHYTHM_RANKS.map(r=>r.id).reverse();
@@ -60,26 +61,26 @@ check('最上位(MF、105万点)の次は無い(null)',rhythmNextRankId(1050000)
 check('MASTER満点(100万)では、MFは届かないので次は無い(null)',rhythmNextRankId(1000000,1000000)===null);
 check('HELL(満点105万)では、Mの次はMF',rhythmNextRankId(1000000,1050000)==='MF');
 check('境界値ちょうどでは、そのランクの1つ上を返す(以上判定と矛盾しない)',
-  rhythmNextRankId(800000)==='SS'&&rhythmNextRankId(799999)==='S');
+  rhythmNextRankId(900000)==='SS'&&rhythmNextRankId(899999)==='S');
 check('マイナスや壊れた値もG扱いの次(F)になる',
   rhythmNextRankId(-100)==='F'&&rhythmNextRankId(undefined)==='F'&&rhythmNextRankId('x')==='F');
 
 // --- 難易度の満点(maxScore)を超える次ランクは出さない ---
 // (2026-09-04、PR #1023マージ直後にCodexレビューで指摘: EASY満点60万=Aが上限なのに
 // 「→S」のようなその難易度では絶対に届かない次ランクを表示してしまっていた)
-check('EASY満点(60万)ちょうどではB止まり、maxScoreを渡すと次はもう無い(null=★MAX)',
+check('EASY満点(80万)ちょうどではB止まり、maxScoreを渡すと次はもう無い(null=★MAX)',
   rhythmRankForScore(maxScoreByDifficulty.EASY)==='B'
   &&rhythmNextRankId(maxScoreByDifficulty.EASY)==='A'
   &&rhythmNextRankId(maxScoreByDifficulty.EASY,maxScoreByDifficulty.EASY)===null);
-check('NORMAL満点(70万)ちょうどではA止まり、maxScoreを渡すと次はもう無い(null=★MAX)',
+check('NORMAL満点(85万)ちょうどではA止まり、maxScoreを渡すと次はもう無い(null=★MAX)',
   rhythmRankForScore(maxScoreByDifficulty.NORMAL)==='A'
   &&rhythmNextRankId(maxScoreByDifficulty.NORMAL)==='S'
   &&rhythmNextRankId(maxScoreByDifficulty.NORMAL,maxScoreByDifficulty.NORMAL)===null);
-check('HARD満点(80万)ちょうどではS止まり、maxScoreを渡すと次はもう無い(null=★MAX)',
+check('HARD満点(90万)ちょうどではS止まり、maxScoreを渡すと次はもう無い(null=★MAX)',
   rhythmRankForScore(maxScoreByDifficulty.HARD)==='S'
   &&rhythmNextRankId(maxScoreByDifficulty.HARD)==='SS'
   &&rhythmNextRankId(maxScoreByDifficulty.HARD,maxScoreByDifficulty.HARD)===null);
-check('EXPERT満点(90万)ちょうどはSS止まり、maxScoreを渡すと次はもう無い(null=★MAX、Mには届かない)',
+check('EXPERT満点(95万)ちょうどはSS止まり、maxScoreを渡すと次はもう無い(null=★MAX、Mには届かない)',
   rhythmRankForScore(maxScoreByDifficulty.EXPERT)==='SS'
   &&rhythmNextRankId(maxScoreByDifficulty.EXPERT)==='M'
   &&rhythmNextRankId(maxScoreByDifficulty.EXPERT,maxScoreByDifficulty.EXPERT)===null);
@@ -87,11 +88,11 @@ check('MASTER満点(100万)ちょうどは既にM(maxScoreを渡しても無し=
   rhythmRankForScore(maxScoreByDifficulty.MASTER)==='M'
   &&rhythmNextRankId(maxScoreByDifficulty.MASTER,maxScoreByDifficulty.MASTER)===null);
 check('maxScore以内でまだ届く次ランクは、今までどおり表示する(頭打ちの副作用が無い)',
-  rhythmNextRankId(300000,maxScoreByDifficulty.EASY)==='D'
-  &&rhythmNextRankId(650000,maxScoreByDifficulty.NORMAL)==='A');
+  rhythmNextRankId(650000,maxScoreByDifficulty.EASY)==='D'
+  &&rhythmNextRankId(800000,maxScoreByDifficulty.NORMAL)==='A');
 check('maxScoreを渡さない/0以下/壊れているときは今までどおり上限なし(既存呼び出しとの互換)',
-  rhythmNextRankId(600000)==='A'&&rhythmNextRankId(600000,undefined)==='A'&&rhythmNextRankId(600000,'x')==='A'
-  &&rhythmNextRankId(600000,0)==='A'&&rhythmNextRankId(600000,-1)==='A');
+  rhythmNextRankId(800000)==='A'&&rhythmNextRankId(800000,undefined)==='A'&&rhythmNextRankId(800000,'x')==='A'
+  &&rhythmNextRankId(800000,0)==='A'&&rhythmNextRankId(800000,-1)==='A');
 
 // --- 画面側の結線 ---
 // 色そのものは見た目の調整で変わる(2026-09-22 に G・M などの色が変わり、ここが古い色のまま落ち続けていた)。

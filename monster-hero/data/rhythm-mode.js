@@ -6,11 +6,12 @@ const RHYTHM_SUB_LANE_COUNT = RHYTHM_LANE_COUNT*2;
 // laneCount を書いていない譜面は5レーン時代のもの。rhythmChartOnRoad が道の真ん中へ寄せて使う
 const RHYTHM_LEGACY_LANE_COUNT = 5;
 const RHYTHM_NOTE_TYPES = Object.freeze(['TAP', 'HOLD', 'FLICK', 'SLIDE']);
+// 満点は5万刻み(2026-10-13 社長の決定。それまでは EASY 60万から10万刻み)。古い記録は換算しない(遊び直すと新しい点になる)
 const RHYTHM_DIFFICULTIES = Object.freeze([
-  Object.freeze({ id:'EASY', maxScore:600000 }),
-  Object.freeze({ id:'NORMAL', maxScore:700000 }),
-  Object.freeze({ id:'HARD', maxScore:800000 }),
-  Object.freeze({ id:'EXPERT', maxScore:900000 }),
+  Object.freeze({ id:'EASY', maxScore:800000 }),
+  Object.freeze({ id:'NORMAL', maxScore:850000 }),
+  Object.freeze({ id:'HARD', maxScore:900000 }),
+  Object.freeze({ id:'EXPERT', maxScore:950000 }),
   Object.freeze({ id:'MASTER', maxScore:1000000 }),
 ]);
 // 6段目の難易度 HELL(2026-10-10・社長の決定。名前はバトルの「Hell」と同じ)。
@@ -92,32 +93,34 @@ const RHYTHM_SYNTHETIC_TAP_AHEAD_MAX_MS=RHYTHM_JUDGMENTS.find(judgment=>judgment
 const RHYTHM_TAP_TARGET_PREVIOUS_SHARE=.75;
 const RHYTHM_TAP_TARGET_UPCOMING_MAX_EARLY_MS=RHYTHM_JUDGMENTS.find(judgment=>judgment.id==='MARVELOUS')?.windowMs||55;
 const RHYTHM_SCORE_WEIGHTS = Object.freeze({ judgment:.9, combo:.1 });
-// スコアランク(暫定値)。G→F→E→D→C→B→A→S→SS→Mの10段階(Mが最上位)。
+// スコアランク。G→F→E→D→C→B→A→S→SS→M→MFの11段階(MFが最上位・2026-10-12 に MF を足した)。
 // 難易度ごとの割合(%)ではなく絶対スコアのしきい値で判定する。%基準だと
 // EASYで100%を出してもMASTERで100%を出しても同じ最上位ランクになってしまうが、
-// 絶対値にすることでEASYの最大60万点はどれだけ極めてもBが上限になり、
+// 絶対値にすることでEASYの最大80万点(2026-10-13 までは60万)はどれだけ極めてもBが上限になり、
 // MASTERの満点(100万点)だけがMへ届く。
 //
 // 2026-09-04、ユーザー指示で各しきい値を1段ずつ上（=同じ点数で付くランクは1段ずつ下）へ
 // ずらした。旧しきい値ではEXPERTの満点(90万点)もM(旧しきい値900000)に届いてしまい、
 // 「MASTERの満点だけがMになる」という上の説明と実際の挙動が食い違っていた。
-// 難易度別最大スコア(EASY 60万 / NORMAL 70万 / HARD 80万 / EXPERT 90万 / MASTER 100万)を
+// 難易度別最大スコア(いまは EASY 80万 / NORMAL 85万 / HARD 90万 / EXPERT 95万 / MASTER 100万 / HELL 105万)を
 // 1段上のランクの境界にそれぞれ使うことで、各難易度の満点が届く上限ランクを
 // 「EASY→B / NORMAL→A / HARD→S / EXPERT→SS / MASTER→M」に変え、Mは
 // MASTERの満点(100万点)でしか届かないようにしている。Gだけは0のまま(最下段なので
 // これ以上下げられない)。
 // MF(2026-10-12 社長の決定「105万のランク【MF】で」)は HELL の満点(105万)でだけ届く、M の1つ上
+// 境目は5万刻み(2026-10-13 社長の決定。満点の5万刻みに合わせる)。各難易度の満点で届く上限は今までどおり
+// EASY→B / NORMAL→A / HARD→S / EXPERT→SS / MASTER→M / HELL→MF。ランクは保存せず点数から出すので、古い記録は見え方が下がる
 const RHYTHM_RANKS = Object.freeze([
   Object.freeze({ id:'MF', min:1050000 }),
   Object.freeze({ id:'M', min:1000000 }),
-  Object.freeze({ id:'SS', min:900000 }),
-  Object.freeze({ id:'S', min:800000 }),
-  Object.freeze({ id:'A', min:700000 }),
-  Object.freeze({ id:'B', min:600000 }),
-  Object.freeze({ id:'C', min:500000 }),
-  Object.freeze({ id:'D', min:400000 }),
-  Object.freeze({ id:'E', min:300000 }),
-  Object.freeze({ id:'F', min:200000 }),
+  Object.freeze({ id:'SS', min:950000 }),
+  Object.freeze({ id:'S', min:900000 }),
+  Object.freeze({ id:'A', min:850000 }),
+  Object.freeze({ id:'B', min:800000 }),
+  Object.freeze({ id:'C', min:750000 }),
+  Object.freeze({ id:'D', min:700000 }),
+  Object.freeze({ id:'E', min:650000 }),
+  Object.freeze({ id:'F', min:600000 }),
   Object.freeze({ id:'G', min:0 }),
 ]);
 const rhythmRankForScore = score => {
@@ -29029,7 +29032,7 @@ const RHYTHM_TUTORIAL_SONG=Object.freeze({
 });
 // 練習の満点は EASY と同じ値にしておく。スコアは記録に残さないが、
 // ランクのゲージや「→次のランク」の表示が満点を分母に使うので、0や1にすると壊れる
-const RHYTHM_TUTORIAL_DIFFICULTY=Object.freeze({id:'TUTORIAL',maxScore:600000,label:'れんしゅう'});
+const RHYTHM_TUTORIAL_DIFFICULTY=Object.freeze({id:'TUTORIAL',maxScore:800000,label:'れんしゅう'}); // 満点は EASY と同じ(2026-10-13 に 60万→80万)
 
 // ===== タップのタイミング合わせ(2026-09-13・ユーザー指示) =====
 // 「今の仕様はみにくすぎるし実用性がない / 特に横画面は終わってる /
@@ -29064,7 +29067,7 @@ const RHYTHM_CALIBRATION_SONG=Object.freeze({
   playDurationMs:RHYTHM_CALIBRATION_END_MS,
   difficulties:Object.freeze({TUTORIAL:rhythmChartOnRoad(RHYTHM_CALIBRATION_CHART)}),
 });
-const RHYTHM_CALIBRATION_DIFFICULTY=Object.freeze({id:'TUTORIAL',maxScore:600000,label:'タイミング合わせ'});
+const RHYTHM_CALIBRATION_DIFFICULTY=Object.freeze({id:'TUTORIAL',maxScore:800000,label:'タイミング合わせ'}); // 満点は EASY と同じ(2026-10-13)
 
 // 曲ごとの拍(2026-09-26・道の演出で使う)。[1拍の長さ(ms), 最初の拍の時刻(ms), 1小節の拍数]。
 // 譜面を作ったときの音源の解析(tools/mode/authoring/*-v3-audio.json の timing)をそのまま写したもの。公開中の曲はノーツが全部この格子に乗っている。
