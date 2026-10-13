@@ -66,7 +66,7 @@ vm.runInContext([
   slice('// ==== タクティクス専用 EXスキル(STEP1: 共通基盤) ====', '// ==== タクティクス専用 EXスキルここまで ===='),
   'globalThis.ex={TACTICS_EX_SKILLS,TACTICS_EX_DURATION_TEXT,TACTICS_EX_IMPLEMENTED_EFFECTS,normalizeTacticsExDef,'
     + 'tacticsExAvoidLeftOf,spendTacticsExAvoid,tacticsExCritFixedAt,tacticsExConfusesOnHit,rollEnemyConfusion,confusedEnemyIntent,ENEMY_CONFUSE_TURNS,ENEMY_CONFUSE_CHANCE,'
-    + 'tacticsExTotalUsesOf,tacticsExPresentScaled,tacticsExCopyableBuffs,setTacticsExSpringKind,tacticsExSpringDmgMult,tacticsExKonjoLeftOf,spendTacticsExKonjo,tacticsExAquaOf,addTacticsExAquaStack,tacticsExUniqueGuaranteeSlot,tacticsExDefOf,tacticsExCounterOf,addTacticsExCounter,tacticsExCounterMult,tacticsExPsychoLockOf,tacticsExDamageBackRates,tacticsExPartyStatRate,tacticsExPartyBoostRegenRate,tacticsExRemainOf,tacticsExThunderOf,addTacticsExThunder,tacticsExMultiBuffOf,tacticsExExtraCombosAt,tacticsExPresentNote,tacticsExPresentKindText,isTacticsExEffectImplemented,createTacticsExState,normalizeTacticsExState,tacticsExUsesOf,'
+    + 'tacticsExTotalUsesOf,tacticsExPresentScaled,tacticsExCopyableBuffs,setTacticsExSpringKind,tacticsExSpringDmgMult,tacticsExKonjoLeftOf,spendTacticsExKonjo,tacticsExAquaOf,addTacticsExAquaStack,tacticsExUniqueGuaranteeSlot,tacticsExUniqueGuaranteeSlots,tacticsExDefOf,tacticsExCounterOf,addTacticsExCounter,tacticsExCounterMult,tacticsExPsychoLockOf,tacticsExDamageBackRates,tacticsExPartyStatRate,tacticsExPartyBoostRegenRate,tacticsExRemainOf,tacticsExThunderOf,addTacticsExThunder,tacticsExMultiBuffOf,tacticsExExtraCombosAt,tacticsExPresentNote,tacticsExPresentKindText,isTacticsExEffectImplemented,createTacticsExState,normalizeTacticsExState,tacticsExUsesOf,'
     + 'tacticsExRemaining,isTacticsExEffectActive,isTacticsExCardLocked,tacticsExLockedSlots,isTacticsExTurnUsed,checkTacticsExUse,'
     + 'applyTacticsExUse,scaleTacticsUnits,setTacticsExMaxRate,expireTacticsExMaxRates,tacticsExDurationText,tacticsExTurnsLeft,tacticsExStyleOf,tacticsExStyleLabel,checkTacticsExChoice,setTacticsExInitialStyle,tacticsExActiveStyle,TACTICS_EX_DUAL_HIT_REPEAT,tacticsExActiveEffect,tacticsExRegenRateAt,applyTacticsExStats,tacticsExCoverSlot,coverTacticsTargets,tacticsExPartyTakenMult,tacticsExPartyRegenRate,tacticsExExtraCombosAt,tacticsExMultiBuffOf,tacticsExLifeCost,tacticsExTargetOptions,checkTacticsExTarget,tacticsExPandoraBoxOf,tacticsExPandoraDevil,tacticsExPandoraTurnEnd,spendTacticsExPandoraBox,setTacticsExMaxHpRate,tacticsExTimeStopSlot,spendTacticsExTimeStop,tacticsExUniqueGuaranteeSlot,ensureTacticsExUniqueInHand,tacticsExCardBonusTotal,tacticsExCardBonusAt,tacticsExVoltageOf,addTacticsExVoltage,rollTacticsExPresent,setTacticsExPresent,tacticsExPresentOf,resetTacticsExWaveUses,TACTICS_EX_PRESENT_KINDS,recordTacticsExDodge,TACTICS_EX_DIST_MATCH_MULT,tacticsExDistMatchDodges};',
 ].join('\n'), sandbox);
@@ -749,7 +749,7 @@ const use = (state, def, slot, monId, now, extra = {}) => {
     && /baseGutsRecoveryRate\+tacticsExPartyBuffNow\(\)\.gutsAdd/.test(app));
   check('本体: ターン終わりにボルテージをため、次のターンも効くならピクシーの固有技を手札へ出す・使ったときにも出す',
     /addTacticsExVoltage\(stNow,tacticsUnitsRef\.current,\{ wave, turn:turnCount \},usedCardEntries\.length\)/.test(app)
-    && /tacticsExUniqueGuaranteeSlot\(tacticsExStateRef\.current,tacticsUnitsRef\.current,\{ wave, turn:turnCount\+1 \}\)/.test(app)
+    && /const favSlots=tacticsExUniqueGuaranteeSlots\(tacticsExStateRef\.current,tacticsUnitsRef\.current,\{ wave, turn:turnCount\+1 \}\);\s*favSlots\.forEach\(/.test(app)
     && /if\(\(def\.guaranteeUnique\|\|def\.pandoraBox\?\.guaranteeUnique\)&&\(hand\.length<5\|\|!selectedCards\.includes\(hand\.length-1\)\)\)/.test(app));
   check('本体: 使ったときにプレゼントの中身を決めて(必ず全員のガッツ)・WAVEが変わったら回数を戻す・詳細に状態を出す',
     /rollTacticsExPresent\(Array\.from\(\{length:pc\.draws\*2\},\(\)=>Math\.random\(\)\),pc\.jackpot,pc\.draws\)/.test(app) && /tacticsRateHeal\(0,pc\.fixedGuts,false\)/.test(app)
@@ -1149,6 +1149,33 @@ const use = (state, def, slot, monId, now, extra = {}) => {
   // パンドラ: 毎ターン固有技が手札に出る
   const pd = ex.applyTacticsExUse(ex.createTacticsExState(), { def: ex.tacticsExDefOf('Pandora'), slot: 0, monId: 'Pandora', now: A(2, 3) });
   check('パンドラの箱: 効いているあいだ毎ターン固有技が手札に出る(切れたら null)', ex.tacticsExUniqueGuaranteeSlot(pd, [mk('Pandora')], A(2, 4)) === 0 && ex.tacticsExUniqueGuaranteeSlot(pd, [mk('Pandora')], A(2, 6)) === null);
+  // ★2026-10-13 不具合報告「パンドラとピクシーの EX を同じターンに使うと、片方の固有技が来ない」。
+  //   出す子は全員(枠の小さい順)返し、入れ替えでほかの子の固有技・選んでいるカードを押し出さない
+  {
+    const both = (order) => order.reduce((st, [id, slot]) => ex.applyTacticsExUse(st, { def: ex.tacticsExDefOf(id), slot, monId: id, now: A(2, 3) }), ex.createTacticsExState());
+    const units2 = [mk('Pandora'), mk('Pixie')];
+    const pp = both([['Pandora', 0], ['Pixie', 1]]), qq = both([['Pixie', 1], ['Pandora', 0]]);
+    check('2体が固有技を出すEXを使うと、2体とも返す(使った順に関係なく・枠の小さい順)',
+      JSON.stringify(ex.tacticsExUniqueGuaranteeSlots(pp, units2, A(2, 4))) === '[0,1]' && JSON.stringify(ex.tacticsExUniqueGuaranteeSlots(qq, units2, A(2, 4))) === '[0,1]'
+      && ex.tacticsExUniqueGuaranteeSlot(pp, units2, A(2, 4)) === 0, JSON.stringify(ex.tacticsExUniqueGuaranteeSlots(pp, units2, A(2, 4))));
+    const u = (slot) => ({ uid: 'u' + slot, type: 'unique', ownerSlotIdx: slot }), k = (n) => ({ uid: 'k' + n, type: 'atk' });
+    const favs = [0, 1];
+    const keepFav = (c) => !!c && c.type === 'unique' && favs.includes(c.ownerSlotIdx);
+    // 手札5枚: 1体目の固有技がいちばん後ろに入った状態で、2体目の固有技を入れる
+    const r = ex.ensureTacticsExUniqueInHand({ hand: [k(1), k(2), k(3), k(4), u(0)], deck: [u(1)], graveyard: [] }, (c) => c.type === 'unique' && c.ownerSlotIdx === 1, 5, keepFav);
+    check('手札がいっぱいでも、先に出た固有技は押し出さず、その手前のカードと同じ位置で入れ替える',
+      r.moved && r.hand.length === 5 && r.hand[4].uid === 'u0' && r.hand[3].uid === 'u1' && r.deck.map((c) => c.uid).join() === 'k4', r.hand.map((c) => c.uid).join());
+    const sel = [3];
+    const r2 = ex.ensureTacticsExUniqueInHand({ hand: [k(1), k(2), k(3), k(4), u(0)], deck: [u(1)], graveyard: [] }, (c) => c.type === 'unique' && c.ownerSlotIdx === 1, 5, (c, i) => sel.includes(i) || keepFav(c));
+    check('選んでいるカードも押し出さない(位置もずれない)', r2.moved && r2.hand[3].uid === 'k4' && r2.hand[2].uid === 'u1' && r2.hand[4].uid === 'u0', r2.hand.map((c) => c.uid).join());
+    const r3 = ex.ensureTacticsExUniqueInHand({ hand: [u(0), u(2), u(3), k(1), k(2)], deck: [u(1)], graveyard: [] }, (c) => c.type === 'unique' && c.ownerSlotIdx === 1, 5, (c, i) => i >= 3 || keepFav(c) || c.ownerSlotIdx >= 2);
+    check('入れ替えられるカードが無ければ、今までどおり入れない(次のターンに出る)', !r3.moved && r3.hand.length === 5 && r3.deck.length === 1);
+    // 本体: 使ったときも、ほかの子の固有技と選んでいるカードを押し出さない
+    const appSrc = fs.readFileSync(path.join(__dirname, '..', '..', 'monster-hero', 'src', 'parts', '60-app.jsx'), 'utf8');
+    check('本体: 使ったときは、ほかの子の固有技・選んでいるカードを入れ替えの対象から外す',
+      /const keepSlots=tacticsExUniqueGuaranteeSlots\(tacticsExStateRef\.current,tacticsUnitsRef\.current,\{ wave, turn:turnCount \}\)\.filter\(s=>s!==slotIdx\);/.test(appSrc)
+      && /ensureTacticsExUniqueInHand\(handPileRef\.current,c=>c&&c\.type==='unique'&&c\.ownerSlotIdx===slotIdx,5,\(c,i\)=>selectedCards\.includes\(i\)\|\|/.test(appSrc));
+  }
   const app = fs.readFileSync(path.join(__dirname, '..', '..', 'monster-hero', 'src', 'parts', '60-app.jsx'), 'utf8');
   check('本体: 時間停止中は残りターンを減らさない・敵の次の行動を決め直さない・根性・アクアフィールド・パンドラの反動へ結線してある',
     /tacticsExFrozenRef\.current = true;/.test(app) && (app.match(/if\(!tacticsExFrozenRef\.current\) advanceEnemyIntents\(/g) || []).length === 3

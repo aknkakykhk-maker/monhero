@@ -12543,7 +12543,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     }
     // ピクシーの「お気に入りの魔法」: 使ったターンから固有技のカードが手札に出る(手札がいっぱいで、いちばん後ろのカードを選んでいるときは、次のターンから)
     if((def.guaranteeUnique||def.pandoraBox?.guaranteeUnique)&&(hand.length<5||!selectedCards.includes(hand.length-1))){
-      const ens=ensureTacticsExUniqueInHand(handPileRef.current,c=>c&&c.type==='unique'&&c.ownerSlotIdx===slotIdx);
+      // ★ほかの子が出している固有技(パンドラとピクシーなど、同じターンに2体が使ったとき)と、選んでいるカードは入れ替えで押し出さない(2026-10-13 不具合報告)
+      const keepSlots=tacticsExUniqueGuaranteeSlots(tacticsExStateRef.current,tacticsUnitsRef.current,{ wave, turn:turnCount }).filter(s=>s!==slotIdx);
+      const ens=ensureTacticsExUniqueInHand(handPileRef.current,c=>c&&c.type==='unique'&&c.ownerSlotIdx===slotIdx,5,(c,i)=>selectedCards.includes(i)||(!!c&&c.type==='unique'&&keepSlots.includes(c.ownerSlotIdx)));
       if(ens.moved){ setHand(ens.hand); setDeck(ens.deck); setGraveyard(ens.graveyard); }
     }
     // スネグーラチカの「クリスマスプレゼント」: 中身をランダムで決める。必ず全員のガッツが戻り、決まった中身が起きる
@@ -13227,11 +13229,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     while(nextHand.length<5&&(nextDeck.length>0||nextGraveyard.length>0))replenish(1);
     // ★ピクシーの「お気に入りの魔法」: 次のターンも効いていれば、固有技のカードを手札へ必ず出す(2026-10-03)
     if(isTacticsMode(runMode)){
-      const favSlot=tacticsExUniqueGuaranteeSlot(tacticsExStateRef.current,tacticsUnitsRef.current,{ wave, turn:turnCount+1 });
-      if(favSlot!=null){
-        const ensured=ensureTacticsExUniqueInHand({ hand:nextHand, deck:nextDeck, graveyard:nextGraveyard },c=>c&&c.type==='unique'&&c.ownerSlotIdx===favSlot); // その枠が持つ固有技(継承した固有技を選んでいてもその技)
+      // ★出す子が2体以上(パンドラとピクシーなど)なら全員ぶん出す。入れ替えでほかの子の固有技を押し出さない(2026-10-13 不具合報告)
+      const favSlots=tacticsExUniqueGuaranteeSlots(tacticsExStateRef.current,tacticsUnitsRef.current,{ wave, turn:turnCount+1 });
+      favSlots.forEach(favSlot=>{
+        const ensured=ensureTacticsExUniqueInHand({ hand:nextHand, deck:nextDeck, graveyard:nextGraveyard },c=>c&&c.type==='unique'&&c.ownerSlotIdx===favSlot,5,c=>!!c&&c.type==='unique'&&favSlots.includes(c.ownerSlotIdx)); // その枠が持つ固有技(継承した固有技を選んでいてもその技)
         nextHand=ensured.hand; nextDeck=ensured.deck; nextGraveyard=ensured.graveyard;
-      }
+      });
     }
     if(getTurnBuff('zeroGuts',false)) setImmediateTurnBuff('zeroGuts',false);
     // ★枠ごとの消費0も、そのターンのカードを使ったら落とす(タクティクス)。

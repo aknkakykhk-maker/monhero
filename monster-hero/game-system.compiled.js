@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4e90e455de4a37fb
+// source-sha256: 8fe5509960def596
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-14 00:31";
+const BUILD_DATE = "2026-10-14 06:28";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -39850,20 +39850,23 @@ const tacticsExMultiBuffOf = (state, units, slot, now) => {
   };
 };
 const tacticsExUniqueGuaranteeSlot = (state, units, now) => {
+  const all = tacticsExUniqueGuaranteeSlots(state, units, now);
+  return all.length ? all[0] : null;
+};
+const tacticsExUniqueGuaranteeSlots = (state, units, now) => {
   const effects = normalizeTacticsExState(state).effects;
-  const hit = Object.keys(effects).map(Number).find(slot => {
+  return Object.keys(effects).map(Number).sort((a, b) => a - b).filter(slot => {
     const unit = Array.isArray(units) ? units[slot] : null;
     if (!unit) return false;
     const kind = tacticsExActiveEffect(state, slot, unit.id, now);
     return effects[slot].guaranteeUnique === true && kind === 'multiBuff' || kind === 'pandoraBox' && !!(effects[slot].pandoraBoxCfg && effects[slot].pandoraBoxCfg.guaranteeUnique);
   });
-  return hit == null ? null : hit;
 };
 const ensureTacticsExUniqueInHand = ({
   hand,
   deck,
   graveyard
-}, predicate, handMax = 5) => {
+}, predicate, handMax = 5, keep = null) => {
   const h = Array.isArray(hand) ? hand.slice() : [],
     d = Array.isArray(deck) ? deck.slice() : [],
     g = Array.isArray(graveyard) ? graveyard.slice() : [];
@@ -39886,8 +39889,22 @@ const ensureTacticsExUniqueInHand = ({
     moved: false
   };
   if (h.length >= handMax) {
-    const out = h.pop();
-    if (out) d.push(out);
+    let out = h.length - 1;
+    while (out >= 0 && typeof keep === 'function' && keep(h[out], out)) out -= 1;
+    if (out < 0) return {
+      hand: hand.slice(),
+      deck: deck.slice(),
+      graveyard: graveyard.slice(),
+      moved: false
+    };
+    d.push(h[out]);
+    h[out] = card;
+    return {
+      hand: h,
+      deck: d,
+      graveyard: g,
+      moved: true
+    };
   }
   h.push(card);
   return {
@@ -90364,7 +90381,11 @@ function MonsterHeroGame() {
       }
     }
     if ((def.guaranteeUnique || def.pandoraBox?.guaranteeUnique) && (hand.length < 5 || !selectedCards.includes(hand.length - 1))) {
-      const ens = ensureTacticsExUniqueInHand(handPileRef.current, c => c && c.type === 'unique' && c.ownerSlotIdx === slotIdx);
+      const keepSlots = tacticsExUniqueGuaranteeSlots(tacticsExStateRef.current, tacticsUnitsRef.current, {
+        wave,
+        turn: turnCount
+      }).filter(s => s !== slotIdx);
+      const ens = ensureTacticsExUniqueInHand(handPileRef.current, c => c && c.type === 'unique' && c.ownerSlotIdx === slotIdx, 5, (c, i) => selectedCards.includes(i) || !!c && c.type === 'unique' && keepSlots.includes(c.ownerSlotIdx));
       if (ens.moved) {
         setHand(ens.hand);
         setDeck(ens.deck);
@@ -91321,20 +91342,20 @@ function MonsterHeroGame() {
     }
     while (nextHand.length < 5 && (nextDeck.length > 0 || nextGraveyard.length > 0)) replenish(1);
     if (isTacticsMode(runMode)) {
-      const favSlot = tacticsExUniqueGuaranteeSlot(tacticsExStateRef.current, tacticsUnitsRef.current, {
+      const favSlots = tacticsExUniqueGuaranteeSlots(tacticsExStateRef.current, tacticsUnitsRef.current, {
         wave,
         turn: turnCount + 1
       });
-      if (favSlot != null) {
+      favSlots.forEach(favSlot => {
         const ensured = ensureTacticsExUniqueInHand({
           hand: nextHand,
           deck: nextDeck,
           graveyard: nextGraveyard
-        }, c => c && c.type === 'unique' && c.ownerSlotIdx === favSlot);
+        }, c => c && c.type === 'unique' && c.ownerSlotIdx === favSlot, 5, c => !!c && c.type === 'unique' && favSlots.includes(c.ownerSlotIdx));
         nextHand = ensured.hand;
         nextDeck = ensured.deck;
         nextGraveyard = ensured.graveyard;
-      }
+      });
     }
     if (getTurnBuff('zeroGuts', false)) setImmediateTurnBuff('zeroGuts', false);
     if (isTacticsMode(runMode)) setTurnBuffs(p => p.bySlot ? {

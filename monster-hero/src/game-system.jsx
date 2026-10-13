@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6d420ccc4467358a
+// generated-sha256: e3fb36caea0341f1
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-14 00:31"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-14 06:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -24818,20 +24818,29 @@ const tacticsExMultiBuffOf = (state, units, slot, now) => {
 };
 // ---- ピクシー(guaranteeUnique): 効いているあいだ、毎ターン固有技カードを手札へ出す ----
 // 出す子の枠(効いていなければ null)。次のターンに効くかを見たいときは、now にそのターンを渡す
+// ★固有技を出す子は2体以上いることがある(パンドラとピクシーなど)。全員の枠は tacticsExUniqueGuaranteeSlots(枠の番号の小さい順)。
+//   この関数はそのうち最初の1体(以前からの呼び出し・検査のため残す)
 const tacticsExUniqueGuaranteeSlot = (state, units, now) => {
+  const all = tacticsExUniqueGuaranteeSlots(state, units, now);
+  return all.length ? all[0] : null;
+};
+const tacticsExUniqueGuaranteeSlots = (state, units, now) => {
   const effects = normalizeTacticsExState(state).effects;
-  const hit = Object.keys(effects).map(Number).find(slot => {
+  return Object.keys(effects).map(Number).sort((a, b) => a - b).filter(slot => {
     const unit = Array.isArray(units) ? units[slot] : null;
     if (!unit) return false;
     const kind = tacticsExActiveEffect(state, slot, unit.id, now);
     // パンドラの箱も、効いているあいだ毎ターン固有技を手札へ出す
     return (effects[slot].guaranteeUnique === true && kind === 'multiBuff') || (kind === 'pandoraBox' && !!(effects[slot].pandoraBoxCfg && effects[slot].pandoraBoxCfg.guaranteeUnique));
   });
-  return hit == null ? null : hit;
 };
 // 手札に predicate を満たすカードが無ければ、山札→捨て札の順で探して手札へ入れる。
-// 手札がいっぱい(5枚)なら、いちばん後ろの別のカードを山札の底へ戻して入れ替える。見つからなければそのまま
-const ensureTacticsExUniqueInHand = ({ hand, deck, graveyard }, predicate, handMax = 5) => {
+// 手札がいっぱい(5枚)なら、いちばん後ろの別のカードを山札の底へ戻して、**同じ位置**で入れ替える。見つからなければそのまま。
+// keep(card, index) … 入れ替えで手札から出さないカード(ほかの子の出すべき固有技・選んでいるカード)。後ろから見て最初に keep でないカードと入れ替える。
+//   全部 keep なら入れない(2026-10-13 不具合報告「パンドラとピクシーの EX を同じターンに使うと、片方の固有技が来ない」。
+//   後から使った子の固有技が、先に出したもう片方の固有技を押し出していた)。
+//   位置を変えずに入れ替えるので、選んでいるカード・置いたカードの番号はずれない
+const ensureTacticsExUniqueInHand = ({ hand, deck, graveyard }, predicate, handMax = 5, keep = null) => {
   const h = Array.isArray(hand) ? hand.slice() : [], d = Array.isArray(deck) ? deck.slice() : [], g = Array.isArray(graveyard) ? graveyard.slice() : [];
   if (h.some(predicate)) return { hand: h, deck: d, graveyard: g, moved: false };
   let card = null;
@@ -24839,7 +24848,14 @@ const ensureTacticsExUniqueInHand = ({ hand, deck, graveyard }, predicate, handM
   if (at >= 0) card = d.splice(at, 1)[0];
   else { at = g.findIndex(predicate); if (at >= 0) card = g.splice(at, 1)[0]; }
   if (!card) return { hand: h, deck: d, graveyard: g, moved: false };
-  if (h.length >= handMax) { const out = h.pop(); if (out) d.push(out); }
+  if (h.length >= handMax) {
+    let out = h.length - 1;
+    while (out >= 0 && typeof keep === 'function' && keep(h[out], out)) out -= 1;
+    if (out < 0) return { hand: hand.slice(), deck: deck.slice(), graveyard: graveyard.slice(), moved: false };
+    d.push(h[out]);
+    h[out] = card;
+    return { hand: h, deck: d, graveyard: g, moved: true };
+  }
   h.push(card);
   return { hand: h, deck: d, graveyard: g, moved: true };
 };
@@ -59036,7 +59052,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     }
     // ピクシーの「お気に入りの魔法」: 使ったターンから固有技のカードが手札に出る(手札がいっぱいで、いちばん後ろのカードを選んでいるときは、次のターンから)
     if((def.guaranteeUnique||def.pandoraBox?.guaranteeUnique)&&(hand.length<5||!selectedCards.includes(hand.length-1))){
-      const ens=ensureTacticsExUniqueInHand(handPileRef.current,c=>c&&c.type==='unique'&&c.ownerSlotIdx===slotIdx);
+      // ★ほかの子が出している固有技(パンドラとピクシーなど、同じターンに2体が使ったとき)と、選んでいるカードは入れ替えで押し出さない(2026-10-13 不具合報告)
+      const keepSlots=tacticsExUniqueGuaranteeSlots(tacticsExStateRef.current,tacticsUnitsRef.current,{ wave, turn:turnCount }).filter(s=>s!==slotIdx);
+      const ens=ensureTacticsExUniqueInHand(handPileRef.current,c=>c&&c.type==='unique'&&c.ownerSlotIdx===slotIdx,5,(c,i)=>selectedCards.includes(i)||(!!c&&c.type==='unique'&&keepSlots.includes(c.ownerSlotIdx)));
       if(ens.moved){ setHand(ens.hand); setDeck(ens.deck); setGraveyard(ens.graveyard); }
     }
     // スネグーラチカの「クリスマスプレゼント」: 中身をランダムで決める。必ず全員のガッツが戻り、決まった中身が起きる
@@ -59720,11 +59738,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     while(nextHand.length<5&&(nextDeck.length>0||nextGraveyard.length>0))replenish(1);
     // ★ピクシーの「お気に入りの魔法」: 次のターンも効いていれば、固有技のカードを手札へ必ず出す(2026-10-03)
     if(isTacticsMode(runMode)){
-      const favSlot=tacticsExUniqueGuaranteeSlot(tacticsExStateRef.current,tacticsUnitsRef.current,{ wave, turn:turnCount+1 });
-      if(favSlot!=null){
-        const ensured=ensureTacticsExUniqueInHand({ hand:nextHand, deck:nextDeck, graveyard:nextGraveyard },c=>c&&c.type==='unique'&&c.ownerSlotIdx===favSlot); // その枠が持つ固有技(継承した固有技を選んでいてもその技)
+      // ★出す子が2体以上(パンドラとピクシーなど)なら全員ぶん出す。入れ替えでほかの子の固有技を押し出さない(2026-10-13 不具合報告)
+      const favSlots=tacticsExUniqueGuaranteeSlots(tacticsExStateRef.current,tacticsUnitsRef.current,{ wave, turn:turnCount+1 });
+      favSlots.forEach(favSlot=>{
+        const ensured=ensureTacticsExUniqueInHand({ hand:nextHand, deck:nextDeck, graveyard:nextGraveyard },c=>c&&c.type==='unique'&&c.ownerSlotIdx===favSlot,5,c=>!!c&&c.type==='unique'&&favSlots.includes(c.ownerSlotIdx)); // その枠が持つ固有技(継承した固有技を選んでいてもその技)
         nextHand=ensured.hand; nextDeck=ensured.deck; nextGraveyard=ensured.graveyard;
-      }
+      });
     }
     if(getTurnBuff('zeroGuts',false)) setImmediateTurnBuff('zeroGuts',false);
     // ★枠ごとの消費0も、そのターンのカードを使ったら落とす(タクティクス)。
