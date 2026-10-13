@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b4efcac9480060b6
+// source-sha256: b0aa6b637f950c05
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-13 11:43";
+const BUILD_DATE = "2026-10-13 12:22";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -9873,6 +9873,80 @@ const monsterArtMaskSize = (className, style) => {
   const fit = style?.objectFit || (/(^|\s)object-contain(\s|$)/.test(className || '') ? 'contain' : '') || (/(^|\s)object-cover(\s|$)/.test(className || '') ? 'cover' : '');
   return fit === 'contain' || fit === 'cover' ? fit : '100% 100%';
 };
+const DYED_BAKE_MAX_SIDE = 768;
+const DYED_BAKE_CACHE_MAX = 64;
+const _dyedBakeCache = new Map();
+const _bakeDyedLayers = (key, src, layers) => {
+  const hit = _dyedBakeCache.get(key);
+  if (hit) {
+    _dyedBakeCache.delete(key);
+    _dyedBakeCache.set(key, hit);
+    return hit;
+  }
+  const promise = (async () => {
+    try {
+      if (typeof document === 'undefined') return null;
+      const base = await _loadArtImage(src);
+      if (!base) return null;
+      const natW = base.naturalWidth || base.width,
+        natH = base.naturalHeight || base.height;
+      if (!(natW > 0) || !(natH > 0)) return null;
+      const scale = Math.min(1, DYED_BAKE_MAX_SIDE / Math.max(natW, natH));
+      const w = Math.max(1, Math.round(natW * scale)),
+        h = Math.max(1, Math.round(natH * scale));
+      const out = document.createElement('canvas');
+      out.width = w;
+      out.height = h;
+      const layer = document.createElement('canvas');
+      layer.width = w;
+      layer.height = h;
+      const ctx = out.getContext('2d'),
+        lctx = layer.getContext('2d');
+      if (!ctx || !lctx) return null;
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      lctx.imageSmoothingEnabled = true;
+      lctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(base, 0, 0, w, h);
+      for (const l of layers) {
+        if (!l) continue;
+        _dyeBlobRetain(l.url);
+        const [recolored, mask] = await Promise.all([_loadArtImage(l.url), _loadArtImage(l.mask)]).finally(() => _dyeBlobRelease(l.url));
+        if (!recolored || !mask) return null;
+        lctx.globalCompositeOperation = 'source-over';
+        lctx.clearRect(0, 0, w, h);
+        lctx.drawImage(recolored, 0, 0, w, h);
+        lctx.globalCompositeOperation = 'destination-in';
+        lctx.drawImage(mask, 0, 0, w, h);
+        lctx.globalCompositeOperation = 'source-over';
+        ctx.globalAlpha = l.alpha / 100;
+        ctx.drawImage(layer, 0, 0);
+        ctx.globalAlpha = 1;
+      }
+      const blob = await new Promise(done => {
+        try {
+          out.toBlob(done, 'image/png');
+        } catch (_) {
+          done(null);
+        }
+      });
+      return blob && window.URL && typeof window.URL.createObjectURL === 'function' ? window.URL.createObjectURL(blob) : null;
+    } catch (e) {
+      return null;
+    }
+  })();
+  _dyedBakeCache.set(key, promise);
+  while (_dyedBakeCache.size > DYED_BAKE_CACHE_MAX) {
+    const oldKey = _dyedBakeCache.keys().next().value;
+    const old = _dyedBakeCache.get(oldKey);
+    _dyedBakeCache.delete(oldKey);
+    _dyeBlobEvict(old);
+  }
+  promise.then(url => {
+    if (!url && _dyedBakeCache.get(key) === promise) _dyedBakeCache.delete(key);
+  });
+  return promise;
+};
 const DyedMonsterImage = ({
   baseId,
   src,
@@ -9933,6 +10007,39 @@ const DyedMonsterImage = ({
       cancelled = true;
     };
   }, [baseId, src, colorKey]);
+  const bakeLayers = hues && hues.length > 0 && masks && !debugMaskPlacement && colors.some(Boolean) ? hues.map((_, idx) => {
+    const url = colors[idx] && masks[idx] && recolored[_recoloredKey(idx, colors[idx])];
+    return url ? {
+      url,
+      mask: masks[idx],
+      alpha: colorAlphaOf(colors[idx])
+    } : null;
+  }) : null;
+  const bakeReady = !!bakeLayers && hues.every((_, idx) => !colors[idx] || !masks[idx] || Object.prototype.hasOwnProperty.call(recolored, _recoloredKey(idx, colors[idx])));
+  const bakeKey = bakeReady ? [baseId, src, ...bakeLayers.map(l => l ? `${l.url}#${l.alpha}` : '-')].join('|') : '';
+  const [baked, setBaked] = useState({
+    key: '',
+    url: undefined
+  });
+  useEffect(() => {
+    const url = baked.url;
+    if (!url) return undefined;
+    _dyeBlobRetain(url);
+    return () => _dyeBlobRelease(url);
+  }, [baked.url]);
+  useEffect(() => {
+    if (!bakeKey) return undefined;
+    let cancelled = false;
+    _bakeDyedLayers(bakeKey, src, bakeLayers).then(url => {
+      if (!cancelled) setBaked({
+        key: bakeKey,
+        url: url || null
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [bakeKey]);
   if (!hues || hues.length === 0) {
     const recoloredSrc = colors[0] && recolored[_recoloredKey(0, colors[0])];
     const alpha = colorAlphaOf(colors[0]);
@@ -9979,6 +10086,23 @@ const DyedMonsterImage = ({
   }
   if (!masks || !colors.some(Boolean)) {
     return React.createElement("img", {
+      src: src,
+      alt: alt,
+      draggable: draggable,
+      className: className,
+      style: style
+    });
+  }
+  if (!debugMaskPlacement) {
+    const bakedUrl = bakeKey && baked.key === bakeKey ? baked.url : undefined;
+    if (bakedUrl) return React.createElement("img", {
+      src: bakedUrl,
+      alt: alt,
+      draggable: draggable,
+      className: className,
+      style: style
+    });
+    if (bakedUrl === undefined) return React.createElement("img", {
       src: src,
       alt: alt,
       draggable: draggable,
