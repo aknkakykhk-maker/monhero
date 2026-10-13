@@ -85,7 +85,10 @@ const mix=(master,{zero,beat,crosses=[],gentle=false,crossUpper='hold'})=>{
     const a=Math.max(...pair.map(startOf)),b=Math.min(...pair.map(endOf));
     const lanes=pair.map(n=>laneAt(n.pts,a)),k=Math.abs(lanes[0]-2.5)<Math.abs(lanes[1]-2.5)||(Math.abs(lanes[0]-2.5)===Math.abs(lanes[1]-2.5)&&pair[0].hand==='R')?0:1;
     const hold=pair[k],mover=pair[1-k],L0=Math.round(lanes[k]*4)/4,x0=lanes[1-k],side=x0<L0?-1:1;
-    const xEnd=Math.max(0,Math.min(5,Math.round((L0-side*Math.max(1,Math.abs(x0-L0)))*4)/4));
+    // 越える深さ: 今までは元の間隔と同じだけ反対側へ(1レーン以上)。動く帯が空中のとき(crossUpper:'mover')は1レーンまで
+    //   (深く越えると、越えた指が相手の親指に寄る。Against My Own Shadow の 39〜41秒で 1.5レーン越えて 43〜57px・テンポくんの bot)
+    const depth=crossUpper==='mover'?1:Math.max(1,Math.abs(x0-L0));
+    const xEnd=Math.max(0,Math.min(5,Math.round((L0-side*depth)*4)/4));
     const mid=(a+b)/2,c0=snap(mid-beat/2),c1=snap(mid+beat/2);
     // 横に動かないのは両手が重なってから(それより前は元の通り道。前から止めると、同じ時刻の反対の手のタップと重なることがある)
     const holdLane=t=>t<a?Math.round(laneAt(hold.pts,t)*1000)/1000:L0;
