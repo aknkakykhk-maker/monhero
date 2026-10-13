@@ -41,9 +41,14 @@ ok('空中の判定の文字は、同じ変数から空中の判定線を基準�
   game.includes('data-rhythm-sky-judgment-display')
   &&game.includes("bottom:`calc(var(--mh-judgment-line-bottom,12%) + ${(RHYTHM_SKY_LIFT.ratio*100).toFixed(2)}% ${RHYTHM_HELL_SKY_TEXT.id==='below'?'- 64px':'+ 38px'})`")
   &&!game.includes("calc(var(--mh-judgment-line-bottom,12%) - 64px)")&&!game.includes("scale(.78)"));
+// 2026-10-12 fecc71c(#2926・HELL のオプション)で、実測した値をいったん lineRatio に入れ、動いたときに空中の線を描き直す形になった。
+// 書き方が変わっても「準備ができたときだけ、実測した線の中心の比を set へ渡す」ことは同じなので、その形を見る(.88 の決めうちが戻っていないことも見る)
+const lineSet=game.match(/if\(ready\)\{const lineRatio=\(lineRect\.top-areaRect\.top\+lineRect\.height\/2\)\/areaRect\.height[^;]*;\s*RHYTHM_JUDGMENT_LINE_Y\.set\(lineRatio\);/);
 ok('追従(HOLD/SLIDE)は、決めうちの.88ではなく実測した位置を見る',
   data.includes('rect.top+rect.height*RHYTHM_JUDGMENT_LINE_Y.ratio')
-  &&game.includes('if(ready)RHYTHM_JUDGMENT_LINE_Y.set((lineRect.top-areaRect.top+lineRect.height/2)/areaRect.height);'));
+  &&!!lineSet
+  &&(game.match(/RHYTHM_JUDGMENT_LINE_Y\.set\(/g)||[]).length===1
+  &&!/RHYTHM_JUDGMENT_LINE_Y\.set\(\s*\.88|RHYTHM_JUDGMENT_LINE_Y\.set\(\s*0\.88/.test(game));
 ok('設定を変えたら測り直す(古い位置のまま流れない)',
   /\},\[settings\.noteStartPosition,settings\.judgmentLineHeight\]\);/.test(game)
   &&/\},\[settings\.noteStartPosition,settings\.noteSize,settings\.judgmentLineHeight,view\.status\]\);/.test(game));
