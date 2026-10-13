@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 27a580372a8dd606
+// source-sha256: 832f52ef08bbd3bb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-13 16:00";
+const BUILD_DATE = "2026-10-13 16:01";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -13317,7 +13317,7 @@ const RANGE_STYLES = {
     shadow: "shadow-red-500/50",
     glow: "drop-shadow-[0_0_15px_rgba(239,68,68,0.9)]",
     slotBg: "bg-red-900/50",
-    labelBg: "bg-red-600 text-white",
+    labelBg: "bg-red-600 mh-range-label",
     slotGlow: "shadow-[inset_0_1px_0_rgba(255,255,255,.22),0_0_14px_rgba(239,68,68,0.38),0_4px_12px_rgba(0,0,0,.55)]"
   },
   1: {
@@ -13327,7 +13327,7 @@ const RANGE_STYLES = {
     shadow: "shadow-yellow-500/50",
     glow: "drop-shadow-[0_0_15px_rgba(234,179,8,0.9)]",
     slotBg: "bg-yellow-900/50",
-    labelBg: "bg-yellow-600 text-black",
+    labelBg: "bg-yellow-600 mh-range-label",
     slotGlow: "shadow-[inset_0_1px_0_rgba(255,255,255,.22),0_0_14px_rgba(234,179,8,0.38),0_4px_12px_rgba(0,0,0,.55)]"
   },
   2: {
@@ -13337,7 +13337,7 @@ const RANGE_STYLES = {
     shadow: "shadow-emerald-500/50",
     glow: "drop-shadow-[0_0_15px_rgba(16,185,129,0.9)]",
     slotBg: "bg-emerald-900/50",
-    labelBg: "bg-emerald-600 text-white",
+    labelBg: "bg-emerald-600 mh-range-label",
     slotGlow: "shadow-[inset_0_1px_0_rgba(255,255,255,.22),0_0_14px_rgba(16,185,129,0.38),0_4px_12px_rgba(0,0,0,.55)]"
   },
   3: {
@@ -13347,7 +13347,7 @@ const RANGE_STYLES = {
     shadow: "shadow-blue-500/50",
     glow: "drop-shadow-[0_0_15px_rgba(59,130,246,0.9)]",
     slotBg: "bg-blue-900/50",
-    labelBg: "bg-blue-600 text-white",
+    labelBg: "bg-blue-600 mh-range-label",
     slotGlow: "shadow-[inset_0_1px_0_rgba(255,255,255,.22),0_0_14px_rgba(59,130,246,0.38),0_4px_12px_rgba(0,0,0,.55)]"
   }
 };
@@ -58443,7 +58443,7 @@ function PickSlotScreen({
         "aria-hidden": "true",
         className: "mh-ph-sparkle"
       }), React.createElement("span", {
-        className: `relative text-[10px] font-black uppercase px-3 py-0.5 rounded-full ${RANGE_STYLES[i].labelBg} ${RANGE_STYLES[i].text} border border-white/30 shadow-md`,
+        className: `relative text-[10px] font-black uppercase px-3 py-0.5 rounded-full ${RANGE_STYLES[i].labelBg} border border-white/30 shadow-md`,
         style: {
           boxShadow: '0 0 10px rgba(var(--mh-rc),.6), inset 0 1px 0 rgba(255,255,255,.35)'
         }
