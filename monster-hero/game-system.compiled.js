@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b0aa6b637f950c05
+// source-sha256: 307924a5f898755f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-13 12:22";
+const BUILD_DATE = "2026-10-13 12:35";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -28957,7 +28957,7 @@ const rhythmEventRewardText = reward => {
   if (reward.gold > 0) parts.push(`💎 ダイヤ×${reward.gold.toLocaleString()}`);
   return parts.join(' ／ ');
 };
-const RHYTHM_OPTION_TABS = Object.freeze([['live', 'ライブ'], ['volume', '音量'], ['system', 'システム']]);
+const RHYTHM_OPTION_TABS = Object.freeze([['live', '演奏'], ['display', '表示'], ['volume', '音'], ['system', '軽さ・演出']]);
 const RhythmOptions = ({
   value,
   onSave,
@@ -29009,6 +29009,8 @@ const RhythmOptions = ({
   const label = 'text-[13px] font-bold';
   const note = 'text-[10px] leading-relaxed text-slate-400';
   const head = 'border-b border-cyan-400/30 pb-1.5 text-[15px] font-black text-cyan-200';
+  const favHead = 'flex items-center gap-1 text-[14px] font-black text-amber-200';
+  const favCard = wide ? 'rounded-xl border border-amber-300/40 bg-amber-950/25 p-1.5' : 'rounded-2xl border border-amber-300/50 bg-gradient-to-br from-amber-950/50 to-slate-900/85 p-4';
   const card = wide ? '' : 'rounded-2xl border border-cyan-400/35 bg-slate-900/85 p-4 shadow-[0_0_18px_rgba(34,211,238,.08)]';
   const row = 'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b border-white/10 py-3 last:border-b-0';
   const stepper = (key, min, max, step, {
@@ -29171,7 +29173,7 @@ const RhythmOptions = ({
     className: `font-black ${wide ? 'text-[13px]' : 'text-base'}`
   }, "⚙️ オプション"))), React.createElement("nav", {
     "data-rhythm-options-tabs": true,
-    className: `grid shrink-0 grid-cols-3 px-3 ${wide ? 'min-w-0 flex-1 gap-1.5 pb-0 pl-0 pr-3' : 'gap-2 pb-2'}`
+    className: `grid shrink-0 grid-cols-4 px-3 ${wide ? 'min-w-0 flex-1 gap-1.5 pb-0 pl-0 pr-3' : 'gap-2 pb-2'}`
   }, RHYTHM_OPTION_TABS.map(([id, text]) => React.createElement("button", {
     type: "button",
     key: id,
@@ -29188,13 +29190,16 @@ const RhythmOptions = ({
     className: `flex-1 min-h-0 overflow-y-auto mh-scroll ${wide ? 'px-3 pb-2 pt-1.5' : 'px-3 pb-5 pt-3'}`
   }, React.createElement("div", {
     className: wide ? 'space-y-2' : 'space-y-4'
-  }, tab === 'live' && React.createElement("section", {
+  }, tab === 'live' && React.createElement("div", {
     "data-rhythm-options-panel": "live",
-    className: card
+    className: wide ? 'space-y-2' : 'space-y-4'
+  }, React.createElement("section", {
+    "data-rhythm-options-group": "よく触る設定",
+    className: favCard
   }, !wide && React.createElement("h3", {
-    className: head
-  }, "◆ ライブ設定"), React.createElement("div", {
-    className: wide ? grid : `mt-3 ${grid}`
+    className: favHead
+  }, "★ よく触る設定"), React.createElement("div", {
+    className: wide ? `mt-1 ${grid}` : `mt-3 ${grid}`
   }, field('ノーツの速さ', stepper('noteSpeed', RHYTHM_NOTE_SPEED_MIN, RHYTHM_NOTE_SPEED_MAX, RHYTHM_NOTE_SPEED_STEP, {
     fine: RHYTHM_NOTE_SPEED_STEP,
     coarse: 1,
@@ -29230,24 +29235,23 @@ const RhythmOptions = ({
     suffix: '%'
   }), 'ノーツの見た目の大きさだけを変えます。入力判定の範囲・HOLD/SLIDE帯・ENDバーの位置は変わりません。', {
     full: true
-  }), field('ノーツの出る位置', stepper('noteStartPosition', -100, 100, 5, {
-    fine: 5,
-    coarse: 25
-  }), 'ノーツが画面のどのあたりから出てくるかを変えます。マイナスにすると奥（画面の上の外側）から、プラスにすると手前寄りから出てきます。判定ラインの位置・判定のタイミング・判定窓・スコアは変わりません。ノーツが流れてくる時間も変わらないので、手前から出すほど見えているあいだの動きは速く見えます。', {
-    full: true
-  }), field('判定ラインの高さ', stepper('judgmentLineHeight', RHYTHM_JUDGMENT_LINE_HEIGHT_MIN, RHYTHM_JUDGMENT_LINE_HEIGHT_MAX, RHYTHM_JUDGMENT_LINE_HEIGHT_STEP, {
+  }))), React.createElement("section", {
+    "data-rhythm-options-group": "見え方",
+    className: card
+  }, !wide && React.createElement("h3", {
+    className: head
+  }, "◆ 見え方"), React.createElement("div", {
+    className: wide ? `mt-1 ${grid}` : `mt-3 ${grid}`
+  }, field('判定ラインの高さ', stepper('judgmentLineHeight', RHYTHM_JUDGMENT_LINE_HEIGHT_MIN, RHYTHM_JUDGMENT_LINE_HEIGHT_MAX, RHYTHM_JUDGMENT_LINE_HEIGHT_STEP, {
     fine: RHYTHM_JUDGMENT_LINE_HEIGHT_STEP,
     coarse: RHYTHM_JUDGMENT_LINE_HEIGHT_STEP * 4,
     suffix: '%'
   }), 'タップする判定ラインを、画面の下から何％の高さに置くかです。大きくするほど上へ上がり、指が届きやすくなります（12％が2026-09-13より前の位置です）。ノーツも弾ける光も判定文字も一緒に上がります。判定の幅（秒数）・スコア・譜面は変わりません。ただしレーンは奥へ行くほど狭くなるので、上げすぎると横の幅が狭く感じられます。', {
     full: true
-  }), field('重いときは演出を自動で控えめに', toggle('autoEffectDown'), '演奏中にカクつきが続いたら、重い演出から順に自動で控えめにします。既定は「ON」です。保存してある設定は変わらず、アプリを開き直すと元に戻ります。判定・スコアは変わりません。\n下げる順番は、にじむ光 → ライブ背景「ライブ」を「派手」に → 道の演出・ノーツの動き → 判定の演出・コンボの節目 → ライブ背景を「控えめ」→「シンプル」です。\n画質を「自動」にしているときは、先に画質を下げ、それでもカクつくときに演出を下げます。'), field('演奏中は曲名を薄くする', toggle('hudSongFade'), '演奏が始まって4秒たつと、左上の曲名とジャケットを薄くします。目線を道に集めやすくするためです。既定は「ON」です。\nポーズ中は元の濃さに戻ります。スコア・ランク・ライフの表示は薄くなりません。'), field('ライフ表示の大きさ', stepper('lifeDisplaySize', RHYTHM_LIFE_SIZE_MIN, RHYTHM_LIFE_SIZE_MAX, RHYTHM_LIFE_SIZE_STEP, {
-    fine: RHYTHM_LIFE_SIZE_STEP,
-    coarse: RHYTHM_LIFE_SIZE_STEP * 5,
-    suffix: '%'
-  }), '画面の右上に出るライフ（♥のゲージと数字）の大きさです。100%が2026-09-13より前の大きさで、既定は150%です。ゲージは長さも太さも倍率どおりに伸び、数字も大きくなります。横画面ではもともとの長さが倍あるので、そのぶん長く伸びます。ハートだけは伸びをゆるめてあります（ここが行の高さを決めていて、大きくするとポーズボタンがレーンの台形へ寄ってしまうため）。ライフの減り方・DOWNの決まりは変わりません。', {
-    full: true
-  }), field('FAST / SLOW表示', toggle('fastSlowDisplay')), field('判定文字表示', toggle('judgmentTextDisplay')), field('ずれの表示', segments('timingDisplay', RHYTHM_TIMING_DISPLAY_LABELS), '叩いたタイミングのずれの見せ方です。既定は「FAST/SLOW」です（osu!・Arcaea などにある表示です）。\n「FAST/SLOW」＝これまでどおり、早い・遅いだけを出します。\n「数字も」＝「FAST 23ms」のように、どれだけずれたかを数字でも出します。\n「メーターも」＝数字に加えて、判定ラインのすぐ上に「ずれメーター」を出します。真ん中の白い線がぴったりで、左が早い・右が遅いです。直近12回のずれが目盛りで並び、古いものほど薄くなります。帯の色は判定の色（金＝MARVELOUS・紫＝EXCELLENT・赤＝GREAT・緑＝GOOD・青＝BAD）です。\nFAST/SLOW表示をOFFにしているときは、数字も出ません。判定・スコアはどれでも変わりません。', {
+  }), field('ノーツの出る位置', stepper('noteStartPosition', -100, 100, 5, {
+    fine: 5,
+    coarse: 25
+  }), 'ノーツが画面のどのあたりから出てくるかを変えます。マイナスにすると奥（画面の上の外側）から、プラスにすると手前寄りから出てきます。判定ラインの位置・判定のタイミング・判定窓・スコアは変わりません。ノーツが流れてくる時間も変わらないので、手前から出すほど見えているあいだの動きは速く見えます。', {
     full: true
   }), field('レーンカバー', stepper('laneCover', RHYTHM_LANE_COVER_MIN, RHYTHM_LANE_COVER_MAX, RHYTHM_LANE_COVER_STEP, {
     fine: RHYTHM_LANE_COVER_STEP,
@@ -29255,11 +29259,26 @@ const RhythmOptions = ({
     suffix: '%'
   }), 'レーンの奥を幕で隠して、ノーツが見えはじめる位置を手前へ寄せます（beatmania IIDX・SOUND VOLTEX の SUDDEN と同じものです）。0%で出しません（既定）。ノーツを速くすると、奥から出てくる細かいノーツまで見えて目が追いつかないときに使います。隠すだけなので、ノーツの速さと判定のタイミングは変わりません。', {
     full: true
-  }), field('アシストモード', toggle('assistMode'), 'リズムゲームが苦手でも気軽に遊べるモードです（バンドリ！アワーノーツのアシストモードを見習いました）。既定はOFFです。ONにすると、フリックはタップするだけで取れ、ホールド・スライドの終わりのフリックも離すだけでよくなります。BAD・MISSでコンボが切れそうなときは「コンボガード」が代わりに受け止めます（最大3回ぶん。コンボをつなぐと少しずつたまり、崩れているときほど早くたまります）。そのかわりスコアは8割になり、FULL COMBO などの称号は付かず、自己ベスト・全国ランキング・ビートPには残りません。曲えらびの「🛟 アシスト」でも切り替えられます。'), field('ミラー譜面', toggle('mirrorChart'), '譜面を左右反対にして遊びます（バンドリ！アワーノーツなどにある設定です）。既定はOFFです。同じ曲でも手の動きが変わるので、苦手な配置の練習や気分転換に使えます。判定・スコア・記録はふだんどおりです。曲えらびの「↔ ミラー譜面」でも切り替えられます。'), field('ラッキーラッシュ', toggle('luckyRush'), 'うまく叩くと、経過時間の下の🍀ゲージがたまり、満タンで抽選します（バンドリ！アワーノーツの「LUCK撃奏」を見習いました）。当たると「LUCKY RUSH!!」になり、しばらくのあいだ画面のふちが金色に光って、ゲージが2倍の速さでたまり、次の抽選も当たりやすくなります。抽選のたびにラッキーptが入り、曲の終わりにおまけのビートPになります（1曲で最大10P。イベントを開いていない期間は1/5。アシストモードでは入りません）。スコア・判定・ランキングには関わりません。既定はONです。'), field('フルコンボ表示', toggle('comboStatusDisplay'), 'フルコンボ（BAD・MISSなし）が続いているあいだはコンボ数のすぐ上に「FULL COMBO」、ぜんぶMARVELOUSのあいだは「ALL MARVELOUS」を小さく出します（プロセカ・CHUNITHM などにある表示です）。途切れたら消えます。'), field('叩いた場所に判定', toggle('judgmentAtTap'), 'ノーツを叩いたとき、判定ラインのその場所にも小さく判定の文字（MARVELOUS・GREAT など）を出します。既定は「OFF」です。\nいつもの真ん中の大きな判定はそのまま出ます。左右どちらの手がずれているかを見分けたいときに使います。判定・スコアは変わりません。'), field('自己ベスト比', toggle('paceDisplay'), 'いまのペースが自己ベストより上か下かを、レーンの左のふちの経過時間の下に「ベスト比 +1,234」のように出します（beatmania IIDX のペースメーカーです）。自己ベストを「曲のここまでの割合」で割り戻した点との差で、上回っていれば緑、下回っていれば赤です。まだ記録が無い曲では出ません。'), field('レーン発光', segments('laneGlow', RHYTHM_LANE_GLOW_LABELS), null, {
-    full: true
   }), field('道の幅（横向き）', segments('roadWidth', RHYTHM_ROAD_WIDTH_LABELS), '横向きで遊ぶときの道の広さです。細くすると、スライドで指を動かす距離が短くなります（そのぶん1レーンは細くなります）。「広い」はこれまでの幅、「細い」は判定ラインのところで画面の約7割です。縦向きでは変わりません。', {
     full: true
-  }), field('コンボ数', React.createElement(React.Fragment, null, toggle('comboDisplay'), draft.comboDisplay !== false && React.createElement(React.Fragment, null, React.createElement("div", {
+  }))), React.createElement("section", {
+    "data-rhythm-options-group": "遊び方",
+    className: card
+  }, !wide && React.createElement("h3", {
+    className: head
+  }, "◆ 遊び方"), React.createElement("div", {
+    className: wide ? `mt-1 ${grid}` : `mt-3 ${grid}`
+  }, field('アシストモード', toggle('assistMode'), 'リズムゲームが苦手でも気軽に遊べるモードです（バンドリ！アワーノーツのアシストモードを見習いました）。既定はOFFです。ONにすると、フリックはタップするだけで取れ、ホールド・スライドの終わりのフリックも離すだけでよくなります。BAD・MISSでコンボが切れそうなときは「コンボガード」が代わりに受け止めます（最大3回ぶん。コンボをつなぐと少しずつたまり、崩れているときほど早くたまります）。そのかわりスコアは8割になり、FULL COMBO などの称号は付かず、自己ベスト・全国ランキング・ビートPには残りません。曲えらびの「🛟 アシスト」でも切り替えられます。'), field('ミラー譜面', toggle('mirrorChart'), '譜面を左右反対にして遊びます（バンドリ！アワーノーツなどにある設定です）。既定はOFFです。同じ曲でも手の動きが変わるので、苦手な配置の練習や気分転換に使えます。判定・スコア・記録はふだんどおりです。曲えらびの「↔ ミラー譜面」でも切り替えられます。'), field('ラッキーラッシュ', toggle('luckyRush'), 'うまく叩くと、経過時間の下の🍀ゲージがたまり、満タンで抽選します（バンドリ！アワーノーツの「LUCK撃奏」を見習いました）。当たると「LUCKY RUSH!!」になり、しばらくのあいだ画面のふちが金色に光って、ゲージが2倍の速さでたまり、次の抽選も当たりやすくなります。抽選のたびにラッキーptが入り、曲の終わりにおまけのビートPになります（1曲で最大10P。イベントを開いていない期間は1/5。アシストモードでは入りません）。スコア・判定・ランキングには関わりません。既定はONです。')))), tab === 'display' && React.createElement("div", {
+    "data-rhythm-options-panel": "display",
+    className: wide ? 'space-y-2' : 'space-y-4'
+  }, React.createElement("section", {
+    "data-rhythm-options-group": "よく触る設定",
+    className: favCard
+  }, !wide && React.createElement("h3", {
+    className: favHead
+  }, "★ よく触る設定"), React.createElement("div", {
+    className: wide ? `mt-1 ${grid}` : `mt-3 ${grid}`
+  }, field('判定文字表示', toggle('judgmentTextDisplay')), field('FAST / SLOW表示', toggle('fastSlowDisplay')), field('コンボ数', React.createElement(React.Fragment, null, toggle('comboDisplay'), draft.comboDisplay !== false && React.createElement(React.Fragment, null, React.createElement("div", {
     className: wide ? 'mt-1.5' : 'mt-2'
   }, segments('comboPosition', RHYTHM_COMBO_POSITION_LABELS)), React.createElement("div", {
     className: wide ? 'mt-1.5' : 'mt-2'
@@ -29277,7 +29296,38 @@ const RhythmOptions = ({
     label: '濃さ（薄くすると透ける）'
   })))), '出す/出さないと、出す場所（おすすめ・左・中央・右・右上）、字の大きさ（70〜150%）、濃さ（30〜100%）を選べます。上から順に「出す/出さない」「場所」「字の大きさ」「濃さ」です。%の行は2つあり、上が字そのものの大きさ、下が濃さ（100%がいちばん濃く、下げるほど透けてノーツが見やすくなります）です。端へ寄せる3つは、両サイドのマスモンに重ならないところへ出ます。大きさを上げると、端に寄せたときはレーンにかかることがあります。どこに置いても判定・スコア・コンボの数え方は変わりません。', {
     full: true
-  }), field('両サイドのマスモン｜濃さ', segments('sideMonsterOpacity', RHYTHM_SIDE_MONSTER_OPACITY_LABELS), 'レーンの外側の空いたところへ、設定したマスモンが出て拍に合わせて跳ねます。ノーツが見づらいときや、端末が熱くなりやすいときは薄くするか止めてください。', {
+  }))), React.createElement("section", {
+    "data-rhythm-options-group": "判定の表示",
+    className: card
+  }, !wide && React.createElement("h3", {
+    className: head
+  }, "◆ 判定の表示"), React.createElement("div", {
+    className: wide ? `mt-1 ${grid}` : `mt-3 ${grid}`
+  }, field('ずれの表示', segments('timingDisplay', RHYTHM_TIMING_DISPLAY_LABELS), '叩いたタイミングのずれの見せ方です。既定は「FAST/SLOW」です（osu!・Arcaea などにある表示です）。\n「FAST/SLOW」＝これまでどおり、早い・遅いだけを出します。\n「数字も」＝「FAST 23ms」のように、どれだけずれたかを数字でも出します。\n「メーターも」＝数字に加えて、判定ラインのすぐ上に「ずれメーター」を出します。真ん中の白い線がぴったりで、左が早い・右が遅いです。直近12回のずれが目盛りで並び、古いものほど薄くなります。帯の色は判定の色（金＝MARVELOUS・紫＝EXCELLENT・赤＝GREAT・緑＝GOOD・青＝BAD）です。\nFAST/SLOW表示をOFFにしているときは、数字も出ません。判定・スコアはどれでも変わりません。', {
+    full: true
+  }), field('叩いた場所に判定', toggle('judgmentAtTap'), 'ノーツを叩いたとき、判定ラインのその場所にも小さく判定の文字（MARVELOUS・GREAT など）を出します。既定は「OFF」です。\nいつもの真ん中の大きな判定はそのまま出ます。左右どちらの手がずれているかを見分けたいときに使います。判定・スコアは変わりません。'))), React.createElement("section", {
+    "data-rhythm-options-group": "画面の数字と表示",
+    className: card
+  }, !wide && React.createElement("h3", {
+    className: head
+  }, "◆ 画面の数字と表示"), React.createElement("div", {
+    className: wide ? `mt-1 ${grid}` : `mt-3 ${grid}`
+  }, field('フルコンボ表示', toggle('comboStatusDisplay'), 'フルコンボ（BAD・MISSなし）が続いているあいだはコンボ数のすぐ上に「FULL COMBO」、ぜんぶMARVELOUSのあいだは「ALL MARVELOUS」を小さく出します（プロセカ・CHUNITHM などにある表示です）。途切れたら消えます。'), field('自己ベスト比', toggle('paceDisplay'), 'いまのペースが自己ベストより上か下かを、レーンの左のふちの経過時間の下に「ベスト比 +1,234」のように出します（beatmania IIDX のペースメーカーです）。自己ベストを「曲のここまでの割合」で割り戻した点との差で、上回っていれば緑、下回っていれば赤です。まだ記録が無い曲では出ません。'), field('ライフ表示の大きさ', stepper('lifeDisplaySize', RHYTHM_LIFE_SIZE_MIN, RHYTHM_LIFE_SIZE_MAX, RHYTHM_LIFE_SIZE_STEP, {
+    fine: RHYTHM_LIFE_SIZE_STEP,
+    coarse: RHYTHM_LIFE_SIZE_STEP * 5,
+    suffix: '%'
+  }), '画面の右上に出るライフ（♥のゲージと数字）の大きさです。100%が2026-09-13より前の大きさで、既定は150%です。ゲージは長さも太さも倍率どおりに伸び、数字も大きくなります。横画面ではもともとの長さが倍あるので、そのぶん長く伸びます。ハートだけは伸びをゆるめてあります（ここが行の高さを決めていて、大きくするとポーズボタンがレーンの台形へ寄ってしまうため）。ライフの減り方・DOWNの決まりは変わりません。', {
+    full: true
+  }), field('演奏中は曲名を薄くする', toggle('hudSongFade'), '演奏が始まって4秒たつと、左上の曲名とジャケットを薄くします。目線を道に集めやすくするためです。既定は「ON」です。\nポーズ中は元の濃さに戻ります。スコア・ランク・ライフの表示は薄くなりません。'), field('レーン発光', segments('laneGlow', RHYTHM_LANE_GLOW_LABELS), null, {
+    full: true
+  }))), React.createElement("section", {
+    "data-rhythm-options-group": "マスモン",
+    className: card
+  }, !wide && React.createElement("h3", {
+    className: head
+  }, "◆ マスモン"), React.createElement("div", {
+    className: wide ? `mt-1 ${grid}` : `mt-3 ${grid}`
+  }, field('両サイドのマスモン｜濃さ', segments('sideMonsterOpacity', RHYTHM_SIDE_MONSTER_OPACITY_LABELS), 'レーンの外側の空いたところへ、設定したマスモンが出て拍に合わせて跳ねます。ノーツが見づらいときや、端末が熱くなりやすいときは薄くするか止めてください。', {
     full: true
   }), field('両サイドのマスモン｜動き', segments('sideMonsterMotion', RHYTHM_SIDE_MONSTER_MOTION_LABELS), 'レーンの外側のマスモンが拍に合わせて跳ねる動きです。動く・動かないはここだけで決まり、「演出量」を下げても変わりません。止めたいときは「動かない」を選んでください（「軽量モード」を入れたときは、重いものをまとめて止めるためここも止まります）。', {
     full: true
@@ -29285,13 +29335,16 @@ const RhythmOptions = ({
     full: true
   }), field('マスモン｜能力のカットイン', toggle('monsterCutIn'), 'マスモンの能力が出たとき、画面の端からそのマスモンの絵が差し込まれます。ノーツより後ろに出るので、ノーツは隠れません。「軽量モード」と演出量「最小」では出ません。', {
     full: true
-  }))), tab === 'volume' && React.createElement("section", {
+  })))), tab === 'volume' && React.createElement("div", {
     "data-rhythm-options-panel": "volume",
-    className: card
+    className: wide ? 'space-y-2' : 'space-y-4'
+  }, React.createElement("section", {
+    "data-rhythm-options-group": "よく触る設定",
+    className: favCard
   }, !wide && React.createElement("h3", {
-    className: head
-  }, "◆ 音量設定"), React.createElement("div", {
-    className: wide ? grid : `mt-3 ${grid}`
+    className: favHead
+  }, "★ よく触る設定"), React.createElement("div", {
+    className: wide ? `mt-1 ${grid}` : `mt-3 ${grid}`
   }, field('BGM音量', stepper('bgmVolume', 0, RHYTHM_VOLUME_MAX, 1, {
     fine: 1,
     coarse: 10
@@ -29302,13 +29355,38 @@ const RhythmOptions = ({
     coarse: 10
   }), null, {
     full: true
-  }), field('タップ音のセット', segments('noteSeType', RHYTHM_NOTE_SE_TYPES.map(item => [item.id, item.label]), id => RHYTHM_NOTE_SE_RUNTIME.preview({
+  }), React.createElement("div", {
+    className: "grid gap-2"
+  }, React.createElement("button", {
+    type: "button",
+    onClick: previewBgm,
+    className: "min-h-[44px] rounded-xl bg-indigo-700 text-[12px] font-black"
+  }, "♪ BGM試聴"), React.createElement("button", {
+    type: "button",
+    "data-rhythm-se-preview": "tap",
+    onClick: () => RHYTHM_NOTE_SE_RUNTIME.preview(draft, 'tap'),
+    className: "min-h-[44px] rounded-xl bg-fuchsia-700 text-[12px] font-black"
+  }, "タップ音試聴")))), React.createElement("section", {
+    "data-rhythm-options-group": "タップ音",
+    className: card
+  }, !wide && React.createElement("h3", {
+    className: head
+  }, "◆ タップ音"), React.createElement("div", {
+    className: wide ? `mt-1 ${grid}` : `mt-3 ${grid}`
+  }, field('タップ音', toggle('noteSeEnabled')), field('タップ音のセット', segments('noteSeType', RHYTHM_NOTE_SE_TYPES.map(item => [item.id, item.label]), id => RHYTHM_NOTE_SE_RUNTIME.preview({
     ...draft,
     noteSeType: id,
     noteSeEnabled: true
   }, 'tap')), `ノーツを叩いたとき・フリックしたとき・ロングを取り終えたときの音が、セットごとにそろって変わります。${RHYTHM_NOTE_SE_TYPES.map(item => `${item.label}＝${item.note}`).join('／')}。`, {
     full: true
-  }), field('判定で音を変える', toggle('noteSeJudgeVary'), 'ONのときは、MARVELOUS・EXCELLENTできらめく音が重なり、GREAT・GOOD・BADとずれるほど小さく・低く・短く鳴ります。耳でも当たり具合が分かります。'), field('空打ちの音', toggle('noteSeEmptyEnabled'), 'ノーツの無いところを叩いたときの「シャッ」という音です。'), field('フリック音の大きさ', stepper('noteSeFlickVolume', 0, RHYTHM_NOTE_SE_PART_VOLUME_MAX, 1, {
+  }), field('判定で音を変える', toggle('noteSeJudgeVary'), 'ONのときは、MARVELOUS・EXCELLENTできらめく音が重なり、GREAT・GOOD・BADとずれるほど小さく・低く・短く鳴ります。耳でも当たり具合が分かります。'), field('空打ちの音', toggle('noteSeEmptyEnabled'), 'ノーツの無いところを叩いたときの「シャッ」という音です。'))), React.createElement("section", {
+    "data-rhythm-options-group": "音ごとの大きさ",
+    className: card
+  }, !wide && React.createElement("h3", {
+    className: head
+  }, "◆ 音ごとの大きさ"), React.createElement("div", {
+    className: wide ? `mt-1 ${grid}` : `mt-3 ${grid}`
+  }, field('フリック音の大きさ', stepper('noteSeFlickVolume', 0, RHYTHM_NOTE_SE_PART_VOLUME_MAX, 1, {
     fine: 5,
     coarse: 20,
     suffix: '%'
@@ -29326,18 +29404,7 @@ const RhythmOptions = ({
     suffix: '%'
   }), 'ホールド・スライドを押さえているあいだ、高く細かい「シャラシャラ」ときらめく音が鳴ります。タップ音量に対する大きさで、0%で鳴らしません。', {
     full: true
-  }), field('タップ音', toggle('noteSeEnabled')), React.createElement("div", {
-    className: "grid gap-2"
-  }, React.createElement("button", {
-    type: "button",
-    onClick: previewBgm,
-    className: "min-h-[44px] rounded-xl bg-indigo-700 text-[12px] font-black"
-  }, "♪ BGM試聴"), React.createElement("button", {
-    type: "button",
-    "data-rhythm-se-preview": "tap",
-    onClick: () => RHYTHM_NOTE_SE_RUNTIME.preview(draft, 'tap'),
-    className: "min-h-[44px] rounded-xl bg-fuchsia-700 text-[12px] font-black"
-  }, "タップ音試聴")), React.createElement("div", {
+  }), React.createElement("div", {
     "data-rhythm-se-previews": true,
     className: `grid grid-cols-2 gap-2 ${wide ? 'col-span-3' : 'col-span-2'}`
   }, React.createElement("button", {
@@ -29376,7 +29443,9 @@ const RhythmOptions = ({
     className: "min-h-[44px] rounded-xl border border-fuchsia-400/60 bg-fuchsia-950/60 text-[11px] font-black leading-tight text-fuchsia-100"
   }, "判定ごと", React.createElement("span", {
     className: "block text-[10px] text-fuchsia-300"
-  }, "良い順に3回")))), React.createElement("details", {
+  }, "良い順に3回"))))), React.createElement("section", {
+    className: card
+  }, React.createElement("details", {
     "data-rhythm-option-help": true,
     className: "mt-3"
   }, React.createElement("summary", {
@@ -29389,13 +29458,16 @@ const RhythmOptions = ({
     className: `mt-2 ${note}`
   }, "タップ音量は0〜", RHYTHM_NOTE_SE_VOLUME_MAX, "まで上げられます（", RHYTHM_VOLUME_MAX, "より上は100上げるごとに2倍の大きさになり、割れないように大きい音だけ丸めて鳴らします）。"), React.createElement("p", {
     className: `mt-2 ${note}`
-  }, "BGM音量は0〜", RHYTHM_VOLUME_MAX, "まで上げられます。100はこれまでと同じ大きさです。100より上は端末の音量を上げても足りないときの逃げ道で、とくにBGM音量は上げすぎると曲の大きいところが割れて聞こえることがあります。"))), tab === 'system' && React.createElement("section", {
+  }, "BGM音量は0〜", RHYTHM_VOLUME_MAX, "まで上げられます。100はこれまでと同じ大きさです。100より上は端末の音量を上げても足りないときの逃げ道で、とくにBGM音量は上げすぎると曲の大きいところが割れて聞こえることがあります。")))), tab === 'system' && React.createElement("div", {
     "data-rhythm-options-panel": "system",
-    className: card
+    className: wide ? 'space-y-2' : 'space-y-4'
+  }, React.createElement("section", {
+    "data-rhythm-options-group": "よく触る設定",
+    className: favCard
   }, !wide && React.createElement("h3", {
-    className: head
-  }, "◆ システム設定"), React.createElement("div", {
-    className: wide ? grid : `mt-3 ${grid}`
+    className: favHead
+  }, "★ よく触る設定"), React.createElement("div", {
+    className: wide ? `mt-1 ${grid}` : `mt-3 ${grid}`
   }, field('見た目のおまかせ', React.createElement("div", {
     "data-rhythm-look-presets": true
   }, React.createElement("div", {
@@ -29431,26 +29503,49 @@ const RhythmOptions = ({
     className: "mt-1.5 text-center text-[10px] font-bold text-cyan-100/80"
   }, "いまは自分で選んだ組み合わせです")), '演奏中の見た目の設定（演出量・ライブ背景・道の演出・判定の演出・ノーツの動き・コンボの節目・にじむ光）を、1回押すだけでまとめて切り替えます。絵は、それぞれの見た目で同じ曲の同じ場面を演奏しているところです。音・判定・操作・画質の設定は変わりません。切り替えたあとも、この下で1つずつ変えられます。\n「軽さ優先」＝いちばん軽い見た目です。端末が熱くなるとき・カクつくときに。\n「標準」＝最初の設定と同じ見た目です。\n「華やか」＝曲のジャケットの背景・サーチライト・道の演出・判定の演出・ノーツの動き・コンボの節目が加わります。\n「全部のせ」＝いちばん華やかな見た目です（ライブ背景「ライブ」・にじむ光も入ります。にじむ光は描画方式が WebGL のときだけ効きます）。重くなるので、カクつくときは「華やか」以下にしてください。\n押しただけではまだ保存されません。下の「保存」を押してください。', {
     full: true
-  }), field('演出量', segments('effectAmount', RHYTHM_EFFECT_LABELS), '重い順に「最大」「多め」「標準」「最小」の4段で、既定は「標準」です。判定・判定窓・スコアはどの段でも変わりません。\n「最大」＝2026-09-13より前の見た目そのまま。判定文字の金色の帯や虹が流れ、判定ラインが拍に合わせて脈打ち、コンボ数が跳ね、両サイドのマスモンも跳ねます。\n「多め」＝判定文字の流れと光のにじみだけ止めます（色・大きさはそのまま）。\n「標準」＝それに加えて、曲のあいだずっと動き続けるものを止めます。判定ラインの脈打ち、コンボ数の跳ねと枠の脈動、判定文字が出た瞬間に弾む動き、ノーツを取り切ったときの光です。判定ラインで弾ける光・100コンボごとのお祝い・フルコンボの大きな表示は残るので、手ごたえは変わりません。両サイドのマスモンの動きはここでは変わりません（専用の「両サイドのマスモン｜動き」で決めます）。\n「最小」＝光そのものと100コンボごとの演出も出なくなります。高精細な画面では、ノーツを描く細かさも3倍から2倍に下げて軽くします（見た目はほんの少しやわらかくなります）。', {
+  }), field('軽量モード', toggle('lightweightMode'), '演出量「最小」と同じところまで演出を止めたうえで、さらに細かい動きも切ります。止まるのは、判定ラインで弾ける光と画面のフラッシュ、判定文字が弾む動きと金・虹が流れる動き、コンボ数が跳ねる動きと枠の脈動、100コンボごとのお祝いとフルコンボの大きな表示、モンスターノーツの光と能力名の弾み、判定ラインが拍に合わせて脈打つ動き、両サイドのマスモンの跳ね、明るさがじわっと変わる動きです。判定・判定窓・スコア・ライフ・譜面・音は一切変わりません。端末が熱くなるときや、演出量「標準」でもカクつくときに使ってください。', {
+    full: true
+  }))), React.createElement("section", {
+    "data-rhythm-options-group": "演出",
+    className: card
+  }, !wide && React.createElement("h3", {
+    className: head
+  }, "◆ 演出"), React.createElement("div", {
+    className: wide ? `mt-1 ${grid}` : `mt-3 ${grid}`
+  }, field('演出量', segments('effectAmount', RHYTHM_EFFECT_LABELS), '重い順に「最大」「多め」「標準」「最小」の4段で、既定は「標準」です。判定・判定窓・スコアはどの段でも変わりません。\n「最大」＝2026-09-13より前の見た目そのまま。判定文字の金色の帯や虹が流れ、判定ラインが拍に合わせて脈打ち、コンボ数が跳ね、両サイドのマスモンも跳ねます。\n「多め」＝判定文字の流れと光のにじみだけ止めます（色・大きさはそのまま）。\n「標準」＝それに加えて、曲のあいだずっと動き続けるものを止めます。判定ラインの脈打ち、コンボ数の跳ねと枠の脈動、判定文字が出た瞬間に弾む動き、ノーツを取り切ったときの光です。判定ラインで弾ける光・100コンボごとのお祝い・フルコンボの大きな表示は残るので、手ごたえは変わりません。両サイドのマスモンの動きはここでは変わりません（専用の「両サイドのマスモン｜動き」で決めます）。\n「最小」＝光そのものと100コンボごとの演出も出なくなります。高精細な画面では、ノーツを描く細かさも3倍から2倍に下げて軽くします（見た目はほんの少しやわらかくなります）。', {
     full: true
   }), field('ライブ背景', segments('stageEffect', RHYTHM_STAGE_EFFECT_LABELS), '演奏中のレーンの後ろの演出です。既定は「シンプル」（これまでの見た目）です。判定・スコアはどれでも変わりません。\n「ライブ」＝「派手」に加えて、ライブ会場のようにします。サーチライトが曲の拍に合わせて明るくなり、レーザーが小節ごとに向きと色を変えて走り、道の両側には観客のペンライトが奥までずらりと並び、拍に合わせて揺れます。ペンライトの色もコンボが伸びるほど変わります。いちばん重い段なので、端末が熱くなるときは下げてください。絵を描くのが得意な専用の部分（GPU）が無い端末では「派手」と同じになります。\n「派手」＝曲のジャケットをぼかして背景に敷き、ノーツが判定ラインへ来るタイミングで背景が光ります。コンボが伸びるほど光の色が熱くなり（水色→桃→金→白金）、モンスターノーツでは金色に大きく光ります。左右からサーチライトが揺れ、光の粒が舞います。\n「控えめ」＝ジャケットの背景とタイミングの光だけにします（動き続けるサーチライトと光の粒は出しません）。\n「シンプル」＝これまでの見た目のままです。\n軽量モードのときは「シンプル」になります。演出量「最小」では、サーチライト・光の粒・レーザー・ペンライトは出しません。', {
     full: true
-  }), field('道の演出', toggle('roadFx'), '演奏中の道(レーン)を、曲に合わせて動かします。既定は「OFF」です。判定・スコア・叩く位置は変わりません。\n曲の拍ごとに細い線が奥から流れてきて、小節の頭では明るい線になります。道の左右のふちが拍に合わせて光り、道の奥はもやに溶けて、その先の光が小節ごとに脈打ちます。\n少し重くなるので、端末が熱くなるときは OFF のままにしてください。演出量が「最小」のときと軽量モードでは出ません。\n変えた設定は、次に遊ぶ曲から使われます。'), field('判定の演出', toggle('judgmentFx'), 'GREAT 以上の判定のとき、判定の文字の後ろで光がはじけ、文字が大きく弾みます。既定は「OFF」です。判定・スコアは変わりません。\n光の色は判定の色（GREAT は赤、EXCELLENT は桃紫、MARVELOUS は金）で、ぴったりの MARVELOUS では虹色の光が走ります。\n判定のたびに動くので少し重くなります。演出量が「最小」のときと軽量モードでは出ません。'), field('ノーツの動き', toggle('noteMotionFx'), 'フリックの矢印と、SLIDE の帯に動きを付けます。既定は「OFF」です。判定・スコア・叩く位置は変わりません。\n上へ払うフリックは矢印が3段に重なり、光が下から上へ流れます。横へ払うフリックは、払う向きへ山形の残像が流れます。SLIDE は、帯の上を判定ラインへ向かって光の波が流れます。\n演出量が「最小」のときと軽量モードでは出ません。'), field('コンボの節目', toggle('comboMilestoneFx'), 'コンボが100のくぎりに届くたび（100・200・300…）、コンボ数のまわりに金の光の輪が広がります。既定は「OFF」です。判定・スコアは変わりません。\n「100 COMBO」の大きな数字は、この設定に関係なくこれまでどおり出ます。コンボ数を出さない設定のときは、光の輪も出ません。演出量が「最小」のときと軽量モードでは出ません。'), field('盛り上がりの光', toggle('climaxFx'), 'サビなど曲がいちばん盛り上がるところに入ると、道の両側に光の筋が奥から流れてきます。既定は「OFF」です。判定・スコア・叩く位置は変わりません。\n盛り上がるところは曲ごとに決まっていて、そこを抜けると光はゆっくり消えます。曲の中でもとくに盛り上がるところほど光が濃くなります。\n演出量が「最小」のときと軽量モードでは出ません。'), field('描く回数', segments('frameRateMode', RHYTHM_FRAME_RATE_LABELS), '演奏中に1秒あたり何回画面を描くかです。既定は「端末に合わせる」（これまでの動き）です。端末が熱くなるときは「省電力」を試してください。\n「省電力」＝120Hz以上のなめらかな画面の端末で、描く回数を毎秒60回ほどに抑えます。端末が熱くなりにくく、電池も長持ちします。ノーツの流れは60Hzの端末と同じなめらかさになります。\n「端末に合わせる」＝画面の速さのまま描きます（毎秒120回など）。いちばんなめらかですが、そのぶん熱くなりやすくなります。\n判定の正確さはどちらでも変わりません。60Hz・90Hzの画面の端末では、どちらを選んでも同じです。', {
+  }), field('道の演出', toggle('roadFx'), '演奏中の道(レーン)を、曲に合わせて動かします。既定は「OFF」です。判定・スコア・叩く位置は変わりません。\n曲の拍ごとに細い線が奥から流れてきて、小節の頭では明るい線になります。道の左右のふちが拍に合わせて光り、道の奥はもやに溶けて、その先の光が小節ごとに脈打ちます。\n少し重くなるので、端末が熱くなるときは OFF のままにしてください。演出量が「最小」のときと軽量モードでは出ません。\n変えた設定は、次に遊ぶ曲から使われます。'), field('判定の演出', toggle('judgmentFx'), 'GREAT 以上の判定のとき、判定の文字の後ろで光がはじけ、文字が大きく弾みます。既定は「OFF」です。判定・スコアは変わりません。\n光の色は判定の色（GREAT は赤、EXCELLENT は桃紫、MARVELOUS は金）で、ぴったりの MARVELOUS では虹色の光が走ります。\n判定のたびに動くので少し重くなります。演出量が「最小」のときと軽量モードでは出ません。'), field('ノーツの動き', toggle('noteMotionFx'), 'フリックの矢印と、SLIDE の帯に動きを付けます。既定は「OFF」です。判定・スコア・叩く位置は変わりません。\n上へ払うフリックは矢印が3段に重なり、光が下から上へ流れます。横へ払うフリックは、払う向きへ山形の残像が流れます。SLIDE は、帯の上を判定ラインへ向かって光の波が流れます。\n演出量が「最小」のときと軽量モードでは出ません。'), field('コンボの節目', toggle('comboMilestoneFx'), 'コンボが100のくぎりに届くたび（100・200・300…）、コンボ数のまわりに金の光の輪が広がります。既定は「OFF」です。判定・スコアは変わりません。\n「100 COMBO」の大きな数字は、この設定に関係なくこれまでどおり出ます。コンボ数を出さない設定のときは、光の輪も出ません。演出量が「最小」のときと軽量モードでは出ません。'), field('盛り上がりの光', toggle('climaxFx'), 'サビなど曲がいちばん盛り上がるところに入ると、道の両側に光の筋が奥から流れてきます。既定は「OFF」です。判定・スコア・叩く位置は変わりません。\n盛り上がるところは曲ごとに決まっていて、そこを抜けると光はゆっくり消えます。曲の中でもとくに盛り上がるところほど光が濃くなります。\n演出量が「最小」のときと軽量モードでは出ません。'), field('にじむ光', toggle('noteBloom'), 'ノーツの光や、ノーツを取ったときの光のまわりを、ふわっとにじませます。既定は「OFF」です。判定・スコアは変わりません。\n描画方式が「WebGL」のとき(「自動」で WebGL になっているときを含む)だけ効きます。「Canvas」のときは何も変わりません。\n光を小さな絵にぼかしてから重ねるので、GPU の仕事が少し増えます。端末が熱くなるときは OFF にしてください。演出量「最小」と軽量モードでは出しません。'), field('モンスターノーツの演出', segments('monsterNoteEffect', RHYTHM_MONSTER_EFFECT_LABELS), 'モンスターノーツを取ったときの演出の強さです。重い順に「多め」「標準」「少なめ」「最小」の4段で、既定は「標準」です。\n「多め」＝画面全体が金色に光り、粒も大きく、そのマスモンが大きく跳ねます。\n「標準」＝全画面の光をやめます（いちばん重いのがこの描き直しです）。粒と跳ねは残ります。\n「少なめ」＝光る粒もふつうのノーツと同じになり、跳ねもやめます。\n「最小」＝ノーツに乗るマスモンの絵を出さなくなります。この絵だけはふつうのノーツと違って、流れているあいだずっと位置と大きさを書き換えているので、ここを止めるといちばん効きます。さらに、取ったその瞬間に走っていた両サイドのマスモンへの反応（見た目の切り替えと700msのタイマー）も丸ごとやめます。どれがモンスターノーツかは金色の粒で分かります。能力名の大きな表示も出ません。\nどの段でも、音・振動・能力の効果はそのまま残ります（効いていることは左上のバッジでも分かります）。', {
+    full: true
+  }), field('重いときは演出を自動で控えめに', toggle('autoEffectDown'), '演奏中にカクつきが続いたら、重い演出から順に自動で控えめにします。既定は「ON」です。保存してある設定は変わらず、アプリを開き直すと元に戻ります。判定・スコアは変わりません。\n下げる順番は、にじむ光 → ライブ背景「ライブ」を「派手」に → 道の演出・ノーツの動き → 判定の演出・コンボの節目 → ライブ背景を「控えめ」→「シンプル」です。\n画質を「自動」にしているときは、先に画質を下げ、それでもカクつくときに演出を下げます。'))), React.createElement("section", {
+    "data-rhythm-options-group": "端末",
+    className: card
+  }, !wide && React.createElement("h3", {
+    className: head
+  }, "◆ 端末"), React.createElement("div", {
+    className: wide ? `mt-1 ${grid}` : `mt-3 ${grid}`
+  }, field('描く回数', segments('frameRateMode', RHYTHM_FRAME_RATE_LABELS), '演奏中に1秒あたり何回画面を描くかです。既定は「端末に合わせる」（これまでの動き）です。端末が熱くなるときは「省電力」を試してください。\n「省電力」＝120Hz以上のなめらかな画面の端末で、描く回数を毎秒60回ほどに抑えます。端末が熱くなりにくく、電池も長持ちします。ノーツの流れは60Hzの端末と同じなめらかさになります。\n「端末に合わせる」＝画面の速さのまま描きます（毎秒120回など）。いちばんなめらかですが、そのぶん熱くなりやすくなります。\n判定の正確さはどちらでも変わりません。60Hz・90Hzの画面の端末では、どちらを選んでも同じです。', {
     full: true
   }), field('画質', segments('renderQuality', RHYTHM_RENDER_QUALITY_LABELS), '演奏中に描くノーツ・光・背景を、どこまで細かく描くかです。既定は「高」（これまでの見た目）です。端末が熱くなるときは下げてみてください。判定・スコア・叩く位置はどれでも変わりません。\n「自動」＝「高」で始め、演奏中に動きが詰まるようなら「標準」→「省電力」と自動で下げます。下げた画質は、アプリを開き直すまで次の曲にも引き継ぎます。\n「高」＝いちばん細かく描きます。\n「標準」＝少しだけ粗く描きます。スマホの画面ではほとんど見分けがつかず、端末の負担が減ります。\n「省電力」＝さらに粗く描きます。ノーツのふちが少しやわらかく見えますが、端末がいちばん熱くなりにくくなります。'), field('描画方式', React.createElement(React.Fragment, null, segments('noteDrawMode', RHYTHM_NOTE_DRAW_LABELS), React.createElement("p", {
     "data-rhythm-draw-mode-now": true,
     className: "mt-1.5 text-center text-[10px] font-bold text-cyan-100/80"
-  }, "この端末では「", rhythmWebglNotesActive(draft.noteDrawMode) ? 'WebGL' : 'Canvas', "」で描きます")), 'ノーツと、ノーツを取ったときの光を、何で描くかです。既定は「自動」です。形・色・判定・スコア・叩く位置はどれでも変わりません（光の輝き方と「にじむ光」だけは、WebGL のときに変わります）。\n「自動」＝端末に絵を描くのが得意な専用の部分（GPU）があれば「WebGL」、無ければ「Canvas」で描きます。\n「Canvas」＝スマホの頭脳にあたる部分（CPU）が、毎回の絵を描いて画面へ渡します。どの端末でも同じように動く、これまでの描き方です。\n「WebGL」＝GPU にノーツと光をまとめて任せて描きます。ライブ背景も GPU で1枚にまとめて描きます。演出量やライブ背景を上げたときのカクつきや、端末の熱さが減りやすい描き方です。ノーツの光や叩いたときの光は、重なるほど白く輝くように描きます（光の見え方だけが「Canvas」と少し違います）。うまく表示できない端末や、演奏の途中でうまく描けなくなったときは、自動で「Canvas」に戻ります。\n変えた描画方式は、次に遊ぶ曲から使われます。'), field('にじむ光', toggle('noteBloom'), 'ノーツの光や、ノーツを取ったときの光のまわりを、ふわっとにじませます。既定は「OFF」です。判定・スコアは変わりません。\n描画方式が「WebGL」のとき(「自動」で WebGL になっているときを含む)だけ効きます。「Canvas」のときは何も変わりません。\n光を小さな絵にぼかしてから重ねるので、GPU の仕事が少し増えます。端末が熱くなるときは OFF にしてください。演出量「最小」と軽量モードでは出しません。'), field('モンスターノーツの演出', segments('monsterNoteEffect', RHYTHM_MONSTER_EFFECT_LABELS), 'モンスターノーツを取ったときの演出の強さです。重い順に「多め」「標準」「少なめ」「最小」の4段で、既定は「標準」です。\n「多め」＝画面全体が金色に光り、粒も大きく、そのマスモンが大きく跳ねます。\n「標準」＝全画面の光をやめます（いちばん重いのがこの描き直しです）。粒と跳ねは残ります。\n「少なめ」＝光る粒もふつうのノーツと同じになり、跳ねもやめます。\n「最小」＝ノーツに乗るマスモンの絵を出さなくなります。この絵だけはふつうのノーツと違って、流れているあいだずっと位置と大きさを書き換えているので、ここを止めるといちばん効きます。さらに、取ったその瞬間に走っていた両サイドのマスモンへの反応（見た目の切り替えと700msのタイマー）も丸ごとやめます。どれがモンスターノーツかは金色の粒で分かります。能力名の大きな表示も出ません。\nどの段でも、音・振動・能力の効果はそのまま残ります（効いていることは左上のバッジでも分かります）。', {
-    full: true
-  }), field('軽量モード', toggle('lightweightMode'), '演出量「最小」と同じところまで演出を止めたうえで、さらに細かい動きも切ります。止まるのは、判定ラインで弾ける光と画面のフラッシュ、判定文字が弾む動きと金・虹が流れる動き、コンボ数が跳ねる動きと枠の脈動、100コンボごとのお祝いとフルコンボの大きな表示、モンスターノーツの光と能力名の弾み、判定ラインが拍に合わせて脈打つ動き、両サイドのマスモンの跳ね、明るさがじわっと変わる動きです。判定・判定窓・スコア・ライフ・譜面・音は一切変わりません。端末が熱くなるときや、演出量「標準」でもカクつくときに使ってください。', {
-    full: true
-  }), field('曲えらびで試聴する', toggle('songPreviewEnabled')), field('タップ時の振動', React.createElement(React.Fragment, null, toggle('vibrationEnabled'), React.createElement("button", {
+  }, "この端末では「", rhythmWebglNotesActive(draft.noteDrawMode) ? 'WebGL' : 'Canvas', "」で描きます")), 'ノーツと、ノーツを取ったときの光を、何で描くかです。既定は「自動」です。形・色・判定・スコア・叩く位置はどれでも変わりません（光の輝き方と「にじむ光」だけは、WebGL のときに変わります）。\n「自動」＝端末に絵を描くのが得意な専用の部分（GPU）があれば「WebGL」、無ければ「Canvas」で描きます。\n「Canvas」＝スマホの頭脳にあたる部分（CPU）が、毎回の絵を描いて画面へ渡します。どの端末でも同じように動く、これまでの描き方です。\n「WebGL」＝GPU にノーツと光をまとめて任せて描きます。ライブ背景も GPU で1枚にまとめて描きます。演出量やライブ背景を上げたときのカクつきや、端末の熱さが減りやすい描き方です。ノーツの光や叩いたときの光は、重なるほど白く輝くように描きます（光の見え方だけが「Canvas」と少し違います）。うまく表示できない端末や、演奏の途中でうまく描けなくなったときは、自動で「Canvas」に戻ります。\n変えた描画方式は、次に遊ぶ曲から使われます。'))), React.createElement("section", {
+    "data-rhythm-options-group": "その他",
+    className: card
+  }, !wide && React.createElement("h3", {
+    className: head
+  }, "◆ その他"), React.createElement("div", {
+    className: wide ? `mt-1 ${grid}` : `mt-3 ${grid}`
+  }, field('曲えらびで試聴する', toggle('songPreviewEnabled')), field('タップ時の振動', React.createElement(React.Fragment, null, toggle('vibrationEnabled'), React.createElement("button", {
     type: "button",
     "data-rhythm-vibration-test": true,
     disabled: !RHYTHM_HAPTICS.supported(),
     onClick: () => RHYTHM_HAPTICS.tap(26),
     className: "mt-1.5 min-h-[44px] w-full rounded-xl border border-white/20 bg-slate-900 px-3 text-[11px] font-black text-slate-200 disabled:opacity-40"
-  }, "試す")), !RHYTHM_HAPTICS.supported() ? 'この端末は振動に対応していないため、ONにしても振動しません（音とエフェクトはそのまま出ます）。' : null), field('演奏中は通知を出さない', toggle('quietDuringPlay'))), React.createElement("details", {
+  }, "試す")), !RHYTHM_HAPTICS.supported() ? 'この端末は振動に対応していないため、ONにしても振動しません（音とエフェクトはそのまま出ます）。' : null), field('演奏中は通知を出さない', toggle('quietDuringPlay')))), React.createElement("section", {
+    className: card
+  }, React.createElement("details", {
     "data-rhythm-option-help": true,
     className: "mt-3"
   }, React.createElement("summary", {
@@ -29460,7 +29555,7 @@ const RhythmOptions = ({
   }, rhythmQuietModeSupportText())), !RHYTHM_HAPTICS.supported() && React.createElement("p", {
     "data-rhythm-vibration-unsupported": true,
     className: "mt-2 text-[10px] font-bold leading-relaxed text-amber-200"
-  }, "この端末は振動に対応していないため、ONにしても振動しません（音とエフェクトはそのまま出ます）。")), !wide && React.createElement("p", {
+  }, "この端末は振動に対応していないため、ONにしても振動しません（音とエフェクトはそのまま出ます）。"))), !wide && React.createElement("p", {
     className: "rounded-xl border border-cyan-400/25 bg-cyan-950/25 px-3 py-2 text-[10px] leading-relaxed text-cyan-100"
   }, "判定を甘くする設定ではありません。端末ごとの見え方・音量・タイミングを調整する項目です。"))), React.createElement("footer", {
     "data-rhythm-options-actions": true,
@@ -31392,7 +31487,8 @@ const rhythmAbilityRows = () => Object.values(RHYTHM_MONSTER_ABILITIES).map(abil
 }));
 const rhythmSlotAbility = masu => masu && masu.baseId ? rhythmMonsterAbilityForLineage(monsterLineageOf(masu.baseId).main.id) : null;
 function RhythmSkyStage({
-  plane
+  plane,
+  still = false
 }) {
   const theme = rhythmSkyTheme();
   if (theme.fx) Object.assign(RHYTHM_SKY_FX, theme.fx);
@@ -31448,6 +31544,7 @@ function RhythmSkyStage({
   } : null;
   return React.createElement("svg", {
     "data-rhythm-sky-stage": true,
+    "data-rhythm-sky-still": still ? '1' : undefined,
     viewBox: "0 0 100 100",
     preserveAspectRatio: "none",
     style: {
@@ -31459,7 +31556,7 @@ function RhythmSkyStage({
       overflow: 'visible',
       zIndex: 2
     }
-  }, React.createElement("style", null, `@keyframes mhSkyFlow{from{transform:translateY(-12px)}to{transform:translateY(${f(fr.y)}px)}}[data-rhythm-sky-flow]{animation:mhSkyFlow 1.3s linear infinite}[data-rhythm-sky-flow="2"]{animation-delay:-.65s}@keyframes mhSkyPulse{0%,100%{opacity:.55}50%{opacity:1}}[data-rhythm-sky-pulse]{animation:mhSkyPulse 1.3s ease-in-out infinite}@media (prefers-reduced-motion:reduce){[data-rhythm-sky-flow],[data-rhythm-sky-pulse]{animation:none}}`), React.createElement("defs", null, React.createElement("linearGradient", {
+  }, React.createElement("style", null, `[data-rhythm-sky-still] *{animation:none!important}@keyframes mhSkyFlow{from{transform:translateY(-12px)}to{transform:translateY(${f(fr.y)}px)}}[data-rhythm-sky-flow]{animation:mhSkyFlow 1.3s linear infinite}[data-rhythm-sky-flow="2"]{animation-delay:-.65s}@keyframes mhSkyPulse{0%,100%{opacity:.55}50%{opacity:1}}[data-rhythm-sky-pulse]{animation:mhSkyPulse 1.3s ease-in-out infinite}@media (prefers-reduced-motion:reduce){[data-rhythm-sky-flow],[data-rhythm-sky-pulse]{animation:none}}`), React.createElement("defs", null, React.createElement("linearGradient", {
     id: "mhSkyFill",
     x1: "0",
     y1: "0",
@@ -32953,6 +33050,8 @@ const RhythmTapTest = ({
     }
   };
   const skyChart = useMemo(() => rhythmChartHasSky(chart?.notes), [chart]);
+  RHYTHM_ROAD_WIDTH.set(orientationIsLandscape() ? RHYTHM_ROAD_WIDTHS[settings.roadWidth] || 1 : 1);
+  const [skyLineTick, setSkyLineTick] = useState(0);
   if (skyChart) RHYTHM_SKY_LIFT.set(orientationIsLandscape());
   const skyPlane = (() => {
     if (!skyChart) return null;
@@ -33737,14 +33836,29 @@ const RhythmTapTest = ({
   }, [roadFactor]);
   useEffect(() => () => RHYTHM_ROAD_WIDTH.reset(), []);
   const laneCoverStyle = useMemo(() => {
-    const percent = rhythmFiniteStep(settings.laneCover, RHYTHM_LANE_COVER_MIN, RHYTHM_LANE_COVER_MAX, RHYTHM_LANE_COVER_STEP, 0);
+    let percent = rhythmFiniteStep(settings.laneCover, RHYTHM_LANE_COVER_MIN, RHYTHM_LANE_COVER_MAX, RHYTHM_LANE_COVER_STEP, 0);
+    if (!(percent > 0)) return null;
+    const line = RHYTHM_JUDGMENT_LINE_Y.ratio,
+      base = rhythmProjectionScale(line);
+    const skyAt = y => {
+      if (!skyChart || !(base > 0)) return 0;
+      let lo = 0,
+        hi = line;
+      for (let k = 0; k < 18; k++) {
+        const m = (lo + hi) / 2;
+        if (m - RHYTHM_SKY_LIFT.ratio * rhythmProjectionScale(m) / base < y) lo = m;else hi = m;
+      }
+      return rhythmProjectionScale(lo);
+    };
+    if (skyChart) percent = Math.min(percent, Math.max(0, (line - RHYTHM_SKY_LIFT.ratio) * 100 - 8));
     if (!(percent > 0)) return null;
     const steps = 8,
       left = [],
       right = [];
     for (let i = 0; i <= steps; i++) {
       const t = i / steps,
-        half = Math.min(50, 50 * rhythmProjectionScale(t * percent / 100) + 1);
+        y = t * percent / 100,
+        half = Math.min(50, 50 * Math.max(rhythmProjectionScale(y), skyAt(y)) + 1);
       left.push(`${(50 - half).toFixed(2)}% ${(t * 100).toFixed(2)}%`);
       right.unshift(`${(50 + half).toFixed(2)}% ${(t * 100).toFixed(2)}%`);
     }
@@ -33754,7 +33868,7 @@ const RhythmTapTest = ({
       clipPath: clip,
       WebkitClipPath: clip
     };
-  }, [settings.laneCover, roadFactor]);
+  }, [settings.laneCover, roadFactor, skyChart, isLandscape, skyLineTick]);
   const hudLeftRef = useRef(null);
   const RHYTHM_CLOCK_SIDE_MIN_WIDTH = 100;
   const [clockPlace, setClockPlace] = useState(null);
@@ -33922,7 +34036,12 @@ const RhythmTapTest = ({
     const spawnY = -noteHeight + settings.noteStartPosition / 100 * areaRect.height * .2;
     const judgmentY = lineRect.top - areaRect.top + lineRect.height / 2 - noteHeight / 2;
     const ready = rhythmTravelLooksReady(areaRect, lineRect);
-    if (ready) RHYTHM_JUDGMENT_LINE_Y.set((lineRect.top - areaRect.top + lineRect.height / 2) / areaRect.height);
+    if (ready) {
+      const lineRatio = (lineRect.top - areaRect.top + lineRect.height / 2) / areaRect.height,
+        moved = Math.abs(lineRatio - RHYTHM_JUDGMENT_LINE_Y.ratio) > .002;
+      RHYTHM_JUDGMENT_LINE_Y.set(lineRatio);
+      if (moved) setSkyLineTick(n => n + 1);
+    }
     const result = {
       spawnY,
       judgmentY,
@@ -34294,7 +34413,8 @@ const RhythmTapTest = ({
       rhythmSpawnTapJudgment(playAreaRef.current, {
         centerRatio: span && span.center,
         judgment,
-        side: rhythmFastSlow(deltaMs)
+        side: rhythmFastSlow(deltaMs),
+        sky: rhythmNoteSkyHeight(note) > 0
       });
     }
     if (settings.timingDisplay === 'METER' && judgment !== 'MISS' && typeof deltaMs === 'number' && Number.isFinite(deltaMs)) {
@@ -37241,7 +37361,8 @@ const RhythmTapTest = ({
       boxShadow: settings.lightweightMode || settings.effectAmount === 'MINIMAL' ? 'none' : settings.effectAmount === 'LOW' ? '0 0 8px #67e8f9' : '0 0 18px #67e8f9,0 0 30px #c084fc'
     }
   }), skyPlane && React.createElement(RhythmSkyStage, {
-    plane: skyPlane
+    plane: skyPlane,
+    still: settings.lightweightMode === true || settings.effectAmount === 'MINIMAL'
   }), lifeState === 'down' && React.createElement("div", {
     "data-rhythm-down-vignette": true,
     "aria-hidden": "true",
@@ -59463,6 +59584,7 @@ const HomeRaidJack = ({
     }
   }, "共有HP ", left.toLocaleString())))));
 };
+const homeWalletGrowPx = (goldText, bpText) => Math.min(24, Math.max(0, Math.ceil(String(goldText).length * 6.4 - 50), Math.ceil(String(bpText).length * 6.4 - 29)));
 function HomeScreen({
   assistantBondUp,
   friendRequestCount = 0,
@@ -59589,12 +59711,23 @@ function HomeScreen({
     "aria-label": `フレンド申請が${Number(friendRequestCount)}件届いています`,
     className: "absolute -right-1 -top-2 flex h-6 min-w-[24px] items-center justify-center rounded-full bg-rose-500 px-1.5 text-[12px] font-black text-white shadow-lg"
   }, Math.min(99, Number(friendRequestCount)))), React.createElement("section", {
-    className: "mh-home-wallet"
+    className: "mh-home-wallet",
+    style: {
+      '--wal-grow': `${homeWalletGrowPx(gold.toLocaleString(), breederPoints.toLocaleString())}px`
+    }
   }, React.createElement("div", null, React.createElement(Gem, {
     size: 14
-  }), React.createElement("b", null, gold.toLocaleString()), React.createElement("small", null, "ダイヤ")), React.createElement("div", null, React.createElement(Coins, {
+  }), React.createElement("b", {
+    style: {
+      '--len': String(gold.toLocaleString()).length
+    }
+  }, gold.toLocaleString()), React.createElement("small", null, "ダイヤ")), React.createElement("div", null, React.createElement(Coins, {
     size: 14
-  }), React.createElement("b", null, breederPoints.toLocaleString()), React.createElement("small", null, "ブリーダーP")), React.createElement("button", {
+  }), React.createElement("b", {
+    style: {
+      '--len': String(breederPoints.toLocaleString()).length
+    }
+  }, breederPoints.toLocaleString()), React.createElement("small", null, "ブリーダーP")), React.createElement("button", {
     onClick: onOpenSettings,
     className: `mh-home-settings${spotClass('settings')}`,
     "aria-label": "設定"
@@ -112122,7 +112255,7 @@ const createAnimationStyle = () => {
     @keyframes mhDiscBorn{0%{opacity:0;transform:scale(.35)}60%{opacity:1;filter:drop-shadow(0 0 30px #fde68a) brightness(1.6)}100%{opacity:1;transform:scale(1);filter:drop-shadow(0 0 18px rgba(253,230,138,.55)) brightness(1)}}
     @keyframes mhDiscUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
     @media (prefers-reduced-motion: reduce){.mh-disc-rebirth-disc,.mh-disc-rebirth-flash,.mh-disc-rebirth-sparks i{animation:none;opacity:0}.mh-disc-rebirth-rays{animation:none;opacity:1}.mh-disc-rebirth-plate,.mh-disc-rebirth-art,.mh-disc-rebirth-name,.mh-disc-rebirth-note,.mh-disc-rebirth-close{animation:none;opacity:1;transform:none;pointer-events:auto}}
-    .mh-home-scene{position:relative;isolation:isolate;container-type:size;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{position:relative;z-index:1;display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-background img.mh-home-backdrop{position:absolute;z-index:0;inset:0;object-fit:cover;filter:blur(14px) brightness(.55);transform:scale(1.08)}.mh-home-background.is-wide img{object-fit:cover}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:29%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:visible;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar.is-framed{border-color:transparent}.mh-home-avatar>span{width:100%;height:100%}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;line-height:1.2}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:9px;line-height:1.2;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:8px/1.1 monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:auto 43px;grid-template-rows:1fr 1fr;width:152px;padding:4px;border-radius:14px}.mh-home-wallet>div{display:grid;grid-template-columns:14px 1fr auto;align-items:center;gap:2px;padding:1px 3px;color:#ffe08a}.mh-home-wallet>div b{font-size:10px;text-align:right}.mh-home-wallet>div small{font-size:8px;color:#f4e7c3}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:9px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;padding:0;border:0;background:transparent;color:#fff;touch-action:manipulation}/* 押せる範囲は見えている札と、そのまわり8pxだけ(2026-10-11・社長の指摘)。以前は建物ぶんの透明な箱が押し場所で、札の外の何もない所でも施設が開き、ジャックの吹き出しを押せなかった。札の位置は、箱の位置と箱の中の札の位置を足し合わせた値にしてある(見た目の位置は前と同じ) */.mh-home-facility::after{content:'';position:absolute;inset:-8px}.mh-home-facility>span{position:relative;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility-label{display:flex;flex-direction:column;align-items:flex-start;line-height:1.05;font-weight:inherit}.mh-home-facility-label small{margin-top:2px;font-size:8px;font-weight:800;letter-spacing:0;color:#ffe6a7;opacity:.9}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}.mh-home-facility.management{left:2.52%;top:26.58%}.mh-home-facility.management>span{border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}.mh-home-facility.temple{right:2.94%;top:25.9%}.mh-home-facility.temple>span{border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}.mh-home-facility.market{right:1.95%;top:57%}.mh-home-facility.market>span{border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}.mh-home-facility.battle{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%)}.mh-home-facility.battle>span{min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}.mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}.mh-home-facility.battle:active>span{transform:scale(.94)}.mh-home-gift{position:absolute;z-index:5;right:5%;top:73%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #67e8f9aa;border-radius:13px;background:#083344e8;color:#cffafe;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-gift em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-gift:active{transform:scale(.94);filter:brightness(1.25)}.mh-home-event-banner{position:absolute;z-index:5;left:9px;bottom:calc(33% + 4px);display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:6px 11px;border:1px solid #fdba74;border-radius:13px;background:linear-gradient(135deg,#7c2d12ee,#4c1d95ee);color:#ffedd5;font-size:11px;font-weight:900;line-height:1.2;box-shadow:0 3px 10px #0008}.mh-home-event-banner small{font-size:9px;font-weight:800;color:#fed7aa}@media(orientation:landscape) and (max-height:600px){.mh-home-event-banner{display:none}}.mh-home-update{position:absolute;z-index:5;right:9px;top:calc(69px + env(safe-area-inset-top));display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed995aa;border-radius:13px;background:#102c29e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-update:active{transform:scale(.94);filter:brightness(1.25)}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-temple-menu-card{position:relative;border:1px solid #a78bfa80;background:linear-gradient(135deg,#2e1065d9 0%,#1e1b4bcc 58%,#312e81b3 100%);box-shadow:inset 0 1px 0 #ddd6fe18,0 5px 16px #0006,0 0 18px #7c3aed12}.mh-temple-menu-card:active{filter:brightness(1.16);transform:scale(.98)}.mh-temple-menu-icon{display:flex;width:30px;height:30px;align-items:center;justify-content:center;border:1px solid #c4b5fd38;border-radius:10px;background:#4c1d9566;box-shadow:inset 0 1px 0 #ede9fe18}.mh-rebirth-stars{display:flex;justify-content:center;align-items:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rainbow-breakthrough-star{display:block;width:1em;height:1em;object-fit:contain;transform:scale(1.07) translateY(-.06em)}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}/* 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま移した */
+    .mh-home-scene{position:relative;isolation:isolate;container-type:size;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{position:relative;z-index:1;display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-background img.mh-home-backdrop{position:absolute;z-index:0;inset:0;object-fit:cover;filter:blur(14px) brightness(.55);transform:scale(1.08)}.mh-home-background.is-wide img{object-fit:cover}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:29%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:visible;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar.is-framed{border-color:transparent}.mh-home-avatar>span{width:100%;height:100%}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;line-height:1.2}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:9px;line-height:1.2;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:8px/1.1 monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:minmax(0,1fr) 43px;grid-template-rows:1fr 1fr;box-sizing:border-box;width:calc(152px + var(--wal-grow,0px));padding:4px;border-radius:14px;--wal-col:calc(99px + var(--wal-grow,0px));--wal-max:10px}.mh-home-wallet>div{display:grid;grid-template-columns:14px minmax(0,1fr) auto;align-items:center;gap:2px;min-width:0;padding:1px 3px;color:#ffe08a;--wal-room:calc(var(--wal-col) - 50px)}.mh-home-wallet>div+div{--wal-room:calc(var(--wal-col) - 71px)}.mh-home-wallet>div b{font-size:min(var(--wal-max),calc(var(--wal-room) / (var(--len,1) * .64)));text-align:right;white-space:nowrap;min-width:0}.mh-home-wallet>div small{font-size:8px;color:#f4e7c3;white-space:nowrap}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:9px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;padding:0;border:0;background:transparent;color:#fff;touch-action:manipulation}/* 押せる範囲は見えている札と、そのまわり8pxだけ(2026-10-11・社長の指摘)。以前は建物ぶんの透明な箱が押し場所で、札の外の何もない所でも施設が開き、ジャックの吹き出しを押せなかった。札の位置は、箱の位置と箱の中の札の位置を足し合わせた値にしてある(見た目の位置は前と同じ) */.mh-home-facility::after{content:'';position:absolute;inset:-8px}.mh-home-facility>span{position:relative;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility-label{display:flex;flex-direction:column;align-items:flex-start;line-height:1.05;font-weight:inherit}.mh-home-facility-label small{margin-top:2px;font-size:8px;font-weight:800;letter-spacing:0;color:#ffe6a7;opacity:.9}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}.mh-home-facility.management{left:2.52%;top:26.58%}.mh-home-facility.management>span{border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}.mh-home-facility.temple{right:2.94%;top:25.9%}.mh-home-facility.temple>span{border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}.mh-home-facility.market{right:1.95%;top:57%}.mh-home-facility.market>span{border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}.mh-home-facility.battle{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%)}.mh-home-facility.battle>span{min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}.mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}.mh-home-facility.battle:active>span{transform:scale(.94)}.mh-home-gift{position:absolute;z-index:5;right:5%;top:73%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #67e8f9aa;border-radius:13px;background:#083344e8;color:#cffafe;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-gift em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-gift:active{transform:scale(.94);filter:brightness(1.25)}.mh-home-event-banner{position:absolute;z-index:5;left:9px;bottom:calc(33% + 4px);display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:6px 11px;border:1px solid #fdba74;border-radius:13px;background:linear-gradient(135deg,#7c2d12ee,#4c1d95ee);color:#ffedd5;font-size:11px;font-weight:900;line-height:1.2;box-shadow:0 3px 10px #0008}.mh-home-event-banner small{font-size:9px;font-weight:800;color:#fed7aa}@media(orientation:landscape) and (max-height:600px){.mh-home-event-banner{display:none}}.mh-home-update{position:absolute;z-index:5;right:9px;top:calc(69px + env(safe-area-inset-top));display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed995aa;border-radius:13px;background:#102c29e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-update:active{transform:scale(.94);filter:brightness(1.25)}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-temple-menu-card{position:relative;border:1px solid #a78bfa80;background:linear-gradient(135deg,#2e1065d9 0%,#1e1b4bcc 58%,#312e81b3 100%);box-shadow:inset 0 1px 0 #ddd6fe18,0 5px 16px #0006,0 0 18px #7c3aed12}.mh-temple-menu-card:active{filter:brightness(1.16);transform:scale(.98)}.mh-temple-menu-icon{display:flex;width:30px;height:30px;align-items:center;justify-content:center;border:1px solid #c4b5fd38;border-radius:10px;background:#4c1d9566;box-shadow:inset 0 1px 0 #ede9fe18}.mh-rebirth-stars{display:flex;justify-content:center;align-items:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rainbow-breakthrough-star{display:block;width:1em;height:1em;object-fit:contain;transform:scale(1.07) translateY(-.06em)}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}/* 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま移した */
     /* ==================== プロフィールフレーム(2026-09-15) ====================
        ブリーダーアイコンの外側へ重ねる飾り枠。アイコン画像そのものには触らない。
        ★太さを px で書かない。inset と mask を割合で書いてあるので、ランキングの 32px でも
@@ -112358,7 +112491,7 @@ const createAnimationStyle = () => {
     @keyframes mhBreakStar{0%,55%{opacity:0;transform:scale(0) rotate(-90deg)}70%{opacity:1;transform:scale(2.1) rotate(20deg)}85%{transform:scale(.9) rotate(0)}100%{opacity:1;transform:scale(1.25)}}
     @keyframes mhBreakOldStar{0%,55%{opacity:.35}100%{opacity:1}}
     @media(prefers-reduced-motion:reduce){.mh-breakthrough-ring,.mh-breakthrough-ring::after,.mh-breakthrough-beam,.mh-breakthrough-mon,.mh-breakthrough-cap,.mh-breakthrough-stars>*,.mh-breakthrough-copy{animation:none}.mh-breakthrough-stars>*{opacity:1}}
-    .mh-rebirth-animation{position:fixed;inset:0;z-index:51000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle,#7c3aed88,#020617 62%);pointer-events:auto;touch-action:none}.mh-rebirth-circle{position:absolute;width:240px;height:240px;border:3px solid #c4b5fd;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fde68a;font-size:150px;animation:mhRebirthCircle 4s ease-in-out forwards}.mh-rebirth-glow{position:absolute;width:100%;height:42%;background:linear-gradient(90deg,transparent,#fff8,transparent);filter:blur(14px);animation:mhRebirthGlow 4s ease-in-out forwards}.mh-rebirth-mon{position:relative;width:145px;height:145px;animation:mhRebirthFloat 4s ease-in-out forwards}.mh-rebirth-copy{position:absolute;bottom:calc(8% + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;color:#fff;font-size:11px;font-weight:900;animation:mhRebirthCopy 4s ease-out forwards}.mh-rebirth-copy b{font-size:20px;color:#fde68a}.mh-rebirth-copy span{margin-top:2px}@keyframes mhRebirthCircle{0%{opacity:0;transform:scale(.3) rotate(0)}25%{opacity:1}100%{opacity:.25;transform:scale(1.5) rotate(180deg)}}@keyframes mhRebirthGlow{0%,20%{opacity:0}40%,70%{opacity:1}100%{opacity:0}}@keyframes mhRebirthFloat{0%{transform:translateY(30px);filter:brightness(1)}45%{transform:translateY(-25px);filter:brightness(2)}60%{filter:brightness(0)}78%{filter:brightness(3)}100%{transform:translateY(0);filter:brightness(1)}}@keyframes mhRebirthCopy{0%,55%{opacity:0;transform:translateY(20px)}68%,100%{opacity:1;transform:none}}.mh-donation-animation{position:fixed;inset:0;z-index:33000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at center,#7c3aed55 0,#020617 58%);pointer-events:auto;touch-action:none}.mh-donation-beam{position:absolute;width:150px;height:110%;background:linear-gradient(90deg,transparent,#fff9c477,transparent);filter:blur(8px);animation:mhDonationBeam 1.5s ease-in-out forwards}.mh-donation-monster{position:absolute;width:96px;height:96px;filter:drop-shadow(0 0 22px #fff);animation:mhDonationRise 1.25s ease-in forwards}.mh-donation-gem{position:absolute;color:#fde68a;opacity:0;filter:drop-shadow(0 0 18px #fbbf24);animation:mhDonationGem .55s 1s ease-out forwards}.mh-donation-particles i{position:absolute;left:50%;top:50%;width:6px;height:6px;border-radius:50%;background:#fde68a;box-shadow:0 0 8px #fff;opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-20px);animation:mhDonationParticle .55s 1s ease-out forwards}.mh-donation-copy{position:absolute;bottom:calc(15% + env(safe-area-inset-bottom));font-size:14px;font-weight:1000;color:#f5d0fe;text-shadow:0 0 12px #a855f7}@keyframes mhDonationRise{0%{transform:translateY(25px) scale(1);opacity:1}55%{transform:translateY(-28px) scale(1.08);opacity:1}100%{transform:translateY(-55px) scale(.05);opacity:0;filter:drop-shadow(0 0 50px #fff)}}@keyframes mhDonationBeam{0%{opacity:0;transform:scaleX(.2)}35%{opacity:1;transform:scaleX(1)}100%{opacity:0;transform:scaleX(.1)}}@keyframes mhDonationGem{to{opacity:1;transform:scale(1.2)}}@keyframes mhDonationParticle{0%{opacity:1}100%{opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-95px) scale(.2)}}@keyframes mhHomeMasumonWalk{0%,100%{translate:0 0}50%{translate:0 -5px}}@keyframes mhHomeBattlePulse{50%{filter:brightness(1.16);box-shadow:0 0 34px #d8b4fddd,inset 0 0 26px #ffdc8366}}@media(max-width:350px){.mh-home-player-copy strong{max-width:80px}.mh-home-wallet{width:140px}.mh-home-wallet>div b{font-size:9px}.mh-home-wallet>div small{font-size:7px}.mh-home-facility>span{font-size:9px;padding:6px 8px}.mh-home-facility.battle>span{min-width:140px;font-size:18px}
+    .mh-rebirth-animation{position:fixed;inset:0;z-index:51000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle,#7c3aed88,#020617 62%);pointer-events:auto;touch-action:none}.mh-rebirth-circle{position:absolute;width:240px;height:240px;border:3px solid #c4b5fd;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fde68a;font-size:150px;animation:mhRebirthCircle 4s ease-in-out forwards}.mh-rebirth-glow{position:absolute;width:100%;height:42%;background:linear-gradient(90deg,transparent,#fff8,transparent);filter:blur(14px);animation:mhRebirthGlow 4s ease-in-out forwards}.mh-rebirth-mon{position:relative;width:145px;height:145px;animation:mhRebirthFloat 4s ease-in-out forwards}.mh-rebirth-copy{position:absolute;bottom:calc(8% + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;color:#fff;font-size:11px;font-weight:900;animation:mhRebirthCopy 4s ease-out forwards}.mh-rebirth-copy b{font-size:20px;color:#fde68a}.mh-rebirth-copy span{margin-top:2px}@keyframes mhRebirthCircle{0%{opacity:0;transform:scale(.3) rotate(0)}25%{opacity:1}100%{opacity:.25;transform:scale(1.5) rotate(180deg)}}@keyframes mhRebirthGlow{0%,20%{opacity:0}40%,70%{opacity:1}100%{opacity:0}}@keyframes mhRebirthFloat{0%{transform:translateY(30px);filter:brightness(1)}45%{transform:translateY(-25px);filter:brightness(2)}60%{filter:brightness(0)}78%{filter:brightness(3)}100%{transform:translateY(0);filter:brightness(1)}}@keyframes mhRebirthCopy{0%,55%{opacity:0;transform:translateY(20px)}68%,100%{opacity:1;transform:none}}.mh-donation-animation{position:fixed;inset:0;z-index:33000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at center,#7c3aed55 0,#020617 58%);pointer-events:auto;touch-action:none}.mh-donation-beam{position:absolute;width:150px;height:110%;background:linear-gradient(90deg,transparent,#fff9c477,transparent);filter:blur(8px);animation:mhDonationBeam 1.5s ease-in-out forwards}.mh-donation-monster{position:absolute;width:96px;height:96px;filter:drop-shadow(0 0 22px #fff);animation:mhDonationRise 1.25s ease-in forwards}.mh-donation-gem{position:absolute;color:#fde68a;opacity:0;filter:drop-shadow(0 0 18px #fbbf24);animation:mhDonationGem .55s 1s ease-out forwards}.mh-donation-particles i{position:absolute;left:50%;top:50%;width:6px;height:6px;border-radius:50%;background:#fde68a;box-shadow:0 0 8px #fff;opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-20px);animation:mhDonationParticle .55s 1s ease-out forwards}.mh-donation-copy{position:absolute;bottom:calc(15% + env(safe-area-inset-bottom));font-size:14px;font-weight:1000;color:#f5d0fe;text-shadow:0 0 12px #a855f7}@keyframes mhDonationRise{0%{transform:translateY(25px) scale(1);opacity:1}55%{transform:translateY(-28px) scale(1.08);opacity:1}100%{transform:translateY(-55px) scale(.05);opacity:0;filter:drop-shadow(0 0 50px #fff)}}@keyframes mhDonationBeam{0%{opacity:0;transform:scaleX(.2)}35%{opacity:1;transform:scaleX(1)}100%{opacity:0;transform:scaleX(.1)}}@keyframes mhDonationGem{to{opacity:1;transform:scale(1.2)}}@keyframes mhDonationParticle{0%{opacity:1}100%{opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-95px) scale(.2)}}@keyframes mhHomeMasumonWalk{0%,100%{translate:0 0}50%{translate:0 -5px}}@keyframes mhHomeBattlePulse{50%{filter:brightness(1.16);box-shadow:0 0 34px #d8b4fddd,inset 0 0 26px #ffdc8366}}@media(max-width:350px){.mh-home-player-copy strong{max-width:80px}.mh-home-wallet{width:calc(140px + min(var(--wal-grow,0px),12px));--wal-col:calc(87px + min(var(--wal-grow,0px),12px));--wal-max:9px}.mh-home-wallet>div small{font-size:7px}.mh-home-facility>span{font-size:9px;padding:6px 8px}.mh-home-facility.battle>span{min-width:140px;font-size:18px}
     }@media(max-height:620px){/* 背の低い端末では、みゅあの吹き出しがM/B管理の看板にかからないよう少し下げる */.mh-home-facility.management,.mh-home-facility.temple{top:27.4%}.mh-home-facility.market{top:55%}}@media(prefers-reduced-motion:reduce){.mh-home-background,.mh-home-player,.mh-home-facility>span{transition:none}.mh-home-facility.battle>span{animation:none}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:none}}
     .mh-home-mission{position:absolute;z-index:5;right:5%;top:65%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #fbbf24aa;border-radius:13px;background:#422006e8;color:#fef3c7;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-mission em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-mission:active{transform:scale(.94);filter:brightness(1.25)}/* はじめての案内で説明中の場所だけを明るく浮かび上がらせる。暗幕(z-index:90000)より前に出す。
    施設だけでなく、ミッション/ギフトの本体・みゅあの吹き出しも対象にする(そこも案内するため) */.is-tutorial-spot{z-index:90001}.mh-home-facility.is-tutorial-spot>span,.mh-home-mission.is-tutorial-spot,.mh-home-gift.is-tutorial-spot,.mh-home-assistant.is-tutorial-spot,.mh-home-settings.is-tutorial-spot{border-color:#fce7f3;filter:brightness(1.5) saturate(1.15);box-shadow:0 0 0 4px #f472b6,0 0 0 10px #f472b655,0 0 46px 12px #f472b6cc;animation:mhTutorialSpot 1.35s ease-in-out infinite}.mh-home-assistant.is-tutorial-spot{border-radius:18px}.mh-home-settings.is-tutorial-spot{position:relative;border-radius:11px}/* どこを指しているかが一目で分かるように、光る枠の上に矢印を出す */.mh-home-facility.is-tutorial-spot>span::before,.mh-home-mission.is-tutorial-spot::before,.mh-home-gift.is-tutorial-spot::before,.mh-home-assistant.is-tutorial-spot::before,.mh-home-settings.is-tutorial-spot::before{content:'▼';position:absolute;left:50%;bottom:100%;margin-bottom:5px;transform:translateX(-50%);color:#fbcfe8;font-size:19px;line-height:1;text-shadow:0 0 12px #f472b6,0 2px 4px #000;animation:mhTutorialArrow .9s ease-in-out infinite;pointer-events:none}/* 設定は画面のいちばん上にあるので、矢印は下側から上を指す */.mh-home-settings.is-tutorial-spot::before{content:'▲';top:100%;bottom:auto;margin:5px 0 0}@keyframes mhTutorialSpot{50%{box-shadow:0 0 0 6px #fbcfe8,0 0 0 15px #f472b644,0 0 62px 18px #f472b6}}@keyframes mhTutorialArrow{50%{transform:translateX(-50%) translateY(-7px)}}/* バトルチュートリアルで「ここを操作して」と示す枠。ふだんの画面の上に重ねるので、   暗幕は張らず、光る枠だけで示す(押せる場所はそのまま押せる) */.is-battle-tutorial-spot{border-radius:18px;outline:3px solid #f472b6;outline-offset:3px;box-shadow:0 0 0 7px #f472b644,0 0 34px 6px #f472b6aa;animation:mhBattleSpot 1.3s ease-in-out infinite}@keyframes mhBattleSpot{50%{outline-color:#fbcfe8;box-shadow:0 0 0 10px #f472b633,0 0 46px 10px #f472b6}}@media(prefers-reduced-motion:reduce){.is-battle-tutorial-spot{animation:none}}@media(prefers-reduced-motion:reduce){.is-tutorial-spot,.is-tutorial-spot>span,.is-tutorial-spot::before,.is-tutorial-spot>span::before{animation:none}}.mh-home-assistant{position:absolute;z-index:5;left:3%;width:70%;top:calc(72px + env(safe-area-inset-top));pointer-events:auto}@media(max-width:350px){.mh-home-assistant{width:62%}}
