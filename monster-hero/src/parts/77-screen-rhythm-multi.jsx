@@ -2574,7 +2574,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
             <RhythmBuddyGrowth key={masu.id} masu={masu} round={room.round} songId={room.songId} diffId={cpuRow.res.diffId} durationMs={song ? Number(song.playDurationMs) || 0 : 0} teamRank={team.rank}
               chartLevel={song && song.difficulties && song.difficulties[cpuRow.res.diffId] ? Number(song.difficulties[cpuRow.res.diffId].level) || 0 : 0}
               humans={team.rows.filter((row) => !row.m.cpu).length}
-              score={cpuRow.res.score} maxScore={((typeof RHYTHM_DIFFICULTIES !== 'undefined' ? RHYTHM_DIFFICULTIES : []).find((d) => d.id === cpuRow.res.diffId) || {}).maxScore || 0} />
+              score={cpuRow.res.score} maxScore={((typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : []).find((d) => d.id === cpuRow.res.diffId) || {}).maxScore || 0} />
           ))}</div>;
         })()}
         <div className="mt-auto flex shrink-0 gap-2 border-t border-white/10 bg-slate-950/90 px-3 pt-2 landscape:justify-end landscape:border-t-0 landscape:bg-transparent [@media(max-height:440px)]:pt-1 [[data-mh-view-rotation=true]_&]:pt-1" style={{ paddingBottom: 'calc(.4rem + var(--mh-sa-bottom))' }}>
@@ -2714,16 +2714,19 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
               </div>
             </div>
           )}
-          <div className="grid grid-cols-5 gap-1.5 landscape:flex-1">
+          {/* 難易度のボタン。HELL のある曲は6つ並ぶ(2026-10-13 社長「マルチも通常と同じ仕様にして」)。鍵つきは、ひとりのときと同じく「◯◯で解放」を出す */}
+          <div data-rhythm-multi-difficulties={drawnDiffs.length} className="grid gap-1.5 landscape:flex-1" style={{ gridTemplateColumns: `repeat(${Math.max(1, drawnDiffs.length)},minmax(0,1fr))` }}>
             {drawnDiffs.map((d) => {
               const open = drawnOpenDiffs.some((x) => x.id === d.id);
+              const need = open ? null : rhythmDifficultyUnlockRequirement(d.id, drawnSong ? drawnSong.songId : '');
               const level = drawnSong && drawnSong.difficulties && drawnSong.difficulties[d.id] ? Number(drawnSong.difficulties[d.id].level) || 0 : 0;
               const active = shownDiffId === d.id;
               return (
-                <button key={d.id} type="button" data-rhythm-multi-difficulty={d.id} disabled={!open || iAmReady} onClick={() => RHYTHM_MULTI.setDiff(d.id)}
+                <button key={d.id} type="button" data-rhythm-multi-difficulty={d.id} data-rhythm-multi-difficulty-locked={open ? '0' : '1'} disabled={!open || iAmReady} onClick={() => RHYTHM_MULTI.setDiff(d.id)} title={need ? `${need}をクリアすると挑めます` : undefined}
                   className={`flex min-h-[52px] flex-col items-center justify-center rounded-full border-2 text-[9px] font-black disabled:opacity-40 ${active ? 'border-fuchsia-300 bg-fuchsia-600 text-white' : 'border-white/20 bg-slate-800 text-slate-200'}`}>
                   <span className="text-base leading-none">{level || '-'}</span>
-                  <span className="leading-tight">{open ? d.id : '🔒'}</span>
+                  <span className="leading-tight">{open ? d.id : `🔒${d.id}`}</span>
+                  {need && <small data-rhythm-multi-difficulty-need={d.id} className="block max-w-full whitespace-normal text-center text-[7px] leading-[1.05] opacity-80 [word-break:keep-all]">{need}で<wbr />解放</small>}
                 </button>
               );
             })}

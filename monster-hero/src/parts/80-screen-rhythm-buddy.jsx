@@ -135,7 +135,7 @@ const rhythmBuddyMakeBrain = (songs) => ({
     const song = (songs || []).find((x) => x.songId === songId);
     const chart = song && song.difficulties ? song.difficulties[diffId] : null;
     const totalNotes = chart ? (Number(chart.totalNotes) > 0 ? Number(chart.totalNotes) : Array.isArray(chart.notes) ? chart.notes.length : 300) : 300;
-    const diffDef = (typeof RHYTHM_DIFFICULTIES !== 'undefined' ? RHYTHM_DIFFICULTIES : []).find((d) => d.id === diffId);
+    const diffDef = (typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : []).find((d) => d.id === diffId);
     const mon = RHYTHM_BUDDY_STORE.get().mons[masuId];
     const mood = rhythmBuddyMood(masuId, rhythmBuddyDayKey(Date.now()), mon);
     return rhythmBuddyPlay({
@@ -152,13 +152,13 @@ const rhythmBuddyMakeBrain = (songs) => ({
     const mood = rhythmBuddyMood(masuId, rhythmBuddyDayKey(Date.now()), mon);
     let scene = kind;
     if (kind === 'result') {
-      const diffDef = (typeof RHYTHM_DIFFICULTIES !== 'undefined' ? RHYTHM_DIFFICULTIES : []).find((d) => d.id === diffId);
+      const diffDef = (typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : []).find((d) => d.id === diffId);
       const ratio = Number(score) / ((diffDef && diffDef.maxScore) || 1000000);
       scene = mvp ? 'mvp' : ratio >= 0.9 ? 'high' : ratio >= 0.7 ? 'mid' : 'low';
     }
     // 部屋のほかの人(自分を含む)の結果への反応。目立つ結果(MVP・フルコン・高得点・伸びなかった・途中でやめた)だけに反応する
     if (kind === 'reactResult') {
-      const diffDef = (typeof RHYTHM_DIFFICULTIES !== 'undefined' ? RHYTHM_DIFFICULTIES : []).find((d) => d.id === diffId);
+      const diffDef = (typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : []).find((d) => d.id === diffId);
       const ratio = Number(score) / ((diffDef && diffDef.maxScore) || 1000000);
       scene = quit ? 'hQuit' : Number(fc) > 0 ? 'hFull' : mvp ? 'hMvp' : ratio >= 0.9 ? 'hHigh' : ratio < 0.6 ? (Number(missRate) >= 0.15 && Math.random() < 0.5 ? 'hMiss' : 'hLow') : '';
       if (!scene) return '';
@@ -188,12 +188,38 @@ const rhythmBuddyMakeBrain = (songs) => ({
     };
     const key = String(masuId);
     const recent = rhythmBuddyTalkRecent.get(key) || [];
-    // 人の呼び方は性格で変わる(「たろうっち」「たろうちゃん」「たろう様」「たろう」)
-    vars.hon = rhythmBuddyHonorific(norm.trait);
-    let text = rhythmBuddyTalkPick({ kind: scene, trait: norm.trait, moodId: mood && mood.id ? mood.id : 'normal', vars, recent, rand: Math.random });
+    // 個体差(2026-10-13): 一人称・呼び方・口ぐせ・好きな曲/苦手な曲・叩き方のくせ・好物/趣味・誕生日。個体番号と相棒の記録から決まる(保存しない)
+    const persona = rhythmBuddyPersona(masuId, norm.trait);
+    const favs = rhythmBuddyPersonaSongs(norm);
+    Object.assign(vars, {
+      self: persona.self, call: persona.call.call || '', food: persona.food, hobby: persona.hobby,
+      like: favs.like ? nameOf(favs.like) : '', dislike: favs.dislike ? nameOf(favs.dislike) : '',
+      hg: persona.habit.good, hb: persona.habit.bad, ht: persona.habit.talk,
+    });
+    // 人の呼び方は性格で変わり(「たろうっち」「たろうちゃん」「たろう様」「たろう」)、同じ性格の中でも1体ずつ違う(「たろうくん」「マスター」…)
+    vars.hon = typeof persona.call.suf === 'string' ? persona.call.suf : rhythmBuddyHonorific(norm.trait);
+    // 個体差の場面へ、ときどき振り替える。超不機嫌の日は誕生日の一言だけ
+    const calm = !(mood && mood.id === 'awful');
+    const base = scene;
+    const r = Math.random();
+    if ((kind === 'join' || kind === 'idle') && rhythmBuddyIsBirthday(persona, Date.now()) && r < 0.6) scene = 'pBday';
+    else if (calm && scene === kind && kind === 'join' && r < 0.3) scene = 'pJoin';
+    else if (calm && kind === 'idle' && r < 0.45) scene = ['pFood', 'pHobby', 'pHabit'][Math.floor(r / 0.15)] || 'pFood';
+    else if (calm && kind === 'pick' && songId && songId === favs.like && r < 0.5) scene = 'pLike';
+    else if (calm && kind === 'song' && songId && songId === favs.dislike && r < 0.6) scene = 'pSongDis';
+    else if (calm && scene === 'low' && songId && songId === favs.dislike && r < 0.6) scene = 'pDislike';
+    else if (calm && scene === 'low' && r < 0.3) scene = 'pLow';
+    else if (calm && scene === 'high' && r < 0.3) scene = 'pHigh';
+    const pickArgs = { trait: norm.trait, moodId: mood && mood.id ? mood.id : 'normal', vars, recent, rand: Math.random };
+    let text = rhythmBuddyTalkPick({ kind: scene, ...pickArgs });
+    if (!text && scene !== base) text = rhythmBuddyTalkPick({ kind: base, ...pickArgs });
+    // 口ぐせ: 3回に1回くらい、文の頭か終わりに付ける(40文字に収まるときだけ)
+    let quirked = false;
+    if (text && calm && Math.random() < 0.33) { const q = rhythmBuddyApplyQuirk(text, persona.quirk, RHYTHM_BUDDY_TALK_MAX); quirked = q !== text; text = q; }
     // 返事の頭に、ときどき名前の呼びかけを付ける(「たろうっち、ナイス!」)。入りきらない・すでに名前が入っているときは付けない
-    if (text && vars.who && RHYTHM_BUDDY_CONVO_CALLABLE.indexOf(scene) >= 0 && text.indexOf(vars.who) < 0 && Math.random() < 0.3) {
-      const call = `${vars.who}${vars.hon}、`;
+    const callName = vars.call || `${vars.who}${vars.hon}`;
+    if (text && vars.who && !(quirked && persona.quirk.pre) && RHYTHM_BUDDY_CONVO_CALLABLE.indexOf(scene) >= 0 && text.indexOf(vars.who) < 0 && text.indexOf(callName) < 0 && Math.random() < 0.3) {
+      const call = `${callName}、`;
       if ((call + text).length <= RHYTHM_BUDDY_TALK_MAX) text = call + text;
     }
     // 性格ごとの話しぶり: ときどき文の終わりに絵文字を添える(ひょうきん=😆 甘えん坊=💕 など)
@@ -296,7 +322,7 @@ function RhythmBuddyAllowance({ freeLeft, tickets, className = '', compact = fal
     </p>
   );
 }
-const rhythmBuddyDiffShort = Object.freeze({ EASY: 'EASY', NORMAL: 'NORMAL', HARD: 'HARD', EXPERT: 'EXPERT', MASTER: 'MASTER' });
+const rhythmBuddyDiffShort = Object.freeze({ EASY: 'EASY', NORMAL: 'NORMAL', HARD: 'HARD', EXPERT: 'EXPERT', MASTER: 'MASTER', HELL: 'HELL' });
 
 // スコアの伸び(最近30回)。横は古い→新しい、縦は「その難易度の満点の何%か」(難易度ごとに満点が違うため)。
 // 1本の線なので凡例は付けない。点を押すと、その回の曲・難易度・スコアを下に出す。数字の一覧も開ける
@@ -369,6 +395,21 @@ function RhythmBuddyDetail({ masu, mon, dayKey, songName, onBack }) {
   const [traitsOpen, setTraitsOpen] = React.useState(false);
   const songs = rhythmBuddyTopSongs(m, allSongs ? RHYTHM_BUDDY_SONG_KEEP : 5);
   const songCount = Object.keys(m.songs).length;
+  // 個体差のプロフィール(2026-10-13)。個体番号と相棒の記録から決まる(保存しない)
+  const persona = rhythmBuddyPersona(masu.id, m.trait);
+  const favs = rhythmBuddyPersonaSongs(m);
+  const bdayToday = rhythmBuddyIsBirthday(persona, Date.now());
+  const profile = [
+    ['self', '一人称', persona.self],
+    ['call', '呼び方', persona.call.label],
+    ['quirk', '口ぐせ', persona.quirk.label],
+    ['food', '好物', persona.food],
+    ['hobby', '趣味', persona.hobby],
+    ['birthday', '誕生日', `${persona.birthday.month}月${persona.birthday.day}日`],
+    ['habit', '叩き方のくせ', persona.habit.label],
+    ['like', '好きな曲', favs.like ? songName(favs.like) : 'まだない'],
+    ['dislike', '苦手な曲', favs.dislike ? songName(favs.dislike) : 'まだない'],
+  ];
   return (
     <div data-rhythm-buddy-detail className="space-y-2">
       <div className="flex items-center gap-3 rounded-2xl border border-lime-300/30 bg-slate-950/70 p-3">
@@ -400,6 +441,21 @@ function RhythmBuddyDetail({ masu, mon, dayKey, songName, onBack }) {
             : <><p className="text-sm font-black text-slate-400">まだ見えない</p><small className="block text-[9px] font-bold leading-snug text-slate-500">ビートLv.{RHYTHM_BUDDY_TRAIT_LEVEL}で決まります。{lean ? `${lean.label}になりやすい種類です` : ''}</small></>}
         </section>
       </div>
+      <section data-rhythm-buddy-profile className="rounded-xl border border-pink-300/30 bg-slate-950/60 p-2">
+        <h4 className="text-[10px] font-black text-slate-400">プロフィール</h4>
+        {bdayToday && <p data-rhythm-buddy-birthday-today className="mt-1 rounded-lg bg-pink-900/50 px-2 py-1 text-[12px] font-black text-pink-100">🎂 今日は{rhythmBuddyMasuName(masu)}の誕生日です!</p>}
+        <dl className="mt-1 grid grid-cols-2 gap-x-2 gap-y-1">
+          {profile.map(([id, label, value]) => (
+            <div key={id} data-rhythm-buddy-profile-item={id} className={`min-w-0 ${id === 'like' || id === 'dislike' || id === 'habit' ? 'col-span-2' : ''}`}>
+              <dt className="text-[9px] font-black text-slate-500">{label}</dt>
+              <dd className={`truncate text-[12px] font-black ${value === 'まだない' ? 'text-slate-500' : 'text-pink-100'}`}>{value}</dd>
+            </div>
+          ))}
+        </dl>
+        <small className="mt-1 block text-[9px] font-bold leading-snug text-slate-500">
+          話し方や好みは1体ずつ違います。{m.trait ? '' : `性格が決まると、一人称・呼び方・口ぐせが性格に合ったものへ変わることがあります。`}叩き方のくせは話すことだけで、スコアには関係しません。好きな曲・苦手な曲は一緒に遊ぶと決まります
+        </small>
+      </section>
       <button data-rhythm-buddy-traits-toggle type="button" onClick={() => setTraitsOpen((v) => !v)} className="min-h-[36px] w-full rounded-lg bg-slate-800 text-[11px] font-black text-slate-200">
         {traitsOpen ? '性格の一覧をとじる' : '性格の一覧を見る(9つ)'}
       </button>
@@ -420,7 +476,7 @@ function RhythmBuddyDetail({ masu, mon, dayKey, songName, onBack }) {
       </section>
       <section className="rounded-xl bg-slate-950/60 p-2">
         <h4 className="mb-1 text-[10px] font-black text-slate-400">難易度の慣れ</h4>
-        {RHYTHM_BUDDY_DIFF_IDS.map((id) => {
+        {rhythmBuddyShownDiffIds().map((id) => {
           const v = rhythmBuddyMastery(m.diffs[id]);
           return (
             <div key={id} className="flex items-center gap-2 py-0.5">
@@ -868,7 +924,7 @@ function RhythmBuddyRankDetail({ entry, onClose, renderBreederIcon = null, songN
       <section data-rhythm-buddy-rank-detail-scores className="rounded-2xl border border-lime-300/25 bg-slate-900/80 p-2">
         <b className="mb-1 block text-[12px] font-black text-lime-100">難易度ごとの最高スコア</b>
         <ul className="space-y-1">
-          {RHYTHM_BUDDY_DIFF_IDS.map((id) => (
+          {rhythmBuddyShownDiffIds().map((id) => (
             <li key={id} className="flex items-center gap-2 text-[11px] font-bold">
               <span className="w-16 shrink-0 text-slate-400">{rhythmBuddyDiffShort[id]}</span>
               {entry.scores[id]
@@ -931,7 +987,7 @@ function RhythmBuddyRankingBoard({ renderBreederIcon = null, selfName = '', onCl
       )}
       {kind === 'score' && (
         <div data-rhythm-buddy-ranking-diffs className="flex gap-1.5 overflow-x-auto">
-          {RHYTHM_BUDDY_DIFF_IDS.map((id) => <button key={id} type="button" onClick={() => setDiffId(id)} className={chip(diffId === id)}>{rhythmBuddyDiffShort[id]}</button>)}
+          {rhythmBuddyShownDiffIds().map((id) => <button key={id} type="button" onClick={() => setDiffId(id)} className={chip(diffId === id)}>{rhythmBuddyDiffShort[id]}</button>)}
         </div>
       )}
       <div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto">

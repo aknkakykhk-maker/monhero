@@ -38,6 +38,13 @@ const predictedArrow = pred.text.slice('const getAttackPredictedDmg = useCallbac
 // 決めごと(withFateCombo ほか)は本体から取り出して、両方へ同じものを入れる
 const fateSrc = slice('// ==== 固有技「運命のコイン」', '// ★タクティクスバトルは敵の並びが別').text;
 const fate = Function(`${fateSrc}\nreturn { withFateCombo };`)();
+// 2026-10-08 からの黒音符(クロミー)の連撃など、あとから攻撃の式へ足された決めごと。足す関数は本体の本物を取り出し、
+// 効果の段階は「誰も貯めていない」中立の値で、予測・実処理・あつの挑発の3つへ同じものを入れる(比べる中身は変わらない)
+const laterSrc = (source.match(/const withBlackNoteCombo = \(exCombos, combo\) => \{[\s\S]*?\n\};/) || [''])[0]
+  + '\nconst blackNoteEffectAt = () => ({ combo: null });'
+  // タクティクス専用(ほかのモードでは何もしない)
+  + '\nconst aquaStackFromCard = () => null;'
+  + '\nconst fireTacticsExCross = () => null;';
 // 共通の正本(buildAttackHits / attackAtonementDmg)も本体から取り出す
 const rules = slice('const ATTACK_COMBO_RULES = Object.freeze({', '\n// 贖罪の追撃(アーク・イブリースの固有技)');
 // attackAtonementDmg は1行から複数行の関数になったので、閉じの「};」まで取り出す
@@ -52,7 +59,7 @@ const tacticsSlotFlag = Function(`${slotFlagSrc.text}\nreturn tacticsSlotFlag;`)
 // この検査が見るのは**既存5モードのぶん**なので、持ち主は勇者モンで固定する。
 // タクティクスで「札を出した子」になることは tools/mode/tactics-enemy-actions-check.js が見る
 const traitOwnerOfFor = (mainHero) => () => (mainHero && mainHero.id) || null;
-const makePredicted = (mainHero, getPermaBuff, getTurnBuff) => Function('mainHero', 'getPermaBuff', 'getTurnBuff', 'Math', 'buildAttackHits', 'attackAtonementDmg', 'soulTraitAttackProfile', 'getMasuMon', 'tacticsSlotFlag', 'traitOwnerOf', `${fateSrc}\nconst tacticsExEffectAt = () => null; const tacticsExStyleAt = () => null; const tacticsExCombosAt = () => null; const tacticsCritFixedNow = () => false; /* 完全回避・乱心の会心確定はタクティクスだけ */ const tacticsExMultiBuffNow = () => ({ dmg:1, taken:1, critRate:1, critDmg:1, distMult:0 }); const TACTICS_EX_DUAL_HIT_REPEAT = 2; // タクティクスのEX(片手盾・二刀流・スイーツパラダイス)は既存5モードでは効かない\nreturn (${predictedArrow});`)(mainHero, getPermaBuff, getTurnBuff, Math, shared.buildAttackHits, shared.attackAtonementDmg, soulTraitAttackProfile, getMasuMon, tacticsSlotFlag, traitOwnerOfFor(mainHero));
+const makePredicted = (mainHero, getPermaBuff, getTurnBuff) => Function('mainHero', 'getPermaBuff', 'getTurnBuff', 'Math', 'buildAttackHits', 'attackAtonementDmg', 'soulTraitAttackProfile', 'getMasuMon', 'tacticsSlotFlag', 'traitOwnerOf', `${fateSrc}\n${laterSrc}\nconst tacticsExEffectAt = () => null; const tacticsExStyleAt = () => null; const tacticsExCombosAt = () => null; const tacticsCritFixedNow = () => false; /* 完全回避・乱心の会心確定はタクティクスだけ */ const tacticsExMultiBuffNow = () => ({ dmg:1, taken:1, critRate:1, critDmg:1, distMult:0 }); const TACTICS_EX_DUAL_HIT_REPEAT = 2; // タクティクスのEX(片手盾・二刀流・スイーツパラダイス)は既存5モードでは効かない\nreturn (${predictedArrow});`)(mainHero, getPermaBuff, getTurnBuff, Math, shared.buildAttackHits, shared.attackAtonementDmg, soulTraitAttackProfile, getMasuMon, tacticsSlotFlag, traitOwnerOfFor(mainHero));
 
 // --- 実処理: processTurn の攻撃ブロック(会心判定 〜 全体連撃)を取り出す ---
 const anchor = source.indexOf("const d=getDmg(card,slotIdx,activeMon,localOryoAdd,localDmgModAdd,halved,attackStartDist,fateDmgMult)");
@@ -62,6 +69,7 @@ const makeActual = (rng) => Function('d', 'card', 'activeMon', 'mainHero', 'getP
   let totalDmg = 0, hasCrit = false; const attackHits = [];
   const halved = false; // 「同じ子の2枚目」ではない(パンドラの箱の悪魔側が見る値)
   ${fateSrc}
+  ${laterSrc}
   const livePermaBuff = getPermaBuff; // ターン途中の永続バフ(ref)。ここでは同じ値
   const tacticsExEffectAt = () => null; const tacticsExStyleAt = () => null; const tacticsExCombosAt = () => null; const tacticsCritFixedNow = () => false; /* 完全回避・乱心の会心確定はタクティクスだけ */ const tacticsExMultiBuffNow = () => ({ dmg:1, taken:1, critRate:1, critDmg:1, distMult:0 }); const TACTICS_EX_DUAL_HIT_REPEAT = 2; // タクティクスのEX(片手盾・二刀流・スイーツパラダイス)は既存5モードでは効かない
   ${act.text}
@@ -124,6 +132,7 @@ check(`乱数を固定すると予測と実処理の合計が一致する(${case
     const slots = { [slotIdx]: stunMon0 }; const effMul = 1; const localOryoAdd = 0, localDmgModAdd = 0;
     const getDmg = () => d0; const setImmediateTurnBuff = () => {};
     ${fateSrc}
+    ${laterSrc}
     const livePermaBuff = getPermaBuff;
     const tacticsExCombosAt = () => null; const tacticsCritFixedNow = () => false; /* 完全回避・乱心の会心確定はタクティクスだけ */ const tacticsExMultiBuffNow = () => ({ dmg:1, taken:1, critRate:1, critDmg:1, distMult:0 }); // スイーツパラダイス(タクティクスのEX)は既存5モードでは効かない
     ${stun.text.replace(/\}\s*$/, '')}

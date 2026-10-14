@@ -194,8 +194,8 @@
   "against_my_own_shadow/easy": "00f9a099a1032c06",
   "against_my_own_shadow/normal": "943a5232253b15a6",
   "against_my_own_shadow/hard": "ed91a70ce36c7cd8",
-  "against_my_own_shadow/expert": "d65b891331b3df8c",
-  "against_my_own_shadow/master": "d3307acba6c515fd",
+  "against_my_own_shadow/expert": "89b559b705dbbc28",
+  "against_my_own_shadow/master": "b8b108bc93a5789d",
   "grievous_lady/easy": "cfa4eb1fdc8a6145",
   "grievous_lady/normal": "bb395c39cce17651",
   "grievous_lady/hard": "406cee60ab2fb116",
@@ -231,6 +231,32 @@
    "reason": "33.74秒のスライドの始まりが0.25刻みで押し始めを受け付けなかったのを0.5刻みへ(Grievous Lady MASTER)",
    "changed": [
     "grievous_lady/master"
+   ]
+  },
+  {
+   "at": "2026-10-12 03:19",
+   "reason": "道具の巻き添えで動いた分を元に戻す(12459fdc9)",
+   "changed": [
+    "sheriruth/hard",
+    "sheriruth/expert",
+    "sheriruth/master"
+   ]
+  },
+  {
+   "at": "2026-10-12 05:37",
+   "reason": "#2808 で 3 に戻すと 44.42秒のスライドの始まりと同じ指で81msになり押しにくいため、遊ばれていた 4 に戻す",
+   "changed": [
+    "sheriruth/hard",
+    "sheriruth/expert",
+    "sheriruth/master"
+   ]
+  },
+  {
+   "at": "2026-10-13 23:04",
+   "reason": "2026-10-13 社長の決定: Against My Own Shadow の EXPERT・MASTER の押さえている帯の中のノーツ(EXPERT 23・MASTER 16)を、時刻・幅・ノーツ数はそのまま帯の外へ置き直す",
+   "changed": [
+    "against_my_own_shadow/expert",
+    "against_my_own_shadow/master"
    ]
   }
  ]

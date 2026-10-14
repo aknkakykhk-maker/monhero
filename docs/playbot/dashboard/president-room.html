@@ -68,13 +68,13 @@ section{display:flex;flex-direction:column;gap:10px}
 <div class="wrap">
   <header>
     <h1>モンヒロ社 社長室</h1>
-    <p class="lead">10/11 23:45 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。<br>モンスター Tier 表: <a href="https://claude.ai/artifact/3sUNc2pQgN5f4QdYYW5tW8">https://claude.ai/artifact/3sUNc2pQgN5f4QdYYW5tW8</a>(サイドバーにも固定)</p>
+    <p class="lead">10/13 15:33 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。<br>モンスター Tier 表: <a href="https://claude.ai/artifact/3sUNc2pQgN5f4QdYYW5tW8">https://claude.ai/artifact/3sUNc2pQgN5f4QdYYW5tW8</a>(サイドバーにも固定)</p>
   </header>
 
   <nav class="counts" aria-label="件数">
     <a class="count warn" href="#decide"><b>0</b><span>社長の判断待ち</span></a>
-    <a class="count" href="#work"><b>4</b><span>進行中</span></a>
-    <a class="count" href="#shipped"><b>69</b><span>公開したもの</span></a>
+    <a class="count" href="#work"><b>2</b><span>進行中</span></a>
+    <a class="count" href="#shipped"><b>73</b><span>公開したもの</span></a>
   </nav>
 
   <section id="decide">
@@ -97,43 +97,28 @@ section{display:flex;flex-direction:column;gap:10px}
         <div class="row-title">モンヒロビートの全曲にジャンルを付ける(余裕のあるときに)</div>
         
         <div class="meta"><span>未定(余裕ができたら)</span><span>見込み 仕組み(RHYTHM_GENRES と曲の印 RHYTHM_SONG_GENRE_TAGS)はもうある。いまのタブは ALL・イベント・お気に入りだけで、曲に印は1つも付いていない。始めるときに、ジャンルの分け方の案(曲の一覧つき)を社長に選択式で聞いてから全曲に付ける。保存値の id は名前を変えない(original/collab は過去に半日出していたので同じ id で足し直す)</span></div>
-      </li>
-      <li id="r2610102320sky">
-        <div class="row-title">Sheriruth: 空中ノーツの新しい難易度(MASTER の上の6段目)を足す</div>
-        <div class="row-body">MASTER の譜面を土台に一部を空中ノーツへ。空中ノーツの描画・判定(試作で数字を確かめ済み)を本番の譜面で使う。6段目の一覧・解放・名前・レベル表・検査・見た目・更新履歴</div>
-        <div class="meta"><span>部長テンポくん</span><span>見込み 名前 HELL・解放は MASTER クリア・Lv.46・SQL 済み(窓口が流した)。社長の指示で公開はしない: デバッグモードから社長が遊べる形まで。重さを既存曲並み以下にしてから社長に見てもらい、OK のあと公開</span></div>
-      </li>
-      <li id="w5">
-        <div class="row-title">モンスターのTier表の見直し(総合で決める)</div>
-        <div class="row-body">社長の選択で 10/10 朝からすぐ再開。①簡易シミュレーター ②Master の全種集め ③5回以上そろった子から調整の案、の順</div>
-        <div class="meta"><span>部長ハカセくん</span><span>見込み スキル入りシミュレーター公開(#2472)。次はトレーニング・アシカを足す。調整の案は改善部が確かめてから1件ずつ</span><span>PR #2396・#2401・#2407・#2513</span></div>
       </li></ul>
       <h3 style="margin-top:14px">これからの予定(まだ始めていない)</h3>
       <ul class="list">
-      <li id="r2610112320tapcheck">
-        <div class="row-title">10/12の深夜2時から全曲エキスパート以上のノーツのタップ位置の確認作業をして。今まで押しづらいとかうまく反応しないのって判定位置のズレとかあるんじゃない？</div>
+      <li id="r2610131505pillar">
+        <div class="row-title">HELL の柱の光の重さを本番の記録で見直す</div>
         
-        <div class="meta"><span>部長テンポくん</span><span>見込み 10/12 2:00 に予約(trig_01E2AjPwkuR8jzkQKmPRL8bB)。全曲の EXPERT・MASTER を bot で流し、描かれた位置と受け付けの位置のずれを測る。朝に窓口へ要約</span></div>
-      </li>
-      <li id="r2610111915hellstory">
-        <div class="row-title">難易度【HELL】の実装のときにストーリーと説明をいれたいから作っといて。BGMはSheriruth</div>
-        
-        <div class="meta"><span>マクアケくん</span><span>見込み お話「空まで届くビート」と説明4枚をデバッグに組み込み済み。HELL の公開(RELEASE_FLAGS.rhythmHell)と同時に出す。開き方は案A(その曲の MASTER クリアで HELL が開く)</span><span>PR #2749</span></div>
+        <div class="meta"><span>統括部長モンヒロくん</span><span>見込み 10/14 10:47 に記録を読む(trig_01UGK4AFeN5ivdS9SWePzJZQ)</span></div>
       </li>
       <li id="r2610101330speed">
         <div class="row-title">Tier 表の実戦を速くする(実戦係の採用・役割分け・ボット用の早送り)</div>
         <div class="row-body">いまは1回20〜30分・同時3本で1時間に6〜9回。①実戦係を1〜2人採用して並べる ②広く測るのはシミュレーター、実戦は上位・境目・ぶれの中の子・パーティに絞る ③デバッグ専用の早送り(通常プレイに出ない・保存とランキングに触れない・早送りあり/なしで結果が一致するのを数字で確かめてから使う)</div>
-        <div class="meta"><span>部長ハカセくん(早送りは修理部と分けてよい)</span><span>見込み 【一時停止 10/10 16:03】社長の指示で sheriruth 以外を止めた。再開は社長の指示のあと。止める前: 採用は 13:31 に済んだ(レフェリーくん・セコンドくん)/ 役割分けの表 15:00ごろ / ボット用の早送り(修理部:部長ドライバーくん・?playbotFast・?playbotSeed)16:00〜17:30 に公開。1時間あたりの回数は早送りのあとに測る</span><span>PR #2610</span></div>
+        <div class="meta"><span>部長ハカセくん(早送りは修理部と分けてよい)</span><span>見込み 【一時停止 10/10 16:03 から。社長の決定(10/13)で止めたまま。必要になったら交代して再開】止める前: 採用は 13:31 に済んだ(レフェリーくん・セコンドくん)/ 役割分けの表 15:00ごろ / ボット用の早送り(修理部:部長ドライバーくん・?playbotFast・?playbotSeed)16:00〜17:30 に公開。1時間あたりの回数は早送りのあとに測る</span><span>PR #2610</span></div>
       </li>
       <li id="r2610101120party">
         <div class="row-title">4体パーティのおすすめと、アシカの入れ方・強化のしかた</div>
         <div class="row-body">難易度ごとに上位3〜5組の4体パーティを、機能の一覧表を踏まえて出す。各パーティにアシカの枚数・優先順・使いどころと、トレーニング・強化ポイント・固有技の強化・WAVE のごほうびの選び方を付ける。シミュレーターで広く測り、上位は実戦で確かめる。改善部が確かめてから社長へ。ページに「おすすめパーティ」の欄を足す</div>
-        <div class="meta"><span>部長ハカセくん(ページは修理部:ピンセットくん)</span><span>見込み 【一時停止 10/10 16:03】社長の指示で sheriruth 以外を止めた。再開は社長の指示のあと。止める前: 第1版(シミュレーター)は 12:36 に Tier ページへ載せた(#2580)/ 実戦の確かめと改善部の確認 19:00ごろ / 仕上げ 20:00ごろ</span><span>PR #2551・#2553・#2580</span></div>
+        <div class="meta"><span>部長ハカセくん(ページは修理部:ピンセットくん)</span><span>見込み 【一時停止 10/10 16:03 から。社長の決定(10/13)で止めたまま。必要になったら交代して再開】止める前: 第1版(シミュレーター)は 12:36 に Tier ページへ載せた(#2580)/ 実戦の確かめと改善部の確認 19:00ごろ / 仕上げ 20:00ごろ</span><span>PR #2551・#2553・#2580</span></div>
       </li>
       <li id="r2610101015mech">
         <div class="row-title">ゲームの機能(自動回復など)を全部踏まえて Tier を考える</div>
         <div class="row-body">機能の一覧表(mechanics.md・69機能)を作った。Tier の判断に入っている 60・一部 5・入っていない 4(緊急回復・強化ポイントのガッツ・供モンの間合い追いつき・魂格)。大きな見落としは、WAVE 報酬の間合いボーナスと固有技の強化がシミュレーターでずっと Lv0 のままだったこと、ボットが緊急回復を一度も押していないこと。入れる順番を決め、ダイスくん(シミュレーター)とアリーナくん(ボット)に割り振った。Tier 表のページに「まだ入れていない機能」を自動で出すようにした</div>
-        <div class="meta"><span>部長ハカセくん</span><span>見込み 【一時停止 10/10 16:03】社長の指示で sheriruth 以外を止めた。再開は社長の指示のあと。止める前: まだ入っていない機能は6つ(トレーニングの選び方・起こす判断・アシカの選び方・魂格・強化ポイントでガッツ・極限)。順に入れる</span><span>PR #2514・#2517・#2520・#2537・#2539・#2569・#2571・#2589・#2597・#2598</span></div><details class="more"><summary>くわしく見る: 機能の一覧表</summary><div class="md"><p>研究所:部長ハカセくんの資料(2026-10-10)。ゲームのコード(60-app.jsx・32-tactics-units.jsx・17/18/19/22 の parts・data/)と、シミュレーター <code>tools/playbot/sim/battle.js</code>(4版目)・ボット <code>tools/playbot/scenarios/tactics-brain.js</code> を読んで作った。研究の対象は Hard・Expert・Master。</p>
+        <div class="meta"><span>部長ハカセくん</span><span>見込み 【一時停止 10/10 16:03 から。社長の決定(10/13)で止めたまま。必要になったら交代して再開】止める前: まだ入っていない機能は6つ(トレーニングの選び方・起こす判断・アシカの選び方・魂格・強化ポイントでガッツ・極限)。順に入れる</span><span>PR #2514・#2517・#2520・#2537・#2539・#2569・#2571・#2589・#2597・#2598</span></div><details class="more"><summary>くわしく見る: 機能の一覧表</summary><div class="md"><p>研究所:部長ハカセくんの資料(2026-10-10)。ゲームのコード(60-app.jsx・32-tactics-units.jsx・17/18/19/22 の parts・data/)と、シミュレーター <code>tools/playbot/sim/battle.js</code>(4版目)・ボット <code>tools/playbot/scenarios/tactics-brain.js</code> を読んで作った。研究の対象は Hard・Expert・Master。</p>
 <ul>
 <li>「シミュ」= シミュレーター、「ボット」= ブラウザのボット(実戦)。ボットは画面の見込みの数字(ダメージ・ガード・予告のダメージ)を読むので、式の中身は数字に乗るぶんだけ判断に入る</li>
 <li>「Tier」欄: どちらかに入っていれば「入っている(シミュ/実戦/両方)」。両方とも欠けがあれば「一部」。どちらにも無ければ「入っていない」</li>
@@ -188,12 +173,7 @@ section{display:flex;flex-direction:column;gap:10px}
       <li id="r2610100750a">
         <div class="row-title">Tier の暫定を早めに外す(社長の目線は抜きで)</div>
         <div class="row-body">暫定・保留の子を、回数の少ない子・EX を使えていない子から先に回す(エイキ・ヤオビクニ・メロディー・スプーキー・プラントなど)。社長の印象には合わせない</div>
-        <div class="meta"><span>部長ハカセくん(実戦はアリーナくん)</span><span>見込み 【一時停止 10/10 16:03】社長の指示で sheriruth 以外を止めた。再開は社長の指示のあと。止める前: 確定はゴーレム・モッチー・パンドラ・スエゾーの4体。回数不足の7体はアリーナくんが回していて、15:00前後に埋まる見込み。そのあと Tier 表のページをまとめて出し直す</span><span>PR #2524・#2528・#2529・#2532・#2539・#2535・#2541・#2558・#2560・#2562・#2582・#2595・#2613・#2616・#2621・#2622・#2630</span></div>
-      </li>
-      <li id="r2610100750b">
-        <div class="row-title">改善部をもっと積極的に動かす</div>
-        <div class="row-body">週1回だった改善部を毎晩に。その日の公開・社長室・研究所の Tier と調整の案を批判の目で見て、1回3件まで指摘する。調整の案は社長に届く前に改善部が確かめる。いますぐ Tier 表の点検を頼んだ</div>
-        <div class="meta"><span>部長ダメダシくん</span><span>見込み 【一時停止 10/10 16:03】社長の指示で sheriruth 以外を止めた。再開は社長の指示のあと。止める前: 毎晩 20:50 に定期実行(初回 10/10)</span></div>
+        <div class="meta"><span>部長ハカセくん(実戦はアリーナくん)</span><span>見込み 【一時停止 10/10 16:03 から。社長の決定(10/13)で止めたまま。必要になったら交代して再開】止める前: 確定はゴーレム・モッチー・パンドラ・スエゾーの4体。回数不足の7体はアリーナくんが回していて、15:00前後に埋まる見込み。そのあと Tier 表のページをまとめて出し直す</span><span>PR #2524・#2528・#2529・#2532・#2539・#2535・#2541・#2558・#2560・#2562・#2582・#2595・#2613・#2616・#2621・#2622・#2630</span></div>
       </li>
       <li id="q1zan">
         <div class="row-title">調整の案1: ザン(Tier の精度が上がってから決める)</div>
@@ -209,11 +189,141 @@ section{display:flex;flex-direction:column;gap:10px}
         <div class="row-title">初めての週報</div>
         <div class="row-body">部ごとのまとめ・今週のMVP・使用量</div>
         <div class="meta"><span>統括部長:モンヒロくん</span><span>見込み 10/12 8:52</span></div>
+      </li>
+      <li id="w5">
+        <div class="row-title">モンスターのTier表の見直し(総合で決める)</div>
+        <div class="row-body">社長の選択で 10/10 朝からすぐ再開。①簡易シミュレーター ②Master の全種集め ③5回以上そろった子から調整の案、の順</div>
+        <div class="meta"><span>部長ハカセくん</span><span>見込み 【一時停止 10/10 16:03 から。社長の決定(10/13)で止めたまま。必要になったら交代して再開】スキル入りシミュレーター公開(#2472)。次はトレーニング・アシカを足す。調整の案は改善部が確かめてから1件ずつ</span><span>PR #2396・#2401・#2407・#2513</span></div>
       </li></ul>
     </section>
     <section id="shipped">
       <h2>公開したもの</h2>
       <ul class="list">
+      <li id="r2610121449mark">
+        <div class="row-title">バトルの枠のマーク×数</div>
+        <div class="row-body">マーク×数を常に出し、薄くした。モンスターを押すと能力とかかっている効果が見られる。数が0のものは出さない・予測ダメージと重ならない</div>
+        <div class="meta"><span>部長ブレイブくん</span><span>PR #2851・#2895・#2918・#2919・#2933・#2936</span></div>
+      </li>
+      <li id="r2610131505switch">
+        <div class="row-title">会話を交代する目安を80万に</div>
+        <div class="row-body">目安80万(候補は60万)。毎晩の見張りの文も直した</div>
+        <div class="meta"><span>統括部長モンヒロくん</span><span>PR #2934</span></div>
+      </li>
+      <li id="r2610121800kaze">
+        <div class="row-title">入口の HELL「風がそよぐ場所」</div>
+        <div class="row-body">HELL と一緒に公開(Lv.23)。公開直後に出ていなかったのを直した(#2932)</div>
+        <div class="meta"><span>オンプくん</span><span>PR #2876・#2932</span></div>
+      </li>
+      <li id="r2610102320sky">
+        <div class="row-title">Sheriruth: 空中ノーツの新しい難易度(MASTER の上の6段目)を足す</div>
+        <div class="row-body">MASTER の譜面を土台に一部を空中ノーツへ。空中ノーツの描画・判定(試作で数字を確かめ済み)を本番の譜面で使う。6段目の一覧・解放・名前・レベル表・検査・見た目・更新履歴</div>
+        <div class="meta"><span>部長テンポくん</span><span>PR #2931</span></div>
+      </li>
+      <li id="r2610111915hellstory">
+        <div class="row-title">難易度【HELL】の実装のときにストーリーと説明をいれたいから作っといて。BGMはSheriruth</div>
+        <div class="row-body">HELL の公開(#2931)と同時に、お話「空まで届くビート」を公開した日に全員へ1回流す。説明は動画つき(#2929)</div>
+        <div class="meta"><span>マクアケくん</span><span>PR #2749・#2929・#2931</span></div>
+      </li>
+      <li id="r2610112355hell">
+        <div class="row-title">難易度 HELL の公開に向けて進める(Sheriruth・Grievous Lady)</div>
+        <div class="row-body">公開は社長の OK のあと(いまはデバッグ専用)。マクアケくん: MASTER クリアで HELL が開く仕組みと、お話→説明の流れを公開の印の後ろに組み込む(デバッグで試せる切り替え・bot)/オンプくん: HELL 2曲の重さを同じ曲の MASTER と bot で比べる・レベルの案を用意/リバースくん: Grievous Lady HELL を新しい検査と交差の bot で通し直す・速さの演出の区間の空中の見え方と判定/テンポくん: 押しても取れないノーツは HELL 2曲も0(確認済み)・2:00 からタップ位置の確認/ドライバーくん: 発熱の手当てのうち HELL の分を先に</div>
+        <div class="meta"><span>マクアケくん・オンプくん・リバースくん・テンポくん・ドライバーくん</span><span>PR #2794・#2795・#2799・#2801・#2806・#2808・#2809・#2811・#2931</span></div>
+      </li>
+      <li id="r2610120730hellview">
+        <div class="row-title">HELL の見やすさ・操作のしやすさ</div>
+        <div class="row-body">見やすさは「案2 はっきり」、空中の受け付けを構えに合わせる(案A)と空中を叩いた柱の光(奥まで)を既定に、空中のタップは深い赤・白い縁を細く。HELL の公開(#2931)で出た</div>
+        <div class="meta"><span>マクアケくん・部長テンポくん</span><span>PR #2824・#2826・#2828・#2831・#2833・#2887・#2889・#2890・#2891・#2917</span></div>
+      </li>
+      <li id="r2610130100score105">
+        <div class="row-title">HELL の満点105万・ランク MF・ランキング</div>
+        <div class="row-body">HELL の公開(#2931)と同時にランキングへ入った</div>
+        <div class="meta"><span>マクアケくん</span><span>PR #2905</span></div>
+      </li>
+      <li id="r2610131150opt">
+        <div class="row-title">オプションを4つのタブに</div>
+        <div class="row-body">4つのタブに分け、各タブの上に「よく触る設定」。オプションが空中のノーツでも同じように効く。HELL の設定3つもオプションへ</div>
+        <div class="meta"><span>マクアケくん</span><span>PR #2920・#2922・#2926・#2930</span></div>
+      </li>
+      <li id="r2610131322video">
+        <div class="row-title">HELL の説明を動画つきに</div>
+        <div class="row-body">説明4枚に場面の動画、5枚目にプレイ映像。ヘルプからも見返せる</div>
+        <div class="meta"><span>リバースくん</span><span>PR #2929</span></div>
+      </li>
+      <li id="r2610131209kosei">
+        <div class="row-title">マスモンの個体差</div>
+        <div class="row-body">案と見本の静止画(#2923)のあと、個体差を公開した</div>
+        <div class="meta"><span>カゲくん</span><span>PR #2923・#2928</span></div>
+      </li>
+      <li id="r2610131237dye">
+        <div class="row-title">染めたマスモンのアイコン</div>
+        <div class="row-body">部位の型を1枚の絵に焼いて出すようにした</div>
+        <div class="meta"><span>部長テンポくん</span><span>PR #2927</span></div>
+      </li>
+      <li id="r2610131200wallet">
+        <div class="row-title">HOME のダイヤの枠</div>
+        <div class="row-body">桁が増えても崩れないようにした</div>
+        <div class="meta"><span>部長ドライバーくん</span><span>PR #2924</span></div>
+      </li>
+      <li id="r2610130100cross">
+        <div class="row-title">HELL の上下クロス</div>
+        <div class="row-body">Grievous Lady は案3(すれ違う X)、Sheriruth 見せ場1に上下の交差を2回。水平クロスは作らない(上下に分ける)</div>
+        <div class="meta"><span>オンプくん</span><span>PR #2897・#2898・#2899・#2900・#2901・#2904・#2906・#2910・#2916</span></div>
+      </li>
+      <li id="r2610131050asika">
+        <div class="row-title">アシカの札の i から効果を見る</div>
+        <div class="row-body">イベントの編成画面で、アシカの札の i から効果を見られる</div>
+        <div class="meta"><span>部長ブレイブくん</span><span>PR #2915</span></div>
+      </li>
+      <li id="r2610100750b">
+        <div class="row-title">改善部をもっと積極的に動かす</div>
+        <div class="row-body">週1回だった改善部を毎晩に。その日の公開・社長室・研究所の Tier と調整の案を批判の目で見て、1回3件まで指摘する。調整の案は社長に届く前に改善部が確かめる。いますぐ Tier 表の点検を頼んだ</div>
+        <div class="meta"><span>部長ダメダシくん</span><span>PR #2913</span></div>
+      </li>
+      <li id="r2610130900score">
+        <div class="row-title">満点とランクの境目を5万刻みに</div>
+        <div class="row-body">満点 EASY 80万・NORMAL 85万・HARD 90万・EXPERT 95万・MASTER 100万・HELL 105万。古い記録は換算しない(社長の決定)</div>
+        <div class="meta"><span>マクアケくん</span><span>PR #2912</span></div>
+      </li>
+      <li id="r2610130800rankdiff">
+        <div class="row-title">曲別ランキングを難易度別にも</div>
+        <div class="row-body">「この曲」のランキングを難易度別にも見られる。縦390の幅でもボタンが切れない</div>
+        <div class="meta"><span>マクアケくん</span><span>PR #2908・#2909</span></div>
+      </li>
+      <li id="r2610130100fade">
+        <div class="row-title">取り損ねた HOLD・SLIDE の残りを消す</div>
+        <div class="row-body">判定・スコア・ライフ・コンボは変えずに、見た目だけ消えるようにした</div>
+        <div class="meta"><span>部長ドライバーくん</span><span>PR #2902</span></div>
+      </li>
+      <li id="r2610121449hand">
+        <div class="row-title">HELL 2曲の手の決まりを直す</div>
+        <div class="row-body">同じ側で地上⇔空中は150ms以上・地上から空中は250ms以上あけ、長押し中の手の5件も直した</div>
+        <div class="meta"><span>オンプくん・部長テンポくん</span><span>PR #2866・#2872・#2877</span></div>
+      </li>
+      <li id="r2610121500tactics">
+        <div class="row-title">タクティクスの状態を見た目で</div>
+        <div class="row-body">EX の残りターン・回数をひと目で出し、26体すべてに EX 中の見た目を付けた</div>
+        <div class="meta"><span>部長ブレイブくん</span><span>PR #2856・#2862・#2867・#2868・#2870・#2871</span></div>
+      </li>
+      <li id="r2610121440rev">
+        <div class="row-title">譜面の道具の古いリビジョンを外す</div>
+        <div class="row-body">最新(Rev.30)だけにした。公開中の譜面は1音も変わらない(道具だけの整理)</div>
+        <div class="meta"><span>オンプくん</span><span>PR #2847・#2861</span></div>
+      </li>
+      <li id="r2610121449judge">
+        <div class="row-title">判定の文字の大きさを「一度で」に</div>
+        <div class="row-body">判定の文字の大きさを一度で変える形を既定にした(地上の判定の文字の置き場所は今のまま)</div>
+        <div class="meta"><span>部長ドライバーくん</span><span>PR #2842・#2855</span></div>
+      </li>
+      <li id="r2610112320tapcheck">
+        <div class="row-title">10/12の深夜2時から全曲エキスパート以上のノーツのタップ位置の確認作業をして。今まで押しづらいとかうまく反応しないのって判定位置のズレとかあるんじゃない？</div>
+        <div class="row-body">82譜面・41,275ノーツ・8つの画面条件で、見えている位置と判定の位置のずれは無し。描かれた真ん中を押して取れないノーツは0</div>
+        <div class="meta"><span>部長テンポくん</span><span>PR #2812</span></div>
+      </li>
+      <li id="r2610112357renda">
+        <div class="row-title">Grievous Lady MASTER の2分ごろの連打が反応しない疑い</div>
+        <div class="row-body">押せる位置は全曲で問題なし(#2790)なので、続けて叩いたときに受け付けるか(前のノーツの判定の窓に吸われないか・叩きの間引き)を、人の連打のずれを入れた bot で確かめる。MASTER と HELL の両方。明らかな不具合なら直して公開してから報告</div>
+        <div class="meta"><span>部長テンポくん</span><span>PR #2800・#2812</span></div>
+      </li>
       <li id="r2610112300lastdiff">
         <div class="row-title">モンビーで新たに始めるとイージーからの表示になるから、これは前のやつを引き継いで</div>
         <div class="row-body">曲えらびで前に選んだ難易度を覚える(mh_rhythm_last_difficulty_v1)</div>
@@ -3508,193 +3618,6 @@ section{display:flex;flex-direction:column;gap:10px}
         <div class="row-title">C2 成績表は記録から道具で足し算するようにした</div>
         <div class="row-body">社長が選んだ案: 点は記録だけに書き、表は道具で足し算する。(もとの指摘: ガードくんは表で6点・記録で4点。記録の行が無い点がある)</div>
         <div class="meta"><span>ヤスリくん</span><span>PR #2426</span></div>
-      </li>
-      <li id="w15">
-        <div class="row-title">改善部の最初のダメ出し(ゲーム7件・会社3件)</div>
-        <div class="row-body">ボットで実際に回して、押した回数・秒数・画面の割合で根拠を取った。明らかな不具合は無し。提案は「社長の判断待ち」に並べた</div>
-        <div class="meta"><span>部長ダメダシくん</span><span>PR #2425</span></div><details class="more"><summary>くわしく見る: 改善部の報告</summary><div class="md"><p>時間: 23:21〜23:55 / 依頼: 統括部長:モンヒロくん(社長「批判的な目で見て悪いとこを改良改善する方向な部も作って」・対象はゲームと会社の両方)</p>
-<ul>
-<li><b>作らずに提案だけ。</b> ゲームも会社の書類も変えていない。案はおすすめを先頭に置いた</li>
-<li>遊んだもの: ボット(<code>playbot.js --only new,walk,look,rhythm</code>・59画面・<code>lib/fake-supabase.js</code> のままでランキングへは送っていない)と、</li>
-</ul>
-<p>  起動からHOMEまでの押す回数を数える小さな台本(ボットの <code>openSession</code> / <code>prepareLegacy</code> / <code>prepareVeteran</code> を使い、スキップを押す人・押さない人の2通り)</p>
-<ul>
-<li>不具合として言い切ったものは無い(見つからなかった)。下はすべて「楽しさ・分かりやすさ・手間」の話</li>
-</ul>
-<details class="md-sec"><summary>ゲーム(上位7件)</summary>
-<div class="md-table"><table><thead><tr><th>#</th><th>件名</th><th>根拠(どの画面・何回・何秒)</th><th>手間</th></tr></thead><tbody><tr><td>G1</td><td>ひさしぶりに開くと、会話とお知らせが積み重なる</td><td>昔のセーブで起動→HOME: <b>スキップを押しても35回・36秒</b>。うち27回はスキップの無いページ(新しい助手の紹介10枚・新モンスター10枚・マスモンランキング3枚・「メロディー」「クロミー」<b>実装予告</b>7枚 ← もう出ているのに予告が出る)。スキップを押さない人は190回・172秒。毎日遊んでいる人(既読あり)は3回・8秒</td><td>中</td></tr><tr><td>G2</td><td>はじめての人のギフトに「お詫びのしるし」が4通届く</td><td>新人の設定直後のギフトボックス: 未受取6件のうち4件が7〜8月の不具合のお詫び(<code>COMPENSATION_GIFTS</code>)。その不具合に遭っていない人が、最初に見る一覧で「お詫び」を4回読む。第一印象が「不具合の多いゲーム」になる</td><td>小</td></tr><tr><td>G3</td><td>ヘルプが長すぎて、はじめての人の入口が最後にある</td><td>ヘルプは8分類93項目・日本語で約15万字(文庫本1冊ぶん)。「基本ルール・ゲームの目的」の1番目が「横画面で遊ぶ」で、「はじめての設定」は13番目(最後)。いちばん長い項目は「音ゲーの設定でできること」約7,800字・「EXスキル」約7,200字</td><td>小〜中</td></tr><tr><td>G4</td><td>曲えらびで、曲が3行しか見えない</td><td>390×844 の曲えらび: 上に助手の吹き出しが2つ+「裏でクイックの∞周回を回すには？」の行。曲の一覧は y≈330〜530 の約200px(画面の24%)で3曲だけ。曲は約26曲あり、毎日遊ぶ人は探すたびにスクロールする(💬の札で畳めるが、はじめは開いている)</td><td>小</td></tr><tr><td>G5</td><td>EXPERT・MASTER の鍵が曲ごとで、上手な人ほど遠回り</td><td>解放は曲ごと(HARDクリア→EXPERT、EXPERTクリア→MASTER)。MASTERだけ遊びたい人でも、1曲ごとに2回(1回2〜2.5分)の遠回り。約26曲すべてで約52回・2時間ほど。新曲が出るたびにも2回ずつ</td><td>中</td></tr><tr><td>G6</td><td>助手の吹き出しが、ほぼすべての画面に出たまま</td><td>見た画面のうち M/B管理・マーケット・ギフト・トレーニング・アシストカード・クラシックバトル・曲えらび(2つ)に吹き出し(1つ約70〜80px・画面の約9%)。中身は毎回同じ画面で同じ種類のひとこと。モンヒロビートの入口には「コメント ON/OFF」があるが、ほかの画面と設定には消す所が無い</td><td>中</td></tr><tr><td>G7</td><td>ことばが分かりにくい</td><td>はじめての人が最初の10分で出会う呼び名: M/B管理・ベースモン・マスモン・勇者モン・供モン・アシストカード・ブリーダーP・ビートP・虹のプシュケー・スキップチケット「序・破・急」。HOMEの入口「M/B管理」は何の略かが画面のどこにも出ない(中の一覧は「ベースモン一覧」「マスモン一覧(バトル)」「マスモン一覧(モンヒロビート)」…7項目)</td><td>小〜中</td></tr></tbody></table></div>
-<h4>選べる案</h4>
-<p><b>G1 ひさしぶりの起動</b></p>
-<ol>
-<li>(おすすめ)起動時のお知らせを「まとめて1枚」にする: 見出しだけ並べ、「くわしく」を押した物だけ開く。予告は本物のお知らせが出たら出さない</li>
-<li>今のまま並べるが、全部の会話・お知らせに「スキップ」を付け、予告は本物が出たら出さない</li>
-<li>予告だけ止める(いちばん小さい直し)</li>
-</ol>
-<p><b>G2 はじめての人のお詫び</b></p>
-<ol>
-<li>(おすすめ)はじめて起動した人には、中身はそのままで題名を「はじめての贈りもの」1通にまとめる(昔の id は記録として持たせ、二重には届かない形。保存データは消さない)</li>
-<li>はじめての人には配らない(その代わり同じ量をプレオープン記念へ足す)</li>
-<li>今のまま</li>
-</ol>
-<p><b>G3 ヘルプ</b></p>
-<ol>
-<li>(おすすめ)いちばん上に「3分でわかるモンスターヒーロー」(500字ほど)を置き、基本ルールの並びを「はじめての設定 → ゲームの目的 → 1周の流れ → …」に直す</li>
-<li>並び替えだけ</li>
-<li>長い項目(3,000字以上の15項目)を「まず読む所」と「くわしく」に分けて畳む</li>
-</ol>
-<p><b>G4 曲えらび</b></p>
-<ol>
-<li>(おすすめ)何曲か遊んだ人(例: 5曲以上)は、吹き出しと「裏でクイック…」をはじめから畳んでおく</li>
-<li>吹き出しを1つにまとめる(2つ目は一度見たら出さない)</li>
-<li>下の曲の詳細を小さくして、一覧を5行にする</li>
-</ol>
-<p><b>G5 EXPERT・MASTER の鍵</b></p>
-<ol>
-<li>(おすすめ)どれか1曲で MASTER をクリアした人(またはビートLvが一定以上)は、全曲の EXPERT・MASTER が開く</li>
-<li>新曲だけ、HARD を1回クリアすれば EXPERT・MASTER まで開く</li>
-<li>今のまま(わざと付けた鍵なので、変えない判断もある)</li>
-</ol>
-<p><b>G6 助手の吹き出し</b></p>
-<ol>
-<li>(おすすめ)設定に「助手のひとこと: いつも / 同じ画面は1日1回 / 出さない」を足す</li>
-<li>同じ画面で2回目からは、顔のアイコンだけにする(押すと開く)</li>
-<li>今のまま</li>
-</ol>
-<p><b>G7 ことば</b></p>
-<ol>
-<li>(おすすめ)「M/B管理」を「モンスター」に言いかえ、初めて出る呼び名に「?」(押すとひとこと説明)を付ける</li>
-<li>入口の下に小さく説明を足すだけ(例: 「M/B管理 — モンスターとアシストカード」)</li>
-<li>今のまま(ヘルプの用語集で足りるとする)</li>
-</ol>
-</details>
-<details class="md-sec"><summary>会社のやり方(3件)</summary>
-<div class="md-table"><table><thead><tr><th>#</th><th>件名</th><th>根拠</th><th>手間</th></tr></thead><tbody><tr><td>C1</td><td>同じことを5か所に書いていて、台帳がもう食い違っている</td><td>1件の仕事を 台帳(REQUESTS.md)・社長室(board.json)・成績(SCOREBOARD.md と scores.json)・日報・部の記録・部署紹介 に手で書く。結果、台帳18行のうち少なくとも4行が古い: 「CLAUDE.md を軽くする」は社長室では公開済みなのに台帳は「修理部へ渡した」/ 12:06 マップくんは #2381・#2385 で公開済みなのに「班で作業中」/ 17:15 の同じ件が2行(「渡した」と「公開済み」)/ 20:40 の件は #2423 でマージ済みなのに「渡した」。「いま」は5種類と決めてあるのに8種類の書き方が混ざり、「新しいものを上に」も 10-09 10:14 の行が 10-08 の下にある</td><td>中</td></tr><tr><td>C2</td><td>成績表の点が、できごとの記録から数え直せない</td><td>部員の表と「できごとの記録」が合わない: 部長ガードくんは表で公開3(6点)だが記録は2行(4点)/ 部長テンポくんの見込み −1 は記録に行が無い / ドライバーくん・ドライバーくん2号・ハカセくん・クラフトくんは点があるのに記録が0行。MVP と降格(社則7)をこの点で決めるので、数え違いがそのまま人事になる</td><td>小</td></tr><tr><td>C3</td><td>書類の公開が多すぎ、手順書が重い</td><td>10/9(日本時間)の main へのマージは68件。うち46件は会社の書類とボットだけ、17件は <code>docs/playbot/</code> だけ。ゲームを変えたのは21件。各部が最初に読む手順書 ROUTINE.md は49KB(社則3.5KBの14倍。社則と同じ決めごとが2か所にある)</td><td>中</td></tr></tbody></table></div>
-<h4>選べる案</h4>
-<p><b>C1 書く場所が多い</b></p>
-<ol>
-<li>(おすすめ)台帳を1つの JSON(1件1行: 受けた日時・担当・いま・PR)にして、社長室・台帳の表・部署紹介はそこから道具で作る。「いま」は道具が5種類以外を断る</li>
-<li>統括部長が社長室を出し直すとき、<code>president-room.js</code> が「台帳の行と社長室・マージ済みPRの食い違い」を並べる(今の「漏れ」確かめを広げる)</li>
-<li>台帳をやめて社長室だけにする</li>
-</ol>
-<p><b>C2 成績表</b></p>
-<ol>
-<li>(おすすめ)点は「できごとの記録」だけに書き、部員ごとの表と scores.json は道具が足し算で作る</li>
-<li>週報の前に統括部長が手で突き合わせる</li>
-<li>今のまま</li>
-</ol>
-<p><b>C3 公開と手順書</b></p>
-<ol>
-<li>(おすすめ)会社の書類(台帳・社長室・成績・日報)は、ゲームを変えないものだけ1日2回(昼・夜)にまとめて1つのPRにする。ROUTINE.md は「部が毎回読む1枚(5KBほど)」と「必要なとき引く本文」に分ける</li>
-<li>書類のPRまとめだけやる</li>
-<li>手順書を分けるだけやる</li>
-</ol>
-</details>
-<details class="md-sec"><summary>統括部長へ回すこと(担当の部へ)</summary>
-<ul>
-<li>明らかな不具合: なし</li>
-<li>ボット: 見回り係の探検で「画面テーマの『おまかせ』」「全WAVE詳細の『戻る』」を押しても変わらない、の2件が改善のヒントに出た(ボットのせいかも。見回り部で確かめてほしい)</li>
-</ul>
-</details></div></details>
-      </li>
-      <li id="w14">
-        <div class="row-title">呼んだマスモンが1曲も演奏しなければ、無料分・券が戻る</div>
-        <div class="row-body">1曲も始まらないまま部屋を出たら、無料1回かセッション券1枚を返す(1曲始まったら使った扱い)。無料1回は払った日と同じ日だけ返す。アプリを閉じたときは、次にモンヒロビートを開いたとき一度だけ返す。返したときはモードえらびに一言が出る</div>
-        <div class="meta"><span>部長テンポくん(マルチくん)</span><span>PR #2423</span><span>マルチの部屋でマスモンを呼び、曲を始めずに「ルームを出る」→ モードえらびに一言・無料の残りが1つ戻る</span></div>
-      </li>
-      <li id="w13">
-        <div class="row-title">main でも落ちていた検査4本を直した(ゲームは壊れていなかった)</div>
-        <div class="row-body">4本とも検査が古くなっていただけ(10/08 のまとめ転生と、譜面ツールのフォルダ追加のあと)。ゲームのコードは変えず、検査は弱めずに今の作りへ合わせ、転生の費用(まとめ3回=1回ずつの合計)とロック中は転生しないことを動かして確かめる項目を足した</div>
-        <div class="meta"><span>部長ドライバーくん</span><span>PR #2417</span><span>(ゲームは変わらない)</span></div>
-      </li>
-      <li id="d4">
-        <div class="row-title">オート強化のはじめの配り方を「1Pずつ」に</div>
-        <div class="row-body">まだ使っていない子だけ「1Pずつ」から始まる。使っている子は従来どおり</div>
-        <div class="meta"><span>部長ガードくん</span><span>PR #2415</span><span>マスモン詳細 → 強化 → オート強化</span></div>
-      </li>
-      <li id="w11">
-        <div class="row-title">CLAUDE.md を軽くした(25.2KB → 15.5KB)</div>
-        <div class="row-body">場面が限られる決まりを、その場所の CLAUDE.md(画像・音源・データ・譜面ツール)とスキルへ移した。決まりは消さず移しただけ。見張りの上限も 16.5KB に下げ、移した先で言葉が消えても気づけるようにした</div>
-        <div class="meta"><span>ヤスリくん</span><span>PR #2414</span><span>CLAUDE.md・docs/rules/README.md「節の置き場所」</span></div>
-      </li>
-      <li id="w12">
-        <div class="row-title">保存キー3つを仕様書に載せた</div>
-        <div class="row-body">検査で見つかった載せ忘れを docs/spec/SAVE_DATA.md に書き足した(ゲームの動きは変わらない)。モンヒロビートの直し方の切り替えは、いまは画面から書く所がなく検査ツールからだけ書かれる、とも書いた</div>
-        <div class="meta"><span>部長ドライバーくん</span><span>PR #2411</span><span>(ゲームは変わらない)</span></div>
-      </li>
-      <li id="w9">
-        <div class="row-title">マスモン一覧が固まらなくなった</div>
-        <div class="row-body">染めた絵の作り直しを裏の作業へ移した。40体・半分染色のセーブで、一覧が出るまで4.1秒→0.2秒(2回目も1.7秒→0.4秒)。絵は1画素も変わらない。モンヒロビートのマスモン一覧など、染めた絵を出すほかの画面も軽くなる</div>
-        <div class="meta"><span>部長ドライバーくん</span><span>PR #2410</span><span>ゲームを始める → M/B管理 → マスモン一覧(染色した子が多いほど違いが分かる)</span></div>
-      </li>
-      <li id="w10">
-        <div class="row-title">オート強化が使いやすくなった</div>
-        <div class="row-body">設定を変えても確定までは保存も強化もしない(「こう上がります」の案に項目ごとの+n)。確定後は「こう上がりました」が残る。余りの配り方を「順番に上限まで」「1Pずつ順番に配る」から選べる。保存データは項目を足しただけ</div>
-        <div class="meta"><span>部長ガードくん</span><span>PR #2412</span><span>マスモン詳細 → 強化 → 「オート強化」タブ</span></div>
-      </li>
-      <li id="w6">
-        <div class="row-title">通信不良の演奏での「範囲の中なのにMISS」はゲームの不具合ではなかった</div>
-        <div class="row-body">ボットがわざと見送った1つ前のノーツが、次を狙った押下をゲームの決まりどおり受け取っていた(どちらを取っても1つはMISSになる形)。ボットで見分けて候補から外した。守り部の条件でも候補0件</div>
-        <div class="meta"><span>部長テンポくん(フィールくん)</span><span>PR #2406</span><span>(ゲームは変わらない)</span></div>
-      </li>
-      <li id="w7">
-        <div class="row-title">マルチの部屋でもマスモンのステータスが見られる</div>
-        <div class="row-body">部屋(マッチング・選曲・準備・待機・結果)のマスモンの札に「i」。自分の子を押すと相棒の画面と同じ詳しい窓。ほかの人の子は名前とビートLvだけ。窓を開いたままでも選曲・準備は進む</div>
-        <div class="meta"><span>部長ドライバーくん</span><span>PR #2403</span><span>モンヒロビート → フリーマッチかプライベート → マスモンを呼ぶ → 部屋の上の札を押す</span></div>
-      </li>
-      <li id="p10">
-        <div class="row-title">タクティクスの検査2本を直した</div>
-        <div class="row-body">公開版でも落ちていた検査2本(研究所のハカセくんが見つけた件)。ゲームの動きは変わらない</div>
-        <div class="meta"><span>部長ブレイブくん</span><span>PR #2387</span><span>(ゲームは変わらない)</span></div>
-      </li>
-      <li id="p11">
-        <div class="row-title">朝の試しの点検で社長が選んだ直し</div>
-        <div class="row-body">ビート部: iPhoneの遅れの分け方・MASTERのフリックのMISS報告(#2373)/見回り部: 見た目の基準の撮り直し・会話の数え方(#2374)/バトル部とビート部: ボットの押し方の漏れと見間違いを直した(#2368・#2370)</div>
-        <div class="meta"><span>各部長</span><span>PR #2368・#2370・#2373・#2374</span><span>(ゲームはほぼ変わらない)</span></div>
-      </li>
-      <li id="p9">
-        <div class="row-title">Tier表を6項目で見る形に・机上の性能表・ボットの直し</div>
-        <div class="row-body">Tier表に攻め・守り・勇者特性・固有技・EX・間合いの6項目と「保留」を入れた。机上の性能表(desk.md)も公開。ボットの勇者選びとEXの使い方を直した。技と間合いの回数はこれからの対戦で数える</div>
-        <div class="meta"><span>部長ハカセくん</span><span>PR #2401</span><span>docs/playbot/reports/tier/</span></div>
-      </li>
-      <li id="p8">
-        <div class="row-title">強化の「完了」に確認・ブラウザの戻るでゲームの外へ出ない</div>
-        <div class="row-body">マスモン強化で確定せずに「完了」や戻るを押すと確認窓。HOME以外ではブラウザの戻る=画面の戻るボタン</div>
-        <div class="meta"><span>部長ガードくん</span><span>PR #2397</span><span>マスモン強化/スマホの戻る操作</span></div>
-      </li>
-      <li id="p7">
-        <div class="row-title">モンスターのTier表(暫定版)</div>
-        <div class="row-body">18/26体・38回ぶん。強め: ミタラシ・モッチー・剣士モッチー・クロミー・モノリス・ピクシーなど / 弱め: ゴーレム・スエゾー・エイキ・イブリース・ウンディーネ(どれも暫定)</div>
-        <div class="meta"><span>部長ハカセくん</span><span>PR #2396</span><span>docs/playbot/reports/tier/monster-tier.md</span></div>
-      </li>
-      <li id="p6">
-        <div class="row-title">DEBUG MENU に「すべて解放してバトル」</div>
-        <div class="row-body">社長の案。全モンスター・全アシカ・全難易度で戦える(保存も記録もしない)。ボットの学び直し用</div>
-        <div class="meta"><span>部長ハカセくん</span><span>PR #2391</span><span>DEBUG MENU</span></div>
-      </li>
-      <li id="p1">
-        <div class="row-title">文字の折り返しの崩れ9件を直した</div>
-        <div class="row-body">モンヒロビートのモードえらび・オプション・マーケット・プロフィールなど</div>
-        <div class="meta"><span>デザインくん</span><span>PR #2381・#2385</span><span>モンヒロビートのモードえらび下の「マスモン 0/4」</span></div>
-      </li>
-      <li id="p2">
-        <div class="row-title">難易度えらびの色の強弱</div>
-        <div class="row-body">段階が上がるほど濃く・光が太く速く。極限チャレンジもそろえた</div>
-        <div class="meta"><span>部長ブレイブくん</span><span>PR #2383</span><span>モンヒロバトル → クラシック → チャレンジ → 難易度</span></div>
-      </li>
-      <li id="p3">
-        <div class="row-title">EXで手札が使えない理由・クッキー満タンの光</div>
-        <div class="row-body">タクティクスで理由を1行/メロディーの札がピンクに光る</div>
-        <div class="meta"><span>部長ブレイブくん</span><span>PR #2371</span><span>タクティクスバトル</span></div>
-      </li>
-      <li id="p4">
-        <div class="row-title">小さい画面のMISSはボットの見間違いと判明</div>
-        <div class="row-body">ゲームの不具合ではなかった。ボット側を直した</div>
-        <div class="meta"><span>部長テンポくん</span><span>PR #2377</span><span>(ゲームは変わらない)</span></div>
-      </li>
-      <li id="p5">
-        <div class="row-title">組織図・社則・成績表</div>
-        <div class="row-body">日報・週報の決めごと、新しい部署3つ</div>
-        <div class="meta"><span>統括部長:モンヒロくん</span><span>PR #2389</span><span>docs/playbot/ORG.md</span></div>
       </li></ul>
       <p class="note">本番: https://aknkakykhk-maker.github.io/monhero/</p>
     </section>
@@ -3725,8 +3648,8 @@ section{display:flex;flex-direction:column;gap:10px}
         <div class="meta"><span>部長ガードくん</span><span>部員 タイムくん・カウントくん・イジワルくん</span><span>最後の報告 10/10 00:05</span></div>
       </li>
       <li>
-        <div class="row-title"><span class="team">研究所</span><span class="chip ok">作業中</span></div>
-        <div class="row-body">Tier表(Hard と Expert を交互に)</div>
+        <div class="row-title"><span class="team">研究所</span><span class="chip idle">一時停止</span></div>
+        <div class="row-body">10/10 から一時停止中。社長の決定(10/13)で止めたまま。必要になったら交代して再開</div>
         <div class="meta"><span>ハカセくん</span><span>最後の報告 10/09 22:32</span></div>
       </li>
       <li>
@@ -3757,8 +3680,13 @@ section{display:flex;flex-direction:column;gap:10px}
       </div>
       <div class="bar-row">
         <span class="bar-name">部長テンポくん</span>
-        <span class="bar-track"><span class="bar-zero" style="left:3.70%"></span><span class="bar " style="left:3.70%;width:77.78%"></span></span>
-        <span class="bar-val">21</span>
+        <span class="bar-track"><span class="bar-zero" style="left:3.70%"></span><span class="bar " style="left:3.70%;width:81.48%"></span></span>
+        <span class="bar-val">22</span>
+      </div>
+      <div class="bar-row">
+        <span class="bar-name">部長ドライバーくん</span>
+        <span class="bar-track"><span class="bar-zero" style="left:3.70%"></span><span class="bar " style="left:3.70%;width:62.96%"></span></span>
+        <span class="bar-val">17</span>
       </div>
       <div class="bar-row">
         <span class="bar-name">部長ハカセくん</span>
@@ -3776,11 +3704,6 @@ section{display:flex;flex-direction:column;gap:10px}
         <span class="bar-val">13</span>
       </div>
       <div class="bar-row">
-        <span class="bar-name">部長ドライバーくん</span>
-        <span class="bar-track"><span class="bar-zero" style="left:3.70%"></span><span class="bar " style="left:3.70%;width:44.44%"></span></span>
-        <span class="bar-val">12</span>
-      </div>
-      <div class="bar-row">
         <span class="bar-name">ピンセットくん</span>
         <span class="bar-track"><span class="bar-zero" style="left:3.70%"></span><span class="bar " style="left:3.70%;width:44.44%"></span></span>
         <span class="bar-val">12</span>
@@ -3796,9 +3719,24 @@ section{display:flex;flex-direction:column;gap:10px}
         <span class="bar-val">7</span>
       </div>
       <div class="bar-row">
+        <span class="bar-name">マクアケくん</span>
+        <span class="bar-track"><span class="bar-zero" style="left:3.70%"></span><span class="bar " style="left:3.70%;width:22.22%"></span></span>
+        <span class="bar-val">6</span>
+      </div>
+      <div class="bar-row">
+        <span class="bar-name">オンプくん</span>
+        <span class="bar-track"><span class="bar-zero" style="left:3.70%"></span><span class="bar " style="left:3.70%;width:22.22%"></span></span>
+        <span class="bar-val">6</span>
+      </div>
+      <div class="bar-row">
         <span class="bar-name">ヤスリくん</span>
         <span class="bar-track"><span class="bar-zero" style="left:3.70%"></span><span class="bar " style="left:3.70%;width:22.22%"></span></span>
         <span class="bar-val">6</span>
+      </div>
+      <div class="bar-row">
+        <span class="bar-name">ストックくん</span>
+        <span class="bar-track"><span class="bar-zero" style="left:3.70%"></span><span class="bar " style="left:3.70%;width:18.52%"></span></span>
+        <span class="bar-val">5</span>
       </div>
       <div class="bar-row">
         <span class="bar-name">部長ダメダシくん</span>
@@ -3811,12 +3749,12 @@ section{display:flex;flex-direction:column;gap:10px}
         <span class="bar-val">3</span>
       </div>
       <div class="bar-row">
-        <span class="bar-name">オンプくん</span>
+        <span class="bar-name">カゲくん</span>
         <span class="bar-track"><span class="bar-zero" style="left:3.70%"></span><span class="bar " style="left:3.70%;width:11.11%"></span></span>
         <span class="bar-val">3</span>
       </div>
       <div class="bar-row">
-        <span class="bar-name">マクアケくん</span>
+        <span class="bar-name">リバースくん</span>
         <span class="bar-track"><span class="bar-zero" style="left:3.70%"></span><span class="bar " style="left:3.70%;width:7.41%"></span></span>
         <span class="bar-val">2</span>
       </div>

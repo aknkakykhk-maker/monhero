@@ -94,3 +94,23 @@
 
 - 内訳を取る: `runOnce({..., breakdown: true, funcs: [...]})`。返す `breakdown` に、関数の自分の時間・指定した関数の含む時間・メインの仕事の種類(2段目まで)・スレッドごと・塗り直した要素・長いコマ(曲の時刻)
 - `atStart(page, cdp)`・`atEnd(page, cdp, breakdown, events)` で、測る区間の頭と終わりにページを調べられる(層ごとの塗り直しは CDP の LayerTree.layerPainted で数えた)
+
+## 発熱の手当ての進み具合(止まったときに再開するための控え・ドライバー)
+
+社長の決定(2026-10-11)「全部やる・見た目は変えない」の ①〜⑤ と、GPU の既定化。窓口は session_014GTmSNS2ae9tRr57k3zFjC(10/12 から)。
+
+| 項目 | 状態 | PR・場所 |
+| --- | --- | --- |
+| 演奏前の準備を既定に | 本番 | #2732・#2752 |
+| GPU の帯・区切りの線・板を既定(WebGL のとき)・熱の物差し(stats.frame の early/late・描き方) | 本番 | #2765 |
+| ① 叩いた光を 2D でも canvas 版に(社長が静止画を見て既定に) | 本番 | #2793(静止画 docs/perf/hitcmp/) |
+| ② 判定ごとの表示の部品は、要る値が変わったときだけ描き直す(useRhythmHudPick) | 本番 | #2798 |
+| ③ 重い飾り: 曲の準備中・演奏中は、隠れているアプリの外側の背景の絵(季節の SVG)を描かない | 本番 | #2802 |
+| ④ その1: 叩いた光の粒を焼いた丸で(2026-10-12 社長の判断で既定に。デバッグの切り替えは残す) | 本番 | #2803・既定化は claude/rhythm-spark-default |
+| ④ その2: ノーツの板の光の絵(draw3Slice)も、板のシェーダーで描く(ノーツごとの描き方の切り替えを減らす。にじむ光が入っているときは今までどおり) | 本番。画素の突き合わせ(143譜面・579場面)は差が丸めの 1/255 がほとんど・最大 16/255。drawHead の時間は FREEDOM DiVE↓ 60〜70秒・CPU1倍で main 11.1/12.8 → 7.6/7.8 ms/秒(交互に2回)。全体の表(rhythm-perf-bench)は揺れの幅に収まり、良し悪しは言えない。RHYTHM_CANVAS_RENDERER.plateGlow=false で前の描き方 | claude/rhythm-heat-plate-glow |
+| ④ 残り(ノーツの板・判定の文字など) | 引き継ぎ。[`RHYTHM_HEAT_HANDOFF.md`](RHYTHM_HEAT_HANDOFF.md) | — |
+
+測り方の控え: 重さは `node tools/playbot/rhythm-perf-bench.js --songs sheriruth:MASTER,freedom_dive:MASTER --cpu 1,4 --draw gpu --roots main=<main の worktree>,new=.`。
+**ほかの検査やビルドを並べて回さない**(CPU を取り合って表が乱れる。2026-10-11 に一度乱れて測り直した)。
+
+★main を取り込むとき、`monster-hero/index.html` は生成物ではない(手で足した CSS がある)。衝突したら main 側で上書きせず、両方を残す(2026-10-12 に一度消して足し直した)。

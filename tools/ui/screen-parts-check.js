@@ -30,6 +30,9 @@ const appIndex = names.indexOf('60-app.jsx');
 // 「数字-screen-」にそろえてあるが、画面コンポーネントは持たない(2026-09-18 に足した)。画面の定義の決まりは当てない
 const SHARED_SCREEN_PARTS = new Set(['41-screen-ui.jsx']);
 const app = fs.readFileSync(path.join(PARTS_DIR, '60-app.jsx'), 'utf8');
+// ほかの画面部品のコード(コメントを除く)。画面どうしで部品を使い合う形を「使われている」と数えるため
+const screenCode = new Map(screens.map((n) => [n, fs.readFileSync(path.join(PARTS_DIR, n), 'utf8').split('\n').filter((line) => !/^\s*(\/\/|\*|\/\*)/.test(line)).join('\n')]));
+const otherScreenCode = (self) => [...screenCode].filter(([n]) => n !== self).map(([, c]) => c).join('\n');
 
 check('切り出した画面部品がある', screens.length > 0, screens.join(' / '));
 check('画面部品の名前が「数字-screen-…」にそろっている', misnamed.length === 0,
@@ -49,8 +52,10 @@ for (const name of screens) {
   // 画面の名前(…Screen)で終わる const も画面として数える(中の小さな部品までは数えない)
   const components = [...src.matchAll(/^(?:function ([A-Z][A-Za-z0-9]*)\(|const ([A-Z][A-Za-z0-9]*Screen) = )/gm)].map((m) => m[1] || m[2]);
   if (!SHARED_SCREEN_PARTS.has(name)) check(`${label}: 画面コンポーネントを定義している`, components.length > 0, components.join(' / ') || '見つからない');
-  // 画面の中だけで使う小さな部品(結果画面の RankingFailedNote など)は、同じファイルの中で使われていればよい
-  const unused = components.filter((c) => !app.includes(`<${c}`) && !code.includes(`<${c}`));
+  // 画面の中だけで使う小さな部品(結果画面の RankingFailedNote など)は、同じファイルの中で使われていればよい。
+  // ほかの画面部品の中で使われていてもよい(相棒のシート・育ち・ランキングは 80 で定義し、77 のマルチの画面で使う。
+  // 前はここを数えず、10/07 から「使われていない」と落ちていた・2026-10-12)
+  const unused = components.filter((c) => !app.includes(`<${c}`) && !code.includes(`<${c}`) && !otherScreenCode(name).includes(`<${c}`));
   check(`${label}: 定義した画面がすべて 60-app.jsx から使われている`, unused.length === 0,
     unused.length ? `使われていない: ${unused.join(' / ')}` : `${components.length}個`);
 

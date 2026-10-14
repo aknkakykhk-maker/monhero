@@ -11,7 +11,7 @@
 //
 // 見るもの:
 //   ・音の性格の物差しが、作った音(シンバル・切れる音・語尾・旋律の上下)を正しく見分ける
-//   ・実際にRev.5・Rev.6で生成し、Rev.6のフリック・同時押しが音の性格に乗る割合がはっきり上がる
+//   ・実際に最新リビジョンで生成し、フリック・同時押しが音の性格に乗る(2026-10-12 から最新だけを作る)
 //     (押せない・ノーツ数は悪くしない)。横フリックの向きが旋律の上下と合う
 //   ・譜面メモ: 結果画面の部品がデバッグから始めた演奏にだけ出る／新しい保存キーが一覧に載っている／
 //     指紋の式がランタイムと取り込み道具で同じ／貼り付けを読める
@@ -21,7 +21,6 @@ const {spawnSync}=require('child_process');
 const ROOT=path.resolve(__dirname,'..','..');
 const {soundTraitsFor,flickScoreOf,chordScoreOf}=require('./rhythm-sound-traits.js');
 const {reportFor:fitReportFor}=require('./rhythm-note-type-fit.js');
-const {reportFor:qualityReportFor}=require('./rhythm-chart-quality-report.js');
 const {CHART_REVISION_LATEST}=require('./rhythm-chart-v3-revision.js');
 const feedback=require('./rhythm-chart-feedback.js');
 const arg=(name,fallback=null)=>{const i=process.argv.indexOf(name);return i>=0&&i+1<process.argv.length?process.argv[i+1]:fallback;};
@@ -50,41 +49,31 @@ const ok=(name,cond,detail='')=>{console.log(`${cond?'OK':'NG'}: ${name}${detail
   ok('同時押しはシンバル・大きな一発でない音を選ばない',chordScoreOf(at(250))===0);
 }
 
-// ── 2. Rev.6で実際に作って比べる ──────────────────────────────────────────────
+// ── 2. 最新リビジョンで実際に作る ──────────────────────────────────────────────
+// 2026-10-12 から作れるのは最新リビジョンだけ。Rev.5 との比べ(上がり幅・押せない配置・ノーツ数)は Rev.6 を入れたときの一度きりの見張りだったので外し、
+// 比べなくても成り立つ下限(フリック8割・同時押し6割)だけを見る
 ok('最新リビジョンは6以上',CHART_REVISION_LATEST>=6);
 const tracks=(arg('--tracks','nothing_without_you,dullahan,kindan_no_resistance,monster_hero_theme')||'').split(',').filter(Boolean);
 const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'sound-types-'));
 try{
-  const sum={5:{flicks:0,flickHit:0,chords:0,chordHit:0,impossible:0,notes:0},6:{flicks:0,flickHit:0,chords:0,chordHit:0,impossible:0,notes:0,side:0,sideHit:0}};
+  const s={flicks:0,flickHit:0,chords:0,chordHit:0};
   for(const trackId of tracks){
-    for(const revision of [5,6]){
-      const dir=path.join(tmp,`${trackId}-r${revision}`);
-      fs.mkdirSync(dir,{recursive:true});
-      const run=spawnSync(process.execPath,[path.join(ROOT,'tools/mode/rhythm-chart-v3-generate.js'),'--track',trackId,
-        '--chart-revision',String(revision),'--write','--output-dir',dir],{cwd:ROOT,encoding:'utf8',maxBuffer:1<<26});
-      if(run.status!==0){ok(`${trackId} Rev.${revision}を生成できる`,false,(run.stderr||'').split('\n')[0]);continue;}
-      const fit=fitReportFor(trackId,{dir,source:'v3'});
-      const quality=qualityReportFor(trackId,{dir,source:'v3'});
-      for(const [difficulty,m] of Object.entries(fit.difficulties)){
-        const s=sum[revision];
-        s.flicks+=m.flicks;s.flickHit+=Math.round((m.flickFit||0)*m.flicks);
-        if(['EASY','NORMAL','HARD'].includes(difficulty)){s.chords+=m.chords;s.chordHit+=Math.round((m.chordFit||0)*m.chords);}
-        if(revision===6){s.side+=m.sideJudged;s.sideHit+=Math.round((m.sideFit||0)*m.sideJudged);}
-        s.impossible+=quality.difficulties[difficulty].gate.impossible;
-        s.notes+=quality.difficulties[difficulty].noteCount;
-      }
+    const dir=path.join(tmp,trackId);
+    fs.mkdirSync(dir,{recursive:true});
+    const run=spawnSync(process.execPath,[path.join(ROOT,'tools/mode/rhythm-chart-v3-generate.js'),'--track',trackId,
+      '--write','--output-dir',dir],{cwd:ROOT,encoding:'utf8',maxBuffer:1<<26});
+    if(run.status!==0){ok(`${trackId} を最新リビジョンで生成できる`,false,(run.stderr||'').split('\n')[0]);continue;}
+    const fit=fitReportFor(trackId,{dir,source:'v3'});
+    for(const [difficulty,m] of Object.entries(fit.difficulties)){
+      s.flicks+=m.flicks;s.flickHit+=Math.round((m.flickFit||0)*m.flicks);
+      if(['EASY','NORMAL','HARD'].includes(difficulty)){s.chords+=m.chords;s.chordHit+=Math.round((m.chordFit||0)*m.chords);}
     }
   }
   const rate=(hit,total)=>total?hit/total:0;
-  const f5=rate(sum[5].flickHit,sum[5].flicks),f6=rate(sum[6].flickHit,sum[6].flicks);
-  const c5=rate(sum[5].chordHit,sum[5].chords),c6=rate(sum[6].chordHit,sum[6].chords);
-  ok('Rev.6のフリックは音の性格(切れる・語尾・シンバル)に乗る',f6>=.8&&f6>=f5+.25,`Rev.5 ${Math.round(f5*100)}% → Rev.6 ${Math.round(f6*100)}%`);
-  ok('Rev.6の同時押し(EASY〜HARD)はシンバル・大きな一発に乗る',c6>=.6&&c6>=c5+.3,`Rev.5 ${Math.round(c5*100)}% → Rev.6 ${Math.round(c6*100)}%`);
-  ok('Rev.6の横フリックは旋律の上がり下がりと同じ向き',sum[6].side===0||rate(sum[6].sideHit,sum[6].side)>=.95,
-    `${sum[6].sideHit}/${sum[6].side}`);
-  ok('Rev.6で押せない配置を増やしていない',sum[6].impossible<=sum[5].impossible,`Rev.5 ${sum[5].impossible} → Rev.6 ${sum[6].impossible}`);
-  ok('Rev.6でノーツ数を大きく変えていない(種類を選び直すだけ)',Math.abs(sum[6].notes-sum[5].notes)<=sum[5].notes*.03,
-    `Rev.5 ${sum[5].notes} → Rev.6 ${sum[6].notes}`);
+  const f=rate(s.flickHit,s.flicks),c=rate(s.chordHit,s.chords);
+  ok('フリックは音の性格(切れる・語尾・シンバル)に乗る',f>=.8,`${Math.round(f*100)}%`);
+  ok('同時押し(EASY〜HARD)はシンバル・大きな一発に乗る',c>=.6,`${Math.round(c*100)}%`);
+  // 横フリックの向きは Rev.8 から「払う指の動き」で決める(rhythm-side-flick.js・rhythm-side-flick-check.js が見張る)。旋律の向きとそろえるのは Rev.6〜7 の作り方だった
 }finally{
   fs.rmSync(tmp,{recursive:true,force:true});
 }

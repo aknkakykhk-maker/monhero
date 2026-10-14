@@ -64,7 +64,8 @@ check('同じ総合力のときは名前順で安定する', tie.map(x => x.user
 const has = (needle) => src.includes(needle);
 
 check('画面側は並べ替えの式を書き写さず collectPowerRankingEntries を呼ぶ',
-  has('const powerRankingAll = useMemo(() => collectPowerRankingEntries(bondRankingAll), [bondRankingAll]);')
+  // 同じ人の同じモンスターを1体だけ並べる pickTopPerBreederMonster(2026-10-07)で包んだ形
+  has('const powerRankingAll = useMemo(() => pickTopPerBreederMonster(collectPowerRankingEntries(bondRankingAll)), [bondRankingAll]);')
     && !has('.sort((a, b) => b.power - a.power || a.userName.localeCompare'));
 
 // ---- 3. 種族タブ ----
@@ -82,7 +83,7 @@ check("取得は絆Lvと同じ levelKind='bond' を呼ぶ",
   has("loadRankings(null,true,false,key==='power'?'bond':key)")
     && !has("loadRankings(null,true,true,'power')"));
 check('上のタブに総合力が並んでいる',
-  has("['bond','絆Lv'],['power','総合力']") && has('grid grid-cols-4 gap-1 mb-2 shrink-0'));
+  has("['bond','絆Lv'],['power','総合力']") && has('mhbs-tabs grid-cols-4 mb-2 shrink-0')); // タブの見た目は共通の mhbs-tabs(2026-10-10)
 check('総合力タブの中身が描かれている',
   has("{modeSelectTab==='power'&&") && has('{renderPowerRankingBody()}'));
 

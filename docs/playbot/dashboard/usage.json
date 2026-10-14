@@ -1,0 +1,208 @@
+{
+ "weekResetDow": 4,
+ "weekResetHour": 20,
+ "recordStart": "2026-10-15 20:00",
+ "calibrations": [
+  {
+   "at": "2026-10-13 15:45",
+   "percent": 69
+  },
+  {
+   "at": "2026-10-13 23:09",
+   "percent": 77
+  }
+ ],
+ "snapshots": [
+  {
+   "at": "2026-10-13 15:47",
+   "note": "社長の使用量画面 69%(10/13 15:45 時点)",
+   "sessions": {
+    "session_012TESL6HTwLnNNvrMJLnHAN": {
+     "name": "守り部 部長ガードくん(10/13〜)",
+     "cost_usd": 0.1922913
+    },
+    "session_013PjVKh5sdbiJbni1W5pZhr": {
+     "name": "改善部 部長ダメダシくん(10/13〜)",
+     "cost_usd": 2.3755408
+    },
+    "session_013j3vPELgtDfDhHcSzW81PR": {
+     "name": "研究所 レフェリーくん(10/10〜)",
+     "cost_usd": 6.2360884
+    },
+    "session_014GTmSNS2ae9tRr57k3zFjC": {
+     "name": "窓口 統括部長モンヒロくん(10/11〜)",
+     "cost_usd": 171.4653797
+    },
+    "session_0169T9CNRwoH1QW1vKpEsUy5": {
+     "name": "修理部 ストックくん(10/11〜)",
+     "cost_usd": 16.5765506
+    },
+    "session_01911k2UUtVGudFqekCw9DB9": {
+     "name": "研究所 部長ハカセくん(10/07〜)",
+     "cost_usd": 354.81128
+    },
+    "session_01CDD9oDTcNPzYzw1txYJndF": {
+     "name": "ビート部 カゲくん(10/13〜)",
+     "cost_usd": 6.5236226
+    },
+    "session_01DT3gL9ZEpezajUTxh9fEfB": {
+     "name": "研究所 ダイスくん(10/10〜)",
+     "cost_usd": 73.8710748
+    },
+    "session_01DfgZpuPHnVgxrwQiurqUQ1": {
+     "name": "ビート部 リバースくん(10/10〜)",
+     "cost_usd": 134.7644082
+    },
+    "session_01GC6TmQQkN6wfT4a8EymrPz": {
+     "name": "研究所 アリーナくん(10/10〜)",
+     "cost_usd": 37.1383506
+    },
+    "session_01JVCTL76hMSV1TP5Z9RMnui": {
+     "name": "バトル部 部長ブレイブくん(10/13〜)",
+     "cost_usd": 20.0144354
+    },
+    "session_01JgrcvWE4GJff7cTHDPoecb": {
+     "name": "ビート部 マクアケくん(10/10〜)",
+     "cost_usd": 199.9530134
+    },
+    "session_01PHekXAt2C5NAZBXL1sh5gG": {
+     "name": "見回り部 部長マップくん(10/07〜)",
+     "cost_usd": 24.4466719
+    },
+    "session_01QSmyXKq2qGHrvHDTCv2h2g": {
+     "name": "修理部 部長ドライバーくん(10/12〜)",
+     "cost_usd": 99.4439894
+    },
+    "session_01SG7SEGSmUcyxyymHyDVipd": {
+     "name": "ビート部 部長テンポくん(10/12〜)",
+     "cost_usd": 56.2253792
+    },
+    "session_01SPwyyGL5vwYvuDU9Bzts2t": {
+     "name": "修理部 ピンセットくん(10/09〜)",
+     "cost_usd": 75.4844365
+    },
+    "session_01VKTcSbgZtBChiibCjAYVgW": {
+     "name": "研究所 セコンドくん(10/10〜)",
+     "cost_usd": 7.0978632
+    },
+    "session_01VRYhgmPT7CS6iFeyRbpz1p": {
+     "name": "開発部 クラフトくん(10/08〜)",
+     "cost_usd": 28.0467378
+    },
+    "session_01WaDzrhPE2Q6PDmeAgFPTwG": {
+     "name": "ビート部 オンプくん(10/13〜)",
+     "cost_usd": 34.3740944
+    },
+    "session_01Wyn2J3kuKNp9MmbffDj3oc": {
+     "name": "修理部 ヤスリくん(10/09〜)",
+     "cost_usd": 21.6786784
+    }
+   }
+  },
+  {
+   "at": "2026-10-13 23:10",
+   "sessions": {
+    "session_012TESL6HTwLnNNvrMJLnHAN": {
+     "name": "守り部 部長ガードくん(10/13〜)",
+     "cost_usd": 0.1922913,
+     "used_tokens": 83679
+    },
+    "session_013PjVKh5sdbiJbni1W5pZhr": {
+     "name": "改善部 部長ダメダシくん(10/13〜)",
+     "cost_usd": 4.3198484,
+     "used_tokens": 179267
+    },
+    "session_013j3vPELgtDfDhHcSzW81PR": {
+     "name": "研究所 レフェリーくん(10/10〜)",
+     "cost_usd": 6.2360884,
+     "used_tokens": 184250
+    },
+    "session_014GTmSNS2ae9tRr57k3zFjC": {
+     "name": "窓口 統括部長モンヒロくん(10/11〜)",
+     "cost_usd": 199.7242699,
+     "used_tokens": 414881
+    },
+    "session_0169T9CNRwoH1QW1vKpEsUy5": {
+     "name": "修理部 ストックくん(10/11〜)",
+     "cost_usd": 16.5765506,
+     "used_tokens": 384291
+    },
+    "session_01911k2UUtVGudFqekCw9DB9": {
+     "name": "研究所 部長ハカセくん(10/07〜)",
+     "cost_usd": 354.81128,
+     "used_tokens": 686678
+    },
+    "session_01CDD9oDTcNPzYzw1txYJndF": {
+     "name": "ビート部 カゲくん(10/13〜)",
+     "cost_usd": 20.7548106,
+     "used_tokens": 397661
+    },
+    "session_01DT3gL9ZEpezajUTxh9fEfB": {
+     "name": "研究所 ダイスくん(10/10〜)",
+     "cost_usd": 73.8710748,
+     "used_tokens": 82764
+    },
+    "session_01DfgZpuPHnVgxrwQiurqUQ1": {
+     "name": "ビート部 リバースくん(10/10〜)",
+     "cost_usd": 134.7644082,
+     "used_tokens": 302522
+    },
+    "session_01GC6TmQQkN6wfT4a8EymrPz": {
+     "name": "研究所 アリーナくん(10/10〜)",
+     "cost_usd": 37.1383506,
+     "used_tokens": 493079
+    },
+    "session_01JVCTL76hMSV1TP5Z9RMnui": {
+     "name": "バトル部 部長ブレイブくん(10/13〜)",
+     "cost_usd": 28.4786308,
+     "used_tokens": 480616
+    },
+    "session_01JgrcvWE4GJff7cTHDPoecb": {
+     "name": "ビート部 マクアケくん(10/10〜)",
+     "cost_usd": 199.9530134,
+     "used_tokens": 753866
+    },
+    "session_01PHekXAt2C5NAZBXL1sh5gG": {
+     "name": "見回り部 部長マップくん(10/07〜)",
+     "cost_usd": 24.4466719,
+     "used_tokens": 567364
+    },
+    "session_01QSmyXKq2qGHrvHDTCv2h2g": {
+     "name": "修理部 部長ドライバーくん(10/12〜)",
+     "cost_usd": 108.9235904,
+     "used_tokens": 444006
+    },
+    "session_01SG7SEGSmUcyxyymHyDVipd": {
+     "name": "ビート部 部長テンポくん(10/12〜)",
+     "cost_usd": 92.841243,
+     "used_tokens": 419642
+    },
+    "session_01SPwyyGL5vwYvuDU9Bzts2t": {
+     "name": "修理部 ピンセットくん(10/09〜)",
+     "cost_usd": 75.4844365,
+     "used_tokens": 433971
+    },
+    "session_01VKTcSbgZtBChiibCjAYVgW": {
+     "name": "研究所 セコンドくん(10/10〜)",
+     "cost_usd": 7.0978632,
+     "used_tokens": 177331
+    },
+    "session_01VRYhgmPT7CS6iFeyRbpz1p": {
+     "name": "開発部 クラフトくん(10/08〜)",
+     "cost_usd": 28.0467378,
+     "used_tokens": 146359
+    },
+    "session_01WaDzrhPE2Q6PDmeAgFPTwG": {
+     "name": "ビート部 オンプくん(10/13〜)",
+     "cost_usd": 88.9456904,
+     "used_tokens": 450818
+    },
+    "session_01Wyn2J3kuKNp9MmbffDj3oc": {
+     "name": "修理部 ヤスリくん(10/09〜)",
+     "cost_usd": 25.9172792,
+     "used_tokens": 453823
+    }
+   }
+  }
+ ]
+}

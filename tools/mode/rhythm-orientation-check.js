@@ -111,7 +111,9 @@ check('入力側のrectキャッシュも回転で捨てる',
 
 // ── 縦横で分けないもの(§6.1) ────────────────────────────────────────────
 check('譜面・判定窓・スコア式を画面の向きで分けていない',
-  !/portrait|landscape/i.test(source.replace(/\/\/[^\n]*/g,'')),
+  // 空中の線の高さ(RHYTHM_SKY_LIFT・2026-10-10〜)は、画面の向きで空中の線を置く高さを変える見た目の設定で、譜面・判定窓・スコア式ではないので除いて見る
+  !/portrait|landscape/i.test(source.replace(/\/\/[^\n]*/g,'')
+    .replace(/const rhythmSkyLiftPortrait=[^\n]*\n/,'').replace(/const RHYTHM_SKY_LIFT=\{[^\n]*\n/,'')),
   '実装側に向き別の分岐が入っていないこと');
 
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');

@@ -118,7 +118,8 @@ check('内訳に素点・回数・加点・合計の4つを出す',
   &&screen.includes('回数ボーナス')&&screen.includes('合計（順位に使う点）'));
 check('内訳に難易度ごとの回数を並べる',
   screen.includes('data-rhythm-bonus-difficulties')
-  &&/rhythmEventPlayCountRows\(rhythmRankingDetail\.playCounts,RHYTHM_DEMO_DIFFICULTY_IDS\)/.test(screen));
+  // 5難易度を先に並べ、公開後の HELL を後ろへ足す形も認める(2026-10-12)
+  &&/rhythmEventPlayCountRows\(rhythmRankingDetail\.playCounts,RHYTHM_DEMO_DIFFICULTY_IDS[),.]/.test(screen));
 check('0回の難易度は内訳に出さない',
   O.rhythmEventPlayCountRows({MASTER:2,HARD:0},ids).map(r=>r.id).join(',')==='HARD,MASTER'.split(',').filter(x=>x==='MASTER').join(','),
   JSON.stringify(O.rhythmEventPlayCountRows({MASTER:2,HARD:0},ids)));

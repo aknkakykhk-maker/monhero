@@ -41,8 +41,6 @@ const path=require('path');
 const {laneCountOfChart,chartRevisionOf,handModelFlagsForRevision}=require('./rhythm-chart-v3-revision.js');
 // 道のレーン数。譜面ごとに読み直す(譜面の作り方の版5から6。書いていない譜面は5)
 let LANE_COUNT=5;
-// HOLDを動かすときに、その上の交差を守るか(譜面の作り方のRev.7から。Rev.6以前の譜面の結果は変えない)
-let GUARD_COVERED_CROSSES=false;
 
 const ROOT=path.resolve(__dirname,'..','..');
 const arg=(name,fallback=null)=>{const i=process.argv.indexOf(name);return i>=0&&i+1<process.argv.length?process.argv[i+1]:fallback;};
@@ -275,7 +273,7 @@ const placements=(notes,index)=>{
   // 逆に、押さえっぱなしのHOLDの側を動かすときも、その上に乗った交差を壊さない(2026-09-26)。
   // 交差のノーツと同じ側へ回り込んだり、2本入らない近さへ寄ったりしない。
   // (Rev.7で作り直した Monster Hero MASTER で、HOLDを左へ2サブレーン寄せて交差のノーツと重ねていた。rhythm-chart-v3-check.js が見つけた)
-  const coveredCrosses=GUARD_COVERED_CROSSES&&note.type==='HOLD'?notes.filter(other=>other.cross===true&&note.grid<other.grid
+  const coveredCrosses=note.type==='HOLD'?notes.filter(other=>other.cross===true&&note.grid<other.grid
     &&other.grid<=note.grid+(Number(note.durationGrids)||0)):[];
   // 「外側」は検査(rhythm-chart-v3-check.js)と同じ物差し: HOLDが道の左半分なら交差はその左、右半分ならその右。
   // 動かす前から外側でなかった交差は、ここでは縛らない(直す前の譜面の結果を変えないため)
@@ -425,9 +423,6 @@ for(const difficulty of DIFFICULTIES){
   const chart=JSON.parse(fs.readFileSync(file,'utf8'));
   const key=difficulty||chart.difficulty||'FILE';
   LANE_COUNT=laneCountOfChart(chart);
-  GUARD_COVERED_CROSSES=chartRevisionOf(chart)>=7;
-  // Rev.8〜: SLIDE の位置をゲーム本体と同じ座標で測る(rhythm-hand-model.js の useRuntimeSlideLanes)
-  const rev8=chartRevisionOf(chart)>=8;
   // 手のモデルの読み方(Rev.8〜 SLIDE の座標 / Rev.14〜 SLIDE の曲線・親指の左右)
   setHandModelFlags(handModelFlagsForRevision(chartRevisionOf(chart)));
   currentMaxStep=MAX_STEP_LANES[chart.difficulty||difficulty]??Infinity;
@@ -435,7 +430,7 @@ for(const difficulty of DIFFICULTIES){
   // Rev.8〜: レーンを動かしたので、横フリックの向きを払う指の動きで付け直す(生成器と同じ決め方)。
   //   生成器で付けた向きのままだと、動かしたノーツへ向かう向きが逆になっていることがある
   let sideFlickNote='';
-  if(rev8&&(chart.difficulty||difficulty)==='MASTER'){
+  if((chart.difficulty||difficulty)==='MASTER'){
     const side=assignSideFlickDirs(notes,timing);
     sideFlickNote=`    横フリックの向きを付け直した: 左${side.left}本・右${side.right}本・向きなし${side.plain}本`;
   }

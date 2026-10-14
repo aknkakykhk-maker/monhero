@@ -122,13 +122,21 @@ const runtime=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js')
   check('Sheriruth HELL の譜面が見つかる(公開曲かデバッグの試作の枠)',!!(hell&&hell.notes&&hell.notes.length));
   if(hell&&master){
     // 公開前は表(RHYTHM_CHART_LEVELS)を通らないので、譜面に書いた Lv. が式の値と一致しているかも見る
-    check('Sheriruth HELL の Lv. が式で出した値と同じ',hell.level===chartLevel(hell).level,`譜面 Lv.${hell.level} / 式 Lv.${chartLevel(hell).level}`);
+    // 社長の値(LEVEL_OVERRIDES の sheriruth_hell_debug)があればその値、無ければ式の値と同じか
+    {const {shownLevel,LEVEL_OVERRIDES}=require('./rhythm-chart-level.js');const want=shownLevel('sheriruth_hell_debug','HELL',hell),over=(LEVEL_OVERRIDES.sheriruth_hell_debug||{}).HELL;
+      check(`Sheriruth HELL の Lv. が${Number.isFinite(over)?'社長の値':'式で出した値'}と同じ`,hell.level===want,`譜面 Lv.${hell.level} / ${Number.isFinite(over)?`社長の値 Lv.${over}・`:''}式 Lv.${chartLevel(hell).level}`);}
     const back=chartStrain(grounded(hell)),masterStrain=chartStrain(master),hellStrain=chartStrain(hell);
     check('Sheriruth HELL の空中を地上へ戻すと、空中のぶんだけ生の値が下がる',back.raw<hellStrain.raw&&back.parts.skySwitch===0&&hellStrain.parts.skySwitch>0,
       `戻した HELL ${back.raw}(切り替え ${back.parts.skySwitch}) / HELL ${hellStrain.raw}(切り替え ${hellStrain.parts.skySwitch})`);
-    // 空中があるだけで2割増し(2026-10-11 社長): HELL の Lv. は、空中を地上と見なした Lv. の SKY_LEVEL_FACTOR 倍
-    {const {SKY_LEVEL_FACTOR}=require('./rhythm-chart-level.js');const groundLv=chartLevel(grounded(hell)).level;
-      check(`Sheriruth HELL の Lv. は、空中を地上と見なした Lv. の ${SKY_LEVEL_FACTOR} 倍`,hell.level===Math.round(groundLv*SKY_LEVEL_FACTOR),`HELL Lv.${hell.level} / 地上と見なして Lv.${groundLv}`);}
+    // 空中を測る式(2026-10-13 社長「今後作るものは測る形で。今あるものは変えなくていい」): 空中のある譜面の式の Lv. は、空中の難しさを
+    // 1ノーツの重さに足した生の値そのもの(一律の倍率ではない)で、空中を地上と見なした Lv. より下にならない
+    {const {levelFromRaw}=require('./rhythm-chart-level.js');const groundLv=chartLevel(grounded(hell)).level,lv=chartLevel(hell);
+      check('Sheriruth HELL の式の Lv. は、空中込みの生の値から測った値(空中を地上と見なした Lv. 以上)',lv.level===levelFromRaw(lv.strain.raw)&&lv.level>=groundLv,`式 Lv.${lv.level} / 地上と見なして Lv.${groundLv}`);}
+    // 公開中の HELL 4曲(と古い試作の Sheriruth)の表示は、公開したときの値のまま(LEVEL_OVERRIDES で固定。Against My Own Shadow は新しい式の 42 で公開)
+    {const {shownLevel,loadRuntimeSongs:loadSongs}=require('./rhythm-chart-level.js');const all=[...(loadSongs().RHYTHM_PROTO_SONGS||[])];
+      for(const [id,d,want] of [['sheriruth_hell_debug','HELL',54],['grievous_lady_hell','MASTER',60],['kaze_ga_soyogu_hell_debug','HELL',23],['against_my_own_shadow_hell_debug','HELL',42]]){
+        const s=all.find(x=>x.songId===id),c=s&&s.difficulties[d];
+        check(`公開中の HELL ${id} の表示は前の値 Lv.${want} のまま(新しい式に変えても動かない)`,!!c&&shownLevel(id,d,c)===want&&c.level===want,`譜面 Lv.${c&&c.level} / 表示 ${c&&shownLevel(id,d,c)} / 新しい式 ${c&&chartLevel(c).level}`);}}
     check('Sheriruth HELL は空中のぶん MASTER より重い',hellStrain.raw>masterStrain.raw&&hell.level>master.level,
       `HELL 生${hellStrain.raw} Lv.${hell.level} / MASTER 生${masterStrain.raw} Lv.${master.level}`);
   }

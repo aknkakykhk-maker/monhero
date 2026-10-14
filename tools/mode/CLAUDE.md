@@ -18,15 +18,24 @@
 公開中の譜面は `rhythm-released-chart-lock-check.js` が指紋で見張る(CI でも回る)。決まった直しで変えるときだけ
 `--update --reason "<理由>"` で控えを更新する。
 
-生成器を変えたら、**変更前のワークツリーを別に立てて生成結果を突き合わせ、ノーツ数が一致すること
-を確かめてから**コミットする。手順: [`docs/rules/SCOPE.md`](../../docs/rules/SCOPE.md)
-ノーツ数が動く強化は**譜面の作り方のリビジョン**(`chartRevision`・`tools/mode/rhythm-chart-v3-revision.js`)を
-1つ上げてその中へ入れる。書いていない既存曲は Rev.1 のまま、新しく解析した曲だけが最新リビジョンになる。
-呼び名は「MHB CHART ENGINE Rev.7」(「版7」とは書かない)。
+**作るのは最新リビジョンだけ**(2026-10-12)。生成器などは最新の作り方しか持たず、古い版へ分ける分かれ道は作らない。
+古い作り方は git の記録(コミット **c2094ad53**)から取り出す。曲の一覧の `chartRevision` の数字と、既に作った譜面を読む読み方は残す。
+作る譜面が変わる強化は `CHART_REVISION_CODE_LATEST` を最新リビジョンの次にし、変更前のワークツリーと出力を突き合わせる。
+本文: [`docs/rules/CHART_ENGINE.md`](../../docs/rules/CHART_ENGINE.md)。呼び名は「MHB CHART ENGINE Rev.30」(「版30」とは書かない)。
 
-**空中のノーツがある譜面(HELL)の Lv.** は、空中を地上と見なした Lv. の1.2倍(2026-10-11 社長「空中あるだけで難易度2割増し」・
-`rhythm-chart-level.js` の `SKY_LEVEL_FACTOR`)。空中の無い譜面(地上の5難易度・公開中の曲)の Lv. はこれで1つも変わらない。
+**HELL の Lv.** は空中の難しさを1ノーツの重さに足して**測って出す**(2026-10-13・`rhythm-chart-level.js`。一律1.2倍はやめた)。
+公開中の HELL の表示は公開したときの値のまま(`LEVEL_OVERRIDES`)。空中の無い譜面の Lv. は変わらない。本文: `docs/rules/CHART_ENGINE.md`
 HELL は `rhythm-hell-mix.js --song <曲> --write` で作る(MASTER を土台に、空と地上が混ざって行き来する形・交差する両手の長押し)。
+
+**手の決まり**(同じ側で地上⇔空中は **150ms 以上**・空中は地上から250ms以上が目安・押さえている帯と同じ側は反対の手が空いているときだけ・
+同じ側の押し始めは90ms未満にしない)は `rhythm-chart-hand-rules-check.js` が見張る。**公開中の譜面のノーツを動かす・戻すとき**は
+`rhythm-overlap-reach-check.js` と手の決まりの検査も回す(#2808→#2821)。本文: [`docs/rules/CHART_ENGINE.md`](../../docs/rules/CHART_ENGINE.md)
+**HELL の交差は上下に分ける**(同じ高さのまま左右が入れ替わる「水平クロス」は作らない・2026-10-13)。同じ検査が HELL で0を見張る
+**押さえている帯の中にノーツを置かない**(2026-10-13): 同じ高さで重なる・幅1が絡む半レーンの重なりは不可(地上と空中なら同じ位置でもよい)。
+HELL と新曲の5難易度の道具が直し、同じ検査が止める(前からある譜面の上限は `rhythm-held-band-existing.json`)
+
+**参考動画がない限り、各難易度は難易度ごとに作る**(2026-10-13 社長の決定)。上の難易度を下の難易度の写し+割増しで作らない。
+HELL は `rhythm-chart-v3-generate.js --difficulty HELL` で曲の解析から骨組みを作り、`rhythm-hell-mix.js` の `source:'audio'` で空中を付ける。本文: [`docs/rules/CHART_ENGINE.md`](../../docs/rules/CHART_ENGINE.md)
 
 > ⚠️ 譜面もゲーム本体も変わらない強化は、**更新履歴とヘルプへ載せない**(プレイヤーには何も
 > 起きていない)。効くのは次に曲を足したときなので、そのときの曲の告知に含まれる。

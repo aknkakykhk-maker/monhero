@@ -78,7 +78,7 @@ const RHYTHM_EVENT_POINTS_PUBLIC_RELEASE = true;
 // ★assistantChat … 助手とおしゃべり(2026-10-14)。社長が試して OK を出すまで偽。それまではデバッグ設定からだけ開ける。
 //   HOMEの「おしゃべり」・仲良し度の行動 chat のヘルプ表示・更新履歴がこの印で一緒に出る
 const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tactics: TACTICS_MODE_PUBLIC_RELEASE,
-  rhythmHell: false,
+  rhythmHell: true,
   assistantChat: false,
   tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE,
   // タクティクスのEXスキル。遊べる入口(β版を含む)があって、EXの公開フラグも立っているときだけ
@@ -368,6 +368,19 @@ const TACTICS_INTRO_SEEN_KEY = 'mh_tactics_intro_seen_v1';
 // デバッグから見たぶんは立てない。HELL の公開(RELEASE_FLAGS.rhythmHell)までは読みにも行かない
 const RHYTHM_HELL_STORY_SEEN_KEY = 'mh_rhythm_hell_story_seen_v1';
 const RHYTHM_HELL_STORY_ID = 'rhythm_hell_story';
+// デバッグの「公開の印が真だったら」で見たぶんは、本番のキーとは別の新しいキーに書く
+// (デバッグ画面は誰でも開けるので、試した人が公開のときにお話を見そびれないように)
+const RHYTHM_HELL_STORY_SEEN_PREVIEW_KEY = 'mh_rhythm_hell_story_seen_preview_proto';
+const rhythmHellStorySeenKey = () => (typeof rhythmHellReleased === 'function' && rhythmHellReleased()) ? RHYTHM_HELL_STORY_SEEN_KEY : RHYTHM_HELL_STORY_SEEN_PREVIEW_KEY;
+// HELL が初めて開いたとき(その曲の MASTER を初めてクリアしたとき)の、お話「空まで届くビート」の流し方(2026-10-12・社長の決定 案A)。
+//   'release'      … HELL を公開した日に全員へ。公開後に HOME へ着いたとき、まだ見ていなければ1回だけ(MASTER のクリアとは関係なし)
+//                    (2026-10-12 社長の決定「HELL を公開した日に全員へ」。これが既定)
+//   'after-result' … その曲の MASTER を初めてクリアした結果画面を閉じたらすぐ、お話 → 説明(RhythmHellGuide)
+//   'home'         … その曲の MASTER を初めてクリアしたあと、次に HOME へ着いたとき
+//   'none'         … 流さない(回想からだけ見られる)
+// 一度見たら(飛ばしても)次からは出ない。既読は mh_rhythm_hell_story_seen_v1(公開前は誰も書けないので、公開の日はまっさら)。
+// デバッグの「公開の印が真だったら」で見たぶんは別のキー(RHYTHM_HELL_STORY_SEEN_PREVIEW_KEY)。ここを書き換えるだけで流し方が変わる
+const RHYTHM_HELL_STORY_TRIGGER = 'release';
 const normalizeAssistantId = (value) => (typeof assistantIdOrDefault === 'function')
   ? assistantIdOrDefault(typeof value === 'string' ? value : null)
   : ((typeof DEFAULT_ASSISTANT_ID !== 'undefined' && DEFAULT_ASSISTANT_ID) || 'mua');

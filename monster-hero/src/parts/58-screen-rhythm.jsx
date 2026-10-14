@@ -392,7 +392,7 @@ function RhythmSongSelectScreen({
           onListScrollTop={top=>{rhythmSongListScrollRef.current=top;}}
           footer={song=><>
             {/* アシストモードとミラー譜面は、アワーノーツと同じく「遊ぶ前にその場で」切り替えられるようにする
-                (2026-09-24)。オプションの「ライブ」にも同じ設定があり、どちらで変えても同じ値が保存される */}
+                (2026-09-24)。オプションの「演奏」タブにも同じ設定があり、どちらで変えても同じ値が保存される */}
             {/* アシスト・ミラー・全国ランキングは1行に3つ並べる。2行に分けていたら縦画面で曲が2曲しか
                 見えなくなった(2026-09-25・ユーザー指摘「曲選択画面が狭くなっちゃってる」)。
                 全国ランキングは曲ごとなので、いま選んでいる曲のぶんを開く。
@@ -714,7 +714,7 @@ function RhythmRankingScreen({
       const refresh=()=>{
         if(boardTab)loadRhythmEventRanking&&loadRhythmEventRanking(boardKind,eventDivisionId);
         else if(totalTabOpen)loadRhythmTotalRanking&&loadRhythmTotalRanking();
-        else loadRhythmRanking(song);
+        else loadRhythmRanking(song,rhythmRanking.difficultyId||'ALL');
       };
       // ランク(S/SS/…)を決める点数。回数ボーナス込みの点だと満点を超えてしまうので、
       // 素点が返っているときはそちらを使う(素点が無い＝加点なしの集計ならそのまま)
@@ -934,6 +934,15 @@ function RhythmRankingScreen({
           {/* 「この曲」がどの曲かを出す(2026-10-07・ユーザー報告「トップのランキングから飛ぶと『この曲』の欄があるのに、どの曲か分からない」)。
               曲えらびを通らずに開いても、見ている曲(最後に選んでいた曲)が分かるようにする */}
           {songTab&&song&&<p data-rhythm-ranking-song className="mb-2 truncate text-center text-[11px] font-black text-amber-100">{rhythmSongFullName(song)||song.displayName}</p>}
+          {/* 難易度の切り替え(2026-10-13 社長「曲ごとの難易度別も表示させよう」)。既定は全難易度(いままでの表。その人のいちばん高いスコア1件で並べる。足し算ではないので「合算」と書かない・2026-10-13 社長)。
+              並べるのは、その曲に譜面がある難易度だけ。HELL は公開の印が真のときだけ(rhythmScoredDifficultyIds) */}
+          {songTab&&song&&(()=>{const chartIds=rhythmDemoDifficulties(song,RHYTHM_PLAY_DIFFICULTIES).map(d=>d.id);
+            const ids=['ALL',...rhythmScoredDifficultyIds().filter(id=>chartIds.includes(id))];const cur=rhythmRanking.difficultyId||'ALL';
+            /* 7つ(全難易度+5難易度+HELL)まで、縦390幅でも切れずに並ぶよう等分する(2026-10-13 窓口「MASTER が途中で切れている」) */
+            return <div data-rhythm-ranking-diffs className="mb-2 flex gap-1">{ids.map(id=>(
+              <button key={id} type="button" data-rhythm-ranking-diff={id} aria-pressed={cur===id} onClick={()=>loadRhythmRanking(song,id)}
+                className={`min-h-[44px] min-w-0 flex-1 basis-0 rounded-lg border px-0.5 text-[9px] font-black leading-tight tracking-tight ${cur===id?'border-amber-300/70 bg-amber-500/20 text-amber-100':'border-white/15 bg-slate-900/70 text-slate-300'}`}>
+                {id==='ALL'?'全難易度':(RHYTHM_DEMO_DIFFICULTY_LABELS[id]?.name||id)}</button>))}</div>;})()}
           {songTab&&rhythmRanking.status==='loading'&&<p data-rhythm-ranking-loading className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">読み込み中…</p>}
           {songTab&&rhythmRanking.status==='error'&&<p data-rhythm-ranking-error className="rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200">読み込めませんでした。電波の良い場所で「更新」をお試しください。</p>}
           {songTab&&rhythmRanking.status==='ready'&&rhythmRanking.entries.length===0&&<p data-rhythm-ranking-empty className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">まだ記録がありません。最初の1件になってみましょう。</p>}
@@ -967,7 +976,7 @@ function RhythmRankingScreen({
           const playCount=Number(rhythmRankingDetail.playCount)||0;
           // 難易度ごとの回数(2026-09-12・ユーザー指示「難易度別回数の内訳もあったほうがいい」)。
           // 返ってこない環境(SQL未適用)では空になり、この段は出ない
-          const playCountRows=rhythmEventPlayCountRows(rhythmRankingDetail.playCounts,RHYTHM_DEMO_DIFFICULTY_IDS);
+          const playCountRows=rhythmEventPlayCountRows(rhythmRankingDetail.playCounts,RHYTHM_DEMO_DIFFICULTY_IDS.concat(rhythmScoredDifficultyIds().filter(id=>!RHYTHM_DEMO_DIFFICULTY_IDS.includes(id))));
           return (
           <div data-rhythm-ranking-detail-modal className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-3" onClick={()=>setRhythmRankingDetail(null)}>
             <div className="w-full max-w-md rounded-2xl border border-amber-300/40 bg-slate-900 p-4" onClick={e=>e.stopPropagation()}>
@@ -1079,7 +1088,7 @@ function RhythmRankingScreen({
                   何度も遊ぶ意味が伝わらないので、報酬の表と同じ場所で先に伝える */}
               {eventWeekly&&<p data-rhythm-week-score-rule
                 className="rounded-2xl border border-fuchsia-300/40 bg-fuchsia-500/5 p-2 text-[10px] leading-tight text-slate-200">
-                <b className="text-fuchsia-200">スコアの数え方</b>　その週に遊んだぶんを<b className="text-white">すべて足します</b>。曲も難易度も問わず、同じ曲を何度遊んでもそのつど積み上がります（上限なし）。満点は難易度ごとに違います（EASY 60万〜MASTER 100万）。「総合」タブが曲ごとのベストを合計するのに対し、こちらは<b className="text-white">遊んだ量</b>で競います。
+                <b className="text-fuchsia-200">スコアの数え方</b>　その週に遊んだぶんを<b className="text-white">すべて足します</b>。曲も難易度も問わず、同じ曲を何度遊んでもそのつど積み上がります（上限なし）。満点は難易度ごとに違います（EASY 80万〜MASTER 100万）。「総合」タブが曲ごとのベストを合計するのに対し、こちらは<b className="text-white">遊んだ量</b>で競います。
               </p>}
               {/* ∞周回の倍率(2026-09-11・ユーザー指示「イベント時は対象曲は3倍」)。
                   報酬の表と同じ場所に置く。対象曲を遊ぶ理由が順位だけではなくなるため */}
@@ -1094,7 +1103,7 @@ function RhythmRankingScreen({
                 className="rounded-2xl border border-fuchsia-300/40 bg-fuchsia-500/5 p-2 text-[10px] leading-tight text-slate-200">
                 <b className="text-fuchsia-200">回数ボーナス</b>　対象曲を遊んだ回数ぶん、自分のベストスコアに加点されます（上限なし）。ランキングに出ている点は加点込みで、「詳細」「内訳」から素点との内訳を見られます。
                 <ul className="mt-1 space-y-0.5">
-                  {RHYTHM_DEMO_DIFFICULTY_IDS.map(id=>(
+                  {rhythmScoredDifficultyIds().map(id=>(
                     <li key={id} className="flex items-baseline gap-2">
                       <b className="w-14 shrink-0 font-black text-fuchsia-200">{RHYTHM_DEMO_DIFFICULTY_LABELS[id]?.name||id}</b>
                       <span className="min-w-0 flex-1 text-slate-200">{rhythmEventPlayBonusPercentText(id)}</span>

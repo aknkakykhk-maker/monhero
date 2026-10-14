@@ -39,8 +39,9 @@ const options = grab('const RhythmOptions=({value,onSave,onBack,onCalibrate=null
 
 // ---- タブ ----
 check('オプションの本体が取り出せている', options.length > 0);
-check('上のタブで3つに分けている',
-  /const RHYTHM_OPTION_TABS=Object\.freeze\(\[\['live','ライブ'\],\['volume','音量'\],\['system','システム'\]\]\)/.test(game)
+// 2026-10-13 社長の選択「案1 タブ4つ+よく触るものを上」で4つに(id は前のまま+display)
+check('上のタブで4つに分けている(演奏・表示・音・軽さ・演出)',
+  /const RHYTHM_OPTION_TABS=Object\.freeze\(\[\['live','演奏'\],\['display','表示'\],\['volume','音'\],\['system','軽さ・演出'\]\]\)/.test(game)
   && /const \[tab,setTab\]=useState\('live'\);/.test(options));
 check('タブは押せるボタンで、いま見ているものが分かる',
   /data-rhythm-options-tab=\{id\} aria-pressed=\{tab===id\}/.test(options)
@@ -58,7 +59,7 @@ check('向きはJSで決める(CSSの landscape: に頼らない)',
   && !options.split('\n').filter(line => !line.trim().startsWith('//') && !line.trim().startsWith('*')).join('\n').includes('landscape:'));
 check('横向きでは見出しとタブを1行に並べる',
   options.includes("data-rhythm-options-bar className={`z-10 shrink-0 border-b border-cyan-400/15 bg-slate-950/95 ${wide?'flex items-center gap-3':''}`}")
-  && /data-rhythm-options-tabs className=\{`grid shrink-0 grid-cols-3 px-3 \$\{wide\?'min-w-0 flex-1/.test(options));
+  && /data-rhythm-options-tabs className=\{`grid shrink-0 grid-cols-4 px-3 \$\{wide\?'min-w-0 flex-1/.test(options));
 check('横向きでは中身を3列に並べる',
   /const grid=`grid gap-2\.5 \$\{wide\?'grid-cols-3 gap-2':'grid-cols-2'\}`/.test(options));
 // 横向きは高さが390pxしかない。高さを食うものは出さない・詰める
@@ -66,7 +67,8 @@ check('横向きでは高さを食うものを省く(説明・スライダー・
   options.includes('{description&&!wide&&<details data-rhythm-option-help')
   && options.includes('{!wide&&<input type="range" data-rhythm-option-slider={key}')
   && /const card=wide\?'':'rounded-2xl/.test(options)
-  && options.includes('{!wide&&<h3 className={head}>◆ ライブ設定</h3>}'));
+  && options.includes('{!wide&&<h3 className={head}>◆ 見え方</h3>}')
+  && options.includes('{!wide&&<h3 className={favHead}>★ よく触る設定</h3>}'));
 check('項目は枠に入れ、頭に帯のラベルを置く',
   /const field=\(title,control,description=null,\{full=false\}=\{\}\)=>/.test(options)
   && options.includes('data-rhythm-option-field')

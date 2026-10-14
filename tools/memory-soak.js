@@ -41,7 +41,35 @@ const makeRand = (seed) => { let t = seed >>> 0; return () => { t += 0x6D2B79F5;
   // 音の「解いたあとの大きさ」を数える(計測用の見張りで、ゲームには何も足さない)。
   // decodeAudioData が返した AudioBuffer の 長さ×チャンネル×4バイト を足し、曲ごとの大きさも控える
   await s.context.addInitScript(() => {
+    // 作られたままになっているものを数える見張り(計測用。ゲームの動きは変えない):
+    //   canvas … document.createElement('canvas') で作られた数 / blob … createObjectURL した数 − revokeObjectURL した数 /
+    //   timers … setInterval で動き続けているタイマーの数 / sources … createBufferSource した数(音の部品)
+    window.__leak = { canvases: 0, blobsMade: 0, blobsRevoked: 0, timers: new Set(), sources: 0, images: 0, ctxs: 0 };
+    try {
+      const ce = Document.prototype.createElement;
+      Document.prototype.createElement = function (tag, ...rest) { if (String(tag).toLowerCase() === 'canvas') window.__leak.canvases += 1; return ce.call(this, tag, ...rest); };
+      const cu = URL.createObjectURL.bind(URL), ru = URL.revokeObjectURL.bind(URL);
+      URL.createObjectURL = (o) => { window.__leak.blobsMade += 1; return cu(o); };
+      URL.revokeObjectURL = (u) => { window.__leak.blobsRevoked += 1; return ru(u); };
+      const si = window.setInterval.bind(window), ci = window.clearInterval.bind(window);
+      window.setInterval = (fn, ms, ...a) => { const id = si(fn, ms, ...a); window.__leak.timers.add(id); return id; };
+      window.clearInterval = (id) => { window.__leak.timers.delete(id); return ci(id); };
+      const OrigImage = window.Image;
+      window.Image = function (...a) { window.__leak.images += 1; return new OrigImage(...a); };
+      window.Image.prototype = OrigImage.prototype;
+      for (const Name of ['AudioContext', 'webkitAudioContext']) {
+        const Ctx = window[Name]; if (!Ctx) continue;
+        const cbs = Ctx.prototype.createBufferSource;
+        Ctx.prototype.createBufferSource = function (...a) { window.__leak.sources += 1; return cbs.apply(this, a); };
+      }
+    } catch (e) {}
     window.__decoded = { count: 0, bytes: 0, list: [] };
+    // どの音を何回取りに行ったか(同じ音を取り直していないか)。fetch の宛先のうち .mp3 だけ数える
+    window.__audioFetch = {};
+    try {
+      const of = window.fetch.bind(window);
+      window.fetch = (input, init) => { try { const u = String(typeof input === 'string' ? input : input.url).split('?')[0]; if (/\.mp3$/i.test(u)) window.__audioFetch[u] = (window.__audioFetch[u] || 0) + 1; } catch (e) {} return of(input, init); };
+    } catch (e) {}
     const wrap = (Proto) => {
       if (!Proto || !Proto.prototype || !Proto.prototype.decodeAudioData) return;
       const orig = Proto.prototype.decodeAudioData;
@@ -71,11 +99,11 @@ const makeRand = (seed) => { let t = seed >>> 0; return () => { t += 0x6D2B79F5;
     await cdp.send('HeapProfiler.collectGarbage').catch(() => {});
     const { metrics } = await cdp.send('Performance.getMetrics');
     const m = Object.fromEntries(metrics.map((x) => [x.name, x.value]));
-    const extra = await s.page.evaluate(() => { let diag = null; try { diag = Audio_.diagnose(); } catch (e) {} const d = window.__decoded || { count: 0, bytes: 0 }; return { canvases: document.querySelectorAll('canvas').length, imgs: document.querySelectorAll('img').length, kept: diag ? diag.bufferCount : -1, rate: diag ? diag.sampleRate : 0, decoded: d.count, decodedMB: Math.round(d.bytes / 1048576) }; }).catch(() => ({ canvases: -1, imgs: -1, kept: -1, rate: 0, decoded: 0, decodedMB: 0 }));
-    const row = { label, sec: Math.round((Date.now() - t0) / 1000), heapMB: +(m.JSHeapUsedSize / 1048576).toFixed(1), rss: rssMB(), nodes: m.Nodes, listeners: m.JSEventListeners, docs: m.Documents, canvases: extra.canvases, imgs: extra.imgs, kept: extra.kept, rate: extra.rate, decoded: extra.decoded, decodedMB: extra.decodedMB };
+    const extra = await s.page.evaluate(() => { let diag = null; try { diag = Audio_.diagnose(); } catch (e) {} const d = window.__decoded || { count: 0, bytes: 0 }; const l = window.__leak || {}; return { canvases: document.querySelectorAll('canvas').length, imgs: document.querySelectorAll('img').length, kept: diag ? diag.bufferCount : -1, songKept: diag ? diag.songBufferCount : -1, songNames: diag && diag.songBufferNames ? diag.songBufferNames.join(',') : '', rebuilds: diag ? diag.rebuilds : -1, rate: diag ? diag.sampleRate : 0, decoded: d.count, decodedMB: Math.round(d.bytes / 1048576), made: l.canvases || 0, blobs: (l.blobsMade || 0) - (l.blobsRevoked || 0), timers: l.timers ? l.timers.size : -1, sources: l.sources || 0, newImages: l.images || 0 }; }).catch(() => ({ canvases: -1, imgs: -1, kept: -1, rate: 0, decoded: 0, decodedMB: 0 }));
+    const row = { label, sec: Math.round((Date.now() - t0) / 1000), heapMB: +(m.JSHeapUsedSize / 1048576).toFixed(1), rss: rssMB(), nodes: m.Nodes, listeners: m.JSEventListeners, docs: m.Documents, canvases: extra.canvases, imgs: extra.imgs, kept: extra.kept, rate: extra.rate, songKept: extra.songKept, songNames: extra.songNames, rebuilds: extra.rebuilds, decoded: extra.decoded, decodedMB: extra.decodedMB, made: extra.made, blobs: extra.blobs, timers: extra.timers, sources: extra.sources, newImages: extra.newImages };
     rows.push(row);
     const first = rows[0];
-    console.log(`${String(row.label).padEnd(16)} ${String(row.sec).padStart(5)}秒  heap ${String(row.heapMB).padStart(6)}MB (${row.heapMB - first.heapMB >= 0 ? '+' : ''}${(row.heapMB - first.heapMB).toFixed(1)})  全体 ${String(row.rss).padStart(5)}MB (${row.rss - first.rss >= 0 ? '+' : ''}${row.rss - first.rss})  nodes ${String(row.nodes).padStart(6)} (${row.nodes - first.nodes >= 0 ? '+' : ''}${row.nodes - first.nodes})  listeners ${String(row.listeners).padStart(5)} (${row.listeners - first.listeners >= 0 ? '+' : ''}${row.listeners - first.listeners})  docs ${row.docs}  canvas ${row.canvases} img ${row.imgs}  音: 解いた${row.decoded}本(${row.decodedMB}MB)・持っている${row.kept}本・${row.rate}Hz`);
+    console.log(`${String(row.label).padEnd(16)} ${String(row.sec).padStart(5)}秒  heap ${String(row.heapMB).padStart(6)}MB (${row.heapMB - first.heapMB >= 0 ? '+' : ''}${(row.heapMB - first.heapMB).toFixed(1)})  全体 ${String(row.rss).padStart(5)}MB (${row.rss - first.rss >= 0 ? '+' : ''}${row.rss - first.rss})  nodes ${String(row.nodes).padStart(6)} (${row.nodes - first.nodes >= 0 ? '+' : ''}${row.nodes - first.nodes})  listeners ${String(row.listeners).padStart(5)} (${row.listeners - first.listeners >= 0 ? '+' : ''}${row.listeners - first.listeners})  docs ${row.docs}  canvas ${row.canvases} img ${row.imgs}  音: 解いた${row.decoded}本(${row.decodedMB}MB)・持っている${row.kept}本(うち曲 ${row.songKept}本・作り直し ${row.rebuilds}回: ${row.songNames})  作ったcanvas ${row.made} blob残り ${row.blobs} Image ${row.newImages} タイマー ${row.timers} 音の部品 ${row.sources}`);
   };
   try {
     // 遊び慣れた人の保存(はじめての設定・案内を済ませてある)で始める。バトル係・音ゲー係と同じ下準備
@@ -106,6 +134,7 @@ const makeRand = (seed) => { let t = seed >>> 0; return () => { t += 0x6D2B79F5;
         if (!(await inBattle())) {
           // 決着した。結果画面を閉じて、新しい周回へ
           await s.dismissOverlays(10); await s.dismissOverlays(10);
+          await s.backHome().catch(() => {});
           on = await startAuto();
           if (!on) { console.log('  (新しい周回を始められなかった)'); break; }
         }
@@ -123,6 +152,11 @@ const makeRand = (seed) => { let t = seed >>> 0; return () => { t += 0x6D2B79F5;
       let n = 0;
       while (Date.now() < end) { await s.wait(30000); n += 1; await sample(`放置 ${n * 30}秒`); }
     }
+    try {
+      const af = await s.page.evaluate(() => window.__audioFetch || {});
+      const lines = Object.entries(af).sort((a, b) => b[1] - a[1]).map(([u, n]) => `${n}回 ${u.split('/').pop()}`);
+      console.log(`\n音の取りに行った回数(多い順。2回以上は取り直し): ${lines.join(' / ')}`);
+    } catch (e) {}
     const first = rows[0], last = rows[rows.length - 1];
     console.log(`\nまとめ: ${last.sec}秒で heap ${first.heapMB}→${last.heapMB}MB / ブラウザ全体 ${first.rss}→${last.rss}MB / nodes ${first.nodes}→${last.nodes} / listeners ${first.listeners}→${last.listeners} / docs ${first.docs}→${last.docs}`);
     const errs = report.issues.filter((x) => x.level === '不具合候補');
