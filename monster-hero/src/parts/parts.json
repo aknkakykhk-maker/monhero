@@ -280,6 +280,10 @@
       "role": "画面: イベント・レイドボス「ジャック」(RAID_JACK=A協力戦・B累計ダメージ・残り回数・追加購入・ランキング / RAID_JACK_PREP=編成とアシカえらび)。表示と選択だけで、回数・ビートP・戦闘開始は本体側"
     },
     {
+      "file": "56-assistant-chat.jsx",
+      "role": "助手とおしゃべりの窓(AssistantChatWindow)。中継役へ送るだけで、会話は端末の新しいキーにだけ置く。公開の印 assistantChat の後ろ"
+    },
+    {
       "file": "60-app.jsx",
       "role": "MonsterHeroGame 本体(全 state・ロジック・各 gameState の JSX)"
     },

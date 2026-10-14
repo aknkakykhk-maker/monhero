@@ -28,7 +28,8 @@ const sbAutomationWriteBlocked = (url, method) => {
     if (!u.startsWith(SUPABASE_URL) || u.includes('/rest/v1/rpc/')) return false;
     if (Array.isArray(stubbed)) {
       const path = u.slice(SUPABASE_URL.length).split('?')[0];
-      if (stubbed.some((t) => typeof t === 'string' && t && path.startsWith('/rest/v1/' + t))) return false;
+      // 中継役(Edge Function)も同じ書き方で通せる(例: ['assistant-chat'] … 助手とおしゃべりの検査)
+      if (stubbed.some((t) => typeof t === 'string' && t && (path.startsWith('/rest/v1/' + t) || path.startsWith('/functions/v1/' + t)))) return false;
     }
     return true;
   } catch { return false; }

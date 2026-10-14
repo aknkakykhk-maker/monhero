@@ -732,6 +732,7 @@ const helpDataRows = (id) => {
       ];
     case 'assistantBondActions':
       return Object.values((typeof ASSISTANT_BOND_ACTIONS !== 'undefined' && ASSISTANT_BOND_ACTIONS) || {})
+        .filter(x => typeof releasedForPlayers !== 'function' || releasedForPlayers(x))
         .map(x => [x.label, `1回 +${x.amount} ／ 1日 ${x.dailyMax} まで`]);
     // 音ゲーの難易度ごとの満点と、その満点で届く上限ランク。ランクのしきい値(RHYTHM_RANKS)を
     // 直接ヘルプへ手で書き写すと、しきい値を調整するたびヘルプだけ古くなるため、

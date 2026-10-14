@@ -166,6 +166,8 @@ const WANT_AMOUNTS = {
   quickClear: [2, 12], proClear: [4, 16], extremeClear: [8, 24],
   // 助手のアシストカード専用
   assistantCardEquip: [4, 20], assistantCardUse: [6, 24],
+  // 助手とおしゃべり(2026-10-14・社長の決定「1往復 +2、1日 +20 まで」。今の増え方とは別枠)
+  chat: [2, 20],
 };
 const wrongAmounts = Object.entries(WANT_AMOUNTS)
   .filter(([k, [amount, dailyMax]]) => !actions[k] || actions[k].amount !== amount || actions[k].dailyMax !== dailyMax)
@@ -174,12 +176,12 @@ check('すべての行動の獲得量と1日上限が指定どおり', wrongAmou
 check('表にない行動が増えていない',
   Object.keys(actions).every(k => WANT_AMOUNTS[k]), Object.keys(actions).filter(k => !WANT_AMOUNTS[k]).join(', '));
 // 既存行動だけの理論上限(=カード分を足す前の値)。仕様の318と一致すること
-const LEGACY_KEYS = Object.keys(WANT_AMOUNTS).filter(k => !k.startsWith('assistantCard'));
+const LEGACY_KEYS = Object.keys(WANT_AMOUNTS).filter(k => !k.startsWith('assistantCard') && k !== 'chat');
 const legacySum = LEGACY_KEYS.reduce((a, k) => a + actions[k].dailyMax, 0);
 check('既存行動だけの1日理論上限は318', legacySum === 318, `${legacySum}`);
-check('カード分を足した理論上限が全体の上限と一致する(手入力していない)',
-  A.ASSISTANT_BOND_DAILY_MAX === legacySum + actions.assistantCardEquip.dailyMax + actions.assistantCardUse.dailyMax,
-  `${A.ASSISTANT_BOND_DAILY_MAX} / 318+20+24=${legacySum + 44}`);
+check('カード分・おしゃべり分を足した理論上限が全体の上限と一致する(手入力していない)',
+  A.ASSISTANT_BOND_DAILY_MAX === legacySum + actions.assistantCardEquip.dailyMax + actions.assistantCardUse.dailyMax + actions.chat.dailyMax,
+  `${A.ASSISTANT_BOND_DAILY_MAX} / 318+20+24+20=${legacySum + 64}`);
 // Lvアップに必要な累積量は変えていない(増やしたのは1回の獲得量だけ)。
 // 獲得量をいじるときにここまで一緒に動かすと、既存プレイヤーのLvが勝手に変わってしまう
 const WANT_NEEDS = [0, 60, 180, 400, 800, 1250, 1750, 2300, 2900, 3550,
