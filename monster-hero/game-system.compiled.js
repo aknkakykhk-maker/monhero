@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4ad3a0e2a5505bce
+// source-sha256: 0605c8c3a8a0a1df
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-14 17:23";
+const BUILD_DATE = "2026-10-14 19:09";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -29460,7 +29460,7 @@ const RhythmOptions = ({
       })),
       slider: true
     }));
-  })(), 'タップする判定ラインを、画面の下から何％の高さに置くかです。大きくするほど上へ上がり、指が届きやすくなります（12％が2026-09-13より前の位置です）。ノーツも弾ける光も判定文字も一緒に上がります。判定の幅（秒数）・スコア・譜面は変わりません。ただしレーンは奥へ行くほど狭くなるので、上げすぎると横の幅が狭く感じられます。' + (hellReleased ? '\n空中の判定ライン(HELL)は、地上の判定ラインからの高さを上下にずらします。空中の線・空中のノーツ・空中を受け付ける範囲が一緒に動きます(地上を受け付ける範囲は変わりません)。上へずらしすぎると、空中を受け付ける範囲が地上の範囲に届いたところで止まります。空中を受け付けるのは、空中の線から上へ一定の幅(画面の高さの20%×「上の端」の値)までです。それより上を押しても空中のノーツは取れません。「実際の画面で合わせる」を押すと、演奏画面に切り替わり、本番と同じ大きさのレーン・判定ライン・受け付ける範囲を見ながら、ノーツを叩いて試しつつ合わせられます。「受け付ける範囲の広さ」は、地上と空中の境目の側だけを狭めます(空中は線より下へのはみ出し、地上は線より上へのはみ出し。100%が今の広さで、50%まで)。狭めると、境目のあたりを押したときにもう一方のノーツを取り違えにくくなりますが、線から離れた所を押すと空振りになります。地上の判定ラインを動かすと、空中の線も一緒に動きます。押す時刻(判定の幅)とスコアは変わりません。' : ''), {
+  })(), 'タップする判定ラインを、画面の下から何％の高さに置くかです。大きくするほど上へ上がり、指が届きやすくなります（12％が2026-09-13より前の位置です）。ノーツも弾ける光も判定文字も一緒に上がります。判定の幅（秒数）・スコア・譜面は変わりません。ただしレーンは奥へ行くほど狭くなるので、上げすぎると横の幅が狭く感じられます。' + (hellReleased ? '\n空中の判定ライン(HELL)は、地上の判定ラインからの高さを上下にずらします。空中の線・空中のノーツ・空中を受け付ける範囲が一緒に動きます(地上を受け付ける範囲は変わりません)。上へずらしすぎると、空中を受け付ける範囲が地上の範囲に届いたところで止まります。空中を受け付けるのは、空中の線から上へ一定の幅(画面の高さの20%×「上の端」の値)までです。それより上を押しても空中のノーツは取れません。「実際の画面で合わせる」を押すと、演奏画面に切り替わり、本番と同じ大きさのレーン・判定ライン・受け付ける範囲を見ながら、時間を気にせず合わせられます(合わせているあいだはノーツは流れません)。「保存して試す」で保存すると、ノーツがくり返し流れる画面になり、ふつうに叩いて試せます。右上の「位置を直す」でまた合わせ直せて、「終わる」でこの画面へ戻ります。「受け付ける範囲の広さ」は、地上と空中の境目の側だけを狭めます(空中は線より下へのはみ出し、地上は線より上へのはみ出し。100%が今の広さで、50%まで)。狭めると、境目のあたりを押したときにもう一方のノーツを取り違えにくくなりますが、線から離れた所を押すと空振りになります。地上の判定ラインを動かすと、空中の線も一緒に動きます。押す時刻(判定の幅)とスコアは変わりません。' : ''), {
     full: true
   }), field('ノーツの出る位置', stepper('noteStartPosition', -100, 100, 5, {
     fine: 5,
@@ -33325,32 +33325,18 @@ const RhythmLineAdjustBands = ({
   }));
 };
 const RhythmLineAdjustPanel = ({
-  ground,
-  onGround,
+  adjust,
   onBump,
-  onDone,
   isLandscape
 }) => {
-  const start = useRef(null);
-  if (!start.current) start.current = {
-    ground,
+  const read = () => ({
+    ground: Number(adjust.ground),
     skyLine: RHYTHM_SKY_LINE_OFFSET.pct,
     groundW: RHYTHM_ACCEPT_WIDTH.ground,
     skyW: RHYTHM_ACCEPT_WIDTH.sky,
     skyTop: RHYTHM_ACCEPT_WIDTH.skyTop
-  };
-  const [vals, setVals] = useState(() => ({
-    ...start.current
-  }));
-  const done = useRef(false);
-  useEffect(() => () => {
-    if (done.current) return;
-    const s0 = start.current;
-    RHYTHM_SKY_LINE_OFFSET.pct = s0.skyLine;
-    RHYTHM_ACCEPT_WIDTH.ground = s0.groundW;
-    RHYTHM_ACCEPT_WIDTH.sky = s0.skyW;
-    RHYTHM_ACCEPT_WIDTH.skyTop = s0.skyTop;
-  }, []);
+  });
+  const [vals, setVals] = useState(read);
   const apply = next => {
     RHYTHM_SKY_LINE_OFFSET.pct = next.skyLine;
     RHYTHM_ACCEPT_WIDTH.ground = next.groundW;
@@ -33366,7 +33352,7 @@ const RhythmLineAdjustPanel = ({
         ...x,
         ground: g
       }));
-      onGround(g);
+      adjust.onGround(g);
       return;
     }
     const norm = key === 'skyLine' ? rhythmNormalizeSkyLineOffset(v) : key === 'skyTop' ? rhythmNormalizeSkyAcceptTop(v) : rhythmNormalizeAcceptWidth(v);
@@ -33377,42 +33363,30 @@ const RhythmLineAdjustPanel = ({
   };
   const skyRange = rhythmSkyLineOffsetRange(RHYTHM_SKY_LIFT.base, RHYTHM_JUDGMENT_LINE_Y.ratio);
   const rows = [['ground', '地上の判定ライン', RHYTHM_JUDGMENT_LINE_HEIGHT_MIN, RHYTHM_JUDGMENT_LINE_HEIGHT_MAX, RHYTHM_JUDGMENT_LINE_HEIGHT_STEP, '%', 0], ['groundW', '地上の受付の広さ', RHYTHM_ACCEPT_WIDTH_MIN_PCT, 100, RHYTHM_ACCEPT_WIDTH_STEP_PCT, '%', 0], ['skyLine', '空中の判定ライン', skyRange.min, skyRange.max, RHYTHM_SKY_LINE_OFFSET_STEP_PCT, '%', 1], ['skyW', '空中の受付の広さ(下側)', RHYTHM_ACCEPT_WIDTH_MIN_PCT, 100, RHYTHM_ACCEPT_WIDTH_STEP_PCT, '%', 0], ['skyTop', '空中の受付の上の端', RHYTHM_SKY_ACCEPT_TOP_MIN_PCT, RHYTHM_SKY_ACCEPT_TOP_MAX_PCT, RHYTHM_SKY_ACCEPT_TOP_STEP_PCT, '%', 0]];
-  const finish = save => {
-    done.current = true;
-    if (save) {
-      RHYTHM_SKY_LINE_OFFSET.set(vals.skyLine);
-      RHYTHM_ACCEPT_WIDTH.set('ground', vals.groundW);
-      RHYTHM_ACCEPT_WIDTH.set('sky', vals.skyW);
-      RHYTHM_ACCEPT_WIDTH.set('skyTop', vals.skyTop);
-    } else {
-      const s0 = start.current;
-      RHYTHM_SKY_LINE_OFFSET.pct = s0.skyLine;
-      RHYTHM_ACCEPT_WIDTH.ground = s0.groundW;
-      RHYTHM_ACCEPT_WIDTH.sky = s0.skyW;
-      RHYTHM_ACCEPT_WIDTH.skyTop = s0.skyTop;
-    }
-    onDone(save ? vals.ground : null);
-  };
+  if (adjust.phase === 'try') return React.createElement("div", {
+    "data-rhythm-line-adjust-panel": true,
+    "data-phase": "try",
+    className: `pointer-events-auto absolute z-[35] flex flex-col items-end gap-1 ${isLandscape ? 'right-1 top-[54px]' : 'right-2 top-[76px]'}`
+  }, React.createElement("button", {
+    type: "button",
+    "data-rhythm-line-adjust-fix": true,
+    onClick: adjust.onFix,
+    className: "min-h-[36px] rounded-lg border border-white/25 bg-slate-900/90 px-2 text-[11px] font-black text-cyan-100"
+  }, "位置を直す"), React.createElement("button", {
+    type: "button",
+    "data-rhythm-line-adjust-end": true,
+    onClick: adjust.onEnd,
+    className: "min-h-[36px] rounded-lg border border-white/25 bg-slate-900/90 px-2 text-[11px] font-black text-white"
+  }, "終わる"));
   return React.createElement("div", {
     "data-rhythm-line-adjust-panel": true,
-    className: `pointer-events-auto absolute z-[35] overflow-y-auto rounded-xl border border-white/20 bg-slate-950/85 p-1.5 text-white shadow-[0_6px_18px_rgba(0,0,0,.5)] ${isLandscape ? 'left-1 top-1 w-[236px] max-h-[calc(100%-8px)]' : 'inset-x-2 top-[76px] max-h-[46%]'}`
-  }, React.createElement("div", {
-    className: "flex items-center gap-1"
+    "data-phase": "set",
+    className: `pointer-events-auto absolute z-[35] overflow-y-auto rounded-xl border border-white/20 bg-slate-950/95 p-1.5 text-white shadow-[0_6px_18px_rgba(0,0,0,.5)] ${isLandscape ? 'left-1 top-1 bottom-1 w-[300px]' : 'inset-x-2 top-[76px] max-h-[62%]'}`
   }, React.createElement("b", {
-    className: "min-w-0 flex-1 px-0.5 text-[11px] font-black leading-tight text-amber-200"
-  }, "判定ラインを合わせる"), React.createElement("button", {
-    type: "button",
-    "data-rhythm-line-adjust-cancel": true,
-    onClick: () => finish(false),
-    className: "min-h-[40px] shrink-0 rounded-lg border border-white/25 bg-slate-800 px-2 text-[11px] font-black"
-  }, "やめる"), React.createElement("button", {
-    type: "button",
-    "data-rhythm-line-adjust-save": true,
-    onClick: () => finish(true),
-    className: "min-h-[40px] shrink-0 rounded-lg bg-amber-400 px-2 text-[11px] font-black text-slate-950"
-  }, "保存して戻る")), !isLandscape && React.createElement("small", {
+    className: "block px-0.5 text-[11px] font-black leading-tight text-amber-200"
+  }, "判定ラインの位置を合わせる"), !isLandscape && React.createElement("small", {
     className: "block px-0.5 text-[9px] font-bold leading-snug text-slate-300"
-  }, "水色=地上・桃色=空中を受け付ける範囲。ノーツを叩いて試せます"), rows.map(([key, label, min, max, step, suffix, dec]) => {
+  }, "水色=地上・桃色=空中を受け付ける範囲。「保存して試す」でノーツを流して叩けます"), rows.map(([key, label, min, max, step, suffix, dec]) => {
     const v = Number(vals[key]);
     const shown = `${dec ? v.toFixed(dec) : v}${suffix}`;
     return React.createElement("div", {
@@ -33451,7 +33425,19 @@ const RhythmLineAdjustPanel = ({
       onClick: () => change(key, v + step),
       className: "min-h-[40px] rounded-lg bg-slate-100 text-[14px] font-black text-slate-900 disabled:opacity-35"
     }, "＋")));
-  }));
+  }), React.createElement("div", {
+    className: "mt-1.5 grid grid-cols-[1fr_auto] gap-1"
+  }, React.createElement("button", {
+    type: "button",
+    "data-rhythm-line-adjust-save": true,
+    onClick: adjust.onSaveTry,
+    className: "min-h-[40px] rounded-lg bg-amber-400 px-2 text-[12px] font-black text-slate-950"
+  }, "保存して試す"), React.createElement("button", {
+    type: "button",
+    "data-rhythm-line-adjust-cancel": true,
+    onClick: adjust.onCancel,
+    className: "min-h-[40px] rounded-lg border border-white/25 bg-slate-800 px-3 text-[12px] font-black"
+  }, "やめる")));
 };
 const RhythmTapTest = ({
   song,
@@ -33473,7 +33459,9 @@ const RhythmTapTest = ({
 }) => {
   const tutorialProp = tutorial;
   tutorial = tutorial || !!lineAdjust;
-  const [lineHeightOverride, setLineHeightOverride] = useState(null);
+  const lineAdjustRef = useRef(lineAdjust);
+  lineAdjustRef.current = lineAdjust;
+  const lineHeightOverride = lineAdjust && Number.isFinite(Number(lineAdjust.ground)) ? Number(lineAdjust.ground) : null;
   const [effectCap, setEffectCap] = useState(() => rhythmAutoEffectMemory.level);
   const settingsBase = useMemo(() => lineHeightOverride === null || !settingsIn ? settingsIn : {
     ...settingsIn,
@@ -34053,7 +34041,7 @@ const RhythmTapTest = ({
     }));
   };
   const initialView = () => ({
-    status: 'loading',
+    status: lineAdjust && lineAdjust.phase === 'set' ? 'idle' : 'loading',
     score: 0,
     combo: 0,
     maxCombo: 0,
@@ -34647,6 +34635,20 @@ const RhythmTapTest = ({
       window.removeEventListener('orientationchange', invalidate);
     };
   }, [settings.noteStartPosition, settings.noteSize, settings.judgmentLineHeight, view.status]);
+  const lineAdjustSetting = !!(lineAdjust && lineAdjust.phase === 'set');
+  useEffect(() => {
+    if (!lineAdjustSetting || typeof requestAnimationFrame === 'undefined') return;
+    let alive = true;
+    const id = requestAnimationFrame(() => {
+      if (!alive) return;
+      travelCacheRef.current = null;
+      measureTravel();
+    });
+    return () => {
+      alive = false;
+      cancelAnimationFrame(id);
+    };
+  }, [lineAdjustSetting, settings.judgmentLineHeight, measureTravel]);
   const applyJudgment = useCallback((note, judgment, deltaMs) => {
     const _judgeT0 = RHYTHM_PERF.enabled && typeof performance !== 'undefined' ? performance.now() : 0;
     const run = runRef.current;
@@ -34990,6 +34992,10 @@ const RhythmTapTest = ({
     run.activeTouchInputs?.clear();
     run.outsideStartInputs?.clear();
     run.audio?.stop();
+    if (lineAdjustRef.current) {
+      lineAdjustRef.current.onLoop?.();
+      return;
+    }
     const score = run.lifeDepleted ? run.lockedScore : run.score;
     const achievements = rhythmResultAchievements(run.counts, chart.totalNotes);
     if (assistOn) {
@@ -36193,7 +36199,7 @@ const RhythmTapTest = ({
   useEffect(() => {
     mountedRef.current = true;
     rhythmChartSwitchHold(true);
-    beginRun(bestRecord);
+    if (!(lineAdjust && lineAdjust.phase === 'set')) beginRun(bestRecord);
     return () => {
       mountedRef.current = false;
       rhythmChartSwitchHold(false);
@@ -37687,11 +37693,9 @@ const RhythmTapTest = ({
       textShadow: '0 1px 4px rgba(2,6,23,.92)'
     }
   }))), lineAdjust && React.createElement(RhythmLineAdjustPanel, {
-    ground: settings.judgmentLineHeight,
-    onGround: setLineHeightOverride,
+    adjust: lineAdjust,
     onBump: () => setSkyLineTick(n => n + 1),
-    isLandscape: isLandscape,
-    onDone: lineAdjust.onDone
+    isLandscape: isLandscape
   }), React.createElement("div", {
     "data-rhythm-song-clock": true,
     "data-clock-wide": isLandscape ? '1' : '',
@@ -38088,7 +38092,7 @@ const RhythmTapTest = ({
     "data-rhythm-lane-cover": true,
     "aria-hidden": "true",
     style: laneCoverStyle
-  }), lineAdjust && React.createElement(RhythmLineAdjustBands, {
+  }), lineAdjust && lineAdjust.phase === 'set' && React.createElement(RhythmLineAdjustBands, {
     tick: skyLineTick
   }), calibrating && React.createElement("div", {
     ref: calibrationBannerRef,
@@ -88038,8 +88042,31 @@ function MonsterHeroGame() {
     });
     setGameState('RHYTHM_PLAY');
   };
+  const [rhythmLineAdjust, setRhythmLineAdjust] = useState(null);
+  const rhythmLineAdjustSnapshot = () => ({
+    skyLine: RHYTHM_SKY_LINE_OFFSET.pct,
+    groundW: RHYTHM_ACCEPT_WIDTH.ground,
+    skyW: RHYTHM_ACCEPT_WIDTH.sky,
+    skyTop: RHYTHM_ACCEPT_WIDTH.skyTop
+  });
+  const rhythmLineAdjustRestore = orig => {
+    if (!orig) return;
+    RHYTHM_SKY_LINE_OFFSET.pct = orig.skyLine;
+    RHYTHM_ACCEPT_WIDTH.ground = orig.groundW;
+    RHYTHM_ACCEPT_WIDTH.sky = orig.skyW;
+    RHYTHM_ACCEPT_WIDTH.skyTop = orig.skyTop;
+  };
   const startRhythmLineAdjust = () => {
     if (rhythmSettings.quietDuringPlay) RHYTHM_QUIET_MODE.enter();
+    setRhythmLineAdjust({
+      phase: 'set',
+      key: 0,
+      ground: rhythmSettings.judgmentLineHeight,
+      orig: {
+        ...rhythmLineAdjustSnapshot(),
+        ground: rhythmSettings.judgmentLineHeight
+      }
+    });
     setRhythmPlay({
       song: RHYTHM_LINE_ADJUST_SONG,
       difficulty: RHYTHM_LINE_ADJUST_DIFFICULTY,
@@ -88047,6 +88074,58 @@ function MonsterHeroGame() {
     });
     setGameState('RHYTHM_PLAY');
   };
+  const leaveRhythmLineAdjust = () => {
+    setRhythmLineAdjust(null);
+    setRhythmPlay(null);
+    setGameState('RHYTHM_OPTIONS');
+  };
+  const saveAndTryRhythmLineAdjust = async () => {
+    const cur = rhythmLineAdjust;
+    if (!cur) return;
+    const now = rhythmLineAdjustSnapshot();
+    RHYTHM_SKY_LINE_OFFSET.set(now.skyLine);
+    RHYTHM_ACCEPT_WIDTH.set('ground', now.groundW);
+    RHYTHM_ACCEPT_WIDTH.set('sky', now.skyW);
+    RHYTHM_ACCEPT_WIDTH.set('skyTop', now.skyTop);
+    const saved = await saveRhythmSettings({
+      ...rhythmSettings,
+      judgmentLineHeight: cur.ground
+    });
+    setRhythmSettings(saved);
+    setRhythmLineAdjust(a => a ? {
+      ...a,
+      phase: 'try',
+      key: a.key + 1,
+      orig: {
+        ...now,
+        ground: cur.ground
+      }
+    } : a);
+  };
+  const rhythmLineAdjustProps = rhythmLineAdjust ? {
+    ...rhythmLineAdjust,
+    onGround: g => setRhythmLineAdjust(a => a ? {
+      ...a,
+      ground: g
+    } : a),
+    onSaveTry: () => {
+      void saveAndTryRhythmLineAdjust();
+    },
+    onCancel: () => {
+      rhythmLineAdjustRestore(rhythmLineAdjust.orig);
+      leaveRhythmLineAdjust();
+    },
+    onFix: () => setRhythmLineAdjust(a => a ? {
+      ...a,
+      phase: 'set',
+      key: a.key + 1
+    } : a),
+    onEnd: leaveRhythmLineAdjust,
+    onLoop: () => setRhythmLineAdjust(a => a && a.phase === 'try' ? {
+      ...a,
+      key: a.key + 1
+    } : a)
+  } : null;
   const startRhythmPractice = () => {
     if (rhythmSettings.quietDuringPlay) RHYTHM_QUIET_MODE.enter();
     setRhythmPlay({
@@ -101223,6 +101302,7 @@ function MonsterHeroGame() {
       fx: raidDamageFx,
       onDone: () => setRaidDamageFx(null)
     }), gameState === 'RHYTHM_PLAY' && rhythmPlay && React.createElement(RhythmTapTest, {
+      key: rhythmPlay.from === 'lineAdjust' && rhythmLineAdjust ? `line-adjust-${rhythmLineAdjust.key}` : undefined,
       raidPlay: rhythmPlay.from === 'raid',
       song: rhythmPlay.song,
       difficulty: rhythmPlay.difficulty,
@@ -101309,6 +101389,10 @@ function MonsterHeroGame() {
         if (rhythmPlay.from === 'multi' && !RHYTHM_MULTI.hasReported(rhythmPlay.multiStartId)) RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId, null, true, {
           diffId: rhythmPlay.difficulty.id
         });
+        if (rhythmPlay.from === 'lineAdjust') {
+          rhythmLineAdjustRestore(rhythmLineAdjust?.orig);
+          setRhythmLineAdjust(null);
+        }
         const back = rhythmPlay.from === 'multi' ? 'RHYTHM_MULTI' : rhythmPlay.from === 'calibration' || rhythmPlay.from === 'lineAdjust' ? 'RHYTHM_OPTIONS' : rhythmPlay.backTo === 'RHYTHM_DEBUG_SELECT' ? 'RHYTHM_DEBUG_SELECT' : rhythmPlay.from === 'debug' || rhythmPlay.from === 'proto' ? 'RHYTHM_DEBUG' : 'RHYTHM_DEMO_HOME';
         setRhythmPlay(null);
         setGameState(back);
@@ -101324,19 +101408,7 @@ function MonsterHeroGame() {
       debugPlay: rhythmPlay.from === 'debug' || rhythmPlay.from === 'proto',
       tutorial: rhythmPlay.from === 'tutorial',
       calibrating: rhythmPlay.from === 'calibration',
-      lineAdjust: rhythmPlay.from === 'lineAdjust' ? {
-        onDone: async height => {
-          if (height !== null && height !== undefined) {
-            const saved = await saveRhythmSettings({
-              ...rhythmSettings,
-              judgmentLineHeight: height
-            });
-            setRhythmSettings(saved);
-          }
-          setRhythmPlay(null);
-          setGameState('RHYTHM_OPTIONS');
-        }
-      } : null,
+      lineAdjust: rhythmPlay.from === 'lineAdjust' ? rhythmLineAdjustProps : null,
       onApplyCalibration: async measured => {
         const offsetMs = Number(measured && measured.offsetMs);
         if (Number.isFinite(offsetMs)) {

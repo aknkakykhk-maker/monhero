@@ -1052,15 +1052,16 @@ const RhythmLineAdjustBands=({tick})=>{
   </div>;
 };
 // 調整の操作。演奏エリアの外(上の帯と同じ並び)に置くので、ボタンを押してもレーンを叩いたことにならない
-const RhythmLineAdjustPanel=({ground,onGround,onBump,onDone,isLandscape})=>{
-  const start=useRef(null);
-  if(!start.current)start.current={ground,skyLine:RHYTHM_SKY_LINE_OFFSET.pct,groundW:RHYTHM_ACCEPT_WIDTH.ground,skyW:RHYTHM_ACCEPT_WIDTH.sky,skyTop:RHYTHM_ACCEPT_WIDTH.skyTop};
-  const [vals,setVals]=useState(()=>({...start.current}));
-  // 「保存して戻る」「やめる」を押さずに画面を離れたとき(ポーズから抜けた・曲が終わった)は、保存していない値を元へ戻す
-  const done=useRef(false);
-  useEffect(()=>()=>{if(done.current)return;const s0=start.current;RHYTHM_SKY_LINE_OFFSET.pct=s0.skyLine;RHYTHM_ACCEPT_WIDTH.ground=s0.groundW;RHYTHM_ACCEPT_WIDTH.sky=s0.skyW;RHYTHM_ACCEPT_WIDTH.skyTop=s0.skyTop;},[]);
+// 調整の操作。演奏エリアの外(上の帯と同じ並び)に置くので、ボタンを押してもレーンを叩いたことにならない。
+// 段階は2つ(2026-10-14 社長「時間で強制終了させるのやめて。普通に設定してそのあとに試すみたいな形にさせて」):
+//   set … 設定する段階。曲もノーツも流さない(時間で終わらない)。5つの行を好きなだけ動かせる
+//   try … 試す段階。地上と空中のノーツをくり返し流す。操作は小さくたたみ、レーンを隠さない
+// 終わるのは「保存して戻る」「やめる」を押したときだけ。値(地上の下書き・元の値)は親(60-app.jsx)が持つので、段階を切り替えて作り直しても消えない
+const RhythmLineAdjustPanel=({adjust,onBump,isLandscape})=>{
+  const read=()=>({ground:Number(adjust.ground),skyLine:RHYTHM_SKY_LINE_OFFSET.pct,groundW:RHYTHM_ACCEPT_WIDTH.ground,skyW:RHYTHM_ACCEPT_WIDTH.sky,skyTop:RHYTHM_ACCEPT_WIDTH.skyTop});
+  const [vals,setVals]=useState(read);
   const apply=next=>{RHYTHM_SKY_LINE_OFFSET.pct=next.skyLine;RHYTHM_ACCEPT_WIDTH.ground=next.groundW;RHYTHM_ACCEPT_WIDTH.sky=next.skyW;RHYTHM_ACCEPT_WIDTH.skyTop=next.skyTop;setVals(next);onBump();};
-  const change=(key,v)=>{if(key==='ground'){const g=rhythmFiniteStep(v,RHYTHM_JUDGMENT_LINE_HEIGHT_MIN,RHYTHM_JUDGMENT_LINE_HEIGHT_MAX,RHYTHM_JUDGMENT_LINE_HEIGHT_STEP);setVals(x=>({...x,ground:g}));onGround(g);return;}
+  const change=(key,v)=>{if(key==='ground'){const g=rhythmFiniteStep(v,RHYTHM_JUDGMENT_LINE_HEIGHT_MIN,RHYTHM_JUDGMENT_LINE_HEIGHT_MAX,RHYTHM_JUDGMENT_LINE_HEIGHT_STEP);setVals(x=>({...x,ground:g}));adjust.onGround(g);return;}
     const norm=key==='skyLine'?rhythmNormalizeSkyLineOffset(v):key==='skyTop'?rhythmNormalizeSkyAcceptTop(v):rhythmNormalizeAcceptWidth(v);apply({...vals,[key]:norm});};
   // 空中の線を動かせる範囲は、いまの画面と地上の線の高さで決まる(画面に収まる分だけ)
   const skyRange=rhythmSkyLineOffsetRange(RHYTHM_SKY_LIFT.base,RHYTHM_JUDGMENT_LINE_Y.ratio);
@@ -1071,20 +1072,16 @@ const RhythmLineAdjustPanel=({ground,onGround,onBump,onDone,isLandscape})=>{
     ['skyW','空中の受付の広さ(下側)',RHYTHM_ACCEPT_WIDTH_MIN_PCT,100,RHYTHM_ACCEPT_WIDTH_STEP_PCT,'%',0],
     ['skyTop','空中の受付の上の端',RHYTHM_SKY_ACCEPT_TOP_MIN_PCT,RHYTHM_SKY_ACCEPT_TOP_MAX_PCT,RHYTHM_SKY_ACCEPT_TOP_STEP_PCT,'%',0],
   ];
-  const finish=save=>{
-    done.current=true;
-    if(save){RHYTHM_SKY_LINE_OFFSET.set(vals.skyLine);RHYTHM_ACCEPT_WIDTH.set('ground',vals.groundW);RHYTHM_ACCEPT_WIDTH.set('sky',vals.skyW);RHYTHM_ACCEPT_WIDTH.set('skyTop',vals.skyTop);}
-    else{const s0=start.current;RHYTHM_SKY_LINE_OFFSET.pct=s0.skyLine;RHYTHM_ACCEPT_WIDTH.ground=s0.groundW;RHYTHM_ACCEPT_WIDTH.sky=s0.skyW;RHYTHM_ACCEPT_WIDTH.skyTop=s0.skyTop;}
-    onDone(save?vals.ground:null);
-  };
-  return <div data-rhythm-line-adjust-panel className={`pointer-events-auto absolute z-[35] overflow-y-auto rounded-xl border border-white/20 bg-slate-950/85 p-1.5 text-white shadow-[0_6px_18px_rgba(0,0,0,.5)] ${isLandscape?'left-1 top-1 w-[236px] max-h-[calc(100%-8px)]':'inset-x-2 top-[76px] max-h-[46%]'}`}>
-    {/* 「やめる」「保存して戻る」はいちばん上に置く(横持ちは高さが足りず、下に置くと切れて見えなかった) */}
-    <div className="flex items-center gap-1">
-      <b className="min-w-0 flex-1 px-0.5 text-[11px] font-black leading-tight text-amber-200">判定ラインを合わせる</b>
-      <button type="button" data-rhythm-line-adjust-cancel onClick={()=>finish(false)} className="min-h-[40px] shrink-0 rounded-lg border border-white/25 bg-slate-800 px-2 text-[11px] font-black">やめる</button>
-      <button type="button" data-rhythm-line-adjust-save onClick={()=>finish(true)} className="min-h-[40px] shrink-0 rounded-lg bg-amber-400 px-2 text-[11px] font-black text-slate-950">保存して戻る</button>
-    </div>
-    {!isLandscape&&<small className="block px-0.5 text-[9px] font-bold leading-snug text-slate-300">水色=地上・桃色=空中を受け付ける範囲。ノーツを叩いて試せます</small>}
+  // 試す段階(保存したあと)は、操作パネルを出さない。右上の一時停止の下に小さく「位置を直す」「終わる」だけを置く
+  //   (2026-10-14 社長「位置調整してるときにノーツ落ちてくるのも邪魔」「試しにやるにも左の設定邪魔」)
+  if(adjust.phase==='try')return <div data-rhythm-line-adjust-panel data-phase="try" className={`pointer-events-auto absolute z-[35] flex flex-col items-end gap-1 ${isLandscape?'right-1 top-[54px]':'right-2 top-[76px]'}`}>
+    <button type="button" data-rhythm-line-adjust-fix onClick={adjust.onFix} className="min-h-[36px] rounded-lg border border-white/25 bg-slate-900/90 px-2 text-[11px] font-black text-cyan-100">位置を直す</button>
+    <button type="button" data-rhythm-line-adjust-end onClick={adjust.onEnd} className="min-h-[36px] rounded-lg border border-white/25 bg-slate-900/90 px-2 text-[11px] font-black text-white">終わる</button>
+  </div>;
+  // 位置を設定する段階: ノーツは流さない・時間の制限もない。5つの値を動かし、下の「保存して試す」で保存してから試す
+  return <div data-rhythm-line-adjust-panel data-phase="set" className={`pointer-events-auto absolute z-[35] overflow-y-auto rounded-xl border border-white/20 bg-slate-950/95 p-1.5 text-white shadow-[0_6px_18px_rgba(0,0,0,.5)] ${isLandscape?'left-1 top-1 bottom-1 w-[300px]':'inset-x-2 top-[76px] max-h-[62%]'}`}>
+    <b className="block px-0.5 text-[11px] font-black leading-tight text-amber-200">判定ラインの位置を合わせる</b>
+    {!isLandscape&&<small className="block px-0.5 text-[9px] font-bold leading-snug text-slate-300">水色=地上・桃色=空中を受け付ける範囲。「保存して試す」でノーツを流して叩けます</small>}
     {rows.map(([key,label,min,max,step,suffix,dec])=>{const v=Number(vals[key]);const shown=`${dec?v.toFixed(dec):v}${suffix}`;
       return <div key={key} data-rhythm-line-adjust-row={key} className="mt-0.5">
         <div className="flex items-baseline justify-between px-0.5"><small className="text-[10px] font-black text-cyan-100">{label}</small><output data-rhythm-line-adjust-value={key} className="text-[11px] font-black tabular-nums text-white">{shown}</output></div>
@@ -1094,13 +1091,18 @@ const RhythmLineAdjustPanel=({ground,onGround,onBump,onDone,isLandscape})=>{
           <button type="button" data-rhythm-line-adjust-nudge={`${key}+`} disabled={v>=max} onClick={()=>change(key,v+step)} className="min-h-[40px] rounded-lg bg-slate-100 text-[14px] font-black text-slate-900 disabled:opacity-35">＋</button>
         </div>
       </div>;})}
+    <div className="mt-1.5 grid grid-cols-[1fr_auto] gap-1">
+      <button type="button" data-rhythm-line-adjust-save onClick={adjust.onSaveTry} className="min-h-[40px] rounded-lg bg-amber-400 px-2 text-[12px] font-black text-slate-950">保存して試す</button>
+      <button type="button" data-rhythm-line-adjust-cancel onClick={adjust.onCancel} className="min-h-[40px] rounded-lg border border-white/25 bg-slate-800 px-3 text-[12px] font-black">やめる</button>
+    </div>
   </div>;
 };
 const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntries,onComplete,onExit,raidPlay=false,quickRunAward=null,debugPlay=false,tutorial=false,calibrating=false,onApplyCalibration=null,multi=false,multiRewardScale=1,lineAdjust=null})=>{
   // 判定ラインの位置の合わせ(lineAdjust)は、練習と同じ扱い(ライフを減らさない・記録を送らない)。練習の説明の帯は出さない
   const tutorialProp=tutorial;tutorial=tutorial||!!lineAdjust;
-  // 合わせている間の地上の判定ラインの高さ(保存はまだ)。null なら設定のまま
-  const [lineHeightOverride,setLineHeightOverride]=useState(null);
+  // 合わせている間の地上の判定ラインの高さ(保存はまだ・親が持つ)。null なら設定のまま
+  const lineAdjustRef=useRef(lineAdjust);lineAdjustRef.current=lineAdjust;
+  const lineHeightOverride=lineAdjust&&Number.isFinite(Number(lineAdjust.ground))?Number(lineAdjust.ground):null;
   // 重いときは演出を自動で控えめにする(設定 autoEffectDown・rhythmCapEffects)。この部品の中の settings は、下げた段を当てたもの
   const [effectCap,setEffectCap]=useState(()=>rhythmAutoEffectMemory.level);
   const settingsBase=useMemo(()=>lineHeightOverride===null||!settingsIn?settingsIn:{...settingsIn,judgmentLineHeight:lineHeightOverride},[settingsIn,lineHeightOverride]);
@@ -1451,7 +1453,7 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   // 譜面データそのものは触らず、演奏を始めるときにノーツ1つ1つへ焼き込む
   // (追従の許容・猶予と同じやり方。保存データにもランキングにも影響しない)。
   const makeRuntimeNotes=()=>{const tracking=rhythmSlideTrackingFor(difficulty.id);const checkpointIntervalMs=rhythmSlideCheckpointIntervalMs(difficulty.id,chart?.level);return chart.notes.map((note,index)=>({...note,index,done:false,activePointerId:null,holdJudgment:null,holdDeltaMs:0,_rhythmSlideToleranceBonusLanes:tracking.toleranceBonusLanes,_rhythmTrackingGraceMs:tracking.graceMs,...(note.type==='SLIDE'?{_rhythmSlideRenderPoints:rhythmSlidePoints(note),_rhythmSlideCheckpoints:rhythmSlideCheckpointTimes(note,checkpointIntervalMs)}:{})}));};
-  const initialView=()=>({status:'loading',score:0,combo:0,maxCombo:0,last:'',lastPrecise:false,fastSlow:'',counts:emptyCounts(),fast:0,slow:0,precise:0,life:RHYTHM_LIFE_MAX,ability:null,result:null});
+  const initialView=()=>({status:lineAdjust&&lineAdjust.phase==='set'?'idle':'loading',score:0,combo:0,maxCombo:0,last:'',lastPrecise:false,fastSlow:'',counts:emptyCounts(),fast:0,slow:0,precise:0,life:RHYTHM_LIFE_MAX,ability:null,result:null});
   const [view,setView]=useState(initialView);
   // 演奏中は左上の曲名とジャケットを薄くする(設定 hudSongFade)。始まって4秒で薄く、ポーズ中(status が playing でない間)は元に戻す
   const [hudSongDim,setHudSongDim]=useState(false);
@@ -1872,6 +1874,15 @@ useEffect(()=>{
   window.addEventListener('orientationchange',invalidate);
   return ()=>{window.removeEventListener('resize',invalidate);window.removeEventListener('orientationchange',invalidate);};
 },[settings.noteStartPosition,settings.noteSize,settings.judgmentLineHeight,view.status]);
+// 判定ラインを合わせる「設定する段階」は曲を流さないので、上の測り直しを自分で回す。
+// 地上の線・空中の線を動かすたびに測り、空中の線と受付の帯を新しい位置へ描き直す(2026-10-14)
+const lineAdjustSetting=!!(lineAdjust&&lineAdjust.phase==='set');
+useEffect(()=>{
+  if(!lineAdjustSetting||typeof requestAnimationFrame==='undefined')return;
+  let alive=true;
+  const id=requestAnimationFrame(()=>{if(!alive)return;travelCacheRef.current=null;measureTravel();});
+  return ()=>{alive=false;cancelAnimationFrame(id);};
+},[lineAdjustSetting,settings.judgmentLineHeight,measureTravel]);
   const applyJudgment=useCallback((note,judgment,deltaMs)=>{const _judgeT0=RHYTHM_PERF.enabled&&typeof performance!=='undefined'?performance.now():0;const run=runRef.current;if(!run||run.finished||run.paused||note.done)return;
 // 必死(ユグドラシル血統の能力)のあいだは、GREAT・EXCELLENTをMARVELOUSとして数える(判定だけをここで置き換える。
 // ずれは変えないので、ジャストのMARVELOUSになるのは本当にぴったりだったときだけ。2026-10-06 ユーザー指示)
@@ -2078,7 +2089,10 @@ if(settings.judgmentAtTap===true&&judgment!=='MISS'&&!calibrating){const lineY=R
 /* ずれメーター(osu! のヒットエラーメーター)。直近12回のずれを目盛りに並べ、古いものほど薄くする。
    目盛りの幅は BAD の窓(±185ms)。判定には一切関わらない */
 if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number'&&Number.isFinite(deltaMs)){const ticks=meterTicksRef.current;if(ticks.length){const slot=(run._meterSlot=((run._meterSlot??-1)+1)%ticks.length);const range=RHYTHM_JUDGMENTS.find(item=>item.id==='BAD')?.windowMs||185;const tick=ticks[slot];if(tick){tick.style.left=`${(50+Math.max(-1,Math.min(1,deltaMs/range))*50).toFixed(2)}%`;tick.dataset.judgment=judgment;}ticks.forEach((el,i)=>{if(!el)return;const age=(slot-i+ticks.length)%ticks.length;el.style.opacity=el.dataset.judgment?String(Math.max(.12,1-age/ticks.length).toFixed(2)):'0';});}}if(showAbilityFlash)scheduleAbilityClear();if(_judgeT0)RHYTHM_PERF.judge(performance.now()-_judgeT0,!!monster);},[chart.totalNotes,difficulty.maxScore,scheduleAbilityClear,scheduleJudgmentClear,settings.vibrationEnabled,settings.monsterNoteEffect,settings.paceDisplay,settings.timingDisplay,tutorial,calibrating,assistOn,luckOn,showLuckyBanner,cutInOn]);
-  const finish=useCallback(()=>{const run=runRef.current;if(!run||run.finished||run.paused)return;run.finished=true;rhythmSongPlaySignal(false,song.songId);stopFrame();RHYTHM_NOTE_SE_RUNTIME.holdStopAll();RHYTHM_GESTURE_RUNTIME.clear();run.activePointers.clear();run.activeTouchInputs?.clear();run.outsideStartInputs?.clear();run.audio?.stop();const score=run.lifeDepleted?run.lockedScore:run.score;const achievements=rhythmResultAchievements(run.counts,chart.totalNotes);/* アシストモードでは FULL COMBO 等の称号を付けない(アワーノーツと同じ) */if(assistOn){achievements.fullCombo=false;achievements.allExcellent=false;achievements.allMarvelous=false;}
+  const finish=useCallback(()=>{const run=runRef.current;if(!run||run.finished||run.paused)return;run.finished=true;rhythmSongPlaySignal(false,song.songId);stopFrame();RHYTHM_NOTE_SE_RUNTIME.holdStopAll();RHYTHM_GESTURE_RUNTIME.clear();run.activePointers.clear();run.activeTouchInputs?.clear();run.outsideStartInputs?.clear();run.audio?.stop();
+    // 判定ラインを合わせる「試す段階」は、曲の終わりで結果へ行かず、最初から流し直す(終わりは「止めて設定に戻る」「保存して戻る」「やめる」だけ。2026-10-14)
+    if(lineAdjustRef.current){lineAdjustRef.current.onLoop?.();return;}
+    const score=run.lifeDepleted?run.lockedScore:run.score;const achievements=rhythmResultAchievements(run.counts,chart.totalNotes);/* アシストモードでは FULL COMBO 等の称号を付けない(アワーノーツと同じ) */if(assistOn){achievements.fullCombo=false;achievements.allExcellent=false;achievements.allMarvelous=false;}
     // ===== クリアか失敗か(2026-09-12・ユーザー指示「終了後にクリアか失敗かもわかるようにして」) =====
     // 失敗＝ライフが0になったまま曲を終えた(不可逆のDOWN)こと。根性で蘇生して0を脱していれば
     // run.lifeDepleted は false に戻っているので、そのときはクリア扱いになる。
@@ -2636,7 +2650,7 @@ scheduleTick();};
     };}catch(_){}
     return()=>{try{if(window.__mhTestHooks){delete window.__mhTestHooks.rhythmSongMs;delete window.__mhTestHooks.rhythmPrepare;delete window.__mhTestHooks.rhythmNotes;delete window.__mhTestHooks.rhythmNoteResults;}}catch(_){}};
   },[]);
-  useEffect(()=>{mountedRef.current=true;rhythmChartSwitchHold(true);beginRun(bestRecord);return()=>{mountedRef.current=false;rhythmChartSwitchHold(false);++generationRef.current;startLockRef.current=false;disposeRun();};},[]);
+  useEffect(()=>{mountedRef.current=true;rhythmChartSwitchHold(true);if(!(lineAdjust&&lineAdjust.phase==='set'))beginRun(bestRecord);return()=>{mountedRef.current=false;rhythmChartSwitchHold(false);++generationRef.current;startLockRef.current=false;disposeRun();};},[]);
   // 演奏中にアプリを離れた(画面が隠れた)回数を診断で数える。直し方 autoPauseOnHidden を入れた端末では、離れた時点で自動で一時停止する
   // (既定は切ってある。入れる前は、Androidは裏でも曲が進んで戻ると大量のMISSになる・iOSは時計が止まる、という推測を診断で確かめる段階。2026-10-07)
   // 依存を持たせず毎回つけ直すのは、いつも最新の pause を呼ぶため
@@ -3141,7 +3155,7 @@ scheduleTick();};
 </div>;})()}<header data-rhythm-hud className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-2 px-3 pt-1.5"><div ref={hudLeftRef} data-rhythm-hud-left className="min-w-0 max-w-[35cqw] text-left landscape:max-w-[28cqw]"><div className="landscape:flex landscape:items-center landscape:gap-2"><RhythmHudScore hud={hudRef.current} maxScore={difficulty.maxScore} bestScore={bestRecord?.bestScore} rankFx={!settings.lightweightMode&&settings.effectAmount!=='MINIMAL'}/><div className="mt-1.5 flex max-w-[34cqw] flex-wrap items-center gap-1 landscape:mt-0 landscape:min-w-0 landscape:shrink"><span className={`shrink-0 rounded ${difficulty.id==='HELL'?'bg-red-900/90 text-red-200 ring-1 ring-red-500/70':'bg-fuchsia-700/85'} px-1.5 py-0.5 text-[9px] font-black leading-none`}>{difficulty.id}</span><small data-rhythm-mode-label className="text-[9px] font-bold leading-none tracking-[0.14em] text-cyan-300 landscape:hidden" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{calibrating?'タイミング合わせ':tutorial?'れんしゅう':debugPlay?debugChartLabel:`Lv.${chart.level}`}</small></div></div>{/* 曲名のとなり(レーンの外)に小さくジャケットを出す(2026-09-26・ユーザー指示「ジャケットは置くにもレーン外の曲名のあたりがいい」)。
     絵が無い曲は出さない。動かないので毎フレームの仕事は増えない。縦向きは左上の表示が道にかからないよう、絵のぶん曲名の幅を縮める */}
 <div data-rhythm-hud-songline data-hud-song-dim={hudSongDim?'1':undefined} className="mt-1 flex items-center gap-1.5 landscape:mt-0.5 landscape:min-w-0">{hudArtSrc&&<img data-rhythm-hud-art src={hudArtSrc} alt="" aria-hidden="true" decoding="async" draggable={false} className="h-7 w-7 shrink-0 rounded-md border border-white/25 object-cover landscape:h-6 landscape:w-6" style={{boxShadow:'0 1px 6px rgba(2,6,23,.8)'}}/>}<div data-rhythm-hud-song className="min-w-0 max-w-[31cqw] text-[10px] font-black text-slate-100 landscape:max-w-none" style={{maxWidth:hudArtSrc&&!isLandscape?'calc(31cqw - 34px)':undefined,display:'-webkit-box',WebkitLineClamp:isLandscape?'2':'3',WebkitBoxOrient:'vertical',overflow:'hidden',lineHeight:'1.25',textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>♪ {rhythmSongFullName(song)}</div></div></div><div data-rhythm-hud-right className="flex w-[33cqw] max-w-[33cqw] flex-col items-end gap-1.5">{/* ★縦持ちでも中身を右へそろえる(flex-col items-end)。ブロックのままだとポーズがライフの行の**左端**に並び、
-    ライフ表示を大きくして行が左へ伸びると、ポーズもいっしょにレーンの上へ出ていた(2026-09-24・ユーザーの実機の指摘) */}<div className="flex flex-col items-end landscape:flex-row landscape:items-center landscape:gap-2"><RhythmHudLife hud={hudRef.current} settings={settings} isLandscape={isLandscape} lifeBoxRef={lifeBoxRef} lifeDamageRef={lifeDamageRef}/><button data-rhythm-pause aria-label="ポーズ" className="pointer-events-auto mt-1 flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-full border border-white/20 bg-slate-900/90 text-2xl font-black text-white shadow-[0_0_12px_rgba(103,232,249,0.18)] landscape:mt-0" onClick={pause}>Ⅱ</button></div><b ref={abilityBadgeRef} data-rhythm-ability-badge hidden className="mt-1 block text-right text-[9px] font-black leading-none tracking-[0.06em] text-amber-200 landscape:inline-block landscape:mt-0.5" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}/></div></header>{lineAdjust&&<RhythmLineAdjustPanel ground={settings.judgmentLineHeight} onGround={setLineHeightOverride} onBump={()=>setSkyLineTick(n=>n+1)} isLandscape={isLandscape} onDone={lineAdjust.onDone}/>}{/* ===== 曲の進みぐあい・経過時間・自己ベスト比(2026-09-24) =====
+    ライフ表示を大きくして行が左へ伸びると、ポーズもいっしょにレーンの上へ出ていた(2026-09-24・ユーザーの実機の指摘) */}<div className="flex flex-col items-end landscape:flex-row landscape:items-center landscape:gap-2"><RhythmHudLife hud={hudRef.current} settings={settings} isLandscape={isLandscape} lifeBoxRef={lifeBoxRef} lifeDamageRef={lifeDamageRef}/><button data-rhythm-pause aria-label="ポーズ" className="pointer-events-auto mt-1 flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-full border border-white/20 bg-slate-900/90 text-2xl font-black text-white shadow-[0_0_12px_rgba(103,232,249,0.18)] landscape:mt-0" onClick={pause}>Ⅱ</button></div><b ref={abilityBadgeRef} data-rhythm-ability-badge hidden className="mt-1 block text-right text-[9px] font-black leading-none tracking-[0.06em] text-amber-200 landscape:inline-block landscape:mt-0.5" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}/></div></header>{lineAdjust&&<RhythmLineAdjustPanel adjust={lineAdjust} onBump={()=>setSkyLineTick(n=>n+1)} isLandscape={isLandscape}/>}{/* ===== 曲の進みぐあい・経過時間・自己ベスト比(2026-09-24) =====
     ★レーン(台形)の右のふちに寄せて置く。音ゲーは目線がレーンに集まるので、レーンから遠いほど読みにくい
       (ユーザー指摘「残り時間がちょっと目に入りづらい / レーンより遠くなればなるほど目線的にきつくなる」)。
       それまではHUDの右の列の右はしにあり、「🔄 横」で回した横画面では画面のいちばん端まで離れていた。
@@ -3246,7 +3260,7 @@ scheduleTick();};
     隠すのはレーンの台形の中だけ(laneCoverStyle の clip-path)。左右の空きにあるコンボ数・マスモン・背景は隠さない。
     ノーツ(z-5)より前、判定ライン(z-6)より前(上端から伸びるので判定ラインとは重ならない)、HUD(z-30)より後ろ。
     ★隠すだけで、ノーツが流れる速さ・判定のタイミングは変わらない */}
-{laneCoverStyle&&<div data-rhythm-lane-cover aria-hidden="true" style={laneCoverStyle}/>}{lineAdjust&&<RhythmLineAdjustBands tick={skyLineTick}/>}{calibrating&&<div ref={calibrationBannerRef} data-rhythm-calibration-banner className="pointer-events-none absolute z-20 rounded-2xl border border-amber-300/60 bg-slate-950/92 text-center shadow-[0_0_18px_rgba(251,191,36,.18)]" style={isLandscape
+{laneCoverStyle&&<div data-rhythm-lane-cover aria-hidden="true" style={laneCoverStyle}/>}{lineAdjust&&lineAdjust.phase==='set'&&<RhythmLineAdjustBands tick={skyLineTick}/>}{calibrating&&<div ref={calibrationBannerRef} data-rhythm-calibration-banner className="pointer-events-none absolute z-20 rounded-2xl border border-amber-300/60 bg-slate-950/92 text-center shadow-[0_0_18px_rgba(251,191,36,.18)]" style={isLandscape
       // 横持ち: HUDの左(スコア)と右(ライフ・ポーズ)にはさまれた上の空きへ。
       //   器を自前で回しているのでCSSの landscape: は効かない(@media が成立しない)。向きはJSで見る。
       //   ★真ん中に置かない。ライフ表示は設定で最大200%まで伸びて左へせり出すので、
