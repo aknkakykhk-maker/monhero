@@ -35,6 +35,15 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-10-14 16:07", type:'update', group:'assistant', title:'助手とのおしゃべりで、ゲームのこと以外もいろいろ話せるようになりました', status:'new', releaseFlag:'assistantChat',
+    items:[
+      '勉強・雑学・その日あったことなど、ゲームのこと以外の話にも、助手がいつもの口調で答えてくれます。',
+      'ふだんの返事は短めで、説明が要るときは少し長く答えます。ゲームの遊び方は、これまでどおりヘルプに書いてあることをもとに答えます。',
+      '好きなもの・目標・あったこと・前に話した話題を覚えるようになりました。少し前までの会話も踏まえて答えます。',
+      '名前や住所・電話番号などの大事な情報は、これまでどおり書かないでください。',
+    ],
+  },
+  {
     date: "2026-10-14 12:01", type:'update', group:'assistant', title:'助手と自由におしゃべりできるようになりました', status:'new', releaseFlag:'assistantChat',
     assistantNotice:{ id:'update_notice_assistant_chat_v1', type:'content' },
     items:[

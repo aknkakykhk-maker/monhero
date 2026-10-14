@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: dffddb2f1adf0701
+// generated-sha256: 1ad60d0c2bdb07cf
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-14 12:19"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-14 16:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -46562,11 +46562,20 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
 // ★電話番号・住所・メールらしい文字は送る前に止める(回数も使わない)。
 const ASSISTANT_CHAT_URL = `${SUPABASE_URL}/functions/v1/assistant-chat`;
 const ASSISTANT_CHAT_LOG_KEY = 'mh_assistant_chat_log_v1';   // { [助手id]: [{ role:'user'|'assistant', text, e? }] }
-const ASSISTANT_CHAT_MEMO_KEY = 'mh_assistant_chat_memo_v1'; // { [助手id]: '前に話したことの短いメモ' }
-const ASSISTANT_CHAT_LOG_LIMIT = 30;
-const ASSISTANT_CHAT_SEND_MESSAGES = 7;
+const ASSISTANT_CHAT_MEMO_KEY = 'mh_assistant_chat_memo_v1'; // 前の形 { [助手id]: '120字までの文' }。読むだけで書かない
+// 思い出メモを5つの欄に広げた(2026-10-14)。新しいキーに書く。前のキーの文は「前に話した話題」として引き継ぐ(CLAUDE.md ⑦)
+const ASSISTANT_CHAT_MEMO_V2_KEY = 'mh_assistant_chat_memo_v2'; // { [助手id]: { likes, goals, events, topics, summary } }
+const ASSISTANT_CHAT_MEMO_FIELDS = { likes:100, goals:100, events:100, topics:100, summary:160 };
+const ASSISTANT_CHAT_LOG_LIMIT = 60;
+// 送る会話は直近10往復まで。10件ずつ区切って送り、前のほうの並びを毎回変えない(中継役でキャッシュが効く)
+const ASSISTANT_CHAT_SEND_STEP = 10;
+const ASSISTANT_CHAT_SEND_MAX = 21;
 const ASSISTANT_CHAT_TEXT_MAX = 200;
-const ASSISTANT_CHAT_MEMO_MAX = 120;
+const assistantChatSendWindow = (list) => {
+  if (list.length <= ASSISTANT_CHAT_SEND_MAX) return list;
+  const start = Math.ceil((list.length - ASSISTANT_CHAT_SEND_MAX) / ASSISTANT_CHAT_SEND_STEP) * ASSISTANT_CHAT_SEND_STEP;
+  return list.slice(start);
+};
 const ASSISTANT_CHAT_LINES = {
   sorry: 'ごめん、今うまく話せないや',
   personal: 'それは大事な情報だから、ここには書かないでね',
@@ -46589,15 +46598,28 @@ const normalizeAssistantChatLog = (raw) => {
     if (!Array.isArray(list)) continue;
     out[id] = list
       .filter(m => m && (m.role === 'user' || m.role === 'assistant') && typeof m.text === 'string' && m.text)
-      .map(m => ({ role: m.role, text: m.text.slice(0, 400), ...(typeof m.e === 'string' ? { e: m.e } : {}) }))
+      .map(m => ({ role: m.role, text: m.text.slice(0, 700), ...(typeof m.e === 'string' ? { e: m.e } : {}) }))
       .slice(-ASSISTANT_CHAT_LOG_LIMIT);
   }
   return out;
 };
-const normalizeAssistantChatMemo = (raw) => {
+// 1人ぶんのメモをそろえる。前の形(文字)は「前に話した話題」へ入れる
+const normalizeAssistantChatMemoOne = (memo) => {
   const out = {};
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
-  for (const [id, memo] of Object.entries(raw)) if (typeof memo === 'string') out[id] = memo.slice(0, ASSISTANT_CHAT_MEMO_MAX);
+  for (const [k, max] of Object.entries(ASSISTANT_CHAT_MEMO_FIELDS)) out[k] = '';
+  if (typeof memo === 'string') out.topics = memo.slice(0, ASSISTANT_CHAT_MEMO_FIELDS.topics);
+  else if (memo && typeof memo === 'object' && !Array.isArray(memo)) {
+    for (const [k, max] of Object.entries(ASSISTANT_CHAT_MEMO_FIELDS)) if (typeof memo[k] === 'string') out[k] = memo[k].slice(0, max);
+  }
+  return out;
+};
+// 新しいキーを優先し、無い助手のぶんだけ前のキーから引き継ぐ
+const normalizeAssistantChatMemo = (rawV2, rawV1) => {
+  const out = {};
+  const v1 = rawV1 && typeof rawV1 === 'object' && !Array.isArray(rawV1) ? rawV1 : {};
+  const v2 = rawV2 && typeof rawV2 === 'object' && !Array.isArray(rawV2) ? rawV2 : {};
+  for (const [id, memo] of Object.entries(v1)) if (typeof memo === 'string') out[id] = normalizeAssistantChatMemoOne(memo);
+  for (const [id, memo] of Object.entries(v2)) out[id] = normalizeAssistantChatMemoOne(memo);
   return out;
 };
 
@@ -46613,10 +46635,10 @@ function AssistantChatWindow({ assistant, playerName, callName, bondLevel, bondT
   React.useEffect(() => {
     let alive = true;
     (async () => {
-      const [rawLog, rawMemo] = await Promise.all([storeGet(ASSISTANT_CHAT_LOG_KEY, {}, false), storeGet(ASSISTANT_CHAT_MEMO_KEY, {}, false)]);
+      const [rawLog, rawMemo, rawMemoV2] = await Promise.all([storeGet(ASSISTANT_CHAT_LOG_KEY, {}, false), storeGet(ASSISTANT_CHAT_MEMO_KEY, {}, false), storeGet(ASSISTANT_CHAT_MEMO_V2_KEY, {}, false)]);
       if (!alive) return;
       setLogs(normalizeAssistantChatLog(rawLog));
-      setMemos(normalizeAssistantChatMemo(rawMemo));
+      setMemos(normalizeAssistantChatMemo(rawMemoV2, rawMemo));
       setLoaded(true);
     })();
     return () => { alive = false; };
@@ -46634,8 +46656,8 @@ function AssistantChatWindow({ assistant, playerName, callName, bondLevel, bondT
   };
   const saveMemo = (memo) => {
     setMemos(prev => {
-      const all = { ...prev, [id]: String(memo || '').slice(0, ASSISTANT_CHAT_MEMO_MAX) };
-      try { storeSet(ASSISTANT_CHAT_MEMO_KEY, all, false); } catch {}
+      const all = { ...prev, [id]: normalizeAssistantChatMemoOne(memo) };
+      try { storeSet(ASSISTANT_CHAT_MEMO_V2_KEY, all, false); } catch {}
       return all;
     });
   };
@@ -46661,8 +46683,8 @@ function AssistantChatWindow({ assistant, playerName, callName, bondLevel, bondT
         body: JSON.stringify({
           breederId: breederId || 'unknown',
           assistantId: id,
-          messages: withUser.slice(-ASSISTANT_CHAT_SEND_MESSAGES).map(m => ({ role: m.role, text: m.text })),
-          ctx: { playerName, callName, bondLevel, bondTitle, bondTone, memo: memos[id] || '' },
+          messages: assistantChatSendWindow(withUser).map(m => ({ role: m.role, text: m.text })),
+          ctx: { playerName, callName, bondLevel, bondTitle, bondTone, memo: memos[id] || null },
         }),
       });
       if (r.ok) res = await r.json();
@@ -46674,7 +46696,7 @@ function AssistantChatWindow({ assistant, playerName, callName, bondLevel, bondT
     if (res && Number.isFinite(res.remainingToday)) setRemaining(res.remainingToday);
     // 本当に返事が来た1往復だけ、思い出メモと仲良し度に数える(断り・失敗は数えない)
     if (res && res.kind === 'reply') {
-      if (typeof res.memo === 'string') saveMemo(res.memo);
+      if (res.memo && typeof res.memo === 'object') saveMemo(res.memo);
       if (typeof onExchange === 'function') onExchange();
     }
   };
