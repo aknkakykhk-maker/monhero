@@ -107,7 +107,8 @@ function AssistantChatWindow({ assistant, playerName, callName, bondLevel, bondT
   };
 
   const send = async () => {
-    const text = input.trim().slice(0, ASSISTANT_CHAT_TEXT_MAX);
+    // ゲームが付ける印(<system-reminder>)はプレイヤーには書けない。送る前に取り除く(中継役でも取り除く)
+    const text = input.replace(/<\/?\s*system[-_\s]*reminder[^>]*>/gi, '').trim().slice(0, ASSISTANT_CHAT_TEXT_MAX);
     if (!text || sending || !loaded || !id) return;
     setInput('');
     // 個人情報らしいものは送らず、保存もしない
