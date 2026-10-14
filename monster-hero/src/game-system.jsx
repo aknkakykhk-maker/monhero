@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 095092020c391201
+// generated-sha256: 2174db2ededb2b1d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-14 07:35"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-14 10:24"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8325,8 +8325,11 @@ const RHYTHM_EVENT_POINTS_PUBLIC_RELEASE = true;
 // ★rhythmHell … 難易度 HELL(空中のノーツ SKY TAP・SKY SLIDE)。社長の OK まで偽(HISTORY 10/11 02:05「HELL はデバッグで色々見てから」)。
 //   いまこの印の後ろにあるのは HELL のお話「空まで届くビート」(回想・BGM設定の枠)。HELL を公開するときに真にし、
 //   ヘルプの HELL の項目・更新履歴・お話を流すきっかけ(案A: その曲の MASTER クリアで開く)を同じ回で入れる
+// ★assistantChat … 助手とおしゃべり(2026-10-14)。社長が試して OK を出すまで偽。それまではデバッグ設定からだけ開ける。
+//   HOMEの「おしゃべり」・仲良し度の行動 chat のヘルプ表示・更新履歴がこの印で一緒に出る
 const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tactics: TACTICS_MODE_PUBLIC_RELEASE,
   rhythmHell: true,
+  assistantChat: false,
   tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE,
   // タクティクスのEXスキル。遊べる入口(β版を含む)があって、EXの公開フラグも立っているときだけ
   tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, rhythmMulti:RHYTHM_MULTI_PUBLIC_RELEASE, friends:FRIENDS_PUBLIC_RELEASE, raidJackRhythm: RAID_JACK_RHYTHM_PUBLIC_RELEASE, get raidJack() { try { return RAID_JACK_PUBLIC_RELEASE === true && Date.now() >= Date.parse(RAID_JACK_START_AT); } catch (e) { return false; } }, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE, rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE, rhythmWeeklyRanking:RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE, rhythmEventPoints:RHYTHM_EVENT_POINTS_PUBLIC_RELEASE };
@@ -11389,6 +11392,7 @@ const helpDataRows = (id) => {
       ];
     case 'assistantBondActions':
       return Object.values((typeof ASSISTANT_BOND_ACTIONS !== 'undefined' && ASSISTANT_BOND_ACTIONS) || {})
+        .filter(x => typeof releasedForPlayers !== 'function' || releasedForPlayers(x))
         .map(x => [x.label, `1回 +${x.amount} ／ 1日 ${x.dailyMax} まで`]);
     // 音ゲーの難易度ごとの満点と、その満点で届く上限ランク。ランクのしきい値(RHYTHM_RANKS)を
     // 直接ヘルプへ手で書き写すと、しきい値を調整するたびヘルプだけ古くなるため、
@@ -15639,7 +15643,8 @@ const sbAutomationWriteBlocked = (url, method) => {
     if (!u.startsWith(SUPABASE_URL) || u.includes('/rest/v1/rpc/')) return false;
     if (Array.isArray(stubbed)) {
       const path = u.slice(SUPABASE_URL.length).split('?')[0];
-      if (stubbed.some((t) => typeof t === 'string' && t && path.startsWith('/rest/v1/' + t))) return false;
+      // 中継役(Edge Function)も同じ書き方で通せる(例: ['assistant-chat'] … 助手とおしゃべりの検査)
+      if (stubbed.some((t) => typeof t === 'string' && t && (path.startsWith('/rest/v1/' + t) || path.startsWith('/functions/v1/' + t)))) return false;
     }
     return true;
   } catch { return false; }
@@ -36751,6 +36756,8 @@ function HomeScreen({
   onOpenBattle, onOpenManagement, onOpenMarket, onOpenProfile, onOpenRhythm, onOpenSettings,
   onOpenTemple, openChangelog, openGiftBox, openMissions, profileFrameId, resolveIconUrl, spotClass,
   raidJackVisible = false, raidJackEventId, onOpenRaidJack,
+  // 助手とおしゃべり(2026-10-14)。公開の印 assistantChat が立つまでは null(ボタンを出さない)
+  onOpenAssistantChat = null,
 }) {
   // 背景の絵は「HOMEの枠が横長かどうか」で選ぶ。画面の向きでは決めない。
   // パソコンは画面が横長でも、HOMEは幅600の縦長の列に収まるので、横長の絵を出すと村の真ん中だけが大きく写り、
@@ -36845,7 +36852,9 @@ function HomeScreen({
           <b>{homeEventCampaign.banner.emoji} {homeEventCampaign.banner.title}</b><small>{homeEventCampaign.banner.sub}</small>
         </button>}
         {/* 仲良し度が上がった直後だけ、みゅあがそのことに触れる(HOMEを離れると元に戻る) */}
-        <div className={`mh-home-assistant${spotClass('assistant')}`}><AssistantBubble scene="home" condition={assistantBondUp?'bondUp':(masuMons.length===0?'firstRun':null)} compact/></div>
+        <div className={`mh-home-assistant${spotClass('assistant')}`}><AssistantBubble scene="home" condition={assistantBondUp?'bondUp':(masuMons.length===0?'firstRun':null)} compact/>
+          {typeof onOpenAssistantChat==='function'&&<button type="button" data-home-assistant-chat onClick={onOpenAssistantChat} className="mt-1 ml-auto block rounded-full border border-pink-300/70 bg-pink-500/85 px-3 py-1 text-[11px] font-black text-white shadow active:scale-95">💬 おしゃべり</button>}
+        </div>
       </main>
     
   );
@@ -46537,6 +46546,165 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
   );
 };
 
+// ---- part: 56-assistant-chat.jsx ----
+// ===== 助手とおしゃべり(2026-10-14・社長の決定) =====
+// 助手と自由に話せる会話の窓。返事は Claude が作る。ゲームは API キーを持たず、
+// 中継役(supabase/functions/assistant-chat)へ送るだけ。仕様: docs/spec/ASSISTANT_CHAT.md
+// ★公開の印 RELEASE_FLAGS.assistantChat の後ろ。印が立つまではデバッグ設定からだけ開ける。
+// ★会話の中身は端末にだけ置く(新しいキー。既存のキーは触らない)。サーバーへ送るのは直近3往復と今回だけ。
+// ★電話番号・住所・メールらしい文字は送る前に止める(回数も使わない)。
+const ASSISTANT_CHAT_URL = `${SUPABASE_URL}/functions/v1/assistant-chat`;
+const ASSISTANT_CHAT_LOG_KEY = 'mh_assistant_chat_log_v1';   // { [助手id]: [{ role:'user'|'assistant', text, e? }] }
+const ASSISTANT_CHAT_MEMO_KEY = 'mh_assistant_chat_memo_v1'; // { [助手id]: '前に話したことの短いメモ' }
+const ASSISTANT_CHAT_LOG_LIMIT = 30;
+const ASSISTANT_CHAT_SEND_MESSAGES = 7;
+const ASSISTANT_CHAT_TEXT_MAX = 200;
+const ASSISTANT_CHAT_MEMO_MAX = 120;
+const ASSISTANT_CHAT_LINES = {
+  sorry: 'ごめん、今うまく話せないや',
+  personal: 'それは大事な情報だから、ここには書かないでね',
+};
+// 中継役(core.js)と同じものを見る。送る前に止めるため
+const ASSISTANT_CHAT_PERSONAL_PATTERNS = [
+  /0\d{1,4}[-‐ー−\s]?\d{1,4}[-‐ー−\s]?\d{3,4}/,
+  /[0-9０-９]{10,11}/,
+  /[\w.+-]+@[\w-]+\.[\w.-]+/,
+  /〒?\s?\d{3}[-‐ー−]\d{4}/,
+  /(都|道|府|県).{0,8}(市|区|町|村).{0,12}\d+[-‐ー−丁番]/,
+];
+const assistantChatLooksPersonal = (text) => ASSISTANT_CHAT_PERSONAL_PATTERNS.some(re => re.test(String(text || '')));
+
+// 保存値が無い・壊れているときは空にする。助手ごとに最後の30件だけ残す
+const normalizeAssistantChatLog = (raw) => {
+  const out = {};
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  for (const [id, list] of Object.entries(raw)) {
+    if (!Array.isArray(list)) continue;
+    out[id] = list
+      .filter(m => m && (m.role === 'user' || m.role === 'assistant') && typeof m.text === 'string' && m.text)
+      .map(m => ({ role: m.role, text: m.text.slice(0, 400), ...(typeof m.e === 'string' ? { e: m.e } : {}) }))
+      .slice(-ASSISTANT_CHAT_LOG_LIMIT);
+  }
+  return out;
+};
+const normalizeAssistantChatMemo = (raw) => {
+  const out = {};
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  for (const [id, memo] of Object.entries(raw)) if (typeof memo === 'string') out[id] = memo.slice(0, ASSISTANT_CHAT_MEMO_MAX);
+  return out;
+};
+
+function AssistantChatWindow({ assistant, playerName, callName, bondLevel, bondTitle, bondTone, onExchange, onClose }) {
+  const id = assistant && assistant.id;
+  const [logs, setLogs] = React.useState({});
+  const [memos, setMemos] = React.useState({});
+  const [loaded, setLoaded] = React.useState(false);
+  const [input, setInput] = React.useState('');
+  const [sending, setSending] = React.useState(false);
+  const [remaining, setRemaining] = React.useState(null);
+  const listRef = React.useRef(null);
+  React.useEffect(() => {
+    let alive = true;
+    (async () => {
+      const [rawLog, rawMemo] = await Promise.all([storeGet(ASSISTANT_CHAT_LOG_KEY, {}, false), storeGet(ASSISTANT_CHAT_MEMO_KEY, {}, false)]);
+      if (!alive) return;
+      setLogs(normalizeAssistantChatLog(rawLog));
+      setMemos(normalizeAssistantChatMemo(rawMemo));
+      setLoaded(true);
+    })();
+    return () => { alive = false; };
+  }, []);
+  const log = (logs[id] || []);
+  React.useEffect(() => { const el = listRef.current; if (el) el.scrollTop = el.scrollHeight; }, [log.length, sending]);
+  const lastExpression = (log.slice().reverse().find(m => m.role === 'assistant') || {}).e || 'happy';
+
+  const saveLog = (next) => {
+    setLogs(prev => {
+      const all = { ...prev, [id]: next.slice(-ASSISTANT_CHAT_LOG_LIMIT) };
+      try { storeSet(ASSISTANT_CHAT_LOG_KEY, all, false); } catch {}
+      return all;
+    });
+  };
+  const saveMemo = (memo) => {
+    setMemos(prev => {
+      const all = { ...prev, [id]: String(memo || '').slice(0, ASSISTANT_CHAT_MEMO_MAX) };
+      try { storeSet(ASSISTANT_CHAT_MEMO_KEY, all, false); } catch {}
+      return all;
+    });
+  };
+
+  const send = async () => {
+    const text = input.trim().slice(0, ASSISTANT_CHAT_TEXT_MAX);
+    if (!text || sending || !loaded || !id) return;
+    setInput('');
+    // 個人情報らしいものは送らず、保存もしない
+    if (assistantChatLooksPersonal(text)) {
+      saveLog([...log, { role: 'assistant', text: ASSISTANT_CHAT_LINES.personal, e: 'troubled' }]);
+      return;
+    }
+    const withUser = [...log, { role: 'user', text }];
+    saveLog(withUser);
+    setSending(true);
+    let res = null;
+    try {
+      const breederId = await ensureBreederId();
+      const r = await fetch(ASSISTANT_CHAT_URL, {
+        method: 'POST',
+        headers: SB_HEADERS,
+        body: JSON.stringify({
+          breederId: breederId || 'unknown',
+          assistantId: id,
+          messages: withUser.slice(-ASSISTANT_CHAT_SEND_MESSAGES).map(m => ({ role: m.role, text: m.text })),
+          ctx: { playerName, callName, bondLevel, bondTitle, bondTone, memo: memos[id] || '' },
+        }),
+      });
+      if (r.ok) res = await r.json();
+    } catch {}
+    setSending(false);
+    const reply = res && typeof res.reply === 'string' && res.reply ? res.reply : ASSISTANT_CHAT_LINES.sorry;
+    const e = res && typeof res.expression === 'string' ? res.expression : 'troubled';
+    saveLog([...withUser, { role: 'assistant', text: reply, e }]);
+    if (res && Number.isFinite(res.remainingToday)) setRemaining(res.remainingToday);
+    // 本当に返事が来た1往復だけ、思い出メモと仲良し度に数える(断り・失敗は数えない)
+    if (res && res.kind === 'reply') {
+      if (typeof res.memo === 'string') saveMemo(res.memo);
+      if (typeof onExchange === 'function') onExchange();
+    }
+  };
+
+  if (!assistant) return null;
+  const accent = assistant.accent || '#f472b6';
+  return (
+    <div data-assistant-chat className="fixed inset-0 flex items-end sm:items-center justify-center bg-black/60 p-2" style={{ zIndex: 9000, paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom))' }} onClick={onClose}>
+      <div className="w-full max-w-md max-h-[85vh] flex flex-col rounded-2xl border-2 bg-slate-950 text-slate-100 shadow-2xl" style={{ borderColor: accent }} onClick={ev => ev.stopPropagation()}>
+        <div className="flex items-center gap-2 px-3 py-2 border-b border-slate-800 shrink-0">
+          <img data-assistant-chat-face={lastExpression} src={assistantFaceSrc(assistant, lastExpression)} alt="" className="h-11 w-11 rounded-full border-2 object-cover bg-slate-900" style={{ borderColor: accent }}/>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-black" style={{ color: accent }}>{assistant.name}とおしゃべり</p>
+            <p data-assistant-chat-remaining className="text-[10px] font-bold text-slate-400">{remaining == null ? '1日に話せる回数には上限があります' : `今日あと${remaining}回`}</p>
+          </div>
+          <button type="button" data-assistant-chat-close onClick={onClose} className="h-9 w-9 rounded-full border border-slate-600 text-slate-300 text-lg font-black active:scale-95" aria-label="閉じる">×</button>
+        </div>
+        <div ref={listRef} className="flex-1 overflow-y-auto mh-scroll px-3 py-2 space-y-2" style={{ minHeight: 180 }}>
+          {log.length === 0 && <p className="text-[11px] text-slate-400 leading-relaxed">{assistant.greeting || '話しかけてみてね'}</p>}
+          {log.map((m, i) => (
+            <div key={i} data-assistant-chat-msg={m.role} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <p className={`max-w-[80%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-[12px] leading-relaxed ${m.role === 'user' ? 'bg-slate-700 text-white' : 'bg-slate-800/80 text-slate-100 border'}`} style={m.role === 'user' ? undefined : { borderColor: accent }}>{m.text}</p>
+            </div>
+          ))}
+          {sending && <p data-assistant-chat-sending className="text-[11px] text-slate-400">{assistant.name}が考え中…</p>}
+        </div>
+        <div className="flex items-end gap-2 border-t border-slate-800 p-2 shrink-0">
+          <textarea data-assistant-chat-input value={input} maxLength={ASSISTANT_CHAT_TEXT_MAX} rows={2} onChange={ev => setInput(ev.target.value)}
+            placeholder="話しかけてみよう(名前や住所などは書かないでね)" className="flex-1 resize-none rounded-xl border border-slate-700 bg-slate-900 px-2 py-1.5 text-[12px] text-white"/>
+          <button type="button" data-assistant-chat-send disabled={sending || !loaded || !input.trim()} onClick={send}
+            className="min-h-[44px] rounded-xl px-3 text-[12px] font-black text-white active:scale-95 disabled:opacity-40" style={{ background: accent }}>送る</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ---- part: 60-app.jsx ----
 function MonsterHeroGame() {
   const [gameState, setGameStateRaw] = useState('HOME');
@@ -48589,6 +48757,8 @@ function MonsterHeroGame() {
   // 呼び方の上書き(絆Lv6から自由入力)。助手ごとに分けて持つので、みゅあとききで別々に決められる
   const [assistantCallStyles, setAssistantCallStylesState] = useState({});
   const assistantCallStyle = assistantCallStyles[selectedAssistantId] || null;
+  // 助手とおしゃべりの窓(2026-10-14)。開いているあいだだけ真。公開の印 assistantChat が立つまではデバッグ設定からだけ開ける
+  const [assistantChatOpen, setAssistantChatOpen] = useState(false);
   // 「仲良し度が上がってできるようになったこと」を、その画面で一度だけ知らせる。
   // 見た案内のidを新しいキーへ覚えるので、既存のセーブデータには触らない
   const [assistantUnlockSeen, setAssistantUnlockSeen] = useState([]);
@@ -62989,8 +63159,19 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             resolveIconUrl={resolveIconUrl} spotClass={spotClass}
             raidJackVisible={(RELEASE_FLAGS.raidJack===true&&raidJackWindowAt(Date.now())==='open')||raidJackDebugForce}
             raidJackEventId={raidJackEventId} onOpenRaidJack={openRaidJack}
+            onOpenAssistantChat={RELEASE_FLAGS.assistantChat===true?()=>setAssistantChatOpen(true):null}
           />
         )}
+        {/* 助手とおしゃべり(2026-10-14)。話す相手は、いま選んでいる助手。返事が来た1往復ごとにその助手の仲良し度(chat)が増える */}
+        {assistantChatOpen&&activeAssistant&&(()=>{
+          const id=activeAssistant.id;
+          const lv=assistantBondLevelNow;
+          const stage=assistantBondStageByLevel(lv,id)||{};
+          return <AssistantChatWindow assistant={activeAssistant} playerName={breederName}
+            callName={assistantCallName(breederName,lv,assistantCallStyles[id]||null,id)}
+            bondLevel={lv} bondTitle={stage.title||''} bondTone={stage.tone||''}
+            onExchange={()=>addAssistantBondFor(id,'chat')} onClose={()=>setAssistantChatOpen(false)}/>;
+        })()}
 
         {/* モンヒロビート(音ゲー)の準備中の案内。公開フラグが立つまでHOMEのモンヒロビートはここへ来る。
             見た目は体験版ホームに合わせ、修行のCSSは借りない(別の機能の見た目に引きずられないため) */}
@@ -65029,6 +65210,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div className="flex items-center gap-2 mb-2 shrink-0"><button onClick={()=>{setGameState('SETTINGS');openHelp();}} className="p-3 text-slate-500"><ArrowLeft size={20}/></button><h2 className="text-base font-black text-slate-400 tracking-widest">DEBUG MENU</h2></div>
             <p className="mb-3 shrink-0 text-[9px] leading-relaxed text-slate-500">用途ごとに畳んであります。見出しを押すと開きます。</p>
             <div className="flex-1 overflow-y-auto mh-scroll space-y-2">
+
+              {/* 助手とおしゃべり(2026-10-14)。公開の印 assistantChat が立つまでの試し口。
+                  本物の中継役へ送るので、1回ごとに社長のAPIクレジットと回数を使う。デバッグ専用なので更新履歴・ヘルプには載せない */}
+              <button data-debug-assistant-chat onClick={()=>setAssistantChatOpen(true)} className="w-full min-h-[58px] rounded-2xl border-2 border-pink-400/50 bg-pink-950/40 text-pink-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">💬 助手とおしゃべり(試す)<small className="mt-0.5 block text-[9px] font-bold leading-relaxed text-pink-200/80">公開前の会話の窓を、いま選んでいる助手で開きます。本物の返事が来るので、1回ごとに回数を使います</small></button>
 
               {/* ---------- ① モンスター ---------- */}
               <details className="rounded-2xl border border-emerald-500/40 bg-emerald-950/20">

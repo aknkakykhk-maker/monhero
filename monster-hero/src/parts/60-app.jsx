@@ -2049,6 +2049,8 @@ function MonsterHeroGame() {
   // 呼び方の上書き(絆Lv6から自由入力)。助手ごとに分けて持つので、みゅあとききで別々に決められる
   const [assistantCallStyles, setAssistantCallStylesState] = useState({});
   const assistantCallStyle = assistantCallStyles[selectedAssistantId] || null;
+  // 助手とおしゃべりの窓(2026-10-14)。開いているあいだだけ真。公開の印 assistantChat が立つまではデバッグ設定からだけ開ける
+  const [assistantChatOpen, setAssistantChatOpen] = useState(false);
   // 「仲良し度が上がってできるようになったこと」を、その画面で一度だけ知らせる。
   // 見た案内のidを新しいキーへ覚えるので、既存のセーブデータには触らない
   const [assistantUnlockSeen, setAssistantUnlockSeen] = useState([]);
@@ -16449,8 +16451,19 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             resolveIconUrl={resolveIconUrl} spotClass={spotClass}
             raidJackVisible={(RELEASE_FLAGS.raidJack===true&&raidJackWindowAt(Date.now())==='open')||raidJackDebugForce}
             raidJackEventId={raidJackEventId} onOpenRaidJack={openRaidJack}
+            onOpenAssistantChat={RELEASE_FLAGS.assistantChat===true?()=>setAssistantChatOpen(true):null}
           />
         )}
+        {/* 助手とおしゃべり(2026-10-14)。話す相手は、いま選んでいる助手。返事が来た1往復ごとにその助手の仲良し度(chat)が増える */}
+        {assistantChatOpen&&activeAssistant&&(()=>{
+          const id=activeAssistant.id;
+          const lv=assistantBondLevelNow;
+          const stage=assistantBondStageByLevel(lv,id)||{};
+          return <AssistantChatWindow assistant={activeAssistant} playerName={breederName}
+            callName={assistantCallName(breederName,lv,assistantCallStyles[id]||null,id)}
+            bondLevel={lv} bondTitle={stage.title||''} bondTone={stage.tone||''}
+            onExchange={()=>addAssistantBondFor(id,'chat')} onClose={()=>setAssistantChatOpen(false)}/>;
+        })()}
 
         {/* モンヒロビート(音ゲー)の準備中の案内。公開フラグが立つまでHOMEのモンヒロビートはここへ来る。
             見た目は体験版ホームに合わせ、修行のCSSは借りない(別の機能の見た目に引きずられないため) */}
@@ -18489,6 +18502,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div className="flex items-center gap-2 mb-2 shrink-0"><button onClick={()=>{setGameState('SETTINGS');openHelp();}} className="p-3 text-slate-500"><ArrowLeft size={20}/></button><h2 className="text-base font-black text-slate-400 tracking-widest">DEBUG MENU</h2></div>
             <p className="mb-3 shrink-0 text-[9px] leading-relaxed text-slate-500">用途ごとに畳んであります。見出しを押すと開きます。</p>
             <div className="flex-1 overflow-y-auto mh-scroll space-y-2">
+
+              {/* 助手とおしゃべり(2026-10-14)。公開の印 assistantChat が立つまでの試し口。
+                  本物の中継役へ送るので、1回ごとに社長のAPIクレジットと回数を使う。デバッグ専用なので更新履歴・ヘルプには載せない */}
+              <button data-debug-assistant-chat onClick={()=>setAssistantChatOpen(true)} className="w-full min-h-[58px] rounded-2xl border-2 border-pink-400/50 bg-pink-950/40 text-pink-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">💬 助手とおしゃべり(試す)<small className="mt-0.5 block text-[9px] font-bold leading-relaxed text-pink-200/80">公開前の会話の窓を、いま選んでいる助手で開きます。本物の返事が来るので、1回ごとに回数を使います</small></button>
 
               {/* ---------- ① モンスター ---------- */}
               <details className="rounded-2xl border border-emerald-500/40 bg-emerald-950/20">

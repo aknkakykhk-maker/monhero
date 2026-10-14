@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e548bf3ac6a1b450
+// source-sha256: 0fc1e9e048f79b61
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-14 07:35";
+const BUILD_DATE = "2026-10-14 10:24";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -11705,6 +11705,7 @@ const RELEASE_FLAGS = {
   speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE,
   tactics: TACTICS_MODE_PUBLIC_RELEASE,
   rhythmHell: true,
+  assistantChat: false,
   tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE,
   tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE,
   rhythmMode: RHYTHM_MODE_PUBLIC_RELEASE,
@@ -16053,7 +16054,7 @@ const helpDataRows = id => {
     case 'monsterPower':
       return [['ライフ 1', `+${MONSTER_POWER_STAT_WEIGHT.hp}`], ['ちから 1', `+${Math.round(MONSTER_POWER_STAT_WEIGHT.atk * 100) / 100}（強化P1つ=ちから+${STAT_POINT_GAIN.atk} で +10）`], ['丈夫さ 1', `+${Math.round(MONSTER_POWER_STAT_WEIGHT.def * 100) / 100}（強化P1つ=丈夫さ+${STAT_POINT_GAIN.def} で +10）`], ['ガッツ 1', `+${Math.round(MONSTER_POWER_STAT_WEIGHT.guts * 100) / 100}（強化P1つ=ガッツ+${STAT_POINT_GAIN.guts} で +10）`], ['間合い適性', DIST_APTITUDE_GRADES.slice().reverse().map(g => `${g} ${MONSTER_POWER_APTITUDE[g] > 0 ? '+' : ''}${MONSTER_POWER_APTITUDE[g]}`).join(' ／ ') + '（4距離すべてを合計）'], ['固有技を1つ持つ', `+${MONSTER_POWER_UNIQUE_OWNED}（Lv0でも付く。継承した固有技も同じ）`], ['固有技の強化Lv 1段階', `+${Math.round(MONSTER_POWER_UNIQUE_PER_LEVEL * 100) / 100}（3段階でちょうど+200）`]];
     case 'assistantBondActions':
-      return Object.values(typeof ASSISTANT_BOND_ACTIONS !== 'undefined' && ASSISTANT_BOND_ACTIONS || {}).map(x => [x.label, `1回 +${x.amount} ／ 1日 ${x.dailyMax} まで`]);
+      return Object.values(typeof ASSISTANT_BOND_ACTIONS !== 'undefined' && ASSISTANT_BOND_ACTIONS || {}).filter(x => typeof releasedForPlayers !== 'function' || releasedForPlayers(x)).map(x => [x.label, `1回 +${x.amount} ／ 1日 ${x.dailyMax} まで`]);
     case 'rhythmDifficultyRanks':
       return (typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : typeof RHYTHM_DIFFICULTIES !== 'undefined' ? RHYTHM_DIFFICULTIES : []).filter(d => typeof RHYTHM_DIFFICULTIES !== 'undefined' && RHYTHM_DIFFICULTIES.some(x => x.id === d.id) || typeof rhythmDemoSongs !== 'undefined' && rhythmDemoSongs(RHYTHM_SONGS).some(song => song.difficulties?.[d.id]?.notes?.length > 0)).map(d => [d.id, `満点 ${d.maxScore.toLocaleString()}点 → 上限ランク ${rhythmRankForScore(d.maxScore)}`]);
     case 'rhythmDemoSongLevels':
@@ -25614,7 +25615,7 @@ const sbAutomationWriteBlocked = (url, method) => {
     if (!u.startsWith(SUPABASE_URL) || u.includes('/rest/v1/rpc/')) return false;
     if (Array.isArray(stubbed)) {
       const path = u.slice(SUPABASE_URL.length).split('?')[0];
-      if (stubbed.some(t => typeof t === 'string' && t && path.startsWith('/rest/v1/' + t))) return false;
+      if (stubbed.some(t => typeof t === 'string' && t && (path.startsWith('/rest/v1/' + t) || path.startsWith('/functions/v1/' + t)))) return false;
     }
     return true;
   } catch {
@@ -60508,7 +60509,8 @@ function HomeScreen({
   spotClass,
   raidJackVisible = false,
   raidJackEventId,
-  onOpenRaidJack
+  onOpenRaidJack,
+  onOpenAssistantChat = null
 }) {
   const homeSceneRef = React.useRef(null);
   const [homeSceneWide, setHomeSceneWide] = React.useState(false);
@@ -60693,7 +60695,12 @@ function HomeScreen({
     scene: "home",
     condition: assistantBondUp ? 'bondUp' : masuMons.length === 0 ? 'firstRun' : null,
     compact: true
-  })));
+  }), typeof onOpenAssistantChat === 'function' && React.createElement("button", {
+    type: "button",
+    "data-home-assistant-chat": true,
+    onClick: onOpenAssistantChat,
+    className: "mt-1 ml-auto block rounded-full border border-pink-300/70 bg-pink-500/85 px-3 py-1 text-[11px] font-black text-white shadow active:scale-95"
+  }, "💬 おしゃべり")));
 }
 function KikiIntroOverlay({
   kikiIntroStep,
@@ -76674,6 +76681,241 @@ const RaidJackPrepScreen = ({
     className: "w-full min-h-[48px] rounded-2xl border-2 border-orange-300/70 bg-orange-700 px-3 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400"
   }, hero ? 'この編成で挑戦する' : '勇者モンを選んでください')));
 };
+const ASSISTANT_CHAT_URL = `${SUPABASE_URL}/functions/v1/assistant-chat`;
+const ASSISTANT_CHAT_LOG_KEY = 'mh_assistant_chat_log_v1';
+const ASSISTANT_CHAT_MEMO_KEY = 'mh_assistant_chat_memo_v1';
+const ASSISTANT_CHAT_LOG_LIMIT = 30;
+const ASSISTANT_CHAT_SEND_MESSAGES = 7;
+const ASSISTANT_CHAT_TEXT_MAX = 200;
+const ASSISTANT_CHAT_MEMO_MAX = 120;
+const ASSISTANT_CHAT_LINES = {
+  sorry: 'ごめん、今うまく話せないや',
+  personal: 'それは大事な情報だから、ここには書かないでね'
+};
+const ASSISTANT_CHAT_PERSONAL_PATTERNS = [/0\d{1,4}[-‐ー−\s]?\d{1,4}[-‐ー−\s]?\d{3,4}/, /[0-9０-９]{10,11}/, /[\w.+-]+@[\w-]+\.[\w.-]+/, /〒?\s?\d{3}[-‐ー−]\d{4}/, /(都|道|府|県).{0,8}(市|区|町|村).{0,12}\d+[-‐ー−丁番]/];
+const assistantChatLooksPersonal = text => ASSISTANT_CHAT_PERSONAL_PATTERNS.some(re => re.test(String(text || '')));
+const normalizeAssistantChatLog = raw => {
+  const out = {};
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  for (const [id, list] of Object.entries(raw)) {
+    if (!Array.isArray(list)) continue;
+    out[id] = list.filter(m => m && (m.role === 'user' || m.role === 'assistant') && typeof m.text === 'string' && m.text).map(m => ({
+      role: m.role,
+      text: m.text.slice(0, 400),
+      ...(typeof m.e === 'string' ? {
+        e: m.e
+      } : {})
+    })).slice(-ASSISTANT_CHAT_LOG_LIMIT);
+  }
+  return out;
+};
+const normalizeAssistantChatMemo = raw => {
+  const out = {};
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  for (const [id, memo] of Object.entries(raw)) if (typeof memo === 'string') out[id] = memo.slice(0, ASSISTANT_CHAT_MEMO_MAX);
+  return out;
+};
+function AssistantChatWindow({
+  assistant,
+  playerName,
+  callName,
+  bondLevel,
+  bondTitle,
+  bondTone,
+  onExchange,
+  onClose
+}) {
+  const id = assistant && assistant.id;
+  const [logs, setLogs] = React.useState({});
+  const [memos, setMemos] = React.useState({});
+  const [loaded, setLoaded] = React.useState(false);
+  const [input, setInput] = React.useState('');
+  const [sending, setSending] = React.useState(false);
+  const [remaining, setRemaining] = React.useState(null);
+  const listRef = React.useRef(null);
+  React.useEffect(() => {
+    let alive = true;
+    (async () => {
+      const [rawLog, rawMemo] = await Promise.all([storeGet(ASSISTANT_CHAT_LOG_KEY, {}, false), storeGet(ASSISTANT_CHAT_MEMO_KEY, {}, false)]);
+      if (!alive) return;
+      setLogs(normalizeAssistantChatLog(rawLog));
+      setMemos(normalizeAssistantChatMemo(rawMemo));
+      setLoaded(true);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const log = logs[id] || [];
+  React.useEffect(() => {
+    const el = listRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [log.length, sending]);
+  const lastExpression = (log.slice().reverse().find(m => m.role === 'assistant') || {}).e || 'happy';
+  const saveLog = next => {
+    setLogs(prev => {
+      const all = {
+        ...prev,
+        [id]: next.slice(-ASSISTANT_CHAT_LOG_LIMIT)
+      };
+      try {
+        storeSet(ASSISTANT_CHAT_LOG_KEY, all, false);
+      } catch {}
+      return all;
+    });
+  };
+  const saveMemo = memo => {
+    setMemos(prev => {
+      const all = {
+        ...prev,
+        [id]: String(memo || '').slice(0, ASSISTANT_CHAT_MEMO_MAX)
+      };
+      try {
+        storeSet(ASSISTANT_CHAT_MEMO_KEY, all, false);
+      } catch {}
+      return all;
+    });
+  };
+  const send = async () => {
+    const text = input.trim().slice(0, ASSISTANT_CHAT_TEXT_MAX);
+    if (!text || sending || !loaded || !id) return;
+    setInput('');
+    if (assistantChatLooksPersonal(text)) {
+      saveLog([...log, {
+        role: 'assistant',
+        text: ASSISTANT_CHAT_LINES.personal,
+        e: 'troubled'
+      }]);
+      return;
+    }
+    const withUser = [...log, {
+      role: 'user',
+      text
+    }];
+    saveLog(withUser);
+    setSending(true);
+    let res = null;
+    try {
+      const breederId = await ensureBreederId();
+      const r = await fetch(ASSISTANT_CHAT_URL, {
+        method: 'POST',
+        headers: SB_HEADERS,
+        body: JSON.stringify({
+          breederId: breederId || 'unknown',
+          assistantId: id,
+          messages: withUser.slice(-ASSISTANT_CHAT_SEND_MESSAGES).map(m => ({
+            role: m.role,
+            text: m.text
+          })),
+          ctx: {
+            playerName,
+            callName,
+            bondLevel,
+            bondTitle,
+            bondTone,
+            memo: memos[id] || ''
+          }
+        })
+      });
+      if (r.ok) res = await r.json();
+    } catch {}
+    setSending(false);
+    const reply = res && typeof res.reply === 'string' && res.reply ? res.reply : ASSISTANT_CHAT_LINES.sorry;
+    const e = res && typeof res.expression === 'string' ? res.expression : 'troubled';
+    saveLog([...withUser, {
+      role: 'assistant',
+      text: reply,
+      e
+    }]);
+    if (res && Number.isFinite(res.remainingToday)) setRemaining(res.remainingToday);
+    if (res && res.kind === 'reply') {
+      if (typeof res.memo === 'string') saveMemo(res.memo);
+      if (typeof onExchange === 'function') onExchange();
+    }
+  };
+  if (!assistant) return null;
+  const accent = assistant.accent || '#f472b6';
+  return React.createElement("div", {
+    "data-assistant-chat": true,
+    className: "fixed inset-0 flex items-end sm:items-center justify-center bg-black/60 p-2",
+    style: {
+      zIndex: 9000,
+      paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom))'
+    },
+    onClick: onClose
+  }, React.createElement("div", {
+    className: "w-full max-w-md max-h-[85vh] flex flex-col rounded-2xl border-2 bg-slate-950 text-slate-100 shadow-2xl",
+    style: {
+      borderColor: accent
+    },
+    onClick: ev => ev.stopPropagation()
+  }, React.createElement("div", {
+    className: "flex items-center gap-2 px-3 py-2 border-b border-slate-800 shrink-0"
+  }, React.createElement("img", {
+    "data-assistant-chat-face": lastExpression,
+    src: assistantFaceSrc(assistant, lastExpression),
+    alt: "",
+    className: "h-11 w-11 rounded-full border-2 object-cover bg-slate-900",
+    style: {
+      borderColor: accent
+    }
+  }), React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("p", {
+    className: "text-sm font-black",
+    style: {
+      color: accent
+    }
+  }, assistant.name, "とおしゃべり"), React.createElement("p", {
+    "data-assistant-chat-remaining": true,
+    className: "text-[10px] font-bold text-slate-400"
+  }, remaining == null ? '1日に話せる回数には上限があります' : `今日あと${remaining}回`)), React.createElement("button", {
+    type: "button",
+    "data-assistant-chat-close": true,
+    onClick: onClose,
+    className: "h-9 w-9 rounded-full border border-slate-600 text-slate-300 text-lg font-black active:scale-95",
+    "aria-label": "閉じる"
+  }, "×")), React.createElement("div", {
+    ref: listRef,
+    className: "flex-1 overflow-y-auto mh-scroll px-3 py-2 space-y-2",
+    style: {
+      minHeight: 180
+    }
+  }, log.length === 0 && React.createElement("p", {
+    className: "text-[11px] text-slate-400 leading-relaxed"
+  }, assistant.greeting || '話しかけてみてね'), log.map((m, i) => React.createElement("div", {
+    key: i,
+    "data-assistant-chat-msg": m.role,
+    className: `flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`
+  }, React.createElement("p", {
+    className: `max-w-[80%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-[12px] leading-relaxed ${m.role === 'user' ? 'bg-slate-700 text-white' : 'bg-slate-800/80 text-slate-100 border'}`,
+    style: m.role === 'user' ? undefined : {
+      borderColor: accent
+    }
+  }, m.text))), sending && React.createElement("p", {
+    "data-assistant-chat-sending": true,
+    className: "text-[11px] text-slate-400"
+  }, assistant.name, "が考え中…")), React.createElement("div", {
+    className: "flex items-end gap-2 border-t border-slate-800 p-2 shrink-0"
+  }, React.createElement("textarea", {
+    "data-assistant-chat-input": true,
+    value: input,
+    maxLength: ASSISTANT_CHAT_TEXT_MAX,
+    rows: 2,
+    onChange: ev => setInput(ev.target.value),
+    placeholder: "話しかけてみよう(名前や住所などは書かないでね)",
+    className: "flex-1 resize-none rounded-xl border border-slate-700 bg-slate-900 px-2 py-1.5 text-[12px] text-white"
+  }), React.createElement("button", {
+    type: "button",
+    "data-assistant-chat-send": true,
+    disabled: sending || !loaded || !input.trim(),
+    onClick: send,
+    className: "min-h-[44px] rounded-xl px-3 text-[12px] font-black text-white active:scale-95 disabled:opacity-40",
+    style: {
+      background: accent
+    }
+  }, "送る"))));
+}
 function MonsterHeroGame() {
   const [gameState, setGameStateRaw] = useState('HOME');
   const isRhythmScreen = state => typeof state === 'string' && state.startsWith('RHYTHM_');
@@ -78499,6 +78741,7 @@ function MonsterHeroGame() {
   }, [friendsActive, publishFriendProfile]);
   const [assistantCallStyles, setAssistantCallStylesState] = useState({});
   const assistantCallStyle = assistantCallStyles[selectedAssistantId] || null;
+  const [assistantChatOpen, setAssistantChatOpen] = useState(false);
   const [assistantUnlockSeen, setAssistantUnlockSeen] = useState([]);
   const [assistantUnlockPage, setAssistantUnlockPage] = useState(0);
   const [showCallStylePicker, setShowCallStylePicker] = useState(false);
@@ -96488,8 +96731,23 @@ function MonsterHeroGame() {
       spotClass: spotClass,
       raidJackVisible: RELEASE_FLAGS.raidJack === true && raidJackWindowAt(Date.now()) === 'open' || raidJackDebugForce,
       raidJackEventId: raidJackEventId,
-      onOpenRaidJack: openRaidJack
-    }), gameState === 'RHYTHM_INFO' && React.createElement(RhythmInfoScreen, {
+      onOpenRaidJack: openRaidJack,
+      onOpenAssistantChat: RELEASE_FLAGS.assistantChat === true ? () => setAssistantChatOpen(true) : null
+    }), assistantChatOpen && activeAssistant && (() => {
+      const id = activeAssistant.id;
+      const lv = assistantBondLevelNow;
+      const stage = assistantBondStageByLevel(lv, id) || {};
+      return React.createElement(AssistantChatWindow, {
+        assistant: activeAssistant,
+        playerName: breederName,
+        callName: assistantCallName(breederName, lv, assistantCallStyles[id] || null, id),
+        bondLevel: lv,
+        bondTitle: stage.title || '',
+        bondTone: stage.tone || '',
+        onExchange: () => addAssistantBondFor(id, 'chat'),
+        onClose: () => setAssistantChatOpen(false)
+      });
+    })(), gameState === 'RHYTHM_INFO' && React.createElement(RhythmInfoScreen, {
       returnToHome: returnToHome
     }), gameState === 'TRAINING_INFO' && React.createElement("main", {
       className: "mh-training-screen"
@@ -101524,7 +101782,13 @@ function MonsterHeroGame() {
       className: "mb-3 shrink-0 text-[9px] leading-relaxed text-slate-500"
     }, "用途ごとに畳んであります。見出しを押すと開きます。"), React.createElement("div", {
       className: "flex-1 overflow-y-auto mh-scroll space-y-2"
-    }, React.createElement("details", {
+    }, React.createElement("button", {
+      "data-debug-assistant-chat": true,
+      onClick: () => setAssistantChatOpen(true),
+      className: "w-full min-h-[58px] rounded-2xl border-2 border-pink-400/50 bg-pink-950/40 text-pink-50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
+    }, "💬 助手とおしゃべり(試す)", React.createElement("small", {
+      className: "mt-0.5 block text-[9px] font-bold leading-relaxed text-pink-200/80"
+    }, "公開前の会話の窓を、いま選んでいる助手で開きます。本物の返事が来るので、1回ごとに回数を使います")), React.createElement("details", {
       className: "rounded-2xl border border-emerald-500/40 bg-emerald-950/20"
     }, React.createElement("summary", {
       className: "cursor-pointer select-none px-3 py-3 text-[11px] font-black text-emerald-200"
