@@ -41,17 +41,20 @@ const okResponse = (obj) => ({
   content: [{ type: 'text', text: JSON.stringify(obj) }],
   usage: { input_tokens: 120, output_tokens: 40, cache_read_input_tokens: 9000, cache_creation_input_tokens: 0 },
 });
+// 本物(assistant_chat_take)と同じく、ブリーダーIDごと(おしゃべり と 'daily:' 付き を別々)に数え、全員の合計も数える
 const counter = (userLimit = 100, totalLimit = 2500) => {
-  const state = { mine: 0, total: 0, refunds: 0 };
+  const state = { mine: 0, total: 0, refunds: 0, byId: {} };
   return {
     state,
-    take: async (_id, u, t) => {
-      if (state.total >= Math.min(t, totalLimit)) return { ok: false, reason: 'total', remaining: Math.max(u - state.mine, 0) };
-      if (state.mine >= Math.min(u, userLimit)) return { ok: false, reason: 'user', remaining: 0 };
-      state.mine++; state.total++;
-      return { ok: true, remaining: u - state.mine };
+    take: async (id, u, t) => {
+      const mine = state.byId[id] || 0;
+      if (state.total >= Math.min(t, totalLimit)) return { ok: false, reason: 'total', remaining: Math.max(u - mine, 0) };
+      if (mine >= Math.min(u, userLimit)) return { ok: false, reason: 'user', remaining: 0 };
+      state.byId[id] = mine + 1; state.total++;
+      if (!String(id).startsWith('daily:')) state.mine++;
+      return { ok: true, remaining: u - mine - 1 };
     },
-    refund: async () => { state.refunds++; state.mine = Math.max(0, state.mine - 1); state.total = Math.max(0, state.total - 1); },
+    refund: async (id) => { state.refunds++; state.byId[id] = Math.max(0, (state.byId[id] || 0) - 1); if (!String(id).startsWith('daily:')) state.mine = Math.max(0, state.mine - 1); state.total = Math.max(0, state.total - 1); },
   };
 };
 
@@ -184,6 +187,15 @@ const unit = async (core) => {
     const draSys = core.buildSystem(DIGEST, 'dra')[2].text;
     const muaSys = core.buildSystem(DIGEST, 'mua')[2].text;
     check('⑯ ドラの人柄に一人称「おで」「ワイ」と、使わない一人称が書いてある', /一人称: [^\n]*おで[^\n]*ワイ[^\n]*俺/.test(draSys));
+    // ⑲ 話し方(2026-10-14 窓口の指摘「ドラが関西弁に寄りすぎ」「ききの『でつ』『まつ』が出ない」)
+    const kikiSys = core.buildSystem(DIGEST, 'kiki')[2].text;
+    const momoSys = core.buildSystem(DIGEST, 'momosuke')[2].text;
+    check('⑲ ドラの話し方は標準語のくだけた口調で、関西弁はほとんど使わない', /話し方[^\n]*標準語[^\n]*関西弁[^\n]*ほとんど使わない/.test(draSys));
+    check('⑲ ききの一人称は「私」で、ときどき「でつ」「まつ」に崩す', /一人称: 「私」/.test(kikiSys) && /でつ/.test(kikiSys) && /まつ/.test(kikiSys));
+    check('⑲ みゅあ・ももすけの一人称(「あたし」「もも」)と話し方も書いてある', /一人称: 「あたし」/.test(muaSys) && /話し方/.test(muaSys) && /一人称: 「もも」/.test(momoSys) && /話し方/.test(momoSys));
+    check('⑲ 決まりに「思い出メモにあることは『聞いていない』と言わない」が入っている', /「聞いていない」とは言わない/.test(core.RULES_TEXT));
+    const named = core.validateDailyLines([{ scene: 'home', e: 'happy', t: 'テストちん、今日もがんばろ！' }, { scene: 'home', e: 'wink', t: 'キミの調子はどう？' }], ['home'], {}, { callName: 'テストちん', playerName: 'テスト' });
+    check('⑲ ふだんの吹き出しに呼び名がそのまま入っていたら {name} へ置き換える', named.home && named.home[0].t === '{name}、今日もがんばろ！' && named.home[1].t === 'キミの調子はどう？');
     check('⑯ みゅあの人柄に、ほかの助手の呼び方(ひめちん・もも・ドラケン)が書いてある', /ひめちん/.test(muaSys) && /「もも」/.test(muaSys) && /ドラケン/.test(muaSys));
     // 表(ASSISTANT_PEER_CALLS)の呼び方が、その助手の台本で実際に使われているか(表と台本のずれを見つける)
     const src = fs.readFileSync(path.join(root, 'monster-hero', 'data', 'assistants.js'), 'utf8');
@@ -436,8 +448,8 @@ const browser = async (core) => {
     const req2 = sent[1] || {};
     check('⑪ 2回目は前の思い出メモを送る', req2.ctx && req2.ctx.memo && req2.ctx.memo.topics === 'あいさつした');
     check('⑪ 送る会話は直近10往復(21件)まで', Array.isArray(req2.messages) && req2.messages.length <= 21 && req2.messages[req2.messages.length - 1].text === 'またね');
-    // ⑱ ふだんの吹き出し(daily_lines)。公開の印が切のあいだは、HOME を開いても頼まない
-    check('⑱ 公開の印が切のあいだ、HOME を開いてもふだんの吹き出しを頼まない', dailySent.length === 0);
+    // ⑱ ふだんの吹き出し(daily_lines)。公開(2026-10-14 #2987)のあとは、その日最初の HOME で1回だけ頼む
+    check('⑱ 公開の印が立っていて、その日最初の HOME で1回だけふだんの吹き出しを頼む', dailySent.length === 1, String(dailySent.length));
     await page.locator('[data-assistant-chat-close]').dispatchEvent('click');
     await page.getByRole('button', { name: '設定' }).first().dispatchEvent('click');
     await page.getByRole('button', { name: 'ヘルプ' }).first().waitFor({ timeout: 20000 });
@@ -445,7 +457,8 @@ const browser = async (core) => {
     await page.getByRole('button', { name: 'わかった！冒険に戻る' }).waitFor({ timeout: 20000 });
     await page.locator('footer button[aria-label=""]').dispatchEvent('click');
     await page.getByText('DEBUG MENU').first().waitFor({ timeout: 20000 });
-    // 失敗の日: ためずに、今までどおりのセリフだけ
+    // 失敗の日: ためずに、今までどおりのセリフだけ(HOME でためたぶんを一度消してから確かめる)
+    await page.evaluate(() => { localStorage.removeItem('mh_assistant_daily_lines_v1'); assistantDailyLinesState = null; });
     dailyFail = true;
     await page.locator('[data-debug-assistant-daily-lines]').dispatchEvent('click');
     await page.getByText('作れませんでした').first().waitFor({ timeout: 10000 }).catch(() => {});
