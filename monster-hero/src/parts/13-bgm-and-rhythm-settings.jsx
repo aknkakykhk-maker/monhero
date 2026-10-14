@@ -337,8 +337,10 @@ const RHYTHM_LIFE_SIZE_STEP = 10;
 // 大きくするほど上へ上がる(指が画面の下へ届かない端末向け)。
 // ★上限は32%で止める。これを越えると判定ラインがエリアの上半分へ入り、
 //   「まだ形が決まっていない」と見なす見張り(rhythmTravelLooksReady)とぶつかる。
-const RHYTHM_JUDGMENT_LINE_HEIGHT_MIN = 8;
-const RHYTHM_JUDGMENT_LINE_HEIGHT_MAX = 32;
+// 2026-10-14 社長「空中ラインと地上ラインの調整範囲もっと広げないと意味ない」→ 8〜32 から 4〜50 へ。上は50まで(判定ラインは画面の上半分より下に置く作り。
+// rhythmTravelLooksReady が線の中心を高さの45%より下と見ている)。古い版で開いても、範囲の端(32)に丸めて読むだけで壊れない
+const RHYTHM_JUDGMENT_LINE_HEIGHT_MIN = 4;
+const RHYTHM_JUDGMENT_LINE_HEIGHT_MAX = 50;
 const RHYTHM_JUDGMENT_LINE_HEIGHT_STEP = 2;
 const RHYTHM_COMBO_SIZE_MIN = 70;
 const RHYTHM_COMBO_SIZE_MAX = 150;

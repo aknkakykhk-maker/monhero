@@ -35,7 +35,7 @@ const grab = (from, to) => {
   const j = game.indexOf(to, i);
   return i >= 0 && j > i ? game.slice(i, j) : '';
 };
-const options = grab('const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=null,onClearCalibration=null})=>{', '\n// モンスターノーツ用のマスモン設定');
+const options = grab('const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,calibrationResult=null,onClearCalibration=null})=>{', '\n// モンスターノーツ用のマスモン設定');
 
 // ---- タブ ----
 check('オプションの本体が取り出せている', options.length > 0);
@@ -65,7 +65,8 @@ check('横向きでは中身を3列に並べる',
 // 横向きは高さが390pxしかない。高さを食うものは出さない・詰める
 check('横向きでは高さを食うものを省く(説明・スライダー・外枠・見出し)',
   options.includes('{description&&!wide&&<details data-rhythm-option-help')
-  && options.includes('{!wide&&<input type="range" data-rhythm-option-slider={key}')
+  // スライダーは横向きでは省く。判定ラインの位置の行だけは slider:true で横向きでも出す(2026-10-14 社長「−/+とスライダーの両方で」)
+  && options.includes('{(!wide||slider)&&<input type="range" data-rhythm-option-slider={key}')
   && /const card=wide\?'':'rounded-2xl/.test(options)
   && options.includes('{!wide&&<h3 className={head}>◆ 見え方</h3>}')
   && options.includes('{!wide&&<h3 className={favHead}>★ よく触る設定</h3>}'));

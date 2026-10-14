@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5c97533b233bd8b7
+// source-sha256: 04052f03792bf69b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-14 11:29";
+const BUILD_DATE = "2026-10-14 12:25";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -5471,8 +5471,8 @@ const RHYTHM_COMBO_OPACITY_STEP = 10;
 const RHYTHM_LIFE_SIZE_MIN = 100;
 const RHYTHM_LIFE_SIZE_MAX = 200;
 const RHYTHM_LIFE_SIZE_STEP = 10;
-const RHYTHM_JUDGMENT_LINE_HEIGHT_MIN = 8;
-const RHYTHM_JUDGMENT_LINE_HEIGHT_MAX = 32;
+const RHYTHM_JUDGMENT_LINE_HEIGHT_MIN = 4;
+const RHYTHM_JUDGMENT_LINE_HEIGHT_MAX = 50;
 const RHYTHM_JUDGMENT_LINE_HEIGHT_STEP = 2;
 const RHYTHM_COMBO_SIZE_MIN = 70;
 const RHYTHM_COMBO_SIZE_MAX = 150;
@@ -28979,6 +28979,7 @@ const RhythmOptions = ({
   onSave,
   onBack,
   onCalibrate = null,
+  onLineAdjust = null,
   calibrationResult = null,
   onClearCalibration = null
 }) => {
@@ -28993,7 +28994,8 @@ const RhythmOptions = ({
     lane: RHYTHM_SKY_LANE_LOOK.id,
     skyLine: RHYTHM_SKY_LINE_OFFSET.pct,
     groundW: RHYTHM_ACCEPT_WIDTH.ground,
-    skyW: RHYTHM_ACCEPT_WIDTH.sky
+    skyW: RHYTHM_ACCEPT_WIDTH.sky,
+    skyTop: RHYTHM_ACCEPT_WIDTH.skyTop
   });
   const [hellDraft, setHellDraft] = useState(hellNow);
   const [hellSaved, setHellSaved] = useState(hellNow);
@@ -29005,6 +29007,7 @@ const RhythmOptions = ({
     RHYTHM_SKY_LINE_OFFSET.set(hellDraft.skyLine);
     RHYTHM_ACCEPT_WIDTH.set('ground', hellDraft.groundW);
     RHYTHM_ACCEPT_WIDTH.set('sky', hellDraft.skyW);
+    RHYTHM_ACCEPT_WIDTH.set('skyTop', hellDraft.skyTop);
     const now = hellNow();
     setHellDraft(now);
     setHellSaved(now);
@@ -29206,6 +29209,15 @@ const RhythmOptions = ({
     setLeaveAsk(false);
     onBack();
   };
+  const goLineAdjust = async () => {
+    if (!onLineAdjust) return;
+    if (dirty) {
+      saveHell();
+      const saved = await onSave(draft);
+      setDraft(saved);
+    }
+    onLineAdjust();
+  };
   const goCalibrate = async () => {
     if (!onCalibrate) return;
     if (dirty) {
@@ -29312,8 +29324,10 @@ const RhythmOptions = ({
     const L = 1 - (Number(draft.judgmentLineHeight) || 0) / 100,
       base = wide ? .39 : rhythmSkyLiftPortrait(),
       skyOn = hellReleased;
-    const ratio = rhythmSkyLiftWith(base, skyOn ? hellDraft.skyLine : 0),
+    const ratio = rhythmSkyLiftWith(base, skyOn ? hellDraft.skyLine : 0, L),
       skyY = L - ratio,
+      skyRange = rhythmSkyLineOffsetRange(base, L),
+      top = rhythmSkyAcceptTopWith(L, ratio, skyOn ? hellDraft.skyTop : 100),
       lim = rhythmSkyAcceptLimitWith(L, base, ratio, 0, skyOn ? hellDraft.skyW : 100),
       from = rhythmGroundAcceptFromWith(L, base, skyOn ? hellDraft.groundW : 100);
     const pct = v => `${(Math.max(0, Math.min(1, v)) * 100).toFixed(2)}%`;
@@ -29338,9 +29352,10 @@ const RhythmOptions = ({
       }
     }), skyOn && React.createElement("div", {
       "data-rhythm-line-preview-sky-band": true,
-      className: "absolute inset-x-0 top-0",
+      className: "absolute inset-x-0",
       style: {
-        height: pct(lim),
+        top: pct(top),
+        height: pct(lim - Math.max(0, top)),
         background: 'rgba(244,114,182,.26)'
       }
     }), skyOn && lim > from && React.createElement("div", {
@@ -29380,7 +29395,12 @@ const RhythmOptions = ({
       style: {
         background: 'repeating-linear-gradient(135deg,rgba(244,114,182,.8) 0 3px,rgba(34,211,238,.8) 3px 6px)'
       }
-    }), "両方(近いほうを取る)")), stepper('judgmentLineHeight', RHYTHM_JUDGMENT_LINE_HEIGHT_MIN, RHYTHM_JUDGMENT_LINE_HEIGHT_MAX, RHYTHM_JUDGMENT_LINE_HEIGHT_STEP, {
+    }), "両方(近いほうを取る)")), onLineAdjust && React.createElement("button", {
+      type: "button",
+      "data-rhythm-line-adjust-open": true,
+      onClick: goLineAdjust,
+      className: "min-h-[46px] w-full rounded-xl border border-cyan-300/60 bg-cyan-950/50 text-[12px] font-black text-cyan-100"
+    }, "🎯 実際の画面で合わせる"), stepper('judgmentLineHeight', RHYTHM_JUDGMENT_LINE_HEIGHT_MIN, RHYTHM_JUDGMENT_LINE_HEIGHT_MAX, RHYTHM_JUDGMENT_LINE_HEIGHT_STEP, {
       fine: RHYTHM_JUDGMENT_LINE_HEIGHT_STEP,
       coarse: RHYTHM_JUDGMENT_LINE_HEIGHT_STEP * 4,
       suffix: '%',
@@ -29397,7 +29417,7 @@ const RhythmOptions = ({
         groundW: rhythmNormalizeAcceptWidth(v)
       })),
       slider: true
-    }), skyOn && stepper('skyLine', -RHYTHM_SKY_LINE_OFFSET_MAX_PCT, RHYTHM_SKY_LINE_OFFSET_MAX_PCT, RHYTHM_SKY_LINE_OFFSET_STEP_PCT, {
+    }), skyOn && stepper('skyLine', skyRange.min, skyRange.max, RHYTHM_SKY_LINE_OFFSET_STEP_PCT, {
       fine: RHYTHM_SKY_LINE_OFFSET_STEP_PCT,
       coarse: 2,
       suffix: '%',
@@ -29420,8 +29440,19 @@ const RhythmOptions = ({
         skyW: rhythmNormalizeAcceptWidth(v)
       })),
       slider: true
+    }), skyOn && stepper('skyTop', RHYTHM_SKY_ACCEPT_TOP_MIN_PCT, RHYTHM_SKY_ACCEPT_TOP_MAX_PCT, RHYTHM_SKY_ACCEPT_TOP_STEP_PCT, {
+      fine: RHYTHM_SKY_ACCEPT_TOP_STEP_PCT,
+      coarse: RHYTHM_SKY_ACCEPT_TOP_STEP_PCT * 5,
+      suffix: '%',
+      label: '空中を受け付ける上の端(線より上の幅・100%が既定)',
+      source: hellDraft,
+      onSet: v => setHellDraft(d => ({
+        ...d,
+        skyTop: rhythmNormalizeSkyAcceptTop(v)
+      })),
+      slider: true
     }));
-  })(), 'タップする判定ラインを、画面の下から何％の高さに置くかです。大きくするほど上へ上がり、指が届きやすくなります（12％が2026-09-13より前の位置です）。ノーツも弾ける光も判定文字も一緒に上がります。判定の幅（秒数）・スコア・譜面は変わりません。ただしレーンは奥へ行くほど狭くなるので、上げすぎると横の幅が狭く感じられます。' + (hellReleased ? '\n空中の判定ライン(HELL)は、地上の判定ラインからの高さを上下にずらします。空中の線・空中のノーツ・空中を受け付ける範囲が一緒に動きます(地上を受け付ける範囲は変わりません)。上へずらしすぎると、空中を受け付ける範囲が地上の範囲に届いたところで止まります。「受け付ける範囲の広さ」は、地上と空中の境目の側だけを狭めます(空中は線より下へのはみ出し、地上は線より上へのはみ出し。100%が今の広さで、50%まで)。狭めると、境目のあたりを押したときにもう一方のノーツを取り違えにくくなりますが、線から離れた所を押すと空振りになります。地上の判定ラインを動かすと、空中の線も一緒に動きます。押す時刻(判定の幅)とスコアは変わりません。' : ''), {
+  })(), 'タップする判定ラインを、画面の下から何％の高さに置くかです。大きくするほど上へ上がり、指が届きやすくなります（12％が2026-09-13より前の位置です）。ノーツも弾ける光も判定文字も一緒に上がります。判定の幅（秒数）・スコア・譜面は変わりません。ただしレーンは奥へ行くほど狭くなるので、上げすぎると横の幅が狭く感じられます。' + (hellReleased ? '\n空中の判定ライン(HELL)は、地上の判定ラインからの高さを上下にずらします。空中の線・空中のノーツ・空中を受け付ける範囲が一緒に動きます(地上を受け付ける範囲は変わりません)。上へずらしすぎると、空中を受け付ける範囲が地上の範囲に届いたところで止まります。空中を受け付けるのは、空中の線から上へ一定の幅(画面の高さの20%×「上の端」の値)までです。それより上を押しても空中のノーツは取れません。「実際の画面で合わせる」を押すと、演奏画面に切り替わり、本番と同じ大きさのレーン・判定ライン・受け付ける範囲を見ながら、ノーツを叩いて試しつつ合わせられます。「受け付ける範囲の広さ」は、地上と空中の境目の側だけを狭めます(空中は線より下へのはみ出し、地上は線より上へのはみ出し。100%が今の広さで、50%まで)。狭めると、境目のあたりを押したときにもう一方のノーツを取り違えにくくなりますが、線から離れた所を押すと空振りになります。地上の判定ラインを動かすと、空中の線も一緒に動きます。押す時刻(判定の幅)とスコアは変わりません。' : ''), {
     full: true
   }), field('ノーツの出る位置', stepper('noteStartPosition', -100, 100, 5, {
     fine: 5,
@@ -33244,6 +33275,176 @@ const rhythmAutoEffectMemory = {
 const rhythmResetAutoEffect = () => {
   rhythmAutoEffectMemory.level = 0;
 };
+const RhythmLineAdjustBands = ({
+  tick
+}) => {
+  const L = RHYTHM_JUDGMENT_LINE_Y.ratio,
+    lim = rhythmSkyAcceptLimit(),
+    from = rhythmGroundAcceptFrom(),
+    top = rhythmSkyAcceptTop();
+  const pct = v => `${(Math.max(0, Math.min(1, v)) * 100).toFixed(2)}%`;
+  return React.createElement("div", {
+    "data-rhythm-line-adjust-bands": true,
+    "data-tick": tick,
+    "aria-hidden": "true",
+    className: "pointer-events-none absolute inset-0 z-[4]"
+  }, React.createElement("div", {
+    "data-rhythm-line-adjust-sky": true,
+    className: "absolute inset-x-0",
+    style: {
+      top: pct(top),
+      height: pct(lim - Math.max(0, top)),
+      background: 'rgba(244,114,182,.2)',
+      borderBottom: '2px dashed rgba(251,207,232,.85)',
+      borderTop: top > 0 ? '2px dashed rgba(251,207,232,.85)' : undefined
+    }
+  }), React.createElement("div", {
+    "data-rhythm-line-adjust-ground": true,
+    className: "absolute inset-x-0 bottom-0",
+    style: {
+      top: pct(from),
+      background: 'rgba(34,211,238,.18)',
+      borderTop: '2px dashed rgba(165,243,252,.85)'
+    }
+  }), lim > from && React.createElement("div", {
+    "data-rhythm-line-adjust-both": true,
+    className: "absolute inset-x-0",
+    style: {
+      top: pct(from),
+      height: pct(lim - from),
+      background: 'repeating-linear-gradient(135deg,rgba(244,114,182,.3) 0 8px,rgba(34,211,238,.3) 8px 16px)'
+    }
+  }));
+};
+const RhythmLineAdjustPanel = ({
+  ground,
+  onGround,
+  onBump,
+  onDone,
+  isLandscape
+}) => {
+  const start = useRef(null);
+  if (!start.current) start.current = {
+    ground,
+    skyLine: RHYTHM_SKY_LINE_OFFSET.pct,
+    groundW: RHYTHM_ACCEPT_WIDTH.ground,
+    skyW: RHYTHM_ACCEPT_WIDTH.sky,
+    skyTop: RHYTHM_ACCEPT_WIDTH.skyTop
+  };
+  const [vals, setVals] = useState(() => ({
+    ...start.current
+  }));
+  const done = useRef(false);
+  useEffect(() => () => {
+    if (done.current) return;
+    const s0 = start.current;
+    RHYTHM_SKY_LINE_OFFSET.pct = s0.skyLine;
+    RHYTHM_ACCEPT_WIDTH.ground = s0.groundW;
+    RHYTHM_ACCEPT_WIDTH.sky = s0.skyW;
+    RHYTHM_ACCEPT_WIDTH.skyTop = s0.skyTop;
+  }, []);
+  const apply = next => {
+    RHYTHM_SKY_LINE_OFFSET.pct = next.skyLine;
+    RHYTHM_ACCEPT_WIDTH.ground = next.groundW;
+    RHYTHM_ACCEPT_WIDTH.sky = next.skyW;
+    RHYTHM_ACCEPT_WIDTH.skyTop = next.skyTop;
+    setVals(next);
+    onBump();
+  };
+  const change = (key, v) => {
+    if (key === 'ground') {
+      const g = rhythmFiniteStep(v, RHYTHM_JUDGMENT_LINE_HEIGHT_MIN, RHYTHM_JUDGMENT_LINE_HEIGHT_MAX, RHYTHM_JUDGMENT_LINE_HEIGHT_STEP);
+      setVals(x => ({
+        ...x,
+        ground: g
+      }));
+      onGround(g);
+      return;
+    }
+    const norm = key === 'skyLine' ? rhythmNormalizeSkyLineOffset(v) : key === 'skyTop' ? rhythmNormalizeSkyAcceptTop(v) : rhythmNormalizeAcceptWidth(v);
+    apply({
+      ...vals,
+      [key]: norm
+    });
+  };
+  const skyRange = rhythmSkyLineOffsetRange(RHYTHM_SKY_LIFT.base, RHYTHM_JUDGMENT_LINE_Y.ratio);
+  const rows = [['ground', '地上の判定ライン', RHYTHM_JUDGMENT_LINE_HEIGHT_MIN, RHYTHM_JUDGMENT_LINE_HEIGHT_MAX, RHYTHM_JUDGMENT_LINE_HEIGHT_STEP, '%', 0], ['groundW', '地上の受付の広さ', RHYTHM_ACCEPT_WIDTH_MIN_PCT, 100, RHYTHM_ACCEPT_WIDTH_STEP_PCT, '%', 0], ['skyLine', '空中の判定ライン', skyRange.min, skyRange.max, RHYTHM_SKY_LINE_OFFSET_STEP_PCT, '%', 1], ['skyW', '空中の受付の広さ(下側)', RHYTHM_ACCEPT_WIDTH_MIN_PCT, 100, RHYTHM_ACCEPT_WIDTH_STEP_PCT, '%', 0], ['skyTop', '空中の受付の上の端', RHYTHM_SKY_ACCEPT_TOP_MIN_PCT, RHYTHM_SKY_ACCEPT_TOP_MAX_PCT, RHYTHM_SKY_ACCEPT_TOP_STEP_PCT, '%', 0]];
+  const finish = save => {
+    done.current = true;
+    if (save) {
+      RHYTHM_SKY_LINE_OFFSET.set(vals.skyLine);
+      RHYTHM_ACCEPT_WIDTH.set('ground', vals.groundW);
+      RHYTHM_ACCEPT_WIDTH.set('sky', vals.skyW);
+      RHYTHM_ACCEPT_WIDTH.set('skyTop', vals.skyTop);
+    } else {
+      const s0 = start.current;
+      RHYTHM_SKY_LINE_OFFSET.pct = s0.skyLine;
+      RHYTHM_ACCEPT_WIDTH.ground = s0.groundW;
+      RHYTHM_ACCEPT_WIDTH.sky = s0.skyW;
+      RHYTHM_ACCEPT_WIDTH.skyTop = s0.skyTop;
+    }
+    onDone(save ? vals.ground : null);
+  };
+  return React.createElement("div", {
+    "data-rhythm-line-adjust-panel": true,
+    className: `pointer-events-auto absolute z-[35] overflow-y-auto rounded-xl border border-white/20 bg-slate-950/85 p-1.5 text-white shadow-[0_6px_18px_rgba(0,0,0,.5)] ${isLandscape ? 'left-1 top-1 w-[236px] max-h-[calc(100%-8px)]' : 'inset-x-2 top-[76px] max-h-[46%]'}`
+  }, React.createElement("div", {
+    className: "flex items-center gap-1"
+  }, React.createElement("b", {
+    className: "min-w-0 flex-1 px-0.5 text-[11px] font-black leading-tight text-amber-200"
+  }, "判定ラインを合わせる"), React.createElement("button", {
+    type: "button",
+    "data-rhythm-line-adjust-cancel": true,
+    onClick: () => finish(false),
+    className: "min-h-[40px] shrink-0 rounded-lg border border-white/25 bg-slate-800 px-2 text-[11px] font-black"
+  }, "やめる"), React.createElement("button", {
+    type: "button",
+    "data-rhythm-line-adjust-save": true,
+    onClick: () => finish(true),
+    className: "min-h-[40px] shrink-0 rounded-lg bg-amber-400 px-2 text-[11px] font-black text-slate-950"
+  }, "保存して戻る")), !isLandscape && React.createElement("small", {
+    className: "block px-0.5 text-[9px] font-bold leading-snug text-slate-300"
+  }, "水色=地上・桃色=空中を受け付ける範囲。ノーツを叩いて試せます"), rows.map(([key, label, min, max, step, suffix, dec]) => {
+    const v = Number(vals[key]);
+    const shown = `${dec ? v.toFixed(dec) : v}${suffix}`;
+    return React.createElement("div", {
+      key: key,
+      "data-rhythm-line-adjust-row": key,
+      className: "mt-0.5"
+    }, React.createElement("div", {
+      className: "flex items-baseline justify-between px-0.5"
+    }, React.createElement("small", {
+      className: "text-[10px] font-black text-cyan-100"
+    }, label), React.createElement("output", {
+      "data-rhythm-line-adjust-value": key,
+      className: "text-[11px] font-black tabular-nums text-white"
+    }, shown)), React.createElement("div", {
+      className: "grid grid-cols-[40px_1fr_40px] items-center gap-1"
+    }, React.createElement("button", {
+      type: "button",
+      "data-rhythm-line-adjust-nudge": `${key}-`,
+      disabled: v <= min,
+      onClick: () => change(key, v - step),
+      className: "min-h-[40px] rounded-lg bg-slate-100 text-[14px] font-black text-slate-900 disabled:opacity-35"
+    }, "−"), React.createElement("input", {
+      type: "range",
+      "data-rhythm-line-adjust-slider": key,
+      "aria-label": `${label}を変える`,
+      min: min,
+      max: max,
+      step: step,
+      value: v,
+      onChange: e => change(key, Number(e.target.value)),
+      className: "w-full accent-cyan-300"
+    }), React.createElement("button", {
+      type: "button",
+      "data-rhythm-line-adjust-nudge": `${key}+`,
+      disabled: v >= max,
+      onClick: () => change(key, v + step),
+      className: "min-h-[40px] rounded-lg bg-slate-100 text-[14px] font-black text-slate-900 disabled:opacity-35"
+    }, "＋")));
+  }));
+};
 const RhythmTapTest = ({
   song,
   difficulty,
@@ -33259,10 +33460,18 @@ const RhythmTapTest = ({
   calibrating = false,
   onApplyCalibration = null,
   multi = false,
-  multiRewardScale = 1
+  multiRewardScale = 1,
+  lineAdjust = null
 }) => {
+  const tutorialProp = tutorial;
+  tutorial = tutorial || !!lineAdjust;
+  const [lineHeightOverride, setLineHeightOverride] = useState(null);
   const [effectCap, setEffectCap] = useState(() => rhythmAutoEffectMemory.level);
-  const settings = useMemo(() => settingsIn && settingsIn.autoEffectDown !== false ? rhythmCapEffects(settingsIn, effectCap) : settingsIn, [settingsIn, effectCap]);
+  const settingsBase = useMemo(() => lineHeightOverride === null || !settingsIn ? settingsIn : {
+    ...settingsIn,
+    judgmentLineHeight: lineHeightOverride
+  }, [settingsIn, lineHeightOverride]);
+  const settings = useMemo(() => settingsBase && settingsBase.autoEffectDown !== false ? rhythmCapEffects(settingsBase, effectCap) : settingsBase, [settingsBase, effectCap]);
   const settingsLiveRef = useRef(settings);
   settingsLiveRef.current = settings;
   useEffect(() => {
@@ -37469,7 +37678,13 @@ const RhythmTapTest = ({
     style: {
       textShadow: '0 1px 4px rgba(2,6,23,.92)'
     }
-  }))), React.createElement("div", {
+  }))), lineAdjust && React.createElement(RhythmLineAdjustPanel, {
+    ground: settings.judgmentLineHeight,
+    onGround: setLineHeightOverride,
+    onBump: () => setSkyLineTick(n => n + 1),
+    isLandscape: isLandscape,
+    onDone: lineAdjust.onDone
+  }), React.createElement("div", {
     "data-rhythm-song-clock": true,
     "data-clock-wide": isLandscape ? '1' : '',
     "data-clock-side": clockOnLeft ? 'left' : 'right',
@@ -37865,6 +38080,8 @@ const RhythmTapTest = ({
     "data-rhythm-lane-cover": true,
     "aria-hidden": "true",
     style: laneCoverStyle
+  }), lineAdjust && React.createElement(RhythmLineAdjustBands, {
+    tick: skyLineTick
   }), calibrating && React.createElement("div", {
     ref: calibrationBannerRef,
     "data-rhythm-calibration-banner": true,
@@ -37894,7 +38111,7 @@ const RhythmTapTest = ({
       fontSize: isLandscape ? '9px' : '11px',
       lineHeight: isLandscape ? 1.3 : 1.6
     }
-  }, "判定ラインにノーツが重なった瞬間に叩いてください。判定とFAST・SLOWはいつもどおり出ます")), tutorial && React.createElement("div", {
+  }, "判定ラインにノーツが重なった瞬間に叩いてください。判定とFAST・SLOWはいつもどおり出ます")), tutorialProp && React.createElement("div", {
     ref: tutorialBannerRef,
     "data-rhythm-tutorial-banner": true,
     className: "pointer-events-none absolute inset-x-3 top-[14%] z-20 rounded-2xl border border-cyan-300/50 bg-slate-950/92 px-3 py-2.5 text-center shadow-[0_0_18px_rgba(34,211,238,.18)]"
@@ -87592,6 +87809,15 @@ function MonsterHeroGame() {
     });
     setGameState('RHYTHM_PLAY');
   };
+  const startRhythmLineAdjust = () => {
+    if (rhythmSettings.quietDuringPlay) RHYTHM_QUIET_MODE.enter();
+    setRhythmPlay({
+      song: RHYTHM_LINE_ADJUST_SONG,
+      difficulty: RHYTHM_LINE_ADJUST_DIFFICULTY,
+      from: 'lineAdjust'
+    });
+    setGameState('RHYTHM_PLAY');
+  };
   const startRhythmPractice = () => {
     if (rhythmSettings.quietDuringPlay) RHYTHM_QUIET_MODE.enter();
     setRhythmPlay({
@@ -100779,6 +101005,7 @@ function MonsterHeroGame() {
       quickRunAward: rhythmPlayRunAward,
       onComplete: async (result, merged) => {
         if (rhythmPlay.from === 'proto') return;
+        if (rhythmPlay.from === 'lineAdjust') return;
         if (rhythmPlay.from === 'raid') void completeRaidJackRhythm(result, rhythmPlay.song, rhythmPlay.difficulty);
         const multiScale = rhythmPlay.from === 'multi' ? rhythmMultiTotalScale(rhythmPlay.multiCount, rhythmPlay.multiStreak, rhythmPlay.multiCpus) : 1;
         if (rhythmPlay.from === 'multi') RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId, result, false, {
@@ -100853,7 +101080,7 @@ function MonsterHeroGame() {
         if (rhythmPlay.from === 'multi' && !RHYTHM_MULTI.hasReported(rhythmPlay.multiStartId)) RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId, null, true, {
           diffId: rhythmPlay.difficulty.id
         });
-        const back = rhythmPlay.from === 'multi' ? 'RHYTHM_MULTI' : rhythmPlay.from === 'calibration' ? 'RHYTHM_OPTIONS' : rhythmPlay.backTo === 'RHYTHM_DEBUG_SELECT' ? 'RHYTHM_DEBUG_SELECT' : rhythmPlay.from === 'debug' || rhythmPlay.from === 'proto' ? 'RHYTHM_DEBUG' : 'RHYTHM_DEMO_HOME';
+        const back = rhythmPlay.from === 'multi' ? 'RHYTHM_MULTI' : rhythmPlay.from === 'calibration' || rhythmPlay.from === 'lineAdjust' ? 'RHYTHM_OPTIONS' : rhythmPlay.backTo === 'RHYTHM_DEBUG_SELECT' ? 'RHYTHM_DEBUG_SELECT' : rhythmPlay.from === 'debug' || rhythmPlay.from === 'proto' ? 'RHYTHM_DEBUG' : 'RHYTHM_DEMO_HOME';
         setRhythmPlay(null);
         setGameState(back);
         if (rhythmHellStoryAfterResultRef.current) {
@@ -100868,6 +101095,19 @@ function MonsterHeroGame() {
       debugPlay: rhythmPlay.from === 'debug' || rhythmPlay.from === 'proto',
       tutorial: rhythmPlay.from === 'tutorial',
       calibrating: rhythmPlay.from === 'calibration',
+      lineAdjust: rhythmPlay.from === 'lineAdjust' ? {
+        onDone: async height => {
+          if (height !== null && height !== undefined) {
+            const saved = await saveRhythmSettings({
+              ...rhythmSettings,
+              judgmentLineHeight: height
+            });
+            setRhythmSettings(saved);
+          }
+          setRhythmPlay(null);
+          setGameState('RHYTHM_OPTIONS');
+        }
+      } : null,
       onApplyCalibration: async measured => {
         const offsetMs = Number(measured && measured.offsetMs);
         if (Number.isFinite(offsetMs)) {
@@ -101018,6 +101258,7 @@ function MonsterHeroGame() {
       value: rhythmSettings,
       onBack: () => setGameState(rhythmOptionsBack),
       onCalibrate: startRhythmCalibration,
+      onLineAdjust: startRhythmLineAdjust,
       calibrationResult: rhythmCalibrationResult,
       onClearCalibration: () => setRhythmCalibrationResult(null),
       onSave: async draft => {

@@ -1297,12 +1297,20 @@ const rhythmSkyLiftPortrait=()=>{try{const v=Number(localStorage.getItem('mh_sky
 // 地上の線は今ある「判定ラインの高さ」(judgmentLineHeight)のまま。空中の線は地上の線からの高さ(RHYTHM_SKY_LIFT)を、この値(画面の高さの%・上が+)だけ足し引きする。
 // 空中のノーツ・空中の線・空中の光は、みな RHYTHM_SKY_LIFT.ratio から位置を決めるので、一緒に動く。空中の受け付ける範囲も一緒に動く(rhythmSkyAcceptLimit)。
 // 保存は新しいキー mh_rhythm_sky_line_offset_v1 だけ。既定は0(今の位置)。0.5刻み・±8% に収め、壊れていたら0
-const RHYTHM_SKY_LINE_OFFSET_MAX_PCT=8,RHYTHM_SKY_LINE_OFFSET_STEP_PCT=.5;
+// 2026-10-14 社長「空中ラインと地上ラインの調整範囲もっと広げないと意味ない」(制限をほぼなくす)→ 保存できる幅は ±60%。
+// 実際の高さは rhythmSkyLiftWith で画面に収める(地上の線から10%以上上・画面の上から3%以内)。古い版で開いても ±8 に丸めて読むだけで壊れない
+const RHYTHM_SKY_LINE_OFFSET_MAX_PCT=60,RHYTHM_SKY_LINE_OFFSET_STEP_PCT=.5;
 const rhythmNormalizeSkyLineOffset=value=>{const n=Number(value);if(!Number.isFinite(n))return 0;const snapped=Math.round(n/RHYTHM_SKY_LINE_OFFSET_STEP_PCT)*RHYTHM_SKY_LINE_OFFSET_STEP_PCT;return Math.max(-RHYTHM_SKY_LINE_OFFSET_MAX_PCT,Math.min(RHYTHM_SKY_LINE_OFFSET_MAX_PCT,snapped))||0;};
 const RHYTHM_SKY_LINE_OFFSET={pct:(()=>{try{const v=typeof localStorage!=='undefined'?localStorage.getItem('mh_rhythm_sky_line_offset_v1'):null;return v===null?0:rhythmNormalizeSkyLineOffset(v);}catch(e){return 0;}})(),
   set(value){const v=rhythmNormalizeSkyLineOffset(value);this.pct=v;try{if(v===0)localStorage.removeItem('mh_rhythm_sky_line_offset_v1');else localStorage.setItem('mh_rhythm_sky_line_offset_v1',String(v));}catch(e){}}};
 // base … 向きで決まる元の高さ(横 39%・縦 16%)。ratio … それに空中の線のずらしを足した、実際の高さ
-const rhythmSkyLiftWith=(base,pct)=>Math.max(.06,Math.min(.6,base+(Number(pct)||0)/100));
+// 空中の線の高さ(地上の線からの距離・画面の高さの割合)。守るのは2つだけ: 空中の線は地上の線より10%以上上(重なって叩けなくならない間)、
+// 空中の線は画面の上から3%より下(画面の外へ出ない)。line は地上の判定線の高さ(上からの割合)
+const RHYTHM_SKY_LIFT_MIN=.1,RHYTHM_SKY_LINE_TOP_MARGIN=.03;
+const rhythmSkyLiftMaxFor=line=>Math.max(RHYTHM_SKY_LIFT_MIN,(Number(line)||.8)-RHYTHM_SKY_LINE_TOP_MARGIN);
+const rhythmSkyLiftWith=(base,pct,line=RHYTHM_JUDGMENT_LINE_Y.ratio)=>Math.max(RHYTHM_SKY_LIFT_MIN,Math.min(rhythmSkyLiftMaxFor(line),base+(Number(pct)||0)/100));
+// 空中の線のずらしで選べる範囲(%)。画面に収まる分だけ(その画面の地上の線の高さで決まる)
+const rhythmSkyLineOffsetRange=(base,line)=>{const st=RHYTHM_SKY_LINE_OFFSET_STEP_PCT;return {min:Math.max(-RHYTHM_SKY_LINE_OFFSET_MAX_PCT,Math.ceil((RHYTHM_SKY_LIFT_MIN-base)*100/st)*st),max:Math.min(RHYTHM_SKY_LINE_OFFSET_MAX_PCT,Math.floor((rhythmSkyLiftMaxFor(line)-base)*100/st)*st)};};
 const RHYTHM_SKY_LIFT={ratio:RHYTHM_SKY_LIFT_RATIO,base:RHYTHM_SKY_LIFT_RATIO,set(landscape){this.base=landscape?.39:rhythmSkyLiftPortrait();this.ratio=rhythmSkyLiftWith(this.base,RHYTHM_SKY_LINE_OFFSET.pct);}};
 const rhythmNoteSkyHeight=note=>{const h=Number(note?.skyHeight);return Number.isFinite(h)&&h>0?Math.min(1,h):0;};
 // 毎コマ何百回も呼ばれるので、点の列ごとに1回だけ数えて覚える。演奏中のノーツは譜面のノーツの写しだが、
@@ -1622,8 +1630,16 @@ const RHYTHM_SKY_REACH_ADAPT={
 const RHYTHM_ACCEPT_WIDTH_MIN_PCT=50,RHYTHM_ACCEPT_WIDTH_STEP_PCT=5;
 const rhythmNormalizeAcceptWidth=value=>{const n=Number(value);if(!Number.isFinite(n))return 100;const snapped=Math.round(n/RHYTHM_ACCEPT_WIDTH_STEP_PCT)*RHYTHM_ACCEPT_WIDTH_STEP_PCT;return Math.max(RHYTHM_ACCEPT_WIDTH_MIN_PCT,Math.min(100,snapped));};
 const rhythmReadAcceptWidth=key=>{try{const v=typeof localStorage!=='undefined'?localStorage.getItem(key):null;return v===null?100:rhythmNormalizeAcceptWidth(v);}catch(e){return 100;}};
+// 空中の受け付けの上の端(2026-10-14 社長の決定)。空中の線から上へ RHYTHM_SKY_ACCEPT_TOP_BASE(画面の高さの20%)×広さ(%)まで。
+// それより上を押した指は空中のノーツを取らない。既定20%: 横持ち(高さ390px)で約78px・縦(844px)で約169px。人の指の押す位置のばらつき
+// (ボットの指のくせ σ=28px)の2.8倍(横)〜6倍(縦)あり、空中の線をねらった指をまず断らない広さ。広さは50〜300%(10%刻み)・新しいキー mh_rhythm_sky_accept_top_pct_v1。
+// 画面の上の外まで行ってよい(線を上げたとき)
+const RHYTHM_SKY_ACCEPT_TOP_BASE=.2,RHYTHM_SKY_ACCEPT_TOP_MIN_PCT=50,RHYTHM_SKY_ACCEPT_TOP_MAX_PCT=300,RHYTHM_SKY_ACCEPT_TOP_STEP_PCT=10;
+const rhythmNormalizeSkyAcceptTop=value=>{const n=Number(value);if(!Number.isFinite(n))return 100;const snapped=Math.round(n/RHYTHM_SKY_ACCEPT_TOP_STEP_PCT)*RHYTHM_SKY_ACCEPT_TOP_STEP_PCT;return Math.max(RHYTHM_SKY_ACCEPT_TOP_MIN_PCT,Math.min(RHYTHM_SKY_ACCEPT_TOP_MAX_PCT,snapped));};
 const RHYTHM_ACCEPT_WIDTH={ground:rhythmReadAcceptWidth('mh_rhythm_ground_accept_pct_v1'),sky:rhythmReadAcceptWidth('mh_rhythm_sky_accept_pct_v1'),
-  set(which,value){if(which!=='ground'&&which!=='sky')return;const v=rhythmNormalizeAcceptWidth(value),key=which==='ground'?'mh_rhythm_ground_accept_pct_v1':'mh_rhythm_sky_accept_pct_v1';this[which]=v;
+  skyTop:(()=>{try{const v=typeof localStorage!=='undefined'?localStorage.getItem('mh_rhythm_sky_accept_top_pct_v1'):null;return v===null?100:rhythmNormalizeSkyAcceptTop(v);}catch(e){return 100;}})(),
+  set(which,value){if(which==='skyTop'){const v=rhythmNormalizeSkyAcceptTop(value);this.skyTop=v;try{if(v===100)localStorage.removeItem('mh_rhythm_sky_accept_top_pct_v1');else localStorage.setItem('mh_rhythm_sky_accept_top_pct_v1',String(v));}catch(e){}return;}
+    if(which!=='ground'&&which!=='sky')return;const v=rhythmNormalizeAcceptWidth(value),key=which==='ground'?'mh_rhythm_ground_accept_pct_v1':'mh_rhythm_sky_accept_pct_v1';this[which]=v;
     try{if(v===100)localStorage.removeItem(key);else localStorage.setItem(key,String(v));}catch(e){}}};
 // 地上のノーツを受ける上の端(これより下を押せば地上)。空中の線のずらしでは動かない(元の高さ base で数える)。地上の線を動かすと一緒に動く。
 // widthPct で、地上の線より上の部分だけを縮める(100なら今までと同じ値)
@@ -1633,12 +1649,16 @@ const rhythmGroundAcceptFrom=()=>rhythmGroundAcceptFromWith(RHYTHM_JUDGMENT_LINE
 // 地上の範囲(今の広さ)の上の端より上へは行かない(どちらも受け付けない隙間を作らない)。ずらしが0・広さ100なら今までと同じ値。
 // widthPct が100未満のときは、空中の線より下の部分を縮める。案A はその狭めた範囲の外へは広げない(狭めた下の端で止まる)
 const rhythmSkyAcceptLimitWith=(line,base,ratio,adapt=0,widthPct=100)=>{
-  const floor=rhythmGroundAcceptFromWith(line,base),full=Math.max(line-RHYTHM_SKY_ACCEPT_BELOW+adapt-(ratio-base),floor);
+  // 空中の線を下げても、下の端は既定の位置(地上の線の少し上)より下へは行かない(2026-10-14・動かせる幅を広げたとき、空中が地上の線まで取っていた)
+  const floor=rhythmGroundAcceptFromWith(line,base),full=Math.max(Math.min(line-RHYTHM_SKY_ACCEPT_BELOW+adapt-(ratio-base),line-RHYTHM_SKY_ACCEPT_BELOW+adapt),floor);
   if(!(widthPct<100))return full;
   const skyLine=line-ratio,plain=Math.max(line-RHYTHM_SKY_ACCEPT_BELOW-(ratio-base),floor),narrowed=skyLine+Math.max(0,plain-skyLine)*Math.max(0,widthPct/100);
   return Math.min(full,narrowed);
 };
 const rhythmSkyAcceptLimit=()=>rhythmSkyAcceptLimitWith(RHYTHM_JUDGMENT_LINE_Y.ratio,RHYTHM_SKY_LIFT.base,RHYTHM_SKY_LIFT.ratio,RHYTHM_SKY_REACH_ADAPT.offset(),RHYTHM_ACCEPT_WIDTH.sky);
+// 空中のノーツを受ける上の端(これより下を押せば空中)。空中の線から上へ、画面の高さの20%×広さ
+const rhythmSkyAcceptTopWith=(line,ratio,pct=100)=>line-ratio-RHYTHM_SKY_ACCEPT_TOP_BASE*(Number(pct)||100)/100;
+const rhythmSkyAcceptTop=()=>rhythmSkyAcceptTopWith(RHYTHM_JUDGMENT_LINE_Y.ratio,RHYTHM_SKY_LIFT.ratio,RHYTHM_ACCEPT_WIDTH.skyTop);
 const rhythmSkyTouch=(clientY,rect)=>{
   if(!RHYTHM_SKY_INPUT.active||!rect||!(Number(rect.height)>0))return null;
   return (Number(clientY)-Number(rect.top))/Number(rect.height);
@@ -1650,7 +1670,7 @@ const rhythmSkyAccepts=(note,touchRatio)=>{
   if(!RHYTHM_SKY_INPUT.active||!Number.isFinite(touchRatio))return true;
   // 地上のノーツは、空中の線と地上の線のまん中より下を押したときだけ取る(2026-10-10 社長「中身がついてきてない」を受けて、
   // 地上のタップを空中の線のすぐ下で押しても取れていた(77個中60個)のを直した。前は空中の線の5%下から下を全部地上として受けていた)
-  return rhythmNoteSkyHeight(note)>0?touchRatio<rhythmSkyAcceptLimit():touchRatio>rhythmGroundAcceptFrom();
+  return rhythmNoteSkyHeight(note)>0?touchRatio<rhythmSkyAcceptLimit()&&touchRatio>rhythmSkyAcceptTop():touchRatio>rhythmGroundAcceptFrom();
 };
 // HOLD/SLIDEを押さえ続けているあいだの「指がどのレーンにいるか」。
 //
@@ -4139,7 +4159,7 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
       // 少し低く押しただけで断られるので、高さを問わない(人の指のくせのボットで見つけた)
       if(RHYTHM_SKY_INPUT.active&&rhythmNoteIsSlide(note)&&rhythmSlideHasSky(note)&&rhythmSlideSkyAt(note,Number(note.timeMs)||0)>=.5){
         const ratio=Number(input?.sky);
-        if(Number.isFinite(ratio)&&!(ratio<rhythmSkyAcceptLimit()))return false;
+        if(Number.isFinite(ratio)&&!(ratio<rhythmSkyAcceptLimit()&&ratio>rhythmSkyAcceptTop()))return false;
       }
       const span=inputSpan(note);
       if(!span)return note.lane===lane;
@@ -29223,6 +29243,28 @@ const RHYTHM_CALIBRATION_SONG=Object.freeze({
   difficulties:Object.freeze({TUTORIAL:rhythmChartOnRoad(RHYTHM_CALIBRATION_CHART)}),
 });
 const RHYTHM_CALIBRATION_DIFFICULTY=Object.freeze({id:'TUTORIAL',maxScore:800000,label:'タイミング合わせ'}); // 満点は EASY と同じ(2026-10-13)
+// 判定ラインの位置の合わせ(2026-10-14 社長「判定ラインの調整見づらいから実際の画面に切り替わって調整できるようにして」)。
+// タイミング合わせと同じく演奏画面をそのまま使い、譜面だけを差し替える。地上のタップと空中のタップを2拍ごとに交互に流す
+// (空中の段を出すため・押して試せるように)。記録・ランキング・ライフには何も残さない(60-app.jsx の from:'lineAdjust')
+const RHYTHM_LINE_ADJUST_NOTE_COUNT=120;
+const rhythmLineAdjustNotes=(()=>{
+  const notes=[],lanes=[1,2,3,4,2,3];
+  for(let index=0;index<RHYTHM_LINE_ADJUST_NOTE_COUNT;index++){
+    const note={type:'TAP',lane:lanes[index%lanes.length],timeMs:rhythmTutorialMs(4+index*2)};
+    if(index%2===1)note.skyHeight=1;
+    notes.push(note);
+  }
+  return Object.freeze(notes);
+})();
+const RHYTHM_LINE_ADJUST_END_MS=rhythmTutorialMs(4+RHYTHM_LINE_ADJUST_NOTE_COUNT*2+4);
+const RHYTHM_LINE_ADJUST_SONG=Object.freeze({
+  songId:'rhythm_line_adjust',
+  displayName:'判定ライン合わせ',
+  bgmTrackId:RHYTHM_TUTORIAL_TRACK_ID,
+  playDurationMs:RHYTHM_LINE_ADJUST_END_MS,
+  difficulties:Object.freeze({TUTORIAL:rhythmChartOnRoad({level:1,notes:rhythmLineAdjustNotes,totalNotes:rhythmLineAdjustNotes.length,durationMs:RHYTHM_LINE_ADJUST_END_MS})}),
+});
+const RHYTHM_LINE_ADJUST_DIFFICULTY=Object.freeze({id:'TUTORIAL',maxScore:800000,label:'判定ライン合わせ'});
 
 // 曲ごとの拍(2026-09-26・道の演出で使う)。[1拍の長さ(ms), 最初の拍の時刻(ms), 1小節の拍数]。
 // 譜面を作ったときの音源の解析(tools/mode/authoring/*-v3-audio.json の timing)をそのまま写したもの。公開中の曲はノーツが全部この格子に乗っている。
