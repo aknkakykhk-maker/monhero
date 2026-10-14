@@ -35,6 +35,21 @@ const SAMPLE_LINES = 24;
 const TOPIC_ALIASES = {
   'rhythm/rhythm-multi': 'マルチ マルチプレイ 協力 部屋 フリーマッチ プライベート',
 };
+// 用語の小さな表(2026-10-14 窓口の指摘「みゅあが自分の愛称『モンビー』を知らないと答えた」)。
+// ここに書くのは「同じものの言い方の組」と「説明を取るヘルプの項目」だけ。
+//   説明 … そのヘルプ項目(無ければ全項目)で、その言葉を最初に含む1文を機械で取る
+//   呼び方 … 助手ごとに、実際のセリフでどの言い方を何回使っているかを数え、いちばん多いものを書く
+const TERM_GROUPS = [
+  { variants: ['モンヒロビート', 'モンビー'], topic: 'rhythm/rhythm-mode' },
+  { variants: ['モンヒロバトル', 'モンバト'], topic: 'basics/battle-modes' },
+  { variants: ['マスモン'], topic: 'masu/masumon' },
+  { variants: ['ベースモン'], topic: 'home/roster' },
+  { variants: ['勇者モン'], topic: 'basics/quickstart' },
+  { variants: ['供モン'], topic: 'basics/quickstart' },
+  { variants: ['絆レベル', '絆Lv'], topic: 'masu/masumon' },
+  { variants: ['仲良し度'], topic: 'tips/bond' },
+  { variants: ['M/B管理'], topic: 'home/roster' },
+];
 
 const loadScript = (file, names) => {
   const src = fs.readFileSync(path.join(DATA, file), 'utf8');
@@ -87,7 +102,50 @@ const buildDigest = () => {
     if (titles.length) index.push(`【${clean(cat.title)}】${titles.join('／')}`);
   });
 
-  const a = loadScript('assistants.js', ['ASSISTANTS', 'assistantSceneLines']);
+  const a = loadScript('assistants.js', ['ASSISTANTS', 'assistantSceneLines', 'ASSISTANT_SCENES', 'ASSISTANT_LINE_PACKS', 'ASSISTANT_UPDATE_NOTICE_SCRIPTS', 'DEFAULT_ASSISTANT_ID']);
+
+  // ---- 用語の表 ----
+  // 助手ごとのセリフを全部集める(場面の通常・条件つき・あとから足した束)
+  const linesBy = {};
+  const addLine = (line, fallbackWho) => {
+    if (!line || typeof line.t !== 'string') return;
+    const who = line.who || fallbackWho || a.DEFAULT_ASSISTANT_ID || 'mua';
+    (linesBy[who] = linesBy[who] || []).push(line.t);
+  };
+  for (const def of Object.values(a.ASSISTANT_SCENES || {})) {
+    for (const line of (def && def.lines) || []) addLine(line);
+    for (const list of Object.values((def && def.when) || {})) for (const line of list || []) addLine(line);
+  }
+  for (const pack of a.ASSISTANT_LINE_PACKS || []) {
+    for (const list of Object.values((pack && pack.lines) || {})) for (const line of list || []) addLine(line, pack.assistantId);
+  }
+  // 告知の読み上げ(告知id → 助手id → セリフ)。愛称(モンビー)はここに多い
+  for (const byAssistant of Object.values(a.ASSISTANT_UPDATE_NOTICE_SCRIPTS || {})) {
+    for (const [who, list] of Object.entries(byAssistant || {})) for (const line of Array.isArray(list) ? list : []) addLine(line, who);
+  }
+  const countIn = (texts, word) => texts.reduce((n, t) => n + (t.split(word).length - 1), 0);
+  const firstSentence = (word, preferId) => {
+    const pool = [topics.find(t => t.id === preferId), ...topics].filter(Boolean);
+    for (const t of pool) {
+      const s = t.text.split(/(?<=。)/).find(x => x.includes(word));
+      if (s) return cut(clean(s), 120);
+    }
+    return '';
+  };
+  const glossary = [];
+  for (const g of TERM_GROUPS) {
+    const meaning = firstSentence(g.variants[0], g.topic);
+    const calls = [];
+    for (const x of a.ASSISTANTS || []) {
+      if (!x || x.role !== '助手') continue;
+      const texts = linesBy[x.id] || [];
+      // その助手が実際に使う言い方を、多い順に全部並べる(いちばん多いものだけにすると、愛称を「知らない」ことになる)
+      const used = g.variants.map(v => [v, countIn(texts, v)]).filter(([, n]) => n > 0).sort((p, q) => q[1] - p[1]).map(([v]) => `「${v}」`);
+      if (used.length) calls.push(`${x.name}は${used.join('とも')}`);
+    }
+    const head = g.variants.length > 1 ? `${g.variants[0]}(＝${g.variants.slice(1).join('・')}。どれも同じもの)` : g.variants[0];
+    glossary.push(`・${head}: ${meaning || '(ヘルプに説明なし)'}${g.variants.length > 1 && calls.length ? ` 助手の呼び方: ${calls.join('、')}` : ''}`);
+  }
   const assistants = {};
   for (const x of a.ASSISTANTS || []) {
     if (!x || x.role !== '助手') continue;
@@ -112,14 +170,15 @@ const buildDigest = () => {
       samples: picked,
     };
   }
-  return { version: 2, index: index.join('\n'), basics: cut(basics.trim(), BASICS_MAX_CHARS), topics, assistants };
+  // terms … 同じものの言い方の組。中継役が質問を広げてから項目を選ぶ(「モンビー」で聞かれてもモンヒロビートの項目が選ばれる)
+  return { version: 2, index: index.join('\n'), glossary: glossary.join('\n'), terms: TERM_GROUPS.filter(g => g.variants.length > 1).map(g => g.variants), basics: cut(basics.trim(), BASICS_MAX_CHARS), topics, assistants };
 };
 
 const run = ({ check = false } = {}) => {
   const digest = buildDigest();
   const text = `${JSON.stringify(digest, null, 1)}\n`;
   const persona = Math.max(0, ...Object.values(digest.assistants).map(x => JSON.stringify(x).length));
-  const size = digest.index.length + digest.basics.length + persona;
+  const size = digest.index.length + digest.glossary.length + digest.basics.length + persona;
   if (size > CACHED_MAX_CHARS) {
     return { ok: false, reason: `助手とおしゃべりの毎回渡す部分が大きすぎます(${size}文字 > ${CACHED_MAX_CHARS})。BASICS_MAX_CHARS を下げてください` };
   }

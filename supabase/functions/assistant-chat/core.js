@@ -127,6 +127,16 @@ const topicIndexOf = (digest) => {
 export const selectHelpTopics = (digest, query, prev = '', count = HELP_PICK_COUNT) => {
   const { rows, df, n } = topicIndexOf(digest);
   if (rows.length === 0) return [];
+  // 用語の表の言いかえで質問を広げる(「モンビー」→「モンヒロビート」も足す)
+  const expand = (s) => {
+    let out = String(s || '');
+    for (const variants of Array.isArray(digest.terms) ? digest.terms : []) {
+      if (variants.some(v => out.includes(v))) out += ` ${variants.join(' ')}`;
+    }
+    return out;
+  };
+  query = expand(query);
+  prev = expand(prev);
   const weights = new Map();
   for (const g of gramsOf(query)) weights.set(g, 1);
   for (const g of gramsOf(prev)) if (!weights.has(g)) weights.set(g, 0.4);
@@ -152,7 +162,7 @@ export const topicsText = (topics) => topics.length
 // system の並び: 決まり → ヘルプの目次と基本(全助手で共通)【区切り】→ 助手の人柄【区切り】→ 選んだヘルプの項目・プレイヤーごとの値
 export const buildSystem = (digest, assistantId, ctx, picked = []) => [
   { type: 'text', text: RULES_TEXT },
-  { type: 'text', text: `ヘルプの目次(どんな項目があるか):\n${digest.index}\n\nヘルプの基本:\n${digest.basics}`, cache_control: { type: 'ephemeral' } },
+  { type: 'text', text: `ヘルプの目次(どんな項目があるか):\n${digest.index}\n\nゲームの用語(同じものの言い方と、助手ごとの呼び方。あなた自身が使う愛称も含む):\n${digest.glossary || ''}\n\nヘルプの基本:\n${digest.basics}`, cache_control: { type: 'ephemeral' } },
   { type: 'text', text: personaText(digest.assistants[assistantId]), cache_control: { type: 'ephemeral' } },
   { type: 'text', text: `${topicsText(picked)}\n\n${contextText(ctx)}` },
 ];

@@ -134,6 +134,9 @@ const unit = async (core) => {
   check('⑬ まだ出ていない印のヘルプ(助手とおしゃべり)は材料に入っていない', !JSON.stringify(DIGEST).includes('助手とおしゃべりできます'));
   const CASES = [
     ['HELLってどうやったら遊べるの?', 'rhythm/rhythm-hell'],
+    // 社長が試して外れた2問(2026-10-14)
+    ['モンビーって何?', 'rhythm/rhythm-mode'],
+    ['モンヒロビートって何?', 'rhythm/rhythm-mode'],
     ['染色ってどうやるの', 'masu/dye'],
     ['合体のやり方を教えて', 'masu/fusion'],
     ['マルチってなに？', 'rhythm/rhythm-multi'],
@@ -161,6 +164,10 @@ const unit = async (core) => {
     const sys = client.calls[0].system;
     check('⑬ HELL の項目(MASTER クリアで開く)が、区切りの後ろの system に入る', /難易度 HELL と空のノーツ/.test(sys[3].text) && /MASTER/.test(sys[3].text) && !/難易度 HELL と空のノーツ\n/.test(sys[1].text));
     check('⑬ 決まりに「推測で作らない」「似た名前を取り違えない」が入っている', /推測で作らない/.test(sys[0].text) && /取り違えない/.test(sys[0].text));
+    // 用語の表はキャッシュする共通部分に入り、みゅあ・ももすけが「モンビー」と呼ぶことが分かる
+    check('⑬ 用語の表がキャッシュする部分に入り、モンビー＝モンヒロビートと、みゅあ・ももすけの呼び方が載っている',
+      /モンヒロビート\(＝モンビー/.test(sys[1].text) && /みゅあは[^、]*「モンビー」/.test(sys[1].text) && /ももすけは[^、]*「モンビー」/.test(sys[1].text) && !!sys[1].cache_control);
+    check('⑬ 用語の表で、絆レベル(マスモン)と仲良し度(助手)を分けている', /・絆レベル/.test(sys[1].text) && /・仲良し度/.test(sys[1].text));
   }
 };
 
