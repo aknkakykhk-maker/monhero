@@ -6893,6 +6893,34 @@ const RHYTHM_HELL_STORY = [
   { who:'mua',      e:'excited',  t:'よーし、モンビーの空、取りにいこう！ 地獄だって、ビートで乗りこえる！' },
 ];
 const RHYTHM_HELL_STORY_CALLS = { mua: 'ドラケン／もも', kiki: 'ドラさん', momosuke: 'ドラちゃん／みゅあねぇ', dra: 'みゅあ／靴下さん／もも' };
+
+// ---------- 助手とおしゃべりのお話(2026-10-14・社長の決定「ストーリーも作ってそれで公開しよう」) ----------
+// 助手たちがブリーダーともっと話したくて、ゲームの世界の中のきっかけ(神殿の奥の「ことのはの鈴」)で自由に話せるようになる話。
+// 最後に HOME の「💬 おしゃべり」へ案内する。4人全員が出る。
+// ★作りは HELL のお話「空まで届くビート」と同じ(回想に残る・BGM の枠・公開の日に HOME で1回)。
+//   公開の印は assistantChat。見たかどうかは新しいキー mh_story_assistant_chat_seen_v1(60-app.jsx の EVENT_REPLAY_UNLOCK_FLAGS の assistantChatStorySeen)
+// ★お話の中では、機械やしくみの言葉を使わない(ゲームの世界の中のこととして書く)。
+//   「モンビー」は ももすけ のセリフで使う。ききは「モンヒロビート」。ドラの一人称は「おで」
+const ASSISTANT_CHAT_STORY = [
+  { who:'mua',      e:'excited',  t:'{name}、聞いて聞いて！ あたしたち、ずっと思ってたことがあるの！' },
+  { who:'kiki',     e:'normal',   t:'いつもは、決まったひとことしか言えなかったでつ。' },
+  { who:'momosuke', e:'troubled', t:'ももだって、ほんとはもっとおしゃべりしたいのにさ〜' },
+  { who:'dra',      e:'normal',   t:'おでなんか、膝の話ばっかりさせられてたからな' },
+  { who:'mua',      e:'happy',    t:'そしたらね、神殿の奥で、ちっちゃい鈴を見つけたんだ！' },
+  { who:'kiki',     e:'surprise', t:'「ことのはの鈴」でつ。鳴らすと、思ったことがそのまま言葉になる鈴だそうでつ。' },
+  { who:'momosuke', e:'wink',     t:'ももが一番に鳴らしたの♡ そしたらね、言いたいことがすらすら出てくるの！' },
+  { who:'dra',      e:'happy',    t:'おでも鳴らした。膝以外のことも、ちゃんとしゃべれるようになったぞ' },
+  { who:'mua',      e:'excited',  t:'だから、これからは{name}と自由におしゃべりできるの！ まじ最高じゃない？' },
+  { who:'kiki',     e:'normal',   t:'遊び方で分からないことがあったら、聞いてほしいでつ。ヘルプに書いてあることなら、ちゃんと答えまつ。' },
+  { who:'momosuke', e:'happy',    t:'モンビーのことも、バトルのことも、ももに聞いていいよ♡ ……ま、ただのおしゃべりでもいいけど？' },
+  { who:'dra',      e:'normal',   t:'話すたびに、ちょっとずつ仲良くなれるんだ。前に話したことも、少しは覚えといてやる' },
+  { who:'mua',      e:'troubled', t:'あ、でもね！ 名前とか住所とか電話番号みたいな大事なことは、書いちゃだめだよ' },
+  { who:'kiki',     e:'normal',   t:'鈴を鳴らせるのは1日100回まででつ。朝5時に、また鳴らせるようになりまつ。' },
+  { who:'momosuke', e:'normal',   t:'みんなでいっぱい鳴らしすぎた日は、鈴が早めに疲れちゃうんだって。そしたら、また明日ね♡' },
+  { who:'dra',      e:'happy',    t:'HOMEで、おでたちの吹き出しの下にある「💬 おしゃべり」を押してみろ' },
+  { who:'mua',      e:'excited',  t:'いま選んでる助手が待ってるからね！ さっそく話しかけてみて〜！' },
+];
+const ASSISTANT_CHAT_STORY_CALLS = { mua: 'もも／ドラケン', kiki: 'ももさん／ドラさん', momosuke: 'みゅあねぇ／ドラちゃん', dra: 'みゅあ／靴下さん／もも' };
 // お話のあとに出す説明(1枚ずつ)。ヘルプの HELL の項目(公開のときに入れる)もこの文に合わせる
 const RHYTHM_HELL_GUIDE_PAGES = Object.freeze([
   Object.freeze({ title:'HELL とは', video:'hell', text:'MASTER のさらに上の難易度です。地上のノーツに、空のノーツが重なって流れてきます。HELL がある曲は、その曲の MASTER をクリアすると HELL が遊べるようになります。' }),
@@ -6961,6 +6989,9 @@ const EVENT_REPLAYS = [
   // 難易度 HELL のお話(2026-10-11)。公開の印 rhythmHell が立つまでは回想にも出さない(デバッグの「全ストーリーを確認」には出る)。
   // 見たかどうかは新しいキー mh_rhythm_hell_story_seen_v1(60-app.jsx の EVENT_REPLAY_UNLOCK_FLAGS の rhythmHellStorySeen)
   { id: 'rhythm_hell_story', date: '2026-10-11 18:30', title: '空まで届くビート ～難易度 HELL～', script: RHYTHM_HELL_STORY, calls: RHYTHM_HELL_STORY_CALLS, unlockedKey: 'rhythmHellStorySeen', releaseFlag: 'rhythmHell', group: 'update' },
+  // 助手とおしゃべりのお話(2026-10-14)。公開の印 assistantChat と一緒に出る。公開後の最初の HOME で1回流れ、そのあとは回想から見返せる。
+  // 見たかどうかは新しいキー mh_story_assistant_chat_seen_v1(60-app.jsx の EVENT_REPLAY_UNLOCK_FLAGS の assistantChatStorySeen)
+  { id: 'assistant_chat_story', date: '2026-10-14 11:59', title: '話せるようになった日 ～ことのはの鈴～', script: ASSISTANT_CHAT_STORY, calls: ASSISTANT_CHAT_STORY_CALLS, unlockedKey: 'assistantChatStorySeen', releaseFlag: 'assistantChat', group: 'update' },
   { id: 'raid_jack_howto_2026_10_04', date: '2026-10-04 08:02', title: 'カボチャの大王ジャック ～レイドの遊び方～', script: ASSISTANT_RAID_JACK_HOWTO, calls: ASSISTANT_RAID_JACK_HOWTO_CALLS, unlockedKey: 'raidJackHowtoSeen', releaseFlag: 'raidJack', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, group: 'halloween' },
 ];
 

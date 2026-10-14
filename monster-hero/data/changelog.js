@@ -35,9 +35,11 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
-    date: "2026-10-14 10:01", type:'update', group:'assistant', title:'助手と自由におしゃべりできるようになりました', status:'new', releaseFlag:'assistantChat',
+    date: "2026-10-14 12:01", type:'update', group:'assistant', title:'助手と自由におしゃべりできるようになりました', status:'new', releaseFlag:'assistantChat',
+    assistantNotice:{ id:'update_notice_assistant_chat_v1', type:'content' },
     items:[
       'HOMEの助手の吹き出しの下にある「💬 おしゃべり」から、いま選んでいる助手と自由に話せます。',
+      '4人の助手が話せるようになったお話「話せるようになった日 ～ことのはの鈴～」が、HOMEで1回流れます。あとからプロフィールの「イベント回想」で見返せます。',
       '遊び方を聞くと、ヘルプに書いてあることをもとに答えてくれます。',
       '返事が来るたびに、その助手の仲良し度が少し増えます。話せるのは1日100回までで、朝5:00に戻ります。',
       '前に話したことを助手が少しだけ覚えていて、次に話すときに触れてくれます。会話の中身はこの端末にだけ残ります。',
