@@ -184,6 +184,15 @@ const unit = async (core) => {
     const draSys = core.buildSystem(DIGEST, 'dra')[2].text;
     const muaSys = core.buildSystem(DIGEST, 'mua')[2].text;
     check('⑯ ドラの人柄に一人称「おで」「ワイ」と、使わない一人称が書いてある', /一人称: [^\n]*おで[^\n]*ワイ[^\n]*俺/.test(draSys));
+    // ⑲ 話し方(2026-10-14 窓口の指摘「ドラが関西弁に寄りすぎ」「ききの『でつ』『まつ』が出ない」)
+    const kikiSys = core.buildSystem(DIGEST, 'kiki')[2].text;
+    const momoSys = core.buildSystem(DIGEST, 'momosuke')[2].text;
+    check('⑲ ドラの話し方は標準語のくだけた口調で、関西弁はほとんど使わない', /話し方[^\n]*標準語[^\n]*関西弁[^\n]*ほとんど使わない/.test(draSys));
+    check('⑲ ききの一人称は「私」で、ときどき「でつ」「まつ」に崩す', /一人称: 「私」/.test(kikiSys) && /でつ/.test(kikiSys) && /まつ/.test(kikiSys));
+    check('⑲ みゅあ・ももすけの一人称(「あたし」「もも」)と話し方も書いてある', /一人称: 「あたし」/.test(muaSys) && /話し方/.test(muaSys) && /一人称: 「もも」/.test(momoSys) && /話し方/.test(momoSys));
+    check('⑲ 決まりに「思い出メモにあることは『聞いていない』と言わない」が入っている', /「聞いていない」とは言わない/.test(core.RULES_TEXT));
+    const named = core.validateDailyLines([{ scene: 'home', e: 'happy', t: 'テストちん、今日もがんばろ！' }, { scene: 'home', e: 'wink', t: 'キミの調子はどう？' }], ['home'], {}, { callName: 'テストちん', playerName: 'テスト' });
+    check('⑲ ふだんの吹き出しに呼び名がそのまま入っていたら {name} へ置き換える', named.home && named.home[0].t === '{name}、今日もがんばろ！' && named.home[1].t === 'キミの調子はどう？');
     check('⑯ みゅあの人柄に、ほかの助手の呼び方(ひめちん・もも・ドラケン)が書いてある', /ひめちん/.test(muaSys) && /「もも」/.test(muaSys) && /ドラケン/.test(muaSys));
     // 表(ASSISTANT_PEER_CALLS)の呼び方が、その助手の台本で実際に使われているか(表と台本のずれを見つける)
     const src = fs.readFileSync(path.join(root, 'monster-hero', 'data', 'assistants.js'), 'utf8');

@@ -171,6 +171,7 @@ const buildDigest = () => {
     assistants[x.id] = {
       name: x.name, tagline: clean(x.tagline), intro: clean(x.intro), greeting: clean(x.greeting),
       ...(x.firstPerson ? { firstPerson: clean(x.firstPerson) } : {}),
+      ...(x.speech ? { speech: clean(x.speech) } : {}),
       peerCalls: Object.entries(peers).map(([id, call]) => `${nameOf(id)}は「${call.replace(/\(.*$/, '')}」${/\(/.test(call) ? call.slice(call.indexOf('(')) : ''}`).join('、'),
       samples: picked,
     };
