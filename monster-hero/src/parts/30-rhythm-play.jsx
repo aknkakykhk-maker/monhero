@@ -1075,8 +1075,8 @@ const RhythmLineAdjustPanel=({adjust,onBump,isLandscape})=>{
   // 試す段階(保存したあと)は、操作パネルを出さない。右上の一時停止の下に小さく「位置を直す」「終わる」だけを置く
   //   (2026-10-14 社長「位置調整してるときにノーツ落ちてくるのも邪魔」「試しにやるにも左の設定邪魔」)
   if(adjust.phase==='try')return <div data-rhythm-line-adjust-panel data-phase="try" className={`pointer-events-auto absolute z-[35] flex flex-col items-end gap-1 ${isLandscape?'right-1 top-[54px]':'right-2 top-[76px]'}`}>
-    <button type="button" data-rhythm-line-adjust-fix onClick={adjust.onFix} className="min-h-[36px] rounded-lg border border-white/25 bg-slate-900/90 px-2 text-[11px] font-black text-cyan-100">位置を直す</button>
-    <button type="button" data-rhythm-line-adjust-end onClick={adjust.onEnd} className="min-h-[36px] rounded-lg border border-white/25 bg-slate-900/90 px-2 text-[11px] font-black text-white">終わる</button>
+    <button type="button" data-rhythm-line-adjust-fix onClick={adjust.onFix} className="min-h-[40px] rounded-lg border border-white/25 bg-slate-900/90 px-2 text-[11px] font-black text-cyan-100">位置を直す</button>
+    <button type="button" data-rhythm-line-adjust-end onClick={adjust.onEnd} className="min-h-[40px] rounded-lg border border-white/25 bg-slate-900/90 px-2 text-[11px] font-black text-white">終わる</button>
   </div>;
   // 位置を設定する段階: ノーツは流さない・時間の制限もない。5つの値を動かし、下の「保存して試す」で保存してから試す
   return <div data-rhythm-line-adjust-panel data-phase="set" className={`pointer-events-auto absolute z-[35] overflow-y-auto rounded-xl border border-white/20 bg-slate-950/95 p-1.5 text-white shadow-[0_6px_18px_rgba(0,0,0,.5)] ${isLandscape?'left-1 top-1 bottom-1 w-[300px]':'inset-x-2 top-[76px] max-h-[62%]'}`}>
