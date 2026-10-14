@@ -104,6 +104,8 @@ export const personaText = (persona) => {
     persona.tagline ? `人柄: ${persona.tagline}` : '',
     persona.intro ? `紹介: ${persona.intro}` : '',
     persona.greeting ? `口癖の例: ${persona.greeting}` : '',
+    persona.firstPerson ? `一人称: ${persona.firstPerson}` : '',
+    persona.peerCalls ? `ほかの助手の呼び方(話に出たときはこう呼ぶ): ${persona.peerCalls}` : '',
     Array.isArray(persona.samples) && persona.samples.length ? `ふだんのセリフの見本(この口調で話す):\n${persona.samples.map(s => `・${s}`).join('\n')}` : '',
   ].filter(Boolean).join('\n');
 };

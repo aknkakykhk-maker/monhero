@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1ad60d0c2bdb07cf
+// generated-sha256: 385961c2cac4cb29
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-14 16:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-14 16:19"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4460,8 +4460,10 @@ const RHYTHM_LIFE_SIZE_STEP = 10;
 // 大きくするほど上へ上がる(指が画面の下へ届かない端末向け)。
 // ★上限は32%で止める。これを越えると判定ラインがエリアの上半分へ入り、
 //   「まだ形が決まっていない」と見なす見張り(rhythmTravelLooksReady)とぶつかる。
-const RHYTHM_JUDGMENT_LINE_HEIGHT_MIN = 8;
-const RHYTHM_JUDGMENT_LINE_HEIGHT_MAX = 32;
+// 2026-10-14 社長「空中ラインと地上ラインの調整範囲もっと広げないと意味ない」→ 8〜32 から 4〜50 へ。上は50まで(判定ラインは画面の上半分より下に置く作り。
+// rhythmTravelLooksReady が線の中心を高さの45%より下と見ている)。古い版で開いても、範囲の端(32)に丸めて読むだけで壊れない
+const RHYTHM_JUDGMENT_LINE_HEIGHT_MIN = 4;
+const RHYTHM_JUDGMENT_LINE_HEIGHT_MAX = 50;
 const RHYTHM_JUDGMENT_LINE_HEIGHT_STEP = 2;
 const RHYTHM_COMBO_SIZE_MIN = 70;
 const RHYTHM_COMBO_SIZE_MAX = 150;
@@ -18389,7 +18391,7 @@ const rhythmEventRewardText=(reward)=>{
 // タブは4つ(2026-10-13 社長の選択「案1 タブ4つ+よく触るものを上」)。保存キー・値は変えず、並べ替えと見出しだけ。
 // id は前のまま使う(live=演奏 / volume=音 / system=軽さ・演出)。display(表示)はライブにあった表示の項目を分けたもの
 const RHYTHM_OPTION_TABS=Object.freeze([['live','演奏'],['display','表示'],['volume','音'],['system','軽さ・演出']]);
-const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=null,onClearCalibration=null})=>{
+const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,calibrationResult=null,onClearCalibration=null})=>{
   const [draft,setDraft]=useState(()=>normalizeRhythmSettings(value));
   const [message,setMessage]=useState('');
   // 未保存のまま「戻る」を押したときの確認。それまでは何も言わずに変更が消えていた
@@ -18400,10 +18402,10 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
   // 保存は今あるキー(mh_hell_sky_hit_proto・mh_hell_sky_text_proto・mh_sky_lane_look_proto)をそのまま使い、値の意味も既定も変えない。
   // ほかの設定と同じく「保存」を押したときに書く(画面の上では下書き)
   const hellReleased=typeof rhythmHellReleased==='function'&&rhythmHellReleased();
-  const hellNow=()=>({hit:RHYTHM_HELL_SKY_HIT.id,text:RHYTHM_HELL_SKY_TEXT.id,lane:RHYTHM_SKY_LANE_LOOK.id,skyLine:RHYTHM_SKY_LINE_OFFSET.pct,groundW:RHYTHM_ACCEPT_WIDTH.ground,skyW:RHYTHM_ACCEPT_WIDTH.sky});
+  const hellNow=()=>({hit:RHYTHM_HELL_SKY_HIT.id,text:RHYTHM_HELL_SKY_TEXT.id,lane:RHYTHM_SKY_LANE_LOOK.id,skyLine:RHYTHM_SKY_LINE_OFFSET.pct,groundW:RHYTHM_ACCEPT_WIDTH.ground,skyW:RHYTHM_ACCEPT_WIDTH.sky,skyTop:RHYTHM_ACCEPT_WIDTH.skyTop});
   const [hellDraft,setHellDraft]=useState(hellNow);
   const [hellSaved,setHellSaved]=useState(hellNow);
-  const saveHell=()=>{if(!hellReleased)return;RHYTHM_HELL_SKY_HIT.set(hellDraft.hit);RHYTHM_HELL_SKY_TEXT.set(hellDraft.text);RHYTHM_SKY_LANE_LOOK.set(hellDraft.lane);RHYTHM_SKY_LINE_OFFSET.set(hellDraft.skyLine);RHYTHM_ACCEPT_WIDTH.set('ground',hellDraft.groundW);RHYTHM_ACCEPT_WIDTH.set('sky',hellDraft.skyW);const now=hellNow();setHellDraft(now);setHellSaved(now);};
+  const saveHell=()=>{if(!hellReleased)return;RHYTHM_HELL_SKY_HIT.set(hellDraft.hit);RHYTHM_HELL_SKY_TEXT.set(hellDraft.text);RHYTHM_SKY_LANE_LOOK.set(hellDraft.lane);RHYTHM_SKY_LINE_OFFSET.set(hellDraft.skyLine);RHYTHM_ACCEPT_WIDTH.set('ground',hellDraft.groundW);RHYTHM_ACCEPT_WIDTH.set('sky',hellDraft.skyW);RHYTHM_ACCEPT_WIDTH.set('skyTop',hellDraft.skyTop);const now=hellNow();setHellDraft(now);setHellSaved(now);};
   const previewRef=useRef(null);
   const scrollRef=useRef(null);
   // 【2026-09-13・ユーザー指摘】縦横ボタンで横にしたオプション画面のスクリーンショット。
@@ -18522,6 +18524,12 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
   //   指の置き方も違ううえ、横持ちでは器の回転を考えていなかった。
   // ★いまは**演奏画面をそのまま使う**(れんしゅうと同じ作り)。判定もFAST/SLOWもいつもどおり出る。
   // ★画面を移るので、未保存の変更は先に保存してから送る(戻ってきたときに消えていないように)。
+  // 判定ラインの位置を演奏画面で合わせる(2026-10-14)。画面を移るので、未保存の変更(HELL の設定も)を先に保存してから送る
+  const goLineAdjust=async()=>{
+    if(!onLineAdjust)return;
+    if(dirty){saveHell();const saved=await onSave(draft);setDraft(saved);}
+    onLineAdjust();
+  };
   const goCalibrate=async()=>{
     if(!onCalibrate)return;
     if(dirty){const saved=await onSave(draft);setDraft(saved);}
@@ -18576,13 +18584,13 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
     範囲は演奏と同じ式(rhythmSkyAcceptLimitWith / rhythmGroundAcceptFromWith)で数える。案A の自動の動きは人によって演奏中に足されるので、見本には入れない */}
 {field('判定ラインの位置',(()=>{
               const L=1-(Number(draft.judgmentLineHeight)||0)/100,base=wide?.39:rhythmSkyLiftPortrait(),skyOn=hellReleased;
-              const ratio=rhythmSkyLiftWith(base,skyOn?hellDraft.skyLine:0),skyY=L-ratio,lim=rhythmSkyAcceptLimitWith(L,base,ratio,0,skyOn?hellDraft.skyW:100),from=rhythmGroundAcceptFromWith(L,base,skyOn?hellDraft.groundW:100);
+              const ratio=rhythmSkyLiftWith(base,skyOn?hellDraft.skyLine:0,L),skyY=L-ratio,skyRange=rhythmSkyLineOffsetRange(base,L),top=rhythmSkyAcceptTopWith(L,ratio,skyOn?hellDraft.skyTop:100),lim=rhythmSkyAcceptLimitWith(L,base,ratio,0,skyOn?hellDraft.skyW:100),from=rhythmGroundAcceptFromWith(L,base,skyOn?hellDraft.groundW:100);
               const pct=v=>`${(Math.max(0,Math.min(1,v))*100).toFixed(2)}%`;
               return <div data-rhythm-line-position className="space-y-2">
                 <div data-rhythm-line-preview className={`relative mx-auto overflow-hidden rounded-xl border border-white/15 bg-slate-950 ${wide?'h-[120px] w-full':'h-[210px] w-[64%]'}`}>
                   <div className="absolute inset-0" style={{clipPath:'polygon(41% 0,59% 0,100% 100%,0 100%)',background:'rgba(76,29,149,.5)'}}>
                     <div data-rhythm-line-preview-ground-band className="absolute inset-x-0 bottom-0" style={{top:pct(skyOn?from:0),background:'rgba(34,211,238,.26)'}}/>
-                    {skyOn&&<div data-rhythm-line-preview-sky-band className="absolute inset-x-0 top-0" style={{height:pct(lim),background:'rgba(244,114,182,.26)'}}/>}
+                    {skyOn&&<div data-rhythm-line-preview-sky-band className="absolute inset-x-0" style={{top:pct(top),height:pct(lim-Math.max(0,top)),background:'rgba(244,114,182,.26)'}}/>}
                     {skyOn&&lim>from&&<div data-rhythm-line-preview-both className="absolute inset-x-0" style={{top:pct(from),height:pct(lim-from),background:'repeating-linear-gradient(135deg,rgba(244,114,182,.42) 0 5px,rgba(34,211,238,.42) 5px 10px)'}}/>}
                     <div data-rhythm-line-preview-ground className="absolute inset-x-0 h-[3px] -translate-y-1/2 bg-cyan-200 shadow-[0_0_6px_rgba(165,243,252,.9)]" style={{top:pct(L)}}/>
                     {skyOn&&<div data-rhythm-line-preview-skyline className="absolute inset-x-0 h-[3px] -translate-y-1/2 bg-pink-200 shadow-[0_0_6px_rgba(251,207,232,.9)]" style={{top:pct(skyY)}}/>}
@@ -18593,13 +18601,15 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
                   {skyOn&&<span><i className="mr-1 inline-block h-2 w-3 rounded-sm align-middle" style={{background:'rgba(244,114,182,.75)'}}/>空中を受け付ける範囲</span>}
                   {skyOn&&<span><i className="mr-1 inline-block h-2 w-3 rounded-sm align-middle" style={{background:'repeating-linear-gradient(135deg,rgba(244,114,182,.8) 0 3px,rgba(34,211,238,.8) 3px 6px)'}}/>両方(近いほうを取る)</span>}
                 </p>
+                {onLineAdjust&&<button type="button" data-rhythm-line-adjust-open onClick={goLineAdjust} className="min-h-[46px] w-full rounded-xl border border-cyan-300/60 bg-cyan-950/50 text-[12px] font-black text-cyan-100">🎯 実際の画面で合わせる</button>}
                 {stepper('judgmentLineHeight',RHYTHM_JUDGMENT_LINE_HEIGHT_MIN,RHYTHM_JUDGMENT_LINE_HEIGHT_MAX,RHYTHM_JUDGMENT_LINE_HEIGHT_STEP,{fine:RHYTHM_JUDGMENT_LINE_HEIGHT_STEP,coarse:RHYTHM_JUDGMENT_LINE_HEIGHT_STEP*4,suffix:'%',label:'地上の判定ライン(画面の下からの高さ)',slider:true})}
                 {skyOn&&stepper('groundW',RHYTHM_ACCEPT_WIDTH_MIN_PCT,100,RHYTHM_ACCEPT_WIDTH_STEP_PCT,{fine:RHYTHM_ACCEPT_WIDTH_STEP_PCT,coarse:RHYTHM_ACCEPT_WIDTH_STEP_PCT*2,suffix:'%',label:'地上を受け付ける範囲の広さ(線より上のはみ出し・100%が今の広さ)',source:hellDraft,onSet:v=>setHellDraft(d=>({...d,groundW:rhythmNormalizeAcceptWidth(v)})),slider:true})}
-                {skyOn&&stepper('skyLine',-RHYTHM_SKY_LINE_OFFSET_MAX_PCT,RHYTHM_SKY_LINE_OFFSET_MAX_PCT,RHYTHM_SKY_LINE_OFFSET_STEP_PCT,{fine:RHYTHM_SKY_LINE_OFFSET_STEP_PCT,coarse:2,suffix:'%',decimals:1,label:'空中の判定ライン(上が＋・0が今の位置)',source:hellDraft,onSet:v=>setHellDraft(d=>({...d,skyLine:rhythmNormalizeSkyLineOffset(v)})),slider:true})}
+                {skyOn&&stepper('skyLine',skyRange.min,skyRange.max,RHYTHM_SKY_LINE_OFFSET_STEP_PCT,{fine:RHYTHM_SKY_LINE_OFFSET_STEP_PCT,coarse:2,suffix:'%',decimals:1,label:'空中の判定ライン(上が＋・0が今の位置)',source:hellDraft,onSet:v=>setHellDraft(d=>({...d,skyLine:rhythmNormalizeSkyLineOffset(v)})),slider:true})}
                 {skyOn&&stepper('skyW',RHYTHM_ACCEPT_WIDTH_MIN_PCT,100,RHYTHM_ACCEPT_WIDTH_STEP_PCT,{fine:RHYTHM_ACCEPT_WIDTH_STEP_PCT,coarse:RHYTHM_ACCEPT_WIDTH_STEP_PCT*2,suffix:'%',label:'空中を受け付ける範囲の広さ(線より下のはみ出し・100%が今の広さ)',source:hellDraft,onSet:v=>setHellDraft(d=>({...d,skyW:rhythmNormalizeAcceptWidth(v)})),slider:true})}
+                {skyOn&&stepper('skyTop',RHYTHM_SKY_ACCEPT_TOP_MIN_PCT,RHYTHM_SKY_ACCEPT_TOP_MAX_PCT,RHYTHM_SKY_ACCEPT_TOP_STEP_PCT,{fine:RHYTHM_SKY_ACCEPT_TOP_STEP_PCT,coarse:RHYTHM_SKY_ACCEPT_TOP_STEP_PCT*5,suffix:'%',label:'空中を受け付ける上の端(線より上の幅・100%が既定)',source:hellDraft,onSet:v=>setHellDraft(d=>({...d,skyTop:rhythmNormalizeSkyAcceptTop(v)})),slider:true})}
               </div>;
             })(),
-              'タップする判定ラインを、画面の下から何％の高さに置くかです。大きくするほど上へ上がり、指が届きやすくなります（12％が2026-09-13より前の位置です）。ノーツも弾ける光も判定文字も一緒に上がります。判定の幅（秒数）・スコア・譜面は変わりません。ただしレーンは奥へ行くほど狭くなるので、上げすぎると横の幅が狭く感じられます。'+(hellReleased?'\n空中の判定ライン(HELL)は、地上の判定ラインからの高さを上下にずらします。空中の線・空中のノーツ・空中を受け付ける範囲が一緒に動きます(地上を受け付ける範囲は変わりません)。上へずらしすぎると、空中を受け付ける範囲が地上の範囲に届いたところで止まります。「受け付ける範囲の広さ」は、地上と空中の境目の側だけを狭めます(空中は線より下へのはみ出し、地上は線より上へのはみ出し。100%が今の広さで、50%まで)。狭めると、境目のあたりを押したときにもう一方のノーツを取り違えにくくなりますが、線から離れた所を押すと空振りになります。地上の判定ラインを動かすと、空中の線も一緒に動きます。押す時刻(判定の幅)とスコアは変わりません。':''),{full:true})}
+              'タップする判定ラインを、画面の下から何％の高さに置くかです。大きくするほど上へ上がり、指が届きやすくなります（12％が2026-09-13より前の位置です）。ノーツも弾ける光も判定文字も一緒に上がります。判定の幅（秒数）・スコア・譜面は変わりません。ただしレーンは奥へ行くほど狭くなるので、上げすぎると横の幅が狭く感じられます。'+(hellReleased?'\n空中の判定ライン(HELL)は、地上の判定ラインからの高さを上下にずらします。空中の線・空中のノーツ・空中を受け付ける範囲が一緒に動きます(地上を受け付ける範囲は変わりません)。上へずらしすぎると、空中を受け付ける範囲が地上の範囲に届いたところで止まります。空中を受け付けるのは、空中の線から上へ一定の幅(画面の高さの20%×「上の端」の値)までです。それより上を押しても空中のノーツは取れません。「実際の画面で合わせる」を押すと、演奏画面に切り替わり、本番と同じ大きさのレーン・判定ライン・受け付ける範囲を見ながら、ノーツを叩いて試しつつ合わせられます。「受け付ける範囲の広さ」は、地上と空中の境目の側だけを狭めます(空中は線より下へのはみ出し、地上は線より上へのはみ出し。100%が今の広さで、50%まで)。狭めると、境目のあたりを押したときにもう一方のノーツを取り違えにくくなりますが、線から離れた所を押すと空振りになります。地上の判定ラインを動かすと、空中の線も一緒に動きます。押す時刻(判定の幅)とスコアは変わりません。':''),{full:true})}
 {/* 【2026-09-05・ユーザー指示】「ノーツの開始位置（奥行き）もオプションで調整できるようにしたい」 */}
 {field('ノーツの出る位置',stepper('noteStartPosition',-100,100,5,{fine:5,coarse:25}),
               'ノーツが画面のどのあたりから出てくるかを変えます。マイナスにすると奥（画面の上の外側）から、プラスにすると手前寄りから出てきます。判定ラインの位置・判定のタイミング・判定窓・スコアは変わりません。ノーツが流れてくる時間も変わらないので、手前から出すほど見えているあいだの動きは速く見えます。',{full:true})}
@@ -20787,10 +20797,74 @@ const RhythmHudJudgment=({hud,settings,status,haloKeys,timingDisplay,judgmentTex
 //   アプリを開き直すまで下げたまま、しかも知らせも出なかった(2026-09-27 の点検で見つけた)
 const rhythmAutoEffectMemory={level:0};
 const rhythmResetAutoEffect=()=>{rhythmAutoEffectMemory.level=0;};
-const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntries,onComplete,onExit,raidPlay=false,quickRunAward=null,debugPlay=false,tutorial=false,calibrating=false,onApplyCalibration=null,multi=false,multiRewardScale=1})=>{
+// 判定ラインの位置の合わせ(2026-10-14 社長「判定ラインの調整見づらいから実際の画面に切り替わって調整できるようにして」)。
+// 演奏画面(本番と同じ描き方)の上に、受け付ける範囲の帯と、調整の操作を重ねる。値は動かすとすぐ演奏画面へ効き(保存はまだ)、
+// 「保存して戻る」でこれまでと同じキーへ書く(地上=判定ラインの高さ judgmentLineHeight・空中=mh_rhythm_sky_line_offset_v1・
+// 広さ=mh_rhythm_ground_accept_pct_v1 / mh_rhythm_sky_accept_pct_v1)。「やめる」は元の値へ戻す
+// 受け付ける範囲の帯。演奏と同じ式(rhythmSkyAcceptLimit / rhythmGroundAcceptFrom)を、いま測った判定ラインの高さで数える。演奏エリアの上に重ねる(押せない)
+const RhythmLineAdjustBands=({tick})=>{
+  const L=RHYTHM_JUDGMENT_LINE_Y.ratio,lim=rhythmSkyAcceptLimit(),from=rhythmGroundAcceptFrom(),top=rhythmSkyAcceptTop();
+  const pct=v=>`${(Math.max(0,Math.min(1,v))*100).toFixed(2)}%`;
+  return <div data-rhythm-line-adjust-bands data-tick={tick} aria-hidden="true" className="pointer-events-none absolute inset-0 z-[4]">
+    <div data-rhythm-line-adjust-sky className="absolute inset-x-0" style={{top:pct(top),height:pct(lim-Math.max(0,top)),background:'rgba(244,114,182,.2)',borderBottom:'2px dashed rgba(251,207,232,.85)',borderTop:top>0?'2px dashed rgba(251,207,232,.85)':undefined}}/>
+    <div data-rhythm-line-adjust-ground className="absolute inset-x-0 bottom-0" style={{top:pct(from),background:'rgba(34,211,238,.18)',borderTop:'2px dashed rgba(165,243,252,.85)'}}/>
+    {lim>from&&<div data-rhythm-line-adjust-both className="absolute inset-x-0" style={{top:pct(from),height:pct(lim-from),background:'repeating-linear-gradient(135deg,rgba(244,114,182,.3) 0 8px,rgba(34,211,238,.3) 8px 16px)'}}/>}
+  </div>;
+};
+// 調整の操作。演奏エリアの外(上の帯と同じ並び)に置くので、ボタンを押してもレーンを叩いたことにならない
+const RhythmLineAdjustPanel=({ground,onGround,onBump,onDone,isLandscape})=>{
+  const start=useRef(null);
+  if(!start.current)start.current={ground,skyLine:RHYTHM_SKY_LINE_OFFSET.pct,groundW:RHYTHM_ACCEPT_WIDTH.ground,skyW:RHYTHM_ACCEPT_WIDTH.sky,skyTop:RHYTHM_ACCEPT_WIDTH.skyTop};
+  const [vals,setVals]=useState(()=>({...start.current}));
+  // 「保存して戻る」「やめる」を押さずに画面を離れたとき(ポーズから抜けた・曲が終わった)は、保存していない値を元へ戻す
+  const done=useRef(false);
+  useEffect(()=>()=>{if(done.current)return;const s0=start.current;RHYTHM_SKY_LINE_OFFSET.pct=s0.skyLine;RHYTHM_ACCEPT_WIDTH.ground=s0.groundW;RHYTHM_ACCEPT_WIDTH.sky=s0.skyW;RHYTHM_ACCEPT_WIDTH.skyTop=s0.skyTop;},[]);
+  const apply=next=>{RHYTHM_SKY_LINE_OFFSET.pct=next.skyLine;RHYTHM_ACCEPT_WIDTH.ground=next.groundW;RHYTHM_ACCEPT_WIDTH.sky=next.skyW;RHYTHM_ACCEPT_WIDTH.skyTop=next.skyTop;setVals(next);onBump();};
+  const change=(key,v)=>{if(key==='ground'){const g=rhythmFiniteStep(v,RHYTHM_JUDGMENT_LINE_HEIGHT_MIN,RHYTHM_JUDGMENT_LINE_HEIGHT_MAX,RHYTHM_JUDGMENT_LINE_HEIGHT_STEP);setVals(x=>({...x,ground:g}));onGround(g);return;}
+    const norm=key==='skyLine'?rhythmNormalizeSkyLineOffset(v):key==='skyTop'?rhythmNormalizeSkyAcceptTop(v):rhythmNormalizeAcceptWidth(v);apply({...vals,[key]:norm});};
+  // 空中の線を動かせる範囲は、いまの画面と地上の線の高さで決まる(画面に収まる分だけ)
+  const skyRange=rhythmSkyLineOffsetRange(RHYTHM_SKY_LIFT.base,RHYTHM_JUDGMENT_LINE_Y.ratio);
+  const rows=[
+    ['ground','地上の判定ライン',RHYTHM_JUDGMENT_LINE_HEIGHT_MIN,RHYTHM_JUDGMENT_LINE_HEIGHT_MAX,RHYTHM_JUDGMENT_LINE_HEIGHT_STEP,'%',0],
+    ['groundW','地上の受付の広さ',RHYTHM_ACCEPT_WIDTH_MIN_PCT,100,RHYTHM_ACCEPT_WIDTH_STEP_PCT,'%',0],
+    ['skyLine','空中の判定ライン',skyRange.min,skyRange.max,RHYTHM_SKY_LINE_OFFSET_STEP_PCT,'%',1],
+    ['skyW','空中の受付の広さ(下側)',RHYTHM_ACCEPT_WIDTH_MIN_PCT,100,RHYTHM_ACCEPT_WIDTH_STEP_PCT,'%',0],
+    ['skyTop','空中の受付の上の端',RHYTHM_SKY_ACCEPT_TOP_MIN_PCT,RHYTHM_SKY_ACCEPT_TOP_MAX_PCT,RHYTHM_SKY_ACCEPT_TOP_STEP_PCT,'%',0],
+  ];
+  const finish=save=>{
+    done.current=true;
+    if(save){RHYTHM_SKY_LINE_OFFSET.set(vals.skyLine);RHYTHM_ACCEPT_WIDTH.set('ground',vals.groundW);RHYTHM_ACCEPT_WIDTH.set('sky',vals.skyW);RHYTHM_ACCEPT_WIDTH.set('skyTop',vals.skyTop);}
+    else{const s0=start.current;RHYTHM_SKY_LINE_OFFSET.pct=s0.skyLine;RHYTHM_ACCEPT_WIDTH.ground=s0.groundW;RHYTHM_ACCEPT_WIDTH.sky=s0.skyW;RHYTHM_ACCEPT_WIDTH.skyTop=s0.skyTop;}
+    onDone(save?vals.ground:null);
+  };
+  return <div data-rhythm-line-adjust-panel className={`pointer-events-auto absolute z-[35] overflow-y-auto rounded-xl border border-white/20 bg-slate-950/85 p-1.5 text-white shadow-[0_6px_18px_rgba(0,0,0,.5)] ${isLandscape?'left-1 top-1 w-[236px] max-h-[calc(100%-8px)]':'inset-x-2 top-[76px] max-h-[46%]'}`}>
+    {/* 「やめる」「保存して戻る」はいちばん上に置く(横持ちは高さが足りず、下に置くと切れて見えなかった) */}
+    <div className="flex items-center gap-1">
+      <b className="min-w-0 flex-1 px-0.5 text-[11px] font-black leading-tight text-amber-200">判定ラインを合わせる</b>
+      <button type="button" data-rhythm-line-adjust-cancel onClick={()=>finish(false)} className="min-h-[40px] shrink-0 rounded-lg border border-white/25 bg-slate-800 px-2 text-[11px] font-black">やめる</button>
+      <button type="button" data-rhythm-line-adjust-save onClick={()=>finish(true)} className="min-h-[40px] shrink-0 rounded-lg bg-amber-400 px-2 text-[11px] font-black text-slate-950">保存して戻る</button>
+    </div>
+    {!isLandscape&&<small className="block px-0.5 text-[9px] font-bold leading-snug text-slate-300">水色=地上・桃色=空中を受け付ける範囲。ノーツを叩いて試せます</small>}
+    {rows.map(([key,label,min,max,step,suffix,dec])=>{const v=Number(vals[key]);const shown=`${dec?v.toFixed(dec):v}${suffix}`;
+      return <div key={key} data-rhythm-line-adjust-row={key} className="mt-0.5">
+        <div className="flex items-baseline justify-between px-0.5"><small className="text-[10px] font-black text-cyan-100">{label}</small><output data-rhythm-line-adjust-value={key} className="text-[11px] font-black tabular-nums text-white">{shown}</output></div>
+        <div className="grid grid-cols-[40px_1fr_40px] items-center gap-1">
+          <button type="button" data-rhythm-line-adjust-nudge={`${key}-`} disabled={v<=min} onClick={()=>change(key,v-step)} className="min-h-[40px] rounded-lg bg-slate-100 text-[14px] font-black text-slate-900 disabled:opacity-35">−</button>
+          <input type="range" data-rhythm-line-adjust-slider={key} aria-label={`${label}を変える`} min={min} max={max} step={step} value={v} onChange={e=>change(key,Number(e.target.value))} className="w-full accent-cyan-300"/>
+          <button type="button" data-rhythm-line-adjust-nudge={`${key}+`} disabled={v>=max} onClick={()=>change(key,v+step)} className="min-h-[40px] rounded-lg bg-slate-100 text-[14px] font-black text-slate-900 disabled:opacity-35">＋</button>
+        </div>
+      </div>;})}
+  </div>;
+};
+const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntries,onComplete,onExit,raidPlay=false,quickRunAward=null,debugPlay=false,tutorial=false,calibrating=false,onApplyCalibration=null,multi=false,multiRewardScale=1,lineAdjust=null})=>{
+  // 判定ラインの位置の合わせ(lineAdjust)は、練習と同じ扱い(ライフを減らさない・記録を送らない)。練習の説明の帯は出さない
+  const tutorialProp=tutorial;tutorial=tutorial||!!lineAdjust;
+  // 合わせている間の地上の判定ラインの高さ(保存はまだ)。null なら設定のまま
+  const [lineHeightOverride,setLineHeightOverride]=useState(null);
   // 重いときは演出を自動で控えめにする(設定 autoEffectDown・rhythmCapEffects)。この部品の中の settings は、下げた段を当てたもの
   const [effectCap,setEffectCap]=useState(()=>rhythmAutoEffectMemory.level);
-  const settings=useMemo(()=>settingsIn&&settingsIn.autoEffectDown!==false?rhythmCapEffects(settingsIn,effectCap):settingsIn,[settingsIn,effectCap]);
+  const settingsBase=useMemo(()=>lineHeightOverride===null||!settingsIn?settingsIn:{...settingsIn,judgmentLineHeight:lineHeightOverride},[settingsIn,lineHeightOverride]);
+  const settings=useMemo(()=>settingsBase&&settingsBase.autoEffectDown!==false?rhythmCapEffects(settingsBase,effectCap):settingsBase,[settingsBase,effectCap]);
   // 演奏の途中で段が下がっても、作り直されない処理(毎フレームの処理・判定の処理)が最新の設定を読めるように
   const settingsLiveRef=useRef(settings);settingsLiveRef.current=settings;
   // タップ音を作り置きしておく(1回だけ。作り終わる前に叩いた音はクラシックで鳴る)
@@ -22827,7 +22901,7 @@ scheduleTick();};
 </div>;})()}<header data-rhythm-hud className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-2 px-3 pt-1.5"><div ref={hudLeftRef} data-rhythm-hud-left className="min-w-0 max-w-[35cqw] text-left landscape:max-w-[28cqw]"><div className="landscape:flex landscape:items-center landscape:gap-2"><RhythmHudScore hud={hudRef.current} maxScore={difficulty.maxScore} bestScore={bestRecord?.bestScore} rankFx={!settings.lightweightMode&&settings.effectAmount!=='MINIMAL'}/><div className="mt-1.5 flex max-w-[34cqw] flex-wrap items-center gap-1 landscape:mt-0 landscape:min-w-0 landscape:shrink"><span className={`shrink-0 rounded ${difficulty.id==='HELL'?'bg-red-900/90 text-red-200 ring-1 ring-red-500/70':'bg-fuchsia-700/85'} px-1.5 py-0.5 text-[9px] font-black leading-none`}>{difficulty.id}</span><small data-rhythm-mode-label className="text-[9px] font-bold leading-none tracking-[0.14em] text-cyan-300 landscape:hidden" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{calibrating?'タイミング合わせ':tutorial?'れんしゅう':debugPlay?debugChartLabel:`Lv.${chart.level}`}</small></div></div>{/* 曲名のとなり(レーンの外)に小さくジャケットを出す(2026-09-26・ユーザー指示「ジャケットは置くにもレーン外の曲名のあたりがいい」)。
     絵が無い曲は出さない。動かないので毎フレームの仕事は増えない。縦向きは左上の表示が道にかからないよう、絵のぶん曲名の幅を縮める */}
 <div data-rhythm-hud-songline data-hud-song-dim={hudSongDim?'1':undefined} className="mt-1 flex items-center gap-1.5 landscape:mt-0.5 landscape:min-w-0">{hudArtSrc&&<img data-rhythm-hud-art src={hudArtSrc} alt="" aria-hidden="true" decoding="async" draggable={false} className="h-7 w-7 shrink-0 rounded-md border border-white/25 object-cover landscape:h-6 landscape:w-6" style={{boxShadow:'0 1px 6px rgba(2,6,23,.8)'}}/>}<div data-rhythm-hud-song className="min-w-0 max-w-[31cqw] text-[10px] font-black text-slate-100 landscape:max-w-none" style={{maxWidth:hudArtSrc&&!isLandscape?'calc(31cqw - 34px)':undefined,display:'-webkit-box',WebkitLineClamp:isLandscape?'2':'3',WebkitBoxOrient:'vertical',overflow:'hidden',lineHeight:'1.25',textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>♪ {rhythmSongFullName(song)}</div></div></div><div data-rhythm-hud-right className="flex w-[33cqw] max-w-[33cqw] flex-col items-end gap-1.5">{/* ★縦持ちでも中身を右へそろえる(flex-col items-end)。ブロックのままだとポーズがライフの行の**左端**に並び、
-    ライフ表示を大きくして行が左へ伸びると、ポーズもいっしょにレーンの上へ出ていた(2026-09-24・ユーザーの実機の指摘) */}<div className="flex flex-col items-end landscape:flex-row landscape:items-center landscape:gap-2"><RhythmHudLife hud={hudRef.current} settings={settings} isLandscape={isLandscape} lifeBoxRef={lifeBoxRef} lifeDamageRef={lifeDamageRef}/><button data-rhythm-pause aria-label="ポーズ" className="pointer-events-auto mt-1 flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-full border border-white/20 bg-slate-900/90 text-2xl font-black text-white shadow-[0_0_12px_rgba(103,232,249,0.18)] landscape:mt-0" onClick={pause}>Ⅱ</button></div><b ref={abilityBadgeRef} data-rhythm-ability-badge hidden className="mt-1 block text-right text-[9px] font-black leading-none tracking-[0.06em] text-amber-200 landscape:inline-block landscape:mt-0.5" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}/></div></header>{/* ===== 曲の進みぐあい・経過時間・自己ベスト比(2026-09-24) =====
+    ライフ表示を大きくして行が左へ伸びると、ポーズもいっしょにレーンの上へ出ていた(2026-09-24・ユーザーの実機の指摘) */}<div className="flex flex-col items-end landscape:flex-row landscape:items-center landscape:gap-2"><RhythmHudLife hud={hudRef.current} settings={settings} isLandscape={isLandscape} lifeBoxRef={lifeBoxRef} lifeDamageRef={lifeDamageRef}/><button data-rhythm-pause aria-label="ポーズ" className="pointer-events-auto mt-1 flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-full border border-white/20 bg-slate-900/90 text-2xl font-black text-white shadow-[0_0_12px_rgba(103,232,249,0.18)] landscape:mt-0" onClick={pause}>Ⅱ</button></div><b ref={abilityBadgeRef} data-rhythm-ability-badge hidden className="mt-1 block text-right text-[9px] font-black leading-none tracking-[0.06em] text-amber-200 landscape:inline-block landscape:mt-0.5" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}/></div></header>{lineAdjust&&<RhythmLineAdjustPanel ground={settings.judgmentLineHeight} onGround={setLineHeightOverride} onBump={()=>setSkyLineTick(n=>n+1)} isLandscape={isLandscape} onDone={lineAdjust.onDone}/>}{/* ===== 曲の進みぐあい・経過時間・自己ベスト比(2026-09-24) =====
     ★レーン(台形)の右のふちに寄せて置く。音ゲーは目線がレーンに集まるので、レーンから遠いほど読みにくい
       (ユーザー指摘「残り時間がちょっと目に入りづらい / レーンより遠くなればなるほど目線的にきつくなる」)。
       それまではHUDの右の列の右はしにあり、「🔄 横」で回した横画面では画面のいちばん端まで離れていた。
@@ -22932,7 +23006,7 @@ scheduleTick();};
     隠すのはレーンの台形の中だけ(laneCoverStyle の clip-path)。左右の空きにあるコンボ数・マスモン・背景は隠さない。
     ノーツ(z-5)より前、判定ライン(z-6)より前(上端から伸びるので判定ラインとは重ならない)、HUD(z-30)より後ろ。
     ★隠すだけで、ノーツが流れる速さ・判定のタイミングは変わらない */}
-{laneCoverStyle&&<div data-rhythm-lane-cover aria-hidden="true" style={laneCoverStyle}/>}{calibrating&&<div ref={calibrationBannerRef} data-rhythm-calibration-banner className="pointer-events-none absolute z-20 rounded-2xl border border-amber-300/60 bg-slate-950/92 text-center shadow-[0_0_18px_rgba(251,191,36,.18)]" style={isLandscape
+{laneCoverStyle&&<div data-rhythm-lane-cover aria-hidden="true" style={laneCoverStyle}/>}{lineAdjust&&<RhythmLineAdjustBands tick={skyLineTick}/>}{calibrating&&<div ref={calibrationBannerRef} data-rhythm-calibration-banner className="pointer-events-none absolute z-20 rounded-2xl border border-amber-300/60 bg-slate-950/92 text-center shadow-[0_0_18px_rgba(251,191,36,.18)]" style={isLandscape
       // 横持ち: HUDの左(スコア)と右(ライフ・ポーズ)にはさまれた上の空きへ。
       //   器を自前で回しているのでCSSの landscape: は効かない(@media が成立しない)。向きはJSで見る。
       //   ★真ん中に置かない。ライフ表示は設定で最大200%まで伸びて左へせり出すので、
@@ -22943,7 +23017,7 @@ scheduleTick();};
       ?{left:'19%',right:'39%',top:'calc(2% + 18px)',padding:'4px 10px'}
       // 縦持ち: 判定ラインの下の空き(bottom 12%より下)。上に置くとコンボ数と重なった
       //   (2026-09-13、実画面で確認)。ここなら目線も判定ラインの近くで済む
-      :{left:'12px',right:'12px',bottom:'1.5%',padding:'8px 12px'}}><b data-rhythm-calibration-title className="block font-black text-amber-200" style={{fontSize:isLandscape?'12px':'14px',lineHeight:1.2}}>かまえて（はじめの{RHYTHM_CALIBRATION_WARMUP_COUNT}回は数えません）</b><span data-rhythm-calibration-text className="mt-1 block font-bold text-slate-200" style={{fontSize:isLandscape?'9px':'11px',lineHeight:isLandscape?1.3:1.6}}>判定ラインにノーツが重なった瞬間に叩いてください。判定とFAST・SLOWはいつもどおり出ます</span></div>}{tutorial&&<div ref={tutorialBannerRef} data-rhythm-tutorial-banner className="pointer-events-none absolute inset-x-3 top-[14%] z-20 rounded-2xl border border-cyan-300/50 bg-slate-950/92 px-3 py-2.5 text-center shadow-[0_0_18px_rgba(34,211,238,.18)]"><b data-rhythm-tutorial-title className="block text-[14px] font-black text-cyan-100">{RHYTHM_TUTORIAL_STEPS[0].title}</b><span data-rhythm-tutorial-text className="mt-1 block text-[11px] font-bold leading-relaxed text-slate-200">{RHYTHM_TUTORIAL_STEPS[0].text}</span></div>}{view.status==='paused'&&!resumeCountdown&&<div data-rhythm-pause-menu data-rhythm-debug-play={debugPlay?'1':undefined} className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-3 bg-slate-950/95 p-5"><h3 className="text-2xl font-black">PAUSE</h3>{/* いま何を・どこまで遊んでいるか。止めた位置・スコア・コンボをここで見られる */}
+      :{left:'12px',right:'12px',bottom:'1.5%',padding:'8px 12px'}}><b data-rhythm-calibration-title className="block font-black text-amber-200" style={{fontSize:isLandscape?'12px':'14px',lineHeight:1.2}}>かまえて（はじめの{RHYTHM_CALIBRATION_WARMUP_COUNT}回は数えません）</b><span data-rhythm-calibration-text className="mt-1 block font-bold text-slate-200" style={{fontSize:isLandscape?'9px':'11px',lineHeight:isLandscape?1.3:1.6}}>判定ラインにノーツが重なった瞬間に叩いてください。判定とFAST・SLOWはいつもどおり出ます</span></div>}{tutorialProp&&<div ref={tutorialBannerRef} data-rhythm-tutorial-banner className="pointer-events-none absolute inset-x-3 top-[14%] z-20 rounded-2xl border border-cyan-300/50 bg-slate-950/92 px-3 py-2.5 text-center shadow-[0_0_18px_rgba(34,211,238,.18)]"><b data-rhythm-tutorial-title className="block text-[14px] font-black text-cyan-100">{RHYTHM_TUTORIAL_STEPS[0].title}</b><span data-rhythm-tutorial-text className="mt-1 block text-[11px] font-bold leading-relaxed text-slate-200">{RHYTHM_TUTORIAL_STEPS[0].text}</span></div>}{view.status==='paused'&&!resumeCountdown&&<div data-rhythm-pause-menu data-rhythm-debug-play={debugPlay?'1':undefined} className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-3 bg-slate-950/95 p-5"><h3 className="text-2xl font-black">PAUSE</h3>{/* いま何を・どこまで遊んでいるか。止めた位置・スコア・コンボをここで見られる */}
 {(()=>{const endMs=Number.isFinite(Number(song.playDurationMs))?Number(song.playDurationMs):chart.durationMs;const ratio=endMs>0?Math.max(0,Math.min(1,pausedSongMs/endMs)):0;return <div data-rhythm-pause-info className="w-full max-w-sm rounded-2xl border border-white/10 bg-slate-900/80 px-3 py-2.5">
   <b className="block truncate text-[12px] font-black text-slate-100">♪ {rhythmSongFullName(song)}</b>
   <div className="mt-1 flex items-center gap-1.5 text-[10px] font-black"><span className={`shrink-0 rounded ${difficulty.id==='HELL'?'bg-red-900/90 text-red-200 ring-1 ring-red-500/70':'bg-fuchsia-700/85'} px-1.5 py-0.5 leading-none`}>{difficulty.id}</span>{!calibrating&&!tutorial&&<span className="text-cyan-300">Lv.{chart.level}</span>}<span className="ml-auto tabular-nums text-slate-300">SCORE <b className="text-white">{hudRef.current.get().score.toLocaleString()}</b></span><span className="tabular-nums text-slate-300">COMBO <b className="text-white">{hudRef.current.get().combo}</b></span></div>
@@ -56570,6 +56644,12 @@ function MonsterHeroGame() {
     setRhythmPlay({ song:RHYTHM_CALIBRATION_SONG, difficulty:RHYTHM_CALIBRATION_DIFFICULTY, from:'calibration' });
     setGameState('RHYTHM_PLAY');
   };
+  // 判定ラインの位置を、演奏画面で合わせる(2026-10-14)。タイミング合わせと同じく演奏画面をそのまま使う
+  const startRhythmLineAdjust = () => {
+    if (rhythmSettings.quietDuringPlay) RHYTHM_QUIET_MODE.enter();
+    setRhythmPlay({ song:RHYTHM_LINE_ADJUST_SONG, difficulty:RHYTHM_LINE_ADJUST_DIFFICULTY, from:'lineAdjust' });
+    setGameState('RHYTHM_PLAY');
+  };
   const startRhythmPractice = () => {
     if (rhythmSettings.quietDuringPlay) RHYTHM_QUIET_MODE.enter();
     setRhythmPlay({ song:RHYTHM_TUTORIAL_SONG, difficulty:RHYTHM_TUTORIAL_DIFFICULTY, from:'tutorial' });
@@ -64801,6 +64881,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // デバッグ画面の試作曲(RHYTHM_PROTO_SONGS)は、何も残さない。周回の報酬・経験値・自己ベスト・クリア回数・
           // 実績・全国ランキングのどれにも入れない(CLAUDE.md ⑦。試作は公開しない曲なので、記録に混ぜない)
           if(rhythmPlay.from==='proto')return;
+          // 判定ラインの位置の合わせも、何も残さない(練習と同じ扱い)
+          if(rhythmPlay.from==='lineAdjust')return;
           // レイドバトルのモンヒロビート挑戦: ジャックへのダメージの処理を始めたうえで、ふつうの演奏と同じく
           // 周回の報酬・自己ベスト・クリア回数・実績・全国ランキングにも入れる(2026-10-07・ユーザー指示「両方つなげる」)。
           // 下の共通の処理へそのまま進む(アシストモードは、共通の処理が記録も送信もしない)
@@ -64874,7 +64956,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             if(RHYTHM_HELL_STORY_TRIGGER==='after-result')rhythmHellStoryAfterResultRef.current=true;
             else if(RHYTHM_HELL_STORY_TRIGGER==='home')setRhythmEventStoryPending(prev=>prev||RHYTHM_HELL_STORY_ID);
           }
-          void recordRhythmAchievements(records,{initialRecords:rhythmBestRecords});if(rhythmPlay.from==='demo'||rhythmPlay.from==='multi'||rhythmPlay.from==='raid')submitRhythmRankingScore(rhythmPlay.song,rhythmPlay.difficulty,result);}} onExit={()=>{if(rhythmPlay.from==='raid'){exitRaidJackRhythmPlay();return;}if(rhythmPlay.from==='multi'&&!RHYTHM_MULTI.hasReported(rhythmPlay.multiStartId))RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId,null,true,{diffId:rhythmPlay.difficulty.id});const back=rhythmPlay.from==='multi'?'RHYTHM_MULTI':rhythmPlay.from==='calibration'?'RHYTHM_OPTIONS':rhythmPlay.backTo==='RHYTHM_DEBUG_SELECT'?'RHYTHM_DEBUG_SELECT':rhythmPlay.from==='debug'||rhythmPlay.from==='proto'?'RHYTHM_DEBUG':'RHYTHM_DEMO_HOME';setRhythmPlay(null);setGameState(back);if(rhythmHellStoryAfterResultRef.current){rhythmHellStoryAfterResultRef.current=false;setEventReplay({id:RHYTHM_HELL_STORY_ID,step:0,live:true});}}} debugPlay={rhythmPlay.from==='debug'||rhythmPlay.from==='proto'} tutorial={rhythmPlay.from==='tutorial'} calibrating={rhythmPlay.from==='calibration'} onApplyCalibration={async measured=>{
+          void recordRhythmAchievements(records,{initialRecords:rhythmBestRecords});if(rhythmPlay.from==='demo'||rhythmPlay.from==='multi'||rhythmPlay.from==='raid')submitRhythmRankingScore(rhythmPlay.song,rhythmPlay.difficulty,result);}} onExit={()=>{if(rhythmPlay.from==='raid'){exitRaidJackRhythmPlay();return;}if(rhythmPlay.from==='multi'&&!RHYTHM_MULTI.hasReported(rhythmPlay.multiStartId))RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId,null,true,{diffId:rhythmPlay.difficulty.id});const back=rhythmPlay.from==='multi'?'RHYTHM_MULTI':rhythmPlay.from==='calibration'||rhythmPlay.from==='lineAdjust'?'RHYTHM_OPTIONS':rhythmPlay.backTo==='RHYTHM_DEBUG_SELECT'?'RHYTHM_DEBUG_SELECT':rhythmPlay.from==='debug'||rhythmPlay.from==='proto'?'RHYTHM_DEBUG':'RHYTHM_DEMO_HOME';setRhythmPlay(null);setGameState(back);if(rhythmHellStoryAfterResultRef.current){rhythmHellStoryAfterResultRef.current=false;setEventReplay({id:RHYTHM_HELL_STORY_ID,step:0,live:true});}}} debugPlay={rhythmPlay.from==='debug'||rhythmPlay.from==='proto'} tutorial={rhythmPlay.from==='tutorial'} calibrating={rhythmPlay.from==='calibration'} lineAdjust={rhythmPlay.from==='lineAdjust'?{onDone:async height=>{if(height!==null&&height!==undefined){const saved=await saveRhythmSettings({...rhythmSettings,judgmentLineHeight:height});setRhythmSettings(saved);}setRhythmPlay(null);setGameState('RHYTHM_OPTIONS');}}:null} onApplyCalibration={async measured=>{
           // 測った値をその場で設定へ入れて保存し、オプションへ戻す。
           // 判定窓・スコア・ランキングには触れない(入れるのは judgmentTimingOffsetMs だけ)
           const offsetMs=Number(measured&&measured.offsetMs);
@@ -64944,7 +65026,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           }:null}
           onStartPlay={(song,difficulty,startId,count,streak,cpus)=>{if(rhythmSettings.quietDuringPlay)RHYTHM_QUIET_MODE.enter();setRhythmPlay({song,difficulty,from:'multi',multiStartId:startId,multiCount:count,multiStreak:streak,multiCpus:cpus||0});setGameState('RHYTHM_PLAY');}}/>}
 
-        {gameState==='RHYTHM_OPTIONS'&&<RhythmOptions value={rhythmSettings} onBack={()=>setGameState(rhythmOptionsBack)} onCalibrate={startRhythmCalibration} calibrationResult={rhythmCalibrationResult} onClearCalibration={()=>setRhythmCalibrationResult(null)} onSave={async draft=>{const saved=await saveRhythmSettings(draft);setRhythmSettings(saved);rhythmResetAutoEffect();return saved;}}/>}
+        {gameState==='RHYTHM_OPTIONS'&&<RhythmOptions value={rhythmSettings} onBack={()=>setGameState(rhythmOptionsBack)} onCalibrate={startRhythmCalibration} onLineAdjust={startRhythmLineAdjust} calibrationResult={rhythmCalibrationResult} onClearCalibration={()=>setRhythmCalibrationResult(null)} onSave={async draft=>{const saved=await saveRhythmSettings(draft);setRhythmSettings(saved);rhythmResetAutoEffect();return saved;}}/>}
 
         {/* 音ゲー体験版のホーム。デバッグ画面をそのまま公開しないために作った、正式導線の最小構成。
             出すのは Monster Hero 1曲 と EASY/NORMAL/HARD だけで、デバッグ用の曲・譜面制作UIは出さない。

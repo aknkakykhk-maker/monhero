@@ -168,6 +168,23 @@ const unit = async (core) => {
     for (const b of bad) { const r = await core.handleChat({ body: b, digest: DIGEST, client: fakeClient(() => okResponse({})), take: counter().take, refund: async () => {} }); if (r.status !== 400) allBad = false; }
     check('形のおかしい頼み(助手がいない・空・長すぎる)は 400 で Claude を呼ばない', allBad);
   }
+  // ⑯ ドラの一人称(基本「おで」・たまに「ワイ」)と、助手どうしの呼び方(2026-10-14 窓口の依頼)
+  {
+    const draSys = core.buildSystem(DIGEST, 'dra')[2].text;
+    const muaSys = core.buildSystem(DIGEST, 'mua')[2].text;
+    check('⑯ ドラの人柄に一人称「おで」「ワイ」と、使わない一人称が書いてある', /一人称: [^\n]*おで[^\n]*ワイ[^\n]*俺/.test(draSys));
+    check('⑯ みゅあの人柄に、ほかの助手の呼び方(ひめちん・もも・ドラケン)が書いてある', /ひめちん/.test(muaSys) && /「もも」/.test(muaSys) && /ドラケン/.test(muaSys));
+    // 表(ASSISTANT_PEER_CALLS)の呼び方が、その助手の台本で実際に使われているか(表と台本のずれを見つける)
+    const src = fs.readFileSync(path.join(root, 'monster-hero', 'data', 'assistants.js'), 'utf8');
+    const PEERS = { mua: ['ひめちん', 'もも', 'ドラケン'], kiki: ['みゅあちん', 'ももさん', 'ドラさん'], momosuke: ['みゅあねぇ', 'ききちゃん', 'ドラちゃん'], dra: ['みゅあ', '靴下さん', 'もも'] };
+    const unused = [];
+    for (const [who, calls] of Object.entries(PEERS)) {
+      const lines = [...src.matchAll(new RegExp(`who:'${who}'[^\\n]*?t:'([^']*)'`, 'g'))].map(m => m[1]).join('\\n');
+      for (const c of calls) if (!lines.includes(c)) unused.push(`${who}→${c}`);
+      check(`⑯ ${who} の呼び方が材料の人柄に入っている`, calls.every(c => (DIGEST.assistants[who].peerCalls || '').includes(c)));
+    }
+    check('⑯ 表の呼び方は、どれもその助手の台本で実際に使われている', unused.length === 0, unused.join(','));
+  }
   // 材料JSON
   check('材料JSONに助手4人(みゅあ・きき・ももすけ・ドラ)がいる', ['mua', 'kiki', 'momosuke', 'dra'].every(id => DIGEST.assistants[id] && DIGEST.assistants[id].samples.length > 0));
   // ⑬ 質問に合うヘルプの項目が、Claude へ渡す材料に入る(2026-10-14 窓口の指摘「HELL をバトルの難易度と取り違えた」)。
