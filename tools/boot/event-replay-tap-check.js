@@ -84,6 +84,7 @@ const markMomosukeIntroSeen=()=>{};
 //   ReferenceError でスキップが効かなくなる(会話が閉じない)。ここでは比べられれば足りる
 const RHYTHM_HELL_STORY_ID='rhythm_hell_story';
 const markRhythmHellStorySeen=()=>{}; const markTacticsIntroSeen=()=>{};
+const ASSISTANT_CHAT_STORY_ID='assistant_chat_story'; const markAssistantChatStorySeen=()=>{};
 const setRhythmHellGuide=()=>{}; const setShowDebugStoryList=()=>{}; const setShowEventReplayList=()=>{};
 function Screen(){
   const [eventReplay,setEventReplay]=useState({id:${JSON.stringify(target.id)},step:0,live:true});

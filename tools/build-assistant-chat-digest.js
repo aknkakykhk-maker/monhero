@@ -102,7 +102,7 @@ const buildDigest = () => {
     if (titles.length) index.push(`【${clean(cat.title)}】${titles.join('／')}`);
   });
 
-  const a = loadScript('assistants.js', ['ASSISTANTS', 'assistantSceneLines', 'ASSISTANT_SCENES', 'ASSISTANT_LINE_PACKS', 'ASSISTANT_UPDATE_NOTICE_SCRIPTS', 'DEFAULT_ASSISTANT_ID']);
+  const a = loadScript('assistants.js', ['ASSISTANTS', 'assistantSceneLines', 'ASSISTANT_SCENES', 'ASSISTANT_LINE_PACKS', 'ASSISTANT_UPDATE_NOTICE_SCRIPTS', 'ASSISTANT_PEER_CALLS', 'DEFAULT_ASSISTANT_ID']);
 
   // ---- 用語の表 ----
   // 助手ごとのセリフを全部集める(場面の通常・条件つき・あとから足した束)
@@ -165,8 +165,13 @@ const buildDigest = () => {
     const step = Math.max(1, samples.length / SAMPLE_LINES);
     const picked = [];
     for (let i = 0; i < samples.length && picked.length < SAMPLE_LINES; i += step) picked.push(samples[Math.floor(i)]);
+    // ほかの助手の呼び方(ASSISTANT_PEER_CALLS)。「きき → ひめちん」のように名前つきで並べる
+    const peers = (a.ASSISTANT_PEER_CALLS && a.ASSISTANT_PEER_CALLS[x.id]) || {};
+    const nameOf = (id) => ((a.ASSISTANTS || []).find(y => y && y.id === id) || {}).name || id;
     assistants[x.id] = {
       name: x.name, tagline: clean(x.tagline), intro: clean(x.intro), greeting: clean(x.greeting),
+      ...(x.firstPerson ? { firstPerson: clean(x.firstPerson) } : {}),
+      peerCalls: Object.entries(peers).map(([id, call]) => `${nameOf(id)}は「${call.replace(/\(.*$/, '')}」${/\(/.test(call) ? call.slice(call.indexOf('(')) : ''}`).join('、'),
       samples: picked,
     };
   }

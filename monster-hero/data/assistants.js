@@ -113,10 +113,21 @@ const ASSISTANTS = [
     emoji: '💚',
     accent: '#4ade80',
     greeting: 'おでに聞いてくれてもええんやで。膝以外もちゃんと役に立つからな。えへへ',
+    // 一人称(2026-10-14 社長「ワイもたまに使う設定にして」)。おしゃべりの人柄にもこのまま渡す
+    firstPerson: '基本は「おで」。たまに「ワイ」も使う。「俺」「僕」「私」は使わない',
     tagline: 'ふざけてるのに説明は上手いおじさん',
     intro: '肩の力を抜いて遊びたい人向け。関西弁でふざけた言い方をするわりに、仕組みの話はいちばん分かりやすい。',
   },
 ];
+// 助手どうしの呼び方(だれ → だれ)。台本の決めごと(きき加入・異世界交響祭などの冒頭のコメント)をここへ1か所にまとめた。
+// おしゃべりの人柄(tools/build-assistant-chat-digest.js)はここから作る。台本で実際に使っているかは
+// tools/assistant/assistant-chat-check.js が突き合わせる。台本を書くときもこの表に合わせる
+const ASSISTANT_PEER_CALLS = Object.freeze({
+  mua:      { kiki: 'ひめちん', momosuke: 'もも', dra: 'ドラケン' },
+  kiki:     { mua: 'みゅあちん', momosuke: 'ももさん', dra: 'ドラさん' },
+  momosuke: { mua: 'みゅあねぇ', kiki: 'ききちゃん', dra: 'ドラちゃん' },
+  dra:      { mua: 'みゅあ', kiki: '靴下さん', momosuke: 'もも(好意が暴走すると「ももぉ〜」)' },
+});
 const DEFAULT_ASSISTANT_ID = 'mua';
 const assistantIdOrDefault = (id) => (ASSISTANTS.some(a => a.id === id) ? id : DEFAULT_ASSISTANT_ID);
 

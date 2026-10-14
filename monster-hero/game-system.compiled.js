@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9b40bc9573bb3c7c
+// source-sha256: 315efd5d5520171c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-14 12:40";
+const BUILD_DATE = "2026-10-14 16:19";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -76908,10 +76908,23 @@ const RaidJackPrepScreen = ({
 const ASSISTANT_CHAT_URL = `${SUPABASE_URL}/functions/v1/assistant-chat`;
 const ASSISTANT_CHAT_LOG_KEY = 'mh_assistant_chat_log_v1';
 const ASSISTANT_CHAT_MEMO_KEY = 'mh_assistant_chat_memo_v1';
-const ASSISTANT_CHAT_LOG_LIMIT = 30;
-const ASSISTANT_CHAT_SEND_MESSAGES = 7;
+const ASSISTANT_CHAT_MEMO_V2_KEY = 'mh_assistant_chat_memo_v2';
+const ASSISTANT_CHAT_MEMO_FIELDS = {
+  likes: 100,
+  goals: 100,
+  events: 100,
+  topics: 100,
+  summary: 160
+};
+const ASSISTANT_CHAT_LOG_LIMIT = 60;
+const ASSISTANT_CHAT_SEND_STEP = 10;
+const ASSISTANT_CHAT_SEND_MAX = 21;
 const ASSISTANT_CHAT_TEXT_MAX = 200;
-const ASSISTANT_CHAT_MEMO_MAX = 120;
+const assistantChatSendWindow = list => {
+  if (list.length <= ASSISTANT_CHAT_SEND_MAX) return list;
+  const start = Math.ceil((list.length - ASSISTANT_CHAT_SEND_MAX) / ASSISTANT_CHAT_SEND_STEP) * ASSISTANT_CHAT_SEND_STEP;
+  return list.slice(start);
+};
 const ASSISTANT_CHAT_LINES = {
   sorry: 'ごめん、今うまく話せないや',
   personal: 'それは大事な情報だから、ここには書かないでね'
@@ -76925,7 +76938,7 @@ const normalizeAssistantChatLog = raw => {
     if (!Array.isArray(list)) continue;
     out[id] = list.filter(m => m && (m.role === 'user' || m.role === 'assistant') && typeof m.text === 'string' && m.text).map(m => ({
       role: m.role,
-      text: m.text.slice(0, 400),
+      text: m.text.slice(0, 700),
       ...(typeof m.e === 'string' ? {
         e: m.e
       } : {})
@@ -76933,10 +76946,20 @@ const normalizeAssistantChatLog = raw => {
   }
   return out;
 };
-const normalizeAssistantChatMemo = raw => {
+const normalizeAssistantChatMemoOne = memo => {
   const out = {};
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
-  for (const [id, memo] of Object.entries(raw)) if (typeof memo === 'string') out[id] = memo.slice(0, ASSISTANT_CHAT_MEMO_MAX);
+  for (const [k, max] of Object.entries(ASSISTANT_CHAT_MEMO_FIELDS)) out[k] = '';
+  if (typeof memo === 'string') out.topics = memo.slice(0, ASSISTANT_CHAT_MEMO_FIELDS.topics);else if (memo && typeof memo === 'object' && !Array.isArray(memo)) {
+    for (const [k, max] of Object.entries(ASSISTANT_CHAT_MEMO_FIELDS)) if (typeof memo[k] === 'string') out[k] = memo[k].slice(0, max);
+  }
+  return out;
+};
+const normalizeAssistantChatMemo = (rawV2, rawV1) => {
+  const out = {};
+  const v1 = rawV1 && typeof rawV1 === 'object' && !Array.isArray(rawV1) ? rawV1 : {};
+  const v2 = rawV2 && typeof rawV2 === 'object' && !Array.isArray(rawV2) ? rawV2 : {};
+  for (const [id, memo] of Object.entries(v1)) if (typeof memo === 'string') out[id] = normalizeAssistantChatMemoOne(memo);
+  for (const [id, memo] of Object.entries(v2)) out[id] = normalizeAssistantChatMemoOne(memo);
   return out;
 };
 function AssistantChatWindow({
@@ -76960,10 +76983,10 @@ function AssistantChatWindow({
   React.useEffect(() => {
     let alive = true;
     (async () => {
-      const [rawLog, rawMemo] = await Promise.all([storeGet(ASSISTANT_CHAT_LOG_KEY, {}, false), storeGet(ASSISTANT_CHAT_MEMO_KEY, {}, false)]);
+      const [rawLog, rawMemo, rawMemoV2] = await Promise.all([storeGet(ASSISTANT_CHAT_LOG_KEY, {}, false), storeGet(ASSISTANT_CHAT_MEMO_KEY, {}, false), storeGet(ASSISTANT_CHAT_MEMO_V2_KEY, {}, false)]);
       if (!alive) return;
       setLogs(normalizeAssistantChatLog(rawLog));
-      setMemos(normalizeAssistantChatMemo(rawMemo));
+      setMemos(normalizeAssistantChatMemo(rawMemoV2, rawMemo));
       setLoaded(true);
     })();
     return () => {
@@ -76992,10 +77015,10 @@ function AssistantChatWindow({
     setMemos(prev => {
       const all = {
         ...prev,
-        [id]: String(memo || '').slice(0, ASSISTANT_CHAT_MEMO_MAX)
+        [id]: normalizeAssistantChatMemoOne(memo)
       };
       try {
-        storeSet(ASSISTANT_CHAT_MEMO_KEY, all, false);
+        storeSet(ASSISTANT_CHAT_MEMO_V2_KEY, all, false);
       } catch {}
       return all;
     });
@@ -77027,7 +77050,7 @@ function AssistantChatWindow({
         body: JSON.stringify({
           breederId: breederId || 'unknown',
           assistantId: id,
-          messages: withUser.slice(-ASSISTANT_CHAT_SEND_MESSAGES).map(m => ({
+          messages: assistantChatSendWindow(withUser).map(m => ({
             role: m.role,
             text: m.text
           })),
@@ -77037,7 +77060,7 @@ function AssistantChatWindow({
             bondLevel,
             bondTitle,
             bondTone,
-            memo: memos[id] || ''
+            memo: memos[id] || null
           }
         })
       });
@@ -77053,7 +77076,7 @@ function AssistantChatWindow({
     }]);
     if (res && Number.isFinite(res.remainingToday)) setRemaining(res.remainingToday);
     if (res && res.kind === 'reply') {
-      if (typeof res.memo === 'string') saveMemo(res.memo);
+      if (res.memo && typeof res.memo === 'object') saveMemo(res.memo);
       if (typeof onExchange === 'function') onExchange();
     }
   };
