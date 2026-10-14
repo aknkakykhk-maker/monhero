@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 385961c2cac4cb29
+// generated-sha256: 6270c7c17ce32abc
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-14 16:19"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-14 16:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8335,6 +8335,8 @@ const RHYTHM_EVENT_POINTS_PUBLIC_RELEASE = true;
 const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tactics: TACTICS_MODE_PUBLIC_RELEASE,
   rhythmHell: true,
   assistantChat: true,
+  // ふだんの吹き出しを1日1回まとめて作る(2026-10-14)。社長が試して OK を出すまで偽。デバッグ設定から試せる(56-assistant-chat.jsx)
+  assistantDailyLines: false,
   tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE,
   // タクティクスのEXスキル。遊べる入口(β版を含む)があって、EXの公開フラグも立っているときだけ
   tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, rhythmMulti:RHYTHM_MULTI_PUBLIC_RELEASE, friends:FRIENDS_PUBLIC_RELEASE, raidJackRhythm: RAID_JACK_RHYTHM_PUBLIC_RELEASE, get raidJack() { try { return RAID_JACK_PUBLIC_RELEASE === true && Date.now() >= Date.parse(RAID_JACK_START_AT); } catch (e) { return false; } }, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE, rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE, rhythmWeeklyRanking:RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE, rhythmEventPoints:RHYTHM_EVENT_POINTS_PUBLIC_RELEASE };
@@ -46808,6 +46810,112 @@ function AssistantChatWindow({ assistant, playerName, callName, bondLevel, bondT
   );
 }
 
+// ===== ふだんの吹き出しを1日1回まとめて作る(2026-10-14・社長「それでいこう」) =====
+// その日最初に HOME を開いたとき、遊んだ記録(数字だけ)と思い出メモを中継役へ送り、いま選んでいる助手の
+// ひとことを場面ごとにまとめて作ってもらう。端末にためて、今のセリフに ASSISTANT_DAILY_LINES_RATE の割合でまぜる
+// (pickAssistantLine から assistantDailyLinePick を呼ぶ)。出すのは端末からなので、待ち時間なし・電波なしでも出る。
+// 作れなかった日・上限・オフラインのときは何もためず、今までどおりのセリフだけになる。
+// ★公開の印 RELEASE_FLAGS.assistantDailyLines(社長が試して OK を出すまで偽)。デバッグ設定から試せる(このときは保存の日付に関係なく作り直す)
+// ★保存は新しいキーだけ。日付ごとに入れ替え、古い日のものは捨てる(CLAUDE.md ⑦)
+const ASSISTANT_DAILY_LINES_KEY = 'mh_assistant_daily_lines_v1'; // { day, assistantId, lines: { [場面]: [{ e, t, n }] } }  n … その日に出した回数
+// 今のセリフにまぜる割合(3回に1回くらい)。ここ1か所で変えられる
+const ASSISTANT_DAILY_LINES_RATE = 1 / 3;
+// 同じひとことを1日に出してよい回数
+const ASSISTANT_DAILY_LINE_MAX_SHOWS = 2;
+const ASSISTANT_DAILY_SCENES = ['home', 'battleChallenge', 'resultWin', 'resultLose', 'rhythmHome', 'masuList', 'temple'];
+const ASSISTANT_DAILY_EXPRESSIONS = ['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited'];
+// いまこの端末でまぜて出している1日ぶん(読み込んだらここへ置く)。デバッグで試しているあいだだけ真にする印も持つ
+let assistantDailyLinesState = null;
+let assistantDailyLinesDebugOn = false;
+const assistantDailyLinesEnabled = () => assistantDailyLinesDebugOn
+  || (typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantDailyLines === true);
+const normalizeAssistantDailyLines = (raw) => {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw) || typeof raw.day !== 'string' || typeof raw.assistantId !== 'string') return null;
+  const lines = {};
+  for (const scene of ASSISTANT_DAILY_SCENES) {
+    const list = raw.lines && Array.isArray(raw.lines[scene]) ? raw.lines[scene] : [];
+    const ok = list.filter(l => l && typeof l.t === 'string' && l.t && l.t.length <= 80 && ASSISTANT_DAILY_EXPRESSIONS.includes(l.e))
+      .slice(0, 4).map(l => ({ e: l.e, t: l.t, n: Number.isFinite(l.n) ? Math.max(0, Math.floor(l.n)) : 0 }));
+    if (ok.length) lines[scene] = ok;
+  }
+  return { day: raw.day, assistantId: raw.assistantId, lines };
+};
+// 端末にためた分を読む。違う日のものは捨てる(使わない)
+const loadAssistantDailyLines = async () => {
+  const saved = normalizeAssistantDailyLines(await storeGet(ASSISTANT_DAILY_LINES_KEY, null, false));
+  assistantDailyLinesState = saved && saved.day === assistantBubbleDayKey() ? saved : null;
+  return assistantDailyLinesState;
+};
+const saveAssistantDailyLines = () => { try { if (assistantDailyLinesState) storeSet(ASSISTANT_DAILY_LINES_KEY, assistantDailyLinesState, false); } catch {} };
+// pickAssistantLine から呼ぶ。まぜる番なら1つ返す(出した回数がいちばん少ないもの)。まぜない番・無いときは null
+// rand は検査から決めた値を渡せるようにしてある
+const assistantDailyLinePick = (scene, assistantId, rand = Math.random()) => {
+  if (!assistantDailyLinesEnabled()) return null;
+  const st = assistantDailyLinesState;
+  if (!st || st.day !== assistantBubbleDayKey() || st.assistantId !== assistantId) return null;
+  const list = (st.lines[scene] || []).filter(l => l.n < ASSISTANT_DAILY_LINE_MAX_SHOWS);
+  if (!list.length || rand >= ASSISTANT_DAILY_LINES_RATE) return null;
+  const least = Math.min(...list.map(l => l.n));
+  const pool = list.filter(l => l.n === least);
+  const picked = pool[Math.floor((rand / ASSISTANT_DAILY_LINES_RATE) * pool.length) % pool.length];
+  picked.n += 1;
+  saveAssistantDailyLines();
+  return { e: picked.e, t: picked.t, daily: true };
+};
+// 遊んだ記録(数字と短い名前だけ)を組み立てる。会話の本文は入れない
+const buildAssistantDailyStats = ({ breederLevel, bondLevel, masuMons, rhythmBestRecords, highScores }) => {
+  const songs = (typeof RHYTHM_SONGS !== 'undefined' && Array.isArray(RHYTHM_SONGS)) ? RHYTHM_SONGS : [];
+  const songName = (id) => { const s = songs.find(x => x && x.songId === id); return s ? String(s.displayName || s.title || id) : id; };
+  const rhythm = [];
+  for (const [songId, byDiff] of Object.entries(rhythmBestRecords || {})) {
+    for (const [diff, r] of Object.entries(byDiff || {})) {
+      if (r && r.played && Number(r.bestScore) > 0) rhythm.push({ 曲: songName(songId), 難易度: diff, 自己ベスト: Math.floor(Number(r.bestScore)), クリア: !!r.clear, フルコンボ: !!r.fullCombo });
+    }
+  }
+  rhythm.sort((a, b) => b.自己ベスト - a.自己ベスト);
+  const monsters = (typeof ALL_PLAYER_MONSTERS !== 'undefined' && Array.isArray(ALL_PLAYER_MONSTERS)) ? ALL_PLAYER_MONSTERS : [];
+  const masu = (Array.isArray(masuMons) ? masuMons : []).map(m => ({
+    名前: String((m && m.name) || '').slice(0, 20),
+    種族: String(((monsters.find(x => x && x.id === (m && m.baseId)) || {}).name) || (m && m.baseId) || ''),
+    絆Lv: (typeof masuBondLevelInfo === 'function') ? masuBondLevelInfo(m).level : null,
+  })).sort((a, b) => (b.絆Lv || 0) - (a.絆Lv || 0));
+  const battle = Object.entries(highScores || {}).filter(([, v]) => Number(v) > 0).map(([d, v]) => ({ 難易度: d, ハイスコア: Math.floor(Number(v)) }));
+  return {
+    ブリーダーLv: Number.isFinite(breederLevel) ? breederLevel : null,
+    仲良し度Lv: Number.isFinite(bondLevel) ? bondLevel : null,
+    マスモンの数: masu.length,
+    よく育てているマスモン: masu.slice(0, 3),
+    モンヒロビートの自己ベスト: rhythm.slice(0, 3),
+    モンヒロビートで遊んだ譜面の数: rhythm.length,
+    バトルのハイスコア: battle.slice(0, 3),
+  };
+};
+// 中継役へ頼んで、その日のぶんをためる。force … デバッグから(日付が同じでも作り直す)
+// 戻り値: 'ok' | 'cached' | 'failed'
+const fetchAssistantDailyLines = async ({ assistantId, ctx, stats, force = false }) => {
+  const day = assistantBubbleDayKey();
+  const saved = await loadAssistantDailyLines();
+  if (!force && saved && saved.assistantId === assistantId) return 'cached';
+  try {
+    const breederId = await ensureBreederId();
+    const r = await fetch(ASSISTANT_CHAT_URL, {
+      method: 'POST', headers: SB_HEADERS,
+      body: JSON.stringify({ kind: 'daily_lines', breederId: breederId || 'unknown', assistantId, scenes: ASSISTANT_DAILY_SCENES, ctx, stats }),
+    });
+    const res = r.ok ? await r.json() : null;
+    const next = res && res.ok === true ? normalizeAssistantDailyLines({ day, assistantId, lines: res.lines }) : null;
+    if (!next || !Object.keys(next.lines).length) return 'failed';
+    assistantDailyLinesState = next;
+    saveAssistantDailyLines();
+    return 'ok';
+  } catch { return 'failed'; }
+};
+// 思い出メモ(おしゃべりのもの)を、その助手のぶんだけ読む(ひとことの材料に渡す)
+const loadAssistantChatMemoFor = async (assistantId) => {
+  const [v1, v2] = await Promise.all([storeGet(ASSISTANT_CHAT_MEMO_KEY, {}, false), storeGet(ASSISTANT_CHAT_MEMO_V2_KEY, {}, false)]);
+  return normalizeAssistantChatMemo(v2, v1)[assistantId] || null;
+};
+
 // ---- part: 60-app.jsx ----
 function MonsterHeroGame() {
   const [gameState, setGameStateRaw] = useState('HOME');
@@ -48865,6 +48973,9 @@ function MonsterHeroGame() {
   const assistantCallStyle = assistantCallStyles[selectedAssistantId] || null;
   // 助手とおしゃべりの窓(2026-10-14)。開いているあいだだけ真。公開の印 assistantChat が立つまではデバッグ設定からだけ開ける
   const [assistantChatOpen, setAssistantChatOpen] = useState(false);
+  // ふだんの吹き出しを1日1回まとめて作る(2026-10-14)。この起動で頼んだ「日付|助手」を覚え、二重に頼まない
+  const assistantDailyLinesAskedRef = useRef('');
+  const [assistantDailyLinesDebugMsg, setAssistantDailyLinesDebugMsg] = useState('');
   // 「仲良し度が上がってできるようになったこと」を、その画面で一度だけ知らせる。
   // 見た案内のidを新しいキーへ覚えるので、既存のセーブデータには触らない
   const [assistantUnlockSeen, setAssistantUnlockSeen] = useState([]);
@@ -53963,6 +54074,26 @@ function MonsterHeroGame() {
   const assistantBondLevelNow = assistantBondLevelOf(assistantBond.points);
   // いま選んでいる助手そのもの。画面はこれを見て顔・名前・色を出す
   const activeAssistant = assistantById(selectedAssistantId);
+  // ふだんの吹き出しを、その日最初に HOME を開いたとき1回だけまとめて頼む(2026-10-14)。
+  // ためてあれば頼まない(fetchAssistantDailyLines が日付と助手を見る)。失敗しても今までどおりのセリフが出るだけ
+  const requestAssistantDailyLines = async (force = false) => {
+    const a = activeAssistant;
+    if (!a || typeof fetchAssistantDailyLines !== 'function') return 'failed';
+    const lv = assistantBondLevelNow;
+    const stage = assistantBondStageByLevel(lv, a.id) || {};
+    const ctx = { playerName: breederName, callName: assistantCallName(breederName, lv, assistantCallStyles[a.id] || null, a.id),
+      bondLevel: lv, bondTitle: stage.title || '', bondTone: stage.tone || '', memo: await loadAssistantChatMemoFor(a.id) };
+    const stats = buildAssistantDailyStats({ breederLevel: breederLevel && breederLevel.level, bondLevel: lv, masuMons, rhythmBestRecords, highScores });
+    return fetchAssistantDailyLines({ assistantId: a.id, ctx, stats, force });
+  };
+  useEffect(() => {
+    if (!(bootPhase === 'GAME' && gameState === 'HOME') || !activeAssistant) return;
+    if (typeof assistantDailyLinesEnabled !== 'function' || !assistantDailyLinesEnabled()) return;
+    const key = `${assistantBubbleDayKey()}|${activeAssistant.id}`;
+    if (assistantDailyLinesAskedRef.current === key) return;
+    assistantDailyLinesAskedRef.current = key;
+    void requestAssistantDailyLines(false);
+  }, [bootPhase, gameState, activeAssistant && activeAssistant.id]);
   // モンヒロビートのモードえらびで、助手が立ち絵でひとこと(2026-10-03)。開くたびに1本えらぶ
   const rhythmModeSelectOpen = gameState === 'RHYTHM_MODE_SELECT';
   const rhythmModeAssistant = useMemo(() => {
@@ -65346,6 +65477,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {/* 助手とおしゃべり(2026-10-14)。公開の印 assistantChat が立つまでの試し口。
                   本物の中継役へ送るので、1回ごとに社長のAPIクレジットと回数を使う。デバッグ専用なので更新履歴・ヘルプには載せない */}
               <button data-debug-assistant-chat onClick={()=>setAssistantChatOpen(true)} className="w-full min-h-[58px] rounded-2xl border-2 border-pink-400/50 bg-pink-950/40 text-pink-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">💬 助手とおしゃべり(試す)<small className="mt-0.5 block text-[9px] font-bold leading-relaxed text-pink-200/80">公開前の会話の窓を、いま選んでいる助手で開きます。本物の返事が来るので、1回ごとに回数を使います</small></button>
+
+              {/* ふだんの吹き出しを1日1回まとめて作る(2026-10-14)。公開の印 assistantDailyLines が立つまでの試し口。
+                  押すと、日付に関係なく今の助手のぶんを作り直し、この起動のあいだだけ今のセリフにまぜて出す。
+                  本物の中継役へ送るので、1回ごとに回数を使う(1人1日3回まで)。デバッグ専用なので更新履歴・ヘルプには載せない */}
+              <button data-debug-assistant-daily-lines onClick={async()=>{if(typeof assistantDailyLinesDebugOn!=='undefined')assistantDailyLinesDebugOn=true;setAssistantDailyLinesDebugMsg('作っています…');const r=await requestAssistantDailyLines(true);const st=typeof assistantDailyLinesState!=='undefined'?assistantDailyLinesState:null;const n=st?Object.values(st.lines).reduce((s,l)=>s+l.length,0):0;setAssistantDailyLinesDebugMsg(r==='ok'?`${n}個できました。HOMEなどの吹き出しに3回に1回くらいまざります`:'作れませんでした(今までどおりのセリフだけが出ます)');}} className="w-full min-h-[58px] rounded-2xl border-2 border-pink-400/50 bg-pink-950/40 text-pink-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">🗨️ ふだんの吹き出しを作る(試す)<small className="mt-0.5 block text-[9px] font-bold leading-relaxed text-pink-200/80">{assistantDailyLinesDebugMsg||'今の助手のひとことを今日のぶんまとめて作り、この起動のあいだ今のセリフにまぜて出します'}</small></button>
 
               {/* ---------- ① モンスター ---------- */}
               <details className="rounded-2xl border border-emerald-500/40 bg-emerald-950/20">

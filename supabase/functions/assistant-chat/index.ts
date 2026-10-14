@@ -7,7 +7,7 @@ import Anthropic from "npm:@anthropic-ai/sdk";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import {
   DEFAULT_ALLOWED_ORIGINS,
-  handleChat,
+  handleRequest,
   loadDigest,
   TOTAL_DAILY_LIMIT,
   USER_DAILY_LIMIT,
@@ -69,6 +69,7 @@ Deno.serve(async (req) => {
     log({ event: "digest_unavailable" });
     return new Response(JSON.stringify({ ok: true, kind: "sorry", reply: "ごめん、今うまく話せないや", expression: "troubled" }), { status: 200, headers });
   }
-  const result = await handleChat({ body, digest, client: anthropic, take, refund, log, limits });
+  // kind:'daily_lines' はふだんの吹き出しを1日1回まとめて作る頼み。それ以外はおしゃべり(core.js の handleRequest が分ける)
+  const result = await handleRequest({ body, digest, client: anthropic, take, refund, log, limits });
   return new Response(JSON.stringify(result.json), { status: result.status, headers });
 });

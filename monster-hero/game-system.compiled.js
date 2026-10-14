@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 315efd5d5520171c
+// source-sha256: f134097cb7bbd5ac
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-14 16:19";
+const BUILD_DATE = "2026-10-14 16:41";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -11711,6 +11711,7 @@ const RELEASE_FLAGS = {
   tactics: TACTICS_MODE_PUBLIC_RELEASE,
   rhythmHell: true,
   assistantChat: true,
+  assistantDailyLines: false,
   tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE,
   tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE,
   rhythmMode: RHYTHM_MODE_PUBLIC_RELEASE,
@@ -77163,6 +77164,145 @@ function AssistantChatWindow({
     }
   }, "送る"))));
 }
+const ASSISTANT_DAILY_LINES_KEY = 'mh_assistant_daily_lines_v1';
+const ASSISTANT_DAILY_LINES_RATE = 1 / 3;
+const ASSISTANT_DAILY_LINE_MAX_SHOWS = 2;
+const ASSISTANT_DAILY_SCENES = ['home', 'battleChallenge', 'resultWin', 'resultLose', 'rhythmHome', 'masuList', 'temple'];
+const ASSISTANT_DAILY_EXPRESSIONS = ['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited'];
+let assistantDailyLinesState = null;
+let assistantDailyLinesDebugOn = false;
+const assistantDailyLinesEnabled = () => assistantDailyLinesDebugOn || typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantDailyLines === true;
+const normalizeAssistantDailyLines = raw => {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw) || typeof raw.day !== 'string' || typeof raw.assistantId !== 'string') return null;
+  const lines = {};
+  for (const scene of ASSISTANT_DAILY_SCENES) {
+    const list = raw.lines && Array.isArray(raw.lines[scene]) ? raw.lines[scene] : [];
+    const ok = list.filter(l => l && typeof l.t === 'string' && l.t && l.t.length <= 80 && ASSISTANT_DAILY_EXPRESSIONS.includes(l.e)).slice(0, 4).map(l => ({
+      e: l.e,
+      t: l.t,
+      n: Number.isFinite(l.n) ? Math.max(0, Math.floor(l.n)) : 0
+    }));
+    if (ok.length) lines[scene] = ok;
+  }
+  return {
+    day: raw.day,
+    assistantId: raw.assistantId,
+    lines
+  };
+};
+const loadAssistantDailyLines = async () => {
+  const saved = normalizeAssistantDailyLines(await storeGet(ASSISTANT_DAILY_LINES_KEY, null, false));
+  assistantDailyLinesState = saved && saved.day === assistantBubbleDayKey() ? saved : null;
+  return assistantDailyLinesState;
+};
+const saveAssistantDailyLines = () => {
+  try {
+    if (assistantDailyLinesState) storeSet(ASSISTANT_DAILY_LINES_KEY, assistantDailyLinesState, false);
+  } catch {}
+};
+const assistantDailyLinePick = (scene, assistantId, rand = Math.random()) => {
+  if (!assistantDailyLinesEnabled()) return null;
+  const st = assistantDailyLinesState;
+  if (!st || st.day !== assistantBubbleDayKey() || st.assistantId !== assistantId) return null;
+  const list = (st.lines[scene] || []).filter(l => l.n < ASSISTANT_DAILY_LINE_MAX_SHOWS);
+  if (!list.length || rand >= ASSISTANT_DAILY_LINES_RATE) return null;
+  const least = Math.min(...list.map(l => l.n));
+  const pool = list.filter(l => l.n === least);
+  const picked = pool[Math.floor(rand / ASSISTANT_DAILY_LINES_RATE * pool.length) % pool.length];
+  picked.n += 1;
+  saveAssistantDailyLines();
+  return {
+    e: picked.e,
+    t: picked.t,
+    daily: true
+  };
+};
+const buildAssistantDailyStats = ({
+  breederLevel,
+  bondLevel,
+  masuMons,
+  rhythmBestRecords,
+  highScores
+}) => {
+  const songs = typeof RHYTHM_SONGS !== 'undefined' && Array.isArray(RHYTHM_SONGS) ? RHYTHM_SONGS : [];
+  const songName = id => {
+    const s = songs.find(x => x && x.songId === id);
+    return s ? String(s.displayName || s.title || id) : id;
+  };
+  const rhythm = [];
+  for (const [songId, byDiff] of Object.entries(rhythmBestRecords || {})) {
+    for (const [diff, r] of Object.entries(byDiff || {})) {
+      if (r && r.played && Number(r.bestScore) > 0) rhythm.push({
+        曲: songName(songId),
+        難易度: diff,
+        自己ベスト: Math.floor(Number(r.bestScore)),
+        クリア: !!r.clear,
+        フルコンボ: !!r.fullCombo
+      });
+    }
+  }
+  rhythm.sort((a, b) => b.自己ベスト - a.自己ベスト);
+  const monsters = typeof ALL_PLAYER_MONSTERS !== 'undefined' && Array.isArray(ALL_PLAYER_MONSTERS) ? ALL_PLAYER_MONSTERS : [];
+  const masu = (Array.isArray(masuMons) ? masuMons : []).map(m => ({
+    名前: String(m && m.name || '').slice(0, 20),
+    種族: String((monsters.find(x => x && x.id === (m && m.baseId)) || {}).name || m && m.baseId || ''),
+    絆Lv: typeof masuBondLevelInfo === 'function' ? masuBondLevelInfo(m).level : null
+  })).sort((a, b) => (b.絆Lv || 0) - (a.絆Lv || 0));
+  const battle = Object.entries(highScores || {}).filter(([, v]) => Number(v) > 0).map(([d, v]) => ({
+    難易度: d,
+    ハイスコア: Math.floor(Number(v))
+  }));
+  return {
+    ブリーダーLv: Number.isFinite(breederLevel) ? breederLevel : null,
+    仲良し度Lv: Number.isFinite(bondLevel) ? bondLevel : null,
+    マスモンの数: masu.length,
+    よく育てているマスモン: masu.slice(0, 3),
+    モンヒロビートの自己ベスト: rhythm.slice(0, 3),
+    モンヒロビートで遊んだ譜面の数: rhythm.length,
+    バトルのハイスコア: battle.slice(0, 3)
+  };
+};
+const fetchAssistantDailyLines = async ({
+  assistantId,
+  ctx,
+  stats,
+  force = false
+}) => {
+  const day = assistantBubbleDayKey();
+  const saved = await loadAssistantDailyLines();
+  if (!force && saved && saved.assistantId === assistantId) return 'cached';
+  try {
+    const breederId = await ensureBreederId();
+    const r = await fetch(ASSISTANT_CHAT_URL, {
+      method: 'POST',
+      headers: SB_HEADERS,
+      body: JSON.stringify({
+        kind: 'daily_lines',
+        breederId: breederId || 'unknown',
+        assistantId,
+        scenes: ASSISTANT_DAILY_SCENES,
+        ctx,
+        stats
+      })
+    });
+    const res = r.ok ? await r.json() : null;
+    const next = res && res.ok === true ? normalizeAssistantDailyLines({
+      day,
+      assistantId,
+      lines: res.lines
+    }) : null;
+    if (!next || !Object.keys(next.lines).length) return 'failed';
+    assistantDailyLinesState = next;
+    saveAssistantDailyLines();
+    return 'ok';
+  } catch {
+    return 'failed';
+  }
+};
+const loadAssistantChatMemoFor = async assistantId => {
+  const [v1, v2] = await Promise.all([storeGet(ASSISTANT_CHAT_MEMO_KEY, {}, false), storeGet(ASSISTANT_CHAT_MEMO_V2_KEY, {}, false)]);
+  return normalizeAssistantChatMemo(v2, v1)[assistantId] || null;
+};
 function MonsterHeroGame() {
   const [gameState, setGameStateRaw] = useState('HOME');
   const isRhythmScreen = state => typeof state === 'string' && state.startsWith('RHYTHM_');
@@ -78991,6 +79131,8 @@ function MonsterHeroGame() {
   const [assistantCallStyles, setAssistantCallStylesState] = useState({});
   const assistantCallStyle = assistantCallStyles[selectedAssistantId] || null;
   const [assistantChatOpen, setAssistantChatOpen] = useState(false);
+  const assistantDailyLinesAskedRef = useRef('');
+  const [assistantDailyLinesDebugMsg, setAssistantDailyLinesDebugMsg] = useState('');
   const [assistantUnlockSeen, setAssistantUnlockSeen] = useState([]);
   const [assistantUnlockPage, setAssistantUnlockPage] = useState(0);
   const [showCallStylePicker, setShowCallStylePicker] = useState(false);
@@ -84122,6 +84264,41 @@ function MonsterHeroGame() {
   };
   const assistantBondLevelNow = assistantBondLevelOf(assistantBond.points);
   const activeAssistant = assistantById(selectedAssistantId);
+  const requestAssistantDailyLines = async (force = false) => {
+    const a = activeAssistant;
+    if (!a || typeof fetchAssistantDailyLines !== 'function') return 'failed';
+    const lv = assistantBondLevelNow;
+    const stage = assistantBondStageByLevel(lv, a.id) || {};
+    const ctx = {
+      playerName: breederName,
+      callName: assistantCallName(breederName, lv, assistantCallStyles[a.id] || null, a.id),
+      bondLevel: lv,
+      bondTitle: stage.title || '',
+      bondTone: stage.tone || '',
+      memo: await loadAssistantChatMemoFor(a.id)
+    };
+    const stats = buildAssistantDailyStats({
+      breederLevel: breederLevel && breederLevel.level,
+      bondLevel: lv,
+      masuMons,
+      rhythmBestRecords,
+      highScores
+    });
+    return fetchAssistantDailyLines({
+      assistantId: a.id,
+      ctx,
+      stats,
+      force
+    });
+  };
+  useEffect(() => {
+    if (!(bootPhase === 'GAME' && gameState === 'HOME') || !activeAssistant) return;
+    if (typeof assistantDailyLinesEnabled !== 'function' || !assistantDailyLinesEnabled()) return;
+    const key = `${assistantBubbleDayKey()}|${activeAssistant.id}`;
+    if (assistantDailyLinesAskedRef.current === key) return;
+    assistantDailyLinesAskedRef.current = key;
+    void requestAssistantDailyLines(false);
+  }, [bootPhase, gameState, activeAssistant && activeAssistant.id]);
   const rhythmModeSelectOpen = gameState === 'RHYTHM_MODE_SELECT';
   const rhythmModeAssistant = useMemo(() => {
     if (!rhythmModeSelectOpen || !activeAssistant) return null;
@@ -102081,7 +102258,20 @@ function MonsterHeroGame() {
       className: "w-full min-h-[58px] rounded-2xl border-2 border-pink-400/50 bg-pink-950/40 text-pink-50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
     }, "💬 助手とおしゃべり(試す)", React.createElement("small", {
       className: "mt-0.5 block text-[9px] font-bold leading-relaxed text-pink-200/80"
-    }, "公開前の会話の窓を、いま選んでいる助手で開きます。本物の返事が来るので、1回ごとに回数を使います")), React.createElement("details", {
+    }, "公開前の会話の窓を、いま選んでいる助手で開きます。本物の返事が来るので、1回ごとに回数を使います")), React.createElement("button", {
+      "data-debug-assistant-daily-lines": true,
+      onClick: async () => {
+        if (typeof assistantDailyLinesDebugOn !== 'undefined') assistantDailyLinesDebugOn = true;
+        setAssistantDailyLinesDebugMsg('作っています…');
+        const r = await requestAssistantDailyLines(true);
+        const st = typeof assistantDailyLinesState !== 'undefined' ? assistantDailyLinesState : null;
+        const n = st ? Object.values(st.lines).reduce((s, l) => s + l.length, 0) : 0;
+        setAssistantDailyLinesDebugMsg(r === 'ok' ? `${n}個できました。HOMEなどの吹き出しに3回に1回くらいまざります` : '作れませんでした(今までどおりのセリフだけが出ます)');
+      },
+      className: "w-full min-h-[58px] rounded-2xl border-2 border-pink-400/50 bg-pink-950/40 text-pink-50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
+    }, "🗨️ ふだんの吹き出しを作る(試す)", React.createElement("small", {
+      className: "mt-0.5 block text-[9px] font-bold leading-relaxed text-pink-200/80"
+    }, assistantDailyLinesDebugMsg || '今の助手のひとことを今日のぶんまとめて作り、この起動のあいだ今のセリフにまぜて出します')), React.createElement("details", {
       className: "rounded-2xl border border-emerald-500/40 bg-emerald-950/20"
     }, React.createElement("summary", {
       className: "cursor-pointer select-none px-3 py-3 text-[11px] font-black text-emerald-200"

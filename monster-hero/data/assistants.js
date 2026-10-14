@@ -7502,6 +7502,12 @@ const pickWeighted = (pool) => {
 
 // 候補から1つ選ぶ。直近に出したものは候補から外す(候補が少ないときは可能な範囲で)
 const pickAssistantLine = (scene, condition, bondLevel, assistantId) => {
+  // ふだんの吹き出しを1日1回まとめて作ったひとこと(2026-10-14)を、決まった割合でまぜる。
+  // 条件つきの場面(はじめて・Lvアップなど)にはまぜない。中身は src/parts/56-assistant-chat.jsx の assistantDailyLinePick
+  if (!condition && typeof assistantDailyLinePick === 'function') {
+    const daily = assistantDailyLinePick(scene, assistantId || DEFAULT_ASSISTANT_ID);
+    if (daily) return daily;
+  }
   const list = assistantSceneLines(scene, condition, bondLevel, assistantId);
   if (list.length === 0) return null;
   if (list.length === 1) return list[0];

@@ -317,6 +317,150 @@ export const handleChat = async ({ body, digest, client, take, refund, log = () 
   return { status: 200, json: { ok: true, kind: 'reply', ...parsed, remainingToday: Number.isFinite(ticket.remaining) ? ticket.remaining : null, limited: null } };
 };
 
+// ---------- ふだんの吹き出しを1日1回まとめて作る(kind:'daily_lines'・2026-10-14 社長「それでいこう」) ----------
+// その人の遊んだ記録(数字だけ)と思い出メモから、いま選んでいる助手が場面ごとに言うひとことを10〜20個まとめて作る。
+// ゲームは端末にためて、今のセリフに3回に1回くらいまぜて出す(56-assistant-chat.jsx)。会話の本文は受け取らない。
+// 回数はおしゃべりと同じ表で、ブリーダーIDの頭に 'daily:' を付けて別に数える(1人1日3回まで=取り直しのぶん)。
+// 全員合計の上限は、おしゃべりと同じ数に入る(表の合計で数えるため)。
+export const DAILY_USER_LIMIT = 3;
+export const DAILY_MAX_TOKENS = 1600;
+export const DAILY_LINE_MIN = 4;
+export const DAILY_LINE_MAX = 60;
+export const DAILY_LINES_PER_SCENE = 4;
+// 作ってよい場面(今の吹き出しの場面のうち、ふだんよく出るもの)。ゲームはこの中から頼む
+export const DAILY_SCENES = Object.freeze({
+  home: 'HOME(村の広場)。その日の様子や、最近の遊び方に触れるひとこと',
+  battleChallenge: 'モンヒロバトルの難易度をえらぶ前。これから戦うときのひとこと',
+  resultWin: 'バトルで勝ったあと。ほめる・よろこぶひとこと',
+  resultLose: 'バトルで負けたあと。はげます・次に向かうひとこと',
+  rhythmHome: 'モンヒロビート(音ゲー)の曲えらびの前。演奏へ向かうひとこと',
+  masuList: 'マスモンの一覧を見ているとき。育てている子に触れるひとこと',
+  temple: '神殿(マスモンを育てる場所)にいるとき。育成に触れるひとこと',
+});
+const DAILY_BANNED = /AI|ＡＩ|API|Claude|クロード|チャットGPT|ChatGPT|人工知能|プロンプト/i;
+export const DAILY_RULES_TEXT = [
+  'いまから、ゲームの吹き出しに出す「ひとこと」を場面ごとにまとめて作る。会話の返事ではない。',
+  '- 1つのひとことは1文か2文、60字まで。改行しない。助手の口調・一人称を守る。',
+  '- プレイヤーを呼ぶときは、名前を書かずに {name} と書く(ゲームが呼び方に置き換える)。{name} 以外の { } は使わない。',
+  '- 材料は、渡された「遊んだ記録」と「思い出メモ」だけ。記録に書いていない数字・自己ベスト・勝ち負け・できごとを作らない。数字を言うときは記録の数字をそのまま使う。',
+  '- 記録に触れないひとことも半分くらい混ぜてよい(いつもの調子の声かけ)。',
+  '- ゲームの仕組み・数字・場所を作らない。ネタバレをしない。今日の天気やニュースなど、今の情報を作らない。',
+  '- 場面ごとに、その場面で言って自然なことだけを書く。',
+].join('\n');
+const DAILY_SCHEMA = (scenes) => ({
+  type: 'object',
+  properties: {
+    lines: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          scene: { type: 'string', enum: scenes },
+          e: { type: 'string', enum: EXPRESSIONS },
+          t: { type: 'string', description: `ひとこと(${DAILY_LINE_MAX}字まで)` },
+        },
+        required: ['scene', 'e', 't'],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ['lines'],
+  additionalProperties: false,
+});
+// 遊んだ記録(数字と短い名前だけ)をそろえる。入れ子は2段まで・文字は短く・件数も絞る
+const cleanStats = (raw, depth = 0) => {
+  if (raw == null) return null;
+  if (typeof raw === 'number') return Number.isFinite(raw) ? Math.round(raw) : null;
+  if (typeof raw === 'boolean') return raw;
+  if (typeof raw === 'string') return raw.slice(0, 30);
+  if (depth >= 3) return null;
+  if (Array.isArray(raw)) return raw.slice(0, 5).map(x => cleanStats(x, depth + 1)).filter(x => x != null);
+  if (typeof raw === 'object') {
+    const out = {};
+    for (const [k, v] of Object.entries(raw).slice(0, 12)) { const c = cleanStats(v, depth + 1); if (c != null) out[String(k).slice(0, 20)] = c; }
+    return out;
+  }
+  return null;
+};
+// 記録に出てくる数字の集まり。ひとことの中の数字は、ここにあるものだけを許す
+const numbersIn = (s) => (String(s).normalize('NFKC').replace(/,/g, '').match(/\d+/g) || []);
+export const validateDailyLines = (lines, scenes, stats) => {
+  const allowed = new Set(numbersIn(JSON.stringify(stats || {})));
+  const per = {};
+  const out = {};
+  for (const l of Array.isArray(lines) ? lines : []) {
+    if (!l || !scenes.includes(l.scene) || !EXPRESSIONS.includes(l.e) || typeof l.t !== 'string') continue;
+    const t = l.t.trim();
+    if (t.length < DAILY_LINE_MIN || t.length > DAILY_LINE_MAX || /[\r\n]/.test(t)) continue;
+    if (/[{}]/.test(t.replace(/\{name\}/g, ''))) continue;
+    if (DAILY_BANNED.test(t) || looksPersonal(t)) continue;
+    if (numbersIn(t).some(n => !allowed.has(n))) continue;
+    per[l.scene] = (per[l.scene] || 0) + 1;
+    if (per[l.scene] > DAILY_LINES_PER_SCENE) continue;
+    (out[l.scene] = out[l.scene] || []).push({ e: l.e, t });
+  }
+  return out;
+};
+export const handleDailyLines = async ({ body, digest, client, take, refund, log = () => {}, limits = {} }) => {
+  const breederId = str(body && body.breederId, 80).trim();
+  const assistantId = str(body && body.assistantId, 20);
+  if (!breederId || !digest || !digest.assistants || !digest.assistants[assistantId]) return { status: 400, json: { ok: false, error: 'bad_request' } };
+  const scenes = (Array.isArray(body.scenes) ? body.scenes : Object.keys(DAILY_SCENES)).filter(s => Object.prototype.hasOwnProperty.call(DAILY_SCENES, s)).slice(0, 10);
+  if (scenes.length === 0) return { status: 400, json: { ok: false, error: 'bad_request' } };
+  const c = body.ctx && typeof body.ctx === 'object' ? body.ctx : {};
+  const ctx = {
+    playerName: str(c.playerName, 20), callName: str(c.callName, 20),
+    bondLevel: Number.isFinite(c.bondLevel) ? Math.max(1, Math.min(99, Math.floor(c.bondLevel))) : 1,
+    bondTitle: str(c.bondTitle, 20), bondTone: str(c.bondTone, 60), memo: normalizeMemo(c.memo),
+  };
+  const stats = cleanStats(body.stats) || {};
+  let ticket;
+  try { ticket = await take(`daily:${breederId}`, limits.daily || DAILY_USER_LIMIT, limits.total || TOTAL_DAILY_LIMIT); } catch {
+    log({ event: 'daily_take_failed' });
+    return { status: 200, json: { ok: false, kind: 'sorry' } };
+  }
+  if (!ticket || ticket.ok !== true) {
+    log({ event: 'daily_limited', limited: ticket && ticket.reason === 'total' ? 'total' : 'user' });
+    return { status: 200, json: { ok: false, kind: 'tired' } };
+  }
+  const sceneText = scenes.map(s => `・${s}: ${DAILY_SCENES[s]}`).join('\n');
+  const ask = `今日のひとことを作って。場面ごとに2〜3個、全部で${Math.min(20, scenes.length * 3)}個まで。\n場面:\n${sceneText}\n\n遊んだ記録(この数字だけを使う):\n${JSON.stringify(stats)}`;
+  let response = null;
+  try {
+    response = await client.messages.create({
+      model: MODEL,
+      max_tokens: DAILY_MAX_TOKENS,
+      thinking: { type: 'disabled' },
+      output_config: { effort: 'low', format: { type: 'json_schema', schema: DAILY_SCHEMA(scenes) } },
+      system: buildSystem(digest, assistantId),
+      messages: [
+        { role: 'user', content: ask },
+        { role: 'system', content: `${DAILY_RULES_TEXT}\n\n${contextText(ctx)}` },
+      ],
+    });
+  } catch (e) {
+    log({ event: 'daily_api_error', status: e && e.status ? e.status : null });
+  }
+  let lines = null;
+  if (response && response.stop_reason !== 'refusal') {
+    const text = (response.content || []).filter(b => b && b.type === 'text').map(b => b.text).join('');
+    try { lines = validateDailyLines(JSON.parse(text).lines, scenes, stats); } catch { lines = null; }
+  }
+  const count = lines ? Object.values(lines).reduce((n, l) => n + l.length, 0) : 0;
+  if (response && response.usage) {
+    const u = response.usage;
+    log({ event: count ? 'daily_ok' : 'daily_empty', lines: count, input: u.input_tokens, output: u.output_tokens, cacheRead: u.cache_read_input_tokens, cacheWrite: u.cache_creation_input_tokens });
+  }
+  if (!count) {
+    try { await refund(`daily:${breederId}`); } catch { log({ event: 'refund_failed' }); }
+    return { status: 200, json: { ok: false, kind: 'sorry' } };
+  }
+  return { status: 200, json: { ok: true, kind: 'daily_lines', lines } };
+};
+
+// 入口は1つ(index.ts は変えない)。kind で分ける
+export const handleRequest = (args) => (args && args.body && args.body.kind === 'daily_lines' ? handleDailyLines(args) : handleChat(args));
+
 // 材料JSONを公開中のサイトから読む。しばらく覚えておく(ヘルプを直しても公開し直さずに追従するため)
 const DIGEST_TTL_MS = 10 * 60 * 1000;
 let digestCache = null;

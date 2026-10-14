@@ -2054,6 +2054,9 @@ function MonsterHeroGame() {
   const assistantCallStyle = assistantCallStyles[selectedAssistantId] || null;
   // 助手とおしゃべりの窓(2026-10-14)。開いているあいだだけ真。公開の印 assistantChat が立つまではデバッグ設定からだけ開ける
   const [assistantChatOpen, setAssistantChatOpen] = useState(false);
+  // ふだんの吹き出しを1日1回まとめて作る(2026-10-14)。この起動で頼んだ「日付|助手」を覚え、二重に頼まない
+  const assistantDailyLinesAskedRef = useRef('');
+  const [assistantDailyLinesDebugMsg, setAssistantDailyLinesDebugMsg] = useState('');
   // 「仲良し度が上がってできるようになったこと」を、その画面で一度だけ知らせる。
   // 見た案内のidを新しいキーへ覚えるので、既存のセーブデータには触らない
   const [assistantUnlockSeen, setAssistantUnlockSeen] = useState([]);
@@ -7152,6 +7155,26 @@ function MonsterHeroGame() {
   const assistantBondLevelNow = assistantBondLevelOf(assistantBond.points);
   // いま選んでいる助手そのもの。画面はこれを見て顔・名前・色を出す
   const activeAssistant = assistantById(selectedAssistantId);
+  // ふだんの吹き出しを、その日最初に HOME を開いたとき1回だけまとめて頼む(2026-10-14)。
+  // ためてあれば頼まない(fetchAssistantDailyLines が日付と助手を見る)。失敗しても今までどおりのセリフが出るだけ
+  const requestAssistantDailyLines = async (force = false) => {
+    const a = activeAssistant;
+    if (!a || typeof fetchAssistantDailyLines !== 'function') return 'failed';
+    const lv = assistantBondLevelNow;
+    const stage = assistantBondStageByLevel(lv, a.id) || {};
+    const ctx = { playerName: breederName, callName: assistantCallName(breederName, lv, assistantCallStyles[a.id] || null, a.id),
+      bondLevel: lv, bondTitle: stage.title || '', bondTone: stage.tone || '', memo: await loadAssistantChatMemoFor(a.id) };
+    const stats = buildAssistantDailyStats({ breederLevel: breederLevel && breederLevel.level, bondLevel: lv, masuMons, rhythmBestRecords, highScores });
+    return fetchAssistantDailyLines({ assistantId: a.id, ctx, stats, force });
+  };
+  useEffect(() => {
+    if (!(bootPhase === 'GAME' && gameState === 'HOME') || !activeAssistant) return;
+    if (typeof assistantDailyLinesEnabled !== 'function' || !assistantDailyLinesEnabled()) return;
+    const key = `${assistantBubbleDayKey()}|${activeAssistant.id}`;
+    if (assistantDailyLinesAskedRef.current === key) return;
+    assistantDailyLinesAskedRef.current = key;
+    void requestAssistantDailyLines(false);
+  }, [bootPhase, gameState, activeAssistant && activeAssistant.id]);
   // モンヒロビートのモードえらびで、助手が立ち絵でひとこと(2026-10-03)。開くたびに1本えらぶ
   const rhythmModeSelectOpen = gameState === 'RHYTHM_MODE_SELECT';
   const rhythmModeAssistant = useMemo(() => {
@@ -18535,6 +18558,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {/* 助手とおしゃべり(2026-10-14)。公開の印 assistantChat が立つまでの試し口。
                   本物の中継役へ送るので、1回ごとに社長のAPIクレジットと回数を使う。デバッグ専用なので更新履歴・ヘルプには載せない */}
               <button data-debug-assistant-chat onClick={()=>setAssistantChatOpen(true)} className="w-full min-h-[58px] rounded-2xl border-2 border-pink-400/50 bg-pink-950/40 text-pink-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">💬 助手とおしゃべり(試す)<small className="mt-0.5 block text-[9px] font-bold leading-relaxed text-pink-200/80">公開前の会話の窓を、いま選んでいる助手で開きます。本物の返事が来るので、1回ごとに回数を使います</small></button>
+
+              {/* ふだんの吹き出しを1日1回まとめて作る(2026-10-14)。公開の印 assistantDailyLines が立つまでの試し口。
+                  押すと、日付に関係なく今の助手のぶんを作り直し、この起動のあいだだけ今のセリフにまぜて出す。
+                  本物の中継役へ送るので、1回ごとに回数を使う(1人1日3回まで)。デバッグ専用なので更新履歴・ヘルプには載せない */}
+              <button data-debug-assistant-daily-lines onClick={async()=>{if(typeof assistantDailyLinesDebugOn!=='undefined')assistantDailyLinesDebugOn=true;setAssistantDailyLinesDebugMsg('作っています…');const r=await requestAssistantDailyLines(true);const st=typeof assistantDailyLinesState!=='undefined'?assistantDailyLinesState:null;const n=st?Object.values(st.lines).reduce((s,l)=>s+l.length,0):0;setAssistantDailyLinesDebugMsg(r==='ok'?`${n}個できました。HOMEなどの吹き出しに3回に1回くらいまざります`:'作れませんでした(今までどおりのセリフだけが出ます)');}} className="w-full min-h-[58px] rounded-2xl border-2 border-pink-400/50 bg-pink-950/40 text-pink-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">🗨️ ふだんの吹き出しを作る(試す)<small className="mt-0.5 block text-[9px] font-bold leading-relaxed text-pink-200/80">{assistantDailyLinesDebugMsg||'今の助手のひとことを今日のぶんまとめて作り、この起動のあいだ今のセリフにまぜて出します'}</small></button>
 
               {/* ---------- ① モンスター ---------- */}
               <details className="rounded-2xl border border-emerald-500/40 bg-emerald-950/20">
