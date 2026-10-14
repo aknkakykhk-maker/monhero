@@ -2,6 +2,8 @@
 //
 //   node tools/memory-soak.js --mode quick  --cycles 8        クイックの周回(AUTO)を8回続ける
 //   node tools/memory-soak.js --mode auto  --minutes 10      クイックを AUTO で回し続ける(WAVEが進み、場面のBGMが次々に変わる。負けたら新しい周回へ)
+//   node tools/memory-soak.js --mode auto  --minutes 15 --repeat   クイックを AUTO∞ で回し続ける(勝ったらそのまま次の周へ。プレイヤーの「オート無限」と同じ。
+//                                                             2026-10-14「クイックでオート無限やってたら気付いたらホームに戻ってた」の調べ。HOMEへ戻っていないかも記録する)
 //   node tools/memory-soak.js --mode rhythm --songs 6         モンヒロビートを6曲続けて演奏する
 //   node tools/memory-soak.js --mode idle   --minutes 10      HOMEで放っておく(ゲームが勝手に増やしていないか)
 //
@@ -22,6 +24,7 @@ const MODE = argOf('--mode', 'quick');
 const CYCLES = Math.max(1, Number(argOf('--cycles', '6')) || 6);
 const SONGS = Math.max(1, Number(argOf('--songs', '4')) || 4);
 const MINUTES = Math.max(1, Number(argOf('--minutes', '5')) || 5);
+const REPEAT = args.includes('--repeat');
 const PORT = Number(process.env.PORT || 8899);
 const PAGE_URL = process.env.SMOKE_URL || `http://localhost:${PORT}/monster-hero/index.html`;
 
@@ -124,12 +127,22 @@ const makeRand = (seed) => { let t = seed >>> 0; return () => { t += 0x6D2B79F5;
         const r = await enterQuickBattle(s, { system: 'systemQuick' });
         if (!r.inBattle) return false;
         await s.page.evaluate(() => document.querySelector('button[aria-label^="AUTO"]')?.click());
+        // AUTO のボタンは押すたびに AUTO → AUTO∞ → 切 と変わる。--repeat は2回押して AUTO∞ にする
+        if (REPEAT) { await s.wait(400); await s.page.evaluate(() => document.querySelector('button[aria-label^="AUTO"]')?.click()); }
         runs += 1;
         return true;
       };
       let on = await startAuto();
       while (Date.now() < end) {
         await s.wait(30000); n += 1;
+        if (REPEAT) {
+          // AUTO∞ は勝てば自分で次の周へ入る。ボットは何もせず、HOMEへ戻っていないか・読み込み直されていないかだけを見る
+          const where = await s.page.evaluate(() => ({ home: !!document.querySelector('.mh-home-scene'), title: /TAP TO START/.test(document.body.innerText), loops: (document.body.innerText.match(/(\d+)\s*周/) || [])[1] || '' })).catch(() => ({ home: false, title: false, loops: '' }));
+          if (process.env.SOAK_SHOT_DIR) await s.page.screenshot({ path: path.join(process.env.SOAK_SHOT_DIR, `repeat-${n}.png`) }).catch(() => {});
+          await sample(`AUTO∞ ${n * 30}秒${where.loops ? `(${where.loops}周)` : ''}${where.home ? ' ★HOME' : ''}${where.title ? ' ★タイトル' : ''}`);
+          if (where.home || where.title) { console.log('  (HOMEかタイトルへ戻った)'); break; }
+          continue;
+        }
         await sample(`AUTO ${n * 30}秒(${runs}周目)`);
         if (!(await inBattle())) {
           // 決着した。結果画面を閉じて、新しい周回へ
