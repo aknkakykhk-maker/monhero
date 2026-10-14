@@ -35,7 +35,7 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
-    date: "2026-10-14 16:40", type:'update', group:'assistant', title:'助手の吹き出しに、その日のあなたに合わせたひとことがまざるようになりました', status:'new', releaseFlag:'assistantDailyLines',
+    date: "2026-10-14 17:08", type:'update', group:'assistant', title:'助手の吹き出しに、その日のあなたに合わせたひとことがまざるようになりました', status:'new', releaseFlag:'assistantDailyLines',
     items:[
       'その日はじめてHOMEを開いたとき、いま選んでいる助手が、あなたの最近の遊び方(よく遊ぶ曲の自己ベストや、育てているマスモンなど)をもとに、その日のひとことをいくつか考えてくれます。',
       'HOMEやバトルの前後、モンヒロビートの曲えらびなどの吹き出しに、いつものセリフとまざって出てきます。',
