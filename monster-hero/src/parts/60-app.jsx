@@ -9857,11 +9857,40 @@ function MonsterHeroGame() {
     setGameState('RHYTHM_PLAY');
   };
   // 判定ラインの位置を、演奏画面で合わせる(2026-10-14)。タイミング合わせと同じく演奏画面をそのまま使う
+  // 判定ラインを実際の画面で合わせる(2026-10-14・社長「位置だけ設定して保存したら試す感じに」「調整中にノーツが落ちてくるのも邪魔」)。
+  //   phase:'set' … ノーツを流さず、時間の制限もなし。レーンと線と受付の帯を出したまま5つの値を動かす。「保存して試す」でここで保存する
+  //   phase:'try' … 操作パネルを出さず、ノーツをくり返し流して叩いてみる(時間でもライフでも終わらない・何も記録しない)。
+  //                 右上の「位置を直す」で 'set' へ(保存した値から続ける)、「終わる」で設定画面へ戻る
+  //   orig は直し始めたときの値。「やめる」と、ここへ戻す(保存キーは今までと同じ)
+  const [rhythmLineAdjust, setRhythmLineAdjust] = useState(null);
+  const rhythmLineAdjustSnapshot = () => ({ skyLine:RHYTHM_SKY_LINE_OFFSET.pct, groundW:RHYTHM_ACCEPT_WIDTH.ground, skyW:RHYTHM_ACCEPT_WIDTH.sky, skyTop:RHYTHM_ACCEPT_WIDTH.skyTop });
+  const rhythmLineAdjustRestore = orig => { if (!orig) return; RHYTHM_SKY_LINE_OFFSET.pct = orig.skyLine; RHYTHM_ACCEPT_WIDTH.ground = orig.groundW; RHYTHM_ACCEPT_WIDTH.sky = orig.skyW; RHYTHM_ACCEPT_WIDTH.skyTop = orig.skyTop; };
   const startRhythmLineAdjust = () => {
     if (rhythmSettings.quietDuringPlay) RHYTHM_QUIET_MODE.enter();
+    setRhythmLineAdjust({ phase:'set', key:0, ground:rhythmSettings.judgmentLineHeight, orig:{ ...rhythmLineAdjustSnapshot(), ground:rhythmSettings.judgmentLineHeight } });
     setRhythmPlay({ song:RHYTHM_LINE_ADJUST_SONG, difficulty:RHYTHM_LINE_ADJUST_DIFFICULTY, from:'lineAdjust' });
     setGameState('RHYTHM_PLAY');
   };
+  const leaveRhythmLineAdjust = () => { setRhythmLineAdjust(null); setRhythmPlay(null); setGameState('RHYTHM_OPTIONS'); };
+  const saveAndTryRhythmLineAdjust = async () => {
+    const cur = rhythmLineAdjust;
+    if (!cur) return;
+    const now = rhythmLineAdjustSnapshot();
+    RHYTHM_SKY_LINE_OFFSET.set(now.skyLine); RHYTHM_ACCEPT_WIDTH.set('ground', now.groundW); RHYTHM_ACCEPT_WIDTH.set('sky', now.skyW); RHYTHM_ACCEPT_WIDTH.set('skyTop', now.skyTop);
+    const saved = await saveRhythmSettings({ ...rhythmSettings, judgmentLineHeight:cur.ground });
+    setRhythmSettings(saved);
+    // 保存した値が、次に「位置を直す」→「やめる」としたときの戻り先になる
+    setRhythmLineAdjust(a => a ? { ...a, phase:'try', key:a.key + 1, orig:{ ...now, ground:cur.ground } } : a);
+  };
+  const rhythmLineAdjustProps = rhythmLineAdjust ? {
+    ...rhythmLineAdjust,
+    onGround: g => setRhythmLineAdjust(a => a ? { ...a, ground:g } : a),
+    onSaveTry: () => { void saveAndTryRhythmLineAdjust(); },
+    onCancel: () => { rhythmLineAdjustRestore(rhythmLineAdjust.orig); leaveRhythmLineAdjust(); },
+    onFix: () => setRhythmLineAdjust(a => a ? { ...a, phase:'set', key:a.key + 1 } : a),
+    onEnd: leaveRhythmLineAdjust,
+    onLoop: () => setRhythmLineAdjust(a => a && a.phase === 'try' ? { ...a, key:a.key + 1 } : a),
+  } : null;
   const startRhythmPractice = () => {
     if (rhythmSettings.quietDuringPlay) RHYTHM_QUIET_MODE.enter();
     setRhythmPlay({ song:RHYTHM_TUTORIAL_SONG, difficulty:RHYTHM_TUTORIAL_DIFFICULTY, from:'tutorial' });
@@ -18089,7 +18118,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         })()}
 
         {raidDamageFx&&((gameState==='RHYTHM_PLAY'&&rhythmPlay&&rhythmPlay.from==='raid')||gameState==='RAID_JACK_DEBUG')&&<RaidJackDamageFx key={raidDamageFx.key} fx={raidDamageFx} onDone={()=>setRaidDamageFx(null)}/>}
-        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest raidPlay={rhythmPlay.from==='raid'} song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmPlay.from==='multi'?rhythmMultiPlaySettings:rhythmSettings} monsterEntries={rhythmMonsterNoteEntries} multi={rhythmPlay.from==='multi'} multiRewardScale={rhythmPlay.from==='multi'?rhythmMultiTotalScale(rhythmPlay.multiCount,rhythmPlay.multiStreak,rhythmPlay.multiCpus):1} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} quickRunAward={rhythmPlayRunAward} onComplete={async(result,merged)=>{
+        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest key={rhythmPlay.from==='lineAdjust'&&rhythmLineAdjust?`line-adjust-${rhythmLineAdjust.key}`:undefined} raidPlay={rhythmPlay.from==='raid'} song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmPlay.from==='multi'?rhythmMultiPlaySettings:rhythmSettings} monsterEntries={rhythmMonsterNoteEntries} multi={rhythmPlay.from==='multi'} multiRewardScale={rhythmPlay.from==='multi'?rhythmMultiTotalScale(rhythmPlay.multiCount,rhythmPlay.multiStreak,rhythmPlay.multiCpus):1} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} quickRunAward={rhythmPlayRunAward} onComplete={async(result,merged)=>{
           // デバッグ画面の試作曲(RHYTHM_PROTO_SONGS)は、何も残さない。周回の報酬・経験値・自己ベスト・クリア回数・
           // 実績・全国ランキングのどれにも入れない(CLAUDE.md ⑦。試作は公開しない曲なので、記録に混ぜない)
           if(rhythmPlay.from==='proto')return;
@@ -18168,7 +18197,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             if(RHYTHM_HELL_STORY_TRIGGER==='after-result')rhythmHellStoryAfterResultRef.current=true;
             else if(RHYTHM_HELL_STORY_TRIGGER==='home')setRhythmEventStoryPending(prev=>prev||RHYTHM_HELL_STORY_ID);
           }
-          void recordRhythmAchievements(records,{initialRecords:rhythmBestRecords});if(rhythmPlay.from==='demo'||rhythmPlay.from==='multi'||rhythmPlay.from==='raid')submitRhythmRankingScore(rhythmPlay.song,rhythmPlay.difficulty,result);}} onExit={()=>{if(rhythmPlay.from==='raid'){exitRaidJackRhythmPlay();return;}if(rhythmPlay.from==='multi'&&!RHYTHM_MULTI.hasReported(rhythmPlay.multiStartId))RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId,null,true,{diffId:rhythmPlay.difficulty.id});const back=rhythmPlay.from==='multi'?'RHYTHM_MULTI':rhythmPlay.from==='calibration'||rhythmPlay.from==='lineAdjust'?'RHYTHM_OPTIONS':rhythmPlay.backTo==='RHYTHM_DEBUG_SELECT'?'RHYTHM_DEBUG_SELECT':rhythmPlay.from==='debug'||rhythmPlay.from==='proto'?'RHYTHM_DEBUG':'RHYTHM_DEMO_HOME';setRhythmPlay(null);setGameState(back);if(rhythmHellStoryAfterResultRef.current){rhythmHellStoryAfterResultRef.current=false;setEventReplay({id:RHYTHM_HELL_STORY_ID,step:0,live:true});}}} debugPlay={rhythmPlay.from==='debug'||rhythmPlay.from==='proto'} tutorial={rhythmPlay.from==='tutorial'} calibrating={rhythmPlay.from==='calibration'} lineAdjust={rhythmPlay.from==='lineAdjust'?{onDone:async height=>{if(height!==null&&height!==undefined){const saved=await saveRhythmSettings({...rhythmSettings,judgmentLineHeight:height});setRhythmSettings(saved);}setRhythmPlay(null);setGameState('RHYTHM_OPTIONS');}}:null} onApplyCalibration={async measured=>{
+          void recordRhythmAchievements(records,{initialRecords:rhythmBestRecords});if(rhythmPlay.from==='demo'||rhythmPlay.from==='multi'||rhythmPlay.from==='raid')submitRhythmRankingScore(rhythmPlay.song,rhythmPlay.difficulty,result);}} onExit={()=>{if(rhythmPlay.from==='raid'){exitRaidJackRhythmPlay();return;}if(rhythmPlay.from==='multi'&&!RHYTHM_MULTI.hasReported(rhythmPlay.multiStartId))RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId,null,true,{diffId:rhythmPlay.difficulty.id});if(rhythmPlay.from==='lineAdjust'){rhythmLineAdjustRestore(rhythmLineAdjust?.orig);setRhythmLineAdjust(null);}const back=rhythmPlay.from==='multi'?'RHYTHM_MULTI':rhythmPlay.from==='calibration'||rhythmPlay.from==='lineAdjust'?'RHYTHM_OPTIONS':rhythmPlay.backTo==='RHYTHM_DEBUG_SELECT'?'RHYTHM_DEBUG_SELECT':rhythmPlay.from==='debug'||rhythmPlay.from==='proto'?'RHYTHM_DEBUG':'RHYTHM_DEMO_HOME';setRhythmPlay(null);setGameState(back);if(rhythmHellStoryAfterResultRef.current){rhythmHellStoryAfterResultRef.current=false;setEventReplay({id:RHYTHM_HELL_STORY_ID,step:0,live:true});}}} debugPlay={rhythmPlay.from==='debug'||rhythmPlay.from==='proto'} tutorial={rhythmPlay.from==='tutorial'} calibrating={rhythmPlay.from==='calibration'} lineAdjust={rhythmPlay.from==='lineAdjust'?rhythmLineAdjustProps:null} onApplyCalibration={async measured=>{
           // 測った値をその場で設定へ入れて保存し、オプションへ戻す。
           // 判定窓・スコア・ランキングには触れない(入れるのは judgmentTimingOffsetMs だけ)
           const offsetMs=Number(measured&&measured.offsetMs);
