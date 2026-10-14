@@ -127,6 +127,41 @@ const unit = async (core) => {
   }
   // 材料JSON
   check('材料JSONに助手4人(みゅあ・きき・ももすけ・ドラ)がいる', ['mua', 'kiki', 'momosuke', 'dra'].every(id => DIGEST.assistants[id] && DIGEST.assistants[id].samples.length > 0));
+  // ⑬ 質問に合うヘルプの項目が、Claude へ渡す材料に入る(2026-10-14 窓口の指摘「HELL をバトルの難易度と取り違えた」)。
+  //    公開の印が立っている項目(HELL・モンヒロビート・マルチなど)が材料から抜けていないことも、ここで分かる
+  const ids = new Set(DIGEST.topics.map(t => t.id));
+  check('⑬ 公開済みの印のヘルプ(HELL・マルチ・モンヒロビート)が材料に入っている', ['rhythm/rhythm-hell', 'rhythm/rhythm-multi', 'rhythm/rhythm-mode'].every(id => ids.has(id)));
+  check('⑬ まだ出ていない印のヘルプ(助手とおしゃべり)は材料に入っていない', !JSON.stringify(DIGEST).includes('助手とおしゃべりできます'));
+  const CASES = [
+    ['HELLってどうやったら遊べるの?', 'rhythm/rhythm-hell'],
+    ['染色ってどうやるの', 'masu/dye'],
+    ['合体のやり方を教えて', 'masu/fusion'],
+    ['マルチってなに？', 'rhythm/rhythm-multi'],
+    ['ジャックってなに', 'basics/raid-jack'],
+    ['仲良し度ってどうやって上がる？', 'tips/bond'],
+    ['限界突破のしかた', 'masu/rebirth'],
+    ['転生するとどうなる？', 'masu/reincarnate'],
+    ['ログインボーナスは？', 'items/login-bonus'],
+    ['ミッションってなに', 'items/missions'],
+    ['スキップチケットって何に使うの', 'items/skip-ticket'],
+    ['種族チャレンジのやり方', 'basics/species-challenge'],
+    ['タクティクスバトルってなに', 'basics/tactics-battle'],
+    ['EXスキルの使い方', 'basics/tactics-ex-skills'],
+  ];
+  const misses = [];
+  for (const [q, want] of CASES) {
+    const got = core.selectHelpTopics(DIGEST, q).map(t => t.id);
+    if (!got.includes(want)) misses.push(`${q} → ${got.join(',')}(期待 ${want})`);
+  }
+  check(`⑬ ${CASES.length}問すべてで、質問の項目が選ばれる`, misses.length === 0, misses.join(' 、 '));
+  // 実際に Claude へ渡す system にも入っている(区切りの後ろ=キャッシュを壊さない場所)
+  {
+    const client = fakeClient(() => okResponse({ reply: 'x', expression: 'happy', memo: '' }));
+    await core.handleChat({ body: baseBody('HELLってどうやったら遊べるの?'), digest: DIGEST, client, take: counter().take, refund: async () => {} });
+    const sys = client.calls[0].system;
+    check('⑬ HELL の項目(MASTER クリアで開く)が、区切りの後ろの system に入る', /難易度 HELL と空のノーツ/.test(sys[3].text) && /MASTER/.test(sys[3].text) && !/難易度 HELL と空のノーツ\n/.test(sys[1].text));
+    check('⑬ 決まりに「推測で作らない」「似た名前を取り違えない」が入っている', /推測で作らない/.test(sys[0].text) && /取り違えない/.test(sys[0].text));
+  }
 };
 
 // ---------- 後半: 実ブラウザ ----------

@@ -4,9 +4,14 @@
 //   出力: monster-hero/data/assistant-chat-digest.json(公開中のサイトから中継役が読む)
 // 手で書き写さないので、ヘルプやセリフを直せば次のビルドで追従する。
 //
-// ★公開の印(releaseFlag / unreleasedFlag)が付いたヘルプは、ここでは全部はぶく。
-//   ビルドの外では印が立っているかを確かめられないため、まだ出ていない機能を助手が話さないよう安全側に倒す。
-// ★大きさに上限を置く(DIGEST_MAX_CHARS)。全部入れると1往復の費用が跳ねるため。超えたらビルドを止める。
+// 中身は3つ(2026-10-14 窓口の指摘「HELL を取り違えた」で作り直した):
+//   index  … ヘルプ全項目の目次(カテゴリ／見出し)。中継役が毎回渡し、キャッシュする
+//   basics … いちばん最初のカテゴリ(基本ルール)の本文。毎回渡し、キャッシュする
+//   topics … 全項目の見出しと本文。中継役が質問の言葉で上位の数項目を選んで足す(キャッシュの区切りの後ろ)
+// ★公開の印(releaseFlag / unreleasedFlag)は、ビルドの時点の RELEASE_FLAGS の値で決める
+//   (src/parts/17-release-changelog-login-missions.jsx の RELEASE_FLAGS を、parts にある定数で評価する)。
+//   値が分からない印は、まだ出ていないものとしてはぶく。
+// ★毎回渡す部分(目次・基本・人柄)に上限を置く(CACHED_MAX_CHARS)。超えたらビルドを止める。
 //
 //   node tools/build-assistant-chat-digest.js           作り直す
 //   node tools/build-assistant-chat-digest.js --check   いまのデータと合っているかだけ見る
@@ -16,13 +21,20 @@ const vm = require('vm');
 
 const ROOT = path.join(__dirname, '..');
 const DATA = path.join(ROOT, 'monster-hero', 'data');
+const PARTS = path.join(ROOT, 'monster-hero', 'src', 'parts');
 const OUT = path.join(DATA, 'assistant-chat-digest.json');
-// 日本語はおよそ1文字1トークン強。3万トークンほどに収める
-const DIGEST_MAX_CHARS = 26000;
-// 1トピックの本文の上限(長い説明は頭のほうだけで足りる)
-const TOPIC_MAX_CHARS = 380;
+// 毎回渡す部分(目次・基本・人柄)の上限。日本語はおよそ1文字1トークン強
+const CACHED_MAX_CHARS = 20000;
+const BASICS_MAX_CHARS = 5000;
+// 選んで渡す1項目の本文の上限
+const TOPIC_MAX_CHARS = 1500;
 // 助手ごとの口調の見本の数
 const SAMPLE_LINES = 24;
+// 検索用の言いかえ(項目id → 遊ぶ人が使いそうな呼び方)。ヘルプの見出しと、画面やプレイヤーの呼び方がずれている項目だけ。
+// 答えの中身ではなく「その項目を選ぶための言葉」なので、ここに説明は書かない
+const TOPIC_ALIASES = {
+  'rhythm/rhythm-multi': 'マルチ マルチプレイ 協力 部屋 フリーマッチ プライベート',
+};
 
 const loadScript = (file, names) => {
   const src = fs.readFileSync(path.join(DATA, file), 'utf8');
@@ -33,21 +45,47 @@ const loadScript = (file, names) => {
 
 const clean = (s) => String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
 const cut = (s, n) => (s.length > n ? `${s.slice(0, n)}…` : s);
-const unreleased = (x) => !!(x && (x.releaseFlag || x.unreleasedFlag));
+
+// ビルドの時点の RELEASE_FLAGS を読む。parts にある `const NAME = true/false/'文字';` を定数として与えて評価する
+const loadReleaseFlags = () => {
+  const consts = {};
+  let flagsSrc = '';
+  for (const f of fs.readdirSync(PARTS).filter(n => n.endsWith('.jsx'))) {
+    const src = fs.readFileSync(path.join(PARTS, f), 'utf8');
+    for (const m of src.matchAll(/^const ([A-Z][A-Z0-9_]*)\s*=\s*(true|false|'[^'\n]*'|"[^"\n]*")\s*;/gm)) consts[m[1]] = m[2];
+    const i = src.indexOf('const RELEASE_FLAGS = {');
+    if (i >= 0) flagsSrc = src.slice(i + 'const RELEASE_FLAGS = '.length, src.indexOf('};', i) + 1);
+  }
+  if (!flagsSrc) throw new Error('RELEASE_FLAGS が見つかりません');
+  const ctx = vm.createContext({ Date });
+  const flags = vm.runInContext(`${Object.entries(consts).map(([k, v]) => `const ${k} = ${v};`).join('\n')}\n(${flagsSrc})`, ctx);
+  const out = {};
+  for (const k of Object.keys(flags)) { try { out[k] = flags[k] === true; } catch { out[k] = false; } }
+  return out;
+};
 
 const buildDigest = () => {
+  const flags = loadReleaseFlags();
+  const released = (x) => !x || ((!x.releaseFlag || flags[x.releaseFlag] === true) && (!x.unreleasedFlag || flags[x.unreleasedFlag] === false));
   const help = loadScript('help.js', ['HELP_CATEGORIES', 'helpBlockPlainText']);
+  const index = [];
   const topics = [];
-  for (const cat of help.HELP_CATEGORIES || []) {
-    if (unreleased(cat)) continue;
-    for (const topic of cat.topics || []) {
-      if (unreleased(topic)) continue;
-      const body = (topic.blocks || []).filter(b => !unreleased(b)).map(b => clean(help.helpBlockPlainText(b))).filter(Boolean).join(' ');
+  let basics = '';
+  (help.HELP_CATEGORIES || []).filter(released).forEach((cat, ci) => {
+    const titles = [];
+    for (const topic of (cat.topics || []).filter(released)) {
+      const body = (topic.blocks || []).filter(released).map(b => clean(help.helpBlockPlainText(b))).filter(Boolean).join(' ');
       if (!body) continue;
-      topics.push(`■${clean(cat.title)}／${clean(topic.title)}\n${cut(body, TOPIC_MAX_CHARS)}`);
+      const title = clean(topic.title);
+      titles.push(title);
+      // heads … 小見出し(note の title)と助手のひとこと。見出しに近い言葉として、質問との一致を少し重く数える
+      // (見出しが「みんなで対戦」でも、中の小見出しや助手が「マルチ」と呼んでいれば拾えるように)
+      const heads = clean([TOPIC_ALIASES[`${cat.id}/${topic.id}`], topic.assistant, ...(topic.blocks || []).filter(released).map(b => b && b.title)].filter(Boolean).join(' '));
+      topics.push({ id: `${cat.id}/${topic.id}`, cat: clean(cat.title), title, heads: cut(heads, 600), text: cut(body, TOPIC_MAX_CHARS) });
+      if (ci === 0) basics += `■${title}\n${body}\n`;
     }
-  }
-  const helpText = topics.join('\n');
+    if (titles.length) index.push(`【${clean(cat.title)}】${titles.join('／')}`);
+  });
 
   const a = loadScript('assistants.js', ['ASSISTANTS', 'assistantSceneLines']);
   const assistants = {};
@@ -74,28 +112,29 @@ const buildDigest = () => {
       samples: picked,
     };
   }
-  return { version: 1, help: helpText, assistants };
+  return { version: 2, index: index.join('\n'), basics: cut(basics.trim(), BASICS_MAX_CHARS), topics, assistants };
 };
 
 const run = ({ check = false } = {}) => {
   const digest = buildDigest();
   const text = `${JSON.stringify(digest, null, 1)}\n`;
-  const size = digest.help.length + Object.values(digest.assistants).reduce((n, x) => n + JSON.stringify(x).length, 0);
-  if (size > DIGEST_MAX_CHARS) {
-    return { ok: false, reason: `助手とおしゃべりの材料が大きすぎます(${size}文字 > ${DIGEST_MAX_CHARS})。TOPIC_MAX_CHARS を下げてください` };
+  const persona = Math.max(0, ...Object.values(digest.assistants).map(x => JSON.stringify(x).length));
+  const size = digest.index.length + digest.basics.length + persona;
+  if (size > CACHED_MAX_CHARS) {
+    return { ok: false, reason: `助手とおしゃべりの毎回渡す部分が大きすぎます(${size}文字 > ${CACHED_MAX_CHARS})。BASICS_MAX_CHARS を下げてください` };
   }
   const before = fs.existsSync(OUT) ? fs.readFileSync(OUT, 'utf8') : '';
   if (check) {
     return before === text ? { ok: true, size } : { ok: false, reason: 'assistant-chat-digest.json が古いままです' };
   }
   if (before !== text) fs.writeFileSync(OUT, text);
-  return { ok: true, changed: before !== text, size, topics: digest.help.split('\n■').length, assistants: Object.keys(digest.assistants).length };
+  return { ok: true, changed: before !== text, size, topics: digest.topics.length, assistants: Object.keys(digest.assistants).length };
 };
 
-module.exports = { run, buildDigest, DIGEST_MAX_CHARS };
+module.exports = { run, buildDigest, loadReleaseFlags, CACHED_MAX_CHARS };
 
 if (require.main === module) {
   const r = run({ check: process.argv.includes('--check') });
   if (!r.ok) { console.error(`NG: ${r.reason}`); process.exit(1); }
-  console.log(r.changed === undefined ? `OK: 助手とおしゃべりの材料は最新です(${r.size}文字)` : `助手とおしゃべりの材料: ${r.changed ? '作り直しました' : '最新でした'}(${r.size}文字 / ヘルプ${r.topics}項目 / 助手${r.assistants}人)`);
+  console.log(r.changed === undefined ? `OK: 助手とおしゃべりの材料は最新です(毎回渡す部分 ${r.size}文字)` : `助手とおしゃべりの材料: ${r.changed ? '作り直しました' : '最新でした'}(毎回渡す部分 ${r.size}文字 / ヘルプ${r.topics}項目 / 助手${r.assistants}人)`);
 }
