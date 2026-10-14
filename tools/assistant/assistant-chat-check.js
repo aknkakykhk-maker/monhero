@@ -131,7 +131,15 @@ const unit = async (core) => {
   //    公開の印が立っている項目(HELL・モンヒロビート・マルチなど)が材料から抜けていないことも、ここで分かる
   const ids = new Set(DIGEST.topics.map(t => t.id));
   check('⑬ 公開済みの印のヘルプ(HELL・マルチ・モンヒロビート)が材料に入っている', ['rhythm/rhythm-hell', 'rhythm/rhythm-multi', 'rhythm/rhythm-mode'].every(id => ids.has(id)));
-  check('⑬ まだ出ていない印のヘルプ(助手とおしゃべり)は材料に入っていない', !JSON.stringify(DIGEST).includes('助手とおしゃべりできます'));
+  // まだ出ていない印(値が偽)のヘルプは材料に入らない。印の値はビルドの時点の RELEASE_FLAGS から読む
+  {
+    const { loadReleaseFlags } = require(path.join(root, 'tools', 'build-assistant-chat-digest.js'));
+    const flags = loadReleaseFlags();
+    const helpSrc = fs.readFileSync(path.join(root, 'monster-hero', 'data', 'help.js'), 'utf8');
+    const offTopics = [...helpSrc.matchAll(/id:\s*'([\w-]+)'[^\n]*releaseFlag:\s*'(\w+)'/g)].filter(m => flags[m[2]] !== true).map(m => m[1]);
+    check('⑬ 印が偽のヘルプの項目は材料に入っていない', offTopics.every(id => !ids.has(id) && ![...ids].some(x => x.endsWith(`/${id}`))), offTopics.join(','));
+    check('⑬ 公開した助手とおしゃべりのヘルプは材料に入っている', flags.assistantChat !== true || JSON.stringify(DIGEST).includes('助手とおしゃべりできます'));
+  }
   const CASES = [
     ['HELLってどうやったら遊べるの?', 'rhythm/rhythm-hell'],
     // 社長が試して外れた2問(2026-10-14)
@@ -209,6 +217,11 @@ const browser = async (core) => {
       localStorage.setItem('mh_inherited_unique_level_compensation_v1', JSON.stringify(true));
       localStorage.setItem('mh_inherited_unique_level_compensation_pending_v1', JSON.stringify(false));
       if (localStorage.getItem('mh_assistant_bond_v1') === null) localStorage.setItem('mh_assistant_bond_v1', JSON.stringify({ points: 800 }));
+      // 先に流れるほかのお話(HELL)は見たことにしておく(このお話だけを確かめるため)
+      localStorage.setItem('mh_rhythm_hell_story_seen_v1', JSON.stringify(true));
+      localStorage.setItem('mh_kiki_intro_seen_v1', JSON.stringify(true));
+      localStorage.setItem('mh_momosuke_intro_seen_v1', JSON.stringify(true));
+      localStorage.setItem('mh_tactics_intro_seen_v1', JSON.stringify(true));
       window.__mhSupabaseStubbed = true;
     });
     await page.addInitScript(eventStorySeed());
@@ -224,23 +237,39 @@ const browser = async (core) => {
     await page.getByRole('button', { name: 'TAP TO START' }).click({ timeout: 60000 });
     await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
     await page.getByRole('button', { name: 'モンヒロバトル' }).waitFor({ timeout: 30000 });
+    // ⑭ 公開(2026-10-14)のあとの最初の HOME で、お話「話せるようになった日」が1回流れる
+    // 先に出る受け取り(ログインボーナスなど)を閉じてから待つ。お話はほかの会話・案内が終わってから流れる
     for (let i = 0; i < 6; i++) {
       const btn = page.getByRole('button', { name: /受け取る|閉じる|はじめる|OK/ }).first();
       if (await btn.count() === 0 || !(await btn.isVisible().catch(() => false))) break;
       await btn.dispatchEvent('click').catch(() => {});
       await page.waitForTimeout(250);
     }
-    check('⑧ 公開の印が切のあいだ、HOMEに「おしゃべり」が出ない', await page.locator('[data-home-assistant-chat]').count() === 0);
+    const story = page.locator('[role="dialog"][aria-label="イベント回想: 話せるようになった日 ～ことのはの鈴～"]');
+    const storyShown = await story.waitFor({ timeout: 30000 }).then(() => true).catch(() => false);
+    const dialogs = storyShown ? '' : await page.evaluate(() => [...document.querySelectorAll('[role="dialog"]')].map(d => d.getAttribute('aria-label') || d.textContent.slice(0, 40)).join(' / '));
+    if (!storyShown && process.env.SHOT_DIR) await page.screenshot({ path: path.join(process.env.SHOT_DIR, 'assistant-chat-story-missing.png') });
+    check('⑭ 公開のあとの最初の HOME で、お話「話せるようになった日」が流れる', storyShown, dialogs);
+    if (storyShown && process.env.SHOT_DIR) await page.screenshot({ path: path.join(process.env.SHOT_DIR, 'assistant-chat-story.png') });
+    for (let i = 0; i < 60 && await story.count(); i++) {
+      await page.locator('[role="dialog"] button[aria-label="次へ"]').first().dispatchEvent('click').catch(() => {});
+      await page.waitForTimeout(120);
+    }
+    check('⑭ 最後まで見ると、新しいキー mh_story_assistant_chat_seen_v1 に「見た」が残る',
+      await page.evaluate(() => localStorage.getItem('mh_story_assistant_chat_seen_v1')) === 'true');
+    for (let i = 0; i < 6; i++) {
+      const btn = page.getByRole('button', { name: /受け取る|閉じる|はじめる|OK/ }).first();
+      if (await btn.count() === 0 || !(await btn.isVisible().catch(() => false))) break;
+      await btn.dispatchEvent('click').catch(() => {});
+      await page.waitForTimeout(250);
+    }
+    await page.locator('[data-home-assistant-chat]').waitFor({ timeout: 10000 }).catch(() => {});
+    check('⑧ 公開の印が立っていて、HOMEに「💬 おしゃべり」が出る', await page.locator('[data-home-assistant-chat]').count() === 1);
+    if (process.env.SHOT_DIR) await page.screenshot({ path: path.join(process.env.SHOT_DIR, 'assistant-chat-home.png') });
     const before = await page.evaluate(() => ({ ...localStorage }));
-    await page.getByRole('button', { name: '設定' }).first().dispatchEvent('click');
-    await page.getByRole('button', { name: 'ヘルプ' }).first().waitFor({ timeout: 20000 });
-    await page.getByRole('button', { name: 'ヘルプ' }).first().dispatchEvent('click');
-    await page.getByRole('button', { name: 'わかった！冒険に戻る' }).waitFor({ timeout: 20000 });
-    await page.locator('footer button[aria-label=""]').dispatchEvent('click');
-    await page.getByText('DEBUG MENU').first().waitFor({ timeout: 20000 });
-    await page.locator('[data-debug-assistant-chat]').dispatchEvent('click');
+    await page.locator('[data-home-assistant-chat]').dispatchEvent('click');
     await page.locator('[data-assistant-chat]').waitFor({ timeout: 10000 });
-    check('⑨ デバッグ設定から会話の窓が開く', true);
+    check('⑨ HOMEの「おしゃべり」から会話の窓が開く', true);
     // ⑫ 個人情報は送られない
     await page.locator('[data-assistant-chat-input]').fill('電話は090-1234-5678');
     await page.locator('[data-assistant-chat-send]').dispatchEvent('click');
