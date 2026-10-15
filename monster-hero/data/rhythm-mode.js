@@ -3151,11 +3151,11 @@ const RHYTHM_INPUT_REC=(()=>{
   const onTouch=e=>{
     const r=box(),list=[];
     for(const t of e.changedTouches||[])list.push({id:t.identifier,x:r1(t.clientX-r.left),y:r1(t.clientY-r.top),rx:r1(t.radiusX||0),ry:r1(t.radiusY||0),f:r1(t.force||0)});
-    push({k:e.type,...stamp(),n:(e.touches||[]).length,c:list});
+    push({k:e.type,...stamp(),ts:r1(e.timeStamp),n:(e.touches||[]).length,c:list});
   };
   const onPointer=e=>{
     const r=box();
-    push({k:e.type,...stamp(),id:e.pointerId,pt:e.pointerType,x:r1(e.clientX-r.left),y:r1(e.clientY-r.top),w:r1(e.width||0),h:r1(e.height||0),f:r1(e.pressure||0),prim:!!e.isPrimary});
+    push({k:e.type,...stamp(),ts:r1(e.timeStamp),id:e.pointerId,pt:e.pointerType,x:r1(e.clientX-r.left),y:r1(e.clientY-r.top),w:r1(e.width||0),h:r1(e.height||0),f:r1(e.pressure||0),prim:!!e.isPrimary});
   };
   const TOUCH=['touchstart','touchmove','touchend','touchcancel'],POINTER=['pointerdown','pointermove','pointerup','pointercancel'];
   const detach=()=>{if(bound&&area){TOUCH.forEach(t=>area.removeEventListener(t,onTouch,true));POINTER.forEach(t=>area.removeEventListener(t,onPointer,true));}bound=null;};
