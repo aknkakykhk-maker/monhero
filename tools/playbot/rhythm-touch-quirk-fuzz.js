@@ -47,7 +47,17 @@ const QUIRKS = [
   ['cancel-all-restart', '地上の指を離すとき touchcancel で全部の指が消え、30ms あとに空中の指が新しい identifier で押し直して続ける'],
   ['end-sky-restart', '空中の指に touchend が来て(押したまま)、30ms あとに新しい identifier で押し直して続ける'],
 ];
-const QUIRK_NAMES = QUIRKS.map(([n]) => n).filter((n) => !ONLY.length || n === 'none' || ONLY.includes(n));
+// --sweep: くせの代わりに「指の位置」をずらす(2026-10-15 窓口「地上の指を空中の帯の真下〜少し上まで・空中の指の高さを上下に」)。
+//   pos:<gy>:<gx>:<sk> … 地上の指の高さ gy(0 = 判定ライン、1 = その時刻の空中スライドの高さ)、
+//                        横 gx(0 = 地上ノーツの中心、1 = その時刻の空中スライドの真下)、空中の指の高さ sk(空中の段の何倍か)
+const SWEEP = process.argv.includes('--sweep');
+const SWEEP_NAMES = (() => {
+  const out = [];
+  for (const gy of [0, .15, .3, .45, .6, .8]) for (const gx of [0, .5, 1]) out.push(`pos:${gy}:${gx}:1`);
+  for (const sk of [.6, .8, 1.2, 1.4]) for (const gx of [0, 1]) out.push(`pos:0:${gx}:${sk}`);
+  return out;
+})();
+const QUIRK_NAMES = SWEEP ? ['none', ...SWEEP_NAMES] : QUIRKS.map(([n]) => n).filter((n) => !ONLY.length || n === 'none' || ONLY.includes(n));
 
 const mime = f => ({ '.js': 'application/javascript', '.html': 'text/html', '.css': 'text/css', '.json': 'application/json', '.mp3': 'audio/mpeg', '.m4a': 'audio/mp4', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.svg': 'image/svg+xml' })[path.extname(f)] || 'application/octet-stream';
 const seed = () => `(() => {
@@ -69,7 +79,7 @@ const runner = async ([songId, quirkNames, repeat, listOnly, tapdx, skip]) => {
   const rect = () => RHYTHM_VIEW_ROTATION.rectOf(area);
   const lineR = () => RHYTHM_JUDGMENT_LINE_Y.ratio;
   const ptLane = (laneCenter, sky) => { const rr = rect(); const yR = lineR() - (sky > 0 ? RHYTHM_SKY_LIFT.ratio * sky : 0); return { x: rr.left + rr.width * rhythmProjectBoundary(laneCenter, lineR()), y: rr.top + rr.height * yR }; };
-  const slidePos = (sc, t) => { const L = rhythmSlideExpectedLane(sc, t); const sky = rhythmSlideHasSky(sc) ? rhythmSlideSkyAt(sc, t) : 0; return ptLane(L + .5, sky); };
+  const slidePos = (sc, t, mul = 1) => { const L = rhythmSlideExpectedLane(sc, t); const sky = rhythmSlideHasSky(sc) ? rhythmSlideSkyAt(sc, t) : 0; return ptLane(L + .5, sky * mul); };
 
   // 組: 空中スライド(600ms 以上)と、その最中(頭から 200ms あと〜終わりの 200ms 前)にある地上のタップ/フリック1つ。
   // 前の組の空中スライドが終わって 400ms 空いてから次の組(指が混ざらないように)
@@ -114,15 +124,23 @@ const runner = async ([songId, quirkNames, repeat, listOnly, tapdx, skip]) => {
     const s = notes[p.slide], sc = cn(p.slide), g = notes[p.ground];
     const F1 = idBase++, F2 = idBase++, F3 = idBase++;
     p.ids = [F1, F2];
-    const gp = ptLane((g.subLane + (g.subLaneWidth || 2) / 2) / 2 + tapdx, 0);
+    let gp = ptLane((g.subLane + (g.subLaneWidth || 2) / 2) / 2 + tapdx, 0);
+    if (String(p.quirk).startsWith('pos:')) {
+      const [, gy, gx, sk] = p.quirk.split(':').map(Number);
+      p.skMul = sk;
+      const above = slidePos(sc, g.timeMs, 1);   // 空中スライドのその時刻の位置(高さはふつう)
+      gp = { x: gp.x + (above.x - gp.x) * gx, y: gp.y + (above.y - gp.y) * gy };
+      p.groundAt = { x: Math.round(gp.x), y: Math.round(gp.y) };
+    }
     p.follow = { from: s.timeMs, to: s.endTimeMs - 5, id: F1, sc, cut: null };
-    at(s.timeMs, () => down(F1, slidePos(sc, s.timeMs)));
+    at(s.timeMs, () => down(F1, slidePos(sc, s.timeMs, p.skMul || 1)));
     const gDown = g.timeMs, gUp = g.timeMs + 60;
     const gFlick = g.type === 'FLICK';
     const gUpPos = gFlick ? { x: gp.x, y: gp.y - 60 } : gp;
     const groundMoves = () => { if (gFlick) { at(gDown + 25, () => move(F2, { x: gp.x, y: gp.y - 30 })); at(gDown + 45, () => move(F2, { x: gp.x, y: gp.y - 60 })); } };
     switch (p.quirk) {
       case 'none': at(gDown, () => down(F2, gp)); groundMoves(); at(gUp, () => up(F2, gUpPos)); break;
+      default: if (String(p.quirk).startsWith('pos:')) { at(gDown, () => down(F2, gp)); groundMoves(); at(gUp, () => up(F2, gUpPos)); } break;
       case 'end-extra-changed': at(gDown, () => down(F2, gp)); groundMoves(); at(gUp, () => up(F2, gUpPos, { extraChanged: [F1] })); break;
       case 'touches-drop-on-end': at(gDown, () => down(F2, gp)); groundMoves(); at(gUp, () => up(F2, gUpPos, { drop: [F1] })); break;
       case 'touches-drop-on-start': at(gDown, () => down(F2, gp, { drop: [F1] })); groundMoves(); at(gUp, () => up(F2, gUpPos)); break;
@@ -164,14 +182,13 @@ const runner = async ([songId, quirkNames, repeat, listOnly, tapdx, skip]) => {
         break;
       }
       case 'move-changed-ground': at(gDown, () => down(F2, gp)); groundMoves(); p.follow.extraChangedFrom = gDown + 5; p.follow.extraChangedTo = gUp - 5; p.follow.extra = F2; at(gUp, () => up(F2, gUpPos)); break;
-      default: break;
     }
     const endFlick = !!(sc.endFlick || s.endFlick);
     if (endFlick) {
       at(s.endTimeMs - 40, () => { p.follow.flick = true; const q = slidePos(sc, s.endTimeMs); move(p.follow.id ?? F1, { x: q.x, y: q.y - 30 }); });
       at(s.endTimeMs - 20, () => { const q = slidePos(sc, s.endTimeMs); move(p.follow.id ?? F1, { x: q.x, y: q.y - 70 }); });
       at(s.endTimeMs, () => { const q = slidePos(sc, s.endTimeMs); up(p.follow.id ?? F1, { x: q.x, y: q.y - 70 }); });
-    } else at(s.endTimeMs - 5, () => up(p.follow.id ?? F1, slidePos(sc, s.endTimeMs)));
+    } else at(s.endTimeMs - 5, () => up(p.follow.id ?? F1, slidePos(sc, s.endTimeMs, p.skMul || 1)));
   }
   events.sort((a, b) => a.at - b.at);
   const lastAt = events.length ? events[events.length - 1].at : 0;
@@ -188,7 +205,7 @@ const runner = async ([songId, quirkNames, repeat, listOnly, tapdx, skip]) => {
         for (const p of plan) {
           const f = p.follow;
           if (!f || f.flick || ms < f.from || ms >= f.to || !live.has(f.id)) continue;
-          const pos = slidePos(f.sc, ms);
+          const pos = slidePos(f.sc, ms, p.skMul || 1);
           const o = {};
           if (f.dropAt && ms >= f.dropAt && !f.dropped) { f.dropped = true; o.drop = [f.id, ...[...live.keys()].filter((x) => x !== f.id)]; }
           if (f.extra && ms >= f.extraChangedFrom && ms <= f.extraChangedTo) o.extraChanged = [f.extra];
@@ -214,7 +231,7 @@ const runner = async ([songId, quirkNames, repeat, listOnly, tapdx, skip]) => {
       return { quirk: p.quirk, slide: p.slide, ground: p.ground, groundType: p.groundType, startMs: Math.round(p.start), endMs: Math.round(p.end),
         slideJ: s?.judgment ?? null, holdJ: s?.holdJudgment ?? null, releaseJ: s?.releaseJudgment ?? null,
         offFrames: off.length, offFrom: off[0] ?? null, offTo: off[off.length - 1] ?? null,
-        groundJ: g?.judgment ?? null, events: evs.slice(0, 12), touches: touchSeen.slice(0, 10) };
+        groundAt: p.groundAt || null, groundJ: g?.judgment ?? null, events: evs.slice(0, 12), touches: touchSeen.slice(0, 10) };
     }),
   };
 };
