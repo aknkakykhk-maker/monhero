@@ -98,7 +98,7 @@ window.__mhBoot = (function () {
 })();
 // 本体JSのキャッシュキー。ここで一度だけ宣言し、下の読み込み処理でも同じ値を使う。
 // 先読みと <script> のURLがずれると、同じ2.7MBを2回取りに行くことになる
-var GAME_BUILD = '202610151502';
+var GAME_BUILD = '202610151511';
 window.__mhGameBuild = GAME_BUILD;
 // 起動でいちばん大きいのは本体JS(約2.7MB)。いちばん後ろで読むため、そこへ来ると
 // ゲージが止まって見えていた。先に取りはじめて、受け取ったバイト数をそのまま出す。
@@ -246,7 +246,7 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
   [data-card-plate] [data-card-name] { flex: 1 1 auto; margin: 0; height: auto !important; min-height: 0; border: 0 !important; padding: 0 10cqw !important; border-radius: 0 !important;
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; text-align: center; container-type: size; overflow: hidden;
     /* 後ろの影は弱く・広く(字が「載せた」ように浮かないよう、中の面がうっすら沈む程度) */
-    background: radial-gradient(ellipse 78% 64% at 50% 47%, rgba(10,5,0,.34), rgba(10,5,0,.14) 58%, rgba(10,5,0,0) 100%) !important; box-shadow: none !important;
+    background: radial-gradient(closest-side, rgba(10,5,0,.34), rgba(10,5,0,.14) 58%, rgba(10,5,0,0) 100%) !important; box-shadow: none !important;
     /* 字は枠と同じ系統の明るい金。縁取りは字の大きさ(8.5px まで)に合わせて細く(0.5px)、濃い金茶。影は小さく近く(にじんで字がつぶれないように) */
     color: #f8d98c !important; font-family: 'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP', serif; letter-spacing: 0;
     text-shadow: .5px 0 0 rgba(48,24,4,.92), -.5px 0 0 rgba(48,24,4,.92), 0 .5px 0 rgba(48,24,4,.92), 0 -.5px 0 rgba(48,24,4,.92), 0 .8px 1.2px rgba(20,10,0,.6) !important; }
@@ -261,8 +261,9 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
   [data-card-plate] [data-skill-change] [data-card-genre] { background: none !important; border: none !important; color: #fff1b8 !important; padding: 0; }
   [data-card-plate] [data-skill-change-spacer] [data-card-genre] { border-width: 3px 5px; overflow: visible; text-overflow: clip; padding: 1px 0; color: #fff1b8 !important;
     text-shadow: 1px 0 0 #2a1503, -1px 0 0 #2a1503, 0 1px 0 #2a1503, 0 -1px 0 #2a1503 !important; }
-  /* 金の面(固有技)は光の線の模様が明るくにぎやかなので、名前の後ろは模様に負けない強さで明るくぼかし、濃い金茶の字にはっきりした明るい縁 */
-  [data-card-plate="gold"] [data-card-name] { background: radial-gradient(ellipse 86% 72% at 50% 47%, rgba(255,247,224,.8), rgba(255,244,214,.55) 52%, rgba(255,242,210,0) 100%) !important; }
+  /* 金の面(固有技)は光の線の模様が明るくにぎやかなので、名前の後ろは模様に負けない強さで明るくぼかし、濃い金茶の字にはっきりした明るい縁。
+     ぼかしは closest-side で名前の欄の内側で消えきる(欄の端で切れて四角い板に見えないように) */
+  [data-card-plate="gold"] [data-card-name] { background: radial-gradient(closest-side, rgba(255,247,224,.8), rgba(255,244,214,.55) 55%, rgba(255,242,210,0) 100%) !important; }
   [data-card-plate="gold"] [data-card-name] { color: #2e1802 !important;
     text-shadow: .7px 0 0 #fff5da, -.7px 0 0 #fff5da, 0 .7px 0 #fff5da, 0 -.7px 0 #fff5da, .5px .5px 0 #fff5da, -.5px -.5px 0 #fff5da, 0 0 2.5px rgba(255,250,232,.95) !important; }
   [data-card-plate="gold"] [data-skill-change], [data-card-plate="gold"] [data-card-genre], [data-card-plate="gold"] [data-skill-change] [data-card-genre], [data-card-plate="gold"] [data-skill-change-spacer] [data-card-genre] { color: #241000 !important;
