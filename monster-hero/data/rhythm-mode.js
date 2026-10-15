@@ -3095,6 +3095,8 @@ const RHYTHM_HOLD_RELEASE_GRACE_MS=100;
 // 浮いているノーツ(持ち替え待ち)の控え。指の数までしか増えないので、そのまま総当たりでよい。
 // 突き合わせ側は「開始時刻の窓」を無視してここを見る。
 const RHYTHM_FLOATING_NOTES=new Set();
+// ロングを押さえている指が、自分の離しの合図なしに指の一覧から消えたとき、離した扱いにする前に待つ時間(30-rhythm-play.jsx の syncTouches)
+const RHYTHM_MISSING_TOUCH_CONFIRM_MS=120;
 // 直前に TAP を取った指の控え(半レーンずれの両手押し・2026-10-15)。照合(rhythmMatchInputBatch)だけが読み書きする。見た目にも保存にも関わらない。
 //   同じ時刻に半レーンずれて並んだ2つの TAP を左右の指で押すとき、先に照合された指が重なりの所を押していると、その指が相手側の TAP を取ってしまい、
 //   あとの指(相手側の TAP の外側寄りを押した)に行き先が無くなって片方が MISS になっていた(Node の総当たりで2853通り中18通り)。
@@ -3867,7 +3869,10 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
     const captureTouchPositions=event=>{Array.from(event.changedTouches||[]).forEach(touch=>record(inputKey('touch',touch.identifier),touch.clientX,touch.clientY));};
     const captureTouchStart=event=>{if(event.target?.closest?.('[data-rhythm-play-area]'))RHYTHM_NOTE_SE_RUNTIME.warm();captureTouchPositions(event);};
     const releaseTouches=event=>{const age=rhythmReleaseAgeMs(event.timeStamp,nowPerf());Array.from(event.changedTouches||[]).forEach(touch=>release(inputKey('touch',touch.identifier),false,age));};
-    const cancelTouches=event=>{Array.from(event.changedTouches||[]).forEach(touch=>release(inputKey('touch',touch.identifier),true));};
+    // ★端末に取り消された指(touchcancel)は、ふつうに離したのと同じに扱う(途中なら持ち替えの猶予・終わり際なら離しの判定)。
+    //   以前は押さえているロングをその場で MISS にしていた。取り消しはプレイヤーの操作ではなく端末の都合(二本指のジェスチャーと見られた等)で、
+    //   押したのに反応しないと報告のあった曲では取り消しが報告の無い曲の約11倍だった(タッチの診断・2026-10-15)
+    const cancelTouches=event=>{Array.from(event.changedTouches||[]).forEach(touch=>release(inputKey('touch',touch.identifier),false));};
     document.addEventListener('touchstart',captureTouchStart,{capture:true,passive:true});
     document.addEventListener('touchmove',captureTouchPositions,{capture:true,passive:true});
     document.addEventListener('touchend',releaseTouches,{capture:true,passive:true});

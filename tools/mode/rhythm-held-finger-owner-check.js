@@ -112,5 +112,15 @@ check('ロングの終わりの窓で、結ばれた指が同じころのフリ�
   && /rejudge:true,flickOnly:true\}\]\);/.test(take)
   && /input\?\.flickOnly===true&&note\.type!=='FLICK'/.test(src));
 
+// 5) iPhone は別の指の合図の中で、押さえている指を指の一覧から一瞬落とすことがある。直す前は、そのたびに押さえている帯が「離した扱い(浮いた帯)」になって暗くなっていた
+//    (実ブラウザの再現: tools/playbot/rhythm-two-finger-sky-repro.js の OMIT=1 OMITGAP=90 で、Sheriruth HELL の空中スライドが地上の6回のタップのたびに浮いていた)
+check('ロングを押さえている指が自分の離しの合図なしに指の一覧から消えたら、すぐ離した扱いにせず少し待つ',
+  /const ownEnd=\(e\.type==='touchend'\|\|e\.type==='touchcancel'\)&&Array\.from\(e\.changedTouches/.test(play)
+  && /if\(!ownEnd&&heldNote&&!heldNote\.done&&heldNote\.type==='HOLD'\)/.test(play)
+  && /RHYTHM_MISSING_TOUCH_CONFIRM_MS\);\}return;\}/.test(play)
+  && /const RHYTHM_MISSING_TOUCH_CONFIRM_MS=120;/.test(src));
+check('端末に取り消された指(touchcancel)は、押さえているロングをその場で MISS にせず、ふつうに離したのと同じに扱う',
+  /const cancelTouches=event=>\{Array\.from\(event\.changedTouches\|\|\[\]\)\.forEach\(touch=>release\(inputKey\('touch',touch\.identifier\),false\)\);\};/.test(src));
+
 console.log(failed ? `\n${failed} 件 NG` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
