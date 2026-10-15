@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d9f53dd5d004f769
+// generated-sha256: c706094346a3121e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-15 23:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-16 00:36"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -22227,7 +22227,7 @@ const visitNote=note=>{if(note.type==='HOLD'&&note.activePointerId!==null&&songT
 // 指を離したまま戻ってこなかったHOLD/SLIDE。持ち替えの猶予を過ぎた時点で失敗にする。
 // 終わりまで来ていたら、離していても成立させる(終わり際に離すぶんは元から許している)
 if(!note.done&&note.activePointerId===null&&note.releasedAtMs!=null){
-  const holdEndMs=note.endTimeMs+settings.judgmentTimingOffsetMs;
+  const holdEndMs=Math.min(Number(note.endTimeMs),rhythmReleaseTargetMs(note))+settings.judgmentTimingOffsetMs;
   if(songTimeMs>=holdEndMs-RHYTHM_HOLD_RELEASE_GRACE_MS){note.releasedAtMs=null;rhythmFloatingNoteRemove(note);applyJudgment(note,note.holdJudgment||'MISS',note.holdDeltaMs||0);}
   else if(songTimeMs-note.releasedAtMs>=RHYTHM_HOLD_HANDOVER_GRACE_MS){const releasedAt=note.releasedAtMs;note.releasedAtMs=null;rhythmFloatingNoteRemove(note);applyJudgment(note,'MISS',releasedAt-holdEndMs);}
 }
@@ -22627,7 +22627,11 @@ scheduleTick();};
     }
     return null;
   };
-  const inputEnds=inputs=>{const run=runRef.current;if(!run||run.finished||run.paused)return;const now=run.audio.songTimeMs();inputs.forEach(input=>{run.inputFeedbackState?.delete(input.inputKey);run.standbyPointers.delete(input.inputKey);const noteIndex=run.activePointers.get(input.inputKey);if(noteIndex===undefined)return;run.activePointers.delete(input.inputKey);const note=run.notes[noteIndex];if(!note||note.done)return;note.activePointerId=null;const holdEndMs=note.endTimeMs+settings.judgmentTimingOffsetMs;
+  // ★「終わり際か、途中で離したか」は、ノーツの離しの的(rhythmReleaseTargetMs)で決める(2026-10-15)。
+//   終わりが近づくと見回り側(RHYTHM_GESTURE_RUNTIME.checkHeldRelease)が、押しっぱなしの自動成功を待たせるためにノーツの終わりの時刻を「離しの的+判定の窓」まで延ばす。
+//   本体がその延ばした時刻で判断していたので、見回り側の時計が少し遅れた回だけ、離しの的ぴったりで離しても「途中で離した」になり、浮いて MISS になっていた
+//   (曲を通したときだけスライドがたまに落ちる件。grievous_lady MASTER 13.45秒・14.45秒などで、押し始め MARVELOUS・通過点すべて通過のまま MISS)
+const inputEnds=inputs=>{const run=runRef.current;if(!run||run.finished||run.paused)return;const now=run.audio.songTimeMs();inputs.forEach(input=>{run.inputFeedbackState?.delete(input.inputKey);run.standbyPointers.delete(input.inputKey);const noteIndex=run.activePointers.get(input.inputKey);if(noteIndex===undefined)return;run.activePointers.delete(input.inputKey);const note=run.notes[noteIndex];if(!note||note.done)return;note.activePointerId=null;const holdEndMs=Math.min(Number(note.endTimeMs),rhythmReleaseTargetMs(note))+settings.judgmentTimingOffsetMs;
     // 先に置いてある指があれば、離したその場でそこへ渡す。
     // 浮いている状態を経由しないので、猶予の時間切れに巻き込まれない
     const takeover=standbyFingerFor(run,noteIndex,input.inputKey);
