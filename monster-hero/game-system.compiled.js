@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4901056a6fbac3de
+// source-sha256: 5894833878d2f4b3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-16 00:39";
+const BUILD_DATE = "2026-10-16 01:03";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -35736,7 +35736,7 @@ const RhythmTapTest = ({
           } else if (settled !== false && songTimeMs >= note.endTimeMs + settings.judgmentTimingOffsetMs) applyJudgment(note, note.holdJudgment || 'MISS', note.holdDeltaMs || 0);
         }
         if (!note.done && note.activePointerId === null && note.releasedAtMs != null) {
-          const holdEndMs = note.endTimeMs + settings.judgmentTimingOffsetMs;
+          const holdEndMs = Math.min(Number(note.endTimeMs), rhythmReleaseTargetMs(note)) + settings.judgmentTimingOffsetMs;
           if (songTimeMs >= holdEndMs - RHYTHM_HOLD_RELEASE_GRACE_MS) {
             note.releasedAtMs = null;
             rhythmFloatingNoteRemove(note);
@@ -36716,7 +36716,7 @@ const RhythmTapTest = ({
       const note = run.notes[noteIndex];
       if (!note || note.done) return;
       note.activePointerId = null;
-      const holdEndMs = note.endTimeMs + settings.judgmentTimingOffsetMs;
+      const holdEndMs = Math.min(Number(note.endTimeMs), rhythmReleaseTargetMs(note)) + settings.judgmentTimingOffsetMs;
       const takeover = standbyFingerFor(run, noteIndex, input.inputKey);
       if (takeover && !note.done && now < holdEndMs - RHYTHM_HOLD_RELEASE_GRACE_MS) {
         RHYTHM_INPUT_REC.event('handover', {
