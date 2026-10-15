@@ -682,12 +682,29 @@ async function chooseBetween(s, mem, log) {
         // 勇者モンの名前は、選んだ直後でまだ build.hero に入っていないことがある。そのときは最後に押した子
         const hero = log.data.build.hero || mem.lastPicked || '';
         const tried = (id) => loadKnowledge().runs.filter((r) => r.difficulty === diff && r.hero === hero && (r.heroStyle || 'sword') === id).length;
-        const fixed = process.env.PLAYBOT_TACTICS_HERO_STYLE || '';
-        const want = fixed || [...styles].sort((a, z) => tried(a.id) - tried(z.id))[0].id;
-        await s.page.evaluate((id) => document.querySelector(`[data-hero-initial-style] [data-hero-style="${id}"]`)?.click(), want);
+        // ★2026-10-10 ハカセくん: 直したボットの Expert 5回がすべて片手剣で、3回は5〜6ターンで WAVE 2 全滅。
+        //   既定は「その難易度で、これまでいちばん先まで届いたスタイル」(クリアは 11 と数える。heroStyle の無い古い回は数えない)。
+        //   記録が1つも無いスタイルしかなければ Hard は片手剣・それより上は片手盾(PROGRESS.md の調べ)。
+        //   PLAYBOT_TACTICS_HERO_STYLE=sword|shield|dual で決め打ち、=explore で前の「試した回数の少ないものから」
+        const envStyle = process.env.PLAYBOT_TACTICS_HERO_STYLE || '';
+        const fixed = /^(sword|shield|dual)$/.test(envStyle) ? envStyle : '';
+        const reached = (id) => {
+          const rs = loadKnowledge().runs.filter((r) => r.difficulty === diff && r.hero === hero && r.heroStyle === id && r.result !== 'stopped');
+          return rs.length ? rs.reduce((a, r) => a + (r.result === 'clear' ? 11 : r.wave || 0), 0) / rs.length : null;
+        };
+        const fallback = diff === 'Hard' || diff === 'Normal' || diff === 'Beginner' ? 'sword' : 'shield';
+        const ranked = styles.map((x) => ({ id: x.id, v: reached(x.id) })).filter((x) => x.v != null).sort((p, q) => q.v - p.v);
+        const want = fixed || (envStyle === 'explore' ? [...styles].sort((a, z) => tried(a.id) - tried(z.id))[0].id
+          : ranked.length ? ranked[0].id : (styles.some((x) => x.id === fallback) ? fallback : styles[0].id));
+        // 押して、本当に選ばれたか(aria-pressed)を確かめる。効いていなければもう1回だけ押す。記録は実際に選ばれているもの
+        const pressStyle = () => s.page.evaluate((id) => document.querySelector(`[data-hero-initial-style] [data-hero-style="${id}"]`)?.click(), want);
+        const pressedNow = () => s.page.evaluate(() => (document.querySelector('[data-hero-initial-style] [data-hero-style][aria-pressed="true"]') || {}).getAttribute?.('data-hero-style') || '');
+        await pressStyle();
         await s.wait(300);
-        log.data.build.heroStyle = want;
-        log.note(`初期スタイル: ${(styles.find((x) => x.id === want) || {}).label || want}(${fixed ? '指定どおり' : `${hero || '?'}で試した回数の少ないものから`})`);
+        if ((await pressedNow()) !== want) { await pressStyle(); await s.wait(400); }
+        const got = (await pressedNow()) || want;
+        log.data.build.heroStyle = got;
+        log.note(`初期スタイル: ${(styles.find((x) => x.id === got) || {}).label || got}(${fixed ? '指定どおり' : envStyle === 'explore' ? `${hero || '?'}で試した回数の少ないものから` : ranked.length ? `この難易度でいちばん届いたもの(平均 WAVE ${ranked[0].v.toFixed(1)})` : '記録が無いので難易度の既定'}${got !== want ? `。※${want}を押したが選ばれなかった` : ''})`);
       }
     }
     const best = placeBtns.sort((a, z) => GRADE.indexOf(a.split(/\s+/)[1]) - GRADE.indexOf(z.split(/\s+/)[1]))[0];
