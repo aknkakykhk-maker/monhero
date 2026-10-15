@@ -68,6 +68,9 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
       localStorage.setItem('mh_breeder_icon', JSON.stringify('🐣'));
       localStorage.setItem('mh_onboarded', JSON.stringify(true));
       localStorage.setItem('mh_tutorial_seen_v1', JSON.stringify(true));
+      // HELL の公開・タクティクスの公開(2026-10-13〜15)後は、HOME で一度だけお話と説明が流れて画面を覆う。検査では見たことにする
+      localStorage.setItem('mh_rhythm_hell_story_seen_v1', JSON.stringify(true));
+      localStorage.setItem('mh_tactics_intro_seen_v1', JSON.stringify(true));
       localStorage.setItem('mh_battle_tutorial_seen_v1', JSON.stringify(true));
       localStorage.setItem('mh_battle_tutorial_guide_shown_v1', JSON.stringify(true));
       localStorage.setItem('mh_masu_migrated', JSON.stringify(true));

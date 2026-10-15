@@ -1786,7 +1786,7 @@ function BattleScreen({
                 {luckBanners.map(b=>(<div key={b.id} data-battle-luck-banner={b.tone}
                   className={`w-full rounded-2xl border-2 px-3 py-1.5 text-center shadow-[0_4px_20px_rgba(0,0,0,.85)] ${b.tone==='bad'?'bg-slate-800/95 border-slate-300 text-slate-100':b.tone==='enemy'?'bg-violet-800/95 border-violet-200 text-white':'bg-amber-600/95 border-amber-100 text-white'}`}
                   style={{animation:liteBattleView?undefined:'skillNamePop 350ms ease-out forwards'}}>
-                  <div data-battle-luck-title className="text-[11px] font-black leading-tight opacity-90">{b.icon} {b.title}</div>
+                  <div data-battle-luck-title className="text-[11px] font-black leading-tight opacity-90">{cardIconNode(b.icon,14)} {b.title}</div>
                   <div data-battle-luck-result className="mt-0.5 text-[15px] font-black leading-snug">{b.result}</div>
                 </div>))}
               </div>,document.body
