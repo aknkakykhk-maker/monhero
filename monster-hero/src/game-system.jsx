@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3083996d885bb0b2
+// generated-sha256: b26a389ba719b0e9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-15 15:47"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-15 17:01"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8460,7 +8460,7 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   rhythmHell: true,
   // 行動カードの絵(枠4色・技のマーク・段階の札)。社長が今のカードと見比べて決めるまで偽(2026-10-15)。
   //   見比べはデバッグ設定の「行動カードの絵」の切り替えで(BATTLE_CARD_ART_DEBUG・71-screen-battle.jsx)
-  battleCardArt: false,
+  battleCardArt: true,
   assistantChat: true,
   // ふだんの吹き出しを1日1回まとめて作る(2026-10-14)。2026-10-14 社長「もう公開していいよ」→真にした(56-assistant-chat.jsx)
   assistantDailyLines: true,
@@ -37343,6 +37343,7 @@ const battleCardArtOn = () => (typeof RELEASE_FLAGS !== 'undefined' && RELEASE_F
 //   小さい字・長音・句読点の前では折らない。候補のうち「長い方の行がいちばん短い」所で折る。1行に収まるなら1行。
 //   長すぎる行(8字以上)は同じ決まりでもう一度折る。返り値は行の配列
 const BATTLE_CARD_NAME_PER_LINE = 5;
+const BATTLE_CARD_NAME_ONE_LINE = 8;
 const battleCardNameClass = (ch) => (/[\u30a0-\u30ff\u31f0-\u31ff\uff66-\uff9f]/.test(ch) ? 'kata'
   : /[\u3040-\u309f]/.test(ch) ? 'hira' : /[\u4e00-\u9fff\u3005\u3006]/.test(ch) ? 'kan' : /[0-9A-Za-z\uff10-\uff5a]/.test(ch) ? 'alnum' : 'other');
 const BATTLE_CARD_NO_BREAK_BEFORE = /^[ぁぃぅぇぉっゃゅょゎゕゖァィゥェォッャュョヮヵヶーｰ・、。！？!?…ゝゞヽヾ）」』】]/;
@@ -37350,7 +37351,7 @@ const BATTLE_CARD_NO_BREAK_BEFORE = /^[ぁぃぅぇぉっゃゅょゎゕゖァ�
 //   「|」の無い名前は1行。手札に出る名前を全部ためして決めた(tools/battle/card-art-check.js が全部の折り方を見る)
 const BATTLE_CARD_NAME_BREAKS = Object.freeze({
   'ルミナスレイ': 'ルミナス|レイ', 'ナイトサンダー': 'ナイト|サンダー', 'エクリプスキッス': 'エクリプス|キッス', 'コンビネーション': 'コンビ|ネーション',
-  'ドリルコンビネーション': 'ドリル|コンビ|ネーション', '大たおれこみ': '大|たおれこみ', '超たおれこみ': '超|たおれこみ',
+  'ドリルコンビネーション': 'ドリル|コンビネーション', '大たおれこみ': '大|たおれこみ', '超たおれこみ': '超|たおれこみ',
   'アイスブレード': 'アイス|ブレード', 'アクアウェイブ': 'アクア|ウェイブ', 'スプラッシュ': 'スプラッシュ', 'ジングルベル': 'ジングル|ベル',
   'アクアゲイザー': 'アクア|ゲイザー', 'ぞうさんぴろぴろ鼻': 'ぞうさん|ぴろぴろ鼻', 'ハトのおとしもの': 'ハトの|おとしもの', '大きなおとしもの': '大きな|おとしもの',
   'グリンネーション': 'グリン|ネーション', '超モッチ砲2': '超モッチ砲2', '超モッチ砲3': '超モッチ砲3', '超モッチ砲ゴッド': '超モッチ砲|ゴッド',
@@ -37367,10 +37368,12 @@ const BATTLE_CARD_NAME_BREAKS = Object.freeze({
   'みゃるの怪薬': 'みゃるの|怪薬', 'みゃるの禁薬': 'みゃるの|禁薬', "KUROMI'S5アタック": "KUROMI'S|5アタック",
   '白き誓い切なる願い': '白き誓い|切なる願い', '神光よ汚れを祓え': '神光よ|汚れを祓え', '祈れ輪廻の環よ': '祈れ|輪廻の環よ', '裁きの光よ下れ': '裁きの光よ|下れ',
   '今こそ真なる目醒め': '今こそ|真なる目醒め',
-  // 置き場(中の面の内側)は最小の字でも1行6字まで。超える名前は3行にする(2026-10-15 社長「枠にかぶらないように」)
-  'ピアノパラソル脳天撃': 'ピアノ|パラソル|脳天撃', 'メロディキャンディボム': 'メロディ|キャンディ|ボム', 'ナイトメアらっきょうボム': 'ナイトメア|らっきょう|ボム', '聖夜の鐘を鳴響け': '聖夜の鐘を|鳴響け', '終焉に救いを与えよ': '終焉に|救いを与えよ', '永劫の贖いを全うせよ': '永劫の贖いを|全うせよ',
+  // 名前は2行まで(2026-10-15 社長「文字は全部同じサイズで最大2行」)。長い名前も言葉の切れ目で2行に折る
+  'ピアノパラソル脳天撃': 'ピアノパラソル|脳天撃', 'メロディキャンディボム': 'メロディ|キャンディボム', 'ナイトメアらっきょうボム': 'ナイトメア|らっきょうボム', '聖夜の鐘を鳴響け': '聖夜の鐘を|鳴響け', '終焉に救いを与えよ': '終焉に|救いを与えよ', '永劫の贖いを全うせよ': '永劫の贖いを|全うせよ',
 });
 const battleCardNameLines = (name, per = BATTLE_CARD_NAME_PER_LINE) => {
+  // 1行に入る名前(5.75px で置き場に収まる8字ぶんまで)は折らない(2026-10-15 社長「短い技名も無理して2行にしないで」)
+  if (per === BATTLE_CARD_NAME_PER_LINE && battleCardNameUnits(name) <= BATTLE_CARD_NAME_ONE_LINE) return [String(name || '')];
   if (Object.prototype.hasOwnProperty.call(BATTLE_CARD_NAME_BREAKS, String(name || ''))) return BATTLE_CARD_NAME_BREAKS[String(name)].split('|');
   const chars = [...String(name || '')];
   const n = chars.length;
@@ -37400,19 +37403,19 @@ const battleCardNameLines = (name, per = BATTLE_CARD_NAME_PER_LINE) => {
   const more = (t) => ([...t].length >= 8 ? battleCardNameLines(t, per) : [t]);
   return [...more(head), ...more(tail)];
 };
-// 名前の字の大きさ(2026-10-15 社長「枠にかぶらないように」)。名前は「文字の置き場」(名前の欄の内側。CSS の padding で中の面の
-//   宝石より内側に決める)の中にだけ置く。字は 置き場の幅÷最長の行 と 置き場の高さ÷行数 の小さい方(8.5px まで。社長「技名は小さくしたほうがいい」で10pxから下げた)。
-//   名前の欄は大きさの基準(container-type:size)なので、cqw/cqh は置き場の幅・高さ。下の飾り線の場所(--mh-rule-h。ふつう6px)は高さから先に引く。
-//   英数(KUROMI'S など)は和文の字より細いので 0.62 字に数える。1行7字(グランド/イリュージョン など)だけ 7px を少し下回る。
-//   スターバースト・/ストリームは社長の指示で2行(3行より釣り合いがよい)。金の枠は置き場が広いので約6.5px
+// 名前の字の大きさ(2026-10-15 社長「文字は全部同じサイズで最大2行にならない？」→ 5.8px でそろえる)。
+//   名前は「文字の置き場」(名前の欄の内側。CSS の padding で中の面の宝石より内側に決める)の中にだけ置き、どの名前も同じ大きさ・2行まで。
+//   大きさは、いちばん長い行(スターバースト・/ストリームの8字)が赤青緑紫の枠の置き場(手札で約46px)にちょうど収まる 5.75px。
+//   名前の欄は大きさの基準(container-type:size)なので、カードが小さい画面では置き場の幅・高さ(cqw/cqh)に合わせて縮むだけにする
+//   (下の飾り線の場所 --mh-rule-h は高さから先に引く)。英数(KUROMI'S など)は和文の字より細いので 0.62 字に数える
+const BATTLE_CARD_NAME_PX = 5.75;
+const BATTLE_CARD_NAME_LH = 1.12;
 const battleCardNameUnits = (line) => [...String(line || '')].reduce((n, ch) => n + (/[\x20-\x7e]/.test(ch) ? 0.62 : 1), 0);
 const battleCardNameFit = (name) => {
   const lines = battleCardNameLines(name);
   const longest = Math.max(1, ...lines.map(battleCardNameUnits));
-  // 3行の名前は行の間を詰める(横持ちは名前の欄の高さが25px前後しかない)。幅は太字で少し広がるぶん 1.5px 引いておく
-  const lh = lines.length >= 3 ? 1.02 : 1.12;
-  const tall = (lines.length * lh).toFixed(2);
-  return { fontSize: `clamp(5.5px, min(calc((100cqw - 1.5px) / ${longest.toFixed(2)}), calc((100cqh - var(--mh-rule-h, 6px)) / ${tall})), 8.5px)`, lineHeight: String(lh), whiteSpace: 'nowrap' };
+  const tall = (lines.length * BATTLE_CARD_NAME_LH).toFixed(2);
+  return { fontSize: `min(${BATTLE_CARD_NAME_PX}px, calc((100cqw - 1.5px) / ${longest.toFixed(2)}), calc((100cqh - var(--mh-rule-h, 6px)) / ${tall}))`, lineHeight: String(BATTLE_CARD_NAME_LH), whiteSpace: 'nowrap' };
 };
 const BATTLE_CARD_ROMAN = Object.freeze(['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX']);
 // カード1枚の絵。{ frame, mark(技のマークの絵・無ければ null で今のアイコン), roman(段階の札・無ければ '') }

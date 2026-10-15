@@ -8,7 +8,7 @@
 //   ① 置き場はカード幅の16.5%より内側(中の面の宝石はカード幅の約14%まで来る。金の枠は縁が細いので12.5%)・上は段階の札の下・下は下段の札の上
 //      金の枠(固有技)は、大きい丸の下の宝石の飾り(カードの高さの約42.5%)より下(2026-10-15 社長「固有技だけカードの柄に被ってる」)
 //   ② 名前は置き場からはみ出さない(下の飾り線の場所 6px も残す。横持ちの金の枠は名前の欄が狭いので線を出さない)。赤・金の両方、縦持ち・横持ちの両方
-//   ③ 字は 5.5px 以上。7px を下回る名前は、語を割れない少しだけの名前(一覧を出す)
+//   ③ 手札の大きさ(72px幅)では、どの名前も同じ大きさ(5.75px)・2行まで(2026-10-15 社長「文字は全部同じサイズで最大2行」)
 const fs = require('fs');
 const path = require('path');
 const http = require('http');
@@ -110,7 +110,7 @@ const server = http.createServer((req, res) => {
           // ② はみ出し(字と飾り線をまとめて置き場に収める)
           const fits = sr.left >= box.l - 0.5 && sr.right <= box.r + 0.5 && sr.height + gap + ruleH <= box.b - box.t + 0.5;
           if (!fits) out.bad.push(`${c.lines.join('/')}(${kind} ${font.toFixed(1)}px 幅${sr.width.toFixed(1)}/${(box.r - box.l).toFixed(1)} 高さ${(sr.height + gap + ruleH).toFixed(1)}/${(box.b - box.t).toFixed(1)})`);
-          if (font < 7 - 0.01 && kind === 'red') out.small.push(`${c.lines.join('/')} ${font.toFixed(1)}px`);
+          if ((Math.abs(font - 5.75) > 0.05 || c.lines.length > 2) && out.small.length < 6) out.small.push(`${c.lines.join('/')}(${kind}) ${font.toFixed(2)}px ${c.lines.length}行`);
           if (font < 5.5 - 0.01) out.bad.push(`${c.name} ${font}px`);
         }
         return out;
@@ -122,10 +122,7 @@ const server = http.createServer((req, res) => {
       small.push(...res.small.map((s) => `${label} ${s}`));
       await page.close();
     }
-    // ③ 縦持ちで 7px を下回るのは、語を割れない数件だけ(横持ちは高さで決まるので3行の名前は小さくなってよい)
-    const portraitSmall = small.filter((s) => s.startsWith('縦持ち'));
-    check('③ 縦持ちで 7px を下回る名前は5件以下', portraitSmall.length <= 5, portraitSmall.join(' / '));
-    if (small.length) console.log(`   7px 未満: ${small.join(' / ')}`);
+    check('③ 縦持ち・横持ちとも、どの名前も同じ大きさ(5.75px)・2行まで', small.length === 0, small.join(' / '));
   } catch (e) { check('ブラウザで確かめられた', false, String(e).slice(0, 300)); }
   finally { if (browser) await browser.close(); server.close(); }
   console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
