@@ -16,6 +16,7 @@ async function newPlayerScenario(s, { maxSteps = 150 } = {}) {
   await s.boot({ toHome: false });
   let reached = false, stepsTaken = 0, typed = 0;
   const done = new Set();
+  const recent = [];
   for (; stepsTaken < maxSteps; stepsTaken++) {
     s.state.step += 1;
     // 「はじめての設定」(名前・アイコン)を終え、案内の会話も抜けたら成功。
@@ -37,8 +38,15 @@ async function newPlayerScenario(s, { maxSteps = 150 } = {}) {
     // アイコンを選ぶ画面のように「進む」ボタンが無い一覧では、並んでいるものから1つ選ぶ
     const pick = setup || (skip && rand() < 0.5 ? skip : forward.length ? forward[0]
       : others.length ? others[Math.floor(rand() * others.length)] : list[Math.floor(rand() * list.length)]);
+    // 窓の中で同じ2つのボタンを行ったり来たりしている(動画の「音ありで見る／音を消す」など)ときは、人と同じく窓を閉じる
+    // (2026-10-15・「HELL の遊び方」の動画の窓で、閉じるを BACKWARD として避け続け150手使い切った)
+    recent.push(pick.label);
+    if (recent.length > 4) recent.shift();
+    const closer = list.find((b) => /^(とじる|閉じる)$/.test(b.label));
+    const pingPong = inDialog && recent.length === 4 && new Set(recent).size <= 2;
+    const finalPick = pingPong && closer ? closer : pick;
     if (setup) done.add(setup.label);
-    await s.tap(pick, 'はじめての案内');
+    await s.tap(finalPick, 'はじめての案内');
     await s.inspect();
     // はじめての人に、れんしゅう(の案内)と時刻で流れるお話が同時に出ていないか(2026-10-10・改善部の指摘G8。れんしゅうのあとにお話を流す)
     const both = await page.evaluate(() => {
