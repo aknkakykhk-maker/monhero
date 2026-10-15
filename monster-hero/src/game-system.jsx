@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: cdf02ead15040263
+// generated-sha256: e13859af47ceb10c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-15 22:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-15 22:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -22583,14 +22583,15 @@ scheduleTick();};
       // いま押さえている帯へ、持ち替えのために置いた2本目の指。
       // まだ何も取らないが、1本目が離れたらこの指へそのまま渡す(inputEndsを参照)。
       // 空打ちの音は鳴らさない(押し損ねたわけではないので)
+      if(!target&&standby)RHYTHM_INPUT_REC.event('standby',{note:standby.index,key:input.inputKey,sub:input.subLaneCoordinate,sky:input.sky});
       if(!target&&standby){
-        run.standbyPointers.set(input.inputKey,standby.index);RHYTHM_INPUT_REC.event('standby',{note:standby.index,key:input.inputKey,sub:input.subLaneCoordinate,sky:input.sky});
+        run.standbyPointers.set(input.inputKey,standby.index);
         if(input.captureTarget&&input.pointerId!==undefined){try{input.captureTarget.setPointerCapture(input.pointerId);}catch{}}
         return;
       }
       // 指を滑らせて取り直した(rejudge)ときも、ノーツが無ければ空押しの音を鳴らす(レーンが変わるたびの「シャッ」)。
       // ただし、ノーツの音の直後(150ms以内)は鳴らさない(2026-10-07・成功したタップのあとに指が数px動くと余分に鳴っていた)
-      if(!target){RHYTHM_INPUT_REC.event('empty',{key:input.inputKey,sub:input.subLaneCoordinate,sky:input.sky,rejudge:!!input.rejudge});if(!input.rejudge||!RHYTHM_NOTE_SE_RUNTIME.recentNoteSe?.(150)){RHYTHM_PERF.emptyTap();RHYTHM_NOTE_SE_RUNTIME.playEmpty();}if(input.captureTarget&&input.pointerId!==undefined){try{input.captureTarget.setPointerCapture(input.pointerId);}catch{}}return;}const judgment=rhythmJudgeTap(deltaMs);if(target.type==='HOLD'){
+      if(!target)RHYTHM_INPUT_REC.event('empty',{key:input.inputKey,sub:input.subLaneCoordinate,sky:input.sky,rejudge:!!input.rejudge});if(!target){if(!input.rejudge||!RHYTHM_NOTE_SE_RUNTIME.recentNoteSe?.(150)){RHYTHM_PERF.emptyTap();RHYTHM_NOTE_SE_RUNTIME.playEmpty();}if(input.captureTarget&&input.pointerId!==undefined){try{input.captureTarget.setPointerCapture(input.pointerId);}catch{}}return;}const judgment=rhythmJudgeTap(deltaMs);if(target.type==='HOLD'){
       // 持ち替えの途中(離したばかりで浮いている)なら、続きとして引き継ぐ。
       // 始点の判定は最初に押さえたときのものを保つ(持ち替えで良くも悪くもならない)
       const handover=target.releasedAtMs!=null;
@@ -22646,7 +22647,7 @@ scheduleTick();};
     if(now>=holdEndMs-RHYTHM_HOLD_RELEASE_GRACE_MS){const own=rhythmReleaseFallback(note,now,settings.judgmentTimingOffsetMs);if(own)applyJudgment(note,own.judgment,own.deltaMs);else applyJudgment(note,note.holdJudgment||'MISS',note.holdDeltaMs||0);}
     // まだ途中なら、すぐには失敗にしない。指を入れ替えている途中かもしれないので、
     // 猶予のあいだは「浮いている」ことだけ覚えておく(rAFのvisitNoteが時間切れを見る)
-    else{note.releasedAtMs=now;rhythmFloatingNoteAdd(note);RHYTHM_INPUT_REC.event('float',{note:noteIndex,key:input.inputKey});}if(input.releaseTarget&&input.pointerId!==undefined){try{if(input.releaseTarget.hasPointerCapture?.(input.pointerId))input.releaseTarget.releasePointerCapture(input.pointerId);}catch{}}});};
+    else{note.releasedAtMs=now;rhythmFloatingNoteAdd(note);}if(!note.done&&note.releasedAtMs===now)RHYTHM_INPUT_REC.event('float',{note:noteIndex,key:input.inputKey});if(input.releaseTarget&&input.pointerId!==undefined){try{if(input.releaseTarget.hasPointerCapture?.(input.pointerId))input.releaseTarget.releasePointerCapture(input.pointerId);}catch{}}});};
   // 入力のたびに getBoundingClientRect() を呼ぶと、そのフレームで書き込み待ちだった
   // ノーツの位置をすべて確定させられる(強制レイアウト)。指の数ぶん・touchmoveの数ぶん
   // これが起きるため、タップのたびに一瞬止まって見える原因になる。FLICK/SLIDE側と

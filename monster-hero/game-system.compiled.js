@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 96b470c85a7b5c0f
+// source-sha256: 140340911badfd21
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-15 22:08";
+const BUILD_DATE = "2026-10-15 22:20";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -36574,14 +36574,14 @@ const RhythmTapTest = ({
         empty: !target || target.type === 'TAP'
       });
       RHYTHM_TOUCH_SPAN_RUNTIME.recordPhysicalTarget(input.inputKey, target);
+      if (!target && standby) RHYTHM_INPUT_REC.event('standby', {
+        note: standby.index,
+        key: input.inputKey,
+        sub: input.subLaneCoordinate,
+        sky: input.sky
+      });
       if (!target && standby) {
         run.standbyPointers.set(input.inputKey, standby.index);
-        RHYTHM_INPUT_REC.event('standby', {
-          note: standby.index,
-          key: input.inputKey,
-          sub: input.subLaneCoordinate,
-          sky: input.sky
-        });
         if (input.captureTarget && input.pointerId !== undefined) {
           try {
             input.captureTarget.setPointerCapture(input.pointerId);
@@ -36589,13 +36589,13 @@ const RhythmTapTest = ({
         }
         return;
       }
+      if (!target) RHYTHM_INPUT_REC.event('empty', {
+        key: input.inputKey,
+        sub: input.subLaneCoordinate,
+        sky: input.sky,
+        rejudge: !!input.rejudge
+      });
       if (!target) {
-        RHYTHM_INPUT_REC.event('empty', {
-          key: input.inputKey,
-          sub: input.subLaneCoordinate,
-          sky: input.sky,
-          rejudge: !!input.rejudge
-        });
         if (!input.rejudge || !RHYTHM_NOTE_SE_RUNTIME.recentNoteSe?.(150)) {
           RHYTHM_PERF.emptyTap();
           RHYTHM_NOTE_SE_RUNTIME.playEmpty();
@@ -36743,11 +36743,11 @@ const RhythmTapTest = ({
       } else {
         note.releasedAtMs = now;
         rhythmFloatingNoteAdd(note);
-        RHYTHM_INPUT_REC.event('float', {
-          note: noteIndex,
-          key: input.inputKey
-        });
       }
+      if (!note.done && note.releasedAtMs === now) RHYTHM_INPUT_REC.event('float', {
+        note: noteIndex,
+        key: input.inputKey
+      });
       if (input.releaseTarget && input.pointerId !== undefined) {
         try {
           if (input.releaseTarget.hasPointerCapture?.(input.pointerId)) input.releaseTarget.releasePointerCapture(input.pointerId);
