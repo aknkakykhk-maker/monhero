@@ -98,7 +98,7 @@ window.__mhBoot = (function () {
 })();
 // 本体JSのキャッシュキー。ここで一度だけ宣言し、下の読み込み処理でも同じ値を使う。
 // 先読みと <script> のURLがずれると、同じ2.7MBを2回取りに行くことになる
-var GAME_BUILD = '202610160708';
+var GAME_BUILD = '202610160724';
 window.__mhGameBuild = GAME_BUILD;
 // 起動でいちばん大きいのは本体JS(約2.7MB)。いちばん後ろで読むため、そこへ来ると
 // ゲージが止まって見えていた。先に取りはじめて、受け取ったバイト数をそのまま出す。
@@ -256,7 +256,8 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
     /* 後ろのぼかしは付けない(2026-10-15 社長「ぼかしがやすっぽくみえる」)。読みやすさは字の縁取りで持たせる */
     background: none !important; box-shadow: none !important;
     /* 字は枠と同じ系統の明るい金。縁取りは字の大きさ(8.5px まで)に合わせて細く(0.5px)、濃い金茶。影は小さく近く(にじんで字がつぶれないように) */
-    color: #f8d98c !important; font-family: 'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP', serif; letter-spacing: 0;
+    /* 字は太いゴシック(2026-10-16 社長「技名をもっと文字太くして」。明朝は絵の上で細く見えた)。大きさ・折り方は battleCardNameFit のまま */
+    color: #f8d98c !important; font-family: 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Noto Sans JP', 'Yu Gothic', system-ui, sans-serif; font-weight: 900 !important; letter-spacing: 0;
     text-shadow: .5px 0 0 rgba(48,24,4,.92), -.5px 0 0 rgba(48,24,4,.92), 0 .5px 0 rgba(48,24,4,.92), 0 -.5px 0 rgba(48,24,4,.92), 0 .8px 1.2px rgba(20,10,0,.6) !important; }
   [data-card-plate] [data-card-name-text] { display: block; flex: none; width: max-content; }
   [data-card-plate] [data-card-name] { --mh-rule-h: 6px; }
@@ -281,6 +282,9 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
   [data-card-art] [data-skill-change-spacer] { height: auto !important; min-height: 0 !important; justify-content: flex-end; padding: 0 !important; }
   /* ★押せる場所は今(カード幅いっぱい・高さ26〜30px)より狭くしない。見た目は中の面に収め、押せる範囲だけ左右へ広げる */
   [data-card-art] [data-skill-change] { position: relative; }
+  /* 「⇄ 技変更」は矢印ごと真ん中に置くと「技変更」の字が右へずれ、下の種類の札(攻撃)が左に寄って見えた(2026-10-16 社長)。
+     右に矢印と同じ幅の見えない字を置いて、「技変更」の字をカードの真ん中にそろえる(新しいカードの絵だけ) */
+  [data-card-art] [data-skill-change] > span:first-child::after { content: '⇄'; visibility: hidden; }
   [data-card-art] [data-skill-change]::after { content: ''; position: absolute; top: -5px; bottom: -5px; left: calc(-7cqw - 4px); right: calc(-7cqw - 4px); }
   /* 段階の札は、大きい丸の下の縁にかかる位置(丸の中心+半径)。金の縁と枠の地に近い暗い金茶で、枠の飾りになじませる */
   .mh-card-art-roman { position: absolute; left: 50%; top: calc(17.8% + 20.4cqw); transform: translate(-50%, -50%); z-index: 8; pointer-events: none;
