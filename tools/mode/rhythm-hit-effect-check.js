@@ -262,12 +262,22 @@ check('画面のフラッシュは opacity だけを動かす(あらかじめ置
   &&!/@keyframes mhRhythmScreenFlash\{[^}]*transform/.test(hitCss.replace(/\s+/g,''))
   &&hitCss.includes('[data-rhythm-screen-flash]{position:absolute;inset:0;pointer-events:none;'));
 check('演出量MINIMAL・軽量モードでは出さない(音は鳴る)',
-  hitCss.includes('[data-rhythm-play-area][data-rhythm-effect="MINIMAL"] [data-rhythm-hit-layer]')
+  // 設定「押したときの光」が「いつも出す」(data-rhythm-tap-light="1")のときだけは、光の層を残す(2026-10-15)
+  hitCss.includes('[data-rhythm-play-area][data-rhythm-effect="MINIMAL"]:not([data-rhythm-tap-light="1"]) [data-rhythm-hit-layer]')
+  &&hitCss.includes('[data-rhythm-play-area][data-rhythm-lightweight="true"]:not([data-rhythm-tap-light="1"]) [data-rhythm-hit-layer]')
   &&hitCss.includes('[data-rhythm-play-area][data-rhythm-lightweight="true"] [data-rhythm-screen-flash]')
   &&hitCss.includes('display:none!important')
   // 音は演出量の外で鳴らす
   // 間に空中のノーツの「きらっ」の音(playSky・演出量の外)が入ってよい
   &&/if\(monsterHit\)RHYTHM_NOTE_SE_RUNTIME\.playMonster\(\);\s*\n(?:\s*\/\/[^\n]*\n\s*if\(rhythmNoteSkyHeight\(note\)>0\)RHYTHM_NOTE_SE_RUNTIME\.playSky\(judgment\);\s*\n)?\s*if\(!settings\.lightweightMode/.test(game));
+// 設定「押したときの光」(2026-10-15)。既定は「おまかせ」(これまでどおり)で、新しい項目は正規化で補う。
+// 「いつも出す」の枝は判定ラインの光だけを出す(判定文字・コンボ数・フラッシュ・マスモンの跳ねには触らない)
+{const i=game.indexOf('}else if(rhythmTapLightOnly(settings)){'),branch=i>=0?game.slice(i,game.indexOf('\n}\n',i)):'';
+check('「押したときの光」: 既定はおまかせ・正規化で補う・「いつも出す」の枝は光だけ',
+  game.includes("tapLight:'AUTO',")
+  &&game.includes('tapLight:RHYTHM_TAP_LIGHT_MODES.includes(source.tapLight)?source.tapLight:DEFAULT_RHYTHM_SETTINGS.tapLight,')
+  &&branch.includes('rhythmSpawnHitEffect(area,')&&branch.includes('monster:false')
+  &&!/judgmentText|comboRef|screenFlashRef|sideMonsterRefs|rhythmBurst/.test(branch));}
 check('入力を邪魔しない',
   hitCss.includes('[data-rhythm-hit-layer]{position:absolute;inset:0;pointer-events:none;')
   &&hitCss.includes('[data-rhythm-screen-flash]{position:absolute;inset:0;pointer-events:none;'));
@@ -474,6 +484,19 @@ html,body{margin:0;background:#000}
       return getComputedStyle(layer).display;
     });
     check('軽量モードではヒットエフェクトを出さない',lightweight==='none',lightweight);
+    // 「押したときの光」を「いつも出す」にしたときは、軽量モード・最小でも光の層だけは出す。画面のフラッシュは止めたまま(2026-10-15)
+    const tapLight=await page.evaluate(()=>{
+      const area=document.querySelector('[data-rhythm-play-area]');
+      const flash=document.createElement('div');flash.setAttribute('data-rhythm-screen-flash','');area.appendChild(flash);
+      area.dataset.rhythmTapLight='1';
+      const layer=area.querySelector('[data-rhythm-hit-layer]');
+      const out={lightweight:getComputedStyle(layer).display,flash:getComputedStyle(flash).display};
+      area.dataset.rhythmLightweight='false';area.dataset.rhythmEffect='MINIMAL';
+      out.minimal=getComputedStyle(layer).display;out.minimalFlash=getComputedStyle(flash).display;
+      return out;
+    });
+    check('「押したときの光」を「いつも出す」にすると、軽量モード・最小でも光だけは出る(フラッシュは止めたまま)',
+      tapLight.lightweight!=='none'&&tapLight.minimal!=='none'&&tapLight.flash==='none'&&tapLight.minimalFlash==='none',JSON.stringify(tapLight));
   }finally{
     if(browser)await browser.close();
     server.close();
