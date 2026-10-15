@@ -32567,6 +32567,10 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   const endBarKind=(note,flick)=>flick?'FLICK':rhythmNoteIsSlide(note)?'SLIDE':'HOLD';
   const END_FLICK_ARROW_GLOWS=Object.freeze([[4,`rgba(${RHYTHM_NOTE_COLORS.FLICK.rgb},.95)`],[2,'rgba(2,6,23,.85)']]);
   const END_FLICK_ARROW_FILL=Object.freeze([[0,RHYTHM_NOTE_COLORS.FLICK.hi],[.6,RHYTHM_NOTE_COLORS.FLICK.mid],[1,RHYTHM_NOTE_COLORS.FLICK.lo]]);
+  // 空中のスライドの終点フリックの印(2026-10-15 社長「小さくて見落として離してしまう」)。地上と同じピンクの横棒＋上向きの矢印を、
+  // 一回り大きく・白いふちと強めの光で描く。光は焼いた絵を貼るだけなので、演出量「最小」・軽量モード・演出の自動の控えめでも消さない
+  const SKY_END_FLICK={barW:1.5,barMinW:30,barH:1.6,arrowW:30,arrowH:22};
+  const SKY_END_FLICK_ARROW_GLOWS=Object.freeze([[9,`rgba(${RHYTHM_NOTE_COLORS.FLICK.rgb},.9)`],[4,`rgba(${RHYTHM_NOTE_COLORS.FLICK.rgb},.95)`],[2,'rgba(2,6,23,.85)']]);
   // 空中のタップ・フリック(skyHeight が数で >0)を、ふつうのノーツと同じ板で描くか(既定 'plate')。旧スタイルは localStorage で選べる
   const isSkyPlate=note=>!!note&&Number(note.skyHeight)>0&&skyTapStyle()==='plate';
   const headStyle=(note,failed,monster)=>{
@@ -33362,9 +33366,16 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     if(!end)return;
     // DOM 版: top = releaseY + noteH/2 - 4、高さ 8px を scaleY(0.52+0.48*奥行き) で中心基準に伸縮 → 中心は end.cy のまま
     // 横幅は帯と同じくノーツサイズの倍率(sizeX と同じ考え方。中心は動かさない)
-    const flick=note.endFlick===true,h=8*(0.52+end.scale*.48),w=end.w*sizeScale,x=end.cx-w/2,top=end.cy-h/2;
+    const flick=note.endFlick===true;
+    // 空中のスライドの終点フリックは大きく(SKY_END_FLICK)。地上と、終点フリックの無い終わりは今までどおり
+    const skyFlick=flick&&!failed&&rhythmSlideHasSky(note);
+    const h=8*(0.52+end.scale*.48)*(skyFlick?SKY_END_FLICK.barH:1),baseW=end.w*sizeScale,w=skyFlick?Math.max(baseW*SKY_END_FLICK.barW,SKY_END_FLICK.barMinW*sizeScale):baseW,x=end.cx-w/2,top=end.cy-h/2;
     ctx.globalAlpha=alpha;
-    if(!failed&&effect!=='MINIMAL'&&!lightweight){
+    if(skyFlick){
+      // 光は焼いた絵を貼るだけ(軽い)。最小・軽量では控えめの光にするが、消しはしない
+      const low=effect==='LOW'||effect==='LIGHT'||effect==='MINIMAL'||lightweight;
+      glowBegin();draw3Slice(glowSprite(`end:FLICK:${low?'low':'full'}`,4,END_BAR_GLOWS.FLICK[low?'low':'full']),end.cx,end.cy,w,h,alpha);glowEnd();
+    }else if(!failed&&effect!=='MINIMAL'&&!lightweight){
       const low=effect==='LOW'||effect==='LIGHT',kind=endBarKind(note,flick);
       const sprite=glowSprite(`end:${kind}:${low?'low':'full'}`,4,END_BAR_GLOWS[kind][low?'low':'full']);
       glowBegin();draw3Slice(sprite,end.cx,end.cy,w,h,alpha);glowEnd();
@@ -33374,9 +33385,10 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     if(failed){g.addColorStop(0,'#94a3b8');g.addColorStop(.5,'#e2e8f0');g.addColorStop(1,'#94a3b8');}
     else{const c=endBarColor(note,flick);g.addColorStop(0,c.mid);g.addColorStop(.5,c.hi);g.addColorStop(1,c.mid);}
     ctx.fillStyle=g;ctx.fill();
-    ctx.lineWidth=1;ctx.strokeStyle=failed?'rgba(148,163,184,.6)':'rgba(255,255,255,.85)';ctx.stroke();
+    ctx.lineWidth=skyFlick?1.8:1;ctx.strokeStyle=failed?'rgba(148,163,184,.6)':skyFlick?'#ffffff':'rgba(255,255,255,.85)';ctx.stroke();
     if(flick&&!failed){
-      const sprite=arrowSprite('endFlick',24,17,END_FLICK_ARROW_GLOWS,END_FLICK_ARROW_FILL);
+      const sprite=skyFlick?arrowSprite('endFlickSky',SKY_END_FLICK.arrowW,SKY_END_FLICK.arrowH,SKY_END_FLICK_ARROW_GLOWS,END_FLICK_ARROW_FILL,'#ffffff')
+        :arrowSprite('endFlick',24,17,END_FLICK_ARROW_GLOWS,END_FLICK_ARROW_FILL);
       const aw=sprite.tw+sprite.margin*2,ah=sprite.th+sprite.margin*2;
       ctx.drawImage(sprite.canvas,end.cx-aw/2,top-2-(sprite.th+sprite.margin),aw,ah);
     }
@@ -33861,6 +33873,9 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       const low=effect==='LOW'||effect==='LIGHT';
       for(const kind of ['HOLD','SLIDE','FLICK'])glowSprite(`end:${kind}:${low?'low':'full'}`,4,END_BAR_GLOWS[kind][low?'low':'full']);
       arrowSprite('endFlick',24,17,END_FLICK_ARROW_GLOWS,END_FLICK_ARROW_FILL);
+      // 空中のスライドの終点フリック(大きい矢印と、最小・軽量でも使う控えめの光)
+      arrowSprite('endFlickSky',SKY_END_FLICK.arrowW,SKY_END_FLICK.arrowH,SKY_END_FLICK_ARROW_GLOWS,END_FLICK_ARROW_FILL,'#ffffff');
+      if(!low)glowSprite('end:FLICK:low',4,END_BAR_GLOWS.FLICK.low);
       // 押さえている最中の光(演奏の途中で新しく絵を作らないよう、ここで焼いておく)
       if(effect!=='MINIMAL'){for(const kind of ['HOLD','SLIDE']){holdSparkSprite(kind);sparkStreakSprite(kind);holdPillarSprite(kind);holdColumnSprite(kind);}sparkDotSprite();hitFlareSprite();holdBoltSprite();}
       // 叩いたときの光(canvas で描くときだけ)
