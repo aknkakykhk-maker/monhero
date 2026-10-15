@@ -4,11 +4,11 @@
 //   node tools/battle/card-name-fit-browser-check.js
 //
 // 本物の CSS(index.html の <style> と tailwind.css)と、本物の折り方・字の大きさ(battleCardNameLines / battleCardNameFit)で、
-// 手札と同じ大きさのカード(縦持ち 75.6×140・横持ち 75.6×111。絵のカードは隣と接するよう左右へ2pxずつ広げてある)を作り、名前を1つずつ置いて測る。
+// 手札と同じ大きさのカード(縦持ち 72×133・横持ち 72×111。手札では見た目だけ約1.1倍に拡大するが、置き場の割合は同じ)を作り、名前を1つずつ置いて測る。
 //   ① 置き場はカード幅の16.5%より内側(中の面の宝石はカード幅の約14%まで来る。金の枠は縁が細いので12.5%)・上は段階の札の下・下は下段の札の上
 //      金の枠(固有技)は、大きい丸の下の宝石の飾り(カードの高さの約42.5%)より下(2026-10-15 社長「固有技だけカードの柄に被ってる」)
 //   ② 名前は置き場からはみ出さない(下の飾り線の場所 6px も残す。横持ちの金の枠は名前の欄が狭いので線を出さない)。赤・金の両方、縦持ち・横持ちの両方
-//   ③ どの名前も同じ大きさ(8字ぶんが赤青緑紫の置き場に収まる大きさ。手札で約6.05px)・2行まで(2026-10-15 社長「文字は全部同じサイズで最大2行」)
+//   ③ どの名前も同じ大きさ(8字ぶんが赤青緑紫の置き場に収まる大きさ。手札で約5.7px)・2行まで(2026-10-15 社長「文字は全部同じサイズで最大2行」)
 const fs = require('fs');
 const path = require('path');
 const http = require('http');
@@ -41,7 +41,7 @@ const nameCtx = {};
 vm.createContext(nameCtx);
 vm.runInContext(battle.slice(battle.indexOf('const BATTLE_CARD_NAME_PER_LINE'), battle.indexOf('const BATTLE_CARD_ROMAN = Object.freeze(')).replace(/^const /gm, 'var '), nameCtx);
 const names = collectNames();
-const CARD_W = 75.6;
+const CARD_W = 72;
 const WANT = (CARD_W * 0.66 - 1.5) / 8; // 赤青緑紫の置き場(カード幅の66%)に8字ぶんがちょうど収まる大きさ
 const cards = names.map((n) => ({ name: n, lines: nameCtx.battleCardNameLines(n), style: nameCtx.battleCardNameFit(n) }));
 
@@ -68,7 +68,7 @@ const server = http.createServer((req, res) => {
   try {
     browser = await playwright.chromium.launch(fs.existsSync('/opt/pw-browsers/chromium') ? { executablePath: '/opt/pw-browsers/chromium' } : {});
     const small = [];
-    for (const [label, vw, vh, cardH] of [['縦持ち', 390, 844, 140], ['横持ち', 844, 390, 111]]) {
+    for (const [label, vw, vh, cardH] of [['縦持ち', 390, 844, 133], ['横持ち', 844, 390, 111]]) {
       const page = await browser.newPage({ viewport: { width: vw, height: vh } });
       await page.goto(`http://localhost:${port}/monster-hero/__card-name-fit.html`);
       const res = await page.evaluate(({ cards, cardH, CARD_W, WANT }) => {

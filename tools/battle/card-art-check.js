@@ -62,9 +62,8 @@ check('⑦ 名前は全部同じ大きさ(8字ぶんが赤青緑紫の置き場�
   && /\[data-card-plate="gold"\] \[data-card-name\] \{ padding: 0 6cqw !important; --mh-name-ratio: 0\.8919; \}/.test(htmlSrc)
   && /<span data-card-name-text style=\{battleCardNameFit\(c\.name\)\}>/.test(battle));
 // ⑧ 手札の幅と高さ(2026-10-15 社長「カードが小さくなって見にくい」「移動するときにカードが潰れる」)
-check('⑧ 絵のカードは左右へ2pxずつ広げて隣と接する・縦持ちは手札の段を高くして枠の絵の縦横比に', /\[data-hand-card\]\[data-card-art\]:not\(\[data-dragging-card\]\) \{ width: calc\(100% \+ 4px\) !important; max-width: none !important; margin: 0 -2px !important; \}/.test(htmlSrc)
-  && /@media \(orientation: portrait\) \{ \[data-hand-tray\]:has\(\[data-card-art\]\) \{ height: clamp\(172px, calc\(37vw \+ 57px\), 236px\) !important; \} \}/.test(htmlSrc) && /<div data-hand-tray /.test(battle));
-check('⑧ 運んでいる間も、押した瞬間のカードの幅・高さのまま(潰れない)', /setDragState\(\{cardIndex:i, x:pt\.clientX, y:pt\.clientY, active:false, card:c, w:r0&&r0\.width>0\?r0\.width:null, h:r0&&r0\.height>0\?r0\.height:null\}\)/.test(battle)
+check('⑧ 絵のカードは見た目だけ拡大して、太い縁の外側を前の手札の外寸にそろえる(並び・押せる場所はそのまま)', /\[data-hand-card\]\[data-card-art\] \{ scale: 1\.126 1\.08; \}/.test(htmlSrc));
+check('⑧ 運んでいる間も、押した瞬間のカードの幅・高さのまま(潰れない)', /setDragState\(\{cardIndex:i, x:pt\.clientX, y:pt\.clientY, active:false, card:c, w:w0, h:h0\}\)/.test(battle)
   && /width:dragState\.w\?`\$\{dragState\.w\}px`:'72px',\.\.\.\(dragState\.h\?\{height:`\$\{dragState\.h\}px`\}:\{\}\)/.test(battle));
 check('⑤ 名札・飾り線もバトル前に読み込む', /\.\.\.Object\.values\(BATTLE_CARD_ART\.plates \|\| \{\}\), \.\.\.Object\.values\(BATTLE_CARD_ART\.rules \|\| \{\}\)\]/.test(battle));
 check('⑤ 飾り線は枠と同じ色(rule-赤/青/緑/紫/金)を --mh-name-rule で渡す', ['red', 'blue', 'green', 'purple', 'gold'].every((k) => strip(A.rules && A.rules[k]).endsWith(`rule-${k}.webp`)) && /'--mh-name-rule':`url\("\$\{cardArt\.rule\}"\)`/.test(battle));
