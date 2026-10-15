@@ -83,7 +83,7 @@ const BATTLE_CARD_NO_BREAK_BEFORE = /^[ぁぃぅぇぉっゃゅょゎゕゖァ�
 //   「|」の無い名前は1行。手札に出る名前を全部ためして決めた(tools/battle/card-art-check.js が全部の折り方を見る)
 const BATTLE_CARD_NAME_BREAKS = Object.freeze({
   'ルミナスレイ': 'ルミナス|レイ', 'ナイトサンダー': 'ナイト|サンダー', 'エクリプスキッス': 'エクリプス|キッス', 'コンビネーション': 'コンビ|ネーション',
-  'ドリルコンビネーション': 'ドリル|コンビ|ネーション', '大たおれこみ': '大|たおれこみ', '超たおれこみ': '超|たおれこみ',
+  'ドリルコンビネーション': 'ドリル|コンビネーション', '大たおれこみ': '大|たおれこみ', '超たおれこみ': '超|たおれこみ',
   'アイスブレード': 'アイス|ブレード', 'アクアウェイブ': 'アクア|ウェイブ', 'スプラッシュ': 'スプラッシュ', 'ジングルベル': 'ジングル|ベル',
   'アクアゲイザー': 'アクア|ゲイザー', 'ぞうさんぴろぴろ鼻': 'ぞうさん|ぴろぴろ鼻', 'ハトのおとしもの': 'ハトの|おとしもの', '大きなおとしもの': '大きな|おとしもの',
   'グリンネーション': 'グリン|ネーション', '超モッチ砲2': '超モッチ砲2', '超モッチ砲3': '超モッチ砲3', '超モッチ砲ゴッド': '超モッチ砲|ゴッド',
@@ -100,8 +100,8 @@ const BATTLE_CARD_NAME_BREAKS = Object.freeze({
   'みゃるの怪薬': 'みゃるの|怪薬', 'みゃるの禁薬': 'みゃるの|禁薬', "KUROMI'S5アタック": "KUROMI'S|5アタック",
   '白き誓い切なる願い': '白き誓い|切なる願い', '神光よ汚れを祓え': '神光よ|汚れを祓え', '祈れ輪廻の環よ': '祈れ|輪廻の環よ', '裁きの光よ下れ': '裁きの光よ|下れ',
   '今こそ真なる目醒め': '今こそ|真なる目醒め',
-  // 置き場(中の面の内側)は最小の字でも1行6字まで。超える名前は3行にする(2026-10-15 社長「枠にかぶらないように」)
-  'ピアノパラソル脳天撃': 'ピアノ|パラソル|脳天撃', 'メロディキャンディボム': 'メロディ|キャンディ|ボム', 'ナイトメアらっきょうボム': 'ナイトメア|らっきょう|ボム', '聖夜の鐘を鳴響け': '聖夜の鐘を|鳴響け', '終焉に救いを与えよ': '終焉に|救いを与えよ', '永劫の贖いを全うせよ': '永劫の贖いを|全うせよ',
+  // 名前は2行まで(2026-10-15 社長「文字は全部同じサイズで最大2行」)。長い名前も言葉の切れ目で2行に折る
+  'ピアノパラソル脳天撃': 'ピアノパラソル|脳天撃', 'メロディキャンディボム': 'メロディ|キャンディボム', 'ナイトメアらっきょうボム': 'ナイトメア|らっきょうボム', '聖夜の鐘を鳴響け': '聖夜の鐘を|鳴響け', '終焉に救いを与えよ': '終焉に|救いを与えよ', '永劫の贖いを全うせよ': '永劫の贖いを|全うせよ',
 });
 const battleCardNameLines = (name, per = BATTLE_CARD_NAME_PER_LINE) => {
   if (Object.prototype.hasOwnProperty.call(BATTLE_CARD_NAME_BREAKS, String(name || ''))) return BATTLE_CARD_NAME_BREAKS[String(name)].split('|');
@@ -133,19 +133,19 @@ const battleCardNameLines = (name, per = BATTLE_CARD_NAME_PER_LINE) => {
   const more = (t) => ([...t].length >= 8 ? battleCardNameLines(t, per) : [t]);
   return [...more(head), ...more(tail)];
 };
-// 名前の字の大きさ(2026-10-15 社長「枠にかぶらないように」)。名前は「文字の置き場」(名前の欄の内側。CSS の padding で中の面の
-//   宝石より内側に決める)の中にだけ置く。字は 置き場の幅÷最長の行 と 置き場の高さ÷行数 の小さい方(8.5px まで。社長「技名は小さくしたほうがいい」で10pxから下げた)。
-//   名前の欄は大きさの基準(container-type:size)なので、cqw/cqh は置き場の幅・高さ。下の飾り線の場所(--mh-rule-h。ふつう6px)は高さから先に引く。
-//   英数(KUROMI'S など)は和文の字より細いので 0.62 字に数える。1行7字(グランド/イリュージョン など)だけ 7px を少し下回る。
-//   スターバースト・/ストリームは社長の指示で2行(3行より釣り合いがよい)。金の枠は置き場が広いので約6.5px
+// 名前の字の大きさ(2026-10-15 社長「文字は全部同じサイズで最大2行にならない？」→ 5.8px でそろえる)。
+//   名前は「文字の置き場」(名前の欄の内側。CSS の padding で中の面の宝石より内側に決める)の中にだけ置き、どの名前も同じ大きさ・2行まで。
+//   大きさは、いちばん長い行(スターバースト・/ストリームの8字)が赤青緑紫の枠の置き場(手札で約46px)にちょうど収まる 5.75px。
+//   名前の欄は大きさの基準(container-type:size)なので、カードが小さい画面では置き場の幅・高さ(cqw/cqh)に合わせて縮むだけにする
+//   (下の飾り線の場所 --mh-rule-h は高さから先に引く)。英数(KUROMI'S など)は和文の字より細いので 0.62 字に数える
+const BATTLE_CARD_NAME_PX = 5.75;
+const BATTLE_CARD_NAME_LH = 1.12;
 const battleCardNameUnits = (line) => [...String(line || '')].reduce((n, ch) => n + (/[\x20-\x7e]/.test(ch) ? 0.62 : 1), 0);
 const battleCardNameFit = (name) => {
   const lines = battleCardNameLines(name);
   const longest = Math.max(1, ...lines.map(battleCardNameUnits));
-  // 3行の名前は行の間を詰める(横持ちは名前の欄の高さが25px前後しかない)。幅は太字で少し広がるぶん 1.5px 引いておく
-  const lh = lines.length >= 3 ? 1.02 : 1.12;
-  const tall = (lines.length * lh).toFixed(2);
-  return { fontSize: `clamp(5.5px, min(calc((100cqw - 1.5px) / ${longest.toFixed(2)}), calc((100cqh - var(--mh-rule-h, 6px)) / ${tall})), 8.5px)`, lineHeight: String(lh), whiteSpace: 'nowrap' };
+  const tall = (lines.length * BATTLE_CARD_NAME_LH).toFixed(2);
+  return { fontSize: `min(${BATTLE_CARD_NAME_PX}px, calc((100cqw - 1.5px) / ${longest.toFixed(2)}), calc((100cqh - var(--mh-rule-h, 6px)) / ${tall}))`, lineHeight: String(BATTLE_CARD_NAME_LH), whiteSpace: 'nowrap' };
 };
 const BATTLE_CARD_ROMAN = Object.freeze(['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX']);
 // カード1枚の絵。{ frame, mark(技のマークの絵・無ければ null で今のアイコン), roman(段階の札・無ければ '') }

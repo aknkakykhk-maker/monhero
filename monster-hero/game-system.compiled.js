@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a86ef6fcbecd01ca
+// source-sha256: 69d774297462482f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-15 15:47";
+const BUILD_DATE = "2026-10-15 16:14";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -61631,7 +61631,7 @@ const BATTLE_CARD_NAME_BREAKS = Object.freeze({
   'ナイトサンダー': 'ナイト|サンダー',
   'エクリプスキッス': 'エクリプス|キッス',
   'コンビネーション': 'コンビ|ネーション',
-  'ドリルコンビネーション': 'ドリル|コンビ|ネーション',
+  'ドリルコンビネーション': 'ドリル|コンビネーション',
   '大たおれこみ': '大|たおれこみ',
   '超たおれこみ': '超|たおれこみ',
   'アイスブレード': 'アイス|ブレード',
@@ -61692,9 +61692,9 @@ const BATTLE_CARD_NAME_BREAKS = Object.freeze({
   '祈れ輪廻の環よ': '祈れ|輪廻の環よ',
   '裁きの光よ下れ': '裁きの光よ|下れ',
   '今こそ真なる目醒め': '今こそ|真なる目醒め',
-  'ピアノパラソル脳天撃': 'ピアノ|パラソル|脳天撃',
-  'メロディキャンディボム': 'メロディ|キャンディ|ボム',
-  'ナイトメアらっきょうボム': 'ナイトメア|らっきょう|ボム',
+  'ピアノパラソル脳天撃': 'ピアノパラソル|脳天撃',
+  'メロディキャンディボム': 'メロディ|キャンディボム',
+  'ナイトメアらっきょうボム': 'ナイトメア|らっきょうボム',
   '聖夜の鐘を鳴響け': '聖夜の鐘を|鳴響け',
   '終焉に救いを与えよ': '終焉に|救いを与えよ',
   '永劫の贖いを全うせよ': '永劫の贖いを|全うせよ'
@@ -61742,15 +61742,16 @@ const battleCardNameLines = (name, per = BATTLE_CARD_NAME_PER_LINE) => {
   const more = t => [...t].length >= 8 ? battleCardNameLines(t, per) : [t];
   return [...more(head), ...more(tail)];
 };
+const BATTLE_CARD_NAME_PX = 5.75;
+const BATTLE_CARD_NAME_LH = 1.12;
 const battleCardNameUnits = line => [...String(line || '')].reduce((n, ch) => n + (/[\x20-\x7e]/.test(ch) ? 0.62 : 1), 0);
 const battleCardNameFit = name => {
   const lines = battleCardNameLines(name);
   const longest = Math.max(1, ...lines.map(battleCardNameUnits));
-  const lh = lines.length >= 3 ? 1.02 : 1.12;
-  const tall = (lines.length * lh).toFixed(2);
+  const tall = (lines.length * BATTLE_CARD_NAME_LH).toFixed(2);
   return {
-    fontSize: `clamp(5.5px, min(calc((100cqw - 1.5px) / ${longest.toFixed(2)}), calc((100cqh - var(--mh-rule-h, 6px)) / ${tall})), 8.5px)`,
-    lineHeight: String(lh),
+    fontSize: `min(${BATTLE_CARD_NAME_PX}px, calc((100cqw - 1.5px) / ${longest.toFixed(2)}), calc((100cqh - var(--mh-rule-h, 6px)) / ${tall}))`,
+    lineHeight: String(BATTLE_CARD_NAME_LH),
     whiteSpace: 'nowrap'
   };
 };
