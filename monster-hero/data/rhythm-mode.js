@@ -4352,7 +4352,11 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
       }
       return false;
     };
-    if(insideHeldBand&&!insideOverlapWith(insideHeldBand)&&!nowTapAt())return {input,target:null,deltaMs:null,standby:insideHeldBand};
+    // ★TAP へ通したときも、押したままなら持ち替えの控えにもする(2026-10-15 改善部 K1)。
+    //   隣の TAP の時刻のころに2本目を帯へ置いて持ち替えると、2本目が TAP を取ったまま控えにならず、1本目を離した瞬間に帯の持ち主がいなくなってスライドが切れていた。
+    //   TAP の判定はそのまま付け、1本目を離したら帯を2本目へ渡す(本体の inputStarts が standby を見る)
+    const bandStandby=insideHeldBand&&!insideOverlapWith(insideHeldBand)?insideHeldBand:null;
+    if(bandStandby&&!nowTapAt())return {input,target:null,deltaMs:null,standby:bandStandby};
     // どのノーツを叩いたことにするかの決め方。
     //
     // 【なぜ「近い順」だけではいけないか】
@@ -4571,7 +4575,7 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
     const touchDelta=judgeNow-(picked.timeMs+offset);
     if(originalType==='FLICK')RHYTHM_NOTE_SE_RUNTIME.markInputGroupHandled();
     else RHYTHM_NOTE_SE_RUNTIME.play(null,typeof rhythmJudgeTap==='function'?rhythmJudgeTap(touchDelta):null);
-    return {input,target:picked,deltaMs:touchDelta};
+    return {input,target:picked,deltaMs:touchDelta,standby:picked.type==='TAP'?bandStandby:null};
   });
 };
 
