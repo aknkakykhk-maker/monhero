@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 25d6e8d5d8db6773
+// generated-sha256: 3a1354ac8bec070d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-15 15:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-15 15:14"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -37360,7 +37360,7 @@ const BATTLE_CARD_NAME_BREAKS = Object.freeze({
   'ダークライトニング': 'ダーク|ライトニング', 'カオスコズミック': 'カオス|コズミック', 'エクリプスノヴァ': 'エクリプス|ノヴァ', 'ライトニング': 'ライトニング',
   '種マシンガン': '種|マシンガン', 'クリスマスツリー': 'クリスマス|ツリー', 'メテオドライブ': 'メテオ|ドライブ', 'ライジングレイヴ': 'ライジング|レイヴ',
   'ダークホウスト': 'ダーク|ホウスト', 'アサルトライジング': 'アサルト|ライジング', '絶影桜華乱舞': '絶影|桜華乱舞', '絶華緋閃・零桜': '絶華緋閃・|零桜',
-  'スターバースト・ストリーム': 'スター|バースト・|ストリーム', 'アイスコフィン': 'アイス|コフィン', 'アクアブラスト': 'アクア|ブラスト',
+  'スターバースト・ストリーム': 'スターバースト・|ストリーム', 'アイスコフィン': 'アイス|コフィン', 'アクアブラスト': 'アクア|ブラスト',
   'メリークリスマス': 'メリー|クリスマス', 'オーシャンノヴァ': 'オーシャン|ノヴァ', 'メニーウィング': 'メニー|ウィング', 'メテオストーム': 'メテオ|ストーム',
   'エターナルアーク': 'エターナル|アーク', 'リボンウィング': 'リボン|ウィング', 'ナイトメアアーク': 'ナイトメア|アーク', 'ドラの毒膝地獄': 'ドラの|毒膝地獄',
   'かどみうむの計算': 'かどみうむの|計算', 'かどみうむの理論': 'かどみうむの|理論', 'かどみうむの叡智': 'かどみうむの|叡智',
@@ -37403,7 +37403,8 @@ const battleCardNameLines = (name, per = BATTLE_CARD_NAME_PER_LINE) => {
 // 名前の字の大きさ(2026-10-15 社長「枠にかぶらないように」)。名前は「文字の置き場」(名前の欄の内側。CSS の padding で中の面の
 //   宝石より内側に決める)の中にだけ置く。字は 置き場の幅÷最長の行 と 置き場の高さ÷行数 の小さい方(8.5px まで。社長「技名は小さくしたほうがいい」で10pxから下げた)。
 //   名前の欄は大きさの基準(container-type:size)なので、cqw/cqh は置き場の幅・高さ。下の飾り線の場所(--mh-rule-h。ふつう6px)は高さから先に引く。
-//   英数(KUROMI'S など)は和文の字より細いので 0.62 字に数える。1行7字(グランド/イリュージョン など)だけ 7px を少し下回る
+//   英数(KUROMI'S など)は和文の字より細いので 0.62 字に数える。1行7字(グランド/イリュージョン など)だけ 7px を少し下回る。
+//   スターバースト・/ストリームは社長の指示で2行(3行より釣り合いがよい)。金の枠は置き場が広いので約6.5px
 const battleCardNameUnits = (line) => [...String(line || '')].reduce((n, ch) => n + (/[\x20-\x7e]/.test(ch) ? 0.62 : 1), 0);
 const battleCardNameFit = (name) => {
   const lines = battleCardNameLines(name);
@@ -37411,7 +37412,7 @@ const battleCardNameFit = (name) => {
   // 3行の名前は行の間を詰める(横持ちは名前の欄の高さが25px前後しかない)。幅は太字で少し広がるぶん 1.5px 引いておく
   const lh = lines.length >= 3 ? 1.02 : 1.12;
   const tall = (lines.length * lh).toFixed(2);
-  return { fontSize: `clamp(6px, min(calc((100cqw - 1.5px) / ${longest.toFixed(2)}), calc((100cqh - var(--mh-rule-h, 6px)) / ${tall})), 8.5px)`, lineHeight: String(lh), whiteSpace: 'nowrap' };
+  return { fontSize: `clamp(5.5px, min(calc((100cqw - 1.5px) / ${longest.toFixed(2)}), calc((100cqh - var(--mh-rule-h, 6px)) / ${tall})), 8.5px)`, lineHeight: String(lh), whiteSpace: 'nowrap' };
 };
 const BATTLE_CARD_ROMAN = Object.freeze(['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX']);
 // カード1枚の絵。{ frame, mark(技のマークの絵・無ければ null で今のアイコン), roman(段階の札・無ければ '') }
