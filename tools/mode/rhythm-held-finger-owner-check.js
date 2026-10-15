@@ -79,15 +79,16 @@ check('空中スライドも、終わりの100msでは指の外れで切らな�
 check('上下クロス(地上の帯と空中の帯)では、指の高さが相手の帯の高さと合わない結び直しをしない',
   /const slideSwapLayerMismatch=\(note,pos,chartNow\)=>\{/.test(src)
   && /if\(slideSwapLayerMismatch\(other\.note,myPos,otherNow\)\|\|slideSwapLayerMismatch\(session\.note,otherPos,myNow\)\)continue;/.test(src));
-const moves = (play.match(/const inputMoves=\(inputKey,subLaneCoordinate\)=>\{[\s\S]*?\n\};/) || [''])[0];
+const moves = (play.match(/const inputMoves=\(inputKey,subLaneCoordinate\)=>\{[^\n]+?\};/) || [''])[0];
+const take = (play.match(/const takeHeldFlick=\(inputKey,subLane,subLaneCoordinate\)=>\{[\s\S]*?\n  \};/) || [''])[0];
 check('何も押さえていない指を滑らせて取る今の動き(inputMoves の empty の取り直し)は変えていない',
-  /if\(state\.empty\)\{inputStarts\(\[\{lane:Math\.floor\(subLane\/2\),subLaneCoordinate,inputKey,rejudge:true,\.\.\.\(state\.flickOnly\?\{flickOnly:true\}:\{\}\)\}\]\);return;\}/.test(moves)
+  /if\(state\.empty\)inputStarts\(\[\{lane:Math\.floor\(subLane\/2\),subLaneCoordinate,inputKey,rejudge:true\}\]\);else if\(typeof takeHeldFlick==='function'\)takeHeldFlick\(inputKey,subLane,subLaneCoordinate\);\};$/.test(moves)
   && /empty:!target\|\|target\.type==='TAP'\}/.test(play));
 check('ロングの終わりの窓で、結ばれた指が同じころのフリックの上へ動いたら、離したことにしてフリックだけを取り直す',
-  /songNow<Number\(held\.endTimeMs\)\+offset-RHYTHM_RELEASE_MAX_MS/.test(moves)
-  && /n\.type==='FLICK'&&n\.activePointerId===null/.test(moves)
-  && /inputEnds\(\[\{inputKey\}\]\);/.test(moves)
-  && /rejudge:true,flickOnly:true\}\]\);/.test(moves)
+  /songNow<Number\(held\.endTimeMs\)\+offset-RHYTHM_RELEASE_MAX_MS/.test(take)
+  && /n\.type==='FLICK'&&n\.activePointerId===null/.test(take)
+  && /inputEnds\(\[\{inputKey\}\]\);/.test(take)
+  && /rejudge:true,flickOnly:true\}\]\);/.test(take)
   && /input\?\.flickOnly===true&&note\.type!=='FLICK'/.test(src));
 
 console.log(failed ? `\n${failed} 件 NG` : '\nすべてOK');

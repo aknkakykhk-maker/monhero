@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4dfe8d6b4bb69912
+// generated-sha256: 1e73e0ae8b93b21f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-15 21:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-15 21:58"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -22482,22 +22482,23 @@ scheduleTick();};
       if(handover){target.releasedAtMs=null;rhythmFloatingNoteRemove(target);}
       else{target.holdJudgment=judgment;target.holdDeltaMs=deltaMs;}
       run.activePointers.set(input.inputKey,target.index);if(input.captureTarget&&input.pointerId!==undefined){try{input.captureTarget.setPointerCapture(input.pointerId);}catch{}}const side=rhythmFastSlow(deltaMs);hudRef.current.set(rhythmNoteIsSky(target)?{skyLast:'HOLD',skyLastPrecise:false,skyFastSlow:side||''}:{last:'HOLD',lastPrecise:false,fastSlow:side||''});scheduleJudgmentClear(rhythmNoteIsSky(target));return;}applyJudgment(target,judgment,deltaMs);});};
-  const inputMoves=(inputKey,subLaneCoordinate)=>{const run=runRef.current,state=run?.inputFeedbackState?.get(inputKey);if(!state||!Number.isFinite(subLaneCoordinate))return;if(Math.abs(subLaneCoordinate-state.subLaneCoordinate)>=3)RHYTHM_PERF.touchJump();if(Math.abs(subLaneCoordinate-state.subLaneCoordinate)<RHYTHM_TAP_REJUDGE_MOVE_SUBLANES)return;const subLane=Math.max(0,Math.min(RHYTHM_SUB_LANE_COUNT-1,Math.floor(subLaneCoordinate)));if(subLane===state.subLane)return;state.subLane=subLane;state.subLaneCoordinate=subLaneCoordinate;if(state.empty){inputStarts([{lane:Math.floor(subLane/2),subLaneCoordinate,inputKey,rejudge:true,...(state.flickOnly?{flickOnly:true}:{})}]);return;}
   // ★押さえているロング(ホールド/スライド)の終わりの窓の中で、その指が「同じころのフリック」の上へ動いたら、そこでロングを離したことにして、
   //   同じ指でフリックを取る(2026-10-15 社長「Crazy Party Night の最後、ホールドを離した流れでフリックしているつもりが毎回 MISS」)。
   //   ロングは離して終わる決まりなので、指を上げずに払うと終わりの窓のあいだ指がロングに結ばれたままで、フリックに一度も触れずに MISS になっていた。
-  //   取り直すのはフリックだけ。ロングの離しの判定は、いつもの「指を離したとき」と同じ(この瞬間の時刻で決まる)。窓の広さは変えない
-  const heldIndex=run.activePointers.get(inputKey),held=heldIndex===undefined?null:run.notes[heldIndex];
-  if(!held||held.done||held.type!=='HOLD')return;
-  const songNow=run.audio.songTimeMs(),offset=settings.judgmentTimingOffsetMs;
-  if(songNow<Number(held.endTimeMs)+offset-RHYTHM_RELEASE_MAX_MS)return;
-  const flick=run.notes.find(n=>n&&!n.done&&n.type==='FLICK'&&n.activePointerId===null&&Math.abs(songNow-(Number(n.timeMs)+offset))<=RHYTHM_INPUT_MATCH_WINDOW_MS&&(()=>{const span=rhythmProjectSubLaneSpan(n.subLane,n.subLaneWidth,1),tol=span.subLaneWidth<=1?RHYTHM_NARROW_TAP_TOLERANCE_SUB_LANES:RHYTHM_TAP_TOLERANCE_SUB_LANES;return subLaneCoordinate>=span.subLane-tol&&subLaneCoordinate<=span.subLane+span.subLaneWidth+tol;})());
-  if(!flick)return;
-  inputEnds([{inputKey}]);
-  run.inputFeedbackState=run.inputFeedbackState||new Map();
-  run.inputFeedbackState.set(inputKey,{subLane,subLaneCoordinate,empty:true,flickOnly:true});
-  inputStarts([{lane:Math.floor(subLane/2),subLaneCoordinate,inputKey,rejudge:true,flickOnly:true}]);
-};
+  //   取り直すのはフリックだけ。ロングの離しの判定は、いつもの「指を離したとき」と同じ(この瞬間の時刻で決まる)。窓の広さは変えない。
+  //   何も押さえていない指を滑らせて取る今の動き(inputMoves の empty)とは別の道で、そちらは変えない
+  const takeHeldFlick=(inputKey,subLane,subLaneCoordinate)=>{
+    const run=runRef.current;if(!run||run.finished||run.paused)return;
+    const heldIndex=run.activePointers.get(inputKey),held=heldIndex===undefined?null:run.notes[heldIndex];
+    if(!held||held.done||held.type!=='HOLD')return;
+    const songNow=run.audio.songTimeMs(),offset=settings.judgmentTimingOffsetMs;
+    if(songNow<Number(held.endTimeMs)+offset-RHYTHM_RELEASE_MAX_MS)return;
+    const flick=run.notes.find(n=>n&&!n.done&&n.type==='FLICK'&&n.activePointerId===null&&Math.abs(songNow-(Number(n.timeMs)+offset))<=RHYTHM_INPUT_MATCH_WINDOW_MS&&(()=>{const span=rhythmProjectSubLaneSpan(n.subLane,n.subLaneWidth,1),tol=span.subLaneWidth<=1?RHYTHM_NARROW_TAP_TOLERANCE_SUB_LANES:RHYTHM_TAP_TOLERANCE_SUB_LANES;return subLaneCoordinate>=span.subLane-tol&&subLaneCoordinate<=span.subLane+span.subLaneWidth+tol;})());
+    if(!flick)return;
+    inputEnds([{inputKey}]);
+    inputStarts([{lane:Math.floor(subLane/2),subLaneCoordinate,inputKey,rejudge:true,flickOnly:true}]);
+  };
+  const inputMoves=(inputKey,subLaneCoordinate)=>{const run=runRef.current,state=run?.inputFeedbackState?.get(inputKey);if(!state||!Number.isFinite(subLaneCoordinate))return;if(Math.abs(subLaneCoordinate-state.subLaneCoordinate)>=3)RHYTHM_PERF.touchJump();if(Math.abs(subLaneCoordinate-state.subLaneCoordinate)<RHYTHM_TAP_REJUDGE_MOVE_SUBLANES)return;const subLane=Math.max(0,Math.min(RHYTHM_SUB_LANE_COUNT-1,Math.floor(subLaneCoordinate)));if(subLane===state.subLane)return;state.subLane=subLane;state.subLaneCoordinate=subLaneCoordinate;if(state.empty)inputStarts([{lane:Math.floor(subLane/2),subLaneCoordinate,inputKey,rejudge:true}]);else if(typeof takeHeldFlick==='function')takeHeldFlick(inputKey,subLane,subLaneCoordinate);};
   // 押さえている帯へ先に置いてあった「控えの指」を探す。
   // 親指で遊ぶ人は「2本目を置いてから1本目を離す」ので、離した瞬間に渡せないと必ずMISSになる
   const standbyFingerFor=(run,noteIndex,exceptKey)=>{

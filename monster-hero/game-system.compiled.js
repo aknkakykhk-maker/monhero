@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 976879c02a4b34cf
+// source-sha256: 583ce75464365c7b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-15 21:41";
+const BUILD_DATE = "2026-10-15 21:58";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -36377,28 +36377,9 @@ const RhythmTapTest = ({
       applyJudgment(target, judgment, deltaMs);
     });
   };
-  const inputMoves = (inputKey, subLaneCoordinate) => {
-    const run = runRef.current,
-      state = run?.inputFeedbackState?.get(inputKey);
-    if (!state || !Number.isFinite(subLaneCoordinate)) return;
-    if (Math.abs(subLaneCoordinate - state.subLaneCoordinate) >= 3) RHYTHM_PERF.touchJump();
-    if (Math.abs(subLaneCoordinate - state.subLaneCoordinate) < RHYTHM_TAP_REJUDGE_MOVE_SUBLANES) return;
-    const subLane = Math.max(0, Math.min(RHYTHM_SUB_LANE_COUNT - 1, Math.floor(subLaneCoordinate)));
-    if (subLane === state.subLane) return;
-    state.subLane = subLane;
-    state.subLaneCoordinate = subLaneCoordinate;
-    if (state.empty) {
-      inputStarts([{
-        lane: Math.floor(subLane / 2),
-        subLaneCoordinate,
-        inputKey,
-        rejudge: true,
-        ...(state.flickOnly ? {
-          flickOnly: true
-        } : {})
-      }]);
-      return;
-    }
+  const takeHeldFlick = (inputKey, subLane, subLaneCoordinate) => {
+    const run = runRef.current;
+    if (!run || run.finished || run.paused) return;
     const heldIndex = run.activePointers.get(inputKey),
       held = heldIndex === undefined ? null : run.notes[heldIndex];
     if (!held || held.done || held.type !== 'HOLD') return;
@@ -36414,13 +36395,6 @@ const RhythmTapTest = ({
     inputEnds([{
       inputKey
     }]);
-    run.inputFeedbackState = run.inputFeedbackState || new Map();
-    run.inputFeedbackState.set(inputKey, {
-      subLane,
-      subLaneCoordinate,
-      empty: true,
-      flickOnly: true
-    });
     inputStarts([{
       lane: Math.floor(subLane / 2),
       subLaneCoordinate,
@@ -36428,6 +36402,23 @@ const RhythmTapTest = ({
       rejudge: true,
       flickOnly: true
     }]);
+  };
+  const inputMoves = (inputKey, subLaneCoordinate) => {
+    const run = runRef.current,
+      state = run?.inputFeedbackState?.get(inputKey);
+    if (!state || !Number.isFinite(subLaneCoordinate)) return;
+    if (Math.abs(subLaneCoordinate - state.subLaneCoordinate) >= 3) RHYTHM_PERF.touchJump();
+    if (Math.abs(subLaneCoordinate - state.subLaneCoordinate) < RHYTHM_TAP_REJUDGE_MOVE_SUBLANES) return;
+    const subLane = Math.max(0, Math.min(RHYTHM_SUB_LANE_COUNT - 1, Math.floor(subLaneCoordinate)));
+    if (subLane === state.subLane) return;
+    state.subLane = subLane;
+    state.subLaneCoordinate = subLaneCoordinate;
+    if (state.empty) inputStarts([{
+      lane: Math.floor(subLane / 2),
+      subLaneCoordinate,
+      inputKey,
+      rejudge: true
+    }]);else if (typeof takeHeldFlick === 'function') takeHeldFlick(inputKey, subLane, subLaneCoordinate);
   };
   const standbyFingerFor = (run, noteIndex, exceptKey) => {
     for (const [key, index] of run.standbyPointers) {
