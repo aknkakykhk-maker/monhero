@@ -1,5 +1,7 @@
 # 譜面設計の原則（モンヒロビート）
 
+> 2026-10-12 から譜面の作り方は最新リビジョンだけ(古い作り方とリビジョンごとの検査 `rhythm-chart-rev<N>-check.js` は外し、git の記録 c2094ad53 にある)。この資料の Rev.◯ ごとの説明は、その番号で作った曲がどんな作り方かの記録として残す。決まり: [`docs/rules/CHART_ENGINE.md`](../rules/CHART_ENGINE.md)
+
 音ゲーの譜面は「音に合わせてノーツを置く」だけでは成り立たない。
 実際に遊ばれている作品（プロジェクトセカイ／CHUNITHM／maimai／太鼓の達人／
 beatmania IIDX／Dance Dance Revolution／osu!／Arcaea／Beat Saber など）の譜面には、

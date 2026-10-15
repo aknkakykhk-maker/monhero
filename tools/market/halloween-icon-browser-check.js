@@ -119,7 +119,13 @@ const seed = ({ conditions }) => {
     await page.waitForTimeout(1200);
     await page.evaluate(() => { const b = [...document.querySelectorAll('button[aria-label="戻る"]')].find(x => x.closest('.mh-screen-head')); if (b && !document.body.innerText.includes('ダイヤで購入')) b.click(); });
     await page.waitForTimeout(600);
-    await clickText(page, entry, { exact: false });
+    // 入口のボタンには売り場の名前の名札(aria-label)が付いている。それで押す。文字の一部で探すと、
+    // 助手の吹き出しのセリフ(「ダイヤは大事に…」など・毎回ランダム)を押してしまい、たまに落ちた(2026-10-15・着替えの検査と同じ直し)
+    const names = { 'ダイヤ': 'ダイヤショップ', 'ビートP': 'ビートP交換所', 'ブリーダーP': 'ブリーダーP交換所', 'ブリーダー': 'ブリーダーP交換所', 'アイテム': 'アイテム交換所' };
+    const name = names[entry];
+    if (!name) { await clickText(page, entry, { exact: false }); return; }
+    await page.evaluate((n) => { const b = [...document.querySelectorAll('button')].find(x => x.getAttribute('aria-label') === n); if (b) b.click(); }, name);
+    await page.waitForTimeout(1000);
   };
 
   const iconCards = (page) => page.evaluate(() => {

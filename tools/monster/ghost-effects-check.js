@@ -141,7 +141,8 @@ check('コインは0.5未満で表(4倍)・それ以外は裏(0.5倍)', f.rollFa
     && /writeFateWheel\(\{\.\.\.fateWheelRef\.current,atkDown:FATE_WHEEL_DEBUFF_TURNS\}\)/.test(app)
     && /writeFateWheel\(\{\.\.\.fateWheelRef\.current,takenUp:FATE_WHEEL_DEBUFF_TURNS\}\)/.test(app));
   check('連撃は予測・あつの挑発・ふつうの攻撃の3か所すべてに付く',
-    (app.match(/exCombos:withFateCombo\(tacticsExCombosAt\(slotIdx,(halved|true)\),(getPermaBuff|livePermaBuff)\('fateStacks',null\),slotIdx\)/g) || []).length === 3
+    // 2026-10-08 から2か所は黒音符の連撃(withBlackNoteCombo)で外から包み、札(card)も渡す形になった。運命の連撃が3か所に付くことは同じ
+    (app.match(/exCombos:(?:withBlackNoteCombo\()?withFateCombo\(tacticsExCombosAt\(slotIdx,(halved|true)(,card)?\),(getPermaBuff|livePermaBuff)\('fateStacks',null\),slotIdx\)/g) || []).length === 3
     && !/exCombos:tacticsExCombosAt\(/.test(app));
   check('裏の消費ガッツ+20%はゴーストの固有技の消費に入る',
     /if \(card\.type === 'unique' && card\.monId===FATE_COIN_MONSTER_ID\) cost = Math\.floor\(cost \* fateCoinGutsMult\(livePermaBuff\('fateStacks',null\)\)\);/.test(app));
@@ -187,7 +188,8 @@ check('コインは0.5未満で表(4倍)・それ以外は裏(0.5倍)', f.rollFa
 
 // --- ④ 技ごとの攻撃モーション ---
 check('ゴースト・スプーキーの技ごとの動きを SKILL_MOTION_SETS へ入れた',
-  /Ghost:SKM_GHOST, Spooky:SKM_SPOOKY \}\);/.test(fxSrc) && /const SKM_GHOST = Object\.freeze\(\{/.test(fxSrc) && /const SKM_SPOOKY = Object\.freeze\(\{/.test(fxSrc));
+  // 2026-10-08 からメロディー・クロミーの動きが後ろへ足された(ゴースト・スプーキーが最後でなくてもよい)
+  /Ghost:SKM_GHOST, Spooky:SKM_SPOOKY[ ,}]/.test(fxSrc) && /const SKM_GHOST = Object\.freeze\(\{/.test(fxSrc) && /const SKM_SPOOKY = Object\.freeze\(\{/.test(fxSrc));
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);

@@ -144,6 +144,26 @@ iPhoneの記録が20曲そろってから判定する。
 - 入れた名前は診断の行の `stats.fixes` に残る（入れる前と後を `rhythm-touch-diag.js` で比べられる）。
 - デバッグ用の上書き（コンソールから `rhythmTouchFixSetOverride(name,true/false/null)`・新しい保存キー `mh_rhythm_fix_override_v1`）は残してあるが、画面のパネルは置かない。
 
+### 1コマの重さ（`stats.frame`・`RHYTHM_FRAME_DIAG`・2026-10-11）
+
+社長「実機の数字で、2D と GPU のどちらが iPhone で軽いかを決める」。**足すだけ**（古い行には無い。表・SQL・ランキングは変えない。約200バイト）。
+
+| 名前 | 意味 |
+| --- | --- |
+| `n` / `avg` / `p95` / `max` | 演奏中の1コマの間隔（ms。1秒以上の間隔は数えない）の数・平均・95%・最長 |
+| `over17` / `over34` / `over50` | 16.7 / 33.3 / 50ms を超えたコマの数（1msの余裕） |
+| `tickAvg` / `tickP95` | ゲームの1コマの処理（JS）の時間 |
+| `startOver50` / `startMax` | 曲の最初の5秒（最初に数えたコマから）の 50ms 超のコマの数・最長（2026-10-11・演奏前の準備の効き目を見る） |
+| `prep` / `prepMs` / `prepWaitMs` | 演奏前の準備をしたか（1/0）・準備にかかった時間・幕が閉じたあと READY の前に待った時間（ms。しなかった回は null） |
+| `early` / `late` | 熱の物差し(2026-10-11)。曲の最初の30秒・2分を過ぎてからのコマの `{n, avg, p95, over34}`(2分に届かない曲の late は null)。熱で端末が速さを落とすと late が遅くなる |
+| `draw` / `gpu` | 描き方（`dom` / `2d` / `webgl` / `gpu`）・WebGL の描き手の名前 |
+| `dpr` / `w` / `h` / `cores` / `effect` / `fps` / `light` | 画面の倍率・演奏エリアの大きさ・CPU の数・演出量・コマの速さの設定・軽量モード |
+| `skyHit` | 空中を叩いたときの手ごたえ A(デバッグの切り替え `mh_hell_sky_hit_proto`)の `on` / `off`(2026-10-12・実機で入/切の重さを比べるため。それより前の行には無い) |
+
+計測ON/OFFに関係なく数える（整数を足すだけ）。作れなかったときは frame を付けずに送る。
+`rhythm-touch-diag.js --report` の「1コマの重さ」が端末:描き方ごとにまとめる（frame の無い行は読み飛ばす）。
+ボットの重さ表（`tools/playbot/rhythm-perf-bench.js`）と並べて、CPU 何倍が実機相当かを決める。見張りは `tools/mode/rhythm-frame-diag-check.js`。
+
 ### 報告ツール
 
 `node tools/mode/rhythm-touch-diag.js --fetch --report` の「タイミングの診断」は、全端末の記録をまとめて、iPhone と Android の差・出力遅延・曲の頭の無音の差を出す（ゲームの入れ切りとは別に、全体の傾向を見る用）。

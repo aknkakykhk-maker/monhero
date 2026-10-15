@@ -13,8 +13,7 @@
 // リビジョンを分けたのは運用ルール ⑩-2 のため(既存曲の生成結果を変えない)。この検査は
 //   ・リビジョンの読み方(書いていない曲はRev.1)と、解析器が新しい曲にだけ最新リビジョンを書くこと
 //   ・公開中の曲がRev.2で作ってあること／公開していない曲が黙ってRev.2へ上がっていないこと
-//   ・Rev.1の生成には写しが一切出ないこと(入口が閉じている)
-//   ・Rev.2で写し率がはっきり上がり、押せる・音に乗る・読める・量を悪くしていないこと
+//   ・最新リビジョンで生成すると、写しが出て・鳴っていない所に置かず・写し率が 0.2 以上(2026-10-12 から最新だけを作る)
 // を確かめる。写し率の物差しは品質レポート(rhythm-chart-quality-report.js の phraseEcho)と同じものを使う。
 'use strict';
 const fs=require('fs'),path=require('path'),os=require('os');
@@ -63,15 +62,17 @@ const registry=JSON.parse(fs.readFileSync(path.join(ROOT,'tools/mode/authoring/r
   ok('Rev.1のまま残す曲に公開曲が混ざっていない',overlap.length===0,overlap.join(', '));
 }
 
-// ── 4. 実際に生成して比べる ──────────────────────────────────────────────────
+// ── 4. 最新リビジョンで実際に生成する ──────────────────────────────────────────
+// 2026-10-12 から作れるのは最新リビジョンだけ。Rev.1 との比べ(写し率の上がり幅・押しやすさ・量・クロスの増減)は、
+// Rev.2 を入れたときの一度きりの見張りだったので外し、比べなくても成り立つことだけを見る。
 // 繰り返しの区切りがある曲。区切りのはっきりした曲・4小節の輪が続く曲・途中で終わる曲を混ぜる
 const tracks=(arg('--tracks','nothing_without_you,4u_hitasura,dullahan,kindan_no_resistance')||'').split(',').filter(Boolean);
 const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'phrase-copy-'));
-const generate=(trackId,revision)=>{
-  const dir=path.join(tmp,`${trackId}-r${revision}`);
+const generate=(trackId,extra=[])=>{
+  const dir=path.join(tmp,`${trackId}${extra.length?'-'+extra.join('-'):''}`);
   fs.mkdirSync(dir,{recursive:true});
   const run=spawnSync(process.execPath,[path.join(ROOT,'tools/mode/rhythm-chart-v3-generate.js'),
-    '--track',trackId,'--chart-revision',String(revision),'--write','--output-dir',dir],{cwd:ROOT,encoding:'utf8',maxBuffer:1<<26});
+    '--track',trackId,...extra,'--write','--output-dir',dir],{cwd:ROOT,encoding:'utf8',maxBuffer:1<<26});
   if(run.status!==0){console.error((run.stderr||'').split('\n').slice(0,6).join('\n'));return null;}
   return {dir,stdout:run.stdout};
 };
@@ -81,18 +82,14 @@ const readShapes=(dir,trackId)=>DIFFICULTIES.map(difficulty=>{
 }).filter(Boolean);
 const mean=list=>list.length?list.reduce((a,b)=>a+b,0)/list.length:0;
 try{
-  const echo={1:[],2:[]};
-
+  const echo=[];
   for(const trackId of tracks){
-    const legacy=generate(trackId,1),latest=generate(trackId,2);
-    ok(`${trackId}: Rev.1・Rev.2とも生成できる`,!!legacy&&!!latest);
-    if(!legacy||!latest)continue;
-    ok(`${trackId}: Rev.1/Rev.2 と表示する`,/譜面の作り方: MHB CHART ENGINE Rev\.1（/.test(legacy.stdout)&&/譜面の作り方: MHB CHART ENGINE Rev\.2（/.test(latest.stdout));
-    const legacyCharts=readShapes(legacy.dir,trackId),latestCharts=readShapes(latest.dir,trackId);
-
-    ok(`${trackId}: Rev.1には写しが出ない(入口が閉じている)`,
-      legacyCharts.every(chart=>chart.chartRevision===1&&!chart.shapes.some(entry=>entry.phraseCopyOf!=null)));
-    ok(`${trackId}: Rev.2では写したかたまりがある`,latestCharts.every(chart=>chart.chartRevision===2)
+    const latest=generate(trackId);
+    ok(`${trackId}: 最新リビジョンで生成できる`,!!latest);
+    if(!latest)continue;
+    ok(`${trackId}: Rev.${CHART_REVISION_LATEST} と表示する`,new RegExp(`譜面の作り方: MHB CHART ENGINE Rev\\.${CHART_REVISION_LATEST}（`).test(latest.stdout));
+    const latestCharts=readShapes(latest.dir,trackId);
+    ok(`${trackId}: 写したかたまりがある`,latestCharts.every(chart=>chart.chartRevision===CHART_REVISION_LATEST)
       &&latestCharts.filter(chart=>chart.shapes.some(entry=>entry.phraseCopyOf!=null)).length>=3);
     // 元の1つの形を2つに割って写したときは、記録も1つにまとまっている(同じ形が続いたように数えない)
     // (区切りの境目で「同じ元を、片方は反転・片方はそのまま」写したのは2回ぶんなので、別の記録でよい)
@@ -103,49 +100,29 @@ try{
     })));
     // 反転で写した区切りもある(ずっと同じ向きにしない)
     ok(`${trackId}: 左右反転の写しも出る`,latestCharts.some(chart=>chart.shapes.some(entry=>entry.phraseCopyOf!=null&&entry.mirrored)));
-
-    const before=reportFor(trackId,{source:'v3',dir:legacy.dir}),after=reportFor(trackId,{source:'v3',dir:latest.dir});
+    const after=reportFor(trackId,{source:'v3',dir:latest.dir});
     for(const difficulty of DIFFICULTIES){
-      const b=before.difficulties[difficulty],a=after.difficulties[difficulty];
-      if(!a||!b)continue;
-      if(b.musicality.phraseEcho!=null)echo[1].push(b.musicality.phraseEcho);
-      if(a.musicality.phraseEcho!=null)echo[2].push(a.musicality.phraseEcho);
-      const problems=[];
-      if(a.gate.impossible>b.gate.impossible)problems.push(`押せない ${b.gate.impossible}→${a.gate.impossible}`);
-      if(a.musicality.onsetHitRate<1)problems.push(`鳴っていない場所のノーツ ${a.musicality.ghostNotes}`);
-      if(a.scores.readability<b.scores.readability-5)problems.push(`読める ${b.scores.readability}→${a.scores.readability}`);
-      // 押しやすさは「忙しい」の件数で比べる。ここは自動修正の前の譜面なので、「押さえている最中の空き手」は
-      // 出荷前の自動修正(rhythm-chart-v2-step7-autofix.js)が直す(実測: 4u_hitasura EXPERT で1箇所出たが、自動修正後は100)。
-      // 押せる軸の点そのものにはそれが混ざるので、点では比べない
-      if(a.hand.strained>b.hand.strained+Math.max(2,Math.round(b.noteCount*.01)))problems.push(`忙しい ${b.hand.strained}→${a.hand.strained}`);
-      // 量は難易度の段そのもの。写しで大きく動かさない(取り分の引き上げは元の数まで・上乗せは1/4まで)
-      if(Math.abs(a.noteCount-b.noteCount)>Math.max(8,b.noteCount*.06))problems.push(`ノーツ数 ${b.noteCount}→${a.noteCount}`);
-      ok(`${trackId} ${difficulty}: 写しで押しやすさ・音・量を悪くしていない`,problems.length===0,problems.join(' / '));
+      const a=after.difficulties[difficulty];
+      if(!a)continue;
+      if(a.musicality.phraseEcho!=null)echo.push(a.musicality.phraseEcho);
+      ok(`${trackId} ${difficulty}: 鳴っていない場所にノーツを置かない`,a.musicality.onsetHitRate>=1,`${a.musicality.ghostNotes}`);
     }
   }
-  // 写し率は曲をまたいだ平均で比べる(区切りの短い曲では1曲ごとの揺れが大きい)
-  const legacyEcho=mean(echo[1]),latestEcho=mean(echo[2]);
-  ok('Rev.2でフレーズの写し率がはっきり上がる(1.4倍以上)',latestEcho>=legacyEcho*1.4&&latestEcho>=.2,
-    `Rev.1 ${legacyEcho.toFixed(3)} → Rev.2 ${latestEcho.toFixed(3)}`);
-  // ── 5. Rev.2のクロス(端に寄ったHOLDを内側へ寄せて置く) ──────────────────────────
-  // 1曲ごとには増減がある(写しで配置が変わると、押さえの位置も変わる)ので、公開中の全曲の合計で見る。
-  // 実測(2026-09-24): MASTER Rev.1 31 → Rev.2 53、EXPERT 32 → 40
+  // 写し率は曲をまたいだ平均で見る(区切りの短い曲では1曲ごとの揺れが大きい)
+  ok('フレーズの写し率が 0.2 以上',mean(echo)>=.2,mean(echo).toFixed(3));
+  // ── 5. クロス(端に寄ったHOLDを内側へ寄せて置く) ──────────────────────────
+  // 1曲ごとには増減があるので、公開中の全曲の合計で見る
   {
     const {RELEASED_TRACKS}=require('./rhythm-runtime-notes.js');
-    const crossTotal={1:{EXPERT:0,MASTER:0},2:{EXPERT:0,MASTER:0}};
-    for(const trackId of Object.values(RELEASED_TRACKS))for(const revision of [1,2])for(const difficulty of ['EXPERT','MASTER']){
-      const dir=path.join(tmp,`cross-${trackId}-r${revision}`);
-      fs.mkdirSync(dir,{recursive:true});
-      const run=spawnSync(process.execPath,[path.join(ROOT,'tools/mode/rhythm-chart-v3-generate.js'),'--track',trackId,
-        '--chart-revision',String(revision),'--difficulty',difficulty,'--write','--output-dir',dir],{cwd:ROOT,encoding:'utf8',maxBuffer:1<<26});
-      if(run.status!==0)continue;
-      const file=path.join(dir,`${trackId.replace(/_/g,'-')}-v3-chart-${difficulty.toLowerCase()}.json`);
-      crossTotal[revision][difficulty]+=JSON.parse(fs.readFileSync(file,'utf8')).notes.filter(note=>note.cross===true).length;
+    const crossTotal={EXPERT:0,MASTER:0};
+    for(const trackId of Object.values(RELEASED_TRACKS))for(const difficulty of ['EXPERT','MASTER']){
+      const made=generate(trackId,['--difficulty',difficulty]);
+      if(!made)continue;
+      const file=path.join(made.dir,`${trackId.replace(/_/g,'-')}-v3-chart-${difficulty.toLowerCase()}.json`);
+      crossTotal[difficulty]+=JSON.parse(fs.readFileSync(file,'utf8')).notes.filter(note=>note.cross===true).length;
     }
-    ok('Rev.2でMASTERのクロスがRev.1より減らない(公開中の全曲の合計)',crossTotal[2].MASTER>=crossTotal[1].MASTER,
-      `Rev.1 ${crossTotal[1].MASTER} → Rev.2 ${crossTotal[2].MASTER}`);
-    ok('Rev.2ではMASTERのクロスがEXPERTより多い(公開中の全曲の合計)',crossTotal[2].MASTER>crossTotal[2].EXPERT,
-      `EXPERT ${crossTotal[2].EXPERT} / MASTER ${crossTotal[2].MASTER}`);
+    ok('MASTERのクロスがEXPERTより多い(公開中の全曲の合計)',crossTotal.MASTER>crossTotal.EXPERT,
+      `EXPERT ${crossTotal.EXPERT} / MASTER ${crossTotal.MASTER}`);
   }
 }finally{
   fs.rmSync(tmp,{recursive:true,force:true});

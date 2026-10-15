@@ -263,8 +263,13 @@ const best = (flags) => ({ played: true, clear: true, fullCombo: false, allExcel
   }
 
   // ── ⑦ 画面側の配線(文字列) ──
-  check('BESTを保存した直後に、保存前のBESTを添えて実績を記録する',
-    /const records=await saveRhythmBestRecord\([^\n]*?setRhythmBestRecords\(records\);void recordRhythmAchievements\(records,\{initialRecords:rhythmBestRecords\}\);/.test(app));
+  // 2026-10-11 f9452181(MASTER クリアで HELL が開く流れ)で、保存と実績の記録の間に「HELL が開いたか」を見る処理が入った。
+  // 見張るのは「保存した直後(同じ流れの中・待たず・抜けず)に、保存前の BEST を添えて記録する」こと。
+  // 間に入ってよいのは、return も await も含まない短い処理(1500文字まで)だけ
+  check('BESTを保存した直後に、保存前のBESTを添えて実績を記録する',(()=>{
+    const m=/const records=await saveRhythmBestRecord\([^\n]*?setRhythmBestRecords\(records\);([\s\S]{0,1500}?)void recordRhythmAchievements\(records,\{initialRecords:rhythmBestRecords\}\);/.exec(app);
+    return !!m&&!/\breturn\b|\bawait\b/.test(m[1]);
+  })());
   check('アシスト・練習・タイミング合わせでは実績を記録しない(それらはBESTの保存より前に抜ける)',
     app.indexOf("if(result?.assist===true)return;") > 0 && app.indexOf("if(result?.assist===true)return;") < app.indexOf('void recordRhythmAchievements(records,{initialRecords:rhythmBestRecords})')
     && app.indexOf("if(rhythmPlay.from==='tutorial')return;") < app.indexOf('void recordRhythmAchievements(records,{initialRecords:rhythmBestRecords})'));

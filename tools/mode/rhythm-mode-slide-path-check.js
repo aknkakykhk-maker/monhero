@@ -3,10 +3,10 @@
 const fs=require('fs'),path=require('path'),vm=require('vm'),crypto=require('crypto');
 const ROOT=path.resolve(__dirname,'../..'),file=path.join(ROOT,'monster-hero/data/rhythm-mode.js'),source=fs.readFileSync(file,'utf8'),game=fs.readFileSync(path.join(ROOT,'monster-hero/src/game-system.jsx'),'utf8');
 let failed=0;const check=(name,ok)=>{console.log(`${ok?'✓':'✗'} ${name}`);if(!ok)failed++;};
-const projection=source.match(/const RHYTHM_PROJECTION_TOP_SCALE=[\s\S]*?const rhythmProjectTravelProgress=[\s\S]*?\n\};/)?.[0],slide=source.match(/const rhythmSlidePoints=[\s\S]*?const rhythmSlideExpectedLane=[\s\S]*?\n\};/)?.[0],segments=source.match(/const rhythmSlideSegmentPolygons=[\s\S]*?\n\};/)?.[0],helpers=[projection,slide,segments].filter(Boolean).join('\n');
+const projection=source.match(/const RHYTHM_PROJECTION_TOP_SCALE=[\s\S]*?const rhythmProjectTravelProgress=[\s\S]*?\n\};/)?.[0],slide=source.match(/const rhythmSlidePoints=[\s\S]*?const rhythmSlideExpectedLane=[\s\S]*?\n\};/)?.[0],segments=source.match(/const rhythmSlideSegmentPolygons=[\s\S]*?\n\};/)?.[0],scroll=source.match(/const RHYTHM_SCROLL=[\s\S]*?const rhythmScrollPos=[\s\S]*?\n\};/)?.[0],minAfter=source.match(/const rhythmScrollMinAfter=[\s\S]*?\n\};/)?.[0],segStart=source.match(/const rhythmSlideSegmentStart=[\s\S]*?\n\};/)?.[0],helpers=[projection,scroll,minAfter,segStart,slide,segments].filter(Boolean).join('\n');
 check('SLIDE経路描画helperを抽出できる',!!helpers);
 if(helpers){
-  const context={RHYTHM_LANE_COUNT:5};vm.runInNewContext(`${helpers}\nthis.out={rhythmSlideExpectedLane,rhythmSlideSegmentPolygons,rhythmProjectLane,rhythmProjectTravelProgress};`,context);
+  const context={RHYTHM_LANE_COUNT:5,RHYTHM_SLIDE_OFFSCREEN_PX:Number(source.match(/const RHYTHM_SLIDE_OFFSCREEN_PX=(\d+)/)?.[1]||64)};vm.runInNewContext(`${helpers}\nthis.out={rhythmSlideExpectedLane,rhythmSlideSegmentPolygons,rhythmProjectLane,rhythmProjectTravelProgress};`,context);
   const h=context.out,note={type:'SLIDE',timeMs:1000,endTimeMs:4000,lane:0,endLane:4,slidePoints:[{timeMs:1000,lane:0},{timeMs:2000,lane:3},{timeMs:3000,lane:1},{timeMs:4000,lane:4}]},travel={visualTime:1000,travelMs:4000,spawnY:0,travelPx:800,noteHalfHeight:10},rect={width:500,height:900};
   const steps=Number(source.match(/const RHYTHM_SLIDE_SEGMENT_STEPS=(\d+)/)?.[1])||1;
   const all=h.rhythmSlideSegmentPolygons(note,1000,travel,rect),remaining=h.rhythmSlideSegmentPolygons(note,2500,travel,rect);
@@ -28,7 +28,11 @@ check('表示外noteは重いprojectionとpolygon更新をskip',game.includes("i
 // polygon の使い回し先は body 直下ではなく fill グループになった。作りの意図は同じ。
 check('polygon DOMは不足分だけ追加し通過済み区間を非表示で再利用',source.includes("if(!segment){segment=document.createElementNS")&&source.includes("fill.childNodes[index].style.display='none'")&&!source.includes('body.lastChild.remove()'));
 check('同一polygon pointsのsetAttributeを省略',source.includes("if(segment._rhythmPoints!==points){segment.setAttribute('points',points);segment._rhythmPoints=points;}"));
-check('SLIDE幅2の許容値と現在幅を使う追従判定',source.includes('const RHYTHM_SLIDE_TOLERANCE_LANES = .82;')&&source.includes('bad=Math.abs(actual-rhythmSlideExpectedLane(session.note,chartNow))>rhythmSlideTrackingTolerance(session.note,chartNow);'));
+// 2026-10 の追従の見直し(b2439dc)で、的と許し幅を先に変数へ取り、判定ラインの高さの位置・指の位置の両方で同じ比べ方をする形になった。
+// 見ることは同じ: 幅2の許し幅 .82・その時刻の帯の中心(rhythmSlideExpectedLane)から許し幅(rhythmSlideTrackingTolerance)より離れたら外れ
+check('SLIDE幅2の許容値と現在幅を使う追従判定',source.includes('const RHYTHM_SLIDE_TOLERANCE_LANES = .82;')
+  &&source.includes('const target=rhythmSlideExpectedLane(session.note,chartNow),tolerance=rhythmSlideTrackingTolerance(session.note,chartNow);')
+  &&source.includes('const off=actual=>actual===null||Math.abs(actual-target)>tolerance;'));
 // 2026-09-12: 継ぎ目(10等分の境目)の縁取りをやめ、外周だけを1本の線でなぞる形にした。
 // 継ぎ目は判定と無関係なのに横線として見えていて、チェックポイントと見分けが付かなかったため。
 // 縁の濃さ(.56)はそのまま。「縁が残っていること」を、新しい作りに対して見る。

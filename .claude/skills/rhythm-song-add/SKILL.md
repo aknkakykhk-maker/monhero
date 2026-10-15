@@ -38,7 +38,16 @@ description: Add a new song to モンヒロビート (the rhythm-game mode of �
 - よその作品の曲は、更新履歴へ `link:{url,label}` を書けば相手のページへのボタンが出る
   (**https だけ通る**関門 `changelogSafeLink` を経由する)。**宣伝の文面は教えてもらった事実だけで書く**。
   作者名は `BGM_TRACKS` の `creator` へ入れる
+- **最初のノーツは2秒より後にする**(2026-10-11 社長の決定。既存曲はいちばん早くて1.8秒)。早いと、始まった瞬間に
+  ノーツが道の途中から出る(Grievous Lady で起きた。最初のノーツが0.31秒)。ゲームの始まり方は変えない。
+  早いときは**音源の頭に無音を足して譜面ごとずらす**(ノーツは省かない)。WAV の段階で `-af "adelay=2000|2000"` を通してから
+  エンコードし、解析は `--bpm <同じ値> --beat-zero <元の拍の頭+足した長さ>` で拍の格子もずらす(`RHYTHM_SONG_BEATS`・`DURATION_MS` も直す)。
+  **生成器は足した無音の手前の音にもノーツを置く**ので、足す長さは「最初の拍の頭が2秒を超える」だけ取る
+  (Against My Own Shadow は1秒では 1.86秒になり、2秒足して 2.44秒になった)
 - 難易度が既存の帯から大きく外れるときは `chartIntensity:'extreme'` を使う
+- **モンスターノーツは、どの難易度にも4個ちょうど**(TAP の枠1〜4を1個ずつ。2026-10-11 社長「どの曲も基本4個入るルールだよ」)。
+  生成器は必ず4個置く。手で書いた・写した譜面は `t(時刻,サブレーン,幅,枠)` の4つ目で付ける(ノーツの数・時刻は変えない)。
+  `node tools/mode/rhythm-monster-four-check.js` が公開曲の全難易度を見張る(例外の表は持たない。4個でない譜面は直す)
   (`challengeFactor` は5難易度まとめて効き、上げすぎるとレベルがむしろ下がる)
 
 
@@ -300,7 +309,7 @@ console.log('最密4秒',best+'打  最短',g[0]+'ms');"
 決めた理由は `docs/spec/RHYTHM_MODE.md` に残す（`rhythm-song-challenge-check.js` が見張る）。
 
 Rev.20 から、自動の歯ごたえはテンポを0.35乗・拍のはっきりさを0.15乗でしか数えない（それまでは0.7乗・0.55乗。
-量がすでにテンポに比例しているのに二重に数えていた。`rhythm-chart-rev20-check.js`）。遅い曲・拍の立ちが弱い曲を
+量がすでにテンポに比例しているのに二重に数えていた。Rev.20）。遅い曲・拍の立ちが弱い曲を
 人が重く直す必要は、前より少ないはず。まず自動のまま出して、帯の中の位置を見てから決める。
 
 ---
@@ -376,6 +385,14 @@ node tools/run-checks.js --area changelog     # お知らせ・ジャケット�
 node tools/run-checks.js --area audio         # BGM_TRACKS の src が実在するか
 node tools/audio/rhythm-loudness-check.js --ffmpeg "$FF"   # 全曲の音量
 node tools/run-checks.js --area mode          # 175本・約14分。譜面まわり
+```
+
+**ほかの曲の譜面が1バイトも変わっていないことを確かめる。**(2026-10-11、仕上げの道具が新曲のたびに Sheriruth の譜面を書き換えていた)
+
+```bash
+node tools/mode/rhythm-released-chart-lock-check.js    # 公開中の曲が控えと同じか(NG なら、その曲は元へ戻す)
+# 新曲を公開するときだけ、新曲を控えに入れる(ほかの曲が「変わった」と出ている間は打たない)
+node tools/mode/rhythm-released-chart-lock-check.js --update --reason "新曲 <曲名> を公開"
 ```
 
 **起動時の読み込みが増えたのが譜面だけであることを確かめる。**

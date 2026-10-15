@@ -23,7 +23,6 @@
 'use strict';
 const fs=require('fs'),path=require('path');
 
-const ENDING_REVISION=22;
 const ENDING_WINDOW_MS=2000,ENDING_MIN_TAIL_MS=2000,ENDING_SHORT_TAIL_MS=500,ENDING_LOOKBACK_MS=8000,ENDING_MAX_GAP_MS=3000;
 const ENDING_HOLD_MIN_MS=1500,ENDING_HOLD_MAX_MS=3000,ENDING_HOLD_END_MARGIN_MS=300;
 
@@ -56,7 +55,7 @@ const fadingEnding=(audio,{chartEndMs=Infinity,shortFade=false}={})=>{
     reason:`最後の一発 ${(last.timeMs/1000).toFixed(2)}秒・余韻 ${(tailFromMs/1000).toFixed(0)}〜${(durationMs/1000).toFixed(1)}秒・長押しの終わり ${(holdEndMs/1000).toFixed(2)}秒`};
 };
 
-module.exports={ENDING_REVISION,fadingEnding};
+module.exports={fadingEnding};
 
 if(require.main===module){
   const dir=path.join(__dirname,'authoring');

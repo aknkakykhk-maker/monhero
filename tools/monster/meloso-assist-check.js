@@ -81,7 +81,8 @@ assert(/await handleEnemyTurn\([^)]*hpBeforeEnemyAttack[,)]/.test(game));
 // そこで回復すると二重に適用され、EXTREMEのLv3が50%回復のはずが100%回復になる。
 assert(!/setNextTurnBuffs\(\s*[A-Za-z_$][\w$]*\s*=>/.test(game),
   'setNextTurnBuffs の更新関数の中で副作用を行っている(回復が二重に適用されうる)');
-assert(game.includes(`const pendingNextTurnBuffs = nextTurnBuffsRef.current;`),
+// 2026-10-06(0194a35ed)に時を止める EX のときは予約を読まない形(timeStopSlot==null?…:{})になった。ref から読む点は同じ
+assert(/const pendingNextTurnBuffs = [^;\n]*nextTurnBuffsRef\.current/.test(game),
   '次ターン予約はrefから読むこと');
 assert(game.includes(`writeNextTurnBuffs({});`), '消費後はrefとstateの両方を空にすること');
 // stateとrefがずれないよう、書き込みは必ずwriteNextTurnBuffsを通す
@@ -121,9 +122,10 @@ assert(game.includes(`Math.max(1,Math.floor(dmgBase*Math.max(0.01,(1.0-getPermaB
 // タクティクスでは「狙われた子だけ」のぶん(tacticsSlotRate)も掛ける形になった。ふだんのバトルは bySlot を渡さないので 1.0 で今までと同じ
 // ふだんのバトルでは追加の掛け算がすべて 1 のままで、今までと同じ式。タクティクスだけ「狙われた子のぶん」と、EXの被ダメ軽減(世界樹の守り・複数効果・パーティ効果)が最後に掛かる。
 // 後ろへ足されるEXの掛け算の中身までは固定せず、「isTacticsMode のときだけ掛け、そうでなければ :1」の形を見る(2026-10)
+// 2026-10-08 からメロディーのクッキー(7個から味方全体の被ダメ軽減)の *cookieEffectNow().takenMult が最後に付く。クッキーが無いときは 1 なので、この検査の場面は変わらない
 assert(game.includes(`? Math.max(1,Math.floor(damage*getTurnBuff('takenDamageMult',1.0)))`)
   || game.includes(`? Math.max(1,Math.floor(damage*getTurnBuff('takenDamageMult',1.0)\n      *tacticsSlotRate(isTacticsMode(runMode)?turnBuffs.bySlot:null,slotIdx,'takenDamageMult',1.0)))`)
-  || /\? Math\.max\(1,Math\.floor\(damage\*getTurnBuff\('takenDamageMult',1\.0\)\s*\*tacticsSlotRate\(isTacticsMode\(runMode\)\?turnBuffs\.bySlot:null,slotIdx,'takenDamageMult',1\.0\)\s*\*\(isTacticsMode\(runMode\)\?[^:]+:1\)\)\)/.test(game),
+  || /\? Math\.max\(1,Math\.floor\(damage\*getTurnBuff\('takenDamageMult',1\.0\)\s*\*tacticsSlotRate\(isTacticsMode\(runMode\)\?turnBuffs\.bySlot:null,slotIdx,'takenDamageMult',1\.0\)\s*\*\(isTacticsMode\(runMode\)\?[^:]+:1\)(?:\s*\*cookieEffectNow\(\)\.takenMult)?\)\)/.test(game),
   '次ターン被ダメージ軽減の適用が変わっている。モデル側も新しい式へ直すこと');
 // 予測表示は1発ずつ数えるため、ガードを引いた値(hit.taken)を resolveTacticsGuardedHit で出してから軽減を掛ける形になった(順番は同じ)
 assert(game.includes(`applyTurnDamageReduction(Math.max(0,rawDmg-guardValueOf(previewGuardFlat,previewGuardMult)))`)

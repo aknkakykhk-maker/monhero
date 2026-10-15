@@ -452,7 +452,8 @@ check('画像のパスをJSXへ直接書いていない', !/images\/assistant\//
 check('HOMEの吹き出しは施設の上に重ならない場所へ置く',
   has('.mh-home-assistant{position:absolute;z-index:5;left:3%;width:70%;top:calc(72px + env(safe-area-inset-top));pointer-events:auto}')
     && has('@media(max-width:350px){.mh-home-assistant{width:62%}}')
-    && has('<div className={`mh-home-assistant${spotClass(\'assistant\')}`}><AssistantBubble scene="home" condition={assistantBondUp?\'bondUp\':(masuMons.length===0?\'firstRun\':null)} compact/></div>'));
+    // 助手とおしゃべり(2026-10-14)の「おしゃべり」ボタンは、同じ置き場所の中で吹き出しの下に並べる(公開の印が立つまでは出ない)
+    && has('<div className={`mh-home-assistant${spotClass(\'assistant\')}`}><AssistantBubble scene="home" condition={assistantBondUp?\'bondUp\':(masuMons.length===0?\'firstRun\':null)} compact/>'));
 // 上のプロフィールカードに重ならないことを、CSSの数値から計算して確かめる。
 // safe-area は帯にも吹き出しにも同じだけ効くので、比べるのは固定の px だけでよい
 check('HOMEの吹き出しはプロフィールカードの下に来る', (() => {

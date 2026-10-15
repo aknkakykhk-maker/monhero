@@ -89,7 +89,8 @@ const headerHtml=headerJsx
   .replace(/\son[A-Z][A-Za-z]*=\{[^}]*\}/g,'')
   // data-... の式は見た目の段階分けで、箱の位置・大きさには効かないので落とす
   .replace(/\sdata-[a-z-]+=\{[^{}]*\}/g,'')
-  .replace(/className=\{`([^`]*)`\}/g,(_,body)=>`class="${body.replace(/\$\{RHYTHM_RANK_COLORS\[[^\]]*\]\}/g,'text-fuchsia-200')}"`)
+  // 難易度の名札は HELL だけ赤(#2737)。この検査は5つの難易度の見た目を見るので、HELL でない側の色に読み替える
+  .replace(/className=\{`([^`]*)`\}/g,(_,body)=>`class="${body.replace(/\$\{RHYTHM_RANK_COLORS\[[^\]]*\]\}/g,'text-fuchsia-200').replace(/\$\{difficulty\.id==='HELL'\?'[^']*':'([^']*)'\}/g,'$1')}"`)
   .replace(/className=/g,'class=')
   .replace(/\{difficulty\.id\}/g,SAMPLE.difficulty)
   .replace(/\{song\.displayName\}/g,SAMPLE.song)

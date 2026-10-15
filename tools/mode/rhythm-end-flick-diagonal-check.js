@@ -140,7 +140,9 @@ check('経路が速く動いているあいだの検出では、指を離すの�
   /session\.endFlickUncertain=true;/.test(source)
   &&/session\.endFlickDone&&!session\.endFlickUncertain&&!session\.endFlickReleased/.test(source));
 check('弾いたまま指を置いていたら、終端でMISSにしない',
-  /session\.failed\|\|\(session\.endFlickRequired&&!session\.endFlickDone\)\?'MISS'/.test(source));
+  /session\.failed\|\|\(session\.endFlickRequired&&!session\.endFlickDone\)\?'MISS'/.test(source)
+  // 2026-10-10(c8af02175)から「押しっぱなしで窓を過ぎたら MISS」の中で、弾いて取ったか(flickTaken)で分ける形になった。弾いたぶんは MISS にしない
+  ||/const flickTaken=session\.endFlickRequired&&session\.endFlickDone;\s*session\.note\.holdJudgment=\(session\.failed\|\|!flickTaken\)\?'MISS'/.test(source));
 
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
 process.exit(failed?1:0);

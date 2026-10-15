@@ -252,13 +252,30 @@ const fixesFor=(verdict,compared)=>{
   return [...metrics].filter(metric=>FIX_FOR[metric]).map(metric=>({metric,...FIX_FOR[metric]}));
 };
 
+// ── 1コマの重さ(2026-10-11・stats.frame) ──
+// 端末の系統 × 描き方(dom / 2d / webgl / gpu)ごとに、1コマの平均・ゲームの1コマの JS の時間の中央値と、33ms を超えたコマの割合を出す。
+// frame が無い古い行・壊れた行は数えない(読み飛ばすだけ)。ボットの重さ表(tools/playbot/rhythm-perf-bench.js)と並べて、CPU 何倍が実機相当かを決める
+const frameSummary=(rows,{days=null,now=Date.now()}={})=>{
+  const since=days?now-days*86400000:-Infinity,groups=new Map();
+  for(const row of rows){
+    if(isReportRow(row))continue;
+    const at=Date.parse(row.created_at||'');if(Number.isFinite(at)&&at<since)continue;
+    const f=row.stats&&typeof row.stats==='object'&&row.stats.frame&&typeof row.stats.frame==='object'?row.stats.frame:null;
+    const n=Number(f&&f.n);if(!f||!(n>0))continue;
+    const key=`${row.platform||'other'}:${String(f.draw||'?')}`;
+    if(!groups.has(key))groups.set(key,{key,plays:0,frames:0,over34:0,avg:[],tick:[],gpu:new Set()});
+    const g=groups.get(key);g.plays++;g.frames+=n;g.over34+=Number(f.over34)||0;
+    if(Number.isFinite(Number(f.avg)))g.avg.push(Number(f.avg));if(Number.isFinite(Number(f.tickAvg)))g.tick.push(Number(f.tickAvg));if(f.gpu)g.gpu.add(String(f.gpu));
+  }
+  return [...groups.values()].map(g=>({key:g.key,plays:g.plays,frameAvg:median(g.avg),tickAvg:median(g.tick),over34Share:g.frames?g.over34/g.frames:0,gpu:[...g.gpu].slice(0,3)})).sort((a,b)=>b.plays-a.plays);
+};
 const report=(rows,{json=false,days=null}={})=>{
   const summary=aggregate(rows,{days});
   const verdict=diagnose(summary);
   const compared=compareReported(rows,{days});
   const fixes=fixesFor(verdict,compared);
   const fixCompare=Object.values(FIX_FOR).map(item=>item.fix).filter((name,i,list)=>list.indexOf(name)===i).map(name=>compareFix(rows,name,{days}));
-  if(json){const timing=timingSummary(rows,{days}),timingVerdict=timingLines(timing);console.log(JSON.stringify({summary,verdict,compared,fixes,fixCompare,timing,timingVerdict},null,1));return {summary,verdict,compared,fixes,fixCompare,timing,timingVerdict};}
+  if(json){const timing=timingSummary(rows,{days}),timingVerdict=timingLines(timing);console.log(JSON.stringify({summary,verdict,compared,fixes,fixCompare,timing,timingVerdict,frames:frameSummary(rows,{days})},null,1));return {summary,verdict,compared,fixes,fixCompare,timing,timingVerdict};}
   console.log(`タッチの診断: ${rows.length}行${days?`(直近${days}日)`:''}`);
   for(const g of summary){
     console.log(`\n[${g.key}] ${g.plays}曲・${g.devices}端末・${g.taps}タッチ・${g.notes}ノーツ`);
@@ -285,10 +302,14 @@ const report=(rows,{json=false,days=null}={})=>{
     for(const g of item.summary)console.log(`  [${item.fixName}・${g.key}] ${g.plays}曲  50ms以上遅れた ${g.lateDeliveryPer1k.toFixed(2)} / 遅れて見えた ${g.lateStartPer1k.toFixed(2)} / 入力の無いMISS ${g.noInputMissPer1k.toFixed(2)} / MISS ${g.missPer1k.toFixed(1)}`);
     item.lines.forEach(line=>console.log(`  ${line.level==='good'?'◎':line.level==='bad'?'▲':line.level==='wait'?'…':'・'} ${line.text}`));
   }
-  return {summary,verdict,compared,fixes,fixCompare};
+  const frames=frameSummary(rows,{days});
+  console.log('\n1コマの重さ(stats.frame・端末:描き方):');
+  if(!frames.length)console.log('  まだ記録がありません(frame を送る版からの行だけ数える)');
+  for(const g of frames)console.log(`  [${g.key}] ${g.plays}曲  1コマ平均の中央値 ${g.frameAvg??'-'}ms / ゲームの JS ${g.tickAvg??'-'}ms / 33ms超 ${(g.over34Share*100).toFixed(1)}%${g.gpu.length?` / ${g.gpu.join('・')}`:''}`);
+  return {summary,verdict,compared,fixes,fixCompare,frames};
 };
 
-module.exports={timingSummary,timingLines,timingFixesFor,TIMING_MIN_PLAYS,aggregate,diagnose,parseRows,mergeRows,MIN_PLAYS,isReportRow,compareReported,compareFix,fixesFor,FIX_FOR,MIN_REPORTED};
+module.exports={frameSummary,timingSummary,timingLines,timingFixesFor,TIMING_MIN_PLAYS,aggregate,diagnose,parseRows,mergeRows,MIN_PLAYS,isReportRow,compareReported,compareFix,fixesFor,FIX_FOR,MIN_REPORTED};
 
 if(require.main===module){
   let rows=readRows();

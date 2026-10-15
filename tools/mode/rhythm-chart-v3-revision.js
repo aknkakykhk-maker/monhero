@@ -13,12 +13,17 @@
 // たまたま閉じられる形の強化しか入れられなかった。拾う音の選び方そのものを良くすると、
 // 既存曲のノーツ数も少しずつ動いてしまう。
 //
-// そこで曲ごとに「どのリビジョンの作り方で作るか」を曲の一覧(rhythm-song-registry.json)へ持たせる。
-//   ・書いていない曲(= 2026-09-24 までに入った曲)はRev.1。今までと1音も変わらない
-//   ・解析器(rhythm-audio-analyze-v3.js)は、**まだ解析していない曲**を登録するときに最新リビジョンを書く
-//     (新しく足す曲だけが、自動で新しい作り方になる)
-//   ・既存曲を作り直すと決めたときは、その曲へ手で `"chartRevision": <リビジョン>` を書く
-//   ・試しに別のリビジョンで作るだけなら、生成器へ `--chart-revision <リビジョン>` を渡す(一覧は書き換えない)
+// そこで曲ごとに「どのリビジョンの作り方で作ったか」を曲の一覧(rhythm-song-registry.json)へ持たせている。
+//
+// 【2026-10-12 から: 作るのは最新リビジョンだけ】(社長「段階を分けず、一気に古い版を外して最新だけにする」)
+//   ・生成器・区間の差し替え・自動修正・仕上げの流れは、最新リビジョンの作り方だけを持つ。`--chart-revision` に最新以外を渡すと止まる。
+//     公開中の譜面は rhythm-mode.js に書き出し済みで、作り直さない(tools/mode/CLAUDE.md ⑩-2)。指紋は rhythm-released-chart-lock-check.js が見張る
+//   ・曲の一覧の chartRevision の数字(Rev.1・21〜28 など)はデータのまま残す。遊んだ記録の学び直しで、その曲がどの作り方で作られたかの印に使う
+//   ・既に作った譜面を「読む」ための読み方は残す: 速さの表(rhythm-chart-tempo-warp.js の tempoWarpForChart)と、手のモデルの読み方
+//     (handModelFlagsForRevision)・レーン数(laneCountOfChart)。週次の学び直しが公開曲の時刻をその曲を作ったときの表で読み解くため
+//   ・古い作り方は git の記録から取り出す: 外す直前のコミットを worktree に出し、そこで生成器へ `--chart-revision <リビジョン>` を渡す
+//     (コミット番号は tools/mode/CLAUDE.md ⑩-2)
+//   ・下の一覧は、それぞれの数字の曲がどんな作り方で作られたかの記録(作り方の改良を足したら、ここへ1行足して CHART_REVISION_CODE_LATEST を上げる)
 //
 // リビジョンの中身(上のリビジョンは下のリビジョンを全部含む)
 //   1 … 2026-09-24 までの作り方
@@ -112,7 +117,10 @@
 //        (Emerald Rush は 150.0 → 153.0 BPM)は、1つのテンポの格子から拍が最大で1拍近くずれる。なめらかな揺れ(Rev.21/23)は
 //        幅の上限(格子の間隔の0.45倍)を超えると使わないので、人が測った「時刻ごとの拍のずれ」の点を音源の一覧の `warpPoints` に書き、
 //        その曲だけ点のあいだを直線でつないだずれを使う(つなぎ目の段差 Rev.26 と同じ通り道)。書いていない曲は Rev.27 と同じ譜面
-//   29〜 … 作法の重みを遊んだ感想(譜面メモ)から学び直したリビジョン。rhythm-chart-learn.js --write が
+//   29 … モンスターノーツを必ず4個(2026-10-11・社長「どの曲も基本4個入るルールだよ」)。曲の20/40/60/80%に近い単打を
+//        「拍の頭で前後1拍空く → 前後半拍 → 拍の頭 → 同時押しでない単打 → 単打」の順にゆるめて、狙いの前後10%(無ければ曲全体)から必ず選ぶ。
+//        Rev.28 までは条件に合う単打が無いとその枠を空けていた(公開曲で19譜面が3個以下だった・手で4個に直した)
+//   30〜 … 作法の重みを遊んだ感想(譜面メモ)から学び直したリビジョン。rhythm-chart-learn.js --write が
 //        tools/mode/authoring/chart-knowledge-weights.json へ書き足すと、自動でここが最新リビジョンになる。
 //        遊んだ記録から学ぶ調整値(tools/mode/authoring/chart-play-tuning.json)も同じ番号の並びへ書き足す。
 //        学び直しは「作り方の最新(CHART_REVISION_CODE_LATEST)・重みの最新・調整値の最新のいちばん大きいもの＋1」を次の番号にする
@@ -123,7 +131,7 @@ const CHART_ENGINE_NAME='MHB CHART ENGINE';
 const chartRevisionLabel=revision=>`${CHART_ENGINE_NAME} Rev.${revision}`;
 const CHART_REVISION_LEGACY=1;
 // 作り方(コード)を改良した最新のリビジョン。改良を足したらここを上げる
-const CHART_REVISION_CODE_LATEST=28;
+const CHART_REVISION_CODE_LATEST=29;
 // 最新リビジョンは、作法の重みを書き足したリビジョンまで自動で上がる(学び直すたびに新しいリビジョンになる)
 const {latestKnowledgeRevision}=require('./rhythm-chart-knowledge.js');
 const {latestPlayTuningRevision}=require('./rhythm-chart-play-tuning.js');

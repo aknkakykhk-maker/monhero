@@ -38,6 +38,9 @@ for (const rel of DATA_FILES) {
     if (/\bsrc:\s*["']images\/profile-frames\//.test(line)) return;
     // 着替えの服は、絵のフォルダ(imageDir)だけを書き、1枚ずつのパスは持たない。フォルダの文字は画像パスではない(2026-10)
     if (/^\s*imageDir:\s*["']images\/assistant\//.test(line)) return;
+    // 行動カードの絵(BATTLE_CARD_ART。枠・技のマーク・名札・名前の飾り線)は、表そのものが定数で、1枚の絵を1か所でしか指さない。
+    // 段階(I〜IX)や色の順に並べた表なので、1枚ずつ定数にすると並びが読めなくなる(2026-10-15)
+    if (/["']images\/ui\/battle-cards\/[^"']+["']/.test(line) && !/["']images\/(?!ui\/battle-cards\/)[^"']+["']/.test(line)) return;
     // アツの表情アイコンは、使われていない画像の検査(image-asset-check)が見つけられるよう、1枚ずつ文字でパスを書く決まりにしてある(breeder.js のコメント)
     if (/^\s*[a-z]+:\s*["']images\/breeder-icons\/atsu_[a-z]+\.png/.test(line)) return;
     if (!/["']images\/[^"']+["']/.test(line)) return;

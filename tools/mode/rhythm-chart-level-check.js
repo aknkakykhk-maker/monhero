@@ -53,7 +53,8 @@ const runtime=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js')
       const chart=song.difficulties[difficulty.id];
       const computed=levels[difficulty.id].level;
       // 数個しか無い確認用の型は測れない（そのときは譜面が持っている値をそのまま使う）
-      if(chart.totalNotes<LEVEL_MIN_NOTES)continue;
+      // HELL(6段目)は譜面がある曲だけにある。無い曲は測らない
+      if(!chart||chart.totalNotes<LEVEL_MIN_NOTES)continue;
       if(chart.level!==computed)mismatched.push(`${song.songId} ${difficulty.id}: 表 ${chart.level} / 計算 ${computed}`);
     }
   }
@@ -80,7 +81,7 @@ const runtime=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js')
   for(const song of RHYTHM_SONGS){
     const levels=RHYTHM_DIFFICULTIES
       .map(difficulty=>({id:difficulty.id,chart:song.difficulties[difficulty.id]}))
-      .filter(entry=>entry.chart.totalNotes>=LEVEL_MIN_NOTES);
+      .filter(entry=>entry.chart&&entry.chart.totalNotes>=LEVEL_MIN_NOTES);
     // テスト用の譜面は、難易度ごとに別々の確認内容を入れてあるので順番を持たない。
     // 曲えらびへ出る曲(RHYTHM_DEMO_SONG_IDS)は全部見る。以前は songId の綴りで
     // 拾っていたため、stay_with_me や kiki_issen のような正式曲が丸ごと外れていた。
@@ -95,13 +96,60 @@ const runtime=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js')
   check('本物の曲は、難易度が上がるほどレベルも上がる',broken.length===0,broken.join(' / '));
 }
 
+// --- 4b. 空中の段(HELL)は、空中のぶんだけが数字に効く(2026-10-10・社長「空中のぶんを数字に足す」) ---
+// 空中のノーツが無い譜面は1つも数字が変わらないこと、HELL は空中のぶんだけ MASTER より重くなることを見る。
+// Sheriruth の HELL は 2026-10-11 に案Z・高さの差39%で組み直した(MASTER の写しではない)ので、空中を地上へ戻すと
+// 空中⇄地上の切り替えのぶんだけ生の値が下がり、切り替えを1度も数えなくなることを見る
+{
+  const hasSky=chart=>(chart&&Array.isArray(chart.notes)?chart.notes:[]).some(note=>Number(note.skyHeight)>0
+    ||(Array.isArray(note.slidePoints)&&note.slidePoints.some(point=>Number(point.sky)>0)));
+  const grounded=chart=>({...chart,notes:chart.notes.map(note=>({...note,skyHeight:0,
+    ...(Array.isArray(note.slidePoints)?{slidePoints:note.slidePoints.map(point=>({...point,sky:0}))}:{})}))});
+  const skyless=[];
+  for(const song of RHYTHM_SONGS){
+    for(const difficulty of RHYTHM_DIFFICULTIES){
+      const chart=song.difficulties[difficulty.id];
+      if(!chart||hasSky(chart))continue;
+      const strain=chartStrain(chart);
+      if(strain&&strain.parts.skySwitch!==0)skyless.push(`${song.songId} ${difficulty.id}`);
+    }
+  }
+  check('空中のノーツが無い譜面では、空中⇄地上の切り替えを1度も数えない',skyless.length===0,skyless.join(' / '));
+  const sheriruth=RHYTHM_SONGS.find(song=>song.songId==='sheriruth');
+  // 公開前は HELL をデバッグの試作の枠(RHYTHM_PROTO_SONGS の sheriruth_hell_debug)に置いている。公開したら公開曲のほうを見る
+  const hellDebug=(loadRuntimeSongs().RHYTHM_PROTO_SONGS||[]).find(song=>song.songId==='sheriruth_hell_debug');
+  const hell=(sheriruth&&sheriruth.difficulties.HELL)||(hellDebug&&hellDebug.difficulties.HELL),master=sheriruth&&sheriruth.difficulties.MASTER;
+  check('Sheriruth HELL の譜面が見つかる(公開曲かデバッグの試作の枠)',!!(hell&&hell.notes&&hell.notes.length));
+  if(hell&&master){
+    // 公開前は表(RHYTHM_CHART_LEVELS)を通らないので、譜面に書いた Lv. が式の値と一致しているかも見る
+    // 社長の値(LEVEL_OVERRIDES の sheriruth_hell_debug)があればその値、無ければ式の値と同じか
+    {const {shownLevel,LEVEL_OVERRIDES}=require('./rhythm-chart-level.js');const want=shownLevel('sheriruth_hell_debug','HELL',hell),over=(LEVEL_OVERRIDES.sheriruth_hell_debug||{}).HELL;
+      check(`Sheriruth HELL の Lv. が${Number.isFinite(over)?'社長の値':'式で出した値'}と同じ`,hell.level===want,`譜面 Lv.${hell.level} / ${Number.isFinite(over)?`社長の値 Lv.${over}・`:''}式 Lv.${chartLevel(hell).level}`);}
+    const back=chartStrain(grounded(hell)),masterStrain=chartStrain(master),hellStrain=chartStrain(hell);
+    check('Sheriruth HELL の空中を地上へ戻すと、空中のぶんだけ生の値が下がる',back.raw<hellStrain.raw&&back.parts.skySwitch===0&&hellStrain.parts.skySwitch>0,
+      `戻した HELL ${back.raw}(切り替え ${back.parts.skySwitch}) / HELL ${hellStrain.raw}(切り替え ${hellStrain.parts.skySwitch})`);
+    // 空中を測る式(2026-10-13 社長「今後作るものは測る形で。今あるものは変えなくていい」): 空中のある譜面の式の Lv. は、空中の難しさを
+    // 1ノーツの重さに足した生の値そのもの(一律の倍率ではない)で、空中を地上と見なした Lv. より下にならない
+    {const {levelFromRaw}=require('./rhythm-chart-level.js');const groundLv=chartLevel(grounded(hell)).level,lv=chartLevel(hell);
+      check('Sheriruth HELL の式の Lv. は、空中込みの生の値から測った値(空中を地上と見なした Lv. 以上)',lv.level===levelFromRaw(lv.strain.raw)&&lv.level>=groundLv,`式 Lv.${lv.level} / 地上と見なして Lv.${groundLv}`);}
+    // 公開中の HELL 4曲(と古い試作の Sheriruth)の表示は、公開したときの値のまま(LEVEL_OVERRIDES で固定。Against My Own Shadow は新しい式の 42 で公開)
+    {const {shownLevel,loadRuntimeSongs:loadSongs}=require('./rhythm-chart-level.js');const all=[...(loadSongs().RHYTHM_PROTO_SONGS||[])];
+      for(const [id,d,want] of [['sheriruth_hell_debug','HELL',54],['grievous_lady_hell','MASTER',60],['kaze_ga_soyogu_hell_debug','HELL',23],['against_my_own_shadow_hell_debug','HELL',42]]){
+        const s=all.find(x=>x.songId===id),c=s&&s.difficulties[d];
+        check(`公開中の HELL ${id} の表示は前の値 Lv.${want} のまま(新しい式に変えても動かない)`,!!c&&shownLevel(id,d,c)===want&&c.level===want,`譜面 Lv.${c&&c.level} / 表示 ${c&&shownLevel(id,d,c)} / 新しい式 ${c&&chartLevel(c).level}`);}}
+    check('Sheriruth HELL は空中のぶん MASTER より重い',hellStrain.raw>masterStrain.raw&&hell.level>master.level,
+      `HELL 生${hellStrain.raw} Lv.${hell.level} / MASTER 生${masterStrain.raw} Lv.${master.level}`);
+  }
+}
+
 // --- 5. レベルが決めた範囲に収まっている ---
 {
   const out=[];
   for(const song of RHYTHM_SONGS){
     for(const difficulty of RHYTHM_DIFFICULTIES){
       const chart=song.difficulties[difficulty.id];
-      if(chart.totalNotes<LEVEL_MIN_NOTES)continue;
+      // HELL(6段目)は譜面がある曲だけにある。無い曲は測らない
+      if(!chart||chart.totalNotes<LEVEL_MIN_NOTES)continue;
       if(!(chart.level>=LEVEL_MIN&&chart.level<=LEVEL_MAX))out.push(`${song.songId} ${difficulty.id}=${chart.level}`);
     }
   }

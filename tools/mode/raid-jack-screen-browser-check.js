@@ -75,6 +75,8 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
       localStorage.setItem('mh_tutorial_seen_v1', JSON.stringify(true));
       localStorage.setItem('mh_rhythm_tutorial_seen_v1', JSON.stringify(true));   // 初めてのモンヒロビートの案内(モンヒロビート挑戦の検査で曲えらびを開くため)
       localStorage.setItem('mh_battle_tutorial_seen_v1', JSON.stringify(true));
+      // HELL の公開(2026-10-13)後は、HOME に着くと HELL のお話と説明が一度だけ流れる。検査では見たことにしておく
+      localStorage.setItem('mh_rhythm_hell_story_seen_v1', JSON.stringify(true));
       localStorage.setItem('mh_battle_tutorial_guide_shown_v1', JSON.stringify(true));
       localStorage.setItem('mh_inherited_unique_level_compensation_v1', JSON.stringify(true));
       localStorage.setItem('mh_inherited_unique_level_compensation_pending_v1', JSON.stringify(false));
@@ -136,6 +138,12 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     check('強制表示がONになる', /HOMEに出す: ON/.test(await page.locator('[data-raid-jack-debug]').innerText()));
     await page.locator('[data-raid-go-home]').click();
     await page.locator('[data-home-raid-jack]').waitFor({ timeout: 20000 });
+    // HOMEの上に出る案内(お知らせのまとめの「あとで読む」・HELL の遊び方の「つぎへ」)を先に閉じる(2026-10-13 から HOME に出る)
+    for (let i = 0; i < 20; i++) {
+      const did = await page.evaluate(() => { const b = document.querySelector('[data-update-guide-bundle-later], [data-rhythm-hell-guide-next]'); if (!b) return false; b.click(); return true; });
+      if (!did) break;
+      await page.waitForTimeout(300);
+    }
     // HOMEを開いたとき重なる導入(新しい助手の紹介など)は、読み終えて閉じる
     for (let i = 0; i < 60; i++) {
       const next = page.locator('button[aria-label="次へ"], button:has-text("次へ"), button:has-text("はじめる"), button:has-text("閉じる"), button:has-text("あとで")').filter({ visible: true }).first();
@@ -160,13 +168,14 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     check('跳ねる動き(アニメーション)が付いている', await page.locator('[data-home-raid-jack] img').first().evaluate((el) => getComputedStyle(el).animationName.includes('mhRaidJackHop')));
     await page.waitForTimeout(1500);
     check('共有HPバーに「あらわれた」と残りHPが出る(段階2が挑戦中)', /ジャック子爵があらわれた/.test(await page.locator('[data-home-raid-jack]').innerText()) && /2,700,000/.test(await page.locator('[data-home-raid-jack]').innerText()), (await page.locator('[data-home-raid-jack]').innerText()).replace(/\s+/g, ' '));
+    // 炎は施設より後ろの別の層(data-home-raid-aura-wrap)で描く(2026-10-13・炎が施設の札にかぶったため。raid-jack-home-aura-check.js)
     check('HOMEのジャックにオーラ(炎の舌)が出ている', await page.evaluate(() => {
-      const el = document.querySelector('[data-home-raid-jack] [data-jack-aura]');
+      const el = document.querySelector('[data-home-raid-aura-wrap] [data-jack-aura]');
       return !!el && el.querySelectorAll('[data-jack-aura-el] > ins').length >= 5;
     }));
     // 撮影用: RAID_HOME_TIER を渡すと、HOMEのオーラの段階の数字だけを差し替えて撮る(色・輪の見え方の確認用。炎の本数は変わらない)
     if (SHOT && process.env.RAID_HOME_TIER) {
-      await page.evaluate((t) => { const el = document.querySelector('[data-home-raid-jack] [data-jack-aura]'); if (el) el.setAttribute('data-jack-aura', t); }, process.env.RAID_HOME_TIER);
+      await page.evaluate((t) => { const el = document.querySelector('[data-home-raid-aura-wrap] [data-jack-aura]'); if (el) el.setAttribute('data-jack-aura', t); }, process.env.RAID_HOME_TIER);
       await page.waitForTimeout(900);
     }
     if (SHOT) await page.screenshot({ path: `${SHOT}/home-jack.png` });
@@ -265,6 +274,30 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await page.locator('[role="dialog"][aria-label$="の詳細"]').getByRole('button', { name: '閉じる' }).last().click();
     await page.locator('[role="dialog"][aria-label$="の詳細"]').waitFor({ state: 'detached', timeout: 10000 });
     check('詳細を閉じると編成画面に戻り、選んだ状態は変わらない', (await page.locator('[data-raid-jack-prep]').count()) === 1 && (await page.locator('[data-raid-hero]').first().getAttribute('class')) === heroBefore && !(await page.locator('[data-raid-prep-start]').isDisabled()));
+    // アシカの効果も、選ぶ画面から見られる(2026-10-13・ユーザー指示)。札の右上の i で、通常の編成と同じ詳細の窓を開く。
+    // 押しても選ぶ/外すは変わらない。窓には正式名称・各段の効果(バトル中と同じ getDynamicDesc の文)・このイベントでの育ち方が出る
+    const teachCount = await page.locator('[data-raid-teach]').count();
+    check('アシカの札すべての右上に i がある', teachCount > 0 && (await page.locator('[data-raid-teach-detail]').count()) === teachCount, `札${teachCount}枚`);
+    const teachId = await page.locator('[data-raid-teach]').first().getAttribute('data-raid-teach');
+    const teachBefore = await page.locator('[data-raid-teach]').first().getAttribute('class');
+    const teachSelBefore = await page.locator('[data-raid-jack-prep]').innerText();
+    if (SHOT) {
+      await page.locator('[data-raid-teach]').first().scrollIntoViewIfNeeded();
+      await page.screenshot({ path: `${SHOT}/raid-prep-teach-i.png` });
+    }
+    await page.locator(`[data-raid-teach-detail="${teachId}"]`).click();
+    await page.locator('[data-teach-detail-note]').waitFor({ timeout: 10000 });
+    if (SHOT) await page.screenshot({ path: `${SHOT}/raid-prep-teach-detail.png` });
+    const teachDlg = await page.locator('[data-teach-detail-note]').locator('xpath=..').innerText();
+    check('アシカの詳細に3段の効果とこのイベントでの育ち方が出る', /Lv\.0/.test(teachDlg) && /Lv\.1/.test(teachDlg) && /Lv\.2/.test(teachDlg) && /このイベントでは Lv\.0 から始まり、3・5ターン目/.test(teachDlg), teachDlg.replace(/\s+/g, ' ').slice(0, 160));
+    const clipped = await page.evaluate(() => {
+      const box = document.querySelector('[data-teach-detail-note]').parentElement;
+      return [...box.querySelectorAll('h3, div, span')].filter((el) => el.children.length === 0 && el.scrollWidth > el.clientWidth + 1).map((el) => el.textContent.slice(0, 20));
+    });
+    check('アシカの詳細の文字が幅390で切れない', clipped.length === 0, clipped.join(' / '));
+    await page.locator('[data-teach-detail-note]').locator('xpath=..').getByRole('button', { name: '閉じる' }).click();
+    await page.locator('[data-teach-detail-note]').waitFor({ state: 'detached', timeout: 10000 });
+    check('アシカの詳細を閉じても、選ぶ/外すは変わらない', (await page.locator('[data-raid-teach]').first().getAttribute('class')) === teachBefore && (await page.locator('[data-raid-jack-prep]').innerText()) === teachSelBefore);
     posts.length = 0;
     await page.locator('[data-raid-prep-start]').click();
     // 通常バトルと同じ配置画面で、勇者モン→供モンの順に、距離(立ち位置)を自分で選ぶ(2026-10-05・「勇者モンの距離が固定になってる」)
@@ -366,7 +399,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await page.locator('[data-home-raid-pumpkin="true"]').waitFor({ timeout: 30000 });
     const homeBtn = await page.locator('[data-home-raid-jack]').innerText();
     check('HOME: 大王を倒したあとは「ぱんぷきんが遊びに来た！」と出て、共有HPバーは出ない', /ぱんぷきんが遊びに来た/.test(homeBtn) && !/共有HP/.test(homeBtn), homeBtn.replace(/\s+/g, ' ').slice(0, 100));
-    check('HOME: ぱんぷきんの絵が出て、ジャックの絵・オーラは出ない', (await page.locator('[data-home-raid-jack] img[src*="pumpkin-icon"]').count()) === 1 && (await page.locator('[data-home-raid-jack] img[src*="jack.png"], [data-home-raid-jack] img[src*="jack-pose"]').count()) === 0 && (await page.locator('[data-home-raid-jack] [data-jack-aura-el]').count()) === 0);
+    check('HOME: ぱんぷきんの絵が出て、ジャックの絵・オーラは出ない', (await page.locator('[data-home-raid-jack] img[src*="pumpkin-icon"]').count()) === 1 && (await page.locator('[data-home-raid-jack] img[src*="jack.png"], [data-home-raid-jack] img[src*="jack-pose"]').count()) === 0 && (await page.locator('[data-home-raid-jack] [data-jack-aura-el], [data-home-raid-aura-wrap] [data-jack-aura-el]').count()) === 0);
     if (SHOT) await page.screenshot({ path: `${SHOT}/home-pumpkin.png` });
     const size = await page.evaluate(() => ({ s: document.documentElement.scrollWidth, c: document.documentElement.clientWidth }));
     check('画面が横にはみ出さない', size.s <= size.c + 1, `${size.s} / ${size.c}`);

@@ -486,7 +486,7 @@ const RaidJackScreen = ({ initialTier = 0, onBack, onChallenge, onPurchase, onCl
 };
 
 // 編成。A: 解放済みのベースモンから / B: 編成に入れているマスモンから。勇者1体+供モン最大3体。アシカは A=1枚 / B=3枚まで
-const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, onStart, restore = null, onOpenDetail }) => {
+const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, onStart, restore = null, onOpenDetail, onOpenTeachingDetail }) => {
   const isB = kind === 'b';
   const maxTeach = RAID_JACK_TEACHING_MAX;   // レイドバトルもグランドスラムも、アシカは3枚まで(数字は 35-raid-jack.jsx)
   const tier = raidJackTierAt(kind, tierIndex);
@@ -503,6 +503,11 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
     if (prev.includes(k)) return prev.filter((x) => x !== k);
     return prev.length >= RAID_JACK_ALLY_MAX ? prev : [...prev, k];
   });
+  // 詳細の窓に出す「どの段から始まり、いつ強くなるか」。数字は戦闘の中身と同じ定数から作る(60-app.jsx の raidJack の開始処理)
+  const teachGrowTurns = RAID_JACK_LEVEL_UP_TURNS.slice(0, RAID_JACK_TEACHING_MAX_LEVEL);
+  const teachDetailInfo = isB
+    ? { startLevel: RAID_JACK_TEACHING_MAX_LEVEL, note: `このイベントでは Lv.${RAID_JACK_TEACHING_MAX_LEVEL}(最大)から始まります。戦闘中は成長しません` }
+    : { startLevel: 0, note: `このイベントでは Lv.0 から始まり、${teachGrowTurns.join('・')}ターン目に1段階ずつ強くなります(最大 Lv.${RAID_JACK_TEACHING_MAX_LEVEL})` };
   const toggleTeach = (id) => setTeachIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : (prev.length >= maxTeach ? (maxTeach === 1 ? [id] : prev) : [...prev, id])));
   // 選ぶときにモンスターの詳細(ステータス・技・適性など)を見られる(2026-10-05・ユーザー指示)。
   // 詳細のボタンは、選ぶボタンの入れ子にならないよう、外側のdivの右上に重ねて置く(押しても選択は変わらない)
@@ -544,16 +549,23 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
           </div>
         </section>
         <section className="rounded-2xl border border-white/10 bg-black/30 p-3">
-          <div className="mb-1 text-[11px] font-black text-orange-200">アシカ({maxTeach}つまで)<span className="ml-1 text-[9px] text-slate-300">{teachIds.length} / {maxTeach}</span></div>
+          <div className="mb-1 text-[11px] font-black text-orange-200">アシカ({maxTeach}つまで)<span className="ml-1 text-[9px] text-slate-300">{teachIds.length} / {maxTeach}</span>{typeof onOpenTeachingDetail === 'function' && <span className="ml-1 text-[9px] font-normal text-slate-300">右上の <b className="text-sky-200">i</b> で効果が見られます</span>}</div>
           <div className="text-[9px] text-slate-300">{isB ? '最大レベルから始まります(戦闘中は成長しません)' : '固有技は3・5・8・11ターン目に2段階ずつ、アシカは3・5ターン目に1段階ずつ強くなります(3枚まで選べます)'}</div>
           <div className="mt-1 grid grid-cols-4 gap-1.5">
             {(Array.isArray(teachings) ? teachings : []).map((t) => (
-              <button type="button" key={t.id} data-raid-teach={t.id} onClick={() => toggleTeach(t.id)}
-                className={`flex flex-col items-center rounded-xl border-2 p-1 text-center active:scale-95 ${teachIds.includes(t.id) ? 'border-orange-300 bg-orange-950/50' : 'border-white/10 bg-slate-900/60'}`}>
+              <div key={t.id} className="relative">
+              <button type="button" data-raid-teach={t.id} onClick={() => toggleTeach(t.id)}
+                className={`flex w-full flex-col items-center rounded-xl border-2 p-1 text-center active:scale-95 ${teachIds.includes(t.id) ? 'border-orange-300 bg-orange-950/50' : 'border-white/10 bg-slate-900/60'}`}>
                 {/* 手札のカードと同じ見え方(きき のように全身の絵は、カード用の拡大・位置の補正で顔に寄せる) */}
                 {cardIconNode(t.icon, 40, t.id)}
                 <span className="mt-0.5 w-full truncate text-[9px] font-black text-slate-100">{t.baseName}</span>
               </button>
+              {/* アシカの効果も見られるようにする(2026-10-13・ユーザー指示)。モンスターの札と同じ右上の i。押しても選ぶ/外すは変わらない */}
+              {typeof onOpenTeachingDetail === 'function' && (
+                <button type="button" data-raid-teach-detail={t.id} aria-label={`${t.baseName}の効果を見る`} onClick={(e) => { e.stopPropagation(); onOpenTeachingDetail(t, teachDetailInfo); }}
+                  className="mh-hit-expand absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full border border-sky-300/60 bg-slate-800 text-[11px] font-black leading-none text-sky-200 shadow active:scale-90">i</button>
+              )}
+              </div>
             ))}
           </div>
         </section>

@@ -25,6 +25,15 @@ const DATA_FILES = [
   'data/breeder.js',
 ];
 
+// WebP の縦横をファイルの頭から読む(VP8 / VP8L / VP8X)。読めなければ null
+const webpSize = (buf) => {
+  if (!buf || buf.length < 30 || buf.toString('ascii', 0, 4) !== 'RIFF' || buf.toString('ascii', 8, 12) !== 'WEBP') return null;
+  const kind = buf.toString('ascii', 12, 16);
+  if (kind === 'VP8X') return { width: 1 + buf.readUIntLE(24, 3), height: 1 + buf.readUIntLE(27, 3) };
+  if (kind === 'VP8L') { const b = buf.readUInt32LE(21); return { width: 1 + (b & 0x3fff), height: 1 + ((b >> 14) & 0x3fff) }; }
+  if (kind === 'VP8 ') return { width: buf.readUInt16LE(26) & 0x3fff, height: buf.readUInt16LE(28) & 0x3fff };
+  return null;
+};
 let failed = 0;
 const check = (name, ok, detail = '') => {
   console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`);
@@ -49,6 +58,12 @@ for (const [name, url] of entries) {
   const file = imageFilePath(url);
   if (!fs.existsSync(file)) { missing.push(`${name} → ${url}`); continue; }
   try {
+    // WebP(行動カードの絵・2026-10-15)は canvas では開けないので、ファイルの頭(RIFF/WEBP と縦横)を読んで確かめる
+    if (/\.webp$/i.test(file)) {
+      const size = webpSize(fs.readFileSync(file));
+      if (!size || !size.width || !size.height) broken.push(`${name} → ${url}`);
+      continue;
+    }
     const img = new Image();
     img.src = fs.readFileSync(file);
     if (!img.width || !img.height) broken.push(`${name} → ${url}`);
@@ -108,8 +123,9 @@ check('images/ に使われていない画像が残っていない', orphans.len
 
 // --- ⑤ ムービー(movies/*.mp4)も、実在・キャッシュキー・置きっぱなしを同じように見る ---
 // 覚醒ムーの必殺技ムービー(2026-09-25)。敵データの specialMovie から参照し、?v= は stamp-version.js が付ける
-const movieHost = fs.readFileSync(path.join(WEB_ROOT, 'data/enemy-monsters.js'), 'utf8');
-const movieRefs = [...movieHost.matchAll(/["'](movies\/[^"'?]+\.mp4)(?:\?v=([0-9a-f]*))?["']/g)];
+// HELL の説明の動画(2026-10-13・mp4 と webm)は data/rhythm-mode.js の RHYTHM_HELL_GUIDE_VIDEOS から
+const movieHost = ['data/enemy-monsters.js', 'data/rhythm-mode.js'].map((rel) => fs.readFileSync(path.join(WEB_ROOT, rel), 'utf8')).join('\n');
+const movieRefs = [...movieHost.matchAll(/["'](movies\/[^"'?]+\.(?:mp4|webm))(?:\?v=([0-9a-f]*))?["']/g)];
 const movieMissing = [], movieStale = [];
 for (const [, rel, key] of movieRefs) {
   const file = path.join(WEB_ROOT, rel);

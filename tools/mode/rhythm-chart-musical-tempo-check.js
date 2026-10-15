@@ -168,9 +168,10 @@ check('生成側が手のモデルを見て置き場所を決めている',
   generator.includes("require('./rhythm-hand-model.js')")&&generator.includes('const placeable='));
 check('生成側の小節あたりの上限が「その小節に実際にある音の数」から決まる',
   generator.includes('const musicalOnsetsInBar=')&&/MUSICAL_LIFT/.test(generator));
+// 5難易度に、--difficulty HELL のときだけ使う HELL の行(2026-10-13)を足した6行。HELL も MASTER より多い
 check('難易度ごとの1拍あたりのノーツ数(perBeat)が難易度順に増える',(()=>{
   const values=[...generator.matchAll(/perBeat:([0-9.]+)/g)].map(m=>Number(m[1]));
-  return values.length===5&&values.every((v,i)=>i===0||v>values[i-1]);
+  return values.length===6&&values.every((v,i)=>i===0||v>values[i-1]);
 })(),[...generator.matchAll(/perBeat:([0-9.]+)/g)].map(m=>m[1]).join(' < '));
 
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');

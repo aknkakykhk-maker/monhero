@@ -45,6 +45,8 @@ check('プロフィールフレームの正規化を抽出できる',frameBlock.
 const context={};
 vm.createContext(context);
 vm.runInContext(
+  // HELL の公開の印を切り替えて確かめるための代わり(本物は RELEASE_FLAGS.rhythmHell を読む)
+  `var __hellOn=false;const rhythmHellReleased=()=>__hellOn;const RHYTHM_HELL_CHARTS={sheriruth:{}};\n`+
   `${frameBlock}\n${difficultiesBlock}\n${demoIdsLine}\n${rankingBlock}\n`+
   `this.out={RHYTHM_RANKING_PREFIX,RHYTHM_RANKING_SEPARATOR,RHYTHM_DEMO_DIFFICULTY_IDS,rhythmRankingDifficultyKey,parseRhythmRankingDifficultyKey,rhythmRankingCombinedMembers,rhythmRankingDedupeByUser,rhythmRankingEntryFromRow,RHYTHM_RANKING_FETCH_LIMIT,RHYTHM_RANKING_DISPLAY_LIMIT};`,
   context
@@ -52,6 +54,15 @@ vm.runInContext(
 const {RHYTHM_RANKING_PREFIX,RHYTHM_DEMO_DIFFICULTY_IDS,rhythmRankingDifficultyKey,parseRhythmRankingDifficultyKey,rhythmRankingCombinedMembers,rhythmRankingDedupeByUser,rhythmRankingEntryFromRow,RHYTHM_RANKING_FETCH_LIMIT,RHYTHM_RANKING_DISPLAY_LIMIT}=context.out;
 
 check('キーの接頭辞はRhythm',RHYTHM_RANKING_PREFIX==='Rhythm');
+// HELL(2026-10-12 社長の決定でランキングに入れる)。公開の印が偽なら送らない・真なら送る
+check('HELL: 公開の印が偽ならキーを作らない(送らない)',rhythmRankingDifficultyKey('sheriruth','HELL')===null);
+check('HELL: 公開の印が偽なら合算のキーに入らない',!rhythmRankingCombinedMembers('sheriruth').some(k=>/-HELL$/.test(k)));
+vm.runInContext('__hellOn=true',context);
+check('HELL: 公開の印が真ならキーを作る',rhythmRankingDifficultyKey('sheriruth','HELL')==='Rhythm-sheriruth-HELL');
+check('HELL: 公開の印が真なら、HELL の譜面がある曲だけ合算のキーに入る',
+  rhythmRankingCombinedMembers('sheriruth').includes('Rhythm-sheriruth-HELL')&&!rhythmRankingCombinedMembers('other_song').some(k=>/-HELL$/.test(k)));
+check('HELL: 送った行は読める(曲と難易度へ戻る)',JSON.stringify(parseRhythmRankingDifficultyKey('Rhythm-sheriruth-HELL'))===JSON.stringify({songId:'sheriruth',difficultyId:'HELL'}));
+vm.runInContext('__hellOn=false',context);
 check('キー生成: songId+難易度idからRhythm-<song>-<難易度>を作る',
   rhythmRankingDifficultyKey('monster_hero_theme_candidate','HARD')==='Rhythm-monster_hero_theme_candidate-HARD');
 check('キー生成: 知らない難易度idはnull',rhythmRankingDifficultyKey('song','UNKNOWN')===null);
@@ -136,7 +147,8 @@ check('取得はoffsetを受け取れる(ページ送りに使う)',
 // 同じプレイヤーの行だけで埋まり、他プレイヤーがユーザー集約後に消えてしまう。
 // ユニークな人数が集まるかページが尽きるまで送るループになっているかを確認する
 check('loadRhythmRankingは、ユニークな人数(表示件数ぶん)が集まるかページが尽きるまでページ送りする',(()=>{
-  const at=game.indexOf('const loadRhythmRanking = useCallback(async (song) => {');
+  // 2026-10-13 に難易度を1つに絞る第2引数を足した(既定は全難易度=いままでどおり)
+  const at=game.indexOf("const loadRhythmRanking = useCallback(async (song, difficultyId = 'ALL') => {");
   const end=game.indexOf('submitRhythmRankingScore',at);
   const block=at>=0&&end>at?game.slice(at,end):'';
   return block.includes('for (let page = 0; page < RHYTHM_RANKING_MAX_PAGES; page++) {')
@@ -171,10 +183,14 @@ check('送信に失敗したときだけ専用キー(mh_rhythm_rank_pending_v1)�
 check('退避する記録に上限があり、際限なく増やさない',
   game.includes('const RHYTHM_RANKING_PENDING_MAX = 20;')
   &&game.includes('list.slice(-RHYTHM_RANKING_PENDING_MAX)'));
-// みんなで対戦(from===multi)も、2026-10-02 のユーザー指示「ランキングにも反映するようにして」で送る側に入った
-check('体験版(from===demo)とみんなで対戦(from===multi)のプレイだけ送信し、デバッグプレイは送信しない',
-  /if\(rhythmPlay\.from==='demo'\|\|rhythmPlay\.from==='multi'\)submitRhythmRankingScore\(rhythmPlay\.song,rhythmPlay\.difficulty,result\);/.test(game)
-  &&!/rhythmPlay\.from==='debug'[^;]{0,40}submitRhythmRankingScore/.test(game));
+// みんなで対戦(from===multi)も、2026-10-02 のユーザー指示「ランキングにも反映するようにして」で送る側に入った。
+// レイドバトルのモンヒロビート挑戦(from===raid)も、2026-10-07 のユーザー指示「両方つなげる」(#2265)で送る側に入った
+check('体験版(from===demo)・みんなで対戦(from===multi)・レイドの挑戦(from===raid)のプレイだけ送信し、デバッグ・試作のプレイは送信しない',
+  /if\(rhythmPlay\.from==='demo'\|\|rhythmPlay\.from==='multi'\|\|rhythmPlay\.from==='raid'\)submitRhythmRankingScore\(rhythmPlay\.song,rhythmPlay\.difficulty,result\);/.test(game)
+  &&!/rhythmPlay\.from==='(debug|proto)'[^;]{0,40}submitRhythmRankingScore/.test(game)
+  // 試作(全解放の曲えらびを含む)は、送信より前で何もせずに抜ける
+  &&/if\(rhythmPlay\.from==='proto'\)return;/.test(game)
+  &&game.indexOf("if(rhythmPlay.from==='proto')return;")<game.indexOf('submitRhythmRankingScore(rhythmPlay.song,rhythmPlay.difficulty,result)'));
 check('BEST記録の保存(saveRhythmBestRecord)は送信の有無に関わらず必ず行う(先に呼んでいる)',(()=>{
   const idx=game.indexOf("const records=await saveRhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId");
   const submitIdx=game.indexOf("submitRhythmRankingScore(rhythmPlay.song,rhythmPlay.difficulty,result)");

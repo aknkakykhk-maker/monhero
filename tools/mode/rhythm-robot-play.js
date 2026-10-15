@@ -7,6 +7,7 @@
 //   node tools/mode/rhythm-robot-play.js --song only_my_railgun --difficulty EASY \
 //       --settings '{"climaxFx":true,"judgmentAtTap":true}' --shots 20000,60000 --shot-dir <dir>
 //     --settings … 演奏の設定(mh_rhythm_settings_v1)をこの値で始める(演出を確かめるとき。重いときの自動調整は切る)
+//     --release  … HOLD/SLIDEの終わりの扱い。correct(既定・終わりで離す)/late(+130ms)/past(+260ms)/hold(離さない)/early(0.6秒前)
 //     --shots    … 曲のその時刻(ms)を過ぎたところで画面を撮る(--shot-dir へ <曲>-<難易度>-<時刻>.png)
 //   どちらのときも、演出が出たか(盛り上がりの光が点いた時刻・叩いた場所の判定の数・ランクが上がったときの文字)を最後に出す
 //
@@ -84,7 +85,12 @@ const installRobot=()=>{
           const end=rhythmReleaseTargetMs(note)||entry.endMs;
           const t=Math.min(song,end);const p=pointAt(note,t);
           if(p&&!entry.flicking){entry.touch=makeTouch(id,p);send('touchmove',entry);}
-          if(song>=end-8){
+          // --release: correct=終わりで離す(既定) / late=終わりから+130ms(判定窓の中)で離す / past=+260ms(判定窓を過ぎて)で離す
+          //            hold=離さず押しっぱなし / early=0.6秒前に離す。ホールド・スライドの終わりの決まりを確かめる用
+          const rel=window.__mhRelease||'correct';
+          if(rel==='hold')continue;
+          const shift=rel==='late'?130:rel==='past'?260:rel==='early'?-600:0;
+          if(song>=end+shift-8){
             if(entry.endFlick&&!entry.flicking){entry.flicking=true;entry.base=p||entry.base;entry.upAt=song+40;entry.touch=makeTouch(id,{...entry.base,x:entry.base.x+entry.dx,y:entry.base.y+entry.dy});send('touchmove',entry);}
             else if(!entry.endFlick||song>=entry.upAt){send('touchend',entry);bot.live.delete(id);}
           }
@@ -121,6 +127,7 @@ const collect=()=>{
   return {rows,log:bot.log.slice(0,5),fx:bot.fx};
 };
 
+const RELEASE=arg('--release','correct');
 const SETTINGS=arg('--settings',null)?JSON.parse(arg('--settings')):null;
 const SHOTS=(arg('--shots','')||'').split(',').map(Number).filter(n=>n>0).sort((a,b)=>a-b),SHOT_DIR=arg('--shot-dir',null);
 const playOne=async(browser,songIds,songId,difficulty)=>{
@@ -147,6 +154,7 @@ const playOne=async(browser,songIds,songId,difficulty)=>{
     const diffOk=await page.evaluate(d=>{const b=document.querySelector(`[data-rhythm-difficulty="${d}"]`);if(!b||b.disabled)return false;b.click();return true;},difficulty);
     if(!diffOk)return {songId,difficulty,error:'難易度を選べない'};
     await page.waitForTimeout(300);
+    await page.evaluate(m=>{window.__mhRelease=m;},RELEASE);
     await page.evaluate(installRobot);
     await page.evaluate(()=>document.querySelector('[data-rhythm-demo-start]').click());
     await page.waitForSelector('[data-rhythm-play-area]',{timeout:30000});
