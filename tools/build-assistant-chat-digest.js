@@ -28,8 +28,10 @@ const CACHED_MAX_CHARS = 20000;
 const BASICS_MAX_CHARS = 5000;
 // 選んで渡す1項目の本文の上限
 const TOPIC_MAX_CHARS = 1500;
-// 助手ごとの口調の見本の数
-const SAMPLE_LINES = 24;
+// 助手ごとの口調の見本の数(2026-10-14 社長「キャラごとの喋り方の特徴がちゃんと反映されてない気がする」で 24 → 80)
+const SAMPLE_LINES = 80;
+// 見本から外したいゲームの説明っぽい言葉(多いほど点を下げる)。くせの強い雑談寄りのセリフを残すため
+const EXPLAIN_WORDS = /難易度|編成|ボタン|画面|設定|タブ|一覧|押す|押して|選んで|選べ|できる|られる|WAVE|ポイント|ダイヤ|報酬|交換|解放|ランキング|ノーツ|判定/g;
 // 検索用の言いかえ(項目id → 遊ぶ人が使いそうな呼び方)。ヘルプの見出しと、画面やプレイヤーの呼び方がずれている項目だけ。
 // 答えの中身ではなく「その項目を選ぶための言葉」なので、ここに説明は書かない
 const TOPIC_ALIASES = {
@@ -102,7 +104,7 @@ const buildDigest = () => {
     if (titles.length) index.push(`【${clean(cat.title)}】${titles.join('／')}`);
   });
 
-  const a = loadScript('assistants.js', ['ASSISTANTS', 'assistantSceneLines', 'ASSISTANT_SCENES', 'ASSISTANT_LINE_PACKS', 'ASSISTANT_UPDATE_NOTICE_SCRIPTS', 'ASSISTANT_PEER_CALLS', 'DEFAULT_ASSISTANT_ID']);
+  const a = loadScript('assistants.js', ['ASSISTANTS', 'assistantSceneLines', 'ASSISTANT_SCENES', 'ASSISTANT_LINE_PACKS', 'ASSISTANT_UPDATE_NOTICE_SCRIPTS', 'ASSISTANT_PEER_CALLS', 'ASSISTANT_CHAT_EXAMPLES', 'EVENT_REPLAYS', 'DEFAULT_ASSISTANT_ID']);
 
   // ---- 用語の表 ----
   // 助手ごとのセリフを全部集める(場面の通常・条件つき・あとから足した束)
@@ -123,6 +125,8 @@ const buildDigest = () => {
   for (const byAssistant of Object.values(a.ASSISTANT_UPDATE_NOTICE_SCRIPTS || {})) {
     for (const [who, list] of Object.entries(byAssistant || {})) for (const line of Array.isArray(list) ? list : []) addLine(line, who);
   }
+  // イベントのお話(回想)の台詞。掛け合いのくせがいちばんよく出る
+  for (const ev of a.EVENT_REPLAYS || []) for (const line of (ev && Array.isArray(ev.script)) ? ev.script : []) if (line && line.who) addLine(line, line.who);
   const countIn = (texts, word) => texts.reduce((n, t) => n + (t.split(word).length - 1), 0);
   const firstSentence = (word, preferId) => {
     const pool = [topics.find(t => t.id === preferId), ...topics].filter(Boolean);
@@ -149,22 +153,21 @@ const buildDigest = () => {
   const assistants = {};
   for (const x of a.ASSISTANTS || []) {
     if (!x || x.role !== '助手') continue;
-    // 見本は HOME のセリフから、仲良し度の低い段階と高い段階をまぜて取る(同じ文は1回だけ)
+    // 見本は、その助手の全セリフ(場面・あとから足した束・告知の読み上げ・お話)から、くせの目印(speechMarkers)が多く、
+    // ゲームの説明っぽい言葉が少ないものを選ぶ。点が同じなら台本に出てくる順。毎回同じ並びになる(乱数は使わない)
+    const markers = x.speechMarkers ? new RegExp(x.speechMarkers, 'g') : null;
     const seen = new Set();
-    const samples = [];
-    for (const lv of [1, 3, 5, 8, 12, 20]) {
-      const lines = typeof a.assistantSceneLines === 'function' ? a.assistantSceneLines('home', null, lv, x.id) : [];
-      for (const line of lines || []) {
-        const t = clean(line && line.t);
-        if (!t || seen.has(t)) continue;
-        seen.add(t);
-        samples.push(t);
-      }
-    }
-    // 毎回同じ並びになるよう、間引きは等間隔(乱数を使うとビルドのたびに中身が変わり、キャッシュも効かなくなる)
-    const step = Math.max(1, samples.length / SAMPLE_LINES);
-    const picked = [];
-    for (let i = 0; i < samples.length && picked.length < SAMPLE_LINES; i += step) picked.push(samples[Math.floor(i)]);
+    const scored = [];
+    (linesBy[x.id] || []).forEach((raw, i) => {
+      const t = clean(raw);
+      if (!t || seen.has(t) || t.length < 6 || t.length > 70 || /[{}]/.test(t)) return;
+      seen.add(t);
+      const quirk = markers ? (t.match(markers) || []).length : 0;
+      const explain = (t.match(EXPLAIN_WORDS) || []).length;
+      scored.push({ t, i, score: quirk * 2 - explain });
+    });
+    scored.sort((p, q) => q.score - p.score || p.i - q.i);
+    const picked = scored.slice(0, SAMPLE_LINES).sort((p, q) => p.i - q.i).map(x => x.t);
     // ほかの助手の呼び方(ASSISTANT_PEER_CALLS)。「きき → ひめちん」のように名前つきで並べる
     const peers = (a.ASSISTANT_PEER_CALLS && a.ASSISTANT_PEER_CALLS[x.id]) || {};
     const nameOf = (id) => ((a.ASSISTANTS || []).find(y => y && y.id === id) || {}).name || id;
@@ -172,6 +175,8 @@ const buildDigest = () => {
       name: x.name, tagline: clean(x.tagline), intro: clean(x.intro), greeting: clean(x.greeting),
       ...(x.firstPerson ? { firstPerson: clean(x.firstPerson) } : {}),
       ...(x.speech ? { speech: clean(x.speech) } : {}),
+      ...(Array.isArray(x.speechQuirks) ? { quirks: x.speechQuirks.map(clean) } : {}),
+      ...(a.ASSISTANT_CHAT_EXAMPLES && Array.isArray(a.ASSISTANT_CHAT_EXAMPLES[x.id]) ? { examples: a.ASSISTANT_CHAT_EXAMPLES[x.id].map(e => ({ q: clean(e.q), a: clean(e.a) })) } : {}),
       peerCalls: Object.entries(peers).map(([id, call]) => `${nameOf(id)}は「${call.replace(/\(.*$/, '')}」${/\(/.test(call) ? call.slice(call.indexOf('(')) : ''}`).join('、'),
       samples: picked,
     };
