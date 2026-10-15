@@ -3682,6 +3682,7 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
     // 帯が離れていっても外れの長さが0のままで切れなかった(動かさないボットで見つけた)。ホールドは帯が横へ動かないので今までどおり
     const elapsedPerf=(session.kind==='SLIDE'?Math.max(Number(pos.perfMs)||0,nowPerf()):pos.perfMs)-session.trackingBadSincePerf;
     if(elapsedPerf<graceMs)return;
+    if(typeof RHYTHM_INPUT_REC!=='undefined')RHYTHM_INPUT_REC.event('track-cut',{note:session.note.index,key:session.key,kind:session.kind});
     session.note.holdJudgment='MISS';
     session.failed=true;
     // 猶予を超えて外れたままなら、指を離すのを待たずその場でMISS確定する。
