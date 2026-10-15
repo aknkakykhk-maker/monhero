@@ -160,7 +160,7 @@ ok('マスモン設定へ入れる',game.includes('data-rhythm-demo-monsters')&&
 //   並びを丸ごと固定で書かず「デバッグならデバッグ画面 / それ以外は曲えらび」を見る
 ok('体験版から始めたプレイは体験版ホームへ戻る',
   game.includes("setRhythmPlay({song,difficulty,from:'demo'})")
-  &&/const back=[^;]*rhythmPlay\.from==='debug'\?'RHYTHM_DEBUG':'RHYTHM_DEMO_HOME'/.test(game));
+  &&/const back=[^;]*rhythmPlay\.from==='debug'\|\|rhythmPlay\.from==='proto'\?'RHYTHM_DEBUG':'RHYTHM_DEMO_HOME'/.test(game));
 ok('あそびかた練習も曲えらびへ戻る',
   game.includes("from:'tutorial' }")&&!game.includes("from:'tutorial'?'RHYTHM_DEBUG'"));
 ok('設定を閉じたとき、開いた画面へ戻る',
@@ -201,7 +201,9 @@ ok('修行の施設はHOMEから外した',
   !game.includes('mh-home-facility training')&&!game.includes('aria-label="修行（準備中）"'));
 ok('修行のCSSを残さず、位置をそのままモンヒロビートへ引き継いでいる',
   !game.includes('.mh-home-facility.training')
-  &&game.includes('.mh-home-facility.rhythm{left:0;top:46%;width:38%;height:25%}'));
+  // 2026-10-11: 施設の押せる範囲を札まわりだけにしたので、ボタン自体を札の位置に置く形になった。
+  //   もとの「箱(left:0;top:46%;width:38%;height:25%)+札(left:5%;top:37%)」と同じ場所 = left:1.9%;top:55.25%
+  &&game.includes('.mh-home-facility.rhythm{left:1.9%;top:55.25%}'));
 ok('公開フラグが立つまではHOMEから遊べず「準備中」の案内を出す',
   game.includes("RHYTHM_MODE_PUBLIC_RELEASE?openRhythmDemo:()=>setGameState('RHYTHM_INFO')")
   &&game.includes("gameState==='RHYTHM_INFO'")

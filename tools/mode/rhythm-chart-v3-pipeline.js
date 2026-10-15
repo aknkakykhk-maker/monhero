@@ -28,7 +28,6 @@ const path=require('path');
 const {spawnSync}=require('child_process');
 const {criticalWarnings,formatWarnings}=require('./rhythm-audio-warnings.js');
 const {SLIDE_EASE_CODES,FLICK_DIR_CODES}=require('./rhythm-runtime-notes.js');
-const {chartRevisionOf}=require('./rhythm-chart-v3-revision.js');
 
 const ROOT=path.resolve(__dirname,'..','..');
 const arg=(name,fallback=null)=>{const i=process.argv.indexOf(name);return i>=0&&i+1<process.argv.length?process.argv[i+1]:fallback;};
@@ -70,9 +69,7 @@ else console.log(`✓ 音源解析は既にある（やり直すなら --reanaly
 // Rev.9〜: 主役の追跡が使う音の層の解析(<曲>-v3-layers.json)。無い・いまの解析ファイルと合わないときだけ作る
 //   (既存の解析ファイルは読むだけ。層の解析は別のファイル)
 {
-  const registryFile=path.join(ROOT,'tools/mode/authoring/rhythm-song-registry.json');
-  const registry=fs.existsSync(registryFile)?JSON.parse(fs.readFileSync(registryFile,'utf8')):{songs:{}};
-  if(chartRevisionOf((registry.songs||{})[trackId])>=9){
+  {
     const layersFile=path.join(ROOT,`tools/mode/authoring/${dashed}-v3-layers.json`);
     const audioSha=fs.existsSync(audioFile)?require('crypto').createHash('sha256').update(fs.readFileSync(audioFile)).digest('hex'):null;
     let fresh=false;
@@ -293,11 +290,16 @@ console.log(`  ランタイム: ${path.relative(ROOT,RUNTIME)}（<${markerPrefix
 // 幅の中を使わせるので、設計側で押せる配置が配信側では「指が入らない」と出ることがある。
 // これまでは公開のあとに人が rhythm-overlap-reach-fix.js を手で回していた(回し忘れると検査が落ちる)。
 // ここで自動で回す。動かすのはレーンだけで、外すノーツは件数として出る。
+// 直すのはこの曲だけ(--song)。公開中のほかの曲の譜面には触らない(tools/mode/CLAUDE.md ⑩-2)。
+// 2026-10-11 まで --song を付けずに呼んでいて、新曲を作るたびに Sheriruth の譜面まで書き換えていた。
+// まだ公開中の曲の表(RELEASED_TRACKS)に載っていない曲は、配信データの物差しの対象外なので回さない
 {
-  const fix=spawnSync(process.execPath,[path.join(ROOT,'tools/mode/rhythm-overlap-reach-fix.js'),'--write'],
-    {cwd:ROOT,encoding:'utf8',maxBuffer:64*1024*1024});
-  const summary=(fix.stdout||'').trim().split('\n').filter(line=>/押せない重なり|マーカー|直しました|書き換え/.test(line));
-  console.log(`  ${fix.status===0?'✓':'✗'} 配信データの物差しでそろえる（rhythm-overlap-reach-fix.js --write）`);
+  const {RELEASED_TRACKS}=require('./rhythm-runtime-notes.js');
+  const songIds=Object.entries(RELEASED_TRACKS||{}).filter(([,track])=>track===trackId).map(([id])=>id);
+  const fix=songIds.length?spawnSync(process.execPath,[path.join(ROOT,'tools/mode/rhythm-overlap-reach-fix.js'),'--write','--song',songIds.join(',')],
+    {cwd:ROOT,encoding:'utf8',maxBuffer:64*1024*1024}):{status:0,stdout:`${trackId} はまだ公開中の曲の表に無いので、配信データの物差しでそろえるのは公開のときに回す`};
+  const summary=(fix.stdout||'').trim().split('\n').filter(line=>/押せない重なり|マーカー|直しました|書き換え|公開中の曲の表/.test(line));
+  console.log(`  ${fix.status===0?'✓':'✗'} 配信データの物差しでそろえる（rhythm-overlap-reach-fix.js --write --song・この曲だけ）`);
   for(const line of summary)console.log(`    ${line.trim()}`);
   if(fix.status!==0){console.error((fix.stderr||fix.stdout||'').trim().split('\n').slice(-5).join('\n'));process.exit(1);}
 }

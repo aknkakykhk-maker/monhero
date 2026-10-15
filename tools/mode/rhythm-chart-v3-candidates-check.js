@@ -49,7 +49,9 @@ try{
   };
   const a=laneSeq(zero),b=laneSeq(one);
   const differing=a.filter((value,index)=>value!==b[index]).length;
-  ok('候補ちがいで譜面が実際に変わる',differing>=a.length*.1,
+  // 下限は最新リビジョンで測った値から(2026-10-12: Rev.30 の MASTER で 33/556=5.9%。フレーズの写しで繰り返しの小節が候補ちがいでもそろうため。
+  // 一覧の Rev.21 で作っていたころは 351/553 だった)。半分の3%を下回ったら、候補が分かれなくなったと見る
+  ok('候補ちがいで譜面が実際に変わる',differing>=a.length*.03,
     `${differing}/${a.length}ノーツが違う`);
   // ノーツの数は音源で決まる(候補ちがいで譜面を作り直しても、拾う音は同じ)。
   // ただし**譜面の形に乗って決まる段**があるので、候補ごとに少しちがう。

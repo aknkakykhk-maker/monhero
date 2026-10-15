@@ -425,13 +425,19 @@ const rhythmBuddyHonorific = (trait) => (Object.prototype.hasOwnProperty.call(RH
 // 重み: 性格の束 ×3、調子の束 ×2、共通 ×1。曲名が要る文は、曲名が無い・長すぎるときは使わない
 const rhythmBuddyTalkPick = ({ kind, trait = '', moodId = 'normal', vars = {}, recent = [], rand = Math.random }) => {
   // 会話の場面(33-rhythm-buddy-convo.jsx の RHYTHM_BUDDY_CONVO)も、同じ選び方で選ぶ
-  const set = RHYTHM_BUDDY_TALK[kind] || (typeof RHYTHM_BUDDY_CONVO !== 'undefined' ? RHYTHM_BUDDY_CONVO[kind] : null);
+  // 個体差の場面(33-rhythm-buddy-persona.jsx の RHYTHM_BUDDY_PERSONA_TALK)も探す
+  const set = RHYTHM_BUDDY_TALK[kind] || (typeof RHYTHM_BUDDY_CONVO !== 'undefined' ? RHYTHM_BUDDY_CONVO[kind] : null)
+    || (typeof RHYTHM_BUDDY_PERSONA_TALK !== 'undefined' ? RHYTHM_BUDDY_PERSONA_TALK[kind] : null);
   if (!set) return '';
   // {名前} の形の穴を、vars の値で埋める。値が無い・空の穴がある文は使わない。埋めて40文字を超える文も使わない
+  // vars.call があれば、「{who}さん」を名前ごとその呼び方(「マスター」「相棒」)にする。vars.self があれば「私」「ぼく」をその一人称にする(個体差)
   const hon = typeof vars.hon === 'string' ? vars.hon : rhythmBuddyHonorific(trait);
+  const callWord = typeof vars.call === 'string' && vars.call ? vars.call : '';
+  const self = typeof vars.self === 'string' ? vars.self : '';
   const make = (raw) => {
     let ok = true;
-    const line = raw.split('{who}さん').join(`{who}${hon}`);
+    let line = raw.split('{who}さん').join(callWord || `{who}${hon}`);
+    if (self && typeof rhythmBuddyPersonaSelf === 'function') line = rhythmBuddyPersonaSelf(line, self);
     const text = line.replace(/\{([A-Za-z]+)\}/g, (all, key) => {
       const v = vars[key];
       if (v == null || v === '') { ok = false; return ''; }
@@ -446,7 +452,8 @@ const rhythmBuddyTalkPick = ({ kind, trait = '', moodId = 'normal', vars = {}, r
   });
   add(set.trait && set.trait[trait], 3);
   add(set.mood && set.mood[moodId], 2);
-  add(set.common, 1);
+  // traitOnly の束(個体差の場面)は、性格が決まった子には共通の文を混ぜない(真面目の子が砕けた言い方をしないように)
+  if (!(set.traitOnly && trait && set.trait && Array.isArray(set.trait[trait]) && set.trait[trait].length)) add(set.common, 1);
   const avoid = new Set(Array.isArray(recent) ? recent : []);
   const fresh = bag.filter((t) => !avoid.has(t));
   const pool = fresh.length ? fresh : bag;

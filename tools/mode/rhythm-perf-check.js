@@ -164,7 +164,9 @@ check('tick本体の処理時間と、tickへ入るまでの遅れを計測で�
   &&data.includes('worstFrameTickMs:acc.worstTickMs')
   &&data.includes('tickDelayMsPerFrame:per(acc.tickDelayMs)')
   &&data.includes('worstFrameDelayMs:acc.worstDelayMs')
-  &&gameSrc.includes('const perfTickStart=RHYTHM_PERF.enabled?performance.now():0;')
+  // 2026-10-11(7e914e3)から、tick の始まりの時刻は1コマの診断(RHYTHM_FRAME_DIAG)にも使うので、計測の切り替えに関係なく毎回取る
+  &&gameSrc.includes("const perfTickStart=typeof performance!=='undefined'&&performance.now?performance.now():0;")
+  &&gameSrc.includes('RHYTHM_FRAME_DIAG.tick(frameNowMs,perfTickStart?performance.now()-perfTickStart:NaN);')
   &&gameSrc.includes('if(RHYTHM_PERF.enabled)RHYTHM_PERF.tick(performance.now()-perfTickStart,perfTickStart-frameNowMs);'));
 check('will-changeは今動いているノーツにだけ付ける(全ノーツへ出しっぱなしにしない)',
   gameSrc.includes("const nextWillChange=visible?'transform, opacity':'';")

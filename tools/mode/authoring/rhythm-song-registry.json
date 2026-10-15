@@ -754,6 +754,66 @@
     "EXPERT": "mild",
     "MASTER": "extreme"
    }
+  },
+  "journey": {
+   "audio": "monster-hero/audio/bgm-journey.mp3",
+   "chartIntensity": "strong",
+   "chartRevision": 28,
+   "audioSha256": "bd51dcc8ef2104c18c6f1c92d45e11d88c7485a9b6f037326f95abee8a23f104",
+   "durationMs": 164196,
+   "analyzedTiming": {
+    "bpm": 128,
+    "beatZeroMs": 272.3,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   }
+  },
+  "sheriruth": {
+   "audio": "monster-hero/audio/bgm-sheriruth.mp3",
+   "chartIntensity": "extreme",
+   "chartRevision": 28,
+   "audioSha256": "ab30c8b641fb18277e3239aa021c1d74361f681e6ba4fc818ce863223b467835",
+   "durationMs": 135000,
+   "analyzedTiming": {
+    "bpm": 184.99,
+    "beatZeroMs": 711.6,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
+  },
+  "grievous_lady": {
+   "audio": "monster-hero/audio/bgm-grievous-lady.mp3",
+   "chartIntensity": "extreme",
+   "chartRevision": 28,
+   "audioSha256": "dac4aa4d3b724c03e0c7a38878f05eb0889f76512b5821f1fdc8ea62459a3ee0",
+   "durationMs": 141912,
+   "analyzedTiming": {
+    "bpm": 210,
+    "beatZeroMs": 2240,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "chartIntensityByDifficulty": {
+    "EASY": "strong",
+    "NORMAL": "strong"
+   }
+  },
+  "against_my_own_shadow": {
+   "audio": "monster-hero/audio/bgm-against-my-own-shadow.mp3",
+   "chartIntensity": "strong",
+   "chartRevision": 28,
+   "audioSha256": "ddce743e94fa705c2a38f6fbacb841baf487057046887f3facf219e34f94285c",
+   "durationMs": 118044,
+   "analyzedTiming": {
+    "bpm": 143.137,
+    "beatZeroMs": 2022.9,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
   }
  }
 }

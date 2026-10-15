@@ -96,7 +96,10 @@
 
   React.createElement=(type,props,...children)=>{
     if(typeof type==='function'&&(type.name==='RhythmTapTest'||type.displayName==='RhythmTapTest')){
-      return originalCreateElement(RhythmRestartBoundary,{component:type,componentProps:props,componentChildren:children});
+      // 呼び出し側が付けた key は外側(この部品)へ渡す。中へ渡すと runKey で上書きされ、
+      // key を変えて作り直す使い方(判定ラインを合わせる画面の「▶ 試す」など)が効かなくなる(2026-10-14)
+      const outerKey=props&&props.key!=null?props.key:undefined;
+      return originalCreateElement(RhythmRestartBoundary,{key:outerKey,component:type,componentProps:props,componentChildren:children});
     }
     return originalCreateElement(type,props,...children);
   };

@@ -80,6 +80,12 @@ const assistantSpeakText=(t)=>t; const assistantBondLevelOf=()=>1; const breeder
 const RHYTHM_EVENT_STORY_IDS=[${JSON.stringify(target.id)}];
 window.__seen=[]; const markRhythmEventStorySeen=(id)=>{window.__seen.push(id);};
 const markMomosukeIntroSeen=()=>{};
+// ★難易度 HELL のお話(2026-10-11 #2749)。スキップ・最後まで見たときに event.id と比べるので、定義していないと
+//   ReferenceError でスキップが効かなくなる(会話が閉じない)。ここでは比べられれば足りる
+const RHYTHM_HELL_STORY_ID='rhythm_hell_story';
+const markRhythmHellStorySeen=()=>{}; const markTacticsIntroSeen=()=>{};
+const ASSISTANT_CHAT_STORY_ID='assistant_chat_story'; const markAssistantChatStorySeen=()=>{};
+const setRhythmHellGuide=()=>{}; const setShowDebugStoryList=()=>{}; const setShowEventReplayList=()=>{};
 function Screen(){
   const [eventReplay,setEventReplay]=useState({id:${JSON.stringify(target.id)},step:0,live:true});
   window.__state=eventReplay;

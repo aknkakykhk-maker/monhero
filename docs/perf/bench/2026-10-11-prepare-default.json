@@ -1,0 +1,546 @@
+[
+ {
+  "label": "main",
+  "song": "sheriruth",
+  "diff": "MASTER",
+  "entry": "debug",
+  "draw": "canvas",
+  "cpu": 1,
+  "runs": [
+   {
+    "song": "sheriruth",
+    "diff": "MASTER",
+    "draw": "canvas",
+    "cpu": 1,
+    "size": "844x390",
+    "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+    "backend": "2d",
+    "band": false,
+    "range": [
+     1320,
+     133056
+    ],
+    "wallSec": 131.344,
+    "notes": 642,
+    "judged": 642,
+    "miss": 0,
+    "frames": {
+     "n": 7643,
+     "avg": 17.18062279209758,
+     "p50": 16.69999999999709,
+     "p95": 16.80000000000291,
+     "p99": 33.39999999999418,
+     "max": 116.69999999999709,
+     "over16": 208,
+     "over33": 9,
+     "over50": 7
+    },
+    "main": {
+     "cpu": 6.965544158053121,
+     "wall": 7.302231061101661,
+     "task": 7.73192607614811,
+     "script": 1.4294274499542066,
+     "style": 1.4722483318068822,
+     "layout": 1.0948346199136465,
+     "busyPct": 44.99262318796443
+    },
+    "func": {
+     "tick": 2.1075064765144575,
+     "paintCanvasNote": 0.6578699463561429,
+     "bot": 1.0561615857647522
+    },
+    "taps": {
+     "n": 642,
+     "handleAvg": 1.727414330186154,
+     "handleP95": 9.700000001117587,
+     "frameAvg": 19.720093457211743,
+     "frameP95": 32.19999999999709,
+     "first": {
+      "handle": 1.199999999254942,
+      "toFrame": 31.899999998509884
+     }
+    },
+    "errors": [],
+    "breakdown": null,
+    "atStart": null,
+    "atEnd": null
+   }
+  ]
+ },
+ {
+  "label": "main",
+  "song": "sheriruth",
+  "diff": "MASTER",
+  "entry": "debug",
+  "draw": "canvas",
+  "cpu": 4,
+  "runs": [
+   {
+    "song": "sheriruth",
+    "diff": "MASTER",
+    "draw": "canvas",
+    "cpu": 4,
+    "size": "844x390",
+    "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+    "backend": "2d",
+    "band": false,
+    "range": [
+     1320,
+     133056
+    ],
+    "wallSec": 129.456,
+    "notes": 642,
+    "judged": 642,
+    "miss": 16,
+    "frames": {
+     "n": 2039,
+     "avg": 63.451741049534085,
+     "p50": 50,
+     "p95": 150,
+     "p99": 216.6999999999971,
+     "max": 333.3000000000029,
+     "over16": 1654,
+     "over33": 1206,
+     "over50": 983
+    },
+    "main": {
+     "cpu": 61.502733202550274,
+     "wall": 62.59772829818538,
+     "task": 65.05615252574792,
+     "script": 10.76200686611084,
+     "style": 16.017803334968118,
+     "layout": 16.622320745463465,
+     "busyPct": 102.46685746508466
+    },
+    "func": {
+     "tick": 22.109669936243257,
+     "paintCanvasNote": 3.4231505640019617,
+     "bot": 15.466847964688572
+    },
+    "taps": {
+     "n": 642,
+     "handleAvg": 11.38598130842108,
+     "handleP95": 45.40000000037253,
+     "frameAvg": 93.13504672859925,
+     "frameP95": 149.69999999962602,
+     "first": {
+      "handle": 5.299999998882413,
+      "toFrame": 140.89999999925567
+     }
+    },
+    "errors": [],
+    "breakdown": null,
+    "atStart": null,
+    "atEnd": null
+   }
+  ]
+ },
+ {
+  "label": "new",
+  "song": "sheriruth",
+  "diff": "MASTER",
+  "entry": "debug",
+  "draw": "canvas",
+  "cpu": 1,
+  "runs": [
+   {
+    "song": "sheriruth",
+    "diff": "MASTER",
+    "draw": "canvas",
+    "cpu": 1,
+    "size": "844x390",
+    "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+    "backend": "2d",
+    "band": false,
+    "range": [
+     1320,
+     133056
+    ],
+    "wallSec": 131.884,
+    "notes": 642,
+    "judged": 642,
+    "miss": 0,
+    "frames": {
+     "n": 7626,
+     "avg": 17.291030684500605,
+     "p50": 16.69999999999709,
+     "p95": 16.80000000000291,
+     "p99": 33.39999999999418,
+     "max": 166.60000000000582,
+     "over16": 239,
+     "over33": 19,
+     "over50": 14
+    },
+    "main": {
+     "cpu": 7.061246525045895,
+     "wall": 7.409978756884343,
+     "task": 7.822531995803829,
+     "script": 1.468228429058484,
+     "style": 1.504539470233412,
+     "layout": 1.1072533438237606,
+     "busyPct": 45.23265066270359
+    },
+    "func": {
+     "tick": 2.1486102806189353,
+     "paintCanvasNote": 0.6612968790978233,
+     "bot": 1.0672699973773931
+    },
+    "taps": {
+     "n": 642,
+     "handleAvg": 1.6283489096579011,
+     "handleP95": 9.400000000372529,
+     "frameAvg": 20.143457943586814,
+     "frameP95": 32.30000000036671,
+     "first": {
+      "handle": 1.099999999627471,
+      "toFrame": 31.99999999888314
+     }
+    },
+    "errors": [],
+    "breakdown": null,
+    "atStart": null,
+    "atEnd": null
+   }
+  ]
+ },
+ {
+  "label": "new",
+  "song": "sheriruth",
+  "diff": "MASTER",
+  "entry": "debug",
+  "draw": "canvas",
+  "cpu": 4,
+  "runs": [
+   {
+    "song": "sheriruth",
+    "diff": "MASTER",
+    "draw": "canvas",
+    "cpu": 4,
+    "size": "844x390",
+    "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+    "backend": "2d",
+    "band": false,
+    "range": [
+     1320,
+     133056
+    ],
+    "wallSec": 131.059,
+    "notes": 642,
+    "judged": 642,
+    "miss": 18,
+    "frames": {
+     "n": 2097,
+     "avg": 62.45970433953262,
+     "p50": 50,
+     "p95": 150.09999999999127,
+     "p99": 200.10000000000582,
+     "max": 533.4000000000015,
+     "over16": 1627,
+     "over33": 1207,
+     "over50": 970
+    },
+    "main": {
+     "cpu": 60.39683643299952,
+     "wall": 61.35633333333333,
+     "task": 63.5814635193133,
+     "script": 10.70679399141631,
+     "style": 15.37094992846924,
+     "layout": 16.70698378636147,
+     "busyPct": 101.73305839354794
+    },
+    "func": {
+     "tick": 21.542890319504053,
+     "paintCanvasNote": 3.3690295660467333,
+     "bot": 14.93530710538865
+    },
+    "taps": {
+     "n": 642,
+     "handleAvg": 12.25498442371547,
+     "handleP95": 52.20000000111759,
+     "frameAvg": 94.62990654172444,
+     "frameP95": 169.2999999996282,
+     "first": {
+      "handle": 6.599999999627471,
+      "toFrame": 226.49999999962893
+     }
+    },
+    "errors": [],
+    "breakdown": null,
+    "atStart": null,
+    "atEnd": null
+   }
+  ]
+ },
+ {
+  "label": "main",
+  "song": "freedom_dive",
+  "diff": "MASTER",
+  "entry": "debug",
+  "draw": "canvas",
+  "cpu": 1,
+  "runs": [
+   {
+    "song": "freedom_dive",
+    "diff": "MASTER",
+    "draw": "canvas",
+    "cpu": 1,
+    "size": "844x390",
+    "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+    "backend": "2d",
+    "band": false,
+    "range": [
+     305,
+     144326
+    ],
+    "wallSec": 143.782,
+    "notes": 814,
+    "judged": 814,
+    "miss": 2,
+    "frames": {
+     "n": 7967,
+     "avg": 18.044546253294946,
+     "p50": 16.69999999999709,
+     "p95": 33.29999999999927,
+     "p99": 33.40000000000873,
+     "max": 200,
+     "over16": 550,
+     "over33": 64,
+     "over50": 26
+    },
+    "main": {
+     "cpu": 7.356158277896323,
+     "wall": 7.8050655202711186,
+     "task": 8.246932847997991,
+     "script": 1.1216472950922556,
+     "style": 1.7990736789255681,
+     "layout": 1.950264465921928,
+     "busyPct": 45.69648078340822
+    },
+    "func": {
+     "tick": 1.498310028869085,
+     "paintCanvasNote": 0.48725593071419604,
+     "bot": 0.8400143090247271
+    },
+    "taps": {
+     "n": 814,
+     "handleAvg": 1.788329238355782,
+     "handleP95": 11.599999999627471,
+     "frameAvg": 21.714496315280833,
+     "frameP95": 35.90000000037253,
+     "first": {
+      "handle": 0.7999999988824129,
+      "toFrame": 15.300000000373984
+     }
+    },
+    "errors": [],
+    "breakdown": null,
+    "atStart": null,
+    "atEnd": null
+   }
+  ]
+ },
+ {
+  "label": "main",
+  "song": "freedom_dive",
+  "diff": "MASTER",
+  "entry": "debug",
+  "draw": "canvas",
+  "cpu": 4,
+  "runs": [
+   {
+    "song": "freedom_dive",
+    "diff": "MASTER",
+    "draw": "canvas",
+    "cpu": 4,
+    "size": "844x390",
+    "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+    "backend": "2d",
+    "band": false,
+    "range": [
+     305,
+     144326
+    ],
+    "wallSec": 141.272,
+    "notes": 814,
+    "judged": 814,
+    "miss": 81,
+    "frames": {
+     "n": 1867,
+     "avg": 75.60846277450456,
+     "p50": 50,
+     "p95": 216.59999999999127,
+     "p99": 316.6000000000058,
+     "max": 633.3000000000029,
+     "over16": 1386,
+     "over33": 1053,
+     "over50": 926
+    },
+    "main": {
+     "cpu": 73.07846866630958,
+     "wall": 74.28700856989823,
+     "task": 77.29673004820567,
+     "script": 9.933621853240492,
+     "style": 18.585416175682912,
+     "layout": 28.54244724156401,
+     "busyPct": 102.15258154482135
+    },
+    "func": {
+     "tick": 23.57446170326727,
+     "paintCanvasNote": 2.539944295661489,
+     "bot": 18.62303642206749
+    },
+    "taps": {
+     "n": 814,
+     "handleAvg": 23.401719901713037,
+     "handleP95": 78.10000000149012,
+     "frameAvg": 121.47248157176898,
+     "frameP95": 237.39999999999418,
+     "first": {
+      "handle": 4.400000000372529,
+      "toFrame": 430.09999999999854
+     }
+    },
+    "errors": [],
+    "breakdown": null,
+    "atStart": null,
+    "atEnd": null
+   }
+  ]
+ },
+ {
+  "label": "new",
+  "song": "freedom_dive",
+  "diff": "MASTER",
+  "entry": "debug",
+  "draw": "canvas",
+  "cpu": 1,
+  "runs": [
+   {
+    "song": "freedom_dive",
+    "diff": "MASTER",
+    "draw": "canvas",
+    "cpu": 1,
+    "size": "844x390",
+    "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+    "backend": "2d",
+    "band": false,
+    "range": [
+     305,
+     144326
+    ],
+    "wallSec": 143.585,
+    "notes": 814,
+    "judged": 814,
+    "miss": 0,
+    "frames": {
+     "n": 8008,
+     "avg": 17.927185314685396,
+     "p50": 16.69999999999709,
+     "p95": 33.29999999999927,
+     "p99": 33.40000000000873,
+     "max": 100.09999999999854,
+     "over16": 532,
+     "over33": 55,
+     "over50": 18
+    },
+    "main": {
+     "cpu": 7.287778346653347,
+     "wall": 7.693205294705295,
+     "task": 8.129461788211788,
+     "script": 1.1187266483516483,
+     "style": 1.783514985014985,
+     "layout": 1.9059192057942058,
+     "busyPct": 45.33950621583035
+    },
+    "func": {
+     "tick": 1.4816438561438563,
+     "paintCanvasNote": 0.48479557942057944,
+     "bot": 0.8161432317682318
+    },
+    "taps": {
+     "n": 814,
+     "handleAvg": 1.7159705159142247,
+     "handleP95": 11.5,
+     "frameAvg": 21.149262899991353,
+     "frameP95": 32.500000000371074,
+     "first": {
+      "handle": 1.400000000372529,
+      "toFrame": 31.800000000745058
+     }
+    },
+    "errors": [],
+    "breakdown": null,
+    "atStart": null,
+    "atEnd": null
+   }
+  ]
+ },
+ {
+  "label": "new",
+  "song": "freedom_dive",
+  "diff": "MASTER",
+  "entry": "debug",
+  "draw": "canvas",
+  "cpu": 4,
+  "runs": [
+   {
+    "song": "freedom_dive",
+    "diff": "MASTER",
+    "draw": "canvas",
+    "cpu": 4,
+    "size": "844x390",
+    "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+    "backend": "2d",
+    "band": false,
+    "range": [
+     305,
+     144326
+    ],
+    "wallSec": 143.241,
+    "notes": 814,
+    "judged": 814,
+    "miss": 90,
+    "frames": {
+     "n": 1758,
+     "avg": 81.44345847554041,
+     "p50": 66.60000000000582,
+     "p95": 233.3000000000029,
+     "p99": 349.8999999999942,
+     "max": 533.2999999999884,
+     "over16": 1310,
+     "over33": 1060,
+     "over50": 962
+    },
+    "main": {
+     "cpu": 78.94828498293515,
+     "wall": 80.26506541524459,
+     "task": 82.68925540386802,
+     "script": 10.850438566552901,
+     "style": 20.732660409556313,
+     "layout": 30.2001598407281,
+     "busyPct": 101.4847082888279
+    },
+    "func": {
+     "tick": 25.585021046643913,
+     "paintCanvasNote": 2.726886234357224,
+     "bot": 20.650646188850967
+    },
+    "taps": {
+     "n": 814,
+     "handleAvg": 24.83660933659103,
+     "handleP95": 89.29999999888241,
+     "frameAvg": 125.40712530784961,
+     "frameP95": 257.3000000000029,
+     "first": {
+      "handle": 6.599999999627471,
+      "toFrame": 156.60000000037326
+     }
+    },
+    "errors": [],
+    "breakdown": null,
+    "atStart": null,
+    "atEnd": null
+   }
+  ]
+ }
+]

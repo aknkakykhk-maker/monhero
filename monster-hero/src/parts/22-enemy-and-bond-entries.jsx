@@ -417,6 +417,96 @@ const COOKIE_DMG_FROM = 10, COOKIE_DMG_UP = 0.15;
 const BLACK_NOTE_DMG_PER = 0.03;
 const BLACK_NOTE_CRIT_FROM = 5, BLACK_NOTE_CRIT_ADD = 0.1;
 const BLACK_NOTE_COMBO_FROM = 10, BLACK_NOTE_COMBO_RATE = 0.15;
+// ★バトル画面の「マーク×数」(2026-10-12 社長の依頼「スタックがいくら貯まってるのか一目でわかるように」)。
+//   貯まる数(味方)と、敵に重なってかかる状態を、その子の枠・敵の絵の隅に「マーク×数」で常に出す。
+//   ★絵柄はここ1か所で差し替える。mark は絵文字。img に画像のパス(images/ の下に置いた絵)を入れると、絵文字の代わりにその絵を出す。
+//   label は読み上げと詳細の言い方。並び順もこの順(味方の枠に複数付くとき)
+const BATTLE_STACK_MARKS = Object.freeze({
+  cookie:     Object.freeze({ mark:'🍪', img:'', label:'クッキー', showZero:true }),          // メロディー(メロディの手作りクッキー)
+  note:       Object.freeze({ mark:'🎵', img:'', label:'黒音符', showZero:true }),            // クロミー(クロミノート)
+  bow:        Object.freeze({ mark:'🎀', img:'', label:'旋律' }),              // メロディ・ボゥの旋律(使った子の枠)
+  kenshi:     Object.freeze({ mark:'💥', img:'', label:'連撃パワー' }),        // 剣士モッチー(ソードスキル)。⚔️ は二刀流の演出に使うので分ける(2026-10-12 社長の決定)
+  trickAtk:   Object.freeze({ mark:'💪', img:'', label:'トリック(ちから)' }),  // ゴースト・スプーキー(トリックスタート)
+  trickDef:   Object.freeze({ mark:'🛡️', img:'', label:'トリック(丈夫さ)' }),
+  trickRegen: Object.freeze({ mark:'💚', img:'', label:'トリック(回復)' }),
+  fateCombo:  Object.freeze({ mark:'🎲', img:'', label:'運命(連撃)' }),        // 運命のコイン・運命の輪
+  fateAtk:    Object.freeze({ mark:'🪙', img:'', label:'運命(ちから)' }),
+  // 残りターン・残り回数(2026-10-12 社長の追加依頼)。unit:'T' は「⏳2T」のように残りターンで出し、1になったら目立たせる
+  exTurns:    Object.freeze({ mark:'⏳', img:'', label:'EXの残りターン', unit:'T' }),   // タクティクスのEX(ターンで切れるもの)
+  avoid:      Object.freeze({ mark:'👻', img:'', label:'完全回避の残り' }),            // ゴースト(オフリィアボイド)
+  konjo:      Object.freeze({ mark:'🔥', img:'', label:'根性の残り' }),                // ウンディーネ(生命の泉)で付いた根性
+  aquaPrison: Object.freeze({ mark:'💧', img:'', label:'水牢' }),              // 敵: ウンディーネ種のアクアフィールド
+  aquaFreeze: Object.freeze({ mark:'❄️', img:'', label:'氷結' }),
+  roar:       Object.freeze({ mark:'📢', img:'', label:'咆哮' }),              // 敵: 自分にかけた攻撃アップ
+});
+// ★モンスターごとの演出(2026-10-12 社長の決定「3体を入れて、残りも順に」。案の一覧は docs/proto/monster-visuals/README.md)。
+//   「マーク×数」の上乗せで、数字の代わりにはしない。置くのは枠の絵のまわりだけ。軽量表示・超省エネでは出さない。
+//   絵柄はここ1か所で差し替える(mark は絵文字。img に画像のパスを入れると、絵文字の代わりにその絵を出す)
+const BATTLE_MONSTER_FX = Object.freeze({
+  // ゴースト(オフリィアボイド): 完全回避の数だけ、その子の絵の半透明の分身を浮かべる。回避を使うと1匹ずつ消える
+  avoidClone: Object.freeze({ max: 2, opacity: 0.5 }),
+  // スネグーラチカ(クリスマスプレゼント): 効いているあいだ箱を出し、角に中身の絵。大当たりは金色に光る箱
+  present: Object.freeze({ mark:'🎁', img:'', jackpotMark:'✨',
+    inner: Object.freeze({ dmg:'⚔️', taken:'🛡️', combo:'💫', heal:'💖', guts:'⚡', crit:'🎯' }) }),
+  // 剣士モッチー(ソード・コンバージョン): いまの型を 剣だけ / 剣と盾 / 剣2本 で出す
+  swordStyle: Object.freeze({ sword:'🗡️', shield:'🗡️🛡️', dual:'⚔️' }),
+  // ---- 区切り2(2026-10-12): EXが効いているあいだの見た目 ----
+  // モッチー(ガッツ全開っちー)・ミタラシ(ドラゴンだっちー): 絵の後ろのオーラ。残り1ターンは小さくなる
+  aura: Object.freeze({
+    Mocchi:    Object.freeze({ mark:'🔥', color:'#facc15' }),
+    Mitarashi: Object.freeze({ mark:'🐉', color:'#22d3ee' }),
+  }),
+  // ハム(ハムボクシング): カウンターの数だけグローブ
+  glove: Object.freeze({ mark:'🥊', max:3 }),
+  // ミーア(オン・ステージ!): 絵の上からのスポットライト。ボルテージが上がるほど明るい
+  spotlight: Object.freeze({ color:'#fde68a', minOpacity:0.2, maxOpacity:0.85 }),
+  // ザン(血踊): 回避した数だけ、赤い残像が増える
+  afterimage: Object.freeze({ max:3, color:'#ef4444' }),
+  // ライガー(雷狼影): ためる間は雷の数だけ ⚡、雷纏のあいだは体に稲妻をまとう
+  thunder: Object.freeze({ mark:'⚡', max:5, color:'#facc15' }),
+  // ---- 区切り3(2026-10-12): EXが効いているあいだ、絵のまわりに舞う・回るもの ----
+  //   kind … petals(上から舞い落ちる) / orbit(まわりを回る) / feathers(ゆっくり落ちる) / ring(後ろで回る輪) / sweets(跳ねる)
+  scatter: Object.freeze({
+    Eiki:    Object.freeze({ kind:'petals',   marks:Object.freeze(['🌸', '🌸', '🌸']) }),       // 緋桜瞬歩
+    Pixie:   Object.freeze({ kind:'orbit',    marks:Object.freeze(['✨', '⭐', '✨']) }),        // お気に入りの魔法
+    Iblis:   Object.freeze({ kind:'feathers', marks:Object.freeze(['🪶', '🪶', '🪶']) }),        // 堕天の烙印(黒い羽根)
+    Ark:     Object.freeze({ kind:'ring',     marks:Object.freeze([]), color:'#fbbf24' }),       // 抗えぬ宿命を追え(輪廻の環)
+    MelWhip: Object.freeze({ kind:'sweets',   marks:Object.freeze(['🍬', '🍰', '🍭']) }),       // スイーツパラダイス
+  }),
+  // ユグドラシル(世界樹の守り): 味方全員の枠に葉っぱの盾。残りターンの数だけ葉が付く
+  leafShield: Object.freeze({ mark:'🍃', max:3 }),
+  // ---- 区切り4(2026-10-12) ----
+  //   kind … beam(目から敵へ光の線) / crack(ひびと赤く光る拳) / mist(薄い霧) / clock(止まった時計と青白い色)
+  overlay: Object.freeze({
+    Suezo:     Object.freeze({ kind:'beam',  mark:'👁️', color:'#38bdf8' }),   // サイコロックオン
+    Golem:     Object.freeze({ kind:'crack', mark:'👊', color:'#ef4444' }),   // 捨て身
+    Oboro:     Object.freeze({ kind:'mist',  mark:'',   color:'#e2e8f0' }),   // おぼろ返し
+    Yaobikuni: Object.freeze({ kind:'clock', mark:'⏱️', color:'#93c5fd' }),   // 悠久の刻
+  }),
+  // モノリス(みんなをかばう): ほかの味方の枠に、モノリスがかばう薄い盾の膜
+  coverFilm: Object.freeze({ mark:'🛡️', color:'#a5b4fc' }),
+  // プラント(緑のめぐみ): 味方全員の枠の下の端に若葉
+  sprout: Object.freeze({ mark:'🌱', n:3 }),
+  // ---- 区切り5(2026-10-12) ----
+  // パンドラ(パンドラの箱): 残りターンが減るほど箱のふたが開いていく(3以上=閉じている / 2=少し / 1=大きく)
+  pandoraBox: Object.freeze({ mark:'📦', lid:'🟪', angles:Object.freeze({ 3:0, 2:-25, 1:-60 }) }),
+  // ウンディーネ(生命の泉): 対象の子の足もとに水の輪
+  springRing: Object.freeze({ color:'#38bdf8' }),
+  // メロディー: クッキーの数に応じて小皿のクッキーが増える(perMark 個で1枚・最大 max 枚)。満タンで光る
+  cookiePile: Object.freeze({ mark:'🍪', perMark:4, max:3 }),
+  // クロミー: 黒音符の数に応じて五線の音符が増える。満タンで紫に光る
+  noteStaff: Object.freeze({ mark:'🎵', perMark:2, max:5 }),
+  // スプーキー: 運命で積んだ数だけコインが回る
+  coinSpin: Object.freeze({ mark:'🪙', max:3 }),
+});
+const BATTLE_STACK_MARK_ORDER = Object.freeze(Object.keys(BATTLE_STACK_MARKS));
+// { kind: 数 } から、出す順に並べた [{ kind, count, mark, img, label }] を作る。知らない種類・0は出さない。
+// ★クッキー・黒音符(showZero)も、0のときは出さない(2026-10-13 社長の決定。もとは「×0」で出していた)。
+//   showZero は「満タンで光る」札の目印としてだけ使う
+const battleStackMarkItems = (counts) => BATTLE_STACK_MARK_ORDER
+  .filter((kind) => counts && Object.prototype.hasOwnProperty.call(counts, kind))
+  .map((kind) => ({ kind, count: Math.max(0, Math.floor(Number(counts[kind]) || 0)), ...BATTLE_STACK_MARKS[kind] }))
+  .filter((it) => it.count > 0);
 const sweetStackTraitOf = (id) => (id && Object.prototype.hasOwnProperty.call(SWEET_STACK_TRAITS, id) ? SWEET_STACK_TRAITS[id] : null);
 const sweetStackCountOf = (n) => Math.min(SWEET_STACK_MAX, Math.max(0, Math.floor(Number(n) || 0)));
 // その行動で増える数。ownerId=特性を持つ子(既存5モードは勇者モン・タクティクスはその枠の子)、actorId=カードを使った子。

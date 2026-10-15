@@ -63,14 +63,95 @@ const HOME_RAID_JACK_CSS = `
 @keyframes mhRaidJackShadow{0%,100%{transform:scaleX(1.05);opacity:.5}50%{transform:scaleX(.7);opacity:.3}}
 @media(prefers-reduced-motion:reduce){.mh-home-raid-jack-img,.mh-home-raid-jack-shadow{animation:none}}
 `;
+// ★重なり順は施設(.mh-home-facilities の z-index:3)より前の 4(2026-10-11・社長の実機の指摘)。
+//   施設は建物ぶんの透明な押し場所を持つので、2のままだと右に置いた吹き出しが神殿・マーケットの押し場所の下になり、
+//   「▶ つぎ」を押すと施設が開いていた。枠そのものは押せなくして(pointerEvents:none)、吹き出しとジャック本体だけを押せるようにする
+//   (枠の余白で施設の押し場所をふさがない)。上の帯・みゅあ・ギフトなど(z-index:5)よりは後ろのまま
 const HOME_RAID_JACK_WRAP_STYLE = Object.freeze({
-  position:'absolute', left:'50%', top:'44%', transform:'translate(-50%,-50%)', zIndex:2,
+  position:'absolute', left:'50%', top:'44%', transform:'translate(-50%,-50%)', zIndex:4, pointerEvents:'none',
   width:'44%', maxWidth:'190px', minWidth:'120px',
 });
+// ★炎(オーラ)だけは、施設(z-index:3)より後ろの 2 に分けて描く(2026-10-13・社長「またレイドボスのオーラが各施設に重なってる」)。
+//   10/07(#2299)に炎を施設の後ろへ回したが、10/11 に吹き出しを押せるようにするためジャック全体を 4 へ上げたとき、
+//   中にある炎も一緒に施設の札・みゅあの吹き出しの前へ出てしまった。ジャック本体と吹き出しは 4 のまま(押せる)、炎は別の層。
+//   炎の層には本体と同じ形の見えない枠を置き、炎の位置・大きさは本体の中にあったときと同じにする
+const HOME_RAID_JACK_AURA_WRAP_STYLE = Object.freeze({ ...HOME_RAID_JACK_WRAP_STYLE, zIndex:2 });
+const HOME_RAID_JACK_AURA_BOX_STYLE = Object.freeze({ display:'flex', flexDirection:'column', alignItems:'center', width:'100%', visibility:'hidden' });
 const HOME_RAID_JACK_BUTTON_STYLE = Object.freeze({
   display:'flex', flexDirection:'column', alignItems:'center', width:'100%',
-  background:'transparent', border:'0', padding:'0', cursor:'pointer',
+  background:'transparent', border:'0', padding:'0', cursor:'pointer', pointerEvents:'auto',
 });
+// ★ジャックのひとこと(吹き出し)の置き場所を、その端末の画面で測って決める(2026-10-10・社長の実機の指摘)。
+//   iPhone縦では「M/B管理」「神殿」のボタンの下へ吹き出しがもぐって文の頭が隠れ、横では上の帯の裏へ隠れていた。
+//   HOMEのボタンの位置は端末ごとに違うので、決め打ちの位置ではどこかで必ず重なる。
+//   そこで「ボタン・みゅあの吹き出し・画面の端」を障害物として測り、重ならない場所と幅を順に試す:
+//     ① 頭の上(幅184→120まで絞る) ② 頭の右 ③ 頭の左 ④ 少しずつ下げて頭の4分の3まで重ねる(それでもだめなときの控え)
+//   どれも重なるときは、重なりがいちばん小さいものを選ぶ。ボタン側は動かさない(押せる場所を変えない)。
+//   head … ジャック本体の絵の箱(跳ねる前の位置) / obstacles … 避ける箱 / measure(width) … その幅での吹き出しの高さ
+const HOME_RAID_SAY_WIDTHS = Object.freeze([184, 168, 152, 136, 120]);
+const HOME_RAID_SAY_GAP = 6;
+const HOME_RAID_SAY_HOP = 18; // 跳ねる高さ(mhRaidJackHop の16px)+ゆとり。頭の上に置くときは、跳ねても頭がしっぽにかからない
+const homeRaidSayPlace = ({ head, obstacles, vw, vh, measure, top = 0 }) => {
+  const pad = 4, edge = 6;
+  const overlap = (r) => {
+    let area = 0;
+    if (r.left < edge || r.top < top + edge || r.right > vw - edge || r.bottom > vh - edge) area += 1e6;
+    for (const o of obstacles) {
+      const w = Math.min(r.right, o.right + pad) - Math.max(r.left, o.left - pad);
+      const h = Math.min(r.bottom, o.bottom + pad) - Math.max(r.top, o.top - pad);
+      if (w > 0 && h > 0) area += w * h;
+    }
+    return area;
+  };
+  const clampX = (x, w) => Math.max(edge, Math.min(vw - edge - w, x));
+  const cx = (head.left + head.right) / 2;
+  const tries = [];
+  for (const w of HOME_RAID_SAY_WIDTHS) {
+    const h = measure(w);
+    const left = clampX(cx - w / 2, w);
+    tries.push({ side: 'top', left, top: head.top - HOME_RAID_SAY_HOP - h, width: w, height: h });
+  }
+  for (const side of ['right', 'left']) {
+    for (const w of HOME_RAID_SAY_WIDTHS) {
+      const h = measure(w);
+      const left = side === 'right' ? head.right + HOME_RAID_SAY_GAP + 6 : head.left - HOME_RAID_SAY_GAP - 6 - w;
+      const midY = head.top + Math.min(head.bottom - head.top, 80) * 0.35;
+      tries.push({ side, left, top: Math.max(top + edge, midY - h / 2), width: w, height: h });
+    }
+  }
+  // ④ 頭の上の位置から6pxずつ下げ、頭の4分の3に重なるところまで探す(ジャックの絵に少し重なっても、文が読めるほうを選ぶ)
+  for (const w of HOME_RAID_SAY_WIDTHS) {
+    const h = measure(w);
+    const from = head.top - HOME_RAID_SAY_HOP - h, to = head.top + (head.bottom - head.top) * 0.75 - h;
+    for (let y = from + 6; y <= to; y += 6) tries.push({ side: 'top', left: clampX(cx - w / 2, w), top: y, width: w, height: h });
+  }
+  let best = null;
+  for (const t of tries) {
+    const area = overlap({ left: t.left, top: t.top, right: t.left + t.width, bottom: t.top + t.height });
+    if (area === 0) return { ...t, clear: true };
+    if (!best || area < best.area) best = { ...t, area };
+  }
+  return best ? { side: best.side, left: best.left, top: best.top, width: best.width, height: best.height, clear: false } : null;
+};
+// HOMEで吹き出しが避ける相手を集める。ボタン・リンク・みゅあの吹き出し(施設は見える札)。
+// ジャック自身・画面いっぱいの背景のような大きな押し場所・見えていないものは数えない
+const homeRaidSayObstacles = (wrap) => {
+  if (typeof document === 'undefined') return [];
+  const vw = window.innerWidth, vh = window.innerHeight, out = [];
+  document.querySelectorAll('button, a[href], [role="button"]').forEach((el) => {
+    if (wrap && wrap.contains(el)) return;
+    // HOMEの施設(M/B管理・神殿・マーケットなど)は、建物ぶんの透明な押し場所の中に「見える札」(> span)を置いた作り。
+    // 押し場所ごと避けると真ん中に置き場所が残らないので、見える札だけを避ける(押せる範囲は変えない)
+    const face = el.classList.contains('mh-home-facility') ? (el.querySelector(':scope > span') || el) : el;
+    const r = face.getBoundingClientRect();
+    if (r.width < 2 || r.height < 2 || r.right <= 0 || r.bottom <= 0 || r.left >= vw || r.top >= vh) return;
+    if (r.width * r.height > vw * vh * 0.4) return;
+    const cs = getComputedStyle(el);
+    if (cs.visibility === 'hidden' || cs.display === 'none' || Number(cs.opacity) === 0) return;
+    out.push({ left: r.left, top: r.top, right: r.right, bottom: r.bottom });
+  });
+  return out;
+};
 const HomeRaidJack = ({ eventId, onOpen }) => {
   // 前回取れた段階の合計から描き始める(36-raid-jack-api.jsx の raidJackTotalsCache)。読み込みが終わるまでの間を「男爵・ライフ満タン」にしない
   const [totals, setTotalsState] = React.useState(() => raidJackCachedTotals(eventId));
@@ -91,6 +172,39 @@ const HomeRaidJack = ({ eventId, onOpen }) => {
     const id = setInterval(load, 60000);
     return () => { alive = false; clearInterval(id); };
   }, [eventId]);
+  // 吹き出しの置き場所(homeRaidSayPlace)。null のあいだは、これまでどおりジャックの上へ置く
+  const wrapRef = React.useRef(null);
+  const sayRef = React.useRef(null);
+  const [sayPlace, setSayPlace] = React.useState(null);
+  React.useLayoutEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const place = () => {
+      const wrap = wrapRef.current, say = sayRef.current;
+      const art = wrap && wrap.querySelector('[data-home-raid-jack] [data-jack-aura], [data-home-raid-jack] [data-home-raid-pumpkin]');
+      const img = art && art.querySelector('img.mh-home-raid-jack-img');
+      if (!wrap || !say || !art || !img) return;
+      // 跳ねている途中の位置ではなく、置かれている位置で測る(img の transform を含まない offset から出す)
+      const ar = art.getBoundingClientRect();
+      const head = { left: ar.left + img.offsetLeft, top: ar.top + img.offsetTop, right: ar.left + img.offsetLeft + img.offsetWidth, bottom: ar.top + img.offsetTop + img.offsetHeight };
+      if (head.right - head.left < 2) return;
+      const keep = say.style.width;
+      const measure = (w) => { say.style.width = `${w}px`; return say.offsetHeight; };
+      const next = homeRaidSayPlace({ head, obstacles: homeRaidSayObstacles(wrap), vw: window.innerWidth, vh: window.innerHeight, measure });
+      say.style.width = keep;
+      if (!next) return;
+      const wr = wrap.getBoundingClientRect();
+      const rel = { side: next.side, left: Math.round(next.left - wr.left), top: Math.round(next.top - wr.top), width: next.width,
+        tail: Math.round(Math.max(14, Math.min(next.width - 14, (head.left + head.right) / 2 - next.left))), tailY: Math.round(Math.max(14, Math.min(next.height - 14, head.top + 24 - next.top))) };
+      setSayPlace((prev) => (prev && prev.side === rel.side && prev.left === rel.left && prev.top === rel.top && prev.width === rel.width && prev.tail === rel.tail && prev.tailY === rel.tailY ? prev : rel));
+    };
+    place();
+    // ボタンの並び・みゅあの吹き出しの長さは、読み込みやセリフで後から変わる。軽い測り直しをときどき回す
+    const timers = [setTimeout(place, 120), setTimeout(place, 700)];
+    const id = setInterval(place, 1500);
+    window.addEventListener('resize', place);
+    window.addEventListener('orientationchange', place);
+    return () => { timers.forEach(clearTimeout); clearInterval(id); window.removeEventListener('resize', place); window.removeEventListener('orientationchange', place); };
+  }, [lineNo, totals]);
   // ときどき両腕ポーズ(約7秒に1回、1.4秒だけ)
   React.useEffect(() => {
     let alive = true; let timer = null;
@@ -113,37 +227,10 @@ const HomeRaidJack = ({ eventId, onOpen }) => {
   const speechLines = raidJackHomeLines(tier.id, rate, allDone);
   const speech = speechLines[lineNo % speechLines.length];
   const speechAccent = allDone ? '#fdba74' : '#fb923c';
-  return (
-    <div data-home-raid-jack-wrap style={HOME_RAID_JACK_WRAP_STYLE}>
-    {/* ひとこと。ジャックの上に出る吹き出し。押すと次のセリフへ(ジャック本体を押すとレイド画面) */}
-    <button type="button" key={`say${lineNo}`} data-home-raid-say data-story-pop="1" onClick={() => setLineNo((n) => n + 1)} aria-label="ジャックのひとこと(押すと次のセリフ)"
-      style={{ position:'absolute', left:'50%', bottom:'100%', marginLeft:-92, marginBottom:'4px', width:184, padding:'6px 10px', borderRadius:'14px',
-        border:`2px solid ${speechAccent}`, background:'#1c0a02ee', color:'#ffedd5', fontSize:'11px', fontWeight:900, lineHeight:1.45, textAlign:'left', cursor:'pointer',
-        boxShadow:`0 0 12px ${speechAccent}66`, animation:'storyPop .25s ease-out both', zIndex:2 }}>
-      <span style={{ display:'block' }}>{speech}</span>
-      <span aria-hidden="true" style={{ display:'block', textAlign:'right', fontSize:'8px', opacity:.7 }}>▶ つぎ</span>
-      <span aria-hidden="true" style={{ position:'absolute', left:'50%', bottom:-9, marginLeft:-8, width:0, height:0, borderLeft:'8px solid transparent', borderRight:'8px solid transparent', borderTop:`9px solid ${speechAccent}` }} />
-    </button>
-    <button type="button" data-home-raid-jack onClick={onOpen} aria-label={allDone ? `${RAID_JACK_PUMPKIN.name}が遊びに来た！タップでレイド画面を開く` : `${tier.name}があらわれた！タップでレイド画面を開く`} style={HOME_RAID_JACK_BUTTON_STYLE}>
-      {/* 通常絵とポーズ絵を重ねて、切り替えは透明度だけで行う(先に両方読み込める・切り替えで枠の高さが変わらない)。
-          ポーズ絵は腕が左右に広がるぶん本体が幅の約半分になるので、通常絵を半分の大きさ(RAID_JACK_NORMAL_ART_SCALE)で描いて本体の大きさをそろえる。
-          どちらも足もと(本体の下端)をそろえて置く */}
-      <span data-jack-aura={allDone ? undefined : (Number(String(tier.id).slice(1)) || undefined)} data-home-raid-pumpkin={allDone ? 'true' : undefined} style={{ position:'relative', display:'block', width:'100%', aspectRatio:'1024 / 640' }}>
-        {/* 段階が進むほど派手になるオーラ(バトルと同じ部品)。絵の後ろに置く */}
-        {/* HOMEのジャックは小さいので、オーラは絵より大きな枠へ広げて描く(段階が上がるほど大きく) */}
-        {!allDone && <span aria-hidden="true" style={{ position:'absolute', pointerEvents:'none', inset:`${-20 - (Number(String(tier.id).slice(1)) || 0) * 8}% ${-10 - (Number(String(tier.id).slice(1)) || 0) * 5}% -6%` }}>
-          <JackAuraLayer tier={Number(String(tier.id).slice(1)) || 0} />
-        </span>}
-        {/* 大王を倒したあとは、小さなぱんぷきんが遊びに来る(オーラ・ポーズ絵なし。跳ねる動きは同じ) */}
-        {allDone ? <img className="mh-home-raid-jack-img" src={PUMPKIN_ICON_IMG} alt="" draggable={false}
-          style={{ position:'absolute', left:`${(1 - RAID_JACK_PUMPKIN_ART_SCALE) * 50}%`, bottom:0, width:`${RAID_JACK_PUMPKIN_ART_SCALE * 100}%`, height:'auto', filter:'drop-shadow(0 6px 10px #000a)', pointerEvents:'none' }} /> : <>
-        <img className="mh-home-raid-jack-img" src={JACK_IMG} alt="" draggable={false}
-          style={{ position:'absolute', left:`${(1 - RAID_JACK_NORMAL_ART_SCALE) * 50}%`, bottom:0, width:`${RAID_JACK_NORMAL_ART_SCALE * 100}%`, height:'auto', opacity:pose ? 0 : 1, filter:`drop-shadow(0 6px 10px #000a) ${raidJackAuraGlowFilter(Number(String(tier.id).slice(1)) || 0, 0.8)}`, pointerEvents:'none' }} />
-        <img className="mh-home-raid-jack-img" src={JACK_POSE_IMG} alt="" draggable={false} aria-hidden="true"
-          style={{ position:'absolute', left:0, bottom:'-6%', width:'100%', height:'auto', opacity:pose ? 1 : 0, filter:`drop-shadow(0 6px 10px #000a) ${raidJackAuraGlowFilter(Number(String(tier.id).slice(1)) || 0, 0.8)}`, pointerEvents:'none' }} />
-        </>}
-      </span>
-      <span className="mh-home-raid-jack-shadow" aria-hidden="true" style={{ display:'block', width:'70%', height:'8px', marginTop:'-6px', borderRadius:'50%', background:'#0008', filter:'blur(3px)' }} />
+  const tierNo = Number(String(tier.id).slice(1)) || 0;
+  // 影と段階・HPの札。本体と、炎の層の見えない枠(高さをそろえるため)の両方で使う
+  const shadowEl = <span className="mh-home-raid-jack-shadow" aria-hidden="true" style={{ display:'block', width:'70%', height:'8px', marginTop:'-6px', borderRadius:'50%', background:'#0008', filter:'blur(3px)' }} />;
+  const labelEl = (
       <span style={{ display:'block', width:'100%', marginTop:'6px', padding:'3px 6px', borderRadius:'10px', border:'1px solid #fdba74aa', background:'#1c0a02d9', color:'#ffedd5', fontSize:'10px', fontWeight:900, textAlign:'center', lineHeight:1.3 }}>
         <span style={{ display:'block' }}>{allDone ? `${RAID_JACK_PUMPKIN.name}が遊びに来た！` : `${tier.name}があらわれた！`}</span>
         {allDone ? <span data-home-raid-pumpkin-note style={{ display:'block', marginTop:'2px', fontSize:'8px', opacity:.9 }}>ジャックを倒した！あそんでダメージを競おう</span> : <>
@@ -155,16 +242,71 @@ const HomeRaidJack = ({ eventId, onOpen }) => {
           : <span style={{ display:'block', fontSize:'8px', opacity:.85 }}>共有HP {left.toLocaleString()}</span>}
         </>}
       </span>
+  );
+  return (
+    <>
+    {/* 炎(オーラ)の層。施設の札・みゅあの吹き出し・上の帯より後ろ(HOME_RAID_JACK_AURA_WRAP_STYLE)。
+        HOMEのジャックは小さいので、オーラは絵より大きな枠へ広げて描く(段階が上がるほど大きく) */}
+    {!allDone && <div aria-hidden="true" data-home-raid-aura-wrap style={HOME_RAID_JACK_AURA_WRAP_STYLE}>
+      <div style={HOME_RAID_JACK_AURA_BOX_STYLE}>
+        <span data-jack-aura={tierNo || undefined} style={{ position:'relative', display:'block', width:'100%', aspectRatio:'1024 / 640' }}>
+          <span style={{ position:'absolute', pointerEvents:'none', visibility:'visible', inset:`${-20 - tierNo * 8}% ${-10 - tierNo * 5}% -6%` }}>
+            <JackAuraLayer tier={tierNo} />
+          </span>
+        </span>
+        {shadowEl}
+        {labelEl}
+      </div>
+    </div>}
+    <div ref={wrapRef} data-home-raid-jack-wrap style={HOME_RAID_JACK_WRAP_STYLE}>
+    {/* ひとこと。ジャックの上に出る吹き出し。押すと次のセリフへ(ジャック本体を押すとレイド画面) */}
+    <button type="button" ref={sayRef} key={`say${lineNo}`} data-home-raid-say data-story-pop="1" data-say-side={sayPlace ? sayPlace.side : 'top'} onClick={() => setLineNo((n) => n + 1)} aria-label="ジャックのひとこと(押すと次のセリフ)"
+      style={{ position:'absolute', ...(sayPlace ? { left:sayPlace.left, top:sayPlace.top, width:sayPlace.width } : { left:'50%', bottom:'100%', marginLeft:-92, marginBottom:'4px', width:184 }),
+        padding:'6px 10px', borderRadius:'14px', boxSizing:'border-box',
+        border:`2px solid ${speechAccent}`, background:'#1c0a02ee', color:'#ffedd5', fontSize:'11px', fontWeight:900, lineHeight:1.45, textAlign:'left', cursor:'pointer',
+        boxShadow:`0 0 12px ${speechAccent}66`, animation:'storyPop .25s ease-out both', zIndex:2, pointerEvents:'auto' }}>
+      <span style={{ display:'block' }}>{speech}</span>
+      <span aria-hidden="true" style={{ display:'block', textAlign:'right', fontSize:'8px', opacity:.7 }}>▶ つぎ</span>
+      {/* しっぽはジャックのほうへ向ける(上に置いたら下向き、右に置いたら左向き、左に置いたら右向き) */}
+      {(!sayPlace || sayPlace.side === 'top') && <span aria-hidden="true" style={{ position:'absolute', left:sayPlace ? sayPlace.tail : '50%', bottom:-9, marginLeft:-8, width:0, height:0, borderLeft:'8px solid transparent', borderRight:'8px solid transparent', borderTop:`9px solid ${speechAccent}` }} />}
+      {sayPlace && sayPlace.side === 'right' && <span aria-hidden="true" style={{ position:'absolute', left:-9, top:sayPlace.tailY, marginTop:-8, width:0, height:0, borderTop:'8px solid transparent', borderBottom:'8px solid transparent', borderRight:`9px solid ${speechAccent}` }} />}
+      {sayPlace && sayPlace.side === 'left' && <span aria-hidden="true" style={{ position:'absolute', right:-9, top:sayPlace.tailY, marginTop:-8, width:0, height:0, borderTop:'8px solid transparent', borderBottom:'8px solid transparent', borderLeft:`9px solid ${speechAccent}` }} />}
+    </button>
+    <button type="button" data-home-raid-jack onClick={onOpen} aria-label={allDone ? `${RAID_JACK_PUMPKIN.name}が遊びに来た！タップでレイド画面を開く` : `${tier.name}があらわれた！タップでレイド画面を開く`} style={HOME_RAID_JACK_BUTTON_STYLE}>
+      {/* 通常絵とポーズ絵を重ねて、切り替えは透明度だけで行う(先に両方読み込める・切り替えで枠の高さが変わらない)。
+          ポーズ絵は腕が左右に広がるぶん本体が幅の約半分になるので、通常絵を半分の大きさ(RAID_JACK_NORMAL_ART_SCALE)で描いて本体の大きさをそろえる。
+          どちらも足もと(本体の下端)をそろえて置く */}
+      <span data-jack-aura={allDone ? undefined : (Number(String(tier.id).slice(1)) || undefined)} data-home-raid-pumpkin={allDone ? 'true' : undefined} style={{ position:'relative', display:'block', width:'100%', aspectRatio:'1024 / 640' }}>
+        {/* 段階が進むほど派手になるオーラは、施設より後ろの別の層(下の data-home-raid-aura-wrap)で描く */}
+        {/* 大王を倒したあとは、小さなぱんぷきんが遊びに来る(オーラ・ポーズ絵なし。跳ねる動きは同じ) */}
+        {allDone ? <img className="mh-home-raid-jack-img" src={PUMPKIN_ICON_IMG} alt="" draggable={false}
+          style={{ position:'absolute', left:`${(1 - RAID_JACK_PUMPKIN_ART_SCALE) * 50}%`, bottom:0, width:`${RAID_JACK_PUMPKIN_ART_SCALE * 100}%`, height:'auto', filter:'drop-shadow(0 6px 10px #000a)', pointerEvents:'none' }} /> : <>
+        <img className="mh-home-raid-jack-img" src={JACK_IMG} alt="" draggable={false}
+          style={{ position:'absolute', left:`${(1 - RAID_JACK_NORMAL_ART_SCALE) * 50}%`, bottom:0, width:`${RAID_JACK_NORMAL_ART_SCALE * 100}%`, height:'auto', opacity:pose ? 0 : 1, filter:`drop-shadow(0 6px 10px #000a) ${raidJackAuraGlowFilter(Number(String(tier.id).slice(1)) || 0, 0.8)}`, pointerEvents:'none' }} />
+        <img className="mh-home-raid-jack-img" src={JACK_POSE_IMG} alt="" draggable={false} aria-hidden="true"
+          style={{ position:'absolute', left:0, bottom:'-6%', width:'100%', height:'auto', opacity:pose ? 1 : 0, filter:`drop-shadow(0 6px 10px #000a) ${raidJackAuraGlowFilter(Number(String(tier.id).slice(1)) || 0, 0.8)}`, pointerEvents:'none' }} />
+        </>}
+      </span>
+      {shadowEl}
+      {labelEl}
     </button>
     </div>
+    </>
   );
 };
+// HOME 右上の枠(ダイヤ・ブリーダーP)を、桁が多いときだけ広げる幅(px)。ふだんの桁数では 0 で、見た目は今のまま。
+// 数の字は 10px で1文字およそ 6.4px。枠の中で数に使える幅はダイヤが 50px・ブリーダーP が 29px(幅152pxのとき)なので、
+// 足りないぶんだけ最大 24px 広げ、それでも入らないぶんは字を小さくする(70-bootstrap.jsx の --wal-room)。
+// tools/home-layout-check.js がこの1行を取り出して同じ計算で測る
+const homeWalletGrowPx=(goldText,bpText)=>Math.min(24,Math.max(0,Math.ceil(String(goldText).length*6.4-50),Math.ceil(String(bpText).length*6.4-29)));
 function HomeScreen({
   assistantBondUp, friendRequestCount = 0, breederIcon, breederLevel, breederName, breederPoints, gifts, gold,
   hasUnreadChangelog, homeBackgroundReady, homeArt, homePastureMasumons, masuMons, missions,
   onOpenBattle, onOpenManagement, onOpenMarket, onOpenProfile, onOpenRhythm, onOpenSettings,
   onOpenTemple, openChangelog, openGiftBox, openMissions, profileFrameId, resolveIconUrl, spotClass,
   raidJackVisible = false, raidJackEventId, onOpenRaidJack,
+  // 助手とおしゃべり(2026-10-14)。公開の印 assistantChat が立つまでは null(ボタンを出さない)
+  onOpenAssistantChat = null,
 }) {
   // 背景の絵は「HOMEの枠が横長かどうか」で選ぶ。画面の向きでは決めない。
   // パソコンは画面が横長でも、HOMEは幅600の縦長の列に収まるので、横長の絵を出すと村の真ん中だけが大きく写り、
@@ -219,8 +361,10 @@ function HomeScreen({
             <ChevronRight className="mh-home-profile-arrow" size={15}/>
             {Number(friendRequestCount)>0&&<span data-home-friend-badge aria-label={`フレンド申請が${Number(friendRequestCount)}件届いています`} className="absolute -right-1 -top-2 flex h-6 min-w-[24px] items-center justify-center rounded-full bg-rose-500 px-1.5 text-[12px] font-black text-white shadow-lg">{Math.min(99,Number(friendRequestCount))}</span>}
           </button>
-          <section className="mh-home-wallet">
-            <div><Gem size={14}/><b>{gold.toLocaleString()}</b><small>ダイヤ</small></div><div><Coins size={14}/><b>{breederPoints.toLocaleString()}</b><small>ブリーダーP</small></div>
+          {/* ダイヤ・ブリーダーP は桁が増えても折り返さず1行のまま(2026-10-13 社長「8桁で『ダイヤ』が縦に折れて枠が伸びた」)。
+              桁が多いときだけ枠を少し広げ(homeWalletGrowPx)、それでも入らないぶんは文字数(--len)に合わせて字を小さくする(70-bootstrap.jsx の --wal-room) */}
+          <section className="mh-home-wallet" style={{'--wal-grow':`${homeWalletGrowPx(gold.toLocaleString(),breederPoints.toLocaleString())}px`}}>
+            <div><Gem size={14}/><b style={{'--len':String(gold.toLocaleString()).length}}>{gold.toLocaleString()}</b><small>ダイヤ</small></div><div><Coins size={14}/><b style={{'--len':String(breederPoints.toLocaleString()).length}}>{breederPoints.toLocaleString()}</b><small>ブリーダーP</small></div>
             <button onClick={onOpenSettings} className={`mh-home-settings${spotClass('settings')}`} aria-label="設定"><Settings size={20}/><span>設定</span></button>
           </section>
         </header>
@@ -257,7 +401,9 @@ function HomeScreen({
           <b>{homeEventCampaign.banner.emoji} {homeEventCampaign.banner.title}</b><small>{homeEventCampaign.banner.sub}</small>
         </button>}
         {/* 仲良し度が上がった直後だけ、みゅあがそのことに触れる(HOMEを離れると元に戻る) */}
-        <div className={`mh-home-assistant${spotClass('assistant')}`}><AssistantBubble scene="home" condition={assistantBondUp?'bondUp':(masuMons.length===0?'firstRun':null)} compact/></div>
+        <div className={`mh-home-assistant${spotClass('assistant')}`}><AssistantBubble scene="home" condition={assistantBondUp?'bondUp':(masuMons.length===0?'firstRun':null)} compact/>
+          {typeof onOpenAssistantChat==='function'&&<button type="button" data-home-assistant-chat onClick={onOpenAssistantChat} className="mt-1 ml-auto block rounded-full border border-pink-300/70 bg-pink-500/85 px-3 py-1 text-[11px] font-black text-white shadow active:scale-95">💬 おしゃべり</button>}
+        </div>
       </main>
     
   );

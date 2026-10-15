@@ -37,6 +37,8 @@
 | `mh_home_art` | string / `'auto'` | ホーム画面アレンジ。値は `mh_title_art` と同じ |
 | `mh_screen_theme_v1` | object / 全部 `'auto'` | 画面テーマ。`{ menu, market, temple, battle, rhythm }` に `'auto'`/`'halloween'`/`'classic'`。`normalizeScreenTheme` で知らない項目・不正な値は `'auto'` に補う(docs/spec/SCREEN_THEME.md) |
 | `mh_battle_perf_v1` | boolean / false | バトルの性能計測のON/OFF(デバッグ限定)。`BATTLE_PERF` が持つ |
+| `mh_debug_battle_card_art_v1` | `'1'` / 未設定 | 行動カードの絵(試作)を出す切り替え(デバッグ限定・2026-10-15)。`BATTLE_CARD_ART_DEBUG` が持つ。公開の印 `battleCardArt` が真なら、未設定でも絵を出す |
+| `mh_asset_prefetch_v1` | object / `{ enabled:true, enabledChosen:false, auto:true, songs:[] }` | 事前ダウンロード(曲・画像を端末にためておく)の入/切・自動ダウンロード・最近選んだ曲(最大12)。`normalizeAssetCacheSettings` で壊れた値は既定に戻す。**`enabled` は `enabledChosen:true`(本人が入/切を押した)のときだけ読む**。既定が切だった 2026-10-11 の約20分に、曲を選んだだけで `enabled:false` が書かれた端末があるため(読み方だけで、保存値は書き換えない)。ためた中身は localStorage ではなく Cache Storage(`mh-assets-v1`)にあり、切にすると消す(docs/spec/ASSET_PREFETCH.md) |
 | `mh_breeder_name` | string / `名無しのブリーダー` | 表示名（保存時最大10文字） |
 | `mh_breeder_icon` | string or null | 種IDまたは購入アイコンID |
 | `mh_breeder_xp` | number / `0` | 累計ブリーダーXP |
@@ -44,6 +46,11 @@
 | `mh_breeder_points` | number / `0` | 未使用マーケットポイント |
 | `mh_breeder_points_granted` | number or null | 累計付与済み相当数 |
 | `mh_breeder_id_v1` | string or null | 端末ごとに1回だけ作るブリーダーID。全国ランキングで同名の別人を見分けるために送る(名前を変えても変わらない。`docs/spec/RHYTHM_RANKING.md` §4) |
+| `mh_assistant_chat_log_v1` | object | 助手とおしゃべりの会話。`{ [助手id]: [{ role:'user'\|'assistant', text, e? }] }`、助手ごとに最後の60件。端末にだけ置き、サーバーには残さない(`docs/spec/ASSISTANT_CHAT.md`) |
+| `mh_assistant_chat_memo_v1` | object | 助手とおしゃべりの思い出メモ(前の形)。`{ [助手id]: 120字までの文 }`。2026-10-14 からは**読むだけ**で書かない。新しいキーに無い助手のぶんは「前に話した話題」として引き継ぐ |
+| `mh_assistant_chat_memo_v2` | object | 助手とおしゃべりの思い出メモ(2026-10-14〜)。`{ [助手id]: { likes, goals, events, topics, summary } }`(各100字・summary 160字まで)。次の会話で中継役へ渡す |
+| `mh_assistant_daily_lines_v1` | object | ふだんの吹き出しを1日1回まとめて作ったひとこと(2026-10-14)。`{ day, assistantId, lines: { [場面]: [{ e, t, n }] } }`。日付が変われば使わず、次に作ったら入れ替える。n はその日に出した回数 |
+| `mh_story_assistant_chat_seen_v1` | boolean | 助手とおしゃべりのお話「話せるようになった日」を本編で見たか(飛ばしても立つ)。公開の後の最初の HOME で1回だけ流すため。回想・デバッグでは立てない |
 | `mh_market_icons` | string[] / `[]` | 購入アイコンID。ブリーダーP交換所だけでなく、**ビートP交換所のハロウィンのアイコン(1000P)の交換でも**、まとまりの中身が全部ここへ足される(2026-10-04)。**同じキャラのアイコン(助手の表情・モンスターの顔と円盤石など)は、どれか1つでも入っていれば全部持っている扱い**(2026-10-03・`BREEDER_ICON_GROUPS` / `expandOwnedMarketIcons`)。広げるのは読むときだけで、保存値は書き換えない。買うと、まとめの中身が全部入る |
 | `mh_owned_items` | object / `{}` | 消耗品ID→個数 |
 | `mh_missions` | object / 期間ごとの既定値 | デイリー・ウィークリー・マンスリーの進捗、期間ID、ギフト送付済みID。旧データの欠損項目は読み込み時に補う |
@@ -116,7 +123,7 @@
 | キー | 値・既定値 | 用途 |
 | --- | --- | --- |
 | `mh_audio_muted` | boolean / `false` | ミュート状態 |
-| `mhdev_session_marker_v1` | object / 無し | **端末の中だけ**の「いま遊んでいる」印(`normalizeSessionMarker`)。起動から15秒ごとに書き直す(`startedAt`・`lastBeat`・`state` = `running`/`hidden`/`closed`・`screen`・`audioBuffers`・`heapMB`・`nav`)。1件だけ。次の起動でこれを読み、正常に終わっていなければ `mhdev_reload_log_v1` へ足す。無い・壊れているときは何もしない。サーバーへは送らない。`localStorage` へ直接書く(`storeSet` は通さない)。**`mhdev_` なのでバックアップに入らない**(この端末の記録なので、別の端末へ引き継がない) |
+| `mhdev_session_marker_v1` | object / 無し | **端末の中だけ**の「いま遊んでいる」印(`normalizeSessionMarker`)。起動から15秒ごとに書き直す(`startedAt`・`lastBeat`・`state` = `running`/`hidden`/`closed`・`screen`・`audioBuffers`・`heapMB`・`nav`、2026-10-12 から `audioMB`(持っている音の大きさ)・`decodedMB`(起動してから解いた合計)・`decodeCount`(解いた回数)。無い印は null として読む)。1件だけ。次の起動でこれを読み、正常に終わっていなければ `mhdev_reload_log_v1` へ足す。無い・壊れているときは何もしない。サーバーへは送らない。`localStorage` へ直接書く(`storeSet` は通さない)。**`mhdev_` なのでバックアップに入らない**(この端末の記録なので、別の端末へ引き継がない) |
 | `mhdev_reload_log_v1` | array / `[]` | **端末の中だけ**の「前回、途中で読み込み直された」記録(`normalizeReloadLog`)。直近 `RELOAD_LOG_LIMIT`(12)件まで、新しいものが先頭。`kind` は `foreground`(遊んでいる最中に止まった)/ `background`(裏に回ったあと)。音量設定の「🔧 音が出ないとき」の下で見られる。サーバーへは送らない。`localStorage` へ直接書く。**`mhdev_` なのでバックアップに入らない** |
 | `mh_battle_speed_v1` | string | バトル速度(`normalizeBattleSpeed` で既定へ) |
 | `mh_battle_screen_style_v1` | string / `'TACTICS_NEW'` | タクティクス画面の表示設定（`TACTICS_OLD` / `TACTICS_NEW`）。未保存・旧`CLASSIC`値・不正値は新タクティクスUIへ正規化。通常のクラシックバトルには影響しない |
@@ -152,6 +159,7 @@
 | `mh_extreme_hs_<難易度>` / `mh_extreme_clears_<難易度>` | number / `0` | 極限チャレンジ(`EXTREME` `NIGHTMARE` `CHAOS` `ULTIMATE` `INFINITY` `GOD`)のハイスコアと完走回数 |
 | `mh_rhythm_settings_v1` | object / `DEFAULT_RHYTHM_SETTINGS` | モンビーの演奏設定(`normalizeRhythmSettings`)。2026-09-27 に `roadWidth`(`WIDE`/`STANDARD`/`NARROW`、横画面の道の幅)を足した。無い・知らない値は `WIDE`(それまでと同じ幅)へ補う。2026-09-28 に `noteSeHoldVolume`(押さえている間の溜める音の大きさ・0〜200・既定100)を足した 2026-10-03 に `multiLightLook`(boolean・既定 `true`。みんなで対戦のライブだけ見た目を「軽さ優先」に重ねる)を追加。無い既存の保存値は既定値で補う。2026-10-04 に `modeSelectArt` / `modeSelectComment`(boolean・既定 `true`。モードえらびの助手の立ち絵とコメントを出すか。無い保存値は `true` で補う)を追加。2026-10-03 に `multiLook`(`LIGHT`/`STANDARD`/`VIVID`/`OWN`・既定 `LIGHT`。対戦の演出の段階)を追加。無い保存値は `multiLightLook` から決める(ON→LIGHT・OFF→OWN)。選び直すときは `multiLightLook` も合わせて書く |
 | `mh_rhythm_select_v1` | object / `DEFAULT_RHYTHM_SELECT_VIEW` | 曲えらび画面の見え方(並び順など) |
+| `mh_rhythm_last_difficulty_v1` | string / `''` | 曲えらびで最後に選んだ難易度(2026-10-11)。`EASY`〜`MASTER` だけを入れる。無い・壊れている・公開していない難易度(HELL など)は `''` に正規化して EASY から(`normalizeRhythmLastDifficulty`)。デバッグの全解放の曲えらびの選択は入れない |
 | `mh_rhythm_best_v1` | object | 曲×難易度ごとの BEST(`normalizeRhythmBestRecords`) |
 | `mh_rhythm_achievements_v1` | object / 空の台帳 | モンヒロビートの実績の台帳(2026-10-05・`docs/spec/RHYTHM_ACHIEVEMENTS.md`)。`{v:1, items:{'曲:難易度:称号':{at:取った時刻ms(0=不明)}}, claimed:{'実績のid#報酬ルールのid':受け取った時刻ms}}`。称号は fullCombo・allExcellent・allMarvelous(上の称号は下の称号も含む)。**取れたかの正本は BEST のまま**(BESTには何も足さない)。受け取り済みの印は消さない。壊れた項目は読まずに捨てる。台帳が無い人は、モンヒロビートを開いたときに BEST から取り込む(1度きり・時刻は不明の0) |
 | `mh_rhythm_monsters_v1` | string[] | モンスターノーツ用のマスモン枠(`data/rhythm-mode.js`) |
@@ -169,17 +177,42 @@
 | `mh_rhythm_chart_notes_v1` | object / `{}` | 譜面メモ(デバッグ限定・2026-09-26)。`曲id|難易度` → 区間ごとの 👍/👎 とひとことメモ。譜面の作り直しを見分ける `fingerprint` 付き(`normalizeRhythmChartNotes`) |
 | `mh_rhythm_play_log_device_v1` | string / 無し | 遊んだ記録(2026-09-28)の端末ごとのでたらめなID(英小文字と数字20文字)。記録の送信(`rhythmPlayLogSend`)だけが使い、無い・形が違うときは作り直す。名前・ブリーダーIDとは結び付かない(`docs/spec/RHYTHM_PLAY_LOG.md`) |
 | `mh_rhythm_touch_diag_v1` | array / `[]` | タッチの診断(2026-09-30・`docs/spec/RHYTHM_TOUCH_DIAG.md`)。演奏1曲ごとに、ポインタとタッチの突き合わせ・遅れ・取り消し・入力の無いMISSの数をまとめたもの。直近20曲だけ持つ。配列でない・要素がオブジェクトでないものは読まずに捨てる。判定・スコア・ランキングには使わない。2026-10-01から、要素の `stats` に `playId`(1曲ごとの番号)と `fixes`(効いていた直し方)が入り、リザルトの「押したのに反応しないことがあった」を押した曲には `reported:true` が付く(どれも項目を足しただけ。無い古い要素はそのまま読む) |
+| `mh_sky_tap_style_proto` | string / 無し(`plate`) | 空中ノーツの見た目の案(2026-10-10・空中ノーツの試作)。**ゲームは読むだけで書かない**。手で入れたときだけ、空中のノーツ・空中の面の色の案が変わる(`gold`・`ruby` など)。無い・知らない値なら既定の `plate`。記録・判定には関わらない |
 | `mh_rhythm_event_notice_v1` | string / `''` | 曲えらびで「今週の対象曲」の案内を見たイベントのID(週が変わると新しいIDになり、その週の初回にもう一度だけ出る。`docs/spec/RHYTHM_RANKING.md` §10.2) |
 | `mh_changelog_timed_seen_fix_v1` | boolean / `false` | `visibleFrom` 付きの更新履歴（時刻が来てから出る項目）を、一度きりで未読へ戻したか。開始前に一覧を開いた端末で既読になり、公開時刻にNEWが付かなかったための補正フラグ（二重適用を防ぐ） |
 | `mh_rhythm_event_story_v1` | string[] / `[]` | イベントの会話ストーリーを最後まで見たイベントのID(開催中に1度だけ流すためのフラグ。回想からはいつでも見られる) |
 | `mh_rhythm_event_points_v1` | number / `0` | モンヒロビートの共通ビートP残高。プレイヤー向け名称のみ旧「イベントP」から変更し、互換性のため保存キーは維持する。0以上の整数へ正規化し、イベント終了時もリセットせず次回へ持ち越す。`docs/spec/RHYTHM_EVENT_POINTS.md` |
 | `mh_rhythm_event_reward_v1` | string[] / `[]` | イベント報酬を受け取り済みのイベントID。二重受取を防ぐためのフラグ(入賞しなかった場合もここへ入れて、問い合わせ直さないようにする。`docs/spec/RHYTHM_RANKING.md` §9.1) |
 | `mh_rhythm_canvas_v1` | `'canvas'` / `'dom'` / 未設定 | デバッグ画面の「ノーツの描き方」の上書き(未設定なら公開フラグに従う) |
+| `mh_rhythm_gpu_band_v1` | `'gpu'` / `'off'` / 未設定 | デバッグ画面の「スライドの帯の描き方(検証用)」。未設定 = 既定(2026-10-11 から、ノーツを WebGL で描いているときは帯・区切りの線・ノーツの板を GPU で描く)。`'gpu'` = 描画方式に関係なく WebGL+GPU。`'off'` = 使わない |
+| `mh_rhythm_prepare_v1` | `'on'` / `'off'` / 未設定 | デバッグ画面の「演奏前の準備(検証用)」(未設定なら既定。2026-10-11 から する) |
+| `mh_rhythm_canvas_hits_v1` | `'canvas'` / `'dom'` / 未設定 | デバッグ画面の「叩いたときの光の描き方(検証用)」。未設定 = 既定(2026-10-11 から canvas)。`'dom'` = 今までどおり画面の要素で光らせる |
+| `mh_rhythm_hit_spark_v1` | `'on'` / `'off'` / 未設定 | デバッグ画面の「叩いたときの光の粒(検証用)」。`'on'` = 焼いた丸を貼る(軽い)・`'off'` = 今の形・未設定 = 既定(今の形)。2026-10-12 |
 | `mh_rhythm_stage_gl_v1` | `'css'` / `'webgl'` / 未設定 | デバッグ画面の「ライブ背景の描き方」の上書き(未設定ならノーツが WebGL のときだけ WebGL) |
 | `mh_rhythm_look_intro_seen_v1` | `true` / 未設定 | 曲えらびで一度だけ出す「見た目の設定」の助手の案内を見たか(未設定なら出す) |
 | `mh_rhythm_play_defaults_restored_v1` | `true` / 未設定 | モンヒロビートの設定の一度きりの戻し(ライブ背景「派手」→「シンプル」・フレームレート「省電力」→「端末に合わせる」。保存値がその当時の既定と同じときだけ)を済ませたか。二度走らせないためのフラグ(`restoreRhythmPlayDefaultsOnce`) |
 | `mh_rhythm_six_lane_seen_v1` | `true` / 未設定 | 道が6レーンになり MASTER に横フリックが出ることを、曲えらびで一度だけ伝える助手の案内を見たか(未設定なら出す) |
 | `mh_tactics_intro_seen_v1` | `true` / 未設定 | タクティクスバトルの導入会話を見たか(β公開後に1度だけ流す) |
+| `mh_rhythm_hell_story_seen_v1` | `true` / 未設定 | 難易度 HELL のお話「空まで届くビート」を見たか(2026-10-11。HELL の公開まで読み書きしない。デバッグから見たぶんは立てない) |
+| `mh_rhythm_hell_story_seen_preview_proto` | `true` / 未設定 | デバッグの「公開の印が真だったら」で HELL のお話を見たか(2026-10-12)。本番のキー `mh_rhythm_hell_story_seen_v1` とは別にして、試した人が公開のときに見そびれないようにする |
+| `mh_rhythm_hell_best_rescaled_v1` | `true` / 未設定 | 一度きりの移行の完了の印(2026-10-12)。HELL の満点を 110万→105万にしたので、`mh_rhythm_best_v1` の各曲の `HELL.bestScore` を一度だけ 105/110 倍(切り捨て)に縮める。印を先に立ててから書き直すので二重に縮めない。5難易度の記録には触らない。記録が無い端末にも印だけ立つ(起動時の移行・60-app.jsx。計算は `rescaleRhythmHellBestScores`) |
+| `mh_rhythm_hell_preview_proto` | `'1'` / 未設定 | デバッグ専用。HELL の「公開の印が真だったら」を試す(2026-10-12)。本番の印 `RELEASE_FLAGS.rhythmHell` は変えない |
+| `mh_sky_box_look_proto` | `'z'`・`'a'`・`'c'` / 未設定 | デバッグ専用。SKY TAP の見た目の案を見比べるための選択(2026-10-11)。未設定なら既定の案B(赤い板・社長の決定)。ふつうのプレイは書かない |
+| `mh_sky_lane_look_proto` | `'none'`・`'a'`〜`'c'`・`'d1l'`・`'d1m'`・`'d2l'`・`'d2m'`・`'el'`・`'elp'` / 未設定 | デバッグ専用。空中のレーンの見せ方の案を見比べるための選択(2026-10-11)。未設定なら案E はっきり(`'em'`・2026-10-12 社長の決定で既定。それまでは「なし」)。ふつうのプレイは書かない **2026-10-13 からは、HELL の公開後にオプションの「表示」タブ「空中の道の見え方」(はっきり=em・控えめ=el・なし=none だけを書く)からも書く**(キー・値の意味・既定は変えない。「保存」を押したときに書く) |
+| `mh_hell_vis_proto` | `'now'`・`'v1'` / 未設定 | デバッグ専用。HELL の見やすさの案(空中の判定線の長さ・空中の板の明るさ・空中スライドの色・板の影)を見比べる(2026-10-12)。未設定なら案2 はっきり(`'v2'`・2026-10-12 社長の決定で既定)。ふつうのプレイは書かない |
+| `mh_hell_sky_hit_proto` | `'on'`(短い柱)・`'far'`(奥まで)・`'off'` / 未設定 | デバッグ専用。HELL で空中を叩いたときに、空中の線の高さにレーンの柱の光を出す案を見比べる(2026-10-12)。未設定なら奥まで(2026-10-12 夜 社長の選択。その前は短い柱が既定。切を選ぶと `'off'` を保存する)。ふつうのプレイは書かない **2026-10-13 からは、HELL の公開後にオプションの「軽さ・演出」タブ「空中を叩いた柱の光」からも書く**(キー・値の意味・既定は変えない。「保存」を押したときに書く) |
+| `mh_rhythm_sky_line_offset_v1` | 数(画面の高さの%・0.5刻み・-60〜60。2026-10-14 に ±8 から広げた。古い版は ±8 に丸めて読む)/ 未設定 | モンヒロビートの「空中の判定ライン」(2026-10-14)。実際の高さは画面に収まるよう `rhythmSkyLiftWith` で抑える。HELL の空中の判定線を、地上の判定線からの高さ(`RHYTHM_SKY_LIFT`)に足し引きしてずらす。上が+。空中のノーツ・空中の線・空中を受け付ける範囲が一緒に動く(地上を受け付ける範囲は動かない)。未設定・0なら今の位置(0のときはキーを消す)。数でない・範囲の外は正規化(`rhythmNormalizeSkyLineOffset`)。オプションの「保存」で書く |
+| `mh_rhythm_ground_accept_pct_v1` | 数(%・5刻み・50〜100)/ 未設定 | モンヒロビート(HELL)の「地上を受け付ける範囲の広さ」(2026-10-14)。地上の線より上へはみ出して受け付けている部分だけを縮める(100が今の広さ・上限)。未設定・100なら今までどおり(100のときはキーを消す)。数でない・範囲の外は正規化(`rhythmNormalizeAcceptWidth`)。空中の範囲を狭めたときは、案A の自動の動きも狭めた範囲の外へは広げない。オプションの「保存」で書く |
+| `mh_rhythm_sky_accept_pct_v1` | 数(%・5刻み・50〜100)/ 未設定 | モンヒロビート(HELL)の「空中を受け付ける範囲の広さ」(2026-10-14)。空中の線より下へはみ出して受け付けている部分だけを縮める(100が今の広さ・上限)。未設定・100なら今までどおり(100のときはキーを消す)。数でない・範囲の外は正規化(`rhythmNormalizeAcceptWidth`)。空中の範囲を狭めたときは、案A の自動の動きも狭めた範囲の外へは広げない。オプションの「保存」で書く |
+| `mh_rhythm_sky_accept_top_pct_v1` | 数(%・10刻み・50〜300)/ 未設定 | モンヒロビート(HELL)の「空中の受付の上の端」(2026-10-14)。空中のノーツを受け付ける上の端を、空中の線から上へ画面の高さの20%×この値(%)にする。未設定・100なら既定(100のときはキーを消す)。数でない・範囲の外は正規化(`rhythmNormalizeSkyAcceptTop`)。オプションの「保存」か、演奏画面での合わせの「保存して戻る」で書く |
+| `mh_sky_tap_distinct_proto` | `'white'`・`'block'`・`'deep'` / 未設定 | デバッグ専用。空中のタップを上フリックと見分けやすくする板の案(白い板/厚い赤い角材/深い赤+太い白い縁)を見比べる(2026-10-12)。未設定なら今のまま。ふつうのプレイは書かない |
+| `mh_flick_up_color_proto` | `'fuchsia'`・`'silver'`・`'lemon'`・`'white'` / 未設定 | デバッグ専用。上フリックの色の案(マゼンタ紫/白銀/レモン黄/白)を見比べる(2026-10-12)。未設定なら今のピンク。読み込み時に1回だけ読む。ふつうのプレイは書かない。**同日の社長の決定(上フリックはピンクのまま)で切り替えを外し、いまは読まない**(端末に残った値は無視される) |
+| `mh_sky_note_color_proto` | `'off'`・`'thin'`・`'k1'`・`'k2'`・`'k3'`(・既定と同じ `'deep'` は書かない)/ 未設定 | デバッグ専用。HELL の空中のノーツの色の組を見比べる(2026-10-12)。**未設定なら deep=空中のタップ 深い赤・縁を細く薄く(同日の社長の決定で既定。右手の空中の長押しは桃のまま)**。off=前の見た目(明るい赤・白い縁)/thin 前の色で縁だけ薄く/組1 タップ深い赤・右手マゼンタ紫/組2 タップ白銀・右手深い赤/組3 タップ深い赤・右手白銀(組はどれも白い縁を細く薄く)。既定以外を選んだ人の値はそのまま使う。既存のデータは読まない・変えない |
+| `mh_monster_note_gold_proto` | `'goldGlow'`・`'now'`(・前の版で書いた `'gold'`)/ 未設定 | デバッグ専用。マスモンのノーツの形を見比べる(2026-10-12)。**未設定なら金の板(同日の社長の決定で既定)**。`goldGlow`=金の板+強い光・`now`=前の形(琥珀色)を選んだ人の値はそのまま使う。読み込み時に1回だけ読む。ふつうのプレイは書かない |
+| `mh_hell_sky_text_proto` | `'above'` / 未設定 | デバッグ専用。HELL の空中の判定の文字の位置(2026-10-12)。未設定なら空中の線のすぐ下(社長の決定で既定)。`'above'` は前の位置(線の38px上) **2026-10-13 からは、HELL の公開後にオプションの「表示」タブ「空中の判定の文字の位置」からも書く**(キー・値の意味・既定は変えない。「保存」を押したときに書く) |
+| `mh_rhythm_judge_text_pos_proto` | `'raise'`・`'fade'`・`'both'` / 未設定 | デバッグ専用。地上の判定の文字の置き場所の案(道の中ほどへ上げる/半分透かす/両方)を見比べる(2026-10-12)。未設定なら今の位置。空中のある譜面では効かない。ふつうのプレイは書かない |
+| `mh_rhythm_judgment_snap_v1` | `'on'`・`'off'` / 未設定 | デバッグ専用。判定の文字の大きさを、なめらかに変えず一度で変える(2026-10-12・ドライバーくん #2842・発熱の手当て)。未設定なら一度で(2026-10-12 社長の決定で既定に。`'off'` を保存した人は今までの形のまま)。ふつうのプレイは書かない |
+| `mh_sky_reach_adapt_proto` | `'1'` / `'0'` / 未設定 | HELL の空中の受け付けの下の境目を、その人の構えに合わせて下げる(案A・2026-10-12・テンポくん)。**未設定なら入**(2026-10-12 社長の決定で既定を入に)。`'0'` は切(固定の境目)を選んだ人。デバッグの切り替えで書く。前は切を選ぶとキーを消していたので、その人も未設定=入になる |
 | `mh_tactics_ex_intro_seen_v1` | `true` / 未設定 | タクティクスで「距離枠をタップするとEXが開く」を一度だけ伝える案内を見たか(公開フラグ `tacticsExSkills` と同じで出し入れ) |
 | `mh_profile_frame_v1` | string / `'none'` | 選んでいるプロフィールフレームのid(`data/breeder.js` の `PROFILE_FRAMES`)。ブリーダーアイコン(`mh_breeder_icon`)とは**独立した設定**で、アイコン側のキーは触らない。読み込みは必ず `normalizeProfileFrameId` を通し、値が無い・壊れている・知らないid・未公開(`released:false`)のidはすべて `'none'`(フレームなし)へ倒す |
 | `mh_quick_rhythm_intro_seen_v1` | boolean / `false` | クイック∞周回とモンビーの連携の案内(バトル画面)を見たか |
@@ -197,6 +230,7 @@
 | `mh_battle_select_assist_v1` | object / 未設定なら `{ modeSelectArt:true, modeSelectComment:true }` | モンヒロバトルの入口(`BATTLE_SYSTEM_SELECT`)で、助手の立ち絵・コメントを出すか(2026-10-08)。入口のトグルを押したときに書く。読むときは `false` のときだけ消し、それ以外・壊れた値は出す側へ倒す。モンヒロビート用のキーは流用しない |
 | `mh_masu_offering_intro_seen_v1` | `true` / 未設定 | 神殿の「お布施」の使い方案内を見たか(2026-10-05)。初めてお布施の画面を開いたときに1度だけ出し、閉じたときに `true` を書く。読むときは `=== true` のときだけ見た扱い |
 | `mh_rhythm_fix_override_v1` | object / 未設定なら `{}` | モンヒロビートの「実機でしか分からない直し方」(`RHYTHM_TOUCH_FIXES`)を、この端末だけで入れる/切る上書き(2026-10-07)。`{ 直し方の名前: boolean }`。**`storeSet` ではなく `localStorage` へ直接**書く(`rhythmTouchFixSetOverride`)。読むときは表にある名前の boolean だけ拾い、それ以外・壊れた値は捨てる(上書きなし=表のとおり)。いまゲームの画面からは書かない(検査と手で試すとき用) |
+| `mh_sky_lift_portrait_proto` | 文字列 `'25'` / `'39'` / 未設定(=16%) | **デバッグ専用**。縦画面の空中の段の高さの差(道の高さの 16%・25%・39%)を見比べる切り替え(2026-10-11・HELL の試作)。音ゲーデバッグの「プレイ」タブの切り替え(`RhythmSkyLiftSwitch`)だけが `localStorage` へ直接書き、16% を選ぶとキーを消す。読むときは `25`・`39` 以外(未設定・壊れた値)を 16% として読む(`rhythmSkyLiftPortrait`)。空中の段がある譜面(デバッグの試作の枠)だけに効き、通常プレイには何も起きない |
 | `mh_assistant_bubble_mode_v1` | `'ALWAYS'` / `'DAILY'` / `'OFF'` / 既定 `'ALWAYS'` | 助手の吹き出し(画面ごとのひとこと)の出し方(2026-10-10・改善G6)。設定画面のボタンで書く。`normalizeAssistantBubbleMode` で既定へ倒す。はじめての案内・`…Intro` の場面・HOMEの助手・助手の告知には効かない |
 | `mh_assistant_bubble_seen_v1` | object / 未設定なら空 | 「1日1回」のときに、その日に出した場面 `{ day:'YYYY-MM-DD'(朝5:00区切り), scenes:[場面のキー] }`。日が違う・壊れた値は空として読む(`normalizeAssistantBubbleSeen`) |
 

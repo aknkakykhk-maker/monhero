@@ -99,6 +99,8 @@ node tools/build.js --check
 | `node build.js` | **まず `src/parts/*.jsx` と `game-system.jsx` をそろえ(parts が変われば連結し直し、game-system.jsx が直接編集されていれば parts へ書き戻す。両方が別々に変わっていれば止まる → `--from-parts` で parts を正にできる)、BUILD_DATE・version.json・更新履歴の最新日時を揃え、game-system.jsx を配信用JSへ変換して `monster-hero/game-system.compiled.js` を書き出す。改修したら必ず実行する。** |
 | `node build.js --check` | compiled が jsx と一致しているか、`tailwind.css` が今のソースから作られているかを確認する(古ければ終了コード1)。出荷前チェック用。 |
 | `node build-tailwind.js` | 配信用の見た目のCSS `monster-hero/tailwind.css` を作る。**中身が変わったときだけ**作り直す(`--force` で必ず、`--check` で古くないかだけ見る)。`build.js` から自動で呼ばれるので、ふつうは直接叩かなくてよい。`landscape:` を自前回転(`data-mh-view-rotation`)でも効かせる差し替えはこの設定に入っている。 |
+| `node build-assistant-chat-digest.js` | 助手とおしゃべりの中継役が読む材料 `monster-hero/data/assistant-chat-digest.json`(ヘルプの中身・助手の人柄)を、`help.js`・`assistants.js` から作る。公開の印が付いたヘルプははぶく。`build.js` が毎回呼ぶ。`--check` で古くないかだけ見る。説明は `docs/spec/ASSISTANT_CHAT.md` |
+| `node build-asset-manifest.js` | 事前ダウンロード(Service Worker `monster-hero/sw.js`)が使う音源・画像の一覧と版の印 `monster-hero/asset-manifest.json` を作る。`build.js` が毎回呼ぶので手で打つことはふつう無い。`--check` で古くなっていないかだけ見る(`build.js --check` も見る)。説明は `docs/spec/ASSET_PREFETCH.md` |
 | `node check-syntax.js` | `monster-hero/game-system.jsx` をBabelで変換して構文エラーが無いか確認する。**改修後は必ず実行する。** |
 | `node undefined-reference-check.js` | `game-system.jsx` が「その場所からは見えない変数」を参照していないか、Babelでスコープをたどって確認する。構文としては正しいので `check-syntax.js` では見つからず、その画面を開いた瞬間だけ真っ白になる類の不具合を防ぐ。**改修後は必ず実行する。** |
 | `node jsx-text-brace-check.js` | JSXの中に、閉じ忘れ・閉じすぎでできた「{」「}」がそのまま文字として混ざっていないかを調べる。`{cond&&<div>…</div>}` の開き `{cond&&` を書き忘れると、余った `}` は画面に出る文字として扱われ構文エラーにならない。**改修後は必ず実行する。** |
@@ -219,15 +221,7 @@ node tools/build.js --check
 
 `mode/rhythm-chart-focus.js` は、主役の追跡(Rev.9〜)。音の層の解析から小節ごとに「ドラム / 歌・主旋律 / 混ざり」のどれを追うかを決め(切り替えにコストを付けた動的計画法)、追っている層に合う打点を拾う優先度で後押しする。`node mode/rhythm-chart-rev9-check.js` が、決め方・後押しの向き・層の解析が無い曲では Rev.8 と同じになること・狙いどおりに選び直していることを見張る。
 
-`node mode/rhythm-chart-rev10-check.js` は、Rev.10(動きの使い回しを避ける)を見張る。実際に Rev.9 と Rev.10 で作り、リズムの違う所で同じ動きの並びが出る割合(気持ちよさの物差しの単調さ)がはっきり減ること・ノーツの数がほとんど変わらないこと・押せない配置を作らないこと・写しの数を減らさないことを確かめる。
-
-`node mode/rhythm-chart-rev11-check.js` は、Rev.11(繰り返すたびの発展とラスサビ・主役に合わせた種類)を見張る。ラスサビのある dullahan を Rev.10 と Rev.11 で作り、発展の回の小節に元の小節には無い FLICK・同時押しが足されること、新しく FLICK になった音がどれも FLICK にふさわしい音であること、写し率を大きく下げないこと、押せない配置を作らないことを確かめる。
-
-`node mode/rhythm-chart-rev13-check.js` は、Rev.13(旋律の有無)を見張る。旋律の音高がほとんど取れない小節では主役の追跡が「メロディを追う」を選ばないこと、旋律の有無を渡さなければ Rev.12 までと同じ決め方であること、実際に作るとメロディを追う小節が旋律の取れる小節へ絞られることを確かめる。
-
-`node mode/rhythm-chart-rev14-check.js` は、Rev.14(手と種類の仕上げ)を見張る。手のモデルの SLIDE の曲線と親指の左右が切り替えたときだけ効くこと、左右を区別すると交差する割り振りが減ること、自動修正が曲線の途中も見ること、終点フリックが旋律の息継ぎに付き HOLD の太さの形が伴奏の変化と合うこと、候補が HARD でもよく分かれることを確かめる。
-
-`node mode/rhythm-chart-rev15-check.js` は、Rev.15(旋律の上下に沿って動かす)を見張る。2曲×5難易度を Rev.14 と Rev.15 で作り、旋律と逆向きの動きが半分以下になること、押せない配置が無いこと、ノーツ数が1%以内で変わらないことを確かめる。
+`node mode/rhythm-chart-generate-latest-check.js` は、譜面の作り方が最新リビジョンだけであることを見張る(2026-10-12)。最新以外の `--chart-revision` で止まる・作った譜面の番号が最新・どの難易度もモンスターノーツ4個。前のリビジョンごとの検査(rev8〜rev25・rev29)は古い作り方と一緒に外した(git の記録 c2094ad53 にある)。本文: `docs/rules/CHART_ENGINE.md`
 
 `node mode/rhythm-play-log.js --fetch --report --learn --write` は、モンヒロビートの遊んだ記録(サーバーの rhythm_play_logs)を読み、譜面ごとの押す時刻のばらつき・ミス・低音の聞こえ方を測って、生成器の調整値(`authoring/chart-play-tuning.json`)を学ぶ(2026-09-28・MHB CHART ENGINE Rev.17)。`--import <file>` で JSON / JSONL からも取り込める。仕組みは `docs/spec/RHYTHM_PLAY_LOG.md`。`mode/rhythm-chart-low-lag.js` は低音の打点の遅れを測り、`mode/rhythm-chart-play-tuning.js` はリビジョンごとの調整値を読む。`node mode/rhythm-play-log-check.js` が、ゲームの送り方・SQL・学び方(作り物の記録で)・調整値0の Rev.17 が Rev.16 と同じ譜面になることを見張る。
 
@@ -236,10 +230,6 @@ node tools/build.js --check
 `node mode/rhythm-touch-diag.js --fetch --report` は、モンヒロビートのタッチの診断(サーバーの rhythm_touch_diagnostics・2026-09-30)を読み、iPhone と Android を比べて、指がどの段階で消えているか(ブラウザがタッチを落とした・ブラウザより手前で消えた・同時5本・取り消し・処理の遅れ・道の外)を判定する。つながらないときは `--import <file>`。見張りは `mode/rhythm-touch-diag-check.js`(SQLを手元の PostgreSQL 16 で流す)と `mode/rhythm-touch-bridge-check.js`(実際に曲を流し、タッチを落とした状況を作って取り戻しと二重防止を見る)。仕組みは `docs/spec/RHYTHM_TOUCH_DIAG.md`。
 
 `node mode/rhythm-virtual-player.js --track <曲id> [--difficulty MASTER] [--runs 200]` は、仮想プレイヤーに作者用の譜面を遊ばせ、ミスの見込み・押す時刻のばらつき・いちばんつまずく区間を出す(2026-09-28・Rev.18 の区間の差し替えも使う)。`node mode/rhythm-virtual-player-check.js` が見張る。`mode/rhythm-chart-repeats.js` は4つの手がかりの多数決で繰り返しを見つけ(Rev.18)、`node mode/rhythm-chart-rev18-check.js` が見張る。写した小節のリズムをそろえる Rev.19 は `node mode/rhythm-chart-rev19-check.js`、歯ごたえをテンポの数字から切り離す Rev.20 は `node mode/rhythm-chart-rev20-check.js` が見張る。`node mode/rhythm-chart-tempo-warp.js` は、テンポの揺れ(Rev.21)に合わせる曲と揺れの幅を一覧する(なめらかに揺れ、半分の区間で確かめた曲だけ。`node mode/rhythm-chart-rev21-check.js` が見張る。Rev.23 の読み方 v2 は `node mode/rhythm-chart-rev23-check.js`)。`node mode/rhythm-chart-ending.js` は、曲の終わりの余韻(Rev.22)で締める曲と最後の一発を一覧する(`node mode/rhythm-chart-rev22-check.js` が見張る)。`node mode/rhythm-check-spots.js --all --write` は、曲ごとの「ここを確かめて」リスト(`docs/spec/RHYTHM_CHECK_SPOTS.md`)を作る(2026-09-29・気になり点・仮想プレイヤーのつまずき・弱い音・音から離れたノーツ・急に詰まる所・出だしと終わりを秒数付きで)。`node mode/rhythm-robot-play.js --all --parallel 3`(`python3 tools/serve.py` を立てた状態で)は、ロボットに本物のゲームで全曲・全難易度を通しで遊ばせ、ノーツの時刻ぴったりのタッチで MARVELOUS にならないノーツを探す。`node mode/rhythm-visual-sync-check.js`(`python3 tools/serve.py` を立てた状態で)は、本物のゲームをブラウザで遊ばせ、縦・端末ごと横・横画面ボタンで回す、の3つで、ノーツが判定ラインに見える時刻と曲の時刻のずれを1コマずつ測る(2026-09-29・どれも中央 ±1ms)。
-
-`node mode/rhythm-chart-rev24-check.js` は、MHB CHART ENGINE Rev.24(大きな一発を左右対称の同時フリックに・2026-09-29)を見張る。Dullahan を Rev.23 と Rev.24 で作り、EASY〜HARD が同じノーツであること、EXPERT・MASTER に同じ時刻・道の真ん中をはさんで左右対称の FLICK 2本の組があること(MASTER は外向きに払う)、組の前後が空いていること、向きの付け直しと自動修正(step7)のあとも位置と向きが変わらないことを確かめる。
-
-`node mode/rhythm-chart-rev25-check.js` は、MHB CHART ENGINE Rev.25(サビ前後の密度を保つ・長いノーツを増やす・2026-09-30・CHUNITHM の譜面との比べ合わせから)を見張る。Rising Hope を Rev.24 と Rev.25 で作り、曲全体のノーツ数が ±3% 以内のまま、MASTER のサビに入る前後(50〜60秒)と終盤(70〜80秒)の密度が上がること、EXPERT・MASTER の HOLD・SLIDE が増えること(ベースの伸びも材料にする)、自動修正(step7)のあとも同じ時刻・同じ場所に重なるノーツが無いことを確かめる。
 
 `node mode/rhythm-chart-rev26-check.js` は、MHB CHART ENGINE Rev.26(曲のつなぎ目の段差・2026-10-03)と、激しさの中間 `strong` を見張る。音源の一覧の `splices` を書いた曲だけつなぎ目から先に一定のずれを返すこと、ゲームの拍の表(`RHYTHM_SONG_BEATS` の4つ目)が同じ値であること、拍の線の計算がつなぎ目の前後で正しいこと、譜面のノーツがつなぎ目の前は格子・後ろは格子+ずれに乗ること、`strong` が `extreme` の倍率の平方根で作られていることを確かめる。
 
@@ -353,6 +343,8 @@ SIX ÉTERNEL(BPM207)のEXPERTが毎秒4.56＝MASTERの上限4.6に迫ってい�
 `node mode/rhythm-glow-road-width-check.js` は、押したサブレーンの光(指の位置で光る台形)が、横向きの「道の幅」(ふつう・細い)に合わせて切り直されることを確認する(2026-10-07・横向きでだけ光が押した位置からずれていた)。
 
 `node mode/rhythm-timing-diag-check.js` は、実機でしか分からないことの診断(`stats.timing`)と、直し方の切り替え(`inputAgeCap` / `smoothSongClock` / `autoPauseOnHidden`・既定はすべて切ってある・この端末だけで入れる上書き `mh_rhythm_fix_override_v1`)が崩れていないかを確認する(2026-10-07)。報告ツール `rhythm-touch-diag.js --report` の「タイミングの診断」も見張る。
+
+`node mode/rhythm-frame-diag-check.js` は、演奏中の1コマの重さをタッチの診断の行へ足す仕組み(`stats.frame`・2026-10-11)を見張る。足すだけ・約200バイト・frame の無い古い行を読んでも壊れない・送り先は今までどおり、を確かめる。
 
 `node mode/rhythm-input-position-check.js` は、押した位置・時刻まわり(判定ラインより下の受付・道の外から滑ってきた指・押さえ始めの時計・疑似タップの時刻)の取り決めが消えていないかを文字で確認する(2026-10-07)。
 `node mode/rhythm-audio-independence-check.js` は、音ゲーのBGM専用gainがメインのbgmGainを経由せずdestinationへ直結していること、曲ごとの音量差はsafeTrackGainで正規化すること、タップ音がもともとメインのSE音量と無関係であること、そして全体ミュート(タイトルの「音がオフです」)だけは`window.__mhAudioEnabled`経由で両方に共通で効くことを確認する。

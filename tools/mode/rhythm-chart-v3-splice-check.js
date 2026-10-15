@@ -3,12 +3,12 @@
 //   ・継ぎ合わせた譜面の気になり点は、候補0(いまの作り方)より多くならない
 //   ・同じ名札の区切りは同じ候補を採る(1番と2番で形がそろう)
 //   ・継ぎ合わせた譜面に押せない配置が無い
-//   ・差し替えても気になり点の高い区切りが残れば、候補を足して選び直す(悪い区間だけ作り直す二段目・Rev.14 から)
+//   ・差し替えても気になり点の高い区切りが残れば、候補を足して選び直す(悪い区間だけ作り直す二段目)
 //   ・--output-dir を渡さなければ何も書かない(authoring/ も公開データも触らない)
 'use strict';
 const fs=require('fs'),path=require('path'),os=require('os');
 const {spawnSync}=require('child_process');
-const {spliceCharts,spliceGate,badSections,SPLICE_REVISION,SPLICE_BAD_MIN,SPLICE_RETRY_REVISION}=require('./rhythm-chart-v3-splice.js');
+const {spliceCharts,spliceGate,badSections,SPLICE_BAD_MIN}=require('./rhythm-chart-v3-splice.js');
 const {simulateNotes}=require('./rhythm-hand-simulate.js');
 const {useRuntimeSlideLanes}=require('./rhythm-hand-model.js');
 
@@ -23,7 +23,7 @@ try{
   const charts=[];
   for(let v=0;v<3;v++){
     const dir=path.join(tmp,`v${v}`);fs.mkdirSync(dir);
-    const result=spawnSync(process.execPath,[path.join(__dirname,'rhythm-chart-v3-generate.js'),'--track',trackId,'--chart-revision','10','--variant',String(v),
+    const result=spawnSync(process.execPath,[path.join(__dirname,'rhythm-chart-v3-generate.js'),'--track',trackId,'--variant',String(v),
       '--difficulty','MASTER','--write','--output-dir',dir],{cwd:ROOT,encoding:'utf8',maxBuffer:64*1024*1024});
     if(result.status!==0){ok(`候補${v}を作れる`,false);continue;}
     charts.push(JSON.parse(fs.readFileSync(path.join(dir,`${dashed}-v3-chart-master.json`),'utf8')));
@@ -56,8 +56,7 @@ try{
   const source=fs.readFileSync(path.join(__dirname,'rhythm-chart-v3-splice.js'),'utf8');
   const writes=source.match(/writeFileSync\([^\n]*/g)||[];
   ok('書き出すのは --output-dir のときと、--apply で関門を通ったときだけ',writes.length===2&&/if\(outputDir\)\{/.test(source)&&/if\(gate\.pass\)\{\s*const out=/.test(source));
-  ok('二段目(Rev.14 から)は候補を足して選び直し、良くなったときだけ採る',/const bad=badSections\(result\);/.test(source)&&/if\(bad\.length&&songRevision>=SPLICE_RETRY_REVISION\)\{/.test(source)&&SPLICE_RETRY_REVISION===14&&/const retry=spliceCharts\(charts\.concat\(more\),audio\);/.test(source)&&/const adopted=retry\.after<result\.after/.test(source));
-  ok('--apply は Rev.12 以降の曲だけ',SPLICE_REVISION===12&&/if\(songRevision<SPLICE_REVISION\)\{[\s\S]{0,200}?process\.exit\(0\);\}/.test(source));
+  ok('二段目は候補を足して選び直し、良くなったときだけ採る',/const bad=badSections\(result\);/.test(source)&&/if\(bad\.length\)\{/.test(source)&&/const retry=spliceCharts\(charts\.concat\(more\),audio\);/.test(source)&&/const adopted=retry\.after<result\.after/.test(source));
   const pipeline=fs.readFileSync(path.join(__dirname,'rhythm-chart-v3-pipeline.js'),'utf8');
   ok('パイプラインは生成の直後・自動修正の前に差し替えを呼ぶ',/step\('区間の差し替え[^']*','rhythm-chart-v3-splice\.js',\['--apply'\]\);\s*if\(write\)step\('自動修正/.test(pipeline));
 }

@@ -108,8 +108,8 @@ check('演奏のループが毎フレーム、押さえている HOLD/SLIDE を�
   /heldNotes\.length=0;/.test(play)&&/if\(!note\.done&&note\.activePointerId!==null&&note\.type==='HOLD'&&rhythmNoteHasBody\(note\)\)heldNotes\.push\(note\);/.test(play)
   &&play.includes('RHYTHM_NOTE_SE_RUNTIME.holdSync(heldNotes);'));
 check('曲の終わり・画面を出るとき・ポーズで止める',
-  /run\.finished=true;stopFrame\(\);RHYTHM_NOTE_SE_RUNTIME\.holdStopAll\(/.test(flat(play))
-  &&/constdisposeRun=useCallback\(\(\)=>\{stopFrame\(\);RHYTHM_NOTE_SE_RUNTIME\.holdStopAll\(/.test(flat(play))
+  /run\.finished=true;(?:rhythmSongPlaySignal\([^)]*\);)?stopFrame\(\);RHYTHM_NOTE_SE_RUNTIME\.holdStopAll\(/.test(flat(play)) // 曲の終わり(曲の再生の合図を消してから止める形になった)
+  &&/constdisposeRun=useCallback\(\(\)=>\{[\s\S]{0,700}?stopFrame\(\);RHYTHM_NOTE_SE_RUNTIME\.holdStopAll\(/.test(flat(play)) // 画面を出るとき(曲の準備・紹介の後片付けのあとで止める形になった)
   &&/if\(!run\|\|run\.finished\|\|run\.paused\)return;RHYTHM_NOTE_SE_RUNTIME\.holdStopAll\([^)]*\);run\.activePointers\.clear\(\)/.test(flat(play)));
 check('設定は新しい項目(既定100%・壊れた値は既定へ)',settingsSrc.includes('noteSeHoldVolume:100')
   &&/noteSeHoldVolume:rhythmFiniteStep\(source\.noteSeHoldVolume,0,RHYTHM_NOTE_SE_PART_VOLUME_MAX,1,DEFAULT_RHYTHM_SETTINGS\.noteSeHoldVolume\)/.test(settingsSrc));

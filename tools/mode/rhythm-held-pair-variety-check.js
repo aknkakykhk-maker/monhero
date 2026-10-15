@@ -145,6 +145,13 @@ if(!fs.existsSync(audio)){
     const centerAt=(note,grid)=>{
       const duration=Number(note.durationGrids)||0;
       if(note.type==='SLIDE'&&duration>0){
+        // 途中の点(slidePoints)があれば、その点をたどる(2026-10-12: 最新リビジョンのスライドは途中で向きを変える。始まりと終わりの直線では測り違える)
+        const pts=Array.isArray(note.slidePoints)&&note.slidePoints.length>1?note.slidePoints:null;
+        if(pts){
+          if(grid<=pts[0].grid)return Number(pts[0].lane);
+          for(let i=1;i<pts.length;i++)if(grid<=pts[i].grid){const a=pts[i-1],b=pts[i];return Number(a.lane)+(Number(b.lane)-Number(a.lane))*(grid-a.grid)/Math.max(1,b.grid-a.grid);}
+          return Number(pts[pts.length-1].lane);
+        }
         const from=Number(note.lane),to=Number(note.endLane??note.lane);
         return from+(to-from)*Math.max(0,Math.min(1,(grid-note.grid)/duration));
       }

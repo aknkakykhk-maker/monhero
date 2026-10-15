@@ -68,6 +68,10 @@ const BGM_TRACKS = [
   { id:'melo_monster', name:'Monster', creator:'オリジナル', src:'audio/bgm-monster.mp3', gain:1, loop:true },
   { id:'melo_monster_short', name:'Monster short ver.', creator:'オリジナル', src:'audio/bgm-monster-short.mp3', gain:1, loop:true },
   { id:'melo_anima', name:'ANiMA', creator:'オリジナル', src:'audio/bgm-anima.mp3', gain:1, loop:true },
+  { id:'melo_journey', name:'Journey', creator:'DECO*27', src:'audio/bgm-journey.mp3', gain:1, loop:true },
+  { id:'melo_sheriruth', name:'Sheriruth', creator:'Team Grimoire', src:'audio/bgm-sheriruth.mp3', gain:1, loop:true },
+  { id:'melo_grievous_lady', name:'Grievous Lady', creator:'Team Grimoire vs Laur', src:'audio/bgm-grievous-lady.mp3', gain:1, loop:true },
+  { id:'melo_against_my_own_shadow', name:'Against My Own Shadow', creator:'オリジナル', src:'audio/bgm-against-my-own-shadow.mp3', gain:1, loop:true },
   { id:'melo_dullahan_clockwork_alt', name:'呪われた騎士の時計仕掛け -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-clockwork-alt.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost', name:'鋼鉄の亡霊', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost_alt', name:'鋼鉄の亡霊 -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost-alt.mp3', gain:1, loop:true },
@@ -99,7 +103,14 @@ const BGM_TRACKS = [
   { id:'eiki_boss_remix', name:'綺季一閃 ～花雪に舞う詠姫～ battle remix', creator:'オリジナル', src:'audio/bgm-eiki-boss-remix.mp3', gain:1, loop:true },
   { id:'pandora_boss_remix', name:'Stay With Me ～Locked Fate～ remix', creator:'オリジナル', src:'audio/bgm-pandora-boss-remix.mp3', gain:1, loop:true },
 ];
+// デバッグ専用の試作曲(モンヒロビートの「空中の段」の試作・2026-10-10)の音源。BGM_TRACKS へは入れない
+// (BGM_TRACKS はBGMアレンジ・自動周回のBGMの選択肢にそのまま並ぶので、入れるとプレイヤーに見えてしまう)。
+// 演奏のときに id から音源を引けるよう、BGM_TRACK_BY_ID にだけ足す
+const BGM_PROTO_TRACKS = Object.freeze([
+  { id:'melo_sheriruth_proto', name:'Sheriruth 試作', creator:'Team Grimoire', src:'audio/bgm-sheriruth-proto.mp3', gain:1, loop:true },
+]);
 const BGM_TRACK_BY_ID = Object.fromEntries(BGM_TRACKS.map(track => [track.id, track]));
+BGM_PROTO_TRACKS.forEach(track => { if (!BGM_TRACK_BY_ID[track.id]) BGM_TRACK_BY_ID[track.id] = track; });
 const BGM_TRACK_BY_KEY = Object.fromEntries(BGM_TRACKS.filter(track => track.legacyKey).map(track => [track.legacyKey, track]));
 // 音ゲーは曲データ側で既存track IDだけを持ち、音源・音量・ループ情報は必ずBGM_TRACKSから解決する。
 const rhythmSongTrack = song => BGM_TRACK_BY_ID[song?.bgmTrackId] || null;
@@ -109,6 +120,13 @@ const RHYTHM_SETTINGS_KEY = 'mh_rhythm_settings_v1';
 // 別キーにしたのは、演奏の設定を読み書きする経路へ画面の都合を混ぜないため。
 // 保存値が無い・壊れているときは既定へ落ちるので、これまでのユーザーもそのまま動く。
 const RHYTHM_SELECT_VIEW_KEY = 'mh_rhythm_select_v1';
+// 曲えらびで最後に選んだ難易度(2026-10-11 社長「モンビーで新たに始めるとイージーからの表示になるから、前のやつを引き継いで」)。
+// 新しいキーに難易度の名前(文字列)だけを入れる。読むときは normalizeRhythmLastDifficulty を必ず通す。
+// 入れてよいのは公開している5難易度だけ。HELL などまだ公開していない難易度・壊れた値は '' (今までどおり EASY から)。
+// その曲にその難易度が無い・まだ解放していないときは、曲えらびの部品が今までどおり選べるいちばん下(EASY)を出す。
+// デバッグの全解放の曲えらび(RHYTHM_DEBUG_SELECT)は別の入れ物を使うので、ここへは混ざらない
+const RHYTHM_LAST_DIFFICULTY_KEY = 'mh_rhythm_last_difficulty_v1';
+const normalizeRhythmLastDifficulty = value => (typeof value === 'string' && RHYTHM_DEMO_DIFFICULTY_IDS.includes(value)) ? value : '';
 // 並び順。id は保存値になるので、増やすことはあっても**名前は変えない**。
 const RHYTHM_SORT_ORDERS = Object.freeze([
   Object.freeze({ id:'added',  label:'入手順',  note:'追加された順。いつも同じ並びになります' }),
@@ -319,8 +337,10 @@ const RHYTHM_LIFE_SIZE_STEP = 10;
 // 大きくするほど上へ上がる(指が画面の下へ届かない端末向け)。
 // ★上限は32%で止める。これを越えると判定ラインがエリアの上半分へ入り、
 //   「まだ形が決まっていない」と見なす見張り(rhythmTravelLooksReady)とぶつかる。
-const RHYTHM_JUDGMENT_LINE_HEIGHT_MIN = 8;
-const RHYTHM_JUDGMENT_LINE_HEIGHT_MAX = 32;
+// 2026-10-14 社長「空中ラインと地上ラインの調整範囲もっと広げないと意味ない」→ 8〜32 から 4〜50 へ。上は50まで(判定ラインは画面の上半分より下に置く作り。
+// rhythmTravelLooksReady が線の中心を高さの45%より下と見ている)。古い版で開いても、範囲の端(32)に丸めて読むだけで壊れない
+const RHYTHM_JUDGMENT_LINE_HEIGHT_MIN = 4;
+const RHYTHM_JUDGMENT_LINE_HEIGHT_MAX = 50;
 const RHYTHM_JUDGMENT_LINE_HEIGHT_STEP = 2;
 const RHYTHM_COMBO_SIZE_MIN = 70;
 const RHYTHM_COMBO_SIZE_MAX = 150;
@@ -435,6 +455,8 @@ const rhythmMirrorNote = note => {
   if(Array.isArray(note.slidePoints))next.slidePoints=note.slidePoints.map(point=>point&&Number.isFinite(Number(point.lane))?{...point,lane:RHYTHM_MIRROR_LAST_LANE-Number(point.lane)}:point);
   // 横フリックの向きも左右を入れ替える(2026-09-26)
   if(note.flickDir==='left')next.flickDir='right';else if(note.flickDir==='right')next.flickDir='left';
+  // 空中のスライドの手の色(左=水色・右=ピンク)も左右を入れ替える(2026-10-10)。hand を書いたノーツ(空中ノーツの譜面)だけに効く
+  if(note.hand==='L')next.hand='R';else if(note.hand==='R')next.hand='L';
   if(Array.isArray(note.holdPoints))next.holdPoints=note.holdPoints.map(point=>{
     if(!point||typeof point!=='object')return point;
     const pw=Number(point.subLaneWidth),pointWidth=Number.isFinite(pw)&&pw>0?pw:w;
@@ -522,6 +544,8 @@ const RHYTHM_RANK_COLORS = Object.freeze({
   G:'text-slate-400', F:'text-purple-300', E:'text-cyan-300', D:'text-teal-300',
   C:'text-green-300', B:'text-pink-300', A:'text-red-400', S:'text-yellow-400',
   SS:'text-yellow-200', M:'text-fuchsia-300',
+  // MF は HELL の満点でだけ届く最上位(2026-10-12)。間合い適性には無い記号なので、ほかのランクと重ならない橙にする
+  MF:'text-orange-300',
 });
 const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   bgmVolume:100, noteSpeed:6, noteSize:100, noteStartPosition:0, displayTimingOffsetMs:0, judgmentTimingOffsetMs:0,
@@ -680,9 +704,36 @@ const normalizeRhythmBestRecord = value => {
     fullCombo:source.fullCombo===true,allExcellent:source.allExcellent===true,allMarvelous:source.allMarvelous===true,
     judgments:Object.fromEntries(RHYTHM_JUDGMENT_IDS.map(id=>[id,count(source.judgments?.[id]??source[id])])),};
 };
+// HELL の満点を 110万→105万にした(2026-10-12 社長の決定)。110万満点のころにデバッグで付いた HELL の自己ベストを、
+// 一度だけ 105/110 に縮める(新しい満点の上を超えないように。割合はそのまま)。5難易度の記録には触らない。
+// 二重に縮めないよう、先に完了の印(新しいキー)を立ててから記録を書き直す。印は記録が無い端末にも立てる
+const RHYTHM_HELL_BEST_RESCALED_KEY = 'mh_rhythm_hell_best_rescaled_v1';
+const rescaleRhythmHellBestScores = value => {
+  const source=value&&typeof value==='object'&&!Array.isArray(value)?value:null;
+  if(!source)return {changed:false,next:value};
+  let changed=false;const next={...source};
+  Object.keys(source).forEach(songId=>{
+    const rec=source[songId],hell=rec&&typeof rec==='object'&&!Array.isArray(rec)?rec.HELL:null;
+    const score=hell&&typeof hell==='object'?Number(hell.bestScore):NaN;
+    if(!Number.isFinite(score)||score<=0)return;
+    next[songId]={...rec,HELL:{...hell,bestScore:Math.floor(score*1050000/1100000)}};changed=true;
+  });
+  return {changed,next};
+};
 const normalizeRhythmBestRecords = value => {
   const source=value&&typeof value==='object'&&!Array.isArray(value)?value:{};
-  return Object.fromEntries(RHYTHM_SONGS.map(song=>[song.songId,Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[id,normalizeRhythmBestRecord(source[song.songId]?.[id])]))]));
+  return Object.fromEntries(RHYTHM_SONGS.map(song=>{
+    const raw=source[song.songId];
+    // 5難易度は全曲、HELL などはその曲に譜面があるときだけ(rhythmSongDifficultyDefs)
+    const known=Object.fromEntries(rhythmSongDifficultyDefs(song).map(({id})=>[id,normalizeRhythmBestRecord(raw?.[id])]));
+    // この版が知らない難易度の記録は、捨てずにそのまま残す(2026-10-10・MASTER の上の難易度を足す前の先回り)。
+    // 新しい版で付いた記録を、古い版のまま開いた端末が保存し直して消してしまわないように(CLAUDE.md ⑦「消さない」)。
+    // 知っている5難易度の読み方は今までどおり。知らない曲の記録はこれまでどおり持たない
+    const extra=raw&&typeof raw==='object'&&!Array.isArray(raw)
+      ?Object.fromEntries(Object.entries(raw).filter(([id,record])=>!Object.prototype.hasOwnProperty.call(known,id)&&/^[A-Z][A-Z0-9_]{0,23}$/.test(id)&&record&&typeof record==='object'&&!Array.isArray(record)))
+      :{};
+    return [song.songId,{...known,...extra}];
+  }));
 };
 const rhythmBestRecord = (records,songId,difficultyId) => normalizeRhythmBestRecord(records?.[songId]?.[difficultyId]);
 const rhythmJudgeTap = deltaMs => RHYTHM_JUDGMENTS.find(item=>item.windowMs!==null&&Math.abs(deltaMs)<=item.windowMs)?.id||'MISS';
@@ -859,7 +910,7 @@ const eikiBossBgmForBattle = (heroId, currentWave, enemyId) =>
   heroId === 'Eiki' && (enemyId === 'Moo' || currentWave === 10) ? 'eiki_boss' : null;
 // 既存の battle / dullahan / boss はチャレンジ用として維持し、保存済み設定との互換性を守る。
 // 追加したモード別専用戦キーは、旧セーブでは従来その場面で使っていた dullahan / boss の選択を継承する。
-const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ title:'monster_hero_theme_alt', home:'original_home', management:'original_profile', market:'original_market', temple:'original_fusion', trainingMenu:'original_home', trainingBoard:'original_home', battle:'original_battle', dullahan:'original_dullahan', boss:'original_boss', quickBattle:'original_battle', quickDullahan:'original_dullahan', quickMoo:'original_boss', proBattle:'original_pro_battle_01', proDullahan:'melo_dullahan_steel_ghost', proMoo:'original_pro_battle_02', extremeBattle:'ichika_battle', extremeDullahan:'melo_dullahan_clockwork', extremeMoo:'ichika_boss', speciesBattle:'original_battle', speciesDullahan:'original_dullahan', speciesMoo:'original_boss', tacticsIntroEvent:'close_to_your_heart_alt', tacticsBattle:'senjou_no_shippuu', tacticsMidBoss:'melo_the_city_beneath_the_comets', tacticsBoss:'makutsu_no_senritsu', autoBattle:'monster_hero_theme', autoVictoryJingle:'off', autoPostWaveBgm:'off', autoRepeatResultBgm:'off', clear:'ichika_clear', enhance:'original_enhance', result:'original_result', gameOver:'original_game_over', kikiIntro:'original_event_01', momosukeIntro:'six_eternel_remix', monbeatCupEvent:'kaze_ga_soyogu', symphonyEvent:'melo_mou_hitotsu_no_sekai_e', rhythmMultiEvent:'melo_haruka', masuCallEvent:'six_eternel',halloweenNightEvent:'melo_crazy_party_night_full', rhythmModeSelect:'pandora_boss_remix' });
+const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ rhythmHellStoryEvent:'melo_sheriruth', assistantChatStoryEvent:'close_to_your_heart_alt', title:'monster_hero_theme_alt', home:'original_home', management:'original_profile', market:'original_market', temple:'original_fusion', trainingMenu:'original_home', trainingBoard:'original_home', battle:'original_battle', dullahan:'original_dullahan', boss:'original_boss', quickBattle:'original_battle', quickDullahan:'original_dullahan', quickMoo:'original_boss', proBattle:'original_pro_battle_01', proDullahan:'melo_dullahan_steel_ghost', proMoo:'original_pro_battle_02', extremeBattle:'ichika_battle', extremeDullahan:'melo_dullahan_clockwork', extremeMoo:'ichika_boss', speciesBattle:'original_battle', speciesDullahan:'original_dullahan', speciesMoo:'original_boss', tacticsIntroEvent:'close_to_your_heart_alt', tacticsBattle:'senjou_no_shippuu', tacticsMidBoss:'melo_the_city_beneath_the_comets', tacticsBoss:'makutsu_no_senritsu', autoBattle:'monster_hero_theme', autoVictoryJingle:'off', autoPostWaveBgm:'off', autoRepeatResultBgm:'off', clear:'ichika_clear', enhance:'original_enhance', result:'original_result', gameOver:'original_game_over', kikiIntro:'original_event_01', momosukeIntro:'six_eternel_remix', monbeatCupEvent:'kaze_ga_soyogu', symphonyEvent:'melo_mou_hitotsu_no_sekai_e', rhythmMultiEvent:'melo_haruka', masuCallEvent:'six_eternel',halloweenNightEvent:'melo_crazy_party_night_full', rhythmModeSelect:'pandora_boss_remix' });
 // 設定欄を足したときに「前からある近い設定」を引き継ぐための対応表。
 // 種族チャレンジの3枠はチャレンジと同じ曲から始めるので、まだ自分で選んでいない人には
 // そのときのチャレンジの設定(自分で変えていればその曲)がそのまま入る
@@ -891,7 +942,9 @@ const BGM_ARRANGEMENT_LEGACY_FALLBACK = Object.freeze({ quickMoo:'boss', proDull
 // 通常再生・イベント回想の両方で同じ曲が鳴る(画面側の分岐を増やさない)
 // 会話イベントのid → BGMの枠。枠を足したら DEFAULT_BGM_ARRANGEMENT にも既定曲を書く
 // (既存プレイヤーの保存値には新しい枠が無いので、normalizeBgmArrangement が既定で埋める)
-const EVENT_BGM_SCENES = Object.freeze({ kiki_intro:'kikiIntro', momosuke_intro:'momosukeIntro', monbeat_cup_2026_09:'monbeatCupEvent', monbeat_cup_2026_09_thanks:'monbeatCupEvent', symphony_2026_09_17:'symphonyEvent', symphony_2026_09_17_thanks:'symphonyEvent', tactics_intro:'tacticsIntroEvent', beat_point_always_2026_09_24:'monbeatCupEvent', rhythm_six_lane_2026_09_26:'monbeatCupEvent', beat_point_up_2026_09_28:'monbeatCupEvent', rhythm_multi_friends_2026_10_03:'rhythmMultiEvent', rhythm_masu_call_2026_10_07:'masuCallEvent', halloween_night_2026_part1:'halloweenNightEvent', raid_jack_howto_2026_10_04:'halloweenNightEvent', raid_jack_rhythm_story_2026_10_06:'halloweenNightEvent', raid_jack_story_1b:'halloweenNightEvent', raid_jack_story_2:'halloweenNightEvent', raid_jack_story_3:'halloweenNightEvent', raid_jack_story_4:'halloweenNightEvent', raid_jack_story_5:'halloweenNightEvent', raid_jack_story_6:'halloweenNightEvent', raid_jack_ending_cleared:'halloweenNightEvent', raid_jack_ending_notcleared:'halloweenNightEvent' });
+// rhythm_hell_story … 難易度 HELL のお話(2026-10-11)。既定は Sheriruth(社長の指定)。BGMアレンジの画面に枠を並べるのは HELL の公開のとき
+// assistant_chat_story … 助手とおしゃべりのお話(2026-10-14)。既定はタクティクスの導入と同じ曲
+const EVENT_BGM_SCENES = Object.freeze({ kiki_intro:'kikiIntro', rhythm_hell_story:'rhythmHellStoryEvent', assistant_chat_story:'assistantChatStoryEvent', momosuke_intro:'momosukeIntro', monbeat_cup_2026_09:'monbeatCupEvent', monbeat_cup_2026_09_thanks:'monbeatCupEvent', symphony_2026_09_17:'symphonyEvent', symphony_2026_09_17_thanks:'symphonyEvent', tactics_intro:'tacticsIntroEvent', beat_point_always_2026_09_24:'monbeatCupEvent', rhythm_six_lane_2026_09_26:'monbeatCupEvent', beat_point_up_2026_09_28:'monbeatCupEvent', rhythm_multi_friends_2026_10_03:'rhythmMultiEvent', rhythm_masu_call_2026_10_07:'masuCallEvent', halloween_night_2026_part1:'halloweenNightEvent', raid_jack_howto_2026_10_04:'halloweenNightEvent', raid_jack_rhythm_story_2026_10_06:'halloweenNightEvent', raid_jack_story_1b:'halloweenNightEvent', raid_jack_story_2:'halloweenNightEvent', raid_jack_story_3:'halloweenNightEvent', raid_jack_story_4:'halloweenNightEvent', raid_jack_story_5:'halloweenNightEvent', raid_jack_story_6:'halloweenNightEvent', raid_jack_ending_cleared:'halloweenNightEvent', raid_jack_ending_notcleared:'halloweenNightEvent' });
 const BGM_PRO_DEFAULT_MIGRATION_KEY = 'mh_bgm_pro_default_migrated_v1';
 const BGM_PRO_PREVIOUS_DEFAULTS = Object.freeze({ proBattle:'original_battle', proDullahan:'original_dullahan', proMoo:'original_boss' });
 // 既定曲を入れ替えたときの移行のしかたは毎回同じ(「以前の既定のままの枠だけ新しい既定へ」)なので、

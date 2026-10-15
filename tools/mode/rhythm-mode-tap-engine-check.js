@@ -42,7 +42,7 @@ check('既存BGM track IDを再利用し、演奏本体はループしない(輪
   &&game.includes('const loop=options?.loop===true;')
   &&game.includes('nextSource.buffer=buffer; nextSource.loop=loop;')
   &&D.RHYTHM_SONGS[0].bgmTrackId==='atsu_cup_theme');
-check('デバッグの開始導線がある・プレオープンで公開されている',game.includes('data-rhythm-tap-start')&&game.includes("gameState==='RHYTHM_DEBUG'")&&game.includes('const RHYTHM_MODE_PUBLIC_RELEASE = true'));
+check('デバッグの開始導線がある・プレオープンで公開されている',game.includes('data-rhythm-debug-select-open')&&game.includes("gameState==='RHYTHM_DEBUG'")&&game.includes('const RHYTHM_MODE_PUBLIC_RELEASE = true'));
 
 // --- 同じレーンを長押ししながら、別の指で同じレーンをタップできるか ---
 // 2026-09-05、ユーザーからの質問「同じレーンを片手で長押ししてて別の指で同じレーンを

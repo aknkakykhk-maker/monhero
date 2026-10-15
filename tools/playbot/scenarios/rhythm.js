@@ -80,9 +80,9 @@ function installPlayer({ sigma, missRate, seed, human = true, persona = '', inpu
     inward: !human || who === 'center' ? 0 : who === 'lean' ? 0.15 + rand() * 0.15 : who === 'thumb' ? (rand() < 0.6 ? 1 : -1) * (0.12 + rand() * 0.2) : -(0.04 + rand() * 0.1) }));
   const handOf = (c) => (c < (RHYTHM_LANE_COUNT - 1) / 2 ? 0 : 1);
   // 1回押すときの指の置きどころ(判定ラインの真ん中からのずれ。px)。押している間は同じ値を使う
-  const fingerHabit = (c, second = false) => {
-    if (!human) return { below: 0, lat: 0, hand: handOf(c) };
-    const hand = handOf(c), h = habit[hand];
+  const fingerHabit = (c, second = false, handAs = null) => {
+    if (!human) return { below: 0, lat: 0, hand: handAs ?? handOf(c) };
+    const hand = handAs ?? handOf(c), h = habit[hand];
     const edge = c <= 0.25 ? -1 : c >= RHYTHM_LANE_COUNT - 1.25 ? 1 : 0;   // 端のレーンは外側へはみ出し気味
     const depth = Math.max(0, Math.min(0.95, h.depth + gauss() * 0.15));
     return { hand, below: depth * roomPx, lat: (h.lat - edge * h.inward + Math.max(-0.4, Math.min(0.4, gauss() * P.latSd * (second ? 1.5 : 1)))) * laneWpx };
@@ -116,19 +116,40 @@ function installPlayer({ sigma, missRate, seed, human = true, persona = '', inpu
   const real = new Map();
   const skippedIdx = new Set();   // わざと見送った(押し損ねた)ノーツ。次の押下がそのノーツに取られたときの見分けに使う
   const plan = [];
-  let skipped = 0;
+  let skipped = 0, handSwaps = 0;
   // 指の使い回し: 同じ手で続けて押すとき(160ms未満)は、2本目の指になる。押す時刻が遅れ気味でばらつき、位置も雑になり、押し損ねも増える
   // (連打・同時押しの多い高難易度で、タップの取りこぼしが増えるのを再現する)
   const lastOfHand = [null, null];
-  [...notes].sort((a, b) => a.timeMs - b.timeMs).forEach((n) => {
-    const hand = handOf(centerOf(n));
+  // 手の割り振り(版2・2026-10-12): 左右は位置で決めるが、その手がまだ HOLD/SLIDE を押さえている最中なら、反対の手で押す
+  // (押さえている親指で別のノーツは叩けない。前は位置だけで決めていたので、帯の隣のタップを押さえている手と同じ手と見なし、
+  //  押さえている指を「同じ手のつられ」で最大50px動かしていた。Grievous Lady HELL 33.74秒の途中切れ)。両手とも押さえていれば位置のまま
+  // 和音(版3・2026-10-12): 同じ時刻のノーツが同じ手に重なり、反対の手があいていれば、反対の側に近いほうを反対の手で押す
+  // (前は位置だけで決めていたので、右側の地上+空中の和音を右手1本で押していた。Sheriruth HELL 80.17秒)
+  const holding = [], groupHand = new Map(), sorted = [...notes].sort((a, b) => a.timeMs - b.timeMs);
+  const handFor = (n) => {
+    if (groupHand.has(n.index)) return groupHand.get(n.index);
+    const group = sorted.filter((m) => m.timeMs === n.timeMs);
+    const busy = new Set(holding.filter((x) => x.n.timeMs < n.timeMs && x.end > n.timeMs).map((x) => x.hand));
+    const picks = group.map((m) => { const byPos = handOf(centerOf(m)); return { m, byPos, hand: busy.has(byPos) && !busy.has(1 - byPos) ? 1 - byPos : byPos }; });
+    for (const h of [0, 1]) {
+      const same = picks.filter((x) => x.hand === h);
+      if (same.length < 2 || busy.has(1 - h) || picks.some((x) => x.hand === 1 - h)) continue;
+      const move = same.reduce((best, x) => (h === 1 ? centerOf(x.m) < centerOf(best.m) : centerOf(x.m) > centerOf(best.m)) ? x : best);
+      move.hand = 1 - h;
+    }
+    picks.forEach((x) => { groupHand.set(x.m.index, x.hand); if (x.hand !== x.byPos) handSwaps += 1; });
+    return groupHand.get(n.index);
+  };
+  sorted.forEach((n) => {
+    const hand = handFor(n);
     const prev = lastOfHand[hand];
     const gap = prev ? n.timeMs - prev.timeMs : Infinity;
     const second = human && gap < 160;
     lastOfHand[hand] = n;
     if (rand() < missRate * (second ? 2.5 : 1)) { skipped += 1; skippedIdx.add(n.index); return; }
     const lateMs = second ? ((160 - gap) / 160) * (6 + Math.abs(gauss()) * 10) : 0;
-    plan.push({ at: n.timeMs + gauss() * sigma * (second ? 1.4 : 1) + lateMs, n, id: pid++, second });
+    if (n.type === 'HOLD' || n.type === 'SLIDE') holding.push({ n, hand, end: Number(n.endTimeMs) || n.timeMs });
+    plan.push({ at: n.timeMs + gauss() * sigma * (second ? 1.4 : 1) + lateMs, n, id: pid++, second, hand });
   });
   plan.sort((a, b) => a.at - b.at);
   const active = []; // 押さえ続けている指 { id, n, until, hab, drift }
@@ -146,7 +167,8 @@ function installPlayer({ sigma, missRate, seed, human = true, persona = '', inpu
   const botLagged = (r) => r.lag >= BOT_LAG_MS || Math.abs(r.sentDelta) >= 70;
   const nearLate = (r) => r.lateMs > 0 || r.dropped || lateTimes.some((t) => Math.abs(r.at - t) <= 1000);
   const diag = { tap: { n: 0, miss: 0, crowdedN: 0, missCrowded: 0, missInBand: 0, missInBandCrowded: 0, secondN: 0, secondMiss: 0 }, fingerLeft: 0, edgeHolds: 0, overlaps: 0, holds: 0, driftEvents: 0, bigDrifts: 0, bandHolds: 0 };
-  const stats = { planned: plan.length, skipped, taps: 0, done: false, human, who, input: inputStats, suspects, diag, habit: habit.map((h) => ({ depth: +h.depth.toFixed(2), lat: +h.lat.toFixed(2), inward: +h.inward.toFixed(2) })) };
+  // playerVersion: 2 = 押さえている手のそばのノーツを反対の手に割り振る版、3 = 同じ時刻の和音を両手に分ける版(2026-10-12)。それより前の記録と数字を混ぜない
+  const stats = { planned: plan.length, skipped, taps: 0, done: false, human, who, playerVersion: 3, handSwaps, input: inputStats, suspects, diag, habit: habit.map((h) => ({ depth: +h.depth.toFixed(2), lat: +h.lat.toFixed(2), inward: +h.inward.toFixed(2) })) };
   const lerpLane = (pts, t) => {
     if (!pts || pts.length < 2) return null;
     if (t <= pts[0].timeMs) return pts[0].lane;
@@ -221,7 +243,7 @@ function installPlayer({ sigma, missRate, seed, human = true, persona = '', inpu
       const pl = plan[i++];
       const { n, id } = pl;
       const c = centerOf(n);
-      const hab = fingerHabit(c, pl.second);
+      const hab = fingerHabit(c, pl.second, pl.hand);
       const p = fingerAt(c, hab, null, now);
       // 同じ手で押さえている指があれば、近くのノーツを押した勢いでつられて数px動く(すぐ戻る)。反対の手は2割だけ、半分の大きさで
       if (active.some((a) => a.n.type === 'HOLD')) diag.overlaps += 1;

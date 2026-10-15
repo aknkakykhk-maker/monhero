@@ -83,9 +83,12 @@ for (const bad of [[null, 'Normal'], ['unknown', 'Normal'], [lineages[0].id, 'Un
   check(`不正な組み合わせを拒否する: ${String(bad[0])}/${String(bad[1])}`, api.speciesChallengeRankingDifficulty(bad[0], bad[1]) === null);
 }
 // Supabaseは既存のrankingsテーブルのまま。新しいテーブル・列を足していない
+// (2026-10-14 助手とおしゃべりの回数の表 assistant_chat_usage が足された。社長の OK を得た別機能の表なので、
+//  ここでは「rankings に触る migration が元の2つから増えていない」を見る)
 check('Supabaseのテーブル・列を増やしていない',
   !/create\s+table/i.test(source) && !/alter\s+table/i.test(source)
-  && fs.readdirSync('supabase/migrations').length === 2);
+  && fs.readdirSync('supabase/migrations')
+    .filter(f => /rankings/i.test(fs.readFileSync(`supabase/migrations/${f}`, 'utf8'))).length === 2);
 
 // ===== ③ 公開フラグと送信 =====
 check('一般公開フラグはtrue(公開済み)', api.SPECIES_CHALLENGE_PUBLIC_RELEASE === true);

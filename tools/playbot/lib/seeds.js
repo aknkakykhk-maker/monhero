@@ -19,6 +19,8 @@ const veteranSeed = (name) => {
   // 新しい助手の紹介(きき・ももすけ)は、しばらく遊んでいる人ならもう見ている
   put('mh_kiki_intro_seen_v1', true);
   put('mh_momosuke_intro_seen_v1', true);
+  // HELL の公開(2026-10-13)後に HOME で一度だけ流れるお話と説明も、しばらく遊んでいる人ならもう見ている
+  put('mh_rhythm_hell_story_seen_v1', true);
   put('mh_clears_Beginner', 1);
   put('mh_quick_clears_Beginner', 1);
 };

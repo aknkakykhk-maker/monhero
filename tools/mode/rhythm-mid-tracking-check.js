@@ -35,6 +35,9 @@ const slideCheckpoints=source.match(/const RHYTHM_SLIDE_CHECKPOINT_BASE_MS=[\s\S
 const releaseHelpers=source.match(/const rhythmJudgeRelease=deltaMs=>\{[\s\S]*?const rhythmWorseJudgment=[\s\S]*?\n\};/)?.[0];
 const floatingHelpers=source.match(/const RHYTHM_HOLD_HANDOVER_GRACE_MS=[\s\S]*?const rhythmFloatingNotesClear=[^\n]*\n/)?.[0];
 const midTrackingConsts=source.match(/const RHYTHM_MID_TRACKING_GRACE_MS=[\s\S]*?const rhythmHoldTrackedLane=[\s\S]*?\n\};/)?.[0];
+// 2026-10-11 から、毎コマの見回り(tick)が離しの合図を待つ長さ rhythmReleaseWaitMs を使う。切り出さないと tick が例外で止まり、
+// コマ送り(pump)が例外を捨てるため、チェックポイントが1件も数えられず 0/0 になっていた。既定(広くしない)の値で用意する
+const releaseWait=(source.match(/const RHYTHM_INPUT_AGE_MAX_MS=[^\n]*\n/)?.[0]||'const RHYTHM_INPUT_AGE_MAX_MS=80;\n')+'const rhythmReleaseWaitMs=()=>RHYTHM_INPUT_AGE_MAX_MS;\n';
 const runtimeBody=source.match(/const RHYTHM_GESTURE_RUNTIME=\(\(\)=>\{[\s\S]*?\n\}\)\(\);/)?.[0];
 check('依存ブロックをすべて抽出できる',!!perf&&!!projection&&!!flickConsts&&!!slideHelpers&&!!slideCheckpoints&&!!releaseHelpers&&!!floatingHelpers&&!!midTrackingConsts&&!!runtimeBody);
 if(!(projection&&flickConsts&&slideHelpers&&slideCheckpoints&&releaseHelpers&&floatingHelpers&&midTrackingConsts&&runtimeBody)){console.log(`\n${failed}件のNGがあります`);process.exit(1);}
@@ -61,7 +64,7 @@ const context={
   rhythmInputEdgeMarginSubLanes:()=>1, // 切り出し範囲の外の関数の代役(既定の余白1)
 };
 vm.createContext(context);
-vm.runInContext(`${judgments}\n${perf}\n${projection}\n${flickConsts}\n${slideHelpers}\n${slideCheckpoints}\n${releaseHelpers}\n${floatingHelpers}\n${midTrackingConsts}\n${runtimeBody}\nthis.out=RHYTHM_GESTURE_RUNTIME;this.margin=rhythmHoldTrackingMarginLanes;this.tracked=rhythmHoldTrackedLane;`,context);
+vm.runInContext(`${judgments}\n${perf}\n${projection}\n${flickConsts}\n${slideHelpers}\n${slideCheckpoints}\n${releaseHelpers}\n${floatingHelpers}\n${midTrackingConsts}\n${releaseWait}\n${runtimeBody}\nthis.out=RHYTHM_GESTURE_RUNTIME;this.margin=rhythmHoldTrackingMarginLanes;this.tracked=rhythmHoldTrackedLane;`,context);
 const runtime=context.out;
 
 // レーン座標→実座標(クリック位置)への変換。rhythmLaneCoordinateAtPointの逆算。
@@ -194,6 +197,20 @@ const advance=ms=>{
   runtime.bind('touch:1',note,'SLIDE',1000,0);
   for(let i=1;i<=10;i++){advance(100);const expectedLane=i*0.2;runtime.record('touch:1',clientXFor(expectedLane),clientY);}
   check('SLIDE: 経路どおりに追従する限り途中失敗しない',note.holdJudgment==='MARVELOUS','holdJudgment='+note.holdJudgment);
+  runtime.clear();
+}
+
+// --- SLIDE: 空中と地上を行き来するスライド(HELL・2026-10-11 社長「空中スライドが地上に降りてきたり」) ---
+// 押し始めたあとは横の位置だけで追うので、高さ(点の sky)が空→地上→空と変わっても、経路どおりに追えば最後まで落ちない
+{
+  const note={type:'SLIDE',timeMs:1000,endTimeMs:3000,lane:0,endLane:4,
+    slidePoints:[{timeMs:1000,lane:0,sky:1},{timeMs:1500,lane:1,sky:1},{timeMs:2000,lane:2,sky:0},{timeMs:2500,lane:3,sky:0},{timeMs:3000,lane:4,sky:1}],
+    subLaneWidth:2,activePointerId:'p1',holdJudgment:'MARVELOUS',holdDeltaMs:0,done:false};
+  now=0;
+  runtime.record('touch:1',clientXFor(0),clientY);
+  runtime.bind('touch:1',note,'SLIDE',1000,0);
+  for(let i=1;i<=10;i++){advance(100);const expectedLane=i*0.2;runtime.record('touch:1',clientXFor(expectedLane),clientY);}
+  check('SLIDE: 空中と地上を行き来するスライドも、経路どおりに追う限り途中失敗しない',note.holdJudgment==='MARVELOUS','holdJudgment='+note.holdJudgment);
   runtime.clear();
 }
 

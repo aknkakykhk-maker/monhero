@@ -54,7 +54,7 @@ const {RHYTHM_HIT_EFFECT_COLORS,RHYTHM_HIT_EFFECT_POOL,RHYTHM_HIT_SPARK_COUNT,RH
   check('CSS 版の炎と手前の光の長さが RHYTHM_FLICK_PLUME.ms と同じ',new RegExp(`>em\\{animation:mhRhythmHitPlume${P.ms}ms`).test(flat)&&new RegExp(`>small\\{animation:mhRhythmHitFloor${P.ms}ms`).test(flat));
   check('器に炎(em)と手前の光(small)がある(押すたびに作らない)',flat.includes("item.appendChild(document.createElement('em'));")&&flat.includes("item.appendChild(document.createElement('small'));"));
   // 2026-09-28: 「動きが硬い・毎回同じ形」で、炎の舌をフリックごとの乱数で飛ばす形にした。canvas 版・CSS 版とも同じ決め方を使う
-  check('炎の舌の飛び方は canvas 版・CSS 版とも rhythmFlickWisps で決める(フリックごとの乱数)',flat.includes('rhythmFlickWisps(h.seed,RHYTHM_FLICK_PLUME.wisps)')&&flat.includes('rhythmFlickWisps((Math.random()*4294967296)>>>0,RHYTHM_FLICK_PLUME.cssWisps)')&&/plume,seed:plume\?\(Math\.random\(\)\*4294967296\)>>>0:0/.test(flat));
+  check('炎の舌の飛び方は canvas 版・CSS 版とも rhythmFlickWisps で決める(フリックごとの乱数)',flat.includes('rhythmFlickWisps(h.seed,RHYTHM_FLICK_PLUME.wisps)')&&flat.includes('rhythmFlickWisps((Math.random()*4294967296)>>>0,RHYTHM_FLICK_PLUME.cssWisps)')&&/plume(?:&&!hit\.sky)?,seed:plume(?:&&!hit\.sky)?\?\(Math\.random\(\)\*4294967296\)>>>0:0/.test(flat));
   {const {rhythmFlickWisps:W}=(()=>{const c={};vm.createContext(c);vm.runInContext(`${source}\nthis.out={rhythmFlickWisps};`,c);return c.out;})();
     const a=W(12345,14),b=W(12345,14),d=W(999,14);
     check('同じ seed なら同じ並び・ちがう seed ならちがう形になる',JSON.stringify(a)===JSON.stringify(b)&&JSON.stringify(a)!==JSON.stringify(d)&&a.length===14&&a.every(w=>w.life>0&&w.dist>0&&w.len>0&&w.wid>0));}
@@ -205,7 +205,8 @@ check('ぴったりのときだけ見た目が強くなる(文字と光)',
 
 // モンスターノーツは金色が特別扱い。虹で上書きしない
 check('モンスターノーツは金色のまま(虹で上書きしない)',
-  source.includes("monster?'#fde047':rhythmHitEffectColor(judgment)")
+  // 空中のノーツ(試作・e0c70c2)は空中の色。モンスターノーツの金色が先に決まるのは同じ
+  /monster\?'#fde047':\((?:sky\?`rgb\(\$\{RHYTHM_SKY_FX\.main\}\)`:)?rhythmHitEffectColor\(judgment\)\)|monster\?'#fde047':rhythmHitEffectColor\(judgment\)/.test(source)
   && source.includes("rainbowHit?color:'var(--rhythm-hit-color,#fff)'")
   && source.includes("item.dataset.hitJudgment=monster?'':String(judgment||'')"));
 // 判定ラインの光も、上の判定ほど明るくする
@@ -265,7 +266,8 @@ check('演出量MINIMAL・軽量モードでは出さない(音は鳴る)',
   &&hitCss.includes('[data-rhythm-play-area][data-rhythm-lightweight="true"] [data-rhythm-screen-flash]')
   &&hitCss.includes('display:none!important')
   // 音は演出量の外で鳴らす
-  &&/if\(monsterHit\)RHYTHM_NOTE_SE_RUNTIME\.playMonster\(\);\s*\n\s*if\(!settings\.lightweightMode/.test(game));
+  // 間に空中のノーツの「きらっ」の音(playSky・演出量の外)が入ってよい
+  &&/if\(monsterHit\)RHYTHM_NOTE_SE_RUNTIME\.playMonster\(\);\s*\n(?:\s*\/\/[^\n]*\n\s*if\(rhythmNoteSkyHeight\(note\)>0\)RHYTHM_NOTE_SE_RUNTIME\.playSky\(judgment\);\s*\n)?\s*if\(!settings\.lightweightMode/.test(game));
 check('入力を邪魔しない',
   hitCss.includes('[data-rhythm-hit-layer]{position:absolute;inset:0;pointer-events:none;')
   &&hitCss.includes('[data-rhythm-screen-flash]{position:absolute;inset:0;pointer-events:none;'));
@@ -377,8 +379,9 @@ const serve=()=>new Promise(resolve=>{
   check('粒の飛ぶ向きが CSS と同じ',!!canvasSparks&&JSON.stringify(cssSparks)===JSON.stringify(JSON.parse(canvasSparks)));
   check('タイミング関数が CSS と同じ(cubic-bezier(.16,.9,.3,1))',
     source.includes('cubic-bezier(.16,.9,.3,1)')&&/const hitEase=\(\(\)=>\{const x1=\.16,y1=\.9,x2=\.3,y2=1,/.test(source));
-  check('WebGL で描けたときだけ光を canvas へ回す(2D の canvas・DOM 版は部品のまま)',
-    game.includes("RHYTHM_CANVAS_RENDERER.enableHits(RHYTHM_CANVAS_RENDERER.backend==='webgl'?playAreaRef.current:null);")
+  // 2026-10-12 社長の判断(#2793): 2D でも canvas 版の光を既定に(rhythmCanvasHitsActive)。WebGL のときはいつも canvas
+  check('WebGL で描けたとき・canvas 版の光が入のときに光を canvas へ回す(それ以外は DOM 版の部品のまま)',
+    game.includes("RHYTHM_CANVAS_RENDERER.enableHits(RHYTHM_CANVAS_RENDERER.backend==='webgl'||rhythmCanvasHitsActive()?playAreaRef.current:null);")
     &&/const rhythmSpawnHitEffect=[^\n]*\n[\s\S]{0,400}RHYTHM_CANVAS_RENDERER\.hitsFor\(area\)/.test(source));
   // 描き始め(begin) → 叩いたときの光(drawHits) → ノーツ(drawNote) の順。間に道の演出(drawRoadFx。光より下)が入ってよい
   {const begin=game.indexOf('RHYTHM_CANVAS_RENDERER.begin('),hits=game.indexOf('if(canvasReady)RHYTHM_CANVAS_RENDERER.drawHits(travel.hitY);'),note=game.indexOf('RHYTHM_CANVAS_RENDERER.drawNote(');

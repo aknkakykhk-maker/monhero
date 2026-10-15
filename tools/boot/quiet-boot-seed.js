@@ -49,8 +49,16 @@ const eventStoryKey = () => {
 };
 
 // addInitScript へそのまま渡せる形。ページの中では引数だけを使う(この外の変数は見えない)
+// 公開の日に HOME で一度だけ流れるお話(タクティクスバトルの導入・HELL の「空まで届くビート」)の既読キー。
+// どちらも起動直後に画面いっぱいへ出て、ショップ・バトルへ進む検査を止めた(2026-10-15・着替えの検査がタクティクスの導入で止まった)。
+// ★キーは本体(17-release-changelog-login-missions.jsx)から読む。お話そのものを確かめる検査はこの種を使わない
+const introStoryKeys = () => {
+  const src = fs.readFileSync(path.resolve(__dirname, '..', '..', 'monster-hero/src/parts/17-release-changelog-login-missions.jsx'), 'utf8');
+  return ['TACTICS_INTRO_SEEN_KEY', 'RHYTHM_HELL_STORY_SEEN_KEY']
+    .map((name) => (src.match(new RegExp(`const ${name} = '([^']+)'`)) || [])[1]).filter(Boolean);
+};
 const eventStorySeed = () => ({
-  content: `(() => { try { localStorage.setItem(${JSON.stringify(eventStoryKey())}, ${JSON.stringify(JSON.stringify(eventStoryIds()))}); } catch (e) {} })();`,
+  content: `(() => { try { localStorage.setItem(${JSON.stringify(eventStoryKey())}, ${JSON.stringify(JSON.stringify(eventStoryIds()))}); ${introStoryKeys().map((k) => `localStorage.setItem(${JSON.stringify(k)}, 'true');`).join(' ')} } catch (e) {} })();`,
 });
 
 // 起動直後に画面いっぱいへ出る「一度きりの案内」。押さずに進めないので、検査では出さない。

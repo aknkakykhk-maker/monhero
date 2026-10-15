@@ -40,8 +40,9 @@ check('演奏画面が「デバッグから始めたか」を受け取る',
   // 受け取る値は増えていく(タイミング合わせの calibrating など)。debugPlay と tutorial を既定 false で受けていればよい
   /const RhythmTapTest=\(\{[^}]*debugPlay=false,tutorial=false[,}]/.test(game));
 check('デバッグ画面から始めたときだけ true になる',
-  game.includes("debugPlay={rhythmPlay.from==='debug'}")
-  && game.includes("setRhythmPlay({song,difficulty,from:'debug'})"));
+  // 2026-10-11 古い縦の一覧(from:'debug')を外した。デバッグの演奏は試作の枠と全解放の曲えらびからの from:'proto'
+  game.includes("debugPlay={rhythmPlay.from==='debug'||rhythmPlay.from==='proto'}")
+  && game.includes("setRhythmPlay({song,difficulty,from:'proto',backTo:'RHYTHM_DEBUG_SELECT'})"));
 check('あそびかた練習も別に見分けている',
   game.includes("tutorial={rhythmPlay.from==='tutorial'}"));
 check('画面を2つに分けていない(判定や描画を二重管理しない)',

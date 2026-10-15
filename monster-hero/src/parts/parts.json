@@ -74,6 +74,10 @@
       "role": "保存層(storeGet / storeSet / storeList / setStorageWriteBlocked)と音ゲー保存の薄い関数"
     },
     {
+      "file": "25-asset-cache.jsx",
+      "role": "事前ダウンロード(ASSET_CACHE。Service Worker の登録、まとまりごとのダウンロード・取り消し・削除、自動の前もって落とし)"
+    },
+    {
       "file": "26-supabase.jsx",
       "role": "全国ランキング(Supabase REST)。難易度キー、取得、送信、絆Lv、周回ID"
     },
@@ -115,6 +119,11 @@
     {
       "file": "33-rhythm-buddy-convo.jsx",
       "role": "呼んだマスモンの会話。人の発言の意図の読み取り(約30種類・曲名・名前・みんな)と、返事・聞き返し・マスモンどうしの話のセリフ集。自分の育ち({lv}{mood}{trait}{fav}…)を混ぜる。AIは使わない",
+      "pure": true
+    },
+    {
+      "file": "33-rhythm-buddy-persona.jsx",
+      "role": "マスモンの個体差(一人称・呼び方・口ぐせ・好きな曲/苦手な曲・叩き方のくせ・好物/趣味・誕生日)。個体番号から決める純関数と、それを使うセリフ集。保存はしない(好き・苦手な曲は相棒の記録を読むだけ)",
       "pure": true
     },
     {
@@ -274,6 +283,10 @@
     {
       "file": "79-screen-raid-jack.jsx",
       "role": "画面: イベント・レイドボス「ジャック」(RAID_JACK=A協力戦・B累計ダメージ・残り回数・追加購入・ランキング / RAID_JACK_PREP=編成とアシカえらび)。表示と選択だけで、回数・ビートP・戦闘開始は本体側"
+    },
+    {
+      "file": "56-assistant-chat.jsx",
+      "role": "助手とおしゃべりの窓(AssistantChatWindow)。中継役へ送るだけで、会話は端末の新しいキーにだけ置く。公開の印 assistantChat の後ろ"
     },
     {
       "file": "60-app.jsx",
