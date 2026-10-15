@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6431dae6f3499a57
+// generated-sha256: c342f060d20ff338
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-16 06:07"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-16 07:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -19652,13 +19652,14 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
           {/* 難易度をえらぶ。高さは固定(ロック中だけ「◯◯で解放」が2行になって、その曲だけ高くならないように) */}
           <div className="min-w-0" style={{gridArea:'diff'}}>
           {/* 版の切り替え(2026-10-03)。版が2つ以上ある曲だけ出す。押すと選んでいる曲がその版に変わり、
-              難易度は同じものがあればそのまま(無ければ上の「選び直し」がいちばん下の難易度へ戻す) */}
+              難易度は同じものがあればそのまま(無ければ上の「選び直し」がいちばん下の難易度へ戻す)。
+              高さは縦36px・横32px(2026-10-16 社長の決定。30px未満で押しにくかった) */}
           {(()=>{const versions=versionsOf(song);if(versions.length<2)return null;
             return <div data-rhythm-song-versions className="mb-1 flex gap-1">{versions.map(item=>{
               const on=item.songId===song.songId,eventVersion=eventSongIds.has(item.songId);
               return <button key={item.songId} type="button" data-rhythm-song-version={item.songId} aria-pressed={on}
                 onClick={()=>setSongId(item.songId)}
-                className={`flex min-h-[30px] min-w-0 flex-1 items-center justify-center gap-0.5 rounded-lg border px-1 text-[11px] font-black leading-none landscape:min-h-[26px] ${on?'border-sky-200 bg-sky-400/30 text-white shadow-[0_0_8px_rgba(56,189,248,.3)]':'border-white/15 bg-slate-900/70 text-slate-300'}`}>
+                className={`flex min-h-[36px] min-w-0 flex-1 items-center justify-center gap-0.5 rounded-lg border px-1 text-[12px] font-black leading-none landscape:min-h-[32px] ${on?'border-sky-200 bg-sky-400/30 text-white shadow-[0_0_8px_rgba(56,189,248,.3)]':'border-white/15 bg-slate-900/70 text-slate-300'}`}>
                 <span className="truncate">{rhythmSongVersionLabel(item.songId)||'原曲'}</span>{eventVersion&&<span aria-label="イベント対象">🏆</span>}
               </button>;})}</div>;})()}
           <div data-rhythm-difficulty-row className={`flex gap-1${spot('difficulty')}`}>

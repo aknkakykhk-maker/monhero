@@ -1167,13 +1167,14 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
           {/* 難易度をえらぶ。高さは固定(ロック中だけ「◯◯で解放」が2行になって、その曲だけ高くならないように) */}
           <div className="min-w-0" style={{gridArea:'diff'}}>
           {/* 版の切り替え(2026-10-03)。版が2つ以上ある曲だけ出す。押すと選んでいる曲がその版に変わり、
-              難易度は同じものがあればそのまま(無ければ上の「選び直し」がいちばん下の難易度へ戻す) */}
+              難易度は同じものがあればそのまま(無ければ上の「選び直し」がいちばん下の難易度へ戻す)。
+              高さは縦36px・横32px(2026-10-16 社長の決定。30px未満で押しにくかった) */}
           {(()=>{const versions=versionsOf(song);if(versions.length<2)return null;
             return <div data-rhythm-song-versions className="mb-1 flex gap-1">{versions.map(item=>{
               const on=item.songId===song.songId,eventVersion=eventSongIds.has(item.songId);
               return <button key={item.songId} type="button" data-rhythm-song-version={item.songId} aria-pressed={on}
                 onClick={()=>setSongId(item.songId)}
-                className={`flex min-h-[30px] min-w-0 flex-1 items-center justify-center gap-0.5 rounded-lg border px-1 text-[11px] font-black leading-none landscape:min-h-[26px] ${on?'border-sky-200 bg-sky-400/30 text-white shadow-[0_0_8px_rgba(56,189,248,.3)]':'border-white/15 bg-slate-900/70 text-slate-300'}`}>
+                className={`flex min-h-[36px] min-w-0 flex-1 items-center justify-center gap-0.5 rounded-lg border px-1 text-[12px] font-black leading-none landscape:min-h-[32px] ${on?'border-sky-200 bg-sky-400/30 text-white shadow-[0_0_8px_rgba(56,189,248,.3)]':'border-white/15 bg-slate-900/70 text-slate-300'}`}>
                 <span className="truncate">{rhythmSongVersionLabel(item.songId)||'原曲'}</span>{eventVersion&&<span aria-label="イベント対象">🏆</span>}
               </button>;})}</div>;})()}
           <div data-rhythm-difficulty-row className={`flex gap-1${spot('difficulty')}`}>
