@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 607e98fae9ace465
+// source-sha256: 518d9526c249ed6f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-15 20:03";
+const BUILD_DATE = "2026-10-15 20:06";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -33325,6 +33325,16 @@ const RhythmLineAdjustBands = ({
     }
   }));
 };
+const rhythmSetText = (el, text) => {
+  if (!el) return;
+  const value = String(text),
+    node = el.firstChild;
+  if (node && node.nodeType === 3 && !node.nextSibling) {
+    if (node.nodeValue !== value) node.nodeValue = value;
+    return;
+  }
+  el.textContent = value;
+};
 const RhythmLineAdjustPanel = ({
   adjust,
   onBump,
@@ -34021,7 +34031,22 @@ const RhythmTapTest = ({
   }, [cutInOn, monsterSignature, sideArtUrls]);
   const abilityTimerRef = useRef(null),
     abilityRevisionRef = useRef(0),
-    abilityBadgeRef = useRef(null);
+    abilityBadgeRef = useRef(null),
+    abilityFlashRef = useRef(null);
+  const setAbilityFlash = text => {
+    const el = abilityFlashRef.current;
+    if (!el) return;
+    if (text) {
+      rhythmSetText(el, text);
+      if (el.dataset.on !== '1') {
+        el.dataset.on = '1';
+        el.style.visibility = 'visible';
+      }
+    } else if (el.dataset.on !== '0') {
+      el.dataset.on = '0';
+      el.style.visibility = 'hidden';
+    }
+  };
   const emptyCounts = () => Object.fromEntries(RHYTHM_JUDGMENT_IDS.map(id => [id, 0]));
   const makeRuntimeNotes = () => {
     const tracking = rhythmSlideTrackingFor(difficulty.id);
@@ -34514,6 +34539,7 @@ const RhythmTapTest = ({
     if (abilityTimerRef.current !== null) clearTimeout(abilityTimerRef.current);
     abilityTimerRef.current = null;
     ++abilityRevisionRef.current;
+    setAbilityFlash('');
   }, []);
   const clearCountdown = useCallback(() => {
     if (countdownTimerRef.current) {
@@ -34533,10 +34559,7 @@ const RhythmTapTest = ({
     abilityTimerRef.current = setTimeout(() => {
       if (revision !== abilityRevisionRef.current) return;
       abilityTimerRef.current = null;
-      setView(v => ({
-        ...v,
-        ability: null
-      }));
+      setAbilityFlash('');
     }, RHYTHM_MONSTER_ABILITY_DISPLAY_MS);
   }, []);
   const travelCacheRef = useRef(null);
@@ -34791,7 +34814,7 @@ const RhythmTapTest = ({
       const ptEl = luckPointsRef.current;
       if (ptEl && ptEl._mhLuck !== run.luckPoints) {
         ptEl._mhLuck = run.luckPoints || 0;
-        ptEl.textContent = `${run.luckPoints || 0}pt`;
+        rhythmSetText(ptEl, `${run.luckPoints || 0}pt`);
       }
     }
     if (settingsLiveRef.current.comboMilestoneFx === true && !settings.lightweightMode && settings.effectAmount !== 'MINIMAL' && keptCombo > run.combo && keptCombo >= RHYTHM_COMBO_MILESTONE_STEP && keptCombo % RHYTHM_COMBO_MILESTONE_STEP === 0) {
@@ -34882,7 +34905,7 @@ const RhythmTapTest = ({
       });
       const lifeDamage = lifeDamageRef.current;
       if (lifeDamage) {
-        lifeDamage.textContent = String(lifeDelta);
+        rhythmSetText(lifeDamage, String(lifeDelta));
         lifeRestarts.push({
           el: lifeDamage,
           attr: 'rhythmLifeDamageShow'
@@ -34917,8 +34940,9 @@ const RhythmTapTest = ({
       },
       life: run.life
     });
-    const coarseKey = `${rhythmComboTier(run.combo)}|${Math.floor(run.combo / RHYTHM_COMBO_MILESTONE_STEP)}|${rhythmLifeState(run.life)}`;
-    if (showAbilityFlash || coarseKey !== run._viewCoarseKey) {
+    const coarseKey = `${rhythmComboTier(run.combo)}|${Math.floor(run.combo / RHYTHM_COMBO_MILESTONE_STEP)}|${rhythmLifeState(run.life) === 'down' ? 'down' : 'up'}`;
+    if (showAbilityFlash) setAbilityFlash(`${abilityFlash.ability}！`);
+    if (coarseKey !== run._viewCoarseKey) {
       run._viewCoarseKey = coarseKey;
       setView(v => ({
         ...v,
@@ -34935,10 +34959,7 @@ const RhythmTapTest = ({
         slow: run.slow,
         precise: run.precise,
         life: run.life,
-        lastDeltaMs,
-        ...(showAbilityFlash ? {
-          ability: abilityFlash
-        } : {})
+        lastDeltaMs
       }));
     }
     scheduleJudgmentClear(rhythmNoteIsSky(note));
@@ -34948,7 +34969,7 @@ const RhythmTapTest = ({
       const diff = Math.round(score - Number(run.startBestScore) * judged / chart.totalNotes);
       paceEl.hidden = false;
       paceEl.dataset.pace = diff >= 0 ? 'up' : 'down';
-      paceEl.textContent = `ベスト比 ${diff >= 0 ? '+' : '−'}${Math.abs(diff).toLocaleString()}`;
+      rhythmSetText(paceEl, `ベスト比 ${diff >= 0 ? '+' : '−'}${Math.abs(diff).toLocaleString()}`);
     }
     if (settings.judgmentAtTap === true && judgment !== 'MISS' && !calibrating) {
       const lineY = RHYTHM_JUDGMENT_LINE_Y.ratio,
@@ -35636,7 +35657,7 @@ const RhythmTapTest = ({
           itazuraMs = rhythmMonsterAbilityRemainingMs(run.abilities, 'ITAZURA', songTimeMs);
         const text = [mutekiMs > 0 ? `無敵 ${(mutekiMs / 1000).toFixed(1)}s` : '', gamanMs > 0 ? `我慢 ${(gamanMs / 1000).toFixed(1)}s` : '', hisshiMs > 0 ? `必死 ${(hisshiMs / 1000).toFixed(1)}s` : '', itazuraMs > 0 ? `いたずら ${(itazuraMs / 1000).toFixed(1)}s` : '', Number(run.abilities?.konjoStock) > 0 ? '根性 ストック' : ''].filter(Boolean).join(' / ');
         if (badge._rhythmBadgeText !== text) {
-          badge.textContent = text;
+          rhythmSetText(badge, text);
           badge._rhythmBadgeText = text;
         }
         if (badge.hidden !== (text === '')) badge.hidden = text === '';
@@ -35679,7 +35700,7 @@ const RhythmTapTest = ({
           second = Math.floor(shownMs / 1000);
         if (timeEl._mhSecond !== second) {
           timeEl._mhSecond = second;
-          timeEl.textContent = `${rhythmClockLabel(shownMs)}/${rhythmClockLabel(playEndTimeMs)}`;
+          rhythmSetText(timeEl, `${rhythmClockLabel(shownMs)}/${rhythmClockLabel(playEndTimeMs)}`);
         }
       }
       const audioDurationMs = Number(run.audio.durationMs) || 0;
@@ -38077,14 +38098,17 @@ const RhythmTapTest = ({
     style: {
       visibility: 'hidden'
     }
-  }, monsters.filter(m => m && m.ability).map(m => m.ability.name).join(''), "！"), view.ability && React.createElement("div", {
+  }, monsters.filter(m => m && m.ability).map(m => m.ability.name).join(''), "！"), monsters.some(m => m && m.ability) && React.createElement("div", {
+    ref: abilityFlashRef,
     "data-rhythm-ability-flash": true,
+    "data-on": "0",
     className: "pointer-events-none absolute left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded-full border-2 border-amber-200 bg-slate-950/90 px-4 py-1.5 text-lg font-black text-amber-100",
     style: {
       bottom: 'calc(12% + 78px)',
+      visibility: 'hidden',
       textShadow: settings.lightweightMode || settings.effectAmount === 'MINIMAL' ? 'none' : '0 0 10px rgba(251,191,36,.8)'
     }
-  }, view.ability.ability, "！"), canvasNotes ? React.createElement("canvas", {
+  }, '\u00a0'), canvasNotes ? React.createElement("canvas", {
     key: webglNotes ? 'webgl' : '2d',
     ref: noteCanvasRef,
     "data-rhythm-note-canvas": true,
