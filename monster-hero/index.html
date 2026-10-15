@@ -98,7 +98,7 @@ window.__mhBoot = (function () {
 })();
 // 本体JSのキャッシュキー。ここで一度だけ宣言し、下の読み込み処理でも同じ値を使う。
 // 先読みと <script> のURLがずれると、同じ2.7MBを2回取りに行くことになる
-var GAME_BUILD = '202610151204';
+var GAME_BUILD = '202610151210';
 window.__mhGameBuild = GAME_BUILD;
 // 起動でいちばん大きいのは本体JS(約2.7MB)。いちばん後ろで読むため、そこへ来ると
 // ゲージが止まって見えていた。先に取りはじめて、受け取ったバイト数をそのまま出す。
@@ -208,19 +208,39 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
   .mh-card-art-icon { width: 30%; display: flex; align-items: center; justify-content: center; }
   .mh-card-art-icon img { max-width: 100%; max-height: 100%; }
   .mh-card-art-gem { position: absolute; left: 15.4%; top: 13%; width: 18.7%; aspect-ratio: 1; transform: translate(-50%, -50%); z-index: 8; pointer-events: none;
-    display: flex; align-items: center; justify-content: center; font: 900 10px/1 system-ui, sans-serif; color: #fff;
+    display: flex; align-items: center; justify-content: center; font: 900 10px/1 system-ui, sans-serif; color: #fff; font-variant-numeric: tabular-nums;
     text-shadow: 1px 0 0 #000, -1px 0 0 #000, 0 1px 0 #000, 0 -1px 0 #000, 0 1px 3px rgba(0,0,0,.9); }
   /* 今の宝石の見た目([data-tactics-look] [data-card-gem])より強く当てて、小さい丸の中へ置く */
   [data-tactics-look] [data-card-art] [data-card-gem].mh-card-art-gem { left: 15.4%; top: 13%; width: 18.7%; height: auto; aspect-ratio: 1; padding: 0;
-    background: none; clip-path: none; font-size: 11px; }
+    background: none; clip-path: none; padding: 0; line-height: 1; font-size: min(11px, 13cqw); }
   [data-tactics-look] [data-card-art] [data-card-gem].mh-card-art-gem::after { display: none; }
   /* 固有技の金の枠(data-card-art="gold")。大きい丸=中心(49.9%,21.2%)・幅の49.5% / 小さい丸=中心(14.5%,12.8%)・幅の16.9% */
   [data-card-art="gold"] .mh-card-art-mark, [data-card-art="gold"] .mh-card-art-icon { top: 21.2%; width: 49.5%; }
   [data-card-art="gold"] .mh-card-art-icon { width: 38%; }
   [data-tactics-look] [data-card-art="gold"] [data-card-gem].mh-card-art-gem { left: 14.5%; top: 12.8%; width: 16.9%; }
-  .mh-card-art-roman { position: absolute; left: 50%; top: 28.5%; transform: translate(-50%, -50%); z-index: 8; pointer-events: none;
-    min-width: 18px; padding: 1px 4px; border-radius: 999px; border: 1px solid #f3d27a; background: rgba(20,12,4,.9);
-    font: 900 8px/1 'Times New Roman', serif; letter-spacing: .02em; color: #fde68a; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,.8); }
+  /* 段階の札は、大きい丸の下の縁にかかる位置(丸の中心+半径)。金の縁と枠の地に近い暗い金茶で、枠の飾りになじませる */
+  .mh-card-art-roman { position: absolute; left: 50%; top: calc(17.8% + 20.4cqw); transform: translate(-50%, -50%); z-index: 8; pointer-events: none;
+    min-width: 16px; padding: 1px 3px 0; border-radius: 3px; border: 1px solid #f3d27a; background: linear-gradient(180deg, #6b4512, #2a1806);
+    font: 900 7px/1.15 'Times New Roman', serif; letter-spacing: .04em; color: #ffe7a3; text-align: center;
+    box-shadow: 0 0 0 1px rgba(40,24,6,.9), 0 1px 3px rgba(0,0,0,.8); text-shadow: 0 1px 1px #000; }
+  /* 行動カードの絵: 文字を枠になじませる(2026-10-15 社長「カードと文字とで位置や表示差の違和感があるからもっとなじませて」)。
+     名前と技変更のまとまりは、枠の中の面(上の丸の下〜下の飾りの手前、左右は横の宝石の内側)へ置き直す。
+     上の端はカードの高さの割合(丸の位置)+幅の割合(丸の半径)で決めるので、横持ちで枠が縦につぶれても丸と飾りにかからない */
+  [data-card-art] { container-type: inline-size; }
+  [data-card-art] > [data-decoration] + div { position: absolute; left: 11%; right: 11%; width: auto !important; top: calc(17.8% + 20.4cqw + 7px); bottom: 9.5%;
+    display: flex; flex-direction: column; justify-content: space-between; gap: 2px; z-index: 6; }
+  [data-card-art="gold"] > [data-decoration] + div { top: calc(21.2% + 24.8cqw + 2px); }
+  [data-card-art] [data-card-name] { flex: 1 1 auto; height: auto !important; min-height: 0; color: #ffe7a3 !important;
+    font-family: 'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP', serif; letter-spacing: .02em;
+    text-shadow: 1px 0 0 #3a2105, -1px 0 0 #3a2105, 0 1px 0 #3a2105, 0 -1px 0 #3a2105, 1px 1px 0 #3a2105, -1px -1px 0 #3a2105, 0 2px 4px rgba(0,0,0,.8), 0 0 6px rgba(255,200,90,.35) !important; }
+  [data-card-art] [data-skill-change], [data-card-art] [data-skill-change-spacer] { height: auto !important; min-height: clamp(26px, 3.6dvh, 30px); flex: none; }
+  /* ★押せる場所は今(カード幅いっぱい・高さ26〜30px)より狭くしない。見た目は中の面に収め、押せる範囲だけ左右へ広げる */
+  [data-card-art] [data-skill-change] { position: relative; }
+  [data-card-art] [data-skill-change]::after { content: ''; position: absolute; top: -2px; bottom: -2px; left: calc(-11cqw - 2px); right: calc(-11cqw - 2px); }
+  [data-card-art] [data-skill-change] { background: linear-gradient(180deg, #3d260a, #170d03) !important; border: 1px solid #d9ae55 !important; border-radius: 6px !important;
+    box-shadow: inset 0 1px 0 rgba(255,230,160,.35), 0 0 0 1px rgba(40,24,6,.9) !important; color: #fde68a !important; }
+  [data-card-art] [data-card-genre] { background: linear-gradient(180deg, rgba(48,30,8,.92), rgba(20,12,3,.92)) !important; border: 1px solid rgba(217,174,85,.75);
+    border-radius: 4px !important; color: #fde68a !important; text-shadow: 0 1px 1px #000; }
   /* 距離の札(零/近/中/遠。RANGE_STYLES の labelBg)。4つとも白い字に黒い細い縁(2026-10-13 社長「全距離統一で」)。
      8pxの小さい字でもにじまないよう、縁は太い1本ではなく、ずらした細い影を4方向に重ねる */
   .mh-range-label { color: #fff !important; text-shadow: 1px 0 0 #000, -1px 0 0 #000, 0 1px 0 #000, 0 -1px 0 #000, 0 0 1px #000; }
