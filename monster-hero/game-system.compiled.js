@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 467b99aec66ae06e
+// source-sha256: a047d3f37969eae3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-14 19:25";
+const BUILD_DATE = "2026-10-15 09:40";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -6689,6 +6689,7 @@ const Audio_ = (() => {
     if (resumeOnGestureBound || typeof document === 'undefined') return;
     resumeOnGestureBound = true;
     const onGesture = () => {
+      unlockStreams();
       const ctx = audioCtx;
       if (!ctx || ctx.state === 'running') return;
       let done = null;
@@ -6712,6 +6713,155 @@ const Audio_ = (() => {
       }
     });
   };
+  const STREAM_POOL_SIZE = 2;
+  const STREAM_UNLOCK_SILENCE = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
+  const streamPool = [];
+  let streamsUnlocked = false,
+    streamsDisabled = false;
+  const streamSupported = () => !streamsDisabled && typeof window !== 'undefined' && typeof window.Audio === 'function';
+  const streamEntry = i => {
+    if (streamPool[i]) return streamPool[i];
+    const el = new window.Audio();
+    el.preload = 'auto';
+    try {
+      el.setAttribute('playsinline', '');
+    } catch (e) {}
+    streamPool[i] = {
+      el,
+      node: null,
+      ctx: null,
+      src: null
+    };
+    return streamPool[i];
+  };
+  const connectStream = entry => {
+    const ctx = getAudioCtx();
+    if (!ctx || !bgmGain) return false;
+    if (entry.ctx && entry.ctx !== ctx) {
+      try {
+        entry.el.pause();
+        entry.el.removeAttribute('src');
+        entry.el.load();
+      } catch (e) {}
+      const at = streamPool.indexOf(entry);
+      if (at >= 0) streamPool[at] = null;
+      return false;
+    }
+    if (!entry.node) {
+      try {
+        entry.node = ctx.createMediaElementSource(entry.el);
+        entry.ctx = ctx;
+      } catch (e) {
+        streamsDisabled = true;
+        return false;
+      }
+    }
+    try {
+      entry.node.disconnect();
+    } catch (e) {}
+    try {
+      entry.node.connect(bgmGain);
+    } catch (e) {
+      return false;
+    }
+    return true;
+  };
+  const setStreamSrc = (entry, src) => {
+    if (entry.src === src) return;
+    entry.src = src;
+    try {
+      entry.el.src = src ? audioUrlWithKey(src) : '';
+      if (!src) entry.el.removeAttribute('src');
+      entry.el.load();
+    } catch (e) {}
+  };
+  const pickStream = src => {
+    const busy = bgmSource && bgmSource.stream ? bgmSource.stream : null;
+    for (let i = 0; i < STREAM_POOL_SIZE; i++) {
+      const e = streamPool[i];
+      if (e && e.src === src && e !== busy) return e;
+    }
+    for (let i = 0; i < STREAM_POOL_SIZE; i++) {
+      const e = streamEntry(i);
+      if (e !== busy) return e;
+    }
+    return null;
+  };
+  const unlockStreams = () => {
+    if (streamsUnlocked || !streamSupported()) return;
+    streamsUnlocked = true;
+    try {
+      if (typeof navigator !== 'undefined' && navigator.audioSession) navigator.audioSession.type = 'ambient';
+    } catch (e) {}
+    for (let i = 0; i < STREAM_POOL_SIZE; i++) {
+      const entry = streamEntry(i);
+      if (bgmSource && bgmSource.stream === entry) continue;
+      try {
+        entry.src = null;
+        entry.el.src = STREAM_UNLOCK_SILENCE;
+        const p = entry.el.play();
+        const back = () => {
+          try {
+            if (!(bgmSource && bgmSource.stream === entry)) {
+              entry.el.pause();
+              if (!entry.src) {
+                entry.el.removeAttribute('src');
+                entry.el.load();
+              }
+            }
+          } catch (e) {}
+        };
+        if (p && p.then) p.then(back, back);else back();
+      } catch (e) {}
+    }
+  };
+  const startStream = (entry, track) => new Promise(resolve => {
+    if (!connectStream(entry)) {
+      resolve(null);
+      return;
+    }
+    setStreamSrc(entry, track.src);
+    const el = entry.el;
+    el.loop = track.loop !== false;
+    try {
+      el.currentTime = 0;
+    } catch (e) {}
+    const handle = {
+      stream: entry,
+      buffer: null,
+      onended: null,
+      stop: () => {
+        try {
+          el.pause();
+        } catch (e) {}
+      },
+      disconnect: () => {}
+    };
+    el.onended = () => {
+      if (handle.onended) handle.onended();
+    };
+    let p = null;
+    try {
+      el.muted = false;
+      p = el.play();
+    } catch (e) {
+      resolve(null);
+      return;
+    }
+    if (p && p.then) p.then(() => resolve(handle), () => resolve(null));else resolve(handle);
+  });
+  const dropSceneBuffers = () => {
+    for (let i = songBufferOrder.length - 1; i >= 0; i--) {
+      const url = songBufferOrder[i];
+      if (rhythmBuffersInUse.has(buffers.get(url)) || previewSource && previewSource.buffer === buffers.get(url)) continue;
+      songBufferOrder.splice(i, 1);
+      buffers.delete(url);
+    }
+    streamPool.forEach(entry => {
+      if (entry && !(bgmSource && bgmSource.stream === entry)) setStreamSrc(entry, null);
+    });
+  };
+  const bgmSilent = () => !enabled || bgmVolumePct <= 0;
   const resumeAudioCtxNoWait = () => {
     const ctx = getAudioCtx();
     if (ctx && ctx.state !== 'running') {
@@ -6856,9 +7006,41 @@ const Audio_ = (() => {
     if (!enabled || bgmVolumePct <= 0 || pageHidden) {
       stopOthers();
       stopJingles();
+      if (bgmSilent()) dropSceneBuffers();
       return Promise.resolve();
     }
     resumeAudioCtxNoWait();
+    if (streamSupported() && !buffers.has(track.src)) {
+      if (bgmSource && bgmSourceKey === track.id) return Promise.resolve();
+      const entry = pickStream(track.src);
+      if (entry) {
+        return startStream(entry, track).then(handle => {
+          const stillWanted = request === bgmRequest && track.id === currentKey && enabled && bgmVolumePct > 0 && !pageHidden && !jingleSource && !previewSource;
+          if (handle && stillWanted) {
+            const prev = bgmSource;
+            bgmSource = handle;
+            bgmSourceKey = track.id;
+            applyTrackGain(track);
+            handle.onended = () => {
+              if (bgmSource === handle) {
+                bgmSource = null;
+                bgmSourceKey = null;
+              }
+            };
+            if (prev && prev !== handle) stopSource(prev);
+            const ctx = audioCtx;
+            if (ctx && ctx.state !== 'running') resumeAudioCtxNoWait();
+            return;
+          }
+          if (handle) handle.stop();
+          if (!stillWanted) return;
+          return loadBuffer(track.src).then(buffer => {
+            rememberSongBuffer(track.src);
+            startBgmBuffer(track.id, track, buffer, request);
+          }).catch(() => {});
+        });
+      }
+    }
     if (buffers.has(track.src)) {
       startBgmBuffer(track.id, track, buffers.get(track.src), request);
       rememberSongBuffer(track.src);
@@ -6957,6 +7139,17 @@ const Audio_ = (() => {
     loadingBuffers.clear();
     songBufferOrder.length = 0;
     rhythmBuffersInUse.clear();
+    streamPool.forEach(entry => {
+      if (entry) {
+        try {
+          entry.el.pause();
+          entry.el.removeAttribute('src');
+          entry.el.load();
+        } catch (e) {}
+      }
+    });
+    streamPool.length = 0;
+    streamsUnlocked = false;
     try {
       if (old && old.state !== 'closed') await old.close();
     } catch (e) {}
@@ -7210,11 +7403,25 @@ const Audio_ = (() => {
   };
   const preloadBGM = key => {
     const track = resolveTrack(key);
-    if (track) loadBuffer(track.src).then(() => rememberSongBuffer(track.src)).catch(() => {});
+    if (!track || bgmSilent()) return;
+    if (streamSupported()) {
+      const entry = pickStream(track.src);
+      if (entry && !(bgmSource && bgmSource.stream === entry)) setStreamSrc(entry, track.src);
+      return;
+    }
+    loadBuffer(track.src).then(() => rememberSongBuffer(track.src)).catch(() => {});
   };
   const prepareBGM = (key, timeoutMs = 2000) => {
     const track = resolveTrack(key);
     if (!track) return Promise.resolve(false);
+    if (streamSupported()) {
+      if (bgmVolumePct > 0) {
+        const entry = pickStream(track.src);
+        if (entry && !(bgmSource && bgmSource.stream === entry)) setStreamSrc(entry, track.src);
+      }
+      return Promise.resolve(true);
+    }
+    if (bgmSilent()) return Promise.resolve(true);
     return Promise.race([loadBuffer(track.src).then(() => {
       rememberSongBuffer(track.src);
       return true;
@@ -7311,6 +7518,7 @@ const Audio_ = (() => {
       stopPreview(false);
       stopOthers();
       stopJingles();
+      dropSceneBuffers();
     } else if (currentKey) playBGM(currentKey);
     await ensure();
   };
@@ -7418,6 +7626,7 @@ const Audio_ = (() => {
     if (pct <= 0) {
       stopPreview(false);
       stopOthers();
+      dropSceneBuffers();
     } else if (enabled && currentKey && !previewKey) playBGM(currentKey);
   };
   const resumeIfNeeded = async () => {
@@ -7437,6 +7646,7 @@ const Audio_ = (() => {
       applyRhythmMute();
     }
     const ctx = resumeAudioCtxNoWait();
+    unlockStreams();
     let toneStart = null;
     if (Tone) {
       try {

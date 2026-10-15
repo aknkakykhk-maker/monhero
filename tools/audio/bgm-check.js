@@ -74,6 +74,19 @@ const INSTRUMENT = () => {
     log.events.push({ t: 'start', url: this.__url || null, loop: !!this.loop, ctxState: this.context && this.context.state, at: Date.now() });
     return origStart.apply(this, arguments);
   };
+  // 場面のBGMは <audio> で流しながら鳴らす(2026-10-15・14-audio.jsx「流しながら鳴らす」)。その再生・停止も同じ記録に残す。
+  // 鳴らせる状態にするための長さ0の無音(data:)は数えない
+  const MEP = window.HTMLMediaElement.prototype;
+  const origPlay = MEP.play, origPause = MEP.pause;
+  const fileOf = (el) => String(el.currentSrc || el.src || '').split('/').pop().split('?')[0];
+  MEP.play = function () {
+    if (!/^data:/.test(String(this.src || ''))) log.events.push({ t: 'start', url: fileOf(this), loop: !!this.loop, ctxState: window.__lastCtx && window.__lastCtx.state, stream: true, at: Date.now() });
+    return origPlay.apply(this, arguments);
+  };
+  MEP.pause = function () {
+    if (!this.paused && !/^data:/.test(String(this.src || ''))) log.events.push({ t: 'stop', url: fileOf(this), stream: true, at: Date.now() });
+    return origPause.apply(this, arguments);
+  };
   const origStop = BSN.stop;
   BSN.stop = function () {
     log.events.push({ t: 'stop', url: this.__url || null, at: Date.now() });
