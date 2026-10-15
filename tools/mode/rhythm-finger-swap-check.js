@@ -170,10 +170,19 @@ for(const [label,make] of [['スライド',slide],['長押し',hold]]){
     reset();
     const run=makeRun([slide(),nextTo()]);
     starts(run,[at('touch:1',3)],0);               // 1本目でSLIDEを押さえる
-    starts(run,[at('touch:2',spot)],1000);         // 2本目を帯の内側へ置く
+    starts(run,[at('touch:2',spot)],800);          // 2本目を帯の内側へ置く(隣のノーツが来る200ms前。2026-10-15 案1: 隣の時刻ちょうどなら隣を取るため)
     check(`帯の内側(${spot})へ置いた2本目は、隣の普通のノーツに取られない`,
       run.standbyPointers.get('touch:2')===0&&!run.notes[1].done,
       `控え=${run.standbyPointers.get('touch:2')} / 隣のノーツ done=${run.notes[1].done}`);
+  }
+  // 2026-10-15 社長の決定「案1」: 隣のノーツの時刻ちょうど(GOOD の窓の中)なら、帯の内側の端でも隣のノーツの受付の中なら隣を取る
+  for(const spot of [4.4,4.6,4.8,5.0]){
+    reset();
+    const run=makeRun([slide(),nextTo()]);
+    starts(run,[at('touch:1',3)],0);
+    const got=match(run.notes,[at('touch:2',spot)],1000,0)[0];
+    check(`隣のノーツの時刻ちょうどに帯の内側(${spot})を押すと、隣のノーツを取る`,
+      got.target===run.notes[1],`取ったもの=${got.target?got.target.type:'なし'} / 控え=${got.standby?'あり':'なし'}`);
   }
   // 帯の外は、これまでどおり普通のノーツを取る
   {
@@ -197,8 +206,8 @@ for(const [label,make] of [['スライド',slide],['長押し',hold]]){
     reset();
     const run=makeRun([slide(),nextTo()]);
     starts(run,[at('touch:1',3)],0);
-    starts(run,[at('touch:2',4.8)],1000);
-    ends(run,['touch:1'],1020);
+    starts(run,[at('touch:2',4.8)],800);
+    ends(run,['touch:1'],820);
     ends(run,['touch:2'],3000);
     check('持ち替えたあと最後まで押さえれば成立する(隣のノーツも巻き込まない)',
       run.notes[0].done&&!run.notes[0]._miss&&!run.notes[1].done,
@@ -219,7 +228,7 @@ check('ポーズしたら控えも捨てる',/run\.standbyPointers\?\.clear\(\)/
 // 押さえている帯の内側へ置いた指は、相手を決める前に控えへ回す(近くのノーツに取られないように)
 check('帯の内側の指は、相手を決める前に控えへ回す',
   /const insideHeldBand=heldBandNote\(false\);/.test(src)
-  &&/if\(insideHeldBand&&!insideOverlapWith\(insideHeldBand\)\)return \{input,target:null,deltaMs:null,standby:insideHeldBand\};/.test(src));
+  &&/if\(insideHeldBand&&!insideOverlapWith\(insideHeldBand\)&&!nowTapAt\(\)\)return \{input,target:null,deltaMs:null,standby:insideHeldBand\};/.test(src));
 // ★ただし帯の上へ**重なって**降ってくるノーツ(被りノーツ)には譲る。
 //   接しているだけ(重なりの幅0)は譲らない＝上の「隣のノーツに取られない」が成り立つ。
 //   中身は tools/mode/rhythm-tap-during-hold-check.js が見る(2026-09-18)。

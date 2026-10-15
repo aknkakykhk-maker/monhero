@@ -4334,7 +4334,25 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
       return false;
     };
     const insideHeldBand=heldBandNote(false);
-    if(insideHeldBand&&!insideOverlapWith(insideHeldBand))return {input,target:null,deltaMs:null,standby:insideHeldBand};
+    // ★帯の内側でも、すぐ横の TAP の時刻が「いま」(GOOD の窓の中)で、その TAP の受付の中を押しているなら、控えにせず TAP へ通す
+    //   (2026-10-15 社長の決定「案1」。押さえている帯と同じ高さのすぐ横の TAP を、帯の側の端で押すと MISS になっていた。Sheriruth HELL 11.7秒など)。
+    //   隣の TAP の時刻がいまではないときは、これまでどおり持ち替えの控え(2026-09-18 の「指置き換えで隣のノーツに引っ張られる」を戻さない)
+    const nowTapAt=()=>{
+      for(let index=matchStart;index<matchEnd;index++){
+        const note=source[index];
+        if(!note||note.done||note.type!=='TAP'||note.activePointerId!==null||claimed.has(index))continue;
+        if(Math.abs(now-(Number(note.timeMs)+offset))>RHYTHM_COMBO_SAFE_WINDOW_MS)continue;
+        // 時刻を大きく過ぎた TAP は、これまでどおり持ち替えを優先する(RHYTHM_HANDOVER_PREFER_LATE_MS の説明)
+        if(now-(Number(note.timeMs)+offset)>RHYTHM_HANDOVER_PREFER_LATE_MS)continue;
+        if(heightMismatch(note))continue;
+        const span=inputSpan(note);
+        if(!span)continue;
+        const tolerance=span.width===1?RHYTHM_NARROW_TAP_TOLERANCE_SUB_LANES:RHYTHM_TAP_TOLERANCE_SUB_LANES;
+        if(subCoordinate>=span.start-tolerance&&subCoordinate<=span.end+tolerance)return true;
+      }
+      return false;
+    };
+    if(insideHeldBand&&!insideOverlapWith(insideHeldBand)&&!nowTapAt())return {input,target:null,deltaMs:null,standby:insideHeldBand};
     // どのノーツを叩いたことにするかの決め方。
     //
     // 【なぜ「近い順」だけではいけないか】
