@@ -57,8 +57,9 @@ check('⑦ 名前の欄は左右をカード幅の10%ずつ下げた置き場(�
   /\[data-card-plate\] \[data-card-name\] \{[^}]*padding: 0 10cqw !important;[^}]*container-type: size;/.test(htmlSrc)
   && /\[data-card-plate\] \[data-card-name\]::after \{ content: ''; flex: none; width: 100%; height: var\(--mh-rule-h\); background: var\(--mh-name-rule, none\)/.test(htmlSrc));
 check('⑦ 金の枠の置き場は、大きい丸の下の飾り(高さの約42.5%)より下', /\[data-card-art="gold"\] > \[data-decoration\] \+ div \{ top: calc\(43% \+ 1px\); \}/.test(htmlSrc));
-check('⑦ 名前は全部同じ大きさ(8字ぶんが赤青緑紫の置き場に収まる大きさ。金も --mh-name-ratio で同じ)・2行まで',
-  /fontSize: `max\(5\.5px, min\(calc\(\(100cqw \* var\(--mh-name-ratio, 1\) - 1\.5px\) \/ \$\{BATTLE_CARD_NAME_ONE_LINE\}\), calc\(\(100cqh - var\(--mh-rule-h, 6px\)\) \/ \$\{tall\}\)\)\)`/.test(battle)
+check('⑦ 名前は全部同じ大きさ(1行6字ぶんが赤青緑紫の置き場に収まる大きさ。金も --mh-name-ratio で同じ)。6字ぶんを超える行の名前だけ小さく',
+  /fontSize: `max\(5px, min\(calc\(\(100cqw \* var\(--mh-name-ratio, 1\) - 1\.5px\) \/ \$\{longest\.toFixed\(2\)\}\), calc\(\(100cqh - var\(--mh-rule-h, 6px\)\) \/ \$\{tall\}\)\)\)`/.test(battle)
+  && /const longest = Math\.max\(BATTLE_CARD_NAME_PER_LINE, \.\.\.lines\.map\(battleCardNameUnits\)\);/.test(battle) && /const BATTLE_CARD_NAME_PER_LINE = 6;/.test(battle)
   && /\[data-card-plate="gold"\] \[data-card-name\] \{ padding: 0 6cqw !important; --mh-name-ratio: 0\.8919; \}/.test(htmlSrc)
   && /<span data-card-name-text style=\{battleCardNameFit\(c\.name\)\}>/.test(battle));
 // ⑧ 手札の幅と高さ(2026-10-15 社長「カードが小さくなって見にくい」「移動するときにカードが潰れる」)
@@ -88,19 +89,20 @@ check('⑤ 飾り線は枠と同じ色(rule-赤/青/緑/紫/金)を --mh-name-ru
   for (const m of be.matchAll(/"([^"]+)"/g)) names.add(m[1]);
   const all = [...names].map((n) => [n, nameCtx.battleCardNameLines(n)]);
   const badHead = all.filter(([, l]) => l.slice(1).some((x) => nameCtx.BATTLE_CARD_NO_BREAK_BEFORE.test(x)));
-  const tooLong = all.filter(([, l]) => l.some((x) => [...x].length > 8));
-  check('⑥ 手札に出る名前を全部折れる(小さい字・長音で行が始まらない)', all.length > 300 && badHead.length === 0, `${all.length}件 ${badHead.slice(0, 3).map(([n, l]) => l.join('/')).join(' ')}`);
-  check('⑥ 1行は8字まで(5.75px の字で置き場に収まる長さ)', tooLong.length === 0, tooLong.slice(0, 3).map(([n, l]) => l.join('/')).join(' '));
-  const three = all.filter(([, l]) => l.length > 2);
-  check('⑥ どの名前も2行まで', three.length === 0, three.slice(0, 3).map(([n, l]) => l.join('/')).join(' '));
-  // 1行に入る名前(8字ぶんまで)は折らない(2026-10-15 社長「短い技名も無理して2行にしないで」)。入らない名前だけ言葉の切れ目で2行
-  const want = { 'ぞうさん頭突き': 'ぞうさん頭突き', 'ニコラオの力': 'ニコラオの力', 'メロメロハート': 'メロメロハート', 'かどみうむの計算': 'かどみうむの計算', 'ドリルコンビネーション': 'ドリル/コンビネーション', 'スターバースト・ストリーム': 'スターバースト・/ストリーム', 'ナイトメアらっきょうボム': 'ナイトメア/らっきょうボム', '永劫の贖いを全うせよ': '永劫の贖いを/全うせよ' };
+  // 2026-10-15 社長「長い名前だけ3行を許す」: 1行に入る名前(6字ぶんまで)は1行、入らない名前は言葉の切れ目で2行、2行に入らない名前だけ3行
   const unitsOf = (t) => [...t].reduce((n, ch) => n + (/[\x20-\x7e]/.test(ch) ? 0.62 : 1), 0);
-  const foldedShort = all.filter(([n, l]) => l.length > 1 && unitsOf(n) <= 8);
-  check('⑥ 1行に入る名前(8字ぶんまで)は1行のまま', foldedShort.length === 0, foldedShort.slice(0, 3).map(([n, l]) => l.join('/')).join(' '));
-  console.log(`   1行 ${all.filter(([, l]) => l.length === 1).length}件・2行 ${all.filter(([, l]) => l.length === 2).length}件`);
+  const over = all.filter(([, l]) => l.some((x) => unitsOf(x) > 6));
+  check('⑥ 1行6字ぶんを超える行は、言葉を割れない数件だけ(その名前だけ字を小さくする)', over.length <= 3, over.map(([n, l]) => l.join('/')).join(' '));
+  check('⑥ 手札に出る名前を全部折れる(小さい字・長音で行が始まらない)', all.length > 300 && badHead.length === 0, `${all.length}件 ${badHead.slice(0, 3).map(([n, l]) => l.join('/')).join(' ')}`);
+  const four = all.filter(([, l]) => l.length > 3);
+  check('⑥ どの名前も3行まで', four.length === 0, four.slice(0, 3).map(([n, l]) => l.join('/')).join(' '));
+  const foldedShort = all.filter(([n, l]) => l.length > 1 && unitsOf(n) <= 6);
+  check('⑥ 1行に入る名前(6字ぶんまで)は1行のまま', foldedShort.length === 0, foldedShort.slice(0, 3).map(([n, l]) => l.join('/')).join(' '));
+  const want = { 'ニコラオの力': 'ニコラオの力', 'ライトニング': 'ライトニング', 'ぞうさん頭突き': 'ぞうさん/頭突き', 'メロメロハート': 'メロメロ/ハート', 'ディープキッス': 'ディープ/キッス',
+    'ドリルコンビネーション': 'ドリル/コンビ/ネーション', 'スターバースト・ストリーム': 'スター/バースト・/ストリーム', 'ナイトメアらっきょうボム': 'ナイトメア/らっきょう/ボム', 'ムーンサルトメロディー': 'ムーンサルト/メロディー' };
   const miss = Object.entries(want).filter(([n, w]) => nameCtx.battleCardNameLines(n).join('/') !== w);
   check('⑥ 1行に入る名前は折らず、入らない名前は言葉の切れ目で折る', miss.length === 0, miss.map(([n]) => `${n}→${nameCtx.battleCardNameLines(n).join('/')}`).join(' '));
+  console.log(`   1行 ${all.filter(([, l]) => l.length === 1).length}件・2行 ${all.filter(([, l]) => l.length === 2).length}件・3行 ${all.filter(([, l]) => l.length === 3).length}件`);
   if (process.env.CARD_NAME_LIST) fs.writeFileSync(process.env.CARD_NAME_LIST, all.map(([n, l]) => `${n}\t${l.join(' / ')}`).join('\n') + '\n');
 }
 
