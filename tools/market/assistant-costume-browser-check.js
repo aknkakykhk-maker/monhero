@@ -113,7 +113,15 @@ const seed = ({ conditions }) => {
     await page.waitForTimeout(1200);
     await page.evaluate(() => { const b = [...document.querySelectorAll('button[aria-label="戻る"]')].find(x => x.closest('.mh-screen-head')); if (b && !document.body.innerText.includes('ダイヤで購入')) b.click(); });
     await page.waitForTimeout(600);
-    await clickText(page, entry, { exact: false });
+    // 入口のボタンだけを押す。助手の吹き出し(「みゅあの説明を開く」など)のセリフにも「ダイヤ」などが出ることがあり、
+    // 文字だけで探すとそちらを押してヘルプが開き、ショップへ入れないことがあった(2026-10-15・セリフはランダムなので、通ったり落ちたりした)
+    await page.evaluate((label) => {
+      // 入口のボタンには売り場の名前の名札(aria-label: ダイヤショップ・ビートP交換所…)が付いている。それで押す
+      const name = { 'ダイヤ': 'ダイヤショップ', 'ビートP': 'ビートP交換所' }[label] || label;
+      const b = [...document.querySelectorAll('button')].find(x => x.getAttribute('aria-label') === name);
+      if (b) b.click();
+    }, entry);
+    await page.waitForTimeout(1000);
   };
 
   // ===== ① 開始の前 =====
