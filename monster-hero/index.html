@@ -98,7 +98,7 @@ window.__mhBoot = (function () {
 })();
 // 本体JSのキャッシュキー。ここで一度だけ宣言し、下の読み込み処理でも同じ値を使う。
 // 先読みと <script> のURLがずれると、同じ2.7MBを2回取りに行くことになる
-var GAME_BUILD = '202610151257';
+var GAME_BUILD = '202610151309';
 window.__mhGameBuild = GAME_BUILD;
 // 起動でいちばん大きいのは本体JS(約2.7MB)。いちばん後ろで読むため、そこへ来ると
 // ゲージが止まって見えていた。先に取りはじめて、受け取ったバイト数をそのまま出す。
@@ -233,12 +233,15 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
   /* 名前・技変更・種類の札は、枠と同じ色の名札(BATTLE_CARD_ART.plates)の上に載せる(2026-10-15 社長「ただ乗っけてるだけに見える」)。
      名札は横長(約7.4:1)なので、border-image の9分割で、左右の宝石と上下の飾りは縮めず、真ん中の面だけを伸ばす(絵は 320×43)。
      字は名札に刻んだように、上に暗い影・下に明るい縁(沈んだ金の字)。金の名札(固有技)だけは濃い字に明るい縁 */
-  [data-card-plate] [data-card-name], [data-card-plate] [data-skill-change], [data-card-plate] [data-skill-change-spacer] [data-card-genre] {
+  [data-card-plate] [data-skill-change], [data-card-plate] [data-skill-change-spacer] [data-card-genre] {
     border-style: solid; border-color: transparent; border-image-source: var(--mh-plate); border-image-slice: 11 27 fill; border-image-repeat: stretch;
     background: none !important; box-shadow: none !important; border-radius: 0 !important; }
   /* 名前の名札は、丸の下から下の札の手前までを埋める(2026-10-15 社長「すき間をなくす」)。字は名札の真ん中 */
-  [data-card-plate] [data-card-name] { flex: 1 1 auto; margin: 0; height: auto !important; min-height: 0; border-width: 3px 4px; padding: 1px 0;
+  /* 名前は名札に載せず、中の面の真ん中へ(2026-10-15 社長「技名の枠はない方がよく見えない?」)。
+     字が浮かないよう、名前の後ろだけ中の面をふわっと暗くする(縁のない楕円の影)。金の面(固有技)は濃い字なので、逆に明るくぼかす */
+  [data-card-plate] [data-card-name] { flex: 1 1 auto; margin: 0; height: auto !important; min-height: 0; border: 0 !important; padding: 1px 0; border-radius: 0 !important;
     display: flex; align-items: center; justify-content: center; text-align: center;
+    background: radial-gradient(ellipse 62% 48% at 50% 50%, rgba(8,4,0,.62), rgba(8,4,0,.28) 60%, rgba(8,4,0,0) 100%) !important; box-shadow: none !important;
     /* 明るい金の字に、はっきりした濃い縁取り(4方向)+うすい光。小さい手札でも読めるように(2026-10-15 社長「字を明るく」) */
     color: #fff1b8 !important; font-family: 'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP', serif; letter-spacing: 0;
     text-shadow: 1px 0 0 #2a1503, -1px 0 0 #2a1503, 0 1px 0 #2a1503, 0 -1px 0 #2a1503, 1px 1px 0 #2a1503, -1px -1px 0 #2a1503, 0 0 4px rgba(255,214,120,.45) !important; }
@@ -247,6 +250,7 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
   [data-card-plate] [data-skill-change] [data-card-genre] { background: none !important; border: none !important; color: #fff1b8 !important; padding: 0; }
   [data-card-plate] [data-skill-change-spacer] [data-card-genre] { border-width: 3px 5px; overflow: visible; text-overflow: clip; padding: 1px 0; color: #fff1b8 !important;
     text-shadow: 1px 0 0 #2a1503, -1px 0 0 #2a1503, 0 1px 0 #2a1503, 0 -1px 0 #2a1503 !important; }
+  [data-card-plate="gold"] [data-card-name] { background: radial-gradient(ellipse 62% 48% at 50% 50%, rgba(255,250,232,.62), rgba(255,246,220,.3) 60%, rgba(255,246,220,0) 100%) !important; }
   [data-card-plate="gold"] [data-card-name], [data-card-plate="gold"] [data-skill-change], [data-card-plate="gold"] [data-card-genre], [data-card-plate="gold"] [data-skill-change] [data-card-genre], [data-card-plate="gold"] [data-skill-change-spacer] [data-card-genre] { color: #241000 !important;
     text-shadow: 1px 0 0 #fff6d8, -1px 0 0 #fff6d8, 0 1px 0 #fff6d8, 0 -1px 0 #fff6d8, 0 0 3px rgba(255,250,230,.9) !important; }
   [data-card-art] [data-skill-change], [data-card-art] [data-skill-change-spacer] { min-height: clamp(26px, 3.6dvh, 30px); flex: none; }
