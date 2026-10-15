@@ -25,6 +25,15 @@ const DATA_FILES = [
   'data/breeder.js',
 ];
 
+// WebP の縦横をファイルの頭から読む(VP8 / VP8L / VP8X)。読めなければ null
+const webpSize = (buf) => {
+  if (!buf || buf.length < 30 || buf.toString('ascii', 0, 4) !== 'RIFF' || buf.toString('ascii', 8, 12) !== 'WEBP') return null;
+  const kind = buf.toString('ascii', 12, 16);
+  if (kind === 'VP8X') return { width: 1 + buf.readUIntLE(24, 3), height: 1 + buf.readUIntLE(27, 3) };
+  if (kind === 'VP8L') { const b = buf.readUInt32LE(21); return { width: 1 + (b & 0x3fff), height: 1 + ((b >> 14) & 0x3fff) }; }
+  if (kind === 'VP8 ') return { width: buf.readUInt16LE(26) & 0x3fff, height: buf.readUInt16LE(28) & 0x3fff };
+  return null;
+};
 let failed = 0;
 const check = (name, ok, detail = '') => {
   console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`);
@@ -49,6 +58,12 @@ for (const [name, url] of entries) {
   const file = imageFilePath(url);
   if (!fs.existsSync(file)) { missing.push(`${name} → ${url}`); continue; }
   try {
+    // WebP(行動カードの絵・2026-10-15)は canvas では開けないので、ファイルの頭(RIFF/WEBP と縦横)を読んで確かめる
+    if (/\.webp$/i.test(file)) {
+      const size = webpSize(fs.readFileSync(file));
+      if (!size || !size.width || !size.height) broken.push(`${name} → ${url}`);
+      continue;
+    }
     const img = new Image();
     img.src = fs.readFileSync(file);
     if (!img.width || !img.height) broken.push(`${name} → ${url}`);

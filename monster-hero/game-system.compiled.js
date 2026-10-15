@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a047d3f37969eae3
+// source-sha256: 8a246eba0abc9ae7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-15 09:40";
+const BUILD_DATE = "2026-10-15 11:55";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -11920,6 +11920,7 @@ const RELEASE_FLAGS = {
   speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE,
   tactics: TACTICS_MODE_PUBLIC_RELEASE,
   rhythmHell: true,
+  battleCardArt: false,
   assistantChat: true,
   assistantDailyLines: true,
   tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE,
@@ -61600,6 +61601,86 @@ const handCardNameFit = (name, boxHeight) => {
     lineHeight: String(lh)
   };
 };
+const BATTLE_CARD_ART_DEBUG = (() => {
+  const KEY = 'mh_debug_battle_card_art_v1';
+  let on = false;
+  try {
+    on = localStorage.getItem(KEY) === '1';
+  } catch (e) {
+    on = false;
+  }
+  return {
+    get on() {
+      return on;
+    },
+    set(next) {
+      on = !!next;
+      try {
+        if (on) localStorage.setItem(KEY, '1');else localStorage.removeItem(KEY);
+      } catch (e) {}
+      return on;
+    }
+  };
+})();
+const battleCardArtOn = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.battleCardArt === true || BATTLE_CARD_ART_DEBUG.on;
+const BATTLE_CARD_ROMAN = Object.freeze(['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX']);
+const battleCardArtOf = c => {
+  if (!c || typeof BATTLE_CARD_ART === 'undefined') return null;
+  const F = BATTLE_CARD_ART.frames;
+  const lvlOf = i => Number.isInteger(i) && i >= 0 ? i : null;
+  if (c.type === 'atk') {
+    const i = lvlOf(BASE_ATK_EVOLUTION.findIndex(e => e.icon === c.icon));
+    return {
+      frame: F.red,
+      mark: i == null ? null : BATTLE_CARD_ART.atk[i],
+      roman: i == null ? '' : BATTLE_CARD_ROMAN[i]
+    };
+  }
+  if (c.type === 'range_atk') {
+    const r = Number.isInteger(c.rangeIdx) ? c.rangeIdx : null;
+    const i = lvlOf(RANGE_EVOLUTION.findIndex(e => typeof c.name === 'string' && r != null && c.name === `${RANGE_LABELS[r]}${e.name}`));
+    return {
+      frame: F.blue,
+      mark: r == null ? null : BATTLE_CARD_ART.range[r] || null,
+      roman: i == null ? '' : BATTLE_CARD_ROMAN[i]
+    };
+  }
+  if (c.type === 'guard') {
+    const i = lvlOf(GUARD_EVOLUTION.findIndex(e => e.name === c.name || e.icon === c.icon));
+    return {
+      frame: F.green,
+      mark: i == null ? null : BATTLE_CARD_ART.guard[i],
+      roman: i == null ? '' : BATTLE_CARD_ROMAN[i]
+    };
+  }
+  if (c.type === 'weak_guard') return {
+    frame: F.green,
+    mark: BATTLE_CARD_ART.guard[0],
+    roman: ''
+  };
+  if (c.type === 'unique') return {
+    frame: F.red,
+    mark: null,
+    roman: ''
+  };
+  return {
+    frame: F.purple,
+    mark: null,
+    roman: ''
+  };
+};
+let battleCardArtPreloaded = false;
+const preloadBattleCardArt = () => {
+  if (battleCardArtPreloaded || typeof BATTLE_CARD_ART === 'undefined' || typeof Image === 'undefined') return;
+  battleCardArtPreloaded = true;
+  [...Object.values(BATTLE_CARD_ART.frames), ...BATTLE_CARD_ART.atk, ...BATTLE_CARD_ART.guard, ...BATTLE_CARD_ART.range].forEach(src => {
+    try {
+      const im = new Image();
+      im.decoding = 'async';
+      im.src = src;
+    } catch (e) {}
+  });
+};
 const HAND_CARD_FIT = Object.freeze({
   iconTop: 'clamp(2px, 0.7dvh, 6px)',
   icon: 'clamp(24px, 4.2dvh, 36px)',
@@ -66455,8 +66536,10 @@ function BattleScreen({
     const isDragging = dragState?.active && dragState?.cardIndex === i;
     const tutorialAllowed = battleTutorialCardAllowed(c);
     const tutorialTargeted = !!battleTutorialCardTarget && battleTutorialCardKind(c) === battleTutorialCardTarget;
+    const cardArt = tacticsNewLayout && battleCardArtOn() ? battleCardArtOf(c) : null;
     const handCardButton = React.createElement("button", {
       "data-hand-card": i,
+      "data-card-art": cardArt ? 'on' : undefined,
       "data-dragging-card": isDragging ? 'true' : undefined,
       "data-card-cost": requiredGuts,
       "data-card-type": c.type,
@@ -66493,7 +66576,7 @@ function BattleScreen({
         ...(TYPE_INLINE_STYLE[c.type] || {})
       },
       className: `relative w-full ${tacticsNewLayout ? 'rounded-[12px] border' : 'rounded-xl border-2'} p-1 flex flex-col items-center justify-between bg-gradient-to-b ${TYPE_COLORS[c.type]} ${isDragging ? 'ring-4 ring-white shadow-[0_0_24px_rgba(255,255,255,0.6)]' : isSel ? 'transition-all -translate-y-1.5 ring-2 ring-cyan-300 z-20 scale-[1.03] opacity-90 saturate-[0.95] shadow-[0_0_16px_rgba(103,232,249,0.45)]' : 'transition-all opacity-90'} ${isPending ? 'ring-4 ring-yellow-400 animate-pulse shadow-[0_0_20px_rgba(250,204,21,0.7)]' : ''} ${!isSelectable && !isSel && !isDragging ? 'grayscale opacity-50' : ''}${tutorialTargeted ? ' is-battle-tutorial-spot' : ''}${battleTutorialCardTarget && !tutorialTargeted ? ' grayscale opacity-25' : ''}`
-    }, tacticsNewLayout && React.createElement(React.Fragment, null, React.createElement("span", {
+    }, tacticsNewLayout && !cardArt && React.createElement(React.Fragment, null, React.createElement("span", {
       "aria-hidden": "true",
       "data-card-pattern": tacticsCardGenre && tacticsCardGenre(c) || ''
     }), React.createElement("span", {
@@ -66505,7 +66588,33 @@ function BattleScreen({
     }), React.createElement("span", {
       "data-card-gem": true,
       "aria-label": `消費ガッツ ${curGuts}`
-    }, curGuts)), discardCards && discardCards.includes(i) && React.createElement("div", {
+    }, curGuts)), cardArt && React.createElement(React.Fragment, null, React.createElement("img", {
+      "aria-hidden": "true",
+      "data-card-art-frame": true,
+      src: cardArt.frame,
+      alt: "",
+      draggable: false,
+      className: "mh-card-art-frame"
+    }), React.createElement("span", {
+      "data-card-gem": true,
+      "data-card-art-gem": true,
+      "aria-label": `消費ガッツ ${curGuts}`,
+      className: "mh-card-art-gem"
+    }, curGuts), cardArt.mark && React.createElement("img", {
+      "aria-hidden": "true",
+      "data-card-art-mark": true,
+      src: cardArt.mark,
+      alt: "",
+      draggable: false,
+      className: "mh-card-art-mark"
+    }), !cardArt.mark && React.createElement("span", {
+      "aria-hidden": "true",
+      "data-card-art-icon": true,
+      className: "mh-card-art-icon"
+    }, cardIconNode(c.icon, 26, c.id)), cardArt.roman && React.createElement("span", {
+      "data-card-art-roman": cardArt.roman,
+      className: "mh-card-art-roman"
+    }, cardArt.roman)), discardCards && discardCards.includes(i) && React.createElement("div", {
       "data-card-discard": true,
       className: "absolute inset-0 z-30 flex items-center justify-center rounded-[inherit] bg-black/60 text-[12px] font-black text-amber-200"
     }, "捨てる"), isSel && !assignedMon && React.createElement("div", {
@@ -78327,6 +78436,7 @@ function MonsterHeroGame() {
   const [showDeckInfo, setShowDeckInfo] = useState(false);
   const [showEnemyInfo, setShowEnemyInfo] = useState(false);
   const [showHeroInfo, setShowHeroInfo] = useState(false);
+  const [battleCardArtDebug, setBattleCardArtDebug] = useState(() => BATTLE_CARD_ART_DEBUG.on);
   const [showSoulBattleEffects, setShowSoulBattleEffects] = useState(false);
   const [battleLog, setBattleLog] = useState([]);
   const [showBattleLog, setShowBattleLog] = useState(false);
@@ -82018,6 +82128,9 @@ function MonsterHeroGame() {
       live: true
     });
   }, [rhythmEventStoryPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay, battleGuideChecked, battleTutorialStep]);
+  useEffect(() => {
+    if (bootPhase === 'GAME' && battleCardArtOn()) preloadBattleCardArt();
+  }, [bootPhase, battleCardArtDebug]);
   useEffect(() => {
     if (RHYTHM_HELL_STORY_TRIGGER !== 'release') return;
     if (!(typeof rhythmHellOpen === 'function' && rhythmHellOpen())) return;
@@ -102641,6 +102754,14 @@ function MonsterHeroGame() {
     }, "🔓 すべて解放してバトル", React.createElement("small", {
       className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
     }, "全モンスター・全アシストカード・全難易度を選べます・解放は保存されず、記録・ランキング・報酬もつきません")), React.createElement("button", {
+      type: "button",
+      "data-battle-card-art-toggle": true,
+      "aria-pressed": battleCardArtDebug,
+      onClick: () => setBattleCardArtDebug(BATTLE_CARD_ART_DEBUG.set(!battleCardArtDebug)),
+      className: `w-full min-h-[52px] rounded-2xl px-3 py-2 text-left text-[12px] font-black active:scale-95 ${battleCardArtDebug ? 'border-2 border-fuchsia-300 bg-fuchsia-500 text-slate-900' : 'border-2 border-fuchsia-400/40 bg-fuchsia-950/30 text-fuchsia-100'}`
+    }, "🃏 行動カードの絵(試作): ", battleCardArtDebug ? '新しい絵' : '今のカード', React.createElement("span", {
+      className: "block text-[10px] font-bold opacity-80"
+    }, "押すと切り替わります。タクティクスの手札に出ます(この端末だけ)")), React.createElement("button", {
       type: "button",
       "data-battle-perf-toggle": true,
       "aria-pressed": battlePerfOn,
