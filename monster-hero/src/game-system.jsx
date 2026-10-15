@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b53bd5e919774398
+// generated-sha256: 9f59a93ef9a10daf
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-15 16:14"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-15 16:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -37343,6 +37343,7 @@ const battleCardArtOn = () => (typeof RELEASE_FLAGS !== 'undefined' && RELEASE_F
 //   小さい字・長音・句読点の前では折らない。候補のうち「長い方の行がいちばん短い」所で折る。1行に収まるなら1行。
 //   長すぎる行(8字以上)は同じ決まりでもう一度折る。返り値は行の配列
 const BATTLE_CARD_NAME_PER_LINE = 5;
+const BATTLE_CARD_NAME_ONE_LINE = 8;
 const battleCardNameClass = (ch) => (/[\u30a0-\u30ff\u31f0-\u31ff\uff66-\uff9f]/.test(ch) ? 'kata'
   : /[\u3040-\u309f]/.test(ch) ? 'hira' : /[\u4e00-\u9fff\u3005\u3006]/.test(ch) ? 'kan' : /[0-9A-Za-z\uff10-\uff5a]/.test(ch) ? 'alnum' : 'other');
 const BATTLE_CARD_NO_BREAK_BEFORE = /^[ぁぃぅぇぉっゃゅょゎゕゖァィゥェォッャュョヮヵヶーｰ・、。！？!?…ゝゞヽヾ）」』】]/;
@@ -37371,6 +37372,8 @@ const BATTLE_CARD_NAME_BREAKS = Object.freeze({
   'ピアノパラソル脳天撃': 'ピアノパラソル|脳天撃', 'メロディキャンディボム': 'メロディ|キャンディボム', 'ナイトメアらっきょうボム': 'ナイトメア|らっきょうボム', '聖夜の鐘を鳴響け': '聖夜の鐘を|鳴響け', '終焉に救いを与えよ': '終焉に|救いを与えよ', '永劫の贖いを全うせよ': '永劫の贖いを|全うせよ',
 });
 const battleCardNameLines = (name, per = BATTLE_CARD_NAME_PER_LINE) => {
+  // 1行に入る名前(5.75px で置き場に収まる8字ぶんまで)は折らない(2026-10-15 社長「短い技名も無理して2行にしないで」)
+  if (per === BATTLE_CARD_NAME_PER_LINE && battleCardNameUnits(name) <= BATTLE_CARD_NAME_ONE_LINE) return [String(name || '')];
   if (Object.prototype.hasOwnProperty.call(BATTLE_CARD_NAME_BREAKS, String(name || ''))) return BATTLE_CARD_NAME_BREAKS[String(name)].split('|');
   const chars = [...String(name || '')];
   const n = chars.length;
