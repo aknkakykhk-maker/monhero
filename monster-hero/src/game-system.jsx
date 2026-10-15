@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3722b1eccfe462fa
+// generated-sha256: 1c20c934dec2c503
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-15 12:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-15 12:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -37343,7 +37343,15 @@ const BATTLE_CARD_ROMAN = Object.freeze(['I', 'II', 'III', 'IV', 'V', 'VI', 'VII
 //   攻撃=赤・距離撃=青・守り=緑・支援=紫・固有技=金(社長の決定)。弱いガードは緑(守りの1段目のマーク・段階の札なし)・それ以外は紫
 //   shape … 枠の丸の位置の型。'std'(4色)・'gold'(固有技の金。大きい丸が大きく少し下)
 //   段階は表の何番目かで決める(攻撃は BASE_ATK_EVOLUTION の icon、守りは GUARD_EVOLUTION の name、距離撃は RANGE_EVOLUTION の名前)
+// 名札の色は枠と同じ(赤・青・緑・紫・金)。枠の絵から引く
 const battleCardArtOf = (c) => {
+  const base = battleCardArtBaseOf(c);
+  if (!base) return null;
+  const F = BATTLE_CARD_ART.frames, P = BATTLE_CARD_ART.plates || {};
+  const color = Object.keys(F).find((k) => F[k] === base.frame) || 'purple';
+  return { ...base, color, plate: P[color] || null };
+};
+const battleCardArtBaseOf = (c) => {
   if (!c || typeof BATTLE_CARD_ART === 'undefined') return null;
   const F = BATTLE_CARD_ART.frames;
   const lvlOf = (i) => (Number.isInteger(i) && i >= 0 ? i : null);
@@ -37370,7 +37378,7 @@ let battleCardArtPreloaded = false;
 const preloadBattleCardArt = () => {
   if (battleCardArtPreloaded || typeof BATTLE_CARD_ART === 'undefined' || typeof Image === 'undefined') return;
   battleCardArtPreloaded = true;
-  [...Object.values(BATTLE_CARD_ART.frames), ...BATTLE_CARD_ART.atk, ...BATTLE_CARD_ART.guard, ...BATTLE_CARD_ART.range]
+  [...Object.values(BATTLE_CARD_ART.frames), ...BATTLE_CARD_ART.atk, ...BATTLE_CARD_ART.guard, ...BATTLE_CARD_ART.range, ...Object.values(BATTLE_CARD_ART.plates || {})]
     .forEach((src) => { try { const im = new Image(); im.decoding = 'async'; im.src = src; } catch (e) {} });
 };
 const HAND_CARD_FIT = Object.freeze({
@@ -40084,12 +40092,12 @@ function BattleScreen({
               // 光らせるのは「いま触ってほしい種類」だけ。技変更の番は名前のところも光らせる
               const tutorialTargeted=!!battleTutorialCardTarget&&battleTutorialCardKind(c)===battleTutorialCardTarget;
               const cardArt=tacticsNewLayout&&battleCardArtOn()?battleCardArtOf(c):null;
-              const handCardButton=(<button data-hand-card={i} data-card-art={cardArt?(cardArt.shape||'std'):undefined} data-dragging-card={isDragging?'true':undefined} data-card-cost={requiredGuts} data-card-type={c.type} data-card-usable={isSelectable?'true':'false'} data-card-block={cardBlock&&!cardBlock.ok?cardBlock.kind:undefined} onPointerDown={(e)=>{
+              const handCardButton=(<button data-hand-card={i} data-card-art={cardArt?(cardArt.shape||'std'):undefined} data-card-plate={cardArt&&cardArt.plate?cardArt.color:undefined} data-dragging-card={isDragging?'true':undefined} data-card-cost={requiredGuts} data-card-type={c.type} data-card-usable={isSelectable?'true':'false'} data-card-block={cardBlock&&!cardBlock.ok?cardBlock.kind:undefined} onPointerDown={(e)=>{
                 if(isBusy||autoBattleRef.current||!tutorialAllowed)return;
                 const pt=e.touches?e.touches[0]:e;
                 cardDragActiveRef.current=false;
                 setDragState({cardIndex:i, x:pt.clientX, y:pt.clientY, active:false, card:c});
-              }} style={{...(isDragging?{touchAction:'none',position:'fixed',left:dragState.x,top:dragState.y,transform:'translate(-50%,-50%) rotate(-3deg) scale(1.15)',zIndex:70000,width:'72px',pointerEvents:'none',transition:'none',filter:'drop-shadow(0 12px 18px rgba(0,0,0,0.65))'}:{touchAction:'none',boxShadow:tacticsNewLayout?`${(TYPE_INLINE_STYLE[c.type]||{}).borderColor?`0 -2px 10px ${(TYPE_INLINE_STYLE[c.type]||{}).borderColor}45, `:''}inset 0 1px 0 rgba(255,255,255,.08), 0 5px 12px rgba(0,0,0,.24)`:`${(TYPE_INLINE_STYLE[c.type]||{}).borderColor?`0 0 12px ${(TYPE_INLINE_STYLE[c.type]||{}).borderColor}70, `:''}inset 0 1px 0 rgba(255,255,255,.34), inset 0 -10px 16px rgba(0,0,0,.30), 0 4px 10px rgba(0,0,0,.5)`}),...(TYPE_INLINE_STYLE[c.type]||{})}} className={`relative w-full ${tacticsNewLayout?'rounded-[12px] border':'rounded-xl border-2'} p-1 flex flex-col items-center justify-between bg-gradient-to-b ${TYPE_COLORS[c.type]} ${isDragging?'ring-4 ring-white shadow-[0_0_24px_rgba(255,255,255,0.6)]':isSel?'transition-all -translate-y-1.5 ring-2 ring-cyan-300 z-20 scale-[1.03] opacity-90 saturate-[0.95] shadow-[0_0_16px_rgba(103,232,249,0.45)]':'transition-all opacity-90'} ${isPending?'ring-4 ring-yellow-400 animate-pulse shadow-[0_0_20px_rgba(250,204,21,0.7)]':''} ${!isSelectable&&!isSel&&!isDragging?'grayscale opacity-50':''}${tutorialTargeted?' is-battle-tutorial-spot':''}${battleTutorialCardTarget&&!tutorialTargeted?' grayscale opacity-25':''}`}>
+              }} style={{...(cardArt&&cardArt.plate?{'--mh-plate':`url("${cardArt.plate}")`}:{}),...(isDragging?{touchAction:'none',position:'fixed',left:dragState.x,top:dragState.y,transform:'translate(-50%,-50%) rotate(-3deg) scale(1.15)',zIndex:70000,width:'72px',pointerEvents:'none',transition:'none',filter:'drop-shadow(0 12px 18px rgba(0,0,0,0.65))'}:{touchAction:'none',boxShadow:tacticsNewLayout?`${(TYPE_INLINE_STYLE[c.type]||{}).borderColor?`0 -2px 10px ${(TYPE_INLINE_STYLE[c.type]||{}).borderColor}45, `:''}inset 0 1px 0 rgba(255,255,255,.08), 0 5px 12px rgba(0,0,0,.24)`:`${(TYPE_INLINE_STYLE[c.type]||{}).borderColor?`0 0 12px ${(TYPE_INLINE_STYLE[c.type]||{}).borderColor}70, `:''}inset 0 1px 0 rgba(255,255,255,.34), inset 0 -10px 16px rgba(0,0,0,.30), 0 4px 10px rgba(0,0,0,.5)`}),...(TYPE_INLINE_STYLE[c.type]||{})}} className={`relative w-full ${tacticsNewLayout?'rounded-[12px] border':'rounded-xl border-2'} p-1 flex flex-col items-center justify-between bg-gradient-to-b ${TYPE_COLORS[c.type]} ${isDragging?'ring-4 ring-white shadow-[0_0_24px_rgba(255,255,255,0.6)]':isSel?'transition-all -translate-y-1.5 ring-2 ring-cyan-300 z-20 scale-[1.03] opacity-90 saturate-[0.95] shadow-[0_0_16px_rgba(103,232,249,0.45)]':'transition-all opacity-90'} ${isPending?'ring-4 ring-yellow-400 animate-pulse shadow-[0_0_20px_rgba(250,204,21,0.7)]':''} ${!isSelectable&&!isSel&&!isDragging?'grayscale opacity-50':''}${tutorialTargeted?' is-battle-tutorial-spot':''}${battleTutorialCardTarget&&!tutorialTargeted?' grayscale opacity-25':''}`}>
                 {/* ★新しい盤面の手札の飾り(2026-09-24 ユーザー指示「カードの絵をもっと高級感というか、いいかんじに」)。
                     金の縁(回る光)・種類ごとの地の模様・ときどき横切る光の筋・左上の消費ガッツの宝石。
                     見た目は data-tactics-look の CSS(70-bootstrap)がまとめて持つ。★消費ガッツはこの宝石だけに出す

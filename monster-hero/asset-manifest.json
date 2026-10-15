@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "92be69c31d3e",
-  "packs": {"beat":{"bytes":87387400,"count":77},"battle":{"bytes":106084389,"count":463},"all":{"bytes":193471789,"count":540}},
+  "id": "02e7fcf77600",
+  "packs": {"beat":{"bytes":87387400,"count":77},"battle":{"bytes":106127343,"count":468},"all":{"bytes":193514743,"count":545}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"ddce743e94fa","size":1416528,"pack":"beat"},
@@ -538,6 +538,11 @@
     "images/ui/battle-cards/guard-7.webp": {"v":"eaae25598a9b","size":9212,"pack":"battle"},
     "images/ui/battle-cards/guard-8.webp": {"v":"e19abed694ec","size":9870,"pack":"battle"},
     "images/ui/battle-cards/guard-9.webp": {"v":"77107591ce9a","size":8884,"pack":"battle"},
+    "images/ui/battle-cards/plate-blue.webp": {"v":"206a41f4f990","size":8744,"pack":"battle"},
+    "images/ui/battle-cards/plate-gold.webp": {"v":"f92a595ad789","size":8720,"pack":"battle"},
+    "images/ui/battle-cards/plate-green.webp": {"v":"993ea66f8428","size":8702,"pack":"battle"},
+    "images/ui/battle-cards/plate-purple.webp": {"v":"84fefdb268fe","size":8438,"pack":"battle"},
+    "images/ui/battle-cards/plate-red.webp": {"v":"223ba9d247d0","size":8350,"pack":"battle"},
     "images/ui/battle-cards/range-0.webp": {"v":"960161f8f3a9","size":8326,"pack":"battle"},
     "images/ui/battle-cards/range-1.webp": {"v":"75d975b66cc5","size":8238,"pack":"battle"},
     "images/ui/battle-cards/range-2.webp": {"v":"217c186d914d","size":8404,"pack":"battle"},

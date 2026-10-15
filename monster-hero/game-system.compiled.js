@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 29033ff7b55d5be6
+// source-sha256: 16dbb71fc5d54714
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-15 12:10";
+const BUILD_DATE = "2026-10-15 12:34";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -61625,6 +61625,18 @@ const BATTLE_CARD_ART_DEBUG = (() => {
 const battleCardArtOn = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.battleCardArt === true || BATTLE_CARD_ART_DEBUG.on;
 const BATTLE_CARD_ROMAN = Object.freeze(['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX']);
 const battleCardArtOf = c => {
+  const base = battleCardArtBaseOf(c);
+  if (!base) return null;
+  const F = BATTLE_CARD_ART.frames,
+    P = BATTLE_CARD_ART.plates || {};
+  const color = Object.keys(F).find(k => F[k] === base.frame) || 'purple';
+  return {
+    ...base,
+    color,
+    plate: P[color] || null
+  };
+};
+const battleCardArtBaseOf = c => {
   if (!c || typeof BATTLE_CARD_ART === 'undefined') return null;
   const F = BATTLE_CARD_ART.frames;
   const lvlOf = i => Number.isInteger(i) && i >= 0 ? i : null;
@@ -61679,7 +61691,7 @@ let battleCardArtPreloaded = false;
 const preloadBattleCardArt = () => {
   if (battleCardArtPreloaded || typeof BATTLE_CARD_ART === 'undefined' || typeof Image === 'undefined') return;
   battleCardArtPreloaded = true;
-  [...Object.values(BATTLE_CARD_ART.frames), ...BATTLE_CARD_ART.atk, ...BATTLE_CARD_ART.guard, ...BATTLE_CARD_ART.range].forEach(src => {
+  [...Object.values(BATTLE_CARD_ART.frames), ...BATTLE_CARD_ART.atk, ...BATTLE_CARD_ART.guard, ...BATTLE_CARD_ART.range, ...Object.values(BATTLE_CARD_ART.plates || {})].forEach(src => {
     try {
       const im = new Image();
       im.decoding = 'async';
@@ -66546,6 +66558,7 @@ function BattleScreen({
     const handCardButton = React.createElement("button", {
       "data-hand-card": i,
       "data-card-art": cardArt ? cardArt.shape || 'std' : undefined,
+      "data-card-plate": cardArt && cardArt.plate ? cardArt.color : undefined,
       "data-dragging-card": isDragging ? 'true' : undefined,
       "data-card-cost": requiredGuts,
       "data-card-type": c.type,
@@ -66564,6 +66577,9 @@ function BattleScreen({
         });
       },
       style: {
+        ...(cardArt && cardArt.plate ? {
+          '--mh-plate': `url("${cardArt.plate}")`
+        } : {}),
         ...(isDragging ? {
           touchAction: 'none',
           position: 'fixed',
