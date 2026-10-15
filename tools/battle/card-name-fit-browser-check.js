@@ -8,7 +8,8 @@
 //   ① 置き場はカード幅の16.5%より内側(中の面の宝石はカード幅の約14%まで来る。金の枠は縁が細いので12.5%)・上は段階の札の下・下は下段の札の上
 //      金の枠(固有技)は、大きい丸の下の宝石の飾り(カードの高さの約42.5%)より下(2026-10-15 社長「固有技だけカードの柄に被ってる」)
 //   ② 名前は置き場からはみ出さない(下の飾り線の場所 6px も残す。横持ちの金の枠は名前の欄が狭いので線を出さない)。赤・金の両方、縦持ち・横持ちの両方
-//   ③ どの名前も同じ大きさ(8字ぶんが赤青緑紫の置き場に収まる大きさ。手札で約5.7px)・2行まで(2026-10-15 社長「文字は全部同じサイズで最大2行」)
+//   ③ どの名前も同じ大きさ(1行6字ぶんが赤青緑紫の置き場に収まる大きさ。手札で約7.67px)・3行まで(2026-10-15 社長「長い名前だけ3行を許す」)。
+//      違ってよいのは、言葉を割れない数件と、横持ち・金の枠の3行(欄の高さが足りない)だけ
 const fs = require('fs');
 const path = require('path');
 const http = require('http');
@@ -42,7 +43,7 @@ vm.createContext(nameCtx);
 vm.runInContext(battle.slice(battle.indexOf('const BATTLE_CARD_NAME_PER_LINE'), battle.indexOf('const BATTLE_CARD_ROMAN = Object.freeze(')).replace(/^const /gm, 'var '), nameCtx);
 const names = collectNames();
 const CARD_W = 72;
-const WANT = (CARD_W * 0.66 - 1.5) / 8; // 赤青緑紫の置き場(カード幅の66%)に8字ぶんがちょうど収まる大きさ
+const WANT = (CARD_W * 0.66 - 1.5) / 6; // 赤青緑紫の置き場(カード幅の66%)に1行6字ぶんがちょうど収まる大きさ(2026-10-15 社長「長い名前だけ3行を許す」)
 const cards = names.map((n) => ({ name: n, lines: nameCtx.battleCardNameLines(n), style: nameCtx.battleCardNameFit(n) }));
 
 const html = read('monster-hero/index.html');
@@ -112,7 +113,7 @@ const server = http.createServer((req, res) => {
           // ② はみ出し(字と飾り線をまとめて置き場に収める)
           const fits = sr.left >= box.l - 0.5 && sr.right <= box.r + 0.5 && sr.height + gap + ruleH <= box.b - box.t + 0.5;
           if (!fits) out.bad.push(`${c.lines.join('/')}(${kind} ${font.toFixed(1)}px 幅${sr.width.toFixed(1)}/${(box.r - box.l).toFixed(1)} 高さ${(sr.height + gap + ruleH).toFixed(1)}/${(box.b - box.t).toFixed(1)})`);
-          if ((Math.abs(font - WANT) > 0.05 || c.lines.length > 2) && out.small.length < 6) out.small.push(`${c.lines.join('/')}(${kind}) ${font.toFixed(2)}px ${c.lines.length}行`);
+          if (Math.abs(font - WANT) > 0.05 || c.lines.length > 3) out.small.push({ name: c.name, lines: c.lines.length, text: `${c.lines.join('/')}(${kind}) ${font.toFixed(2)}px ${c.lines.length}行`, font });
           if (font < 5.5 - 0.01) out.bad.push(`${c.name} ${font}px`);
         }
         return out;
@@ -121,10 +122,17 @@ const server = http.createServer((req, res) => {
       check(`② ${label}: ${cards.length}件 × 赤・金 の名前が置き場からはみ出さない`, res.bad.length === 0, res.bad.slice(0, 6).join(' '));
       const f = res.fonts.sort((a, b) => a - b);
       console.log(`   ${label}: 字の大きさ 最小${f[0].toFixed(1)}px・真ん中${f[Math.floor(f.length / 2)].toFixed(1)}px・最大${f[f.length - 1].toFixed(1)}px`);
-      small.push(...res.small.map((s) => `${label} ${s}`));
+      small.push(...res.small.map((s) => ({ ...s, label })));
       await page.close();
     }
-    check(`③ 縦持ち・横持ちとも、どの名前も同じ大きさ(${WANT.toFixed(2)}px)・2行まで`, small.length === 0, small.join(' / '));
+    // ③ ほかと違う大きさになってよいのは、1行6字ぶんを超える(言葉を割れない)名前と、横持ちの3行(欄の高さが足りない)だけ
+    const unitsOf = (t) => [...t].reduce((n, ch) => n + (/[\x20-\x7e]/.test(ch) ? 0.62 : 1), 0);
+    // 金の枠は名前を大きい丸の下の飾りより下に置くので欄が低く、3行は高さで少し小さくなる(金の札に出る3行の名前は スターバースト・ストリーム だけ)
+    const allowed = (x) => cards.find((c) => c.name === x.name).lines.some((l) => unitsOf(l) > 6) || (x.lines === 3 && (x.label === '横持ち' || /\(gold\)/.test(x.text)));
+    const wrong = small.filter((x) => !allowed(x));
+    check(`③ 縦持ち・横持ちとも、名前は同じ大きさ(${WANT.toFixed(2)}px)・3行まで`, wrong.length === 0, wrong.slice(0, 6).map((x) => `${x.label} ${x.text}`).join(' / '));
+    const ex = [...new Set(small.filter(allowed).map((x) => `${x.label} ${x.text}`))];
+    console.log(`   例外(小さくなる): ${ex.length}件 ${ex.join(' / ')}`);
   } catch (e) { check('ブラウザで確かめられた', false, String(e).slice(0, 300)); }
   finally { if (browser) await browser.close(); server.close(); }
   console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
