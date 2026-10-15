@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: fdebf8333bff2772
+// source-sha256: fa48568139a18d69
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-15 20:51";
+const BUILD_DATE = "2026-10-15 20:59";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -5483,6 +5483,9 @@ const RHYTHM_COMBO_SIZE_STEP = 10;
 const RHYTHM_LANE_GLOW_LABELS = Object.freeze([['NORMAL', '標準'], ['LOW', '控えめ'], ['NONE', 'なし']]);
 const RHYTHM_ROAD_WIDTH_LABELS = Object.freeze([['WIDE', '広い'], ['STANDARD', 'ふつう'], ['NARROW', '細い']]);
 const RHYTHM_EFFECT_LABELS = Object.freeze([['NORMAL', '最大'], ['LOW', '多め'], ['LIGHT', '標準'], ['MINIMAL', '最小']]);
+const RHYTHM_TAP_LIGHT_MODES = Object.freeze(['AUTO', 'ALWAYS']);
+const RHYTHM_TAP_LIGHT_LABELS = Object.freeze([['AUTO', 'おまかせ'], ['ALWAYS', 'いつも出す']]);
+const rhythmTapLightOnly = settings => !!settings && settings.tapLight === 'ALWAYS' && (settings.lightweightMode === true || settings.effectAmount === 'MINIMAL');
 const RHYTHM_FRAME_RATE_MODES = Object.freeze(['POWER_SAVE', 'DEVICE']);
 const RHYTHM_FRAME_RATE_LABELS = Object.freeze([['POWER_SAVE', '省電力'], ['DEVICE', '端末に合わせる']]);
 const RHYTHM_RENDER_QUALITY_MODES = Object.freeze(['AUTO', 'HIGH', 'STANDARD', 'SAVE']);
@@ -5568,6 +5571,8 @@ const RHYTHM_AUTO_EFFECT_STEPS = Object.freeze([s => s.noteBloom ? {
   stageEffect: 'CALM'
 } : null, s => s.stageEffect === 'CALM' ? {
   stageEffect: 'SIMPLE'
+} : null, s => s.tapLight === 'ALWAYS' && typeof rhythmCanvasHitsActive === 'function' && !rhythmCanvasHitsActive() ? {
+  tapLight: 'AUTO'
 } : null]);
 const rhythmCapEffects = (settings, level) => {
   let out = settings;
@@ -5580,7 +5585,7 @@ const rhythmCapEffects = (settings, level) => {
   }
   return out;
 };
-const RHYTHM_AUTO_EFFECT_STEP_LABELS = Object.freeze(['にじむ光', 'ライブ→派手', '道の演出・ノーツの動き・盛り上がりの光', '判定の演出・コンボの節目', '派手→控えめ', '控えめ→シンプル']);
+const RHYTHM_AUTO_EFFECT_STEP_LABELS = Object.freeze(['にじむ光', 'ライブ→派手', '道の演出・ノーツの動き・盛り上がりの光', '判定の演出・コンボの節目', '派手→控えめ', '控えめ→シンプル', '押したときの光(画面の要素で描くとき)']);
 const rhythmNextEffectCap = (settings, level) => {
   const now = rhythmCapEffects(settings, level);
   for (let i = Math.max(0, Number(level) || 0); i < RHYTHM_AUTO_EFFECT_STEPS.length; i++) {
@@ -5797,6 +5802,7 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   judgmentAtTap: false,
   hudSongFade: true,
   autoEffectDown: true,
+  tapLight: 'AUTO',
   stageEffect: 'SIMPLE',
   roadWidth: 'WIDE',
   laneCover: 0,
@@ -5872,6 +5878,7 @@ const normalizeRhythmSettings = value => {
     judgmentAtTap: typeof source.judgmentAtTap === 'boolean' ? source.judgmentAtTap : DEFAULT_RHYTHM_SETTINGS.judgmentAtTap,
     hudSongFade: typeof source.hudSongFade === 'boolean' ? source.hudSongFade : DEFAULT_RHYTHM_SETTINGS.hudSongFade,
     autoEffectDown: typeof source.autoEffectDown === 'boolean' ? source.autoEffectDown : DEFAULT_RHYTHM_SETTINGS.autoEffectDown,
+    tapLight: RHYTHM_TAP_LIGHT_MODES.includes(source.tapLight) ? source.tapLight : DEFAULT_RHYTHM_SETTINGS.tapLight,
     stageEffect: RHYTHM_STAGE_EFFECTS.includes(source.stageEffect) ? source.stageEffect : DEFAULT_RHYTHM_SETTINGS.stageEffect,
     laneCover: rhythmFiniteStep(source.laneCover, RHYTHM_LANE_COVER_MIN, RHYTHM_LANE_COVER_MAX, RHYTHM_LANE_COVER_STEP, DEFAULT_RHYTHM_SETTINGS.laneCover),
     timingDisplay: RHYTHM_TIMING_DISPLAYS.includes(source.timingDisplay) ? source.timingDisplay : DEFAULT_RHYTHM_SETTINGS.timingDisplay,
@@ -29729,7 +29736,9 @@ const RhythmOptions = ({
     className: head
   }, "◆ 演出"), React.createElement("div", {
     className: wide ? `mt-1 ${grid}` : `mt-3 ${grid}`
-  }, field('演出量', segments('effectAmount', RHYTHM_EFFECT_LABELS), '重い順に「最大」「多め」「標準」「最小」の4段で、既定は「標準」です。判定・判定窓・スコアはどの段でも変わりません。\n「最大」＝2026-09-13より前の見た目そのまま。判定文字の金色の帯や虹が流れ、判定ラインが拍に合わせて脈打ち、コンボ数が跳ね、両サイドのマスモンも跳ねます。\n「多め」＝判定文字の流れと光のにじみだけ止めます（色・大きさはそのまま）。\n「標準」＝それに加えて、曲のあいだずっと動き続けるものを止めます。判定ラインの脈打ち、コンボ数の跳ねと枠の脈動、判定文字が出た瞬間に弾む動き、ノーツを取り切ったときの光です。判定ラインで弾ける光・100コンボごとのお祝い・フルコンボの大きな表示は残るので、手ごたえは変わりません。両サイドのマスモンの動きはここでは変わりません（専用の「両サイドのマスモン｜動き」で決めます）。\n「最小」＝光そのものと100コンボごとの演出も出なくなります。高精細な画面では、ノーツを描く細かさも3倍から2倍に下げて軽くします（見た目はほんの少しやわらかくなります）。', {
+  }, field('演出量', segments('effectAmount', RHYTHM_EFFECT_LABELS), '重い順に「最大」「多め」「標準」「最小」の4段で、既定は「標準」です。判定・判定窓・スコアはどの段でも変わりません。\n「最大」＝2026-09-13より前の見た目そのまま。判定文字の金色の帯や虹が流れ、判定ラインが拍に合わせて脈打ち、コンボ数が跳ね、両サイドのマスモンも跳ねます。\n「多め」＝判定文字の流れと光のにじみだけ止めます（色・大きさはそのまま）。\n「標準」＝それに加えて、曲のあいだずっと動き続けるものを止めます。判定ラインの脈打ち、コンボ数の跳ねと枠の脈動、判定文字が出た瞬間に弾む動き、ノーツを取り切ったときの光です。判定ラインで弾ける光・100コンボごとのお祝い・フルコンボの大きな表示は残るので、手ごたえは変わりません。両サイドのマスモンの動きはここでは変わりません（専用の「両サイドのマスモン｜動き」で決めます）。\n「最小」＝光そのものと100コンボごとの演出も出なくなります（取ったときの光だけは、下の「押したときの光」を「いつも出す」にすると出せます）。高精細な画面では、ノーツを描く細かさも3倍から2倍に下げて軽くします（見た目はほんの少しやわらかくなります）。', {
+    full: true
+  }), field('押したときの光', segments('tapLight', RHYTHM_TAP_LIGHT_LABELS), 'ノーツを取った瞬間に判定ラインで弾ける光（TAP・フリックの炎・ホールドやスライドを押し切ったときの光）を、演出量とは別に決めます。既定は「おまかせ」です。判定・スコアは変わりません。\n「おまかせ」＝演出量に合わせます。演出量「最小」と軽量モードでは出ません（これまでどおり）。\n「いつも出す」＝演出量「最小」や軽量モードでも、この光だけは出します。判定文字やコンボ数の弾み、画面のフラッシュ、両サイドのマスモンの跳ねなど、ほかの演出は止まったままです。モンスターノーツの光も、ふつうのノーツと同じ大きさになります。', {
     full: true
   }), field('ライブ背景', segments('stageEffect', RHYTHM_STAGE_EFFECT_LABELS), '演奏中のレーンの後ろの演出です。既定は「シンプル」（これまでの見た目）です。判定・スコアはどれでも変わりません。\n「ライブ」＝「派手」に加えて、ライブ会場のようにします。サーチライトが曲の拍に合わせて明るくなり、レーザーが小節ごとに向きと色を変えて走り、道の両側には観客のペンライトが奥までずらりと並び、拍に合わせて揺れます。ペンライトの色もコンボが伸びるほど変わります。いちばん重い段なので、端末が熱くなるときは下げてください。絵を描くのが得意な専用の部分（GPU）が無い端末では「派手」と同じになります。\n「派手」＝曲のジャケットをぼかして背景に敷き、ノーツが判定ラインへ来るタイミングで背景が光ります。コンボが伸びるほど光の色が熱くなり（水色→桃→金→白金）、モンスターノーツでは金色に大きく光ります。左右からサーチライトが揺れ、光の粒が舞います。\n「控えめ」＝ジャケットの背景とタイミングの光だけにします（動き続けるサーチライトと光の粒は出しません）。\n「シンプル」＝これまでの見た目のままです。\n軽量モードのときは「シンプル」になります。演出量「最小」では、サーチライト・光の粒・レーザー・ペンライトは出しません。', {
     full: true
@@ -34761,6 +34770,24 @@ const RhythmTapTest = ({
           attr: 'rhythmComboPop'
         });
         rhythmRestartAnimations(restarts);
+      } else if (rhythmTapLightOnly(settings)) {
+        const area = playAreaRef.current,
+          lineY = RHYTHM_JUDGMENT_LINE_Y.ratio,
+          nowMs = run.audio?.songTimeMs?.() ?? note.timeMs;
+        const span = rhythmNoteIsSlide(note) ? rhythmProjectSlideSpan(rhythmReleaseLane(note), note, lineY, nowMs) : rhythmNoteVisualSpan(note, note.lane, lineY, nowMs);
+        const flickHit = rhythmNoteVisualType(note) === 'FLICK' ? rhythmFlickDir(note) || 'up' : note.endFlick ? 'up' : '';
+        const hitEffect = rhythmSpawnHitEffect(area, {
+          centerRatio: span.center,
+          widthRatio: span.width,
+          judgment,
+          monster: false,
+          precise: preciseHit,
+          defer: true,
+          flick: flickHit,
+          finish: rhythmNoteHasBody(note),
+          sky: rhythmNoteSkyHeight(note) > 0
+        });
+        if (hitEffect) rhythmRestartAnimations([hitEffect]);
       }
     }
     if (settings.vibrationEnabled && judgment !== 'MISS') RHYTHM_HAPTICS.tap(monsterHit ? 26 : 12);
@@ -36077,6 +36104,7 @@ const RhythmTapTest = ({
     if (canvasNotes) RHYTHM_CANVAS_RENDERER.warmSprites({
       effect: settings.effectAmount,
       lightweight: settings.lightweightMode,
+      tapLight: rhythmTapLightOnly(settings),
       maxDpr: noteCanvasMaxDpr
     });
     if (canvasNotes) faceBitmapsRef.current.forEach(face => {
@@ -37827,6 +37855,7 @@ const RhythmTapTest = ({
     "data-rhythm-strip": RHYTHM_STRIP.value || undefined,
     "data-rhythm-lightweight": settings.lightweightMode ? 'true' : 'false',
     "data-rhythm-effect": settings.effectAmount,
+    "data-rhythm-tap-light": rhythmTapLightOnly(settings) ? '1' : undefined,
     onPointerDown: pointerDown,
     onPointerMove: pointerMove,
     onPointerUp: pointerEnd,

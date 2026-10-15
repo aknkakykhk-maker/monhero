@@ -270,7 +270,7 @@ check('画質の設定がノーツの canvas の画素密度に効き、描く�
   gameSrc.includes("const noteCanvasMaxDpr=Math.min(settings.effectAmount==='MINIMAL'?2:RHYTHM_NOTE_CANVAS_MAX_DPR,rhythmRenderQualityCap(renderQualityNow,RHYTHM_NOTE_CANVAS_MAX_DPR));")
   &&gameSrc.includes('noteCanvasMaxDprRef.current=noteCanvasMaxDpr;')
   &&gameSrc.includes('maxDpr:noteCanvasMaxDprRef.current,sizeScale:')
-  &&gameSrc.includes('lightweight:settings.lightweightMode,maxDpr:noteCanvasMaxDpr});'));
+  &&gameSrc.includes('lightweight:settings.lightweightMode,tapLight:rhythmTapLightOnly(settings),maxDpr:noteCanvasMaxDpr});'));
 check('画質「自動」は詰まりが続いたときだけ一段下げ、上げ直さない',
   gameSrc.includes("if(settings.renderQuality==='AUTO'){const aq=run._autoQuality")
   &&gameSrc.includes('aq.slow/aq.frames>RHYTHM_AUTO_QUALITY_SLOW_RATIO&&stepAutoQualityRef.current')

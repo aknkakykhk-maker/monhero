@@ -30156,8 +30156,9 @@ const installRhythmGeometryStyles=()=>{
     [data-rhythm-screen-flash][data-rhythm-flash="1"]{animation:mhRhythmScreenFlash 620ms ease-out 1}
     @keyframes mhRhythmScreenFlash{0%{opacity:0}12%{opacity:1}100%{opacity:0}}
     /* 演出量MINIMAL・軽量モードでは出さない(音は鳴る) */
-    [data-rhythm-play-area][data-rhythm-lightweight="true"] [data-rhythm-hit-layer],
-    [data-rhythm-play-area][data-rhythm-effect="MINIMAL"] [data-rhythm-hit-layer],
+    /* ただし設定「押したときの光」が「いつも出す」(data-rhythm-tap-light)のときは、判定ラインで弾ける光だけは出す(2026-10-15) */
+    [data-rhythm-play-area][data-rhythm-lightweight="true"]:not([data-rhythm-tap-light="1"]) [data-rhythm-hit-layer],
+    [data-rhythm-play-area][data-rhythm-effect="MINIMAL"]:not([data-rhythm-tap-light="1"]) [data-rhythm-hit-layer],
     [data-rhythm-play-area][data-rhythm-lightweight="true"] [data-rhythm-screen-flash],
     [data-rhythm-play-area][data-rhythm-effect="MINIMAL"] [data-rhythm-screen-flash]{display:none!important}
     /* 能力名(「ミーア 元気！」)も出た瞬間に大きく弾ませる。1曲に最大4回しか出ないので大きめに。 */
@@ -33829,7 +33830,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       // 押さえている最中の光(演奏の途中で新しく絵を作らないよう、ここで焼いておく)
       if(effect!=='MINIMAL'){for(const kind of ['HOLD','SLIDE']){holdSparkSprite(kind);sparkStreakSprite(kind);holdPillarSprite(kind);holdColumnSprite(kind);}sparkDotSprite();hitFlareSprite();holdBoltSprite();}
       // 叩いたときの光(canvas で描くときだけ)
-      if(effect!=='MINIMAL'&&!options.lightweight)warmHitSprites();
+      // 設定「押したときの光」が「いつも出す」なら、最小・軽量でもこの光だけは描くので焼いておく(options.tapLight・2026-10-15)
+      if((effect!=='MINIMAL'&&!options.lightweight)||options.tapLight)warmHitSprites();
       // WebGL のときは、焼いた絵を演奏の前に GPU へ渡しておく
       if(ctx&&backend==='webgl'&&typeof ctx.preloadImage==='function')for(const sprite of sprites.values())if(sprite&&sprite.canvas)ctx.preloadImage(sprite.canvas);
       return sprites.size-before;
