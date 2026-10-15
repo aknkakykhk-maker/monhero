@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 456f2f4853022cbf
+// generated-sha256: c342f060d20ff338
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-16 06:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-16 07:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -30918,6 +30918,8 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
   const [assetDownloadOpen, setAssetDownloadOpen] = useState(false);
   // 助手のひとことの出し方(21-assistant.jsx の ASSISTANT_BUBBLE_STORE。早期の return より前で読む)
   const assistantBubble = useAssistantBubbleState();
+  // 行動カードの見た目(71-screen-battle.jsx の BATTLE_CARD_LOOK。端末に保存する。バトル画面は開くたびに読む)
+  const [battleCardLook, setBattleCardLook] = useState(() => BATTLE_CARD_LOOK.value);
   if (assetDownloadOpen) return <AssetDownloadPage onBack={() => setAssetDownloadOpen(false)}/>;
   if (battleSettingsOpen) {
     return (
@@ -30936,6 +30938,22 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
                     aria-pressed={battleScreenStyle === option.id}
                     onClick={() => onChangeBattleScreenStyle(option.id)}
                     className={`flex min-h-[58px] flex-col items-center justify-center rounded-xl px-1 py-1.5 text-[10px] font-black leading-tight active:scale-95 ${battleScreenStyle === option.id ? 'border border-cyan-400 bg-cyan-600 text-white' : 'border border-white/10 bg-slate-950 text-slate-300'}`}>
+                    <span className="block">{option.label}</span>
+                    <small className="mt-0.5 block text-[9px] font-bold opacity-80">{option.note}</small>
+                  </button>
+                ))}
+              </div>
+            </div>
+            {/* 行動カードの見た目(2026-10-16 社長「前のカードも選べる」)。タクティクスバトル(新)の手札だけ。既定は新しいカードの絵 */}
+            <div data-battle-card-look-setting className="border-t border-white/10 pt-3">
+              <b className="block text-[13px] font-black text-slate-200">行動カードの見た目</b>
+              <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">タクティクスバトル(新)の手札のカードの見た目を選びます。カードの効果や大きさ・操作は同じです。</p>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                {BATTLE_CARD_LOOKS.map(option => (
+                  <button key={option.id} type="button" data-battle-card-look={option.id}
+                    aria-pressed={battleCardLook === option.id}
+                    onClick={() => setBattleCardLook(BATTLE_CARD_LOOK.set(option.id))}
+                    className={`flex min-h-[58px] flex-col items-center justify-center rounded-xl px-1 py-1.5 text-[10px] font-black leading-tight active:scale-95 ${battleCardLook === option.id ? 'border border-cyan-400 bg-cyan-600 text-white' : 'border border-white/10 bg-slate-950 text-slate-300'}`}>
                     <span className="block">{option.label}</span>
                     <small className="mt-0.5 block text-[9px] font-bold opacity-80">{option.note}</small>
                   </button>
@@ -37383,7 +37401,23 @@ const BATTLE_CARD_ART_DEBUG = (() => {
     set(next) { on = !!next; try { if (on) localStorage.setItem(KEY, '1'); else localStorage.removeItem(KEY); } catch (e) {} return on; },
   };
 })();
-const battleCardArtOn = () => (typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.battleCardArt === true) || BATTLE_CARD_ART_DEBUG.on;
+// 行動カードの見た目の選択(2026-10-16 社長「前のカードも選べる」)。設定 → バトル設定で「新しいカードの絵」(既定)と「前のカード」を選ぶ。
+//   保存は新しいキー mh_battle_card_look_v1('art' / 'classic')だけ。無い・壊れているときは既定の 'art'。前のカードを選んだ人には、公開の印やデバッグの切り替えより優先して前のカードを出す
+const BATTLE_CARD_LOOKS = Object.freeze([
+  { id: 'art', label: '新しいカードの絵', note: '種類ごとの色の枠' },
+  { id: 'classic', label: '前のカード', note: '字が大きいシンプルな形' },
+]);
+const normalizeBattleCardLook = (v) => (v === 'classic' ? 'classic' : 'art');
+const BATTLE_CARD_LOOK = (() => {
+  const KEY = 'mh_battle_card_look_v1';
+  let look = 'art';
+  try { look = normalizeBattleCardLook(localStorage.getItem(KEY)); } catch (e) { look = 'art'; }
+  return {
+    get value() { return look; },
+    set(next) { look = normalizeBattleCardLook(next); try { localStorage.setItem(KEY, look); } catch (e) {} return look; },
+  };
+})();
+const battleCardArtOn = () => BATTLE_CARD_LOOK.value !== 'classic' && ((typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.battleCardArt === true) || BATTLE_CARD_ART_DEBUG.on);
 // ★カード名の折り返し(2026-10-15 社長「言葉の切れ目で折って」「長い名前だけ3行を許す」)。
 //   字は全部同じ大きさで、1行に入る名前(BATTLE_CARD_NAME_PER_LINE=6字ぶんまで)は1行、入らない名前は2行、2行に入らない名前だけ3行。
 //   折ってよい所 … 字の種類が変わる所(カタカナ・ひらがな・漢字・英数)・単語の切れ目(Intl.Segmenter があれば)・下の上書き表の「|」。

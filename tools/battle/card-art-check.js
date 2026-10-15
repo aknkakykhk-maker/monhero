@@ -111,6 +111,19 @@ check('④ 公開の印 battleCardArt は真(2026-10-15 社長「このまま公
 const app = read('monster-hero/src/parts/60-app.jsx');
 check('④ デバッグ設定に切り替えがある', /data-battle-card-art-toggle aria-pressed=\{battleCardArtDebug\} onClick=\{\(\)=>setBattleCardArtDebug\(BATTLE_CARD_ART_DEBUG\.set\(!battleCardArtDebug\)\)\}/.test(app));
 check('④ ゲームに入ったら(バトルの前に)絵を読み込む', /if \(bootPhase === 'GAME' && battleCardArtOn\(\)\) preloadBattleCardArt\(\);/.test(app));
+// ⑨ 行動カードの見た目の選択(2026-10-16 社長「前のカードも選べる」)
+{
+  const lookCtx = { RELEASE_FLAGS: { battleCardArt: true }, localStorage: { store: {}, getItem(k) { return this.store[k] ?? null; }, setItem(k, v) { this.store[k] = String(v); }, removeItem(k) { delete this.store[k]; } } };
+  vm.createContext(lookCtx);
+  vm.runInContext(slice('const BATTLE_CARD_ART_DEBUG = ', 'const battleCardNameClass').replace(/^const /gm, 'var '), lookCtx);
+  const on1 = lookCtx.battleCardArtOn();
+  lookCtx.BATTLE_CARD_LOOK.set('classic');
+  const on2 = lookCtx.battleCardArtOn(), saved = lookCtx.localStorage.store.mh_battle_card_look_v1;
+  check('⑨ 既定は新しいカードの絵・「前のカード」を選ぶと絵を出さない・新しいキー mh_battle_card_look_v1 に保存', on1 === true && on2 === false && saved === 'classic');
+  check('⑨ 保存値が無い・壊れているときは既定(新しいカードの絵)', lookCtx.normalizeBattleCardLook(null) === 'art' && lookCtx.normalizeBattleCardLook('xyz') === 'art' && lookCtx.normalizeBattleCardLook('classic') === 'classic');
+  const settings = read('monster-hero/src/parts/51-screen-settings.jsx');
+  check('⑨ 設定 → バトル設定に「行動カードの見た目」の切り替えがある', /data-battle-card-look-setting/.test(settings) && /onClick=\{\(\) => setBattleCardLook\(BATTLE_CARD_LOOK\.set\(option\.id\)\)\}/.test(settings));
+}
 check('④ 手札は公開の印かデバッグの切り替えのときだけ絵にする(タクティクスの新しい手札)', /const cardArt=tacticsNewLayout&&battleCardArtOn\(\)\?battleCardArtOf\(c\):null;/.test(battle));
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');

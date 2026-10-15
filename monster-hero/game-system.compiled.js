@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 29aaf3ca0ecc2417
+// source-sha256: 2b5f054ef415199c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-16 06:55";
+const BUILD_DATE = "2026-10-16 07:08";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -49101,6 +49101,7 @@ function SettingsScreen({
   const [battleSettingsOpen, setBattleSettingsOpen] = useState(false);
   const [assetDownloadOpen, setAssetDownloadOpen] = useState(false);
   const assistantBubble = useAssistantBubbleState();
+  const [battleCardLook, setBattleCardLook] = useState(() => BATTLE_CARD_LOOK.value);
   if (assetDownloadOpen) return React.createElement(AssetDownloadPage, {
     onBack: () => setAssetDownloadOpen(false)
   });
@@ -49134,6 +49135,26 @@ function SettingsScreen({
       "aria-pressed": battleScreenStyle === option.id,
       onClick: () => onChangeBattleScreenStyle(option.id),
       className: `flex min-h-[58px] flex-col items-center justify-center rounded-xl px-1 py-1.5 text-[10px] font-black leading-tight active:scale-95 ${battleScreenStyle === option.id ? 'border border-cyan-400 bg-cyan-600 text-white' : 'border border-white/10 bg-slate-950 text-slate-300'}`
+    }, React.createElement("span", {
+      className: "block"
+    }, option.label), React.createElement("small", {
+      className: "mt-0.5 block text-[9px] font-bold opacity-80"
+    }, option.note))))), React.createElement("div", {
+      "data-battle-card-look-setting": true,
+      className: "border-t border-white/10 pt-3"
+    }, React.createElement("b", {
+      className: "block text-[13px] font-black text-slate-200"
+    }, "行動カードの見た目"), React.createElement("p", {
+      className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
+    }, "タクティクスバトル(新)の手札のカードの見た目を選びます。カードの効果や大きさ・操作は同じです。"), React.createElement("div", {
+      className: "mt-2 grid grid-cols-2 gap-2"
+    }, BATTLE_CARD_LOOKS.map(option => React.createElement("button", {
+      key: option.id,
+      type: "button",
+      "data-battle-card-look": option.id,
+      "aria-pressed": battleCardLook === option.id,
+      onClick: () => setBattleCardLook(BATTLE_CARD_LOOK.set(option.id)),
+      className: `flex min-h-[58px] flex-col items-center justify-center rounded-xl px-1 py-1.5 text-[10px] font-black leading-tight active:scale-95 ${battleCardLook === option.id ? 'border border-cyan-400 bg-cyan-600 text-white' : 'border border-white/10 bg-slate-950 text-slate-300'}`
     }, React.createElement("span", {
       className: "block"
     }, option.label), React.createElement("small", {
@@ -61802,7 +61823,38 @@ const BATTLE_CARD_ART_DEBUG = (() => {
     }
   };
 })();
-const battleCardArtOn = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.battleCardArt === true || BATTLE_CARD_ART_DEBUG.on;
+const BATTLE_CARD_LOOKS = Object.freeze([{
+  id: 'art',
+  label: '新しいカードの絵',
+  note: '種類ごとの色の枠'
+}, {
+  id: 'classic',
+  label: '前のカード',
+  note: '字が大きいシンプルな形'
+}]);
+const normalizeBattleCardLook = v => v === 'classic' ? 'classic' : 'art';
+const BATTLE_CARD_LOOK = (() => {
+  const KEY = 'mh_battle_card_look_v1';
+  let look = 'art';
+  try {
+    look = normalizeBattleCardLook(localStorage.getItem(KEY));
+  } catch (e) {
+    look = 'art';
+  }
+  return {
+    get value() {
+      return look;
+    },
+    set(next) {
+      look = normalizeBattleCardLook(next);
+      try {
+        localStorage.setItem(KEY, look);
+      } catch (e) {}
+      return look;
+    }
+  };
+})();
+const battleCardArtOn = () => BATTLE_CARD_LOOK.value !== 'classic' && (typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.battleCardArt === true || BATTLE_CARD_ART_DEBUG.on);
 const BATTLE_CARD_NAME_PER_LINE = 6;
 const battleCardNameClass = ch => /[\u30a0-\u30ff\u31f0-\u31ff\uff66-\uff9f]/.test(ch) ? 'kata' : /[\u3040-\u309f]/.test(ch) ? 'hira' : /[\u4e00-\u9fff\u3005\u3006]/.test(ch) ? 'kan' : /[0-9A-Za-z\uff10-\uff5a]/.test(ch) ? 'alnum' : 'other';
 const BATTLE_CARD_NO_BREAK_BEFORE = /^[ぁぃぅぇぉっゃゅょゎゕゖァィゥェォッャュョヮヵヶーｰ・、。！？!?…ゝゞヽヾ）」』】]/;

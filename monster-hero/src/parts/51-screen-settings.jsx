@@ -121,6 +121,8 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
   const [assetDownloadOpen, setAssetDownloadOpen] = useState(false);
   // 助手のひとことの出し方(21-assistant.jsx の ASSISTANT_BUBBLE_STORE。早期の return より前で読む)
   const assistantBubble = useAssistantBubbleState();
+  // 行動カードの見た目(71-screen-battle.jsx の BATTLE_CARD_LOOK。端末に保存する。バトル画面は開くたびに読む)
+  const [battleCardLook, setBattleCardLook] = useState(() => BATTLE_CARD_LOOK.value);
   if (assetDownloadOpen) return <AssetDownloadPage onBack={() => setAssetDownloadOpen(false)}/>;
   if (battleSettingsOpen) {
     return (
@@ -139,6 +141,22 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
                     aria-pressed={battleScreenStyle === option.id}
                     onClick={() => onChangeBattleScreenStyle(option.id)}
                     className={`flex min-h-[58px] flex-col items-center justify-center rounded-xl px-1 py-1.5 text-[10px] font-black leading-tight active:scale-95 ${battleScreenStyle === option.id ? 'border border-cyan-400 bg-cyan-600 text-white' : 'border border-white/10 bg-slate-950 text-slate-300'}`}>
+                    <span className="block">{option.label}</span>
+                    <small className="mt-0.5 block text-[9px] font-bold opacity-80">{option.note}</small>
+                  </button>
+                ))}
+              </div>
+            </div>
+            {/* 行動カードの見た目(2026-10-16 社長「前のカードも選べる」)。タクティクスバトル(新)の手札だけ。既定は新しいカードの絵 */}
+            <div data-battle-card-look-setting className="border-t border-white/10 pt-3">
+              <b className="block text-[13px] font-black text-slate-200">行動カードの見た目</b>
+              <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">タクティクスバトル(新)の手札のカードの見た目を選びます。カードの効果や大きさ・操作は同じです。</p>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                {BATTLE_CARD_LOOKS.map(option => (
+                  <button key={option.id} type="button" data-battle-card-look={option.id}
+                    aria-pressed={battleCardLook === option.id}
+                    onClick={() => setBattleCardLook(BATTLE_CARD_LOOK.set(option.id))}
+                    className={`flex min-h-[58px] flex-col items-center justify-center rounded-xl px-1 py-1.5 text-[10px] font-black leading-tight active:scale-95 ${battleCardLook === option.id ? 'border border-cyan-400 bg-cyan-600 text-white' : 'border border-white/10 bg-slate-950 text-slate-300'}`}>
                     <span className="block">{option.label}</span>
                     <small className="mt-0.5 block text-[9px] font-bold opacity-80">{option.note}</small>
                   </button>
