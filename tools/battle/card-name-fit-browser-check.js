@@ -10,6 +10,7 @@
 //   ② 名前は置き場からはみ出さない(下の飾り線の場所 6px も残す。横持ちの金の枠は名前の欄が狭いので線を出さない)。赤・金の両方、縦持ち・横持ちの両方
 //   ③ どの名前も同じ大きさ(1行6字ぶんが赤青緑紫の置き場に収まる大きさ。手札で約7.67px)・3行まで(2026-10-15 社長「長い名前だけ3行を許す」)。
 //      違ってよいのは、言葉を割れない数件と、横持ち・金の枠の3行(欄の高さが足りない)だけ
+//   ④ 「⇄ 技変更」の「技変更」の3文字の真ん中が、下の種類の札・カードの真ん中にそろう(2026-10-16 社長「⇄技変更の4文字をセンターにしてるから左に寄って見える」)
 const fs = require('fs');
 const path = require('path');
 const http = require('http');
@@ -69,12 +70,13 @@ const server = http.createServer((req, res) => {
   try {
     browser = await playwright.chromium.launch(fs.existsSync('/opt/pw-browsers/chromium') ? { executablePath: '/opt/pw-browsers/chromium' } : {});
     const small = [];
+    const centers = [];
     for (const [label, vw, vh, cardH] of [['縦持ち', 390, 844, 133], ['横持ち', 844, 390, 111]]) {
       const page = await browser.newPage({ viewport: { width: vw, height: vh } });
       await page.goto(`http://localhost:${port}/monster-hero/__card-name-fit.html`);
       const res = await page.evaluate(({ cards, cardH, CARD_W, WANT }) => {
         const rootEl = document.getElementById('root');
-        const out = { bad: [], room: [], small: [], fonts: [] };
+        const out = { bad: [], room: [], small: [], fonts: [], center: [] };
         const mk = (c, kind) => {
           const card = document.createElement('div');
           card.setAttribute('data-card-art', kind === 'gold' ? 'gold' : 'std');
@@ -82,7 +84,7 @@ const server = http.createServer((req, res) => {
           card.style.cssText = `position:relative;width:${CARD_W}px;height:${cardH}px;isolation:isolate;flex:none`;
           card.innerHTML = '<div data-decoration></div><div><div data-card-name class="text-[11px] font-black leading-[13px] w-full whitespace-normal flex items-center justify-center overflow-hidden px-0.5"><span data-card-name-text></span></div>'
             // 下段の札は本物(71-screen-battle.jsx の技変更の段)と同じ作り。高さは CSS の min-height で決まる
-            + '<div data-skill-change class="flex w-full shrink-0 flex-col items-stretch justify-between gap-px rounded-[7px] border border-white/60 p-[2px]"><span class="flex items-center justify-center gap-0.5 pt-px text-[9px] font-black leading-none"><span>⇄</span>技変更</span>'
+            + '<div data-skill-change class="flex w-full shrink-0 flex-col items-stretch justify-between gap-px rounded-[7px] border border-white/60 p-[2px]"><span class="flex items-center justify-center gap-0.5 pt-px text-[9px] font-black leading-none"><span aria-hidden="true">⇄</span>技変更</span>'
             + '<div data-card-genre="攻撃" class="w-full truncate rounded-[5px] px-0.5 text-[8px] font-black leading-[11px]">攻撃</div></div></div>'
             + (kind === 'gold' ? '' : '<span class="mh-card-art-roman" data-card-art-roman>II</span>');
           const span = card.querySelector('[data-card-name-text]');
@@ -103,6 +105,14 @@ const server = http.createServer((req, res) => {
           const ruleH = parseFloat(after.height) || 0, gap = parseFloat(cs.rowGap) || 0;
           const font = parseFloat(getComputedStyle(card.querySelector('[data-card-name-text]')).fontSize);
           out.fonts.push(font);
+          // ④ 「技変更」の3文字の真ん中と、下の種類の札(攻撃)の真ん中が縦にそろう(⇄ は幅に入れない。2026-10-16 社長)
+          if (c === cards[0]) {
+            const head = card.querySelector('[data-skill-change] > span'), genre = card.querySelector('[data-skill-change] [data-card-genre]');
+            const tn = [...head.childNodes].find((n) => n.nodeType === 3 && /技変更/.test(n.textContent));
+            const rg = document.createRange(); rg.selectNodeContents(tn); const tr = rg.getBoundingClientRect();
+            const gr = genre.getBoundingClientRect();
+            out.center.push({ kind, diff: (tr.left + tr.width / 2) - (gr.left + gr.width / 2), card: (tr.left + tr.width / 2) - (cr.left + cr.width / 2) });
+          }
           // ① 置き場そのもの(1つ目の名前でだけ見れば足りるが、全部見ても軽い)
           const roman = card.querySelector('[data-card-art-roman]');
           const plate = card.querySelector('[data-skill-change]').getBoundingClientRect();
@@ -123,6 +133,7 @@ const server = http.createServer((req, res) => {
       const f = res.fonts.sort((a, b) => a - b);
       console.log(`   ${label}: 字の大きさ 最小${f[0].toFixed(1)}px・真ん中${f[Math.floor(f.length / 2)].toFixed(1)}px・最大${f[f.length - 1].toFixed(1)}px`);
       small.push(...res.small.map((s) => ({ ...s, label })));
+      centers.push(...res.center.map((x) => ({ ...x, label })));
       await page.close();
     }
     // ③ ほかと違う大きさになってよいのは、1行6字ぶんを超える(言葉を割れない)名前と、横持ちの3行(欄の高さが足りない)だけ
@@ -130,6 +141,8 @@ const server = http.createServer((req, res) => {
     // 金の枠は名前を大きい丸の下の飾りより下に置くので欄が低く、3行は高さで少し小さくなる(金の札に出る3行の名前は スターバースト・ストリーム だけ)
     const allowed = (x) => cards.find((c) => c.name === x.name).lines.some((l) => unitsOf(l) > 6) || (x.lines === 3 && (x.label === '横持ち' || /\(gold\)/.test(x.text)));
     const wrong = small.filter((x) => !allowed(x));
+    const off = centers.filter((x) => Math.abs(x.diff) > 1 || Math.abs(x.card) > 1);
+    check('④ 「技変更」の3文字の真ん中が、下の種類の札とカードの真ん中にそろう(1px 以内)', centers.length > 0 && off.length === 0, centers.map((x) => `${x.label} ${x.kind} 札との差${x.diff.toFixed(2)}px・カードとの差${x.card.toFixed(2)}px`).join(' / '));
     check(`③ 縦持ち・横持ちとも、名前は同じ大きさ(${WANT.toFixed(2)}px)・3行まで`, wrong.length === 0, wrong.slice(0, 6).map((x) => `${x.label} ${x.text}`).join(' / '));
     const ex = [...new Set(small.filter(allowed).map((x) => `${x.label} ${x.text}`))];
     console.log(`   例外(小さくなる): ${ex.length}件 ${ex.join(' / ')}`);
