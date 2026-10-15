@@ -373,6 +373,91 @@
      "cost_usd": 4.3198484
     }
    }
+  },
+  {
+   "at": "2026-10-16 02:53",
+   "sessions": {
+    "session_014GTmSNS2ae9tRr57k3zFjC": {
+     "name": "窓口 統括部長モンヒロくん(10/11〜)",
+     "cost_usd": 342.0671951
+    },
+    "session_012TESL6HTwLnNNvrMJLnHAN": {
+     "name": "守り部 部長ガードくん(10/13〜)",
+     "cost_usd": 0.6614537
+    },
+    "session_013PjVKh5sdbiJbni1W5pZhr": {
+     "name": "改善部 部長ダメダシくん(10/13〜)",
+     "cost_usd": 8.613619
+    },
+    "session_013j3vPELgtDfDhHcSzW81PR": {
+     "name": "研究所 レフェリーくん(10/10〜)",
+     "cost_usd": 10.032836
+    },
+    "session_0169T9CNRwoH1QW1vKpEsUy5": {
+     "name": "修理部 ストックくん(10/11〜)",
+     "cost_usd": 19.7336322
+    },
+    "session_01911k2UUtVGudFqekCw9DB9": {
+     "name": "研究所 部長ハカセくん(10/07〜)",
+     "cost_usd": 368.2498644
+    },
+    "session_01CDD9oDTcNPzYzw1txYJndF": {
+     "name": "ビート部 カゲくん(10/13〜)",
+     "cost_usd": 28.2794208
+    },
+    "session_01DT3gL9ZEpezajUTxh9fEfB": {
+     "name": "研究所 ダイスくん(10/10〜)",
+     "cost_usd": 83.4104012
+    },
+    "session_01DfgZpuPHnVgxrwQiurqUQ1": {
+     "name": "ビート部 リバースくん(10/10〜)",
+     "cost_usd": 134.7644082
+    },
+    "session_01GC6TmQQkN6wfT4a8EymrPz": {
+     "name": "研究所 アリーナくん(10/10〜)",
+     "cost_usd": 52.0930446
+    },
+    "session_01JVCTL76hMSV1TP5Z9RMnui": {
+     "name": "バトル部 部長ブレイブくん(10/13〜)",
+     "cost_usd": 111.5115446
+    },
+    "session_01JgrcvWE4GJff7cTHDPoecb": {
+     "name": "ビート部 マクアケくん(10/10〜)",
+     "cost_usd": 199.9530134
+    },
+    "session_01PHekXAt2C5NAZBXL1sh5gG": {
+     "name": "見回り部 部長マップくん(10/07〜)",
+     "cost_usd": 30.8562548
+    },
+    "session_01QSmyXKq2qGHrvHDTCv2h2g": {
+     "name": "修理部 部長ドライバーくん(10/12〜)",
+     "cost_usd": 176.8751234
+    },
+    "session_01SG7SEGSmUcyxyymHyDVipd": {
+     "name": "ビート部 部長テンポくん(10/12〜)",
+     "cost_usd": 246.4965536
+    },
+    "session_01SPwyyGL5vwYvuDU9Bzts2t": {
+     "name": "修理部 ピンセットくん(10/09〜)",
+     "cost_usd": 77.0919265
+    },
+    "session_01VKTcSbgZtBChiibCjAYVgW": {
+     "name": "研究所 セコンドくん(10/10〜)",
+     "cost_usd": 11.8752672
+    },
+    "session_01VRYhgmPT7CS6iFeyRbpz1p": {
+     "name": "開発部 クラフトくん(10/08〜)",
+     "cost_usd": 83.8533608
+    },
+    "session_01WaDzrhPE2Q6PDmeAgFPTwG": {
+     "name": "ビート部 オンプくん(10/13〜)",
+     "cost_usd": 92.5702266
+    },
+    "session_01Wyn2J3kuKNp9MmbffDj3oc": {
+     "name": "修理部 ヤスリくん(10/09〜)",
+     "cost_usd": 29.5027812
+    }
+   }
   }
  ]
 }
