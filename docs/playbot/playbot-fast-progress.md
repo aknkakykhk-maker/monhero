@@ -19,3 +19,8 @@
 2. `run-checks --changed` → PR → マージ
 3. 印の名前と縮めた所の一覧を、アリーナくん(session_01GC6TmQQkN6wfT4a8EymrPz)とハカセくん(session_01911k2UUtVGudFqekCw9DB9)へ送る
 4. 更新履歴・ヘルプには載せない(デバッグ専用)
+
+## 2026-10-15 再開 → 社長の指示「モンヒロビート以外を止める」で、また止めた(修理部:ドライバーくん)
+- できたこと: いまの main へ載せ直した(ブランチ claude/playbot-fast)。アリーナくんの希望で、印をそのタブの sessionStorage(mhdev_playbot_v1)にも控えて読み直し・タイトルへ戻っても残るようにし、window.__playbotFast / window.__playbotSeed で読めるようにした。playbot.js に PLAYBOT_QUERY(開く URL に印を付ける)を足した
+- 比べ走り: 早送りありの1本(種123・--seed 7)は tacticsPro(Hard)を WAVE 10 まで 29ターン・12.1分。早送りなしの1本は止めたため未完。まだ main へは入れていない
+- 次にやること: 同じ種で早送りなしの1本を回して比べる → run-checks → PR → マージ → アリーナくんへ印の名前と縮めた所を送る
