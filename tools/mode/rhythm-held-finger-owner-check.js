@@ -29,7 +29,7 @@ const ctx = { console, navigator: {}, performance: { now: () => 0 }, requestAnim
     addEventListener() {}, removeEventListener() {}, querySelector: () => null, querySelectorAll: () => [] } };
 ctx.window = ctx; ctx.globalThis = ctx;
 vm.createContext(ctx);
-vm.runInContext(src + '\nglobalThis.__x={rhythmMatchInputBatch,RHYTHM_GESTURE_RUNTIME,RHYTHM_SKY_INPUT,RHYTHM_JUDGMENT_LINE_Y,rhythmSkyAcceptLimit,RHYTHM_FLOATING_NOTES};', ctx);
+vm.runInContext(src + '\nglobalThis.__x={rhythmMatchInputBatch,RHYTHM_GESTURE_RUNTIME,RHYTHM_SKY_INPUT,RHYTHM_JUDGMENT_LINE_Y,rhythmSkyAcceptLimit,RHYTHM_FLOATING_NOTES,rhythmRecentTapClaimsClear};', ctx);
 const X = ctx.__x, match = X.rhythmMatchInputBatch;
 
 let failed = 0;
@@ -69,6 +69,27 @@ for (const sub of [3.3, 3.5]) {
   X.RHYTHM_SKY_INPUT.active = true;
 }
 
+// ---- 半レーンずれの両手押し(2026-10-15 社長「両手の連打でミス判定になってたのも…」) ----
+// 同じ時刻に半レーン(サブレーン1〜2)ずれて並んだ2つの TAP を、左右の指が「それぞれ自分のノーツの見た目の中」で押したら、両方取れること。
+// 直す前は、左の指が重なりの所(右のノーツの中心に近い側)を押すと右のノーツを取ってしまい、右の指(右のノーツの右寄り)に行き先が無く片方が MISS だった
+{
+  X.RHYTHM_SKY_INPUT.active = false;
+  let total = 0; const bad = [];
+  for (const w of [2, 3, 4]) for (const shift of [1, 2]) for (const dt of [0, 20, -20]) for (let ea = -0.9; ea <= 0.91; ea += 0.15) for (let eb = -0.9; eb <= 0.91; eb += 0.15) {
+    const A = { index: 0, type: 'TAP', timeMs: 1000, lane: 1, subLane: 2, subLaneWidth: w, done: false, activePointerId: null };
+    const B = { index: 1, type: 'TAP', timeMs: 1000, lane: 1, subLane: 2 + shift, subLaneWidth: w, done: false, activePointerId: null };
+    const ca = 2 + w / 2 + ea, cb = 2 + shift + w / 2 + eb;
+    if (ca < 2 || ca > 2 + w || cb < 2 + shift || cb > 2 + shift + w || ca >= cb) continue;
+    total++; X.RHYTHM_GESTURE_RUNTIME.clear(); X.rhythmRecentTapClaimsClear();
+    const fa = finger('touch:1', ca, null), fb = finger('touch:2', cb, null), got = new Set();
+    const run = (inputs, t) => { for (const r of match([A, B], inputs, t, 0)) if (r.target) { r.target.done = true; got.add(r.target.index); } };
+    if (dt === 0) run([fa, fb], 1000); else if (dt > 0) { run([fa], 1000); run([fb], 1000 + dt); } else { run([fb], 1000); run([fa], 1000 - dt); }
+    if (got.size < 2) bad.push(`幅${w} ずれ${shift} 時間差${dt} 左${ca.toFixed(2)} 右${cb.toFixed(2)}`);
+  }
+  check(`半レーンずれの2つの TAP を左右の指でそれぞれの見た目の中を押すと、両方取れる(${total}通り)`, bad.length === 0, bad.slice(0, 3).join(' / '));
+  X.RHYTHM_SKY_INPUT.active = true;
+}
+
 // ---- 作りの形 ----
 check('控えの判断と浮いた帯の拾いで、指の高さと帯の高さの食い違いを見る(heightMismatch)',
   /const heightMismatch=note=>\{/.test(src)
@@ -90,6 +111,16 @@ check('ロングの終わりの窓で、結ばれた指が同じころのフリ�
   && /inputEnds\(\[\{inputKey\}\]\);/.test(take)
   && /rejudge:true,flickOnly:true\}\]\);/.test(take)
   && /input\?\.flickOnly===true&&note\.type!=='FLICK'/.test(src));
+
+// 5) iPhone は別の指の合図の中で、押さえている指を指の一覧から一瞬落とすことがある。直す前は、そのたびに押さえている帯が「離した扱い(浮いた帯)」になって暗くなっていた
+//    (実ブラウザの再現: tools/playbot/rhythm-two-finger-sky-repro.js の OMIT=1 OMITGAP=90 で、Sheriruth HELL の空中スライドが地上の6回のタップのたびに浮いていた)
+check('ロングを押さえている指が自分の離しの合図なしに指の一覧から消えたら、すぐ離した扱いにせず少し待つ',
+  /const ownEnd=\(e\.type==='touchend'\|\|e\.type==='touchcancel'\)&&Array\.from\(e\.changedTouches/.test(play)
+  && /if\(!ownEnd&&heldNote&&!heldNote\.done&&heldNote\.type==='HOLD'\)/.test(play)
+  && /RHYTHM_MISSING_TOUCH_CONFIRM_MS\);\}return;\}/.test(play)
+  && /const RHYTHM_MISSING_TOUCH_CONFIRM_MS=120;/.test(src));
+check('端末に取り消された指(touchcancel)は、押さえているロングをその場で MISS にせず、ふつうに離したのと同じに扱う',
+  /const cancelTouches=event=>\{Array\.from\(event\.changedTouches\|\|\[\]\)\.forEach\(touch=>release\(inputKey\('touch',touch\.identifier\),false\)\);\};/.test(src));
 
 console.log(failed ? `\n${failed} 件 NG` : '\nすべてOK');
 process.exit(failed ? 1 : 0);

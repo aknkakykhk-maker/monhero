@@ -3,6 +3,8 @@
 // 空中の帯は判定ラインの道をそのまま持ち上げた形なので、空中の指は「判定ラインの高さでの横の位置のまま、高さだけ上げる」(ボットと同じ)。
 //   node tools/playbot/rhythm-two-finger-sky-repro.js --song sheriruth --diff HELL     (SLIDE=174 TAPS=175,176,177,178,179,180 TAPDX=0.9)
 //   SLIDE=150 TAPS=151,152 node tools/playbot/rhythm-two-finger-sky-repro.js --song against_my_own_shadow --diff HELL   (NOFLICK=1 で終点フリックを払わずに離す)
+//   OMIT=1 で指2の touchstart の指の一覧から指1を一瞬欠けさせる(iPhone で起きる形)。OMITGAP=90 でそのあと指1の合図を90ms止める(指をじっと置いている)
+//   BFLICK=1 で指2のタップも払う動きにする(指2が動くときに指1の空中スライドへ入り込まないかを見る)
 //   --root <前の版の worktree> で直す前と比べる。LAG=80 で空中の指を遅らせる。SHOT=40500 SHOTDIR=<フォルダ> で画面写し
 // 目安(直したあと): Sheriruth の TAPDX=0.9 で空中スライドも地上の6つも取れる(直す前は地上が6つとも MISS)
 const path = require('path'), fs = require('fs');
@@ -103,7 +105,7 @@ const mime = f => ({ '.js': 'application/javascript', '.html': 'text/html', '.cs
   const SLIDE_I = Number(process.env.SLIDE), TAPS = String(process.env.TAPS || '').split(',').filter(Boolean).map(Number);
   const { touchInputSource: TIS } = require(path.join(ROOT_DEFAULT, 'tools/playbot/lib/touch-input.js'));
   const shotP = process.env.SHOT ? (async () => { for (const at of String(process.env.SHOT).split(',').map(Number)) { await page.waitForFunction((m) => (window.__mhTestHooks?.rhythmSongMs?.() ?? -1) >= m, at, { timeout: 600000, polling: 'raf' }); await page.screenshot({ path: `${process.env.SHOTDIR || '.'}/shot-${at}.png` }); } })() : null;
-  const resP = page.evaluate(async ([sid, si, taps, src, chartKey, lag, tapdx, noflick]) => {
+  const resP = page.evaluate(async ([sid, si, taps, src, chartKey, lag, tapdx, noflick, bflick, omit, omitgap]) => {
     const area = document.querySelector('[data-rhythm-play-area]');
     const ti = (0, eval)('(' + src.replace(/radiusX: 11, radiusY: 11/g, 'radiusX: 18, radiusY: 18') + ')')(area, 'touch');
     const notes = window.__mhTestHooks.rhythmNotes();
@@ -116,24 +118,33 @@ const mime = f => ({ '.js': 'application/javascript', '.html': 'text/html', '.cs
     const events = [];
     events.push({ at: s.timeMs, f: () => ti.send(ti.makeEvents('down', 1, slidePos(s.timeMs))) });
     for (const ti2 of taps) { const n = notes[ti2], c = (n.subLane + (n.subLaneWidth || 2) / 2) / 2 + tapdx, p = ptLane(c, 0);
+      if (omit) {
+        // iPhone で起きる「合図の中の指の一覧が一瞬欠ける」を真似る: 指2の touchstart の touches に指1が載っていない(次の合図からは載る)
+        events.push({ at: n.timeMs, f: () => { const mk = (id, q) => new Touch({ identifier: id, target: area, clientX: q.x, clientY: q.y, pageX: q.x, pageY: q.y, screenX: q.x, screenY: q.y, radiusX: 18, radiusY: 18, force: 1 });
+          area.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, pointerId: 2, pointerType: 'touch', isPrimary: false, clientX: p.x, clientY: p.y, button: 0, buttons: 1 }));
+          area.dispatchEvent(new TouchEvent('touchstart', { bubbles: true, cancelable: true, touches: [mk(2, p)], targetTouches: [mk(2, p)], changedTouches: [mk(2, p)] }));
+          ti.makeEvents('down', 2, p); window.__mhOmitUntil = window.__mhTestHooks.rhythmSongMs() + omitgap; } });
+      } else
       events.push({ at: n.timeMs, f: () => ti.send(ti.makeEvents('down', 2, p)) });
-      if (n.type === 'FLICK') { events.push({ at: n.timeMs + 25, f: () => ti.send(ti.makeEvents('move', 2, { x: p.x, y: p.y - 30 })) }); events.push({ at: n.timeMs + 45, f: () => ti.send(ti.makeEvents('move', 2, { x: p.x, y: p.y - 60 })) }); events.push({ at: n.timeMs + 60, f: () => ti.send(ti.makeEvents('up', 2, { x: p.x, y: p.y - 60 })) }); }
+      if (n.type === 'FLICK' || bflick) { events.push({ at: n.timeMs + 25, f: () => ti.send(ti.makeEvents('move', 2, { x: p.x, y: p.y - 30 })) }); events.push({ at: n.timeMs + 45, f: () => ti.send(ti.makeEvents('move', 2, { x: p.x, y: p.y - 60 })) }); events.push({ at: n.timeMs + 60, f: () => ti.send(ti.makeEvents('up', 2, { x: p.x, y: p.y - 60 })) }); }
       else events.push({ at: n.timeMs + 60, f: () => ti.send(ti.makeEvents('up', 2, p)) }); }
     const endFlick = !!(sc.endFlick || s.endFlick);
     let flicking = false;
     if (endFlick && !noflick) { events.push({ at: s.endTimeMs - 40, f: () => { flicking = true; const q = slidePos(s.endTimeMs); ti.send(ti.makeEvents('move', 1, { x: q.x, y: q.y - 30 })); } }); events.push({ at: s.endTimeMs - 20, f: () => { const q = slidePos(s.endTimeMs); ti.send(ti.makeEvents('move', 1, { x: q.x, y: q.y - 70 })); } }); events.push({ at: s.endTimeMs, f: () => { const q = slidePos(s.endTimeMs); ti.send(ti.makeEvents('up', 1, { x: q.x, y: q.y - 70 })); } }); }
     else events.push({ at: s.endTimeMs - 5, f: () => ti.send(ti.makeEvents('up', 1, slidePos(s.endTimeMs))) });
     events.sort((a, b) => a.at - b.at);
-    const offLog = []; let lastMove = 0;
+    const offLog = [], floatLog = []; let lastMove = 0;
+    // 浮いた帯の一覧へ足された瞬間をそのまま捕まえる(毎コマの見回りでは、一瞬で戻ったものを取りこぼす)
+    if (typeof RHYTHM_FLOATING_NOTES !== 'undefined' && !RHYTHM_FLOATING_NOTES.__mhWatched) { const add = RHYTHM_FLOATING_NOTES.add.bind(RHYTHM_FLOATING_NOTES); RHYTHM_FLOATING_NOTES.add = x => { try { if (x && x.index === si) floatLog.push('浮' + Math.round(window.__mhTestHooks.rhythmSongMs())); } catch (_) {} return add(x); }; RHYTHM_FLOATING_NOTES.__mhWatched = true; }
     await new Promise(done => { const tick = () => { const ms = window.__mhTestHooks.rhythmSongMs();
       while (events.length && ms >= events[0].at) events.shift().f();
-      if (!flicking && ms >= s.timeMs && ms < s.endTimeMs - 5 && ms - lastMove > 16) { lastMove = ms; ti.send(ti.makeEvents('move', 1, slidePos(ms - lag))); const off = RHYTHM_GESTURE_RUNTIME.slideOffForIndex(si); if (off) offLog.push(Math.round(ms)); }
+      if (!flicking && ms >= s.timeMs && ms < s.endTimeMs - 5 && ms - lastMove > 16 && !(ms < (window.__mhOmitUntil || 0))) { lastMove = ms; ti.send(ti.makeEvents('move', 1, slidePos(ms - lag))); const off = RHYTHM_GESTURE_RUNTIME.slideOffForIndex(si); if (off) offLog.push(Math.round(ms)); }
       if (events.length) requestAnimationFrame(tick); else setTimeout(done, 700); }; requestAnimationFrame(tick); });
     const rs = window.__mhTestHooks.rhythmNoteResults();
-    return { slide: rs[si], taps: taps.map(i => rs[i]), offMs: offLog.length ? offLog[0] + '〜' + offLog[offLog.length - 1] + '(' + offLog.length + 'コマ)' : 'なし' };
-  }, [SONG, SLIDE_I, TAPS, TIS, process.env.CHART || SONG, Number(process.env.LAG || 0), Number(process.env.TAPDX || 0), !!process.env.NOFLICK]);
+    return { slide: rs[si], taps: taps.map(i => rs[i]), offMs: offLog.length ? offLog[0] + '〜' + offLog[offLog.length - 1] + '(' + offLog.length + 'コマ)' : 'なし', floatMs: floatLog.length ? floatLog.join(',') : 'なし' };
+  }, [SONG, SLIDE_I, TAPS, TIS, process.env.CHART || SONG, Number(process.env.LAG || 0), Number(process.env.TAPDX || 0), !!process.env.NOFLICK, !!process.env.BFLICK, !!process.env.OMIT, Number(process.env.OMITGAP || 0)]);
   const res = await resP; if (shotP) await shotP;
-  console.log('空中スライド', SLIDE_I, res.slide.judgment, '押し始め', res.slide.holdJudgment, '離し', res.slide.releaseJudgment, '暗い時間', res.offMs);
+  console.log('空中スライド', SLIDE_I, res.slide.judgment, '押し始め', res.slide.holdJudgment, '離し', res.slide.releaseJudgment, '暗い時間', res.offMs, '離した扱い', res.floatMs);
   res.taps.forEach(t => console.log('  地上', t.index, t.judgment, 'ずれ', t.deltaMs == null ? '-' : Math.round(t.deltaMs)));
   if (errors.length) console.log(`  ページのエラー: ${errors.join(' | ')}`);
   await context.close(); await browser.close();

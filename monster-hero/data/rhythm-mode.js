@@ -3095,6 +3095,16 @@ const RHYTHM_HOLD_RELEASE_GRACE_MS=100;
 // 浮いているノーツ(持ち替え待ち)の控え。指の数までしか増えないので、そのまま総当たりでよい。
 // 突き合わせ側は「開始時刻の窓」を無視してここを見る。
 const RHYTHM_FLOATING_NOTES=new Set();
+// ロングを押さえている指が、自分の離しの合図なしに指の一覧から消えたとき、離した扱いにする前に待つ時間(30-rhythm-play.jsx の syncTouches)
+const RHYTHM_MISSING_TOUCH_CONFIRM_MS=120;
+// 直前に TAP を取った指の控え(半レーンずれの両手押し・2026-10-15)。照合(rhythmMatchInputBatch)だけが読み書きする。見た目にも保存にも関わらない。
+//   同じ時刻に半レーンずれて並んだ2つの TAP を左右の指で押すとき、先に照合された指が重なりの所を押していると、その指が相手側の TAP を取ってしまい、
+//   あとの指(相手側の TAP の外側寄りを押した)に行き先が無くなって片方が MISS になっていた(Node の総当たりで2853通り中18通り)。
+//   あとの指に行き先が無く、その指が「先の指が取った TAP」の内側を押していて、先の指の位置で取れた同じ時刻の TAP がまだ残っていれば、あとの指にそちらを取らせる。
+//   先に取った判定は外さない・付け替えない。あとの指に行き先がある場合は何もしない
+const RHYTHM_RECENT_TAP_CLAIMS=[];
+const RHYTHM_RECENT_TAP_CLAIM_MS=200;
+const rhythmRecentTapClaimsClear=()=>{RHYTHM_RECENT_TAP_CLAIMS.length=0;};
 const rhythmFloatingNoteAdd=note=>{if(note)RHYTHM_FLOATING_NOTES.add(note);};
 const rhythmFloatingNoteRemove=note=>{if(note)RHYTHM_FLOATING_NOTES.delete(note);};
 const rhythmFloatingNotesClear=()=>{RHYTHM_FLOATING_NOTES.clear();};
@@ -3859,7 +3869,10 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
     const captureTouchPositions=event=>{Array.from(event.changedTouches||[]).forEach(touch=>record(inputKey('touch',touch.identifier),touch.clientX,touch.clientY));};
     const captureTouchStart=event=>{if(event.target?.closest?.('[data-rhythm-play-area]'))RHYTHM_NOTE_SE_RUNTIME.warm();captureTouchPositions(event);};
     const releaseTouches=event=>{const age=rhythmReleaseAgeMs(event.timeStamp,nowPerf());Array.from(event.changedTouches||[]).forEach(touch=>release(inputKey('touch',touch.identifier),false,age));};
-    const cancelTouches=event=>{Array.from(event.changedTouches||[]).forEach(touch=>release(inputKey('touch',touch.identifier),true));};
+    // ★端末に取り消された指(touchcancel)は、ふつうに離したのと同じに扱う(途中なら持ち替えの猶予・終わり際なら離しの判定)。
+    //   以前は押さえているロングをその場で MISS にしていた。取り消しはプレイヤーの操作ではなく端末の都合(二本指のジェスチャーと見られた等)で、
+    //   押したのに反応しないと報告のあった曲では取り消しが報告の無い曲の約11倍だった(タッチの診断・2026-10-15)
+    const cancelTouches=event=>{Array.from(event.changedTouches||[]).forEach(touch=>release(inputKey('touch',touch.identifier),false));};
     document.addEventListener('touchstart',captureTouchStart,{capture:true,passive:true});
     document.addEventListener('touchmove',captureTouchPositions,{capture:true,passive:true});
     document.addEventListener('touchend',releaseTouches,{capture:true,passive:true});
@@ -4496,12 +4509,37 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
     //
     // ここでは「控えの指」として返すだけで、判定も音も出さない。
     // 実際の引き継ぎは、1本目が離れたときに game-system.jsx 側が行う。
+    // 半レーンずれの両手押しの救い(RHYTHM_RECENT_TAP_CLAIMS の説明)。仮の入力・取り直し・空中の指では見ない
+    if(!picked&&!tapOnly&&!rejudge&&Number.isFinite(subCoordinate)&&RHYTHM_RECENT_TAP_CLAIMS.length){
+      for(let k=RHYTHM_RECENT_TAP_CLAIMS.length-1;k>=0&&!picked;k--){
+        const c=RHYTHM_RECENT_TAP_CLAIMS[k];
+        if(!c||judgeNow-c.at>RHYTHM_RECENT_TAP_CLAIM_MS||c.key===key)continue;
+        const taken=inputSpan(c.note);
+        if(!taken||!(subCoordinate>=taken.start&&subCoordinate<=taken.end))continue;   // あとの指は、先の指が取った TAP の内側を押している
+        for(let index=matchStart;index<matchEnd;index++){
+          const note=source[index];
+          if(!note||note===c.note||note.done||note.type!=='TAP'||note.activePointerId!==null||claimed.has(index))continue;
+          if(Math.abs(Number(note.timeMs)-Number(c.note.timeMs))>2)continue;                 // 同じ時刻に並んだ TAP だけ
+          if(Math.abs(now-(Number(note.timeMs)+offset))>RHYTHM_INPUT_MATCH_WINDOW_MS)continue;
+          if(heightMismatch(note))continue;
+          const span=inputSpan(note);
+          if(!span)continue;
+          const tolerance=span.width===1?RHYTHM_NARROW_TAP_TOLERANCE_SUB_LANES:RHYTHM_TAP_TOLERANCE_SUB_LANES;
+          if(!(c.sub>=span.start-tolerance&&c.sub<=span.end+tolerance))continue;            // 先の指の位置でも取れた TAP
+          picked=note;pickedIndex=index;break;
+        }
+      }
+    }
     if(!picked){
       const nearHeldBand=heldBandNote(true);
       if(nearHeldBand)return {input,target:null,deltaMs:null,standby:nearHeldBand};
     }
     if(!picked)return {input,target:null,deltaMs:null};
     claimed.add(pickedIndex);
+    if(picked.type==='TAP'&&!tapOnly&&Number.isFinite(subCoordinate)){
+      RHYTHM_RECENT_TAP_CLAIMS.push({note:picked,key,sub:subCoordinate,at:judgeNow});
+      while(RHYTHM_RECENT_TAP_CLAIMS.length>12||(RHYTHM_RECENT_TAP_CLAIMS.length&&judgeNow-RHYTHM_RECENT_TAP_CLAIMS[0].at>RHYTHM_RECENT_TAP_CLAIM_MS*4))RHYTHM_RECENT_TAP_CLAIMS.shift();
+    }
     if(tapOnly)RHYTHM_TOUCH_SPAN_RUNTIME.claimSyntheticTarget(key,picked);
     // 空中の段のある譜面で地上のノーツを取れた押下の深さを覚える(空中の境目をその人の構えに合わせる試作・既定は切)
     if(RHYTHM_SKY_INPUT.active&&RHYTHM_SKY_REACH_ADAPT.on&&!tapOnly&&!(rhythmNoteIsSlide(picked)?rhythmSlideHasSky(picked)&&rhythmSlideSkyAt(picked,Number(picked.timeMs)||0)>=.5:rhythmNoteSkyHeight(picked)>0))RHYTHM_SKY_REACH_ADAPT.note(Number(input?.sky));
