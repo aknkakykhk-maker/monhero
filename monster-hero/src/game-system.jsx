@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d7cbeac61dd6ca38
+// generated-sha256: 456f2f4853022cbf
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-16 06:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-16 06:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -22312,10 +22312,7 @@ if(badge&&!hasAbilityBadge){
 }
 if(hasAbilityBadge){
   const mutekiMs=rhythmMonsterAbilityRemainingMs(run.abilities,'MUTEKI',songTimeMs),gamanMs=rhythmMonsterAbilityRemainingMs(run.abilities,'GAMAN',songTimeMs),hisshiMs=rhythmMonsterAbilityRemainingMs(run.abilities,'HISSHI',songTimeMs),itazuraMs=rhythmMonsterAbilityRemainingMs(run.abilities,'ITAZURA',songTimeMs);
-  // 残りは1秒刻み(切り上げ)で出す(2026-10-16 社長の決定)。0.1秒刻みだと1秒に10回文字が変わり、そのたびに画面の上の段の置き直し(レイアウト)が走って、
-  // 遅い端末ではモンスターノーツの直後にカクついていた(Sheriruth HELL 77.6秒の「我慢」)
-  const secs=ms=>Math.ceil(ms/1000);
-  const text=[mutekiMs>0?`無敵 ${secs(mutekiMs)}s`:'',gamanMs>0?`我慢 ${secs(gamanMs)}s`:'',hisshiMs>0?`必死 ${secs(hisshiMs)}s`:'',itazuraMs>0?`いたずら ${secs(itazuraMs)}s`:'',Number(run.abilities?.konjoStock)>0?'根性 ストック':''].filter(Boolean).join(' / ');
+  const text=[mutekiMs>0?`無敵 ${(mutekiMs/1000).toFixed(1)}s`:'',gamanMs>0?`我慢 ${(gamanMs/1000).toFixed(1)}s`:'',hisshiMs>0?`必死 ${(hisshiMs/1000).toFixed(1)}s`:'',itazuraMs>0?`いたずら ${(itazuraMs/1000).toFixed(1)}s`:'',Number(run.abilities?.konjoStock)>0?'根性 ストック':''].filter(Boolean).join(' / ');
   if(badge._rhythmBadgeText!==text){rhythmSetText(badge,text);badge._rhythmBadgeText=text;}
   if(badge.hidden!==(text===''))badge.hidden=text==='';
 }
