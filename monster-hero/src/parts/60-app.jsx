@@ -6194,6 +6194,15 @@ function MonsterHeroGame() {
         setOnboardingIcon(hasSavedIcon ? savedIcon : null);
         setGameState(savedAssistant ? 'PROFILE' : 'ASSISTANT_SELECT');
       }
+      // れんしゅうの案内をもう見た・断った人は、起動のこの時点で「案内の判定は終わり」にする。
+      // HOMEへ着いてからの判定を待たせない(時刻で流れるお話が、これまでどおりすぐ流れ始める)。はじめての人だけが、HOMEでの判定を待つ。保存は増やさない
+      try {
+        const [guideSeen, guideShown] = await Promise.all([
+          storeGet(BATTLE_TUTORIAL_SEEN_KEY, false, false),
+          storeGet(BATTLE_TUTORIAL_GUIDE_SHOWN_KEY, false, false),
+        ]);
+        if (guideSeen === true || guideShown === true) setBattleGuideChecked(true);
+      } catch { setBattleGuideChecked(true); }
       setDataLoaded(true); // ここまでで起動に必要なセーブデータは揃っている
       // タイトル表示を待たせず、選んでいる難易度のスコアランキングだけを裏で取得する。
       // 以前は全難易度(9件)をまとめて取りに行っていたため、起動直後の通信が混み合い、
