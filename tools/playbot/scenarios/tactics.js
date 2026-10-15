@@ -100,7 +100,8 @@ async function enterTactics(s, { mode, difficulty = 'keep', stats = {}, ctx = nu
       const before = await page.evaluate(() => (document.querySelector('article[data-difficulty-card].on') || {}).getAttribute?.('data-difficulty-card') || '');
       const moved = await page.evaluate(() => { const b = document.querySelector('button[aria-label="前の難易度"]'); if (!b || b.disabled) return false; b.click(); return true; });
       if (!moved) break;
-      for (let w = 0; w < 15; w++) {
+      // 3本並べで重いときは切り替えが遅い(2026-10-15 セコンドくん: no-difficulty:Expert で入れなかった)。1つあたり最大4.5秒待つ
+      for (let w = 0; w < 30; w++) {
         await s.wait(150);
         const now = await page.evaluate(() => (document.querySelector('article[data-difficulty-card].on') || {}).getAttribute?.('data-difficulty-card') || '');
         if (now !== before) break;
@@ -115,24 +116,36 @@ async function enterTactics(s, { mode, difficulty = 'keep', stats = {}, ctx = nu
       if (key === difficulty) break;
       const moved = await page.evaluate(() => { const b = document.querySelector('button[aria-label="次の難易度"]'); if (!b || b.disabled) return false; b.click(); return true; });
       if (!moved) break;
-      for (let w = 0; w < 15 && (await onKey()) === key; w++) await s.wait(150);
+      for (let w = 0; w < 30 && (await onKey()) === key; w++) await s.wait(150);
     }
     if ((await onKey()) !== difficulty) return `no-difficulty:${difficulty}`;
   }
   // ★難易度の札(article[data-difficulty-card])は全部の難易度ぶん並んでいて、どの札にも「この難易度で挑戦」がある。
   //   文字で探して押すと、いつも先頭の Beginner を押してしまう(2026-10-09 まで、ずっと Beginner で戦っていた)。
   //   いま選んでいる札(class に on)の中のボタンを押す。押せなければ(まだ開いていない)1つ前へ戻る
+  // ★難易度を名前で指定したときは、選んでいる札(.on)がその難易度のときだけ押す。.on が見つからないときに先頭の札(Beginner)を押したり、
+  //   押せないときに1つ前へ戻したりしない(2026-10-15 レフェリーくん: Expert のつもりの回が Beginner で戦っていた。3本並べで重いとき)
+  const named = difficulty && !['max', 'keep'].includes(difficulty);
   for (let i = 0; i < 20; i++) {
-    const r = await page.evaluate(() => {
-      const card = document.querySelector('article[data-difficulty-card].on') || document.querySelector('article[data-difficulty-card]');
+    if (named) {
+      let key = '';
+      for (let w = 0; w < 20 && key !== difficulty; w++) { key = await page.evaluate(() => (document.querySelector('article[data-difficulty-card].on') || {}).getAttribute?.('data-difficulty-card') || ''); if (key !== difficulty) await s.wait(250); }
+      if (key !== difficulty) return `no-difficulty:${difficulty}(押す前に ${key || '札なし'})`;
+    }
+    const r = await page.evaluate((strict) => {
+      const card = document.querySelector('article[data-difficulty-card].on') || (strict ? null : document.querySelector('article[data-difficulty-card]'));
+      if (!card && strict) return { lost: true };
       if (!card) return { none: true };
       const go = [...card.querySelectorAll('button')].find((x) => /この難易度で挑戦/.test(x.innerText || ''));
       if (!go || go.disabled) return { key: card.getAttribute('data-difficulty-card'), locked: true };
       go.scrollIntoView({ block: 'center' });
       go.click();
       return { key: card.getAttribute('data-difficulty-card') };
-    });
-    if (r.none) { if (await s.tapLabel(/この難易度で挑戦/, 1500)) break; }
+    }, named);
+    if (r.lost) continue;
+    if (named && r.key && r.key !== difficulty) return `no-difficulty:${difficulty}(押したのは ${r.key})`;
+    if (named && r.locked) return `no-difficulty:${difficulty}(押せない)`;
+    if (r.none && !named) { if (await s.tapLabel(/この難易度で挑戦/, 1500)) break; }
     if (r.key) stats.difficulty = r.key;
     if (!r.locked && !r.none) { await s.wait(1500); break; }
     if (!(await s.tapLabel(/^前の難易度$/, 700))) break;
