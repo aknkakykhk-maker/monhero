@@ -3473,6 +3473,15 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
   // 本体(30-rhythm-play.jsx)の「指→ノーツ」の表も同じ瞬間に入れ替える(setSlideSwapListener)。本体が応じなければ何もしない
   let slideSwapListener=null;
   const setSlideSwapListener=fn=>{slideSwapListener=typeof fn==='function'?fn:null;};
+  // 指の高さ(空中の受け付けか地上か)と、帯のその時刻の高さ(空中が半分以上か)が食い違うか。空中の段が無いときは食い違わない
+  const slideSwapLayerMismatch=(note,pos,chartNow)=>{
+    if(typeof RHYTHM_SKY_INPUT==='undefined'||!RHYTHM_SKY_INPUT.active||!note||!pos)return false;
+    const box=areaRect();
+    if(!box||!(box.height>0))return false;
+    const fingerSky=((Number(pos.clientY)-box.top)/box.height)<rhythmSkyAcceptLimit();
+    const bandSky=rhythmSlideHasSky(note)&&rhythmSlideSkyAt(note,chartNow)>=.5;
+    return fingerSky!==bandSky;
+  };
   const slideSwapAcrossFingers=session=>{
     if(!slideSwapListener||!session||session.kind!=='SLIDE'||session.finished||session.endFlickArmed||!session.note||session.note.done)return false;
     const key=session.key,myPos=positions.get(key);
@@ -3483,6 +3492,11 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
       if(!otherPos)continue;
       const myNow=estimatedSongMs(session)-session.offsetMs,otherNow=estimatedSongMs(other)-other.offsetMs;
       if(slideFingerOff(other,myPos,otherNow)||slideFingerOff(session,otherPos,myNow)||!slideFingerOff(other,otherPos,otherNow))continue;
+      // ★上下クロス(地上の帯と空中の帯が同じ横の位置で交わる)では結び直さない(2026-10-15 社長「上下なのに交わる瞬間に一瞬暗くなってた」)。
+      //   上の測り方は横の位置だけなので、交わった直後に指が少し遅れると、地上を押さえる指と空中を押さえる指が入れ替わり、
+      //   それぞれ高さの合わない帯に結ばれて「外れ」(暗くなる・点を落とす)になっていた。
+      //   指の高さ(地上/空中の受け付けの境目より上か)が、相手の帯のいまの高さと合うときだけ結び直す。空中の段の無い曲は今までどおり
+      if(slideSwapLayerMismatch(other.note,myPos,otherNow)||slideSwapLayerMismatch(session.note,otherPos,myNow))continue;
       if(slideSwapListener(key,otherKey,session.note,other.note)!==true)return false;
       sessions.set(key,other);sessions.set(otherKey,session);
       other.key=key;session.key=otherKey;
