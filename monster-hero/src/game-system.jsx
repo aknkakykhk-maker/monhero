@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1c20c934dec2c503
+// generated-sha256: f673671d4284d29f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-15 12:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-15 12:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -37338,6 +37338,71 @@ const BATTLE_CARD_ART_DEBUG = (() => {
   };
 })();
 const battleCardArtOn = () => (typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.battleCardArt === true) || BATTLE_CARD_ART_DEBUG.on;
+// ★カード名の折り返し(2026-10-15 社長「言葉の切れ目で折って」)。名札の上で「ぞうさん頭／突き」のように言葉の途中で折れていた。
+//   折ってよい所 … 字の種類が変わる所(カタカナ・ひらがな・漢字・英数)と、単語の切れ目(Intl.Segmenter があれば)。
+//   小さい字・長音・句読点の前では折らない。候補のうち「長い方の行がいちばん短い」所で折る。1行に収まるなら1行。
+//   長すぎる行(8字以上)は同じ決まりでもう一度折る。返り値は行の配列
+const BATTLE_CARD_NAME_PER_LINE = 5;
+const battleCardNameClass = (ch) => (/[\u30a0-\u30ff\u31f0-\u31ff\uff66-\uff9f]/.test(ch) ? 'kata'
+  : /[\u3040-\u309f]/.test(ch) ? 'hira' : /[\u4e00-\u9fff\u3005\u3006]/.test(ch) ? 'kan' : /[0-9A-Za-z\uff10-\uff5a]/.test(ch) ? 'alnum' : 'other');
+const BATTLE_CARD_NO_BREAK_BEFORE = /^[ぁぃぅぇぉっゃゅょゎゕゖァィゥェォッャュョヮヵヶーｰ・、。！？!?…ゝゞヽヾ）」』】]/;
+// 機械では言葉の切れ目が分からない名前(カタカナの複合語・ひらがなの続く語)だけ、折る位置を「|」で決めておく。
+//   「|」の無い名前は1行。手札に出る名前を全部ためして決めた(tools/battle/card-art-check.js が全部の折り方を見る)
+const BATTLE_CARD_NAME_BREAKS = Object.freeze({
+  'ルミナスレイ': 'ルミナス|レイ', 'ナイトサンダー': 'ナイト|サンダー', 'エクリプスキッス': 'エクリプス|キッス', 'コンビネーション': 'コンビ|ネーション',
+  'ドリルコンビネーション': 'ドリル|コンビネーション', '大たおれこみ': '大|たおれこみ', '超たおれこみ': '超|たおれこみ',
+  'アイスブレード': 'アイス|ブレード', 'アクアウェイブ': 'アクア|ウェイブ', 'スプラッシュ': 'スプラッシュ', 'ジングルベル': 'ジングル|ベル',
+  'アクアゲイザー': 'アクア|ゲイザー', 'ぞうさんぴろぴろ鼻': 'ぞうさん|ぴろぴろ鼻', 'ハトのおとしもの': 'ハトの|おとしもの', '大きなおとしもの': '大きな|おとしもの',
+  'グリンネーション': 'グリン|ネーション', '超モッチ砲2': '超モッチ砲2', '超モッチ砲3': '超モッチ砲3', '超モッチ砲ゴッド': '超モッチ砲|ゴッド',
+  '超モッチ砲ブルー': '超モッチ砲|ブルー', '超炎モッチ砲ゴッド': '超炎モッチ砲|ゴッド', 'サイコキネシス': 'サイコ|キネシス', 'クロノキネシス': 'クロノ|キネシス',
+  'かがやきいき': 'かがやきいき', 'マジワンツー': 'マジ|ワンツー', 'ギガサンダー': 'ギガ|サンダー', 'ギガライトニング': 'ギガ|ライトニング',
+  'コズミッグバン': 'コズミッグ|バン', 'コズミックライブ': 'コズミック|ライブ', 'セイクリッドレイ': 'セイクリッド|レイ', 'アビスサンダー': 'アビス|サンダー',
+  'ダークライトニング': 'ダーク|ライトニング', 'カオスコズミック': 'カオス|コズミック', 'エクリプスノヴァ': 'エクリプス|ノヴァ', 'ライトニング': 'ライトニング',
+  '種マシンガン': '種|マシンガン', 'クリスマスツリー': 'クリスマス|ツリー', 'メテオドライブ': 'メテオ|ドライブ', 'ライジングレイヴ': 'ライジング|レイヴ',
+  'ダークホウスト': 'ダーク|ホウスト', 'アサルトライジング': 'アサルト|ライジング', '絶影桜華乱舞': '絶影|桜華乱舞', '絶華緋閃・零桜': '絶華緋閃・|零桜',
+  'スターバースト・ストリーム': 'スターバースト・|ストリーム', 'アイスコフィン': 'アイス|コフィン', 'アクアブラスト': 'アクア|ブラスト',
+  'メリークリスマス': 'メリー|クリスマス', 'オーシャンノヴァ': 'オーシャン|ノヴァ', 'メニーウィング': 'メニー|ウィング', 'メテオストーム': 'メテオ|ストーム',
+  'エターナルアーク': 'エターナル|アーク', 'リボンウィング': 'リボン|ウィング', 'ナイトメアアーク': 'ナイトメア|アーク', 'ドラの毒膝地獄': 'ドラの|毒膝地獄',
+  'かどみうむの計算': 'かどみうむの|計算', 'かどみうむの理論': 'かどみうむの|理論', 'かどみうむの叡智': 'かどみうむの|叡智',
+  'みゃるの怪薬': 'みゃるの|怪薬', 'みゃるの禁薬': 'みゃるの|禁薬', "KUROMI'S5アタック": "KUROMI'S|5アタック",
+  '白き誓い切なる願い': '白き誓い|切なる願い', '神光よ汚れを祓え': '神光よ|汚れを祓え', '祈れ輪廻の環よ': '祈れ|輪廻の環よ', '裁きの光よ下れ': '裁きの光よ|下れ',
+  '今こそ真なる目醒め': '今こそ|真なる目醒め', '聖夜の鐘を鳴響け': '聖夜の鐘を|鳴響け', '終焉に救いを与えよ': '終焉に|救いを与えよ', '永劫の贖いを全うせよ': '永劫の贖いを|全うせよ',
+});
+const battleCardNameLines = (name, per = BATTLE_CARD_NAME_PER_LINE) => {
+  if (Object.prototype.hasOwnProperty.call(BATTLE_CARD_NAME_BREAKS, String(name || ''))) return BATTLE_CARD_NAME_BREAKS[String(name)].split('|');
+  const chars = [...String(name || '')];
+  const n = chars.length;
+  if (n <= per) return [chars.join('')];
+  const ok = new Set();
+  for (let k = 1; k < n; k += 1) {
+    const a = battleCardNameClass(chars[k - 1]), b = battleCardNameClass(chars[k]);
+    // 長音「ー」はカタカナとして続ける(カタカナ→ーは切れ目にしない)
+    if (a !== b && !(chars[k] === 'ー' || chars[k - 1] === 'ー')) ok.add(k);
+  }
+  try {
+    if (typeof Intl !== 'undefined' && typeof Intl.Segmenter === 'function') {
+      let at = 0;
+      for (const seg of new Intl.Segmenter('ja', { granularity: 'word' }).segment(chars.join(''))) { at += [...seg.segment].length; if (at > 0 && at < n) ok.add(at); }
+    }
+  } catch (e) { /* 使えない端末は字の種類だけで決める */ }
+  const cands = [...ok].filter((k) => !BATTLE_CARD_NO_BREAK_BEFORE.test(chars[k]));
+  const mid = Math.ceil(n / 2);
+  // 候補が無い・偏りすぎ(長い方が真ん中より3字以上長い)なら、折ってよい字の前で真ん中に近い所
+  let best = null;
+  for (const k of cands) { const m = Math.max(k, n - k); if (m <= mid + 2 && (best == null || m < Math.max(best, n - best) || (m === Math.max(best, n - best) && Math.abs(k - mid) < Math.abs(best - mid)))) best = k; }
+  if (best == null) {
+    for (let d = 0; d < n; d += 1) { for (const k of [mid + d, mid - d]) { if (best == null && k > 0 && k < n && !BATTLE_CARD_NO_BREAK_BEFORE.test(chars[k])) best = k; } if (best != null) break; }
+    if (best == null) best = mid;
+  }
+  const head = chars.slice(0, best).join(''), tail = chars.slice(best).join('');
+  const more = (t) => ([...t].length >= 8 ? battleCardNameLines(t, per) : [t]);
+  return [...more(head), ...more(tail)];
+};
+// 絵のカードの名前の字の大きさ。長い方の行が名札の内側(名前の欄の幅 − 名札の縁)に収まる大きさで、上限10px・下限7px
+const battleCardNameFit = (name) => {
+  const longest = Math.max(1, ...battleCardNameLines(name).map((l) => [...l].length));
+  return { fontSize: `clamp(7px, calc((100cqw - 11px) / ${longest}), 10px)`, lineHeight: '1.15', whiteSpace: 'nowrap' };
+};
 const BATTLE_CARD_ROMAN = Object.freeze(['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX']);
 // カード1枚の絵。{ frame, mark(技のマークの絵・無ければ null で今のアイコン), roman(段階の札・無ければ '') }
 //   攻撃=赤・距離撃=青・守り=緑・支援=紫・固有技=金(社長の決定)。弱いガードは緑(守りの1段目のマーク・段階の札なし)・それ以外は紫
@@ -40117,7 +40182,7 @@ function BattleScreen({
                 <div data-decoration className="flex shrink-0 items-center justify-center rounded-[11px] border border-white/[.16] bg-black/20" style={{marginTop:HAND_CARD_FIT.iconTop,width:HAND_CARD_FIT.icon,height:HAND_CARD_FIT.icon,boxShadow:'inset 0 1px 0 rgba(255,255,255,.25), inset 0 -4px 8px rgba(0,0,0,.35)'}}>{cardIconNode(c.icon,26,c.id)}</div><div className="w-full text-center flex flex-col justify-end gap-0.5" style={{containerType:'inline-size'}}>{/* ★技名は押しても技の一覧を開かない(カードを選ぶだけ)。一覧はガッツの段の上の「⇄ 技変更」から開く
                     (2026-09-24 ユーザー指摘「技変更一覧が誤タップで反応しやすい」・場所はユーザー選択)。
                     それまでは技名の欄(カード幅×30px)がまるごと押し場所で、カードを選ぶつもりの指が当たっていた */}
-                <div data-card-name className="text-[11px] font-black leading-[13px] w-full whitespace-normal flex items-center justify-center overflow-hidden px-0.5" style={{height:tacticsNewLayout?HAND_CARD_FIT.nameRich:HAND_CARD_FIT.name,...handCardNameFit(c.name,tacticsNewLayout?HAND_CARD_FIT.nameRich:HAND_CARD_FIT.name)}}>{c.name}</div>{(()=>{
+                <div data-card-name className="text-[11px] font-black leading-[13px] w-full whitespace-normal flex items-center justify-center overflow-hidden px-0.5" style={{height:tacticsNewLayout?HAND_CARD_FIT.nameRich:HAND_CARD_FIT.name,...handCardNameFit(c.name,tacticsNewLayout?HAND_CARD_FIT.nameRich:HAND_CARD_FIT.name),...(cardArt?battleCardNameFit(c.name):{})}}>{cardArt?battleCardNameLines(c.name).map((l,k)=>(<React.Fragment key={k}>{k>0&&<br/>}{l}</React.Fragment>)):c.name}</div>{(()=>{
                   // カードの表に「ジャンル」と「誰に効くか」を出す(仕様: BATTLE_NEW_MODE_PLAN.md 4.4
                   // 「単体効果と全体効果が分かるようにカード説明に表示するようにしたい」)。
                   // ★言葉はアプリ側の cardGenreLabel / cardScopeLabel から引く。カードをタップした
