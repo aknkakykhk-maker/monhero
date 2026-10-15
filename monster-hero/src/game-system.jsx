@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d28340003d37b678
+// generated-sha256: e266387e904b2ffc
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-15 17:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-15 18:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5378,8 +5378,8 @@ const Audio_ = (() => {
   const _gainFromPct = (pct) => pct <= 0 ? 0 : Math.pow(10, (-40 + (Math.min(100, pct) / 100) * 40) / 20);
   const _bgmGain = (pct) => pct <= 0 ? 0 : Math.pow(10, (-55 + (Math.min(100, pct) / 100) * 55) / 20) * 0.55;
 
-  // 場面のBGMは <audio> で流しながら鳴らし、MediaElementSource で下の bgmGain へつなぐ(2026-10-15・下の「流しながら鳴らす」)。
-  // ジングル・試聴・演奏・効果音は、mp3を取得・デコードして AudioBufferSourceNode で出力する(以前は場面のBGMもこちらだった)。
+  // HTMLAudioElementはiOSの消音スイッチを無視するため使用しない。mp3を取得・デコードし、
+  // BGMもジングルもAudioBufferSourceNodeだけで出力する。
   //
   // 出口(destination)の手前に、素通しのgainと音量計(analyser)を1つだけ挟む。
   // 音は変えない。「コードの上では鳴らしているのに端末から聞こえない」を切り分けるため、
@@ -5434,7 +5434,6 @@ const Audio_ = (() => {
     if (resumeOnGestureBound || typeof document === 'undefined') return;
     resumeOnGestureBound = true;
     const onGesture = () => {
-      unlockStreams();
       const ctx = audioCtx;
       if (!ctx || ctx.state === 'running') return;
       let done = null;
@@ -5446,91 +5445,6 @@ const Audio_ = (() => {
       try { document.addEventListener(type, onGesture, { capture: true, passive: true }); } catch (e) { document.addEventListener(type, onGesture, true); }
     });
   };
-  // ===== 場面のBGMは、まるごと解かずに流しながら鳴らす(2026-10-15・社長の決定) =====
-  // 解いた音(AudioBuffer)は1曲で数十MBあり、クイックの∞周回では場面ごとに解いて4本ぶん(約540MB)を持ち続けていた。
-  // iPhone の Safari では、長く回すとメモリ不足でページごと読み込み直され、「気付いたらホームに戻ってた」になっていた。
-  // そこで場面のBGM(タイトル・ホーム・バトルなど)は <audio> で流しながら鳴らし、音量・出口は今までどおり
-  // bgmGain → masterOut を通す(MediaElementSource)。手元に持つのは圧縮されたままの数MBだけになる。
-  // ★<audio> は使い回す2つだけ。iPhone はタップしていないときに新しい <audio> を鳴らし始めさせないので、
-  //   最初のタップで2つとも鳴らせる状態にしておき(unlockStreams)、以後は src を替えて使う(1つは鳴らす係・1つは次の曲を先に読む係)。
-  // ★それでも鳴らし始めを断られたとき・MediaElementSource が使えない端末では、今までの解いた音で鳴らす(必ず鳴る)。
-  // ★iOS の消音スイッチ: 以前は「<audio> は消音スイッチを無視するので使わない」としていた。iOS 17 以降は
-  //   navigator.audioSession.type を 'ambient' にして、Web Audio と同じく消音スイッチに従わせる(それより前の iOS では効かない)。
-  // ★モンヒロビートの演奏・曲えらびの試聴・ジングル・効果音は、今までどおり解いた音のまま(演奏はタイミングを合わせるため)。
-  const STREAM_POOL_SIZE = 2;
-  const STREAM_UNLOCK_SILENCE = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
-  const streamPool = [];
-  let streamsUnlocked = false, streamsDisabled = false;
-  const streamSupported = () => !streamsDisabled && typeof window !== 'undefined' && typeof window.Audio === 'function';
-  const streamEntry = (i) => {
-    if (streamPool[i]) return streamPool[i];
-    const el = new window.Audio();
-    el.preload = 'auto';
-    try { el.setAttribute('playsinline', ''); } catch (e) {}
-    streamPool[i] = { el, node: null, ctx: null, src: null };
-    return streamPool[i];
-  };
-  // いまのAudioContextへつなぐ(1つの <audio> は1つのcontextにしかつなげない。作り直したら <audio> も作り直す)
-  const connectStream = (entry) => {
-    const ctx = getAudioCtx();
-    if (!ctx || !bgmGain) return false;
-    if (entry.ctx && entry.ctx !== ctx) { try { entry.el.pause(); entry.el.removeAttribute('src'); entry.el.load(); } catch (e) {} const at = streamPool.indexOf(entry); if (at >= 0) streamPool[at] = null; return false; }
-    if (!entry.node) {
-      try { entry.node = ctx.createMediaElementSource(entry.el); entry.ctx = ctx; } catch (e) { streamsDisabled = true; return false; }
-    }
-    try { entry.node.disconnect(); } catch (e) {}
-    try { entry.node.connect(bgmGain); } catch (e) { return false; }
-    return true;
-  };
-  const setStreamSrc = (entry, src) => {
-    if (entry.src === src) return;
-    entry.src = src;
-    try { entry.el.src = src ? audioUrlWithKey(src) : ''; if (!src) entry.el.removeAttribute('src'); entry.el.load(); } catch (e) {}
-  };
-  // 鳴らしている係(bgmSource)が使っている <audio> 以外で、src がそれならそれを、なければ空いている方を返す
-  const pickStream = (src) => {
-    const busy = bgmSource && bgmSource.stream ? bgmSource.stream : null;
-    for (let i = 0; i < STREAM_POOL_SIZE; i++) { const e = streamPool[i]; if (e && e.src === src && e !== busy) return e; }
-    for (let i = 0; i < STREAM_POOL_SIZE; i++) { const e = streamEntry(i); if (e !== busy) return e; }
-    return null;
-  };
-  // 最初のタップの中で、2つの <audio> を鳴らせる状態にする(無音のうちに再生→すぐ止める)
-  const unlockStreams = () => {
-    if (streamsUnlocked || !streamSupported()) return;
-    streamsUnlocked = true;
-    try { if (typeof navigator !== 'undefined' && navigator.audioSession) navigator.audioSession.type = 'ambient'; } catch (e) {}
-    for (let i = 0; i < STREAM_POOL_SIZE; i++) {
-      const entry = streamEntry(i);
-      if (bgmSource && bgmSource.stream === entry) continue;
-      // 長さ0の無音を鳴らす(src が空だと再生そのものが断られて、鳴らせる状態にならない)
-      try { entry.src = null; entry.el.src = STREAM_UNLOCK_SILENCE; const p = entry.el.play(); const back = () => { try { if (!(bgmSource && bgmSource.stream === entry)) { entry.el.pause(); if (!entry.src) { entry.el.removeAttribute('src'); entry.el.load(); } } } catch (e) {} }; if (p && p.then) p.then(back, back); else back(); } catch (e) {}
-    }
-  };
-  // 鳴らし始める。止めるのは stopSource() で(bgmSource と同じ形の { stop, disconnect } を返す)
-  const startStream = (entry, track) => new Promise((resolve) => {
-    if (!connectStream(entry)) { resolve(null); return; }
-    setStreamSrc(entry, track.src);
-    const el = entry.el;
-    el.loop = track.loop !== false;
-    try { el.currentTime = 0; } catch (e) {}
-    const handle = { stream: entry, buffer: null, onended: null,
-      stop: () => { try { el.pause(); } catch (e) {} },
-      disconnect: () => {} };
-    el.onended = () => { if (handle.onended) handle.onended(); };
-    let p = null;
-    try { el.muted = false; p = el.play(); } catch (e) { resolve(null); return; }
-    if (p && p.then) p.then(() => resolve(handle), () => resolve(null)); else resolve(handle);
-  });
-  // 鳴らさないあいだは、持っている場面のBGM(解いた音)を手放す。鳴らしている演奏の曲などは残す
-  const dropSceneBuffers = () => {
-    for (let i = songBufferOrder.length - 1; i >= 0; i--) {
-      const url = songBufferOrder[i];
-      if (rhythmBuffersInUse.has(buffers.get(url)) || (previewSource && previewSource.buffer === buffers.get(url))) continue;
-      songBufferOrder.splice(i, 1); buffers.delete(url);
-    }
-    streamPool.forEach((entry) => { if (entry && !(bgmSource && bgmSource.stream === entry)) setStreamSrc(entry, null); });
-  };
-  const bgmSilent = () => !enabled || bgmVolumePct <= 0;
   const resumeAudioCtxNoWait = () => {
     const ctx = getAudioCtx();
     if (ctx && ctx.state !== 'running') { try { const p = ctx.resume(); if (p && p.catch) p.catch(() => {}); } catch (e) {} }
@@ -5610,30 +5524,8 @@ const Audio_ = (() => {
     currentKey = track.id;
     const request = ++bgmRequest;
     if (bgmSourceKey && bgmSourceKey !== track.id) stopOthers();
-    if (!enabled || bgmVolumePct <= 0 || pageHidden) { stopOthers(); stopJingles(); if (bgmSilent()) dropSceneBuffers(); return Promise.resolve(); }
+    if (!enabled || bgmVolumePct <= 0 || pageHidden) { stopOthers(); stopJingles(); return Promise.resolve(); }
     resumeAudioCtxNoWait();
-    // 流しながら鳴らす(上の「場面のBGMは、まるごと解かずに」)。断られたら下の解いた音で鳴らす
-    if (streamSupported() && !buffers.has(track.src)) {
-      if (bgmSource && bgmSourceKey === track.id) return Promise.resolve();
-      const entry = pickStream(track.src);
-      if (entry) {
-        return startStream(entry, track).then((handle) => {
-          const stillWanted = request === bgmRequest && track.id === currentKey && enabled && bgmVolumePct > 0 && !pageHidden && !jingleSource && !previewSource;
-          if (handle && stillWanted) {
-            const prev = bgmSource;
-            bgmSource = handle; bgmSourceKey = track.id; applyTrackGain(track);
-            handle.onended = () => { if (bgmSource === handle) { bgmSource = null; bgmSourceKey = null; } };
-            if (prev && prev !== handle) stopSource(prev);
-            const ctx = audioCtx; if (ctx && ctx.state !== 'running') resumeAudioCtxNoWait();
-            return;
-          }
-          if (handle) handle.stop();
-          if (!stillWanted) return;
-          // 鳴らし始めを断られた(タップしていないときの自動再生の制限など)。今までの解いた音で鳴らす
-          return loadBuffer(track.src).then((buffer) => { rememberSongBuffer(track.src); startBgmBuffer(track.id, track, buffer, request); }).catch(() => {});
-        });
-      }
-    }
     // 起動タップ前にdecode済みなら、user activation中に同期的に再生開始する。
     if (buffers.has(track.src)) {
       startBgmBuffer(track.id, track, buffers.get(track.src), request);
@@ -5692,8 +5584,6 @@ const Audio_ = (() => {
     // 音源(AudioBuffer)は作り直したcontextのサンプリングレートが違うと速さが変わってしまう。
     // 取り直しても通信キャッシュから読めるので、ここは安全側に倒して捨てる
     buffers.clear(); loadingBuffers.clear(); songBufferOrder.length = 0; rhythmBuffersInUse.clear();
-    streamPool.forEach((entry) => { if (entry) { try { entry.el.pause(); entry.el.removeAttribute('src'); entry.el.load(); } catch (e) {} } });
-    streamPool.length = 0; streamsUnlocked = false;
     try { if (old && old.state !== 'closed') await old.close(); } catch (e) {}
     const ctx = getAudioCtx();
     if (!ctx) return false;
@@ -5843,22 +5733,9 @@ const Audio_ = (() => {
       };
     } catch(e){ return null; }
   };
-  // 次の場面の曲の先読み。流しながら鳴らす端末では、空いている <audio> に読み始めさせるだけ(解かない)。
-  // 音が消えているあいだ(消音・BGM音量0)は何もしない(2026-10-15・社長の決定「消音中はBGMを1本も持たない」)
-  const preloadBGM = (key) => {
-    const track = resolveTrack(key); if (!track || bgmSilent()) return;
-    if (streamSupported()) { const entry = pickStream(track.src); if (entry && !(bgmSource && bgmSource.stream === entry)) setStreamSrc(entry, track.src); return; }
-    loadBuffer(track.src).then(() => rememberSongBuffer(track.src)).catch(() => {});
-  };
+  const preloadBGM = (key) => { const track = resolveTrack(key); if (track) loadBuffer(track.src).then(() => rememberSongBuffer(track.src)).catch(() => {}); };
   const prepareBGM = (key, timeoutMs = 2000) => {
     const track = resolveTrack(key); if (!track) return Promise.resolve(false);
-    // 起動時のタイトルBGMの用意(60-app.jsx)。タップ前はまだ音が有効でない(enabled=false)ので、消音の判定では断らない。
-    // 流しながら鳴らす端末では、BGM音量が0でなければ <audio> に読み始めさせるだけで、待たずに「用意できた」と返す
-    if (streamSupported()) {
-      if (bgmVolumePct > 0) { const entry = pickStream(track.src); if (entry && !(bgmSource && bgmSource.stream === entry)) setStreamSrc(entry, track.src); }
-      return Promise.resolve(true);
-    }
-    if (bgmSilent()) return Promise.resolve(true);
     return Promise.race([loadBuffer(track.src).then(() => { rememberSongBuffer(track.src); return true; }).catch(() => false), new Promise((r) => setTimeout(() => r(false), timeoutMs))]);
   };
   const prepareSE = (timeoutMs = 5000) => Promise.race([
@@ -5907,7 +5784,7 @@ const Audio_ = (() => {
     } catch (e) { return null; }
   };
   const setPageHidden = (hidden) => { pageHidden = !!hidden; ctxTimeMark = null; if (pageHidden) { ++bgmRequest; stopPreview(false); stopOthers(); stopJingles(); } else if (currentKey) playBGM(currentKey); };
-  const setEnabled = async (on) => { enabled = !!on; if (typeof window !== 'undefined') window.__mhAudioEnabled = enabled; applyRhythmMute(); if (!enabled) { ++bgmRequest; stopPreview(false); stopOthers(); stopJingles(); dropSceneBuffers(); } else if (currentKey) playBGM(currentKey); await ensure(); };
+  const setEnabled = async (on) => { enabled = !!on; if (typeof window !== 'undefined') window.__mhAudioEnabled = enabled; applyRhythmMute(); if (!enabled) { ++bgmRequest; stopPreview(false); stopOthers(); stopJingles(); } else if (currentKey) playBGM(currentKey); await ensure(); };
   const isEnabled = () => enabled;
   // いま実際に鳴っている曲を、外(検査)から見るための口。
   // BGMは <audio> ではなく Web Audio (AudioBufferSourceNode) で鳴らしているので、
@@ -5981,13 +5858,12 @@ const Audio_ = (() => {
     return { rebuilt, beeped, running: !!ctx && ctx.state === 'running' };
   };
   const setSeVolume = (pct) => { seVolumePct = pct; if (seBus && Tone) { try { seBus.gain.rampTo(_gainFromPct(pct), 0.05); } catch (e) {} } };
-  const setBgmVolume = (pct) => { bgmVolumePct = pct; applyTrackGain(resolveTrack(previewKey || currentKey)); if (pct <= 0) { stopPreview(false); stopOthers(); dropSceneBuffers(); } else if (enabled && currentKey && !previewKey) playBGM(currentKey); };
+  const setBgmVolume = (pct) => { bgmVolumePct = pct; applyTrackGain(resolveTrack(previewKey || currentKey)); if (pct <= 0) { stopPreview(false); stopOthers(); } else if (enabled && currentKey && !previewKey) playBGM(currentKey); };
   const resumeIfNeeded = async () => { await ensureAudioCtxRunning(); if (Tone) { try { await Tone.start(); started = true; } catch (e) {} } if (enabled && currentKey && !bgmSource) playBGM(currentKey); };
   const unlock = async (playTestTone = false) => {
     if (!enabled) { enabled = true; if (typeof window !== 'undefined') window.__mhAudioEnabled = true; applyRhythmMute(); }
     // resume・決定SEはuser activationが残るイベント処理内で開始し、最初の再生前に待たない。
     const ctx = resumeAudioCtxNoWait();
-    unlockStreams();
     let toneStart = null;
     if (Tone) {
       try { toneStart = Tone.start(); if (toneStart?.catch) toneStart.catch(() => {}); } catch (e) {}
