@@ -6,7 +6,8 @@
 // 本物の CSS(index.html の <style> と tailwind.css)と、本物の折り方・字の大きさ(battleCardNameLines / battleCardNameFit)で、
 // 手札と同じ大きさのカード(縦持ち 72×133・横持ち 72×111)を作り、名前を1つずつ置いて測る。
 //   ① 置き場はカード幅の16.5%より内側(中の面の宝石はカード幅の約14%まで来る)・上は段階の札の下・下は下段の札の上
-//   ② 名前は置き場からはみ出さない(下の飾り線の場所 5px も残す)。赤・金の両方、縦持ち・横持ちの両方
+//      金の枠(固有技)は、大きい丸の下の宝石の飾り(カードの高さの約42.5%)より下(2026-10-15 社長「固有技だけカードの柄に被ってる」)
+//   ② 名前は置き場からはみ出さない(下の飾り線の場所 6px も残す。横持ちの金の枠は名前の欄が狭いので線を出さない)。赤・金の両方、縦持ち・横持ちの両方
 //   ③ 字は 6px 以上。7px を下回る名前は、語を割れない少しだけの名前(一覧を出す)
 const fs = require('fs');
 const path = require('path');
@@ -103,7 +104,7 @@ const server = http.createServer((req, res) => {
           const roman = card.querySelector('[data-card-art-roman]');
           const plate = card.querySelector('[data-skill-change]').getBoundingClientRect();
           const roomOk = box.l - cr.left >= cr.width * 0.165 - 0.3 && cr.right - box.r >= cr.width * 0.165 - 0.3
-            && (!roman || box.t >= roman.getBoundingClientRect().bottom - 0.3) && box.b <= plate.top + 0.3 && ruleH >= 5;
+            && (!roman || box.t >= roman.getBoundingClientRect().bottom - 0.3) && (kind !== 'gold' || box.t >= cr.top + cr.height * 0.425) && box.b <= plate.top + 0.3 && (ruleH >= 6 || (kind === 'gold' && innerWidth > innerHeight));
           if (!roomOk && out.room.length < 3) out.room.push(`${kind}: 左${(box.l - cr.left).toFixed(1)} 右${(cr.right - box.r).toFixed(1)} 上${box.t.toFixed(1)}/${roman ? roman.getBoundingClientRect().bottom.toFixed(1) : '-'} 下${box.b.toFixed(1)}/${plate.top.toFixed(1)} 線${ruleH}`);
           // ② はみ出し(字と飾り線をまとめて置き場に収める)
           const fits = sr.left >= box.l - 0.5 && sr.right <= box.r + 0.5 && sr.height + gap + ruleH <= box.b - box.t + 0.5;
@@ -113,7 +114,7 @@ const server = http.createServer((req, res) => {
         }
         return out;
       }, { cards, cardH });
-      check(`① ${label}: 置き場は中の面の宝石より内側・段階の札の下〜下段の札の上・飾り線の場所 5px`, res.room.length === 0, res.room.join(' / '));
+      check(`① ${label}: 置き場は中の面の宝石より内側・段階の札(金は丸の下の飾り)の下〜下段の札の上・飾り線の場所 6px(横持ちの金は線なし)`, res.room.length === 0, res.room.join(' / '));
       check(`② ${label}: ${cards.length}件 × 赤・金 の名前が置き場からはみ出さない`, res.bad.length === 0, res.bad.slice(0, 6).join(' '));
       const f = res.fonts.sort((a, b) => a - b);
       console.log(`   ${label}: 字の大きさ 最小${f[0].toFixed(1)}px・真ん中${f[Math.floor(f.length / 2)].toFixed(1)}px・最大${f[f.length - 1].toFixed(1)}px`);

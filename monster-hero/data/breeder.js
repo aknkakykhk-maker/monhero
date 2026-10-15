@@ -110,13 +110,13 @@ const BATTLE_CARD_ART = Object.freeze({
     gold: 'images/ui/battle-cards/plate-gold.webp?v=f92a595ad789',
   }),
   // 名前の飾り線(2026-10-15 社長。真ん中の宝石が枠の色)。名前の下に、文字の置き場の幅いっぱいで置く(index.html の [data-card-name]::after)。
-  //   原本は tools/art-sources/name-dividers/(約2085×105)。240×12 に縮めた
+  //   原本は tools/art-sources/name-dividers/(約2085×105)。真ん中の宝石と唐草を中心に 8:1(840×105)で切り出し、192×24 にした(手札で高さ約6px。切った両端は透明へぼかす)
   rules: Object.freeze({
-    red: 'images/ui/battle-cards/rule-red.webp?v=d80890ff512f',
-    blue: 'images/ui/battle-cards/rule-blue.webp?v=8c53c590ec62',
-    green: 'images/ui/battle-cards/rule-green.webp?v=fb1adf4721dc',
-    purple: 'images/ui/battle-cards/rule-purple.webp?v=3c83242ca8af',
-    gold: 'images/ui/battle-cards/rule-gold.webp?v=34bc657ea74d',
+    red: 'images/ui/battle-cards/rule-red.webp?v=cb3784b5d724',
+    blue: 'images/ui/battle-cards/rule-blue.webp?v=6ea611645122',
+    green: 'images/ui/battle-cards/rule-green.webp?v=40a70b55e319',
+    purple: 'images/ui/battle-cards/rule-purple.webp?v=39f80f5dd9d5',
+    gold: 'images/ui/battle-cards/rule-gold.webp?v=92745a007b55',
   }),
 });
 
