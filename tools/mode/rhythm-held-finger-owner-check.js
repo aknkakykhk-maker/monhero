@@ -29,7 +29,7 @@ const ctx = { console, navigator: {}, performance: { now: () => 0 }, requestAnim
     addEventListener() {}, removeEventListener() {}, querySelector: () => null, querySelectorAll: () => [] } };
 ctx.window = ctx; ctx.globalThis = ctx;
 vm.createContext(ctx);
-vm.runInContext(src + '\nglobalThis.__x={rhythmMatchInputBatch,RHYTHM_GESTURE_RUNTIME,RHYTHM_SKY_INPUT,RHYTHM_JUDGMENT_LINE_Y,rhythmSkyAcceptLimit,RHYTHM_FLOATING_NOTES};', ctx);
+vm.runInContext(src + '\nglobalThis.__x={rhythmMatchInputBatch,RHYTHM_GESTURE_RUNTIME,RHYTHM_SKY_INPUT,RHYTHM_JUDGMENT_LINE_Y,rhythmSkyAcceptLimit,RHYTHM_FLOATING_NOTES,rhythmRecentTapClaimsClear};', ctx);
 const X = ctx.__x, match = X.rhythmMatchInputBatch;
 
 let failed = 0;
@@ -66,6 +66,27 @@ for (const sub of [3.3, 3.5]) {
   const held = { index: 0, type: 'HOLD', timeMs: 0, endTimeMs: 3000, lane: 1, subLane: 2, subLaneWidth: 4, done: false, activePointerId: 'touch:1' };
   const r = match([held], [finger('touch:2', 4, null)], 1500, 0)[0];
   check('空中の段が無い曲では、地上のホールドの上へ置いた2本目の指はこれまでどおり控えになる', r.standby === held);
+  X.RHYTHM_SKY_INPUT.active = true;
+}
+
+// ---- 半レーンずれの両手押し(2026-10-15 社長「両手の連打でミス判定になってたのも…」) ----
+// 同じ時刻に半レーン(サブレーン1〜2)ずれて並んだ2つの TAP を、左右の指が「それぞれ自分のノーツの見た目の中」で押したら、両方取れること。
+// 直す前は、左の指が重なりの所(右のノーツの中心に近い側)を押すと右のノーツを取ってしまい、右の指(右のノーツの右寄り)に行き先が無く片方が MISS だった
+{
+  X.RHYTHM_SKY_INPUT.active = false;
+  let total = 0; const bad = [];
+  for (const w of [2, 3, 4]) for (const shift of [1, 2]) for (const dt of [0, 20, -20]) for (let ea = -0.9; ea <= 0.91; ea += 0.15) for (let eb = -0.9; eb <= 0.91; eb += 0.15) {
+    const A = { index: 0, type: 'TAP', timeMs: 1000, lane: 1, subLane: 2, subLaneWidth: w, done: false, activePointerId: null };
+    const B = { index: 1, type: 'TAP', timeMs: 1000, lane: 1, subLane: 2 + shift, subLaneWidth: w, done: false, activePointerId: null };
+    const ca = 2 + w / 2 + ea, cb = 2 + shift + w / 2 + eb;
+    if (ca < 2 || ca > 2 + w || cb < 2 + shift || cb > 2 + shift + w || ca >= cb) continue;
+    total++; X.RHYTHM_GESTURE_RUNTIME.clear(); X.rhythmRecentTapClaimsClear();
+    const fa = finger('touch:1', ca, null), fb = finger('touch:2', cb, null), got = new Set();
+    const run = (inputs, t) => { for (const r of match([A, B], inputs, t, 0)) if (r.target) { r.target.done = true; got.add(r.target.index); } };
+    if (dt === 0) run([fa, fb], 1000); else if (dt > 0) { run([fa], 1000); run([fb], 1000 + dt); } else { run([fb], 1000); run([fa], 1000 - dt); }
+    if (got.size < 2) bad.push(`幅${w} ずれ${shift} 時間差${dt} 左${ca.toFixed(2)} 右${cb.toFixed(2)}`);
+  }
+  check(`半レーンずれの2つの TAP を左右の指でそれぞれの見た目の中を押すと、両方取れる(${total}通り)`, bad.length === 0, bad.slice(0, 3).join(' / '));
   X.RHYTHM_SKY_INPUT.active = true;
 }
 
