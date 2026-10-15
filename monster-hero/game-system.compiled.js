@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5dee29b2617c2132
+// source-sha256: 37f6f05f29977a65
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-15 22:06";
+const BUILD_DATE = "2026-10-15 22:39";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -33836,6 +33836,12 @@ const RhythmTapTest = ({
   })();
   useEffect(() => {
     RHYTHM_GESTURE_RUNTIME.setSlideSwapListener?.((keyA, keyB, noteA, noteB) => {
+      RHYTHM_INPUT_REC.event('swap', {
+        note: noteA?.index,
+        other: noteB?.index,
+        key: keyA,
+        otherKey: keyB
+      });
       const run = runRef.current;
       if (!run || run.finished || run.paused) return false;
       const indexA = run.activePointers.get(keyA),
@@ -34874,6 +34880,13 @@ const RhythmTapTest = ({
     const run = runRef.current;
     if (!run || run.finished || run.paused || note.done) return;
     if (rhythmHisshiUpgrades(run.abilities, judgment, run.audio?.songTimeMs?.() ?? 0)) judgment = 'MARVELOUS';
+    RHYTHM_INPUT_REC.event(judgment === 'MISS' ? 'miss' : 'hit', {
+      note: note.index,
+      j: judgment,
+      dt: typeof deltaMs === 'number' && Number.isFinite(deltaMs) ? Math.round(deltaMs) : null,
+      key: note.activePointerId,
+      sky: rhythmNoteIsSky(note)
+    });
     if (note.activePointerId !== null) {
       if (note.activePointerId !== -1) run.activePointers.delete(note.activePointerId);
       note.activePointerId = null;
@@ -36561,6 +36574,12 @@ const RhythmTapTest = ({
         empty: !target || target.type === 'TAP'
       });
       RHYTHM_TOUCH_SPAN_RUNTIME.recordPhysicalTarget(input.inputKey, target);
+      if (!target && standby) RHYTHM_INPUT_REC.event('standby', {
+        note: standby.index,
+        key: input.inputKey,
+        sub: input.subLaneCoordinate,
+        sky: input.sky
+      });
       if (!target && standby) {
         run.standbyPointers.set(input.inputKey, standby.index);
         if (input.captureTarget && input.pointerId !== undefined) {
@@ -36570,6 +36589,12 @@ const RhythmTapTest = ({
         }
         return;
       }
+      if (!target) RHYTHM_INPUT_REC.event('empty', {
+        key: input.inputKey,
+        sub: input.subLaneCoordinate,
+        sky: input.sky,
+        rejudge: !!input.rejudge
+      });
       if (!target) {
         if (!input.rejudge || !RHYTHM_NOTE_SE_RUNTIME.recentNoteSe?.(150)) {
           RHYTHM_PERF.emptyTap();
@@ -36585,6 +36610,14 @@ const RhythmTapTest = ({
       const judgment = rhythmJudgeTap(deltaMs);
       if (target.type === 'HOLD') {
         const handover = target.releasedAtMs != null;
+        RHYTHM_INPUT_REC.event(handover ? 'handover' : 'hold', {
+          note: target.index,
+          key: input.inputKey,
+          j: judgment,
+          dt: Math.round(deltaMs),
+          sub: input.subLaneCoordinate,
+          sky: input.sky
+        });
         target.activePointerId = input.inputKey;
         if (handover) {
           target.releasedAtMs = null;
@@ -36615,6 +36648,37 @@ const RhythmTapTest = ({
       applyJudgment(target, judgment, deltaMs);
     });
   };
+  const takeHeldFlick = (inputKey, subLane, subLaneCoordinate) => {
+    const run = runRef.current;
+    if (!run || run.finished || run.paused) return;
+    const heldIndex = run.activePointers.get(inputKey),
+      held = heldIndex === undefined ? null : run.notes[heldIndex];
+    if (!held || held.done || held.type !== 'HOLD') return;
+    const songNow = run.audio.songTimeMs(),
+      offset = settings.judgmentTimingOffsetMs;
+    if (songNow < Number(held.endTimeMs) + offset - RHYTHM_RELEASE_MAX_MS) return;
+    const flick = run.notes.find(n => n && !n.done && n.type === 'FLICK' && n.activePointerId === null && Math.abs(songNow - (Number(n.timeMs) + offset)) <= RHYTHM_INPUT_MATCH_WINDOW_MS && (() => {
+      const span = rhythmProjectSubLaneSpan(n.subLane, n.subLaneWidth, 1),
+        tol = span.subLaneWidth <= 1 ? RHYTHM_NARROW_TAP_TOLERANCE_SUB_LANES : RHYTHM_TAP_TOLERANCE_SUB_LANES;
+      return subLaneCoordinate >= span.subLane - tol && subLaneCoordinate <= span.subLane + span.subLaneWidth + tol;
+    })());
+    if (!flick) return;
+    RHYTHM_INPUT_REC.event('held-flick', {
+      note: held.index,
+      flick: flick.index,
+      key: inputKey
+    });
+    inputEnds([{
+      inputKey
+    }]);
+    inputStarts([{
+      lane: Math.floor(subLane / 2),
+      subLaneCoordinate,
+      inputKey,
+      rejudge: true,
+      flickOnly: true
+    }]);
+  };
   const inputMoves = (inputKey, subLaneCoordinate) => {
     const run = runRef.current,
       state = run?.inputFeedbackState?.get(inputKey);
@@ -36630,7 +36694,7 @@ const RhythmTapTest = ({
       subLaneCoordinate,
       inputKey,
       rejudge: true
-    }]);
+    }]);else if (typeof takeHeldFlick === 'function') takeHeldFlick(inputKey, subLane, subLaneCoordinate);
   };
   const standbyFingerFor = (run, noteIndex, exceptKey) => {
     for (const [key, index] of run.standbyPointers) {
@@ -36655,6 +36719,11 @@ const RhythmTapTest = ({
       const holdEndMs = note.endTimeMs + settings.judgmentTimingOffsetMs;
       const takeover = standbyFingerFor(run, noteIndex, input.inputKey);
       if (takeover && !note.done && now < holdEndMs - RHYTHM_HOLD_RELEASE_GRACE_MS) {
+        RHYTHM_INPUT_REC.event('handover', {
+          note: noteIndex,
+          key: takeover,
+          from: input.inputKey
+        });
         note.activePointerId = takeover;
         note.releasedAtMs = null;
         rhythmFloatingNoteRemove(note);
@@ -36675,6 +36744,10 @@ const RhythmTapTest = ({
         note.releasedAtMs = now;
         rhythmFloatingNoteAdd(note);
       }
+      if (!note.done && note.releasedAtMs === now) RHYTHM_INPUT_REC.event('float', {
+        note: noteIndex,
+        key: input.inputKey
+      });
       if (input.releaseTarget && input.pointerId !== undefined) {
         try {
           if (input.releaseTarget.hasPointerCapture?.(input.pointerId)) input.releaseTarget.releasePointerCapture(input.pointerId);
