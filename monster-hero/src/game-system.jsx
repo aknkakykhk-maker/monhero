@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d28340003d37b678
+// generated-sha256: 2f02f3d5a45ab78b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-15 17:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-15 19:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -53395,6 +53395,15 @@ function MonsterHeroGame() {
         setOnboardingIcon(hasSavedIcon ? savedIcon : null);
         setGameState(savedAssistant ? 'PROFILE' : 'ASSISTANT_SELECT');
       }
+      // れんしゅうの案内をもう見た・断った人は、起動のこの時点で「案内の判定は終わり」にする。
+      // HOMEへ着いてからの判定を待たせない(時刻で流れるお話が、これまでどおりすぐ流れ始める)。はじめての人だけが、HOMEでの判定を待つ。保存は増やさない
+      try {
+        const [guideSeen, guideShown] = await Promise.all([
+          storeGet(BATTLE_TUTORIAL_SEEN_KEY, false, false),
+          storeGet(BATTLE_TUTORIAL_GUIDE_SHOWN_KEY, false, false),
+        ]);
+        if (guideSeen === true || guideShown === true) setBattleGuideChecked(true);
+      } catch { setBattleGuideChecked(true); }
       setDataLoaded(true); // ここまでで起動に必要なセーブデータは揃っている
       // タイトル表示を待たせず、選んでいる難易度のスコアランキングだけを裏で取得する。
       // 以前は全難易度(9件)をまとめて取りに行っていたため、起動直後の通信が混み合い、
