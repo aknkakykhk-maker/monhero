@@ -77,11 +77,31 @@ const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
 //   playbotSeed … ランを始めるたび(applyResetAllState)に Math.random を同じ種から作り直す。
 //                 同じ種なら、早送りあり/なしで同じ戦いになることを確かめるため
 // どちらかが付いた周回は、全国ランキングにも自己ベストにも残さない(submitRunScoreOnce。乱数を選べると記録を作れてしまうため)
-const PLAYBOT_URL_PARAMS = (() => { try { return new URLSearchParams(window.location.search); } catch (_) { return new URLSearchParams(''); } })();
+// ★ページを読み直したとき・タイトルへ戻ったときにも印が残るよう、URL で受けた印はそのタブの sessionStorage(mhdev_playbot_v1)にも控える
+//   (2026-10-15 アリーナくんの希望)。sessionStorage はタブを閉じれば消え、保存データ(mh_*)ではない
+const PLAYBOT_URL_PARAMS = (() => {
+  let params = new URLSearchParams('');
+  try { params = new URLSearchParams(window.location.search); } catch (_) {}
+  try {
+    const KEY = 'mhdev_playbot_v1';
+    if (params.has('playbotFast') || params.has('playbotSeed')) {
+      window.sessionStorage.setItem(KEY, JSON.stringify({ fast: params.get('playbotFast'), seed: params.get('playbotSeed') }));
+    } else {
+      const kept = JSON.parse(window.sessionStorage.getItem(KEY) || 'null');
+      if (kept && typeof kept === 'object') {
+        if (typeof kept.fast === 'string') params.set('playbotFast', kept.fast);
+        if (typeof kept.seed === 'string') params.set('playbotSeed', kept.seed);
+      }
+    }
+  } catch (_) {}
+  return params;
+})();
 const PLAYBOT_FAST = PLAYBOT_URL_PARAMS.get('playbotFast') === '1';
 const PLAYBOT_FAST_DIVISOR = 20;
 const PLAYBOT_SEED = (() => { const v = PLAYBOT_URL_PARAMS.get('playbotSeed'); return v != null && /^\d{1,9}$/.test(v) ? Number(v) : null; })();
 const PLAYBOT_ACTIVE = PLAYBOT_FAST || PLAYBOT_SEED != null;
+// ボットが「効いているか」を記録に残せるように、window から読めるようにする(画面には出さない)
+try { if (typeof window !== 'undefined') { window.__playbotFast = PLAYBOT_FAST; window.__playbotSeed = PLAYBOT_SEED; } } catch (_) {}
 // 種つきの乱数(mulberry32)。0以上1未満を返す
 const playbotSeededRandom = (seed) => {
   let a = seed >>> 0;
@@ -204,7 +224,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-15 18:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-15 19:36"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
