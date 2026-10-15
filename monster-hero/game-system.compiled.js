@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: eb547b8a2790277c
+// source-sha256: 12c0fb27b945a90d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-15 23:26";
+const BUILD_DATE = "2026-10-16 00:21";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -61778,8 +61778,7 @@ const BATTLE_CARD_ART_DEBUG = (() => {
   };
 })();
 const battleCardArtOn = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.battleCardArt === true || BATTLE_CARD_ART_DEBUG.on;
-const BATTLE_CARD_NAME_PER_LINE = 5;
-const BATTLE_CARD_NAME_ONE_LINE = 8;
+const BATTLE_CARD_NAME_PER_LINE = 6;
 const battleCardNameClass = ch => /[\u30a0-\u30ff\u31f0-\u31ff\uff66-\uff9f]/.test(ch) ? 'kata' : /[\u3040-\u309f]/.test(ch) ? 'hira' : /[\u4e00-\u9fff\u3005\u3006]/.test(ch) ? 'kan' : /[0-9A-Za-z\uff10-\uff5a]/.test(ch) ? 'alnum' : 'other';
 const BATTLE_CARD_NO_BREAK_BEFORE = /^[ぁぃぅぇぉっゃゅょゎゕゖァィゥェォッャュョヮヵヶーｰ・、。！？!?…ゝゞヽヾ）」』】]/;
 const BATTLE_CARD_NAME_BREAKS = Object.freeze({
@@ -61787,7 +61786,7 @@ const BATTLE_CARD_NAME_BREAKS = Object.freeze({
   'ナイトサンダー': 'ナイト|サンダー',
   'エクリプスキッス': 'エクリプス|キッス',
   'コンビネーション': 'コンビ|ネーション',
-  'ドリルコンビネーション': 'ドリル|コンビネーション',
+  'ドリルコンビネーション': 'ドリル|コンビ|ネーション',
   '大たおれこみ': '大|たおれこみ',
   '超たおれこみ': '超|たおれこみ',
   'アイスブレード': 'アイス|ブレード',
@@ -61826,7 +61825,7 @@ const BATTLE_CARD_NAME_BREAKS = Object.freeze({
   'アサルトライジング': 'アサルト|ライジング',
   '絶影桜華乱舞': '絶影|桜華乱舞',
   '絶華緋閃・零桜': '絶華緋閃・|零桜',
-  'スターバースト・ストリーム': 'スターバースト・|ストリーム',
+  'スターバースト・ストリーム': 'スター|バースト・|ストリーム',
   'アイスコフィン': 'アイス|コフィン',
   'アクアブラスト': 'アクア|ブラスト',
   'メリークリスマス': 'メリー|クリスマス',
@@ -61848,64 +61847,145 @@ const BATTLE_CARD_NAME_BREAKS = Object.freeze({
   '祈れ輪廻の環よ': '祈れ|輪廻の環よ',
   '裁きの光よ下れ': '裁きの光よ|下れ',
   '今こそ真なる目醒め': '今こそ|真なる目醒め',
-  'ピアノパラソル脳天撃': 'ピアノパラソル|脳天撃',
-  'メロディキャンディボム': 'メロディ|キャンディボム',
-  'ナイトメアらっきょうボム': 'ナイトメア|らっきょうボム',
+  'ピアノパラソル脳天撃': 'ピアノ|パラソル|脳天撃',
+  'メロディキャンディボム': 'メロディ|キャンディ|ボム',
+  'ナイトメアらっきょうボム': 'ナイトメア|らっきょう|ボム',
+  'ディープキッス': 'ディープ|キッス',
+  'サンダービート': 'サンダー|ビート',
+  'アサルトダンス': 'アサルト|ダンス',
+  'ガッチョスラント': 'ガッチョ|スラント',
+  'アクアウィップ': 'アクア|ウィップ',
+  'キャンディボム': 'キャンディ|ボム',
+  'シャドウレギオン': 'シャドウ|レギオン',
+  'デンプシーロール': 'デンプシー|ロール',
+  'フォームガンマ': 'フォーム|ガンマ',
+  'リバースレイド': 'リバース|レイド',
+  'ソニックレイヴ': 'ソニック|レイヴ',
+  'アサルトレイド': 'アサルト|レイド',
+  'アクシズバレット': 'アクシズ|バレット',
+  'ブラッディクロス': 'ブラッディ|クロス',
+  'ワンダーブレイズ': 'ワンダー|ブレイズ',
+  'パピヨンバースト': 'パピヨン|バースト',
+  'パウンドメテオ': 'パウンド|メテオ',
+  'ホリゾンタル・スクエア': 'ホリゾンタル・|スクエア',
+  'グランドイリュージョン': 'グランド|イリュージョン',
+  'ムーンサルトメロディー': 'ムーンサルト|メロディー',
+  'ライジングブースト': 'ライジング|ブースト',
+  'スウィートパレード': 'スウィート|パレード',
+  'マリーランドアーチ': 'マリーランド|アーチ',
+  '巨大雪だるま転がし': '巨大雪だるま|転がし',
+  '熾天の剣よ降り立て': '熾天の剣よ|降り立て',
+  '天の慈悲を示されよ': '天の慈悲を|示されよ',
   '聖夜の鐘を鳴響け': '聖夜の鐘を|鳴響け',
   '終焉に救いを与えよ': '終焉に|救いを与えよ',
   '永劫の贖いを全うせよ': '永劫の贖いを|全うせよ'
 });
-const battleCardNameLines = (name, per = BATTLE_CARD_NAME_PER_LINE) => {
-  if (per === BATTLE_CARD_NAME_PER_LINE && battleCardNameUnits(name) <= BATTLE_CARD_NAME_ONE_LINE) return [String(name || '')];
-  if (Object.prototype.hasOwnProperty.call(BATTLE_CARD_NAME_BREAKS, String(name || ''))) return BATTLE_CARD_NAME_BREAKS[String(name)].split('|');
-  const chars = [...String(name || '')];
-  const n = chars.length;
-  if (n <= per) return [chars.join('')];
-  const ok = new Set();
+const battleCardNameBreakCache = new Map();
+const battleCardNameLines = name => {
+  const text = String(name || '');
+  if (battleCardNameBreakCache.has(text)) return battleCardNameBreakCache.get(text);
+  const chars = [...text],
+    n = chars.length,
+    per = BATTLE_CARD_NAME_PER_LINE;
+  if (battleCardNameUnits(text) > per && Object.prototype.hasOwnProperty.call(BATTLE_CARD_NAME_BREAKS, text)) {
+    const fixed = BATTLE_CARD_NAME_BREAKS[text].split('|');
+    battleCardNameBreakCache.set(text, fixed);
+    return fixed;
+  }
+  const good = new Set();
   for (let k = 1; k < n; k += 1) {
     const a = battleCardNameClass(chars[k - 1]),
       b = battleCardNameClass(chars[k]);
-    if (a !== b && !(chars[k] === 'ー' || chars[k - 1] === 'ー')) ok.add(k);
+    if (a !== b && !(chars[k] === 'ー' || chars[k - 1] === 'ー')) good.add(k);
   }
   try {
     if (typeof Intl !== 'undefined' && typeof Intl.Segmenter === 'function') {
       let at = 0;
       for (const seg of new Intl.Segmenter('ja', {
         granularity: 'word'
-      }).segment(chars.join(''))) {
+      }).segment(text)) {
         at += [...seg.segment].length;
-        if (at > 0 && at < n) ok.add(at);
+        if (at > 0 && at < n) good.add(at);
       }
     }
   } catch (e) {}
-  const cands = [...ok].filter(k => !BATTLE_CARD_NO_BREAK_BEFORE.test(chars[k]));
-  const mid = Math.ceil(n / 2);
-  let best = null;
-  for (const k of cands) {
-    const m = Math.max(k, n - k);
-    if (m <= mid + 2 && (best == null || m < Math.max(best, n - best) || m === Math.max(best, n - best) && Math.abs(k - mid) < Math.abs(best - mid))) best = k;
-  }
-  if (best == null) {
-    for (let d = 0; d < n; d += 1) {
-      for (const k of [mid + d, mid - d]) {
-        if (best == null && k > 0 && k < n && !BATTLE_CARD_NO_BREAK_BEFORE.test(chars[k])) best = k;
-      }
-      if (best != null) break;
+  for (const [word, broken] of Object.entries(BATTLE_CARD_NAME_BREAKS)) {
+    const at = text.indexOf(word);
+    if (at < 0) continue;
+    const start = [...text.slice(0, at)].length,
+      len = [...word].length;
+    for (let q = start + 1; q < start + len; q += 1) good.delete(q);
+    let p = start;
+    for (const part of broken.split('|').slice(0, -1)) {
+      p += [...part].length;
+      good.add(p);
     }
-    if (best == null) best = mid;
   }
-  const head = chars.slice(0, best).join(''),
-    tail = chars.slice(best).join('');
-  const more = t => [...t].length >= 8 ? battleCardNameLines(t, per) : [t];
-  return [...more(head), ...more(tail)];
+  const allowed = [];
+  for (let k = 1; k < n; k += 1) if (!BATTLE_CARD_NO_BREAK_BEFORE.test(chars[k])) allowed.push(k);
+  let best = null,
+    loose = null;
+  const better = (x, y) => !y || x[0] < y[0] || x[0] === y[0] && (x[1] < y[1] || x[1] === y[1] && x[2] < y[2]);
+  const walk = (i, lines, mid) => {
+    if (lines.length > 3) return;
+    if (i === n) {
+      const longest = Math.max(...lines.map(battleCardNameUnits));
+      const key = [mid, lines.length, longest];
+      if (longest <= per + 1e-9) {
+        if (better(key, best && best.key)) best = {
+          key,
+          lines: [...lines]
+        };
+      } else {
+        const lk = [longest, mid, lines.length];
+        if (better(lk, loose && loose.key)) loose = {
+          key: lk,
+          lines: [...lines]
+        };
+      }
+      return;
+    }
+    for (const j of [...allowed.filter(k => k > i), n]) {
+      lines.push(chars.slice(i, j).join(''));
+      walk(j, lines, mid + (j < n && !good.has(j) ? 1 : 0));
+      lines.pop();
+    }
+  };
+  walk(0, [], 0);
+  if (best && best.key[0] > 0) best = null;
+  if (!best) {
+    loose = null;
+    const walkGood = (i, lines) => {
+      if (lines.length > 3) return;
+      if (i === n) {
+        const longest = Math.max(...lines.map(battleCardNameUnits));
+        const lk = [longest, lines.length, 0];
+        if (better(lk, loose && loose.key)) loose = {
+          key: lk,
+          lines: [...lines]
+        };
+        return;
+      }
+      for (const j of [...[...good].filter(k => k > i && !BATTLE_CARD_NO_BREAK_BEFORE.test(chars[k])).sort((a, b) => a - b), n]) {
+        lines.push(chars.slice(i, j).join(''));
+        walkGood(j, lines);
+        lines.pop();
+      }
+    };
+    walkGood(0, []);
+  }
+  const out = best ? best.lines : loose ? loose.lines : [text];
+  battleCardNameBreakCache.set(text, out);
+  return out;
 };
-const BATTLE_CARD_NAME_LH = 1.12;
+const BATTLE_CARD_NAME_LH = 1.1;
 const battleCardNameUnits = line => [...String(line || '')].reduce((n, ch) => n + (/[\x20-\x7e]/.test(ch) ? 0.62 : 1), 0);
 const battleCardNameFit = name => {
   const lines = battleCardNameLines(name);
+  const longest = Math.max(BATTLE_CARD_NAME_PER_LINE, ...lines.map(battleCardNameUnits));
   const tall = (lines.length * BATTLE_CARD_NAME_LH).toFixed(2);
   return {
-    fontSize: `max(5.5px, min(calc((100cqw * var(--mh-name-ratio, 1) - 1.5px) / ${BATTLE_CARD_NAME_ONE_LINE}), calc((100cqh - var(--mh-rule-h, 6px)) / ${tall})))`,
+    fontSize: `max(5px, min(calc((100cqw * var(--mh-name-ratio, 1) - 1.5px) / ${longest.toFixed(2)}), calc((100cqh - var(--mh-rule-h, 6px)) / ${tall})))`,
     lineHeight: String(BATTLE_CARD_NAME_LH),
     whiteSpace: 'nowrap'
   };
