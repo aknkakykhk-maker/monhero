@@ -4,11 +4,11 @@
 //   node tools/battle/card-name-fit-browser-check.js
 //
 // 本物の CSS(index.html の <style> と tailwind.css)と、本物の折り方・字の大きさ(battleCardNameLines / battleCardNameFit)で、
-// 手札と同じ大きさのカード(縦持ち 72×133・横持ち 72×111)を作り、名前を1つずつ置いて測る。
+// 手札と同じ大きさのカード(縦持ち 72×133・横持ち 72×111。手札では見た目だけ約1.1倍に拡大するが、置き場の割合は同じ)を作り、名前を1つずつ置いて測る。
 //   ① 置き場はカード幅の16.5%より内側(中の面の宝石はカード幅の約14%まで来る。金の枠は縁が細いので12.5%)・上は段階の札の下・下は下段の札の上
 //      金の枠(固有技)は、大きい丸の下の宝石の飾り(カードの高さの約42.5%)より下(2026-10-15 社長「固有技だけカードの柄に被ってる」)
 //   ② 名前は置き場からはみ出さない(下の飾り線の場所 6px も残す。横持ちの金の枠は名前の欄が狭いので線を出さない)。赤・金の両方、縦持ち・横持ちの両方
-//   ③ 手札の大きさ(72px幅)では、どの名前も同じ大きさ(5.75px)・2行まで(2026-10-15 社長「文字は全部同じサイズで最大2行」)
+//   ③ どの名前も同じ大きさ(8字ぶんが赤青緑紫の置き場に収まる大きさ。手札で約5.7px)・2行まで(2026-10-15 社長「文字は全部同じサイズで最大2行」)
 const fs = require('fs');
 const path = require('path');
 const http = require('http');
@@ -41,6 +41,8 @@ const nameCtx = {};
 vm.createContext(nameCtx);
 vm.runInContext(battle.slice(battle.indexOf('const BATTLE_CARD_NAME_PER_LINE'), battle.indexOf('const BATTLE_CARD_ROMAN = Object.freeze(')).replace(/^const /gm, 'var '), nameCtx);
 const names = collectNames();
+const CARD_W = 72;
+const WANT = (CARD_W * 0.66 - 1.5) / 8; // 赤青緑紫の置き場(カード幅の66%)に8字ぶんがちょうど収まる大きさ
 const cards = names.map((n) => ({ name: n, lines: nameCtx.battleCardNameLines(n), style: nameCtx.battleCardNameFit(n) }));
 
 const html = read('monster-hero/index.html');
@@ -69,14 +71,14 @@ const server = http.createServer((req, res) => {
     for (const [label, vw, vh, cardH] of [['縦持ち', 390, 844, 133], ['横持ち', 844, 390, 111]]) {
       const page = await browser.newPage({ viewport: { width: vw, height: vh } });
       await page.goto(`http://localhost:${port}/monster-hero/__card-name-fit.html`);
-      const res = await page.evaluate(({ cards, cardH }) => {
+      const res = await page.evaluate(({ cards, cardH, CARD_W, WANT }) => {
         const rootEl = document.getElementById('root');
         const out = { bad: [], room: [], small: [], fonts: [] };
         const mk = (c, kind) => {
           const card = document.createElement('div');
           card.setAttribute('data-card-art', kind === 'gold' ? 'gold' : 'std');
           card.setAttribute('data-card-plate', kind);
-          card.style.cssText = `position:relative;width:72px;height:${cardH}px;isolation:isolate;flex:none`;
+          card.style.cssText = `position:relative;width:${CARD_W}px;height:${cardH}px;isolation:isolate;flex:none`;
           card.innerHTML = '<div data-decoration></div><div><div data-card-name class="text-[11px] font-black leading-[13px] w-full whitespace-normal flex items-center justify-center overflow-hidden px-0.5"><span data-card-name-text></span></div>'
             // 下段の札は本物(71-screen-battle.jsx の技変更の段)と同じ作り。高さは CSS の min-height で決まる
             + '<div data-skill-change class="flex w-full shrink-0 flex-col items-stretch justify-between gap-px rounded-[7px] border border-white/60 p-[2px]"><span class="flex items-center justify-center gap-0.5 pt-px text-[9px] font-black leading-none"><span>⇄</span>技変更</span>'
@@ -110,11 +112,11 @@ const server = http.createServer((req, res) => {
           // ② はみ出し(字と飾り線をまとめて置き場に収める)
           const fits = sr.left >= box.l - 0.5 && sr.right <= box.r + 0.5 && sr.height + gap + ruleH <= box.b - box.t + 0.5;
           if (!fits) out.bad.push(`${c.lines.join('/')}(${kind} ${font.toFixed(1)}px 幅${sr.width.toFixed(1)}/${(box.r - box.l).toFixed(1)} 高さ${(sr.height + gap + ruleH).toFixed(1)}/${(box.b - box.t).toFixed(1)})`);
-          if ((Math.abs(font - 5.75) > 0.05 || c.lines.length > 2) && out.small.length < 6) out.small.push(`${c.lines.join('/')}(${kind}) ${font.toFixed(2)}px ${c.lines.length}行`);
+          if ((Math.abs(font - WANT) > 0.05 || c.lines.length > 2) && out.small.length < 6) out.small.push(`${c.lines.join('/')}(${kind}) ${font.toFixed(2)}px ${c.lines.length}行`);
           if (font < 5.5 - 0.01) out.bad.push(`${c.name} ${font}px`);
         }
         return out;
-      }, { cards, cardH });
+      }, { cards, cardH, CARD_W, WANT });
       check(`① ${label}: 置き場は中の面の宝石より内側・段階の札(金は丸の下の飾り)の下〜下段の札の上・飾り線の場所 6px(横持ちの金は線なし)`, res.room.length === 0, res.room.join(' / '));
       check(`② ${label}: ${cards.length}件 × 赤・金 の名前が置き場からはみ出さない`, res.bad.length === 0, res.bad.slice(0, 6).join(' '));
       const f = res.fonts.sort((a, b) => a - b);
@@ -122,7 +124,7 @@ const server = http.createServer((req, res) => {
       small.push(...res.small.map((s) => `${label} ${s}`));
       await page.close();
     }
-    check('③ 縦持ち・横持ちとも、どの名前も同じ大きさ(5.75px)・2行まで', small.length === 0, small.join(' / '));
+    check(`③ 縦持ち・横持ちとも、どの名前も同じ大きさ(${WANT.toFixed(2)}px)・2行まで`, small.length === 0, small.join(' / '));
   } catch (e) { check('ブラウザで確かめられた', false, String(e).slice(0, 300)); }
   finally { if (browser) await browser.close(); server.close(); }
   console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');

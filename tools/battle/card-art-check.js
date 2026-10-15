@@ -57,9 +57,15 @@ check('⑦ 名前の欄は左右をカード幅の10%ずつ下げた置き場(�
   /\[data-card-plate\] \[data-card-name\] \{[^}]*padding: 0 10cqw !important;[^}]*container-type: size;/.test(htmlSrc)
   && /\[data-card-plate\] \[data-card-name\]::after \{ content: ''; flex: none; width: 100%; height: var\(--mh-rule-h\); background: var\(--mh-name-rule, none\)/.test(htmlSrc));
 check('⑦ 金の枠の置き場は、大きい丸の下の飾り(高さの約42.5%)より下', /\[data-card-art="gold"\] > \[data-decoration\] \+ div \{ top: calc\(43% \+ 1px\); \}/.test(htmlSrc));
-check('⑦ 名前は全部同じ大きさ(5.75px)・2行まで。小さい画面では置き場の幅・高さ(cqw/cqh)に合わせて縮むだけ(社長「文字は全部同じサイズで最大2行」)',
-  /const BATTLE_CARD_NAME_PX = 5\.75;/.test(battle) && /fontSize: `min\(\$\{BATTLE_CARD_NAME_PX\}px, calc\(\(100cqw - 1\.5px\) \/ \$\{longest\.toFixed\(2\)\}\), calc\(\(100cqh - var\(--mh-rule-h, 6px\)\) \/ \$\{tall\}\)\)`/.test(battle)
+check('⑦ 名前は全部同じ大きさ(8字ぶんが赤青緑紫の置き場に収まる大きさ。金も --mh-name-ratio で同じ)・2行まで',
+  /fontSize: `max\(5\.5px, min\(calc\(\(100cqw \* var\(--mh-name-ratio, 1\) - 1\.5px\) \/ \$\{BATTLE_CARD_NAME_ONE_LINE\}\), calc\(\(100cqh - var\(--mh-rule-h, 6px\)\) \/ \$\{tall\}\)\)\)`/.test(battle)
+  && /\[data-card-plate="gold"\] \[data-card-name\] \{ padding: 0 6cqw !important; --mh-name-ratio: 0\.8919; \}/.test(htmlSrc)
   && /<span data-card-name-text style=\{battleCardNameFit\(c\.name\)\}>/.test(battle));
+// ⑧ 手札の幅と高さ(2026-10-15 社長「カードが小さくなって見にくい」「移動するときにカードが潰れる」)
+check('⑧ 絵のカードは見た目だけ拡大して、太い縁の外側を前の手札の外寸にそろえる(並び・押せる場所はそのまま)', /\[data-hand-card\]\[data-card-art\] \{ scale: 1\.126 1\.08; \}/.test(htmlSrc));
+check('⑧ 運んでいる間は scale を外し、同じ拡大を transform の中で掛ける(指からずれない)', /\[data-hand-card\]\[data-card-art\]\[data-dragging-card\] \{ scale: none; \}/.test(htmlSrc) && /transform:cardArt\?'translate\(-50%,-50%\) rotate\(-3deg\) scale\(1\.2949,1\.242\)'/.test(battle));
+check('⑧ 運んでいる間も、押した瞬間のカードの幅・高さのまま(潰れない)', /setDragState\(\{cardIndex:i, x:pt\.clientX, y:pt\.clientY, active:false, card:c, w:w0, h:h0\}\)/.test(battle)
+  && /width:dragState\.w\?`\$\{dragState\.w\}px`:'72px',\.\.\.\(dragState\.h\?\{height:`\$\{dragState\.h\}px`\}:\{\}\)/.test(battle));
 check('⑤ 名札・飾り線もバトル前に読み込む', /\.\.\.Object\.values\(BATTLE_CARD_ART\.plates \|\| \{\}\), \.\.\.Object\.values\(BATTLE_CARD_ART\.rules \|\| \{\}\)\]/.test(battle));
 check('⑤ 飾り線は枠と同じ色(rule-赤/青/緑/紫/金)を --mh-name-rule で渡す', ['red', 'blue', 'green', 'purple', 'gold'].every((k) => strip(A.rules && A.rules[k]).endsWith(`rule-${k}.webp`)) && /'--mh-name-rule':`url\("\$\{cardArt\.rule\}"\)`/.test(battle));
 

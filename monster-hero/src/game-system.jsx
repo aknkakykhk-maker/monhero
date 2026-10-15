@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 915fec59e80fe97c
+// generated-sha256: d9f53dd5d004f769
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-15 23:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-15 23:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -37438,19 +37438,18 @@ const battleCardNameLines = (name, per = BATTLE_CARD_NAME_PER_LINE) => {
   const more = (t) => ([...t].length >= 8 ? battleCardNameLines(t, per) : [t]);
   return [...more(head), ...more(tail)];
 };
-// 名前の字の大きさ(2026-10-15 社長「文字は全部同じサイズで最大2行にならない？」→ 5.8px でそろえる)。
-//   名前は「文字の置き場」(名前の欄の内側。CSS の padding で中の面の宝石より内側に決める)の中にだけ置き、どの名前も同じ大きさ・2行まで。
-//   大きさは、いちばん長い行(スターバースト・/ストリームの8字)が赤青緑紫の枠の置き場(手札で約46px)にちょうど収まる 5.75px。
-//   名前の欄は大きさの基準(container-type:size)なので、カードが小さい画面では置き場の幅・高さ(cqw/cqh)に合わせて縮むだけにする
+// 名前の字の大きさ(2026-10-15 社長「文字は全部同じサイズで最大2行」→ 全部同じ大きさ・2行まで)。
+//   名前は「文字の置き場」(名前の欄の内側。CSS の padding で中の面の宝石より内側に決める)の中にだけ置く。
+//   大きさは、いちばん長い行(8字ぶん)が赤青緑紫の枠の置き場(カード幅の66%)にちょうど収まる大きさで、カードの幅に合わせて変わる
+//   (手札が約72px幅なら約5.7px。手札では見た目を約1.1倍に拡大している)。金の枠は置き場が広い(74%)ので、--mh-name-ratio で赤青緑紫と同じ大きさにそろえる。
+//   名前の欄は大きさの基準(container-type:size)なので cqw は置き場の幅。高さが足りない画面では高さに合わせて縮む
 //   (下の飾り線の場所 --mh-rule-h は高さから先に引く)。英数(KUROMI'S など)は和文の字より細いので 0.62 字に数える
-const BATTLE_CARD_NAME_PX = 5.75;
 const BATTLE_CARD_NAME_LH = 1.12;
 const battleCardNameUnits = (line) => [...String(line || '')].reduce((n, ch) => n + (/[\x20-\x7e]/.test(ch) ? 0.62 : 1), 0);
 const battleCardNameFit = (name) => {
   const lines = battleCardNameLines(name);
-  const longest = Math.max(1, ...lines.map(battleCardNameUnits));
   const tall = (lines.length * BATTLE_CARD_NAME_LH).toFixed(2);
-  return { fontSize: `min(${BATTLE_CARD_NAME_PX}px, calc((100cqw - 1.5px) / ${longest.toFixed(2)}), calc((100cqh - var(--mh-rule-h, 6px)) / ${tall}))`, lineHeight: String(BATTLE_CARD_NAME_LH), whiteSpace: 'nowrap' };
+  return { fontSize: `max(5.5px, min(calc((100cqw * var(--mh-name-ratio, 1) - 1.5px) / ${BATTLE_CARD_NAME_ONE_LINE}), calc((100cqh - var(--mh-rule-h, 6px)) / ${tall})))`, lineHeight: String(BATTLE_CARD_NAME_LH), whiteSpace: 'nowrap' };
 };
 const BATTLE_CARD_ROMAN = Object.freeze(['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX']);
 // カード1枚の絵。{ frame, mark(技のマークの絵・無ければ null で今のアイコン), roman(段階の札・無ければ '') }
@@ -40210,8 +40209,11 @@ function BattleScreen({
                 if(isBusy||autoBattleRef.current||!tutorialAllowed)return;
                 const pt=e.touches?e.touches[0]:e;
                 cardDragActiveRef.current=false;
-                setDragState({cardIndex:i, x:pt.clientX, y:pt.clientY, active:false, card:c});
-              }} style={{...(cardArt&&cardArt.plate?{'--mh-plate':`url("${cardArt.plate}")`}:{}),...(cardArt&&cardArt.rule?{'--mh-name-rule':`url("${cardArt.rule}")`}:{}),...(isDragging?{touchAction:'none',position:'fixed',left:dragState.x,top:dragState.y,transform:'translate(-50%,-50%) rotate(-3deg) scale(1.15)',zIndex:70000,width:'72px',pointerEvents:'none',transition:'none',filter:'drop-shadow(0 12px 18px rgba(0,0,0,0.65))'}:{touchAction:'none',boxShadow:tacticsNewLayout?`${(TYPE_INLINE_STYLE[c.type]||{}).borderColor?`0 -2px 10px ${(TYPE_INLINE_STYLE[c.type]||{}).borderColor}45, `:''}inset 0 1px 0 rgba(255,255,255,.08), 0 5px 12px rgba(0,0,0,.24)`:`${(TYPE_INLINE_STYLE[c.type]||{}).borderColor?`0 0 12px ${(TYPE_INLINE_STYLE[c.type]||{}).borderColor}70, `:''}inset 0 1px 0 rgba(255,255,255,.34), inset 0 -10px 16px rgba(0,0,0,.30), 0 4px 10px rgba(0,0,0,.5)`}),...(TYPE_INLINE_STYLE[c.type]||{})}} className={`relative w-full ${tacticsNewLayout?'rounded-[12px] border':'rounded-xl border-2'} p-1 flex flex-col items-center justify-between bg-gradient-to-b ${TYPE_COLORS[c.type]} ${isDragging?'ring-4 ring-white shadow-[0_0_24px_rgba(255,255,255,0.6)]':isSel?'transition-all -translate-y-1.5 ring-2 ring-cyan-300 z-20 scale-[1.03] opacity-90 saturate-[0.95] shadow-[0_0_16px_rgba(103,232,249,0.45)]':'transition-all opacity-90'} ${isPending?'ring-4 ring-yellow-400 animate-pulse shadow-[0_0_20px_rgba(250,204,21,0.7)]':''} ${!isSelectable&&!isSel&&!isDragging?'grayscale opacity-50':''}${tutorialTargeted?' is-battle-tutorial-spot':''}${battleTutorialCardTarget&&!tutorialTargeted?' grayscale opacity-25':''}`}>
+                // 運ぶ間も手札と同じ大きさ・縦横比にする(2026-10-15 社長「移動するときにカードが潰れる」)。押した瞬間の大きさを覚えておく
+                //   (絵のカードは見た目だけ拡大(CSS の scale)しているので、拡大を含まない元の大きさ offsetWidth/offsetHeight を使う)
+                const el0=e.currentTarget, w0=el0&&el0.offsetWidth>0?el0.offsetWidth:null, h0=el0&&el0.offsetHeight>0?el0.offsetHeight:null;
+                setDragState({cardIndex:i, x:pt.clientX, y:pt.clientY, active:false, card:c, w:w0, h:h0});
+              }} style={{...(cardArt&&cardArt.plate?{'--mh-plate':`url("${cardArt.plate}")`}:{}),...(cardArt&&cardArt.rule?{'--mh-name-rule':`url("${cardArt.rule}")`}:{}),...(isDragging?{touchAction:'none',position:'fixed',left:dragState.x,top:dragState.y,transform:cardArt?'translate(-50%,-50%) rotate(-3deg) scale(1.2949,1.242)':'translate(-50%,-50%) rotate(-3deg) scale(1.15)',zIndex:70000,width:dragState.w?`${dragState.w}px`:'72px',...(dragState.h?{height:`${dragState.h}px`}:{}),pointerEvents:'none',transition:'none',filter:'drop-shadow(0 12px 18px rgba(0,0,0,0.65))'}:{touchAction:'none',boxShadow:tacticsNewLayout?`${(TYPE_INLINE_STYLE[c.type]||{}).borderColor?`0 -2px 10px ${(TYPE_INLINE_STYLE[c.type]||{}).borderColor}45, `:''}inset 0 1px 0 rgba(255,255,255,.08), 0 5px 12px rgba(0,0,0,.24)`:`${(TYPE_INLINE_STYLE[c.type]||{}).borderColor?`0 0 12px ${(TYPE_INLINE_STYLE[c.type]||{}).borderColor}70, `:''}inset 0 1px 0 rgba(255,255,255,.34), inset 0 -10px 16px rgba(0,0,0,.30), 0 4px 10px rgba(0,0,0,.5)`}),...(TYPE_INLINE_STYLE[c.type]||{})}} className={`relative w-full ${tacticsNewLayout?'rounded-[12px] border':'rounded-xl border-2'} p-1 flex flex-col items-center justify-between bg-gradient-to-b ${TYPE_COLORS[c.type]} ${isDragging?'ring-4 ring-white shadow-[0_0_24px_rgba(255,255,255,0.6)]':isSel?'transition-all -translate-y-1.5 ring-2 ring-cyan-300 z-20 scale-[1.03] opacity-90 saturate-[0.95] shadow-[0_0_16px_rgba(103,232,249,0.45)]':'transition-all opacity-90'} ${isPending?'ring-4 ring-yellow-400 animate-pulse shadow-[0_0_20px_rgba(250,204,21,0.7)]':''} ${!isSelectable&&!isSel&&!isDragging?'grayscale opacity-50':''}${tutorialTargeted?' is-battle-tutorial-spot':''}${battleTutorialCardTarget&&!tutorialTargeted?' grayscale opacity-25':''}`}>
                 {/* ★新しい盤面の手札の飾り(2026-09-24 ユーザー指示「カードの絵をもっと高級感というか、いいかんじに」)。
                     金の縁(回る光)・種類ごとの地の模様・ときどき横切る光の筋・左上の消費ガッツの宝石。
                     見た目は data-tactics-look の CSS(70-bootstrap)がまとめて持つ。★消費ガッツはこの宝石だけに出す
