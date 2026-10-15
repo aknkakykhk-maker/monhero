@@ -39,7 +39,7 @@ ok('canvas 版の顔は DOM の要素を重ねない(毎フレーム拡大して
   !game.includes('data-rhythm-canvas-face aria-hidden')&&game.includes('RHYTHM_CANVAS_RENDERER.drawFace(faceBitmap.glow'));
 ok('いちばん軽い段では能力名の大きな表示も出さない',
   game.includes("const showAbilityFlash=!!abilityFlash&&!rhythmMonsterEffectAtMost(settings.monsterNoteEffect,'NONE');")
-  &&game.includes('...(showAbilityFlash?{ability:abilityFlash}:{})')
+  &&game.includes('if(showAbilityFlash)setAbilityFlash(`${abilityFlash.ability}！`);')
   &&game.includes('if(showAbilityFlash)scheduleAbilityClear();'));
 // ---- 踏んだ瞬間の処理(2026-09-13・ユーザー指摘「マスモンの表示より踏んだときの挙動
 //      だと思うんだけどその辺は何もいじらない？」) ----
