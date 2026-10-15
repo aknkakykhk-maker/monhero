@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4901056a6fbac3de
+// source-sha256: 79838c9f514d0559
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-16 00:39";
+const BUILD_DATE = "2026-10-16 01:16";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -16442,7 +16442,8 @@ const AssistantBubble = ({
   accent = null,
   faceSize = null,
   compact = false,
-  defaultOpen = false
+  defaultOpen = false,
+  footerSpace = 0
 }) => {
   const [open, setOpen] = useState(defaultOpen);
   const bubbleSetting = useAssistantBubbleState();
@@ -16582,14 +16583,21 @@ const AssistantBubble = ({
     }
   }, who.name), React.createElement("span", {
     className: `block text-white leading-relaxed ${compact ? 'text-[10px]' : 'text-[12px]'}`
-  }, text), hasDetail && React.createElement("span", {
+  }, text), (hasDetail || footerSpace > 0) && React.createElement("span", {
     className: "mt-0.5 flex items-center justify-end gap-0.5 text-[9px] font-black",
     style: {
-      color
+      color,
+      ...(footerSpace > 0 ? {
+        paddingLeft: `${footerSpace}px`,
+        minHeight: '18px',
+        whiteSpace: 'nowrap'
+      } : {})
     }
-  }, "タップで詳しく", React.createElement(ChevronRight, {
+  }, hasDetail && React.createElement(React.Fragment, null, React.createElement("span", {
+    "data-bubble-more-text": true
+  }, "タップで詳しく"), React.createElement(ChevronRight, {
     size: 11
-  })))), open && React.createElement("div", {
+  }))))), open && React.createElement("div", {
     className: "fixed inset-0 flex items-end justify-center",
     style: {
       position: 'fixed',
@@ -61289,12 +61297,16 @@ function HomeScreen({
   }, React.createElement(AssistantBubble, {
     scene: "home",
     condition: assistantBondUp ? 'bondUp' : masuMons.length === 0 ? 'firstRun' : null,
-    compact: true
+    compact: true,
+    footerSpace: typeof onOpenAssistantChat === 'function' ? 70 : 0
   }), typeof onOpenAssistantChat === 'function' && React.createElement("button", {
     type: "button",
     "data-home-assistant-chat": true,
     onClick: onOpenAssistantChat,
-    className: "mt-1 ml-auto block rounded-full border border-pink-300/70 bg-pink-500/85 px-3 py-1 text-[11px] font-black text-white shadow active:scale-95"
+    className: "absolute bottom-[6px] z-10 rounded-full border border-pink-300/70 bg-pink-500/85 px-1.5 py-px text-[9px] font-black leading-tight text-white shadow active:scale-95",
+    style: {
+      left: '64px'
+    }
   }, "💬 おしゃべり")));
 }
 function KikiIntroOverlay({
