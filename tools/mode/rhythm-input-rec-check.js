@@ -49,6 +49,26 @@ const read = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
   check('切に戻すとキーを消す', !store.has('mh_rhythm_input_rec_v1'));
 }
 
+// ---- 再生の道具(rhythm-input-replay.js)の部品 ----
+{
+  const R = require('./rhythm-input-replay.js');
+  const ev = [
+    { k: 'touchstart', ms: 900, at: 1950, ts: 1940, c: [{ id: 123456, x: 10, y: 20, rx: 9, ry: 9, f: 0 }] },
+    { k: 'touchstart', ms: 1000, at: 2050, ts: 2045, c: [{ id: 999, x: 30, y: 40, rx: 9, ry: 9, f: 0 }] },
+    { k: 'touchend', ms: 1100, at: 2150, ts: 2148, c: [{ id: 123456, x: 10, y: 20 }] },
+    { k: 'pointerdown', ms: 900, at: 1951, id: 3, pt: 'touch', x: 10, y: 20 },
+  ];
+  check('再生: 曲の頭の時刻を記録から出す', R.songStartAt(ev) === 1050);
+  check('再生: 起きた時刻は e.timeStamp を使い、基準が違うものは受け取った時刻', R.occurAt(ev[0]) === 1940 && R.occurAt({ at: 100000, ts: 3 }) === 100000);
+  const plan = R.touchPlan(ev, 1050);
+  check('再生: 指は小さな番号に直し、そのとき触れている指を全部渡す(pointer は流さない)',
+    plan.length === 3 && plan[0].points[0].id === 1 && plan[1].points.length === 2 && plan[2].type === 'touchEnd' && plan[2].points.length === 1 && plan[2].points[0].id === 2 && plan[0].rel === 890);
+  const o = [{ type: 'hit', ms: 1000, d: { note: 5 } }, { type: 'miss', ms: 2000, d: { note: 6, reason: 'no-input' } }, { type: 'standby', ms: 2500, d: {} }];
+  const r = [{ type: 'hit', ms: 1010, d: { note: 5 } }, { type: 'hit', ms: 2003, d: { note: 6 } }, { type: 'standby', ms: 2600, d: {} }];
+  const c = R.compareJudges(o, r, 40);
+  check('再生: 判定の出来事を、種類・ノーツ・時刻の差で1対1に結ぶ', c.matched === 1 && c.missingInReplay.length === 2 && c.extraInReplay.length === 2 && c.byType.hit.orig === 1 && c.byType.hit.replay === 2);
+}
+
 // ---- 静的: 演奏とデバッグ設定のつなぎ ----
 {
   const play = read('monster-hero/src/parts/30-rhythm-play.jsx'), app = read('monster-hero/src/parts/60-app.jsx');
