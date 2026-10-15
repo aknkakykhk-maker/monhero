@@ -1225,7 +1225,7 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   // 交差の持ち替え(2026-10-11 社長「交差のときは指を置き換えている」)。タッチ側の見回りが2本の SLIDE の指と帯を結び直すとき、
   // 本体の「指→ノーツ」の表(run.activePointers・note.activePointerId)も同じ瞬間に入れ替える。表が想定と違えば断る(タッチ側も結び直さない)
   useEffect(()=>{
-    RHYTHM_GESTURE_RUNTIME.setSlideSwapListener?.((keyA,keyB,noteA,noteB)=>{
+    RHYTHM_GESTURE_RUNTIME.setSlideSwapListener?.((keyA,keyB,noteA,noteB)=>{RHYTHM_INPUT_REC.event('swap',{note:noteA?.index,other:noteB?.index,key:keyA,otherKey:keyB});
       const run=runRef.current;
       if(!run||run.finished||run.paused)return false;
       const indexA=run.activePointers.get(keyA),indexB=run.activePointers.get(keyB);
@@ -1898,6 +1898,7 @@ useEffect(()=>{
 // 必死(ユグドラシル血統の能力)のあいだは、GREAT・EXCELLENTをMARVELOUSとして数える(判定だけをここで置き換える。
 // ずれは変えないので、ジャストのMARVELOUSになるのは本当にぴったりだったときだけ。2026-10-06 ユーザー指示)
 if(rhythmHisshiUpgrades(run.abilities,judgment,run.audio?.songTimeMs?.()??0))judgment='MARVELOUS';
+RHYTHM_INPUT_REC.event(judgment==='MISS'?'miss':'hit',{note:note.index,j:judgment,dt:typeof deltaMs==='number'&&Number.isFinite(deltaMs)?Math.round(deltaMs):null,key:note.activePointerId,sky:rhythmNoteIsSky(note)});
 if(note.activePointerId!==null){if(note.activePointerId!==-1)run.activePointers.delete(note.activePointerId);note.activePointerId=null;}note.releasedAtMs=null;rhythmFloatingNoteRemove(note);note.done=true;note._rhythmFinalJudgment=judgment;note._rhythmDeltaMs=typeof deltaMs==='number'&&Number.isFinite(deltaMs)?deltaMs:null;
 // MARVELOUSの中でも、とくにぴったり(±20ms)だったか。**見た目にしか使わない**(2026-09-12)。
 // 判定の名前・スコア・コンボ・ライフ・判定数・FAST/SLOWの数え方には一切入れないので、
@@ -2712,6 +2713,7 @@ scheduleTick();};
       // いま押さえている帯へ、持ち替えのために置いた2本目の指。
       // まだ何も取らないが、1本目が離れたらこの指へそのまま渡す(inputEndsを参照)。
       // 空打ちの音は鳴らさない(押し損ねたわけではないので)
+      if(!target&&standby)RHYTHM_INPUT_REC.event('standby',{note:standby.index,key:input.inputKey,sub:input.subLaneCoordinate,sky:input.sky});
       if(!target&&standby){
         run.standbyPointers.set(input.inputKey,standby.index);
         if(input.captureTarget&&input.pointerId!==undefined){try{input.captureTarget.setPointerCapture(input.pointerId);}catch{}}
@@ -2719,10 +2721,11 @@ scheduleTick();};
       }
       // 指を滑らせて取り直した(rejudge)ときも、ノーツが無ければ空押しの音を鳴らす(レーンが変わるたびの「シャッ」)。
       // ただし、ノーツの音の直後(150ms以内)は鳴らさない(2026-10-07・成功したタップのあとに指が数px動くと余分に鳴っていた)
-      if(!target){if(!input.rejudge||!RHYTHM_NOTE_SE_RUNTIME.recentNoteSe?.(150)){RHYTHM_PERF.emptyTap();RHYTHM_NOTE_SE_RUNTIME.playEmpty();}if(input.captureTarget&&input.pointerId!==undefined){try{input.captureTarget.setPointerCapture(input.pointerId);}catch{}}return;}const judgment=rhythmJudgeTap(deltaMs);if(target.type==='HOLD'){
+      if(!target)RHYTHM_INPUT_REC.event('empty',{key:input.inputKey,sub:input.subLaneCoordinate,sky:input.sky,rejudge:!!input.rejudge});if(!target){if(!input.rejudge||!RHYTHM_NOTE_SE_RUNTIME.recentNoteSe?.(150)){RHYTHM_PERF.emptyTap();RHYTHM_NOTE_SE_RUNTIME.playEmpty();}if(input.captureTarget&&input.pointerId!==undefined){try{input.captureTarget.setPointerCapture(input.pointerId);}catch{}}return;}const judgment=rhythmJudgeTap(deltaMs);if(target.type==='HOLD'){
       // 持ち替えの途中(離したばかりで浮いている)なら、続きとして引き継ぐ。
       // 始点の判定は最初に押さえたときのものを保つ(持ち替えで良くも悪くもならない)
       const handover=target.releasedAtMs!=null;
+      RHYTHM_INPUT_REC.event(handover?'handover':'hold',{note:target.index,key:input.inputKey,j:judgment,dt:Math.round(deltaMs),sub:input.subLaneCoordinate,sky:input.sky});
       target.activePointerId=input.inputKey;
       if(handover){target.releasedAtMs=null;rhythmFloatingNoteRemove(target);}
       else{target.holdJudgment=judgment;target.holdDeltaMs=deltaMs;}
@@ -2740,6 +2743,7 @@ scheduleTick();};
     if(songNow<Number(held.endTimeMs)+offset-RHYTHM_RELEASE_MAX_MS)return;
     const flick=run.notes.find(n=>n&&!n.done&&n.type==='FLICK'&&n.activePointerId===null&&Math.abs(songNow-(Number(n.timeMs)+offset))<=RHYTHM_INPUT_MATCH_WINDOW_MS&&(()=>{const span=rhythmProjectSubLaneSpan(n.subLane,n.subLaneWidth,1),tol=span.subLaneWidth<=1?RHYTHM_NARROW_TAP_TOLERANCE_SUB_LANES:RHYTHM_TAP_TOLERANCE_SUB_LANES;return subLaneCoordinate>=span.subLane-tol&&subLaneCoordinate<=span.subLane+span.subLaneWidth+tol;})());
     if(!flick)return;
+    RHYTHM_INPUT_REC.event('held-flick',{note:held.index,flick:flick.index,key:inputKey});
     inputEnds([{inputKey}]);
     inputStarts([{lane:Math.floor(subLane/2),subLaneCoordinate,inputKey,rejudge:true,flickOnly:true}]);
   };
@@ -2758,6 +2762,7 @@ scheduleTick();};
     // 浮いている状態を経由しないので、猶予の時間切れに巻き込まれない
     const takeover=standbyFingerFor(run,noteIndex,input.inputKey);
     if(takeover&&!note.done&&now<holdEndMs-RHYTHM_HOLD_RELEASE_GRACE_MS){
+      RHYTHM_INPUT_REC.event('handover',{note:noteIndex,key:takeover,from:input.inputKey});
       note.activePointerId=takeover;
       note.releasedAtMs=null;rhythmFloatingNoteRemove(note);
       run.activePointers.set(takeover,noteIndex);
@@ -2772,7 +2777,7 @@ scheduleTick();};
     if(now>=holdEndMs-RHYTHM_HOLD_RELEASE_GRACE_MS){const own=rhythmReleaseFallback(note,now,settings.judgmentTimingOffsetMs);if(own)applyJudgment(note,own.judgment,own.deltaMs);else applyJudgment(note,note.holdJudgment||'MISS',note.holdDeltaMs||0);}
     // まだ途中なら、すぐには失敗にしない。指を入れ替えている途中かもしれないので、
     // 猶予のあいだは「浮いている」ことだけ覚えておく(rAFのvisitNoteが時間切れを見る)
-    else{note.releasedAtMs=now;rhythmFloatingNoteAdd(note);}if(input.releaseTarget&&input.pointerId!==undefined){try{if(input.releaseTarget.hasPointerCapture?.(input.pointerId))input.releaseTarget.releasePointerCapture(input.pointerId);}catch{}}});};
+    else{note.releasedAtMs=now;rhythmFloatingNoteAdd(note);}if(!note.done&&note.releasedAtMs===now)RHYTHM_INPUT_REC.event('float',{note:noteIndex,key:input.inputKey});if(input.releaseTarget&&input.pointerId!==undefined){try{if(input.releaseTarget.hasPointerCapture?.(input.pointerId))input.releaseTarget.releasePointerCapture(input.pointerId);}catch{}}});};
   // 入力のたびに getBoundingClientRect() を呼ぶと、そのフレームで書き込み待ちだった
   // ノーツの位置をすべて確定させられる(強制レイアウト)。指の数ぶん・touchmoveの数ぶん
   // これが起きるため、タップのたびに一瞬止まって見える原因になる。FLICK/SLIDE側と
