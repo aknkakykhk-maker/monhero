@@ -68,26 +68,19 @@ section{display:flex;flex-direction:column;gap:10px}
 <div class="wrap">
   <header>
     <h1>モンヒロ社 社長室</h1>
-    <p class="lead">10/16 04:07 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。<br>モンスター Tier 表: <a href="https://claude.ai/artifact/3sUNc2pQgN5f4QdYYW5tW8">https://claude.ai/artifact/3sUNc2pQgN5f4QdYYW5tW8</a>(サイドバーにも固定)</p>
+    <p class="lead">10/16 06:02 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。<br>モンスター Tier 表: <a href="https://claude.ai/artifact/3sUNc2pQgN5f4QdYYW5tW8">https://claude.ai/artifact/3sUNc2pQgN5f4QdYYW5tW8</a>(サイドバーにも固定)</p>
   </header>
 
   <nav class="counts" aria-label="件数">
-    <a class="count warn" href="#decide"><b>1</b><span>社長の判断待ち(うち提案 1)</span></a>
-    <a class="count" href="#work"><b>3</b><span>進行中</span></a>
-    <a class="count" href="#shipped"><b>32</b><span>公開したもの</span></a>
+    <a class="count warn" href="#decide"><b>0</b><span>社長の判断待ち</span></a>
+    <a class="count" href="#work"><b>5</b><span>進行中</span></a>
+    <a class="count" href="#shipped"><b>33</b><span>公開したもの</span></a>
   </nav>
 
   <section id="decide">
     <h2>社長の判断待ち(提案・質問)</h2>
     <p class="note">部からの提案は「提案」、進め方の確認は「質問」の札で出ます。決めたら、チャットで番号や案を伝えてください。</p>
-    <div class="cards">
-      <article class="card decide" id="r2610160158night">
-        <span class="chip warn">提案</span>
-        <h3>夜の点検: モンビー周り・タクティクス周り・ダメ出しくんの確認</h3>
-        <p></p>
-        <ol class="options"><li>改善部K2: カードのコスト数字を白で大きく(約10px)・名前を白文字に黒ふち(推奨)</li><li>曲の版切り替えボタンを押しやすく大きく</li><li>Sheriruth HELL 77.6秒のカクつき(最長約100ms)を詰める</li><li>タクティクス最終WAVE(覚醒ムー)の重さ・予告の見直し</li><li>支援寄りの子(ハム・モノリス)の出番を増やす</li></ol>
-        <div class="meta"><span>バトル部・ビート部・改善部 ブレイブくん・テンポくん・ダメダシくん</span><span>10/16 01:58</span></div>
-      </article>
+    <div class="cards"><p class="empty">いま決めてほしいことはありません。</p>
     </div>
   </section>
 
@@ -95,6 +88,16 @@ section{display:flex;flex-direction:column;gap:10px}
     <section id="work">
       <h2>進行中の作業</h2>
       <ul class="list">
+      <li id="r2610160800oldcard">
+        <div class="row-title">タクティクスの行動カードを、設定で前のカードの見た目にも戻せるようにする(改善部K2・社長の決定)</div>
+        
+        <div class="meta"><span>部長ブレイブくん</span><span>見込み 既定は新しいカードの絵のまま。新しい保存キーを足すだけ</span></div>
+      </li>
+      <li id="r2610160800beat">
+        <div class="row-title">モンヒロビート: 曲の版切り替えボタンを大きく/Sheriruth HELL 77.6秒のカクつきを詰める(夜の点検の提案・社長の決定)</div>
+        
+        <div class="meta"><span>部長テンポくん</span><span>見込み 判定の幅と配信中の譜面は変えない</span></div>
+      </li>
       <li id="r2610152200scan">
         <div class="row-title">モンヒロビート: 全曲・全難易度を機械で洗い出し、人の手どおりの自動演奏で正しく押して MISS になる所を探す</div>
         
@@ -221,6 +224,11 @@ section{display:flex;flex-direction:column;gap:10px}
     <section id="shipped">
       <h2>公開したもの</h2>
       <ul class="list">
+      <li id="r2610160158night">
+        <div class="row-title">夜の点検: モンビー周り・タクティクス周り・ダメ出しくんの確認</div>
+        
+        <div class="meta"><span>ブレイブくん・テンポくん・ダメダシくん</span><span>PR #3052・#3054・#3055・#3056・#3059</span></div>
+      </li>
       <li id="r2610152230flickmark">
         <div class="row-title">空中スライドの終わりの「払う」印を大きく目立たせる(決まりはそのまま)</div>
         
