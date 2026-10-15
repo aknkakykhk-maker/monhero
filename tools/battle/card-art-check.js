@@ -51,8 +51,36 @@ check('⑤ 名札は枠と同じ色(攻撃=赤・距離撃=青・守り=緑・�
   plateOf({ type: 'atk', ...ctx.BASE_ATK_EVOLUTION[0] }).endsWith('plate-red.webp') && plateOf({ type: 'range_atk', rangeIdx: 0, name: `零${ctx.RANGE_EVOLUTION[0].name}` }).endsWith('plate-blue.webp')
   && plateOf({ type: 'guard', ...ctx.GUARD_EVOLUTION[0] }).endsWith('plate-green.webp') && plateOf({ type: 'buff' }).endsWith('plate-purple.webp') && plateOf({ type: 'unique' }).endsWith('plate-gold.webp'));
 const htmlSrc = read('monster-hero/index.html');
-check('⑤ 名札は9分割で真ん中だけ伸ばす(border-image)・金の名札は濃い字', /border-image-source: var\(--mh-plate\); border-image-slice: 11 27 fill;/.test(htmlSrc) && /\[data-card-plate="gold"\] \[data-card-name\][^{]*\{ color: #3a1d02/.test(htmlSrc));
+check('⑤ 名札は9分割で真ん中だけ伸ばす(border-image)・金の名札は濃い字', /border-image-source: var\(--mh-plate\); border-image-slice: 11 27 fill;/.test(htmlSrc) && /\[data-card-plate="gold"\] \[data-card-name\][^{]*\{ color: #241000/.test(htmlSrc));
 check('⑤ 名札もバトル前に読み込む', /\.\.\.Object\.values\(BATTLE_CARD_ART\.plates \|\| \{\}\)\]/.test(battle));
+
+// ⑥ 名前の折り返し(2026-10-15 社長「言葉の切れ目で折って」)。手札に出る名前を全部折ってみる
+{
+  const nameCtx = {};
+  vm.createContext(nameCtx);
+  vm.runInContext(slice('const BATTLE_CARD_NAME_PER_LINE', 'const BATTLE_CARD_ROMAN = Object.freeze(').replace(/^const /gm, 'var '), nameCtx);
+  const ally = read('monster-hero/data/ally-monsters.js'), skills = read('monster-hero/data/skills.js'), breederSrc = read('monster-hero/data/breeder.js');
+  const strs = (t) => [...t.matchAll(/"([^"]+)"|'([^']+)'/g)].map((m) => m[1] || m[2]);
+  const names = new Set();
+  const atkSrc = ally.slice(0, ally.indexOf('};', ally.indexOf('const HERO_ATK_NAMES')));
+  for (const m of atkSrc.matchAll(/\[([^\]]*)\]/g)) strs(m[1]).forEach((x) => names.add(x));
+  for (const m of ally.matchAll(/names:\s*\[([^\]]*)\]/g)) strs(m[1]).forEach((x) => names.add(x));
+  const ge = skills.slice(skills.indexOf('const GUARD_EVOLUTION'), skills.indexOf('const RANGE_EVOLUTION'));
+  for (const m of ge.matchAll(/name:"([^"]+)"/g)) names.add(m[1]);
+  const re = skills.slice(skills.indexOf('const RANGE_EVOLUTION'), skills.indexOf('const TYPE_COLORS'));
+  for (const m of re.matchAll(/name:"([^"]+)"/g)) ['零', '近', '中', '遠'].forEach((l) => names.add(l + m[1]));
+  const be = breederSrc.slice(breederSrc.indexOf('const BREEDER_EVO_NAMES'), breederSrc.indexOf('};', breederSrc.indexOf('const BREEDER_EVO_NAMES')));
+  for (const m of be.matchAll(/"([^"]+)"/g)) names.add(m[1]);
+  const all = [...names].map((n) => [n, nameCtx.battleCardNameLines(n)]);
+  const badHead = all.filter(([, l]) => l.slice(1).some((x) => nameCtx.BATTLE_CARD_NO_BREAK_BEFORE.test(x)));
+  const tooLong = all.filter(([, l]) => l.some((x) => [...x].length > 8));
+  check('⑥ 手札に出る名前を全部折れる(小さい字・長音で行が始まらない)', all.length > 300 && badHead.length === 0, `${all.length}件 ${badHead.slice(0, 3).map(([n, l]) => l.join('/')).join(' ')}`);
+  check('⑥ 1行は8字まで(長い名前は字を小さくして2行)', tooLong.length === 0, tooLong.slice(0, 3).map(([n, l]) => l.join('/')).join(' '));
+  const want = { 'ぞうさん頭突き': 'ぞうさん/頭突き', 'ニコラオの力': 'ニコラオ/の力', 'メロメロハート': 'メロメロ/ハート', 'ハイガード': 'ハイガード', 'ライトニング': 'ライトニング', 'ナイトサンダー': 'ナイト/サンダー', 'かどみうむの計算': 'かどみうむの/計算' };
+  const miss = Object.entries(want).filter(([n, w]) => nameCtx.battleCardNameLines(n).join('/') !== w);
+  check('⑥ 言葉の切れ目で折る(ぞうさん/頭突き・ニコラオ/の力 など)', miss.length === 0, miss.map(([n]) => `${n}→${nameCtx.battleCardNameLines(n).join('/')}`).join(' '));
+  if (process.env.CARD_NAME_LIST) fs.writeFileSync(process.env.CARD_NAME_LIST, all.map(([n, l]) => `${n}\t${l.join(' / ')}`).join('\n') + '\n');
+}
 
 // ④
 check('④ 公開の印 battleCardArt は偽', /\n  battleCardArt: false,/.test(read('monster-hero/src/parts/17-release-changelog-login-missions.jsx')));

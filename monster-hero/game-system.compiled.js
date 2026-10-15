@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 16dbb71fc5d54714
+// source-sha256: 4c41f1ada6b7cac1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-15 12:34";
+const BUILD_DATE = "2026-10-15 12:57";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -61623,6 +61623,130 @@ const BATTLE_CARD_ART_DEBUG = (() => {
   };
 })();
 const battleCardArtOn = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.battleCardArt === true || BATTLE_CARD_ART_DEBUG.on;
+const BATTLE_CARD_NAME_PER_LINE = 5;
+const battleCardNameClass = ch => /[\u30a0-\u30ff\u31f0-\u31ff\uff66-\uff9f]/.test(ch) ? 'kata' : /[\u3040-\u309f]/.test(ch) ? 'hira' : /[\u4e00-\u9fff\u3005\u3006]/.test(ch) ? 'kan' : /[0-9A-Za-z\uff10-\uff5a]/.test(ch) ? 'alnum' : 'other';
+const BATTLE_CARD_NO_BREAK_BEFORE = /^[ぁぃぅぇぉっゃゅょゎゕゖァィゥェォッャュョヮヵヶーｰ・、。！？!?…ゝゞヽヾ）」』】]/;
+const BATTLE_CARD_NAME_BREAKS = Object.freeze({
+  'ルミナスレイ': 'ルミナス|レイ',
+  'ナイトサンダー': 'ナイト|サンダー',
+  'エクリプスキッス': 'エクリプス|キッス',
+  'コンビネーション': 'コンビ|ネーション',
+  'ドリルコンビネーション': 'ドリル|コンビネーション',
+  '大たおれこみ': '大|たおれこみ',
+  '超たおれこみ': '超|たおれこみ',
+  'アイスブレード': 'アイス|ブレード',
+  'アクアウェイブ': 'アクア|ウェイブ',
+  'スプラッシュ': 'スプラッシュ',
+  'ジングルベル': 'ジングル|ベル',
+  'アクアゲイザー': 'アクア|ゲイザー',
+  'ぞうさんぴろぴろ鼻': 'ぞうさん|ぴろぴろ鼻',
+  'ハトのおとしもの': 'ハトの|おとしもの',
+  '大きなおとしもの': '大きな|おとしもの',
+  'グリンネーション': 'グリン|ネーション',
+  '超モッチ砲2': '超モッチ砲2',
+  '超モッチ砲3': '超モッチ砲3',
+  '超モッチ砲ゴッド': '超モッチ砲|ゴッド',
+  '超モッチ砲ブルー': '超モッチ砲|ブルー',
+  '超炎モッチ砲ゴッド': '超炎モッチ砲|ゴッド',
+  'サイコキネシス': 'サイコ|キネシス',
+  'クロノキネシス': 'クロノ|キネシス',
+  'かがやきいき': 'かがやきいき',
+  'マジワンツー': 'マジ|ワンツー',
+  'ギガサンダー': 'ギガ|サンダー',
+  'ギガライトニング': 'ギガ|ライトニング',
+  'コズミッグバン': 'コズミッグ|バン',
+  'コズミックライブ': 'コズミック|ライブ',
+  'セイクリッドレイ': 'セイクリッド|レイ',
+  'アビスサンダー': 'アビス|サンダー',
+  'ダークライトニング': 'ダーク|ライトニング',
+  'カオスコズミック': 'カオス|コズミック',
+  'エクリプスノヴァ': 'エクリプス|ノヴァ',
+  'ライトニング': 'ライトニング',
+  '種マシンガン': '種|マシンガン',
+  'クリスマスツリー': 'クリスマス|ツリー',
+  'メテオドライブ': 'メテオ|ドライブ',
+  'ライジングレイヴ': 'ライジング|レイヴ',
+  'ダークホウスト': 'ダーク|ホウスト',
+  'アサルトライジング': 'アサルト|ライジング',
+  '絶影桜華乱舞': '絶影|桜華乱舞',
+  '絶華緋閃・零桜': '絶華緋閃・|零桜',
+  'スターバースト・ストリーム': 'スターバースト・|ストリーム',
+  'アイスコフィン': 'アイス|コフィン',
+  'アクアブラスト': 'アクア|ブラスト',
+  'メリークリスマス': 'メリー|クリスマス',
+  'オーシャンノヴァ': 'オーシャン|ノヴァ',
+  'メニーウィング': 'メニー|ウィング',
+  'メテオストーム': 'メテオ|ストーム',
+  'エターナルアーク': 'エターナル|アーク',
+  'リボンウィング': 'リボン|ウィング',
+  'ナイトメアアーク': 'ナイトメア|アーク',
+  'ドラの毒膝地獄': 'ドラの|毒膝地獄',
+  'かどみうむの計算': 'かどみうむの|計算',
+  'かどみうむの理論': 'かどみうむの|理論',
+  'かどみうむの叡智': 'かどみうむの|叡智',
+  'みゃるの怪薬': 'みゃるの|怪薬',
+  'みゃるの禁薬': 'みゃるの|禁薬',
+  "KUROMI'S5アタック": "KUROMI'S|5アタック",
+  '白き誓い切なる願い': '白き誓い|切なる願い',
+  '神光よ汚れを祓え': '神光よ|汚れを祓え',
+  '祈れ輪廻の環よ': '祈れ|輪廻の環よ',
+  '裁きの光よ下れ': '裁きの光よ|下れ',
+  '今こそ真なる目醒め': '今こそ|真なる目醒め',
+  '聖夜の鐘を鳴響け': '聖夜の鐘を|鳴響け',
+  '終焉に救いを与えよ': '終焉に|救いを与えよ',
+  '永劫の贖いを全うせよ': '永劫の贖いを|全うせよ'
+});
+const battleCardNameLines = (name, per = BATTLE_CARD_NAME_PER_LINE) => {
+  if (Object.prototype.hasOwnProperty.call(BATTLE_CARD_NAME_BREAKS, String(name || ''))) return BATTLE_CARD_NAME_BREAKS[String(name)].split('|');
+  const chars = [...String(name || '')];
+  const n = chars.length;
+  if (n <= per) return [chars.join('')];
+  const ok = new Set();
+  for (let k = 1; k < n; k += 1) {
+    const a = battleCardNameClass(chars[k - 1]),
+      b = battleCardNameClass(chars[k]);
+    if (a !== b && !(chars[k] === 'ー' || chars[k - 1] === 'ー')) ok.add(k);
+  }
+  try {
+    if (typeof Intl !== 'undefined' && typeof Intl.Segmenter === 'function') {
+      let at = 0;
+      for (const seg of new Intl.Segmenter('ja', {
+        granularity: 'word'
+      }).segment(chars.join(''))) {
+        at += [...seg.segment].length;
+        if (at > 0 && at < n) ok.add(at);
+      }
+    }
+  } catch (e) {}
+  const cands = [...ok].filter(k => !BATTLE_CARD_NO_BREAK_BEFORE.test(chars[k]));
+  const mid = Math.ceil(n / 2);
+  let best = null;
+  for (const k of cands) {
+    const m = Math.max(k, n - k);
+    if (m <= mid + 2 && (best == null || m < Math.max(best, n - best) || m === Math.max(best, n - best) && Math.abs(k - mid) < Math.abs(best - mid))) best = k;
+  }
+  if (best == null) {
+    for (let d = 0; d < n; d += 1) {
+      for (const k of [mid + d, mid - d]) {
+        if (best == null && k > 0 && k < n && !BATTLE_CARD_NO_BREAK_BEFORE.test(chars[k])) best = k;
+      }
+      if (best != null) break;
+    }
+    if (best == null) best = mid;
+  }
+  const head = chars.slice(0, best).join(''),
+    tail = chars.slice(best).join('');
+  const more = t => [...t].length >= 8 ? battleCardNameLines(t, per) : [t];
+  return [...more(head), ...more(tail)];
+};
+const battleCardNameFit = name => {
+  const longest = Math.max(1, ...battleCardNameLines(name).map(l => [...l].length));
+  return {
+    fontSize: `clamp(7px, calc((100cqw - 11px) / ${longest}), 10px)`,
+    lineHeight: '1.15',
+    whiteSpace: 'nowrap'
+  };
+};
 const BATTLE_CARD_ROMAN = Object.freeze(['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX']);
 const battleCardArtOf = c => {
   const base = battleCardArtBaseOf(c);
@@ -66672,9 +66796,12 @@ function BattleScreen({
       className: "text-[11px] font-black leading-[13px] w-full whitespace-normal flex items-center justify-center overflow-hidden px-0.5",
       style: {
         height: tacticsNewLayout ? HAND_CARD_FIT.nameRich : HAND_CARD_FIT.name,
-        ...handCardNameFit(c.name, tacticsNewLayout ? HAND_CARD_FIT.nameRich : HAND_CARD_FIT.name)
+        ...handCardNameFit(c.name, tacticsNewLayout ? HAND_CARD_FIT.nameRich : HAND_CARD_FIT.name),
+        ...(cardArt ? battleCardNameFit(c.name) : {})
       }
-    }, c.name), (() => {
+    }, cardArt ? battleCardNameLines(c.name).map((l, k) => React.createElement(React.Fragment, {
+      key: k
+    }, k > 0 && React.createElement("br", null), l)) : c.name), (() => {
       const genre = tacticsCardGenre ? tacticsCardGenre(c) : null;
       const scope = tacticsCardScope ? tacticsCardScope(c) : null;
       const text = genre ? scope && scope !== '敵へ' ? `${genre}・${scope}` : genre : '';
