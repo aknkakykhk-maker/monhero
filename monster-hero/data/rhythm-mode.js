@@ -29741,15 +29741,23 @@ const RHYTHM_RANKING_MAX_PAGES=10;
 // 同じユーザー名の行が複数あっても、いちばん高いスコアの1件だけを残す
 // (「自分のスコアはハイスコア1件のみ」という仕様。書き込み側は1プレイ=1行のまま増やし続け、
 // 表示のときにだけ集約する。既存のaggregateBreederLevelsと同じ考え方)
+// 行の並べ方(2026-10-15・社長の決定「同じスコアなら JUST MARVELOUS が多い人を上に。それも同じなら先に出した人が上」)。
+// JUST MARVELOUS の回数は記録の詳細(party の先頭の precise)。2026-09-13 より前の記録には無いので 0 回として扱う。
+// 出した時刻は created_at(読めなければいちばん後ろ)。負の数を返したら a が上
+const rhythmRankingRowPrecise=(r)=>{const d=Array.isArray(r?.party)?r.party[0]:null;const n=Number(d&&typeof d==='object'?d.precise:0);return Number.isFinite(n)&&n>0?Math.floor(n):0;};
+const rhythmRankingRowTime=(r)=>{const t=Date.parse(r?.created_at||'');return Number.isFinite(t)?t:Infinity;};
+const rhythmRankingCompareRows=(a,b)=>((Number(b?.score)||0)-(Number(a?.score)||0))
+  ||(rhythmRankingRowPrecise(b)-rhythmRankingRowPrecise(a))
+  ||(rhythmRankingRowTime(a)===rhythmRankingRowTime(b)?0:(rhythmRankingRowTime(a)<rhythmRankingRowTime(b)?-1:1));
 const rhythmRankingDedupeByUser=(rows)=>{
   const byUser=new Map();
   (rows||[]).forEach(r=>{
     const name=r?.user_name||'名無しのブリーダー';
-    const score=Number(r?.score)||0;
     const cur=byUser.get(name);
-    if(!cur||score>(Number(cur.score)||0))byUser.set(name,r);
+    // その人のいちばん良い1件(並べ方と同じ決まり。同点なら JUST MARVELOUS が多い方・先に出した方)
+    if(!cur||rhythmRankingCompareRows(r,cur)<0)byUser.set(name,r);
   });
-  return [...byUser.values()].sort((a,b)=>(Number(b.score)||0)-(Number(a.score)||0));
+  return [...byUser.values()].sort(rhythmRankingCompareRows);
 };
 // Supabaseの生の行を画面表示用の形へ整える。partyには判定内訳等の詳細をJSONで持たせている
 // (種族チャレンジがpartyへ育て方の詳細を持たせているのと同じ、列を増やさない考え方)。
@@ -30133,11 +30141,14 @@ const installRhythmGeometryStyles=()=>{
        跳ねる速さは1拍の長さ(--rhythm-side-beat)。曲ごとにプレイ開始時へ一度だけ書く。 */
     /* --- マスモンの能力のカットイン(2026-09-26) ---
        ノーツより後ろ(z-index:1。両サイドのマスモンと同じ層)。帯と絵は動かない形で、動かすのは transform と opacity だけ。
-       ふだんは visibility:hidden(描かない)。data-rhythm-cutin-play="1" のあいだだけ 0.9秒のアニメーションで見える。
+       ふだんは透明(opacity:0)。data-rhythm-cutin-play="1" のあいだだけ 0.9秒のアニメーションで見える。
        ★印の名前を入れ物([data-rhythm-cutin])と同じにしない。同じだと入れ物の inset:0 が部品にも当たり、右の部品が左端へ寄った */
     [data-rhythm-cutin]{position:absolute;inset:0;pointer-events:none;z-index:1;overflow:hidden}
     /* 道の外の空いたところ(画面の端・上寄り)に収める。道の真ん中まで入り込むとノーツの流れる場所がごちゃつく */
-    [data-rhythm-cutin-slot]{position:absolute;top:8%;height:32%;width:40%;visibility:hidden;opacity:0}
+    /* ★出る瞬間に絵と帯を描き起こさないよう、曲の前から「透明のまま」層として用意しておく(visibility は隠さない)。
+       隠していると、モンスターノーツを取った瞬間に初めて描いて GPU へ渡すので、その1コマが重かった(2026-10-15)。
+       透明(opacity:0)なので見た目は今までと同じ。押せる所も変わらない(入れ物が pointer-events:none) */
+    [data-rhythm-cutin-slot]{position:absolute;top:8%;height:32%;width:40%;opacity:0;will-change:transform,opacity}
     [data-rhythm-cutin-slot][data-side="left"]{left:0}
     [data-rhythm-cutin-slot][data-side="right"]{right:0}
     [data-rhythm-cutin-band]{position:absolute;left:-10%;right:-10%;top:30%;height:40%;transform:skewY(-9deg);

@@ -3322,7 +3322,12 @@ function MonsterHeroGame() {
         const pageRows = await sbFetchRhythmRankings(keys, RHYTHM_RANKING_FETCH_LIMIT, page * RHYTHM_RANKING_FETCH_LIMIT, `rhythm-rank-${song.songId}-${Date.now()}-${page}`);
         if (rhythmRankingRequestRef.current !== requestId) return;
         rows = rows.concat(Array.isArray(pageRows) ? pageRows : []);
-        if (rhythmRankingDedupeByUser(rows).length >= RHYTHM_RANKING_DISPLAY_LIMIT) break;
+        // 表示する人数がそろっても、最後の人と同じスコアの行がまだ続いていそうなら取り続ける
+        // (同点は JUST MARVELOUS の数・出した順で並べるので、同点ぶんを最後まで取ってから並べる。2026-10-15)
+        const deduped = rhythmRankingDedupeByUser(rows);
+        const lastShown = deduped[RHYTHM_RANKING_DISPLAY_LIMIT - 1];
+        const lastFetched = Array.isArray(pageRows) && pageRows.length ? pageRows[pageRows.length - 1] : null;
+        if (lastShown && !(lastFetched && (Number(lastFetched.score) || 0) >= (Number(lastShown.score) || 0))) break;
         if (!Array.isArray(pageRows) || pageRows.length < RHYTHM_RANKING_FETCH_LIMIT) break;
       }
       const entries = rhythmRankingDedupeByUser(rows).slice(0, RHYTHM_RANKING_DISPLAY_LIMIT).map(rhythmRankingEntryFromRow);
@@ -4608,10 +4613,15 @@ function MonsterHeroGame() {
     if (RHYTHM_HELL_STORY_TRIGGER !== 'release') return;
     if (!(typeof rhythmHellOpen === 'function' && rhythmHellOpen())) return;
     if (!rhythmHellStorySeenLoaded || rhythmHellStorySeenFlag) return;
+    // ★HELL をまだ1曲も開いていない人(はじめての人など)には、まだ流さない。MASTER をクリアして HELL が初めて開いたとき、
+    //   演奏の結果のあと(下の「HELL が初めて開いたか」)に流す。はじめての設定の直後に HELL のお話と説明が重ならないように(2026-10-15・ユーザー指示)
+    const hellOpenedSomewhere = Object.keys(rhythmBestRecords && typeof rhythmBestRecords === 'object' ? rhythmBestRecords : {})
+      .some(songId => rhythmDifficultyUnlocked(songId, 'HELL', rhythmBestRecords));
+    if (!hellOpenedSomewhere) return;
     if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
     if (rhythmEventStoryStartedRef.current.includes(RHYTHM_HELL_STORY_ID)) return;
     setRhythmEventStoryPending(RHYTHM_HELL_STORY_ID);
-  }, [rhythmHellStorySeenLoaded, rhythmHellStorySeenFlag, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  }, [rhythmHellStorySeenLoaded, rhythmHellStorySeenFlag, rhythmBestRecords, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
   // 助手とおしゃべりのお話を、公開のあとの最初の HOME で1回だけ流す(2026-10-14・社長の決定)。置き方は上の HELL のお話と同じ
   useEffect(() => {
     if (!EVENT_REPLAY_RELEASE_FLAGS.assistantChat) return;
@@ -18208,7 +18218,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             &&!rhythmDifficultyUnlocked(rhythmPlay.song.songId,'HELL',rhythmBestRecords)&&rhythmDifficultyUnlocked(rhythmPlay.song.songId,'HELL',records)
             &&!rhythmHellStorySeenFlag){
             if(RHYTHM_HELL_STORY_TRIGGER==='after-result')rhythmHellStoryAfterResultRef.current=true;
-            else if(RHYTHM_HELL_STORY_TRIGGER==='home')setRhythmEventStoryPending(prev=>prev||RHYTHM_HELL_STORY_ID);
+            else if(RHYTHM_HELL_STORY_TRIGGER==='home'||RHYTHM_HELL_STORY_TRIGGER==='release')setRhythmEventStoryPending(prev=>prev||RHYTHM_HELL_STORY_ID);
           }
           void recordRhythmAchievements(records,{initialRecords:rhythmBestRecords});if(rhythmPlay.from==='demo'||rhythmPlay.from==='multi'||rhythmPlay.from==='raid')submitRhythmRankingScore(rhythmPlay.song,rhythmPlay.difficulty,result);}} onExit={()=>{if(rhythmPlay.from==='raid'){exitRaidJackRhythmPlay();return;}if(rhythmPlay.from==='multi'&&!RHYTHM_MULTI.hasReported(rhythmPlay.multiStartId))RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId,null,true,{diffId:rhythmPlay.difficulty.id});if(rhythmPlay.from==='lineAdjust'){rhythmLineAdjustRestore(rhythmLineAdjust?.orig);setRhythmLineAdjust(null);}const back=rhythmPlay.from==='multi'?'RHYTHM_MULTI':rhythmPlay.from==='calibration'||rhythmPlay.from==='lineAdjust'?'RHYTHM_OPTIONS':rhythmPlay.backTo==='RHYTHM_DEBUG_SELECT'?'RHYTHM_DEBUG_SELECT':rhythmPlay.from==='debug'||rhythmPlay.from==='proto'?'RHYTHM_DEBUG':'RHYTHM_DEMO_HOME';setRhythmPlay(null);setGameState(back);if(rhythmHellStoryAfterResultRef.current){rhythmHellStoryAfterResultRef.current=false;setEventReplay({id:RHYTHM_HELL_STORY_ID,step:0,live:true});}}} debugPlay={rhythmPlay.from==='debug'||rhythmPlay.from==='proto'} tutorial={rhythmPlay.from==='tutorial'} calibrating={rhythmPlay.from==='calibration'} lineAdjust={rhythmPlay.from==='lineAdjust'?rhythmLineAdjustProps:null} onApplyCalibration={async measured=>{
           // 測った値をその場で設定へ入れて保存し、オプションへ戻す。

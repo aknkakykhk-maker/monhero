@@ -146,16 +146,34 @@ check('取得はoffsetを受け取れる(ページ送りに使う)',
 // 2026-09-04、Codexレビュー指摘: 1プレイ=1行のまま増え続けるため、1回の取得を打ち切ると
 // 同じプレイヤーの行だけで埋まり、他プレイヤーがユーザー集約後に消えてしまう。
 // ユニークな人数が集まるかページが尽きるまで送るループになっているかを確認する
-check('loadRhythmRankingは、ユニークな人数(表示件数ぶん)が集まるかページが尽きるまでページ送りする',(()=>{
+check('loadRhythmRankingは、ユニークな人数(表示件数ぶん)が集まり、最後の人と同じスコアの行が続かなくなるか、ページが尽きるまでページ送りする',(()=>{
   // 2026-10-13 に難易度を1つに絞る第2引数を足した(既定は全難易度=いままでどおり)
   const at=game.indexOf("const loadRhythmRanking = useCallback(async (song, difficultyId = 'ALL') => {");
   const end=game.indexOf('submitRhythmRankingScore',at);
   const block=at>=0&&end>at?game.slice(at,end):'';
   return block.includes('for (let page = 0; page < RHYTHM_RANKING_MAX_PAGES; page++) {')
     &&block.includes('page * RHYTHM_RANKING_FETCH_LIMIT')
-    &&block.includes('rhythmRankingDedupeByUser(rows).length >= RHYTHM_RANKING_DISPLAY_LIMIT')
+    &&block.includes('const lastShown = deduped[RHYTHM_RANKING_DISPLAY_LIMIT - 1];')
+    &&block.includes('if (lastShown && !(lastFetched && (Number(lastFetched.score) || 0) >= (Number(lastShown.score) || 0))) break;')
     &&block.includes('pageRows.length < RHYTHM_RANKING_FETCH_LIMIT');
 })());
+// 同じスコアの並べ方(2026-10-15・社長の決定)。本物の比べ方を取り出して、例で確かめる
+check('同じスコアなら JUST MARVELOUS が多い人が上、それも同じなら先に出した人が上(記録に回数が無い古い行は0回)',(()=>{
+  const pick=(name)=>(data.match(new RegExp(`^const ${name}=.*$`,'m'))||[''])[0];
+  const src=[pick('rhythmRankingRowPrecise'),pick('rhythmRankingRowTime')].join('\n');
+  const cmpAt=data.indexOf('const rhythmRankingCompareRows=');const cmpEnd=data.indexOf('const rhythmRankingDedupeByUser=',cmpAt);
+  if(!src.trim()||cmpAt<0||cmpEnd<0)return false;
+  const cmp=new Function(`${src}\n${data.slice(cmpAt,cmpEnd)}\nreturn rhythmRankingCompareRows;`)();
+  const row=(score,precise,at)=>({score,created_at:at,party:precise==null?[{}]:[{precise}]});
+  const boss=row(1000000,141,'2026-10-15T10:00:00Z'),other=row(1000000,132,'2026-10-14T10:00:00Z');
+  const early=row(1000000,141,'2026-10-13T10:00:00Z'),old=row(1000000,null,'2026-09-01T10:00:00Z'),low=row(999999,500,'2026-10-01T10:00:00Z');
+  const sorted=[other,low,old,boss,early].sort(cmp);
+  return sorted[0]===early&&sorted[1]===boss&&sorted[2]===other&&sorted[3]===old&&sorted[4]===low;
+})());
+check('1人1件に絞るときも同じ並べ方を使い、サーバーからもスコア→出した時刻の順で受け取る',
+  data.includes('if(!cur||rhythmRankingCompareRows(r,cur)<0)byUser.set(name,r);')
+  &&data.includes('return [...byUser.values()].sort(rhythmRankingCompareRows);')
+  &&game.includes('&order=score.desc.nullslast,created_at.asc&limit=${limit}&offset=${offset}'));
 check('ページ送りに上限(RHYTHM_RANKING_MAX_PAGES)があり、無限に取得し続けない',
   data.includes('const RHYTHM_RANKING_MAX_PAGES=10;'));
 check('sbInsertRhythmScore/sbFetchRhythmRankingsは、既存モードが必ず経由するnormalizeRankingDifficultyを呼んでいない(検証を共有しない)',(()=>{
