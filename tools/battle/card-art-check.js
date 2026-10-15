@@ -51,12 +51,13 @@ check('⑤ 名札は枠と同じ色(攻撃=赤・距離撃=青・守り=緑・�
   plateOf({ type: 'atk', ...ctx.BASE_ATK_EVOLUTION[0] }).endsWith('plate-red.webp') && plateOf({ type: 'range_atk', rangeIdx: 0, name: `零${ctx.RANGE_EVOLUTION[0].name}` }).endsWith('plate-blue.webp')
   && plateOf({ type: 'guard', ...ctx.GUARD_EVOLUTION[0] }).endsWith('plate-green.webp') && plateOf({ type: 'buff' }).endsWith('plate-purple.webp') && plateOf({ type: 'unique' }).endsWith('plate-gold.webp'));
 const htmlSrc = read('monster-hero/index.html');
-check('⑤ 名札は9分割で真ん中だけ伸ばす(border-image)・金の名札は濃い字', /border-image-source: var\(--mh-plate\); border-image-slice: 11 27 fill;/.test(htmlSrc) && /\[data-card-plate="gold"\] \[data-card-name\] \{ color: #3a1f04/.test(htmlSrc));
+check('⑤ 名札は9分割で真ん中だけ伸ばす(border-image)・金の名札は濃い字', /border-image-source: var\(--mh-plate\); border-image-slice: 11 27 fill;/.test(htmlSrc) && /\[data-card-plate="gold"\] \[data-card-name\] \{ color: #2e1802/.test(htmlSrc));
 // ⑦ 文字の置き場(2026-10-15 社長「枠にかぶらないように」)。はみ出さないかは card-name-fit-browser-check.js が420件を置いて見る
-check('⑦ 名前の欄は左右をカード幅の10%ずつ下げた置き場(中の面の宝石より内側)・大きさの基準・下に飾り線の場所 5px',
-  /\[data-card-plate\] \[data-card-name\] \{[^}]*padding: 1px 10cqw !important;[^}]*container-type: size;/.test(htmlSrc)
-  && /\[data-card-plate\] \[data-card-name\]::after \{ content: ''; flex: none; width: 100%; height: 5px; background: var\(--mh-name-rule, none\)/.test(htmlSrc));
-check('⑦ 字の大きさは置き場の幅・高さ(cqw/cqh)から決め、飾り線の 5px を先に引く', /calc\(\(100cqw - 1\.5px\) \/ \$\{longest\.toFixed\(2\)\}\), calc\(\(100cqh - 5px\) \/ \$\{tall\}\)/.test(battle)
+check('⑦ 名前の欄は左右をカード幅の10%ずつ下げた置き場(中の面の宝石より内側)・大きさの基準・下に飾り線の場所 6px',
+  /\[data-card-plate\] \[data-card-name\] \{[^}]*padding: 0 10cqw !important;[^}]*container-type: size;/.test(htmlSrc)
+  && /\[data-card-plate\] \[data-card-name\]::after \{ content: ''; flex: none; width: 100%; height: var\(--mh-rule-h\); background: var\(--mh-name-rule, none\)/.test(htmlSrc));
+check('⑦ 金の枠の置き場は、大きい丸の下の飾り(高さの約42.5%)より下', /\[data-card-art="gold"\] > \[data-decoration\] \+ div \{ top: calc\(43% \+ 1px\); \}/.test(htmlSrc));
+check('⑦ 字の大きさは置き場の幅・高さ(cqw/cqh)から決め、飾り線の 6px を先に引く・上限 8.5px(社長「技名は小さく」)', /calc\(\(100cqw - 1\.5px\) \/ \$\{longest\.toFixed\(2\)\}\), calc\(\(100cqh - var\(--mh-rule-h, 6px\)\) \/ \$\{tall\}\)\), 8\.5px\)`/.test(battle)
   && /<span data-card-name-text style=\{battleCardNameFit\(c\.name\)\}>/.test(battle));
 check('⑤ 名札・飾り線もバトル前に読み込む', /\.\.\.Object\.values\(BATTLE_CARD_ART\.plates \|\| \{\}\), \.\.\.Object\.values\(BATTLE_CARD_ART\.rules \|\| \{\}\)\]/.test(battle));
 check('⑤ 飾り線は枠と同じ色(rule-赤/青/緑/紫/金)を --mh-name-rule で渡す', ['red', 'blue', 'green', 'purple', 'gold'].every((k) => strip(A.rules && A.rules[k]).endsWith(`rule-${k}.webp`)) && /'--mh-name-rule':`url\("\$\{cardArt\.rule\}"\)`/.test(battle));

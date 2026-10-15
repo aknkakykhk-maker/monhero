@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "e7c93a8d0e05",
-  "packs": {"beat":{"bytes":87387400,"count":77},"battle":{"bytes":106147897,"count":473},"all":{"bytes":193535297,"count":550}},
+  "id": "dafaabd858ae",
+  "packs": {"beat":{"bytes":87387400,"count":77},"battle":{"bytes":106153357,"count":473},"all":{"bytes":193540757,"count":550}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"ddce743e94fa","size":1416528,"pack":"beat"},
@@ -547,11 +547,11 @@
     "images/ui/battle-cards/range-1.webp": {"v":"75d975b66cc5","size":8238,"pack":"battle"},
     "images/ui/battle-cards/range-2.webp": {"v":"217c186d914d","size":8404,"pack":"battle"},
     "images/ui/battle-cards/range-3.webp": {"v":"9ab6877fd82d","size":8738,"pack":"battle"},
-    "images/ui/battle-cards/rule-blue.webp": {"v":"8c53c590ec62","size":4126,"pack":"battle"},
-    "images/ui/battle-cards/rule-gold.webp": {"v":"34bc657ea74d","size":4104,"pack":"battle"},
-    "images/ui/battle-cards/rule-green.webp": {"v":"fb1adf4721dc","size":4138,"pack":"battle"},
-    "images/ui/battle-cards/rule-purple.webp": {"v":"3c83242ca8af","size":4106,"pack":"battle"},
-    "images/ui/battle-cards/rule-red.webp": {"v":"d80890ff512f","size":4080,"pack":"battle"},
+    "images/ui/battle-cards/rule-blue.webp": {"v":"6ea611645122","size":5236,"pack":"battle"},
+    "images/ui/battle-cards/rule-gold.webp": {"v":"92745a007b55","size":5190,"pack":"battle"},
+    "images/ui/battle-cards/rule-green.webp": {"v":"40a70b55e319","size":5192,"pack":"battle"},
+    "images/ui/battle-cards/rule-purple.webp": {"v":"39f80f5dd9d5","size":5202,"pack":"battle"},
+    "images/ui/battle-cards/rule-red.webp": {"v":"cb3784b5d724","size":5194,"pack":"battle"},
     "images/ui/breakthrough-rainbow-star.PNG": {"v":"c0e9259703a7","size":199081,"pack":"battle"}
   }
 }

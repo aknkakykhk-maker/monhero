@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2115cbf76288c387
+// source-sha256: b54e8fe52a0f7da0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-15 15:12";
+const BUILD_DATE = "2026-10-15 15:24";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -61670,7 +61670,7 @@ const BATTLE_CARD_NAME_BREAKS = Object.freeze({
   'アサルトライジング': 'アサルト|ライジング',
   '絶影桜華乱舞': '絶影|桜華乱舞',
   '絶華緋閃・零桜': '絶華緋閃・|零桜',
-  'スターバースト・ストリーム': 'スター|バースト・|ストリーム',
+  'スターバースト・ストリーム': 'スターバースト・|ストリーム',
   'アイスコフィン': 'アイス|コフィン',
   'アクアブラスト': 'アクア|ブラスト',
   'メリークリスマス': 'メリー|クリスマス',
@@ -61749,7 +61749,7 @@ const battleCardNameFit = name => {
   const lh = lines.length >= 3 ? 1.02 : 1.12;
   const tall = (lines.length * lh).toFixed(2);
   return {
-    fontSize: `clamp(6px, min(calc((100cqw - 1.5px) / ${longest.toFixed(2)}), calc((100cqh - 5px) / ${tall})), 10px)`,
+    fontSize: `clamp(5.5px, min(calc((100cqw - 1.5px) / ${longest.toFixed(2)}), calc((100cqh - var(--mh-rule-h, 6px)) / ${tall})), 8.5px)`,
     lineHeight: String(lh),
     whiteSpace: 'nowrap'
   };
