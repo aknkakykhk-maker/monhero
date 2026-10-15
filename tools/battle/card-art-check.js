@@ -63,6 +63,7 @@ check('⑦ 名前は全部同じ大きさ(8字ぶんが赤青緑紫の置き場�
   && /<span data-card-name-text style=\{battleCardNameFit\(c\.name\)\}>/.test(battle));
 // ⑧ 手札の幅と高さ(2026-10-15 社長「カードが小さくなって見にくい」「移動するときにカードが潰れる」)
 check('⑧ 絵のカードは見た目だけ拡大して、太い縁の外側を前の手札の外寸にそろえる(並び・押せる場所はそのまま)', /\[data-hand-card\]\[data-card-art\] \{ scale: 1\.126 1\.08; \}/.test(htmlSrc));
+check('⑧ 運んでいる間は scale を外し、同じ拡大を transform の中で掛ける(指からずれない)', /\[data-hand-card\]\[data-card-art\]\[data-dragging-card\] \{ scale: none; \}/.test(htmlSrc) && /transform:cardArt\?'translate\(-50%,-50%\) rotate\(-3deg\) scale\(1\.2949,1\.242\)'/.test(battle));
 check('⑧ 運んでいる間も、押した瞬間のカードの幅・高さのまま(潰れない)', /setDragState\(\{cardIndex:i, x:pt\.clientX, y:pt\.clientY, active:false, card:c, w:w0, h:h0\}\)/.test(battle)
   && /width:dragState\.w\?`\$\{dragState\.w\}px`:'72px',\.\.\.\(dragState\.h\?\{height:`\$\{dragState\.h\}px`\}:\{\}\)/.test(battle));
 check('⑤ 名札・飾り線もバトル前に読み込む', /\.\.\.Object\.values\(BATTLE_CARD_ART\.plates \|\| \{\}\), \.\.\.Object\.values\(BATTLE_CARD_ART\.rules \|\| \{\}\)\]/.test(battle));
