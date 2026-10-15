@@ -91,7 +91,7 @@ check('0だとハート・数字・バーの見た目が変わる(赤くなる�
 check('減った瞬間に揺らし、減った量を一瞬だけ出す',
   game.includes('const lifeDelta=run.life-lifeBefore;')
   &&game.includes("lifeRestarts.push({el:lifeBox,attr:'rhythmLifeHit'})")
-  &&game.includes('lifeDamage.textContent=String(lifeDelta);')
+  &&game.includes('rhythmSetText(lifeDamage,String(lifeDelta));')
   &&game.includes('rhythmRestartAnimations(lifeRestarts)')
   &&html.includes('[data-rhythm-life][data-rhythm-life-hit="1"]'));
 // ★根性で蘇生したときは「増えた」側なので出さない。増減どちらでも出すと、回復のたびに揺れる

@@ -233,10 +233,11 @@ check('絵はプレイ中に作り直さない（毎フレームの処理に染�
   !!tickBody&&!/DyedMonsterImage|getRecoloredImage|getDyeRegionMasks|createElement\('canvas'\)/.test(tickBody));
 check('奥行きはレーンと同じ депth scaleへ乗せる（毎フレームJSで書き換えない）'.replace('депth','depth'),
   /data-rhythm-monster-face[\s\S]{0,400}scale\(var\(--rhythm-note-depth-scale, 1\)\)/.test(game));
-const abilityFlash=game.match(/<div data-rhythm-ability-flash[\s\S]{0,600}?<\/div>/)?.[0]||'';
+const abilityFlash=game.match(/<div ref=\{abilityFlashRef\} data-rhythm-ability-flash[\s\S]{0,600}?<\/div>/)?.[0]||'';
+// 能力名の札は最初から置いておき、文字だけを書き換える(2026-10-15 モンスターノーツの瞬間の重さを減らすため)
 check('能力発動表示はモンスター名を出さず能力名だけ',
-  abilityFlash.includes('{view.ability.ability}！')
-  &&!abilityFlash.includes('view.ability.monster'));
+  !!abilityFlash&&game.includes('setAbilityFlash(`${abilityFlash.ability}！`)')
+  &&!game.includes('setAbilityFlash(`${abilityFlash.monster}'));
 check('無敵・我慢の残り時間と根性ストックが分かるUIがある',
   game.includes('data-rhythm-ability-badge')&&game.includes("'根性 ストック'"));
 check('残り時間の更新でsetStateを増やしていない（DOMへ直接書く）',

@@ -30133,11 +30133,14 @@ const installRhythmGeometryStyles=()=>{
        跳ねる速さは1拍の長さ(--rhythm-side-beat)。曲ごとにプレイ開始時へ一度だけ書く。 */
     /* --- マスモンの能力のカットイン(2026-09-26) ---
        ノーツより後ろ(z-index:1。両サイドのマスモンと同じ層)。帯と絵は動かない形で、動かすのは transform と opacity だけ。
-       ふだんは visibility:hidden(描かない)。data-rhythm-cutin-play="1" のあいだだけ 0.9秒のアニメーションで見える。
+       ふだんは透明(opacity:0)。data-rhythm-cutin-play="1" のあいだだけ 0.9秒のアニメーションで見える。
        ★印の名前を入れ物([data-rhythm-cutin])と同じにしない。同じだと入れ物の inset:0 が部品にも当たり、右の部品が左端へ寄った */
     [data-rhythm-cutin]{position:absolute;inset:0;pointer-events:none;z-index:1;overflow:hidden}
     /* 道の外の空いたところ(画面の端・上寄り)に収める。道の真ん中まで入り込むとノーツの流れる場所がごちゃつく */
-    [data-rhythm-cutin-slot]{position:absolute;top:8%;height:32%;width:40%;visibility:hidden;opacity:0}
+    /* ★出る瞬間に絵と帯を描き起こさないよう、曲の前から「透明のまま」層として用意しておく(visibility は隠さない)。
+       隠していると、モンスターノーツを取った瞬間に初めて描いて GPU へ渡すので、その1コマが重かった(2026-10-15)。
+       透明(opacity:0)なので見た目は今までと同じ。押せる所も変わらない(入れ物が pointer-events:none) */
+    [data-rhythm-cutin-slot]{position:absolute;top:8%;height:32%;width:40%;opacity:0;will-change:transform,opacity}
     [data-rhythm-cutin-slot][data-side="left"]{left:0}
     [data-rhythm-cutin-slot][data-side="right"]{right:0}
     [data-rhythm-cutin-band]{position:absolute;left:-10%;right:-10%;top:30%;height:40%;transform:skewY(-9deg);
