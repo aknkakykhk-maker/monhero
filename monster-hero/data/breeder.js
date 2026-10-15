@@ -101,6 +101,14 @@ const BATTLE_CARD_ART = Object.freeze({
   atk: Object.freeze(['images/ui/battle-cards/atk-1.webp?v=665df968b172', 'images/ui/battle-cards/atk-2.webp?v=96d0c562a41e', 'images/ui/battle-cards/atk-3.webp?v=78ec160b4a65', 'images/ui/battle-cards/atk-4.webp?v=5b30e9c9cf34', 'images/ui/battle-cards/atk-5.webp?v=1fc8366499a1', 'images/ui/battle-cards/atk-6.webp?v=772a9c75e527', 'images/ui/battle-cards/atk-7.webp?v=067fcf5d7f3d', 'images/ui/battle-cards/atk-8.webp?v=a1ce8f960223', 'images/ui/battle-cards/atk-9.webp?v=20c7c2779a48']),
   guard: Object.freeze(['images/ui/battle-cards/guard-1.webp?v=513b7a5b5476', 'images/ui/battle-cards/guard-2.webp?v=dc4bb98fc08b', 'images/ui/battle-cards/guard-3.webp?v=bfb5bfc72f93', 'images/ui/battle-cards/guard-4.webp?v=aae3cd5ec24b', 'images/ui/battle-cards/guard-5.webp?v=64ad02db25eb', 'images/ui/battle-cards/guard-6.webp?v=6babd9f2c1f1', 'images/ui/battle-cards/guard-7.webp?v=eaae25598a9b', 'images/ui/battle-cards/guard-8.webp?v=e19abed694ec', 'images/ui/battle-cards/guard-9.webp?v=77107591ce9a']),
   range: Object.freeze(['images/ui/battle-cards/range-0.webp?v=960161f8f3a9', 'images/ui/battle-cards/range-1.webp?v=75d975b66cc5', 'images/ui/battle-cards/range-2.webp?v=217c186d914d', 'images/ui/battle-cards/range-3.webp?v=9ab6877fd82d']),
+  // 名札(2026-10-15 社長。名前と下の札を載せる台。枠と同じ5色)。真ん中だけを縦に伸ばして使う(index.html の .mh-card-art-plate)
+  plates: Object.freeze({
+    red: 'images/ui/battle-cards/plate-red.webp?v=223ba9d247d0',
+    blue: 'images/ui/battle-cards/plate-blue.webp?v=206a41f4f990',
+    green: 'images/ui/battle-cards/plate-green.webp?v=993ea66f8428',
+    purple: 'images/ui/battle-cards/plate-purple.webp?v=84fefdb268fe',
+    gold: 'images/ui/battle-cards/plate-gold.webp?v=f92a595ad789',
+  }),
 });
 
 const TEACHING_CARDS = [

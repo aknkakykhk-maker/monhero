@@ -40,7 +40,7 @@ window.addEventListener('unhandledrejection', function(ev){ window.__mhErr('[pro
 // ここでは各ファイルの実サイズを重みにして、実際に受け取ったバイト数で動かす。
 window.__mhBoot = (function () {
   // 起動時に読み込むファイルの実サイズ(バイト)。tools/build.js が実ファイルから書き込む
-  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":22303,"data/images/images-enemy.js":2926,"data/ally-monsters.js":38373,"data/lineages.js":12461,"data/breeder.js":91712,"data/enemy-monsters.js":7879,"data/skills.js":4375,"data/rhythm-mode.js":2635098,"data/rhythm-lane-svg.js":11949,"data/rhythm-geometry-calibration.js":15552,"data/rhythm-result-replay-remount.js":5743,"data/rhythm-event.js":75981,"data/changelog.js":1342024,"data/help.js":584626,"data/rhythm-step3-release.js":8517,"data/assistants.js":609381,"tailwind.css":212414,"game-system.compiled.js":5463375,"data/images/title-screen-halloween.jpg":368790,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
+  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":22303,"data/images/images-enemy.js":2926,"data/ally-monsters.js":38373,"data/lineages.js":12461,"data/breeder.js":92249,"data/enemy-monsters.js":7879,"data/skills.js":4375,"data/rhythm-mode.js":2635098,"data/rhythm-lane-svg.js":11949,"data/rhythm-geometry-calibration.js":15552,"data/rhythm-result-replay-remount.js":5743,"data/rhythm-event.js":75981,"data/changelog.js":1342024,"data/help.js":584626,"data/rhythm-step3-release.js":8517,"data/assistants.js":609381,"tailwind.css":212414,"game-system.compiled.js":5463930,"data/images/title-screen-halloween.jpg":368790,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
   var total = 0, k;
   for (k in SIZES) total += SIZES[k];
   var got = {};   // ファイルごとに「いま何バイト受け取ったか」
@@ -98,7 +98,7 @@ window.__mhBoot = (function () {
 })();
 // 本体JSのキャッシュキー。ここで一度だけ宣言し、下の読み込み処理でも同じ値を使う。
 // 先読みと <script> のURLがずれると、同じ2.7MBを2回取りに行くことになる
-var GAME_BUILD = '202610151210';
+var GAME_BUILD = '202610151234';
 window.__mhGameBuild = GAME_BUILD;
 // 起動でいちばん大きいのは本体JS(約2.7MB)。いちばん後ろで読むため、そこへ来ると
 // ゲージが止まって見えていた。先に取りはじめて、受け取ったバイト数をそのまま出す。
@@ -132,7 +132,7 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
      作るのは tools/build-tailwind.js(node tools/build.js が中身の変化を見て必要なときだけ呼ぶ)。
      landscape: の差し替え(自前で画面を回したときにも効かせる)もそちらの設定へ移してある。
      ?v= は中身のハッシュ。tools/stamp-version.js が data/*.js と同じ仕組みで打つ。 -->
-<link rel="stylesheet" href="tailwind.css?v=4ad833261ba4" onload="__mhBoot.done('tailwind.css','見た目を読み込み中')" onerror="__mhBoot.fail('tailwind.css')">
+<link rel="stylesheet" href="tailwind.css?v=8bc0c2e99cfc" onload="__mhBoot.done('tailwind.css','見た目を読み込み中')" onerror="__mhBoot.fail('tailwind.css')">
 <style>
   html, body { margin:0; padding:0; background:#000; overscroll-behavior:none; -webkit-tap-highlight-color:transparent; height:100%; }
   /* 画面の高さは、ここで決めた --mh-vh ひとつだけを使う。
@@ -227,20 +227,35 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
      名前と技変更のまとまりは、枠の中の面(上の丸の下〜下の飾りの手前、左右は横の宝石の内側)へ置き直す。
      上の端はカードの高さの割合(丸の位置)+幅の割合(丸の半径)で決めるので、横持ちで枠が縦につぶれても丸と飾りにかからない */
   [data-card-art] { container-type: inline-size; }
-  [data-card-art] > [data-decoration] + div { position: absolute; left: 11%; right: 11%; width: auto !important; top: calc(17.8% + 20.4cqw + 7px); bottom: 9.5%;
+  [data-card-art] > [data-decoration] + div { position: absolute; left: 7%; right: 7%; width: auto !important; top: calc(17.8% + 20.4cqw + 7px); bottom: 9.5%;
     display: flex; flex-direction: column; justify-content: space-between; gap: 2px; z-index: 6; }
   [data-card-art="gold"] > [data-decoration] + div { top: calc(21.2% + 24.8cqw + 2px); }
-  [data-card-art] [data-card-name] { flex: 1 1 auto; height: auto !important; min-height: 0; color: #ffe7a3 !important;
-    font-family: 'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP', serif; letter-spacing: .02em;
-    text-shadow: 1px 0 0 #3a2105, -1px 0 0 #3a2105, 0 1px 0 #3a2105, 0 -1px 0 #3a2105, 1px 1px 0 #3a2105, -1px -1px 0 #3a2105, 0 2px 4px rgba(0,0,0,.8), 0 0 6px rgba(255,200,90,.35) !important; }
-  [data-card-art] [data-skill-change], [data-card-art] [data-skill-change-spacer] { height: auto !important; min-height: clamp(26px, 3.6dvh, 30px); flex: none; }
+  /* 名前・技変更・種類の札は、枠と同じ色の名札(BATTLE_CARD_ART.plates)の上に載せる(2026-10-15 社長「ただ乗っけてるだけに見える」)。
+     名札は横長(約7.4:1)なので、border-image の9分割で、左右の宝石と上下の飾りは縮めず、真ん中の面だけを伸ばす(絵は 320×43)。
+     字は名札に刻んだように、上に暗い影・下に明るい縁(沈んだ金の字)。金の名札(固有技)だけは濃い字に明るい縁 */
+  [data-card-plate] [data-card-name], [data-card-plate] [data-skill-change], [data-card-plate] [data-skill-change-spacer] [data-card-genre] {
+    border-style: solid; border-color: transparent; border-image-source: var(--mh-plate); border-image-slice: 11 27 fill; border-image-repeat: stretch;
+    background: none !important; box-shadow: none !important; border-radius: 0 !important; }
+  [data-card-plate] [data-card-name] { flex: 0 0 auto; margin: auto 0; height: auto !important; min-height: 0; border-width: 3px 4px; padding: 2px 0; font-size: 10px !important; line-height: 12px !important;
+    color: #f7dc94 !important; font-family: 'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP', serif; letter-spacing: 0;
+    text-shadow: 0 -1px 0 rgba(0,0,0,.9), 0 1px 0 rgba(255,236,180,.4), 0 0 3px rgba(0,0,0,.55) !important; }
+  [data-card-plate] [data-skill-change] { height: auto !important; border-width: 3px 5px; padding: 1px 0 0; color: #f7dc94 !important;
+    text-shadow: 0 -1px 0 rgba(0,0,0,.9), 0 1px 0 rgba(255,236,180,.35) !important; }
+  [data-card-plate] [data-skill-change] [data-card-genre] { background: none !important; border: none !important; color: #ffe9b0 !important; padding: 0; }
+  [data-card-plate] [data-skill-change-spacer] [data-card-genre] { border-width: 3px 5px; overflow: visible; text-overflow: clip; padding: 1px 0; color: #f7dc94 !important;
+    text-shadow: 0 -1px 0 rgba(0,0,0,.9), 0 1px 0 rgba(255,236,180,.35) !important; }
+  [data-card-plate="gold"] [data-card-name], [data-card-plate="gold"] [data-skill-change], [data-card-plate="gold"] [data-card-genre], [data-card-plate="gold"] [data-skill-change] [data-card-genre], [data-card-plate="gold"] [data-skill-change-spacer] [data-card-genre] { color: #3a1d02 !important;
+    text-shadow: 0 1px 0 rgba(255,248,222,.85), 0 0 2px rgba(255,244,210,.7), 0 0 1px rgba(255,248,222,.9) !important; }
+  [data-card-art] [data-skill-change], [data-card-art] [data-skill-change-spacer] { min-height: clamp(26px, 3.6dvh, 30px); flex: none; }
+  [data-card-art] [data-skill-change-spacer] { height: auto !important; justify-content: flex-end; }
   /* ★押せる場所は今(カード幅いっぱい・高さ26〜30px)より狭くしない。見た目は中の面に収め、押せる範囲だけ左右へ広げる */
   [data-card-art] [data-skill-change] { position: relative; }
-  [data-card-art] [data-skill-change]::after { content: ''; position: absolute; top: -2px; bottom: -2px; left: calc(-11cqw - 2px); right: calc(-11cqw - 2px); }
-  [data-card-art] [data-skill-change] { background: linear-gradient(180deg, #3d260a, #170d03) !important; border: 1px solid #d9ae55 !important; border-radius: 6px !important;
-    box-shadow: inset 0 1px 0 rgba(255,230,160,.35), 0 0 0 1px rgba(40,24,6,.9) !important; color: #fde68a !important; }
-  [data-card-art] [data-card-genre] { background: linear-gradient(180deg, rgba(48,30,8,.92), rgba(20,12,3,.92)) !important; border: 1px solid rgba(217,174,85,.75);
-    border-radius: 4px !important; color: #fde68a !important; text-shadow: 0 1px 1px #000; }
+  [data-card-art] [data-skill-change]::after { content: ''; position: absolute; top: -5px; bottom: -5px; left: calc(-7cqw - 4px); right: calc(-7cqw - 4px); }
+  /* 段階の札は、大きい丸の下の縁にかかる位置(丸の中心+半径)。金の縁と枠の地に近い暗い金茶で、枠の飾りになじませる */
+  .mh-card-art-roman { position: absolute; left: 50%; top: calc(17.8% + 20.4cqw); transform: translate(-50%, -50%); z-index: 8; pointer-events: none;
+    min-width: 16px; padding: 1px 3px 0; border-radius: 3px; border: 1px solid #f3d27a; background: linear-gradient(180deg, #6b4512, #2a1806);
+    font: 900 7px/1.15 'Times New Roman', serif; letter-spacing: .04em; color: #ffe7a3; text-align: center;
+    box-shadow: 0 0 0 1px rgba(40,24,6,.9), 0 1px 3px rgba(0,0,0,.8); text-shadow: 0 1px 1px #000; }
   /* 距離の札(零/近/中/遠。RANGE_STYLES の labelBg)。4つとも白い字に黒い細い縁(2026-10-13 社長「全距離統一で」)。
      8pxの小さい字でもにじまないよう、縁は太い1本ではなく、ずらした細い影を4方向に重ねる */
   .mh-range-label { color: #fff !important; text-shadow: 1px 0 0 #000, -1px 0 0 #000, 0 1px 0 #000, 0 -1px 0 #000, 0 0 1px #000; }
@@ -2157,7 +2172,7 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
 <script src="data/images/images-enemy.js?v=f10f6ad82110" onload="__mhBoot.done('data/images/images-enemy.js','敵モンスターの絵を読み込み中')" onerror="__mhBoot.fail('data/images/images-enemy.js')"></script>
 <script src="data/ally-monsters.js?v=9f8e081ac969" onload="__mhBoot.done('data/ally-monsters.js','モンスターデータを読み込み中')" onerror="__mhBoot.fail('data/ally-monsters.js')"></script>
 <script src="data/lineages.js?v=729eaceffd0a" onload="__mhBoot.done('data/lineages.js','血統データを読み込み中')" onerror="__mhBoot.fail('data/lineages.js')"></script>
-<script src="data/breeder.js?v=f0268de1cb19" onload="__mhBoot.done('data/breeder.js','ブリーダーデータを読み込み中')" onerror="__mhBoot.fail('data/breeder.js')"></script>
+<script src="data/breeder.js?v=29d3189ece88" onload="__mhBoot.done('data/breeder.js','ブリーダーデータを読み込み中')" onerror="__mhBoot.fail('data/breeder.js')"></script>
 <script src="data/enemy-monsters.js?v=6811f59c3732" onload="__mhBoot.done('data/enemy-monsters.js','敵データを読み込み中')" onerror="__mhBoot.fail('data/enemy-monsters.js')"></script>
 <script src="data/skills.js?v=06be9af9b367" onload="__mhBoot.done('data/skills.js','技データを読み込み中')" onerror="__mhBoot.fail('data/skills.js')"></script>
 <script src="data/rhythm-mode.js?v=61ea9c8e20d1" onload="__mhBoot.done('data/rhythm-mode.js','音ゲーデータを読み込み中')" onerror="__mhBoot.fail('data/rhythm-mode.js')"></script>

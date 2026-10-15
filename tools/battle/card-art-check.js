@@ -38,12 +38,21 @@ check('① 弱いガードは緑(守りの1段目・札なし)・固有技は金
   && bf.frame === A.frames.purple && un.frame === A.frames.gold && un.shape === 'gold' && atk(0).shape === 'std' && bf.mark === null && hl.frame === A.frames.purple);
 
 // ③
-const files = [...Object.values(A.frames), ...A.atk, ...A.guard, ...A.range].map(strip);
+const files = [...Object.values(A.frames), ...A.atk, ...A.guard, ...A.range, ...Object.values(A.plates || {})].map(strip);
 const missing = files.filter((f) => !fs.existsSync(path.join(root, 'monster-hero', f)));
 check('③ 絵がすべて実在し、webp で images/ui/ に置いてある', missing.length === 0 && files.every((f) => /^images\/ui\/battle-cards\/.+\.webp$/.test(f)), missing.join(', '));
 const total = files.reduce((n, f) => n + (fs.existsSync(path.join(root, 'monster-hero', f)) ? fs.statSync(path.join(root, 'monster-hero', f)).size : 0), 0);
-check('③ 27枚の合計が 600KB 以下(原本のまま入れていない)', files.length === 27 && total <= 600 * 1024, `${Math.round(total / 1024)}KB`);
+check('③ 32枚(枠5・マーク22・名札5)の合計が 600KB 以下(原本のまま入れていない)', files.length === 32 && total <= 600 * 1024, `${Math.round(total / 1024)}KB`);
 check('③ images/ui/ は事前ダウンロードのよく使う画面の画像に入る', /const ASSET_CORE_PREFIXES = \[[^\]]*'images\/ui\/'/.test(read('monster-hero/src/parts/25-asset-cache.jsx')));
+
+// ⑤ 名札(2026-10-15)
+const plateOf = (c) => of(c).plate && strip(of(c).plate);
+check('⑤ 名札は枠と同じ色(攻撃=赤・距離撃=青・守り=緑・支援=紫・固有技=金)',
+  plateOf({ type: 'atk', ...ctx.BASE_ATK_EVOLUTION[0] }).endsWith('plate-red.webp') && plateOf({ type: 'range_atk', rangeIdx: 0, name: `零${ctx.RANGE_EVOLUTION[0].name}` }).endsWith('plate-blue.webp')
+  && plateOf({ type: 'guard', ...ctx.GUARD_EVOLUTION[0] }).endsWith('plate-green.webp') && plateOf({ type: 'buff' }).endsWith('plate-purple.webp') && plateOf({ type: 'unique' }).endsWith('plate-gold.webp'));
+const htmlSrc = read('monster-hero/index.html');
+check('⑤ 名札は9分割で真ん中だけ伸ばす(border-image)・金の名札は濃い字', /border-image-source: var\(--mh-plate\); border-image-slice: 11 27 fill;/.test(htmlSrc) && /\[data-card-plate="gold"\] \[data-card-name\][^{]*\{ color: #3a1d02/.test(htmlSrc));
+check('⑤ 名札もバトル前に読み込む', /\.\.\.Object\.values\(BATTLE_CARD_ART\.plates \|\| \{\}\)\]/.test(battle));
 
 // ④
 check('④ 公開の印 battleCardArt は偽', /\n  battleCardArt: false,/.test(read('monster-hero/src/parts/17-release-changelog-login-missions.jsx')));
