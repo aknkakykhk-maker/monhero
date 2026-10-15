@@ -40,7 +40,7 @@ window.addEventListener('unhandledrejection', function(ev){ window.__mhErr('[pro
 // ここでは各ファイルの実サイズを重みにして、実際に受け取ったバイト数で動かす。
 window.__mhBoot = (function () {
   // 起動時に読み込むファイルの実サイズ(バイト)。tools/build.js が実ファイルから書き込む
-  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":22303,"data/images/images-enemy.js":2926,"data/ally-monsters.js":38373,"data/lineages.js":12461,"data/breeder.js":93016,"data/enemy-monsters.js":7879,"data/skills.js":4375,"data/rhythm-mode.js":2647777,"data/rhythm-lane-svg.js":11949,"data/rhythm-geometry-calibration.js":15552,"data/rhythm-result-replay-remount.js":5743,"data/rhythm-event.js":75981,"data/changelog.js":1350597,"data/help.js":587968,"data/rhythm-step3-release.js":8517,"data/assistants.js":616459,"tailwind.css":212414,"game-system.compiled.js":5481166,"data/images/title-screen-halloween.jpg":368790,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
+  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":22303,"data/images/images-enemy.js":2926,"data/ally-monsters.js":38373,"data/lineages.js":12461,"data/breeder.js":93016,"data/enemy-monsters.js":7879,"data/skills.js":4375,"data/rhythm-mode.js":2647777,"data/rhythm-lane-svg.js":11949,"data/rhythm-geometry-calibration.js":15552,"data/rhythm-result-replay-remount.js":5743,"data/rhythm-event.js":75981,"data/changelog.js":1351286,"data/help.js":587968,"data/rhythm-step3-release.js":8517,"data/assistants.js":616459,"tailwind.css":212414,"game-system.compiled.js":5481466,"data/images/title-screen-halloween.jpg":368790,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
   var total = 0, k;
   for (k in SIZES) total += SIZES[k];
   var got = {};   // ファイルごとに「いま何バイト受け取ったか」
@@ -98,7 +98,7 @@ window.__mhBoot = (function () {
 })();
 // 本体JSのキャッシュキー。ここで一度だけ宣言し、下の読み込み処理でも同じ値を使う。
 // 先読みと <script> のURLがずれると、同じ2.7MBを2回取りに行くことになる
-var GAME_BUILD = '202610152239';
+var GAME_BUILD = '202610152302';
 window.__mhGameBuild = GAME_BUILD;
 // 起動でいちばん大きいのは本体JS(約2.7MB)。いちばん後ろで読むため、そこへ来ると
 // ゲージが止まって見えていた。先に取りはじめて、受け取ったバイト数をそのまま出す。
@@ -132,7 +132,7 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
      作るのは tools/build-tailwind.js(node tools/build.js が中身の変化を見て必要なときだけ呼ぶ)。
      landscape: の差し替え(自前で画面を回したときにも効かせる)もそちらの設定へ移してある。
      ?v= は中身のハッシュ。tools/stamp-version.js が data/*.js と同じ仕組みで打つ。 -->
-<link rel="stylesheet" href="tailwind.css?v=9f19b08c80d0" onload="__mhBoot.done('tailwind.css','見た目を読み込み中')" onerror="__mhBoot.fail('tailwind.css')">
+<link rel="stylesheet" href="tailwind.css?v=1ddee7b70eff" onload="__mhBoot.done('tailwind.css','見た目を読み込み中')" onerror="__mhBoot.fail('tailwind.css')">
 <style>
   html, body { margin:0; padding:0; background:#000; overscroll-behavior:none; -webkit-tap-highlight-color:transparent; height:100%; }
   /* 画面の高さは、ここで決めた --mh-vh ひとつだけを使う。
@@ -227,6 +227,13 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
      名前と技変更のまとまりは、枠の中の面(上の丸の下〜下の飾りの手前、左右は横の宝石の内側)へ置き直す。
      上の端はカードの高さの割合(丸の位置)+幅の割合(丸の半径)で決めるので、横持ちで枠が縦につぶれても丸と飾りにかからない */
   [data-card-art] { container-type: inline-size; }
+  /* 手札の幅と高さ(2026-10-15 社長「カードが小さくなって見にくい」「すき間が空いて横幅が狭くなってない?」)。
+     枠の絵は左右の縁と飾りがカード幅の約11%ずつあり、前の手札(色の面が端まであった)より細く・すき間が広く見えた。
+     絵のカードだけ左右へ2pxずつ広げて隣と接するようにし(手札の並びのすき間は4px)、縦持ちでは手札の段を高くして、
+     カードを枠の絵と同じ縦横比(約1:1.85)にする。段の高さ = カード幅×1.85 + 上の見出しの段(約57px)。
+     カード幅 ≒ (画面幅 − 32px)÷5 + 4px なので 37vw + 57px。運んでいる間(data-dragging-card)は押した瞬間の大きさを使う */
+  [data-hand-card][data-card-art]:not([data-dragging-card]) { width: calc(100% + 4px) !important; max-width: none !important; margin: 0 -2px !important; }
+  @media (orientation: portrait) { [data-hand-tray]:has([data-card-art]) { height: clamp(172px, calc(37vw + 57px), 236px) !important; } }
   [data-card-art] > [data-decoration] + div { position: absolute; left: 7%; right: 7%; width: auto !important; top: calc(17.8% + 20.4cqw + 7px); bottom: 9.5%;
     display: flex; flex-direction: column; justify-content: space-between; gap: 3px; z-index: 6; }
   /* 金の枠は大きい丸の下の宝石の飾りが、カードの高さの約42.5%まで下りてくる(枠の絵はカードいっぱいに伸ばすので高さの割合で決まる)。
@@ -263,7 +270,7 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
     text-shadow: 1px 0 0 #2a1503, -1px 0 0 #2a1503, 0 1px 0 #2a1503, 0 -1px 0 #2a1503 !important; }
   /* 金の面(固有技)は、濃い金茶の字にはっきりした明るい縁(後ろのぼかしは安っぽく見えるので付けない。2026-10-15 社長) */
   /* 金の面は中の面の縁が細く広いので、置き場を左右に少し広げる(カード幅の13%から内側) */
-  [data-card-plate="gold"] [data-card-name] { padding: 0 6cqw !important; }
+  [data-card-plate="gold"] [data-card-name] { padding: 0 6cqw !important; --mh-name-ratio: 0.8919; } /* 字の大きさは赤青緑紫(置き場66%)にそろえる: 66÷74 */
   [data-card-plate="gold"] [data-card-name] { color: #2e1802 !important;
     text-shadow: .7px 0 0 #fff5da, -.7px 0 0 #fff5da, 0 .7px 0 #fff5da, 0 -.7px 0 #fff5da, .5px .5px 0 #fff5da, -.5px -.5px 0 #fff5da, 0 0 2.5px rgba(255,250,232,.95) !important; }
   [data-card-plate="gold"] [data-skill-change], [data-card-plate="gold"] [data-card-genre], [data-card-plate="gold"] [data-skill-change] [data-card-genre], [data-card-plate="gold"] [data-skill-change-spacer] [data-card-genre] { color: #241000 !important;
@@ -2208,7 +2215,7 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
 <script src="data/rhythm-geometry-calibration.js?v=02534cca12f6" onload="__mhBoot.done('data/rhythm-geometry-calibration.js','音ゲー座標校正を読み込み中')" onerror="__mhBoot.fail('data/rhythm-geometry-calibration.js')"></script>
 <script src="data/rhythm-result-replay-remount.js?v=381554180360" onload="__mhBoot.done('data/rhythm-result-replay-remount.js','音ゲー再プレイ処理を読み込み中')" onerror="__mhBoot.fail('data/rhythm-result-replay-remount.js')"></script>
 <script src="data/rhythm-event.js?v=53766e5f1840" onload="__mhBoot.done('data/rhythm-event.js','週間ランキングを読み込み中')" onerror="__mhBoot.fail('data/rhythm-event.js')"></script>
-<script src="data/changelog.js?v=42f52b94d860" onload="__mhBoot.done('data/changelog.js','更新情報を読み込み中')" onerror="__mhBoot.fail('data/changelog.js')"></script>
+<script src="data/changelog.js?v=71636d8bd481" onload="__mhBoot.done('data/changelog.js','更新情報を読み込み中')" onerror="__mhBoot.fail('data/changelog.js')"></script>
 <script src="data/help.js?v=d64e97e1bc69" onload="__mhBoot.done('data/help.js','ヘルプを読み込み中')" onerror="__mhBoot.fail('data/help.js')"></script>
 <script data-mhsave-backup src="data/mhsave-backup.js?v=7845a4fd261f" onload="__mhBoot.done('data/mhsave-backup.js','バックアップ機能を読み込み中')" onerror="__mhBoot.fail('data/mhsave-backup.js')"></script>
 <script src="data/rhythm-step3-release.js?v=ae1d7f73f23a" onload="__mhBoot.done('data/rhythm-step3-release.js','音ゲー更新情報を読み込み中')" onerror="__mhBoot.fail('data/rhythm-step3-release.js')"></script>

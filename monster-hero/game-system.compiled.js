@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 37f6f05f29977a65
+// source-sha256: efd5ebd8a2d8217e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-15 22:39";
+const BUILD_DATE = "2026-10-15 23:02";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -61870,15 +61870,13 @@ const battleCardNameLines = (name, per = BATTLE_CARD_NAME_PER_LINE) => {
   const more = t => [...t].length >= 8 ? battleCardNameLines(t, per) : [t];
   return [...more(head), ...more(tail)];
 };
-const BATTLE_CARD_NAME_PX = 5.75;
 const BATTLE_CARD_NAME_LH = 1.12;
 const battleCardNameUnits = line => [...String(line || '')].reduce((n, ch) => n + (/[\x20-\x7e]/.test(ch) ? 0.62 : 1), 0);
 const battleCardNameFit = name => {
   const lines = battleCardNameLines(name);
-  const longest = Math.max(1, ...lines.map(battleCardNameUnits));
   const tall = (lines.length * BATTLE_CARD_NAME_LH).toFixed(2);
   return {
-    fontSize: `min(${BATTLE_CARD_NAME_PX}px, calc((100cqw - 1.5px) / ${longest.toFixed(2)}), calc((100cqh - var(--mh-rule-h, 6px)) / ${tall}))`,
+    fontSize: `max(5.5px, min(calc((100cqw * var(--mh-name-ratio, 1) - 1.5px) / ${BATTLE_CARD_NAME_ONE_LINE}), calc((100cqh - var(--mh-rule-h, 6px)) / ${tall})))`,
     lineHeight: String(BATTLE_CARD_NAME_LH),
     whiteSpace: 'nowrap'
   };
@@ -66702,6 +66700,7 @@ function BattleScreen({
     "aria-label": "この案内を閉じる",
     className: "min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black"
   }, "×"))), React.createElement("div", {
+    "data-hand-tray": true,
     className: "shrink-0 p-1 flex flex-col relative border-t border-white/[.08] backdrop-blur-sm",
     style: {
       height: 'clamp(172px,23dvh,196px)',
@@ -66830,12 +66829,15 @@ function BattleScreen({
         if (isBusy || autoBattleRef.current || !tutorialAllowed) return;
         const pt = e.touches ? e.touches[0] : e;
         cardDragActiveRef.current = false;
+        const r0 = e.currentTarget && e.currentTarget.getBoundingClientRect ? e.currentTarget.getBoundingClientRect() : null;
         setDragState({
           cardIndex: i,
           x: pt.clientX,
           y: pt.clientY,
           active: false,
-          card: c
+          card: c,
+          w: r0 && r0.width > 0 ? r0.width : null,
+          h: r0 && r0.height > 0 ? r0.height : null
         });
       },
       style: {
@@ -66852,7 +66854,10 @@ function BattleScreen({
           top: dragState.y,
           transform: 'translate(-50%,-50%) rotate(-3deg) scale(1.15)',
           zIndex: 70000,
-          width: '72px',
+          width: dragState.w ? `${dragState.w}px` : '72px',
+          ...(dragState.h ? {
+            height: `${dragState.h}px`
+          } : {}),
           pointerEvents: 'none',
           transition: 'none',
           filter: 'drop-shadow(0 12px 18px rgba(0,0,0,0.65))'
