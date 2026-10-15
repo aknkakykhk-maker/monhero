@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 64ea45c830af1488
+// source-sha256: 057c78d88b34a196
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-15 21:08";
+const BUILD_DATE = "2026-10-15 21:36";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -26839,7 +26839,7 @@ const rhythmTotalRankingMissing = (status, body) => {
   if (!/rhythm_total_rankings/i.test(text)) return false;
   return /PGRST205|PGRST200|42P01|does not exist|Could not find the/i.test(text);
 };
-const sbFetchRhythmTotalRankings = async ({
+const sbFetchRhythmTotalRankingsRaw = async ({
   limit = RHYTHM_TOTAL_RANKING_DISPLAY_LIMIT,
   identityKeys = null,
   requestId = 'untracked'
@@ -26869,7 +26869,7 @@ const sbFetchRhythmTotalRankings = async ({
         rankingLog(requestId, 'profile-frame-column-missing', {
           status: res.status
         });
-        return sbFetchRhythmTotalRankings({
+        return sbFetchRhythmTotalRankingsRaw({
           limit,
           identityKeys,
           requestId
@@ -27018,7 +27018,7 @@ const sbFetchRhythmWeekWindow = async ({
     endMs
   };
 };
-const sbFetchRhythmEventSongBests = async ({
+const sbFetchRhythmEventSongBestsRaw = async ({
   songId,
   fromMs,
   toMs,
@@ -27078,7 +27078,7 @@ const sbFetchRhythmEventSongBests = async ({
     return ask(RHYTHM_EVENT_SONG_SELECT_BASE);
   }
 };
-const sbFetchRhythmEventTotals = async ({
+const sbFetchRhythmEventTotalsRaw = async ({
   songIds,
   fromMs,
   toMs,
@@ -27153,7 +27153,7 @@ const rhythmEventPlayCountsFromRow = value => {
   }
   return out;
 };
-const sbFetchRhythmWeekTotals = async ({
+const sbFetchRhythmWeekTotalsRaw = async ({
   fromMs,
   toMs,
   limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT,
@@ -27170,6 +27170,193 @@ const sbFetchRhythmWeekTotals = async ({
     label: 'rhythm-week-total',
     requestId
   }), RHYTHM_WEEK_TOTAL_SELECT);
+};
+const RHYTHM_TIE_PAD = 20;
+let _rhythmPreciseUnavailable = false;
+const rhythmPreciseMissing = (status, text) => status === 404 || /PGRST202|42883|rhythm_(total|week|event)_precise/i.test(String(text || ''));
+const sbFetchRhythmPreciseMap = async ({
+  fn,
+  body,
+  identityKeys,
+  requestId
+}) => {
+  if (_rhythmPreciseUnavailable || !identityKeys.length) return null;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}?select=identity_key,total_precise`, {
+      method: 'POST',
+      headers: SB_HEADERS,
+      body: JSON.stringify({
+        ...(body || {}),
+        identity_keys: identityKeys
+      }),
+      signal: controller.signal
+    });
+    const text = await res.text();
+    if (!res.ok) {
+      if (rhythmPreciseMissing(res.status, text)) _rhythmPreciseUnavailable = true;
+      rankingLog(requestId, 'rhythm-precise-unavailable', {
+        fn,
+        status: res.status
+      });
+      return null;
+    }
+    const rows = JSON.parse(text);
+    const map = new Map();
+    for (const row of Array.isArray(rows) ? rows : []) {
+      const n = Number(row?.total_precise);
+      if (typeof row?.identity_key === 'string' && Number.isFinite(n) && n > 0) map.set(row.identity_key, Math.floor(n));
+    }
+    return map;
+  } catch (error) {
+    rankingLog(requestId, 'rhythm-precise-failed', {
+      fn,
+      message: error?.message || String(error)
+    });
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+};
+const rhythmTieSortRows = (rows, {
+  scoreKey,
+  timeKey,
+  preciseOf
+}) => rows.map((row, index) => ({
+  row,
+  index,
+  score: Number(row?.[scoreKey]) || 0,
+  precise: preciseOf(row),
+  time: Date.parse(row?.[timeKey])
+})).sort((a, b) => b.score - a.score || b.precise - a.precise || (Number.isFinite(a.time) && Number.isFinite(b.time) ? a.time - b.time : 0) || a.index - b.index).map(item => item.row);
+const rhythmTieFix = async ({
+  rows,
+  limit,
+  scoreKey,
+  timeKey,
+  fn = null,
+  body = null,
+  requestId
+}) => {
+  const list = Array.isArray(rows) ? rows : [];
+  if (list.length < 2) return list.slice(0, limit);
+  const scores = list.map(row => Number(row?.[scoreKey]) || 0);
+  if (new Set(scores).size === scores.length) return list.slice(0, limit);
+  let preciseOf;
+  if (fn) {
+    const tied = new Set(scores.filter((score, i) => scores.indexOf(score) !== i));
+    const keys = [...new Set(list.filter(row => tied.has(Number(row?.[scoreKey]) || 0)).map(row => row?.identity_key).filter(k => typeof k === 'string' && k))];
+    const map = await sbFetchRhythmPreciseMap({
+      fn,
+      body,
+      identityKeys: keys,
+      requestId
+    });
+    if (!map) return list.slice(0, limit);
+    preciseOf = row => map.get(row?.identity_key) || 0;
+  } else {
+    preciseOf = row => rhythmRankingRowPrecise(row);
+  }
+  return rhythmTieSortRows(list, {
+    scoreKey,
+    timeKey,
+    preciseOf
+  }).slice(0, limit);
+};
+const rhythmTieWanted = identityKeys => !(Array.isArray(identityKeys) && identityKeys.length);
+const sbFetchRhythmTotalRankings = async (options = {}) => {
+  const {
+    limit = RHYTHM_TOTAL_RANKING_DISPLAY_LIMIT,
+    identityKeys = null,
+    requestId = 'untracked'
+  } = options;
+  if (!rhythmTieWanted(identityKeys)) return sbFetchRhythmTotalRankingsRaw(options);
+  const rows = await sbFetchRhythmTotalRankingsRaw({
+    ...options,
+    limit: limit + RHYTHM_TIE_PAD
+  });
+  return rhythmTieFix({
+    rows,
+    limit,
+    scoreKey: 'total_score',
+    timeKey: 'last_scored_at',
+    fn: 'rhythm_total_precise',
+    requestId
+  });
+};
+const sbFetchRhythmWeekTotals = async (options = {}) => {
+  const {
+    fromMs,
+    toMs,
+    limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT,
+    identityKeys = null,
+    requestId = 'untracked'
+  } = options;
+  if (!rhythmTieWanted(identityKeys)) return sbFetchRhythmWeekTotalsRaw(options);
+  const rows = await sbFetchRhythmWeekTotalsRaw({
+    ...options,
+    limit: limit + RHYTHM_TIE_PAD
+  });
+  return rhythmTieFix({
+    rows,
+    limit,
+    scoreKey: 'total_score',
+    timeKey: 'last_scored_at',
+    fn: 'rhythm_week_precise',
+    body: {
+      from_at: new Date(fromMs).toISOString(),
+      to_at: new Date(toMs).toISOString()
+    },
+    requestId
+  });
+};
+const sbFetchRhythmEventTotals = async (options = {}) => {
+  const {
+    songIds,
+    fromMs,
+    toMs,
+    limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT,
+    identityKeys = null,
+    requestId = 'untracked'
+  } = options;
+  if (!rhythmTieWanted(identityKeys)) return sbFetchRhythmEventTotalsRaw(options);
+  const rows = await sbFetchRhythmEventTotalsRaw({
+    ...options,
+    limit: limit + RHYTHM_TIE_PAD
+  });
+  return rhythmTieFix({
+    rows,
+    limit,
+    scoreKey: 'total_score',
+    timeKey: 'last_scored_at',
+    fn: 'rhythm_event_precise',
+    body: {
+      song_ids: songIds,
+      from_at: new Date(fromMs).toISOString(),
+      to_at: new Date(toMs).toISOString()
+    },
+    requestId
+  });
+};
+const sbFetchRhythmEventSongBests = async (options = {}) => {
+  const {
+    limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT,
+    identityKeys = null,
+    requestId = 'untracked'
+  } = options;
+  if (!rhythmTieWanted(identityKeys)) return sbFetchRhythmEventSongBestsRaw(options);
+  const rows = await sbFetchRhythmEventSongBestsRaw({
+    ...options,
+    limit: limit + RHYTHM_TIE_PAD
+  });
+  return rhythmTieFix({
+    rows,
+    limit,
+    scoreKey: 'score',
+    timeKey: 'scored_at',
+    requestId
+  });
 };
 const rhythmEventSongEntryFromRow = row => applyLatestBreederProfile({
   identityKey: typeof row?.identity_key === 'string' ? row.identity_key : '',
