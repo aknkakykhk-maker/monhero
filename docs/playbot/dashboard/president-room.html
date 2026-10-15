@@ -68,13 +68,13 @@ section{display:flex;flex-direction:column;gap:10px}
 <div class="wrap">
   <header>
     <h1>モンヒロ社 社長室</h1>
-    <p class="lead">10/15 23:22 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。<br>モンスター Tier 表: <a href="https://claude.ai/artifact/3sUNc2pQgN5f4QdYYW5tW8">https://claude.ai/artifact/3sUNc2pQgN5f4QdYYW5tW8</a>(サイドバーにも固定)</p>
+    <p class="lead">10/16 01:58 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。<br>モンスター Tier 表: <a href="https://claude.ai/artifact/3sUNc2pQgN5f4QdYYW5tW8">https://claude.ai/artifact/3sUNc2pQgN5f4QdYYW5tW8</a>(サイドバーにも固定)</p>
   </header>
 
   <nav class="counts" aria-label="件数">
     <a class="count warn" href="#decide"><b>0</b><span>社長の判断待ち</span></a>
     <a class="count" href="#work"><b>5</b><span>進行中</span></a>
-    <a class="count" href="#shipped"><b>36</b><span>公開したもの</span></a>
+    <a class="count" href="#shipped"><b>31</b><span>公開したもの</span></a>
   </nav>
 
   <section id="decide">
@@ -88,10 +88,10 @@ section{display:flex;flex-direction:column;gap:10px}
     <section id="work">
       <h2>進行中の作業</h2>
       <ul class="list">
-      <li id="r2610152245card">
-        <div class="row-title">行動カードが前より小さい・運ぶとき潰れる・クラシックの枠の札が帯と重なる(Android)</div>
+      <li id="r2610160158night">
+        <div class="row-title">夜の点検: モンビー周り・タクティクス周り・ダメ出しくんの確認</div>
         
-        <div class="meta"><span>部長ブレイブくん</span><span>見込み 前のカードと同じ外寸にそろえる</span></div>
+        <div class="meta"><span>ブレイブくん・テンポくん・ダメダシくん</span><span>見込み バトル部は完了(HOMEのおしゃべりボタン重なりを#3055で修正)。ビート部は全曲の自動演奏中</span><span>PR #3052・#3054・#3055・#3056</span></div>
       </li>
       <li id="r2610152200scan">
         <div class="row-title">モンヒロビート: 全曲・全難易度を機械で洗い出し、人の手どおりの自動演奏で正しく押して MISS になる所を探す</div>
@@ -101,7 +101,7 @@ section{display:flex;flex-direction:column;gap:10px}
       <li id="r2610152207judge">
         <div class="row-title">モンヒロビート: 押さえている指と別の指の判定が混ざる(空中スライド中の地上タップ・フリックで外れる/Sheriruth・AMOS HELL/ホールド→フリック/上下クロス/半レーンずれの両手押し)</div>
         
-        <div class="meta"><span>部長テンポくん</span><span>見込み #3045: 押さえている指が一瞬一覧から消えても120ms待つ・取り消しで即MISSにしない。#3042: 半レーンずれの両手押し。社長の確認待ち</span><span>PR #3036・#3042・#3045</span></div>
+        <div class="meta"><span>部長テンポくん</span><span>見込み #3051 タップ優先・#3053 スライド終わりのMISS・#3054 改善部K1の後戻り修正まで公開。全曲HELL/MASTERの自動演奏で点検中(朝に報告)。社長のiPhone確認待ち</span><span>PR #3036・#3042・#3045・#3051・#3053・#3054・#3049</span></div>
       </li>
       <li id="r2610151940stutter">
         <div class="row-title">モンヒロビート: 元気・4回目のモンスターノーツでかくつく(Sheriruth HELL)</div>
@@ -228,6 +228,11 @@ section{display:flex;flex-direction:column;gap:10px}
         <div class="row-title">空中スライドの終わりの「払う」印を大きく目立たせる(決まりはそのまま)</div>
         
         <div class="meta"><span>部員</span><span>PR #3039</span></div>
+      </li>
+      <li id="r2610152245card">
+        <div class="row-title">行動カードが前より小さい・運ぶとき潰れる・クラシックの枠の札が帯と重なる(Android)</div>
+        
+        <div class="meta"><span>部長ブレイブくん</span><span>PR #3048・#3050</span></div>
       </li>
       <li id="r2610152240recjudge">
         <div class="row-title">入力の記録に判定の出来事(付いた・MISS・控え・浮き・持ち替え・外れによる切れ)を入れる</div>
@@ -373,36 +378,6 @@ section{display:flex;flex-direction:column;gap:10px}
         <div class="row-title">取り損ねた HOLD・SLIDE の残りを消す</div>
         <div class="row-body">判定・スコア・ライフ・コンボは変えずに、見た目だけ消えるようにした</div>
         <div class="meta"><span>部長ドライバーくん</span><span>PR #2902</span></div>
-      </li>
-      <li id="r2610121449hand">
-        <div class="row-title">HELL 2曲の手の決まりを直す</div>
-        <div class="row-body">同じ側で地上⇔空中は150ms以上・地上から空中は250ms以上あけ、長押し中の手の5件も直した</div>
-        <div class="meta"><span>オンプくん・部長テンポくん</span><span>PR #2866・#2872・#2877</span></div>
-      </li>
-      <li id="r2610121500tactics">
-        <div class="row-title">タクティクスの状態を見た目で</div>
-        <div class="row-body">EX の残りターン・回数をひと目で出し、26体すべてに EX 中の見た目を付けた</div>
-        <div class="meta"><span>部長ブレイブくん</span><span>PR #2856・#2862・#2867・#2868・#2870・#2871</span></div>
-      </li>
-      <li id="r2610121440rev">
-        <div class="row-title">譜面の道具の古いリビジョンを外す</div>
-        <div class="row-body">最新(Rev.30)だけにした。公開中の譜面は1音も変わらない(道具だけの整理)</div>
-        <div class="meta"><span>オンプくん</span><span>PR #2847・#2861</span></div>
-      </li>
-      <li id="r2610121449judge">
-        <div class="row-title">判定の文字の大きさを「一度で」に</div>
-        <div class="row-body">判定の文字の大きさを一度で変える形を既定にした(地上の判定の文字の置き場所は今のまま)</div>
-        <div class="meta"><span>部長ドライバーくん</span><span>PR #2842・#2855</span></div>
-      </li>
-      <li id="r2610112320tapcheck">
-        <div class="row-title">10/12の深夜2時から全曲エキスパート以上のノーツのタップ位置の確認作業をして。今まで押しづらいとかうまく反応しないのって判定位置のズレとかあるんじゃない？</div>
-        <div class="row-body">82譜面・41,275ノーツ・8つの画面条件で、見えている位置と判定の位置のずれは無し。描かれた真ん中を押して取れないノーツは0</div>
-        <div class="meta"><span>部長テンポくん</span><span>PR #2812</span></div>
-      </li>
-      <li id="r2610112357renda">
-        <div class="row-title">Grievous Lady MASTER の2分ごろの連打が反応しない疑い</div>
-        <div class="row-body">押せる位置は全曲で問題なし(#2790)なので、続けて叩いたときに受け付けるか(前のノーツの判定の窓に吸われないか・叩きの間引き)を、人の連打のずれを入れた bot で確かめる。MASTER と HELL の両方。明らかな不具合なら直して公開してから報告</div>
-        <div class="meta"><span>部長テンポくん</span><span>PR #2800・#2812</span></div>
       </li></ul>
       <p class="note">本番: https://aknkakykhk-maker.github.io/monhero/</p>
     </section>
