@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "0ca638364c4e",
-  "packs": {"beat":{"bytes":87387400,"count":77},"battle":{"bytes":106031777,"count":462},"all":{"bytes":193419177,"count":539}},
+  "id": "92be69c31d3e",
+  "packs": {"beat":{"bytes":87387400,"count":77},"battle":{"bytes":106084389,"count":463},"all":{"bytes":193471789,"count":540}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"ddce743e94fa","size":1416528,"pack":"beat"},
@@ -525,6 +525,7 @@
     "images/ui/battle-cards/atk-8.webp": {"v":"a1ce8f960223","size":9884,"pack":"battle"},
     "images/ui/battle-cards/atk-9.webp": {"v":"20c7c2779a48","size":9940,"pack":"battle"},
     "images/ui/battle-cards/frame-blue.webp": {"v":"61fc12322033","size":32364,"pack":"battle"},
+    "images/ui/battle-cards/frame-gold.webp": {"v":"37472823143d","size":52612,"pack":"battle"},
     "images/ui/battle-cards/frame-green.webp": {"v":"439f70b776c8","size":30844,"pack":"battle"},
     "images/ui/battle-cards/frame-purple.webp": {"v":"7df652da8493","size":32044,"pack":"battle"},
     "images/ui/battle-cards/frame-red.webp": {"v":"9237b55a1de5","size":32730,"pack":"battle"},

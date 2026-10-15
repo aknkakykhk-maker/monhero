@@ -73,7 +73,8 @@ const BATTLE_CARD_ART_DEBUG = (() => {
 const battleCardArtOn = () => (typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.battleCardArt === true) || BATTLE_CARD_ART_DEBUG.on;
 const BATTLE_CARD_ROMAN = Object.freeze(['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX']);
 // カード1枚の絵。{ frame, mark(技のマークの絵・無ければ null で今のアイコン), roman(段階の札・無ければ '') }
-//   攻撃=赤・距離撃=青・守り=緑・支援=紫(社長の決定)。固有技は赤・弱いガードは緑(守りの1段目のマーク・段階の札なし)・それ以外は紫(案。社長に確認中)
+//   攻撃=赤・距離撃=青・守り=緑・支援=紫・固有技=金(社長の決定)。弱いガードは緑(守りの1段目のマーク・段階の札なし)・それ以外は紫
+//   shape … 枠の丸の位置の型。'std'(4色)・'gold'(固有技の金。大きい丸が大きく少し下)
 //   段階は表の何番目かで決める(攻撃は BASE_ATK_EVOLUTION の icon、守りは GUARD_EVOLUTION の name、距離撃は RANGE_EVOLUTION の名前)
 const battleCardArtOf = (c) => {
   if (!c || typeof BATTLE_CARD_ART === 'undefined') return null;
@@ -81,20 +82,21 @@ const battleCardArtOf = (c) => {
   const lvlOf = (i) => (Number.isInteger(i) && i >= 0 ? i : null);
   if (c.type === 'atk') {
     const i = lvlOf(BASE_ATK_EVOLUTION.findIndex((e) => e.icon === c.icon));
-    return { frame: F.red, mark: i == null ? null : BATTLE_CARD_ART.atk[i], roman: i == null ? '' : BATTLE_CARD_ROMAN[i] };
+    return { frame: F.red, mark: i == null ? null : BATTLE_CARD_ART.atk[i], roman: i == null ? '' : BATTLE_CARD_ROMAN[i], shape: 'std' };
   }
   if (c.type === 'range_atk') {
     const r = Number.isInteger(c.rangeIdx) ? c.rangeIdx : null;
     const i = lvlOf(RANGE_EVOLUTION.findIndex((e) => typeof c.name === 'string' && r != null && c.name === `${RANGE_LABELS[r]}${e.name}`));
-    return { frame: F.blue, mark: r == null ? null : (BATTLE_CARD_ART.range[r] || null), roman: i == null ? '' : BATTLE_CARD_ROMAN[i] };
+    return { frame: F.blue, mark: r == null ? null : (BATTLE_CARD_ART.range[r] || null), roman: i == null ? '' : BATTLE_CARD_ROMAN[i], shape: 'std' };
   }
   if (c.type === 'guard') {
     const i = lvlOf(GUARD_EVOLUTION.findIndex((e) => e.name === c.name || e.icon === c.icon));
-    return { frame: F.green, mark: i == null ? null : BATTLE_CARD_ART.guard[i], roman: i == null ? '' : BATTLE_CARD_ROMAN[i] };
+    return { frame: F.green, mark: i == null ? null : BATTLE_CARD_ART.guard[i], roman: i == null ? '' : BATTLE_CARD_ROMAN[i], shape: 'std' };
   }
-  if (c.type === 'weak_guard') return { frame: F.green, mark: BATTLE_CARD_ART.guard[0], roman: '' };
-  if (c.type === 'unique') return { frame: F.red, mark: null, roman: '' };
-  return { frame: F.purple, mark: null, roman: '' };
+  if (c.type === 'weak_guard') return { frame: F.green, mark: BATTLE_CARD_ART.guard[0], roman: '', shape: 'std' };
+  // 固有技は金の枠(2026-10-15 社長の決定)。丸の位置と大きさがほかと違うので shape:'gold'(真ん中はその子の顔か固有技の絵=今のアイコン)
+  if (c.type === 'unique') return { frame: F.gold || F.red, mark: null, roman: '', shape: F.gold ? 'gold' : 'std' };
+  return { frame: F.purple, mark: null, roman: '', shape: 'std' };
 };
 // バトルが始まる前に、枠とマークを読み込んでおく(初めて出た瞬間のカクつきを防ぐ・社長の決めごと)。1回の起動で1回だけ
 let battleCardArtPreloaded = false;
@@ -2815,7 +2817,7 @@ function BattleScreen({
               // 光らせるのは「いま触ってほしい種類」だけ。技変更の番は名前のところも光らせる
               const tutorialTargeted=!!battleTutorialCardTarget&&battleTutorialCardKind(c)===battleTutorialCardTarget;
               const cardArt=tacticsNewLayout&&battleCardArtOn()?battleCardArtOf(c):null;
-              const handCardButton=(<button data-hand-card={i} data-card-art={cardArt?'on':undefined} data-dragging-card={isDragging?'true':undefined} data-card-cost={requiredGuts} data-card-type={c.type} data-card-usable={isSelectable?'true':'false'} data-card-block={cardBlock&&!cardBlock.ok?cardBlock.kind:undefined} onPointerDown={(e)=>{
+              const handCardButton=(<button data-hand-card={i} data-card-art={cardArt?(cardArt.shape||'std'):undefined} data-dragging-card={isDragging?'true':undefined} data-card-cost={requiredGuts} data-card-type={c.type} data-card-usable={isSelectable?'true':'false'} data-card-block={cardBlock&&!cardBlock.ok?cardBlock.kind:undefined} onPointerDown={(e)=>{
                 if(isBusy||autoBattleRef.current||!tutorialAllowed)return;
                 const pt=e.touches?e.touches[0]:e;
                 cardDragActiveRef.current=false;
