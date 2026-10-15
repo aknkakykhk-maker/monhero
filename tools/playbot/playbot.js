@@ -77,7 +77,8 @@ const PORT = Number(process.env.PLAYBOT_PORT) || 8981; // 2つ同時に動かす
 // ゲームを配信する場所。ふだんはこのリポジトリ。古い版(git worktree で別の場所に出したもの)で動かして見張りが本当に見つけられるか確かめるときだけ
 // PLAYBOT_SERVE_ROOT=<その場所> で差し替える(ツールとボットはこのリポジトリのものを使う)
 const SERVE_ROOT = process.env.PLAYBOT_SERVE_ROOT ? path.resolve(process.env.PLAYBOT_SERVE_ROOT) : ROOT;
-const PAGE_URL = `http://localhost:${PORT}/monster-hero/index.html`;
+// PLAYBOT_QUERY='?playbotSeed=123&playbotFast=1' で、ゲームの開き方に印を付けられる(ボット用の早送り・乱数の種。10-core.jsx の PLAYBOT_*)
+const PAGE_URL = `http://localhost:${PORT}/monster-hero/index.html${process.env.PLAYBOT_QUERY || ''}`;
 
 const stamp = (() => {
   const d = new Date(Date.now() + 9 * 3600 * 1000); // JST
