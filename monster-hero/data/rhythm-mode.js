@@ -3131,6 +3131,61 @@ const rhythmHandoverSpanAt=(note,chartTimeMs)=>{
 // ★ふつうの端末では pointerOnly は起きないので、この取り戻しは一度も動かない(何も変わらない)。
 //
 // 判定の窓・スコア・譜面には触らない。数えたものは演奏ごとにまとめ(snapshot)、端末に残してサーバーへ送る(30-rhythm-play.jsx)。
+// ===== 入力の記録(2026-10-15・社長「判定が機能しないのは致命的」。修理部・デバッグ専用) =====
+// 実機の指の動きをそのまま残し、Chromium で同じ時刻に流して判定を比べるためのもの(再生は tools/mode/rhythm-input-replay.js)。
+//   ・デバッグ設定「入力の記録」で入れたときだけ動く(既定は切。入れ切りだけ mh_rhythm_input_rec_v1 に残す)
+//   ・演奏エリアの touch / pointer を capture で全部残す: 曲の時刻(ms)・performance.now・指の番号・演奏エリア基準の座標・接触の幅・force
+//   ・判定の出来事は event(type, data) で書き込む(判定の持ち主=ビート部が呼ぶ。切のときは何もしない)
+//   ・記録はメモリの中だけ。演奏が終わったら「最後の記録」として1件だけ持ち、デバッグ設定の「記録をコピー」で写す
+//   ・名前・ID などの個人の情報は入れない。ランキング・保存・判定には一切触らない
+const RHYTHM_INPUT_REC_KEY='mh_rhythm_input_rec_v1';
+const RHYTHM_INPUT_REC=(()=>{
+  const MAX_EVENTS=300000;
+  let on=false,area=null,songMs=null,events=[],meta=null,last=null,bound=null,dropped=0;
+  const enabled=()=>{try{return typeof localStorage!=='undefined'&&localStorage.getItem(RHYTHM_INPUT_REC_KEY)==='on';}catch{return false;}};
+  const setEnabled=v=>{try{if(typeof localStorage!=='undefined'){if(v)localStorage.setItem(RHYTHM_INPUT_REC_KEY,'on');else localStorage.removeItem(RHYTHM_INPUT_REC_KEY);}}catch{}return enabled();};
+  const r1=v=>Math.round(Number(v)*10)/10;
+  const stamp=()=>{let ms=null;try{ms=songMs?r1(songMs()):null;}catch{}return {ms,at:r1(typeof performance!=='undefined'?performance.now():Date.now())};};
+  const push=item=>{if(events.length>=MAX_EVENTS){dropped++;return;}events.push(item);};
+  const box=()=>{try{return area.getBoundingClientRect();}catch{return {left:0,top:0,width:0,height:0};}};
+  const onTouch=e=>{
+    const r=box(),list=[];
+    for(const t of e.changedTouches||[])list.push({id:t.identifier,x:r1(t.clientX-r.left),y:r1(t.clientY-r.top),rx:r1(t.radiusX||0),ry:r1(t.radiusY||0),f:r1(t.force||0)});
+    push({k:e.type,...stamp(),ts:r1(e.timeStamp),n:(e.touches||[]).length,c:list});
+  };
+  const onPointer=e=>{
+    const r=box();
+    push({k:e.type,...stamp(),ts:r1(e.timeStamp),id:e.pointerId,pt:e.pointerType,x:r1(e.clientX-r.left),y:r1(e.clientY-r.top),w:r1(e.width||0),h:r1(e.height||0),f:r1(e.pressure||0),prim:!!e.isPrimary});
+  };
+  const TOUCH=['touchstart','touchmove','touchend','touchcancel'],POINTER=['pointerdown','pointermove','pointerup','pointercancel'];
+  const detach=()=>{if(bound&&area){TOUCH.forEach(t=>area.removeEventListener(t,onTouch,true));POINTER.forEach(t=>area.removeEventListener(t,onPointer,true));}bound=null;};
+  return {
+    enabled,setEnabled,isRecording:()=>on,
+    // 記録中の曲の時刻(ms)。再生の道具が「曲が鳴り始めたか」を待つのに使う
+    songMs:()=>on?stamp().ms:null,
+    // 演奏の始まりに呼ぶ。info … { songId, difficultyId, mirror, assist, offsetMs, speed } など(個人の情報は入れない)
+    begin(el,getSongMs,info){
+      if(on)this.finish({interrupted:true});
+      detach();on=false;if(!enabled()||!el)return false;
+      area=el;songMs=typeof getSongMs==='function'?getSongMs:null;events=[];dropped=0;
+      const r=box();
+      meta={v:1,startedAt:new Date().toISOString(),area:{w:r1(r.width),h:r1(r.height)},view:{w:typeof window!=='undefined'?window.innerWidth:0,h:typeof window!=='undefined'?window.innerHeight:0,dpr:typeof window!=='undefined'?window.devicePixelRatio:1},
+        ua:typeof navigator!=='undefined'?String(navigator.userAgent||'').slice(0,160):'',...(info&&typeof info==='object'?info:{})};
+      TOUCH.forEach(t=>area.addEventListener(t,onTouch,{capture:true,passive:true}));
+      POINTER.forEach(t=>area.addEventListener(t,onPointer,{capture:true,passive:true}));
+      bound=true;on=true;return true;
+    },
+    // 判定の出来事(付いた・外れた・控え・浮き・交差の持ち替え・MISS の理由など)。type は文字、data は小さなオブジェクト
+    event(type,data){if(!on)return;push({k:'judge',type:String(type||''),...stamp(),d:data&&typeof data==='object'?data:{v:data}});},
+    // 演奏の終わり(やめた・倒れたも)に呼ぶ。extra … { cleared, score など }
+    finish(extra){if(!on)return null;detach();on=false;last={...meta,endedAt:new Date().toISOString(),dropped,extra:extra&&typeof extra==='object'?extra:null,events};events=[];return last;},
+    // 途中でやめた演奏も、コピーの前にここで閉じて残す
+    last:()=>last,
+    close(){if(on)this.finish({interrupted:true});return last;},
+    summary:()=>last?{songId:last.songId||'',difficultyId:last.difficultyId||'',events:last.events.length,touches:last.events.filter(e=>e.k&&e.k.startsWith('touch')).length,judges:last.events.filter(e=>e.k==='judge').length,dropped:last.dropped}:null,
+    text:()=>last?JSON.stringify(last):'',
+  };
+})();
 const RHYTHM_TOUCH_BRIDGE_WAIT_MS=45;     // ポインタのあと、タッチをこれだけ待つ
 const RHYTHM_TOUCH_BRIDGE_MATCH_PX=28;    // 同じ指とみなす位置の差
 const RHYTHM_TOUCH_BRIDGE_KEEP_MS=600;    // 突き合わせのために覚えておく長さ(遅れて届くほうを待つ)
@@ -29774,15 +29829,23 @@ const RHYTHM_RANKING_MAX_PAGES=10;
 // 同じユーザー名の行が複数あっても、いちばん高いスコアの1件だけを残す
 // (「自分のスコアはハイスコア1件のみ」という仕様。書き込み側は1プレイ=1行のまま増やし続け、
 // 表示のときにだけ集約する。既存のaggregateBreederLevelsと同じ考え方)
+// 行の並べ方(2026-10-15・社長の決定「同じスコアなら JUST MARVELOUS が多い人を上に。それも同じなら先に出した人が上」)。
+// JUST MARVELOUS の回数は記録の詳細(party の先頭の precise)。2026-09-13 より前の記録には無いので 0 回として扱う。
+// 出した時刻は created_at(読めなければいちばん後ろ)。負の数を返したら a が上
+const rhythmRankingRowPrecise=(r)=>{const d=Array.isArray(r?.party)?r.party[0]:null;const n=Number(d&&typeof d==='object'?d.precise:0);return Number.isFinite(n)&&n>0?Math.floor(n):0;};
+const rhythmRankingRowTime=(r)=>{const t=Date.parse(r?.created_at||'');return Number.isFinite(t)?t:Infinity;};
+const rhythmRankingCompareRows=(a,b)=>((Number(b?.score)||0)-(Number(a?.score)||0))
+  ||(rhythmRankingRowPrecise(b)-rhythmRankingRowPrecise(a))
+  ||(rhythmRankingRowTime(a)===rhythmRankingRowTime(b)?0:(rhythmRankingRowTime(a)<rhythmRankingRowTime(b)?-1:1));
 const rhythmRankingDedupeByUser=(rows)=>{
   const byUser=new Map();
   (rows||[]).forEach(r=>{
     const name=r?.user_name||'名無しのブリーダー';
-    const score=Number(r?.score)||0;
     const cur=byUser.get(name);
-    if(!cur||score>(Number(cur.score)||0))byUser.set(name,r);
+    // その人のいちばん良い1件(並べ方と同じ決まり。同点なら JUST MARVELOUS が多い方・先に出した方)
+    if(!cur||rhythmRankingCompareRows(r,cur)<0)byUser.set(name,r);
   });
-  return [...byUser.values()].sort((a,b)=>(Number(b.score)||0)-(Number(a.score)||0));
+  return [...byUser.values()].sort(rhythmRankingCompareRows);
 };
 // Supabaseの生の行を画面表示用の形へ整える。partyには判定内訳等の詳細をJSONで持たせている
 // (種族チャレンジがpartyへ育て方の詳細を持たせているのと同じ、列を増やさない考え方)。
@@ -30126,8 +30189,9 @@ const installRhythmGeometryStyles=()=>{
     [data-rhythm-screen-flash][data-rhythm-flash="1"]{animation:mhRhythmScreenFlash 620ms ease-out 1}
     @keyframes mhRhythmScreenFlash{0%{opacity:0}12%{opacity:1}100%{opacity:0}}
     /* 演出量MINIMAL・軽量モードでは出さない(音は鳴る) */
-    [data-rhythm-play-area][data-rhythm-lightweight="true"] [data-rhythm-hit-layer],
-    [data-rhythm-play-area][data-rhythm-effect="MINIMAL"] [data-rhythm-hit-layer],
+    /* ただし設定「押したときの光」が「いつも出す」(data-rhythm-tap-light)のときは、判定ラインで弾ける光だけは出す(2026-10-15) */
+    [data-rhythm-play-area][data-rhythm-lightweight="true"]:not([data-rhythm-tap-light="1"]) [data-rhythm-hit-layer],
+    [data-rhythm-play-area][data-rhythm-effect="MINIMAL"]:not([data-rhythm-tap-light="1"]) [data-rhythm-hit-layer],
     [data-rhythm-play-area][data-rhythm-lightweight="true"] [data-rhythm-screen-flash],
     [data-rhythm-play-area][data-rhythm-effect="MINIMAL"] [data-rhythm-screen-flash]{display:none!important}
     /* 能力名(「ミーア 元気！」)も出た瞬間に大きく弾ませる。1曲に最大4回しか出ないので大きめに。 */
@@ -33799,7 +33863,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       // 押さえている最中の光(演奏の途中で新しく絵を作らないよう、ここで焼いておく)
       if(effect!=='MINIMAL'){for(const kind of ['HOLD','SLIDE']){holdSparkSprite(kind);sparkStreakSprite(kind);holdPillarSprite(kind);holdColumnSprite(kind);}sparkDotSprite();hitFlareSprite();holdBoltSprite();}
       // 叩いたときの光(canvas で描くときだけ)
-      if(effect!=='MINIMAL'&&!options.lightweight)warmHitSprites();
+      // 設定「押したときの光」が「いつも出す」なら、最小・軽量でもこの光だけは描くので焼いておく(options.tapLight・2026-10-15)
+      if((effect!=='MINIMAL'&&!options.lightweight)||options.tapLight)warmHitSprites();
       // WebGL のときは、焼いた絵を演奏の前に GPU へ渡しておく
       if(ctx&&backend==='webgl'&&typeof ctx.preloadImage==='function')for(const sprite of sprites.values())if(sprite&&sprite.canvas)ctx.preloadImage(sprite.canvas);
       return sprites.size-before;

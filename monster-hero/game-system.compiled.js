@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 583ce75464365c7b
+// source-sha256: c8a797d07d61a398
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-15 21:58";
+const BUILD_DATE = "2026-10-15 22:05";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -5483,6 +5483,9 @@ const RHYTHM_COMBO_SIZE_STEP = 10;
 const RHYTHM_LANE_GLOW_LABELS = Object.freeze([['NORMAL', '標準'], ['LOW', '控えめ'], ['NONE', 'なし']]);
 const RHYTHM_ROAD_WIDTH_LABELS = Object.freeze([['WIDE', '広い'], ['STANDARD', 'ふつう'], ['NARROW', '細い']]);
 const RHYTHM_EFFECT_LABELS = Object.freeze([['NORMAL', '最大'], ['LOW', '多め'], ['LIGHT', '標準'], ['MINIMAL', '最小']]);
+const RHYTHM_TAP_LIGHT_MODES = Object.freeze(['AUTO', 'ALWAYS']);
+const RHYTHM_TAP_LIGHT_LABELS = Object.freeze([['AUTO', 'おまかせ'], ['ALWAYS', 'いつも出す']]);
+const rhythmTapLightOnly = settings => !!settings && settings.tapLight === 'ALWAYS' && (settings.lightweightMode === true || settings.effectAmount === 'MINIMAL');
 const RHYTHM_FRAME_RATE_MODES = Object.freeze(['POWER_SAVE', 'DEVICE']);
 const RHYTHM_FRAME_RATE_LABELS = Object.freeze([['POWER_SAVE', '省電力'], ['DEVICE', '端末に合わせる']]);
 const RHYTHM_RENDER_QUALITY_MODES = Object.freeze(['AUTO', 'HIGH', 'STANDARD', 'SAVE']);
@@ -5568,6 +5571,8 @@ const RHYTHM_AUTO_EFFECT_STEPS = Object.freeze([s => s.noteBloom ? {
   stageEffect: 'CALM'
 } : null, s => s.stageEffect === 'CALM' ? {
   stageEffect: 'SIMPLE'
+} : null, s => s.tapLight === 'ALWAYS' && typeof rhythmCanvasHitsActive === 'function' && !rhythmCanvasHitsActive() ? {
+  tapLight: 'AUTO'
 } : null]);
 const rhythmCapEffects = (settings, level) => {
   let out = settings;
@@ -5580,7 +5585,7 @@ const rhythmCapEffects = (settings, level) => {
   }
   return out;
 };
-const RHYTHM_AUTO_EFFECT_STEP_LABELS = Object.freeze(['にじむ光', 'ライブ→派手', '道の演出・ノーツの動き・盛り上がりの光', '判定の演出・コンボの節目', '派手→控えめ', '控えめ→シンプル']);
+const RHYTHM_AUTO_EFFECT_STEP_LABELS = Object.freeze(['にじむ光', 'ライブ→派手', '道の演出・ノーツの動き・盛り上がりの光', '判定の演出・コンボの節目', '派手→控えめ', '控えめ→シンプル', '押したときの光(画面の要素で描くとき)']);
 const rhythmNextEffectCap = (settings, level) => {
   const now = rhythmCapEffects(settings, level);
   for (let i = Math.max(0, Number(level) || 0); i < RHYTHM_AUTO_EFFECT_STEPS.length; i++) {
@@ -5797,6 +5802,7 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   judgmentAtTap: false,
   hudSongFade: true,
   autoEffectDown: true,
+  tapLight: 'AUTO',
   stageEffect: 'SIMPLE',
   roadWidth: 'WIDE',
   laneCover: 0,
@@ -5872,6 +5878,7 @@ const normalizeRhythmSettings = value => {
     judgmentAtTap: typeof source.judgmentAtTap === 'boolean' ? source.judgmentAtTap : DEFAULT_RHYTHM_SETTINGS.judgmentAtTap,
     hudSongFade: typeof source.hudSongFade === 'boolean' ? source.hudSongFade : DEFAULT_RHYTHM_SETTINGS.hudSongFade,
     autoEffectDown: typeof source.autoEffectDown === 'boolean' ? source.autoEffectDown : DEFAULT_RHYTHM_SETTINGS.autoEffectDown,
+    tapLight: RHYTHM_TAP_LIGHT_MODES.includes(source.tapLight) ? source.tapLight : DEFAULT_RHYTHM_SETTINGS.tapLight,
     stageEffect: RHYTHM_STAGE_EFFECTS.includes(source.stageEffect) ? source.stageEffect : DEFAULT_RHYTHM_SETTINGS.stageEffect,
     laneCover: rhythmFiniteStep(source.laneCover, RHYTHM_LANE_COVER_MIN, RHYTHM_LANE_COVER_MAX, RHYTHM_LANE_COVER_STEP, DEFAULT_RHYTHM_SETTINGS.laneCover),
     timingDisplay: RHYTHM_TIMING_DISPLAYS.includes(source.timingDisplay) ? source.timingDisplay : DEFAULT_RHYTHM_SETTINGS.timingDisplay,
@@ -26776,7 +26783,7 @@ const sbFetchRhythmRankings = async (difficultyKeys, limit = RHYTHM_RANKING_FETC
   if (keys.length === 0) return [];
   await ensureBreederProfiles(requestId);
   const select = rankingSelectWithBreederId(rankingSelectWithProfileFrame(RHYTHM_RANKING_SELECT));
-  const url = `${SUPABASE_URL}/rest/v1/rankings?select=${select}&difficulty=in.(${keys.map(k => encodeURIComponent(`"${k}"`)).join(',')})&order=score.desc.nullslast&limit=${limit}&offset=${offset}`;
+  const url = `${SUPABASE_URL}/rest/v1/rankings?select=${select}&difficulty=in.(${keys.map(k => encodeURIComponent(`"${k}"`)).join(',')})&order=score.desc.nullslast,created_at.asc&limit=${limit}&offset=${offset}`;
   rankingLog(requestId, 'rhythm-request-start', {
     keys,
     limit,
@@ -26832,7 +26839,7 @@ const rhythmTotalRankingMissing = (status, body) => {
   if (!/rhythm_total_rankings/i.test(text)) return false;
   return /PGRST205|PGRST200|42P01|does not exist|Could not find the/i.test(text);
 };
-const sbFetchRhythmTotalRankings = async ({
+const sbFetchRhythmTotalRankingsRaw = async ({
   limit = RHYTHM_TOTAL_RANKING_DISPLAY_LIMIT,
   identityKeys = null,
   requestId = 'untracked'
@@ -26862,7 +26869,7 @@ const sbFetchRhythmTotalRankings = async ({
         rankingLog(requestId, 'profile-frame-column-missing', {
           status: res.status
         });
-        return sbFetchRhythmTotalRankings({
+        return sbFetchRhythmTotalRankingsRaw({
           limit,
           identityKeys,
           requestId
@@ -27011,7 +27018,7 @@ const sbFetchRhythmWeekWindow = async ({
     endMs
   };
 };
-const sbFetchRhythmEventSongBests = async ({
+const sbFetchRhythmEventSongBestsRaw = async ({
   songId,
   fromMs,
   toMs,
@@ -27071,7 +27078,7 @@ const sbFetchRhythmEventSongBests = async ({
     return ask(RHYTHM_EVENT_SONG_SELECT_BASE);
   }
 };
-const sbFetchRhythmEventTotals = async ({
+const sbFetchRhythmEventTotalsRaw = async ({
   songIds,
   fromMs,
   toMs,
@@ -27146,7 +27153,7 @@ const rhythmEventPlayCountsFromRow = value => {
   }
   return out;
 };
-const sbFetchRhythmWeekTotals = async ({
+const sbFetchRhythmWeekTotalsRaw = async ({
   fromMs,
   toMs,
   limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT,
@@ -27163,6 +27170,193 @@ const sbFetchRhythmWeekTotals = async ({
     label: 'rhythm-week-total',
     requestId
   }), RHYTHM_WEEK_TOTAL_SELECT);
+};
+const RHYTHM_TIE_PAD = 20;
+let _rhythmPreciseUnavailable = false;
+const rhythmPreciseMissing = (status, text) => status === 404 || /PGRST202|42883|rhythm_(total|week|event)_precise/i.test(String(text || ''));
+const sbFetchRhythmPreciseMap = async ({
+  fn,
+  body,
+  identityKeys,
+  requestId
+}) => {
+  if (_rhythmPreciseUnavailable || !identityKeys.length) return null;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}?select=identity_key,total_precise`, {
+      method: 'POST',
+      headers: SB_HEADERS,
+      body: JSON.stringify({
+        ...(body || {}),
+        identity_keys: identityKeys
+      }),
+      signal: controller.signal
+    });
+    const text = await res.text();
+    if (!res.ok) {
+      if (rhythmPreciseMissing(res.status, text)) _rhythmPreciseUnavailable = true;
+      rankingLog(requestId, 'rhythm-precise-unavailable', {
+        fn,
+        status: res.status
+      });
+      return null;
+    }
+    const rows = JSON.parse(text);
+    const map = new Map();
+    for (const row of Array.isArray(rows) ? rows : []) {
+      const n = Number(row?.total_precise);
+      if (typeof row?.identity_key === 'string' && Number.isFinite(n) && n > 0) map.set(row.identity_key, Math.floor(n));
+    }
+    return map;
+  } catch (error) {
+    rankingLog(requestId, 'rhythm-precise-failed', {
+      fn,
+      message: error?.message || String(error)
+    });
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+};
+const rhythmTieSortRows = (rows, {
+  scoreKey,
+  timeKey,
+  preciseOf
+}) => rows.map((row, index) => ({
+  row,
+  index,
+  score: Number(row?.[scoreKey]) || 0,
+  precise: preciseOf(row),
+  time: Date.parse(row?.[timeKey])
+})).sort((a, b) => b.score - a.score || b.precise - a.precise || (Number.isFinite(a.time) && Number.isFinite(b.time) ? a.time - b.time : 0) || a.index - b.index).map(item => item.row);
+const rhythmTieFix = async ({
+  rows,
+  limit,
+  scoreKey,
+  timeKey,
+  fn = null,
+  body = null,
+  requestId
+}) => {
+  const list = Array.isArray(rows) ? rows : [];
+  if (list.length < 2) return list.slice(0, limit);
+  const scores = list.map(row => Number(row?.[scoreKey]) || 0);
+  if (new Set(scores).size === scores.length) return list.slice(0, limit);
+  let preciseOf;
+  if (fn) {
+    const tied = new Set(scores.filter((score, i) => scores.indexOf(score) !== i));
+    const keys = [...new Set(list.filter(row => tied.has(Number(row?.[scoreKey]) || 0)).map(row => row?.identity_key).filter(k => typeof k === 'string' && k))];
+    const map = await sbFetchRhythmPreciseMap({
+      fn,
+      body,
+      identityKeys: keys,
+      requestId
+    });
+    if (!map) return list.slice(0, limit);
+    preciseOf = row => map.get(row?.identity_key) || 0;
+  } else {
+    preciseOf = row => rhythmRankingRowPrecise(row);
+  }
+  return rhythmTieSortRows(list, {
+    scoreKey,
+    timeKey,
+    preciseOf
+  }).slice(0, limit);
+};
+const rhythmTieWanted = identityKeys => !(Array.isArray(identityKeys) && identityKeys.length);
+const sbFetchRhythmTotalRankings = async (options = {}) => {
+  const {
+    limit = RHYTHM_TOTAL_RANKING_DISPLAY_LIMIT,
+    identityKeys = null,
+    requestId = 'untracked'
+  } = options;
+  if (!rhythmTieWanted(identityKeys)) return sbFetchRhythmTotalRankingsRaw(options);
+  const rows = await sbFetchRhythmTotalRankingsRaw({
+    ...options,
+    limit: limit + RHYTHM_TIE_PAD
+  });
+  return rhythmTieFix({
+    rows,
+    limit,
+    scoreKey: 'total_score',
+    timeKey: 'last_scored_at',
+    fn: 'rhythm_total_precise',
+    requestId
+  });
+};
+const sbFetchRhythmWeekTotals = async (options = {}) => {
+  const {
+    fromMs,
+    toMs,
+    limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT,
+    identityKeys = null,
+    requestId = 'untracked'
+  } = options;
+  if (!rhythmTieWanted(identityKeys)) return sbFetchRhythmWeekTotalsRaw(options);
+  const rows = await sbFetchRhythmWeekTotalsRaw({
+    ...options,
+    limit: limit + RHYTHM_TIE_PAD
+  });
+  return rhythmTieFix({
+    rows,
+    limit,
+    scoreKey: 'total_score',
+    timeKey: 'last_scored_at',
+    fn: 'rhythm_week_precise',
+    body: {
+      from_at: new Date(fromMs).toISOString(),
+      to_at: new Date(toMs).toISOString()
+    },
+    requestId
+  });
+};
+const sbFetchRhythmEventTotals = async (options = {}) => {
+  const {
+    songIds,
+    fromMs,
+    toMs,
+    limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT,
+    identityKeys = null,
+    requestId = 'untracked'
+  } = options;
+  if (!rhythmTieWanted(identityKeys)) return sbFetchRhythmEventTotalsRaw(options);
+  const rows = await sbFetchRhythmEventTotalsRaw({
+    ...options,
+    limit: limit + RHYTHM_TIE_PAD
+  });
+  return rhythmTieFix({
+    rows,
+    limit,
+    scoreKey: 'total_score',
+    timeKey: 'last_scored_at',
+    fn: 'rhythm_event_precise',
+    body: {
+      song_ids: songIds,
+      from_at: new Date(fromMs).toISOString(),
+      to_at: new Date(toMs).toISOString()
+    },
+    requestId
+  });
+};
+const sbFetchRhythmEventSongBests = async (options = {}) => {
+  const {
+    limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT,
+    identityKeys = null,
+    requestId = 'untracked'
+  } = options;
+  if (!rhythmTieWanted(identityKeys)) return sbFetchRhythmEventSongBestsRaw(options);
+  const rows = await sbFetchRhythmEventSongBestsRaw({
+    ...options,
+    limit: limit + RHYTHM_TIE_PAD
+  });
+  return rhythmTieFix({
+    rows,
+    limit,
+    scoreKey: 'score',
+    timeKey: 'scored_at',
+    requestId
+  });
 };
 const rhythmEventSongEntryFromRow = row => applyLatestBreederProfile({
   identityKey: typeof row?.identity_key === 'string' ? row.identity_key : '',
@@ -29729,7 +29923,9 @@ const RhythmOptions = ({
     className: head
   }, "◆ 演出"), React.createElement("div", {
     className: wide ? `mt-1 ${grid}` : `mt-3 ${grid}`
-  }, field('演出量', segments('effectAmount', RHYTHM_EFFECT_LABELS), '重い順に「最大」「多め」「標準」「最小」の4段で、既定は「標準」です。判定・判定窓・スコアはどの段でも変わりません。\n「最大」＝2026-09-13より前の見た目そのまま。判定文字の金色の帯や虹が流れ、判定ラインが拍に合わせて脈打ち、コンボ数が跳ね、両サイドのマスモンも跳ねます。\n「多め」＝判定文字の流れと光のにじみだけ止めます（色・大きさはそのまま）。\n「標準」＝それに加えて、曲のあいだずっと動き続けるものを止めます。判定ラインの脈打ち、コンボ数の跳ねと枠の脈動、判定文字が出た瞬間に弾む動き、ノーツを取り切ったときの光です。判定ラインで弾ける光・100コンボごとのお祝い・フルコンボの大きな表示は残るので、手ごたえは変わりません。両サイドのマスモンの動きはここでは変わりません（専用の「両サイドのマスモン｜動き」で決めます）。\n「最小」＝光そのものと100コンボごとの演出も出なくなります。高精細な画面では、ノーツを描く細かさも3倍から2倍に下げて軽くします（見た目はほんの少しやわらかくなります）。', {
+  }, field('演出量', segments('effectAmount', RHYTHM_EFFECT_LABELS), '重い順に「最大」「多め」「標準」「最小」の4段で、既定は「標準」です。判定・判定窓・スコアはどの段でも変わりません。\n「最大」＝2026-09-13より前の見た目そのまま。判定文字の金色の帯や虹が流れ、判定ラインが拍に合わせて脈打ち、コンボ数が跳ね、両サイドのマスモンも跳ねます。\n「多め」＝判定文字の流れと光のにじみだけ止めます（色・大きさはそのまま）。\n「標準」＝それに加えて、曲のあいだずっと動き続けるものを止めます。判定ラインの脈打ち、コンボ数の跳ねと枠の脈動、判定文字が出た瞬間に弾む動き、ノーツを取り切ったときの光です。判定ラインで弾ける光・100コンボごとのお祝い・フルコンボの大きな表示は残るので、手ごたえは変わりません。両サイドのマスモンの動きはここでは変わりません（専用の「両サイドのマスモン｜動き」で決めます）。\n「最小」＝光そのものと100コンボごとの演出も出なくなります（取ったときの光だけは、下の「押したときの光」を「いつも出す」にすると出せます）。高精細な画面では、ノーツを描く細かさも3倍から2倍に下げて軽くします（見た目はほんの少しやわらかくなります）。', {
+    full: true
+  }), field('押したときの光', segments('tapLight', RHYTHM_TAP_LIGHT_LABELS), 'ノーツを取った瞬間に判定ラインで弾ける光（TAP・フリックの炎・ホールドやスライドを押し切ったときの光）を、演出量とは別に決めます。既定は「おまかせ」です。判定・スコアは変わりません。\n「おまかせ」＝演出量に合わせます。演出量「最小」と軽量モードでは出ません（これまでどおり）。\n「いつも出す」＝演出量「最小」や軽量モードでも、この光だけは出します。判定文字やコンボ数の弾み、画面のフラッシュ、両サイドのマスモンの跳ねなど、ほかの演出は止まったままです。モンスターノーツの光も、ふつうのノーツと同じ大きさになります。', {
     full: true
   }), field('ライブ背景', segments('stageEffect', RHYTHM_STAGE_EFFECT_LABELS), '演奏中のレーンの後ろの演出です。既定は「シンプル」（これまでの見た目）です。判定・スコアはどれでも変わりません。\n「ライブ」＝「派手」に加えて、ライブ会場のようにします。サーチライトが曲の拍に合わせて明るくなり、レーザーが小節ごとに向きと色を変えて走り、道の両側には観客のペンライトが奥までずらりと並び、拍に合わせて揺れます。ペンライトの色もコンボが伸びるほど変わります。いちばん重い段なので、端末が熱くなるときは下げてください。絵を描くのが得意な専用の部分（GPU）が無い端末では「派手」と同じになります。\n「派手」＝曲のジャケットをぼかして背景に敷き、ノーツが判定ラインへ来るタイミングで背景が光ります。コンボが伸びるほど光の色が熱くなり（水色→桃→金→白金）、モンスターノーツでは金色に大きく光ります。左右からサーチライトが揺れ、光の粒が舞います。\n「控えめ」＝ジャケットの背景とタイミングの光だけにします（動き続けるサーチライトと光の粒は出しません）。\n「シンプル」＝これまでの見た目のままです。\n軽量モードのときは「シンプル」になります。演出量「最小」では、サーチライト・光の粒・レーザー・ペンライトは出しません。', {
     full: true
@@ -34761,6 +34957,24 @@ const RhythmTapTest = ({
           attr: 'rhythmComboPop'
         });
         rhythmRestartAnimations(restarts);
+      } else if (rhythmTapLightOnly(settings)) {
+        const area = playAreaRef.current,
+          lineY = RHYTHM_JUDGMENT_LINE_Y.ratio,
+          nowMs = run.audio?.songTimeMs?.() ?? note.timeMs;
+        const span = rhythmNoteIsSlide(note) ? rhythmProjectSlideSpan(rhythmReleaseLane(note), note, lineY, nowMs) : rhythmNoteVisualSpan(note, note.lane, lineY, nowMs);
+        const flickHit = rhythmNoteVisualType(note) === 'FLICK' ? rhythmFlickDir(note) || 'up' : note.endFlick ? 'up' : '';
+        const hitEffect = rhythmSpawnHitEffect(area, {
+          centerRatio: span.center,
+          widthRatio: span.width,
+          judgment,
+          monster: false,
+          precise: preciseHit,
+          defer: true,
+          flick: flickHit,
+          finish: rhythmNoteHasBody(note),
+          sky: rhythmNoteSkyHeight(note) > 0
+        });
+        if (hitEffect) rhythmRestartAnimations([hitEffect]);
       }
     }
     if (settings.vibrationEnabled && judgment !== 'MISS') RHYTHM_HAPTICS.tap(monsterHit ? 26 : 12);
@@ -35068,6 +35282,12 @@ const RhythmTapTest = ({
         RHYTHM_TIMING_DIAG.meta(run.audio?.info?.());
       } catch {}
     }
+    try {
+      RHYTHM_INPUT_REC.finish({
+        cleared: !failed,
+        score: Number(run.score) || 0
+      });
+    } catch {}
     const touchDiag = !debugPlay && !tutorial && !calibrating ? rhythmTouchDiagOf({
       song,
       difficulty,
@@ -36002,6 +36222,23 @@ const RhythmTapTest = ({
       return;
     }
     const startBest = normalizeRhythmBestRecord(startBestValue);
+    try {
+      RHYTHM_INPUT_REC.begin(playAreaRef.current, () => Number(audio.songTimeMs()) || 0, {
+        songId: song.songId,
+        difficultyId: difficulty.id,
+        mirror: !!mirrorOn,
+        assist: !!assistOn,
+        offsetMs: Number(settings.judgmentTimingOffsetMs) || 0,
+        debugPlay: !!debugPlay,
+        settings: (() => {
+          try {
+            return JSON.parse(JSON.stringify(settings));
+          } catch {
+            return null;
+          }
+        })()
+      });
+    } catch {}
     RHYTHM_FRAME_DIAG.reset();
     RHYTHM_TIMING_DIAG.reset();
     RHYTHM_TIMING_DIAG.meta(audio.info?.());
@@ -36061,6 +36298,7 @@ const RhythmTapTest = ({
     if (canvasNotes) RHYTHM_CANVAS_RENDERER.warmSprites({
       effect: settings.effectAmount,
       lightweight: settings.lightweightMode,
+      tapLight: rhythmTapLightOnly(settings),
       maxDpr: noteCanvasMaxDpr
     });
     if (canvasNotes) faceBitmapsRef.current.forEach(face => {
@@ -37837,6 +38075,7 @@ const RhythmTapTest = ({
     "data-rhythm-strip": RHYTHM_STRIP.value || undefined,
     "data-rhythm-lightweight": settings.lightweightMode ? 'true' : 'false',
     "data-rhythm-effect": settings.effectAmount,
+    "data-rhythm-tap-light": rhythmTapLightOnly(settings) ? '1' : undefined,
     onPointerDown: pointerDown,
     onPointerMove: pointerMove,
     onPointerUp: pointerEnd,
@@ -76571,7 +76810,6 @@ const RaidJackRankingList = ({
   eventId,
   initialTab = 'a',
   initialTier = 0,
-  bossDown = false,
   renderPlace,
   renderIcon,
   cardClass
@@ -76589,7 +76827,7 @@ const RaidJackRankingList = ({
   const [src, setSrc] = useState('all');
   const useSrc = tab === 'a' && src !== 'all';
   const srcName = src === 'rhythm' ? 'モンヒロビート' : 'バトル';
-  const useAll = !maxHit && tab === 'a' && allMode && (bossDown || useSrc);
+  const useAll = !maxHit && tab === 'a' && allMode;
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -76722,7 +76960,7 @@ const RaidJackRankingList = ({
       setAllMode(false);
     },
     className: `min-h-[34px] rounded-xl border px-2.5 active:scale-95 ${!useAll && tierIdx === i ? 'border-orange-300 bg-orange-800 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`
-  }, t.name.replace('ジャック', ''))), (bossDown || useSrc) && React.createElement("button", {
+  }, t.name.replace('ジャック', ''))), React.createElement("button", {
     type: "button",
     "data-raid-jack-ranking-all": true,
     onClick: () => setAllMode(true),
@@ -76738,7 +76976,7 @@ const RaidJackRankingList = ({
     className: "shrink-0 text-[10px] text-slate-200"
   }, "あなた ", myTotal.toLocaleString(), ahead !== null ? `(${ahead + 1}位)` : '')), React.createElement("div", {
     className: "mb-2 text-[9px] text-slate-400"
-  }, useSrc && maxHit ? `${src === 'rhythm' ? '1曲' : '1回の戦い'}で出した、いちばん大きいダメージで競います。難易度ごとにも見られます。順位報酬はありません。` : useSrc ? `${srcName}だけで与えたダメージで競います。順位報酬はありません(報酬は全体の貢献ランキングで決まります)。` : maxHit ? '1回の戦いで出した、いちばん大きいダメージで競います。難易度ごとにも見られます。順位報酬はありません。' : useAll ? '全段階へ与えたダメージの合計です。' : tab === 'a' ? '1〜5位に報酬があります。男爵〜公爵は倒れた時点、大王は期間の終わりに順位が決まります(報酬一覧)。' : '1〜5位に報酬があります。期間の終わりに順位が決まります(報酬一覧)。'), rows === undefined && React.createElement("div", {
+  }, useSrc && maxHit ? `${src === 'rhythm' ? '1曲' : '1回の戦い'}で出した、いちばん大きいダメージで競います。難易度ごとにも見られます。順位報酬はありません。` : useSrc ? `${srcName}だけで与えたダメージで競います。順位報酬はありません(報酬は全体の貢献ランキングで決まります)。` : maxHit ? '1回の戦いで出した、いちばん大きいダメージで競います。難易度ごとにも見られます。順位報酬はありません。' : useAll ? '全段階へ与えたダメージの合計です。この順位に報酬はありません(報酬は段階ごとの貢献で決まります)。' : tab === 'a' ? '1〜5位に報酬があります。男爵〜公爵は倒れた時点、大王は期間の終わりに順位が決まります(報酬一覧)。' : '1〜5位に報酬があります。期間の終わりに順位が決まります(報酬一覧)。'), rows === undefined && React.createElement("div", {
     className: "py-3 text-center text-[10px] text-slate-400"
   }, "読み込み中…"), rows === null && React.createElement("div", {
     className: "py-3 text-center text-[10px] text-slate-400"
@@ -77070,7 +77308,6 @@ const RaidJackScreen = ({
     eventId: eventId,
     initialTab: tab,
     initialTier: current,
-    bossDown: bossDownNow,
     renderPlace: renderPlace,
     renderIcon: renderIcon,
     cardClass: cardClass,
@@ -77789,6 +78026,14 @@ function MonsterHeroGame() {
   const [rhythmCanvasHitsPref, setRhythmCanvasHitsPref] = useState(() => rhythmCanvasHitsPreference());
   const [rhythmHitSparkPref, setRhythmHitSparkPref] = useState(() => rhythmHitSparkPreference());
   const [rhythmJudgmentSnapPref, setRhythmJudgmentSnapPref] = useState(() => rhythmJudgmentSnapPreference());
+  const [rhythmInputRecOn, setRhythmInputRecOn] = useState(() => {
+    try {
+      return RHYTHM_INPUT_REC.enabled();
+    } catch {
+      return false;
+    }
+  });
+  const [rhythmInputRecMsg, setRhythmInputRecMsg] = useState('');
   const [rhythmReleaseAgeWide, setRhythmReleaseAgeWide] = useState(() => rhythmTouchFixOn('releaseAgeWide'));
   const [rhythmStageGlPref, setRhythmStageGlPref] = useState(() => rhythmStageGlPreference());
   const [rhythmChartToolsOpened, setRhythmChartToolsOpened] = useState(false);
@@ -80979,7 +81224,10 @@ function MonsterHeroGame() {
         const pageRows = await sbFetchRhythmRankings(keys, RHYTHM_RANKING_FETCH_LIMIT, page * RHYTHM_RANKING_FETCH_LIMIT, `rhythm-rank-${song.songId}-${Date.now()}-${page}`);
         if (rhythmRankingRequestRef.current !== requestId) return;
         rows = rows.concat(Array.isArray(pageRows) ? pageRows : []);
-        if (rhythmRankingDedupeByUser(rows).length >= RHYTHM_RANKING_DISPLAY_LIMIT) break;
+        const deduped = rhythmRankingDedupeByUser(rows);
+        const lastShown = deduped[RHYTHM_RANKING_DISPLAY_LIMIT - 1];
+        const lastFetched = Array.isArray(pageRows) && pageRows.length ? pageRows[pageRows.length - 1] : null;
+        if (lastShown && !(lastFetched && (Number(lastFetched.score) || 0) >= (Number(lastShown.score) || 0))) break;
         if (!Array.isArray(pageRows) || pageRows.length < RHYTHM_RANKING_FETCH_LIMIT) break;
       }
       const entries = rhythmRankingDedupeByUser(rows).slice(0, RHYTHM_RANKING_DISPLAY_LIMIT).map(rhythmRankingEntryFromRow);
@@ -102293,6 +102541,54 @@ function MonsterHeroGame() {
       onClick: () => setRhythmHitSparkPref(rhythmHitSparkSetPreference(value)),
       className: `min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmHitSparkPref === value ? 'bg-cyan-400 text-slate-900' : 'border border-white/20 bg-slate-900 text-slate-200'}`
     }, label)))), React.createElement("section", {
+      "data-rhythm-input-rec-panel": true,
+      className: "mb-3 rounded-2xl border border-amber-400/40 bg-amber-950/20 p-3"
+    }, React.createElement("h3", {
+      className: "text-xs font-black text-amber-200"
+    }, "入力の記録（検証用）"), React.createElement("p", {
+      className: "mt-1 text-[9px] font-bold leading-relaxed text-amber-100/80"
+    }, "「入」にすると、モンヒロビートの演奏中の指の動き（時刻・位置・接触の幅）と判定の出来事を端末の中だけに記録します。名前などは入りません。ランキングには影響しません。演奏が終わったら下のボタンで最後の1曲分をコピーして送ってください。"), React.createElement("div", {
+      className: "mt-2 flex gap-2"
+    }, [[true, '入'], [false, '切']].map(([value, label]) => React.createElement("button", {
+      key: label,
+      type: "button",
+      "data-rhythm-input-rec-pref": value ? 'on' : 'off',
+      "aria-pressed": rhythmInputRecOn === value,
+      onClick: () => {
+        try {
+          RHYTHM_INPUT_REC.setEnabled(value);
+          setRhythmInputRecOn(RHYTHM_INPUT_REC.enabled());
+        } catch {}
+      },
+      className: `min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmInputRecOn === value ? 'bg-amber-400 text-slate-900' : 'border border-white/20 bg-slate-900 text-slate-200'}`
+    }, label))), React.createElement("button", {
+      type: "button",
+      "data-rhythm-input-rec-copy": true,
+      onClick: async () => {
+        let text = '';
+        let sum = null;
+        try {
+          RHYTHM_INPUT_REC.close();
+          text = RHYTHM_INPUT_REC.text();
+          sum = RHYTHM_INPUT_REC.summary();
+        } catch {}
+        if (!text) {
+          setRhythmInputRecMsg('まだ記録がありません（「入」にしてから1曲演奏してください）');
+          return;
+        }
+        const info = sum ? `（指の動き ${sum.touches || 0}件・判定 ${sum.judges || 0}件）` : '';
+        try {
+          await navigator.clipboard.writeText(text);
+          setRhythmInputRecMsg(`コピーしました${info}`);
+        } catch {
+          setRhythmInputRecMsg('コピーできませんでした');
+        }
+      },
+      className: "mt-2 min-h-[40px] w-full rounded-xl border border-amber-300/50 bg-slate-900 text-[11px] font-black text-amber-100"
+    }, "最後の演奏の記録をコピー"), rhythmInputRecMsg && React.createElement("p", {
+      "data-rhythm-input-rec-msg": true,
+      className: "mt-1 text-[10px] font-bold text-amber-100"
+    }, rhythmInputRecMsg)), React.createElement("section", {
       "data-rhythm-judgment-snap-panel": true,
       className: "mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"
     }, React.createElement("h3", {

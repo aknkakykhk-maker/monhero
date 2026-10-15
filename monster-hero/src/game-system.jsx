@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1e73e0ae8b93b21f
+// generated-sha256: d24b67f9c32d6160
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-15 21:58"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-15 22:05"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4475,6 +4475,13 @@ const RHYTHM_ROAD_WIDTH_LABELS = Object.freeze([['WIDE','広い'],['STANDARD','�
 //   2026-09-13・ユーザー指示「段を増やして更に標準をもっと軽くする」。
 //   名前は重さの順に読めるようにそろえてある(既定が「標準」なのは前の指示のまま)。
 const RHYTHM_EFFECT_LABELS = Object.freeze([['NORMAL','最大'],['LOW','多め'],['LIGHT','標準'],['MINIMAL','最小']]);
+// 押したときの光(2026-10-15・社長「演出量を最小にしても、フリックとかのタップ時の光は出る設定がほしい」)。
+// AUTO   … 演出量に合わせる(これまでどおり。演出量「最小」・軽量モードでは出さない)
+// ALWAYS … 演出量「最小」・軽量モードでも、判定ラインで弾ける光だけは出す(ほかの演出は止めたまま)
+const RHYTHM_TAP_LIGHT_MODES = Object.freeze(['AUTO','ALWAYS']);
+const RHYTHM_TAP_LIGHT_LABELS = Object.freeze([['AUTO','おまかせ'],['ALWAYS','いつも出す']]);
+// 「最小」・軽量モードのせいで止まっている光を、この設定で出すときだけ真(ふだんの段では、もともと光が出ているので偽)
+const rhythmTapLightOnly = settings => !!settings&&settings.tapLight==='ALWAYS'&&(settings.lightweightMode===true||settings.effectAmount==='MINIMAL');
 // 演奏中に1秒あたり何回描くか(2026-09-24・ユーザーと相談して決めた)。
 // POWER_SAVE … 120Hz以上の画面では1回おきに描き、毎秒60回ほどに抑える。発熱と電池を抑える。
 //   90Hzの画面は抑えない(60へ落とすと 11ms/22ms が交互に並び、かえってガタついて見える)。
@@ -4536,10 +4543,14 @@ const RHYTHM_AUTO_EFFECT_STEPS = Object.freeze([
   s=>s.judgmentFx||s.comboMilestoneFx?{judgmentFx:false,comboMilestoneFx:false}:null,
   s=>s.stageEffect==='VIVID'?{stageEffect:'CALM'}:null,
   s=>s.stageEffect==='CALM'?{stageEffect:'SIMPLE'}:null,
+  // 設定「押したときの光」の「いつも出す」(2026-10-15)。ノーツの canvas へ描く既定の描き方では、測って軽かったので下げない
+  // (実際の演奏・CPU 4倍遅くした状態の30秒で、演出量「最小」のまま光を足しても 33ms をこえたコマは 25→21 本で増えなかった)。
+  // 画面の要素で光らせる描き方(デバッグの設定で選んだとき)だけは、レイアウトと見た目の計算が 1.2秒→4.1秒、33ms をこえたコマが 23→65 本に増えたので、ここで止める
+  s=>s.tapLight==='ALWAYS'&&typeof rhythmCanvasHitsActive==='function'&&!rhythmCanvasHitsActive()?{tapLight:'AUTO'}:null,
 ]);
 const rhythmCapEffects = (settings,level) => {let out=settings;for(let i=0;i<Math.min(Number(level)||0,RHYTHM_AUTO_EFFECT_STEPS.length);i++){const patch=RHYTHM_AUTO_EFFECT_STEPS[i](out);if(patch)out={...out,...patch};}return out;};
 // 段ごとの名前(デバッグの性能計測に「何を下げたか」を出すためだけに使う。並びは RHYTHM_AUTO_EFFECT_STEPS と同じ)
-const RHYTHM_AUTO_EFFECT_STEP_LABELS = Object.freeze(['にじむ光','ライブ→派手','道の演出・ノーツの動き・盛り上がりの光','判定の演出・コンボの節目','派手→控えめ','控えめ→シンプル']);
+const RHYTHM_AUTO_EFFECT_STEP_LABELS = Object.freeze(['にじむ光','ライブ→派手','道の演出・ノーツの動き・盛り上がりの光','判定の演出・コンボの節目','派手→控えめ','控えめ→シンプル','押したときの光(画面の要素で描くとき)']);
 // 次に下げる段(当てるものがある段)。もう下げるものが無ければ null
 const rhythmNextEffectCap = (settings,level) => {const now=rhythmCapEffects(settings,level);for(let i=Math.max(0,Number(level)||0);i<RHYTHM_AUTO_EFFECT_STEPS.length;i++){if(RHYTHM_AUTO_EFFECT_STEPS[i](now))return i+1;}return null;};
 // 対戦の演出の段階。見た目のおまかせの id と、自分の設定のまま(OWN)
@@ -4730,6 +4741,8 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   hudSongFade:true,
   // 重いときは演出を自動で控えめにする(2026-09-27)。演奏中にカクつき続けたら、重い演出から一段ずつ下げる(保存値は変えない)。既定は ON
   autoEffectDown:true,
+  // 押したときの光(2026-10-15)。新しい項目なので、保存値に無い人は「おまかせ」(これまでの見え方)で補う
+  tapLight:'AUTO',
   // 背景の演出(2026-09-24)。既存の保存値には無いので、読み込み時は既定で補われる。
   // ★既定は「シンプル」(=これまでの見た目)。一度は派手を既定にしたが、実機で
   //   「タップ感度が悪くなってる気がする」と言われ、上と同じ指示で元へ戻した
@@ -4807,6 +4820,7 @@ const normalizeRhythmSettings = value => {
     judgmentAtTap:typeof source.judgmentAtTap==='boolean'?source.judgmentAtTap:DEFAULT_RHYTHM_SETTINGS.judgmentAtTap,
     hudSongFade:typeof source.hudSongFade==='boolean'?source.hudSongFade:DEFAULT_RHYTHM_SETTINGS.hudSongFade,
     autoEffectDown:typeof source.autoEffectDown==='boolean'?source.autoEffectDown:DEFAULT_RHYTHM_SETTINGS.autoEffectDown,
+    tapLight:RHYTHM_TAP_LIGHT_MODES.includes(source.tapLight)?source.tapLight:DEFAULT_RHYTHM_SETTINGS.tapLight,
     stageEffect:RHYTHM_STAGE_EFFECTS.includes(source.stageEffect)?source.stageEffect:DEFAULT_RHYTHM_SETTINGS.stageEffect,
     laneCover:rhythmFiniteStep(source.laneCover,RHYTHM_LANE_COVER_MIN,RHYTHM_LANE_COVER_MAX,RHYTHM_LANE_COVER_STEP,DEFAULT_RHYTHM_SETTINGS.laneCover),
     timingDisplay:RHYTHM_TIMING_DISPLAYS.includes(source.timingDisplay)?source.timingDisplay:DEFAULT_RHYTHM_SETTINGS.timingDisplay,
@@ -16987,7 +17001,7 @@ const sbFetchRhythmRankings = async (difficultyKeys, limit=RHYTHM_RANKING_FETCH_
   if (keys.length === 0) return [];
   await ensureBreederProfiles(requestId);
   const select = rankingSelectWithBreederId(rankingSelectWithProfileFrame(RHYTHM_RANKING_SELECT));
-  const url = `${SUPABASE_URL}/rest/v1/rankings?select=${select}&difficulty=in.(${keys.map(k=>encodeURIComponent(`"${k}"`)).join(',')})&order=score.desc.nullslast&limit=${limit}&offset=${offset}`;
+  const url = `${SUPABASE_URL}/rest/v1/rankings?select=${select}&difficulty=in.(${keys.map(k=>encodeURIComponent(`"${k}"`)).join(',')})&order=score.desc.nullslast,created_at.asc&limit=${limit}&offset=${offset}`;
   rankingLog(requestId, 'rhythm-request-start', { keys, limit, offset, url, table: 'rankings' });
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
@@ -17048,7 +17062,7 @@ const rhythmTotalRankingMissing = (status, body) => {
   if (!/rhythm_total_rankings/i.test(text)) return false;
   return /PGRST205|PGRST200|42P01|does not exist|Could not find the/i.test(text);
 };
-const sbFetchRhythmTotalRankings = async ({ limit=RHYTHM_TOTAL_RANKING_DISPLAY_LIMIT, identityKeys=null, requestId='untracked' } = {}) => {
+const sbFetchRhythmTotalRankingsRaw = async ({ limit=RHYTHM_TOTAL_RANKING_DISPLAY_LIMIT, identityKeys=null, requestId='untracked' } = {}) => {
   await ensureBreederProfiles(requestId);
   // identityKeys を渡すと、その人の行だけを取りにいく(50位圏外の自分を出すため)
   const filter = Array.isArray(identityKeys) && identityKeys.length
@@ -17068,7 +17082,7 @@ const sbFetchRhythmTotalRankings = async ({ limit=RHYTHM_TOTAL_RANKING_DISPLAY_L
       if (select !== RHYTHM_TOTAL_RANKING_SELECT && _isMissingProfileFrameError(res.status, body)) {
         _rankingProfileFrameUnavailable = true;
         rankingLog(requestId, 'profile-frame-column-missing', { status: res.status });
-        return sbFetchRhythmTotalRankings({ limit, identityKeys, requestId });
+        return sbFetchRhythmTotalRankingsRaw({ limit, identityKeys, requestId });
       }
       if (rhythmTotalRankingMissing(res.status, body)) {
         rankingLog(requestId, 'rhythm-total-view-missing', { status: res.status });
@@ -17257,7 +17271,7 @@ const sbFetchRhythmWeekWindow = async ({ requestId = 'untracked' } = {}) => {
   return { startMs, endMs };
 };
 // 期間×対象曲の「曲ごとベスト」。部門1つぶん(=曲1つぶん)を取りにいく
-const sbFetchRhythmEventSongBests = async ({ songId, fromMs, toMs, bonusRates = null, limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' }) => {
+const sbFetchRhythmEventSongBestsRaw = async ({ songId, fromMs, toMs, bonusRates = null, limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' }) => {
   const filter = Array.isArray(identityKeys) && identityKeys.length
     ? `&identity_key=in.(${identityKeys.map(k => encodeURIComponent(`"${k}"`)).join(',')})`
     : '';
@@ -17303,7 +17317,7 @@ const sbFetchRhythmEventSongBests = async ({ songId, fromMs, toMs, bonusRates = 
   }
 };
 // 期間×対象曲の「総合」。対象曲それぞれのその週のベストを単純合算したもの(§6.3)
-const sbFetchRhythmEventTotals = async ({ songIds, fromMs, toMs, bonusRates = null, limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' }) => {
+const sbFetchRhythmEventTotalsRaw = async ({ songIds, fromMs, toMs, bonusRates = null, limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' }) => {
   const filter = Array.isArray(identityKeys) && identityKeys.length
     ? `&identity_key=in.(${identityKeys.map(k => encodeURIComponent(`"${k}"`)).join(',')})`
     : '';
@@ -17360,7 +17374,7 @@ const rhythmEventPlayCountsFromRow = (value) => {
   return out;
 };
 // 週間ランキング(累計スコア)。対象曲を持たないので、渡すのは期間だけ
-const sbFetchRhythmWeekTotals = async ({ fromMs, toMs, limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' }) => {
+const sbFetchRhythmWeekTotalsRaw = async ({ fromMs, toMs, limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' }) => {
   const filter = Array.isArray(identityKeys) && identityKeys.length
     ? `&identity_key=in.(${identityKeys.map(k => encodeURIComponent(`"${k}"`)).join(',')})`
     : '';
@@ -17370,6 +17384,94 @@ const sbFetchRhythmWeekTotals = async ({ fromMs, toMs, limit = RHYTHM_EVENT_RANK
     body: { from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() },
     label: 'rhythm-week-total', requestId,
   }), RHYTHM_WEEK_TOTAL_SELECT);
+};
+// ── 同点を JUST MARVELOUS で分ける(2026-10-15・社長の決定「案2: 総合・週間・イベントも この曲 とそろえる」) ──
+// 合計点の並びはいままでのビュー・関数のまま。上位を少し多めに取り、同じ点の中だけを
+// 「JUST MARVELOUS の多い順 → 先に出した順」に並べ直してから表示の件数に切る。
+// JUST MARVELOUS の合計は新しい関数(docs/sql/rankings/RHYTHM_JM_TIEBREAK_APPLY.sql)から聞く。
+// 関数がまだ無い環境(SQL 適用前)・通信の失敗では、いままでの並び(合計点 → 先に出した順)のまま出す。
+// 曲の部門(イベントの曲ごと)は行の party に内訳があるので、関数を使わずに行から読む(「この曲」と同じ)
+const RHYTHM_TIE_PAD = 20;
+let _rhythmPreciseUnavailable = false;
+const rhythmPreciseMissing = (status, text) => status === 404 || /PGRST202|42883|rhythm_(total|week|event)_precise/i.test(String(text || ''));
+const sbFetchRhythmPreciseMap = async ({ fn, body, identityKeys, requestId }) => {
+  if (_rhythmPreciseUnavailable || !identityKeys.length) return null;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}?select=identity_key,total_precise`, {
+      method: 'POST', headers: SB_HEADERS, body: JSON.stringify({ ...(body || {}), identity_keys: identityKeys }), signal: controller.signal,
+    });
+    const text = await res.text();
+    if (!res.ok) {
+      if (rhythmPreciseMissing(res.status, text)) _rhythmPreciseUnavailable = true;
+      rankingLog(requestId, 'rhythm-precise-unavailable', { fn, status: res.status });
+      return null;
+    }
+    const rows = JSON.parse(text);
+    const map = new Map();
+    for (const row of Array.isArray(rows) ? rows : []) {
+      const n = Number(row?.total_precise);
+      if (typeof row?.identity_key === 'string' && Number.isFinite(n) && n > 0) map.set(row.identity_key, Math.floor(n));
+    }
+    return map;
+  } catch (error) {
+    rankingLog(requestId, 'rhythm-precise-failed', { fn, message: error?.message || String(error) });
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+};
+// 合計点 → JUST MARVELOUS → 先に出した順。同じなら受け取った順のまま
+const rhythmTieSortRows = (rows, { scoreKey, timeKey, preciseOf }) => rows
+  .map((row, index) => ({ row, index, score: Number(row?.[scoreKey]) || 0, precise: preciseOf(row), time: Date.parse(row?.[timeKey]) }))
+  .sort((a, b) => (b.score - a.score) || (b.precise - a.precise)
+    || ((Number.isFinite(a.time) && Number.isFinite(b.time)) ? a.time - b.time : 0) || (a.index - b.index))
+  .map(item => item.row);
+const rhythmTieFix = async ({ rows, limit, scoreKey, timeKey, fn = null, body = null, requestId }) => {
+  const list = Array.isArray(rows) ? rows : [];
+  if (list.length < 2) return list.slice(0, limit);
+  // 同じ点の人がいなければ、聞きに行かずにそのまま返す
+  const scores = list.map(row => Number(row?.[scoreKey]) || 0);
+  if (new Set(scores).size === scores.length) return list.slice(0, limit);
+  let preciseOf;
+  if (fn) {
+    const tied = new Set(scores.filter((score, i) => scores.indexOf(score) !== i));
+    const keys = [...new Set(list.filter(row => tied.has(Number(row?.[scoreKey]) || 0)).map(row => row?.identity_key).filter(k => typeof k === 'string' && k))];
+    const map = await sbFetchRhythmPreciseMap({ fn, body, identityKeys: keys, requestId });
+    if (!map) return list.slice(0, limit);
+    preciseOf = row => map.get(row?.identity_key) || 0;
+  } else {
+    preciseOf = row => rhythmRankingRowPrecise(row);
+  }
+  return rhythmTieSortRows(list, { scoreKey, timeKey, preciseOf }).slice(0, limit);
+};
+const rhythmTieWanted = (identityKeys) => !(Array.isArray(identityKeys) && identityKeys.length);
+const sbFetchRhythmTotalRankings = async (options = {}) => {
+  const { limit = RHYTHM_TOTAL_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' } = options;
+  if (!rhythmTieWanted(identityKeys)) return sbFetchRhythmTotalRankingsRaw(options);
+  const rows = await sbFetchRhythmTotalRankingsRaw({ ...options, limit: limit + RHYTHM_TIE_PAD });
+  return rhythmTieFix({ rows, limit, scoreKey: 'total_score', timeKey: 'last_scored_at', fn: 'rhythm_total_precise', requestId });
+};
+const sbFetchRhythmWeekTotals = async (options = {}) => {
+  const { fromMs, toMs, limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' } = options;
+  if (!rhythmTieWanted(identityKeys)) return sbFetchRhythmWeekTotalsRaw(options);
+  const rows = await sbFetchRhythmWeekTotalsRaw({ ...options, limit: limit + RHYTHM_TIE_PAD });
+  return rhythmTieFix({ rows, limit, scoreKey: 'total_score', timeKey: 'last_scored_at', fn: 'rhythm_week_precise',
+    body: { from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() }, requestId });
+};
+const sbFetchRhythmEventTotals = async (options = {}) => {
+  const { songIds, fromMs, toMs, limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' } = options;
+  if (!rhythmTieWanted(identityKeys)) return sbFetchRhythmEventTotalsRaw(options);
+  const rows = await sbFetchRhythmEventTotalsRaw({ ...options, limit: limit + RHYTHM_TIE_PAD });
+  return rhythmTieFix({ rows, limit, scoreKey: 'total_score', timeKey: 'last_scored_at', fn: 'rhythm_event_precise',
+    body: { song_ids: songIds, from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() }, requestId });
+};
+const sbFetchRhythmEventSongBests = async (options = {}) => {
+  const { limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' } = options;
+  if (!rhythmTieWanted(identityKeys)) return sbFetchRhythmEventSongBestsRaw(options);
+  const rows = await sbFetchRhythmEventSongBestsRaw({ ...options, limit: limit + RHYTHM_TIE_PAD });
+  return rhythmTieFix({ rows, limit, scoreKey: 'score', timeKey: 'scored_at', requestId });
 };
 // 生の行を画面用の形へ整える。壊れた値でも落ちないよう、数として確かめてから使う
 const rhythmEventSongEntryFromRow = (row) => applyLatestBreederProfile({
@@ -18793,7 +18895,10 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
                 「重い」との声)。判定文字の金の帯・虹の流れは毎フレーム字を塗り直すので、
                 動きがカクつく端末ではここがいちばん効く */}
 {field('演出量',segments('effectAmount',RHYTHM_EFFECT_LABELS),
-              '重い順に「最大」「多め」「標準」「最小」の4段で、既定は「標準」です。判定・判定窓・スコアはどの段でも変わりません。\n「最大」＝2026-09-13より前の見た目そのまま。判定文字の金色の帯や虹が流れ、判定ラインが拍に合わせて脈打ち、コンボ数が跳ね、両サイドのマスモンも跳ねます。\n「多め」＝判定文字の流れと光のにじみだけ止めます（色・大きさはそのまま）。\n「標準」＝それに加えて、曲のあいだずっと動き続けるものを止めます。判定ラインの脈打ち、コンボ数の跳ねと枠の脈動、判定文字が出た瞬間に弾む動き、ノーツを取り切ったときの光です。判定ラインで弾ける光・100コンボごとのお祝い・フルコンボの大きな表示は残るので、手ごたえは変わりません。両サイドのマスモンの動きはここでは変わりません（専用の「両サイドのマスモン｜動き」で決めます）。\n「最小」＝光そのものと100コンボごとの演出も出なくなります。高精細な画面では、ノーツを描く細かさも3倍から2倍に下げて軽くします（見た目はほんの少しやわらかくなります）。',{full:true})}
+              '重い順に「最大」「多め」「標準」「最小」の4段で、既定は「標準」です。判定・判定窓・スコアはどの段でも変わりません。\n「最大」＝2026-09-13より前の見た目そのまま。判定文字の金色の帯や虹が流れ、判定ラインが拍に合わせて脈打ち、コンボ数が跳ね、両サイドのマスモンも跳ねます。\n「多め」＝判定文字の流れと光のにじみだけ止めます（色・大きさはそのまま）。\n「標準」＝それに加えて、曲のあいだずっと動き続けるものを止めます。判定ラインの脈打ち、コンボ数の跳ねと枠の脈動、判定文字が出た瞬間に弾む動き、ノーツを取り切ったときの光です。判定ラインで弾ける光・100コンボごとのお祝い・フルコンボの大きな表示は残るので、手ごたえは変わりません。両サイドのマスモンの動きはここでは変わりません（専用の「両サイドのマスモン｜動き」で決めます）。\n「最小」＝光そのものと100コンボごとの演出も出なくなります（取ったときの光だけは、下の「押したときの光」を「いつも出す」にすると出せます）。高精細な画面では、ノーツを描く細かさも3倍から2倍に下げて軽くします（見た目はほんの少しやわらかくなります）。',{full:true})}
+{/* 押したときの光(2026-10-15・社長「演出量を最小にしても、フリックとかのタップ時の光は出る設定がほしい」)。既定は「おまかせ」(これまでの見た目) */}
+{field('押したときの光',segments('tapLight',RHYTHM_TAP_LIGHT_LABELS),
+              'ノーツを取った瞬間に判定ラインで弾ける光（TAP・フリックの炎・ホールドやスライドを押し切ったときの光）を、演出量とは別に決めます。既定は「おまかせ」です。判定・スコアは変わりません。\n「おまかせ」＝演出量に合わせます。演出量「最小」と軽量モードでは出ません（これまでどおり）。\n「いつも出す」＝演出量「最小」や軽量モードでも、この光だけは出します。判定文字やコンボ数の弾み、画面のフラッシュ、両サイドのマスモンの跳ねなど、ほかの演出は止まったままです。モンスターノーツの光も、ふつうのノーツと同じ大きさになります。',{full:true})}
 {/* 1秒に描く回数(2026-09-24)。既定は「端末に合わせる」(これまでの動き)。
                 120Hz以上の画面でだけ効く。60Hz・90Hzの画面ではどちらを選んでも同じ */}
 {/* 背景の演出(2026-09-24・ユーザー指示「設定ありきで派手な感じにしたい」)。既定はシンプル(操作感を変えないため) */}
@@ -21756,6 +21861,15 @@ if(judgment!=='MISS'){
     if(comboText)restarts.push({el:comboText,attr:'rhythmComboPop'});
     // ここで1回だけレイアウトを読む。集めた印をまとめて付け直す
     rhythmRestartAnimations(restarts);
+  }else if(rhythmTapLightOnly(settings)){
+    // 設定「押したときの光」が「いつも出す」で、演出量「最小」・軽量モードのとき(2026-10-15・社長「演出量を最小にしても、フリックとかのタップ時の光は出る設定がほしい」)。
+    // 判定ラインで弾ける光(rhythmSpawnHitEffect)だけを出す。判定文字・コンボ数の弾み・画面のフラッシュ・マスモンの跳ねは「最小」のまま止めておく。
+    // モンスターノーツもふつうの大きさの光にする(900ms の大きな光は出さない)。判定・スコアには触らない
+    const area=playAreaRef.current,lineY=RHYTHM_JUDGMENT_LINE_Y.ratio,nowMs=run.audio?.songTimeMs?.()??note.timeMs;
+    const span=rhythmNoteIsSlide(note)?rhythmProjectSlideSpan(rhythmReleaseLane(note),note,lineY,nowMs):rhythmNoteVisualSpan(note,note.lane,lineY,nowMs);
+    const flickHit=rhythmNoteVisualType(note)==='FLICK'?(rhythmFlickDir(note)||'up'):(note.endFlick?'up':'');
+    const hitEffect=rhythmSpawnHitEffect(area,{centerRatio:span.center,widthRatio:span.width,judgment,monster:false,precise:preciseHit,defer:true,flick:flickHit,finish:rhythmNoteHasBody(note),sky:rhythmNoteSkyHeight(note)>0});
+    if(hitEffect)rhythmRestartAnimations([hitEffect]);
   }
 }
 // ★振動は「タップ時の振動」の管轄。モンスターノーツだけ強めにする(指でも違いが分かるように)。
@@ -21902,6 +22016,7 @@ if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number
     if(!debugPlay&&!tutorial&&!calibrating&&!assistOn)rhythmPlayLogSend({song,difficulty,rawChart,notes:run.notes,settings,mirror:mirrorOn,cleared:!failed});
     // タッチの診断を残して送る(待たない・失敗しても何もしない)。デバッグ・練習・タイミング合わせは除く。アシストは印を付けて含める
     if(!debugPlay&&!tutorial&&!calibrating){try{RHYTHM_TIMING_DIAG.meta(run.audio?.info?.());}catch{}}
+    try{RHYTHM_INPUT_REC.finish({cleared:!failed,score:Number(run.score)||0});}catch{}
     const touchDiag=!debugPlay&&!tutorial&&!calibrating?rhythmTouchDiagOf({song,difficulty,notes:run.notes,inputTimes:run.inputTimes,assist:assistOn,mirror:mirrorOn,cleared:!failed,frame:rhythmFrameDiagOf()}):null;
     if(touchDiag)void rhythmTouchDiagRecord(touchDiag);
     // リザルトの「押したのに反応しないことがあった」に渡す。タッチで遊ぶ端末(iPhone・Android)だけ
@@ -22359,7 +22474,7 @@ const introStart=rhythmSongIntroNow();
 const introMinMs=introShown||multi?introMs:0;
 songIntroRef.current={generation,holds,visible:introShown,skippable:!multi,skipped:false,closingAt:null,
   minEnd:introStart+introMinMs,maxEnd:introStart+(multi?introMinMs:Math.max(introMinMs,RHYTHM_SONG_INTRO_MAX_MS))};
-setSongIntro(introShown?{key:generation,ms:introMs,short:introMs<RHYTHM_SONG_INTRO_MS,skippable:!multi}:null);}/* 直し方の入れ切りは、ゲームが端末の直近の診断の記録から自分で決める(人が調整する前提にしない) */try{rhythmTouchFixAutoSet(rhythmTouchFixAutoFrom(await storeGet(RHYTHM_TOUCH_DIAG_KEY,[])));}catch{rhythmTouchFixAutoSet({});}const audio=await Audio_.startRhythmTrack(song.bgmTrackId,settings.bgmVolume,{autoStart:false});if(!mountedRef.current||generation!==generationRef.current){audio?.stop();return;}if(!audio){rhythmSongPrepSignal(false,song.songId);startLockRef.current=false;songIntroRef.current=null;setSongIntro(null);setView(v=>({...v,status:'error'}));return;}const startBest=normalizeRhythmBestRecord(startBestValue);RHYTHM_FRAME_DIAG.reset();RHYTHM_TIMING_DIAG.reset();RHYTHM_TIMING_DIAG.meta(audio.info?.());RHYTHM_TOUCH_BRIDGE.reset();rhythmFloatingNotesClear();runRef.current={audio,heroSeed:Math.random(),notes:makeRuntimeNotes(),activePointers:new Map(),standbyPointers:new Map(),activeTouchInputs:new Set(),inputTimes:[],combo:0,maxCombo:0,counts:emptyCounts(),fast:0,slow:0,precise:0,deltas:[],life:RHYTHM_LIFE_MAX,lifeDepleted:false,score:0,lockedScore:0,scoreOffset:0,abilities:createRhythmMonsterAbilityState(),konjoOwnerName:'',finished:false,paused:false,generation,startBest,startBestScore:startBest.bestScore};laneRefs.current.forEach(el=>{if(el){el.style.display='block';el.style.opacity='0';el.style.filter='';/* styleを直接書き戻したら、「前に何を書いたか」の控えも一緒に捨てる。   控えだけ古いまま残ると、値が同じだと判断して書き込みを飛ばし、   実際の見た目とズレたまま固まる(例: 透明のまま出てこない)ため */el._rhythmHidden=false;el._rhythmOpacity=undefined;el._rhythmWillChange=undefined;el._rhythmFailedFlag=undefined;el._rhythmClearFlag=undefined;delete el.dataset.rhythmClear;el._rhythmHoldBody=undefined;el._rhythmHoldFilter=undefined;el._rhythmDepthScale=undefined;el._rhythmDepthBrightness=undefined;el._rhythmTransform=undefined;el._rhythmSlideBody=undefined;}});if(canvasNotes)RHYTHM_CANVAS_RENDERER.clear();rhythmLayoutPlayArea(playAreaRef.current);updateJudgmentBand(measureTravel(),rhythmTravelMsForSpeed(settings.noteSpeed));
+setSongIntro(introShown?{key:generation,ms:introMs,short:introMs<RHYTHM_SONG_INTRO_MS,skippable:!multi}:null);}/* 直し方の入れ切りは、ゲームが端末の直近の診断の記録から自分で決める(人が調整する前提にしない) */try{rhythmTouchFixAutoSet(rhythmTouchFixAutoFrom(await storeGet(RHYTHM_TOUCH_DIAG_KEY,[])));}catch{rhythmTouchFixAutoSet({});}const audio=await Audio_.startRhythmTrack(song.bgmTrackId,settings.bgmVolume,{autoStart:false});if(!mountedRef.current||generation!==generationRef.current){audio?.stop();return;}if(!audio){rhythmSongPrepSignal(false,song.songId);startLockRef.current=false;songIntroRef.current=null;setSongIntro(null);setView(v=>({...v,status:'error'}));return;}const startBest=normalizeRhythmBestRecord(startBestValue);/* 入力の記録(デバッグ設定で入れたときだけ。rhythm-mode.js の RHYTHM_INPUT_REC) */try{RHYTHM_INPUT_REC.begin(playAreaRef.current,()=>Number(audio.songTimeMs())||0,{songId:song.songId,difficultyId:difficulty.id,mirror:!!mirrorOn,assist:!!assistOn,offsetMs:Number(settings.judgmentTimingOffsetMs)||0,debugPlay:!!debugPlay,settings:(()=>{try{return JSON.parse(JSON.stringify(settings));}catch{return null;}})()});}catch{}RHYTHM_FRAME_DIAG.reset();RHYTHM_TIMING_DIAG.reset();RHYTHM_TIMING_DIAG.meta(audio.info?.());RHYTHM_TOUCH_BRIDGE.reset();rhythmFloatingNotesClear();runRef.current={audio,heroSeed:Math.random(),notes:makeRuntimeNotes(),activePointers:new Map(),standbyPointers:new Map(),activeTouchInputs:new Set(),inputTimes:[],combo:0,maxCombo:0,counts:emptyCounts(),fast:0,slow:0,precise:0,deltas:[],life:RHYTHM_LIFE_MAX,lifeDepleted:false,score:0,lockedScore:0,scoreOffset:0,abilities:createRhythmMonsterAbilityState(),konjoOwnerName:'',finished:false,paused:false,generation,startBest,startBestScore:startBest.bestScore};laneRefs.current.forEach(el=>{if(el){el.style.display='block';el.style.opacity='0';el.style.filter='';/* styleを直接書き戻したら、「前に何を書いたか」の控えも一緒に捨てる。   控えだけ古いまま残ると、値が同じだと判断して書き込みを飛ばし、   実際の見た目とズレたまま固まる(例: 透明のまま出てこない)ため */el._rhythmHidden=false;el._rhythmOpacity=undefined;el._rhythmWillChange=undefined;el._rhythmFailedFlag=undefined;el._rhythmClearFlag=undefined;delete el.dataset.rhythmClear;el._rhythmHoldBody=undefined;el._rhythmHoldFilter=undefined;el._rhythmDepthScale=undefined;el._rhythmDepthBrightness=undefined;el._rhythmTransform=undefined;el._rhythmSlideBody=undefined;}});if(canvasNotes)RHYTHM_CANVAS_RENDERER.clear();rhythmLayoutPlayArea(playAreaRef.current);updateJudgmentBand(measureTravel(),rhythmTravelMsForSpeed(settings.noteSpeed));
 /* 使い回すヒットエフェクトを先に作っておく。曲の途中で10個まとめて作ると、そこで一瞬引っかかる */
 rhythmEnsureHitEffects(playAreaRef.current);
 /* 光のスプライトも先に焼いておく。曲の中で「その種類のノーツが初めて出た瞬間」に作ると
@@ -22367,7 +22482,7 @@ rhythmEnsureHitEffects(playAreaRef.current);
    カウントダウン(READY→3→2→1 の3.2秒)のあいだに済ませるので、プレイヤーには見えない。
    ★描くときと同じ設定を渡す。キャッシュのキーは種類と画素密度だけなので、
      違う設定で焼くとそのまま曲の終わりまで使われてしまう(2026-09-12) */
-if(canvasNotes)RHYTHM_CANVAS_RENDERER.warmSprites({effect:settings.effectAmount,lightweight:settings.lightweightMode,maxDpr:noteCanvasMaxDpr});
+if(canvasNotes)RHYTHM_CANVAS_RENDERER.warmSprites({effect:settings.effectAmount,lightweight:settings.lightweightMode,tapLight:rhythmTapLightOnly(settings),maxDpr:noteCanvasMaxDpr});
 /* モンスターノーツの顔の絵も GPU へ渡しておく(焼き上がりが描き込み先より先だったときの分。渡してあれば何もしない) */
 if(canvasNotes)faceBitmapsRef.current.forEach(face=>{if(face){RHYTHM_CANVAS_RENDERER.preloadImage(face.plain);RHYTHM_CANVAS_RENDERER.preloadImage(face.glow);}});
 /* カットインの絵は、出るまで見えない(visibility:hidden)ので、端末によっては**初めて出る瞬間**に画像を読み解く。
@@ -22976,7 +23091,7 @@ scheduleTick();};
 
 {/* 0になったその瞬間だけ、大きく1度だけ出す(1.4秒で消える) */}
 {lifeDownSlam&&<div data-rhythm-life-down-slam aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-[32%] z-40 text-center"><b className="block text-5xl font-black leading-none">LIFE 0</b><small className="mt-1 block text-xs font-black tracking-[0.34em]">DOWN</small></div>}
-<div ref={playAreaRef} data-rhythm-play-area data-rhythm-judgment-snap={judgmentSnap?'1':undefined} data-rhythm-judgment-fx={settings.judgmentFx===true&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL'?'1':undefined} data-rhythm-counting={countdownStep!==null?'1':undefined} data-rhythm-strip={RHYTHM_STRIP.value||undefined} data-rhythm-lightweight={settings.lightweightMode?'true':'false'} data-rhythm-effect={settings.effectAmount} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerEnd} onPointerCancel={pointerEnd} className="relative mx-2 mb-2 flex-1 min-h-0 overflow-hidden border-x border-cyan-400/50" style={{/* position と overflow はここにも直接書く。ノーツも判定ラインもこの箱を基準に
+<div ref={playAreaRef} data-rhythm-play-area data-rhythm-judgment-snap={judgmentSnap?'1':undefined} data-rhythm-judgment-fx={settings.judgmentFx===true&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL'?'1':undefined} data-rhythm-counting={countdownStep!==null?'1':undefined} data-rhythm-strip={RHYTHM_STRIP.value||undefined} data-rhythm-lightweight={settings.lightweightMode?'true':'false'} data-rhythm-effect={settings.effectAmount} data-rhythm-tap-light={rhythmTapLightOnly(settings)?'1':undefined} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerEnd} onPointerCancel={pointerEnd} className="relative mx-2 mb-2 flex-1 min-h-0 overflow-hidden border-x border-cyan-400/50" style={{/* position と overflow はここにも直接書く。ノーツも判定ラインもこの箱を基準に
     置いているので、Tailwindの relative が効く前だと基準が別の要素へ移り、
     判定ラインが画面の変なところへ出る(2026-09-05)。中身の置き場所に関わるものは
     外部CSSに任せない */position:'relative',overflow:'hidden',touchAction:'none',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none','--rhythm-note-size-scale':settings.noteSize/100,
@@ -46369,11 +46484,12 @@ const RaidJackRankingRows = ({ rows, myId, renderPlace, renderIcon, cardClass, l
   );
 };
 // ランキング画面(レイド画面の「ランキング」ボタンから開く)。モード別(レイドバトル/グランドスラム)・レイドバトルは段階別。
-//   レイドバトルは、大王が倒れたあとだけ「累計ダメージ(全段階の合計)」も見られる。上位100位まで。自分の記録と順位は圏外でも出る
-const RaidJackRankingList = ({ onClose, eventId, initialTab = 'a', initialTier = 0, bossDown = false, renderPlace, renderIcon, cardClass }) => {
+//   レイドバトルは「累計ダメージ(全段階の合計)」もいつでも見られる(2026-10-15 社長「合計もいつでも累計を出す」。前は大王が倒れたあとだけ)。
+//   順位の報酬は、これまでどおり段階ごとの貢献で決まる。上位100位まで。自分の記録と順位は圏外でも出る
+const RaidJackRankingList = ({ onClose, eventId, initialTab = 'a', initialTier = 0, renderPlace, renderIcon, cardClass }) => {
   const [tab, setTab] = useState(initialTab);
   const [tierIdx, setTierIdx] = useState(Math.min(Math.max(initialTier, 0), RAID_JACK_A_TIERS.length - 1));
-  const [allMode, setAllMode] = useState(false);   // A の「累計ダメージ(全段階の合計)」。大王が倒れたあとだけ選べる
+  const [allMode, setAllMode] = useState(false);   // A の「累計ダメージ(全段階の合計)」。合計・バトル・モンヒロビートのどれでもいつでも選べる
   const [maxHit, setMaxHit] = useState(false);     // 「1戦の最大ダメージ」ランキング(A・Bどちらでも・報酬なし)
   const [rows, setRows] = useState(undefined);     // undefined=読み込み中 / null=準備中 / 配列
   const [self, setSelf] = useState(null);
@@ -46384,7 +46500,7 @@ const RaidJackRankingList = ({ onClose, eventId, initialTab = 'a', initialTier =
   const [src, setSrc] = useState('all');         // A の与ダメージの種類: 'all'(合計) / 'battle'(バトル) / 'rhythm'(モンヒロビート)
   const useSrc = tab === 'a' && src !== 'all';
   const srcName = src === 'rhythm' ? 'モンヒロビート' : 'バトル';
-  const useAll = !maxHit && tab === 'a' && allMode && (bossDown || useSrc);
+  const useAll = !maxHit && tab === 'a' && allMode;
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -46466,10 +46582,8 @@ const RaidJackRankingList = ({ onClose, eventId, initialTab = 'a', initialTier =
             <button type="button" key={t.id} data-raid-jack-ranking-tier={t.id} onClick={() => { setTierIdx(i); setAllMode(false); }}
               className={`min-h-[34px] rounded-xl border px-2.5 active:scale-95 ${!useAll && tierIdx === i ? 'border-orange-300 bg-orange-800 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`}>{t.name.replace('ジャック', '')}</button>
           ))}
-          {(bossDown || useSrc) && (
-            <button type="button" data-raid-jack-ranking-all onClick={() => setAllMode(true)}
-              className={`min-h-[34px] rounded-xl border px-2.5 active:scale-95 ${useAll ? 'border-orange-300 bg-orange-800 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`}>累計ダメージ</button>
-          )}
+          <button type="button" data-raid-jack-ranking-all onClick={() => setAllMode(true)}
+            className={`min-h-[34px] rounded-xl border px-2.5 active:scale-95 ${useAll ? 'border-orange-300 bg-orange-800 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`}>累計ダメージ</button>
         </div>
       )}
       <div className="min-h-0 flex-1 overflow-y-auto rounded-2xl border border-white/10 bg-black/30 p-3">
@@ -46477,7 +46591,7 @@ const RaidJackRankingList = ({ onClose, eventId, initialTab = 'a', initialTier =
           <span className="font-black text-orange-200">{title}</span>
           {myTotal > 0 && <span data-raid-jack-ranking-mine className="shrink-0 text-[10px] text-slate-200">あなた {myTotal.toLocaleString()}{ahead !== null ? `(${ahead + 1}位)` : ''}</span>}
         </div>
-        <div className="mb-2 text-[9px] text-slate-400">{useSrc && maxHit ? `${src === 'rhythm' ? '1曲' : '1回の戦い'}で出した、いちばん大きいダメージで競います。難易度ごとにも見られます。順位報酬はありません。` : useSrc ? `${srcName}だけで与えたダメージで競います。順位報酬はありません(報酬は全体の貢献ランキングで決まります)。` : maxHit ? '1回の戦いで出した、いちばん大きいダメージで競います。難易度ごとにも見られます。順位報酬はありません。' : useAll ? '全段階へ与えたダメージの合計です。' : tab === 'a' ? '1〜5位に報酬があります。男爵〜公爵は倒れた時点、大王は期間の終わりに順位が決まります(報酬一覧)。' : '1〜5位に報酬があります。期間の終わりに順位が決まります(報酬一覧)。'}</div>
+        <div className="mb-2 text-[9px] text-slate-400">{useSrc && maxHit ? `${src === 'rhythm' ? '1曲' : '1回の戦い'}で出した、いちばん大きいダメージで競います。難易度ごとにも見られます。順位報酬はありません。` : useSrc ? `${srcName}だけで与えたダメージで競います。順位報酬はありません(報酬は全体の貢献ランキングで決まります)。` : maxHit ? '1回の戦いで出した、いちばん大きいダメージで競います。難易度ごとにも見られます。順位報酬はありません。' : useAll ? '全段階へ与えたダメージの合計です。この順位に報酬はありません(報酬は段階ごとの貢献で決まります)。' : tab === 'a' ? '1〜5位に報酬があります。男爵〜公爵は倒れた時点、大王は期間の終わりに順位が決まります(報酬一覧)。' : '1〜5位に報酬があります。期間の終わりに順位が決まります(報酬一覧)。'}</div>
         {rows === undefined && <div className="py-3 text-center text-[10px] text-slate-400">読み込み中…</div>}
         {rows === null && <div className="py-3 text-center text-[10px] text-slate-400">ランキングは準備中です</div>}
         {Array.isArray(rows) && rows.length === 0 && <div className="py-3 text-center text-[10px] text-slate-400">まだ記録がありません。いちばんのりを目指そう！</div>}
@@ -46712,7 +46826,7 @@ const RaidJackScreen = ({ initialTier = 0, onBack, onChallenge, onPurchase, onCl
           </button>
         )}
       </div>
-      {showRanking && <RaidJackRankingList eventId={eventId} initialTab={tab} initialTier={current} bossDown={bossDownNow} renderPlace={renderPlace} renderIcon={renderIcon} cardClass={cardClass} onClose={() => setShowRanking(false)} />}
+      {showRanking && <RaidJackRankingList eventId={eventId} initialTab={tab} initialTier={current} renderPlace={renderPlace} renderIcon={renderIcon} cardClass={cardClass} onClose={() => setShowRanking(false)} />}
       {showRewards && <RaidJackRewardList claimed={state.claimed} initialTab={tab} onClose={() => setShowRewards(false)} />}
     </div>
   );
@@ -47258,6 +47372,8 @@ function MonsterHeroGame() {
   const [rhythmCanvasHitsPref,setRhythmCanvasHitsPref]=useState(()=>rhythmCanvasHitsPreference());
   const [rhythmHitSparkPref,setRhythmHitSparkPref]=useState(()=>rhythmHitSparkPreference());
   const [rhythmJudgmentSnapPref,setRhythmJudgmentSnapPref]=useState(()=>rhythmJudgmentSnapPreference());
+  const [rhythmInputRecOn,setRhythmInputRecOn]=useState(()=>{try{return RHYTHM_INPUT_REC.enabled();}catch{return false;}});
+  const [rhythmInputRecMsg,setRhythmInputRecMsg]=useState('');
   // ホールド・スライドの離しの合図の遅れを、どこまで信じて戻すか(検証用・2026-10-11)。この端末だけの切り替え(mh_rhythm_fix_override_v1)
   const [rhythmReleaseAgeWide,setRhythmReleaseAgeWide]=useState(()=>rhythmTouchFixOn('releaseAgeWide'));
   const [rhythmStageGlPref,setRhythmStageGlPref]=useState(()=>rhythmStageGlPreference());
@@ -50430,7 +50546,12 @@ function MonsterHeroGame() {
         const pageRows = await sbFetchRhythmRankings(keys, RHYTHM_RANKING_FETCH_LIMIT, page * RHYTHM_RANKING_FETCH_LIMIT, `rhythm-rank-${song.songId}-${Date.now()}-${page}`);
         if (rhythmRankingRequestRef.current !== requestId) return;
         rows = rows.concat(Array.isArray(pageRows) ? pageRows : []);
-        if (rhythmRankingDedupeByUser(rows).length >= RHYTHM_RANKING_DISPLAY_LIMIT) break;
+        // 表示する人数がそろっても、最後の人と同じスコアの行がまだ続いていそうなら取り続ける
+        // (同点は JUST MARVELOUS の数・出した順で並べるので、同点ぶんを最後まで取ってから並べる。2026-10-15)
+        const deduped = rhythmRankingDedupeByUser(rows);
+        const lastShown = deduped[RHYTHM_RANKING_DISPLAY_LIMIT - 1];
+        const lastFetched = Array.isArray(pageRows) && pageRows.length ? pageRows[pageRows.length - 1] : null;
+        if (lastShown && !(lastFetched && (Number(lastFetched.score) || 0) >= (Number(lastShown.score) || 0))) break;
         if (!Array.isArray(pageRows) || pageRows.length < RHYTHM_RANKING_FETCH_LIMIT) break;
       }
       const entries = rhythmRankingDedupeByUser(rows).slice(0, RHYTHM_RANKING_DISPLAY_LIMIT).map(rhythmRankingEntryFromRow);
@@ -65585,6 +65706,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 canvas 版は WebGL のときに使っている同じ絵。2026-10-11 社長の判断で既定を canvas にした。「画面の要素」で今までの描き方に戻せる */}
             {/* 叩いたときの光の粒の描き方(2026-10-12・修理部・発熱の手当て ④)。焼いた丸を貼ると光の重さが約2割減る。差は 1画素未満のふちだけ。社長が静止画を見て既定を決める */}
             <section data-rhythm-hit-spark-panel className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"><h3 className="text-xs font-black text-cyan-200">叩いたときの光の粒（検証用）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80">ノーツを叩いたときにはじける小さな粒を、canvas で描くときの描き方です。「焼いた丸」は一度作った丸の絵を貼るので軽くなります（見た目の差は粒のふちのわずかな違いだけ）。次の演奏から効きます。</p><div className="mt-2 flex gap-2">{[['','既定（焼いた丸）'],['on','焼いた丸'],['off','今までの形']].map(([value,label])=><button key={value||'default'} type="button" data-rhythm-hit-spark-pref={value||'default'} aria-pressed={rhythmHitSparkPref===value} onClick={()=>setRhythmHitSparkPref(rhythmHitSparkSetPreference(value))} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmHitSparkPref===value?'bg-cyan-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></section>
+            <section data-rhythm-input-rec-panel className="mb-3 rounded-2xl border border-amber-400/40 bg-amber-950/20 p-3"><h3 className="text-xs font-black text-amber-200">入力の記録（検証用）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-amber-100/80">「入」にすると、モンヒロビートの演奏中の指の動き（時刻・位置・接触の幅）と判定の出来事を端末の中だけに記録します。名前などは入りません。ランキングには影響しません。演奏が終わったら下のボタンで最後の1曲分をコピーして送ってください。</p><div className="mt-2 flex gap-2">{[[true,'入'],[false,'切']].map(([value,label])=><button key={label} type="button" data-rhythm-input-rec-pref={value?'on':'off'} aria-pressed={rhythmInputRecOn===value} onClick={()=>{try{RHYTHM_INPUT_REC.setEnabled(value);setRhythmInputRecOn(RHYTHM_INPUT_REC.enabled());}catch{}}} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmInputRecOn===value?'bg-amber-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div><button type="button" data-rhythm-input-rec-copy onClick={async()=>{let text='';let sum=null;try{RHYTHM_INPUT_REC.close();text=RHYTHM_INPUT_REC.text();sum=RHYTHM_INPUT_REC.summary();}catch{}if(!text){setRhythmInputRecMsg('まだ記録がありません（「入」にしてから1曲演奏してください）');return;}const info=sum?`（指の動き ${sum.touches||0}件・判定 ${sum.judges||0}件）`:'';try{await navigator.clipboard.writeText(text);setRhythmInputRecMsg(`コピーしました${info}`);}catch{setRhythmInputRecMsg('コピーできませんでした');}}} className="mt-2 min-h-[40px] w-full rounded-xl border border-amber-300/50 bg-slate-900 text-[11px] font-black text-amber-100">最後の演奏の記録をコピー</button>{rhythmInputRecMsg&&<p data-rhythm-input-rec-msg className="mt-1 text-[10px] font-bold text-amber-100">{rhythmInputRecMsg}</p>}</section>
             <section data-rhythm-judgment-snap-panel className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"><h3 className="text-xs font-black text-cyan-200">判定の文字の大きさの変わり方（検証用）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80">判定の文字（PERFECT など）は判定ごとに大きさが違い、今は 0.12秒かけてなめらかに大きさを変えています（そのあいだ毎コマ画面の組み直しが起きます）。「一度で」は大きさをすぐに変えます。弾む動き・色・光は変わりません。次の演奏から効きます。</p><div className="mt-2 flex gap-2">{[['','既定（一度で）'],['on','一度で'],['off','なめらかに']].map(([value,label])=><button key={value||'default'} type="button" data-rhythm-judgment-snap-pref={value||'default'} aria-pressed={rhythmJudgmentSnapPref===value} onClick={()=>setRhythmJudgmentSnapPref(rhythmJudgmentSnapSetPreference(value))} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmJudgmentSnapPref===value?'bg-cyan-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></section>
             <section data-rhythm-canvas-hits-panel className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"><h3 className="text-xs font-black text-cyan-200">叩いたときの光の描き方（検証用）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80">「canvas」は、ノーツを叩いたときに判定ラインで弾ける光を、ノーツと同じ canvas へ描きます（WebGL の描き方で使っている絵と同じ）。既定は canvas です。「画面の要素」は今までの描き方（光の部品を画面の要素として動かす。発熱の元になっていた）です。次の演奏から効きます。</p><div className="mt-2 flex gap-2">{[['','既定（canvas）'],['canvas','canvas'],['dom','画面の要素']].map(([value,label])=><button key={value||'default'} type="button" data-rhythm-canvas-hits-pref={value||'default'} aria-pressed={rhythmCanvasHitsPref===value} onClick={()=>setRhythmCanvasHitsPref(rhythmCanvasHitsSetPreference(value))} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmCanvasHitsPref===value?'bg-cyan-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></section>
             <section data-rhythm-prepare-panel className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"><h3 className="text-xs font-black text-cyan-200">演奏前の準備（検証用）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80">「する」は、曲の最初のコマで初めて起きていた重い仕事（道の大きさを測る・ノーツの絵を描く準備）を、曲の前の幕のあいだに済ませます。準備が済むまで幕は閉じません（最長6秒）。次の演奏から効きます。</p><div className="mt-2 flex gap-2">{[['','既定（する）'],['on','する'],['off','しない']].map(([value,label])=><button key={value||'default'} type="button" data-rhythm-prepare-pref={value||'default'} aria-pressed={rhythmPreparePref===value} onClick={()=>setRhythmPreparePref(rhythmPrepareSetPreference(value))} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmPreparePref===value?'bg-cyan-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></section>
