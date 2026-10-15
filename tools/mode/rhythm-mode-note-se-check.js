@@ -18,7 +18,7 @@ check('空押しSEはノーツ未取得の新規入力と境界越え再判定�
   /if\(state\.empty\)inputStarts\(\[\{lane:Math\.floor\(subLane\/2\),subLaneCoordinate,inputKey[^\]]*\}\]/.test(gameSource));
 check('TAP後は次の境界で再判定し、操作中ノーツの指は横取りしない',gameSource.includes("empty:!target||target.type==='TAP'")&&gameSource.includes("if(state.empty)inputStarts(")&&gameSource.includes("if(subLane===state.subLane)return"));
 // 2026-09-27 から、触れた瞬間のずれで出した判定を渡して音を鳴らし分ける。フリックは触れた瞬間には鳴らさない(払えたときに鳴らす)
-check('ノーツ取得時は従来SEだけを鳴らす(フリックは触れた瞬間には鳴らさない)',source.includes("if(originalType==='FLICK')RHYTHM_NOTE_SE_RUNTIME.markInputGroupHandled();\n    else RHYTHM_NOTE_SE_RUNTIME.play(null,typeof rhythmJudgeTap==='function'?rhythmJudgeTap(touchDelta):null);\n    return {input,target:picked,deltaMs:touchDelta};"));
+check('ノーツ取得時は従来SEだけを鳴らす(フリックは触れた瞬間には鳴らさない)',source.includes("if(originalType==='FLICK')RHYTHM_NOTE_SE_RUNTIME.markInputGroupHandled();\n    else RHYTHM_NOTE_SE_RUNTIME.play(null,typeof rhythmJudgeTap==='function'?rhythmJudgeTap(touchDelta):null);\n    return {input,target:picked,deltaMs:touchDelta,standby:picked.type==='TAP'?bandStandby:null};"));
 check('空押しSEは短いノイズ系Web Audio',source.includes('const duration=.055')&&source.includes("filter.type='bandpass'")&&source.includes('audio.createBufferSource()'));
 check('接触幅の1物理イベントは空押しをまとめ、成功があれば空押しを抑止',source.includes('inputGroupDepth')&&source.includes('inputGroupHit')&&source.includes('markInputGroupHandled')&&source.includes('return handled?true:emitEmpty()'));
 

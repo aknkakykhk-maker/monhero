@@ -2357,7 +2357,7 @@ const visitNote=note=>{if(note.type==='HOLD'&&note.activePointerId!==null&&songT
 // 指を離したまま戻ってこなかったHOLD/SLIDE。持ち替えの猶予を過ぎた時点で失敗にする。
 // 終わりまで来ていたら、離していても成立させる(終わり際に離すぶんは元から許している)
 if(!note.done&&note.activePointerId===null&&note.releasedAtMs!=null){
-  const holdEndMs=note.endTimeMs+settings.judgmentTimingOffsetMs;
+  const holdEndMs=Math.min(Number(note.endTimeMs),rhythmReleaseTargetMs(note))+settings.judgmentTimingOffsetMs;
   if(songTimeMs>=holdEndMs-RHYTHM_HOLD_RELEASE_GRACE_MS){note.releasedAtMs=null;rhythmFloatingNoteRemove(note);applyJudgment(note,note.holdJudgment||'MISS',note.holdDeltaMs||0);}
   else if(songTimeMs-note.releasedAtMs>=RHYTHM_HOLD_HANDOVER_GRACE_MS){const releasedAt=note.releasedAtMs;note.releasedAtMs=null;rhythmFloatingNoteRemove(note);applyJudgment(note,'MISS',releasedAt-holdEndMs);}
 }
@@ -2719,6 +2719,8 @@ scheduleTick();};
         if(input.captureTarget&&input.pointerId!==undefined){try{input.captureTarget.setPointerCapture(input.pointerId);}catch{}}
         return;
       }
+      // 帯の内側で隣の TAP を取った指は、押したままなら持ち替えの控えにもする(2026-10-15 改善部 K1)。TAP の判定はこのあといつもどおり付ける
+      if(target&&standby&&target.type==='TAP'){RHYTHM_INPUT_REC.event('standby',{note:standby.index,key:input.inputKey,tap:target.index});run.standbyPointers.set(input.inputKey,standby.index);if(input.captureTarget&&input.pointerId!==undefined){try{input.captureTarget.setPointerCapture(input.pointerId);}catch{}}}
       // 指を滑らせて取り直した(rejudge)ときも、ノーツが無ければ空押しの音を鳴らす(レーンが変わるたびの「シャッ」)。
       // ただし、ノーツの音の直後(150ms以内)は鳴らさない(2026-10-07・成功したタップのあとに指が数px動くと余分に鳴っていた)
       if(!target)RHYTHM_INPUT_REC.event('empty',{key:input.inputKey,sub:input.subLaneCoordinate,sky:input.sky,rejudge:!!input.rejudge});if(!target){if(!input.rejudge||!RHYTHM_NOTE_SE_RUNTIME.recentNoteSe?.(150)){RHYTHM_PERF.emptyTap();RHYTHM_NOTE_SE_RUNTIME.playEmpty();}if(input.captureTarget&&input.pointerId!==undefined){try{input.captureTarget.setPointerCapture(input.pointerId);}catch{}}return;}const judgment=rhythmJudgeTap(deltaMs);if(target.type==='HOLD'){
@@ -2757,7 +2759,11 @@ scheduleTick();};
     }
     return null;
   };
-  const inputEnds=inputs=>{const run=runRef.current;if(!run||run.finished||run.paused)return;const now=run.audio.songTimeMs();inputs.forEach(input=>{run.inputFeedbackState?.delete(input.inputKey);run.standbyPointers.delete(input.inputKey);const noteIndex=run.activePointers.get(input.inputKey);if(noteIndex===undefined)return;run.activePointers.delete(input.inputKey);const note=run.notes[noteIndex];if(!note||note.done)return;note.activePointerId=null;const holdEndMs=note.endTimeMs+settings.judgmentTimingOffsetMs;
+  // ★「終わり際か、途中で離したか」は、ノーツの離しの的(rhythmReleaseTargetMs)で決める(2026-10-15)。
+//   終わりが近づくと見回り側(RHYTHM_GESTURE_RUNTIME.checkHeldRelease)が、押しっぱなしの自動成功を待たせるためにノーツの終わりの時刻を「離しの的+判定の窓」まで延ばす。
+//   本体がその延ばした時刻で判断していたので、見回り側の時計が少し遅れた回だけ、離しの的ぴったりで離しても「途中で離した」になり、浮いて MISS になっていた
+//   (曲を通したときだけスライドがたまに落ちる件。grievous_lady MASTER 13.45秒・14.45秒などで、押し始め MARVELOUS・通過点すべて通過のまま MISS)
+const inputEnds=inputs=>{const run=runRef.current;if(!run||run.finished||run.paused)return;const now=run.audio.songTimeMs();inputs.forEach(input=>{run.inputFeedbackState?.delete(input.inputKey);run.standbyPointers.delete(input.inputKey);const noteIndex=run.activePointers.get(input.inputKey);if(noteIndex===undefined)return;run.activePointers.delete(input.inputKey);const note=run.notes[noteIndex];if(!note||note.done)return;note.activePointerId=null;const holdEndMs=Math.min(Number(note.endTimeMs),rhythmReleaseTargetMs(note))+settings.judgmentTimingOffsetMs;
     // 先に置いてある指があれば、離したその場でそこへ渡す。
     // 浮いている状態を経由しないので、猶予の時間切れに巻き込まれない
     const takeover=standbyFingerFor(run,noteIndex,input.inputKey);

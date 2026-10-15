@@ -122,5 +122,11 @@ check('ロングを押さえている指が自分の離しの合図なしに指�
 check('端末に取り消された指(touchcancel)は、押さえているロングをその場で MISS にせず、ふつうに離したのと同じに扱う',
   /const cancelTouches=event=>\{Array\.from\(event\.changedTouches\|\|\[\]\)\.forEach\(touch=>release\(inputKey\('touch',touch\.identifier\),false\)\);\};/.test(src));
 
+// 6) 終わり際か途中で離したかは、ノーツの離しの的で決める。見回り側が終わり近くで終わりの時刻を延ばすため、延ばした時刻で決めると、
+//    見回り側の時計が少し遅れた回だけ、離しの的ぴったりで離したスライドが浮いて MISS になっていた(grievous_lady MASTER を通したときだけ・2026-10-15)
+check('離しの処理と浮いた帯の見回りは、延ばされた終わりの時刻ではなく離しの的で終わり際を決める',
+  (play.match(/const holdEndMs=Math\.min\(Number\(note\.endTimeMs\),rhythmReleaseTargetMs\(note\)\)\+settings\.judgmentTimingOffsetMs;/g) || []).length === 2
+  && !/const holdEndMs=note\.endTimeMs\+settings\.judgmentTimingOffsetMs;/.test(play));
+
 console.log(failed ? `\n${failed} 件 NG` : '\nすべてOK');
 process.exit(failed ? 1 : 0);

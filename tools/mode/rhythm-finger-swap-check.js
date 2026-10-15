@@ -46,6 +46,9 @@ const makeRun=notes=>({notes,activePointers:new Map(),standbyPointers:new Map(),
 const starts=(run,inputs,now)=>match(run.notes,inputs,now,0).forEach(({input,target,deltaMs,standby})=>{
   if(!target&&standby){run.standbyPointers.set(input.inputKey,standby.index);return;}
   if(!target){run.empty++;return;}
+  // 本体と同じ: 帯の内側で隣の TAP を取った指は、控えにもする(2026-10-15 改善部 K1)
+  if(standby&&target.type==='TAP')run.standbyPointers.set(input.inputKey,standby.index);
+  if(target.type==='TAP'){target.done=true;target._judgedAt=now;}
   if(target.type==='HOLD'){
     const handover=target.releasedAtMs!=null;
     target.activePointerId=input.inputKey;
@@ -213,6 +216,22 @@ for(const [label,make] of [['スライド',slide],['長押し',hold]]){
       run.notes[0].done&&!run.notes[0]._miss&&!run.notes[1].done,
       `SLIDE done=${run.notes[0].done} / 隣のノーツ done=${run.notes[1].done}`);
   }
+  // ★隣の TAP の時刻のころ(900・1000・1080ms)に持ち替えても、帯は2本目へ渡る(2026-10-15 改善部 K1)。
+  //   #3051 のあと、この時刻帯では2本目が TAP を取ったまま控えにならず、1本目を離すとスライドが切れていた。
+  //   TAP の判定は付けたまま(社長の決定「案1」)、押したままなら控えにもする
+  for(const [put,spot] of [[1000,4.8],[900,4.8],[1080,4.8],[1000,4.4],[1000,5.0]]){
+    reset();
+    const run=makeRun([slide(),nextTo()]);
+    starts(run,[at('touch:1',3)],0);
+    starts(run,[at('touch:2',spot)],put);
+    const standby=run.standbyPointers.get('touch:2');
+    ends(run,['touch:1'],put+20);
+    const owner=run.notes[0].activePointerId;
+    ends(run,['touch:2'],3000);
+    check(`隣の TAP の時刻のころ(${put}ms・${spot})に持ち替えても、TAP を取ったうえで帯を2本目へ渡し、スライドが成立する`,
+      run.notes[1].done&&standby===0&&owner==='touch:2'&&run.notes[0].done&&!run.notes[0]._miss,
+      `TAP done=${run.notes[1].done} / 控え=${standby} / 離した直後の持ち主=${owner} / SLIDE done=${run.notes[0].done} miss=${!!run.notes[0]._miss}`);
+  }
 }
 
 // --- 本体側の作り ---
@@ -228,7 +247,12 @@ check('ポーズしたら控えも捨てる',/run\.standbyPointers\?\.clear\(\)/
 // 押さえている帯の内側へ置いた指は、相手を決める前に控えへ回す(近くのノーツに取られないように)
 check('帯の内側の指は、相手を決める前に控えへ回す',
   /const insideHeldBand=heldBandNote\(false\);/.test(src)
-  &&/if\(insideHeldBand&&!insideOverlapWith\(insideHeldBand\)&&!nowTapAt\(\)\)return \{input,target:null,deltaMs:null,standby:insideHeldBand\};/.test(src));
+  &&/const bandStandby=insideHeldBand&&!insideOverlapWith\(insideHeldBand\)\?insideHeldBand:null;/.test(src)
+  &&/if\(bandStandby&&!nowTapAt\(\)\)return \{input,target:null,deltaMs:null,standby:bandStandby\};/.test(src));
+// 隣の TAP を取った指も控えにする(2026-10-15 改善部 K1)
+check('帯の内側で TAP を取った指も、持ち替えの控えにする',
+  /return \{input,target:picked,deltaMs:touchDelta,standby:picked\.type==='TAP'\?bandStandby:null\};/.test(src)
+  &&/if\(target&&standby&&target\.type==='TAP'\)\{[^\n]{0,200}run\.standbyPointers\.set\(input\.inputKey,standby\.index\);/.test(game));
 // ★ただし帯の上へ**重なって**降ってくるノーツ(被りノーツ)には譲る。
 //   接しているだけ(重なりの幅0)は譲らない＝上の「隣のノーツに取られない」が成り立つ。
 //   中身は tools/mode/rhythm-tap-during-hold-check.js が見る(2026-09-18)。
