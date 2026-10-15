@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4a5e472246a029ba
+// source-sha256: fdebf8333bff2772
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-15 20:26";
+const BUILD_DATE = "2026-10-15 20:51";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -35068,6 +35068,12 @@ const RhythmTapTest = ({
         RHYTHM_TIMING_DIAG.meta(run.audio?.info?.());
       } catch {}
     }
+    try {
+      RHYTHM_INPUT_REC.finish({
+        cleared: !failed,
+        score: Number(run.score) || 0
+      });
+    } catch {}
     const touchDiag = !debugPlay && !tutorial && !calibrating ? rhythmTouchDiagOf({
       song,
       difficulty,
@@ -36002,6 +36008,16 @@ const RhythmTapTest = ({
       return;
     }
     const startBest = normalizeRhythmBestRecord(startBestValue);
+    try {
+      RHYTHM_INPUT_REC.begin(playAreaRef.current, () => Number(audio.songTimeMs()) || 0, {
+        songId: song.songId,
+        difficultyId: difficulty.id,
+        mirror: !!mirrorOn,
+        assist: !!assistOn,
+        offsetMs: Number(settings.judgmentTimingOffsetMs) || 0,
+        debugPlay: !!debugPlay
+      });
+    } catch {}
     RHYTHM_FRAME_DIAG.reset();
     RHYTHM_TIMING_DIAG.reset();
     RHYTHM_TIMING_DIAG.meta(audio.info?.());
@@ -77761,6 +77777,14 @@ function MonsterHeroGame() {
   const [rhythmCanvasHitsPref, setRhythmCanvasHitsPref] = useState(() => rhythmCanvasHitsPreference());
   const [rhythmHitSparkPref, setRhythmHitSparkPref] = useState(() => rhythmHitSparkPreference());
   const [rhythmJudgmentSnapPref, setRhythmJudgmentSnapPref] = useState(() => rhythmJudgmentSnapPreference());
+  const [rhythmInputRecOn, setRhythmInputRecOn] = useState(() => {
+    try {
+      return RHYTHM_INPUT_REC.enabled();
+    } catch {
+      return false;
+    }
+  });
+  const [rhythmInputRecMsg, setRhythmInputRecMsg] = useState('');
   const [rhythmReleaseAgeWide, setRhythmReleaseAgeWide] = useState(() => rhythmTouchFixOn('releaseAgeWide'));
   const [rhythmStageGlPref, setRhythmStageGlPref] = useState(() => rhythmStageGlPreference());
   const [rhythmChartToolsOpened, setRhythmChartToolsOpened] = useState(false);
@@ -102268,6 +102292,54 @@ function MonsterHeroGame() {
       onClick: () => setRhythmHitSparkPref(rhythmHitSparkSetPreference(value)),
       className: `min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmHitSparkPref === value ? 'bg-cyan-400 text-slate-900' : 'border border-white/20 bg-slate-900 text-slate-200'}`
     }, label)))), React.createElement("section", {
+      "data-rhythm-input-rec-panel": true,
+      className: "mb-3 rounded-2xl border border-amber-400/40 bg-amber-950/20 p-3"
+    }, React.createElement("h3", {
+      className: "text-xs font-black text-amber-200"
+    }, "入力の記録（検証用）"), React.createElement("p", {
+      className: "mt-1 text-[9px] font-bold leading-relaxed text-amber-100/80"
+    }, "「入」にすると、モンヒロビートの演奏中の指の動き（時刻・位置・接触の幅）と判定の出来事を端末の中だけに記録します。名前などは入りません。ランキングには影響しません。演奏が終わったら下のボタンで最後の1曲分をコピーして送ってください。"), React.createElement("div", {
+      className: "mt-2 flex gap-2"
+    }, [[true, '入'], [false, '切']].map(([value, label]) => React.createElement("button", {
+      key: label,
+      type: "button",
+      "data-rhythm-input-rec-pref": value ? 'on' : 'off',
+      "aria-pressed": rhythmInputRecOn === value,
+      onClick: () => {
+        try {
+          RHYTHM_INPUT_REC.setEnabled(value);
+          setRhythmInputRecOn(RHYTHM_INPUT_REC.enabled());
+        } catch {}
+      },
+      className: `min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmInputRecOn === value ? 'bg-amber-400 text-slate-900' : 'border border-white/20 bg-slate-900 text-slate-200'}`
+    }, label))), React.createElement("button", {
+      type: "button",
+      "data-rhythm-input-rec-copy": true,
+      onClick: async () => {
+        let text = '';
+        let sum = null;
+        try {
+          RHYTHM_INPUT_REC.close();
+          text = RHYTHM_INPUT_REC.text();
+          sum = RHYTHM_INPUT_REC.summary();
+        } catch {}
+        if (!text) {
+          setRhythmInputRecMsg('まだ記録がありません（「入」にしてから1曲演奏してください）');
+          return;
+        }
+        const info = sum ? `（指の動き ${sum.touches || 0}件・判定 ${sum.judges || 0}件）` : '';
+        try {
+          await navigator.clipboard.writeText(text);
+          setRhythmInputRecMsg(`コピーしました${info}`);
+        } catch {
+          setRhythmInputRecMsg('コピーできませんでした');
+        }
+      },
+      className: "mt-2 min-h-[40px] w-full rounded-xl border border-amber-300/50 bg-slate-900 text-[11px] font-black text-amber-100"
+    }, "最後の演奏の記録をコピー"), rhythmInputRecMsg && React.createElement("p", {
+      "data-rhythm-input-rec-msg": true,
+      className: "mt-1 text-[10px] font-bold text-amber-100"
+    }, rhythmInputRecMsg)), React.createElement("section", {
       "data-rhythm-judgment-snap-panel": true,
       className: "mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"
     }, React.createElement("h3", {
