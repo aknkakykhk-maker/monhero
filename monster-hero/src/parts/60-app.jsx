@@ -898,7 +898,9 @@ function MonsterHeroGame() {
   const [guardBonusCount, setGuardBonusCount] = useState(0);
   const [showDeckInfo, setShowDeckInfo] = useState(false);
   const [showEnemyInfo, setShowEnemyInfo] = useState(false);
-  const [showHeroInfo, setShowHeroInfo] = useState(false); // バトル中に勇者モンの特性を確認するオーバーレイ
+  const [showHeroInfo, setShowHeroInfo] = useState(false);
+  // 行動カードの絵のデバッグ切り替え(端末だけ・71-screen-battle.jsx の BATTLE_CARD_ART_DEBUG)。デバッグ設定から見比べる
+  const [battleCardArtDebug, setBattleCardArtDebug] = useState(() => BATTLE_CARD_ART_DEBUG.on); // バトル中に勇者モンの特性を確認するオーバーレイ
   const [showSoulBattleEffects, setShowSoulBattleEffects] = useState(false); // バトル中の魂格効果一覧
   // バトルの記録(2026-09-22 ユーザー依頼「バトル中のログ」)。
   // ★画面には帯を出さず、敵の絵の右にある「ログ」ボタンからだけ開く
@@ -4598,6 +4600,8 @@ function MonsterHeroGame() {
     }
     setEventReplay({ id: storyId, step: 0, live: true });
   }, [rhythmEventStoryPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay, battleGuideChecked, battleTutorialStep]);
+  // 行動カードの絵は、ゲームに入ったら(バトルが始まる前に)1回だけ読み込んでおく。出すときだけ(公開の印かデバッグの切り替え)
+  useEffect(() => { if (bootPhase === 'GAME' && battleCardArtOn()) preloadBattleCardArt(); }, [bootPhase, battleCardArtDebug]);
   // 難易度 HELL のお話を、公開した日に全員へ1回だけ流す(RHYTHM_HELL_STORY_TRIGGER が 'release'・2026-10-12 社長の決定)。
   // 公開の印が偽なら何もしない(デバッグの「公開の印が真だったら」では試せる)。流すのは上の「HOME に着いたら流す」の置き方と同じ
   useEffect(() => {
@@ -18619,6 +18623,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   {/* バトルの性能計測(2026-09-28)。ONにするとタクティクス新画面の左上に、コマの速さ・遅いコマの割合・
                       長い処理・動き続けているアニメーションの数・自動で軽さを下げた記録を出す。OFFのあいだは数えない。
                       プレイヤーの通常プレイには出ないので、更新履歴・ヘルプには載せない */}
+                  {/* 行動カードの絵(2026-10-15)。公開前に、社長が今のカードと見比べるための切り替え。この端末だけに効く。
+                      公開の印(RELEASE_FLAGS.battleCardArt)が真になったら、切り替えに関係なく出る。更新履歴・ヘルプには公開のときに書く */}
+                  <button type="button" data-battle-card-art-toggle aria-pressed={battleCardArtDebug} onClick={()=>setBattleCardArtDebug(BATTLE_CARD_ART_DEBUG.set(!battleCardArtDebug))} className={`w-full min-h-[52px] rounded-2xl px-3 py-2 text-left text-[12px] font-black active:scale-95 ${battleCardArtDebug?'border-2 border-fuchsia-300 bg-fuchsia-500 text-slate-900':'border-2 border-fuchsia-400/40 bg-fuchsia-950/30 text-fuchsia-100'}`}>🃏 行動カードの絵(試作): {battleCardArtDebug?'新しい絵':'今のカード'}<span className="block text-[10px] font-bold opacity-80">押すと切り替わります。タクティクスの手札に出ます(この端末だけ)</span></button>
                   <button type="button" data-battle-perf-toggle aria-pressed={battlePerfOn} onClick={()=>setBattlePerfOn(BATTLE_PERF.setEnabled(!battlePerfOn))} className={`w-full min-h-[52px] rounded-2xl px-3 py-2 text-left text-[12px] font-black active:scale-95 ${battlePerfOn?'border-2 border-amber-300 bg-amber-500 text-slate-900':'border-2 border-amber-400/40 bg-amber-950/30 text-amber-100'}`}>📈 バトルの性能計測：{battlePerfOn?'ON':'OFF'}<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">タクティクス新画面の左上に、コマの速さ・かくつき・自動で軽くした記録を出します（次のバトルから）</small></button>
                   {/* デバッグ戦の「難易度9個 → 敵10個 → 勇者モン → 開始」は、以前このメニューの中へ
                       そのまま埋まっていた。1500pxほど縦に伸びていて、次の欄へ行くのにそこを全部

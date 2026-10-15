@@ -59,6 +59,51 @@ const handCardNameFit = (name, boxHeight) => {
 // 手札のカードの中の段の高さ。★カードの高さは画面の高さで変わる(844pxで133px、667pxで111px)。
 // 固定の px のままだと、背の低い画面では「⇄ 技変更」の帯を足したぶん(もとから4px)下へはみ出していた。
 // 背の高い画面では今までと同じ大きさ(絵36px・技名30px)になるよう、上限を今までの値にしてある
+// ★行動カードの絵(2026-10-15 社長「バトルカードの変更も進めて」)。公開の印 battleCardArt か、デバッグ設定の切り替えで出す。
+//   切り替えは端末だけに持つデバッグ用の印(mh_debug_battle_card_art_v1)。公開の印が真になったら、切り替えに関係なく出る
+const BATTLE_CARD_ART_DEBUG = (() => {
+  const KEY = 'mh_debug_battle_card_art_v1';
+  let on = false;
+  try { on = localStorage.getItem(KEY) === '1'; } catch (e) { on = false; }
+  return {
+    get on() { return on; },
+    set(next) { on = !!next; try { if (on) localStorage.setItem(KEY, '1'); else localStorage.removeItem(KEY); } catch (e) {} return on; },
+  };
+})();
+const battleCardArtOn = () => (typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.battleCardArt === true) || BATTLE_CARD_ART_DEBUG.on;
+const BATTLE_CARD_ROMAN = Object.freeze(['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX']);
+// カード1枚の絵。{ frame, mark(技のマークの絵・無ければ null で今のアイコン), roman(段階の札・無ければ '') }
+//   攻撃=赤・距離撃=青・守り=緑・支援=紫(社長の決定)。固有技は赤・弱いガードは緑(守りの1段目のマーク・段階の札なし)・それ以外は紫(案。社長に確認中)
+//   段階は表の何番目かで決める(攻撃は BASE_ATK_EVOLUTION の icon、守りは GUARD_EVOLUTION の name、距離撃は RANGE_EVOLUTION の名前)
+const battleCardArtOf = (c) => {
+  if (!c || typeof BATTLE_CARD_ART === 'undefined') return null;
+  const F = BATTLE_CARD_ART.frames;
+  const lvlOf = (i) => (Number.isInteger(i) && i >= 0 ? i : null);
+  if (c.type === 'atk') {
+    const i = lvlOf(BASE_ATK_EVOLUTION.findIndex((e) => e.icon === c.icon));
+    return { frame: F.red, mark: i == null ? null : BATTLE_CARD_ART.atk[i], roman: i == null ? '' : BATTLE_CARD_ROMAN[i] };
+  }
+  if (c.type === 'range_atk') {
+    const r = Number.isInteger(c.rangeIdx) ? c.rangeIdx : null;
+    const i = lvlOf(RANGE_EVOLUTION.findIndex((e) => typeof c.name === 'string' && r != null && c.name === `${RANGE_LABELS[r]}${e.name}`));
+    return { frame: F.blue, mark: r == null ? null : (BATTLE_CARD_ART.range[r] || null), roman: i == null ? '' : BATTLE_CARD_ROMAN[i] };
+  }
+  if (c.type === 'guard') {
+    const i = lvlOf(GUARD_EVOLUTION.findIndex((e) => e.name === c.name || e.icon === c.icon));
+    return { frame: F.green, mark: i == null ? null : BATTLE_CARD_ART.guard[i], roman: i == null ? '' : BATTLE_CARD_ROMAN[i] };
+  }
+  if (c.type === 'weak_guard') return { frame: F.green, mark: BATTLE_CARD_ART.guard[0], roman: '' };
+  if (c.type === 'unique') return { frame: F.red, mark: null, roman: '' };
+  return { frame: F.purple, mark: null, roman: '' };
+};
+// バトルが始まる前に、枠とマークを読み込んでおく(初めて出た瞬間のカクつきを防ぐ・社長の決めごと)。1回の起動で1回だけ
+let battleCardArtPreloaded = false;
+const preloadBattleCardArt = () => {
+  if (battleCardArtPreloaded || typeof BATTLE_CARD_ART === 'undefined' || typeof Image === 'undefined') return;
+  battleCardArtPreloaded = true;
+  [...Object.values(BATTLE_CARD_ART.frames), ...BATTLE_CARD_ART.atk, ...BATTLE_CARD_ART.guard, ...BATTLE_CARD_ART.range]
+    .forEach((src) => { try { const im = new Image(); im.decoding = 'async'; im.src = src; } catch (e) {} });
+};
 const HAND_CARD_FIT = Object.freeze({
   iconTop: 'clamp(2px, 0.7dvh, 6px)',
   icon: 'clamp(24px, 4.2dvh, 36px)',
@@ -2769,7 +2814,8 @@ function BattleScreen({
               const tutorialAllowed=battleTutorialCardAllowed(c);
               // 光らせるのは「いま触ってほしい種類」だけ。技変更の番は名前のところも光らせる
               const tutorialTargeted=!!battleTutorialCardTarget&&battleTutorialCardKind(c)===battleTutorialCardTarget;
-              const handCardButton=(<button data-hand-card={i} data-dragging-card={isDragging?'true':undefined} data-card-cost={requiredGuts} data-card-type={c.type} data-card-usable={isSelectable?'true':'false'} data-card-block={cardBlock&&!cardBlock.ok?cardBlock.kind:undefined} onPointerDown={(e)=>{
+              const cardArt=tacticsNewLayout&&battleCardArtOn()?battleCardArtOf(c):null;
+              const handCardButton=(<button data-hand-card={i} data-card-art={cardArt?'on':undefined} data-dragging-card={isDragging?'true':undefined} data-card-cost={requiredGuts} data-card-type={c.type} data-card-usable={isSelectable?'true':'false'} data-card-block={cardBlock&&!cardBlock.ok?cardBlock.kind:undefined} onPointerDown={(e)=>{
                 if(isBusy||autoBattleRef.current||!tutorialAllowed)return;
                 const pt=e.touches?e.touches[0]:e;
                 cardDragActiveRef.current=false;
@@ -2779,7 +2825,12 @@ function BattleScreen({
                     金の縁(回る光)・種類ごとの地の模様・ときどき横切る光の筋・左上の消費ガッツの宝石。
                     見た目は data-tactics-look の CSS(70-bootstrap)がまとめて持つ。★消費ガッツはこの宝石だけに出す
                     (下のガッツの段と二重になっていた・ユーザー指摘「消費ガッツが2つある」) */}
-                {tacticsNewLayout&&<><span aria-hidden="true" data-card-pattern={(tacticsCardGenre&&tacticsCardGenre(c))||''}/><span aria-hidden="true" data-card-shine/><span aria-hidden="true" data-card-frame/><span data-card-gem aria-label={`消費ガッツ ${curGuts}`}>{curGuts}</span></>}
+                {tacticsNewLayout&&!cardArt&&<><span aria-hidden="true" data-card-pattern={(tacticsCardGenre&&tacticsCardGenre(c))||''}/><span aria-hidden="true" data-card-shine/><span aria-hidden="true" data-card-frame/><span data-card-gem aria-label={`消費ガッツ ${curGuts}`}>{curGuts}</span></>}
+                {/* 行動カードの絵: 枠(カード全体)・左上の小さい丸にガッツ・上の大きい丸に技のマークと段階の札(位置は枠の絵の穴に合わせた割合。index.html の .mh-card-art-*) */}
+                {cardArt&&<><img aria-hidden="true" data-card-art-frame src={cardArt.frame} alt="" draggable={false} className="mh-card-art-frame"/><span data-card-gem data-card-art-gem aria-label={`消費ガッツ ${curGuts}`} className="mh-card-art-gem">{curGuts}</span>
+                  {cardArt.mark&&<img aria-hidden="true" data-card-art-mark src={cardArt.mark} alt="" draggable={false} className="mh-card-art-mark"/>}
+                  {!cardArt.mark&&<span aria-hidden="true" data-card-art-icon className="mh-card-art-icon">{cardIconNode(c.icon,26,c.id)}</span>}
+                  {cardArt.roman&&<span data-card-art-roman={cardArt.roman} className="mh-card-art-roman">{cardArt.roman}</span>}</>}
                 {discardCards&&discardCards.includes(i)&&(<div data-card-discard className="absolute inset-0 z-30 flex items-center justify-center rounded-[inherit] bg-black/60 text-[12px] font-black text-amber-200">捨てる</div>)}
                 {isSel&&!assignedMon&&(<div className={`absolute top-0.5 ${tacticsNewLayout?'right-0.5':'left-0.5'} z-30 w-5 h-5 rounded-full bg-cyan-400 border-2 border-white flex items-center justify-center shadow-lg`}><Check size={10} className="text-white" strokeWidth={4}/></div>)}
                 {assignedMon&&(<div className="absolute top-0.5 right-0.5 z-30 w-5 h-5 rounded-full bg-indigo-600 border-2 border-white flex items-center justify-center overflow-hidden shadow-lg">{assignedMon.imgUrl?<img src={assignedMon.imgUrl} alt="" className="w-full h-full object-contain"/>:<span className="text-[10px]">{assignedMon.emoji}</span>}</div>)}
