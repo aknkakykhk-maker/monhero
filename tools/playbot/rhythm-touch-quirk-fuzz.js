@@ -31,6 +31,7 @@ const QUIRKS = [
   ['end-extra-changed', '地上の指を離す touchend の changedTouches に、離していない空中の指まで入っている(touches は正しい)'],
   ['touches-drop-on-end', '地上の指を離す touchend の touches から空中の指が抜けている(次の touchmove では戻る)'],
   ['touches-drop-on-start', '地上の指の touchstart の touches に空中の指が入っていない(次の touchmove では戻る)'],
+  ['touches-drop-still', '地上の指の touchstart の touches に空中の指が入らず、そのあと空中の指は 90ms 動かない(指をじっと置いている・ビート部の再現と同じ形)'],
   ['touches-drop-move', '空中の指の touchmove の途中で1回だけ touches が空(次では戻る)'],
   ['touches-dup', '地上の指の touchstart の touches に空中の指が2回入っている'],
   ['start-end-same-frame', '地上の指の touchstart と touchend が同じコマに続けて届く'],
@@ -152,6 +153,7 @@ const runner = async ([songId, quirkNames, repeat, listOnly, tapdx, skip]) => {
       case 'end-extra-changed': at(gDown, () => down(F2, gp)); groundMoves(); at(gUp, () => up(F2, gUpPos, { extraChanged: [F1] })); break;
       case 'touches-drop-on-end': at(gDown, () => down(F2, gp)); groundMoves(); at(gUp, () => up(F2, gUpPos, { drop: [F1] })); break;
       case 'touches-drop-on-start': at(gDown, () => down(F2, gp, { drop: [F1] })); groundMoves(); at(gUp, () => up(F2, gUpPos)); break;
+      case 'touches-drop-still': at(gDown, () => down(F2, gp, { drop: [F1] })); groundMoves(); at(gUp, () => up(F2, gUpPos)); p.follow.pauseFrom = gDown; p.follow.pauseTo = gDown + 90; break;
       case 'touches-drop-move': at(gDown, () => down(F2, gp)); groundMoves(); at(gUp, () => up(F2, gUpPos)); p.follow.dropAt = gDown + 30; break;
       case 'touches-dup': at(gDown, () => down(F2, gp, { dup: [F1] })); groundMoves(); at(gUp, () => up(F2, gUpPos)); break;
       case 'start-end-same-frame': at(gDown, () => { down(F2, gp); up(F2, gUpPos); }); break;
@@ -213,6 +215,7 @@ const runner = async ([songId, quirkNames, repeat, listOnly, tapdx, skip]) => {
         for (const p of plan) {
           const f = p.follow;
           if (!f || f.flick || ms < f.from || ms >= f.to || !live.has(f.id)) continue;
+          if (f.pauseFrom != null && ms >= f.pauseFrom && ms < f.pauseTo) continue;   // 指をじっと置いている(合図を送らない)
           const pos = slidePos(f.sc, ms, p.skMul || 1);
           const o = {};
           if (f.dropAt && ms >= f.dropAt && !f.dropped) { f.dropped = true; o.drop = [f.id, ...[...live.keys()].filter((x) => x !== f.id)]; }
