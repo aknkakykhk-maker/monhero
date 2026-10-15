@@ -174,6 +174,33 @@ check('1人1件に絞るときも同じ並べ方を使い、サーバーから�
   data.includes('if(!cur||rhythmRankingCompareRows(r,cur)<0)byUser.set(name,r);')
   &&data.includes('return [...byUser.values()].sort(rhythmRankingCompareRows);')
   &&game.includes('&order=score.desc.nullslast,created_at.asc&limit=${limit}&offset=${offset}'));
+// 総合・週間・イベントの同点(2026-10-15・社長の決定「案2」)。本物の並べ直しを取り出し、偽の通信で確かめる
+const tieDone=(async()=>{
+  const at=game.indexOf('const RHYTHM_TIE_PAD = 20;'),end=game.indexOf('const rhythmTieWanted =',at);
+  const pick=(name)=>(data.match(new RegExp(`^const ${name}=.*$`,'m'))||[''])[0];
+  const make=(reply)=>new Function('fetch',`const SUPABASE_URL='x',SB_HEADERS={},rankingLog=()=>{};\n${pick('rhythmRankingRowPrecise')}\n${at>=0&&end>at?game.slice(at,end):''}\nreturn {rhythmTieFix,asked:()=>_rhythmPreciseUnavailable};`)(reply);
+  const rows=[{identity_key:'a',total_score:900,last_scored_at:'2026-10-14T01:00:00Z'},{identity_key:'b',total_score:900,last_scored_at:'2026-10-14T02:00:00Z'},
+    {identity_key:'c',total_score:800,last_scored_at:'2026-10-14T00:00:00Z'},{identity_key:'d',total_score:900,last_scored_at:'2026-10-14T03:00:00Z'}];
+  const ok=async(body)=>({ok:true,status:200,text:async()=>JSON.stringify(body)});
+  let sent=null;
+  const T=make(async(url,opt)=>{sent={url,body:JSON.parse(opt.body)};return ok([{identity_key:'b',total_precise:30},{identity_key:'d',total_precise:30},{identity_key:'a',total_precise:10}]);});
+  const fixed=await T.rhythmTieFix({rows,limit:3,scoreKey:'total_score',timeKey:'last_scored_at',fn:'rhythm_week_precise',body:{from_at:'f',to_at:'t'},requestId:'x'});
+  check('同点は JUST MARVELOUS の多い順 → 先に出した順。表示の件数に切る',fixed.map(r=>r.identity_key).join()==='b,d,a',fixed.map(r=>r.identity_key).join());
+  check('聞くのは同点の人だけ・期間も渡す',sent&&sent.url.includes('rpc/rhythm_week_precise')&&sent.body.identity_keys.sort().join()==='a,b,d'&&sent.body.from_at==='f');
+  const M=make(async()=>({ok:false,status:404,text:async()=>'{"code":"PGRST202"}'}));
+  const old=await M.rhythmTieFix({rows,limit:3,scoreKey:'total_score',timeKey:'last_scored_at',fn:'rhythm_total_precise',requestId:'x'});
+  check('SQL を当てる前(関数が無い)は、いままでの並びのまま・以後は聞かない',old.map(r=>r.identity_key).join()==='a,b,c'&&M.asked()===true);
+  let called=0;
+  const N=make(async()=>{called++;return ok([]);});
+  const uniq=await N.rhythmTieFix({rows:[rows[0],rows[2]],limit:5,scoreKey:'total_score',timeKey:'last_scored_at',fn:'rhythm_total_precise',requestId:'x'});
+  check('同点が無ければ聞きに行かない',called===0&&uniq.length===2);
+  const song=await N.rhythmTieFix({rows:[{identity_key:'a',score:5,scored_at:'2026-10-14T01:00:00Z',party:[{precise:1}]},{identity_key:'b',score:5,scored_at:'2026-10-14T02:00:00Z',party:[{precise:7}]}],limit:5,scoreKey:'score',timeKey:'scored_at',requestId:'x'});
+  check('イベントの曲ごとは行の内訳(party)から読む(通信しない)',called===0&&song.map(r=>r.identity_key).join()==='b,a');
+  check('総合・週間・イベント総合・イベントの曲ごとの4つが並べ直しを通り、自分の行だけを取るときは通さない',
+    ['rhythm_total_precise','rhythm_week_precise','rhythm_event_precise'].every(fn=>game.includes(`fn: '${fn}'`))
+    &&(game.match(/if \(!rhythmTieWanted\(identityKeys\)\) return sbFetchRhythm\w+Raw\(options\);/g)||[]).length===4
+    &&(game.match(/limit: limit \+ RHYTHM_TIE_PAD/g)||[]).length===4);
+})().catch(e=>check('同点の並べ直しを確かめられる',false,String(e)));
 check('ページ送りに上限(RHYTHM_RANKING_MAX_PAGES)があり、無限に取得し続けない',
   data.includes('const RHYTHM_RANKING_MAX_PAGES=10;'));
 check('sbInsertRhythmScore/sbFetchRhythmRankingsは、既存モードが必ず経由するnormalizeRankingDifficultyを呼んでいない(検証を共有しない)',(()=>{
@@ -269,5 +296,7 @@ check('更新履歴に記載がある',changelog.includes('全国ランキング
 check('仕様書に保存の仕組み(新テーブル・新列なし)を記載',
   docs.includes('全国ランキング')&&docs.includes('Rhythm-<songId>-<難易度id>')&&docs.includes('新テーブル・新列'));
 
+tieDone.then(()=>{
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
 process.exit(failed?1:0);
+});

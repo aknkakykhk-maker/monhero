@@ -103,6 +103,19 @@ EASY まで含めて全部埋めた人が強くなる＝作業量が順位にな
 現行の曲別ランキングは同点処理を持たない（取得順に並ぶ）が、合算は同点が起きやすいので
 ここだけ決めておく。既存の曲別ランキングの並びには手を触れない。
 
+**2026-10-15 から(社長の決定「案2」)**: 曲別(「この曲」・#3030)と同じく、合計点が同じなら
+**JUST MARVELOUS の合計が多いほうを上**、それも同じなら上の「先に到達したほう」。週間(§6)・イベント(§7)の総合も同じ。
+
+- JUST MARVELOUS は記録の `party[0].precise`。無い・壊れている記録は 0
+- 数え方: 総合・イベント総合は「曲ごとのベスト1件」(同じ点が2件あれば JM の多いほう)の合計、週間は期間中の記録すべての合計。
+  イベントの曲ごとの部門は行の `party` から読む
+- 既存のビュー・関数(`rhythm_total_rankings` / `rhythm_week_score_totals` / `rhythm_event_totals(_bonus)`)は変えない。
+  新しい関数 `rhythm_total_precise` / `rhythm_week_precise` / `rhythm_event_precise`(と `rhythm_party_precise`)を足しただけ
+  (`docs/sql/rankings/RHYTHM_JM_TIEBREAK_APPLY.sql`・検査 `tools/ranking/rhythm-jm-tiebreak-sql-check.js`)
+- アプリ(26-supabase.jsx `rhythmTieFix`)は上位を `RHYTHM_TIE_PAD`(20)件多めに取り、同点の人の JM 合計だけを新しい関数に聞いて
+  同じ点の中を並べ直してから表示の件数に切る。関数が無い(SQL 適用前)・通信の失敗では、いままでの並びのまま出す。
+  報酬の順位を決める取得も同じ経路を通る。自分の行だけを取る取得(圏外の自分)は並べ直さない
+
 ### 3.4 一覧に出す項目
 
 | 項目 | 内容 |
