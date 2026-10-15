@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 057c78d88b34a196
+// source-sha256: c8a797d07d61a398
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-15 21:36";
+const BUILD_DATE = "2026-10-15 22:05";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -36615,6 +36615,32 @@ const RhythmTapTest = ({
       applyJudgment(target, judgment, deltaMs);
     });
   };
+  const takeHeldFlick = (inputKey, subLane, subLaneCoordinate) => {
+    const run = runRef.current;
+    if (!run || run.finished || run.paused) return;
+    const heldIndex = run.activePointers.get(inputKey),
+      held = heldIndex === undefined ? null : run.notes[heldIndex];
+    if (!held || held.done || held.type !== 'HOLD') return;
+    const songNow = run.audio.songTimeMs(),
+      offset = settings.judgmentTimingOffsetMs;
+    if (songNow < Number(held.endTimeMs) + offset - RHYTHM_RELEASE_MAX_MS) return;
+    const flick = run.notes.find(n => n && !n.done && n.type === 'FLICK' && n.activePointerId === null && Math.abs(songNow - (Number(n.timeMs) + offset)) <= RHYTHM_INPUT_MATCH_WINDOW_MS && (() => {
+      const span = rhythmProjectSubLaneSpan(n.subLane, n.subLaneWidth, 1),
+        tol = span.subLaneWidth <= 1 ? RHYTHM_NARROW_TAP_TOLERANCE_SUB_LANES : RHYTHM_TAP_TOLERANCE_SUB_LANES;
+      return subLaneCoordinate >= span.subLane - tol && subLaneCoordinate <= span.subLane + span.subLaneWidth + tol;
+    })());
+    if (!flick) return;
+    inputEnds([{
+      inputKey
+    }]);
+    inputStarts([{
+      lane: Math.floor(subLane / 2),
+      subLaneCoordinate,
+      inputKey,
+      rejudge: true,
+      flickOnly: true
+    }]);
+  };
   const inputMoves = (inputKey, subLaneCoordinate) => {
     const run = runRef.current,
       state = run?.inputFeedbackState?.get(inputKey);
@@ -36630,7 +36656,7 @@ const RhythmTapTest = ({
       subLaneCoordinate,
       inputKey,
       rejudge: true
-    }]);
+    }]);else if (typeof takeHeldFlick === 'function') takeHeldFlick(inputKey, subLane, subLaneCoordinate);
   };
   const standbyFingerFor = (run, noteIndex, exceptKey) => {
     for (const [key, index] of run.standbyPointers) {

@@ -203,6 +203,7 @@
   "mode/rhythm-hand-restrike-check.js",
   "mode/rhythm-help-structure-check.js",
   "mode/rhythm-hold-handover-check.js",
+  "mode/rhythm-held-finger-owner-check.js",
   "mode/rhythm-hold-head-check.js",
   "mode/rhythm-input-cost-check.js",
   "mode/rhythm-input-edge-check.js",
