@@ -100,7 +100,8 @@ async function enterTactics(s, { mode, difficulty = 'keep', stats = {}, ctx = nu
       const before = await page.evaluate(() => (document.querySelector('article[data-difficulty-card].on') || {}).getAttribute?.('data-difficulty-card') || '');
       const moved = await page.evaluate(() => { const b = document.querySelector('button[aria-label="前の難易度"]'); if (!b || b.disabled) return false; b.click(); return true; });
       if (!moved) break;
-      for (let w = 0; w < 15; w++) {
+      // 3本並べで重いときは切り替えが遅い(2026-10-15 セコンドくん: no-difficulty:Expert で入れなかった)。1つあたり最大4.5秒待つ
+      for (let w = 0; w < 30; w++) {
         await s.wait(150);
         const now = await page.evaluate(() => (document.querySelector('article[data-difficulty-card].on') || {}).getAttribute?.('data-difficulty-card') || '');
         if (now !== before) break;
@@ -115,7 +116,7 @@ async function enterTactics(s, { mode, difficulty = 'keep', stats = {}, ctx = nu
       if (key === difficulty) break;
       const moved = await page.evaluate(() => { const b = document.querySelector('button[aria-label="次の難易度"]'); if (!b || b.disabled) return false; b.click(); return true; });
       if (!moved) break;
-      for (let w = 0; w < 15 && (await onKey()) === key; w++) await s.wait(150);
+      for (let w = 0; w < 30 && (await onKey()) === key; w++) await s.wait(150);
     }
     if ((await onKey()) !== difficulty) return `no-difficulty:${difficulty}`;
   }
