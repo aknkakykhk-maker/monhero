@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 927d078bb4c44a6e
+// source-sha256: 3434f23fae5c5bf9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-15 13:09";
+const BUILD_DATE = "2026-10-15 14:53";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -61631,7 +61631,7 @@ const BATTLE_CARD_NAME_BREAKS = Object.freeze({
   'ナイトサンダー': 'ナイト|サンダー',
   'エクリプスキッス': 'エクリプス|キッス',
   'コンビネーション': 'コンビ|ネーション',
-  'ドリルコンビネーション': 'ドリル|コンビネーション',
+  'ドリルコンビネーション': 'ドリル|コンビ|ネーション',
   '大たおれこみ': '大|たおれこみ',
   '超たおれこみ': '超|たおれこみ',
   'アイスブレード': 'アイス|ブレード',
@@ -61670,7 +61670,7 @@ const BATTLE_CARD_NAME_BREAKS = Object.freeze({
   'アサルトライジング': 'アサルト|ライジング',
   '絶影桜華乱舞': '絶影|桜華乱舞',
   '絶華緋閃・零桜': '絶華緋閃・|零桜',
-  'スターバースト・ストリーム': 'スターバースト・|ストリーム',
+  'スターバースト・ストリーム': 'スター|バースト・|ストリーム',
   'アイスコフィン': 'アイス|コフィン',
   'アクアブラスト': 'アクア|ブラスト',
   'メリークリスマス': 'メリー|クリスマス',
@@ -61692,6 +61692,9 @@ const BATTLE_CARD_NAME_BREAKS = Object.freeze({
   '祈れ輪廻の環よ': '祈れ|輪廻の環よ',
   '裁きの光よ下れ': '裁きの光よ|下れ',
   '今こそ真なる目醒め': '今こそ|真なる目醒め',
+  'ピアノパラソル脳天撃': 'ピアノ|パラソル|脳天撃',
+  'メロディキャンディボム': 'メロディ|キャンディ|ボム',
+  'ナイトメアらっきょうボム': 'ナイトメア|らっきょう|ボム',
   '聖夜の鐘を鳴響け': '聖夜の鐘を|鳴響け',
   '終焉に救いを与えよ': '終焉に|救いを与えよ',
   '永劫の贖いを全うせよ': '永劫の贖いを|全うせよ'
@@ -61739,11 +61742,15 @@ const battleCardNameLines = (name, per = BATTLE_CARD_NAME_PER_LINE) => {
   const more = t => [...t].length >= 8 ? battleCardNameLines(t, per) : [t];
   return [...more(head), ...more(tail)];
 };
+const battleCardNameUnits = line => [...String(line || '')].reduce((n, ch) => n + (/[\x20-\x7e]/.test(ch) ? 0.62 : 1), 0);
 const battleCardNameFit = name => {
-  const longest = Math.max(1, ...battleCardNameLines(name).map(l => [...l].length));
+  const lines = battleCardNameLines(name);
+  const longest = Math.max(1, ...lines.map(battleCardNameUnits));
+  const lh = lines.length >= 3 ? 1.02 : 1.12;
+  const tall = (lines.length * lh).toFixed(2);
   return {
-    fontSize: `clamp(7px, calc((100cqw - 11px) / ${longest}), 10px)`,
-    lineHeight: '1.15',
+    fontSize: `clamp(6px, min(calc((100cqw - 1.5px) / ${longest.toFixed(2)}), calc((100cqh - 5px) / ${tall})), 10px)`,
+    lineHeight: String(lh),
     whiteSpace: 'nowrap'
   };
 };
@@ -61752,12 +61759,14 @@ const battleCardArtOf = c => {
   const base = battleCardArtBaseOf(c);
   if (!base) return null;
   const F = BATTLE_CARD_ART.frames,
-    P = BATTLE_CARD_ART.plates || {};
+    P = BATTLE_CARD_ART.plates || {},
+    R = BATTLE_CARD_ART.rules || {};
   const color = Object.keys(F).find(k => F[k] === base.frame) || 'purple';
   return {
     ...base,
     color,
-    plate: P[color] || null
+    plate: P[color] || null,
+    rule: R[color] || null
   };
 };
 const battleCardArtBaseOf = c => {
@@ -61815,7 +61824,7 @@ let battleCardArtPreloaded = false;
 const preloadBattleCardArt = () => {
   if (battleCardArtPreloaded || typeof BATTLE_CARD_ART === 'undefined' || typeof Image === 'undefined') return;
   battleCardArtPreloaded = true;
-  [...Object.values(BATTLE_CARD_ART.frames), ...BATTLE_CARD_ART.atk, ...BATTLE_CARD_ART.guard, ...BATTLE_CARD_ART.range, ...Object.values(BATTLE_CARD_ART.plates || {})].forEach(src => {
+  [...Object.values(BATTLE_CARD_ART.frames), ...BATTLE_CARD_ART.atk, ...BATTLE_CARD_ART.guard, ...BATTLE_CARD_ART.range, ...Object.values(BATTLE_CARD_ART.plates || {}), ...Object.values(BATTLE_CARD_ART.rules || {})].forEach(src => {
     try {
       const im = new Image();
       im.decoding = 'async';
@@ -66704,6 +66713,9 @@ function BattleScreen({
         ...(cardArt && cardArt.plate ? {
           '--mh-plate': `url("${cardArt.plate}")`
         } : {}),
+        ...(cardArt && cardArt.rule ? {
+          '--mh-name-rule': `url("${cardArt.rule}")`
+        } : {}),
         ...(isDragging ? {
           touchAction: 'none',
           position: 'fixed',
@@ -66796,12 +66808,14 @@ function BattleScreen({
       className: "text-[11px] font-black leading-[13px] w-full whitespace-normal flex items-center justify-center overflow-hidden px-0.5",
       style: {
         height: tacticsNewLayout ? HAND_CARD_FIT.nameRich : HAND_CARD_FIT.name,
-        ...handCardNameFit(c.name, tacticsNewLayout ? HAND_CARD_FIT.nameRich : HAND_CARD_FIT.name),
-        ...(cardArt ? battleCardNameFit(c.name) : {})
+        ...handCardNameFit(c.name, tacticsNewLayout ? HAND_CARD_FIT.nameRich : HAND_CARD_FIT.name)
       }
-    }, cardArt ? battleCardNameLines(c.name).map((l, k) => React.createElement(React.Fragment, {
+    }, cardArt ? React.createElement("span", {
+      "data-card-name-text": true,
+      style: battleCardNameFit(c.name)
+    }, battleCardNameLines(c.name).map((l, k) => React.createElement(React.Fragment, {
       key: k
-    }, k > 0 && React.createElement("br", null), l)) : c.name), (() => {
+    }, k > 0 && React.createElement("br", null), l))) : c.name), (() => {
       const genre = tacticsCardGenre ? tacticsCardGenre(c) : null;
       const scope = tacticsCardScope ? tacticsCardScope(c) : null;
       const text = genre ? scope && scope !== '敵へ' ? `${genre}・${scope}` : genre : '';

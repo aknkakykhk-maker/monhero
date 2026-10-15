@@ -38,11 +38,11 @@ check('① 弱いガードは緑(守りの1段目・札なし)・固有技は金
   && bf.frame === A.frames.purple && un.frame === A.frames.gold && un.shape === 'gold' && atk(0).shape === 'std' && bf.mark === null && hl.frame === A.frames.purple);
 
 // ③
-const files = [...Object.values(A.frames), ...A.atk, ...A.guard, ...A.range, ...Object.values(A.plates || {})].map(strip);
+const files = [...Object.values(A.frames), ...A.atk, ...A.guard, ...A.range, ...Object.values(A.plates || {}), ...Object.values(A.rules || {})].map(strip);
 const missing = files.filter((f) => !fs.existsSync(path.join(root, 'monster-hero', f)));
 check('③ 絵がすべて実在し、webp で images/ui/ に置いてある', missing.length === 0 && files.every((f) => /^images\/ui\/battle-cards\/.+\.webp$/.test(f)), missing.join(', '));
 const total = files.reduce((n, f) => n + (fs.existsSync(path.join(root, 'monster-hero', f)) ? fs.statSync(path.join(root, 'monster-hero', f)).size : 0), 0);
-check('③ 32枚(枠5・マーク22・名札5)の合計が 600KB 以下(原本のまま入れていない)', files.length === 32 && total <= 600 * 1024, `${Math.round(total / 1024)}KB`);
+check('③ 37枚(枠5・マーク22・名札5・飾り線5)の合計が 600KB 以下(原本のまま入れていない)', files.length === 37 && total <= 600 * 1024, `${Math.round(total / 1024)}KB`);
 check('③ images/ui/ は事前ダウンロードのよく使う画面の画像に入る', /const ASSET_CORE_PREFIXES = \[[^\]]*'images\/ui\/'/.test(read('monster-hero/src/parts/25-asset-cache.jsx')));
 
 // ⑤ 名札(2026-10-15)
@@ -51,8 +51,15 @@ check('⑤ 名札は枠と同じ色(攻撃=赤・距離撃=青・守り=緑・�
   plateOf({ type: 'atk', ...ctx.BASE_ATK_EVOLUTION[0] }).endsWith('plate-red.webp') && plateOf({ type: 'range_atk', rangeIdx: 0, name: `零${ctx.RANGE_EVOLUTION[0].name}` }).endsWith('plate-blue.webp')
   && plateOf({ type: 'guard', ...ctx.GUARD_EVOLUTION[0] }).endsWith('plate-green.webp') && plateOf({ type: 'buff' }).endsWith('plate-purple.webp') && plateOf({ type: 'unique' }).endsWith('plate-gold.webp'));
 const htmlSrc = read('monster-hero/index.html');
-check('⑤ 名札は9分割で真ん中だけ伸ばす(border-image)・金の名札は濃い字', /border-image-source: var\(--mh-plate\); border-image-slice: 11 27 fill;/.test(htmlSrc) && /\[data-card-plate="gold"\] \[data-card-name\][^{]*\{ color: #241000/.test(htmlSrc));
-check('⑤ 名札もバトル前に読み込む', /\.\.\.Object\.values\(BATTLE_CARD_ART\.plates \|\| \{\}\)\]/.test(battle));
+check('⑤ 名札は9分割で真ん中だけ伸ばす(border-image)・金の名札は濃い字', /border-image-source: var\(--mh-plate\); border-image-slice: 11 27 fill;/.test(htmlSrc) && /\[data-card-plate="gold"\] \[data-card-name\] \{ color: #3a1f04/.test(htmlSrc));
+// ⑦ 文字の置き場(2026-10-15 社長「枠にかぶらないように」)。はみ出さないかは card-name-fit-browser-check.js が420件を置いて見る
+check('⑦ 名前の欄は左右をカード幅の10%ずつ下げた置き場(中の面の宝石より内側)・大きさの基準・下に飾り線の場所 5px',
+  /\[data-card-plate\] \[data-card-name\] \{[^}]*padding: 1px 10cqw !important;[^}]*container-type: size;/.test(htmlSrc)
+  && /\[data-card-plate\] \[data-card-name\]::after \{ content: ''; flex: none; width: 100%; height: 5px; background: var\(--mh-name-rule, none\)/.test(htmlSrc));
+check('⑦ 字の大きさは置き場の幅・高さ(cqw/cqh)から決め、飾り線の 5px を先に引く', /calc\(\(100cqw - 1\.5px\) \/ \$\{longest\.toFixed\(2\)\}\), calc\(\(100cqh - 5px\) \/ \$\{tall\}\)/.test(battle)
+  && /<span data-card-name-text style=\{battleCardNameFit\(c\.name\)\}>/.test(battle));
+check('⑤ 名札・飾り線もバトル前に読み込む', /\.\.\.Object\.values\(BATTLE_CARD_ART\.plates \|\| \{\}\), \.\.\.Object\.values\(BATTLE_CARD_ART\.rules \|\| \{\}\)\]/.test(battle));
+check('⑤ 飾り線は枠と同じ色(rule-赤/青/緑/紫/金)を --mh-name-rule で渡す', ['red', 'blue', 'green', 'purple', 'gold'].every((k) => strip(A.rules && A.rules[k]).endsWith(`rule-${k}.webp`)) && /'--mh-name-rule':`url\("\$\{cardArt\.rule\}"\)`/.test(battle));
 
 // ⑥ 名前の折り返し(2026-10-15 社長「言葉の切れ目で折って」)。手札に出る名前を全部折ってみる
 {
