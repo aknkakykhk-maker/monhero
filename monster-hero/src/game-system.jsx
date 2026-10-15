@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ed029b2c7d32663e
+// generated-sha256: 9112b2c0b2205562
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-15 20:07"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-15 20:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4475,6 +4475,13 @@ const RHYTHM_ROAD_WIDTH_LABELS = Object.freeze([['WIDE','広い'],['STANDARD','�
 //   2026-09-13・ユーザー指示「段を増やして更に標準をもっと軽くする」。
 //   名前は重さの順に読めるようにそろえてある(既定が「標準」なのは前の指示のまま)。
 const RHYTHM_EFFECT_LABELS = Object.freeze([['NORMAL','最大'],['LOW','多め'],['LIGHT','標準'],['MINIMAL','最小']]);
+// 押したときの光(2026-10-15・社長「演出量を最小にしても、フリックとかのタップ時の光は出る設定がほしい」)。
+// AUTO   … 演出量に合わせる(これまでどおり。演出量「最小」・軽量モードでは出さない)
+// ALWAYS … 演出量「最小」・軽量モードでも、判定ラインで弾ける光だけは出す(ほかの演出は止めたまま)
+const RHYTHM_TAP_LIGHT_MODES = Object.freeze(['AUTO','ALWAYS']);
+const RHYTHM_TAP_LIGHT_LABELS = Object.freeze([['AUTO','おまかせ'],['ALWAYS','いつも出す']]);
+// 「最小」・軽量モードのせいで止まっている光を、この設定で出すときだけ真(ふだんの段では、もともと光が出ているので偽)
+const rhythmTapLightOnly = settings => !!settings&&settings.tapLight==='ALWAYS'&&(settings.lightweightMode===true||settings.effectAmount==='MINIMAL');
 // 演奏中に1秒あたり何回描くか(2026-09-24・ユーザーと相談して決めた)。
 // POWER_SAVE … 120Hz以上の画面では1回おきに描き、毎秒60回ほどに抑える。発熱と電池を抑える。
 //   90Hzの画面は抑えない(60へ落とすと 11ms/22ms が交互に並び、かえってガタついて見える)。
@@ -4536,10 +4543,14 @@ const RHYTHM_AUTO_EFFECT_STEPS = Object.freeze([
   s=>s.judgmentFx||s.comboMilestoneFx?{judgmentFx:false,comboMilestoneFx:false}:null,
   s=>s.stageEffect==='VIVID'?{stageEffect:'CALM'}:null,
   s=>s.stageEffect==='CALM'?{stageEffect:'SIMPLE'}:null,
+  // 設定「押したときの光」の「いつも出す」(2026-10-15)。ノーツの canvas へ描く既定の描き方では、測って軽かったので下げない
+  // (実際の演奏・CPU 4倍遅くした状態の30秒で、演出量「最小」のまま光を足しても 33ms をこえたコマは 25→21 本で増えなかった)。
+  // 画面の要素で光らせる描き方(デバッグの設定で選んだとき)だけは、レイアウトと見た目の計算が 1.2秒→4.1秒、33ms をこえたコマが 23→65 本に増えたので、ここで止める
+  s=>s.tapLight==='ALWAYS'&&typeof rhythmCanvasHitsActive==='function'&&!rhythmCanvasHitsActive()?{tapLight:'AUTO'}:null,
 ]);
 const rhythmCapEffects = (settings,level) => {let out=settings;for(let i=0;i<Math.min(Number(level)||0,RHYTHM_AUTO_EFFECT_STEPS.length);i++){const patch=RHYTHM_AUTO_EFFECT_STEPS[i](out);if(patch)out={...out,...patch};}return out;};
 // 段ごとの名前(デバッグの性能計測に「何を下げたか」を出すためだけに使う。並びは RHYTHM_AUTO_EFFECT_STEPS と同じ)
-const RHYTHM_AUTO_EFFECT_STEP_LABELS = Object.freeze(['にじむ光','ライブ→派手','道の演出・ノーツの動き・盛り上がりの光','判定の演出・コンボの節目','派手→控えめ','控えめ→シンプル']);
+const RHYTHM_AUTO_EFFECT_STEP_LABELS = Object.freeze(['にじむ光','ライブ→派手','道の演出・ノーツの動き・盛り上がりの光','判定の演出・コンボの節目','派手→控えめ','控えめ→シンプル','押したときの光(画面の要素で描くとき)']);
 // 次に下げる段(当てるものがある段)。もう下げるものが無ければ null
 const rhythmNextEffectCap = (settings,level) => {const now=rhythmCapEffects(settings,level);for(let i=Math.max(0,Number(level)||0);i<RHYTHM_AUTO_EFFECT_STEPS.length;i++){if(RHYTHM_AUTO_EFFECT_STEPS[i](now))return i+1;}return null;};
 // 対戦の演出の段階。見た目のおまかせの id と、自分の設定のまま(OWN)
@@ -4730,6 +4741,8 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   hudSongFade:true,
   // 重いときは演出を自動で控えめにする(2026-09-27)。演奏中にカクつき続けたら、重い演出から一段ずつ下げる(保存値は変えない)。既定は ON
   autoEffectDown:true,
+  // 押したときの光(2026-10-15)。新しい項目なので、保存値に無い人は「おまかせ」(これまでの見え方)で補う
+  tapLight:'AUTO',
   // 背景の演出(2026-09-24)。既存の保存値には無いので、読み込み時は既定で補われる。
   // ★既定は「シンプル」(=これまでの見た目)。一度は派手を既定にしたが、実機で
   //   「タップ感度が悪くなってる気がする」と言われ、上と同じ指示で元へ戻した
@@ -4807,6 +4820,7 @@ const normalizeRhythmSettings = value => {
     judgmentAtTap:typeof source.judgmentAtTap==='boolean'?source.judgmentAtTap:DEFAULT_RHYTHM_SETTINGS.judgmentAtTap,
     hudSongFade:typeof source.hudSongFade==='boolean'?source.hudSongFade:DEFAULT_RHYTHM_SETTINGS.hudSongFade,
     autoEffectDown:typeof source.autoEffectDown==='boolean'?source.autoEffectDown:DEFAULT_RHYTHM_SETTINGS.autoEffectDown,
+    tapLight:RHYTHM_TAP_LIGHT_MODES.includes(source.tapLight)?source.tapLight:DEFAULT_RHYTHM_SETTINGS.tapLight,
     stageEffect:RHYTHM_STAGE_EFFECTS.includes(source.stageEffect)?source.stageEffect:DEFAULT_RHYTHM_SETTINGS.stageEffect,
     laneCover:rhythmFiniteStep(source.laneCover,RHYTHM_LANE_COVER_MIN,RHYTHM_LANE_COVER_MAX,RHYTHM_LANE_COVER_STEP,DEFAULT_RHYTHM_SETTINGS.laneCover),
     timingDisplay:RHYTHM_TIMING_DISPLAYS.includes(source.timingDisplay)?source.timingDisplay:DEFAULT_RHYTHM_SETTINGS.timingDisplay,
@@ -18793,7 +18807,10 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
                 「重い」との声)。判定文字の金の帯・虹の流れは毎フレーム字を塗り直すので、
                 動きがカクつく端末ではここがいちばん効く */}
 {field('演出量',segments('effectAmount',RHYTHM_EFFECT_LABELS),
-              '重い順に「最大」「多め」「標準」「最小」の4段で、既定は「標準」です。判定・判定窓・スコアはどの段でも変わりません。\n「最大」＝2026-09-13より前の見た目そのまま。判定文字の金色の帯や虹が流れ、判定ラインが拍に合わせて脈打ち、コンボ数が跳ね、両サイドのマスモンも跳ねます。\n「多め」＝判定文字の流れと光のにじみだけ止めます（色・大きさはそのまま）。\n「標準」＝それに加えて、曲のあいだずっと動き続けるものを止めます。判定ラインの脈打ち、コンボ数の跳ねと枠の脈動、判定文字が出た瞬間に弾む動き、ノーツを取り切ったときの光です。判定ラインで弾ける光・100コンボごとのお祝い・フルコンボの大きな表示は残るので、手ごたえは変わりません。両サイドのマスモンの動きはここでは変わりません（専用の「両サイドのマスモン｜動き」で決めます）。\n「最小」＝光そのものと100コンボごとの演出も出なくなります。高精細な画面では、ノーツを描く細かさも3倍から2倍に下げて軽くします（見た目はほんの少しやわらかくなります）。',{full:true})}
+              '重い順に「最大」「多め」「標準」「最小」の4段で、既定は「標準」です。判定・判定窓・スコアはどの段でも変わりません。\n「最大」＝2026-09-13より前の見た目そのまま。判定文字の金色の帯や虹が流れ、判定ラインが拍に合わせて脈打ち、コンボ数が跳ね、両サイドのマスモンも跳ねます。\n「多め」＝判定文字の流れと光のにじみだけ止めます（色・大きさはそのまま）。\n「標準」＝それに加えて、曲のあいだずっと動き続けるものを止めます。判定ラインの脈打ち、コンボ数の跳ねと枠の脈動、判定文字が出た瞬間に弾む動き、ノーツを取り切ったときの光です。判定ラインで弾ける光・100コンボごとのお祝い・フルコンボの大きな表示は残るので、手ごたえは変わりません。両サイドのマスモンの動きはここでは変わりません（専用の「両サイドのマスモン｜動き」で決めます）。\n「最小」＝光そのものと100コンボごとの演出も出なくなります（取ったときの光だけは、下の「押したときの光」を「いつも出す」にすると出せます）。高精細な画面では、ノーツを描く細かさも3倍から2倍に下げて軽くします（見た目はほんの少しやわらかくなります）。',{full:true})}
+{/* 押したときの光(2026-10-15・社長「演出量を最小にしても、フリックとかのタップ時の光は出る設定がほしい」)。既定は「おまかせ」(これまでの見た目) */}
+{field('押したときの光',segments('tapLight',RHYTHM_TAP_LIGHT_LABELS),
+              'ノーツを取った瞬間に判定ラインで弾ける光（TAP・フリックの炎・ホールドやスライドを押し切ったときの光）を、演出量とは別に決めます。既定は「おまかせ」です。判定・スコアは変わりません。\n「おまかせ」＝演出量に合わせます。演出量「最小」と軽量モードでは出ません（これまでどおり）。\n「いつも出す」＝演出量「最小」や軽量モードでも、この光だけは出します。判定文字やコンボ数の弾み、画面のフラッシュ、両サイドのマスモンの跳ねなど、ほかの演出は止まったままです。モンスターノーツの光も、ふつうのノーツと同じ大きさになります。',{full:true})}
 {/* 1秒に描く回数(2026-09-24)。既定は「端末に合わせる」(これまでの動き)。
                 120Hz以上の画面でだけ効く。60Hz・90Hzの画面ではどちらを選んでも同じ */}
 {/* 背景の演出(2026-09-24・ユーザー指示「設定ありきで派手な感じにしたい」)。既定はシンプル(操作感を変えないため) */}
@@ -21756,6 +21773,15 @@ if(judgment!=='MISS'){
     if(comboText)restarts.push({el:comboText,attr:'rhythmComboPop'});
     // ここで1回だけレイアウトを読む。集めた印をまとめて付け直す
     rhythmRestartAnimations(restarts);
+  }else if(rhythmTapLightOnly(settings)){
+    // 設定「押したときの光」が「いつも出す」で、演出量「最小」・軽量モードのとき(2026-10-15・社長「演出量を最小にしても、フリックとかのタップ時の光は出る設定がほしい」)。
+    // 判定ラインで弾ける光(rhythmSpawnHitEffect)だけを出す。判定文字・コンボ数の弾み・画面のフラッシュ・マスモンの跳ねは「最小」のまま止めておく。
+    // モンスターノーツもふつうの大きさの光にする(900ms の大きな光は出さない)。判定・スコアには触らない
+    const area=playAreaRef.current,lineY=RHYTHM_JUDGMENT_LINE_Y.ratio,nowMs=run.audio?.songTimeMs?.()??note.timeMs;
+    const span=rhythmNoteIsSlide(note)?rhythmProjectSlideSpan(rhythmReleaseLane(note),note,lineY,nowMs):rhythmNoteVisualSpan(note,note.lane,lineY,nowMs);
+    const flickHit=rhythmNoteVisualType(note)==='FLICK'?(rhythmFlickDir(note)||'up'):(note.endFlick?'up':'');
+    const hitEffect=rhythmSpawnHitEffect(area,{centerRatio:span.center,widthRatio:span.width,judgment,monster:false,precise:preciseHit,defer:true,flick:flickHit,finish:rhythmNoteHasBody(note),sky:rhythmNoteSkyHeight(note)>0});
+    if(hitEffect)rhythmRestartAnimations([hitEffect]);
   }
 }
 // ★振動は「タップ時の振動」の管轄。モンスターノーツだけ強めにする(指でも違いが分かるように)。
@@ -22367,7 +22393,7 @@ rhythmEnsureHitEffects(playAreaRef.current);
    カウントダウン(READY→3→2→1 の3.2秒)のあいだに済ませるので、プレイヤーには見えない。
    ★描くときと同じ設定を渡す。キャッシュのキーは種類と画素密度だけなので、
      違う設定で焼くとそのまま曲の終わりまで使われてしまう(2026-09-12) */
-if(canvasNotes)RHYTHM_CANVAS_RENDERER.warmSprites({effect:settings.effectAmount,lightweight:settings.lightweightMode,maxDpr:noteCanvasMaxDpr});
+if(canvasNotes)RHYTHM_CANVAS_RENDERER.warmSprites({effect:settings.effectAmount,lightweight:settings.lightweightMode,tapLight:rhythmTapLightOnly(settings),maxDpr:noteCanvasMaxDpr});
 /* モンスターノーツの顔の絵も GPU へ渡しておく(焼き上がりが描き込み先より先だったときの分。渡してあれば何もしない) */
 if(canvasNotes)faceBitmapsRef.current.forEach(face=>{if(face){RHYTHM_CANVAS_RENDERER.preloadImage(face.plain);RHYTHM_CANVAS_RENDERER.preloadImage(face.glow);}});
 /* カットインの絵は、出るまで見えない(visibility:hidden)ので、端末によっては**初めて出る瞬間**に画像を読み解く。
@@ -22960,7 +22986,7 @@ scheduleTick();};
 
 {/* 0になったその瞬間だけ、大きく1度だけ出す(1.4秒で消える) */}
 {lifeDownSlam&&<div data-rhythm-life-down-slam aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-[32%] z-40 text-center"><b className="block text-5xl font-black leading-none">LIFE 0</b><small className="mt-1 block text-xs font-black tracking-[0.34em]">DOWN</small></div>}
-<div ref={playAreaRef} data-rhythm-play-area data-rhythm-judgment-snap={judgmentSnap?'1':undefined} data-rhythm-judgment-fx={settings.judgmentFx===true&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL'?'1':undefined} data-rhythm-counting={countdownStep!==null?'1':undefined} data-rhythm-strip={RHYTHM_STRIP.value||undefined} data-rhythm-lightweight={settings.lightweightMode?'true':'false'} data-rhythm-effect={settings.effectAmount} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerEnd} onPointerCancel={pointerEnd} className="relative mx-2 mb-2 flex-1 min-h-0 overflow-hidden border-x border-cyan-400/50" style={{/* position と overflow はここにも直接書く。ノーツも判定ラインもこの箱を基準に
+<div ref={playAreaRef} data-rhythm-play-area data-rhythm-judgment-snap={judgmentSnap?'1':undefined} data-rhythm-judgment-fx={settings.judgmentFx===true&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL'?'1':undefined} data-rhythm-counting={countdownStep!==null?'1':undefined} data-rhythm-strip={RHYTHM_STRIP.value||undefined} data-rhythm-lightweight={settings.lightweightMode?'true':'false'} data-rhythm-effect={settings.effectAmount} data-rhythm-tap-light={rhythmTapLightOnly(settings)?'1':undefined} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerEnd} onPointerCancel={pointerEnd} className="relative mx-2 mb-2 flex-1 min-h-0 overflow-hidden border-x border-cyan-400/50" style={{/* position と overflow はここにも直接書く。ノーツも判定ラインもこの箱を基準に
     置いているので、Tailwindの relative が効く前だと基準が別の要素へ移り、
     判定ラインが画面の変なところへ出る(2026-09-05)。中身の置き場所に関わるものは
     外部CSSに任せない */position:'relative',overflow:'hidden',touchAction:'none',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none','--rhythm-note-size-scale':settings.noteSize/100,
