@@ -83,7 +83,7 @@ const BATTLE_CARD_NO_BREAK_BEFORE = /^[ぁぃぅぇぉっゃゅょゎゕゖァ�
 //   「|」の無い名前は1行。手札に出る名前を全部ためして決めた(tools/battle/card-art-check.js が全部の折り方を見る)
 const BATTLE_CARD_NAME_BREAKS = Object.freeze({
   'ルミナスレイ': 'ルミナス|レイ', 'ナイトサンダー': 'ナイト|サンダー', 'エクリプスキッス': 'エクリプス|キッス', 'コンビネーション': 'コンビ|ネーション',
-  'ドリルコンビネーション': 'ドリル|コンビネーション', '大たおれこみ': '大|たおれこみ', '超たおれこみ': '超|たおれこみ',
+  'ドリルコンビネーション': 'ドリル|コンビ|ネーション', '大たおれこみ': '大|たおれこみ', '超たおれこみ': '超|たおれこみ',
   'アイスブレード': 'アイス|ブレード', 'アクアウェイブ': 'アクア|ウェイブ', 'スプラッシュ': 'スプラッシュ', 'ジングルベル': 'ジングル|ベル',
   'アクアゲイザー': 'アクア|ゲイザー', 'ぞうさんぴろぴろ鼻': 'ぞうさん|ぴろぴろ鼻', 'ハトのおとしもの': 'ハトの|おとしもの', '大きなおとしもの': '大きな|おとしもの',
   'グリンネーション': 'グリン|ネーション', '超モッチ砲2': '超モッチ砲2', '超モッチ砲3': '超モッチ砲3', '超モッチ砲ゴッド': '超モッチ砲|ゴッド',
@@ -93,13 +93,15 @@ const BATTLE_CARD_NAME_BREAKS = Object.freeze({
   'ダークライトニング': 'ダーク|ライトニング', 'カオスコズミック': 'カオス|コズミック', 'エクリプスノヴァ': 'エクリプス|ノヴァ', 'ライトニング': 'ライトニング',
   '種マシンガン': '種|マシンガン', 'クリスマスツリー': 'クリスマス|ツリー', 'メテオドライブ': 'メテオ|ドライブ', 'ライジングレイヴ': 'ライジング|レイヴ',
   'ダークホウスト': 'ダーク|ホウスト', 'アサルトライジング': 'アサルト|ライジング', '絶影桜華乱舞': '絶影|桜華乱舞', '絶華緋閃・零桜': '絶華緋閃・|零桜',
-  'スターバースト・ストリーム': 'スターバースト・|ストリーム', 'アイスコフィン': 'アイス|コフィン', 'アクアブラスト': 'アクア|ブラスト',
+  'スターバースト・ストリーム': 'スター|バースト・|ストリーム', 'アイスコフィン': 'アイス|コフィン', 'アクアブラスト': 'アクア|ブラスト',
   'メリークリスマス': 'メリー|クリスマス', 'オーシャンノヴァ': 'オーシャン|ノヴァ', 'メニーウィング': 'メニー|ウィング', 'メテオストーム': 'メテオ|ストーム',
   'エターナルアーク': 'エターナル|アーク', 'リボンウィング': 'リボン|ウィング', 'ナイトメアアーク': 'ナイトメア|アーク', 'ドラの毒膝地獄': 'ドラの|毒膝地獄',
   'かどみうむの計算': 'かどみうむの|計算', 'かどみうむの理論': 'かどみうむの|理論', 'かどみうむの叡智': 'かどみうむの|叡智',
   'みゃるの怪薬': 'みゃるの|怪薬', 'みゃるの禁薬': 'みゃるの|禁薬', "KUROMI'S5アタック": "KUROMI'S|5アタック",
   '白き誓い切なる願い': '白き誓い|切なる願い', '神光よ汚れを祓え': '神光よ|汚れを祓え', '祈れ輪廻の環よ': '祈れ|輪廻の環よ', '裁きの光よ下れ': '裁きの光よ|下れ',
-  '今こそ真なる目醒め': '今こそ|真なる目醒め', '聖夜の鐘を鳴響け': '聖夜の鐘を|鳴響け', '終焉に救いを与えよ': '終焉に|救いを与えよ', '永劫の贖いを全うせよ': '永劫の贖いを|全うせよ',
+  '今こそ真なる目醒め': '今こそ|真なる目醒め',
+  // 置き場(中の面の内側)は最小の字でも1行6字まで。超える名前は3行にする(2026-10-15 社長「枠にかぶらないように」)
+  'ピアノパラソル脳天撃': 'ピアノ|パラソル|脳天撃', 'メロディキャンディボム': 'メロディ|キャンディ|ボム', 'ナイトメアらっきょうボム': 'ナイトメア|らっきょう|ボム', '聖夜の鐘を鳴響け': '聖夜の鐘を|鳴響け', '終焉に救いを与えよ': '終焉に|救いを与えよ', '永劫の贖いを全うせよ': '永劫の贖いを|全うせよ',
 });
 const battleCardNameLines = (name, per = BATTLE_CARD_NAME_PER_LINE) => {
   if (Object.prototype.hasOwnProperty.call(BATTLE_CARD_NAME_BREAKS, String(name || ''))) return BATTLE_CARD_NAME_BREAKS[String(name)].split('|');
@@ -131,23 +133,31 @@ const battleCardNameLines = (name, per = BATTLE_CARD_NAME_PER_LINE) => {
   const more = (t) => ([...t].length >= 8 ? battleCardNameLines(t, per) : [t]);
   return [...more(head), ...more(tail)];
 };
-// 絵のカードの名前の字の大きさ。長い方の行が名札の内側(名前の欄の幅 − 名札の縁)に収まる大きさで、上限10px・下限7px
+// 名前の字の大きさ(2026-10-15 社長「枠にかぶらないように」)。名前は「文字の置き場」(名前の欄の内側。CSS の padding で中の面の
+//   宝石より内側に決める)の中にだけ置く。字は 置き場の幅÷最長の行 と 置き場の高さ÷行数 の小さい方(10px まで)。
+//   名前の欄は大きさの基準(container-type:size)なので、cqw/cqh は置き場の幅・高さ。下の飾り線の場所(5px)は高さから先に引く。
+//   英数(KUROMI'S など)は和文の字より細いので 0.62 字に数える。1行7字(グランド/イリュージョン など)だけ 7px を少し下回る
+const battleCardNameUnits = (line) => [...String(line || '')].reduce((n, ch) => n + (/[\x20-\x7e]/.test(ch) ? 0.62 : 1), 0);
 const battleCardNameFit = (name) => {
-  const longest = Math.max(1, ...battleCardNameLines(name).map((l) => [...l].length));
-  return { fontSize: `clamp(7px, calc((100cqw - 11px) / ${longest}), 10px)`, lineHeight: '1.15', whiteSpace: 'nowrap' };
+  const lines = battleCardNameLines(name);
+  const longest = Math.max(1, ...lines.map(battleCardNameUnits));
+  // 3行の名前は行の間を詰める(横持ちは名前の欄の高さが25px前後しかない)。幅は太字で少し広がるぶん 1.5px 引いておく
+  const lh = lines.length >= 3 ? 1.02 : 1.12;
+  const tall = (lines.length * lh).toFixed(2);
+  return { fontSize: `clamp(6px, min(calc((100cqw - 1.5px) / ${longest.toFixed(2)}), calc((100cqh - 5px) / ${tall})), 10px)`, lineHeight: String(lh), whiteSpace: 'nowrap' };
 };
 const BATTLE_CARD_ROMAN = Object.freeze(['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX']);
 // カード1枚の絵。{ frame, mark(技のマークの絵・無ければ null で今のアイコン), roman(段階の札・無ければ '') }
 //   攻撃=赤・距離撃=青・守り=緑・支援=紫・固有技=金(社長の決定)。弱いガードは緑(守りの1段目のマーク・段階の札なし)・それ以外は紫
 //   shape … 枠の丸の位置の型。'std'(4色)・'gold'(固有技の金。大きい丸が大きく少し下)
 //   段階は表の何番目かで決める(攻撃は BASE_ATK_EVOLUTION の icon、守りは GUARD_EVOLUTION の name、距離撃は RANGE_EVOLUTION の名前)
-// 名札の色は枠と同じ(赤・青・緑・紫・金)。枠の絵から引く
+// 名札・名前の飾り線の色は枠と同じ(赤・青・緑・紫・金)。枠の絵から引く
 const battleCardArtOf = (c) => {
   const base = battleCardArtBaseOf(c);
   if (!base) return null;
-  const F = BATTLE_CARD_ART.frames, P = BATTLE_CARD_ART.plates || {};
+  const F = BATTLE_CARD_ART.frames, P = BATTLE_CARD_ART.plates || {}, R = BATTLE_CARD_ART.rules || {};
   const color = Object.keys(F).find((k) => F[k] === base.frame) || 'purple';
-  return { ...base, color, plate: P[color] || null };
+  return { ...base, color, plate: P[color] || null, rule: R[color] || null };
 };
 const battleCardArtBaseOf = (c) => {
   if (!c || typeof BATTLE_CARD_ART === 'undefined') return null;
@@ -176,7 +186,7 @@ let battleCardArtPreloaded = false;
 const preloadBattleCardArt = () => {
   if (battleCardArtPreloaded || typeof BATTLE_CARD_ART === 'undefined' || typeof Image === 'undefined') return;
   battleCardArtPreloaded = true;
-  [...Object.values(BATTLE_CARD_ART.frames), ...BATTLE_CARD_ART.atk, ...BATTLE_CARD_ART.guard, ...BATTLE_CARD_ART.range, ...Object.values(BATTLE_CARD_ART.plates || {})]
+  [...Object.values(BATTLE_CARD_ART.frames), ...BATTLE_CARD_ART.atk, ...BATTLE_CARD_ART.guard, ...BATTLE_CARD_ART.range, ...Object.values(BATTLE_CARD_ART.plates || {}), ...Object.values(BATTLE_CARD_ART.rules || {})]
     .forEach((src) => { try { const im = new Image(); im.decoding = 'async'; im.src = src; } catch (e) {} });
 };
 const HAND_CARD_FIT = Object.freeze({
@@ -2895,7 +2905,7 @@ function BattleScreen({
                 const pt=e.touches?e.touches[0]:e;
                 cardDragActiveRef.current=false;
                 setDragState({cardIndex:i, x:pt.clientX, y:pt.clientY, active:false, card:c});
-              }} style={{...(cardArt&&cardArt.plate?{'--mh-plate':`url("${cardArt.plate}")`}:{}),...(isDragging?{touchAction:'none',position:'fixed',left:dragState.x,top:dragState.y,transform:'translate(-50%,-50%) rotate(-3deg) scale(1.15)',zIndex:70000,width:'72px',pointerEvents:'none',transition:'none',filter:'drop-shadow(0 12px 18px rgba(0,0,0,0.65))'}:{touchAction:'none',boxShadow:tacticsNewLayout?`${(TYPE_INLINE_STYLE[c.type]||{}).borderColor?`0 -2px 10px ${(TYPE_INLINE_STYLE[c.type]||{}).borderColor}45, `:''}inset 0 1px 0 rgba(255,255,255,.08), 0 5px 12px rgba(0,0,0,.24)`:`${(TYPE_INLINE_STYLE[c.type]||{}).borderColor?`0 0 12px ${(TYPE_INLINE_STYLE[c.type]||{}).borderColor}70, `:''}inset 0 1px 0 rgba(255,255,255,.34), inset 0 -10px 16px rgba(0,0,0,.30), 0 4px 10px rgba(0,0,0,.5)`}),...(TYPE_INLINE_STYLE[c.type]||{})}} className={`relative w-full ${tacticsNewLayout?'rounded-[12px] border':'rounded-xl border-2'} p-1 flex flex-col items-center justify-between bg-gradient-to-b ${TYPE_COLORS[c.type]} ${isDragging?'ring-4 ring-white shadow-[0_0_24px_rgba(255,255,255,0.6)]':isSel?'transition-all -translate-y-1.5 ring-2 ring-cyan-300 z-20 scale-[1.03] opacity-90 saturate-[0.95] shadow-[0_0_16px_rgba(103,232,249,0.45)]':'transition-all opacity-90'} ${isPending?'ring-4 ring-yellow-400 animate-pulse shadow-[0_0_20px_rgba(250,204,21,0.7)]':''} ${!isSelectable&&!isSel&&!isDragging?'grayscale opacity-50':''}${tutorialTargeted?' is-battle-tutorial-spot':''}${battleTutorialCardTarget&&!tutorialTargeted?' grayscale opacity-25':''}`}>
+              }} style={{...(cardArt&&cardArt.plate?{'--mh-plate':`url("${cardArt.plate}")`}:{}),...(cardArt&&cardArt.rule?{'--mh-name-rule':`url("${cardArt.rule}")`}:{}),...(isDragging?{touchAction:'none',position:'fixed',left:dragState.x,top:dragState.y,transform:'translate(-50%,-50%) rotate(-3deg) scale(1.15)',zIndex:70000,width:'72px',pointerEvents:'none',transition:'none',filter:'drop-shadow(0 12px 18px rgba(0,0,0,0.65))'}:{touchAction:'none',boxShadow:tacticsNewLayout?`${(TYPE_INLINE_STYLE[c.type]||{}).borderColor?`0 -2px 10px ${(TYPE_INLINE_STYLE[c.type]||{}).borderColor}45, `:''}inset 0 1px 0 rgba(255,255,255,.08), 0 5px 12px rgba(0,0,0,.24)`:`${(TYPE_INLINE_STYLE[c.type]||{}).borderColor?`0 0 12px ${(TYPE_INLINE_STYLE[c.type]||{}).borderColor}70, `:''}inset 0 1px 0 rgba(255,255,255,.34), inset 0 -10px 16px rgba(0,0,0,.30), 0 4px 10px rgba(0,0,0,.5)`}),...(TYPE_INLINE_STYLE[c.type]||{})}} className={`relative w-full ${tacticsNewLayout?'rounded-[12px] border':'rounded-xl border-2'} p-1 flex flex-col items-center justify-between bg-gradient-to-b ${TYPE_COLORS[c.type]} ${isDragging?'ring-4 ring-white shadow-[0_0_24px_rgba(255,255,255,0.6)]':isSel?'transition-all -translate-y-1.5 ring-2 ring-cyan-300 z-20 scale-[1.03] opacity-90 saturate-[0.95] shadow-[0_0_16px_rgba(103,232,249,0.45)]':'transition-all opacity-90'} ${isPending?'ring-4 ring-yellow-400 animate-pulse shadow-[0_0_20px_rgba(250,204,21,0.7)]':''} ${!isSelectable&&!isSel&&!isDragging?'grayscale opacity-50':''}${tutorialTargeted?' is-battle-tutorial-spot':''}${battleTutorialCardTarget&&!tutorialTargeted?' grayscale opacity-25':''}`}>
                 {/* ★新しい盤面の手札の飾り(2026-09-24 ユーザー指示「カードの絵をもっと高級感というか、いいかんじに」)。
                     金の縁(回る光)・種類ごとの地の模様・ときどき横切る光の筋・左上の消費ガッツの宝石。
                     見た目は data-tactics-look の CSS(70-bootstrap)がまとめて持つ。★消費ガッツはこの宝石だけに出す
@@ -2915,7 +2925,7 @@ function BattleScreen({
                 <div data-decoration className="flex shrink-0 items-center justify-center rounded-[11px] border border-white/[.16] bg-black/20" style={{marginTop:HAND_CARD_FIT.iconTop,width:HAND_CARD_FIT.icon,height:HAND_CARD_FIT.icon,boxShadow:'inset 0 1px 0 rgba(255,255,255,.25), inset 0 -4px 8px rgba(0,0,0,.35)'}}>{cardIconNode(c.icon,26,c.id)}</div><div className="w-full text-center flex flex-col justify-end gap-0.5" style={{containerType:'inline-size'}}>{/* ★技名は押しても技の一覧を開かない(カードを選ぶだけ)。一覧はガッツの段の上の「⇄ 技変更」から開く
                     (2026-09-24 ユーザー指摘「技変更一覧が誤タップで反応しやすい」・場所はユーザー選択)。
                     それまでは技名の欄(カード幅×30px)がまるごと押し場所で、カードを選ぶつもりの指が当たっていた */}
-                <div data-card-name className="text-[11px] font-black leading-[13px] w-full whitespace-normal flex items-center justify-center overflow-hidden px-0.5" style={{height:tacticsNewLayout?HAND_CARD_FIT.nameRich:HAND_CARD_FIT.name,...handCardNameFit(c.name,tacticsNewLayout?HAND_CARD_FIT.nameRich:HAND_CARD_FIT.name),...(cardArt?battleCardNameFit(c.name):{})}}>{cardArt?battleCardNameLines(c.name).map((l,k)=>(<React.Fragment key={k}>{k>0&&<br/>}{l}</React.Fragment>)):c.name}</div>{(()=>{
+                <div data-card-name className="text-[11px] font-black leading-[13px] w-full whitespace-normal flex items-center justify-center overflow-hidden px-0.5" style={{height:tacticsNewLayout?HAND_CARD_FIT.nameRich:HAND_CARD_FIT.name,...handCardNameFit(c.name,tacticsNewLayout?HAND_CARD_FIT.nameRich:HAND_CARD_FIT.name)}}>{cardArt?<span data-card-name-text style={battleCardNameFit(c.name)}>{battleCardNameLines(c.name).map((l,k)=>(<React.Fragment key={k}>{k>0&&<br/>}{l}</React.Fragment>))}</span>:c.name}</div>{(()=>{
                   // カードの表に「ジャンル」と「誰に効くか」を出す(仕様: BATTLE_NEW_MODE_PLAN.md 4.4
                   // 「単体効果と全体効果が分かるようにカード説明に表示するようにしたい」)。
                   // ★言葉はアプリ側の cardGenreLabel / cardScopeLabel から引く。カードをタップした
