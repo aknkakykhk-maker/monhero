@@ -70,7 +70,23 @@ const BATTLE_CARD_ART_DEBUG = (() => {
     set(next) { on = !!next; try { if (on) localStorage.setItem(KEY, '1'); else localStorage.removeItem(KEY); } catch (e) {} return on; },
   };
 })();
-const battleCardArtOn = () => (typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.battleCardArt === true) || BATTLE_CARD_ART_DEBUG.on;
+// 行動カードの見た目の選択(2026-10-16 社長「前のカードも選べる」)。設定 → バトル設定で「新しいカードの絵」(既定)と「前のカード」を選ぶ。
+//   保存は新しいキー mh_battle_card_look_v1('art' / 'classic')だけ。無い・壊れているときは既定の 'art'。前のカードを選んだ人には、公開の印やデバッグの切り替えより優先して前のカードを出す
+const BATTLE_CARD_LOOKS = Object.freeze([
+  { id: 'art', label: '新しいカードの絵', note: '種類ごとの色の枠' },
+  { id: 'classic', label: '前のカード', note: '字が大きいシンプルな形' },
+]);
+const normalizeBattleCardLook = (v) => (v === 'classic' ? 'classic' : 'art');
+const BATTLE_CARD_LOOK = (() => {
+  const KEY = 'mh_battle_card_look_v1';
+  let look = 'art';
+  try { look = normalizeBattleCardLook(localStorage.getItem(KEY)); } catch (e) { look = 'art'; }
+  return {
+    get value() { return look; },
+    set(next) { look = normalizeBattleCardLook(next); try { localStorage.setItem(KEY, look); } catch (e) {} return look; },
+  };
+})();
+const battleCardArtOn = () => BATTLE_CARD_LOOK.value !== 'classic' && ((typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.battleCardArt === true) || BATTLE_CARD_ART_DEBUG.on);
 // ★カード名の折り返し(2026-10-15 社長「言葉の切れ目で折って」「長い名前だけ3行を許す」)。
 //   字は全部同じ大きさで、1行に入る名前(BATTLE_CARD_NAME_PER_LINE=6字ぶんまで)は1行、入らない名前は2行、2行に入らない名前だけ3行。
 //   折ってよい所 … 字の種類が変わる所(カタカナ・ひらがな・漢字・英数)・単語の切れ目(Intl.Segmenter があれば)・下の上書き表の「|」。

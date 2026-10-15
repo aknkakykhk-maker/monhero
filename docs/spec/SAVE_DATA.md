@@ -38,6 +38,7 @@
 | `mh_screen_theme_v1` | object / 全部 `'auto'` | 画面テーマ。`{ menu, market, temple, battle, rhythm }` に `'auto'`/`'halloween'`/`'classic'`。`normalizeScreenTheme` で知らない項目・不正な値は `'auto'` に補う(docs/spec/SCREEN_THEME.md) |
 | `mh_battle_perf_v1` | boolean / false | バトルの性能計測のON/OFF(デバッグ限定)。`BATTLE_PERF` が持つ |
 | `mh_debug_battle_card_art_v1` | `'1'` / 未設定 | 行動カードの絵(試作)を出す切り替え(デバッグ限定・2026-10-15)。`BATTLE_CARD_ART_DEBUG` が持つ。公開の印 `battleCardArt` が真なら、未設定でも絵を出す |
+| `mh_battle_card_look_v1` | `'art'` / `'classic'` / 未設定 | 行動カードの見た目(設定 → バトル設定。2026-10-16)。`'classic'` で前のカード、それ以外・未設定・壊れた値は新しいカードの絵(既定)。`BATTLE_CARD_LOOK`(71-screen-battle.jsx)が `normalizeBattleCardLook` を通して読む |
 | `mh_asset_prefetch_v1` | object / `{ enabled:true, enabledChosen:false, auto:true, songs:[] }` | 事前ダウンロード(曲・画像を端末にためておく)の入/切・自動ダウンロード・最近選んだ曲(最大12)。`normalizeAssetCacheSettings` で壊れた値は既定に戻す。**`enabled` は `enabledChosen:true`(本人が入/切を押した)のときだけ読む**。既定が切だった 2026-10-11 の約20分に、曲を選んだだけで `enabled:false` が書かれた端末があるため(読み方だけで、保存値は書き換えない)。ためた中身は localStorage ではなく Cache Storage(`mh-assets-v1`)にあり、切にすると消す(docs/spec/ASSET_PREFETCH.md) |
 | `mh_breeder_name` | string / `名無しのブリーダー` | 表示名（保存時最大10文字） |
 | `mh_breeder_icon` | string or null | 種IDまたは購入アイコンID |
