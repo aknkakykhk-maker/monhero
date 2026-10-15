@@ -40,7 +40,7 @@ window.addEventListener('unhandledrejection', function(ev){ window.__mhErr('[pro
 // ここでは各ファイルの実サイズを重みにして、実際に受け取ったバイト数で動かす。
 window.__mhBoot = (function () {
   // 起動時に読み込むファイルの実サイズ(バイト)。tools/build.js が実ファイルから書き込む
-  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":22303,"data/images/images-enemy.js":2926,"data/ally-monsters.js":38373,"data/lineages.js":12461,"data/breeder.js":93016,"data/enemy-monsters.js":7879,"data/skills.js":4375,"data/rhythm-mode.js":2653570,"data/rhythm-lane-svg.js":11949,"data/rhythm-geometry-calibration.js":15552,"data/rhythm-result-replay-remount.js":5743,"data/rhythm-event.js":75981,"data/changelog.js":1357427,"data/help.js":588748,"data/rhythm-step3-release.js":8517,"data/assistants.js":616459,"tailwind.css":212441,"game-system.compiled.js":5489201,"data/images/title-screen-halloween.jpg":368790,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
+  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":22303,"data/images/images-enemy.js":2926,"data/ally-monsters.js":38373,"data/lineages.js":12461,"data/breeder.js":93016,"data/enemy-monsters.js":7879,"data/skills.js":4375,"data/rhythm-mode.js":2653570,"data/rhythm-lane-svg.js":11949,"data/rhythm-geometry-calibration.js":15552,"data/rhythm-result-replay-remount.js":5743,"data/rhythm-event.js":75981,"data/changelog.js":1357938,"data/help.js":588748,"data/rhythm-step3-release.js":8517,"data/assistants.js":616459,"tailwind.css":212441,"game-system.compiled.js":5489201,"data/images/title-screen-halloween.jpg":368790,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
   var total = 0, k;
   for (k in SIZES) total += SIZES[k];
   var got = {};   // ファイルごとに「いま何バイト受け取ったか」
@@ -98,7 +98,7 @@ window.__mhBoot = (function () {
 })();
 // 本体JSのキャッシュキー。ここで一度だけ宣言し、下の読み込み処理でも同じ値を使う。
 // 先読みと <script> のURLがずれると、同じ2.7MBを2回取りに行くことになる
-var GAME_BUILD = '202610160708';
+var GAME_BUILD = '202610160737';
 window.__mhGameBuild = GAME_BUILD;
 // 起動でいちばん大きいのは本体JS(約2.7MB)。いちばん後ろで読むため、そこへ来ると
 // ゲージが止まって見えていた。先に取りはじめて、受け取ったバイト数をそのまま出す。
@@ -132,7 +132,7 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
      作るのは tools/build-tailwind.js(node tools/build.js が中身の変化を見て必要なときだけ呼ぶ)。
      landscape: の差し替え(自前で画面を回したときにも効かせる)もそちらの設定へ移してある。
      ?v= は中身のハッシュ。tools/stamp-version.js が data/*.js と同じ仕組みで打つ。 -->
-<link rel="stylesheet" href="tailwind.css?v=a1589c63f0e9" onload="__mhBoot.done('tailwind.css','見た目を読み込み中')" onerror="__mhBoot.fail('tailwind.css')">
+<link rel="stylesheet" href="tailwind.css?v=fffa4d0dc481" onload="__mhBoot.done('tailwind.css','見た目を読み込み中')" onerror="__mhBoot.fail('tailwind.css')">
 <style>
   html, body { margin:0; padding:0; background:#000; overscroll-behavior:none; -webkit-tap-highlight-color:transparent; height:100%; }
   /* 画面の高さは、ここで決めた --mh-vh ひとつだけを使う。
@@ -256,7 +256,8 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
     /* 後ろのぼかしは付けない(2026-10-15 社長「ぼかしがやすっぽくみえる」)。読みやすさは字の縁取りで持たせる */
     background: none !important; box-shadow: none !important;
     /* 字は枠と同じ系統の明るい金。縁取りは字の大きさ(8.5px まで)に合わせて細く(0.5px)、濃い金茶。影は小さく近く(にじんで字がつぶれないように) */
-    color: #f8d98c !important; font-family: 'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP', serif; letter-spacing: 0;
+    /* 字は太いゴシック(2026-10-16 社長「技名をもっと文字太くして」。明朝は絵の上で細く見えた)。大きさ・折り方は battleCardNameFit のまま */
+    color: #f8d98c !important; font-family: 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Noto Sans JP', 'Yu Gothic', system-ui, sans-serif; font-weight: 900 !important; letter-spacing: 0;
     text-shadow: .5px 0 0 rgba(48,24,4,.92), -.5px 0 0 rgba(48,24,4,.92), 0 .5px 0 rgba(48,24,4,.92), 0 -.5px 0 rgba(48,24,4,.92), 0 .8px 1.2px rgba(20,10,0,.6) !important; }
   [data-card-plate] [data-card-name-text] { display: block; flex: none; width: max-content; }
   [data-card-plate] [data-card-name] { --mh-rule-h: 6px; }
@@ -281,6 +282,9 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
   [data-card-art] [data-skill-change-spacer] { height: auto !important; min-height: 0 !important; justify-content: flex-end; padding: 0 !important; }
   /* ★押せる場所は今(カード幅いっぱい・高さ26〜30px)より狭くしない。見た目は中の面に収め、押せる範囲だけ左右へ広げる */
   [data-card-art] [data-skill-change] { position: relative; }
+  /* 「⇄ 技変更」は矢印ごと真ん中に置くと「技変更」の字が右へずれ、下の種類の札(攻撃)が左に寄って見えた(2026-10-16 社長)。
+     右に矢印と同じ幅の見えない字を置いて、「技変更」の字をカードの真ん中にそろえる(新しいカードの絵だけ) */
+  [data-card-art] [data-skill-change] > span:first-child::after { content: '⇄'; visibility: hidden; }
   [data-card-art] [data-skill-change]::after { content: ''; position: absolute; top: -5px; bottom: -5px; left: calc(-7cqw - 4px); right: calc(-7cqw - 4px); }
   /* 段階の札は、大きい丸の下の縁にかかる位置(丸の中心+半径)。金の縁と枠の地に近い暗い金茶で、枠の飾りになじませる */
   .mh-card-art-roman { position: absolute; left: 50%; top: calc(17.8% + 20.4cqw); transform: translate(-50%, -50%); z-index: 8; pointer-events: none;
@@ -2219,7 +2223,7 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
 <script src="data/rhythm-geometry-calibration.js?v=02534cca12f6" onload="__mhBoot.done('data/rhythm-geometry-calibration.js','音ゲー座標校正を読み込み中')" onerror="__mhBoot.fail('data/rhythm-geometry-calibration.js')"></script>
 <script src="data/rhythm-result-replay-remount.js?v=381554180360" onload="__mhBoot.done('data/rhythm-result-replay-remount.js','音ゲー再プレイ処理を読み込み中')" onerror="__mhBoot.fail('data/rhythm-result-replay-remount.js')"></script>
 <script src="data/rhythm-event.js?v=53766e5f1840" onload="__mhBoot.done('data/rhythm-event.js','週間ランキングを読み込み中')" onerror="__mhBoot.fail('data/rhythm-event.js')"></script>
-<script src="data/changelog.js?v=d81a94274785" onload="__mhBoot.done('data/changelog.js','更新情報を読み込み中')" onerror="__mhBoot.fail('data/changelog.js')"></script>
+<script src="data/changelog.js?v=b24a48931192" onload="__mhBoot.done('data/changelog.js','更新情報を読み込み中')" onerror="__mhBoot.fail('data/changelog.js')"></script>
 <script src="data/help.js?v=3a6b032cc0b1" onload="__mhBoot.done('data/help.js','ヘルプを読み込み中')" onerror="__mhBoot.fail('data/help.js')"></script>
 <script data-mhsave-backup src="data/mhsave-backup.js?v=7845a4fd261f" onload="__mhBoot.done('data/mhsave-backup.js','バックアップ機能を読み込み中')" onerror="__mhBoot.fail('data/mhsave-backup.js')"></script>
 <script src="data/rhythm-step3-release.js?v=ae1d7f73f23a" onload="__mhBoot.done('data/rhythm-step3-release.js','音ゲー更新情報を読み込み中')" onerror="__mhBoot.fail('data/rhythm-step3-release.js')"></script>
