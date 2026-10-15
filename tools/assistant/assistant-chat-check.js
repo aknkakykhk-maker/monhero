@@ -204,6 +204,9 @@ const unit = async (core) => {
     const draSamples = DIGEST.assistants.dra.samples.join('\n');
     check('⑳ 見本はくせの強いセリフから選ばれている(ききは「でつ」「まつ」が多く、ドラは「えへへ」がある)', (kikiSamples.match(/でつ|まつ/g) || []).length >= 30 && /えへへ/.test(draSamples));
     check('⑳ ききの受け答えの見本は、どれも「でつ」「まつ」か顔文字を含む', DIGEST.assistants.kiki.examples.every(e => /でつ|まつ|ω|ー`|∀|ᵕ/.test(e.a)));
+    // ㉑ 一般の知識はどの助手も同じように答える(2026-10-15 社長「キリトって知ってる？ にききだけ分からないって返した」)
+    check('㉑ 決まりで、ゲームの仕組み(ヘルプだけ)と一般の知識(どの助手も同じように知っている)を分けている', /知識は2つに分けて/.test(core.RULES_TEXT) && /どの助手もみんな同じように/.test(core.RULES_TEXT) && /このゲームのことではないから分からない」とは言わない/.test(core.RULES_TEXT));
+    check('㉑ 決まりに「ていねい・遠慮などは話し方のことで、知っている量を減らさない」が入っている', /知っている量を減らすものではない/.test(core.RULES_TEXT));
     check('⑳ 決まりに「毎回くせを最低1つ入れる・ヘルプの文をそのまま写さない」が入っている', /最低1つは入れる/.test(core.RULES_TEXT) && /そのまま写さず/.test(core.RULES_TEXT));
     check('⑲ 決まりに「思い出メモにあることは『聞いていない』と言わない」が入っている', /「聞いていない」とは言わない/.test(core.RULES_TEXT));
     const named = core.validateDailyLines([{ scene: 'home', e: 'happy', t: 'テストちん、今日もがんばろ！' }, { scene: 'home', e: 'wink', t: 'キミの調子はどう？' }], ['home'], {}, { callName: 'テストちん', playerName: 'テスト' });
