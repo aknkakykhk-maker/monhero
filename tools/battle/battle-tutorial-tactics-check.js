@@ -292,7 +292,8 @@ const check = (name, ok, detail = '') => {
     const seen = await page.evaluate(() => localStorage.getItem('mh_battle_tutorial_seen_v1'));
     check('お試し再生で既読フラグを書き換えない', seen === 'false' || seen === JSON.stringify(false), String(seen));
     // タクティクスの記録も増えていないこと(練習は記録を残さない)
-    const tacticsKeys = await page.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith('mh_tactics_')));
+    // 「タクティクスの導入を見た」(mh_tactics_intro_seen_v1)は、起動前に共通の下準備(eventStorySeed)が入れたもので、練習が書いたものではないので数えない
+    const tacticsKeys = await page.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith('mh_tactics_') && k !== 'mh_tactics_intro_seen_v1'));
     check('タクティクスの記録を書いていない', tacticsKeys.length === 0, tacticsKeys.join(', '));
 
     // --- ⑨ 実行時エラー ---
