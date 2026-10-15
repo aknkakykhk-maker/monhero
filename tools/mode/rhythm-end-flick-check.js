@@ -55,6 +55,16 @@ check('終端の判定表を変えていない',
    [151,'GOOD'],[170,'GOOD'],[171,'BAD'],[185,'BAD'],[186,'MISS']].every(([d,e])=>rhythmJudgeRelease(d)===e));
 check('フリックの距離は単発FLICKと同じ24px',RHYTHM_FLICK_DISTANCE_PX===24);
 check('終点フリックの受付は終端の250ms前から',RHYTHM_END_FLICK_ARM_MS===250);
+// 空中のスライドの終点フリックの印(2026-10-15 社長「小さくて見落として離してしまう」)。
+// 地上より大きく描き、光は演出量「最小」・軽量モードでも消さない(焼いた絵を貼るだけの軽い形)
+{
+  const bar=(source.match(/const drawEndBar=\(note,geo,opts\)=>\{[\s\S]*?\n  \};/)||[''])[0];
+  check('空中の終点フリックの印は大きさの決まり(SKY_END_FLICK)を使う',/const SKY_END_FLICK=\{barW:1\.5,barMinW:30,barH:1\.6,arrowW:30,arrowH:22\}/.test(source)&&bar.includes('SKY_END_FLICK.barW')&&bar.includes("arrowSprite('endFlickSky'"));
+  check('空中の終点フリックの印は失敗したら出さない',bar.includes('const skyFlick=flick&&!failed&&rhythmSlideHasSky(note);'));
+  const skyGlow=(bar.match(/if\(skyFlick\)\{[\s\S]*?\}else if/)||[''])[0];
+  check('空中の終点フリックの光は最小・軽量でも消さない(控えめの光にするだけ)',skyGlow.includes('draw3Slice(')&&!skyGlow.includes("effect!=='MINIMAL'")&&!/!lightweight/.test(skyGlow));
+  check('地上の終点フリックの印は今までどおり(24x17の矢印・最小と軽量では光なし)',bar.includes("arrowSprite('endFlick',24,17,")&&bar.includes("}else if(!failed&&effect!=='MINIMAL'&&!lightweight){"));
+}
 
 // --- 2. endFlick を書いていないノーツは何も変わらない ---
 check('endFlickを書かないHOLDは終点フリックの対象外',

@@ -15,6 +15,9 @@
 //     時刻は記録の performance.now() を曲の頭に合わせて写す(曲が始まる前の指も同じ間合いで流す)
 //   ・再生側でも記録を取り、届いた時刻のずれ(流した側の精度)も出す
 //   ・ラッキーラッシュなど偶然で決まるものは実機と同じにならない。比べるのは入力の扱い(判定の出来事)
+//   ・曲の頭の合わせには数msのぶれが残る(2026-10-15 の往復で 0.3〜5.7ms)。判定幅の端ぎりぎり(dt が GOOD の端に近い)の出来事は、
+//     その数msで「付いた」⇔「空押し+MISS」が入れ替わることがある。違いが出たら dt を見て、端の1件だけなら作りの差ではない
+//   ・ほかの Chromium(検査など)と同時に回すと処理が詰まって指が遅れることがある。1本ずつ回す
 'use strict';
 const http = require('http'), path = require('path'), fs = require('fs');
 const ROOT = path.resolve(__dirname, '..', '..');
@@ -195,7 +198,11 @@ if (require.main !== module) { module.exports = { readRecord, songStartAt, occur
       late.push(now() - target);
       const touchPoints = p.points.map((t) => ({ x: area.l + t.x, y: area.t + t.y, id: t.id, radiusX: t.radiusX, radiusY: t.radiusY, force: t.force }));
       // 起きた時刻も渡す。ゲームは e.timeStamp から受け取りまでの遅れを差し引くので、実機と同じ間合いになる
-      await cdp.send('Input.dispatchTouchEvent', { type: p.type, touchPoints: p.type === 'touchCancel' ? [] : touchPoints, timestamp: (s.origin + s.start + p.rel) / 1000 });
+      // CDP の決まり: touchEnd・touchCancel は指を並べずに送る(全部離す)。一部の指だけ離すときは、残りの指を並べた touchMove で送る
+      //(並べた指と前の状態の差から、離した指の touchend が作られる)。一部の指の cancel も同じく touchMove になる(cancel ではなく end として届く)
+      const partial = (p.type === 'touchEnd' || p.type === 'touchCancel') && touchPoints.length > 0;
+      const type = partial ? 'touchMove' : p.type;
+      await cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' || type === 'touchCancel' ? [] : touchPoints, timestamp: (s.origin + s.start + p.rel) / 1000 });
       if (SHOTS && now() > shotNext) { shotNext = now() + 1000; await page.screenshot({ path: path.join(SHOTS, `replay-${String(shotN++).padStart(3, '0')}.jpg`), type: 'jpeg', quality: 70 }); }
     }
     // 曲の終わり(または途中でやめた記録なら最後の指の 3 秒あと)まで待つ
