@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ace1da23626096da
+// source-sha256: 8da9d27c9ea7efc1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-15 22:49";
+const BUILD_DATE = "2026-10-15 23:01";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -37076,13 +37076,42 @@ const RhythmTapTest = ({
       if (starts.length) inputStarts(starts, ageMs);
       const ended = [];
       Array.from(current.activeTouchInputs).forEach(inputKey => {
-        if (!live.has(inputKey)) {
-          current.activeTouchInputs.delete(inputKey);
-          current.outsideStartInputs?.delete(inputKey);
-          ended.push({
-            inputKey
-          });
+        if (live.has(inputKey)) {
+          current.missingHeld?.delete(inputKey);
+          return;
         }
+        const ownEnd = (e.type === 'touchend' || e.type === 'touchcancel') && Array.from(e.changedTouches || []).some(t => rhythmInputKey('touch', t.identifier) === inputKey);
+        const heldIndex = current.activePointers.get(inputKey),
+          heldNote = heldIndex === undefined ? null : current.notes[heldIndex];
+        if (!ownEnd && heldNote && !heldNote.done && heldNote.type === 'HOLD') {
+          current.missingHeld = current.missingHeld || new Map();
+          if (!current.missingHeld.has(inputKey)) {
+            const since = performance.now();
+            current.missingHeld.set(inputKey, since);
+            RHYTHM_INPUT_REC.event('missing', {
+              note: heldNote.index,
+              key: inputKey
+            });
+            setTimeout(() => {
+              const run = runRef.current;
+              if (run !== current || run.finished || run.missingHeld?.get(inputKey) !== since) return;
+              run.missingHeld.delete(inputKey);
+              if (!run.activeTouchInputs.has(inputKey)) return;
+              run.activeTouchInputs.delete(inputKey);
+              run.outsideStartInputs?.delete(inputKey);
+              inputEnds([{
+                inputKey
+              }]);
+            }, RHYTHM_MISSING_TOUCH_CONFIRM_MS);
+          }
+          return;
+        }
+        current.missingHeld?.delete(inputKey);
+        current.activeTouchInputs.delete(inputKey);
+        current.outsideStartInputs?.delete(inputKey);
+        ended.push({
+          inputKey
+        });
       });
       if (ended.length) inputEnds(ended);
     };
