@@ -6,7 +6,7 @@
 //   ① 種類ごとの枠の色: 攻撃=赤・距離撃=青・守り=緑・支援=紫・固有技=金(弱いガード=緑)
 //   ② 技のマークと段階の札: 攻撃は BASE_ATK_EVOLUTION・守りは GUARD_EVOLUTION の何番目か、距離撃は間合いのメダル+RANGE_EVOLUTION の段階
 //   ③ 絵は軽い形式(webp)で images/ui/(よく使う画面の画像=事前ダウンロード)に置き、原本より小さい
-//   ④ 公開の印は偽(社長が見比べてから)。デバッグ設定に切り替えがあり、ゲームに入ったら1回読み込む
+//   ④ 公開の印は真(2026-10-15 公開)。デバッグ設定に切り替えがあり、ゲームに入ったら1回読み込む
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -99,7 +99,7 @@ check('⑤ 飾り線は枠と同じ色(rule-赤/青/緑/紫/金)を --mh-name-ru
 }
 
 // ④
-check('④ 公開の印 battleCardArt は偽', /\n  battleCardArt: false,/.test(read('monster-hero/src/parts/17-release-changelog-login-missions.jsx')));
+check('④ 公開の印 battleCardArt は真(2026-10-15 社長「このまま公開する」)', /\n  battleCardArt: true,/.test(read('monster-hero/src/parts/17-release-changelog-login-missions.jsx')));
 const app = read('monster-hero/src/parts/60-app.jsx');
 check('④ デバッグ設定に切り替えがある', /data-battle-card-art-toggle aria-pressed=\{battleCardArtDebug\} onClick=\{\(\)=>setBattleCardArtDebug\(BATTLE_CARD_ART_DEBUG\.set\(!battleCardArtDebug\)\)\}/.test(app));
 check('④ ゲームに入ったら(バトルの前に)絵を読み込む', /if \(bootPhase === 'GAME' && battleCardArtOn\(\)\) preloadBattleCardArt\(\);/.test(app));
