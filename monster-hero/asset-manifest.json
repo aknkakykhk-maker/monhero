@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "02e7fcf77600",
-  "packs": {"beat":{"bytes":87387400,"count":77},"battle":{"bytes":106127343,"count":468},"all":{"bytes":193514743,"count":545}},
+  "id": "e7c93a8d0e05",
+  "packs": {"beat":{"bytes":87387400,"count":77},"battle":{"bytes":106147897,"count":473},"all":{"bytes":193535297,"count":550}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"ddce743e94fa","size":1416528,"pack":"beat"},
@@ -547,6 +547,11 @@
     "images/ui/battle-cards/range-1.webp": {"v":"75d975b66cc5","size":8238,"pack":"battle"},
     "images/ui/battle-cards/range-2.webp": {"v":"217c186d914d","size":8404,"pack":"battle"},
     "images/ui/battle-cards/range-3.webp": {"v":"9ab6877fd82d","size":8738,"pack":"battle"},
+    "images/ui/battle-cards/rule-blue.webp": {"v":"8c53c590ec62","size":4126,"pack":"battle"},
+    "images/ui/battle-cards/rule-gold.webp": {"v":"34bc657ea74d","size":4104,"pack":"battle"},
+    "images/ui/battle-cards/rule-green.webp": {"v":"fb1adf4721dc","size":4138,"pack":"battle"},
+    "images/ui/battle-cards/rule-purple.webp": {"v":"3c83242ca8af","size":4106,"pack":"battle"},
+    "images/ui/battle-cards/rule-red.webp": {"v":"d80890ff512f","size":4080,"pack":"battle"},
     "images/ui/breakthrough-rainbow-star.PNG": {"v":"c0e9259703a7","size":199081,"pack":"battle"}
   }
 }
