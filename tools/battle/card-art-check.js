@@ -87,9 +87,14 @@ check('⑤ 飾り線は枠と同じ色(rule-赤/青/緑/紫/金)を --mh-name-ru
   check('⑥ 1行は8字まで(5.75px の字で置き場に収まる長さ)', tooLong.length === 0, tooLong.slice(0, 3).map(([n, l]) => l.join('/')).join(' '));
   const three = all.filter(([, l]) => l.length > 2);
   check('⑥ どの名前も2行まで', three.length === 0, three.slice(0, 3).map(([n, l]) => l.join('/')).join(' '));
-  const want = { 'ぞうさん頭突き': 'ぞうさん/頭突き', 'ニコラオの力': 'ニコラオ/の力', 'メロメロハート': 'メロメロ/ハート', 'ハイガード': 'ハイガード', 'ライトニング': 'ライトニング', 'ナイトサンダー': 'ナイト/サンダー', 'かどみうむの計算': 'かどみうむの/計算' };
+  // 1行に入る名前(8字ぶんまで)は折らない(2026-10-15 社長「短い技名も無理して2行にしないで」)。入らない名前だけ言葉の切れ目で2行
+  const want = { 'ぞうさん頭突き': 'ぞうさん頭突き', 'ニコラオの力': 'ニコラオの力', 'メロメロハート': 'メロメロハート', 'かどみうむの計算': 'かどみうむの計算', 'ドリルコンビネーション': 'ドリル/コンビネーション', 'スターバースト・ストリーム': 'スターバースト・/ストリーム', 'ナイトメアらっきょうボム': 'ナイトメア/らっきょうボム', '永劫の贖いを全うせよ': '永劫の贖いを/全うせよ' };
+  const unitsOf = (t) => [...t].reduce((n, ch) => n + (/[\x20-\x7e]/.test(ch) ? 0.62 : 1), 0);
+  const foldedShort = all.filter(([n, l]) => l.length > 1 && unitsOf(n) <= 8);
+  check('⑥ 1行に入る名前(8字ぶんまで)は1行のまま', foldedShort.length === 0, foldedShort.slice(0, 3).map(([n, l]) => l.join('/')).join(' '));
+  console.log(`   1行 ${all.filter(([, l]) => l.length === 1).length}件・2行 ${all.filter(([, l]) => l.length === 2).length}件`);
   const miss = Object.entries(want).filter(([n, w]) => nameCtx.battleCardNameLines(n).join('/') !== w);
-  check('⑥ 言葉の切れ目で折る(ぞうさん/頭突き・ニコラオ/の力 など)', miss.length === 0, miss.map(([n]) => `${n}→${nameCtx.battleCardNameLines(n).join('/')}`).join(' '));
+  check('⑥ 1行に入る名前は折らず、入らない名前は言葉の切れ目で折る', miss.length === 0, miss.map(([n]) => `${n}→${nameCtx.battleCardNameLines(n).join('/')}`).join(' '));
   if (process.env.CARD_NAME_LIST) fs.writeFileSync(process.env.CARD_NAME_LIST, all.map(([n, l]) => `${n}\t${l.join(' / ')}`).join('\n') + '\n');
 }
 

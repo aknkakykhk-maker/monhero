@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 69d774297462482f
+// source-sha256: 15884030a2d622af
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-15 16:14";
+const BUILD_DATE = "2026-10-15 16:18";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -61624,6 +61624,7 @@ const BATTLE_CARD_ART_DEBUG = (() => {
 })();
 const battleCardArtOn = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.battleCardArt === true || BATTLE_CARD_ART_DEBUG.on;
 const BATTLE_CARD_NAME_PER_LINE = 5;
+const BATTLE_CARD_NAME_ONE_LINE = 8;
 const battleCardNameClass = ch => /[\u30a0-\u30ff\u31f0-\u31ff\uff66-\uff9f]/.test(ch) ? 'kata' : /[\u3040-\u309f]/.test(ch) ? 'hira' : /[\u4e00-\u9fff\u3005\u3006]/.test(ch) ? 'kan' : /[0-9A-Za-z\uff10-\uff5a]/.test(ch) ? 'alnum' : 'other';
 const BATTLE_CARD_NO_BREAK_BEFORE = /^[ぁぃぅぇぉっゃゅょゎゕゖァィゥェォッャュョヮヵヶーｰ・、。！？!?…ゝゞヽヾ）」』】]/;
 const BATTLE_CARD_NAME_BREAKS = Object.freeze({
@@ -61700,6 +61701,7 @@ const BATTLE_CARD_NAME_BREAKS = Object.freeze({
   '永劫の贖いを全うせよ': '永劫の贖いを|全うせよ'
 });
 const battleCardNameLines = (name, per = BATTLE_CARD_NAME_PER_LINE) => {
+  if (per === BATTLE_CARD_NAME_PER_LINE && battleCardNameUnits(name) <= BATTLE_CARD_NAME_ONE_LINE) return [String(name || '')];
   if (Object.prototype.hasOwnProperty.call(BATTLE_CARD_NAME_BREAKS, String(name || ''))) return BATTLE_CARD_NAME_BREAKS[String(name)].split('|');
   const chars = [...String(name || '')];
   const n = chars.length;
