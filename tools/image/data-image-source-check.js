@@ -30,12 +30,7 @@ const inlineRefs = [];
 for (const rel of DATA_FILES) {
   const p = path.join(WEB, rel);
   if (!fs.existsSync(p)) continue;
-  // 行動カードの絵(breeder.js の BATTLE_CARD_ART・2026-10-15)は、絵の場所をまとめた定数の表そのもの。
-  // 枠・技のマーク・名札の絵は、ほかの場所から1枚ずつ指さない(この表を通して使う)ので、表の中だけは直書きでよい
-  let inCardArt = false;
   fs.readFileSync(p, 'utf8').split('\n').forEach((line, i) => {
-    if (/^const\s+BATTLE_CARD_ART\s*=/.test(line)) inCardArt = true;
-    if (inCardArt) { if (/^\}\);?\s*$/.test(line)) inCardArt = false; return; }
     if (/^\s*(?:\/\/|\*)/.test(line)) return;                     // コメントは対象外
     if (/^\s*const\s+[A-Z0-9_]+\s*=\s*["']images\//.test(line)) return; // 定数の宣言はよい
     // プロフィール枠は「1枠に1枚」で、ほかの場所から同じ絵を指さない。書き方(src に images/profile-frames/… を
