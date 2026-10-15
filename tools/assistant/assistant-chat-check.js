@@ -193,6 +193,18 @@ const unit = async (core) => {
     check('⑲ ドラの話し方は標準語のくだけた口調で、関西弁はほとんど使わない', /話し方[^\n]*標準語[^\n]*関西弁[^\n]*ほとんど使わない/.test(draSys));
     check('⑲ ききの一人称は「私」で、ときどき「でつ」「まつ」に崩す', /一人称: 「私」/.test(kikiSys) && /でつ/.test(kikiSys) && /まつ/.test(kikiSys));
     check('⑲ みゅあ・ももすけの一人称(「あたし」「もも」)と話し方も書いてある', /一人称: 「あたし」/.test(muaSys) && /話し方/.test(muaSys) && /一人称: 「もも」/.test(momoSys) && /話し方/.test(momoSys));
+    // ⑳ キャラのくせ(2026-10-15 社長「キャラごとの喋り方の特徴がちゃんと反映されてない気がする」)
+    for (const id of ['mua', 'kiki', 'momosuke', 'dra']) {
+      const per = DIGEST.assistants[id];
+      const sysText = core.buildSystem(DIGEST, id)[2].text;
+      check(`⑳ ${id}: 見本のセリフが60〜100本・必ず出すくせ・受け答えの見本5〜8組が人柄に入っている`, per.samples.length >= 60 && per.samples.length <= 100
+        && per.quirks.length >= 3 && per.examples.length >= 5 && per.examples.length <= 8 && /必ず出すくせ/.test(sysText) && /受け答えの見本/.test(sysText));
+    }
+    const kikiSamples = DIGEST.assistants.kiki.samples.join('\n');
+    const draSamples = DIGEST.assistants.dra.samples.join('\n');
+    check('⑳ 見本はくせの強いセリフから選ばれている(ききは「でつ」「まつ」が多く、ドラは「えへへ」がある)', (kikiSamples.match(/でつ|まつ/g) || []).length >= 30 && /えへへ/.test(draSamples));
+    check('⑳ ききの受け答えの見本は、どれも「でつ」「まつ」か顔文字を含む', DIGEST.assistants.kiki.examples.every(e => /でつ|まつ|ω|ー`|∀|ᵕ/.test(e.a)));
+    check('⑳ 決まりに「毎回くせを最低1つ入れる・ヘルプの文をそのまま写さない」が入っている', /最低1つは入れる/.test(core.RULES_TEXT) && /そのまま写さず/.test(core.RULES_TEXT));
     check('⑲ 決まりに「思い出メモにあることは『聞いていない』と言わない」が入っている', /「聞いていない」とは言わない/.test(core.RULES_TEXT));
     const named = core.validateDailyLines([{ scene: 'home', e: 'happy', t: 'テストちん、今日もがんばろ！' }, { scene: 'home', e: 'wink', t: 'キミの調子はどう？' }], ['home'], {}, { callName: 'テストちん', playerName: 'テスト' });
     check('⑲ ふだんの吹き出しに呼び名がそのまま入っていたら {name} へ置き換える', named.home && named.home[0].t === '{name}、今日もがんばろ！' && named.home[1].t === 'キミの調子はどう？');
