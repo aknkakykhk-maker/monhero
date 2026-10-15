@@ -106,6 +106,10 @@ const runner = async ([songId, quirkNames, repeat, listOnly, tapdx, skip]) => {
   }
   const left = queue.slice(k);
 
+  // ---- 浮き(押さえている指が離れたとみなされ、帯が暗くなる)を直接見張る。記録の出来事に出ない浮きも拾う ----
+  const floats = [];
+  const origAdd = RHYTHM_FLOATING_NOTES.add.bind(RHYTHM_FLOATING_NOTES);
+  RHYTHM_FLOATING_NOTES.add = (note) => { try { floats.push({ index: note?.index, ms: Math.round(window.__mhTestHooks.rhythmSongMs() || 0) }); } catch (_) {} return origAdd(note); };
   // ---- 指の合図(touch-input.js と同じ作り方に、くせを入れられるようにしたもの) ----
   const live = new Map();
   const mkTouch = (id, p) => new Touch({ identifier: id, target: area, clientX: p.x, clientY: p.y, pageX: p.x, pageY: p.y, screenX: p.x, screenY: p.y, radiusX: 18, radiusY: 18, force: 1 });
@@ -131,6 +135,10 @@ const runner = async ([songId, quirkNames, repeat, listOnly, tapdx, skip]) => {
       const above = slidePos(sc, g.timeMs, 1);   // 空中スライドのその時刻の位置(高さはふつう)
       gp = { x: gp.x + (above.x - gp.x) * gx, y: gp.y + (above.y - gp.y) * gy };
       p.groundAt = { x: Math.round(gp.x), y: Math.round(gp.y) };
+      const c = (g.subLane + (g.subLaneWidth || 2) / 2) / 2, rr = rect();
+      const laneW = rr.width * (rhythmProjectBoundary(c + .5, lineR()) - rhythmProjectBoundary(c - .5, lineR()));
+      p.offLanes = Math.round((gp.x - ptLane(c, 0).x) / laneW * 100) / 100;
+      p.halfWidth = (g.subLaneWidth || 2) / 4;   // ノーツの幅の半分(レーン)
     }
     p.follow = { from: s.timeMs, to: s.endTimeMs - 5, id: F1, sc, cut: null };
     at(s.timeMs, () => down(F1, slidePos(sc, s.timeMs, p.skMul || 1)));
@@ -231,7 +239,7 @@ const runner = async ([songId, quirkNames, repeat, listOnly, tapdx, skip]) => {
       return { quirk: p.quirk, slide: p.slide, ground: p.ground, groundType: p.groundType, startMs: Math.round(p.start), endMs: Math.round(p.end),
         slideJ: s?.judgment ?? null, holdJ: s?.holdJudgment ?? null, releaseJ: s?.releaseJudgment ?? null,
         offFrames: off.length, offFrom: off[0] ?? null, offTo: off[off.length - 1] ?? null,
-        groundAt: p.groundAt || null, groundJ: g?.judgment ?? null, events: evs.slice(0, 12), touches: touchSeen.slice(0, 10) };
+        groundAt: p.groundAt || null, offLanes: p.offLanes ?? null, halfWidth: p.halfWidth ?? null, floats: floats.filter((f) => f.index === p.slide).map((f) => f.ms), groundJ: g?.judgment ?? null, events: evs.slice(0, 12), touches: touchSeen.slice(0, 10) };
     }),
   };
 };
@@ -300,14 +308,14 @@ const runner = async ([songId, quirkNames, repeat, listOnly, tapdx, skip]) => {
     console.log('くせ                      スライド  押し始め  離し        切れたコマ   地上');
     for (const r of res.results) {
       const cut = r.offFrames ? `${r.offFrames}(${r.offFrom}〜${r.offTo})` : '-';
-      const bad = r.quirk !== 'none' && (r.offFrames > 0 || r.slideJ === 'MISS' || r.releaseJ === 'MISS');
-      console.log(`${(bad ? '★' : ' ') + r.quirk.padEnd(24)} #${String(r.slide).padEnd(5)} ${String(r.holdJ ?? r.slideJ ?? '-').padEnd(9)} ${String(r.releaseJ ?? '-').padEnd(11)} ${cut.padEnd(12)} #${r.ground} ${r.groundJ ?? '-'}`);
+      const bad = r.quirk !== 'none' && (r.offFrames > 0 || r.slideJ === 'MISS' || r.releaseJ === 'MISS' || r.floats.length > 0);
+      console.log(`${(bad ? '★' : ' ') + r.quirk.padEnd(24)} #${String(r.slide).padEnd(5)} ${String(r.holdJ ?? r.slideJ ?? '-').padEnd(9)} ${String(r.releaseJ ?? '-').padEnd(11)} ${cut.padEnd(12)} #${r.ground} ${r.groundJ ?? '-'}${r.offLanes != null ? ` (ノーツから ${r.offLanes} レーン・幅の半分 ${r.halfWidth})` : ''}${r.floats.length ? ` 浮き ${r.floats.join(',')}` : ''}`);
       if (VERBOSE || bad || r.quirk === 'none' && (r.offFrames > 0 || r.releaseJ === 'MISS')) console.log(`     ${label[r.quirk]}\n     出来事: ${r.events.join(' ')}\n     指: ${r.touches.join(' ')}`);
     }
     const base = res.results.filter(r => r.quirk === 'none');
-    const baseBad = base.filter(r => r.offFrames > 0 || r.releaseJ === 'MISS' || r.slideJ === 'MISS');
+    const baseBad = base.filter(r => r.offFrames > 0 || r.releaseJ === 'MISS' || r.slideJ === 'MISS' || r.floats.length > 0);
     console.log(`\nくせなしの組: ${base.length} のうち空中スライドが切れたもの ${baseBad.length}${baseBad.length ? '(土台の指の動かし方がずれている。その組の結果は割り引いて読む)' : ''}`);
-    console.log('★ = くせを混ぜた組で、空中スライドが切れた・MISS になったもの');
+    console.log('★ = くせを混ぜた組で、空中スライドが切れた・MISS になった・浮いた(帯が暗くなった)もの');
     if (OUT) { fs.writeFileSync(OUT, JSON.stringify({ song: SONG, diff: DIFF, ...res }, null, 1)); console.log(`書き出し: ${OUT}`); }
   }
   if (errors.length) console.log(`ページのエラー: ${errors.join(' | ')}`);
