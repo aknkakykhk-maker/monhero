@@ -3618,6 +3618,9 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
     // 空中の段(試作・2026-10-10 社長「切れる作りにしてほしいけど猶予はあり」): 高さのあるスライドは、ホールドと同じく
     // 猶予を超えて外れたらその場で切れる(MISS)。地上だけのスライド(既存の全曲)はこれまでどおり切れない
     if(session.kind==='SLIDE'&&!rhythmSlideHasSky(session.note))return;
+    // ★空中のスライドも、ホールドと同じく終わりの100msでは切らない(2026-10-15 社長「AMOS の空スライドの離す方のとき毎回ミスになる」)。
+    //   指を離す・次のノーツへ動かす瞬間に接点が帯から外れるのは当たり前で、もう成立する時間。ホールドにはあった免除が空中のスライドだけ無かった
+    if(session.kind==='SLIDE'&&chartNow>=Number(session.note?.endTimeMs)-RHYTHM_HOLD_END_TRACKING_SKIP_MS)return;
     const graceMs=session.kind==='SLIDE'?RHYTHM_SKY_SLIDE_CUT_GRACE_MS:Number(session.note?._rhythmTrackingGraceMs)>0
       ?Number(session.note._rhythmTrackingGraceMs):RHYTHM_MID_TRACKING_GRACE_MS;
     // 空中のスライドは「いまの時刻」で外れていた長さを測る。指が止まったままだと pos.perfMs は押した瞬間のまま進まず、
@@ -4188,6 +4191,19 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
       const span=inputSpan(note);
       return span?Math.min(Math.abs(subCoordinate-span.center),Number.isFinite(altCoordinate)?Math.abs(altCoordinate-span.center):Infinity):0;
     };
+    // ★押さえている帯・浮いている帯と、この指の高さ(空中の受け付けか地上か)が食い違うか(2026-10-15 社長「Sheriruth HELL の空スライド中にほかのノーツを拾われる」)。
+    //   横の位置だけで見ていたので、空中スライドの真下の地上のノーツを叩いた指が「空中スライドの持ち替えの2本目」と見なされ、
+    //   地上のノーツを取らずに MISS にしていた(再現: Sheriruth HELL 36.1〜38.7秒の空中スライドの真下の地上 TAP を右寄りで叩く)。
+    //   空中の段が無い曲・高さの分からない入力は今までどおり(食い違わない)
+    const heightMismatch=note=>{
+      if(!RHYTHM_SKY_INPUT.active)return false;
+      const ratio=Number(input?.sky);
+      if(!Number.isFinite(ratio))return false;
+      const fingerSky=ratio<rhythmSkyAcceptLimit();
+      const slide=rhythmNoteIsSlide(note)||note._rhythmOriginalType==='SLIDE';
+      const bandSky=slide?(rhythmSlideHasSky(note)&&rhythmSlideSkyAt(note,now-offset)>=.5):rhythmNoteSkyHeight(note)>0;
+      return fingerSky!==bandSky;
+    };
     // いま押さえられている HOLD/SLIDE の帯の上へ置いた指か(＝持ち替えの2本目)を探す。
     // withTolerance=false なら帯の内側そのもの、true なら受付の広がりぶんまで見る。
     const heldBandNote=withTolerance=>{
@@ -4197,6 +4213,7 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
         if(!note||note.done||note.activePointerId===null)continue;
         if(!(note.type==='HOLD'||rhythmNoteIsSlide(note)||note._rhythmOriginalType==='SLIDE'))continue;
         if(note.activePointerId===key)continue;   // 自分がいま押さえている指
+        if(heightMismatch(note))continue;         // 高さの違う帯(地上の指と空中の帯など)の持ち替えにはしない
         const span=rhythmHandoverSpanAt(note,now-offset);
         const tolerance=withTolerance
           ?(span.width<=1?RHYTHM_NARROW_TAP_TOLERANCE_SUB_LANES:RHYTHM_TAP_TOLERANCE_SUB_LANES)
@@ -4321,7 +4338,8 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
     let passedBest=null,upcomingBest=null;
     for(let index=matchStart;index<matchEnd;index++){
       const note=source[index];
-      if(claimed.has(index)||!note||note.done||note.activePointerId!==null||!RHYTHM_NOTE_TYPES.includes(note.type)||tapOnly&&note.type!=='TAP')continue;
+      // flickOnly … 押さえていたホールド/スライドが指を置いたまま終わったあと、その指を滑らせたときの取り直し。フリックだけを取る(下の説明・30-rhythm-play.jsx の inputMoves)
+      if(claimed.has(index)||!note||note.done||note.activePointerId!==null||!RHYTHM_NOTE_TYPES.includes(note.type)||tapOnly&&note.type!=='TAP'||input?.flickOnly===true&&note.type!=='FLICK')continue;
       const noteTime=Number(note.timeMs)+offset;
       if(tapOnly&&Number.isFinite(syntheticTime)&&Math.abs(Number(note.timeMs)-syntheticTime)>.001)continue;
       // 【2026-09-13・両手の高速タップでミスが出る】
@@ -4394,6 +4412,7 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
         const index=Number(note.index);
         if(note.activePointerId!==null||claimed.has(index))continue;
         if(tapOnly)continue;   // 指の代わりに作った仮の入力では持ち替えを扱わない
+        if(heightMismatch(note))continue;   // 高さの違う帯は拾わない(地上を叩いた指で空中の浮いた帯を拾わない)
         const span=rhythmHandoverSpanAt(note,now-offset);
         const tolerance=span.width<=1?RHYTHM_NARROW_TAP_TOLERANCE_SUB_LANES:RHYTHM_TAP_TOLERANCE_SUB_LANES;
         const onBand=Number.isFinite(subCoordinate)

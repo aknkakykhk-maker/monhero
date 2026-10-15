@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: beb31c5e65a976f5
+// source-sha256: 976879c02a4b34cf
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-15 20:27";
+const BUILD_DATE = "2026-10-15 21:41";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -36387,11 +36387,46 @@ const RhythmTapTest = ({
     if (subLane === state.subLane) return;
     state.subLane = subLane;
     state.subLaneCoordinate = subLaneCoordinate;
-    if (state.empty) inputStarts([{
+    if (state.empty) {
+      inputStarts([{
+        lane: Math.floor(subLane / 2),
+        subLaneCoordinate,
+        inputKey,
+        rejudge: true,
+        ...(state.flickOnly ? {
+          flickOnly: true
+        } : {})
+      }]);
+      return;
+    }
+    const heldIndex = run.activePointers.get(inputKey),
+      held = heldIndex === undefined ? null : run.notes[heldIndex];
+    if (!held || held.done || held.type !== 'HOLD') return;
+    const songNow = run.audio.songTimeMs(),
+      offset = settings.judgmentTimingOffsetMs;
+    if (songNow < Number(held.endTimeMs) + offset - RHYTHM_RELEASE_MAX_MS) return;
+    const flick = run.notes.find(n => n && !n.done && n.type === 'FLICK' && n.activePointerId === null && Math.abs(songNow - (Number(n.timeMs) + offset)) <= RHYTHM_INPUT_MATCH_WINDOW_MS && (() => {
+      const span = rhythmProjectSubLaneSpan(n.subLane, n.subLaneWidth, 1),
+        tol = span.subLaneWidth <= 1 ? RHYTHM_NARROW_TAP_TOLERANCE_SUB_LANES : RHYTHM_TAP_TOLERANCE_SUB_LANES;
+      return subLaneCoordinate >= span.subLane - tol && subLaneCoordinate <= span.subLane + span.subLaneWidth + tol;
+    })());
+    if (!flick) return;
+    inputEnds([{
+      inputKey
+    }]);
+    run.inputFeedbackState = run.inputFeedbackState || new Map();
+    run.inputFeedbackState.set(inputKey, {
+      subLane,
+      subLaneCoordinate,
+      empty: true,
+      flickOnly: true
+    });
+    inputStarts([{
       lane: Math.floor(subLane / 2),
       subLaneCoordinate,
       inputKey,
-      rejudge: true
+      rejudge: true,
+      flickOnly: true
     }]);
   };
   const standbyFingerFor = (run, noteIndex, exceptKey) => {
