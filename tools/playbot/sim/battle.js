@@ -542,6 +542,13 @@ function decideTurn(st) {
       const buff = supOfType((c) => c.type === 'buff' && c.id !== 'myaru');
       if (buff && (richest >= 0.6 || playBest)) { take(buff, 'support'); continue; }
     }
+    // ⑦' 置けるものが無い → 余った行動回数ぶん、だれも使えないカードを捨てる(tactics-brain.js 526〜535)。
+    //   ボットは画面の「使えない」印(倒れた子・EX で動けない子の固有技など)とガッツ不足のカードを捨てる。9 版目で足した
+    if (st.discardBlocked !== false) {
+      const blocked = st.hand.map((c, hi) => hi).filter((hi) => !used.has(hi) && isAttackType(st.hand[hi])
+        && !actors.some((s) => (st.hand[hi].type !== 'unique' || st.hand[hi].ownerSlotIdx === s) && gutsLeft(s) >= getCardGuts(st, st.hand[hi], s)));
+      blocked.slice(0, limit - picks.length - discards.length).forEach((hi) => { discards.push(hi); used.add(hi); });
+    }
     break;
   }
   return { picks, discards };
@@ -1097,10 +1104,11 @@ function playTurn(st) {
     st.dmgBySlot[slot] = (st.dmgBySlot[slot] || 0) + total;
     st.waveDist[slot] += total; // 60-app.jsx 12881 turnDistDmg(攻撃カードのダメージを撃った子の枠へ)
   }
+  st.overkill = (st.overkill || 0) + Math.max(0, dealt - st.enemy.hp);
   st.enemy.hp = Math.max(0, st.enemy.hp - dealt);
   if (TRACE) {
     const u = st.units.map((x) => (x ? `${x.id}:${x.hp}/${x.maxHp} g${x.guts}/${x.maxGuts}${x.downed ? '×' : ''}` : '-')).join(' ');
-    console.log(`W${st.wave} T${st.turn} 距離${st.dist} 予告${st.intent ? (st.intent.variant || st.intent.type) + ':' + (st.intent.value || '') + '→' + (st.intent.targetSlot ?? '') : '-'} 使う[${picks.map((p) => st.hand[p.hi].type + '@' + p.slot).join(',')}] 捨て${discards.length} 与${dealt} 敵${st.enemy.hp}/${st.enemy.maxHp} | ${u}`);
+    console.log(`W${st.wave} T${st.turn} 距離${st.dist} 予告${st.intent ? (st.intent.variant || st.intent.type) + ':' + (st.intent.value || '') + '→' + (st.intent.targetSlot ?? '') : '-'} 使う[${picks.map((p) => st.hand[p.hi].type + '@' + p.slot).join(',')}] 捨て${discards.length}${process.env.SIM_TRACE === '2' ? ` 手札[${st.hand.map((c) => `${c.type}@${c.ownerSlotIdx ?? '-'}`).join(',')}] 山${st.deck.length}/墓${st.graveyard.length}` : ''} 与${dealt} 敵${st.enemy.hp}/${st.enemy.maxHp} | ${u}`);
   }
   st.dealtTotal += dealt;
   if (st.enemy.hp <= 0) return 'clear';
@@ -1150,7 +1158,7 @@ function playTurn(st) {
     else if (intent.type === 'MOVE' && forcedMoveTarget != null) performed = false;
     else if (intent.type === 'MOVE') st.dist = intent.targetDist;
     else if (intent.type === 'ROAR') { st.roarStacks += 1; st.enemy.atk = Math.floor(Math.max(0, st.enemy.atk) * G.TACTICS_ROAR_ATK_RATE); }
-    else if (intent.type === 'REGEN') st.enemy.hp = Math.min(st.enemy.maxHp, st.enemy.hp + G.tacticsRegenHealAmount(st.enemy.maxHp));
+    else if (intent.type === 'REGEN') { const h0 = st.enemy.hp; st.enemy.hp = Math.min(st.enemy.maxHp, st.enemy.hp + G.tacticsRegenHealAmount(st.enemy.maxHp)); st.regenTotal = (st.regenTotal || 0) + st.enemy.hp - h0; }
     else if (intent.type === 'ATTACK' || intent.type === 'SPECIAL') {
       const actingDist = forcedMoveTarget != null ? forcedMoveTarget : st.dist;
       const actingIntent = G.tacticsSweepIntent(intent, st.units, actingDist);
@@ -1401,7 +1409,7 @@ function trainAfterWave(st, w) {
   }
 }
 
-function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWave = 10, exMode = 'bot', assist = 'bot', assistPlay = 'bot', training = 'bot', exLog = false, distBonus = true, uniqueUp = true, emergency = 'auto', uniquePlan = 'bot' }) {
+function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWave = 10, exMode = 'bot', assist = 'bot', assistPlay = 'bot', training = 'bot', exLog = false, distBonus = true, uniqueUp = true, emergency = 'auto', uniquePlan = 'bot', discardBlocked = true }) {
   const rng = mulberry32(hashSeed(seed, heroId, difficulty, allies.join(',')));
   const hero = MON_BY_ID[heroId];
   if (!hero) throw new Error(`勇者モンが見つからない: ${heroId}`);
@@ -1422,7 +1430,7 @@ function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWa
     // 固有技の強化(6 版目): 枠ごとの段・残りの強化ポイント・強化の記録
     useUniqueUp: uniqueUp, uniquePlan, uniqueLv: {}, upgradePoints: 0, uniqueLog: [],
     // 緊急回復(7 版目): 'auto'(① AUTO と同じ条件)・'brink'(② 全滅の手前だけ)・'bot'(①+②。2026-10-10 からのブラウザのボット arena-1 と同じ)・'none'(使わない。それまでのボット)
-    emergency, emergencyUses: 0,
+    emergency, emergencyUses: 0, discardBlocked,
   };
   if (assist !== 'bot' && assist !== 'none' && !TEACH_BY_ID[assist]) throw new Error(`アシカの選び方が分からない: ${assist}`);
   if (!TRAINING_PLANS.includes(training)) throw new Error(`トレーニングの選び方が分からない: ${training}`);
@@ -1435,6 +1443,7 @@ function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWa
     st.wave = w;
     // 敵を出す(60-app.jsx spawnEnemy 13629): 総合力で敵が強くなる。WAVE で消えるもの(waveBuffs・turnBuffs・運命の輪・乱心・トリックスタート)を消す
     st.enemy = G.createBattleEnemy(w, difficulty, null, null, G.tacticsEnemyPowerMultiplier(st.powerStart, st.powerNow), { mode: 'tacticsPro' });
+    st.enemyHpTotal = (st.enemyHpTotal || 0) + st.enemy.maxHp;
     st.dist = w === 1 ? st.heroSlot : Math.floor(rng() * 4);
     st.roarStacks = 0; st.trick = [{}, {}, {}, {}]; st.trickRolled = null; st.waveDist = [0, 0, 0, 0];
     st.waveB = {}; st.turnB = {}; st.nextB = {}; st.fateWheel = { atkDown: 0, takenUp: 0 }; st.confuse = 0;
@@ -1463,7 +1472,7 @@ function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWa
     }
     const turns = Math.min(st.turn, 20);
     st.turnsTotal += turns; st.waveTurns.push(turns);
-    const summary = { turns: st.turnsTotal, waveTurns: st.waveTurns, dealt: st.dealtTotal, taken: st.taken, exUses: st.exUses, dodges: st.dodges, assists: st.assistLog, assistUses: st.assistUses, training: st.trainingLog, uniques: st.uniqueLog, emergencyUses: st.emergencyUses, distBonus: st.distBonus.map((x) => Math.round(x * 1000) / 1000), exLog: st.exLog, assistScenes: st.assistScenes, dmgById: dmgById(st) };
+    const summary = { turns: st.turnsTotal, waveTurns: st.waveTurns, dealt: st.dealtTotal, taken: st.taken, exUses: st.exUses, dodges: st.dodges, assists: st.assistLog, assistUses: st.assistUses, training: st.trainingLog, uniques: st.uniqueLog, emergencyUses: st.emergencyUses, distBonus: st.distBonus.map((x) => Math.round(x * 1000) / 1000), exLog: st.exLog, assistScenes: st.assistScenes, dmgById: dmgById(st), enemyHpTotal: st.enemyHpTotal, regenTotal: st.regenTotal || 0, overkill: st.overkill || 0 };
     if (out !== 'clear') return { result: out === 'wipe' ? 'wipe' : 'timeout', wave: w, ...summary };
     // WAVE を抜けた(60-app.jsx resolveEnemyDefeat 11131〜): 追いつき補正と自動回復の率
     const remaining = Math.max(0, 21 - st.turn);
@@ -1500,7 +1509,7 @@ function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWa
       else if ([1, 3, 5, 7, 9].includes(w)) learnTeaching(st, chooseTeaching(st, teachingPool(st, 'odd')));
     }
   }
-  return { result: 'clear', wave: maxWave, turns: st.turnsTotal, waveTurns: st.waveTurns, dealt: st.dealtTotal, taken: st.taken, exUses: st.exUses, dodges: st.dodges, assists: st.assistLog, assistUses: st.assistUses, training: st.trainingLog, uniques: st.uniqueLog, emergencyUses: st.emergencyUses, distBonus: st.distBonus.map((x) => Math.round(x * 1000) / 1000), exLog: st.exLog, assistScenes: st.assistScenes, dmgById: dmgById(st) };
+  return { result: 'clear', wave: maxWave, turns: st.turnsTotal, waveTurns: st.waveTurns, dealt: st.dealtTotal, taken: st.taken, exUses: st.exUses, dodges: st.dodges, assists: st.assistLog, assistUses: st.assistUses, training: st.trainingLog, uniques: st.uniqueLog, emergencyUses: st.emergencyUses, distBonus: st.distBonus.map((x) => Math.round(x * 1000) / 1000), exLog: st.exLog, assistScenes: st.assistScenes, dmgById: dmgById(st), enemyHpTotal: st.enemyHpTotal, regenTotal: st.regenTotal || 0, overkill: st.overkill || 0 };
 }
 
 function pickAllies(heroId, rng, n = 3) {
