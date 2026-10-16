@@ -150,6 +150,8 @@ function MonsterHeroGame() {
   const [rhythmCanvasHitsPref,setRhythmCanvasHitsPref]=useState(()=>rhythmCanvasHitsPreference());
   const [rhythmHitSparkPref,setRhythmHitSparkPref]=useState(()=>rhythmHitSparkPreference());
   const [rhythmJudgmentSnapPref,setRhythmJudgmentSnapPref]=useState(()=>rhythmJudgmentSnapPreference());
+  // 場面のBGMを軽く持つ(デバッグ設定・2026-10-16 社長の決定「案1＋案2」。14-audio.jsx の BGM_LIGHT_KEY)
+  const [bgmLightPref,setBgmLightPref]=useState(()=>{try{return localStorage.getItem('mh_bgm_light_v1')==='on';}catch{return false;}});
   const [rhythmInputRecOn,setRhythmInputRecOn]=useState(()=>{try{return RHYTHM_INPUT_REC.enabled();}catch{return false;}});
   const [rhythmInputRecMsg,setRhythmInputRecMsg]=useState('');
   // ホールド・スライドの離しの合図の遅れを、どこまで信じて戻すか(検証用・2026-10-11)。この端末だけの切り替え(mh_rhythm_fix_override_v1)
@@ -18742,6 +18744,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   {/* 画面エラーの受け止め(MhErrorBoundary)を実際に試す。押すとこの画面の描画で例外が起き、真っ白の代わりに「ホームへ戻る」が出るはず */}
                   <button data-debug-screen-error onClick={()=>setDebugThrowScreenError(true)} className="min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95">⚠️ 画面エラーの受け止めを試す</button>
                   {debugThrowScreenError&&<DebugThrowScreenError/>}
+                  {/* 場面のBGMを軽く持つ(2026-10-16 社長の決定「案1＋案2」・修理部)。オート無限を長く回したときの iPhone のメモリ不足の手当て。
+                      入にすると、場面のBGM(タイトル・ホーム・バトルなど)だけ音を軽くして(24kHz)、持つのも2本までにする。モンヒロビートの曲は変わらない。
+                      既定は切。社長の iPhone で確かめてから既定を入にする */}
+                  <section data-bgm-light-panel className="rounded-2xl border border-amber-400/40 bg-amber-950/20 p-3"><h3 className="text-xs font-black text-amber-200">🔊 場面のBGMを軽く持つ（検証用）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-amber-100/80">「入」にすると、タイトル・ホーム・バトルなどの BGM の音を軽くして（少しこもることがあります）、持っておく曲も2本までにします。長く遊んだときにメモリが足りなくなるのを防ぐためのものです。モンヒロビートの曲と効果音は変わりません。次に BGM が切り替わったときから効きます。</p><div className="mt-2 flex gap-2">{[[true,'入'],[false,'切']].map(([value,label])=><button key={label} type="button" data-bgm-light-pref={value?'on':'off'} aria-pressed={bgmLightPref===value} onClick={()=>{try{if(value)localStorage.setItem('mh_bgm_light_v1','on');else localStorage.removeItem('mh_bgm_light_v1');}catch{}setBgmLightPref(value);}} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${bgmLightPref===value?'bg-amber-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></section>
                   {/* 事前ダウンロード(2026-10-11)。ONにすると Service Worker を登録し、設定に「ダウンロード」が出る。
                       OFFにすると Service Worker を外し、端末にためた曲・画像を消す(セーブデータ・ランキングには触れない)。
                       既定は ON(2026-10-11 公開)。この切り替えボタン自体はデバッグ専用 */}
