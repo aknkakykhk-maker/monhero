@@ -24,11 +24,11 @@ const args=process.argv.slice(2),argOf=k=>{const i=args.indexOf(k);return i>=0?a
 // crosses: 交差する両手の長押し(片手が空・片手が地上)を入れる所(両手のスライドが重なる所の始まりの時刻・音で選んだ)。
 // showcase: MASTER にもともとある交差の見せ場(社長が決めた形・押せないの例外はこの中だけ)
 const SONGS={sheriruth:{marker:'sheriruth-v3',zero:711.6-2594.75,beat:324.342,levelRe:/const sheriruthHellChart=mhChart\((\d+),/,
-  crosses:[75960,78550,83419],showcase:[[107900,112600],[130200,132100]]},
+  crosses:[75960,78550,83419],showcase:[[107900,112600],[130200,132100]],drawers:false},
   // 風がそよぐ場所(2026-10-12 社長「もう1曲だけ簡単な曲のヘルも作ってみるのが良いと思う」)。空中のノーツを覚える入口なので gentle:
   // 空中は片手だけが空の小節の、拍の頭のタップだけ(スライド・ホールドは地上のまま・両手が空の小節は作らない)。交差の見せ場は置かない。
   // 土台はいま遊ばれている切り替わったあとの譜面(-v4-・RHYTHM_EVENT の after)
-  kaze_ga_soyogu:{marker:'kaze-ga-soyogu-v4',zero:209,beat:60000/118.88,levelRe:/const kazeGaSoyoguHellChart=mhChart\((\d+),/,gentle:true},
+  kaze_ga_soyogu:{marker:'kaze-ga-soyogu-v4',zero:209,beat:60000/118.88,levelRe:/const kazeGaSoyoguHellChart=mhChart\((\d+),/,gentle:true,drawers:false},
   // Against My Own Shadow(2026-10-13 社長「中くらいの HELL」)。拍は解析ファイル(authoring/against-my-own-shadow-v3-audio.json の timing)。
   // crosses は MASTER で両手の長押しが重なる所(10.72・39.23・94.24秒の2本目の始まり)
   against_my_own_shadow:{marker:'against-my-own-shadow-v3',zero:2022.9,beat:419.1788,levelRe:/const againstMyOwnShadowHellChart=mhChart\((\d+),/,
@@ -36,7 +36,8 @@ const SONGS={sheriruth:{marker:'sheriruth-v3',zero:711.6-2594.75,beat:324.342,le
     // crossDepth:-1(前 0.75): 94.2〜94.9秒の左手の空中スライドは、右手の地上スライドの真ん中を越えずに手前1レーン(レーン1.5)で止める。
     //   越えると、交わる所で帯を持ち替える遊び方では親指が空中と地上を入れ替えることになり押せない(テンポくんの bot・持ち替え --freeze 3 で
     //   93.61・94.24秒の2本が3種とも MISS。指を交差させる遊び方 --freeze 0 では MISS 0)。左右が入れ替わらなければ、どちらの遊び方でも押せる
-    source:'audio',variant:3,crosses:'auto',crossUpper:'mover',crossDepth:-1}};
+    source:'audio',variant:3,crosses:'auto',crossUpper:'mover',crossDepth:-1,drawers:false}};
+// drawers:false … 引き出し(2026-10-16)より前に作った HELL。作り直すときも今の形のまま(使うかは社長が決める)。新しい曲は書かない(=使う)
 const BEAT_GAP=1.5;                      // 同じ親指が段を変えるまでの拍
 // 同じ側(レーンの左右)で高さ(地上⇔空中)を変えるまでの間(2026-10-12 社長「HELL の操作性をもっと改良して」・テンポくんの数え方)。
 // 親指の振り分けとは別に、画面の左半分・右半分ごとに見る。点は押し始めと、長押し・スライドの終わり(指が離れる高さ)。同時押し(0ms)は両手で取るので数えない
@@ -62,10 +63,10 @@ const readBlock=(source,name)=>{
 // 曲の解析から HELL の骨組みを作る(2026-10-13 社長「ヘル用に作り直して」「参考動画がない限り、各難易度を難易度ごとにちゃんと作る」)。
 //   MASTER の譜面は読まない。譜面を作る道具(rhythm-chart-v3-generate.js)を --difficulty HELL で回し、出た譜面を下書きの形へ直す。
 //   時刻への直し方は rhythm-chart-v3-pipeline.js の runtimeRow と同じ(拍の頭+格子×格子の長さ+テンポの揺れ)
-const audioDraft=(trackId,variant=0)=>{
+const audioDraft=(trackId,variant=0,drawersOn=true)=>{
   const os=require('os'),{spawnSync}=require('child_process'),{tempoWarpForChart}=require('./rhythm-chart-tempo-warp.js');
   const dashed=trackId.replace(/_/g,'-'),dir=fs.mkdtempSync(path.join(os.tmpdir(),'mh-hell-'));
-  const r=spawnSync(process.execPath,[path.join(__dirname,'rhythm-chart-v3-generate.js'),'--track',trackId,'--difficulty','HELL','--variant',String(variant),'--output-dir',dir,'--write'],{encoding:'utf8'});
+  const r=spawnSync(process.execPath,[path.join(__dirname,'rhythm-chart-v3-generate.js'),'--track',trackId,'--difficulty','HELL','--variant',String(variant),'--output-dir',dir,'--write',...(drawersOn?[]:['--no-drawers'])],{encoding:'utf8'});
   if(r.status!==0)throw new Error('HELL の骨組みを作れなかった: '+String(r.stderr||r.stdout).slice(-400));
   const chart=JSON.parse(fs.readFileSync(path.join(dir,`${dashed}-v3-chart-hell.json`),'utf8'));
   const audio=JSON.parse(fs.readFileSync(path.join(__dirname,'authoring',`${dashed}-v3-audio.json`),'utf8'));
@@ -102,7 +103,15 @@ const sideOf=(n,end)=>{const c=n.k==='s'?n.pts[end?n.pts.length-1:0][1]+0.5:(n.s
 const startOf=n=>n.k==='s'?n.pts[0][0]:n.t,endOf=n=>n.k==='s'?n.pts[n.pts.length-1][0]:n.k==='h'?n.end:n.t;
 const laneAt=(pts,at)=>{if(at<=pts[0][0])return pts[0][1];for(let i=1;i<pts.length;i++)if(at<=pts[i][0]){const r=(at-pts[i-1][0])/Math.max(1,pts[i][0]-pts[i-1][0]);return pts[i-1][1]+(pts[i][1]-pts[i-1][1])*r;}return pts[pts.length-1][1];};
 
-const mix=(master,{zero,beat,crosses=[],gentle=false,crossUpper='hold',crossDepth=null})=>{
+// 引き出し(2026-10-16 社長の決定・rhythm-chart-drawers.js の R3・R4・R5)。曲の解析(audio の区切りと盛り上がり)を見て、合う曲・合う区間にだけ使う。
+//   drawers:false の曲(引き出しより前に作った HELL)は使わない(作り直すときに社長が決める)。--drawers で試しに使う・--no-drawers で使わない
+const D=require('./rhythm-chart-drawers.js');
+// 2本のスライドが重なる間に左右が入れ替わるか(両方を空にすると同じ高さの交差=水平クロスになる。HELL では作らない)
+const lanesCross=(a,b)=>{const s0=Math.max(startOf(a),startOf(b)),e0=Math.min(endOf(a),endOf(b));if(e0-s0<=0)return false;
+  let sign=0;for(let k=0;k<=8;k++){const at=s0+(e0-s0)*k/8,d=laneAt(a.pts,at)-laneAt(b.pts,at);if(Math.abs(d)<.5)return true;const g=Math.sign(d);if(sign&&g!==sign)return true;sign=g;}
+  return false;};
+const mix=(master,{zero,beat,crosses=[],gentle=false,crossUpper='hold',crossDepth=null,audio=null,drawersOn=false,drawerIds=null})=>{
+  const want=id=>drawersOn&&audio&&(!drawerIds||drawerIds.includes(id));
   // 格子へ寄せる。元の譜面に近い時刻(3ms以内)があればその時刻を使う(丸め方が1ms違うと、2本のスライドの間がその瞬間だけ詰まる)
   const chartTimes=[...new Set(master.flatMap(n=>n.k==='s'?n.pts.map(p=>p[0]):[n.t,n.end].filter(x=>x!=null)))].sort((a,b)=>a-b);
   const Q=beat/4,snap=at=>{const g=Math.round(zero+Math.round((at-zero)/Q)*Q);const near=chartTimes.find(x=>Math.abs(x-g)<=3);return near!=null?near:g;};
@@ -111,12 +120,20 @@ const mix=(master,{zero,beat,crosses=[],gentle=false,crossUpper='hold',crossDept
   const notes=master.map(n=>n.k==='s'?{...n,hand:handOf(n),pts:n.pts.map(p=>p.slice())}:{...n,hand:handOf(n)});
   // スライドの形: 2拍以上は「降りる・上がる・上がって降りる」を順に。短いものは段の回し方に従う(行き来しない)
   const PROFILES=['down','up','hill'];let slideIndex=0;
-  const phraseOf=at=>PHRASE_MODES[((Math.floor((at-zero)/(beat*PHRASE_BEATS))%PHRASE_MODES.length)+PHRASE_MODES.length)%PHRASE_MODES.length];
+  // R4(引き出し): 同じ勢いが続く区切りでは、長めの回し(左手が空 ⇄ 右手が空)。使う区切りは下で決める
+  let r4Windows=[],r4Beats=0;
+  const phraseOf=at=>{const w=r4Windows.find(([a,b])=>at>=a&&at<b);if(w)return ['L','R'][Math.floor((at-w[0])/(beat*r4Beats))%2];return phraseBase(at);};
+  const phraseBase=at=>PHRASE_MODES[((Math.floor((at-zero)/(beat*PHRASE_BEATS))%PHRASE_MODES.length)+PHRASE_MODES.length)%PHRASE_MODES.length];
   // gentle: 拍の頭(3ms 以内)のタップだけを空にする・両手が空の小節は片手(その音の手)だけ
   const onBeat=at=>{const k=(at-zero)/beat;return Math.abs(k-Math.round(k))*beat<=3;};
   const wantSky=(n)=>{const m=phraseOf(startOf(n));
     if(gentle)return n.k==='t'&&onBeat(n.t)&&m===n.hand;
     return m==='both'||m===n.hand;};
+  // 引き出しを選ぶ(使う/使わないと理由は notes.drawers に残り、表示に出る)
+  const drawerLog=[];
+  const slideList=()=>notes.filter(n=>n.k==='s').map(n=>({hand:n.hand,start:startOf(n),end:endOf(n),n}));
+  const r4=want('R4')?D.chooseR4(audio,{gentle}):null;
+  if(r4){drawerLog.push(r4);if(r4.use){r4Windows=r4.windows;r4Beats=r4.phraseBeats;}}
   const fixedGround=n=>n.k==='h'||n.k==='f'||!!n.mon||!!n.pin;   // pin: 同じ側の高さの切り替えを避けるため段を固定したタップ(空中のこともある。前後は fix・backFix がその段へそろえる)
   // 交差する両手の長押し(2026-10-11 社長「スカイホールドのダブルで右と左で地上と空中でクロスさせるのもいれたいね」)。
   // 両手のスライドが重なる所で、真ん中に近いほうを横に動かない空中の長押し、もう片方を地上で空中の長押しの下をくぐって反対側へ渡らせる。
@@ -178,6 +195,26 @@ const mix=(master,{zero,beat,crosses=[],gentle=false,crossUpper='hold',crossDept
     if(n.k==='s'&&gentle){n.profile='ground';n.fixed=true;}
     else if(n.k==='s'){n.profile=endOf(n)-startOf(n)>=2*beat-2?PROFILES[slideIndex++%PROFILES.length]:(wantSky(n)?'sky':'ground');}
     else n.want=fixedGround(n)?0:(wantSky(n)?1:0);
+  }
+  // R3(引き出し): 空中スライドの見せ場。いちばん盛り上がる区切りの、両手のスライド(1拍以上)を空のまま通す(交差の長押しの形は触らない)
+  // R5(引き出し): 盛り上がったまま終わる曲は、最後の左右のスライドを床から空へ上げて締める
+  //   どちらも、重なる反対の手のスライドと左右が入れ替わる(両方空だと水平クロスになる)ものは空にしない
+  const airborne=[];
+  // 同じ親指で詰まって(1.5拍未満の間で)続く鎖の中に、段の違う固定のノーツ(ホールド・モンスター・形を固定したスライド)があるときは空にしない
+  //   (固定どうしで段を変える間を守れず、段の直しが行ったり来たりして収まらない。sideFix の lockedClash と同じ考え)
+  const lockedLevel=(m,atEnd)=>m.k==='h'||m.mon?0:m.k==='s'&&m.fixed?(airborne.includes(m)?(atEnd?1:(m.profile==='up'?0:1)):(m.pts[atEnd?m.pts.length-1:0][3]>=.5?1:0)):null;
+  const nearLocked=(n,profile)=>{const list=notes.filter(m=>m.hand===n.hand).sort((x,y)=>startOf(x)-startOf(y)),i=list.indexOf(n),g=BEAT_GAP*beat-2;
+    const startLevel=profile==='up'?0:1;
+    for(let j=i-1;j>=0&&startOf(list[j+1])-endOf(list[j])<g;j--){const lv=lockedLevel(list[j],true);if(lv!=null){if(lv!==startLevel)return true;break;}}
+    for(let j=i+1;j<list.length&&startOf(list[j])-endOf(list[j-1])<g;j++){const lv=lockedLevel(list[j],false);if(lv!=null){if(lv!==1)return true;break;}}
+    return false;};
+  const lift=(n,profile)=>{if(n.fixed||nearLocked(n,profile))return false;if(airborne.some(m=>m.hand!==n.hand&&lanesCross(m,n)))return false;n.profile=profile;n.fixed=true;airborne.push(n);return true;};
+  {
+    const r3=want('R3')?D.chooseR3(audio,slideList(),{gentle}):null;if(r3)drawerLog.push(r3);
+    if(r3&&r3.use){r3.lifted=0;for(const x of slideList().filter(x=>x.start>=r3.window[0]&&x.start<r3.window[1]&&x.end-x.start>=beat-2).sort((a,b)=>a.start-b.start))if(lift(x.n,'sky'))r3.lifted++;}
+    const lastMs=Math.max(...notes.map(endOf));
+    const r5=want('R5')?D.chooseR5(audio,slideList(),lastMs,{gentle}):null;if(r5)drawerLog.push(r5);
+    if(r5&&r5.use){r5.lifted=0;for(const x of r5.slides)if(lift(x.n,x.end-x.start>=2*beat-2?'up':'sky'))r5.lifted++;r5.slides=r5.slides.map(x=>({hand:x.hand,start:x.start,end:x.end}));}
   }
   // 同時押しは片方だけ空(両手が空の回では、右手を地上に残す)
   const byTime=new Map();for(const n of notes)if(n.k!=='s'){const k=n.t;byTime.set(k,[...(byTime.get(k)||[]),n]);}
@@ -318,6 +355,10 @@ const mix=(master,{zero,beat,crosses=[],gentle=false,crossUpper='hold',crossDept
   bandFix();
   for(const n of notes)delete n.mirrored;
   notes.crossWindows=crossWindows;
+  // 引き出しが手直しのあとまで残ったか(空中の点がある本数)
+  for(const d of drawerLog){if(d.id==='R3'&&d.use){const w=d.window;d.kept=notes.filter(n=>n.k==='s'&&startOf(n)>=w[0]&&startOf(n)<w[1]&&n.pts.some(p=>p[3]>=.5)).length;}
+    if(d.id==='R5'&&d.use)d.kept=d.slides.filter(x=>notes.some(n=>n.k==='s'&&n.hand===x.hand&&startOf(n)===x.start&&n.pts[n.pts.length-1][3]>=.5)).length;}
+  notes.drawers=drawerLog;
   return notes;
 };
 
@@ -338,6 +379,26 @@ const counts=notes=>{const slides=notes.filter(n=>n.k==='s');
   const c={地上タップ:notes.filter(n=>n.k==='t'&&!n.sky).length,空タップ:notes.filter(n=>n.k==='t'&&n.sky).length,ホールド:notes.filter(n=>n.k==='h').length,
     スライド:slides.length,地上だけ:0,空だけ:0,行き来:0,モンスター:notes.filter(n=>n.mon).length};
   for(const s of slides)c[kind(s)]++;return c;};
+// 引き出しを使って、手の決まりの数(同じ側の150ms・地上から250ms・段を変える間・水平クロス)が増えるなら、増えない組み合わせまで外す
+//   (2026-10-16 Freedom Dive を試したとき、R3 で同じ側の150ms が7→17件になった。引き出しは曲に合うときだけ使う)
+const handRuleScore=(notes,beat)=>{const HR=require('./rhythm-chart-hand-rules.js'),rt=toRuntime(notes);
+  return sideSwitches(notes).length+levelSwitchViolations(notes,beat).length+HR.flatCross(rt).length+HR.skyAfterGround(rt).length;};
+const mixBest=(master,opts)=>{
+  const copy=()=>JSON.parse(JSON.stringify(master));
+  if(!opts.drawersOn||!opts.audio)return mix(master,opts);
+  const plain=mix(copy(),{...opts,drawersOn:false}),base=handRuleScore(plain,opts.beat);
+  const all=(opts.drawerIds||['R3','R4','R5']).slice();
+  let ids=all,out=mix(copy(),{...opts,drawerIds:ids}),score=handRuleScore(out,opts.beat);
+  const dropped=[];
+  // 使ったもの(use)を1つずつ外して、元より増えない所まで戻す(最後に使ったものから)
+  while(score>base){const used=(out.drawers||[]).filter(d=>d.use&&ids.includes(d.id)).map(d=>d.id);if(!used.length)break;
+    let best=null;for(const id of used){const next=ids.filter(x=>x!==id),o=mix(copy(),{...opts,drawerIds:next}),sc=handRuleScore(o,opts.beat);if(!best||sc<best.sc)best={id,next,o,sc};}
+    dropped.push({id:best.id,from:score,to:best.sc});ids=best.next;out=best.o;score=best.sc;}
+  const log=out.drawers||[];
+  for(const d of dropped){const old=log.find(x=>x.id===d.id);const entry={id:d.id,use:false,reason:`曲には合うが、使うと手の決まりの数が増える(引き出し無し ${base}件 → 使うと ${d.from}件)ので使わない`};
+    if(old)Object.assign(old,entry,{lifted:undefined,kept:undefined});else log.push(entry);}
+  out.drawers=log.sort((a,b)=>a.id.localeCompare(b.id));
+  return out;};
 // 書き出し(t=地上タップ・h=ホールド・T=空中のタップ・S=手の決まったスライド[時刻,レーン,幅,高さ,なめらかさ])
 const render=notes=>{const items=notes.slice().sort((a,b)=>startOf(a)-startOf(b)||(a.k==='s'?1:-1)).map(n=>
   n.k==='s'?`S(${startOf(n)},${endOf(n)},${JSON.stringify(n.pts)},${n.endFlick?1:0},'${n.hand}')`
@@ -356,12 +417,25 @@ const toRuntime=notes=>notes.map(n=>n.k==='s'?{type:'SLIDE',timeMs:startOf(n),en
 
 if(require.main===module){
   try{
-    const songId=argOf('--song');const conf=SONGS[songId];if(!conf)throw new Error(`--song は ${Object.keys(SONGS).join('/')} のどれか`);
+    const songId=argOf('--song');
+    // SONGS に無い曲でも、解析ファイルがあれば曲の解析から試しに作れる(数字を出すだけ・書けない。新しい曲の HELL を考えるとき)
+    const trialAudio=!SONGS[songId]&&songId&&path.join(__dirname,'authoring',`${String(songId).replace(/_/g,'-')}-v3-audio.json`);
+    const conf=SONGS[songId]||(trialAudio&&fs.existsSync(trialAudio)?(()=>{const tm=JSON.parse(fs.readFileSync(trialAudio,'utf8')).timing;
+      return {marker:`${songId.replace(/_/g,'-')}-v3`,zero:tm.beatZeroMs,beat:tm.beatMs,source:'audio',crosses:'auto',crossUpper:'mover',trial:true};})():null);
+    if(!conf)throw new Error(`--song は ${Object.keys(SONGS).join('/')} のどれか(または解析ファイルのある曲を試しに)`);
+    if(conf.trial&&args.includes('--write'))throw new Error('SONGS に無い曲は試すだけ(--write は SONGS に足してから)');
     const source=fs.readFileSync(rt0.RUNTIME,'utf8');
     // source:'audio' の曲は MASTER を読まず、曲の解析から HELL の骨組みを作る(before は比べるための MASTER)
-    const master=conf.source==='audio'?audioDraft(songId,conf.variant||0):readBlock(source,`${conf.marker}-master`),before=readBlock(source,`${conf.marker}-master`);
-    const oldHell=rt0.markerBlock(source,`${conf.marker}-hell`);
-    const hell=mix(master,conf);
+    // 引き出し(rhythm-chart-drawers.js)。drawers:false の曲は使わない。--drawers で試しに使う(書くのは社長が決めてから)・--no-drawers で使わない
+    const drawersOn=args.includes('--drawers')||(conf.drawers!==false&&!args.includes('--no-drawers'));
+    const audioFile=path.join(__dirname,'authoring',`${songId.replace(/_/g,'-')}-v3-audio.json`);
+    const audio=fs.existsSync(audioFile)?JSON.parse(fs.readFileSync(audioFile,'utf8')):null;
+    const master=conf.source==='audio'?audioDraft(songId,conf.variant||0,drawersOn):readBlock(source,`${conf.marker}-master`);
+    const before=rt0.markerBlock(source,`${conf.marker}-master`)?readBlock(source,`${conf.marker}-master`):master;
+    const oldHell=conf.trial?null:rt0.markerBlock(source,`${conf.marker}-hell`);
+    const hell=mixBest(master,{...conf,audio,drawersOn,drawerIds:argOf('--drawers-only')?argOf('--drawers-only').split(','):null});
+    for(const d of hell.drawers||[])console.log(`引き出し ${D.drawerLine(d)}${d.use&&d.lifted!=null?`(空へ上げた ${d.lifted}本・手直しのあと${d.id==='R3'?'区間の中で空を通るスライド':'空で終わる'} ${d.kept}本)`:''}`);
+    if(!drawersOn)console.log('引き出し: 使わない(この曲は drawers:false。試すときは --drawers)');
     const {chartLevel}=require('./rhythm-chart-level.js');
     const rt=toRuntime(hell),level=chartLevel({notes:rt}).level,mLevel=chartLevel({notes:toRuntime(before)}).level;
     const windows=[...(conf.showcase||[]),...(hell.crossWindows||[])],inWin=t=>windows.some(([a,b])=>t>=a&&t<=b);
@@ -399,4 +473,4 @@ if(require.main===module){
     console.log(`書いた: ${path.relative(rt0.ROOT,rt0.RUNTIME)} の <${conf.marker}-hell-notes> と HELL の Lv.${finalLevel}(ほかのマーカーは1バイトも変えていない)。この後 node tools/build.js`);
   }catch(e){console.error('止まった:',e.message);process.exit(1);}
 }
-module.exports={mix,readBlock,audioDraft,render,counts,levelSwitchViolations,sideSwitches,toRuntime,HELL_LANDSCAPE,SONGS};
+module.exports={mix,mixBest,handRuleScore,readBlock,audioDraft,render,counts,levelSwitchViolations,sideSwitches,toRuntime,HELL_LANDSCAPE,SONGS};
