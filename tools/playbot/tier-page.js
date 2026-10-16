@@ -214,7 +214,7 @@ function build(d) {
   const tier = (t) => `<b class="t t-${tcls(t)}">${esc(t)}</b>`;
   const tile = (m, bodyHtml, letter, prov, kind = 'm') => `
       <details class="mon">
-        <summary>${iconOf(kind, m.名前)}${prov ? '<span class="prov">暫定</span>' : ''}<span class="nm">${esc(m.名前)}</span>${letter ? `<span class="lt">${tier(letter)}</span>` : ''}</summary>
+        <summary>${iconOf(kind, m.名前)}${prov ? `<span class="prov">${m.境目 ? '境目' : '暫定'}</span>` : ''}<span class="nm">${esc(m.名前)}</span>${letter ? `<span class="lt">${tier(letter)}</span>` : ''}</summary>
         <div class="body">${bodyHtml}</div>
       </details>`;
   const kv = (rows) => `<dl>${rows.filter(Boolean).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${v}</dd>`).join('')}</dl>`;
@@ -262,6 +262,7 @@ function build(d) {
   const fullBody = (m) => evidence(m) + kv([
     ['役', esc(m.役)],
     m.仮の総合 ? ['仮の総合', `${tier(m.仮の総合)} (5回未満のマスから出した仮)`] : null,
+    m.境目 ? ['境目', `${esc(m.総合)} とその隣の段の境目。3つの難易度とも5回以上あるのに差がぶれの中なので、回数はここで止めて暫定のまま置いている`] : null,
     ['ひとこと', esc(m.理由)],
     m.強み ? ['強み', esc(m.強み)] : null,
     m.弱み ? ['弱み', esc(m.弱み)] : null,
@@ -476,7 +477,7 @@ ${css}
 
   <section id="monsters">
     <h2>モンスター 総合 Tier</h2>
-    <p class="note" style="margin-bottom:10px">${weights} の重みで難易度ごとの点を合わせた順。「暫定」の印は、試した回数が少なく動くかもしれない子。モンスターの Tier はブラウザの実戦の記録から(ボットが緊急回復を使うようになったのは 2026-10-10 からで、それより前の回は使っていません)。</p>${panels('総合', fullBody, null, OVERALL_TIERS)}
+    <p class="note" style="margin-bottom:10px">${weights} の重みで難易度ごとの点を合わせた順。「暫定」の印は、試した回数が少なく動くかもしれない子。「境目」の印は、回数は足りているのに隣の段との差がぶれの中の子。モンスターの Tier はブラウザの実戦の記録から(ボットが緊急回復を使うようになったのは 2026-10-10 からで、それより前の回は使っていません)。</p>${panels('総合', fullBody, null, OVERALL_TIERS)}
   </section>
 
   <section id="monsters-diff">

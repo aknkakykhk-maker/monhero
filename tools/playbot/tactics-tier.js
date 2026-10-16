@@ -290,7 +290,9 @@ const overall = stats.map((s) => {
   const weakBot = Number.isFinite(gap) && gap >= BOT_WEAK_GAP && fixedBotHeroRuns(s.m.name) < BOT_FIXED_NEED;
   // 決め手がぶれの中(数えたマスのどれにも、ぶれを超える項目が無い)なら「暫定」(2026-10-10 改善部 R1)
   const noisy = !!usable.length && !usable.some((v) => v.x.sigAny) && !['回数不足', '保留'].includes(tier);
-  return { s, tier, score, n, provisional: firmCells.length < 2 || weakBot || noisy, weakBot, noisy, usable, botGap: gap, short, guess };
+  // 境目: 3つの難易度とも5回以上あり、ボットの事情も無いのに決め手がぶれの中。回数を足しても動きにくいので、ここで回すのを止める(2026-10-16)
+  const border = noisy && !weakBot && per.length === TIER_DIFFS.length && per.every((v) => v.x.n >= 5);
+  return { s, tier, score, n, provisional: firmCells.length < 2 || weakBot || noisy, weakBot, noisy, border, usable, botGap: gap, short, guess };
 });
 const OVERALL_ORDER = ['S', 'A', 'B', 'C', 'D', '回数不足', '保留', '未計測'];
 overall.sort((a, z) => OVERALL_ORDER.indexOf(a.tier) - OVERALL_ORDER.indexOf(z.tier) || (z.score || -9) - (a.score || -9));
@@ -318,6 +320,8 @@ const few = overall.filter((o) => o.tier === '回数不足');
 if (few.length) { out(); out(`回数不足(どの難易度も5回未満なので、総合はまだ付けない。かっこは * のマスから出した仮の Tier): ${few.map((o) => `${o.s.m.name}(仮${o.guess})`).join('・')}`); }
 const weakAll = overall.filter((o) => o.weakBot && !['回数不足', '保留', '未計測'].includes(o.tier));
 if (weakAll.length) { out(); out(`ボットの EX の使い方が下手なので、直したボットの回が${BOT_FIXED_NEED}回たまるまで暫定: ${weakAll.map((o) => `${o.s.m.name}(上手 − ボット +${o.botGap.toFixed(2)}・直したボット ${fixedBotHeroRuns(o.s.m.name)}回)`).join('・')}`); }
+const borderAll = overall.filter((o) => o.border);
+if (borderAll.length) { out(); out(`境目(3つの難易度とも5回以上あるのに、決め手がぶれの中。上下どちらの段とも言い切れないので、回数はここで止めて暫定のまま置く): ${borderAll.map((o) => `${o.s.m.name}(${o.tier})`).join('・')}`); }
 const heldAll = overall.filter((o) => o.tier === '保留');
 if (heldAll.length) { out(); out(`保留(EX をまだ使えていない): ${heldAll.map((o) => o.s.m.name).join('・')}`); }
 out();
@@ -570,7 +574,8 @@ function evidenceOf(o) {
   if (thin.length) unknown.push(`回数が5回に届かない難易度がある(${thin.join('・')})`);
   if (o.weakBot) unknown.push(`ボットの EX の使い方がシミュレーターの上手な使い方より WAVE ${r1(o.botGap)} 低いので、直したボットの回(いま ${fixedBotHeroRuns(name)}回)がたまるまで本当の強さは分からない`);
   if (s.tier === '保留') unknown.push('EX を一度も使えていないので Tier を付けていない');
-  if (o.noisy) unknown.push(`Tier の点の決め手(上の内訳)がどれもぶれの中なので、${o.tier} は仮(暫定)。回数が増えると動く`);
+  if (o.border) unknown.push(`3つの難易度とも5回以上あるのに、Tier の点の決め手(上の内訳)がどれもぶれの中。${o.tier} とその隣の段の境目にいて、回数を足しても動きにくいので、ここで止めている`);
+  else if (o.noisy) unknown.push(`Tier の点の決め手(上の内訳)がどれもぶれの中なので、${o.tier} は仮(暫定)。回数が増えると動く`);
   const byDiffN = per.filter(([, rs]) => rs.length).map(([d, rs]) => `${d} ${rs.length}`).join('・');
   return {
     出どころ: '実戦',
@@ -623,7 +628,7 @@ function tierJson(prev) {
     const dr = deskByName[s.m.name];
     const entry = {
       名前: s.m.name, 役: s.role, 総合: o.tier === '未計測' ? '回数不足' : o.tier, ...cell,
-      暫定: o.tier === '回数不足' || o.tier === '保留' ? false : !!o.provisional, 仮の総合: o.guess || '',
+      暫定: o.tier === '回数不足' || o.tier === '保留' ? false : !!o.provisional, 境目: !!o.border, 仮の総合: o.guess || '',
       理由: reason, 強み: good.join('・'), 弱み: bad.join('・'),
       回数: Object.fromEntries(TIER_DIFFS.map((d) => { const x = diffCell(o, d); return [d, x ? x.n : 0]; })),
       勇者の回数: Object.fromEntries(TIER_DIFFS.map((d) => { const x = diffCell(o, d); return [d, x ? x.heroN : 0]; })),
