@@ -105,6 +105,8 @@ node tools/build.js --check
 | `node undefined-reference-check.js` | `game-system.jsx` が「その場所からは見えない変数」を参照していないか、Babelでスコープをたどって確認する。構文としては正しいので `check-syntax.js` では見つからず、その画面を開いた瞬間だけ真っ白になる類の不具合を防ぐ。**改修後は必ず実行する。** |
 | `node jsx-text-brace-check.js` | JSXの中に、閉じ忘れ・閉じすぎでできた「{」「}」がそのまま文字として混ざっていないかを調べる。`{cond&&<div>…</div>}` の開き `{cond&&` を書き忘れると、余った `}` は画面に出る文字として扱われ構文エラーにならない。**改修後は必ず実行する。** |
 | `node render-error-check.js` | 画面が真っ白になる類の不具合(JSの実行時エラー)を、実際にブラウザで開いて確かめる。構文も参照先も正しいのに描画した瞬間だけ落ちる(宣言前の定数を読むなど)場合はここでしか止められない。**改修後は必ず実行する。** |
+| `node heap-snapshot-diff.js <前> <後>` | ページのメモリの写し(heap snapshot)を2枚比べ、増えた部品の種類(数・大きさ)と、後で新しく現れた部品をつかんでいる鎖を出す。写しは `memory-soak.js --snapshot-at 10,40 --snapshot-dir <フォルダ>` で取る |
+| `node debug-trials-check.js` | デバッグ設定のいちばん上の「確認待ちの試作」(`81-debug-trials.jsx` の `DEBUG_TRIALS`)と、設定の画面の入口(デバッグ設定を開いたことのある端末だけ)を実際のブラウザで確かめる。`--shots <フォルダ>` で写しも出す |
 | `node compiled-runtime-check.js` | 配信用コードが `jsxDEV` / automatic JSX runtime など、`index.html` が用意していないランタイムを参照していないことと、React / ReactDOM の読込順を確認する。 |
 | `node boot-flow-check.js` | 音声失敗時のTITLE遷移、全画面タイトルタップ、同期的な多重実行防止、GAME準備と演出の並列化を静的に確認する。 |
 | `node update-notice-check.js` | 新バージョンの定期検知、常時表示、キャッシュ回避付き更新を静的に確認する。 |

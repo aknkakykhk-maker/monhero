@@ -7,6 +7,7 @@
 //   node tools/memory-soak.js --mode rhythm --songs 6         モンヒロビートを6曲続けて演奏する
 //   node tools/memory-soak.js --mode idle   --minutes 10      HOMEで放っておく(ゲームが勝手に増やしていないか)
 //   … --infra-every <回> で Chromium の中の内訳(memory-infra・プロセスごとの部品の大きさ)を取る間隔(既定 20 回ごと・はじめと終わりは必ず)
+//   … --snapshot-at 10,40 --snapshot-dir <フォルダ> で、その分を過ぎたときのページのメモリの写しを書き出す(比べるのは tools/heap-snapshot-diff.js)
 //   … --bgm-light を足すと、場面のBGMを軽く持つ(デバッグ設定 mh_bgm_light_v1)を入れて測る(2026-10-16)
 //
 // 合格・不合格の検査ではなく、数字を出す道具。1回ごとに強制的にガベージコレクションをしてから測るので、
@@ -146,10 +147,21 @@ const makeRand = (seed) => { let t = seed >>> 0; return () => { t += 0x6D2B79F5;
         if (!al) continue;
         const pname = String(names[ev.pid] || ev.pid).replace(/\s+/g, '');
         const bucket = per[pname] = per[pname] || {};
+        // blink_gc(画面の部品の置き場)は、使っている分(allocated_objects_size)と確保している分(committed_size)、
+        // 置き場所(Space)ごとの使っている分も出す。差は「捨てた跡地を返していない分」
+        for (const [name, a] of Object.entries(al)) {
+          const m = name.match(/^blink_gc\/main\/heap(?:\/([A-Za-z0-9]+))?$/);
+          if (!m || !a || !a.attrs) continue;
+          const used = a.attrs.allocated_objects_size ? hex(a.attrs.allocated_objects_size.value) : 0;
+          const committed = a.attrs.committed_size ? hex(a.attrs.committed_size.value) : 0;
+          if (!m[1]) { if (used) bucket['blink_gc 使用中'] = (bucket['blink_gc 使用中'] || 0) + used; if (committed) bucket['blink_gc 確保'] = (bucket['blink_gc 確保'] || 0) + committed; }
+          else if (used) bucket[`blink_gc:${m[1]}`] = (bucket[`blink_gc:${m[1]}`] || 0) + used;
+        }
         for (const [name, a] of Object.entries(al)) {
           if (name.includes('/')) continue;   // いちばん上の部品だけ(下の内訳は二重に数えない)
           const size = a && a.attrs && a.attrs.size ? hex(a.attrs.size.value) : 0;
           if (size > 0) bucket[name] = (bucket[name] || 0) + size;
+
         }
         const totals = ev.args.dumps.process_totals;
         if (totals && totals.resident_set_bytes) bucket['(rss)'] = hex(totals.resident_set_bytes);
@@ -167,6 +179,20 @@ const makeRand = (seed) => { let t = seed >>> 0; return () => { t += 0x6D2B79F5;
       console.log(`  内訳(memory-infra・${label}・${row.sec}秒):\n${lines.join('\n')}`);
     } catch (e) { console.log(`  内訳を取れませんでした: ${String(e && e.message || e).slice(0, 120)}`); }
   };
+  // --snapshot-at 10,40 --snapshot-dir <フォルダ>: その分を過ぎた最初の測りで、ページのメモリの写し(heap snapshot)を書き出す。
+  // 比べるのは tools/heap-snapshot-diff.js(増えた部品の種類と、それをつかんでいるもの)
+  const SNAP_AT = String(argOf('--snapshot-at', '')).split(',').map(Number).filter((n) => n > 0).sort((a, b) => a - b);
+  const SNAP_DIR = argOf('--snapshot-dir', out);
+  const takeSnapshot = async (name) => {
+    const file = path.join(SNAP_DIR, `${name}.heapsnapshot`);
+    fs.mkdirSync(SNAP_DIR, { recursive: true });
+    const fd = fs.openSync(file, 'w');
+    const onChunk = (e) => fs.writeSync(fd, e.chunk);
+    cdp.on('HeapProfiler.addHeapSnapshotChunk', onChunk);
+    try { await cdp.send('HeapProfiler.takeHeapSnapshot', { reportProgress: false, captureNumericValue: false }); }
+    finally { cdp.off('HeapProfiler.addHeapSnapshotChunk', onChunk); fs.closeSync(fd); }
+    console.log(`  写し: ${file}(${Math.round(fs.statSync(file).size / 1048576)}MB)`);
+  };
   let sampleNo = 0;
   const sample = async (label) => {
     // 強制的にごみを片付けてから測る(持ち続けているものだけが数字に出る)
@@ -182,6 +208,7 @@ const makeRand = (seed) => { let t = seed >>> 0; return () => { t += 0x6D2B79F5;
     console.log(`${String(row.label).padEnd(16)} ${String(row.sec).padStart(5)}秒  heap ${String(row.heapMB).padStart(6)}MB (${row.heapMB - first.heapMB >= 0 ? '+' : ''}${(row.heapMB - first.heapMB).toFixed(1)})  全体 ${String(row.rss).padStart(5)}MB (${row.rss - first.rss >= 0 ? '+' : ''}${row.rss - first.rss})  nodes ${String(row.nodes).padStart(6)} (${row.nodes - first.nodes >= 0 ? '+' : ''}${row.nodes - first.nodes})  listeners ${String(row.listeners).padStart(5)} (${row.listeners - first.listeners >= 0 ? '+' : ''}${row.listeners - first.listeners})  docs ${row.docs}  canvas ${row.canvases} img ${row.imgs}  音: 解いた${row.decoded}本(${row.decodedMB}MB)・持っている${row.kept}本(うち曲 ${row.songKept}本・作り直し ${row.rebuilds}回: ${row.songNames})  作ったcanvas ${row.made} blob残り ${row.blobs} Image ${row.newImages} タイマー ${row.timers} 音の部品 ${row.sources}`);
     console.log(`    描画の面: canvas ${row.canvasMB}MB(2d ${row.ctx2d}・WebGL ${row.webgl}・Offscreen ${row.offscreen})・ImageBitmap 残り ${row.bitmapsAlive} / 画像: img ${row.imgMB}MB(${row.imgSrcs}種類)・背景画像の要素 ${row.cssBg} / プロセス: ${Object.entries(row.procs || {}).map(([k, v]) => `${k} ${v}MB(${v - ((first.procs || {})[k] || 0) >= 0 ? '+' : ''}${v - ((first.procs || {})[k] || 0)})`).join('・')}`);
     if (sampleNo === 1 || sampleNo % INFRA_EVERY === 0) await infraDump(label);
+    while (SNAP_AT.length && row.sec >= SNAP_AT[0] * 60) { const m = SNAP_AT.shift(); await takeSnapshot(`soak-${m}min`); }
   };
   try {
     // 遊び慣れた人の保存(はじめての設定・案内を済ませてある)で始める。バトル係・音ゲー係と同じ下準備
