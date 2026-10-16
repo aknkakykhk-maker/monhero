@@ -714,10 +714,15 @@ async function chooseBetween(s, mem, log) {
         // 押して、本当に選ばれたか(aria-pressed)を確かめる。効いていなければもう1回だけ押す。記録は実際に選ばれているもの
         const pressStyle = () => s.page.evaluate((id) => document.querySelector(`[data-hero-initial-style] [data-hero-style="${id}"]`)?.click(), want);
         const pressedNow = () => s.page.evaluate(() => (document.querySelector('[data-hero-initial-style] [data-hero-style][aria-pressed="true"]') || {}).getAttribute?.('data-hero-style') || '');
+        // PLAYBOT_SHOT_DIR=<フォルダ> で、押す前と押した後の画面を残す(報告用)
+        const shotDir = process.env.PLAYBOT_SHOT_DIR || '';
+        const shot = (name) => shotDir && s.page.screenshot({ path: require('path').join(shotDir, `hero-style-${diff || 'x'}-${name}.png`) }).catch(() => {});
+        await shot('before');
         await pressStyle();
         await s.wait(300);
         if ((await pressedNow()) !== want) { await pressStyle(); await s.wait(400); }
         const got = (await pressedNow()) || want;
+        await shot('after');
         log.data.build.heroStyle = got;
         log.note(`初期スタイル: ${(styles.find((x) => x.id === got) || {}).label || got}(${fixed ? '指定どおり' : envStyle === 'explore' ? `${hero || '?'}で試した回数の少ないものから` : simPick ? 'Master はシミュの結果で片手盾' : ranked.length ? `この難易度でいちばん届いたもの(平均 WAVE ${ranked[0].v.toFixed(1)})` : '記録が無いので難易度の既定'}${got !== want ? `。※${want}を押したが選ばれなかった` : ''})`);
       }
