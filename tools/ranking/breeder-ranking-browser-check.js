@@ -1,7 +1,7 @@
 // Supabaseをスタブし、複数ブリーダーLv記録が実際のDOMへ描画・保持されることを確認する。
 const { chromium } = require('playwright');
 // イベントの「閉幕とお礼」は終了の時刻に自動で流れる。既読にしておかないと会話で止まる
-const { eventStorySeed } = require(require('path').resolve(__dirname, '..', 'boot/quiet-boot-seed'));
+const { quietBootSeed } = require(require('path').resolve(__dirname, '..', 'boot/quiet-boot-seed'));
 const URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/index.html';
 (async()=>{
   // ★この1本だけ「環境変数があればそれを使い、無ければPlaywright既定のパス」になっていて、
@@ -31,7 +31,8 @@ const URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/index.h
     put('mh_inherited_unique_level_compensation_pending_v1',false);
     put('mh_masu_level_cap_compensation_notice_seen_v1',true);
   });
-  await page.addInitScript(eventStorySeed());
+  // イベントの会話に加えて、お詫びの配布などの一度きりのお知らせも「もう見た」にする(お詫びの配布はモード選択の上に重なりタブを押せなくする)
+  await page.addInitScript(quietBootSeed());
   // ★取り方が「難易度ごとに1回ずつ」から「全難易度まとめて1回」へ変わったので、
   //   difficulty で出し分けずに全部返す。見たいのは
   //   「全難易度から集めて、同じ人は最高Lvへまとめる」ことなので、材料は同じ
@@ -90,7 +91,8 @@ const URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/index.h
   await page.waitForTimeout(600);
   await page.evaluate(()=>{const b=document.querySelector('[data-battle-system="systemClassic"]');if(b)b.click();});
   await page.waitForTimeout(1500);
-  await page.evaluate(()=>{const b=[...document.querySelectorAll('button')].find(x=>x.textContent.trim()==='ブリーダーLv');if(b)b.click();});
+  // タブは見た目に飾り(🏆)が付くので、文字ではなく aria-label で探す
+  await page.evaluate(()=>{const b=document.querySelector('button[aria-label="ブリーダーLvランキング"]');if(b)b.click();});
   const cards=page.locator('[data-ranking-kind="breeder"]');
   await cards.first().waitFor({timeout:30000});
   if(await cards.count()!==3)throw new Error(`ブリーダーLv DOM件数が3件ではありません: ${await cards.count()}`);
