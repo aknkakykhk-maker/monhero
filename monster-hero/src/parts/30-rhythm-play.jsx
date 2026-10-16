@@ -911,6 +911,17 @@ const rhythmTouchDiagOf=({song,difficulty,notes,inputTimes,assist,mirror,cleared
             // 1コマの重さ(2026-10-11)。足すだけ(古い行には無い)
             ...(frame&&typeof frame==='object'?{frame}:{})}};
 };
+// モンスターノーツの前後のコマ(2026-10-16・RHYTHM_FRAME_DIAG.mark)を stats.mon に足す。行の大きさの上限(stats は 4KB・表の check 制約)を
+// 超えると行ごと断られるので、文字にした大きさが RHYTHM_TOUCH_DIAG_MON_MAX を超えるあいだ、うしろの回から手がかりを削り、それでも超えれば回ごと外す
+const RHYTHM_TOUCH_DIAG_MON_MAX=3500;
+const rhythmTouchDiagWithMon=(diag,mon)=>{
+  if(!diag||!diag.stats||!Array.isArray(mon)||!mon.length)return diag;
+  const list=mon.map(m=>({...m}));
+  const size=()=>{try{return JSON.stringify({...diag.stats,mon:list}).length;}catch{return Infinity;}};
+  for(let i=list.length-1;i>=0&&size()>RHYTHM_TOUCH_DIAG_MON_MAX;i--){delete list[i].c;if(size()>RHYTHM_TOUCH_DIAG_MON_MAX)delete list[i].i;}
+  while(list.length&&size()>RHYTHM_TOUCH_DIAG_MON_MAX)list.pop();
+  return list.length?{...diag,stats:{...diag.stats,mon:list}}:diag;
+};
 const rhythmTouchDiagRecord=async(diag)=>{
   try{
     const saved=await storeGet(RHYTHM_TOUCH_DIAG_KEY,[]);
@@ -1442,6 +1453,8 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   // 設定「マスモン｜能力のカットイン」で出さないにできる。軽量モード・演出量「最小」では出さない。
   const cutInRefs=useRef([]);
   const cutInOn=settings.monsterCutIn!==false&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL';
+  // モンスターノーツの層の先作り(試作・2026-10-16)。演奏を始めるときに1回読む
+  const monLayersOn=useState(()=>rhythmMonLayersOn())[0];
   const cutInElements=useMemo(()=>{
     if(!cutInOn)return null;
     return <div data-rhythm-cutin aria-hidden="true">
@@ -1927,7 +1940,7 @@ if(clearedGesture){
 //   振動はここへまとめる(演出量で強さが変わっていた。振動は専用の設定の管轄)。
 const monsterHit=judgment!=='MISS'&&!!monsterForNote(note);
 if(judgment!=='MISS'){
-  if(monsterHit)RHYTHM_NOTE_SE_RUNTIME.playMonster();
+  if(monsterHit){RHYTHM_NOTE_SE_RUNTIME.playMonster();RHYTHM_FRAME_DIAG.cue('se');}
   // 空中のノーツ(試作)は、ふだんの音に「きらっ」を重ねる(空中のノーツがある譜面だけ)
   if(rhythmNoteSkyHeight(note)>0)RHYTHM_NOTE_SE_RUNTIME.playSky(judgment);
   if(!settings.lightweightMode&&settings.effectAmount!=='MINIMAL'){
@@ -2043,6 +2056,8 @@ const stockRevive=rhythmConsumeKonjoStock(run.abilities,run.life);
 if(stockRevive.revived){run.life=stockRevive.life;run.abilities=stockRevive.state;revived=true;abilityFlash={monster:run.konjoOwnerName||'',ability:RHYTHM_MONSTER_ABILITIES.KONJO.name};}
 // モンスターノーツはGREAT以上で能力が出る(§3.4)。判定窓は専用に甘くしない
 const monster=monsterForNote(note);
+// モンスターノーツの前後のコマを実機の記録に残す(2026-10-16)。カットインの絵がもう用意できていたか(dec)も控える
+if(monster){const ci=cutInOn?cutInRefs.current[rhythmNoteMonsterSlot(note)-1]:null,img=ci&&ci.querySelector('img');RHYTHM_FRAME_DIAG.mark(songTimeMs,judgment,{ly:monLayersOn?1:0,ci:cutInOn?1:0,dec:img?(img.complete&&img.naturalWidth>0?1:0):-1,lw:settings.lightweightMode?1:0,fx:String(settings.effectAmount||'').slice(0,3)});}
 if(monster&&monster.ability&&rhythmMonsterAbilityTriggers(judgment)){
   const activated=rhythmActivateMonsterAbility({ability:monster.ability,state:run.abilities,life:run.life,songTimeMs});
   run.abilities=activated.state;run.life=activated.life;
@@ -2063,7 +2078,7 @@ if(monster&&monster.ability&&rhythmMonsterAbilityTriggers(judgment)){
     run.abilityCounts=run.abilityCounts||[];
     if(slot>=1)run.abilityCounts[slot-1]=(Number(run.abilityCounts[slot-1])||0)+1;
     // カットインを1回だけ走らせる(見た目だけ。判定・スコア・ライフには触らない)
-    if(cutInOn){const cutIn=cutInRefs.current[slot-1];if(cutIn)rhythmRestartAnimations([{el:cutIn,attr:'rhythmCutinPlay'}]);}
+    if(cutInOn){const cutIn=cutInRefs.current[slot-1];if(cutIn){RHYTHM_FRAME_DIAG.cue('cutin');rhythmRestartAnimations([{el:cutIn,attr:'rhythmCutinPlay'}]);}}
   }
 }
 const calculatedScore=Math.floor(rhythmCalculateScore({judgments:run.counts,maxCombo:run.maxCombo,totalNotes:chart.totalNotes,maxScore:difficulty.maxScore})*(assistOn?RHYTHM_ASSIST_SCORE_RATE:1));if(!run.lifeDepleted)run.score=calculatedScore-run.scoreOffset;if(!run.lifeDepleted&&run.life===0){run.lifeDepleted=true;run.lockedScore=run.score;}
@@ -2100,7 +2115,7 @@ hudRef.current.set(rhythmNoteIsSky(note)?{score,combo:run.combo,skyLast:judgment
 // 危険・注意などの段はライフの部品(RhythmHudLife)が hud から自分で描き直す。段まで見ると、元気で回復して段が変わった瞬間
 // (=モンスターノーツを取った瞬間)に演奏画面全体を作り直していた(2026-10-15 社長「元気で回復したらまだかくついてる」)
 const coarseKey=`${rhythmComboTier(run.combo)}|${Math.floor(run.combo/RHYTHM_COMBO_MILESTONE_STEP)}|${rhythmLifeState(run.life)==='down'?'down':'up'}`;
-if(showAbilityFlash)setAbilityFlash(`${abilityFlash.ability}！`);
+if(showAbilityFlash){RHYTHM_FRAME_DIAG.cue('flash');setAbilityFlash(`${abilityFlash.ability}！`);}
 if(coarseKey!==run._viewCoarseKey){run._viewCoarseKey=coarseKey;setView(v=>({...v,score,combo:run.combo,maxCombo:run.maxCombo,last:judgment,lastPrecise:preciseHit,fastSlow:side||'',counts:{...run.counts},fast:run.fast,slow:run.slow,precise:run.precise,life:run.life,lastDeltaMs}));}scheduleJudgmentClear(rhythmNoteIsSky(note));
 /* 自己ベスト比(beatmania IIDX のペースメーカー)。「自己ベストを曲のここまでの割合で割り戻した点」との差。
    前の記録が無い曲・練習・タイミング合わせでは出さない。★見た目だけで、スコアにも記録にも入れない */
@@ -2148,7 +2163,7 @@ if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number
     // タッチの診断を残して送る(待たない・失敗しても何もしない)。デバッグ・練習・タイミング合わせは除く。アシストは印を付けて含める
     if(!debugPlay&&!tutorial&&!calibrating){try{RHYTHM_TIMING_DIAG.meta(run.audio?.info?.());}catch{}}
     try{RHYTHM_INPUT_REC.finish({cleared:!failed,score:Number(run.score)||0});}catch{}
-    const touchDiag=!debugPlay&&!tutorial&&!calibrating?rhythmTouchDiagOf({song,difficulty,notes:run.notes,inputTimes:run.inputTimes,assist:assistOn,mirror:mirrorOn,cleared:!failed,frame:rhythmFrameDiagOf()}):null;
+    const touchDiag=!debugPlay&&!tutorial&&!calibrating?rhythmTouchDiagWithMon(rhythmTouchDiagOf({song,difficulty,notes:run.notes,inputTimes:run.inputTimes,assist:assistOn,mirror:mirrorOn,cleared:!failed,frame:rhythmFrameDiagOf()}),RHYTHM_FRAME_DIAG.monSnapshot()):null;
     if(touchDiag)void rhythmTouchDiagRecord(touchDiag);
     // リザルトの「押したのに反応しないことがあった」に渡す。タッチで遊ぶ端末(iPhone・Android)だけ
     const touchReport=touchDiag&&touchDiag.platform!=='other'?{playId:touchDiag.stats.playId,song_id:touchDiag.song_id,difficulty:touchDiag.difficulty,note_count:touchDiag.note_count,platform:touchDiag.platform,standalone:touchDiag.standalone}:null;
@@ -2457,7 +2472,7 @@ if(settings.sideMonsterAbilityHighlight&&sideMonsterRefs.current.length){
   if(run.abilityFlashSlot&&songTimeMs<Number(run.abilityFlashUntilMs))active.add(run.abilityFlashSlot);
   const signature=[...active].sort().join(',');
   if(run.sideMonsterActiveSignature!==signature){
-    run.sideMonsterActiveSignature=signature;
+    run.sideMonsterActiveSignature=signature;RHYTHM_FRAME_DIAG.cue('side');
     sideMonsterRefs.current.forEach((el,index)=>{
       if(!el)return;
       const want=active.has(index+1)?'1':'0';
@@ -3240,7 +3255,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
 
 {/* 0になったその瞬間だけ、大きく1度だけ出す(1.4秒で消える) */}
 {lifeDownSlam&&<div data-rhythm-life-down-slam aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-[32%] z-40 text-center"><b className="block text-5xl font-black leading-none">LIFE 0</b><small className="mt-1 block text-xs font-black tracking-[0.34em]">DOWN</small></div>}
-<div ref={playAreaRef} data-rhythm-play-area data-rhythm-judgment-snap={judgmentSnap?'1':undefined} data-rhythm-judgment-fx={settings.judgmentFx===true&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL'?'1':undefined} data-rhythm-counting={countdownStep!==null?'1':undefined} data-rhythm-strip={RHYTHM_STRIP.value||undefined} data-rhythm-lightweight={settings.lightweightMode?'true':'false'} data-rhythm-effect={settings.effectAmount} data-rhythm-tap-light={rhythmTapLightOnly(settings)?'1':undefined} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerEnd} onPointerCancel={pointerEnd} className="relative mx-2 mb-2 flex-1 min-h-0 overflow-hidden border-x border-cyan-400/50" style={{/* position と overflow はここにも直接書く。ノーツも判定ラインもこの箱を基準に
+<div ref={playAreaRef} data-rhythm-play-area data-rhythm-mon-layers={monLayersOn?'1':undefined} data-rhythm-judgment-snap={judgmentSnap?'1':undefined} data-rhythm-judgment-fx={settings.judgmentFx===true&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL'?'1':undefined} data-rhythm-counting={countdownStep!==null?'1':undefined} data-rhythm-strip={RHYTHM_STRIP.value||undefined} data-rhythm-lightweight={settings.lightweightMode?'true':'false'} data-rhythm-effect={settings.effectAmount} data-rhythm-tap-light={rhythmTapLightOnly(settings)?'1':undefined} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerEnd} onPointerCancel={pointerEnd} className="relative mx-2 mb-2 flex-1 min-h-0 overflow-hidden border-x border-cyan-400/50" style={{/* position と overflow はここにも直接書く。ノーツも判定ラインもこの箱を基準に
     置いているので、Tailwindの relative が効く前だと基準が別の要素へ移り、
     判定ラインが画面の変なところへ出る(2026-09-05)。中身の置き場所に関わるものは
     外部CSSに任せない */position:'relative',overflow:'hidden',touchAction:'none',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none','--rhythm-note-size-scale':settings.noteSize/100,
