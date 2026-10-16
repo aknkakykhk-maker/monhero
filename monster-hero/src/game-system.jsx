@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a1881677220e4caa
+// generated-sha256: 5ac7762ef7eaded8
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-16 14:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-16 17:49"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -31134,7 +31134,7 @@ function AssetDownloadPage({ onBack }) {
   );
 }
 
-function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onOpenTitleArt, onOpenHomeArt, onOpenScreenTheme, onOpenBackup, onOpenHelp, onOpenGameUpdate, gameUpdateDisabled, onReturnToTitle, updateNoticeStyle, onChangeUpdateNoticeStyle, battleScreenStyle, onChangeBattleScreenStyle, battleFxSettings, onChangeBattleFxSetting, battleFxAutoLoad }) {
+function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onOpenTitleArt, onOpenHomeArt, onOpenScreenTheme, onOpenBackup, onOpenHelp, onOpenDebug = null, onOpenGameUpdate, gameUpdateDisabled, onReturnToTitle, updateNoticeStyle, onChangeUpdateNoticeStyle, battleScreenStyle, onChangeBattleScreenStyle, battleFxSettings, onChangeBattleFxSetting, battleFxAutoLoad }) {
   // バトル設定は設定画面の中の1ページ(2026-09-24 ユーザー指示「バトルの設定をバラにしないで、
   // 音量設定の上に作ってその中に細かい設定欄を作って」)。画面(gameState)は増やさず、ここで切り替える
   const [battleSettingsOpen, setBattleSettingsOpen] = useState(false);
@@ -31222,6 +31222,8 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
       <div className={`${SCREEN_LIST_CLASS} w-full max-w-md mx-auto space-y-3 pb-4`}>
         {/* 1行ずつ「絵＋名前＋何の設定か」を出す(2026-10-05)。名前だけのボタンが9つ同じ見た目で並び、
             どれが何の設定か押すまで分からなかった。M/B管理・神殿のメニューと同じ形 */}
+        {/* デバッグ設定の入口(2026-10-16)。一度でもヘルプの奥からデバッグ設定を開いた端末だけに出る。いちばん上に置いてスクロールせずに押せるようにする(60-app.jsx の debugEntryKnown) */}
+        {onOpenDebug && <SettingsMenuLink icon="🧪" label="デバッグ設定" desc="確認待ちの試作・検証用(この端末だけ)" onClick={onOpenDebug}/>}
         <SettingsMenuLink icon="⚔️" label="バトル設定" desc="タクティクスの画面・画面の軽さ・待機中の動き" onClick={() => setBattleSettingsOpen(true)} data-open-battle-settings/>
         <SettingsMenuLink icon="🎚️" label="音量設定" desc="効果音とBGMの大きさ・音が出ないとき" onClick={onOpenAudioSettings}/>
         <SettingsMenuLink icon="🎵" label="BGMアレンジ" desc="場面ごとに流す曲を選ぶ" onClick={onOpenBgmArrangement}/>
@@ -47538,6 +47540,73 @@ const loadAssistantChatMemoFor = async (assistantId) => {
   return normalizeAssistantChatMemo(v2, v1)[assistantId] || null;
 };
 
+// ---- part: 81-debug-trials.jsx ----
+// ===== 確認待ちの試作(デバッグ設定のいちばん上・2026-10-16 社長「新しいのを確認するのも分かりやすくしないと探すのが大変すぎる」) =====
+// 社長に iPhone で確かめてほしい試作だけを、デバッグ設定を開いてすぐの所に並べる。
+// ★試作を足すときは DEBUG_TRIALS に1行足すだけ。並び・NEW の印・入/切のボタン・いまの状態は下の部品が作る。
+//   ・added … 足した日(JST・'YYYY-MM-DD')。新しいものほど上
+//   ・key / on … 入/切を覚える localStorage のキーと「入」の値(切はキーを消す)。試作の本体が読むキーと同じにする
+//   ・title / note / when … 名前・何が変わるか1行・いつから効くか
+// ★確認が済んで既定に入れたら、その行を消す(一覧から外す)。キーそのものは本体の決まりのとおり残す(SAVE_DATA.md)。
+// NEW の印は「まだ一度も入/切を押していない試作」に付く(押した試作は mh_debug_trials_seen_v1 に覚える)。
+// デバッグ専用(更新履歴・ヘルプに載せない)。判定・セーブデータの中身には触らない
+const DEBUG_TRIALS = [
+  { id: 'bgm_light', added: '2026-10-16', area: '音', key: 'mh_bgm_light_v1', on: 'on',
+    title: '🔊 場面のBGMを軽く持つ',
+    note: 'タイトル・ホーム・バトルなどの BGM を軽くして(少しこもることがあります)、持つ曲を2本までにします。長く遊んだときのメモリ不足の手当てです。モンヒロビートの曲・効果音は変わりません',
+    when: '次に BGM が切り替わったときから' },
+  { id: 'rhythm_floor3d', added: '2026-10-16', area: 'モンヒロビート', key: 'mh_rhythm_floor3d_proto_v1', on: 'on',
+    title: '🎵 床と空中の見た目',
+    note: '地上のノーツを道の床に平たく貼り付け、空中のノーツを厚みのある箱にして床に影を落とします。判定の位置・時刻・指の扱いは変わりません',
+    when: '次の演奏から' },
+];
+const DEBUG_TRIALS_SEEN_KEY = 'mh_debug_trials_seen_v1';
+const debugTrialRead = (trial) => { try { return typeof localStorage !== 'undefined' && localStorage.getItem(trial.key) === trial.on; } catch (e) { return false; } };
+const debugTrialWrite = (trial, on) => { try { if (on) localStorage.setItem(trial.key, trial.on); else localStorage.removeItem(trial.key); } catch (e) {} return debugTrialRead(trial); };
+const debugTrialsSeen = () => { try { const v = JSON.parse(localStorage.getItem(DEBUG_TRIALS_SEEN_KEY) || '[]'); return Array.isArray(v) ? v.filter((x) => typeof x === 'string') : []; } catch (e) { return []; } };
+const debugTrialsMarkSeen = (id) => { try { const seen = debugTrialsSeen(); if (!seen.includes(id)) localStorage.setItem(DEBUG_TRIALS_SEEN_KEY, JSON.stringify([...seen, id].slice(-100))); } catch (e) {} };
+// まだ押していない(NEW)ものを上、そのあと足した日の新しい順
+const debugTrialsOrdered = (seen) => DEBUG_TRIALS.map((t, i) => ({ t, i, fresh: !seen.includes(t.id) }))
+  .sort((a, b) => (Number(b.fresh) - Number(a.fresh)) || String(b.t.added).localeCompare(String(a.t.added)) || (a.i - b.i)).map((x) => ({ ...x.t, fresh: x.fresh }));
+
+// onChange … 入/切を押したあとに呼ぶ(本体の画面が同じキーを覚えている state を読み直すため)
+function DebugTrialsPanel({ onChange }) {
+  const [, setTick] = useState(0);
+  const seen = debugTrialsSeen();
+  const list = debugTrialsOrdered(seen);
+  if (!list.length) return null;
+  const toggle = (trial, on) => { debugTrialWrite(trial, on); debugTrialsMarkSeen(trial.id); setTick((n) => n + 1); try { if (onChange) onChange(trial, on); } catch (e) {} };
+  return (
+    <section data-debug-trials className="rounded-2xl border-2 border-lime-400/60 bg-lime-950/30 p-3">
+      <h3 className="text-[12px] font-black text-lime-200">🧪 確認待ちの試作<small className="ml-1 text-[9px] font-bold text-lime-100/70">({list.length})</small></h3>
+      <p className="mt-0.5 text-[9px] font-bold leading-relaxed text-lime-100/75">iPhone で確かめてほしい試作です。「入」にして遊び、気になる所があれば「切」で元に戻せます。新しいものほど上に出ます。</p>
+      <div className="mt-2 space-y-2">
+        {list.map((trial) => {
+          const on = debugTrialRead(trial);
+          return (
+            <div key={trial.id} data-debug-trial={trial.id} data-debug-trial-on={on ? '1' : '0'} data-debug-trial-new={trial.fresh ? '1' : undefined} className="rounded-xl border border-white/10 bg-slate-950/60 p-2.5">
+              <div className="flex items-start gap-2">
+                <div className="min-w-0 flex-1">
+                  <b className="block text-[12px] font-black text-white">{trial.fresh && <span data-debug-trial-new-badge className="mr-1 rounded bg-rose-500 px-1 py-px align-middle text-[8px] font-black text-white">NEW</span>}{trial.title}</b>
+                  <small className="mt-0.5 block text-[9px] font-bold text-slate-400">{trial.area}・{trial.added}・{trial.when}</small>
+                </div>
+                <span data-debug-trial-state className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black ${on ? 'bg-lime-400 text-slate-900' : 'bg-slate-700 text-slate-200'}`}>いま {on ? '入' : '切'}</span>
+              </div>
+              <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-300">{trial.note}</p>
+              <div className="mt-2 flex gap-2">
+                {[[true, '入'], [false, '切']].map(([value, label]) => (
+                  <button key={label} type="button" data-debug-trial-set={value ? 'on' : 'off'} aria-pressed={on === value} onClick={() => toggle(trial, value)}
+                    className={`min-h-[40px] flex-1 rounded-xl text-[12px] font-black active:scale-95 ${on === value ? 'bg-lime-400 text-slate-900' : 'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 // ---- part: 60-app.jsx ----
 function MonsterHeroGame() {
   const [gameState, setGameStateRaw] = useState('HOME');
@@ -47687,12 +47756,15 @@ function MonsterHeroGame() {
   // ノーツの描き方の上書き(検証用・デバッグ限定)。'' = 公開設定に従う / 'dom' / 'canvas'
   const [rhythmCanvasPref,setRhythmCanvasPref]=useState(()=>rhythmCanvasNotesPreference());
   const [rhythmGpuBandPref,setRhythmGpuBandPref]=useState(()=>rhythmGpuBandPreference());
+  const [rhythmFloor3dPref,setRhythmFloor3dPref]=useState(()=>rhythmFloor3dPreference());
   const [rhythmPreparePref,setRhythmPreparePref]=useState(()=>rhythmPreparePreference());
   const [rhythmCanvasHitsPref,setRhythmCanvasHitsPref]=useState(()=>rhythmCanvasHitsPreference());
   const [rhythmHitSparkPref,setRhythmHitSparkPref]=useState(()=>rhythmHitSparkPreference());
   const [rhythmJudgmentSnapPref,setRhythmJudgmentSnapPref]=useState(()=>rhythmJudgmentSnapPreference());
-  // 場面のBGMを軽く持つ(デバッグ設定・2026-10-16 社長の決定「案1＋案2」。14-audio.jsx の BGM_LIGHT_KEY)
-  const [bgmLightPref,setBgmLightPref]=useState(()=>{try{return localStorage.getItem('mh_bgm_light_v1')==='on';}catch{return false;}});
+  // デバッグ設定を一度でも開いた端末だけ、設定の画面にも入口を出す(2026-10-16 社長「デバッグモードがわかりづらい」)。
+  // ふつうのプレイヤーはヘルプの奥の入口を開かないので、出ないまま(新しいキー mh_debug_entry_v1)
+  const [debugEntryKnown,setDebugEntryKnown]=useState(()=>{try{return localStorage.getItem('mh_debug_entry_v1')==='1';}catch{return false;}});
+  useEffect(()=>{if(gameState!=='DEBUG_SETTINGS')return;try{localStorage.setItem('mh_debug_entry_v1','1');}catch{}setDebugEntryKnown(true);},[gameState]);
   const [rhythmInputRecOn,setRhythmInputRecOn]=useState(()=>{try{return RHYTHM_INPUT_REC.enabled();}catch{return false;}});
   const [rhythmInputRecMsg,setRhythmInputRecMsg]=useState('');
   // ホールド・スライドの離しの合図の遅れを、どこまで信じて戻すか(検証用・2026-10-11)。この端末だけの切り替え(mh_rhythm_fix_override_v1)
@@ -55644,6 +55716,8 @@ function MonsterHeroGame() {
     return result;
   };
   const openTrainingInfo=()=>setGameState('TRAINING_INFO');
+  // デバッグ設定を開く(ヘルプの奥の入口と、設定の画面の入口が同じものを呼ぶ)
+  const openDebugSettings=()=>{const options=getDebugEnemyOptions(debugBattleModeId);if(!options.some(o=>o.key===debugEnemyKey))setDebugEnemyKey(options[0]?.key||null);debugBattleRef.current=false;extremeRunRef.current=false;setDebugBattle(false);setExtremeRun(false);setDebugOutcome(null);setShowHelp(false);setGameState('DEBUG_SETTINGS');};
   const openDebugTraining=()=>{setTrainingSelectedId(null);setTrainingDifficulty('BEGINNER');setTrainingSession(null);setGameState('TRAINING_SELECT');};
   const startTraining=()=>{if(!trainingSelectedId||trainingDifficulty!=='BEGINNER')return;setTrainingMapScale(1);setTrainingMapOverview(false);setTrainingSession(createTrainingSession(trainingSelectedId));setTrainingDebugRoll(null);setGameState('TRAINING_BOARD');};
   const patchTraining=patch=>setTrainingSession(prev=>({...prev,...patch}));
@@ -65174,6 +65248,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onOpenScreenTheme={()=>setShowScreenTheme(true)}
             onOpenBackup={()=>{setShowBackup(true);setBackupTab('export');setBackupCode('');setRestoreInput('');setRestoreMsg('');}}
             onOpenHelp={()=>openHelp()}
+            onOpenDebug={debugEntryKnown?openDebugSettings:null}
             onOpenGameUpdate={()=>setShowGameUpdateConfirm(true)}
             gameUpdateDisabled={showGameUpdateConfirm||gameUpdatePending}
             onReturnToTitle={()=>setShowOfficialTitleConfirm(true)}
@@ -66021,6 +66096,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             {/* スライドの帯を GPU に一度だけ置いて描くかの切り替え(2026-10-11・作り替え B の S1)。社長の iPhone で今の描き方と比べてから既定にする(S3)。
                 プレイヤーの通常プレイには出ないので更新履歴・ヘルプには載せない */}
             <section data-rhythm-gpu-band-panel className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"><h3 className="text-xs font-black text-cyan-200">スライドの帯の描き方（検証用）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80">「GPU」はスライドの帯（地上・空中・影）の形を譜面を読んだときに一度だけ GPU に置き、毎コマは曲の位置だけ渡して描きます（帯が長い・多い曲で軽くするための試作）。既定（GPU）は、ノーツを WebGL で描いているとき（描画方式が自動で GPU がある端末など）に使います。「GPU（WebGL も）」は描画方式に関係なくノーツを WebGL で描きます（「ノーツの描き方」で canvas・要素を選んでいるときはそちらが勝ちます）。「今の描き方」は使いません。WebGL が使えないときは今の描き方に戻ります。次の演奏から効きます。</p><div className="mt-2 flex gap-2">{[['','既定（GPU）'],['gpu','GPU（WebGL も）'],['off','今の描き方']].map(([value,label])=><button key={value||'default'} type="button" data-rhythm-gpu-band-pref={value||'default'} aria-pressed={rhythmGpuBandPref===value} onClick={()=>setRhythmGpuBandPref(rhythmGpuBandSetPreference(value))} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmGpuBandPref===value?'bg-cyan-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></section>
+            {/* 床と空中の見た目の試作(2026-10-16 社長「地上は床にべったり、空中は立体感ある表示」)。見た目だけ・判定と入力は変えない。
+                プレイヤーの通常プレイには出ないので更新履歴・ヘルプには載せない */}
+            <section data-rhythm-floor3d-panel className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"><h3 className="text-xs font-black text-cyan-200">床と空中の見た目（試作）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80">「試作」は、地上のノーツを道の床に平たく貼り付けた形（奥ほど細く薄い台形）にし、空中のノーツを側面と厚みのある箱にして、床に影を落とします。判定の位置・時刻・指の扱いは変わりません。空中スライドの厚みは「スライドの帯の描き方」が「今の描き方」のときだけ出ます。次の演奏から効きます。</p><div className="mt-2 flex gap-2">{[['','今の見た目'],['on','試作']].map(([value,label])=><button key={value||'off'} type="button" data-rhythm-floor3d-pref={value||'off'} aria-pressed={rhythmFloor3dPref===value} onClick={()=>setRhythmFloor3dPref(rhythmFloor3dSetPreference(value))} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmFloor3dPref===value?'bg-cyan-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></section>
             {/* 演奏前の準備の切り替え(2026-10-11・修理部・社長「事前読み込みで改善されないの?」)。曲の最初のコマで初めて起きていた重い仕事を、曲の前の幕のあいだに済ませる。
                 2026-10-11 社長の決定で既定を「する」にした。何かあれば「しない」で戻す。見た目は変わらないので更新履歴・ヘルプには載せない */}
             {/* 叩いたときの光の描き方の切り替え(2026-10-11・修理部・発熱の調べ)。DOM の光の部品は CSS のアニメーションが毎コマ スタイルの再計算をさせていた。
@@ -66152,6 +66230,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div className="flex items-center gap-2 mb-2 shrink-0"><button onClick={()=>{setGameState('SETTINGS');openHelp();}} className="p-3 text-slate-500"><ArrowLeft size={20}/></button><h2 className="text-base font-black text-slate-400 tracking-widest">DEBUG MENU</h2></div>
             <p className="mb-3 shrink-0 text-[9px] leading-relaxed text-slate-500">用途ごとに畳んであります。見出しを押すと開きます。</p>
             <div className="flex-1 overflow-y-auto mh-scroll space-y-2">
+              {/* 確認待ちの試作(81-debug-trials.jsx の DEBUG_TRIALS)。いちばん上に出す。同じキーを覚えている本体の state も読み直す */}
+              <DebugTrialsPanel onChange={(trial)=>{if(trial.id==='rhythm_floor3d')setRhythmFloor3dPref(rhythmFloor3dPreference());}}/>
 
               {/* 助手とおしゃべり(2026-10-14)。公開の印 assistantChat が立つまでの試し口。
                   本物の中継役へ送るので、1回ごとに社長のAPIクレジットと回数を使う。デバッグ専用なので更新履歴・ヘルプには載せない */}
@@ -66285,10 +66365,6 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   {/* 画面エラーの受け止め(MhErrorBoundary)を実際に試す。押すとこの画面の描画で例外が起き、真っ白の代わりに「ホームへ戻る」が出るはず */}
                   <button data-debug-screen-error onClick={()=>setDebugThrowScreenError(true)} className="min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95">⚠️ 画面エラーの受け止めを試す</button>
                   {debugThrowScreenError&&<DebugThrowScreenError/>}
-                  {/* 場面のBGMを軽く持つ(2026-10-16 社長の決定「案1＋案2」・修理部)。オート無限を長く回したときの iPhone のメモリ不足の手当て。
-                      入にすると、場面のBGM(タイトル・ホーム・バトルなど)だけ音を軽くして(24kHz)、持つのも2本までにする。モンヒロビートの曲は変わらない。
-                      既定は切。社長の iPhone で確かめてから既定を入にする */}
-                  <section data-bgm-light-panel className="rounded-2xl border border-amber-400/40 bg-amber-950/20 p-3"><h3 className="text-xs font-black text-amber-200">🔊 場面のBGMを軽く持つ（検証用）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-amber-100/80">「入」にすると、タイトル・ホーム・バトルなどの BGM の音を軽くして（少しこもることがあります）、持っておく曲も2本までにします。長く遊んだときにメモリが足りなくなるのを防ぐためのものです。モンヒロビートの曲と効果音は変わりません。次に BGM が切り替わったときから効きます。</p><div className="mt-2 flex gap-2">{[[true,'入'],[false,'切']].map(([value,label])=><button key={label} type="button" data-bgm-light-pref={value?'on':'off'} aria-pressed={bgmLightPref===value} onClick={()=>{try{if(value)localStorage.setItem('mh_bgm_light_v1','on');else localStorage.removeItem('mh_bgm_light_v1');}catch{}setBgmLightPref(value);}} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${bgmLightPref===value?'bg-amber-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></section>
                   {/* 事前ダウンロード(2026-10-11)。ONにすると Service Worker を登録し、設定に「ダウンロード」が出る。
                       OFFにすると Service Worker を外し、端末にためた曲・画像を消す(セーブデータ・ランキングには触れない)。
                       既定は ON(2026-10-11 公開)。この切り替えボタン自体はデバッグ専用 */}
@@ -69014,7 +69090,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </div>
           <footer className="shrink-0 p-4 bg-slate-900 border-t border-white/10 text-center" style={{backgroundColor:'#0f172a',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
             <button onClick={()=>setShowHelp(false)} className="mh-button mh-button-primary w-full min-h-[52px] py-3 rounded-2xl font-black text-sm active:scale-95">わかった！冒険に戻る</button>
-            <button aria-label="" onClick={()=>{const options=getDebugEnemyOptions(debugBattleModeId);if(!options.some(o=>o.key===debugEnemyKey))setDebugEnemyKey(options[0]?.key||null);debugBattleRef.current=false;extremeRunRef.current=false;setDebugBattle(false);setExtremeRun(false);setDebugOutcome(null);setShowHelp(false);setGameState('DEBUG_SETTINGS');}} className="mt-5 mx-auto block text-[10px] opacity-25 hover:opacity-40 active:opacity-60">💊</button>
+            <button aria-label="" onClick={openDebugSettings} className="mt-5 mx-auto block text-[10px] opacity-25 hover:opacity-40 active:opacity-60">💊</button>
           </footer>
         </div>);
       })()}
