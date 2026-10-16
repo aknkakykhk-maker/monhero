@@ -1212,6 +1212,9 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   // 空中の面は道の幅と判定ラインの高さから作るので、作る前に道の幅を入れる(2026-10-13・横向きの「道の幅」が空中の面へ1回遅れて効いていた)。
   // 判定ラインの高さは描くたびに測る(下の measure)。測った高さが変わったら、空中の面を描き直す(skyLineTick)
   RHYTHM_ROAD_WIDTH.set(orientationIsLandscape()?(RHYTHM_ROAD_WIDTHS[settings.roadWidth]||1):1);
+  // 案3の2段目(試作・2026-10-16): カメラを寝かせる。道の幅と同じく、描き始めより前に入れる(判定・入力・見た目がそろって変わる)
+  const cameraDeep=useState(()=>rhythmCameraDeepActive())[0];
+  RHYTHM_PROJECTION_CAMERA.set(cameraDeep);
   const [skyLineTick,setSkyLineTick]=useState(0);
   if(skyChart)RHYTHM_SKY_LIFT.set(orientationIsLandscape());
   // 空中の面(試作): 道の左右の縁を、奥行きごとの持ち上げ幅ぶん上へずらした台形。プレイエリアを 0〜100 の座標で
@@ -1691,7 +1694,7 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
     if(area){rhythmLayoutPlayArea(area);if(typeof window!=='undefined'&&typeof window.rhythmLaneSvgRefresh==='function')window.rhythmLaneSvgRefresh();}
   },[roadFactor]);
   // 演奏画面を離れたら、これまでの幅へ戻す(曲えらびの見本などに持ち越さない)
-  useEffect(()=>()=>RHYTHM_ROAD_WIDTH.reset(),[]);
+  useEffect(()=>()=>{RHYTHM_ROAD_WIDTH.reset();RHYTHM_PROJECTION_CAMERA.reset();},[]);
   /* レーンカバーの形。高さは設定の%で、横はレーンの台形(rhythmProjectionScale)に沿って切り抜く。
      台形のふちは少し曲がっているので、8か所で折って近づける(外へ1%だけはみ出させて、ふちの隙間を作らない) */
   // 道の幅の倍率(roadFactor)が変わったときも作り直す(台形の幅が変わるため)
