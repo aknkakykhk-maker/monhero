@@ -36,6 +36,8 @@ const seed = () => {
   const fatal = [];
   page.on('pageerror', e => fatal.push(e.message));
   await page.addInitScript(seed);
+  // 起動したとたんに出るお知らせ(お詫びの配布など)を「もう見た」にする。お詫びの配布はモード選択の上に重なりタブを押せなくする
+  await page.addInitScript(require(require('path').resolve(__dirname, '..', 'boot/quiet-boot-seed')).quietBootSeed());
 
   // 全行を作っておき、要求された order/limit/offset のとおりに切り出して返す
   const requests = [];
@@ -88,7 +90,8 @@ const seed = () => {
   await page.waitForTimeout(600);
   await page.evaluate(() => { const b = document.querySelector('[data-battle-system="systemClassic"]'); if (b) b.click(); });
   await page.waitForTimeout(1500);
-  await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => x.textContent.trim() === 'ブリーダーLv'); if (b) b.click(); });
+  // タブは見た目に飾り(🏆)が付くので、文字ではなく aria-label で探す
+  await page.evaluate(() => { const b = document.querySelector('button[aria-label="ブリーダーLvランキング"]'); if (b) b.click(); });
   await page.waitForTimeout(4000);
   await page.waitForFunction(() => document.querySelectorAll('[data-ranking-kind="breeder"]').length > 0, { timeout: 30000 }).catch(() => {});
 
