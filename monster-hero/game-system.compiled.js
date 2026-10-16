@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6a3960f46eecbc0d
+// source-sha256: 5ab7c47d9824ecb8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-15 18:55";
+const BUILD_DATE = "2026-10-16 07:37";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -5483,6 +5483,9 @@ const RHYTHM_COMBO_SIZE_STEP = 10;
 const RHYTHM_LANE_GLOW_LABELS = Object.freeze([['NORMAL', '標準'], ['LOW', '控えめ'], ['NONE', 'なし']]);
 const RHYTHM_ROAD_WIDTH_LABELS = Object.freeze([['WIDE', '広い'], ['STANDARD', 'ふつう'], ['NARROW', '細い']]);
 const RHYTHM_EFFECT_LABELS = Object.freeze([['NORMAL', '最大'], ['LOW', '多め'], ['LIGHT', '標準'], ['MINIMAL', '最小']]);
+const RHYTHM_TAP_LIGHT_MODES = Object.freeze(['AUTO', 'ALWAYS']);
+const RHYTHM_TAP_LIGHT_LABELS = Object.freeze([['AUTO', 'おまかせ'], ['ALWAYS', 'いつも出す']]);
+const rhythmTapLightOnly = settings => !!settings && settings.tapLight === 'ALWAYS' && (settings.lightweightMode === true || settings.effectAmount === 'MINIMAL');
 const RHYTHM_FRAME_RATE_MODES = Object.freeze(['POWER_SAVE', 'DEVICE']);
 const RHYTHM_FRAME_RATE_LABELS = Object.freeze([['POWER_SAVE', '省電力'], ['DEVICE', '端末に合わせる']]);
 const RHYTHM_RENDER_QUALITY_MODES = Object.freeze(['AUTO', 'HIGH', 'STANDARD', 'SAVE']);
@@ -5568,6 +5571,8 @@ const RHYTHM_AUTO_EFFECT_STEPS = Object.freeze([s => s.noteBloom ? {
   stageEffect: 'CALM'
 } : null, s => s.stageEffect === 'CALM' ? {
   stageEffect: 'SIMPLE'
+} : null, s => s.tapLight === 'ALWAYS' && typeof rhythmCanvasHitsActive === 'function' && !rhythmCanvasHitsActive() ? {
+  tapLight: 'AUTO'
 } : null]);
 const rhythmCapEffects = (settings, level) => {
   let out = settings;
@@ -5580,7 +5585,7 @@ const rhythmCapEffects = (settings, level) => {
   }
   return out;
 };
-const RHYTHM_AUTO_EFFECT_STEP_LABELS = Object.freeze(['にじむ光', 'ライブ→派手', '道の演出・ノーツの動き・盛り上がりの光', '判定の演出・コンボの節目', '派手→控えめ', '控えめ→シンプル']);
+const RHYTHM_AUTO_EFFECT_STEP_LABELS = Object.freeze(['にじむ光', 'ライブ→派手', '道の演出・ノーツの動き・盛り上がりの光', '判定の演出・コンボの節目', '派手→控えめ', '控えめ→シンプル', '押したときの光(画面の要素で描くとき)']);
 const rhythmNextEffectCap = (settings, level) => {
   const now = rhythmCapEffects(settings, level);
   for (let i = Math.max(0, Number(level) || 0); i < RHYTHM_AUTO_EFFECT_STEPS.length; i++) {
@@ -5797,6 +5802,7 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   judgmentAtTap: false,
   hudSongFade: true,
   autoEffectDown: true,
+  tapLight: 'AUTO',
   stageEffect: 'SIMPLE',
   roadWidth: 'WIDE',
   laneCover: 0,
@@ -5872,6 +5878,7 @@ const normalizeRhythmSettings = value => {
     judgmentAtTap: typeof source.judgmentAtTap === 'boolean' ? source.judgmentAtTap : DEFAULT_RHYTHM_SETTINGS.judgmentAtTap,
     hudSongFade: typeof source.hudSongFade === 'boolean' ? source.hudSongFade : DEFAULT_RHYTHM_SETTINGS.hudSongFade,
     autoEffectDown: typeof source.autoEffectDown === 'boolean' ? source.autoEffectDown : DEFAULT_RHYTHM_SETTINGS.autoEffectDown,
+    tapLight: RHYTHM_TAP_LIGHT_MODES.includes(source.tapLight) ? source.tapLight : DEFAULT_RHYTHM_SETTINGS.tapLight,
     stageEffect: RHYTHM_STAGE_EFFECTS.includes(source.stageEffect) ? source.stageEffect : DEFAULT_RHYTHM_SETTINGS.stageEffect,
     laneCover: rhythmFiniteStep(source.laneCover, RHYTHM_LANE_COVER_MIN, RHYTHM_LANE_COVER_MAX, RHYTHM_LANE_COVER_STEP, DEFAULT_RHYTHM_SETTINGS.laneCover),
     timingDisplay: RHYTHM_TIMING_DISPLAYS.includes(source.timingDisplay) ? source.timingDisplay : DEFAULT_RHYTHM_SETTINGS.timingDisplay,
@@ -16435,7 +16442,8 @@ const AssistantBubble = ({
   accent = null,
   faceSize = null,
   compact = false,
-  defaultOpen = false
+  defaultOpen = false,
+  footerSpace = 0
 }) => {
   const [open, setOpen] = useState(defaultOpen);
   const bubbleSetting = useAssistantBubbleState();
@@ -16575,14 +16583,21 @@ const AssistantBubble = ({
     }
   }, who.name), React.createElement("span", {
     className: `block text-white leading-relaxed ${compact ? 'text-[10px]' : 'text-[12px]'}`
-  }, text), hasDetail && React.createElement("span", {
+  }, text), (hasDetail || footerSpace > 0) && React.createElement("span", {
     className: "mt-0.5 flex items-center justify-end gap-0.5 text-[9px] font-black",
     style: {
-      color
+      color,
+      ...(footerSpace > 0 ? {
+        paddingLeft: `${footerSpace}px`,
+        minHeight: '18px',
+        whiteSpace: 'nowrap'
+      } : {})
     }
-  }, "タップで詳しく", React.createElement(ChevronRight, {
+  }, hasDetail && React.createElement(React.Fragment, null, React.createElement("span", {
+    "data-bubble-more-text": true
+  }, "タップで詳しく"), React.createElement(ChevronRight, {
     size: 11
-  })))), open && React.createElement("div", {
+  }))))), open && React.createElement("div", {
     className: "fixed inset-0 flex items-end justify-center",
     style: {
       position: 'fixed',
@@ -26776,7 +26791,7 @@ const sbFetchRhythmRankings = async (difficultyKeys, limit = RHYTHM_RANKING_FETC
   if (keys.length === 0) return [];
   await ensureBreederProfiles(requestId);
   const select = rankingSelectWithBreederId(rankingSelectWithProfileFrame(RHYTHM_RANKING_SELECT));
-  const url = `${SUPABASE_URL}/rest/v1/rankings?select=${select}&difficulty=in.(${keys.map(k => encodeURIComponent(`"${k}"`)).join(',')})&order=score.desc.nullslast&limit=${limit}&offset=${offset}`;
+  const url = `${SUPABASE_URL}/rest/v1/rankings?select=${select}&difficulty=in.(${keys.map(k => encodeURIComponent(`"${k}"`)).join(',')})&order=score.desc.nullslast,created_at.asc&limit=${limit}&offset=${offset}`;
   rankingLog(requestId, 'rhythm-request-start', {
     keys,
     limit,
@@ -26832,7 +26847,7 @@ const rhythmTotalRankingMissing = (status, body) => {
   if (!/rhythm_total_rankings/i.test(text)) return false;
   return /PGRST205|PGRST200|42P01|does not exist|Could not find the/i.test(text);
 };
-const sbFetchRhythmTotalRankings = async ({
+const sbFetchRhythmTotalRankingsRaw = async ({
   limit = RHYTHM_TOTAL_RANKING_DISPLAY_LIMIT,
   identityKeys = null,
   requestId = 'untracked'
@@ -26862,7 +26877,7 @@ const sbFetchRhythmTotalRankings = async ({
         rankingLog(requestId, 'profile-frame-column-missing', {
           status: res.status
         });
-        return sbFetchRhythmTotalRankings({
+        return sbFetchRhythmTotalRankingsRaw({
           limit,
           identityKeys,
           requestId
@@ -27011,7 +27026,7 @@ const sbFetchRhythmWeekWindow = async ({
     endMs
   };
 };
-const sbFetchRhythmEventSongBests = async ({
+const sbFetchRhythmEventSongBestsRaw = async ({
   songId,
   fromMs,
   toMs,
@@ -27071,7 +27086,7 @@ const sbFetchRhythmEventSongBests = async ({
     return ask(RHYTHM_EVENT_SONG_SELECT_BASE);
   }
 };
-const sbFetchRhythmEventTotals = async ({
+const sbFetchRhythmEventTotalsRaw = async ({
   songIds,
   fromMs,
   toMs,
@@ -27146,7 +27161,7 @@ const rhythmEventPlayCountsFromRow = value => {
   }
   return out;
 };
-const sbFetchRhythmWeekTotals = async ({
+const sbFetchRhythmWeekTotalsRaw = async ({
   fromMs,
   toMs,
   limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT,
@@ -27163,6 +27178,193 @@ const sbFetchRhythmWeekTotals = async ({
     label: 'rhythm-week-total',
     requestId
   }), RHYTHM_WEEK_TOTAL_SELECT);
+};
+const RHYTHM_TIE_PAD = 20;
+let _rhythmPreciseUnavailable = false;
+const rhythmPreciseMissing = (status, text) => status === 404 || /PGRST202|42883|rhythm_(total|week|event)_precise/i.test(String(text || ''));
+const sbFetchRhythmPreciseMap = async ({
+  fn,
+  body,
+  identityKeys,
+  requestId
+}) => {
+  if (_rhythmPreciseUnavailable || !identityKeys.length) return null;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}?select=identity_key,total_precise`, {
+      method: 'POST',
+      headers: SB_HEADERS,
+      body: JSON.stringify({
+        ...(body || {}),
+        identity_keys: identityKeys
+      }),
+      signal: controller.signal
+    });
+    const text = await res.text();
+    if (!res.ok) {
+      if (rhythmPreciseMissing(res.status, text)) _rhythmPreciseUnavailable = true;
+      rankingLog(requestId, 'rhythm-precise-unavailable', {
+        fn,
+        status: res.status
+      });
+      return null;
+    }
+    const rows = JSON.parse(text);
+    const map = new Map();
+    for (const row of Array.isArray(rows) ? rows : []) {
+      const n = Number(row?.total_precise);
+      if (typeof row?.identity_key === 'string' && Number.isFinite(n) && n > 0) map.set(row.identity_key, Math.floor(n));
+    }
+    return map;
+  } catch (error) {
+    rankingLog(requestId, 'rhythm-precise-failed', {
+      fn,
+      message: error?.message || String(error)
+    });
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+};
+const rhythmTieSortRows = (rows, {
+  scoreKey,
+  timeKey,
+  preciseOf
+}) => rows.map((row, index) => ({
+  row,
+  index,
+  score: Number(row?.[scoreKey]) || 0,
+  precise: preciseOf(row),
+  time: Date.parse(row?.[timeKey])
+})).sort((a, b) => b.score - a.score || b.precise - a.precise || (Number.isFinite(a.time) && Number.isFinite(b.time) ? a.time - b.time : 0) || a.index - b.index).map(item => item.row);
+const rhythmTieFix = async ({
+  rows,
+  limit,
+  scoreKey,
+  timeKey,
+  fn = null,
+  body = null,
+  requestId
+}) => {
+  const list = Array.isArray(rows) ? rows : [];
+  if (list.length < 2) return list.slice(0, limit);
+  const scores = list.map(row => Number(row?.[scoreKey]) || 0);
+  if (new Set(scores).size === scores.length) return list.slice(0, limit);
+  let preciseOf;
+  if (fn) {
+    const tied = new Set(scores.filter((score, i) => scores.indexOf(score) !== i));
+    const keys = [...new Set(list.filter(row => tied.has(Number(row?.[scoreKey]) || 0)).map(row => row?.identity_key).filter(k => typeof k === 'string' && k))];
+    const map = await sbFetchRhythmPreciseMap({
+      fn,
+      body,
+      identityKeys: keys,
+      requestId
+    });
+    if (!map) return list.slice(0, limit);
+    preciseOf = row => map.get(row?.identity_key) || 0;
+  } else {
+    preciseOf = row => rhythmRankingRowPrecise(row);
+  }
+  return rhythmTieSortRows(list, {
+    scoreKey,
+    timeKey,
+    preciseOf
+  }).slice(0, limit);
+};
+const rhythmTieWanted = identityKeys => !(Array.isArray(identityKeys) && identityKeys.length);
+const sbFetchRhythmTotalRankings = async (options = {}) => {
+  const {
+    limit = RHYTHM_TOTAL_RANKING_DISPLAY_LIMIT,
+    identityKeys = null,
+    requestId = 'untracked'
+  } = options;
+  if (!rhythmTieWanted(identityKeys)) return sbFetchRhythmTotalRankingsRaw(options);
+  const rows = await sbFetchRhythmTotalRankingsRaw({
+    ...options,
+    limit: limit + RHYTHM_TIE_PAD
+  });
+  return rhythmTieFix({
+    rows,
+    limit,
+    scoreKey: 'total_score',
+    timeKey: 'last_scored_at',
+    fn: 'rhythm_total_precise',
+    requestId
+  });
+};
+const sbFetchRhythmWeekTotals = async (options = {}) => {
+  const {
+    fromMs,
+    toMs,
+    limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT,
+    identityKeys = null,
+    requestId = 'untracked'
+  } = options;
+  if (!rhythmTieWanted(identityKeys)) return sbFetchRhythmWeekTotalsRaw(options);
+  const rows = await sbFetchRhythmWeekTotalsRaw({
+    ...options,
+    limit: limit + RHYTHM_TIE_PAD
+  });
+  return rhythmTieFix({
+    rows,
+    limit,
+    scoreKey: 'total_score',
+    timeKey: 'last_scored_at',
+    fn: 'rhythm_week_precise',
+    body: {
+      from_at: new Date(fromMs).toISOString(),
+      to_at: new Date(toMs).toISOString()
+    },
+    requestId
+  });
+};
+const sbFetchRhythmEventTotals = async (options = {}) => {
+  const {
+    songIds,
+    fromMs,
+    toMs,
+    limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT,
+    identityKeys = null,
+    requestId = 'untracked'
+  } = options;
+  if (!rhythmTieWanted(identityKeys)) return sbFetchRhythmEventTotalsRaw(options);
+  const rows = await sbFetchRhythmEventTotalsRaw({
+    ...options,
+    limit: limit + RHYTHM_TIE_PAD
+  });
+  return rhythmTieFix({
+    rows,
+    limit,
+    scoreKey: 'total_score',
+    timeKey: 'last_scored_at',
+    fn: 'rhythm_event_precise',
+    body: {
+      song_ids: songIds,
+      from_at: new Date(fromMs).toISOString(),
+      to_at: new Date(toMs).toISOString()
+    },
+    requestId
+  });
+};
+const sbFetchRhythmEventSongBests = async (options = {}) => {
+  const {
+    limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT,
+    identityKeys = null,
+    requestId = 'untracked'
+  } = options;
+  if (!rhythmTieWanted(identityKeys)) return sbFetchRhythmEventSongBestsRaw(options);
+  const rows = await sbFetchRhythmEventSongBestsRaw({
+    ...options,
+    limit: limit + RHYTHM_TIE_PAD
+  });
+  return rhythmTieFix({
+    rows,
+    limit,
+    scoreKey: 'score',
+    timeKey: 'scored_at',
+    requestId
+  });
 };
 const rhythmEventSongEntryFromRow = row => applyLatestBreederProfile({
   identityKey: typeof row?.identity_key === 'string' ? row.identity_key : '',
@@ -29729,7 +29931,9 @@ const RhythmOptions = ({
     className: head
   }, "◆ 演出"), React.createElement("div", {
     className: wide ? `mt-1 ${grid}` : `mt-3 ${grid}`
-  }, field('演出量', segments('effectAmount', RHYTHM_EFFECT_LABELS), '重い順に「最大」「多め」「標準」「最小」の4段で、既定は「標準」です。判定・判定窓・スコアはどの段でも変わりません。\n「最大」＝2026-09-13より前の見た目そのまま。判定文字の金色の帯や虹が流れ、判定ラインが拍に合わせて脈打ち、コンボ数が跳ね、両サイドのマスモンも跳ねます。\n「多め」＝判定文字の流れと光のにじみだけ止めます（色・大きさはそのまま）。\n「標準」＝それに加えて、曲のあいだずっと動き続けるものを止めます。判定ラインの脈打ち、コンボ数の跳ねと枠の脈動、判定文字が出た瞬間に弾む動き、ノーツを取り切ったときの光です。判定ラインで弾ける光・100コンボごとのお祝い・フルコンボの大きな表示は残るので、手ごたえは変わりません。両サイドのマスモンの動きはここでは変わりません（専用の「両サイドのマスモン｜動き」で決めます）。\n「最小」＝光そのものと100コンボごとの演出も出なくなります。高精細な画面では、ノーツを描く細かさも3倍から2倍に下げて軽くします（見た目はほんの少しやわらかくなります）。', {
+  }, field('演出量', segments('effectAmount', RHYTHM_EFFECT_LABELS), '重い順に「最大」「多め」「標準」「最小」の4段で、既定は「標準」です。判定・判定窓・スコアはどの段でも変わりません。\n「最大」＝2026-09-13より前の見た目そのまま。判定文字の金色の帯や虹が流れ、判定ラインが拍に合わせて脈打ち、コンボ数が跳ね、両サイドのマスモンも跳ねます。\n「多め」＝判定文字の流れと光のにじみだけ止めます（色・大きさはそのまま）。\n「標準」＝それに加えて、曲のあいだずっと動き続けるものを止めます。判定ラインの脈打ち、コンボ数の跳ねと枠の脈動、判定文字が出た瞬間に弾む動き、ノーツを取り切ったときの光です。判定ラインで弾ける光・100コンボごとのお祝い・フルコンボの大きな表示は残るので、手ごたえは変わりません。両サイドのマスモンの動きはここでは変わりません（専用の「両サイドのマスモン｜動き」で決めます）。\n「最小」＝光そのものと100コンボごとの演出も出なくなります（取ったときの光だけは、下の「押したときの光」を「いつも出す」にすると出せます）。高精細な画面では、ノーツを描く細かさも3倍から2倍に下げて軽くします（見た目はほんの少しやわらかくなります）。', {
+    full: true
+  }), field('押したときの光', segments('tapLight', RHYTHM_TAP_LIGHT_LABELS), 'ノーツを取った瞬間に判定ラインで弾ける光（TAP・フリックの炎・ホールドやスライドを押し切ったときの光）を、演出量とは別に決めます。既定は「おまかせ」です。判定・スコアは変わりません。\n「おまかせ」＝演出量に合わせます。演出量「最小」と軽量モードでは出ません（これまでどおり）。\n「いつも出す」＝演出量「最小」や軽量モードでも、この光だけは出します。判定文字やコンボ数の弾み、画面のフラッシュ、両サイドのマスモンの跳ねなど、ほかの演出は止まったままです。モンスターノーツの光も、ふつうのノーツと同じ大きさになります。', {
     full: true
   }), field('ライブ背景', segments('stageEffect', RHYTHM_STAGE_EFFECT_LABELS), '演奏中のレーンの後ろの演出です。既定は「シンプル」（これまでの見た目）です。判定・スコアはどれでも変わりません。\n「ライブ」＝「派手」に加えて、ライブ会場のようにします。サーチライトが曲の拍に合わせて明るくなり、レーザーが小節ごとに向きと色を変えて走り、道の両側には観客のペンライトが奥までずらりと並び、拍に合わせて揺れます。ペンライトの色もコンボが伸びるほど変わります。いちばん重い段なので、端末が熱くなるときは下げてください。絵を描くのが得意な専用の部分（GPU）が無い端末では「派手」と同じになります。\n「派手」＝曲のジャケットをぼかして背景に敷き、ノーツが判定ラインへ来るタイミングで背景が光ります。コンボが伸びるほど光の色が熱くなり（水色→桃→金→白金）、モンスターノーツでは金色に大きく光ります。左右からサーチライトが揺れ、光の粒が舞います。\n「控えめ」＝ジャケットの背景とタイミングの光だけにします（動き続けるサーチライトと光の粒は出しません）。\n「シンプル」＝これまでの見た目のままです。\n軽量モードのときは「シンプル」になります。演出量「最小」では、サーチライト・光の粒・レーザー・ペンライトは出しません。', {
     full: true
@@ -30636,7 +30840,7 @@ const RhythmSongSelect = ({
         "data-rhythm-song-version": item.songId,
         "aria-pressed": on,
         onClick: () => setSongId(item.songId),
-        className: `flex min-h-[30px] min-w-0 flex-1 items-center justify-center gap-0.5 rounded-lg border px-1 text-[11px] font-black leading-none landscape:min-h-[26px] ${on ? 'border-sky-200 bg-sky-400/30 text-white shadow-[0_0_8px_rgba(56,189,248,.3)]' : 'border-white/15 bg-slate-900/70 text-slate-300'}`
+        className: `flex min-h-[36px] min-w-0 flex-1 items-center justify-center gap-0.5 rounded-lg border px-1 text-[12px] font-black leading-none landscape:min-h-[32px] ${on ? 'border-sky-200 bg-sky-400/30 text-white shadow-[0_0_8px_rgba(56,189,248,.3)]' : 'border-white/15 bg-slate-900/70 text-slate-300'}`
       }, React.createElement("span", {
         className: "truncate"
       }, rhythmSongVersionLabel(item.songId) || '原曲'), eventVersion && React.createElement("span", {
@@ -33325,6 +33529,16 @@ const RhythmLineAdjustBands = ({
     }
   }));
 };
+const rhythmSetText = (el, text) => {
+  if (!el) return;
+  const value = String(text),
+    node = el.firstChild;
+  if (node && node.nodeType === 3 && !node.nextSibling) {
+    if (node.nodeValue !== value) node.nodeValue = value;
+    return;
+  }
+  el.textContent = value;
+};
 const RhythmLineAdjustPanel = ({
   adjust,
   onBump,
@@ -33630,6 +33844,12 @@ const RhythmTapTest = ({
   })();
   useEffect(() => {
     RHYTHM_GESTURE_RUNTIME.setSlideSwapListener?.((keyA, keyB, noteA, noteB) => {
+      RHYTHM_INPUT_REC.event('swap', {
+        note: noteA?.index,
+        other: noteB?.index,
+        key: keyA,
+        otherKey: keyB
+      });
       const run = runRef.current;
       if (!run || run.finished || run.paused) return false;
       const indexA = run.activePointers.get(keyA),
@@ -34021,7 +34241,22 @@ const RhythmTapTest = ({
   }, [cutInOn, monsterSignature, sideArtUrls]);
   const abilityTimerRef = useRef(null),
     abilityRevisionRef = useRef(0),
-    abilityBadgeRef = useRef(null);
+    abilityBadgeRef = useRef(null),
+    abilityFlashRef = useRef(null);
+  const setAbilityFlash = text => {
+    const el = abilityFlashRef.current;
+    if (!el) return;
+    if (text) {
+      rhythmSetText(el, text);
+      if (el.dataset.on !== '1') {
+        el.dataset.on = '1';
+        el.style.visibility = 'visible';
+      }
+    } else if (el.dataset.on !== '0') {
+      el.dataset.on = '0';
+      el.style.visibility = 'hidden';
+    }
+  };
   const emptyCounts = () => Object.fromEntries(RHYTHM_JUDGMENT_IDS.map(id => [id, 0]));
   const makeRuntimeNotes = () => {
     const tracking = rhythmSlideTrackingFor(difficulty.id);
@@ -34514,6 +34749,7 @@ const RhythmTapTest = ({
     if (abilityTimerRef.current !== null) clearTimeout(abilityTimerRef.current);
     abilityTimerRef.current = null;
     ++abilityRevisionRef.current;
+    setAbilityFlash('');
   }, []);
   const clearCountdown = useCallback(() => {
     if (countdownTimerRef.current) {
@@ -34533,10 +34769,7 @@ const RhythmTapTest = ({
     abilityTimerRef.current = setTimeout(() => {
       if (revision !== abilityRevisionRef.current) return;
       abilityTimerRef.current = null;
-      setView(v => ({
-        ...v,
-        ability: null
-      }));
+      setAbilityFlash('');
     }, RHYTHM_MONSTER_ABILITY_DISPLAY_MS);
   }, []);
   const travelCacheRef = useRef(null);
@@ -34655,6 +34888,13 @@ const RhythmTapTest = ({
     const run = runRef.current;
     if (!run || run.finished || run.paused || note.done) return;
     if (rhythmHisshiUpgrades(run.abilities, judgment, run.audio?.songTimeMs?.() ?? 0)) judgment = 'MARVELOUS';
+    RHYTHM_INPUT_REC.event(judgment === 'MISS' ? 'miss' : 'hit', {
+      note: note.index,
+      j: judgment,
+      dt: typeof deltaMs === 'number' && Number.isFinite(deltaMs) ? Math.round(deltaMs) : null,
+      key: note.activePointerId,
+      sky: rhythmNoteIsSky(note)
+    });
     if (note.activePointerId !== null) {
       if (note.activePointerId !== -1) run.activePointers.delete(note.activePointerId);
       note.activePointerId = null;
@@ -34738,6 +34978,24 @@ const RhythmTapTest = ({
           attr: 'rhythmComboPop'
         });
         rhythmRestartAnimations(restarts);
+      } else if (rhythmTapLightOnly(settings)) {
+        const area = playAreaRef.current,
+          lineY = RHYTHM_JUDGMENT_LINE_Y.ratio,
+          nowMs = run.audio?.songTimeMs?.() ?? note.timeMs;
+        const span = rhythmNoteIsSlide(note) ? rhythmProjectSlideSpan(rhythmReleaseLane(note), note, lineY, nowMs) : rhythmNoteVisualSpan(note, note.lane, lineY, nowMs);
+        const flickHit = rhythmNoteVisualType(note) === 'FLICK' ? rhythmFlickDir(note) || 'up' : note.endFlick ? 'up' : '';
+        const hitEffect = rhythmSpawnHitEffect(area, {
+          centerRatio: span.center,
+          widthRatio: span.width,
+          judgment,
+          monster: false,
+          precise: preciseHit,
+          defer: true,
+          flick: flickHit,
+          finish: rhythmNoteHasBody(note),
+          sky: rhythmNoteSkyHeight(note) > 0
+        });
+        if (hitEffect) rhythmRestartAnimations([hitEffect]);
       }
     }
     if (settings.vibrationEnabled && judgment !== 'MISS') RHYTHM_HAPTICS.tap(monsterHit ? 26 : 12);
@@ -34791,7 +35049,7 @@ const RhythmTapTest = ({
       const ptEl = luckPointsRef.current;
       if (ptEl && ptEl._mhLuck !== run.luckPoints) {
         ptEl._mhLuck = run.luckPoints || 0;
-        ptEl.textContent = `${run.luckPoints || 0}pt`;
+        rhythmSetText(ptEl, `${run.luckPoints || 0}pt`);
       }
     }
     if (settingsLiveRef.current.comboMilestoneFx === true && !settings.lightweightMode && settings.effectAmount !== 'MINIMAL' && keptCombo > run.combo && keptCombo >= RHYTHM_COMBO_MILESTONE_STEP && keptCombo % RHYTHM_COMBO_MILESTONE_STEP === 0) {
@@ -34882,7 +35140,7 @@ const RhythmTapTest = ({
       });
       const lifeDamage = lifeDamageRef.current;
       if (lifeDamage) {
-        lifeDamage.textContent = String(lifeDelta);
+        rhythmSetText(lifeDamage, String(lifeDelta));
         lifeRestarts.push({
           el: lifeDamage,
           attr: 'rhythmLifeDamageShow'
@@ -34917,8 +35175,9 @@ const RhythmTapTest = ({
       },
       life: run.life
     });
-    const coarseKey = `${rhythmComboTier(run.combo)}|${Math.floor(run.combo / RHYTHM_COMBO_MILESTONE_STEP)}|${rhythmLifeState(run.life)}`;
-    if (showAbilityFlash || coarseKey !== run._viewCoarseKey) {
+    const coarseKey = `${rhythmComboTier(run.combo)}|${Math.floor(run.combo / RHYTHM_COMBO_MILESTONE_STEP)}|${rhythmLifeState(run.life) === 'down' ? 'down' : 'up'}`;
+    if (showAbilityFlash) setAbilityFlash(`${abilityFlash.ability}！`);
+    if (coarseKey !== run._viewCoarseKey) {
       run._viewCoarseKey = coarseKey;
       setView(v => ({
         ...v,
@@ -34935,10 +35194,7 @@ const RhythmTapTest = ({
         slow: run.slow,
         precise: run.precise,
         life: run.life,
-        lastDeltaMs,
-        ...(showAbilityFlash ? {
-          ability: abilityFlash
-        } : {})
+        lastDeltaMs
       }));
     }
     scheduleJudgmentClear(rhythmNoteIsSky(note));
@@ -34948,7 +35204,7 @@ const RhythmTapTest = ({
       const diff = Math.round(score - Number(run.startBestScore) * judged / chart.totalNotes);
       paceEl.hidden = false;
       paceEl.dataset.pace = diff >= 0 ? 'up' : 'down';
-      paceEl.textContent = `ベスト比 ${diff >= 0 ? '+' : '−'}${Math.abs(diff).toLocaleString()}`;
+      rhythmSetText(paceEl, `ベスト比 ${diff >= 0 ? '+' : '−'}${Math.abs(diff).toLocaleString()}`);
     }
     if (settings.judgmentAtTap === true && judgment !== 'MISS' && !calibrating) {
       const lineY = RHYTHM_JUDGMENT_LINE_Y.ratio,
@@ -35047,6 +35303,12 @@ const RhythmTapTest = ({
         RHYTHM_TIMING_DIAG.meta(run.audio?.info?.());
       } catch {}
     }
+    try {
+      RHYTHM_INPUT_REC.finish({
+        cleared: !failed,
+        score: Number(run.score) || 0
+      });
+    } catch {}
     const touchDiag = !debugPlay && !tutorial && !calibrating ? rhythmTouchDiagOf({
       song,
       difficulty,
@@ -35482,7 +35744,7 @@ const RhythmTapTest = ({
           } else if (settled !== false && songTimeMs >= note.endTimeMs + settings.judgmentTimingOffsetMs) applyJudgment(note, note.holdJudgment || 'MISS', note.holdDeltaMs || 0);
         }
         if (!note.done && note.activePointerId === null && note.releasedAtMs != null) {
-          const holdEndMs = note.endTimeMs + settings.judgmentTimingOffsetMs;
+          const holdEndMs = Math.min(Number(note.endTimeMs), rhythmReleaseTargetMs(note)) + settings.judgmentTimingOffsetMs;
           if (songTimeMs >= holdEndMs - RHYTHM_HOLD_RELEASE_GRACE_MS) {
             note.releasedAtMs = null;
             rhythmFloatingNoteRemove(note);
@@ -35636,7 +35898,7 @@ const RhythmTapTest = ({
           itazuraMs = rhythmMonsterAbilityRemainingMs(run.abilities, 'ITAZURA', songTimeMs);
         const text = [mutekiMs > 0 ? `無敵 ${(mutekiMs / 1000).toFixed(1)}s` : '', gamanMs > 0 ? `我慢 ${(gamanMs / 1000).toFixed(1)}s` : '', hisshiMs > 0 ? `必死 ${(hisshiMs / 1000).toFixed(1)}s` : '', itazuraMs > 0 ? `いたずら ${(itazuraMs / 1000).toFixed(1)}s` : '', Number(run.abilities?.konjoStock) > 0 ? '根性 ストック' : ''].filter(Boolean).join(' / ');
         if (badge._rhythmBadgeText !== text) {
-          badge.textContent = text;
+          rhythmSetText(badge, text);
           badge._rhythmBadgeText = text;
         }
         if (badge.hidden !== (text === '')) badge.hidden = text === '';
@@ -35679,7 +35941,7 @@ const RhythmTapTest = ({
           second = Math.floor(shownMs / 1000);
         if (timeEl._mhSecond !== second) {
           timeEl._mhSecond = second;
-          timeEl.textContent = `${rhythmClockLabel(shownMs)}/${rhythmClockLabel(playEndTimeMs)}`;
+          rhythmSetText(timeEl, `${rhythmClockLabel(shownMs)}/${rhythmClockLabel(playEndTimeMs)}`);
         }
       }
       const audioDurationMs = Number(run.audio.durationMs) || 0;
@@ -35981,6 +36243,23 @@ const RhythmTapTest = ({
       return;
     }
     const startBest = normalizeRhythmBestRecord(startBestValue);
+    try {
+      RHYTHM_INPUT_REC.begin(playAreaRef.current, () => Number(audio.songTimeMs()) || 0, {
+        songId: song.songId,
+        difficultyId: difficulty.id,
+        mirror: !!mirrorOn,
+        assist: !!assistOn,
+        offsetMs: Number(settings.judgmentTimingOffsetMs) || 0,
+        debugPlay: !!debugPlay,
+        settings: (() => {
+          try {
+            return JSON.parse(JSON.stringify(settings));
+          } catch {
+            return null;
+          }
+        })()
+      });
+    } catch {}
     RHYTHM_FRAME_DIAG.reset();
     RHYTHM_TIMING_DIAG.reset();
     RHYTHM_TIMING_DIAG.meta(audio.info?.());
@@ -36040,6 +36319,7 @@ const RhythmTapTest = ({
     if (canvasNotes) RHYTHM_CANVAS_RENDERER.warmSprites({
       effect: settings.effectAmount,
       lightweight: settings.lightweightMode,
+      tapLight: rhythmTapLightOnly(settings),
       maxDpr: noteCanvasMaxDpr
     });
     if (canvasNotes) faceBitmapsRef.current.forEach(face => {
@@ -36302,6 +36582,12 @@ const RhythmTapTest = ({
         empty: !target || target.type === 'TAP'
       });
       RHYTHM_TOUCH_SPAN_RUNTIME.recordPhysicalTarget(input.inputKey, target);
+      if (!target && standby) RHYTHM_INPUT_REC.event('standby', {
+        note: standby.index,
+        key: input.inputKey,
+        sub: input.subLaneCoordinate,
+        sky: input.sky
+      });
       if (!target && standby) {
         run.standbyPointers.set(input.inputKey, standby.index);
         if (input.captureTarget && input.pointerId !== undefined) {
@@ -36311,6 +36597,25 @@ const RhythmTapTest = ({
         }
         return;
       }
+      if (target && standby && target.type === 'TAP') {
+        RHYTHM_INPUT_REC.event('standby', {
+          note: standby.index,
+          key: input.inputKey,
+          tap: target.index
+        });
+        run.standbyPointers.set(input.inputKey, standby.index);
+        if (input.captureTarget && input.pointerId !== undefined) {
+          try {
+            input.captureTarget.setPointerCapture(input.pointerId);
+          } catch {}
+        }
+      }
+      if (!target) RHYTHM_INPUT_REC.event('empty', {
+        key: input.inputKey,
+        sub: input.subLaneCoordinate,
+        sky: input.sky,
+        rejudge: !!input.rejudge
+      });
       if (!target) {
         if (!input.rejudge || !RHYTHM_NOTE_SE_RUNTIME.recentNoteSe?.(150)) {
           RHYTHM_PERF.emptyTap();
@@ -36326,6 +36631,14 @@ const RhythmTapTest = ({
       const judgment = rhythmJudgeTap(deltaMs);
       if (target.type === 'HOLD') {
         const handover = target.releasedAtMs != null;
+        RHYTHM_INPUT_REC.event(handover ? 'handover' : 'hold', {
+          note: target.index,
+          key: input.inputKey,
+          j: judgment,
+          dt: Math.round(deltaMs),
+          sub: input.subLaneCoordinate,
+          sky: input.sky
+        });
         target.activePointerId = input.inputKey;
         if (handover) {
           target.releasedAtMs = null;
@@ -36356,6 +36669,37 @@ const RhythmTapTest = ({
       applyJudgment(target, judgment, deltaMs);
     });
   };
+  const takeHeldFlick = (inputKey, subLane, subLaneCoordinate) => {
+    const run = runRef.current;
+    if (!run || run.finished || run.paused) return;
+    const heldIndex = run.activePointers.get(inputKey),
+      held = heldIndex === undefined ? null : run.notes[heldIndex];
+    if (!held || held.done || held.type !== 'HOLD') return;
+    const songNow = run.audio.songTimeMs(),
+      offset = settings.judgmentTimingOffsetMs;
+    if (songNow < Number(held.endTimeMs) + offset - RHYTHM_RELEASE_MAX_MS) return;
+    const flick = run.notes.find(n => n && !n.done && n.type === 'FLICK' && n.activePointerId === null && Math.abs(songNow - (Number(n.timeMs) + offset)) <= RHYTHM_INPUT_MATCH_WINDOW_MS && (() => {
+      const span = rhythmProjectSubLaneSpan(n.subLane, n.subLaneWidth, 1),
+        tol = span.subLaneWidth <= 1 ? RHYTHM_NARROW_TAP_TOLERANCE_SUB_LANES : RHYTHM_TAP_TOLERANCE_SUB_LANES;
+      return subLaneCoordinate >= span.subLane - tol && subLaneCoordinate <= span.subLane + span.subLaneWidth + tol;
+    })());
+    if (!flick) return;
+    RHYTHM_INPUT_REC.event('held-flick', {
+      note: held.index,
+      flick: flick.index,
+      key: inputKey
+    });
+    inputEnds([{
+      inputKey
+    }]);
+    inputStarts([{
+      lane: Math.floor(subLane / 2),
+      subLaneCoordinate,
+      inputKey,
+      rejudge: true,
+      flickOnly: true
+    }]);
+  };
   const inputMoves = (inputKey, subLaneCoordinate) => {
     const run = runRef.current,
       state = run?.inputFeedbackState?.get(inputKey);
@@ -36371,7 +36715,7 @@ const RhythmTapTest = ({
       subLaneCoordinate,
       inputKey,
       rejudge: true
-    }]);
+    }]);else if (typeof takeHeldFlick === 'function') takeHeldFlick(inputKey, subLane, subLaneCoordinate);
   };
   const standbyFingerFor = (run, noteIndex, exceptKey) => {
     for (const [key, index] of run.standbyPointers) {
@@ -36393,9 +36737,14 @@ const RhythmTapTest = ({
       const note = run.notes[noteIndex];
       if (!note || note.done) return;
       note.activePointerId = null;
-      const holdEndMs = note.endTimeMs + settings.judgmentTimingOffsetMs;
+      const holdEndMs = Math.min(Number(note.endTimeMs), rhythmReleaseTargetMs(note)) + settings.judgmentTimingOffsetMs;
       const takeover = standbyFingerFor(run, noteIndex, input.inputKey);
       if (takeover && !note.done && now < holdEndMs - RHYTHM_HOLD_RELEASE_GRACE_MS) {
+        RHYTHM_INPUT_REC.event('handover', {
+          note: noteIndex,
+          key: takeover,
+          from: input.inputKey
+        });
         note.activePointerId = takeover;
         note.releasedAtMs = null;
         rhythmFloatingNoteRemove(note);
@@ -36416,6 +36765,10 @@ const RhythmTapTest = ({
         note.releasedAtMs = now;
         rhythmFloatingNoteAdd(note);
       }
+      if (!note.done && note.releasedAtMs === now) RHYTHM_INPUT_REC.event('float', {
+        note: noteIndex,
+        key: input.inputKey
+      });
       if (input.releaseTarget && input.pointerId !== undefined) {
         try {
           if (input.releaseTarget.hasPointerCapture?.(input.pointerId)) input.releaseTarget.releasePointerCapture(input.pointerId);
@@ -36744,13 +37097,42 @@ const RhythmTapTest = ({
       if (starts.length) inputStarts(starts, ageMs);
       const ended = [];
       Array.from(current.activeTouchInputs).forEach(inputKey => {
-        if (!live.has(inputKey)) {
-          current.activeTouchInputs.delete(inputKey);
-          current.outsideStartInputs?.delete(inputKey);
-          ended.push({
-            inputKey
-          });
+        if (live.has(inputKey)) {
+          current.missingHeld?.delete(inputKey);
+          return;
         }
+        const ownEnd = (e.type === 'touchend' || e.type === 'touchcancel') && Array.from(e.changedTouches || []).some(t => rhythmInputKey('touch', t.identifier) === inputKey);
+        const heldIndex = current.activePointers.get(inputKey),
+          heldNote = heldIndex === undefined ? null : current.notes[heldIndex];
+        if (!ownEnd && heldNote && !heldNote.done && heldNote.type === 'HOLD') {
+          current.missingHeld = current.missingHeld || new Map();
+          if (!current.missingHeld.has(inputKey)) {
+            const since = performance.now();
+            current.missingHeld.set(inputKey, since);
+            RHYTHM_INPUT_REC.event('missing', {
+              note: heldNote.index,
+              key: inputKey
+            });
+            setTimeout(() => {
+              const run = runRef.current;
+              if (run !== current || run.finished || run.missingHeld?.get(inputKey) !== since) return;
+              run.missingHeld.delete(inputKey);
+              if (!run.activeTouchInputs.has(inputKey)) return;
+              run.activeTouchInputs.delete(inputKey);
+              run.outsideStartInputs?.delete(inputKey);
+              inputEnds([{
+                inputKey
+              }]);
+            }, RHYTHM_MISSING_TOUCH_CONFIRM_MS);
+          }
+          return;
+        }
+        current.missingHeld?.delete(inputKey);
+        current.activeTouchInputs.delete(inputKey);
+        current.outsideStartInputs?.delete(inputKey);
+        ended.push({
+          inputKey
+        });
       });
       if (ended.length) inputEnds(ended);
     };
@@ -37790,6 +38172,7 @@ const RhythmTapTest = ({
     "data-rhythm-strip": RHYTHM_STRIP.value || undefined,
     "data-rhythm-lightweight": settings.lightweightMode ? 'true' : 'false',
     "data-rhythm-effect": settings.effectAmount,
+    "data-rhythm-tap-light": rhythmTapLightOnly(settings) ? '1' : undefined,
     onPointerDown: pointerDown,
     onPointerMove: pointerMove,
     onPointerUp: pointerEnd,
@@ -38077,14 +38460,17 @@ const RhythmTapTest = ({
     style: {
       visibility: 'hidden'
     }
-  }, monsters.filter(m => m && m.ability).map(m => m.ability.name).join(''), "！"), view.ability && React.createElement("div", {
+  }, monsters.filter(m => m && m.ability).map(m => m.ability.name).join(''), "！"), monsters.some(m => m && m.ability) && React.createElement("div", {
+    ref: abilityFlashRef,
     "data-rhythm-ability-flash": true,
+    "data-on": "0",
     className: "pointer-events-none absolute left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded-full border-2 border-amber-200 bg-slate-950/90 px-4 py-1.5 text-lg font-black text-amber-100",
     style: {
       bottom: 'calc(12% + 78px)',
+      visibility: 'hidden',
       textShadow: settings.lightweightMode || settings.effectAmount === 'MINIMAL' ? 'none' : '0 0 10px rgba(251,191,36,.8)'
     }
-  }, view.ability.ability, "！"), canvasNotes ? React.createElement("canvas", {
+  }, '\u00a0'), canvasNotes ? React.createElement("canvas", {
     key: webglNotes ? 'webgl' : '2d',
     ref: noteCanvasRef,
     "data-rhythm-note-canvas": true,
@@ -48715,6 +49101,7 @@ function SettingsScreen({
   const [battleSettingsOpen, setBattleSettingsOpen] = useState(false);
   const [assetDownloadOpen, setAssetDownloadOpen] = useState(false);
   const assistantBubble = useAssistantBubbleState();
+  const [battleCardLook, setBattleCardLook] = useState(() => BATTLE_CARD_LOOK.value);
   if (assetDownloadOpen) return React.createElement(AssetDownloadPage, {
     onBack: () => setAssetDownloadOpen(false)
   });
@@ -48748,6 +49135,26 @@ function SettingsScreen({
       "aria-pressed": battleScreenStyle === option.id,
       onClick: () => onChangeBattleScreenStyle(option.id),
       className: `flex min-h-[58px] flex-col items-center justify-center rounded-xl px-1 py-1.5 text-[10px] font-black leading-tight active:scale-95 ${battleScreenStyle === option.id ? 'border border-cyan-400 bg-cyan-600 text-white' : 'border border-white/10 bg-slate-950 text-slate-300'}`
+    }, React.createElement("span", {
+      className: "block"
+    }, option.label), React.createElement("small", {
+      className: "mt-0.5 block text-[9px] font-bold opacity-80"
+    }, option.note))))), React.createElement("div", {
+      "data-battle-card-look-setting": true,
+      className: "border-t border-white/10 pt-3"
+    }, React.createElement("b", {
+      className: "block text-[13px] font-black text-slate-200"
+    }, "行動カードの見た目"), React.createElement("p", {
+      className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
+    }, "タクティクスバトル(新)の手札のカードの見た目を選びます。カードの効果や大きさ・操作は同じです。"), React.createElement("div", {
+      className: "mt-2 grid grid-cols-2 gap-2"
+    }, BATTLE_CARD_LOOKS.map(option => React.createElement("button", {
+      key: option.id,
+      type: "button",
+      "data-battle-card-look": option.id,
+      "aria-pressed": battleCardLook === option.id,
+      onClick: () => setBattleCardLook(BATTLE_CARD_LOOK.set(option.id)),
+      className: `flex min-h-[58px] flex-col items-center justify-center rounded-xl px-1 py-1.5 text-[10px] font-black leading-tight active:scale-95 ${battleCardLook === option.id ? 'border border-cyan-400 bg-cyan-600 text-white' : 'border border-white/10 bg-slate-950 text-slate-300'}`
     }, React.createElement("span", {
       className: "block"
     }, option.label), React.createElement("small", {
@@ -60924,12 +61331,16 @@ function HomeScreen({
   }, React.createElement(AssistantBubble, {
     scene: "home",
     condition: assistantBondUp ? 'bondUp' : masuMons.length === 0 ? 'firstRun' : null,
-    compact: true
+    compact: true,
+    footerSpace: typeof onOpenAssistantChat === 'function' ? 70 : 0
   }), typeof onOpenAssistantChat === 'function' && React.createElement("button", {
     type: "button",
     "data-home-assistant-chat": true,
     onClick: onOpenAssistantChat,
-    className: "mt-1 ml-auto block rounded-full border border-pink-300/70 bg-pink-500/85 px-3 py-1 text-[11px] font-black text-white shadow active:scale-95"
+    className: "absolute bottom-[6px] z-10 rounded-full border border-pink-300/70 bg-pink-500/85 px-1.5 py-px text-[9px] font-black leading-tight text-white shadow active:scale-95",
+    style: {
+      left: '64px'
+    }
   }, "💬 おしゃべり")));
 }
 function KikiIntroOverlay({
@@ -61412,9 +61823,39 @@ const BATTLE_CARD_ART_DEBUG = (() => {
     }
   };
 })();
-const battleCardArtOn = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.battleCardArt === true || BATTLE_CARD_ART_DEBUG.on;
-const BATTLE_CARD_NAME_PER_LINE = 5;
-const BATTLE_CARD_NAME_ONE_LINE = 8;
+const BATTLE_CARD_LOOKS = Object.freeze([{
+  id: 'art',
+  label: '新しいカードの絵',
+  note: '種類ごとの色の枠'
+}, {
+  id: 'classic',
+  label: '前のカード',
+  note: '字が大きいシンプルな形'
+}]);
+const normalizeBattleCardLook = v => v === 'classic' ? 'classic' : 'art';
+const BATTLE_CARD_LOOK = (() => {
+  const KEY = 'mh_battle_card_look_v1';
+  let look = 'art';
+  try {
+    look = normalizeBattleCardLook(localStorage.getItem(KEY));
+  } catch (e) {
+    look = 'art';
+  }
+  return {
+    get value() {
+      return look;
+    },
+    set(next) {
+      look = normalizeBattleCardLook(next);
+      try {
+        localStorage.setItem(KEY, look);
+      } catch (e) {}
+      return look;
+    }
+  };
+})();
+const battleCardArtOn = () => BATTLE_CARD_LOOK.value !== 'classic' && (typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.battleCardArt === true || BATTLE_CARD_ART_DEBUG.on);
+const BATTLE_CARD_NAME_PER_LINE = 6;
 const battleCardNameClass = ch => /[\u30a0-\u30ff\u31f0-\u31ff\uff66-\uff9f]/.test(ch) ? 'kata' : /[\u3040-\u309f]/.test(ch) ? 'hira' : /[\u4e00-\u9fff\u3005\u3006]/.test(ch) ? 'kan' : /[0-9A-Za-z\uff10-\uff5a]/.test(ch) ? 'alnum' : 'other';
 const BATTLE_CARD_NO_BREAK_BEFORE = /^[ぁぃぅぇぉっゃゅょゎゕゖァィゥェォッャュョヮヵヶーｰ・、。！？!?…ゝゞヽヾ）」』】]/;
 const BATTLE_CARD_NAME_BREAKS = Object.freeze({
@@ -61422,7 +61863,7 @@ const BATTLE_CARD_NAME_BREAKS = Object.freeze({
   'ナイトサンダー': 'ナイト|サンダー',
   'エクリプスキッス': 'エクリプス|キッス',
   'コンビネーション': 'コンビ|ネーション',
-  'ドリルコンビネーション': 'ドリル|コンビネーション',
+  'ドリルコンビネーション': 'ドリル|コンビ|ネーション',
   '大たおれこみ': '大|たおれこみ',
   '超たおれこみ': '超|たおれこみ',
   'アイスブレード': 'アイス|ブレード',
@@ -61461,7 +61902,7 @@ const BATTLE_CARD_NAME_BREAKS = Object.freeze({
   'アサルトライジング': 'アサルト|ライジング',
   '絶影桜華乱舞': '絶影|桜華乱舞',
   '絶華緋閃・零桜': '絶華緋閃・|零桜',
-  'スターバースト・ストリーム': 'スターバースト・|ストリーム',
+  'スターバースト・ストリーム': 'スター|バースト・|ストリーム',
   'アイスコフィン': 'アイス|コフィン',
   'アクアブラスト': 'アクア|ブラスト',
   'メリークリスマス': 'メリー|クリスマス',
@@ -61483,66 +61924,145 @@ const BATTLE_CARD_NAME_BREAKS = Object.freeze({
   '祈れ輪廻の環よ': '祈れ|輪廻の環よ',
   '裁きの光よ下れ': '裁きの光よ|下れ',
   '今こそ真なる目醒め': '今こそ|真なる目醒め',
-  'ピアノパラソル脳天撃': 'ピアノパラソル|脳天撃',
-  'メロディキャンディボム': 'メロディ|キャンディボム',
-  'ナイトメアらっきょうボム': 'ナイトメア|らっきょうボム',
+  'ピアノパラソル脳天撃': 'ピアノ|パラソル|脳天撃',
+  'メロディキャンディボム': 'メロディ|キャンディ|ボム',
+  'ナイトメアらっきょうボム': 'ナイトメア|らっきょう|ボム',
+  'ディープキッス': 'ディープ|キッス',
+  'サンダービート': 'サンダー|ビート',
+  'アサルトダンス': 'アサルト|ダンス',
+  'ガッチョスラント': 'ガッチョ|スラント',
+  'アクアウィップ': 'アクア|ウィップ',
+  'キャンディボム': 'キャンディ|ボム',
+  'シャドウレギオン': 'シャドウ|レギオン',
+  'デンプシーロール': 'デンプシー|ロール',
+  'フォームガンマ': 'フォーム|ガンマ',
+  'リバースレイド': 'リバース|レイド',
+  'ソニックレイヴ': 'ソニック|レイヴ',
+  'アサルトレイド': 'アサルト|レイド',
+  'アクシズバレット': 'アクシズ|バレット',
+  'ブラッディクロス': 'ブラッディ|クロス',
+  'ワンダーブレイズ': 'ワンダー|ブレイズ',
+  'パピヨンバースト': 'パピヨン|バースト',
+  'パウンドメテオ': 'パウンド|メテオ',
+  'ホリゾンタル・スクエア': 'ホリゾンタル・|スクエア',
+  'グランドイリュージョン': 'グランド|イリュージョン',
+  'ムーンサルトメロディー': 'ムーンサルト|メロディー',
+  'ライジングブースト': 'ライジング|ブースト',
+  'スウィートパレード': 'スウィート|パレード',
+  'マリーランドアーチ': 'マリーランド|アーチ',
+  '巨大雪だるま転がし': '巨大雪だるま|転がし',
+  '熾天の剣よ降り立て': '熾天の剣よ|降り立て',
+  '天の慈悲を示されよ': '天の慈悲を|示されよ',
   '聖夜の鐘を鳴響け': '聖夜の鐘を|鳴響け',
   '終焉に救いを与えよ': '終焉に|救いを与えよ',
   '永劫の贖いを全うせよ': '永劫の贖いを|全うせよ'
 });
-const battleCardNameLines = (name, per = BATTLE_CARD_NAME_PER_LINE) => {
-  if (per === BATTLE_CARD_NAME_PER_LINE && battleCardNameUnits(name) <= BATTLE_CARD_NAME_ONE_LINE) return [String(name || '')];
-  if (Object.prototype.hasOwnProperty.call(BATTLE_CARD_NAME_BREAKS, String(name || ''))) return BATTLE_CARD_NAME_BREAKS[String(name)].split('|');
-  const chars = [...String(name || '')];
-  const n = chars.length;
-  if (n <= per) return [chars.join('')];
-  const ok = new Set();
+const battleCardNameBreakCache = new Map();
+const battleCardNameLines = name => {
+  const text = String(name || '');
+  if (battleCardNameBreakCache.has(text)) return battleCardNameBreakCache.get(text);
+  const chars = [...text],
+    n = chars.length,
+    per = BATTLE_CARD_NAME_PER_LINE;
+  if (battleCardNameUnits(text) > per && Object.prototype.hasOwnProperty.call(BATTLE_CARD_NAME_BREAKS, text)) {
+    const fixed = BATTLE_CARD_NAME_BREAKS[text].split('|');
+    battleCardNameBreakCache.set(text, fixed);
+    return fixed;
+  }
+  const good = new Set();
   for (let k = 1; k < n; k += 1) {
     const a = battleCardNameClass(chars[k - 1]),
       b = battleCardNameClass(chars[k]);
-    if (a !== b && !(chars[k] === 'ー' || chars[k - 1] === 'ー')) ok.add(k);
+    if (a !== b && !(chars[k] === 'ー' || chars[k - 1] === 'ー')) good.add(k);
   }
   try {
     if (typeof Intl !== 'undefined' && typeof Intl.Segmenter === 'function') {
       let at = 0;
       for (const seg of new Intl.Segmenter('ja', {
         granularity: 'word'
-      }).segment(chars.join(''))) {
+      }).segment(text)) {
         at += [...seg.segment].length;
-        if (at > 0 && at < n) ok.add(at);
+        if (at > 0 && at < n) good.add(at);
       }
     }
   } catch (e) {}
-  const cands = [...ok].filter(k => !BATTLE_CARD_NO_BREAK_BEFORE.test(chars[k]));
-  const mid = Math.ceil(n / 2);
-  let best = null;
-  for (const k of cands) {
-    const m = Math.max(k, n - k);
-    if (m <= mid + 2 && (best == null || m < Math.max(best, n - best) || m === Math.max(best, n - best) && Math.abs(k - mid) < Math.abs(best - mid))) best = k;
-  }
-  if (best == null) {
-    for (let d = 0; d < n; d += 1) {
-      for (const k of [mid + d, mid - d]) {
-        if (best == null && k > 0 && k < n && !BATTLE_CARD_NO_BREAK_BEFORE.test(chars[k])) best = k;
-      }
-      if (best != null) break;
+  for (const [word, broken] of Object.entries(BATTLE_CARD_NAME_BREAKS)) {
+    const at = text.indexOf(word);
+    if (at < 0) continue;
+    const start = [...text.slice(0, at)].length,
+      len = [...word].length;
+    for (let q = start + 1; q < start + len; q += 1) good.delete(q);
+    let p = start;
+    for (const part of broken.split('|').slice(0, -1)) {
+      p += [...part].length;
+      good.add(p);
     }
-    if (best == null) best = mid;
   }
-  const head = chars.slice(0, best).join(''),
-    tail = chars.slice(best).join('');
-  const more = t => [...t].length >= 8 ? battleCardNameLines(t, per) : [t];
-  return [...more(head), ...more(tail)];
+  const allowed = [];
+  for (let k = 1; k < n; k += 1) if (!BATTLE_CARD_NO_BREAK_BEFORE.test(chars[k])) allowed.push(k);
+  let best = null,
+    loose = null;
+  const better = (x, y) => !y || x[0] < y[0] || x[0] === y[0] && (x[1] < y[1] || x[1] === y[1] && x[2] < y[2]);
+  const walk = (i, lines, mid) => {
+    if (lines.length > 3) return;
+    if (i === n) {
+      const longest = Math.max(...lines.map(battleCardNameUnits));
+      const key = [mid, lines.length, longest];
+      if (longest <= per + 1e-9) {
+        if (better(key, best && best.key)) best = {
+          key,
+          lines: [...lines]
+        };
+      } else {
+        const lk = [longest, mid, lines.length];
+        if (better(lk, loose && loose.key)) loose = {
+          key: lk,
+          lines: [...lines]
+        };
+      }
+      return;
+    }
+    for (const j of [...allowed.filter(k => k > i), n]) {
+      lines.push(chars.slice(i, j).join(''));
+      walk(j, lines, mid + (j < n && !good.has(j) ? 1 : 0));
+      lines.pop();
+    }
+  };
+  walk(0, [], 0);
+  if (best && best.key[0] > 0) best = null;
+  if (!best) {
+    loose = null;
+    const walkGood = (i, lines) => {
+      if (lines.length > 3) return;
+      if (i === n) {
+        const longest = Math.max(...lines.map(battleCardNameUnits));
+        const lk = [longest, lines.length, 0];
+        if (better(lk, loose && loose.key)) loose = {
+          key: lk,
+          lines: [...lines]
+        };
+        return;
+      }
+      for (const j of [...[...good].filter(k => k > i && !BATTLE_CARD_NO_BREAK_BEFORE.test(chars[k])).sort((a, b) => a - b), n]) {
+        lines.push(chars.slice(i, j).join(''));
+        walkGood(j, lines);
+        lines.pop();
+      }
+    };
+    walkGood(0, []);
+  }
+  const out = best ? best.lines : loose ? loose.lines : [text];
+  battleCardNameBreakCache.set(text, out);
+  return out;
 };
-const BATTLE_CARD_NAME_PX = 5.75;
-const BATTLE_CARD_NAME_LH = 1.12;
+const BATTLE_CARD_NAME_LH = 1.1;
 const battleCardNameUnits = line => [...String(line || '')].reduce((n, ch) => n + (/[\x20-\x7e]/.test(ch) ? 0.62 : 1), 0);
 const battleCardNameFit = name => {
   const lines = battleCardNameLines(name);
-  const longest = Math.max(1, ...lines.map(battleCardNameUnits));
+  const longest = Math.max(BATTLE_CARD_NAME_PER_LINE, ...lines.map(battleCardNameUnits));
   const tall = (lines.length * BATTLE_CARD_NAME_LH).toFixed(2);
   return {
-    fontSize: `min(${BATTLE_CARD_NAME_PX}px, calc((100cqw - 1.5px) / ${longest.toFixed(2)}), calc((100cqh - var(--mh-rule-h, 6px)) / ${tall}))`,
+    fontSize: `max(5px, min(calc((100cqw * var(--mh-name-ratio, 1) - 1.5px) / ${longest.toFixed(2)}), calc((100cqh - var(--mh-rule-h, 6px)) / ${tall})))`,
     lineHeight: String(BATTLE_CARD_NAME_LH),
     whiteSpace: 'nowrap'
   };
@@ -66494,12 +67014,17 @@ function BattleScreen({
         if (isBusy || autoBattleRef.current || !tutorialAllowed) return;
         const pt = e.touches ? e.touches[0] : e;
         cardDragActiveRef.current = false;
+        const el0 = e.currentTarget,
+          w0 = el0 && el0.offsetWidth > 0 ? el0.offsetWidth : null,
+          h0 = el0 && el0.offsetHeight > 0 ? el0.offsetHeight : null;
         setDragState({
           cardIndex: i,
           x: pt.clientX,
           y: pt.clientY,
           active: false,
-          card: c
+          card: c,
+          w: w0,
+          h: h0
         });
       },
       style: {
@@ -66514,9 +67039,12 @@ function BattleScreen({
           position: 'fixed',
           left: dragState.x,
           top: dragState.y,
-          transform: 'translate(-50%,-50%) rotate(-3deg) scale(1.15)',
+          transform: cardArt ? 'translate(-50%,-50%) rotate(-3deg) scale(1.2949,1.242)' : 'translate(-50%,-50%) rotate(-3deg) scale(1.15)',
           zIndex: 70000,
-          width: '72px',
+          width: dragState.w ? `${dragState.w}px` : '72px',
+          ...(dragState.h ? {
+            height: `${dragState.h}px`
+          } : {}),
           pointerEvents: 'none',
           transition: 'none',
           filter: 'drop-shadow(0 12px 18px rgba(0,0,0,0.65))'
@@ -76521,7 +77049,6 @@ const RaidJackRankingList = ({
   eventId,
   initialTab = 'a',
   initialTier = 0,
-  bossDown = false,
   renderPlace,
   renderIcon,
   cardClass
@@ -76539,7 +77066,7 @@ const RaidJackRankingList = ({
   const [src, setSrc] = useState('all');
   const useSrc = tab === 'a' && src !== 'all';
   const srcName = src === 'rhythm' ? 'モンヒロビート' : 'バトル';
-  const useAll = !maxHit && tab === 'a' && allMode && (bossDown || useSrc);
+  const useAll = !maxHit && tab === 'a' && allMode;
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -76672,7 +77199,7 @@ const RaidJackRankingList = ({
       setAllMode(false);
     },
     className: `min-h-[34px] rounded-xl border px-2.5 active:scale-95 ${!useAll && tierIdx === i ? 'border-orange-300 bg-orange-800 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`
-  }, t.name.replace('ジャック', ''))), (bossDown || useSrc) && React.createElement("button", {
+  }, t.name.replace('ジャック', ''))), React.createElement("button", {
     type: "button",
     "data-raid-jack-ranking-all": true,
     onClick: () => setAllMode(true),
@@ -76688,7 +77215,7 @@ const RaidJackRankingList = ({
     className: "shrink-0 text-[10px] text-slate-200"
   }, "あなた ", myTotal.toLocaleString(), ahead !== null ? `(${ahead + 1}位)` : '')), React.createElement("div", {
     className: "mb-2 text-[9px] text-slate-400"
-  }, useSrc && maxHit ? `${src === 'rhythm' ? '1曲' : '1回の戦い'}で出した、いちばん大きいダメージで競います。難易度ごとにも見られます。順位報酬はありません。` : useSrc ? `${srcName}だけで与えたダメージで競います。順位報酬はありません(報酬は全体の貢献ランキングで決まります)。` : maxHit ? '1回の戦いで出した、いちばん大きいダメージで競います。難易度ごとにも見られます。順位報酬はありません。' : useAll ? '全段階へ与えたダメージの合計です。' : tab === 'a' ? '1〜5位に報酬があります。男爵〜公爵は倒れた時点、大王は期間の終わりに順位が決まります(報酬一覧)。' : '1〜5位に報酬があります。期間の終わりに順位が決まります(報酬一覧)。'), rows === undefined && React.createElement("div", {
+  }, useSrc && maxHit ? `${src === 'rhythm' ? '1曲' : '1回の戦い'}で出した、いちばん大きいダメージで競います。難易度ごとにも見られます。順位報酬はありません。` : useSrc ? `${srcName}だけで与えたダメージで競います。順位報酬はありません(報酬は全体の貢献ランキングで決まります)。` : maxHit ? '1回の戦いで出した、いちばん大きいダメージで競います。難易度ごとにも見られます。順位報酬はありません。' : useAll ? '全段階へ与えたダメージの合計です。この順位に報酬はありません(報酬は段階ごとの貢献で決まります)。' : tab === 'a' ? '1〜5位に報酬があります。男爵〜公爵は倒れた時点、大王は期間の終わりに順位が決まります(報酬一覧)。' : '1〜5位に報酬があります。期間の終わりに順位が決まります(報酬一覧)。'), rows === undefined && React.createElement("div", {
     className: "py-3 text-center text-[10px] text-slate-400"
   }, "読み込み中…"), rows === null && React.createElement("div", {
     className: "py-3 text-center text-[10px] text-slate-400"
@@ -77020,7 +77547,6 @@ const RaidJackScreen = ({
     eventId: eventId,
     initialTab: tab,
     initialTier: current,
-    bossDown: bossDownNow,
     renderPlace: renderPlace,
     renderIcon: renderIcon,
     cardClass: cardClass,
@@ -77739,6 +78265,14 @@ function MonsterHeroGame() {
   const [rhythmCanvasHitsPref, setRhythmCanvasHitsPref] = useState(() => rhythmCanvasHitsPreference());
   const [rhythmHitSparkPref, setRhythmHitSparkPref] = useState(() => rhythmHitSparkPreference());
   const [rhythmJudgmentSnapPref, setRhythmJudgmentSnapPref] = useState(() => rhythmJudgmentSnapPreference());
+  const [rhythmInputRecOn, setRhythmInputRecOn] = useState(() => {
+    try {
+      return RHYTHM_INPUT_REC.enabled();
+    } catch {
+      return false;
+    }
+  });
+  const [rhythmInputRecMsg, setRhythmInputRecMsg] = useState('');
   const [rhythmReleaseAgeWide, setRhythmReleaseAgeWide] = useState(() => rhythmTouchFixOn('releaseAgeWide'));
   const [rhythmStageGlPref, setRhythmStageGlPref] = useState(() => rhythmStageGlPreference());
   const [rhythmChartToolsOpened, setRhythmChartToolsOpened] = useState(false);
@@ -80929,7 +81463,10 @@ function MonsterHeroGame() {
         const pageRows = await sbFetchRhythmRankings(keys, RHYTHM_RANKING_FETCH_LIMIT, page * RHYTHM_RANKING_FETCH_LIMIT, `rhythm-rank-${song.songId}-${Date.now()}-${page}`);
         if (rhythmRankingRequestRef.current !== requestId) return;
         rows = rows.concat(Array.isArray(pageRows) ? pageRows : []);
-        if (rhythmRankingDedupeByUser(rows).length >= RHYTHM_RANKING_DISPLAY_LIMIT) break;
+        const deduped = rhythmRankingDedupeByUser(rows);
+        const lastShown = deduped[RHYTHM_RANKING_DISPLAY_LIMIT - 1];
+        const lastFetched = Array.isArray(pageRows) && pageRows.length ? pageRows[pageRows.length - 1] : null;
+        if (lastShown && !(lastFetched && (Number(lastFetched.score) || 0) >= (Number(lastShown.score) || 0))) break;
         if (!Array.isArray(pageRows) || pageRows.length < RHYTHM_RANKING_FETCH_LIMIT) break;
       }
       const entries = rhythmRankingDedupeByUser(rows).slice(0, RHYTHM_RANKING_DISPLAY_LIMIT).map(rhythmRankingEntryFromRow);
@@ -82091,10 +82628,12 @@ function MonsterHeroGame() {
     if (RHYTHM_HELL_STORY_TRIGGER !== 'release') return;
     if (!(typeof rhythmHellOpen === 'function' && rhythmHellOpen())) return;
     if (!rhythmHellStorySeenLoaded || rhythmHellStorySeenFlag) return;
+    const hellOpenedSomewhere = Object.keys(rhythmBestRecords && typeof rhythmBestRecords === 'object' ? rhythmBestRecords : {}).some(songId => rhythmDifficultyUnlocked(songId, 'HELL', rhythmBestRecords));
+    if (!hellOpenedSomewhere) return;
     if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
     if (rhythmEventStoryStartedRef.current.includes(RHYTHM_HELL_STORY_ID)) return;
     setRhythmEventStoryPending(RHYTHM_HELL_STORY_ID);
-  }, [rhythmHellStorySeenLoaded, rhythmHellStorySeenFlag, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  }, [rhythmHellStorySeenLoaded, rhythmHellStorySeenFlag, rhythmBestRecords, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
   useEffect(() => {
     if (!EVENT_REPLAY_RELEASE_FLAGS.assistantChat) return;
     if (!assistantChatStorySeenLoaded || assistantChatStorySeenFlag) return;
@@ -83504,6 +84043,12 @@ function MonsterHeroGame() {
         setOnboardingName(hasSavedName ? savedName.trim().slice(0, 10) : '');
         setOnboardingIcon(hasSavedIcon ? savedIcon : null);
         setGameState(savedAssistant ? 'PROFILE' : 'ASSISTANT_SELECT');
+      }
+      try {
+        const [guideSeen, guideShown] = await Promise.all([storeGet(BATTLE_TUTORIAL_SEEN_KEY, false, false), storeGet(BATTLE_TUTORIAL_GUIDE_SHOWN_KEY, false, false)]);
+        if (guideSeen === true || guideShown === true) setBattleGuideChecked(true);
+      } catch {
+        setBattleGuideChecked(true);
       }
       setDataLoaded(true);
       try {
@@ -101653,7 +102198,7 @@ function MonsterHeroGame() {
         const records = await saveRhythmBestRecord(rhythmBestRecords, rhythmPlay.song.songId, rhythmPlay.difficulty.id, merged);
         setRhythmBestRecords(records);
         if (rhythmPlay.from === 'demo' && typeof rhythmHellOpen === 'function' && rhythmHellOpen() && rhythmChartPlayable(rhythmPlay.song, 'HELL') && !rhythmDifficultyUnlocked(rhythmPlay.song.songId, 'HELL', rhythmBestRecords) && rhythmDifficultyUnlocked(rhythmPlay.song.songId, 'HELL', records) && !rhythmHellStorySeenFlag) {
-          if (RHYTHM_HELL_STORY_TRIGGER === 'after-result') rhythmHellStoryAfterResultRef.current = true;else if (RHYTHM_HELL_STORY_TRIGGER === 'home') setRhythmEventStoryPending(prev => prev || RHYTHM_HELL_STORY_ID);
+          if (RHYTHM_HELL_STORY_TRIGGER === 'after-result') rhythmHellStoryAfterResultRef.current = true;else if (RHYTHM_HELL_STORY_TRIGGER === 'home' || RHYTHM_HELL_STORY_TRIGGER === 'release') setRhythmEventStoryPending(prev => prev || RHYTHM_HELL_STORY_ID);
         }
         void recordRhythmAchievements(records, {
           initialRecords: rhythmBestRecords
@@ -102235,6 +102780,54 @@ function MonsterHeroGame() {
       onClick: () => setRhythmHitSparkPref(rhythmHitSparkSetPreference(value)),
       className: `min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmHitSparkPref === value ? 'bg-cyan-400 text-slate-900' : 'border border-white/20 bg-slate-900 text-slate-200'}`
     }, label)))), React.createElement("section", {
+      "data-rhythm-input-rec-panel": true,
+      className: "mb-3 rounded-2xl border border-amber-400/40 bg-amber-950/20 p-3"
+    }, React.createElement("h3", {
+      className: "text-xs font-black text-amber-200"
+    }, "入力の記録（検証用）"), React.createElement("p", {
+      className: "mt-1 text-[9px] font-bold leading-relaxed text-amber-100/80"
+    }, "「入」にすると、モンヒロビートの演奏中の指の動き（時刻・位置・接触の幅）と判定の出来事を端末の中だけに記録します。名前などは入りません。ランキングには影響しません。演奏が終わったら下のボタンで最後の1曲分をコピーして送ってください。"), React.createElement("div", {
+      className: "mt-2 flex gap-2"
+    }, [[true, '入'], [false, '切']].map(([value, label]) => React.createElement("button", {
+      key: label,
+      type: "button",
+      "data-rhythm-input-rec-pref": value ? 'on' : 'off',
+      "aria-pressed": rhythmInputRecOn === value,
+      onClick: () => {
+        try {
+          RHYTHM_INPUT_REC.setEnabled(value);
+          setRhythmInputRecOn(RHYTHM_INPUT_REC.enabled());
+        } catch {}
+      },
+      className: `min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmInputRecOn === value ? 'bg-amber-400 text-slate-900' : 'border border-white/20 bg-slate-900 text-slate-200'}`
+    }, label))), React.createElement("button", {
+      type: "button",
+      "data-rhythm-input-rec-copy": true,
+      onClick: async () => {
+        let text = '';
+        let sum = null;
+        try {
+          RHYTHM_INPUT_REC.close();
+          text = RHYTHM_INPUT_REC.text();
+          sum = RHYTHM_INPUT_REC.summary();
+        } catch {}
+        if (!text) {
+          setRhythmInputRecMsg('まだ記録がありません（「入」にしてから1曲演奏してください）');
+          return;
+        }
+        const info = sum ? `（指の動き ${sum.touches || 0}件・判定 ${sum.judges || 0}件）` : '';
+        try {
+          await navigator.clipboard.writeText(text);
+          setRhythmInputRecMsg(`コピーしました${info}`);
+        } catch {
+          setRhythmInputRecMsg('コピーできませんでした');
+        }
+      },
+      className: "mt-2 min-h-[40px] w-full rounded-xl border border-amber-300/50 bg-slate-900 text-[11px] font-black text-amber-100"
+    }, "最後の演奏の記録をコピー"), rhythmInputRecMsg && React.createElement("p", {
+      "data-rhythm-input-rec-msg": true,
+      className: "mt-1 text-[10px] font-bold text-amber-100"
+    }, rhythmInputRecMsg)), React.createElement("section", {
       "data-rhythm-judgment-snap-panel": true,
       className: "mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"
     }, React.createElement("h3", {

@@ -38,6 +38,7 @@
 | `mh_screen_theme_v1` | object / 全部 `'auto'` | 画面テーマ。`{ menu, market, temple, battle, rhythm }` に `'auto'`/`'halloween'`/`'classic'`。`normalizeScreenTheme` で知らない項目・不正な値は `'auto'` に補う(docs/spec/SCREEN_THEME.md) |
 | `mh_battle_perf_v1` | boolean / false | バトルの性能計測のON/OFF(デバッグ限定)。`BATTLE_PERF` が持つ |
 | `mh_debug_battle_card_art_v1` | `'1'` / 未設定 | 行動カードの絵(試作)を出す切り替え(デバッグ限定・2026-10-15)。`BATTLE_CARD_ART_DEBUG` が持つ。公開の印 `battleCardArt` が真なら、未設定でも絵を出す |
+| `mh_battle_card_look_v1` | `'art'` / `'classic'` / 未設定 | 行動カードの見た目(設定 → バトル設定。2026-10-16)。`'classic'` で前のカード、それ以外・未設定・壊れた値は新しいカードの絵(既定)。`BATTLE_CARD_LOOK`(71-screen-battle.jsx)が `normalizeBattleCardLook` を通して読む |
 | `mh_asset_prefetch_v1` | object / `{ enabled:true, enabledChosen:false, auto:true, songs:[] }` | 事前ダウンロード(曲・画像を端末にためておく)の入/切・自動ダウンロード・最近選んだ曲(最大12)。`normalizeAssetCacheSettings` で壊れた値は既定に戻す。**`enabled` は `enabledChosen:true`(本人が入/切を押した)のときだけ読む**。既定が切だった 2026-10-11 の約20分に、曲を選んだだけで `enabled:false` が書かれた端末があるため(読み方だけで、保存値は書き換えない)。ためた中身は localStorage ではなく Cache Storage(`mh-assets-v1`)にあり、切にすると消す(docs/spec/ASSET_PREFETCH.md) |
 | `mh_breeder_name` | string / `名無しのブリーダー` | 表示名（保存時最大10文字） |
 | `mh_breeder_icon` | string or null | 種IDまたは購入アイコンID |
@@ -212,6 +213,7 @@
 | `mh_hell_sky_text_proto` | `'above'` / 未設定 | デバッグ専用。HELL の空中の判定の文字の位置(2026-10-12)。未設定なら空中の線のすぐ下(社長の決定で既定)。`'above'` は前の位置(線の38px上) **2026-10-13 からは、HELL の公開後にオプションの「表示」タブ「空中の判定の文字の位置」からも書く**(キー・値の意味・既定は変えない。「保存」を押したときに書く) |
 | `mh_rhythm_judge_text_pos_proto` | `'raise'`・`'fade'`・`'both'` / 未設定 | デバッグ専用。地上の判定の文字の置き場所の案(道の中ほどへ上げる/半分透かす/両方)を見比べる(2026-10-12)。未設定なら今の位置。空中のある譜面では効かない。ふつうのプレイは書かない |
 | `mh_rhythm_judgment_snap_v1` | `'on'`・`'off'` / 未設定 | デバッグ専用。判定の文字の大きさを、なめらかに変えず一度で変える(2026-10-12・ドライバーくん #2842・発熱の手当て)。未設定なら一度で(2026-10-12 社長の決定で既定に。`'off'` を保存した人は今までの形のまま)。ふつうのプレイは書かない |
+| `mh_rhythm_input_rec_v1` | `'on'` / 未設定 | デバッグ専用。モンヒロビートの演奏中の入力(指の時刻・位置・接触の幅)と判定の出来事を記録する(2026-10-15・ドライバーくん)。記録そのものは保存せずメモリに最後の1曲分だけ持ち、デバッグ設定の「最後の演奏の記録をコピー」で取り出す。判定・スコア・ランキングには使わない。ふつうのプレイは書かない |
 | `mh_sky_reach_adapt_proto` | `'1'` / `'0'` / 未設定 | HELL の空中の受け付けの下の境目を、その人の構えに合わせて下げる(案A・2026-10-12・テンポくん)。**未設定なら入**(2026-10-12 社長の決定で既定を入に)。`'0'` は切(固定の境目)を選んだ人。デバッグの切り替えで書く。前は切を選ぶとキーを消していたので、その人も未設定=入になる |
 | `mh_tactics_ex_intro_seen_v1` | `true` / 未設定 | タクティクスで「距離枠をタップするとEXが開く」を一度だけ伝える案内を見たか(公開フラグ `tacticsExSkills` と同じで出し入れ) |
 | `mh_profile_frame_v1` | string / `'none'` | 選んでいるプロフィールフレームのid(`data/breeder.js` の `PROFILE_FRAMES`)。ブリーダーアイコン(`mh_breeder_icon`)とは**独立した設定**で、アイコン側のキーは触らない。読み込みは必ず `normalizeProfileFrameId` を通し、値が無い・壊れている・知らないid・未公開(`released:false`)のidはすべて `'none'`(フレームなし)へ倒す |

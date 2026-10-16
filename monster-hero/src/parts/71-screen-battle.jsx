@@ -70,13 +70,29 @@ const BATTLE_CARD_ART_DEBUG = (() => {
     set(next) { on = !!next; try { if (on) localStorage.setItem(KEY, '1'); else localStorage.removeItem(KEY); } catch (e) {} return on; },
   };
 })();
-const battleCardArtOn = () => (typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.battleCardArt === true) || BATTLE_CARD_ART_DEBUG.on;
-// ★カード名の折り返し(2026-10-15 社長「言葉の切れ目で折って」)。名札の上で「ぞうさん頭／突き」のように言葉の途中で折れていた。
-//   折ってよい所 … 字の種類が変わる所(カタカナ・ひらがな・漢字・英数)と、単語の切れ目(Intl.Segmenter があれば)。
-//   小さい字・長音・句読点の前では折らない。候補のうち「長い方の行がいちばん短い」所で折る。1行に収まるなら1行。
-//   長すぎる行(8字以上)は同じ決まりでもう一度折る。返り値は行の配列
-const BATTLE_CARD_NAME_PER_LINE = 5;
-const BATTLE_CARD_NAME_ONE_LINE = 8;
+// 行動カードの見た目の選択(2026-10-16 社長「前のカードも選べる」)。設定 → バトル設定で「新しいカードの絵」(既定)と「前のカード」を選ぶ。
+//   保存は新しいキー mh_battle_card_look_v1('art' / 'classic')だけ。無い・壊れているときは既定の 'art'。前のカードを選んだ人には、公開の印やデバッグの切り替えより優先して前のカードを出す
+const BATTLE_CARD_LOOKS = Object.freeze([
+  { id: 'art', label: '新しいカードの絵', note: '種類ごとの色の枠' },
+  { id: 'classic', label: '前のカード', note: '字が大きいシンプルな形' },
+]);
+const normalizeBattleCardLook = (v) => (v === 'classic' ? 'classic' : 'art');
+const BATTLE_CARD_LOOK = (() => {
+  const KEY = 'mh_battle_card_look_v1';
+  let look = 'art';
+  try { look = normalizeBattleCardLook(localStorage.getItem(KEY)); } catch (e) { look = 'art'; }
+  return {
+    get value() { return look; },
+    set(next) { look = normalizeBattleCardLook(next); try { localStorage.setItem(KEY, look); } catch (e) {} return look; },
+  };
+})();
+const battleCardArtOn = () => BATTLE_CARD_LOOK.value !== 'classic' && ((typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.battleCardArt === true) || BATTLE_CARD_ART_DEBUG.on);
+// ★カード名の折り返し(2026-10-15 社長「言葉の切れ目で折って」「長い名前だけ3行を許す」)。
+//   字は全部同じ大きさで、1行に入る名前(BATTLE_CARD_NAME_PER_LINE=6字ぶんまで)は1行、入らない名前は2行、2行に入らない名前だけ3行。
+//   折ってよい所 … 字の種類が変わる所(カタカナ・ひらがな・漢字・英数)・単語の切れ目(Intl.Segmenter があれば)・下の上書き表の「|」。
+//   小さい字・長音・句読点の前では折らない。「言葉の途中で折る数」がいちばん少なく、次に行数が少なく、次に長い行がいちばん短い折り方。
+//   上書き表で「|」の無い名前は、その中では折らない。返り値は行の配列
+const BATTLE_CARD_NAME_PER_LINE = 6;
 const battleCardNameClass = (ch) => (/[\u30a0-\u30ff\u31f0-\u31ff\uff66-\uff9f]/.test(ch) ? 'kata'
   : /[\u3040-\u309f]/.test(ch) ? 'hira' : /[\u4e00-\u9fff\u3005\u3006]/.test(ch) ? 'kan' : /[0-9A-Za-z\uff10-\uff5a]/.test(ch) ? 'alnum' : 'other');
 const BATTLE_CARD_NO_BREAK_BEFORE = /^[ぁぃぅぇぉっゃゅょゎゕゖァィゥェォッャュョヮヵヶーｰ・、。！？!?…ゝゞヽヾ）」』】]/;
@@ -84,7 +100,7 @@ const BATTLE_CARD_NO_BREAK_BEFORE = /^[ぁぃぅぇぉっゃゅょゎゕゖァ�
 //   「|」の無い名前は1行。手札に出る名前を全部ためして決めた(tools/battle/card-art-check.js が全部の折り方を見る)
 const BATTLE_CARD_NAME_BREAKS = Object.freeze({
   'ルミナスレイ': 'ルミナス|レイ', 'ナイトサンダー': 'ナイト|サンダー', 'エクリプスキッス': 'エクリプス|キッス', 'コンビネーション': 'コンビ|ネーション',
-  'ドリルコンビネーション': 'ドリル|コンビネーション', '大たおれこみ': '大|たおれこみ', '超たおれこみ': '超|たおれこみ',
+  'ドリルコンビネーション': 'ドリル|コンビ|ネーション', '大たおれこみ': '大|たおれこみ', '超たおれこみ': '超|たおれこみ',
   'アイスブレード': 'アイス|ブレード', 'アクアウェイブ': 'アクア|ウェイブ', 'スプラッシュ': 'スプラッシュ', 'ジングルベル': 'ジングル|ベル',
   'アクアゲイザー': 'アクア|ゲイザー', 'ぞうさんぴろぴろ鼻': 'ぞうさん|ぴろぴろ鼻', 'ハトのおとしもの': 'ハトの|おとしもの', '大きなおとしもの': '大きな|おとしもの',
   'グリンネーション': 'グリン|ネーション', '超モッチ砲2': '超モッチ砲2', '超モッチ砲3': '超モッチ砲3', '超モッチ砲ゴッド': '超モッチ砲|ゴッド',
@@ -94,61 +110,92 @@ const BATTLE_CARD_NAME_BREAKS = Object.freeze({
   'ダークライトニング': 'ダーク|ライトニング', 'カオスコズミック': 'カオス|コズミック', 'エクリプスノヴァ': 'エクリプス|ノヴァ', 'ライトニング': 'ライトニング',
   '種マシンガン': '種|マシンガン', 'クリスマスツリー': 'クリスマス|ツリー', 'メテオドライブ': 'メテオ|ドライブ', 'ライジングレイヴ': 'ライジング|レイヴ',
   'ダークホウスト': 'ダーク|ホウスト', 'アサルトライジング': 'アサルト|ライジング', '絶影桜華乱舞': '絶影|桜華乱舞', '絶華緋閃・零桜': '絶華緋閃・|零桜',
-  'スターバースト・ストリーム': 'スターバースト・|ストリーム', 'アイスコフィン': 'アイス|コフィン', 'アクアブラスト': 'アクア|ブラスト',
+  'スターバースト・ストリーム': 'スター|バースト・|ストリーム', 'アイスコフィン': 'アイス|コフィン', 'アクアブラスト': 'アクア|ブラスト',
   'メリークリスマス': 'メリー|クリスマス', 'オーシャンノヴァ': 'オーシャン|ノヴァ', 'メニーウィング': 'メニー|ウィング', 'メテオストーム': 'メテオ|ストーム',
   'エターナルアーク': 'エターナル|アーク', 'リボンウィング': 'リボン|ウィング', 'ナイトメアアーク': 'ナイトメア|アーク', 'ドラの毒膝地獄': 'ドラの|毒膝地獄',
   'かどみうむの計算': 'かどみうむの|計算', 'かどみうむの理論': 'かどみうむの|理論', 'かどみうむの叡智': 'かどみうむの|叡智',
   'みゃるの怪薬': 'みゃるの|怪薬', 'みゃるの禁薬': 'みゃるの|禁薬', "KUROMI'S5アタック": "KUROMI'S|5アタック",
   '白き誓い切なる願い': '白き誓い|切なる願い', '神光よ汚れを祓え': '神光よ|汚れを祓え', '祈れ輪廻の環よ': '祈れ|輪廻の環よ', '裁きの光よ下れ': '裁きの光よ|下れ',
   '今こそ真なる目醒め': '今こそ|真なる目醒め',
-  // 名前は2行まで(2026-10-15 社長「文字は全部同じサイズで最大2行」)。長い名前も言葉の切れ目で2行に折る
-  'ピアノパラソル脳天撃': 'ピアノパラソル|脳天撃', 'メロディキャンディボム': 'メロディ|キャンディボム', 'ナイトメアらっきょうボム': 'ナイトメア|らっきょうボム', '聖夜の鐘を鳴響け': '聖夜の鐘を|鳴響け', '終焉に救いを与えよ': '終焉に|救いを与えよ', '永劫の贖いを全うせよ': '永劫の贖いを|全うせよ',
+  // 機械では切れ目が分からないカタカナの複合語(2026-10-15 字を大きくして1行6字ぶんにしたとき、言葉の途中で折れた名前)
+  'ピアノパラソル脳天撃': 'ピアノ|パラソル|脳天撃', 'メロディキャンディボム': 'メロディ|キャンディ|ボム', 'ナイトメアらっきょうボム': 'ナイトメア|らっきょう|ボム',
+  'ディープキッス': 'ディープ|キッス', 'サンダービート': 'サンダー|ビート', 'アサルトダンス': 'アサルト|ダンス', 'ガッチョスラント': 'ガッチョ|スラント',
+  'アクアウィップ': 'アクア|ウィップ', 'キャンディボム': 'キャンディ|ボム', 'シャドウレギオン': 'シャドウ|レギオン', 'デンプシーロール': 'デンプシー|ロール',
+  'フォームガンマ': 'フォーム|ガンマ', 'リバースレイド': 'リバース|レイド', 'ソニックレイヴ': 'ソニック|レイヴ', 'アサルトレイド': 'アサルト|レイド',
+  'アクシズバレット': 'アクシズ|バレット', 'ブラッディクロス': 'ブラッディ|クロス', 'ワンダーブレイズ': 'ワンダー|ブレイズ', 'パピヨンバースト': 'パピヨン|バースト',
+  'パウンドメテオ': 'パウンド|メテオ', 'ホリゾンタル・スクエア': 'ホリゾンタル・|スクエア', 'グランドイリュージョン': 'グランド|イリュージョン',
+  'ムーンサルトメロディー': 'ムーンサルト|メロディー', 'ライジングブースト': 'ライジング|ブースト', 'スウィートパレード': 'スウィート|パレード', 'マリーランドアーチ': 'マリーランド|アーチ',
+  '巨大雪だるま転がし': '巨大雪だるま|転がし', '熾天の剣よ降り立て': '熾天の剣よ|降り立て', '天の慈悲を示されよ': '天の慈悲を|示されよ', '聖夜の鐘を鳴響け': '聖夜の鐘を|鳴響け', '終焉に救いを与えよ': '終焉に|救いを与えよ', '永劫の贖いを全うせよ': '永劫の贖いを|全うせよ',
 });
-const battleCardNameLines = (name, per = BATTLE_CARD_NAME_PER_LINE) => {
-  // 1行に入る名前(5.75px で置き場に収まる8字ぶんまで)は折らない(2026-10-15 社長「短い技名も無理して2行にしないで」)
-  if (per === BATTLE_CARD_NAME_PER_LINE && battleCardNameUnits(name) <= BATTLE_CARD_NAME_ONE_LINE) return [String(name || '')];
-  if (Object.prototype.hasOwnProperty.call(BATTLE_CARD_NAME_BREAKS, String(name || ''))) return BATTLE_CARD_NAME_BREAKS[String(name)].split('|');
-  const chars = [...String(name || '')];
-  const n = chars.length;
-  if (n <= per) return [chars.join('')];
-  const ok = new Set();
+const battleCardNameBreakCache = new Map();
+const battleCardNameLines = (name) => {
+  const text = String(name || '');
+  if (battleCardNameBreakCache.has(text)) return battleCardNameBreakCache.get(text);
+  const chars = [...text], n = chars.length, per = BATTLE_CARD_NAME_PER_LINE;
+  // 表にその名前そのものがあり、1行に入らない名前は、表の折り方をそのまま使う(1行に入る名前は1行)
+  if (battleCardNameUnits(text) > per && Object.prototype.hasOwnProperty.call(BATTLE_CARD_NAME_BREAKS, text)) { const fixed = BATTLE_CARD_NAME_BREAKS[text].split('|'); battleCardNameBreakCache.set(text, fixed); return fixed; }
+  const good = new Set();
   for (let k = 1; k < n; k += 1) {
     const a = battleCardNameClass(chars[k - 1]), b = battleCardNameClass(chars[k]);
     // 長音「ー」はカタカナとして続ける(カタカナ→ーは切れ目にしない)
-    if (a !== b && !(chars[k] === 'ー' || chars[k - 1] === 'ー')) ok.add(k);
+    if (a !== b && !(chars[k] === 'ー' || chars[k - 1] === 'ー')) good.add(k);
   }
   try {
     if (typeof Intl !== 'undefined' && typeof Intl.Segmenter === 'function') {
       let at = 0;
-      for (const seg of new Intl.Segmenter('ja', { granularity: 'word' }).segment(chars.join(''))) { at += [...seg.segment].length; if (at > 0 && at < n) ok.add(at); }
+      for (const seg of new Intl.Segmenter('ja', { granularity: 'word' }).segment(text)) { at += [...seg.segment].length; if (at > 0 && at < n) good.add(at); }
     }
   } catch (e) { /* 使えない端末は字の種類だけで決める */ }
-  const cands = [...ok].filter((k) => !BATTLE_CARD_NO_BREAK_BEFORE.test(chars[k]));
-  const mid = Math.ceil(n / 2);
-  // 候補が無い・偏りすぎ(長い方が真ん中より3字以上長い)なら、折ってよい字の前で真ん中に近い所
-  let best = null;
-  for (const k of cands) { const m = Math.max(k, n - k); if (m <= mid + 2 && (best == null || m < Math.max(best, n - best) || (m === Math.max(best, n - best) && Math.abs(k - mid) < Math.abs(best - mid)))) best = k; }
-  if (best == null) {
-    for (let d = 0; d < n; d += 1) { for (const k of [mid + d, mid - d]) { if (best == null && k > 0 && k < n && !BATTLE_CARD_NO_BREAK_BEFORE.test(chars[k])) best = k; } if (best != null) break; }
-    if (best == null) best = mid;
+  // 上書き表: 名前の中に表の名前があれば、その「|」を切れ目にし、「|」の無い名前の内側は切れ目にしない
+  for (const [word, broken] of Object.entries(BATTLE_CARD_NAME_BREAKS)) {
+    const at = text.indexOf(word);
+    if (at < 0) continue;
+    const start = [...text.slice(0, at)].length, len = [...word].length;
+    for (let q = start + 1; q < start + len; q += 1) good.delete(q);
+    let p = start;
+    for (const part of broken.split('|').slice(0, -1)) { p += [...part].length; good.add(p); }
   }
-  const head = chars.slice(0, best).join(''), tail = chars.slice(best).join('');
-  const more = (t) => ([...t].length >= 8 ? battleCardNameLines(t, per) : [t]);
-  return [...more(head), ...more(tail)];
+  const allowed = [];
+  for (let k = 1; k < n; k += 1) if (!BATTLE_CARD_NO_BREAK_BEFORE.test(chars[k])) allowed.push(k);
+  // 言葉の途中で折る数 → 行数 → 長い行 の順に小さい折り方を、3行までで探す(2行に入らない名前だけ、言葉の切れ目で3行にする)。どれも入らなければ、行数を気にせず長い行がいちばん短い折り方
+  let best = null, loose = null;
+  const better = (x, y) => !y || x[0] < y[0] || (x[0] === y[0] && (x[1] < y[1] || (x[1] === y[1] && x[2] < y[2])));
+  const walk = (i, lines, mid) => {
+    if (lines.length > 3) return;
+    if (i === n) {
+      const longest = Math.max(...lines.map(battleCardNameUnits));
+      const key = [mid, lines.length, longest];
+      if (longest <= per + 1e-9) { if (better(key, best && best.key)) best = { key, lines: [...lines] }; }
+      else { const lk = [longest, mid, lines.length]; if (better(lk, loose && loose.key)) loose = { key: lk, lines: [...lines] }; }
+      return;
+    }
+    for (const j of [...allowed.filter((k) => k > i), n]) {
+      lines.push(chars.slice(i, j).join(''));
+      walk(j, lines, mid + (j < n && !good.has(j) ? 1 : 0));
+      lines.pop();
+    }
+  };
+  walk(0, [], 0);
+  // 言葉の切れ目だけで入らない名前(言葉を割れない数件)は、言葉の途中では折らず、言葉の切れ目だけで折って字をその名前だけ小さくする(battleCardNameFit)
+  if (best && best.key[0] > 0) best = null;
+  if (!best) { loose = null; const walkGood = (i, lines) => { if (lines.length > 3) return; if (i === n) { const longest = Math.max(...lines.map(battleCardNameUnits)); const lk = [longest, lines.length, 0]; if (better(lk, loose && loose.key)) loose = { key: lk, lines: [...lines] }; return; } for (const j of [...[...good].filter((k) => k > i && !BATTLE_CARD_NO_BREAK_BEFORE.test(chars[k])).sort((a, b) => a - b), n]) { lines.push(chars.slice(i, j).join('')); walkGood(j, lines); lines.pop(); } }; walkGood(0, []); }
+  const out = best ? best.lines : (loose ? loose.lines : [text]);
+  battleCardNameBreakCache.set(text, out);
+  return out;
 };
-// 名前の字の大きさ(2026-10-15 社長「文字は全部同じサイズで最大2行にならない？」→ 5.8px でそろえる)。
-//   名前は「文字の置き場」(名前の欄の内側。CSS の padding で中の面の宝石より内側に決める)の中にだけ置き、どの名前も同じ大きさ・2行まで。
-//   大きさは、いちばん長い行(スターバースト・/ストリームの8字)が赤青緑紫の枠の置き場(手札で約46px)にちょうど収まる 5.75px。
-//   名前の欄は大きさの基準(container-type:size)なので、カードが小さい画面では置き場の幅・高さ(cqw/cqh)に合わせて縮むだけにする
-//   (下の飾り線の場所 --mh-rule-h は高さから先に引く)。英数(KUROMI'S など)は和文の字より細いので 0.62 字に数える
-const BATTLE_CARD_NAME_PX = 5.75;
-const BATTLE_CARD_NAME_LH = 1.12;
+// 名前の字の大きさ(2026-10-15 社長「長い名前だけ3行を許す」→ 前の手札に近い大きさで全部そろえる)。
+//   名前は「文字の置き場」(名前の欄の内側。CSS の padding で中の面の宝石より内側に決める)の中にだけ置く。
+//   大きさは、1行6字ぶん(BATTLE_CARD_NAME_PER_LINE)が赤青緑紫の枠の置き場(カード幅の66%)にちょうど収まる大きさで、カードの幅に合わせて変わる
+//   (手札が約72px幅なら約7.7px。手札では見た目を約1.1倍に拡大しているので約8.6px)。金の枠は置き場が広い(74%)ので --mh-name-ratio で同じ大きさにそろえる。
+//   6字ぶんを超える行(言葉を割れない数件)だけ、その名前を小さくする。名前の欄は大きさの基準(container-type:size)なので cqw は置き場の幅。
+//   高さが足りない欄(横持ちの3行など)では高さに合わせて縮む(下の飾り線の場所 --mh-rule-h は高さから先に引く)。英数は 0.62 字に数える
+const BATTLE_CARD_NAME_LH = 1.1;
 const battleCardNameUnits = (line) => [...String(line || '')].reduce((n, ch) => n + (/[\x20-\x7e]/.test(ch) ? 0.62 : 1), 0);
 const battleCardNameFit = (name) => {
   const lines = battleCardNameLines(name);
-  const longest = Math.max(1, ...lines.map(battleCardNameUnits));
+  const longest = Math.max(BATTLE_CARD_NAME_PER_LINE, ...lines.map(battleCardNameUnits));
   const tall = (lines.length * BATTLE_CARD_NAME_LH).toFixed(2);
-  return { fontSize: `min(${BATTLE_CARD_NAME_PX}px, calc((100cqw - 1.5px) / ${longest.toFixed(2)}), calc((100cqh - var(--mh-rule-h, 6px)) / ${tall}))`, lineHeight: String(BATTLE_CARD_NAME_LH), whiteSpace: 'nowrap' };
+  return { fontSize: `max(5px, min(calc((100cqw * var(--mh-name-ratio, 1) - 1.5px) / ${longest.toFixed(2)}), calc((100cqh - var(--mh-rule-h, 6px)) / ${tall})))`, lineHeight: String(BATTLE_CARD_NAME_LH), whiteSpace: 'nowrap' };
 };
 const BATTLE_CARD_ROMAN = Object.freeze(['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX']);
 // カード1枚の絵。{ frame, mark(技のマークの絵・無ければ null で今のアイコン), roman(段階の札・無ければ '') }
@@ -2908,8 +2955,11 @@ function BattleScreen({
                 if(isBusy||autoBattleRef.current||!tutorialAllowed)return;
                 const pt=e.touches?e.touches[0]:e;
                 cardDragActiveRef.current=false;
-                setDragState({cardIndex:i, x:pt.clientX, y:pt.clientY, active:false, card:c});
-              }} style={{...(cardArt&&cardArt.plate?{'--mh-plate':`url("${cardArt.plate}")`}:{}),...(cardArt&&cardArt.rule?{'--mh-name-rule':`url("${cardArt.rule}")`}:{}),...(isDragging?{touchAction:'none',position:'fixed',left:dragState.x,top:dragState.y,transform:'translate(-50%,-50%) rotate(-3deg) scale(1.15)',zIndex:70000,width:'72px',pointerEvents:'none',transition:'none',filter:'drop-shadow(0 12px 18px rgba(0,0,0,0.65))'}:{touchAction:'none',boxShadow:tacticsNewLayout?`${(TYPE_INLINE_STYLE[c.type]||{}).borderColor?`0 -2px 10px ${(TYPE_INLINE_STYLE[c.type]||{}).borderColor}45, `:''}inset 0 1px 0 rgba(255,255,255,.08), 0 5px 12px rgba(0,0,0,.24)`:`${(TYPE_INLINE_STYLE[c.type]||{}).borderColor?`0 0 12px ${(TYPE_INLINE_STYLE[c.type]||{}).borderColor}70, `:''}inset 0 1px 0 rgba(255,255,255,.34), inset 0 -10px 16px rgba(0,0,0,.30), 0 4px 10px rgba(0,0,0,.5)`}),...(TYPE_INLINE_STYLE[c.type]||{})}} className={`relative w-full ${tacticsNewLayout?'rounded-[12px] border':'rounded-xl border-2'} p-1 flex flex-col items-center justify-between bg-gradient-to-b ${TYPE_COLORS[c.type]} ${isDragging?'ring-4 ring-white shadow-[0_0_24px_rgba(255,255,255,0.6)]':isSel?'transition-all -translate-y-1.5 ring-2 ring-cyan-300 z-20 scale-[1.03] opacity-90 saturate-[0.95] shadow-[0_0_16px_rgba(103,232,249,0.45)]':'transition-all opacity-90'} ${isPending?'ring-4 ring-yellow-400 animate-pulse shadow-[0_0_20px_rgba(250,204,21,0.7)]':''} ${!isSelectable&&!isSel&&!isDragging?'grayscale opacity-50':''}${tutorialTargeted?' is-battle-tutorial-spot':''}${battleTutorialCardTarget&&!tutorialTargeted?' grayscale opacity-25':''}`}>
+                // 運ぶ間も手札と同じ大きさ・縦横比にする(2026-10-15 社長「移動するときにカードが潰れる」)。押した瞬間の大きさを覚えておく
+                //   (絵のカードは見た目だけ拡大(CSS の scale)しているので、拡大を含まない元の大きさ offsetWidth/offsetHeight を使う)
+                const el0=e.currentTarget, w0=el0&&el0.offsetWidth>0?el0.offsetWidth:null, h0=el0&&el0.offsetHeight>0?el0.offsetHeight:null;
+                setDragState({cardIndex:i, x:pt.clientX, y:pt.clientY, active:false, card:c, w:w0, h:h0});
+              }} style={{...(cardArt&&cardArt.plate?{'--mh-plate':`url("${cardArt.plate}")`}:{}),...(cardArt&&cardArt.rule?{'--mh-name-rule':`url("${cardArt.rule}")`}:{}),...(isDragging?{touchAction:'none',position:'fixed',left:dragState.x,top:dragState.y,transform:cardArt?'translate(-50%,-50%) rotate(-3deg) scale(1.2949,1.242)':'translate(-50%,-50%) rotate(-3deg) scale(1.15)',zIndex:70000,width:dragState.w?`${dragState.w}px`:'72px',...(dragState.h?{height:`${dragState.h}px`}:{}),pointerEvents:'none',transition:'none',filter:'drop-shadow(0 12px 18px rgba(0,0,0,0.65))'}:{touchAction:'none',boxShadow:tacticsNewLayout?`${(TYPE_INLINE_STYLE[c.type]||{}).borderColor?`0 -2px 10px ${(TYPE_INLINE_STYLE[c.type]||{}).borderColor}45, `:''}inset 0 1px 0 rgba(255,255,255,.08), 0 5px 12px rgba(0,0,0,.24)`:`${(TYPE_INLINE_STYLE[c.type]||{}).borderColor?`0 0 12px ${(TYPE_INLINE_STYLE[c.type]||{}).borderColor}70, `:''}inset 0 1px 0 rgba(255,255,255,.34), inset 0 -10px 16px rgba(0,0,0,.30), 0 4px 10px rgba(0,0,0,.5)`}),...(TYPE_INLINE_STYLE[c.type]||{})}} className={`relative w-full ${tacticsNewLayout?'rounded-[12px] border':'rounded-xl border-2'} p-1 flex flex-col items-center justify-between bg-gradient-to-b ${TYPE_COLORS[c.type]} ${isDragging?'ring-4 ring-white shadow-[0_0_24px_rgba(255,255,255,0.6)]':isSel?'transition-all -translate-y-1.5 ring-2 ring-cyan-300 z-20 scale-[1.03] opacity-90 saturate-[0.95] shadow-[0_0_16px_rgba(103,232,249,0.45)]':'transition-all opacity-90'} ${isPending?'ring-4 ring-yellow-400 animate-pulse shadow-[0_0_20px_rgba(250,204,21,0.7)]':''} ${!isSelectable&&!isSel&&!isDragging?'grayscale opacity-50':''}${tutorialTargeted?' is-battle-tutorial-spot':''}${battleTutorialCardTarget&&!tutorialTargeted?' grayscale opacity-25':''}`}>
                 {/* ★新しい盤面の手札の飾り(2026-09-24 ユーザー指示「カードの絵をもっと高級感というか、いいかんじに」)。
                     金の縁(回る光)・種類ごとの地の模様・ときどき横切る光の筋・左上の消費ガッツの宝石。
                     見た目は data-tactics-look の CSS(70-bootstrap)がまとめて持つ。★消費ガッツはこの宝石だけに出す

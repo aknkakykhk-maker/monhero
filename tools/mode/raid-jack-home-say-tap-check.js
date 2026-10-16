@@ -191,7 +191,7 @@ const LINES_PER_SIZE = 6;
           const r = btn.querySelector(':scope > span').getBoundingClientRect();
           const owns = (x, y) => { if (x < 0 || y < 0 || x >= innerWidth || y >= innerHeight) return null; const t = document.elementFromPoint(x, y); return !!t && btn.contains(t); };
           const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-          if (owns(cx, cy) === false) bad.push(`${name}: 札の真ん中が押せない`);
+          if (owns(cx, cy) === false) { const t = document.elementFromPoint(cx, cy); bad.push(`${name}: 札の真ん中が押せない(上にあるもの: ${t ? (t.getAttribute('aria-label') || t.getAttribute('data-home-hint') || t.className || t.tagName).toString().slice(0, 80) + ' / ' + (t.closest('[aria-label]') ? t.closest('[aria-label]').getAttribute('aria-label') : '') + ' / ' + ((t.closest('.mh-home-assistant') || t).innerText || '').replace(/\s+/g, ' ').slice(0, 80) : 'なし'})`); }
           if (r.height + 16 < 44) bad.push(`${name}: 押せる高さが44px未満(${Math.round(r.height + 16)})`);
           for (const [dx, dy, side] of [[-1, 0, '左'], [1, 0, '右'], [0, -1, '上'], [0, 1, '下']]) {
             const edgeX = dx < 0 ? r.left : dx > 0 ? r.right : cx, edgeY = dy < 0 ? r.top : dy > 0 ? r.bottom : cy;
