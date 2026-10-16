@@ -23,6 +23,34 @@ const Audio_ = (() => {
   //   上限は、いまの場面+次の場面+少し前の2本ぶんで 4
   const SONG_BUFFER_KEEP = 4;
   const songBufferOrder = [];
+  // ★場面のBGMを軽く持つ(2026-10-16 社長の決定「案1＋案2」・デバッグ設定の入/切で試す。既定は切)。
+  //   きっかけ: 「クイックでオート無限を1時間ほどやっていたら、ホームに戻っていた」(iPhone のメモリ不足の読み込み直し)。
+  //   ・案1 場面のBGMだけ、解いたあと 24kHz に落として元を捨てる(1本あたり約半分)
+  //   ・案2 場面のBGMは「いま鳴っている1本＋直前(または次)の1本」だけ持つ
+  //   鳴らし方(AudioBuffer を Web Audio で鳴らす)は変えない(#2991 の <audio> は iPhone で無音になったため使わない)。
+  //   モンヒロビートの曲(演奏・試聴)と効果音は対象外。軽くした音は鍵に '#light' を付けて別に持つので、
+  //   同じファイルを演奏で読むときは、ふつうの音として別に解く(演奏が軽い音を使うことはない)
+  const BGM_LIGHT_KEY = 'mh_bgm_light_v1';
+  const BGM_LIGHT_RATE = 24000, BGM_LIGHT_KEEP = 2, BGM_LIGHT_SUFFIX = '#light';
+  const bgmLightOn = () => { try { return typeof localStorage !== 'undefined' && localStorage.getItem(BGM_LIGHT_KEY) === 'on'; } catch (e) { return false; } };
+  const sceneBufferKey = (src) => (bgmLightOn() ? src + BGM_LIGHT_SUFFIX : src);
+  const lightOrder = [];
+  // 解いた音を BGM_LIGHT_RATE で描き直す(OfflineAudioContext)。できない環境・失敗はそのままの音を返す
+  const lightenBuffer = (buffer) => new Promise((resolve) => {
+    let settled = false;
+    const finish = (b) => { if (settled) return; settled = true; resolve(b && b.length ? b : buffer); };
+    try {
+      const OAC = typeof window !== 'undefined' ? (window.OfflineAudioContext || window.webkitOfflineAudioContext) : null;
+      if (!OAC || !buffer || buffer.sampleRate <= BGM_LIGHT_RATE) { finish(buffer); return; }
+      const length = Math.max(1, Math.round(buffer.duration * BGM_LIGHT_RATE));
+      const off = new OAC(buffer.numberOfChannels, length, BGM_LIGHT_RATE);
+      const src = off.createBufferSource();
+      src.buffer = buffer; src.connect(off.destination); src.start(0);
+      off.oncomplete = (e) => finish(e && e.renderedBuffer);
+      const p = off.startRendering();
+      if (p && p.then) p.then(finish, () => finish(buffer));
+    } catch (e) { finish(buffer); }
+  });
   // previewRequest は試聴の「この呼び出しが今も最新か」を見るための番号。
   // 通常BGM(bgmRequest)と同じ役目で、読み込みを待っているあいだに止められたり
   // 押し直されたりした古い呼び出しが、あとから音を鳴らし始めるのを防ぐ
@@ -254,9 +282,22 @@ const Audio_ = (() => {
     if (previewSource && previewSource.buffer === buffer) return true;
     if (rhythmBuffersInUse.has(buffer)) return true;
     const scene = currentKey ? resolveTrack(currentKey) : null;
-    return !!(scene && scene.src === url);
+    return !!(scene && (scene.src === url || scene.src + BGM_LIGHT_SUFFIX === url));
   };
   const rememberSongBuffer = (url) => {
+    // 軽く持つ場面のBGMは別の列で数え、BGM_LIGHT_KEEP 本まで(案2)
+    if (String(url).endsWith(BGM_LIGHT_SUFFIX)) {
+      const li = lightOrder.indexOf(url);
+      if (li >= 0) lightOrder.splice(li, 1);
+      lightOrder.push(url);
+      for (let i = 0; lightOrder.length > BGM_LIGHT_KEEP && i < lightOrder.length - 1;) {
+        const old = lightOrder[i];
+        if (bufferInUse(old)) { i++; continue; }
+        lightOrder.splice(i, 1);
+        buffers.delete(old);
+      }
+      return;
+    }
     const at = songBufferOrder.indexOf(url);
     if (at >= 0) songBufferOrder.splice(at, 1);
     songBufferOrder.push(url);
@@ -267,19 +308,23 @@ const Audio_ = (() => {
       buffers.delete(old);
     }
   };
-  const loadBuffer = (url) => {
-    if (buffers.has(url)) return Promise.resolve(buffers.get(url));
-    if (loadingBuffers.has(url)) return loadingBuffers.get(url);
+  // key … 覚えておく鍵。ふつうは素のパス、場面のBGMを軽く持つときは末尾に '#light'(BGM_LIGHT_SUFFIX)
+  const loadBuffer = (key) => {
+    if (buffers.has(key)) return Promise.resolve(buffers.get(key));
+    if (loadingBuffers.has(key)) return loadingBuffers.get(key);
     const ctx = getAudioCtx();
     if (!ctx || typeof fetch !== 'function') return Promise.reject(new Error('Web Audio unavailable'));
+    const light = String(key).endsWith(BGM_LIGHT_SUFFIX);
+    const url = light ? String(key).slice(0, -BGM_LIGHT_SUFFIX.length) : key;
     // 覚えておく鍵は素のパス(url)のまま。取りに行くときだけキーを足す。
     // こうすると、キーが変わっても同じ曲を二重に持たない。
     const request = fetch(audioUrlWithKey(url), { cache: 'force-cache' }).then((res) => {
       if (!res.ok) throw new Error(`audio fetch failed: ${res.status}`);
       return res.arrayBuffer();
-    }).then((data) => decode(ctx, data)).then((buffer) => { buffers.set(url, buffer); decodedBytes += bufferBytes(buffer); decodedCount += 1; return buffer; })
-      .finally(() => loadingBuffers.delete(url));
-    loadingBuffers.set(url, request);
+    }).then((data) => decode(ctx, data)).then((decoded) => { decodedBytes += bufferBytes(decoded); decodedCount += 1; return light ? lightenBuffer(decoded) : decoded; })
+      .then((buffer) => { buffers.set(key, buffer); return buffer; })
+      .finally(() => loadingBuffers.delete(key));
+    loadingBuffers.set(key, request);
     return request;
   };
   const stopSource = (source) => { if (source) { try { source.onended = null; source.stop(); } catch (e) {} try { source.disconnect(); } catch (e) {} } };
@@ -312,12 +357,13 @@ const Audio_ = (() => {
     if (!enabled || bgmVolumePct <= 0 || pageHidden) { stopOthers(); stopJingles(); return Promise.resolve(); }
     resumeAudioCtxNoWait();
     // 起動タップ前にdecode済みなら、user activation中に同期的に再生開始する。
-    if (buffers.has(track.src)) {
-      startBgmBuffer(track.id, track, buffers.get(track.src), request);
-      rememberSongBuffer(track.src);
+    const bufKey = sceneBufferKey(track.src);
+    if (buffers.has(bufKey)) {
+      startBgmBuffer(track.id, track, buffers.get(bufKey), request);
+      rememberSongBuffer(bufKey);
       return Promise.resolve();
     }
-    return loadBuffer(track.src).then((buffer) => { rememberSongBuffer(track.src); startBgmBuffer(track.id, track, buffer, request); }).catch(() => {});
+    return loadBuffer(bufKey).then((buffer) => { rememberSongBuffer(bufKey); startBgmBuffer(track.id, track, buffer, request); }).catch(() => {});
   };
   // 番号を進めることで、読み込み待ちの古い試聴を無効にする(あとから鳴り出さない)
   const stopPreview = (resume = true) => { ++previewRequest; stopSource(previewSource); previewSource = null; previewKey = null; if (resume && currentKey) playBGM(currentKey); };
@@ -518,10 +564,11 @@ const Audio_ = (() => {
       };
     } catch(e){ return null; }
   };
-  const preloadBGM = (key) => { const track = resolveTrack(key); if (track) loadBuffer(track.src).then(() => rememberSongBuffer(track.src)).catch(() => {}); };
+  const preloadBGM = (key) => { const track = resolveTrack(key); if (!track) return; const bufKey = sceneBufferKey(track.src); loadBuffer(bufKey).then(() => rememberSongBuffer(bufKey)).catch(() => {}); };
   const prepareBGM = (key, timeoutMs = 2000) => {
     const track = resolveTrack(key); if (!track) return Promise.resolve(false);
-    return Promise.race([loadBuffer(track.src).then(() => { rememberSongBuffer(track.src); return true; }).catch(() => false), new Promise((r) => setTimeout(() => r(false), timeoutMs))]);
+    const bufKey = sceneBufferKey(track.src);
+    return Promise.race([loadBuffer(bufKey).then(() => { rememberSongBuffer(bufKey); return true; }).catch(() => false), new Promise((r) => setTimeout(() => r(false), timeoutMs))]);
   };
   const prepareSE = (timeoutMs = 5000) => Promise.race([
     load().then(() => true).catch(() => false),
@@ -612,6 +659,9 @@ const Audio_ = (() => {
       bgmVolumePct, seVolumePct,
       // 持っている解いた音の数と、そのうち試聴・演奏で読んだ曲の数(直近 SONG_BUFFER_KEEP 曲まで)
       bufferCount: buffers.size, songBufferCount: songBufferOrder.length,
+      // 場面のBGMを軽く持っているか(デバッグ設定)と、軽く持っている本数
+      bgmLight: bgmLightOn(), lightBufferCount: lightOrder.length,
+      lightRates: lightOrder.map(key => { const b = buffers.get(key); return b ? Math.round(b.sampleRate) : 0; }),
       // 持っている曲の名前(古い順)。同じ曲を手放しては読み直していないかを調べるための読み取り
       songBufferNames: songBufferOrder.map(url => String(url).split('/').pop()),
       // 持っている音の大きさ(MB)と、起動してから解いた合計(MB)・回数。同じ曲を手放しては読み直すと、後ろの2つだけが増え続ける
