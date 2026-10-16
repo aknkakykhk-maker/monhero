@@ -222,8 +222,14 @@ function main(){
         &&Number.isFinite(Number(charts.EASY.policy.songChallenge?.beatClarity)),
         JSON.stringify(charts.EASY.policy.songChallenge||null));
       const onsetGrids=new Set(audio.onsets.map(onset=>onset.grid));
+      // 低音の遅れの直し(遊んだ記録から学ぶ調整値・rhythm-chart-play-tuning.js)とテンポの揺れの直しは、鳴っている音を格子1〜2つ手前へ寄せて置く。
+      //   寄せたノーツは、時刻が近く(格子1.5つ以内)強さが同じ打点が元の解析にあれば「鳴っている所」と見る
+      //   (2026-10-16 引き出し R2 で拾う音が変わり、寄せた音が初めて選ばれて、格子が同じかだけを見ていたここが落ちた)
+      const gMs=Number(audio.timing.gridMs)||audio.timing.beatMs/audio.timing.subdivisionsPerBeat;
+      const sounded=note=>note.chord||onsetGrids.has(note.grid)||audio.onsets.some(onset=>Math.abs(onset.grid-note.grid)*gMs<=gMs*1.5+1
+        &&Math.abs(Number(onset.strength)-Number(note.sourceStrength))<.006&&onset.character===note.sourceCharacter);
       check(`${song.track}: 鳴っていない場所へ置いていない`,
-        DIFFICULTIES.every(d=>charts[d].notes.every(note=>note.chord||onsetGrids.has(note.grid))));
+        DIFFICULTIES.every(d=>charts[d].notes.every(sounded)));
       check(`${song.track}: 形の語彙を使っている`,
         DIFFICULTIES.every(d=>new Set((charts[d].shapes||[]).map(entry=>entry.pattern).filter(Boolean)).size>=4),
         DIFFICULTIES.map(d=>new Set((charts[d].shapes||[]).map(e=>e.pattern).filter(Boolean)).size).join('/')+'種');
