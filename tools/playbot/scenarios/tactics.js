@@ -95,7 +95,8 @@ async function enterTactics(s, { mode, difficulty = 'keep', stats = {}, ctx = nu
     }
   }
   // 難易度を名前で指定したとき(Master など)は、いちばん前へ戻してから、その札まで送る(すべて解放だと極限まで開いているため)
-  if (difficulty && !['max', 'keep'].includes(difficulty)) {
+  // 札を目当ての難易度まで送る(押す直前に札が戻っていたときに、もう1回送り直すため関数にした。2026-10-16)
+  const navTo = async () => {
     for (let k = 0; k < 25; k++) {
       const before = await page.evaluate(() => (document.querySelector('article[data-difficulty-card].on') || {}).getAttribute?.('data-difficulty-card') || '');
       const moved = await page.evaluate(() => { const b = document.querySelector('button[aria-label="前の難易度"]'); if (!b || b.disabled) return false; b.click(); return true; });
@@ -118,7 +119,10 @@ async function enterTactics(s, { mode, difficulty = 'keep', stats = {}, ctx = nu
       if (!moved) break;
       for (let w = 0; w < 30 && (await onKey()) === key; w++) await s.wait(150);
     }
-    if ((await onKey()) !== difficulty) return `no-difficulty:${difficulty}`;
+    return (await onKey()) === difficulty;
+  };
+  if (difficulty && !['max', 'keep'].includes(difficulty)) {
+    if (!(await navTo())) return `no-difficulty:${difficulty}`;
   }
   // ★難易度の札(article[data-difficulty-card])は全部の難易度ぶん並んでいて、どの札にも「この難易度で挑戦」がある。
   //   文字で探して押すと、いつも先頭の Beginner を押してしまう(2026-10-09 まで、ずっと Beginner で戦っていた)。
@@ -126,23 +130,29 @@ async function enterTactics(s, { mode, difficulty = 'keep', stats = {}, ctx = nu
   // ★難易度を名前で指定したときは、選んでいる札(.on)がその難易度のときだけ押す。.on が見つからないときに先頭の札(Beginner)を押したり、
   //   押せないときに1つ前へ戻したりしない(2026-10-15 レフェリーくん: Expert のつもりの回が Beginner で戦っていた。3本並べで重いとき)
   const named = difficulty && !['max', 'keep'].includes(difficulty);
+  let navRetried = false;
   for (let i = 0; i < 20; i++) {
     if (named) {
       let key = '';
       for (let w = 0; w < 20 && key !== difficulty; w++) { key = await page.evaluate(() => (document.querySelector('article[data-difficulty-card].on') || {}).getAttribute?.('data-difficulty-card') || ''); if (key !== difficulty) await s.wait(250); }
       if (key !== difficulty) return `no-difficulty:${difficulty}(押す前に ${key || '札なし'})`;
     }
-    const r = await page.evaluate((strict) => {
+    const r = await page.evaluate(([strict, want]) => {
       const card = document.querySelector('article[data-difficulty-card].on') || (strict ? null : document.querySelector('article[data-difficulty-card]'));
       if (!card && strict) return { lost: true };
+      // ★名前で指定したときは、押す前に札を確かめる。違えば押さない(押してしまうと、その難易度で始まってしまう)
+      if (strict && card.getAttribute('data-difficulty-card') !== want) return { key: card.getAttribute('data-difficulty-card'), wrong: true };
       if (!card) return { none: true };
       const go = [...card.querySelectorAll('button')].find((x) => /この難易度で挑戦/.test(x.innerText || ''));
       if (!go || go.disabled) return { key: card.getAttribute('data-difficulty-card'), locked: true };
       go.scrollIntoView({ block: 'center' });
       go.click();
       return { key: card.getAttribute('data-difficulty-card') };
-    }, named);
+    }, [named, difficulty]);
     if (r.lost) continue;
+    // ★押す直前に札が戻っていたときは、押さずに1回だけ送り直してやり直す(2026-10-16 セコンドくん: ゴースト Expert で Beginner の札)
+    if (r.wrong && !navRetried) { navRetried = true; await navTo(); continue; }
+    if (r.wrong) return `no-difficulty:${difficulty}(押す前に ${r.key}。送り直しても合わない)`;
     if (named && r.key && r.key !== difficulty) return `no-difficulty:${difficulty}(押したのは ${r.key})`;
     if (named && r.locked) return `no-difficulty:${difficulty}(押せない)`;
     if (r.none && !named) { if (await s.tapLabel(/この難易度で挑戦/, 1500)) break; }
@@ -537,6 +547,9 @@ async function fightTactics(s, stats, { maxMs = 360000, waves = true, speedUp = 
       if (!before.actionEnabled) {
         // 置いた直後の演出のあいだは押せない(最大6秒待つ)
         for (let k = 0; k < 12 && !(await readTactics(s)).actionEnabled; k++) await s.wait(500);
+        // ★「WAVE n リザルト」へ移っていたら、打ち切らずに合間へ進む(2026-10-16 セコンドくん: モノリス Expert W4 で倒した直後、
+        //   リザルトの見出しが h1〜h3 でなく戦いの最中と見て、手札の空のまま実行を待って打ち切りになった)
+        if (!(await readTactics(s)).actionEnabled && await s.page.evaluate(() => /WAVE\s*\d+\s*リザルト/.test((document.body.innerText || '').replace(/\s+/g, ' ')))) { ctx && ctx.log.waveEnd('clear'); continue; }
         if (!(await readTactics(s)).actionEnabled) { await s.addIssue('反応なし', `タクティクスで実行が押せない(手札 ${before.hand.map((c) => `${c.type}${c.usable ? '' : '×'}`).join(' ')})`); break; }
       }
       await tapEl(s, '[data-battle-action]', 'ACTION');
