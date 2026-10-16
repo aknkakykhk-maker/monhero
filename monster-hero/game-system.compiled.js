@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6d2bd494dfe8cc77
+// source-sha256: 899427bd99199734
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-16 13:16";
+const BUILD_DATE = "2026-10-16 13:39";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -42921,7 +42921,7 @@ const rhythmBuddyTalkPick = ({
   const make = raw => {
     let ok = true;
     let line = raw.split('{who}さん').join(callWord || `{who}${hon}`);
-    if (self && typeof rhythmBuddyPersonaSelf === 'function') line = rhythmBuddyPersonaSelf(line, self);
+    if (self && typeof rhythmBuddyPersonaSelf === 'function') line = rhythmBuddyPersonaSelf(line, self, vars.female === true);
     const text = line.replace(/\{([A-Za-z]+)\}/g, (all, key) => {
       const v = vars[key];
       if (v == null || v === '') {
@@ -44362,6 +44362,24 @@ const RHYTHM_BUDDY_SELF_WORDS = Object.freeze({
   stubborn: Object.freeze(['おれ', 'わし', '拙者', '自分']),
   easygoing: Object.freeze(['ぼく', 'うち', 'わし', 'あたし'])
 });
+const RHYTHM_BUDDY_FEMALE_LINEAGES = Object.freeze(['pixie', 'undine']);
+const rhythmBuddyGenderOf = baseId => {
+  const map = typeof MONSTER_LINEAGE_MAP !== 'undefined' ? MONSTER_LINEAGE_MAP : null;
+  const entry = map && baseId != null && Object.prototype.hasOwnProperty.call(map, baseId) ? map[baseId] : null;
+  return entry && RHYTHM_BUDDY_FEMALE_LINEAGES.includes(entry.main) ? 'female' : '';
+};
+const RHYTHM_BUDDY_SELF_WORDS_FEMALE = Object.freeze({
+  '': Object.freeze(['わたし', 'あたし', 'うち']),
+  jester: Object.freeze(['あたし', 'うち', 'わたし']),
+  brave: Object.freeze(['あたし', 'わたし', 'うち']),
+  clingy: Object.freeze(['あたし', 'うち', 'わたし']),
+  smart: Object.freeze(['わたし', 'わたくし']),
+  serious: Object.freeze(['わたし', 'わたくし']),
+  proud: Object.freeze(['わたし', 'わたくし', 'あたし']),
+  worrier: Object.freeze(['わたし', 'あたし', 'うち']),
+  stubborn: Object.freeze(['あたし', 'わたし', 'うち']),
+  easygoing: Object.freeze(['うち', 'あたし', 'わたし'])
+});
 const RHYTHM_BUDDY_CALL_STYLES = Object.freeze({
   san: Object.freeze({
     id: 'san',
@@ -44617,12 +44635,14 @@ const rhythmBuddyPersonaBirthday = id => {
     day: d.getUTCDate()
   };
 };
-const rhythmBuddyPersona = (masuId, trait = '') => {
+const rhythmBuddyPersona = (masuId, trait = '', baseId = null) => {
   const t = Object.prototype.hasOwnProperty.call(RHYTHM_BUDDY_SELF_WORDS, trait) ? trait : '';
+  const gender = rhythmBuddyGenderOf(baseId);
   const callId = rhythmBuddyPersonaChoose(RHYTHM_BUDDY_CALLS[t], masuId, `call:${t}`, true);
   const quirk = rhythmBuddyPersonaChoose(RHYTHM_BUDDY_QUIRKS[t], masuId, `quirk:${t}`, false);
   return {
-    self: rhythmBuddyPersonaChoose(RHYTHM_BUDDY_SELF_WORDS[t], masuId, `self:${t}`, true),
+    gender,
+    self: rhythmBuddyPersonaChoose((gender === 'female' ? RHYTHM_BUDDY_SELF_WORDS_FEMALE : RHYTHM_BUDDY_SELF_WORDS)[t], masuId, `self:${t}`, true),
     call: RHYTHM_BUDDY_CALL_STYLES[callId],
     quirk: Object.freeze({
       ...quirk,
@@ -44837,7 +44857,7 @@ const RHYTHM_BUDDY_PERSONA_TALK = Object.freeze(Object.fromEntries(Object.keys(R
   traitOnly: true
 })])));
 const RHYTHM_BUDDY_PERSONA_KINDS = Object.freeze(Object.keys(RHYTHM_BUDDY_PERSONA_TALK));
-const rhythmBuddyPersonaSelf = (line, self) => self ? String(line).replace(/私|ぼく/g, self) : String(line);
+const rhythmBuddyPersonaSelf = (line, self, female = false) => self ? String(line).replace(female ? /私|ぼく|俺|オイラ|僕|拙者/g : /私|ぼく/g, self) : String(line);
 const FRIEND_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const FRIEND_CODE_LENGTH = 8;
 const FRIENDS_MAX = 50;
@@ -71009,6 +71029,7 @@ const RHYTHM_MULTI = (() => {
       try {
         text = cpuBrain.talk({
           masuId: x.masuId,
+          baseId: c.mb || null,
           kind,
           me: c.name,
           ...vars
@@ -74887,6 +74908,7 @@ const rhythmBuddyMakeBrain = songs => ({
   },
   talk({
     masuId,
+    baseId = null,
     kind,
     songId = '',
     score = 0,
@@ -74946,10 +74968,11 @@ const rhythmBuddyMakeBrain = songs => ({
     };
     const key = String(masuId);
     const recent = rhythmBuddyTalkRecent.get(key) || [];
-    const persona = rhythmBuddyPersona(masuId, norm.trait);
+    const persona = rhythmBuddyPersona(masuId, norm.trait, baseId);
     const favs = rhythmBuddyPersonaSongs(norm);
     Object.assign(vars, {
       self: persona.self,
+      female: persona.gender === 'female',
       call: persona.call.call || '',
       food: persona.food,
       hobby: persona.hobby,
@@ -75356,10 +75379,10 @@ function RhythmBuddyDetail({
   const [traitsOpen, setTraitsOpen] = React.useState(false);
   const songs = rhythmBuddyTopSongs(m, allSongs ? RHYTHM_BUDDY_SONG_KEEP : 5);
   const songCount = Object.keys(m.songs).length;
-  const persona = rhythmBuddyPersona(masu.id, m.trait);
+  const persona = rhythmBuddyPersona(masu.id, m.trait, masu.baseId);
   const favs = rhythmBuddyPersonaSongs(m);
   const bdayToday = rhythmBuddyIsBirthday(persona, Date.now());
-  const profile = [['self', '一人称', persona.self], ['call', '呼び方', persona.call.label], ['quirk', '口ぐせ', persona.quirk.label], ['food', '好物', persona.food], ['hobby', '趣味', persona.hobby], ['birthday', '誕生日', `${persona.birthday.month}月${persona.birthday.day}日`], ['habit', '叩き方のくせ', persona.habit.label], ['like', '好きな曲', favs.like ? songName(favs.like) : 'まだない'], ['dislike', '苦手な曲', favs.dislike ? songName(favs.dislike) : 'まだない']];
+  const profile = [...(persona.gender === 'female' ? [['gender', '性別', '女の子']] : []), ['self', '一人称', persona.self], ['call', '呼び方', persona.call.label], ['quirk', '口ぐせ', persona.quirk.label], ['food', '好物', persona.food], ['hobby', '趣味', persona.hobby], ['birthday', '誕生日', `${persona.birthday.month}月${persona.birthday.day}日`], ['habit', '叩き方のくせ', persona.habit.label], ['like', '好きな曲', favs.like ? songName(favs.like) : 'まだない'], ['dislike', '苦手な曲', favs.dislike ? songName(favs.dislike) : 'まだない']];
   return React.createElement("div", {
     "data-rhythm-buddy-detail": true,
     className: "space-y-2"
