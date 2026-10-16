@@ -33209,15 +33209,17 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     ctx.globalAlpha=opts.alpha*(L.farDim+(1-L.farDim)*near);
     // 側面(真ん中の側だけ見える)
     const right=hd.cx<mid;
-    ctx.fillStyle='rgba(148,163,184,.42)';ctx.beginPath();
+    // 色は今の空中の箱の決まり(RHYTHM_SKY_LOOK.box)をそのまま使う(2026-10-16 社長「色の置き方は今のまま・見せ方だけ変える」)。側面は手前の面の色に暗さを重ねる
+    ctx.fillStyle=`rgba(${L.frontFill},${L.frontAlpha})`;ctx.beginPath();
     if(right){ctx.moveTo(xf1,yf);ctx.lineTo(xb1,yb);ctx.lineTo(xb1,yb+thick*1.35*kb);ctx.lineTo(xf1,yd);}else{ctx.moveTo(xf0,yf);ctx.lineTo(xb0,yb);ctx.lineTo(xb0,yb+thick*1.35*kb);ctx.lineTo(xf0,yd);}
-    ctx.closePath();ctx.fill();
-    // 上の面(いちばん明るい)
-    ctx.fillStyle='rgba(241,245,249,.5)';ctx.beginPath();ctx.moveTo(xb0,yb);ctx.lineTo(xb1,yb);ctx.lineTo(xf1,yf);ctx.lineTo(xf0,yf);ctx.closePath();ctx.fill();
+    ctx.closePath();ctx.fill();ctx.fillStyle='rgba(2,6,23,.3)';ctx.fill();
+    // 上の面(いちばん明るい): 塗りの色に、今の箱と同じ白い上の面を重ねる
+    ctx.fillStyle=`rgba(${L.fill},${L.fillAlpha})`;ctx.beginPath();ctx.moveTo(xb0,yb);ctx.lineTo(xb1,yb);ctx.lineTo(xf1,yf);ctx.lineTo(xf0,yf);ctx.closePath();ctx.fill();
+    ctx.fillStyle=`rgba(255,255,255,${L.topAlpha})`;ctx.fill();
     // 手前の面(中くらい)
-    ctx.fillStyle='rgba(203,213,225,.34)';ctx.fillRect(xf0,yf,W,yd-yf);
+    ctx.fillStyle=`rgba(${L.frontFill},${L.frontAlpha})`;ctx.fillRect(xf0,yf,W,yd-yf);
     // 縁(白)
-    ctx.strokeStyle='rgba(255,255,255,.95)';ctx.lineWidth=Math.max(1,L.edgePx*.8);ctx.beginPath();
+    ctx.strokeStyle=`rgb(${L.edge})`;ctx.lineWidth=Math.max(1,L.edgePx*.8);ctx.beginPath();
     ctx.moveTo(xb0,yb);ctx.lineTo(xb1,yb);ctx.lineTo(xf1,yf);ctx.lineTo(xf0,yf);ctx.closePath();ctx.moveTo(xf0,yf);ctx.lineTo(xf0,yd);ctx.lineTo(xf1,yd);ctx.lineTo(xf1,yf);ctx.stroke();
     ctx.globalAlpha=1;
   };
@@ -33225,9 +33227,9 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     const sh=geo.skyShadow,hd=geo.head;if(!sh||!hd)return;
     const L=RHYTHM_SKY_LOOK.shadow,{faceH,thick,W}=skyBoxDims(hd,opts),w=W-L.insetPx*2,h=Math.max(4,(faceH+thick)*.8);
     if(floor3d){
-      // 試作(floor3d): 影も床に寝かせた台形(地上の粒と同じ潰れ方)。参考どおり、箱と同じ幅の塗った灰色の影が真下の床に落ちる
+      // 試作(floor3d): 影も床に寝かせた台形(地上の粒と同じ潰れ方)。参考どおり、箱と同じ幅の塗った影が真下の床に落ちる(色は今の影の色のまま)
       const groundY=cssH*RHYTHM_JUDGMENT_LINE_Y.ratio,fh=floorThick(sh.cy,sizeScale)*1.6,fade=Math.max(0,Math.min(1,(groundY-sh.cy-fh/2)/(cssH*L.fadeRatio)));
-      ctx.globalAlpha=opts.alpha*fade;ctx.fillStyle='rgba(51,65,85,.7)';floorQuadPath(floorQuad(sh.cx,sh.cy,W,fh));ctx.fill();
+      ctx.globalAlpha=opts.alpha*fade;ctx.fillStyle=`rgba(${L.rgb},${L.alpha})`;floorQuadPath(floorQuad(sh.cx,sh.cy,W,fh));ctx.fill();
       const yTop=hd.cy+faceH/2+thick*1.35,yBot=sh.cy-fh/2;
       if(yBot-yTop>4){ctx.globalAlpha=opts.alpha*L.lineAlpha*Math.max(.35,fade);ctx.strokeStyle='#ffffff';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(hd.cx,yTop);ctx.lineTo(sh.cx,yBot);ctx.stroke();}
       ctx.globalAlpha=1;return;
