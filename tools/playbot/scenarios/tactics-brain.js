@@ -437,7 +437,10 @@ async function maybeUseEx(s, b, mem, log) {
     else if (role === 'burst' && enemyFull && (late || (b.enemy && b.enemy.max >= 3000))) why = '敵のライフがたっぷり残っている(火力のEX)';
     // ★WAVE の始めに使う(2026-10-10 ダイスくんのシミュレーター: 上手な使い方は WAVE の 1〜2 ターン目・敵のライフ 96% で使い、1ランの回数も倍。
     //   Expert で ライガー +0.84・プラント +0.65・アーク +0.62 WAVE)。前は WAVE 5 より前の小さい敵では使わなかった。PLAYBOT_TACTICS_EX_EARLY=0 で前の決め方
-    else if (role === 'burst' && exEarly && (b.turn || 1) <= 2 && b.enemy && b.enemy.hp >= b.enemy.max * 0.9) why = 'WAVE の始め(火力の EX を早めに)';
+    // ★ライフを払う EX(イブリース「堕天の烙印」最大ライフの30%)は、1体だけのとき・ライフが7割を切っているときは早めに使わない
+    //   (2026-10-16 セコンドくん: Expert W1 T1 に使ってライフ 360→200、1体だけの序盤で T4 に全滅)
+    else if (role === 'burst' && exEarly && (b.turn || 1) <= 2 && b.enemy && b.enemy.hp >= b.enemy.max * 0.9
+      && !(/ライフの\d+%を払/.test(((ROSTER_BY_NAME[x.name] || {}).ex || {}).desc || '') && (aliveCount <= 1 || (x.hp && x.hp.now < x.hp.max * 0.7)))) why = 'WAVE の始め(火力の EX を早めに)';
     // 自分だけを守る EX(オボロゲソウの吸収・ゴーストの完全回避): 自分が狙われて、重く削られるとき
     else if (role === 'selfGuard' && x.aimDamage && x.hp && x.aimDamage >= x.hp.now * 0.3) why = '自分が狙われて重い(自分を守るEX)';
     // カウンター(ハム): 自分が狙われているターン。貫通撃は受けきれないので外す
