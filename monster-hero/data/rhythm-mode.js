@@ -33722,6 +33722,17 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     if(!band)return;
     const {failed,alpha}=opts,pressed=opts.pressed&&!opts.slideOff,dim=!!opts.slideOff&&!failed;
     if(!band.slide(note,g.travel,g.rect,g.halfH,sizeScale))return;
+    // 案3(2026-10-16): 空中スライドを、白い芯から手の色がにじむ半透明の光の帯にする。GPU の帯の描き方のまま(社長「GPU から外すと重い」)。
+    //   2D の描き方(drawSkySlideZ の case3)と同じ考え: 手の色の薄い塗り・外へにじむ縁・手の色の芯(足し算)・白い芯(足し算)
+    if(case3&&!failed&&opts.skySlideRgb&&skyZOn()){
+      const A=RHYTHM_SKY_LOOK.arc,handRgb=opts.skyHand==='L'?A.left:opts.skyHand==='R'?A.right:A.rgb,a=alpha*(dim?.45:1);
+      band.pass('fill',{mode:0,color:`rgba(${handRgb},.22)`,alpha:a,minHw:A.minHalfWidthPx,stencil:true});
+      band.pass('outline',{mode:0,hw:5,color:`rgba(${handRgb},.16)`,alpha:a,stencil:true});
+      band.pass('fill',{mode:7,hw:5,core:true,additive:true,color:`rgba(${handRgb},.4)`,alpha:a,stencil:true});
+      band.pass('fill',{mode:7,hw:2,core:true,additive:true,color:'rgba(255,255,255,.55)',alpha:a,stencil:true});
+      band.done();
+      return;
+    }
     if(!failed&&opts.skySlideRgb&&skyZOn()){
       // 空中スライドのZ版(drawSkySlideZ と同じ値): 手の色で全体を塗り、空中の所だけ白い縁と白い芯
       const A=RHYTHM_SKY_LOOK.arc,C=RHYTHM_SKY_LOOK.core;
@@ -34251,7 +34262,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   return {
     // options.webgl … 検証用。WebGL の描き込み先(rhythmCreateGL2D)で描く。作れなければ今までどおり 2D で描く
     // options.gpuBand … スライドの帯を GPU に置いて描く(WebGL のときだけ。作れなければ今までどおり CPU で刻む)
-    attach(next,options={}){{const f=rhythmFloor3dPreference();floor3d=f==='on'||f==='on2'||f==='on3';floor3d2=f==='on2';floor3d3=f==='on3';sky3dWanted=f==='a3d';case3=f==='c3'||f==='c3b';skySeen=false;}sparkSprites=rhythmHitSparkActive();canvas=next||null;backend='2d';ctx=null;gpuBandWanted=!!options.gpuBand&&!floor3d2&&!floor3d3&&!sky3dWanted&&!case3;hitArea=null;skyHitArea=null;hitSlots.fill(null);pendingClear=false;blank=true;if(canvas&&options.webgl){ctx=rhythmCreateGL2D(canvas);if(ctx)backend='webgl';}if(canvas&&!ctx){try{ctx=canvas.getContext('2d');}catch(e){ctx=null;}}
+    attach(next,options={}){{const f=rhythmFloor3dPreference();floor3d=f==='on'||f==='on2'||f==='on3';floor3d2=f==='on2';floor3d3=f==='on3';sky3dWanted=f==='a3d';case3=f==='c3'||f==='c3b';skySeen=false;}sparkSprites=rhythmHitSparkActive();canvas=next||null;backend='2d';ctx=null;gpuBandWanted=!!options.gpuBand&&!floor3d2&&!floor3d3&&!sky3dWanted;hitArea=null;skyHitArea=null;hitSlots.fill(null);pendingClear=false;blank=true;if(canvas&&options.webgl){ctx=rhythmCreateGL2D(canvas);if(ctx)backend='webgl';}if(canvas&&!ctx){try{ctx=canvas.getContext('2d');}catch(e){ctx=null;}}
       // 段階A: 3Dの部品(シェーダー)は演奏前のここで作っておく(曲の最初のコマで組み立てない)
       if(sky3dWanted&&backend==='webgl'&&ctx)void ctx.sky3d;},
     get backend(){return backend;},
