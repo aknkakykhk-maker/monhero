@@ -31514,8 +31514,10 @@ const RHYTHM_FLOOR3D_KEY='mh_rhythm_floor3d_proto_v1';
 // 'on3' = 試作3(2026-10-16 社長「全然だめだね。もっと立体感出せないの？」): 影や線を足すのではなく、空間そのものを見せる。
 //   空中の層を道と同じ遠近のガラスの床として描き、道の両端に床と空中をつなぐ柱を立てて「箱の中の空間」にする。
 //   空中のノーツは厚い立方体、空中スライドは厚みのある管。床にはっきりした影と柱。色・判定はそのまま(GPU の帯は使わない)
-const rhythmFloor3dPreference=()=>{try{if(typeof localStorage==='undefined')return '';const v=localStorage.getItem(RHYTHM_FLOOR3D_KEY);return v==='on'||v==='on2'||v==='on3'?v:'';}catch{return '';}};
-const rhythmFloor3dSetPreference=value=>{const next=value==='on'||value==='on2'||value==='on3'?value:'';try{if(typeof localStorage!=='undefined'){if(next)localStorage.setItem(RHYTHM_FLOOR3D_KEY,next);else localStorage.removeItem(RHYTHM_FLOOR3D_KEY);}}catch{}return next;};
+// 'a3d' = 段階A(本物の3D・docs/playbot/reports/2026-10-16/floor3d-estimate.md): 空中のタップを光の当たる箱、空中スライドを丸い管として
+//   ノーツの WebGL の層の中で描く(rhythmCreateGpuSky3d)。地上・道は今のまま。WebGL で描いていないときは今の見た目
+const rhythmFloor3dPreference=()=>{try{if(typeof localStorage==='undefined')return '';const v=localStorage.getItem(RHYTHM_FLOOR3D_KEY);return v==='on'||v==='on2'||v==='on3'||v==='a3d'?v:'';}catch{return '';}};
+const rhythmFloor3dSetPreference=value=>{const next=value==='on'||value==='on2'||value==='on3'||value==='a3d'?value:'';try{if(typeof localStorage!=='undefined'){if(next)localStorage.setItem(RHYTHM_FLOOR3D_KEY,next);else localStorage.removeItem(RHYTHM_FLOOR3D_KEY);}}catch{}return next;};
 const RHYTHM_GPU_BAND_KEY='mh_rhythm_gpu_band_v1';
 // 2026-10-11 社長の決定で、ノーツを WebGL で描いているときは GPU の帯・区切りの線・ノーツの板を既定で使う(本番の記録 stats.frame で前後を比べる)。
 // 値: 'gpu' = 使う(ノーツも WebGL で描く)・'off' = 使わない(今までの WebGL の描き方)・未設定 = 既定(WebGL のときは使う)。
@@ -31941,6 +31943,95 @@ const rhythmCreateGpuPlate=(gl,host)=>{
   return api;
 };
 
+// ===================== 空中を本物の3Dで描く部品(段階A・2026-10-16) =====================
+// 社長「参考動画みたいに立体的に」→ 見積もり(docs/playbot/reports/2026-10-16/floor3d-estimate.md)の段階A。
+// 空中のタップを光の当たる箱、空中スライドを丸い断面の管として、面ごとの向き(法線)から明るさを計算して描く。
+// ★位置は今の式(rhythmNoteCanvasGeometry・rhythmSkyLiftPx)が出した画面の位置のまま。立体は「その位置に置いた物」として
+//   その場で向きを決めて描くだけなので、判定・指の当たり判定は1画素も変わらない。
+// ★ノーツの WebGL の層(GL2D)の中で描く(層を増やさない)。板の部品(rhythmCreateGpuPlate)と同じく、GL2D の待ちを描き切ってから
+//   自分のシェーダーで描き、GL2D の次の描画の前に GL2D の描き方へ戻す。深さの絵は使わず、見える面だけを奥から順に描く
+const rhythmCreateGpuSky3d=(gl,host)=>{
+  if(!gl||!host)return null;
+  // 1つの頂点: 画面の位置(CSS 画素)・面の向き(x 右・y 下・z 手前)・色(濃さを掛けていない rgba)
+  const VS='attribute vec2 aPos;attribute vec3 aNrm;attribute vec4 aCol;uniform vec3 uM0;uniform vec3 uM1;uniform vec2 uView;'+
+    'varying vec3 vN;varying vec4 vC;'+
+    'void main(){vN=aNrm;vC=aCol;vec2 q=vec2(dot(uM0,vec3(aPos,1.0)),dot(uM1,vec3(aPos,1.0)));vec2 c=q/uView*2.0-1.0;gl_Position=vec4(c.x,-c.y,0.0,1.0);}';
+  // 光: 左上手前からの1つの光(拡散)+まわりの明るさ+つや(真上から見た反射)。色は濃さを掛けて重ねる(GL2D と同じ重ね方)
+  const FS='precision mediump float;varying vec3 vN;varying vec4 vC;uniform float uAlpha;'+
+    'void main(){vec3 n=normalize(vN);vec3 L=normalize(vec3(-0.35,-0.75,0.55));float d=max(dot(n,L),0.0);'+
+    'vec3 H=normalize(L+vec3(0.0,0.0,1.0));float sp=pow(max(dot(n,H),0.0),28.0);'+
+    'vec3 c=vC.rgb*(0.38+0.78*d)+vec3(1.0)*sp*0.55;float a=vC.a*uAlpha;gl_FragColor=vec4(min(c,vec3(1.0))*a,a);}';
+  const compile=(type,src)=>{const sh=gl.createShader(type);gl.shaderSource(sh,src);gl.compileShader(sh);if(!gl.getShaderParameter(sh,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(sh)||'sky3d shader');return sh;};
+  let prog=null,buf=null;
+  try{
+    prog=gl.createProgram();gl.attachShader(prog,compile(gl.VERTEX_SHADER,VS));gl.attachShader(prog,compile(gl.FRAGMENT_SHADER,FS));
+    gl.bindAttribLocation(prog,0,'aPos');gl.bindAttribLocation(prog,1,'aNrm');gl.bindAttribLocation(prog,2,'aCol');
+    gl.linkProgram(prog);if(!gl.getProgramParameter(prog,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(prog)||'sky3d link');
+    buf=gl.createBuffer();host.rebind();
+  }catch(e){return null;}
+  const U={uM0:gl.getUniformLocation(prog,'uM0'),uM1:gl.getUniformLocation(prog,'uM1'),uView:gl.getUniformLocation(prog,'uView'),uAlpha:gl.getUniformLocation(prog,'uAlpha')};
+  const STRIDE=9;let data=new Float32Array(STRIDE*600),n=0;
+  const push=(x,y,nx,ny,nz,c)=>{if((n+1)*STRIDE>data.length){const next=new Float32Array(data.length*2);next.set(data);data=next;}
+    const o=n*STRIDE;data[o]=x;data[o+1]=y;data[o+2]=nx;data[o+3]=ny;data[o+4]=nz;data[o+5]=c[0];data[o+6]=c[1];data[o+7]=c[2];data[o+8]=c[3];n++;};
+  const tri=(a,b,c,nrm,col)=>{push(a[0],a[1],nrm[0],nrm[1],nrm[2],col);push(b[0],b[1],nrm[0],nrm[1],nrm[2],col);push(c[0],c[1],nrm[0],nrm[1],nrm[2],col);};
+  let bound=false,sentKey='';
+  const bind=()=>{
+    if(bound)return;host.flush();gl.useProgram(prog);gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+    gl.enableVertexAttribArray(0);gl.enableVertexAttribArray(1);gl.enableVertexAttribArray(2);for(let i=3;i<5;i++)gl.disableVertexAttribArray(i);
+    gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);gl.stencilFunc(gl.ALWAYS,0,0xff);bound=true;
+    const m=host.matrix(),view=host.view(),key=m.join(',')+'|'+view[0]+','+view[1];
+    if(sentKey!==key){gl.uniform3f(U.uM0,m[0],m[2],m[4]);gl.uniform3f(U.uM1,m[1],m[3],m[5]);gl.uniform2f(U.uView,view[0],view[1]);sentKey=key;}
+    host.claim(api.end);
+  };
+  const flushMesh=alpha=>{
+    if(!n)return;host.flush();bind();
+    gl.bufferData(gl.ARRAY_BUFFER,data.subarray(0,n*STRIDE),gl.STREAM_DRAW);
+    gl.vertexAttribPointer(0,2,gl.FLOAT,false,STRIDE*4,0);gl.vertexAttribPointer(1,3,gl.FLOAT,false,STRIDE*4,8);gl.vertexAttribPointer(2,4,gl.FLOAT,false,STRIDE*4,20);
+    gl.uniform1f(U.uAlpha,Math.max(0,Math.min(1,alpha)));gl.drawArrays(gl.TRIANGLES,0,n);n=0;
+  };
+  const api={
+    // 箱1つ。cx・cy … 画面の中心 / w … 幅(画素) / h・d … 高さ・奥行き(画素) / yaw … 左右の向き(ラジアン・道の真ん中を向く) / pitch … 見下ろす角度
+    // rgb … [0〜1]×3 / alpha … 全体の濃さ / fill … 色の濃さ
+    cube(o){
+      if(host.lost())return false;
+      const hw=o.w/2,hh=o.h/2,hd=o.d/2,cy=Math.cos(o.yaw),sy=Math.sin(o.yaw),cp=Math.cos(o.pitch),sp=Math.sin(o.pitch),F=o.w*5;
+      // 向きを変える(左右 → 見下ろし)。y は下向き・z は手前
+      const rot=v=>{const x1=v[0]*cy+v[2]*sy,z1=-v[0]*sy+v[2]*cy;const y2=v[1]*cp-z1*sp,z2=v[1]*sp+z1*cp;return [x1,y2,z2];};
+      const proj=v=>{const k=F/(F-v[2]);return [o.cx+v[0]*k,o.cy+v[1]*k];};
+      const C=[];for(const x of [-hw,hw])for(const y of [-hh,hh])for(const z of [-hd,hd])C.push(rot([x,y,z]));
+      const idx=(x,y,z)=>(x?4:0)+(y?2:0)+(z?1:0);
+      // 6つの面(外向きの法線と4つの角)。手前を向く面だけ、奥から順に描く
+      const faces=[[[0,0,1],[idx(0,0,1),idx(1,0,1),idx(1,1,1),idx(0,1,1)]],[[0,0,-1],[idx(1,0,0),idx(0,0,0),idx(0,1,0),idx(1,1,0)]],
+        [[0,-1,0],[idx(0,0,0),idx(1,0,0),idx(1,0,1),idx(0,0,1)]],[[0,1,0],[idx(0,1,1),idx(1,1,1),idx(1,1,0),idx(0,1,0)]],
+        [[-1,0,0],[idx(0,0,0),idx(0,0,1),idx(0,1,1),idx(0,1,0)]],[[1,0,0],[idx(1,0,1),idx(1,0,0),idx(1,1,0),idx(1,1,1)]]]
+        .map(([nrm,ids])=>{const nn=rot(nrm);const z=ids.reduce((a,i)=>a+C[i][2],0)/4;return {nn,ids,z};}).filter(f=>f.nn[2]>0.02).sort((a,b)=>a.z-b.z);
+      const col=[o.rgb[0],o.rgb[1],o.rgb[2],o.fill];
+      for(const f of faces){const P=f.ids.map(i=>proj(C[i]));tri(P[0],P[1],P[2],f.nn,col);tri(P[0],P[2],P[3],f.nn,col);}
+      // 縁の明るい線の代わりに、上の面のふちを少し明るく(つやで出る)
+      flushMesh(o.alpha);return true;
+    },
+    // 管1本。pts … 中心線の点 [x,y,半径] の並び(画面の画素) / rgb / alpha / fill。断面は手前の半円(奥の半分は見えない)
+    tube(o){
+      if(host.lost())return false;
+      const P=o.pts;if(!P||P.length<2)return true;const SEG=7,col=[o.rgb[0],o.rgb[1],o.rgb[2],o.fill];
+      const ring=i=>{const a=P[Math.max(0,i-1)],b=P[Math.min(P.length-1,i+1)];let tx=b[0]-a[0],ty=b[1]-a[1];const L=Math.hypot(tx,ty)||1;tx/=L;ty/=L;
+        const nx=-ty,ny=tx,out=[];for(let k=0;k<=SEG;k++){const t=Math.PI*k/SEG,c=Math.cos(t),s=Math.sin(t);
+          // 見下ろしているので、管の上の面が少し見える(断面を下へ少しずらす)
+          out.push({x:P[i][0]+nx*c*P[i][2],y:P[i][1]+ny*c*P[i][2]+s*P[i][2]*.28,n:[nx*c,ny*c-s*.35,s]});}return out;};
+      let prev=ring(0);
+      for(let i=1;i<P.length;i++){const cur=ring(i);
+        for(let k=0;k<SEG;k++){const a=prev[k],b=prev[k+1],c=cur[k+1],d=cur[k];
+          push(a.x,a.y,a.n[0],a.n[1],a.n[2],col);push(b.x,b.y,b.n[0],b.n[1],b.n[2],col);push(c.x,c.y,c.n[0],c.n[1],c.n[2],col);
+          push(a.x,a.y,a.n[0],a.n[1],a.n[2],col);push(c.x,c.y,c.n[0],c.n[1],c.n[2],col);push(d.x,d.y,d.n[0],d.n[1],d.n[2],col);}
+        prev=cur;}
+      flushMesh(o.alpha);return true;
+    },
+    end(){if(bound){bound=false;sentKey='';host.restore();}},
+    dispose(){try{gl.deleteBuffer(buf);gl.deleteProgram(prog);}catch(e){}},
+  };
+  return api;
+};
+
 // ===================== ノーツを WebGL で描く(検証用・2026-09-26) =====================
 // ユーザー指示「WebGL をデバッグ的に作ることは可能？ → 進めて」。デバッグ画面の「ノーツの描き方」で
 // 「WebGL」を選んだときだけ使う(mh_rhythm_canvas_v1 = 'webgl')。プレイヤーの画面は何も変わらない。
@@ -31987,7 +32078,7 @@ const rhythmCreateGL2D=canvas=>{
   let prog=null,loc=null,buf=null,lost=false,textures=new WeakMap(),stencilRef=0,viewW=0,viewH=0;
   let bandApi=null,bandTried=false;
   // ノーツの板を GPU で描く部品(rhythmCreateGpuPlate)。foreignEnd は、別のシェーダーを結び付けたままの部品が GL2D へ戻すための関数
-  let plateApi=null,plateTried=false,foreignEnd=null;
+  let plateApi=null,plateTried=false,foreignEnd=null,sky3dApi=null,sky3dTried=false;
   // ── にじむ光(ブルーム。2026-09-26・ユーザー指示「見た目の向上＋軽量化」の3。オプションで入れた人だけ・既定は切る) ──
   // 足し算で描いた光だけを、画面の1/4の大きさの見えない画像へ描き直し、横・縦にぼかして、画面の上へ足し算で重ねる。
   // 小さな画像をぼかすだけなので、画面全体をぼかすより軽い。作業用の画像は画面の大きさが変わったときだけ作り直す
@@ -32028,7 +32119,7 @@ const rhythmCreateGL2D=canvas=>{
     gl.uniform1i(loc.uTex,0);gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,true);gl.activeTexture(gl.TEXTURE0);
     textures=new WeakMap();stencilRef=0;viewW=viewH=0;resetSent();bloom=null;bloomList=[];
     // スライドの帯を GPU に置く描き方(作り替え B)。文脈を作り直したら、前の文脈で作ったものは使えないので作り直させる
-    bandApi=null;bandTried=false;plateApi=null;plateTried=false;foreignEnd=null;
+    bandApi=null;bandTried=false;plateApi=null;plateTried=false;foreignEnd=null;sky3dApi=null;sky3dTried=false;
   };
   try{init();}catch(e){return null;}
   canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();lost=true;},false);
@@ -32431,7 +32522,16 @@ const rhythmCreateGL2D=canvas=>{
       }
       return plateApi;
     },
-    dispose(){pend=null;n=0;foreignEnd=null;gpuTimer.dispose();if(bandApi){try{bandApi.dispose();}catch(e){}bandApi=null;}if(plateApi){try{plateApi.dispose();}catch(e){}plateApi=null;}try{const lose=gl.getExtension('WEBGL_lose_context');if(lose)lose.loseContext();}catch(e){}},
+    // 空中を本物の3Dで描く部品(段階A・rhythmCreateGpuSky3d)。描き手をつなぐとき(演奏前)に作る。作れなければ null(今の見た目で描く)
+    get sky3d(){
+      if(lost||!prog)return null;
+      if(!sky3dTried){sky3dTried=true;
+        try{sky3dApi=rhythmCreateGpuSky3d(gl,{flush:()=>flushPending(),restore:restoreMain,claim:end=>{foreignEnd=end;},
+          rebind:()=>gl.bindBuffer(gl.ARRAY_BUFFER,buf),matrix:()=>m,view:()=>{syncView();return [viewW,viewH];},lost:()=>lost});}catch(e){sky3dApi=null;}
+      }
+      return sky3dApi;
+    },
+    dispose(){pend=null;n=0;foreignEnd=null;gpuTimer.dispose();if(sky3dApi){try{sky3dApi.dispose();}catch(e){}sky3dApi=null;}if(bandApi){try{bandApi.dispose();}catch(e){}bandApi=null;}if(plateApi){try{plateApi.dispose();}catch(e){}plateApi=null;}try{const lose=gl.getExtension('WEBGL_lose_context');if(lose)lose.loseContext();}catch(e){}},
   };
   return ctx;
 };
@@ -32492,7 +32592,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   const frameGround=[];
   let canvas=null,ctx=null,backend='2d',dpr=1,cssW=0,cssH=0,frameNow=0,effect='FULL',lightweight=false,sizeScale=1,drawn=0;
   // 床と空中の見た目の試作(rhythmFloor3dPreference)。attach で1回読む(毎コマ localStorage を読まない)
-  let floor3d=false,floor3d2=false,floor3d3=false,skySeen=false;
+  let floor3d=false,floor3d2=false,floor3d3=false,skySeen=false,sky3dWanted=false;
   // スライドの帯を GPU に置いて描くか(作り替え B の S1・デバッグの切り替え)。WebGL の描き込み先で、帯の部品が作れたときだけ
   let gpuBandWanted=false;
   // 道のふちの光(drawRoadFx)の形とグラデーションは、描く先と大きさが同じあいだは毎回同じなので使い回す(2026-09-27)。
@@ -32975,7 +33075,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     if(!quads||!quads.length)return;
     // 空中の段(試作): 高さのあるスライドの床の影。高さがある所ほど濃い暗い帯(高さ=帯と影の離れ方が見える)
     quads.forEach(q=>{const a=Math.max(0,Math.min(1,(Number(q.sky)||0)*1.4));if(a<=.02)return;
-      ctx.globalAlpha=opts.alpha*(floor3d3?.5+.4*a:floor3d2?.35+.4*a:skyZOn()?.18+.22*a:.25+.45*a);ctx.fillStyle='rgba(2,0,10,.85)';
+      ctx.globalAlpha=opts.alpha*(floor3d3||sky3dWanted?.5+.4*a:floor3d2?.35+.4*a:skyZOn()?.18+.22*a:.25+.45*a);ctx.fillStyle='rgba(2,0,10,.85)';
       ctx.beginPath();ctx.moveTo(q.l0,q.y0);ctx.lineTo(q.r0,q.y0);ctx.lineTo(q.r1,q.y1);ctx.lineTo(q.l1,q.y1);ctx.closePath();ctx.fill();});
     ctx.globalAlpha=1;
   };
@@ -33193,7 +33293,32 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   // 箱の全体の高さ(上の面+手前の厚み)は「幅×aspect(参考は0.20)」。今の高さ(板の高さ×奥行き×1.3)が上限・最小は6px。
   // 幅の狭い縦画面で、縦に厚い四角にならないように(2026-10-11 参考動画の測定: 箱は全体 21.5px/幅107px=0.20)
   const skyBoxDims=(hd,opts)=>{const L=RHYTHM_SKY_LOOK.box,ds=Number(opts.depthScale)||1,W=Math.max(10,hd.w*sizeScale),capH=Math.max(L.minFacePx,hd.h*ds)*(1+L.thickRatio),total=Math.max(6,Math.min(capH,W*L.aspect)),faceH=total/(1+L.thickRatio),thick=total-faceH;return {faceH,thick,W};};
+  // ── 段階A(本物の3D) ──
+  const sky3dApi=()=>sky3dWanted&&backend==='webgl'&&ctx?ctx.sky3d:null;
+  const rgbOf=text=>String(text||'255,255,255').split(',').map(v=>Math.max(0,Math.min(1,Number(v)/255||0)));
+  // 空中のタップ: 光の当たる箱。幅は今の箱と同じ・高さは幅の18%・奥行きは幅の32%。道の真ん中を向き(左右の位置で少し回す)、斜め上から見下ろす
+  const drawSkyCube3d=(hd,opts)=>{
+    const api=sky3dApi();if(!api)return false;
+    const L=RHYTHM_SKY_LOOK.box,W=Math.max(12,hd.w*sizeScale),near=Math.max(0,Math.min(1,((Number(opts.depthScale)||1)-.56)/.44));
+    const yaw=Math.atan((hd.cx-cssW/2)/Math.max(1,cssW))*-.5;
+    return api.cube({cx:hd.cx,cy:hd.cy,w:W,h:Math.max(4,W*.18),d:Math.max(5,W*.32),yaw,pitch:.55,rgb:rgbOf(L.fill),fill:.96,alpha:opts.alpha*(L.farDim+(1-L.farDim)*near)});
+  };
+  // 空中スライド: 帯の中心線に沿った丸い管。太さは帯の幅の半分(細い所は最小半幅)
+  const drawSkyTube3d=(quads,opts,handRgb)=>{
+    const api=sky3dApi();if(!api)return false;
+    // 高さのある区切りが続く所ごとに1本の管(中心線の点 [x,y,半径])
+    const A=RHYTHM_SKY_LOOK.arc,runs=[];let run=null;
+    const pt=(l,r,y)=>[(l+r)/2,y,Math.max(A.minHalfWidthPx,(r-l)/2)*.9];
+    for(const q of quads){
+      if((Number(q.sky)||0)>.05){if(!run){run=[pt(q.l0,q.r0,q.y0)];runs.push(run);}const p=pt(q.l1,q.r1,q.y1),b=run[run.length-1];if(Math.hypot(p[0]-b[0],p[1]-b[1])>=1)run.push(p);}
+      else run=null;
+    }
+    const rgb=rgbOf(handRgb),alpha=opts.alpha*(opts.slideOff?.45:1);
+    for(const r of runs)if(r.length>1)api.tube({pts:r,rgb,fill:.95,alpha});
+    return true;
+  };
   const drawGlassBox=(hd,opts)=>{
+    if(drawSkyCube3d(hd,opts))return;
     if(floor3d){drawGlassBox3d(hd,opts);return;}
     const L=RHYTHM_SKY_LOOK.box,{faceH,thick,W}=skyBoxDims(hd,opts),x0=hd.cx-W/2,y0=hd.cy-faceH/2;
     // 奥の箱ほど枠・面を少し暗く(込み合う所で白い枠が格子のように交わって数えにくくならないように)
@@ -33288,6 +33413,13 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   const drawSkyShadowZ=(geo,opts)=>{
     const sh=geo.skyShadow,hd=geo.head;if(!sh||!hd)return;
     const L=RHYTHM_SKY_LOOK.shadow,{faceH,thick,W}=skyBoxDims(hd,opts),w=W-L.insetPx*2,h=Math.max(4,(faceH+thick)*.8);
+    if(sky3dApi()){
+      // 段階A: 箱の真下の床に、ふちのぼけた影(外は薄く・中は濃く)。箱との距離が分かるように影は小さめ
+      const groundY=cssH*RHYTHM_JUDGMENT_LINE_Y.ratio,Wc=Math.max(12,hd.w*sizeScale),fh=floorThick(sh.cy,sizeScale)*1.6,fade=Math.max(.3,Math.min(1,(groundY-sh.cy)/(cssH*L.fadeRatio*.5)));
+      ctx.globalAlpha=opts.alpha*fade;ctx.fillStyle='rgba(0,0,0,.28)';floorQuadPath(floorQuad(sh.cx,sh.cy,Wc*1.15,fh*1.4));ctx.fill();
+      ctx.fillStyle='rgba(0,0,0,.5)';floorQuadPath(floorQuad(sh.cx,sh.cy,Wc*.85,fh));ctx.fill();
+      ctx.globalAlpha=1;return;
+    }
     if(floor3d3){
       // 試作3: 真下の床にはっきりした影(箱と同じ幅・黒72%)と、影から箱の下まで立つ柱(白・太さは奥行きに合わせる)
       const ds=Number(opts.depthScale)||1,Wc=Math.max(12,hd.w*sizeScale),fh=floorThick(sh.cy,sizeScale)*2;
@@ -33344,12 +33476,15 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     const air=quads.filter(q=>(Number(q.sky)||0)>.05).map(q=>{const [l0,r0]=widen(q.l0,q.r0),[l1,r1]=widen(q.l1,q.r1);return {l0,r0,y0:q.y0,l1,r1,y1:q.y1};});
     // 空中スライドは、高さが低い区間も含めて全部「手の色」(左=青・右=桃)で中まで塗る
     const handRgb=opts.skyHand==='L'?A.left:opts.skyHand==='R'?A.right:A.rgb;
+    // 段階A: 空中の区切りは丸い管で描く(地上に近い区切りは下の今の帯のまま)
+    const tube3d=sky3dApi()!=null;
     quads.forEach(q=>{
       if((Number(q.sky)||0)>.05)return;
       const [l0,r0]=widen(q.l0,q.r0),[l1,r1]=widen(q.l1,q.r1);
       ctx.fillStyle=`rgba(${handRgb},${A.alpha})`;
       ctx.beginPath();ctx.moveTo(l0,q.y0);ctx.lineTo(r0,q.y0);ctx.lineTo(r1,q.y1);ctx.lineTo(l1,q.y1);ctx.closePath();ctx.fill();
     });
+    if(tube3d&&air.length&&drawSkyTube3d(quads,opts,handRgb)){ctx.globalAlpha=1;return;}
     // 試作2: 帯の真下の床の影と帯のあいだに、手の色の薄い幕と縦の導線(浮いたリボンに見える)。影は geo.slideShadow(床の位置)
     if(floor3d2&&air.length&&Array.isArray(opts.slideShadowQuads)){const sq=opts.slideShadowQuads;
       ctx.fillStyle=`rgba(${handRgb},.24)`;ctx.beginPath();let lines=[];
@@ -34050,7 +34185,9 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   return {
     // options.webgl … 検証用。WebGL の描き込み先(rhythmCreateGL2D)で描く。作れなければ今までどおり 2D で描く
     // options.gpuBand … スライドの帯を GPU に置いて描く(WebGL のときだけ。作れなければ今までどおり CPU で刻む)
-    attach(next,options={}){{const f=rhythmFloor3dPreference();floor3d=f==='on'||f==='on2'||f==='on3';floor3d2=f==='on2';floor3d3=f==='on3';skySeen=false;}sparkSprites=rhythmHitSparkActive();canvas=next||null;backend='2d';ctx=null;gpuBandWanted=!!options.gpuBand&&!floor3d2&&!floor3d3;hitArea=null;skyHitArea=null;hitSlots.fill(null);pendingClear=false;blank=true;if(canvas&&options.webgl){ctx=rhythmCreateGL2D(canvas);if(ctx)backend='webgl';}if(canvas&&!ctx){try{ctx=canvas.getContext('2d');}catch(e){ctx=null;}}},
+    attach(next,options={}){{const f=rhythmFloor3dPreference();floor3d=f==='on'||f==='on2'||f==='on3';floor3d2=f==='on2';floor3d3=f==='on3';sky3dWanted=f==='a3d';skySeen=false;}sparkSprites=rhythmHitSparkActive();canvas=next||null;backend='2d';ctx=null;gpuBandWanted=!!options.gpuBand&&!floor3d2&&!floor3d3&&!sky3dWanted;hitArea=null;skyHitArea=null;hitSlots.fill(null);pendingClear=false;blank=true;if(canvas&&options.webgl){ctx=rhythmCreateGL2D(canvas);if(ctx)backend='webgl';}if(canvas&&!ctx){try{ctx=canvas.getContext('2d');}catch(e){ctx=null;}}
+      // 段階A: 3Dの部品(シェーダー)は演奏前のここで作っておく(曲の最初のコマで組み立てない)
+      if(sky3dWanted&&backend==='webgl'&&ctx)void ctx.sky3d;},
     get backend(){return backend;},
     // いまスライドの帯を GPU で描けるか。演奏画面はこれが true のとき、帯を CPU で刻まないよう rhythmNoteCanvasGeometry へ gpu を渡す
     get gpuBand(){return gpuBandWanted&&backend==='webgl'&&!!ctx&&!!ctx.band;},
@@ -34058,6 +34195,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     get floor3d(){return floor3d;},
     get floor3d2(){return floor3d2;},
     get floor3d3(){return floor3d3;},
+    get sky3d(){return sky3dWanted&&backend==='webgl'&&!!ctx&&!!ctx.sky3d;},
     get additiveGlow(){return additiveGlow;},set additiveGlow(v){additiveGlow=v!==false;},
     get plateGlow(){return plateGlowWanted;},set plateGlow(v){plateGlowWanted=v!==false;},
     // 描き込み先が取れているか。WebGL の準備が途中で失敗すると、その canvas からは 2D も取り出せず
