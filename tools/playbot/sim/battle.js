@@ -27,7 +27,10 @@
 //   供モンが入った枠は「これまでの合計ダメージ × 1e-5 × 追いつきの倍率」まで引き上げる(catchUpTacticsDistBonus 1290)。simulateRun({ distBonus: false }) で切れる
 // ★6 版目で固有技の強化(供モンが入るたびに強化ポイント 1〜4。ボットと同じく、いちばんダメージを出した子へ)、
 //   7 版目で緊急回復(AUTO と同じ条件)を入れた。simulateRun({ uniqueUp: false, emergency: 'none' }) で切れる
-// ★まだ入れていないもの: 魂格(Tier の対象外)・強化ポイントでガッツ+10・トレーニングと緊急回復の上手な使い方。近似したものは md の頭(APPROX)に書く。
+// ★9 版目(2026-10-15)で、置けるものが無いときにだれも使えないカード(倒れた子の固有技など)を捨てる(ボットと同じ)・
+//   トレーニングの候補(atkgut・adapt)と起こすかの決め方 simulateRun({ revive: 'bot'|'always'|'never'|'carry' })・
+//   結果に敵のライフの合計(enemyHpTotal)・再生(regenTotal)・最後の一撃の余り(overkill)を足した。比べた結果は docs/playbot/reports/tier/lab/training.md
+// ★まだ入れていないもの: 魂格(Tier の対象外)・強化ポイントでガッツ+10・緊急回復の上手な使い方。近似したものは md の頭(APPROX)に書く。
 const fs = require('fs');
 const path = require('path');
 const { loadGame } = require('./load-game');
@@ -541,6 +544,13 @@ function decideTurn(st) {
       const richest = aliveNow.reduce((m, i) => Math.max(m, gutsRate(i)), 0);
       const buff = supOfType((c) => c.type === 'buff' && c.id !== 'myaru');
       if (buff && (richest >= 0.6 || playBest)) { take(buff, 'support'); continue; }
+    }
+    // ⑦' 置けるものが無い → 余った行動回数ぶん、だれも使えないカードを捨てる(tactics-brain.js 526〜535)。
+    //   ボットは画面の「使えない」印(倒れた子・EX で動けない子の固有技など)とガッツ不足のカードを捨てる。9 版目で足した
+    if (st.discardBlocked !== false) {
+      const blocked = st.hand.map((c, hi) => hi).filter((hi) => !used.has(hi) && isAttackType(st.hand[hi])
+        && !actors.some((s) => (st.hand[hi].type !== 'unique' || st.hand[hi].ownerSlotIdx === s) && gutsLeft(s) >= getCardGuts(st, st.hand[hi], s)));
+      blocked.slice(0, limit - picks.length - discards.length).forEach((hi) => { discards.push(hi); used.add(hi); });
     }
     break;
   }
@@ -1097,10 +1107,11 @@ function playTurn(st) {
     st.dmgBySlot[slot] = (st.dmgBySlot[slot] || 0) + total;
     st.waveDist[slot] += total; // 60-app.jsx 12881 turnDistDmg(攻撃カードのダメージを撃った子の枠へ)
   }
+  st.overkill = (st.overkill || 0) + Math.max(0, dealt - st.enemy.hp);
   st.enemy.hp = Math.max(0, st.enemy.hp - dealt);
   if (TRACE) {
     const u = st.units.map((x) => (x ? `${x.id}:${x.hp}/${x.maxHp} g${x.guts}/${x.maxGuts}${x.downed ? '×' : ''}` : '-')).join(' ');
-    console.log(`W${st.wave} T${st.turn} 距離${st.dist} 予告${st.intent ? (st.intent.variant || st.intent.type) + ':' + (st.intent.value || '') + '→' + (st.intent.targetSlot ?? '') : '-'} 使う[${picks.map((p) => st.hand[p.hi].type + '@' + p.slot).join(',')}] 捨て${discards.length} 与${dealt} 敵${st.enemy.hp}/${st.enemy.maxHp} | ${u}`);
+    console.log(`W${st.wave} T${st.turn} 距離${st.dist} 予告${st.intent ? (st.intent.variant || st.intent.type) + ':' + (st.intent.value || '') + '→' + (st.intent.targetSlot ?? '') : '-'} 使う[${picks.map((p) => st.hand[p.hi].type + '@' + p.slot).join(',')}] 捨て${discards.length}${process.env.SIM_TRACE === '2' ? ` 手札[${st.hand.map((c) => `${c.type}@${c.ownerSlotIdx ?? '-'}`).join(',')}] 山${st.deck.length}/墓${st.graveyard.length}` : ''} 与${dealt} 敵${st.enemy.hp}/${st.enemy.maxHp} | ${u}`);
   }
   st.dealtTotal += dealt;
   if (st.enemy.hp <= 0) return 'clear';
@@ -1150,7 +1161,7 @@ function playTurn(st) {
     else if (intent.type === 'MOVE' && forcedMoveTarget != null) performed = false;
     else if (intent.type === 'MOVE') st.dist = intent.targetDist;
     else if (intent.type === 'ROAR') { st.roarStacks += 1; st.enemy.atk = Math.floor(Math.max(0, st.enemy.atk) * G.TACTICS_ROAR_ATK_RATE); }
-    else if (intent.type === 'REGEN') st.enemy.hp = Math.min(st.enemy.maxHp, st.enemy.hp + G.tacticsRegenHealAmount(st.enemy.maxHp));
+    else if (intent.type === 'REGEN') { const h0 = st.enemy.hp; st.enemy.hp = Math.min(st.enemy.maxHp, st.enemy.hp + G.tacticsRegenHealAmount(st.enemy.maxHp)); st.regenTotal = (st.regenTotal || 0) + st.enemy.hp - h0; }
     else if (intent.type === 'ATTACK' || intent.type === 'SPECIAL') {
       const actingDist = forcedMoveTarget != null ? forcedMoveTarget : st.dist;
       const actingIntent = G.tacticsSweepIntent(intent, st.units, actingDist);
@@ -1357,7 +1368,9 @@ function upgradeUniques(st, w) {
 //     ダメージの割合 35% 以上の子がいればその子、いなければ「倒れた数×2 ≥ 編成の数」なら最初の子
 //   - 鍛える: 丸太うけ+走り込み。ガッツ不足 4 回以上か元のガッツ 90 以下で、ライフが半分以上残っていれば 丸太うけ+猛勉強
 // トレーニングの選び方: bot(ボットと同じ)・none(しない)・hpdef(丸太うけ+走り込み)・atkhp(ドミノ倒し+走り込み)・atk2(ドミノ倒し×2)・role(ダメージ役だけドミノ倒し)
-const TRAINING_PLANS = ['bot', 'none', 'hpdef', 'atkhp', 'atk2', 'role'];
+const TRAINING_PLANS = ['bot', 'none', 'hpdef', 'atkhp', 'atk2', 'role', 'atkgut', 'adapt'];
+// 倒れた子を起こすかの決め方(9 版目): bot(ランで1回だけ。ボットと同じ)・always(倒れた子がいれば毎回、いちばんダメージを出した子)・never(起こさない)・carry(ダメージ役(頭割り以上)が倒れていれば毎回)
+const REVIVE_PLANS = ['bot', 'always', 'never', 'carry'];
 // 固有技の強化ポイントの入れ方: bot(いちばんダメージを出した子へ。ボットと同じ)・hero(勇者モンへ)・even(段のいちばん低い子へ順に)
 const UNIQUE_PLANS = ['bot', 'hero', 'even'];
 const TRAINING_ID = { 丸太うけ: 'def', 走り込み: 'hp', 猛勉強: 'guts', ドミノ倒し: 'atk' };
@@ -1365,16 +1378,20 @@ function trainAfterWave(st, w) {
   if (st.training === 'none') return;
   const filled = G.tacticsFilledSlots(st.units);
   const downed = filled.filter((i) => G.normalizeTacticsUnit(st.units[i]).downed);
-  if (downed.length && !st.reviveAsked) {
+  const total = Object.values(st.dmgBySlot).reduce((a, b) => a + b, 0) || 1;
+  const byDmg = downed.slice().sort((a, z) => (st.dmgBySlot[z] || 0) - (st.dmgBySlot[a] || 0));
+  let reviveSlot = null;
+  if (downed.length && st.revive === 'always') reviveSlot = byDmg[0];
+  else if (downed.length && st.revive === 'carry') reviveSlot = byDmg.find((i) => (st.dmgBySlot[i] || 0) / total >= 1 / Math.max(1, filled.length)) ?? null;
+  else if (downed.length && st.revive === 'bot' && !st.reviveAsked) {
     st.reviveAsked = true;
-    const total = Object.values(st.dmgBySlot).reduce((a, b) => a + b, 0) || 1;
     const key = downed.find((i) => (st.dmgBySlot[i] || 0) / total >= 0.35);
-    if (key != null || downed.length * 2 >= filled.length) {
-      const slot = key != null ? key : downed[0];
-      st.units = G.reviveTacticsAt(st.units, slot);
-      st.trainingLog.push({ wave: w, id: st.mons[slot].id, picks: ['revive'] });
-      return;
-    }
+    if (key != null || downed.length * 2 >= filled.length) reviveSlot = key != null ? key : downed[0];
+  }
+  if (reviveSlot != null) {
+    st.units = G.reviveTacticsAt(st.units, reviveSlot);
+    st.trainingLog.push({ wave: w, id: st.mons[reviveSlot].id, picks: ['revive'] });
+    return;
   }
   for (const slot of filled) {
     const u = G.normalizeTacticsUnit(st.units[slot]);
@@ -1387,6 +1404,13 @@ function trainAfterWave(st, w) {
     if (st.training === 'hpdef') plan = ['丸太うけ', '走り込み'];
     else if (st.training === 'atkhp') plan = ['ドミノ倒し', '走り込み'];
     else if (st.training === 'atk2') plan = ['ドミノ倒し', 'ドミノ倒し'];
+    else if (st.training === 'atkgut') plan = ['ドミノ倒し', '猛勉強'];
+    else if (st.training === 'adapt') {
+      // ドミノ倒し+走り込み。ガッツの少ない子(ボットと同じ条件)は2つ目を猛勉強、ライフが半分を切った子は丸太うけ+走り込み
+      plan = ['ドミノ倒し', '走り込み'];
+      if (((st.gutsShortBy[slot] || 0) >= 4 || (Number.isFinite(baseGuts) && baseGuts <= 90)) && !(hpRatio < 0.5)) plan = ['ドミノ倒し', '猛勉強'];
+      if (hpRatio < 0.5) plan = ['丸太うけ', '走り込み'];
+    }
     else if (st.training === 'role') {
       // ダメージ役(頭割り以上を出した子)はドミノ倒し+走り込み、ほかは丸太うけ+走り込み。ガッツの少ない子は2つ目を猛勉強
       const total = Object.values(st.dmgBySlot).reduce((a, b) => a + b, 0) || 1;
@@ -1401,7 +1425,7 @@ function trainAfterWave(st, w) {
   }
 }
 
-function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWave = 10, exMode = 'bot', assist = 'bot', assistPlay = 'bot', training = 'bot', exLog = false, distBonus = true, uniqueUp = true, emergency = 'auto', uniquePlan = 'bot' }) {
+function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWave = 10, exMode = 'bot', assist = 'bot', assistPlay = 'bot', training = 'bot', exLog = false, distBonus = true, uniqueUp = true, emergency = 'auto', uniquePlan = 'bot', discardBlocked = true, revive = 'bot' }) {
   const rng = mulberry32(hashSeed(seed, heroId, difficulty, allies.join(',')));
   const hero = MON_BY_ID[heroId];
   if (!hero) throw new Error(`勇者モンが見つからない: ${heroId}`);
@@ -1422,10 +1446,11 @@ function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWa
     // 固有技の強化(6 版目): 枠ごとの段・残りの強化ポイント・強化の記録
     useUniqueUp: uniqueUp, uniquePlan, uniqueLv: {}, upgradePoints: 0, uniqueLog: [],
     // 緊急回復(7 版目): 'auto'(① AUTO と同じ条件)・'brink'(② 全滅の手前だけ)・'bot'(①+②。2026-10-10 からのブラウザのボット arena-1 と同じ)・'none'(使わない。それまでのボット)
-    emergency, emergencyUses: 0,
+    emergency, emergencyUses: 0, discardBlocked, revive,
   };
   if (assist !== 'bot' && assist !== 'none' && !TEACH_BY_ID[assist]) throw new Error(`アシカの選び方が分からない: ${assist}`);
   if (!TRAINING_PLANS.includes(training)) throw new Error(`トレーニングの選び方が分からない: ${training}`);
+  if (!REVIVE_PLANS.includes(revive)) throw new Error(`起こすかの決め方が分からない: ${revive}`);
   if (!UNIQUE_PLANS.includes(uniquePlan)) throw new Error(`固有技の強化の入れ方が分からない: ${uniquePlan}`);
   st.heroSlot = bestSlotFor(hero, [0, 1, 2, 3]);
   st.mons[st.heroSlot] = hero; st.units[st.heroSlot] = G.createTacticsUnit(hero);
@@ -1435,6 +1460,7 @@ function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWa
     st.wave = w;
     // 敵を出す(60-app.jsx spawnEnemy 13629): 総合力で敵が強くなる。WAVE で消えるもの(waveBuffs・turnBuffs・運命の輪・乱心・トリックスタート)を消す
     st.enemy = G.createBattleEnemy(w, difficulty, null, null, G.tacticsEnemyPowerMultiplier(st.powerStart, st.powerNow), { mode: 'tacticsPro' });
+    st.enemyHpTotal = (st.enemyHpTotal || 0) + st.enemy.maxHp;
     st.dist = w === 1 ? st.heroSlot : Math.floor(rng() * 4);
     st.roarStacks = 0; st.trick = [{}, {}, {}, {}]; st.trickRolled = null; st.waveDist = [0, 0, 0, 0];
     st.waveB = {}; st.turnB = {}; st.nextB = {}; st.fateWheel = { atkDown: 0, takenUp: 0 }; st.confuse = 0;
@@ -1463,7 +1489,7 @@ function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWa
     }
     const turns = Math.min(st.turn, 20);
     st.turnsTotal += turns; st.waveTurns.push(turns);
-    const summary = { turns: st.turnsTotal, waveTurns: st.waveTurns, dealt: st.dealtTotal, taken: st.taken, exUses: st.exUses, dodges: st.dodges, assists: st.assistLog, assistUses: st.assistUses, training: st.trainingLog, uniques: st.uniqueLog, emergencyUses: st.emergencyUses, distBonus: st.distBonus.map((x) => Math.round(x * 1000) / 1000), exLog: st.exLog, assistScenes: st.assistScenes, dmgById: dmgById(st) };
+    const summary = { turns: st.turnsTotal, waveTurns: st.waveTurns, dealt: st.dealtTotal, taken: st.taken, exUses: st.exUses, dodges: st.dodges, assists: st.assistLog, assistUses: st.assistUses, training: st.trainingLog, uniques: st.uniqueLog, emergencyUses: st.emergencyUses, distBonus: st.distBonus.map((x) => Math.round(x * 1000) / 1000), exLog: st.exLog, assistScenes: st.assistScenes, dmgById: dmgById(st), enemyHpTotal: st.enemyHpTotal, regenTotal: st.regenTotal || 0, overkill: st.overkill || 0 };
     if (out !== 'clear') return { result: out === 'wipe' ? 'wipe' : 'timeout', wave: w, ...summary };
     // WAVE を抜けた(60-app.jsx resolveEnemyDefeat 11131〜): 追いつき補正と自動回復の率
     const remaining = Math.max(0, 21 - st.turn);
@@ -1500,7 +1526,7 @@ function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWa
       else if ([1, 3, 5, 7, 9].includes(w)) learnTeaching(st, chooseTeaching(st, teachingPool(st, 'odd')));
     }
   }
-  return { result: 'clear', wave: maxWave, turns: st.turnsTotal, waveTurns: st.waveTurns, dealt: st.dealtTotal, taken: st.taken, exUses: st.exUses, dodges: st.dodges, assists: st.assistLog, assistUses: st.assistUses, training: st.trainingLog, uniques: st.uniqueLog, emergencyUses: st.emergencyUses, distBonus: st.distBonus.map((x) => Math.round(x * 1000) / 1000), exLog: st.exLog, assistScenes: st.assistScenes, dmgById: dmgById(st) };
+  return { result: 'clear', wave: maxWave, turns: st.turnsTotal, waveTurns: st.waveTurns, dealt: st.dealtTotal, taken: st.taken, exUses: st.exUses, dodges: st.dodges, assists: st.assistLog, assistUses: st.assistUses, training: st.trainingLog, uniques: st.uniqueLog, emergencyUses: st.emergencyUses, distBonus: st.distBonus.map((x) => Math.round(x * 1000) / 1000), exLog: st.exLog, assistScenes: st.assistScenes, dmgById: dmgById(st), enemyHpTotal: st.enemyHpTotal, regenTotal: st.regenTotal || 0, overkill: st.overkill || 0 };
 }
 
 function pickAllies(heroId, rng, n = 3) {
@@ -1625,7 +1651,7 @@ if (require.main === module) {
   const bossCell = (x) => (x.boss > 0 ? `${pct(x.bossWin)}(${pct(x.boss)})` : '—');
   out(`# 簡易シミュレーター(タクティクスプロ・${DIFFS.join(' / ')}・各 ${RUNS} 回・EX の使い方 ${MODES.join(' / ')})`);
   out();
-  out(`\`node tools/playbot/sim/battle.js\` の出力(7 版目・スキル・アシカ・トレーニング・間合いボーナス・固有技の強化・緊急回復入り。トレーニング ${TRAINING}・アシカ ${ASSIST}・間合いボーナス ${DIST_BONUS ? 'on' : 'off'}・固有技の強化 ${UNIQUE_UP ? 'on' : 'off'}・緊急回復 ${EM_LIST.map((em) => EM_JA[em] || em).join(' / ')}。1つ目の「${EM_JA[EMERGENCY] || EMERGENCY}」で EX の使い方3通り・実戦との突き合わせ・bot と best の差を出し、2つ目からは EX=best だけを列に足した)。式はゲームのコード(60-app.jsx・19-difficulties・22-enemy・32-tactics-units)から写したもの。`);
+  out(`\`node tools/playbot/sim/battle.js\` の出力(9 版目・スキル・アシカ・トレーニング・間合いボーナス・固有技の強化・緊急回復入り。トレーニング ${TRAINING}・アシカ ${ASSIST}・間合いボーナス ${DIST_BONUS ? 'on' : 'off'}・固有技の強化 ${UNIQUE_UP ? 'on' : 'off'}・緊急回復 ${EM_LIST.map((em) => EM_JA[em] || em).join(' / ')}。1つ目の「${EM_JA[EMERGENCY] || EMERGENCY}」で EX の使い方3通り・実戦との突き合わせ・bot と best の差を出し、2つ目からは EX=best だけを列に足した)。式はゲームのコード(60-app.jsx・19-difficulties・22-enemy・32-tactics-units)から写したもの。`);
   out();
   out('**2 版目で入れたもの**(社長の決まり「ステは弱いけどスキル系で調整してるから、そこもちゃんと見て判断して」):');
   out();
