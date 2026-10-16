@@ -16,7 +16,7 @@
 //   1. 候補をしぼる: 勇者ごとに、組み合わせ(asika-sim.json の combo。その組の届いた WAVE、Expert 5・Master 3 の重み)の上位 --top-allies 体
 //   2. その中の3体の組をすべて(6 体なら 20 組)、難易度ごとに回す。Hard はクリア率、Expert・Master は届いた WAVE(クリアは 11)で並べる
 //   3. 難易度ごとに上位 --verify-top 組を、別の乱数の種で各 --verify-runs 回測り直し、その数字で並べる。くじのぶれ(標準誤差の2倍)の中の差には順位を付けない
-//   シミュレーターの設定: EX・アシカの使い方は上手(best)、アシカの選び方はボット、トレーニングはボット、緊急回復は直したボットと同じ(bot)
+//   シミュレーターの設定: EX・アシカの使い方は上手(best)、アシカの選び方はボット、トレーニングはドミノ倒し+走り込み(10 版目から)、緊急回復は直したボットと同じ(bot)
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -29,9 +29,10 @@ const ASIKA_CACHE = path.join(OUT_DIR, 'asika-sim.json');
 const args = process.argv.slice(2);
 const argOf = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : d; };
 const DIFFS = ['Hard', 'Expert', 'Master'];
-const SIM_VER = 8; // sim/battle.js の版(asika-tier.js の SIM_VER と同じ意味)
+const SIM_VER = 10; // sim/battle.js の版(asika-tier.js の SIM_VER と同じ意味)
 const ev = require('./evidence');
-const SIM_OPT = { exMode: 'best', assist: 'bot', assistPlay: 'best', training: 'bot', emergency: 'bot' };
+// 10 版目(2026-10-16 ハカセくんの決定): 上手な遊び方のトレーニングはドミノ倒し+走り込み(lab/training.md)
+const SIM_OPT = { exMode: 'best', assist: 'bot', assistPlay: 'best', training: 'atkhp', emergency: 'bot' };
 
 // ---------- 子プロセス: 1マス(勇者モン×供モン3体×難易度)を N 回まわして足し合わせる ----------
 if (args[0] === '--worker') {
@@ -161,7 +162,7 @@ async function compute(cache) {
       const kd = `${k}|${d}`;
       dt.push({ ...base, key: `${kd}|base` });
       for (const id of sim.TEACH_IDS) dt.push({ ...base, key: `${kd}|card:${id}`, card: id, opt: { assist: id } });
-      for (const tr of TRAININGS) if (tr !== 'bot') dt.push({ ...base, key: `${kd}|train:${tr}`, opt: { training: tr } });
+      for (const tr of TRAININGS) if (tr !== SIM_OPT.training) dt.push({ ...base, key: `${kd}|train:${tr}`, opt: { training: tr } });
       for (const up of UNIQUES) if (up !== 'bot') dt.push({ ...base, key: `${kd}|unique:${up}`, opt: { uniquePlan: up } });
     }
   }
@@ -173,7 +174,7 @@ async function compute(cache) {
   }
   await go('heroBase', { runs: VRUNS, seed: SEED + 3000, simVer: SIM_VER }, bt);
 }
-const TRAININGS = ['bot', 'hpdef', 'atkhp', 'atk2', 'role'];
+const TRAININGS = ['atkhp', 'bot', 'hpdef', 'atk2', 'role'];
 const TRAINING_JA = { bot: '丸太うけ+走り込み(ガッツの少ない子は丸太うけ+猛勉強。いまのボット)', hpdef: '丸太うけ+走り込み(全員)', atkhp: 'ドミノ倒し+走り込み', atk2: 'ドミノ倒し×2', role: 'ダメージ役はドミノ倒し+走り込み・ほかは丸太うけ+走り込み' };
 const UNIQUES = ['bot', 'hero', 'even'];
 const UNIQUE_JA = { bot: 'それまでいちばんダメージを出した子へ', hero: '勇者モンへ', even: '段のいちばん低い子へ順に(均等)' };
@@ -258,7 +259,14 @@ function writeAll(cache) {
       base, cards, firm,
       優先: firm.map((x) => sim.TEACH_BY_ID[x.id].baseName),
       使いどころ: firm.slice(0, 3).map(scenes).filter(Boolean),
-      train: ((botName) => pickBest(TRAININGS.filter((x) => x !== 'bot').map((x) => `train:${x}`), TRAINING_JA, botName))('丸太うけ+走り込み。ガッツの少ない子は丸太うけ+猛勉強'),
+      train: (() => {
+        // 10 版目: 基準(上手な遊び方)がドミノ倒し+走り込み。ほかの選び方との差は「ほか − 基準」なので、ボットの選び方の差を裏返して言う
+        const r = pickBest(TRAININGS.filter((x) => x !== SIM_OPT.training).map((x) => `train:${x}`), TRAINING_JA, '');
+        const botC = D[`${kd}|train:bot`]; const bd = botC ? diffOf(botC) : null;
+        if (r.firm) return { ...r, text: `${r.text.replace(/いまのボットの選び方より/, 'ドミノ倒し+走り込みより')}` };
+        const gain = bd ? (d === 'Hard' ? `クリア率 ${sgn(-bd.v * 100, 0)} 点` : `${sgn(-bd.v)} WAVE`) : '—';
+        return { ...r, text: `ドミノ倒し+走り込み(全員)。丸太うけはガードが4枚まで増えて攻撃が減る(いまのボットの選び方(丸太うけ+走り込み)より ${gain}。${cache.detail.runs} 回のぶれは ${r.width})` };
+      })(),
       unique: ((botName) => pickBest(UNIQUES.filter((x) => x !== 'bot').map((x) => `unique:${x}`), UNIQUE_JA, botName))('それまでいちばんダメージを出した子の固有技へ'),
     };
   };
@@ -299,7 +307,7 @@ function writeAll(cache) {
   o();
   o('**組み方**: 始める前に供モンの候補を5体選び、WAVE 2・4・6 のあとに、まだ入っていない候補からくじで3体が出て1体を選ぶ。候補の5体に下の3体を入れ、出た3体のうち下の並びの前の子から選ぶ。5体中3体が出るので、指定の3体が1体も出ないことは無く、いつでもこの4体がそろう。**候補の残り2体は誰でもよい**(強さに効かない)。入る順はくじしだいで、シミュレーターも同じくじで測った。');
   o();
-  o('**並べ方**: Hard はクリア率、Expert・Master は届いた WAVE(クリアは 11 と数える)。測り直した数字で並べた。「ぶれの中で並ぶ順位」は、くじのぶれ(標準誤差の2倍)の中の差を同じ順位にしたもの(同じ数字の組は、どれを選んでも同じくらい)。「確か」= 測り直しても、候補の全パーティの平均(基準)よりぶれ以上に上(そうでなければ「ぶれの中」)。EX とアシカの使い方は上手な使い方、アシカの選び方・トレーニングはボットと同じ、緊急回復は直したボットと同じ条件。暫定・回数不足の子(Tier 表で回数が足りない子)が入るパーティには、そう書いた。');
+  o('**並べ方**: Hard はクリア率、Expert・Master は届いた WAVE(クリアは 11 と数える)。測り直した数字で並べた。「ぶれの中で並ぶ順位」は、くじのぶれ(標準誤差の2倍)の中の差を同じ順位にしたもの(同じ数字の組は、どれを選んでも同じくらい)。「確か」= 測り直しても、候補の全パーティの平均(基準)よりぶれ以上に上(そうでなければ「ぶれの中」)。EX とアシカの使い方は上手な使い方、アシカの選び方はボットと同じ、トレーニングはドミノ倒し+走り込み(全員。シミュレーター 10 版目)、緊急回復は直したボットと同じ条件。暫定・回数不足の子(Tier 表で回数が足りない子)が入るパーティには、そう書いた。');
   const out = [];
   for (const d of DIFFS) {
     const rows = topParties(cache, d);
