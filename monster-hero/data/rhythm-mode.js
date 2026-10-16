@@ -32692,7 +32692,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     // 光の絵も板のシェーダーで描く(2026-10-12・発熱の手当て④)。ノーツ1つごとに「光(GL2D)→ 板 → 矢印(GL2D)」と描き方が切り替わり、
     // そのたびに GL2D の状態の送り直しが起きていたため。にじむ光(ブルーム)が入っているときは GL2D の足し算の光を覚えて使うので、今までどおり
     const fuseGlow=!!plate&&plateGlowWanted&&headGlowCount>0&&!ctx.bloomActive;
-    if(!fuseGlow)drawHeadGlows(cx,cy);
+    // 試作(floor3d)の地上の粒は光らせない(参考動画の地上の板は光らない)
+    if(!fuseGlow&&!floorHead)drawHeadGlows(cx,cy);
     ctx.globalAlpha=alpha;
     // ノーツの外の暗い縁取りは、端も中も同じ太さ・濃さ(2026-10-12 社長「端と中で同じ太さ・濃さにそろえて」。それまでは端だけ太く濃くしていた)
     const plateDone=!!plate&&plate.draw({cx,cy,w,h,radius,alpha,sizeMul,outline:failed?0:RHYTHM_NOTE_OUTLINE_PX*sizeMul,outlineColor:RHYTHM_NOTE_OUTLINE_COLOR,
@@ -32705,10 +32706,12 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       const g=style.gradient,base=Array.isArray(g[2])?g[2][0]:(typeof g[1]==='string'?g[1]:g[0]),lo=typeof g[g.length-1]==='string'?g[g.length-1]:base;
       const fh=floorThick(cy,sizeMul),q=floorQuad(cx,cy,w,fh),mx0=(q[0]+q[3])/2,mx1=(q[1]+q[4])/2,my=(q[2]+q[5])/2;
       if(!failed){ctx.lineWidth=RHYTHM_NOTE_OUTLINE_PX*sizeMul;ctx.strokeStyle=RHYTHM_NOTE_OUTLINE_COLOR;floorQuadPath(q);ctx.stroke();}
+      // 手前の側面(厚み)。参考の地上の板は「床に寝ていて、手前の側面が見える」。下の辺から下へ、少し暗い色の帯
+      {const side=Math.max(1.5,fh*.55);ctx.fillStyle=lo;ctx.beginPath();ctx.moveTo(q[3],q[5]);ctx.lineTo(q[4],q[5]);ctx.lineTo(q[4],q[5]+side);ctx.lineTo(q[3],q[5]+side);ctx.closePath();ctx.fill();
+        ctx.fillStyle='rgba(2,6,23,.28)';ctx.fill();}
       floorQuadPath(q);ctx.fillStyle=base;ctx.fill();
       if(!failed){ctx.fillStyle='rgba(255,255,255,.4)';ctx.beginPath();ctx.moveTo(q[0],q[2]);ctx.lineTo(q[1],q[2]);ctx.lineTo(mx1,my);ctx.lineTo(mx0,my);ctx.closePath();ctx.fill();}
       ctx.lineWidth=1;ctx.strokeStyle=style.border;floorQuadPath(q);ctx.stroke();
-      if(!failed){const lw=Math.max(1,fh*.22);ctx.strokeStyle=lo;ctx.lineWidth=lw;ctx.beginPath();ctx.moveTo(q[3],q[5]-lw/2);ctx.lineTo(q[4],q[5]-lw/2);ctx.stroke();}
       if(rhythmNoteIsHold(note)){ctx.fillStyle='rgba(8,47,73,.55)';ctx.fillRect(cx-w*.26,cy-.75,w*.52,1.5);}
       if(brightness<1){floorQuadPath(q);ctx.fillStyle=`rgba(2,6,23,${(1-brightness).toFixed(3)})`;ctx.fill();}
       if(pressed){floorQuadPath(q);ctx.fillStyle='rgba(255,255,255,.4)';ctx.fill();}
@@ -33198,20 +33201,21 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     ctx.beginPath();ctx.moveTo(x0,y0+faceH);ctx.lineTo(x0+W,y0+faceH);ctx.stroke();
     ctx.globalAlpha=1;
   };
-  // 試作(floor3d)の空中の箱。上の面は奥へ狭まって消える点へ寄る台形、手前に厚みの面、真ん中の側に側面(暗め)。どれも単色の多角形
+  // 試作(floor3d)の空中の箱。上の面は奥へ狭まって消える点へ寄る台形、手前に厚みの面、真ん中の側に側面。どれも単色の多角形。
+  // 参考動画の空中のノーツは「半透明のガラスの箱で、向こうが透けて見える」ので、面は半透明・縁だけ白くはっきり
   const drawGlassBox3d=(hd,opts)=>{
     const L=RHYTHM_SKY_LOOK.box,{faceH,thick,W}=skyBoxDims(hd,opts),near=Math.max(0,Math.min(1,((Number(opts.depthScale)||1)-.56)/.44));
     const mid=cssW/2,kb=.8,xf0=hd.cx-W/2,xf1=hd.cx+W/2,yf=hd.cy+faceH/2,yb=yf-faceH*1.25,cb=mid+(hd.cx-mid)*kb,xb0=cb-W*kb/2,xb1=cb+W*kb/2,yd=yf+thick*1.35;
     ctx.globalAlpha=opts.alpha*(L.farDim+(1-L.farDim)*near);
     // 側面(真ん中の側だけ見える)
     const right=hd.cx<mid;
-    ctx.fillStyle='rgba(71,85,105,.82)';ctx.beginPath();
+    ctx.fillStyle='rgba(148,163,184,.42)';ctx.beginPath();
     if(right){ctx.moveTo(xf1,yf);ctx.lineTo(xb1,yb);ctx.lineTo(xb1,yb+thick*1.35*kb);ctx.lineTo(xf1,yd);}else{ctx.moveTo(xf0,yf);ctx.lineTo(xb0,yb);ctx.lineTo(xb0,yb+thick*1.35*kb);ctx.lineTo(xf0,yd);}
     ctx.closePath();ctx.fill();
     // 上の面(いちばん明るい)
-    ctx.fillStyle='rgba(241,245,249,.78)';ctx.beginPath();ctx.moveTo(xb0,yb);ctx.lineTo(xb1,yb);ctx.lineTo(xf1,yf);ctx.lineTo(xf0,yf);ctx.closePath();ctx.fill();
+    ctx.fillStyle='rgba(241,245,249,.5)';ctx.beginPath();ctx.moveTo(xb0,yb);ctx.lineTo(xb1,yb);ctx.lineTo(xf1,yf);ctx.lineTo(xf0,yf);ctx.closePath();ctx.fill();
     // 手前の面(中くらい)
-    ctx.fillStyle='rgba(148,163,184,.88)';ctx.fillRect(xf0,yf,W,yd-yf);
+    ctx.fillStyle='rgba(203,213,225,.34)';ctx.fillRect(xf0,yf,W,yd-yf);
     // 縁(白)
     ctx.strokeStyle='rgba(255,255,255,.95)';ctx.lineWidth=Math.max(1,L.edgePx*.8);ctx.beginPath();
     ctx.moveTo(xb0,yb);ctx.lineTo(xb1,yb);ctx.lineTo(xf1,yf);ctx.lineTo(xf0,yf);ctx.closePath();ctx.moveTo(xf0,yf);ctx.lineTo(xf0,yd);ctx.lineTo(xf1,yd);ctx.lineTo(xf1,yf);ctx.stroke();
@@ -33221,9 +33225,9 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     const sh=geo.skyShadow,hd=geo.head;if(!sh||!hd)return;
     const L=RHYTHM_SKY_LOOK.shadow,{faceH,thick,W}=skyBoxDims(hd,opts),w=W-L.insetPx*2,h=Math.max(4,(faceH+thick)*.8);
     if(floor3d){
-      // 試作(floor3d): 影も床に寝かせた台形(地上の粒と同じ潰れ方)。箱の真下の床に落ちる
+      // 試作(floor3d): 影も床に寝かせた台形(地上の粒と同じ潰れ方)。参考どおり、箱と同じ幅の塗った灰色の影が真下の床に落ちる
       const groundY=cssH*RHYTHM_JUDGMENT_LINE_Y.ratio,fh=floorThick(sh.cy,sizeScale)*1.6,fade=Math.max(0,Math.min(1,(groundY-sh.cy-fh/2)/(cssH*L.fadeRatio)));
-      ctx.globalAlpha=opts.alpha*fade;ctx.fillStyle='rgba(2,6,23,.62)';floorQuadPath(floorQuad(sh.cx,sh.cy,W*1.05,fh));ctx.fill();
+      ctx.globalAlpha=opts.alpha*fade;ctx.fillStyle='rgba(51,65,85,.7)';floorQuadPath(floorQuad(sh.cx,sh.cy,W,fh));ctx.fill();
       const yTop=hd.cy+faceH/2+thick*1.35,yBot=sh.cy-fh/2;
       if(yBot-yTop>4){ctx.globalAlpha=opts.alpha*L.lineAlpha*Math.max(.35,fade);ctx.strokeStyle='#ffffff';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(hd.cx,yTop);ctx.lineTo(sh.cx,yBot);ctx.stroke();}
       ctx.globalAlpha=1;return;
