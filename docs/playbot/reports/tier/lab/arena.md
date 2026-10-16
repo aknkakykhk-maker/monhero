@@ -175,6 +175,8 @@ PLAYBOT_PORT=8981 PLAYBOT_TACTICS_ALL=1 PLAYBOT_TACTICS_DIFF=Hard PLAYBOT_TACTIC
 - 2026-10-16 14:30 JST ごろから **ボットの版 arena-4: トレーニングは全員「ドミノ倒し+走り込み」が既定**(ハカセくんの決め方)。
   実戦 Hard(arena-3 の上で比べた): ゴーレム domino 2/3・v2 1/3 / モッチー domino 2/3・v2 3/3 / ライガー domino 1/3・v2 1/3 → 合計 domino 5/9・v2 5/9 で同じ(平均ターン 32 と 40。ターン数は数え落ちが残る)。
   はっきり悪くないので既定に。`PLAYBOT_TACTICS_TRAIN=v2` で前の決め方(記録の `r.bot.train`)
+- 2026-10-16 15:00 JST ごろから **ターン数を手番を回した回数で数える**(ハカセくん・ダイスくんの指摘。`makeLog` の `turn`)。前は画面のターンの数字のいちばん大きいもので、時間停止や読み落としで少なく出ていた。
+  WAVE ごとの `turns` = 手番を回した回数(`acts`)、画面の数字は `turnShown`。記録の1回ごとに `turnsBy: 'acts'` が付いた回から正しい(それより前の回の turns は少なめに出ていることがある)
 
 ## 見つけたボットの取りこぼし(ハカセくんへ渡す)
 

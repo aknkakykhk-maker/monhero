@@ -844,7 +844,11 @@ function makeLog(meta) {
           dealt: 0, taken: 0, healed: 0, downs: 0, byMon: {}, byType: {}, use: {}, texts: {}, traitHits: 0, presence: {}, partyMax: 0, startParty: partyOf(b), endParty: null, result: '' };
         L.waves.push(cur);
       }
-      cur.turns = Math.max(cur.turns, b.turn || 0);
+      // ★ターン数は、手番を実際に回した回数(この関数が呼ばれた回数)で数える(2026-10-16 から)。前は画面のターンの数字のいちばん大きいもので、
+      //   時間停止(ターンの数字が進まない)や読み落としで少なく出ていた(W10 が turns 1・1ターンに7枚に見える回)。画面の数字は turnShown に残す
+      cur.acts = (cur.acts || 0) + 1;
+      cur.turnShown = Math.max(cur.turnShown || 0, b.turn || 0);
+      cur.turns = cur.acts;
       for (const x of b.slots.filter((y) => y.occupied && !y.downed)) cur.presence[x.name] = (cur.presence[x.name] || 0) + 1;
       cur.partyMax = Math.max(cur.partyMax, b.slots.filter((x) => x.occupied).reduce((a2, x) => a2 + (x.hp ? x.hp.max : 0), 0));
       const th = threatOf(b); cur.threats[th] = (cur.threats[th] || 0) + 1;
@@ -1074,6 +1078,7 @@ function rememberRun(L, stats) {
     //   これが無い回は、それより前の版
     //   切り替えごとの入/切(ハカセくんの頼み: Tier を「直したボットの回だけ」に絞れるように)。時間停止の直しは切れないので、bot がある回は全部入っている
     //   emergency は押す条件の名前('auto+wipe' / 'auto' / 'wipe' / false)。2026-10-10 10:30 ごろまでの arena-1 の回は true(= auto+wipe)
+    turnsBy: 'acts', // 2026-10-16 から: turns は手番を回した回数(それより前の回は画面のターンの数字のいちばん大きいもの)
     bot: { ver: 'arena-4', ...Object.fromEntries(['EMERGENCY', 'REGEN', 'REVIVE_EACH', 'TRAIN_V2', 'UNIQUE_ROLE', 'HAM_STUN', 'EX_EARLY'].map((f) => [f.toLowerCase().replace(/_(\w)/g, (_, c) => c.toUpperCase()), process.env[`PLAYBOT_TACTICS_${f}`] !== '0'])), emergency: emergencyMode() || false, rotate: process.env.PLAYBOT_TACTICS_ASSIST_ROTATE === '1',
       train: process.env.PLAYBOT_TACTICS_TRAIN === 'v2' ? 'v2' : 'domino',
       // fixedAllies = 指定した3体(候補5体のうち3体。残り2体はふだんどおり選ぶ)・joined = WAVE の合間に実際に加わった順(毎回くじで3体出るので順は変わる)
