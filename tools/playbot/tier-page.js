@@ -218,7 +218,9 @@ function build(d) {
         <div class="body">${bodyHtml}</div>
       </details>`;
   const kv = (rows) => `<dl>${rows.filter(Boolean).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${v}</dd>`).join('')}</dl>`;
-  const diffTable = (m) => `<div class="tw"><table><thead><tr><th>難易度</th><th>Tier</th><th>試した回数(勇者)</th>${m.机上 ? '<th>受けられる</th>' : ''}</tr></thead><tbody>${DIFFS.map((k) => `<tr><td>${k}</td><td>${tier(m[k])}${m.難易度が暫定 && m.難易度が暫定[k] ? ' <small>暫定</small>' : ''}</td><td>${m.回数[k]}${m.勇者の回数 ? `(${m.勇者の回数[k]})` : ''}</td>${m.机上 ? `<td>${m.机上.受けられる[k]}発</td>` : ''}</tr>`).join('')}</tbody></table></div>`;
+  // 難易度ごとの小さい表。狭い画面では「Hard [A] 暫定 / 5回(勇者 3) / 4発」の1行カードに
+  const diffCards = (m, withHero) => `<ul class="dcl narrow">${DIFFS.map((k) => `<li><b class="dk">${k}</b>${tier(m[k])}${m.難易度が暫定 && m.難易度が暫定[k] ? '<small>暫定</small>' : ''}<span>${m.回数[k]}回${withHero && m.勇者の回数 ? `(勇者 ${m.勇者の回数[k]})` : ''}</span>${withHero && m.机上 ? `<span>受けられる ${m.机上.受けられる[k]}発</span>` : ''}</li>`).join('')}</ul>`;
+  const diffTable = (m) => diffCards(m, true) + `<div class="tw wide"><table><thead><tr><th>難易度</th><th>Tier</th><th>試した回数(勇者)</th>${m.机上 ? '<th>受けられる</th>' : ''}</tr></thead><tbody>${DIFFS.map((k) => `<tr><td>${k}</td><td>${tier(m[k])}${m.難易度が暫定 && m.難易度が暫定[k] ? ' <small>暫定</small>' : ''}</td><td>${m.回数[k]}${m.勇者の回数 ? `(${m.勇者の回数[k]})` : ''}</td>${m.机上 ? `<td>${m.机上.受けられる[k]}発</td>` : ''}</tr>`).join('')}</tbody></table></div>`;
   const refList = (kind, list) => `<ul class="rl">${list.map((x) => `<li>${iconOf(kind, x.名前, 'sm')}<span><b>${esc(x.名前)}</b> ${esc(x.理由)}</span></li>`).join('')}</ul>`;
   const evidence = (e) => {
     const r = e && e.根拠;
@@ -227,11 +229,23 @@ function build(d) {
     const rows = (r.数字 || []).map((x) => {
       const diff = Math.abs(num(x.差)), noise = Math.abs(num(x.ぶれ));
       const inNoise = Number.isFinite(diff) && Number.isFinite(noise) && x.差 !== undefined && x.ぶれ !== undefined && diff < noise;
-      return `<tr${inNoise ? ' class="dim"' : ''}><td>${esc(x.名前)}</td><td>${esc(x.値)}</td><td>${esc(x.基準 || '')}</td><td>${esc(x.差 || '')}${inNoise ? ' <small>ぶれの中</small>' : ''}</td><td>${esc(x.ぶれ || '')}</td></tr>`;
+      return { x, inNoise };
+    });
+    const table = rows.map(({ x, inNoise }) => `<tr${inNoise ? ' class="dim"' : ''}><td>${esc(x.名前)}</td><td>${esc(x.値)}</td><td>${esc(x.基準 || '')}</td><td>${esc(x.差 || '')}${inNoise ? ' <small>ぶれの中</small>' : ''}</td><td>${esc(x.ぶれ || '')}</td></tr>`).join('');
+    // 幅の狭い画面(〜600px)用: 1項目=1枚のカード。「60%(5回中3回)」は大きい数字と小さい添え書きに分ける
+    const cards = rows.map(({ x, inNoise }) => {
+      const v = String(x.値 == null ? '' : x.値);
+      const m = v.match(/^(.+?)\s*[（(](.+)[)）]$/);
+      const meta = [
+        x.基準 ? esc(x.基準) : '',
+        x.差 !== undefined && x.差 !== '' ? `差 <b>${esc(x.差)}</b>${inNoise ? '(ぶれの中)' : ''}` : '',
+        x.ぶれ ? `ぶれ ${esc(x.ぶれ)}` : '',
+      ].filter(Boolean).map((t) => `<span>${t}</span>`).join('');
+      return `<li class="evc${inNoise ? ' dim' : ''}"><div class="evc-n">${esc(x.名前)}</div><div class="evc-v"><b>${esc(m ? m[1] : v)}</b>${m ? `<small>${esc(m[2])}</small>` : ''}</div>${meta ? `<div class="evc-m">${meta}</div>` : ''}</li>`;
     }).join('');
     return `<div class="ev">
       <div class="evh"><span class="src src-${{ 実戦: 'j', シミュレーター: 's', 机上: 'd', '実戦+シミュレーター': 'js' }[r.出どころ] || 'd'}">${esc(r.出どころ)}</span><span class="evn">${esc(r.回数)}</span></div>
-      ${rows ? `<div class="tw"><table><thead><tr><th>数字</th><th>値</th><th>基準</th><th>差</th><th>ぶれ</th></tr></thead><tbody>${rows}</tbody></table></div><p class="note" style="margin:4px 0 0"><small>ぶれ = この幅の中の差は、たまたまかもしれない(標準誤差の2倍)。差がぶれより小さい行は薄く「ぶれの中」。</small></p>` : ''}
+      ${rows.length ? `<div class="tw wide"><table><thead><tr><th>数字</th><th>値</th><th>基準</th><th>差</th><th>ぶれ</th></tr></thead><tbody>${table}</tbody></table></div><ul class="evcl narrow">${cards}</ul><p class="note" style="margin:4px 0 0"><small>ぶれ = この幅の中の差は、たまたまかもしれない(標準誤差の2倍)。差がぶれより小さい行は薄く「ぶれの中」。</small></p>` : ''}
       ${(r.効いている機能 || []).length ? `<div class="evf"><small>効いている機能</small> ${r.効いている機能.map((f) => `<span class="chip">${esc(f)}</span>`).join('')}</div>` : ''}
       <p class="evs"><b>だから</b> ${esc(r.だから)}</p>
       ${r.まだ分からない ? `<p class="evu"><b>まだ分からない</b> ${esc(r.まだ分からない)}</p>` : ''}
@@ -244,7 +258,7 @@ function build(d) {
     a.強み ? ['強み', esc(a.強み)] : null,
     a.弱み ? ['弱み', esc(a.弱み)] : null,
     a.合うモンスター && a.合うモンスター.length ? ['合うモンスター', refList('m', a.合うモンスター)] : (a.合う子なし ? ['合うモンスター', esc(a.合う子なし)] : null),
-  ]) + (a.回数 ? `<div class="tw"><table><thead><tr><th>難易度</th><th>Tier</th><th>試した回数</th></tr></thead><tbody>${DIFFS.map((k) => `<tr><td>${k}</td><td>${tier(a[k])}</td><td>${a.回数[k]}</td></tr>`).join('')}</tbody></table></div>` : '');
+  ]) + (a.回数 ? diffCards(a, false) + `<div class="tw wide"><table><thead><tr><th>難易度</th><th>Tier</th><th>試した回数</th></tr></thead><tbody>${DIFFS.map((k) => `<tr><td>${k}</td><td>${tier(a[k])}</td><td>${a.回数[k]}</td></tr>`).join('')}</tbody></table></div>` : '');
   const fullBody = (m) => evidence(m) + kv([
     ['役', esc(m.役)],
     m.仮の総合 ? ['仮の総合', `${tier(m.仮の総合)} (5回未満のマスから出した仮)`] : null,
@@ -425,6 +439,30 @@ html{scroll-behavior:smooth;scroll-padding-top:56px}
 .cbd>summary{list-style:none;cursor:pointer;display:flex;gap:10px;align-items:center;padding:8px 10px;-webkit-tap-highlight-color:transparent}
 .cbd>summary::-webkit-details-marker{display:none}
 .cbd .body{margin:0 10px 10px}
+/* 幅の狭い画面(〜600px): 詳細の表をカードに替え、文字を 14px 以上にする(2026-10-16 社長「スマホで見やすく」) */
+.narrow{display:none}
+.evcl,.dcl{list-style:none;margin:0;padding:0;flex-direction:column;gap:8px}
+.evc{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 12px}
+.evc-n{font-size:14px;color:var(--muted);font-weight:700}
+.evc-v{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px}
+.evc-v b{font-family:var(--font-head);font-size:24px;line-height:1.3;font-variant-numeric:tabular-nums}
+.evc-v small{font-size:14px}
+.evc-m{display:flex;flex-wrap:wrap;gap:2px 12px;font-size:14px;color:var(--muted)}
+.evc-m span{min-width:0;overflow-wrap:break-word}.evc-m b{color:var(--fg);white-space:nowrap}
+.evc.dim .evc-v b{color:var(--muted)}
+.dcl{margin:8px 0 0}
+.dcl li{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px 12px;font-size:14px}
+.dcl .dk{min-width:4.2em;font-family:var(--font-head)}
+@media (max-width:600px){
+  .wide{display:none}
+  .narrow{display:flex}
+  .body,.ev,.ev p,.pinfo,.cb,.how{font-size:14px}
+  dt,.note,.evn,.chip,.nm2,small,.x,.cnt{font-size:14px}
+  .src,.party h4{font-size:14px}
+  dl{grid-template-columns:1fr;gap:0}
+  dt{margin-top:6px}
+  dd,.ct,.evn{overflow-wrap:break-word}
+}
 .ic>i{position:absolute;inset:0;background-size:contain;background-position:center;background-repeat:no-repeat;transform-origin:center center}
 ${css}
 </style>
