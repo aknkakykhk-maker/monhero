@@ -31,6 +31,7 @@
 //   トレーニングの候補(atkgut・adapt)と起こすかの決め方 simulateRun({ revive: 'bot'|'always'|'never'|'carry' })・
 //   結果に敵のライフの合計(enemyHpTotal)・再生(regenTotal)・最後の一撃の余り(overkill)を足した。比べた結果は docs/playbot/reports/tier/lab/training.md
 // ★10 版目(2026-10-16): EX=best(上手な遊び方)の列はトレーニングもドミノ倒し+走り込み(ハカセくんの決定)。bot の列は実戦のボットと同じまま
+// ★11 版目(2026-10-16): EX=best の列は緊急回復も上手な使い方(emergency 'best' = ガッツの平均 40% 未満で押す)・剣士モッチーの初期スタイル(heroStyle。強い難易度はずっと片手盾)
 // ★まだ入れていないもの: 魂格(Tier の対象外)・強化ポイントでガッツ+10・緊急回復の上手な使い方。近似したものは md の頭(APPROX)に書く。
 const fs = require('fs');
 const path = require('path');
@@ -47,10 +48,10 @@ const APPROX = [
   '氷海の支配者(人魚3体の勇者特性)の「敵と同じ距離」は、ターンの始めの敵の距離で見る(ゲームも描き直し前の enemyDist を見る)',
   'ゲームは1ターンのあいだ permaBuffs・waveBuffs・turnBuffs を「ターンの始めの値」で読む(React の state)。ここもターンの始めに写しを取って読む。ref で持つもの(EX の状態・クッキー・黒音符・運命の輪・運命のコイン/輪の積み)はその場の値',
   'スネグーラチカのプレゼント・コイン・輪・乱心などの乱数は seed 付きの乱数で引く',
-  '剣士モッチーの初期スタイルは片手剣(配置の画面で選べる初期スタイルは選ばない)。bot は EX で二刀流へ、best は勇者なら二刀流・供モンなら片手盾へ切り替える',
+  '剣士モッチーの初期スタイル: bot は片手剣で始めて EX で二刀流へ。best は WAVE 1 の敵の攻撃力が勇者のライフの 0.6 倍以上の難易度(Master)ならランのあいだずっと片手盾、ほかは片手剣で始めて手強い敵へは二刀流(供モンは片手盾)',
   'ボットの「見込みのダメージ」は画面の数字を読むが、ここでは同じ式(getDmg・被ダメージ)で出す',
   '魂格は入れていない(Tier の対象外。素のモンスターで比べる)。強化ポイントはすべて固有技へ使う(ガッツ+10 には使わない。ボットと同じ)',
-  '緊急回復は AUTO と同じ条件(出せるカードが無く、ガッツさえあれば出せるとき)だけ。ブラウザのボットは緊急回復を使わないので、実戦とのずれを見るときは --emergency none も並べる',
+  '緊急回復: bot の列はボットと同じ(出せるカードが無い・全滅の手前)、EX=best の列は上手な使い方(立っている子のガッツの平均が 40% 未満ならカードの前に押す。倒し切れそう・残り3ターン以内は押さない。lab/emergency.md)',
   'トレーニングの選び方はボットと同じ(丸太うけ+走り込み。ガッツの少ない子は丸太うけ+猛勉強。倒れた子を起こすかはランで1回だけ考える)。EX=best の列(上手な遊び方)はドミノ倒し+走り込み(全員。10 版目・lab/training.md)',
   'アシカのポルツは「味方のだれかが敵の攻撃を受けた・ガードで受け止めた」ターンに1回ぶん消化する(ゲームは handleEnemyTurn の tookEnemyAttack)',
   'アシカのみゅあ・かどみうむ・ももすけの上限アップは、そのカードの回復のあとで1体ずつの上限へ掛ける(ゲームは permaBuffs が変わったあとの useEffect で掛ける)',
@@ -757,7 +758,9 @@ function policyBest(st) {
     else if (e === 'weaponChange') {
       // 勇者の剣士モッチーは、手強い敵へは二刀流(連撃が2回ぶん)、ライフが細ったら片手盾(丈夫さ+ちから)。供モンは片手盾
       const style = G.tacticsExStyleOf(x.def, st.ex, x.i, x.id);
-      choice = x.i !== st.heroSlot ? 'shield' : (hurt(x, 0.4) ? 'shield' : (tough && x.hp.now >= x.hp.max * 0.6 ? 'dual' : style));
+      //   11 版目の候補: 敵の攻撃力がその子のライフの SHIELD_AT 倍以上なら(Expert・Master の強い敵)、二刀流(丈夫さ半分)は危ないので片手盾
+      const strong = !!st.shieldRun || (SHIELD_AT > 0 && st.enemy.atk >= x.hp.max * SHIELD_AT);
+      choice = x.i !== st.heroSlot ? 'shield' : (hurt(x, 0.4) || strong ? 'shield' : (tough && x.hp.now >= x.hp.max * 0.6 ? 'dual' : style));
       go = style !== choice;
     } else if (e === 'statBoost') go = !x.exActive && (bot || (waveStart && tough && b.wave >= 3));
     else if (['psychoLock', 'thunder', 'multiBuff', 'stage', 'partyBoost'].includes(e)) {
@@ -771,6 +774,10 @@ function policyBest(st) {
   }
 }
 const BOSS_RESERVE = Number(process.env.SIM_BOSS_RESERVE ?? 2);
+const SHIELD_AT = Number(process.env.SIM_SHIELD_AT ?? 0);
+// 剣士モッチーの構え(11 版目・2026-10-16 ダイスくん。lab/dice.md): WAVE 1 の敵の攻撃力が勇者のライフの SHIELD_INIT 倍以上の難易度(Master)は、
+//   ランのあいだずっと片手盾(二刀流は丈夫さが半分で、強い敵に倒される)。各 300 回で Master 1.73 → 3.17 WAVE・Hard・Expert は変わらず
+const SHIELD_INIT = Number(process.env.SIM_SHIELD_INIT ?? 0.6);
 const COAST_TURNS = Number(process.env.SIM_COAST_TURNS ?? 6);
 // 楽に進めているか: 直前の WAVE を COAST_TURNS ターン以内で抜けた
 const coasting = (st) => st.waveTurns.length > 0 && st.waveTurns[st.waveTurns.length - 1] <= COAST_TURNS;
@@ -1448,7 +1455,7 @@ function trainAfterWave(st, w) {
   }
 }
 
-function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWave = 10, exMode = 'bot', assist = 'bot', assistPlay = 'bot', training = 'bot', exLog = false, distBonus = true, uniqueUp = true, emergency = 'auto', uniquePlan = 'bot', discardBlocked = true, revive = 'bot', emergencyCfg = null }) {
+function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWave = 10, exMode = 'bot', assist = 'bot', assistPlay = 'bot', training = 'bot', exLog = false, distBonus = true, uniqueUp = true, emergency = 'auto', uniquePlan = 'bot', discardBlocked = true, revive = 'bot', emergencyCfg = null, heroStyle = null }) {
   const rng = mulberry32(hashSeed(seed, heroId, difficulty, allies.join(',')));
   const hero = MON_BY_ID[heroId];
   if (!hero) throw new Error(`勇者モンが見つからない: ${heroId}`);
@@ -1477,6 +1484,18 @@ function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWa
   if (!UNIQUE_PLANS.includes(uniquePlan)) throw new Error(`固有技の強化の入れ方が分からない: ${uniquePlan}`);
   st.heroSlot = bestSlotFor(hero, [0, 1, 2, 3]);
   st.mons[st.heroSlot] = hero; st.units[st.heroSlot] = G.createTacticsUnit(hero);
+  // 勇者モンの初期スタイル(剣士モッチー。60-app.jsx 14981 setTacticsExInitialStyle と同じ)。null・既定なら片手剣のまま
+  const heroDef = G.tacticsExDefOf(heroId);
+  if (heroStyle == null && exMode === 'best') heroStyle = 'auto'; // 上手な使い方は初期スタイルも選ぶ
+  // 緊急回復の上手な使い方の既定(11 版目・ハカセくんの決定。lab/emergency.md): 立っている子のガッツの平均が 40% 未満なら、カードの前に押す
+  if (emergency === 'best' && !st.emergencyCfg) st.emergencyCfg = { guts: 0.4 };
+  //   'auto' = 上手な使い方と同じ決め方(WAVE 1 の敵の攻撃力がライフの SHIELD_INIT 倍以上なら片手盾、ほかは片手剣)
+  if (heroStyle === 'auto' && heroDef && heroDef.heroInitialStyle) {
+    const e1 = G.createBattleEnemy(1, difficulty, null, null, 1, { mode: 'tacticsPro' });
+    st.shieldRun = SHIELD_INIT > 0 && !!e1 && e1.atk >= G.normalizeTacticsUnit(st.units[st.heroSlot]).maxHp * SHIELD_INIT;
+    heroStyle = st.shieldRun ? 'shield' : null; // 強い難易度のランは、ずっと片手盾(上手な使い方の EX も二刀流へ変えない)
+  }
+  if (heroStyle && heroDef && heroDef.heroInitialStyle) st.ex = G.setTacticsExInitialStyle(G.createTacticsExState(), { def: heroDef, slot: st.heroSlot, monId: heroId, style: heroStyle });
   const waiting = allies.slice();
   learnTeaching(st, chooseTeaching(st, teachingPool(st, 'start'))); // ランの始めに1枚(PICK_TEACHING)
   for (let w = 1; w <= maxWave; w++) {
@@ -1596,6 +1615,8 @@ if (require.main === module) {
   const UNIQUE_UP = argOf('--unique-up', 'on') !== 'off'; // 固有技の強化(6 版目)
   const TRAINING = argOf('--training', 'bot'); // トレーニングの選び方(bot・none)。4 版目から既定は bot
   // 10 版目(2026-10-16 ハカセくんの決定): EX=best(上手な遊び方)の列は、トレーニングもドミノ倒し+走り込み(lab/training.md)。--training を指定したらそれに従う
+  // 11 版目(2026-10-16 ハカセくんの決定): EX=best の列は、緊急回復も上手な使い方(ガッツの平均 40% 未満で押す。lab/emergency.md)。--emergency を指定したらそれに従う
+  const emergencyFor = (mode) => (mode === 'best' && !args.includes('--emergency') ? 'best' : EMERGENCY);
   const trainingFor = (mode) => (mode === 'best' && !args.includes('--training') ? 'atkhp' : TRAINING);
   const ASSIST = argOf('--assist', 'bot'); // アシカの選び方(bot・none・カードの id)。3 版目から既定は bot(いまのボットと同じ)
   const mdFile = argOf('--md', '');
@@ -1614,7 +1635,7 @@ if (require.main === module) {
         const waves = []; let past2 = 0; let clear = 0; let wipe = 0; let timeout = 0; let heroEx = 0; let dodges = 0; let boss = 0; let emer = 0;
         for (let i = 0; i < RUNS; i++) {
           const allies = pickAllies(m.id, mulberry32(hashSeed(SEED, 'allies', m.id, d, i)));
-          const r = simulateRun({ heroId: m.id, allies, difficulty: d, seed: hashSeed(SEED, i), maxWave: MAX_WAVE, exMode: mode, assist: ASSIST, training: trainingFor(mode), emergency: EMERGENCY, distBonus: DIST_BONUS, uniqueUp: UNIQUE_UP });
+          const r = simulateRun({ heroId: m.id, allies, difficulty: d, seed: hashSeed(SEED, i), maxWave: MAX_WAVE, exMode: mode, assist: ASSIST, training: trainingFor(mode), emergency: emergencyFor(mode), distBonus: DIST_BONUS, uniqueUp: UNIQUE_UP });
           waves.push(r.wave);
           if (r.wave > 2 || r.result === 'clear') past2++;
           if (r.wave >= MAX_WAVE) boss++; // ボス戦(最後の WAVE。Hard〜Master は覚醒ムー)に入った回
@@ -1676,7 +1697,7 @@ if (require.main === module) {
   const bossCell = (x) => (x.boss > 0 ? `${pct(x.bossWin)}(${pct(x.boss)})` : '—');
   out(`# 簡易シミュレーター(タクティクスプロ・${DIFFS.join(' / ')}・各 ${RUNS} 回・EX の使い方 ${MODES.join(' / ')})`);
   out();
-  out(`\`node tools/playbot/sim/battle.js\` の出力(10 版目・スキル・アシカ・トレーニング・間合いボーナス・固有技の強化・緊急回復入り。トレーニング ${TRAINING}(EX=best の列は ${trainingFor("best") === "atkhp" ? "ドミノ倒し+走り込み" : trainingFor("best")})・アシカ ${ASSIST}・間合いボーナス ${DIST_BONUS ? 'on' : 'off'}・固有技の強化 ${UNIQUE_UP ? 'on' : 'off'}・緊急回復 ${EM_LIST.map((em) => EM_JA[em] || em).join(' / ')}。1つ目の「${EM_JA[EMERGENCY] || EMERGENCY}」で EX の使い方3通り・実戦との突き合わせ・bot と best の差を出し、2つ目からは EX=best だけを列に足した)。式はゲームのコード(60-app.jsx・19-difficulties・22-enemy・32-tactics-units)から写したもの。`);
+  out(`\`node tools/playbot/sim/battle.js\` の出力(11 版目・スキル・アシカ・トレーニング・間合いボーナス・固有技の強化・緊急回復入り。トレーニング ${TRAINING}(EX=best の列は ${trainingFor("best") === "atkhp" ? "ドミノ倒し+走り込み" : trainingFor("best")}・緊急回復はガッツの平均 40% 未満で押す・剣士モッチーは強い難易度でずっと片手盾)・アシカ ${ASSIST}・間合いボーナス ${DIST_BONUS ? 'on' : 'off'}・固有技の強化 ${UNIQUE_UP ? 'on' : 'off'}・緊急回復 ${EM_LIST.map((em) => EM_JA[em] || em).join(' / ')}。1つ目の「${EM_JA[EMERGENCY] || EMERGENCY}」で EX の使い方3通り・実戦との突き合わせ・bot と best の差を出し、2つ目からは EX=best だけを列に足した)。式はゲームのコード(60-app.jsx・19-difficulties・22-enemy・32-tactics-units)から写したもの。`);
   out();
   out('**2 版目で入れたもの**(社長の決まり「ステは弱いけどスキル系で調整してるから、そこもちゃんと見て判断して」):');
   out();
