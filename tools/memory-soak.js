@@ -151,6 +151,9 @@ const makeRand = (seed) => { let t = seed >>> 0; return () => { t += 0x6D2B79F5;
           if (name.includes('/')) continue;   // いちばん上の部品だけ(下の内訳は二重に数えない)
           const size = a && a.attrs && a.attrs.size ? hex(a.attrs.size.value) : 0;
           if (size > 0) bucket[name] = (bucket[name] || 0) + size;
+          // 確保した大きさ(size)のうち、本当に使っている分(allocated_objects_size)。差は「捨てた跡地を返していない分」
+          const used = a && a.attrs && a.attrs.allocated_objects_size ? hex(a.attrs.allocated_objects_size.value) : 0;
+          if (used > 0) bucket[`${name}(使用中)`] = (bucket[`${name}(使用中)`] || 0) + used;
         }
         const totals = ev.args.dumps.process_totals;
         if (totals && totals.resident_set_bytes) bucket['(rss)'] = hex(totals.resident_set_bytes);
