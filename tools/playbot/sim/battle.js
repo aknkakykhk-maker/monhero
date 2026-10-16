@@ -968,7 +968,11 @@ function playTurn(st) {
   EX_POLICIES[st.exMode](st);
   const exUsedNow = Object.values(st.exUses).reduce((a, b) => a + b, 0) > exBefore;
   // 緊急回復②「全滅の手前」(brink・bot。tactics-brain.js emergencyWhy 107〜124 と同じ判断)はカードを選ぶ前に見る
-  let emergencyBrink = (st.emergency === 'brink' || st.emergency === 'bot') && !exUsedNow && st.enemy.hp > 0 && brinkWhy(st);
+  let emergencyBrink = (st.emergency === 'brink' || st.emergency === 'bot' || st.emergency === 'best') && !exUsedNow && st.enemy.hp > 0 && brinkWhy(st);
+  // 緊急回復の上手な使い方(11 版目の候補): ボットの2つ(全滅の手前・出せるカードが無い)に加えて、カードを選ぶ前に
+  //   倒れた子がいる・立っている子のガッツの平均が細った・狙われた子が細っている、のどれかなら押す。
+  //   ただし、このターンで倒し切れそうなとき(直近の1ターンの与ダメ × finish ≥ 敵の残り)と、残りターンが少ないときは押さない
+  if (st.emergency === 'best' && !emergencyBrink && !exUsedNow && st.enemy.hp > 0) emergencyBrink = bestEmergencyWhy(st);
   let { picks, discards } = emergencyBrink ? { picks: [], discards: [] } : decideTurn(st);
   if (emergencyBrink) {
     st.units = G.rateHealTacticsBoard(st.units, 0.3, 0.3, true).units;
@@ -978,7 +982,7 @@ function playTurn(st) {
   // 緊急回復(7 版目。60-app.jsx useEmergency 11939・AUTO の条件 12996〜13001): 出せるカードが1枚も無く(EX も使っていない)、
   //   ガッツさえあれば出せるカードがあるターンに使う。全員(倒れた子も)のライフ・ガッツを上限の 30% ずつ戻し、そのターンはカードを使わずに敵の番へ。
   //   ゲームでは回数の上限は無い。ここは AUTO と同じ「捨てる前に」使う(AUTO はカードを捨てない)
-  if ((st.emergency === 'auto' || st.emergency === 'bot') && !emergencyBrink && !picks.length && !exUsedNow && st.enemy.hp > 0) {
+  if ((st.emergency === 'auto' || st.emergency === 'bot' || st.emergency === 'best') && !emergencyBrink && !picks.length && !exUsedNow && st.enemy.hp > 0) {
     const actors = G.tacticsFilledSlots(st.units).filter((i) => G.canTacticsSlotAct(st.units, i) && !exLockedSlots(st).includes(i));
     const lacksOnlyGuts = st.hand.some((c) => !c.teach && actors.some((i) => getCardGuts(st, c, i) <= G.normalizeTacticsUnit(st.units[i]).maxGuts));
     if (lacksOnlyGuts) {
@@ -1340,6 +1344,24 @@ function brinkWhy(st) {
   return true;
 }
 
+function bestEmergencyWhy(st) {
+  const cfg = st.emergencyCfg || {};
+  const filled = G.tacticsFilledSlots(st.units);
+  const alive = filled.filter((i) => !G.normalizeTacticsUnit(st.units[i]).downed);
+  if (!alive.length) return false;
+  if (st.turn > 20 - (cfg.reserveTurns ?? 3)) return false;
+  if (st.recentDealt > 0 && st.recentDealt * (cfg.finish ?? 1.5) >= st.enemy.hp) return false;
+  const downed = filled.length - alive.length;
+  if (cfg.down && downed >= cfg.down) return true;
+  const gutsAvg = alive.reduce((a, i) => { const u = G.normalizeTacticsUnit(st.units[i]); return a + u.guts / Math.max(1, u.maxGuts); }, 0) / alive.length;
+  if (cfg.guts && gutsAvg < cfg.guts) return true;
+  if (cfg.hp) {
+    const aimed = targetsNow(st, st.intent, st.dist);
+    if (aimed.some((i) => { const u = G.normalizeTacticsUnit(st.units[i]); return u && !u.downed && u.hp / Math.max(1, u.maxHp) < cfg.hp; })) return true;
+  }
+  return false;
+}
+
 // ---------- 固有技の強化(供モンが入った WAVE のあと) ----------
 const MAX_UNIQUE_LV = 8; // 11-masu-progression.jsx MAX_UNIQUE_SKILL_LEVEL(load-game.js は 11 を読まないので写す)
 // ゲーム: 供モンが入ると強化ポイントを 1〜4(60-app.jsx 14648: Math.floor(Math.random()*4)+1)。1ポイントで固有技が1段(upgradeUnique 14998・最大 MAX_UNIQUE_SKILL_LEVEL 8)。
@@ -1426,7 +1448,7 @@ function trainAfterWave(st, w) {
   }
 }
 
-function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWave = 10, exMode = 'bot', assist = 'bot', assistPlay = 'bot', training = 'bot', exLog = false, distBonus = true, uniqueUp = true, emergency = 'auto', uniquePlan = 'bot', discardBlocked = true, revive = 'bot' }) {
+function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWave = 10, exMode = 'bot', assist = 'bot', assistPlay = 'bot', training = 'bot', exLog = false, distBonus = true, uniqueUp = true, emergency = 'auto', uniquePlan = 'bot', discardBlocked = true, revive = 'bot', emergencyCfg = null }) {
   const rng = mulberry32(hashSeed(seed, heroId, difficulty, allies.join(',')));
   const hero = MON_BY_ID[heroId];
   if (!hero) throw new Error(`勇者モンが見つからない: ${heroId}`);
@@ -1447,7 +1469,7 @@ function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWa
     // 固有技の強化(6 版目): 枠ごとの段・残りの強化ポイント・強化の記録
     useUniqueUp: uniqueUp, uniquePlan, uniqueLv: {}, upgradePoints: 0, uniqueLog: [],
     // 緊急回復(7 版目): 'auto'(① AUTO と同じ条件)・'brink'(② 全滅の手前だけ)・'bot'(①+②。2026-10-10 からのブラウザのボット arena-1 と同じ)・'none'(使わない。それまでのボット)
-    emergency, emergencyUses: 0, discardBlocked, revive,
+    emergency, emergencyUses: 0, emergencyCfg, discardBlocked, revive,
   };
   if (assist !== 'bot' && assist !== 'none' && !TEACH_BY_ID[assist]) throw new Error(`アシカの選び方が分からない: ${assist}`);
   if (!TRAINING_PLANS.includes(training)) throw new Error(`トレーニングの選び方が分からない: ${training}`);
