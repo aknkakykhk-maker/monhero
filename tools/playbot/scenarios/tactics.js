@@ -572,6 +572,11 @@ async function fightTactics(s, stats, { maxMs = 360000, waves = true, speedUp = 
         || (k >= 4 && handSig(now) !== handSig(before) && (now.picked || 0) === 0 && now.hand.some((c) => c.usable))
         || (timeStopNow && k >= 4 && (before.picked || 0) > 0 && (now.picked || 0) === 0 && now.hand.some((c) => c.usable) && now.actionPresent);
       // 時間停止のターンで動かないときは、何が欠けているかを残す(2026-10-16 レフェリーくん: arena-4 でも Master で3回中1回止まる)
+      // 時間停止のターンで 20 秒進まなければ、実行か「ターンを進める」を1回だけ押し直す(押したのが効いていないことがある)
+      if (timeStopNow && !moved && k === 40) {
+        const again = await s.page.evaluate(() => { const p = document.querySelector('[data-tactics-ex-pass]'); if (p && !p.disabled) { p.click(); return 'ターンを進める'; } const a = document.querySelector('[data-battle-action]'); if (a && !a.disabled) { a.click(); return 'ACTION'; } return ''; });
+        console.log(`    [時間停止の待ち] 20秒進まないので押し直した: ${again || '押せるボタンなし'}`);
+      }
       if (timeStopNow && !moved && k % 10 === 9) console.log(`    [時間停止の待ち] ${k * 0.5}秒 ターン ${before.turn}→${now.turn} 置いた ${before.picked}→${now.picked} 手札 ${(now.hand || []).map((c) => `${c.type}${c.usable ? '' : '×'}`).join(' ')} 実行 ${now.actionPresent ? (now.actionEnabled ? '押せる' : '押せない') : 'なし'} 戦い中 ${now.inBattle}`);
     }
     const after = await brain.readBoard(s);
