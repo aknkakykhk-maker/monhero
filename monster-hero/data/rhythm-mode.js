@@ -31511,8 +31511,11 @@ const rhythmPrepareActive=()=>rhythmPreparePreference()!=='off';
 const RHYTHM_FLOOR3D_KEY='mh_rhythm_floor3d_proto_v1';
 // 'on2' = 試作2(2026-10-16 社長「もっと一目見て空中にある感じに」「結局色で覚えてるだけな気がする」): 色を抜いても高さで見分けられるように、
 //   空中は床の影をはっきり・影と箱を結ぶ導線・宙に立った箱、空中スライドは床の影と帯の下の幕で浮いたリボンに。帯の描き方の設定に関係なく効く(GPU の帯を使わない)
-const rhythmFloor3dPreference=()=>{try{if(typeof localStorage==='undefined')return '';const v=localStorage.getItem(RHYTHM_FLOOR3D_KEY);return v==='on'||v==='on2'?v:'';}catch{return '';}};
-const rhythmFloor3dSetPreference=value=>{const next=value==='on'||value==='on2'?value:'';try{if(typeof localStorage!=='undefined'){if(next)localStorage.setItem(RHYTHM_FLOOR3D_KEY,next);else localStorage.removeItem(RHYTHM_FLOOR3D_KEY);}}catch{}return next;};
+// 'on3' = 試作3(2026-10-16 社長「全然だめだね。もっと立体感出せないの？」): 影や線を足すのではなく、空間そのものを見せる。
+//   空中の層を道と同じ遠近のガラスの床として描き、道の両端に床と空中をつなぐ柱を立てて「箱の中の空間」にする。
+//   空中のノーツは厚い立方体、空中スライドは厚みのある管。床にはっきりした影と柱。色・判定はそのまま(GPU の帯は使わない)
+const rhythmFloor3dPreference=()=>{try{if(typeof localStorage==='undefined')return '';const v=localStorage.getItem(RHYTHM_FLOOR3D_KEY);return v==='on'||v==='on2'||v==='on3'?v:'';}catch{return '';}};
+const rhythmFloor3dSetPreference=value=>{const next=value==='on'||value==='on2'||value==='on3'?value:'';try{if(typeof localStorage!=='undefined'){if(next)localStorage.setItem(RHYTHM_FLOOR3D_KEY,next);else localStorage.removeItem(RHYTHM_FLOOR3D_KEY);}}catch{}return next;};
 const RHYTHM_GPU_BAND_KEY='mh_rhythm_gpu_band_v1';
 // 2026-10-11 社長の決定で、ノーツを WebGL で描いているときは GPU の帯・区切りの線・ノーツの板を既定で使う(本番の記録 stats.frame で前後を比べる)。
 // 値: 'gpu' = 使う(ノーツも WebGL で描く)・'off' = 使わない(今までの WebGL の描き方)・未設定 = 既定(WebGL のときは使う)。
@@ -32489,7 +32492,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   const frameGround=[];
   let canvas=null,ctx=null,backend='2d',dpr=1,cssW=0,cssH=0,frameNow=0,effect='FULL',lightweight=false,sizeScale=1,drawn=0;
   // 床と空中の見た目の試作(rhythmFloor3dPreference)。attach で1回読む(毎コマ localStorage を読まない)
-  let floor3d=false,floor3d2=false;
+  let floor3d=false,floor3d2=false,floor3d3=false,skySeen=false;
   // スライドの帯を GPU に置いて描くか(作り替え B の S1・デバッグの切り替え)。WebGL の描き込み先で、帯の部品が作れたときだけ
   let gpuBandWanted=false;
   // 道のふちの光(drawRoadFx)の形とグラデーションは、描く先と大きさが同じあいだは毎回同じなので使い回す(2026-09-27)。
@@ -32501,7 +32504,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   // begin() では消さずに「消す予定」だけ立て、最初に何かを描く瞬間に消す(touch)。最後まで何も描かなかったフレームは、
   // 前のフレームがもう空(blank)なら何もしない。前奏・間奏・曲の終わりで、canvas の消去・GPU への命令・画面の合成し直しがなくなる
   let pendingClear=false,blank=true;
-  const touch=()=>{if(!pendingClear)return;pendingClear=false;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,cssW,cssH);blank=false;};
+  const touch=()=>{if(!pendingClear)return;pendingClear=false;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,cssW,cssH);blank=false;if(floor3d3&&skySeen)drawSkyLayer();};
   // マスモンの顔(焼いた絵)。ノーツより上に出すため、描くのはフレームの最後(end)にまとめる。
   // 以前は DOM の要素を canvas の上へ重ねて毎フレーム動かしていた(2026-09-25にやめた)
   const faces=[];
@@ -32972,7 +32975,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     if(!quads||!quads.length)return;
     // 空中の段(試作): 高さのあるスライドの床の影。高さがある所ほど濃い暗い帯(高さ=帯と影の離れ方が見える)
     quads.forEach(q=>{const a=Math.max(0,Math.min(1,(Number(q.sky)||0)*1.4));if(a<=.02)return;
-      ctx.globalAlpha=opts.alpha*(floor3d2?.35+.4*a:skyZOn()?.18+.22*a:.25+.45*a);ctx.fillStyle='rgba(2,0,10,.85)';
+      ctx.globalAlpha=opts.alpha*(floor3d3?.5+.4*a:floor3d2?.35+.4*a:skyZOn()?.18+.22*a:.25+.45*a);ctx.fillStyle='rgba(2,0,10,.85)';
       ctx.beginPath();ctx.moveTo(q.l0,q.y0);ctx.lineTo(q.r0,q.y0);ctx.lineTo(q.r1,q.y1);ctx.lineTo(q.l1,q.y1);ctx.closePath();ctx.fill();});
     ctx.globalAlpha=1;
   };
@@ -33207,6 +33210,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   // 参考動画の空中のノーツは「半透明のガラスの箱で、向こうが透けて見える」ので、面は半透明・縁だけ白くはっきり
   const drawGlassBox3d=(hd,opts)=>{
     if(floor3d2){drawFloatBox(hd,opts);return;}
+    if(floor3d3){drawSkyCube(hd,opts);return;}
     const L=RHYTHM_SKY_LOOK.box,{faceH,thick,W}=skyBoxDims(hd,opts),near=Math.max(0,Math.min(1,((Number(opts.depthScale)||1)-.56)/.44));
     const mid=cssW/2,kb=.8,xf0=hd.cx-W/2,xf1=hd.cx+W/2,yf=hd.cy+faceH/2,yb=yf-faceH*1.25,cb=mid+(hd.cx-mid)*kb,xb0=cb-W*kb/2,xb1=cb+W*kb/2,yd=yf+thick*1.35;
     ctx.globalAlpha=opts.alpha*(L.farDim+(1-L.farDim)*near);
@@ -33238,9 +33242,60 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     ctx.strokeStyle=`rgb(${L.edge})`;ctx.lineWidth=Math.max(1.2,L.edgePx);ctx.strokeRect(x0,y0,W,H);
     ctx.globalAlpha=1;
   };
+  // ── 試作3 ──
+  // 道の端(左右)の画面の x と、その高さで空中を何 px 持ち上げるか(ノーツの空中の高さと同じ式・rhythmSkyLiftPx)
+  const roadEdgeX=(y,right)=>cssW*rhythmProjectBoundary(right?RHYTHM_LANE_COUNT:0,Math.max(0,Math.min(1,y/Math.max(1,cssH))));
+  const skyLiftAt=y=>rhythmSkyLiftPx({height:cssH},Math.max(0,Math.min(1,y/Math.max(1,cssH))));
+  // 空中の層: 道と同じ遠近のガラスの床(地上の道をそのまま持ち上げた形)と、床と空中をつなぐ道の端の柱。曲の背景の上・ノーツの下に描く
+  const drawSkyLayer=()=>{
+    const line=cssH*RHYTHM_JUDGMENT_LINE_Y.ratio,top=cssH*.04,N=14,pts=[];
+    for(let i=0;i<=N;i++){const y=top+(line-top)*Math.pow(i/N,1.6);pts.push({y,yl:y-skyLiftAt(y),l:roadEdgeX(y,false),r:roadEdgeX(y,true)});}
+    ctx.globalAlpha=1;
+    // ガラスの床(手前ほど少し明るい)
+    const g=ctx.createLinearGradient(0,pts[0].yl,0,pts[N].yl);g.addColorStop(0,'rgba(186,230,253,.02)');g.addColorStop(1,'rgba(186,230,253,.13)');
+    ctx.fillStyle=g;ctx.beginPath();ctx.moveTo(pts[0].l,pts[0].yl);for(const p of pts)ctx.lineTo(p.l,p.yl);for(let i=N;i>=0;i--)ctx.lineTo(pts[i].r,pts[i].yl);ctx.closePath();ctx.fill();
+    // 横の目(奥ほど細く薄い)
+    for(let i=2;i<=N;i+=2){const p=pts[i],k=i/N;ctx.strokeStyle=`rgba(224,242,254,${.08+.22*k})`;ctx.lineWidth=.6+1.2*k;ctx.beginPath();ctx.moveTo(p.l,p.yl);ctx.lineTo(p.r,p.yl);ctx.stroke();}
+    // 空中の層の両端のレール(はっきり)
+    ctx.lineWidth=2.2;ctx.strokeStyle='rgba(240,249,255,.75)';
+    for(const side of ['l','r']){ctx.beginPath();pts.forEach((p,i)=>{if(i)ctx.lineTo(p[side],p.yl);else ctx.moveTo(p[side],p.yl);});ctx.stroke();}
+    // 床と空中をつなぐ柱(道の両端・奥の3本は細く薄く・手前は太い)。柱の下には床との接点の印
+    for(const i of [4,7,10,N]){const p=pts[i],k=i/N,w=1+4*k;
+      for(const x of [p.l,p.r]){const gg=ctx.createLinearGradient(0,p.y,0,p.yl);gg.addColorStop(0,`rgba(148,163,184,${.15+.25*k})`);gg.addColorStop(1,`rgba(240,249,255,${.25+.5*k})`);
+        ctx.fillStyle=gg;ctx.fillRect(x-w/2,p.yl,w,p.y-p.yl);}}
+    ctx.globalAlpha=1;
+  };
+  // 空中のタップの立方体: 上の面(奥へ寝る台形)・こちら向きの厚い前の面・真ん中側の側面。前の面は上から下へ明→暗、縁は白
+  const drawSkyCube=(hd,opts)=>{
+    const L=RHYTHM_SKY_LOOK.box,ds=Number(opts.depthScale)||1,W=Math.max(12,hd.w*sizeScale),near=Math.max(0,Math.min(1,(ds-.56)/.44));
+    const front=Math.max(6,W*.32),depth=Math.max(4,W*.22),mid=cssW/2,kb=.86,xf0=hd.cx-W/2,xf1=hd.cx+W/2,yt=hd.cy-front/2,yb=hd.cy+front/2;
+    const cb=mid+(hd.cx-mid)*kb,xb0=cb-W*kb/2,xb1=cb+W*kb/2,ytb=yt-depth;
+    ctx.globalAlpha=opts.alpha*(L.farDim+(1-L.farDim)*near);
+    // 側面(真ん中の側だけ見える)
+    const right=hd.cx<mid;ctx.fillStyle=`rgba(${L.frontFill},.85)`;ctx.beginPath();
+    if(right){ctx.moveTo(xf1,yt);ctx.lineTo(xb1,ytb);ctx.lineTo(xb1,ytb+front*kb);ctx.lineTo(xf1,yb);}else{ctx.moveTo(xf0,yt);ctx.lineTo(xb0,ytb);ctx.lineTo(xb0,ytb+front*kb);ctx.lineTo(xf0,yb);}
+    ctx.closePath();ctx.fill();ctx.fillStyle='rgba(2,6,23,.45)';ctx.fill();
+    // 上の面(いちばん明るい)
+    ctx.beginPath();ctx.moveTo(xb0,ytb);ctx.lineTo(xb1,ytb);ctx.lineTo(xf1,yt);ctx.lineTo(xf0,yt);ctx.closePath();
+    ctx.fillStyle=`rgba(${L.fill},.95)`;ctx.fill();ctx.fillStyle='rgba(255,255,255,.55)';ctx.fill();
+    // 前の面(上から下へ明→暗)
+    const g=ctx.createLinearGradient(0,yt,0,yb);g.addColorStop(0,`rgba(${L.fill},.95)`);g.addColorStop(1,`rgba(${L.frontFill},.95)`);
+    ctx.fillStyle=g;ctx.fillRect(xf0,yt,W,front);ctx.fillStyle='rgba(2,6,23,.25)';ctx.fillRect(xf0,yt+front*.55,W,front*.45);
+    ctx.strokeStyle='#ffffff';ctx.lineWidth=Math.max(1.2,L.edgePx);ctx.beginPath();
+    ctx.moveTo(xb0,ytb);ctx.lineTo(xb1,ytb);ctx.lineTo(xf1,yt);ctx.lineTo(xf0,yt);ctx.closePath();ctx.rect(xf0,yt,W,front);ctx.stroke();
+    ctx.globalAlpha=1;
+  };
   const drawSkyShadowZ=(geo,opts)=>{
     const sh=geo.skyShadow,hd=geo.head;if(!sh||!hd)return;
     const L=RHYTHM_SKY_LOOK.shadow,{faceH,thick,W}=skyBoxDims(hd,opts),w=W-L.insetPx*2,h=Math.max(4,(faceH+thick)*.8);
+    if(floor3d3){
+      // 試作3: 真下の床にはっきりした影(箱と同じ幅・黒72%)と、影から箱の下まで立つ柱(白・太さは奥行きに合わせる)
+      const ds=Number(opts.depthScale)||1,Wc=Math.max(12,hd.w*sizeScale),fh=floorThick(sh.cy,sizeScale)*2;
+      ctx.globalAlpha=opts.alpha;ctx.fillStyle='rgba(0,0,0,.72)';floorQuadPath(floorQuad(sh.cx,sh.cy,Wc,fh));ctx.fill();
+      const front=Math.max(6,Wc*.32),yTop=hd.cy+front/2,yBot=sh.cy,pw=Math.max(1.5,3*ds);
+      if(yBot-yTop>3){const g=ctx.createLinearGradient(0,yBot,0,yTop);g.addColorStop(0,'rgba(148,163,184,.35)');g.addColorStop(1,'rgba(255,255,255,.9)');ctx.fillStyle=g;ctx.fillRect(hd.cx-pw/2,yTop,pw,yBot-yTop);}
+      ctx.globalAlpha=1;return;
+    }
     if(floor3d2){
       // 試作2: 影はノーツの真下の床に、濃く・くっきり(判定の線の手前まで消さない)。影の中心から箱の下まで、白い導線を太めに
       const groundY=cssH*RHYTHM_JUDGMENT_LINE_Y.ratio,fh=floorThick(sh.cy,sizeScale)*1.8,fade=Math.max(.35,Math.min(1,(groundY-sh.cy)/(cssH*L.fadeRatio*.5)));
@@ -33301,8 +33356,17 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       quads.forEach((q,i)=>{const g=sq[i];if(!g||(Number(q.sky)||0)<=.05)return;const x0=(q.l0+q.r0)/2,x1=(q.l1+q.r1)/2,gx0=(g.l0+g.r0)/2,gx1=(g.l1+g.r1)/2;
         ctx.moveTo(x0,q.y0);ctx.lineTo(x1,q.y1);ctx.lineTo(gx1,g.y1);ctx.lineTo(gx0,g.y0);ctx.closePath();if(i%2===0)lines.push([x0,q.y0,gx0,g.y0]);});
       ctx.fill();ctx.strokeStyle='rgba(255,255,255,.6)';ctx.lineWidth=1;ctx.beginPath();lines.forEach(([a,b,c,d])=>{ctx.moveTo(a,b);ctx.lineTo(c,d);});ctx.stroke();}
+    // 試作3: 管。帯の下に厚い暗い面(帯の幅の35%ぶん下へ)と、帯から床の影へ下りる柱(4区切りごと)
+    if(floor3d3&&air.length){
+      const sq=Array.isArray(opts.slideShadowQuads)?opts.slideShadowQuads:null;
+      ctx.fillStyle='rgba(2,6,23,.45)';ctx.lineWidth=1;ctx.beginPath();
+      quads.forEach((q,i)=>{const g=sq&&sq[i];if(!g||(Number(q.sky)||0)<=.3||i%4)return;const x0=(q.l0+q.r0)/2,pw=Math.max(1.2,(q.r0-q.l0)*.08);ctx.rect(x0-pw/2,q.y0,pw,Math.max(0,g.y0-q.y0));});
+      ctx.fillStyle='rgba(226,232,240,.4)';ctx.fill();
+      air.forEach(q=>{const d0=Math.max(3,(q.r0-q.l0)*.35),d1=Math.max(3,(q.r1-q.l1)*.35);ctx.beginPath();ctx.moveTo(q.l0,q.y0);ctx.lineTo(q.r0,q.y0);ctx.lineTo(q.r1,q.y1);ctx.lineTo(q.r1,q.y1+d1);ctx.lineTo(q.r0,q.y0+d0);ctx.lineTo(q.l0,q.y0+d0);ctx.lineTo(q.l1,q.y1+d1);ctx.lineTo(q.l1,q.y1);ctx.closePath();
+        ctx.fillStyle=`rgba(${handRgb},.55)`;ctx.fill();ctx.fillStyle='rgba(2,6,23,.5)';ctx.fill();});
+    }
     // 試作(floor3d): 空中の帯に厚み。暗い同じ形を少し下へずらして先に塗る(帯の下の面が見える)
-    if(floor3d&&air.length){ctx.fillStyle='rgba(30,41,59,.7)';air.forEach(q=>{const d0=Math.max(2,floorThick(q.y0,1)*.9),d1=Math.max(2,floorThick(q.y1,1)*.9);ctx.beginPath();ctx.moveTo(q.l0,q.y0+d0);ctx.lineTo(q.r0,q.y0+d0);ctx.lineTo(q.r1,q.y1+d1);ctx.lineTo(q.l1,q.y1+d1);ctx.closePath();ctx.fill();});}
+    if(floor3d&&!floor3d3&&air.length){ctx.fillStyle='rgba(30,41,59,.7)';air.forEach(q=>{const d0=Math.max(2,floorThick(q.y0,1)*.9),d1=Math.max(2,floorThick(q.y1,1)*.9);ctx.beginPath();ctx.moveTo(q.l0,q.y0+d0);ctx.lineTo(q.r0,q.y0+d0);ctx.lineTo(q.r1,q.y1+d1);ctx.lineTo(q.l1,q.y1+d1);ctx.closePath();ctx.fill();});}
     ctx.fillStyle=`rgba(${handRgb},${A.alpha})`;
     air.forEach(q=>{ctx.beginPath();ctx.moveTo(q.l0,q.y0);ctx.lineTo(q.r0,q.y0);ctx.lineTo(q.r1,q.y1);ctx.lineTo(q.l1,q.y1);ctx.closePath();ctx.fill();});
     // 左右の縁を白く(床の紫の上でも地上スライドの紫の帯と見分けられる)
@@ -33371,7 +33435,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     // ノーツサイズが100%以外のときだけ、帯の左右を中心のまわりで倍率にした写しを作る(100%は元のまま)
     // 高さ(sky)も写す(2026-10-11。以前は写さず、ノーツサイズが100%以外だと空中のスライドが地上の色で描かれていた。帯を GPU で描く描き方との突き合わせで見つけた)
     const quads=sizeScale===1?geo.slide:geo.slide.map(q=>{const [l0,r0]=sizeX(q.l0,q.r0),[l1,r1]=sizeX(q.l1,q.r1);return {l0,r0,y0:q.y0,l1,r1,y1:q.y1,sky:q.sky,t0:q.t0,t1:q.t1};});
-    if(!failed&&opts.skySlideRgb&&skyZOn()){drawSkySlideZ(quads,floor3d2&&geo.slideShadow?{...opts,slideShadowQuads:geo.slideShadow}:opts,note);return;}
+    if(!failed&&opts.skySlideRgb&&skyZOn()){drawSkySlideZ(quads,(floor3d2||floor3d3)&&geo.slideShadow?{...opts,slideShadowQuads:geo.slideShadow}:opts,note);return;}
     ctx.globalAlpha=alpha;
     if(!failed&&effect!=='MINIMAL'&&!lightweight){
       // ぼかし(drop-shadow 5px)の代わりに、外周をなぞる太い半透明の線
@@ -33986,13 +34050,14 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   return {
     // options.webgl … 検証用。WebGL の描き込み先(rhythmCreateGL2D)で描く。作れなければ今までどおり 2D で描く
     // options.gpuBand … スライドの帯を GPU に置いて描く(WebGL のときだけ。作れなければ今までどおり CPU で刻む)
-    attach(next,options={}){{const f=rhythmFloor3dPreference();floor3d=f==='on'||f==='on2';floor3d2=f==='on2';}sparkSprites=rhythmHitSparkActive();canvas=next||null;backend='2d';ctx=null;gpuBandWanted=!!options.gpuBand&&!floor3d2;hitArea=null;skyHitArea=null;hitSlots.fill(null);pendingClear=false;blank=true;if(canvas&&options.webgl){ctx=rhythmCreateGL2D(canvas);if(ctx)backend='webgl';}if(canvas&&!ctx){try{ctx=canvas.getContext('2d');}catch(e){ctx=null;}}},
+    attach(next,options={}){{const f=rhythmFloor3dPreference();floor3d=f==='on'||f==='on2'||f==='on3';floor3d2=f==='on2';floor3d3=f==='on3';skySeen=false;}sparkSprites=rhythmHitSparkActive();canvas=next||null;backend='2d';ctx=null;gpuBandWanted=!!options.gpuBand&&!floor3d2&&!floor3d3;hitArea=null;skyHitArea=null;hitSlots.fill(null);pendingClear=false;blank=true;if(canvas&&options.webgl){ctx=rhythmCreateGL2D(canvas);if(ctx)backend='webgl';}if(canvas&&!ctx){try{ctx=canvas.getContext('2d');}catch(e){ctx=null;}}},
     get backend(){return backend;},
     // いまスライドの帯を GPU で描けるか。演奏画面はこれが true のとき、帯を CPU で刻まないよう rhythmNoteCanvasGeometry へ gpu を渡す
     get gpuBand(){return gpuBandWanted&&backend==='webgl'&&!!ctx&&!!ctx.band;},
     // 床と空中の見た目の試作が入っているか(検査・性能計測で見る)
     get floor3d(){return floor3d;},
     get floor3d2(){return floor3d2;},
+    get floor3d3(){return floor3d3;},
     get additiveGlow(){return additiveGlow;},set additiveGlow(v){additiveGlow=v!==false;},
     get plateGlow(){return plateGlowWanted;},set plateGlow(v){plateGlowWanted=v!==false;},
     // 描き込み先が取れているか。WebGL の準備が途中で失敗すると、その canvas からは 2D も取り出せず
@@ -34181,6 +34246,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       const trackDim=trackOn&&note._trackOff?.4:1;
       // スライドか(帯を CPU で刻んだ geo.slide か、GPU で描く geo.slideGpu)
       const isSlide=!!(geo.slide||geo.slideGpu);
+      // 試作3: 空中のノーツが一度でも出た曲だけ、空中の層(ガラスの床と柱)を描く
+      if(floor3d3&&!skySeen&&(geo.skyShadow||rhythmSlideHasSky(note)))skySeen=true;
       if(o.pop===null){
         if(geo.slideShadow)drawSkyShadowBand(geo.slideShadow,o);
         else if(geo.slideGpu&&rhythmSlideHasSky(note))drawSkyShadowGpu(note,geo,o);
