@@ -209,7 +209,14 @@ function writeAll(cache) {
   try { realRuns = JSON.parse(fs.readFileSync(path.join(__dirname, 'tactics-knowledge.json'), 'utf8')).runs || []; } catch (e) { realRuns = []; }
   const realOf = (h, al, d) => {
     const want = al.map((x) => NAME[x]).sort().join(',');
-    const rs = realRuns.filter((r) => r.mode === 'tacticsPro' && r.difficulty === d && r.hero === NAME[h] && alliesOf(r).slice().sort().join(',') === want && ['clear', 'wipe', 'timeout'].includes(r.result));
+    // 供モンを固定した回(r.bot.fixedAllies)は、このパーティを目指して遊んだ回として数える。4体そろう前に全滅した回も負けとして入れる
+    //   (そろった回だけ数えると負けだけが抜けて勝率が甘く見える。2026-10-16 ハカセくん)。ただし固定していない子が盤面に出た回(固定が効かなかった回)は数えない。
+    //   固定していない回は、盤面に同じ4体がそろった回だけ
+    const wantSet = new Set(al.map((x) => NAME[x]));
+    const fixedOf = (r) => (r.bot && r.bot.fixedAllies ? String(r.bot.fixedAllies).split(',').map((x) => x.trim()).filter(Boolean) : null);
+    const aimed = (r) => { const f = fixedOf(r); return f && f.length === wantSet.size && f.every((n) => wantSet.has(n)) && alliesOf(r).every((n) => wantSet.has(n)); };
+    const rs = realRuns.filter((r) => r.mode === 'tacticsPro' && r.difficulty === d && r.hero === NAME[h] && ['clear', 'wipe', 'timeout'].includes(r.result)
+      && (fixedOf(r) ? aimed(r) : alliesOf(r).slice().sort().join(',') === want));
     return rs.length ? { 回数: rs.length, クリア: rs.filter((r) => r.result === 'clear').length } : null;
   };
   // なぜ噛み合うか(機械が書く1〜2行): 得意な枠の分かれ方と EX の役

@@ -437,7 +437,12 @@ async function maybeUseEx(s, b, mem, log) {
     else if (role === 'burst' && enemyFull && (late || (b.enemy && b.enemy.max >= 3000))) why = '敵のライフがたっぷり残っている(火力のEX)';
     // ★WAVE の始めに使う(2026-10-10 ダイスくんのシミュレーター: 上手な使い方は WAVE の 1〜2 ターン目・敵のライフ 96% で使い、1ランの回数も倍。
     //   Expert で ライガー +0.84・プラント +0.65・アーク +0.62 WAVE)。前は WAVE 5 より前の小さい敵では使わなかった。PLAYBOT_TACTICS_EX_EARLY=0 で前の決め方
-    else if (role === 'burst' && exEarly && (b.turn || 1) <= 2 && b.enemy && b.enemy.hp >= b.enemy.max * 0.9) why = 'WAVE の始め(火力の EX を早めに)';
+    // ★ライフを払う EX(イブリース「堕天の烙印」最大ライフの30%)は、1体だけのとき・ライフが7割を切っているときは早めに使わない
+    //   (2026-10-16 セコンドくん: Expert W1 T1 に使ってライフ 360→200、1体だけの序盤で T4 に全滅)
+    else if (role === 'burst' && exEarly && (b.turn || 1) <= 2 && b.enemy && b.enemy.hp >= b.enemy.max * 0.9
+      && !(/ライフの\d+%を払/.test(((ROSTER_BY_NAME[x.name] || {}).ex || {}).desc || '') && (aliveCount <= 1 || (x.hp && x.hp.now < x.hp.max * 0.7)
+        // 払ったあと(最大ライフの30%)のライフで、予告の攻撃に耐えられないときも使わない(セコンドくんの案)
+        || (x.hp && x.aimDamage && x.hp.now - x.hp.max * 0.3 <= x.aimDamage)))) why = 'WAVE の始め(火力の EX を早めに)';
     // 自分だけを守る EX(オボロゲソウの吸収・ゴーストの完全回避): 自分が狙われて、重く削られるとき
     else if (role === 'selfGuard' && x.aimDamage && x.hp && x.aimDamage >= x.hp.now * 0.3) why = '自分が狙われて重い(自分を守るEX)';
     // カウンター(ハム): 自分が狙われているターン。貫通撃は受けきれないので外す
@@ -736,7 +741,10 @@ async function chooseBetween(s, mem, log) {
       return (f != null ? f + allyScore(nm) * 0.1 : allyScore(nm)) - num(t.match(/総合力\s*([\d,]+)/)[1]) / 4000;
     };
     // 供モンを固定したとき(PLAYBOT_TACTICS_ALLIES)は、その順に加える
-    const fixed = (mem.fixedAllies || []).map((nm) => allyBtns.find((t) => t.split(/\s+/)[0] === nm)).find(Boolean);
+    // ★もう加わった子は外す(候補の一覧に加わり済みの子も並ぶことがある。2026-10-16: 加わり済みのミタラシ・スプーキーをもう一度押して空振りし、
+    //   別の押し方で固定していない子(ゴーレム)が入った回・加わった順の記録に同じ子が2回出た回があった)
+    const joinedNames = new Set(log.data.build.allies.filter((x) => x.wave !== log.data.waves.length).map((x) => x.name));
+    const fixed = (mem.fixedAllies || []).filter((nm) => !joinedNames.has(nm)).map((nm) => allyBtns.find((t) => t.split(/\s+/)[0] === nm)).find(Boolean);
     // ★同じ合間でこの画面をもう一度読んだら、さっき選んだ子を押し直す(2026-10-10 ハカセくんの指摘: 1回目に選んだあと「最初の供モンか」が変わって
     //   点数が入れ替わり、2回目に別の子を押していた。記録はハム・実際に加わったのはゴーレム、というずれが出ていた)
     mem.allyPickAt = mem.allyPickAt || {};
