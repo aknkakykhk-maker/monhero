@@ -16,6 +16,11 @@ const DEBUG_TRIALS = [
     title: '🎵 床と空中の見た目',
     note: '地上のノーツを道の床に平たく貼り付け、空中のノーツを厚みのある箱にして床に影を落とします。判定の位置・時刻・指の扱いは変わりません',
     when: '次の演奏から' },
+  // 試作2(同じキーの別の値。入れると試作1は切になる・切はどちらもキーを消す)
+  { id: 'rhythm_floor3d2', added: '2026-10-16', area: 'モンヒロビート', key: 'mh_rhythm_floor3d_proto_v1', on: 'on2',
+    title: '🎵 床と空中の見た目(試作2)',
+    note: '色を抜いても高さで見分けられるように、空中のノーツの真下の床に濃い影と白い導線を出し、箱を宙に立てます。空中スライドは床の影と帯の下の薄い幕で浮いたリボンにします。判定は変わりません',
+    when: '次の演奏から' },
 ];
 const DEBUG_TRIALS_SEEN_KEY = 'mh_debug_trials_seen_v1';
 const debugTrialRead = (trial) => { try { return typeof localStorage !== 'undefined' && localStorage.getItem(trial.key) === trial.on; } catch (e) { return false; } };

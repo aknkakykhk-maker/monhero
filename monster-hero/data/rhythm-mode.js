@@ -31509,8 +31509,10 @@ const rhythmPrepareActive=()=>rhythmPreparePreference()!=='off';
 // デバッグの「床と空中の見た目(試作)」だけで入る。既定は切(キーが無ければ今までの見た目のまま)。見た目だけで、判定の位置・時刻・入力には触らない。
 // 値: 'on' = 試作の見た目 / 未設定 = 今まで。演奏を始めるとき(描き手をつなぐとき)に1回読む
 const RHYTHM_FLOOR3D_KEY='mh_rhythm_floor3d_proto_v1';
-const rhythmFloor3dPreference=()=>{try{return typeof localStorage!=='undefined'&&localStorage.getItem(RHYTHM_FLOOR3D_KEY)==='on'?'on':'';}catch{return '';}};
-const rhythmFloor3dSetPreference=value=>{const next=value==='on'?'on':'';try{if(typeof localStorage!=='undefined'){if(next)localStorage.setItem(RHYTHM_FLOOR3D_KEY,next);else localStorage.removeItem(RHYTHM_FLOOR3D_KEY);}}catch{}return next;};
+// 'on2' = 試作2(2026-10-16 社長「もっと一目見て空中にある感じに」「結局色で覚えてるだけな気がする」): 色を抜いても高さで見分けられるように、
+//   空中は床の影をはっきり・影と箱を結ぶ導線・宙に立った箱、空中スライドは床の影と帯の下の幕で浮いたリボンに。帯の描き方の設定に関係なく効く(GPU の帯を使わない)
+const rhythmFloor3dPreference=()=>{try{if(typeof localStorage==='undefined')return '';const v=localStorage.getItem(RHYTHM_FLOOR3D_KEY);return v==='on'||v==='on2'?v:'';}catch{return '';}};
+const rhythmFloor3dSetPreference=value=>{const next=value==='on'||value==='on2'?value:'';try{if(typeof localStorage!=='undefined'){if(next)localStorage.setItem(RHYTHM_FLOOR3D_KEY,next);else localStorage.removeItem(RHYTHM_FLOOR3D_KEY);}}catch{}return next;};
 const RHYTHM_GPU_BAND_KEY='mh_rhythm_gpu_band_v1';
 // 2026-10-11 社長の決定で、ノーツを WebGL で描いているときは GPU の帯・区切りの線・ノーツの板を既定で使う(本番の記録 stats.frame で前後を比べる)。
 // 値: 'gpu' = 使う(ノーツも WebGL で描く)・'off' = 使わない(今までの WebGL の描き方)・未設定 = 既定(WebGL のときは使う)。
@@ -32487,7 +32489,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   const frameGround=[];
   let canvas=null,ctx=null,backend='2d',dpr=1,cssW=0,cssH=0,frameNow=0,effect='FULL',lightweight=false,sizeScale=1,drawn=0;
   // 床と空中の見た目の試作(rhythmFloor3dPreference)。attach で1回読む(毎コマ localStorage を読まない)
-  let floor3d=false;
+  let floor3d=false,floor3d2=false;
   // スライドの帯を GPU に置いて描くか(作り替え B の S1・デバッグの切り替え)。WebGL の描き込み先で、帯の部品が作れたときだけ
   let gpuBandWanted=false;
   // 道のふちの光(drawRoadFx)の形とグラデーションは、描く先と大きさが同じあいだは毎回同じなので使い回す(2026-09-27)。
@@ -32970,7 +32972,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     if(!quads||!quads.length)return;
     // 空中の段(試作): 高さのあるスライドの床の影。高さがある所ほど濃い暗い帯(高さ=帯と影の離れ方が見える)
     quads.forEach(q=>{const a=Math.max(0,Math.min(1,(Number(q.sky)||0)*1.4));if(a<=.02)return;
-      ctx.globalAlpha=opts.alpha*(skyZOn()?.18+.22*a:.25+.45*a);ctx.fillStyle='rgba(2,0,10,.85)';
+      ctx.globalAlpha=opts.alpha*(floor3d2?.35+.4*a:skyZOn()?.18+.22*a:.25+.45*a);ctx.fillStyle='rgba(2,0,10,.85)';
       ctx.beginPath();ctx.moveTo(q.l0,q.y0);ctx.lineTo(q.r0,q.y0);ctx.lineTo(q.r1,q.y1);ctx.lineTo(q.l1,q.y1);ctx.closePath();ctx.fill();});
     ctx.globalAlpha=1;
   };
@@ -33204,6 +33206,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   // 試作(floor3d)の空中の箱。上の面は奥へ狭まって消える点へ寄る台形、手前に厚みの面、真ん中の側に側面。どれも単色の多角形。
   // 参考動画の空中のノーツは「半透明のガラスの箱で、向こうが透けて見える」ので、面は半透明・縁だけ白くはっきり
   const drawGlassBox3d=(hd,opts)=>{
+    if(floor3d2){drawFloatBox(hd,opts);return;}
     const L=RHYTHM_SKY_LOOK.box,{faceH,thick,W}=skyBoxDims(hd,opts),near=Math.max(0,Math.min(1,((Number(opts.depthScale)||1)-.56)/.44));
     const mid=cssW/2,kb=.8,xf0=hd.cx-W/2,xf1=hd.cx+W/2,yf=hd.cy+faceH/2,yb=yf-faceH*1.25,cb=mid+(hd.cx-mid)*kb,xb0=cb-W*kb/2,xb1=cb+W*kb/2,yd=yf+thick*1.35;
     ctx.globalAlpha=opts.alpha*(L.farDim+(1-L.farDim)*near);
@@ -33223,9 +33226,32 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     ctx.moveTo(xb0,yb);ctx.lineTo(xb1,yb);ctx.lineTo(xf1,yf);ctx.lineTo(xf0,yf);ctx.closePath();ctx.moveTo(xf0,yf);ctx.lineTo(xf0,yd);ctx.lineTo(xf1,yd);ctx.lineTo(xf1,yf);ctx.stroke();
     ctx.globalAlpha=1;
   };
+  // 試作2: 宙に立った箱。床の遠近(奥へ寝る上の面)を使わず、こちらを向いた手前の面+下の厚み+下の縁の暗い線で「立っている」形にする。
+  //   上の縁は白くはっきり、下の厚みは暗く(下から見上げた面)。色は今の空中の箱の決まりのまま
+  const drawFloatBox=(hd,opts)=>{
+    const L=RHYTHM_SKY_LOOK.box,{faceH,thick,W}=skyBoxDims(hd,opts),near=Math.max(0,Math.min(1,((Number(opts.depthScale)||1)-.56)/.44));
+    const H=Math.max(6,faceH+thick),x0=hd.cx-W/2,y0=hd.cy-H/2,under=Math.max(2,H*.38);
+    ctx.globalAlpha=opts.alpha*(L.farDim+(1-L.farDim)*near);
+    ctx.fillStyle=`rgba(${L.fill},${Math.min(1,L.fillAlpha+.1)})`;ctx.fillRect(x0,y0,W,H);
+    ctx.fillStyle=`rgba(255,255,255,${L.topAlpha})`;ctx.fillRect(x0,y0,W,Math.max(2,H*.3));
+    ctx.fillStyle='rgba(2,6,23,.55)';ctx.fillRect(x0+1,y0+H,W-2,under);
+    ctx.strokeStyle=`rgb(${L.edge})`;ctx.lineWidth=Math.max(1.2,L.edgePx);ctx.strokeRect(x0,y0,W,H);
+    ctx.globalAlpha=1;
+  };
   const drawSkyShadowZ=(geo,opts)=>{
     const sh=geo.skyShadow,hd=geo.head;if(!sh||!hd)return;
     const L=RHYTHM_SKY_LOOK.shadow,{faceH,thick,W}=skyBoxDims(hd,opts),w=W-L.insetPx*2,h=Math.max(4,(faceH+thick)*.8);
+    if(floor3d2){
+      // 試作2: 影はノーツの真下の床に、濃く・くっきり(判定の線の手前まで消さない)。影の中心から箱の下まで、白い導線を太めに
+      const groundY=cssH*RHYTHM_JUDGMENT_LINE_Y.ratio,fh=floorThick(sh.cy,sizeScale)*1.8,fade=Math.max(.35,Math.min(1,(groundY-sh.cy)/(cssH*L.fadeRatio*.5)));
+      const q=floorQuad(sh.cx,sh.cy,W*1.05,fh);
+      ctx.globalAlpha=opts.alpha*fade;ctx.fillStyle='rgba(0,0,0,.62)';floorQuadPath(q);ctx.fill();
+      ctx.strokeStyle='rgba(255,255,255,.55)';ctx.lineWidth=1;ctx.stroke();
+      const H=Math.max(6,faceH+thick),yTop=hd.cy+H/2+Math.max(2,H*.38),yBot=sh.cy-fh/2;
+      if(yBot-yTop>3){ctx.globalAlpha=opts.alpha*.85;ctx.strokeStyle='#ffffff';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(hd.cx,yTop);ctx.lineTo(sh.cx,yBot);ctx.stroke();
+        ctx.globalAlpha=opts.alpha*.9;ctx.fillStyle='#ffffff';ctx.beginPath();ctx.arc(sh.cx,sh.cy,2.2,0,Math.PI*2);ctx.fill();}
+      ctx.globalAlpha=1;return;
+    }
     if(floor3d){
       // 試作(floor3d): 影も床に寝かせた台形(地上の粒と同じ潰れ方)。参考どおり、箱と同じ幅の塗った影が真下の床に落ちる(色は今の影の色のまま)
       const groundY=cssH*RHYTHM_JUDGMENT_LINE_Y.ratio,fh=floorThick(sh.cy,sizeScale)*1.6,fade=Math.max(0,Math.min(1,(groundY-sh.cy-fh/2)/(cssH*L.fadeRatio)));
@@ -33269,6 +33295,12 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       ctx.fillStyle=`rgba(${handRgb},${A.alpha})`;
       ctx.beginPath();ctx.moveTo(l0,q.y0);ctx.lineTo(r0,q.y0);ctx.lineTo(r1,q.y1);ctx.lineTo(l1,q.y1);ctx.closePath();ctx.fill();
     });
+    // 試作2: 帯の真下の床の影と帯のあいだに、手の色の薄い幕と縦の導線(浮いたリボンに見える)。影は geo.slideShadow(床の位置)
+    if(floor3d2&&air.length&&Array.isArray(opts.slideShadowQuads)){const sq=opts.slideShadowQuads;
+      ctx.fillStyle=`rgba(${handRgb},.24)`;ctx.beginPath();let lines=[];
+      quads.forEach((q,i)=>{const g=sq[i];if(!g||(Number(q.sky)||0)<=.05)return;const x0=(q.l0+q.r0)/2,x1=(q.l1+q.r1)/2,gx0=(g.l0+g.r0)/2,gx1=(g.l1+g.r1)/2;
+        ctx.moveTo(x0,q.y0);ctx.lineTo(x1,q.y1);ctx.lineTo(gx1,g.y1);ctx.lineTo(gx0,g.y0);ctx.closePath();if(i%2===0)lines.push([x0,q.y0,gx0,g.y0]);});
+      ctx.fill();ctx.strokeStyle='rgba(255,255,255,.6)';ctx.lineWidth=1;ctx.beginPath();lines.forEach(([a,b,c,d])=>{ctx.moveTo(a,b);ctx.lineTo(c,d);});ctx.stroke();}
     // 試作(floor3d): 空中の帯に厚み。暗い同じ形を少し下へずらして先に塗る(帯の下の面が見える)
     if(floor3d&&air.length){ctx.fillStyle='rgba(30,41,59,.7)';air.forEach(q=>{const d0=Math.max(2,floorThick(q.y0,1)*.9),d1=Math.max(2,floorThick(q.y1,1)*.9);ctx.beginPath();ctx.moveTo(q.l0,q.y0+d0);ctx.lineTo(q.r0,q.y0+d0);ctx.lineTo(q.r1,q.y1+d1);ctx.lineTo(q.l1,q.y1+d1);ctx.closePath();ctx.fill();});}
     ctx.fillStyle=`rgba(${handRgb},${A.alpha})`;
@@ -33339,7 +33371,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     // ノーツサイズが100%以外のときだけ、帯の左右を中心のまわりで倍率にした写しを作る(100%は元のまま)
     // 高さ(sky)も写す(2026-10-11。以前は写さず、ノーツサイズが100%以外だと空中のスライドが地上の色で描かれていた。帯を GPU で描く描き方との突き合わせで見つけた)
     const quads=sizeScale===1?geo.slide:geo.slide.map(q=>{const [l0,r0]=sizeX(q.l0,q.r0),[l1,r1]=sizeX(q.l1,q.r1);return {l0,r0,y0:q.y0,l1,r1,y1:q.y1,sky:q.sky,t0:q.t0,t1:q.t1};});
-    if(!failed&&opts.skySlideRgb&&skyZOn()){drawSkySlideZ(quads,opts,note);return;}
+    if(!failed&&opts.skySlideRgb&&skyZOn()){drawSkySlideZ(quads,floor3d2&&geo.slideShadow?{...opts,slideShadowQuads:geo.slideShadow}:opts,note);return;}
     ctx.globalAlpha=alpha;
     if(!failed&&effect!=='MINIMAL'&&!lightweight){
       // ぼかし(drop-shadow 5px)の代わりに、外周をなぞる太い半透明の線
@@ -33954,12 +33986,13 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   return {
     // options.webgl … 検証用。WebGL の描き込み先(rhythmCreateGL2D)で描く。作れなければ今までどおり 2D で描く
     // options.gpuBand … スライドの帯を GPU に置いて描く(WebGL のときだけ。作れなければ今までどおり CPU で刻む)
-    attach(next,options={}){floor3d=rhythmFloor3dPreference()==='on';sparkSprites=rhythmHitSparkActive();canvas=next||null;backend='2d';ctx=null;gpuBandWanted=!!options.gpuBand;hitArea=null;skyHitArea=null;hitSlots.fill(null);pendingClear=false;blank=true;if(canvas&&options.webgl){ctx=rhythmCreateGL2D(canvas);if(ctx)backend='webgl';}if(canvas&&!ctx){try{ctx=canvas.getContext('2d');}catch(e){ctx=null;}}},
+    attach(next,options={}){{const f=rhythmFloor3dPreference();floor3d=f==='on'||f==='on2';floor3d2=f==='on2';}sparkSprites=rhythmHitSparkActive();canvas=next||null;backend='2d';ctx=null;gpuBandWanted=!!options.gpuBand&&!floor3d2;hitArea=null;skyHitArea=null;hitSlots.fill(null);pendingClear=false;blank=true;if(canvas&&options.webgl){ctx=rhythmCreateGL2D(canvas);if(ctx)backend='webgl';}if(canvas&&!ctx){try{ctx=canvas.getContext('2d');}catch(e){ctx=null;}}},
     get backend(){return backend;},
     // いまスライドの帯を GPU で描けるか。演奏画面はこれが true のとき、帯を CPU で刻まないよう rhythmNoteCanvasGeometry へ gpu を渡す
     get gpuBand(){return gpuBandWanted&&backend==='webgl'&&!!ctx&&!!ctx.band;},
     // 床と空中の見た目の試作が入っているか(検査・性能計測で見る)
     get floor3d(){return floor3d;},
+    get floor3d2(){return floor3d2;},
     get additiveGlow(){return additiveGlow;},set additiveGlow(v){additiveGlow=v!==false;},
     get plateGlow(){return plateGlowWanted;},set plateGlow(v){plateGlowWanted=v!==false;},
     // 描き込み先が取れているか。WebGL の準備が途中で失敗すると、その canvas からは 2D も取り出せず
