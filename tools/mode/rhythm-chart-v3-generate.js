@@ -59,6 +59,10 @@ const inputDir=arg('--input-dir',null);
 // ★variant 0 は**今までと1音も変わらない**(種の文字列に何も足さない)。
 //   既存曲の譜面を変えないため、既定は必ず0(運用ルール ⑩-2)。
 const variant=Math.max(0,Math.floor(Number(arg('--variant',0))||0));
+// 引き出し(2026-10-16・rhythm-chart-drawers.js)。曲の解析を見て合う曲だけに使う。--no-drawers で使わない
+//   (作った後に足した引き出しなので、前からある HELL を作り直すとき rhythm-hell-mix.js が --no-drawers を付ける)
+const drawersOn=!process.argv.includes('--no-drawers');
+const drawers=require('./rhythm-chart-drawers.js');
 const variantSeed=variant>0?`:v${variant}`:'';
 // 種を変えるだけだと、形の選ばれ方が入れ替わるだけで**点数がほとんど動かなかった**
 // (候補4本で6軸の合計が572.0〜572.2、差0.2点)。品質の軸をまたぐ差を作るには、
@@ -1227,10 +1231,18 @@ const buildChart=(difficulty,options={})=>{
   // 小節ごとの取り分は「その小節にある音の数 × 盛り上がりの持ち上げ」の比で配る。
   // どれだけ盛り上がっても、その小節に無い音は叩かせない。
   const weights=new Map();
-  let weightSum=0;
   for(let bar=minBar;bar<=maxBar;bar++){
     const position=budgetPosition(bar);
-    const weight=musicalOnsetsInBar(bar)*(liftMin+(liftMax-liftMin)*position);
+    weights.set(bar,musicalOnsetsInBar(bar)*(liftMin+(liftMax-liftMin)*position));
+  }
+  // 引き出し R2(入りを軽く・後半を重く)。入りが静かで山が後半にあり、このままだと入りが重い・後半が軽い曲の MASTER・HELL だけ。
+  //   曲全体の数は変えない(配り方だけ)。今の取り分の形(1秒あたりの重み)を見て、要るぶんだけ掛ける
+  const weightRate=(fromMs,toMs)=>{let sum=0;for(let bar=minBar;bar<=maxBar;bar++){const at=gridTimeMs(bar*BAR);if(at>=fromMs&&at<toMs)sum+=weights.get(bar);}return sum/Math.max(.001,(toMs-fromMs)/1000);};
+  const r2=drawersOn?drawers.chooseR2(audio,difficulty,{weightRate}):{id:'R2',use:false,reason:'--no-drawers で使わない'};
+  if(difficulty==='MASTER'||difficulty==='HELL')notice.push(`引き出し ${drawers.drawerLine(r2)}`);
+  let weightSum=0;
+  for(let bar=minBar;bar<=maxBar;bar++){
+    const weight=weights.get(bar)*drawers.r2BarScale(r2,bar,gridTimeMs(bar*BAR));
     weights.set(bar,weight);
     weightSum+=weight;
   }
@@ -3459,7 +3471,7 @@ const buildChart=(difficulty,options={})=>{
     }
     notice.push(`音ゲーの作法: ${Object.entries(knowledgeCounts).map(([id,count])=>`${id} ${count}`).join(' / ')||'効いた所なし'}`);
   }
-  return {notes,log,notice,profile:P,runs:runs.length,knowledgeCounts,chordCount,chordRunCount,sweepCount,crossCount,monsterSlotGrids,mirrorFlickCount,
+  return {notes,log,notice,r2,profile:P,runs:runs.length,knowledgeCounts,chordCount,chordRunCount,sweepCount,crossCount,monsterSlotGrids,mirrorFlickCount,
     targetCount,notesPerSecondTarget:round3(notesPerSecond),
     counts:{holdMax,slideMax,flickMax,endFlickMax,chordMax,accentMax,
       playableMinutes:round3(playableMinutes)}};
@@ -4071,6 +4083,8 @@ if(write){
       ...(focusOn?{focus:{source:`${dashed}-v3-layers.json`,bars:[...focusData.focus.byBar.entries()].map(([bar,state])=>`${bar}:${state[0]==='d'?'d':state==='melody'?'v':'m'}`).join(' ')}}:{}),
       // Rev.7: 使った作法の重みと、効いた回数
       knowledge:{weights:knowledgeWeights,fired:results[difficulty].knowledgeCounts||{}},
+      // 引き出し(2026-10-16): 使った/使わないと理由(rhythm-chart-drawers.js)
+      ...(results[difficulty].r2&&(difficulty==='MASTER'||difficulty==='HELL')?{drawers:[results[difficulty].r2]}:{}),
       status:'draft',
       reviewRequired:true,
       runtimeConnected:false,

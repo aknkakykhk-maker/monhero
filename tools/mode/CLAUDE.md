@@ -21,7 +21,7 @@
 **作るのは最新リビジョンだけ**(2026-10-12)。生成器などは最新の作り方しか持たず、古い版へ分ける分かれ道は作らない。
 古い作り方は git の記録(コミット **c2094ad53**)から取り出す。曲の一覧の `chartRevision` の数字と、既に作った譜面を読む読み方は残す。
 作る譜面が変わる強化は `CHART_REVISION_CODE_LATEST` を最新リビジョンの次にし、変更前のワークツリーと出力を突き合わせる。
-本文: [`docs/rules/CHART_ENGINE.md`](../../docs/rules/CHART_ENGINE.md)。呼び名は「MHB CHART ENGINE Rev.30」(「版30」とは書かない)。
+本文: [`docs/rules/CHART_ENGINE.md`](../../docs/rules/CHART_ENGINE.md)。呼び名は「MHB CHART ENGINE Rev.31」(「版31」とは書かない)。
 
 **HELL の Lv.** は空中の難しさを1ノーツの重さに足して**測って出す**(2026-10-13・`rhythm-chart-level.js`。一律1.2倍はやめた)。
 公開中の HELL の表示は公開したときの値のまま(`LEVEL_OVERRIDES`)。空中の無い譜面の Lv. は変わらない。本文: `docs/rules/CHART_ENGINE.md`
