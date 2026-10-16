@@ -146,7 +146,7 @@ const rhythmBuddyMakeBrain = (songs) => ({
   },
   // 部屋のチャットで話す一言(2026-10-07)。性格・その日の調子で変わる。kind='result' のときは、MVP・出来で場面を決める。
   // 直近に言ったものは避ける(マスモンごとに8つ覚える)
-  talk({ masuId, kind, songId = '', score = 0, diffId = '', mvp = false, me = '', who = '', mate = '', fc = 0, quit = false, missRate = 0, topicKind = '', topicSongId = '' }) {
+  talk({ masuId, baseId = null, kind, songId = '', score = 0, diffId = '', mvp = false, me = '', who = '', mate = '', fc = 0, quit = false, missRate = 0, topicKind = '', topicSongId = '' }) {
     const mon = RHYTHM_BUDDY_STORE.get().mons[masuId];
     const norm = rhythmBuddyNormalizeMon(mon);
     const mood = rhythmBuddyMood(masuId, rhythmBuddyDayKey(Date.now()), mon);
@@ -189,10 +189,11 @@ const rhythmBuddyMakeBrain = (songs) => ({
     const key = String(masuId);
     const recent = rhythmBuddyTalkRecent.get(key) || [];
     // 個体差(2026-10-13): 一人称・呼び方・口ぐせ・好きな曲/苦手な曲・叩き方のくせ・好物/趣味・誕生日。個体番号と相棒の記録から決まる(保存しない)
-    const persona = rhythmBuddyPersona(masuId, norm.trait);
+    // baseId(種)で性別も決まる(ウンディーネ種・ピクシー種は女の子。2026-10-16)
+    const persona = rhythmBuddyPersona(masuId, norm.trait, baseId);
     const favs = rhythmBuddyPersonaSongs(norm);
     Object.assign(vars, {
-      self: persona.self, call: persona.call.call || '', food: persona.food, hobby: persona.hobby,
+      self: persona.self, female: persona.gender === 'female', call: persona.call.call || '', food: persona.food, hobby: persona.hobby,
       like: favs.like ? nameOf(favs.like) : '', dislike: favs.dislike ? nameOf(favs.dislike) : '',
       hg: persona.habit.good, hb: persona.habit.bad, ht: persona.habit.talk,
     });
@@ -396,10 +397,12 @@ function RhythmBuddyDetail({ masu, mon, dayKey, songName, onBack }) {
   const songs = rhythmBuddyTopSongs(m, allSongs ? RHYTHM_BUDDY_SONG_KEEP : 5);
   const songCount = Object.keys(m.songs).length;
   // 個体差のプロフィール(2026-10-13)。個体番号と相棒の記録から決まる(保存しない)
-  const persona = rhythmBuddyPersona(masu.id, m.trait);
+  const persona = rhythmBuddyPersona(masu.id, m.trait, masu.baseId);
   const favs = rhythmBuddyPersonaSongs(m);
   const bdayToday = rhythmBuddyIsBirthday(persona, Date.now());
   const profile = [
+    // 性別は決まっている種(ウンディーネ種・ピクシー種)だけ出す(2026-10-16)
+    ...(persona.gender === 'female' ? [['gender', '性別', '女の子']] : []),
     ['self', '一人称', persona.self],
     ['call', '呼び方', persona.call.label],
     ['quirk', '口ぐせ', persona.quirk.label],

@@ -20,6 +20,28 @@ const RHYTHM_BUDDY_SELF_WORDS = Object.freeze({
   stubborn: Object.freeze(['おれ', 'わし', '拙者', '自分']),
   easygoing: Object.freeze(['ぼく', 'うち', 'わし', 'あたし']),
 });
+// 性別(2026-10-16 社長「ウンディーネとピクシー種は明確に女個体だから、そういう設定を足して」)。
+// 種(主血統)で決まる。ピクシー種(ピクシー・ミア・パンドラ)とウンディーネ種(ウンディーネ・ヤオビクニ・スネグーラチカ)は女の子。
+// ほかの種は決めない('')。保存はしない(個体のデータは書き換えない・種から毎回決める)
+const RHYTHM_BUDDY_FEMALE_LINEAGES = Object.freeze(['pixie', 'undine']);
+const rhythmBuddyGenderOf = (baseId) => {
+  const map = typeof MONSTER_LINEAGE_MAP !== 'undefined' ? MONSTER_LINEAGE_MAP : null;
+  const entry = map && baseId != null && Object.prototype.hasOwnProperty.call(map, baseId) ? map[baseId] : null;
+  return entry && RHYTHM_BUDDY_FEMALE_LINEAGES.includes(entry.main) ? 'female' : '';
+};
+// 女の子の一人称。性格ごとに、上の表から女の子の言い方だけを残したもの(頑固のように1つも無い性格は、近い言い方を足した)。先頭がいちばん多い形
+const RHYTHM_BUDDY_SELF_WORDS_FEMALE = Object.freeze({
+  '': Object.freeze(['わたし', 'あたし', 'うち']),
+  jester: Object.freeze(['あたし', 'うち', 'わたし']),
+  brave: Object.freeze(['あたし', 'わたし', 'うち']),
+  clingy: Object.freeze(['あたし', 'うち', 'わたし']),
+  smart: Object.freeze(['わたし', 'わたくし']),
+  serious: Object.freeze(['わたし', 'わたくし']),
+  proud: Object.freeze(['わたし', 'わたくし', 'あたし']),
+  worrier: Object.freeze(['わたし', 'あたし', 'うち']),
+  stubborn: Object.freeze(['あたし', 'わたし', 'うち']),
+  easygoing: Object.freeze(['うち', 'あたし', 'わたし']),
+});
 // B 人の呼び方。suf は名前のあとに付ける形('' は呼び捨て)、call は名前の代わりに呼ぶ形。
 // 先頭は、性格ごとの呼び方(33-rhythm-buddy-talk.jsx の RHYTHM_BUDDY_HONORIFICS)と同じにしておく
 const RHYTHM_BUDDY_CALL_STYLES = Object.freeze({
@@ -101,12 +123,15 @@ const rhythmBuddyPersonaBirthday = (id) => {
   return { month: d.getUTCMonth() + 1, day: d.getUTCDate() };
 };
 // その子の個体差(D の好き・苦手な曲は rhythmBuddyPersonaSongs で別に読む)
-const rhythmBuddyPersona = (masuId, trait = '') => {
+// baseId(種)を渡すと性別も決まる。渡さないとき・ほかの種は、これまでと1文字も変わらない
+const rhythmBuddyPersona = (masuId, trait = '', baseId = null) => {
   const t = Object.prototype.hasOwnProperty.call(RHYTHM_BUDDY_SELF_WORDS, trait) ? trait : '';
+  const gender = rhythmBuddyGenderOf(baseId);
   const callId = rhythmBuddyPersonaChoose(RHYTHM_BUDDY_CALLS[t], masuId, `call:${t}`, true);
   const quirk = rhythmBuddyPersonaChoose(RHYTHM_BUDDY_QUIRKS[t], masuId, `quirk:${t}`, false);
   return {
-    self: rhythmBuddyPersonaChoose(RHYTHM_BUDDY_SELF_WORDS[t], masuId, `self:${t}`, true),
+    gender,
+    self: rhythmBuddyPersonaChoose((gender === 'female' ? RHYTHM_BUDDY_SELF_WORDS_FEMALE : RHYTHM_BUDDY_SELF_WORDS)[t], masuId, `self:${t}`, true),
     call: RHYTHM_BUDDY_CALL_STYLES[callId],
     quirk: Object.freeze({ ...quirk, label: quirk.pre ? `「${quirk.pre.replace(/、$/, '')}」` : `文の終わりに「${quirk.end.replace(/^!/, '')}」` }),
     habit: rhythmBuddyPersonaChoose(RHYTHM_BUDDY_HABITS, masuId, 'habit', false),
@@ -262,5 +287,6 @@ const RHYTHM_BUDDY_PERSONA_TALK_RAW = ({
 const RHYTHM_BUDDY_PERSONA_TALK = Object.freeze(Object.fromEntries(Object.keys(RHYTHM_BUDDY_PERSONA_TALK_RAW)
   .map((k) => [k, Object.freeze({ ...RHYTHM_BUDDY_PERSONA_TALK_RAW[k], traitOnly: true })])));
 const RHYTHM_BUDDY_PERSONA_KINDS = Object.freeze(Object.keys(RHYTHM_BUDDY_PERSONA_TALK));
-// 一人称を、既存のセリフの「私」「ぼく」にも当てる(その子の一人称で話す)
-const rhythmBuddyPersonaSelf = (line, self) => (self ? String(line).replace(/私|ぼく/g, self) : String(line));
+// 一人称を、既存のセリフの「私」「ぼく」にも当てる(その子の一人称で話す)。
+// 女の子の個体は、セリフに直に書かれた「俺」「オイラ」「僕」「拙者」も、その子の一人称にする(2026-10-16)。ほかの子のセリフは変えない
+const rhythmBuddyPersonaSelf = (line, self, female = false) => (self ? String(line).replace(female ? /私|ぼく|俺|オイラ|僕|拙者/g : /私|ぼく/g, self) : String(line));

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 5dacc80d54b29e87
+// generated-sha256: 2f5539f409ee585b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-16 13:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-16 13:56"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -26722,7 +26722,7 @@ const rhythmBuddyTalkPick = ({ kind, trait = '', moodId = 'normal', vars = {}, r
   const make = (raw) => {
     let ok = true;
     let line = raw.split('{who}さん').join(callWord || `{who}${hon}`);
-    if (self && typeof rhythmBuddyPersonaSelf === 'function') line = rhythmBuddyPersonaSelf(line, self);
+    if (self && typeof rhythmBuddyPersonaSelf === 'function') line = rhythmBuddyPersonaSelf(line, self, vars.female === true);
     const text = line.replace(/\{([A-Za-z]+)\}/g, (all, key) => {
       const v = vars[key];
       if (v == null || v === '') { ok = false; return ''; }
@@ -27390,6 +27390,28 @@ const RHYTHM_BUDDY_SELF_WORDS = Object.freeze({
   stubborn: Object.freeze(['おれ', 'わし', '拙者', '自分']),
   easygoing: Object.freeze(['ぼく', 'うち', 'わし', 'あたし']),
 });
+// 性別(2026-10-16 社長「ウンディーネとピクシー種は明確に女個体だから、そういう設定を足して」)。
+// 種(主血統)で決まる。ピクシー種(ピクシー・ミア・パンドラ)とウンディーネ種(ウンディーネ・ヤオビクニ・スネグーラチカ)は女の子。
+// ほかの種は決めない('')。保存はしない(個体のデータは書き換えない・種から毎回決める)
+const RHYTHM_BUDDY_FEMALE_LINEAGES = Object.freeze(['pixie', 'undine']);
+const rhythmBuddyGenderOf = (baseId) => {
+  const map = typeof MONSTER_LINEAGE_MAP !== 'undefined' ? MONSTER_LINEAGE_MAP : null;
+  const entry = map && baseId != null && Object.prototype.hasOwnProperty.call(map, baseId) ? map[baseId] : null;
+  return entry && RHYTHM_BUDDY_FEMALE_LINEAGES.includes(entry.main) ? 'female' : '';
+};
+// 女の子の一人称。性格ごとに、上の表から女の子の言い方だけを残したもの(頑固のように1つも無い性格は、近い言い方を足した)。先頭がいちばん多い形
+const RHYTHM_BUDDY_SELF_WORDS_FEMALE = Object.freeze({
+  '': Object.freeze(['わたし', 'あたし', 'うち']),
+  jester: Object.freeze(['あたし', 'うち', 'わたし']),
+  brave: Object.freeze(['あたし', 'わたし', 'うち']),
+  clingy: Object.freeze(['あたし', 'うち', 'わたし']),
+  smart: Object.freeze(['わたし', 'わたくし']),
+  serious: Object.freeze(['わたし', 'わたくし']),
+  proud: Object.freeze(['わたし', 'わたくし', 'あたし']),
+  worrier: Object.freeze(['わたし', 'あたし', 'うち']),
+  stubborn: Object.freeze(['あたし', 'わたし', 'うち']),
+  easygoing: Object.freeze(['うち', 'あたし', 'わたし']),
+});
 // B 人の呼び方。suf は名前のあとに付ける形('' は呼び捨て)、call は名前の代わりに呼ぶ形。
 // 先頭は、性格ごとの呼び方(33-rhythm-buddy-talk.jsx の RHYTHM_BUDDY_HONORIFICS)と同じにしておく
 const RHYTHM_BUDDY_CALL_STYLES = Object.freeze({
@@ -27471,12 +27493,15 @@ const rhythmBuddyPersonaBirthday = (id) => {
   return { month: d.getUTCMonth() + 1, day: d.getUTCDate() };
 };
 // その子の個体差(D の好き・苦手な曲は rhythmBuddyPersonaSongs で別に読む)
-const rhythmBuddyPersona = (masuId, trait = '') => {
+// baseId(種)を渡すと性別も決まる。渡さないとき・ほかの種は、これまでと1文字も変わらない
+const rhythmBuddyPersona = (masuId, trait = '', baseId = null) => {
   const t = Object.prototype.hasOwnProperty.call(RHYTHM_BUDDY_SELF_WORDS, trait) ? trait : '';
+  const gender = rhythmBuddyGenderOf(baseId);
   const callId = rhythmBuddyPersonaChoose(RHYTHM_BUDDY_CALLS[t], masuId, `call:${t}`, true);
   const quirk = rhythmBuddyPersonaChoose(RHYTHM_BUDDY_QUIRKS[t], masuId, `quirk:${t}`, false);
   return {
-    self: rhythmBuddyPersonaChoose(RHYTHM_BUDDY_SELF_WORDS[t], masuId, `self:${t}`, true),
+    gender,
+    self: rhythmBuddyPersonaChoose((gender === 'female' ? RHYTHM_BUDDY_SELF_WORDS_FEMALE : RHYTHM_BUDDY_SELF_WORDS)[t], masuId, `self:${t}`, true),
     call: RHYTHM_BUDDY_CALL_STYLES[callId],
     quirk: Object.freeze({ ...quirk, label: quirk.pre ? `「${quirk.pre.replace(/、$/, '')}」` : `文の終わりに「${quirk.end.replace(/^!/, '')}」` }),
     habit: rhythmBuddyPersonaChoose(RHYTHM_BUDDY_HABITS, masuId, 'habit', false),
@@ -27632,8 +27657,9 @@ const RHYTHM_BUDDY_PERSONA_TALK_RAW = ({
 const RHYTHM_BUDDY_PERSONA_TALK = Object.freeze(Object.fromEntries(Object.keys(RHYTHM_BUDDY_PERSONA_TALK_RAW)
   .map((k) => [k, Object.freeze({ ...RHYTHM_BUDDY_PERSONA_TALK_RAW[k], traitOnly: true })])));
 const RHYTHM_BUDDY_PERSONA_KINDS = Object.freeze(Object.keys(RHYTHM_BUDDY_PERSONA_TALK));
-// 一人称を、既存のセリフの「私」「ぼく」にも当てる(その子の一人称で話す)
-const rhythmBuddyPersonaSelf = (line, self) => (self ? String(line).replace(/私|ぼく/g, self) : String(line));
+// 一人称を、既存のセリフの「私」「ぼく」にも当てる(その子の一人称で話す)。
+// 女の子の個体は、セリフに直に書かれた「俺」「オイラ」「僕」「拙者」も、その子の一人称にする(2026-10-16)。ほかの子のセリフは変えない
+const rhythmBuddyPersonaSelf = (line, self, female = false) => (self ? String(line).replace(female ? /私|ぼく|俺|オイラ|僕|拙者/g : /私|ぼく/g, self) : String(line));
 
 // ---- part: 34-friends-api.jsx ----
 // ===== フレンド機能の通信層(Supabase の friend_codes / friend_links) =====
@@ -43009,7 +43035,7 @@ const RHYTHM_MULTI = (() => {
       const now = Date.now();
       if (!opts.now && !opts.skipGap && now - (room.talk.at[x.id] || 0) < RHYTHM_MULTI_CPU_TALK_GAP_MS) return;
       let text = '';
-      try { text = cpuBrain.talk({ masuId: x.masuId, kind, me: c.name, ...vars }); } catch (_) { text = ''; }
+      try { text = cpuBrain.talk({ masuId: x.masuId, baseId: c.mb || null, kind, me: c.name, ...vars }); } catch (_) { text = ''; }
       text = rhythmMultiText(text, RHYTHM_MULTI_CHAT_MAX_LENGTH).trim();
       if (!text) return;
       room.talk.at[x.id] = now;
@@ -45407,7 +45433,7 @@ const rhythmBuddyMakeBrain = (songs) => ({
   },
   // 部屋のチャットで話す一言(2026-10-07)。性格・その日の調子で変わる。kind='result' のときは、MVP・出来で場面を決める。
   // 直近に言ったものは避ける(マスモンごとに8つ覚える)
-  talk({ masuId, kind, songId = '', score = 0, diffId = '', mvp = false, me = '', who = '', mate = '', fc = 0, quit = false, missRate = 0, topicKind = '', topicSongId = '' }) {
+  talk({ masuId, baseId = null, kind, songId = '', score = 0, diffId = '', mvp = false, me = '', who = '', mate = '', fc = 0, quit = false, missRate = 0, topicKind = '', topicSongId = '' }) {
     const mon = RHYTHM_BUDDY_STORE.get().mons[masuId];
     const norm = rhythmBuddyNormalizeMon(mon);
     const mood = rhythmBuddyMood(masuId, rhythmBuddyDayKey(Date.now()), mon);
@@ -45450,10 +45476,11 @@ const rhythmBuddyMakeBrain = (songs) => ({
     const key = String(masuId);
     const recent = rhythmBuddyTalkRecent.get(key) || [];
     // 個体差(2026-10-13): 一人称・呼び方・口ぐせ・好きな曲/苦手な曲・叩き方のくせ・好物/趣味・誕生日。個体番号と相棒の記録から決まる(保存しない)
-    const persona = rhythmBuddyPersona(masuId, norm.trait);
+    // baseId(種)で性別も決まる(ウンディーネ種・ピクシー種は女の子。2026-10-16)
+    const persona = rhythmBuddyPersona(masuId, norm.trait, baseId);
     const favs = rhythmBuddyPersonaSongs(norm);
     Object.assign(vars, {
-      self: persona.self, call: persona.call.call || '', food: persona.food, hobby: persona.hobby,
+      self: persona.self, female: persona.gender === 'female', call: persona.call.call || '', food: persona.food, hobby: persona.hobby,
       like: favs.like ? nameOf(favs.like) : '', dislike: favs.dislike ? nameOf(favs.dislike) : '',
       hg: persona.habit.good, hb: persona.habit.bad, ht: persona.habit.talk,
     });
@@ -45657,10 +45684,12 @@ function RhythmBuddyDetail({ masu, mon, dayKey, songName, onBack }) {
   const songs = rhythmBuddyTopSongs(m, allSongs ? RHYTHM_BUDDY_SONG_KEEP : 5);
   const songCount = Object.keys(m.songs).length;
   // 個体差のプロフィール(2026-10-13)。個体番号と相棒の記録から決まる(保存しない)
-  const persona = rhythmBuddyPersona(masu.id, m.trait);
+  const persona = rhythmBuddyPersona(masu.id, m.trait, masu.baseId);
   const favs = rhythmBuddyPersonaSongs(m);
   const bdayToday = rhythmBuddyIsBirthday(persona, Date.now());
   const profile = [
+    // 性別は決まっている種(ウンディーネ種・ピクシー種)だけ出す(2026-10-16)
+    ...(persona.gender === 'female' ? [['gender', '性別', '女の子']] : []),
     ['self', '一人称', persona.self],
     ['call', '呼び方', persona.call.label],
     ['quirk', '口ぐせ', persona.quirk.label],

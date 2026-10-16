@@ -437,7 +437,7 @@ const rhythmBuddyTalkPick = ({ kind, trait = '', moodId = 'normal', vars = {}, r
   const make = (raw) => {
     let ok = true;
     let line = raw.split('{who}さん').join(callWord || `{who}${hon}`);
-    if (self && typeof rhythmBuddyPersonaSelf === 'function') line = rhythmBuddyPersonaSelf(line, self);
+    if (self && typeof rhythmBuddyPersonaSelf === 'function') line = rhythmBuddyPersonaSelf(line, self, vars.female === true);
     const text = line.replace(/\{([A-Za-z]+)\}/g, (all, key) => {
       const v = vars[key];
       if (v == null || v === '') { ok = false; return ''; }
