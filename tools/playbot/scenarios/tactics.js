@@ -565,8 +565,12 @@ async function fightTactics(s, stats, { maxMs = 360000, waves = true, speedUp = 
       // ★ヤオビクニの「悠久の刻」(時間停止)を使ったターンは、ターンの数字が進まない(EX の説明どおり)。
       //   手札が配り直されたことでも「動いた」と見る(2026-10-09 はこれを進行停止と見誤っていた)
       const handSig = (t) => (t.hand || []).map((c) => c.label || c.type).join('|');
+      // ★時間停止のターンは、手札が同じ並びに見えることがある(2026-10-16 レフェリーくん: Master W1 で時間停止+ハイガードのあと 60 秒で進行停止)。
+      //   そのターンに時間停止を使っていたら、置いた枚数が 0 に戻り、手札が押せて実行ボタンがあれば「動いた」と見る
+      const timeStopNow = ctx.log.data.ex.slice(exBefore).some((e) => /悠久/.test(e.ex || ''));
       moved = !now.inBattle || now.over || now.turn !== before.turn || now.wave !== before.wave
-        || (k >= 4 && handSig(now) !== handSig(before) && (now.picked || 0) === 0 && now.hand.some((c) => c.usable));
+        || (k >= 4 && handSig(now) !== handSig(before) && (now.picked || 0) === 0 && now.hand.some((c) => c.usable))
+        || (timeStopNow && k >= 4 && (before.picked || 0) > 0 && (now.picked || 0) === 0 && now.hand.some((c) => c.usable) && now.actionPresent);
     }
     const after = await brain.readBoard(s);
     // 記録: このターンに出たダメージを、置いたカードの見込みの割合で子ごとに分ける
