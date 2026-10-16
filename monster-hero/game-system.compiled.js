@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 491e6ce68aeb9237
+// source-sha256: e95873c4c83c1e56
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-16 14:17";
+const BUILD_DATE = "2026-10-16 17:11";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -78496,6 +78496,7 @@ function MonsterHeroGame() {
   const [rhythmStrip, setRhythmStrip] = useState(() => RHYTHM_STRIP.value);
   const [rhythmCanvasPref, setRhythmCanvasPref] = useState(() => rhythmCanvasNotesPreference());
   const [rhythmGpuBandPref, setRhythmGpuBandPref] = useState(() => rhythmGpuBandPreference());
+  const [rhythmFloor3dPref, setRhythmFloor3dPref] = useState(() => rhythmFloor3dPreference());
   const [rhythmPreparePref, setRhythmPreparePref] = useState(() => rhythmPreparePreference());
   const [rhythmCanvasHitsPref, setRhythmCanvasHitsPref] = useState(() => rhythmCanvasHitsPreference());
   const [rhythmHitSparkPref, setRhythmHitSparkPref] = useState(() => rhythmHitSparkPreference());
@@ -103005,6 +103006,22 @@ function MonsterHeroGame() {
       "aria-pressed": rhythmGpuBandPref === value,
       onClick: () => setRhythmGpuBandPref(rhythmGpuBandSetPreference(value)),
       className: `min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmGpuBandPref === value ? 'bg-cyan-400 text-slate-900' : 'border border-white/20 bg-slate-900 text-slate-200'}`
+    }, label)))), React.createElement("section", {
+      "data-rhythm-floor3d-panel": true,
+      className: "mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"
+    }, React.createElement("h3", {
+      className: "text-xs font-black text-cyan-200"
+    }, "床と空中の見た目（試作）"), React.createElement("p", {
+      className: "mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80"
+    }, "「試作」は、地上のノーツを道の床に平たく貼り付けた形（奥ほど細く薄い台形）にし、空中のノーツを側面と厚みのある箱にして、床に影を落とします。判定の位置・時刻・指の扱いは変わりません。空中スライドの厚みは「スライドの帯の描き方」が「今の描き方」のときだけ出ます。次の演奏から効きます。"), React.createElement("div", {
+      className: "mt-2 flex gap-2"
+    }, [['', '今の見た目'], ['on', '試作']].map(([value, label]) => React.createElement("button", {
+      key: value || 'off',
+      type: "button",
+      "data-rhythm-floor3d-pref": value || 'off',
+      "aria-pressed": rhythmFloor3dPref === value,
+      onClick: () => setRhythmFloor3dPref(rhythmFloor3dSetPreference(value)),
+      className: `min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmFloor3dPref === value ? 'bg-cyan-400 text-slate-900' : 'border border-white/20 bg-slate-900 text-slate-200'}`
     }, label)))), React.createElement("section", {
       "data-rhythm-hit-spark-panel": true,
       className: "mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"

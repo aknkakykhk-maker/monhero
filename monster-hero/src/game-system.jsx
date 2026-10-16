@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a1881677220e4caa
+// generated-sha256: e9f8daafc69d1c1a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-16 14:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-16 17:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -47687,6 +47687,7 @@ function MonsterHeroGame() {
   // ノーツの描き方の上書き(検証用・デバッグ限定)。'' = 公開設定に従う / 'dom' / 'canvas'
   const [rhythmCanvasPref,setRhythmCanvasPref]=useState(()=>rhythmCanvasNotesPreference());
   const [rhythmGpuBandPref,setRhythmGpuBandPref]=useState(()=>rhythmGpuBandPreference());
+  const [rhythmFloor3dPref,setRhythmFloor3dPref]=useState(()=>rhythmFloor3dPreference());
   const [rhythmPreparePref,setRhythmPreparePref]=useState(()=>rhythmPreparePreference());
   const [rhythmCanvasHitsPref,setRhythmCanvasHitsPref]=useState(()=>rhythmCanvasHitsPreference());
   const [rhythmHitSparkPref,setRhythmHitSparkPref]=useState(()=>rhythmHitSparkPreference());
@@ -66021,6 +66022,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             {/* スライドの帯を GPU に一度だけ置いて描くかの切り替え(2026-10-11・作り替え B の S1)。社長の iPhone で今の描き方と比べてから既定にする(S3)。
                 プレイヤーの通常プレイには出ないので更新履歴・ヘルプには載せない */}
             <section data-rhythm-gpu-band-panel className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"><h3 className="text-xs font-black text-cyan-200">スライドの帯の描き方（検証用）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80">「GPU」はスライドの帯（地上・空中・影）の形を譜面を読んだときに一度だけ GPU に置き、毎コマは曲の位置だけ渡して描きます（帯が長い・多い曲で軽くするための試作）。既定（GPU）は、ノーツを WebGL で描いているとき（描画方式が自動で GPU がある端末など）に使います。「GPU（WebGL も）」は描画方式に関係なくノーツを WebGL で描きます（「ノーツの描き方」で canvas・要素を選んでいるときはそちらが勝ちます）。「今の描き方」は使いません。WebGL が使えないときは今の描き方に戻ります。次の演奏から効きます。</p><div className="mt-2 flex gap-2">{[['','既定（GPU）'],['gpu','GPU（WebGL も）'],['off','今の描き方']].map(([value,label])=><button key={value||'default'} type="button" data-rhythm-gpu-band-pref={value||'default'} aria-pressed={rhythmGpuBandPref===value} onClick={()=>setRhythmGpuBandPref(rhythmGpuBandSetPreference(value))} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmGpuBandPref===value?'bg-cyan-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></section>
+            {/* 床と空中の見た目の試作(2026-10-16 社長「地上は床にべったり、空中は立体感ある表示」)。見た目だけ・判定と入力は変えない。
+                プレイヤーの通常プレイには出ないので更新履歴・ヘルプには載せない */}
+            <section data-rhythm-floor3d-panel className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"><h3 className="text-xs font-black text-cyan-200">床と空中の見た目（試作）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80">「試作」は、地上のノーツを道の床に平たく貼り付けた形（奥ほど細く薄い台形）にし、空中のノーツを側面と厚みのある箱にして、床に影を落とします。判定の位置・時刻・指の扱いは変わりません。空中スライドの厚みは「スライドの帯の描き方」が「今の描き方」のときだけ出ます。次の演奏から効きます。</p><div className="mt-2 flex gap-2">{[['','今の見た目'],['on','試作']].map(([value,label])=><button key={value||'off'} type="button" data-rhythm-floor3d-pref={value||'off'} aria-pressed={rhythmFloor3dPref===value} onClick={()=>setRhythmFloor3dPref(rhythmFloor3dSetPreference(value))} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmFloor3dPref===value?'bg-cyan-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></section>
             {/* 演奏前の準備の切り替え(2026-10-11・修理部・社長「事前読み込みで改善されないの?」)。曲の最初のコマで初めて起きていた重い仕事を、曲の前の幕のあいだに済ませる。
                 2026-10-11 社長の決定で既定を「する」にした。何かあれば「しない」で戻す。見た目は変わらないので更新履歴・ヘルプには載せない */}
             {/* 叩いたときの光の描き方の切り替え(2026-10-11・修理部・発熱の調べ)。DOM の光の部品は CSS のアニメーションが毎コマ スタイルの再計算をさせていた。
