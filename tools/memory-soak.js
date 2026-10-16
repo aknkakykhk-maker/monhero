@@ -6,6 +6,7 @@
 //                                                             2026-10-14「クイックでオート無限やってたら気付いたらホームに戻ってた」の調べ。HOMEへ戻っていないかも記録する)
 //   node tools/memory-soak.js --mode rhythm --songs 6         モンヒロビートを6曲続けて演奏する
 //   node tools/memory-soak.js --mode idle   --minutes 10      HOMEで放っておく(ゲームが勝手に増やしていないか)
+//   … --bgm-light を足すと、場面のBGMを軽く持つ(デバッグ設定 mh_bgm_light_v1)を入れて測る(2026-10-16)
 //
 // 合格・不合格の検査ではなく、数字を出す道具。1回ごとに強制的にガベージコレクションをしてから測るので、
 // 「あとで片付く一時的なごみ」ではなく「持ち続けているもの」だけが数字に出る。
@@ -43,6 +44,8 @@ const makeRand = (seed) => { let t = seed >>> 0; return () => { t += 0x6D2B79F5;
   const s = await openSession({ playwright, pageUrl: PAGE_URL, port: PORT, out, rand: makeRand(20261010), persona: 'メモリ計測', report });
   // 音の「解いたあとの大きさ」を数える(計測用の見張りで、ゲームには何も足さない)。
   // decodeAudioData が返した AudioBuffer の 長さ×チャンネル×4バイト を足し、曲ごとの大きさも控える
+  // --bgm-light: 場面のBGMを軽く持つ(デバッグ設定 mh_bgm_light_v1・2026-10-16)を入れて測る
+  if (args.includes('--bgm-light')) await s.context.addInitScript(() => { try { localStorage.setItem('mh_bgm_light_v1', 'on'); } catch (e) {} });
   await s.context.addInitScript(() => {
     // 作られたままになっているものを数える見張り(計測用。ゲームの動きは変えない):
     //   canvas … document.createElement('canvas') で作られた数 / blob … createObjectURL した数 − revokeObjectURL した数 /
