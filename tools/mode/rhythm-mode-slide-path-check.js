@@ -32,7 +32,10 @@ check('同一polygon pointsのsetAttributeを省略',source.includes("if(segment
 // 見ることは同じ: 幅2の許し幅 .82・その時刻の帯の中心(rhythmSlideExpectedLane)から許し幅(rhythmSlideTrackingTolerance)より離れたら外れ
 check('SLIDE幅2の許容値と現在幅を使う追従判定',source.includes('const RHYTHM_SLIDE_TOLERANCE_LANES = .82;')
   &&source.includes('const target=rhythmSlideExpectedLane(session.note,chartNow),tolerance=rhythmSlideTrackingTolerance(session.note,chartNow);')
-  &&source.includes('const off=actual=>actual===null||Math.abs(actual-target)>tolerance;'));
+  // 2026-10-16: 空中の段のあるスライドだけ、帯が少し前(RHYTHM_SKY_SLIDE_FINGER_LAG_MS)にいた所も帯の上と見る(lagged)。空中の段の無い曲は lagged が null で今までどおり
+  &&(source.includes('const off=actual=>actual===null||Math.abs(actual-target)>tolerance;')
+    ||(source.includes('const lagged=rhythmSlideHasSky(session.note)?rhythmSlideExpectedLane(session.note,chartNow-RHYTHM_SKY_SLIDE_FINGER_LAG_MS):null;')
+      &&source.includes('const off=actual=>actual===null||(Math.abs(actual-target)>tolerance&&(lagged===null||Math.abs(actual-lagged)>tolerance));'))));
 // 2026-09-12: 継ぎ目(10等分の境目)の縁取りをやめ、外周だけを1本の線でなぞる形にした。
 // 継ぎ目は判定と無関係なのに横線として見えていて、チェックポイントと見分けが付かなかったため。
 // 縁の濃さ(.56)はそのまま。「縁が残っていること」を、新しい作りに対して見る。

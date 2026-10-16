@@ -3059,6 +3059,8 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
 const RHYTHM_MID_TRACKING_GRACE_MS=120;
 // 空中の段(試作): 高さのあるスライドが外れてから切れるまでの猶予。MASTER のホールド(120ms)を基準に、横持ち親指2本の人のくせのボットで決める
 const RHYTHM_SKY_SLIDE_CUT_GRACE_MS=120;
+// 空中の段のあるスライドで、指が帯から遅れて付いてくるのを許す長さ(帯がこの時間だけ前にいた所も帯の上と見る・2026-10-16)
+const RHYTHM_SKY_SLIDE_FINGER_LAG_MS=90;
 const RHYTHM_HOLD_TRACKING_MARGIN_LANES=.15;
 // 帯が細くなっていくとき、追従の許容に残す「少し前の太さ」までの長さ(ms)。指の反応の遅れぶん。
 const RHYTHM_HOLD_NARROWING_LOOKBACK_MS=150;
@@ -3553,7 +3555,11 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
     const atLine=laneCoordinate(pos.clientX,pos.clientY);
     const areaBox=areaRect();
     const atFinger=areaBox?rhythmLaneCoordinateAtPoint(pos.clientX,pos.clientY,areaBox):null;
-    const off=actual=>actual===null||Math.abs(actual-target)>tolerance;
+    // 空中の段のあるスライド(HELL)は、帯が速く横へ走る所で指が少し遅れて付いてくるのを許す(2026-10-16 社長「ヘルで上下クロスのときに、交わったタイミングで一瞬判定消える」)。
+    //   帯が RHYTHM_SKY_SLIDE_FINGER_LAG_MS 前にいた所も帯の上と見る。Grievous Lady HELL の 67.67〜67.95秒は帯が 0.3秒で4.5レーン走って空中の帯と交わり、
+    //   重い端末(CPU 4倍遅い条件のボット)では指が追いつかず外れが続いて切れていた。空中の段の無い曲(既存の全曲)は今までどおり
+    const lagged=rhythmSlideHasSky(session.note)?rhythmSlideExpectedLane(session.note,chartNow-RHYTHM_SKY_SLIDE_FINGER_LAG_MS):null;
+    const off=actual=>actual===null||(Math.abs(actual-target)>tolerance&&(lagged===null||Math.abs(actual-lagged)>tolerance));
     // 空中の段(試作・2026-10-10 社長「空中スライドのとき長押ししてたら、位置を合わせなくても勝手に判定オッケーになってない?」):
     // 判定ラインより上を押さえた指は、見えている帯と同じ「判定ラインの幅で測った位置」(atFinger)だけで見る。
     // 判定ラインの高さに直した位置(atLine)は奥の狭い道幅から外へ引き延ばすので、2つの許し幅を合わせると地上より広くなり、
@@ -3717,7 +3723,9 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
     // HOLDはこれまでどおり、猶予を超えたらその場でMISSを確定する。
     // 空中の段(試作・2026-10-10 社長「切れる作りにしてほしいけど猶予はあり」): 高さのあるスライドは、ホールドと同じく
     // 猶予を超えて外れたらその場で切れる(MISS)。地上だけのスライド(既存の全曲)はこれまでどおり切れない
-    if(session.kind==='SLIDE'&&!rhythmSlideHasSky(session.note))return;
+    // ★空中も地上も通るスライドは、帯がいま地上を走っている間は、地上のスライドと同じく切らない(2026-10-16・上下クロスで地上側の帯が切れていた。
+    //   「切れる」は空中の帯の決まり。地上を走っている所で外れた分は、地上のスライドと同じく判定の点だけを落とす)
+    if(session.kind==='SLIDE'&&!(rhythmSlideHasSky(session.note)&&rhythmSlideSkyAt(session.note,chartNow)>=.5))return;
     // ★空中のスライドも、ホールドと同じく終わりの100msでは切らない(2026-10-15 社長「AMOS の空スライドの離す方のとき毎回ミスになる」)。
     //   指を離す・次のノーツへ動かす瞬間に接点が帯から外れるのは当たり前で、もう成立する時間。ホールドにはあった免除が空中のスライドだけ無かった
     if(session.kind==='SLIDE'&&chartNow>=Number(session.note?.endTimeMs)-RHYTHM_HOLD_END_TRACKING_SKIP_MS)return;
