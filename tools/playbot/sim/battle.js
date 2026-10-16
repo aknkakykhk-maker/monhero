@@ -30,6 +30,7 @@
 // ★9 版目(2026-10-15)で、置けるものが無いときにだれも使えないカード(倒れた子の固有技など)を捨てる(ボットと同じ)・
 //   トレーニングの候補(atkgut・adapt)と起こすかの決め方 simulateRun({ revive: 'bot'|'always'|'never'|'carry' })・
 //   結果に敵のライフの合計(enemyHpTotal)・再生(regenTotal)・最後の一撃の余り(overkill)を足した。比べた結果は docs/playbot/reports/tier/lab/training.md
+// ★10 版目(2026-10-16): EX=best(上手な遊び方)の列はトレーニングもドミノ倒し+走り込み(ハカセくんの決定)。bot の列は実戦のボットと同じまま
 // ★まだ入れていないもの: 魂格(Tier の対象外)・強化ポイントでガッツ+10・緊急回復の上手な使い方。近似したものは md の頭(APPROX)に書く。
 const fs = require('fs');
 const path = require('path');
@@ -50,7 +51,7 @@ const APPROX = [
   'ボットの「見込みのダメージ」は画面の数字を読むが、ここでは同じ式(getDmg・被ダメージ)で出す',
   '魂格は入れていない(Tier の対象外。素のモンスターで比べる)。強化ポイントはすべて固有技へ使う(ガッツ+10 には使わない。ボットと同じ)',
   '緊急回復は AUTO と同じ条件(出せるカードが無く、ガッツさえあれば出せるとき)だけ。ブラウザのボットは緊急回復を使わないので、実戦とのずれを見るときは --emergency none も並べる',
-  'トレーニングの選び方はボットと同じ(丸太うけ+走り込み。ガッツの少ない子は丸太うけ+猛勉強。倒れた子を起こすかはランで1回だけ考える)。上手な選び方はまだ無い',
+  'トレーニングの選び方はボットと同じ(丸太うけ+走り込み。ガッツの少ない子は丸太うけ+猛勉強。倒れた子を起こすかはランで1回だけ考える)。EX=best の列(上手な遊び方)はドミノ倒し+走り込み(全員。10 版目・lab/training.md)',
   'アシカのポルツは「味方のだれかが敵の攻撃を受けた・ガードで受け止めた」ターンに1回ぶん消化する(ゲームは handleEnemyTurn の tookEnemyAttack)',
   'アシカのみゅあ・かどみうむ・ももすけの上限アップは、そのカードの回復のあとで1体ずつの上限へ掛ける(ゲームは permaBuffs が変わったあとの useEffect で掛ける)',
   'アシカを選ぶ画面の並び(Math.random の混ぜ方)は seed 付きの乱数で引く。ボットの「ガッツ不足」の数え方は、ガッツが足りずに置けない攻撃カードがあるターンに、ガッツ35%未満の子を1ずつ数える',
@@ -1572,6 +1573,8 @@ if (require.main === module) {
   const DIST_BONUS = argOf('--dist-bonus', 'on') !== 'off'; // WAVE 報酬の間合いボーナス(5 版目)
   const UNIQUE_UP = argOf('--unique-up', 'on') !== 'off'; // 固有技の強化(6 版目)
   const TRAINING = argOf('--training', 'bot'); // トレーニングの選び方(bot・none)。4 版目から既定は bot
+  // 10 版目(2026-10-16 ハカセくんの決定): EX=best(上手な遊び方)の列は、トレーニングもドミノ倒し+走り込み(lab/training.md)。--training を指定したらそれに従う
+  const trainingFor = (mode) => (mode === 'best' && !args.includes('--training') ? 'atkhp' : TRAINING);
   const ASSIST = argOf('--assist', 'bot'); // アシカの選び方(bot・none・カードの id)。3 版目から既定は bot(いまのボットと同じ)
   const mdFile = argOf('--md', '');
   const tierJson = argOf('--tier-json', ''); // 子ごとの「緊急回復」の1文を、この tier.json の「モンスター」へ書く(sim.md と同じ数字から)
@@ -1589,7 +1592,7 @@ if (require.main === module) {
         const waves = []; let past2 = 0; let clear = 0; let wipe = 0; let timeout = 0; let heroEx = 0; let dodges = 0; let boss = 0; let emer = 0;
         for (let i = 0; i < RUNS; i++) {
           const allies = pickAllies(m.id, mulberry32(hashSeed(SEED, 'allies', m.id, d, i)));
-          const r = simulateRun({ heroId: m.id, allies, difficulty: d, seed: hashSeed(SEED, i), maxWave: MAX_WAVE, exMode: mode, assist: ASSIST, training: TRAINING, emergency: EMERGENCY, distBonus: DIST_BONUS, uniqueUp: UNIQUE_UP });
+          const r = simulateRun({ heroId: m.id, allies, difficulty: d, seed: hashSeed(SEED, i), maxWave: MAX_WAVE, exMode: mode, assist: ASSIST, training: trainingFor(mode), emergency: EMERGENCY, distBonus: DIST_BONUS, uniqueUp: UNIQUE_UP });
           waves.push(r.wave);
           if (r.wave > 2 || r.result === 'clear') past2++;
           if (r.wave >= MAX_WAVE) boss++; // ボス戦(最後の WAVE。Hard〜Master は覚醒ムー)に入った回
@@ -1614,7 +1617,7 @@ if (require.main === module) {
           let sum = 0; let clear = 0; let boss = 0; let eu = 0;
           for (let i = 0; i < RUNS; i++) {
             const allies = pickAllies(m.id, mulberry32(hashSeed(SEED, 'allies', m.id, d, i)));
-            const r = simulateRun({ heroId: m.id, allies, difficulty: d, seed: hashSeed(SEED, i), maxWave: MAX_WAVE, exMode: mo, assist: ASSIST, training: TRAINING, emergency: em, distBonus: DIST_BONUS, uniqueUp: UNIQUE_UP });
+            const r = simulateRun({ heroId: m.id, allies, difficulty: d, seed: hashSeed(SEED, i), maxWave: MAX_WAVE, exMode: mo, assist: ASSIST, training: trainingFor(mo), emergency: em, distBonus: DIST_BONUS, uniqueUp: UNIQUE_UP });
             sum += r.wave; if (r.result === 'clear') clear++; if (r.wave >= MAX_WAVE) boss++; eu += r.emergencyUses;
           }
           statsX[em][mo][m.id][d] = { avg: sum / RUNS, clear: clear / RUNS, boss: boss / RUNS, bossWin: boss ? clear / boss : NaN, emergency: eu / RUNS };
@@ -1651,7 +1654,7 @@ if (require.main === module) {
   const bossCell = (x) => (x.boss > 0 ? `${pct(x.bossWin)}(${pct(x.boss)})` : '—');
   out(`# 簡易シミュレーター(タクティクスプロ・${DIFFS.join(' / ')}・各 ${RUNS} 回・EX の使い方 ${MODES.join(' / ')})`);
   out();
-  out(`\`node tools/playbot/sim/battle.js\` の出力(9 版目・スキル・アシカ・トレーニング・間合いボーナス・固有技の強化・緊急回復入り。トレーニング ${TRAINING}・アシカ ${ASSIST}・間合いボーナス ${DIST_BONUS ? 'on' : 'off'}・固有技の強化 ${UNIQUE_UP ? 'on' : 'off'}・緊急回復 ${EM_LIST.map((em) => EM_JA[em] || em).join(' / ')}。1つ目の「${EM_JA[EMERGENCY] || EMERGENCY}」で EX の使い方3通り・実戦との突き合わせ・bot と best の差を出し、2つ目からは EX=best だけを列に足した)。式はゲームのコード(60-app.jsx・19-difficulties・22-enemy・32-tactics-units)から写したもの。`);
+  out(`\`node tools/playbot/sim/battle.js\` の出力(10 版目・スキル・アシカ・トレーニング・間合いボーナス・固有技の強化・緊急回復入り。トレーニング ${TRAINING}(EX=best の列は ${trainingFor("best") === "atkhp" ? "ドミノ倒し+走り込み" : trainingFor("best")})・アシカ ${ASSIST}・間合いボーナス ${DIST_BONUS ? 'on' : 'off'}・固有技の強化 ${UNIQUE_UP ? 'on' : 'off'}・緊急回復 ${EM_LIST.map((em) => EM_JA[em] || em).join(' / ')}。1つ目の「${EM_JA[EMERGENCY] || EMERGENCY}」で EX の使い方3通り・実戦との突き合わせ・bot と best の差を出し、2つ目からは EX=best だけを列に足した)。式はゲームのコード(60-app.jsx・19-difficulties・22-enemy・32-tactics-units)から写したもの。`);
   out();
   out('**2 版目で入れたもの**(社長の決まり「ステは弱いけどスキル系で調整してるから、そこもちゃんと見て判断して」):');
   out();
