@@ -741,7 +741,10 @@ async function chooseBetween(s, mem, log) {
       return (f != null ? f + allyScore(nm) * 0.1 : allyScore(nm)) - num(t.match(/総合力\s*([\d,]+)/)[1]) / 4000;
     };
     // 供モンを固定したとき(PLAYBOT_TACTICS_ALLIES)は、その順に加える
-    const fixed = (mem.fixedAllies || []).map((nm) => allyBtns.find((t) => t.split(/\s+/)[0] === nm)).find(Boolean);
+    // ★もう加わった子は外す(候補の一覧に加わり済みの子も並ぶことがある。2026-10-16: 加わり済みのミタラシ・スプーキーをもう一度押して空振りし、
+    //   別の押し方で固定していない子(ゴーレム)が入った回・加わった順の記録に同じ子が2回出た回があった)
+    const joinedNames = new Set(log.data.build.allies.filter((x) => x.wave !== log.data.waves.length).map((x) => x.name));
+    const fixed = (mem.fixedAllies || []).filter((nm) => !joinedNames.has(nm)).map((nm) => allyBtns.find((t) => t.split(/\s+/)[0] === nm)).find(Boolean);
     // ★同じ合間でこの画面をもう一度読んだら、さっき選んだ子を押し直す(2026-10-10 ハカセくんの指摘: 1回目に選んだあと「最初の供モンか」が変わって
     //   点数が入れ替わり、2回目に別の子を押していた。記録はハム・実際に加わったのはゴーレム、というずれが出ていた)
     mem.allyPickAt = mem.allyPickAt || {};
