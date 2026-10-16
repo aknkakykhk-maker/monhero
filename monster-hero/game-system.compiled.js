@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3d583b6874503805
+// source-sha256: 573d626fd7f289a0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-16 20:30";
+const BUILD_DATE = "2026-10-16 21:04";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -33058,6 +33058,35 @@ const rhythmTouchDiagOf = ({
     }
   };
 };
+const RHYTHM_TOUCH_DIAG_MON_MAX = 3500;
+const rhythmTouchDiagWithMon = (diag, mon) => {
+  if (!diag || !diag.stats || !Array.isArray(mon) || !mon.length) return diag;
+  const list = mon.map(m => ({
+    ...m
+  }));
+  const size = () => {
+    try {
+      return JSON.stringify({
+        ...diag.stats,
+        mon: list
+      }).length;
+    } catch {
+      return Infinity;
+    }
+  };
+  for (let i = list.length - 1; i >= 0 && size() > RHYTHM_TOUCH_DIAG_MON_MAX; i--) {
+    delete list[i].c;
+    if (size() > RHYTHM_TOUCH_DIAG_MON_MAX) delete list[i].i;
+  }
+  while (list.length && size() > RHYTHM_TOUCH_DIAG_MON_MAX) list.pop();
+  return list.length ? {
+    ...diag,
+    stats: {
+      ...diag.stats,
+      mon: list
+    }
+  } : diag;
+};
 const rhythmTouchDiagRecord = async diag => {
   try {
     const saved = await storeGet(RHYTHM_TOUCH_DIAG_KEY, []);
@@ -34283,6 +34312,7 @@ const RhythmTapTest = ({
   }, [monsterSignature, settings.sideMonsterOpacity, settings.sideMonsterMotion, settings.lightweightMode, sideArtUrls]);
   const cutInRefs = useRef([]);
   const cutInOn = settings.monsterCutIn !== false && !settings.lightweightMode && settings.effectAmount !== 'MINIMAL';
+  const monLayersOn = useState(() => rhythmMonLayersOn())[0];
   const cutInElements = useMemo(() => {
     if (!cutInOn) return null;
     return React.createElement("div", {
@@ -34985,7 +35015,10 @@ const RhythmTapTest = ({
     }
     const monsterHit = judgment !== 'MISS' && !!monsterForNote(note);
     if (judgment !== 'MISS') {
-      if (monsterHit) RHYTHM_NOTE_SE_RUNTIME.playMonster();
+      if (monsterHit) {
+        RHYTHM_NOTE_SE_RUNTIME.playMonster();
+        RHYTHM_FRAME_DIAG.cue('se');
+      }
       if (rhythmNoteSkyHeight(note) > 0) RHYTHM_NOTE_SE_RUNTIME.playSky(judgment);
       if (!settings.lightweightMode && settings.effectAmount !== 'MINIMAL') {
         const area = playAreaRef.current;
@@ -35149,6 +35182,17 @@ const RhythmTapTest = ({
       };
     }
     const monster = monsterForNote(note);
+    if (monster) {
+      const ci = cutInOn ? cutInRefs.current[rhythmNoteMonsterSlot(note) - 1] : null,
+        img = ci && ci.querySelector('img');
+      RHYTHM_FRAME_DIAG.mark(songTimeMs, judgment, {
+        ly: monLayersOn ? 1 : 0,
+        ci: cutInOn ? 1 : 0,
+        dec: img ? img.complete && img.naturalWidth > 0 ? 1 : 0 : -1,
+        lw: settings.lightweightMode ? 1 : 0,
+        fx: String(settings.effectAmount || '').slice(0, 3)
+      });
+    }
     if (monster && monster.ability && rhythmMonsterAbilityTriggers(judgment)) {
       const activated = rhythmActivateMonsterAbility({
         ability: monster.ability,
@@ -35175,10 +35219,13 @@ const RhythmTapTest = ({
         if (slot >= 1) run.abilityCounts[slot - 1] = (Number(run.abilityCounts[slot - 1]) || 0) + 1;
         if (cutInOn) {
           const cutIn = cutInRefs.current[slot - 1];
-          if (cutIn) rhythmRestartAnimations([{
-            el: cutIn,
-            attr: 'rhythmCutinPlay'
-          }]);
+          if (cutIn) {
+            RHYTHM_FRAME_DIAG.cue('cutin');
+            rhythmRestartAnimations([{
+              el: cutIn,
+              attr: 'rhythmCutinPlay'
+            }]);
+          }
         }
       }
     }
@@ -35244,7 +35291,10 @@ const RhythmTapTest = ({
       life: run.life
     });
     const coarseKey = `${rhythmComboTier(run.combo)}|${Math.floor(run.combo / RHYTHM_COMBO_MILESTONE_STEP)}|${rhythmLifeState(run.life) === 'down' ? 'down' : 'up'}`;
-    if (showAbilityFlash) setAbilityFlash(`${abilityFlash.ability}！`);
+    if (showAbilityFlash) {
+      RHYTHM_FRAME_DIAG.cue('flash');
+      setAbilityFlash(`${abilityFlash.ability}！`);
+    }
     if (coarseKey !== run._viewCoarseKey) {
       run._viewCoarseKey = coarseKey;
       setView(v => ({
@@ -35377,7 +35427,7 @@ const RhythmTapTest = ({
         score: Number(run.score) || 0
       });
     } catch {}
-    const touchDiag = !debugPlay && !tutorial && !calibrating ? rhythmTouchDiagOf({
+    const touchDiag = !debugPlay && !tutorial && !calibrating ? rhythmTouchDiagWithMon(rhythmTouchDiagOf({
       song,
       difficulty,
       notes: run.notes,
@@ -35386,7 +35436,7 @@ const RhythmTapTest = ({
       mirror: mirrorOn,
       cleared: !failed,
       frame: rhythmFrameDiagOf()
-    }) : null;
+    }), RHYTHM_FRAME_DIAG.monSnapshot()) : null;
     if (touchDiag) void rhythmTouchDiagRecord(touchDiag);
     const touchReport = touchDiag && touchDiag.platform !== 'other' ? {
       playId: touchDiag.stats.playId,
@@ -35983,6 +36033,7 @@ const RhythmTapTest = ({
         const signature = [...active].sort().join(',');
         if (run.sideMonsterActiveSignature !== signature) {
           run.sideMonsterActiveSignature = signature;
+          RHYTHM_FRAME_DIAG.cue('side');
           sideMonsterRefs.current.forEach((el, index) => {
             if (!el) return;
             const want = active.has(index + 1) ? '1' : '0';
@@ -38234,6 +38285,7 @@ const RhythmTapTest = ({
   }, "DOWN")), React.createElement("div", {
     ref: playAreaRef,
     "data-rhythm-play-area": true,
+    "data-rhythm-mon-layers": monLayersOn ? '1' : undefined,
     "data-rhythm-judgment-snap": judgmentSnap ? '1' : undefined,
     "data-rhythm-judgment-fx": settings.judgmentFx === true && !settings.lightweightMode && settings.effectAmount !== 'MINIMAL' ? '1' : undefined,
     "data-rhythm-counting": countdownStep !== null ? '1' : undefined,
@@ -78350,6 +78402,15 @@ const loadAssistantChatMemoFor = async assistantId => {
   return normalizeAssistantChatMemo(v2, v1)[assistantId] || null;
 };
 const DEBUG_TRIALS = [{
+  id: 'rhythm_mon_layers',
+  added: '2026-10-16',
+  area: 'モンヒロビート',
+  key: 'mh_rhythm_mon_layers_v1',
+  on: 'on',
+  title: '🎵 モンスターノーツのかくつきの手当て',
+  note: 'モンスターノーツを取ったときに大きくなる両サイドのマスモンと光の輪を、曲の前から用意しておきます(見た目は変わりません)。入と切で同じ曲を1回ずつ遊ぶと、どちらがかくつかないかを記録で比べられます',
+  when: '次の演奏から'
+}, {
   id: 'bgm_light',
   added: '2026-10-16',
   area: '音',

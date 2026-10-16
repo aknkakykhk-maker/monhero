@@ -1777,7 +1777,14 @@ const RHYTHM_FRAME_DIAG=(()=>{
   const EARLY_MS=30000,LATE_MS=120000;
   const win=()=>({hist:new Uint32Array(BINS),n:0,sum:0,over34:0});
   let gapHist=null,tickHist=null,n=0,sum=0,max=0,over17=0,over34=0,over50=0,tickN=0,tickSum=0,last=0,first=0,startOver50=0,startMax=0,early=null,late=null;
-  const reset=()=>{gapHist=new Uint32Array(BINS);tickHist=new Uint32Array(BINS);n=0;sum=0;max=0;over17=0;over34=0;over50=0;tickN=0;tickSum=0;last=0;first=0;startOver50=0;startMax=0;early=win();late=win();};
+  // モンスターノーツの前後(2026-10-16 社長「モンスターノーツでかくつくの直ってない」)。手元の測り方では実機と合わないので、実機の遊んだ記録に残す。
+  //   叩いた時刻(判定した瞬間)の 0.5秒前〜3秒後のコマのうち、間隔が 25ms を超えたものだけを [叩いてからのms・間隔・そのコマの JS の ms] で覚える(1回に12個まで)。
+  //   JS の ms が小さいのに間隔が長いコマは、JS の外(合成・塗り・画像の用意・音)で止まっている。cue … その間に何をしたか(カットイン・能力の文字・音)と叩いてからのms。
+  //   1曲に6回まで。行の大きさの上限(stats は 4KB)を超えないよう、送る側(rhythmTouchDiagOf)が大きさを見て削る
+  const MON_PRE=500,MON_POST=3000,MON_SLOW=25,MON_MAX=6,MON_LIST=12;
+  let ring=[],marks=[];
+  const reset=()=>{gapHist=new Uint32Array(BINS);tickHist=new Uint32Array(BINS);n=0;sum=0;max=0;over17=0;over34=0;over50=0;tickN=0;tickSum=0;last=0;first=0;startOver50=0;startMax=0;early=win();late=win();ring=[];marks=[];};
+  const nowMs=()=>typeof performance!=='undefined'&&performance.now?performance.now():0;
   const addWin=(w,gap)=>{w.n++;w.sum+=gap;if(gap>34.3)w.over34++;w.hist[Math.min(BINS-1,Math.floor(gap))]++;};
   reset();
   const pct=(hist,total,p)=>{if(!total)return null;const want=Math.ceil(total*p);let seen=0;for(let i=0;i<BINS;i++){seen+=hist[i];if(seen>=want)return i;}return BINS-1;};
@@ -1796,7 +1803,24 @@ const RHYTHM_FRAME_DIAG=(()=>{
       }
       const d=Number(tickMs);
       if(Number.isFinite(d)&&d>=0&&d<1000){tickN++;tickSum+=d;tickHist[Math.min(BINS-1,Math.floor(d))]++;}
+      // モンスターノーツの前後: 直前の0.5秒ぶんを覚えておき、叩いたあと3秒は開いている窓へ入れる
+      if(Number.isFinite(t)&&ring.length?t>ring[ring.length-1].t:Number.isFinite(t)){
+        const gap=ring.length?t-ring[ring.length-1].t:0,tk=Number.isFinite(d)?d:-1;
+        ring.push({t,gap,tk});while(ring.length&&t-ring[0].t>MON_PRE+100)ring.shift();
+        for(const m of marks){if(m.closed)continue;const off=t-m.at;if(off>MON_POST){m.closed=true;continue;}m.n++;m.sum+=gap;if(gap>m.max)m.max=gap;
+          if(gap>MON_SLOW&&gap<1000&&m.l.length<MON_LIST)m.l.push([Math.round(off),Math.round(gap),tk<0?-1:Math.round(tk*10)/10]);}
+      }
     },
+    // モンスターノーツを判定した瞬間。songMs … 曲の時刻 / judge … 判定 / info … そのときの様子(カットインの絵を用意できていたかなど)
+    mark(songMs,judge,info){
+      if(marks.length>=MON_MAX)return;const at=nowMs();
+      const pre=ring.filter(f=>at-f.t<=MON_PRE&&f.gap>MON_SLOW&&f.gap<1000).slice(-4).map(f=>[Math.round(f.t-at),Math.round(f.gap),f.tk<0?-1:Math.round(f.tk*10)/10]);
+      marks.push({at,s:Math.round(Number(songMs)/100)/10,j:String(judge||'').slice(0,1),n:0,sum:0,max:0,l:pre,c:[],info:info&&typeof info==='object'?info:null,closed:false});
+    },
+    // 開いている窓に「その時に何をしたか」を残す(カットイン・能力の文字・音など)
+    cue(name){const at=nowMs();for(const m of marks)if(!m.closed&&at-m.at<=MON_POST&&m.c.length<8)m.c.push(String(name).slice(0,8)+'@'+Math.round(at-m.at));},
+    // 送る形(短く)。l は「叩いてからのms:間隔:JSのms」を ; でつないだ文字
+    monSnapshot(){return marks.map(m=>({s:m.s,j:m.j,n:m.n,avg:m.n?r1(m.sum/m.n):null,max:Math.round(m.max),l:m.l.map(x=>x.join(':')).join(';'),c:m.c.join(';'),...(m.info?{i:m.info}:{})}));},
     // meta … 描き方など(draw・gpu・dpr・w・h・cores・effect・fps・light)
     snapshot(meta){
       const winOf=w=>w&&w.n?{n:w.n,avg:r1(w.sum/w.n),p95:pct(w.hist,w.n,.95),over34:w.over34}:null;
@@ -30336,6 +30360,9 @@ const installRhythmGeometryStyles=()=>{
        全imgへ書くとその仕組みを壊す。 */
     [data-rhythm-side-monster-art]>*{display:block;width:100%;height:100%;object-fit:contain}
     [data-rhythm-side-monster][data-rhythm-side-active="1"] [data-rhythm-side-monster-art]{transform:scale(1.14)}
+    /* 層の先作り(試作・mh_rhythm_mon_layers_v1): 広がる絵と光の輪を、曲の前から GPU の層にしておく(叩いた瞬間に層を作って描き直さない) */
+    [data-rhythm-play-area][data-rhythm-mon-layers="1"] [data-rhythm-side-monster-art]{will-change:transform}
+    [data-rhythm-play-area][data-rhythm-mon-layers="1"] [data-rhythm-side-monster]::after{will-change:transform,opacity}
     [data-rhythm-play-area][data-rhythm-lightweight="true"] [data-rhythm-side-monster-art]{transition:none}
     [data-rhythm-side-monster][data-rhythm-side-motion="NORMAL"]{
       animation:mhRhythmSideHop var(--rhythm-side-beat,500ms) ease-in-out infinite;
@@ -31509,6 +31536,11 @@ const rhythmPrepareActive=()=>rhythmPreparePreference()!=='off';
 // デバッグの「床と空中の見た目(試作)」だけで入る。既定は切(キーが無ければ今までの見た目のまま)。見た目だけで、判定の位置・時刻・入力には触らない。
 // 値: 'on' = 試作の見た目 / 未設定 = 今まで。演奏を始めるとき(描き手をつなぐとき)に1回読む
 const RHYTHM_FLOOR3D_KEY='mh_rhythm_floor3d_proto_v1';
+// モンスターノーツの層の先作り(試作・2026-10-16 社長「モンスターノーツでかくつくの直ってない」)。値 'on' のとき、両サイドのマスモンの絵(叩くと1.14倍に広がる)と
+// 能力の光の輪に、曲の前から GPU の層を用意しておく(カットインの 2026-10-15 の直しと同じ考え)。見た目は変わらない。既定は切。
+// 実機の記録(stats.mon・RHYTHM_FRAME_DIAG.mark)に入/切を控えるので、同じ曲を入と切で1回ずつ遊べば比べられる
+const RHYTHM_MON_LAYERS_KEY='mh_rhythm_mon_layers_v1';
+const rhythmMonLayersOn=()=>{try{return typeof localStorage!=='undefined'&&localStorage.getItem(RHYTHM_MON_LAYERS_KEY)==='on';}catch{return false;}};
 // 'on2' = 試作2(2026-10-16 社長「もっと一目見て空中にある感じに」「結局色で覚えてるだけな気がする」): 色を抜いても高さで見分けられるように、
 //   空中は床の影をはっきり・影と箱を結ぶ導線・宙に立った箱、空中スライドは床の影と帯の下の幕で浮いたリボンに。帯の描き方の設定に関係なく効く(GPU の帯を使わない)
 // 'on3' = 試作3(2026-10-16 社長「全然だめだね。もっと立体感出せないの？」): 影や線を足すのではなく、空間そのものを見せる。
