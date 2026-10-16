@@ -26,7 +26,9 @@
 ## 前からある HELL
 
 Sheriruth・風がそよぐ場所・Against My Own Shadow の HELL は `rhythm-hell-mix.js` の `SONGS` に `drawers:false`(作り直しても今の形)。
-試すときは `--drawers`(書かない・数字だけ)。使うかどうかは社長が決める。
+試すときは `--drawers`(書かない・数字だけ)。
+**2026-10-16 社長の決定: 3曲とも今のまま。**「あくまでもツールの強化として学習してほしいだけで、基本的にいま実装されてる曲を変えることはしない」。
+引き出しは、これから作る曲・譜面だけに使う。配信中の曲の譜面は今後も作り直さない(⑩-2)。
 
 ```
 node tools/mode/rhythm-density-shape.js [--difficulty HELL|ALL] [--chart <譜面のJSON>]   R1
