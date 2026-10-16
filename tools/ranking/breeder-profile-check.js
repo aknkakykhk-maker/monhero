@@ -114,8 +114,10 @@ check('読み直しは間引く(ランキングを開くたびに読まない)',
   supa.includes('BREEDER_PROFILES_TTL_MS') && /Date\.now\(\) - _breederProfilesFetchedAt < BREEDER_PROFILES_TTL_MS/.test(supa));
 
 // ===== ④ 取得の入口が、組み立て前にそろえていること =====
+// 2026-10-15 から合算は「同点を JUST MARVELOUS で分ける」包み(sbFetchRhythmTotalRankings)の中で、
+// 実際に取りに行く sbFetchRhythmTotalRankingsRaw を呼ぶ。そろえる・覚えるのは Raw のほう
 for (const fn of ['sbFetchRankings', 'sbFetchBondLevels', 'sbFetchRhythmRankings',
-                  'sbFetchRhythmTotalRankings', 'sbFetchRhythmEventRows']) {
+                  'sbFetchRhythmTotalRankingsRaw', 'sbFetchRhythmEventRows']) {
   check(`${fn} は組み立て前にプロフィールをそろえる`,
     new RegExp(`const ${fn} = async[\\s\\S]{0,700}?await ensureBreederProfiles\\(`).test(supa));
 }
@@ -168,7 +170,7 @@ check('プロフィール表に登録がある人は、そちらが優先',
 check('受け皿で変えるのは枠だけ(名前やアイコンは記録のまま)',
   /recordFrameFor\(entry\);\s*\n\s*return \(frame && frame !== entry\.profileFrame\) \? \{ \.\.\.entry, profileFrame: frame \} : entry;/.test(supa));
 for (const [label, fn] of [['通常・ブリーダーLv', 'sbFetchRankings'], ['絆Lv・総合力', 'sbFetchBondLevels'],
-                           ['モンビー曲別', 'sbFetchRhythmRankings'], ['モンビー合算', 'sbFetchRhythmTotalRankings'],
+                           ['モンビー曲別', 'sbFetchRhythmRankings'], ['モンビー合算', 'sbFetchRhythmTotalRankingsRaw'],
                            ['モンビーイベント・週間', 'sbFetchRhythmEventRows']]) {
   const block = (supa.split(`const ${fn} = async`)[1] || '').slice(0, 6000);
   check(`${label}(${fn})の取得で枠を覚えている`, block.includes('rememberLooksFromRows'));

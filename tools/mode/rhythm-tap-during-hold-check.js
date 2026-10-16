@@ -103,14 +103,23 @@ for(const [label,make] of [['長押し',hold],['スライド',slide]]){
   const r=match([lone],[at('touch:2',4)],1500+150,0)[0];
   check('帯を押さえていないときは、150ms遅れたTAPもこれまでどおり叩ける',r.target===lone,r.target?'叩いた':'取れなかった');
 }
-// ── 接しているだけの隣のノーツは、これまでどおり控え(#1493を戻さない) ──
+// ── 接しているだけの隣のノーツ(2026-10-15 社長の決定「案1」で見直し) ──
+//   ・隣の TAP の時刻がいま(GOOD の窓の中)なら、帯の内側の端を押しても TAP を取る(Sheriruth HELL 11.7秒などで MISS になっていた)
+//   ・隣の TAP の時刻がいまではないなら、これまでどおり持ち替えの控え(#1493・2026-09-18「指置き換えで隣のノーツに引っ張られる」を戻さない)
 {
   // SLIDEの帯は 1〜5。隣のノーツは 5〜7 で、境界の1点(5.0)だけが接している
   const next=()=>({index:1,type:'TAP',timeMs:1500,lane:2,subLane:5,subLaneWidth:2,done:false,activePointerId:null});
   for(const spot of [4.4,4.6,4.8,5.0]){
     const s=slide();s.activePointerId='touch:1';
-    const r=play(s,next(),spot);
-    check(`帯の内側(${spot})へ置いた2本目は、接しているだけの隣のノーツに取られない`,
+    const r=play(s,next(),spot,1500);
+    check(`隣の TAP の時刻ちょうどに、帯の内側(${spot})の TAP の受付の中を押すと TAP を取る`,
+      r.target===r.other,
+      r.target?`取ったもの=index ${r.target.index}`:(r.standby?'控えにされた':'空打ち'));
+  }
+  for(const spot of [4.4,4.6,4.8,5.0]){
+    const s=slide();s.activePointerId='touch:1';
+    const r=play(s,next(),spot,1500-200);
+    check(`隣の TAP がまだ来ていないとき(200ms 手前)、帯の内側(${spot})へ置いた2本目は持ち替えの控えになる(引っ張られない)`,
       !r.target&&r.standby===r.held,
       r.target?`取ったもの=index ${r.target.index}`:(r.standby?'控え':'空打ち'));
   }

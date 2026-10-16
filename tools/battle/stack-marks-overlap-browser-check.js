@@ -5,7 +5,7 @@
 //   node tools/battle/stack-marks-overlap-browser-check.js     (OV_SHOT=<フォルダ> で静止画を残す)
 //
 // マークは差し込み口(window.__mhStackMarksDebug)で4つ並べ、予測ダメージは7桁の字に置き換えて、いちばん窮屈な形で測る。
-// 幅は 390×844 / 412×915 / 折りたたみを開いた 884×1104 / 横持ち 844×390。
+// 幅は 390×844 / 412×915 / Android の写しの 593×690 / 折りたたみを開いた 884×1104 / 横持ち 844×390。
 //   ① クラシック(チャレンジ。極限・GOD も同じ枠): 縦長の枠
 //   ② タクティクスプロ: 横長の新しい枠
 // 土台(起動・始め方)は unit-detail-browser-check.js から写した。
@@ -308,7 +308,8 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
     };
 
     const shotDir = process.env.OV_SHOT || '';
-    const SIZES = [[390, 844, '390'], [412, 915, '412'], [884, 1104, 'fold'], [844, 390, 'landscape']];
+    // 593×690 は社長の Android の写し(2026-10-15・1186×1380)の大きさ
+    const SIZES = [[390, 844, '390'], [412, 915, '412'], [593, 690, 'android'], [884, 1104, 'fold'], [844, 390, 'landscape']];
     const MARKS = { kenshi: 1, cookie: 5, trickAtk: 2, fateAtk: 1 };
     // 予測ダメージを7桁の字に置き換える(数字の幅だけを見る。描き直されたら戻るので、測る直前に毎回置く)
     const longPreview = () => page.evaluate(() => {

@@ -3095,6 +3095,16 @@ const RHYTHM_HOLD_RELEASE_GRACE_MS=100;
 // 浮いているノーツ(持ち替え待ち)の控え。指の数までしか増えないので、そのまま総当たりでよい。
 // 突き合わせ側は「開始時刻の窓」を無視してここを見る。
 const RHYTHM_FLOATING_NOTES=new Set();
+// ロングを押さえている指が、自分の離しの合図なしに指の一覧から消えたとき、離した扱いにする前に待つ時間(30-rhythm-play.jsx の syncTouches)
+const RHYTHM_MISSING_TOUCH_CONFIRM_MS=120;
+// 直前に TAP を取った指の控え(半レーンずれの両手押し・2026-10-15)。照合(rhythmMatchInputBatch)だけが読み書きする。見た目にも保存にも関わらない。
+//   同じ時刻に半レーンずれて並んだ2つの TAP を左右の指で押すとき、先に照合された指が重なりの所を押していると、その指が相手側の TAP を取ってしまい、
+//   あとの指(相手側の TAP の外側寄りを押した)に行き先が無くなって片方が MISS になっていた(Node の総当たりで2853通り中18通り)。
+//   あとの指に行き先が無く、その指が「先の指が取った TAP」の内側を押していて、先の指の位置で取れた同じ時刻の TAP がまだ残っていれば、あとの指にそちらを取らせる。
+//   先に取った判定は外さない・付け替えない。あとの指に行き先がある場合は何もしない
+const RHYTHM_RECENT_TAP_CLAIMS=[];
+const RHYTHM_RECENT_TAP_CLAIM_MS=200;
+const rhythmRecentTapClaimsClear=()=>{RHYTHM_RECENT_TAP_CLAIMS.length=0;};
 const rhythmFloatingNoteAdd=note=>{if(note)RHYTHM_FLOATING_NOTES.add(note);};
 const rhythmFloatingNoteRemove=note=>{if(note)RHYTHM_FLOATING_NOTES.delete(note);};
 const rhythmFloatingNotesClear=()=>{RHYTHM_FLOATING_NOTES.clear();};
@@ -3131,6 +3141,61 @@ const rhythmHandoverSpanAt=(note,chartTimeMs)=>{
 // ★ふつうの端末では pointerOnly は起きないので、この取り戻しは一度も動かない(何も変わらない)。
 //
 // 判定の窓・スコア・譜面には触らない。数えたものは演奏ごとにまとめ(snapshot)、端末に残してサーバーへ送る(30-rhythm-play.jsx)。
+// ===== 入力の記録(2026-10-15・社長「判定が機能しないのは致命的」。修理部・デバッグ専用) =====
+// 実機の指の動きをそのまま残し、Chromium で同じ時刻に流して判定を比べるためのもの(再生は tools/mode/rhythm-input-replay.js)。
+//   ・デバッグ設定「入力の記録」で入れたときだけ動く(既定は切。入れ切りだけ mh_rhythm_input_rec_v1 に残す)
+//   ・演奏エリアの touch / pointer を capture で全部残す: 曲の時刻(ms)・performance.now・指の番号・演奏エリア基準の座標・接触の幅・force
+//   ・判定の出来事は event(type, data) で書き込む(判定の持ち主=ビート部が呼ぶ。切のときは何もしない)
+//   ・記録はメモリの中だけ。演奏が終わったら「最後の記録」として1件だけ持ち、デバッグ設定の「記録をコピー」で写す
+//   ・名前・ID などの個人の情報は入れない。ランキング・保存・判定には一切触らない
+const RHYTHM_INPUT_REC_KEY='mh_rhythm_input_rec_v1';
+const RHYTHM_INPUT_REC=(()=>{
+  const MAX_EVENTS=300000;
+  let on=false,area=null,songMs=null,events=[],meta=null,last=null,bound=null,dropped=0;
+  const enabled=()=>{try{return typeof localStorage!=='undefined'&&localStorage.getItem(RHYTHM_INPUT_REC_KEY)==='on';}catch{return false;}};
+  const setEnabled=v=>{try{if(typeof localStorage!=='undefined'){if(v)localStorage.setItem(RHYTHM_INPUT_REC_KEY,'on');else localStorage.removeItem(RHYTHM_INPUT_REC_KEY);}}catch{}return enabled();};
+  const r1=v=>Math.round(Number(v)*10)/10;
+  const stamp=()=>{let ms=null;try{ms=songMs?r1(songMs()):null;}catch{}return {ms,at:r1(typeof performance!=='undefined'?performance.now():Date.now())};};
+  const push=item=>{if(events.length>=MAX_EVENTS){dropped++;return;}events.push(item);};
+  const box=()=>{try{return area.getBoundingClientRect();}catch{return {left:0,top:0,width:0,height:0};}};
+  const onTouch=e=>{
+    const r=box(),list=[];
+    for(const t of e.changedTouches||[])list.push({id:t.identifier,x:r1(t.clientX-r.left),y:r1(t.clientY-r.top),rx:r1(t.radiusX||0),ry:r1(t.radiusY||0),f:r1(t.force||0)});
+    push({k:e.type,...stamp(),ts:r1(e.timeStamp),n:(e.touches||[]).length,c:list});
+  };
+  const onPointer=e=>{
+    const r=box();
+    push({k:e.type,...stamp(),ts:r1(e.timeStamp),id:e.pointerId,pt:e.pointerType,x:r1(e.clientX-r.left),y:r1(e.clientY-r.top),w:r1(e.width||0),h:r1(e.height||0),f:r1(e.pressure||0),prim:!!e.isPrimary});
+  };
+  const TOUCH=['touchstart','touchmove','touchend','touchcancel'],POINTER=['pointerdown','pointermove','pointerup','pointercancel'];
+  const detach=()=>{if(bound&&area){TOUCH.forEach(t=>area.removeEventListener(t,onTouch,true));POINTER.forEach(t=>area.removeEventListener(t,onPointer,true));}bound=null;};
+  return {
+    enabled,setEnabled,isRecording:()=>on,
+    // 記録中の曲の時刻(ms)。再生の道具が「曲が鳴り始めたか」を待つのに使う
+    songMs:()=>on?stamp().ms:null,
+    // 演奏の始まりに呼ぶ。info … { songId, difficultyId, mirror, assist, offsetMs, speed } など(個人の情報は入れない)
+    begin(el,getSongMs,info){
+      if(on)this.finish({interrupted:true});
+      detach();on=false;if(!enabled()||!el)return false;
+      area=el;songMs=typeof getSongMs==='function'?getSongMs:null;events=[];dropped=0;
+      const r=box();
+      meta={v:1,startedAt:new Date().toISOString(),area:{w:r1(r.width),h:r1(r.height)},view:{w:typeof window!=='undefined'?window.innerWidth:0,h:typeof window!=='undefined'?window.innerHeight:0,dpr:typeof window!=='undefined'?window.devicePixelRatio:1},
+        ua:typeof navigator!=='undefined'?String(navigator.userAgent||'').slice(0,160):'',...(info&&typeof info==='object'?info:{})};
+      TOUCH.forEach(t=>area.addEventListener(t,onTouch,{capture:true,passive:true}));
+      POINTER.forEach(t=>area.addEventListener(t,onPointer,{capture:true,passive:true}));
+      bound=true;on=true;return true;
+    },
+    // 判定の出来事(付いた・外れた・控え・浮き・交差の持ち替え・MISS の理由など)。type は文字、data は小さなオブジェクト
+    event(type,data){if(!on)return;push({k:'judge',type:String(type||''),...stamp(),d:data&&typeof data==='object'?data:{v:data}});},
+    // 演奏の終わり(やめた・倒れたも)に呼ぶ。extra … { cleared, score など }
+    finish(extra){if(!on)return null;detach();on=false;last={...meta,endedAt:new Date().toISOString(),dropped,extra:extra&&typeof extra==='object'?extra:null,events};events=[];return last;},
+    // 途中でやめた演奏も、コピーの前にここで閉じて残す
+    last:()=>last,
+    close(){if(on)this.finish({interrupted:true});return last;},
+    summary:()=>last?{songId:last.songId||'',difficultyId:last.difficultyId||'',events:last.events.length,touches:last.events.filter(e=>e.k&&e.k.startsWith('touch')).length,judges:last.events.filter(e=>e.k==='judge').length,dropped:last.dropped}:null,
+    text:()=>last?JSON.stringify(last):'',
+  };
+})();
 const RHYTHM_TOUCH_BRIDGE_WAIT_MS=45;     // ポインタのあと、タッチをこれだけ待つ
 const RHYTHM_TOUCH_BRIDGE_MATCH_PX=28;    // 同じ指とみなす位置の差
 const RHYTHM_TOUCH_BRIDGE_KEEP_MS=600;    // 突き合わせのために覚えておく長さ(遅れて届くほうを待つ)
@@ -3473,6 +3538,15 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
   // 本体(30-rhythm-play.jsx)の「指→ノーツ」の表も同じ瞬間に入れ替える(setSlideSwapListener)。本体が応じなければ何もしない
   let slideSwapListener=null;
   const setSlideSwapListener=fn=>{slideSwapListener=typeof fn==='function'?fn:null;};
+  // 指の高さ(空中の受け付けか地上か)と、帯のその時刻の高さ(空中が半分以上か)が食い違うか。空中の段が無いときは食い違わない
+  const slideSwapLayerMismatch=(note,pos,chartNow)=>{
+    if(typeof RHYTHM_SKY_INPUT==='undefined'||!RHYTHM_SKY_INPUT.active||!note||!pos)return false;
+    const box=areaRect();
+    if(!box||!(box.height>0))return false;
+    const fingerSky=((Number(pos.clientY)-box.top)/box.height)<rhythmSkyAcceptLimit();
+    const bandSky=rhythmSlideHasSky(note)&&rhythmSlideSkyAt(note,chartNow)>=.5;
+    return fingerSky!==bandSky;
+  };
   const slideSwapAcrossFingers=session=>{
     if(!slideSwapListener||!session||session.kind!=='SLIDE'||session.finished||session.endFlickArmed||!session.note||session.note.done)return false;
     const key=session.key,myPos=positions.get(key);
@@ -3483,6 +3557,11 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
       if(!otherPos)continue;
       const myNow=estimatedSongMs(session)-session.offsetMs,otherNow=estimatedSongMs(other)-other.offsetMs;
       if(slideFingerOff(other,myPos,otherNow)||slideFingerOff(session,otherPos,myNow)||!slideFingerOff(other,otherPos,otherNow))continue;
+      // ★上下クロス(地上の帯と空中の帯が同じ横の位置で交わる)では結び直さない(2026-10-15 社長「上下なのに交わる瞬間に一瞬暗くなってた」)。
+      //   上の測り方は横の位置だけなので、交わった直後に指が少し遅れると、地上を押さえる指と空中を押さえる指が入れ替わり、
+      //   それぞれ高さの合わない帯に結ばれて「外れ」(暗くなる・点を落とす)になっていた。
+      //   指の高さ(地上/空中の受け付けの境目より上か)が、相手の帯のいまの高さと合うときだけ結び直す。空中の段の無い曲は今までどおり
+      if(slideSwapLayerMismatch(other.note,myPos,otherNow)||slideSwapLayerMismatch(session.note,otherPos,myNow))continue;
       if(slideSwapListener(key,otherKey,session.note,other.note)!==true)return false;
       sessions.set(key,other);sessions.set(otherKey,session);
       other.key=key;session.key=otherKey;
@@ -3604,12 +3683,16 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
     // 空中の段(試作・2026-10-10 社長「切れる作りにしてほしいけど猶予はあり」): 高さのあるスライドは、ホールドと同じく
     // 猶予を超えて外れたらその場で切れる(MISS)。地上だけのスライド(既存の全曲)はこれまでどおり切れない
     if(session.kind==='SLIDE'&&!rhythmSlideHasSky(session.note))return;
+    // ★空中のスライドも、ホールドと同じく終わりの100msでは切らない(2026-10-15 社長「AMOS の空スライドの離す方のとき毎回ミスになる」)。
+    //   指を離す・次のノーツへ動かす瞬間に接点が帯から外れるのは当たり前で、もう成立する時間。ホールドにはあった免除が空中のスライドだけ無かった
+    if(session.kind==='SLIDE'&&chartNow>=Number(session.note?.endTimeMs)-RHYTHM_HOLD_END_TRACKING_SKIP_MS)return;
     const graceMs=session.kind==='SLIDE'?RHYTHM_SKY_SLIDE_CUT_GRACE_MS:Number(session.note?._rhythmTrackingGraceMs)>0
       ?Number(session.note._rhythmTrackingGraceMs):RHYTHM_MID_TRACKING_GRACE_MS;
     // 空中のスライドは「いまの時刻」で外れていた長さを測る。指が止まったままだと pos.perfMs は押した瞬間のまま進まず、
     // 帯が離れていっても外れの長さが0のままで切れなかった(動かさないボットで見つけた)。ホールドは帯が横へ動かないので今までどおり
     const elapsedPerf=(session.kind==='SLIDE'?Math.max(Number(pos.perfMs)||0,nowPerf()):pos.perfMs)-session.trackingBadSincePerf;
     if(elapsedPerf<graceMs)return;
+    if(typeof RHYTHM_INPUT_REC!=='undefined')RHYTHM_INPUT_REC.event('track-cut',{note:session.note.index,key:session.key,kind:session.kind});
     session.note.holdJudgment='MISS';
     session.failed=true;
     // 猶予を超えて外れたままなら、指を離すのを待たずその場でMISS確定する。
@@ -3786,7 +3869,10 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
     const captureTouchPositions=event=>{Array.from(event.changedTouches||[]).forEach(touch=>record(inputKey('touch',touch.identifier),touch.clientX,touch.clientY));};
     const captureTouchStart=event=>{if(event.target?.closest?.('[data-rhythm-play-area]'))RHYTHM_NOTE_SE_RUNTIME.warm();captureTouchPositions(event);};
     const releaseTouches=event=>{const age=rhythmReleaseAgeMs(event.timeStamp,nowPerf());Array.from(event.changedTouches||[]).forEach(touch=>release(inputKey('touch',touch.identifier),false,age));};
-    const cancelTouches=event=>{Array.from(event.changedTouches||[]).forEach(touch=>release(inputKey('touch',touch.identifier),true));};
+    // ★端末に取り消された指(touchcancel)は、ふつうに離したのと同じに扱う(途中なら持ち替えの猶予・終わり際なら離しの判定)。
+    //   以前は押さえているロングをその場で MISS にしていた。取り消しはプレイヤーの操作ではなく端末の都合(二本指のジェスチャーと見られた等)で、
+    //   押したのに反応しないと報告のあった曲では取り消しが報告の無い曲の約11倍だった(タッチの診断・2026-10-15)
+    const cancelTouches=event=>{Array.from(event.changedTouches||[]).forEach(touch=>release(inputKey('touch',touch.identifier),false));};
     document.addEventListener('touchstart',captureTouchStart,{capture:true,passive:true});
     document.addEventListener('touchmove',captureTouchPositions,{capture:true,passive:true});
     document.addEventListener('touchend',releaseTouches,{capture:true,passive:true});
@@ -4174,6 +4260,19 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
       const span=inputSpan(note);
       return span?Math.min(Math.abs(subCoordinate-span.center),Number.isFinite(altCoordinate)?Math.abs(altCoordinate-span.center):Infinity):0;
     };
+    // ★押さえている帯・浮いている帯と、この指の高さ(空中の受け付けか地上か)が食い違うか(2026-10-15 社長「Sheriruth HELL の空スライド中にほかのノーツを拾われる」)。
+    //   横の位置だけで見ていたので、空中スライドの真下の地上のノーツを叩いた指が「空中スライドの持ち替えの2本目」と見なされ、
+    //   地上のノーツを取らずに MISS にしていた(再現: Sheriruth HELL 36.1〜38.7秒の空中スライドの真下の地上 TAP を右寄りで叩く)。
+    //   空中の段が無い曲・高さの分からない入力は今までどおり(食い違わない)
+    const heightMismatch=note=>{
+      if(!RHYTHM_SKY_INPUT.active)return false;
+      const ratio=Number(input?.sky);
+      if(!Number.isFinite(ratio))return false;
+      const fingerSky=ratio<rhythmSkyAcceptLimit();
+      const slide=rhythmNoteIsSlide(note)||note._rhythmOriginalType==='SLIDE';
+      const bandSky=slide?(rhythmSlideHasSky(note)&&rhythmSlideSkyAt(note,now-offset)>=.5):rhythmNoteSkyHeight(note)>0;
+      return fingerSky!==bandSky;
+    };
     // いま押さえられている HOLD/SLIDE の帯の上へ置いた指か(＝持ち替えの2本目)を探す。
     // withTolerance=false なら帯の内側そのもの、true なら受付の広がりぶんまで見る。
     const heldBandNote=withTolerance=>{
@@ -4183,6 +4282,7 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
         if(!note||note.done||note.activePointerId===null)continue;
         if(!(note.type==='HOLD'||rhythmNoteIsSlide(note)||note._rhythmOriginalType==='SLIDE'))continue;
         if(note.activePointerId===key)continue;   // 自分がいま押さえている指
+        if(heightMismatch(note))continue;         // 高さの違う帯(地上の指と空中の帯など)の持ち替えにはしない
         const span=rhythmHandoverSpanAt(note,now-offset);
         const tolerance=withTolerance
           ?(span.width<=1?RHYTHM_NARROW_TAP_TOLERANCE_SUB_LANES:RHYTHM_TAP_TOLERANCE_SUB_LANES)
@@ -4234,7 +4334,29 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
       return false;
     };
     const insideHeldBand=heldBandNote(false);
-    if(insideHeldBand&&!insideOverlapWith(insideHeldBand))return {input,target:null,deltaMs:null,standby:insideHeldBand};
+    // ★帯の内側でも、すぐ横の TAP の時刻が「いま」(GOOD の窓の中)で、その TAP の受付の中を押しているなら、控えにせず TAP へ通す
+    //   (2026-10-15 社長の決定「案1」。押さえている帯と同じ高さのすぐ横の TAP を、帯の側の端で押すと MISS になっていた。Sheriruth HELL 11.7秒など)。
+    //   隣の TAP の時刻がいまではないときは、これまでどおり持ち替えの控え(2026-09-18 の「指置き換えで隣のノーツに引っ張られる」を戻さない)
+    const nowTapAt=()=>{
+      for(let index=matchStart;index<matchEnd;index++){
+        const note=source[index];
+        if(!note||note.done||note.type!=='TAP'||note.activePointerId!==null||claimed.has(index))continue;
+        if(Math.abs(now-(Number(note.timeMs)+offset))>RHYTHM_COMBO_SAFE_WINDOW_MS)continue;
+        // 時刻を大きく過ぎた TAP は、これまでどおり持ち替えを優先する(RHYTHM_HANDOVER_PREFER_LATE_MS の説明)
+        if(now-(Number(note.timeMs)+offset)>RHYTHM_HANDOVER_PREFER_LATE_MS)continue;
+        if(heightMismatch(note))continue;
+        const span=inputSpan(note);
+        if(!span)continue;
+        const tolerance=span.width===1?RHYTHM_NARROW_TAP_TOLERANCE_SUB_LANES:RHYTHM_TAP_TOLERANCE_SUB_LANES;
+        if(subCoordinate>=span.start-tolerance&&subCoordinate<=span.end+tolerance)return true;
+      }
+      return false;
+    };
+    // ★TAP へ通したときも、押したままなら持ち替えの控えにもする(2026-10-15 改善部 K1)。
+    //   隣の TAP の時刻のころに2本目を帯へ置いて持ち替えると、2本目が TAP を取ったまま控えにならず、1本目を離した瞬間に帯の持ち主がいなくなってスライドが切れていた。
+    //   TAP の判定はそのまま付け、1本目を離したら帯を2本目へ渡す(本体の inputStarts が standby を見る)
+    const bandStandby=insideHeldBand&&!insideOverlapWith(insideHeldBand)?insideHeldBand:null;
+    if(bandStandby&&!nowTapAt())return {input,target:null,deltaMs:null,standby:bandStandby};
     // どのノーツを叩いたことにするかの決め方。
     //
     // 【なぜ「近い順」だけではいけないか】
@@ -4307,7 +4429,8 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
     let passedBest=null,upcomingBest=null;
     for(let index=matchStart;index<matchEnd;index++){
       const note=source[index];
-      if(claimed.has(index)||!note||note.done||note.activePointerId!==null||!RHYTHM_NOTE_TYPES.includes(note.type)||tapOnly&&note.type!=='TAP')continue;
+      // flickOnly … 押さえていたホールド/スライドが指を置いたまま終わったあと、その指を滑らせたときの取り直し。フリックだけを取る(下の説明・30-rhythm-play.jsx の inputMoves)
+      if(claimed.has(index)||!note||note.done||note.activePointerId!==null||!RHYTHM_NOTE_TYPES.includes(note.type)||tapOnly&&note.type!=='TAP'||input?.flickOnly===true&&note.type!=='FLICK')continue;
       const noteTime=Number(note.timeMs)+offset;
       if(tapOnly&&Number.isFinite(syntheticTime)&&Math.abs(Number(note.timeMs)-syntheticTime)>.001)continue;
       // 【2026-09-13・両手の高速タップでミスが出る】
@@ -4380,6 +4503,7 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
         const index=Number(note.index);
         if(note.activePointerId!==null||claimed.has(index))continue;
         if(tapOnly)continue;   // 指の代わりに作った仮の入力では持ち替えを扱わない
+        if(heightMismatch(note))continue;   // 高さの違う帯は拾わない(地上を叩いた指で空中の浮いた帯を拾わない)
         const span=rhythmHandoverSpanAt(note,now-offset);
         const tolerance=span.width<=1?RHYTHM_NARROW_TAP_TOLERANCE_SUB_LANES:RHYTHM_TAP_TOLERANCE_SUB_LANES;
         const onBand=Number.isFinite(subCoordinate)
@@ -4407,12 +4531,37 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
     //
     // ここでは「控えの指」として返すだけで、判定も音も出さない。
     // 実際の引き継ぎは、1本目が離れたときに game-system.jsx 側が行う。
+    // 半レーンずれの両手押しの救い(RHYTHM_RECENT_TAP_CLAIMS の説明)。仮の入力・取り直し・空中の指では見ない
+    if(!picked&&!tapOnly&&!rejudge&&Number.isFinite(subCoordinate)&&RHYTHM_RECENT_TAP_CLAIMS.length){
+      for(let k=RHYTHM_RECENT_TAP_CLAIMS.length-1;k>=0&&!picked;k--){
+        const c=RHYTHM_RECENT_TAP_CLAIMS[k];
+        if(!c||judgeNow-c.at>RHYTHM_RECENT_TAP_CLAIM_MS||c.key===key)continue;
+        const taken=inputSpan(c.note);
+        if(!taken||!(subCoordinate>=taken.start&&subCoordinate<=taken.end))continue;   // あとの指は、先の指が取った TAP の内側を押している
+        for(let index=matchStart;index<matchEnd;index++){
+          const note=source[index];
+          if(!note||note===c.note||note.done||note.type!=='TAP'||note.activePointerId!==null||claimed.has(index))continue;
+          if(Math.abs(Number(note.timeMs)-Number(c.note.timeMs))>2)continue;                 // 同じ時刻に並んだ TAP だけ
+          if(Math.abs(now-(Number(note.timeMs)+offset))>RHYTHM_INPUT_MATCH_WINDOW_MS)continue;
+          if(heightMismatch(note))continue;
+          const span=inputSpan(note);
+          if(!span)continue;
+          const tolerance=span.width===1?RHYTHM_NARROW_TAP_TOLERANCE_SUB_LANES:RHYTHM_TAP_TOLERANCE_SUB_LANES;
+          if(!(c.sub>=span.start-tolerance&&c.sub<=span.end+tolerance))continue;            // 先の指の位置でも取れた TAP
+          picked=note;pickedIndex=index;break;
+        }
+      }
+    }
     if(!picked){
       const nearHeldBand=heldBandNote(true);
       if(nearHeldBand)return {input,target:null,deltaMs:null,standby:nearHeldBand};
     }
     if(!picked)return {input,target:null,deltaMs:null};
     claimed.add(pickedIndex);
+    if(picked.type==='TAP'&&!tapOnly&&Number.isFinite(subCoordinate)){
+      RHYTHM_RECENT_TAP_CLAIMS.push({note:picked,key,sub:subCoordinate,at:judgeNow});
+      while(RHYTHM_RECENT_TAP_CLAIMS.length>12||(RHYTHM_RECENT_TAP_CLAIMS.length&&judgeNow-RHYTHM_RECENT_TAP_CLAIMS[0].at>RHYTHM_RECENT_TAP_CLAIM_MS*4))RHYTHM_RECENT_TAP_CLAIMS.shift();
+    }
     if(tapOnly)RHYTHM_TOUCH_SPAN_RUNTIME.claimSyntheticTarget(key,picked);
     // 空中の段のある譜面で地上のノーツを取れた押下の深さを覚える(空中の境目をその人の構えに合わせる試作・既定は切)
     if(RHYTHM_SKY_INPUT.active&&RHYTHM_SKY_REACH_ADAPT.on&&!tapOnly&&!(rhythmNoteIsSlide(picked)?rhythmSlideHasSky(picked)&&rhythmSlideSkyAt(picked,Number(picked.timeMs)||0)>=.5:rhythmNoteSkyHeight(picked)>0))RHYTHM_SKY_REACH_ADAPT.note(Number(input?.sky));
@@ -4426,7 +4575,7 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
     const touchDelta=judgeNow-(picked.timeMs+offset);
     if(originalType==='FLICK')RHYTHM_NOTE_SE_RUNTIME.markInputGroupHandled();
     else RHYTHM_NOTE_SE_RUNTIME.play(null,typeof rhythmJudgeTap==='function'?rhythmJudgeTap(touchDelta):null);
-    return {input,target:picked,deltaMs:touchDelta};
+    return {input,target:picked,deltaMs:touchDelta,standby:picked.type==='TAP'?bandStandby:null};
   });
 };
 
@@ -29741,15 +29890,23 @@ const RHYTHM_RANKING_MAX_PAGES=10;
 // 同じユーザー名の行が複数あっても、いちばん高いスコアの1件だけを残す
 // (「自分のスコアはハイスコア1件のみ」という仕様。書き込み側は1プレイ=1行のまま増やし続け、
 // 表示のときにだけ集約する。既存のaggregateBreederLevelsと同じ考え方)
+// 行の並べ方(2026-10-15・社長の決定「同じスコアなら JUST MARVELOUS が多い人を上に。それも同じなら先に出した人が上」)。
+// JUST MARVELOUS の回数は記録の詳細(party の先頭の precise)。2026-09-13 より前の記録には無いので 0 回として扱う。
+// 出した時刻は created_at(読めなければいちばん後ろ)。負の数を返したら a が上
+const rhythmRankingRowPrecise=(r)=>{const d=Array.isArray(r?.party)?r.party[0]:null;const n=Number(d&&typeof d==='object'?d.precise:0);return Number.isFinite(n)&&n>0?Math.floor(n):0;};
+const rhythmRankingRowTime=(r)=>{const t=Date.parse(r?.created_at||'');return Number.isFinite(t)?t:Infinity;};
+const rhythmRankingCompareRows=(a,b)=>((Number(b?.score)||0)-(Number(a?.score)||0))
+  ||(rhythmRankingRowPrecise(b)-rhythmRankingRowPrecise(a))
+  ||(rhythmRankingRowTime(a)===rhythmRankingRowTime(b)?0:(rhythmRankingRowTime(a)<rhythmRankingRowTime(b)?-1:1));
 const rhythmRankingDedupeByUser=(rows)=>{
   const byUser=new Map();
   (rows||[]).forEach(r=>{
     const name=r?.user_name||'名無しのブリーダー';
-    const score=Number(r?.score)||0;
     const cur=byUser.get(name);
-    if(!cur||score>(Number(cur.score)||0))byUser.set(name,r);
+    // その人のいちばん良い1件(並べ方と同じ決まり。同点なら JUST MARVELOUS が多い方・先に出した方)
+    if(!cur||rhythmRankingCompareRows(r,cur)<0)byUser.set(name,r);
   });
-  return [...byUser.values()].sort((a,b)=>(Number(b.score)||0)-(Number(a.score)||0));
+  return [...byUser.values()].sort(rhythmRankingCompareRows);
 };
 // Supabaseの生の行を画面表示用の形へ整える。partyには判定内訳等の詳細をJSONで持たせている
 // (種族チャレンジがpartyへ育て方の詳細を持たせているのと同じ、列を増やさない考え方)。
@@ -30093,8 +30250,9 @@ const installRhythmGeometryStyles=()=>{
     [data-rhythm-screen-flash][data-rhythm-flash="1"]{animation:mhRhythmScreenFlash 620ms ease-out 1}
     @keyframes mhRhythmScreenFlash{0%{opacity:0}12%{opacity:1}100%{opacity:0}}
     /* 演出量MINIMAL・軽量モードでは出さない(音は鳴る) */
-    [data-rhythm-play-area][data-rhythm-lightweight="true"] [data-rhythm-hit-layer],
-    [data-rhythm-play-area][data-rhythm-effect="MINIMAL"] [data-rhythm-hit-layer],
+    /* ただし設定「押したときの光」が「いつも出す」(data-rhythm-tap-light)のときは、判定ラインで弾ける光だけは出す(2026-10-15) */
+    [data-rhythm-play-area][data-rhythm-lightweight="true"]:not([data-rhythm-tap-light="1"]) [data-rhythm-hit-layer],
+    [data-rhythm-play-area][data-rhythm-effect="MINIMAL"]:not([data-rhythm-tap-light="1"]) [data-rhythm-hit-layer],
     [data-rhythm-play-area][data-rhythm-lightweight="true"] [data-rhythm-screen-flash],
     [data-rhythm-play-area][data-rhythm-effect="MINIMAL"] [data-rhythm-screen-flash]{display:none!important}
     /* 能力名(「ミーア 元気！」)も出た瞬間に大きく弾ませる。1曲に最大4回しか出ないので大きめに。 */
@@ -30133,11 +30291,14 @@ const installRhythmGeometryStyles=()=>{
        跳ねる速さは1拍の長さ(--rhythm-side-beat)。曲ごとにプレイ開始時へ一度だけ書く。 */
     /* --- マスモンの能力のカットイン(2026-09-26) ---
        ノーツより後ろ(z-index:1。両サイドのマスモンと同じ層)。帯と絵は動かない形で、動かすのは transform と opacity だけ。
-       ふだんは visibility:hidden(描かない)。data-rhythm-cutin-play="1" のあいだだけ 0.9秒のアニメーションで見える。
+       ふだんは透明(opacity:0)。data-rhythm-cutin-play="1" のあいだだけ 0.9秒のアニメーションで見える。
        ★印の名前を入れ物([data-rhythm-cutin])と同じにしない。同じだと入れ物の inset:0 が部品にも当たり、右の部品が左端へ寄った */
     [data-rhythm-cutin]{position:absolute;inset:0;pointer-events:none;z-index:1;overflow:hidden}
     /* 道の外の空いたところ(画面の端・上寄り)に収める。道の真ん中まで入り込むとノーツの流れる場所がごちゃつく */
-    [data-rhythm-cutin-slot]{position:absolute;top:8%;height:32%;width:40%;visibility:hidden;opacity:0}
+    /* ★出る瞬間に絵と帯を描き起こさないよう、曲の前から「透明のまま」層として用意しておく(visibility は隠さない)。
+       隠していると、モンスターノーツを取った瞬間に初めて描いて GPU へ渡すので、その1コマが重かった(2026-10-15)。
+       透明(opacity:0)なので見た目は今までと同じ。押せる所も変わらない(入れ物が pointer-events:none) */
+    [data-rhythm-cutin-slot]{position:absolute;top:8%;height:32%;width:40%;opacity:0;will-change:transform,opacity}
     [data-rhythm-cutin-slot][data-side="left"]{left:0}
     [data-rhythm-cutin-slot][data-side="right"]{right:0}
     [data-rhythm-cutin-band]{position:absolute;left:-10%;right:-10%;top:30%;height:40%;transform:skewY(-9deg);
@@ -32466,6 +32627,10 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   const endBarKind=(note,flick)=>flick?'FLICK':rhythmNoteIsSlide(note)?'SLIDE':'HOLD';
   const END_FLICK_ARROW_GLOWS=Object.freeze([[4,`rgba(${RHYTHM_NOTE_COLORS.FLICK.rgb},.95)`],[2,'rgba(2,6,23,.85)']]);
   const END_FLICK_ARROW_FILL=Object.freeze([[0,RHYTHM_NOTE_COLORS.FLICK.hi],[.6,RHYTHM_NOTE_COLORS.FLICK.mid],[1,RHYTHM_NOTE_COLORS.FLICK.lo]]);
+  // 空中のスライドの終点フリックの印(2026-10-15 社長「小さくて見落として離してしまう」)。地上と同じピンクの横棒＋上向きの矢印を、
+  // 一回り大きく・白いふちと強めの光で描く。光は焼いた絵を貼るだけなので、演出量「最小」・軽量モード・演出の自動の控えめでも消さない
+  const SKY_END_FLICK={barW:1.5,barMinW:30,barH:1.6,arrowW:30,arrowH:22};
+  const SKY_END_FLICK_ARROW_GLOWS=Object.freeze([[9,`rgba(${RHYTHM_NOTE_COLORS.FLICK.rgb},.9)`],[4,`rgba(${RHYTHM_NOTE_COLORS.FLICK.rgb},.95)`],[2,'rgba(2,6,23,.85)']]);
   // 空中のタップ・フリック(skyHeight が数で >0)を、ふつうのノーツと同じ板で描くか(既定 'plate')。旧スタイルは localStorage で選べる
   const isSkyPlate=note=>!!note&&Number(note.skyHeight)>0&&skyTapStyle()==='plate';
   const headStyle=(note,failed,monster)=>{
@@ -33261,9 +33426,16 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     if(!end)return;
     // DOM 版: top = releaseY + noteH/2 - 4、高さ 8px を scaleY(0.52+0.48*奥行き) で中心基準に伸縮 → 中心は end.cy のまま
     // 横幅は帯と同じくノーツサイズの倍率(sizeX と同じ考え方。中心は動かさない)
-    const flick=note.endFlick===true,h=8*(0.52+end.scale*.48),w=end.w*sizeScale,x=end.cx-w/2,top=end.cy-h/2;
+    const flick=note.endFlick===true;
+    // 空中のスライドの終点フリックは大きく(SKY_END_FLICK)。地上と、終点フリックの無い終わりは今までどおり
+    const skyFlick=flick&&!failed&&rhythmSlideHasSky(note);
+    const h=8*(0.52+end.scale*.48)*(skyFlick?SKY_END_FLICK.barH:1),baseW=end.w*sizeScale,w=skyFlick?Math.max(baseW*SKY_END_FLICK.barW,SKY_END_FLICK.barMinW*sizeScale):baseW,x=end.cx-w/2,top=end.cy-h/2;
     ctx.globalAlpha=alpha;
-    if(!failed&&effect!=='MINIMAL'&&!lightweight){
+    if(skyFlick){
+      // 光は焼いた絵を貼るだけ(軽い)。最小・軽量では控えめの光にするが、消しはしない
+      const low=effect==='LOW'||effect==='LIGHT'||effect==='MINIMAL'||lightweight;
+      glowBegin();draw3Slice(glowSprite(`end:FLICK:${low?'low':'full'}`,4,END_BAR_GLOWS.FLICK[low?'low':'full']),end.cx,end.cy,w,h,alpha);glowEnd();
+    }else if(!failed&&effect!=='MINIMAL'&&!lightweight){
       const low=effect==='LOW'||effect==='LIGHT',kind=endBarKind(note,flick);
       const sprite=glowSprite(`end:${kind}:${low?'low':'full'}`,4,END_BAR_GLOWS[kind][low?'low':'full']);
       glowBegin();draw3Slice(sprite,end.cx,end.cy,w,h,alpha);glowEnd();
@@ -33273,9 +33445,10 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     if(failed){g.addColorStop(0,'#94a3b8');g.addColorStop(.5,'#e2e8f0');g.addColorStop(1,'#94a3b8');}
     else{const c=endBarColor(note,flick);g.addColorStop(0,c.mid);g.addColorStop(.5,c.hi);g.addColorStop(1,c.mid);}
     ctx.fillStyle=g;ctx.fill();
-    ctx.lineWidth=1;ctx.strokeStyle=failed?'rgba(148,163,184,.6)':'rgba(255,255,255,.85)';ctx.stroke();
+    ctx.lineWidth=skyFlick?1.8:1;ctx.strokeStyle=failed?'rgba(148,163,184,.6)':skyFlick?'#ffffff':'rgba(255,255,255,.85)';ctx.stroke();
     if(flick&&!failed){
-      const sprite=arrowSprite('endFlick',24,17,END_FLICK_ARROW_GLOWS,END_FLICK_ARROW_FILL);
+      const sprite=skyFlick?arrowSprite('endFlickSky',SKY_END_FLICK.arrowW,SKY_END_FLICK.arrowH,SKY_END_FLICK_ARROW_GLOWS,END_FLICK_ARROW_FILL,'#ffffff')
+        :arrowSprite('endFlick',24,17,END_FLICK_ARROW_GLOWS,END_FLICK_ARROW_FILL);
       const aw=sprite.tw+sprite.margin*2,ah=sprite.th+sprite.margin*2;
       ctx.drawImage(sprite.canvas,end.cx-aw/2,top-2-(sprite.th+sprite.margin),aw,ah);
     }
@@ -33760,10 +33933,14 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       const low=effect==='LOW'||effect==='LIGHT';
       for(const kind of ['HOLD','SLIDE','FLICK'])glowSprite(`end:${kind}:${low?'low':'full'}`,4,END_BAR_GLOWS[kind][low?'low':'full']);
       arrowSprite('endFlick',24,17,END_FLICK_ARROW_GLOWS,END_FLICK_ARROW_FILL);
+      // 空中のスライドの終点フリック(大きい矢印と、最小・軽量でも使う控えめの光)
+      arrowSprite('endFlickSky',SKY_END_FLICK.arrowW,SKY_END_FLICK.arrowH,SKY_END_FLICK_ARROW_GLOWS,END_FLICK_ARROW_FILL,'#ffffff');
+      if(!low)glowSprite('end:FLICK:low',4,END_BAR_GLOWS.FLICK.low);
       // 押さえている最中の光(演奏の途中で新しく絵を作らないよう、ここで焼いておく)
       if(effect!=='MINIMAL'){for(const kind of ['HOLD','SLIDE']){holdSparkSprite(kind);sparkStreakSprite(kind);holdPillarSprite(kind);holdColumnSprite(kind);}sparkDotSprite();hitFlareSprite();holdBoltSprite();}
       // 叩いたときの光(canvas で描くときだけ)
-      if(effect!=='MINIMAL'&&!options.lightweight)warmHitSprites();
+      // 設定「押したときの光」が「いつも出す」なら、最小・軽量でもこの光だけは描くので焼いておく(options.tapLight・2026-10-15)
+      if((effect!=='MINIMAL'&&!options.lightweight)||options.tapLight)warmHitSprites();
       // WebGL のときは、焼いた絵を演奏の前に GPU へ渡しておく
       if(ctx&&backend==='webgl'&&typeof ctx.preloadImage==='function')for(const sprite of sprites.values())if(sprite&&sprite.canvas)ctx.preloadImage(sprite.canvas);
       return sprites.size-before;

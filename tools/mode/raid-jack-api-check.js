@@ -235,6 +235,16 @@ const make = () => {
   check('このファイルは rankings などへ書き込まない', !/rankings|breeder_profiles|bond_levels/.test(api.replace(/\/\/.*$/gm, '')));
   check('端末の保存は新しいキーだけ', (api.match(/storeSet\(([^,)]+)/g) || []).every((s) => /RAID_JACK_STORAGE_KEY/.test(s)));
 
+  // ⑥ ランキング画面の「累計ダメージ(全段階の合計)」は、合計・バトル・モンヒロビートのどれでもいつでも選べる
+  //   (2026-10-15 社長「合計もいつでも累計を出す」。前は合計だけ大王を倒したあとにしか出なかった)
+  {
+    const scr = read('monster-hero/src/parts/79-screen-raid-jack.jsx');
+    const list = scr.slice(scr.indexOf('const RaidJackRankingList = '), scr.indexOf('const RaidJackScreen = '));
+    check('累計ダメージは大王の討伐を待たずに選べる(useAll に討伐の条件が無い)', /const useAll = !maxHit && tab === 'a' && allMode;/.test(list) && !/bossDown/.test(list));
+    check('累計ダメージのボタンは、レイドバトルの段階ボタンの横にいつも出る', /\n          <button type="button" data-raid-jack-ranking-all onClick=\{\(\) => setAllMode\(true\)\}/.test(list));
+    check('合計の累計は、全段階の合計のビュー(raid_jack_a_ranking)を読む(SQL は変えない)', /: useAll \? await sbFetchRaidJackARanking\(100, eventId\)/.test(list));
+  }
+
   if (failed) { console.log(`\n${failed}件 NG`); process.exit(1); }
   console.log('\nすべて OK');
 })();

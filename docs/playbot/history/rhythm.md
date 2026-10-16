@@ -3,6 +3,16 @@
 班のセッションが毎晩いちばん上へ1日ぶんを足す(手順は [`tools/playbot/ROUTINE.md`](../../../tools/playbot/ROUTINE.md) の手順8・9)。
 書くこと: 結果のひとこと / 不具合と PR の番号(マージ待ちか) / 出した提案と、ユーザーの返事(**却下・保留もそのまま残す**) / 作り手へ回したいこと / 決まったこと
 
+## 2026-10-16(夜の点検・窓口の指示「モンビー周りの点検」)
+
+- 点検した版: `80ceeb10e`(#3054 のあと)
+- 公開: #3053(曲を通したとき、スライドを終わりちょうどで離しても MISS になることがあった。延ばした終わりの時刻で「途中で離した」と見ていた)/ #3054(改善部 K1: 帯の内側で隣の TAP を取った指も、押したままなら持ち替えの控えにする。案1 はそのまま)
+- 理想の人の手(`rhythm-ideal-hands.js`)で HELL 4曲・MASTER 33曲を通して、MISS・BAD はどれも 0。#3036/#3042/#3045/#3051/#3053/#3054 の退行なし。MASTER のうち7曲(monster_hero_another・eiki_boss_remix・pandora_boss_remix・stay_with_me_short・kiki_issen_short・crazy_party_night・monster_short)は道具が曲を始められず未確認(道具の入り口の都合)
+- `--team rhythm`(種 93841): 不具合候補1件(マルチ係/相棒・Stay With Me NORMAL 75974ms の HOLD が途中で切れた・画面のいちばん下を押していた)。同じ種で2回回し直して出ず、ゆれとして様子見。音ゲー係の Monster Hero MASTER のフリック MISS 6/27 は、理想の手では 0 なのでボットの指のくせ
+- `feel.js --compare origin/main`(#3054 の前): 前の版より悪くなったところは無い
+- 提案: 曲の版を切り替えるボタン(原曲・remix・short ver.)が 32px 未満で小さい / Sheriruth HELL 77.6秒のモンスターノーツ直後のカクつき(最長 100ms ほど残る)
+- 作り手へ回したいこと: `rhythm-ideal-hands.js` が別の版の曲・short 版を始められるようにする
+
 ## 2026-10-09(統括部長からの依頼・通信不良の演奏の「指が帯の上なのにMISS」の調べ直し)
 
 - 依頼: 守り部が #2368・#2377 のあとも「指が帯の上なのにMISS」が出ると報告(意地悪係の通信不良のなかの演奏)。0805(種 714106・ios・Stay With Me EXPERT・17px下)、0815(種 320090・ios・同 MASTER・162px下)、1636(種 375327・touch・Monster Hero EXPERT・147px下・-54ms)。
