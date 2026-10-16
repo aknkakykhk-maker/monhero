@@ -1,3 +1,19 @@
+// ★場面のBGMを軽く持つ(2026-10-16 社長の決定「オンオフ設定できて、デフォルトはオフ」)。音量設定の小窓で入/切する。
+//   保存は新しいキー mh_bgm_light_pref_v1('on' / 'off' / 無し)。無い・壊れているときは切。
+//   デバッグの検証用に使っていた mh_bgm_light_v1('on')が残っている端末は、新しいキーがまだ無いあいだだけ「入」として読む
+//   (古いキーは書き換えない・消さない。新しいキーを一度でも押せば、そちらが優先される)
+const BGM_LIGHT_PREF_KEY = 'mh_bgm_light_pref_v1';
+const BGM_LIGHT_LEGACY_KEY = 'mh_bgm_light_v1';
+const bgmLightPreference = () => {
+  try {
+    if (typeof localStorage === 'undefined') return false;
+    const v = localStorage.getItem(BGM_LIGHT_PREF_KEY);
+    if (v === 'on') return true;
+    if (v === 'off') return false;
+    return localStorage.getItem(BGM_LIGHT_LEGACY_KEY) === 'on';
+  } catch (e) { return false; }
+};
+const bgmLightSetPreference = (on) => { try { if (typeof localStorage !== 'undefined') localStorage.setItem(BGM_LIGHT_PREF_KEY, on ? 'on' : 'off'); } catch (e) {} return bgmLightPreference(); };
 const Audio_ = (() => {
   let Tone = null, ready = false, loading = null, started = false;
   let reverb = null, seBus = null;
@@ -23,16 +39,16 @@ const Audio_ = (() => {
   //   上限は、いまの場面+次の場面+少し前の2本ぶんで 4
   const SONG_BUFFER_KEEP = 4;
   const songBufferOrder = [];
-  // ★場面のBGMを軽く持つ(2026-10-16 社長の決定「案1＋案2」・デバッグ設定の入/切で試す。既定は切)。
+  // ★場面のBGMを軽く持つ(2026-10-16 社長の決定「案1＋案2」。同日、音量設定の入/切に移した・既定は切)。
   //   きっかけ: 「クイックでオート無限を1時間ほどやっていたら、ホームに戻っていた」(iPhone のメモリ不足の読み込み直し)。
   //   ・案1 場面のBGMだけ、解いたあと 24kHz に落として元を捨てる(1本あたり約半分)
   //   ・案2 場面のBGMは「いま鳴っている1本＋直前(または次)の1本」だけ持つ
   //   鳴らし方(AudioBuffer を Web Audio で鳴らす)は変えない(#2991 の <audio> は iPhone で無音になったため使わない)。
   //   モンヒロビートの曲(演奏・試聴)と効果音は対象外。軽くした音は鍵に '#light' を付けて別に持つので、
   //   同じファイルを演奏で読むときは、ふつうの音として別に解く(演奏が軽い音を使うことはない)
-  const BGM_LIGHT_KEY = 'mh_bgm_light_v1';
   const BGM_LIGHT_RATE = 24000, BGM_LIGHT_KEEP = 2, BGM_LIGHT_SUFFIX = '#light';
-  const bgmLightOn = () => { try { return typeof localStorage !== 'undefined' && localStorage.getItem(BGM_LIGHT_KEY) === 'on'; } catch (e) { return false; } };
+  // 入/切は音量設定(bgmLightPreference・この上で定義)。デバッグの検証用キーの「入」も引き継いで読む
+  const bgmLightOn = () => bgmLightPreference();
   const sceneBufferKey = (src) => (bgmLightOn() ? src + BGM_LIGHT_SUFFIX : src);
   const lightOrder = [];
   // 解いた音を BGM_LIGHT_RATE で描き直す(OfflineAudioContext)。できない環境・失敗はそのままの音を返す

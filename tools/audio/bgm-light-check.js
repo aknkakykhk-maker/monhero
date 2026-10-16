@@ -1,4 +1,4 @@
-// 場面のBGMを軽く持つ(デバッグ設定 mh_bgm_light_v1・2026-10-16 社長の決定「案1＋案2」)を、実際のブラウザで確かめる。
+// 場面のBGMを軽く持つ(音量設定 mh_bgm_light_pref_v1・2026-10-16 社長の決定「案1＋案2」→ 同日「オンオフ設定できて既定はオフ」)を、実際のブラウザで確かめる。
 //
 //   node tools/audio/bgm-light-check.js
 //
@@ -35,9 +35,10 @@ const serve = () => new Promise((resolve) => {
 let failed = 0;
 const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failed++; };
 const src = fs.readFileSync(path.join(root, 'monster-hero/src/parts/14-audio.jsx'), 'utf8');
-check('保存キーは新しい mh_bgm_light_v1(入/切だけ)', /const BGM_LIGHT_KEY = 'mh_bgm_light_v1';/.test(src));
+check('保存キーは新しい mh_bgm_light_pref_v1(既定は切)・検証用の mh_bgm_light_v1 は新しいキーが無いときだけ入として読む', /const BGM_LIGHT_PREF_KEY = 'mh_bgm_light_pref_v1';/.test(src) && /const BGM_LIGHT_LEGACY_KEY = 'mh_bgm_light_v1';/.test(src) && /if \(v === 'off'\) return false;/.test(src));
+check('音量設定に入/切がある', fs.readFileSync(path.join(root, 'monster-hero/src/parts/60-app.jsx'), 'utf8').includes('data-bgm-light-setting'));
 check('鳴らし方は変えない(<audio> / MediaElementSource を使わない)', !/createMediaElementSource|new Audio\(/.test(src));
-check('保存データの一覧に載っている', fs.readFileSync(path.join(root, 'docs/spec/SAVE_DATA.md'), 'utf8').includes('`mh_bgm_light_v1`'));
+check('保存データの一覧に載っている', fs.readFileSync(path.join(root, 'docs/spec/SAVE_DATA.md'), 'utf8').includes('`mh_bgm_light_pref_v1`'));
 
 const run = async (playwright, light) => {
   const browser = await playwright.chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--autoplay-policy=no-user-gesture-required'] });
@@ -49,7 +50,7 @@ const run = async (playwright, light) => {
       const put = (k, v) => localStorage.setItem(k, JSON.stringify(v));
       put('mh_breeder_name', 'テスト'); put('mh_breeder_icon', '🐣'); put('mh_onboarded', true);
       put('mh_tutorial_seen_v1', true); put('mh_assistant_selected_v1', 'mua'); put('mh_update_notice_seen_v1', true);
-      if (on) localStorage.setItem('mh_bgm_light_v1', 'on'); else localStorage.removeItem('mh_bgm_light_v1');
+      if (on) localStorage.setItem('mh_bgm_light_pref_v1', 'on'); else localStorage.removeItem('mh_bgm_light_pref_v1');
     }, light);
     await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'load', timeout: 60000 });
     await page.getByRole('button', { name: 'TAP TO START' }).click({ timeout: 60000, force: true });

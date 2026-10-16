@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: baaf4db20e7a9902
+// source-sha256: d191a9b6d12c0db6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-16 17:49";
+const BUILD_DATE = "2026-10-16 18:55";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -6449,6 +6449,25 @@ const homeArtSrc = (value, landscape = false) => {
   return landscape && option.wideSrc ? option.wideSrc : option.src;
 };
 const homeArtIsWide = (value, landscape = false) => !!(landscape && HOME_ART_OPTIONS.find(item => item.id === resolveHomeArt(value)).wideSrc);
+const BGM_LIGHT_PREF_KEY = 'mh_bgm_light_pref_v1';
+const BGM_LIGHT_LEGACY_KEY = 'mh_bgm_light_v1';
+const bgmLightPreference = () => {
+  try {
+    if (typeof localStorage === 'undefined') return false;
+    const v = localStorage.getItem(BGM_LIGHT_PREF_KEY);
+    if (v === 'on') return true;
+    if (v === 'off') return false;
+    return localStorage.getItem(BGM_LIGHT_LEGACY_KEY) === 'on';
+  } catch (e) {
+    return false;
+  }
+};
+const bgmLightSetPreference = on => {
+  try {
+    if (typeof localStorage !== 'undefined') localStorage.setItem(BGM_LIGHT_PREF_KEY, on ? 'on' : 'off');
+  } catch (e) {}
+  return bgmLightPreference();
+};
 const Audio_ = (() => {
   let Tone = null,
     ready = false,
@@ -6477,17 +6496,10 @@ const Audio_ = (() => {
   };
   const SONG_BUFFER_KEEP = 4;
   const songBufferOrder = [];
-  const BGM_LIGHT_KEY = 'mh_bgm_light_v1';
   const BGM_LIGHT_RATE = 24000,
     BGM_LIGHT_KEEP = 2,
     BGM_LIGHT_SUFFIX = '#light';
-  const bgmLightOn = () => {
-    try {
-      return typeof localStorage !== 'undefined' && localStorage.getItem(BGM_LIGHT_KEY) === 'on';
-    } catch (e) {
-      return false;
-    }
-  };
+  const bgmLightOn = () => bgmLightPreference();
   const sceneBufferKey = src => bgmLightOn() ? src + BGM_LIGHT_SUFFIX : src;
   const lightOrder = [];
   const lightenBuffer = buffer => new Promise(resolve => {
@@ -78350,15 +78362,6 @@ const loadAssistantChatMemoFor = async assistantId => {
   return normalizeAssistantChatMemo(v2, v1)[assistantId] || null;
 };
 const DEBUG_TRIALS = [{
-  id: 'bgm_light',
-  added: '2026-10-16',
-  area: '音',
-  key: 'mh_bgm_light_v1',
-  on: 'on',
-  title: '🔊 場面のBGMを軽く持つ',
-  note: 'タイトル・ホーム・バトルなどの BGM を軽くして(少しこもることがあります)、持つ曲を2本までにします。長く遊んだときのメモリ不足の手当てです。モンヒロビートの曲・効果音は変わりません',
-  when: '次に BGM が切り替わったときから'
-}, {
   id: 'rhythm_floor3d',
   added: '2026-10-16',
   area: 'モンヒロビート',
@@ -80431,6 +80434,7 @@ function MonsterHeroGame() {
   const [bgmVolume, setBgmVolumeState] = useState(DEFAULT_VOLUME);
   const [audioUnlocked, setAudioUnlocked] = useState(true);
   const [showAudioSettings, setShowAudioSettings] = useState(false);
+  const [bgmLightSetting, setBgmLightSetting] = useState(() => bgmLightPreference());
   const [showBgmArrangement, setShowBgmArrangement] = useState(false);
   const [bgmArrangementCategory, setBgmArrangementCategory] = useState('basic');
   const [bgmArrangementBattleMode, setBgmArrangementBattleMode] = useState('challenge');
@@ -97576,7 +97580,23 @@ function MonsterHeroGame() {
     onChange: changeBgmVolume,
     gradient: "from-fuchsia-500 to-pink-500",
     thumbRing: "border-fuchsia-400"
-  }), React.createElement("button", {
+  }), React.createElement("div", {
+    "data-bgm-light-setting": true,
+    className: "mt-3 rounded-xl border border-white/15 bg-white/5 p-3 text-left"
+  }, React.createElement("b", {
+    className: "block text-[12px] font-black text-white"
+  }, "🪶 場面のBGMを軽く持つ（メモリを節約）"), React.createElement("p", {
+    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-300"
+  }, "長く遊ぶと落ちやすい端末向け。BGMの高い音が少しだけこもります。モンヒロビートの曲と効果音は変わりません。次にBGMが切り替わったときから効きます。"), React.createElement("div", {
+    className: "mt-2 flex gap-2"
+  }, [[true, '入'], [false, '切']].map(([value, label]) => React.createElement("button", {
+    key: label,
+    type: "button",
+    "data-bgm-light-set": value ? 'on' : 'off',
+    "aria-pressed": bgmLightSetting === value,
+    onClick: () => setBgmLightSetting(bgmLightSetPreference(value)),
+    className: `min-h-[40px] flex-1 rounded-xl text-[12px] font-black active:scale-95 ${bgmLightSetting === value ? 'bg-fuchsia-400 text-slate-900' : 'border border-white/20 bg-slate-900 text-slate-200'}`
+  }, label)))), React.createElement("button", {
     className: "mh-dialog-choice mt-3",
     "aria-expanded": showAudioDiag,
     onClick: () => setShowAudioDiag(v => !v)
@@ -98403,7 +98423,23 @@ function MonsterHeroGame() {
       onChange: changeBgmVolume,
       gradient: "from-fuchsia-500 to-pink-500",
       thumbRing: "border-fuchsia-400"
-    })), React.createElement("label", {
+    }), React.createElement("div", {
+      "data-bgm-light-setting": true,
+      className: "mt-3 rounded-xl border border-white/15 bg-white/5 p-3 text-left"
+    }, React.createElement("b", {
+      className: "block text-[12px] font-black text-white"
+    }, "🪶 場面のBGMを軽く持つ（メモリを節約）"), React.createElement("p", {
+      className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-300"
+    }, "長く遊ぶと落ちやすい端末向け。BGMの高い音が少しだけこもります。モンヒロビートの曲と効果音は変わりません。次にBGMが切り替わったときから効きます。"), React.createElement("div", {
+      className: "mt-2 flex gap-2"
+    }, [[true, '入'], [false, '切']].map(([value, label]) => React.createElement("button", {
+      key: label,
+      type: "button",
+      "data-bgm-light-set": value ? 'on' : 'off',
+      "aria-pressed": bgmLightSetting === value,
+      onClick: () => setBgmLightSetting(bgmLightSetPreference(value)),
+      className: `min-h-[40px] flex-1 rounded-xl text-[12px] font-black active:scale-95 ${bgmLightSetting === value ? 'bg-fuchsia-400 text-slate-900' : 'border border-white/20 bg-slate-900 text-slate-200'}`
+    }, label))))), React.createElement("label", {
       className: "block"
     }, React.createElement("span", {
       className: "text-xs font-black text-slate-300"

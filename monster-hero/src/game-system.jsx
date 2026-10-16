@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 5ac7762ef7eaded8
+// generated-sha256: 7cbeb8ddc8aa867b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-16 17:49"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-16 18:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5227,6 +5227,22 @@ const homeArtSrc = (value, landscape = false) => {
 const homeArtIsWide = (value, landscape = false) => !!(landscape && HOME_ART_OPTIONS.find(item => item.id === resolveHomeArt(value)).wideSrc);
 
 // ---- part: 14-audio.jsx ----
+// ★場面のBGMを軽く持つ(2026-10-16 社長の決定「オンオフ設定できて、デフォルトはオフ」)。音量設定の小窓で入/切する。
+//   保存は新しいキー mh_bgm_light_pref_v1('on' / 'off' / 無し)。無い・壊れているときは切。
+//   デバッグの検証用に使っていた mh_bgm_light_v1('on')が残っている端末は、新しいキーがまだ無いあいだだけ「入」として読む
+//   (古いキーは書き換えない・消さない。新しいキーを一度でも押せば、そちらが優先される)
+const BGM_LIGHT_PREF_KEY = 'mh_bgm_light_pref_v1';
+const BGM_LIGHT_LEGACY_KEY = 'mh_bgm_light_v1';
+const bgmLightPreference = () => {
+  try {
+    if (typeof localStorage === 'undefined') return false;
+    const v = localStorage.getItem(BGM_LIGHT_PREF_KEY);
+    if (v === 'on') return true;
+    if (v === 'off') return false;
+    return localStorage.getItem(BGM_LIGHT_LEGACY_KEY) === 'on';
+  } catch (e) { return false; }
+};
+const bgmLightSetPreference = (on) => { try { if (typeof localStorage !== 'undefined') localStorage.setItem(BGM_LIGHT_PREF_KEY, on ? 'on' : 'off'); } catch (e) {} return bgmLightPreference(); };
 const Audio_ = (() => {
   let Tone = null, ready = false, loading = null, started = false;
   let reverb = null, seBus = null;
@@ -5252,16 +5268,16 @@ const Audio_ = (() => {
   //   上限は、いまの場面+次の場面+少し前の2本ぶんで 4
   const SONG_BUFFER_KEEP = 4;
   const songBufferOrder = [];
-  // ★場面のBGMを軽く持つ(2026-10-16 社長の決定「案1＋案2」・デバッグ設定の入/切で試す。既定は切)。
+  // ★場面のBGMを軽く持つ(2026-10-16 社長の決定「案1＋案2」。同日、音量設定の入/切に移した・既定は切)。
   //   きっかけ: 「クイックでオート無限を1時間ほどやっていたら、ホームに戻っていた」(iPhone のメモリ不足の読み込み直し)。
   //   ・案1 場面のBGMだけ、解いたあと 24kHz に落として元を捨てる(1本あたり約半分)
   //   ・案2 場面のBGMは「いま鳴っている1本＋直前(または次)の1本」だけ持つ
   //   鳴らし方(AudioBuffer を Web Audio で鳴らす)は変えない(#2991 の <audio> は iPhone で無音になったため使わない)。
   //   モンヒロビートの曲(演奏・試聴)と効果音は対象外。軽くした音は鍵に '#light' を付けて別に持つので、
   //   同じファイルを演奏で読むときは、ふつうの音として別に解く(演奏が軽い音を使うことはない)
-  const BGM_LIGHT_KEY = 'mh_bgm_light_v1';
   const BGM_LIGHT_RATE = 24000, BGM_LIGHT_KEEP = 2, BGM_LIGHT_SUFFIX = '#light';
-  const bgmLightOn = () => { try { return typeof localStorage !== 'undefined' && localStorage.getItem(BGM_LIGHT_KEY) === 'on'; } catch (e) { return false; } };
+  // 入/切は音量設定(bgmLightPreference・この上で定義)。デバッグの検証用キーの「入」も引き継いで読む
+  const bgmLightOn = () => bgmLightPreference();
   const sceneBufferKey = (src) => (bgmLightOn() ? src + BGM_LIGHT_SUFFIX : src);
   const lightOrder = [];
   // 解いた音を BGM_LIGHT_RATE で描き直す(OfflineAudioContext)。できない環境・失敗はそのままの音を返す
@@ -47551,10 +47567,7 @@ const loadAssistantChatMemoFor = async (assistantId) => {
 // NEW の印は「まだ一度も入/切を押していない試作」に付く(押した試作は mh_debug_trials_seen_v1 に覚える)。
 // デバッグ専用(更新履歴・ヘルプに載せない)。判定・セーブデータの中身には触らない
 const DEBUG_TRIALS = [
-  { id: 'bgm_light', added: '2026-10-16', area: '音', key: 'mh_bgm_light_v1', on: 'on',
-    title: '🔊 場面のBGMを軽く持つ',
-    note: 'タイトル・ホーム・バトルなどの BGM を軽くして(少しこもることがあります)、持つ曲を2本までにします。長く遊んだときのメモリ不足の手当てです。モンヒロビートの曲・効果音は変わりません',
-    when: '次に BGM が切り替わったときから' },
+  // 2026-10-16 「🔊 場面のBGMを軽く持つ」は確認が済み、音量設定の入/切(既定は切)へ移したので外した
   { id: 'rhythm_floor3d', added: '2026-10-16', area: 'モンヒロビート', key: 'mh_rhythm_floor3d_proto_v1', on: 'on',
     title: '🎵 床と空中の見た目',
     note: '地上のノーツを道の床に平たく貼り付け、空中のノーツを厚みのある箱にして床に影を落とします。判定の位置・時刻・指の扱いは変わりません',
@@ -49798,6 +49811,8 @@ function MonsterHeroGame() {
   // 実際に音が出るのは最初のタップ以降になる(下のuseEffectで自動的に解除する)
   const [audioUnlocked, setAudioUnlocked] = useState(true);
   const [showAudioSettings, setShowAudioSettings] = useState(false); // 音量設定モーダルの表示状態
+  // 場面のBGMを軽く持つ(音量設定の入/切・14-audio.jsx の bgmLightPreference。既定は切)
+  const [bgmLightSetting, setBgmLightSetting] = useState(() => bgmLightPreference());
   const [showBgmArrangement, setShowBgmArrangement] = useState(false);
   const [bgmArrangementCategory, setBgmArrangementCategory] = useState('basic');
   const [bgmArrangementBattleMode, setBgmArrangementBattleMode] = useState('challenge');
@@ -63818,7 +63833,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   ) : showHomeArt ? (
     <ArtPickerModal pickerId="home" heading="ホーム画面アレンジ" note="ホーム画面の背景を選べます。「ハロウィン」は、横画面では横長の絵になります。" options={HOME_ART_OPTIONS} value={homeArt} resolved={resolveHomeArt(homeArt)} onChange={changeHomeArt} onClose={()=>setShowHomeArt(false)}/>
   ) : showAudioSettings ? (
-    <div className="mh-title-modal"><div className="mh-title-dialog" style={{maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',overflowY:'auto'}}><div className="mh-dialog-head"><h3>音量設定</h3><button onClick={()=>setShowAudioSettings(false)}><X size={18}/></button></div><button className="mh-dialog-choice" onClick={toggleQuickMute}>{audioMuted?'🔇 音がオフです':'🔊 音はオンです'}</button><VolumeSlider label="SE" icon="🔔" value={seVolume} onChange={changeSeVolume} gradient="from-cyan-500 to-indigo-500" thumbRing="border-indigo-400"/><VolumeSlider label="BGM" icon="🎵" value={bgmVolume} onChange={changeBgmVolume} gradient="from-fuchsia-500 to-pink-500" thumbRing="border-fuchsia-400"/><button className="mh-dialog-choice mt-3" aria-expanded={showAudioDiag} onClick={()=>setShowAudioDiag(v=>!v)}>🔧 音が出ないとき {showAudioDiag?'▲':'▼'}</button>{showAudioDiag&&<><AudioTroubleshootPanel info={audioDiag} peak={audioDiagPeak} muted={audioMuted} onTest={testAudioOutput} onRepair={repairAudioOutput} repairing={audioRepairing}/><ReloadLogPanel/></>}</div></div>
+    <div className="mh-title-modal"><div className="mh-title-dialog" style={{maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',overflowY:'auto'}}><div className="mh-dialog-head"><h3>音量設定</h3><button onClick={()=>setShowAudioSettings(false)}><X size={18}/></button></div><button className="mh-dialog-choice" onClick={toggleQuickMute}>{audioMuted?'🔇 音がオフです':'🔊 音はオンです'}</button><VolumeSlider label="SE" icon="🔔" value={seVolume} onChange={changeSeVolume} gradient="from-cyan-500 to-indigo-500" thumbRing="border-indigo-400"/><VolumeSlider label="BGM" icon="🎵" value={bgmVolume} onChange={changeBgmVolume} gradient="from-fuchsia-500 to-pink-500" thumbRing="border-fuchsia-400"/><div data-bgm-light-setting className="mt-3 rounded-xl border border-white/15 bg-white/5 p-3 text-left"><b className="block text-[12px] font-black text-white">🪶 場面のBGMを軽く持つ（メモリを節約）</b><p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-300">長く遊ぶと落ちやすい端末向け。BGMの高い音が少しだけこもります。モンヒロビートの曲と効果音は変わりません。次にBGMが切り替わったときから効きます。</p><div className="mt-2 flex gap-2">{[[true,'入'],[false,'切']].map(([value,label])=><button key={label} type="button" data-bgm-light-set={value?'on':'off'} aria-pressed={bgmLightSetting===value} onClick={()=>setBgmLightSetting(bgmLightSetPreference(value))} className={`min-h-[40px] flex-1 rounded-xl text-[12px] font-black active:scale-95 ${bgmLightSetting===value?'bg-fuchsia-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></div><button className="mh-dialog-choice mt-3" aria-expanded={showAudioDiag} onClick={()=>setShowAudioDiag(v=>!v)}>🔧 音が出ないとき {showAudioDiag?'▲':'▼'}</button>{showAudioDiag&&<><AudioTroubleshootPanel info={audioDiag} peak={audioDiagPeak} muted={audioMuted} onTest={testAudioOutput} onRepair={repairAudioOutput} repairing={audioRepairing}/><ReloadLogPanel/></>}</div></div>
   ) : showBgmArrangement ? (
     <div className="mh-title-modal"><div className="mh-title-dialog" style={{maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',overflowY:'auto'}}><div className="mh-dialog-head"><h3>BGMアレンジ</h3><button onClick={closeBgmArrangement}><X size={18}/></button></div>{(()=>{const categories=[
       {id:'basic',label:'基本',items:[['home','HOME BGM'],['title','タイトル BGM'],['autoBattle','AUTOモード BGM'],['management','M/B管理 BGM'],['clear','ゲームクリア BGM'],
@@ -64141,7 +64156,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       {updateNotice}{storageTroubleNotice}
       {/* ランの途中ならどの画面でも出し続ける。gameState==='BATTLE' に限っていたため、
           敵を倒してWAVE_RESULTへ移った瞬間に消えて、曲を選べなくなっていた */}
-      {showAutoBgmPicker&&isRunStage(gameState)&&<div data-auto-bgm-picker className="fixed inset-0 flex items-end justify-center bg-black/55 p-3" style={{zIndex:2147483647}} onClick={()=>setShowAutoBgmPicker(false)}><div className="w-full max-w-sm rounded-2xl border border-indigo-300/40 bg-slate-950 p-4 text-left shadow-2xl" onClick={e=>e.stopPropagation()}><div className="flex items-center justify-between gap-2 mb-3"><div><div className="text-sm font-black text-white">BGM / 音量</div><div className="text-[10px] text-slate-400">{ultraEcoSession?'超省エネ中：SEはOFF固定':(autoBattle||autoRepeat)?'AUTO中のBGMを一時変更':'このバトル中のBGMを一時変更'}</div></div><button type="button" onClick={()=>setShowAutoBgmPicker(false)} className="min-w-[44px] min-h-[44px] rounded-xl bg-slate-800 text-slate-200 font-black">×</button></div><div className="mb-2">{ultraEcoSession?<div className="rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-xs font-black text-slate-400">🔕 SE 0　超省エネ中はOFF固定</div>:<VolumeSlider label="SE" icon="🔔" value={seVolume} onChange={changeSeVolume} gradient="from-cyan-500 to-indigo-500" thumbRing="border-indigo-400"/>}</div><div className="mb-3"><VolumeSlider label="BGM" icon="🎵" value={bgmVolume} onChange={changeBgmVolume} gradient="from-fuchsia-500 to-pink-500" thumbRing="border-fuchsia-400"/></div><label className="block"><span className="text-xs font-black text-slate-300">再生するBGM</span><select aria-label="バトル中に再生するBGM" value={autoBgmOverride||(autoBattle||autoRepeat?bgmArrangement.autoBattle:bgmKeyForState(gameState,wave,enemy?.id,(waveHistory||[]).length>0,hp<=0||gaveUp))} onChange={e=>selectAutoRuntimeBgm(e.target.value)} className="mt-1 w-full min-h-[48px] rounded-xl border border-white/15 bg-slate-900 px-3 text-sm text-white"><option value="__none__">BGMなし</option>{BGM_TRACKS.map(track=><option key={track.id} value={track.id}>{track.name}</option>)}</select></label><p className="mt-2 text-[10px] leading-relaxed text-slate-400">BGMの一時選択は保存済みBGMアレンジを変更しません。SE/BGM音量はHOMEの音量設定と共通です。</p></div></div>}
+      {showAutoBgmPicker&&isRunStage(gameState)&&<div data-auto-bgm-picker className="fixed inset-0 flex items-end justify-center bg-black/55 p-3" style={{zIndex:2147483647}} onClick={()=>setShowAutoBgmPicker(false)}><div className="w-full max-w-sm rounded-2xl border border-indigo-300/40 bg-slate-950 p-4 text-left shadow-2xl" onClick={e=>e.stopPropagation()}><div className="flex items-center justify-between gap-2 mb-3"><div><div className="text-sm font-black text-white">BGM / 音量</div><div className="text-[10px] text-slate-400">{ultraEcoSession?'超省エネ中：SEはOFF固定':(autoBattle||autoRepeat)?'AUTO中のBGMを一時変更':'このバトル中のBGMを一時変更'}</div></div><button type="button" onClick={()=>setShowAutoBgmPicker(false)} className="min-w-[44px] min-h-[44px] rounded-xl bg-slate-800 text-slate-200 font-black">×</button></div><div className="mb-2">{ultraEcoSession?<div className="rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-xs font-black text-slate-400">🔕 SE 0　超省エネ中はOFF固定</div>:<VolumeSlider label="SE" icon="🔔" value={seVolume} onChange={changeSeVolume} gradient="from-cyan-500 to-indigo-500" thumbRing="border-indigo-400"/>}</div><div className="mb-3"><VolumeSlider label="BGM" icon="🎵" value={bgmVolume} onChange={changeBgmVolume} gradient="from-fuchsia-500 to-pink-500" thumbRing="border-fuchsia-400"/><div data-bgm-light-setting className="mt-3 rounded-xl border border-white/15 bg-white/5 p-3 text-left"><b className="block text-[12px] font-black text-white">🪶 場面のBGMを軽く持つ（メモリを節約）</b><p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-300">長く遊ぶと落ちやすい端末向け。BGMの高い音が少しだけこもります。モンヒロビートの曲と効果音は変わりません。次にBGMが切り替わったときから効きます。</p><div className="mt-2 flex gap-2">{[[true,'入'],[false,'切']].map(([value,label])=><button key={label} type="button" data-bgm-light-set={value?'on':'off'} aria-pressed={bgmLightSetting===value} onClick={()=>setBgmLightSetting(bgmLightSetPreference(value))} className={`min-h-[40px] flex-1 rounded-xl text-[12px] font-black active:scale-95 ${bgmLightSetting===value?'bg-fuchsia-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></div></div><label className="block"><span className="text-xs font-black text-slate-300">再生するBGM</span><select aria-label="バトル中に再生するBGM" value={autoBgmOverride||(autoBattle||autoRepeat?bgmArrangement.autoBattle:bgmKeyForState(gameState,wave,enemy?.id,(waveHistory||[]).length>0,hp<=0||gaveUp))} onChange={e=>selectAutoRuntimeBgm(e.target.value)} className="mt-1 w-full min-h-[48px] rounded-xl border border-white/15 bg-slate-900 px-3 text-sm text-white"><option value="__none__">BGMなし</option>{BGM_TRACKS.map(track=><option key={track.id} value={track.id}>{track.name}</option>)}</select></label><p className="mt-2 text-[10px] leading-relaxed text-slate-400">BGMの一時選択は保存済みBGMアレンジを変更しません。SE/BGM音量はHOMEの音量設定と共通です。</p></div></div>}
       {/* AUTO∞の超省エネ中は、BATTLEから中間画面・CHAMPION・次周まで同じ暗さを保つ。 */}
       {/* モンビーを開いている間は外す。曲えらびや譜面まで暗いままだと遊べない
           (超省エネはバトルを見ないための暗幕なので、見る画面へ移ったら役目が終わる) */}
