@@ -151,8 +151,10 @@ function MonsterHeroGame() {
   const [rhythmCanvasHitsPref,setRhythmCanvasHitsPref]=useState(()=>rhythmCanvasHitsPreference());
   const [rhythmHitSparkPref,setRhythmHitSparkPref]=useState(()=>rhythmHitSparkPreference());
   const [rhythmJudgmentSnapPref,setRhythmJudgmentSnapPref]=useState(()=>rhythmJudgmentSnapPreference());
-  // 場面のBGMを軽く持つ(デバッグ設定・2026-10-16 社長の決定「案1＋案2」。14-audio.jsx の BGM_LIGHT_KEY)
-  const [bgmLightPref,setBgmLightPref]=useState(()=>{try{return localStorage.getItem('mh_bgm_light_v1')==='on';}catch{return false;}});
+  // デバッグ設定を一度でも開いた端末だけ、設定の画面にも入口を出す(2026-10-16 社長「デバッグモードがわかりづらい」)。
+  // ふつうのプレイヤーはヘルプの奥の入口を開かないので、出ないまま(新しいキー mh_debug_entry_v1)
+  const [debugEntryKnown,setDebugEntryKnown]=useState(()=>{try{return localStorage.getItem('mh_debug_entry_v1')==='1';}catch{return false;}});
+  useEffect(()=>{if(gameState!=='DEBUG_SETTINGS')return;try{localStorage.setItem('mh_debug_entry_v1','1');}catch{}setDebugEntryKnown(true);},[gameState]);
   const [rhythmInputRecOn,setRhythmInputRecOn]=useState(()=>{try{return RHYTHM_INPUT_REC.enabled();}catch{return false;}});
   const [rhythmInputRecMsg,setRhythmInputRecMsg]=useState('');
   // ホールド・スライドの離しの合図の遅れを、どこまで信じて戻すか(検証用・2026-10-11)。この端末だけの切り替え(mh_rhythm_fix_override_v1)
@@ -8104,6 +8106,8 @@ function MonsterHeroGame() {
     return result;
   };
   const openTrainingInfo=()=>setGameState('TRAINING_INFO');
+  // デバッグ設定を開く(ヘルプの奥の入口と、設定の画面の入口が同じものを呼ぶ)
+  const openDebugSettings=()=>{const options=getDebugEnemyOptions(debugBattleModeId);if(!options.some(o=>o.key===debugEnemyKey))setDebugEnemyKey(options[0]?.key||null);debugBattleRef.current=false;extremeRunRef.current=false;setDebugBattle(false);setExtremeRun(false);setDebugOutcome(null);setShowHelp(false);setGameState('DEBUG_SETTINGS');};
   const openDebugTraining=()=>{setTrainingSelectedId(null);setTrainingDifficulty('BEGINNER');setTrainingSession(null);setGameState('TRAINING_SELECT');};
   const startTraining=()=>{if(!trainingSelectedId||trainingDifficulty!=='BEGINNER')return;setTrainingMapScale(1);setTrainingMapOverview(false);setTrainingSession(createTrainingSession(trainingSelectedId));setTrainingDebugRoll(null);setGameState('TRAINING_BOARD');};
   const patchTraining=patch=>setTrainingSession(prev=>({...prev,...patch}));
@@ -17634,6 +17638,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onOpenScreenTheme={()=>setShowScreenTheme(true)}
             onOpenBackup={()=>{setShowBackup(true);setBackupTab('export');setBackupCode('');setRestoreInput('');setRestoreMsg('');}}
             onOpenHelp={()=>openHelp()}
+            onOpenDebug={debugEntryKnown?openDebugSettings:null}
             onOpenGameUpdate={()=>setShowGameUpdateConfirm(true)}
             gameUpdateDisabled={showGameUpdateConfirm||gameUpdatePending}
             onReturnToTitle={()=>setShowOfficialTitleConfirm(true)}
@@ -18615,6 +18620,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div className="flex items-center gap-2 mb-2 shrink-0"><button onClick={()=>{setGameState('SETTINGS');openHelp();}} className="p-3 text-slate-500"><ArrowLeft size={20}/></button><h2 className="text-base font-black text-slate-400 tracking-widest">DEBUG MENU</h2></div>
             <p className="mb-3 shrink-0 text-[9px] leading-relaxed text-slate-500">用途ごとに畳んであります。見出しを押すと開きます。</p>
             <div className="flex-1 overflow-y-auto mh-scroll space-y-2">
+              {/* 確認待ちの試作(81-debug-trials.jsx の DEBUG_TRIALS)。いちばん上に出す。同じキーを覚えている本体の state も読み直す */}
+              <DebugTrialsPanel onChange={(trial)=>{if(trial.id==='rhythm_floor3d')setRhythmFloor3dPref(rhythmFloor3dPreference());}}/>
 
               {/* 助手とおしゃべり(2026-10-14)。公開の印 assistantChat が立つまでの試し口。
                   本物の中継役へ送るので、1回ごとに社長のAPIクレジットと回数を使う。デバッグ専用なので更新履歴・ヘルプには載せない */}
@@ -18748,10 +18755,6 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   {/* 画面エラーの受け止め(MhErrorBoundary)を実際に試す。押すとこの画面の描画で例外が起き、真っ白の代わりに「ホームへ戻る」が出るはず */}
                   <button data-debug-screen-error onClick={()=>setDebugThrowScreenError(true)} className="min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95">⚠️ 画面エラーの受け止めを試す</button>
                   {debugThrowScreenError&&<DebugThrowScreenError/>}
-                  {/* 場面のBGMを軽く持つ(2026-10-16 社長の決定「案1＋案2」・修理部)。オート無限を長く回したときの iPhone のメモリ不足の手当て。
-                      入にすると、場面のBGM(タイトル・ホーム・バトルなど)だけ音を軽くして(24kHz)、持つのも2本までにする。モンヒロビートの曲は変わらない。
-                      既定は切。社長の iPhone で確かめてから既定を入にする */}
-                  <section data-bgm-light-panel className="rounded-2xl border border-amber-400/40 bg-amber-950/20 p-3"><h3 className="text-xs font-black text-amber-200">🔊 場面のBGMを軽く持つ（検証用）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-amber-100/80">「入」にすると、タイトル・ホーム・バトルなどの BGM の音を軽くして（少しこもることがあります）、持っておく曲も2本までにします。長く遊んだときにメモリが足りなくなるのを防ぐためのものです。モンヒロビートの曲と効果音は変わりません。次に BGM が切り替わったときから効きます。</p><div className="mt-2 flex gap-2">{[[true,'入'],[false,'切']].map(([value,label])=><button key={label} type="button" data-bgm-light-pref={value?'on':'off'} aria-pressed={bgmLightPref===value} onClick={()=>{try{if(value)localStorage.setItem('mh_bgm_light_v1','on');else localStorage.removeItem('mh_bgm_light_v1');}catch{}setBgmLightPref(value);}} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${bgmLightPref===value?'bg-amber-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></section>
                   {/* 事前ダウンロード(2026-10-11)。ONにすると Service Worker を登録し、設定に「ダウンロード」が出る。
                       OFFにすると Service Worker を外し、端末にためた曲・画像を消す(セーブデータ・ランキングには触れない)。
                       既定は ON(2026-10-11 公開)。この切り替えボタン自体はデバッグ専用 */}
@@ -21477,7 +21480,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </div>
           <footer className="shrink-0 p-4 bg-slate-900 border-t border-white/10 text-center" style={{backgroundColor:'#0f172a',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
             <button onClick={()=>setShowHelp(false)} className="mh-button mh-button-primary w-full min-h-[52px] py-3 rounded-2xl font-black text-sm active:scale-95">わかった！冒険に戻る</button>
-            <button aria-label="" onClick={()=>{const options=getDebugEnemyOptions(debugBattleModeId);if(!options.some(o=>o.key===debugEnemyKey))setDebugEnemyKey(options[0]?.key||null);debugBattleRef.current=false;extremeRunRef.current=false;setDebugBattle(false);setExtremeRun(false);setDebugOutcome(null);setShowHelp(false);setGameState('DEBUG_SETTINGS');}} className="mt-5 mx-auto block text-[10px] opacity-25 hover:opacity-40 active:opacity-60">💊</button>
+            <button aria-label="" onClick={openDebugSettings} className="mt-5 mx-auto block text-[10px] opacity-25 hover:opacity-40 active:opacity-60">💊</button>
           </footer>
         </div>);
       })()}

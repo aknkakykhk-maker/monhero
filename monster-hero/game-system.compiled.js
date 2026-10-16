@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e95873c4c83c1e56
+// source-sha256: baaf4db20e7a9902
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-16 17:11";
+const BUILD_DATE = "2026-10-16 17:49";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -49319,6 +49319,7 @@ function SettingsScreen({
   onOpenScreenTheme,
   onOpenBackup,
   onOpenHelp,
+  onOpenDebug = null,
   onOpenGameUpdate,
   gameUpdateDisabled,
   onReturnToTitle,
@@ -49435,7 +49436,12 @@ function SettingsScreen({
     compact: true
   })), React.createElement("div", {
     className: `${SCREEN_LIST_CLASS} w-full max-w-md mx-auto space-y-3 pb-4`
-  }, React.createElement(SettingsMenuLink, {
+  }, onOpenDebug && React.createElement(SettingsMenuLink, {
+    icon: "🧪",
+    label: "デバッグ設定",
+    desc: "確認待ちの試作・検証用(この端末だけ)",
+    onClick: onOpenDebug
+  }), React.createElement(SettingsMenuLink, {
     icon: "⚔️",
     label: "バトル設定",
     desc: "タクティクスの画面・画面の軽さ・待機中の動き",
@@ -78343,6 +78349,123 @@ const loadAssistantChatMemoFor = async assistantId => {
   const [v1, v2] = await Promise.all([storeGet(ASSISTANT_CHAT_MEMO_KEY, {}, false), storeGet(ASSISTANT_CHAT_MEMO_V2_KEY, {}, false)]);
   return normalizeAssistantChatMemo(v2, v1)[assistantId] || null;
 };
+const DEBUG_TRIALS = [{
+  id: 'bgm_light',
+  added: '2026-10-16',
+  area: '音',
+  key: 'mh_bgm_light_v1',
+  on: 'on',
+  title: '🔊 場面のBGMを軽く持つ',
+  note: 'タイトル・ホーム・バトルなどの BGM を軽くして(少しこもることがあります)、持つ曲を2本までにします。長く遊んだときのメモリ不足の手当てです。モンヒロビートの曲・効果音は変わりません',
+  when: '次に BGM が切り替わったときから'
+}, {
+  id: 'rhythm_floor3d',
+  added: '2026-10-16',
+  area: 'モンヒロビート',
+  key: 'mh_rhythm_floor3d_proto_v1',
+  on: 'on',
+  title: '🎵 床と空中の見た目',
+  note: '地上のノーツを道の床に平たく貼り付け、空中のノーツを厚みのある箱にして床に影を落とします。判定の位置・時刻・指の扱いは変わりません',
+  when: '次の演奏から'
+}];
+const DEBUG_TRIALS_SEEN_KEY = 'mh_debug_trials_seen_v1';
+const debugTrialRead = trial => {
+  try {
+    return typeof localStorage !== 'undefined' && localStorage.getItem(trial.key) === trial.on;
+  } catch (e) {
+    return false;
+  }
+};
+const debugTrialWrite = (trial, on) => {
+  try {
+    if (on) localStorage.setItem(trial.key, trial.on);else localStorage.removeItem(trial.key);
+  } catch (e) {}
+  return debugTrialRead(trial);
+};
+const debugTrialsSeen = () => {
+  try {
+    const v = JSON.parse(localStorage.getItem(DEBUG_TRIALS_SEEN_KEY) || '[]');
+    return Array.isArray(v) ? v.filter(x => typeof x === 'string') : [];
+  } catch (e) {
+    return [];
+  }
+};
+const debugTrialsMarkSeen = id => {
+  try {
+    const seen = debugTrialsSeen();
+    if (!seen.includes(id)) localStorage.setItem(DEBUG_TRIALS_SEEN_KEY, JSON.stringify([...seen, id].slice(-100)));
+  } catch (e) {}
+};
+const debugTrialsOrdered = seen => DEBUG_TRIALS.map((t, i) => ({
+  t,
+  i,
+  fresh: !seen.includes(t.id)
+})).sort((a, b) => Number(b.fresh) - Number(a.fresh) || String(b.t.added).localeCompare(String(a.t.added)) || a.i - b.i).map(x => ({
+  ...x.t,
+  fresh: x.fresh
+}));
+function DebugTrialsPanel({
+  onChange
+}) {
+  const [, setTick] = useState(0);
+  const seen = debugTrialsSeen();
+  const list = debugTrialsOrdered(seen);
+  if (!list.length) return null;
+  const toggle = (trial, on) => {
+    debugTrialWrite(trial, on);
+    debugTrialsMarkSeen(trial.id);
+    setTick(n => n + 1);
+    try {
+      if (onChange) onChange(trial, on);
+    } catch (e) {}
+  };
+  return React.createElement("section", {
+    "data-debug-trials": true,
+    className: "rounded-2xl border-2 border-lime-400/60 bg-lime-950/30 p-3"
+  }, React.createElement("h3", {
+    className: "text-[12px] font-black text-lime-200"
+  }, "🧪 確認待ちの試作", React.createElement("small", {
+    className: "ml-1 text-[9px] font-bold text-lime-100/70"
+  }, "(", list.length, ")")), React.createElement("p", {
+    className: "mt-0.5 text-[9px] font-bold leading-relaxed text-lime-100/75"
+  }, "iPhone で確かめてほしい試作です。「入」にして遊び、気になる所があれば「切」で元に戻せます。新しいものほど上に出ます。"), React.createElement("div", {
+    className: "mt-2 space-y-2"
+  }, list.map(trial => {
+    const on = debugTrialRead(trial);
+    return React.createElement("div", {
+      key: trial.id,
+      "data-debug-trial": trial.id,
+      "data-debug-trial-on": on ? '1' : '0',
+      "data-debug-trial-new": trial.fresh ? '1' : undefined,
+      className: "rounded-xl border border-white/10 bg-slate-950/60 p-2.5"
+    }, React.createElement("div", {
+      className: "flex items-start gap-2"
+    }, React.createElement("div", {
+      className: "min-w-0 flex-1"
+    }, React.createElement("b", {
+      className: "block text-[12px] font-black text-white"
+    }, trial.fresh && React.createElement("span", {
+      "data-debug-trial-new-badge": true,
+      className: "mr-1 rounded bg-rose-500 px-1 py-px align-middle text-[8px] font-black text-white"
+    }, "NEW"), trial.title), React.createElement("small", {
+      className: "mt-0.5 block text-[9px] font-bold text-slate-400"
+    }, trial.area, "・", trial.added, "・", trial.when)), React.createElement("span", {
+      "data-debug-trial-state": true,
+      className: `shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black ${on ? 'bg-lime-400 text-slate-900' : 'bg-slate-700 text-slate-200'}`
+    }, "いま ", on ? '入' : '切')), React.createElement("p", {
+      className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-300"
+    }, trial.note), React.createElement("div", {
+      className: "mt-2 flex gap-2"
+    }, [[true, '入'], [false, '切']].map(([value, label]) => React.createElement("button", {
+      key: label,
+      type: "button",
+      "data-debug-trial-set": value ? 'on' : 'off',
+      "aria-pressed": on === value,
+      onClick: () => toggle(trial, value),
+      className: `min-h-[40px] flex-1 rounded-xl text-[12px] font-black active:scale-95 ${on === value ? 'bg-lime-400 text-slate-900' : 'border border-white/20 bg-slate-900 text-slate-200'}`
+    }, label))));
+  })));
+}
 function MonsterHeroGame() {
   const [gameState, setGameStateRaw] = useState('HOME');
   const isRhythmScreen = state => typeof state === 'string' && state.startsWith('RHYTHM_');
@@ -78501,13 +78624,20 @@ function MonsterHeroGame() {
   const [rhythmCanvasHitsPref, setRhythmCanvasHitsPref] = useState(() => rhythmCanvasHitsPreference());
   const [rhythmHitSparkPref, setRhythmHitSparkPref] = useState(() => rhythmHitSparkPreference());
   const [rhythmJudgmentSnapPref, setRhythmJudgmentSnapPref] = useState(() => rhythmJudgmentSnapPreference());
-  const [bgmLightPref, setBgmLightPref] = useState(() => {
+  const [debugEntryKnown, setDebugEntryKnown] = useState(() => {
     try {
-      return localStorage.getItem('mh_bgm_light_v1') === 'on';
+      return localStorage.getItem('mh_debug_entry_v1') === '1';
     } catch {
       return false;
     }
   });
+  useEffect(() => {
+    if (gameState !== 'DEBUG_SETTINGS') return;
+    try {
+      localStorage.setItem('mh_debug_entry_v1', '1');
+    } catch {}
+    setDebugEntryKnown(true);
+  }, [gameState]);
   const [rhythmInputRecOn, setRhythmInputRecOn] = useState(() => {
     try {
       return RHYTHM_INPUT_REC.enabled();
@@ -86449,6 +86579,17 @@ function MonsterHeroGame() {
     return result;
   };
   const openTrainingInfo = () => setGameState('TRAINING_INFO');
+  const openDebugSettings = () => {
+    const options = getDebugEnemyOptions(debugBattleModeId);
+    if (!options.some(o => o.key === debugEnemyKey)) setDebugEnemyKey(options[0]?.key || null);
+    debugBattleRef.current = false;
+    extremeRunRef.current = false;
+    setDebugBattle(false);
+    setExtremeRun(false);
+    setDebugOutcome(null);
+    setShowHelp(false);
+    setGameState('DEBUG_SETTINGS');
+  };
   const openDebugTraining = () => {
     setTrainingSelectedId(null);
     setTrainingDifficulty('BEGINNER');
@@ -100944,6 +101085,7 @@ function MonsterHeroGame() {
         setRestoreMsg('');
       },
       onOpenHelp: () => openHelp(),
+      onOpenDebug: debugEntryKnown ? openDebugSettings : null,
       onOpenGameUpdate: () => setShowGameUpdateConfirm(true),
       gameUpdateDisabled: showGameUpdateConfirm || gameUpdatePending,
       onReturnToTitle: () => setShowOfficialTitleConfirm(true),
@@ -103455,7 +103597,11 @@ function MonsterHeroGame() {
       className: "mb-3 shrink-0 text-[9px] leading-relaxed text-slate-500"
     }, "用途ごとに畳んであります。見出しを押すと開きます。"), React.createElement("div", {
       className: "flex-1 overflow-y-auto mh-scroll space-y-2"
-    }, React.createElement("button", {
+    }, React.createElement(DebugTrialsPanel, {
+      onChange: trial => {
+        if (trial.id === 'rhythm_floor3d') setRhythmFloor3dPref(rhythmFloor3dPreference());
+      }
+    }), React.createElement("button", {
       "data-debug-assistant-chat": true,
       onClick: () => setAssistantChatOpen(true),
       className: "w-full min-h-[58px] rounded-2xl border-2 border-pink-400/50 bg-pink-950/40 text-pink-50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
@@ -103813,28 +103959,7 @@ function MonsterHeroGame() {
       "data-debug-screen-error": true,
       onClick: () => setDebugThrowScreenError(true),
       className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
-    }, "⚠️ 画面エラーの受け止めを試す"), debugThrowScreenError && React.createElement(DebugThrowScreenError, null), React.createElement("section", {
-      "data-bgm-light-panel": true,
-      className: "rounded-2xl border border-amber-400/40 bg-amber-950/20 p-3"
-    }, React.createElement("h3", {
-      className: "text-xs font-black text-amber-200"
-    }, "🔊 場面のBGMを軽く持つ（検証用）"), React.createElement("p", {
-      className: "mt-1 text-[9px] font-bold leading-relaxed text-amber-100/80"
-    }, "「入」にすると、タイトル・ホーム・バトルなどの BGM の音を軽くして（少しこもることがあります）、持っておく曲も2本までにします。長く遊んだときにメモリが足りなくなるのを防ぐためのものです。モンヒロビートの曲と効果音は変わりません。次に BGM が切り替わったときから効きます。"), React.createElement("div", {
-      className: "mt-2 flex gap-2"
-    }, [[true, '入'], [false, '切']].map(([value, label]) => React.createElement("button", {
-      key: label,
-      type: "button",
-      "data-bgm-light-pref": value ? 'on' : 'off',
-      "aria-pressed": bgmLightPref === value,
-      onClick: () => {
-        try {
-          if (value) localStorage.setItem('mh_bgm_light_v1', 'on');else localStorage.removeItem('mh_bgm_light_v1');
-        } catch {}
-        setBgmLightPref(value);
-      },
-      className: `min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${bgmLightPref === value ? 'bg-amber-400 text-slate-900' : 'border border-white/20 bg-slate-900 text-slate-200'}`
-    }, label)))), React.createElement("button", {
+    }, "⚠️ 画面エラーの受け止めを試す"), debugThrowScreenError && React.createElement(DebugThrowScreenError, null), React.createElement("button", {
       type: "button",
       "data-asset-cache-toggle": true,
       "aria-pressed": assetCacheOn,
@@ -109103,17 +109228,7 @@ function MonsterHeroGame() {
         className: "mh-button mh-button-primary w-full min-h-[52px] py-3 rounded-2xl font-black text-sm active:scale-95"
       }, "わかった！冒険に戻る"), React.createElement("button", {
         "aria-label": "",
-        onClick: () => {
-          const options = getDebugEnemyOptions(debugBattleModeId);
-          if (!options.some(o => o.key === debugEnemyKey)) setDebugEnemyKey(options[0]?.key || null);
-          debugBattleRef.current = false;
-          extremeRunRef.current = false;
-          setDebugBattle(false);
-          setExtremeRun(false);
-          setDebugOutcome(null);
-          setShowHelp(false);
-          setGameState('DEBUG_SETTINGS');
-        },
+        onClick: openDebugSettings,
         className: "mt-5 mx-auto block text-[10px] opacity-25 hover:opacity-40 active:opacity-60"
       }, "💊")));
     })(), titleModal, showOfficialTitleConfirm && React.createElement("div", {

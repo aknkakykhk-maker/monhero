@@ -289,6 +289,10 @@
       "role": "助手とおしゃべりの窓(AssistantChatWindow)。中継役へ送るだけで、会話は端末の新しいキーにだけ置く。公開の印 assistantChat の後ろ"
     },
     {
+      "file": "81-debug-trials.jsx",
+      "role": "デバッグ設定のいちばん上の「確認待ちの試作」(DEBUG_TRIALS に1行足すと出る)。デバッグ専用"
+    },
+    {
       "file": "60-app.jsx",
       "role": "MonsterHeroGame 本体(全 state・ロジック・各 gameState の JSX)"
     },
