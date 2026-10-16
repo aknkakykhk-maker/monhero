@@ -689,7 +689,8 @@ async function chooseBetween(s, mem, log) {
     if (!log.data.build.heroStyle) {
       const styles = await s.page.evaluate(() => [...document.querySelectorAll('[data-hero-initial-style] [data-hero-style]')].map((b) => ({ id: b.getAttribute('data-hero-style'), label: (b.innerText || '').trim() })));
       if (styles.length) {
-        const diff = (log.data.meta || {}).difficulty || '';
+        // 配置の画面ではまだ meta.difficulty が入っていないことがある。そのときは回すときに指定した難易度
+        const diff = (log.data.meta || {}).difficulty || process.env.PLAYBOT_TACTICS_DIFF || '';
         // 勇者モンの名前は、選んだ直後でまだ build.hero に入っていないことがある。そのときは最後に押した子
         const hero = log.data.build.hero || mem.lastPicked || '';
         const tried = (id) => loadKnowledge().runs.filter((r) => r.difficulty === diff && r.hero === hero && (r.heroStyle || 'sword') === id).length;
