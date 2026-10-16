@@ -21,6 +21,11 @@ const DEBUG_TRIALS = [
     title: '🎵 床と空中の見た目(試作2)',
     note: '色を抜いても高さで見分けられるように、空中のノーツの真下の床に濃い影と白い導線を出し、箱を宙に立てます。空中スライドは床の影と帯の下の薄い幕で浮いたリボンにします。判定は変わりません',
     when: '次の演奏から' },
+  // 試作3(2026-10-16 社長「全然だめだね。もっと立体感出せないの？」)。同じキーの値 on3
+  { id: 'rhythm_floor3d3', added: '2026-10-16', area: 'モンヒロビート', key: 'mh_rhythm_floor3d_proto_v1', on: 'on3',
+    title: '🎵 床と空中の見た目(試作3・立体)',
+    note: '空中の層を道と同じ遠近のガラスの床として見せ、道の両端に床と空中をつなぐ柱を立てます。空中のノーツは厚い立方体、空中スライドは厚みのある管に。床にはっきりした影。色・判定は変わりません',
+    when: '次の演奏から' },
 ];
 const DEBUG_TRIALS_SEEN_KEY = 'mh_debug_trials_seen_v1';
 const debugTrialRead = (trial) => { try { return typeof localStorage !== 'undefined' && localStorage.getItem(trial.key) === trial.on; } catch (e) { return false; } };
