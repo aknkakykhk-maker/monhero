@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 5ac7762ef7eaded8
+// generated-sha256: 5159a1661c60e63f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-16 17:49"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-16 18:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -47559,6 +47559,11 @@ const DEBUG_TRIALS = [
     title: '🎵 床と空中の見た目',
     note: '地上のノーツを道の床に平たく貼り付け、空中のノーツを厚みのある箱にして床に影を落とします。判定の位置・時刻・指の扱いは変わりません',
     when: '次の演奏から' },
+  // 試作2(同じキーの別の値。入れると試作1は切になる・切はどちらもキーを消す)
+  { id: 'rhythm_floor3d2', added: '2026-10-16', area: 'モンヒロビート', key: 'mh_rhythm_floor3d_proto_v1', on: 'on2',
+    title: '🎵 床と空中の見た目(試作2)',
+    note: '色を抜いても高さで見分けられるように、空中のノーツの真下の床に濃い影と白い導線を出し、箱を宙に立てます。空中スライドは床の影と帯の下の薄い幕で浮いたリボンにします。判定は変わりません',
+    when: '次の演奏から' },
 ];
 const DEBUG_TRIALS_SEEN_KEY = 'mh_debug_trials_seen_v1';
 const debugTrialRead = (trial) => { try { return typeof localStorage !== 'undefined' && localStorage.getItem(trial.key) === trial.on; } catch (e) { return false; } };
@@ -66098,7 +66103,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <section data-rhythm-gpu-band-panel className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"><h3 className="text-xs font-black text-cyan-200">スライドの帯の描き方（検証用）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80">「GPU」はスライドの帯（地上・空中・影）の形を譜面を読んだときに一度だけ GPU に置き、毎コマは曲の位置だけ渡して描きます（帯が長い・多い曲で軽くするための試作）。既定（GPU）は、ノーツを WebGL で描いているとき（描画方式が自動で GPU がある端末など）に使います。「GPU（WebGL も）」は描画方式に関係なくノーツを WebGL で描きます（「ノーツの描き方」で canvas・要素を選んでいるときはそちらが勝ちます）。「今の描き方」は使いません。WebGL が使えないときは今の描き方に戻ります。次の演奏から効きます。</p><div className="mt-2 flex gap-2">{[['','既定（GPU）'],['gpu','GPU（WebGL も）'],['off','今の描き方']].map(([value,label])=><button key={value||'default'} type="button" data-rhythm-gpu-band-pref={value||'default'} aria-pressed={rhythmGpuBandPref===value} onClick={()=>setRhythmGpuBandPref(rhythmGpuBandSetPreference(value))} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmGpuBandPref===value?'bg-cyan-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></section>
             {/* 床と空中の見た目の試作(2026-10-16 社長「地上は床にべったり、空中は立体感ある表示」)。見た目だけ・判定と入力は変えない。
                 プレイヤーの通常プレイには出ないので更新履歴・ヘルプには載せない */}
-            <section data-rhythm-floor3d-panel className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"><h3 className="text-xs font-black text-cyan-200">床と空中の見た目（試作）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80">「試作」は、地上のノーツを道の床に平たく貼り付けた形（奥ほど細く薄い台形）にし、空中のノーツを側面と厚みのある箱にして、床に影を落とします。判定の位置・時刻・指の扱いは変わりません。空中スライドの厚みは「スライドの帯の描き方」が「今の描き方」のときだけ出ます。次の演奏から効きます。</p><div className="mt-2 flex gap-2">{[['','今の見た目'],['on','試作']].map(([value,label])=><button key={value||'off'} type="button" data-rhythm-floor3d-pref={value||'off'} aria-pressed={rhythmFloor3dPref===value} onClick={()=>setRhythmFloor3dPref(rhythmFloor3dSetPreference(value))} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmFloor3dPref===value?'bg-cyan-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></section>
+            <section data-rhythm-floor3d-panel className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"><h3 className="text-xs font-black text-cyan-200">床と空中の見た目（試作）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80">「試作」は、地上のノーツを道の床に平たく貼り付けた形（奥ほど細く薄い台形）にし、空中のノーツを側面と厚みのある箱にして、床に影を落とします。判定の位置・時刻・指の扱いは変わりません。空中スライドの厚みは「スライドの帯の描き方」が「今の描き方」のときだけ出ます。「試作2」は、色を抜いても高さで見分けられるように、空中のノーツの真下の床に濃い影と白い導線を出し、箱を宙に立てます。空中スライドは床の影と帯の下の薄い幕で浮いたリボンにします(帯の描き方の設定に関係なく効きます)。次の演奏から効きます。</p><div className="mt-2 flex gap-2">{[['','今の見た目'],['on','試作'],['on2','試作2']].map(([value,label])=><button key={value||'off'} type="button" data-rhythm-floor3d-pref={value||'off'} aria-pressed={rhythmFloor3dPref===value} onClick={()=>setRhythmFloor3dPref(rhythmFloor3dSetPreference(value))} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmFloor3dPref===value?'bg-cyan-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></section>
             {/* 演奏前の準備の切り替え(2026-10-11・修理部・社長「事前読み込みで改善されないの?」)。曲の最初のコマで初めて起きていた重い仕事を、曲の前の幕のあいだに済ませる。
                 2026-10-11 社長の決定で既定を「する」にした。何かあれば「しない」で戻す。見た目は変わらないので更新履歴・ヘルプには載せない */}
             {/* 叩いたときの光の描き方の切り替え(2026-10-11・修理部・発熱の調べ)。DOM の光の部品は CSS のアニメーションが毎コマ スタイルの再計算をさせていた。
@@ -66231,7 +66236,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <p className="mb-3 shrink-0 text-[9px] leading-relaxed text-slate-500">用途ごとに畳んであります。見出しを押すと開きます。</p>
             <div className="flex-1 overflow-y-auto mh-scroll space-y-2">
               {/* 確認待ちの試作(81-debug-trials.jsx の DEBUG_TRIALS)。いちばん上に出す。同じキーを覚えている本体の state も読み直す */}
-              <DebugTrialsPanel onChange={(trial)=>{if(trial.id==='rhythm_floor3d')setRhythmFloor3dPref(rhythmFloor3dPreference());}}/>
+              <DebugTrialsPanel onChange={(trial)=>{if(trial.id==='rhythm_floor3d'||trial.id==='rhythm_floor3d2')setRhythmFloor3dPref(rhythmFloor3dPreference());}}/>
 
               {/* 助手とおしゃべり(2026-10-14)。公開の印 assistantChat が立つまでの試し口。
                   本物の中継役へ送るので、1回ごとに社長のAPIクレジットと回数を使う。デバッグ専用なので更新履歴・ヘルプには載せない */}
