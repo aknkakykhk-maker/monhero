@@ -655,9 +655,13 @@ async function chooseBetween(s, mem, log) {
       const hurt = m.downs > 0 || (hpRatio != null && hpRatio < 0.5);
       const dealer = share >= 1 / members;
       if (v2 && !hurt) plan = dealer ? ['ドミノ倒し', '走り込み'] : guardFull ? ['走り込み', 'ドミノ倒し'] : ['丸太うけ', '走り込み'];
+      // ★PLAYBOT_TACTICS_TRAIN=domino … 全員「ドミノ倒し+走り込み」(2026-10-16 ハカセくん・ダイスくんのシミュ: 丸太うけはガードの段階を上げて
+      //   ガードカードが4枚まで増え、手札の攻撃が減る。Hard クリア 31% → 53%)。傷んだ子・ガッツの少ない子の決め方も使わない
+      const trainDomino = process.env.PLAYBOT_TACTICS_TRAIN === 'domino';
+      if (trainDomino) plan = ['ドミノ倒し', '走り込み'];
       // ガッツの少ない子(元のガッツ 90 以下)は、詰まる前から猛勉強を混ぜる(ゴーレムは通常技4発でガッツが尽きていた)
       const baseGuts = (ROSTER_BY_NAME[scr.trainingName] || {}).guts;
-      if ((m.gutsShort >= 4 || (Number.isFinite(baseGuts) && baseGuts <= 90)) && !(hpRatio != null && hpRatio < 0.5)) plan = v2 ? [plan[0], '猛勉強'] : ['丸太うけ', '猛勉強'];
+      if (!trainDomino && (m.gutsShort >= 4 || (Number.isFinite(baseGuts) && baseGuts <= 90)) && !(hpRatio != null && hpRatio < 0.5)) plan = v2 ? [plan[0], '猛勉強'] : ['丸太うけ', '猛勉強'];
       // 丸太うけを選んだぶん、丈夫さの見積もりを上げる(2回目は1回目のあとの値にかかる)
       mem.defCounted = mem.defCounted || {};
       if (scr.picked === 0 && !mem.defCounted[tkey] && (mem.defCounted[tkey] = true)) mem.defEst[scr.trainingName] = defOf(scr.trainingName) * Math.pow(1.2, plan.filter((x) => x === '丸太うけ').length);
@@ -1068,6 +1072,7 @@ function rememberRun(L, stats) {
     //   切り替えごとの入/切(ハカセくんの頼み: Tier を「直したボットの回だけ」に絞れるように)。時間停止の直しは切れないので、bot がある回は全部入っている
     //   emergency は押す条件の名前('auto+wipe' / 'auto' / 'wipe' / false)。2026-10-10 10:30 ごろまでの arena-1 の回は true(= auto+wipe)
     bot: { ver: 'arena-3', ...Object.fromEntries(['EMERGENCY', 'REGEN', 'REVIVE_EACH', 'TRAIN_V2', 'UNIQUE_ROLE', 'HAM_STUN', 'EX_EARLY'].map((f) => [f.toLowerCase().replace(/_(\w)/g, (_, c) => c.toUpperCase()), process.env[`PLAYBOT_TACTICS_${f}`] !== '0'])), emergency: emergencyMode() || false, rotate: process.env.PLAYBOT_TACTICS_ASSIST_ROTATE === '1',
+      train: process.env.PLAYBOT_TACTICS_TRAIN === 'domino' ? 'domino' : 'v2',
       // fixedAllies = 指定した3体(候補5体のうち3体。残り2体はふだんどおり選ぶ)・joined = WAVE の合間に実際に加わった順(毎回くじで3体出るので順は変わる)
       ...(process.env.PLAYBOT_TACTICS_ALLIES ? { fixedAllies: process.env.PLAYBOT_TACTICS_ALLIES, joined: L.build.allies.map((a) => `W${a.wave}:${a.name}`) } : {}),
       ...(process.env.PLAYBOT_TACTICS_ASSIST_ORDER ? { assistOrder: process.env.PLAYBOT_TACTICS_ASSIST_ORDER } : {}) },
