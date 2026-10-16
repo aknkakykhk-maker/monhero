@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5e8634da76a6ec7f
+// source-sha256: 3d583b6874503805
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-16 19:39";
+const BUILD_DATE = "2026-10-16 20:30";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -78385,6 +78385,15 @@ const DEBUG_TRIALS = [{
   title: '🎵 床と空中の見た目(試作3・立体)',
   note: '空中の層を道と同じ遠近のガラスの床として見せ、道の両端に床と空中をつなぐ柱を立てます。空中のノーツは厚い立方体、空中スライドは厚みのある管に。床にはっきりした影。色・判定は変わりません',
   when: '次の演奏から'
+}, {
+  id: 'rhythm_floor3d_a3d',
+  added: '2026-10-16',
+  area: 'モンヒロビート',
+  key: 'mh_rhythm_floor3d_proto_v1',
+  on: 'a3d',
+  title: '🎵 空中を本物の3Dで(段階A)',
+  note: '空中のタップを光の当たる立体の箱、空中スライドを丸い管として描き、床に影を落とします。地上と道は今のまま。位置・判定・色は変わりません(ノーツを WebGL で描いているときだけ効きます)',
+  when: '次の演奏から'
 }];
 const DEBUG_TRIALS_SEEN_KEY = 'mh_debug_trials_seen_v1';
 const debugTrialRead = trial => {
@@ -103173,9 +103182,9 @@ function MonsterHeroGame() {
       className: "text-xs font-black text-cyan-200"
     }, "床と空中の見た目（試作）"), React.createElement("p", {
       className: "mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80"
-    }, "「試作」は、地上のノーツを道の床に平たく貼り付けた形（奥ほど細く薄い台形）にし、空中のノーツを側面と厚みのある箱にして、床に影を落とします。判定の位置・時刻・指の扱いは変わりません。空中スライドの厚みは「スライドの帯の描き方」が「今の描き方」のときだけ出ます。「試作2」は、色を抜いても高さで見分けられるように、空中のノーツの真下の床に濃い影と白い導線を出し、箱を宙に立てます。空中スライドは床の影と帯の下の薄い幕で浮いたリボンにします(帯の描き方の設定に関係なく効きます)。「試作3」は、空中の層を道と同じ遠近のガラスの床として描き、道の両端に床と空中をつなぐ柱を立て、空中のノーツを厚い立方体、空中スライドを厚みのある管にします。次の演奏から効きます。"), React.createElement("div", {
+    }, "「試作」は、地上のノーツを道の床に平たく貼り付けた形（奥ほど細く薄い台形）にし、空中のノーツを側面と厚みのある箱にして、床に影を落とします。判定の位置・時刻・指の扱いは変わりません。空中スライドの厚みは「スライドの帯の描き方」が「今の描き方」のときだけ出ます。「試作2」は、色を抜いても高さで見分けられるように、空中のノーツの真下の床に濃い影と白い導線を出し、箱を宙に立てます。空中スライドは床の影と帯の下の薄い幕で浮いたリボンにします(帯の描き方の設定に関係なく効きます)。「試作3」は、空中の層を道と同じ遠近のガラスの床として描き、道の両端に床と空中をつなぐ柱を立て、空中のノーツを厚い立方体、空中スライドを厚みのある管にします。「3D(段階A)」は、空中のタップを光の当たる本物の立体の箱、空中スライドを丸い管として WebGL で描きます(ノーツを WebGL で描いているときだけ・地上と道は今のまま)。次の演奏から効きます。"), React.createElement("div", {
       className: "mt-2 flex gap-2"
-    }, [['', '今の見た目'], ['on', '試作'], ['on2', '試作2'], ['on3', '試作3']].map(([value, label]) => React.createElement("button", {
+    }, [['', '今の見た目'], ['on', '試作'], ['on2', '試作2'], ['on3', '試作3'], ['a3d', '3D(段階A)']].map(([value, label]) => React.createElement("button", {
       key: value || 'off',
       type: "button",
       "data-rhythm-floor3d-pref": value || 'off',

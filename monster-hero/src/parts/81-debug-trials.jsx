@@ -26,6 +26,11 @@ const DEBUG_TRIALS = [
     title: '🎵 床と空中の見た目(試作3・立体)',
     note: '空中の層を道と同じ遠近のガラスの床として見せ、道の両端に床と空中をつなぐ柱を立てます。空中のノーツは厚い立方体、空中スライドは厚みのある管に。床にはっきりした影。色・判定は変わりません',
     when: '次の演奏から' },
+  // 段階A(2026-10-16 社長「すぐ段階Aを始める」・docs/playbot/reports/2026-10-16/floor3d-estimate.md)。同じキーの値 a3d
+  { id: 'rhythm_floor3d_a3d', added: '2026-10-16', area: 'モンヒロビート', key: 'mh_rhythm_floor3d_proto_v1', on: 'a3d',
+    title: '🎵 空中を本物の3Dで(段階A)',
+    note: '空中のタップを光の当たる立体の箱、空中スライドを丸い管として描き、床に影を落とします。地上と道は今のまま。位置・判定・色は変わりません(ノーツを WebGL で描いているときだけ効きます)',
+    when: '次の演奏から' },
 ];
 const DEBUG_TRIALS_SEEN_KEY = 'mh_debug_trials_seen_v1';
 const debugTrialRead = (trial) => { try { return typeof localStorage !== 'undefined' && localStorage.getItem(trial.key) === trial.on; } catch (e) { return false; } };
