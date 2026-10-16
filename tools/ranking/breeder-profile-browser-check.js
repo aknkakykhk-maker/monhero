@@ -63,6 +63,8 @@ async function run() {
   const fatal = []; const posts = []; const gets = [];
   page.on('pageerror', e => fatal.push(e.message));
   await page.addInitScript(seed);
+  // 起動したとたんに出るお知らせ(イベントの会話・お詫びの配布など)を「もう見た」にする。お詫びの配布はバトルのモード選択の上に重なり、タブを押せなくする
+  await page.addInitScript(require(require('path').resolve(__dirname, '..', 'boot/quiet-boot-seed')).quietBootSeed());
   // 通信を差し替えたので、ゲーム側の「自動操作では書き込まない」止めを外す(26-supabase.jsx)
   await page.addInitScript(() => { window.__mhSupabaseStubbed = true; });
   await page.evaluate(() => { window.__mhSupabaseStubbed = true; }).catch(() => {});
@@ -180,11 +182,13 @@ async function run() {
   // スコアのランキング画面からバトルのタブへ戻る。開いている画面によって
   // 「そのタブが押せる」まで戻る回数が違うので、押せるまで戻ってから押す
   const goBack = () => page.evaluate(() => {
-    const b = [...document.querySelectorAll('button')].find(x => x.querySelector('svg') && x.className.includes('text-slate-400'));
+    // 戻るボタンは aria-label「戻る」で探す(色の指定は画面の作り直しで変わる)
+    const b = document.querySelector('button[aria-label="戻る"]') || [...document.querySelectorAll('button')].find(x => x.querySelector('svg') && x.className.includes('text-slate-400'));
     if (b) b.click();
   });
   const clickTab = (t) => page.evaluate((label) => {
-    const b = [...document.querySelectorAll('button')].find(x => x.textContent.trim() === label);
+    // タブは見た目に飾り(🏆)が付くので、文字ではなく aria-label(「◯◯ランキング」)で探す
+    const b = document.querySelector(`button[aria-label="${label}ランキング"]`) || [...document.querySelectorAll('button')].find(x => x.textContent.trim() === label);
     if (!b) return false;
     b.click();
     return true;

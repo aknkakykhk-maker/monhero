@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5ab7c47d9824ecb8
+// source-sha256: b1cd35701918999d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-16 07:37";
+const BUILD_DATE = "2026-10-16 13:56";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -6477,6 +6477,45 @@ const Audio_ = (() => {
   };
   const SONG_BUFFER_KEEP = 4;
   const songBufferOrder = [];
+  const BGM_LIGHT_KEY = 'mh_bgm_light_v1';
+  const BGM_LIGHT_RATE = 24000,
+    BGM_LIGHT_KEEP = 2,
+    BGM_LIGHT_SUFFIX = '#light';
+  const bgmLightOn = () => {
+    try {
+      return typeof localStorage !== 'undefined' && localStorage.getItem(BGM_LIGHT_KEY) === 'on';
+    } catch (e) {
+      return false;
+    }
+  };
+  const sceneBufferKey = src => bgmLightOn() ? src + BGM_LIGHT_SUFFIX : src;
+  const lightOrder = [];
+  const lightenBuffer = buffer => new Promise(resolve => {
+    let settled = false;
+    const finish = b => {
+      if (settled) return;
+      settled = true;
+      resolve(b && b.length ? b : buffer);
+    };
+    try {
+      const OAC = typeof window !== 'undefined' ? window.OfflineAudioContext || window.webkitOfflineAudioContext : null;
+      if (!OAC || !buffer || buffer.sampleRate <= BGM_LIGHT_RATE) {
+        finish(buffer);
+        return;
+      }
+      const length = Math.max(1, Math.round(buffer.duration * BGM_LIGHT_RATE));
+      const off = new OAC(buffer.numberOfChannels, length, BGM_LIGHT_RATE);
+      const src = off.createBufferSource();
+      src.buffer = buffer;
+      src.connect(off.destination);
+      src.start(0);
+      off.oncomplete = e => finish(e && e.renderedBuffer);
+      const p = off.startRendering();
+      if (p && p.then) p.then(finish, () => finish(buffer));
+    } catch (e) {
+      finish(buffer);
+    }
+  });
   let bgmSource = null,
     bgmSourceKey = null,
     bgmRequest = 0,
@@ -6766,9 +6805,24 @@ const Audio_ = (() => {
     if (previewSource && previewSource.buffer === buffer) return true;
     if (rhythmBuffersInUse.has(buffer)) return true;
     const scene = currentKey ? resolveTrack(currentKey) : null;
-    return !!(scene && scene.src === url);
+    return !!(scene && (scene.src === url || scene.src + BGM_LIGHT_SUFFIX === url));
   };
   const rememberSongBuffer = url => {
+    if (String(url).endsWith(BGM_LIGHT_SUFFIX)) {
+      const li = lightOrder.indexOf(url);
+      if (li >= 0) lightOrder.splice(li, 1);
+      lightOrder.push(url);
+      for (let i = 0; lightOrder.length > BGM_LIGHT_KEEP && i < lightOrder.length - 1;) {
+        const old = lightOrder[i];
+        if (bufferInUse(old)) {
+          i++;
+          continue;
+        }
+        lightOrder.splice(i, 1);
+        buffers.delete(old);
+      }
+      return;
+    }
     const at = songBufferOrder.indexOf(url);
     if (at >= 0) songBufferOrder.splice(at, 1);
     songBufferOrder.push(url);
@@ -6782,23 +6836,27 @@ const Audio_ = (() => {
       buffers.delete(old);
     }
   };
-  const loadBuffer = url => {
-    if (buffers.has(url)) return Promise.resolve(buffers.get(url));
-    if (loadingBuffers.has(url)) return loadingBuffers.get(url);
+  const loadBuffer = key => {
+    if (buffers.has(key)) return Promise.resolve(buffers.get(key));
+    if (loadingBuffers.has(key)) return loadingBuffers.get(key);
     const ctx = getAudioCtx();
     if (!ctx || typeof fetch !== 'function') return Promise.reject(new Error('Web Audio unavailable'));
+    const light = String(key).endsWith(BGM_LIGHT_SUFFIX);
+    const url = light ? String(key).slice(0, -BGM_LIGHT_SUFFIX.length) : key;
     const request = fetch(audioUrlWithKey(url), {
       cache: 'force-cache'
     }).then(res => {
       if (!res.ok) throw new Error(`audio fetch failed: ${res.status}`);
       return res.arrayBuffer();
-    }).then(data => decode(ctx, data)).then(buffer => {
-      buffers.set(url, buffer);
-      decodedBytes += bufferBytes(buffer);
+    }).then(data => decode(ctx, data)).then(decoded => {
+      decodedBytes += bufferBytes(decoded);
       decodedCount += 1;
+      return light ? lightenBuffer(decoded) : decoded;
+    }).then(buffer => {
+      buffers.set(key, buffer);
       return buffer;
-    }).finally(() => loadingBuffers.delete(url));
-    loadingBuffers.set(url, request);
+    }).finally(() => loadingBuffers.delete(key));
+    loadingBuffers.set(key, request);
     return request;
   };
   const stopSource = source => {
@@ -6866,13 +6924,14 @@ const Audio_ = (() => {
       return Promise.resolve();
     }
     resumeAudioCtxNoWait();
-    if (buffers.has(track.src)) {
-      startBgmBuffer(track.id, track, buffers.get(track.src), request);
-      rememberSongBuffer(track.src);
+    const bufKey = sceneBufferKey(track.src);
+    if (buffers.has(bufKey)) {
+      startBgmBuffer(track.id, track, buffers.get(bufKey), request);
+      rememberSongBuffer(bufKey);
       return Promise.resolve();
     }
-    return loadBuffer(track.src).then(buffer => {
-      rememberSongBuffer(track.src);
+    return loadBuffer(bufKey).then(buffer => {
+      rememberSongBuffer(bufKey);
       startBgmBuffer(track.id, track, buffer, request);
     }).catch(() => {});
   };
@@ -7217,13 +7276,16 @@ const Audio_ = (() => {
   };
   const preloadBGM = key => {
     const track = resolveTrack(key);
-    if (track) loadBuffer(track.src).then(() => rememberSongBuffer(track.src)).catch(() => {});
+    if (!track) return;
+    const bufKey = sceneBufferKey(track.src);
+    loadBuffer(bufKey).then(() => rememberSongBuffer(bufKey)).catch(() => {});
   };
   const prepareBGM = (key, timeoutMs = 2000) => {
     const track = resolveTrack(key);
     if (!track) return Promise.resolve(false);
-    return Promise.race([loadBuffer(track.src).then(() => {
-      rememberSongBuffer(track.src);
+    const bufKey = sceneBufferKey(track.src);
+    return Promise.race([loadBuffer(bufKey).then(() => {
+      rememberSongBuffer(bufKey);
       return true;
     }).catch(() => false), new Promise(r => setTimeout(() => r(false), timeoutMs))]);
   };
@@ -7374,6 +7436,12 @@ const Audio_ = (() => {
       seVolumePct,
       bufferCount: buffers.size,
       songBufferCount: songBufferOrder.length,
+      bgmLight: bgmLightOn(),
+      lightBufferCount: lightOrder.length,
+      lightRates: lightOrder.map(key => {
+        const b = buffers.get(key);
+        return b ? Math.round(b.sampleRate) : 0;
+      }),
       songBufferNames: songBufferOrder.map(url => String(url).split('/').pop()),
       keptAudioMB: Math.round([...buffers.values()].reduce((sum, b) => sum + bufferBytes(b), 0) / 1048576),
       decodedMB: Math.round(decodedBytes / 1048576),
@@ -42853,7 +42921,7 @@ const rhythmBuddyTalkPick = ({
   const make = raw => {
     let ok = true;
     let line = raw.split('{who}さん').join(callWord || `{who}${hon}`);
-    if (self && typeof rhythmBuddyPersonaSelf === 'function') line = rhythmBuddyPersonaSelf(line, self);
+    if (self && typeof rhythmBuddyPersonaSelf === 'function') line = rhythmBuddyPersonaSelf(line, self, vars.female === true);
     const text = line.replace(/\{([A-Za-z]+)\}/g, (all, key) => {
       const v = vars[key];
       if (v == null || v === '') {
@@ -44294,6 +44362,24 @@ const RHYTHM_BUDDY_SELF_WORDS = Object.freeze({
   stubborn: Object.freeze(['おれ', 'わし', '拙者', '自分']),
   easygoing: Object.freeze(['ぼく', 'うち', 'わし', 'あたし'])
 });
+const RHYTHM_BUDDY_FEMALE_LINEAGES = Object.freeze(['pixie', 'undine']);
+const rhythmBuddyGenderOf = baseId => {
+  const map = typeof MONSTER_LINEAGE_MAP !== 'undefined' ? MONSTER_LINEAGE_MAP : null;
+  const entry = map && baseId != null && Object.prototype.hasOwnProperty.call(map, baseId) ? map[baseId] : null;
+  return entry && RHYTHM_BUDDY_FEMALE_LINEAGES.includes(entry.main) ? 'female' : '';
+};
+const RHYTHM_BUDDY_SELF_WORDS_FEMALE = Object.freeze({
+  '': Object.freeze(['わたし', 'あたし', 'うち']),
+  jester: Object.freeze(['あたし', 'うち', 'わたし']),
+  brave: Object.freeze(['あたし', 'わたし', 'うち']),
+  clingy: Object.freeze(['あたし', 'うち', 'わたし']),
+  smart: Object.freeze(['わたし', 'わたくし']),
+  serious: Object.freeze(['わたし', 'わたくし']),
+  proud: Object.freeze(['わたし', 'わたくし', 'あたし']),
+  worrier: Object.freeze(['わたし', 'あたし', 'うち']),
+  stubborn: Object.freeze(['あたし', 'わたし', 'うち']),
+  easygoing: Object.freeze(['うち', 'あたし', 'わたし'])
+});
 const RHYTHM_BUDDY_CALL_STYLES = Object.freeze({
   san: Object.freeze({
     id: 'san',
@@ -44549,12 +44635,14 @@ const rhythmBuddyPersonaBirthday = id => {
     day: d.getUTCDate()
   };
 };
-const rhythmBuddyPersona = (masuId, trait = '') => {
+const rhythmBuddyPersona = (masuId, trait = '', baseId = null) => {
   const t = Object.prototype.hasOwnProperty.call(RHYTHM_BUDDY_SELF_WORDS, trait) ? trait : '';
+  const gender = rhythmBuddyGenderOf(baseId);
   const callId = rhythmBuddyPersonaChoose(RHYTHM_BUDDY_CALLS[t], masuId, `call:${t}`, true);
   const quirk = rhythmBuddyPersonaChoose(RHYTHM_BUDDY_QUIRKS[t], masuId, `quirk:${t}`, false);
   return {
-    self: rhythmBuddyPersonaChoose(RHYTHM_BUDDY_SELF_WORDS[t], masuId, `self:${t}`, true),
+    gender,
+    self: rhythmBuddyPersonaChoose((gender === 'female' ? RHYTHM_BUDDY_SELF_WORDS_FEMALE : RHYTHM_BUDDY_SELF_WORDS)[t], masuId, `self:${t}`, true),
     call: RHYTHM_BUDDY_CALL_STYLES[callId],
     quirk: Object.freeze({
       ...quirk,
@@ -44769,7 +44857,7 @@ const RHYTHM_BUDDY_PERSONA_TALK = Object.freeze(Object.fromEntries(Object.keys(R
   traitOnly: true
 })])));
 const RHYTHM_BUDDY_PERSONA_KINDS = Object.freeze(Object.keys(RHYTHM_BUDDY_PERSONA_TALK));
-const rhythmBuddyPersonaSelf = (line, self) => self ? String(line).replace(/私|ぼく/g, self) : String(line);
+const rhythmBuddyPersonaSelf = (line, self, female = false) => self ? String(line).replace(female ? /私|ぼく|俺|オイラ|僕|拙者/g : /私|ぼく/g, self) : String(line);
 const FRIEND_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const FRIEND_CODE_LENGTH = 8;
 const FRIENDS_MAX = 50;
@@ -70941,6 +71029,7 @@ const RHYTHM_MULTI = (() => {
       try {
         text = cpuBrain.talk({
           masuId: x.masuId,
+          baseId: c.mb || null,
           kind,
           me: c.name,
           ...vars
@@ -74819,6 +74908,7 @@ const rhythmBuddyMakeBrain = songs => ({
   },
   talk({
     masuId,
+    baseId = null,
     kind,
     songId = '',
     score = 0,
@@ -74878,10 +74968,11 @@ const rhythmBuddyMakeBrain = songs => ({
     };
     const key = String(masuId);
     const recent = rhythmBuddyTalkRecent.get(key) || [];
-    const persona = rhythmBuddyPersona(masuId, norm.trait);
+    const persona = rhythmBuddyPersona(masuId, norm.trait, baseId);
     const favs = rhythmBuddyPersonaSongs(norm);
     Object.assign(vars, {
       self: persona.self,
+      female: persona.gender === 'female',
       call: persona.call.call || '',
       food: persona.food,
       hobby: persona.hobby,
@@ -75288,10 +75379,10 @@ function RhythmBuddyDetail({
   const [traitsOpen, setTraitsOpen] = React.useState(false);
   const songs = rhythmBuddyTopSongs(m, allSongs ? RHYTHM_BUDDY_SONG_KEEP : 5);
   const songCount = Object.keys(m.songs).length;
-  const persona = rhythmBuddyPersona(masu.id, m.trait);
+  const persona = rhythmBuddyPersona(masu.id, m.trait, masu.baseId);
   const favs = rhythmBuddyPersonaSongs(m);
   const bdayToday = rhythmBuddyIsBirthday(persona, Date.now());
-  const profile = [['self', '一人称', persona.self], ['call', '呼び方', persona.call.label], ['quirk', '口ぐせ', persona.quirk.label], ['food', '好物', persona.food], ['hobby', '趣味', persona.hobby], ['birthday', '誕生日', `${persona.birthday.month}月${persona.birthday.day}日`], ['habit', '叩き方のくせ', persona.habit.label], ['like', '好きな曲', favs.like ? songName(favs.like) : 'まだない'], ['dislike', '苦手な曲', favs.dislike ? songName(favs.dislike) : 'まだない']];
+  const profile = [...(persona.gender === 'female' ? [['gender', '性別', '女の子']] : []), ['self', '一人称', persona.self], ['call', '呼び方', persona.call.label], ['quirk', '口ぐせ', persona.quirk.label], ['food', '好物', persona.food], ['hobby', '趣味', persona.hobby], ['birthday', '誕生日', `${persona.birthday.month}月${persona.birthday.day}日`], ['habit', '叩き方のくせ', persona.habit.label], ['like', '好きな曲', favs.like ? songName(favs.like) : 'まだない'], ['dislike', '苦手な曲', favs.dislike ? songName(favs.dislike) : 'まだない']];
   return React.createElement("div", {
     "data-rhythm-buddy-detail": true,
     className: "space-y-2"
@@ -78265,6 +78356,13 @@ function MonsterHeroGame() {
   const [rhythmCanvasHitsPref, setRhythmCanvasHitsPref] = useState(() => rhythmCanvasHitsPreference());
   const [rhythmHitSparkPref, setRhythmHitSparkPref] = useState(() => rhythmHitSparkPreference());
   const [rhythmJudgmentSnapPref, setRhythmJudgmentSnapPref] = useState(() => rhythmJudgmentSnapPreference());
+  const [bgmLightPref, setBgmLightPref] = useState(() => {
+    try {
+      return localStorage.getItem('mh_bgm_light_v1') === 'on';
+    } catch {
+      return false;
+    }
+  });
   const [rhythmInputRecOn, setRhythmInputRecOn] = useState(() => {
     try {
       return RHYTHM_INPUT_REC.enabled();
@@ -103554,7 +103652,28 @@ function MonsterHeroGame() {
       "data-debug-screen-error": true,
       onClick: () => setDebugThrowScreenError(true),
       className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
-    }, "⚠️ 画面エラーの受け止めを試す"), debugThrowScreenError && React.createElement(DebugThrowScreenError, null), React.createElement("button", {
+    }, "⚠️ 画面エラーの受け止めを試す"), debugThrowScreenError && React.createElement(DebugThrowScreenError, null), React.createElement("section", {
+      "data-bgm-light-panel": true,
+      className: "rounded-2xl border border-amber-400/40 bg-amber-950/20 p-3"
+    }, React.createElement("h3", {
+      className: "text-xs font-black text-amber-200"
+    }, "🔊 場面のBGMを軽く持つ（検証用）"), React.createElement("p", {
+      className: "mt-1 text-[9px] font-bold leading-relaxed text-amber-100/80"
+    }, "「入」にすると、タイトル・ホーム・バトルなどの BGM の音を軽くして（少しこもることがあります）、持っておく曲も2本までにします。長く遊んだときにメモリが足りなくなるのを防ぐためのものです。モンヒロビートの曲と効果音は変わりません。次に BGM が切り替わったときから効きます。"), React.createElement("div", {
+      className: "mt-2 flex gap-2"
+    }, [[true, '入'], [false, '切']].map(([value, label]) => React.createElement("button", {
+      key: label,
+      type: "button",
+      "data-bgm-light-pref": value ? 'on' : 'off',
+      "aria-pressed": bgmLightPref === value,
+      onClick: () => {
+        try {
+          if (value) localStorage.setItem('mh_bgm_light_v1', 'on');else localStorage.removeItem('mh_bgm_light_v1');
+        } catch {}
+        setBgmLightPref(value);
+      },
+      className: `min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${bgmLightPref === value ? 'bg-amber-400 text-slate-900' : 'border border-white/20 bg-slate-900 text-slate-200'}`
+    }, label)))), React.createElement("button", {
       type: "button",
       "data-asset-cache-toggle": true,
       "aria-pressed": assetCacheOn,

@@ -536,7 +536,7 @@ const RHYTHM_MULTI = (() => {
       const now = Date.now();
       if (!opts.now && !opts.skipGap && now - (room.talk.at[x.id] || 0) < RHYTHM_MULTI_CPU_TALK_GAP_MS) return;
       let text = '';
-      try { text = cpuBrain.talk({ masuId: x.masuId, kind, me: c.name, ...vars }); } catch (_) { text = ''; }
+      try { text = cpuBrain.talk({ masuId: x.masuId, baseId: c.mb || null, kind, me: c.name, ...vars }); } catch (_) { text = ''; }
       text = rhythmMultiText(text, RHYTHM_MULTI_CHAT_MAX_LENGTH).trim();
       if (!text) return;
       room.talk.at[x.id] = now;
