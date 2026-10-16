@@ -186,6 +186,43 @@ check('詳細画面: 女の子の種だけ「性別 女の子」を出し、セ�
   && /female: persona\.gender === 'female'/.test(screen0)
   && /cpuBrain\.talk\(\{ masuId: x\.masuId, baseId: c\.mb \|\| null,/.test(read('77-screen-rhythm-multi.jsx')));
 
+// ---- 女の子用のセリフ(2026-10-16 社長「女の子用のセリフを足す」) ----
+{
+  const parts = ['33-rhythm-buddy-talk.jsx', '33-rhythm-buddy-convo.jsx', '33-rhythm-buddy-persona.jsx'].map(read).join('\n');
+  const mk = (src) => { const c = { Math, Number, String, Array, Object, Set, Date, console }; vm.createContext(c);
+    vm.runInContext(`${src}\n;globalThis.__q={ pick:rhythmBuddyTalkPick, T:RHYTHM_BUDDY_TALK, C:RHYTHM_BUDDY_CONVO, P:RHYTHM_BUDDY_PERSONA_TALK, F:RHYTHM_BUDDY_FEMALE_LINES };`, c); return c.__q; };
+  const Q = mk(parts);
+  // 表を空にした写し(女の子用のセリフを足す前と同じ動き)
+  const Q0 = mk(parts.replace(/const RHYTHM_BUDDY_FEMALE_LINES = Object\.freeze\(\{[\s\S]*?\n\}\);/, 'const RHYTHM_BUDDY_FEMALE_LINES = Object.freeze({});'));
+  const F = Q.F, keys = Object.keys(F);
+  const traitLines = new Set();
+  [Q.T, Q.C, Q.P].forEach((set) => Object.values(set).forEach((sc) => Object.values((sc && sc.trait) || {}).forEach((ls) => (ls || []).forEach((l) => traitLines.add(l)))));
+  check(`女の子用の言い換えが100組以上あり、左はどれも実際にある性格のセリフ`, keys.length >= 100 && keys.every((k) => traitLines.has(k)), `${keys.length}組 / 無い: ${keys.filter((k) => !traitLines.has(k)).slice(0, 3).join(' / ')}`);
+  const holes = (t) => (String(t).match(/\{[a-zA-Z]+\}/g) || []).sort().join(',');
+  check('言い換えの左右で、差し込み口({song} など)が同じ・右が空でない・40文字以内', keys.every((k) => holes(k) === holes(F[k]) && F[k].length > 0 && F[k] !== k && F[k].length <= 40),
+    keys.filter((k) => holes(k) !== holes(F[k]) || !F[k] || F[k] === k || F[k].length > 40).slice(0, 3).join(' / '));
+  check('言い換えの右に、男の子っぽい言い回し(ぞ・ぜ・俺・〜ん!・〜しろ)が無い', keys.every((k) => !/ぞ|ぜ|俺|オイラ|僕|拙者|[^な]ん[!。…]*$|しろ$|しとらん|せん[!ぞ]?$/.test(F[k])),
+    keys.filter((k) => /ぞ|ぜ|俺|オイラ|僕|拙者|[^な]ん[!。…]*$|しろ$|しとらん|せん[!ぞ]?$/.test(F[k])).slice(0, 3).map((k) => F[k]).join(' / '));
+  const kinds = [...new Set([...Object.keys(Q.T), ...Object.keys(Q.C), ...Object.keys(Q.P)])];
+  const base = { who: 'たろう', me: 'ピク', mate: 'モノ', song: 'Monster', fav: 'Monster', lv: '12', score: '90万点', plays: '8', days: '3', trait: '勇敢', topic: 'Monster',
+    like: 'Monster', dislike: 'Sheriruth', food: 'プリン', hobby: '歌', hg: '早めに入れた', hb: '急ぎすぎた', ht: 'つい早めに叩いちゃう', mood: '最高' };
+  let femaleBad = [], otherDiff = [];
+  TRAITS.forEach((t) => kinds.forEach((kind) => { for (let i = 0; i < 24; i++) {
+    const r = () => i / 24;
+    const fv = { ...base, self: 'あたし', female: true }, mv = { ...base, self: 'おれ' };
+    const f = Q.pick({ kind, trait: t, moodId: 'normal', vars: fv, rand: r });
+    if (keys.some((k) => k && f && f === k.replace(/\{who\}さん/g, 'たろう').replace(/\{([a-zA-Z]+)\}/g, (a, x) => (x === 'self' ? 'あたし' : base[x] || a)))) femaleBad.push(`${t}/${kind}:${f}`);
+    const m1 = Q.pick({ kind, trait: t, moodId: 'normal', vars: mv, rand: r }), m0 = Q0.pick({ kind, trait: t, moodId: 'normal', vars: mv, rand: r });
+    if (m1 !== m0) otherDiff.push(`${t}/${kind}:${m0}→${m1}`);
+  } }));
+  check('女の子の子は、言い換えの左(もとの男の子っぽいセリフ)を話さない', femaleBad.length === 0, femaleBad.slice(0, 3).join(' / '));
+  check('ほかの子のセリフは、女の子用のセリフを足す前と1文字も変わらない(全場面・9性格)', otherDiff.length === 0, otherDiff.slice(0, 3).join(' / '));
+  check('女の子の子(勇敢)は「勝負よ!」のような言い換えで話す', Q.pick({ kind: 'song', trait: 'brave', vars: { ...base, self: 'あたし', female: true }, rand: () => 0 }) !== ''
+    && Object.values(F).includes('{song}で勝負よ!'));
+  check('セリフを選ぶところで、女の子の子のときだけ言い換える', /if \(female && typeof RHYTHM_BUDDY_FEMALE_LINES !== 'undefined' && Object\.prototype\.hasOwnProperty\.call\(RHYTHM_BUDDY_FEMALE_LINES, raw\)\) raw = RHYTHM_BUDDY_FEMALE_LINES\[raw\];/.test(read('33-rhythm-buddy-talk.jsx'))
+    && /const female = vars\.female === true;/.test(read('33-rhythm-buddy-talk.jsx')));
+}
+
 // ---- 保存しない ----
 check('個体差は保存キーを足さない(mh_ の文字・localStorage が無い)', !/mh_[a-z]/.test(personaSrc.replace(/^\/\/.*$/gm, '')) && !/localStorage/.test(personaSrc));
 const screen = read('80-screen-rhythm-buddy.jsx');
