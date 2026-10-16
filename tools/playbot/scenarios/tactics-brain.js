@@ -657,7 +657,9 @@ async function chooseBetween(s, mem, log) {
       if (v2 && !hurt) plan = dealer ? ['ドミノ倒し', '走り込み'] : guardFull ? ['走り込み', 'ドミノ倒し'] : ['丸太うけ', '走り込み'];
       // ★PLAYBOT_TACTICS_TRAIN=domino … 全員「ドミノ倒し+走り込み」(2026-10-16 ハカセくん・ダイスくんのシミュ: 丸太うけはガードの段階を上げて
       //   ガードカードが4枚まで増え、手札の攻撃が減る。Hard クリア 31% → 53%)。傷んだ子・ガッツの少ない子の決め方も使わない
-      const trainDomino = process.env.PLAYBOT_TACTICS_TRAIN === 'domino';
+      //   2026-10-16 から既定(arena-4。実戦 Hard でゴーレム・モッチー・ライガー各3回: domino 5/9 クリア・v2 5/9 で同じ → はっきり悪くないので既定に)。
+      //   PLAYBOT_TACTICS_TRAIN=v2 で前の決め方
+      const trainDomino = process.env.PLAYBOT_TACTICS_TRAIN !== 'v2';
       if (trainDomino) plan = ['ドミノ倒し', '走り込み'];
       // ガッツの少ない子(元のガッツ 90 以下)は、詰まる前から猛勉強を混ぜる(ゴーレムは通常技4発でガッツが尽きていた)
       const baseGuts = (ROSTER_BY_NAME[scr.trainingName] || {}).guts;
@@ -1068,11 +1070,12 @@ function rememberRun(L, stats) {
     // ボットの版(2026-10-10 から)。arena-1 = アリーナくんの直し(緊急回復・自動回復の見込み・起こす・トレーニング・固有技の強化・おなら・時間停止)の入った版。
     //   arena-2 = それに EX を早めに使う直し(火力の EX を WAVE の始めに・ウンディーネ・ニコラオ。exEarly)を足した版
     //   arena-3 = それに 供モンの押し直しのずれ・更新の知らせ・メロディーの EX の直しを足した版(2026-10-10 12:30 ごろから)
+    //   arena-4 = それにトレーニングを全員「ドミノ倒し+走り込み」にした版(2026-10-16 14:30 JST ごろから。train: 'domino')
     //   これが無い回は、それより前の版
     //   切り替えごとの入/切(ハカセくんの頼み: Tier を「直したボットの回だけ」に絞れるように)。時間停止の直しは切れないので、bot がある回は全部入っている
     //   emergency は押す条件の名前('auto+wipe' / 'auto' / 'wipe' / false)。2026-10-10 10:30 ごろまでの arena-1 の回は true(= auto+wipe)
-    bot: { ver: 'arena-3', ...Object.fromEntries(['EMERGENCY', 'REGEN', 'REVIVE_EACH', 'TRAIN_V2', 'UNIQUE_ROLE', 'HAM_STUN', 'EX_EARLY'].map((f) => [f.toLowerCase().replace(/_(\w)/g, (_, c) => c.toUpperCase()), process.env[`PLAYBOT_TACTICS_${f}`] !== '0'])), emergency: emergencyMode() || false, rotate: process.env.PLAYBOT_TACTICS_ASSIST_ROTATE === '1',
-      train: process.env.PLAYBOT_TACTICS_TRAIN === 'domino' ? 'domino' : 'v2',
+    bot: { ver: 'arena-4', ...Object.fromEntries(['EMERGENCY', 'REGEN', 'REVIVE_EACH', 'TRAIN_V2', 'UNIQUE_ROLE', 'HAM_STUN', 'EX_EARLY'].map((f) => [f.toLowerCase().replace(/_(\w)/g, (_, c) => c.toUpperCase()), process.env[`PLAYBOT_TACTICS_${f}`] !== '0'])), emergency: emergencyMode() || false, rotate: process.env.PLAYBOT_TACTICS_ASSIST_ROTATE === '1',
+      train: process.env.PLAYBOT_TACTICS_TRAIN === 'v2' ? 'v2' : 'domino',
       // fixedAllies = 指定した3体(候補5体のうち3体。残り2体はふだんどおり選ぶ)・joined = WAVE の合間に実際に加わった順(毎回くじで3体出るので順は変わる)
       ...(process.env.PLAYBOT_TACTICS_ALLIES ? { fixedAllies: process.env.PLAYBOT_TACTICS_ALLIES, joined: L.build.allies.map((a) => `W${a.wave}:${a.name}`) } : {}),
       ...(process.env.PLAYBOT_TACTICS_ASSIST_ORDER ? { assistOrder: process.env.PLAYBOT_TACTICS_ASSIST_ORDER } : {}) },
