@@ -703,6 +703,16 @@ const RHYTHM_STRIP=(()=>{
 // 判定・入力・見た目はすべてこの投影を通るので、ここを変えれば3つがそろって変わる。
 const RHYTHM_PROJECTION_TOP_SCALE=.07;
 const RHYTHM_PROJECTION_CURVE=1;
+// カメラ(2026-10-16 社長「案3までやる」の2段目・確認待ちの試作 mh_rhythm_floor3d_proto_v1='c3b')。
+// 道の遠近(rhythmProjectionDepth)とノーツの近づき方(rhythmProjectTravelProgress)はここの値を読む。判定・入力・見た目・レーンの SVG・GPU の帯は
+// どれもこの2つを通るので、ここを替えれば押す場所と見た目がそろって変わる(RHYTHM_ROAD_WIDTH と同じ作り)。
+// 演奏画面が演奏を始めるときに set する。演奏の外・試作が切のときは今までの値(上の2つと RHYTHM_TRAVEL_FAR_SCALE)。
+//   deep … カメラを寝かせる: 奥の幅を細く(.07→.04)・遠くのノーツほど小さく遅く、手前で速く近づく(.4→.3)。道の両端はまっすぐのまま(曲げるとラッパの形に戻る)
+const RHYTHM_PROJECTION_CAMERA={
+  top:RHYTHM_PROJECTION_TOP_SCALE,far:null,deep:false,
+  set(deep){this.deep=!!deep;this.top=deep?.04:RHYTHM_PROJECTION_TOP_SCALE;this.far=deep?.3:null;},
+  reset(){this.set(false);},
+};
 // 横向きの道の幅(2026-09-27・ユーザー指示「オプションでパターン選べるにして。不具合とかおきないように」)。
 // 道の横の広がりにだけ掛ける倍率。見た目・判定・入力・叩いた光・レーンの SVG はどれも rhythmProjectionScale /
 // rhythmProjectBoundary を通るので、ここを変えれば全部がそろって変わる(どこか1つだけ古い幅が残ることがない)。
@@ -757,8 +767,9 @@ const rhythmClamp01=value=>Math.max(0,Math.min(1,Number(value)||0));
 // 奥行き(0〜1)。道の横幅の倍率は掛けない。ノーツの太さ・明るさはこちらで決める
 const rhythmProjectionDepth=yRatio=>{
   const y=Math.min(1,Number(yRatio)||0);
-  if(y<0&&RHYTHM_PROJECTION_CURVE===1)return Math.max(0,RHYTHM_PROJECTION_TOP_SCALE+(1-RHYTHM_PROJECTION_TOP_SCALE)*y);
-  return RHYTHM_PROJECTION_TOP_SCALE+(1-RHYTHM_PROJECTION_TOP_SCALE)*Math.pow(rhythmClamp01(y),RHYTHM_PROJECTION_CURVE);
+  const top=RHYTHM_PROJECTION_CAMERA.top;
+  if(y<0&&RHYTHM_PROJECTION_CURVE===1)return Math.max(0,top+(1-top)*y);
+  return top+(1-top)*Math.pow(rhythmClamp01(y),RHYTHM_PROJECTION_CURVE);
 };
 // 道の横の広がり。奥行きに横向きの道の幅の倍率を掛けたもの
 const rhythmProjectionScale=yRatio=>rhythmProjectionDepth(yRatio)*RHYTHM_ROAD_WIDTH.factor;
@@ -920,7 +931,7 @@ const rhythmSubLanePolygon=subLane=>rhythmSpanPolygon(subLane/2,(subLane+1)/2);
 // .25 だと判定ラインで平均の4倍の速さになり、手前で目が追いつかない。.4 で2.5倍(以前の式は1.46倍)
 const RHYTHM_TRAVEL_FAR_SCALE=.4;
 const rhythmProjectTravelProgress=progress=>{
-  const p=Number(progress)||0,far=RHYTHM_TRAVEL_FAR_SCALE,k=1/far;
+  const p=Number(progress)||0,far=typeof RHYTHM_PROJECTION_CAMERA==='object'&&RHYTHM_PROJECTION_CAMERA.far?RHYTHM_PROJECTION_CAMERA.far:RHYTHM_TRAVEL_FAR_SCALE,k=1/far;
   if(p<0)return p*(k-1)/(k*k)/(1-far);
   if(p>1)return 1+(p-1)*(k-1)/(1-far);
   return (1/(k-(k-1)*p)-far)/(1-far);
@@ -31548,10 +31559,13 @@ const rhythmMonLayersOn=()=>{try{return typeof localStorage!=='undefined'&&local
 //   空中のノーツは厚い立方体、空中スライドは厚みのある管。床にはっきりした影と柱。色・判定はそのまま(GPU の帯は使わない)
 // 'c3' = 案3の1段目(2026-10-16 社長「案3までやる」・docs/playbot/reports/2026-10-16/floor3d-look/): 参考動画の見やすさは「明るさ・透け・光のにじみ」から来ている。
 //   空中のタップを明るく薄い板+光る縁(案1)、空中スライドを白い芯から手の色がにじむ半透明の光の帯(案2)にする。色・判定はそのまま(GPU の帯は使わない)
+// 'c3b' = 案3の2段目: 1段目の見た目+カメラを寝かせる(RHYTHM_PROJECTION_CAMERA.set(true)。演奏画面が演奏を始めるときに入れる。判定・入力も同じ計算を通るのでそろう)
 // 'a3d' = 段階A(本物の3D・docs/playbot/reports/2026-10-16/floor3d-estimate.md): 空中のタップを光の当たる箱、空中スライドを丸い管として
 //   ノーツの WebGL の層の中で描く(rhythmCreateGpuSky3d)。地上・道は今のまま。WebGL で描いていないときは今の見た目
-const rhythmFloor3dPreference=()=>{try{if(typeof localStorage==='undefined')return '';const v=localStorage.getItem(RHYTHM_FLOOR3D_KEY);return v==='on'||v==='on2'||v==='on3'||v==='a3d'||v==='c3'?v:'';}catch{return '';}};
-const rhythmFloor3dSetPreference=value=>{const next=value==='on'||value==='on2'||value==='on3'||value==='a3d'||value==='c3'?value:'';try{if(typeof localStorage!=='undefined'){if(next)localStorage.setItem(RHYTHM_FLOOR3D_KEY,next);else localStorage.removeItem(RHYTHM_FLOOR3D_KEY);}}catch{}return next;};
+const rhythmFloor3dPreference=()=>{try{if(typeof localStorage==='undefined')return '';const v=localStorage.getItem(RHYTHM_FLOOR3D_KEY);return v==='on'||v==='on2'||v==='on3'||v==='a3d'||v==='c3'||v==='c3b'?v:'';}catch{return '';}};
+// 案3の2段目(カメラを寝かせる)を使うか。演奏画面が RHYTHM_PROJECTION_CAMERA へ入れる
+const rhythmCameraDeepActive=()=>rhythmFloor3dPreference()==='c3b';
+const rhythmFloor3dSetPreference=value=>{const next=value==='on'||value==='on2'||value==='on3'||value==='a3d'||value==='c3'||value==='c3b'?value:'';try{if(typeof localStorage!=='undefined'){if(next)localStorage.setItem(RHYTHM_FLOOR3D_KEY,next);else localStorage.removeItem(RHYTHM_FLOOR3D_KEY);}}catch{}return next;};
 const RHYTHM_GPU_BAND_KEY='mh_rhythm_gpu_band_v1';
 // 2026-10-11 社長の決定で、ノーツを WebGL で描いているときは GPU の帯・区切りの線・ノーツの板を既定で使う(本番の記録 stats.frame で前後を比べる)。
 // 値: 'gpu' = 使う(ノーツも WebGL で描く)・'off' = 使わない(今までの WebGL の描き方)・未設定 = 既定(WebGL のときは使う)。
@@ -31734,8 +31748,8 @@ const rhythmCreateGpuSlideBand=(gl,host)=>{
     if(uniformsFor!==cur){uniformsFor=cur;const u=cur.u,m=host.matrix(),view=host.view();
       gl.uniform3f(U.uM0,m[0],m[2],m[4]);gl.uniform3f(U.uM1,m[1],m[3],m[5]);gl.uniform2f(U.uView,view[0],view[1]);
       gl.uniform1f(U.uSnow,u.snow);gl.uniform1f(U.uTnow,u.tnow);gl.uniform1f(U.uTravel,u.travel);gl.uniform1f(U.uSpawnY,u.spawnY);gl.uniform1f(U.uTravelPx,u.travelPx);gl.uniform1f(U.uHalfH,u.halfH);
-      gl.uniform1f(U.uW,u.w);gl.uniform1f(U.uH,u.h);gl.uniform1f(U.uLanes,RHYTHM_LANE_COUNT);gl.uniform1f(U.uTop,RHYTHM_PROJECTION_TOP_SCALE);gl.uniform1f(U.uCurve,RHYTHM_PROJECTION_CURVE);
-      gl.uniform1f(U.uRoad,RHYTHM_ROAD_WIDTH.factor);gl.uniform1f(U.uFar,RHYTHM_TRAVEL_FAR_SCALE);gl.uniform1f(U.uSkyK,u.skyK);gl.uniform1f(U.uSize,u.size);}
+      gl.uniform1f(U.uW,u.w);gl.uniform1f(U.uH,u.h);gl.uniform1f(U.uLanes,RHYTHM_LANE_COUNT);gl.uniform1f(U.uTop,RHYTHM_PROJECTION_CAMERA.top);gl.uniform1f(U.uCurve,RHYTHM_PROJECTION_CURVE);
+      gl.uniform1f(U.uRoad,RHYTHM_ROAD_WIDTH.factor);gl.uniform1f(U.uFar,RHYTHM_PROJECTION_CAMERA.far||RHYTHM_TRAVEL_FAR_SCALE);gl.uniform1f(U.uSkyK,u.skyK);gl.uniform1f(U.uSize,u.size);}
   };
   // 頂点の並びの指定は、入れ物が変わったときだけし直す(スマホのブラウザは命令1回ごとの手間が大きい)
   let pointed=null;
@@ -34237,7 +34251,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   return {
     // options.webgl … 検証用。WebGL の描き込み先(rhythmCreateGL2D)で描く。作れなければ今までどおり 2D で描く
     // options.gpuBand … スライドの帯を GPU に置いて描く(WebGL のときだけ。作れなければ今までどおり CPU で刻む)
-    attach(next,options={}){{const f=rhythmFloor3dPreference();floor3d=f==='on'||f==='on2'||f==='on3';floor3d2=f==='on2';floor3d3=f==='on3';sky3dWanted=f==='a3d';case3=f==='c3';skySeen=false;}sparkSprites=rhythmHitSparkActive();canvas=next||null;backend='2d';ctx=null;gpuBandWanted=!!options.gpuBand&&!floor3d2&&!floor3d3&&!sky3dWanted&&!case3;hitArea=null;skyHitArea=null;hitSlots.fill(null);pendingClear=false;blank=true;if(canvas&&options.webgl){ctx=rhythmCreateGL2D(canvas);if(ctx)backend='webgl';}if(canvas&&!ctx){try{ctx=canvas.getContext('2d');}catch(e){ctx=null;}}
+    attach(next,options={}){{const f=rhythmFloor3dPreference();floor3d=f==='on'||f==='on2'||f==='on3';floor3d2=f==='on2';floor3d3=f==='on3';sky3dWanted=f==='a3d';case3=f==='c3'||f==='c3b';skySeen=false;}sparkSprites=rhythmHitSparkActive();canvas=next||null;backend='2d';ctx=null;gpuBandWanted=!!options.gpuBand&&!floor3d2&&!floor3d3&&!sky3dWanted&&!case3;hitArea=null;skyHitArea=null;hitSlots.fill(null);pendingClear=false;blank=true;if(canvas&&options.webgl){ctx=rhythmCreateGL2D(canvas);if(ctx)backend='webgl';}if(canvas&&!ctx){try{ctx=canvas.getContext('2d');}catch(e){ctx=null;}}
       // 段階A: 3Dの部品(シェーダー)は演奏前のここで作っておく(曲の最初のコマで組み立てない)
       if(sky3dWanted&&backend==='webgl'&&ctx)void ctx.sky3d;},
     get backend(){return backend;},
