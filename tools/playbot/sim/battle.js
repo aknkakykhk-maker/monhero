@@ -316,7 +316,8 @@ function slotGuardValue(st, guardBySlot, slot) {
 // 60-app.jsx spawnEnemy(13629)・advanceEnemyIntents(10241)・aimTacticsIntent(1320)
 const actionState = (st) => ({ definitions: G.enemyActionDefinitionsFor('tacticsPro', st.enemy.id, st.enemy.difficulty, st.enemy.actionCount), roarStacks: st.roarStacks });
 const nextAction = (st, dist, last, extra = {}) => G.chooseEnemyAction(st.enemy, dist, st.rng, { ...G.enemyActionStateFrom(last), ...actionState(st), ...extra });
-const aim = (st, intent) => G.withTacticsTarget(intent, st.units, st.rng);
+// st.aimHook … 狙いの決め方を差し替える口(2026-10-17 ヘイトの試算 hate-trial.js が使う)。渡さなければ今までどおり
+const aim = (st, intent) => (typeof st.aimHook === 'function' ? st.aimHook(st, intent) : G.withTacticsTarget(intent, st.units, st.rng));
 const distAfterIntent = (intent, d) => (intent && intent.type === 'MOVE' && Number.isInteger(intent.targetDist)) ? intent.targetDist : d;
 function advanceIntents(st, executed, distAfter, performed) {
   const effective = performed ? executed : null;
@@ -1426,13 +1427,13 @@ function trainAfterWave(st, w) {
   }
 }
 
-function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWave = 10, exMode = 'bot', assist = 'bot', assistPlay = 'bot', training = 'bot', exLog = false, distBonus = true, uniqueUp = true, emergency = 'auto', uniquePlan = 'bot', discardBlocked = true, revive = 'bot' }) {
+function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWave = 10, exMode = 'bot', assist = 'bot', assistPlay = 'bot', training = 'bot', exLog = false, distBonus = true, uniqueUp = true, emergency = 'auto', uniquePlan = 'bot', discardBlocked = true, revive = 'bot', aimHook = null }) {
   const rng = mulberry32(hashSeed(seed, heroId, difficulty, allies.join(',')));
   const hero = MON_BY_ID[heroId];
   if (!hero) throw new Error(`勇者モンが見つからない: ${heroId}`);
   if (!EX_POLICIES[exMode]) throw new Error(`EX の使い方が分からない: ${exMode}`);
   const st = {
-    rng, heroId, difficulty, exMode, maxWave, mons: [null, null, null, null], units: [null, null, null, null], trick: [{}, {}, {}, {}],
+    aimHook, rng, heroId, difficulty, exMode, maxWave, mons: [null, null, null, null], units: [null, null, null, null], trick: [{}, {}, {}, {}],
     autoHp: 0.1, joinCatchUp: 1, powerStart: monsterPowerOf(hero), powerNow: monsterPowerOf(hero),
     dealtTotal: 0, taken: 0, recentDealt: 0, recentWave: 0, turnsTotal: 0, waveTurns: [],
     // ランのあいだ残るもの: EX の回数・permaBuffs・クッキー/黒音符・メロディ・ボゥの積み・運命のコイン/輪の積み
