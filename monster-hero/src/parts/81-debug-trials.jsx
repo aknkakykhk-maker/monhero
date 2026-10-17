@@ -8,6 +8,11 @@
 // NEW の印は「まだ一度も入/切を押していない試作」に付く(押した試作は mh_debug_trials_seen_v1 に覚える)。
 // デバッグ専用(更新履歴・ヘルプに載せない)。判定・セーブデータの中身には触らない
 const DEBUG_TRIALS = [
+  // 2026-10-17 社長「とりあえず表記とヘイト変動率とかでいいんじゃないかな？」。タイプの表は 32-tactics-units.jsx の MONSTER_TYPES / MONSTER_TYPE_OF
+  { id: 'monster_type', added: '2026-10-17', area: 'モンスター', key: 'mh_monster_type_proto_v1', on: 'on',
+    title: '🏷️ モンスターのタイプ表記(試作)',
+    note: '図鑑・図鑑の詳細・パーティ選びに、アタッカー・タンク・サポーター・ヒーラー・シャドウの印を出します。タイプが効くのはタクティクスのヘイト(試作)の増え方だけで、能力・ステータスは変わりません',
+    when: '次に画面を開いたときから' },
   // 2026-10-17 社長「試作する」(ヘイト)。数字は 32-tactics-units.jsx の TACTICS_HATE の1か所。切のときは今までと同じ狙い方
   { id: 'tactics_hate', added: '2026-10-17', area: 'タクティクスバトル', key: 'mh_tactics_hate_proto_v1', on: 'on',
     title: '⚔️ タクティクスのヘイト(試作)',

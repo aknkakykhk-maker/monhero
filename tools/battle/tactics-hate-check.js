@@ -3,12 +3,14 @@
 //
 //   node tools/battle/tactics-hate-check.js
 //
-//   ① 全モンスターが TACTICS_HATE.monsters にあり、役割が roles にある(足し忘れると「攻撃」の既定値になる)
+//   ① 全モンスターが MONSTER_TYPE_OF(タイプの表)にあり、メイン・サブが MONSTER_TYPES にある(足し忘れると止める)。
+//     ヘイトの倍率はタイプの表から引く(TACTICS_HATE に役割の表を二重に持たない)
 //   ② 切のとき(hate を渡さない)は、狙いの重みが今までの式とまったく同じ
 //   ③ 1ターンの動き: 毎ターン ×decay・上限・倒れたら0・空き枠は0・勇者は下地より下がらない・与ダメージは割合で配る
 //   ④ 炎の段は 20・50・80。勇者は下地を引いた値で見る
 //   ⑤ 名前の出た子の値(資料の★おすすめ): あつの挑発・みゅあの愛・ももすけのおねだり・モノリスのかばう
 //   ⑥ 確認待ちの試作の一覧にあり、既定は切(キーが無ければ効かない)。タクティクスバトルだけ(レイド・既存5モードは見ない)
+//   ⑦ タイプの表記: 確認待ちの試作の一覧にあり、既定は切。図鑑・図鑑の詳細・パーティ選びに印がある
 const fs = require('fs');
 const path = require('path');
 const { loadGame } = require('../playbot/sim/load-game');
@@ -22,9 +24,12 @@ const near = (a, b) => Math.abs(a - b) < 1e-9;
 
 // ①
 const mons = Object.values(G.ALL_PLAYER_MONSTERS).filter((m) => m && !m.debugOnly);
-const missing = mons.filter((m) => !H.monsters[m.id] || !H.roles[H.monsters[m.id].role]).map((m) => m.id);
-check('① 全モンスターが表にあり、役割が roles にある', missing.length === 0 && mons.length > 0, missing.length ? `足りない: ${missing.join(', ')}` : `${mons.length}体`);
-check('① 役割の倍率は数で、0より大きい', Object.values(H.roles).every((r) => Number.isFinite(r.mult) && r.mult > 0));
+const T = G.MONSTER_TYPES, TO = G.MONSTER_TYPE_OF;
+const missing = mons.filter((m) => !TO[m.id] || !T[TO[m.id].main] || (TO[m.id].sub != null && (!T[TO[m.id].sub] || TO[m.id].sub === TO[m.id].main))).map((m) => m.id);
+check('① 全モンスターがタイプの表にあり、メイン・サブが MONSTER_TYPES にある', missing.length === 0 && mons.length > 0, missing.length ? `足りない・違う: ${missing.join(', ')}(MONSTER_TYPE_OF に1行足す)` : `${mons.length}体`);
+check('① タイプの倍率は数で、0より大きい・名前とアイコンがある', Object.values(T).every((r) => Number.isFinite(r.hateMult) && r.hateMult > 0 && r.label && r.icon));
+check('① ヘイトに役割の表を二重に持たない', !('roles' in H) && Object.values(H.monsters).every((m) => !('role' in m)));
+check('① ヘイトの倍率はタイプの表から引く', mons.every((m) => H.monsters[m.id]?.mult != null || G.tacticsHateProfile(m.id).mult === T[TO[m.id].main].hateMult));
 
 // ②
 const unit = (id, hp, maxHp, downed = false) => ({ id, name: id, hp, maxHp, guts: 10, maxGuts: 10, atk: 100, def: 100, downed });
@@ -76,6 +81,13 @@ check('⑥ キーが無ければ切', G.tacticsHateProtoOn() === false);
 const app = read('monster-hero/src/parts/60-app.jsx');
 check('⑥ タクティクスバトルだけ(レイドバトルは見ない)', /const tacticsHateOnFor = \(mode\) => TACTICS_BATTLE_MODES\.includes\(mode\) && !isRaidJackMode\(mode\) && tacticsHateProtoOn\(\);/.test(app));
 check('⑥ 保存データの一覧に試作のキーがある', read('docs/spec/SAVE_DATA.md').includes(G.TACTICS_HATE_PROTO_KEY));
+
+// ⑦
+check('⑦ タイプの表記が確認待ちの試作の一覧にある', trials.includes(`key: '${G.MONSTER_TYPE_PROTO_KEY}', on: 'on'`));
+check('⑦ キーが無ければ切', G.monsterTypeProtoOn() === false);
+check('⑦ 保存データの一覧にタイプのキーがある', read('docs/spec/SAVE_DATA.md').includes(G.MONSTER_TYPE_PROTO_KEY));
+const dex = read('monster-hero/src/parts/57-screen-monster-dex.jsx'), pickSrc = read('monster-hero/src/parts/67-screen-pick.jsx');
+check('⑦ 図鑑・図鑑の詳細・パーティ選びに印がある', (dex.match(/<MonsterTypeBadge /g) || []).length >= 2 && /<MonsterTypeBadge /.test(pickSrc));
 
 console.log(failed ? `\nNG ${failed}件` : '\nすべてOK');
 process.exit(failed ? 1 : 0);

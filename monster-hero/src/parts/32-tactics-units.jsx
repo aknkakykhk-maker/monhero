@@ -571,10 +571,9 @@ const withTacticsTarget = (intent, units, random = Math.random, bias = TACTICS_T
 // 敵の狙いを「目立った子ほど狙われやすく」する裏の値。タクティクスバトルだけ・バトル中だけ(保存しない)。
 // デバッグ設定の「🧪 確認待ちの試作」で入れたときだけ効く(切のときは今までとまったく同じ)。
 // ★数字はこの TACTICS_HATE の1か所だけに置く(試算: docs/playbot/reports/2026-10-17/tactics-hate-numbers.md の★おすすめ)。
-//   action … 行動ごとの基準値 / roles … 役割ごとの倍率・上乗せ / monsters … 子ごとの役割と上書き(mult・add・always)
+//   action … 行動ごとの基準値 / monsters … 子ごとの上書き(mult・add・always)。タイプごとの倍率は下の MONSTER_TYPES(1か所)
 //   1ターンの動き: ヘイト = 前のヘイト × decay + 倍率 ×(そのターンに増えたぶん)。上限 cap・倒れたら0・WAVE で0。
 //   勇者は hero.floor より下がらない(炎は下地を引いた値で出す)。狙いの重み = 今の重み ×(1 + ヘイト ÷ k)
-// ★モンスターを足したら monsters に1行足す(tactics-hate-check.js が全モンスターを見る)
 const TACTICS_HATE_PROTO_KEY = 'mh_tactics_hate_proto_v1';
 const tacticsHateProtoOn = () => { try { return typeof localStorage !== 'undefined' && localStorage.getItem(TACTICS_HATE_PROTO_KEY) === 'on'; } catch (e) { return false; } };
 const TACTICS_HATE = {
@@ -587,31 +586,53 @@ const TACTICS_HATE = {
   assist: { atsu: 'taunt', mua: 'heal', momosuke: 'heal', meloso: 'heal', oryo: 'buff', dra: 'buff', cadmium: 'buff', myaru: 'buff', kiki: 'buff', poltz: 'buff' },
   // 回復の量(ライフの回復率 + ガッツの回復率 × 0.5)。段 0〜2
   healAmount: { mua: [0.5, 1.05, 1.35], momosuke: [0.25, 1.05, 1.35], meloso: [0.45, 0.45, 0.45] },
-  roles: {
-    tank: { label: '盾', mult: 1.3, add: { guard: 6 } },
-    healer: { label: '回復', mult: 1.2, add: {} },
-    support: { label: '補助', mult: 1.1, add: {} },
-    attacker: { label: '攻撃', mult: 1.0, add: {} },
-    sneak: { label: 'ひそむ', mult: 0.8, add: {} },
-  },
+  // 子ごとの上書き(タイプの既定値より強く/弱くしたい子だけ)。mult … 増え方の倍率 / add … 行動ごとの上乗せ / always … 行動のたびの上乗せ
   monsters: {
-    Mocchi: { role: 'attacker' }, Mitarashi: { role: 'attacker' }, Golem: { role: 'attacker' }, Suezo: { role: 'attacker' },
-    Ham: { role: 'attacker' }, Pandora: { role: 'attacker' }, KenshiMocchi: { role: 'attacker' }, Eiki: { role: 'attacker' },
-    Kuromy: { role: 'attacker' }, Spooky: { role: 'attacker' },
-    Monol: { role: 'tank', mult: 1.5, always: 3 }, Yggdrasil: { role: 'tank' }, MelWhip: { role: 'tank' }, Oboro: { role: 'tank' }, Plant: { role: 'tank' },
-    Melody: { role: 'healer' }, Undine: { role: 'healer' },
-    Pixie: { role: 'support' }, Mia: { role: 'support' }, Ark: { role: 'support' }, Iblis: { role: 'support' },
-    Snegurochka: { role: 'support' }, Yaobikuni: { role: 'support' },
-    Tiger: { role: 'sneak' }, Zan: { role: 'sneak' }, Ghost: { role: 'sneak' },
+    Monol: { mult: 1.5, always: 3 }, // モノリスの特性(常にヘイトが上がりやすい)
   },
+};
+
+// ===== モンスターのタイプ(確認待ちの試作・2026-10-17 社長「とりあえず表記とヘイト変動率とかでいいんじゃないかな？」) =====
+// ★効くのはタクティクスのヘイトの増え方(hateMult・hateAdd)だけ。ほかのモード・能力・ステータスには効かせない。
+// ★タイプの表はここ1か所(ヘイトの役割もこの表を読む。二重に持たない)。メイン1つ + サブ(任意・表記だけ)。
+// ★モンスターを足したら MONSTER_TYPE_OF に1行足す(tactics-hate-check.js が全モンスターを見て、無ければ止める)
+const MONSTER_TYPE_PROTO_KEY = 'mh_monster_type_proto_v1';
+const monsterTypeProtoOn = () => { try { return typeof localStorage !== 'undefined' && localStorage.getItem(MONSTER_TYPE_PROTO_KEY) === 'on'; } catch (e) { return false; } };
+const MONSTER_TYPES = {
+  attacker: { label: 'アタッカー', icon: '⚔️', note: '攻めの主役', hateMult: 1.0, hateAdd: {} },
+  tank: { label: 'タンク', icon: '🛡️', note: '前に立って攻撃を引き受ける', hateMult: 1.3, hateAdd: { guard: 6 } },
+  supporter: { label: 'サポーター', icon: '✨', note: '味方を強くする', hateMult: 1.1, hateAdd: {} },
+  healer: { label: 'ヒーラー', icon: '💚', note: '味方を癒やす', hateMult: 1.2, hateAdd: {} },
+  shadow: { label: 'シャドウ', icon: '🌙', note: 'かわして、目立たずに攻める', hateMult: 0.8, hateAdd: {} },
+};
+const MONSTER_TYPE_OF = {
+  Mocchi: { main: 'attacker', sub: 'tank' }, Mitarashi: { main: 'attacker', sub: 'tank' },
+  Golem: { main: 'attacker' }, Suezo: { main: 'attacker', sub: 'supporter' }, Ham: { main: 'attacker' },
+  Pandora: { main: 'attacker' }, KenshiMocchi: { main: 'attacker' }, Eiki: { main: 'attacker' },
+  Kuromy: { main: 'attacker' }, Spooky: { main: 'attacker', sub: 'supporter' },
+  Monol: { main: 'tank' }, Yggdrasil: { main: 'tank', sub: 'healer' }, MelWhip: { main: 'tank', sub: 'attacker' },
+  Oboro: { main: 'tank' }, Plant: { main: 'tank', sub: 'healer' },
+  Melody: { main: 'healer', sub: 'tank' }, Undine: { main: 'healer', sub: 'supporter' },
+  Pixie: { main: 'supporter', sub: 'attacker' }, Mia: { main: 'supporter', sub: 'attacker' },
+  Ark: { main: 'supporter', sub: 'attacker' }, Iblis: { main: 'supporter', sub: 'attacker' },
+  Snegurochka: { main: 'supporter' }, Yaobikuni: { main: 'supporter', sub: 'tank' },
+  Tiger: { main: 'shadow', sub: 'attacker' }, Zan: { main: 'shadow', sub: 'attacker' }, Ghost: { main: 'shadow', sub: 'attacker' },
+};
+// その子のタイプ({ main, sub } の形。表に無い子はアタッカー・サブなし)
+const monsterTypeOf = (monId) => {
+  const t = MONSTER_TYPE_OF[monId];
+  const main = t && MONSTER_TYPES[t.main] ? t.main : 'attacker';
+  const sub = t && MONSTER_TYPES[t.sub] && t.sub !== main ? t.sub : null;
+  return { main, sub };
 };
 const TACTICS_HATE_EMPTY = [0, 0, 0, 0];
 const tacticsHateNum = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
-// 役割の既定値に、子の上書きを重ねる(表に無い子は「攻撃」)
+// タイプ(メイン)の既定値に、子の上書きを重ねる(表に無い子はアタッカー)
 const tacticsHateProfile = (monId) => {
-  const m = TACTICS_HATE.monsters[monId] || { role: 'attacker' };
-  const r = TACTICS_HATE.roles[m.role] || TACTICS_HATE.roles.attacker;
-  return { role: TACTICS_HATE.roles[m.role] ? m.role : 'attacker', mult: Number.isFinite(m.mult) ? m.mult : r.mult, add: { ...r.add, ...(m.add || {}) }, always: tacticsHateNum(m.always) };
+  const type = monsterTypeOf(monId).main;
+  const r = MONSTER_TYPES[type];
+  const m = TACTICS_HATE.monsters[monId] || {};
+  return { type, mult: Number.isFinite(m.mult) ? m.mult : r.hateMult, add: { ...r.hateAdd, ...(m.add || {}) }, always: tacticsHateNum(m.always) };
 };
 // カードが何の行動か(数えないものは null)
 const tacticsHateCardKind = (card) => {

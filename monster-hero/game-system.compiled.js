@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b83e5d9acbc78589
+// source-sha256: 140f98e076389b72
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-17 19:40";
+const BUILD_DATE = "2026-10-17 20:07";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -39504,130 +39504,177 @@ const TACTICS_HATE = {
     momosuke: [0.25, 1.05, 1.35],
     meloso: [0.45, 0.45, 0.45]
   },
-  roles: {
-    tank: {
-      label: '盾',
-      mult: 1.3,
-      add: {
-        guard: 6
-      }
-    },
-    healer: {
-      label: '回復',
-      mult: 1.2,
-      add: {}
-    },
-    support: {
-      label: '補助',
-      mult: 1.1,
-      add: {}
-    },
-    attacker: {
-      label: '攻撃',
-      mult: 1.0,
-      add: {}
-    },
-    sneak: {
-      label: 'ひそむ',
-      mult: 0.8,
-      add: {}
-    }
-  },
   monsters: {
-    Mocchi: {
-      role: 'attacker'
-    },
-    Mitarashi: {
-      role: 'attacker'
-    },
-    Golem: {
-      role: 'attacker'
-    },
-    Suezo: {
-      role: 'attacker'
-    },
-    Ham: {
-      role: 'attacker'
-    },
-    Pandora: {
-      role: 'attacker'
-    },
-    KenshiMocchi: {
-      role: 'attacker'
-    },
-    Eiki: {
-      role: 'attacker'
-    },
-    Kuromy: {
-      role: 'attacker'
-    },
-    Spooky: {
-      role: 'attacker'
-    },
     Monol: {
-      role: 'tank',
       mult: 1.5,
       always: 3
-    },
-    Yggdrasil: {
-      role: 'tank'
-    },
-    MelWhip: {
-      role: 'tank'
-    },
-    Oboro: {
-      role: 'tank'
-    },
-    Plant: {
-      role: 'tank'
-    },
-    Melody: {
-      role: 'healer'
-    },
-    Undine: {
-      role: 'healer'
-    },
-    Pixie: {
-      role: 'support'
-    },
-    Mia: {
-      role: 'support'
-    },
-    Ark: {
-      role: 'support'
-    },
-    Iblis: {
-      role: 'support'
-    },
-    Snegurochka: {
-      role: 'support'
-    },
-    Yaobikuni: {
-      role: 'support'
-    },
-    Tiger: {
-      role: 'sneak'
-    },
-    Zan: {
-      role: 'sneak'
-    },
-    Ghost: {
-      role: 'sneak'
     }
   }
+};
+const MONSTER_TYPE_PROTO_KEY = 'mh_monster_type_proto_v1';
+const monsterTypeProtoOn = () => {
+  try {
+    return typeof localStorage !== 'undefined' && localStorage.getItem(MONSTER_TYPE_PROTO_KEY) === 'on';
+  } catch (e) {
+    return false;
+  }
+};
+const MONSTER_TYPES = {
+  attacker: {
+    label: 'アタッカー',
+    icon: '⚔️',
+    note: '攻めの主役',
+    hateMult: 1.0,
+    hateAdd: {}
+  },
+  tank: {
+    label: 'タンク',
+    icon: '🛡️',
+    note: '前に立って攻撃を引き受ける',
+    hateMult: 1.3,
+    hateAdd: {
+      guard: 6
+    }
+  },
+  supporter: {
+    label: 'サポーター',
+    icon: '✨',
+    note: '味方を強くする',
+    hateMult: 1.1,
+    hateAdd: {}
+  },
+  healer: {
+    label: 'ヒーラー',
+    icon: '💚',
+    note: '味方を癒やす',
+    hateMult: 1.2,
+    hateAdd: {}
+  },
+  shadow: {
+    label: 'シャドウ',
+    icon: '🌙',
+    note: 'かわして、目立たずに攻める',
+    hateMult: 0.8,
+    hateAdd: {}
+  }
+};
+const MONSTER_TYPE_OF = {
+  Mocchi: {
+    main: 'attacker',
+    sub: 'tank'
+  },
+  Mitarashi: {
+    main: 'attacker',
+    sub: 'tank'
+  },
+  Golem: {
+    main: 'attacker'
+  },
+  Suezo: {
+    main: 'attacker',
+    sub: 'supporter'
+  },
+  Ham: {
+    main: 'attacker'
+  },
+  Pandora: {
+    main: 'attacker'
+  },
+  KenshiMocchi: {
+    main: 'attacker'
+  },
+  Eiki: {
+    main: 'attacker'
+  },
+  Kuromy: {
+    main: 'attacker'
+  },
+  Spooky: {
+    main: 'attacker',
+    sub: 'supporter'
+  },
+  Monol: {
+    main: 'tank'
+  },
+  Yggdrasil: {
+    main: 'tank',
+    sub: 'healer'
+  },
+  MelWhip: {
+    main: 'tank',
+    sub: 'attacker'
+  },
+  Oboro: {
+    main: 'tank'
+  },
+  Plant: {
+    main: 'tank',
+    sub: 'healer'
+  },
+  Melody: {
+    main: 'healer',
+    sub: 'tank'
+  },
+  Undine: {
+    main: 'healer',
+    sub: 'supporter'
+  },
+  Pixie: {
+    main: 'supporter',
+    sub: 'attacker'
+  },
+  Mia: {
+    main: 'supporter',
+    sub: 'attacker'
+  },
+  Ark: {
+    main: 'supporter',
+    sub: 'attacker'
+  },
+  Iblis: {
+    main: 'supporter',
+    sub: 'attacker'
+  },
+  Snegurochka: {
+    main: 'supporter'
+  },
+  Yaobikuni: {
+    main: 'supporter',
+    sub: 'tank'
+  },
+  Tiger: {
+    main: 'shadow',
+    sub: 'attacker'
+  },
+  Zan: {
+    main: 'shadow',
+    sub: 'attacker'
+  },
+  Ghost: {
+    main: 'shadow',
+    sub: 'attacker'
+  }
+};
+const monsterTypeOf = monId => {
+  const t = MONSTER_TYPE_OF[monId];
+  const main = t && MONSTER_TYPES[t.main] ? t.main : 'attacker';
+  const sub = t && MONSTER_TYPES[t.sub] && t.sub !== main ? t.sub : null;
+  return {
+    main,
+    sub
+  };
 };
 const TACTICS_HATE_EMPTY = [0, 0, 0, 0];
 const tacticsHateNum = v => Number.isFinite(Number(v)) ? Number(v) : 0;
 const tacticsHateProfile = monId => {
-  const m = TACTICS_HATE.monsters[monId] || {
-    role: 'attacker'
-  };
-  const r = TACTICS_HATE.roles[m.role] || TACTICS_HATE.roles.attacker;
+  const type = monsterTypeOf(monId).main;
+  const r = MONSTER_TYPES[type];
+  const m = TACTICS_HATE.monsters[monId] || {};
   return {
-    role: TACTICS_HATE.roles[m.role] ? m.role : 'attacker',
-    mult: Number.isFinite(m.mult) ? m.mult : r.mult,
+    type,
+    mult: Number.isFinite(m.mult) ? m.mult : r.hateMult,
     add: {
-      ...r.add,
+      ...r.hateAdd,
       ...(m.add || {})
     },
     always: tacticsHateNum(m.always)
@@ -52256,6 +52303,33 @@ function MonsterAttackPreviewScreen({
     onPlay: (kind, name) => playAttackPreview(kind, name)
   })));
 }
+function MonsterTypeBadge({
+  monId,
+  size = 'sm',
+  compact = false
+}) {
+  if (!monsterTypeProtoOn()) return null;
+  const t = monsterTypeOf(monId);
+  const chip = (key, isSub) => {
+    const d = MONSTER_TYPES[key];
+    const iconOnly = isSub && compact;
+    return React.createElement("span", {
+      key: key,
+      "data-monster-type": key,
+      "data-monster-type-sub": isSub ? 'true' : undefined,
+      title: `${isSub ? 'サブ' : 'メイン'}タイプ：${d.label}(${d.note})`,
+      className: `inline-flex items-center gap-0.5 rounded-full border ${compact ? 'px-1' : 'px-1.5'} py-px font-black leading-none whitespace-nowrap ${size === 'md' ? 'text-[11px]' : 'text-[9px]'} ${isSub ? 'border-white/15 bg-white/5 text-slate-300' : 'border-amber-300/50 bg-amber-500/15 text-amber-100'}`
+    }, React.createElement("span", {
+      "aria-hidden": "true"
+    }, d.icon), iconOnly ? React.createElement("span", {
+      className: "sr-only"
+    }, d.label) : d.label);
+  };
+  return React.createElement("span", {
+    "data-monster-type-badge": monId,
+    className: `inline-flex max-w-full flex-wrap items-center justify-center ${compact ? 'gap-0.5' : 'gap-1'}`
+  }, chip(t.main, false), t.sub && chip(t.sub, true));
+}
 function MonsterDexScreen({
   dexLineageFilter,
   unlockedMonsterIds,
@@ -52327,7 +52401,10 @@ function MonsterDexScreen({
       className: "text-[11px] font-black truncate w-full text-center leading-tight text-amber-100"
     }, unlocked ? mon.name : '？？？'), React.createElement("div", {
       className: "text-[10px] font-black text-amber-400/80 leading-tight"
-    }, unlocked ? monsterCategoryName(category) : '未発見'));
+    }, unlocked ? monsterCategoryName(category) : '未発見'), unlocked && React.createElement(MonsterTypeBadge, {
+      monId: mon.id,
+      compact: true
+    }));
   })), shown.length === 0 && React.createElement(ScreenEmpty, {
     emoji: "📖",
     lines: ['この血統のモンスターはまだいません。']
@@ -52567,7 +52644,13 @@ function MonsterDexDetailScreen({
     className: "w-full max-w-md mx-auto h-full flex flex-col min-h-0 rounded-2xl border border-amber-500/60 bg-gradient-to-b from-amber-950/50 to-slate-950 p-3"
   }, React.createElement("div", {
     className: "shrink-0 text-center text-[17px] font-black text-amber-100 truncate"
-  }, unlocked ? mon.name : '？？？'), unlocked ? React.createElement(React.Fragment, null, React.createElement("div", {
+  }, unlocked ? mon.name : '？？？'), unlocked && monsterTypeProtoOn() && React.createElement("div", {
+    "data-dex-type-row": true,
+    className: "shrink-0 mt-1 flex justify-center"
+  }, React.createElement(MonsterTypeBadge, {
+    monId: mon.id,
+    size: "md"
+  })), unlocked ? React.createElement(React.Fragment, null, React.createElement("div", {
     "data-dex-lineage-row": true,
     className: "shrink-0 mt-2 grid items-center gap-1.5",
     style: {
@@ -59189,7 +59272,12 @@ function ProMonsterGridPicker({
     className: "shrink-0 text-[9px] text-slate-500 font-black"
   }, "総合力 ", React.createElement("b", {
     className: "text-[12px] text-amber-300 font-mono"
-  }, formatMonsterPower(monsterPowerOf(focus))))), React.createElement("div", {
+  }, formatMonsterPower(monsterPowerOf(focus))))), monsterTypeProtoOn() && React.createElement("div", {
+    "data-pick-type-row": true,
+    className: "flex"
+  }, React.createElement(MonsterTypeBadge, {
+    monId: focus.id
+  })), React.createElement("div", {
     className: "truncate text-[9px] font-black text-slate-400 leading-tight"
   }, (() => {
     const l = monsterLineageOf(focus.id);
@@ -78891,6 +78979,15 @@ const loadAssistantChatMemoFor = async assistantId => {
   return normalizeAssistantChatMemo(v2, v1)[assistantId] || null;
 };
 const DEBUG_TRIALS = [{
+  id: 'monster_type',
+  added: '2026-10-17',
+  area: 'モンスター',
+  key: 'mh_monster_type_proto_v1',
+  on: 'on',
+  title: '🏷️ モンスターのタイプ表記(試作)',
+  note: '図鑑・図鑑の詳細・パーティ選びに、アタッカー・タンク・サポーター・ヒーラー・シャドウの印を出します。タイプが効くのはタクティクスのヘイト(試作)の増え方だけで、能力・ステータスは変わりません',
+  when: '次に画面を開いたときから'
+}, {
   id: 'tactics_hate',
   added: '2026-10-17',
   area: 'タクティクスバトル',
