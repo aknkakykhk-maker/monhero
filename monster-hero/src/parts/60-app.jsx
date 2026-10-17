@@ -200,7 +200,7 @@ function MonsterHeroGame() {
   };
   const openRhythmDemo = async (opts) => {
     const settings=normalizeRhythmSettings(await restoreRhythmPlayDefaultsOnce(await storeGet(RHYTHM_SETTINGS_KEY,DEFAULT_RHYTHM_SETTINGS,false)));
-    const records=normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY,{},false));
+    const records=await loadRhythmBestRecordsNow();
     const monsterSlots=sanitizeRhythmMonsterSlotIds(await storeGet(RHYTHM_MONSTER_SLOT_KEY,[],false));
     setRhythmSettings(settings); setRhythmBestRecords(records); setRhythmMonsterSlotIds(monsterSlots);
     void recordRhythmAchievements(records);   // 実績の台帳へそろえる(初回は、すでに取れていたぶんを取り込む。失敗しても入れる)
@@ -216,7 +216,7 @@ function MonsterHeroGame() {
   };
   const openRhythmDebug = async () => {
     const settings=normalizeRhythmSettings(await restoreRhythmPlayDefaultsOnce(await storeGet(RHYTHM_SETTINGS_KEY,DEFAULT_RHYTHM_SETTINGS,false)));
-    const records=normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY,{},false));
+    const records=await loadRhythmBestRecordsNow();
     const monsterSlots=sanitizeRhythmMonsterSlotIds(await storeGet(RHYTHM_MONSTER_SLOT_KEY,[],false));
     setRhythmSettings(settings); setRhythmBestRecords(records); setRhythmMonsterSlotIds(monsterSlots);
     void recordRhythmAchievements(records);   // 実績の台帳へそろえる(初回は、すでに取れていたぶんを取り込む。失敗しても入れる)
@@ -2015,7 +2015,7 @@ function MonsterHeroGame() {
     friendPublishRef.current = Date.now();
     // 曲ごとのベストは、ゲームを開いたあと一度もモンヒロビートを開いていなくても出せるよう、端末の保存から直接読む
     let rhythmBest = null;
-    try { rhythmBest = normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY, {}, false)); } catch (error) { rhythmBest = null; }
+    try { rhythmBest = await loadRhythmBestRecordsNow(); } catch (error) { rhythmBest = null; }
     let records = null;
     try {
       records = friendsBuildRecords({
@@ -18221,7 +18221,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 通算クリア回数を数える(スエゾービートのフレームの条件)。ライフを残して終えたときだけ。
           // 練習・アシストモードは上で除いてある。数えられなくても記録の保存は止めない
           if(result?.cleared!==false){ try{ setRhythmClearTotal(await addRhythmClearTotal()); }catch{} }
-          const records=await saveRhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id,merged);setRhythmBestRecords(records);
+          // 刻みの数え方(scoreVersion 2)の記録は mh_rhythm_best_v2 へ、今の数え方の記録は mh_rhythm_best_v1 へ。
+          // 書くもとは、その版の保存値(画面の records は別の版のことがあるので、演奏中に切り替えの時刻をまたいでも混ざらないように合わせ直す)
+          const bestVersion=result?.scoreVersion===2?2:1;
+          const storedBest=(await loadRhythmBestRecordsOf(bestVersion))?.[rhythmPlay.song.songId]?.[rhythmPlay.difficulty.id];
+          const records=await saveRhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id,mergeRhythmBestRecord(storedBest,result),bestVersion);setRhythmBestRecords(records);
           // HELL が初めて開いたか(その曲の MASTER を初めてクリア・2026-10-12 案A)。公開の印が偽なら譜面が無いので、ここは何もしない。
           // お話をまだ見ていなければ RHYTHM_HELL_STORY_TRIGGER のとおりに流す。開く条件そのものは rhythmDifficultyUnlocked(記録から数える)
           if(rhythmPlay.from==='demo'&&typeof rhythmHellOpen==='function'&&rhythmHellOpen()&&rhythmChartPlayable(rhythmPlay.song,'HELL')

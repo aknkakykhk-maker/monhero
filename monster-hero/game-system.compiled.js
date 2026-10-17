@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 993adfb1d26dfc30
+// source-sha256: 9fb7a7b3f7700ad2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-17 14:06";
+const BUILD_DATE = "2026-10-17 14:08";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -5432,6 +5432,27 @@ const RHYTHM_NOTE_SPEED_MIN = 1;
 const RHYTHM_NOTE_SPEED_MAX = 12;
 const RHYTHM_NOTE_SPEED_STEP = .1;
 const RHYTHM_BEST_RECORDS_KEY = 'mh_rhythm_best_v1';
+const RHYTHM_BEST_RECORDS_V2_KEY = 'mh_rhythm_best_v2';
+const rhythmBestRecordsWithLegacyMarks = (current, legacy) => {
+  const now = normalizeRhythmBestRecords(current),
+    old = normalizeRhythmBestRecords(legacy);
+  Object.keys(now).forEach(songId => {
+    Object.keys(now[songId] || {}).forEach(diff => {
+      const a = now[songId][diff],
+        b = old?.[songId]?.[diff];
+      if (!a || !b || typeof a !== 'object' || typeof b !== 'object') return;
+      now[songId][diff] = {
+        ...a,
+        played: a.played || b.played === true,
+        clear: a.clear || b.clear === true,
+        fullCombo: a.fullCombo || b.fullCombo === true,
+        allExcellent: a.allExcellent || b.allExcellent === true,
+        allMarvelous: a.allMarvelous || b.allMarvelous === true
+      };
+    });
+  });
+  return now;
+};
 const RHYTHM_RANKING_PENDING_KEY = 'mh_rhythm_rank_pending_v1';
 const RHYTHM_RANKING_PENDING_MAX = 20;
 const RHYTHM_EFFECT_LEVELS = Object.freeze(['NORMAL', 'LOW', 'LIGHT', 'MINIMAL']);
@@ -25040,13 +25061,20 @@ const saveRhythmMonsterSlots = async value => {
   await storeSet(RHYTHM_MONSTER_SLOT_KEY, normalized, false);
   return normalized;
 };
-const saveRhythmBestRecord = async (records, songId, difficultyId, value) => {
+const saveRhythmBestRecord = async (records, songId, difficultyId, value, version = 1) => {
   const song = RHYTHM_SONGS.find(item => item.songId === songId);
   if (!song || !rhythmSongDifficultyDefs(song).some(item => item.id === difficultyId)) return normalizeRhythmBestRecords(records);
-  const normalized = normalizeRhythmBestRecords(records);
+  const key = version === 2 ? RHYTHM_BEST_RECORDS_V2_KEY : RHYTHM_BEST_RECORDS_KEY;
+  const normalized = normalizeRhythmBestRecords(await storeGet(key, {}, false));
   normalized[songId][difficultyId] = normalizeRhythmBestRecord(value);
-  await storeSet(RHYTHM_BEST_RECORDS_KEY, normalized, false);
-  return normalized;
+  await storeSet(key, normalized, false);
+  return loadRhythmBestRecordsNow();
+};
+const loadRhythmBestRecordsOf = async version => normalizeRhythmBestRecords(await storeGet(version === 2 ? RHYTHM_BEST_RECORDS_V2_KEY : RHYTHM_BEST_RECORDS_KEY, {}, false));
+const loadRhythmBestRecordsNow = async () => {
+  const legacy = await loadRhythmBestRecordsOf(1);
+  if (!(typeof rhythmTickRulesActive === 'function' && rhythmTickRulesActive())) return legacy;
+  return rhythmBestRecordsWithLegacyMarks(await loadRhythmBestRecordsOf(2), legacy);
 };
 const RHYTHM_ACHIEVEMENT_GRANTERS = {};
 const rhythmAchievementEligible = (songId, difficultyId) => {
@@ -51016,7 +51044,7 @@ function ProfileScreen({
     let alive = true;
     (async () => {
       try {
-        const best = normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY, {}, false));
+        const best = await loadRhythmBestRecordsNow();
         if (alive) setRhythmAchRows(friendsRhythmAchievements(best));
       } catch (error) {}
     })();
@@ -69775,7 +69803,7 @@ function FriendsScreen({
       try {
         const savedNotes = friendsNormalizeNotes(await storeGet(FRIEND_NOTES_KEY, {}, false));
         const savedRecent = friendsNormalizeRecent(await storeGet(FRIEND_RECENT_KEY, [], false));
-        const best = normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY, {}, false));
+        const best = await loadRhythmBestRecordsNow();
         if (cancelled || !aliveRef.current) return;
         setNotes(savedNotes);
         setRecent(savedRecent);
@@ -78931,7 +78959,7 @@ function MonsterHeroGame() {
   };
   const openRhythmDemo = async opts => {
     const settings = normalizeRhythmSettings(await restoreRhythmPlayDefaultsOnce(await storeGet(RHYTHM_SETTINGS_KEY, DEFAULT_RHYTHM_SETTINGS, false)));
-    const records = normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY, {}, false));
+    const records = await loadRhythmBestRecordsNow();
     const monsterSlots = sanitizeRhythmMonsterSlotIds(await storeGet(RHYTHM_MONSTER_SLOT_KEY, [], false));
     setRhythmSettings(settings);
     setRhythmBestRecords(records);
@@ -78946,7 +78974,7 @@ function MonsterHeroGame() {
   };
   const openRhythmDebug = async () => {
     const settings = normalizeRhythmSettings(await restoreRhythmPlayDefaultsOnce(await storeGet(RHYTHM_SETTINGS_KEY, DEFAULT_RHYTHM_SETTINGS, false)));
-    const records = normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY, {}, false));
+    const records = await loadRhythmBestRecordsNow();
     const monsterSlots = sanitizeRhythmMonsterSlotIds(await storeGet(RHYTHM_MONSTER_SLOT_KEY, [], false));
     setRhythmSettings(settings);
     setRhythmBestRecords(records);
@@ -80509,7 +80537,7 @@ function MonsterHeroGame() {
     friendPublishRef.current = Date.now();
     let rhythmBest = null;
     try {
-      rhythmBest = normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY, {}, false));
+      rhythmBest = await loadRhythmBestRecordsNow();
     } catch (error) {
       rhythmBest = null;
     }
@@ -102839,7 +102867,9 @@ function MonsterHeroGame() {
             setRhythmClearTotal(await addRhythmClearTotal());
           } catch {}
         }
-        const records = await saveRhythmBestRecord(rhythmBestRecords, rhythmPlay.song.songId, rhythmPlay.difficulty.id, merged);
+        const bestVersion = result?.scoreVersion === 2 ? 2 : 1;
+        const storedBest = (await loadRhythmBestRecordsOf(bestVersion))?.[rhythmPlay.song.songId]?.[rhythmPlay.difficulty.id];
+        const records = await saveRhythmBestRecord(rhythmBestRecords, rhythmPlay.song.songId, rhythmPlay.difficulty.id, mergeRhythmBestRecord(storedBest, result), bestVersion);
         setRhythmBestRecords(records);
         if (rhythmPlay.from === 'demo' && typeof rhythmHellOpen === 'function' && rhythmHellOpen() && rhythmChartPlayable(rhythmPlay.song, 'HELL') && !rhythmDifficultyUnlocked(rhythmPlay.song.songId, 'HELL', rhythmBestRecords) && rhythmDifficultyUnlocked(rhythmPlay.song.songId, 'HELL', records) && !rhythmHellStorySeenFlag) {
           if (RHYTHM_HELL_STORY_TRIGGER === 'after-result') rhythmHellStoryAfterResultRef.current = true;else if (RHYTHM_HELL_STORY_TRIGGER === 'home' || RHYTHM_HELL_STORY_TRIGGER === 'release') setRhythmEventStoryPending(prev => prev || RHYTHM_HELL_STORY_ID);

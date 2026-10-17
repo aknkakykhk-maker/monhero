@@ -208,6 +208,18 @@ const RHYTHM_NOTE_SPEED_MIN=1;
 const RHYTHM_NOTE_SPEED_MAX=12;
 const RHYTHM_NOTE_SPEED_STEP=.1;
 const RHYTHM_BEST_RECORDS_KEY = 'mh_rhythm_best_v1';
+// 刻みの数え方(2026-10-17・社長の決定)の自己ベスト。物差しが変わるので、今の mh_rhythm_best_v1 は消さず書き換えず、新しいキーに分ける(CLAUDE.md ⑦)。
+// 形は v1 と同じ(normalizeRhythmBestRecords)。切り替えの時刻(RHYTHM_TICK_SWITCH_AT)を過ぎて始めた演奏の記録だけがここへ入る
+const RHYTHM_BEST_RECORDS_V2_KEY = 'mh_rhythm_best_v2';
+// 新しい数え方の記録に、旧の記録の「印」だけを重ねる(点・判定の内訳・最大コンボは新しい記録のまま)。
+//   played・clear … HELL の開放などの条件が、切り替えで閉じないように
+//   fullCombo・allExcellent・allMarvelous … 取った称号は下げない(社長の決定)
+const rhythmBestRecordsWithLegacyMarks = (current,legacy) => {
+  const now=normalizeRhythmBestRecords(current),old=normalizeRhythmBestRecords(legacy);
+  Object.keys(now).forEach(songId=>{Object.keys(now[songId]||{}).forEach(diff=>{const a=now[songId][diff],b=old?.[songId]?.[diff];if(!a||!b||typeof a!=='object'||typeof b!=='object')return;
+    now[songId][diff]={...a,played:a.played||b.played===true,clear:a.clear||b.clear===true,fullCombo:a.fullCombo||b.fullCombo===true,allExcellent:a.allExcellent||b.allExcellent===true,allMarvelous:a.allMarvelous||b.allMarvelous===true};});});
+  return now;
+};
 // 全国ランキングへの送信に失敗したときだけ退避する専用キー(2026-09-04)。
 // 既存のBEST記録(RHYTHM_BEST_RECORDS_KEY)とは別で、自動の再送はしない
 // (端末内に「送れなかった記録が残っている」という手がかりを残すだけ)。

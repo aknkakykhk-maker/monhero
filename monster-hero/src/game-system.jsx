@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 102715c3da7b8e33
+// generated-sha256: 808c7c540b1e7e0a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-17 14:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-17 14:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4331,6 +4331,18 @@ const RHYTHM_NOTE_SPEED_MIN=1;
 const RHYTHM_NOTE_SPEED_MAX=12;
 const RHYTHM_NOTE_SPEED_STEP=.1;
 const RHYTHM_BEST_RECORDS_KEY = 'mh_rhythm_best_v1';
+// 刻みの数え方(2026-10-17・社長の決定)の自己ベスト。物差しが変わるので、今の mh_rhythm_best_v1 は消さず書き換えず、新しいキーに分ける(CLAUDE.md ⑦)。
+// 形は v1 と同じ(normalizeRhythmBestRecords)。切り替えの時刻(RHYTHM_TICK_SWITCH_AT)を過ぎて始めた演奏の記録だけがここへ入る
+const RHYTHM_BEST_RECORDS_V2_KEY = 'mh_rhythm_best_v2';
+// 新しい数え方の記録に、旧の記録の「印」だけを重ねる(点・判定の内訳・最大コンボは新しい記録のまま)。
+//   played・clear … HELL の開放などの条件が、切り替えで閉じないように
+//   fullCombo・allExcellent・allMarvelous … 取った称号は下げない(社長の決定)
+const rhythmBestRecordsWithLegacyMarks = (current,legacy) => {
+  const now=normalizeRhythmBestRecords(current),old=normalizeRhythmBestRecords(legacy);
+  Object.keys(now).forEach(songId=>{Object.keys(now[songId]||{}).forEach(diff=>{const a=now[songId][diff],b=old?.[songId]?.[diff];if(!a||!b||typeof a!=='object'||typeof b!=='object')return;
+    now[songId][diff]={...a,played:a.played||b.played===true,clear:a.clear||b.clear===true,fullCombo:a.fullCombo||b.fullCombo===true,allExcellent:a.allExcellent||b.allExcellent===true,allMarvelous:a.allMarvelous||b.allMarvelous===true};});});
+  return now;
+};
 // 全国ランキングへの送信に失敗したときだけ退避する専用キー(2026-09-04)。
 // 既存のBEST記録(RHYTHM_BEST_RECORDS_KEY)とは別で、自動の再送はしない
 // (端末内に「送れなかった記録が残っている」という手がかりを残すだけ)。
@@ -15227,13 +15239,27 @@ const saveRhythmSettings = async value => {
 const saveRhythmMonsterSlots = async value => {
   const normalized=sanitizeRhythmMonsterSlotIds(value); await storeSet(RHYTHM_MONSTER_SLOT_KEY,normalized,false); return normalized;
 };
-const saveRhythmBestRecord = async (records,songId,difficultyId,value) => {
+// version … 記録の物差しの版(2 = 刻みの数え方・mh_rhythm_best_v2 / それ以外 = 今の数え方・mh_rhythm_best_v1)。
+// 書く前にそのキーの保存値を読み直し、そこへ1件だけ入れる(画面が持っている records は別の版のことがあるので、書くもとにしない)。
+// 返すのは「いまの数え方で見る記録」(loadRhythmBestRecordsNow と同じ形)
+const saveRhythmBestRecord = async (records,songId,difficultyId,value,version=1) => {
   const song=RHYTHM_SONGS.find(item=>item.songId===songId);
   // HELL など5難易度の外の難易度は、その曲に譜面があるときだけ残す
   if(!song||!rhythmSongDifficultyDefs(song).some(item=>item.id===difficultyId)) return normalizeRhythmBestRecords(records);
-  const normalized=normalizeRhythmBestRecords(records);
+  const key=version===2?RHYTHM_BEST_RECORDS_V2_KEY:RHYTHM_BEST_RECORDS_KEY;
+  const normalized=normalizeRhythmBestRecords(await storeGet(key,{},false));
   normalized[songId][difficultyId]=normalizeRhythmBestRecord(value);
-  await storeSet(RHYTHM_BEST_RECORDS_KEY,normalized,false); return normalized;
+  await storeSet(key,normalized,false);
+  return loadRhythmBestRecordsNow();
+};
+// その版の自己ベスト(保存値そのまま・正規化だけ)
+const loadRhythmBestRecordsOf = async version => normalizeRhythmBestRecords(await storeGet(version===2?RHYTHM_BEST_RECORDS_V2_KEY:RHYTHM_BEST_RECORDS_KEY,{},false));
+// いまの数え方で見る自己ベスト。切り替えの時刻(と確認待ちの試作)を見て、新しい数え方なら v2 に旧の印(クリア・称号)を重ねて返す。
+// 切り替え前は今までどおり v1 をそのまま返す
+const loadRhythmBestRecordsNow = async () => {
+  const legacy=await loadRhythmBestRecordsOf(1);
+  if(!(typeof rhythmTickRulesActive==='function'&&rhythmTickRulesActive()))return legacy;
+  return rhythmBestRecordsWithLegacyMarks(await loadRhythmBestRecordsOf(2),legacy);
 };
 // <rhythm-achievement-io>
 // ===== モンヒロビートの実績の台帳(2026-10-05)。定義と計算は 13-bgm-and-rhythm-settings.jsx。仕様: docs/spec/RHYTHM_ACHIEVEMENTS.md =====
@@ -32086,7 +32112,7 @@ function ProfileScreen({
     let alive = true;
     (async () => {
       try {
-        const best = normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY, {}, false));
+        const best = await loadRhythmBestRecordsNow();
         if (alive) setRhythmAchRows(friendsRhythmAchievements(best));
       } catch (error) { /* 読めなければ実績の表を出さないだけ */ }
     })();
@@ -42116,7 +42142,7 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
       try {
         const savedNotes = friendsNormalizeNotes(await storeGet(FRIEND_NOTES_KEY, {}, false));
         const savedRecent = friendsNormalizeRecent(await storeGet(FRIEND_RECENT_KEY, [], false));
-        const best = normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY, {}, false));
+        const best = await loadRhythmBestRecordsNow();
         if (cancelled || !aliveRef.current) return;
         setNotes(savedNotes); setRecent(savedRecent); setMyBest(best);
         // 最近遊んだ人の最新の名前・アイコンも読んでおく(読めなければ、覚えていた名前のまま出す)
@@ -47929,7 +47955,7 @@ function MonsterHeroGame() {
   };
   const openRhythmDemo = async (opts) => {
     const settings=normalizeRhythmSettings(await restoreRhythmPlayDefaultsOnce(await storeGet(RHYTHM_SETTINGS_KEY,DEFAULT_RHYTHM_SETTINGS,false)));
-    const records=normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY,{},false));
+    const records=await loadRhythmBestRecordsNow();
     const monsterSlots=sanitizeRhythmMonsterSlotIds(await storeGet(RHYTHM_MONSTER_SLOT_KEY,[],false));
     setRhythmSettings(settings); setRhythmBestRecords(records); setRhythmMonsterSlotIds(monsterSlots);
     void recordRhythmAchievements(records);   // 実績の台帳へそろえる(初回は、すでに取れていたぶんを取り込む。失敗しても入れる)
@@ -47945,7 +47971,7 @@ function MonsterHeroGame() {
   };
   const openRhythmDebug = async () => {
     const settings=normalizeRhythmSettings(await restoreRhythmPlayDefaultsOnce(await storeGet(RHYTHM_SETTINGS_KEY,DEFAULT_RHYTHM_SETTINGS,false)));
-    const records=normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY,{},false));
+    const records=await loadRhythmBestRecordsNow();
     const monsterSlots=sanitizeRhythmMonsterSlotIds(await storeGet(RHYTHM_MONSTER_SLOT_KEY,[],false));
     setRhythmSettings(settings); setRhythmBestRecords(records); setRhythmMonsterSlotIds(monsterSlots);
     void recordRhythmAchievements(records);   // 実績の台帳へそろえる(初回は、すでに取れていたぶんを取り込む。失敗しても入れる)
@@ -49744,7 +49770,7 @@ function MonsterHeroGame() {
     friendPublishRef.current = Date.now();
     // 曲ごとのベストは、ゲームを開いたあと一度もモンヒロビートを開いていなくても出せるよう、端末の保存から直接読む
     let rhythmBest = null;
-    try { rhythmBest = normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY, {}, false)); } catch (error) { rhythmBest = null; }
+    try { rhythmBest = await loadRhythmBestRecordsNow(); } catch (error) { rhythmBest = null; }
     let records = null;
     try {
       records = friendsBuildRecords({
@@ -65950,7 +65976,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 通算クリア回数を数える(スエゾービートのフレームの条件)。ライフを残して終えたときだけ。
           // 練習・アシストモードは上で除いてある。数えられなくても記録の保存は止めない
           if(result?.cleared!==false){ try{ setRhythmClearTotal(await addRhythmClearTotal()); }catch{} }
-          const records=await saveRhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id,merged);setRhythmBestRecords(records);
+          // 刻みの数え方(scoreVersion 2)の記録は mh_rhythm_best_v2 へ、今の数え方の記録は mh_rhythm_best_v1 へ。
+          // 書くもとは、その版の保存値(画面の records は別の版のことがあるので、演奏中に切り替えの時刻をまたいでも混ざらないように合わせ直す)
+          const bestVersion=result?.scoreVersion===2?2:1;
+          const storedBest=(await loadRhythmBestRecordsOf(bestVersion))?.[rhythmPlay.song.songId]?.[rhythmPlay.difficulty.id];
+          const records=await saveRhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id,mergeRhythmBestRecord(storedBest,result),bestVersion);setRhythmBestRecords(records);
           // HELL が初めて開いたか(その曲の MASTER を初めてクリア・2026-10-12 案A)。公開の印が偽なら譜面が無いので、ここは何もしない。
           // お話をまだ見ていなければ RHYTHM_HELL_STORY_TRIGGER のとおりに流す。開く条件そのものは rhythmDifficultyUnlocked(記録から数える)
           if(rhythmPlay.from==='demo'&&typeof rhythmHellOpen==='function'&&rhythmHellOpen()&&rhythmChartPlayable(rhythmPlay.song,'HELL')
