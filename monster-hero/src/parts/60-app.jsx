@@ -1267,6 +1267,11 @@ function MonsterHeroGame() {
   // 表示用のstateではなくrefで持つ(上限に達したら咆哮そのものが候補から外れる)。
   // WAVEが変わるたびに0へ戻す
   const tacticsRoarStacksRef = useRef(0);
+  // ヘイト(確認待ちの試作 TACTICS_HATE・2026-10-17)。枠ごとの値(炎の表示に state も持つ)・そのターンにたまった行動のぶん・与ダメージ
+  const [tacticsHate, setTacticsHate] = useState(TACTICS_HATE_EMPTY);
+  const tacticsHateRef = useRef(TACTICS_HATE_EMPTY);
+  const tacticsHatePendingRef = useRef([0, 0, 0, 0]);
+  const tacticsHateDealtRef = useRef([0, 0, 0, 0]);
   // 盤面を書き換える唯一の入口。ref・state・パーティのライフを必ず一緒に動かす。
   // ★新モードのライフ(hp / maxHp)は盤面の合計。片方だけ動かすと
   //   「合計は残っているのに全員倒れている」状態ができ、敗北判定が壊れる。
@@ -1374,7 +1379,27 @@ function MonsterHeroGame() {
       ? { start: tacticsPowerRef.current.start || power, now: power } : { start: 0, now: 0 };
   };
   // 新モードのときだけ、敵の予告へ「誰を狙うか」を足す。ほかのモードでは intent をそのまま返す
-  const aimTacticsIntent = (intent, mode) => (isTacticsMode(mode) ? withTacticsTarget(intent, tacticsUnitsRef.current) : intent);
+  // ★ヘイト(試作)はタクティクスバトルだけ(レイドバトル・既存5モードには効かせない)。切のときは今までと同じ抽選
+  const tacticsHateOnFor = (mode) => TACTICS_BATTLE_MODES.includes(mode) && !isRaidJackMode(mode) && tacticsHateProtoOn();
+  const aimTacticsIntent = (intent, mode) => (isTacticsMode(mode)
+    ? withTacticsTarget(intent, tacticsUnitsRef.current, Math.random, TACTICS_TARGET_LOW_HP_BIAS, tacticsHateOnFor(mode) ? tacticsHateRef.current : null)
+    : intent);
+  const commitTacticsHate = (next) => { tacticsHateRef.current = next; setTacticsHate(next); };
+  const tacticsHateHeroSlot = () => tacticsUnitsRef.current.findIndex(u => !!(u && mainHero && u.id === mainHero.id));
+  const addTacticsHatePending = (slotIdx, gain) => {
+    if (!Number.isInteger(slotIdx) || slotIdx < 0 || slotIdx > 3 || !(gain > 0)) return;
+    const next = [...tacticsHatePendingRef.current]; next[slotIdx] += gain; tacticsHatePendingRef.current = next;
+  };
+  const clearTacticsHateTurn = () => { tacticsHatePendingRef.current = [0, 0, 0, 0]; tacticsHateDealtRef.current = [0, 0, 0, 0]; };
+  // WAVE の始め: 0へ(勇者だけ下地)
+  const resetTacticsHate = (mode) => { clearTacticsHateTurn(); commitTacticsHate(tacticsHateOnFor(mode) ? tacticsHateWaveStart(tacticsHateHeroSlot()) : TACTICS_HATE_EMPTY); };
+  // 敵の次の狙いを決める直前に、そのターンのぶんを足す(倒れた子は0)
+  const stepTacticsHate = (mode) => {
+    if (!tacticsHateOnFor(mode)) return;
+    const units = tacticsUnitsRef.current;
+    commitTacticsHate(tacticsHateStep(tacticsHateRef.current, { gains: tacticsHatePendingRef.current, dealt: tacticsHateDealtRef.current }, units, tacticsHateHeroSlot(), units.map(u => u && u.id)));
+    clearTacticsHateTurn();
+  };
   // ===== ライフの増減(新モードだけ盤面へ) =====
   // どれも「新モードなら増減後の合計ライフ、ほかのモードなら null」を返す。
   // 呼び出し側は null のときだけ今までどおりの1行を通す。こうすると既存5モードの
@@ -10567,6 +10592,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const actionState = () => ({definitions:enemyActionDefinitionsFor(runMode,enemy?.id,enemy?.difficulty,enemy?.actionCount),roarStacks:tacticsRoarStacksRef.current});
     // ★狙いは「予告として出す直前」に決める。抽選したときのまま持ち歩くと、
     //   そのあいだに狙われていた子が倒れていても、その子を狙ったまま予告してしまう
+    stepTacticsHate(runMode); // ヘイト(試作): このターンのぶんを足してから狙う
     const aimed = aimTacticsIntent(reserved || getNextEnemyAction(enemy, distAfterExecuted, effective, {unannounced:true,...actionState()}), runMode);
     // ★乱心(スプーキーのトリックコンフューズ): 残っていれば1つ使い、50%で「意味不明」へ差し替える。
     //   予告として出す前に決めるので、意味不明かどうかは「次の行動」の札に出る。
@@ -12617,6 +12643,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const next=applyTacticsExUse(state,{ def, slot:slotIdx, monId:mon.id, now:tacticsExNow,
       presentLevel:def.present&&raidJackRunRef.current?tacticsRaidPresentLevel(tacticsExNow.turn):null, snapshot:usedUnit?{ atk:usedUnit.atk, def:usedUnit.def, spent:spentStacks, ...(def.effect==='timeStop'?{ copied:tacticsExCopyableBuffs(state,tacticsUnitsRef.current,tacticsExNow,slotIdx) }:{}) }:null, choice, target:def.target==='ally'?choice:null });
     commitTacticsExState(next);
+    if(tacticsHateOnFor(runMode)) addTacticsHatePending(slotIdx,tacticsHateExGain(def.effect,mon.id)); // ヘイト(試作): EX を使った
     Audio_.se.card();
     const toggled=def.duration==='style'?`（${tacticsExStyleLabel(def,next,slotIdx,mon.id)}）`:'';
     pushBattleLog(`EX ${mon.masuName||mon.name}「${def.name}」${toggled}`, 'ally');
@@ -12772,6 +12799,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       if(!payable) return;
     }
     setIsBusy(true);
+    // ヘイト(試作): 使ったカードを、使った子のぶんとしてためる(同じ子の2枚目からは半分)
+    if(tacticsHateOnFor(runMode)){
+      const usesBySlot={};
+      usedCardEntries.forEach(entry=>{
+        const idx=entry.slotIdx!=null?entry.slotIdx:defaultSlot;
+        const eff=(usesBySlot[idx]||0)>0?0.5:1; usesBySlot[idx]=(usesBySlot[idx]||0)+1;
+        addTacticsHatePending(idx,tacticsHateCardGain(entry.card,tacticsUnitsRef.current[idx]?.id,eff));
+      });
+    }
     // ★自分が動いたら、前に出ていたぶんはその場で消す(時間切れを待たない)
     clearTacticsSlotFx();
     let lastType='none', guardTypeInTurn='none', totalDmg=0, totalHeal=0, totalHealRate=0, localOryoAdd=0, localDmgModAdd=0, localGlobalComboAdd=0, attackCount=0, hasCrit=false, immediateInvincible=false, immediateStun=false, currentTurnGuardFlat=0, currentTurnGuardMult=0;
@@ -13305,6 +13341,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const turnDistDmg=[0,0,0,0];
         for(const h of attackHits){ const si=(h.slotIdx!=null)?h.slotIdx:fallbackSlot; if(si>=0&&si<4) turnDistDmg[si]+=h.dmg; }
         setWaveDistDamage(prev=>{const n=[...prev]; for(let k=0;k<4;k++) n[k]=(n[k]||0)+turnDistDmg[k]; return n;});
+        if(tacticsHateOnFor(runMode)) tacticsHateDealtRef.current=tacticsHateDealtRef.current.map((v,k)=>v+turnDistDmg[k]); // ヘイト(試作): 与ダメージの割合
         // Show combined total for multi-hit
         if(multiHit){
           await battleWait(150);
@@ -14130,6 +14167,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setEnemy(newEnemy); setEnemyDist(dist); setEnemyLastIntent(null);
     // 行動表はモードと敵で決まる。新モード以外では今までどおりの1つの表が返る
     const actionState=()=>({definitions:enemyActionDefinitionsFor(runMode,newEnemy?.id,newEnemy?.difficulty,newEnemy?.actionCount),roarStacks:tacticsRoarStacksRef.current});
+    resetTacticsHate(runMode); // ヘイト(試作)は WAVE ごとに0から
     const firstIntent = aimTacticsIntent(getNextEnemyAction(newEnemy,dist,null,{unannounced:true,...actionState()}),runMode);
     setEnemyIntent(firstIntent);
     reserveEnemyNextIntent(getNextEnemyAction(newEnemy,distAfterIntent(firstIntent,dist),firstIntent,actionState()));
@@ -20533,7 +20571,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             guardValueOf={guardValueOf} tacticsSlotGuardValue={tacticsSlotGuardValue}
             tacticsExInfo={tacticsExInfo} activateTacticsEx={activateTacticsEx} tacticsExCutin={tacticsExCutin}
             tacticsExIntroVisible={tacticsExIntroVisible} dismissTacticsExIntro={dismissTacticsExIntro} tacticsPandoraForms={tacticsPandoraForms} trickStartView={trickStartView} sweetStackView={sweetStackView} bowStackView={bowStackView} fateWheelView={fateWheelView} enemyConfuseTurns={enemyConfuseTurns} luckBanners={luckBanners}
-            tacticsExTurnUsed={tacticsExTurnUsed} passTacticsTurn={passTacticsTurn} tacticsCoverSlot={tacticsExEnabled?tacticsExCoverSlot(tacticsExState,tacticsUnits,tacticsExNow):null}
+            tacticsExTurnUsed={tacticsExTurnUsed} passTacticsTurn={passTacticsTurn} tacticsHate={tacticsHate} tacticsHateOn={tacticsHateOnFor(runMode)} tacticsCoverSlot={tacticsExEnabled?tacticsExCoverSlot(tacticsExState,tacticsUnits,tacticsExNow):null}
             guts={guts} hand={hand} heroCardBonus={heroCardBonus} heroDist={heroDist}
             hp={hp} iceLockActive={iceLockActive} iceLockPreparing={iceLockPreparing} iceLockTurns={iceLockTurns}
             isAssistCard={isAssistCard} isAttackCard={isAttackCard} isBusy={isBusy} isHeroSlotMon={isHeroSlotMon}

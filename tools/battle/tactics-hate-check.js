@@ -1,0 +1,81 @@
+#!/usr/bin/env node
+// タクティクスのヘイト(確認待ちの試作・2026-10-17 社長「試作する」)の作りを見る。
+//
+//   node tools/battle/tactics-hate-check.js
+//
+//   ① 全モンスターが TACTICS_HATE.monsters にあり、役割が roles にある(足し忘れると「攻撃」の既定値になる)
+//   ② 切のとき(hate を渡さない)は、狙いの重みが今までの式とまったく同じ
+//   ③ 1ターンの動き: 毎ターン ×decay・上限・倒れたら0・空き枠は0・勇者は下地より下がらない・与ダメージは割合で配る
+//   ④ 炎の段は 20・50・80。勇者は下地を引いた値で見る
+//   ⑤ 名前の出た子の値(資料の★おすすめ): あつの挑発・みゅあの愛・ももすけのおねだり・モノリスのかばう
+//   ⑥ 確認待ちの試作の一覧にあり、既定は切(キーが無ければ効かない)。タクティクスバトルだけ(レイド・既存5モードは見ない)
+const fs = require('fs');
+const path = require('path');
+const { loadGame } = require('../playbot/sim/load-game');
+const root = path.resolve(__dirname, '..', '..');
+const read = (rel) => fs.readFileSync(path.join(root, rel), 'utf8');
+let failed = 0;
+const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failed++; };
+const G = loadGame();
+const H = G.TACTICS_HATE;
+const near = (a, b) => Math.abs(a - b) < 1e-9;
+
+// ①
+const mons = Object.values(G.ALL_PLAYER_MONSTERS).filter((m) => m && !m.debugOnly);
+const missing = mons.filter((m) => !H.monsters[m.id] || !H.roles[H.monsters[m.id].role]).map((m) => m.id);
+check('① 全モンスターが表にあり、役割が roles にある', missing.length === 0 && mons.length > 0, missing.length ? `足りない: ${missing.join(', ')}` : `${mons.length}体`);
+check('① 役割の倍率は数で、0より大きい', Object.values(H.roles).every((r) => Number.isFinite(r.mult) && r.mult > 0));
+
+// ②
+const unit = (id, hp, maxHp, downed = false) => ({ id, name: id, hp, maxHp, guts: 10, maxGuts: 10, atk: 100, def: 100, downed });
+const units = [unit('Mocchi', 700, 720), unit('Monol', 350, 700), unit('Ghost', 100, 450), unit('Ham', 0, 350, true)];
+const old = units.map((u, i) => (u.downed ? null : { index: i, weight: 1 + 2 * (1 - u.hp / u.maxHp) })).filter(Boolean);
+const nowW = G.tacticsTargetWeights(units);
+check('② 切のときは重みが今までの式と同じ', nowW.length === old.length && nowW.every((w, k) => w.index === old[k].index && near(w.weight, old[k].weight)));
+const seq = [0.1, 0.5, 0.9, 0.33];
+const pick = (hate) => seq.map((r) => G.withTacticsTarget({ type: 'ATTACK', value: 10 }, units, () => r, G.TACTICS_TARGET_LOW_HP_BIAS, hate).targetSlot);
+check('② 切のときの抽選は今までと同じ(引数なし = null)', JSON.stringify(pick(undefined)) === JSON.stringify(pick(null)));
+const hw = G.tacticsTargetWeights(units, G.TACTICS_TARGET_LOW_HP_BIAS, [50, 0, 0, 0]);
+check('② 入のときは ×(1 + ヘイト ÷ k)', near(hw[0].weight, old[0].weight * (1 + 50 / H.k)) && near(hw[1].weight, old[1].weight));
+
+// ③
+const ids = units.map((u) => u.id);
+const s0 = G.tacticsHateStep([40, 40, 40, 40], {}, units, -1, ids);
+check('③ 何もしなければ ×decay・倒れた子は0', near(s0[0], 40 * H.decay) && near(s0[1], 40 * H.decay) && s0[3] === 0);
+const capped = G.tacticsHateStep([0, 90, 0, 0], { gains: [0, 300, 0, 0] }, units, -1, ids);
+check('③ 上限で止まる', capped[1] === H.cap);
+const emptyUnits = [units[0], null, units[2], null];
+check('③ 空き枠は0', G.tacticsHateStep([10, 10, 10, 10], { gains: [5, 5, 5, 5] }, emptyUnits, -1, ids)[1] === 0);
+const hero = G.tacticsHateStep([0, 0, 0, 0], {}, units, 0, ids);
+check('③ 勇者は下地より下がらない', hero[0] === H.hero.floor && hero[1] === 0);
+check('③ WAVE の始めは0・勇者だけ下地', JSON.stringify(G.tacticsHateWaveStart(2)) === JSON.stringify([0, 0, H.hero.floor, 0]));
+const share = G.tacticsHateStep([0, 0, 0, 0], { dealt: [300, 100, 0, 0] }, units, -1, ids);
+const monolMult = G.tacticsHateProfile('Monol').mult;
+check('③ 与ダメージは味方の中の割合 × dmgShare(敵のライフに左右されない)', near(share[0], H.action.dmgShare * 0.75) && near(share[1], monolMult * H.action.dmgShare * 0.25));
+const big = G.tacticsHateStep([0, 0, 0, 0], { dealt: [300000, 100000, 0, 0] }, units, -1, ids);
+check('③ A:10,000 と B:100,000 のように桁が違っても、割合が同じなら同じヘイト', near(big[0], share[0]) && near(big[1], share[1]));
+
+// ④
+const f = (v, hero = false) => G.tacticsHateFlame(v, hero);
+check('④ 炎は 20・50・80 で1段ずつ', [f(19), f(20), f(49), f(50), f(79), f(80), f(100)].join() === '0,1,1,2,2,3,3');
+check('④ 勇者は下地を引いた値で見る', f(H.hero.floor, true) === 0 && f(H.hero.floor + 20, true) === 1);
+
+// ⑤
+const gain = (card, id) => G.tacticsHateCardGain(card, id) * G.tacticsHateProfile(id).mult;
+check('⑤ あつの挑発 +40(攻撃の子)', near(gain({ id: 'atsu', type: 'debuff', subType: 'stun_atsu' }, 'Mocchi'), 40));
+check('⑤ みゅあの愛 +15 / +31.5 / +40.5', [0, 1, 2].map((lv) => gain({ id: 'mua', type: 'heal', evoLevel: lv }, 'Mocchi')).every((v, k) => near(v, [15, 31.5, 40.5][k])));
+check('⑤ ももすけのおねだり +7.5 / +31.5 / +40.5', [0, 1, 2].map((lv) => gain({ id: 'momosuke', type: 'heal', evoLevel: lv }, 'Mocchi')).every((v, k) => near(v, [7.5, 31.5, 40.5][k])));
+check('⑤ ガード +25(盾は +6 上乗せ)', near(G.tacticsHateCardGain({ type: 'guard' }, 'Mocchi'), 25) && near(G.tacticsHateCardGain({ type: 'guard' }, 'Yggdrasil'), 31));
+const cover = G.tacticsHateExGain('coverAll', 'Monol') * monolMult;
+check('⑤ モノリスのかばう (60 + 行動のたび3) × 1.5', near(cover, (60 + 3) * 1.5) && monolMult === 1.5 && G.tacticsHateProfile('Monol').always === 3);
+
+// ⑥
+const trials = read('monster-hero/src/parts/81-debug-trials.jsx');
+check('⑥ 確認待ちの試作の一覧にある', trials.includes(`key: '${G.TACTICS_HATE_PROTO_KEY}', on: 'on'`) && trials.includes('タクティクスのヘイト(試作)'));
+check('⑥ キーが無ければ切', G.tacticsHateProtoOn() === false);
+const app = read('monster-hero/src/parts/60-app.jsx');
+check('⑥ タクティクスバトルだけ(レイドバトルは見ない)', /const tacticsHateOnFor = \(mode\) => TACTICS_BATTLE_MODES\.includes\(mode\) && !isRaidJackMode\(mode\) && tacticsHateProtoOn\(\);/.test(app));
+check('⑥ 保存データの一覧に試作のキーがある', read('docs/spec/SAVE_DATA.md').includes(G.TACTICS_HATE_PROTO_KEY));
+
+console.log(failed ? `\nNG ${failed}件` : '\nすべてOK');
+process.exit(failed ? 1 : 0);
