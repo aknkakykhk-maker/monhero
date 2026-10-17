@@ -192,6 +192,7 @@ const VARIANTS = {
   trait: { name: 'モノリスの特性だけ(×1.5・行動のたび+3・かばうは+0)', cfg: withMonol({ monol: { mult: 1.5, always: 3 }, cover: 0 }) },
   both: { name: 'かばう+特性の両方(×1.5・行動のたび+3・かばう+60)', cfg: withMonol({ monol: { mult: 1.5, always: 3 } }) },
   strong: { name: '両方を強く(×2・行動のたび+6・かばう+60)', cfg: withMonol({ monol: { mult: 2, always: 6 } }) },
+  rec: { name: '★おすすめ(勇者の下地20・与ダメージ×15・ガード+25・モノリス×1.5と+3)', cfg: edited((c) => { c.hero.floor = 20; c.action.dmgShare = 15; c.action.guard = 25; Object.assign(c.monsters.Monol, { mult: 1.5, always: 3 }); }) },
 };
 const PARTIES = [
   { key: 'top', name: '1位(モッチー + ゴースト・スプーキー・ハム)', hero: 'Mocchi', allies: ['Ghost', 'Spooky', 'Ham'] },
@@ -206,6 +207,8 @@ const KNOBS = [
   { name: 'かばう 60 → 80', edit: (c) => { c.exByEffect.coverAll = 80; } },
   { name: '盾の倍率 1.3 → 1.5', edit: (c) => { c.roles.tank.mult = 1.5; } },
   { name: '与ダメージの割合 30 → 40', edit: (c) => { c.action.dmgShare = 40; } },
+  { name: '与ダメージの割合 30 → 15', edit: (c) => { c.action.dmgShare = 15; } },
+  { name: 'ガード 6 → 25', edit: (c) => { c.action.guard = 25; } },
   { name: '回復 30 → 40', edit: (c) => { c.action.heal = 40; } },
 ];
 
@@ -271,7 +274,7 @@ out(`| その子のヘイト | 炎 | 満タンの子 | 半分の子 | 4分の1�
 out('| --- | --- | --- | --- | --- |');
 for (const h of [0, 20, 50, 80, 100]) out(`| ${h} | ${['—', '🔥', '🔥🔥', '🔥🔥🔥'][flameOf(C, h)]} | ${pct(probOf(1, h, C.k))} | ${pct(probOf(0.5, h, C.k))} | ${pct(probOf(0.25, h, C.k))} |`);
 out('');
-out('ヘイト0のときが今の式と同じ(満タン25%・半分40%・4分の1 47%)。');
+out('ヘイト0のときが今の式と同じ(満タン25%・半分40%・4分の1 45%)。');
 out('');
 out('## D. 名前の出た子の具体値(1回あたり。役割の倍率を掛けたあと)');
 out('');
