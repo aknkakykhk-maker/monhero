@@ -601,6 +601,9 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   noteSeJudgeVary:true, noteSeFlickVolume:100, noteSeEndVolume:100, noteSeEmptyEnabled:true,
   // ホールド・スライドを押さえている間の音(はじめは「ウィーン」、同じ日に鈴の「シャラララ」を経て、見本の録画をまねた高い「シャラシャラ」になった。きらめく音へ作り替えた)の大きさ。タップ音量に対する%。0で鳴らさない(2026-09-28)
   noteSeHoldVolume:100,
+  // ホールド・スライドの刻みを通るたびの音(「チリッ」)の大きさ(2026-10-17)。タップ音量に対する%。既定は0(鳴らさない。社長「ださいからなくしていいよ」→「設定でいじれるように」)。
+  // 新しい項目なので、保存値に無い人は既定(0)で補う
+  noteSeTickVolume:0,
   livePartnerVisible:true,
   // 両サイドのマスモン(2026-09-05)。既存の保存値には無いので、読み込み時は既定で補われる。
   sideMonsterOpacity:'NORMAL', sideMonsterMotion:'NORMAL', sideMonsterAbilityHighlight:true,
@@ -695,6 +698,7 @@ const normalizeRhythmSettings = value => {
     noteSeFlickVolume:rhythmFiniteStep(source.noteSeFlickVolume,0,RHYTHM_NOTE_SE_PART_VOLUME_MAX,1,DEFAULT_RHYTHM_SETTINGS.noteSeFlickVolume),
     noteSeEndVolume:rhythmFiniteStep(source.noteSeEndVolume,0,RHYTHM_NOTE_SE_PART_VOLUME_MAX,1,DEFAULT_RHYTHM_SETTINGS.noteSeEndVolume),
     noteSeHoldVolume:rhythmFiniteStep(source.noteSeHoldVolume,0,RHYTHM_NOTE_SE_PART_VOLUME_MAX,1,DEFAULT_RHYTHM_SETTINGS.noteSeHoldVolume),
+    noteSeTickVolume:rhythmFiniteStep(source.noteSeTickVolume,0,100,1,DEFAULT_RHYTHM_SETTINGS.noteSeTickVolume),
     noteSeEnabled:bool('noteSeEnabled'), vibrationEnabled:bool('vibrationEnabled'),
     effectAmount:RHYTHM_EFFECT_LEVELS.includes(source.effectAmount)?source.effectAmount:DEFAULT_RHYTHM_SETTINGS.effectAmount,
     lightweightMode:bool('lightweightMode'), livePartnerVisible:bool('livePartnerVisible'), multiLightLook:bool('multiLightLook'), modeSelectArt:bool('modeSelectArt'), modeSelectComment:bool('modeSelectComment'),
