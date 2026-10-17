@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 155d66a2602accdb
+// source-sha256: 2c72c759e92f2543
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-17 09:49";
+const BUILD_DATE = "2026-10-17 10:38";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -34374,6 +34374,7 @@ const RhythmTapTest = ({
       holdDeltaMs: 0,
       _rhythmSlideToleranceBonusLanes: tracking.toleranceBonusLanes,
       _rhythmTrackingGraceMs: tracking.graceMs,
+      _rhythmCheckpointIntervalMs: checkpointIntervalMs,
       ...(note.type === 'SLIDE' ? {
         _rhythmSlideRenderPoints: rhythmSlidePoints(note),
         _rhythmSlideCheckpoints: rhythmSlideCheckpointTimes(note, checkpointIntervalMs)
@@ -36006,6 +36007,44 @@ const RhythmTapTest = ({
         if (!note.done && note.activePointerId !== null && note.type === 'HOLD' && rhythmNoteHasBody(note)) heldNotes.push(note);
       }
       RHYTHM_NOTE_SE_RUNTIME.holdSync(heldNotes);
+      for (let i = 0; i < heldNotes.length; i++) {
+        const note = heldNotes[i],
+          ticks = Number(note._rhythmTicks) || 0;
+        if (!(ticks > (Number(note._rhythmTicksSeen) || 0))) continue;
+        note._rhythmTicksSeen = ticks;
+        const slide = rhythmNoteIsSlide(note);
+        RHYTHM_NOTE_SE_RUNTIME.playTick(slide);
+        if (settings.lightweightMode || settings.effectAmount === 'MINIMAL') continue;
+        const area = playAreaRef.current;
+        if (area && RHYTHM_CANVAS_RENDERER.hitsFor(area)) {
+          const at = run.audio?.songTimeMs?.() ?? note.timeMs,
+            lineY = RHYTHM_JUDGMENT_LINE_Y.ratio,
+            span = slide ? rhythmProjectSlideSpan(rhythmReleaseLane(note), note, lineY, at) : rhythmNoteVisualSpan(note, note.lane, lineY, at);
+          RHYTHM_CANVAS_RENDERER.pushTick({
+            center: span.center,
+            width: span.width,
+            color: slide ? '#f0abfc' : '#a5f3fc',
+            sky: rhythmNoteSkyHeight(note) > 0
+          });
+        }
+        const combo = comboRef.current;
+        if (combo && typeof combo.animate === 'function') {
+          try {
+            combo._rhythmTickAnim?.cancel?.();
+            combo._rhythmTickAnim = combo.animate([{
+              transform: 'scale(1)'
+            }, {
+              transform: 'scale(1.07)',
+              offset: .3
+            }, {
+              transform: 'scale(1)'
+            }], {
+              duration: 150,
+              easing: 'ease-out'
+            });
+          } catch (_) {}
+        }
+      }
       run.notesReady = true;
       if (canvasNotes) RHYTHM_CANVAS_RENDERER.end();
       RHYTHM_PERF.notes(perfScanned, perfDrawn, scanFrom, run.notesAscending);

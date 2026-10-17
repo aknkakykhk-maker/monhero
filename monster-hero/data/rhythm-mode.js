@@ -2269,6 +2269,17 @@ const rhythmSlideNoteCheckpoints=note=>{
   if(Array.isArray(baked))return baked;
   return rhythmSlideCheckpointTimes(note,rhythmSlideCheckpointIntervalMs('MASTER',null));
 };
+// ホールドの「線を通った」演出の時刻(2026-10-17 社長「ホールドとかスライドで、他ゲーはコンボ増えてくけど、あれのほうが爽快感はある」→ 案A: 見た目と音だけ)。
+// ホールドには判定の線が無いので、スライドの線と同じ間隔(難易度と譜面のレベルで決まる _rhythmCheckpointIntervalMs)で時刻を作る。
+// 光・音・コンボのはねを出すためだけに使い、判定・コンボの数・スコアには使わない。終わりの手前(TAIL_GUARD)は置かない
+const rhythmHoldTickTimes=note=>{
+  const start=Number(note?.timeMs),end=Number(note?.endTimeMs);
+  if(!Number.isFinite(start)||!Number.isFinite(end)||end<=start)return [];
+  const step=Math.max(RHYTHM_SLIDE_CHECKPOINT_MIN_MS,Number(note?._rhythmCheckpointIntervalMs)||rhythmSlideCheckpointIntervalMs('MASTER',null));
+  const limit=end-RHYTHM_SLIDE_CHECKPOINT_TAIL_GUARD_MS,count=Math.max(1,Math.round((end-start)/step)),out=[];
+  for(let i=1;i<=count;i++){const at=Math.round(start+(end-start)*i/count);if(at<=limit)out.push(at);}
+  return out;
+};
 // 通過率から「これより良くはならない」という押さえを決める。始点・終点の判定と
 // 悪いほうで合わせて使う。null は「落としていない＝押さえを掛けない」＝これまでどおり。
 const RHYTHM_SLIDE_CHECKPOINT_GRADES=Object.freeze([
@@ -2511,7 +2522,9 @@ const RHYTHM_NOTE_SE_TARGET_RMS = Object.freeze({ tap:.3, flick:.28, end:.28 });
 const RHYTHM_NOTE_SE_GRADE_GAIN = Object.freeze({ PERFECT:1, GREAT:.82, GOOD:.64 });
 const rhythmNoteSeGradeOf = judgment => judgment==='GREAT' ? 'GREAT' : (judgment==='GOOD'||judgment==='BAD'||judgment==='MISS') ? 'GOOD' : 'PERFECT';
 const RHYTHM_NOTE_SE_RUNTIME=(()=>{
-  let ctx=null,cachedRaw=null,cachedSettings={enabled:true,volume:70,type:'STANDARD'},inputGroupDepth=0,inputGroupHit=false;
+  // cachedRaw は「まだ読んでいない」(undefined)から始める(2026-10-17)。null から始めると、設定を一度も保存していない端末(保存値が null)では
+  // 1回目の読み込みが「前と同じ」と見なされ、下の仮の値(押さえている間の音の大きさ holdVolume などが無い)のままになり、押さえている間の音が鳴っていなかった
+  let ctx=null,cachedRaw=undefined,cachedSettings={enabled:true,volume:70,type:'STANDARD'},inputGroupDepth=0,inputGroupHit=false;
   // 出口(割れ止めを1つ通してから destination へ)。音の作り(context)ごとに1つだけ作って使い回す
   let outCtx=null,outNode=null,noiseCtx=null,noiseBuffer=null;
   const output=audio=>{
@@ -2967,6 +2980,31 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
   // 既存のタップ音と同じ設定(音量・ON/OFF・全体ミュート)を読み、専用の保存キーは増やさない。
   // 空中のノーツを取ったとき、ふだんのタップ音に重ねる「きらっ」(試作・2026-10-10)。高い2音を少しずらして鳴らし、
   // 小さく上がる音を添える。地上の音は変えない。MISS では鳴らさない。設定(音量・ON/OFF・全体ミュート)はタップ音と同じものを読む
+  // ホールド・スライドで線を通ったときの小さな音(2026-10-17 案A)。押さえている間の音と同じ大きさの決まり(タップ音量 × 押さえている間の音の%)で、
+  // それよりさらに小さく短い「チッ」。0%・タップ音を切っているときは鳴らさない。音の作りがまだ動いていなければ新しく作らない(鳴らさないだけ)。
+  // 線が詰まっても鳴りすぎないよう、前の音から70ms は次を鳴らさない
+  let tickLast=-1;
+  const playTick=(slide=false)=>{
+    const settings=readSettings();
+    if(!settings.enabled||settings.volume<=0||settings.holdVolume<=0||!rhythmAudioGloballyEnabled())return false;
+    const audio=ctx;
+    if(!audio||audio.state!=='running')return false;
+    const now=audio.currentTime;
+    if(tickLast>=0&&now-tickLast<.07&&now>=tickLast)return false;
+    tickLast=now;
+    try{
+      const oscillator=audio.createOscillator(),gain=audio.createGain();
+      oscillator.type='sine';
+      oscillator.frequency.setValueAtTime(slide?2793.83:2349.32,now);
+      gain.gain.setValueAtTime(.0001,now);
+      gain.gain.exponentialRampToValueAtTime(rhythmNoteSeLevel(.007,settings.volume/100*settings.holdVolume/100),now+.003);
+      gain.gain.exponentialRampToValueAtTime(.0001,now+.07);
+      oscillator.connect(gain);gain.connect(output(audio));
+      oscillator.start(now);oscillator.stop(now+.09);
+      oscillator.onended=()=>{try{oscillator.disconnect();gain.disconnect();}catch{}};
+    }catch{return false;}
+    return true;
+  };
   const playSky=(judgment='MARVELOUS')=>{
     if(judgment==='MISS')return false;
     const settings=readSettings();
@@ -3048,7 +3086,7 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
     voice('sine',196.00,chord,.7,.7);
     return true;
   };
-  return {warm,wake,prepare,play,playClear,playFlick,playMonster,playSky,preview,playEmpty,beginInputGroup,markInputGroupHandled,recentNoteSe,endInputGroup,playFullCombo,playNewRecord,holdSync,holdStopAll,_holdVoiceCount:()=>holdVoices.size,_readSettings:readSettings};
+  return {warm,wake,prepare,play,playClear,playFlick,playMonster,playSky,playTick,preview,playEmpty,beginInputGroup,markInputGroupHandled,recentNoteSe,endInputGroup,playFullCombo,playNewRecord,holdSync,holdStopAll,_holdVoiceCount:()=>holdVoices.size,_readSettings:readSettings};
 })();
 
 // 途中追従判定(暫定値。実機確認のうえで調整する)。
@@ -3741,8 +3779,19 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
   // 時刻が来たチェックポイントを1つずつ見て、そのとき指が的の中にいたかを記録する。
   // 「ぶれた一瞬では落とさない」は evaluatePosition が維持している trackingBadSincePerf を
   // そのまま使う(猶予の考え方を追従の判定と共有するため)。
+  // 線を通った印(note._rhythmTicks)。演奏画面が毎コマ読んで、光・音・コンボのはねを出す(2026-10-17 案A)。判定・コンボの数には使わない
+  const markTick=note=>{note._rhythmTicks=(Number(note._rhythmTicks)||0)+1;};
   const evaluateCheckpoints=(session,perf)=>{
-    if(!session||session.kind!=='SLIDE'||session.finished||session.note.done)return;
+    if(!session||session.finished||session.note.done)return;
+    // ホールドは線が無いので、同じ間隔の時刻(rhythmHoldTickTimes)を通るたびに印だけ付ける。外れているあいだ(帯が暗い)は付けない
+    if(session.kind==='HOLD'){
+      const ticks=session.tickTimes;
+      if(session.failed||!Array.isArray(ticks)||session.tickIndex>=ticks.length)return;
+      const chartNow=estimatedSongMs(session)-session.offsetMs;
+      while(session.tickIndex<ticks.length&&Number(ticks[session.tickIndex])<=chartNow){session.tickIndex++;if(session.trackingBadSincePerf==null)markTick(session.note);}
+      return;
+    }
+    if(session.kind!=='SLIDE')return;
     const times=session.checkpointTimes;
     if(!Array.isArray(times)||session.checkpointIndex>=times.length)return;
     const chartNow=estimatedSongMs(session)-session.offsetMs;
@@ -3751,8 +3800,9 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
     while(session.checkpointIndex<times.length&&Number(times[session.checkpointIndex])<=chartNow){
       session.checkpointIndex++;
       // 終点フリックの受付中は追従を見ない(フリックで的から外れるのは当たり前のため)。
-      if(session.endFlickArmed){session.checkpointPassed++;continue;}
-      if(session.trackingBadSincePerf==null||perf-session.trackingBadSincePerf<graceMs)session.checkpointPassed++;
+      if(session.endFlickArmed){session.checkpointPassed++;markTick(session.note);continue;}
+      // 落とした線では印を付けない(光・音も出ない)
+      if(session.trackingBadSincePerf==null||perf-session.trackingBadSincePerf<graceMs){session.checkpointPassed++;markTick(session.note);}
     }
   };
   const tick=()=>{
@@ -3879,7 +3929,7 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
       // release() が終端判定を作り、押しっぱなしなら+200ms超でMISSになる。
     }else if(kind==='FLICK')note.endTimeMs=(Number(note.timeMs)||0)+60000;
     const perf=nowPerf();
-    sessions.set(key,{key,note,kind,startSongMs:Number(startSongMs)||0,offsetMs:Number(offsetMs)||0,startPerfMs:perf/* 【2026-10-07 21時】押した瞬間の遅れぶん巻き戻すのは、いったんやめる(タップ抜けの報告。原因を調べるまで10/6夕方の動きへ戻す) */,lastPerfMs:perf,startX:pos.clientX,startY:pos.clientY,finished:false,failed:false,releaseRequired,releaseTargetMs,startJudgment:null,startDeltaMs:0,expiredGuard:false,autoCompletionDeferred:false,trackingBadSincePerf:null,checkpointTimes:kind==='SLIDE'?rhythmSlideNoteCheckpoints(note):[],checkpointIndex:0,checkpointPassed:0,endFlickRequired,endFlickArmed:false,endFlickAnchorX:pos.clientX,endFlickAnchorY:pos.clientY,endFlickDone:false,endFlickUncertain:false});
+    sessions.set(key,{key,note,kind,startSongMs:Number(startSongMs)||0,offsetMs:Number(offsetMs)||0,startPerfMs:perf/* 【2026-10-07 21時】押した瞬間の遅れぶん巻き戻すのは、いったんやめる(タップ抜けの報告。原因を調べるまで10/6夕方の動きへ戻す) */,lastPerfMs:perf,startX:pos.clientX,startY:pos.clientY,finished:false,failed:false,releaseRequired,releaseTargetMs,startJudgment:null,startDeltaMs:0,expiredGuard:false,autoCompletionDeferred:false,trackingBadSincePerf:null,checkpointTimes:kind==='SLIDE'?rhythmSlideNoteCheckpoints(note):[],tickTimes:kind==='HOLD'?rhythmHoldTickTimes(note):[],tickIndex:0,checkpointIndex:0,checkpointPassed:0,endFlickRequired,endFlickArmed:false,endFlickAnchorX:pos.clientX,endFlickAnchorY:pos.clientY,endFlickDone:false,endFlickUncertain:false});
     ensureTick();
   };
   const slideVisualLaneForIndex=index=>{
@@ -30487,6 +30537,8 @@ installRhythmGeometryStyles();
 //
 // 使い回す枚数。同時にこれ以上重なることは実際には無く、足りなければ古いものから奪う。
 const RHYTHM_HIT_EFFECT_POOL=10;
+// ホールド・スライドで線を通ったときの小さな光の長さ(2026-10-17 案A)
+const RHYTHM_HOLD_TICK_MS=200;
 // 1枚あたりに仕込む「はじける粒」の数。飛ぶ向きはCSS側に書いてある。
 const RHYTHM_HIT_SPARK_COUNT=5;
 // ふつうのノーツと、モンスターノーツ(1曲に最大4回)で光の大きさ・長さを変える。
@@ -33973,6 +34025,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     return painted;
   };
   const hitSlots=new Array(RHYTHM_HIT_EFFECT_POOL).fill(null),hitFilters=new Map();
+  // ホールド・スライドで線を通ったときの小さな光(2026-10-17 案A)。叩いた光の枠(hitSlots)とは別の6枠を順に使い回す(線の光で叩いた光を押し出さない)
+  const tickSlots=new Array(6).fill(null);let tickNext=0;
   const readHitFilters=area=>{
     hitFilters.clear();
     try{
@@ -34191,6 +34245,15 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     for(let k=pts.length-1;k>=0;k--)ctx.lineTo(pts[k].r,pts[k].y);
     ctx.closePath();ctx.fill();
   };
+  // 線を通ったときの小さな光: 判定ラインの上で、帯の幅に合わせた薄い横の光と、真ん中の小さな十字の星。0.2秒で消える(四角と多角形だけで描く)
+  const drawTick=(tk,p,y)=>{
+    const cx=tk.center*cssW,W=tk.width*cssW*(1+.25*p),fade=1-p,r=(4+7*p)*Math.max(.7,Math.min(1.3,cssW/600));
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.fillStyle=tk.color;
+    ctx.globalAlpha=.32*fade;ctx.fillRect(cx-W/2,y-2.5,W,5);
+    ctx.globalAlpha=.85*fade;ctx.beginPath();ctx.moveTo(cx,y-r*1.6);ctx.lineTo(cx+r*.32,y-r*.32);ctx.lineTo(cx+r*1.6,y);ctx.lineTo(cx+r*.32,y+r*.32);ctx.lineTo(cx,y+r*1.6);ctx.lineTo(cx-r*.32,y+r*.32);ctx.lineTo(cx-r*1.6,y);ctx.lineTo(cx-r*.32,y-r*.32);ctx.closePath();ctx.fill();
+    ctx.fillStyle='#ffffff';ctx.globalAlpha=.9*fade;ctx.fillRect(cx-1.5,y-1.5,3,3);
+  };
   const drawOneHit=(h,p,hitY,elapsed=0)=>{
     const W=h.width*cssW,cx=h.center*cssW,left=cx-W/2;
     // フリックの炎の羽は、ほかの光より長く残る(0.46秒)。ほかの光は元の長さで終える
@@ -34349,7 +34412,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     preloadImage(source){if(source&&ctx&&backend==='webgl'&&typeof ctx.preloadImage==='function')ctx.preloadImage(source);},
     release(){if(ctx&&backend==='webgl'&&typeof ctx.dispose==='function')ctx.dispose();canvas=null;ctx=null;backend='2d';sprites.clear();hitArea=null;skyHitArea=null;skyPressed=[];hitSlots.fill(null);},
     // 叩いたときの光をこの canvas で描くか(検証用・WebGL のときだけ演奏画面が area を渡す)。null で DOM の部品へ戻す
-    enableHits(area){hitArea=area&&ctx?area:null;hitSlots.fill(null);hitNext=0;if(hitArea)readHitFilters(hitArea);},
+    enableHits(area){hitArea=area&&ctx?area:null;hitSlots.fill(null);hitNext=0;tickSlots.fill(null);tickNext=0;if(hitArea)readHitFilters(hitArea);},
     hitsFor(area){return !!hitArea&&!!ctx&&area===hitArea;},
     enableSkyHits(area){skyHitArea=area&&ctx?area:null;skyPressed=[];},
     // 空中の高さで押しているサブレーン(演奏画面が指の出入りのたびに渡す)。alpha は設定「レーンの光」の濃さ
@@ -34359,6 +34422,14 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     // ただし HELL の空中の柱の光(オプション「空中を叩いた柱の光」)だけは出す(柱だけ。中心の光・粒・星は出さない)。
     // 2026-10-13 社長「奥までに設定しても短いまま」: 演出量「最小」(見た目のおまかせ「軽さ優先」)と軽量モードでは柱がまるごと出ず、
     // 押している間の短い光(drawSkyPress)だけが見えていた。光は叩いた1回につき台形1つで、形と色の段は1回だけ作るので重さはほぼ増えない
+    // 線を通ったときの小さな光。演出量「最小」・軽量モードでは出さない。叩いた光と同じ層(ノーツの canvas)に描くので、画面の部品は増やさない
+    pushTick(tick){
+      if(!(tick.sky?(hitArea||skyHitArea):hitArea)||effect==='MINIMAL'||lightweight)return false;
+      tickSlots[tickNext]={center:Math.max(0,Math.min(1,Number(tick.center)||.5)),width:Math.max(.04,Math.min(1,Number(tick.width)||.1)),color:String(tick.color||'#e0f2fe'),sky:!!tick.sky,
+        start:typeof performance!=='undefined'?performance.now():Date.now()};
+      tickNext=(tickNext+1)%tickSlots.length;
+      return true;
+    },
     pushHit(hit){
       if(!(hit.sky?(hitArea||skyHitArea):hitArea))return;
       const lite=effect==='MINIMAL'||lightweight;
@@ -34374,6 +34445,12 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       if(!ctx||!(hitArea||skyHitArea)||!Number.isFinite(hitY))return 0;
       const now=frameNow||(typeof performance!=='undefined'?performance.now():Date.now());let count=0;
       if(skyHitArea&&skyPressed.length)count+=drawSkyPress();
+      for(let slot=0;slot<tickSlots.length;slot++){
+        const tk=tickSlots[slot];if(!tk)continue;
+        const t=(now-tk.start)/RHYTHM_HOLD_TICK_MS;
+        if(t>=1||t<0){tickSlots[slot]=null;continue;}
+        touch();glowBegin();drawTick(tk,t,tk.sky?hitY-cssH*RHYTHM_SKY_LIFT.ratio:hitY);glowEnd();count++;
+      }
       for(let slot=0;slot<hitSlots.length;slot++){
         const hit=hitSlots[slot];if(!hit)continue;
         const elapsed=now-hit.start,t=elapsed/hit.ms,end=hit.plume?Math.max(hit.ms,HIT_PLUME_MS):hit.ms;
