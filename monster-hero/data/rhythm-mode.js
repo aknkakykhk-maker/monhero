@@ -3929,7 +3929,7 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
       // release() が終端判定を作り、押しっぱなしなら+200ms超でMISSになる。
     }else if(kind==='FLICK')note.endTimeMs=(Number(note.timeMs)||0)+60000;
     const perf=nowPerf();
-    sessions.set(key,{key,note,kind,startSongMs:Number(startSongMs)||0,offsetMs:Number(offsetMs)||0,startPerfMs:perf/* 【2026-10-07 21時】押した瞬間の遅れぶん巻き戻すのは、いったんやめる(タップ抜けの報告。原因を調べるまで10/6夕方の動きへ戻す) */,lastPerfMs:perf,startX:pos.clientX,startY:pos.clientY,finished:false,failed:false,releaseRequired,releaseTargetMs,startJudgment:null,startDeltaMs:0,expiredGuard:false,autoCompletionDeferred:false,trackingBadSincePerf:null,checkpointTimes:kind==='SLIDE'?rhythmSlideNoteCheckpoints(note):[],tickTimes:kind==='HOLD'?rhythmHoldTickTimes(note):[],tickIndex:0,checkpointIndex:0,checkpointPassed:0,endFlickRequired,endFlickArmed:false,endFlickAnchorX:pos.clientX,endFlickAnchorY:pos.clientY,endFlickDone:false,endFlickUncertain:false});
+    sessions.set(key,{key,note,kind,startSongMs:Number(startSongMs)||0,offsetMs:Number(offsetMs)||0,startPerfMs:perf/* 【2026-10-07 21時】押した瞬間の遅れぶん巻き戻すのは、いったんやめる(タップ抜けの報告。原因を調べるまで10/6夕方の動きへ戻す) */,lastPerfMs:perf,startX:pos.clientX,startY:pos.clientY,finished:false,failed:false,releaseRequired,releaseTargetMs,startJudgment:null,startDeltaMs:0,expiredGuard:false,autoCompletionDeferred:false,trackingBadSincePerf:null,checkpointTimes:kind==='SLIDE'?rhythmSlideNoteCheckpoints(note):[],tickTimes:kind==='HOLD'&&typeof rhythmHoldTickTimes==='function'?rhythmHoldTickTimes(note):[],tickIndex:0,checkpointIndex:0,checkpointPassed:0,endFlickRequired,endFlickArmed:false,endFlickAnchorX:pos.clientX,endFlickAnchorY:pos.clientY,endFlickDone:false,endFlickUncertain:false});
     ensureTick();
   };
   const slideVisualLaneForIndex=index=>{
