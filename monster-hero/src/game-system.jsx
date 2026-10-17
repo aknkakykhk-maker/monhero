@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 95ac449cc5dd6472
+// generated-sha256: 2893ae78c2a567fe
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-17 20:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-17 20:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -23970,17 +23970,18 @@ const tacticsEnemyPowerMultiplier = (startPower, nowPower, exponent = TACTICS_EN
 //   重みは「残りライフの割合が低いほど大きい」。倒れている子は狙わない。
 //   weightBias を0にすると一様ランダムになる(検査で確かめる)。
 const TACTICS_TARGET_LOW_HP_BIAS = 2;
-const tacticsTargetWeights = (units, bias = TACTICS_TARGET_LOW_HP_BIAS) => {
+// hate … ヘイト(試作)の配列。渡したときだけ重みに ×(1 + ヘイト ÷ k) を掛ける(渡さなければ今までどおり)
+const tacticsTargetWeights = (units, bias = TACTICS_TARGET_LOW_HP_BIAS, hate = null) => {
   const safeBias = Number.isFinite(Number(bias)) ? Math.max(0, Number(bias)) : TACTICS_TARGET_LOW_HP_BIAS;
   return tacticsAliveSlots(units).map(index => {
     const unit = normalizeTacticsUnit(units[index]);
     const remain = unit.maxHp > 0 ? tacticsClamp(unit.hp / unit.maxHp, 0, 1) : 1;
-    return { index, weight: 1 + safeBias * (1 - remain) };
+    return { index, weight: (1 + safeBias * (1 - remain)) * tacticsHateWeightMult(hate, index) };
   });
 };
 // 狙うスロットを1つ選ぶ。生きている子がいなければ null
-const chooseTacticsTarget = (units, random = Math.random, bias = TACTICS_TARGET_LOW_HP_BIAS) => {
-  const weights = tacticsTargetWeights(units, bias);
+const chooseTacticsTarget = (units, random = Math.random, bias = TACTICS_TARGET_LOW_HP_BIAS, hate = null) => {
+  const weights = tacticsTargetWeights(units, bias, hate);
   if (!weights.length) return null;
   const total = weights.reduce((sum, entry) => sum + entry.weight, 0);
   if (!(total > 0)) return weights[0].index;
@@ -24006,7 +24007,7 @@ const tacticsTargetName = (units, slotIndex) => {
 //   実行時に「その間合いにいる子」を見る(予告には間合いが出ている)。
 // ★ダメージの無い行動(ためる・移動・咆哮・再生)にも狙いは要らない。
 const TACTICS_TARGETED_TYPES = ['ATTACK', 'SPECIAL'];
-const withTacticsTarget = (intent, units, random = Math.random, bias = TACTICS_TARGET_LOW_HP_BIAS) => {
+const withTacticsTarget = (intent, units, random = Math.random, bias = TACTICS_TARGET_LOW_HP_BIAS, hate = null) => {
   if (!intent || !TACTICS_TARGETED_TYPES.includes(intent.type)) return intent;
   if (intent.targetsAll) return { ...intent, targetName: TACTICS_ALL_TARGET_LABEL };
   // ★間合い攻撃も「誰を狙うか」を決める(2026-09-22 ユーザー指示「誰に攻撃するかが大事」)。
@@ -24016,8 +24017,129 @@ const withTacticsTarget = (intent, units, random = Math.random, bias = TACTICS_T
   //   誰も立っていない間合いだと攻撃そのものが起きなかった
   const sweepSlot = intent.variant === 'sweep' && Number.isInteger(intent.sweepDist)
     && tacticsAliveSlots(units).includes(intent.sweepDist) ? intent.sweepDist : null;
-  const targetSlot = sweepSlot != null ? sweepSlot : chooseTacticsTarget(units, random, bias);
+  const targetSlot = sweepSlot != null ? sweepSlot : chooseTacticsTarget(units, random, bias, hate);
   return targetSlot == null ? intent : { ...intent, targetSlot, targetName: tacticsTargetName(units, targetSlot) };
+};
+
+// ===== ヘイト(確認待ちの試作・2026-10-17 社長「試作する」) =====
+// 敵の狙いを「目立った子ほど狙われやすく」する裏の値。タクティクスバトルだけ・バトル中だけ(保存しない)。
+// デバッグ設定の「🧪 確認待ちの試作」で入れたときだけ効く(切のときは今までとまったく同じ)。
+// ★数字はこの TACTICS_HATE の1か所だけに置く(試算: docs/playbot/reports/2026-10-17/tactics-hate-numbers.md の★おすすめ)。
+//   action … 行動ごとの基準値 / monsters … 子ごとの上書き(mult・add・always)。タイプごとの倍率は下の MONSTER_TYPES(1か所)
+//   1ターンの動き: ヘイト = 前のヘイト × decay + 倍率 ×(そのターンに増えたぶん)。上限 cap・倒れたら0・WAVE で0。
+//   勇者は hero.floor より下がらない(炎は下地を引いた値で出す)。狙いの重み = 今の重み ×(1 + ヘイト ÷ k)
+// 入/切を読むのは 81-debug-trials.jsx の tacticsHateProtoOn(この部品は保存に触らない)
+const TACTICS_HATE = {
+  k: 25, decay: 0.7, cap: 100,
+  flames: [20, 50, 80],
+  hero: { floor: 20 },
+  action: { atk: 2, unique: 4, dmgShare: 15, heal: 30, buff: 5, debuff: 8, guard: 25, taunt: 40, ex: 10 },
+  exByEffect: { coverAll: 60, partyGuard: 20, lifeSpring: 20, cookieBox: 15, partyBoost: 15, present: 10 },
+  // 助手のカード(id)がどの行動か
+  assist: { atsu: 'taunt', mua: 'heal', momosuke: 'heal', meloso: 'heal', oryo: 'buff', dra: 'buff', cadmium: 'buff', myaru: 'buff', kiki: 'buff', poltz: 'buff' },
+  // 回復の量(ライフの回復率 + ガッツの回復率 × 0.5)。段 0〜2
+  healAmount: { mua: [0.5, 1.05, 1.35], momosuke: [0.25, 1.05, 1.35], meloso: [0.45, 0.45, 0.45] },
+  // 子ごとの上書き(タイプの既定値より強く/弱くしたい子だけ)。mult … 増え方の倍率 / add … 行動ごとの上乗せ / always … 行動のたびの上乗せ
+  monsters: {
+    Monol: { mult: 1.5, always: 3 }, // モノリスの特性(常にヘイトが上がりやすい)
+  },
+};
+
+// ===== モンスターのタイプ(確認待ちの試作・2026-10-17 社長「とりあえず表記とヘイト変動率とかでいいんじゃないかな？」) =====
+// ★効くのはタクティクスのヘイトの増え方(hateMult・hateAdd)だけ。ほかのモード・能力・ステータスには効かせない。
+// ★タイプの表はここ1か所(ヘイトの役割もこの表を読む。二重に持たない)。メイン1つ + サブ(任意・表記だけ)。
+// ★モンスターを足したら MONSTER_TYPE_OF に1行足す(tactics-hate-check.js が全モンスターを見て、無ければ止める)
+// 表記の入/切を読むのは 81-debug-trials.jsx の monsterTypeProtoOn
+const MONSTER_TYPES = {
+  attacker: { label: 'アタッカー', icon: '⚔️', note: '攻めの主役', hateMult: 1.0, hateAdd: {} },
+  tank: { label: 'タンク', icon: '🛡️', note: '前に立って攻撃を引き受ける', hateMult: 1.3, hateAdd: { guard: 6 } },
+  supporter: { label: 'サポーター', icon: '✨', note: '味方を強くする', hateMult: 1.1, hateAdd: {} },
+  healer: { label: 'ヒーラー', icon: '💚', note: '味方を癒やす', hateMult: 1.2, hateAdd: {} },
+  shadow: { label: 'シャドウ', icon: '🌙', note: 'かわして、目立たずに攻める', hateMult: 0.8, hateAdd: {} },
+};
+const MONSTER_TYPE_OF = {
+  Mocchi: { main: 'attacker', sub: 'tank' }, Mitarashi: { main: 'attacker', sub: 'tank' },
+  Golem: { main: 'attacker' }, Suezo: { main: 'attacker', sub: 'supporter' }, Ham: { main: 'attacker' },
+  Pandora: { main: 'attacker' }, KenshiMocchi: { main: 'attacker' }, Eiki: { main: 'attacker' },
+  Kuromy: { main: 'attacker' }, Spooky: { main: 'attacker', sub: 'supporter' },
+  Monol: { main: 'tank' }, Yggdrasil: { main: 'tank', sub: 'healer' }, MelWhip: { main: 'tank', sub: 'attacker' },
+  Oboro: { main: 'tank' }, Plant: { main: 'tank', sub: 'healer' },
+  Melody: { main: 'healer', sub: 'tank' }, Undine: { main: 'healer', sub: 'supporter' },
+  Pixie: { main: 'supporter', sub: 'attacker' }, Mia: { main: 'supporter', sub: 'attacker' },
+  Ark: { main: 'supporter', sub: 'attacker' }, Iblis: { main: 'supporter', sub: 'attacker' },
+  Snegurochka: { main: 'supporter' }, Yaobikuni: { main: 'supporter', sub: 'tank' },
+  Tiger: { main: 'shadow', sub: 'attacker' }, Zan: { main: 'shadow', sub: 'attacker' }, Ghost: { main: 'shadow', sub: 'attacker' },
+};
+// その子のタイプ({ main, sub } の形。表に無い子はアタッカー・サブなし)
+const monsterTypeOf = (monId) => {
+  const t = MONSTER_TYPE_OF[monId];
+  const main = t && MONSTER_TYPES[t.main] ? t.main : 'attacker';
+  const sub = t && MONSTER_TYPES[t.sub] && t.sub !== main ? t.sub : null;
+  return { main, sub };
+};
+const TACTICS_HATE_EMPTY = [0, 0, 0, 0];
+const tacticsHateNum = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
+// タイプ(メイン)の既定値に、子の上書きを重ねる(表に無い子はアタッカー)
+const tacticsHateProfile = (monId) => {
+  const type = monsterTypeOf(monId).main;
+  const r = MONSTER_TYPES[type];
+  const m = TACTICS_HATE.monsters[monId] || {};
+  return { type, mult: Number.isFinite(m.mult) ? m.mult : r.hateMult, add: { ...r.hateAdd, ...(m.add || {}) }, always: tacticsHateNum(m.always) };
+};
+// カードが何の行動か(数えないものは null)
+const tacticsHateCardKind = (card) => {
+  if (!card) return null;
+  if (TACTICS_HATE.assist[card.id]) return TACTICS_HATE.assist[card.id];
+  if (card.type === 'guard' || card.type === 'weak_guard') return 'guard';
+  if (card.type === 'unique') return 'unique';
+  if (card.type === 'atk' || card.type === 'range_atk') return 'atk';
+  if (card.type === 'buff') return 'buff';
+  if (card.type === 'debuff') return 'debuff';
+  return null;
+};
+// カード1枚で増えるヘイト(倍率を掛ける前)。effMul … 同じ子の2枚目なら 0.5
+const tacticsHateCardGain = (card, monId, effMul = 1) => {
+  const kind = tacticsHateCardKind(card);
+  if (!kind) return 0;
+  const p = tacticsHateProfile(monId);
+  const eff = Number.isFinite(Number(effMul)) ? Math.max(0, Number(effMul)) : 1;
+  let base = tacticsHateNum(TACTICS_HATE.action[kind]);
+  if (kind === 'heal') {
+    const lv = Math.max(0, Math.min(2, Math.floor(tacticsHateNum(card.evoLevel))));
+    base = TACTICS_HATE.action.heal * tacticsHateNum((TACTICS_HATE.healAmount[card.id] || [])[lv]) * eff;
+  } else if (kind === 'taunt' || kind === 'buff' || kind === 'debuff') base *= eff;
+  return base + tacticsHateNum(p.add[kind]) + p.always;
+};
+// EX を使ったときに増えるヘイト(倍率を掛ける前)
+const tacticsHateExGain = (effect, monId) => {
+  const p = tacticsHateProfile(monId);
+  const base = Object.prototype.hasOwnProperty.call(TACTICS_HATE.exByEffect, effect) ? TACTICS_HATE.exByEffect[effect] : TACTICS_HATE.action.ex;
+  return base + tacticsHateNum(p.add.ex) + p.always;
+};
+const normalizeTacticsHate = (hate) => [0, 1, 2, 3].map(i => tacticsClamp(tacticsHateNum(Array.isArray(hate) ? hate[i] : 0), 0, TACTICS_HATE.cap));
+// WAVE の始め(勇者だけ下地から)
+const tacticsHateWaveStart = (heroSlot) => [0, 1, 2, 3].map(i => (i === heroSlot ? TACTICS_HATE.hero.floor : 0));
+// 1ターンぶん進める。gains … 枠ごとの行動のぶん(倍率の前)/ dealt … 枠ごとのそのターンの与ダメージ / monIds … 枠ごとの子の id
+const tacticsHateStep = (hate, { gains = TACTICS_HATE_EMPTY, dealt = TACTICS_HATE_EMPTY } = {}, units, heroSlot, monIds = []) => {
+  const prev = normalizeTacticsHate(hate);
+  const filled = tacticsFilledSlots(units);
+  const team = filled.reduce((sum, i) => sum + Math.max(0, tacticsHateNum(dealt[i])), 0);
+  return [0, 1, 2, 3].map(i => {
+    if (!filled.includes(i)) return 0;
+    if (normalizeTacticsUnit(units[i]).downed) return 0;
+    const p = tacticsHateProfile(monIds[i]);
+    const share = team > 0 ? TACTICS_HATE.action.dmgShare * Math.max(0, tacticsHateNum(dealt[i])) / team : 0;
+    let v = prev[i] * TACTICS_HATE.decay + p.mult * (Math.max(0, tacticsHateNum(gains[i])) + share);
+    if (i === heroSlot) v = Math.max(v, TACTICS_HATE.hero.floor);
+    return Math.min(TACTICS_HATE.cap, v);
+  });
+};
+// 狙いの重みに掛ける倍率(hate が無ければ 1)
+const tacticsHateWeightMult = (hate, index) => (Array.isArray(hate) ? 1 + tacticsClamp(tacticsHateNum(hate[index]), 0, TACTICS_HATE.cap) / TACTICS_HATE.k : 1);
+// 炎の段(0〜3)。勇者は下地を引いた値で見る
+const tacticsHateFlame = (value, isHero = false) => {
+  const v = tacticsHateNum(value) - (isHero ? TACTICS_HATE.hero.floor : 0);
+  return TACTICS_HATE.flames.filter(x => v >= x).length;
 };
 // その行動が実際に当たるスロット。予告と実行で同じ関数を通すので食い違わない
 // 間合い攻撃が「当たり」(×TACTICS_SWEEP_MULT)になる条件。
@@ -32642,6 +32764,21 @@ function MonsterAttackPreviewScreen({ dexMonsterId, dexAttackPreview, unlockedMo
         </div>
       </div>;}
 
+// モンスターのタイプの小さな印(確認待ちの試作 MONSTER_TYPES。切のときは何も出さない)
+// compact … サブはアイコンだけ(図鑑の一覧のような狭い場所)
+function MonsterTypeBadge({ monId, size = 'sm', compact = false }) {
+  if (!monsterTypeProtoOn()) return null;
+  const t = monsterTypeOf(monId);
+  const chip = (key, isSub) => {
+    const d = MONSTER_TYPES[key];
+    const iconOnly = isSub && compact;
+    return (<span key={key} data-monster-type={key} data-monster-type-sub={isSub ? 'true' : undefined} title={`${isSub ? 'サブ' : 'メイン'}タイプ：${d.label}(${d.note})`}
+      className={`inline-flex items-center gap-0.5 rounded-full border ${compact ? 'px-1' : 'px-1.5'} py-px font-black leading-none whitespace-nowrap ${size === 'md' ? 'text-[11px]' : 'text-[9px]'} ${isSub ? 'border-white/15 bg-white/5 text-slate-300' : 'border-amber-300/50 bg-amber-500/15 text-amber-100'}`}>
+      <span aria-hidden="true">{d.icon}</span>{iconOnly ? <span className="sr-only">{d.label}</span> : d.label}</span>);
+  };
+  return <span data-monster-type-badge={monId} className={`inline-flex max-w-full flex-wrap items-center justify-center ${compact ? 'gap-0.5' : 'gap-1'}`}>{chip(t.main, false)}{t.sub && chip(t.sub, true)}</span>;
+}
+
 function MonsterDexScreen({ dexLineageFilter, unlockedMonsterIds, onSelectLineage, onOpenDetail, onBackToManagement }) {
       const monsters=dexMonsterList();
       const unlockedCount=monsters.filter(mon=>unlockedMonsterIds.includes(mon.id)).length;
@@ -32677,6 +32814,7 @@ function MonsterDexScreen({ dexLineageFilter, unlockedMonsterIds, onSelectLineag
                   <DexMonsterIcon src={iconSrc} hidden={!unlocked}/>
                   <div className="text-[11px] font-black truncate w-full text-center leading-tight text-amber-100">{unlocked?mon.name:'？？？'}</div>
                   <div className="text-[10px] font-black text-amber-400/80 leading-tight">{unlocked?monsterCategoryName(category):'未発見'}</div>
+                  {unlocked&&<MonsterTypeBadge monId={mon.id} compact/>}
                 </button>
               );
             })}
@@ -32808,6 +32946,7 @@ function MonsterDexDetailScreen({ dexMonsterId, dexTab, unlockedMonsterIds, masu
         <div className="flex-1 min-h-0 pt-3">
           <div className="w-full max-w-md mx-auto h-full flex flex-col min-h-0 rounded-2xl border border-amber-500/60 bg-gradient-to-b from-amber-950/50 to-slate-950 p-3">
             <div className="shrink-0 text-center text-[17px] font-black text-amber-100 truncate">{unlocked?mon.name:'？？？'}</div>
+            {unlocked&&monsterTypeProtoOn()&&<div data-dex-type-row className="shrink-0 mt-1 flex justify-center"><MonsterTypeBadge monId={mon.id} size="md"/></div>}
             {unlocked?(<>
               {/* 血統の行。血統名や区分の文字数で位置が動かないよう、
                   左右のチップを同じ幅(1fr)の枠へ入れ、ラベル・×・区分は端と中央へ固定する */}
@@ -36047,6 +36186,7 @@ function ProMonsterGridPicker({ list, selectedId=null, isDisabled, onSelect, onD
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-baseline justify-between gap-2"><b className="truncate text-[14px] text-white leading-tight">{focus.name}</b><span className="shrink-0 text-[9px] text-slate-500 font-black">総合力 <b className="text-[12px] text-amber-300 font-mono">{formatMonsterPower(monsterPowerOf(focus))}</b></span></div>
+                {monsterTypeProtoOn()&&<div data-pick-type-row className="flex"><MonsterTypeBadge monId={focus.id}/></div>}
                 <div className="truncate text-[9px] font-black text-slate-400 leading-tight">{(()=>{const l=monsterLineageOf(focus.id);return l.main.id===l.sub.id?`${l.main.name}の純血`:`${l.main.name} × ${l.sub.name}`;})()}</div>
                 <div className="truncate text-[10px] font-black text-amber-300 leading-tight"><Zap size={10} className="inline mr-0.5"/>{focus.unique.name}</div>
                 <div className="text-[9px] text-indigo-200 font-black leading-tight line-clamp-2"><span className="text-indigo-400">勇者特性 </span>{focus.trait||'特性なし'}</div>
@@ -38744,7 +38884,7 @@ function BattleScreen({
   setShowSoulBattleEffects, setSkillPicker, setSlotSettle, slotMaxUses, slotSettle, slotSkill,
   slotUniqueChoice, slots, soulBattleParty, soulCoordinationCardBonus, suppressCardClickRef,
   tacticsCanAssign, tacticsCardBlock, enemyDebuffs, battleUnitStatusOf, battleEnemyStatus, enemyStackCounts, debugStackMarks, tacticsSlotCountersAt, discardCards, actionUsed, tacticsCardGenre, tacticsCardScope, tacticsSlotFx, tacticsUnits,
-  tacticsExInfo, activateTacticsEx, tacticsExCutin, tacticsExTurnUsed, passTacticsTurn, tacticsCoverSlot,
+  tacticsExInfo, activateTacticsEx, tacticsExCutin, tacticsExTurnUsed, passTacticsTurn, tacticsCoverSlot, tacticsHate, tacticsHateOn,
   tacticsExIntroVisible, dismissTacticsExIntro, tacticsPandoraForms, trickStartView, sweetStackView, bowStackView, fateWheelView, enemyConfuseTurns, luckBanners,
   teachingFx, totalTurnCount, turnCount, ultimateDistanceBreakLevels, ultraBattleView, enemyDefeating,
   unifiedSpecialDefense, useEmergency, wave,
@@ -40228,6 +40368,9 @@ function BattleScreen({
               const slotAimHit=slotAimed?plannedHitWithCover(i):null;
               // この子のEXスキル(タクティクスだけ。持っていなければ null)
               const slotExInfo=tacticsExInfo?tacticsExInfo(i):null;
+              // ヘイト(確認待ちの試作): 炎の段。倒れている子には出さない。勇者は下地を引いた値で見る
+              const hateLv=s&&tacticsHateOn&&Array.isArray(tacticsHate)&&!normalizeTacticsUnit(tacticsUnits[i])?.downed?tacticsHateFlame(tacticsHate[i],isHeroSlotMon(s)):0;
+              const hateFlame=hateLv>0?<span data-tactics-hate={i} data-tactics-hate-level={hateLv} title="ヘイト(狙われやすさ)" className="ml-0.5 shrink-0 pr-[0.3em] text-[8px] leading-none tracking-[-0.3em] drop-shadow-[0_0_3px_rgba(251,146,60,.9)]">{'🔥'.repeat(hateLv)}</span>:null;
               // パンドラの箱: 効いているあいだは、悪魔と天使の2体を1つの枠に並べて出す(ライフ・ガッツ・距離・狙われ方は1体のまま)。
               // 待機アニメ(MonsterIdleArt)は本体の絵のパーツ用なので、2体のときは通さない。カードを切る間は、そのカードの側(1枚目=悪魔・2枚目以降=天使)が前に出て、もう片方は暗くなる。染色は本体用なので2体には掛けない
               const pandoraForm = s && s.id === 'Pandora' ? (tacticsPandoraForms && tacticsPandoraForms[i]) : null;
@@ -40374,7 +40517,7 @@ function BattleScreen({
                     「勇者モン選択時だけ効く特性」が効いているのか判断できないため */}
                 {/* 縁を回る光。回すのは中の大きな光の輪(transform)だけにして、塗りを毎コマ描き直さない(70-bootstrap の data-slot-ring) */}
                 {tacticsNewLayout&&<i aria-hidden="true" data-slot-ring/>}
-                <div data-slot-head={tacticsNewLayout?i:undefined} className={`${tacticsNewLayout?'col-span-2 row-start-1 h-[18px] justify-start gap-0.5 pr-[84px] backdrop-blur-sm':'h-[18px] justify-center'} shrink-0 flex items-center px-1 border-b z-20 ${isHeroSlotMon(s)?'bg-amber-400/10 border-amber-200/20':'bg-white/[.025] border-white/[.055]'}`}>{tacticsNewLayout&&<span className={`mr-1 shrink-0 rounded px-1 py-0.5 text-[8px] font-black leading-none ${RANGE_STYLES[i].labelBg}`}>{RANGE_LABELS[i]}</span>}{isHeroSlotMon(s)&&<Crown size={8} className="shrink-0 mr-0.5 text-amber-300"/>}<span className={`text-[10px] font-black truncate uppercase leading-none ${isHeroSlotMon(s)?'text-amber-100':'text-white'}`}>{s?.name||'---'}</span>{assignedCount>0&&!tacticsNewLayout&&<span className="ml-1 text-[10px] font-black text-indigo-300">×{assignedCount}</span>}{tacticsNewLayout&&slotExInfo&&(<span data-tactics-ex-mark={i} data-tactics-ex-state={slotExInfo.badge.text} className={`absolute right-1 top-[3px] max-w-[80px] truncate rounded px-1 py-0.5 text-[8px] font-black leading-none ${slotExInfo.badge.active?'bg-fuchsia-600 text-white ring-1 ring-fuchsia-200':'bg-black/70 text-fuchsia-200 ring-1 ring-fuchsia-400/60'}`}>EX{slotExInfo.badge.text!=='EX'?` ${slotExInfo.badge.text}`:(slotExInfo.badge.uses!=null?`×${slotExInfo.badge.uses}`:'')}</span>)}{slotBuffMarks.map(mark=>(<span key={mark.text} data-tactics-slot-buff={mark.text} className={`ml-1 shrink-0 text-[8px] font-black leading-none ${mark.cls}`}>{mark.text}</span>))}</div>
+                <div data-slot-head={tacticsNewLayout?i:undefined} className={`${tacticsNewLayout?'col-span-2 row-start-1 h-[18px] justify-start gap-0.5 pr-[84px] backdrop-blur-sm':'h-[18px] justify-center'} shrink-0 flex items-center px-1 border-b z-20 ${isHeroSlotMon(s)?'bg-amber-400/10 border-amber-200/20':'bg-white/[.025] border-white/[.055]'}`}>{tacticsNewLayout&&<span className={`mr-1 shrink-0 rounded px-1 py-0.5 text-[8px] font-black leading-none ${RANGE_STYLES[i].labelBg}`}>{RANGE_LABELS[i]}</span>}{isHeroSlotMon(s)&&<Crown size={8} className="shrink-0 mr-0.5 text-amber-300"/>}<span className={`text-[10px] font-black truncate uppercase leading-none ${isHeroSlotMon(s)?'text-amber-100':'text-white'}`}>{s?.name||'---'}</span>{hateFlame&&!tacticsNewLayout&&hateFlame}{assignedCount>0&&!tacticsNewLayout&&<span className="ml-1 text-[10px] font-black text-indigo-300">×{assignedCount}</span>}{tacticsNewLayout&&(hateFlame||slotExInfo)&&(<span className="absolute right-1 top-[3px] flex items-center gap-0.5">{hateFlame}{slotExInfo&&(<span data-tactics-ex-mark={i} data-tactics-ex-state={slotExInfo.badge.text} className={`max-w-[80px] truncate rounded px-1 py-0.5 text-[8px] font-black leading-none ${slotExInfo.badge.active?'bg-fuchsia-600 text-white ring-1 ring-fuchsia-200':'bg-black/70 text-fuchsia-200 ring-1 ring-fuchsia-400/60'}`}>EX{slotExInfo.badge.text!=='EX'?` ${slotExInfo.badge.text}`:(slotExInfo.badge.uses!=null?`×${slotExInfo.badge.uses}`:'')}</span>)}</span>)}{slotBuffMarks.map(mark=>(<span key={mark.text} data-tactics-slot-buff={mark.text} className={`ml-1 shrink-0 text-[8px] font-black leading-none ${mark.cls}`}>{mark.text}</span>))}</div>
                 {(()=>{const uOptions=getAvailableUniquesForSlot(s,ownedUniques,i); if(uOptions.length<2) return null; const curKey=activeSlotUniqueKey(slotUniqueChoice,i,s); const curIdx=Math.max(0,uOptions.findIndex(o=>o.key===curKey));
                   return(<div onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation(); if(isBusy||autoBattleRef.current)return; cycleActiveUniqueForSlot(i);}} className={`${tacticsNewLayout?'absolute left-1 top-[20px]':'shrink-0'} z-20 flex items-center justify-center gap-0.5 bg-purple-700/90 border-b border-purple-300/50 py-0.5 active:scale-95${autoBattle?' opacity-40':''}`}>
                     <RefreshCcw size={7} className="text-white"/><span className="text-[10px] font-black text-white leading-none">固有技 {curIdx+1}/{uOptions.length}</span>
@@ -47699,6 +47842,16 @@ const loadAssistantChatMemoFor = async (assistantId) => {
 // NEW の印は「まだ一度も入/切を押していない試作」に付く(押した試作は mh_debug_trials_seen_v1 に覚える)。
 // デバッグ専用(更新履歴・ヘルプに載せない)。判定・セーブデータの中身には触らない
 const DEBUG_TRIALS = [
+  // 2026-10-17 社長「とりあえず表記とヘイト変動率とかでいいんじゃないかな？」。タイプの表は 32-tactics-units.jsx の MONSTER_TYPES / MONSTER_TYPE_OF
+  { id: 'monster_type', added: '2026-10-17', area: 'モンスター', key: 'mh_monster_type_proto_v1', on: 'on',
+    title: '🏷️ モンスターのタイプ表記(試作)',
+    note: '図鑑・図鑑の詳細・パーティ選びに、アタッカー・タンク・サポーター・ヒーラー・シャドウの印を出します。タイプが効くのはタクティクスのヘイト(試作)の増え方だけで、能力・ステータスは変わりません',
+    when: '次に画面を開いたときから' },
+  // 2026-10-17 社長「試作する」(ヘイト)。数字は 32-tactics-units.jsx の TACTICS_HATE の1か所。切のときは今までと同じ狙い方
+  { id: 'tactics_hate', added: '2026-10-17', area: 'タクティクスバトル', key: 'mh_tactics_hate_proto_v1', on: 'on',
+    title: '⚔️ タクティクスのヘイト(試作)',
+    note: '攻撃・回復・挑発・ガード・かばうなどで目立った子ほど、敵に狙われやすくなります。味方の名前の横に🔥(1〜3段)で出ます。WAVE が変わると0、倒れると0。勇者は少しだけ下地があります。タクティクスバトルだけ',
+    when: '次のターンから' },
   // 2026-10-16 社長「モンスターノーツでかくつくの直ってない」。見た目は変わらない。入と切で同じ曲を1回ずつ遊ぶと、記録(stats.mon)で比べられる
   { id: 'rhythm_mon_layers', added: '2026-10-16', area: 'モンヒロビート', key: 'mh_rhythm_mon_layers_v1', on: 'on',
     title: '🎵 モンスターノーツのかくつきの手当て',
@@ -47735,6 +47888,11 @@ const DEBUG_TRIALS = [
   // 段階A(値 a3d)は 2026-10-17 に普通の設定「空中のノーツの見た目」へ移した(RHYTHM_SKY_NOTE_LOOK)ので、ここから外した
 ];
 const DEBUG_TRIALS_SEEN_KEY = 'mh_debug_trials_seen_v1';
+// 試作の本体が読む入/切(タクティクスのヘイト・モンスターのタイプ表記。表と式は 32-tactics-units.jsx)
+const TACTICS_HATE_PROTO_KEY = 'mh_tactics_hate_proto_v1';
+const tacticsHateProtoOn = () => { try { return typeof localStorage !== 'undefined' && localStorage.getItem(TACTICS_HATE_PROTO_KEY) === 'on'; } catch (e) { return false; } };
+const MONSTER_TYPE_PROTO_KEY = 'mh_monster_type_proto_v1';
+const monsterTypeProtoOn = () => { try { return typeof localStorage !== 'undefined' && localStorage.getItem(MONSTER_TYPE_PROTO_KEY) === 'on'; } catch (e) { return false; } };
 const debugTrialRead = (trial) => { try { return typeof localStorage !== 'undefined' && localStorage.getItem(trial.key) === trial.on; } catch (e) { return false; } };
 const debugTrialWrite = (trial, on) => { try { if (on) localStorage.setItem(trial.key, trial.on); else localStorage.removeItem(trial.key); } catch (e) {} return debugTrialRead(trial); };
 const debugTrialsSeen = () => { try { const v = JSON.parse(localStorage.getItem(DEBUG_TRIALS_SEEN_KEY) || '[]'); return Array.isArray(v) ? v.filter((x) => typeof x === 'string') : []; } catch (e) { return []; } };
@@ -49051,6 +49209,11 @@ function MonsterHeroGame() {
   // 表示用のstateではなくrefで持つ(上限に達したら咆哮そのものが候補から外れる)。
   // WAVEが変わるたびに0へ戻す
   const tacticsRoarStacksRef = useRef(0);
+  // ヘイト(確認待ちの試作 TACTICS_HATE・2026-10-17)。枠ごとの値(炎の表示に state も持つ)・そのターンにたまった行動のぶん・与ダメージ
+  const [tacticsHate, setTacticsHate] = useState(TACTICS_HATE_EMPTY);
+  const tacticsHateRef = useRef(TACTICS_HATE_EMPTY);
+  const tacticsHatePendingRef = useRef([0, 0, 0, 0]);
+  const tacticsHateDealtRef = useRef([0, 0, 0, 0]);
   // 盤面を書き換える唯一の入口。ref・state・パーティのライフを必ず一緒に動かす。
   // ★新モードのライフ(hp / maxHp)は盤面の合計。片方だけ動かすと
   //   「合計は残っているのに全員倒れている」状態ができ、敗北判定が壊れる。
@@ -49158,7 +49321,27 @@ function MonsterHeroGame() {
       ? { start: tacticsPowerRef.current.start || power, now: power } : { start: 0, now: 0 };
   };
   // 新モードのときだけ、敵の予告へ「誰を狙うか」を足す。ほかのモードでは intent をそのまま返す
-  const aimTacticsIntent = (intent, mode) => (isTacticsMode(mode) ? withTacticsTarget(intent, tacticsUnitsRef.current) : intent);
+  // ★ヘイト(試作)はタクティクスバトルだけ(レイドバトル・既存5モードには効かせない)。切のときは今までと同じ抽選
+  const tacticsHateOnFor = (mode) => TACTICS_BATTLE_MODES.includes(mode) && !isRaidJackMode(mode) && tacticsHateProtoOn();
+  const aimTacticsIntent = (intent, mode) => (isTacticsMode(mode)
+    ? withTacticsTarget(intent, tacticsUnitsRef.current, Math.random, TACTICS_TARGET_LOW_HP_BIAS, tacticsHateOnFor(mode) ? tacticsHateRef.current : null)
+    : intent);
+  const commitTacticsHate = (next) => { tacticsHateRef.current = next; setTacticsHate(next); };
+  const tacticsHateHeroSlot = () => tacticsUnitsRef.current.findIndex(u => !!(u && mainHero && u.id === mainHero.id));
+  const addTacticsHatePending = (slotIdx, gain) => {
+    if (!Number.isInteger(slotIdx) || slotIdx < 0 || slotIdx > 3 || !(gain > 0)) return;
+    const next = [...tacticsHatePendingRef.current]; next[slotIdx] += gain; tacticsHatePendingRef.current = next;
+  };
+  const clearTacticsHateTurn = () => { tacticsHatePendingRef.current = [0, 0, 0, 0]; tacticsHateDealtRef.current = [0, 0, 0, 0]; };
+  // WAVE の始め: 0へ(勇者だけ下地)
+  const resetTacticsHate = (mode) => { clearTacticsHateTurn(); commitTacticsHate(tacticsHateOnFor(mode) ? tacticsHateWaveStart(tacticsHateHeroSlot()) : TACTICS_HATE_EMPTY); };
+  // 敵の次の狙いを決める直前に、そのターンのぶんを足す(倒れた子は0)
+  const stepTacticsHate = (mode) => {
+    if (!tacticsHateOnFor(mode)) return;
+    const units = tacticsUnitsRef.current;
+    commitTacticsHate(tacticsHateStep(tacticsHateRef.current, { gains: tacticsHatePendingRef.current, dealt: tacticsHateDealtRef.current }, units, tacticsHateHeroSlot(), units.map(u => u && u.id)));
+    clearTacticsHateTurn();
+  };
   // ===== ライフの増減(新モードだけ盤面へ) =====
   // どれも「新モードなら増減後の合計ライフ、ほかのモードなら null」を返す。
   // 呼び出し側は null のときだけ今までどおりの1行を通す。こうすると既存5モードの
@@ -58353,6 +58536,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const actionState = () => ({definitions:enemyActionDefinitionsFor(runMode,enemy?.id,enemy?.difficulty,enemy?.actionCount),roarStacks:tacticsRoarStacksRef.current});
     // ★狙いは「予告として出す直前」に決める。抽選したときのまま持ち歩くと、
     //   そのあいだに狙われていた子が倒れていても、その子を狙ったまま予告してしまう
+    stepTacticsHate(runMode); // ヘイト(試作): このターンのぶんを足してから狙う
     const aimed = aimTacticsIntent(reserved || getNextEnemyAction(enemy, distAfterExecuted, effective, {unannounced:true,...actionState()}), runMode);
     // ★乱心(スプーキーのトリックコンフューズ): 残っていれば1つ使い、50%で「意味不明」へ差し替える。
     //   予告として出す前に決めるので、意味不明かどうかは「次の行動」の札に出る。
@@ -60403,6 +60587,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const next=applyTacticsExUse(state,{ def, slot:slotIdx, monId:mon.id, now:tacticsExNow,
       presentLevel:def.present&&raidJackRunRef.current?tacticsRaidPresentLevel(tacticsExNow.turn):null, snapshot:usedUnit?{ atk:usedUnit.atk, def:usedUnit.def, spent:spentStacks, ...(def.effect==='timeStop'?{ copied:tacticsExCopyableBuffs(state,tacticsUnitsRef.current,tacticsExNow,slotIdx) }:{}) }:null, choice, target:def.target==='ally'?choice:null });
     commitTacticsExState(next);
+    if(tacticsHateOnFor(runMode)) addTacticsHatePending(slotIdx,tacticsHateExGain(def.effect,mon.id)); // ヘイト(試作): EX を使った
     Audio_.se.card();
     const toggled=def.duration==='style'?`（${tacticsExStyleLabel(def,next,slotIdx,mon.id)}）`:'';
     pushBattleLog(`EX ${mon.masuName||mon.name}「${def.name}」${toggled}`, 'ally');
@@ -60558,6 +60743,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       if(!payable) return;
     }
     setIsBusy(true);
+    // ヘイト(試作): 使ったカードを、使った子のぶんとしてためる(同じ子の2枚目からは半分)
+    if(tacticsHateOnFor(runMode)){
+      const usesBySlot={};
+      usedCardEntries.forEach(entry=>{
+        const idx=entry.slotIdx!=null?entry.slotIdx:defaultSlot;
+        const eff=(usesBySlot[idx]||0)>0?0.5:1; usesBySlot[idx]=(usesBySlot[idx]||0)+1;
+        addTacticsHatePending(idx,tacticsHateCardGain(entry.card,tacticsUnitsRef.current[idx]?.id,eff));
+      });
+    }
     // ★自分が動いたら、前に出ていたぶんはその場で消す(時間切れを待たない)
     clearTacticsSlotFx();
     let lastType='none', guardTypeInTurn='none', totalDmg=0, totalHeal=0, totalHealRate=0, localOryoAdd=0, localDmgModAdd=0, localGlobalComboAdd=0, attackCount=0, hasCrit=false, immediateInvincible=false, immediateStun=false, currentTurnGuardFlat=0, currentTurnGuardMult=0;
@@ -61091,6 +61285,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const turnDistDmg=[0,0,0,0];
         for(const h of attackHits){ const si=(h.slotIdx!=null)?h.slotIdx:fallbackSlot; if(si>=0&&si<4) turnDistDmg[si]+=h.dmg; }
         setWaveDistDamage(prev=>{const n=[...prev]; for(let k=0;k<4;k++) n[k]=(n[k]||0)+turnDistDmg[k]; return n;});
+        if(tacticsHateOnFor(runMode)) tacticsHateDealtRef.current=tacticsHateDealtRef.current.map((v,k)=>v+turnDistDmg[k]); // ヘイト(試作): 与ダメージの割合
         // Show combined total for multi-hit
         if(multiHit){
           await battleWait(150);
@@ -61916,6 +62111,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setEnemy(newEnemy); setEnemyDist(dist); setEnemyLastIntent(null);
     // 行動表はモードと敵で決まる。新モード以外では今までどおりの1つの表が返る
     const actionState=()=>({definitions:enemyActionDefinitionsFor(runMode,newEnemy?.id,newEnemy?.difficulty,newEnemy?.actionCount),roarStacks:tacticsRoarStacksRef.current});
+    resetTacticsHate(runMode); // ヘイト(試作)は WAVE ごとに0から
     const firstIntent = aimTacticsIntent(getNextEnemyAction(newEnemy,dist,null,{unannounced:true,...actionState()}),runMode);
     setEnemyIntent(firstIntent);
     reserveEnemyNextIntent(getNextEnemyAction(newEnemy,distAfterIntent(firstIntent,dist),firstIntent,actionState()));
@@ -68319,7 +68515,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             guardValueOf={guardValueOf} tacticsSlotGuardValue={tacticsSlotGuardValue}
             tacticsExInfo={tacticsExInfo} activateTacticsEx={activateTacticsEx} tacticsExCutin={tacticsExCutin}
             tacticsExIntroVisible={tacticsExIntroVisible} dismissTacticsExIntro={dismissTacticsExIntro} tacticsPandoraForms={tacticsPandoraForms} trickStartView={trickStartView} sweetStackView={sweetStackView} bowStackView={bowStackView} fateWheelView={fateWheelView} enemyConfuseTurns={enemyConfuseTurns} luckBanners={luckBanners}
-            tacticsExTurnUsed={tacticsExTurnUsed} passTacticsTurn={passTacticsTurn} tacticsCoverSlot={tacticsExEnabled?tacticsExCoverSlot(tacticsExState,tacticsUnits,tacticsExNow):null}
+            tacticsExTurnUsed={tacticsExTurnUsed} passTacticsTurn={passTacticsTurn} tacticsHate={tacticsHate} tacticsHateOn={tacticsHateOnFor(runMode)} tacticsCoverSlot={tacticsExEnabled?tacticsExCoverSlot(tacticsExState,tacticsUnits,tacticsExNow):null}
             guts={guts} hand={hand} heroCardBonus={heroCardBonus} heroDist={heroDist}
             hp={hp} iceLockActive={iceLockActive} iceLockPreparing={iceLockPreparing} iceLockTurns={iceLockTurns}
             isAssistCard={isAssistCard} isAttackCard={isAttackCard} isBusy={isBusy} isHeroSlotMon={isHeroSlotMon}
