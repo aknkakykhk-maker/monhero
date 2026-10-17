@@ -57,7 +57,7 @@ check('刻みの MISS ではライフを減らさない',!/tickMiss[^\n]{0,200}r
 check('いたずら(ゴースト血統)は刻みの MISS でもコンボを守る',/rhythmItazuraKeepsCombo\(run\.abilities,'MISS'/.test(play));
 check('押し終わりに残りの刻みを清算する(GOOD 以上は取った・BAD/MISS は落とした)',/comboTicksRef\.current\(note,judgment\);/.test(play)&&/if\(judgment==='BAD'\|\|judgment==='MISS'\)note\._rhythmComboDrop=dropNow\(\)\+rest;else note\._rhythmComboOk=okNow\(\)\+rest;/.test(play));
 check('ホールドも外れで切らない(刻みの数え方のとき)',/if\(session\.kind==='SLIDE'\|\|session\.note\?\._rhythmTickRules===true\)return;/.test(data));
-check('切り替えの時刻は1か所・演奏を始めるときに見る',(data.match(/const RHYTHM_TICK_SWITCH_AT=/g)||[]).length===1&&/const tickRules=rhythmTickRulesActive\(\);runRef\.current=/.test(play));
+check('切り替えの時刻は1か所・演奏を始めるときに見る',(data.match(/const RHYTHM_TICK_SWITCH_AT=/g)||[]).length===1&&/const tickRules=rhythmTickRulesActive\(\);rhythmFloatingNotesClear\(\);runRef\.current=/.test(play));
 
 // ===== 自己ベスト =====
 check('自己ベストは新キー mh_rhythm_best_v2',/const RHYTHM_BEST_RECORDS_V2_KEY = 'mh_rhythm_best_v2';/.test(settings)&&/const RHYTHM_BEST_RECORDS_KEY = 'mh_rhythm_best_v1';/.test(settings));
@@ -68,7 +68,7 @@ check('SAVE_DATA.md に新しいキー',read('docs/spec/SAVE_DATA.md').includes(
 // ===== ランキング =====
 check('新しい物差しは Rhythm-曲-難易度-2 で送る',/return version===2\?`\$\{base\}\$\{RHYTHM_RANKING_SEPARATOR\}\$\{RHYTHM_RANKING_VERSION_TAG\}`:base;/.test(data)&&/rhythmRankingDifficultyKey\(song\?\.songId, difficulty\?\.id, scoreVersion\)/.test(app));
 check('切り替え前(試作)の新しい記録は送らない',/if \(scoreVersion === 2 && !\(typeof rhythmTickRulesReleased === 'function' && rhythmTickRulesReleased\(\)\)\) return;/.test(app));
-check('期間(週間・イベント)は始まった時点の物差しで数える',/rhythmRankingDbName\('rhythm_week_score_totals', rhythmRankingPeriodVersion\(fromMs\)\)/.test(supa)&&/version: rhythmRankingPeriodVersion\(fromMs\)/.test(supa));
+check('期間(週間・イベント)は始まった時点の物差しで数える',/rhythmRankingUrl\(`\$\{SUPABASE_URL\}\/rest\/v1\/rpc\/rhythm_week_score_totals\?select=\$\{select\}`, rhythmRankingPeriodVersion\(fromMs\)\)/.test(supa)&&/version: rhythmRankingPeriodVersion\(fromMs\)/.test(supa));
 check('切り替えた週の終わりまでは旧の記録も送る',/rhythmTickDualSubmit\(\)/.test(app)&&/legacy:\{score:/.test(play));
 const sql=fs.existsSync(path.join(ROOT,'docs/sql/rankings/RHYTHM_TICK_V2_APPLY.sql'))?read('docs/sql/rankings/RHYTHM_TICK_V2_APPLY.sql'):'';
 check('足すだけの SQL がある(既存を alter・drop・delete・update しない)',sql.includes('create or replace view public.rhythm2_scores')&&!/\b(alter|drop|delete|update|truncate)\b\s+(table|view|function|from|public\.)/i.test(sql.replace(/^--.*$/gm,'')));

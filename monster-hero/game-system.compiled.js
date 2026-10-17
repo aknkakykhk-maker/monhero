@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5dc643814737565b
+// source-sha256: 74c1a8d744b54bbc
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-17 14:30";
+const BUILD_DATE = "2026-10-17 14:57";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -26968,12 +26968,12 @@ const sbFetchRhythmTotalRankingsRaw = async ({
   await ensureBreederProfiles(requestId);
   const filter = Array.isArray(identityKeys) && identityKeys.length ? `&identity_key=in.(${identityKeys.map(k => encodeURIComponent(`"${k}"`)).join(',')})` : '';
   const select = rankingSelectWithProfileFrame(RHYTHM_TOTAL_RANKING_SELECT);
-  const url = `${SUPABASE_URL}/rest/v1/${rhythmRankingDbName('rhythm_total_rankings')}?select=${select}` + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`;
+  const url = rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rhythm_total_rankings?select=${select}`) + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`;
   rankingLog(requestId, 'rhythm-total-request-start', {
     limit,
     identityKeys,
     url,
-    view: rhythmRankingDbName('rhythm_total_rankings')
+    view: 'rhythm_total_rankings'
   });
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
@@ -27155,7 +27155,7 @@ const sbFetchRhythmEventSongBestsRaw = async ({
     to_at: new Date(toMs).toISOString()
   };
   const askRaw = select => sbFetchRhythmEventRows({
-    url: `${SUPABASE_URL}/rest/v1/rpc/${rhythmRankingDbName('rhythm_event_song_bests', rhythmRankingPeriodVersion(fromMs))}?select=${select}` + `&order=score.desc,scored_at.asc&limit=${limit}${filter}`,
+    url: rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rpc/rhythm_event_song_bests?select=${select}`, rhythmRankingPeriodVersion(fromMs)) + `&order=score.desc,scored_at.asc&limit=${limit}${filter}`,
     body,
     label: 'rhythm-event-song',
     requestId
@@ -27163,7 +27163,7 @@ const sbFetchRhythmEventSongBestsRaw = async ({
   const ask = select => askWithProfileFrame(askRaw, select);
   if (bonusRates) {
     const askBonusRaw = select => sbFetchRhythmEventRows({
-      url: `${SUPABASE_URL}/rest/v1/rpc/${rhythmRankingDbName('rhythm_event_song_bests_bonus', rhythmRankingPeriodVersion(fromMs))}?select=${select}` + `&order=score.desc,scored_at.asc&limit=${limit}${filter}`,
+      url: rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rpc/rhythm_event_song_bests_bonus?select=${select}`, rhythmRankingPeriodVersion(fromMs)) + `&order=score.desc,scored_at.asc&limit=${limit}${filter}`,
       body: {
         ...body,
         bonus_rates: bonusRates
@@ -27216,7 +27216,7 @@ const sbFetchRhythmEventTotalsRaw = async ({
   };
   if (bonusRates) {
     const askBonusRaw = select => sbFetchRhythmEventRows({
-      url: `${SUPABASE_URL}/rest/v1/rpc/${rhythmRankingDbName('rhythm_event_totals_bonus', rhythmRankingPeriodVersion(fromMs))}?select=${select}` + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
+      url: rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rpc/rhythm_event_totals_bonus?select=${select}`, rhythmRankingPeriodVersion(fromMs)) + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
       body: {
         ...body,
         bonus_rates: bonusRates
@@ -27244,7 +27244,7 @@ const sbFetchRhythmEventTotalsRaw = async ({
     }
   }
   return askWithProfileFrame(select => sbFetchRhythmEventRows({
-    url: `${SUPABASE_URL}/rest/v1/rpc/${rhythmRankingDbName('rhythm_event_totals', rhythmRankingPeriodVersion(fromMs))}?select=${select}` + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
+    url: rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rpc/rhythm_event_totals?select=${select}`, rhythmRankingPeriodVersion(fromMs)) + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
     body,
     label: 'rhythm-event-total',
     requestId
@@ -27283,7 +27283,7 @@ const sbFetchRhythmWeekTotalsRaw = async ({
 }) => {
   const filter = Array.isArray(identityKeys) && identityKeys.length ? `&identity_key=in.(${identityKeys.map(k => encodeURIComponent(`"${k}"`)).join(',')})` : '';
   return askWithProfileFrame(select => sbFetchRhythmEventRows({
-    url: `${SUPABASE_URL}/rest/v1/rpc/${rhythmRankingDbName('rhythm_week_score_totals', rhythmRankingPeriodVersion(fromMs))}?select=${select}` + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
+    url: rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rpc/rhythm_week_score_totals?select=${select}`, rhythmRankingPeriodVersion(fromMs)) + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
     body: {
       from_at: new Date(fromMs).toISOString(),
       to_at: new Date(toMs).toISOString()
@@ -27306,7 +27306,7 @@ const sbFetchRhythmPreciseMap = async ({
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${rhythmRankingDbName(fn, version)}?select=identity_key,total_precise`, {
+    const res = await fetch(rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rpc/${fn}?select=identity_key,total_precise`, version), {
       method: 'POST',
       headers: SB_HEADERS,
       body: JSON.stringify({
@@ -36584,8 +36584,8 @@ const RhythmTapTest = ({
     RHYTHM_TIMING_DIAG.reset();
     RHYTHM_TIMING_DIAG.meta(audio.info?.());
     RHYTHM_TOUCH_BRIDGE.reset();
-    rhythmFloatingNotesClear();
     const tickRules = rhythmTickRulesActive();
+    rhythmFloatingNotesClear();
     runRef.current = {
       audio,
       heroSeed: Math.random(),

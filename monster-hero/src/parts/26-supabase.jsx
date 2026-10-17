@@ -1426,9 +1426,9 @@ const sbFetchRhythmTotalRankingsRaw = async ({ limit=RHYTHM_TOTAL_RANKING_DISPLA
     ? `&identity_key=in.(${identityKeys.map(k=>encodeURIComponent(`"${k}"`)).join(',')})`
     : '';
   const select = rankingSelectWithProfileFrame(RHYTHM_TOTAL_RANKING_SELECT);
-  const url = `${SUPABASE_URL}/rest/v1/${rhythmRankingDbName('rhythm_total_rankings')}?select=${select}`
+  const url = rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rhythm_total_rankings?select=${select}`)
     + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`;
-  rankingLog(requestId, 'rhythm-total-request-start', { limit, identityKeys, url, view: rhythmRankingDbName('rhythm_total_rankings') });
+  rankingLog(requestId, 'rhythm-total-request-start', { limit, identityKeys, url, view: 'rhythm_total_rankings' });
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
   try {
@@ -1634,7 +1634,7 @@ const sbFetchRhythmEventSongBestsRaw = async ({ songId, fromMs, toMs, bonusRates
     : '';
   const body = { song_ids: [songId], from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() };
   const askRaw = (select) => sbFetchRhythmEventRows({
-    url: `${SUPABASE_URL}/rest/v1/rpc/${rhythmRankingDbName('rhythm_event_song_bests', rhythmRankingPeriodVersion(fromMs))}?select=${select}`
+    url: rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rpc/rhythm_event_song_bests?select=${select}`, rhythmRankingPeriodVersion(fromMs))
       + `&order=score.desc,scored_at.asc&limit=${limit}${filter}`,
     body, label: 'rhythm-event-song', requestId,
   });
@@ -1643,7 +1643,7 @@ const sbFetchRhythmEventSongBestsRaw = async ({ songId, fromMs, toMs, bonusRates
   // 関数がまだ無い環境では加点なしへ戻す(順位は出る。加点と内訳だけ出ない)
   if (bonusRates) {
     const askBonusRaw = (select) => sbFetchRhythmEventRows({
-      url: `${SUPABASE_URL}/rest/v1/rpc/${rhythmRankingDbName('rhythm_event_song_bests_bonus', rhythmRankingPeriodVersion(fromMs))}?select=${select}`
+      url: rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rpc/rhythm_event_song_bests_bonus?select=${select}`, rhythmRankingPeriodVersion(fromMs))
         + `&order=score.desc,scored_at.asc&limit=${limit}${filter}`,
       body: { ...body, bonus_rates: bonusRates }, label: 'rhythm-event-song-bonus', requestId,
     });
@@ -1682,7 +1682,7 @@ const sbFetchRhythmEventTotalsRaw = async ({ songIds, fromMs, toMs, bonusRates =
   // 曲の部門と同じく、加点込みの関数を先に試して、無ければ加点なしへ戻す
   if (bonusRates) {
     const askBonusRaw = (select) => sbFetchRhythmEventRows({
-      url: `${SUPABASE_URL}/rest/v1/rpc/${rhythmRankingDbName('rhythm_event_totals_bonus', rhythmRankingPeriodVersion(fromMs))}?select=${select}`
+      url: rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rpc/rhythm_event_totals_bonus?select=${select}`, rhythmRankingPeriodVersion(fromMs))
         + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
       body: { ...body, bonus_rates: bonusRates }, label: 'rhythm-event-total-bonus', requestId,
     });
@@ -1699,7 +1699,7 @@ const sbFetchRhythmEventTotalsRaw = async ({ songIds, fromMs, toMs, bonusRates =
     }
   }
   return askWithProfileFrame((select) => sbFetchRhythmEventRows({
-    url: `${SUPABASE_URL}/rest/v1/rpc/${rhythmRankingDbName('rhythm_event_totals', rhythmRankingPeriodVersion(fromMs))}?select=${select}`
+    url: rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rpc/rhythm_event_totals?select=${select}`, rhythmRankingPeriodVersion(fromMs))
       + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
     body, label: 'rhythm-event-total', requestId,
   }), RHYTHM_EVENT_TOTAL_SELECT);
@@ -1736,7 +1736,7 @@ const sbFetchRhythmWeekTotalsRaw = async ({ fromMs, toMs, limit = RHYTHM_EVENT_R
     ? `&identity_key=in.(${identityKeys.map(k => encodeURIComponent(`"${k}"`)).join(',')})`
     : '';
   return askWithProfileFrame((select) => sbFetchRhythmEventRows({
-    url: `${SUPABASE_URL}/rest/v1/rpc/${rhythmRankingDbName('rhythm_week_score_totals', rhythmRankingPeriodVersion(fromMs))}?select=${select}`
+    url: rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rpc/rhythm_week_score_totals?select=${select}`, rhythmRankingPeriodVersion(fromMs))
       + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
     body: { from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() },
     label: 'rhythm-week-total', requestId,
@@ -1756,7 +1756,7 @@ const sbFetchRhythmPreciseMap = async ({ fn, body, identityKeys, requestId, vers
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${rhythmRankingDbName(fn, version)}?select=identity_key,total_precise`, {
+    const res = await fetch(rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rpc/${fn}?select=identity_key,total_precise`, version), {
       method: 'POST', headers: SB_HEADERS, body: JSON.stringify({ ...(body || {}), identity_keys: identityKeys }), signal: controller.signal,
     });
     const text = await res.text();

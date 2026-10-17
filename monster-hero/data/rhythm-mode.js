@@ -30051,6 +30051,8 @@ const RHYTHM_RANKING_VIEW={legacy:false};
 const rhythmRankingViewVersion=()=>!RHYTHM_RANKING_VIEW.legacy&&typeof rhythmTickRulesReleased==='function'&&rhythmTickRulesReleased()?2:1;
 // データベースの見方・関数の名前を、版に合わせる(rhythm_total_rankings → rhythm2_total_rankings など)
 const rhythmRankingDbName=(name,version=rhythmRankingViewVersion())=>version===2?String(name).replace(/^rhythm_/,'rhythm2_'):String(name);
+// アドレス(…/rest/v1/rhythm_total_rankings?… や …/rpc/rhythm_week_score_totals?…)の見方・関数の名前を、版に合わせて置き換える
+const rhythmRankingUrl=(url,version=rhythmRankingViewVersion())=>version===2?String(url).replace(/\/(rpc\/)?rhythm_(total_rankings|week_score_totals|event_song_bests_bonus|event_song_bests|event_totals_bonus|event_totals|total_precise|week_precise|event_precise)\?/,(m,rpc,name)=>`/${rpc||''}rhythm2_${name}?`):String(url);
 // 期間(週間・イベント)の物差しは、その期間が始まった時点の版で決める(週の途中で切り替えても、その週は旧の物差しのまま数える)
 const rhythmRankingPeriodVersion=fromMs=>{const sw=Date.parse(RHYTHM_TICK_SWITCH_AT);return Number.isFinite(Number(fromMs))&&Number(fromMs)>=sw?2:1;};
 // 切り替えた週の終わり(切り替えの時刻の次の月曜 5:00 JST)。それまでは新しい版のアプリも、旧の物差しの記録を一緒に送る
