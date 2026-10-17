@@ -8729,6 +8729,36 @@ function MonsterHeroGame() {
       setReincarnateError('転生データを保存できませんでした。もう一度お試しください。');
     }
   };
+  // まとめて転生(2026-10-17)。選んだ子を1回ずつ、1体ずつと同じ計算(buildMasuReincarnationMulti)で順に転生し、
+  // 個体とダイヤを1回の取引で保存する(保存に失敗したらどちらも元のまま。二重に転生しない)。
+  // 途中で転生できない子が出たら、その手前の子までを保存する。仲良し度は1体ずつ転生したときと同じく1体ごとに足す
+  const executeMasuReincarnationBulk = async (ids) => {
+    if (reincarnateProcessingRef.current) return { ok:false };
+    const before = masuMonsRef.current;
+    const result = buildMasuReincarnationMulti({ masuMons:before, ids, gold, lockedIds:rebirthLockedMasuIds });
+    if (!result.ok) { setReincarnateError(result.reason); return { ok:false }; }
+    reincarnateProcessingRef.current = true;
+    setReincarnateError('');
+    try {
+      const saved = await saveStoredValuesOrRollback([
+        { key:'mh_masu_mons', before, next:result.nextMasuMons },
+        { key:'mh_gold', before:gold, next:result.nextGold },
+      ], storeGet, storeSet);
+      if (!saved) throw new Error('bulk reincarnation save failed');
+      masuMonsRef.current = result.nextMasuMons;
+      setMasuMons(result.nextMasuMons); setGold(result.nextGold);
+      result.done.forEach(() => addAssistantBond('reincarnate'));
+      const first = result.done[0].result;
+      const firstMasu = first.nextMasu;
+      setReincarnateAnimation({ bulk:result.count, times:1, masu:firstMasu, base:ALL_PLAYER_MONSTERS[firstMasu.baseId], raisesSkill:false, keptSkillPoints:first.keptSkillPoints, fromLevel:first.fromLevel, nextLevel:first.nextLevel, nextPoints:first.nextPoints, gainedPoints:result.gainedPoints, stopReason:result.stopReason });
+      setTimeout(()=>{ setReincarnateAnimation(null); reincarnateProcessingRef.current=false; }, 4100);
+      return { ok:true, count:result.count, stopReason:result.stopReason };
+    } catch {
+      reincarnateProcessingRef.current=false;
+      setReincarnateError('転生データを保存できませんでした。どの子も転生していません。もう一度お試しください。');
+      return { ok:false };
+    }
+  };
   const executeMasuRegeneration = async () => {
     if (regenerationProcessingRef.current || !regenerationSelectedId) return;
     const base=ALL_PLAYER_MONSTERS[regenerationSelectedId];
@@ -16895,6 +16925,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             MONSTER_CARD_STYLE={MONSTER_CARD_STYLE}
             buildUnifiedMonsterEntries={buildUnifiedMonsterEntries}
             executeMasuReincarnation={executeMasuReincarnation}
+            executeMasuReincarnationBulk={executeMasuReincarnationBulk}
+            favoriteMasuIds={lockedMasuIds}
             getRebirthSkillChoices={getRebirthSkillChoices}
             gold={gold}
             masuMons={masuMons}

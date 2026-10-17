@@ -184,6 +184,7 @@ const EXPORTED_NAMES = [
   'normalizeMasuProgression',
   'resetMasuForRebirth',
   'buildMasuReincarnation',
+  'buildMasuReincarnationMulti',
   'applyBondXpGain',
   'masuPowerOf',
   'resolveMasuDistAptitude',

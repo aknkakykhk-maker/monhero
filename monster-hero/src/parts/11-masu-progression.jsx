@@ -2947,6 +2947,33 @@ const buildMasuReincarnationBatch = ({ masu, skillKey, gold, lockedIds = [], cou
   if (!last) return { ok:false, reason:reason || '転生できません。', count:0, cost:0 };
   return { ...last, ok:true, count:done, cost:spent, fromLevel:first.fromLevel, stopReason:done < wanted ? reason : '' };
 };
+// 複数のマスモンを1回ずつまとめて転生する(2026-10-17 社長依頼「まとめて転生みたいなことができれば便利」)。
+// 1体ずつ転生したときと同じ結果にするため、中身は buildMasuReincarnation を選んだ順に1体ずつ呼ぶだけ。
+// 固有技は上げない(「あとで決める」と同じで、固有技ポイント+1として残す)。ダイヤは前の子の残りから引く。
+// 途中で転生できない子(ダイヤ不足・ロック・Lv不足)が出たら、そこで止めて、それまでの子だけを返す。
+// 同じidが2回選ばれていても1回だけ数える(二重に転生しない)
+const buildMasuReincarnationMulti = ({ masuMons = [], ids = [], gold = 0, lockedIds = [] } = {}) => {
+  const list = Array.isArray(masuMons) ? masuMons : [];
+  const wanted = [...new Set((Array.isArray(ids) ? ids : []).map(id => String(id)))];
+  let goldLeft = donationDiamondValue(gold), spent = 0, reason = '', stoppedId = null;
+  const done = [];
+  const byId = new Map(list.map(m => [String(m?.id), m]));
+  for (const id of wanted) {
+    const r = buildMasuReincarnation({ masu:byId.get(id) || null, skillKey:'', gold:goldLeft, lockedIds });
+    if (!r.ok) { reason = r.reason; stoppedId = id; break; }
+    done.push({ id, result:r });
+    byId.set(id, r.nextMasu);
+    goldLeft = r.nextGold; spent += r.cost;
+  }
+  if (!done.length) return { ok:false, reason:reason || '転生できるマスモンがいません。', done:[], cost:0, nextGold:donationDiamondValue(gold), nextMasuMons:list, stoppedId };
+  const changed = new Map(done.map(d => [d.id, d.result.nextMasu]));
+  return {
+    ok:true, done, count:done.length, cost:spent, nextGold:goldLeft,
+    nextMasuMons:list.map(m => changed.get(String(m?.id)) || m),
+    gainedPoints:done.length * REINCARNATE_POINTS, keptSkillPointsGain:done.length,
+    stopReason:done.length < wanted.length ? reason : '', stoppedId:done.length < wanted.length ? stoppedId : null,
+  };
+};
 // 神殿の寄付で受け取るダイヤ。保存データが古い・破損している場合も負数やNaNを返さない。
 const donationDiamondValue = (bondXp) => {
   const value = Number(bondXp);
