@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 140f98e076389b72
+// source-sha256: d7105138629dcf7b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-17 20:07";
+const BUILD_DATE = "2026-10-17 20:27";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -39452,14 +39452,6 @@ const withTacticsTarget = (intent, units, random = Math.random, bias = TACTICS_T
     targetName: tacticsTargetName(units, targetSlot)
   };
 };
-const TACTICS_HATE_PROTO_KEY = 'mh_tactics_hate_proto_v1';
-const tacticsHateProtoOn = () => {
-  try {
-    return typeof localStorage !== 'undefined' && localStorage.getItem(TACTICS_HATE_PROTO_KEY) === 'on';
-  } catch (e) {
-    return false;
-  }
-};
 const TACTICS_HATE = {
   k: 25,
   decay: 0.7,
@@ -39509,14 +39501,6 @@ const TACTICS_HATE = {
       mult: 1.5,
       always: 3
     }
-  }
-};
-const MONSTER_TYPE_PROTO_KEY = 'mh_monster_type_proto_v1';
-const monsterTypeProtoOn = () => {
-  try {
-    return typeof localStorage !== 'undefined' && localStorage.getItem(MONSTER_TYPE_PROTO_KEY) === 'on';
-  } catch (e) {
-    return false;
   }
 };
 const MONSTER_TYPES = {
@@ -79061,6 +79045,22 @@ const DEBUG_TRIALS = [{
   when: '次の演奏から'
 }];
 const DEBUG_TRIALS_SEEN_KEY = 'mh_debug_trials_seen_v1';
+const TACTICS_HATE_PROTO_KEY = 'mh_tactics_hate_proto_v1';
+const tacticsHateProtoOn = () => {
+  try {
+    return typeof localStorage !== 'undefined' && localStorage.getItem(TACTICS_HATE_PROTO_KEY) === 'on';
+  } catch (e) {
+    return false;
+  }
+};
+const MONSTER_TYPE_PROTO_KEY = 'mh_monster_type_proto_v1';
+const monsterTypeProtoOn = () => {
+  try {
+    return typeof localStorage !== 'undefined' && localStorage.getItem(MONSTER_TYPE_PROTO_KEY) === 'on';
+  } catch (e) {
+    return false;
+  }
+};
 const debugTrialRead = trial => {
   try {
     return typeof localStorage !== 'undefined' && localStorage.getItem(trial.key) === trial.on;

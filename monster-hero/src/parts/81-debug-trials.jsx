@@ -54,6 +54,11 @@ const DEBUG_TRIALS = [
   // 段階A(値 a3d)は 2026-10-17 に普通の設定「空中のノーツの見た目」へ移した(RHYTHM_SKY_NOTE_LOOK)ので、ここから外した
 ];
 const DEBUG_TRIALS_SEEN_KEY = 'mh_debug_trials_seen_v1';
+// 試作の本体が読む入/切(タクティクスのヘイト・モンスターのタイプ表記。表と式は 32-tactics-units.jsx)
+const TACTICS_HATE_PROTO_KEY = 'mh_tactics_hate_proto_v1';
+const tacticsHateProtoOn = () => { try { return typeof localStorage !== 'undefined' && localStorage.getItem(TACTICS_HATE_PROTO_KEY) === 'on'; } catch (e) { return false; } };
+const MONSTER_TYPE_PROTO_KEY = 'mh_monster_type_proto_v1';
+const monsterTypeProtoOn = () => { try { return typeof localStorage !== 'undefined' && localStorage.getItem(MONSTER_TYPE_PROTO_KEY) === 'on'; } catch (e) { return false; } };
 const debugTrialRead = (trial) => { try { return typeof localStorage !== 'undefined' && localStorage.getItem(trial.key) === trial.on; } catch (e) { return false; } };
 const debugTrialWrite = (trial, on) => { try { if (on) localStorage.setItem(trial.key, trial.on); else localStorage.removeItem(trial.key); } catch (e) {} return debugTrialRead(trial); };
 const debugTrialsSeen = () => { try { const v = JSON.parse(localStorage.getItem(DEBUG_TRIALS_SEEN_KEY) || '[]'); return Array.isArray(v) ? v.filter((x) => typeof x === 'string') : []; } catch (e) { return []; } };

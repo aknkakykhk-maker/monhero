@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 5872e9eac398ee90
+// generated-sha256: c5ea7ecefe03cc9a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-17 20:07"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-17 20:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -24028,8 +24028,7 @@ const withTacticsTarget = (intent, units, random = Math.random, bias = TACTICS_T
 //   action … 行動ごとの基準値 / monsters … 子ごとの上書き(mult・add・always)。タイプごとの倍率は下の MONSTER_TYPES(1か所)
 //   1ターンの動き: ヘイト = 前のヘイト × decay + 倍率 ×(そのターンに増えたぶん)。上限 cap・倒れたら0・WAVE で0。
 //   勇者は hero.floor より下がらない(炎は下地を引いた値で出す)。狙いの重み = 今の重み ×(1 + ヘイト ÷ k)
-const TACTICS_HATE_PROTO_KEY = 'mh_tactics_hate_proto_v1';
-const tacticsHateProtoOn = () => { try { return typeof localStorage !== 'undefined' && localStorage.getItem(TACTICS_HATE_PROTO_KEY) === 'on'; } catch (e) { return false; } };
+// 入/切を読むのは 81-debug-trials.jsx の tacticsHateProtoOn(この部品は保存に触らない)
 const TACTICS_HATE = {
   k: 25, decay: 0.7, cap: 100,
   flames: [20, 50, 80],
@@ -24050,8 +24049,7 @@ const TACTICS_HATE = {
 // ★効くのはタクティクスのヘイトの増え方(hateMult・hateAdd)だけ。ほかのモード・能力・ステータスには効かせない。
 // ★タイプの表はここ1か所(ヘイトの役割もこの表を読む。二重に持たない)。メイン1つ + サブ(任意・表記だけ)。
 // ★モンスターを足したら MONSTER_TYPE_OF に1行足す(tactics-hate-check.js が全モンスターを見て、無ければ止める)
-const MONSTER_TYPE_PROTO_KEY = 'mh_monster_type_proto_v1';
-const monsterTypeProtoOn = () => { try { return typeof localStorage !== 'undefined' && localStorage.getItem(MONSTER_TYPE_PROTO_KEY) === 'on'; } catch (e) { return false; } };
+// 表記の入/切を読むのは 81-debug-trials.jsx の monsterTypeProtoOn
 const MONSTER_TYPES = {
   attacker: { label: 'アタッカー', icon: '⚔️', note: '攻めの主役', hateMult: 1.0, hateAdd: {} },
   tank: { label: 'タンク', icon: '🛡️', note: '前に立って攻撃を引き受ける', hateMult: 1.3, hateAdd: { guard: 6 } },
@@ -47883,6 +47881,11 @@ const DEBUG_TRIALS = [
   // 段階A(値 a3d)は 2026-10-17 に普通の設定「空中のノーツの見た目」へ移した(RHYTHM_SKY_NOTE_LOOK)ので、ここから外した
 ];
 const DEBUG_TRIALS_SEEN_KEY = 'mh_debug_trials_seen_v1';
+// 試作の本体が読む入/切(タクティクスのヘイト・モンスターのタイプ表記。表と式は 32-tactics-units.jsx)
+const TACTICS_HATE_PROTO_KEY = 'mh_tactics_hate_proto_v1';
+const tacticsHateProtoOn = () => { try { return typeof localStorage !== 'undefined' && localStorage.getItem(TACTICS_HATE_PROTO_KEY) === 'on'; } catch (e) { return false; } };
+const MONSTER_TYPE_PROTO_KEY = 'mh_monster_type_proto_v1';
+const monsterTypeProtoOn = () => { try { return typeof localStorage !== 'undefined' && localStorage.getItem(MONSTER_TYPE_PROTO_KEY) === 'on'; } catch (e) { return false; } };
 const debugTrialRead = (trial) => { try { return typeof localStorage !== 'undefined' && localStorage.getItem(trial.key) === trial.on; } catch (e) { return false; } };
 const debugTrialWrite = (trial, on) => { try { if (on) localStorage.setItem(trial.key, trial.on); else localStorage.removeItem(trial.key); } catch (e) {} return debugTrialRead(trial); };
 const debugTrialsSeen = () => { try { const v = JSON.parse(localStorage.getItem(DEBUG_TRIALS_SEEN_KEY) || '[]'); return Array.isArray(v) ? v.filter((x) => typeof x === 'string') : []; } catch (e) { return []; } };

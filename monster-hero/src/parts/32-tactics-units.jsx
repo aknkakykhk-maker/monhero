@@ -574,8 +574,7 @@ const withTacticsTarget = (intent, units, random = Math.random, bias = TACTICS_T
 //   action … 行動ごとの基準値 / monsters … 子ごとの上書き(mult・add・always)。タイプごとの倍率は下の MONSTER_TYPES(1か所)
 //   1ターンの動き: ヘイト = 前のヘイト × decay + 倍率 ×(そのターンに増えたぶん)。上限 cap・倒れたら0・WAVE で0。
 //   勇者は hero.floor より下がらない(炎は下地を引いた値で出す)。狙いの重み = 今の重み ×(1 + ヘイト ÷ k)
-const TACTICS_HATE_PROTO_KEY = 'mh_tactics_hate_proto_v1';
-const tacticsHateProtoOn = () => { try { return typeof localStorage !== 'undefined' && localStorage.getItem(TACTICS_HATE_PROTO_KEY) === 'on'; } catch (e) { return false; } };
+// 入/切を読むのは 81-debug-trials.jsx の tacticsHateProtoOn(この部品は保存に触らない)
 const TACTICS_HATE = {
   k: 25, decay: 0.7, cap: 100,
   flames: [20, 50, 80],
@@ -596,8 +595,7 @@ const TACTICS_HATE = {
 // ★効くのはタクティクスのヘイトの増え方(hateMult・hateAdd)だけ。ほかのモード・能力・ステータスには効かせない。
 // ★タイプの表はここ1か所(ヘイトの役割もこの表を読む。二重に持たない)。メイン1つ + サブ(任意・表記だけ)。
 // ★モンスターを足したら MONSTER_TYPE_OF に1行足す(tactics-hate-check.js が全モンスターを見て、無ければ止める)
-const MONSTER_TYPE_PROTO_KEY = 'mh_monster_type_proto_v1';
-const monsterTypeProtoOn = () => { try { return typeof localStorage !== 'undefined' && localStorage.getItem(MONSTER_TYPE_PROTO_KEY) === 'on'; } catch (e) { return false; } };
+// 表記の入/切を読むのは 81-debug-trials.jsx の monsterTypeProtoOn
 const MONSTER_TYPES = {
   attacker: { label: 'アタッカー', icon: '⚔️', note: '攻めの主役', hateMult: 1.0, hateAdd: {} },
   tank: { label: 'タンク', icon: '🛡️', note: '前に立って攻撃を引き受ける', hateMult: 1.3, hateAdd: { guard: 6 } },

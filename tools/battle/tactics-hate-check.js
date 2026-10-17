@@ -76,6 +76,13 @@ check('⑤ モノリスのかばう (60 + 行動のたび3) × 1.5', near(cover,
 
 // ⑥
 const trials = read('monster-hero/src/parts/81-debug-trials.jsx');
+// 入/切を読む関数は 81-debug-trials.jsx(保存に触るので純粋な部品には置かない)。その行だけを切り出して、空の localStorage で動かす
+const vm = require('vm');
+const protoSrc = trials.split('\n').filter((l) => /^const (TACTICS_HATE_PROTO_KEY|tacticsHateProtoOn|MONSTER_TYPE_PROTO_KEY|monsterTypeProtoOn) = /.test(l)).join('\n').replace(/^const /gm, 'var ');
+const P = { localStorage: { getItem: () => null } };
+vm.createContext(P); vm.runInContext(protoSrc, P);
+Object.assign(G, { TACTICS_HATE_PROTO_KEY: P.TACTICS_HATE_PROTO_KEY, tacticsHateProtoOn: P.tacticsHateProtoOn, MONSTER_TYPE_PROTO_KEY: P.MONSTER_TYPE_PROTO_KEY, monsterTypeProtoOn: P.monsterTypeProtoOn });
+check('⑥ 入/切を読む関数が試作の一覧の部品にある', typeof P.tacticsHateProtoOn === 'function' && typeof P.monsterTypeProtoOn === 'function');
 check('⑥ 確認待ちの試作の一覧にある', trials.includes(`key: '${G.TACTICS_HATE_PROTO_KEY}', on: 'on'`) && trials.includes('タクティクスのヘイト(試作)'));
 check('⑥ キーが無ければ切', G.tacticsHateProtoOn() === false);
 const app = read('monster-hero/src/parts/60-app.jsx');
