@@ -2627,6 +2627,8 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
       flickVolume:partVolume(value?.noteSeFlickVolume,100),
       endVolume:partVolume(value?.noteSeEndVolume,100),
       holdVolume:partVolume(value?.noteSeHoldVolume,100),
+      // 刻みの音の大きさ(0〜100%)。保存値に無い人は0(鳴らさない)
+      tickVolume:Math.max(0,Math.min(100,partVolume(value?.noteSeTickVolume,0))),
       emptyEnabled:typeof value?.noteSeEmptyEnabled==='boolean'?value.noteSeEmptyEnabled:true,
     };
   };
@@ -3048,14 +3050,15 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
   let tickLast=-1;
   const playTick=(slide=false)=>{
     const settings=readSettings();
-    if(!settings.enabled||settings.volume<=0||!rhythmAudioGloballyEnabled())return false;
+    if(!settings.enabled||settings.volume<=0||!(settings.tickVolume>0)||!rhythmAudioGloballyEnabled())return false;
     const audio=ctx;
     if(!audio||audio.state==='closed')return false;
     if(audio.state!=='running'&&typeof audio.resume==='function')audio.resume().catch(()=>{});
     const now=audio.currentTime;
     if(tickLast>=0&&now-tickLast<.07&&now>=tickLast)return false;
     tickLast=now;
-    const volume=settings.volume/100;
+    // 設定「刻みの音の大きさ」(既定0=鳴らさない)をタップ音量に掛ける
+    const volume=settings.volume/100*settings.tickVolume/100;
     try{
       const tone=(type,freq,start,sustain,peak)=>{
         const oscillator=audio.createOscillator(),gain=audio.createGain();
