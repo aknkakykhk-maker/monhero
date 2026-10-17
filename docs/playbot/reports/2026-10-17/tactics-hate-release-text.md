@@ -137,6 +137,8 @@ addAssistantLinePack({ id: 'tactics_hate_intro_v1', lines: {
 
 **おすすめは★1(1曲で通す)。** 今の仕組みのまま出せて、導入のお話とつながる。
 
+> **2026-10-17 決定: 社長「途中で変わるのいいね」→ 3(イベントBGM 1 → 戦場の疾風)で入れた。** 台本の行に `bgm:` を書ける口と、0.8秒で下げてから替える仕組みを足し、案Dの台本を `data/assistants.js` の `ASSISTANT_TACTICS_TYPES` に置いた(公開の印 `tacticsTypes` は偽のまま)。動画: [tactics-story-bgm/](tactics-story-bgm/README.md)
+
 **公開するときに、そのまま鳴る形**(★1のとき):
 
 ```js
