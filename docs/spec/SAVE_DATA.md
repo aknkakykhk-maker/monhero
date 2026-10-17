@@ -162,6 +162,8 @@
 | `mh_rhythm_select_v1` | object / `DEFAULT_RHYTHM_SELECT_VIEW` | 曲えらび画面の見え方(並び順など) |
 | `mh_rhythm_last_difficulty_v1` | string / `''` | 曲えらびで最後に選んだ難易度(2026-10-11)。`EASY`〜`MASTER` だけを入れる。無い・壊れている・公開していない難易度(HELL など)は `''` に正規化して EASY から(`normalizeRhythmLastDifficulty`)。デバッグの全解放の曲えらびの選択は入れない |
 | `mh_rhythm_best_v1` | object | 曲×難易度ごとの BEST(`normalizeRhythmBestRecords`) |
+| `mh_rhythm_best_v2` | object | 刻みの数え方(2026-10-17・ホールド・スライドの刻みもノーツとして数える)の BEST。形は `mh_rhythm_best_v1` と同じ(`normalizeRhythmBestRecords`)。切り替えの時刻(`RHYTHM_TICK_SWITCH_AT`)を過ぎて始めた演奏の記録だけが入る。`mh_rhythm_best_v1` は消さず書き換えない(旧記録)。読むときは v2 に v1 のクリア・称号の印だけを重ねる(`loadRhythmBestRecordsNow`) |
+| `mh_rhythm_tick_preview_proto` | `'1'` / 未設定 | 確認用(デバッグ・自動演奏)。`'1'` なら切り替えの時刻より前でも刻みの数え方で遊ぶ(そのあいだはランキングへ送らない) |
 | `mh_rhythm_achievements_v1` | object / 空の台帳 | モンヒロビートの実績の台帳(2026-10-05・`docs/spec/RHYTHM_ACHIEVEMENTS.md`)。`{v:1, items:{'曲:難易度:称号':{at:取った時刻ms(0=不明)}}, claimed:{'実績のid#報酬ルールのid':受け取った時刻ms}}`。称号は fullCombo・allExcellent・allMarvelous(上の称号は下の称号も含む)。**取れたかの正本は BEST のまま**(BESTには何も足さない)。受け取り済みの印は消さない。壊れた項目は読まずに捨てる。台帳が無い人は、モンヒロビートを開いたときに BEST から取り込む(1度きり・時刻は不明の0) |
 | `mh_rhythm_monsters_v1` | string[] | モンスターノーツ用のマスモン枠(`data/rhythm-mode.js`) |
 | `mh_rhythm_rank_pending_v1` | object[] | 全国ランキングへ送れなかったモンビーの記録(次回に再送) |

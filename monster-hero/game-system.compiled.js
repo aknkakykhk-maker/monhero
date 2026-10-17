@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: df377cdea3f23bca
+// source-sha256: 5254584556f77e04
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-17 14:19";
+const BUILD_DATE = "2026-10-17 14:27";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -30911,7 +30911,7 @@ const RhythmSongSelect = ({
   }, rhythmSongLengthLabel(song, chart), React.createElement("span", {
     "data-rhythm-demo-level": true,
     className: "ml-1.5 text-slate-300"
-  }, "Lv.", chart.level, " / ", chart.totalNotes, "ノーツ"))), React.createElement("div", {
+  }, "Lv.", chart.level, " / ", chart.totalNotes, "ノーツ", rhythmTickRulesActive() && difficulty && rhythmChartTickCount(song, chart, difficulty.id) > 0 ? ` + 刻み${rhythmChartTickCount(song, chart, difficulty.id)}` : ''))), React.createElement("div", {
     "data-rhythm-song-stats": true,
     style: {
       gridArea: 'stats'
@@ -37962,7 +37962,16 @@ const RhythmTapTest = ({
     }, "MAX COMBO"), React.createElement("b", {
       "data-rhythm-max-combo": true,
       className: `block text-[34px] font-black leading-tight tabular-nums ${rhythmComboTextColor(view.maxCombo)}`
-    }, view.maxCombo), React.createElement("div", {
+    }, view.maxCombo), view.result?.scoreVersion === 2 && React.createElement("small", {
+      "data-rhythm-result-ticks": true,
+      className: "mt-0.5 block text-[10px] font-bold leading-tight text-slate-300"
+    }, "刻み ", React.createElement("b", {
+      className: "tabular-nums text-white"
+    }, view.result.tickJust), "/", view.result.tickTotal, view.result.tickMiss > 0 ? React.createElement("span", {
+      className: "text-rose-300"
+    }, "(MISS ", view.result.tickMiss, ")") : null, React.createElement("span", {
+      className: "block text-[9px] font-bold text-slate-400"
+    }, "ホールド・スライドの刻みもコンボに数えます")), React.createElement("div", {
       className: "mt-1.5 grid w-full grid-cols-2 gap-1 text-[10px] font-black"
     }, React.createElement("span", {
       "data-rhythm-result-fast": true,
@@ -53384,7 +53393,16 @@ function RhythmRankingScreen({
     size: 18
   })), React.createElement("h2", {
     className: "text-sm font-black tracking-widest text-amber-200"
-  }, "🏆 全国ランキング"), React.createElement("button", {
+  }, "🏆 全国ランキング"), typeof rhythmTickRulesReleased === 'function' && rhythmTickRulesReleased() && !boardTab && React.createElement("button", {
+    type: "button",
+    "data-rhythm-ranking-legacy": true,
+    "aria-pressed": RHYTHM_RANKING_VIEW.legacy,
+    onClick: () => {
+      RHYTHM_RANKING_VIEW.legacy = !RHYTHM_RANKING_VIEW.legacy;
+      refresh();
+    },
+    className: `ml-auto min-h-[44px] rounded-lg px-2 text-[10px] font-black ${RHYTHM_RANKING_VIEW.legacy ? 'bg-slate-200/15 text-slate-100' : 'text-slate-300'}`
+  }, RHYTHM_RANKING_VIEW.legacy ? '旧記録を表示中' : '旧記録'), React.createElement("button", {
     "aria-label": "更新",
     "data-rhythm-ranking-refresh": true,
     onClick: refresh,
@@ -70831,6 +70849,7 @@ const RHYTHM_MULTI_CPU_AWAIT_MS = 60000;
 const RHYTHM_MULTI_CPU_BANTER_GAP_MS = 15000;
 const RHYTHM_MULTI_ROOM_TOPIC = 'realtime:mhb-room-';
 const RHYTHM_MULTI_LOBBY_TOPIC = 'realtime:mhb-lobby-';
+const rhythmMultiTopicTag = () => typeof rhythmTickRulesActive === 'function' && rhythmTickRulesActive() ? 'v2-' : '';
 const RHYTHM_MULTI_LOBBY_ANNOUNCE_MS = 2000;
 const RHYTHM_MULTI_LOBBY_LISTEN_MS = 3500;
 const RHYTHM_MULTI_LOBBY_FRESH_MS = 6000;
@@ -71806,7 +71825,7 @@ const RHYTHM_MULTI = (() => {
         rooms,
         lastAnnounce: 0,
         socket: rhythmMultiOpenSocket({
-          topic: RHYTHM_MULTI_LOBBY_TOPIC + kind,
+          topic: RHYTHM_MULTI_LOBBY_TOPIC + rhythmMultiTopicTag() + kind,
           onOpen: () => {},
           onMessage: raw => {
             const n = rhythmMultiCleanRoomNotice(raw);
@@ -72019,7 +72038,7 @@ const RHYTHM_MULTI = (() => {
     s.status = 'connecting';
     emit();
     socket = rhythmMultiOpenSocket({
-      topic: RHYTHM_MULTI_ROOM_TOPIC + s.code,
+      topic: RHYTHM_MULTI_ROOM_TOPIC + rhythmMultiTopicTag() + s.code,
       onOpen: () => {
         if (!s) return;
         s.status = 'open';
@@ -72232,7 +72251,7 @@ const RHYTHM_MULTI = (() => {
       return new Promise(resolve => {
         const rooms = {};
         const sock = rhythmMultiOpenSocket({
-          topic: RHYTHM_MULTI_LOBBY_TOPIC + (kind === 'veteran' ? 'veteran' : 'free'),
+          topic: RHYTHM_MULTI_LOBBY_TOPIC + rhythmMultiTopicTag() + (kind === 'veteran' ? 'veteran' : 'free'),
           onOpen: () => {},
           onMessage: raw => {
             const n = rhythmMultiCleanRoomNotice(raw);
@@ -72252,7 +72271,7 @@ const RHYTHM_MULTI = (() => {
     watchLobby(kind, onCount) {
       const rooms = {};
       const sock = rhythmMultiOpenSocket({
-        topic: RHYTHM_MULTI_LOBBY_TOPIC + (kind === 'veteran' ? 'veteran' : 'free'),
+        topic: RHYTHM_MULTI_LOBBY_TOPIC + rhythmMultiTopicTag() + (kind === 'veteran' ? 'veteran' : 'free'),
         onOpen: () => {},
         onMessage: raw => {
           const n = rhythmMultiCleanRoomNotice(raw);

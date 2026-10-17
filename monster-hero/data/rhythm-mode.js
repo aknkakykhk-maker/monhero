@@ -2310,6 +2310,16 @@ const rhythmComboTickTimes=(note,grid,difficultyId)=>{
   for(const t of beats)if(!near(out,t))out.push(t);
   return out.sort((a,b)=>a-b);
 };
+// 譜面の刻みの数(曲えらびの「ノーツ数 + 刻み◯」に出す)。演奏のときと同じ作り方で数え、譜面ごとに1回だけ数えて覚えておく
+const RHYTHM_CHART_TICK_COUNT_CACHE=new WeakMap();
+const rhythmChartTickCount=(song,chart,difficultyId)=>{
+  if(!chart||!Array.isArray(chart.notes))return 0;
+  const key=`${song?.songId||''}|${difficultyId||''}`,box=RHYTHM_CHART_TICK_COUNT_CACHE.get(chart)||{};
+  if(Object.prototype.hasOwnProperty.call(box,key))return box[key];
+  const grid=typeof rhythmSongBeatGrid==='function'?rhythmSongBeatGrid(song?.songId):null;
+  const count=chart.notes.reduce((sum,note)=>sum+(rhythmNoteHasBody(note)?rhythmComboTickTimes(note,grid,difficultyId).length:0),0);
+  box[key]=count;RHYTHM_CHART_TICK_COUNT_CACHE.set(chart,box);return count;
+};
 // 1曲の刻みの数(演奏画面のノーツの _rhythmComboTicks を足す)
 const rhythmComboTickTotal=notes=>Array.isArray(notes)?notes.reduce((sum,note)=>sum+(Array.isArray(note?._rhythmComboTicks)?note._rhythmComboTicks.length:0),0):0;
 // 刻みの数え方へ切り替える時刻(週の区切り・イベントの外。社長の確認しだいで動かす)。演奏を始めるときに毎回見る(読み込み時に1回だけ決めない)。

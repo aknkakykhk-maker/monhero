@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 229079f0ae892f6e
+// generated-sha256: a243d551efe5389d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-17 14:19"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-17 14:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -19724,7 +19724,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
                 {favoriteIds.has(song.songId)?'♥':'♡'}
               </button>
             </div>
-            <small className="mt-0.5 block text-[11px] font-bold text-slate-400 landscape:mt-0">{rhythmSongLengthLabel(song,chart)}<span data-rhythm-demo-level className="ml-1.5 text-slate-300">Lv.{chart.level} / {chart.totalNotes}ノーツ</span></small>
+            <small className="mt-0.5 block text-[11px] font-bold text-slate-400 landscape:mt-0">{rhythmSongLengthLabel(song,chart)}<span data-rhythm-demo-level className="ml-1.5 text-slate-300">Lv.{chart.level} / {chart.totalNotes}ノーツ{/* 刻みの数え方(2026-10-17)のときは「+ 刻み◯」も出す。Lv. には入れない */}{rhythmTickRulesActive()&&difficulty&&rhythmChartTickCount(song,chart,difficulty.id)>0?` + 刻み${rhythmChartTickCount(song,chart,difficulty.id)}`:''}</span></small>
           </div>
           {/* 選んでいる難易度の自己ベスト・ランク・最大コンボ(2026-09-26・バンドリ！の曲えらびを参考に、文章の1行から札にした)。
               スコアを大きく、ランクは右端に大きな字で */}
@@ -23137,6 +23137,8 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
 <div data-rhythm-result-combo className="flex w-[34%] shrink-0 flex-col items-center justify-center rounded-2xl border border-white/10 bg-slate-900/85 px-2 py-2 text-center [@container(min-width:680px)]:w-[31%]">
   <small className={`text-[10px] font-black tracking-[.2em] ${rhythmComboTextColor(view.maxCombo)}`}>MAX COMBO</small>
   <b data-rhythm-max-combo className={`block text-[34px] font-black leading-tight tabular-nums ${rhythmComboTextColor(view.maxCombo)}`}>{view.maxCombo}</b>
+  {/* 刻みの数え方(2026-10-17): ホールド・スライドの刻みもノーツとしてコンボに数えたことと、取れた刻みの数を出す */}
+  {view.result?.scoreVersion===2&&<small data-rhythm-result-ticks className="mt-0.5 block text-[10px] font-bold leading-tight text-slate-300">刻み <b className="tabular-nums text-white">{view.result.tickJust}</b>/{view.result.tickTotal}{view.result.tickMiss>0?<span className="text-rose-300">(MISS {view.result.tickMiss})</span>:null}<span className="block text-[9px] font-bold text-slate-400">ホールド・スライドの刻みもコンボに数えます</span></small>}
   <div className="mt-1.5 grid w-full grid-cols-2 gap-1 text-[10px] font-black"><span data-rhythm-result-fast className="rounded-lg bg-cyan-500/15 py-1 text-cyan-200">FAST<b className="block text-sm tabular-nums text-white">{view.fast}</b></span><span data-rhythm-result-slow className="rounded-lg bg-fuchsia-500/15 py-1 text-fuchsia-200">SLOW<b className="block text-sm tabular-nums text-white">{view.slow}</b></span></div>
 </div>
 </section>
@@ -33649,6 +33651,11 @@ function RhythmRankingScreen({
         <header className="z-10 flex shrink-0 items-center gap-2 border-b border-amber-400/15 bg-slate-950/95 px-3 py-1" style={{paddingTop:'calc(0.25rem + var(--mh-sa-top))'}}>
           <button aria-label="戻る" onClick={onBackToSongSelect} className="min-h-[44px] px-2 text-slate-400"><ArrowLeft size={18}/></button>
           <h2 className="text-sm font-black tracking-widest text-amber-200">🏆 全国ランキング</h2>
+          {/* 旧記録(2026-10-17・刻みの数え方への切り替え)。切り替えのあとだけ出す。曲ごと・合計の順位を、今までの物差しの記録で見る。
+              週間・イベントは、その期間が始まった時点の物差しで数えるので、このボタンでは変わらない */}
+          {typeof rhythmTickRulesReleased==='function'&&rhythmTickRulesReleased()&&!boardTab&&<button type="button" data-rhythm-ranking-legacy aria-pressed={RHYTHM_RANKING_VIEW.legacy}
+            onClick={()=>{RHYTHM_RANKING_VIEW.legacy=!RHYTHM_RANKING_VIEW.legacy;refresh();}}
+            className={`ml-auto min-h-[44px] rounded-lg px-2 text-[10px] font-black ${RHYTHM_RANKING_VIEW.legacy?'bg-slate-200/15 text-slate-100':'text-slate-300'}`}>{RHYTHM_RANKING_VIEW.legacy?'旧記録を表示中':'旧記録'}</button>}
           <button aria-label="更新" data-rhythm-ranking-refresh onClick={refresh} className="ml-auto min-h-[44px] px-2 text-[10px] font-black text-amber-200">更新</button>
         </header>
         {/* タブ。押したときに初めて取りにいく。公開前はタブごと出さない */}
@@ -42864,6 +42871,9 @@ const RHYTHM_MULTI_CPU_AWAIT_MS = 60000;
 const RHYTHM_MULTI_CPU_BANTER_GAP_MS = 15000;
 const RHYTHM_MULTI_ROOM_TOPIC = 'realtime:mhb-room-';
 const RHYTHM_MULTI_LOBBY_TOPIC = 'realtime:mhb-lobby-';
+// 刻みの数え方(2026-10-17・社長の決定「マルチは部屋の中で版をそろえる」)。新しい数え方の端末は、受付と部屋の通信路の名前に v2- を付けて分ける。
+// 古い版のアプリとは同じ部屋に入らない(スコアの物差しが違う人どうしで比べないため)。プライベートの合言葉も版ごとに別の部屋になる
+const rhythmMultiTopicTag = () => (typeof rhythmTickRulesActive === 'function' && rhythmTickRulesActive() ? 'v2-' : '');
 const RHYTHM_MULTI_LOBBY_ANNOUNCE_MS = 2000;
 const RHYTHM_MULTI_LOBBY_LISTEN_MS = 3500;
 const RHYTHM_MULTI_LOBBY_FRESH_MS = 6000;
@@ -43516,7 +43526,7 @@ const RHYTHM_MULTI = (() => {
       lobby = {
         kind, rooms, lastAnnounce: 0,
         socket: rhythmMultiOpenSocket({
-          topic: RHYTHM_MULTI_LOBBY_TOPIC + kind,
+          topic: RHYTHM_MULTI_LOBBY_TOPIC + rhythmMultiTopicTag() + kind,
           onOpen: () => {},
           onMessage: (raw) => { const n = rhythmMultiCleanRoomNotice(raw); if (n) rooms[n.code] = { n: n.n, seen: Date.now() }; },
           onClose: () => {},
@@ -43631,7 +43641,7 @@ const RHYTHM_MULTI = (() => {
     s.status = 'connecting';
     emit();
     socket = rhythmMultiOpenSocket({
-      topic: RHYTHM_MULTI_ROOM_TOPIC + s.code,
+      topic: RHYTHM_MULTI_ROOM_TOPIC + rhythmMultiTopicTag() + s.code,
       onOpen: () => { if (!s) return; s.status = 'open'; sendHb(); emit(); },
       onMessage,
       onClose: () => {
@@ -43749,7 +43759,7 @@ const RHYTHM_MULTI = (() => {
       return new Promise((resolve) => {
         const rooms = {};
         const sock = rhythmMultiOpenSocket({
-          topic: RHYTHM_MULTI_LOBBY_TOPIC + (kind === 'veteran' ? 'veteran' : 'free'),
+          topic: RHYTHM_MULTI_LOBBY_TOPIC + rhythmMultiTopicTag() + (kind === 'veteran' ? 'veteran' : 'free'),
           onOpen: () => {},
           onMessage: (raw) => { const n = rhythmMultiCleanRoomNotice(raw); if (n) rooms[n.code] = { n: n.n, seen: Date.now() }; },
           onClose: () => {},
@@ -43762,7 +43772,7 @@ const RHYTHM_MULTI = (() => {
     watchLobby(kind, onCount) {
       const rooms = {};
       const sock = rhythmMultiOpenSocket({
-        topic: RHYTHM_MULTI_LOBBY_TOPIC + (kind === 'veteran' ? 'veteran' : 'free'),
+        topic: RHYTHM_MULTI_LOBBY_TOPIC + rhythmMultiTopicTag() + (kind === 'veteran' ? 'veteran' : 'free'),
         onOpen: () => {},
         onMessage: (raw) => { const n = rhythmMultiCleanRoomNotice(raw); if (n) rooms[n.code] = { n: n.n, seen: Date.now() }; },
         onClose: () => {},
