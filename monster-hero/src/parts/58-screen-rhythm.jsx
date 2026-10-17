@@ -787,6 +787,11 @@ function RhythmRankingScreen({
         <header className="z-10 flex shrink-0 items-center gap-2 border-b border-amber-400/15 bg-slate-950/95 px-3 py-1" style={{paddingTop:'calc(0.25rem + var(--mh-sa-top))'}}>
           <button aria-label="戻る" onClick={onBackToSongSelect} className="min-h-[44px] px-2 text-slate-400"><ArrowLeft size={18}/></button>
           <h2 className="text-sm font-black tracking-widest text-amber-200">🏆 全国ランキング</h2>
+          {/* 旧記録(2026-10-17・刻みの数え方への切り替え)。切り替えのあとだけ出す。曲ごと・合計の順位を、今までの物差しの記録で見る。
+              週間・イベントは、その期間が始まった時点の物差しで数えるので、このボタンでは変わらない */}
+          {typeof rhythmTickRulesReleased==='function'&&rhythmTickRulesReleased()&&!boardTab&&<button type="button" data-rhythm-ranking-legacy aria-pressed={RHYTHM_RANKING_VIEW.legacy}
+            onClick={()=>{RHYTHM_RANKING_VIEW.legacy=!RHYTHM_RANKING_VIEW.legacy;refresh();}}
+            className={`ml-auto min-h-[44px] rounded-lg px-2 text-[10px] font-black ${RHYTHM_RANKING_VIEW.legacy?'bg-slate-200/15 text-slate-100':'text-slate-300'}`}>{RHYTHM_RANKING_VIEW.legacy?'旧記録を表示中':'旧記録'}</button>}
           <button aria-label="更新" data-rhythm-ranking-refresh onClick={refresh} className="ml-auto min-h-[44px] px-2 text-[10px] font-black text-amber-200">更新</button>
         </header>
         {/* タブ。押したときに初めて取りにいく。公開前はタブごと出さない */}

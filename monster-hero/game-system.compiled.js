@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0be04660a815575a
+// source-sha256: ec9d032d3510339f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-17 11:38";
+const BUILD_DATE = "2026-10-17 15:04";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -5432,6 +5432,27 @@ const RHYTHM_NOTE_SPEED_MIN = 1;
 const RHYTHM_NOTE_SPEED_MAX = 12;
 const RHYTHM_NOTE_SPEED_STEP = .1;
 const RHYTHM_BEST_RECORDS_KEY = 'mh_rhythm_best_v1';
+const RHYTHM_BEST_RECORDS_V2_KEY = 'mh_rhythm_best_v2';
+const rhythmBestRecordsWithLegacyMarks = (current, legacy) => {
+  const now = normalizeRhythmBestRecords(current),
+    old = normalizeRhythmBestRecords(legacy);
+  Object.keys(now).forEach(songId => {
+    Object.keys(now[songId] || {}).forEach(diff => {
+      const a = now[songId][diff],
+        b = old?.[songId]?.[diff];
+      if (!a || !b || typeof a !== 'object' || typeof b !== 'object') return;
+      now[songId][diff] = {
+        ...a,
+        played: a.played || b.played === true,
+        clear: a.clear || b.clear === true,
+        fullCombo: a.fullCombo || b.fullCombo === true,
+        allExcellent: a.allExcellent || b.allExcellent === true,
+        allMarvelous: a.allMarvelous || b.allMarvelous === true
+      };
+    });
+  });
+  return now;
+};
 const RHYTHM_RANKING_PENDING_KEY = 'mh_rhythm_rank_pending_v1';
 const RHYTHM_RANKING_PENDING_MAX = 20;
 const RHYTHM_EFFECT_LEVELS = Object.freeze(['NORMAL', 'LOW', 'LIGHT', 'MINIMAL']);
@@ -5972,12 +5993,29 @@ const rhythmCalculateScore = ({
   const judged = RHYTHM_JUDGMENT_IDS.reduce((sum, id) => sum + (judgments[id] || 0) * rates[id], 0);
   return Math.min(maxScore, Math.round((judged / totalNotes * RHYTHM_SCORE_WEIGHTS.judgment + maxCombo / totalNotes * RHYTHM_SCORE_WEIGHTS.combo) * maxScore));
 };
-const rhythmResultAchievements = (judgments, totalNotes) => {
+const RHYTHM_TICK_SCORE_WEIGHT = .5;
+const rhythmCalculateScoreTicks = ({
+  judgments,
+  maxCombo,
+  totalNotes,
+  maxScore,
+  tickJust = 0,
+  tickTotal = 0
+}) => {
+  if (!totalNotes) return 0;
+  const ticks = Math.max(0, Number(tickTotal) || 0),
+    got = Math.max(0, Math.min(ticks, Number(tickJust) || 0));
+  const rates = Object.fromEntries(RHYTHM_JUDGMENTS.map(item => [item.id, item.scoreRate]));
+  const judged = RHYTHM_JUDGMENT_IDS.reduce((sum, id) => sum + (judgments[id] || 0) * rates[id], 0) + RHYTHM_TICK_SCORE_WEIGHT * got;
+  return Math.min(maxScore, Math.round((judged / (totalNotes + RHYTHM_TICK_SCORE_WEIGHT * ticks) * RHYTHM_SCORE_WEIGHTS.judgment + maxCombo / (totalNotes + ticks) * RHYTHM_SCORE_WEIGHTS.combo) * maxScore));
+};
+const rhythmResultAchievements = (judgments, totalNotes, tickMiss = 0) => {
   const counts = Object.fromEntries(RHYTHM_JUDGMENT_IDS.map(id => [id, Math.max(0, Number(judgments?.[id]) || 0)]));
+  const kept = !(Number(tickMiss) > 0);
   return {
-    fullCombo: counts.BAD === 0 && counts.MISS === 0,
-    allExcellent: counts.GREAT === 0 && counts.GOOD === 0 && counts.BAD === 0 && counts.MISS === 0,
-    allMarvelous: totalNotes > 0 && counts.MARVELOUS === totalNotes
+    fullCombo: kept && counts.BAD === 0 && counts.MISS === 0,
+    allExcellent: kept && counts.GREAT === 0 && counts.GOOD === 0 && counts.BAD === 0 && counts.MISS === 0,
+    allMarvelous: kept && totalNotes > 0 && counts.MARVELOUS === totalNotes
   };
 };
 const mergeRhythmBestRecord = (current, result) => {
@@ -25023,13 +25061,20 @@ const saveRhythmMonsterSlots = async value => {
   await storeSet(RHYTHM_MONSTER_SLOT_KEY, normalized, false);
   return normalized;
 };
-const saveRhythmBestRecord = async (records, songId, difficultyId, value) => {
+const saveRhythmBestRecord = async (records, songId, difficultyId, value, version = 1) => {
   const song = RHYTHM_SONGS.find(item => item.songId === songId);
   if (!song || !rhythmSongDifficultyDefs(song).some(item => item.id === difficultyId)) return normalizeRhythmBestRecords(records);
-  const normalized = normalizeRhythmBestRecords(records);
+  const key = version === 2 ? RHYTHM_BEST_RECORDS_V2_KEY : RHYTHM_BEST_RECORDS_KEY;
+  const normalized = normalizeRhythmBestRecords(await storeGet(key, {}, false));
   normalized[songId][difficultyId] = normalizeRhythmBestRecord(value);
-  await storeSet(RHYTHM_BEST_RECORDS_KEY, normalized, false);
-  return normalized;
+  await storeSet(key, normalized, false);
+  return loadRhythmBestRecordsNow();
+};
+const loadRhythmBestRecordsOf = async version => normalizeRhythmBestRecords(await storeGet(version === 2 ? RHYTHM_BEST_RECORDS_V2_KEY : RHYTHM_BEST_RECORDS_KEY, {}, false));
+const loadRhythmBestRecordsNow = async () => {
+  const legacy = await loadRhythmBestRecordsOf(1);
+  if (!(typeof rhythmTickRulesActive === 'function' && rhythmTickRulesActive())) return legacy;
+  return rhythmBestRecordsWithLegacyMarks(await loadRhythmBestRecordsOf(2), legacy);
 };
 const RHYTHM_ACHIEVEMENT_GRANTERS = {};
 const rhythmAchievementEligible = (songId, difficultyId) => {
@@ -26912,7 +26957,7 @@ const RHYTHM_TOTAL_RANKING_DISPLAY_LIMIT = 50;
 const rhythmTotalRankingMissing = (status, body) => {
   if (status !== 404 && status !== 400) return false;
   const text = String(body || '');
-  if (!/rhythm_total_rankings/i.test(text)) return false;
+  if (!/rhythm2?_total_rankings/i.test(text)) return false;
   return /PGRST205|PGRST200|42P01|does not exist|Could not find the/i.test(text);
 };
 const sbFetchRhythmTotalRankingsRaw = async ({
@@ -26923,7 +26968,7 @@ const sbFetchRhythmTotalRankingsRaw = async ({
   await ensureBreederProfiles(requestId);
   const filter = Array.isArray(identityKeys) && identityKeys.length ? `&identity_key=in.(${identityKeys.map(k => encodeURIComponent(`"${k}"`)).join(',')})` : '';
   const select = rankingSelectWithProfileFrame(RHYTHM_TOTAL_RANKING_SELECT);
-  const url = `${SUPABASE_URL}/rest/v1/rhythm_total_rankings?select=${select}` + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`;
+  const url = rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rhythm_total_rankings?select=${select}`) + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`;
   rankingLog(requestId, 'rhythm-total-request-start', {
     limit,
     identityKeys,
@@ -26997,7 +27042,7 @@ const RHYTHM_EVENT_TOTAL_BONUS_SELECT = `${RHYTHM_EVENT_TOTAL_BONUS_SELECT_BASE}
 const rhythmEventRankingMissing = (status, body) => {
   if (status !== 404 && status !== 400) return false;
   const text = String(body || '');
-  if (!/rhythm_week_window|rhythm_week_score_totals|rhythm_event_song_bests|rhythm_event_totals/i.test(text)) return false;
+  if (!/rhythm_week_window|rhythm2?_week_score_totals|rhythm2?_event_song_bests|rhythm2?_event_totals/i.test(text)) return false;
   return /PGRST202|PGRST205|PGRST200|42P01|42883|does not exist|Could not find the/i.test(text);
 };
 const rhythmEventDetailColumnMissing = (status, body) => {
@@ -27110,7 +27155,7 @@ const sbFetchRhythmEventSongBestsRaw = async ({
     to_at: new Date(toMs).toISOString()
   };
   const askRaw = select => sbFetchRhythmEventRows({
-    url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_song_bests?select=${select}` + `&order=score.desc,scored_at.asc&limit=${limit}${filter}`,
+    url: rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rpc/rhythm_event_song_bests?select=${select}`, rhythmRankingPeriodVersion(fromMs)) + `&order=score.desc,scored_at.asc&limit=${limit}${filter}`,
     body,
     label: 'rhythm-event-song',
     requestId
@@ -27118,7 +27163,7 @@ const sbFetchRhythmEventSongBestsRaw = async ({
   const ask = select => askWithProfileFrame(askRaw, select);
   if (bonusRates) {
     const askBonusRaw = select => sbFetchRhythmEventRows({
-      url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_song_bests_bonus?select=${select}` + `&order=score.desc,scored_at.asc&limit=${limit}${filter}`,
+      url: rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rpc/rhythm_event_song_bests_bonus?select=${select}`, rhythmRankingPeriodVersion(fromMs)) + `&order=score.desc,scored_at.asc&limit=${limit}${filter}`,
       body: {
         ...body,
         bonus_rates: bonusRates
@@ -27171,7 +27216,7 @@ const sbFetchRhythmEventTotalsRaw = async ({
   };
   if (bonusRates) {
     const askBonusRaw = select => sbFetchRhythmEventRows({
-      url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_totals_bonus?select=${select}` + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
+      url: rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rpc/rhythm_event_totals_bonus?select=${select}`, rhythmRankingPeriodVersion(fromMs)) + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
       body: {
         ...body,
         bonus_rates: bonusRates
@@ -27199,7 +27244,7 @@ const sbFetchRhythmEventTotalsRaw = async ({
     }
   }
   return askWithProfileFrame(select => sbFetchRhythmEventRows({
-    url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_totals?select=${select}` + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
+    url: rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rpc/rhythm_event_totals?select=${select}`, rhythmRankingPeriodVersion(fromMs)) + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
     body,
     label: 'rhythm-event-total',
     requestId
@@ -27238,7 +27283,7 @@ const sbFetchRhythmWeekTotalsRaw = async ({
 }) => {
   const filter = Array.isArray(identityKeys) && identityKeys.length ? `&identity_key=in.(${identityKeys.map(k => encodeURIComponent(`"${k}"`)).join(',')})` : '';
   return askWithProfileFrame(select => sbFetchRhythmEventRows({
-    url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_week_score_totals?select=${select}` + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
+    url: rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rpc/rhythm_week_score_totals?select=${select}`, rhythmRankingPeriodVersion(fromMs)) + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
     body: {
       from_at: new Date(fromMs).toISOString(),
       to_at: new Date(toMs).toISOString()
@@ -27254,13 +27299,14 @@ const sbFetchRhythmPreciseMap = async ({
   fn,
   body,
   identityKeys,
-  requestId
+  requestId,
+  version
 }) => {
   if (_rhythmPreciseUnavailable || !identityKeys.length) return null;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}?select=identity_key,total_precise`, {
+    const res = await fetch(rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rpc/${fn}?select=identity_key,total_precise`, version), {
       method: 'POST',
       headers: SB_HEADERS,
       body: JSON.stringify({
@@ -27313,7 +27359,8 @@ const rhythmTieFix = async ({
   timeKey,
   fn = null,
   body = null,
-  requestId
+  requestId,
+  version = undefined
 }) => {
   const list = Array.isArray(rows) ? rows : [];
   if (list.length < 2) return list.slice(0, limit);
@@ -27327,7 +27374,8 @@ const rhythmTieFix = async ({
       fn,
       body,
       identityKeys: keys,
-      requestId
+      requestId,
+      version
     });
     if (!map) return list.slice(0, limit);
     preciseOf = row => map.get(row?.identity_key) || 0;
@@ -27384,7 +27432,8 @@ const sbFetchRhythmWeekTotals = async (options = {}) => {
       from_at: new Date(fromMs).toISOString(),
       to_at: new Date(toMs).toISOString()
     },
-    requestId
+    requestId,
+    version: rhythmRankingPeriodVersion(fromMs)
   });
 };
 const sbFetchRhythmEventTotals = async (options = {}) => {
@@ -27412,7 +27461,8 @@ const sbFetchRhythmEventTotals = async (options = {}) => {
       from_at: new Date(fromMs).toISOString(),
       to_at: new Date(toMs).toISOString()
     },
-    requestId
+    requestId,
+    version: rhythmRankingPeriodVersion(fromMs)
   });
 };
 const sbFetchRhythmEventSongBests = async (options = {}) => {
@@ -30861,7 +30911,7 @@ const RhythmSongSelect = ({
   }, rhythmSongLengthLabel(song, chart), React.createElement("span", {
     "data-rhythm-demo-level": true,
     className: "ml-1.5 text-slate-300"
-  }, "Lv.", chart.level, " / ", chart.totalNotes, "ノーツ"))), React.createElement("div", {
+  }, "Lv.", chart.level, " / ", chart.totalNotes, "ノーツ", rhythmTickRulesActive() && difficulty && rhythmChartTickCount(song, chart, difficulty.id) > 0 ? ` + 刻み${rhythmChartTickCount(song, chart, difficulty.id)}` : ''))), React.createElement("div", {
     "data-rhythm-song-stats": true,
     style: {
       gridArea: 'stats'
@@ -34362,9 +34412,10 @@ const RhythmTapTest = ({
     }
   };
   const emptyCounts = () => Object.fromEntries(RHYTHM_JUDGMENT_IDS.map(id => [id, 0]));
-  const makeRuntimeNotes = () => {
+  const makeRuntimeNotes = (tickRules = false) => {
     const tracking = rhythmSlideTrackingFor(difficulty.id);
     const checkpointIntervalMs = rhythmSlideCheckpointIntervalMs(difficulty.id, chart?.level);
+    const tickGrid = tickRules ? rhythmSongBeatGrid(song.songId) : null;
     return chart.notes.map((note, index) => ({
       ...note,
       index,
@@ -34375,6 +34426,10 @@ const RhythmTapTest = ({
       _rhythmSlideToleranceBonusLanes: tracking.toleranceBonusLanes,
       _rhythmTrackingGraceMs: tracking.graceMs,
       _rhythmCheckpointIntervalMs: checkpointIntervalMs,
+      ...(tickRules && rhythmNoteHasBody(note) ? {
+        _rhythmTickRules: true,
+        _rhythmComboTicks: rhythmComboTickTimes(note, tickGrid, difficulty.id)
+      } : {}),
       ...(note.type === 'SLIDE' ? {
         _rhythmSlideRenderPoints: rhythmSlidePoints(note),
         _rhythmSlideCheckpoints: rhythmSlideCheckpointTimes(note, checkpointIntervalMs)
@@ -34991,10 +35046,67 @@ const RhythmTapTest = ({
       cancelAnimationFrame(id);
     };
   }, [lineAdjustSetting, settings.judgmentLineHeight, measureTravel]);
+  const tickScoreOf = run => Math.floor(rhythmCalculateScoreTicks({
+    judgments: run.counts,
+    maxCombo: run.maxCombo,
+    totalNotes: chart.totalNotes,
+    maxScore: difficulty.maxScore,
+    tickJust: run.tickJust,
+    tickTotal: run.tickTotal ?? (run.tickTotal = rhythmComboTickTotal(run.notes))
+  }) * (assistOn ? RHYTHM_ASSIST_SCORE_RATE : 1));
+  const comboTicksRef = useRef(null);
+  comboTicksRef.current = (note, judgment = null) => {
+    const run = runRef.current,
+      ticks = note && note._rhythmComboTicks;
+    if (!run || !run.tickRules || !Array.isArray(ticks) || !ticks.length) return 0;
+    const okNow = () => Number(note._rhythmComboOk) || 0,
+      dropNow = () => Number(note._rhythmComboDrop) || 0;
+    if (judgment) {
+      const rest = ticks.length - okNow() - dropNow();
+      if (rest > 0) {
+        if (judgment === 'BAD' || judgment === 'MISS') note._rhythmComboDrop = dropNow() + rest;else note._rhythmComboOk = okNow() + rest;
+      }
+      note._rhythmComboIdx = ticks.length;
+    }
+    const ok = okNow() - (Number(note._rhythmComboSeenOk) || 0),
+      drop = dropNow() - (Number(note._rhythmComboSeenDrop) || 0);
+    if (!(ok > 0) && !(drop > 0)) return 0;
+    note._rhythmComboSeenOk = okNow();
+    note._rhythmComboSeenDrop = dropNow();
+    if (drop > 0) {
+      run.tickMiss += drop;
+      if (!(run.combo > 0 && rhythmItazuraKeepsCombo(run.abilities, 'MISS', run.audio?.songTimeMs?.() ?? 0))) run.combo = 0;
+    }
+    if (ok > 0) {
+      run.tickJust += ok;
+      run.combo += ok;
+      run.maxCombo = Math.max(run.maxCombo, run.combo);
+    }
+    if (!judgment) {
+      if (!run.lifeDepleted) run.score = tickScoreOf(run) - run.scoreOffset;
+      const score = run.lifeDepleted ? run.lockedScore : run.score;
+      hudRef.current.set({
+        score,
+        combo: run.combo
+      });
+      const coarseKey = `${rhythmComboTier(run.combo)}|${Math.floor(run.combo / RHYTHM_COMBO_MILESTONE_STEP)}|${rhythmLifeState(run.life) === 'down' ? 'down' : 'up'}`;
+      if (coarseKey !== run._viewCoarseKey) {
+        run._viewCoarseKey = coarseKey;
+        setView(v => ({
+          ...v,
+          score,
+          combo: run.combo,
+          maxCombo: run.maxCombo
+        }));
+      }
+    }
+    return ok;
+  };
   const applyJudgment = useCallback((note, judgment, deltaMs) => {
     const _judgeT0 = RHYTHM_PERF.enabled && typeof performance !== 'undefined' ? performance.now() : 0;
     const run = runRef.current;
     if (!run || run.finished || run.paused || note.done) return;
+    comboTicksRef.current(note, judgment);
     if (rhythmHisshiUpgrades(run.abilities, judgment, run.audio?.songTimeMs?.() ?? 0)) judgment = 'MARVELOUS';
     RHYTHM_INPUT_REC.event(judgment === 'MISS' ? 'miss' : 'hit', {
       note: note.index,
@@ -35172,6 +35284,8 @@ const RhythmTapTest = ({
     }
     run.combo = keptCombo;
     run.maxCombo = Math.max(run.maxCombo, keptCombo);
+    run.noteCombo = keptCombo === 0 ? 0 : nextCombo === 0 ? run.noteCombo || 0 : (run.noteCombo || 0) + 1;
+    run.noteMaxCombo = Math.max(run.noteMaxCombo || 0, run.noteCombo);
     run.counts[judgment]++;
     if (preciseHit) run.precise++;
     const side = judgment === 'MISS' ? null : rhythmFastSlow(deltaMs);
@@ -35239,20 +35353,34 @@ const RhythmTapTest = ({
         }
       }
     }
-    const calculatedScore = Math.floor(rhythmCalculateScore({
+    const calculatedScore = run.tickRules ? tickScoreOf(run) : Math.floor(rhythmCalculateScore({
       judgments: run.counts,
       maxCombo: run.maxCombo,
       totalNotes: chart.totalNotes,
       maxScore: difficulty.maxScore
     }) * (assistOn ? RHYTHM_ASSIST_SCORE_RATE : 1));
-    if (!run.lifeDepleted) run.score = calculatedScore - run.scoreOffset;
+    const legacyScore = run.tickRules ? Math.floor(rhythmCalculateScore({
+      judgments: run.counts,
+      maxCombo: run.noteMaxCombo || 0,
+      totalNotes: chart.totalNotes,
+      maxScore: difficulty.maxScore
+    }) * (assistOn ? RHYTHM_ASSIST_SCORE_RATE : 1)) : null;
+    if (!run.lifeDepleted) {
+      run.score = calculatedScore - run.scoreOffset;
+      if (legacyScore != null) run.legacyScore = legacyScore - (run.legacyOffset || 0);
+    }
     if (!run.lifeDepleted && run.life === 0) {
       run.lifeDepleted = true;
       run.lockedScore = run.score;
+      run.legacyLocked = run.legacyScore;
     }
     if (revived && run.lifeDepleted && run.life > 0) {
       run.scoreOffset = rhythmScoreOffsetAfterRevive(calculatedScore, run.lockedScore);
       run.score = run.lockedScore;
+      if (legacyScore != null) {
+        run.legacyOffset = rhythmScoreOffsetAfterRevive(legacyScore, run.legacyLocked || 0);
+        run.legacyScore = run.legacyLocked || 0;
+      }
       run.lifeDepleted = false;
     }
     const lifeDelta = run.life - lifeBefore;
@@ -35382,7 +35510,7 @@ const RhythmTapTest = ({
       return;
     }
     const score = run.lifeDepleted ? run.lockedScore : run.score;
-    const achievements = rhythmResultAchievements(run.counts, chart.totalNotes);
+    const achievements = rhythmResultAchievements(run.counts, chart.totalNotes, run.tickRules ? run.tickMiss : 0);
     if (assistOn) {
       achievements.fullCombo = false;
       achievements.allExcellent = false;
@@ -35403,6 +35531,17 @@ const RhythmTapTest = ({
         ...run.counts
       },
       maxCombo: run.maxCombo,
+      ...(run.tickRules ? {
+        scoreVersion: 2,
+        tickTotal: run.tickTotal ?? rhythmComboTickTotal(run.notes),
+        tickJust: run.tickJust,
+        tickMiss: run.tickMiss,
+        legacy: {
+          score: Math.max(0, Math.floor(Number(run.lifeDepleted ? run.legacyLocked : run.legacyScore) || 0)),
+          maxCombo: run.noteMaxCombo || 0,
+          ...rhythmResultAchievements(run.counts, chart.totalNotes)
+        }
+      } : {}),
       fast: run.fast,
       slow: run.slow,
       precise: run.precise,
@@ -36007,6 +36146,7 @@ const RhythmTapTest = ({
         if (!note.done && note.activePointerId !== null && note.type === 'HOLD' && rhythmNoteHasBody(note)) heldNotes.push(note);
       }
       RHYTHM_NOTE_SE_RUNTIME.holdSync(heldNotes);
+      if (run.tickRules) for (let i = 0; i < heldNotes.length; i++) comboTicksRef.current(heldNotes[i]);
       for (let i = 0; i < heldNotes.length; i++) {
         const note = heldNotes[i],
           ticks = Number(note._rhythmTicks) || 0;
@@ -36444,11 +36584,16 @@ const RhythmTapTest = ({
     RHYTHM_TIMING_DIAG.reset();
     RHYTHM_TIMING_DIAG.meta(audio.info?.());
     RHYTHM_TOUCH_BRIDGE.reset();
+    const tickRules = rhythmTickRulesActive();
     rhythmFloatingNotesClear();
     runRef.current = {
       audio,
       heroSeed: Math.random(),
-      notes: makeRuntimeNotes(),
+      tickRules,
+      notes: makeRuntimeNotes(tickRules),
+      tickJust: 0,
+      tickMiss: 0,
+      tickTotal: null,
       activePointers: new Map(),
       standbyPointers: new Map(),
       activeTouchInputs: new Set(),
@@ -36625,6 +36770,18 @@ const RhythmTapTest = ({
             releaseJudgment: note._rhythmReleaseJudgment ?? null,
             releaseDeltaMs: Number.isFinite(note._rhythmReleaseDeltaMs) ? note._rhythmReleaseDeltaMs : null
           })) : null;
+        },
+        rhythmTickCounts: () => {
+          const run = runRef.current;
+          return run ? {
+            rules: !!run.tickRules,
+            just: run.tickJust || 0,
+            miss: run.tickMiss || 0,
+            total: run.tickTotal ?? rhythmComboTickTotal(run.notes),
+            combo: run.combo,
+            maxCombo: run.maxCombo,
+            score: run.score
+          } : null;
         },
         rhythmNotes: () => {
           const run = runRef.current;
@@ -37805,7 +37962,16 @@ const RhythmTapTest = ({
     }, "MAX COMBO"), React.createElement("b", {
       "data-rhythm-max-combo": true,
       className: `block text-[34px] font-black leading-tight tabular-nums ${rhythmComboTextColor(view.maxCombo)}`
-    }, view.maxCombo), React.createElement("div", {
+    }, view.maxCombo), view.result?.scoreVersion === 2 && React.createElement("small", {
+      "data-rhythm-result-ticks": true,
+      className: "mt-0.5 block text-[10px] font-bold leading-tight text-slate-300"
+    }, "刻み ", React.createElement("b", {
+      className: "tabular-nums text-white"
+    }, view.result.tickJust), "/", view.result.tickTotal, view.result.tickMiss > 0 ? React.createElement("span", {
+      className: "text-rose-300"
+    }, "(MISS ", view.result.tickMiss, ")") : null, React.createElement("span", {
+      className: "block text-[9px] font-bold text-slate-400"
+    }, "ホールド・スライドの刻みもコンボに数えます")), React.createElement("div", {
       className: "mt-1.5 grid w-full grid-cols-2 gap-1 text-[10px] font-black"
     }, React.createElement("span", {
       "data-rhythm-result-fast": true,
@@ -46247,7 +46413,8 @@ const RAID_JACK_RHYTHM_DIFFICULTY_FACTORS = Object.freeze({
   NORMAL: 0.40,
   HARD: 0.55,
   EXPERT: 0.75,
-  MASTER: 1.0
+  MASTER: 1.0,
+  HELL: 1.0
 });
 const RAID_JACK_RHYTHM_COMBO_PER_COMBO = 0.0005;
 const RAID_JACK_RHYTHM_ACHIEVE_FACTORS = Object.freeze({
@@ -46296,9 +46463,17 @@ const raidJackRhythmDamage = input => {
 };
 const raidJackRhythmDamageOf = (result, difficulty) => {
   const r = result && typeof result === 'object' ? result : {};
+  const tickJust = Math.max(0, Math.floor(Number(r.tickJust) || 0)),
+    tickMiss = Math.max(0, Math.floor(Number(r.tickMiss) || 0));
+  const judgments = (tickJust || tickMiss) && r.judgments && typeof r.judgments === 'object' ? {
+    ...r.judgments,
+    MARVELOUS: Math.floor(Number(r.judgments.MARVELOUS) || 0) + tickJust,
+    MISS: Math.floor(Number(r.judgments.MISS) || 0) + tickMiss
+  } : r.judgments;
+  const precise = Math.floor(Number(r.precise) || 0) + tickJust;
   return raidJackRhythmDamage({
-    judgments: r.judgments,
-    precise: r.precise,
+    judgments,
+    precise,
     maxCombo: r.maxCombo,
     difficultyId: difficulty && difficulty.id,
     assist: r.assist === true,
@@ -50916,7 +51091,7 @@ function ProfileScreen({
     let alive = true;
     (async () => {
       try {
-        const best = normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY, {}, false));
+        const best = await loadRhythmBestRecordsNow();
         if (alive) setRhythmAchRows(friendsRhythmAchievements(best));
       } catch (error) {}
     })();
@@ -53218,7 +53393,16 @@ function RhythmRankingScreen({
     size: 18
   })), React.createElement("h2", {
     className: "text-sm font-black tracking-widest text-amber-200"
-  }, "🏆 全国ランキング"), React.createElement("button", {
+  }, "🏆 全国ランキング"), typeof rhythmTickRulesReleased === 'function' && rhythmTickRulesReleased() && !boardTab && React.createElement("button", {
+    type: "button",
+    "data-rhythm-ranking-legacy": true,
+    "aria-pressed": RHYTHM_RANKING_VIEW.legacy,
+    onClick: () => {
+      RHYTHM_RANKING_VIEW.legacy = !RHYTHM_RANKING_VIEW.legacy;
+      refresh();
+    },
+    className: `ml-auto min-h-[44px] rounded-lg px-2 text-[10px] font-black ${RHYTHM_RANKING_VIEW.legacy ? 'bg-slate-200/15 text-slate-100' : 'text-slate-300'}`
+  }, RHYTHM_RANKING_VIEW.legacy ? '旧記録を表示中' : '旧記録'), React.createElement("button", {
     "aria-label": "更新",
     "data-rhythm-ranking-refresh": true,
     onClick: refresh,
@@ -69675,7 +69859,7 @@ function FriendsScreen({
       try {
         const savedNotes = friendsNormalizeNotes(await storeGet(FRIEND_NOTES_KEY, {}, false));
         const savedRecent = friendsNormalizeRecent(await storeGet(FRIEND_RECENT_KEY, [], false));
-        const best = normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY, {}, false));
+        const best = await loadRhythmBestRecordsNow();
         if (cancelled || !aliveRef.current) return;
         setNotes(savedNotes);
         setRecent(savedRecent);
@@ -70665,6 +70849,7 @@ const RHYTHM_MULTI_CPU_AWAIT_MS = 60000;
 const RHYTHM_MULTI_CPU_BANTER_GAP_MS = 15000;
 const RHYTHM_MULTI_ROOM_TOPIC = 'realtime:mhb-room-';
 const RHYTHM_MULTI_LOBBY_TOPIC = 'realtime:mhb-lobby-';
+const rhythmMultiTopicTag = () => typeof rhythmTickRulesActive === 'function' && rhythmTickRulesActive() ? 'v2-' : '';
 const RHYTHM_MULTI_LOBBY_ANNOUNCE_MS = 2000;
 const RHYTHM_MULTI_LOBBY_LISTEN_MS = 3500;
 const RHYTHM_MULTI_LOBBY_FRESH_MS = 6000;
@@ -71640,7 +71825,7 @@ const RHYTHM_MULTI = (() => {
         rooms,
         lastAnnounce: 0,
         socket: rhythmMultiOpenSocket({
-          topic: RHYTHM_MULTI_LOBBY_TOPIC + kind,
+          topic: RHYTHM_MULTI_LOBBY_TOPIC + rhythmMultiTopicTag() + kind,
           onOpen: () => {},
           onMessage: raw => {
             const n = rhythmMultiCleanRoomNotice(raw);
@@ -71853,7 +72038,7 @@ const RHYTHM_MULTI = (() => {
     s.status = 'connecting';
     emit();
     socket = rhythmMultiOpenSocket({
-      topic: RHYTHM_MULTI_ROOM_TOPIC + s.code,
+      topic: RHYTHM_MULTI_ROOM_TOPIC + rhythmMultiTopicTag() + s.code,
       onOpen: () => {
         if (!s) return;
         s.status = 'open';
@@ -72066,7 +72251,7 @@ const RHYTHM_MULTI = (() => {
       return new Promise(resolve => {
         const rooms = {};
         const sock = rhythmMultiOpenSocket({
-          topic: RHYTHM_MULTI_LOBBY_TOPIC + (kind === 'veteran' ? 'veteran' : 'free'),
+          topic: RHYTHM_MULTI_LOBBY_TOPIC + rhythmMultiTopicTag() + (kind === 'veteran' ? 'veteran' : 'free'),
           onOpen: () => {},
           onMessage: raw => {
             const n = rhythmMultiCleanRoomNotice(raw);
@@ -72086,7 +72271,7 @@ const RHYTHM_MULTI = (() => {
     watchLobby(kind, onCount) {
       const rooms = {};
       const sock = rhythmMultiOpenSocket({
-        topic: RHYTHM_MULTI_LOBBY_TOPIC + (kind === 'veteran' ? 'veteran' : 'free'),
+        topic: RHYTHM_MULTI_LOBBY_TOPIC + rhythmMultiTopicTag() + (kind === 'veteran' ? 'veteran' : 'free'),
         onOpen: () => {},
         onMessage: raw => {
           const n = rhythmMultiCleanRoomNotice(raw);
@@ -78831,7 +79016,7 @@ function MonsterHeroGame() {
   };
   const openRhythmDemo = async opts => {
     const settings = normalizeRhythmSettings(await restoreRhythmPlayDefaultsOnce(await storeGet(RHYTHM_SETTINGS_KEY, DEFAULT_RHYTHM_SETTINGS, false)));
-    const records = normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY, {}, false));
+    const records = await loadRhythmBestRecordsNow();
     const monsterSlots = sanitizeRhythmMonsterSlotIds(await storeGet(RHYTHM_MONSTER_SLOT_KEY, [], false));
     setRhythmSettings(settings);
     setRhythmBestRecords(records);
@@ -78846,7 +79031,7 @@ function MonsterHeroGame() {
   };
   const openRhythmDebug = async () => {
     const settings = normalizeRhythmSettings(await restoreRhythmPlayDefaultsOnce(await storeGet(RHYTHM_SETTINGS_KEY, DEFAULT_RHYTHM_SETTINGS, false)));
-    const records = normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY, {}, false));
+    const records = await loadRhythmBestRecordsNow();
     const monsterSlots = sanitizeRhythmMonsterSlotIds(await storeGet(RHYTHM_MONSTER_SLOT_KEY, [], false));
     setRhythmSettings(settings);
     setRhythmBestRecords(records);
@@ -80409,7 +80594,7 @@ function MonsterHeroGame() {
     friendPublishRef.current = Date.now();
     let rhythmBest = null;
     try {
-      rhythmBest = normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY, {}, false));
+      rhythmBest = await loadRhythmBestRecordsNow();
     } catch (error) {
       rhythmBest = null;
     }
@@ -82022,11 +82207,19 @@ function MonsterHeroGame() {
     }
   }, [settleRhythmRankingSubmit]);
   const submitRhythmRankingScoreBody = useCallback(async (song, difficulty, result) => {
-    const difficultyKey = rhythmRankingDifficultyKey(song?.songId, difficulty?.id);
+    const scoreVersion = result?.scoreVersion === 2 ? 2 : 1;
+    if (scoreVersion === 2 && !(typeof rhythmTickRulesReleased === 'function' && rhythmTickRulesReleased())) return;
+    const difficultyKey = rhythmRankingDifficultyKey(song?.songId, difficulty?.id, scoreVersion);
     if (!difficultyKey) return;
     const detail = {
       songId: song.songId,
       difficultyId: difficulty.id,
+      ...(scoreVersion === 2 ? {
+        scoreVersion: 2,
+        tickTotal: Math.max(0, Math.floor(Number(result.tickTotal) || 0)),
+        tickJust: Math.max(0, Math.floor(Number(result.tickJust) || 0)),
+        tickMiss: Math.max(0, Math.floor(Number(result.tickMiss) || 0))
+      } : {}),
       judgments: result.judgments,
       maxCombo: result.maxCombo,
       fast: result.fast,
@@ -82079,7 +82272,28 @@ function MonsterHeroGame() {
     if (!outcome.nationalSaved) scheduleRhythmRankingRetry();
   }, [breederName, breederLevel, breederIcon, profileFrameId, refreshRhythmRankingPending, scheduleRhythmRankingRetry]);
   const submitRhythmRankingScore = useCallback((song, difficulty, result) => {
-    const task = submitRhythmRankingScoreBody(song, difficulty, result);
+    const legacy = result && result.scoreVersion === 2 && result.legacy && typeof rhythmTickDualSubmit === 'function' && rhythmTickDualSubmit() && typeof rhythmTickRulesReleased === 'function' && rhythmTickRulesReleased() ? result.legacy : null;
+    const task = (async () => {
+      await submitRhythmRankingScoreBody(song, difficulty, result);
+      if (legacy) {
+        const {
+          scoreVersion,
+          tickTotal,
+          tickJust,
+          tickMiss,
+          legacy: _legacy,
+          ...rest
+        } = result;
+        await submitRhythmRankingScoreBody(song, difficulty, {
+          ...rest,
+          score: legacy.score,
+          maxCombo: legacy.maxCombo,
+          fullCombo: legacy.fullCombo === true,
+          allExcellent: legacy.allExcellent === true,
+          allMarvelous: legacy.allMarvelous === true
+        });
+      }
+    })();
     rhythmRankingSubmitRef.current = task.catch(() => {});
     return task;
   }, [submitRhythmRankingScoreBody]);
@@ -102739,7 +102953,9 @@ function MonsterHeroGame() {
             setRhythmClearTotal(await addRhythmClearTotal());
           } catch {}
         }
-        const records = await saveRhythmBestRecord(rhythmBestRecords, rhythmPlay.song.songId, rhythmPlay.difficulty.id, merged);
+        const bestVersion = result?.scoreVersion === 2 ? 2 : 1;
+        const storedBest = (await loadRhythmBestRecordsOf(bestVersion))?.[rhythmPlay.song.songId]?.[rhythmPlay.difficulty.id];
+        const records = await saveRhythmBestRecord(rhythmBestRecords, rhythmPlay.song.songId, rhythmPlay.difficulty.id, mergeRhythmBestRecord(storedBest, result), bestVersion);
         setRhythmBestRecords(records);
         if (rhythmPlay.from === 'demo' && typeof rhythmHellOpen === 'function' && rhythmHellOpen() && rhythmChartPlayable(rhythmPlay.song, 'HELL') && !rhythmDifficultyUnlocked(rhythmPlay.song.songId, 'HELL', rhythmBestRecords) && rhythmDifficultyUnlocked(rhythmPlay.song.songId, 'HELL', records) && !rhythmHellStorySeenFlag) {
           if (RHYTHM_HELL_STORY_TRIGGER === 'after-result') rhythmHellStoryAfterResultRef.current = true;else if (RHYTHM_HELL_STORY_TRIGGER === 'home' || RHYTHM_HELL_STORY_TRIGGER === 'release') setRhythmEventStoryPending(prev => prev || RHYTHM_HELL_STORY_ID);

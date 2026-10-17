@@ -94,6 +94,9 @@ const RHYTHM_MULTI_CPU_AWAIT_MS = 60000;
 const RHYTHM_MULTI_CPU_BANTER_GAP_MS = 15000;
 const RHYTHM_MULTI_ROOM_TOPIC = 'realtime:mhb-room-';
 const RHYTHM_MULTI_LOBBY_TOPIC = 'realtime:mhb-lobby-';
+// 刻みの数え方(2026-10-17・社長の決定「マルチは部屋の中で版をそろえる」)。新しい数え方の端末は、受付と部屋の通信路の名前に v2- を付けて分ける。
+// 古い版のアプリとは同じ部屋に入らない(スコアの物差しが違う人どうしで比べないため)。プライベートの合言葉も版ごとに別の部屋になる
+const rhythmMultiTopicTag = () => (typeof rhythmTickRulesActive === 'function' && rhythmTickRulesActive() ? 'v2-' : '');
 const RHYTHM_MULTI_LOBBY_ANNOUNCE_MS = 2000;
 const RHYTHM_MULTI_LOBBY_LISTEN_MS = 3500;
 const RHYTHM_MULTI_LOBBY_FRESH_MS = 6000;
@@ -746,7 +749,7 @@ const RHYTHM_MULTI = (() => {
       lobby = {
         kind, rooms, lastAnnounce: 0,
         socket: rhythmMultiOpenSocket({
-          topic: RHYTHM_MULTI_LOBBY_TOPIC + kind,
+          topic: RHYTHM_MULTI_LOBBY_TOPIC + rhythmMultiTopicTag() + kind,
           onOpen: () => {},
           onMessage: (raw) => { const n = rhythmMultiCleanRoomNotice(raw); if (n) rooms[n.code] = { n: n.n, seen: Date.now() }; },
           onClose: () => {},
@@ -861,7 +864,7 @@ const RHYTHM_MULTI = (() => {
     s.status = 'connecting';
     emit();
     socket = rhythmMultiOpenSocket({
-      topic: RHYTHM_MULTI_ROOM_TOPIC + s.code,
+      topic: RHYTHM_MULTI_ROOM_TOPIC + rhythmMultiTopicTag() + s.code,
       onOpen: () => { if (!s) return; s.status = 'open'; sendHb(); emit(); },
       onMessage,
       onClose: () => {
@@ -979,7 +982,7 @@ const RHYTHM_MULTI = (() => {
       return new Promise((resolve) => {
         const rooms = {};
         const sock = rhythmMultiOpenSocket({
-          topic: RHYTHM_MULTI_LOBBY_TOPIC + (kind === 'veteran' ? 'veteran' : 'free'),
+          topic: RHYTHM_MULTI_LOBBY_TOPIC + rhythmMultiTopicTag() + (kind === 'veteran' ? 'veteran' : 'free'),
           onOpen: () => {},
           onMessage: (raw) => { const n = rhythmMultiCleanRoomNotice(raw); if (n) rooms[n.code] = { n: n.n, seen: Date.now() }; },
           onClose: () => {},
@@ -992,7 +995,7 @@ const RHYTHM_MULTI = (() => {
     watchLobby(kind, onCount) {
       const rooms = {};
       const sock = rhythmMultiOpenSocket({
-        topic: RHYTHM_MULTI_LOBBY_TOPIC + (kind === 'veteran' ? 'veteran' : 'free'),
+        topic: RHYTHM_MULTI_LOBBY_TOPIC + rhythmMultiTopicTag() + (kind === 'veteran' ? 'veteran' : 'free'),
         onOpen: () => {},
         onMessage: (raw) => { const n = rhythmMultiCleanRoomNotice(raw); if (n) rooms[n.code] = { n: n.n, seen: Date.now() }; },
         onClose: () => {},

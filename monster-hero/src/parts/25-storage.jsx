@@ -143,13 +143,27 @@ const saveRhythmSettings = async value => {
 const saveRhythmMonsterSlots = async value => {
   const normalized=sanitizeRhythmMonsterSlotIds(value); await storeSet(RHYTHM_MONSTER_SLOT_KEY,normalized,false); return normalized;
 };
-const saveRhythmBestRecord = async (records,songId,difficultyId,value) => {
+// version … 記録の物差しの版(2 = 刻みの数え方・mh_rhythm_best_v2 / それ以外 = 今の数え方・mh_rhythm_best_v1)。
+// 書く前にそのキーの保存値を読み直し、そこへ1件だけ入れる(画面が持っている records は別の版のことがあるので、書くもとにしない)。
+// 返すのは「いまの数え方で見る記録」(loadRhythmBestRecordsNow と同じ形)
+const saveRhythmBestRecord = async (records,songId,difficultyId,value,version=1) => {
   const song=RHYTHM_SONGS.find(item=>item.songId===songId);
   // HELL など5難易度の外の難易度は、その曲に譜面があるときだけ残す
   if(!song||!rhythmSongDifficultyDefs(song).some(item=>item.id===difficultyId)) return normalizeRhythmBestRecords(records);
-  const normalized=normalizeRhythmBestRecords(records);
+  const key=version===2?RHYTHM_BEST_RECORDS_V2_KEY:RHYTHM_BEST_RECORDS_KEY;
+  const normalized=normalizeRhythmBestRecords(await storeGet(key,{},false));
   normalized[songId][difficultyId]=normalizeRhythmBestRecord(value);
-  await storeSet(RHYTHM_BEST_RECORDS_KEY,normalized,false); return normalized;
+  await storeSet(key,normalized,false);
+  return loadRhythmBestRecordsNow();
+};
+// その版の自己ベスト(保存値そのまま・正規化だけ)
+const loadRhythmBestRecordsOf = async version => normalizeRhythmBestRecords(await storeGet(version===2?RHYTHM_BEST_RECORDS_V2_KEY:RHYTHM_BEST_RECORDS_KEY,{},false));
+// いまの数え方で見る自己ベスト。切り替えの時刻(と確認待ちの試作)を見て、新しい数え方なら v2 に旧の印(クリア・称号)を重ねて返す。
+// 切り替え前は今までどおり v1 をそのまま返す
+const loadRhythmBestRecordsNow = async () => {
+  const legacy=await loadRhythmBestRecordsOf(1);
+  if(!(typeof rhythmTickRulesActive==='function'&&rhythmTickRulesActive()))return legacy;
+  return rhythmBestRecordsWithLegacyMarks(await loadRhythmBestRecordsOf(2),legacy);
 };
 // <rhythm-achievement-io>
 // ===== モンヒロビートの実績の台帳(2026-10-05)。定義と計算は 13-bgm-and-rhythm-settings.jsx。仕様: docs/spec/RHYTHM_ACHIEVEMENTS.md =====

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 742d9eb29d7fb2c2
+// generated-sha256: 7f0a20ea8a1794d9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-17 11:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-17 15:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4331,6 +4331,18 @@ const RHYTHM_NOTE_SPEED_MIN=1;
 const RHYTHM_NOTE_SPEED_MAX=12;
 const RHYTHM_NOTE_SPEED_STEP=.1;
 const RHYTHM_BEST_RECORDS_KEY = 'mh_rhythm_best_v1';
+// 刻みの数え方(2026-10-17・社長の決定)の自己ベスト。物差しが変わるので、今の mh_rhythm_best_v1 は消さず書き換えず、新しいキーに分ける(CLAUDE.md ⑦)。
+// 形は v1 と同じ(normalizeRhythmBestRecords)。切り替えの時刻(RHYTHM_TICK_SWITCH_AT)を過ぎて始めた演奏の記録だけがここへ入る
+const RHYTHM_BEST_RECORDS_V2_KEY = 'mh_rhythm_best_v2';
+// 新しい数え方の記録に、旧の記録の「印」だけを重ねる(点・判定の内訳・最大コンボは新しい記録のまま)。
+//   played・clear … HELL の開放などの条件が、切り替えで閉じないように
+//   fullCombo・allExcellent・allMarvelous … 取った称号は下げない(社長の決定)
+const rhythmBestRecordsWithLegacyMarks = (current,legacy) => {
+  const now=normalizeRhythmBestRecords(current),old=normalizeRhythmBestRecords(legacy);
+  Object.keys(now).forEach(songId=>{Object.keys(now[songId]||{}).forEach(diff=>{const a=now[songId][diff],b=old?.[songId]?.[diff];if(!a||!b||typeof a!=='object'||typeof b!=='object')return;
+    now[songId][diff]={...a,played:a.played||b.played===true,clear:a.clear||b.clear===true,fullCombo:a.fullCombo||b.fullCombo===true,allExcellent:a.allExcellent||b.allExcellent===true,allMarvelous:a.allMarvelous||b.allMarvelous===true};});});
+  return now;
+};
 // 全国ランキングへの送信に失敗したときだけ退避する専用キー(2026-09-04)。
 // 既存のBEST記録(RHYTHM_BEST_RECORDS_KEY)とは別で、自動の再送はしない
 // (端末内に「送れなかった記録が残っている」という手がかりを残すだけ)。
@@ -4882,12 +4894,27 @@ const rhythmCalculateScore = ({judgments,maxCombo,totalNotes,maxScore}) => {
   const judged=RHYTHM_JUDGMENT_IDS.reduce((sum,id)=>sum+(judgments[id]||0)*rates[id],0);
   return Math.min(maxScore,Math.round((judged/totalNotes*RHYTHM_SCORE_WEIGHTS.judgment+maxCombo/totalNotes*RHYTHM_SCORE_WEIGHTS.combo)*maxScore));
 };
-const rhythmResultAchievements = (judgments,totalNotes) => {
+// 刻みの数え方(2026-10-17・docs/playbot/reports/2026-10-17/combo-tick-v2/PLAN.md)のスコア。今の rhythmCalculateScore は変えない(旧の物差し)。
+//   判定の点 = (ノーツの点の合計 + 刻みの重み × 取った刻みの数) ÷ (ノーツ数 + 刻みの重み × 刻みの数)。刻みは取れば JUST MARVELOUS(1点)・落とせば MISS(0点)
+//   コンボの点 = 最大コンボ ÷ (ノーツ数 + 刻みの数)(刻みも1コンボ)
+//   ノーツも刻みも全部つなげば、どちらも満点(満点は今のまま)
+const RHYTHM_TICK_SCORE_WEIGHT=.5;
+const rhythmCalculateScoreTicks = ({judgments,maxCombo,totalNotes,maxScore,tickJust=0,tickTotal=0}) => {
+  if(!totalNotes) return 0;
+  const ticks=Math.max(0,Number(tickTotal)||0),got=Math.max(0,Math.min(ticks,Number(tickJust)||0));
+  const rates=Object.fromEntries(RHYTHM_JUDGMENTS.map(item=>[item.id,item.scoreRate]));
+  const judged=RHYTHM_JUDGMENT_IDS.reduce((sum,id)=>sum+(judgments[id]||0)*rates[id],0)+RHYTHM_TICK_SCORE_WEIGHT*got;
+  return Math.min(maxScore,Math.round((judged/(totalNotes+RHYTHM_TICK_SCORE_WEIGHT*ticks)*RHYTHM_SCORE_WEIGHTS.judgment+maxCombo/(totalNotes+ticks)*RHYTHM_SCORE_WEIGHTS.combo)*maxScore));
+};
+// tickMiss … 落とした刻みの数(刻みの数え方のとき)。1つでも落とすと FC・AE・AM は付かない(社長の決定「刻みも落とさないことがフルコンボの条件」)。
+//   渡さない呼び出しは0(今までと同じ)。取った称号は記録の側で下げない(mergeRhythmBestRecord は「前に取った or 今回取った」)
+const rhythmResultAchievements = (judgments,totalNotes,tickMiss=0) => {
   const counts=Object.fromEntries(RHYTHM_JUDGMENT_IDS.map(id=>[id,Math.max(0,Number(judgments?.[id])||0)]));
+  const kept=!(Number(tickMiss)>0);
   return {
-    fullCombo:counts.BAD===0&&counts.MISS===0,
-    allExcellent:counts.GREAT===0&&counts.GOOD===0&&counts.BAD===0&&counts.MISS===0,
-    allMarvelous:totalNotes>0&&counts.MARVELOUS===totalNotes,
+    fullCombo:kept&&counts.BAD===0&&counts.MISS===0,
+    allExcellent:kept&&counts.GREAT===0&&counts.GOOD===0&&counts.BAD===0&&counts.MISS===0,
+    allMarvelous:kept&&totalNotes>0&&counts.MARVELOUS===totalNotes,
   };
 };
 // 今回の完走結果を既存BESTへ統合する純粋関数。判定内訳は、そのBESTスコアを
@@ -15212,13 +15239,27 @@ const saveRhythmSettings = async value => {
 const saveRhythmMonsterSlots = async value => {
   const normalized=sanitizeRhythmMonsterSlotIds(value); await storeSet(RHYTHM_MONSTER_SLOT_KEY,normalized,false); return normalized;
 };
-const saveRhythmBestRecord = async (records,songId,difficultyId,value) => {
+// version … 記録の物差しの版(2 = 刻みの数え方・mh_rhythm_best_v2 / それ以外 = 今の数え方・mh_rhythm_best_v1)。
+// 書く前にそのキーの保存値を読み直し、そこへ1件だけ入れる(画面が持っている records は別の版のことがあるので、書くもとにしない)。
+// 返すのは「いまの数え方で見る記録」(loadRhythmBestRecordsNow と同じ形)
+const saveRhythmBestRecord = async (records,songId,difficultyId,value,version=1) => {
   const song=RHYTHM_SONGS.find(item=>item.songId===songId);
   // HELL など5難易度の外の難易度は、その曲に譜面があるときだけ残す
   if(!song||!rhythmSongDifficultyDefs(song).some(item=>item.id===difficultyId)) return normalizeRhythmBestRecords(records);
-  const normalized=normalizeRhythmBestRecords(records);
+  const key=version===2?RHYTHM_BEST_RECORDS_V2_KEY:RHYTHM_BEST_RECORDS_KEY;
+  const normalized=normalizeRhythmBestRecords(await storeGet(key,{},false));
   normalized[songId][difficultyId]=normalizeRhythmBestRecord(value);
-  await storeSet(RHYTHM_BEST_RECORDS_KEY,normalized,false); return normalized;
+  await storeSet(key,normalized,false);
+  return loadRhythmBestRecordsNow();
+};
+// その版の自己ベスト(保存値そのまま・正規化だけ)
+const loadRhythmBestRecordsOf = async version => normalizeRhythmBestRecords(await storeGet(version===2?RHYTHM_BEST_RECORDS_V2_KEY:RHYTHM_BEST_RECORDS_KEY,{},false));
+// いまの数え方で見る自己ベスト。切り替えの時刻(と確認待ちの試作)を見て、新しい数え方なら v2 に旧の印(クリア・称号)を重ねて返す。
+// 切り替え前は今までどおり v1 をそのまま返す
+const loadRhythmBestRecordsNow = async () => {
+  const legacy=await loadRhythmBestRecordsOf(1);
+  if(!(typeof rhythmTickRulesActive==='function'&&rhythmTickRulesActive()))return legacy;
+  return rhythmBestRecordsWithLegacyMarks(await loadRhythmBestRecordsOf(2),legacy);
 };
 // <rhythm-achievement-io>
 // ===== モンヒロビートの実績の台帳(2026-10-05)。定義と計算は 13-bgm-and-rhythm-settings.jsx。仕様: docs/spec/RHYTHM_ACHIEVEMENTS.md =====
@@ -17110,7 +17151,7 @@ const RHYTHM_TOTAL_RANKING_DISPLAY_LIMIT = 50;
 const rhythmTotalRankingMissing = (status, body) => {
   if (status !== 404 && status !== 400) return false;
   const text = String(body || '');
-  if (!/rhythm_total_rankings/i.test(text)) return false;
+  if (!/rhythm2?_total_rankings/i.test(text)) return false;
   return /PGRST205|PGRST200|42P01|does not exist|Could not find the/i.test(text);
 };
 const sbFetchRhythmTotalRankingsRaw = async ({ limit=RHYTHM_TOTAL_RANKING_DISPLAY_LIMIT, identityKeys=null, requestId='untracked' } = {}) => {
@@ -17120,7 +17161,7 @@ const sbFetchRhythmTotalRankingsRaw = async ({ limit=RHYTHM_TOTAL_RANKING_DISPLA
     ? `&identity_key=in.(${identityKeys.map(k=>encodeURIComponent(`"${k}"`)).join(',')})`
     : '';
   const select = rankingSelectWithProfileFrame(RHYTHM_TOTAL_RANKING_SELECT);
-  const url = `${SUPABASE_URL}/rest/v1/rhythm_total_rankings?select=${select}`
+  const url = rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rhythm_total_rankings?select=${select}`)
     + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`;
   rankingLog(requestId, 'rhythm-total-request-start', { limit, identityKeys, url, view: 'rhythm_total_rankings' });
   const controller = new AbortController();
@@ -17220,7 +17261,7 @@ const RHYTHM_EVENT_TOTAL_BONUS_SELECT = `${RHYTHM_EVENT_TOTAL_BONUS_SELECT_BASE}
 const rhythmEventRankingMissing = (status, body) => {
   if (status !== 404 && status !== 400) return false;
   const text = String(body || '');
-  if (!/rhythm_week_window|rhythm_week_score_totals|rhythm_event_song_bests|rhythm_event_totals/i.test(text)) return false;
+  if (!/rhythm_week_window|rhythm2?_week_score_totals|rhythm2?_event_song_bests|rhythm2?_event_totals/i.test(text)) return false;
   return /PGRST202|PGRST205|PGRST200|42P01|42883|does not exist|Could not find the/i.test(text);
 };
 // 「party という列は無い」という応答かどうか(SQL未適用の環境)。
@@ -17328,7 +17369,7 @@ const sbFetchRhythmEventSongBestsRaw = async ({ songId, fromMs, toMs, bonusRates
     : '';
   const body = { song_ids: [songId], from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() };
   const askRaw = (select) => sbFetchRhythmEventRows({
-    url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_song_bests?select=${select}`
+    url: rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rpc/rhythm_event_song_bests?select=${select}`, rhythmRankingPeriodVersion(fromMs))
       + `&order=score.desc,scored_at.asc&limit=${limit}${filter}`,
     body, label: 'rhythm-event-song', requestId,
   });
@@ -17337,7 +17378,7 @@ const sbFetchRhythmEventSongBestsRaw = async ({ songId, fromMs, toMs, bonusRates
   // 関数がまだ無い環境では加点なしへ戻す(順位は出る。加点と内訳だけ出ない)
   if (bonusRates) {
     const askBonusRaw = (select) => sbFetchRhythmEventRows({
-      url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_song_bests_bonus?select=${select}`
+      url: rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rpc/rhythm_event_song_bests_bonus?select=${select}`, rhythmRankingPeriodVersion(fromMs))
         + `&order=score.desc,scored_at.asc&limit=${limit}${filter}`,
       body: { ...body, bonus_rates: bonusRates }, label: 'rhythm-event-song-bonus', requestId,
     });
@@ -17376,7 +17417,7 @@ const sbFetchRhythmEventTotalsRaw = async ({ songIds, fromMs, toMs, bonusRates =
   // 曲の部門と同じく、加点込みの関数を先に試して、無ければ加点なしへ戻す
   if (bonusRates) {
     const askBonusRaw = (select) => sbFetchRhythmEventRows({
-      url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_totals_bonus?select=${select}`
+      url: rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rpc/rhythm_event_totals_bonus?select=${select}`, rhythmRankingPeriodVersion(fromMs))
         + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
       body: { ...body, bonus_rates: bonusRates }, label: 'rhythm-event-total-bonus', requestId,
     });
@@ -17393,7 +17434,7 @@ const sbFetchRhythmEventTotalsRaw = async ({ songIds, fromMs, toMs, bonusRates =
     }
   }
   return askWithProfileFrame((select) => sbFetchRhythmEventRows({
-    url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_totals?select=${select}`
+    url: rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rpc/rhythm_event_totals?select=${select}`, rhythmRankingPeriodVersion(fromMs))
       + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
     body, label: 'rhythm-event-total', requestId,
   }), RHYTHM_EVENT_TOTAL_SELECT);
@@ -17430,7 +17471,7 @@ const sbFetchRhythmWeekTotalsRaw = async ({ fromMs, toMs, limit = RHYTHM_EVENT_R
     ? `&identity_key=in.(${identityKeys.map(k => encodeURIComponent(`"${k}"`)).join(',')})`
     : '';
   return askWithProfileFrame((select) => sbFetchRhythmEventRows({
-    url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_week_score_totals?select=${select}`
+    url: rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rpc/rhythm_week_score_totals?select=${select}`, rhythmRankingPeriodVersion(fromMs))
       + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
     body: { from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() },
     label: 'rhythm-week-total', requestId,
@@ -17445,12 +17486,12 @@ const sbFetchRhythmWeekTotalsRaw = async ({ fromMs, toMs, limit = RHYTHM_EVENT_R
 const RHYTHM_TIE_PAD = 20;
 let _rhythmPreciseUnavailable = false;
 const rhythmPreciseMissing = (status, text) => status === 404 || /PGRST202|42883|rhythm_(total|week|event)_precise/i.test(String(text || ''));
-const sbFetchRhythmPreciseMap = async ({ fn, body, identityKeys, requestId }) => {
+const sbFetchRhythmPreciseMap = async ({ fn, body, identityKeys, requestId, version }) => {
   if (_rhythmPreciseUnavailable || !identityKeys.length) return null;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}?select=identity_key,total_precise`, {
+    const res = await fetch(rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rpc/${fn}?select=identity_key,total_precise`, version), {
       method: 'POST', headers: SB_HEADERS, body: JSON.stringify({ ...(body || {}), identity_keys: identityKeys }), signal: controller.signal,
     });
     const text = await res.text();
@@ -17479,7 +17520,7 @@ const rhythmTieSortRows = (rows, { scoreKey, timeKey, preciseOf }) => rows
   .sort((a, b) => (b.score - a.score) || (b.precise - a.precise)
     || ((Number.isFinite(a.time) && Number.isFinite(b.time)) ? a.time - b.time : 0) || (a.index - b.index))
   .map(item => item.row);
-const rhythmTieFix = async ({ rows, limit, scoreKey, timeKey, fn = null, body = null, requestId }) => {
+const rhythmTieFix = async ({ rows, limit, scoreKey, timeKey, fn = null, body = null, requestId, version = undefined }) => {
   const list = Array.isArray(rows) ? rows : [];
   if (list.length < 2) return list.slice(0, limit);
   // 同じ点の人がいなければ、聞きに行かずにそのまま返す
@@ -17489,7 +17530,7 @@ const rhythmTieFix = async ({ rows, limit, scoreKey, timeKey, fn = null, body = 
   if (fn) {
     const tied = new Set(scores.filter((score, i) => scores.indexOf(score) !== i));
     const keys = [...new Set(list.filter(row => tied.has(Number(row?.[scoreKey]) || 0)).map(row => row?.identity_key).filter(k => typeof k === 'string' && k))];
-    const map = await sbFetchRhythmPreciseMap({ fn, body, identityKeys: keys, requestId });
+    const map = await sbFetchRhythmPreciseMap({ fn, body, identityKeys: keys, requestId, version });
     if (!map) return list.slice(0, limit);
     preciseOf = row => map.get(row?.identity_key) || 0;
   } else {
@@ -17509,14 +17550,14 @@ const sbFetchRhythmWeekTotals = async (options = {}) => {
   if (!rhythmTieWanted(identityKeys)) return sbFetchRhythmWeekTotalsRaw(options);
   const rows = await sbFetchRhythmWeekTotalsRaw({ ...options, limit: limit + RHYTHM_TIE_PAD });
   return rhythmTieFix({ rows, limit, scoreKey: 'total_score', timeKey: 'last_scored_at', fn: 'rhythm_week_precise',
-    body: { from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() }, requestId });
+    body: { from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() }, requestId, version: rhythmRankingPeriodVersion(fromMs) });
 };
 const sbFetchRhythmEventTotals = async (options = {}) => {
   const { songIds, fromMs, toMs, limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' } = options;
   if (!rhythmTieWanted(identityKeys)) return sbFetchRhythmEventTotalsRaw(options);
   const rows = await sbFetchRhythmEventTotalsRaw({ ...options, limit: limit + RHYTHM_TIE_PAD });
   return rhythmTieFix({ rows, limit, scoreKey: 'total_score', timeKey: 'last_scored_at', fn: 'rhythm_event_precise',
-    body: { song_ids: songIds, from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() }, requestId });
+    body: { song_ids: songIds, from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() }, requestId, version: rhythmRankingPeriodVersion(fromMs) });
 };
 const sbFetchRhythmEventSongBests = async (options = {}) => {
   const { limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' } = options;
@@ -19683,7 +19724,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
                 {favoriteIds.has(song.songId)?'♥':'♡'}
               </button>
             </div>
-            <small className="mt-0.5 block text-[11px] font-bold text-slate-400 landscape:mt-0">{rhythmSongLengthLabel(song,chart)}<span data-rhythm-demo-level className="ml-1.5 text-slate-300">Lv.{chart.level} / {chart.totalNotes}ノーツ</span></small>
+            <small className="mt-0.5 block text-[11px] font-bold text-slate-400 landscape:mt-0">{rhythmSongLengthLabel(song,chart)}<span data-rhythm-demo-level className="ml-1.5 text-slate-300">Lv.{chart.level} / {chart.totalNotes}ノーツ{/* 刻みの数え方(2026-10-17)のときは「+ 刻み◯」も出す。Lv. には入れない */}{rhythmTickRulesActive()&&difficulty&&rhythmChartTickCount(song,chart,difficulty.id)>0?` + 刻み${rhythmChartTickCount(song,chart,difficulty.id)}`:''}</span></small>
           </div>
           {/* 選んでいる難易度の自己ベスト・ランク・最大コンボ(2026-09-26・バンドリ！の曲えらびを参考に、文章の1行から札にした)。
               スコアを大きく、ランクは右端に大きな字で */}
@@ -21404,7 +21445,7 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   // チェックポイント(判定線)の間隔は「難易度 × その譜面のレベル」で決まる。
   // 譜面データそのものは触らず、演奏を始めるときにノーツ1つ1つへ焼き込む
   // (追従の許容・猶予と同じやり方。保存データにもランキングにも影響しない)。
-  const makeRuntimeNotes=()=>{const tracking=rhythmSlideTrackingFor(difficulty.id);const checkpointIntervalMs=rhythmSlideCheckpointIntervalMs(difficulty.id,chart?.level);return chart.notes.map((note,index)=>({...note,index,done:false,activePointerId:null,holdJudgment:null,holdDeltaMs:0,_rhythmSlideToleranceBonusLanes:tracking.toleranceBonusLanes,_rhythmTrackingGraceMs:tracking.graceMs,_rhythmCheckpointIntervalMs:checkpointIntervalMs,...(note.type==='SLIDE'?{_rhythmSlideRenderPoints:rhythmSlidePoints(note),_rhythmSlideCheckpoints:rhythmSlideCheckpointTimes(note,checkpointIntervalMs)}:{})}));};
+  const makeRuntimeNotes=(tickRules=false)=>{const tracking=rhythmSlideTrackingFor(difficulty.id);const checkpointIntervalMs=rhythmSlideCheckpointIntervalMs(difficulty.id,chart?.level);const tickGrid=tickRules?rhythmSongBeatGrid(song.songId):null;return chart.notes.map((note,index)=>({...note,index,done:false,activePointerId:null,holdJudgment:null,holdDeltaMs:0,_rhythmSlideToleranceBonusLanes:tracking.toleranceBonusLanes,_rhythmTrackingGraceMs:tracking.graceMs,_rhythmCheckpointIntervalMs:checkpointIntervalMs,...(tickRules&&rhythmNoteHasBody(note)?{_rhythmTickRules:true,_rhythmComboTicks:rhythmComboTickTimes(note,tickGrid,difficulty.id)}:{}),...(note.type==='SLIDE'?{_rhythmSlideRenderPoints:rhythmSlidePoints(note),_rhythmSlideCheckpoints:rhythmSlideCheckpointTimes(note,checkpointIntervalMs)}:{})}));};
   const initialView=()=>({status:lineAdjust&&lineAdjust.phase==='set'?'idle':'loading',score:0,combo:0,maxCombo:0,last:'',lastPrecise:false,fastSlow:'',counts:emptyCounts(),fast:0,slow:0,precise:0,life:RHYTHM_LIFE_MAX,ability:null,result:null});
   const [view,setView]=useState(initialView);
   // 演奏中は左上の曲名とジャケットを薄くする(設定 hudSongFade)。始まって4秒で薄く、ポーズ中(status が playing でない間)は元に戻す
@@ -21835,7 +21876,37 @@ useEffect(()=>{
   const id=requestAnimationFrame(()=>{if(!alive)return;travelCacheRef.current=null;measureTravel();});
   return ()=>{alive=false;cancelAnimationFrame(id);};
 },[lineAdjustSetting,settings.judgmentLineHeight,measureTravel]);
-  const applyJudgment=useCallback((note,judgment,deltaMs)=>{const _judgeT0=RHYTHM_PERF.enabled&&typeof performance!=='undefined'?performance.now():0;const run=runRef.current;if(!run||run.finished||run.paused||note.done)return;
+  // ===== 刻み(2026-10-17 社長の決定「刻みもノーツとして数える」・docs/playbot/reports/2026-10-17/combo-tick-v2/PLAN.md) =====
+  // 指の処理(evaluateComboTicks)がノーツに数えた「押さえて通った刻み(_rhythmComboOk)」「外れて通った刻み(_rhythmComboDrop)」のうち、
+  // まだ入れていない分を入れる。通った刻み = JUST MARVELOUS(run.tickJust・コンボ+1)、外れた刻み = MISS(run.tickMiss・コンボが切れる)。
+  // 刻みの MISS でもライフは減らさない。いたずら(ゴースト血統)のあいだは、刻みの MISS でもコンボが切れない(社長の決定)。
+  // judgment を渡すと押し終わりの清算: まだ通っていない残りの刻みを、GOOD 以上なら取った・BAD/MISS なら落としたとして片付ける
+  // (押さえずに終わった帯・指の処理を通らない入力でも、刻みの数が必ずそろう)。
+  // 判定の数(run.counts)・遊んだ記録・端末の記録には入れない(社長の決定「遊んだ記録・週次の学習・異変の報告には刻みを入れない」)
+  const tickScoreOf=run=>Math.floor(rhythmCalculateScoreTicks({judgments:run.counts,maxCombo:run.maxCombo,totalNotes:chart.totalNotes,maxScore:difficulty.maxScore,tickJust:run.tickJust,tickTotal:run.tickTotal??(run.tickTotal=rhythmComboTickTotal(run.notes))})*(assistOn?RHYTHM_ASSIST_SCORE_RATE:1));
+  const comboTicksRef=useRef(null);
+  comboTicksRef.current=(note,judgment=null)=>{
+    const run=runRef.current,ticks=note&&note._rhythmComboTicks;
+    if(!run||!run.tickRules||!Array.isArray(ticks)||!ticks.length)return 0;
+    const okNow=()=>Number(note._rhythmComboOk)||0,dropNow=()=>Number(note._rhythmComboDrop)||0;
+    if(judgment){const rest=ticks.length-okNow()-dropNow();if(rest>0){if(judgment==='BAD'||judgment==='MISS')note._rhythmComboDrop=dropNow()+rest;else note._rhythmComboOk=okNow()+rest;}note._rhythmComboIdx=ticks.length;}
+    const ok=okNow()-(Number(note._rhythmComboSeenOk)||0),drop=dropNow()-(Number(note._rhythmComboSeenDrop)||0);
+    if(!(ok>0)&&!(drop>0))return 0;
+    note._rhythmComboSeenOk=okNow();note._rhythmComboSeenDrop=dropNow();
+    // 同じコマに両方あるときは、落としてから通った順(外れて戻った)として数える
+    if(drop>0){run.tickMiss+=drop;if(!(run.combo>0&&rhythmItazuraKeepsCombo(run.abilities,'MISS',run.audio?.songTimeMs?.()??0)))run.combo=0;}
+    if(ok>0){run.tickJust+=ok;run.combo+=ok;run.maxCombo=Math.max(run.maxCombo,run.combo);}
+    if(!judgment){
+      // 押さえている間はここでスコアと表示を書く(押し終わりは判定の処理がまとめて書く)
+      if(!run.lifeDepleted)run.score=tickScoreOf(run)-run.scoreOffset;
+      const score=run.lifeDepleted?run.lockedScore:run.score;
+      hudRef.current.set({score,combo:run.combo});
+      const coarseKey=`${rhythmComboTier(run.combo)}|${Math.floor(run.combo/RHYTHM_COMBO_MILESTONE_STEP)}|${rhythmLifeState(run.life)==='down'?'down':'up'}`;
+      if(coarseKey!==run._viewCoarseKey){run._viewCoarseKey=coarseKey;setView(v=>({...v,score,combo:run.combo,maxCombo:run.maxCombo}));}
+    }
+    return ok;
+  };
+  const applyJudgment=useCallback((note,judgment,deltaMs)=>{const _judgeT0=RHYTHM_PERF.enabled&&typeof performance!=='undefined'?performance.now():0;const run=runRef.current;if(!run||run.finished||run.paused||note.done)return;comboTicksRef.current(note,judgment);
 // 必死(ユグドラシル血統の能力)のあいだは、GREAT・EXCELLENTをMARVELOUSとして数える(判定だけをここで置き換える。
 // ずれは変えないので、ジャストのMARVELOUSになるのは本当にぴったりだったときだけ。2026-10-06 ユーザー指示)
 if(rhythmHisshiUpgrades(run.abilities,judgment,run.audio?.songTimeMs?.()??0))judgment='MARVELOUS';
@@ -21972,7 +22043,7 @@ if(luckOn){const luckNow=run.audio?.songTimeMs?.()??0;const rushActive=run.luckR
 /* コンボの節目(オプション「コンボの節目」)。100のくぎりに届いた瞬間だけ、コンボ数のまわりに金の光の輪を広げる
    (「100 COMBO」の大きな数字は、もとからある演出 comboMilestone が出す)。コンボガードで数が据え置きのとき(増えていないとき)は出さない */
 if(settingsLiveRef.current.comboMilestoneFx===true&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL'&&keptCombo>run.combo&&keptCombo>=RHYTHM_COMBO_MILESTONE_STEP&&keptCombo%RHYTHM_COMBO_MILESTONE_STEP===0){const el=comboRingRef.current;if(el)rhythmRestartAnimations([{el,attr:'rhythmRing'}]);}
-run.combo=keptCombo;run.maxCombo=Math.max(run.maxCombo,keptCombo);run.counts[judgment]++;if(preciseHit)run.precise++;const side=judgment==='MISS'?null:rhythmFastSlow(deltaMs);if(side)run[side.toLowerCase()]++;const songTimeMs=run.audio?.songTimeMs?.()??0;
+run.combo=keptCombo;run.maxCombo=Math.max(run.maxCombo,keptCombo);/* 旧の物差しのコンボ(ノーツだけ・刻みは入れない) */run.noteCombo=keptCombo===0?0:nextCombo===0?(run.noteCombo||0):(run.noteCombo||0)+1;run.noteMaxCombo=Math.max(run.noteMaxCombo||0,run.noteCombo);run.counts[judgment]++;if(preciseHit)run.precise++;const side=judgment==='MISS'?null:rhythmFastSlow(deltaMs);if(side)run[side.toLowerCase()]++;const songTimeMs=run.audio?.songTimeMs?.()??0;
 // ライフ変化は能力(無敵・我慢)を通してから反映する。判定・コンボ・スコアそのものは変えない(§4.2)
 // 練習ではライフを減らさない。途中で倒れると、まだ習っていないノーツまで届かなくなる
 // lifeBefore … 減ったことを知らせる演出のためだけに控える(2026-09-12)。計算には使わない
@@ -22009,10 +22080,11 @@ if(monster&&monster.ability&&rhythmMonsterAbilityTriggers(judgment)){
     if(cutInOn){const cutIn=cutInRefs.current[slot-1];if(cutIn){RHYTHM_FRAME_DIAG.cue('cutin');rhythmRestartAnimations([{el:cutIn,attr:'rhythmCutinPlay'}]);}}
   }
 }
-const calculatedScore=Math.floor(rhythmCalculateScore({judgments:run.counts,maxCombo:run.maxCombo,totalNotes:chart.totalNotes,maxScore:difficulty.maxScore})*(assistOn?RHYTHM_ASSIST_SCORE_RATE:1));if(!run.lifeDepleted)run.score=calculatedScore-run.scoreOffset;if(!run.lifeDepleted&&run.life===0){run.lifeDepleted=true;run.lockedScore=run.score;}
+const calculatedScore=run.tickRules?tickScoreOf(run):Math.floor(rhythmCalculateScore({judgments:run.counts,maxCombo:run.maxCombo,totalNotes:chart.totalNotes,maxScore:difficulty.maxScore})*(assistOn?RHYTHM_ASSIST_SCORE_RATE:1));/* 刻みの数え方のときは、旧の物差しのスコア(ノーツだけ・今の rhythmCalculateScore)も並べて数える。切り替えた週の終わりまで旧の順位へも送るため */const legacyScore=run.tickRules?Math.floor(rhythmCalculateScore({judgments:run.counts,maxCombo:run.noteMaxCombo||0,totalNotes:chart.totalNotes,maxScore:difficulty.maxScore})*(assistOn?RHYTHM_ASSIST_SCORE_RATE:1)):null;
+if(!run.lifeDepleted){run.score=calculatedScore-run.scoreOffset;if(legacyScore!=null)run.legacyScore=legacyScore-(run.legacyOffset||0);}if(!run.lifeDepleted&&run.life===0){run.lifeDepleted=true;run.lockedScore=run.score;run.legacyLocked=run.legacyScore;}
 // DOWN中に根性で蘇生したら、**その蘇生ノーツ自身は加算せず次のノーツから** 加算を再開する。
 // DOWN中に止まっていたぶんを遡って足さないよう、そのぶんを差し引く量として持つ(§4.4)
-if(revived&&run.lifeDepleted&&run.life>0){run.scoreOffset=rhythmScoreOffsetAfterRevive(calculatedScore,run.lockedScore);run.score=run.lockedScore;run.lifeDepleted=false;}
+if(revived&&run.lifeDepleted&&run.life>0){run.scoreOffset=rhythmScoreOffsetAfterRevive(calculatedScore,run.lockedScore);run.score=run.lockedScore;if(legacyScore!=null){run.legacyOffset=rhythmScoreOffsetAfterRevive(legacyScore,run.legacyLocked||0);run.legacyScore=run.legacyLocked||0;}run.lifeDepleted=false;}
 // ===== ライフの変化を目で分かるようにする(2026-09-12・ユーザー指示) =====
 // 「ライフ変動や0になったときとか気付きにくい」。バーの数字が小さく動くだけでは気づけないので、
 // 減ったその場でHUDを揺らし、減った量を数字で一瞬出す。書くのは data 属性と文字だけで、
@@ -22060,7 +22132,7 @@ if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number
   const finish=useCallback(()=>{const run=runRef.current;if(!run||run.finished||run.paused)return;run.finished=true;rhythmSongPlaySignal(false,song.songId);stopFrame();RHYTHM_NOTE_SE_RUNTIME.holdStopAll();RHYTHM_GESTURE_RUNTIME.clear();run.activePointers.clear();run.activeTouchInputs?.clear();run.outsideStartInputs?.clear();run.audio?.stop();
     // 判定ラインを合わせる「試す段階」は、曲の終わりで結果へ行かず、最初から流し直す(終わりは「止めて設定に戻る」「保存して戻る」「やめる」だけ。2026-10-14)
     if(lineAdjustRef.current){lineAdjustRef.current.onLoop?.();return;}
-    const score=run.lifeDepleted?run.lockedScore:run.score;const achievements=rhythmResultAchievements(run.counts,chart.totalNotes);/* アシストモードでは FULL COMBO 等の称号を付けない(アワーノーツと同じ) */if(assistOn){achievements.fullCombo=false;achievements.allExcellent=false;achievements.allMarvelous=false;}
+    const score=run.lifeDepleted?run.lockedScore:run.score;const achievements=rhythmResultAchievements(run.counts,chart.totalNotes,run.tickRules?run.tickMiss:0);/* アシストモードでは FULL COMBO 等の称号を付けない(アワーノーツと同じ) */if(assistOn){achievements.fullCombo=false;achievements.allExcellent=false;achievements.allMarvelous=false;}
     // ===== クリアか失敗か(2026-09-12・ユーザー指示「終了後にクリアか失敗かもわかるようにして」) =====
     // 失敗＝ライフが0になったまま曲を終えた(不可逆のDOWN)こと。根性で蘇生して0を脱していれば
     // run.lifeDepleted は false に戻っているので、そのときはクリア扱いになる。
@@ -22082,7 +22154,7 @@ if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number
     const calibration=calibrating
       ? rhythmCalibrationOffsetFromTaps((Array.isArray(run.deltas)?run.deltas:[]).slice(RHYTHM_CALIBRATION_WARMUP_COUNT))
       : null;
-    const result={score,judgments:{...run.counts},maxCombo:run.maxCombo,fast:run.fast,slow:run.slow,precise:run.precise,cleared:!failed,...(calibration?{calibration}:{}),...achievements,...(assistOn?{assist:true}:{})};
+    /* 刻みの数え方のときは、刻みの数・取った数・落とした数と、物差しの版(scoreVersion 2)を足す。judgments・precise はノーツだけ(刻みは入れない) */const result={score,judgments:{...run.counts},maxCombo:run.maxCombo,...(run.tickRules?{scoreVersion:2,tickTotal:run.tickTotal??rhythmComboTickTotal(run.notes),tickJust:run.tickJust,tickMiss:run.tickMiss,legacy:{score:Math.max(0,Math.floor(Number(run.lifeDepleted?run.legacyLocked:run.legacyScore)||0)),maxCombo:run.noteMaxCombo||0,...rhythmResultAchievements(run.counts,chart.totalNotes)}}:{}),fast:run.fast,slow:run.slow,precise:run.precise,cleared:!failed,...(calibration?{calibration}:{}),...achievements,...(assistOn?{assist:true}:{})};
     /* アシストモードのプレイは自己ベスト・ランキングに残さない(受け取る側が result.assist を見て保存しない)。
        ここでも自己ベストを混ぜない(NEW RECORD を出さない) */
     const isNewRecord=!assistOn&&score>run.startBestScore;const merged=assistOn?normalizeRhythmBestRecord(run.startBest):mergeRhythmBestRecord(run.startBest,result);
@@ -22364,6 +22436,8 @@ for(let i=scanFrom;i<notes.length;i++){
   if(!note.done&&note.activePointerId!==null&&note.type==='HOLD'&&rhythmNoteHasBody(note))heldNotes.push(note);
 }
 RHYTHM_NOTE_SE_RUNTIME.holdSync(heldNotes);
+// 刻みの数え方: 押さえている帯の刻みを判定・コンボ・スコアへ入れる(comboTicksRef。押し終わりは判定の処理が残りを清算する)
+if(run.tickRules)for(let i=0;i<heldNotes.length;i++)comboTicksRef.current(heldNotes[i]);
 // ホールド・スライドで線(チェックポイント)を通ったとき、小さな光・小さな音・コンボの数字の軽いはねを出す(2026-10-17 社長「ホールドとかスライドで、
 // 他ゲーはコンボ増えてくけど、あれのほうが爽快感はある」→ 案A: 見た目と音だけ。コンボの数・スコア・判定は変えない)。
 // 印(note._rhythmTicks)は指の処理(evaluateCheckpoints)が、落とさずに通った線でだけ増やす。光はノーツの canvas の中(pushTick)、はねは今あるコンボの数字を animate で動かすだけ(画面の部品は足さない)。
@@ -22565,7 +22639,7 @@ const introStart=rhythmSongIntroNow();
 const introMinMs=introShown||multi?introMs:0;
 songIntroRef.current={generation,holds,visible:introShown,skippable:!multi,skipped:false,closingAt:null,
   minEnd:introStart+introMinMs,maxEnd:introStart+(multi?introMinMs:Math.max(introMinMs,RHYTHM_SONG_INTRO_MAX_MS))};
-setSongIntro(introShown?{key:generation,ms:introMs,short:introMs<RHYTHM_SONG_INTRO_MS,skippable:!multi}:null);}/* 直し方の入れ切りは、ゲームが端末の直近の診断の記録から自分で決める(人が調整する前提にしない) */try{rhythmTouchFixAutoSet(rhythmTouchFixAutoFrom(await storeGet(RHYTHM_TOUCH_DIAG_KEY,[])));}catch{rhythmTouchFixAutoSet({});}const audio=await Audio_.startRhythmTrack(song.bgmTrackId,settings.bgmVolume,{autoStart:false});if(!mountedRef.current||generation!==generationRef.current){audio?.stop();return;}if(!audio){rhythmSongPrepSignal(false,song.songId);startLockRef.current=false;songIntroRef.current=null;setSongIntro(null);setView(v=>({...v,status:'error'}));return;}const startBest=normalizeRhythmBestRecord(startBestValue);/* 入力の記録(デバッグ設定で入れたときだけ。rhythm-mode.js の RHYTHM_INPUT_REC) */try{RHYTHM_INPUT_REC.begin(playAreaRef.current,()=>Number(audio.songTimeMs())||0,{songId:song.songId,difficultyId:difficulty.id,mirror:!!mirrorOn,assist:!!assistOn,offsetMs:Number(settings.judgmentTimingOffsetMs)||0,debugPlay:!!debugPlay,settings:(()=>{try{return JSON.parse(JSON.stringify(settings));}catch{return null;}})()});}catch{}RHYTHM_FRAME_DIAG.reset();RHYTHM_TIMING_DIAG.reset();RHYTHM_TIMING_DIAG.meta(audio.info?.());RHYTHM_TOUCH_BRIDGE.reset();rhythmFloatingNotesClear();runRef.current={audio,heroSeed:Math.random(),notes:makeRuntimeNotes(),activePointers:new Map(),standbyPointers:new Map(),activeTouchInputs:new Set(),inputTimes:[],combo:0,maxCombo:0,counts:emptyCounts(),fast:0,slow:0,precise:0,deltas:[],life:RHYTHM_LIFE_MAX,lifeDepleted:false,score:0,lockedScore:0,scoreOffset:0,abilities:createRhythmMonsterAbilityState(),konjoOwnerName:'',finished:false,paused:false,generation,startBest,startBestScore:startBest.bestScore};laneRefs.current.forEach(el=>{if(el){el.style.display='block';el.style.opacity='0';el.style.filter='';/* styleを直接書き戻したら、「前に何を書いたか」の控えも一緒に捨てる。   控えだけ古いまま残ると、値が同じだと判断して書き込みを飛ばし、   実際の見た目とズレたまま固まる(例: 透明のまま出てこない)ため */el._rhythmHidden=false;el._rhythmOpacity=undefined;el._rhythmWillChange=undefined;el._rhythmFailedFlag=undefined;el._rhythmClearFlag=undefined;delete el.dataset.rhythmClear;el._rhythmHoldBody=undefined;el._rhythmHoldFilter=undefined;el._rhythmDepthScale=undefined;el._rhythmDepthBrightness=undefined;el._rhythmTransform=undefined;el._rhythmSlideBody=undefined;}});if(canvasNotes)RHYTHM_CANVAS_RENDERER.clear();rhythmLayoutPlayArea(playAreaRef.current);updateJudgmentBand(measureTravel(),rhythmTravelMsForSpeed(settings.noteSpeed));
+setSongIntro(introShown?{key:generation,ms:introMs,short:introMs<RHYTHM_SONG_INTRO_MS,skippable:!multi}:null);}/* 直し方の入れ切りは、ゲームが端末の直近の診断の記録から自分で決める(人が調整する前提にしない) */try{rhythmTouchFixAutoSet(rhythmTouchFixAutoFrom(await storeGet(RHYTHM_TOUCH_DIAG_KEY,[])));}catch{rhythmTouchFixAutoSet({});}const audio=await Audio_.startRhythmTrack(song.bgmTrackId,settings.bgmVolume,{autoStart:false});if(!mountedRef.current||generation!==generationRef.current){audio?.stop();return;}if(!audio){rhythmSongPrepSignal(false,song.songId);startLockRef.current=false;songIntroRef.current=null;setSongIntro(null);setView(v=>({...v,status:'error'}));return;}const startBest=normalizeRhythmBestRecord(startBestValue);/* 入力の記録(デバッグ設定で入れたときだけ。rhythm-mode.js の RHYTHM_INPUT_REC) */try{RHYTHM_INPUT_REC.begin(playAreaRef.current,()=>Number(audio.songTimeMs())||0,{songId:song.songId,difficultyId:difficulty.id,mirror:!!mirrorOn,assist:!!assistOn,offsetMs:Number(settings.judgmentTimingOffsetMs)||0,debugPlay:!!debugPlay,settings:(()=>{try{return JSON.parse(JSON.stringify(settings));}catch{return null;}})()});}catch{}RHYTHM_FRAME_DIAG.reset();RHYTHM_TIMING_DIAG.reset();RHYTHM_TIMING_DIAG.meta(audio.info?.());RHYTHM_TOUCH_BRIDGE.reset();const tickRules=rhythmTickRulesActive();rhythmFloatingNotesClear();runRef.current={audio,heroSeed:Math.random(),tickRules,notes:makeRuntimeNotes(tickRules),tickJust:0,tickMiss:0,tickTotal:null,activePointers:new Map(),standbyPointers:new Map(),activeTouchInputs:new Set(),inputTimes:[],combo:0,maxCombo:0,counts:emptyCounts(),fast:0,slow:0,precise:0,deltas:[],life:RHYTHM_LIFE_MAX,lifeDepleted:false,score:0,lockedScore:0,scoreOffset:0,abilities:createRhythmMonsterAbilityState(),konjoOwnerName:'',finished:false,paused:false,generation,startBest,startBestScore:startBest.bestScore};laneRefs.current.forEach(el=>{if(el){el.style.display='block';el.style.opacity='0';el.style.filter='';/* styleを直接書き戻したら、「前に何を書いたか」の控えも一緒に捨てる。   控えだけ古いまま残ると、値が同じだと判断して書き込みを飛ばし、   実際の見た目とズレたまま固まる(例: 透明のまま出てこない)ため */el._rhythmHidden=false;el._rhythmOpacity=undefined;el._rhythmWillChange=undefined;el._rhythmFailedFlag=undefined;el._rhythmClearFlag=undefined;delete el.dataset.rhythmClear;el._rhythmHoldBody=undefined;el._rhythmHoldFilter=undefined;el._rhythmDepthScale=undefined;el._rhythmDepthBrightness=undefined;el._rhythmTransform=undefined;el._rhythmSlideBody=undefined;}});if(canvasNotes)RHYTHM_CANVAS_RENDERER.clear();rhythmLayoutPlayArea(playAreaRef.current);updateJudgmentBand(measureTravel(),rhythmTravelMsForSpeed(settings.noteSpeed));
 /* 使い回すヒットエフェクトを先に作っておく。曲の途中で10個まとめて作ると、そこで一瞬引っかかる */
 rhythmEnsureHitEffects(playAreaRef.current);
 /* 光のスプライトも先に焼いておく。曲の中で「その種類のノーツが初めて出た瞬間」に作ると
@@ -22632,6 +22706,7 @@ scheduleTick();};
       // 1ノーツずつの判定とずれ(読むだけ)。モンヒロくんが「自分が押した時刻・位置」と見比べて、
       // 押したのに取れない・判定のずれ・ホールドが切れた、を数える(tools/playbot/lib/feel.js・2026-10-07)
       rhythmNoteResults:()=>{const run=runRef.current;return run?run.notes.map(note=>({index:note.index,done:!!note.done,judgment:note._rhythmFinalJudgment??null,deltaMs:Number.isFinite(note._rhythmDeltaMs)?note._rhythmDeltaMs:null,holdJudgment:note.holdJudgment??null,holdDeltaMs:Number.isFinite(note.holdDeltaMs)?note.holdDeltaMs:null,endTimeMs:Number.isFinite(note.endTimeMs)?note.endTimeMs:null,releaseTargetMs:Number.isFinite(note._rhythmReleaseTargetMs)?note._rhythmReleaseTargetMs:null,endFlick:note.endFlick===true,releaseDone:note._rhythmReleaseDone===true,releaseJudgment:note._rhythmReleaseJudgment??null,releaseDeltaMs:Number.isFinite(note._rhythmReleaseDeltaMs)?note._rhythmReleaseDeltaMs:null})):null;},
+      rhythmTickCounts:()=>{const run=runRef.current;return run?{rules:!!run.tickRules,just:run.tickJust||0,miss:run.tickMiss||0,total:run.tickTotal??rhythmComboTickTotal(run.notes),combo:run.combo,maxCombo:run.maxCombo,score:run.score}:null;},
       rhythmNotes:()=>{const run=runRef.current;return run?run.notes.map(note=>({index:note.index,type:note.type,ticks:Number(note._rhythmTicks)||0,timeMs:note.timeMs,skyHeight:rhythmNoteSkyHeight(note),endTimeMs:note.endTimeMs,lane:note.lane,subLane:note.subLane,subLaneWidth:note.subLaneWidth,slidePoints:Array.isArray(note.slidePoints)?note.slidePoints.map(pt=>({timeMs:pt.timeMs,lane:pt.lane})):null,done:!!note.done})):null;},
     };}catch(_){}
     return()=>{try{if(window.__mhTestHooks){delete window.__mhTestHooks.rhythmSongMs;delete window.__mhTestHooks.rhythmPrepare;delete window.__mhTestHooks.rhythmNotes;delete window.__mhTestHooks.rhythmNoteResults;}}catch(_){}};
@@ -23062,6 +23137,8 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
 <div data-rhythm-result-combo className="flex w-[34%] shrink-0 flex-col items-center justify-center rounded-2xl border border-white/10 bg-slate-900/85 px-2 py-2 text-center [@container(min-width:680px)]:w-[31%]">
   <small className={`text-[10px] font-black tracking-[.2em] ${rhythmComboTextColor(view.maxCombo)}`}>MAX COMBO</small>
   <b data-rhythm-max-combo className={`block text-[34px] font-black leading-tight tabular-nums ${rhythmComboTextColor(view.maxCombo)}`}>{view.maxCombo}</b>
+  {/* 刻みの数え方(2026-10-17): ホールド・スライドの刻みもノーツとしてコンボに数えたことと、取れた刻みの数を出す */}
+  {view.result?.scoreVersion===2&&<small data-rhythm-result-ticks className="mt-0.5 block text-[10px] font-bold leading-tight text-slate-300">刻み <b className="tabular-nums text-white">{view.result.tickJust}</b>/{view.result.tickTotal}{view.result.tickMiss>0?<span className="text-rose-300">(MISS {view.result.tickMiss})</span>:null}<span className="block text-[9px] font-bold text-slate-400">ホールド・スライドの刻みもコンボに数えます</span></small>}
   <div className="mt-1.5 grid w-full grid-cols-2 gap-1 text-[10px] font-black"><span data-rhythm-result-fast className="rounded-lg bg-cyan-500/15 py-1 text-cyan-200">FAST<b className="block text-sm tabular-nums text-white">{view.fast}</b></span><span data-rhythm-result-slow className="rounded-lg bg-fuchsia-500/15 py-1 text-fuchsia-200">SLOW<b className="block text-sm tabular-nums text-white">{view.slow}</b></span></div>
 </div>
 </section>
@@ -28844,7 +28921,8 @@ const RAID_JACK_PUMPKIN = raidJackTier('a6', 'ぱんぷきん', 13.0, 5, 1.0, 45
 //     数字を見てから決め直す。決めたら RAID_JACK_RHYTHM_DAMAGE_LIMIT に数字を入れる(null = 上限なし。1回の送信の上限 1億 は別に効く)
 const RAID_JACK_RHYTHM_JUDGMENT_RATES = Object.freeze({ JUST: 1.0, MARVELOUS: 0.95, EXCELLENT: 0.70, GREAT: 0.50, GOOD: 0.25, BAD: -0.15, MISS: -0.30 });
 const RAID_JACK_RHYTHM_BASE = 1000;   // MASTER のジャスト1個
-const RAID_JACK_RHYTHM_DIFFICULTY_FACTORS = Object.freeze({ EASY: 0.25, NORMAL: 0.40, HARD: 0.55, EXPERT: 0.75, MASTER: 1.0 });
+// HELL は 2026-10-17 に足した(それまでは表に無く、HELL で遊ぶとダメージが0だった)。社長の決定で MASTER と同じ値
+const RAID_JACK_RHYTHM_DIFFICULTY_FACTORS = Object.freeze({ EASY: 0.25, NORMAL: 0.40, HARD: 0.55, EXPERT: 0.75, MASTER: 1.0, HELL: 1.0 });
 const RAID_JACK_RHYTHM_COMBO_PER_COMBO = 0.0005;   // 1コンボあたりの上乗せ(100コンボで +5%)
 // 達成の補正: ふつうの演奏は基準の0.35倍(半分からさらに30%下げた)。オールマーベラス=1.0(従来どおり)・オールエクセレント=0.9・フルコンボ=0.7(いずれも従来比)
 const RAID_JACK_RHYTHM_ACHIEVE_FACTORS = Object.freeze({ NONE: 0.35, FULL_COMBO: 0.7, ALL_EXCELLENT: 0.9, ALL_MARVELOUS: 1.0 });
@@ -28878,7 +28956,14 @@ const raidJackRhythmDamage = (input) => {
 // 演奏の結果(result・difficulty)から、ダメージを出す
 const raidJackRhythmDamageOf = (result, difficulty) => {
   const r = result && typeof result === 'object' ? result : {};
-  return raidJackRhythmDamage({ judgments: r.judgments, precise: r.precise, maxCombo: r.maxCombo, difficultyId: difficulty && difficulty.id, assist: r.assist === true, fullCombo: r.fullCombo === true, allExcellent: r.allExcellent === true, allMarvelous: r.allMarvelous === true });
+  // 刻みの数え方(2026-10-17・社長の決定「レイドは係数そのままで、刻みも数える」): 取った刻みは JUST MARVELOUS、落とした刻みは MISS として判定の数へ足す。
+  // 最大コンボはもともと刻み込み。刻みの無い記録(今までの数え方)はそのまま
+  const tickJust = Math.max(0, Math.floor(Number(r.tickJust) || 0)), tickMiss = Math.max(0, Math.floor(Number(r.tickMiss) || 0));
+  const judgments = (tickJust || tickMiss) && r.judgments && typeof r.judgments === 'object'
+    ? { ...r.judgments, MARVELOUS: (Math.floor(Number(r.judgments.MARVELOUS) || 0)) + tickJust, MISS: (Math.floor(Number(r.judgments.MISS) || 0)) + tickMiss }
+    : r.judgments;
+  const precise = (Math.floor(Number(r.precise) || 0)) + tickJust;
+  return raidJackRhythmDamage({ judgments, precise, maxCombo: r.maxCombo, difficultyId: difficulty && difficulty.id, assist: r.assist === true, fullCombo: r.fullCombo === true, allExcellent: r.allExcellent === true, allMarvelous: r.allMarvelous === true });
 };
 
 // 共有の合計から「大王が倒されたか」を見る(totals は sbFetchRaidJackTierTotals の返り値)。見るたびに数え直す
@@ -32031,7 +32116,7 @@ function ProfileScreen({
     let alive = true;
     (async () => {
       try {
-        const best = normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY, {}, false));
+        const best = await loadRhythmBestRecordsNow();
         if (alive) setRhythmAchRows(friendsRhythmAchievements(best));
       } catch (error) { /* 読めなければ実績の表を出さないだけ */ }
     })();
@@ -33566,6 +33651,11 @@ function RhythmRankingScreen({
         <header className="z-10 flex shrink-0 items-center gap-2 border-b border-amber-400/15 bg-slate-950/95 px-3 py-1" style={{paddingTop:'calc(0.25rem + var(--mh-sa-top))'}}>
           <button aria-label="戻る" onClick={onBackToSongSelect} className="min-h-[44px] px-2 text-slate-400"><ArrowLeft size={18}/></button>
           <h2 className="text-sm font-black tracking-widest text-amber-200">🏆 全国ランキング</h2>
+          {/* 旧記録(2026-10-17・刻みの数え方への切り替え)。切り替えのあとだけ出す。曲ごと・合計の順位を、今までの物差しの記録で見る。
+              週間・イベントは、その期間が始まった時点の物差しで数えるので、このボタンでは変わらない */}
+          {typeof rhythmTickRulesReleased==='function'&&rhythmTickRulesReleased()&&!boardTab&&<button type="button" data-rhythm-ranking-legacy aria-pressed={RHYTHM_RANKING_VIEW.legacy}
+            onClick={()=>{RHYTHM_RANKING_VIEW.legacy=!RHYTHM_RANKING_VIEW.legacy;refresh();}}
+            className={`ml-auto min-h-[44px] rounded-lg px-2 text-[10px] font-black ${RHYTHM_RANKING_VIEW.legacy?'bg-slate-200/15 text-slate-100':'text-slate-300'}`}>{RHYTHM_RANKING_VIEW.legacy?'旧記録を表示中':'旧記録'}</button>}
           <button aria-label="更新" data-rhythm-ranking-refresh onClick={refresh} className="ml-auto min-h-[44px] px-2 text-[10px] font-black text-amber-200">更新</button>
         </header>
         {/* タブ。押したときに初めて取りにいく。公開前はタブごと出さない */}
@@ -42061,7 +42151,7 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
       try {
         const savedNotes = friendsNormalizeNotes(await storeGet(FRIEND_NOTES_KEY, {}, false));
         const savedRecent = friendsNormalizeRecent(await storeGet(FRIEND_RECENT_KEY, [], false));
-        const best = normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY, {}, false));
+        const best = await loadRhythmBestRecordsNow();
         if (cancelled || !aliveRef.current) return;
         setNotes(savedNotes); setRecent(savedRecent); setMyBest(best);
         // 最近遊んだ人の最新の名前・アイコンも読んでおく(読めなければ、覚えていた名前のまま出す)
@@ -42781,6 +42871,9 @@ const RHYTHM_MULTI_CPU_AWAIT_MS = 60000;
 const RHYTHM_MULTI_CPU_BANTER_GAP_MS = 15000;
 const RHYTHM_MULTI_ROOM_TOPIC = 'realtime:mhb-room-';
 const RHYTHM_MULTI_LOBBY_TOPIC = 'realtime:mhb-lobby-';
+// 刻みの数え方(2026-10-17・社長の決定「マルチは部屋の中で版をそろえる」)。新しい数え方の端末は、受付と部屋の通信路の名前に v2- を付けて分ける。
+// 古い版のアプリとは同じ部屋に入らない(スコアの物差しが違う人どうしで比べないため)。プライベートの合言葉も版ごとに別の部屋になる
+const rhythmMultiTopicTag = () => (typeof rhythmTickRulesActive === 'function' && rhythmTickRulesActive() ? 'v2-' : '');
 const RHYTHM_MULTI_LOBBY_ANNOUNCE_MS = 2000;
 const RHYTHM_MULTI_LOBBY_LISTEN_MS = 3500;
 const RHYTHM_MULTI_LOBBY_FRESH_MS = 6000;
@@ -43433,7 +43526,7 @@ const RHYTHM_MULTI = (() => {
       lobby = {
         kind, rooms, lastAnnounce: 0,
         socket: rhythmMultiOpenSocket({
-          topic: RHYTHM_MULTI_LOBBY_TOPIC + kind,
+          topic: RHYTHM_MULTI_LOBBY_TOPIC + rhythmMultiTopicTag() + kind,
           onOpen: () => {},
           onMessage: (raw) => { const n = rhythmMultiCleanRoomNotice(raw); if (n) rooms[n.code] = { n: n.n, seen: Date.now() }; },
           onClose: () => {},
@@ -43548,7 +43641,7 @@ const RHYTHM_MULTI = (() => {
     s.status = 'connecting';
     emit();
     socket = rhythmMultiOpenSocket({
-      topic: RHYTHM_MULTI_ROOM_TOPIC + s.code,
+      topic: RHYTHM_MULTI_ROOM_TOPIC + rhythmMultiTopicTag() + s.code,
       onOpen: () => { if (!s) return; s.status = 'open'; sendHb(); emit(); },
       onMessage,
       onClose: () => {
@@ -43666,7 +43759,7 @@ const RHYTHM_MULTI = (() => {
       return new Promise((resolve) => {
         const rooms = {};
         const sock = rhythmMultiOpenSocket({
-          topic: RHYTHM_MULTI_LOBBY_TOPIC + (kind === 'veteran' ? 'veteran' : 'free'),
+          topic: RHYTHM_MULTI_LOBBY_TOPIC + rhythmMultiTopicTag() + (kind === 'veteran' ? 'veteran' : 'free'),
           onOpen: () => {},
           onMessage: (raw) => { const n = rhythmMultiCleanRoomNotice(raw); if (n) rooms[n.code] = { n: n.n, seen: Date.now() }; },
           onClose: () => {},
@@ -43679,7 +43772,7 @@ const RHYTHM_MULTI = (() => {
     watchLobby(kind, onCount) {
       const rooms = {};
       const sock = rhythmMultiOpenSocket({
-        topic: RHYTHM_MULTI_LOBBY_TOPIC + (kind === 'veteran' ? 'veteran' : 'free'),
+        topic: RHYTHM_MULTI_LOBBY_TOPIC + rhythmMultiTopicTag() + (kind === 'veteran' ? 'veteran' : 'free'),
         onOpen: () => {},
         onMessage: (raw) => { const n = rhythmMultiCleanRoomNotice(raw); if (n) rooms[n.code] = { n: n.n, seen: Date.now() }; },
         onClose: () => {},
@@ -47874,7 +47967,7 @@ function MonsterHeroGame() {
   };
   const openRhythmDemo = async (opts) => {
     const settings=normalizeRhythmSettings(await restoreRhythmPlayDefaultsOnce(await storeGet(RHYTHM_SETTINGS_KEY,DEFAULT_RHYTHM_SETTINGS,false)));
-    const records=normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY,{},false));
+    const records=await loadRhythmBestRecordsNow();
     const monsterSlots=sanitizeRhythmMonsterSlotIds(await storeGet(RHYTHM_MONSTER_SLOT_KEY,[],false));
     setRhythmSettings(settings); setRhythmBestRecords(records); setRhythmMonsterSlotIds(monsterSlots);
     void recordRhythmAchievements(records);   // 実績の台帳へそろえる(初回は、すでに取れていたぶんを取り込む。失敗しても入れる)
@@ -47890,7 +47983,7 @@ function MonsterHeroGame() {
   };
   const openRhythmDebug = async () => {
     const settings=normalizeRhythmSettings(await restoreRhythmPlayDefaultsOnce(await storeGet(RHYTHM_SETTINGS_KEY,DEFAULT_RHYTHM_SETTINGS,false)));
-    const records=normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY,{},false));
+    const records=await loadRhythmBestRecordsNow();
     const monsterSlots=sanitizeRhythmMonsterSlotIds(await storeGet(RHYTHM_MONSTER_SLOT_KEY,[],false));
     setRhythmSettings(settings); setRhythmBestRecords(records); setRhythmMonsterSlotIds(monsterSlots);
     void recordRhythmAchievements(records);   // 実績の台帳へそろえる(初回は、すでに取れていたぶんを取り込む。失敗しても入れる)
@@ -49689,7 +49782,7 @@ function MonsterHeroGame() {
     friendPublishRef.current = Date.now();
     // 曲ごとのベストは、ゲームを開いたあと一度もモンヒロビートを開いていなくても出せるよう、端末の保存から直接読む
     let rhythmBest = null;
-    try { rhythmBest = normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY, {}, false)); } catch (error) { rhythmBest = null; }
+    try { rhythmBest = await loadRhythmBestRecordsNow(); } catch (error) { rhythmBest = null; }
     let records = null;
     try {
       records = friendsBuildRecords({
@@ -51024,10 +51117,15 @@ function MonsterHeroGame() {
   // (通常バトルのdebugBattleRefガードと同じ考え方)。失敗してもBEST記録(mh_rhythm_best_v1)
   // には影響しない、副作用だけの追加送信として扱う
   const submitRhythmRankingScoreBody = useCallback(async (song, difficulty, result) => {
-    const difficultyKey = rhythmRankingDifficultyKey(song?.songId, difficulty?.id);
+    // 刻みの数え方の記録(scoreVersion 2)は新しい物差しの鍵(…-2)へ。切り替えの時刻より前(確認待ちの試作で遊んだ記録)は送らない
+    const scoreVersion = result?.scoreVersion === 2 ? 2 : 1;
+    if (scoreVersion === 2 && !(typeof rhythmTickRulesReleased === 'function' && rhythmTickRulesReleased())) return;
+    const difficultyKey = rhythmRankingDifficultyKey(song?.songId, difficulty?.id, scoreVersion);
     if (!difficultyKey) return;
     const detail = {
       songId: song.songId, difficultyId: difficulty.id,
+      // 刻みの数(新しい物差しのときだけ。判定の内訳 judgments・precise はノーツだけ)
+      ...(scoreVersion === 2 ? { scoreVersion: 2, tickTotal: Math.max(0, Math.floor(Number(result.tickTotal) || 0)), tickJust: Math.max(0, Math.floor(Number(result.tickJust) || 0)), tickMiss: Math.max(0, Math.floor(Number(result.tickMiss) || 0)) } : {}),
       judgments: result.judgments, maxCombo: result.maxCombo, fast: result.fast, slow: result.slow,
       // ぴったりのMARVELOUSの回数(2026-09-13・ユーザー依頼「ランキングからのスコア詳細では
       // JUST Marvelousも見れるようにして」)。party はJSONの列なので**項目を足すだけ**で済み、
@@ -51070,7 +51168,18 @@ function MonsterHeroGame() {
     if (!outcome.nationalSaved) scheduleRhythmRankingRetry();
   }, [breederName, breederLevel, breederIcon, profileFrameId, refreshRhythmRankingPending, scheduleRhythmRankingRetry]);
   const submitRhythmRankingScore = useCallback((song, difficulty, result) => {
-    const task = submitRhythmRankingScoreBody(song, difficulty, result);
+    // 刻みの数え方の記録は、切り替えた週の終わり(rhythmTickDualUntilMs)までは、同じ演奏を旧の物差しで数えた記録(result.legacy)も旧の順位へ送る。
+    // 切り替えた週の週間ランキング・報酬は旧の物差しで最後までそろえるため(期間の物差しは rhythmRankingPeriodVersion が始まった時点で決める)
+    const legacy = result && result.scoreVersion === 2 && result.legacy && typeof rhythmTickDualSubmit === 'function' && rhythmTickDualSubmit()
+      && typeof rhythmTickRulesReleased === 'function' && rhythmTickRulesReleased() ? result.legacy : null;
+    const task = (async () => {
+      await submitRhythmRankingScoreBody(song, difficulty, result);
+      if (legacy) {
+        const { scoreVersion, tickTotal, tickJust, tickMiss, legacy: _legacy, ...rest } = result;
+        await submitRhythmRankingScoreBody(song, difficulty, { ...rest, score: legacy.score, maxCombo: legacy.maxCombo,
+          fullCombo: legacy.fullCombo === true, allExcellent: legacy.allExcellent === true, allMarvelous: legacy.allMarvelous === true });
+      }
+    })();
     rhythmRankingSubmitRef.current = task.catch(() => {});
     return task;
   }, [submitRhythmRankingScoreBody]);
@@ -65895,7 +66004,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 通算クリア回数を数える(スエゾービートのフレームの条件)。ライフを残して終えたときだけ。
           // 練習・アシストモードは上で除いてある。数えられなくても記録の保存は止めない
           if(result?.cleared!==false){ try{ setRhythmClearTotal(await addRhythmClearTotal()); }catch{} }
-          const records=await saveRhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id,merged);setRhythmBestRecords(records);
+          // 刻みの数え方(scoreVersion 2)の記録は mh_rhythm_best_v2 へ、今の数え方の記録は mh_rhythm_best_v1 へ。
+          // 書くもとは、その版の保存値(画面の records は別の版のことがあるので、演奏中に切り替えの時刻をまたいでも混ざらないように合わせ直す)
+          const bestVersion=result?.scoreVersion===2?2:1;
+          const storedBest=(await loadRhythmBestRecordsOf(bestVersion))?.[rhythmPlay.song.songId]?.[rhythmPlay.difficulty.id];
+          const records=await saveRhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id,mergeRhythmBestRecord(storedBest,result),bestVersion);setRhythmBestRecords(records);
           // HELL が初めて開いたか(その曲の MASTER を初めてクリア・2026-10-12 案A)。公開の印が偽なら譜面が無いので、ここは何もしない。
           // お話をまだ見ていなければ RHYTHM_HELL_STORY_TRIGGER のとおりに流す。開く条件そのものは rhythmDifficultyUnlocked(記録から数える)
           if(rhythmPlay.from==='demo'&&typeof rhythmHellOpen==='function'&&rhythmHellOpen()&&rhythmChartPlayable(rhythmPlay.song,'HELL')

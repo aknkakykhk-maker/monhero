@@ -84,7 +84,7 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
       try {
         const savedNotes = friendsNormalizeNotes(await storeGet(FRIEND_NOTES_KEY, {}, false));
         const savedRecent = friendsNormalizeRecent(await storeGet(FRIEND_RECENT_KEY, [], false));
-        const best = normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY, {}, false));
+        const best = await loadRhythmBestRecordsNow();
         if (cancelled || !aliveRef.current) return;
         setNotes(savedNotes); setRecent(savedRecent); setMyBest(best);
         // 最近遊んだ人の最新の名前・アイコンも読んでおく(読めなければ、覚えていた名前のまま出す)

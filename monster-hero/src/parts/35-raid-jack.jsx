@@ -153,7 +153,8 @@ const RAID_JACK_PUMPKIN = raidJackTier('a6', 'ぱんぷきん', 13.0, 5, 1.0, 45
 //     数字を見てから決め直す。決めたら RAID_JACK_RHYTHM_DAMAGE_LIMIT に数字を入れる(null = 上限なし。1回の送信の上限 1億 は別に効く)
 const RAID_JACK_RHYTHM_JUDGMENT_RATES = Object.freeze({ JUST: 1.0, MARVELOUS: 0.95, EXCELLENT: 0.70, GREAT: 0.50, GOOD: 0.25, BAD: -0.15, MISS: -0.30 });
 const RAID_JACK_RHYTHM_BASE = 1000;   // MASTER のジャスト1個
-const RAID_JACK_RHYTHM_DIFFICULTY_FACTORS = Object.freeze({ EASY: 0.25, NORMAL: 0.40, HARD: 0.55, EXPERT: 0.75, MASTER: 1.0 });
+// HELL は 2026-10-17 に足した(それまでは表に無く、HELL で遊ぶとダメージが0だった)。社長の決定で MASTER と同じ値
+const RAID_JACK_RHYTHM_DIFFICULTY_FACTORS = Object.freeze({ EASY: 0.25, NORMAL: 0.40, HARD: 0.55, EXPERT: 0.75, MASTER: 1.0, HELL: 1.0 });
 const RAID_JACK_RHYTHM_COMBO_PER_COMBO = 0.0005;   // 1コンボあたりの上乗せ(100コンボで +5%)
 // 達成の補正: ふつうの演奏は基準の0.35倍(半分からさらに30%下げた)。オールマーベラス=1.0(従来どおり)・オールエクセレント=0.9・フルコンボ=0.7(いずれも従来比)
 const RAID_JACK_RHYTHM_ACHIEVE_FACTORS = Object.freeze({ NONE: 0.35, FULL_COMBO: 0.7, ALL_EXCELLENT: 0.9, ALL_MARVELOUS: 1.0 });
@@ -187,7 +188,14 @@ const raidJackRhythmDamage = (input) => {
 // 演奏の結果(result・difficulty)から、ダメージを出す
 const raidJackRhythmDamageOf = (result, difficulty) => {
   const r = result && typeof result === 'object' ? result : {};
-  return raidJackRhythmDamage({ judgments: r.judgments, precise: r.precise, maxCombo: r.maxCombo, difficultyId: difficulty && difficulty.id, assist: r.assist === true, fullCombo: r.fullCombo === true, allExcellent: r.allExcellent === true, allMarvelous: r.allMarvelous === true });
+  // 刻みの数え方(2026-10-17・社長の決定「レイドは係数そのままで、刻みも数える」): 取った刻みは JUST MARVELOUS、落とした刻みは MISS として判定の数へ足す。
+  // 最大コンボはもともと刻み込み。刻みの無い記録(今までの数え方)はそのまま
+  const tickJust = Math.max(0, Math.floor(Number(r.tickJust) || 0)), tickMiss = Math.max(0, Math.floor(Number(r.tickMiss) || 0));
+  const judgments = (tickJust || tickMiss) && r.judgments && typeof r.judgments === 'object'
+    ? { ...r.judgments, MARVELOUS: (Math.floor(Number(r.judgments.MARVELOUS) || 0)) + tickJust, MISS: (Math.floor(Number(r.judgments.MISS) || 0)) + tickMiss }
+    : r.judgments;
+  const precise = (Math.floor(Number(r.precise) || 0)) + tickJust;
+  return raidJackRhythmDamage({ judgments, precise, maxCombo: r.maxCombo, difficultyId: difficulty && difficulty.id, assist: r.assist === true, fullCombo: r.fullCombo === true, allExcellent: r.allExcellent === true, allMarvelous: r.allMarvelous === true });
 };
 
 // 共有の合計から「大王が倒されたか」を見る(totals は sbFetchRaidJackTierTotals の返り値)。見るたびに数え直す

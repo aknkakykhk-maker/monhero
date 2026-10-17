@@ -200,7 +200,7 @@ function MonsterHeroGame() {
   };
   const openRhythmDemo = async (opts) => {
     const settings=normalizeRhythmSettings(await restoreRhythmPlayDefaultsOnce(await storeGet(RHYTHM_SETTINGS_KEY,DEFAULT_RHYTHM_SETTINGS,false)));
-    const records=normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY,{},false));
+    const records=await loadRhythmBestRecordsNow();
     const monsterSlots=sanitizeRhythmMonsterSlotIds(await storeGet(RHYTHM_MONSTER_SLOT_KEY,[],false));
     setRhythmSettings(settings); setRhythmBestRecords(records); setRhythmMonsterSlotIds(monsterSlots);
     void recordRhythmAchievements(records);   // 実績の台帳へそろえる(初回は、すでに取れていたぶんを取り込む。失敗しても入れる)
@@ -216,7 +216,7 @@ function MonsterHeroGame() {
   };
   const openRhythmDebug = async () => {
     const settings=normalizeRhythmSettings(await restoreRhythmPlayDefaultsOnce(await storeGet(RHYTHM_SETTINGS_KEY,DEFAULT_RHYTHM_SETTINGS,false)));
-    const records=normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY,{},false));
+    const records=await loadRhythmBestRecordsNow();
     const monsterSlots=sanitizeRhythmMonsterSlotIds(await storeGet(RHYTHM_MONSTER_SLOT_KEY,[],false));
     setRhythmSettings(settings); setRhythmBestRecords(records); setRhythmMonsterSlotIds(monsterSlots);
     void recordRhythmAchievements(records);   // 実績の台帳へそろえる(初回は、すでに取れていたぶんを取り込む。失敗しても入れる)
@@ -2015,7 +2015,7 @@ function MonsterHeroGame() {
     friendPublishRef.current = Date.now();
     // 曲ごとのベストは、ゲームを開いたあと一度もモンヒロビートを開いていなくても出せるよう、端末の保存から直接読む
     let rhythmBest = null;
-    try { rhythmBest = normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY, {}, false)); } catch (error) { rhythmBest = null; }
+    try { rhythmBest = await loadRhythmBestRecordsNow(); } catch (error) { rhythmBest = null; }
     let records = null;
     try {
       records = friendsBuildRecords({
@@ -3350,10 +3350,15 @@ function MonsterHeroGame() {
   // (通常バトルのdebugBattleRefガードと同じ考え方)。失敗してもBEST記録(mh_rhythm_best_v1)
   // には影響しない、副作用だけの追加送信として扱う
   const submitRhythmRankingScoreBody = useCallback(async (song, difficulty, result) => {
-    const difficultyKey = rhythmRankingDifficultyKey(song?.songId, difficulty?.id);
+    // 刻みの数え方の記録(scoreVersion 2)は新しい物差しの鍵(…-2)へ。切り替えの時刻より前(確認待ちの試作で遊んだ記録)は送らない
+    const scoreVersion = result?.scoreVersion === 2 ? 2 : 1;
+    if (scoreVersion === 2 && !(typeof rhythmTickRulesReleased === 'function' && rhythmTickRulesReleased())) return;
+    const difficultyKey = rhythmRankingDifficultyKey(song?.songId, difficulty?.id, scoreVersion);
     if (!difficultyKey) return;
     const detail = {
       songId: song.songId, difficultyId: difficulty.id,
+      // 刻みの数(新しい物差しのときだけ。判定の内訳 judgments・precise はノーツだけ)
+      ...(scoreVersion === 2 ? { scoreVersion: 2, tickTotal: Math.max(0, Math.floor(Number(result.tickTotal) || 0)), tickJust: Math.max(0, Math.floor(Number(result.tickJust) || 0)), tickMiss: Math.max(0, Math.floor(Number(result.tickMiss) || 0)) } : {}),
       judgments: result.judgments, maxCombo: result.maxCombo, fast: result.fast, slow: result.slow,
       // ぴったりのMARVELOUSの回数(2026-09-13・ユーザー依頼「ランキングからのスコア詳細では
       // JUST Marvelousも見れるようにして」)。party はJSONの列なので**項目を足すだけ**で済み、
@@ -3396,7 +3401,18 @@ function MonsterHeroGame() {
     if (!outcome.nationalSaved) scheduleRhythmRankingRetry();
   }, [breederName, breederLevel, breederIcon, profileFrameId, refreshRhythmRankingPending, scheduleRhythmRankingRetry]);
   const submitRhythmRankingScore = useCallback((song, difficulty, result) => {
-    const task = submitRhythmRankingScoreBody(song, difficulty, result);
+    // 刻みの数え方の記録は、切り替えた週の終わり(rhythmTickDualUntilMs)までは、同じ演奏を旧の物差しで数えた記録(result.legacy)も旧の順位へ送る。
+    // 切り替えた週の週間ランキング・報酬は旧の物差しで最後までそろえるため(期間の物差しは rhythmRankingPeriodVersion が始まった時点で決める)
+    const legacy = result && result.scoreVersion === 2 && result.legacy && typeof rhythmTickDualSubmit === 'function' && rhythmTickDualSubmit()
+      && typeof rhythmTickRulesReleased === 'function' && rhythmTickRulesReleased() ? result.legacy : null;
+    const task = (async () => {
+      await submitRhythmRankingScoreBody(song, difficulty, result);
+      if (legacy) {
+        const { scoreVersion, tickTotal, tickJust, tickMiss, legacy: _legacy, ...rest } = result;
+        await submitRhythmRankingScoreBody(song, difficulty, { ...rest, score: legacy.score, maxCombo: legacy.maxCombo,
+          fullCombo: legacy.fullCombo === true, allExcellent: legacy.allExcellent === true, allMarvelous: legacy.allMarvelous === true });
+      }
+    })();
     rhythmRankingSubmitRef.current = task.catch(() => {});
     return task;
   }, [submitRhythmRankingScoreBody]);
@@ -18221,7 +18237,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 通算クリア回数を数える(スエゾービートのフレームの条件)。ライフを残して終えたときだけ。
           // 練習・アシストモードは上で除いてある。数えられなくても記録の保存は止めない
           if(result?.cleared!==false){ try{ setRhythmClearTotal(await addRhythmClearTotal()); }catch{} }
-          const records=await saveRhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id,merged);setRhythmBestRecords(records);
+          // 刻みの数え方(scoreVersion 2)の記録は mh_rhythm_best_v2 へ、今の数え方の記録は mh_rhythm_best_v1 へ。
+          // 書くもとは、その版の保存値(画面の records は別の版のことがあるので、演奏中に切り替えの時刻をまたいでも混ざらないように合わせ直す)
+          const bestVersion=result?.scoreVersion===2?2:1;
+          const storedBest=(await loadRhythmBestRecordsOf(bestVersion))?.[rhythmPlay.song.songId]?.[rhythmPlay.difficulty.id];
+          const records=await saveRhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id,mergeRhythmBestRecord(storedBest,result),bestVersion);setRhythmBestRecords(records);
           // HELL が初めて開いたか(その曲の MASTER を初めてクリア・2026-10-12 案A)。公開の印が偽なら譜面が無いので、ここは何もしない。
           // お話をまだ見ていなければ RHYTHM_HELL_STORY_TRIGGER のとおりに流す。開く条件そのものは rhythmDifficultyUnlocked(記録から数える)
           if(rhythmPlay.from==='demo'&&typeof rhythmHellOpen==='function'&&rhythmHellOpen()&&rhythmChartPlayable(rhythmPlay.song,'HELL')

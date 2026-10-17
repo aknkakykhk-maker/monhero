@@ -32,7 +32,7 @@ check('壊れたノーツでは出さない',api.rhythmHoldTickTimes({timeMs:5,e
 
 // 数え方は変えない(判定に使う checkpointPassed はそのまま・印だけ足す)
 const ev=grab('  const evaluateCheckpoints=(session,perf)=>{','\n  const tick=()=>{');
-check('落とした線では印を付けない(スライド)',/if\(session\.trackingBadSincePerf==null\|\|perf-session\.trackingBadSincePerf<graceMs\)\{session\.checkpointPassed\+\+;markTick\(session\.note\);\}/.test(ev));
+check('落とした線では印を付けない(スライド)',/if\(session\.trackingBadSincePerf==null\|\|perf-session\.trackingBadSincePerf<graceMs\)\{session\.checkpointPassed\+\+;markLine\(session\.note\);\}/.test(ev));
 check('外れているあいだは印を付けない(ホールド)',/if\(session\.trackingBadSincePerf==null\)markTick\(session\.note\);/.test(ev)&&/session\.failed\|\|/.test(ev));
 check('ホールドの印は判定に使う数(checkpointPassed)を動かさない',!/session\.kind==='HOLD'[\s\S]{0,400}checkpointPassed/.test(ev));
 check('印を増やすのは evaluateCheckpoints だけ',(data.match(/_rhythmTicks=/g)||[]).length===1);

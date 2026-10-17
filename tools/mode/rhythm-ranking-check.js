@@ -178,7 +178,7 @@ check('1人1件に絞るときも同じ並べ方を使い、サーバーから�
 const tieDone=(async()=>{
   const at=game.indexOf('const RHYTHM_TIE_PAD = 20;'),end=game.indexOf('const rhythmTieWanted =',at);
   const pick=(name)=>(data.match(new RegExp(`^const ${name}=.*$`,'m'))||[''])[0];
-  const make=(reply)=>new Function('fetch',`const SUPABASE_URL='x',SB_HEADERS={},rankingLog=()=>{};\n${pick('rhythmRankingRowPrecise')}\n${at>=0&&end>at?game.slice(at,end):''}\nreturn {rhythmTieFix,asked:()=>_rhythmPreciseUnavailable};`)(reply);
+  const make=(reply)=>new Function('fetch',`const SUPABASE_URL='x',SB_HEADERS={},rankingLog=()=>{},rhythmRankingUrl=(u)=>u;\n${pick('rhythmRankingRowPrecise')}\n${at>=0&&end>at?game.slice(at,end):''}\nreturn {rhythmTieFix,asked:()=>_rhythmPreciseUnavailable};`)(reply);
   const rows=[{identity_key:'a',total_score:900,last_scored_at:'2026-10-14T01:00:00Z'},{identity_key:'b',total_score:900,last_scored_at:'2026-10-14T02:00:00Z'},
     {identity_key:'c',total_score:800,last_scored_at:'2026-10-14T00:00:00Z'},{identity_key:'d',total_score:900,last_scored_at:'2026-10-14T03:00:00Z'}];
   const ok=async(body)=>({ok:true,status:200,text:async()=>JSON.stringify(body)});
@@ -218,7 +218,7 @@ check('既存モードのランキングキー一覧(RANKING_DIFFICULTY_KEYS)に
 // (ランキングを開くとき、その送信が終わるのを待つため)。呼び出し側の名前は変えていない
 check('送信の呼び出し(submitRhythmRankingScore)を持つ',
   game.includes('const submitRhythmRankingScoreBody = useCallback(async (song, difficulty, result) => {')
-  &&/const submitRhythmRankingScore = useCallback\(\(song, difficulty, result\) => \{\s*const task = submitRhythmRankingScoreBody\(song, difficulty, result\);/.test(game));
+  &&/const submitRhythmRankingScore = useCallback\(\(song, difficulty, result\) => \{[\s\S]{0,1200}?await submitRhythmRankingScoreBody\(song, difficulty, result\);/.test(game));
 check('送信はpersistRankingScoreを再利用し、insertScoreだけモンビー専用に差し替える(送受信の共通の失敗処理は増やさない)',
   /persistRankingScore\(\{\s*row, insertScore: sbInsertRhythmScore,/.test(game));
 check('送信に失敗したときだけ専用キー(mh_rhythm_rank_pending_v1)へ退避する。BEST記録のキーとは別',

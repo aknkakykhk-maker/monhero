@@ -208,6 +208,18 @@ const RHYTHM_NOTE_SPEED_MIN=1;
 const RHYTHM_NOTE_SPEED_MAX=12;
 const RHYTHM_NOTE_SPEED_STEP=.1;
 const RHYTHM_BEST_RECORDS_KEY = 'mh_rhythm_best_v1';
+// 刻みの数え方(2026-10-17・社長の決定)の自己ベスト。物差しが変わるので、今の mh_rhythm_best_v1 は消さず書き換えず、新しいキーに分ける(CLAUDE.md ⑦)。
+// 形は v1 と同じ(normalizeRhythmBestRecords)。切り替えの時刻(RHYTHM_TICK_SWITCH_AT)を過ぎて始めた演奏の記録だけがここへ入る
+const RHYTHM_BEST_RECORDS_V2_KEY = 'mh_rhythm_best_v2';
+// 新しい数え方の記録に、旧の記録の「印」だけを重ねる(点・判定の内訳・最大コンボは新しい記録のまま)。
+//   played・clear … HELL の開放などの条件が、切り替えで閉じないように
+//   fullCombo・allExcellent・allMarvelous … 取った称号は下げない(社長の決定)
+const rhythmBestRecordsWithLegacyMarks = (current,legacy) => {
+  const now=normalizeRhythmBestRecords(current),old=normalizeRhythmBestRecords(legacy);
+  Object.keys(now).forEach(songId=>{Object.keys(now[songId]||{}).forEach(diff=>{const a=now[songId][diff],b=old?.[songId]?.[diff];if(!a||!b||typeof a!=='object'||typeof b!=='object')return;
+    now[songId][diff]={...a,played:a.played||b.played===true,clear:a.clear||b.clear===true,fullCombo:a.fullCombo||b.fullCombo===true,allExcellent:a.allExcellent||b.allExcellent===true,allMarvelous:a.allMarvelous||b.allMarvelous===true};});});
+  return now;
+};
 // 全国ランキングへの送信に失敗したときだけ退避する専用キー(2026-09-04)。
 // 既存のBEST記録(RHYTHM_BEST_RECORDS_KEY)とは別で、自動の再送はしない
 // (端末内に「送れなかった記録が残っている」という手がかりを残すだけ)。
@@ -759,12 +771,27 @@ const rhythmCalculateScore = ({judgments,maxCombo,totalNotes,maxScore}) => {
   const judged=RHYTHM_JUDGMENT_IDS.reduce((sum,id)=>sum+(judgments[id]||0)*rates[id],0);
   return Math.min(maxScore,Math.round((judged/totalNotes*RHYTHM_SCORE_WEIGHTS.judgment+maxCombo/totalNotes*RHYTHM_SCORE_WEIGHTS.combo)*maxScore));
 };
-const rhythmResultAchievements = (judgments,totalNotes) => {
+// 刻みの数え方(2026-10-17・docs/playbot/reports/2026-10-17/combo-tick-v2/PLAN.md)のスコア。今の rhythmCalculateScore は変えない(旧の物差し)。
+//   判定の点 = (ノーツの点の合計 + 刻みの重み × 取った刻みの数) ÷ (ノーツ数 + 刻みの重み × 刻みの数)。刻みは取れば JUST MARVELOUS(1点)・落とせば MISS(0点)
+//   コンボの点 = 最大コンボ ÷ (ノーツ数 + 刻みの数)(刻みも1コンボ)
+//   ノーツも刻みも全部つなげば、どちらも満点(満点は今のまま)
+const RHYTHM_TICK_SCORE_WEIGHT=.5;
+const rhythmCalculateScoreTicks = ({judgments,maxCombo,totalNotes,maxScore,tickJust=0,tickTotal=0}) => {
+  if(!totalNotes) return 0;
+  const ticks=Math.max(0,Number(tickTotal)||0),got=Math.max(0,Math.min(ticks,Number(tickJust)||0));
+  const rates=Object.fromEntries(RHYTHM_JUDGMENTS.map(item=>[item.id,item.scoreRate]));
+  const judged=RHYTHM_JUDGMENT_IDS.reduce((sum,id)=>sum+(judgments[id]||0)*rates[id],0)+RHYTHM_TICK_SCORE_WEIGHT*got;
+  return Math.min(maxScore,Math.round((judged/(totalNotes+RHYTHM_TICK_SCORE_WEIGHT*ticks)*RHYTHM_SCORE_WEIGHTS.judgment+maxCombo/(totalNotes+ticks)*RHYTHM_SCORE_WEIGHTS.combo)*maxScore));
+};
+// tickMiss … 落とした刻みの数(刻みの数え方のとき)。1つでも落とすと FC・AE・AM は付かない(社長の決定「刻みも落とさないことがフルコンボの条件」)。
+//   渡さない呼び出しは0(今までと同じ)。取った称号は記録の側で下げない(mergeRhythmBestRecord は「前に取った or 今回取った」)
+const rhythmResultAchievements = (judgments,totalNotes,tickMiss=0) => {
   const counts=Object.fromEntries(RHYTHM_JUDGMENT_IDS.map(id=>[id,Math.max(0,Number(judgments?.[id])||0)]));
+  const kept=!(Number(tickMiss)>0);
   return {
-    fullCombo:counts.BAD===0&&counts.MISS===0,
-    allExcellent:counts.GREAT===0&&counts.GOOD===0&&counts.BAD===0&&counts.MISS===0,
-    allMarvelous:totalNotes>0&&counts.MARVELOUS===totalNotes,
+    fullCombo:kept&&counts.BAD===0&&counts.MISS===0,
+    allExcellent:kept&&counts.GREAT===0&&counts.GOOD===0&&counts.BAD===0&&counts.MISS===0,
+    allMarvelous:kept&&totalNotes>0&&counts.MARVELOUS===totalNotes,
   };
 };
 // 今回の完走結果を既存BESTへ統合する純粋関数。判定内訳は、そのBESTスコアを
