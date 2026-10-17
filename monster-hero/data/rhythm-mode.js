@@ -30030,14 +30030,27 @@ const RHYTHM_RANKING_SEPARATOR='-';
 // HELL は公開の印(RELEASE_FLAGS.rhythmHell)が真のときだけ(デバッグの「印が真だったら」では入れない=送らない)
 const rhythmScoredDifficultyIds=()=>(typeof rhythmHellReleased==='function'&&rhythmHellReleased())?[...RHYTHM_DEMO_DIFFICULTY_IDS,...RHYTHM_EXTRA_DIFFICULTIES.map(d=>d.id)]:RHYTHM_DEMO_DIFFICULTY_IDS;
 const rhythmScoredDifficulty=difficultyId=>rhythmScoredDifficultyIds().includes(difficultyId);
-const rhythmRankingDifficultyKey=(songId,difficultyId)=>{
+// ===== ランキングの物差しの版(2026-10-17・刻みの数え方。docs/playbot/reports/2026-10-17/combo-tick-v2/PLAN.md) =====
+// 刻みの数え方の記録は、同じ rankings 表へ Rhythm-<songId>-<難易度id>-2(4つ区切り)で入れる。
+// 今の見方(rhythm_scores など)は3つ区切りだけを数えるので、新しい記録は今の順位(旧の物差し)に一切混ざらない。
+// 新しい物差しの順位は、データベースに足す rhythm2_*(見方・関数)が4つ区切りの '-2' だけを数える。表・列・既存の見方は変えない(CLAUDE.md ⑦)。
+// 古い版のアプリは今までどおり3つ区切りで送るので、旧の物差しに入る。
+// 見る版: 切り替えの時刻を過ぎたら新しい物差し(2)。画面の「旧記録」で今までの順位(1)も見られる(RHYTHM_RANKING_VIEW.legacy)
+const RHYTHM_RANKING_VERSION_TAG='2';
+const RHYTHM_RANKING_VIEW={legacy:false};
+const rhythmRankingViewVersion=()=>!RHYTHM_RANKING_VIEW.legacy&&typeof rhythmTickRulesReleased==='function'&&rhythmTickRulesReleased()?2:1;
+// データベースの見方・関数の名前を、見る版に合わせる(rhythm_total_rankings → rhythm2_total_rankings など)
+const rhythmRankingDbName=name=>rhythmRankingViewVersion()===2?String(name).replace(/^rhythm_/,'rhythm2_'):String(name);
+const rhythmRankingDifficultyKey=(songId,difficultyId,version=rhythmRankingViewVersion())=>{
   if(!songId||!rhythmScoredDifficulty(difficultyId))return null;
-  return `${RHYTHM_RANKING_PREFIX}${RHYTHM_RANKING_SEPARATOR}${songId}${RHYTHM_RANKING_SEPARATOR}${difficultyId}`;
+  const base=`${RHYTHM_RANKING_PREFIX}${RHYTHM_RANKING_SEPARATOR}${songId}${RHYTHM_RANKING_SEPARATOR}${difficultyId}`;
+  return version===2?`${base}${RHYTHM_RANKING_SEPARATOR}${RHYTHM_RANKING_VERSION_TAG}`:base;
 };
 // ランキングキーから曲と難易度へ戻す。知らない形式や難易度はnull(既存キーとして扱わない)
 const parseRhythmRankingDifficultyKey=(key)=>{
   const parts=String(key??'').trim().split(RHYTHM_RANKING_SEPARATOR);
-  if(parts.length!==3||parts[0]!==RHYTHM_RANKING_PREFIX)return null;
+  // 4つ区切りは刻みの数え方の記録(末尾が '2' のものだけ)
+  if(!(parts.length===3||(parts.length===4&&parts[3]===RHYTHM_RANKING_VERSION_TAG))||parts[0]!==RHYTHM_RANKING_PREFIX)return null;
   const [,songId,difficultyId]=parts;
   // 読むほうは HELL の行も受ける(公開前は送らないので、行は無い)
   if(!songId||!RHYTHM_PLAY_DIFFICULTIES.some(d=>d.id===difficultyId))return null;

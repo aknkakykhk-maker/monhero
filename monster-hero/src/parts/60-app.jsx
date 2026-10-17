@@ -3350,10 +3350,15 @@ function MonsterHeroGame() {
   // (通常バトルのdebugBattleRefガードと同じ考え方)。失敗してもBEST記録(mh_rhythm_best_v1)
   // には影響しない、副作用だけの追加送信として扱う
   const submitRhythmRankingScoreBody = useCallback(async (song, difficulty, result) => {
-    const difficultyKey = rhythmRankingDifficultyKey(song?.songId, difficulty?.id);
+    // 刻みの数え方の記録(scoreVersion 2)は新しい物差しの鍵(…-2)へ。切り替えの時刻より前(確認待ちの試作で遊んだ記録)は送らない
+    const scoreVersion = result?.scoreVersion === 2 ? 2 : 1;
+    if (scoreVersion === 2 && !(typeof rhythmTickRulesReleased === 'function' && rhythmTickRulesReleased())) return;
+    const difficultyKey = rhythmRankingDifficultyKey(song?.songId, difficulty?.id, scoreVersion);
     if (!difficultyKey) return;
     const detail = {
       songId: song.songId, difficultyId: difficulty.id,
+      // 刻みの数(新しい物差しのときだけ。判定の内訳 judgments・precise はノーツだけ)
+      ...(scoreVersion === 2 ? { scoreVersion: 2, tickTotal: Math.max(0, Math.floor(Number(result.tickTotal) || 0)), tickJust: Math.max(0, Math.floor(Number(result.tickJust) || 0)), tickMiss: Math.max(0, Math.floor(Number(result.tickMiss) || 0)) } : {}),
       judgments: result.judgments, maxCombo: result.maxCombo, fast: result.fast, slow: result.slow,
       // ぴったりのMARVELOUSの回数(2026-09-13・ユーザー依頼「ランキングからのスコア詳細では
       // JUST Marvelousも見れるようにして」)。party はJSONの列なので**項目を足すだけ**で済み、

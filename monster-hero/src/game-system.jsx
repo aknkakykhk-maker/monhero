@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 808c7c540b1e7e0a
+// generated-sha256: 282c6f73ae9a124b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-17 14:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-17 14:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -17151,7 +17151,7 @@ const RHYTHM_TOTAL_RANKING_DISPLAY_LIMIT = 50;
 const rhythmTotalRankingMissing = (status, body) => {
   if (status !== 404 && status !== 400) return false;
   const text = String(body || '');
-  if (!/rhythm_total_rankings/i.test(text)) return false;
+  if (!/rhythm2?_total_rankings/i.test(text)) return false;
   return /PGRST205|PGRST200|42P01|does not exist|Could not find the/i.test(text);
 };
 const sbFetchRhythmTotalRankingsRaw = async ({ limit=RHYTHM_TOTAL_RANKING_DISPLAY_LIMIT, identityKeys=null, requestId='untracked' } = {}) => {
@@ -17161,9 +17161,9 @@ const sbFetchRhythmTotalRankingsRaw = async ({ limit=RHYTHM_TOTAL_RANKING_DISPLA
     ? `&identity_key=in.(${identityKeys.map(k=>encodeURIComponent(`"${k}"`)).join(',')})`
     : '';
   const select = rankingSelectWithProfileFrame(RHYTHM_TOTAL_RANKING_SELECT);
-  const url = `${SUPABASE_URL}/rest/v1/rhythm_total_rankings?select=${select}`
+  const url = `${SUPABASE_URL}/rest/v1/${rhythmRankingDbName('rhythm_total_rankings')}?select=${select}`
     + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`;
-  rankingLog(requestId, 'rhythm-total-request-start', { limit, identityKeys, url, view: 'rhythm_total_rankings' });
+  rankingLog(requestId, 'rhythm-total-request-start', { limit, identityKeys, url, view: rhythmRankingDbName('rhythm_total_rankings') });
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
   try {
@@ -17261,7 +17261,7 @@ const RHYTHM_EVENT_TOTAL_BONUS_SELECT = `${RHYTHM_EVENT_TOTAL_BONUS_SELECT_BASE}
 const rhythmEventRankingMissing = (status, body) => {
   if (status !== 404 && status !== 400) return false;
   const text = String(body || '');
-  if (!/rhythm_week_window|rhythm_week_score_totals|rhythm_event_song_bests|rhythm_event_totals/i.test(text)) return false;
+  if (!/rhythm_week_window|rhythm2?_week_score_totals|rhythm2?_event_song_bests|rhythm2?_event_totals/i.test(text)) return false;
   return /PGRST202|PGRST205|PGRST200|42P01|42883|does not exist|Could not find the/i.test(text);
 };
 // 「party という列は無い」という応答かどうか(SQL未適用の環境)。
@@ -17369,7 +17369,7 @@ const sbFetchRhythmEventSongBestsRaw = async ({ songId, fromMs, toMs, bonusRates
     : '';
   const body = { song_ids: [songId], from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() };
   const askRaw = (select) => sbFetchRhythmEventRows({
-    url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_song_bests?select=${select}`
+    url: `${SUPABASE_URL}/rest/v1/rpc/${rhythmRankingDbName('rhythm_event_song_bests')}?select=${select}`
       + `&order=score.desc,scored_at.asc&limit=${limit}${filter}`,
     body, label: 'rhythm-event-song', requestId,
   });
@@ -17378,7 +17378,7 @@ const sbFetchRhythmEventSongBestsRaw = async ({ songId, fromMs, toMs, bonusRates
   // 関数がまだ無い環境では加点なしへ戻す(順位は出る。加点と内訳だけ出ない)
   if (bonusRates) {
     const askBonusRaw = (select) => sbFetchRhythmEventRows({
-      url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_song_bests_bonus?select=${select}`
+      url: `${SUPABASE_URL}/rest/v1/rpc/${rhythmRankingDbName('rhythm_event_song_bests_bonus')}?select=${select}`
         + `&order=score.desc,scored_at.asc&limit=${limit}${filter}`,
       body: { ...body, bonus_rates: bonusRates }, label: 'rhythm-event-song-bonus', requestId,
     });
@@ -17417,7 +17417,7 @@ const sbFetchRhythmEventTotalsRaw = async ({ songIds, fromMs, toMs, bonusRates =
   // 曲の部門と同じく、加点込みの関数を先に試して、無ければ加点なしへ戻す
   if (bonusRates) {
     const askBonusRaw = (select) => sbFetchRhythmEventRows({
-      url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_totals_bonus?select=${select}`
+      url: `${SUPABASE_URL}/rest/v1/rpc/${rhythmRankingDbName('rhythm_event_totals_bonus')}?select=${select}`
         + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
       body: { ...body, bonus_rates: bonusRates }, label: 'rhythm-event-total-bonus', requestId,
     });
@@ -17434,7 +17434,7 @@ const sbFetchRhythmEventTotalsRaw = async ({ songIds, fromMs, toMs, bonusRates =
     }
   }
   return askWithProfileFrame((select) => sbFetchRhythmEventRows({
-    url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_totals?select=${select}`
+    url: `${SUPABASE_URL}/rest/v1/rpc/${rhythmRankingDbName('rhythm_event_totals')}?select=${select}`
       + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
     body, label: 'rhythm-event-total', requestId,
   }), RHYTHM_EVENT_TOTAL_SELECT);
@@ -17471,7 +17471,7 @@ const sbFetchRhythmWeekTotalsRaw = async ({ fromMs, toMs, limit = RHYTHM_EVENT_R
     ? `&identity_key=in.(${identityKeys.map(k => encodeURIComponent(`"${k}"`)).join(',')})`
     : '';
   return askWithProfileFrame((select) => sbFetchRhythmEventRows({
-    url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_week_score_totals?select=${select}`
+    url: `${SUPABASE_URL}/rest/v1/rpc/${rhythmRankingDbName('rhythm_week_score_totals')}?select=${select}`
       + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
     body: { from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() },
     label: 'rhythm-week-total', requestId,
@@ -17491,7 +17491,7 @@ const sbFetchRhythmPreciseMap = async ({ fn, body, identityKeys, requestId }) =>
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}?select=identity_key,total_precise`, {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${rhythmRankingDbName(fn)}?select=identity_key,total_precise`, {
       method: 'POST', headers: SB_HEADERS, body: JSON.stringify({ ...(body || {}), identity_keys: identityKeys }), signal: controller.signal,
     });
     const text = await res.text();
@@ -51105,10 +51105,15 @@ function MonsterHeroGame() {
   // (通常バトルのdebugBattleRefガードと同じ考え方)。失敗してもBEST記録(mh_rhythm_best_v1)
   // には影響しない、副作用だけの追加送信として扱う
   const submitRhythmRankingScoreBody = useCallback(async (song, difficulty, result) => {
-    const difficultyKey = rhythmRankingDifficultyKey(song?.songId, difficulty?.id);
+    // 刻みの数え方の記録(scoreVersion 2)は新しい物差しの鍵(…-2)へ。切り替えの時刻より前(確認待ちの試作で遊んだ記録)は送らない
+    const scoreVersion = result?.scoreVersion === 2 ? 2 : 1;
+    if (scoreVersion === 2 && !(typeof rhythmTickRulesReleased === 'function' && rhythmTickRulesReleased())) return;
+    const difficultyKey = rhythmRankingDifficultyKey(song?.songId, difficulty?.id, scoreVersion);
     if (!difficultyKey) return;
     const detail = {
       songId: song.songId, difficultyId: difficulty.id,
+      // 刻みの数(新しい物差しのときだけ。判定の内訳 judgments・precise はノーツだけ)
+      ...(scoreVersion === 2 ? { scoreVersion: 2, tickTotal: Math.max(0, Math.floor(Number(result.tickTotal) || 0)), tickJust: Math.max(0, Math.floor(Number(result.tickJust) || 0)), tickMiss: Math.max(0, Math.floor(Number(result.tickMiss) || 0)) } : {}),
       judgments: result.judgments, maxCombo: result.maxCombo, fast: result.fast, slow: result.slow,
       // ぴったりのMARVELOUSの回数(2026-09-13・ユーザー依頼「ランキングからのスコア詳細では
       // JUST Marvelousも見れるようにして」)。party はJSONの列なので**項目を足すだけ**で済み、

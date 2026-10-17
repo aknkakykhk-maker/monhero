@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9fb7a7b3f7700ad2
+// source-sha256: 2e843815f02d3ab7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-17 14:08";
+const BUILD_DATE = "2026-10-17 14:09";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -26957,7 +26957,7 @@ const RHYTHM_TOTAL_RANKING_DISPLAY_LIMIT = 50;
 const rhythmTotalRankingMissing = (status, body) => {
   if (status !== 404 && status !== 400) return false;
   const text = String(body || '');
-  if (!/rhythm_total_rankings/i.test(text)) return false;
+  if (!/rhythm2?_total_rankings/i.test(text)) return false;
   return /PGRST205|PGRST200|42P01|does not exist|Could not find the/i.test(text);
 };
 const sbFetchRhythmTotalRankingsRaw = async ({
@@ -26968,12 +26968,12 @@ const sbFetchRhythmTotalRankingsRaw = async ({
   await ensureBreederProfiles(requestId);
   const filter = Array.isArray(identityKeys) && identityKeys.length ? `&identity_key=in.(${identityKeys.map(k => encodeURIComponent(`"${k}"`)).join(',')})` : '';
   const select = rankingSelectWithProfileFrame(RHYTHM_TOTAL_RANKING_SELECT);
-  const url = `${SUPABASE_URL}/rest/v1/rhythm_total_rankings?select=${select}` + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`;
+  const url = `${SUPABASE_URL}/rest/v1/${rhythmRankingDbName('rhythm_total_rankings')}?select=${select}` + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`;
   rankingLog(requestId, 'rhythm-total-request-start', {
     limit,
     identityKeys,
     url,
-    view: 'rhythm_total_rankings'
+    view: rhythmRankingDbName('rhythm_total_rankings')
   });
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
@@ -27042,7 +27042,7 @@ const RHYTHM_EVENT_TOTAL_BONUS_SELECT = `${RHYTHM_EVENT_TOTAL_BONUS_SELECT_BASE}
 const rhythmEventRankingMissing = (status, body) => {
   if (status !== 404 && status !== 400) return false;
   const text = String(body || '');
-  if (!/rhythm_week_window|rhythm_week_score_totals|rhythm_event_song_bests|rhythm_event_totals/i.test(text)) return false;
+  if (!/rhythm_week_window|rhythm2?_week_score_totals|rhythm2?_event_song_bests|rhythm2?_event_totals/i.test(text)) return false;
   return /PGRST202|PGRST205|PGRST200|42P01|42883|does not exist|Could not find the/i.test(text);
 };
 const rhythmEventDetailColumnMissing = (status, body) => {
@@ -27155,7 +27155,7 @@ const sbFetchRhythmEventSongBestsRaw = async ({
     to_at: new Date(toMs).toISOString()
   };
   const askRaw = select => sbFetchRhythmEventRows({
-    url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_song_bests?select=${select}` + `&order=score.desc,scored_at.asc&limit=${limit}${filter}`,
+    url: `${SUPABASE_URL}/rest/v1/rpc/${rhythmRankingDbName('rhythm_event_song_bests')}?select=${select}` + `&order=score.desc,scored_at.asc&limit=${limit}${filter}`,
     body,
     label: 'rhythm-event-song',
     requestId
@@ -27163,7 +27163,7 @@ const sbFetchRhythmEventSongBestsRaw = async ({
   const ask = select => askWithProfileFrame(askRaw, select);
   if (bonusRates) {
     const askBonusRaw = select => sbFetchRhythmEventRows({
-      url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_song_bests_bonus?select=${select}` + `&order=score.desc,scored_at.asc&limit=${limit}${filter}`,
+      url: `${SUPABASE_URL}/rest/v1/rpc/${rhythmRankingDbName('rhythm_event_song_bests_bonus')}?select=${select}` + `&order=score.desc,scored_at.asc&limit=${limit}${filter}`,
       body: {
         ...body,
         bonus_rates: bonusRates
@@ -27216,7 +27216,7 @@ const sbFetchRhythmEventTotalsRaw = async ({
   };
   if (bonusRates) {
     const askBonusRaw = select => sbFetchRhythmEventRows({
-      url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_totals_bonus?select=${select}` + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
+      url: `${SUPABASE_URL}/rest/v1/rpc/${rhythmRankingDbName('rhythm_event_totals_bonus')}?select=${select}` + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
       body: {
         ...body,
         bonus_rates: bonusRates
@@ -27244,7 +27244,7 @@ const sbFetchRhythmEventTotalsRaw = async ({
     }
   }
   return askWithProfileFrame(select => sbFetchRhythmEventRows({
-    url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_totals?select=${select}` + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
+    url: `${SUPABASE_URL}/rest/v1/rpc/${rhythmRankingDbName('rhythm_event_totals')}?select=${select}` + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
     body,
     label: 'rhythm-event-total',
     requestId
@@ -27283,7 +27283,7 @@ const sbFetchRhythmWeekTotalsRaw = async ({
 }) => {
   const filter = Array.isArray(identityKeys) && identityKeys.length ? `&identity_key=in.(${identityKeys.map(k => encodeURIComponent(`"${k}"`)).join(',')})` : '';
   return askWithProfileFrame(select => sbFetchRhythmEventRows({
-    url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_week_score_totals?select=${select}` + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
+    url: `${SUPABASE_URL}/rest/v1/rpc/${rhythmRankingDbName('rhythm_week_score_totals')}?select=${select}` + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
     body: {
       from_at: new Date(fromMs).toISOString(),
       to_at: new Date(toMs).toISOString()
@@ -27305,7 +27305,7 @@ const sbFetchRhythmPreciseMap = async ({
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}?select=identity_key,total_precise`, {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${rhythmRankingDbName(fn)}?select=identity_key,total_precise`, {
       method: 'POST',
       headers: SB_HEADERS,
       body: JSON.stringify({
@@ -82150,11 +82150,19 @@ function MonsterHeroGame() {
     }
   }, [settleRhythmRankingSubmit]);
   const submitRhythmRankingScoreBody = useCallback(async (song, difficulty, result) => {
-    const difficultyKey = rhythmRankingDifficultyKey(song?.songId, difficulty?.id);
+    const scoreVersion = result?.scoreVersion === 2 ? 2 : 1;
+    if (scoreVersion === 2 && !(typeof rhythmTickRulesReleased === 'function' && rhythmTickRulesReleased())) return;
+    const difficultyKey = rhythmRankingDifficultyKey(song?.songId, difficulty?.id, scoreVersion);
     if (!difficultyKey) return;
     const detail = {
       songId: song.songId,
       difficultyId: difficulty.id,
+      ...(scoreVersion === 2 ? {
+        scoreVersion: 2,
+        tickTotal: Math.max(0, Math.floor(Number(result.tickTotal) || 0)),
+        tickJust: Math.max(0, Math.floor(Number(result.tickJust) || 0)),
+        tickMiss: Math.max(0, Math.floor(Number(result.tickMiss) || 0))
+      } : {}),
       judgments: result.judgments,
       maxCombo: result.maxCombo,
       fast: result.fast,

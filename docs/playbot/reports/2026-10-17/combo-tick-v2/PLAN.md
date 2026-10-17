@@ -32,9 +32,9 @@
 
 ## 区切り
 
-- [ ] 1. 刻みを作る・指の処理・ホールドを切らない・切り替えの時刻
-- [ ] 2. 演奏画面: 判定・コンボ・スコア・FC・結果・いたずら・レイド(+HELL の補正)
-- [ ] 3. 自己ベスト v2・曲えらび/結果の表示(ノーツ数+刻み・旧記録)
-- [ ] 4. Supabase: 送る鍵・読む見方を版で分ける+SQL(足すだけ)を窓口へ
+- [x] 1. 刻みを作る・指の処理・ホールドを切らない・切り替えの時刻(rhythmComboTickTimes・evaluateComboTicks・RHYTHM_TICK_SWITCH_AT)
+- [x] 2. 演奏画面: 判定・コンボ・スコア・FC・結果・いたずら・レイド(+HELL の補正)(comboTicksRef・rhythmCalculateScoreTicks・raidJackRhythmDamageOf)
+- [~] 3. 自己ベスト v2(済: saveRhythmBestRecord の版・loadRhythmBestRecordsNow)・曲えらび/結果の表示(ノーツ数+刻み・旧記録)はまだ
+- [~] 4. Supabase: 送る鍵・読む見方を版で分ける(済: rhythmRankingDifficultyKey の -2・rhythmRankingDbName)+SQL `docs/sql/rankings/RHYTHM_TICK_V2_APPLY(_TEST).sql`(済・窓口へ送る)。旧記録の切り替えボタンはまだ
 - [ ] 5. マルチの版そろえ・遊んだ記録/端末の記録に刻みを入れない確認
 - [ ] 6. 更新履歴・ヘルプ・検査・自動演奏・動画(combo-tick-v2/)
