@@ -3167,11 +3167,13 @@ function MonsterHeroGame() {
       //   9/07〜9/14の週の途中。どの週も「終わった時点では累計だった」ので、
       //   累計で出すのがそのとき見えていた順位と一致する
       const weeklyTotals = (kind === 'weekly' || (kind === 'history' && historyEntry.kind === 'weekly')) && !targetSongId;
+      // 画面の「旧記録」(2026-10-17)を押しているときは、切り替えより前の記録(今までの物差し)で見る。報酬の計算はここを通らない
+      const legacyView = RHYTHM_RANKING_VIEW.legacy === true;
       const fetchRows = (options) => weeklyTotals
-        ? sbFetchRhythmWeekTotals({ fromMs:range.startMs, toMs:range.endMs, ...options })
+        ? sbFetchRhythmWeekTotals({ fromMs:range.startMs, toMs:range.endMs, legacyView, ...options })
         : targetSongId
-        ? sbFetchRhythmEventSongBests({ songId:targetSongId, fromMs:range.startMs, toMs:range.endMs, bonusRates, ...options })
-        : sbFetchRhythmEventTotals({ songIds:[...event.songIds], fromMs:range.startMs, toMs:range.endMs, bonusRates, ...options });
+        ? sbFetchRhythmEventSongBests({ songId:targetSongId, fromMs:range.startMs, toMs:range.endMs, bonusRates, legacyView, ...options })
+        : sbFetchRhythmEventTotals({ songIds:[...event.songIds], fromMs:range.startMs, toMs:range.endMs, bonusRates, legacyView, ...options });
       const fromRow = weeklyTotals ? rhythmWeekTotalEntryFromRow
         : targetSongId ? rhythmEventSongEntryFromRow : rhythmEventTotalEntryFromRow;
       const rows = await fetchRows({ requestId:`rhythm-${kind}-${division}-${Date.now()}` });
@@ -3401,18 +3403,7 @@ function MonsterHeroGame() {
     if (!outcome.nationalSaved) scheduleRhythmRankingRetry();
   }, [breederName, breederLevel, breederIcon, profileFrameId, refreshRhythmRankingPending, scheduleRhythmRankingRetry]);
   const submitRhythmRankingScore = useCallback((song, difficulty, result) => {
-    // 刻みの数え方の記録は、切り替えた週の終わり(rhythmTickDualUntilMs)までは、同じ演奏を旧の物差しで数えた記録(result.legacy)も旧の順位へ送る。
-    // 切り替えた週の週間ランキング・報酬は旧の物差しで最後までそろえるため(期間の物差しは rhythmRankingPeriodVersion が始まった時点で決める)
-    const legacy = result && result.scoreVersion === 2 && result.legacy && typeof rhythmTickDualSubmit === 'function' && rhythmTickDualSubmit()
-      && typeof rhythmTickRulesReleased === 'function' && rhythmTickRulesReleased() ? result.legacy : null;
-    const task = (async () => {
-      await submitRhythmRankingScoreBody(song, difficulty, result);
-      if (legacy) {
-        const { scoreVersion, tickTotal, tickJust, tickMiss, legacy: _legacy, ...rest } = result;
-        await submitRhythmRankingScoreBody(song, difficulty, { ...rest, score: legacy.score, maxCombo: legacy.maxCombo,
-          fullCombo: legacy.fullCombo === true, allExcellent: legacy.allExcellent === true, allMarvelous: legacy.allMarvelous === true });
-      }
-    })();
+    const task = submitRhythmRankingScoreBody(song, difficulty, result);
     rhythmRankingSubmitRef.current = task.catch(() => {});
     return task;
   }, [submitRhythmRankingScoreBody]);
