@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6e1cc3b3a2367a96
+// source-sha256: 155d66a2602accdb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-17 09:06";
+const BUILD_DATE = "2026-10-17 09:49";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -29271,6 +29271,7 @@ const RhythmOptions = ({
     hit: RHYTHM_HELL_SKY_HIT.id,
     text: RHYTHM_HELL_SKY_TEXT.id,
     lane: RHYTHM_SKY_LANE_LOOK.id,
+    skyNote: RHYTHM_SKY_NOTE_LOOK.id,
     skyLine: RHYTHM_SKY_LINE_OFFSET.pct,
     groundW: RHYTHM_ACCEPT_WIDTH.ground,
     skyW: RHYTHM_ACCEPT_WIDTH.sky,
@@ -29283,6 +29284,7 @@ const RhythmOptions = ({
     RHYTHM_HELL_SKY_HIT.set(hellDraft.hit);
     RHYTHM_HELL_SKY_TEXT.set(hellDraft.text);
     RHYTHM_SKY_LANE_LOOK.set(hellDraft.lane);
+    RHYTHM_SKY_NOTE_LOOK.set(hellDraft.skyNote);
     RHYTHM_SKY_LINE_OFFSET.set(hellDraft.skyLine);
     RHYTHM_ACCEPT_WIDTH.set('ground', hellDraft.groundW);
     RHYTHM_ACCEPT_WIDTH.set('sky', hellDraft.skyW);
@@ -29806,6 +29808,8 @@ const RhythmOptions = ({
   }), field('演奏中は曲名を薄くする', toggle('hudSongFade'), '演奏が始まって4秒たつと、左上の曲名とジャケットを薄くします。目線を道に集めやすくするためです。既定は「ON」です。\nポーズ中は元の濃さに戻ります。スコア・ランク・ライフの表示は薄くなりません。'), field('レーン発光', segments('laneGlow', RHYTHM_LANE_GLOW_LABELS), null, {
     full: true
   }), hellReleased && field('空中の道の見え方', hellSegments('lane', [['em', 'はっきり'], ['el', '控えめ'], ['none', 'なし']]), 'HELL で、空中のノーツが流れてくる空中の道をどれくらいはっきり出すかです。既定は「はっきり」です。「なし」にすると、空中の判定線だけになります。判定・スコアは変わりません。', {
+    full: true
+  }), hellReleased && field('空中のノーツの見た目', hellSegments('skyNote', [['normal', 'いつもの'], ['3d', '立体']]), 'HELL の空中のノーツを、どんな形で描くかです。既定は「いつもの」です。\n「立体」＝空中のタップを光の当たる立体の箱に、空中のスライドを丸い管にして、真下の床に影を落とします。地上のノーツと道はいつもの見た目のままです。\nノーツの位置・判定・色・スコアはどちらでも変わりません。「立体」は描画方式が「WebGL」のとき(「自動」で WebGL になっているときを含む)だけ効き、「Canvas」のときはいつもの見た目で描きます。', {
     full: true
   }))), React.createElement("section", {
     "data-rhythm-options-group": "マスモン",
@@ -78468,15 +78472,6 @@ const DEBUG_TRIALS = [{
   on: 'c3',
   title: '🎵 空中の見た目(案3・明るい板と光の帯)',
   note: '空中のタップを明るく薄い板と光る縁に、空中スライドを白い芯から手の色がにじむ半透明の光の帯にします(参考動画の見やすさに寄せた見た目)。地上と道は今のまま。色・判定は変わりません',
-  when: '次の演奏から'
-}, {
-  id: 'rhythm_floor3d_a3d',
-  added: '2026-10-16',
-  area: 'モンヒロビート',
-  key: 'mh_rhythm_floor3d_proto_v1',
-  on: 'a3d',
-  title: '🎵 空中を本物の3Dで(段階A)',
-  note: '空中のタップを光の当たる立体の箱、空中スライドを丸い管として描き、床に影を落とします。地上と道は今のまま。位置・判定・色は変わりません(ノーツを WebGL で描いているときだけ効きます)',
   when: '次の演奏から'
 }];
 const DEBUG_TRIALS_SEEN_KEY = 'mh_debug_trials_seen_v1';

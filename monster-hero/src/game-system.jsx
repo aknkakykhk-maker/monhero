@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a37a6d18aef4a5e4
+// generated-sha256: db8038b1ae9d3051
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-17 09:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-17 09:49"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -18560,10 +18560,10 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
   // 保存は今あるキー(mh_hell_sky_hit_proto・mh_hell_sky_text_proto・mh_sky_lane_look_proto)をそのまま使い、値の意味も既定も変えない。
   // ほかの設定と同じく「保存」を押したときに書く(画面の上では下書き)
   const hellReleased=typeof rhythmHellReleased==='function'&&rhythmHellReleased();
-  const hellNow=()=>({hit:RHYTHM_HELL_SKY_HIT.id,text:RHYTHM_HELL_SKY_TEXT.id,lane:RHYTHM_SKY_LANE_LOOK.id,skyLine:RHYTHM_SKY_LINE_OFFSET.pct,groundW:RHYTHM_ACCEPT_WIDTH.ground,skyW:RHYTHM_ACCEPT_WIDTH.sky,skyTop:RHYTHM_ACCEPT_WIDTH.skyTop});
+  const hellNow=()=>({hit:RHYTHM_HELL_SKY_HIT.id,text:RHYTHM_HELL_SKY_TEXT.id,lane:RHYTHM_SKY_LANE_LOOK.id,skyNote:RHYTHM_SKY_NOTE_LOOK.id,skyLine:RHYTHM_SKY_LINE_OFFSET.pct,groundW:RHYTHM_ACCEPT_WIDTH.ground,skyW:RHYTHM_ACCEPT_WIDTH.sky,skyTop:RHYTHM_ACCEPT_WIDTH.skyTop});
   const [hellDraft,setHellDraft]=useState(hellNow);
   const [hellSaved,setHellSaved]=useState(hellNow);
-  const saveHell=()=>{if(!hellReleased)return;RHYTHM_HELL_SKY_HIT.set(hellDraft.hit);RHYTHM_HELL_SKY_TEXT.set(hellDraft.text);RHYTHM_SKY_LANE_LOOK.set(hellDraft.lane);RHYTHM_SKY_LINE_OFFSET.set(hellDraft.skyLine);RHYTHM_ACCEPT_WIDTH.set('ground',hellDraft.groundW);RHYTHM_ACCEPT_WIDTH.set('sky',hellDraft.skyW);RHYTHM_ACCEPT_WIDTH.set('skyTop',hellDraft.skyTop);const now=hellNow();setHellDraft(now);setHellSaved(now);};
+  const saveHell=()=>{if(!hellReleased)return;RHYTHM_HELL_SKY_HIT.set(hellDraft.hit);RHYTHM_HELL_SKY_TEXT.set(hellDraft.text);RHYTHM_SKY_LANE_LOOK.set(hellDraft.lane);RHYTHM_SKY_NOTE_LOOK.set(hellDraft.skyNote);RHYTHM_SKY_LINE_OFFSET.set(hellDraft.skyLine);RHYTHM_ACCEPT_WIDTH.set('ground',hellDraft.groundW);RHYTHM_ACCEPT_WIDTH.set('sky',hellDraft.skyW);RHYTHM_ACCEPT_WIDTH.set('skyTop',hellDraft.skyTop);const now=hellNow();setHellDraft(now);setHellSaved(now);};
   const previewRef=useRef(null);
   const scrollRef=useRef(null);
   // 【2026-09-13・ユーザー指摘】縦横ボタンで横にしたオプション画面のスクリーンショット。
@@ -18842,6 +18842,9 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
 {field('レーン発光',segments('laneGlow',RHYTHM_LANE_GLOW_LABELS),null,{full:true})}
 {hellReleased&&field('空中の道の見え方',hellSegments('lane',[['em','はっきり'],['el','控えめ'],['none','なし']]),
   'HELL で、空中のノーツが流れてくる空中の道をどれくらいはっきり出すかです。既定は「はっきり」です。「なし」にすると、空中の判定線だけになります。判定・スコアは変わりません。',{full:true})}
+{/* 空中のノーツの見た目(2026-10-17 社長「空中を本物の3D(段階A)が1番見やすかった。これと今のを設定で選べるようにする」)。既定は「いつもの」 */}
+{hellReleased&&field('空中のノーツの見た目',hellSegments('skyNote',[['normal','いつもの'],['3d','立体']]),
+  'HELL の空中のノーツを、どんな形で描くかです。既定は「いつもの」です。\n「立体」＝空中のタップを光の当たる立体の箱に、空中のスライドを丸い管にして、真下の床に影を落とします。地上のノーツと道はいつもの見た目のままです。\nノーツの位置・判定・色・スコアはどちらでも変わりません。「立体」は描画方式が「WebGL」のとき(「自動」で WebGL になっているときを含む)だけ効き、「Canvas」のときはいつもの見た目で描きます。',{full:true})}
 </div>
 </section>
 <section data-rhythm-options-group="マスモン" className={card}>
@@ -47602,11 +47605,7 @@ const DEBUG_TRIALS = [
     title: '🎵 空中の見た目(案3・明るい板と光の帯)',
     note: '空中のタップを明るく薄い板と光る縁に、空中スライドを白い芯から手の色がにじむ半透明の光の帯にします(参考動画の見やすさに寄せた見た目)。地上と道は今のまま。色・判定は変わりません',
     when: '次の演奏から' },
-  // 段階A(2026-10-16 社長「すぐ段階Aを始める」・docs/playbot/reports/2026-10-16/floor3d-estimate.md)。同じキーの値 a3d
-  { id: 'rhythm_floor3d_a3d', added: '2026-10-16', area: 'モンヒロビート', key: 'mh_rhythm_floor3d_proto_v1', on: 'a3d',
-    title: '🎵 空中を本物の3Dで(段階A)',
-    note: '空中のタップを光の当たる立体の箱、空中スライドを丸い管として描き、床に影を落とします。地上と道は今のまま。位置・判定・色は変わりません(ノーツを WebGL で描いているときだけ効きます)',
-    when: '次の演奏から' },
+  // 段階A(値 a3d)は 2026-10-17 に普通の設定「空中のノーツの見た目」へ移した(RHYTHM_SKY_NOTE_LOOK)ので、ここから外した
 ];
 const DEBUG_TRIALS_SEEN_KEY = 'mh_debug_trials_seen_v1';
 const debugTrialRead = (trial) => { try { return typeof localStorage !== 'undefined' && localStorage.getItem(trial.key) === trial.on; } catch (e) { return false; } };

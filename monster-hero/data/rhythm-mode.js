@@ -31568,6 +31568,16 @@ const rhythmFloor3dPreference=()=>{try{if(typeof localStorage==='undefined')retu
 // 案3の2段目(カメラを寝かせる)を使うか。演奏画面が RHYTHM_PROJECTION_CAMERA へ入れる
 const rhythmCameraDeepActive=()=>rhythmFloor3dPreference()==='c3b';
 const rhythmFloor3dSetPreference=value=>{const next=value==='on'||value==='on2'||value==='on3'||value==='a3d'||value==='c3'||value==='c3b'?value:'';try{if(typeof localStorage!=='undefined'){if(next)localStorage.setItem(RHYTHM_FLOOR3D_KEY,next);else localStorage.removeItem(RHYTHM_FLOOR3D_KEY);}}catch{}return next;};
+// 空中のノーツの見た目(2026-10-17 社長「空中を本物の3D(段階A)が1番見やすかった。これと今のを設定で選べるようにする」)。
+// 普通の設定(演奏の設定 → 表示)で「いつもの」「立体」から選ぶ。保存は新しいキー mh_rhythm_sky_note_look_v1('3d' のときだけ置く・既定「いつもの」はキーを消す)。
+// 古い値・壊れた値は「いつもの」。キーが無く、段階Aの試作(mh_rhythm_floor3d_proto_v1='a3d')を入れていた端末は「立体」のまま見せる。
+// 選び直したときは段階Aの試作の値を消す(試作の一覧から外したので、残っていると「いつもの」に戻せないため。ほかの試作の値は触らない)
+const RHYTHM_SKY_NOTE_LOOK_KEY='mh_rhythm_sky_note_look_v1';
+const RHYTHM_SKY_NOTE_LOOK_LABELS=Object.freeze({normal:'いつもの','3d':'立体'});
+const RHYTHM_SKY_NOTE_LOOK={
+  get id(){try{if(typeof localStorage==='undefined')return 'normal';const v=localStorage.getItem(RHYTHM_SKY_NOTE_LOOK_KEY);if(v==='3d'||v==='normal')return v;if(v==null&&rhythmFloor3dPreference()==='a3d')return '3d';return 'normal';}catch{return 'normal';}},
+  set(id){const v=id==='3d'?'3d':'normal';try{if(typeof localStorage!=='undefined'){if(v==='3d')localStorage.setItem(RHYTHM_SKY_NOTE_LOOK_KEY,v);else localStorage.removeItem(RHYTHM_SKY_NOTE_LOOK_KEY);if(rhythmFloor3dPreference()==='a3d')rhythmFloor3dSetPreference('');}}catch{}return v;},
+};
 const RHYTHM_GPU_BAND_KEY='mh_rhythm_gpu_band_v1';
 // 2026-10-11 社長の決定で、ノーツを WebGL で描いているときは GPU の帯・区切りの線・ノーツの板を既定で使う(本番の記録 stats.frame で前後を比べる)。
 // 値: 'gpu' = 使う(ノーツも WebGL で描く)・'off' = 使わない(今までの WebGL の描き方)・未設定 = 既定(WebGL のときは使う)。
@@ -33125,7 +33135,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     if(!quads||!quads.length)return;
     // 空中の段(試作): 高さのあるスライドの床の影。高さがある所ほど濃い暗い帯(高さ=帯と影の離れ方が見える)
     quads.forEach(q=>{const a=Math.max(0,Math.min(1,(Number(q.sky)||0)*1.4));if(a<=.02)return;
-      ctx.globalAlpha=opts.alpha*(floor3d3||sky3dWanted?.5+.4*a:floor3d2?.35+.4*a:skyZOn()?.18+.22*a:.25+.45*a);ctx.fillStyle='rgba(2,0,10,.85)';
+      ctx.globalAlpha=opts.alpha*(floor3d3||(sky3dWanted&&backend==='webgl')?.5+.4*a:floor3d2?.35+.4*a:skyZOn()?.18+.22*a:.25+.45*a);ctx.fillStyle='rgba(2,0,10,.85)';
       ctx.beginPath();ctx.moveTo(q.l0,q.y0);ctx.lineTo(q.r0,q.y0);ctx.lineTo(q.r1,q.y1);ctx.lineTo(q.l1,q.y1);ctx.closePath();ctx.fill();});
     ctx.globalAlpha=1;
   };
@@ -34264,7 +34274,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   return {
     // options.webgl … 検証用。WebGL の描き込み先(rhythmCreateGL2D)で描く。作れなければ今までどおり 2D で描く
     // options.gpuBand … スライドの帯を GPU に置いて描く(WebGL のときだけ。作れなければ今までどおり CPU で刻む)
-    attach(next,options={}){{const f=rhythmFloor3dPreference();floor3d=f==='on'||f==='on2'||f==='on3';floor3d2=f==='on2';floor3d3=f==='on3';sky3dWanted=f==='a3d';case3=f==='c3'||f==='c3b';skySeen=false;}sparkSprites=rhythmHitSparkActive();canvas=next||null;backend='2d';ctx=null;gpuBandWanted=!!options.gpuBand&&!floor3d2&&!floor3d3&&!sky3dWanted;hitArea=null;skyHitArea=null;hitSlots.fill(null);pendingClear=false;blank=true;if(canvas&&options.webgl){ctx=rhythmCreateGL2D(canvas);if(ctx)backend='webgl';}if(canvas&&!ctx){try{ctx=canvas.getContext('2d');}catch(e){ctx=null;}}
+    attach(next,options={}){{const f=rhythmFloor3dPreference();floor3d=f==='on'||f==='on2'||f==='on3';floor3d2=f==='on2';floor3d3=f==='on3';sky3dWanted=f&&f!=='a3d'?false:RHYTHM_SKY_NOTE_LOOK.id==='3d';case3=f==='c3'||f==='c3b';skySeen=false;}sparkSprites=rhythmHitSparkActive();canvas=next||null;backend='2d';ctx=null;gpuBandWanted=!!options.gpuBand&&!floor3d2&&!floor3d3&&!sky3dWanted;hitArea=null;skyHitArea=null;hitSlots.fill(null);pendingClear=false;blank=true;if(canvas&&options.webgl){ctx=rhythmCreateGL2D(canvas);if(ctx)backend='webgl';}if(canvas&&!ctx){try{ctx=canvas.getContext('2d');}catch(e){ctx=null;}}
       // 段階A: 3Dの部品(シェーダー)は演奏前のここで作っておく(曲の最初のコマで組み立てない)
       if(sky3dWanted&&backend==='webgl'&&ctx)void ctx.sky3d;},
     get backend(){return backend;},
