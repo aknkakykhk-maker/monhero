@@ -30039,8 +30039,16 @@ const rhythmScoredDifficulty=difficultyId=>rhythmScoredDifficultyIds().includes(
 const RHYTHM_RANKING_VERSION_TAG='2';
 const RHYTHM_RANKING_VIEW={legacy:false};
 const rhythmRankingViewVersion=()=>!RHYTHM_RANKING_VIEW.legacy&&typeof rhythmTickRulesReleased==='function'&&rhythmTickRulesReleased()?2:1;
-// データベースの見方・関数の名前を、見る版に合わせる(rhythm_total_rankings → rhythm2_total_rankings など)
-const rhythmRankingDbName=name=>rhythmRankingViewVersion()===2?String(name).replace(/^rhythm_/,'rhythm2_'):String(name);
+// データベースの見方・関数の名前を、版に合わせる(rhythm_total_rankings → rhythm2_total_rankings など)
+const rhythmRankingDbName=(name,version=rhythmRankingViewVersion())=>version===2?String(name).replace(/^rhythm_/,'rhythm2_'):String(name);
+// 期間(週間・イベント)の物差しは、その期間が始まった時点の版で決める(週の途中で切り替えても、その週は旧の物差しのまま数える)
+const rhythmRankingPeriodVersion=fromMs=>{const sw=Date.parse(RHYTHM_TICK_SWITCH_AT);return Number.isFinite(Number(fromMs))&&Number(fromMs)>=sw?2:1;};
+// 切り替えた週の終わり(切り替えの時刻の次の月曜 5:00 JST)。それまでは新しい版のアプリも、旧の物差しの記録を一緒に送る
+// (切り替えた週の週間ランキング・報酬が、旧の物差しで最後までそろうように)
+const rhythmTickDualUntilMs=()=>{const sw=Date.parse(RHYTHM_TICK_SWITCH_AT),jst=sw+9*3600000,d=new Date(jst),dayMs=86400000;
+  const base=Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate())+5*3600000;// その日の 5:00(JST を UTC の数字で持つ)
+  const dow=new Date(base).getUTCDay();let next=base+((8-dow)%7)*dayMs;if(next<=jst)next+=7*dayMs;return next-9*3600000;};
+const rhythmTickDualSubmit=(nowMs=Date.now())=>Number(nowMs)<rhythmTickDualUntilMs();
 const rhythmRankingDifficultyKey=(songId,difficultyId,version=rhythmRankingViewVersion())=>{
   if(!songId||!rhythmScoredDifficulty(difficultyId))return null;
   const base=`${RHYTHM_RANKING_PREFIX}${RHYTHM_RANKING_SEPARATOR}${songId}${RHYTHM_RANKING_SEPARATOR}${difficultyId}`;

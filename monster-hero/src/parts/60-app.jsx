@@ -3401,7 +3401,18 @@ function MonsterHeroGame() {
     if (!outcome.nationalSaved) scheduleRhythmRankingRetry();
   }, [breederName, breederLevel, breederIcon, profileFrameId, refreshRhythmRankingPending, scheduleRhythmRankingRetry]);
   const submitRhythmRankingScore = useCallback((song, difficulty, result) => {
-    const task = submitRhythmRankingScoreBody(song, difficulty, result);
+    // 刻みの数え方の記録は、切り替えた週の終わり(rhythmTickDualUntilMs)までは、同じ演奏を旧の物差しで数えた記録(result.legacy)も旧の順位へ送る。
+    // 切り替えた週の週間ランキング・報酬は旧の物差しで最後までそろえるため(期間の物差しは rhythmRankingPeriodVersion が始まった時点で決める)
+    const legacy = result && result.scoreVersion === 2 && result.legacy && typeof rhythmTickDualSubmit === 'function' && rhythmTickDualSubmit()
+      && typeof rhythmTickRulesReleased === 'function' && rhythmTickRulesReleased() ? result.legacy : null;
+    const task = (async () => {
+      await submitRhythmRankingScoreBody(song, difficulty, result);
+      if (legacy) {
+        const { scoreVersion, tickTotal, tickJust, tickMiss, legacy: _legacy, ...rest } = result;
+        await submitRhythmRankingScoreBody(song, difficulty, { ...rest, score: legacy.score, maxCombo: legacy.maxCombo,
+          fullCombo: legacy.fullCombo === true, allExcellent: legacy.allExcellent === true, allMarvelous: legacy.allMarvelous === true });
+      }
+    })();
     rhythmRankingSubmitRef.current = task.catch(() => {});
     return task;
   }, [submitRhythmRankingScoreBody]);

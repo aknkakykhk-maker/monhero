@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2e843815f02d3ab7
+// source-sha256: de3d6b3b4c917b01
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-17 14:09";
+const BUILD_DATE = "2026-10-17 14:14";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -27155,7 +27155,7 @@ const sbFetchRhythmEventSongBestsRaw = async ({
     to_at: new Date(toMs).toISOString()
   };
   const askRaw = select => sbFetchRhythmEventRows({
-    url: `${SUPABASE_URL}/rest/v1/rpc/${rhythmRankingDbName('rhythm_event_song_bests')}?select=${select}` + `&order=score.desc,scored_at.asc&limit=${limit}${filter}`,
+    url: `${SUPABASE_URL}/rest/v1/rpc/${rhythmRankingDbName('rhythm_event_song_bests', rhythmRankingPeriodVersion(fromMs))}?select=${select}` + `&order=score.desc,scored_at.asc&limit=${limit}${filter}`,
     body,
     label: 'rhythm-event-song',
     requestId
@@ -27163,7 +27163,7 @@ const sbFetchRhythmEventSongBestsRaw = async ({
   const ask = select => askWithProfileFrame(askRaw, select);
   if (bonusRates) {
     const askBonusRaw = select => sbFetchRhythmEventRows({
-      url: `${SUPABASE_URL}/rest/v1/rpc/${rhythmRankingDbName('rhythm_event_song_bests_bonus')}?select=${select}` + `&order=score.desc,scored_at.asc&limit=${limit}${filter}`,
+      url: `${SUPABASE_URL}/rest/v1/rpc/${rhythmRankingDbName('rhythm_event_song_bests_bonus', rhythmRankingPeriodVersion(fromMs))}?select=${select}` + `&order=score.desc,scored_at.asc&limit=${limit}${filter}`,
       body: {
         ...body,
         bonus_rates: bonusRates
@@ -27216,7 +27216,7 @@ const sbFetchRhythmEventTotalsRaw = async ({
   };
   if (bonusRates) {
     const askBonusRaw = select => sbFetchRhythmEventRows({
-      url: `${SUPABASE_URL}/rest/v1/rpc/${rhythmRankingDbName('rhythm_event_totals_bonus')}?select=${select}` + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
+      url: `${SUPABASE_URL}/rest/v1/rpc/${rhythmRankingDbName('rhythm_event_totals_bonus', rhythmRankingPeriodVersion(fromMs))}?select=${select}` + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
       body: {
         ...body,
         bonus_rates: bonusRates
@@ -27244,7 +27244,7 @@ const sbFetchRhythmEventTotalsRaw = async ({
     }
   }
   return askWithProfileFrame(select => sbFetchRhythmEventRows({
-    url: `${SUPABASE_URL}/rest/v1/rpc/${rhythmRankingDbName('rhythm_event_totals')}?select=${select}` + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
+    url: `${SUPABASE_URL}/rest/v1/rpc/${rhythmRankingDbName('rhythm_event_totals', rhythmRankingPeriodVersion(fromMs))}?select=${select}` + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
     body,
     label: 'rhythm-event-total',
     requestId
@@ -27283,7 +27283,7 @@ const sbFetchRhythmWeekTotalsRaw = async ({
 }) => {
   const filter = Array.isArray(identityKeys) && identityKeys.length ? `&identity_key=in.(${identityKeys.map(k => encodeURIComponent(`"${k}"`)).join(',')})` : '';
   return askWithProfileFrame(select => sbFetchRhythmEventRows({
-    url: `${SUPABASE_URL}/rest/v1/rpc/${rhythmRankingDbName('rhythm_week_score_totals')}?select=${select}` + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
+    url: `${SUPABASE_URL}/rest/v1/rpc/${rhythmRankingDbName('rhythm_week_score_totals', rhythmRankingPeriodVersion(fromMs))}?select=${select}` + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
     body: {
       from_at: new Date(fromMs).toISOString(),
       to_at: new Date(toMs).toISOString()
@@ -27299,13 +27299,14 @@ const sbFetchRhythmPreciseMap = async ({
   fn,
   body,
   identityKeys,
-  requestId
+  requestId,
+  version
 }) => {
   if (_rhythmPreciseUnavailable || !identityKeys.length) return null;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${rhythmRankingDbName(fn)}?select=identity_key,total_precise`, {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${rhythmRankingDbName(fn, version)}?select=identity_key,total_precise`, {
       method: 'POST',
       headers: SB_HEADERS,
       body: JSON.stringify({
@@ -27358,7 +27359,8 @@ const rhythmTieFix = async ({
   timeKey,
   fn = null,
   body = null,
-  requestId
+  requestId,
+  version = undefined
 }) => {
   const list = Array.isArray(rows) ? rows : [];
   if (list.length < 2) return list.slice(0, limit);
@@ -27372,7 +27374,8 @@ const rhythmTieFix = async ({
       fn,
       body,
       identityKeys: keys,
-      requestId
+      requestId,
+      version
     });
     if (!map) return list.slice(0, limit);
     preciseOf = row => map.get(row?.identity_key) || 0;
@@ -27429,7 +27432,8 @@ const sbFetchRhythmWeekTotals = async (options = {}) => {
       from_at: new Date(fromMs).toISOString(),
       to_at: new Date(toMs).toISOString()
     },
-    requestId
+    requestId,
+    version: rhythmRankingPeriodVersion(fromMs)
   });
 };
 const sbFetchRhythmEventTotals = async (options = {}) => {
@@ -27457,7 +27461,8 @@ const sbFetchRhythmEventTotals = async (options = {}) => {
       from_at: new Date(fromMs).toISOString(),
       to_at: new Date(toMs).toISOString()
     },
-    requestId
+    requestId,
+    version: rhythmRankingPeriodVersion(fromMs)
   });
 };
 const sbFetchRhythmEventSongBests = async (options = {}) => {
@@ -35279,6 +35284,8 @@ const RhythmTapTest = ({
     }
     run.combo = keptCombo;
     run.maxCombo = Math.max(run.maxCombo, keptCombo);
+    run.noteCombo = keptCombo === 0 ? 0 : nextCombo === 0 ? run.noteCombo || 0 : (run.noteCombo || 0) + 1;
+    run.noteMaxCombo = Math.max(run.noteMaxCombo || 0, run.noteCombo);
     run.counts[judgment]++;
     if (preciseHit) run.precise++;
     const side = judgment === 'MISS' ? null : rhythmFastSlow(deltaMs);
@@ -35352,14 +35359,28 @@ const RhythmTapTest = ({
       totalNotes: chart.totalNotes,
       maxScore: difficulty.maxScore
     }) * (assistOn ? RHYTHM_ASSIST_SCORE_RATE : 1));
-    if (!run.lifeDepleted) run.score = calculatedScore - run.scoreOffset;
+    const legacyScore = run.tickRules ? Math.floor(rhythmCalculateScore({
+      judgments: run.counts,
+      maxCombo: run.noteMaxCombo || 0,
+      totalNotes: chart.totalNotes,
+      maxScore: difficulty.maxScore
+    }) * (assistOn ? RHYTHM_ASSIST_SCORE_RATE : 1)) : null;
+    if (!run.lifeDepleted) {
+      run.score = calculatedScore - run.scoreOffset;
+      if (legacyScore != null) run.legacyScore = legacyScore - (run.legacyOffset || 0);
+    }
     if (!run.lifeDepleted && run.life === 0) {
       run.lifeDepleted = true;
       run.lockedScore = run.score;
+      run.legacyLocked = run.legacyScore;
     }
     if (revived && run.lifeDepleted && run.life > 0) {
       run.scoreOffset = rhythmScoreOffsetAfterRevive(calculatedScore, run.lockedScore);
       run.score = run.lockedScore;
+      if (legacyScore != null) {
+        run.legacyOffset = rhythmScoreOffsetAfterRevive(legacyScore, run.legacyLocked || 0);
+        run.legacyScore = run.legacyLocked || 0;
+      }
       run.lifeDepleted = false;
     }
     const lifeDelta = run.life - lifeBefore;
@@ -35514,7 +35535,12 @@ const RhythmTapTest = ({
         scoreVersion: 2,
         tickTotal: run.tickTotal ?? rhythmComboTickTotal(run.notes),
         tickJust: run.tickJust,
-        tickMiss: run.tickMiss
+        tickMiss: run.tickMiss,
+        legacy: {
+          score: Math.max(0, Math.floor(Number(run.lifeDepleted ? run.legacyLocked : run.legacyScore) || 0)),
+          maxCombo: run.noteMaxCombo || 0,
+          ...rhythmResultAchievements(run.counts, chart.totalNotes)
+        }
       } : {}),
       fast: run.fast,
       slow: run.slow,
@@ -82215,7 +82241,28 @@ function MonsterHeroGame() {
     if (!outcome.nationalSaved) scheduleRhythmRankingRetry();
   }, [breederName, breederLevel, breederIcon, profileFrameId, refreshRhythmRankingPending, scheduleRhythmRankingRetry]);
   const submitRhythmRankingScore = useCallback((song, difficulty, result) => {
-    const task = submitRhythmRankingScoreBody(song, difficulty, result);
+    const legacy = result && result.scoreVersion === 2 && result.legacy && typeof rhythmTickDualSubmit === 'function' && rhythmTickDualSubmit() && typeof rhythmTickRulesReleased === 'function' && rhythmTickRulesReleased() ? result.legacy : null;
+    const task = (async () => {
+      await submitRhythmRankingScoreBody(song, difficulty, result);
+      if (legacy) {
+        const {
+          scoreVersion,
+          tickTotal,
+          tickJust,
+          tickMiss,
+          legacy: _legacy,
+          ...rest
+        } = result;
+        await submitRhythmRankingScoreBody(song, difficulty, {
+          ...rest,
+          score: legacy.score,
+          maxCombo: legacy.maxCombo,
+          fullCombo: legacy.fullCombo === true,
+          allExcellent: legacy.allExcellent === true,
+          allMarvelous: legacy.allMarvelous === true
+        });
+      }
+    })();
     rhythmRankingSubmitRef.current = task.catch(() => {});
     return task;
   }, [submitRhythmRankingScoreBody]);
