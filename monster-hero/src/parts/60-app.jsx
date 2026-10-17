@@ -7590,11 +7590,12 @@ function MonsterHeroGame() {
   };
   // 魂格再編の書は、通常の100万ダイヤ商品とは別カードで
   // 勇者の証1個→1冊へ交換できる。同じ所持品IDだけを検証付き保存し、失敗時は元へ戻す。
-  const exchangeSoulRankRespecByProof = async () => {
+  // quantity 冊をまとめて交換する(2026-10-17)。勇者の証 quantity 個 → 書 quantity 冊を1回の保存で行う
+  const exchangeSoulRankRespecByProof = async (quantity=1) => {
     if (marketPurchaseProcessingRef.current) return false;
     const before = ownedItemsRef.current;
-    const exchange = buildSoulRankRespecProofExchange(before, 1);
-    if (!exchange.ok) { setMarketExchangeError('勇者の証が1個必要です。'); return false; }
+    const exchange = buildSoulRankRespecProofExchange(before, quantity);
+    if (!exchange.ok) { setMarketExchangeError(`勇者の証が${exchange.proofCost}個必要です。`); return false; }
     marketPurchaseProcessingRef.current = true;
     setMarketExchangeError('');
     try {
@@ -7613,11 +7614,12 @@ function MonsterHeroGame() {
   };
   // 勇者の証片20個 → 勇者の証1個。魂格再編の書と同じ作りで、失敗したら元へ戻す
   // (2026-09-13・週間ランキングの報酬で証片がたまるようにしたのに合わせて追加)
-  const exchangeHeroProofByShard = async () => {
+  // quantity 個をまとめて交換する(2026-10-17)。証片 20×quantity 個 → 証 quantity 個を1回の保存で行う
+  const exchangeHeroProofByShard = async (quantity=1) => {
     if (marketPurchaseProcessingRef.current) return false;
     const before = ownedItemsRef.current;
-    const exchange = buildHeroProofShardExchange(before, 1);
-    if (!exchange.ok) { setMarketExchangeError(`勇者の証片が${HERO_PROOF_SHARD_PER_PROOF}個必要です（いま${exchange.shardHave}個）。`); return false; }
+    const exchange = buildHeroProofShardExchange(before, quantity);
+    if (!exchange.ok) { setMarketExchangeError(`勇者の証片が${exchange.shardCost}個必要です（いま${exchange.shardHave}個）。`); return false; }
     marketPurchaseProcessingRef.current = true;
     setMarketExchangeError('');
     try {
