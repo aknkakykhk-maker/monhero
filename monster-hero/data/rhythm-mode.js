@@ -2980,28 +2980,42 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
   // 既存のタップ音と同じ設定(音量・ON/OFF・全体ミュート)を読み、専用の保存キーは増やさない。
   // 空中のノーツを取ったとき、ふだんのタップ音に重ねる「きらっ」(試作・2026-10-10)。高い2音を少しずらして鳴らし、
   // 小さく上がる音を添える。地上の音は変えない。MISS では鳴らさない。設定(音量・ON/OFF・全体ミュート)はタップ音と同じものを読む
-  // ホールド・スライドで線を通ったときの小さな音(2026-10-17 案A)。押さえている間の音と同じ大きさの決まり(タップ音量 × 押さえている間の音の%)で、
-  // それよりさらに小さく短い「チッ」。0%・タップ音を切っているときは鳴らさない。音の作りがまだ動いていなければ新しく作らない(鳴らさないだけ)。
+  // ホールド・スライドで線を通ったときの音(2026-10-17 案A。同じ日に社長「全然わかんないし音もないし」で作り直した)。
+  // 叩いた音と同じ大きさの決まり(タップ音量)に従う(押さえている間の音の大きさは既定が小さく、0%の人もいるため使わない)。
+  // 曲の上でも聞き分けられるよう、高い鈴の2つの音(G6 と 1オクターブ上)に、ごく短い「カッ」(高い所だけの雑音)を重ねた、はっきりした短い音。
+  // 音の作りは叩いた音と同じもの(ctx)を使い、新しく起こさない(押さえ始めの1回目のタップで解錠されている)。止まっていたら起こしてから鳴らす。
   // 線が詰まっても鳴りすぎないよう、前の音から70ms は次を鳴らさない
   let tickLast=-1;
   const playTick=(slide=false)=>{
     const settings=readSettings();
-    if(!settings.enabled||settings.volume<=0||settings.holdVolume<=0||!rhythmAudioGloballyEnabled())return false;
+    if(!settings.enabled||settings.volume<=0||!rhythmAudioGloballyEnabled())return false;
     const audio=ctx;
-    if(!audio||audio.state!=='running')return false;
+    if(!audio||audio.state==='closed')return false;
+    if(audio.state!=='running'&&typeof audio.resume==='function')audio.resume().catch(()=>{});
     const now=audio.currentTime;
     if(tickLast>=0&&now-tickLast<.07&&now>=tickLast)return false;
     tickLast=now;
+    const volume=settings.volume/100;
     try{
-      const oscillator=audio.createOscillator(),gain=audio.createGain();
-      oscillator.type='sine';
-      oscillator.frequency.setValueAtTime(slide?2793.83:2349.32,now);
-      gain.gain.setValueAtTime(.0001,now);
-      gain.gain.exponentialRampToValueAtTime(rhythmNoteSeLevel(.007,settings.volume/100*settings.holdVolume/100),now+.003);
-      gain.gain.exponentialRampToValueAtTime(.0001,now+.07);
-      oscillator.connect(gain);gain.connect(output(audio));
-      oscillator.start(now);oscillator.stop(now+.09);
-      oscillator.onended=()=>{try{oscillator.disconnect();gain.disconnect();}catch{}};
+      const tone=(type,freq,start,sustain,peak)=>{
+        const oscillator=audio.createOscillator(),gain=audio.createGain();
+        oscillator.type=type;oscillator.frequency.setValueAtTime(freq,start);
+        gain.gain.setValueAtTime(.0001,start);
+        gain.gain.exponentialRampToValueAtTime(rhythmNoteSeLevel(peak,volume),start+.002);
+        gain.gain.exponentialRampToValueAtTime(.0001,start+sustain);
+        oscillator.connect(gain);gain.connect(output(audio));
+        oscillator.start(start);oscillator.stop(start+sustain+.02);
+        oscillator.onended=()=>{try{oscillator.disconnect();gain.disconnect();}catch{}};
+      };
+      const base=slide?1760:1567.98;
+      tone('triangle',base,now,.11,.03);
+      tone('sine',base*2,now,.08,.018);
+      const source=audio.createBufferSource(),filter=audio.createBiquadFilter(),gain=audio.createGain();
+      source.buffer=noise(audio);filter.type='highpass';filter.frequency.setValueAtTime(5200,now);
+      gain.gain.setValueAtTime(rhythmNoteSeLevel(.016,volume),now);gain.gain.exponentialRampToValueAtTime(.0001,now+.025);
+      source.connect(filter);filter.connect(gain);gain.connect(output(audio));
+      source.start(now);source.stop(now+.04);
+      source.onended=()=>{try{source.disconnect();filter.disconnect();gain.disconnect();}catch{}};
     }catch{return false;}
     return true;
   };
@@ -30538,7 +30552,7 @@ installRhythmGeometryStyles();
 // 使い回す枚数。同時にこれ以上重なることは実際には無く、足りなければ古いものから奪う。
 const RHYTHM_HIT_EFFECT_POOL=10;
 // ホールド・スライドで線を通ったときの小さな光の長さ(2026-10-17 案A)
-const RHYTHM_HOLD_TICK_MS=200;
+const RHYTHM_HOLD_TICK_MS=300;
 // 線を通ったときの演出を、1本の帯につき何msに1回までにするか(曲がりの多い帯は線が細かく来るため)
 const RHYTHM_HOLD_TICK_FX_GAP_MS=100;
 // 1枚あたりに仕込む「はじける粒」の数。飛ぶ向きはCSS側に書いてある。
@@ -34247,14 +34261,25 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     for(let k=pts.length-1;k>=0;k--)ctx.lineTo(pts[k].r,pts[k].y);
     ctx.closePath();ctx.fill();
   };
-  // 線を通ったときの小さな光: 判定ラインの上で、帯の幅に合わせた薄い横の光と、真ん中の小さな十字の星。0.2秒で消える(四角と多角形だけで描く)
+  // 線を通ったときの光: 判定ラインの上で、帯の幅いっぱいの線が白く光って帯の色へ消え、真ん中から帯の色の光が弾ける(8本の筋と十字の星)。0.3秒。
+  // 四角と多角形だけで描く(影・にじみの描き方は使わない)。弱い形(演出量「最小」)は線と星だけを小さめに
   const drawTick=(tk,p,y)=>{
-    const cx=tk.center*cssW,W=tk.width*cssW*(1+.25*p),fade=1-p,r=(4+7*p)*Math.max(.7,Math.min(1.3,cssW/600));
+    const s=Math.max(.8,Math.min(1.4,cssW/600)),fade=1-p,pop=p<.15?p/.15:1,cx=tk.center*cssW,W=Math.max(36*s,tk.width*cssW*1.15);
     ctx.setTransform(dpr,0,0,dpr,0,0);
-    ctx.fillStyle=tk.color;
-    ctx.globalAlpha=.32*fade;ctx.fillRect(cx-W/2,y-2.5,W,5);
-    ctx.globalAlpha=.85*fade;ctx.beginPath();ctx.moveTo(cx,y-r*1.6);ctx.lineTo(cx+r*.32,y-r*.32);ctx.lineTo(cx+r*1.6,y);ctx.lineTo(cx+r*.32,y+r*.32);ctx.lineTo(cx,y+r*1.6);ctx.lineTo(cx-r*.32,y+r*.32);ctx.lineTo(cx-r*1.6,y);ctx.lineTo(cx-r*.32,y-r*.32);ctx.closePath();ctx.fill();
-    ctx.fillStyle='#ffffff';ctx.globalAlpha=.9*fade;ctx.fillRect(cx-1.5,y-1.5,3,3);
+    // 帯の幅の線: 帯の色の太い光の上に白い芯。はじめ太く、細くなって消える
+    const th=(tk.weak?8:16)*s*(1-.6*p);
+    ctx.fillStyle=tk.color;ctx.globalAlpha=(tk.weak?.45:.7)*fade;ctx.fillRect(cx-W/2,y-th/2,W,th);
+    ctx.fillStyle='#ffffff';ctx.globalAlpha=.95*fade;ctx.fillRect(cx-W/2,y-th/6,W,th/3);
+    // 十字の星(白い芯と帯の色の外側)
+    const r=(tk.weak?10:18+16*p)*s*pop;
+    const star=(rad,thin)=>{ctx.beginPath();ctx.moveTo(cx,y-rad);ctx.lineTo(cx+rad*thin,y-rad*thin);ctx.lineTo(cx+rad,y);ctx.lineTo(cx+rad*thin,y+rad*thin);ctx.lineTo(cx,y+rad);ctx.lineTo(cx-rad*thin,y+rad*thin);ctx.lineTo(cx-rad,y);ctx.lineTo(cx-rad*thin,y-rad*thin);ctx.closePath();ctx.fill();};
+    ctx.fillStyle=tk.color;ctx.globalAlpha=.9*fade;star(r*1.35,.22);
+    ctx.fillStyle='#ffffff';ctx.globalAlpha=fade;star(r*.8,.2);
+    if(tk.weak)return;
+    // 弾ける8本の筋(帯の色)。外へ飛びながら短くなる
+    ctx.fillStyle=tk.color;ctx.globalAlpha=.85*fade;
+    for(let k=0;k<8;k++){const a=k*Math.PI/4+.39,d0=(10+30*p)*s,d1=d0+(14*(1-p)+4)*s,w=2.4*s,ca=Math.cos(a),sa=Math.sin(a);
+      ctx.beginPath();ctx.moveTo(cx+ca*d0-sa*w,y+sa*d0+ca*w);ctx.lineTo(cx+ca*d1,y+sa*d1);ctx.lineTo(cx+ca*d0+sa*w,y+sa*d0-ca*w);ctx.closePath();ctx.fill();}
   };
   const drawOneHit=(h,p,hitY,elapsed=0)=>{
     const W=h.width*cssW,cx=h.center*cssW,left=cx-W/2;
@@ -34424,10 +34449,12 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     // ただし HELL の空中の柱の光(オプション「空中を叩いた柱の光」)だけは出す(柱だけ。中心の光・粒・星は出さない)。
     // 2026-10-13 社長「奥までに設定しても短いまま」: 演出量「最小」(見た目のおまかせ「軽さ優先」)と軽量モードでは柱がまるごと出ず、
     // 押している間の短い光(drawSkyPress)だけが見えていた。光は叩いた1回につき台形1つで、形と色の段は1回だけ作るので重さはほぼ増えない
-    // 線を通ったときの小さな光。演出量「最小」・軽量モードでは出さない。叩いた光と同じ層(ノーツの canvas)に描くので、画面の部品は増やさない
+    // 線を通ったときの光(2026-10-17。同じ日に社長「全然わかんない」で、ひとめで分かる大きさと明るさに作り直した)。
+    // 軽量モードでは出さない。演出量「最小」では弱い形(星と線だけ・小さめ)で出す(空中の柱の光と同じく、最小でも分かる合図は残す)。
+    // 叩いた光と同じ層(ノーツの canvas)に描くので、画面の部品は増やさない
     pushTick(tick){
-      if(!(tick.sky?(hitArea||skyHitArea):hitArea)||effect==='MINIMAL'||lightweight)return false;
-      tickSlots[tickNext]={center:Math.max(0,Math.min(1,Number(tick.center)||.5)),width:Math.max(.04,Math.min(1,Number(tick.width)||.1)),color:String(tick.color||'#e0f2fe'),sky:!!tick.sky,
+      if(!(tick.sky?(hitArea||skyHitArea):hitArea)||lightweight)return false;
+      tickSlots[tickNext]={center:Math.max(0,Math.min(1,Number(tick.center)||.5)),width:Math.max(.04,Math.min(1,Number(tick.width)||.1)),color:String(tick.color||'#67e8f9'),sky:!!tick.sky,weak:effect==='MINIMAL',
         start:typeof performance!=='undefined'?performance.now():Date.now()};
       tickNext=(tickNext+1)%tickSlots.length;
       return true;

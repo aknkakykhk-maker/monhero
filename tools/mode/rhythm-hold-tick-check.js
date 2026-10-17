@@ -8,7 +8,8 @@
 //   ・落とした線(外れているあいだ)では印を付けない
 //   ・ホールドは線が無いので、スライドの線と同じ間隔の時刻で出す(終わりの手前は置かない)
 //   ・光はノーツの canvas の中(叩いた光とは別の枠)、はねは今あるコンボの数字を animate で動かすだけ。画面の部品を足さない
-//   ・演出量「最小」・軽量モードでは光とはねを出さない。音はタップ音・押さえている間の音の設定に従い、新しく音の作りを起こさない
+//   ・軽量モードでは光とはねを出さない。演出量「最小」では弱い形で出す。音は叩いた音の大きさ(タップ音量)に従い、新しく音の作りを起こさない
+//   ・2026-10-17 社長「全然わかんないし音もないし」: 音は叩いた音と同じくらいの強さ、光はひとめで分かる大きさ(0.3秒・帯の幅の線・星・8本の筋)
 'use strict';
 const fs=require('fs'),path=require('path');
 const ROOT=path.resolve(__dirname,'../..');
@@ -40,16 +41,18 @@ check('印を増やすのは evaluateCheckpoints だけ',(data.match(/_rhythmTic
 const i=play.indexOf('RHYTHM_NOTE_SE_RUNTIME.holdSync(heldNotes);'),block=play.slice(i,i+2200);
 check('曲がりの多い帯でも、1本につき決まった間隔に1回までにまとめる',/if\(frameNowMs-\(Number\(note\._rhythmTickFxAt\)\|\|-1e9\)<RHYTHM_HOLD_TICK_FX_GAP_MS\)continue;/.test(block)&&/const RHYTHM_HOLD_TICK_FX_GAP_MS=100;/.test(data));
 check('音は線を通るたびに出す',/RHYTHM_NOTE_SE_RUNTIME\.playTick\(slide\)/.test(block));
-check('演出量「最小」・軽量モードでは光とはねを出さない',/if\(settings\.lightweightMode\|\|settings\.effectAmount==='MINIMAL'\)continue;/.test(block));
+check('軽量モードでは光とはねを出さない・演出量「最小」では弱い形',/if\(settings\.lightweightMode\)continue;\n  const weak=settings\.effectAmount==='MINIMAL';/.test(block));
 check('光はノーツの canvas の中に出す',/RHYTHM_CANVAS_RENDERER\.pushTick\(/.test(block)&&!/createElement|appendChild/.test(block));
 check('はねは今あるコンボの数字を動かすだけ',/const combo=comboRef\.current;/.test(block)&&/combo\.animate\(/.test(block));
 check('コンボの数・スコアには触らない',!/setCombo|combo\+\+|score\s*\+=|addScore|applyJudgment/.test(block));
 const push=grab('    pushTick(tick){','\n    },');
-check('描き手も最小・軽量では受け付けない',/effect==='MINIMAL'\|\|lightweight/.test(push));
+check('描き手も軽量モードでは受け付けず、最小では弱い形にする',/\|\|lightweight\)return false;/.test(push)&&/weak:effect==='MINIMAL'/.test(push));
+check('光はひとめで分かる長さ(0.3秒)',/const RHYTHM_HOLD_TICK_MS=300;/.test(data));
 check('叩いた光の枠を使わない(別の枠)',/tickSlots\[tickNext\]=/.test(push)&&!/hitSlots/.test(push));
 const se=grab('  const playTick=(slide=false)=>{','\n  };');
-check('音は押さえている間の音の設定に従う',/settings\.holdVolume<=0/.test(se)&&/settings\.volume\/100\*settings\.holdVolume\/100/.test(se));
-check('音の作りを新しく起こさない',/const audio=ctx;/.test(se)&&!/context\(\)/.test(se));
+check('音は叩いた音の大きさ(タップ音量)に従い、押さえている間の音の大きさは使わない',/const volume=settings\.volume\/100;/.test(se)&&!/holdVolume/.test(se));
+check('音は曲に埋もれない強さ(叩いた音の基準 .035 に近い)',/tone\('triangle',base,now,\.11,\.03\)/.test(se));
+check('音の作りを新しく起こさない(止まっていたら起こすだけ)',/const audio=ctx;/.test(se)&&!/context\(\)/.test(se)&&/audio\.resume\(\)/.test(se));
 check('効果音の設定を、保存値が無い端末でも既定で読む',/let ctx=null,cachedRaw=undefined,/.test(data));
 
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');

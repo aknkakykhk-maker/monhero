@@ -2442,17 +2442,19 @@ RHYTHM_NOTE_SE_RUNTIME.holdSync(heldNotes);
 // ホールド・スライドで線(チェックポイント)を通ったとき、小さな光・小さな音・コンボの数字の軽いはねを出す(2026-10-17 社長「ホールドとかスライドで、
 // 他ゲーはコンボ増えてくけど、あれのほうが爽快感はある」→ 案A: 見た目と音だけ。コンボの数・スコア・判定は変えない)。
 // 印(note._rhythmTicks)は指の処理(evaluateCheckpoints)が、落とさずに通った線でだけ増やす。光はノーツの canvas の中(pushTick)、はねは今あるコンボの数字を animate で動かすだけ(画面の部品は足さない)。
-// 演出量「最小」・軽量モードでは光とはねを出さない(音はタップ音の設定に従う)
+// 軽量モードでは光とはねを出さない。演出量「最小」では弱い形で出す(音はタップ音の設定に従う)。
+// 2026-10-17 社長「全然わかんないし音もないし」で、音を叩いた音の大きさに、光とはねをひとめで分かる強さに作り直した
 // 曲がりの多い帯は線が約45msおきに来るので、1本の帯につき RHYTHM_HOLD_TICK_FX_GAP_MS に1回までにまとめる(光と音が忙しくなりすぎないように)
 for(let i=0;i<heldNotes.length;i++){const note=heldNotes[i],ticks=Number(note._rhythmTicks)||0;if(!(ticks>(Number(note._rhythmTicksSeen)||0)))continue;note._rhythmTicksSeen=ticks;
   if(frameNowMs-(Number(note._rhythmTickFxAt)||-1e9)<RHYTHM_HOLD_TICK_FX_GAP_MS)continue;note._rhythmTickFxAt=frameNowMs;
   const slide=rhythmNoteIsSlide(note);RHYTHM_NOTE_SE_RUNTIME.playTick(slide);
-  if(settings.lightweightMode||settings.effectAmount==='MINIMAL')continue;
+  if(settings.lightweightMode)continue;
+  const weak=settings.effectAmount==='MINIMAL';
   const area=playAreaRef.current;
-  if(area&&RHYTHM_CANVAS_RENDERER.hitsFor(area)){const at=run.audio?.songTimeMs?.()??note.timeMs,lineY=RHYTHM_JUDGMENT_LINE_Y.ratio,span=slide?rhythmProjectSlideSpan(rhythmReleaseLane(note),note,lineY,at):rhythmNoteVisualSpan(note,note.lane,lineY,at);
-    RHYTHM_CANVAS_RENDERER.pushTick({center:span.center,width:span.width,color:slide?'#f0abfc':'#a5f3fc',sky:rhythmNoteSkyHeight(note)>0});}
+  if(area&&RHYTHM_CANVAS_RENDERER.hitsFor(area)){const at=run.audio?.songTimeMs?.()??note.timeMs,lineY=RHYTHM_JUDGMENT_LINE_Y.ratio,span=slide?rhythmProjectSlideSpan(rhythmSlideExpectedLane(note,at),note,lineY,at):rhythmNoteVisualSpan(note,note.lane,lineY,at);
+    RHYTHM_CANVAS_RENDERER.pushTick({center:span.center,width:span.width,color:slide?'#f0abfc':'#67e8f9',sky:rhythmNoteSkyHeight(note)>0});}
   const combo=comboRef.current;
-  if(combo&&typeof combo.animate==='function'){try{combo._rhythmTickAnim?.cancel?.();combo._rhythmTickAnim=combo.animate([{transform:'scale(1)'},{transform:'scale(1.07)',offset:.3},{transform:'scale(1)'}],{duration:150,easing:'ease-out'});}catch(_){}}
+  if(combo&&typeof combo.animate==='function'){try{combo._rhythmTickAnim?.cancel?.();combo._rhythmTickAnim=combo.animate(weak?[{transform:'scale(1)'},{transform:'scale(1.12)',offset:.25},{transform:'scale(1)'}]:[{transform:'scale(1)',filter:'brightness(1)'},{transform:'scale(1.28)',filter:`brightness(1.9) drop-shadow(0 0 10px ${slide?'#f0abfc':'#67e8f9'})`,offset:.22},{transform:'scale(1)',filter:'brightness(1)'}],{duration:weak?160:240,easing:'ease-out'});}catch(_){}}
 }
 run.notesReady=true;
 if(canvasNotes)RHYTHM_CANVAS_RENDERER.end();
