@@ -211,15 +211,23 @@ const RHYTHM_BEST_RECORDS_KEY = 'mh_rhythm_best_v1';
 // 刻みの数え方(2026-10-17・社長の決定)の自己ベスト。物差しが変わるので、今の mh_rhythm_best_v1 は消さず書き換えず、新しいキーに分ける(CLAUDE.md ⑦)。
 // 形は v1 と同じ(normalizeRhythmBestRecords)。切り替えの時刻(RHYTHM_TICK_SWITCH_AT)を過ぎて始めた演奏の記録だけがここへ入る
 const RHYTHM_BEST_RECORDS_V2_KEY = 'mh_rhythm_best_v2';
-// 新しい数え方の記録に、旧の記録の「印」だけを重ねる(点・判定の内訳・最大コンボは新しい記録のまま)。
-//   played・clear … HELL の開放などの条件が、切り替えで閉じないように
-//   fullCombo・allExcellent・allMarvelous … 取った称号は下げない(社長の決定)
+// 新しい数え方の記録と旧の記録を合わせて見せる(2026-10-17)。
+//   ・新しい数え方でまだ遊んでいない曲・難易度(v2 の点が0)は、旧の記録(点・判定の内訳・最大コンボ・印)をそのまま出す
+//     (★当初は印だけを重ねていたため、新しい数え方で遊ぶまで自己ベストが0に見えた。社長「自分のスコアの記録がリセットされてるんだけど」で直した)
+//   ・両方あるときは新しい数え方の記録を出し、旧の記録の印(played・clear・称号)を重ねる(HELL の開放などが閉じない・取った称号は下げない)
+//   旧の記録を出している曲・難易度は RHYTHM_BEST_LEGACY_SHOWN に `曲|難易度` で覚える(曲えらびの「旧」の印)。保存値はどちらも書き換えない
+const RHYTHM_BEST_LEGACY_SHOWN = new Set();
 const rhythmBestRecordsWithLegacyMarks = (current,legacy) => {
   const now=normalizeRhythmBestRecords(current),old=normalizeRhythmBestRecords(legacy);
+  RHYTHM_BEST_LEGACY_SHOWN.clear();
   Object.keys(now).forEach(songId=>{Object.keys(now[songId]||{}).forEach(diff=>{const a=now[songId][diff],b=old?.[songId]?.[diff];if(!a||!b||typeof a!=='object'||typeof b!=='object')return;
+    // 旧の記録のほうが点が高い(新しい数え方でまだ遊んでいないときを含む)なら、旧の記録を出す(社長「1つにつなげる。高いほう」)
+    if(Number(b.bestScore)>Number(a.bestScore)||(!(Number(a.bestScore)>0)&&b.played===true)){now[songId][diff]={...b,played:b.played||a.played===true,clear:b.clear||a.clear===true,fullCombo:b.fullCombo||a.fullCombo===true,allExcellent:b.allExcellent||a.allExcellent===true,allMarvelous:b.allMarvelous||a.allMarvelous===true};if(Number(b.bestScore)>0)RHYTHM_BEST_LEGACY_SHOWN.add(`${songId}|${diff}`);return;}
     now[songId][diff]={...a,played:a.played||b.played===true,clear:a.clear||b.clear===true,fullCombo:a.fullCombo||b.fullCombo===true,allExcellent:a.allExcellent||b.allExcellent===true,allMarvelous:a.allMarvelous||b.allMarvelous===true};});});
   return now;
 };
+// 曲えらびで、その曲・難易度の自己ベストが旧の数え方の記録かどうか
+const rhythmBestShowsLegacy = (songId,difficultyId) => RHYTHM_BEST_LEGACY_SHOWN.has(`${songId}|${difficultyId}`);
 // 全国ランキングへの送信に失敗したときだけ退避する専用キー(2026-09-04)。
 // 既存のBEST記録(RHYTHM_BEST_RECORDS_KEY)とは別で、自動の再送はしない
 // (端末内に「送れなかった記録が残っている」という手がかりを残すだけ)。

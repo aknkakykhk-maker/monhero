@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 48bb48eb22e6b260
+// source-sha256: 0fd1505da827530d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-17 15:35";
+const BUILD_DATE = "2026-10-17 17:39";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -5433,14 +5433,28 @@ const RHYTHM_NOTE_SPEED_MAX = 12;
 const RHYTHM_NOTE_SPEED_STEP = .1;
 const RHYTHM_BEST_RECORDS_KEY = 'mh_rhythm_best_v1';
 const RHYTHM_BEST_RECORDS_V2_KEY = 'mh_rhythm_best_v2';
+const RHYTHM_BEST_LEGACY_SHOWN = new Set();
 const rhythmBestRecordsWithLegacyMarks = (current, legacy) => {
   const now = normalizeRhythmBestRecords(current),
     old = normalizeRhythmBestRecords(legacy);
+  RHYTHM_BEST_LEGACY_SHOWN.clear();
   Object.keys(now).forEach(songId => {
     Object.keys(now[songId] || {}).forEach(diff => {
       const a = now[songId][diff],
         b = old?.[songId]?.[diff];
       if (!a || !b || typeof a !== 'object' || typeof b !== 'object') return;
+      if (Number(b.bestScore) > Number(a.bestScore) || !(Number(a.bestScore) > 0) && b.played === true) {
+        now[songId][diff] = {
+          ...b,
+          played: b.played || a.played === true,
+          clear: b.clear || a.clear === true,
+          fullCombo: b.fullCombo || a.fullCombo === true,
+          allExcellent: b.allExcellent || a.allExcellent === true,
+          allMarvelous: b.allMarvelous || a.allMarvelous === true
+        };
+        if (Number(b.bestScore) > 0) RHYTHM_BEST_LEGACY_SHOWN.add(`${songId}|${diff}`);
+        return;
+      }
       now[songId][diff] = {
         ...a,
         played: a.played || b.played === true,
@@ -5453,6 +5467,7 @@ const rhythmBestRecordsWithLegacyMarks = (current, legacy) => {
   });
   return now;
 };
+const rhythmBestShowsLegacy = (songId, difficultyId) => RHYTHM_BEST_LEGACY_SHOWN.has(`${songId}|${difficultyId}`);
 const RHYTHM_RANKING_PENDING_KEY = 'mh_rhythm_rank_pending_v1';
 const RHYTHM_RANKING_PENDING_MAX = 20;
 const RHYTHM_EFFECT_LEVELS = Object.freeze(['NORMAL', 'LOW', 'LIGHT', 'MINIMAL']);
@@ -30924,7 +30939,10 @@ const RhythmSongSelect = ({
     className: "min-w-0 [container-type:inline-size]"
   }, React.createElement("small", {
     className: "block text-[9px] font-black tracking-[.15em] text-slate-400"
-  }, "HIGH SCORE", best && best.played && !best.clear && React.createElement("span", {
+  }, "HIGH SCORE", best && difficulty && rhythmBestShowsLegacy(song.songId, difficulty.id) && React.createElement("span", {
+    "data-rhythm-demo-legacy-best": true,
+    className: "ml-1 rounded bg-slate-500/30 px-1 tracking-normal text-slate-200"
+  }, "旧"), best && best.played && !best.clear && React.createElement("span", {
     "data-rhythm-demo-uncleared": true,
     className: "ml-1 tracking-normal text-rose-300"
   }, "未クリア")), React.createElement("b", {
@@ -53375,16 +53393,7 @@ function RhythmRankingScreen({
     size: 18
   })), React.createElement("h2", {
     className: "text-sm font-black tracking-widest text-amber-200"
-  }, "🏆 全国ランキング"), typeof rhythmTickRulesReleased === 'function' && rhythmTickRulesReleased() && React.createElement("button", {
-    type: "button",
-    "data-rhythm-ranking-legacy": true,
-    "aria-pressed": RHYTHM_RANKING_VIEW.legacy,
-    onClick: () => {
-      RHYTHM_RANKING_VIEW.legacy = !RHYTHM_RANKING_VIEW.legacy;
-      refresh();
-    },
-    className: `ml-auto min-h-[44px] rounded-lg px-2 text-[10px] font-black ${RHYTHM_RANKING_VIEW.legacy ? 'bg-slate-200/15 text-slate-100' : 'text-slate-300'}`
-  }, RHYTHM_RANKING_VIEW.legacy ? '旧記録を表示中' : '旧記録'), React.createElement("button", {
+  }, "🏆 全国ランキング"), React.createElement("button", {
     "aria-label": "更新",
     "data-rhythm-ranking-refresh": true,
     onClick: refresh,
@@ -82150,7 +82159,7 @@ function MonsterHeroGame() {
     try {
       await settleRhythmRankingSubmit();
       if (rhythmRankingRequestRef.current !== requestId) return;
-      const keys = diff === 'ALL' ? rhythmRankingCombinedMembers(song.songId) : [rhythmRankingDifficultyKey(song.songId, diff)].filter(Boolean);
+      const keys = diff === 'ALL' ? rhythmRankingCombinedMembers(song.songId) : rhythmRankingKeysWithV2(rhythmRankingDifficultyKey(song.songId, diff));
       let rows = [];
       if (!keys.length) {
         setRhythmRanking({
@@ -82195,7 +82204,7 @@ function MonsterHeroGame() {
   const submitRhythmRankingScoreBody = useCallback(async (song, difficulty, result) => {
     const scoreVersion = result?.scoreVersion === 2 ? 2 : 1;
     if (scoreVersion === 2 && !(typeof rhythmTickRulesReleased === 'function' && rhythmTickRulesReleased())) return;
-    const difficultyKey = rhythmRankingDifficultyKey(song?.songId, difficulty?.id, scoreVersion);
+    const difficultyKey = rhythmRankingDifficultyKey(song?.songId, difficulty?.id, 1);
     if (!difficultyKey) return;
     const detail = {
       songId: song.songId,
@@ -82319,6 +82328,9 @@ function MonsterHeroGame() {
             const createdAt = storedCreatedAt || rankingCreatedAtFromLocal(at);
             const payload = {
               ...columns,
+              ...(columns.difficulty ? {
+                difficulty: rhythmRankingKeyToV1(columns.difficulty)
+              } : {}),
               ...(createdAt ? {
                 created_at: createdAt
               } : {})

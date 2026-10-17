@@ -3324,7 +3324,7 @@ function MonsterHeroGame() {
       await settleRhythmRankingSubmit();
       if (rhythmRankingRequestRef.current !== requestId) return;
       const keys = diff === 'ALL' ? rhythmRankingCombinedMembers(song.songId)
-        : [rhythmRankingDifficultyKey(song.songId, diff)].filter(Boolean);
+        : rhythmRankingKeysWithV2(rhythmRankingDifficultyKey(song.songId, diff));
       let rows = [];
       if (!keys.length) { setRhythmRanking({ status:'ready', entries:[], error:null, songId:song.songId, difficultyId:diff }); return; }
       for (let page = 0; page < RHYTHM_RANKING_MAX_PAGES; page++) {
@@ -3355,7 +3355,8 @@ function MonsterHeroGame() {
     // 刻みの数え方の記録(scoreVersion 2)は新しい物差しの鍵(…-2)へ。切り替えの時刻より前(確認待ちの試作で遊んだ記録)は送らない
     const scoreVersion = result?.scoreVersion === 2 ? 2 : 1;
     if (scoreVersion === 2 && !(typeof rhythmTickRulesReleased === 'function' && rhythmTickRulesReleased())) return;
-    const difficultyKey = rhythmRankingDifficultyKey(song?.songId, difficulty?.id, scoreVersion);
+    // 2026-10-17 社長「ランキング全部リセットされてる」: 新しい数え方の記録も今までの鍵で送り、今までの順位に1つにつなげる(scoreVersion は party に残す)
+    const difficultyKey = rhythmRankingDifficultyKey(song?.songId, difficulty?.id, 1);
     if (!difficultyKey) return;
     const detail = {
       songId: song.songId, difficultyId: difficulty.id,
@@ -3462,7 +3463,7 @@ function MonsterHeroGame() {
             // 退避したときの時刻(at)をそのまま created_at として送る。
             // 付けずに送ると、送り直した瞬間が記録の時刻になってしまう
             const createdAt = storedCreatedAt || rankingCreatedAtFromLocal(at);
-            const payload = { ...columns, ...(createdAt ? { created_at: createdAt } : {}) };
+            const payload = { ...columns, ...(columns.difficulty ? { difficulty: rhythmRankingKeyToV1(columns.difficulty) } : {}), ...(createdAt ? { created_at: createdAt } : {}) };
             const res = await insertResentRankingRow(sbInsertRhythmScore, payload);
             if (res?.saved === true) sent++; else { failed++; rest.push(row); }
           } catch (e) {

@@ -30048,7 +30048,9 @@ const rhythmScoredDifficulty=difficultyId=>rhythmScoredDifficultyIds().includes(
 // 見る版: 切り替えの時刻を過ぎたら新しい物差し(2)。画面の「旧記録」で今までの順位(1)も見られる(RHYTHM_RANKING_VIEW.legacy)
 const RHYTHM_RANKING_VERSION_TAG='2';
 const RHYTHM_RANKING_VIEW={legacy:false};
-const rhythmRankingViewVersion=()=>!RHYTHM_RANKING_VIEW.legacy&&typeof rhythmTickRulesReleased==='function'&&rhythmTickRulesReleased()?2:1;
+// ★2026-10-17 社長「ランキング全部リセットされてる」→ 別枠をやめ、1つにつなげる。新しい数え方の記録も今までの鍵(3つ区切り)で送り、今までの見方(rhythm_*)で読む。
+//   rhythm2_*(データベースに足した見方・関数)はもう読まない(消さずに残す)。見る版はいつも 1
+const rhythmRankingViewVersion=()=>1;
 // データベースの見方・関数の名前を、版に合わせる(rhythm_total_rankings → rhythm2_total_rankings など)
 const rhythmRankingDbName=(name,version=rhythmRankingViewVersion())=>version===2?String(name).replace(/^rhythm_/,'rhythm2_'):String(name);
 // アドレス(…/rest/v1/rhythm_total_rankings?… や …/rpc/rhythm_week_score_totals?…)の見方・関数の名前を、版に合わせて置き換える
@@ -30056,8 +30058,7 @@ const rhythmRankingUrl=(url,version=rhythmRankingViewVersion())=>version===2?Str
 // 期間(週間・イベント)の物差し(2026-10-17 社長「切り替えちゃっていいよ」): 切り替えの時刻より後に終わる期間(切り替えた週・開催中のイベント・それより先)は
 // 新しい物差し、それより前に終わった期間は今までの物差しで数える(終わった週の順位・報酬は変わらない)。
 // legacyView … 画面の「旧記録」を押しているとき。切り替えより前に出した記録(今までの物差し)で見る。報酬の計算は渡さない
-const rhythmRankingPeriodVersion=(fromMs,toMs,legacyView=false)=>{if(legacyView)return 1;const sw=Date.parse(RHYTHM_TICK_SWITCH_AT),end=Number(toMs);
-  if(Number.isFinite(end))return end>sw?2:1;return Number.isFinite(Number(fromMs))&&Number(fromMs)>=sw?2:1;};
+const rhythmRankingPeriodVersion=()=>1;
 const rhythmRankingDifficultyKey=(songId,difficultyId,version=rhythmRankingViewVersion())=>{
   if(!songId||!rhythmScoredDifficulty(difficultyId))return null;
   const base=`${RHYTHM_RANKING_PREFIX}${RHYTHM_RANKING_SEPARATOR}${songId}${RHYTHM_RANKING_SEPARATOR}${difficultyId}`;
@@ -30079,8 +30080,12 @@ const parseRhythmRankingDifficultyKey=(key)=>{
 // HELL は、公開後に HELL の譜面がある曲だけ(RHYTHM_HELL_CHARTS)
 const rhythmRankingCombinedMembers=(songId)=>rhythmScoredDifficultyIds()
   .filter(difficultyId=>RHYTHM_DIFFICULTIES.some(d=>d.id===difficultyId)||(typeof RHYTHM_HELL_CHARTS!=='undefined'&&!!RHYTHM_HELL_CHARTS[songId]))
-  .map(difficultyId=>rhythmRankingDifficultyKey(songId,difficultyId))
+  .flatMap(difficultyId=>rhythmRankingKeysWithV2(rhythmRankingDifficultyKey(songId,difficultyId)))
   .filter(Boolean);
+// 曲ごとの順位を読むときは、10/17 15:03〜(#3156・#3157 の版)に4つ区切り(…-2)で届いた記録も一緒に読む(1つにつなげるため)
+const rhythmRankingKeysWithV2=key=>key?[key,`${key}${RHYTHM_RANKING_SEPARATOR}${RHYTHM_RANKING_VERSION_TAG}`]:[];
+// 端末に残っている送れなかった記録の鍵(…-2)を、今までの鍵へ直す
+const rhythmRankingKeyToV1=key=>{const parts=String(key??'').split(RHYTHM_RANKING_SEPARATOR);return parts.length===4&&parts[0]===RHYTHM_RANKING_PREFIX&&parts[3]===RHYTHM_RANKING_VERSION_TAG?parts.slice(0,3).join(RHYTHM_RANKING_SEPARATOR):String(key??'');};
 // 1ページで受け取る生の行数、ユーザーごとに畳んだあと画面へ出す件数、
 // 十分な人数が集まるまでページ送りする上限(下のrhythmRankingDedupeByUserの説明も参照)。
 // 2026-09-04、Codexレビュー指摘: 1回200件で打ち切ると、同じプレイヤーが200回を超えて

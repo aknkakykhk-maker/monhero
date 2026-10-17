@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d91b11737029c120
+// generated-sha256: f95bc34b84e6bc7e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-17 15:35"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-17 17:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4334,15 +4334,23 @@ const RHYTHM_BEST_RECORDS_KEY = 'mh_rhythm_best_v1';
 // 刻みの数え方(2026-10-17・社長の決定)の自己ベスト。物差しが変わるので、今の mh_rhythm_best_v1 は消さず書き換えず、新しいキーに分ける(CLAUDE.md ⑦)。
 // 形は v1 と同じ(normalizeRhythmBestRecords)。切り替えの時刻(RHYTHM_TICK_SWITCH_AT)を過ぎて始めた演奏の記録だけがここへ入る
 const RHYTHM_BEST_RECORDS_V2_KEY = 'mh_rhythm_best_v2';
-// 新しい数え方の記録に、旧の記録の「印」だけを重ねる(点・判定の内訳・最大コンボは新しい記録のまま)。
-//   played・clear … HELL の開放などの条件が、切り替えで閉じないように
-//   fullCombo・allExcellent・allMarvelous … 取った称号は下げない(社長の決定)
+// 新しい数え方の記録と旧の記録を合わせて見せる(2026-10-17)。
+//   ・新しい数え方でまだ遊んでいない曲・難易度(v2 の点が0)は、旧の記録(点・判定の内訳・最大コンボ・印)をそのまま出す
+//     (★当初は印だけを重ねていたため、新しい数え方で遊ぶまで自己ベストが0に見えた。社長「自分のスコアの記録がリセットされてるんだけど」で直した)
+//   ・両方あるときは新しい数え方の記録を出し、旧の記録の印(played・clear・称号)を重ねる(HELL の開放などが閉じない・取った称号は下げない)
+//   旧の記録を出している曲・難易度は RHYTHM_BEST_LEGACY_SHOWN に `曲|難易度` で覚える(曲えらびの「旧」の印)。保存値はどちらも書き換えない
+const RHYTHM_BEST_LEGACY_SHOWN = new Set();
 const rhythmBestRecordsWithLegacyMarks = (current,legacy) => {
   const now=normalizeRhythmBestRecords(current),old=normalizeRhythmBestRecords(legacy);
+  RHYTHM_BEST_LEGACY_SHOWN.clear();
   Object.keys(now).forEach(songId=>{Object.keys(now[songId]||{}).forEach(diff=>{const a=now[songId][diff],b=old?.[songId]?.[diff];if(!a||!b||typeof a!=='object'||typeof b!=='object')return;
+    // 旧の記録のほうが点が高い(新しい数え方でまだ遊んでいないときを含む)なら、旧の記録を出す(社長「1つにつなげる。高いほう」)
+    if(Number(b.bestScore)>Number(a.bestScore)||(!(Number(a.bestScore)>0)&&b.played===true)){now[songId][diff]={...b,played:b.played||a.played===true,clear:b.clear||a.clear===true,fullCombo:b.fullCombo||a.fullCombo===true,allExcellent:b.allExcellent||a.allExcellent===true,allMarvelous:b.allMarvelous||a.allMarvelous===true};if(Number(b.bestScore)>0)RHYTHM_BEST_LEGACY_SHOWN.add(`${songId}|${diff}`);return;}
     now[songId][diff]={...a,played:a.played||b.played===true,clear:a.clear||b.clear===true,fullCombo:a.fullCombo||b.fullCombo===true,allExcellent:a.allExcellent||b.allExcellent===true,allMarvelous:a.allMarvelous||b.allMarvelous===true};});});
   return now;
 };
+// 曲えらびで、その曲・難易度の自己ベストが旧の数え方の記録かどうか
+const rhythmBestShowsLegacy = (songId,difficultyId) => RHYTHM_BEST_LEGACY_SHOWN.has(`${songId}|${difficultyId}`);
 // 全国ランキングへの送信に失敗したときだけ退避する専用キー(2026-09-04)。
 // 既存のBEST記録(RHYTHM_BEST_RECORDS_KEY)とは別で、自動の再送はしない
 // (端末内に「送れなかった記録が残っている」という手がかりを残すだけ)。
@@ -19733,7 +19741,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
                 端末の字(iPhone の太字の数字)は検査の端末より幅が広く、決め打ちの22pxでは「954,0…」と切れていた。
                 この列を器(container)にして、100cqw ÷ (文字数×0.72) を上限22pxで使う。cqw が使えない端末では22pxのまま */}
             <div className="min-w-0 [container-type:inline-size]">
-              <small className="block text-[9px] font-black tracking-[.15em] text-slate-400">HIGH SCORE{best&&best.played&&!best.clear&&<span data-rhythm-demo-uncleared className="ml-1 tracking-normal text-rose-300">未クリア</span>}</small>
+              <small className="block text-[9px] font-black tracking-[.15em] text-slate-400">HIGH SCORE{/* 旧の数え方(刻みを数える前)の記録を出しているときの印(2026-10-17) */}{best&&difficulty&&rhythmBestShowsLegacy(song.songId,difficulty.id)&&<span data-rhythm-demo-legacy-best className="ml-1 rounded bg-slate-500/30 px-1 tracking-normal text-slate-200">旧</span>}{best&&best.played&&!best.clear&&<span data-rhythm-demo-uncleared className="ml-1 tracking-normal text-rose-300">未クリア</span>}</small>
               <b data-rhythm-demo-best className={`block truncate font-black tabular-nums text-amber-100 ${best&&best.played?'text-[22px] leading-tight':'text-[12px] leading-snug'}`}
                 style={best&&best.played?{fontSize:`min(22px, calc(100cqw / ${(best.bestScore.toLocaleString().length*.72).toFixed(2)}))`}:undefined}>
                 {best&&best.played?best.bestScore.toLocaleString():'まだ遊んでいません'}
@@ -33650,10 +33658,6 @@ function RhythmRankingScreen({
         <header className="z-10 flex shrink-0 items-center gap-2 border-b border-amber-400/15 bg-slate-950/95 px-3 py-1" style={{paddingTop:'calc(0.25rem + var(--mh-sa-top))'}}>
           <button aria-label="戻る" onClick={onBackToSongSelect} className="min-h-[44px] px-2 text-slate-400"><ArrowLeft size={18}/></button>
           <h2 className="text-sm font-black tracking-widest text-amber-200">🏆 全国ランキング</h2>
-          {/* 旧記録(2026-10-17・刻みの数え方への切り替え)。切り替えのあとだけ出す。曲ごと・合計・週間・イベントの順位を、切り替えより前に出した記録(今までの物差し)で見る */}
-          {typeof rhythmTickRulesReleased==='function'&&rhythmTickRulesReleased()&&<button type="button" data-rhythm-ranking-legacy aria-pressed={RHYTHM_RANKING_VIEW.legacy}
-            onClick={()=>{RHYTHM_RANKING_VIEW.legacy=!RHYTHM_RANKING_VIEW.legacy;refresh();}}
-            className={`ml-auto min-h-[44px] rounded-lg px-2 text-[10px] font-black ${RHYTHM_RANKING_VIEW.legacy?'bg-slate-200/15 text-slate-100':'text-slate-300'}`}>{RHYTHM_RANKING_VIEW.legacy?'旧記録を表示中':'旧記録'}</button>}
           <button aria-label="更新" data-rhythm-ranking-refresh onClick={refresh} className="ml-auto min-h-[44px] px-2 text-[10px] font-black text-amber-200">更新</button>
         </header>
         {/* タブ。押したときに初めて取りにいく。公開前はタブごと出さない */}
@@ -51089,7 +51093,7 @@ function MonsterHeroGame() {
       await settleRhythmRankingSubmit();
       if (rhythmRankingRequestRef.current !== requestId) return;
       const keys = diff === 'ALL' ? rhythmRankingCombinedMembers(song.songId)
-        : [rhythmRankingDifficultyKey(song.songId, diff)].filter(Boolean);
+        : rhythmRankingKeysWithV2(rhythmRankingDifficultyKey(song.songId, diff));
       let rows = [];
       if (!keys.length) { setRhythmRanking({ status:'ready', entries:[], error:null, songId:song.songId, difficultyId:diff }); return; }
       for (let page = 0; page < RHYTHM_RANKING_MAX_PAGES; page++) {
@@ -51120,7 +51124,8 @@ function MonsterHeroGame() {
     // 刻みの数え方の記録(scoreVersion 2)は新しい物差しの鍵(…-2)へ。切り替えの時刻より前(確認待ちの試作で遊んだ記録)は送らない
     const scoreVersion = result?.scoreVersion === 2 ? 2 : 1;
     if (scoreVersion === 2 && !(typeof rhythmTickRulesReleased === 'function' && rhythmTickRulesReleased())) return;
-    const difficultyKey = rhythmRankingDifficultyKey(song?.songId, difficulty?.id, scoreVersion);
+    // 2026-10-17 社長「ランキング全部リセットされてる」: 新しい数え方の記録も今までの鍵で送り、今までの順位に1つにつなげる(scoreVersion は party に残す)
+    const difficultyKey = rhythmRankingDifficultyKey(song?.songId, difficulty?.id, 1);
     if (!difficultyKey) return;
     const detail = {
       songId: song.songId, difficultyId: difficulty.id,
@@ -51227,7 +51232,7 @@ function MonsterHeroGame() {
             // 退避したときの時刻(at)をそのまま created_at として送る。
             // 付けずに送ると、送り直した瞬間が記録の時刻になってしまう
             const createdAt = storedCreatedAt || rankingCreatedAtFromLocal(at);
-            const payload = { ...columns, ...(createdAt ? { created_at: createdAt } : {}) };
+            const payload = { ...columns, ...(columns.difficulty ? { difficulty: rhythmRankingKeyToV1(columns.difficulty) } : {}), ...(createdAt ? { created_at: createdAt } : {}) };
             const res = await insertResentRankingRow(sbInsertRhythmScore, payload);
             if (res?.saved === true) sent++; else { failed++; rest.push(row); }
           } catch (e) {

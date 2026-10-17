@@ -66,11 +66,13 @@ check('新しい数え方では v2 に v1 のクリア・称号の印だけを�
 check('SAVE_DATA.md に新しいキー',read('docs/spec/SAVE_DATA.md').includes('`mh_rhythm_best_v2`')&&read('docs/spec/SAVE_DATA.md').includes('`mh_rhythm_tick_preview_proto`'));
 
 // ===== ランキング =====
-check('新しい物差しは Rhythm-曲-難易度-2 で送る',/return version===2\?`\$\{base\}\$\{RHYTHM_RANKING_SEPARATOR\}\$\{RHYTHM_RANKING_VERSION_TAG\}`:base;/.test(data)&&/rhythmRankingDifficultyKey\(song\?\.songId, difficulty\?\.id, scoreVersion\)/.test(app));
+check('新しい数え方の記録も今までの鍵で送り、今までの順位に1つにつなげる(2026-10-17 社長「ランキング全部リセットされてる」)',/rhythmRankingDifficultyKey\(song\?\.songId, difficulty\?\.id, 1\)/.test(app)&&/const rhythmRankingViewVersion=\(\)=>1;/.test(data));
+check('…-2 で届いた記録も曲ごとの順位で読み、送れなかった記録の …-2 は今までの鍵に直して送る',/rhythmRankingKeysWithV2\(rhythmRankingDifficultyKey\(song\.songId, diff\)\)/.test(app)&&/difficulty: rhythmRankingKeyToV1\(columns\.difficulty\)/.test(app));
 check('切り替え前(試作)の新しい記録は送らない',/if \(scoreVersion === 2 && !\(typeof rhythmTickRulesReleased === 'function' && rhythmTickRulesReleased\(\)\)\) return;/.test(app));
-check('期間(週間・イベント)は、切り替えより後に終わる期間を新しい物差しで数える(終わった週は今までのまま)',/rhythmRankingUrl\(`\$\{SUPABASE_URL\}\/rest\/v1\/rpc\/rhythm_week_score_totals\?select=\$\{select\}`, rhythmRankingPeriodVersion\(fromMs, toMs, legacyView\)\)/.test(supa)&&/if\(Number\.isFinite\(end\)\)return end>sw\?2:1;/.test(data));
+check('週間・イベントも今までの見方で数える(切り替え前の記録もふくめる)',/const rhythmRankingPeriodVersion=\(\)=>1;/.test(data));
+check('自己ベストは前の記録と新しい記録の高いほうを出す(前の記録には「旧」の印)',/if\(Number\(b\.bestScore\)>Number\(a\.bestScore\)/.test(settings)&&/rhythmBestShowsLegacy\(song\.songId,difficulty\.id\)/.test(read('monster-hero/src/parts/29-rhythm-screens.jsx')));
 check('旧の記録を一緒に送らない(2026-10-17 社長「切り替えちゃっていいよ」)',!/rhythmTickDual/.test(app+data)&&!/legacy:\{score:/.test(play));
-check('報酬の計算は「旧記録」の押し具合に左右されない(画面の読み込みだけが legacyView を渡す)',(app.match(/legacyView/g)||[]).length>=1&&/const legacyView = RHYTHM_RANKING_VIEW\.legacy === true;/.test(app));
+check('「旧記録」のボタンはもう出さない',!/data-rhythm-ranking-legacy/.test(read('monster-hero/src/parts/58-screen-rhythm.jsx'))&&(app.match(/legacyView/g)||[]).length>=1&&/const legacyView = RHYTHM_RANKING_VIEW\.legacy === true;/.test(app));
 const sql=fs.existsSync(path.join(ROOT,'docs/sql/rankings/RHYTHM_TICK_V2_APPLY.sql'))?read('docs/sql/rankings/RHYTHM_TICK_V2_APPLY.sql'):'';
 check('足すだけの SQL がある(既存を alter・drop・delete・update しない)',sql.includes('create or replace view public.rhythm2_scores')&&!/\b(alter|drop|delete|update|truncate)\b\s+(table|view|function|from|public\.)/i.test(sql.replace(/^--.*$/gm,'')));
 check('SQL の新しい見方は4つ区切りの -2 だけを数える',/array_length\(string_to_array\(difficulty, '-'\), 1\) = 4/.test(sql)&&/split_part\(difficulty, '-', 4\) = '2'/.test(sql));
