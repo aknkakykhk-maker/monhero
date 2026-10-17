@@ -25,10 +25,10 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
   // 保存は今あるキー(mh_hell_sky_hit_proto・mh_hell_sky_text_proto・mh_sky_lane_look_proto)をそのまま使い、値の意味も既定も変えない。
   // ほかの設定と同じく「保存」を押したときに書く(画面の上では下書き)
   const hellReleased=typeof rhythmHellReleased==='function'&&rhythmHellReleased();
-  const hellNow=()=>({hit:RHYTHM_HELL_SKY_HIT.id,text:RHYTHM_HELL_SKY_TEXT.id,lane:RHYTHM_SKY_LANE_LOOK.id,skyLine:RHYTHM_SKY_LINE_OFFSET.pct,groundW:RHYTHM_ACCEPT_WIDTH.ground,skyW:RHYTHM_ACCEPT_WIDTH.sky,skyTop:RHYTHM_ACCEPT_WIDTH.skyTop});
+  const hellNow=()=>({hit:RHYTHM_HELL_SKY_HIT.id,text:RHYTHM_HELL_SKY_TEXT.id,lane:RHYTHM_SKY_LANE_LOOK.id,skyNote:RHYTHM_SKY_NOTE_LOOK.id,skyLine:RHYTHM_SKY_LINE_OFFSET.pct,groundW:RHYTHM_ACCEPT_WIDTH.ground,skyW:RHYTHM_ACCEPT_WIDTH.sky,skyTop:RHYTHM_ACCEPT_WIDTH.skyTop});
   const [hellDraft,setHellDraft]=useState(hellNow);
   const [hellSaved,setHellSaved]=useState(hellNow);
-  const saveHell=()=>{if(!hellReleased)return;RHYTHM_HELL_SKY_HIT.set(hellDraft.hit);RHYTHM_HELL_SKY_TEXT.set(hellDraft.text);RHYTHM_SKY_LANE_LOOK.set(hellDraft.lane);RHYTHM_SKY_LINE_OFFSET.set(hellDraft.skyLine);RHYTHM_ACCEPT_WIDTH.set('ground',hellDraft.groundW);RHYTHM_ACCEPT_WIDTH.set('sky',hellDraft.skyW);RHYTHM_ACCEPT_WIDTH.set('skyTop',hellDraft.skyTop);const now=hellNow();setHellDraft(now);setHellSaved(now);};
+  const saveHell=()=>{if(!hellReleased)return;RHYTHM_HELL_SKY_HIT.set(hellDraft.hit);RHYTHM_HELL_SKY_TEXT.set(hellDraft.text);RHYTHM_SKY_LANE_LOOK.set(hellDraft.lane);RHYTHM_SKY_NOTE_LOOK.set(hellDraft.skyNote);RHYTHM_SKY_LINE_OFFSET.set(hellDraft.skyLine);RHYTHM_ACCEPT_WIDTH.set('ground',hellDraft.groundW);RHYTHM_ACCEPT_WIDTH.set('sky',hellDraft.skyW);RHYTHM_ACCEPT_WIDTH.set('skyTop',hellDraft.skyTop);const now=hellNow();setHellDraft(now);setHellSaved(now);};
   const previewRef=useRef(null);
   const scrollRef=useRef(null);
   // 【2026-09-13・ユーザー指摘】縦横ボタンで横にしたオプション画面のスクリーンショット。
@@ -307,6 +307,9 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
 {field('レーン発光',segments('laneGlow',RHYTHM_LANE_GLOW_LABELS),null,{full:true})}
 {hellReleased&&field('空中の道の見え方',hellSegments('lane',[['em','はっきり'],['el','控えめ'],['none','なし']]),
   'HELL で、空中のノーツが流れてくる空中の道をどれくらいはっきり出すかです。既定は「はっきり」です。「なし」にすると、空中の判定線だけになります。判定・スコアは変わりません。',{full:true})}
+{/* 空中のノーツの見た目(2026-10-17 社長「空中を本物の3D(段階A)が1番見やすかった。これと今のを設定で選べるようにする」)。既定は「いつもの」 */}
+{hellReleased&&field('空中のノーツの見た目',hellSegments('skyNote',[['normal','いつもの'],['3d','立体']]),
+  'HELL の空中のノーツを、どんな形で描くかです。既定は「いつもの」です。\n「立体」＝空中のタップを光の当たる立体の箱に、空中のスライドを丸い管にして、真下の床に影を落とします。地上のノーツと道はいつもの見た目のままです。\nノーツの位置・判定・色・スコアはどちらでも変わりません。「立体」は描画方式が「WebGL」のとき(「自動」で WebGL になっているときを含む)だけ効き、「Canvas」のときはいつもの見た目で描きます。',{full:true})}
 </div>
 </section>
 <section data-rhythm-options-group="マスモン" className={card}>
