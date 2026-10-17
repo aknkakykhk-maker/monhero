@@ -716,7 +716,10 @@ const normalizeRhythmBestRecord = value => {
     //     (CLAUDE.md ⑦「既存の値に項目を追加する」「保存値が無いときの既定値を通す」)。
     played:source.played===true||source.clear===true,clear:source.clear===true,
     fullCombo:source.fullCombo===true,allExcellent:source.allExcellent===true,allMarvelous:source.allMarvelous===true,
-    judgments:Object.fromEntries(RHYTHM_JUDGMENT_IDS.map(id=>[id,count(source.judgments?.[id]??source[id])])),};
+    judgments:Object.fromEntries(RHYTHM_JUDGMENT_IDS.map(id=>[id,count(source.judgments?.[id]??source[id])])),
+    // comboMax … ホールド・スライドの刻み(8分音符)も数えた最大コンボ(2026-10-17 に追加・案②)。maxCombo はノーツだけの数のまま(意味を変えない)。
+    //   この項目が無い保存値は0(まだ新しい数え方で遊んでいない)として読む(CLAUDE.md ⑦)
+    comboMax:count(source.comboMax),};
 };
 // HELL の満点を 110万→105万にした(2026-10-12 社長の決定)。110万満点のころにデバッグで付いた HELL の自己ベストを、
 // 一度だけ 105/110 に縮める(新しい満点の上を超えないように。割合はそのまま)。5難易度の記録には触らない。
@@ -753,18 +756,24 @@ const rhythmBestRecord = (records,songId,difficultyId) => normalizeRhythmBestRec
 const rhythmJudgeTap = deltaMs => RHYTHM_JUDGMENTS.find(item=>item.windowMs!==null&&Math.abs(deltaMs)<=item.windowMs)?.id||'MISS';
 const rhythmFastSlow = deltaMs => deltaMs<0?'FAST':deltaMs>0?'SLOW':null;
 const rhythmComboAfter = (combo,judgment) => ['MARVELOUS','EXCELLENT','GREAT','GOOD'].includes(judgment)?combo+1:0;
-const rhythmCalculateScore = ({judgments,maxCombo,totalNotes,maxScore}) => {
+// comboTotal … コンボの点の分母(2026-10-17・案②)。ノーツ数+ホールド・スライドの刻みの数。渡さないときはノーツ数(これまでと同じ)。
+//   満点は変わらない: ノーツも刻みも全部つなげば maxCombo=comboTotal でコンボの点は満点(これまでの maxCombo=totalNotes と同じ)
+const rhythmCalculateScore = ({judgments,maxCombo,totalNotes,maxScore,comboTotal}) => {
   if(!totalNotes) return 0;
+  const comboBase=Number(comboTotal)>0?Number(comboTotal):totalNotes;
   const rates=Object.fromEntries(RHYTHM_JUDGMENTS.map(item=>[item.id,item.scoreRate]));
   const judged=RHYTHM_JUDGMENT_IDS.reduce((sum,id)=>sum+(judgments[id]||0)*rates[id],0);
-  return Math.min(maxScore,Math.round((judged/totalNotes*RHYTHM_SCORE_WEIGHTS.judgment+maxCombo/totalNotes*RHYTHM_SCORE_WEIGHTS.combo)*maxScore));
+  return Math.min(maxScore,Math.round((judged/totalNotes*RHYTHM_SCORE_WEIGHTS.judgment+maxCombo/comboBase*RHYTHM_SCORE_WEIGHTS.combo)*maxScore));
 };
-const rhythmResultAchievements = (judgments,totalNotes) => {
+// tickDrops … 落としたコンボの刻みの数(2026-10-17・社長の決定「刻みも1つも落とさないことをフルコンボの条件にする」)。
+//   1つでも落とすと FC・AE・AM は付かない(AE ⊃ FC・AM ⊃ AE)。渡さない呼び出しは0(これまでと同じ)。取った称号は記録の側で下げない
+const rhythmResultAchievements = (judgments,totalNotes,tickDrops=0) => {
   const counts=Object.fromEntries(RHYTHM_JUDGMENT_IDS.map(id=>[id,Math.max(0,Number(judgments?.[id])||0)]));
+  const kept=!(Number(tickDrops)>0);
   return {
-    fullCombo:counts.BAD===0&&counts.MISS===0,
-    allExcellent:counts.GREAT===0&&counts.GOOD===0&&counts.BAD===0&&counts.MISS===0,
-    allMarvelous:totalNotes>0&&counts.MARVELOUS===totalNotes,
+    fullCombo:kept&&counts.BAD===0&&counts.MISS===0,
+    allExcellent:kept&&counts.GREAT===0&&counts.GOOD===0&&counts.BAD===0&&counts.MISS===0,
+    allMarvelous:kept&&totalNotes>0&&counts.MARVELOUS===totalNotes,
   };
 };
 // 今回の完走結果を既存BESTへ統合する純粋関数。判定内訳は、そのBESTスコアを
@@ -777,6 +786,8 @@ const mergeRhythmBestRecord = (current,result) => {
     bestScore:isNewRecord?score:previous.bestScore,
     judgments:isNewRecord?result?.judgments:previous.judgments,
     maxCombo:Math.max(previous.maxCombo,Math.max(0,Math.floor(Number(result?.maxCombo)||0))),
+    // 刻みも数えた最大コンボ(新しい項目)。前より大きいときだけ上書きする
+    comboMax:Math.max(previous.comboMax,Math.max(0,Math.floor(Number(result?.comboMax)||0))),
     // 最後まで演奏したこと自体は played、ライフを残して終えたことが clear。
     // ★cleared を渡さない古い呼び出し(undefined)は、これまでどおりクリア扱いにする。
     //   一度でもクリアしていれば、あとで失敗しても clear は下がらない(記録を消さない)。

@@ -2269,17 +2269,30 @@ const rhythmSlideNoteCheckpoints=note=>{
   if(Array.isArray(baked))return baked;
   return rhythmSlideCheckpointTimes(note,rhythmSlideCheckpointIntervalMs('MASTER',null));
 };
-// ホールドの「線を通った」演出の時刻(2026-10-17 社長「ホールドとかスライドで、他ゲーはコンボ増えてくけど、あれのほうが爽快感はある」→ 案A: 見た目と音だけ)。
-// ホールドには判定の線が無いので、スライドの線と同じ間隔(難易度と譜面のレベルで決まる _rhythmCheckpointIntervalMs)で時刻を作る。
-// 光・音・コンボのはねを出すためだけに使い、判定・コンボの数・スコアには使わない。終わりの手前(TAIL_GUARD)は置かない
-const rhythmHoldTickTimes=note=>{
+// コンボの刻み(2026-10-17 社長の決定・案②「満点はそのまま・正規化」・刻みは8分音符ごと)。
+// ホールド・スライドを押さえている間、曲の8分音符の時刻(拍の表 RHYTHM_SONG_BEATS の半拍。つなぎ目・テンポの揺れも拍の線と同じく直す)を
+// 通るたびにコンボが1つ増え、外れて落とすとコンボが切れる。判定を下げるための線(チェックポイント・帯の曲がりで細かさが決まる)とは別のもの。
+// 押し始めと押し終わりの近く(RHYTHM_COMBO_TICK_EDGE_MS)には置かない(押し始め・終わりの判定と重ねない)。
+// 拍の表が無い曲(試験用・チュートリアルなど)は、押し始めから RHYTHM_COMBO_TICK_FALLBACK_MS ごと。
+// 譜面と曲だけで決まる(端末・コマの速さで数が変わらない)ので、スコアの分母(ノーツ数+刻みの数)はどの端末でも同じ
+const RHYTHM_COMBO_TICK_EDGE_MS=40;
+const RHYTHM_COMBO_TICK_FALLBACK_MS=250;
+const rhythmComboTickTimes=(note,grid)=>{
   const start=Number(note?.timeMs),end=Number(note?.endTimeMs);
-  if(!Number.isFinite(start)||!Number.isFinite(end)||end<=start)return [];
-  const step=Math.max(RHYTHM_SLIDE_CHECKPOINT_MIN_MS,Number(note?._rhythmCheckpointIntervalMs)||rhythmSlideCheckpointIntervalMs('MASTER',null));
-  const limit=end-RHYTHM_SLIDE_CHECKPOINT_TAIL_GUARD_MS,count=Math.max(1,Math.round((end-start)/step)),out=[];
-  for(let i=1;i<=count;i++){const at=Math.round(start+(end-start)*i/count);if(at<=limit)out.push(at);}
+  if(!Number.isFinite(start)||!Number.isFinite(end)||end-start<=RHYTHM_COMBO_TICK_EDGE_MS*2)return [];
+  const from=start+RHYTHM_COMBO_TICK_EDGE_MS,to=end-RHYTHM_COMBO_TICK_EDGE_MS,out=[];
+  const half=grid&&Number(grid.beatMs)>50&&Number.isFinite(Number(grid.zeroMs))?Number(grid.beatMs)/2:0;
+  if(half){
+    for(let k=Math.floor((from-grid.zeroMs)/half)-4,n=0;n<20000;k++,n++){
+      const t=Math.round(rhythmBeatLineTime(grid,grid.zeroMs+k*half));
+      if(t>to)break;
+      if(t>=from&&(!out.length||t>out[out.length-1]))out.push(t);
+    }
+  }else for(let t=start+RHYTHM_COMBO_TICK_FALLBACK_MS;t<=to;t+=RHYTHM_COMBO_TICK_FALLBACK_MS)out.push(Math.round(t));
   return out;
 };
+// 1曲のコンボの刻みの数(演奏画面の run.notes の _rhythmComboTicks を足す)。スコアのコンボの点の分母は「ノーツ数+これ」
+const rhythmComboTickTotal=notes=>Array.isArray(notes)?notes.reduce((sum,note)=>sum+(Array.isArray(note?._rhythmComboTicks)?note._rhythmComboTicks.length:0),0):0;
 // 通過率から「これより良くはならない」という押さえを決める。始点・終点の判定と
 // 悪いほうで合わせて使う。null は「落としていない＝押さえを掛けない」＝これまでどおり。
 const RHYTHM_SLIDE_CHECKPOINT_GRADES=Object.freeze([
@@ -3793,18 +3806,26 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
   // 時刻が来たチェックポイントを1つずつ見て、そのとき指が的の中にいたかを記録する。
   // 「ぶれた一瞬では落とさない」は evaluatePosition が維持している trackingBadSincePerf を
   // そのまま使う(猶予の考え方を追従の判定と共有するため)。
-  // 線を通った印(note._rhythmTicks)。演奏画面が毎コマ読んで、光・音・コンボのはねを出す(2026-10-17 案A)。判定・コンボの数には使わない
-  const markTick=note=>{note._rhythmTicks=(Number(note._rhythmTicks)||0)+1;};
+  // コンボの刻み(rhythmComboTickTimes)を通るたびに、押さえていたら note._rhythmComboOk、外れていたら note._rhythmComboDrop を1つ増やす。
+  // 演奏画面が毎コマ読んで、コンボを増やす・切る(と光・音)。どこまで見たかはノーツに持つ(指の引き継ぎで同じ刻みを二度数えない)。
+  // 外れの一瞬(猶予 graceMs 未満)では落とさない(チェックポイントと同じ)。終点フリックの受付中は押さえているものとして数える
+  const evaluateComboTicks=(session,perf)=>{
+    const note=session.note,ticks=note?._rhythmComboTicks;
+    if(!Array.isArray(ticks)||(session.kind==='HOLD'&&session.failed))return;
+    let index=Number(note._rhythmComboIdx)||0;
+    if(index>=ticks.length)return;
+    const chartNow=estimatedSongMs(session)-session.offsetMs;
+    const graceMs=Number(note._rhythmTrackingGraceMs)>0?Number(note._rhythmTrackingGraceMs):RHYTHM_MID_TRACKING_GRACE_MS;
+    while(index<ticks.length&&Number(ticks[index])<=chartNow){
+      index++;
+      if(session.endFlickArmed||session.trackingBadSincePerf==null||perf-session.trackingBadSincePerf<graceMs)note._rhythmComboOk=(Number(note._rhythmComboOk)||0)+1;
+      else note._rhythmComboDrop=(Number(note._rhythmComboDrop)||0)+1;
+    }
+    note._rhythmComboIdx=index;
+  };
   const evaluateCheckpoints=(session,perf)=>{
     if(!session||session.finished||session.note.done)return;
-    // ホールドは線が無いので、同じ間隔の時刻(rhythmHoldTickTimes)を通るたびに印だけ付ける。外れているあいだ(帯が暗い)は付けない
-    if(session.kind==='HOLD'){
-      const ticks=session.tickTimes;
-      if(session.failed||!Array.isArray(ticks)||session.tickIndex>=ticks.length)return;
-      const chartNow=estimatedSongMs(session)-session.offsetMs;
-      while(session.tickIndex<ticks.length&&Number(ticks[session.tickIndex])<=chartNow){session.tickIndex++;if(session.trackingBadSincePerf==null)markTick(session.note);}
-      return;
-    }
+    evaluateComboTicks(session,perf);
     if(session.kind!=='SLIDE')return;
     const times=session.checkpointTimes;
     if(!Array.isArray(times)||session.checkpointIndex>=times.length)return;
@@ -3814,9 +3835,8 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
     while(session.checkpointIndex<times.length&&Number(times[session.checkpointIndex])<=chartNow){
       session.checkpointIndex++;
       // 終点フリックの受付中は追従を見ない(フリックで的から外れるのは当たり前のため)。
-      if(session.endFlickArmed){session.checkpointPassed++;markTick(session.note);continue;}
-      // 落とした線では印を付けない(光・音も出ない)
-      if(session.trackingBadSincePerf==null||perf-session.trackingBadSincePerf<graceMs){session.checkpointPassed++;markTick(session.note);}
+      if(session.endFlickArmed){session.checkpointPassed++;continue;}
+      if(session.trackingBadSincePerf==null||perf-session.trackingBadSincePerf<graceMs)session.checkpointPassed++;
     }
   };
   const tick=()=>{
@@ -3943,7 +3963,7 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
       // release() が終端判定を作り、押しっぱなしなら+200ms超でMISSになる。
     }else if(kind==='FLICK')note.endTimeMs=(Number(note.timeMs)||0)+60000;
     const perf=nowPerf();
-    sessions.set(key,{key,note,kind,startSongMs:Number(startSongMs)||0,offsetMs:Number(offsetMs)||0,startPerfMs:perf/* 【2026-10-07 21時】押した瞬間の遅れぶん巻き戻すのは、いったんやめる(タップ抜けの報告。原因を調べるまで10/6夕方の動きへ戻す) */,lastPerfMs:perf,startX:pos.clientX,startY:pos.clientY,finished:false,failed:false,releaseRequired,releaseTargetMs,startJudgment:null,startDeltaMs:0,expiredGuard:false,autoCompletionDeferred:false,trackingBadSincePerf:null,checkpointTimes:kind==='SLIDE'?rhythmSlideNoteCheckpoints(note):[],tickTimes:kind==='HOLD'&&typeof rhythmHoldTickTimes==='function'?rhythmHoldTickTimes(note):[],tickIndex:0,checkpointIndex:0,checkpointPassed:0,endFlickRequired,endFlickArmed:false,endFlickAnchorX:pos.clientX,endFlickAnchorY:pos.clientY,endFlickDone:false,endFlickUncertain:false});
+    sessions.set(key,{key,note,kind,startSongMs:Number(startSongMs)||0,offsetMs:Number(offsetMs)||0,startPerfMs:perf/* 【2026-10-07 21時】押した瞬間の遅れぶん巻き戻すのは、いったんやめる(タップ抜けの報告。原因を調べるまで10/6夕方の動きへ戻す) */,lastPerfMs:perf,startX:pos.clientX,startY:pos.clientY,finished:false,failed:false,releaseRequired,releaseTargetMs,startJudgment:null,startDeltaMs:0,expiredGuard:false,autoCompletionDeferred:false,trackingBadSincePerf:null,checkpointTimes:kind==='SLIDE'?rhythmSlideNoteCheckpoints(note):[],checkpointIndex:0,checkpointPassed:0,endFlickRequired,endFlickArmed:false,endFlickAnchorX:pos.clientX,endFlickAnchorY:pos.clientY,endFlickDone:false,endFlickUncertain:false});
     ensureTick();
   };
   const slideVisualLaneForIndex=index=>{

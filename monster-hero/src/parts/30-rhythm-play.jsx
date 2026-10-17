@@ -1479,7 +1479,7 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   // チェックポイント(判定線)の間隔は「難易度 × その譜面のレベル」で決まる。
   // 譜面データそのものは触らず、演奏を始めるときにノーツ1つ1つへ焼き込む
   // (追従の許容・猶予と同じやり方。保存データにもランキングにも影響しない)。
-  const makeRuntimeNotes=()=>{const tracking=rhythmSlideTrackingFor(difficulty.id);const checkpointIntervalMs=rhythmSlideCheckpointIntervalMs(difficulty.id,chart?.level);return chart.notes.map((note,index)=>({...note,index,done:false,activePointerId:null,holdJudgment:null,holdDeltaMs:0,_rhythmSlideToleranceBonusLanes:tracking.toleranceBonusLanes,_rhythmTrackingGraceMs:tracking.graceMs,_rhythmCheckpointIntervalMs:checkpointIntervalMs,...(note.type==='SLIDE'?{_rhythmSlideRenderPoints:rhythmSlidePoints(note),_rhythmSlideCheckpoints:rhythmSlideCheckpointTimes(note,checkpointIntervalMs)}:{})}));};
+  const makeRuntimeNotes=()=>{const tracking=rhythmSlideTrackingFor(difficulty.id);const checkpointIntervalMs=rhythmSlideCheckpointIntervalMs(difficulty.id,chart?.level);const comboGrid=rhythmSongBeatGrid(song.songId);return chart.notes.map((note,index)=>({...note,index,done:false,activePointerId:null,holdJudgment:null,holdDeltaMs:0,_rhythmSlideToleranceBonusLanes:tracking.toleranceBonusLanes,_rhythmTrackingGraceMs:tracking.graceMs,_rhythmComboTicks:rhythmNoteHasBody(note)?rhythmComboTickTimes(note,comboGrid):null,...(note.type==='SLIDE'?{_rhythmSlideRenderPoints:rhythmSlidePoints(note),_rhythmSlideCheckpoints:rhythmSlideCheckpointTimes(note,checkpointIntervalMs)}:{})}));};
   const initialView=()=>({status:lineAdjust&&lineAdjust.phase==='set'?'idle':'loading',score:0,combo:0,maxCombo:0,last:'',lastPrecise:false,fastSlow:'',counts:emptyCounts(),fast:0,slow:0,precise:0,life:RHYTHM_LIFE_MAX,ability:null,result:null});
   const [view,setView]=useState(initialView);
   // 演奏中は左上の曲名とジャケットを薄くする(設定 hudSongFade)。始まって4秒で薄く、ポーズ中(status が playing でない間)は元に戻す
@@ -1910,7 +1910,35 @@ useEffect(()=>{
   const id=requestAnimationFrame(()=>{if(!alive)return;travelCacheRef.current=null;measureTravel();});
   return ()=>{alive=false;cancelAnimationFrame(id);};
 },[lineAdjustSetting,settings.judgmentLineHeight,measureTravel]);
-  const applyJudgment=useCallback((note,judgment,deltaMs)=>{const _judgeT0=RHYTHM_PERF.enabled&&typeof performance!=='undefined'?performance.now():0;const run=runRef.current;if(!run||run.finished||run.paused||note.done)return;
+  // ===== コンボの刻み(2026-10-17 社長の決定・案②「満点はそのまま・正規化」・8分音符ごと) =====
+  // 指の処理(evaluateComboTicks)がノーツに数えた「押さえて通った刻み(_rhythmComboOk)」「外れて落とした刻み(_rhythmComboDrop)」のうち、
+  // まだコンボへ入れていない分を入れる。通った刻みはコンボ+1、落とした刻みはコンボを切る(フルコンボの条件にも数える run.comboTickDrops)。
+  // judgment を渡すと押し終わりの清算: まだ通っていない残りの刻みを、GOOD 以上なら通った・BAD/MISS なら落としたとして片付ける
+  // (押さえずに終わったノーツ・指の処理を通らない入力でも、刻みの数が必ずそろう)。
+  // ★ノーツだけのコンボ(run.noteCombo・記録の maxCombo の意味)には入れない。スコアのコンボの点だけが「ノーツ数+刻みの数」を分母にする
+  const comboTicksRef=useRef(null);
+  comboTicksRef.current=(note,judgment=null)=>{
+    const run=runRef.current,ticks=note&&note._rhythmComboTicks;
+    if(!run||!Array.isArray(ticks)||!ticks.length)return 0;
+    const okNow=()=>Number(note._rhythmComboOk)||0,dropNow=()=>Number(note._rhythmComboDrop)||0;
+    if(judgment){const rest=ticks.length-okNow()-dropNow();if(rest>0){if(judgment==='BAD'||judgment==='MISS')note._rhythmComboDrop=dropNow()+rest;else note._rhythmComboOk=okNow()+rest;}note._rhythmComboIdx=ticks.length;}
+    const ok=okNow()-(Number(note._rhythmComboSeenOk)||0),drop=dropNow()-(Number(note._rhythmComboSeenDrop)||0);
+    if(!(ok>0)&&!(drop>0))return 0;
+    note._rhythmComboSeenOk=okNow();note._rhythmComboSeenDrop=dropNow();
+    // 同じコマに両方あるときは、落としてから通った順(外れて戻った)として数える
+    if(drop>0){run.combo=0;run.comboTickDrops+=drop;}
+    if(ok>0){run.combo+=ok;run.maxCombo=Math.max(run.maxCombo,run.combo);}
+    if(!judgment){
+      // 押さえている間はここでスコアと表示を書く(押し終わりは判定の処理がまとめて書く)
+      if(!run.lifeDepleted)run.score=Math.floor(rhythmCalculateScore({judgments:run.counts,maxCombo:run.maxCombo,totalNotes:chart.totalNotes,comboTotal:chart.totalNotes+(run.comboTickTotal??(run.comboTickTotal=rhythmComboTickTotal(run.notes))),maxScore:difficulty.maxScore})*(assistOn?RHYTHM_ASSIST_SCORE_RATE:1))-run.scoreOffset;
+      const score=run.lifeDepleted?run.lockedScore:run.score;
+      hudRef.current.set({score,combo:run.combo});
+      const coarseKey=`${rhythmComboTier(run.combo)}|${Math.floor(run.combo/RHYTHM_COMBO_MILESTONE_STEP)}|${rhythmLifeState(run.life)==='down'?'down':'up'}`;
+      if(coarseKey!==run._viewCoarseKey){run._viewCoarseKey=coarseKey;setView(v=>({...v,score,combo:run.combo,maxCombo:run.maxCombo}));}
+    }
+    return ok;
+  };
+  const applyJudgment=useCallback((note,judgment,deltaMs)=>{const _judgeT0=RHYTHM_PERF.enabled&&typeof performance!=='undefined'?performance.now():0;const run=runRef.current;if(!run||run.finished||run.paused||note.done)return;comboTicksRef.current(note,judgment);
 // 必死(ユグドラシル血統の能力)のあいだは、GREAT・EXCELLENTをMARVELOUSとして数える(判定だけをここで置き換える。
 // ずれは変えないので、ジャストのMARVELOUSになるのは本当にぴったりだったときだけ。2026-10-06 ユーザー指示)
 if(rhythmHisshiUpgrades(run.abilities,judgment,run.audio?.songTimeMs?.()??0))judgment='MARVELOUS';
@@ -2047,7 +2075,7 @@ if(luckOn){const luckNow=run.audio?.songTimeMs?.()??0;const rushActive=run.luckR
 /* コンボの節目(オプション「コンボの節目」)。100のくぎりに届いた瞬間だけ、コンボ数のまわりに金の光の輪を広げる
    (「100 COMBO」の大きな数字は、もとからある演出 comboMilestone が出す)。コンボガードで数が据え置きのとき(増えていないとき)は出さない */
 if(settingsLiveRef.current.comboMilestoneFx===true&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL'&&keptCombo>run.combo&&keptCombo>=RHYTHM_COMBO_MILESTONE_STEP&&keptCombo%RHYTHM_COMBO_MILESTONE_STEP===0){const el=comboRingRef.current;if(el)rhythmRestartAnimations([{el,attr:'rhythmRing'}]);}
-run.combo=keptCombo;run.maxCombo=Math.max(run.maxCombo,keptCombo);run.counts[judgment]++;if(preciseHit)run.precise++;const side=judgment==='MISS'?null:rhythmFastSlow(deltaMs);if(side)run[side.toLowerCase()]++;const songTimeMs=run.audio?.songTimeMs?.()??0;
+run.combo=keptCombo;run.maxCombo=Math.max(run.maxCombo,keptCombo);/* ノーツだけのコンボ(記録の maxCombo の意味のまま・刻みは入れない) */run.noteCombo=keptCombo===0?0:nextCombo===0?run.noteCombo:run.noteCombo+1;run.noteMaxCombo=Math.max(run.noteMaxCombo,run.noteCombo);run.counts[judgment]++;if(preciseHit)run.precise++;const side=judgment==='MISS'?null:rhythmFastSlow(deltaMs);if(side)run[side.toLowerCase()]++;const songTimeMs=run.audio?.songTimeMs?.()??0;
 // ライフ変化は能力(無敵・我慢)を通してから反映する。判定・コンボ・スコアそのものは変えない(§4.2)
 // 練習ではライフを減らさない。途中で倒れると、まだ習っていないノーツまで届かなくなる
 // lifeBefore … 減ったことを知らせる演出のためだけに控える(2026-09-12)。計算には使わない
@@ -2084,7 +2112,7 @@ if(monster&&monster.ability&&rhythmMonsterAbilityTriggers(judgment)){
     if(cutInOn){const cutIn=cutInRefs.current[slot-1];if(cutIn){RHYTHM_FRAME_DIAG.cue('cutin');rhythmRestartAnimations([{el:cutIn,attr:'rhythmCutinPlay'}]);}}
   }
 }
-const calculatedScore=Math.floor(rhythmCalculateScore({judgments:run.counts,maxCombo:run.maxCombo,totalNotes:chart.totalNotes,maxScore:difficulty.maxScore})*(assistOn?RHYTHM_ASSIST_SCORE_RATE:1));if(!run.lifeDepleted)run.score=calculatedScore-run.scoreOffset;if(!run.lifeDepleted&&run.life===0){run.lifeDepleted=true;run.lockedScore=run.score;}
+const calculatedScore=Math.floor(rhythmCalculateScore({judgments:run.counts,maxCombo:run.maxCombo,totalNotes:chart.totalNotes,comboTotal:chart.totalNotes+(run.comboTickTotal??(run.comboTickTotal=rhythmComboTickTotal(run.notes))),maxScore:difficulty.maxScore})*(assistOn?RHYTHM_ASSIST_SCORE_RATE:1));if(!run.lifeDepleted)run.score=calculatedScore-run.scoreOffset;if(!run.lifeDepleted&&run.life===0){run.lifeDepleted=true;run.lockedScore=run.score;}
 // DOWN中に根性で蘇生したら、**その蘇生ノーツ自身は加算せず次のノーツから** 加算を再開する。
 // DOWN中に止まっていたぶんを遡って足さないよう、そのぶんを差し引く量として持つ(§4.4)
 if(revived&&run.lifeDepleted&&run.life>0){run.scoreOffset=rhythmScoreOffsetAfterRevive(calculatedScore,run.lockedScore);run.score=run.lockedScore;run.lifeDepleted=false;}
@@ -2135,7 +2163,7 @@ if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number
   const finish=useCallback(()=>{const run=runRef.current;if(!run||run.finished||run.paused)return;run.finished=true;rhythmSongPlaySignal(false,song.songId);stopFrame();RHYTHM_NOTE_SE_RUNTIME.holdStopAll();RHYTHM_GESTURE_RUNTIME.clear();run.activePointers.clear();run.activeTouchInputs?.clear();run.outsideStartInputs?.clear();run.audio?.stop();
     // 判定ラインを合わせる「試す段階」は、曲の終わりで結果へ行かず、最初から流し直す(終わりは「止めて設定に戻る」「保存して戻る」「やめる」だけ。2026-10-14)
     if(lineAdjustRef.current){lineAdjustRef.current.onLoop?.();return;}
-    const score=run.lifeDepleted?run.lockedScore:run.score;const achievements=rhythmResultAchievements(run.counts,chart.totalNotes);/* アシストモードでは FULL COMBO 等の称号を付けない(アワーノーツと同じ) */if(assistOn){achievements.fullCombo=false;achievements.allExcellent=false;achievements.allMarvelous=false;}
+    const score=run.lifeDepleted?run.lockedScore:run.score;const achievements=rhythmResultAchievements(run.counts,chart.totalNotes,run.comboTickDrops);/* アシストモードでは FULL COMBO 等の称号を付けない(アワーノーツと同じ) */if(assistOn){achievements.fullCombo=false;achievements.allExcellent=false;achievements.allMarvelous=false;}
     // ===== クリアか失敗か(2026-09-12・ユーザー指示「終了後にクリアか失敗かもわかるようにして」) =====
     // 失敗＝ライフが0になったまま曲を終えた(不可逆のDOWN)こと。根性で蘇生して0を脱していれば
     // run.lifeDepleted は false に戻っているので、そのときはクリア扱いになる。
@@ -2157,7 +2185,7 @@ if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number
     const calibration=calibrating
       ? rhythmCalibrationOffsetFromTaps((Array.isArray(run.deltas)?run.deltas:[]).slice(RHYTHM_CALIBRATION_WARMUP_COUNT))
       : null;
-    const result={score,judgments:{...run.counts},maxCombo:run.maxCombo,fast:run.fast,slow:run.slow,precise:run.precise,cleared:!failed,...(calibration?{calibration}:{}),...achievements,...(assistOn?{assist:true}:{})};
+    /* maxCombo はノーツだけの数(記録・レイド・マルチで今までと同じ意味)。comboMax は刻みも数えた数(画面に出す数・記録の新しい項目) */const result={score,judgments:{...run.counts},maxCombo:run.noteMaxCombo,comboMax:run.maxCombo,comboTickDrops:run.comboTickDrops,fast:run.fast,slow:run.slow,precise:run.precise,cleared:!failed,...(calibration?{calibration}:{}),...achievements,...(assistOn?{assist:true}:{})};
     /* アシストモードのプレイは自己ベスト・ランキングに残さない(受け取る側が result.assist を見て保存しない)。
        ここでも自己ベストを混ぜない(NEW RECORD を出さない) */
     const isNewRecord=!assistOn&&score>run.startBestScore;const merged=assistOn?normalizeRhythmBestRecord(run.startBest):mergeRhythmBestRecord(run.startBest,result);
@@ -2441,11 +2469,12 @@ for(let i=scanFrom;i<notes.length;i++){
 RHYTHM_NOTE_SE_RUNTIME.holdSync(heldNotes);
 // ホールド・スライドで線(チェックポイント)を通ったとき、小さな光・小さな音・コンボの数字の軽いはねを出す(2026-10-17 社長「ホールドとかスライドで、
 // 他ゲーはコンボ増えてくけど、あれのほうが爽快感はある」→ 案A: 見た目と音だけ。コンボの数・スコア・判定は変えない)。
-// 印(note._rhythmTicks)は指の処理(evaluateCheckpoints)が、落とさずに通った線でだけ増やす。光はノーツの canvas の中(pushTick)、はねは今あるコンボの数字を animate で動かすだけ(画面の部品は足さない)。
+// 2026-10-17 案②: コンボの刻み(8分音符)を通るたびにコンボが増えるようにしたので、光・音・はねも同じ刻みで出す(判定を下げる線とは切り離した)。
+// 刻みは指の処理(evaluateComboTicks)が数え、comboTicksRef がコンボ・スコアへ入れる。落とした刻みではコンボが切れ、光・音は出ない。光はノーツの canvas の中(pushTick)、はねは今あるコンボの数字を animate で動かすだけ(画面の部品は足さない)。
 // 軽量モードでは光とはねを出さない。演出量「最小」では弱い形で出す(音はタップ音の設定に従う)。
 // 2026-10-17 社長「全然わかんないし音もないし」で、音を叩いた音の大きさに、光とはねをひとめで分かる強さに作り直した
-// 曲がりの多い帯は線が約45msおきに来るので、1本の帯につき RHYTHM_HOLD_TICK_FX_GAP_MS に1回までにまとめる(光と音が忙しくなりすぎないように)
-for(let i=0;i<heldNotes.length;i++){const note=heldNotes[i],ticks=Number(note._rhythmTicks)||0;if(!(ticks>(Number(note._rhythmTicksSeen)||0)))continue;note._rhythmTicksSeen=ticks;
+// 速い曲でも光と音が忙しくなりすぎないよう、1本の帯につき RHYTHM_HOLD_TICK_FX_GAP_MS に1回までにまとめる(コンボは刻みごとに必ず増える)
+for(let i=0;i<heldNotes.length;i++){const note=heldNotes[i];if(!(comboTicksRef.current(note)>0))continue;
   if(frameNowMs-(Number(note._rhythmTickFxAt)||-1e9)<RHYTHM_HOLD_TICK_FX_GAP_MS)continue;note._rhythmTickFxAt=frameNowMs;
   const slide=rhythmNoteIsSlide(note);RHYTHM_NOTE_SE_RUNTIME.playTick(slide);
   if(settings.lightweightMode)continue;
@@ -2640,7 +2669,7 @@ const introStart=rhythmSongIntroNow();
 const introMinMs=introShown||multi?introMs:0;
 songIntroRef.current={generation,holds,visible:introShown,skippable:!multi,skipped:false,closingAt:null,
   minEnd:introStart+introMinMs,maxEnd:introStart+(multi?introMinMs:Math.max(introMinMs,RHYTHM_SONG_INTRO_MAX_MS))};
-setSongIntro(introShown?{key:generation,ms:introMs,short:introMs<RHYTHM_SONG_INTRO_MS,skippable:!multi}:null);}/* 直し方の入れ切りは、ゲームが端末の直近の診断の記録から自分で決める(人が調整する前提にしない) */try{rhythmTouchFixAutoSet(rhythmTouchFixAutoFrom(await storeGet(RHYTHM_TOUCH_DIAG_KEY,[])));}catch{rhythmTouchFixAutoSet({});}const audio=await Audio_.startRhythmTrack(song.bgmTrackId,settings.bgmVolume,{autoStart:false});if(!mountedRef.current||generation!==generationRef.current){audio?.stop();return;}if(!audio){rhythmSongPrepSignal(false,song.songId);startLockRef.current=false;songIntroRef.current=null;setSongIntro(null);setView(v=>({...v,status:'error'}));return;}const startBest=normalizeRhythmBestRecord(startBestValue);/* 入力の記録(デバッグ設定で入れたときだけ。rhythm-mode.js の RHYTHM_INPUT_REC) */try{RHYTHM_INPUT_REC.begin(playAreaRef.current,()=>Number(audio.songTimeMs())||0,{songId:song.songId,difficultyId:difficulty.id,mirror:!!mirrorOn,assist:!!assistOn,offsetMs:Number(settings.judgmentTimingOffsetMs)||0,debugPlay:!!debugPlay,settings:(()=>{try{return JSON.parse(JSON.stringify(settings));}catch{return null;}})()});}catch{}RHYTHM_FRAME_DIAG.reset();RHYTHM_TIMING_DIAG.reset();RHYTHM_TIMING_DIAG.meta(audio.info?.());RHYTHM_TOUCH_BRIDGE.reset();rhythmFloatingNotesClear();runRef.current={audio,heroSeed:Math.random(),notes:makeRuntimeNotes(),activePointers:new Map(),standbyPointers:new Map(),activeTouchInputs:new Set(),inputTimes:[],combo:0,maxCombo:0,counts:emptyCounts(),fast:0,slow:0,precise:0,deltas:[],life:RHYTHM_LIFE_MAX,lifeDepleted:false,score:0,lockedScore:0,scoreOffset:0,abilities:createRhythmMonsterAbilityState(),konjoOwnerName:'',finished:false,paused:false,generation,startBest,startBestScore:startBest.bestScore};laneRefs.current.forEach(el=>{if(el){el.style.display='block';el.style.opacity='0';el.style.filter='';/* styleを直接書き戻したら、「前に何を書いたか」の控えも一緒に捨てる。   控えだけ古いまま残ると、値が同じだと判断して書き込みを飛ばし、   実際の見た目とズレたまま固まる(例: 透明のまま出てこない)ため */el._rhythmHidden=false;el._rhythmOpacity=undefined;el._rhythmWillChange=undefined;el._rhythmFailedFlag=undefined;el._rhythmClearFlag=undefined;delete el.dataset.rhythmClear;el._rhythmHoldBody=undefined;el._rhythmHoldFilter=undefined;el._rhythmDepthScale=undefined;el._rhythmDepthBrightness=undefined;el._rhythmTransform=undefined;el._rhythmSlideBody=undefined;}});if(canvasNotes)RHYTHM_CANVAS_RENDERER.clear();rhythmLayoutPlayArea(playAreaRef.current);updateJudgmentBand(measureTravel(),rhythmTravelMsForSpeed(settings.noteSpeed));
+setSongIntro(introShown?{key:generation,ms:introMs,short:introMs<RHYTHM_SONG_INTRO_MS,skippable:!multi}:null);}/* 直し方の入れ切りは、ゲームが端末の直近の診断の記録から自分で決める(人が調整する前提にしない) */try{rhythmTouchFixAutoSet(rhythmTouchFixAutoFrom(await storeGet(RHYTHM_TOUCH_DIAG_KEY,[])));}catch{rhythmTouchFixAutoSet({});}const audio=await Audio_.startRhythmTrack(song.bgmTrackId,settings.bgmVolume,{autoStart:false});if(!mountedRef.current||generation!==generationRef.current){audio?.stop();return;}if(!audio){rhythmSongPrepSignal(false,song.songId);startLockRef.current=false;songIntroRef.current=null;setSongIntro(null);setView(v=>({...v,status:'error'}));return;}const startBest=normalizeRhythmBestRecord(startBestValue);/* 入力の記録(デバッグ設定で入れたときだけ。rhythm-mode.js の RHYTHM_INPUT_REC) */try{RHYTHM_INPUT_REC.begin(playAreaRef.current,()=>Number(audio.songTimeMs())||0,{songId:song.songId,difficultyId:difficulty.id,mirror:!!mirrorOn,assist:!!assistOn,offsetMs:Number(settings.judgmentTimingOffsetMs)||0,debugPlay:!!debugPlay,settings:(()=>{try{return JSON.parse(JSON.stringify(settings));}catch{return null;}})()});}catch{}RHYTHM_FRAME_DIAG.reset();RHYTHM_TIMING_DIAG.reset();RHYTHM_TIMING_DIAG.meta(audio.info?.());RHYTHM_TOUCH_BRIDGE.reset();rhythmFloatingNotesClear();runRef.current={audio,heroSeed:Math.random(),notes:makeRuntimeNotes(),activePointers:new Map(),standbyPointers:new Map(),activeTouchInputs:new Set(),inputTimes:[],combo:0,maxCombo:0,noteCombo:0,noteMaxCombo:0,comboTickDrops:0,comboTickTotal:null,counts:emptyCounts(),fast:0,slow:0,precise:0,deltas:[],life:RHYTHM_LIFE_MAX,lifeDepleted:false,score:0,lockedScore:0,scoreOffset:0,abilities:createRhythmMonsterAbilityState(),konjoOwnerName:'',finished:false,paused:false,generation,startBest,startBestScore:startBest.bestScore};laneRefs.current.forEach(el=>{if(el){el.style.display='block';el.style.opacity='0';el.style.filter='';/* styleを直接書き戻したら、「前に何を書いたか」の控えも一緒に捨てる。   控えだけ古いまま残ると、値が同じだと判断して書き込みを飛ばし、   実際の見た目とズレたまま固まる(例: 透明のまま出てこない)ため */el._rhythmHidden=false;el._rhythmOpacity=undefined;el._rhythmWillChange=undefined;el._rhythmFailedFlag=undefined;el._rhythmClearFlag=undefined;delete el.dataset.rhythmClear;el._rhythmHoldBody=undefined;el._rhythmHoldFilter=undefined;el._rhythmDepthScale=undefined;el._rhythmDepthBrightness=undefined;el._rhythmTransform=undefined;el._rhythmSlideBody=undefined;}});if(canvasNotes)RHYTHM_CANVAS_RENDERER.clear();rhythmLayoutPlayArea(playAreaRef.current);updateJudgmentBand(measureTravel(),rhythmTravelMsForSpeed(settings.noteSpeed));
 /* 使い回すヒットエフェクトを先に作っておく。曲の途中で10個まとめて作ると、そこで一瞬引っかかる */
 rhythmEnsureHitEffects(playAreaRef.current);
 /* 光のスプライトも先に焼いておく。曲の中で「その種類のノーツが初めて出た瞬間」に作ると
