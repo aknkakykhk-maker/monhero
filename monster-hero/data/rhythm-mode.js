@@ -3058,7 +3058,7 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
 //   HOLDは動かない的なので、経路を追従するSLIDEより厳しめにしている。
 const RHYTHM_MID_TRACKING_GRACE_MS=120;
 // 空中の段(試作): 高さのあるスライドが外れてから切れるまでの猶予。MASTER のホールド(120ms)を基準に、横持ち親指2本の人のくせのボットで決める
-const RHYTHM_SKY_SLIDE_CUT_GRACE_MS=120;
+// (2026-10-16 まで: RHYTHM_SKY_SLIDE_CUT_GRACE_MS=120。空中のスライドを外れたら切っていた猶予。いまは地上と同じくチェックポイントで見るので使わない)
 // 空中の段のあるスライドで、指が帯から遅れて付いてくるのを許す長さ(帯がこの時間だけ前にいた所も帯の上と見る・2026-10-16)
 const RHYTHM_SKY_SLIDE_FINGER_LAG_MS=90;
 const RHYTHM_HOLD_TRACKING_MARGIN_LANES=.15;
@@ -3721,19 +3721,13 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
     // 【2026-09-12】SLIDEはここで打ち切らない。外れているあいだに来たチェックポイントだけが
     // 落ちて、指を戻せば続きは拾える(evaluateCheckpoints が数える)。
     // HOLDはこれまでどおり、猶予を超えたらその場でMISSを確定する。
-    // 空中の段(試作・2026-10-10 社長「切れる作りにしてほしいけど猶予はあり」): 高さのあるスライドは、ホールドと同じく
-    // 猶予を超えて外れたらその場で切れる(MISS)。地上だけのスライド(既存の全曲)はこれまでどおり切れない
-    // ★空中も地上も通るスライドは、帯がいま地上を走っている間は、地上のスライドと同じく切らない(2026-10-16・上下クロスで地上側の帯が切れていた。
-    //   「切れる」は空中の帯の決まり。地上を走っている所で外れた分は、地上のスライドと同じく判定の点だけを落とす)
-    if(session.kind==='SLIDE'&&!(rhythmSlideHasSky(session.note)&&rhythmSlideSkyAt(session.note,chartNow)>=.5))return;
-    // ★空中のスライドも、ホールドと同じく終わりの100msでは切らない(2026-10-15 社長「AMOS の空スライドの離す方のとき毎回ミスになる」)。
-    //   指を離す・次のノーツへ動かす瞬間に接点が帯から外れるのは当たり前で、もう成立する時間。ホールドにはあった免除が空中のスライドだけ無かった
-    if(session.kind==='SLIDE'&&chartNow>=Number(session.note?.endTimeMs)-RHYTHM_HOLD_END_TRACKING_SKIP_MS)return;
-    const graceMs=session.kind==='SLIDE'?RHYTHM_SKY_SLIDE_CUT_GRACE_MS:Number(session.note?._rhythmTrackingGraceMs)>0
-      ?Number(session.note._rhythmTrackingGraceMs):RHYTHM_MID_TRACKING_GRACE_MS;
-    // 空中のスライドは「いまの時刻」で外れていた長さを測る。指が止まったままだと pos.perfMs は押した瞬間のまま進まず、
-    // 帯が離れていっても外れの長さが0のままで切れなかった(動かさないボットで見つけた)。ホールドは帯が横へ動かないので今までどおり
-    const elapsedPerf=(session.kind==='SLIDE'?Math.max(Number(pos.perfMs)||0,nowPerf()):pos.perfMs)-session.trackingBadSincePerf;
+    // ★空中のスライドも、地上のスライドと同じく途中で切らない(2026-10-16 社長「スライドとかで外れたらミス判定になるの早くない？」
+    //   「今までって判定箇所があって、それを何%分外したらその分判定が下がってくとかじゃなかったっけ？」)。
+    //   2026-10-10 から空中のスライドだけ「外れが120ms続いたらその場で MISS」(ホールドと同じ)だったのをやめ、外れているあいだに来たチェックポイントを落とし、
+    //   落とした割合で判定を下げる(rhythmSlideTrackingFloor)。外れているあいだ帯が暗くなる合図(note._trackOff)は今までどおり。ホールドは今のまま切れる
+    if(session.kind==='SLIDE')return;
+    const graceMs=Number(session.note?._rhythmTrackingGraceMs)>0?Number(session.note._rhythmTrackingGraceMs):RHYTHM_MID_TRACKING_GRACE_MS;
+    const elapsedPerf=pos.perfMs-session.trackingBadSincePerf;
     if(elapsedPerf<graceMs)return;
     if(typeof RHYTHM_INPUT_REC!=='undefined')RHYTHM_INPUT_REC.event('track-cut',{note:session.note.index,key:session.key,kind:session.kind});
     session.note.holdJudgment='MISS';
