@@ -2322,9 +2322,9 @@ const rhythmChartTickCount=(song,chart,difficultyId)=>{
 };
 // 1曲の刻みの数(演奏画面のノーツの _rhythmComboTicks を足す)
 const rhythmComboTickTotal=notes=>Array.isArray(notes)?notes.reduce((sum,note)=>sum+(Array.isArray(note?._rhythmComboTicks)?note._rhythmComboTicks.length:0),0):0;
-// 刻みの数え方へ切り替える時刻(週の区切り・イベントの外。社長の確認しだいで動かす)。演奏を始めるときに毎回見る(読み込み時に1回だけ決めない)。
+// 刻みの数え方へ切り替える時刻。演奏を始めるときに毎回見る(読み込み時に1回だけ決めない)。
 // デバッグの「確認待ちの試作」(mh_rhythm_tick_preview_proto='1')を入れると、この時刻より前でも試せる(そのあいだはランキングへ送らない)
-const RHYTHM_TICK_SWITCH_AT='2026-11-02T05:00:00+09:00';
+const RHYTHM_TICK_SWITCH_AT='2026-10-17T15:03:00+09:00';// 社長の決定「出来たらすぐ」= 公開した時刻(イベント中・週の途中でも切り替える)
 const RHYTHM_TICK_PREVIEW_KEY='mh_rhythm_tick_preview_proto';
 const rhythmTickPreviewOn=()=>{try{return typeof localStorage!=='undefined'&&localStorage.getItem(RHYTHM_TICK_PREVIEW_KEY)==='1';}catch{return false;}};
 const rhythmTickRulesReleased=(nowMs=Date.now())=>Number(nowMs)>=Date.parse(RHYTHM_TICK_SWITCH_AT);

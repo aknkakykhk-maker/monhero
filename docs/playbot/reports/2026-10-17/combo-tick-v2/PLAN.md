@@ -16,7 +16,7 @@
 - 曲えらび: 「ノーツ数 + 刻み◯」。Lv. の式には入れない
 - マルチは部屋の中で版をそろえる
 - ⑦: ランキングは足すだけ・古い版は旧の物差しのまま。自己ベストは新キー `mh_rhythm_best_v2`。SQL は窓口へ本文を送り、社長の確認後に1回で流す
-- 切り替えは週の区切り(月曜5:00)。イベント中は避ける → いまハロウィン・ナイトと大王ジャックが 11/1 まで。**既定 2026-11-02 05:00(社長に確認中)**
+- 切り替えは週の区切り(月曜5:00)。イベント中は避ける → いまハロウィン・ナイトと大王ジャックが 11/1 まで。→ 社長「出来たらすぐ」: 公開した時刻 2026-10-17 15:03 に切り替え(イベント中・週の途中でも)
 
 ## 作り方(調べて決めた)
 
@@ -34,7 +34,7 @@
 
 - [x] 1. 刻みを作る・指の処理・ホールドを切らない・切り替えの時刻(rhythmComboTickTimes・evaluateComboTicks・RHYTHM_TICK_SWITCH_AT)
 - [x] 2. 演奏画面: 判定・コンボ・スコア・FC・結果・いたずら・レイド(+HELL の補正)(comboTicksRef・rhythmCalculateScoreTicks・raidJackRhythmDamageOf)
-- [~] 3. 自己ベスト v2(済: saveRhythmBestRecord の版・loadRhythmBestRecordsNow)・曲えらび/結果の表示(ノーツ数+刻み・旧記録)はまだ
-- [~] 4. Supabase: 送る鍵・読む見方を版で分ける(済: rhythmRankingDifficultyKey の -2・rhythmRankingDbName)+SQL `docs/sql/rankings/RHYTHM_TICK_V2_APPLY(_TEST).sql`(済・窓口へ送る)。旧記録の切り替えボタンはまだ
-- [ ] 5. マルチの版そろえ・遊んだ記録/端末の記録に刻みを入れない確認
-- [ ] 6. 更新履歴・ヘルプ・検査・自動演奏・動画(combo-tick-v2/)
+- [x] 3. 自己ベスト v2・曲えらび(ノーツ数+刻み)・結果(刻みの数)・旧記録の切り替え
+- [x] 4. Supabase: 送る鍵(-2)・読むアドレス(rhythmRankingUrl)・期間の版・切り替えた週の二重送り・SQL(本番に適用済み)
+- [x] 5. マルチの版そろえ(通信路に v2-)・遊んだ記録/端末の記録に刻みを入れない
+- [x] 6. 更新履歴・ヘルプ・検査・自動演奏・動画(README.md)
