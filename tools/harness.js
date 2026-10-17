@@ -322,6 +322,7 @@ const EXPORTED_NAMES = [
   'SOUL_RANK_RESPEC_ITEM_ID',
   'SOUL_RANK_RESPEC_DIAMOND_COST',
   'buildSoulRankRespecProofExchange',
+  'buildHeroProofShardExchange',
   'formatSoulTraitEffect',
   'combineSoulProbabilityPoints',
   'soulTraitPartyPreview',
