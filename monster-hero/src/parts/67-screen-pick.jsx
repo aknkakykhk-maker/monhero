@@ -251,6 +251,7 @@ function ProMonsterGridPicker({ list, selectedId=null, isDisabled, onSelect, onD
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-baseline justify-between gap-2"><b className="truncate text-[14px] text-white leading-tight">{focus.name}</b><span className="shrink-0 text-[9px] text-slate-500 font-black">総合力 <b className="text-[12px] text-amber-300 font-mono">{formatMonsterPower(monsterPowerOf(focus))}</b></span></div>
+                {monsterTypeProtoOn()&&<div data-pick-type-row className="flex"><MonsterTypeBadge monId={focus.id}/></div>}
                 <div className="truncate text-[9px] font-black text-slate-400 leading-tight">{(()=>{const l=monsterLineageOf(focus.id);return l.main.id===l.sub.id?`${l.main.name}の純血`:`${l.main.name} × ${l.sub.name}`;})()}</div>
                 <div className="truncate text-[10px] font-black text-amber-300 leading-tight"><Zap size={10} className="inline mr-0.5"/>{focus.unique.name}</div>
                 <div className="text-[9px] text-indigo-200 font-black leading-tight line-clamp-2"><span className="text-indigo-400">勇者特性 </span>{focus.trait||'特性なし'}</div>

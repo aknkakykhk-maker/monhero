@@ -516,17 +516,18 @@ const tacticsEnemyPowerMultiplier = (startPower, nowPower, exponent = TACTICS_EN
 //   重みは「残りライフの割合が低いほど大きい」。倒れている子は狙わない。
 //   weightBias を0にすると一様ランダムになる(検査で確かめる)。
 const TACTICS_TARGET_LOW_HP_BIAS = 2;
-const tacticsTargetWeights = (units, bias = TACTICS_TARGET_LOW_HP_BIAS) => {
+// hate … ヘイト(試作)の配列。渡したときだけ重みに ×(1 + ヘイト ÷ k) を掛ける(渡さなければ今までどおり)
+const tacticsTargetWeights = (units, bias = TACTICS_TARGET_LOW_HP_BIAS, hate = null) => {
   const safeBias = Number.isFinite(Number(bias)) ? Math.max(0, Number(bias)) : TACTICS_TARGET_LOW_HP_BIAS;
   return tacticsAliveSlots(units).map(index => {
     const unit = normalizeTacticsUnit(units[index]);
     const remain = unit.maxHp > 0 ? tacticsClamp(unit.hp / unit.maxHp, 0, 1) : 1;
-    return { index, weight: 1 + safeBias * (1 - remain) };
+    return { index, weight: (1 + safeBias * (1 - remain)) * tacticsHateWeightMult(hate, index) };
   });
 };
 // 狙うスロットを1つ選ぶ。生きている子がいなければ null
-const chooseTacticsTarget = (units, random = Math.random, bias = TACTICS_TARGET_LOW_HP_BIAS) => {
-  const weights = tacticsTargetWeights(units, bias);
+const chooseTacticsTarget = (units, random = Math.random, bias = TACTICS_TARGET_LOW_HP_BIAS, hate = null) => {
+  const weights = tacticsTargetWeights(units, bias, hate);
   if (!weights.length) return null;
   const total = weights.reduce((sum, entry) => sum + entry.weight, 0);
   if (!(total > 0)) return weights[0].index;
@@ -552,7 +553,7 @@ const tacticsTargetName = (units, slotIndex) => {
 //   実行時に「その間合いにいる子」を見る(予告には間合いが出ている)。
 // ★ダメージの無い行動(ためる・移動・咆哮・再生)にも狙いは要らない。
 const TACTICS_TARGETED_TYPES = ['ATTACK', 'SPECIAL'];
-const withTacticsTarget = (intent, units, random = Math.random, bias = TACTICS_TARGET_LOW_HP_BIAS) => {
+const withTacticsTarget = (intent, units, random = Math.random, bias = TACTICS_TARGET_LOW_HP_BIAS, hate = null) => {
   if (!intent || !TACTICS_TARGETED_TYPES.includes(intent.type)) return intent;
   if (intent.targetsAll) return { ...intent, targetName: TACTICS_ALL_TARGET_LABEL };
   // ★間合い攻撃も「誰を狙うか」を決める(2026-09-22 ユーザー指示「誰に攻撃するかが大事」)。
@@ -562,8 +563,129 @@ const withTacticsTarget = (intent, units, random = Math.random, bias = TACTICS_T
   //   誰も立っていない間合いだと攻撃そのものが起きなかった
   const sweepSlot = intent.variant === 'sweep' && Number.isInteger(intent.sweepDist)
     && tacticsAliveSlots(units).includes(intent.sweepDist) ? intent.sweepDist : null;
-  const targetSlot = sweepSlot != null ? sweepSlot : chooseTacticsTarget(units, random, bias);
+  const targetSlot = sweepSlot != null ? sweepSlot : chooseTacticsTarget(units, random, bias, hate);
   return targetSlot == null ? intent : { ...intent, targetSlot, targetName: tacticsTargetName(units, targetSlot) };
+};
+
+// ===== ヘイト(確認待ちの試作・2026-10-17 社長「試作する」) =====
+// 敵の狙いを「目立った子ほど狙われやすく」する裏の値。タクティクスバトルだけ・バトル中だけ(保存しない)。
+// デバッグ設定の「🧪 確認待ちの試作」で入れたときだけ効く(切のときは今までとまったく同じ)。
+// ★数字はこの TACTICS_HATE の1か所だけに置く(試算: docs/playbot/reports/2026-10-17/tactics-hate-numbers.md の★おすすめ)。
+//   action … 行動ごとの基準値 / monsters … 子ごとの上書き(mult・add・always)。タイプごとの倍率は下の MONSTER_TYPES(1か所)
+//   1ターンの動き: ヘイト = 前のヘイト × decay + 倍率 ×(そのターンに増えたぶん)。上限 cap・倒れたら0・WAVE で0。
+//   勇者は hero.floor より下がらない(炎は下地を引いた値で出す)。狙いの重み = 今の重み ×(1 + ヘイト ÷ k)
+// 入/切を読むのは 81-debug-trials.jsx の tacticsHateProtoOn(この部品は保存に触らない)
+const TACTICS_HATE = {
+  k: 25, decay: 0.7, cap: 100,
+  flames: [20, 50, 80],
+  hero: { floor: 20 },
+  action: { atk: 2, unique: 4, dmgShare: 15, heal: 30, buff: 5, debuff: 8, guard: 25, taunt: 40, ex: 10 },
+  exByEffect: { coverAll: 60, partyGuard: 20, lifeSpring: 20, cookieBox: 15, partyBoost: 15, present: 10 },
+  // 助手のカード(id)がどの行動か
+  assist: { atsu: 'taunt', mua: 'heal', momosuke: 'heal', meloso: 'heal', oryo: 'buff', dra: 'buff', cadmium: 'buff', myaru: 'buff', kiki: 'buff', poltz: 'buff' },
+  // 回復の量(ライフの回復率 + ガッツの回復率 × 0.5)。段 0〜2
+  healAmount: { mua: [0.5, 1.05, 1.35], momosuke: [0.25, 1.05, 1.35], meloso: [0.45, 0.45, 0.45] },
+  // 子ごとの上書き(タイプの既定値より強く/弱くしたい子だけ)。mult … 増え方の倍率 / add … 行動ごとの上乗せ / always … 行動のたびの上乗せ
+  monsters: {
+    Monol: { mult: 1.5, always: 3 }, // モノリスの特性(常にヘイトが上がりやすい)
+  },
+};
+
+// ===== モンスターのタイプ(確認待ちの試作・2026-10-17 社長「とりあえず表記とヘイト変動率とかでいいんじゃないかな？」) =====
+// ★効くのはタクティクスのヘイトの増え方(hateMult・hateAdd)だけ。ほかのモード・能力・ステータスには効かせない。
+// ★タイプの表はここ1か所(ヘイトの役割もこの表を読む。二重に持たない)。メイン1つ + サブ(任意・表記だけ)。
+// ★モンスターを足したら MONSTER_TYPE_OF に1行足す(tactics-hate-check.js が全モンスターを見て、無ければ止める)
+// 表記の入/切を読むのは 81-debug-trials.jsx の monsterTypeProtoOn
+const MONSTER_TYPES = {
+  attacker: { label: 'アタッカー', icon: '⚔️', note: '攻めの主役', hateMult: 1.0, hateAdd: {} },
+  tank: { label: 'タンク', icon: '🛡️', note: '前に立って攻撃を引き受ける', hateMult: 1.3, hateAdd: { guard: 6 } },
+  supporter: { label: 'サポーター', icon: '✨', note: '味方を強くする', hateMult: 1.1, hateAdd: {} },
+  healer: { label: 'ヒーラー', icon: '💚', note: '味方を癒やす', hateMult: 1.2, hateAdd: {} },
+  shadow: { label: 'シャドウ', icon: '🌙', note: 'かわして、目立たずに攻める', hateMult: 0.8, hateAdd: {} },
+};
+const MONSTER_TYPE_OF = {
+  Mocchi: { main: 'attacker', sub: 'tank' }, Mitarashi: { main: 'attacker', sub: 'tank' },
+  Golem: { main: 'attacker' }, Suezo: { main: 'attacker', sub: 'supporter' }, Ham: { main: 'attacker' },
+  Pandora: { main: 'attacker' }, KenshiMocchi: { main: 'attacker' }, Eiki: { main: 'attacker' },
+  Kuromy: { main: 'attacker' }, Spooky: { main: 'attacker', sub: 'supporter' },
+  Monol: { main: 'tank' }, Yggdrasil: { main: 'tank', sub: 'healer' }, MelWhip: { main: 'tank', sub: 'attacker' },
+  Oboro: { main: 'tank' }, Plant: { main: 'tank', sub: 'healer' },
+  Melody: { main: 'healer', sub: 'tank' }, Undine: { main: 'healer', sub: 'supporter' },
+  Pixie: { main: 'supporter', sub: 'attacker' }, Mia: { main: 'supporter', sub: 'attacker' },
+  Ark: { main: 'supporter', sub: 'attacker' }, Iblis: { main: 'supporter', sub: 'attacker' },
+  Snegurochka: { main: 'supporter' }, Yaobikuni: { main: 'supporter', sub: 'tank' },
+  Tiger: { main: 'shadow', sub: 'attacker' }, Zan: { main: 'shadow', sub: 'attacker' }, Ghost: { main: 'shadow', sub: 'attacker' },
+};
+// その子のタイプ({ main, sub } の形。表に無い子はアタッカー・サブなし)
+const monsterTypeOf = (monId) => {
+  const t = MONSTER_TYPE_OF[monId];
+  const main = t && MONSTER_TYPES[t.main] ? t.main : 'attacker';
+  const sub = t && MONSTER_TYPES[t.sub] && t.sub !== main ? t.sub : null;
+  return { main, sub };
+};
+const TACTICS_HATE_EMPTY = [0, 0, 0, 0];
+const tacticsHateNum = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
+// タイプ(メイン)の既定値に、子の上書きを重ねる(表に無い子はアタッカー)
+const tacticsHateProfile = (monId) => {
+  const type = monsterTypeOf(monId).main;
+  const r = MONSTER_TYPES[type];
+  const m = TACTICS_HATE.monsters[monId] || {};
+  return { type, mult: Number.isFinite(m.mult) ? m.mult : r.hateMult, add: { ...r.hateAdd, ...(m.add || {}) }, always: tacticsHateNum(m.always) };
+};
+// カードが何の行動か(数えないものは null)
+const tacticsHateCardKind = (card) => {
+  if (!card) return null;
+  if (TACTICS_HATE.assist[card.id]) return TACTICS_HATE.assist[card.id];
+  if (card.type === 'guard' || card.type === 'weak_guard') return 'guard';
+  if (card.type === 'unique') return 'unique';
+  if (card.type === 'atk' || card.type === 'range_atk') return 'atk';
+  if (card.type === 'buff') return 'buff';
+  if (card.type === 'debuff') return 'debuff';
+  return null;
+};
+// カード1枚で増えるヘイト(倍率を掛ける前)。effMul … 同じ子の2枚目なら 0.5
+const tacticsHateCardGain = (card, monId, effMul = 1) => {
+  const kind = tacticsHateCardKind(card);
+  if (!kind) return 0;
+  const p = tacticsHateProfile(monId);
+  const eff = Number.isFinite(Number(effMul)) ? Math.max(0, Number(effMul)) : 1;
+  let base = tacticsHateNum(TACTICS_HATE.action[kind]);
+  if (kind === 'heal') {
+    const lv = Math.max(0, Math.min(2, Math.floor(tacticsHateNum(card.evoLevel))));
+    base = TACTICS_HATE.action.heal * tacticsHateNum((TACTICS_HATE.healAmount[card.id] || [])[lv]) * eff;
+  } else if (kind === 'taunt' || kind === 'buff' || kind === 'debuff') base *= eff;
+  return base + tacticsHateNum(p.add[kind]) + p.always;
+};
+// EX を使ったときに増えるヘイト(倍率を掛ける前)
+const tacticsHateExGain = (effect, monId) => {
+  const p = tacticsHateProfile(monId);
+  const base = Object.prototype.hasOwnProperty.call(TACTICS_HATE.exByEffect, effect) ? TACTICS_HATE.exByEffect[effect] : TACTICS_HATE.action.ex;
+  return base + tacticsHateNum(p.add.ex) + p.always;
+};
+const normalizeTacticsHate = (hate) => [0, 1, 2, 3].map(i => tacticsClamp(tacticsHateNum(Array.isArray(hate) ? hate[i] : 0), 0, TACTICS_HATE.cap));
+// WAVE の始め(勇者だけ下地から)
+const tacticsHateWaveStart = (heroSlot) => [0, 1, 2, 3].map(i => (i === heroSlot ? TACTICS_HATE.hero.floor : 0));
+// 1ターンぶん進める。gains … 枠ごとの行動のぶん(倍率の前)/ dealt … 枠ごとのそのターンの与ダメージ / monIds … 枠ごとの子の id
+const tacticsHateStep = (hate, { gains = TACTICS_HATE_EMPTY, dealt = TACTICS_HATE_EMPTY } = {}, units, heroSlot, monIds = []) => {
+  const prev = normalizeTacticsHate(hate);
+  const filled = tacticsFilledSlots(units);
+  const team = filled.reduce((sum, i) => sum + Math.max(0, tacticsHateNum(dealt[i])), 0);
+  return [0, 1, 2, 3].map(i => {
+    if (!filled.includes(i)) return 0;
+    if (normalizeTacticsUnit(units[i]).downed) return 0;
+    const p = tacticsHateProfile(monIds[i]);
+    const share = team > 0 ? TACTICS_HATE.action.dmgShare * Math.max(0, tacticsHateNum(dealt[i])) / team : 0;
+    let v = prev[i] * TACTICS_HATE.decay + p.mult * (Math.max(0, tacticsHateNum(gains[i])) + share);
+    if (i === heroSlot) v = Math.max(v, TACTICS_HATE.hero.floor);
+    return Math.min(TACTICS_HATE.cap, v);
+  });
+};
+// 狙いの重みに掛ける倍率(hate が無ければ 1)
+const tacticsHateWeightMult = (hate, index) => (Array.isArray(hate) ? 1 + tacticsClamp(tacticsHateNum(hate[index]), 0, TACTICS_HATE.cap) / TACTICS_HATE.k : 1);
+// 炎の段(0〜3)。勇者は下地を引いた値で見る
+const tacticsHateFlame = (value, isHero = false) => {
+  const v = tacticsHateNum(value) - (isHero ? TACTICS_HATE.hero.floor : 0);
+  return TACTICS_HATE.flames.filter(x => v >= x).length;
 };
 // その行動が実際に当たるスロット。予告と実行で同じ関数を通すので食い違わない
 // 間合い攻撃が「当たり」(×TACTICS_SWEEP_MULT)になる条件。

@@ -185,6 +185,21 @@ function MonsterAttackPreviewScreen({ dexMonsterId, dexAttackPreview, unlockedMo
         </div>
       </div>;}
 
+// モンスターのタイプの小さな印(確認待ちの試作 MONSTER_TYPES。切のときは何も出さない)
+// compact … サブはアイコンだけ(図鑑の一覧のような狭い場所)
+function MonsterTypeBadge({ monId, size = 'sm', compact = false }) {
+  if (!monsterTypeProtoOn()) return null;
+  const t = monsterTypeOf(monId);
+  const chip = (key, isSub) => {
+    const d = MONSTER_TYPES[key];
+    const iconOnly = isSub && compact;
+    return (<span key={key} data-monster-type={key} data-monster-type-sub={isSub ? 'true' : undefined} title={`${isSub ? 'サブ' : 'メイン'}タイプ：${d.label}(${d.note})`}
+      className={`inline-flex items-center gap-0.5 rounded-full border ${compact ? 'px-1' : 'px-1.5'} py-px font-black leading-none whitespace-nowrap ${size === 'md' ? 'text-[11px]' : 'text-[9px]'} ${isSub ? 'border-white/15 bg-white/5 text-slate-300' : 'border-amber-300/50 bg-amber-500/15 text-amber-100'}`}>
+      <span aria-hidden="true">{d.icon}</span>{iconOnly ? <span className="sr-only">{d.label}</span> : d.label}</span>);
+  };
+  return <span data-monster-type-badge={monId} className={`inline-flex max-w-full flex-wrap items-center justify-center ${compact ? 'gap-0.5' : 'gap-1'}`}>{chip(t.main, false)}{t.sub && chip(t.sub, true)}</span>;
+}
+
 function MonsterDexScreen({ dexLineageFilter, unlockedMonsterIds, onSelectLineage, onOpenDetail, onBackToManagement }) {
       const monsters=dexMonsterList();
       const unlockedCount=monsters.filter(mon=>unlockedMonsterIds.includes(mon.id)).length;
@@ -220,6 +235,7 @@ function MonsterDexScreen({ dexLineageFilter, unlockedMonsterIds, onSelectLineag
                   <DexMonsterIcon src={iconSrc} hidden={!unlocked}/>
                   <div className="text-[11px] font-black truncate w-full text-center leading-tight text-amber-100">{unlocked?mon.name:'？？？'}</div>
                   <div className="text-[10px] font-black text-amber-400/80 leading-tight">{unlocked?monsterCategoryName(category):'未発見'}</div>
+                  {unlocked&&<MonsterTypeBadge monId={mon.id} compact/>}
                 </button>
               );
             })}
@@ -351,6 +367,7 @@ function MonsterDexDetailScreen({ dexMonsterId, dexTab, unlockedMonsterIds, masu
         <div className="flex-1 min-h-0 pt-3">
           <div className="w-full max-w-md mx-auto h-full flex flex-col min-h-0 rounded-2xl border border-amber-500/60 bg-gradient-to-b from-amber-950/50 to-slate-950 p-3">
             <div className="shrink-0 text-center text-[17px] font-black text-amber-100 truncate">{unlocked?mon.name:'？？？'}</div>
+            {unlocked&&monsterTypeProtoOn()&&<div data-dex-type-row className="shrink-0 mt-1 flex justify-center"><MonsterTypeBadge monId={mon.id} size="md"/></div>}
             {unlocked?(<>
               {/* 血統の行。血統名や区分の文字数で位置が動かないよう、
                   左右のチップを同じ幅(1fr)の枠へ入れ、ラベル・×・区分は端と中央へ固定する */}
