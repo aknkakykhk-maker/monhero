@@ -5065,6 +5065,15 @@ function MonsterHeroGame() {
     : momosukeIntroPlaying
       ? EVENT_BGM_SCENES.momosuke_intro
       : (eventReplay ? (EVENT_BGM_SCENES[eventReplay.id] || null) : null);
+  // 会話イベントの台本の行に bgm:'<曲id>' があれば、その行から曲を替える(無いお話は今までどおり)
+  const eventLineBgm = (() => {
+    if (!eventReplay || kikiIntroPlaying || momosukeIntroPlaying) return null;
+    const list = eventReplay.debug ? eventReplayAllList() : eventReplayList();
+    const ev = list.find(x => x.id === eventReplay.id);
+    return eventScriptBgmAt(ev && ev.script, eventReplay.step);
+  })();
+  // 同じお話の中で曲が替わるときだけ、今の曲を下げてから移す(お話に入る・出るときは今までどおり)
+  const eventBgmPlayedRef = useRef(null);
   // 画面から鳴らすべき曲のキーを決める
   // allowKeep=false のときは「直前のBGMを維持」を選ばない。
   // モンビーを開いているあいだバトルのBGMは止まっているので、戻ってきたときに
@@ -5076,6 +5085,7 @@ function MonsterHeroGame() {
     // 会話イベント中は画面(HOME/PROFILE)より優先してイベントBGMを鳴らす。
     // 通常再生(きき加入)も、プロフィールからのイベント回想も同じ設定を使う。
     // イベントが終わればこの判定を抜けるので、元の画面のBGMへそのまま戻る
+    if (eventLineBgm) return eventLineBgm;
     if (eventBgmScene) return bgmArrangementWithEventDefault(bgmArrangement, eventBgmScene);
     // イベント・レイドボス「ジャック」: ジャックとの戦いは Monster(全編)、レイド画面・段階えらび・編成はぱんぷきんの曲に固定する
     if (state === 'BATTLE' && raidJackRunRef.current) return RAID_JACK_BATTLE_BGM_TRACK;
@@ -5189,9 +5199,13 @@ function MonsterHeroGame() {
     // 音がオフでも、その画面で使う曲は先に読み込んでおく(タップした瞬間に鳴り始めるように)
     if (key) Audio_.preloadBGM(key);
     if (!audioOn) { Audio_.stopBGM(); return; }
-    if (key) Audio_.playBGM(key);
+    const eventId = eventReplay ? eventReplay.id : null;
+    const prev = eventBgmPlayedRef.current;
+    eventBgmPlayedRef.current = eventId ? { id: eventId, key } : null;
+    if (key && eventId && prev && prev.id === eventId && prev.key !== key) Audio_.fadeToBGM(key, EVENT_BGM_FADE_MS);
+    else if (key) Audio_.playBGM(key);
     else Audio_.stopBGM();
-  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen]);
+  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement, runMode, eventBgmScene, eventLineBgm, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen]);
 
   // SE/BGMそれぞれの音量をAudioエンジンへ反映
   // 超省エネではBGMを選んで鳴らしてもSEだけは常に0。保存済みSE音量そのものは変更しない。

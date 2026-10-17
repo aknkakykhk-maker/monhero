@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 98b7a1a692949589
+// source-sha256: a242eda38d646bd9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-17 23:28";
+const BUILD_DATE = "2026-10-18 03:18";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -395,6 +395,9 @@ const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
   },
   get assistantChat() {
     return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantChat === true;
+  },
+  get tacticsTypes() {
+    return false;
   }
 });
 const eventReplayReleased = event => !event?.releaseFlag || EVENT_REPLAY_RELEASE_FLAGS[event.releaseFlag] === true;
@@ -6283,6 +6286,7 @@ const rhythmAchievementPending = (ledger, rules, eligible) => {
 const pandoraBossBgmForBattle = (heroId, currentWave, enemyId) => heroId === 'Pandora' && (enemyId === 'Moo' || currentWave === 10) ? 'pandora_boss' : null;
 const eikiBossBgmForBattle = (heroId, currentWave, enemyId) => heroId === 'Eiki' && (enemyId === 'Moo' || currentWave === 10) ? 'eiki_boss' : null;
 const DEFAULT_BGM_ARRANGEMENT = Object.freeze({
+  tacticsTypesEvent: 'original_event_01',
   rhythmHellStoryEvent: 'melo_sheriruth',
   assistantChatStoryEvent: 'close_to_your_heart_alt',
   title: 'monster_hero_theme_alt',
@@ -6363,7 +6367,19 @@ const BGM_ARRANGEMENT_LEGACY_FALLBACK = Object.freeze({
   speciesDullahan: 'dullahan',
   speciesMoo: 'boss'
 });
+const eventScriptBgmAt = (script, step) => {
+  if (!Array.isArray(script) || !script.length) return null;
+  const last = Math.max(0, Math.min(Number.isInteger(step) ? step : 0, script.length - 1));
+  let found = null;
+  for (let i = 0; i <= last; i += 1) {
+    const id = script[i] && script[i].bgm;
+    if (typeof id === 'string' && BGM_TRACKS.some(t => t.id === id)) found = id;
+  }
+  return found;
+};
+const EVENT_BGM_FADE_MS = 800;
 const EVENT_BGM_SCENES = Object.freeze({
+  tactics_types: 'tacticsTypesEvent',
   kiki_intro: 'kikiIntro',
   rhythm_hell_story: 'rhythmHellStoryEvent',
   assistant_chat_story: 'assistantChatStoryEvent',
@@ -6996,7 +7012,12 @@ const Audio_ = (() => {
   const resolveTrack = key => BGM_TRACK_BY_ID[key] || BGM_TRACK_BY_KEY[key] || null;
   const safeTrackGain = track => Math.max(0, Math.min(1.25, Number.isFinite(track?.gain) ? track.gain : 1));
   const applyTrackGain = track => {
-    if (bgmGain) bgmGain.gain.value = Math.min(1, _bgmGain(bgmVolumePct) * safeTrackGain(track));
+    if (bgmGain) {
+      try {
+        bgmGain.gain.cancelScheduledValues(0);
+      } catch (e) {}
+      bgmGain.gain.value = Math.min(1, _bgmGain(bgmVolumePct) * safeTrackGain(track));
+    }
   };
   const startBgmBuffer = (key, track, buffer, request) => {
     const ctx = getAudioCtx();
@@ -7046,6 +7067,31 @@ const Audio_ = (() => {
       rememberSongBuffer(bufKey);
       startBgmBuffer(track.id, track, buffer, request);
     }).catch(() => {});
+  };
+  let fadeRequest = 0;
+  const fadeToBGM = (key, ms = 800) => {
+    const track = resolveTrack(key);
+    if (!track) return Promise.resolve();
+    const ctx = getAudioCtx();
+    if (!ctx || !bgmGain || !bgmSource || bgmSourceKey === track.id || !enabled || pageHidden) return playBGM(key);
+    const req = ++fadeRequest;
+    const seconds = Math.max(0.05, (Number(ms) || 0) / 1000);
+    try {
+      const at = ctx.currentTime;
+      bgmGain.gain.cancelScheduledValues(at);
+      bgmGain.gain.setValueAtTime(bgmGain.gain.value, at);
+      bgmGain.gain.linearRampToValueAtTime(0, at + seconds);
+    } catch (e) {
+      return playBGM(key);
+    }
+    currentKey = track.id;
+    return new Promise(resolve => setTimeout(() => {
+      if (req !== fadeRequest || currentKey !== track.id) {
+        resolve();
+        return;
+      }
+      resolve(playBGM(key));
+    }, seconds * 1000));
   };
   const stopPreview = (resume = true) => {
     ++previewRequest;
@@ -8466,6 +8512,7 @@ const Audio_ = (() => {
     playSeFile,
     preloadSE,
     playBGM,
+    fadeToBGM,
     stopBGM,
     startRhythmTrack,
     previewBGM,
@@ -84307,8 +84354,16 @@ function MonsterHeroGame() {
   const kikiIntroPlaying = gameState === 'HOME' && onboarded && tutorialStep == null && kikiIntroStep != null;
   const momosukeIntroPlaying = gameState === 'HOME' && onboarded && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep != null;
   const eventBgmScene = kikiIntroPlaying ? EVENT_BGM_SCENES.kiki_intro : momosukeIntroPlaying ? EVENT_BGM_SCENES.momosuke_intro : eventReplay ? EVENT_BGM_SCENES[eventReplay.id] || null : null;
+  const eventLineBgm = (() => {
+    if (!eventReplay || kikiIntroPlaying || momosukeIntroPlaying) return null;
+    const list = eventReplay.debug ? eventReplayAllList() : eventReplayList();
+    const ev = list.find(x => x.id === eventReplay.id);
+    return eventScriptBgmAt(ev && ev.script, eventReplay.step);
+  })();
+  const eventBgmPlayedRef = useRef(null);
   const bgmSuspendedByRhythmRef = useRef(false);
   const bgmKeyForState = (state, currentWave, enemyId, wavesDone, isGameOver, allowKeep = true) => {
+    if (eventLineBgm) return eventLineBgm;
     if (eventBgmScene) return bgmArrangementWithEventDefault(bgmArrangement, eventBgmScene);
     if (state === 'BATTLE' && raidJackRunRef.current) return RAID_JACK_BATTLE_BGM_TRACK;
     if (RAID_JACK_BGM_STATES.includes(state)) return RAID_JACK_BGM_TRACK;
@@ -84399,8 +84454,14 @@ function MonsterHeroGame() {
       Audio_.stopBGM();
       return;
     }
-    if (key) Audio_.playBGM(key);else Audio_.stopBGM();
-  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen]);
+    const eventId = eventReplay ? eventReplay.id : null;
+    const prev = eventBgmPlayedRef.current;
+    eventBgmPlayedRef.current = eventId ? {
+      id: eventId,
+      key
+    } : null;
+    if (key && eventId && prev && prev.id === eventId && prev.key !== key) Audio_.fadeToBGM(key, EVENT_BGM_FADE_MS);else if (key) Audio_.playBGM(key);else Audio_.stopBGM();
+  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement, runMode, eventBgmScene, eventLineBgm, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen]);
   useEffect(() => {
     Audio_.setSeVolume(ultraEcoSession || rhythmScreenOpen ? 0 : seVolume);
   }, [seVolume, ultraEcoSession, rhythmScreenOpen]);

@@ -6527,6 +6527,23 @@ const ASSISTANT_RHYTHM_MASU_CALL_CALLS = { mua: 'ドラケン／もも', kiki: '
 //    「間合いはクラシックにもあった / 攻撃予告もクラシックにはあった」と指摘された)。
 // ★数字(倍率・確率)を書かない。調整のたびに会話が嘘になる。
 //   数字はヘルプとSCAN画面が実データから出す
+// 助手4人がタイプを教える(2026-10-17 試作・社長「助手の4人でうまいことタイプを当てはめて説明するストーリーは？」)。
+// BGM: 名乗りまでイベントBGM 1(会話イベントの曲 tacticsTypesEvent)→ ドラが前に立つ行(bgm:)から戦場の疾風へ。曲は0.8秒下げてから替わる
+// 下書き: docs/playbot/reports/2026-10-17/tactics-hate-release-text.md の案D
+const ASSISTANT_TACTICS_TYPES = [
+  { who:'mua',      e:'excited',  t:'ねえねえ、モンスターにタイプができたんだって！ あたしたちも当てはめてみよ！' },
+  { who:'mua',      e:'happy',    t:'まずはあたし！ ✨サポーター！ みんなを強くして、背中を押す係だよ♪ ちょっとだけ🔥が付きやすいかも' },
+  { who:'kiki',     e:'normal',   t:'私は⚔️アタッカーでつ。思い切り攻めて、敵のライフを削る係でつ。たくさん攻撃すると🔥が付いて、狙われやすくなりまつ' },
+  { who:'momosuke', e:'surprise', t:'ももは💚ヒーラー！ みんなのライフを戻すの！ ……まって、回復すると🔥が付きやすいって書いてある！！' },
+  { who:'dra',      e:'normal',   t:'おでは🛡️タンクだな。前に立って、攻撃を引き受ける係だ。ガードを構えたり、かばったりすると🔥がいっぱい付く。……それでいいんだよ', bgm:'senjou_no_shippuu' },
+  { who:'momosuke', e:'surprise', t:'えっ、わざと狙われに行くの！？ ドラ、えらすぎ！！' },
+  { who:'dra',      e:'happy',    t:'えへへ。おでなんか膝くらいしか自慢がないからな。その膝で、みんなの前に立つわ' },
+  { who:'mua',      e:'excited',  t:'ドラケンに🔥が集まったら、ひめちんが思いっきり殴れるってことぢゃん！ まじ最強の作戦すぎ🤣ｗ' },
+  { who:'kiki',     e:'wink',     t:'そなのか……では、遠慮なくいきまつ( ˘ω˘)9グッ!' },
+  { who:'momosuke', e:'happy',    t:'あ、ゴーストくんたちは🌙シャドウなんだって。ふわっとかわして、🔥が付きにくいの。ちょっとずるいww' },
+  { who:'dra',      e:'normal',   t:'🔥はターンがたつと消えていくし、WAVEが変わればまっさらだ。だれに引き受けてもらうかは、{name}が決めてくれよな' },
+  { who:'mua',      e:'happy',    t:'タイプは図鑑とパーティ選びで見られるよ〜。🔥を見ながら作戦立てよ！' },
+];
 const ASSISTANT_TACTICS_INTRO = [
   { who:'mua',      e:'excited',  t:'ねぇ聞いて！ バトルに新しい仕組みが来たんだって！✨' },
   { who:'kiki',     e:'happy',    t:'タクティクスバトル、でつね。編成の考え方がまるで変わりまつ♪' },
@@ -7021,6 +7038,8 @@ const EVENT_REPLAYS = [
   // (releaseFlag。モードが見えていないのに会話だけあると、何の話か分からない)。
   // いまは alwaysUnlocked で「公開したら回想からいつでも見られる」形。
   // 本編で1度だけ流す導線は、β版を出すときに告知とセットで足す
+  // 助手4人がタイプを教える(2026-10-17 試作)。releaseFlag の tacticsTypes が偽のあいだは回想にも出さない
+  { id: 'tactics_types', date: '2026-10-17 20:00', title: 'タクティクスバトル ～4人のタイプ～', script: ASSISTANT_TACTICS_TYPES, unlockedKey: 'tacticsTypesSeen', releaseFlag: 'tacticsTypes', alwaysUnlocked: true, group: 'update' },
   { id: 'tactics_intro', date: '2026-09-21 20:15', title: 'タクティクスバトル ～誰を連れていくか～', script: ASSISTANT_TACTICS_INTRO, unlockedKey: 'tacticsIntroSeen', releaseFlag: 'tacticsBattle', alwaysUnlocked: true, group: 'update' },
   { id: 'kiki_intro', date: '2026-08-16 18:41', title: 'きき加入 ～ふたりの助手～', script: ASSISTANT_KIKI_INTRO, calls: ASSISTANT_KIKI_INTRO_CALLS, unlockedKey: 'kikiIntroSeen', group: 'assistant' },
   // ももすけ登場は、本編を待たずに回想からも見られる(2026-09-05・ユーザー指示)。
