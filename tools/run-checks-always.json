@@ -200,6 +200,7 @@
   "mode/rhythm-camera-deep-check.js",
   "mode/rhythm-sky-note-look-check.js",
   "mode/rhythm-hold-tick-check.js",
+  "mode/rhythm-tick-notes-check.js",
   "mode/rhythm-fullcombo-celebrate-check.js",
   "mode/rhythm-glow-road-width-check.js",
   "mode/rhythm-hand-model-check.js",

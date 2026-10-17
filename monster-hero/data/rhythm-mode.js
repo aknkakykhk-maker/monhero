@@ -2301,10 +2301,10 @@ const rhythmComboTickTimes=(note,grid,difficultyId)=>{
   while(step<RHYTHM_COMBO_TICK_MIN_STEP_MS)step*=2;
   // 折れ点を先に置き(近すぎる折れ点どうしは先のほうだけ)、拍の刻みは折れ点・ほかの刻みから離れているときだけ足す
   const kept=[];
-  for(const t of rhythmSlideBendTimes(note).filter(t=>t>=from&&t<=to).sort((a,b)=>a-b))if(!kept.length||t-kept[kept.length-1]>=RHYTHM_COMBO_TICK_MIN_GAP_MS)kept.push(t);
+  for(const t of rhythmSlideBendTimes(note).filter(t=>t>from&&t<to).sort((a,b)=>a-b))if(!kept.length||t-kept[kept.length-1]>=RHYTHM_COMBO_TICK_MIN_GAP_MS)kept.push(t);
   const beats=[];
-  if(beat){for(let k=Math.floor((from-grid.zeroMs)/step)-4,n=0;n<20000;k++,n++){const t=Math.round(rhythmBeatLineTime(grid,grid.zeroMs+k*step));if(t>to)break;if(t>=from)beats.push(t);}}
-  else for(let t=start+step;t<=to;t+=step)beats.push(Math.round(t));
+  if(beat){for(let k=Math.floor((from-grid.zeroMs)/step)-4,n=0;n<20000;k++,n++){const t=Math.round(rhythmBeatLineTime(grid,grid.zeroMs+k*step));if(t>=to)break;if(t>from)beats.push(t);}}
+  else for(let t=start+step;t<to;t+=step)if(t>from)beats.push(Math.round(t));
   const near=(list,t)=>list.some(v=>Math.abs(v-t)<RHYTHM_COMBO_TICK_MIN_GAP_MS);
   const out=kept.slice();
   for(const t of beats)if(!near(out,t))out.push(t);
