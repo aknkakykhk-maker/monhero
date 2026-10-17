@@ -2479,7 +2479,8 @@ if(run.tickRules)for(let i=0;i<heldNotes.length;i++)comboTicksRef.current(heldNo
 // 曲がりの多い帯は線が約45msおきに来るので、1本の帯につき RHYTHM_HOLD_TICK_FX_GAP_MS に1回までにまとめる(光と音が忙しくなりすぎないように)
 for(let i=0;i<heldNotes.length;i++){const note=heldNotes[i],ticks=Number(note._rhythmTicks)||0;if(!(ticks>(Number(note._rhythmTicksSeen)||0)))continue;note._rhythmTicksSeen=ticks;
   if(frameNowMs-(Number(note._rhythmTickFxAt)||-1e9)<RHYTHM_HOLD_TICK_FX_GAP_MS)continue;note._rhythmTickFxAt=frameNowMs;
-  const slide=rhythmNoteIsSlide(note);RHYTHM_NOTE_SE_RUNTIME.playTick(slide);
+  // 刻みごとの音(playTick)は鳴らさない(2026-10-17 社長「カウントするたびになるの、ださいからなくしていいよ」)。光とコンボのはねだけ出す
+  const slide=rhythmNoteIsSlide(note);
   if(settings.lightweightMode)continue;
   const weak=settings.effectAmount==='MINIMAL';
   const area=playAreaRef.current;

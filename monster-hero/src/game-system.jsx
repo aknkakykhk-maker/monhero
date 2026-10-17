@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f95bc34b84e6bc7e
+// generated-sha256: db3b88b564408e08
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-17 17:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-17 18:49"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -22453,7 +22453,8 @@ if(run.tickRules)for(let i=0;i<heldNotes.length;i++)comboTicksRef.current(heldNo
 // 曲がりの多い帯は線が約45msおきに来るので、1本の帯につき RHYTHM_HOLD_TICK_FX_GAP_MS に1回までにまとめる(光と音が忙しくなりすぎないように)
 for(let i=0;i<heldNotes.length;i++){const note=heldNotes[i],ticks=Number(note._rhythmTicks)||0;if(!(ticks>(Number(note._rhythmTicksSeen)||0)))continue;note._rhythmTicksSeen=ticks;
   if(frameNowMs-(Number(note._rhythmTickFxAt)||-1e9)<RHYTHM_HOLD_TICK_FX_GAP_MS)continue;note._rhythmTickFxAt=frameNowMs;
-  const slide=rhythmNoteIsSlide(note);RHYTHM_NOTE_SE_RUNTIME.playTick(slide);
+  // 刻みごとの音(playTick)は鳴らさない(2026-10-17 社長「カウントするたびになるの、ださいからなくしていいよ」)。光とコンボのはねだけ出す
+  const slide=rhythmNoteIsSlide(note);
   if(settings.lightweightMode)continue;
   const weak=settings.effectAmount==='MINIMAL';
   const area=playAreaRef.current;

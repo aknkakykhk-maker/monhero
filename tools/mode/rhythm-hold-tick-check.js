@@ -40,7 +40,7 @@ check('印を増やすのは evaluateCheckpoints だけ',(data.match(/_rhythmTic
 // 演奏画面: 光は canvas・はねは animate・最小と軽量では見た目を出さない
 const i=play.indexOf('RHYTHM_NOTE_SE_RUNTIME.holdSync(heldNotes);'),block=play.slice(i,i+2200);
 check('曲がりの多い帯でも、1本につき決まった間隔に1回までにまとめる',/if\(frameNowMs-\(Number\(note\._rhythmTickFxAt\)\|\|-1e9\)<RHYTHM_HOLD_TICK_FX_GAP_MS\)continue;/.test(block)&&/const RHYTHM_HOLD_TICK_FX_GAP_MS=100;/.test(data));
-check('音は線を通るたびに出す',/RHYTHM_NOTE_SE_RUNTIME\.playTick\(slide\)/.test(block));
+check('刻みごとの音は鳴らさない(2026-10-17 社長「ださいからなくしていいよ」)',!/RHYTHM_NOTE_SE_RUNTIME\.playTick\(/.test(block));
 check('軽量モードでは光とはねを出さない・演出量「最小」では弱い形',/if\(settings\.lightweightMode\)continue;\n  const weak=settings\.effectAmount==='MINIMAL';/.test(block));
 check('光はノーツの canvas の中に出す',/RHYTHM_CANVAS_RENDERER\.pushTick\(/.test(block)&&!/createElement|appendChild/.test(block));
 check('はねは今あるコンボの数字を動かすだけ',/const combo=comboRef\.current;/.test(block)&&/combo\.animate\(/.test(block));
