@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0be04660a815575a
+// source-sha256: 993adfb1d26dfc30
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-17 11:38";
+const BUILD_DATE = "2026-10-17 14:06";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -5972,12 +5972,29 @@ const rhythmCalculateScore = ({
   const judged = RHYTHM_JUDGMENT_IDS.reduce((sum, id) => sum + (judgments[id] || 0) * rates[id], 0);
   return Math.min(maxScore, Math.round((judged / totalNotes * RHYTHM_SCORE_WEIGHTS.judgment + maxCombo / totalNotes * RHYTHM_SCORE_WEIGHTS.combo) * maxScore));
 };
-const rhythmResultAchievements = (judgments, totalNotes) => {
+const RHYTHM_TICK_SCORE_WEIGHT = .5;
+const rhythmCalculateScoreTicks = ({
+  judgments,
+  maxCombo,
+  totalNotes,
+  maxScore,
+  tickJust = 0,
+  tickTotal = 0
+}) => {
+  if (!totalNotes) return 0;
+  const ticks = Math.max(0, Number(tickTotal) || 0),
+    got = Math.max(0, Math.min(ticks, Number(tickJust) || 0));
+  const rates = Object.fromEntries(RHYTHM_JUDGMENTS.map(item => [item.id, item.scoreRate]));
+  const judged = RHYTHM_JUDGMENT_IDS.reduce((sum, id) => sum + (judgments[id] || 0) * rates[id], 0) + RHYTHM_TICK_SCORE_WEIGHT * got;
+  return Math.min(maxScore, Math.round((judged / (totalNotes + RHYTHM_TICK_SCORE_WEIGHT * ticks) * RHYTHM_SCORE_WEIGHTS.judgment + maxCombo / (totalNotes + ticks) * RHYTHM_SCORE_WEIGHTS.combo) * maxScore));
+};
+const rhythmResultAchievements = (judgments, totalNotes, tickMiss = 0) => {
   const counts = Object.fromEntries(RHYTHM_JUDGMENT_IDS.map(id => [id, Math.max(0, Number(judgments?.[id]) || 0)]));
+  const kept = !(Number(tickMiss) > 0);
   return {
-    fullCombo: counts.BAD === 0 && counts.MISS === 0,
-    allExcellent: counts.GREAT === 0 && counts.GOOD === 0 && counts.BAD === 0 && counts.MISS === 0,
-    allMarvelous: totalNotes > 0 && counts.MARVELOUS === totalNotes
+    fullCombo: kept && counts.BAD === 0 && counts.MISS === 0,
+    allExcellent: kept && counts.GREAT === 0 && counts.GOOD === 0 && counts.BAD === 0 && counts.MISS === 0,
+    allMarvelous: kept && totalNotes > 0 && counts.MARVELOUS === totalNotes
   };
 };
 const mergeRhythmBestRecord = (current, result) => {
@@ -34362,9 +34379,10 @@ const RhythmTapTest = ({
     }
   };
   const emptyCounts = () => Object.fromEntries(RHYTHM_JUDGMENT_IDS.map(id => [id, 0]));
-  const makeRuntimeNotes = () => {
+  const makeRuntimeNotes = (tickRules = false) => {
     const tracking = rhythmSlideTrackingFor(difficulty.id);
     const checkpointIntervalMs = rhythmSlideCheckpointIntervalMs(difficulty.id, chart?.level);
+    const tickGrid = tickRules ? rhythmSongBeatGrid(song.songId) : null;
     return chart.notes.map((note, index) => ({
       ...note,
       index,
@@ -34375,6 +34393,10 @@ const RhythmTapTest = ({
       _rhythmSlideToleranceBonusLanes: tracking.toleranceBonusLanes,
       _rhythmTrackingGraceMs: tracking.graceMs,
       _rhythmCheckpointIntervalMs: checkpointIntervalMs,
+      ...(tickRules && rhythmNoteHasBody(note) ? {
+        _rhythmTickRules: true,
+        _rhythmComboTicks: rhythmComboTickTimes(note, tickGrid, difficulty.id)
+      } : {}),
       ...(note.type === 'SLIDE' ? {
         _rhythmSlideRenderPoints: rhythmSlidePoints(note),
         _rhythmSlideCheckpoints: rhythmSlideCheckpointTimes(note, checkpointIntervalMs)
@@ -34991,10 +35013,67 @@ const RhythmTapTest = ({
       cancelAnimationFrame(id);
     };
   }, [lineAdjustSetting, settings.judgmentLineHeight, measureTravel]);
+  const tickScoreOf = run => Math.floor(rhythmCalculateScoreTicks({
+    judgments: run.counts,
+    maxCombo: run.maxCombo,
+    totalNotes: chart.totalNotes,
+    maxScore: difficulty.maxScore,
+    tickJust: run.tickJust,
+    tickTotal: run.tickTotal ?? (run.tickTotal = rhythmComboTickTotal(run.notes))
+  }) * (assistOn ? RHYTHM_ASSIST_SCORE_RATE : 1));
+  const comboTicksRef = useRef(null);
+  comboTicksRef.current = (note, judgment = null) => {
+    const run = runRef.current,
+      ticks = note && note._rhythmComboTicks;
+    if (!run || !run.tickRules || !Array.isArray(ticks) || !ticks.length) return 0;
+    const okNow = () => Number(note._rhythmComboOk) || 0,
+      dropNow = () => Number(note._rhythmComboDrop) || 0;
+    if (judgment) {
+      const rest = ticks.length - okNow() - dropNow();
+      if (rest > 0) {
+        if (judgment === 'BAD' || judgment === 'MISS') note._rhythmComboDrop = dropNow() + rest;else note._rhythmComboOk = okNow() + rest;
+      }
+      note._rhythmComboIdx = ticks.length;
+    }
+    const ok = okNow() - (Number(note._rhythmComboSeenOk) || 0),
+      drop = dropNow() - (Number(note._rhythmComboSeenDrop) || 0);
+    if (!(ok > 0) && !(drop > 0)) return 0;
+    note._rhythmComboSeenOk = okNow();
+    note._rhythmComboSeenDrop = dropNow();
+    if (drop > 0) {
+      run.tickMiss += drop;
+      if (!(run.combo > 0 && rhythmItazuraKeepsCombo(run.abilities, 'MISS', run.audio?.songTimeMs?.() ?? 0))) run.combo = 0;
+    }
+    if (ok > 0) {
+      run.tickJust += ok;
+      run.combo += ok;
+      run.maxCombo = Math.max(run.maxCombo, run.combo);
+    }
+    if (!judgment) {
+      if (!run.lifeDepleted) run.score = tickScoreOf(run) - run.scoreOffset;
+      const score = run.lifeDepleted ? run.lockedScore : run.score;
+      hudRef.current.set({
+        score,
+        combo: run.combo
+      });
+      const coarseKey = `${rhythmComboTier(run.combo)}|${Math.floor(run.combo / RHYTHM_COMBO_MILESTONE_STEP)}|${rhythmLifeState(run.life) === 'down' ? 'down' : 'up'}`;
+      if (coarseKey !== run._viewCoarseKey) {
+        run._viewCoarseKey = coarseKey;
+        setView(v => ({
+          ...v,
+          score,
+          combo: run.combo,
+          maxCombo: run.maxCombo
+        }));
+      }
+    }
+    return ok;
+  };
   const applyJudgment = useCallback((note, judgment, deltaMs) => {
     const _judgeT0 = RHYTHM_PERF.enabled && typeof performance !== 'undefined' ? performance.now() : 0;
     const run = runRef.current;
     if (!run || run.finished || run.paused || note.done) return;
+    comboTicksRef.current(note, judgment);
     if (rhythmHisshiUpgrades(run.abilities, judgment, run.audio?.songTimeMs?.() ?? 0)) judgment = 'MARVELOUS';
     RHYTHM_INPUT_REC.event(judgment === 'MISS' ? 'miss' : 'hit', {
       note: note.index,
@@ -35239,7 +35318,7 @@ const RhythmTapTest = ({
         }
       }
     }
-    const calculatedScore = Math.floor(rhythmCalculateScore({
+    const calculatedScore = run.tickRules ? tickScoreOf(run) : Math.floor(rhythmCalculateScore({
       judgments: run.counts,
       maxCombo: run.maxCombo,
       totalNotes: chart.totalNotes,
@@ -35382,7 +35461,7 @@ const RhythmTapTest = ({
       return;
     }
     const score = run.lifeDepleted ? run.lockedScore : run.score;
-    const achievements = rhythmResultAchievements(run.counts, chart.totalNotes);
+    const achievements = rhythmResultAchievements(run.counts, chart.totalNotes, run.tickRules ? run.tickMiss : 0);
     if (assistOn) {
       achievements.fullCombo = false;
       achievements.allExcellent = false;
@@ -35403,6 +35482,12 @@ const RhythmTapTest = ({
         ...run.counts
       },
       maxCombo: run.maxCombo,
+      ...(run.tickRules ? {
+        scoreVersion: 2,
+        tickTotal: run.tickTotal ?? rhythmComboTickTotal(run.notes),
+        tickJust: run.tickJust,
+        tickMiss: run.tickMiss
+      } : {}),
       fast: run.fast,
       slow: run.slow,
       precise: run.precise,
@@ -36007,6 +36092,7 @@ const RhythmTapTest = ({
         if (!note.done && note.activePointerId !== null && note.type === 'HOLD' && rhythmNoteHasBody(note)) heldNotes.push(note);
       }
       RHYTHM_NOTE_SE_RUNTIME.holdSync(heldNotes);
+      if (run.tickRules) for (let i = 0; i < heldNotes.length; i++) comboTicksRef.current(heldNotes[i]);
       for (let i = 0; i < heldNotes.length; i++) {
         const note = heldNotes[i],
           ticks = Number(note._rhythmTicks) || 0;
@@ -36445,10 +36531,15 @@ const RhythmTapTest = ({
     RHYTHM_TIMING_DIAG.meta(audio.info?.());
     RHYTHM_TOUCH_BRIDGE.reset();
     rhythmFloatingNotesClear();
+    const tickRules = rhythmTickRulesActive();
     runRef.current = {
       audio,
       heroSeed: Math.random(),
-      notes: makeRuntimeNotes(),
+      tickRules,
+      notes: makeRuntimeNotes(tickRules),
+      tickJust: 0,
+      tickMiss: 0,
+      tickTotal: null,
       activePointers: new Map(),
       standbyPointers: new Map(),
       activeTouchInputs: new Set(),
@@ -46247,7 +46338,8 @@ const RAID_JACK_RHYTHM_DIFFICULTY_FACTORS = Object.freeze({
   NORMAL: 0.40,
   HARD: 0.55,
   EXPERT: 0.75,
-  MASTER: 1.0
+  MASTER: 1.0,
+  HELL: 1.0
 });
 const RAID_JACK_RHYTHM_COMBO_PER_COMBO = 0.0005;
 const RAID_JACK_RHYTHM_ACHIEVE_FACTORS = Object.freeze({
@@ -46296,9 +46388,17 @@ const raidJackRhythmDamage = input => {
 };
 const raidJackRhythmDamageOf = (result, difficulty) => {
   const r = result && typeof result === 'object' ? result : {};
+  const tickJust = Math.max(0, Math.floor(Number(r.tickJust) || 0)),
+    tickMiss = Math.max(0, Math.floor(Number(r.tickMiss) || 0));
+  const judgments = (tickJust || tickMiss) && r.judgments && typeof r.judgments === 'object' ? {
+    ...r.judgments,
+    MARVELOUS: Math.floor(Number(r.judgments.MARVELOUS) || 0) + tickJust,
+    MISS: Math.floor(Number(r.judgments.MISS) || 0) + tickMiss
+  } : r.judgments;
+  const precise = Math.floor(Number(r.precise) || 0) + tickJust;
   return raidJackRhythmDamage({
-    judgments: r.judgments,
-    precise: r.precise,
+    judgments,
+    precise,
     maxCombo: r.maxCombo,
     difficultyId: difficulty && difficulty.id,
     assist: r.assist === true,

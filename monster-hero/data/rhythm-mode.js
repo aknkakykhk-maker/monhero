@@ -2269,6 +2269,56 @@ const rhythmSlideNoteCheckpoints=note=>{
   if(Array.isArray(baked))return baked;
   return rhythmSlideCheckpointTimes(note,rhythmSlideCheckpointIntervalMs('MASTER',null));
 };
+// ===== 刻み(2026-10-17 社長の決定「刻みもノーツとして数える」・docs/playbot/reports/2026-10-17/combo-tick-v2/PLAN.md) =====
+// ホールド・スライドを押さえている間に通る「刻み」。押さえて通れば JUST MARVELOUS、外れていれば MISS の、もう1つのノーツとして数える
+// (重みはふつうのノーツの半分。満点は変わらない)。譜面のデータは変えず、演奏を始めるときに帯と曲の拍の表から作る(どの端末でも同じ数)。
+//   ・間隔: EASY〜HARD は4分音符(1拍)、EXPERT 以上は8分音符。刻みどうしが RHYTHM_COMBO_TICK_MIN_STEP_MS より詰まる速い曲は1段粗く(倍)
+//   ・帯の折れ点(曲がる点)には必ず置く。1本の帯で RHYTHM_COMBO_TICK_MIN_GAP_MS に1つまで(近いときは折れ点を残し、拍の刻みを外す)
+//   ・帯の始まりと終わりの前後 RHYTHM_COMBO_TICK_EDGE_MS には置かない(押し始め・押し終わりはその帯の1ノーツで判定する)
+//   ・拍の表(RHYTHM_SONG_BEATS)が無い曲(試験用・チュートリアルなど)は RHYTHM_COMBO_TICK_FALLBACK_MS ごと
+// 判定を下げるための線(チェックポイント・rhythmSlideCheckpointTimes)とは別のもの(そちらは今までどおり)
+const RHYTHM_COMBO_TICK_EDGE_MS=40;
+const RHYTHM_COMBO_TICK_MIN_GAP_MS=100;
+const RHYTHM_COMBO_TICK_MIN_STEP_MS=150;
+const RHYTHM_COMBO_TICK_FALLBACK_MS=250;
+const RHYTHM_COMBO_TICK_DIVISION=Object.freeze({EASY:1,NORMAL:1,HARD:1,EXPERT:2,MASTER:2,HELL:2});
+// 帯の折れ点の時刻(スライドの途中の点のうち、前後で動く向き・速さが変わる点と、曲線(ease)の始まる点)
+const rhythmSlideBendTimes=note=>{
+  if(!Array.isArray(note?.slidePoints)||note.slidePoints.length<3)return [];
+  const pts=note.slidePoints,out=[];
+  const slope=(a,b)=>{const dt=Number(b?.timeMs)-Number(a?.timeMs);return dt>0?(Number(b?.lane)-Number(a?.lane))/dt:0;};
+  for(let i=1;i<pts.length-1;i++){const t=Number(pts[i]?.timeMs);if(!Number.isFinite(t))continue;
+    if(pts[i].ease||pts[i-1].ease||Math.abs(slope(pts[i-1],pts[i])-slope(pts[i],pts[i+1]))>1e-6)out.push(Math.round(t));}
+  return out;
+};
+const rhythmComboTickTimes=(note,grid,difficultyId)=>{
+  const start=Number(note?.timeMs),end=Number(note?.endTimeMs);
+  if(!Number.isFinite(start)||!Number.isFinite(end))return [];
+  const from=start+RHYTHM_COMBO_TICK_EDGE_MS,to=end-RHYTHM_COMBO_TICK_EDGE_MS;
+  if(to<from)return [];
+  const beat=grid&&Number(grid.beatMs)>50&&Number.isFinite(Number(grid.zeroMs))?Number(grid.beatMs):0;
+  let step=beat?beat/(RHYTHM_COMBO_TICK_DIVISION[String(difficultyId||'').toUpperCase()]||2):RHYTHM_COMBO_TICK_FALLBACK_MS;
+  while(step<RHYTHM_COMBO_TICK_MIN_STEP_MS)step*=2;
+  // 折れ点を先に置き(近すぎる折れ点どうしは先のほうだけ)、拍の刻みは折れ点・ほかの刻みから離れているときだけ足す
+  const kept=[];
+  for(const t of rhythmSlideBendTimes(note).filter(t=>t>=from&&t<=to).sort((a,b)=>a-b))if(!kept.length||t-kept[kept.length-1]>=RHYTHM_COMBO_TICK_MIN_GAP_MS)kept.push(t);
+  const beats=[];
+  if(beat){for(let k=Math.floor((from-grid.zeroMs)/step)-4,n=0;n<20000;k++,n++){const t=Math.round(rhythmBeatLineTime(grid,grid.zeroMs+k*step));if(t>to)break;if(t>=from)beats.push(t);}}
+  else for(let t=start+step;t<=to;t+=step)beats.push(Math.round(t));
+  const near=(list,t)=>list.some(v=>Math.abs(v-t)<RHYTHM_COMBO_TICK_MIN_GAP_MS);
+  const out=kept.slice();
+  for(const t of beats)if(!near(out,t))out.push(t);
+  return out.sort((a,b)=>a-b);
+};
+// 1曲の刻みの数(演奏画面のノーツの _rhythmComboTicks を足す)
+const rhythmComboTickTotal=notes=>Array.isArray(notes)?notes.reduce((sum,note)=>sum+(Array.isArray(note?._rhythmComboTicks)?note._rhythmComboTicks.length:0),0):0;
+// 刻みの数え方へ切り替える時刻(週の区切り・イベントの外。社長の確認しだいで動かす)。演奏を始めるときに毎回見る(読み込み時に1回だけ決めない)。
+// デバッグの「確認待ちの試作」(mh_rhythm_tick_preview_proto='1')を入れると、この時刻より前でも試せる(そのあいだはランキングへ送らない)
+const RHYTHM_TICK_SWITCH_AT='2026-11-02T05:00:00+09:00';
+const RHYTHM_TICK_PREVIEW_KEY='mh_rhythm_tick_preview_proto';
+const rhythmTickPreviewOn=()=>{try{return typeof localStorage!=='undefined'&&localStorage.getItem(RHYTHM_TICK_PREVIEW_KEY)==='1';}catch{return false;}};
+const rhythmTickRulesReleased=(nowMs=Date.now())=>Number(nowMs)>=Date.parse(RHYTHM_TICK_SWITCH_AT);
+const rhythmTickRulesActive=(nowMs=Date.now())=>rhythmTickRulesReleased(nowMs)||rhythmTickPreviewOn();
 // ホールドの「線を通った」演出の時刻(2026-10-17 社長「ホールドとかスライドで、他ゲーはコンボ増えてくけど、あれのほうが爽快感はある」→ 案A: 見た目と音だけ)。
 // ホールドには判定の線が無いので、スライドの線と同じ間隔(難易度と譜面のレベルで決まる _rhythmCheckpointIntervalMs)で時刻を作る。
 // 光・音・コンボのはねを出すためだけに使い、判定・コンボの数・スコアには使わない。終わりの手前(TAIL_GUARD)は置かない
@@ -3777,7 +3827,9 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
     //   「今までって判定箇所があって、それを何%分外したらその分判定が下がってくとかじゃなかったっけ？」)。
     //   2026-10-10 から空中のスライドだけ「外れが120ms続いたらその場で MISS」(ホールドと同じ)だったのをやめ、外れているあいだに来たチェックポイントを落とし、
     //   落とした割合で判定を下げる(rhythmSlideTrackingFloor)。外れているあいだ帯が暗くなる合図(note._trackOff)は今までどおり。ホールドは今のまま切れる
-    if(session.kind==='SLIDE')return;
+    // ★刻みの数え方(2026-10-17 社長「ホールドも外れても押し直せば続く形にする(スライドとそろえる)。外れていた間の刻みだけ MISS」)では、
+    //   ホールドも切らない(_rhythmTickRules は演奏画面が、切り替えの時刻を過ぎて始めた演奏のノーツに付ける)
+    if(session.kind==='SLIDE'||session.note?._rhythmTickRules===true)return;
     const graceMs=Number(session.note?._rhythmTrackingGraceMs)>0?Number(session.note._rhythmTrackingGraceMs):RHYTHM_MID_TRACKING_GRACE_MS;
     const elapsedPerf=pos.perfMs-session.trackingBadSincePerf;
     if(elapsedPerf<graceMs)return;
@@ -3794,11 +3846,31 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
   // 「ぶれた一瞬では落とさない」は evaluatePosition が維持している trackingBadSincePerf を
   // そのまま使う(猶予の考え方を追従の判定と共有するため)。
   // 線を通った印(note._rhythmTicks)。演奏画面が毎コマ読んで、光・音・コンボのはねを出す(2026-10-17 案A)。判定・コンボの数には使わない
+  // 刻みの数え方(note._rhythmTickRules)では、光・音・はねは判定の線ではなく刻み(evaluateComboTicks)で出す
   const markTick=note=>{note._rhythmTicks=(Number(note._rhythmTicks)||0)+1;};
+  const markLine=note=>{if(note._rhythmTickRules!==true)markTick(note);};
+  // 刻み(note._rhythmComboTicks・rhythmComboTickTimes)を通るたびに、押さえていたら note._rhythmComboOk、外れていたら note._rhythmComboDrop を1つ増やす。
+  // 演奏画面が毎コマ読んで、判定(JUST MARVELOUS / MISS)・コンボ・スコアへ入れる。どこまで見たかはノーツに持つ(指の引き継ぎで同じ刻みを二度数えない)。
+  // 外れの一瞬(猶予 graceMs 未満)では落とさない(判定の線と同じ)。終点フリックの受付中は押さえているものとして数える
+  const evaluateComboTicks=(session,perf)=>{
+    const note=session.note,ticks=note?._rhythmComboTicks;
+    if(!Array.isArray(ticks)||(session.kind==='HOLD'&&session.failed))return;
+    let index=Number(note._rhythmComboIdx)||0;
+    if(index>=ticks.length)return;
+    const chartNow=estimatedSongMs(session)-session.offsetMs;
+    const graceMs=Number(note._rhythmTrackingGraceMs)>0?Number(note._rhythmTrackingGraceMs):RHYTHM_MID_TRACKING_GRACE_MS;
+    while(index<ticks.length&&Number(ticks[index])<=chartNow){
+      index++;
+      if(session.endFlickArmed||session.trackingBadSincePerf==null||perf-session.trackingBadSincePerf<graceMs){note._rhythmComboOk=(Number(note._rhythmComboOk)||0)+1;markTick(note);}
+      else note._rhythmComboDrop=(Number(note._rhythmComboDrop)||0)+1;
+    }
+    note._rhythmComboIdx=index;
+  };
   const evaluateCheckpoints=(session,perf)=>{
     if(!session||session.finished||session.note.done)return;
+    evaluateComboTicks(session,perf);
     // ホールドは線が無いので、同じ間隔の時刻(rhythmHoldTickTimes)を通るたびに印だけ付ける。外れているあいだ(帯が暗い)は付けない
-    if(session.kind==='HOLD'){
+    if(session.kind==='HOLD'&&session.note._rhythmTickRules!==true){
       const ticks=session.tickTimes;
       if(session.failed||!Array.isArray(ticks)||session.tickIndex>=ticks.length)return;
       const chartNow=estimatedSongMs(session)-session.offsetMs;
@@ -3814,9 +3886,9 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
     while(session.checkpointIndex<times.length&&Number(times[session.checkpointIndex])<=chartNow){
       session.checkpointIndex++;
       // 終点フリックの受付中は追従を見ない(フリックで的から外れるのは当たり前のため)。
-      if(session.endFlickArmed){session.checkpointPassed++;markTick(session.note);continue;}
+      if(session.endFlickArmed){session.checkpointPassed++;markLine(session.note);continue;}
       // 落とした線では印を付けない(光・音も出ない)
-      if(session.trackingBadSincePerf==null||perf-session.trackingBadSincePerf<graceMs){session.checkpointPassed++;markTick(session.note);}
+      if(session.trackingBadSincePerf==null||perf-session.trackingBadSincePerf<graceMs){session.checkpointPassed++;markLine(session.note);}
     }
   };
   const tick=()=>{

@@ -759,12 +759,27 @@ const rhythmCalculateScore = ({judgments,maxCombo,totalNotes,maxScore}) => {
   const judged=RHYTHM_JUDGMENT_IDS.reduce((sum,id)=>sum+(judgments[id]||0)*rates[id],0);
   return Math.min(maxScore,Math.round((judged/totalNotes*RHYTHM_SCORE_WEIGHTS.judgment+maxCombo/totalNotes*RHYTHM_SCORE_WEIGHTS.combo)*maxScore));
 };
-const rhythmResultAchievements = (judgments,totalNotes) => {
+// 刻みの数え方(2026-10-17・docs/playbot/reports/2026-10-17/combo-tick-v2/PLAN.md)のスコア。今の rhythmCalculateScore は変えない(旧の物差し)。
+//   判定の点 = (ノーツの点の合計 + 刻みの重み × 取った刻みの数) ÷ (ノーツ数 + 刻みの重み × 刻みの数)。刻みは取れば JUST MARVELOUS(1点)・落とせば MISS(0点)
+//   コンボの点 = 最大コンボ ÷ (ノーツ数 + 刻みの数)(刻みも1コンボ)
+//   ノーツも刻みも全部つなげば、どちらも満点(満点は今のまま)
+const RHYTHM_TICK_SCORE_WEIGHT=.5;
+const rhythmCalculateScoreTicks = ({judgments,maxCombo,totalNotes,maxScore,tickJust=0,tickTotal=0}) => {
+  if(!totalNotes) return 0;
+  const ticks=Math.max(0,Number(tickTotal)||0),got=Math.max(0,Math.min(ticks,Number(tickJust)||0));
+  const rates=Object.fromEntries(RHYTHM_JUDGMENTS.map(item=>[item.id,item.scoreRate]));
+  const judged=RHYTHM_JUDGMENT_IDS.reduce((sum,id)=>sum+(judgments[id]||0)*rates[id],0)+RHYTHM_TICK_SCORE_WEIGHT*got;
+  return Math.min(maxScore,Math.round((judged/(totalNotes+RHYTHM_TICK_SCORE_WEIGHT*ticks)*RHYTHM_SCORE_WEIGHTS.judgment+maxCombo/(totalNotes+ticks)*RHYTHM_SCORE_WEIGHTS.combo)*maxScore));
+};
+// tickMiss … 落とした刻みの数(刻みの数え方のとき)。1つでも落とすと FC・AE・AM は付かない(社長の決定「刻みも落とさないことがフルコンボの条件」)。
+//   渡さない呼び出しは0(今までと同じ)。取った称号は記録の側で下げない(mergeRhythmBestRecord は「前に取った or 今回取った」)
+const rhythmResultAchievements = (judgments,totalNotes,tickMiss=0) => {
   const counts=Object.fromEntries(RHYTHM_JUDGMENT_IDS.map(id=>[id,Math.max(0,Number(judgments?.[id])||0)]));
+  const kept=!(Number(tickMiss)>0);
   return {
-    fullCombo:counts.BAD===0&&counts.MISS===0,
-    allExcellent:counts.GREAT===0&&counts.GOOD===0&&counts.BAD===0&&counts.MISS===0,
-    allMarvelous:totalNotes>0&&counts.MARVELOUS===totalNotes,
+    fullCombo:kept&&counts.BAD===0&&counts.MISS===0,
+    allExcellent:kept&&counts.GREAT===0&&counts.GOOD===0&&counts.BAD===0&&counts.MISS===0,
+    allMarvelous:kept&&totalNotes>0&&counts.MARVELOUS===totalNotes,
   };
 };
 // 今回の完走結果を既存BESTへ統合する純粋関数。判定内訳は、そのBESTスコアを
