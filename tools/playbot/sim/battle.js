@@ -1003,6 +1003,7 @@ function playTurn(st) {
     const halved = (usesBy[slot] || 0) > 0; usesBy[slot] = (usesBy[slot] || 0) + 1;
     const effMul = halved ? 0.5 : 1;
     const mon = st.mons[slot];
+    if (typeof st.actHook === 'function') st.actHook(st, slot, card, effMul); // カードを使った子を知らせる口(2026-10-17 ヘイトの基準表 hate-table.js)
     // パンドラの箱: 箱のあいだの固有技は、天使の力で味方全員のライフ・ガッツを戻す(60-app.jsx 12408)
     const box = G.tacticsExPandoraBoxOf(st.ex, st.units, slot, now);
     if (box && card.type === 'unique' && box.angelRate > 0) st.units = G.rateHealTacticsBoard(st.units, box.angelRate, box.angelRate, false).units;
@@ -1427,13 +1428,13 @@ function trainAfterWave(st, w) {
   }
 }
 
-function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWave = 10, exMode = 'bot', assist = 'bot', assistPlay = 'bot', training = 'bot', exLog = false, distBonus = true, uniqueUp = true, emergency = 'auto', uniquePlan = 'bot', discardBlocked = true, revive = 'bot', aimHook = null }) {
+function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWave = 10, exMode = 'bot', assist = 'bot', assistPlay = 'bot', training = 'bot', exLog = false, distBonus = true, uniqueUp = true, emergency = 'auto', uniquePlan = 'bot', discardBlocked = true, revive = 'bot', aimHook = null, actHook = null }) {
   const rng = mulberry32(hashSeed(seed, heroId, difficulty, allies.join(',')));
   const hero = MON_BY_ID[heroId];
   if (!hero) throw new Error(`勇者モンが見つからない: ${heroId}`);
   if (!EX_POLICIES[exMode]) throw new Error(`EX の使い方が分からない: ${exMode}`);
   const st = {
-    aimHook, rng, heroId, difficulty, exMode, maxWave, mons: [null, null, null, null], units: [null, null, null, null], trick: [{}, {}, {}, {}],
+    aimHook, actHook, rng, heroId, difficulty, exMode, maxWave, mons: [null, null, null, null], units: [null, null, null, null], trick: [{}, {}, {}, {}],
     autoHp: 0.1, joinCatchUp: 1, powerStart: monsterPowerOf(hero), powerNow: monsterPowerOf(hero),
     dealtTotal: 0, taken: 0, recentDealt: 0, recentWave: 0, turnsTotal: 0, waveTurns: [],
     // ランのあいだ残るもの: EX の回数・permaBuffs・クッキー/黒音符・メロディ・ボゥの積み・運命のコイン/輪の積み
