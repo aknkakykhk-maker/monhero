@@ -30539,6 +30539,8 @@ installRhythmGeometryStyles();
 const RHYTHM_HIT_EFFECT_POOL=10;
 // ホールド・スライドで線を通ったときの小さな光の長さ(2026-10-17 案A)
 const RHYTHM_HOLD_TICK_MS=200;
+// 線を通ったときの演出を、1本の帯につき何msに1回までにするか(曲がりの多い帯は線が細かく来るため)
+const RHYTHM_HOLD_TICK_FX_GAP_MS=100;
 // 1枚あたりに仕込む「はじける粒」の数。飛ぶ向きはCSS側に書いてある。
 const RHYTHM_HIT_SPARK_COUNT=5;
 // ふつうのノーツと、モンスターノーツ(1曲に最大4回)で光の大きさ・長さを変える。

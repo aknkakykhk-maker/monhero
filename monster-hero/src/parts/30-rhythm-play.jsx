@@ -2443,7 +2443,9 @@ RHYTHM_NOTE_SE_RUNTIME.holdSync(heldNotes);
 // 他ゲーはコンボ増えてくけど、あれのほうが爽快感はある」→ 案A: 見た目と音だけ。コンボの数・スコア・判定は変えない)。
 // 印(note._rhythmTicks)は指の処理(evaluateCheckpoints)が、落とさずに通った線でだけ増やす。光はノーツの canvas の中(pushTick)、はねは今あるコンボの数字を animate で動かすだけ(画面の部品は足さない)。
 // 演出量「最小」・軽量モードでは光とはねを出さない(音はタップ音の設定に従う)
+// 曲がりの多い帯は線が約45msおきに来るので、1本の帯につき RHYTHM_HOLD_TICK_FX_GAP_MS に1回までにまとめる(光と音が忙しくなりすぎないように)
 for(let i=0;i<heldNotes.length;i++){const note=heldNotes[i],ticks=Number(note._rhythmTicks)||0;if(!(ticks>(Number(note._rhythmTicksSeen)||0)))continue;note._rhythmTicksSeen=ticks;
+  if(frameNowMs-(Number(note._rhythmTickFxAt)||-1e9)<RHYTHM_HOLD_TICK_FX_GAP_MS)continue;note._rhythmTickFxAt=frameNowMs;
   const slide=rhythmNoteIsSlide(note);RHYTHM_NOTE_SE_RUNTIME.playTick(slide);
   if(settings.lightweightMode||settings.effectAmount==='MINIMAL')continue;
   const area=playAreaRef.current;
