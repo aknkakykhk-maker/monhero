@@ -21,6 +21,9 @@
 // ・上の残高は MarketBalanceBar、知らせは MarketNotice
 // ・買う/交換するときは、どの品も MarketPurchaseSheet(確認の窓)を通す。
 //   以前は円盤石・アシスト・アイコン・勇者の証の交換が、押した瞬間に確認なしで実行されていた
+// ・何度も買う品(消耗品・素材)は、どの売り場でも窓で個数を選んでまとめて買える(stackable)。
+//   勇者の証(証片で交換)と魂格再編の書(勇者の証で交換)も 2026-10-17 の社長依頼「まとめ買いできるようにして」で加えた。
+//   1つしか持てない品(円盤石・アシスト・アイコン・フレーム・着替え)は1つずつ
 // ・窓はこの画面が1つだけ持つ(sheet)。保存の中身は本体のまま(onBuy などは成功したら true / {ok:true} を返す)
 function BreederMarketScreen({
   gold, breederPoints, ownedItems, marketTab, marketExchangeError, purchaseProcessing,
@@ -106,8 +109,12 @@ function BreederMarketScreen({
 
   const openSheet = (next) => { setSheetQuantity(1); setSheet(next); };
   const closeSheet = () => { if(!sheetPending) setSheet(null); };
+  // 「買う」を素早く2回押しても1回だけ通す。state(sheetPending)は次の描画まで変わらないので、
+  // 同じ描画のうちに来た2回目は ref で止める(二重に引かれる・二重にもらえるのを防ぐ。まとめ買いで1回の額が大きくなったため)
+  const sheetBusyRef = React.useRef(false);
   const confirmSheet = async (count) => {
-    if(!sheet||sheetPending) return;
+    if(!sheet||sheetPending||sheetBusyRef.current) return;
+    sheetBusyRef.current = true;
     setSheetPending(true);
     try {
       const result = await sheet.confirm(count);
@@ -116,7 +123,7 @@ function BreederMarketScreen({
         if(sheet.rebirth&&ALL_PLAYER_MONSTERS[sheet.rebirth.monsterId]) setRebirth(sheet.rebirth);
         setSheet(null);
       }
-    } finally { setSheetPending(false); }
+    } finally { sheetBusyRef.current = false; setSheetPending(false); }
   };
   // 所持数と詳細ボタン。消耗品のカードはどの売り場でもこの形
   const ownedMiddle = (count, detailItem, extraDetail=null) => <>
@@ -153,7 +160,7 @@ function BreederMarketScreen({
           canBuy={proofHave>0&&!busy}
           disabled={purchaseProcessing}
           onZoom={()=>onZoomIcon(item)}
-          onBuy={()=>openSheet({ item:exchangeItem, confirm:()=>onExchangeSoulRankRespec() })}
+          onBuy={()=>openSheet({ item:exchangeItem, stackable:true, confirm:(count)=>onExchangeSoulRankRespec(count) })}
           middle={ownedMiddle(ownedItemCount(ownedItems,SOUL_RANK_RESPEC_ITEM_ID), item)}
         />}
       </React.Fragment>
@@ -248,7 +255,7 @@ function BreederMarketScreen({
             canBuy={shardHave>=HERO_PROOF_SHARD_PER_PROOF&&!busy}
             disabled={purchaseProcessing}
             onZoom={()=>onZoomIcon(HERO_PROOF_ITEM)}
-            onBuy={()=>openSheet({ item:shardExchange, confirm:()=>onExchangeHeroProof() })}
+            onBuy={()=>openSheet({ item:shardExchange, stackable:true, confirm:(count)=>onExchangeHeroProof(count) })}
             middle={ownedMiddle(proofHave, HERO_PROOF_ITEM)}
           />;})()}
         </div>

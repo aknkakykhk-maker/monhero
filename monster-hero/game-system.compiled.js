@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d7105138629dcf7b
+// source-sha256: 569eeb7f9e4cb66a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-17 20:27";
+const BUILD_DATE = "2026-10-17 20:34";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -50716,8 +50716,10 @@ function BreederMarketScreen({
   const closeSheet = () => {
     if (!sheetPending) setSheet(null);
   };
+  const sheetBusyRef = React.useRef(false);
   const confirmSheet = async count => {
-    if (!sheet || sheetPending) return;
+    if (!sheet || sheetPending || sheetBusyRef.current) return;
+    sheetBusyRef.current = true;
     setSheetPending(true);
     try {
       const result = await sheet.confirm(count);
@@ -50726,6 +50728,7 @@ function BreederMarketScreen({
         setSheet(null);
       }
     } finally {
+      sheetBusyRef.current = false;
       setSheetPending(false);
     }
   };
@@ -50801,7 +50804,8 @@ function BreederMarketScreen({
       onZoom: () => onZoomIcon(item),
       onBuy: () => openSheet({
         item: exchangeItem,
-        confirm: () => onExchangeSoulRankRespec()
+        stackable: true,
+        confirm: count => onExchangeSoulRankRespec(count)
       }),
       middle: ownedMiddle(ownedItemCount(ownedItems, SOUL_RANK_RESPEC_ITEM_ID), item)
     }));
@@ -50988,7 +50992,8 @@ function BreederMarketScreen({
       onZoom: () => onZoomIcon(HERO_PROOF_ITEM),
       onBuy: () => openSheet({
         item: shardExchange,
-        confirm: () => onExchangeHeroProof()
+        stackable: true,
+        confirm: count => onExchangeHeroProof(count)
       }),
       middle: ownedMiddle(proofHave, HERO_PROOF_ITEM)
     });
@@ -86702,12 +86707,12 @@ function MonsterHeroGame() {
       marketPurchaseProcessingRef.current = false;
     }
   };
-  const exchangeSoulRankRespecByProof = async () => {
+  const exchangeSoulRankRespecByProof = async (quantity = 1) => {
     if (marketPurchaseProcessingRef.current) return false;
     const before = ownedItemsRef.current;
-    const exchange = buildSoulRankRespecProofExchange(before, 1);
+    const exchange = buildSoulRankRespecProofExchange(before, quantity);
     if (!exchange.ok) {
-      setMarketExchangeError('勇者の証が1個必要です。');
+      setMarketExchangeError(`勇者の証が${exchange.proofCost}個必要です。`);
       return false;
     }
     marketPurchaseProcessingRef.current = true;
@@ -86730,12 +86735,12 @@ function MonsterHeroGame() {
       marketPurchaseProcessingRef.current = false;
     }
   };
-  const exchangeHeroProofByShard = async () => {
+  const exchangeHeroProofByShard = async (quantity = 1) => {
     if (marketPurchaseProcessingRef.current) return false;
     const before = ownedItemsRef.current;
-    const exchange = buildHeroProofShardExchange(before, 1);
+    const exchange = buildHeroProofShardExchange(before, quantity);
     if (!exchange.ok) {
-      setMarketExchangeError(`勇者の証片が${HERO_PROOF_SHARD_PER_PROOF}個必要です（いま${exchange.shardHave}個）。`);
+      setMarketExchangeError(`勇者の証片が${exchange.shardCost}個必要です（いま${exchange.shardHave}個）。`);
       return false;
     }
     marketPurchaseProcessingRef.current = true;

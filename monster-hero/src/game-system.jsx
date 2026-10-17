@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c5ea7ecefe03cc9a
+// generated-sha256: 2893ae78c2a567fe
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-17 20:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-17 20:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -31804,6 +31804,9 @@ function ItemInventoryScreen({ ownedItems, onBack, onUseItem }) {
 // ・上の残高は MarketBalanceBar、知らせは MarketNotice
 // ・買う/交換するときは、どの品も MarketPurchaseSheet(確認の窓)を通す。
 //   以前は円盤石・アシスト・アイコン・勇者の証の交換が、押した瞬間に確認なしで実行されていた
+// ・何度も買う品(消耗品・素材)は、どの売り場でも窓で個数を選んでまとめて買える(stackable)。
+//   勇者の証(証片で交換)と魂格再編の書(勇者の証で交換)も 2026-10-17 の社長依頼「まとめ買いできるようにして」で加えた。
+//   1つしか持てない品(円盤石・アシスト・アイコン・フレーム・着替え)は1つずつ
 // ・窓はこの画面が1つだけ持つ(sheet)。保存の中身は本体のまま(onBuy などは成功したら true / {ok:true} を返す)
 function BreederMarketScreen({
   gold, breederPoints, ownedItems, marketTab, marketExchangeError, purchaseProcessing,
@@ -31889,8 +31892,12 @@ function BreederMarketScreen({
 
   const openSheet = (next) => { setSheetQuantity(1); setSheet(next); };
   const closeSheet = () => { if(!sheetPending) setSheet(null); };
+  // 「買う」を素早く2回押しても1回だけ通す。state(sheetPending)は次の描画まで変わらないので、
+  // 同じ描画のうちに来た2回目は ref で止める(二重に引かれる・二重にもらえるのを防ぐ。まとめ買いで1回の額が大きくなったため)
+  const sheetBusyRef = React.useRef(false);
   const confirmSheet = async (count) => {
-    if(!sheet||sheetPending) return;
+    if(!sheet||sheetPending||sheetBusyRef.current) return;
+    sheetBusyRef.current = true;
     setSheetPending(true);
     try {
       const result = await sheet.confirm(count);
@@ -31899,7 +31906,7 @@ function BreederMarketScreen({
         if(sheet.rebirth&&ALL_PLAYER_MONSTERS[sheet.rebirth.monsterId]) setRebirth(sheet.rebirth);
         setSheet(null);
       }
-    } finally { setSheetPending(false); }
+    } finally { sheetBusyRef.current = false; setSheetPending(false); }
   };
   // 所持数と詳細ボタン。消耗品のカードはどの売り場でもこの形
   const ownedMiddle = (count, detailItem, extraDetail=null) => <>
@@ -31936,7 +31943,7 @@ function BreederMarketScreen({
           canBuy={proofHave>0&&!busy}
           disabled={purchaseProcessing}
           onZoom={()=>onZoomIcon(item)}
-          onBuy={()=>openSheet({ item:exchangeItem, confirm:()=>onExchangeSoulRankRespec() })}
+          onBuy={()=>openSheet({ item:exchangeItem, stackable:true, confirm:(count)=>onExchangeSoulRankRespec(count) })}
           middle={ownedMiddle(ownedItemCount(ownedItems,SOUL_RANK_RESPEC_ITEM_ID), item)}
         />}
       </React.Fragment>
@@ -32031,7 +32038,7 @@ function BreederMarketScreen({
             canBuy={shardHave>=HERO_PROOF_SHARD_PER_PROOF&&!busy}
             disabled={purchaseProcessing}
             onZoom={()=>onZoomIcon(HERO_PROOF_ITEM)}
-            onBuy={()=>openSheet({ item:shardExchange, confirm:()=>onExchangeHeroProof() })}
+            onBuy={()=>openSheet({ item:shardExchange, stackable:true, confirm:(count)=>onExchangeHeroProof(count) })}
             middle={ownedMiddle(proofHave, HERO_PROOF_ITEM)}
           />;})()}
         </div>
@@ -55550,11 +55557,12 @@ function MonsterHeroGame() {
   };
   // 魂格再編の書は、通常の100万ダイヤ商品とは別カードで
   // 勇者の証1個→1冊へ交換できる。同じ所持品IDだけを検証付き保存し、失敗時は元へ戻す。
-  const exchangeSoulRankRespecByProof = async () => {
+  // quantity 冊をまとめて交換する(2026-10-17)。勇者の証 quantity 個 → 書 quantity 冊を1回の保存で行う
+  const exchangeSoulRankRespecByProof = async (quantity=1) => {
     if (marketPurchaseProcessingRef.current) return false;
     const before = ownedItemsRef.current;
-    const exchange = buildSoulRankRespecProofExchange(before, 1);
-    if (!exchange.ok) { setMarketExchangeError('勇者の証が1個必要です。'); return false; }
+    const exchange = buildSoulRankRespecProofExchange(before, quantity);
+    if (!exchange.ok) { setMarketExchangeError(`勇者の証が${exchange.proofCost}個必要です。`); return false; }
     marketPurchaseProcessingRef.current = true;
     setMarketExchangeError('');
     try {
@@ -55573,11 +55581,12 @@ function MonsterHeroGame() {
   };
   // 勇者の証片20個 → 勇者の証1個。魂格再編の書と同じ作りで、失敗したら元へ戻す
   // (2026-09-13・週間ランキングの報酬で証片がたまるようにしたのに合わせて追加)
-  const exchangeHeroProofByShard = async () => {
+  // quantity 個をまとめて交換する(2026-10-17)。証片 20×quantity 個 → 証 quantity 個を1回の保存で行う
+  const exchangeHeroProofByShard = async (quantity=1) => {
     if (marketPurchaseProcessingRef.current) return false;
     const before = ownedItemsRef.current;
-    const exchange = buildHeroProofShardExchange(before, 1);
-    if (!exchange.ok) { setMarketExchangeError(`勇者の証片が${HERO_PROOF_SHARD_PER_PROOF}個必要です（いま${exchange.shardHave}個）。`); return false; }
+    const exchange = buildHeroProofShardExchange(before, quantity);
+    if (!exchange.ok) { setMarketExchangeError(`勇者の証片が${exchange.shardCost}個必要です（いま${exchange.shardHave}個）。`); return false; }
     marketPurchaseProcessingRef.current = true;
     setMarketExchangeError('');
     try {
