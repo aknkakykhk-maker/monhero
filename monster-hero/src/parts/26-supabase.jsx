@@ -1628,13 +1628,13 @@ const sbFetchRhythmWeekWindow = async ({ requestId = 'untracked' } = {}) => {
   return { startMs, endMs };
 };
 // 期間×対象曲の「曲ごとベスト」。部門1つぶん(=曲1つぶん)を取りにいく
-const sbFetchRhythmEventSongBestsRaw = async ({ songId, fromMs, toMs, bonusRates = null, limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' }) => {
+const sbFetchRhythmEventSongBestsRaw = async ({ songId, fromMs, toMs, bonusRates = null, limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' , legacyView = false}) => {
   const filter = Array.isArray(identityKeys) && identityKeys.length
     ? `&identity_key=in.(${identityKeys.map(k => encodeURIComponent(`"${k}"`)).join(',')})`
     : '';
   const body = { song_ids: [songId], from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() };
   const askRaw = (select) => sbFetchRhythmEventRows({
-    url: rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rpc/rhythm_event_song_bests?select=${select}`, rhythmRankingPeriodVersion(fromMs))
+    url: rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rpc/rhythm_event_song_bests?select=${select}`, rhythmRankingPeriodVersion(fromMs, toMs, legacyView))
       + `&order=score.desc,scored_at.asc&limit=${limit}${filter}`,
     body, label: 'rhythm-event-song', requestId,
   });
@@ -1643,7 +1643,7 @@ const sbFetchRhythmEventSongBestsRaw = async ({ songId, fromMs, toMs, bonusRates
   // 関数がまだ無い環境では加点なしへ戻す(順位は出る。加点と内訳だけ出ない)
   if (bonusRates) {
     const askBonusRaw = (select) => sbFetchRhythmEventRows({
-      url: rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rpc/rhythm_event_song_bests_bonus?select=${select}`, rhythmRankingPeriodVersion(fromMs))
+      url: rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rpc/rhythm_event_song_bests_bonus?select=${select}`, rhythmRankingPeriodVersion(fromMs, toMs, legacyView))
         + `&order=score.desc,scored_at.asc&limit=${limit}${filter}`,
       body: { ...body, bonus_rates: bonusRates }, label: 'rhythm-event-song-bonus', requestId,
     });
@@ -1674,7 +1674,7 @@ const sbFetchRhythmEventSongBestsRaw = async ({ songId, fromMs, toMs, bonusRates
   }
 };
 // 期間×対象曲の「総合」。対象曲それぞれのその週のベストを単純合算したもの(§6.3)
-const sbFetchRhythmEventTotalsRaw = async ({ songIds, fromMs, toMs, bonusRates = null, limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' }) => {
+const sbFetchRhythmEventTotalsRaw = async ({ songIds, fromMs, toMs, bonusRates = null, limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' , legacyView = false}) => {
   const filter = Array.isArray(identityKeys) && identityKeys.length
     ? `&identity_key=in.(${identityKeys.map(k => encodeURIComponent(`"${k}"`)).join(',')})`
     : '';
@@ -1682,7 +1682,7 @@ const sbFetchRhythmEventTotalsRaw = async ({ songIds, fromMs, toMs, bonusRates =
   // 曲の部門と同じく、加点込みの関数を先に試して、無ければ加点なしへ戻す
   if (bonusRates) {
     const askBonusRaw = (select) => sbFetchRhythmEventRows({
-      url: rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rpc/rhythm_event_totals_bonus?select=${select}`, rhythmRankingPeriodVersion(fromMs))
+      url: rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rpc/rhythm_event_totals_bonus?select=${select}`, rhythmRankingPeriodVersion(fromMs, toMs, legacyView))
         + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
       body: { ...body, bonus_rates: bonusRates }, label: 'rhythm-event-total-bonus', requestId,
     });
@@ -1699,7 +1699,7 @@ const sbFetchRhythmEventTotalsRaw = async ({ songIds, fromMs, toMs, bonusRates =
     }
   }
   return askWithProfileFrame((select) => sbFetchRhythmEventRows({
-    url: rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rpc/rhythm_event_totals?select=${select}`, rhythmRankingPeriodVersion(fromMs))
+    url: rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rpc/rhythm_event_totals?select=${select}`, rhythmRankingPeriodVersion(fromMs, toMs, legacyView))
       + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
     body, label: 'rhythm-event-total', requestId,
   }), RHYTHM_EVENT_TOTAL_SELECT);
@@ -1731,12 +1731,12 @@ const rhythmEventPlayCountsFromRow = (value) => {
   return out;
 };
 // 週間ランキング(累計スコア)。対象曲を持たないので、渡すのは期間だけ
-const sbFetchRhythmWeekTotalsRaw = async ({ fromMs, toMs, limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' }) => {
+const sbFetchRhythmWeekTotalsRaw = async ({ fromMs, toMs, limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' , legacyView = false}) => {
   const filter = Array.isArray(identityKeys) && identityKeys.length
     ? `&identity_key=in.(${identityKeys.map(k => encodeURIComponent(`"${k}"`)).join(',')})`
     : '';
   return askWithProfileFrame((select) => sbFetchRhythmEventRows({
-    url: rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rpc/rhythm_week_score_totals?select=${select}`, rhythmRankingPeriodVersion(fromMs))
+    url: rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rpc/rhythm_week_score_totals?select=${select}`, rhythmRankingPeriodVersion(fromMs, toMs, legacyView))
       + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
     body: { from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() },
     label: 'rhythm-week-total', requestId,
@@ -1815,14 +1815,14 @@ const sbFetchRhythmWeekTotals = async (options = {}) => {
   if (!rhythmTieWanted(identityKeys)) return sbFetchRhythmWeekTotalsRaw(options);
   const rows = await sbFetchRhythmWeekTotalsRaw({ ...options, limit: limit + RHYTHM_TIE_PAD });
   return rhythmTieFix({ rows, limit, scoreKey: 'total_score', timeKey: 'last_scored_at', fn: 'rhythm_week_precise',
-    body: { from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() }, requestId, version: rhythmRankingPeriodVersion(fromMs) });
+    body: { from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() }, requestId, version: rhythmRankingPeriodVersion(fromMs, toMs, options.legacyView === true) });
 };
 const sbFetchRhythmEventTotals = async (options = {}) => {
   const { songIds, fromMs, toMs, limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' } = options;
   if (!rhythmTieWanted(identityKeys)) return sbFetchRhythmEventTotalsRaw(options);
   const rows = await sbFetchRhythmEventTotalsRaw({ ...options, limit: limit + RHYTHM_TIE_PAD });
   return rhythmTieFix({ rows, limit, scoreKey: 'total_score', timeKey: 'last_scored_at', fn: 'rhythm_event_precise',
-    body: { song_ids: songIds, from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() }, requestId, version: rhythmRankingPeriodVersion(fromMs) });
+    body: { song_ids: songIds, from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() }, requestId, version: rhythmRankingPeriodVersion(fromMs, toMs, options.legacyView === true) });
 };
 const sbFetchRhythmEventSongBests = async (options = {}) => {
   const { limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' } = options;

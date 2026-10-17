@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7f0a20ea8a1794d9
+// generated-sha256: d91b11737029c120
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-17 15:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-17 15:35"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -17363,13 +17363,13 @@ const sbFetchRhythmWeekWindow = async ({ requestId = 'untracked' } = {}) => {
   return { startMs, endMs };
 };
 // 期間×対象曲の「曲ごとベスト」。部門1つぶん(=曲1つぶん)を取りにいく
-const sbFetchRhythmEventSongBestsRaw = async ({ songId, fromMs, toMs, bonusRates = null, limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' }) => {
+const sbFetchRhythmEventSongBestsRaw = async ({ songId, fromMs, toMs, bonusRates = null, limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' , legacyView = false}) => {
   const filter = Array.isArray(identityKeys) && identityKeys.length
     ? `&identity_key=in.(${identityKeys.map(k => encodeURIComponent(`"${k}"`)).join(',')})`
     : '';
   const body = { song_ids: [songId], from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() };
   const askRaw = (select) => sbFetchRhythmEventRows({
-    url: rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rpc/rhythm_event_song_bests?select=${select}`, rhythmRankingPeriodVersion(fromMs))
+    url: rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rpc/rhythm_event_song_bests?select=${select}`, rhythmRankingPeriodVersion(fromMs, toMs, legacyView))
       + `&order=score.desc,scored_at.asc&limit=${limit}${filter}`,
     body, label: 'rhythm-event-song', requestId,
   });
@@ -17378,7 +17378,7 @@ const sbFetchRhythmEventSongBestsRaw = async ({ songId, fromMs, toMs, bonusRates
   // 関数がまだ無い環境では加点なしへ戻す(順位は出る。加点と内訳だけ出ない)
   if (bonusRates) {
     const askBonusRaw = (select) => sbFetchRhythmEventRows({
-      url: rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rpc/rhythm_event_song_bests_bonus?select=${select}`, rhythmRankingPeriodVersion(fromMs))
+      url: rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rpc/rhythm_event_song_bests_bonus?select=${select}`, rhythmRankingPeriodVersion(fromMs, toMs, legacyView))
         + `&order=score.desc,scored_at.asc&limit=${limit}${filter}`,
       body: { ...body, bonus_rates: bonusRates }, label: 'rhythm-event-song-bonus', requestId,
     });
@@ -17409,7 +17409,7 @@ const sbFetchRhythmEventSongBestsRaw = async ({ songId, fromMs, toMs, bonusRates
   }
 };
 // 期間×対象曲の「総合」。対象曲それぞれのその週のベストを単純合算したもの(§6.3)
-const sbFetchRhythmEventTotalsRaw = async ({ songIds, fromMs, toMs, bonusRates = null, limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' }) => {
+const sbFetchRhythmEventTotalsRaw = async ({ songIds, fromMs, toMs, bonusRates = null, limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' , legacyView = false}) => {
   const filter = Array.isArray(identityKeys) && identityKeys.length
     ? `&identity_key=in.(${identityKeys.map(k => encodeURIComponent(`"${k}"`)).join(',')})`
     : '';
@@ -17417,7 +17417,7 @@ const sbFetchRhythmEventTotalsRaw = async ({ songIds, fromMs, toMs, bonusRates =
   // 曲の部門と同じく、加点込みの関数を先に試して、無ければ加点なしへ戻す
   if (bonusRates) {
     const askBonusRaw = (select) => sbFetchRhythmEventRows({
-      url: rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rpc/rhythm_event_totals_bonus?select=${select}`, rhythmRankingPeriodVersion(fromMs))
+      url: rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rpc/rhythm_event_totals_bonus?select=${select}`, rhythmRankingPeriodVersion(fromMs, toMs, legacyView))
         + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
       body: { ...body, bonus_rates: bonusRates }, label: 'rhythm-event-total-bonus', requestId,
     });
@@ -17434,7 +17434,7 @@ const sbFetchRhythmEventTotalsRaw = async ({ songIds, fromMs, toMs, bonusRates =
     }
   }
   return askWithProfileFrame((select) => sbFetchRhythmEventRows({
-    url: rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rpc/rhythm_event_totals?select=${select}`, rhythmRankingPeriodVersion(fromMs))
+    url: rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rpc/rhythm_event_totals?select=${select}`, rhythmRankingPeriodVersion(fromMs, toMs, legacyView))
       + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
     body, label: 'rhythm-event-total', requestId,
   }), RHYTHM_EVENT_TOTAL_SELECT);
@@ -17466,12 +17466,12 @@ const rhythmEventPlayCountsFromRow = (value) => {
   return out;
 };
 // 週間ランキング(累計スコア)。対象曲を持たないので、渡すのは期間だけ
-const sbFetchRhythmWeekTotalsRaw = async ({ fromMs, toMs, limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' }) => {
+const sbFetchRhythmWeekTotalsRaw = async ({ fromMs, toMs, limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' , legacyView = false}) => {
   const filter = Array.isArray(identityKeys) && identityKeys.length
     ? `&identity_key=in.(${identityKeys.map(k => encodeURIComponent(`"${k}"`)).join(',')})`
     : '';
   return askWithProfileFrame((select) => sbFetchRhythmEventRows({
-    url: rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rpc/rhythm_week_score_totals?select=${select}`, rhythmRankingPeriodVersion(fromMs))
+    url: rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rpc/rhythm_week_score_totals?select=${select}`, rhythmRankingPeriodVersion(fromMs, toMs, legacyView))
       + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
     body: { from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() },
     label: 'rhythm-week-total', requestId,
@@ -17550,14 +17550,14 @@ const sbFetchRhythmWeekTotals = async (options = {}) => {
   if (!rhythmTieWanted(identityKeys)) return sbFetchRhythmWeekTotalsRaw(options);
   const rows = await sbFetchRhythmWeekTotalsRaw({ ...options, limit: limit + RHYTHM_TIE_PAD });
   return rhythmTieFix({ rows, limit, scoreKey: 'total_score', timeKey: 'last_scored_at', fn: 'rhythm_week_precise',
-    body: { from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() }, requestId, version: rhythmRankingPeriodVersion(fromMs) });
+    body: { from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() }, requestId, version: rhythmRankingPeriodVersion(fromMs, toMs, options.legacyView === true) });
 };
 const sbFetchRhythmEventTotals = async (options = {}) => {
   const { songIds, fromMs, toMs, limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' } = options;
   if (!rhythmTieWanted(identityKeys)) return sbFetchRhythmEventTotalsRaw(options);
   const rows = await sbFetchRhythmEventTotalsRaw({ ...options, limit: limit + RHYTHM_TIE_PAD });
   return rhythmTieFix({ rows, limit, scoreKey: 'total_score', timeKey: 'last_scored_at', fn: 'rhythm_event_precise',
-    body: { song_ids: songIds, from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() }, requestId, version: rhythmRankingPeriodVersion(fromMs) });
+    body: { song_ids: songIds, from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() }, requestId, version: rhythmRankingPeriodVersion(fromMs, toMs, options.legacyView === true) });
 };
 const sbFetchRhythmEventSongBests = async (options = {}) => {
   const { limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' } = options;
@@ -22043,7 +22043,7 @@ if(luckOn){const luckNow=run.audio?.songTimeMs?.()??0;const rushActive=run.luckR
 /* コンボの節目(オプション「コンボの節目」)。100のくぎりに届いた瞬間だけ、コンボ数のまわりに金の光の輪を広げる
    (「100 COMBO」の大きな数字は、もとからある演出 comboMilestone が出す)。コンボガードで数が据え置きのとき(増えていないとき)は出さない */
 if(settingsLiveRef.current.comboMilestoneFx===true&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL'&&keptCombo>run.combo&&keptCombo>=RHYTHM_COMBO_MILESTONE_STEP&&keptCombo%RHYTHM_COMBO_MILESTONE_STEP===0){const el=comboRingRef.current;if(el)rhythmRestartAnimations([{el,attr:'rhythmRing'}]);}
-run.combo=keptCombo;run.maxCombo=Math.max(run.maxCombo,keptCombo);/* 旧の物差しのコンボ(ノーツだけ・刻みは入れない) */run.noteCombo=keptCombo===0?0:nextCombo===0?(run.noteCombo||0):(run.noteCombo||0)+1;run.noteMaxCombo=Math.max(run.noteMaxCombo||0,run.noteCombo);run.counts[judgment]++;if(preciseHit)run.precise++;const side=judgment==='MISS'?null:rhythmFastSlow(deltaMs);if(side)run[side.toLowerCase()]++;const songTimeMs=run.audio?.songTimeMs?.()??0;
+run.combo=keptCombo;run.maxCombo=Math.max(run.maxCombo,keptCombo);run.counts[judgment]++;if(preciseHit)run.precise++;const side=judgment==='MISS'?null:rhythmFastSlow(deltaMs);if(side)run[side.toLowerCase()]++;const songTimeMs=run.audio?.songTimeMs?.()??0;
 // ライフ変化は能力(無敵・我慢)を通してから反映する。判定・コンボ・スコアそのものは変えない(§4.2)
 // 練習ではライフを減らさない。途中で倒れると、まだ習っていないノーツまで届かなくなる
 // lifeBefore … 減ったことを知らせる演出のためだけに控える(2026-09-12)。計算には使わない
@@ -22080,11 +22080,10 @@ if(monster&&monster.ability&&rhythmMonsterAbilityTriggers(judgment)){
     if(cutInOn){const cutIn=cutInRefs.current[slot-1];if(cutIn){RHYTHM_FRAME_DIAG.cue('cutin');rhythmRestartAnimations([{el:cutIn,attr:'rhythmCutinPlay'}]);}}
   }
 }
-const calculatedScore=run.tickRules?tickScoreOf(run):Math.floor(rhythmCalculateScore({judgments:run.counts,maxCombo:run.maxCombo,totalNotes:chart.totalNotes,maxScore:difficulty.maxScore})*(assistOn?RHYTHM_ASSIST_SCORE_RATE:1));/* 刻みの数え方のときは、旧の物差しのスコア(ノーツだけ・今の rhythmCalculateScore)も並べて数える。切り替えた週の終わりまで旧の順位へも送るため */const legacyScore=run.tickRules?Math.floor(rhythmCalculateScore({judgments:run.counts,maxCombo:run.noteMaxCombo||0,totalNotes:chart.totalNotes,maxScore:difficulty.maxScore})*(assistOn?RHYTHM_ASSIST_SCORE_RATE:1)):null;
-if(!run.lifeDepleted){run.score=calculatedScore-run.scoreOffset;if(legacyScore!=null)run.legacyScore=legacyScore-(run.legacyOffset||0);}if(!run.lifeDepleted&&run.life===0){run.lifeDepleted=true;run.lockedScore=run.score;run.legacyLocked=run.legacyScore;}
+const calculatedScore=run.tickRules?tickScoreOf(run):Math.floor(rhythmCalculateScore({judgments:run.counts,maxCombo:run.maxCombo,totalNotes:chart.totalNotes,maxScore:difficulty.maxScore})*(assistOn?RHYTHM_ASSIST_SCORE_RATE:1));if(!run.lifeDepleted)run.score=calculatedScore-run.scoreOffset;if(!run.lifeDepleted&&run.life===0){run.lifeDepleted=true;run.lockedScore=run.score;}
 // DOWN中に根性で蘇生したら、**その蘇生ノーツ自身は加算せず次のノーツから** 加算を再開する。
 // DOWN中に止まっていたぶんを遡って足さないよう、そのぶんを差し引く量として持つ(§4.4)
-if(revived&&run.lifeDepleted&&run.life>0){run.scoreOffset=rhythmScoreOffsetAfterRevive(calculatedScore,run.lockedScore);run.score=run.lockedScore;if(legacyScore!=null){run.legacyOffset=rhythmScoreOffsetAfterRevive(legacyScore,run.legacyLocked||0);run.legacyScore=run.legacyLocked||0;}run.lifeDepleted=false;}
+if(revived&&run.lifeDepleted&&run.life>0){run.scoreOffset=rhythmScoreOffsetAfterRevive(calculatedScore,run.lockedScore);run.score=run.lockedScore;run.lifeDepleted=false;}
 // ===== ライフの変化を目で分かるようにする(2026-09-12・ユーザー指示) =====
 // 「ライフ変動や0になったときとか気付きにくい」。バーの数字が小さく動くだけでは気づけないので、
 // 減ったその場でHUDを揺らし、減った量を数字で一瞬出す。書くのは data 属性と文字だけで、
@@ -22154,7 +22153,7 @@ if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number
     const calibration=calibrating
       ? rhythmCalibrationOffsetFromTaps((Array.isArray(run.deltas)?run.deltas:[]).slice(RHYTHM_CALIBRATION_WARMUP_COUNT))
       : null;
-    /* 刻みの数え方のときは、刻みの数・取った数・落とした数と、物差しの版(scoreVersion 2)を足す。judgments・precise はノーツだけ(刻みは入れない) */const result={score,judgments:{...run.counts},maxCombo:run.maxCombo,...(run.tickRules?{scoreVersion:2,tickTotal:run.tickTotal??rhythmComboTickTotal(run.notes),tickJust:run.tickJust,tickMiss:run.tickMiss,legacy:{score:Math.max(0,Math.floor(Number(run.lifeDepleted?run.legacyLocked:run.legacyScore)||0)),maxCombo:run.noteMaxCombo||0,...rhythmResultAchievements(run.counts,chart.totalNotes)}}:{}),fast:run.fast,slow:run.slow,precise:run.precise,cleared:!failed,...(calibration?{calibration}:{}),...achievements,...(assistOn?{assist:true}:{})};
+    /* 刻みの数え方のときは、刻みの数・取った数・落とした数と、物差しの版(scoreVersion 2)を足す。judgments・precise はノーツだけ(刻みは入れない) */const result={score,judgments:{...run.counts},maxCombo:run.maxCombo,...(run.tickRules?{scoreVersion:2,tickTotal:run.tickTotal??rhythmComboTickTotal(run.notes),tickJust:run.tickJust,tickMiss:run.tickMiss}:{}),fast:run.fast,slow:run.slow,precise:run.precise,cleared:!failed,...(calibration?{calibration}:{}),...achievements,...(assistOn?{assist:true}:{})};
     /* アシストモードのプレイは自己ベスト・ランキングに残さない(受け取る側が result.assist を見て保存しない)。
        ここでも自己ベストを混ぜない(NEW RECORD を出さない) */
     const isNewRecord=!assistOn&&score>run.startBestScore;const merged=assistOn?normalizeRhythmBestRecord(run.startBest):mergeRhythmBestRecord(run.startBest,result);
@@ -33651,9 +33650,8 @@ function RhythmRankingScreen({
         <header className="z-10 flex shrink-0 items-center gap-2 border-b border-amber-400/15 bg-slate-950/95 px-3 py-1" style={{paddingTop:'calc(0.25rem + var(--mh-sa-top))'}}>
           <button aria-label="戻る" onClick={onBackToSongSelect} className="min-h-[44px] px-2 text-slate-400"><ArrowLeft size={18}/></button>
           <h2 className="text-sm font-black tracking-widest text-amber-200">🏆 全国ランキング</h2>
-          {/* 旧記録(2026-10-17・刻みの数え方への切り替え)。切り替えのあとだけ出す。曲ごと・合計の順位を、今までの物差しの記録で見る。
-              週間・イベントは、その期間が始まった時点の物差しで数えるので、このボタンでは変わらない */}
-          {typeof rhythmTickRulesReleased==='function'&&rhythmTickRulesReleased()&&!boardTab&&<button type="button" data-rhythm-ranking-legacy aria-pressed={RHYTHM_RANKING_VIEW.legacy}
+          {/* 旧記録(2026-10-17・刻みの数え方への切り替え)。切り替えのあとだけ出す。曲ごと・合計・週間・イベントの順位を、切り替えより前に出した記録(今までの物差し)で見る */}
+          {typeof rhythmTickRulesReleased==='function'&&rhythmTickRulesReleased()&&<button type="button" data-rhythm-ranking-legacy aria-pressed={RHYTHM_RANKING_VIEW.legacy}
             onClick={()=>{RHYTHM_RANKING_VIEW.legacy=!RHYTHM_RANKING_VIEW.legacy;refresh();}}
             className={`ml-auto min-h-[44px] rounded-lg px-2 text-[10px] font-black ${RHYTHM_RANKING_VIEW.legacy?'bg-slate-200/15 text-slate-100':'text-slate-300'}`}>{RHYTHM_RANKING_VIEW.legacy?'旧記録を表示中':'旧記録'}</button>}
           <button aria-label="更新" data-rhythm-ranking-refresh onClick={refresh} className="ml-auto min-h-[44px] px-2 text-[10px] font-black text-amber-200">更新</button>
@@ -50934,11 +50932,13 @@ function MonsterHeroGame() {
       //   9/07〜9/14の週の途中。どの週も「終わった時点では累計だった」ので、
       //   累計で出すのがそのとき見えていた順位と一致する
       const weeklyTotals = (kind === 'weekly' || (kind === 'history' && historyEntry.kind === 'weekly')) && !targetSongId;
+      // 画面の「旧記録」(2026-10-17)を押しているときは、切り替えより前の記録(今までの物差し)で見る。報酬の計算はここを通らない
+      const legacyView = RHYTHM_RANKING_VIEW.legacy === true;
       const fetchRows = (options) => weeklyTotals
-        ? sbFetchRhythmWeekTotals({ fromMs:range.startMs, toMs:range.endMs, ...options })
+        ? sbFetchRhythmWeekTotals({ fromMs:range.startMs, toMs:range.endMs, legacyView, ...options })
         : targetSongId
-        ? sbFetchRhythmEventSongBests({ songId:targetSongId, fromMs:range.startMs, toMs:range.endMs, bonusRates, ...options })
-        : sbFetchRhythmEventTotals({ songIds:[...event.songIds], fromMs:range.startMs, toMs:range.endMs, bonusRates, ...options });
+        ? sbFetchRhythmEventSongBests({ songId:targetSongId, fromMs:range.startMs, toMs:range.endMs, bonusRates, legacyView, ...options })
+        : sbFetchRhythmEventTotals({ songIds:[...event.songIds], fromMs:range.startMs, toMs:range.endMs, bonusRates, legacyView, ...options });
       const fromRow = weeklyTotals ? rhythmWeekTotalEntryFromRow
         : targetSongId ? rhythmEventSongEntryFromRow : rhythmEventTotalEntryFromRow;
       const rows = await fetchRows({ requestId:`rhythm-${kind}-${division}-${Date.now()}` });
@@ -51168,18 +51168,7 @@ function MonsterHeroGame() {
     if (!outcome.nationalSaved) scheduleRhythmRankingRetry();
   }, [breederName, breederLevel, breederIcon, profileFrameId, refreshRhythmRankingPending, scheduleRhythmRankingRetry]);
   const submitRhythmRankingScore = useCallback((song, difficulty, result) => {
-    // 刻みの数え方の記録は、切り替えた週の終わり(rhythmTickDualUntilMs)までは、同じ演奏を旧の物差しで数えた記録(result.legacy)も旧の順位へ送る。
-    // 切り替えた週の週間ランキング・報酬は旧の物差しで最後までそろえるため(期間の物差しは rhythmRankingPeriodVersion が始まった時点で決める)
-    const legacy = result && result.scoreVersion === 2 && result.legacy && typeof rhythmTickDualSubmit === 'function' && rhythmTickDualSubmit()
-      && typeof rhythmTickRulesReleased === 'function' && rhythmTickRulesReleased() ? result.legacy : null;
-    const task = (async () => {
-      await submitRhythmRankingScoreBody(song, difficulty, result);
-      if (legacy) {
-        const { scoreVersion, tickTotal, tickJust, tickMiss, legacy: _legacy, ...rest } = result;
-        await submitRhythmRankingScoreBody(song, difficulty, { ...rest, score: legacy.score, maxCombo: legacy.maxCombo,
-          fullCombo: legacy.fullCombo === true, allExcellent: legacy.allExcellent === true, allMarvelous: legacy.allMarvelous === true });
-      }
-    })();
+    const task = submitRhythmRankingScoreBody(song, difficulty, result);
     rhythmRankingSubmitRef.current = task.catch(() => {});
     return task;
   }, [submitRhythmRankingScoreBody]);

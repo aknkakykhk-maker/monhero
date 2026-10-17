@@ -30053,14 +30053,11 @@ const rhythmRankingViewVersion=()=>!RHYTHM_RANKING_VIEW.legacy&&typeof rhythmTic
 const rhythmRankingDbName=(name,version=rhythmRankingViewVersion())=>version===2?String(name).replace(/^rhythm_/,'rhythm2_'):String(name);
 // アドレス(…/rest/v1/rhythm_total_rankings?… や …/rpc/rhythm_week_score_totals?…)の見方・関数の名前を、版に合わせて置き換える
 const rhythmRankingUrl=(url,version=rhythmRankingViewVersion())=>version===2?String(url).replace(/\/(rpc\/)?rhythm_(total_rankings|week_score_totals|event_song_bests_bonus|event_song_bests|event_totals_bonus|event_totals|total_precise|week_precise|event_precise)\?/,(m,rpc,name)=>`/${rpc||''}rhythm2_${name}?`):String(url);
-// 期間(週間・イベント)の物差しは、その期間が始まった時点の版で決める(週の途中で切り替えても、その週は旧の物差しのまま数える)
-const rhythmRankingPeriodVersion=fromMs=>{const sw=Date.parse(RHYTHM_TICK_SWITCH_AT);return Number.isFinite(Number(fromMs))&&Number(fromMs)>=sw?2:1;};
-// 切り替えた週の終わり(切り替えの時刻の次の月曜 5:00 JST)。それまでは新しい版のアプリも、旧の物差しの記録を一緒に送る
-// (切り替えた週の週間ランキング・報酬が、旧の物差しで最後までそろうように)
-const rhythmTickDualUntilMs=()=>{const sw=Date.parse(RHYTHM_TICK_SWITCH_AT),jst=sw+9*3600000,d=new Date(jst),dayMs=86400000;
-  const base=Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate())+5*3600000;// その日の 5:00(JST を UTC の数字で持つ)
-  const dow=new Date(base).getUTCDay();let next=base+((8-dow)%7)*dayMs;if(next<=jst)next+=7*dayMs;return next-9*3600000;};
-const rhythmTickDualSubmit=(nowMs=Date.now())=>Number(nowMs)<rhythmTickDualUntilMs();
+// 期間(週間・イベント)の物差し(2026-10-17 社長「切り替えちゃっていいよ」): 切り替えの時刻より後に終わる期間(切り替えた週・開催中のイベント・それより先)は
+// 新しい物差し、それより前に終わった期間は今までの物差しで数える(終わった週の順位・報酬は変わらない)。
+// legacyView … 画面の「旧記録」を押しているとき。切り替えより前に出した記録(今までの物差し)で見る。報酬の計算は渡さない
+const rhythmRankingPeriodVersion=(fromMs,toMs,legacyView=false)=>{if(legacyView)return 1;const sw=Date.parse(RHYTHM_TICK_SWITCH_AT),end=Number(toMs);
+  if(Number.isFinite(end))return end>sw?2:1;return Number.isFinite(Number(fromMs))&&Number(fromMs)>=sw?2:1;};
 const rhythmRankingDifficultyKey=(songId,difficultyId,version=rhythmRankingViewVersion())=>{
   if(!songId||!rhythmScoredDifficulty(difficultyId))return null;
   const base=`${RHYTHM_RANKING_PREFIX}${RHYTHM_RANKING_SEPARATOR}${songId}${RHYTHM_RANKING_SEPARATOR}${difficultyId}`;

@@ -218,7 +218,7 @@ check('既存モードのランキングキー一覧(RANKING_DIFFICULTY_KEYS)に
 // (ランキングを開くとき、その送信が終わるのを待つため)。呼び出し側の名前は変えていない
 check('送信の呼び出し(submitRhythmRankingScore)を持つ',
   game.includes('const submitRhythmRankingScoreBody = useCallback(async (song, difficulty, result) => {')
-  &&/const submitRhythmRankingScore = useCallback\(\(song, difficulty, result\) => \{[\s\S]{0,1200}?await submitRhythmRankingScoreBody\(song, difficulty, result\);/.test(game));
+  &&/const submitRhythmRankingScore = useCallback\(\(song, difficulty, result\) => \{\s*const task = submitRhythmRankingScoreBody\(song, difficulty, result\);/.test(game));
 check('送信はpersistRankingScoreを再利用し、insertScoreだけモンビー専用に差し替える(送受信の共通の失敗処理は増やさない)',
   /persistRankingScore\(\{\s*row, insertScore: sbInsertRhythmScore,/.test(game));
 check('送信に失敗したときだけ専用キー(mh_rhythm_rank_pending_v1)へ退避する。BEST記録のキーとは別',
