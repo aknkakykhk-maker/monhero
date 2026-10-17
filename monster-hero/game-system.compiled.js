@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7ce897d3033e1ef7
+// source-sha256: 0be04660a815575a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-17 11:20";
+const BUILD_DATE = "2026-10-17 11:38";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -36016,16 +36016,17 @@ const RhythmTapTest = ({
         note._rhythmTickFxAt = frameNowMs;
         const slide = rhythmNoteIsSlide(note);
         RHYTHM_NOTE_SE_RUNTIME.playTick(slide);
-        if (settings.lightweightMode || settings.effectAmount === 'MINIMAL') continue;
+        if (settings.lightweightMode) continue;
+        const weak = settings.effectAmount === 'MINIMAL';
         const area = playAreaRef.current;
         if (area && RHYTHM_CANVAS_RENDERER.hitsFor(area)) {
           const at = run.audio?.songTimeMs?.() ?? note.timeMs,
             lineY = RHYTHM_JUDGMENT_LINE_Y.ratio,
-            span = slide ? rhythmProjectSlideSpan(rhythmReleaseLane(note), note, lineY, at) : rhythmNoteVisualSpan(note, note.lane, lineY, at);
+            span = slide ? rhythmProjectSlideSpan(rhythmSlideExpectedLane(note, at), note, lineY, at) : rhythmNoteVisualSpan(note, note.lane, lineY, at);
           RHYTHM_CANVAS_RENDERER.pushTick({
             center: span.center,
             width: span.width,
-            color: slide ? '#f0abfc' : '#a5f3fc',
+            color: slide ? '#f0abfc' : '#67e8f9',
             sky: rhythmNoteSkyHeight(note) > 0
           });
         }
@@ -36033,15 +36034,25 @@ const RhythmTapTest = ({
         if (combo && typeof combo.animate === 'function') {
           try {
             combo._rhythmTickAnim?.cancel?.();
-            combo._rhythmTickAnim = combo.animate([{
+            combo._rhythmTickAnim = combo.animate(weak ? [{
               transform: 'scale(1)'
             }, {
-              transform: 'scale(1.07)',
-              offset: .3
+              transform: 'scale(1.12)',
+              offset: .25
             }, {
               transform: 'scale(1)'
+            }] : [{
+              transform: 'scale(1)',
+              filter: 'brightness(1)'
+            }, {
+              transform: 'scale(1.28)',
+              filter: `brightness(1.9) drop-shadow(0 0 10px ${slide ? '#f0abfc' : '#67e8f9'})`,
+              offset: .22
+            }, {
+              transform: 'scale(1)',
+              filter: 'brightness(1)'
             }], {
-              duration: 150,
+              duration: weak ? 160 : 240,
               easing: 'ease-out'
             });
           } catch (_) {}
