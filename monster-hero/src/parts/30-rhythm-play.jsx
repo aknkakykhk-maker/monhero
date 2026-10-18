@@ -2684,6 +2684,8 @@ rhythmEnsureHitEffects(playAreaRef.current);
 if(canvasNotes)RHYTHM_CANVAS_RENDERER.warmSprites({effect:settings.effectAmount,lightweight:settings.lightweightMode,tapLight:rhythmTapLightOnly(settings),maxDpr:noteCanvasMaxDpr});
 /* モンスターノーツの顔の絵も GPU へ渡しておく(焼き上がりが描き込み先より先だったときの分。渡してあれば何もしない) */
 if(canvasNotes)faceBitmapsRef.current.forEach(face=>{if(face){RHYTHM_CANVAS_RENDERER.preloadImage(face.plain);RHYTHM_CANVAS_RENDERER.preloadImage(face.glow);}});
+/* 長いスライドの帯も GPU へ置いておく(2026-10-18 社長の決定)。画面に入った1コマで形を作って送ると、iPhone で止まっていた(Sheriruth HELL の106秒あたり)。GPU の帯を使っていなければ何もしない */
+if(canvasNotes)RHYTHM_CANVAS_RENDERER.warmSlideBands(runRef.current&&runRef.current.notes);
 /* カットインの絵は、出るまで見えない(visibility:hidden)ので、端末によっては**初めて出る瞬間**に画像を読み解く。
    取った瞬間に重ならないよう、演奏の前に読み解いておく(2026-10-13 社長報告「モンスターノーツを取った瞬間に一瞬かくつく」) */
 cutInRefs.current.forEach(el=>{const img=el&&el.querySelector('img');if(img&&typeof img.decode==='function')img.decode().catch(()=>{});});
