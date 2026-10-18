@@ -1506,6 +1506,66 @@
    "skyAfterGround": 0,
    "besideHeldBand": 0,
    "fastSameSide": 0
+  },
+  "rose/EASY": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0
+  },
+  "rose/NORMAL": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0
+  },
+  "rose/HARD": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0
+  },
+  "rose/EXPERT": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0
+  },
+  "rose/MASTER": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0
+  },
+  "rose_short/EASY": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0
+  },
+  "rose_short/NORMAL": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0
+  },
+  "rose_short/HARD": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0
+  },
+  "rose_short/EXPERT": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0
+  },
+  "rose_short/MASTER": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0
   }
  },
  "history": [
@@ -1513,6 +1573,11 @@
    "at": "2026-10-12T05:25",
    "reason": "はじめての控え(2026-10-12 時点の公開中の全譜面)",
    "changed": 250
+  },
+  {
+   "at": "2026-10-18T13:55",
+   "reason": "新曲 ROSE(全編・short ver.)を公開",
+   "changed": 10
   }
  ]
 }

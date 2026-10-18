@@ -200,7 +200,17 @@
   "grievous_lady/normal": "bb395c39cce17651",
   "grievous_lady/hard": "406cee60ab2fb116",
   "grievous_lady/expert": "e0ab70ed9b827bc2",
-  "grievous_lady/master": "9348316cb81ed3ef"
+  "grievous_lady/master": "9348316cb81ed3ef",
+  "rose/easy": "1b4cd7e8aa80c37f",
+  "rose/normal": "17fcc3a6649dd9d2",
+  "rose/hard": "3b2ad830d281bcf3",
+  "rose/expert": "94431c5fb8c19603",
+  "rose/master": "0e265a14b22550d7",
+  "rose_short/easy": "1874957e01d1a478",
+  "rose_short/normal": "850a795c9b56bd90",
+  "rose_short/hard": "66727662efa44f4b",
+  "rose_short/expert": "7eb2aa2e6bef045a",
+  "rose_short/master": "ca1af8a08b902eb8"
  },
  "history": [
   {
@@ -257,6 +267,31 @@
    "changed": [
     "against_my_own_shadow/expert",
     "against_my_own_shadow/master"
+   ]
+  },
+  {
+   "at": "2026-10-18 13:16",
+   "reason": "新曲 ROSE(全編・short ver.)を公開",
+   "changed": [
+    "rose/easy",
+    "rose/normal",
+    "rose/hard",
+    "rose/expert",
+    "rose/master",
+    "rose_short/easy",
+    "rose_short/normal",
+    "rose_short/hard",
+    "rose_short/expert",
+    "rose_short/master"
+   ]
+  },
+  {
+   "at": "2026-10-18 14:29",
+   "reason": "新曲 ROSE: 押さえている帯の中のノーツを外へ・モンスターノーツを4個に",
+   "changed": [
+    "rose/expert",
+    "rose/master",
+    "rose_short/master"
    ]
   }
  ]

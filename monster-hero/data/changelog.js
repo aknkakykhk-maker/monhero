@@ -35,6 +35,29 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    // 2026-10-18 社長の依頼(窓口経由・mp4 とジャケット)「ショートとフルで両方作って。ヘルもありで」。歯ごたえは社長が激しさ中間(strong)と決めた
+    date: "2026-10-18 13:15", type:'update', title:'モンヒロビート：新曲「ROSE」を追加しました', status:'new',
+    image: 'images/song-art/rose.jpg?v=c877115de5a6',
+    items:[
+      'モンヒロビートに、HANA の「ROSE」の全編（2分45秒）を追加しました。曲えらびからすぐ遊べます。',
+      'EASY から MASTER までに加えて、空中のノーツが出る HELL があります。HELL は MASTER をクリアすると開きます。',
+      'レベルは EASY Lv.5 ／ NORMAL Lv.7 ／ HARD Lv.10 ／ EXPERT Lv.17 ／ MASTER Lv.30 ／ HELL Lv.45 です。',
+      'ノーツ数は 159 ／ 197 ／ 266 ／ 424 ／ 533 です。',
+    ],
+    assistantNotice: { id:'update_notice_rose_v1', type:'content' },
+  },
+  {
+    // 同じ依頼の短い版。曲えらびでは全編と1行にまとまる(行を押すと全編・難易度ボタンの上で切り替え)
+    date: "2026-10-18 13:15", type:'update', title:'モンヒロビート：新曲「ROSE short ver.」を追加しました', status:'new',
+    image: 'images/song-art/rose.jpg?v=c877115de5a6',
+    items:[
+      'モンヒロビートに「ROSE」の short ver.（1分55秒）も追加しました。曲えらびでは全編と同じ行にまとまっていて、難易度ボタンの上の「short ver.」で切り替えられます。',
+      'short ver. にも HELL があります。short ver. の MASTER をクリアすると開きます。',
+      'レベルは EASY Lv.5 ／ NORMAL Lv.6 ／ HARD Lv.10 ／ EXPERT Lv.17 ／ MASTER Lv.33 ／ HELL Lv.44 です。',
+      'ノーツ数は 113 ／ 131 ／ 183 ／ 286 ／ 356 です。',
+    ],
+  },
+  {
     // 2026-10-18 社長の判断「控えめの値に上げる」(まっさらな端末の音量の既定 1 → 30)
     date: "2026-10-18 09:10", type:'fix', group:'other', title:'はじめて遊ぶ端末で、音がほとんど聞こえなかったのを直しました', status:'new',
     items:[
