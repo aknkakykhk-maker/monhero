@@ -8771,10 +8771,11 @@ function MonsterHeroGame() {
   // まとめて転生(2026-10-17)。選んだ子を1回ずつ、1体ずつと同じ計算(buildMasuReincarnationMulti)で順に転生し、
   // 個体とダイヤを1回の取引で保存する(保存に失敗したらどちらも元のまま。二重に転生しない)。
   // 途中で転生できない子が出たら、その手前の子までを保存する。仲良し度は1体ずつ転生したときと同じく1体ごとに足す
-  const executeMasuReincarnationBulk = async (ids) => {
+  // (1体ずつの画面で回数を選んだときも、仲良し度は1回ぶんだけ足している)。times は1体あたりの回数か 'max'(2026-10-18)
+  const executeMasuReincarnationBulk = async (ids, times=1) => {
     if (reincarnateProcessingRef.current) return { ok:false };
     const before = masuMonsRef.current;
-    const result = buildMasuReincarnationMulti({ masuMons:before, ids, gold, lockedIds:rebirthLockedMasuIds });
+    const result = buildMasuReincarnationMulti({ masuMons:before, ids, gold, lockedIds:rebirthLockedMasuIds, times });
     if (!result.ok) { setReincarnateError(result.reason); return { ok:false }; }
     reincarnateProcessingRef.current = true;
     setReincarnateError('');
@@ -8789,7 +8790,7 @@ function MonsterHeroGame() {
       result.done.forEach(() => addAssistantBond('reincarnate'));
       const first = result.done[0].result;
       const firstMasu = first.nextMasu;
-      setReincarnateAnimation({ bulk:result.count, times:1, masu:firstMasu, base:ALL_PLAYER_MONSTERS[firstMasu.baseId], raisesSkill:false, keptSkillPoints:first.keptSkillPoints, fromLevel:first.fromLevel, nextLevel:first.nextLevel, nextPoints:first.nextPoints, gainedPoints:result.gainedPoints, stopReason:result.stopReason });
+      setReincarnateAnimation({ bulk:result.count, total:result.total, times:1, masu:firstMasu, base:ALL_PLAYER_MONSTERS[firstMasu.baseId], raisesSkill:false, keptSkillPoints:first.keptSkillPoints, fromLevel:first.fromLevel, nextLevel:first.nextLevel, nextPoints:first.nextPoints, gainedPoints:result.gainedPoints, stopReason:result.stopReason });
       setTimeout(()=>{ setReincarnateAnimation(null); reincarnateProcessingRef.current=false; }, 4100);
       return { ok:true, count:result.count, stopReason:result.stopReason };
     } catch {

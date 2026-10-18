@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6111e9a3f8441eb9
+// generated-sha256: 1e074558f963d939
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-18 14:29"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-18 21:43"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3958,31 +3958,48 @@ const buildMasuReincarnationBatch = ({ masu, skillKey, gold, lockedIds = [], cou
   if (!last) return { ok:false, reason:reason || '転生できません。', count:0, cost:0 };
   return { ...last, ok:true, count:done, cost:spent, fromLevel:first.fromLevel, stopReason:done < wanted ? reason : '' };
 };
-// 複数のマスモンを1回ずつまとめて転生する(2026-10-17 社長依頼「まとめて転生みたいなことができれば便利」)。
-// 1体ずつ転生したときと同じ結果にするため、中身は buildMasuReincarnation を選んだ順に1体ずつ呼ぶだけ。
-// 固有技は上げない(「あとで決める」と同じで、固有技ポイント+1として残す)。ダイヤは前の子の残りから引く。
-// 途中で転生できない子(ダイヤ不足・ロック・Lv不足)が出たら、そこで止めて、それまでの子だけを返す。
-// 同じidが2回選ばれていても1回だけ数える(二重に転生しない)
-const buildMasuReincarnationMulti = ({ masuMons = [], ids = [], gold = 0, lockedIds = [] } = {}) => {
+// 複数のマスモンをまとめて転生する(2026-10-17 社長依頼「まとめて転生みたいなことができれば便利」、
+// 2026-10-18 追加依頼「2回以上できる場合でも回数を増やしたり、最大数転生みたいな感じのがあれば助かる」)。
+// 1回ずつ転生したときと同じ結果にするため、中身は buildMasuReincarnation を選んだ順に、子ごとに times 回まで順に呼ぶだけ。
+//   times … 1人あたりの回数(1〜REINCARNATE_BATCH_MAX)。'max' なら、子ごとに続けられるいちばん多い回数(上限 REINCARNATE_BATCH_MAX)
+// 固有技は上げない(「あとで決める」と同じで、固有技ポイント+1として残す)。ダイヤは前の転生の残りから引く。
+// ・2回目からLvが足りなくなった子は、そこまでの回数で次の子へ進む(子ごとに回数がちがうことがある)
+// ・ダイヤが足りなくなったら、そこで全体を止める(それまでの転生だけを返す)
+// ・1回も転生できない子(ロック・Lv不足)が出たら、そこで止める
+// 同じidが2回選ばれていても1人ぶんだけ数える(二重に転生しない)
+const buildMasuReincarnationMulti = ({ masuMons = [], ids = [], gold = 0, lockedIds = [], times = 1 } = {}) => {
   const list = Array.isArray(masuMons) ? masuMons : [];
   const wanted = [...new Set((Array.isArray(ids) ? ids : []).map(id => String(id)))];
-  let goldLeft = donationDiamondValue(gold), spent = 0, reason = '', stoppedId = null;
+  const perMon = times === 'max' ? REINCARNATE_BATCH_MAX : Math.min(REINCARNATE_BATCH_MAX, Math.max(1, Math.floor(Number(times) || 1)));
+  let goldLeft = donationDiamondValue(gold), spent = 0, total = 0, reason = '', stoppedId = null, outOfGold = false;
   const done = [];
   const byId = new Map(list.map(m => [String(m?.id), m]));
   for (const id of wanted) {
-    const r = buildMasuReincarnation({ masu:byId.get(id) || null, skillKey:'', gold:goldLeft, lockedIds });
-    if (!r.ok) { reason = r.reason; stoppedId = id; break; }
-    done.push({ id, result:r });
-    byId.set(id, r.nextMasu);
-    goldLeft = r.nextGold; spent += r.cost;
+    let cur = byId.get(id) || null, count = 0, cost = 0, first = null, last = null;
+    for (let i = 0; i < perMon; i++) {
+      const r = buildMasuReincarnation({ masu:cur, skillKey:'', gold:goldLeft, lockedIds });
+      if (!r.ok) {
+        // 1回もできない子、またはダイヤ切れなら全体を止める。2回目からのLv不足だけは、この子をここまでにして次の子へ
+        outOfGold = r.reason === 'ダイヤが不足しています。';
+        if (!count || outOfGold) { reason = r.reason; stoppedId = id; }
+        break;
+      }
+      if (!first) first = r;
+      last = r; cur = r.nextMasu; goldLeft = r.nextGold; cost += r.cost; count++;
+    }
+    if (count) {
+      done.push({ id, count, cost, fromLevel:first.fromLevel, nextLevel:last.nextLevel, nextPoints:last.nextPoints, result:last });
+      byId.set(id, cur); spent += cost; total += count;
+    }
+    if (stoppedId) break;
   }
-  if (!done.length) return { ok:false, reason:reason || '転生できるマスモンがいません。', done:[], cost:0, nextGold:donationDiamondValue(gold), nextMasuMons:list, stoppedId };
+  if (!done.length) return { ok:false, reason:reason || '転生できるマスモンがいません。', done:[], count:0, total:0, cost:0, nextGold:donationDiamondValue(gold), nextMasuMons:list, stoppedId };
   const changed = new Map(done.map(d => [d.id, d.result.nextMasu]));
   return {
-    ok:true, done, count:done.length, cost:spent, nextGold:goldLeft,
+    ok:true, done, count:done.length, total, cost:spent, nextGold:goldLeft,
     nextMasuMons:list.map(m => changed.get(String(m?.id)) || m),
-    gainedPoints:done.length * REINCARNATE_POINTS, keptSkillPointsGain:done.length,
-    stopReason:done.length < wanted.length ? reason : '', stoppedId:done.length < wanted.length ? stoppedId : null,
+    gainedPoints:total * REINCARNATE_POINTS, keptSkillPointsGain:total,
+    stopReason:stoppedId ? reason : '', stoppedId, outOfGold,
   };
 };
 // 神殿の寄付で受け取るダイヤ。保存データが古い・破損している場合も負数やNaNを返さない。
@@ -34406,6 +34423,8 @@ function MasuReincarnateScreen({
       const [bulkIds,setBulkIds]=React.useState([]);
       const [bulkConfirmOpen,setBulkConfirmOpen]=React.useState(false);
       const [bulkPending,setBulkPending]=React.useState(false);
+      // 1体あたりの回数(2026-10-18)。数か 'max'(子ごとに続けられるいちばん多い回数)
+      const [bulkTimes,setBulkTimes]=React.useState(1);
       const selected=masuMons.find(m=>String(m.id)===String(reincarnateSelectedId));
       if (!selected) {
         const entries=sortMonsterEntries(buildUnifiedMonsterEntries([],masuMons,monsterRosterIds)).filter(e=>e.type==='masu'&&monsterEntryMatchesDisplayFlags(e,monsterDisplayFlags)&&monsterEntryMatchesLineage(e));
@@ -34419,31 +34438,37 @@ function MasuReincarnateScreen({
         // 「すべて選択」は編成中とお気に入り(🔒)の子を選ばない(転生は取り消せないので、守っている子は自分で選んだときだけ)
         const isFavorite=(masu)=>isMasuLocked(favoriteMasuIds,masu.id);
         const pickAll=()=>setBulkIds(eligible.filter(masu=>!inParty(masu)&&!isFavorite(masu)).map(masu=>masu.id));
-        const preview=picked.length?buildMasuReincarnationMulti({masuMons,ids:picked,gold,lockedIds:rebirthLockedMasuIds}):null;
+        const preview=picked.length?buildMasuReincarnationMulti({masuMons,ids:picked,gold,lockedIds:rebirthLockedMasuIds,times:bulkTimes}):null;
+        // 回数を増やせる上限は、選んだ子のうちいちばん多く続けられる子の回数(ダイヤも数える)
+        const maxPreview=picked.length?buildMasuReincarnationMulti({masuMons,ids:picked,gold,lockedIds:rebirthLockedMasuIds,times:'max'}):null;
+        const timesMax=Math.max(1,...(maxPreview?.done||[]).map(d=>d.count));
+        const timesNum=bulkTimes==='max'?timesMax:Math.min(Math.max(1,bulkTimes),timesMax);
+        const setTimes=(n)=>setBulkTimes(Math.min(timesMax,Math.max(1,n)));
         const busy=bulkPending||reincarnateProcessingRef.current;
         const confirmBulk=async()=>{
           if(busy||!preview?.ok) return;
           setBulkPending(true);
           try {
-            const r=await executeMasuReincarnationBulk(picked);
+            const r=await executeMasuReincarnationBulk(picked,bulkTimes);
             if(r?.ok){ setBulkIds([]); setBulkConfirmOpen(false); }
           } finally { setBulkPending(false); }
         };
-        return <div data-mh-screen className={SCREEN_SHELL_CLASS}><ScreenHead title="転生" accent="text-violet-300" onBack={onBackToTemple} backLabel="神殿へ戻る"/><div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="reincarnate" compact/></div>{renderScreenNote('reincarnate',`絆Lv.${REINCARNATE_MIN_LEVEL}以上のマスモンは、強化を振り直せます。`,[`レベルが${REINCARNATE_LEVEL_DROP}下がる代わりに、振った強化をすべて振り直せます。`,'限界突破の回数や★はそのまま残ります。','左上の□で選ぶと、何体かをまとめて1回ずつ転生できます。'])}{renderMonsterSortFilterBar({singleType:true})}<div className={SCREEN_LIST_CLASS}>{entries.length===0?<ScreenEmpty emoji="🔄" lines={['表示できるマスモンがいません。','並べ替え・絞り込みの設定を見直してください。']}/>:<div className="grid grid-cols-3 gap-2 pb-3">{entries.map(({masu})=>{const base=ALL_PLAYER_MONSTERS[masu.baseId];if(!base)return null;const lvl=masuBondLevelInfo(masu);const locked=isMasuLocked(rebirthLockedMasuIds,masu.id);const can=lvl.level>=REINCARNATE_MIN_LEVEL&&!locked;const on=can&&picked.some(id=>String(id)===String(masu.id));return <div key={masu.id} className="relative" data-reincarnate-card={masu.id}><button disabled={!can} data-reincarnate-locked={locked?'1':undefined} onClick={()=>{setReincarnateSelectedId(masu.id);setReincarnateSkillKey(null);setReincarnateTimes(1);setReincarnateError('');}} style={MONSTER_CARD_STYLE} className={`${MONSTER_CARD_CLASS} w-full ${on?'border-violet-200 ring-2 ring-violet-300':'border-violet-500/40'} bg-slate-900 disabled:opacity-60`}>{renderMonsterCardBody({masu,base,status:locked?<span className="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-amber-500/25 border border-amber-300/50 text-amber-100">🔁 転生ロック</span>:lvl.level<REINCARNATE_MIN_LEVEL?<span className="block text-center text-[10px] font-bold leading-tight text-slate-300">あとLv.{REINCARNATE_MIN_LEVEL-lvl.level}で転生</span>:<ReincarnateBadge count={masu.reincarnateCount} className="is-inline"/>})}</button>{can&&<button type="button" role="checkbox" aria-checked={on} aria-label={`${masu.name}をまとめて転生に選ぶ`} data-reincarnate-pick={masu.id} disabled={busy} onClick={()=>togglePick(masu.id)} className="absolute left-0 top-0 z-10 flex h-11 w-11 items-start justify-start p-1.5"><span aria-hidden="true" className={`flex h-6 w-6 items-center justify-center rounded-md border-2 text-[13px] font-black ${on?'border-violet-100 bg-violet-500 text-white':'border-white/70 bg-slate-950/80 text-transparent'}`}>✓</span></button>}</div>})}</div>}</div>
+        return <div data-mh-screen className={SCREEN_SHELL_CLASS}><ScreenHead title="転生" accent="text-violet-300" onBack={onBackToTemple} backLabel="神殿へ戻る"/><div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="reincarnate" compact/></div>{renderScreenNote('reincarnate',`絆Lv.${REINCARNATE_MIN_LEVEL}以上のマスモンは、強化を振り直せます。`,[`レベルが${REINCARNATE_LEVEL_DROP}下がる代わりに、振った強化をすべて振り直せます。`,'限界突破の回数や★はそのまま残ります。','左上の□で選ぶと、何体かをまとめて転生できます。1体あたりの回数と「最大」も選べます。'])}{renderMonsterSortFilterBar({singleType:true})}<div className={SCREEN_LIST_CLASS}>{entries.length===0?<ScreenEmpty emoji="🔄" lines={['表示できるマスモンがいません。','並べ替え・絞り込みの設定を見直してください。']}/>:<div className="grid grid-cols-3 gap-2 pb-3">{entries.map(({masu})=>{const base=ALL_PLAYER_MONSTERS[masu.baseId];if(!base)return null;const lvl=masuBondLevelInfo(masu);const locked=isMasuLocked(rebirthLockedMasuIds,masu.id);const can=lvl.level>=REINCARNATE_MIN_LEVEL&&!locked;const on=can&&picked.some(id=>String(id)===String(masu.id));return <div key={masu.id} className="relative" data-reincarnate-card={masu.id}><button disabled={!can} data-reincarnate-locked={locked?'1':undefined} onClick={()=>{setReincarnateSelectedId(masu.id);setReincarnateSkillKey(null);setReincarnateTimes(1);setReincarnateError('');}} style={MONSTER_CARD_STYLE} className={`${MONSTER_CARD_CLASS} w-full ${on?'border-violet-200 ring-2 ring-violet-300':'border-violet-500/40'} bg-slate-900 disabled:opacity-60`}>{renderMonsterCardBody({masu,base,status:locked?<span className="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-amber-500/25 border border-amber-300/50 text-amber-100">🔁 転生ロック</span>:lvl.level<REINCARNATE_MIN_LEVEL?<span className="block text-center text-[10px] font-bold leading-tight text-slate-300">あとLv.{REINCARNATE_MIN_LEVEL-lvl.level}で転生</span>:<ReincarnateBadge count={masu.reincarnateCount} className="is-inline"/>})}</button>{can&&<button type="button" role="checkbox" aria-checked={on} aria-label={`${masu.name}をまとめて転生に選ぶ`} data-reincarnate-pick={masu.id} disabled={busy} onClick={()=>togglePick(masu.id)} className="absolute left-0 top-0 z-10 flex h-11 w-11 items-start justify-start p-1.5"><span aria-hidden="true" className={`flex h-6 w-6 items-center justify-center rounded-md border-2 text-[13px] font-black ${on?'border-violet-100 bg-violet-500 text-white':'border-white/70 bg-slate-950/80 text-transparent'}`}>✓</span></button>}</div>})}</div>}</div>
           {eligible.length>0&&<div className={SCREEN_FOOTER_CLASS} data-reincarnate-bulk-bar>
+            <div data-reincarnate-bulk-times className="mb-2 flex items-center gap-1.5"><span className="shrink-0 text-[11px] font-black text-slate-300">1体あたりの回数</span><button type="button" disabled={busy||bulkTimes!=='max'&&timesNum<=1} onClick={()=>setTimes(timesNum-1)} className="mh-button mh-button-secondary min-h-[44px] min-w-[44px] rounded-xl bg-slate-800 font-black active:scale-95 disabled:opacity-30">−</button><strong className="min-w-[2.5rem] text-center font-mono text-lg font-black text-white">{bulkTimes==='max'?'最大':timesNum}</strong><button type="button" disabled={busy||bulkTimes!=='max'&&timesNum>=timesMax} onClick={()=>setTimes(timesNum+1)} className="mh-button mh-button-secondary min-h-[44px] min-w-[44px] rounded-xl bg-slate-800 font-black active:scale-95 disabled:opacity-30">＋</button><button type="button" disabled={busy} onClick={()=>setBulkTimes('max')} className={`mh-button mh-button-secondary min-h-[44px] flex-1 rounded-xl text-xs font-black active:scale-95 disabled:opacity-30 ${bulkTimes==='max'?'bg-violet-600 text-white':'bg-slate-800'}`}>最大{picked.length?`（${timesMax}回）`:''}</button></div>
             <div className="grid grid-cols-2 gap-2"><button type="button" disabled={busy} onClick={pickAll} className="mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-800 text-xs font-black active:scale-95 disabled:opacity-30">すべて選択</button><button type="button" disabled={busy||picked.length===0} onClick={()=>setBulkIds([])} className="mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-800 text-xs font-black active:scale-95 disabled:opacity-30">選択を外す</button></div>
-            <button type="button" data-reincarnate-bulk-open disabled={busy||picked.length===0} onClick={()=>{setReincarnateError('');setBulkConfirmOpen(true);}} className="mh-button mh-button-primary mt-2 w-full min-h-[52px] rounded-2xl bg-violet-600 text-sm font-black active:scale-[.98] disabled:opacity-30">{picked.length?`まとめて転生（${picked.length}体）`:'まとめて転生（□で選んでください）'}</button>
+            <button type="button" data-reincarnate-bulk-open disabled={busy||picked.length===0} onClick={()=>{setReincarnateError('');setBulkConfirmOpen(true);}} className="mh-button mh-button-primary mt-2 w-full min-h-[52px] rounded-2xl bg-violet-600 text-sm font-black active:scale-[.98] disabled:opacity-30">{picked.length?`まとめて転生（${picked.length}体${preview?.ok&&preview.total>preview.count?`・計${preview.total}回`:''}）`:'まとめて転生（□で選んでください）'}</button>
             <div className="mt-1 text-center text-[10px] font-bold text-slate-400">「すべて選択」は編成中とお気に入りの子を選びません</div>
           </div>}
           {bulkConfirmOpen&&picked.length>0&&<ModalFrame label="まとめて転生の確認" border="border-violet-400/70" onClose={busy?null:()=>setBulkConfirmOpen(false)}>
             <div data-reincarnate-bulk-confirm>
-            <h3 className="text-center text-lg font-black text-violet-200">まとめて転生（{picked.length}体）</h3>
-            <p className="mt-1 text-center text-[11px] font-bold text-slate-300">1体につき1回ずつ転生します。転生は取り消せません。</p>
-            <ul className="mt-3 max-h-[34vh] space-y-1.5 overflow-y-auto rounded-2xl border border-white/10 bg-black/30 p-2" data-reincarnate-bulk-list>{(preview?.done||[]).map(({id,result})=>{const m=masuMons.find(x=>String(x.id)===String(id));return <li key={id} className="flex items-center justify-between gap-2 rounded-xl bg-slate-900 px-2.5 py-2 text-[11px] font-black"><span className="min-w-0"><span className="block truncate text-white">{m?.name}{m&&inParty(m)&&<span className="ml-1 rounded-full border border-amber-300/50 bg-amber-500/20 px-1.5 text-[9px] text-amber-100">編成中</span>}{m&&isFavorite(m)&&<span className="ml-1 rounded-full border border-pink-300/50 bg-pink-500/20 px-1.5 text-[9px] text-pink-100">お気に入り</span>}</span><span className="block text-pink-300">Lv.{result.fromLevel} → Lv.{result.nextLevel}</span></span><span className="shrink-0 text-right"><span className="block text-amber-300">強化P {result.nextPoints}</span><span className="flex items-center justify-end gap-0.5 text-slate-300"><Gem size={10}/>{result.cost.toLocaleString()}</span></span></li>;})}</ul>
-            {preview?.stopReason&&<p className="mt-2 text-center text-[11px] font-black text-amber-300">{(masuMons.find(x=>String(x.id)===String(preview.stoppedId))||{}).name}から先は転生できません：{preview.stopReason}{preview.ok?`（手前の${preview.count}体を転生します）`:''}</p>}
+            <h3 className="text-center text-lg font-black text-violet-200">まとめて転生（{picked.length}体{preview?.ok?`・計${preview.total}回`:''}）</h3>
+            <p className="mt-1 text-center text-[11px] font-bold text-slate-300">{bulkTimes==='max'?'それぞれ続けられるいちばん多い回数':`1体につき${timesNum}回まで`}転生します。転生は取り消せません。</p>
+            <ul className="mt-3 max-h-[34vh] space-y-1.5 overflow-y-auto rounded-2xl border border-white/10 bg-black/30 p-2" data-reincarnate-bulk-list>{(preview?.done||[]).map(({id,count,cost,fromLevel,nextLevel,nextPoints})=>{const m=masuMons.find(x=>String(x.id)===String(id));return <li key={id} className="flex items-center justify-between gap-2 rounded-xl bg-slate-900 px-2.5 py-2 text-[11px] font-black"><span className="min-w-0"><span className="block truncate text-white">{m?.name}{m&&inParty(m)&&<span className="ml-1 rounded-full border border-amber-300/50 bg-amber-500/20 px-1.5 text-[9px] text-amber-100">編成中</span>}{m&&isFavorite(m)&&<span className="ml-1 rounded-full border border-pink-300/50 bg-pink-500/20 px-1.5 text-[9px] text-pink-100">お気に入り</span>}</span><span className="block text-pink-300"><span data-reincarnate-bulk-count className="mr-1 rounded-md bg-violet-600/60 px-1 text-white">×{count}回</span>Lv.{fromLevel} → Lv.{nextLevel}</span></span><span className="shrink-0 text-right"><span className="block text-amber-300">強化P {nextPoints}</span><span className="flex items-center justify-end gap-0.5 text-slate-300"><Gem size={10}/>{cost.toLocaleString()}</span></span></li>;})}</ul>
+            {preview?.stopReason&&<p className="mt-2 text-center text-[11px] font-black text-amber-300">{(masuMons.find(x=>String(x.id)===String(preview.stoppedId))||{}).name}{preview.outOfGold?'の途中でダイヤが足りなくなります':'から先は転生できません'}：{preview.stopReason}{preview.ok?`（そこまでの計${preview.total}回を転生します）`:''}</p>}
             {preview?.ok&&<div className="mt-3 space-y-1.5 rounded-2xl border border-white/10 bg-black/30 p-3 text-[12px] font-black">
-              <div className="flex justify-between"><span className="text-slate-400">得られる物</span><span className="text-right text-amber-300">転生ぶんの強化ポイント +{REINCARNATE_POINTS}×{preview.count}体<br/>固有技ポイント +1×{preview.count}体</span></div>
-              <div className="flex justify-between"><span className="text-slate-400">失う物</span><span className="text-right text-pink-300">Lv −{REINCARNATE_LEVEL_DROP}（1体ごと）<br/>振った強化は白紙に戻る</span></div>
+              <div className="flex justify-between"><span className="text-slate-400">得られる物</span><span className="text-right text-amber-300">転生ぶんの強化ポイント +{REINCARNATE_POINTS}×{preview.total}回<br/>固有技ポイント +1×{preview.total}回</span></div>
+              <div className="flex justify-between"><span className="text-slate-400">失う物</span><span className="text-right text-pink-300">Lv −{REINCARNATE_LEVEL_DROP}×{preview.total}回（1回ごと）<br/>振った強化は白紙に戻る</span></div>
               <div className="flex justify-between text-base"><span className="text-slate-300">必要ダイヤ合計</span><span className="flex items-center gap-1 text-amber-300"><Gem size={14}/>{preview.cost.toLocaleString()}</span></div>
               <div className="flex justify-between"><span className="text-slate-400">所持ダイヤ</span><span>{gold.toLocaleString()}</span></div>
               <div className="flex justify-between"><span className="text-slate-400">転生後</span><span className="text-amber-300">残り{preview.nextGold.toLocaleString()}ダイヤ</span></div>
@@ -34731,7 +34756,7 @@ function MasuReincarnateAnimation({
       {/* 何回目の転生かをその場で出す。一覧・詳細と同じバッジを大きくしただけなので、
           あとから見返したときに同じ印で結び付く */}
       <div className="mh-reincarnation-mark"><ReincarnateBadge count={normalizeMasuProgression(reincarnateAnimation.masu).reincarnateCount}/></div>
-      <div className="mh-reincarnation-copy">{reincarnateAnimation.bulk?<><b>{reincarnateAnimation.bulk}体の転生完了！</b><span>それぞれLv.−{REINCARNATE_LEVEL_DROP}・強化ポイント +{REINCARNATE_POINTS}</span><span>固有技ポイント +1 ずつ</span><span>強化は詳細から振り直せます</span></>:<><b>{reincarnateAnimation.times>1?`転生 ×${reincarnateAnimation.times} 完了！`:'転生完了！'}</b><span>Lv.{reincarnateAnimation.fromLevel} → Lv.{reincarnateAnimation.nextLevel}</span><span>{reincarnateAnimation.raisesSkill===false?`固有技ポイント +1（所持 ${reincarnateAnimation.keptSkillPoints}）`:`${reincarnateAnimation.skillName} Lv.${reincarnateAnimation.skillLevel}へ進化`}</span><span>強化ポイント {reincarnateAnimation.nextPoints} を振り直せます</span></>}</div>
+      <div className="mh-reincarnation-copy">{reincarnateAnimation.bulk?<><b>{reincarnateAnimation.bulk}体・計{reincarnateAnimation.total||reincarnateAnimation.bulk}回の転生完了！</b><span>1回ごとにLv.−{REINCARNATE_LEVEL_DROP}・強化ポイント +{REINCARNATE_POINTS}</span><span>固有技ポイント +1 ずつ</span><span>強化は詳細から振り直せます</span></>:<><b>{reincarnateAnimation.times>1?`転生 ×${reincarnateAnimation.times} 完了！`:'転生完了！'}</b><span>Lv.{reincarnateAnimation.fromLevel} → Lv.{reincarnateAnimation.nextLevel}</span><span>{reincarnateAnimation.raisesSkill===false?`固有技ポイント +1（所持 ${reincarnateAnimation.keptSkillPoints}）`:`${reincarnateAnimation.skillName} Lv.${reincarnateAnimation.skillLevel}へ進化`}</span><span>強化ポイント {reincarnateAnimation.nextPoints} を振り直せます</span></>}</div>
     </div>
   );
 }
@@ -56836,10 +56861,11 @@ function MonsterHeroGame() {
   // まとめて転生(2026-10-17)。選んだ子を1回ずつ、1体ずつと同じ計算(buildMasuReincarnationMulti)で順に転生し、
   // 個体とダイヤを1回の取引で保存する(保存に失敗したらどちらも元のまま。二重に転生しない)。
   // 途中で転生できない子が出たら、その手前の子までを保存する。仲良し度は1体ずつ転生したときと同じく1体ごとに足す
-  const executeMasuReincarnationBulk = async (ids) => {
+  // (1体ずつの画面で回数を選んだときも、仲良し度は1回ぶんだけ足している)。times は1体あたりの回数か 'max'(2026-10-18)
+  const executeMasuReincarnationBulk = async (ids, times=1) => {
     if (reincarnateProcessingRef.current) return { ok:false };
     const before = masuMonsRef.current;
-    const result = buildMasuReincarnationMulti({ masuMons:before, ids, gold, lockedIds:rebirthLockedMasuIds });
+    const result = buildMasuReincarnationMulti({ masuMons:before, ids, gold, lockedIds:rebirthLockedMasuIds, times });
     if (!result.ok) { setReincarnateError(result.reason); return { ok:false }; }
     reincarnateProcessingRef.current = true;
     setReincarnateError('');
@@ -56854,7 +56880,7 @@ function MonsterHeroGame() {
       result.done.forEach(() => addAssistantBond('reincarnate'));
       const first = result.done[0].result;
       const firstMasu = first.nextMasu;
-      setReincarnateAnimation({ bulk:result.count, times:1, masu:firstMasu, base:ALL_PLAYER_MONSTERS[firstMasu.baseId], raisesSkill:false, keptSkillPoints:first.keptSkillPoints, fromLevel:first.fromLevel, nextLevel:first.nextLevel, nextPoints:first.nextPoints, gainedPoints:result.gainedPoints, stopReason:result.stopReason });
+      setReincarnateAnimation({ bulk:result.count, total:result.total, times:1, masu:firstMasu, base:ALL_PLAYER_MONSTERS[firstMasu.baseId], raisesSkill:false, keptSkillPoints:first.keptSkillPoints, fromLevel:first.fromLevel, nextLevel:first.nextLevel, nextPoints:first.nextPoints, gainedPoints:result.gainedPoints, stopReason:result.stopReason });
       setTimeout(()=>{ setReincarnateAnimation(null); reincarnateProcessingRef.current=false; }, 4100);
       return { ok:true, count:result.count, stopReason:result.stopReason };
     } catch {

@@ -6,7 +6,8 @@
 //   ② 「すべて選択」は編成中とお気に入りの子を選ばない。印を押せば自分で足せる。「選択を外す」で全部外れる
 //   ③ 「まとめて転生」で確認の窓が開き、選んだ子の一覧(編成中の印)・得られる物・失う物・ダイヤの合計と残りが出る。
 //      窓は幅375・390からはみ出さない
-//   ④ 「転生する」を素早く2回押しても、選んだ子が1回ずつだけ転生し、ダイヤは合計ぶんだけ減る。選ばなかった子は変わらない
+//   ④ 「転生する」を素早く2回押しても、選んだ子が選んだ回数だけ転生し、ダイヤは合計ぶんだけ減る。選ばなかった子は変わらない
+//   ⑤ 1体あたりの回数(−/＋)と「最大」(2026-10-18)。確認の窓に子ごとの回数と、合計の回数での得られる物・失う物が出る
 //   計算が1体ずつと同じかは bulk-reincarnate-check.js
 const http = require('http'), path = require('path'), fs = require('fs');
 const ROOT = path.resolve(__dirname, '..', '..'), PORT = 8958;
@@ -36,7 +37,7 @@ const GOLD = 100000000;
       put('mh_rhythm_tutorial_seen_v1', true); put('mh_inherited_unique_level_compensation_v1', true); put('mh_masu_level_cap_compensation_notice_seen_v1', true);
       put('mh_gold', gold);
       const mk = (id, baseId, name, bondXp) => ({ id, baseId, name, bondXp, colors: [], levelCap: 400, rebirthCount: 30, reincarnateCount: 0 });
-      put('mh_masu_mons', [mk('m1', 'Ark', 'アーク編成', 9999999), mk('m2', 'Zan', 'ザンお気に', 9000000), mk('m3', 'Mocchi', 'モッチー', 8500000),
+      put('mh_masu_mons', [mk('m1', 'Ark', 'アーク編成', 9999999), mk('m2', 'Zan', 'ザンお気に', 9000000), mk('m3', 'Mocchi', 'モッチー', 400000),
         mk('m4', 'Suezo', 'スエゾー', 9500000), mk('m5', 'Golem', 'ゴーレム', 50)]);
       put('mh_monster_roster', ['m1', 'Golem', 'Tiger', 'Ham', 'Pixie', 'Monol', 'Oboro', 'Mocchi']);
       put('mh_masu_locked_v1', ['m2']); }, GOLD);
@@ -70,7 +71,19 @@ const GOLD = 100000000;
     ok('「選択を外す」で全部外れる', await clickText('^選択を外す$') && (await picks()).every(x => !x.on));
     await clickText('^すべて選択$'); await page.evaluate(() => document.querySelector('[data-reincarnate-pick="m1"]').click()); await page.waitForTimeout(300);
 
+    // 1体あたりの回数(2026-10-18)。＋で2回、「最大」で子ごとに続けられるいちばん多い回数(アーク・スエゾー4回、モッチー2回)
+    const timesText = () => page.evaluate(() => document.querySelector('[data-reincarnate-bulk-times]')?.innerText.replace(/\s+/g, ' ') || '');
+    const pressTimes = (label) => page.evaluate(l => { const b = [...document.querySelectorAll('[data-reincarnate-bulk-times] button')].find(b => b.innerText.trim().startsWith(l)); if (!b || b.disabled) return false; b.click(); return true; }, label);
+    ok('一覧の下に「1体あたりの回数」があり、はじめは1回', /1体あたりの回数 − 1 ＋/.test(await timesText()), await timesText());
+    ok('＋で2回になる', await pressTimes('＋') && /− 2 ＋/.test(await timesText()));
+    ok('「最大」に、選んだ子のいちばん多い回数(4回)が出る', /最大（4回）/.test(await timesText()), await timesText());
+    ok('「最大」を押せる', await pressTimes('最大')); await page.waitForTimeout(300);
+    const barMax = await page.evaluate(() => document.querySelector('[data-reincarnate-bulk-open]')?.innerText || '');
+    ok('ボタンに合計の回数が出る(3体・計10回)', /まとめて転生（3体・計10回）/.test(barMax), barMax);
     await page.evaluate(() => document.querySelector('[data-reincarnate-bulk-open]').click()); await page.waitForTimeout(500);
+    const counts = await page.$$eval('[data-reincarnate-bulk-list] li', els => els.map(e => e.innerText.replace(/\s+/g, ' ')));
+    ok('確認の窓に子ごとの回数が出る(アーク・スエゾー×4回、モッチー×2回)', counts.length === 3 && counts.filter(t => /×4回/.test(t)).length === 2 && counts.some(t => /モッチー.*×2回/.test(t)), counts.join(' / '));
+    ok('確認の窓の得られる物・失う物が合計の回数で出る', await page.evaluate(() => { const t = document.querySelector('[data-reincarnate-bulk-confirm]').innerText.replace(/\s+/g, ' '); return /\+10×10回/.test(t) && /固有技ポイント \+1×10回/.test(t) && /−99×10回/.test(t); }));
     const confirm = await page.evaluate(() => { const d = document.querySelector('[data-reincarnate-bulk-confirm]'); if (!d) return null;
       return { text: d.innerText.replace(/\s+/g, ' '), rows: d.querySelectorAll('[data-reincarnate-bulk-list] li').length }; });
     ok('確認の窓が開き、選んだ3体が並ぶ', !!confirm && confirm.rows === 3, confirm ? confirm.text.slice(0, 120) : '開かない');
@@ -91,7 +104,7 @@ const GOLD = 100000000;
     await page.waitForTimeout(5200);
     const saved = await page.evaluate(() => ({ mons: JSON.parse(localStorage.getItem('mh_masu_mons') || '[]'), gold: JSON.parse(localStorage.getItem('mh_gold') || 'null') }));
     const rc = Object.fromEntries(saved.mons.map(m => [m.id, m.reincarnateCount || 0]));
-    ok('2回押しても、選んだ3体が1回ずつだけ転生する', rc.m1 === 1 && rc.m3 === 1 && rc.m4 === 1, JSON.stringify(rc));
+    ok('2回押しても二重にならず、選んだ子が最大の回数だけ転生する(4・2・4回)', rc.m1 === 4 && rc.m3 === 2 && rc.m4 === 4, JSON.stringify(rc));
     ok('選ばなかった子(お気に入り・Lv不足)は転生前の保存値のまま', ['m2', 'm5'].every(id => JSON.stringify(saved.mons.find(m => m.id === id)) === JSON.stringify(beforeMons.find(m => m.id === id))));
     ok('ダイヤは合計ぶんだけ1回減る', saved.gold === GOLD - totalCost, `${saved.gold} / ${GOLD - totalCost}`);
     ok('転生後は選んだ印が外れ、確認の窓が閉じる', (await picks()).every(x => !x.on) && !(await page.$('[data-reincarnate-bulk-confirm]')));
