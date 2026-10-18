@@ -417,6 +417,11 @@ node tools/audio/rhythm-loudness-check.js --ffmpeg "$FF"   # 全曲の音量
 node tools/run-checks.js --area mode          # 175本・約14分。譜面まわり
 ```
 
+> ⚠️ **`strong` / `extreme` で作ると、生成のあとの手直しで MASTER のモンスターノーツが4個を切ったり、押さえている帯の中にノーツが戻ったりする**(2026-10-18 ROSE。
+> 自動のままでは出なかった)。`node tools/mode/rhythm-monster-four-check.js` と `node tools/mode/rhythm-chart-hand-rules-check.js` を必ず通し、
+> 落ちたら時刻とノーツ数はそのまま、帯の中のタップは共通の道具 `fixHeldBand`(`rhythm-chart-hand-rules.js`)で帯の外へ、モンスターは狙いの時刻に近い拍の頭の単打へ枠を付けて直す。
+> 手の決まりの控えへは `--update` で全体を書き直さず(ほかの曲の行まで変わる)、新曲の行だけを足す
+
 **ほかの曲の譜面が1バイトも変わっていないことを確かめる。**(2026-10-11、仕上げの道具が新曲のたびに Sheriruth の譜面を書き換えていた)
 
 ```bash
