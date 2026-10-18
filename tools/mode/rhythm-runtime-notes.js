@@ -215,6 +215,8 @@ const RELEASED_MARKERS=Object.freeze({
   grievous_lady:'grievous-lady-v3',
   rose:'rose-v3',
   rose_short:'rose-short-v3',
+  sad_song:'sad-song-v3',
+  sad_song_short:'sad-song-short-v3',
   toward_the_stars_short:'toward-the-stars-short-v3',
 });
 
@@ -264,6 +266,8 @@ const RELEASED_TRACKS=Object.freeze({
   against_my_own_shadow:'against_my_own_shadow',
   rose:'rose',
   rose_short:'rose_short',
+  sad_song:'sad_song',
+  sad_song_short:'sad_song_short',
   toward_the_stars_short:'toward_the_stars_short',
 });
 

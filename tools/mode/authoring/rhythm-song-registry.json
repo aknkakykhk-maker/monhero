@@ -860,6 +860,32 @@
     "HELL": "extreme"
    },
    "hellDensity": 1.3
+  },
+  "sad_song": {
+   "audio": "monster-hero/audio/bgm-sad-song.mp3",
+   "chartRevision": 31,
+   "audioSha256": "47d16979bb906bf2f047377e9a4cc871f9c152e0623ef91f8b5a3f1c817a3021",
+   "durationMs": 218556,
+   "analyzedTiming": {
+    "bpm": 172.009,
+    "beatZeroMs": 99.5,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   }
+  },
+  "sad_song_short": {
+   "audio": "monster-hero/audio/bgm-sad-song-short.mp3",
+   "chartRevision": 31,
+   "audioSha256": "2ff39f50eddd7d2ec20a1aaca188d0d34b3b9c211ee182f68d01a1e4d488216c",
+   "durationMs": 82440,
+   "analyzedTiming": {
+    "bpm": 172.009,
+    "beatZeroMs": 99.5,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
   }
  }
 }

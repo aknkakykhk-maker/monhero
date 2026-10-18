@@ -41,6 +41,9 @@ const SONGS={sheriruth:{marker:'sheriruth-v3',zero:711.6-2594.75,beat:324.342,le
   // 曲の解析から作る(source:'audio')。引き出し(R1〜R5)は曲の区切りを見て道具が使う/使わないを決める(出力に理由が出る)
   rose:{marker:'rose-v3',zero:2116,beat:480,levelRe:/const roseHellChart=mhChart\((\d+),/,source:'audio',variant:1,crosses:'auto',crossUpper:'mover',crossDepth:-1},
   rose_short:{marker:'rose-short-v3',zero:2116,beat:480,levelRe:/const roseShortHellChart=mhChart\((\d+),/,source:'audio',variant:3,crosses:'auto',crossUpper:'mover',crossDepth:-1},
+  // SAD SONG(2026-10-18 社長「SAD SONG フル、ショート」)。拍は解析ファイル(authoring/sad-song-v3-audio.json の timing。全編と short は同じ格子)
+  sad_song:{marker:'sad-song-v3',zero:99.5,beat:348.818,levelRe:/const sadSongHellChart=mhChart\((\d+),/,source:'audio',variant:3,crosses:'auto',crossUpper:'mover',crossDepth:-1},
+  sad_song_short:{marker:'sad-song-short-v3',zero:99.5,beat:348.818,levelRe:/const sadSongShortHellChart=mhChart\((\d+),/,source:'audio',variant:3,crosses:'auto',crossUpper:'mover',crossDepth:-1},
   // Toward the Stars, Paradise or Truth short ver.(hitoyakyuko・2026-10-19・新曲は基本 HELL あり)
   toward_the_stars_short:{marker:'toward-the-stars-short-v3',zero:1390.5,beat:418.796,levelRe:/const towardTheStarsShortHellChart=mhChart\((\d+),/,source:'audio',variant:2,crosses:'auto',crossUpper:'mover',crossDepth:-1,phrases:['L','both','R','both']}};
 // drawers:false … 引き出し(2026-10-16)より前に作った HELL。作り直すときも今の形のまま(使うかは社長が決める)。新しい曲は書かない(=使う)

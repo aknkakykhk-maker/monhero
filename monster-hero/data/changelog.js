@@ -64,6 +64,29 @@ const CHANGELOG = [
     ],
   },
   {
+    // 2026-10-19 社長の依頼「SAD SONG フル、ショート」(mp4 とジャケット)。歯ごたえは社長が自動のままと決めた
+    date: "2026-10-19 00:20", type:'update', title:'モンヒロビート：新曲「SAD SONG」を追加しました', status:'new',
+    image:'images/song-art/sad-song.jpg?v=cc2bf8ddee1c',
+    items:[
+      'モンヒロビートに「SAD SONG」の全編（3分39秒）を追加しました。曲えらびからすぐ遊べます。',
+      'EASY から MASTER までに加えて、空中のノーツが出る HELL があります。HELL は MASTER をクリアすると開きます。',
+      'レベルは EASY Lv.8 ／ NORMAL Lv.9 ／ HARD Lv.13 ／ EXPERT Lv.21 ／ MASTER Lv.29 ／ HELL Lv.34 です。',
+      'ノーツ数は 350 ／ 394 ／ 536 ／ 652 ／ 742 です。',
+    ],
+    assistantNotice:{ id:'update_notice_sad_song_v1', type:'content' },
+  },
+  {
+    // 同じ依頼の短い版。曲えらびでは全編と1行にまとまる(行を押すと全編・難易度ボタンの上で切り替え)
+    date: "2026-10-19 00:20", type:'update', title:'モンヒロビート：新曲「SAD SONG short ver.」を追加しました', status:'new',
+    image:'images/song-art/sad-song.jpg?v=cc2bf8ddee1c',
+    items:[
+      'モンヒロビートに「SAD SONG」の short ver.（1分22秒）も追加しました。曲えらびでは全編と同じ行にまとまっていて、難易度ボタンの上の「short ver.」で切り替えられます。',
+      'short ver. にも HELL があります。short ver. の MASTER をクリアすると開きます。',
+      'レベルは EASY Lv.8 ／ NORMAL Lv.10 ／ HARD Lv.16 ／ EXPERT Lv.24 ／ MASTER Lv.28 ／ HELL Lv.35 です。',
+      'ノーツ数は 139 ／ 164 ／ 221 ／ 268 ／ 300 です。',
+    ],
+  },
+  {
     // 2026-10-18 社長「新しくヘルプに載ったやつは🆕のマークみたいなのつけといて」
     date: "2026-10-19 00:02", type:'update', group:'ui', title:'ヘルプに新しく載った項目が、🆕の印で分かるようになりました', status:'new',
     items:[
