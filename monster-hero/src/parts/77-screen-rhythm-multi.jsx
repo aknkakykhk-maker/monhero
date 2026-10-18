@@ -1220,7 +1220,7 @@ function RhythmMultiChatPanel({ view, phase = '', members = [], resolveIconUrl =
           return (
             <li key={c.cid} data-rhythm-multi-chat-line className={`flex items-end gap-1.5 ${mine ? 'justify-end' : ''}`}>
               {!mine && (m
-                ? <RhythmMultiAvatar m={m} resolveIconUrl={resolveIconUrl} sizeClass="h-8 w-8 shrink-0" />
+                ? <RhythmMultiAvatar m={m} resolveIconUrl={resolveIconUrl} sizeClass="h-8 w-8 shrink-0" small />
                 : <span aria-hidden="true" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-800 text-xs">🎵</span>)}
               <span className={`flex min-w-0 max-w-[80%] flex-col ${mine ? 'items-end' : 'items-start'}`}>
                 {!mine && <b className="max-w-full truncate text-[10px] text-amber-200">{c.name}</b>}
@@ -1454,7 +1454,7 @@ function RhythmMultiBuddyInfoSheet({ m, masu, songName, resolveIconUrl, onClose 
 }
 
 // 参加者の顔。名前の横に、ブリーダーのアイコン(プロフィールフレーム付き)を出す
-function RhythmMultiAvatar({ m, resolveIconUrl, sizeClass = 'h-10 w-10' }) {
+function RhythmMultiAvatar({ m, resolveIconUrl, sizeClass = 'h-10 w-10', small = false }) {
   // 相棒(CPU)は、呼んだ人のマスモンを染めた姿で描く(種類 mb と色 mc は知らせに載っている)
   if (m.cpu) {
     const base = m.mb && typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[m.mb] : null;
@@ -1469,8 +1469,13 @@ function RhythmMultiAvatar({ m, resolveIconUrl, sizeClass = 'h-10 w-10' }) {
     );
   }
   const src = resolveIconUrl ? resolveIconUrl(m.icon) : null;
+  // small … 上の5人の細い帯(28px)とチャット(32px)。絵の枠(リースなど)は細かい飾りが小さく潰れて、
+  //   アイコンの上に白とピンクの点が散ったように見えた(2026-10-19 社長「マスモンの染色ずれなおってない」・frame_mua_3)。
+  //   小さいときは絵の枠を重ねずアイコンだけにする(色の輪の枠はそのまま)。大きく出す所は今までどおり
+  const frame = typeof profileFrameById === 'function' ? profileFrameById(normalizeProfileFrameId(m.frame)) : null;
+  const frameId = small && frame && frame.kind === 'image' ? null : m.frame;
   return (
-    <ProfileAvatar src={src} id={m.icon} frameId={m.frame} alt="" className={sizeClass}
+    <ProfileAvatar src={src} id={m.icon} frameId={frameId} alt="" className={sizeClass}
       fallback={<span aria-hidden="true" className="flex h-full w-full items-center justify-center bg-slate-800 text-lg">🎵</span>} />
   );
 }
@@ -1502,7 +1507,7 @@ function RhythmMultiMemberCards({ members, hostId, selfId, resolveIconUrl, badge
             <RhythmMultiChatBubble text={bubbleOf ? bubbleOf(m.id) : ''} />
             <small data-rhythm-multi-member-badge className={`absolute -top-1.5 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full px-1.5 py-px text-[9px] font-black leading-tight ${badge.cls}`}>{badge.text}</small>
             <span className="relative shrink-0">
-              <RhythmMultiAvatar m={m} resolveIconUrl={resolveIconUrl} sizeClass={tall ? 'h-12 w-12 landscape:h-16 landscape:w-16' : 'h-7 w-7'} />
+              <RhythmMultiAvatar m={m} resolveIconUrl={resolveIconUrl} sizeClass={tall ? 'h-12 w-12 landscape:h-16 landscape:w-16' : 'h-7 w-7'} small={!tall} />
               {m.id === hostId && <span aria-hidden="true" className="absolute -right-1.5 -top-1.5 text-[11px]">👑</span>}
               {openable && <span aria-hidden="true" className={`absolute -bottom-1 -right-1.5 flex items-center justify-center rounded-full bg-lime-300 font-black leading-none text-slate-950 ${tall ? 'h-4 w-4 text-[10px]' : 'h-3 w-3 text-[8px]'}`}>i</span>}
             </span>
