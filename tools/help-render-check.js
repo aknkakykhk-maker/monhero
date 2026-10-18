@@ -112,6 +112,8 @@ const transformed = babel.transformSync(
   "const HELP_GUIDE_INTRO = (typeof HELP_INTRO !== 'undefined' && HELP_INTRO) || '';\n" +
   'const helpCategoryById = (id) => HELP_GUIDE.find(c => c.id === id) || null;\n' +
   'const helpTopicById = (categoryId, topicId) => ((helpCategoryById(categoryId) || {}).topics || []).find(t => t.id === topicId) || null;\n' +
+  // ヘルプの🆕(2026-10-18)。判定は本体と同じもの(保存の読み書きは上の実データ表の塊に入っている)
+  grab(source, 'const HELP_NEW_DAYS = ', 'const DIFFICULTY_SETTINGS = {') +
   'const HelpScreen = ({ showHelp, helpCatId, helpTopicId, helpAssistantOpen, setShowHelp, setHelpCatId, setHelpTopicId, setHelpAssistantOpen,\n' +
   '  ArrowLeft, ChevronRight, getDebugEnemyOptions, difficulty, setDebugEnemyKey, debugBattleRef, setDebugBattle, setDebugOutcome, setGameState, openDebugSettings,\n' +
   // ヘルプの見出しに出す助手。本体では「いま選んでいる助手」がそのまま入る

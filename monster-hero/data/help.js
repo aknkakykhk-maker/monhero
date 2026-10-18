@@ -36,6 +36,8 @@
 //   ・数値を手で書くのは最後の手段。実データから作れるものは t:'data' にする
 //     (手で書いた数値は tools/help-guide-check.js が実処理と照合する)。
 //   ・id はヘルプ内のリンクや「前回見ていた場所」の保存に使うので、既存のものは変更しない。
+//   ・新しく足したトピックには added:'YYYY-MM-DD'(載せた日・JST。公開の印つきなら公開した日)を書く。
+//     その日から14日のあいだ、まだ開いていない人の一覧に🆕が付く(HELP_NEW_DAYS・19-difficulties-and-rules.jsx)
 
 // 助手の名前・画像・セリフは data/assistants.js が持つ。ここでは各項目の
 // 「助手のひとこと(assistant)」だけを書く。
@@ -54,7 +56,7 @@ const HELP_CATEGORIES = [
     expression: 'happy',
     topics: [
       {
-        id:'quickstart', emoji:'⏱️', title:'3分でわかるモンスターヒーロー',
+        id:'quickstart', added:'2026-10-10', emoji:'⏱️', title:'3分でわかるモンスターヒーロー',
         assistant:'はじめてならここだけ読めばOK！ 遊び方の流れと、最初にやることをまとめたよ♪', expression:'happy',
         blocks:[
           {t:'p',text:'モンスターを育てて、カードで戦うゲームです。目標は、モンヒロバトルで全10WAVEを勝ち進み、最後のWAVEのラスボス「ムー」を倒すこと。勝っても負けても、進んだぶんの経験値とダイヤがもらえるので、くり返し遊ぶほど強くなれます。'},
@@ -285,7 +287,7 @@ const HELP_CATEGORIES = [
       },
       {
         // 2026-10-18 公開(タクティクスのヘイト)。数字は出さない(炎の段だけで伝える)
-        id: 'tactics-hate', emoji: '🔥', title: 'タクティクスバトルの狙われやすさ(🔥)', releaseFlag:'tacticsHate', group:'まずはここから',
+        id: 'tactics-hate', added:'2026-10-18', emoji: '🔥', title: 'タクティクスバトルの狙われやすさ(🔥)', releaseFlag:'tacticsHate', group:'まずはここから',
         assistant: '🔥が多い子ほど狙われやすいよ！ 守りたい子がいたら、タンクに🔥を集めてもらおう♪',
         expression: 'normal',
         blocks: [
@@ -304,7 +306,7 @@ const HELP_CATEGORIES = [
         ],
       },
       {
-        id: 'monster-types', emoji: '🏷️', title: 'モンスターのタイプ', releaseFlag:'tacticsHate', group:'まずはここから',
+        id: 'monster-types', added:'2026-10-18', emoji: '🏷️', title: 'モンスターのタイプ', releaseFlag:'tacticsHate', group:'まずはここから',
         assistant: 'タイプは図鑑で見られるよ！ 変わるのは🔥の付きやすさだけだから安心してね〜',
         expression: 'happy',
         blocks: [
@@ -564,7 +566,7 @@ const HELP_CATEGORIES = [
       },
       {
         // 難易度 HELL(2026-10-12 下書き)。公開の印 RELEASE_FLAGS.rhythmHell が真になるまで、一覧にも本文にも出ない
-        id:'rhythm-hell', emoji:'🔥', title:'難易度 HELL と空のノーツ', releaseFlag:'rhythmHell', group:'ノーツと操作',
+        id:'rhythm-hell', added:'2026-10-13', emoji:'🔥', title:'難易度 HELL と空のノーツ', releaseFlag:'rhythmHell', group:'ノーツと操作',
         assistant:'MASTERのさらに上が HELL だよ。空から来るノーツは、上の判定ラインで叩いてね♪', expression:'happy',
         blocks:[
           {t:'p',text:'HELL は MASTER のさらに上の難易度です。地上のノーツに加えて、空のノーツ（SKY TAP・SKY SLIDE）が流れてきます。HELL がある曲だけ、曲えらびの難易度に HELL が並びます。'},
@@ -943,7 +945,7 @@ const HELP_CATEGORIES = [
         ],
       },
       {
-        id:'rhythm-buddy', emoji:'🎶', title:'マスモンを呼ぶ(ビートLv)', releaseFlag:'rhythmMulti', group:'マスモンとランキング',
+        id:'rhythm-buddy', added:'2026-10-07', emoji:'🎶', title:'マスモンを呼ぶ(ビートLv)', releaseFlag:'rhythmMulti', group:'マスモンとランキング',
         assistant:'マスモンをマルチに呼べるよ♪ ひとりのときでも、すぐに一緒にライブできるの！', expression:'happy',
         blocks:[
           {t:'p',text:'マルチの部屋で「マスモンを呼ぶ」を押して、手持ちのマスモンを1体えらぶと、その子がCPUとしてメンバーに入ります。呼んだ部屋にいるあいだは、何曲でも一緒に遊びます。人が集まらないときでも、呼んだマスモンと2人そろえばライブを始められます。'},
@@ -1684,7 +1686,7 @@ const HELP_CATEGORIES = [
         ],
       },
       {
-        id: 'offering', emoji: '🙏', title: 'お布施',
+        id: 'offering', added:'2026-10-05', emoji: '🙏', title: 'お布施',
         assistant: 'ダイヤを払って、マスモンに直接経験値をあげられるよ！ 限界突破や転生まで一気にできちゃう♪',
         expression: 'excited',
         blocks: [
@@ -2230,6 +2232,7 @@ const HELP_CATEGORIES = [
           { t:'p', text:'タイトル画面の「更新履歴」から、上のタブで2つを切り替えて確認できます。未読の更新があるときはタブと項目にNEWマークが付きます。' },
           { t:'p', text:'一覧は日付ごとに区切られ、その日の更新が「モンヒロビート」「マスモンの育成」「バトル」のように話題ごとにまとまって並びます。1行ごとに件数が出て、閉じているあいだも中身の見出しがちらっと見えます。' },
           { t:'p', text:'行を押すと、そのまとまりの中身が時刻・札・本文まで全部開きます（もう一度押すと閉じます）。開けるのは1つずつで、別の行を押すと前のものは閉じます。' },
+          { t:'note', title:'ヘルプの🆕', text:'ヘルプに新しく載った項目には、載ってから2週間のあいだ🆕の印が付きます。印のある項目が入っているカテゴリにも付きます。一度開いた項目の印は消えます。' },
           { t:'note', title:'話題ごとにまとめている理由', text:'こまかい更新が1件ずつ積み上がると、少し前の更新でもすぐ画面の外へ流れてしまい、さかのぼるのが大変でした。同じ日の同じ話題を1行にまとめることで、一覧の行数が5分の1ほどになり、1画面でさかのぼれる日数が大きく増えています。まとめているのは並べ方だけで、項目そのものは1件も省いていません。' },
           { t:'note', title:'助手が起動時に知らせるもの', text:'助手が「新しく入ったよ」と知らせるのは、マーケットに商品が並んだとき・バトルの新モードや新難易度・新しい遊び（新曲・新しい助手・新しい育成システム・キャンペーンなど）のときだけです。見た目の改善や小さな変更は更新履歴にだけ書かれます。' },
           { t:'p', text:'左の「更新情報」には、新しく増えたもの・遊びやすくしたもの・マーケットの入荷が並びます。札は「新機能」「改善」「マーケット」です。' },
