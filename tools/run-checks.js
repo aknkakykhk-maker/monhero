@@ -125,6 +125,9 @@ const FORCE_CHECKS = [
   // カードの中のボタンの文字が横にあふれて切れる(2026-09-21・ユーザー報告)
   { re: /^monster-hero\/src\/parts\/(10-core|60-app)\.jsx$/,
     checks: ['battle/battle-mode-card-fit-check.js'], why: 'モード選択のカードが崩れていないか' },
+  // ヘルプの🆕(2026-10-18)。added を書き忘れても、印の出し方を壊してもエラーは出ない
+  { re: /^monster-hero\/(data\/help\.js|src\/parts\/(19-difficulties-and-rules|60-app)\.jsx)$/,
+    checks: ['boot/help-new-badge-check.js'], why: 'ヘルプの新しい項目に🆕が付き、開くと消えるか' },
   // 敵の並びは2本ある(クラシック・クイック / タクティクス)。混ざると、いま遊んでいる人の
   // チャレンジ・プロの手ごたえが静かに変わる。ファイル名の語では拾えないので名指しする
   { re: /^monster-hero\/(data\/(enemy-monsters|images\/images-enemy)\.js|src\/parts\/(22-enemy-and-bond-entries|60-app)\.jsx)$/,

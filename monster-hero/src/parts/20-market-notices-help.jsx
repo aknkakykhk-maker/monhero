@@ -872,3 +872,11 @@ const HELP_DATA_TITLES = {
   rhythmSongArtwork: '曲えらびに絵が出る曲',
   rhythmMonsterAbilities: 'モンスターノーツで出る能力',
 };
+
+// ヘルプの🆕で、開いたトピックを覚える(2026-10-18・新しいキー。いつ🆕にするかの判定は 19-difficulties-and-rules.jsx の helpTopicIsNew)
+const HELP_NEW_SEEN_KEY = 'mh_help_new_seen_v1';
+const helpNewSeenIds = () => { try { const v = JSON.parse(localStorage.getItem(HELP_NEW_SEEN_KEY) || '[]'); return Array.isArray(v) ? v.filter(x => typeof x === 'string') : []; } catch (e) { return []; } };
+const helpMarkTopicSeen = (topic) => {
+  if (helpTopicAddedMs(topic) == null) return;
+  try { const seen = helpNewSeenIds(); if (!seen.includes(topic.id)) localStorage.setItem(HELP_NEW_SEEN_KEY, JSON.stringify([...seen, topic.id].slice(-200))); } catch (e) {}
+};
