@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 46910b64ce1ba2a8
+// source-sha256: 530889f4d6742ec4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-18 23:40";
+const BUILD_DATE = "2026-10-19 00:18";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -13847,6 +13847,15 @@ const HELP_GUIDE = (typeof HELP_CATEGORIES !== 'undefined' && Array.isArray(HELP
 const HELP_GUIDE_INTRO = typeof HELP_INTRO !== 'undefined' && HELP_INTRO || '';
 const helpCategoryById = id => HELP_GUIDE.find(c => c.id === id) || null;
 const helpTopicById = (categoryId, topicId) => ((helpCategoryById(categoryId) || {}).topics || []).find(t => t.id === topicId) || null;
+const HELP_NEW_DAYS = 14;
+const helpTopicAddedMs = topic => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(typeof topic?.added === 'string' ? topic.added : '');
+  return m ? Date.UTC(+m[1], +m[2] - 1, +m[3], -9, 0) : null;
+};
+const helpTopicIsNew = (topic, seen, now = Date.now()) => {
+  const at = helpTopicAddedMs(topic);
+  return at != null && now >= at && now < at + HELP_NEW_DAYS * 86400000 && !(Array.isArray(seen) && seen.includes(topic.id));
+};
 const DIFFICULTY_SETTINGS = {
   Beginner: {
     label: "Beginner",
@@ -16466,6 +16475,22 @@ const HELP_DATA_TITLES = {
   rhythmDifficultySpread: '同じ難易度でも曲でどれだけ違うか',
   rhythmSongArtwork: '曲えらびに絵が出る曲',
   rhythmMonsterAbilities: 'モンスターノーツで出る能力'
+};
+const HELP_NEW_SEEN_KEY = 'mh_help_new_seen_v1';
+const helpNewSeenIds = () => {
+  try {
+    const v = JSON.parse(localStorage.getItem(HELP_NEW_SEEN_KEY) || '[]');
+    return Array.isArray(v) ? v.filter(x => typeof x === 'string') : [];
+  } catch (e) {
+    return [];
+  }
+};
+const helpMarkTopicSeen = topic => {
+  if (helpTopicAddedMs(topic) == null) return;
+  try {
+    const seen = helpNewSeenIds();
+    if (!seen.includes(topic.id)) localStorage.setItem(HELP_NEW_SEEN_KEY, JSON.stringify([...seen, topic.id].slice(-200)));
+  } catch (e) {}
 };
 const ASSISTANT_LIST = typeof ASSISTANTS !== 'undefined' && Array.isArray(ASSISTANTS) ? ASSISTANTS : [];
 const ASSISTANT_SCENE_MAP = typeof ASSISTANT_SCENES !== 'undefined' && ASSISTANT_SCENES || {};
@@ -110254,6 +110279,13 @@ function MonsterHeroGame() {
       const headTitle = topic ? topic.title : cat ? cat.title : 'ヘルプ（攻略情報局）';
       const topicIndex = topic ? cat.topics.findIndex(t => t.id === topic.id) : -1;
       const nextTopic = topicIndex >= 0 ? cat.topics[topicIndex + 1] : null;
+      if (topic) helpMarkTopicSeen(topic);
+      const helpSeen = helpNewSeenIds();
+      const helpNewBadge = React.createElement("span", {
+        "data-help-new": true,
+        "aria-label": "新しい項目",
+        className: "shrink-0 text-[17px] leading-none"
+      }, "🆕");
       return React.createElement("div", {
         className: "fixed inset-0 flex flex-col",
         style: {
@@ -110368,7 +110400,7 @@ function MonsterHeroGame() {
         }
       }, c.title), React.createElement("span", {
         className: "block text-[10px] text-slate-400 leading-tight mt-0.5"
-      }, c.summary)), React.createElement(ChevronRight, {
+      }, c.summary)), (c.topics || []).some(t => helpTopicIsNew(t, helpSeen)) && helpNewBadge, React.createElement(ChevronRight, {
         size: 16,
         className: "shrink-0 text-slate-500"
       })))), cat && !topic && React.createElement("div", {
@@ -110396,7 +110428,7 @@ function MonsterHeroGame() {
         className: "shrink-0 text-base leading-none"
       }, t.emoji), React.createElement("span", {
         className: "flex-1 min-w-0 text-[12px] font-black text-white leading-tight"
-      }, t.title), React.createElement(ChevronRight, {
+      }, t.title), helpTopicIsNew(t, helpSeen) && helpNewBadge, React.createElement(ChevronRight, {
         size: 16,
         className: "shrink-0 text-slate-500"
       }))))), cat && topic && React.createElement("div", {

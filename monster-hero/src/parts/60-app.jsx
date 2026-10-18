@@ -21525,6 +21525,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const headTitle = topic ? topic.title : cat ? cat.title : 'ヘルプ（攻略情報局）';
         const topicIndex = topic ? cat.topics.findIndex(t=>t.id===topic.id) : -1;
         const nextTopic = topicIndex>=0 ? cat.topics[topicIndex+1] : null;
+        // 🆕(載せてから HELP_NEW_DAYS 日・まだ開いていない項目)。開いた項目はここで「見た」にする(保存は新しいキーだけ)
+        if (topic) helpMarkTopicSeen(topic);
+        const helpSeen = helpNewSeenIds();
+        const helpNewBadge = <span data-help-new aria-label="新しい項目" className="shrink-0 text-[17px] leading-none">🆕</span>;
         return (
         <div className="fixed inset-0 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'#000000',zIndex:99999}}>
           <header className="shrink-0 px-3 py-3 border-b border-white/10 flex items-center gap-2 bg-slate-900 shadow-xl" style={{backgroundColor:'#0f172a',paddingTop:'calc(0.75rem + env(safe-area-inset-top))'}}>
@@ -21561,6 +21565,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       <span className="block text-[13px] font-black leading-tight" style={{color:c.color}}>{c.title}</span>
                       <span className="block text-[10px] text-slate-400 leading-tight mt-0.5">{c.summary}</span>
                     </span>
+                    {(c.topics||[]).some(t=>helpTopicIsNew(t,helpSeen))&&helpNewBadge}
                     <ChevronRight size={16} className="shrink-0 text-slate-500"/>
                   </button>
                 ))}
@@ -21581,6 +21586,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     <button onClick={()=>{setHelpTopicId(t.id);}} className="w-full rounded-2xl border px-4 py-3 flex items-center gap-3 text-left active:scale-95" style={{borderColor:`${cat.color}55`,backgroundColor:'rgba(15,23,42,0.7)'}}>
                       <span className="shrink-0 text-base leading-none">{t.emoji}</span>
                       <span className="flex-1 min-w-0 text-[12px] font-black text-white leading-tight">{t.title}</span>
+                      {helpTopicIsNew(t,helpSeen)&&helpNewBadge}
                       <ChevronRight size={16} className="shrink-0 text-slate-500"/>
                     </button>
                   </React.Fragment>
