@@ -1567,6 +1567,36 @@
    "besideHeldBand": 0,
    "fastSameSide": 0
   },
+  "toward_the_stars_short/EASY": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0
+  },
+  "toward_the_stars_short/NORMAL": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0
+  },
+  "toward_the_stars_short/HARD": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0
+  },
+  "toward_the_stars_short/EXPERT": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0
+  },
+  "toward_the_stars_short/MASTER": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0
+  },
   "sad_song/EASY": {
    "sideHeightSwitch": 0,
    "skyAfterGround": 0,
@@ -1650,7 +1680,12 @@
    "changed": 10
   },
   {
-   "at": "2026-10-18T15:00",
+   "at": "2026-10-19T01:20",
+   "reason": "新曲 Toward the Stars, Paradise or Truth short ver. を公開",
+   "changed": 5
+  },
+  {
+   "at": "2026-10-18T16:49",
    "reason": "新曲 SAD SONG(全編・short ver.)の行だけを足す",
    "changed": 10
   }

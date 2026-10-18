@@ -843,6 +843,24 @@
     "source": "command"
    }
   },
+  "toward_the_stars_short": {
+   "audio": "monster-hero/audio/bgm-toward-the-stars-short.mp3",
+   "chartRevision": 31,
+   "audioSha256": "25c386c484398d06ef9e8846b7eb38b3362bf0d985f663f76c06803a46e7363a",
+   "durationMs": 136800,
+   "analyzedTiming": {
+    "bpm": 143.268,
+    "beatZeroMs": 1390.5,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   },
+   "chartIntensityByDifficulty": {
+    "MASTER": "extreme",
+    "HELL": "extreme"
+   },
+   "hellDensity": 1.3
+  },
   "sad_song": {
    "audio": "monster-hero/audio/bgm-sad-song.mp3",
    "chartRevision": 31,

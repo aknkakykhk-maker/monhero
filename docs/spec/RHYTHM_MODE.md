@@ -8550,3 +8550,20 @@ songId `rose`（全編）/ `rose_short`（副題 `short ver.`）、bgmTrackId `m
 - **HELL**（新曲は基本 HELL あり・2026-10-18 から）: 曲の解析から HELL 用に一から作った（`rhythm-hell-mix.js` の `source:'audio'`）。
   `variant` を 0〜3 で比べ、モンスター4個・水平クロス0・帯の中0のうち、横持ちの交差・届きにくいが少ないものにした（全編 1・short 3）。
   引き出しは道具が曲を見て決めた（全編は R3・R5 を使う／short は使わない。理由は道具の出力）
+
+## 「Toward the Stars, Paradise or Truth」short ver. をモンヒロビートへ足した（2026-10-19）
+
+社長の依頼（窓口経由・mp3 1本。ジャケットは mp3 に埋め込まれていた絵）。曲名・作者はタグから（`Toward the Stars, Paradise or Truth`・`hitoyakyuko`）。
+短い版だけで全編は無いので、1曲として足した。songId `toward_the_stars_short`、`displayName:'Toward the Stars, Paradise or Truth'`・`subtitle:'short ver.'`、bgmTrackId `melo_toward_the_stars_short`（`creator:'hitoyakyuko'`）。
+
+- **ジャケット**: mp3 の中の絵（1254×1254）を 512×512 に（65KB）
+- **音源**: 頭から鳴っているので2秒の無音を足した。×1.3725 で **-14.00 LUFS / -2.91 dBTP**（2分17秒）
+- **テンポ**: 自動判定 143.27 BPM / 4拍子 / 拍の頭 1390.5ms（無音込み）。半分 71.64（±15ms 28%）・3/4倍 107.45（24%）・4/3倍 191.03（39%）と比べ、±15ms がいちばん良い 143.27（51%）のまま
+- **歯ごたえは社長が「マスター以上をもっとむずく」と決めた**: EASY〜EXPERT は自動のまま、`chartIntensityByDifficulty:{MASTER:'extreme',HELL:'extreme'}`（`challengeFactor`・`chartIntensity` は書かない）。
+  EASY 7 / NORMAL 8 / HARD 13 / EXPERT 17 / MASTER 37 / HELL 46、ノーツ 174 / 205 / 278 / 332 / 481 / 563。
+  候補: 自動 7 / 8 / 13 / 17 / 27 / 37 ／ 1.3 で 8 / 10 / 16 / 22 / 28 / 36 ／ `strong` で 8 / 10 / 18 / 28 / 31 / 38 ／ 1.6・`extreme`（曲まるごと）は出荷できない ／
+  MASTER・HELL を `strong` で MASTER 31・HELL 37
+- **HELL**: 社長「HELL をもっと上げる」で、HELL を作る道具に2つの手を足した（書いた曲だけ・`docs/rules/CHART_ENGINE.md`「HELL を重くする」）。
+  曲の一覧の `hellDensity:1.3`（拾う音 566 → 881・HELL 467 → 563 ノーツ）と、`rhythm-hell-mix.js` の `phrases:['L','both','R','both']`（両手とも地上の小節を無くす）。variant 2。
+  Lv.37 → 46、空中のタップ 78 → 150。モンスター4個・水平クロス0・帯の中0
+- 公開前に、EXPERT（3か所）・MASTER（2か所）の押さえている帯の中のタップを帯の外へ、MASTER のモンスターノーツ（激しさを上げて3個になった）を4個に直した（時刻・ノーツ数はそのまま）

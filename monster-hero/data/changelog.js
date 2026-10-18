@@ -35,6 +35,35 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-10-19 01:13", type:'update', group:'assistant', title:'助手ごとのモンヒロビートの呼び方が変わりました', status:'new',
+    items:[
+      'モンヒロビートのことを、ドラは「モンビー」、ももすけは「モンビート」と呼ぶようになりました。',
+      'みゅあは「モンビー」、ききは「モンヒロビート」のまま。おしゃべりでも同じ呼び方をします。',
+    ],
+  },
+  {
+    // 2026-10-19 社長の依頼(窓口経由・mp3。ジャケットは mp3 に入っていた絵)。歯ごたえは社長「マスター以上をもっとむずく」で MASTER・HELL だけ重く
+    date: "2026-10-19 01:10", type:'update', title:'モンヒロビート：新曲「Toward the Stars, Paradise or Truth」を追加しました', status:'new',
+    image: 'images/song-art/toward-the-stars.jpg?v=b586e7a271b9',
+    items:[
+      'モンヒロビートに、hitoyakyuko の「Toward the Stars, Paradise or Truth」short ver.（2分15秒）を追加しました。曲えらびからすぐ遊べます。',
+      'EASY から MASTER までに加えて、空中のノーツが出る HELL があります。HELL は MASTER をクリアすると開きます。MASTER と HELL は手ごわい譜面になっています。',
+      'レベルは EASY Lv.7 ／ NORMAL Lv.8 ／ HARD Lv.13 ／ EXPERT Lv.17 ／ MASTER Lv.37 ／ HELL Lv.46 です。',
+      'ノーツ数は 174 ／ 205 ／ 278 ／ 332 ／ 481 ／ 563 です。',
+    ],
+    assistantNotice: { id:'update_notice_toward_the_stars_v1', type:'content' },
+  },
+  {
+    date: "2026-10-19 00:42", type:'update', group:'assistant', title:'助手たちの性格と話し方が、よりその人らしくなりました', status:'new',
+    items:[
+      'ききは、おとなしい話し方はそのままに、育成と戦い方は火力で押し切る派になりました。「迷ったら、ちからに振りまつ」のような作戦を、静かにすすめてくれます。',
+      'ドラは、膝の話や下ネタまじりの冗談をよく言うようになりました。仕組みの説明が分かりやすいのは、これまでどおりです。',
+      'ももすけは、からかったり煽ったりしながらも、最後はちゃんと褒めてくれます。ドラの冗談にはわざと乗っかります。',
+      'みゅあはドラの冗談にノリで合わせることもありますが、内心はあきれています。ききは静かに流します。',
+      'HOME・バトル・結果・強化の画面のひとことと、おしゃべりの話し方も、新しい性格にそろえました。助手選択の紹介とヘルプの「助手について」も直しています。',
+    ],
+  },
+  {
     // 2026-10-19 社長の依頼「SAD SONG フル、ショート」(mp4 とジャケット)。歯ごたえは社長が自動のままと決めた
     date: "2026-10-19 00:20", type:'update', title:'モンヒロビート：新曲「SAD SONG」を追加しました', status:'new',
     image:'images/song-art/sad-song.jpg?v=cc2bf8ddee1c',
@@ -55,6 +84,15 @@ const CHANGELOG = [
       'short ver. にも HELL があります。short ver. の MASTER をクリアすると開きます。',
       'レベルは EASY Lv.8 ／ NORMAL Lv.10 ／ HARD Lv.16 ／ EXPERT Lv.24 ／ MASTER Lv.28 ／ HELL Lv.35 です。',
       'ノーツ数は 139 ／ 164 ／ 221 ／ 268 ／ 300 です。',
+    ],
+  },
+  {
+    // 2026-10-18 社長「新しくヘルプに載ったやつは🆕のマークみたいなのつけといて」
+    date: "2026-10-19 00:02", type:'update', group:'ui', title:'ヘルプに新しく載った項目が、🆕の印で分かるようになりました', status:'new',
+    items:[
+      'ヘルプに新しく載った項目には、載ってから2週間のあいだ🆕の印が付きます。',
+      '印のある項目が入っているカテゴリにも印が付くので、どこに新しい説明が増えたかがすぐ分かります。',
+      '一度開いた項目の印は消えます。',
     ],
   },
   {

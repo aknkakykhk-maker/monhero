@@ -43,7 +43,9 @@ const SONGS={sheriruth:{marker:'sheriruth-v3',zero:711.6-2594.75,beat:324.342,le
   rose_short:{marker:'rose-short-v3',zero:2116,beat:480,levelRe:/const roseShortHellChart=mhChart\((\d+),/,source:'audio',variant:3,crosses:'auto',crossUpper:'mover',crossDepth:-1},
   // SAD SONG(2026-10-18 社長「SAD SONG フル、ショート」)。拍は解析ファイル(authoring/sad-song-v3-audio.json の timing。全編と short は同じ格子)
   sad_song:{marker:'sad-song-v3',zero:99.5,beat:348.818,levelRe:/const sadSongHellChart=mhChart\((\d+),/,source:'audio',variant:3,crosses:'auto',crossUpper:'mover',crossDepth:-1},
-  sad_song_short:{marker:'sad-song-short-v3',zero:99.5,beat:348.818,levelRe:/const sadSongShortHellChart=mhChart\((\d+),/,source:'audio',variant:3,crosses:'auto',crossUpper:'mover',crossDepth:-1}};
+  sad_song_short:{marker:'sad-song-short-v3',zero:99.5,beat:348.818,levelRe:/const sadSongShortHellChart=mhChart\((\d+),/,source:'audio',variant:3,crosses:'auto',crossUpper:'mover',crossDepth:-1},
+  // Toward the Stars, Paradise or Truth short ver.(hitoyakyuko・2026-10-19・新曲は基本 HELL あり)
+  toward_the_stars_short:{marker:'toward-the-stars-short-v3',zero:1390.5,beat:418.796,levelRe:/const towardTheStarsShortHellChart=mhChart\((\d+),/,source:'audio',variant:2,crosses:'auto',crossUpper:'mover',crossDepth:-1,phrases:['L','both','R','both']}};
 // drawers:false … 引き出し(2026-10-16)より前に作った HELL。作り直すときも今の形のまま(使うかは社長が決める)。新しい曲は書かない(=使う)
 const BEAT_GAP=1.5;                      // 同じ親指が段を変えるまでの拍
 // 同じ側(レーンの左右)で高さ(地上⇔空中)を変えるまでの間(2026-10-12 社長「HELL の操作性をもっと改良して」・テンポくんの数え方)。
@@ -117,7 +119,7 @@ const D=require('./rhythm-chart-drawers.js');
 const lanesCross=(a,b)=>{const s0=Math.max(startOf(a),startOf(b)),e0=Math.min(endOf(a),endOf(b));if(e0-s0<=0)return false;
   let sign=0;for(let k=0;k<=8;k++){const at=s0+(e0-s0)*k/8,d=laneAt(a.pts,at)-laneAt(b.pts,at);if(Math.abs(d)<.5)return true;const g=Math.sign(d);if(sign&&g!==sign)return true;sign=g;}
   return false;};
-const mix=(master,{zero,beat,crosses=[],gentle=false,crossUpper='hold',crossDepth=null,audio=null,drawersOn=false,drawerIds=null})=>{
+const mix=(master,{zero,beat,crosses=[],gentle=false,crossUpper='hold',crossDepth=null,audio=null,drawersOn=false,drawerIds=null,phrases=null})=>{
   const want=id=>drawersOn&&audio&&(!drawerIds||drawerIds.includes(id));
   // 格子へ寄せる。元の譜面に近い時刻(3ms以内)があればその時刻を使う(丸め方が1ms違うと、2本のスライドの間がその瞬間だけ詰まる)
   const chartTimes=[...new Set(master.flatMap(n=>n.k==='s'?n.pts.map(p=>p[0]):[n.t,n.end].filter(x=>x!=null)))].sort((a,b)=>a-b);
@@ -130,7 +132,9 @@ const mix=(master,{zero,beat,crosses=[],gentle=false,crossUpper='hold',crossDept
   // R4(引き出し): 同じ勢いが続く区切りでは、長めの回し(左手が空 ⇄ 右手が空)。使う区切りは下で決める
   let r4Windows=[],r4Beats=0;
   const phraseOf=at=>{const w=r4Windows.find(([a,b])=>at>=a&&at<b);if(w)return ['L','R'][Math.floor((at-w[0])/(beat*r4Beats))%2];return phraseBase(at);};
-  const phraseBase=at=>PHRASE_MODES[((Math.floor((at-zero)/(beat*PHRASE_BEATS))%PHRASE_MODES.length)+PHRASE_MODES.length)%PHRASE_MODES.length];
+  // phrases: 曲の設定で回し方を上書きする(2026-10-18・Toward the Stars の HELL を重くする。書いた曲だけ・書いていない曲は今までの4つの回し)
+  const modes=Array.isArray(phrases)&&phrases.length&&phrases.every(m=>PHRASE_MODES.includes(m))?phrases:PHRASE_MODES;
+  const phraseBase=at=>modes[((Math.floor((at-zero)/(beat*PHRASE_BEATS))%modes.length)+modes.length)%modes.length];
   // gentle: 拍の頭(3ms 以内)のタップだけを空にする・両手が空の小節は片手(その音の手)だけ
   const onBeat=at=>{const k=(at-zero)/beat;return Math.abs(k-Math.round(k))*beat<=3;};
   const wantSky=(n)=>{const m=phraseOf(startOf(n));

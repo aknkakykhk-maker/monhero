@@ -220,7 +220,12 @@
   "sad_song_short/normal": "a465ae3a46b772bf",
   "sad_song_short/hard": "dc0f97dcee78b3a9",
   "sad_song_short/expert": "c559a9e8c5dd5286",
-  "sad_song_short/master": "9cc9d8b15d303b66"
+  "sad_song_short/master": "9cc9d8b15d303b66",
+  "toward_the_stars_short/easy": "d6c779dff3230048",
+  "toward_the_stars_short/normal": "55b025e4205a0e6a",
+  "toward_the_stars_short/hard": "afe02bc39240db70",
+  "toward_the_stars_short/expert": "178a932c31f42eb8",
+  "toward_the_stars_short/master": "95c9471b49f7b83f"
  },
  "history": [
   {
@@ -305,7 +310,18 @@
    ]
   },
   {
-   "at": "2026-10-19 00:19",
+   "at": "2026-10-19 01:10",
+   "reason": "新曲 Toward the Stars, Paradise or Truth short ver. を公開",
+   "changed": [
+    "toward_the_stars_short/easy",
+    "toward_the_stars_short/normal",
+    "toward_the_stars_short/hard",
+    "toward_the_stars_short/expert",
+    "toward_the_stars_short/master"
+   ]
+  },
+  {
+   "at": "2026-10-19 01:49",
    "reason": "新曲 SAD SONG(全編・short ver.)を公開",
    "changed": [
     "sad_song/easy",

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: cd19e04b711b0a21
+// generated-sha256: 68bf3de606b7dfc2
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-19 00:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-19 01:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4245,6 +4245,7 @@ const BGM_TRACKS = [
   { id:'melo_rose_short', name:'ROSE short ver.', creator:'HANA', src:'audio/bgm-rose-short.mp3', gain:1, loop:true },
   { id:'melo_sad_song', name:'SAD SONG', creator:'オリジナル', src:'audio/bgm-sad-song.mp3', gain:1, loop:true },
   { id:'melo_sad_song_short', name:'SAD SONG short ver.', creator:'オリジナル', src:'audio/bgm-sad-song-short.mp3', gain:1, loop:true },
+  { id:'melo_toward_the_stars_short', name:'Toward the Stars, Paradise or Truth short ver.', creator:'hitoyakyuko', src:'audio/bgm-toward-the-stars-short.mp3', gain:1, loop:true },
   { id:'melo_dullahan_clockwork_alt', name:'呪われた騎士の時計仕掛け -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-clockwork-alt.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost', name:'鋼鉄の亡霊', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost_alt', name:'鋼鉄の亡霊 -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost-alt.mp3', gain:1, loop:true },
@@ -5512,6 +5513,7 @@ const Audio_ = (() => {
     "audio/bgm-title-theme.mp3": "8af0684e79e7",
     "audio/bgm-title.mp3": "b7bdc68bb0c0",
     "audio/bgm-toriko.mp3": "3870d26f6322",
+    "audio/bgm-toward-the-stars-short.mp3": "25c386c48439",
     "audio/bgm-wrath-of-the-thorn-king.mp3": "d1ea326a4ee2",
     "audio/jingle-victory.mp3": "689c9715a824",
     "audio/se-awakened-moo-apocalypse.mp3": "3ed18e30e8e7",
@@ -9876,6 +9878,18 @@ const HELP_GUIDE = ((typeof HELP_CATEGORIES !== 'undefined' && Array.isArray(HEL
 const HELP_GUIDE_INTRO = (typeof HELP_INTRO !== 'undefined' && HELP_INTRO) || '';
 const helpCategoryById = (id) => HELP_GUIDE.find(c => c.id === id) || null;
 const helpTopicById = (categoryId, topicId) => ((helpCategoryById(categoryId) || {}).topics || []).find(t => t.id === topicId) || null;
+// ヘルプの🆕(2026-10-18 社長「新しくヘルプに載ったやつは🆕のマークみたいなのつけといて」)。
+// トピックの added(載せた日・JST)から HELP_NEW_DAYS 日のあいだ、まだ開いていなければ一覧に🆕を付ける。
+// 開いたトピックは新しいキー mh_help_new_seen_v1(トピックidの配列)に覚える(保存の読み書きは 20-market-notices-help.jsx)。既存のキーには触らない(CLAUDE.md ⑦)
+const HELP_NEW_DAYS = 14;
+const helpTopicAddedMs = (topic) => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(typeof topic?.added === 'string' ? topic.added : '');
+  return m ? Date.UTC(+m[1], +m[2] - 1, +m[3], -9, 0) : null;
+};
+const helpTopicIsNew = (topic, seen, now = Date.now()) => {
+  const at = helpTopicAddedMs(topic);
+  return at != null && now >= at && now < at + HELP_NEW_DAYS * 86400000 && !(Array.isArray(seen) && seen.includes(topic.id));
+};
 const DIFFICULTY_SETTINGS = {
   Beginner:    { label: "Beginner",     power: 0.25, score: 0.25, gold: 0.25, bg: '#0891b2', text: '#67e8f9', color: "bg-cyan-600", shadow: "shadow-cyan-600/50" },
   Easy:        { label: "Easy",         power: 0.5,  score: 0.5,  gold: 0.5,  bg: '#059669', text: '#6ee7b7', color: "bg-emerald-600", shadow: "shadow-emerald-600/50" },
@@ -11745,6 +11759,14 @@ const HELP_DATA_TITLES = {
   rhythmDifficultySpread: '同じ難易度でも曲でどれだけ違うか',
   rhythmSongArtwork: '曲えらびに絵が出る曲',
   rhythmMonsterAbilities: 'モンスターノーツで出る能力',
+};
+
+// ヘルプの🆕で、開いたトピックを覚える(2026-10-18・新しいキー。いつ🆕にするかの判定は 19-difficulties-and-rules.jsx の helpTopicIsNew)
+const HELP_NEW_SEEN_KEY = 'mh_help_new_seen_v1';
+const helpNewSeenIds = () => { try { const v = JSON.parse(localStorage.getItem(HELP_NEW_SEEN_KEY) || '[]'); return Array.isArray(v) ? v.filter(x => typeof x === 'string') : []; } catch (e) { return []; } };
+const helpMarkTopicSeen = (topic) => {
+  if (helpTopicAddedMs(topic) == null) return;
+  try { const seen = helpNewSeenIds(); if (!seen.includes(topic.id)) localStorage.setItem(HELP_NEW_SEEN_KEY, JSON.stringify([...seen, topic.id].slice(-200))); } catch (e) {}
 };
 
 // ---- part: 21-assistant.jsx ----
@@ -69617,6 +69639,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const headTitle = topic ? topic.title : cat ? cat.title : 'ヘルプ（攻略情報局）';
         const topicIndex = topic ? cat.topics.findIndex(t=>t.id===topic.id) : -1;
         const nextTopic = topicIndex>=0 ? cat.topics[topicIndex+1] : null;
+        // 🆕(載せてから HELP_NEW_DAYS 日・まだ開いていない項目)。開いた項目はここで「見た」にする(保存は新しいキーだけ)
+        if (topic) helpMarkTopicSeen(topic);
+        const helpSeen = helpNewSeenIds();
+        const helpNewBadge = <span data-help-new aria-label="新しい項目" className="shrink-0 text-[17px] leading-none">🆕</span>;
         return (
         <div className="fixed inset-0 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'#000000',zIndex:99999}}>
           <header className="shrink-0 px-3 py-3 border-b border-white/10 flex items-center gap-2 bg-slate-900 shadow-xl" style={{backgroundColor:'#0f172a',paddingTop:'calc(0.75rem + env(safe-area-inset-top))'}}>
@@ -69653,6 +69679,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       <span className="block text-[13px] font-black leading-tight" style={{color:c.color}}>{c.title}</span>
                       <span className="block text-[10px] text-slate-400 leading-tight mt-0.5">{c.summary}</span>
                     </span>
+                    {(c.topics||[]).some(t=>helpTopicIsNew(t,helpSeen))&&helpNewBadge}
                     <ChevronRight size={16} className="shrink-0 text-slate-500"/>
                   </button>
                 ))}
@@ -69673,6 +69700,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     <button onClick={()=>{setHelpTopicId(t.id);}} className="w-full rounded-2xl border px-4 py-3 flex items-center gap-3 text-left active:scale-95" style={{borderColor:`${cat.color}55`,backgroundColor:'rgba(15,23,42,0.7)'}}>
                       <span className="shrink-0 text-base leading-none">{t.emoji}</span>
                       <span className="flex-1 min-w-0 text-[12px] font-black text-white leading-tight">{t.title}</span>
+                      {helpTopicIsNew(t,helpSeen)&&helpNewBadge}
                       <ChevronRight size={16} className="shrink-0 text-slate-500"/>
                     </button>
                   </React.Fragment>
