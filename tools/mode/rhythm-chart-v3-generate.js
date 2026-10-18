@@ -500,6 +500,9 @@ let registryEntry=null;
     // 難易度ごとの激しさの上書き(上の songIntensity)。書いた曲だけ
     const byDifficulty=entry&&entry.chartIntensityByDifficulty;
     if(byDifficulty&&typeof byDifficulty==='object'&&!Array.isArray(byDifficulty))audio.chartIntensityByDifficulty=byDifficulty;
+    // HELL だけ音を多く拾う倍率(下の hellBoost)。書いた曲の HELL だけ
+    const hellDensity=Number(entry&&entry.hellDensity);
+    if(Number.isFinite(hellDensity)&&hellDensity>1)audio.hellDensity=hellDensity;
     registryEntry=entry||null;
   }
 }
@@ -1174,7 +1177,11 @@ const buildChart=(difficulty,options={})=>{
   // 拍の頭の平均を使うと、拍が立っていない曲ほどその値も低くなるので絞れない
   // （MF × ICHIKA MIX は拍の頭0.480に対して16分裏0.489で、ほとんど落ちなかった）。
   // 「16分裏のうち強いほうから OFF_BEAT_KEEP だけ残す」なら、曲によらず確実に効く。
-  const offBeatFloor=(()=>{
+  // HELL だけ音を多く拾う(hellDensity を書いた曲の HELL だけ・2026-10-18)。量の倍率(下の hellBoost)だけでは、拾える音の数が天井になって増えない
+  //   (Toward the Stars の HELL: 目標950に対して拾える音566・打点881)。拾う範囲を広げる: 弱い裏の音も落とさず、
+  //   格子からのずれの許容をどの音も大きい一発と同じ 43ms にする(格子へ寄せても最良の判定 ±55ms の中)。書いていない曲は今までと同じ
+  const hellWide=difficulty==='HELL'&&Number(audio&&audio.hellDensity)>1;
+  const offBeatFloor=hellWide?0:(()=>{
     const clarity=audio.summary?.beatClarity;
     if(!clarity||!(clarity.ratio>0)||clarity.ratio>=BEAT_CLARITY_MIN)return 0;
     // 曲ごとの「激しさ」で残す割合を上書きできる（書いていない曲は OFF_BEAT_KEEP のまま）。
@@ -1193,7 +1200,7 @@ const buildChart=(difficulty,options={})=>{
   //   落としてしまうと「曲の山なのにノーツが来ない」になる。いちばん良い判定(MARVELOUS)の窓は
   //   ±55msなので、43msずれた音を格子へ寄せて置いても**まだ最良の判定の中**に入る。
   //   43msという線は、耳で確かめるときの許容(earReviewMaxOffsetMs)と同じものを使う。
-  const peakOffsetAllowance=onset=>onset.character==='FULL'
+  const peakOffsetAllowance=onset=>onset.character==='FULL'||hellWide
     ?COMMON.earReviewMaxOffsetMs:COMMON.maxAbsPeakOffsetMs;
   const pool=allOnsets.filter(onset=>
     onset.grid%P.lattice===0&&Math.abs(onset.gridOffsetMs)<=peakOffsetAllowance(onset)
@@ -1212,7 +1219,12 @@ const buildChart=(difficulty,options={})=>{
   const challenge=songChallengeFactor(audio);
   // 曲ごとの「激しさ」。書いていない曲では density が1・ceiling が0なので、
   // 下の式は今までとまったく同じ値を返す。
-  const densityBoost=Number(I.density)>0?Number(I.density):1;
+  // HELL だけ音を多く拾う(2026-10-18 社長「マスター以上をもっとむずく」→ Toward the Stars の HELL を Lv.45 以上に)。
+  // 曲の一覧に hellDensity(1より大きく2まで)を書いた曲の HELL だけ、量に掛ける。書いていない曲・HELL 以外の難易度は今までと1音も変わらない
+  // (公開中の曲の HELL は書いていないうえ、譜面は rhythm-mode.js に書き出し済みで、公開中の譜面の控え rhythm-released-chart-lock-check.js が見張る)。
+  // 天井(hardMaxPerSecond・実際に鳴っている音の数)はそのまま。押せるかどうかは両手のシミュレートと rhythm-hell-mix.js の手の決まりが見張る
+  const hellBoost=hellWide?Math.min(2,Number(audio.hellDensity)):1;
+  const densityBoost=(Number(I.density)>0?Number(I.density):1)*hellBoost;
   // 激しさを書いた曲では、上限を1段上げる（既定の maxPerSecond ではなく hardMaxPerSecond を使う）。
   const softMax=densityBoost>1?target.hardMaxPerSecond:target.maxPerSecond;
   // いちばん外側の天井。既定は hardMaxPerSecond（ここは全曲共通の安全弁）。

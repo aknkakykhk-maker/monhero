@@ -210,7 +210,12 @@
   "rose_short/normal": "850a795c9b56bd90",
   "rose_short/hard": "66727662efa44f4b",
   "rose_short/expert": "7eb2aa2e6bef045a",
-  "rose_short/master": "ca1af8a08b902eb8"
+  "rose_short/master": "ca1af8a08b902eb8",
+  "toward_the_stars_short/easy": "d6c779dff3230048",
+  "toward_the_stars_short/normal": "55b025e4205a0e6a",
+  "toward_the_stars_short/hard": "afe02bc39240db70",
+  "toward_the_stars_short/expert": "178a932c31f42eb8",
+  "toward_the_stars_short/master": "95c9471b49f7b83f"
  },
  "history": [
   {
@@ -292,6 +297,17 @@
     "rose/expert",
     "rose/master",
     "rose_short/master"
+   ]
+  },
+  {
+   "at": "2026-10-19 01:10",
+   "reason": "新曲 Toward the Stars, Paradise or Truth short ver. を公開",
+   "changed": [
+    "toward_the_stars_short/easy",
+    "toward_the_stars_short/normal",
+    "toward_the_stars_short/hard",
+    "toward_the_stars_short/expert",
+    "toward_the_stars_short/master"
    ]
   }
  ]
