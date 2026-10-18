@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 096a5cf746c25ab5
+// generated-sha256: 97b3c9c46aaf05bf
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-18 04:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-18 09:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8748,9 +8748,11 @@ const CHANGELOG_STATUS = {
   investigating: { label: '調査中',   cls: 'bg-amber-900/70 text-amber-300 border-amber-500/50' },
   known:         { label: '判明済み', cls: 'bg-slate-800 text-slate-300 border-slate-500/50' },
 };
-// 音量の既定値。初期状態は「音がオン」で、いきなり大きな音が鳴らないよう最小の1から始める
-// (ミュートを解除したときの音量もこの値に合わせている)
-const DEFAULT_VOLUME = 1;
+// 音量の既定値(まだ音量を保存していない端末だけに効く。保存した値はそのまま読む)。初期状態は「音がオン」。
+// 2026-10-18 社長の判断「控えめの値に上げる」で 1 → 30。1 だとほとんど聞こえなかった(効果音 約-40dB・BGM 約-54dB)。
+// 30 は効果音 約-28dB・BGM 約-38dB(14-audio.jsx の _gainFromPct / _bgmGain)で、いきなり大きな音にはならない。
+// ミュートの解除(toggleQuickMute)は音量の値を変えず、保存している音量のまま鳴らし直す
+const DEFAULT_VOLUME = 30;
 // ログインボーナスは毎日、既存の報酬に加えてスキップチケット・序を1枚配る。
 // 4日目の「100」はもともとブリーダー経験値のつもりだったが、
 // 報酬の種類をブリーダーポイント(pt)にしていたため、使い道のないptが大量に配られていた。
