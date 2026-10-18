@@ -45,6 +45,8 @@ description: Add a new song to モンヒロビート (the rhythm-game mode of �
   **生成器は足した無音の手前の音にもノーツを置く**ので、足す長さは「最初の拍の頭が2秒を超える」だけ取る
   (Against My Own Shadow は1秒では 1.86秒になり、2秒足して 2.44秒になった)
 - 難易度が既存の帯から大きく外れるときは `chartIntensity:'extreme'` を使う
+- **今後の新曲は基本 HELL あり**(2026-10-18 社長「今後の新曲は基本ヘルありで」)。地上の5難易度と一緒に HELL も作って公開する。
+  手順は「6-2. HELL」。依頼で「HELL なし」と言われたときだけ外す。HELL の Lv. も難易度を聞くときに一緒に並べる
 - **モンスターノーツは、どの難易度にも4個ちょうど**(TAP の枠1〜4を1個ずつ。2026-10-11 社長「どの曲も基本4個入るルールだよ」)。
   生成器は必ず4個置く。手で書いた・写した譜面は `t(時刻,サブレーン,幅,枠)` の4つ目で付ける(ノーツの数・時刻は変えない)。
   `node tools/mode/rhythm-monster-four-check.js` が公開曲の全難易度を見張る(例外の表は持たない。4個でない譜面は直す)
@@ -234,6 +236,19 @@ done
 曲えらびでは版がまとめて1行になり、難易度ボタンの上で切り替わる。組に入れ忘れると別の行に並び、`node tools/mode/rhythm-song-version-check.js`
 （表示名が同じ公開曲が同じ組に入っているか）が落ちる。`RHYTHM_DEMO_SONG_IDS` には今までどおり末尾へ足す（公開の範囲・ランキング送信はこちら）。
 
+### 全編から short ver. を切り出す(2026-10-18・ROSE)
+
+「全編と short の両方を」と頼まれ、short の音源が届いていないときは自分で切る。決まりは「頭からサビの終わりまで」
+(`docs/spec/RHYTHM_ROADMAP.md`。SIX ÉTERNEL・Stay With Me・綺季一閃 と同じ)。
+
+1. 全編を先に解析し(`--write`)、解析ファイルの `structure.sections` を見る
+2. **いちばん盛り上がる(`intensity` が最大の)サビのブロックの終わり**で切る。次の区切りの頭1小節でフェードアウトする
+   (ROSE: 86.6〜113.5秒のサビ・強さ0.85 → `--from 0 --to 115.396 --fade-out 1.92`。長さ 1分55秒)
+3. 無音を足した全編の WAV から `rhythm-audio-reencode.js --from 0 --to … --fade-out …` で作り、音量は short だけで測ってそろえる
+4. 同じ録音の頭から切るので、テンポと拍の頭は全編と同じ値で解析する(`--bpm` `--beat-zero` を全編と同じに。`splices` は要らない)
+5. songId は `<全編>_short`、`displayName` は全編と同じ・`subtitle:'short ver.'`、ジャケットは全編と同じ絵。`RHYTHM_SONG_VERSION_GROUPS` に
+   `[['<全編>','原曲'],['<全編>_short','short ver.']]` の組を1行足す(先頭が行を押したときの版)
+
 ---
 
 ## 6. 入れ物を作って譜面を流し込む
@@ -256,6 +271,21 @@ node tools/mode/rhythm-chart-level.js --write
 
 > ⚠️ `RHYTHM_SONGS[].bgmTrackId` が `BGM_TRACKS` に在るかを突き合わせる検査は**無い**。
 > 書き忘れると「曲えらびには並ぶのに無音で始まる」。ここは目で確かめる。
+
+### 6-2. HELL(新曲は基本あり・2026-10-18)
+
+本文は `docs/rules/CHART_ENGINE.md`(曲の解析から一から作る・交差は上下に分ける・押さえている帯の中に置かない・
+引き出し R1〜R5 は曲に合うときだけ)。手本は Against My Own Shadow と ROSE。
+
+1. `data/rhythm-mode.js` に、5難易度の入れ物の後ろへ HELL の入れ物を1つ足す
+   (`const <name>HellNotes=((t,h,f,s,T,F,S)=>[ // <…-v3-hell-notes> … ])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);` と
+   `const <name>HellChart=mhChart(1,<name>HellNotes,<NAME>_DURATION_MS,6);`)
+2. `RHYTHM_HELL_CHARTS` に `<songId>:<name>HellChart` を足す(曲えらびに HELL が出る)。
+   `RHYTHM_PROTO_SONGS` に `<songId>_hell_debug` の枠を足す(`rhythm-hell-mix.js --write` がこの枠で Lv. を測る)
+3. `tools/mode/rhythm-hell-mix.js` の `SONGS` に1行(`marker`・`zero`=拍の頭・`beat`=1拍のms・`levelRe`・`source:'audio'`・
+   `crosses:'auto'`・`crossUpper:'mover'`・`crossDepth:-1`・`variant`)。`drawers` は書かない(=引き出しを使う。使う/使わないと理由は道具が出す)
+4. `variant` を 0〜3 で比べ、**モンスター4個・水平クロス0・帯の中0**を満たすうち、横持ちの「交差」「届きにくい」が少ないものを選ぶ
+   (ROSE は全編・short とも 1)。`node tools/mode/rhythm-hell-mix.js --song <曲> --write` で書く(Lv. も書く)
 
 ---
 
