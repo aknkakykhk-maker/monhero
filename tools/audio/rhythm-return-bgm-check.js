@@ -45,7 +45,8 @@ for (const file of files) {
     // 生成物は `(waveHistory || [])` のように空白が入るので、空白を潰してから見る
     && compact.includes('bgmKeyForState(gameState,wave,enemy?.id,(waveHistory||[]).length>0,hp<=0||gaveUp,false)'));
   check(`${rel}: モンビーの開け閉めでBGMを見直す`,
-    /autoBgmOverride, rhythmScreenOpen\]\);/.test(src));
+    // 2026-10-18: 依存の並びの後ろに eventLineBgm などが足されても、rhythmScreenOpen が入っていれば同じ
+    /autoBgmOverride, rhythmScreenOpen(?:, [A-Za-z_$][\w$]*)*\]\);/.test(src));
 
   // 前提: モンビーの画面はBGMのキーを持たない(だから止まる)
   if (file.includes('/src/')) {
