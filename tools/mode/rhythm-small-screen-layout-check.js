@@ -63,6 +63,14 @@ const seed = (lookIntroSeen) => {
     // --- 曲えらび: 案内が出ていても「決定」が見える ---
     for (const [w, h] of [[360, 640], [320, 568], [640, 360], [740, 360], [844, 390]]) {
       const { page } = await openSelect(w, h, false);
+      // 縦が低い画面(高さ700以下)は、案内をはじめから畳む(2026-10-07・10-09 💬で助手のひとことと上の案内をまとめて畳む)。
+      // 畳んでいることを確かめてから💬で開き、開いたときも「決定」が見えてかからないことを見る
+      if (h <= 700 && h > w) {
+        const folded = await page.evaluate(() => !document.querySelector('[data-rhythm-look-intro]'));
+        check(`${w}x${h} 低い画面では案内をはじめから畳んでいる`, folded);
+        await page.evaluate(() => document.querySelector('[data-rhythm-song-notice-toggle]')?.click());
+        await page.waitForTimeout(500);
+      }
       const r = await page.evaluate(() => {
         const q = (s) => document.querySelector(s), rect = (e) => e && e.getBoundingClientRect();
         const start = rect(q('[data-rhythm-demo-start]')), intro = rect(q('[data-rhythm-look-intro]'));
