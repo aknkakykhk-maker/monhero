@@ -42,7 +42,8 @@ const TOPIC_ALIASES = {
 //   説明 … そのヘルプ項目(無ければ全項目)で、その言葉を最初に含む1文を機械で取る
 //   呼び方 … 助手ごとに、実際のセリフでどの言い方を何回使っているかを数え、いちばん多いものを書く
 const TERM_GROUPS = [
-  { variants: ['モンヒロビート', 'モンビー'], topic: 'rhythm/rhythm-mode' },
+  // prefer … 助手の設定にある「いまの呼び方」(ASSISTANTS の rhythmCall)。公開済みのお話は昔の呼び方のままなので、数だけで並べると古い呼び方が先に来る
+  { variants: ['モンヒロビート', 'モンビー', 'モンビート'], topic: 'rhythm/rhythm-mode', prefer: 'rhythmCall' },
   { variants: ['モンヒロバトル', 'モンバト'], topic: 'basics/battle-modes' },
   { variants: ['マスモン'], topic: 'masu/masumon' },
   { variants: ['ベースモン'], topic: 'home/roster' },
@@ -144,7 +145,11 @@ const buildDigest = () => {
       if (!x || x.role !== '助手') continue;
       const texts = linesBy[x.id] || [];
       // その助手が実際に使う言い方を、多い順に全部並べる(いちばん多いものだけにすると、愛称を「知らない」ことになる)
-      const used = g.variants.map(v => [v, countIn(texts, v)]).filter(([, n]) => n > 0).sort((p, q) => q[1] - p[1]).map(([v]) => `「${v}」`);
+      // 「モンビー」は「モンビート」の中にも入っているので、長い言い方のぶんを引いて数える
+      const countOf = (v) => countIn(texts, v) - g.variants.filter(w => w !== v && w.startsWith(v)).reduce((n, w) => n + countIn(texts, w), 0);
+      const preferred = g.prefer && g.variants.includes(x[g.prefer]) ? x[g.prefer] : null;
+      const used = g.variants.map(v => [v, countOf(v)]).filter(([v, n]) => n > 0 || v === preferred)
+        .sort((p, q) => (q[0] === preferred) - (p[0] === preferred) || q[1] - p[1]).map(([v]) => `「${v}」${v === preferred ? '(いまの呼び方)' : ''}`);
       if (used.length) calls.push(`${x.name}は${used.join('とも')}`);
     }
     const head = g.variants.length > 1 ? `${g.variants[0]}(＝${g.variants.slice(1).join('・')}。どれも同じもの)` : g.variants[0];
