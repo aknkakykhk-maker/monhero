@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 29a789d86deaae5a
+// source-sha256: 32f5e74ae0aaca65
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-19 06:04";
+const BUILD_DATE = "2026-10-19 07:34";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -73325,7 +73325,8 @@ function RhythmMultiChatPanel({
     }, !mine && (m ? React.createElement(RhythmMultiAvatar, {
       m: m,
       resolveIconUrl: resolveIconUrl,
-      sizeClass: "h-8 w-8 shrink-0"
+      sizeClass: "h-8 w-8 shrink-0",
+      small: true
     }) : React.createElement("span", {
       "aria-hidden": "true",
       className: "flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-800 text-xs"
@@ -73700,7 +73701,8 @@ function RhythmMultiBuddyInfoSheet({
 function RhythmMultiAvatar({
   m,
   resolveIconUrl,
-  sizeClass = 'h-10 w-10'
+  sizeClass = 'h-10 w-10',
+  small = false
 }) {
   if (m.cpu) {
     const base = m.mb && typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[m.mb] : null;
@@ -73721,10 +73723,12 @@ function RhythmMultiAvatar({
     }, "🐾"));
   }
   const src = resolveIconUrl ? resolveIconUrl(m.icon) : null;
+  const frame = typeof profileFrameById === 'function' ? profileFrameById(normalizeProfileFrameId(m.frame)) : null;
+  const frameId = small && frame && frame.kind === 'image' ? null : m.frame;
   return React.createElement(ProfileAvatar, {
     src: src,
     id: m.icon,
-    frameId: m.frame,
+    frameId: frameId,
     alt: "",
     className: sizeClass,
     fallback: React.createElement("span", {
@@ -73786,7 +73790,8 @@ function RhythmMultiMemberCards({
     }, React.createElement(RhythmMultiAvatar, {
       m: m,
       resolveIconUrl: resolveIconUrl,
-      sizeClass: tall ? 'h-12 w-12 landscape:h-16 landscape:w-16' : 'h-7 w-7'
+      sizeClass: tall ? 'h-12 w-12 landscape:h-16 landscape:w-16' : 'h-7 w-7',
+      small: !tall
     }), m.id === hostId && React.createElement("span", {
       "aria-hidden": "true",
       className: "absolute -right-1.5 -top-1.5 text-[11px]"
