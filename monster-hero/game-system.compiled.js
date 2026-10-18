@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7cff63faaab7d719
+// source-sha256: 46910b64ce1ba2a8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-18 23:25";
+const BUILD_DATE = "2026-10-18 23:40";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -397,7 +397,7 @@ const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
     return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantChat === true;
   },
   get tacticsTypes() {
-    return false;
+    return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.tacticsHate === true;
   }
 });
 const eventReplayReleased = event => !event?.releaseFlag || EVENT_REPLAY_RELEASE_FLAGS[event.releaseFlag] === true;
@@ -11996,6 +11996,7 @@ const RELEASE_FLAGS = {
   assistantChat: true,
   assistantDailyLines: true,
   tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE,
+  tacticsHate: true,
   tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE,
   rhythmMode: RHYTHM_MODE_PUBLIC_RELEASE,
   rhythmMulti: RHYTHM_MULTI_PUBLIC_RELEASE,
@@ -12339,6 +12340,8 @@ const rhythmHellStorySeenKey = () => typeof rhythmHellReleased === 'function' &&
 const RHYTHM_HELL_STORY_TRIGGER = 'release';
 const ASSISTANT_CHAT_STORY_SEEN_KEY = 'mh_story_assistant_chat_seen_v1';
 const ASSISTANT_CHAT_STORY_ID = 'assistant_chat_story';
+const TACTICS_TYPES_STORY_SEEN_KEY = 'mh_story_tactics_types_seen_v1';
+const TACTICS_TYPES_STORY_ID = 'tactics_types';
 const normalizeAssistantId = value => typeof assistantIdOrDefault === 'function' ? assistantIdOrDefault(typeof value === 'string' ? value : null) : typeof DEFAULT_ASSISTANT_ID !== 'undefined' && DEFAULT_ASSISTANT_ID || 'mua';
 const ASSISTANT_BOND_KEY = 'mh_assistant_bond_v1';
 const assistantBondKeyFor = assistantId => {
@@ -79328,24 +79331,6 @@ const loadAssistantChatMemoFor = async assistantId => {
   return normalizeAssistantChatMemo(v2, v1)[assistantId] || null;
 };
 const DEBUG_TRIALS = [{
-  id: 'monster_type',
-  added: '2026-10-17',
-  area: 'モンスター',
-  key: 'mh_monster_type_proto_v1',
-  on: 'on',
-  title: '🏷️ モンスターのタイプ表記(試作)',
-  note: '図鑑・図鑑の詳細・パーティ選びに、アタッカー・タンク・サポーター・ヒーラー・シャドウの印を出します。タイプが効くのはタクティクスのヘイト(試作)の増え方だけで、能力・ステータスは変わりません',
-  when: '次に画面を開いたときから'
-}, {
-  id: 'tactics_hate',
-  added: '2026-10-17',
-  area: 'タクティクスバトル',
-  key: 'mh_tactics_hate_proto_v1',
-  on: 'on',
-  title: '⚔️ タクティクスのヘイト(試作)',
-  note: '攻撃・回復・挑発・ガード・かばうなどで目立った子ほど、敵に狙われやすくなります。味方の名前の横に🔥(1〜3段)で出ます。WAVE が変わると0、倒れると0。勇者は少しだけ下地があります。タクティクスバトルだけ',
-  when: '次のターンから'
-}, {
   id: 'rhythm_mon_layers',
   added: '2026-10-16',
   area: 'モンヒロビート',
@@ -79410,22 +79395,8 @@ const DEBUG_TRIALS = [{
   when: '次の演奏から'
 }];
 const DEBUG_TRIALS_SEEN_KEY = 'mh_debug_trials_seen_v1';
-const TACTICS_HATE_PROTO_KEY = 'mh_tactics_hate_proto_v1';
-const tacticsHateProtoOn = () => {
-  try {
-    return typeof localStorage !== 'undefined' && localStorage.getItem(TACTICS_HATE_PROTO_KEY) === 'on';
-  } catch (e) {
-    return false;
-  }
-};
-const MONSTER_TYPE_PROTO_KEY = 'mh_monster_type_proto_v1';
-const monsterTypeProtoOn = () => {
-  try {
-    return typeof localStorage !== 'undefined' && localStorage.getItem(MONSTER_TYPE_PROTO_KEY) === 'on';
-  } catch (e) {
-    return false;
-  }
-};
+const tacticsHateProtoOn = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.tacticsHate === true;
+const monsterTypeProtoOn = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.tacticsHate === true;
 const debugTrialRead = trial => {
   try {
     return typeof localStorage !== 'undefined' && localStorage.getItem(trial.key) === trial.on;
@@ -81052,6 +81023,8 @@ function MonsterHeroGame() {
   const [rhythmHellStorySeenFlag, setRhythmHellStorySeenFlag] = useState(false);
   const [assistantChatStorySeenFlag, setAssistantChatStorySeenFlag] = useState(false);
   const [assistantChatStorySeenLoaded, setAssistantChatStorySeenLoaded] = useState(false);
+  const [tacticsTypesStorySeenFlag, setTacticsTypesStorySeenFlag] = useState(false);
+  const [tacticsTypesStorySeenLoaded, setTacticsTypesStorySeenLoaded] = useState(false);
   const [rhythmHellStorySeenLoaded, setRhythmHellStorySeenLoaded] = useState(false);
   const [rhythmHellGuide, setRhythmHellGuide] = useState(null);
   const rhythmHellStoryAfterResultRef = useRef(false);
@@ -84120,6 +84093,13 @@ function MonsterHeroGame() {
     setRhythmEventStoryPending(ASSISTANT_CHAT_STORY_ID);
   }, [assistantChatStorySeenLoaded, assistantChatStorySeenFlag, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
   useEffect(() => {
+    if (!EVENT_REPLAY_RELEASE_FLAGS.tacticsTypes || !EVENT_REPLAY_RELEASE_FLAGS.tacticsBattle) return;
+    if (!tacticsTypesStorySeenLoaded || tacticsTypesStorySeenFlag || !tacticsIntroSeenFlag) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
+    if (rhythmEventStoryStartedRef.current.includes(TACTICS_TYPES_STORY_ID)) return;
+    setRhythmEventStoryPending(prev => prev || TACTICS_TYPES_STORY_ID);
+  }, [tacticsTypesStorySeenLoaded, tacticsTypesStorySeenFlag, tacticsIntroSeenFlag, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  useEffect(() => {
     if (!tacticsIntroPending) return;
     if (!(bootPhase === 'GAME' && gameState === 'HOME' && onboarded && !onboardingPreview && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && !rhythmEventStoryPending && !eventReplay)) return;
     setTacticsIntroPending(false);
@@ -85475,6 +85455,12 @@ function MonsterHeroGame() {
           setAssistantChatStorySeenLoaded(true);
         } catch {}
       }
+      if (EVENT_REPLAY_RELEASE_FLAGS.tacticsTypes) {
+        try {
+          setTacticsTypesStorySeenFlag((await storeGet(TACTICS_TYPES_STORY_SEEN_KEY, false, false)) === true);
+          setTacticsTypesStorySeenLoaded(true);
+        } catch {}
+      }
       if (EVENT_REPLAY_RELEASE_FLAGS.tacticsBattle) {
         const tacticsIntroSeen = await storeGet(TACTICS_INTRO_SEEN_KEY, false, false);
         setTacticsIntroSeenFlag(tacticsIntroSeen === true);
@@ -86804,12 +86790,19 @@ function MonsterHeroGame() {
       storeSet(ASSISTANT_CHAT_STORY_SEEN_KEY, true, false);
     } catch {}
   }, []);
+  const markTacticsTypesStorySeen = useCallback(() => {
+    setTacticsTypesStorySeenFlag(true);
+    try {
+      storeSet(TACTICS_TYPES_STORY_SEEN_KEY, true, false);
+    } catch {}
+  }, []);
   const EVENT_REPLAY_UNLOCK_FLAGS = {
     kikiIntroSeen: kikiIntroSeenFlag,
     momosukeIntroSeen: momosukeIntroSeenFlag,
     tacticsIntroSeen: tacticsIntroSeenFlag,
     rhythmHellStorySeen: rhythmHellStorySeenFlag,
     assistantChatStorySeen: assistantChatStorySeenFlag,
+    tacticsTypesSeen: tacticsTypesStorySeenFlag,
     monbeatCupEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(MONBEAT_CUP_STORY_ID),
     monbeatCupThanksSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(MONBEAT_CUP_THANKS_STORY_ID),
     symphonyThanksSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_THANKS_STORY_ID),
@@ -109344,6 +109337,7 @@ function MonsterHeroGame() {
         if (event && event.id === RAID_JACK_HOWTO_AFTER_STORY_ID && eventReplay.live && !eventReplay.debug && RELEASE_FLAGS.raidJack === true && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(RAID_JACK_STORY_START_ID)) setRhythmEventStoryPending(prev => prev || RAID_JACK_STORY_START_ID);
         if (event && event.id === RAID_JACK_STORY_START_ID && eventReplay.live && !eventReplay.debug && RELEASE_FLAGS.raidJack === true && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(RAID_JACK_HOWTO_STORY_ID)) setRhythmEventStoryPending(prev => prev || RAID_JACK_HOWTO_STORY_ID);
         if (event && event.id === ASSISTANT_CHAT_STORY_ID && eventReplay.live && !eventReplay.debug) markAssistantChatStorySeen();
+        if (event && event.id === TACTICS_TYPES_STORY_ID && eventReplay.live && !eventReplay.debug) markTacticsTypesStorySeen();
         if (event && event.id === RHYTHM_HELL_STORY_ID) {
           if (!eventReplay.debug) markRhythmHellStorySeen();
           setRhythmHellGuide({
@@ -109362,6 +109356,7 @@ function MonsterHeroGame() {
         if (eventReplay.live && !eventReplay.debug && event && RHYTHM_EVENT_STORY_IDS.includes(event.id)) void markRhythmEventStorySeen(event.id);
         if (eventReplay.live && !eventReplay.debug && event && event.id === 'tactics_intro') markTacticsIntroSeen();
         if (eventReplay.live && !eventReplay.debug && event && event.id === ASSISTANT_CHAT_STORY_ID) markAssistantChatStorySeen();
+        if (eventReplay.live && !eventReplay.debug && event && event.id === TACTICS_TYPES_STORY_ID) markTacticsTypesStorySeen();
         if (event && event.id === RHYTHM_HELL_STORY_ID) {
           if (eventReplay.live && !eventReplay.debug) markRhythmHellStorySeen();
           setRhythmHellGuide({

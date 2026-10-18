@@ -8,16 +8,6 @@
 // NEW の印は「まだ一度も入/切を押していない試作」に付く(押した試作は mh_debug_trials_seen_v1 に覚える)。
 // デバッグ専用(更新履歴・ヘルプに載せない)。判定・セーブデータの中身には触らない
 const DEBUG_TRIALS = [
-  // 2026-10-17 社長「とりあえず表記とヘイト変動率とかでいいんじゃないかな？」。タイプの表は 32-tactics-units.jsx の MONSTER_TYPES / MONSTER_TYPE_OF
-  { id: 'monster_type', added: '2026-10-17', area: 'モンスター', key: 'mh_monster_type_proto_v1', on: 'on',
-    title: '🏷️ モンスターのタイプ表記(試作)',
-    note: '図鑑・図鑑の詳細・パーティ選びに、アタッカー・タンク・サポーター・ヒーラー・シャドウの印を出します。タイプが効くのはタクティクスのヘイト(試作)の増え方だけで、能力・ステータスは変わりません',
-    when: '次に画面を開いたときから' },
-  // 2026-10-17 社長「試作する」(ヘイト)。数字は 32-tactics-units.jsx の TACTICS_HATE の1か所。切のときは今までと同じ狙い方
-  { id: 'tactics_hate', added: '2026-10-17', area: 'タクティクスバトル', key: 'mh_tactics_hate_proto_v1', on: 'on',
-    title: '⚔️ タクティクスのヘイト(試作)',
-    note: '攻撃・回復・挑発・ガード・かばうなどで目立った子ほど、敵に狙われやすくなります。味方の名前の横に🔥(1〜3段)で出ます。WAVE が変わると0、倒れると0。勇者は少しだけ下地があります。タクティクスバトルだけ',
-    when: '次のターンから' },
   // 2026-10-16 社長「モンスターノーツでかくつくの直ってない」。見た目は変わらない。入と切で同じ曲を1回ずつ遊ぶと、記録(stats.mon)で比べられる
   { id: 'rhythm_mon_layers', added: '2026-10-16', area: 'モンヒロビート', key: 'mh_rhythm_mon_layers_v1', on: 'on',
     title: '🎵 モンスターノーツのかくつきの手当て',
@@ -54,11 +44,10 @@ const DEBUG_TRIALS = [
   // 段階A(値 a3d)は 2026-10-17 に普通の設定「空中のノーツの見た目」へ移した(RHYTHM_SKY_NOTE_LOOK)ので、ここから外した
 ];
 const DEBUG_TRIALS_SEEN_KEY = 'mh_debug_trials_seen_v1';
-// 試作の本体が読む入/切(タクティクスのヘイト・モンスターのタイプ表記。表と式は 32-tactics-units.jsx)
-const TACTICS_HATE_PROTO_KEY = 'mh_tactics_hate_proto_v1';
-const tacticsHateProtoOn = () => { try { return typeof localStorage !== 'undefined' && localStorage.getItem(TACTICS_HATE_PROTO_KEY) === 'on'; } catch (e) { return false; } };
-const MONSTER_TYPE_PROTO_KEY = 'mh_monster_type_proto_v1';
-const monsterTypeProtoOn = () => { try { return typeof localStorage !== 'undefined' && localStorage.getItem(MONSTER_TYPE_PROTO_KEY) === 'on'; } catch (e) { return false; } };
+// タクティクスのヘイト・モンスターのタイプ表記(表と式は 32-tactics-units.jsx)。2026-10-18 に公開し、試作の一覧から外した。
+// いまは公開の印 RELEASE_FLAGS.tacticsHate だけで決まる(試作のときのキー mh_tactics_hate_proto_v1 / mh_monster_type_proto_v1 は読まない・消さない)
+const tacticsHateProtoOn = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.tacticsHate === true;
+const monsterTypeProtoOn = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.tacticsHate === true;
 const debugTrialRead = (trial) => { try { return typeof localStorage !== 'undefined' && localStorage.getItem(trial.key) === trial.on; } catch (e) { return false; } };
 const debugTrialWrite = (trial, on) => { try { if (on) localStorage.setItem(trial.key, trial.on); else localStorage.removeItem(trial.key); } catch (e) {} return debugTrialRead(trial); };
 const debugTrialsSeen = () => { try { const v = JSON.parse(localStorage.getItem(DEBUG_TRIALS_SEEN_KEY) || '[]'); return Array.isArray(v) ? v.filter((x) => typeof x === 'string') : []; } catch (e) { return []; } };

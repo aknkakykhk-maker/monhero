@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 90838f52fbd46ae8
+// generated-sha256: c7dc5916faa4f9a1
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-18 23:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-18 23:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -304,8 +304,8 @@ const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
   get rhythmHell() { return typeof rhythmHellOpen === 'function' ? rhythmHellOpen() : (typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.rhythmHell === true); },
   // 助手とおしゃべりのお話(assistant_chat_story・2026-10-14)。おしゃべりの公開と一緒に出る
   get assistantChat() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantChat === true; },
-  // 助手4人がタイプを教えるお話(tactics_types・2026-10-17 試作)。ヘイトとタイプの公開まで回想にも出さない(デバッグの全ストーリーからは見られる)
-  get tacticsTypes() { return false; },
+  // 助手4人がタイプを教えるお話(tactics_types・2026-10-17)。ヘイトとタイプの公開(RELEASE_FLAGS.tacticsHate・2026-10-18)と一緒に出る
+  get tacticsTypes() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.tacticsHate === true; },
 });
 const eventReplayReleased = (event) => !event?.releaseFlag || EVENT_REPLAY_RELEASE_FLAGS[event.releaseFlag] === true;
 // 画面に並べるイベント回想。3か所(プロフィール・回想一覧・再生)が同じ並びを見るための唯一の入口
@@ -8529,6 +8529,9 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   // ふだんの吹き出しを1日1回まとめて作る(2026-10-14)。2026-10-14 社長「もう公開していいよ」→真にした(56-assistant-chat.jsx)
   assistantDailyLines: true,
   tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE,
+  // タクティクスのヘイト(🔥)とモンスターのタイプ表記。2026-10-18 社長「ヘイトシステムは実装していいよ」で公開。
+  //   数字は 32-tactics-units.jsx の TACTICS_HATE / MONSTER_TYPES。お話「タクティクスバトル ～4人のタイプ～」(tactics_types)もこの印で出る
+  tacticsHate: true,
   // タクティクスのEXスキル。遊べる入口(β版を含む)があって、EXの公開フラグも立っているときだけ
   tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, rhythmMulti:RHYTHM_MULTI_PUBLIC_RELEASE, friends:FRIENDS_PUBLIC_RELEASE, raidJackRhythm: RAID_JACK_RHYTHM_PUBLIC_RELEASE, get raidJack() { try { return RAID_JACK_PUBLIC_RELEASE === true && Date.now() >= Date.parse(RAID_JACK_START_AT); } catch (e) { return false; } }, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE, rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE, rhythmWeeklyRanking:RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE, rhythmEventPoints:RHYTHM_EVENT_POINTS_PUBLIC_RELEASE };
 // releaseFlag = そのフラグが立つまで出さない。unreleasedFlag = そのフラグが立ったら出さない。
@@ -8835,6 +8838,10 @@ const RHYTHM_HELL_STORY_TRIGGER = 'release';
 // 公開(RELEASE_FLAGS.assistantChat)のあとの最初の HOME で1回だけ流す。デバッグから見たぶんは立てない
 const ASSISTANT_CHAT_STORY_SEEN_KEY = 'mh_story_assistant_chat_seen_v1';
 const ASSISTANT_CHAT_STORY_ID = 'assistant_chat_story';
+// 助手4人がタイプを教えるお話「タクティクスバトル ～4人のタイプ～」(2026-10-18・新しいキー。既存のキーには触らない・CLAUDE.md ⑦)。
+// ヘイトとタイプの公開(RELEASE_FLAGS.tacticsHate)のあと、タクティクスバトルの導入のお話を見た人にだけ、最初の HOME で1回流す。デバッグから見たぶんは立てない
+const TACTICS_TYPES_STORY_SEEN_KEY = 'mh_story_tactics_types_seen_v1';
+const TACTICS_TYPES_STORY_ID = 'tactics_types';
 const normalizeAssistantId = (value) => (typeof assistantIdOrDefault === 'function')
   ? assistantIdOrDefault(typeof value === 'string' ? value : null)
   : ((typeof DEFAULT_ASSISTANT_ID !== 'undefined' && DEFAULT_ASSISTANT_ID) || 'mua');
@@ -47992,16 +47999,6 @@ const loadAssistantChatMemoFor = async (assistantId) => {
 // NEW の印は「まだ一度も入/切を押していない試作」に付く(押した試作は mh_debug_trials_seen_v1 に覚える)。
 // デバッグ専用(更新履歴・ヘルプに載せない)。判定・セーブデータの中身には触らない
 const DEBUG_TRIALS = [
-  // 2026-10-17 社長「とりあえず表記とヘイト変動率とかでいいんじゃないかな？」。タイプの表は 32-tactics-units.jsx の MONSTER_TYPES / MONSTER_TYPE_OF
-  { id: 'monster_type', added: '2026-10-17', area: 'モンスター', key: 'mh_monster_type_proto_v1', on: 'on',
-    title: '🏷️ モンスターのタイプ表記(試作)',
-    note: '図鑑・図鑑の詳細・パーティ選びに、アタッカー・タンク・サポーター・ヒーラー・シャドウの印を出します。タイプが効くのはタクティクスのヘイト(試作)の増え方だけで、能力・ステータスは変わりません',
-    when: '次に画面を開いたときから' },
-  // 2026-10-17 社長「試作する」(ヘイト)。数字は 32-tactics-units.jsx の TACTICS_HATE の1か所。切のときは今までと同じ狙い方
-  { id: 'tactics_hate', added: '2026-10-17', area: 'タクティクスバトル', key: 'mh_tactics_hate_proto_v1', on: 'on',
-    title: '⚔️ タクティクスのヘイト(試作)',
-    note: '攻撃・回復・挑発・ガード・かばうなどで目立った子ほど、敵に狙われやすくなります。味方の名前の横に🔥(1〜3段)で出ます。WAVE が変わると0、倒れると0。勇者は少しだけ下地があります。タクティクスバトルだけ',
-    when: '次のターンから' },
   // 2026-10-16 社長「モンスターノーツでかくつくの直ってない」。見た目は変わらない。入と切で同じ曲を1回ずつ遊ぶと、記録(stats.mon)で比べられる
   { id: 'rhythm_mon_layers', added: '2026-10-16', area: 'モンヒロビート', key: 'mh_rhythm_mon_layers_v1', on: 'on',
     title: '🎵 モンスターノーツのかくつきの手当て',
@@ -48038,11 +48035,10 @@ const DEBUG_TRIALS = [
   // 段階A(値 a3d)は 2026-10-17 に普通の設定「空中のノーツの見た目」へ移した(RHYTHM_SKY_NOTE_LOOK)ので、ここから外した
 ];
 const DEBUG_TRIALS_SEEN_KEY = 'mh_debug_trials_seen_v1';
-// 試作の本体が読む入/切(タクティクスのヘイト・モンスターのタイプ表記。表と式は 32-tactics-units.jsx)
-const TACTICS_HATE_PROTO_KEY = 'mh_tactics_hate_proto_v1';
-const tacticsHateProtoOn = () => { try { return typeof localStorage !== 'undefined' && localStorage.getItem(TACTICS_HATE_PROTO_KEY) === 'on'; } catch (e) { return false; } };
-const MONSTER_TYPE_PROTO_KEY = 'mh_monster_type_proto_v1';
-const monsterTypeProtoOn = () => { try { return typeof localStorage !== 'undefined' && localStorage.getItem(MONSTER_TYPE_PROTO_KEY) === 'on'; } catch (e) { return false; } };
+// タクティクスのヘイト・モンスターのタイプ表記(表と式は 32-tactics-units.jsx)。2026-10-18 に公開し、試作の一覧から外した。
+// いまは公開の印 RELEASE_FLAGS.tacticsHate だけで決まる(試作のときのキー mh_tactics_hate_proto_v1 / mh_monster_type_proto_v1 は読まない・消さない)
+const tacticsHateProtoOn = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.tacticsHate === true;
+const monsterTypeProtoOn = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.tacticsHate === true;
 const debugTrialRead = (trial) => { try { return typeof localStorage !== 'undefined' && localStorage.getItem(trial.key) === trial.on; } catch (e) { return false; } };
 const debugTrialWrite = (trial, on) => { try { if (on) localStorage.setItem(trial.key, trial.on); else localStorage.removeItem(trial.key); } catch (e) {} return debugTrialRead(trial); };
 const debugTrialsSeen = () => { try { const v = JSON.parse(localStorage.getItem(DEBUG_TRIALS_SEEN_KEY) || '[]'); return Array.isArray(v) ? v.filter((x) => typeof x === 'string') : []; } catch (e) { return []; } };
@@ -49763,6 +49759,9 @@ function MonsterHeroGame() {
   // 助手とおしゃべりのお話を見たか(ASSISTANT_CHAT_STORY_SEEN_KEY)。読み終えるまで流さない
   const [assistantChatStorySeenFlag, setAssistantChatStorySeenFlag] = useState(false);
   const [assistantChatStorySeenLoaded, setAssistantChatStorySeenLoaded] = useState(false);
+  // 助手4人がタイプを教えるお話を見たか(TACTICS_TYPES_STORY_SEEN_KEY)。読み終えるまで流さない
+  const [tacticsTypesStorySeenFlag, setTacticsTypesStorySeenFlag] = useState(false);
+  const [tacticsTypesStorySeenLoaded, setTacticsTypesStorySeenLoaded] = useState(false);
   // 既読を読み終えたか(読む前に「まだ見ていない」と取り違えて流さないため)
   const [rhythmHellStorySeenLoaded, setRhythmHellStorySeenLoaded] = useState(false);
   const [rhythmHellGuide, setRhythmHellGuide] = useState(null);
@@ -52762,6 +52761,16 @@ function MonsterHeroGame() {
     if (rhythmEventStoryStartedRef.current.includes(ASSISTANT_CHAT_STORY_ID)) return;
     setRhythmEventStoryPending(ASSISTANT_CHAT_STORY_ID);
   }, [assistantChatStorySeenLoaded, assistantChatStorySeenFlag, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  // 助手4人がタイプを教えるお話を、ヘイトとタイプの公開のあとの最初の HOME で1回だけ流す(2026-10-18)。
+  // タクティクスバトルの導入のお話をまだ見ていない人には流さない(何の話か分からないので。回想からは見られる)
+  useEffect(() => {
+    if (!EVENT_REPLAY_RELEASE_FLAGS.tacticsTypes || !EVENT_REPLAY_RELEASE_FLAGS.tacticsBattle) return;
+    if (!tacticsTypesStorySeenLoaded || tacticsTypesStorySeenFlag || !tacticsIntroSeenFlag) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
+    if (rhythmEventStoryStartedRef.current.includes(TACTICS_TYPES_STORY_ID)) return;
+    // ★同じ瞬間にほかのお話(HELL・おしゃべり)も流れようとしたら、そちらを先にする(上書きしない)
+    setRhythmEventStoryPending(prev => prev || TACTICS_TYPES_STORY_ID);
+  }, [tacticsTypesStorySeenLoaded, tacticsTypesStorySeenFlag, tacticsIntroSeenFlag, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
   // タクティクスバトルの導入も同じ置き方で、HOMEで1度だけ流す。
   // ★ほかの会話が出ているあいだは待つ(重ねて出すと、どちらも読めない)
   useEffect(() => {
@@ -54263,6 +54272,10 @@ function MonsterHeroGame() {
       if (EVENT_REPLAY_RELEASE_FLAGS.assistantChat) {
         try { setAssistantChatStorySeenFlag((await storeGet(ASSISTANT_CHAT_STORY_SEEN_KEY, false, false)) === true); setAssistantChatStorySeenLoaded(true); } catch {}
       }
+      // 助手4人がタイプを教えるお話を見たか。ヘイトとタイプの公開(tacticsTypes)のあとだけ読む
+      if (EVENT_REPLAY_RELEASE_FLAGS.tacticsTypes) {
+        try { setTacticsTypesStorySeenFlag((await storeGet(TACTICS_TYPES_STORY_SEEN_KEY, false, false)) === true); setTacticsTypesStorySeenLoaded(true); } catch {}
+      }
       if (EVENT_REPLAY_RELEASE_FLAGS.tacticsBattle) {
         const tacticsIntroSeen = await storeGet(TACTICS_INTRO_SEEN_KEY, false, false);
         setTacticsIntroSeenFlag(tacticsIntroSeen === true);
@@ -55503,6 +55516,11 @@ function MonsterHeroGame() {
     setAssistantChatStorySeenFlag(true);
     try { storeSet(ASSISTANT_CHAT_STORY_SEEN_KEY, true, false); } catch {}
   }, []);
+  // 助手4人がタイプを教えるお話を「見た」にする。回想の画面からは保存へ直接書かず、この関数を通す
+  const markTacticsTypesStorySeen = useCallback(() => {
+    setTacticsTypesStorySeenFlag(true);
+    try { storeSet(TACTICS_TYPES_STORY_SEEN_KEY, true, false); } catch {}
+  }, []);
   // イベント回想の解放判定。EVENT_REPLAYS側はunlockedKeyという「呼び名」しか持たないので、
   // その名前→実際のstateの対応をここで持つ(データファイルはgame-system.jsxの状態を見られないため)。
   // 今後イベントを増やすときは、そのイベントの既読フラグをここへ1行足すだけでよい
@@ -55510,6 +55528,7 @@ function MonsterHeroGame() {
     tacticsIntroSeen: tacticsIntroSeenFlag,
     rhythmHellStorySeen: rhythmHellStorySeenFlag,
     assistantChatStorySeen: assistantChatStorySeenFlag,
+    tacticsTypesSeen: tacticsTypesStorySeenFlag,
     monbeatCupEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(MONBEAT_CUP_STORY_ID),
     monbeatCupThanksSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(MONBEAT_CUP_THANKS_STORY_ID),
     symphonyThanksSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_THANKS_STORY_ID),
@@ -69121,6 +69140,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 難易度 HELL のお話は、見終えたら続けて説明(RhythmHellGuide)を出す。一覧へ戻るのは説明を閉じたあと
           // 助手とおしゃべりのお話は、本編で流したときだけ「見た」にする(回想・デバッグでは立てない)
           if(event&&event.id===ASSISTANT_CHAT_STORY_ID&&eventReplay.live&&!eventReplay.debug) markAssistantChatStorySeen();
+          if(event&&event.id===TACTICS_TYPES_STORY_ID&&eventReplay.live&&!eventReplay.debug) markTacticsTypesStorySeen();
           if(event&&event.id===RHYTHM_HELL_STORY_ID){
             if(!eventReplay.debug) markRhythmHellStorySeen();
             setRhythmHellGuide({page:0,debugList:!!eventReplay.debugList,fromList:!!eventReplay.fromList});
@@ -69140,6 +69160,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           if(eventReplay.live&&!eventReplay.debug&&event&&RHYTHM_EVENT_STORY_IDS.includes(event.id)) void markRhythmEventStorySeen(event.id);
           if(eventReplay.live&&!eventReplay.debug&&event&&event.id==='tactics_intro') markTacticsIntroSeen();
           if(eventReplay.live&&!eventReplay.debug&&event&&event.id===ASSISTANT_CHAT_STORY_ID) markAssistantChatStorySeen();
+          if(eventReplay.live&&!eventReplay.debug&&event&&event.id===TACTICS_TYPES_STORY_ID) markTacticsTypesStorySeen();
           // HELL のお話は飛ばしても説明は出す(遊び方は飛ばさずに知ってほしい)。見たにするのは本編で流したときだけ
           if(event&&event.id===RHYTHM_HELL_STORY_ID){
             if(eventReplay.live&&!eventReplay.debug) markRhythmHellStorySeen();

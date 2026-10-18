@@ -180,7 +180,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-18 23:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-18 23:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -297,8 +297,8 @@ const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
   get rhythmHell() { return typeof rhythmHellOpen === 'function' ? rhythmHellOpen() : (typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.rhythmHell === true); },
   // 助手とおしゃべりのお話(assistant_chat_story・2026-10-14)。おしゃべりの公開と一緒に出る
   get assistantChat() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantChat === true; },
-  // 助手4人がタイプを教えるお話(tactics_types・2026-10-17 試作)。ヘイトとタイプの公開まで回想にも出さない(デバッグの全ストーリーからは見られる)
-  get tacticsTypes() { return false; },
+  // 助手4人がタイプを教えるお話(tactics_types・2026-10-17)。ヘイトとタイプの公開(RELEASE_FLAGS.tacticsHate・2026-10-18)と一緒に出る
+  get tacticsTypes() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.tacticsHate === true; },
 });
 const eventReplayReleased = (event) => !event?.releaseFlag || EVENT_REPLAY_RELEASE_FLAGS[event.releaseFlag] === true;
 // 画面に並べるイベント回想。3か所(プロフィール・回想一覧・再生)が同じ並びを見るための唯一の入口

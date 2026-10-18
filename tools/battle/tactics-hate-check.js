@@ -76,23 +76,24 @@ check('⑤ モノリスのかばう (60 + 行動のたび3) × 1.5', near(cover,
 
 // ⑥
 const trials = read('monster-hero/src/parts/81-debug-trials.jsx');
-// 入/切を読む関数は 81-debug-trials.jsx(保存に触るので純粋な部品には置かない)。その行だけを切り出して、空の localStorage で動かす
+// 2026-10-18 公開(社長「ヘイトシステムは実装していいよ」)。入/切は公開の印 RELEASE_FLAGS.tacticsHate だけで決まる
 const vm = require('vm');
-const protoSrc = trials.split('\n').filter((l) => /^const (TACTICS_HATE_PROTO_KEY|tacticsHateProtoOn|MONSTER_TYPE_PROTO_KEY|monsterTypeProtoOn) = /.test(l)).join('\n').replace(/^const /gm, 'var ');
-const P = { localStorage: { getItem: () => null } };
-vm.createContext(P); vm.runInContext(protoSrc, P);
-Object.assign(G, { TACTICS_HATE_PROTO_KEY: P.TACTICS_HATE_PROTO_KEY, tacticsHateProtoOn: P.tacticsHateProtoOn, MONSTER_TYPE_PROTO_KEY: P.MONSTER_TYPE_PROTO_KEY, monsterTypeProtoOn: P.monsterTypeProtoOn });
+const protoSrc = trials.split('\n').filter((l) => /^const (tacticsHateProtoOn|monsterTypeProtoOn) = /.test(l)).join('\n').replace(/^const /gm, 'var ');
+const runProto = (flags) => { const P = { RELEASE_FLAGS: flags, localStorage: { getItem: () => null } }; vm.createContext(P); vm.runInContext(protoSrc, P); return P; };
+const P = runProto({ tacticsHate: true }), Poff = runProto({ tacticsHate: false });
+Object.assign(G, { tacticsHateProtoOn: P.tacticsHateProtoOn, monsterTypeProtoOn: P.monsterTypeProtoOn });
+const release = read('monster-hero/src/parts/17-release-changelog-login-missions.jsx');
 check('⑥ 入/切を読む関数が試作の一覧の部品にある', typeof P.tacticsHateProtoOn === 'function' && typeof P.monsterTypeProtoOn === 'function');
-check('⑥ 確認待ちの試作の一覧にある', trials.includes(`key: '${G.TACTICS_HATE_PROTO_KEY}', on: 'on'`) && trials.includes('タクティクスのヘイト(試作)'));
-check('⑥ キーが無ければ切', G.tacticsHateProtoOn() === false);
+check('⑥ 公開の印が立っている', /^\s*tacticsHate: true,/m.test(release));
+check('⑥ 公開の印が真なら入・偽なら切(試作のキーは読まない)', P.tacticsHateProtoOn() === true && Poff.tacticsHateProtoOn() === false && !/localStorage/.test(protoSrc));
+check('⑥ 確認待ちの試作の一覧から外した', !trials.includes("key: 'mh_tactics_hate_proto_v1'") && !trials.includes("key: 'mh_monster_type_proto_v1'"));
 const app = read('monster-hero/src/parts/60-app.jsx');
 check('⑥ タクティクスバトルだけ(レイドバトルは見ない)', /const tacticsHateOnFor = \(mode\) => TACTICS_BATTLE_MODES\.includes\(mode\) && !isRaidJackMode\(mode\) && tacticsHateProtoOn\(\);/.test(app));
-check('⑥ 保存データの一覧に試作のキーがある', read('docs/spec/SAVE_DATA.md').includes(G.TACTICS_HATE_PROTO_KEY));
+check('⑥ 保存データの一覧に試作のキーが残っている(消さない)', read('docs/spec/SAVE_DATA.md').includes('mh_tactics_hate_proto_v1'));
 
 // ⑦
-check('⑦ タイプの表記が確認待ちの試作の一覧にある', trials.includes(`key: '${G.MONSTER_TYPE_PROTO_KEY}', on: 'on'`));
-check('⑦ キーが無ければ切', G.monsterTypeProtoOn() === false);
-check('⑦ 保存データの一覧にタイプのキーがある', read('docs/spec/SAVE_DATA.md').includes(G.MONSTER_TYPE_PROTO_KEY));
+check('⑦ タイプの表記も同じ印', P.monsterTypeProtoOn() === true && Poff.monsterTypeProtoOn() === false);
+check('⑦ 保存データの一覧にタイプのキーが残っている(消さない)', read('docs/spec/SAVE_DATA.md').includes('mh_monster_type_proto_v1'));
 const dex = read('monster-hero/src/parts/57-screen-monster-dex.jsx'), pickSrc = read('monster-hero/src/parts/67-screen-pick.jsx');
 check('⑦ 図鑑・図鑑の詳細・パーティ選びに印がある', (dex.match(/<MonsterTypeBadge /g) || []).length >= 2 && /<MonsterTypeBadge /.test(pickSrc));
 
