@@ -25,6 +25,7 @@ export const SYSTEM = [
   '- platforms: 端末の種類(ios / android)ごとの全体。miss_rate=MISS÷ノーツ数、no_input_rate=何も押していないのに MISS になった率(見落としかタッチの抜け)、late_rate=タッチが遅れて届いた率、slow_per_1000=34ms を超えたコマの数(1,000コマあたり)。_day が前日、_base が前の7日。',
   '- flagged: 前日に MISS 率が前の7日より目立って上がった「曲×難易度×端末の種類」。miss_by_5pct_* は、曲のはじめからノーツの順に5%ずつ20区間に分けた MISS の数(day は前日、base は前の7日の合計。logs_* はその回数)。',
   '- builds_day: 前日に遊ばれたゲームの版(公開した日時)。',
+  '- mashed_excluded_day: 1ノーツあたりのタッチが5回を超える連打のプレイを、集計から外した数(この数は本文に別に1行足すので、触れなくてよい)。',
   '書くこと:',
   '- いつもと違う所を3つまで、多い順に。曲・難易度・端末の種類・曲のどのあたり(◯〜◯%)かを書く。',
   '- 考えられる原因を短く(新しい版のあとか・特定の端末だけか・何も押していない MISS が多いか・特定の区間に集まっているか)。',
@@ -47,6 +48,12 @@ export const platformJump = (facts) => (Array.isArray(facts?.platforms) ? facts.
   return num(p?.plays_day) >= PLATFORM_MIN_PLAYS && Number.isFinite(day) && Number.isFinite(base)
     && day >= base * PLATFORM_RATIO && day - base >= PLATFORM_DIFF;
 });
+// 連打の多いプレイを集計から外した数(2026-10-19 社長の決定・rhythm_anomaly_facts の mashed_excluded_day)。外した日だけ本文に1行足す
+export const mashedLine = (facts) => {
+  const n = num(facts?.mashed_excluded_day);
+  return Number.isFinite(n) && n > 0 ? `連打の多いプレイ${Math.round(n)}件を除いた。` : '';
+};
+const withMashed = (summary, facts) => { const line = mashedLine(facts); return line ? `${summary}\n${line}` : summary; };
 const hasForbiddenKey = (value) => {
   if (Array.isArray(value)) return value.some(hasForbiddenKey);
   if (value && typeof value === 'object') return Object.keys(value).some((k) => FORBIDDEN_KEYS.includes(k) || hasForbiddenKey(value[k]));
@@ -81,7 +88,7 @@ export const runReport = async ({ token, day, tokenOk, loadFacts, save, client, 
     return reply(500, { ok: false, error: 'forbidden_key', day: target });
   }
   if (flagged === 0 && !platformJump(facts)) {
-    await save({ ...base, status: 'quiet', summary: QUIET_SUMMARY, facts });
+    await save({ ...base, status: 'quiet', summary: withMashed(QUIET_SUMMARY, facts), facts });
     log({ event: 'saved', day: target, status: 'quiet', flagged });
     return reply(200, { ok: true, day: target, status: 'quiet', flagged });
   }
@@ -115,8 +122,9 @@ export const runReport = async ({ token, day, tokenOk, loadFacts, save, client, 
     log({ event: 'error', day: target, reason: 'empty', stop: response?.stop_reason ?? null });
     return reply(502, { ok: false, error: 'empty', day: target });
   }
-  await save({ ...base, status: 'ok', flagged_count: flagged, summary: text, facts, model: MODEL, ...usage });
+  const summary = withMashed(text, facts);
+  await save({ ...base, status: 'ok', flagged_count: flagged, summary, facts, model: MODEL, ...usage });
   // 報告の本文にも個人の情報は無い(集計の数字だけから書いている)ので、確かめやすいようにログへも出す
-  log({ event: 'saved', day: target, status: 'ok', flagged, ...usage, summary: text });
+  log({ event: 'saved', day: target, status: 'ok', flagged, ...usage, summary });
   return reply(200, { ok: true, day: target, status: 'ok', flagged });
 };
