@@ -74,6 +74,8 @@ const BGM_TRACKS = [
   { id:'melo_against_my_own_shadow', name:'Against My Own Shadow', creator:'オリジナル', src:'audio/bgm-against-my-own-shadow.mp3', gain:1, loop:true },
   { id:'melo_rose', name:'ROSE', creator:'HANA', src:'audio/bgm-rose.mp3', gain:1, loop:true },
   { id:'melo_rose_short', name:'ROSE short ver.', creator:'HANA', src:'audio/bgm-rose-short.mp3', gain:1, loop:true },
+  { id:'melo_sad_song', name:'SAD SONG', creator:'オリジナル', src:'audio/bgm-sad-song.mp3', gain:1, loop:true },
+  { id:'melo_sad_song_short', name:'SAD SONG short ver.', creator:'オリジナル', src:'audio/bgm-sad-song-short.mp3', gain:1, loop:true },
   { id:'melo_dullahan_clockwork_alt', name:'呪われた騎士の時計仕掛け -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-clockwork-alt.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost', name:'鋼鉄の亡霊', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost_alt', name:'鋼鉄の亡霊 -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost-alt.mp3', gain:1, loop:true },

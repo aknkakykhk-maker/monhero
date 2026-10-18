@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "79eac06b131a",
-  "packs": {"beat":{"bytes":90834905,"count":80},"battle":{"bytes":106153357,"count":473},"all":{"bytes":196988262,"count":553}},
+  "id": "84f81dd226e8",
+  "packs": {"beat":{"bytes":94500661,"count":83},"battle":{"bytes":106153357,"count":473},"all":{"bytes":200654018,"count":556}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"ddce743e94fa","size":1416528,"pack":"beat"},
@@ -59,6 +59,8 @@
     "audio/bgm-rising-hope.mp3": {"v":"5b56b8f9d099","size":1083024,"pack":"beat"},
     "audio/bgm-rose-short.mp3": {"v":"57888379506b","size":1385424,"pack":"beat"},
     "audio/bgm-rose.mp3": {"v":"acc0ceccc810","size":1982448,"pack":"beat"},
+    "audio/bgm-sad-song-short.mp3": {"v":"2ff39f50eddd","size":989280,"pack":"beat"},
+    "audio/bgm-sad-song.mp3": {"v":"47d16979bb90","size":2622672,"pack":"beat"},
     "audio/bgm-senjou-no-shippuu.mp3": {"v":"dfcd5d833fec","size":2323165,"pack":"beat"},
     "audio/bgm-sheriruth-proto.mp3": {"v":"a6f3c4e66746","size":409581,"pack":"beat"},
     "audio/bgm-sheriruth.mp3": {"v":"ab30c8b641fb","size":1620000,"pack":"beat"},
@@ -510,6 +512,7 @@
     "images/song-art/only-my-railgun.jpg": {"v":"a79e2735865b","size":82919,"pack":"beat"},
     "images/song-art/rising-hope.jpg": {"v":"4c1e106d0e39","size":56296,"pack":"beat"},
     "images/song-art/rose.jpg": {"v":"c877115de5a6","size":79633,"pack":"beat"},
+    "images/song-art/sad-song.jpg": {"v":"cc2bf8ddee1c","size":53804,"pack":"beat"},
     "images/song-art/senjou-no-shippuu.jpg": {"v":"50e3ed20ee08","size":73672,"pack":"beat"},
     "images/song-art/sheriruth.jpg": {"v":"4302be7eca16","size":73641,"pack":"beat"},
     "images/song-art/six-eternel-ai-wa-hitotsu-janai.jpg": {"v":"e71044bbd526","size":51765,"pack":"beat"},

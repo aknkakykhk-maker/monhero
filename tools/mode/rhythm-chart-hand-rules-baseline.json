@@ -1566,6 +1566,76 @@
    "skyAfterGround": 0,
    "besideHeldBand": 0,
    "fastSameSide": 0
+  },
+  "sad_song/EASY": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "sad_song/NORMAL": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "sad_song/HARD": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 10,
+   "heldHandSwitch": 0
+  },
+  "sad_song/EXPERT": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 47,
+   "heldHandSwitch": 0
+  },
+  "sad_song/MASTER": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 93,
+   "heldHandSwitch": 0
+  },
+  "sad_song_short/EASY": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "sad_song_short/NORMAL": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "sad_song_short/HARD": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 14,
+   "heldHandSwitch": 0
+  },
+  "sad_song_short/EXPERT": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 41,
+   "heldHandSwitch": 0
+  },
+  "sad_song_short/MASTER": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 52,
+   "heldHandSwitch": 0
   }
  },
  "history": [
@@ -1577,6 +1647,11 @@
   {
    "at": "2026-10-18T13:55",
    "reason": "新曲 ROSE(全編・short ver.)を公開",
+   "changed": 10
+  },
+  {
+   "at": "2026-10-18T15:00",
+   "reason": "新曲 SAD SONG(全編・short ver.)の行だけを足す",
    "changed": 10
   }
  ]

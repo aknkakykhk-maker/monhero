@@ -215,6 +215,8 @@ const RELEASED_MARKERS=Object.freeze({
   grievous_lady:'grievous-lady-v3',
   rose:'rose-v3',
   rose_short:'rose-short-v3',
+  sad_song:'sad-song-v3',
+  sad_song_short:'sad-song-short-v3',
 });
 
 // 曲id → 音源の一覧(tools/mode/authoring/rhythm-song-registry.json)のid。
@@ -263,6 +265,8 @@ const RELEASED_TRACKS=Object.freeze({
   against_my_own_shadow:'against_my_own_shadow',
   rose:'rose',
   rose_short:'rose_short',
+  sad_song:'sad_song',
+  sad_song_short:'sad_song_short',
 });
 
 module.exports={SLIDE_EASE_CODES,FLICK_DIR_CODES,heldSpan,HOLD_SHIFT_SUB,ROOT,RUNTIME,FINGER_GAP_SUB,loadRuntime,makeSpanAt,usableSpan,maxSeparation,
