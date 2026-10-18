@@ -45,7 +45,7 @@ check('⑤ 案Dはドラが前に立つ行から戦場の疾風', switchAt > 0 &
 check('③ bgm を書いているのは案Dだけ(ほかの会話イベントは今までどおり)', written.length === 1);
 check('⑤ 案Dの会話イベントの曲はイベントBGM 1', /tactics_types:'tacticsTypesEvent'/.test(bgm) && /tacticsTypesEvent:'original_event_01'/.test(bgm));
 const core = read('monster-hero/src/parts/10-core.jsx');
-check('⑤ 案Dの公開の印は偽(回想に出ない)', /get tacticsTypes\(\) \{ return false; \}/.test(core) && /releaseFlag: 'tacticsTypes'/.test(assistants));
+check('⑤ 案Dはヘイトの公開の印と一緒に出る', /get tacticsTypes\(\) \{ return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS\.tacticsHate === true; \}/.test(core) && /releaseFlag: 'tacticsTypes'/.test(assistants));
 
 // ④
 const audio = read('monster-hero/src/parts/14-audio.jsx');

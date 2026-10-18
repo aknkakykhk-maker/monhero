@@ -274,6 +274,27 @@ const assistantUpdateNoticeFromChangelog = entry => {
 // ★呼び方の決めごと: みゅあ・ももすけは「モンビー」、ききは「モンヒロビート」
 //   (2026-09-11・ユーザー指示)。
 const ASSISTANT_UPDATE_NOTICE_SCRIPTS = {
+  // タクティクスのヘイト(🔥)とモンスターのタイプ(2026-10-18 公開)。ヘイトの数字・敵の数字は出さない(炎の段だけで伝える)
+  update_notice_tactics_hate_v1: {
+    mua: [
+      { e:'surprise', t:'{name}、聞いて聞いて！ タクティクスバトルの敵が、目立つ子を狙うようになったんだって！' },
+      { e:'normal',   t:'いっぱい攻撃したり、回復したり、挑発したりすると、名前の横に🔥が付くの。🔥が多い子ほど狙われやすいよ〜' },
+      { e:'wink',     t:'だからね、モノリスみたいな硬い子が前に出てかばうと、攻撃を引き受けてくれるんだ♪ 守りたい子の🔥を見ながら戦ってみて！' },
+      { e:'happy',    t:'あと、モンスターに「タイプ」ができたよ！ アタッカー・タンク・サポーター・ヒーラー・シャドウの5つ。図鑑で見てみてね〜' },
+    ],
+    kiki: [
+      { e:'normal',   t:'{name}、タクティクスバトルの敵が、目立った子を狙うようになりまつ。' },
+      { e:'normal',   t:'攻撃・回復・挑発・ガード・かばうを使うと、その子の名前の横に🔥が付きまつ。🔥は3段まであって、多いほど狙われやすいでつ。' },
+      { e:'wink',     t:'タンクの子が🔥を集めると、ほかの子が狙われにくくなりまつ。WAVEが変わると🔥は消えまつ。' },
+      { e:'happy',    t:'モンスターには5つのタイプが付きまちた。図鑑・パーティ選びで確かめられまつ。タイプで変わるのは🔥の付きやすさだけでつ。' },
+    ],
+    momosuke: [
+      { e:'excited',  t:'{name}〜！ タクティクスバトルの敵がね、目立ってる子をねらうようになったんだって♡' },
+      { e:'normal',   t:'がんばって攻撃したり回復したりすると、名前の横に🔥が付くの。🔥がいっぱいの子は気をつけてね！' },
+      { e:'happy',    t:'モノリスがみんなをかばうと🔥🔥🔥になって、敵の目がそっちに向くんだよ♡ たのもしい〜！' },
+      { e:'wink',     t:'それから、モンスターにタイプが付いたよ。もものおすすめはヒーラー！ 図鑑で見てみてね♪' },
+    ],
+  },
   // ハロウィン・ナイト(2026-10-04〜11-01)。期間・5倍・新曲・お話(第1部)・衣装の4つを伝える。
   // ★呼び方の決めごと: みゅあ・ももすけは「モンビー」、きき・ドラは「モンヒロビート」。ドラは「〜だよ」「〜だ」で話す
   update_notice_halloween_night_v1: {
@@ -7038,8 +7059,8 @@ const EVENT_REPLAYS = [
   // (releaseFlag。モードが見えていないのに会話だけあると、何の話か分からない)。
   // いまは alwaysUnlocked で「公開したら回想からいつでも見られる」形。
   // 本編で1度だけ流す導線は、β版を出すときに告知とセットで足す
-  // 助手4人がタイプを教える(2026-10-17 試作)。releaseFlag の tacticsTypes が偽のあいだは回想にも出さない
-  { id: 'tactics_types', date: '2026-10-17 20:00', title: 'タクティクスバトル ～4人のタイプ～', script: ASSISTANT_TACTICS_TYPES, unlockedKey: 'tacticsTypesSeen', releaseFlag: 'tacticsTypes', alwaysUnlocked: true, group: 'update' },
+  // 助手4人がタイプを教える(2026-10-17 作成・2026-10-18 公開)。releaseFlag の tacticsTypes はヘイトとタイプの公開の印(RELEASE_FLAGS.tacticsHate)と一緒
+  { id: 'tactics_types', date: '2026-10-18 23:14', title: 'タクティクスバトル ～4人のタイプ～', script: ASSISTANT_TACTICS_TYPES, unlockedKey: 'tacticsTypesSeen', releaseFlag: 'tacticsTypes', alwaysUnlocked: true, group: 'update' },
   { id: 'tactics_intro', date: '2026-09-21 20:15', title: 'タクティクスバトル ～誰を連れていくか～', script: ASSISTANT_TACTICS_INTRO, unlockedKey: 'tacticsIntroSeen', releaseFlag: 'tacticsBattle', alwaysUnlocked: true, group: 'update' },
   { id: 'kiki_intro', date: '2026-08-16 18:41', title: 'きき加入 ～ふたりの助手～', script: ASSISTANT_KIKI_INTRO, calls: ASSISTANT_KIKI_INTRO_CALLS, unlockedKey: 'kikiIntroSeen', group: 'assistant' },
   // ももすけ登場は、本編を待たずに回想からも見られる(2026-09-05・ユーザー指示)。
