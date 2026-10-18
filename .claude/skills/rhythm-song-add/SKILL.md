@@ -287,6 +287,10 @@ node tools/mode/rhythm-chart-level.js --write
 4. `variant` を 0〜3 で比べ、**モンスター4個・水平クロス0・帯の中0**を満たすうち、横持ちの「交差」「届きにくい」が少ないものを選ぶ
    (ROSE は激しさ中間で、全編 1・short 3)。**歯ごたえ(`chartIntensity`・`challengeFactor`)を変えたら比べ直す**(同じ variant でもモンスターが4個から2個に減った)。`node tools/mode/rhythm-hell-mix.js --song <曲> --write` で書く(Lv. も書く)
 
+5. **HELL をもっと重くしてほしいと言われたら**(2026-10-18・Toward the Stars): 曲の一覧に `hellDensity`(例 1.3)を書いて拾う音を増やし、
+   `SONGS` の `phrases`(例 `['L','both','R','both']`)で両手とも地上の小節を減らす。どちらも書いた曲の HELL にだけ効く。本文は `docs/rules/CHART_ENGINE.md`「HELL を重くする」。
+   MASTER だけ重くするのは `chartIntensityByDifficulty`(例 `{"MASTER":"extreme","HELL":"extreme"}`)。EASY〜EXPERT は変わらない
+
 ---
 
 ## 7. ★ここで止まって難易度を聞く

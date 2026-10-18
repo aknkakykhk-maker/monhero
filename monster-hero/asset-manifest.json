@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "79eac06b131a",
-  "packs": {"beat":{"bytes":90834905,"count":80},"battle":{"bytes":106153357,"count":473},"all":{"bytes":196988262,"count":553}},
+  "id": "c97c8ce10a29",
+  "packs": {"beat":{"bytes":92541813,"count":82},"battle":{"bytes":106153357,"count":473},"all":{"bytes":198695170,"count":555}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"ddce743e94fa","size":1416528,"pack":"beat"},
@@ -71,6 +71,7 @@
     "audio/bgm-title-theme.mp3": {"v":"8af0684e79e7","size":270378,"pack":"battle"},
     "audio/bgm-title.mp3": {"v":"b7bdc68bb0c0","size":500759,"pack":"battle"},
     "audio/bgm-toriko.mp3": {"v":"3870d26f6322","size":953036,"pack":"beat"},
+    "audio/bgm-toward-the-stars-short.mp3": {"v":"25c386c48439","size":1641600,"pack":"beat"},
     "audio/bgm-wrath-of-the-thorn-king.mp3": {"v":"d1ea326a4ee2","size":1157328,"pack":"beat"},
     "audio/jingle-victory.mp3": {"v":"689c9715a824","size":78273,"pack":"battle"},
     "audio/se-awakened-moo-apocalypse.mp3": {"v":"3ed18e30e8e7","size":82124,"pack":"battle"},
@@ -517,6 +518,7 @@
     "images/song-art/stay-with-me.jpg": {"v":"0a8784f80cf1","size":80845,"pack":"beat"},
     "images/song-art/the-city-beneath-the-comets.jpg": {"v":"8fd08d30ea81","size":59752,"pack":"beat"},
     "images/song-art/toriko.jpg": {"v":"6958512f6e28","size":39282,"pack":"beat"},
+    "images/song-art/toward-the-stars.jpg": {"v":"b586e7a271b9","size":65308,"pack":"beat"},
     "images/song-art/wrath-of-the-thorn-king.jpg": {"v":"e65c5105b221","size":65936,"pack":"beat"},
     "images/ui/battle-cards/atk-1.webp": {"v":"665df968b172","size":8700,"pack":"battle"},
     "images/ui/battle-cards/atk-2.webp": {"v":"96d0c562a41e","size":9126,"pack":"battle"},

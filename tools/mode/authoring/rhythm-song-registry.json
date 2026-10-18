@@ -854,7 +854,12 @@
     "beatsPerBar": 4,
     "subdivisionsPerBeat": 4,
     "source": "detected"
-   }
+   },
+   "chartIntensityByDifficulty": {
+    "MASTER": "extreme",
+    "HELL": "extreme"
+   },
+   "hellDensity": 1.3
   }
  }
 }

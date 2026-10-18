@@ -1566,6 +1566,36 @@
    "skyAfterGround": 0,
    "besideHeldBand": 0,
    "fastSameSide": 0
+  },
+  "toward_the_stars_short/EASY": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0
+  },
+  "toward_the_stars_short/NORMAL": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0
+  },
+  "toward_the_stars_short/HARD": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0
+  },
+  "toward_the_stars_short/EXPERT": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0
+  },
+  "toward_the_stars_short/MASTER": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0
   }
  },
  "history": [
@@ -1578,6 +1608,11 @@
    "at": "2026-10-18T13:55",
    "reason": "新曲 ROSE(全編・short ver.)を公開",
    "changed": 10
+  },
+  {
+   "at": "2026-10-19T01:20",
+   "reason": "新曲 Toward the Stars, Paradise or Truth short ver. を公開",
+   "changed": 5
   }
  ]
 }

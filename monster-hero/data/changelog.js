@@ -35,6 +35,18 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    // 2026-10-19 社長の依頼(窓口経由・mp3。ジャケットは mp3 に入っていた絵)。歯ごたえは社長「マスター以上をもっとむずく」で MASTER・HELL だけ重く
+    date: "2026-10-19 01:10", type:'update', title:'モンヒロビート：新曲「Toward the Stars, Paradise or Truth」を追加しました', status:'new',
+    image: 'images/song-art/toward-the-stars.jpg?v=b586e7a271b9',
+    items:[
+      'モンヒロビートに、hitoyakyuko の「Toward the Stars, Paradise or Truth」short ver.（2分15秒）を追加しました。曲えらびからすぐ遊べます。',
+      'EASY から MASTER までに加えて、空中のノーツが出る HELL があります。HELL は MASTER をクリアすると開きます。MASTER と HELL は手ごわい譜面になっています。',
+      'レベルは EASY Lv.7 ／ NORMAL Lv.8 ／ HARD Lv.13 ／ EXPERT Lv.17 ／ MASTER Lv.37 ／ HELL Lv.46 です。',
+      'ノーツ数は 174 ／ 205 ／ 278 ／ 332 ／ 481 ／ 563 です。',
+    ],
+    assistantNotice: { id:'update_notice_toward_the_stars_v1', type:'content' },
+  },
+  {
     // 2026-10-18 社長報告「モンスターノーツ取るとやっぱり固まるときがある。特にsheriの4つめ」。原因は直後に画面へ入る長い空中スライドの帯(案Aで手当て)
     date: "2026-10-18 23:24", type:'fix', title:'モンヒロビート：長い空中スライドが画面に入るときの引っかかりを減らしました', status:'new',
     items:[
