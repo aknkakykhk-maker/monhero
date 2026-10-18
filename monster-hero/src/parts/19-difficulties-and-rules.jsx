@@ -23,6 +23,18 @@ const HELP_GUIDE = ((typeof HELP_CATEGORIES !== 'undefined' && Array.isArray(HEL
 const HELP_GUIDE_INTRO = (typeof HELP_INTRO !== 'undefined' && HELP_INTRO) || '';
 const helpCategoryById = (id) => HELP_GUIDE.find(c => c.id === id) || null;
 const helpTopicById = (categoryId, topicId) => ((helpCategoryById(categoryId) || {}).topics || []).find(t => t.id === topicId) || null;
+// ヘルプの🆕(2026-10-18 社長「新しくヘルプに載ったやつは🆕のマークみたいなのつけといて」)。
+// トピックの added(載せた日・JST)から HELP_NEW_DAYS 日のあいだ、まだ開いていなければ一覧に🆕を付ける。
+// 開いたトピックは新しいキー mh_help_new_seen_v1(トピックidの配列)に覚える(保存の読み書きは 20-market-notices-help.jsx)。既存のキーには触らない(CLAUDE.md ⑦)
+const HELP_NEW_DAYS = 14;
+const helpTopicAddedMs = (topic) => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(typeof topic?.added === 'string' ? topic.added : '');
+  return m ? Date.UTC(+m[1], +m[2] - 1, +m[3], -9, 0) : null;
+};
+const helpTopicIsNew = (topic, seen, now = Date.now()) => {
+  const at = helpTopicAddedMs(topic);
+  return at != null && now >= at && now < at + HELP_NEW_DAYS * 86400000 && !(Array.isArray(seen) && seen.includes(topic.id));
+};
 const DIFFICULTY_SETTINGS = {
   Beginner:    { label: "Beginner",     power: 0.25, score: 0.25, gold: 0.25, bg: '#0891b2', text: '#67e8f9', color: "bg-cyan-600", shadow: "shadow-cyan-600/50" },
   Easy:        { label: "Easy",         power: 0.5,  score: 0.5,  gold: 0.5,  bg: '#059669', text: '#6ee7b7', color: "bg-emerald-600", shadow: "shadow-emerald-600/50" },
