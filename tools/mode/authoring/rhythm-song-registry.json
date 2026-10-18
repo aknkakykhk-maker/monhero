@@ -817,6 +817,7 @@
   },
   "rose": {
    "audio": "monster-hero/audio/bgm-rose.mp3",
+   "chartIntensity": "strong",
    "chartRevision": 31,
    "audioSha256": "acc0ceccc810854e8c4517778aad6b31a52758fe9b13c9204f74a89ccf27d434",
    "durationMs": 165204,
@@ -830,6 +831,7 @@
   },
   "rose_short": {
    "audio": "monster-hero/audio/bgm-rose-short.mp3",
+   "chartIntensity": "strong",
    "chartRevision": 31,
    "audioSha256": "57888379506b2a6ba9efe9c0eb120465aab702a13dfbcad2acfe12f85d67fb28",
    "durationMs": 115452,

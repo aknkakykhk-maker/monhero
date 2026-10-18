@@ -165,6 +165,8 @@ const Audio_ = (() => {
     "audio/bgm-profile.mp3": "523789845ff1",
     "audio/bgm-result.mp3": "c4dc9d2fb8a5",
     "audio/bgm-rising-hope.mp3": "5b56b8f9d099",
+    "audio/bgm-rose-short.mp3": "57888379506b",
+    "audio/bgm-rose.mp3": "acc0ceccc810",
     "audio/bgm-senjou-no-shippuu.mp3": "dfcd5d833fec",
     "audio/bgm-sheriruth-proto.mp3": "a6f3c4e66746",
     "audio/bgm-sheriruth.mp3": "ab30c8b641fb",

@@ -40,7 +40,7 @@ const SONGS={sheriruth:{marker:'sheriruth-v3',zero:711.6-2594.75,beat:324.342,le
   // ROSE(HANA・2026-10-18 社長「新曲。ショートとフルで両方作って。ヘルもありで」)。拍は解析ファイル(authoring/rose-v3-audio.json・rose-short-v3-audio.json の timing)。
   // 曲の解析から作る(source:'audio')。引き出し(R1〜R5)は曲の区切りを見て道具が使う/使わないを決める(出力に理由が出る)
   rose:{marker:'rose-v3',zero:2116,beat:480,levelRe:/const roseHellChart=mhChart\((\d+),/,source:'audio',variant:1,crosses:'auto',crossUpper:'mover',crossDepth:-1},
-  rose_short:{marker:'rose-short-v3',zero:2116,beat:480,levelRe:/const roseShortHellChart=mhChart\((\d+),/,source:'audio',variant:1,crosses:'auto',crossUpper:'mover',crossDepth:-1}};
+  rose_short:{marker:'rose-short-v3',zero:2116,beat:480,levelRe:/const roseShortHellChart=mhChart\((\d+),/,source:'audio',variant:3,crosses:'auto',crossUpper:'mover',crossDepth:-1}};
 // drawers:false … 引き出し(2026-10-16)より前に作った HELL。作り直すときも今の形のまま(使うかは社長が決める)。新しい曲は書かない(=使う)
 const BEAT_GAP=1.5;                      // 同じ親指が段を変えるまでの拍
 // 同じ側(レーンの左右)で高さ(地上⇔空中)を変えるまでの間(2026-10-12 社長「HELL の操作性をもっと改良して」・テンポくんの数え方)。
