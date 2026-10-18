@@ -9,6 +9,7 @@
 //   ③ ダイヤショップ「アイテム」: トレーニングチケットを11枚まとめ買い(2回押しても1回ぶん)
 //   ④ ビートP交換所「強化素材」: 勇者の証片を MAX でまとめ交換(2回押しても1回ぶん)
 //   ⑤ 窓が iPhone の幅(375・390)からはみ出さない。画面に横スクロールが出ない
+//   ⑥ 数を直接打ち込める(2026-10-19)。数字のキーボード・16px以上・上限超え/小数/空/0 のそろえ方・合計が追いつく
 // 計算の細かいところ(1個ずつN回と同じ結果か)は market-bulk-purchase-check.js
 const http = require('http'), path = require('path'), fs = require('fs');
 const ROOT = path.resolve(__dirname, '..', '..'), PORT = 8957;
@@ -119,6 +120,35 @@ const serve = () => new Promise(r => { const s = http.createServer((req, res) =>
     it = await items();
     ok('2回押しても1回ぶん: 証片5→11・ビートP3,000→0', it.hero_proof_shard === 11 && (await store('mh_rhythm_event_points_v1')) === 0, `${it.hero_proof_shard} / ${await store('mh_rhythm_event_points_v1')}`);
 
+    // ⑥ 数を直接打ち込む(2026-10-19 社長「マーケットのアイテムは直接数値入力で買えるようにしよう！」)
+    //    ダイヤは48,900、トレーニングチケットは1枚100ダイヤなので、買えるのは489枚まで
+    await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find(b => /戻る/.test(b.getAttribute('aria-label') || '')); b && b.click(); }); await page.waitForTimeout(400);
+    await section('diamond'); await tab('アイテム');
+    ok('数を打ち込む: トレーニングチケットの窓が開く', await openBuy('トレーニングチケットを')); await page.waitForTimeout(300);
+    const input = page.locator('[role="dialog"] [data-quantity-input]');
+    const inputInfo = await input.evaluate(el => ({ mode: el.getAttribute('inputmode'), size: parseFloat(getComputedStyle(el).fontSize) }));
+    ok('数の欄は数字のキーボードが出る形(inputmode=numeric)で、字は16px以上(iPhone で拡大されない)', inputInfo.mode === 'numeric' && inputInfo.size >= 16, JSON.stringify(inputInfo));
+    const typeAndRead = async (text) => { await input.fill(text); await page.waitForTimeout(150); return { value: await input.inputValue(), sheet: await sheetText() }; };
+    let r = await typeAndRead('25');
+    ok('「25」と打つと、打っている途中で合計が2,500ダイヤ・残り46,400ダイヤになる', /合計 2,500ダイヤ/.test(r.sheet) && /残り46,400ダイヤ/.test(r.sheet), r.sheet.slice(0, 160));
+    r = await typeAndRead('99999');
+    ok('買える数より多く打つと、買える数(489)にそろう', r.value === '489' && /合計 48,900ダイヤ/.test(r.sheet), r.value);
+    r = await typeAndRead('3.7');
+    ok('小数は点より前だけ(3)になる', r.value === '3' && /合計 300ダイヤ/.test(r.sheet), r.value);
+    r = await typeAndRead('');
+    ok('空のあいだは1として数える(合計100ダイヤ)', /合計 100ダイヤ/.test(r.sheet), r.sheet.slice(0, 120));
+    r = await typeAndRead('0');
+    ok('0のあいだも1として数える', /合計 100ダイヤ/.test(r.sheet));
+    await input.blur(); await page.waitForTimeout(150);
+    ok('欄を離れると、そろえた数(1)が出る', (await input.inputValue()) === '1');
+    await typeAndRead('7');
+    await press('+1'); await page.waitForTimeout(150);
+    ok('打ったあとに+1を押すと、打った数から増える(8)', (await input.inputValue()) === '8' && /合計 800ダイヤ/.test(await sheetText()));
+    for (const w of [375, 390]) { const f = await fits(w); ok(`数の欄があっても窓が幅${w}からはみ出さない`, f.ok, f.why); }
+    await page.setViewportSize({ width: 390, height: 844 }); await page.waitForTimeout(150);
+    await doubleConfirm('購入'); await page.waitForTimeout(1200);
+    it = await items();
+    ok('打ち込んだ数で買える(2回押しても1回ぶん): チケット12→20・ダイヤ48,900→48,100', it.training_ticket === 20 && (await store('mh_gold')) === 48100, `${it.training_ticket} / ${await store('mh_gold')}`);
     ok('画面のエラーが出ていない', errors.length === 0, errors.slice(0, 2).join(' / '));
   } catch (e) { ok('最後まで進められる', false, String(e).slice(0, 300)); }
   finally { await browser.close(); server.close(); }
