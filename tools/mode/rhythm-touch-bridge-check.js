@@ -37,7 +37,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     const fixCtx = (ua) => { const c = { navigator: { userAgent: ua, maxTouchPoints: 5 }, console }; vm.runInNewContext(`${src.slice(start, end)}\nthis.F=RHYTHM_TOUCH_FIXES;this.on=rhythmTouchFixOn;this.active=rhythmTouchFixesActive;`, c); return c; };
     const pc = fixCtx('Mozilla/5.0 (X11; Linux x86_64)'), ip = fixCtx('Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)');
     // inputAgeCap は 2026-10-07 21時のユーザー報告(タップ抜けがひどくなった)で標準では切った。releaseAgeWide(2026-10-11)はデバッグ画面で試すだけで標準は切ってある
-    check('部品: 入れてあるのは lateInputEffectDown(iPhoneのみ)と autoPauseOnHidden(全端末)で、inputAgeCap・releaseAgeWide・wideEdge・smoothSongClock は切ってある', ip.on('lateInputEffectDown') && !ip.on('inputAgeCap') && !ip.on('releaseAgeWide') && !ip.on('wideEdge') && !ip.on('smoothSongClock') && !pc.on('lateInputEffectDown') && !pc.on('inputAgeCap') && !pc.on('releaseAgeWide') && pc.on('autoPauseOnHidden') && ip.active().join() === 'lateInputEffectDown,autoPauseOnHidden' && pc.active().join() === 'autoPauseOnHidden');
+    check('部品: 入れてあるのは lateInputEffectDown・wideEdge(iPhoneのみ)と autoPauseOnHidden(全端末)で、inputAgeCap・releaseAgeWide・smoothSongClock は切ってある', ip.on('lateInputEffectDown') && !ip.on('inputAgeCap') && !ip.on('releaseAgeWide') && ip.on('wideEdge') && !pc.on('wideEdge') && !ip.on('smoothSongClock') && !pc.on('lateInputEffectDown') && !pc.on('inputAgeCap') && !pc.on('releaseAgeWide') && pc.on('autoPauseOnHidden') && ip.active().join() === 'lateInputEffectDown,wideEdge,autoPauseOnHidden' && pc.active().join() === 'autoPauseOnHidden');
     pc.F.wideEdge = true; ip.F.wideEdge = true;
     check('部品: iPhone専用の直し方は iPhone だけに効く', ip.on('wideEdge') && !pc.on('wideEdge') && ip.active().join() === 'lateInputEffectDown,wideEdge,autoPauseOnHidden' && pc.active().join() === 'autoPauseOnHidden');
     pc.F.allPlatforms = true;
@@ -216,7 +216,7 @@ const seed = () => {
     check('⑥ 1曲ぶんのまとめに、系統・突き合わせ・入力の数が入る', saved.d && ['ios', 'android', 'other'].includes(saved.d.platform) && typeof saved.d.stats.pointerOnly === 'number' && saved.d.stats.inputs === 2, JSON.stringify(saved.d || saved));
     check('⑥ まとめが端末に残る(新しいキー mh_rhythm_touch_diag_v1)', Array.isArray(saved.list) && saved.list.length >= 1 && saved.list[saved.list.length - 1].song_id === 'mf_ichika_mix');
 
-    // ⑨ 直し方「wideEdge」: 道の外の受け付けを広げる(既定は切ってある)
+    // ⑨ 直し方「wideEdge」: 道の外の受け付けを広げる(iPhone では入れてある。ここはパソコンで開くので、allPlatforms を入れるまでは効かない)
     const edge = await page.evaluate(() => {
       const rect = { left: 0, top: 0, width: 1000, height: 1000 };
       const left = rhythmProjectBoundary(0, 1), right = rhythmProjectBoundary(RHYTHM_LANE_COUNT, 1), lw = (right - left) / RHYTHM_LANE_COUNT;
@@ -225,10 +225,10 @@ const seed = () => {
       RHYTHM_TOUCH_FIXES.wideEdge = true; RHYTHM_TOUCH_FIXES.allPlatforms = true;
       const on = rhythmLaneCoordinateAtPoint(x, 1000, rect);
       const far = rhythmLaneCoordinateAtPoint((left - lw / 2 * 2.5) * 1000, 1000, rect);
-      RHYTHM_TOUCH_FIXES.wideEdge = false; RHYTHM_TOUCH_FIXES.allPlatforms = false;
+      RHYTHM_TOUCH_FIXES.allPlatforms = false;
       return { off, on, far, back: rhythmLaneCoordinateAtPoint(x, 1000, rect) };
     });
-    check('⑨ 切ってあるときは、サブレーン1.5本ぶん外の指を受け付けない(いまのまま)', edge.off === null && edge.back === null, JSON.stringify(edge));
+    check('⑨ 効かないとき(パソコン)は、サブレーン1.5本ぶん外の指を受け付けない(いまのまま)', edge.off === null && edge.back === null, JSON.stringify(edge));
     check('⑨ 入れると、サブレーン2本ぶんまで受け付ける(それより外は受け付けない)', typeof edge.on === 'number' && edge.far === null, JSON.stringify(edge));
 
     // ⑩ リザルトの「押したのに反応しないことがあった」: 端末の記録に印を付け、報告の行を作る
