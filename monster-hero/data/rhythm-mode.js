@@ -32831,6 +32831,9 @@ const RHYTHM_SKY_NOTE_LOOK={
   set(id){const v=id==='3d'?'3d':'normal';try{if(typeof localStorage!=='undefined'){if(v==='3d')localStorage.setItem(RHYTHM_SKY_NOTE_LOOK_KEY,v);else localStorage.removeItem(RHYTHM_SKY_NOTE_LOOK_KEY);if(rhythmFloor3dPreference()==='a3d')rhythmFloor3dSetPreference('');}}catch{}return v;},
 };
 const RHYTHM_GPU_BAND_KEY='mh_rhythm_gpu_band_v1';
+// 演奏の前に GPU へ置いておく帯(2026-10-18・RHYTHM_CANVAS_RENDERER.warmSlideBands)。点がこの数以上のスライドだけ・長い順にこの本数まで。
+// 2026-10-18 の公開中の譜面で当てはまるのは Sheriruth の HELL 4本(271・254・38・28)・EXPERT 2本・MASTER 2本・HARD 1本だけ
+const RHYTHM_GPU_BAND_WARM_POINTS=24,RHYTHM_GPU_BAND_WARM_MAX=12;
 // 2026-10-11 社長の決定で、ノーツを WebGL で描いているときは GPU の帯・区切りの線・ノーツの板を既定で使う(本番の記録 stats.frame で前後を比べる)。
 // 値: 'gpu' = 使う(ノーツも WebGL で描く)・'off' = 使わない(今までの WebGL の描き方)・未設定 = 既定(WebGL のときは使う)。
 // 描画方式で Canvas を選んだ人は 2D のまま(この切り替えはノーツを WebGL にはしない。'gpu' を選んだときだけ WebGL にする)。
@@ -32973,7 +32976,8 @@ const rhythmCreateGpuSlideBand=(gl,host)=>{
   };
   const now=()=>typeof performance!=='undefined'?performance.now():Date.now();
   // 見えなくなって3秒たった帯の形は捨てる(GPU の入れ物を持ち続けない)
-  const sweep=t=>{if(t-lastSweep<2000)return;lastSweep=t;for(const e of alive){if(t-e.usedAt>3000){alive.delete(e);try{gl.deleteBuffer(e.buf);if(e.cpBuf)gl.deleteBuffer(e.cpBuf);}catch(err){}if(entries&&entries.get(e.key)===e)entries.delete(e.key);}}};
+  // 曲の前に作っておいた帯(prepare・pinned)は、初めて描くまで片付けない
+  const sweep=t=>{if(t-lastSweep<2000)return;lastSweep=t;for(const e of alive){if(!e.pinned&&t-e.usedAt>3000){alive.delete(e);try{gl.deleteBuffer(e.buf);if(e.cpBuf)gl.deleteBuffer(e.cpBuf);}catch(err){}if(entries&&entries.get(e.key)===e)entries.delete(e.key);}}};
   const entryFor=note=>{
     const key=keyOf(note);if(!key||typeof key!=='object'||!entries)return null;
     let e=entries.get(key);
@@ -33036,7 +33040,7 @@ const rhythmCreateGpuSlideBand=(gl,host)=>{
     _slide(note,travel,rect,halfH,size){
       cur=null;
       const e=entryFor(note);if(!e)return false;
-      const t=now();e.usedAt=t;sweep(t);
+      const t=now();e.usedAt=t;e.pinned=false;sweep(t);
       const nowMs=Math.max(e.t0,Math.min(e.t1,Number(travel.chartNowMs)||e.t0));
       if(!(nowMs<e.t1))return false;
       const base=rhythmProjectionScale(RHYTHM_JUDGMENT_LINE_Y.ratio);
@@ -33109,6 +33113,29 @@ const rhythmCreateGpuSlideBand=(gl,host)=>{
       // 左右のふちだけ(空中のふち): 先の線を抜いた2つの範囲
       draw(dynBuf,cur.edges[0],cur.edges[1]);if(cur.sRight){draw(e.buf,cur.sRight[0],cur.sRight[1]);draw(e.buf,cur.sLeft[0],cur.sLeft[1]);return;}draw(e.buf,cur.sOutline[0],e.capFrom);draw(e.buf,e.capTo,cur.sOutline[1]);
     },
+    // 曲の前に帯の形を作って GPU に置き、色もステンシルも書かずに1回だけ描いて GPU へ送り切る(2026-10-18 社長の決定・案A)。
+    // 長いスライド(Sheriruth HELL の 106.8秒・107.3秒の 271点・254点の空中スライド)は、形を作って送るのが画面に入ったその1コマに重なり、
+    // iPhone で約130ms 止まっていた(端末の記録 stats.mon・over50)。形と鍵(点の並び)は描くときと同じなので、描くときはそのまま使う。
+    // 使うまで片付けない(pinned)。初めて描いたところで外す(_slide)。見た目・判定は変えない
+    prepare(note){
+      if(host.lost())return false;
+      api.end();host.flush();
+      let ok=false;
+      try{
+        const e=entryFor(note);
+        if(e){e.pinned=true;
+          gl.useProgram(prog);for(let i=0;i<5;i++)gl.enableVertexAttribArray(i);pointers(e.buf);
+          const mask=gl.getParameter(gl.STENCIL_WRITEMASK);
+          gl.colorMask(false,false,false,false);gl.stencilMask(0);
+          if(e.fill[1]-e.fill[0]>=3)gl.drawArrays(gl.TRIANGLE_STRIP,e.fill[0],e.fill[1]-e.fill[0]);
+          gl.colorMask(true,true,true,true);gl.stencilMask(mask);
+          ok=true;}
+      }catch(err){ok=false;}
+      pointed=null;bound=false;uniformsFor=null;host.restore();host.rebind();
+      return ok;
+    },
+    // 前の曲で先に作って、描かずに終わった帯の印を外す(次の曲の前に呼ぶ。外したものは見えないまま3秒で片付く)
+    unpinAll(){for(const e of alive)e.pinned=false;},
     // GL2D の描き方へ戻す(帯を描き終えたら必ず呼ぶ)
     end(){if(bound){bound=false;host.restore();}},
     done(){api.end();cur=null;},
@@ -35621,6 +35648,18 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     // 演奏の前に、絵を GPU へ渡しておく(WebGL のときだけ。2D・まだ描き込み先が無いときは何もしない)。
     // モンスターノーツの顔の絵は、渡していないと**そのノーツが画面に出た瞬間**に渡すことになる(2026-10-13)
     preloadImage(source){if(source&&ctx&&backend==='webgl'&&typeof ctx.preloadImage==='function')ctx.preloadImage(source);},
+    // 長いスライドの帯を、演奏の前に GPU へ置いておく(2026-10-18・rhythmCreateGpuSlideBand の prepare)。
+    // GPU の帯を使っていないとき(前の描き方・2D・WebGL を作れなかった端末)は何もしない。メモリを持ちすぎないよう、点の多い帯だけ・長い順に上限まで
+    warmSlideBands(notes){
+      if(!(gpuBandWanted&&backend==='webgl'&&ctx))return 0;
+      const band=ctx.band;if(!band||typeof band.prepare!=='function')return 0;
+      band.unpinAll();
+      const pointsOf=note=>{const pts=note&&(note._rhythmSlideRenderPoints||note.slidePoints);return Array.isArray(pts)?pts.length:0;};
+      const list=(Array.isArray(notes)?notes:[]).filter(note=>note&&note.type==='SLIDE'&&pointsOf(note)>=RHYTHM_GPU_BAND_WARM_POINTS)
+        .sort((a,b)=>pointsOf(b)-pointsOf(a)).slice(0,RHYTHM_GPU_BAND_WARM_MAX);
+      let made=0;for(const note of list)if(band.prepare(note))made++;
+      return made;
+    },
     release(){if(ctx&&backend==='webgl'&&typeof ctx.dispose==='function')ctx.dispose();canvas=null;ctx=null;backend='2d';sprites.clear();hitArea=null;skyHitArea=null;skyPressed=[];hitSlots.fill(null);},
     // 叩いたときの光をこの canvas で描くか(検証用・WebGL のときだけ演奏画面が area を渡す)。null で DOM の部品へ戻す
     enableHits(area){hitArea=area&&ctx?area:null;hitSlots.fill(null);hitNext=0;tickSlots.fill(null);tickNext=0;if(hitArea)readHitFilters(hitArea);},
