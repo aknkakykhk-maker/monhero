@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1e074558f963d939
+// generated-sha256: 90838f52fbd46ae8
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-18 21:43"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-18 23:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -22752,6 +22752,8 @@ rhythmEnsureHitEffects(playAreaRef.current);
 if(canvasNotes)RHYTHM_CANVAS_RENDERER.warmSprites({effect:settings.effectAmount,lightweight:settings.lightweightMode,tapLight:rhythmTapLightOnly(settings),maxDpr:noteCanvasMaxDpr});
 /* モンスターノーツの顔の絵も GPU へ渡しておく(焼き上がりが描き込み先より先だったときの分。渡してあれば何もしない) */
 if(canvasNotes)faceBitmapsRef.current.forEach(face=>{if(face){RHYTHM_CANVAS_RENDERER.preloadImage(face.plain);RHYTHM_CANVAS_RENDERER.preloadImage(face.glow);}});
+/* 長いスライドの帯も GPU へ置いておく(2026-10-18 社長の決定)。画面に入った1コマで形を作って送ると、iPhone で止まっていた(Sheriruth HELL の106秒あたり)。GPU の帯を使っていなければ何もしない */
+if(canvasNotes)RHYTHM_CANVAS_RENDERER.warmSlideBands(runRef.current&&runRef.current.notes);
 /* カットインの絵は、出るまで見えない(visibility:hidden)ので、端末によっては**初めて出る瞬間**に画像を読み解く。
    取った瞬間に重ならないよう、演奏の前に読み解いておく(2026-10-13 社長報告「モンスターノーツを取った瞬間に一瞬かくつく」) */
 cutInRefs.current.forEach(el=>{const img=el&&el.querySelector('img');if(img&&typeof img.decode==='function')img.decode().catch(()=>{});});

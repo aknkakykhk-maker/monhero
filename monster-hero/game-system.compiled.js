@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3aa31c504c040120
+// source-sha256: 7cff63faaab7d719
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-18 21:43";
+const BUILD_DATE = "2026-10-18 23:25";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -36813,6 +36813,7 @@ const RhythmTapTest = ({
         RHYTHM_CANVAS_RENDERER.preloadImage(face.glow);
       }
     });
+    if (canvasNotes) RHYTHM_CANVAS_RENDERER.warmSlideBands(runRef.current && runRef.current.notes);
     cutInRefs.current.forEach(el => {
       const img = el && el.querySelector('img');
       if (img && typeof img.decode === 'function') img.decode().catch(() => {});
