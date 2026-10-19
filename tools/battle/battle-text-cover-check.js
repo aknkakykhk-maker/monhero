@@ -1,3 +1,4 @@
+const { pickProParty } = require('./lib/pro-party-pick');
 const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分類フォルダから見た1つ上
 // バトル画面で「文字が文字の上に乗っていないか」を、実際のブラウザで測る。
 //
@@ -141,6 +142,12 @@ const OVERLAP_FN = () => {
     // 勇者モン → 配置 → 供モン候補5体 → アシストカード、とたどってバトルまで進める。
     // ★押すものは「その画面にしか無いもの」で選ぶ。とりあえず押せるものを押すと、
     //   戻るボタンを踏んで難易度選択まで戻ってしまう
+    // 2026-10-19 から、プロモードの編成は「枠へ入れる → 勇者モンを選ぶ」(ProPartyPicker)。一覧の先頭の子を勇者モンにして抜ける
+    if (await page.locator('[data-pro-party]').count()) {
+      const first = await page.evaluate(() => { const b = document.querySelector('[data-pro-pick-scroll] button[aria-label$="を見る"]'); return b ? b.getAttribute('aria-label').replace(/を見る$/, '') : null; });
+      const proPickError = first ? await pickProParty(page, first) : 'プロモードの一覧が空';
+      if (proPickError) console.log(`INFO ${proPickError}`);
+    }
     await page.evaluate(() => { window.__pick = 0; window.__change = 1; });
     for (let i = 0; i < 40; i += 1) {
       const state = await page.evaluate(() => document.body.innerText.replace(/\s+/g, ' '));

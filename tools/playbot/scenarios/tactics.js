@@ -209,6 +209,26 @@ async function enterTactics(s, { mode, difficulty = 'keep', stats = {}, ctx = nu
     const step = await page.evaluate(() => {
       const live = [...document.querySelectorAll('button')].filter((x) => x.offsetParent && !x.disabled);
       const pick = (re) => live.find((x) => re.test(x.textContent.trim()));
+      // 2026-10-19 から、プロモードの編成は「上の枠へ入れる → 勇者モンを選ぶ」(ProPartyPicker)。選びたい子(__pbWant)を先に入れ、先頭の子を勇者モンにする
+      if (document.querySelector('[data-pro-party]')) {
+        const want = window.__pbWant || [];
+        const done = document.querySelector('[data-pro-party-done]');
+        if (done) {
+          if (!done.disabled) { done.click(); return 'pro-done'; }
+          const slots = [...document.querySelectorAll('[data-pro-party-slot][aria-label$="を勇者モンにする"]')];
+          const h = slots.find((x) => want[0] && x.getAttribute('aria-label').startsWith(want[0])) || slots[0];
+          if (h) { h.click(); return 'pro-hero'; }
+        }
+        const next = document.querySelector('[data-pro-party-next]');
+        if (next && !next.disabled) { next.click(); return 'pro-next'; }
+        const chosen = new Set([...document.querySelectorAll('[data-pro-party-slot][aria-label$="を枠から外す"]')].map((x) => x.getAttribute('aria-label').replace(/を枠から外す$/, '')));
+        const put = live.find((x) => /を枠に入れる$/.test(x.getAttribute('aria-label') || '') && !chosen.has(x.getAttribute('aria-label').replace(/を枠に入れる$/, '')));
+        const tiles = [...document.querySelectorAll('[data-pro-pick-scroll] button[aria-label$="を見る"]')].filter((x) => !x.disabled && !chosen.has(x.getAttribute('aria-label').replace(/を見る$/, '')));
+        const wantTile = tiles.find((x) => want.includes(x.getAttribute('aria-label').replace(/を見る$/, '')));
+        if (put && (!wantTile || put.getAttribute('aria-label').replace(/を枠に入れる$/, '') === wantTile.getAttribute('aria-label').replace(/を見る$/, ''))) { put.click(); return 'pro-put'; }
+        const t = wantTile || tiles[0];
+        if (t) { t.click(); return 'pro-focus'; }
+      }
       // ★勇者モン・供モンの画面は、はじめから誰かが選ばれていて「この子で挑む」「供モンNにする」が押せる。
       //   先に決定を押すと、選びたい子ではなく前回の子・一覧の先頭の子になる。選びたい子が画面にいれば、先にその子を押す
       const monsEarly = live.filter((x) => /ライフ\s*\d+ちから|総合力|^この子で挑む$|^供モン\d+にする$/.test(x.textContent.trim()) && x.textContent.trim() !== '詳細を見る' && !/DEBUG/.test(x.textContent));

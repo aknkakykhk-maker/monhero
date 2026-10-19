@@ -117,6 +117,8 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await page.locator('[data-raid-mon]').nth(0).click();
     await page.locator('[data-raid-mon]').nth(1).click();
     await page.locator('[data-raid-prep-next]').click();
+    await page.locator('[data-raid-slot="0"]').click();   // ② 勇者モンを選ぶ(零に置いた1体目)
+    await page.locator('[data-raid-prep-hero-next]').click();
     await page.locator('[data-raid-prep-start]').click();
     await page.locator('[data-battle-controls]').waitFor({ timeout: 30000 });
     for (let i = 0; i < 3; i++) { await page.locator('[data-battle-controls] button').first().click().catch(() => {}); }

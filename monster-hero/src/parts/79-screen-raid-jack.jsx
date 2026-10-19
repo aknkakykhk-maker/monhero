@@ -508,14 +508,15 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
   const [step, setStep] = useState('party');
   const [teachIds, setTeachIds] = useState(() => (restore && Array.isArray(restore.teachIds)) ? restore.teachIds : (Array.isArray(teachings) ? teachings : []).slice(0, maxTeach).map((t) => t.id));
   const slotMons = slotKeys.map(monOf);
-  const heroIdx = Number.isInteger(heroRange) && slotMons[heroRange] ? heroRange : slotMons.findIndex(Boolean);
+  // 勇者モンは「② 勇者モンをえらぶ」で選ぶ(2026-10-19 社長「零距離が勇者モン固定になる。距離別に決めたあとに誰を勇者モンにするかの選択で」)。置いた子が1体だけならその子
+  const heroIdx = Number.isInteger(heroRange) && slotMons[heroRange] ? heroRange : (slotMons.filter(Boolean).length === 1 ? slotMons.findIndex(Boolean) : -1);
   const hero = heroIdx >= 0 ? slotMons[heroIdx] : null;
   const placedCount = slotMons.filter(Boolean).length;
   const nextEmpty = (keys, from) => { for (let n = 1; n <= 4; n++) { const r = (from + n) % 4; if (!keys[r]) return r; } return null; };
   const removeAt = (r) => {
     const next = [...slotKeys]; next[r] = null;
     setSlotKeys(next);
-    if (heroIdx === r) { const other = next.findIndex(Boolean); setHeroRange(other >= 0 ? other : null); }
+    if (heroRange === r) setHeroRange(null);
     setPickRange(r);
   };
   const pickMon = (mon) => {
@@ -526,7 +527,6 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
     if (r == null) return;   // 4つの枠がうまっている
     const next = [...slotKeys]; next[r] = k;
     setSlotKeys(next);
-    if (!hero) setHeroRange(r);
     setPickRange(nextEmpty(next, r));
   };
   const pickSlot = (r) => { if (slotKeys[r]) removeAt(r); else setPickRange(r); };
@@ -551,13 +551,13 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
   const tile = (mon) => {
     const k = keyOf(mon);
     const at = slotKeys.indexOf(k);
-    const role = at < 0 ? null : at === heroIdx ? 'hero' : 'ally';
+    const role = at < 0 ? null : 'placed';
     const showR = at >= 0 ? at : pickRange;
     const pct = Number.isInteger(showR) ? raidJackAptPct(mon, showR) : null;
     return (
     <div key={k} className="relative">
     <button type="button" onClick={() => pickMon(mon)} data-raid-mon={k} data-raid-mon-role={role || undefined} data-raid-mon-range={at >= 0 ? at : undefined} aria-pressed={!!role}
-      className={`flex w-full flex-col items-center rounded-xl border-2 p-1 text-center active:scale-95 ${role === 'hero' ? 'border-amber-300 bg-amber-900/50' : role === 'ally' ? 'border-sky-300 bg-sky-950/60' : 'border-white/10 bg-slate-900/60'}`}>
+      className={`flex w-full flex-col items-center rounded-xl border-2 p-1 text-center active:scale-95 ${role ? 'border-sky-300 bg-sky-950/60' : 'border-white/10 bg-slate-900/60'}`}>
       {faceOf(mon, 'h-12 w-12')}
       <span className="mt-0.5 w-full truncate text-[9px] font-black text-slate-100">{mon.name}</span>
       {/* タイプの印(2026-10-19・社長「タイプわかるようにしてほしい」)。札が狭いのでメインだけ。サブは詳細(i)に出る */}
@@ -565,7 +565,7 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
       {/* 置いた距離(置いていなければ、いま光っている枠の距離)での適性 */}
       {pct != null && <span data-raid-mon-apt={showR} className="mt-0.5 flex items-center gap-0.5">{rangeChip(showR)}<span className={`text-[9px] font-black tabular-nums ${pctTone(pct)}`}>{formatAptPct(pct)}</span></span>}
     </button>
-    {role && <span aria-hidden="true" className={`pointer-events-none absolute -left-1 -top-1 rounded-full border px-1 text-[9px] font-black leading-[14px] shadow ${role === 'hero' ? 'border-amber-200 bg-amber-500 text-black' : 'border-sky-200 bg-sky-600 text-white'}`}>{role === 'hero' ? '👑勇者' : '供'}</span>}
+    {role && <span aria-hidden="true" className="pointer-events-none absolute -left-1 -top-1 rounded-full border border-sky-200 bg-sky-600 px-1 text-[9px] font-black leading-[14px] text-white shadow">{RANGE_LABELS[at]}に置いた</span>}
     {typeof onOpenDetail === 'function' && (
       <button type="button" data-raid-detail={k} aria-label={`${mon.name}の詳細を見る`} onClick={(e) => { e.stopPropagation(); onOpenDetail(mon); }}
         className="mh-hit-expand absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full border border-sky-300/60 bg-slate-800 text-[11px] font-black leading-none text-sky-200 shadow active:scale-90">i</button>
@@ -573,46 +573,49 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
     </div>
     );
   };
-  // 距離の枠。光っている枠が「次に押した子が入る先」。うまった枠を押すと外れる。👑 でその子を勇者モンにする
+  // 距離の枠。① 光っている枠が「次に押した子が入る先」。うまった枠を押すと外れる。② 押した子が勇者モンになる
   const slot = (r) => {
     const mon = slotMons[r];
     const active = step === 'party' && !mon && pickRange === r;
-    const isHero = mon && r === heroIdx;
+    const isHero = mon && step !== 'party' && r === heroIdx;
+    const heroPick = step === 'hero' && !!mon;
     const pct = mon ? raidJackAptPct(mon, r) : null;
     return (
       <div key={r} className="relative min-w-0">
-        <button type="button" data-raid-slot={r} data-raid-slot-active={active ? 'true' : undefined} onClick={() => { if (step !== 'party') setStep('party'); pickSlot(r); }}
-          aria-label={mon ? `${RANGE_LABELS[r]}距離の${mon.name}を外す` : `${RANGE_LABELS[r]}距離に置く子を選ぶ`}
-          className={`flex w-full min-w-0 flex-col items-center rounded-xl border-2 p-1 ${mon ? 'pb-2.5' : ''} text-center active:scale-95 ${active ? 'border-orange-300 bg-orange-900/40 shadow-[0_0_10px_rgba(253,186,116,.55)]' : mon ? (isHero ? 'border-amber-300/80 bg-amber-950/40' : 'border-sky-300/60 bg-sky-950/40') : 'border-dashed border-white/20 bg-slate-900/40'}`}>
+        <button type="button" data-raid-slot={r} data-raid-slot-active={active ? 'true' : undefined} onClick={() => { if (step === 'hero') { if (mon) setHeroRange(r); return; } if (step === 'teach') { setStep('hero'); return; } pickSlot(r); }}
+          data-raid-slot-hero={isHero ? 'true' : undefined} disabled={step === 'hero' && !mon}
+          aria-label={step === 'party' ? (mon ? `${RANGE_LABELS[r]}距離の${mon.name}を外す` : `${RANGE_LABELS[r]}距離に置く子を選ぶ`) : (mon ? `${mon.name}を勇者モンにする` : `${RANGE_LABELS[r]}距離は空き`)}
+          className={`flex w-full min-w-0 flex-col items-center rounded-xl border-2 p-1 ${mon ? 'pb-2.5' : ''} text-center active:scale-95 ${active ? 'border-orange-300 bg-orange-900/40 shadow-[0_0_10px_rgba(253,186,116,.55)]' : mon ? (isHero ? 'border-amber-300 bg-amber-900/50 shadow-[0_0_10px_rgba(252,211,77,.55)]' : heroPick ? 'border-amber-200/50 bg-sky-950/40' : 'border-sky-300/60 bg-sky-950/40') : 'border-dashed border-white/20 bg-slate-900/40'}`}>
           <span className="flex items-center gap-0.5">{rangeChip(r)}<span className="text-[9px] font-black text-slate-200">距離</span></span>
-          {mon ? faceOf(mon, 'mt-0.5 h-10 w-10') : <span className={`mt-0.5 flex h-10 w-10 items-center justify-center rounded-full border border-dashed text-[16px] font-black ${active ? 'border-orange-200 text-orange-100' : 'border-white/25 text-slate-500'}`}>+</span>}
+          {mon ? faceOf(mon, 'mt-0.5 h-10 w-10 [@media(max-height:640px)]:h-8 [@media(max-height:640px)]:w-8') : <span className={`mt-0.5 flex h-10 w-10 [@media(max-height:640px)]:h-8 [@media(max-height:640px)]:w-8 items-center justify-center rounded-full border border-dashed text-[16px] font-black ${active ? 'border-orange-200 text-orange-100' : 'border-white/25 text-slate-500'}`}>+</span>}
           <span className="mt-0.5 w-full truncate text-[9px] font-black text-slate-100">{mon ? mon.name : (active ? 'ここに入る' : '空き')}</span>
           <span data-raid-slot-apt={mon ? r : undefined} className={`text-[10px] font-black leading-tight tabular-nums ${mon ? pctTone(pct) : 'text-slate-600'}`}>{mon ? formatAptPct(pct) : '—'}</span>
-          {mon && <span aria-hidden="true" className="absolute right-1 top-[18px] flex h-3.5 w-3.5 items-center justify-center rounded-full bg-slate-700 text-[9px] font-black leading-none text-slate-100">×</span>}
+          {mon && step === 'party' && <span aria-hidden="true" className="absolute right-1 top-[18px] flex h-3.5 w-3.5 items-center justify-center rounded-full bg-slate-700 text-[9px] font-black leading-none text-slate-100">×</span>}
         </button>
-        {mon && (isHero
-          ? <span aria-hidden="true" className="pointer-events-none absolute -bottom-1.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border border-amber-200 bg-amber-500 px-1 text-[9px] font-black leading-[14px] text-black shadow">👑勇者</span>
-          : <button type="button" data-raid-make-hero={r} aria-label={`${mon.name}を勇者モンにする`} onClick={() => setHeroRange(r)}
-              className="mh-hit-expand absolute -bottom-1.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border border-white/30 bg-slate-800 px-1 text-[9px] font-black leading-[14px] text-slate-200 shadow active:scale-90">👑にする</button>)}
+        {isHero && <span aria-hidden="true" className="pointer-events-none absolute -bottom-1.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border border-amber-200 bg-amber-500 px-1 text-[9px] font-black leading-[14px] text-black shadow">👑勇者</span>}
+        {heroPick && !isHero && <span aria-hidden="true" className="pointer-events-none absolute -bottom-1.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border border-white/30 bg-slate-800 px-1 text-[9px] font-black leading-[14px] text-slate-200 shadow">押して👑</span>}
       </div>
     );
   };
-  const guide = !hero ? '下の一覧から、光っている距離に置く子をえらんでください(最初に置いた子が勇者モンになります)'
-    : Number.isInteger(pickRange) && placedCount < 4 ? `次は${RANGE_LABELS[pickRange]}距離。供モンは${RAID_JACK_ALLY_MAX}体まで(えらばなくても挑戦できます)`
-    : '準備OK。枠を押すとその子を外せます。「👑にする」で勇者モンを替えられます';
+  const guide = step === 'hero' ? (hero ? `${hero.name}が勇者モンです。ほかの子を押すと替えられます` : '勇者モンにする子を、上の枠から1体えらんでください')
+    : placedCount === 0 ? '好きな距離の枠を押してから、下の一覧で置く子をえらんでください(どの順でもOK)'
+    : Number.isInteger(pickRange) && placedCount < 4 ? `次は${RANGE_LABELS[pickRange]}距離(ほかの枠を押すとそこに置けます)。全部で${1 + RAID_JACK_ALLY_MAX}体まで`
+    : '置けました。枠を押すとその子を外せます。勇者モンは次でえらびます';
   const partyRow = (
-    <section className="rounded-2xl border border-orange-300/30 bg-black/30 p-2" data-raid-party>
-      <div className="mb-1 flex flex-wrap items-baseline gap-x-1 text-[11px] font-black text-orange-200">いまの編成と距離<span className="text-[9px] font-normal text-slate-300">%はその距離での適性(その距離に立つ子のぶんだけ効きます)</span></div>
+    // 一覧の流れる枠の外に置いて、画面の上に固定する(2026-10-19 社長「編成のとこは固定にしたほうが見やすいんじゃない？」)。
+    // 背の低い端末(高さ640以下)は、説明の行を畳み・案内を1行にして、下の一覧が2行以上見える高さを残す
+    <section className="mb-2 shrink-0 rounded-2xl border border-orange-300/30 bg-black/30 p-2 [@media(max-height:640px)]:mb-1 [@media(max-height:640px)]:py-1.5" data-raid-party>
+      <div className="mb-1 flex flex-wrap items-baseline gap-x-1 text-[11px] font-black text-orange-200">いまの編成と距離<span className="text-[9px] font-normal text-slate-300 [@media(max-height:640px)]:hidden">%はその距離での適性(その距離に立つ子のぶんだけ効きます)</span></div>
       <div className="grid grid-cols-4 gap-1.5 pb-1.5 pt-1">{ranges.map((r) => slot(r))}</div>
-      {step === 'party' && <div data-raid-guide className="mt-1.5 rounded-lg bg-orange-950/40 px-2 py-1 text-[10px] font-bold text-orange-100">{guide}</div>}
+      {step !== 'teach' && <div data-raid-guide title={guide} className="mt-1.5 rounded-lg bg-orange-950/40 px-2 py-1 text-[10px] font-bold text-orange-100 [@media(max-height:640px)]:mt-1 [@media(max-height:640px)]:truncate [@media(max-height:640px)]:py-0.5">{guide}</div>}
     </section>
   );
   return (
     <div className={`${SCREEN_SHELL_CLASS} overflow-hidden`} data-raid-jack-prep data-raid-prep-step={step}>
-      <ScreenHead title={`${tier.name}に挑む`} icon="🎃" accent="text-orange-200" onBack={step === 'teach' ? () => setStep('party') : onBack}
-        note={step === 'teach' ? '② アシカをえらぶ' : `① ${isB ? 'マスモン' : 'ベースモン'}と距離をえらぶ・20ターン勝負`} />
-      <div className={`${SCREEN_LIST_CLASS} space-y-3`}>
-        {partyRow}
+      <ScreenHead title={`${tier.name}に挑む`} icon="🎃" accent="text-orange-200" onBack={step === 'teach' ? () => setStep('hero') : step === 'hero' ? () => setStep('party') : onBack}
+        note={step === 'teach' ? '③ アシカをえらぶ' : step === 'hero' ? '② 勇者モンをえらぶ' : `① ${isB ? 'マスモン' : 'ベースモン'}を距離に置く・20ターン勝負`} />
+      {partyRow}
+      <div className={`${SCREEN_LIST_CLASS} space-y-3`} data-raid-prep-list>
         {step === 'party' && (
         <section className="rounded-2xl border border-white/10 bg-black/30 p-3">
           <div className="mb-1 text-[11px] font-black text-orange-200">モンスター<span className="ml-1 text-[9px] font-normal text-slate-300">押すと上の光っている距離に入ります。右上の <b className="text-sky-200">i</b> で詳細が見られます</span></div>
@@ -620,6 +623,12 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
             {list.map((mon) => tile(mon))}
           </div>
           {list.length === 0 && <div className="py-2 text-center text-[10px] text-slate-400">編成できるモンスターがいません</div>}
+        </section>
+        )}
+        {step === 'hero' && (
+        <section className="rounded-2xl border border-amber-300/30 bg-black/30 p-3 text-[10px] leading-relaxed text-slate-200" data-raid-hero-step>
+          <div className="mb-1 text-[11px] font-black text-amber-200">👑 勇者モンとは</div>
+          <div>戦いの主役になる1体です。ちから・丈夫さは勇者モンをもとに、供モンのぶんが足されます。勇者モンを置いた距離から戦いが始まり、少しだけ狙われやすくなります(🔥)。</div>
         </section>
         )}
         {step === 'teach' && (
@@ -651,19 +660,26 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
       </div>
       <div className={SCREEN_FOOTER_CLASS}>
         {step === 'party' ? (
-          <button type="button" data-raid-prep-next disabled={!hero} onClick={() => setStep('teach')}
+          <button type="button" data-raid-prep-next disabled={placedCount === 0} onClick={() => setStep('hero')}
             className="w-full min-h-[48px] rounded-2xl border-2 border-orange-300/70 bg-orange-700 px-3 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400">
-            {hero ? '次へ(アシカをえらぶ)' : '勇者モンを置いてください'}
+            {placedCount > 0 ? '次へ(勇者モンをえらぶ)' : '距離に子を置いてください'}
           </button>
         ) : (
           <div className="flex gap-2">
-            <button type="button" data-raid-prep-back onClick={() => setStep('party')}
-              className="min-h-[48px] shrink-0 rounded-2xl border-2 border-white/15 bg-slate-800 px-3 text-[12px] font-black text-slate-100 active:scale-95">← 編成</button>
-            <button type="button" data-raid-prep-start disabled={!hero}
-              onClick={() => onStart({ party, teachingIds: teachIds, slots: slotMons, heroSlot: heroIdx, restore: { slotKeys, heroRange: heroIdx, teachIds } })}
-              className="min-h-[48px] flex-1 rounded-2xl border-2 border-orange-300/70 bg-orange-700 px-3 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400">
-              この編成で挑戦する
-            </button>
+            <button type="button" data-raid-prep-back onClick={() => setStep(step === 'teach' ? 'hero' : 'party')}
+              className="min-h-[48px] shrink-0 rounded-2xl border-2 border-white/15 bg-slate-800 px-3 text-[12px] font-black text-slate-100 active:scale-95">{step === 'teach' ? '← 勇者モン' : '← 置き直す'}</button>
+            {step === 'hero' ? (
+              <button type="button" data-raid-prep-hero-next disabled={!hero} onClick={() => setStep('teach')}
+                className="min-h-[48px] flex-1 rounded-2xl border-2 border-orange-300/70 bg-orange-700 px-3 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400">
+                {hero ? '次へ(アシカをえらぶ)' : '勇者モンをえらんでください'}
+              </button>
+            ) : (
+              <button type="button" data-raid-prep-start disabled={!hero}
+                onClick={() => onStart({ party, teachingIds: teachIds, slots: slotMons, heroSlot: heroIdx, restore: { slotKeys, heroRange: heroIdx, teachIds } })}
+                className="min-h-[48px] flex-1 rounded-2xl border-2 border-orange-300/70 bg-orange-700 px-3 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400">
+                この編成で挑戦する
+              </button>
+            )}
           </div>
         )}
       </div>
