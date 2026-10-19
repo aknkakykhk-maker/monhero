@@ -212,6 +212,19 @@ for (const frame of imageFrames) {
     && Math.abs(parseFloat(style.left) + (box - 1) / 2 * 100) < 0.01 && style.left === style.top,
     `${style.width} / left ${style.left}`);
 }
+// ===== ①-3 小さく出す所(28〜32px)用に前もって縮めた絵(srcSmall・2026-10-19) =====
+// 大きい絵をその場で縮めると細かい飾りが点のように潰れた(マルチの部屋の上の並び・チャット)。
+// 小さい版は同じ穴の比で重ねるので、穴が大きい絵とそろっていること・軽いことを見る
+for (const frame of imageFrames) {
+  const small = String(frame.srcSmall || '');
+  check(`${frame.id}: 小さく出す所用の絵がある`, /^images\/profile-frames\/small\/[a-z0-9-]+\.png(\?v=[0-9a-f]+)?$/.test(small) && small.split('?')[0].split('/').pop() === String(frame.src || '').split('?')[0].split('/').pop(), small);
+  const file = path.join(ROOT, 'monster-hero', small.split('?')[0]);
+  if (!small || !fs.existsSync(file)) { check(`${frame.id}: 小さい絵が置いてある`, false, small); continue; }
+  const m = measureFramePng(file);
+  check(`${frame.id}: 小さい絵は正方形で、32px×画素密度3に足りて、軽い`,
+    m.width === m.height && m.width >= 96 && m.width <= 256 && m.bytes <= 24 * 1024, `${m.width}px / ${(m.bytes / 1024).toFixed(1)}KB`);
+  check(`${frame.id}: 小さい絵の穴が大きい絵とそろう`, Math.abs(m.hole - Number(frame.hole)) <= 0.03, `書いてある ${frame.hole} / 小さい絵 ${m.hole.toFixed(3)}`);
+}
 check('穴の大きさが取れない絵は保険の大きさへ倒れる',
   [{}, { hole: 0 }, { hole: 3 }, { hole: 'x' }].every(f => F.profileFrameImageStyle(f).width === '132.00%'));
 

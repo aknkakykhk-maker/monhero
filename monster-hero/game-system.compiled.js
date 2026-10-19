@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 851132eb18b8204e
+// source-sha256: 9c543d322c8fbe75
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-19 09:58";
+const BUILD_DATE = "2026-10-19 10:02";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -15544,12 +15544,13 @@ const BreederIcon = ({
   style: adjustment ? profileIconTransformStyle(adjustment) : marketProfileIconStyle(id)
 }));
 const ProfileFrameLayer = ({
-  frameId
+  frameId,
+  small = false
 }) => {
   const frame = profileFrameById(normalizeProfileFrameId(frameId));
   if (!frame || frame.kind === 'none') return null;
   if (frame.kind === 'image') return React.createElement("img", {
-    src: frame.src,
+    src: small && frame.srcSmall || frame.src,
     alt: "",
     "aria-hidden": "true",
     draggable: false,
@@ -15570,7 +15571,8 @@ const ProfileAvatar = ({
   roundedClass = 'rounded-full',
   adjustment,
   fallback = null,
-  badge = null
+  badge = null,
+  small = false
 }) => React.createElement("span", {
   className: `mh-profile-avatar ${className}`
 }, React.createElement("span", {
@@ -15583,7 +15585,8 @@ const ProfileAvatar = ({
   roundedClass: roundedClass,
   className: "w-full h-full"
 }) : fallback, badge), React.createElement(ProfileFrameLayer, {
-  frameId: frameId
+  frameId: frameId,
+  small: small
 }));
 const hasProfileFrame = frameId => normalizeProfileFrameId(frameId) !== PROFILE_FRAME_NONE_ID;
 const HomeProfileIcon = ({
@@ -73769,12 +73772,11 @@ function RhythmMultiAvatar({
     }, "🐾"));
   }
   const src = resolveIconUrl ? resolveIconUrl(m.icon) : null;
-  const frame = typeof profileFrameById === 'function' ? profileFrameById(normalizeProfileFrameId(m.frame)) : null;
-  const frameId = small && frame && frame.kind === 'image' ? null : m.frame;
   return React.createElement(ProfileAvatar, {
     src: src,
     id: m.icon,
-    frameId: frameId,
+    frameId: m.frame,
+    small: small,
     alt: "",
     className: sizeClass,
     fallback: React.createElement("span", {
