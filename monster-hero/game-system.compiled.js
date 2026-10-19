@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9c543d322c8fbe75
+// source-sha256: f30179d9158dcb57
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-19 10:02";
+const BUILD_DATE = "2026-10-19 10:50";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -39665,6 +39665,8 @@ const TACTICS_HATE = {
   decay: 0.7,
   cap: 100,
   flames: [20, 50, 80],
+  cardFlames: [15, 40],
+  cardDmgShareGuess: 0.5,
   hero: {
     floor: 20
   },
@@ -39899,6 +39901,16 @@ const tacticsHateExGain = (effect, monId) => {
   const base = Object.prototype.hasOwnProperty.call(TACTICS_HATE.exByEffect, effect) ? TACTICS_HATE.exByEffect[effect] : TACTICS_HATE.action.ex;
   return base + tacticsHateNum(p.add.ex) + p.always;
 };
+const tacticsHateGainLevel = gain => tacticsHateNum(gain) > 0 ? 1 + TACTICS_HATE.cardFlames.filter(x => gain >= x).length : 0;
+const TACTICS_HATE_LEVEL_LABELS = ['', '小', '中', '大'];
+const tacticsHateCardEstimate = (card, monId = null) => {
+  const kind = tacticsHateCardKind(card);
+  if (!kind) return 0;
+  const share = kind === 'atk' || kind === 'unique' || kind === 'taunt' ? TACTICS_HATE.action.dmgShare * TACTICS_HATE.cardDmgShareGuess : 0;
+  return tacticsHateProfile(monId).mult * (tacticsHateCardGain(card, monId) + share);
+};
+const tacticsHateCardLevel = (card, monId = null) => tacticsHateGainLevel(tacticsHateCardEstimate(card, monId));
+const tacticsHateExLevel = (effect, monId) => tacticsHateGainLevel(tacticsHateProfile(monId).mult * tacticsHateExGain(effect, monId));
 const normalizeTacticsHate = hate => [0, 1, 2, 3].map(i => tacticsClamp(tacticsHateNum(Array.isArray(hate) ? hate[i] : 0), 0, TACTICS_HATE.cap));
 const tacticsHateWaveStart = heroSlot => [0, 1, 2, 3].map(i => i === heroSlot ? TACTICS_HATE.hero.floor : 0);
 const tacticsHateStep = (hate, {
@@ -68425,7 +68437,20 @@ function BattleScreen({
       className: "w-full h-full object-contain"
     }) : React.createElement("span", {
       className: "text-[10px]"
-    }, assignedMon.emoji)), React.createElement("div", {
+    }, assignedMon.emoji)), tacticsHateOn && (() => {
+      const lv = tacticsHateCardLevel(c, assignedMon?.id || (Number.isInteger(c.ownerSlotIdx) ? slots[c.ownerSlotIdx]?.id : null) || null);
+      return lv > 0 ? React.createElement("span", {
+        "data-card-hate": lv,
+        "aria-label": `使うと狙われやすさ ${TACTICS_HATE_LEVEL_LABELS[lv]}`,
+        title: `使うと🔥 ${TACTICS_HATE_LEVEL_LABELS[lv]}`,
+        className: "pointer-events-none absolute bottom-[3px] left-1/2 z-30 flex -translate-x-1/2 items-center rounded-full border border-orange-300/60 bg-black/70 px-1 py-px text-[8px] leading-[10px] tracking-[-0.15em] shadow-[0_0_6px_rgba(249,115,22,.55)]"
+      }, Array.from({
+        length: lv
+      }, (_, k) => React.createElement("span", {
+        key: k,
+        "aria-hidden": "true"
+      }, "🔥"))) : null;
+    })(), React.createElement("div", {
       "data-decoration": true,
       className: "flex shrink-0 items-center justify-center rounded-[11px] border border-white/[.16] bg-black/20",
       style: {
@@ -68657,7 +68682,15 @@ function BattleScreen({
   }, "カード"), React.createElement("dd", {
     "data-tactics-ex-with-cards": exPanel.def.withCards ? 'yes' : 'no',
     className: "font-black text-white"
-  }, exPanel.def.withCards ? '同じターンにこの子も通常カードを使える' : '使ったターン、この子はカードを使えない（ほかの子は使える）'), exPanel.durationText && React.createElement(React.Fragment, null, React.createElement("dt", {
+  }, exPanel.def.withCards ? '同じターンにこの子も通常カードを使える' : '使ったターン、この子はカードを使えない（ほかの子は使える）'), tacticsHateOn && (() => {
+    const lv = tacticsHateExLevel(exPanel.def.effect, slots[exPanel.slot]?.id || null);
+    return lv > 0 ? React.createElement(React.Fragment, null, React.createElement("dt", {
+      className: "font-bold text-slate-400"
+    }, "狙われやすさ"), React.createElement("dd", {
+      "data-tactics-ex-hate": lv,
+      className: "font-black text-orange-200"
+    }, "使うと", '🔥'.repeat(lv), " ", TACTICS_HATE_LEVEL_LABELS[lv])) : null;
+  })(), exPanel.durationText && React.createElement(React.Fragment, null, React.createElement("dt", {
     className: "font-bold text-slate-400"
   }, "効果時間"), React.createElement("dd", {
     className: "font-black text-white"
