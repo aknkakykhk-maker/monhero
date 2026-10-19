@@ -159,6 +159,9 @@ const rhythmMultiNormalizeCode = (text) => {
 };
 const rhythmMultiMakeId = (head = 'p') => `${head}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 const rhythmMultiText = (value, max) => String(value == null ? '' : value).replace(/[\u0000-\u001f]/g, '').slice(0, max);
+// 相棒の染め色(部位ごと)。濃さの「@NN」も通す(2026-10-19・消すと濃さを付けた部位の色が読めなくなっていた)。
+// 染めていない部位は空のまま残す(詰めると、うしろの色が前の部位へずれる)
+const rhythmMultiColorId = (c) => rhythmMultiText(c, 24).replace(/[^A-Za-z0-9_#:@.-]/g, '');
 const rhythmMultiInt = (value, max) => {
   const n = Math.floor(Number(value));
   return Number.isFinite(n) ? Math.min(max, Math.max(0, n)) : 0;
@@ -240,7 +243,7 @@ const rhythmMultiCleanMessage = (raw) => {
     if (out.cpu) {
       out.owner = rhythmMultiText(raw.owner, 40);
       out.mb = rhythmMultiText(raw.mb, 40).replace(/[^A-Za-z0-9_-]/g, '');
-      out.mc = Array.isArray(raw.mc) ? raw.mc.slice(0, 8).map((c) => rhythmMultiText(c, 24).replace(/[^A-Za-z0-9_#:-]/g, '')) : [];
+      out.mc = Array.isArray(raw.mc) ? raw.mc.slice(0, 8).map(rhythmMultiColorId) : [];
       // 選んだ理由(相棒の気持ち。決まった短いコードだけ通す)
       out.pw = rhythmMultiText(raw.pw, 12).replace(/[^a-z]/g, '');
     }
@@ -896,7 +899,7 @@ const RHYTHM_MULTI = (() => {
       s.members[id] = {
         id, cpu: true, owner: s.selfId, name: rhythmMultiText(buddy.name, 12) || 'マスモン', level: rhythmMultiInt(buddy.level, 9999),
         mb: rhythmMultiText(buddy.baseId, 40).replace(/[^A-Za-z0-9_-]/g, ''),
-        mc: Array.isArray(buddy.colors) ? buddy.colors.slice(0, 8).map((c) => rhythmMultiText(c, 24).replace(/[^A-Za-z0-9_#:-]/g, '')) : [],
+        mc: Array.isArray(buddy.colors) ? buddy.colors.slice(0, 8).map(rhythmMultiColorId) : [],
         icon: '', frame: '', bid: '', joinedAt: Math.max(Date.now(), me ? me.joinedAt + 1 : 0),
         pick: '', pickRound: '', readyRound: '', diff: me ? me.diff : '', playing: false, open: false, res: null, seen: Date.now(),
       };
@@ -1463,7 +1466,7 @@ function RhythmMultiAvatar({ m, resolveIconUrl, sizeClass = 'h-10 w-10', small =
     return (
       <span data-rhythm-multi-cpu-avatar className={`relative block shrink-0 overflow-hidden rounded-full border-2 border-lime-300/80 bg-slate-800 ${sizeClass}`}>
         {src
-          ? <DyedMonsterImage baseId={m.mb} src={src} alt="" masuColors={Array.isArray(m.mc) ? m.mc.filter(Boolean) : []} draggable={false} className="h-full w-full object-contain p-0.5" />
+          ? <DyedMonsterImage baseId={m.mb} src={src} alt="" masuColors={Array.isArray(m.mc) ? m.mc.map((c) => c || null) : []} draggable={false} className="h-full w-full object-contain p-0.5" />
           : <span aria-hidden="true" className="flex h-full w-full items-center justify-center text-lg">🐾</span>}
       </span>
     );
