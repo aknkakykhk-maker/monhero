@@ -43,6 +43,8 @@ function RhythmInfoScreen({
   );
 }
 
+// 曲えらびのアシスト・ミラー譜面の切り替え(キー・絵・名前・ONの色)。縦は上の題名の行、横はジャケットの右に同じものを置く
+const RHYTHM_SELECT_PLAY_MODES=[['assistMode','🛟','アシスト','border-emerald-300 bg-emerald-600/80 text-white'],['mirrorChart','↔','ミラー譜面','border-sky-300 bg-sky-600/80 text-white']];
 function RhythmSongSelectScreen({
   catchingUp, difficulty, dismissQuickRhythmBackground, dismissRhythmEventNotice, dismissRhythmSixLaneIntro, rhythmSixLaneIntroVisible, dismissRhythmLookIntro, rhythmLookIntroVisible, onTryRhythmLook, exitingQuickRun, handleGiveUp, mainHero,
   onExit, onOpenEventRanking, onOpenHelp, onOpenMulti = null, onOpenMonsterSlots, onOpenOptions, onOpenRanking,
@@ -182,8 +184,9 @@ function RhythmSongSelectScreen({
           <div className="min-w-0 flex-1">
             {/* 「体験版」の札は、右のボタンの幅を空けるためこの小さな行へ入れた(2026-10-01)。
                 題名はヘルプや案内と同じ呼び名「曲えらび」にそろえた(以前は「楽曲選択」) */}
-            <small className="flex items-center gap-1.5 text-[8px] font-black leading-none tracking-[0.2em] text-fuchsia-300">MONBEAT<span data-rhythm-demo-badge className="rounded-full border border-amber-300/60 bg-amber-500/15 px-1.5 py-px text-[8px] tracking-normal text-amber-200">体験版</span></small>
-            <h2 className="truncate text-sm font-black leading-tight tracking-widest text-cyan-200">🎵 曲えらび</h2>
+            <small className="flex items-center gap-1.5 text-[8px] font-black leading-none tracking-[0.2em] text-fuchsia-300"><span className="max-[359px]:hidden">MONBEAT</span><span data-rhythm-demo-badge className="rounded-full border border-amber-300/60 bg-amber-500/15 px-1.5 py-px text-[8px] tracking-normal text-amber-200">体験版</span></small>
+            {/* 幅の狭い端末(320px など)は縦の題名の行にアシスト・ミラーが入るので、♪と字の間隔を詰めて「曲えらび」を収める(2026-10-19) */}
+            <h2 className="truncate text-sm font-black leading-tight tracking-widest text-cyan-200 max-[359px]:tracking-normal"><span className="max-[359px]:hidden">🎵 </span>曲えらび</h2>
             {beatPointReleased&&Number.isFinite(beatPointBalance)&&<small data-rhythm-beat-point-balance aria-label={`所持ビートP ${beatPointBalance.toLocaleString()}`}
               className="block truncate text-[9px] font-black leading-tight text-violet-200/90">🎟️ {beatPointBalance.toLocaleString()} <span className="text-violet-300/80">ビートP</span></small>}
           </div>
@@ -193,6 +196,21 @@ function RhythmSongSelectScreen({
           {quickRunStartNode&&<div data-quick-run-start-header className="min-w-0 max-w-[260px] flex-1">{quickRunStartNode}</div>}
           {/* 縦⇄横の切り替え。端末の回転ロックを解除しに行かなくても横画面で遊べるようにする
               (2026-09-05・ユーザー指示「縦なら横に横なら縦に変わるボタン」) */}
+          {/* 縦画面だけ、アシスト・ミラー譜面をここ(横・設定の左)へ置く(2026-10-19 社長「縦画面だと曲選択が見づらい。
+              アシスト、ミラーとかを上部の空いてるとこに移動して」)。下の詳細の箱が1段低くなり、そのぶん曲の一覧が多く見える。
+              形は横・設定と同じ「絵＋下に小さく名前」で、ONのときは色が付く。入/切の意味と保存は今までどおり(オプションの「演奏」タブと同じ値) */}
+          <div data-rhythm-header-play-modes className="flex shrink-0 gap-1 landscape:hidden">
+            {RHYTHM_SELECT_PLAY_MODES.map(([key,icon,name,on])=>{
+              const active=!!(rhythmSettings&&rhythmSettings[key]);
+              return <button key={key} type="button" data-rhythm-play-mode-toggle={key} data-rhythm-play-mode-place="header" aria-pressed={active}
+                aria-label={`${name} ${active?'ON':'OFF'}`} title={name}
+                onClick={()=>onToggleRhythmSetting&&onToggleRhythmSetting(key)}
+                className={`flex min-h-[44px] min-w-[44px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border px-1 leading-none ${active?on:'border-white/15 bg-slate-900/80 text-slate-300'}`}>
+                <span className="flex items-center gap-0.5 text-[12px] font-black leading-none"><span aria-hidden="true">{icon}</span><span className="text-[8px]">{active?'ON':'OFF'}</span></span>
+                <span className="text-[9px] font-black leading-none">{name==='ミラー譜面'?'ミラー':name}</span>
+              </button>;
+            })}
+          </div>
           <RhythmOrientationButton/>
           {/* 右上の4つのボタンは「絵＋下に小さく名前」の同じ形(2026-10-01・ユーザー指摘「マスモン設定ボタン自体も
               分かりづらいから画面幅を無駄にせず分かりやすいように」)。絵文字だけだと何のボタンか分からなかった。
@@ -390,6 +408,8 @@ function RhythmSongSelectScreen({
           onView={saveRhythmSelectView}
           listScrollTop={rhythmSongListScrollRef.current}
           onListScrollTop={top=>{rhythmSongListScrollRef.current=top;}}
+          actionExtra={song=><button type="button" data-rhythm-demo-ranking data-rhythm-ranking-place="action" onClick={()=>onOpenRanking(song)} aria-label="この曲の全国ランキング" title="全国ランキング"
+            className="flex min-h-[46px] w-[46px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border border-amber-300/60 bg-amber-500/10 leading-none text-amber-100"><span aria-hidden="true" className="text-base leading-none">🏆</span><span className="text-[8px] font-black leading-none">順位</span></button>}
           footer={song=><>
             {/* アシストモードとミラー譜面は、アワーノーツと同じく「遊ぶ前にその場で」切り替えられるようにする
                 (2026-09-24)。オプションの「演奏」タブにも同じ設定があり、どちらで変えても同じ値が保存される */}
@@ -401,8 +421,9 @@ function RhythmSongSelectScreen({
                 (2026-09-05・ユーザー指摘「縦画面の楽曲選択が2曲までしか出ないのがやりづらい」)。 */}
             {/* 2026-09-26 に見本の形へ(ユーザー指示「見本の形がかなり理想」)。縦は1行の横長ボタン、
                 横はジャケットの右(自己ベストの下)へ入るので、絵文字とON/OFFだけの小さなボタンにする */}
-            <div data-rhythm-play-modes className="grid grid-cols-3 gap-1.5">
-              {[['assistMode','🛟','アシスト','border-emerald-300 bg-emerald-600/80 text-white'],['mirrorChart','↔','ミラー譜面','border-sky-300 bg-sky-600/80 text-white']].map(([key,icon,name,on])=>{
+            {/* 縦画面ではこの段を出さない(2026-10-19)。アシスト・ミラーは上の題名の行へ、ランキングは「決定」の右へ移した */}
+            <div data-rhythm-play-modes className="hidden grid-cols-3 gap-1.5 landscape:grid">
+              {RHYTHM_SELECT_PLAY_MODES.map(([key,icon,name,on])=>{
                 const active=!!(rhythmSettings&&rhythmSettings[key]);
                 return <button key={key} type="button" data-rhythm-play-mode-toggle={key} aria-pressed={active}
                   aria-label={`${name} ${active?'ON':'OFF'}`} title={name}
