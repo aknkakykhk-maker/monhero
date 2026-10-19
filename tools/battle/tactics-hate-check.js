@@ -97,5 +97,15 @@ check('⑦ 保存データの一覧にタイプのキーが残っている(消�
 const dex = read('monster-hero/src/parts/57-screen-monster-dex.jsx'), pickSrc = read('monster-hero/src/parts/67-screen-pick.jsx');
 check('⑦ 図鑑・図鑑の詳細・パーティ選びに印がある', (dex.match(/<MonsterTypeBadge /g) || []).length >= 2 && /<MonsterTypeBadge /.test(pickSrc));
 
+// ⑧ 行動カードの🔥(使うと上がる量の段。基準は TACTICS_HATE.cardFlames の1か所)
+check('⑧ カードの段の基準が TACTICS_HATE にある', Array.isArray(H.cardFlames) && H.cardFlames.length === 2 && H.cardFlames[0] < H.cardFlames[1] && Number.isFinite(H.cardDmgShareGuess));
+check('⑧ 段は 0〜3(小・中・大)', G.tacticsHateGainLevel(0) === 0 && G.tacticsHateGainLevel(1) === 1 && G.tacticsHateGainLevel(H.cardFlames[0]) === 2 && G.tacticsHateGainLevel(H.cardFlames[1]) === 3 && G.TACTICS_HATE_LEVEL_LABELS.join() === ',小,中,大');
+const lv = (card, id) => G.tacticsHateCardLevel(card, id);
+check('⑧ 通常攻撃は小・ガードは中・挑発は大', lv({ type: 'atk' }, 'Mocchi') === 1 && lv({ type: 'guard' }, 'Mocchi') === 2 && lv({ id: 'atsu', type: 'taunt' }, 'Mocchi') === 3);
+check('⑧ 子のタイプ・特性で変わる(盾のガード・モノリスの攻撃)', lv({ type: 'guard' }, 'Yggdrasil') === 3 && lv({ type: 'atk' }, 'Monol') === 2);
+check('⑧ EX のかばうは大', G.tacticsHateExLevel('coverAll', 'Monol') === 3);
+const battle = read('monster-hero/src/parts/71-screen-battle.jsx');
+check('⑧ 手札と EX の詳細に段を出す(ヘイトが切なら出さない)', /tacticsHateOn&&\(\(\)=>\{const lv=tacticsHateCardLevel\(/.test(battle) && /tacticsHateOn&&\(\(\)=>\{const lv=tacticsHateExLevel\(/.test(battle));
+
 console.log(failed ? `\nNG ${failed}件` : '\nすべてOK');
 process.exit(failed ? 1 : 0);

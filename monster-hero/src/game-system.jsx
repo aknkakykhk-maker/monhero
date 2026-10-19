@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c3c94a90b721f1d6
+// generated-sha256: 170b7b4bd6a203fa
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-19 10:02"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-19 11:07"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -24155,6 +24155,11 @@ const withTacticsTarget = (intent, units, random = Math.random, bias = TACTICS_T
 const TACTICS_HATE = {
   k: 25, decay: 0.7, cap: 100,
   flames: [20, 50, 80],
+  // 行動カード・EX に出す「使うと🔥がどれだけ上がるか」の段(2026-10-19 社長「各カードにヘイト割合も書いたほうがわかりやすいかもね」)。
+  //   1回で上がる量(使う子の倍率を掛けたあと)が cardFlames[0] 未満なら🔥(小)・cardFlames[1] 未満なら🔥🔥(中)・それ以上は🔥🔥🔥(大)
+  //   攻撃は与ダメージのぶんも入るので、そのターンの味方の与ダメージのうち cardDmgShareGuess を出したとして見積もる
+  cardFlames: [15, 40],
+  cardDmgShareGuess: 0.5,
   hero: { floor: 20 },
   action: { atk: 2, unique: 4, dmgShare: 15, heal: 30, buff: 5, debuff: 8, guard: 25, taunt: 40, ex: 10 },
   exByEffect: { coverAll: 60, partyGuard: 20, lifeSpring: 20, cookieBox: 15, partyBoost: 15, present: 10 },
@@ -24239,6 +24244,19 @@ const tacticsHateExGain = (effect, monId) => {
   const base = Object.prototype.hasOwnProperty.call(TACTICS_HATE.exByEffect, effect) ? TACTICS_HATE.exByEffect[effect] : TACTICS_HATE.action.ex;
   return base + tacticsHateNum(p.add.ex) + p.always;
 };
+// 1回で上がる量 → 段(0 = 上がらない・1〜3 = 小・中・大)
+const tacticsHateGainLevel = (gain) => (tacticsHateNum(gain) > 0 ? 1 + TACTICS_HATE.cardFlames.filter(x => gain >= x).length : 0);
+const TACTICS_HATE_LEVEL_LABELS = ['', '小', '中', '大'];
+// 行動カードを1回使うと上がる量(使う子の倍率まで掛けたもの)。monId が無ければタイプの倍率なし(アタッカーと同じ)
+const tacticsHateCardEstimate = (card, monId = null) => {
+  const kind = tacticsHateCardKind(card);
+  if (!kind) return 0;
+  const share = kind === 'atk' || kind === 'unique' || kind === 'taunt' ? TACTICS_HATE.action.dmgShare * TACTICS_HATE.cardDmgShareGuess : 0;
+  return tacticsHateProfile(monId).mult * (tacticsHateCardGain(card, monId) + share);
+};
+const tacticsHateCardLevel = (card, monId = null) => tacticsHateGainLevel(tacticsHateCardEstimate(card, monId));
+// EX を使うと上がる量の段(使う子の倍率まで掛けたもの)
+const tacticsHateExLevel = (effect, monId) => tacticsHateGainLevel(tacticsHateProfile(monId).mult * tacticsHateExGain(effect, monId));
 const normalizeTacticsHate = (hate) => [0, 1, 2, 3].map(i => tacticsClamp(tacticsHateNum(Array.isArray(hate) ? hate[i] : 0), 0, TACTICS_HATE.cap));
 // WAVE の始め(勇者だけ下地から)
 const tacticsHateWaveStart = (heroSlot) => [0, 1, 2, 3].map(i => (i === heroSlot ? TACTICS_HATE.hero.floor : 0));
@@ -41017,6 +41035,10 @@ function BattleScreen({
                 {discardCards&&discardCards.includes(i)&&(<div data-card-discard className="absolute inset-0 z-30 flex items-center justify-center rounded-[inherit] bg-black/60 text-[12px] font-black text-amber-200">捨てる</div>)}
                 {isSel&&!assignedMon&&(<div className={`absolute top-0.5 ${tacticsNewLayout?'right-0.5':'left-0.5'} z-30 w-5 h-5 rounded-full bg-cyan-400 border-2 border-white flex items-center justify-center shadow-lg`}><Check size={10} className="text-white" strokeWidth={4}/></div>)}
                 {assignedMon&&(<div className="absolute top-0.5 right-0.5 z-30 w-5 h-5 rounded-full bg-indigo-600 border-2 border-white flex items-center justify-center overflow-hidden shadow-lg">{assignedMon.imgUrl?<img src={assignedMon.imgUrl} alt="" className="w-full h-full object-contain"/>:<span className="text-[10px]">{assignedMon.emoji}</span>}</div>)}
+                {/* 使うと🔥(狙われやすさ)がどれだけ上がるか(2026-10-19 社長「各カードにヘイト割合も書いたほうがわかりやすいかもね」)。段は TACTICS_HATE.cardFlames。
+                    置いた子(固有技は持ち主)のタイプ・上書きまで掛ける。カードの下の端の真ん中に小さな帯で出す(右上は選んだ印・左上はガッツ) */}
+                {tacticsHateOn&&(()=>{const lv=tacticsHateCardLevel(c,assignedMon?.id||(Number.isInteger(c.ownerSlotIdx)?slots[c.ownerSlotIdx]?.id:null)||null); return lv>0?(
+                  <span data-card-hate={lv} aria-label={`使うと狙われやすさ ${TACTICS_HATE_LEVEL_LABELS[lv]}`} title={`使うと🔥 ${TACTICS_HATE_LEVEL_LABELS[lv]}`} className="pointer-events-none absolute bottom-[3px] left-1/2 z-30 flex -translate-x-1/2 items-center rounded-full border border-orange-300/60 bg-black/70 px-1 py-px text-[8px] leading-[10px] tracking-[-0.15em] shadow-[0_0_6px_rgba(249,115,22,.55)]">{Array.from({length:lv},(_,k)=><span key={k} aria-hidden="true">🔥</span>)}</span>):null;})()}
                 {/* ★data-decoration は「これは絵であって読むものではない」という目じるし。
                     使えないカードの赤い札(枚数上限など)をこの絵の上へわざと出すので、
                     文字の重なりを見る検査ではこの中身を数えない */}
@@ -41134,6 +41156,7 @@ function BattleScreen({
                 <dd data-tactics-ex-uses className="font-black text-white">{exPanel.remaining.unlimited?'無制限':`のこり ${exPanel.remaining.left} / ${exPanel.remaining.max}（${exPanel.def.usesPerWave?'このWAVE':'このラン'}）`}</dd>
                 <dt className="font-bold text-slate-400">カード</dt>
                 <dd data-tactics-ex-with-cards={exPanel.def.withCards?'yes':'no'} className="font-black text-white">{exPanel.def.withCards?'同じターンにこの子も通常カードを使える':'使ったターン、この子はカードを使えない（ほかの子は使える）'}</dd>
+                {tacticsHateOn&&(()=>{const lv=tacticsHateExLevel(exPanel.def.effect,slots[exPanel.slot]?.id||null); return lv>0?<><dt className="font-bold text-slate-400">狙われやすさ</dt><dd data-tactics-ex-hate={lv} className="font-black text-orange-200">使うと{'🔥'.repeat(lv)} {TACTICS_HATE_LEVEL_LABELS[lv]}</dd></>:null;})()}
                 {exPanel.durationText&&<><dt className="font-bold text-slate-400">効果時間</dt><dd className="font-black text-white">{exPanel.durationText}</dd></>}
                 {exPanel.def.conditionText&&<><dt className="font-bold text-slate-400">条件</dt><dd className="font-black text-white">{exPanel.def.conditionText}</dd></>}
                 {exPanel.stats&&!exPanel.stats.changed&&<><dt className="font-bold text-slate-400">ちから／丈夫さ</dt><dd data-tactics-ex-stats className="font-black text-white">{exPanel.stats.atk}／{exPanel.stats.def}</dd></>}

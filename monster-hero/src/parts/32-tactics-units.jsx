@@ -578,6 +578,11 @@ const withTacticsTarget = (intent, units, random = Math.random, bias = TACTICS_T
 const TACTICS_HATE = {
   k: 25, decay: 0.7, cap: 100,
   flames: [20, 50, 80],
+  // 行動カード・EX に出す「使うと🔥がどれだけ上がるか」の段(2026-10-19 社長「各カードにヘイト割合も書いたほうがわかりやすいかもね」)。
+  //   1回で上がる量(使う子の倍率を掛けたあと)が cardFlames[0] 未満なら🔥(小)・cardFlames[1] 未満なら🔥🔥(中)・それ以上は🔥🔥🔥(大)
+  //   攻撃は与ダメージのぶんも入るので、そのターンの味方の与ダメージのうち cardDmgShareGuess を出したとして見積もる
+  cardFlames: [15, 40],
+  cardDmgShareGuess: 0.5,
   hero: { floor: 20 },
   action: { atk: 2, unique: 4, dmgShare: 15, heal: 30, buff: 5, debuff: 8, guard: 25, taunt: 40, ex: 10 },
   exByEffect: { coverAll: 60, partyGuard: 20, lifeSpring: 20, cookieBox: 15, partyBoost: 15, present: 10 },
@@ -662,6 +667,19 @@ const tacticsHateExGain = (effect, monId) => {
   const base = Object.prototype.hasOwnProperty.call(TACTICS_HATE.exByEffect, effect) ? TACTICS_HATE.exByEffect[effect] : TACTICS_HATE.action.ex;
   return base + tacticsHateNum(p.add.ex) + p.always;
 };
+// 1回で上がる量 → 段(0 = 上がらない・1〜3 = 小・中・大)
+const tacticsHateGainLevel = (gain) => (tacticsHateNum(gain) > 0 ? 1 + TACTICS_HATE.cardFlames.filter(x => gain >= x).length : 0);
+const TACTICS_HATE_LEVEL_LABELS = ['', '小', '中', '大'];
+// 行動カードを1回使うと上がる量(使う子の倍率まで掛けたもの)。monId が無ければタイプの倍率なし(アタッカーと同じ)
+const tacticsHateCardEstimate = (card, monId = null) => {
+  const kind = tacticsHateCardKind(card);
+  if (!kind) return 0;
+  const share = kind === 'atk' || kind === 'unique' || kind === 'taunt' ? TACTICS_HATE.action.dmgShare * TACTICS_HATE.cardDmgShareGuess : 0;
+  return tacticsHateProfile(monId).mult * (tacticsHateCardGain(card, monId) + share);
+};
+const tacticsHateCardLevel = (card, monId = null) => tacticsHateGainLevel(tacticsHateCardEstimate(card, monId));
+// EX を使うと上がる量の段(使う子の倍率まで掛けたもの)
+const tacticsHateExLevel = (effect, monId) => tacticsHateGainLevel(tacticsHateProfile(monId).mult * tacticsHateExGain(effect, monId));
 const normalizeTacticsHate = (hate) => [0, 1, 2, 3].map(i => tacticsClamp(tacticsHateNum(Array.isArray(hate) ? hate[i] : 0), 0, TACTICS_HATE.cap));
 // WAVE の始め(勇者だけ下地から)
 const tacticsHateWaveStart = (heroSlot) => [0, 1, 2, 3].map(i => (i === heroSlot ? TACTICS_HATE.hero.floor : 0));

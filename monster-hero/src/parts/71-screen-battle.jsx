@@ -2976,6 +2976,10 @@ function BattleScreen({
                 {discardCards&&discardCards.includes(i)&&(<div data-card-discard className="absolute inset-0 z-30 flex items-center justify-center rounded-[inherit] bg-black/60 text-[12px] font-black text-amber-200">捨てる</div>)}
                 {isSel&&!assignedMon&&(<div className={`absolute top-0.5 ${tacticsNewLayout?'right-0.5':'left-0.5'} z-30 w-5 h-5 rounded-full bg-cyan-400 border-2 border-white flex items-center justify-center shadow-lg`}><Check size={10} className="text-white" strokeWidth={4}/></div>)}
                 {assignedMon&&(<div className="absolute top-0.5 right-0.5 z-30 w-5 h-5 rounded-full bg-indigo-600 border-2 border-white flex items-center justify-center overflow-hidden shadow-lg">{assignedMon.imgUrl?<img src={assignedMon.imgUrl} alt="" className="w-full h-full object-contain"/>:<span className="text-[10px]">{assignedMon.emoji}</span>}</div>)}
+                {/* 使うと🔥(狙われやすさ)がどれだけ上がるか(2026-10-19 社長「各カードにヘイト割合も書いたほうがわかりやすいかもね」)。段は TACTICS_HATE.cardFlames。
+                    置いた子(固有技は持ち主)のタイプ・上書きまで掛ける。カードの下の端の真ん中に小さな帯で出す(右上は選んだ印・左上はガッツ) */}
+                {tacticsHateOn&&(()=>{const lv=tacticsHateCardLevel(c,assignedMon?.id||(Number.isInteger(c.ownerSlotIdx)?slots[c.ownerSlotIdx]?.id:null)||null); return lv>0?(
+                  <span data-card-hate={lv} aria-label={`使うと狙われやすさ ${TACTICS_HATE_LEVEL_LABELS[lv]}`} title={`使うと🔥 ${TACTICS_HATE_LEVEL_LABELS[lv]}`} className="pointer-events-none absolute bottom-[3px] left-1/2 z-30 flex -translate-x-1/2 items-center rounded-full border border-orange-300/60 bg-black/70 px-1 py-px text-[8px] leading-[10px] tracking-[-0.15em] shadow-[0_0_6px_rgba(249,115,22,.55)]">{Array.from({length:lv},(_,k)=><span key={k} aria-hidden="true">🔥</span>)}</span>):null;})()}
                 {/* ★data-decoration は「これは絵であって読むものではない」という目じるし。
                     使えないカードの赤い札(枚数上限など)をこの絵の上へわざと出すので、
                     文字の重なりを見る検査ではこの中身を数えない */}
@@ -3093,6 +3097,7 @@ function BattleScreen({
                 <dd data-tactics-ex-uses className="font-black text-white">{exPanel.remaining.unlimited?'無制限':`のこり ${exPanel.remaining.left} / ${exPanel.remaining.max}（${exPanel.def.usesPerWave?'このWAVE':'このラン'}）`}</dd>
                 <dt className="font-bold text-slate-400">カード</dt>
                 <dd data-tactics-ex-with-cards={exPanel.def.withCards?'yes':'no'} className="font-black text-white">{exPanel.def.withCards?'同じターンにこの子も通常カードを使える':'使ったターン、この子はカードを使えない（ほかの子は使える）'}</dd>
+                {tacticsHateOn&&(()=>{const lv=tacticsHateExLevel(exPanel.def.effect,slots[exPanel.slot]?.id||null); return lv>0?<><dt className="font-bold text-slate-400">狙われやすさ</dt><dd data-tactics-ex-hate={lv} className="font-black text-orange-200">使うと{'🔥'.repeat(lv)} {TACTICS_HATE_LEVEL_LABELS[lv]}</dd></>:null;})()}
                 {exPanel.durationText&&<><dt className="font-bold text-slate-400">効果時間</dt><dd className="font-black text-white">{exPanel.durationText}</dd></>}
                 {exPanel.def.conditionText&&<><dt className="font-bold text-slate-400">条件</dt><dd className="font-black text-white">{exPanel.def.conditionText}</dd></>}
                 {exPanel.stats&&!exPanel.stats.changed&&<><dt className="font-bold text-slate-400">ちから／丈夫さ</dt><dd data-tactics-ex-stats className="font-black text-white">{exPanel.stats.atk}／{exPanel.stats.def}</dd></>}
