@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: bafa12a546a8c6ee
+// source-sha256: 851132eb18b8204e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-19 07:51";
+const BUILD_DATE = "2026-10-19 09:58";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -71687,6 +71687,7 @@ const rhythmMultiNormalizeCode = text => {
 };
 const rhythmMultiMakeId = (head = 'p') => `${head}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 const rhythmMultiText = (value, max) => String(value == null ? '' : value).replace(/[\u0000-\u001f]/g, '').slice(0, max);
+const rhythmMultiColorId = c => rhythmMultiText(c, 24).replace(/[^A-Za-z0-9_#:@.-]/g, '');
 const rhythmMultiInt = (value, max) => {
   const n = Math.floor(Number(value));
   return Number.isFinite(n) ? Math.min(max, Math.max(0, n)) : 0;
@@ -71782,7 +71783,7 @@ const rhythmMultiCleanMessage = raw => {
     if (out.cpu) {
       out.owner = rhythmMultiText(raw.owner, 40);
       out.mb = rhythmMultiText(raw.mb, 40).replace(/[^A-Za-z0-9_-]/g, '');
-      out.mc = Array.isArray(raw.mc) ? raw.mc.slice(0, 8).map(c => rhythmMultiText(c, 24).replace(/[^A-Za-z0-9_#:-]/g, '')) : [];
+      out.mc = Array.isArray(raw.mc) ? raw.mc.slice(0, 8).map(rhythmMultiColorId) : [];
       out.pw = rhythmMultiText(raw.pw, 12).replace(/[^a-z]/g, '');
     }
     return out;
@@ -72870,7 +72871,7 @@ const RHYTHM_MULTI = (() => {
         name: rhythmMultiText(buddy.name, 12) || 'マスモン',
         level: rhythmMultiInt(buddy.level, 9999),
         mb: rhythmMultiText(buddy.baseId, 40).replace(/[^A-Za-z0-9_-]/g, ''),
-        mc: Array.isArray(buddy.colors) ? buddy.colors.slice(0, 8).map(c => rhythmMultiText(c, 24).replace(/[^A-Za-z0-9_#:-]/g, '')) : [],
+        mc: Array.isArray(buddy.colors) ? buddy.colors.slice(0, 8).map(rhythmMultiColorId) : [],
         icon: '',
         frame: '',
         bid: '',
@@ -73759,7 +73760,7 @@ function RhythmMultiAvatar({
       baseId: m.mb,
       src: src,
       alt: "",
-      masuColors: Array.isArray(m.mc) ? m.mc.filter(Boolean) : [],
+      masuColors: Array.isArray(m.mc) ? m.mc.map(c => c || null) : [],
       draggable: false,
       className: "h-full w-full object-contain p-0.5"
     }) : React.createElement("span", {
