@@ -9,7 +9,7 @@
 //   ③ 1ターンの動き: 毎ターン ×decay・上限・倒れたら0・空き枠は0・勇者は下地より下がらない・与ダメージは割合で配る
 //   ④ 炎の段は 20・50・80。勇者は下地を引いた値で見る
 //   ⑤ 名前の出た子の値(資料の★おすすめ): あつの挑発・みゅあの愛・ももすけのおねだり・モノリスのかばう
-//   ⑥ 確認待ちの試作の一覧にあり、既定は切(キーが無ければ効かない)。タクティクスバトルだけ(レイド・既存5モードは見ない)
+//   ⑥ 確認待ちの試作の一覧にあり、既定は切(キーが無ければ効かない)。タクティクスの盤面のバトル全部(タクティクスバトル・レイド。既存5モードは見ない)
 //   ⑦ タイプの表記: 確認待ちの試作の一覧にあり、既定は切。図鑑・図鑑の詳細・パーティ選びに印がある
 const fs = require('fs');
 const path = require('path');
@@ -88,7 +88,8 @@ check('⑥ 公開の印が立っている', /^\s*tacticsHate: true,/m.test(relea
 check('⑥ 公開の印が真なら入・偽なら切(試作のキーは読まない)', P.tacticsHateProtoOn() === true && Poff.tacticsHateProtoOn() === false && !/localStorage/.test(protoSrc));
 check('⑥ 確認待ちの試作の一覧から外した', !trials.includes("key: 'mh_tactics_hate_proto_v1'") && !trials.includes("key: 'mh_monster_type_proto_v1'"));
 const app = read('monster-hero/src/parts/60-app.jsx');
-check('⑥ タクティクスバトルだけ(レイドバトルは見ない)', /const tacticsHateOnFor = \(mode\) => TACTICS_BATTLE_MODES\.includes\(mode\) && !isRaidJackMode\(mode\) && tacticsHateProtoOn\(\);/.test(app));
+check('⑥ タクティクスの盤面のバトル全部(レイドバトル・グランドスラムも。既存5モードは見ない)', /const tacticsHateOnFor = \(mode\) => isTacticsMode\(mode\) && tacticsHateProtoOn\(\);/.test(app) && /const isTacticsMode = \(mode\) => TACTICS_BATTLE_MODES\.includes\(mode\) \|\| isRaidJackMode\(mode\);/.test(read('monster-hero/src/parts/10-core.jsx')));
+check('⑥ 勇者の下地は、戦闘の始めに写した勇者の id で付ける(レイドは勇者を決めた同じ描画で始まる)', /tacticsHateHeroIdRef\.current = \(heroForDeck \|\| mainHero\)\?\.id \|\| null;/.test(app) && /const tacticsHateHeroSlot = \(\) => \{ const id = tacticsHateHeroIdRef\.current/.test(app));
 check('⑥ 保存データの一覧に試作のキーが残っている(消さない)', read('docs/spec/SAVE_DATA.md').includes('mh_tactics_hate_proto_v1'));
 
 // ⑦
