@@ -126,13 +126,14 @@ const BreederIcon = ({ src, id, alt='', className='', roundedClass='rounded-full
 //   32pxでも80pxでも枠の太さが比例して変わり、小さいアイコンでもズレない。
 // ★出してよいフレームかどうかは normalizeProfileFrameId だけが決める
 //   (未公開の豪華フレームはここで 'none' に倒れるので、通常プレイヤーには出ない)。
-const ProfileFrameLayer = ({ frameId }) => {
+const ProfileFrameLayer = ({ frameId, small = false }) => {
   const frame = profileFrameById(normalizeProfileFrameId(frameId));
   if (!frame || frame.kind === 'none') return null;
   // 画像フレームは透過PNGをそのまま重ねる。object-contain なので縦横比は変わらない。
   // 重ねる大きさと位置は絵ごとに違う(穴の大きさが違う)ので、profileFrameImageStyle が出す
+  // small … 28〜32px で出す所。大きい絵をその場で縮めると細かい飾りが点のように潰れるので、前もって縮めた srcSmall を使う(2026-10-19)
   if (frame.kind === 'image') return (
-    <img src={frame.src} alt="" aria-hidden="true" draggable={false}
+    <img src={(small && frame.srcSmall) || frame.src} alt="" aria-hidden="true" draggable={false}
       style={profileFrameImageStyle(frame)} className="mh-profile-frame mh-profile-frame-image"/>
   );
   return <span aria-hidden="true" className={`mh-profile-frame mh-profile-frame-ring ${frame.className||''}`}/>;
@@ -141,7 +142,7 @@ const ProfileFrameLayer = ({ frameId }) => {
 // frameId を渡さない(または 'none')ときは、これまでの BreederIcon と見た目が変わらない。
 // badge は「アイコンと同じ円の中へ収めたい飾り」(プロフィールの鉛筆マークなど)。
 // 内側の円でクリップされ、フレームだけがその外へ出る。
-const ProfileAvatar = ({ src, id, frameId=null, alt='', className='', roundedClass='rounded-full', adjustment, fallback=null, badge=null }) => (
+const ProfileAvatar = ({ src, id, frameId=null, alt='', className='', roundedClass='rounded-full', adjustment, fallback=null, badge=null, small=false }) => (
   <span className={`mh-profile-avatar ${className}`}>
     <span className={`relative flex h-full w-full items-center justify-center overflow-hidden ${roundedClass}`}>
       {src
@@ -149,7 +150,7 @@ const ProfileAvatar = ({ src, id, frameId=null, alt='', className='', roundedCla
         : fallback}
       {badge}
     </span>
-    <ProfileFrameLayer frameId={frameId}/>
+    <ProfileFrameLayer frameId={frameId} small={small}/>
   </span>
 );
 // フレームを選んでいるか(もとから付いている縁を消すかどうかの判定に使う)

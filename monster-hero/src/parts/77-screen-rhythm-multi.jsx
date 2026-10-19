@@ -1472,13 +1472,11 @@ function RhythmMultiAvatar({ m, resolveIconUrl, sizeClass = 'h-10 w-10', small =
     );
   }
   const src = resolveIconUrl ? resolveIconUrl(m.icon) : null;
-  // small … 上の5人の細い帯(28px)とチャット(32px)。絵の枠(リースなど)は細かい飾りが小さく潰れて、
+  // small … 上の5人の細い帯(28px)とチャット(32px)。絵の枠(リースなど)は大きい絵をその場で縮めると細かい飾りが潰れて、
   //   アイコンの上に白とピンクの点が散ったように見えた(2026-10-19 社長「マスモンの染色ずれなおってない」・frame_mua_3)。
-  //   小さいときは絵の枠を重ねずアイコンだけにする(色の輪の枠はそのまま)。大きく出す所は今までどおり
-  const frame = typeof profileFrameById === 'function' ? profileFrameById(normalizeProfileFrameId(m.frame)) : null;
-  const frameId = small && frame && frame.kind === 'image' ? null : m.frame;
+  //   いったん枠を外したが、社長「フレーム出なくしたの？」で、前もって縮めた小さい版(srcSmall)で出すことにした(同日)
   return (
-    <ProfileAvatar src={src} id={m.icon} frameId={frameId} alt="" className={sizeClass}
+    <ProfileAvatar src={src} id={m.icon} frameId={m.frame} small={small} alt="" className={sizeClass}
       fallback={<span aria-hidden="true" className="flex h-full w-full items-center justify-center bg-slate-800 text-lg">🎵</span>} />
   );
 }

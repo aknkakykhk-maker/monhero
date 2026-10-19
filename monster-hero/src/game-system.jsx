@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9aa2398e6098d2ab
+// generated-sha256: c3c94a90b721f1d6
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-19 09:58"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-19 10:02"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11014,13 +11014,14 @@ const BreederIcon = ({ src, id, alt='', className='', roundedClass='rounded-full
 //   32pxでも80pxでも枠の太さが比例して変わり、小さいアイコンでもズレない。
 // ★出してよいフレームかどうかは normalizeProfileFrameId だけが決める
 //   (未公開の豪華フレームはここで 'none' に倒れるので、通常プレイヤーには出ない)。
-const ProfileFrameLayer = ({ frameId }) => {
+const ProfileFrameLayer = ({ frameId, small = false }) => {
   const frame = profileFrameById(normalizeProfileFrameId(frameId));
   if (!frame || frame.kind === 'none') return null;
   // 画像フレームは透過PNGをそのまま重ねる。object-contain なので縦横比は変わらない。
   // 重ねる大きさと位置は絵ごとに違う(穴の大きさが違う)ので、profileFrameImageStyle が出す
+  // small … 28〜32px で出す所。大きい絵をその場で縮めると細かい飾りが点のように潰れるので、前もって縮めた srcSmall を使う(2026-10-19)
   if (frame.kind === 'image') return (
-    <img src={frame.src} alt="" aria-hidden="true" draggable={false}
+    <img src={(small && frame.srcSmall) || frame.src} alt="" aria-hidden="true" draggable={false}
       style={profileFrameImageStyle(frame)} className="mh-profile-frame mh-profile-frame-image"/>
   );
   return <span aria-hidden="true" className={`mh-profile-frame mh-profile-frame-ring ${frame.className||''}`}/>;
@@ -11029,7 +11030,7 @@ const ProfileFrameLayer = ({ frameId }) => {
 // frameId を渡さない(または 'none')ときは、これまでの BreederIcon と見た目が変わらない。
 // badge は「アイコンと同じ円の中へ収めたい飾り」(プロフィールの鉛筆マークなど)。
 // 内側の円でクリップされ、フレームだけがその外へ出る。
-const ProfileAvatar = ({ src, id, frameId=null, alt='', className='', roundedClass='rounded-full', adjustment, fallback=null, badge=null }) => (
+const ProfileAvatar = ({ src, id, frameId=null, alt='', className='', roundedClass='rounded-full', adjustment, fallback=null, badge=null, small=false }) => (
   <span className={`mh-profile-avatar ${className}`}>
     <span className={`relative flex h-full w-full items-center justify-center overflow-hidden ${roundedClass}`}>
       {src
@@ -11037,7 +11038,7 @@ const ProfileAvatar = ({ src, id, frameId=null, alt='', className='', roundedCla
         : fallback}
       {badge}
     </span>
-    <ProfileFrameLayer frameId={frameId}/>
+    <ProfileFrameLayer frameId={frameId} small={small}/>
   </span>
 );
 // フレームを選んでいるか(もとから付いている縁を消すかどうかの判定に使う)
@@ -44607,13 +44608,11 @@ function RhythmMultiAvatar({ m, resolveIconUrl, sizeClass = 'h-10 w-10', small =
     );
   }
   const src = resolveIconUrl ? resolveIconUrl(m.icon) : null;
-  // small … 上の5人の細い帯(28px)とチャット(32px)。絵の枠(リースなど)は細かい飾りが小さく潰れて、
+  // small … 上の5人の細い帯(28px)とチャット(32px)。絵の枠(リースなど)は大きい絵をその場で縮めると細かい飾りが潰れて、
   //   アイコンの上に白とピンクの点が散ったように見えた(2026-10-19 社長「マスモンの染色ずれなおってない」・frame_mua_3)。
-  //   小さいときは絵の枠を重ねずアイコンだけにする(色の輪の枠はそのまま)。大きく出す所は今までどおり
-  const frame = typeof profileFrameById === 'function' ? profileFrameById(normalizeProfileFrameId(m.frame)) : null;
-  const frameId = small && frame && frame.kind === 'image' ? null : m.frame;
+  //   いったん枠を外したが、社長「フレーム出なくしたの？」で、前もって縮めた小さい版(srcSmall)で出すことにした(同日)
   return (
-    <ProfileAvatar src={src} id={m.icon} frameId={frameId} alt="" className={sizeClass}
+    <ProfileAvatar src={src} id={m.icon} frameId={m.frame} small={small} alt="" className={sizeClass}
       fallback={<span aria-hidden="true" className="flex h-full w-full items-center justify-center bg-slate-800 text-lg">🎵</span>} />
   );
 }

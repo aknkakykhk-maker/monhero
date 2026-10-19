@@ -598,6 +598,9 @@ const PROFILE_FRAMES = [
   //   tools/ranking/profile-frame-check.js が実際のPNGを測って突き合わせる。
   // ★元絵は 1254px / 0.9〜2.2MB だったものを 384px へ落として入れてある。
   //   表示は最大80pxなので、これで足りる(CLAUDE.md ⑥-2)。
+  // ★srcSmall は小さく出す所(マルチの部屋の上の並び28px・チャット32px)用に、前もって縮めた絵(2026-10-19 社長「小さい所用にフレームを出す」)。
+  //   大きい絵をその場で縮めると、細かい飾りが点の散ったように潰れた。細かい点を均してから、28〜32px×画素密度3に合う大きさへ縮めてある。
+  //   穴の比(hole)は大きい絵と同じなので、位置合わせは profileFrameImageStyle をそのまま使う。絵を差し替えたら small も作り直す
   //
   // 【released と unlock の役割はまったく別】(2026-09-16)
   //   released … **描いてよいか**。false のものは選択画面にも出ないし、
@@ -612,15 +615,15 @@ const PROFILE_FRAMES = [
   // ★条件は「買えるか」だけを決める。買ったあとに条件を割っても枠は残る(mh_profile_frame_owned_v1)。
   { id:'frame_mocchi', name:'モッチー', kind:'image', released:true, hole:0.656,
     unlock:{ shops:PROFILE_FRAME_MONSTER_SHOPS, condition:{ kind:'speciesRebirth', lineage:'mocchi', count:1, text:'モッチー種(モッチー・ミタラシ・剣士モッチー)を1回以上限界突破する' } },
-    src:'images/profile-frames/mocchi.png?v=7c842f6ed7bf',
+    src:'images/profile-frames/mocchi.png?v=7c842f6ed7bf', srcSmall:'images/profile-frames/small/mocchi.png?v=2d23bd4ec6b9',
     desc:'桜の花びらと桜もちをあしらった、モッチーの和風フレーム。' },
   { id:'frame_moo', name:'ムー', kind:'image', released:true, hole:0.682,
     unlock:{ shops:PROFILE_FRAME_MONSTER_SHOPS, condition:{ kind:'difficultyCleared', difficulty:'Master', text:'バトルの難易度マスター以上をクリアする' } },
-    src:'images/profile-frames/moo.png?v=fc64f9da9806',
+    src:'images/profile-frames/moo.png?v=fc64f9da9806', srcSmall:'images/profile-frames/small/moo.png?v=2c1f217a83e6',
     desc:'紫の宝玉と金の角をいただく、ラスボス「ムー」のフレーム。' },
   { id:'frame_suezo_beat', name:'スエゾービート', kind:'image', released:true, hole:0.724,
     unlock:{ shops:PROFILE_FRAME_MONSTER_SHOPS, condition:{ kind:'rhythmClears', count:10, text:'モンヒロビートを10回以上クリアする' } },
-    src:'images/profile-frames/suezo-beat.png?v=0b43f621dd89',
+    src:'images/profile-frames/suezo-beat.png?v=0b43f621dd89', srcSmall:'images/profile-frames/small/suezo-beat.png?v=ed7ff5b7d2b4',
     desc:'スエゾーと音符が跳ねる、モンヒロビートのフレーム。' },
   // ==================== モンスターの枠7枚(2026-10-03) ====================
   // ユーザーから受け取った透過PNG(1254px → 384pxへ軽くした。ASSETS.md)。
@@ -629,31 +632,31 @@ const PROFILE_FRAMES = [
   // ★条件に shops:['breederPoint'] と書いたぶん、ビートP交換所では条件なしで買える。
   { id:'frame_suezo', name:'スエゾー', kind:'image', released:true, hole:0.573,
     unlock:{ shops:PROFILE_FRAME_MONSTER_SHOPS, condition:{ kind:'monsterReincarnate', monsterId:'Suezo', count:1, shops:['breederPoint'], text:'スエゾーを1回転生する' } },
-    src:'images/profile-frames/suezo.png?v=6f617e7aa00a',
+    src:'images/profile-frames/suezo.png?v=6f617e7aa00a', srcSmall:'images/profile-frames/small/suezo.png?v=af78e8da3297',
     desc:'黄金の輪に、スエゾーがぺろりと顔を出す、きらめくフレーム。' },
   { id:'frame_golem', name:'ゴーレム', kind:'image', released:true, hole:0.755,
     unlock:{ shops:PROFILE_FRAME_MONSTER_SHOPS, condition:{ kind:'monsterReincarnate', monsterId:'Golem', count:1, shops:['breederPoint'], text:'ゴーレムを1回転生する' } },
-    src:'images/profile-frames/golem.png?v=84bc05c75f8d',
+    src:'images/profile-frames/golem.png?v=84bc05c75f8d', srcSmall:'images/profile-frames/small/golem.png?v=b7677178c19c',
     desc:'ごつごつした白い岩が、ぐるりと連なる、ゴーレムの輪。' },
   { id:'frame_tiger', name:'ライガー', kind:'image', released:true, hole:0.703,
     unlock:{ shops:PROFILE_FRAME_MONSTER_SHOPS, condition:{ kind:'monsterReincarnate', monsterId:'Tiger', count:1, shops:['breederPoint'], text:'ライガーを1回転生する' } },
-    src:'images/profile-frames/tiger.png?v=3ced385df138',
+    src:'images/profile-frames/tiger.png?v=3ced385df138', srcSmall:'images/profile-frames/small/tiger.png?v=2a743d53deb4',
     desc:'蒼い結晶と金の飾りをまとった、ライガーの輪。' },
   { id:'frame_ham', name:'ハム', kind:'image', released:true, hole:0.792,
     unlock:{ shops:PROFILE_FRAME_MONSTER_SHOPS, condition:{ kind:'monsterReincarnate', monsterId:'Ham', count:1, shops:['breederPoint'], text:'ハムを1回転生する' } },
-    src:'images/profile-frames/ham.png?v=0d4103bbbab8',
+    src:'images/profile-frames/ham.png?v=0d4103bbbab8', srcSmall:'images/profile-frames/small/ham.png?v=88da9ab250ff',
     desc:'ふわふわの毛並みと肉球、桃色の耳をあしらった、ハムの輪。' },
   { id:'frame_pixie', name:'ピクシー', kind:'image', released:true, hole:0.750,
     unlock:{ shops:PROFILE_FRAME_MONSTER_SHOPS, condition:{ kind:'monsterReincarnate', monsterId:'Pixie', count:1, shops:['breederPoint'], text:'ピクシーを1回転生する' } },
-    src:'images/profile-frames/pixie.png?v=a9a36e085925',
+    src:'images/profile-frames/pixie.png?v=a9a36e085925', srcSmall:'images/profile-frames/small/pixie.png?v=fb6479bd1636',
     desc:'ハートの宝石とこうもりの羽が並ぶ、ピクシーの輪。' },
   { id:'frame_mia', name:'ミーア', kind:'image', released:true, hole:0.734,
     unlock:{ shops:PROFILE_FRAME_MONSTER_SHOPS, condition:{ kind:'monsterReincarnate', monsterId:'Mia', count:1, shops:['breederPoint'], text:'ミーアを1回転生する' } },
-    src:'images/profile-frames/mia.png?v=fc46dfb38806',
+    src:'images/profile-frames/mia.png?v=fc46dfb38806', srcSmall:'images/profile-frames/small/mia.png?v=25df0abdb3a3',
     desc:'白い羽と色とりどりのリボンで飾った、ミーアの輪。' },
   { id:'frame_ragnarok', name:'ラグナロク', kind:'image', released:true, hole:0.672,
     unlock:{ shops:PROFILE_FRAME_RAGNAROK_SHOPS, condition:{ kind:'difficultyCleared', difficulty:'RAGNAROK', shops:['breederPoint'], text:'バトルの難易度ラグナロクをクリアする' } },
-    src:'images/profile-frames/ragnarok.png?v=b6e9fe525ece',
+    src:'images/profile-frames/ragnarok.png?v=b6e9fe525ece', srcSmall:'images/profile-frames/small/ragnarok.png?v=145848170f50',
     desc:'燃えさかる炎をまとう黒い竜が、ぐるりと取り巻く輪。' },
   // ==================== ハロウィンとモンヒロビート用の4枚(2026-10-05・未公開) ====================
   // ユーザーから受け取ったJPEG(透過なし・黒背景)を、枠の外と穴の中の黒を透明にして取り込んだ(384px)。
@@ -661,16 +664,16 @@ const PROFILE_FRAMES = [
   // 決まったら released:true にして unlock に売り値(shops)や条件を書く(上のモンスターの枠と同じ)。
   //   ハロウィンの2種は期間限定にするか未定。「モンビー用」はモンヒロビート用の意味。
   { id:'frame_halloween_night', name:'ハロウィン・夜', kind:'image', released:false, hole:0.521,
-    src:'images/profile-frames/halloween-night.png?v=647f32308d31',
+    src:'images/profile-frames/halloween-night.png?v=647f32308d31', srcSmall:'images/profile-frames/small/halloween-night.png?v=5c47af1a0742',
     desc:'青い炎と骨、音符の輪に、ハロウィンの夜のモンスターたちが集まる、暗い夜のフレーム。' },
   { id:'frame_halloween_pumpkin', name:'ハロウィン・パンプキン', kind:'image', released:false, hole:0.583,
-    src:'images/profile-frames/halloween-pumpkin.png?v=f68b833002c2',
+    src:'images/profile-frames/halloween-pumpkin.png?v=f68b833002c2', srcSmall:'images/profile-frames/small/halloween-pumpkin.png?v=f4aac89375ec',
     desc:'大きなパンプキンと、包帯のうさぎ、ゴーストが並ぶ、にぎやかなハロウィンのフレーム。' },
   { id:'frame_eiki_zan', name:'エイキ&ザン', kind:'image', released:false, hole:0.656,
-    src:'images/profile-frames/eiki-zan.png?v=535efca30954',
+    src:'images/profile-frames/eiki-zan.png?v=535efca30954', srcSmall:'images/profile-frames/small/eiki-zan.png?v=3ca4fedaece2',
     desc:'桜と夜空のステージで、エイキとザンがギターを奏でる、モンヒロビート用のフレーム。' },
   { id:'frame_undine_beat', name:'ウンディーネ種', kind:'image', released:false, hole:0.604,
-    src:'images/profile-frames/undine-beat.png?v=71fc5b699b36',
+    src:'images/profile-frames/undine-beat.png?v=71fc5b699b36', srcSmall:'images/profile-frames/small/undine-beat.png?v=9d34ec0bd2fd',
     desc:'水と泡のステージで、ウンディーネの仲間たちが歌う、モンヒロビート用のフレーム。' },
   // ==================== 助手の仲良し度でもらえる枠(2026-09-16) ====================
   // 助手1人につき3枚。その助手との仲良し度が Lv2 / Lv5 / Lv7 になると自動でもらえる。
@@ -681,29 +684,29 @@ const PROFILE_FRAMES = [
   // (BREEDER_EVO_NAMES.mua の 愛 → 深愛 → 慈愛)にそろえてある。
   { id:'frame_mua_1', name:'みゅあ・愛', kind:'image', released:true, hole:0.669,
     unlock:{ assistantId:'mua', bondLevel:2 },
-    src:'images/profile-frames/mua-1.png?v=cf21c351ff0a',
+    src:'images/profile-frames/mua-1.png?v=cf21c351ff0a', srcSmall:'images/profile-frames/small/mua-1.png?v=cff43ee9669e',
     desc:'桜色のリボンと星をあしらった、みゅあの細いリース。' },
   { id:'frame_mua_2', name:'みゅあ・深愛', kind:'image', released:true, hole:0.745,
     unlock:{ assistantId:'mua', bondLevel:5 },
-    src:'images/profile-frames/mua-2.png?v=ec2adae9b6f6',
+    src:'images/profile-frames/mua-2.png?v=ec2adae9b6f6', srcSmall:'images/profile-frames/small/mua-2.png?v=0d8f01b1ce71',
     desc:'金の飾りと真珠、虹のリボンで華やかにした、みゅあのリース。' },
   { id:'frame_mua_3', name:'みゅあ・慈愛', kind:'image', released:true, hole:0.719,
     unlock:{ assistantId:'mua', bondLevel:7 },
-    src:'images/profile-frames/mua-3.png?v=d18cf1740410',
+    src:'images/profile-frames/mua-3.png?v=d18cf1740410', srcSmall:'images/profile-frames/small/mua-3.png?v=3c302cc16d8e',
     desc:'みゅあ本人が寄り添って眠る、いちばん特別なリース。' },
   // ききの3枚。同じ意匠を段階的に豪華にしたもので、呼び分けは教えカードの3段階
   // (BREEDER_EVO_NAMES.kiki の 応援 → 本気 → 全力全開)にそろえてある。
   { id:'frame_kiki_ouen', name:'きき・応援', kind:'image', released:true, hole:0.755,
     unlock:{ assistantId:'kiki', bondLevel:2 },
-    src:'images/profile-frames/kiki-ouen.png?v=09b871ec464c',
+    src:'images/profile-frames/kiki-ouen.png?v=09b871ec464c', srcSmall:'images/profile-frames/small/kiki-ouen.png?v=765c2b84055f',
     desc:'紅いリボンと白いくつ下をあしらった、ききのフレーム。' },
   { id:'frame_kiki_honki', name:'きき・本気', kind:'image', released:true, hole:0.698,
     unlock:{ assistantId:'kiki', bondLevel:5 },
-    src:'images/profile-frames/kiki-honki.png?v=fb89e34bd92b',
+    src:'images/profile-frames/kiki-honki.png?v=fb89e34bd92b', srcSmall:'images/profile-frames/small/kiki-honki.png?v=9383373c0f24',
     desc:'金の縁飾りと桜、幾重ものリボンで華やかにした、ききのフレーム。' },
   { id:'frame_kiki_zenryoku', name:'きき・全力全開', kind:'image', released:true, hole:0.677,
     unlock:{ assistantId:'kiki', bondLevel:7 },
-    src:'images/profile-frames/kiki-zenryoku.png?v=88238cde0306',
+    src:'images/profile-frames/kiki-zenryoku.png?v=88238cde0306', srcSmall:'images/profile-frames/small/kiki-zenryoku.png?v=393ad230d39d',
     desc:'髪とリボンが渦を巻き、星とハートが輝く、ききのいちばん豪華なフレーム。' },
   // ももすけの3枚。ももすけにはまだアシストカードが無いので、呼び分けを先に決めてある
   // (2026-09-16・ユーザーが選択)。おねだり → だだこね → 独り占め。
@@ -711,15 +714,15 @@ const PROFILE_FRAMES = [
   // (BREEDER_EVO_NAMES へ momosuke:['ももすけのおねだり','ももすけのだだこね','ももすけの独り占め'])。
   { id:'frame_momosuke_1', name:'ももすけ・おねだり', kind:'image', released:true, hole:0.737,
     unlock:{ assistantId:'momosuke', bondLevel:2 },
-    src:'images/profile-frames/momosuke-1.png?v=85af4bc2f2e2',
+    src:'images/profile-frames/momosuke-1.png?v=85af4bc2f2e2', srcSmall:'images/profile-frames/small/momosuke-1.png?v=618769cbac66',
     desc:'黒とピンクのリボンに、うさぎと三日月をあしらった細い輪。' },
   { id:'frame_momosuke_2', name:'ももすけ・だだこね', kind:'image', released:true, hole:0.714,
     unlock:{ assistantId:'momosuke', bondLevel:5 },
-    src:'images/profile-frames/momosuke-2.png?v=9c1adfb2e8b6',
+    src:'images/profile-frames/momosuke-2.png?v=9c1adfb2e8b6', srcSmall:'images/profile-frames/small/momosuke-2.png?v=4503f619c3a6',
     desc:'大きな三日月と魔法陣、こうもりの羽で飾った、ももすけの輪。' },
   { id:'frame_momosuke_3', name:'ももすけ・独り占め', kind:'image', released:true, hole:0.714,
     unlock:{ assistantId:'momosuke', bondLevel:7 },
-    src:'images/profile-frames/momosuke-3.png?v=15ed59e8cf51',
+    src:'images/profile-frames/momosuke-3.png?v=15ed59e8cf51', srcSmall:'images/profile-frames/small/momosuke-3.png?v=5ca7a59b24ff',
     desc:'ももすけ本人がうさぎのぬいぐるみを抱えて陣取る、いちばん特別な輪。' },
 ];
 const PROFILE_FRAME_MAP = Object.freeze(Object.fromEntries(PROFILE_FRAMES.map(frame => [frame.id, frame])));
