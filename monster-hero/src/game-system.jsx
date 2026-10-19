@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 170b7b4bd6a203fa
+// generated-sha256: 8bedaaf349703b1e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-19 11:07"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-19 12:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -29096,7 +29096,7 @@ const raidJackStoryUnlockKey = (id) => `${String(id).replace(/^raid_jack_/, 'rai
 // イベント中のBGM(2026-10-04・ユーザー指示)。レイド画面・段階えらび・編成は、この曲に固定する(ジャック戦は 2026-10-05 から下の RAID_JACK_BATTLE_BGM_TRACK)。
 // HOMEの曲は、ユーザーが自分で選んでいない(既定のまま)あいだだけ、期間中にこの曲へ替わる。終わると元に戻る
 const RAID_JACK_BGM_TRACK = 'melo_crazy_party_night_full';   // Crazy Party Night ～ぱんぷきんの逆襲～ の全編版(2026-10-04・ユーザー指示「ハロウィンイベント関連はこの曲をデフォルトに」。1分34秒の版から替えた)
-const RAID_JACK_BGM_STATES = Object.freeze(['RAID_JACK', 'RAID_JACK_PREP', 'RAID_JACK_PLACE']);
+const RAID_JACK_BGM_STATES = Object.freeze(['RAID_JACK', 'RAID_JACK_PREP']);
 // ジャックとの戦い(レイドバトルもグランドスラムも)だけは、ハロウィンの曲「Monster」の全編の版にする(2026-10-05・ユーザー指示
 // 「フルはハロウィンイベント期間でのレイド戦用のデフォルト曲にして」。範囲は戦闘中だけ・ユーザー判断)。レイド画面・段階えらび・編成は上の曲のまま
 const RAID_JACK_BATTLE_BGM_TRACK = 'melo_monster';
@@ -47672,70 +47672,146 @@ const RaidJackScreen = ({ initialTier = 0, onBack, onChallenge, onPurchase, onCl
   );
 };
 
-// 編成。A: 解放済みのベースモンから / B: 編成に入れているマスモンから。勇者1体+供モン最大3体。アシカは A=1枚 / B=3枚まで
+// 編成。A: 解放済みのベースモンから / B: 編成に入れているマスモンから。勇者1体+供モン最大3体。アシカは3枚まで
+// 2026-10-19 社長「パーティー選ぶときにそのまま同時に距離適性も選択できるように」「アシカの選択も忘れやすいから、パーティー選んで距離決めたあとに」:
+//   ① 編成と距離: 零・近・中・遠の4つの枠に、一覧で押した子を置く(光っている枠へ入る)。最初に置いた子が勇者モン(👑で替えられる)。
+//      枠と一覧に、その距離での適性(%)を出す。タクティクスは「その距離に立っている子の適性だけ」が効く(足し算にならない)
+//   ② アシカ: 編成が決まってから選ぶ。ここで「この編成で挑戦する」
+const RAID_JACK_RANGE_TONE = ['border-red-400/70 bg-red-600 text-white', 'border-amber-300/70 bg-amber-500 text-black', 'border-emerald-300/70 bg-emerald-600 text-white', 'border-sky-300/70 bg-sky-600 text-white'];
+const raidJackAptPct = (mon, range) => aptGradeToPct((mon && mon.distAptitude && mon.distAptitude[range]) || 'C');
 const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, onStart, restore = null, onOpenDetail, onOpenTeachingDetail }) => {
   const isB = kind === 'b';
   const maxTeach = RAID_JACK_TEACHING_MAX;   // レイドバトルもグランドスラムも、アシカは3枚まで(数字は 35-raid-jack.jsx)
   const tier = raidJackTierAt(kind, tierIndex);
   const list = Array.isArray(candidates) ? candidates : [];
   const keyOf = (mon) => String(mon.masuId || mon.id);
-  // 配置画面から戻ってきたときは、選んでいた編成のまま(restore)
-  const [heroKey, setHeroKey] = useState(restore && restore.heroKey ? restore.heroKey : null);
-  const [allyKeys, setAllyKeys] = useState(restore && Array.isArray(restore.allyKeys) ? restore.allyKeys : []);
-  const [teachIds, setTeachIds] = useState(() => (restore && Array.isArray(restore.teachIds)) ? restore.teachIds : (Array.isArray(teachings) ? teachings : []).slice(0, maxTeach).map((t) => t.id));
-  const hero = list.find((m) => keyOf(m) === heroKey) || null;
-  const allies = allyKeys.map((k) => list.find((m) => keyOf(m) === k)).filter(Boolean);
-  const toggleAlly = (mon) => setAllyKeys((prev) => {
-    const k = keyOf(mon);
-    if (prev.includes(k)) return prev.filter((x) => x !== k);
-    return prev.length >= RAID_JACK_ALLY_MAX ? prev : [...prev, k];
+  const monOf = (k) => (k ? list.find((m) => keyOf(m) === k) || null : null);
+  const ranges = RANGE_LABELS.map((_, i) => i);
+  const [slotKeys, setSlotKeys] = useState(() => {
+    const keys = restore && Array.isArray(restore.slotKeys) ? restore.slotKeys : [];
+    return ranges.map((i) => (typeof keys[i] === 'string' && list.some((m) => keyOf(m) === keys[i]) ? keys[i] : null));
   });
+  const [heroRange, setHeroRange] = useState(() => (restore && Number.isInteger(restore.heroRange) ? restore.heroRange : null));
+  const [pickRange, setPickRange] = useState(() => { const keys = restore && Array.isArray(restore.slotKeys) ? restore.slotKeys : []; const i = ranges.findIndex((r) => !keys[r]); return i < 0 ? null : i; });
+  const [step, setStep] = useState('party');
+  const [teachIds, setTeachIds] = useState(() => (restore && Array.isArray(restore.teachIds)) ? restore.teachIds : (Array.isArray(teachings) ? teachings : []).slice(0, maxTeach).map((t) => t.id));
+  const slotMons = slotKeys.map(monOf);
+  const heroIdx = Number.isInteger(heroRange) && slotMons[heroRange] ? heroRange : slotMons.findIndex(Boolean);
+  const hero = heroIdx >= 0 ? slotMons[heroIdx] : null;
+  const placedCount = slotMons.filter(Boolean).length;
+  const nextEmpty = (keys, from) => { for (let n = 1; n <= 4; n++) { const r = (from + n) % 4; if (!keys[r]) return r; } return null; };
+  const removeAt = (r) => {
+    const next = [...slotKeys]; next[r] = null;
+    setSlotKeys(next);
+    if (heroIdx === r) { const other = next.findIndex(Boolean); setHeroRange(other >= 0 ? other : null); }
+    setPickRange(r);
+  };
+  const pickMon = (mon) => {
+    const k = keyOf(mon);
+    const at = slotKeys.indexOf(k);
+    if (at >= 0) { removeAt(at); return; }
+    const r = Number.isInteger(pickRange) && !slotKeys[pickRange] ? pickRange : nextEmpty(slotKeys, 3);
+    if (r == null) return;   // 4つの枠がうまっている
+    const next = [...slotKeys]; next[r] = k;
+    setSlotKeys(next);
+    if (!hero) setHeroRange(r);
+    setPickRange(nextEmpty(next, r));
+  };
+  const pickSlot = (r) => { if (slotKeys[r]) removeAt(r); else setPickRange(r); };
+  const party = hero ? [hero, ...slotMons.filter((m, i) => m && i !== heroIdx)] : [];
   // 詳細の窓に出す「どの段から始まり、いつ強くなるか」。数字は戦闘の中身と同じ定数から作る(60-app.jsx の raidJack の開始処理)
   const teachGrowTurns = RAID_JACK_LEVEL_UP_TURNS.slice(0, RAID_JACK_TEACHING_MAX_LEVEL);
   const teachDetailInfo = isB
     ? { startLevel: RAID_JACK_TEACHING_MAX_LEVEL, note: `このイベントでは Lv.${RAID_JACK_TEACHING_MAX_LEVEL}(最大)から始まります。戦闘中は成長しません` }
     : { startLevel: 0, note: `このイベントでは Lv.0 から始まり、${teachGrowTurns.join('・')}ターン目に1段階ずつ強くなります(最大 Lv.${RAID_JACK_TEACHING_MAX_LEVEL})` };
   const toggleTeach = (id) => setTeachIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : (prev.length >= maxTeach ? (maxTeach === 1 ? [id] : prev) : [...prev, id])));
+  const faceOf = (mon, cls) => {
+    // 本番のプロフィールのアイコンと同じ見え方(拡大・位置の調整つき)にそろえる
+    const face = friendsFaceIconOf(mon.baseId || mon.id);
+    return face
+      ? <BreederIcon src={face.src} id={face.id} className={`${cls} bg-slate-800`} />
+      : <img src={mon.faceIconUrl || mon.iconUrl || mon.imgUrl} alt="" className={`${cls} rounded-full bg-slate-800 object-contain`} />;
+  };
+  const pctTone = (v) => (v > 0 ? 'text-emerald-300' : v < 0 ? 'text-rose-300' : 'text-slate-300');
+  const rangeChip = (r, extra = '') => <span className={`inline-flex h-4 min-w-4 items-center justify-center rounded-full border px-0.5 text-[9px] font-black leading-none ${RAID_JACK_RANGE_TONE[r]} ${extra}`}>{RANGE_LABELS[r]}</span>;
   // 選ぶときにモンスターの詳細(ステータス・技・適性など)を見られる(2026-10-05・ユーザー指示)。
   // 詳細のボタンは、選ぶボタンの入れ子にならないよう、外側のdivの右上に重ねて置く(押しても選択は変わらない)
-  const tile = (mon, on, onClick, attrs) => (
-    <div key={keyOf(mon)} className="relative">
-    <button type="button" onClick={onClick} {...attrs}
-      className={`flex w-full flex-col items-center rounded-xl border-2 p-1 text-center active:scale-95 ${on ? 'border-orange-300 bg-orange-950/50' : 'border-white/10 bg-slate-900/60'}`}>
-      {(() => {
-        // 本番のプロフィールのアイコンと同じ見え方(拡大・位置の調整つき)にそろえる
-        const face = friendsFaceIconOf(mon.baseId || mon.id);
-        return face
-          ? <BreederIcon src={face.src} id={face.id} className="h-12 w-12 bg-slate-800" />
-          : <img src={mon.faceIconUrl || mon.iconUrl || mon.imgUrl} alt="" className="h-12 w-12 rounded-full bg-slate-800 object-contain" />;
-      })()}
+  const tile = (mon) => {
+    const k = keyOf(mon);
+    const at = slotKeys.indexOf(k);
+    const role = at < 0 ? null : at === heroIdx ? 'hero' : 'ally';
+    const showR = at >= 0 ? at : pickRange;
+    const pct = Number.isInteger(showR) ? raidJackAptPct(mon, showR) : null;
+    return (
+    <div key={k} className="relative">
+    <button type="button" onClick={() => pickMon(mon)} data-raid-mon={k} data-raid-mon-role={role || undefined} data-raid-mon-range={at >= 0 ? at : undefined} aria-pressed={!!role}
+      className={`flex w-full flex-col items-center rounded-xl border-2 p-1 text-center active:scale-95 ${role === 'hero' ? 'border-amber-300 bg-amber-900/50' : role === 'ally' ? 'border-sky-300 bg-sky-950/60' : 'border-white/10 bg-slate-900/60'}`}>
+      {faceOf(mon, 'h-12 w-12')}
       <span className="mt-0.5 w-full truncate text-[9px] font-black text-slate-100">{mon.name}</span>
+      {/* タイプの印(2026-10-19・社長「タイプわかるようにしてほしい」)。札が狭いのでメインだけ。サブは詳細(i)に出る */}
+      {monsterTypeProtoOn() && (() => { const t = MONSTER_TYPES[monsterTypeOf(mon.baseId || mon.id).main]; return t ? <span data-raid-mon-type={monsterTypeOf(mon.baseId || mon.id).main} className="mt-0.5 flex w-full items-center justify-center gap-px truncate rounded-full border border-white/15 bg-black/30 px-0.5 text-[8px] font-black leading-[12px] tracking-tight text-slate-200"><span aria-hidden="true">{t.icon}</span>{t.label}</span> : null; })()}
+      {/* 置いた距離(置いていなければ、いま光っている枠の距離)での適性 */}
+      {pct != null && <span data-raid-mon-apt={showR} className="mt-0.5 flex items-center gap-0.5">{rangeChip(showR)}<span className={`text-[9px] font-black tabular-nums ${pctTone(pct)}`}>{formatAptPct(pct)}</span></span>}
     </button>
+    {role && <span aria-hidden="true" className={`pointer-events-none absolute -left-1 -top-1 rounded-full border px-1 text-[9px] font-black leading-[14px] shadow ${role === 'hero' ? 'border-amber-200 bg-amber-500 text-black' : 'border-sky-200 bg-sky-600 text-white'}`}>{role === 'hero' ? '👑勇者' : '供'}</span>}
     {typeof onOpenDetail === 'function' && (
-      <button type="button" data-raid-detail={keyOf(mon)} aria-label={`${mon.name}の詳細を見る`} onClick={(e) => { e.stopPropagation(); onOpenDetail(mon); }}
+      <button type="button" data-raid-detail={k} aria-label={`${mon.name}の詳細を見る`} onClick={(e) => { e.stopPropagation(); onOpenDetail(mon); }}
         className="mh-hit-expand absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full border border-sky-300/60 bg-slate-800 text-[11px] font-black leading-none text-sky-200 shadow active:scale-90">i</button>
     )}
     </div>
+    );
+  };
+  // 距離の枠。光っている枠が「次に押した子が入る先」。うまった枠を押すと外れる。👑 でその子を勇者モンにする
+  const slot = (r) => {
+    const mon = slotMons[r];
+    const active = step === 'party' && !mon && pickRange === r;
+    const isHero = mon && r === heroIdx;
+    const pct = mon ? raidJackAptPct(mon, r) : null;
+    return (
+      <div key={r} className="relative min-w-0">
+        <button type="button" data-raid-slot={r} data-raid-slot-active={active ? 'true' : undefined} onClick={() => { if (step !== 'party') setStep('party'); pickSlot(r); }}
+          aria-label={mon ? `${RANGE_LABELS[r]}距離の${mon.name}を外す` : `${RANGE_LABELS[r]}距離に置く子を選ぶ`}
+          className={`flex w-full min-w-0 flex-col items-center rounded-xl border-2 p-1 ${mon ? 'pb-2.5' : ''} text-center active:scale-95 ${active ? 'border-orange-300 bg-orange-900/40 shadow-[0_0_10px_rgba(253,186,116,.55)]' : mon ? (isHero ? 'border-amber-300/80 bg-amber-950/40' : 'border-sky-300/60 bg-sky-950/40') : 'border-dashed border-white/20 bg-slate-900/40'}`}>
+          <span className="flex items-center gap-0.5">{rangeChip(r)}<span className="text-[9px] font-black text-slate-200">距離</span></span>
+          {mon ? faceOf(mon, 'mt-0.5 h-10 w-10') : <span className={`mt-0.5 flex h-10 w-10 items-center justify-center rounded-full border border-dashed text-[16px] font-black ${active ? 'border-orange-200 text-orange-100' : 'border-white/25 text-slate-500'}`}>+</span>}
+          <span className="mt-0.5 w-full truncate text-[9px] font-black text-slate-100">{mon ? mon.name : (active ? 'ここに入る' : '空き')}</span>
+          <span data-raid-slot-apt={mon ? r : undefined} className={`text-[10px] font-black leading-tight tabular-nums ${mon ? pctTone(pct) : 'text-slate-600'}`}>{mon ? formatAptPct(pct) : '—'}</span>
+          {mon && <span aria-hidden="true" className="absolute right-1 top-[18px] flex h-3.5 w-3.5 items-center justify-center rounded-full bg-slate-700 text-[9px] font-black leading-none text-slate-100">×</span>}
+        </button>
+        {mon && (isHero
+          ? <span aria-hidden="true" className="pointer-events-none absolute -bottom-1.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border border-amber-200 bg-amber-500 px-1 text-[9px] font-black leading-[14px] text-black shadow">👑勇者</span>
+          : <button type="button" data-raid-make-hero={r} aria-label={`${mon.name}を勇者モンにする`} onClick={() => setHeroRange(r)}
+              className="mh-hit-expand absolute -bottom-1.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border border-white/30 bg-slate-800 px-1 text-[9px] font-black leading-[14px] text-slate-200 shadow active:scale-90">👑にする</button>)}
+      </div>
+    );
+  };
+  const guide = !hero ? '下の一覧から、光っている距離に置く子をえらんでください(最初に置いた子が勇者モンになります)'
+    : Number.isInteger(pickRange) && placedCount < 4 ? `次は${RANGE_LABELS[pickRange]}距離。供モンは${RAID_JACK_ALLY_MAX}体まで(えらばなくても挑戦できます)`
+    : '準備OK。枠を押すとその子を外せます。「👑にする」で勇者モンを替えられます';
+  const partyRow = (
+    <section className="rounded-2xl border border-orange-300/30 bg-black/30 p-2" data-raid-party>
+      <div className="mb-1 flex flex-wrap items-baseline gap-x-1 text-[11px] font-black text-orange-200">いまの編成と距離<span className="text-[9px] font-normal text-slate-300">%はその距離での適性(その距離に立つ子のぶんだけ効きます)</span></div>
+      <div className="grid grid-cols-4 gap-1.5 pb-1.5 pt-1">{ranges.map((r) => slot(r))}</div>
+      {step === 'party' && <div data-raid-guide className="mt-1.5 rounded-lg bg-orange-950/40 px-2 py-1 text-[10px] font-bold text-orange-100">{guide}</div>}
+    </section>
   );
   return (
-    <div className={`${SCREEN_SHELL_CLASS} overflow-hidden`} data-raid-jack-prep>
-      <ScreenHead title={`${tier.name}に挑む`} icon="🎃" accent="text-orange-200" onBack={onBack}
-        note={`${isB ? 'マスモン' : 'ベースモン'}で編成・20ターン勝負`} />
+    <div className={`${SCREEN_SHELL_CLASS} overflow-hidden`} data-raid-jack-prep data-raid-prep-step={step}>
+      <ScreenHead title={`${tier.name}に挑む`} icon="🎃" accent="text-orange-200" onBack={step === 'teach' ? () => setStep('party') : onBack}
+        note={step === 'teach' ? '② アシカをえらぶ' : `① ${isB ? 'マスモン' : 'ベースモン'}と距離をえらぶ・20ターン勝負`} />
       <div className={`${SCREEN_LIST_CLASS} space-y-3`}>
+        {partyRow}
+        {step === 'party' && (
         <section className="rounded-2xl border border-white/10 bg-black/30 p-3">
-          <div className="mb-1 text-[11px] font-black text-orange-200">勇者モン(1体)<span className="ml-1 text-[9px] font-normal text-slate-300">右上の <b className="text-sky-200">i</b> でモンスターの詳細が見られます</span></div>
-          <div className="grid grid-cols-5 gap-1.5">
-            {list.map((mon) => tile(mon, heroKey === keyOf(mon), () => { setHeroKey(keyOf(mon)); setAllyKeys((prev) => prev.filter((x) => x !== keyOf(mon))); }, { 'data-raid-hero': keyOf(mon) }))}
+          <div className="mb-1 text-[11px] font-black text-orange-200">モンスター<span className="ml-1 text-[9px] font-normal text-slate-300">押すと上の光っている距離に入ります。右上の <b className="text-sky-200">i</b> で詳細が見られます</span></div>
+          <div className="grid grid-cols-4 gap-1.5 pt-1 min-[360px]:grid-cols-5">
+            {list.map((mon) => tile(mon))}
           </div>
           {list.length === 0 && <div className="py-2 text-center text-[10px] text-slate-400">編成できるモンスターがいません</div>}
         </section>
-        <section className="rounded-2xl border border-white/10 bg-black/30 p-3">
-          <div className="mb-1 text-[11px] font-black text-orange-200">供モン(最大{RAID_JACK_ALLY_MAX}体)<span className="ml-1 text-[9px] text-slate-300">{allies.length} / {RAID_JACK_ALLY_MAX}</span></div>
-          <div className="grid grid-cols-5 gap-1.5">
-            {list.filter((m) => keyOf(m) !== heroKey).map((mon) => tile(mon, allyKeys.includes(keyOf(mon)), () => toggleAlly(mon), { 'data-raid-ally': keyOf(mon) }))}
-          </div>
-        </section>
-        <section className="rounded-2xl border border-white/10 bg-black/30 p-3">
+        )}
+        {step === 'teach' && (
+        <section className="rounded-2xl border border-white/10 bg-black/30 p-3" data-raid-teach-step>
           <div className="mb-1 text-[11px] font-black text-orange-200">アシカ({maxTeach}つまで)<span className="ml-1 text-[9px] text-slate-300">{teachIds.length} / {maxTeach}</span>{typeof onOpenTeachingDetail === 'function' && <span className="ml-1 text-[9px] font-normal text-slate-300">右上の <b className="text-sky-200">i</b> で効果が見られます</span>}</div>
           <div className="text-[9px] text-slate-300">{isB ? '最大レベルから始まります(戦闘中は成長しません)' : '固有技は3・5・8・11ターン目に2段階ずつ、アシカは3・5ターン目に1段階ずつ強くなります(3枚まで選べます)'}</div>
           <div className="mt-1 grid grid-cols-4 gap-1.5">
@@ -47756,16 +47832,28 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
             ))}
           </div>
         </section>
+        )}
         <div className="rounded-2xl border border-white/10 bg-black/30 p-3 text-[10px] text-slate-300">
           ライフ {tier.hp.toLocaleString()} / 技 {tier.actionCount}本 / 20ターンで終わります。始めると今日の挑戦回数を1回使います。途中でやめても回数は戻りませんが、そこまでのダメージは記録されます。
         </div>
       </div>
       <div className={SCREEN_FOOTER_CLASS}>
-        <button type="button" data-raid-prep-start disabled={!hero}
-          onClick={() => onStart({ party: [hero, ...allies], teachingIds: teachIds, heroKey, allyKeys })}
-          className="w-full min-h-[48px] rounded-2xl border-2 border-orange-300/70 bg-orange-700 px-3 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400">
-          {hero ? 'この編成で挑戦する' : '勇者モンを選んでください'}
-        </button>
+        {step === 'party' ? (
+          <button type="button" data-raid-prep-next disabled={!hero} onClick={() => setStep('teach')}
+            className="w-full min-h-[48px] rounded-2xl border-2 border-orange-300/70 bg-orange-700 px-3 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400">
+            {hero ? '次へ(アシカをえらぶ)' : '勇者モンを置いてください'}
+          </button>
+        ) : (
+          <div className="flex gap-2">
+            <button type="button" data-raid-prep-back onClick={() => setStep('party')}
+              className="min-h-[48px] shrink-0 rounded-2xl border-2 border-white/15 bg-slate-800 px-3 text-[12px] font-black text-slate-100 active:scale-95">← 編成</button>
+            <button type="button" data-raid-prep-start disabled={!hero}
+              onClick={() => onStart({ party, teachingIds: teachIds, slots: slotMons, heroSlot: heroIdx, restore: { slotKeys, heroRange: heroIdx, teachIds } })}
+              className="min-h-[48px] flex-1 rounded-2xl border-2 border-orange-300/70 bg-orange-700 px-3 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400">
+              この編成で挑戦する
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -49538,13 +49626,16 @@ function MonsterHeroGame() {
       ? { start: tacticsPowerRef.current.start || power, now: power } : { start: 0, now: 0 };
   };
   // 新モードのときだけ、敵の予告へ「誰を狙うか」を足す。ほかのモードでは intent をそのまま返す
-  // ★ヘイト(試作)はタクティクスバトルだけ(レイドバトル・既存5モードには効かせない)。切のときは今までと同じ抽選
-  const tacticsHateOnFor = (mode) => TACTICS_BATTLE_MODES.includes(mode) && !isRaidJackMode(mode) && tacticsHateProtoOn();
+  // ★ヘイトはタクティクスの盤面を使うバトル全部(タクティクスバトル・レイドバトル/グランドスラム)。既存5モードには効かせない。切のときは今までと同じ抽選
+  //   レイドも同じタクティクスの盤面なので同じにする(2026-10-19 社長「タクティクスバトルをレイドは使ってるんだから同じにするの当たり前」)
+  const tacticsHateOnFor = (mode) => isTacticsMode(mode) && tacticsHateProtoOn();
   const aimTacticsIntent = (intent, mode) => (isTacticsMode(mode)
     ? withTacticsTarget(intent, tacticsUnitsRef.current, Math.random, TACTICS_TARGET_LOW_HP_BIAS, tacticsHateOnFor(mode) ? tacticsHateRef.current : null)
     : intent);
   const commitTacticsHate = (next) => { tacticsHateRef.current = next; setTacticsHate(next); };
-  const tacticsHateHeroSlot = () => tacticsUnitsRef.current.findIndex(u => !!(u && mainHero && u.id === mainHero.id));
+  // 勇者モンの id は戦闘の始めに参照用の値へ写す。レイドは勇者モンを決めた同じ描画で戦闘を始めるので、mainHero(state)がまだ前のままのことがある
+  const tacticsHateHeroIdRef = useRef(null);
+  const tacticsHateHeroSlot = () => { const id = tacticsHateHeroIdRef.current || (mainHero && mainHero.id); return id ? tacticsUnitsRef.current.findIndex(u => !!(u && u.id === id)) : -1; };
   const addTacticsHatePending = (slotIdx, gain) => {
     if (!Number.isInteger(slotIdx) || slotIdx < 0 || slotIdx > 3 || !(gain > 0)) return;
     const next = [...tacticsHatePendingRef.current]; next[slotIdx] += gain; tacticsHatePendingRef.current = next;
@@ -50763,7 +50854,6 @@ function MonsterHeroGame() {
   const [raidJackStartRequest, setRaidJackStartRequest] = useState(null);
   const [raidJackDetailMon, setRaidJackDetailMon] = useState(null);       // 編成画面で詳細を見ているモンスター(確認専用)
   const [raidJackPrep, setRaidJackPrep] = useState(null);                 // 編成画面で挑む段階 {kind,tierIndex}
-  const [raidJackPlace, setRaidJackPlace] = useState(null);               // 配置(距離)えらび {party,teachingIds,slots,heroSlot}。通常バトルと同じ PickSlotScreen で1体ずつ置く
   // 画面のなかの案内(助手の吹き出し)は、レイド画面を開いた最初の1度だけ。保存キーは新しく足す(CLAUDE.md ⑦)
   const RAID_JACK_GUIDE_KEY = 'mh_raid_jack_guide_seen_v1';
   const [raidJackGuideSeen, setRaidJackGuideSeen] = useState(true);
@@ -52074,7 +52164,7 @@ function MonsterHeroGame() {
     RHYTHM_HISTORY: 'home',     // モンヒロビート「これまでの記録」もHOMEの曲を続ける
     RHYTHM_MASU_BEAT: 'management', // マスモン一覧(モンヒロビート)はM/B管理と同じ曲を続ける(対応表に載せ忘れると無音になる)
     RHYTHM_MODE_SELECT: 'rhythmModeSelect', // モンヒロビートのモードえらび(2026-10-03・ユーザー指示「新しい画面が出るから初期BGMもアレンジも追加」)
-    RAID_JACK: 'home', RAID_JACK_PREP: 'home', RAID_JACK_PLACE: 'home', // イベント・レイドボス「ジャック」のレイド画面と編成もHOMEの曲を続ける
+    RAID_JACK: 'home', RAID_JACK_PREP: 'home', // イベント・レイドボス「ジャック」のレイド画面と編成もHOMEの曲を続ける
     FRIENDS: 'home',            // フレンド画面もHOMEの曲を続ける
                                 // (2026-09-14・ユーザー指摘「BGMがない / 設定してるホームのBGMを流して」)
     BATTLE_MENU: 'enhance',      // 難易度・ランキング(モンスター選択と同じ曲)
@@ -62441,6 +62531,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // 強化フェーズの並びは次のバトルが始まったら用済み。残すと次のランの配置画面などに古い並びが出る
     setPhasePlan(null);
     setDefeatFx(null);
+    tacticsHateHeroIdRef.current = (heroForDeck || mainHero)?.id || null;   // ヘイトの勇者の下地を付ける子(tacticsHateHeroSlot)
     // 通常・クイック・プロ・極限・練習/デバッグの共通開始点で、新しいランだけ累計を初期化する。
     if (w === 1) {
       setTotalTurnCount(0);
@@ -63179,31 +63270,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       marketPurchaseProcessingRef.current = false;
     }
   };
-  // 編成が決まったら、通常バトルと同じ配置画面(PICK_SLOT)で、勇者モン→供モンの順に1体ずつ距離(立ち位置)を選んでもらう。
-  // 回数を使うのは、全員を置き終えて戦闘を始めるときだけ(ここで戻っても回数は減らない)。
-  // 勇者モンを置いた距離が、最初の間合い(initialBattleDistanceRef)になる(2026-10-05・ユーザー指摘「勇者モンの距離が固定になってる」)
-  const beginRaidJackPlacement = ({ party, teachingIds, heroKey = null, allyKeys = [] }) => {
-    const list = (Array.isArray(party) ? party : []).filter(Boolean);
-    if (list.length === 0) return;
-    setRaidJackPlace({ party:list, teachingIds, slots:[null,null,null,null], heroSlot:0, restore:{ heroKey, allyKeys, teachIds:teachingIds } });
-    setGameState('RAID_JACK_PLACE');
-  };
-  const placeRaidJackMon = (mon, slotIdx) => {
-    const place = raidJackPlace;
-    if (!place || !mon || !Number.isInteger(slotIdx) || slotIdx < 0 || slotIdx > 3 || place.slots[slotIdx]) return;
-    const slots = [...place.slots];
-    const isHero = slots.every(slot => !slot);
-    slots[slotIdx] = { ...mon };
-    Audio_.se.join();
-    const heroSlot = isHero ? slotIdx : place.heroSlot;
-    if (slots.filter(Boolean).length >= place.party.length) {
-      setRaidJackPlace(null);
-      void startRaidJackFromPrep({ party:place.party, teachingIds:place.teachingIds, slots, heroSlot });
-      return;
-    }
-    setRaidJackPlace({ ...place, slots, heroSlot });
-  };
-  const cancelRaidJackPlacement = () => { const restore = raidJackPlace && raidJackPlace.restore; setRaidJackPrep(prev => prev ? { ...prev, restore } : prev); setRaidJackPlace(null); setGameState('RAID_JACK_PREP'); };
+  // 距離(立ち位置)は、編成画面(RaidJackPrepScreen)で子を選ぶときに一緒に決める(2026-10-19 社長「パーティー選ぶときにそのまま同時に距離適性も選択できるように」)。
+  // 以前の別の配置画面(RAID_JACK_PLACE)は無くした。勇者モンを置いた距離が、最初の間合い(initialBattleDistanceRef)になる
   // 編成が決まったら、今日の回数を1回使ってから戦闘を始める(途中でやめても・アプリを閉じても回数は戻さない)
   const startRaidJackFromPrep = async ({ party, teachingIds, slots = null, heroSlot = 0 }) => {
     const prep = raidJackPrep;
@@ -64123,7 +64191,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               ) : (
                 <h3 className="text-[17px] font-black text-white truncate leading-tight">{mon.name}</h3>
               )}
-              <div className={`text-[10px] font-bold ${masu ? 'text-pink-400' : 'text-indigo-400'} truncate`}>{masu ? `元：${base.name}` : 'ベースモン'}</div>
+              <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5"><span className={`min-w-0 text-[10px] font-bold ${masu ? 'text-pink-400' : 'text-indigo-400'} truncate`}>{masu ? `元：${base.name}` : 'ベースモン'}</span>{/* タイプの印(2026-10-19・社長「タイプわかるようにしてほしい」)。詳細の窓はどの画面もここを通る */}<MonsterTypeBadge monId={base.id || mon.id} /></div>
             </div>
             {onClose && <button onClick={onClose} aria-label="閉じる" className="mh-hit-expand relative p-2 -m-1 bg-white/5 rounded-full active:scale-90 shrink-0"><X size={16}/></button>}
           </div>
@@ -67054,20 +67122,6 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           onPurchase={purchaseRaidJackExtra} onClaimRewards={claimRaidJackRewards} beatPoints={rhythmEventPoints} eventId={raidJackEventId} forced={raidJackDebugForce} unlimited={raidJackDebugForce&&!raidJackDebugRealRules}
           guideVisible={(RELEASE_FLAGS.raidJack===true||raidJackDebugForce)&&!raidJackGuideSeen} onDismissGuide={dismissRaidJackGuide}
           renderPlace={rankingPlace} renderIcon={rankingBreederIcon} cardClass={rankingCardClass}/>)}
-        {gameState==='RAID_JACK_PLACE'&&raidJackPlace&&(()=>{
-          const placed=raidJackPlace.slots.filter(Boolean).length;
-          const mon=raidJackPlace.party[placed]||null;
-          // 通常のタクティクスと同じ配置画面。距離適性は合算せず、その距離に立っている子のぶんだけ(空いている枠は0 → 置く子の適性だけが出る)
-          const placedBonus=(dist)=>{const standing=raidJackPlace.slots[dist];return standing?aptGradeToPct(getDistAptitude(standing,dist)):0;};
-          return <PickSlotScreen
-            battleTutorial={null} battleTutorialSpotClass={()=>''}
-            currentPickingMon={mon} distTotalBonus={placedBonus}
-            getDistAptitude={getDistAptitude} scenarioPicksSlot={()=>true}
-            setupMon={placeRaidJackMon} slots={raidJackPlace.slots} perSlotApt={true}
-            phasePlan={null} wave={0}
-            heroStyleDef={null} heroStyle={null} onHeroStyle={null}
-            onRepick={cancelRaidJackPlacement}/>;
-        })()}
         {gameState==='RAID_JACK_PREP'&&raidJackPrep&&(<><RaidJackPrepScreen
           kind={raidJackPrep.kind} tierIndex={raidJackPrep.tierIndex}
           candidates={raidJackPrep.kind==='b'?getActiveMonsterList():getUnlockedBaseMonsterList()}
@@ -67075,7 +67129,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           teachings={(()=>{const unlocked=TEACHING_CARDS.filter(t=>unlockedTeachingIds.includes(t.id));return unlocked.length>0?unlocked:getActiveTeachingCards();})()}
           onOpenDetail={(mon)=>setRaidJackDetailMon(mon)}
           onOpenTeachingDetail={(t,info)=>setRosterDetailTeaching({...t,detailStartLvl:info&&Number.isFinite(info.startLevel)?info.startLevel:null,detailNote:info&&info.note?info.note:''})}
-          onBack={()=>{setRaidJackDetailMon(null);setRosterDetailTeaching(null);setGameState('RAID_JACK');}} onStart={(args)=>{setRaidJackDetailMon(null);setRosterDetailTeaching(null);return beginRaidJackPlacement(args);}}/>
+          onBack={()=>{setRaidJackDetailMon(null);setRosterDetailTeaching(null);setGameState('RAID_JACK');}} onStart={(args)=>{setRaidJackDetailMon(null);setRosterDetailTeaching(null);setRaidJackPrep(prev=>prev?{...prev,restore:args.restore}:prev);void startRaidJackFromPrep(args);}}/>
           {raidJackDetailMon&&renderMonsterDetailModal({
             mon:raidJackDetailMon,
             masu:raidJackDetailMon.masuId?getMasuMon(raidJackDetailMon.masuId):null,

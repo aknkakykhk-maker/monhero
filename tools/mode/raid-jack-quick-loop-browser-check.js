@@ -114,12 +114,10 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await page.locator('[data-home-raid-jack]').dispatchEvent('click');
     await page.locator('[data-raid-jack-screen]').waitFor({ timeout: 30000 });
     await page.locator('[data-raid-jack-challenge]').click();
-    await page.locator('[data-raid-hero]').first().click();
-    await page.locator('[data-raid-ally]').nth(0).click();
+    await page.locator('[data-raid-mon]').nth(0).click();
+    await page.locator('[data-raid-mon]').nth(1).click();
+    await page.locator('[data-raid-prep-next]').click();
     await page.locator('[data-raid-prep-start]').click();
-    await page.locator('[data-ph-range]').first().waitFor({ timeout: 20000 });
-    await page.locator('[data-ph-range="1"]').click();
-    await page.locator('[data-ph-range="0"]').click();
     await page.locator('[data-battle-controls]').waitFor({ timeout: 30000 });
     for (let i = 0; i < 3; i++) { await page.locator('[data-battle-controls] button').first().click().catch(() => {}); }
     await page.locator('button[aria-label^="AUTO"]').first().click();

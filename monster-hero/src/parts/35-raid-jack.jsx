@@ -50,7 +50,7 @@ const raidJackStoryUnlockKey = (id) => `${String(id).replace(/^raid_jack_/, 'rai
 // イベント中のBGM(2026-10-04・ユーザー指示)。レイド画面・段階えらび・編成は、この曲に固定する(ジャック戦は 2026-10-05 から下の RAID_JACK_BATTLE_BGM_TRACK)。
 // HOMEの曲は、ユーザーが自分で選んでいない(既定のまま)あいだだけ、期間中にこの曲へ替わる。終わると元に戻る
 const RAID_JACK_BGM_TRACK = 'melo_crazy_party_night_full';   // Crazy Party Night ～ぱんぷきんの逆襲～ の全編版(2026-10-04・ユーザー指示「ハロウィンイベント関連はこの曲をデフォルトに」。1分34秒の版から替えた)
-const RAID_JACK_BGM_STATES = Object.freeze(['RAID_JACK', 'RAID_JACK_PREP', 'RAID_JACK_PLACE']);
+const RAID_JACK_BGM_STATES = Object.freeze(['RAID_JACK', 'RAID_JACK_PREP']);
 // ジャックとの戦い(レイドバトルもグランドスラムも)だけは、ハロウィンの曲「Monster」の全編の版にする(2026-10-05・ユーザー指示
 // 「フルはハロウィンイベント期間でのレイド戦用のデフォルト曲にして」。範囲は戦闘中だけ・ユーザー判断)。レイド画面・段階えらび・編成は上の曲のまま
 const RAID_JACK_BATTLE_BGM_TRACK = 'melo_monster';

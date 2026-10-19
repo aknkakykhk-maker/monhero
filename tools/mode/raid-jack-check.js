@@ -193,7 +193,10 @@ check('強化の表示(回数)は 4回・次の強化のターンが出る', o.r
   const app = read('monster-hero/src/parts/60-app.jsx');
   const start = app.slice(app.indexOf('const startRaidJackBattle = (req) => {'), app.indexOf('// 開始の依頼が来て、runMode が依頼のモードへ反映された次の描画で始める'));
   check('ジャック戦の開始で、編成全員の距離適性を合算して渡さない(立っている子の適性だけが効く)', start.length > 0 && !/raidApt/.test(start) && /initBattle\(1,raidSlots,uniques,teachings,raidDef,'Jack',hero,null\)/.test(start));
-  check('配置画面の「いまの適性」は、その距離に立っている子のぶんだけ(合計ではない)', /const standing=raidJackPlace\.slots\[dist\]/.test(app) && /perSlotApt=\{true\}/.test(app));
+  // 2026-10-19 から距離は編成画面で決める。枠と一覧の%は、その距離に立つ子の適性だけ(足し算しない)
+  const prep = read('monster-hero/src/parts/79-screen-raid-jack.jsx');
+  check('編成画面の距離の%は、その距離に立っている子のぶんだけ(合計ではない)', /const raidJackAptPct = \(mon, range\) => aptGradeToPct\(\(mon && mon\.distAptitude && mon\.distAptitude\[range\]\) \|\| 'C'\);/.test(prep) && /const pct = mon \? raidJackAptPct\(mon, r\) : null;/.test(prep));
+  check('編成画面から、選んだ距離(slots・heroSlot)のまま戦闘を始める', /slots: slotMons, heroSlot: heroIdx/.test(prep) && /void startRaidJackFromPrep\(args\)/.test(app));
 }
 
 // ⑤ 公開フラグ
