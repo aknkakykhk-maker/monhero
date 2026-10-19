@@ -257,7 +257,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await page.locator('[data-raid-jack-prep]').waitFor({ timeout: 20000 });
     check('編成画面が開く(段階名が出る)', /ジャック子爵に挑む/.test(await page.locator('[data-raid-jack-prep]').innerText()));
     // ① 編成と距離: 零・近・中・遠の枠に、一覧で押した子を置く(2026-10-19 社長「パーティー選ぶときにそのまま同時に距離適性も選択できるように」)
-    check('勇者モンを置くまで次へ進めない', await page.locator('[data-raid-prep-next]').isDisabled());
+    check('子を置くまで次へ進めない', await page.locator('[data-raid-prep-next]').isDisabled());
     check('はじめは零距離の枠が光っている', (await page.locator('[data-raid-slot="0"]').getAttribute('data-raid-slot-active')) === 'true');
     check('一覧にタイプの印が出る', (await page.locator('[data-raid-mon] [data-raid-mon-type]').count()) >= 2);
     // 勇者モンは「中距離(添字2)」へ置く。固定の最前列ではなく、選んだ場所になる
@@ -270,10 +270,23 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     check('一覧の子に、光っている距離での適性(%)が出る(スエゾーは零距離で -10%)', /零\s*-10%/.test(apt1), apt1);
     await page.locator('[data-raid-mon]').nth(1).click();
     const roles = await page.locator('[data-raid-mon]').evaluateAll((els) => els.slice(0, 2).map((el) => `${el.getAttribute('data-raid-mon-role')}@${el.getAttribute('data-raid-mon-range')}`));
-    check('1体目が勇者モン(中)・2体目が供モン(零)になり、札が付く', roles[0] === 'hero@2' && roles[1] === 'ally@0', roles.join(','));
+    check('置いた子に距離の札が付く(①ではまだ勇者モンを決めない)', roles[0] === 'placed@2' && roles[1] === 'placed@0' && (await page.locator('[data-raid-slot-hero]').count()) === 0, roles.join(','));
     const slot0 = (await page.locator('[data-raid-slot="0"]').innerText()).replace(/\s+/g, ' ');
     check('距離の枠に、置いた子とその距離での適性(%)が出る(勇者モンのぶんを足さない)', /-10%/.test(slot0) && /外す/.test(await page.locator('[data-raid-slot="0"]').getAttribute('aria-label')), slot0);
-    check('勇者モンと供モンを置くと次へ進める', !(await page.locator('[data-raid-prep-next]').isDisabled()));
+    check('子を置くと次へ進める', !(await page.locator('[data-raid-prep-next]').isDisabled()));
+    // 編成と距離の箱は画面の上に固定。一覧だけが流れる(2026-10-19 社長「編成のとこは固定にしたほうが見やすいんじゃない？」)
+    await page.evaluate(() => { let el = document.querySelector('[data-raid-mon]'); while (el && !/(auto|scroll)/.test(getComputedStyle(el).overflowY)) el = el.parentElement; if (el) el.scrollTop = el.scrollHeight; });
+    await page.waitForTimeout(400);
+    if (SHOT) await page.screenshot({ path: `${SHOT}/raid-prep-scrolled.png` });
+    const fixed = await page.evaluate(() => {
+      const party = document.querySelector('[data-raid-party]').getBoundingClientRect();
+      const list = document.querySelector('[data-raid-prep-list]');
+      const lr = list ? list.getBoundingClientRect() : null;
+      const tileH = document.querySelector('[data-raid-mon]').parentElement.getBoundingClientRect().height;
+      return { top: Math.round(party.top), bottom: Math.round(party.bottom), vh: innerHeight, listH: lr ? Math.round(lr.height) : 0, tileH: Math.round(tileH), scrolled: list ? list.scrollTop : 0, canScroll: list ? list.scrollHeight > list.clientHeight + 1 : false };
+    });
+    check('一覧を下へ送っても、編成と距離の箱が画面の上に見えている', (fixed.scrolled > 0 || !fixed.canScroll) && fixed.top >= 0 && fixed.bottom < fixed.vh / 2, JSON.stringify(fixed));
+    check('一覧の見えている高さが、札2行ぶん以上ある', fixed.listH >= fixed.tileH * 2 + 6, JSON.stringify(fixed));
     check('このときはまだアシカを選ばない(②で選ぶ)', (await page.locator('[data-raid-teach]').count()) === 0);
     // モンスターの詳細を、選ぶ画面から見られる(確認専用。選択は変わらない・閉じると編成画面に戻る)
     const detailBtn = page.locator('[data-raid-detail]').first();
@@ -289,8 +302,17 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await page.locator('[role="dialog"][aria-label$="の詳細"]').getByRole('button', { name: '閉じる' }).last().click();
     await page.locator('[role="dialog"][aria-label$="の詳細"]').waitFor({ state: 'detached', timeout: 10000 });
     check('詳細を閉じると編成画面に戻り、選んだ状態は変わらない', (await page.locator('[data-raid-jack-prep]').count()) === 1 && (await page.locator('[data-raid-mon]').first().getAttribute('class')) === heroBefore && !(await page.locator('[data-raid-prep-next]').isDisabled()));
-    // ② アシカ: 編成と距離を決めてから選ぶ(2026-10-19 社長「アシカの選択も忘れやすいから」)
+    // ② 勇者モン: 置いた子の中から選ぶ(2026-10-19 社長「零距離が勇者モン固定になる。距離別に決めたあとに誰を勇者モンにするかの選択で」)
     await page.locator('[data-raid-prep-next]').click();
+    await page.locator('[data-raid-prep-hero-next]').waitFor({ timeout: 10000 });
+    check('② は2体置いたとき、勇者モンを選ぶまで次へ進めない', await page.locator('[data-raid-prep-hero-next]').isDisabled());
+    await page.locator('[data-raid-slot="0"]').click();
+    check('② 枠を押すと、その子が勇者モンになる(零)', (await page.locator('[data-raid-slot="0"]').getAttribute('data-raid-slot-hero')) === 'true' && !(await page.locator('[data-raid-prep-hero-next]').isDisabled()));
+    await page.locator('[data-raid-slot="2"]').click();
+    check('② 選び直せる(中の子に替わる)', (await page.locator('[data-raid-slot="2"]').getAttribute('data-raid-slot-hero')) === 'true' && (await page.locator('[data-raid-slot-hero]').count()) === 1);
+    if (SHOT) await page.screenshot({ path: `${SHOT}/raid-prep-hero.png` });
+    // ③ アシカ: 編成と距離を決めてから選ぶ(2026-10-19 社長「アシカの選択も忘れやすいから」)
+    await page.locator('[data-raid-prep-hero-next]').click();
     await page.locator('[data-raid-teach-step]').waitFor({ timeout: 10000 });
     check('次へで、アシカを選ぶ画面になる(編成と距離は上に残る)', (await page.locator('[data-raid-teach]').count()) > 0 && (await page.locator('[data-raid-mon]').count()) === 0 && /-10%/.test(await page.locator('[data-raid-slot="0"]').innerText()));
     if (SHOT) await page.screenshot({ path: `${SHOT}/raid-prep-teach.png` });
@@ -320,10 +342,13 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     check('アシカの詳細を閉じても、選ぶ/外すは変わらない', (await page.locator('[data-raid-teach]').first().getAttribute('class')) === teachBefore && (await page.locator('[data-raid-jack-prep]').innerText()) === teachSelBefore);
     posts.length = 0;
     check('回数は、選んでいるあいだは減らない(まだ戦闘を始めていない)', await page.evaluate(() => { const st = JSON.parse(localStorage.getItem('mh_raid_jack_v1') || '{}'); return !st.a || !st.a.used; }));
-    // ②から①へ戻れる(選んだ編成と距離はそのまま)
+    // ③から②・①へ戻れる(選んだ編成・距離・勇者モンはそのまま)
     await page.locator('[data-raid-prep-back]').click();
-    check('アシカの画面から編成へ戻れる(選んだ編成と距離はそのまま)', (await page.locator('[data-raid-mon][data-raid-mon-role="hero"]').getAttribute('data-raid-mon-range')) === '2' && !(await page.locator('[data-raid-prep-next]').isDisabled()));
+    await page.locator('[data-raid-prep-back]').click();
+    check('アシカの画面から編成へ戻れる(置いた距離はそのまま)', (await page.locator('[data-raid-mon][data-raid-mon-role]').first().getAttribute('data-raid-mon-range')) === '2' && !(await page.locator('[data-raid-prep-next]').isDisabled()));
     await page.locator('[data-raid-prep-next]').click();
+    check('戻っても勇者モン(中)は選んだまま', (await page.locator('[data-raid-slot="2"]').getAttribute('data-raid-slot-hero')) === 'true');
+    await page.locator('[data-raid-prep-hero-next]').click();
     await page.locator('[data-raid-prep-start]').click();
     await page.locator('[data-battle-controls]').waitFor({ timeout: 30000 });
     check('編成と配置からジャック戦が始まる', true);
@@ -336,6 +361,8 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     const board = await page.evaluate(() => [...document.querySelectorAll('[data-slot-index]')].map((el) => ({ i: el.getAttribute('data-slot-index'), t: (el.innerText || '').replace(/\s+/g, ' ').slice(0, 40), img: !!el.querySelector('img') })));
     console.log('INFO board', JSON.stringify(board));
     check('戦闘の盤面で、置いた距離(零・中)に子がいて、置いていない距離(近・遠)は空いている', ['0', '2'].every((i) => board.some((b) => b.i === i && b.img)) && ['1', '3'].every((i) => !board.some((b) => b.i === i && b.img)), JSON.stringify(board));
+    const heroHead = await page.evaluate(() => [0, 2].map((i) => (document.querySelector(`[data-slot-head="${i}"]`) || {}).className || '').map((c) => /amber-400\/10/.test(c)));
+    check('戦闘の盤面で、②で選んだ子(中)が勇者モン(王冠)になっている', heroHead[1] === true && heroHead[0] === false, JSON.stringify(heroHead));
     // レイドバトルは、みんなが削った分を引き継ぐ(子爵 3,200,000 のうち 500,000 が削れている → 2,700,000 から)
     await page.waitForFunction(() => /2,700,000\s*\/\s*3,200,000/.test(document.body.innerText), null, { timeout: 30000 }).catch(() => {});
     check('A: 敵ライフが共有の残り(2,700,000 / 3,200,000)から始まる', /2,700,000\s*\/\s*3,200,000/.test(await page.locator('body').innerText()));

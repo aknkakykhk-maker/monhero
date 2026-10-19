@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7dd5d6d99a66d396
+// source-sha256: 9b4616d850d074db
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-19 12:15";
+const BUILD_DATE = "2026-10-19 13:15";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -59574,6 +59574,7 @@ const PRO_PICK_ACCENT = {
 function ProMonsterGridPicker({
   list,
   selectedId = null,
+  selectedIds = null,
   isDisabled,
   onSelect,
   onDetail,
@@ -59581,7 +59582,8 @@ function ProMonsterGridPicker({
   confirmAria,
   accent = 'indigo',
   instant = false,
-  spotClassFor
+  spotClassFor,
+  header = null
 }) {
   const ac = PRO_PICK_ACCENT[accent] || PRO_PICK_ACCENT.indigo;
   const [prefs, setPrefs] = React.useState(readProPickPrefs);
@@ -59628,7 +59630,7 @@ function ProMonsterGridPicker({
   const pinnedIds = activeTab === 'all' ? [...new Set([...prefs.fav, ...prefs.recent])].filter(id => byId.has(id)) : [];
   const tile = (m, keyPrefix) => {
     const on = focusId === m.id;
-    const chosen = selectedId === m.id;
+    const chosen = selectedId === m.id || Array.isArray(selectedIds) && selectedIds.includes(m.id);
     const tag = prefs.fav.includes(m.id) ? '★' : prefs.recent.includes(m.id) ? '前回' : null;
     return React.createElement("button", {
       key: keyPrefix + m.id,
@@ -59668,11 +59670,11 @@ function ProMonsterGridPicker({
   return React.createElement("div", {
     "data-pro-pick-grid": true,
     className: "w-full flex-1 min-h-0 flex flex-col"
-  }, lineageTabs.length > 1 && React.createElement("div", {
+  }, header, lineageTabs.length > 1 && React.createElement("div", {
     "data-pro-pick-tabs": true,
     role: "tablist",
     "aria-label": "血統",
-    className: "shrink-0 pb-1.5 flex gap-1.5 overflow-x-auto mh-scroll"
+    className: `shrink-0 pb-1.5 flex gap-1.5 overflow-x-auto mh-scroll${header ? ' [@media(max-height:640px)]:hidden' : ''}`
   }, [{
     id: 'all',
     name: 'すべて',
@@ -59714,7 +59716,7 @@ function ProMonsterGridPicker({
   }, "モンスターをタップすると、ここに詳しい情報が出ます") : React.createElement(React.Fragment, null, React.createElement("div", {
     className: "flex items-center gap-2"
   }, React.createElement("div", {
-    className: "w-16 h-16 shrink-0 rounded-2xl overflow-hidden bg-black/30 border border-white/10 flex items-center justify-center"
+    className: `w-16 h-16 shrink-0 rounded-2xl overflow-hidden bg-black/30 border border-white/10 flex items-center justify-center${header ? ' [@media(max-height:640px)]:hidden' : ''}`
   }, focus.imgUrl ? React.createElement(DyedMonsterImage, {
     baseId: focus.id,
     src: focus.imgUrl,
@@ -59739,21 +59741,21 @@ function ProMonsterGridPicker({
   }, React.createElement(MonsterTypeBadge, {
     monId: focus.id
   })), React.createElement("div", {
-    className: "truncate text-[9px] font-black text-slate-400 leading-tight"
+    className: `truncate text-[9px] font-black text-slate-400 leading-tight${header ? ' [@media(max-height:640px)]:hidden' : ''}`
   }, (() => {
     const l = monsterLineageOf(focus.id);
     return l.main.id === l.sub.id ? `${l.main.name}の純血` : `${l.main.name} × ${l.sub.name}`;
   })()), React.createElement("div", {
-    className: "truncate text-[10px] font-black text-amber-300 leading-tight"
+    className: `truncate text-[10px] font-black text-amber-300 leading-tight${header ? ' [@media(max-height:640px)]:hidden' : ''}`
   }, React.createElement(Zap, {
     size: 10,
     className: "inline mr-0.5"
   }), focus.unique.name), React.createElement("div", {
-    className: "text-[9px] text-indigo-200 font-black leading-tight line-clamp-2"
+    className: `text-[9px] text-indigo-200 font-black leading-tight line-clamp-2${header ? ' [@media(max-height:640px)]:hidden' : ''}`
   }, React.createElement("span", {
     className: "text-indigo-400"
   }, "勇者特性 "), focus.trait || '特性なし'))), React.createElement("div", {
-    className: "mt-1.5 grid grid-cols-4 gap-1 text-center font-mono"
+    className: `mt-1.5 grid grid-cols-4 gap-1 text-center font-mono${header ? ' [@media(max-height:640px)]:hidden' : ''}`
   }, [['ライフ', focus.baseHp, 'text-pink-300'], ['ちから', focus.baseAtk, 'text-red-300'], ['丈夫さ', focus.baseDef, 'text-emerald-300'], ['ガッツ', focus.baseGuts, 'text-amber-300']].map(([label, value, tint]) => React.createElement("div", {
     key: label,
     className: "rounded-lg bg-white/5 py-0.5"
@@ -59762,7 +59764,7 @@ function ProMonsterGridPicker({
   }, label), React.createElement("div", {
     className: `text-[12px] font-black leading-tight ${tint}`
   }, value)))), React.createElement("div", {
-    className: "mt-1 grid grid-cols-4 gap-1 text-center"
+    className: `mt-1 grid grid-cols-4 gap-1 text-center${header ? ' [@media(max-height:640px)]:hidden' : ''}`
   }, RANGE_LABELS.map((label, i) => React.createElement("div", {
     key: label,
     className: "rounded-lg bg-white/5 py-0.5"
@@ -59785,7 +59787,173 @@ function ProMonsterGridPicker({
     onClick: () => onSelect(focus),
     "aria-label": confirmAria ? confirmAria(focus) : undefined,
     className: `flex-1 min-h-[44px] rounded-xl text-[13px] font-black active:scale-[.98] disabled:opacity-30 ${ac.button}`
-  }, confirmLabel))))));
+  }, typeof confirmLabel === 'function' ? confirmLabel(focus) : confirmLabel))))));
+}
+function ProPartyPicker({
+  list,
+  need,
+  initialIds = [],
+  isDisabled,
+  onDone,
+  onDetail
+}) {
+  const ids0 = () => {
+    const pick = [...new Set(initialIds)].filter(id => list.some(m => m.id === id)).slice(0, need);
+    return Array.from({
+      length: need
+    }, (_, i) => pick[i] || null);
+  };
+  const [ids, setIds] = React.useState(ids0);
+  const [active, setActive] = React.useState(() => {
+    const i = ids0().findIndex(x => !x);
+    return i < 0 ? null : i;
+  });
+  const [step, setStep] = React.useState('members');
+  const [heroId, setHeroId] = React.useState(() => initialIds[0] && ids0().includes(initialIds[0]) ? initialIds[0] : null);
+  const byId = new Map(list.map(m => [m.id, m]));
+  const filled = ids.filter(Boolean).length;
+  const full = filled === need;
+  const nextEmpty = (arr, from) => {
+    for (let n = 1; n <= arr.length; n++) {
+      const i = (from + n) % arr.length;
+      if (!arr[i]) return i;
+    }
+    return null;
+  };
+  const removeAt = i => {
+    const next = [...ids];
+    if (next[i] === heroId) setHeroId(null);
+    next[i] = null;
+    setIds(next);
+    setActive(i);
+  };
+  const put = m => {
+    const at = ids.indexOf(m.id);
+    if (at >= 0) {
+      removeAt(at);
+      return;
+    }
+    const i = Number.isInteger(active) && !ids[active] ? active : nextEmpty(ids, ids.length - 1);
+    if (i == null) return;
+    const next = [...ids];
+    next[i] = m.id;
+    setIds(next);
+    setActive(nextEmpty(next, i));
+  };
+  const hero = heroId && ids.includes(heroId) ? byId.get(heroId) : null;
+  const slot = (id, i) => {
+    const m = id ? byId.get(id) : null;
+    const on = step === 'members' && !m && active === i;
+    const isHero = step === 'hero' && m && m.id === heroId;
+    return React.createElement("button", {
+      key: i,
+      type: "button",
+      "data-pro-party-slot": i,
+      "data-pro-party-active": on ? 'true' : undefined,
+      "data-pro-party-hero": isHero ? 'true' : undefined,
+      disabled: step === 'hero' && !m,
+      onClick: () => {
+        if (step === 'hero') {
+          if (m) setHeroId(m.id);
+          return;
+        }
+        if (m) removeAt(i);else setActive(i);
+      },
+      "aria-label": step === 'hero' ? m ? `${m.name}を勇者モンにする` : '空き' : m ? `${m.name}を枠から外す` : `${i + 1}番目の枠に入れる子を選ぶ`,
+      className: `relative flex min-w-0 flex-col items-center rounded-xl border-2 px-0.5 pb-1 pt-0.5 text-center active:scale-95 ${on ? 'border-indigo-300 bg-indigo-900/40 shadow-[0_0_10px_rgba(165,180,252,.55)]' : isHero ? 'border-amber-300 bg-amber-900/50 shadow-[0_0_10px_rgba(252,211,77,.55)]' : m ? 'border-pink-300/50 bg-slate-900/80' : 'border-dashed border-white/20 bg-slate-900/40'}`
+    }, React.createElement("span", {
+      className: "flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-black/30 [@media(max-height:640px)]:h-7 [@media(max-height:640px)]:w-7"
+    }, m ? m.imgUrl ? React.createElement(DyedMonsterImage, {
+      baseId: m.id,
+      src: m.imgUrl,
+      alt: "",
+      masuColors: m.colors,
+      className: "h-full w-full object-contain"
+    }) : React.createElement("span", {
+      className: "text-xl"
+    }, m.emoji) : React.createElement("span", {
+      className: `text-[15px] font-black ${on ? 'text-indigo-100' : 'text-slate-600'}`
+    }, "+")), React.createElement("span", {
+      className: "mt-0.5 w-full truncate text-[9px] font-black leading-tight text-white"
+    }, m ? m.name : on ? 'ここに入る' : '空き'), m && monsterTypeProtoOn() && (() => {
+      const t = monsterTypeOf(m.id);
+      const icons = [t.main, t.sub].filter(k => k && MONSTER_TYPES[k]).map(k => MONSTER_TYPES[k]);
+      return React.createElement("span", {
+        "data-pro-party-type": t.main,
+        title: icons.map(d => d.label).join('・'),
+        className: "text-[9px] leading-[11px] [@media(max-height:640px)]:hidden"
+      }, icons.map(d => d.icon).join(''), React.createElement("span", {
+        className: "sr-only"
+      }, icons.map(d => d.label).join('・')));
+    })(), m && step === 'members' && React.createElement("span", {
+      "aria-hidden": "true",
+      className: "absolute right-0.5 top-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-slate-700 text-[9px] font-black leading-none text-slate-100"
+    }, "×"), isHero && React.createElement("span", {
+      "aria-hidden": "true",
+      className: "absolute -top-1.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border border-amber-200 bg-amber-500 px-1 text-[8px] font-black leading-[12px] text-black"
+    }, "👑勇者"));
+  };
+  const guide = step === 'hero' ? hero ? `${hero.name}が勇者モンです。ほかの子を押すと替えられます` : '勇者モンにする子を、上の枠から1体えらんでください' : full ? 'そろいました。枠を押すとその子を外せます。勇者モンは次でえらびます' : `好きな枠を押してから、下で子をえらんで「枠に入れる」(どの順でもOK・あと${need - filled}体)`;
+  const top = React.createElement("section", {
+    "data-pro-party": true,
+    className: "mb-2 shrink-0 rounded-2xl border border-indigo-300/30 bg-black/30 p-2 [@media(max-height:640px)]:mb-1 [@media(max-height:640px)]:py-1.5"
+  }, React.createElement("div", {
+    className: "mb-1 flex items-baseline justify-between gap-1 text-[11px] font-black text-indigo-200"
+  }, React.createElement("span", null, step === 'hero' ? '② 勇者モンをえらぶ' : '① 編成する子をえらぶ'), React.createElement("span", {
+    className: "text-[9px] text-slate-400"
+  }, filled, " / ", need)), React.createElement("div", {
+    className: `grid gap-1 ${need > 4 ? 'grid-cols-6' : 'grid-cols-4'} pt-1`
+  }, ids.map(slot)), React.createElement("div", {
+    "data-pro-party-guide": true,
+    title: guide,
+    className: "mt-1 rounded-lg bg-indigo-950/40 px-2 py-1 text-[10px] font-bold text-indigo-100 [@media(max-height:640px)]:hidden"
+  }, guide));
+  if (step === 'hero') return React.createElement("div", {
+    "data-pro-party-step": "hero",
+    className: "w-full flex-1 min-h-0 flex flex-col"
+  }, top, React.createElement("div", {
+    className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
+  }, React.createElement("div", {
+    className: "rounded-2xl border border-amber-300/30 bg-black/30 p-3 text-[10px] leading-relaxed text-slate-200"
+  }, React.createElement("div", {
+    className: "mb-1 text-[11px] font-black text-amber-200"
+  }, "👑 勇者モンとは"), React.createElement("div", null, "戦いの主役になる1体です。最初のWAVEから盤面に立ち、置いた距離から戦いが始まります。ほかの子は供モンの候補になり、これまでどおりWAVEごとに1体ずつ合流します。"))), React.createElement("div", {
+    className: "shrink-0 flex gap-2 pt-2"
+  }, React.createElement("button", {
+    type: "button",
+    "data-pro-party-back": true,
+    onClick: () => setStep('members'),
+    className: "min-h-[48px] shrink-0 rounded-2xl border-2 border-white/15 bg-slate-800 px-3 text-[12px] font-black text-slate-100 active:scale-95"
+  }, "← 選び直す"), React.createElement("button", {
+    type: "button",
+    "data-pro-party-done": true,
+    disabled: !hero,
+    onClick: () => onDone(hero, ids.filter(id => id && id !== hero.id).map(id => byId.get(id))),
+    className: "min-h-[48px] flex-1 rounded-2xl bg-indigo-600 px-3 text-[13px] font-black text-white active:scale-95 disabled:bg-slate-800 disabled:text-slate-500"
+  }, hero ? '次へ(距離をえらぶ)' : '勇者モンをえらんでください')));
+  return React.createElement("div", {
+    "data-pro-party-step": "members",
+    className: "w-full flex-1 min-h-0 flex flex-col"
+  }, React.createElement(ProMonsterGridPicker, {
+    list: list,
+    selectedIds: ids.filter(Boolean),
+    accent: "indigo",
+    isDisabled: isDisabled,
+    header: top,
+    confirmLabel: m => ids.includes(m.id) ? '枠から外す' : full ? '枠がいっぱいです' : '枠に入れる',
+    confirmAria: m => ids.includes(m.id) ? `${m.name}を枠から外す` : `${m.name}を枠に入れる`,
+    onSelect: m => {
+      if (!ids.includes(m.id) && full) return;
+      put(m);
+    },
+    onDetail: onDetail
+  }), React.createElement("button", {
+    type: "button",
+    "data-pro-party-next": true,
+    disabled: !full,
+    onClick: () => setStep('hero'),
+    className: "mt-2 shrink-0 min-h-[48px] w-full rounded-2xl bg-indigo-600 px-3 text-[13px] font-black text-white active:scale-95 disabled:bg-slate-800 disabled:text-slate-500"
+  }, full ? '次へ(勇者モンをえらぶ)' : `あと${need - filled}体えらんでください`));
 }
 function PickHeroAllyScreen({
   MONSTER_CARD_CLASS,
@@ -59829,7 +59997,9 @@ function PickHeroAllyScreen({
   spendStatPoint,
   tacticsUnits,
   wave,
-  waveResult
+  waveResult,
+  proAllyPool = [],
+  setProAllyPool = null
 }) {
   const partyFace = (mon, className = '') => !mon ? React.createElement("span", {
     "aria-hidden": "true",
@@ -59875,7 +60045,7 @@ function PickHeroAllyScreen({
       className: `text-xl font-black italic uppercase tracking-widest ${pickMode === 'ally' ? 'mh-ph-title' : 'text-indigo-400'}`
     }, pickMode === 'hero' ? '勇者モンを選択' : '供モンを選択'), React.createElement("p", {
       "data-pick-term-note": true,
-      className: "mt-0.5 text-[10px] font-bold leading-snug text-slate-400"
+      className: `mt-0.5 text-[10px] font-bold leading-snug text-slate-400${pickMode === 'hero' && isProMode(runMode) && !battleTutorial ? ' [@media(max-height:640px)]:hidden' : ''}`
     }, pickMode === 'hero' ? '勇者モン＝バトルの主役。この子の勇者特性が効く' : '供モン＝勇者モンと一緒に戦う仲間')), React.createElement("div", {
       className: "w-10"
     })), pickMode === 'ally' && React.createElement("div", {
@@ -59886,7 +60056,7 @@ function PickHeroAllyScreen({
       plan: phasePlan,
       current: "ally",
       nextWave: wave > 0 ? wave + 1 : null
-    })), React.createElement("div", {
+    })), !(pickMode === 'hero' && isProMode(runMode) && !battleTutorial) && React.createElement("div", {
       className: `shrink-0 w-full max-w-md mx-auto mb-2${pickMode === 'ally' ? ' mh-phase-tall' : ''}`
     }, React.createElement(AssistantBubble, {
       key: pickMode,
@@ -59998,7 +60168,7 @@ function PickHeroAllyScreen({
       "aria-pressed": heroPickTab === key,
       className: `flex-1 min-h-[40px] rounded-2xl font-black text-[12px] border-2 active:scale-95 ${heroPickTab === key ? 'bg-indigo-600 border-indigo-300 text-white shadow-lg' : 'bg-slate-900 border-slate-700 text-slate-400'}`
     }, label))), React.createElement("div", {
-      className: "text-[9px] text-slate-500 font-bold mt-1 px-1 text-center"
+      className: `text-[9px] text-slate-500 font-bold mt-1 px-1 text-center${isProMode(runMode) && !battleTutorial ? ' [@media(max-height:640px)]:hidden' : ''}`
     }, isProMode(runMode) ? 'プロモードはベースモンだけで挑みます。育てたマスモンは連れていけません' : heroPickTab === 'base' ? '解放済みのベースモンから選べます。編成に入れていなくても、ラン終了時にマスモン登録できます' : 'M/B管理で組んだ編成から選びます')), React.createElement("div", {
       className: `flex-1 ${pickMode === 'hero' && isProMode(runMode) ? 'overflow-hidden' : 'overflow-y-auto mh-scroll'} w-full max-w-md mx-auto pb-4 min-h-0 flex flex-col`
     }, React.createElement("div", {
@@ -60018,6 +60188,19 @@ function PickHeroAllyScreen({
         setAllyCardIndex(next);
         centerCarouselChild(root, next, 'smooth');
       };
+      if (pickMode === 'hero' && isProMode(runMode) && !battleTutorial && typeof setProAllyPool === 'function') return React.createElement(ProPartyPicker, {
+        list: list,
+        need: 1 + Math.min(PRO_ALLY_POOL_SIZE, Math.max(0, list.length - 1)),
+        initialIds: proHeroPreset?.heroBaseId ? [proHeroPreset.heroBaseId, ...(proAllyPool || []).map(m => m && m.id)] : currentPickingMon && (proAllyPool || []).length ? [currentPickingMon.id, ...proAllyPool.map(m => m && m.id)] : readProPickPrefs().recent,
+        isDisabled: m => !scenarioPicksHero(m.id),
+        onDone: (hero, allies) => {
+          setProAllyPool(allies.filter(Boolean));
+          setProHeroPreset(null);
+          setCurrentPickingMon(hero);
+          advanceRunStage('PICK_SLOT');
+        },
+        onDetail: m => setCurrentPickingMon(m)
+      });
       if (pickMode === 'hero' && isProMode(runMode)) return React.createElement(ProMonsterGridPicker, {
         list: list,
         selectedId: proHeroPreset?.heroBaseId || null,
@@ -78947,7 +79130,7 @@ const RaidJackPrepScreen = ({
   const [step, setStep] = useState('party');
   const [teachIds, setTeachIds] = useState(() => restore && Array.isArray(restore.teachIds) ? restore.teachIds : (Array.isArray(teachings) ? teachings : []).slice(0, maxTeach).map(t => t.id));
   const slotMons = slotKeys.map(monOf);
-  const heroIdx = Number.isInteger(heroRange) && slotMons[heroRange] ? heroRange : slotMons.findIndex(Boolean);
+  const heroIdx = Number.isInteger(heroRange) && slotMons[heroRange] ? heroRange : slotMons.filter(Boolean).length === 1 ? slotMons.findIndex(Boolean) : -1;
   const hero = heroIdx >= 0 ? slotMons[heroIdx] : null;
   const placedCount = slotMons.filter(Boolean).length;
   const nextEmpty = (keys, from) => {
@@ -78961,10 +79144,7 @@ const RaidJackPrepScreen = ({
     const next = [...slotKeys];
     next[r] = null;
     setSlotKeys(next);
-    if (heroIdx === r) {
-      const other = next.findIndex(Boolean);
-      setHeroRange(other >= 0 ? other : null);
-    }
+    if (heroRange === r) setHeroRange(null);
     setPickRange(r);
   };
   const pickMon = mon => {
@@ -78979,7 +79159,6 @@ const RaidJackPrepScreen = ({
     const next = [...slotKeys];
     next[r] = k;
     setSlotKeys(next);
-    if (!hero) setHeroRange(r);
     setPickRange(nextEmpty(next, r));
   };
   const pickSlot = r => {
@@ -79014,7 +79193,7 @@ const RaidJackPrepScreen = ({
   const tile = mon => {
     const k = keyOf(mon);
     const at = slotKeys.indexOf(k);
-    const role = at < 0 ? null : at === heroIdx ? 'hero' : 'ally';
+    const role = at < 0 ? null : 'placed';
     const showR = at >= 0 ? at : pickRange;
     const pct = Number.isInteger(showR) ? raidJackAptPct(mon, showR) : null;
     return React.createElement("div", {
@@ -79027,7 +79206,7 @@ const RaidJackPrepScreen = ({
       "data-raid-mon-role": role || undefined,
       "data-raid-mon-range": at >= 0 ? at : undefined,
       "aria-pressed": !!role,
-      className: `flex w-full flex-col items-center rounded-xl border-2 p-1 text-center active:scale-95 ${role === 'hero' ? 'border-amber-300 bg-amber-900/50' : role === 'ally' ? 'border-sky-300 bg-sky-950/60' : 'border-white/10 bg-slate-900/60'}`
+      className: `flex w-full flex-col items-center rounded-xl border-2 p-1 text-center active:scale-95 ${role ? 'border-sky-300 bg-sky-950/60' : 'border-white/10 bg-slate-900/60'}`
     }, faceOf(mon, 'h-12 w-12'), React.createElement("span", {
       className: "mt-0.5 w-full truncate text-[9px] font-black text-slate-100"
     }, mon.name), monsterTypeProtoOn() && (() => {
@@ -79045,8 +79224,8 @@ const RaidJackPrepScreen = ({
       className: `text-[9px] font-black tabular-nums ${pctTone(pct)}`
     }, formatAptPct(pct)))), role && React.createElement("span", {
       "aria-hidden": "true",
-      className: `pointer-events-none absolute -left-1 -top-1 rounded-full border px-1 text-[9px] font-black leading-[14px] shadow ${role === 'hero' ? 'border-amber-200 bg-amber-500 text-black' : 'border-sky-200 bg-sky-600 text-white'}`
-    }, role === 'hero' ? '👑勇者' : '供'), typeof onOpenDetail === 'function' && React.createElement("button", {
+      className: "pointer-events-none absolute -left-1 -top-1 rounded-full border border-sky-200 bg-sky-600 px-1 text-[9px] font-black leading-[14px] text-white shadow"
+    }, RANGE_LABELS[at], "に置いた"), typeof onOpenDetail === 'function' && React.createElement("button", {
       type: "button",
       "data-raid-detail": k,
       "aria-label": `${mon.name}の詳細を見る`,
@@ -79060,7 +79239,8 @@ const RaidJackPrepScreen = ({
   const slot = r => {
     const mon = slotMons[r];
     const active = step === 'party' && !mon && pickRange === r;
-    const isHero = mon && r === heroIdx;
+    const isHero = mon && step !== 'party' && r === heroIdx;
+    const heroPick = step === 'hero' && !!mon;
     const pct = mon ? raidJackAptPct(mon, r) : null;
     return React.createElement("div", {
       key: r,
@@ -79070,49 +79250,56 @@ const RaidJackPrepScreen = ({
       "data-raid-slot": r,
       "data-raid-slot-active": active ? 'true' : undefined,
       onClick: () => {
-        if (step !== 'party') setStep('party');
+        if (step === 'hero') {
+          if (mon) setHeroRange(r);
+          return;
+        }
+        if (step === 'teach') {
+          setStep('hero');
+          return;
+        }
         pickSlot(r);
       },
-      "aria-label": mon ? `${RANGE_LABELS[r]}距離の${mon.name}を外す` : `${RANGE_LABELS[r]}距離に置く子を選ぶ`,
-      className: `flex w-full min-w-0 flex-col items-center rounded-xl border-2 p-1 ${mon ? 'pb-2.5' : ''} text-center active:scale-95 ${active ? 'border-orange-300 bg-orange-900/40 shadow-[0_0_10px_rgba(253,186,116,.55)]' : mon ? isHero ? 'border-amber-300/80 bg-amber-950/40' : 'border-sky-300/60 bg-sky-950/40' : 'border-dashed border-white/20 bg-slate-900/40'}`
+      "data-raid-slot-hero": isHero ? 'true' : undefined,
+      disabled: step === 'hero' && !mon,
+      "aria-label": step === 'party' ? mon ? `${RANGE_LABELS[r]}距離の${mon.name}を外す` : `${RANGE_LABELS[r]}距離に置く子を選ぶ` : mon ? `${mon.name}を勇者モンにする` : `${RANGE_LABELS[r]}距離は空き`,
+      className: `flex w-full min-w-0 flex-col items-center rounded-xl border-2 p-1 ${mon ? 'pb-2.5' : ''} text-center active:scale-95 ${active ? 'border-orange-300 bg-orange-900/40 shadow-[0_0_10px_rgba(253,186,116,.55)]' : mon ? isHero ? 'border-amber-300 bg-amber-900/50 shadow-[0_0_10px_rgba(252,211,77,.55)]' : heroPick ? 'border-amber-200/50 bg-sky-950/40' : 'border-sky-300/60 bg-sky-950/40' : 'border-dashed border-white/20 bg-slate-900/40'}`
     }, React.createElement("span", {
       className: "flex items-center gap-0.5"
     }, rangeChip(r), React.createElement("span", {
       className: "text-[9px] font-black text-slate-200"
-    }, "距離")), mon ? faceOf(mon, 'mt-0.5 h-10 w-10') : React.createElement("span", {
-      className: `mt-0.5 flex h-10 w-10 items-center justify-center rounded-full border border-dashed text-[16px] font-black ${active ? 'border-orange-200 text-orange-100' : 'border-white/25 text-slate-500'}`
+    }, "距離")), mon ? faceOf(mon, 'mt-0.5 h-10 w-10 [@media(max-height:640px)]:h-8 [@media(max-height:640px)]:w-8') : React.createElement("span", {
+      className: `mt-0.5 flex h-10 w-10 [@media(max-height:640px)]:h-8 [@media(max-height:640px)]:w-8 items-center justify-center rounded-full border border-dashed text-[16px] font-black ${active ? 'border-orange-200 text-orange-100' : 'border-white/25 text-slate-500'}`
     }, "+"), React.createElement("span", {
       className: "mt-0.5 w-full truncate text-[9px] font-black text-slate-100"
     }, mon ? mon.name : active ? 'ここに入る' : '空き'), React.createElement("span", {
       "data-raid-slot-apt": mon ? r : undefined,
       className: `text-[10px] font-black leading-tight tabular-nums ${mon ? pctTone(pct) : 'text-slate-600'}`
-    }, mon ? formatAptPct(pct) : '—'), mon && React.createElement("span", {
+    }, mon ? formatAptPct(pct) : '—'), mon && step === 'party' && React.createElement("span", {
       "aria-hidden": "true",
       className: "absolute right-1 top-[18px] flex h-3.5 w-3.5 items-center justify-center rounded-full bg-slate-700 text-[9px] font-black leading-none text-slate-100"
-    }, "×")), mon && (isHero ? React.createElement("span", {
+    }, "×")), isHero && React.createElement("span", {
       "aria-hidden": "true",
       className: "pointer-events-none absolute -bottom-1.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border border-amber-200 bg-amber-500 px-1 text-[9px] font-black leading-[14px] text-black shadow"
-    }, "👑勇者") : React.createElement("button", {
-      type: "button",
-      "data-raid-make-hero": r,
-      "aria-label": `${mon.name}を勇者モンにする`,
-      onClick: () => setHeroRange(r),
-      className: "mh-hit-expand absolute -bottom-1.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border border-white/30 bg-slate-800 px-1 text-[9px] font-black leading-[14px] text-slate-200 shadow active:scale-90"
-    }, "👑にする")));
+    }, "👑勇者"), heroPick && !isHero && React.createElement("span", {
+      "aria-hidden": "true",
+      className: "pointer-events-none absolute -bottom-1.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border border-white/30 bg-slate-800 px-1 text-[9px] font-black leading-[14px] text-slate-200 shadow"
+    }, "押して👑"));
   };
-  const guide = !hero ? '下の一覧から、光っている距離に置く子をえらんでください(最初に置いた子が勇者モンになります)' : Number.isInteger(pickRange) && placedCount < 4 ? `次は${RANGE_LABELS[pickRange]}距離。供モンは${RAID_JACK_ALLY_MAX}体まで(えらばなくても挑戦できます)` : '準備OK。枠を押すとその子を外せます。「👑にする」で勇者モンを替えられます';
+  const guide = step === 'hero' ? hero ? `${hero.name}が勇者モンです。ほかの子を押すと替えられます` : '勇者モンにする子を、上の枠から1体えらんでください' : placedCount === 0 ? '好きな距離の枠を押してから、下の一覧で置く子をえらんでください(どの順でもOK)' : Number.isInteger(pickRange) && placedCount < 4 ? `次は${RANGE_LABELS[pickRange]}距離(ほかの枠を押すとそこに置けます)。全部で${1 + RAID_JACK_ALLY_MAX}体まで` : '置けました。枠を押すとその子を外せます。勇者モンは次でえらびます';
   const partyRow = React.createElement("section", {
-    className: "rounded-2xl border border-orange-300/30 bg-black/30 p-2",
+    className: "mb-2 shrink-0 rounded-2xl border border-orange-300/30 bg-black/30 p-2 [@media(max-height:640px)]:mb-1 [@media(max-height:640px)]:py-1.5",
     "data-raid-party": true
   }, React.createElement("div", {
     className: "mb-1 flex flex-wrap items-baseline gap-x-1 text-[11px] font-black text-orange-200"
   }, "いまの編成と距離", React.createElement("span", {
-    className: "text-[9px] font-normal text-slate-300"
+    className: "text-[9px] font-normal text-slate-300 [@media(max-height:640px)]:hidden"
   }, "%はその距離での適性(その距離に立つ子のぶんだけ効きます)")), React.createElement("div", {
     className: "grid grid-cols-4 gap-1.5 pb-1.5 pt-1"
-  }, ranges.map(r => slot(r))), step === 'party' && React.createElement("div", {
+  }, ranges.map(r => slot(r))), step !== 'teach' && React.createElement("div", {
     "data-raid-guide": true,
-    className: "mt-1.5 rounded-lg bg-orange-950/40 px-2 py-1 text-[10px] font-bold text-orange-100"
+    title: guide,
+    className: "mt-1.5 rounded-lg bg-orange-950/40 px-2 py-1 text-[10px] font-bold text-orange-100 [@media(max-height:640px)]:mt-1 [@media(max-height:640px)]:truncate [@media(max-height:640px)]:py-0.5"
   }, guide));
   return React.createElement("div", {
     className: `${SCREEN_SHELL_CLASS} overflow-hidden`,
@@ -79122,11 +79309,12 @@ const RaidJackPrepScreen = ({
     title: `${tier.name}に挑む`,
     icon: "🎃",
     accent: "text-orange-200",
-    onBack: step === 'teach' ? () => setStep('party') : onBack,
-    note: step === 'teach' ? '② アシカをえらぶ' : `① ${isB ? 'マスモン' : 'ベースモン'}と距離をえらぶ・20ターン勝負`
-  }), React.createElement("div", {
-    className: `${SCREEN_LIST_CLASS} space-y-3`
-  }, partyRow, step === 'party' && React.createElement("section", {
+    onBack: step === 'teach' ? () => setStep('hero') : step === 'hero' ? () => setStep('party') : onBack,
+    note: step === 'teach' ? '③ アシカをえらぶ' : step === 'hero' ? '② 勇者モンをえらぶ' : `① ${isB ? 'マスモン' : 'ベースモン'}を距離に置く・20ターン勝負`
+  }), partyRow, React.createElement("div", {
+    className: `${SCREEN_LIST_CLASS} space-y-3`,
+    "data-raid-prep-list": true
+  }, step === 'party' && React.createElement("section", {
     className: "rounded-2xl border border-white/10 bg-black/30 p-3"
   }, React.createElement("div", {
     className: "mb-1 text-[11px] font-black text-orange-200"
@@ -79138,7 +79326,12 @@ const RaidJackPrepScreen = ({
     className: "grid grid-cols-4 gap-1.5 pt-1 min-[360px]:grid-cols-5"
   }, list.map(mon => tile(mon))), list.length === 0 && React.createElement("div", {
     className: "py-2 text-center text-[10px] text-slate-400"
-  }, "編成できるモンスターがいません")), step === 'teach' && React.createElement("section", {
+  }, "編成できるモンスターがいません")), step === 'hero' && React.createElement("section", {
+    className: "rounded-2xl border border-amber-300/30 bg-black/30 p-3 text-[10px] leading-relaxed text-slate-200",
+    "data-raid-hero-step": true
+  }, React.createElement("div", {
+    className: "mb-1 text-[11px] font-black text-amber-200"
+  }, "👑 勇者モンとは"), React.createElement("div", null, "戦いの主役になる1体です。ちから・丈夫さは勇者モンをもとに、供モンのぶんが足されます。勇者モンを置いた距離から戦いが始まり、少しだけ狙われやすくなります(🔥)。")), step === 'teach' && React.createElement("section", {
     className: "rounded-2xl border border-white/10 bg-black/30 p-3",
     "data-raid-teach-step": true
   }, React.createElement("div", {
@@ -79179,17 +79372,23 @@ const RaidJackPrepScreen = ({
   }, step === 'party' ? React.createElement("button", {
     type: "button",
     "data-raid-prep-next": true,
-    disabled: !hero,
-    onClick: () => setStep('teach'),
+    disabled: placedCount === 0,
+    onClick: () => setStep('hero'),
     className: "w-full min-h-[48px] rounded-2xl border-2 border-orange-300/70 bg-orange-700 px-3 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400"
-  }, hero ? '次へ(アシカをえらぶ)' : '勇者モンを置いてください') : React.createElement("div", {
+  }, placedCount > 0 ? '次へ(勇者モンをえらぶ)' : '距離に子を置いてください') : React.createElement("div", {
     className: "flex gap-2"
   }, React.createElement("button", {
     type: "button",
     "data-raid-prep-back": true,
-    onClick: () => setStep('party'),
+    onClick: () => setStep(step === 'teach' ? 'hero' : 'party'),
     className: "min-h-[48px] shrink-0 rounded-2xl border-2 border-white/15 bg-slate-800 px-3 text-[12px] font-black text-slate-100 active:scale-95"
-  }, "← 編成"), React.createElement("button", {
+  }, step === 'teach' ? '← 勇者モン' : '← 置き直す'), step === 'hero' ? React.createElement("button", {
+    type: "button",
+    "data-raid-prep-hero-next": true,
+    disabled: !hero,
+    onClick: () => setStep('teach'),
+    className: "min-h-[48px] flex-1 rounded-2xl border-2 border-orange-300/70 bg-orange-700 px-3 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400"
+  }, hero ? '次へ(アシカをえらぶ)' : '勇者モンをえらんでください') : React.createElement("button", {
     type: "button",
     "data-raid-prep-start": true,
     disabled: !hero,
@@ -109290,6 +109489,8 @@ function MonsterHeroGame() {
       },
       pickMode: gameState === 'PICK_HERO' ? 'hero' : 'ally',
       proHeroPreset: proHeroPreset,
+      proAllyPool: proAllyPool,
+      setProAllyPool: setProAllyPool,
       renderMonsterCardBody: renderMonsterCardBody,
       renderMonsterDetailModal: renderMonsterDetailModal,
       renderProMonsterRow: renderProMonsterRow,

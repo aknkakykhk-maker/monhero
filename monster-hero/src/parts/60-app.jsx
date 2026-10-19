@@ -20800,7 +20800,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           phasePlan={gameState==='PICK_ALLY'?phasePlan:null} wave={wave}
           tacticsUnits={isTacticsMode(runMode)?tacticsUnits:null}
           onBack={()=>{if(gameState==='PICK_HERO'){setCurrentPickingMon(null);setBattleMenuTab('difficulty');setGameState(battleEntryStateRef.current);return;}returnToHome();}}
-          pickMode={gameState==='PICK_HERO'?'hero':'ally'} proHeroPreset={proHeroPreset}
+          pickMode={gameState==='PICK_HERO'?'hero':'ally'} proHeroPreset={proHeroPreset} proAllyPool={proAllyPool} setProAllyPool={setProAllyPool}
           renderMonsterCardBody={renderMonsterCardBody} renderMonsterDetailModal={renderMonsterDetailModal}
           renderProMonsterRow={renderProMonsterRow} runMode={runMode} scenarioPicksHero={scenarioPicksHero}
           setAllyCardIndex={setAllyCardIndex} setCurrentPickingMon={setCurrentPickingMon}

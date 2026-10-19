@@ -1,6 +1,7 @@
 // タクティクスバトル(プロ・新画面)を実際のブラウザで開くところまでを1つにまとめたもの。
 // battle-perf-budget-check.js と battle-live-frame-report.js が使う(同じ道筋で開けば、数字を比べられる)。
 // 道筋は card-drag-perf.js と同じ(ふだんの入口 → タクティクス → プロ → 難易度 → 編成 → WAVE 1/10)。
+const { pickProParty } = require('./pro-party-pick');
 const http = require('http');
 const path = require('path');
 const fs = require('fs');
@@ -79,6 +80,12 @@ async function openTacticsBattle({ root, port, storage = {}, mobile = true } = {
     });
     await page.waitForTimeout(1500);
     // ★押すものは「その画面にしか無いもの」で選ぶ(とりあえず押せるものを押すと、戻るを踏む)
+    // 2026-10-19 から、プロモードの編成は「枠へ入れる → 勇者モンを選ぶ」(ProPartyPicker)。一覧の先頭の子を勇者モンにして抜ける
+    if (await page.locator('[data-pro-party]').count()) {
+      const first = await page.evaluate(() => { const b = document.querySelector('[data-pro-pick-scroll] button[aria-label$="を見る"]'); return b ? b.getAttribute('aria-label').replace(/を見る$/, '') : null; });
+      const proPickError = first ? await pickProParty(page, first) : 'プロモードの一覧が空';
+      if (proPickError) throw new Error(proPickError);
+    }
     await page.evaluate(() => { window.__pick = 0; window.__change = 1; });
     for (let i = 0; i < 40; i += 1) {
       if (await page.evaluate(() => /WAVE 1\/10/.test(document.body.innerText))) break;
