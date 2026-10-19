@@ -193,7 +193,7 @@ const ScreenSectionLabel = ({ children, note = '' }) => (
 // マーケットで作った形(2026-09-28)をここへ移し、どの画面からも同じ部品で出す。
 //   ModalFrame       … 窓の枠。safe-area を取り、外側を押すと閉じる(保存中など閉じてよくないときは onClose を渡さない)
 //   ModalCloseButton … 閉じる/キャンセルのボタン。文言は「閉じる」「キャンセル」の2つだけにそろえる
-//   QuantityStepper  … 数を選ぶ -10/-1/数/+1/+10 と MAX
+//   QuantityStepper  … 数を選ぶ -10/-1/数(直接打ち込める)/+1/+10 と MAX
 //   ConfirmSheet     … 「本当に〜しますか」の確認。本体の askConfirm から出す
 // ★窓の重なり順(z-index)は MODAL_Z の段から選ぶ。値をその場で書かない
 const MODAL_Z = Object.freeze({ dialog:42000, confirm:43000 });
@@ -211,15 +211,30 @@ const QuantityStepper = ({ value, max, onChange, unit='個', maxClass='' }) => {
   const count=Math.min(Math.max(1, Math.floor(Number(value)||1)), Math.max(1, safeMax));
   const setCount=(next)=>onChange&&onChange(Math.min(Math.max(1, next), Math.max(1, safeMax)));
   const stepClass='mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-800 font-black active:scale-95 disabled:opacity-30';
+  // 数を直接打ち込める(2026-10-19 社長「マーケットのアイテムは直接数値入力で買えるようにしよう！」)。
+  // 打っている途中の字(draft)は欄にだけ持ち、数として読めたら 1〜max にそろえてすぐ onChange へ渡す(合計の表示が追いつく)。
+  // 空・0 のあいだは 1 として数え、欄を離れたら そろえた数を出し直す。小数は点より前だけを読む。
+  // 字の大きさは16px以上(iPhone で欄を押したときに画面が拡大されないように)
+  const [draft,setDraft]=React.useState(null);
+  const typeCount=(raw)=>{
+    const digits=String(raw||'').split(/[.,．。]/)[0].replace(/[^0-9０-９]/g,'').replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0));
+    const n=parseInt(digits,10);
+    if(Number.isFinite(n)&&n>Math.max(1,safeMax)) { setDraft(String(Math.max(1,safeMax))); setCount(safeMax); return; }
+    setDraft(digits);
+    setCount(Number.isFinite(n)&&n>=1?n:1);
+  };
   return <>
     <div className="mt-2 grid grid-cols-5 items-center gap-1.5">
-      <button type="button" disabled={count<=1} onClick={()=>setCount(count-10)} className={stepClass}>-10</button>
-      <button type="button" disabled={count<=1} onClick={()=>setCount(count-1)} className={stepClass}>-1</button>
-      <strong className="text-center text-xl font-black font-mono">{count}</strong>
-      <button type="button" disabled={count>=safeMax} onClick={()=>setCount(count+1)} className={stepClass}>+1</button>
-      <button type="button" disabled={count>=safeMax} onClick={()=>setCount(count+10)} className={stepClass}>+10</button>
+      <button type="button" disabled={count<=1} onClick={()=>{setDraft(null);setCount(count-10);}} className={stepClass}>-10</button>
+      <button type="button" disabled={count<=1} onClick={()=>{setDraft(null);setCount(count-1);}} className={stepClass}>-1</button>
+      <input type="text" inputMode="numeric" pattern="[0-9]*" enterKeyHint="done" autoComplete="off" aria-label={`数（1〜${Math.max(1,safeMax).toLocaleString()}${unit}）`} data-quantity-input
+        disabled={safeMax<=0} value={draft??String(count)} onChange={(e)=>typeCount(e.target.value)} onFocus={(e)=>e.target.select()} onBlur={()=>setDraft(null)}
+        onKeyDown={(e)=>{ if(e.key==='Enter') e.currentTarget.blur(); }}
+        style={{fontSize:20}} className="min-h-[44px] w-full min-w-0 rounded-xl border border-white/20 bg-black/40 px-1 text-center font-black font-mono text-white outline-none focus:border-amber-300 disabled:opacity-40"/>
+      <button type="button" disabled={count>=safeMax} onClick={()=>{setDraft(null);setCount(count+1);}} className={stepClass}>+1</button>
+      <button type="button" disabled={count>=safeMax} onClick={()=>{setDraft(null);setCount(count+10);}} className={stepClass}>+10</button>
     </div>
-    <button type="button" disabled={safeMax<=0} onClick={()=>setCount(safeMax)} className={`mh-button mh-button-secondary mt-2 min-h-[44px] w-full rounded-xl font-black active:scale-95 disabled:opacity-30 ${maxClass}`}>MAX（{safeMax.toLocaleString()}{unit}）</button>
+    <button type="button" disabled={safeMax<=0} onClick={()=>{setDraft(null);setCount(safeMax);}} className={`mh-button mh-button-secondary mt-2 min-h-[44px] w-full rounded-xl font-black active:scale-95 disabled:opacity-30 ${maxClass}`}>MAX（{safeMax.toLocaleString()}{unit}）</button>
   </>;
 };
 // 名前を入れる窓(2026-10-05)。ブリーダー名とマスモンの名前の窓が、ほぼ同じ作りで別々に手書きされ、

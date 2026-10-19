@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 87aae450a8ef3e8c
+// source-sha256: 851132eb18b8204e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-19 09:43";
+const BUILD_DATE = "2026-10-19 09:58";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -48813,34 +48813,79 @@ const QuantityStepper = ({
   const count = Math.min(Math.max(1, Math.floor(Number(value) || 1)), Math.max(1, safeMax));
   const setCount = next => onChange && onChange(Math.min(Math.max(1, next), Math.max(1, safeMax)));
   const stepClass = 'mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-800 font-black active:scale-95 disabled:opacity-30';
+  const [draft, setDraft] = React.useState(null);
+  const typeCount = raw => {
+    const digits = String(raw || '').split(/[.,．。]/)[0].replace(/[^0-9０-９]/g, '').replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0));
+    const n = parseInt(digits, 10);
+    if (Number.isFinite(n) && n > Math.max(1, safeMax)) {
+      setDraft(String(Math.max(1, safeMax)));
+      setCount(safeMax);
+      return;
+    }
+    setDraft(digits);
+    setCount(Number.isFinite(n) && n >= 1 ? n : 1);
+  };
   return React.createElement(React.Fragment, null, React.createElement("div", {
     className: "mt-2 grid grid-cols-5 items-center gap-1.5"
   }, React.createElement("button", {
     type: "button",
     disabled: count <= 1,
-    onClick: () => setCount(count - 10),
+    onClick: () => {
+      setDraft(null);
+      setCount(count - 10);
+    },
     className: stepClass
   }, "-10"), React.createElement("button", {
     type: "button",
     disabled: count <= 1,
-    onClick: () => setCount(count - 1),
+    onClick: () => {
+      setDraft(null);
+      setCount(count - 1);
+    },
     className: stepClass
-  }, "-1"), React.createElement("strong", {
-    className: "text-center text-xl font-black font-mono"
-  }, count), React.createElement("button", {
+  }, "-1"), React.createElement("input", {
+    type: "text",
+    inputMode: "numeric",
+    pattern: "[0-9]*",
+    enterKeyHint: "done",
+    autoComplete: "off",
+    "aria-label": `数（1〜${Math.max(1, safeMax).toLocaleString()}${unit}）`,
+    "data-quantity-input": true,
+    disabled: safeMax <= 0,
+    value: draft ?? String(count),
+    onChange: e => typeCount(e.target.value),
+    onFocus: e => e.target.select(),
+    onBlur: () => setDraft(null),
+    onKeyDown: e => {
+      if (e.key === 'Enter') e.currentTarget.blur();
+    },
+    style: {
+      fontSize: 20
+    },
+    className: "min-h-[44px] w-full min-w-0 rounded-xl border border-white/20 bg-black/40 px-1 text-center font-black font-mono text-white outline-none focus:border-amber-300 disabled:opacity-40"
+  }), React.createElement("button", {
     type: "button",
     disabled: count >= safeMax,
-    onClick: () => setCount(count + 1),
+    onClick: () => {
+      setDraft(null);
+      setCount(count + 1);
+    },
     className: stepClass
   }, "+1"), React.createElement("button", {
     type: "button",
     disabled: count >= safeMax,
-    onClick: () => setCount(count + 10),
+    onClick: () => {
+      setDraft(null);
+      setCount(count + 10);
+    },
     className: stepClass
   }, "+10")), React.createElement("button", {
     type: "button",
     disabled: safeMax <= 0,
-    onClick: () => setCount(safeMax),
+    onClick: () => {
+      setDraft(null);
+      setCount(safeMax);
+    },
     className: `mh-button mh-button-secondary mt-2 min-h-[44px] w-full rounded-xl font-black active:scale-95 disabled:opacity-30 ${maxClass}`
   }, "MAX（", safeMax.toLocaleString(), unit, "）"));
 };
