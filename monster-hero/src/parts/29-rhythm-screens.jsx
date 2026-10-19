@@ -765,7 +765,7 @@ const rhythmPlayedSongCount=bestRecords=>Object.values(bestRecords&&typeof bestR
 const rhythmSelectNoticeOpen=(state,playedSongCount,isShortScreen)=>isShortScreen
   ?state.noticeOpenShort
   :(!state.noticeTouched&&playedSongCount>=RHYTHM_NOTICE_FOLD_PLAYED_SONGS?false:state.noticeOpen);
-const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,noticeHidden=0,footer=null,emptyText='遊べる譜面がまだありません。',spotClass=null,
+const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,noticeHidden=0,footer=null,actionExtra=null,emptyText='遊べる譜面がまだありません。',spotClass=null,
   songId='',difficultyId='',onSongId=null,onDifficultyId=null,view=null,onView=null,
   listScrollTop=null,onListScrollTop=null,toolbarExtra=null,playLabel='決定',playDisabled=false,hideRandom=false,unlockAll=false})=>{
   const spot=name=>(typeof spotClass==='function'?spotClass(name):'');
@@ -1216,6 +1216,8 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
             <button type="button" data-rhythm-demo-start={difficulty.id} disabled={playDisabled}
               onClick={()=>onPlay(song,difficulty)}
               className="min-h-[46px] flex-1 rounded-xl bg-gradient-to-r from-cyan-500 to-fuchsia-600 text-base font-black text-white disabled:opacity-40 landscape:min-h-[42px]">{playLabel}</button>
+            {/* actionExtra … 縦画面だけ、決定の右に置く小さなボタン(ソロの曲えらびのランキング・2026-10-19)。横は footer に置く */}
+            {actionExtra&&<div data-rhythm-song-action-extra className="flex shrink-0 landscape:hidden">{actionExtra(song,difficulty)}</div>}
           </div>
           {footer&&<div data-rhythm-song-footer className="min-w-0" style={{gridArea:'foot'}}>{typeof footer==='function'?footer(song,difficulty):footer}</div>}
         </div>

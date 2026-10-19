@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9b4616d850d074db
+// source-sha256: 80d0c9c7a3f04656
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-19 13:15";
+const BUILD_DATE = "2026-10-20 01:18";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -30671,6 +30671,7 @@ const RhythmSongSelect = ({
   notice = null,
   noticeHidden = 0,
   footer = null,
+  actionExtra = null,
   emptyText = '遊べる譜面がまだありません。',
   spotClass = null,
   songId = '',
@@ -31256,7 +31257,10 @@ const RhythmSongSelect = ({
     disabled: playDisabled,
     onClick: () => onPlay(song, difficulty),
     className: "min-h-[46px] flex-1 rounded-xl bg-gradient-to-r from-cyan-500 to-fuchsia-600 text-base font-black text-white disabled:opacity-40 landscape:min-h-[42px]"
-  }, playLabel)), footer && React.createElement("div", {
+  }, playLabel), actionExtra && React.createElement("div", {
+    "data-rhythm-song-action-extra": true,
+    className: "flex shrink-0 landscape:hidden"
+  }, actionExtra(song, difficulty))), footer && React.createElement("div", {
     "data-rhythm-song-footer": true,
     className: "min-w-0",
     style: {
@@ -53059,6 +53063,7 @@ function RhythmInfoScreen({
     className: "mt-5 min-h-[48px] w-full rounded-xl bg-slate-700 text-sm font-black"
   }, "HOMEへ戻る")));
 }
+const RHYTHM_SELECT_PLAY_MODES = [['assistMode', '🛟', 'アシスト', 'border-emerald-300 bg-emerald-600/80 text-white'], ['mirrorChart', '↔', 'ミラー譜面', 'border-sky-300 bg-sky-600/80 text-white']];
 function RhythmSongSelectScreen({
   catchingUp,
   difficulty,
@@ -53225,12 +53230,16 @@ function RhythmSongSelectScreen({
     className: "min-w-0 flex-1"
   }, React.createElement("small", {
     className: "flex items-center gap-1.5 text-[8px] font-black leading-none tracking-[0.2em] text-fuchsia-300"
-  }, "MONBEAT", React.createElement("span", {
+  }, React.createElement("span", {
+    className: "max-[359px]:hidden"
+  }, "MONBEAT"), React.createElement("span", {
     "data-rhythm-demo-badge": true,
     className: "rounded-full border border-amber-300/60 bg-amber-500/15 px-1.5 py-px text-[8px] tracking-normal text-amber-200"
   }, "体験版")), React.createElement("h2", {
-    className: "truncate text-sm font-black leading-tight tracking-widest text-cyan-200"
-  }, "🎵 曲えらび"), beatPointReleased && Number.isFinite(beatPointBalance) && React.createElement("small", {
+    className: "truncate text-sm font-black leading-tight tracking-widest text-cyan-200 max-[359px]:tracking-normal"
+  }, React.createElement("span", {
+    className: "max-[359px]:hidden"
+  }, "🎵 "), "曲えらび"), beatPointReleased && Number.isFinite(beatPointBalance) && React.createElement("small", {
     "data-rhythm-beat-point-balance": true,
     "aria-label": `所持ビートP ${beatPointBalance.toLocaleString()}`,
     className: "block truncate text-[9px] font-black leading-tight text-violet-200/90"
@@ -53242,7 +53251,31 @@ function RhythmSongSelectScreen({
   }, quickRunBandButton), quickRunStartNode && React.createElement("div", {
     "data-quick-run-start-header": true,
     className: "min-w-0 max-w-[260px] flex-1"
-  }, quickRunStartNode), React.createElement(RhythmOrientationButton, null), React.createElement("button", {
+  }, quickRunStartNode), React.createElement("div", {
+    "data-rhythm-header-play-modes": true,
+    className: "flex shrink-0 gap-1 landscape:hidden"
+  }, RHYTHM_SELECT_PLAY_MODES.map(([key, icon, name, on]) => {
+    const active = !!(rhythmSettings && rhythmSettings[key]);
+    return React.createElement("button", {
+      key: key,
+      type: "button",
+      "data-rhythm-play-mode-toggle": key,
+      "data-rhythm-play-mode-place": "header",
+      "aria-pressed": active,
+      "aria-label": `${name} ${active ? 'ON' : 'OFF'}`,
+      title: name,
+      onClick: () => onToggleRhythmSetting && onToggleRhythmSetting(key),
+      className: `flex min-h-[44px] min-w-[44px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border px-1 leading-none ${active ? on : 'border-white/15 bg-slate-900/80 text-slate-300'}`
+    }, React.createElement("span", {
+      className: "flex items-center gap-0.5 text-[12px] font-black leading-none"
+    }, React.createElement("span", {
+      "aria-hidden": "true"
+    }, icon), React.createElement("span", {
+      className: "text-[8px]"
+    }, active ? 'ON' : 'OFF')), React.createElement("span", {
+      className: "text-[9px] font-black leading-none"
+    }, name === 'ミラー譜面' ? 'ミラー' : name));
+  })), React.createElement(RhythmOrientationButton, null), React.createElement("button", {
     "data-rhythm-demo-options": true,
     "aria-label": "オプション",
     title: "オプション",
@@ -53504,10 +53537,24 @@ function RhythmSongSelectScreen({
     onListScrollTop: top => {
       rhythmSongListScrollRef.current = top;
     },
+    actionExtra: song => React.createElement("button", {
+      type: "button",
+      "data-rhythm-demo-ranking": true,
+      "data-rhythm-ranking-place": "action",
+      onClick: () => onOpenRanking(song),
+      "aria-label": "この曲の全国ランキング",
+      title: "全国ランキング",
+      className: "flex min-h-[46px] w-[46px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border border-amber-300/60 bg-amber-500/10 leading-none text-amber-100"
+    }, React.createElement("span", {
+      "aria-hidden": "true",
+      className: "text-base leading-none"
+    }, "🏆"), React.createElement("span", {
+      className: "text-[8px] font-black leading-none"
+    }, "順位")),
     footer: song => React.createElement(React.Fragment, null, React.createElement("div", {
       "data-rhythm-play-modes": true,
-      className: "grid grid-cols-3 gap-1.5"
-    }, [['assistMode', '🛟', 'アシスト', 'border-emerald-300 bg-emerald-600/80 text-white'], ['mirrorChart', '↔', 'ミラー譜面', 'border-sky-300 bg-sky-600/80 text-white']].map(([key, icon, name, on]) => {
+      className: "hidden grid-cols-3 gap-1.5 landscape:grid"
+    }, RHYTHM_SELECT_PLAY_MODES.map(([key, icon, name, on]) => {
       const active = !!(rhythmSettings && rhythmSettings[key]);
       return React.createElement("button", {
         key: key,
