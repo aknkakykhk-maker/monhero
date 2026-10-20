@@ -732,6 +732,14 @@ const grantNewPlayerCampaignGift = (gifts, now=Date.now(), extraRewards=[]) => {
 // ★既存のギフト(diamond / rainbowPsyche など)の形は何も変えていない。
 //   古い保存(mh_gifts)はそのまま読めるし、書き方も今までどおりでよい(CLAUDE.md ⑦)。
 const GIFT_ITEM_REWARD_TYPE = 'gameItem';
+// プロフィールフレームを届ける報酬(2026-10-20・ハロウィン・妖)。{ type:'profileFrame', frameId } で、数は1枚に決まっている。
+// 受け取ると mh_profile_frame_owned_v1 へ足す(ほかの手に入れ方と同じ入れ物)。知らない・未公開の枠のときはギフトごと無効にする。
+// ★この種類を知らない古い版では「受け取れないギフト」として残るだけで、ほかのギフトや保存は壊れない
+const GIFT_FRAME_REWARD_TYPE = 'profileFrame';
+const giftFrameRewardInfo = (frameId) => {
+  const frame = typeof profileFrameById === 'function' ? profileFrameById(frameId) : null;
+  return frame && frame.released === true ? frame : null;
+};
 // そのidのアイテムの名前と絵文字。知らないidでは null を返し、ギフトごと無効にする
 // (知らないものを黙って配らない)
 const giftItemRewardInfo = (itemId) => {
@@ -764,8 +772,11 @@ const normalizeGiftRewards = (gift) => {
   const supported = Object.keys(GIFT_REWARD_LABELS);
   const rewards = gift.rewards.map(r => (r?.type === GIFT_ITEM_REWARD_TYPE
     ? { type:GIFT_ITEM_REWARD_TYPE, itemId:(typeof r?.itemId === 'string' ? r.itemId : ''), amount:Math.floor(Number(r?.amount)) }
-    : { type:r?.type, amount:Math.floor(Number(r?.amount)) }));
-  return rewards.every(r => (r.type === GIFT_ITEM_REWARD_TYPE ? !!giftItemRewardInfo(r.itemId) : supported.includes(r.type))
+    : r?.type === GIFT_FRAME_REWARD_TYPE
+      ? { type:GIFT_FRAME_REWARD_TYPE, frameId:(typeof r?.frameId === 'string' ? r.frameId : ''), amount:1 }
+      : { type:r?.type, amount:Math.floor(Number(r?.amount)) }));
+  return rewards.every(r => (r.type === GIFT_ITEM_REWARD_TYPE ? !!giftItemRewardInfo(r.itemId)
+    : r.type === GIFT_FRAME_REWARD_TYPE ? !!giftFrameRewardInfo(r.frameId) : supported.includes(r.type))
     && Number.isFinite(r.amount) && r.amount > 0) ? rewards : null;
 };
 // 受取期限。expiresAt を書いていないギフトは「期限なし(ずっと受け取れる)」として扱う。
@@ -788,7 +799,7 @@ const summarizeClaimedGiftRewards = (gifts) => {
   const totals = new Map();
   (Array.isArray(gifts) ? gifts : []).forEach(gift => {
     (normalizeGiftRewards(gift) || []).forEach(reward => {
-      const key = reward.type === GIFT_ITEM_REWARD_TYPE ? `${reward.type}:${reward.itemId}` : reward.type;
+      const key = reward.type === GIFT_ITEM_REWARD_TYPE ? `${reward.type}:${reward.itemId}` : reward.type === GIFT_FRAME_REWARD_TYPE ? `${reward.type}:${reward.frameId}` : reward.type;
       const prev = totals.get(key);
       totals.set(key, prev ? { ...prev, amount:prev.amount + reward.amount } : { ...reward });
     });
@@ -799,13 +810,19 @@ const buildGiftClaim = (gift, balances, now=Date.now()) => {
   if (!gift || gift.claimedAt || giftIsExpired(gift, now)) return { ok:false, reason:gift?.claimedAt?'claimed':'expired' };
   const rewards = normalizeGiftRewards(gift);
   if (!rewards) return { ok:false, reason:'invalidReward' };
-  const next = { gold:Math.max(0,Number(balances?.gold)||0), breederPoints:Math.max(0,Number(balances?.breederPoints)||0), breederXp:Math.max(0,Number(balances?.breederXp)||0), ownedItems:{...(balances?.ownedItems||{})} };
+  const next = { gold:Math.max(0,Number(balances?.gold)||0), breederPoints:Math.max(0,Number(balances?.breederPoints)||0), breederXp:Math.max(0,Number(balances?.breederXp)||0), ownedItems:{...(balances?.ownedItems||{})},
+    // フレームの報酬があるときだけ使う(持っていなければ足す。持っていれば何もしない)
+    ownedProfileFrames:Array.isArray(balances?.ownedProfileFrames)?[...balances.ownedProfileFrames]:[] };
   // 虹の超越の実は既存の RAINBOW_TRANSCEND_FRUIT_ITEM_ID と同じ保存ID。
   const itemIds = { dyeMock:'dye_mock', bondPointReset:'bond_reset_scroll', uniqueSkillResetTicket:'unique_skill_reset_ticket', rainbowPsyche:'rainbow_psyche', rainbowTranscendFruit:'transcend_fruit_rainbow', trainingTicket:'training_ticket', trainingTicketLarge:'training_ticket_l', skipTicketJo:'skip_ticket_jo', skipTicketHa:'skip_ticket_ha', skipTicketKyu:'skip_ticket_kyu' };
-  rewards.forEach(({type,itemId,amount})=>{ if(type==='diamond') next.gold+=amount; else if(type==='breederPoint') next.breederPoints+=amount; else if(type==='breederXp') next.breederXp+=amount; else { const id=type===GIFT_ITEM_REWARD_TYPE?itemId:itemIds[type]; next.ownedItems[id]=(next.ownedItems[id]||0)+amount; } });
+  rewards.forEach(({type,itemId,frameId,amount})=>{ if(type===GIFT_FRAME_REWARD_TYPE){ if(!next.ownedProfileFrames.includes(frameId)) next.ownedProfileFrames.push(frameId); return; } if(type==='diamond') next.gold+=amount; else if(type==='breederPoint') next.breederPoints+=amount; else if(type==='breederXp') next.breederXp+=amount; else { const id=type===GIFT_ITEM_REWARD_TYPE?itemId:itemIds[type]; next.ownedItems[id]=(next.ownedItems[id]||0)+amount; } });
   return { ok:true, balances:next, gift:{...gift,claimedAt:new Date(now).toISOString()} };
 };
 const giftRewardText = (reward) => {
+  if (reward && reward.type === GIFT_FRAME_REWARD_TYPE) {
+    const frame = giftFrameRewardInfo(reward.frameId);
+    return `🖼️ プロフィールフレーム「${frame ? frame.name : reward.frameId}」`;
+  }
   if (reward && reward.type === GIFT_ITEM_REWARD_TYPE) {
     const info = giftItemRewardInfo(reward.itemId);
     const name = info ? `${info.emoji ? `${info.emoji} ` : ''}${info.name}` : reward.itemId;

@@ -658,23 +658,28 @@ const PROFILE_FRAMES = [
     unlock:{ shops:PROFILE_FRAME_RAGNAROK_SHOPS, condition:{ kind:'difficultyCleared', difficulty:'RAGNAROK', shops:['breederPoint'], text:'バトルの難易度ラグナロクをクリアする' } },
     src:'images/profile-frames/ragnarok.png?v=b6e9fe525ece', srcSmall:'images/profile-frames/small/ragnarok.png?v=145848170f50',
     desc:'燃えさかる炎をまとう黒い竜が、ぐるりと取り巻く輪。' },
-  // ==================== ハロウィンとモンヒロビート用の4枚(2026-10-05・未公開) ====================
+  // ==================== ハロウィンとモンヒロビート用の4枚(2026-10-05 取り込み・2026-10-20 公開) ====================
   // ユーザーから受け取ったJPEG(透過なし・黒背景)を、枠の外と穴の中の黒を透明にして取り込んだ(384px)。
-  // 売り方が決まっていないので released:false(選択画面にも売り場にも出ず、他人の記録に入っていても描かれない)。
-  // 決まったら released:true にして unlock に売り値(shops)や条件を書く(上のモンスターの枠と同じ)。
-  //   ハロウィンの2種は期間限定にするか未定。「モンビー用」はモンヒロビート用の意味。
-  { id:'frame_halloween_night', name:'ハロウィン・夜', kind:'image', released:false, hole:0.521,
+  // 2026-10-20 社長の決定で公開。名前も社長が決めた(id は取り込んだときのまま。変えると選んだ人・ランキングの記録が外れる)。
+  //   ハロウィン・恐 … マーケットで売る(値段はモンスターの枠と同じ)。レイドの大王ジャックがみんなで倒されるか、イベントが終わると、全員が買えるようになる(condition.kind:'raidJackBossDown')
+  //   ハロウィン・妖 … レイド「カボチャの大王ジャック」の大王まで倒せたときの終章を見た参加者へ、ギフトで1回だけ届ける(unlock.gift)
+  //   ウンディーネ3姉妹・ザン・エイキ … 対象のマスモンのビートLvを、それぞれ50以上にするとマーケットで買える(condition.kind:'buddyBeatLevel')
+  { id:'frame_halloween_night', name:'ハロウィン・恐', kind:'image', released:true, hole:0.521,
+    unlock:{ shops:PROFILE_FRAME_MONSTER_SHOPS, condition:{ kind:'raidJackBossDown', text:'カボチャの大王ジャックが倒されるか、ハロウィン・ナイトが終わると買えるようになります' } },
     src:'images/profile-frames/halloween-night.png?v=647f32308d31', srcSmall:'images/profile-frames/small/halloween-night.png?v=5c47af1a0742',
-    desc:'青い炎と骨、音符の輪に、ハロウィンの夜のモンスターたちが集まる、暗い夜のフレーム。' },
-  { id:'frame_halloween_pumpkin', name:'ハロウィン・パンプキン', kind:'image', released:false, hole:0.583,
+    desc:'青い炎と骨、音符の輪に、ハロウィンの夜のモンスターたちが集まる、ちょっとこわいフレーム。' },
+  { id:'frame_halloween_pumpkin', name:'ハロウィン・妖', kind:'image', released:true, hole:0.583,
+    unlock:{ gift:'raidJackEnding' },
     src:'images/profile-frames/halloween-pumpkin.png?v=f68b833002c2', srcSmall:'images/profile-frames/small/halloween-pumpkin.png?v=f4aac89375ec',
-    desc:'大きなパンプキンと、包帯のうさぎ、ゴーストが並ぶ、にぎやかなハロウィンのフレーム。' },
-  { id:'frame_eiki_zan', name:'エイキ&ザン', kind:'image', released:false, hole:0.656,
+    desc:'大きなパンプキンと魔女の女の子、包帯のうさぎ、ゴーストが並ぶ、にぎやかなハロウィンのフレーム。' },
+  { id:'frame_eiki_zan', name:'ザン・エイキ', kind:'image', released:true, hole:0.656,
+    unlock:{ shops:PROFILE_FRAME_MONSTER_SHOPS, condition:{ kind:'buddyBeatLevel', monsterIds:['Zan', 'Eiki'], level:50, text:'ザンとエイキのマスモンを、それぞれビートLv50以上にする' } },
     src:'images/profile-frames/eiki-zan.png?v=535efca30954', srcSmall:'images/profile-frames/small/eiki-zan.png?v=3ca4fedaece2',
-    desc:'桜と夜空のステージで、エイキとザンがギターを奏でる、モンヒロビート用のフレーム。' },
-  { id:'frame_undine_beat', name:'ウンディーネ種', kind:'image', released:false, hole:0.604,
+    desc:'桜と夜空のステージで、エイキとザンがギターを奏でる、モンヒロビートのフレーム。' },
+  { id:'frame_undine_beat', name:'ウンディーネ3姉妹', kind:'image', released:true, hole:0.604,
+    unlock:{ shops:PROFILE_FRAME_MONSTER_SHOPS, condition:{ kind:'buddyBeatLevel', monsterIds:['Undine', 'Yaobikuni', 'Snegurochka'], level:50, text:'ウンディーネ・ヤオビクニ・スネグーラチカのマスモンを、それぞれビートLv50以上にする' } },
     src:'images/profile-frames/undine-beat.png?v=71fc5b699b36', srcSmall:'images/profile-frames/small/undine-beat.png?v=9d34ec0bd2fd',
-    desc:'水と泡のステージで、ウンディーネの仲間たちが歌う、モンヒロビート用のフレーム。' },
+    desc:'水と泡のステージで、ウンディーネの3姉妹が歌う、モンヒロビートのフレーム。' },
   // ==================== 助手の仲良し度でもらえる枠(2026-09-16) ====================
   // 助手1人につき3枚。その助手との仲良し度が Lv2 / Lv5 / Lv7 になると自動でもらえる。
   // ★unlock を書いた枠は「もらうまで選べない」だけで、描くのは自由(released:true)。
@@ -787,12 +792,20 @@ const profileFrameUnlock = (frame) => {
   return (unlock && typeof unlock.assistantId === 'string' && Number.isFinite(level))
     ? { assistantId: unlock.assistantId, bondLevel: level } : null;
 };
+// 贈り物で届く枠(2026-10-20)。売らない・仲良し度でもない。決まった出来事で、ギフトボックスへ1回だけ届く。
+//   gift:'raidJackEnding' … レイド「カボチャの大王ジャック」で大王まで倒せたときの終章(raid_jack_ending_cleared)を見た参加者へ
+// ★届くまでは選択画面にも出さない(手に入れ方を先に見せない)。届いたら mh_profile_frame_owned_v1 に入る(ほかの枠と同じ入れ物)
+const PROFILE_FRAME_GIFT_KINDS = Object.freeze(['raidJackEnding']);
+const profileFrameGift = (frame) => {
+  const gift = frame && frame.unlock && frame.unlock.gift;
+  return (typeof gift === 'string' && PROFILE_FRAME_GIFT_KINDS.includes(gift)) ? gift : null;
+};
 // いま選べるか。条件の無い枠は常に true、条件つきは「もらった記録」にあるときだけ true
 const profileFrameOwned = (id, owned) => {
   const frame = profileFrameById(id);
   if (!frame || frame.released !== true) return false;
   // もらう条件(仲良し度)か売り値が付いている枠は、手に入れた記録がなければ選べない。どちらも無い枠は最初から選べる
-  if (!profileFrameUnlock(frame) && !profileFrameSale(frame)) return true;
+  if (!profileFrameUnlock(frame) && !profileFrameSale(frame) && !profileFrameGift(frame)) return true;
   return normalizeOwnedProfileFrames(owned).includes(frame.id);
 };
 // ==== 売るフレーム(2026-10-03 ユーザー指示「フレームも販売実装を予定してるから、ブリーダーポイントとビートポイントのとこに実装できる準備をしといて」) ====
@@ -832,7 +845,12 @@ const profileFramesForSale = (shop) => releasedProfileFrames().filter(frame => !
 //   kind:'monsterReincarnate' … monsterId のモンスター(マスモン)を count 回以上「転生」(reincarnateCount。限界突破とは別の仕組み)
 //   kind:'difficultyCleared' … difficulty 以上の難易度をクリア
 //   kind:'rhythmClears'    … モンヒロビートを count 回以上クリア(通算。RHYTHM_CLEAR_TOTAL_KEY)
-const PROFILE_FRAME_CONDITION_KINDS = Object.freeze(['speciesRebirth', 'monsterReincarnate', 'difficultyCleared', 'rhythmClears']);
+//   kind:'buddyBeatLevel'  … monsterIds の種ごとに、自分のマスモンのビートLv(RHYTHM_BUDDY_KEY の経験値)が level 以上(2026-10-20)。
+//                            同じ種のマスモンが何体かいるときは、いちばん高い子で見る。全部の種がそろって達成
+//   kind:'raidJackBossDown' … レイド「カボチャの大王ジャック」の大王が、みんなで倒されたあと(共有の合計・raidJackBossDown。2026-10-20)か、
+//                            倒されなくてもレイドの期間が終わったあと(raidJackWindowAt が 'after'・社長「終わったら解放」)。
+//                            自分が参加したかは問わない。text はそのまま鍵の文になる(ネタバレにならない書き方で)
+const PROFILE_FRAME_CONDITION_KINDS = Object.freeze(['speciesRebirth', 'monsterReincarnate', 'difficultyCleared', 'rhythmClears', 'buddyBeatLevel', 'raidJackBossDown']);
 const profileFrameCondition = (frame) => {
   const condition = frame && frame.unlock && frame.unlock.condition;
   return (condition && PROFILE_FRAME_CONDITION_KINDS.includes(condition.kind)) ? condition : null;

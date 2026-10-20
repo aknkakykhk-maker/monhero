@@ -365,17 +365,30 @@ node tools/ranking/profile-frame-sql-check.js   # PostgreSQL があるときだ�
 
 いまは未公開なので、どれも実装していない。DEBUG の一覧は3列・上下広めにして重なりを避けている。
 
-### 8.4 まだ売っていない4枚（2026-10-05・`released:false`）
+### 8.4 ハロウィンとモンヒロビートの4枚（2026-10-05 取り込み・2026-10-20 公開）
 
-ユーザーから受け取った4枚。**売り方が決まっていないので未公開**（選択画面にも売り場にも出ず、他人の記録に入っていても描かれない）。
+2026-10-05 にユーザーから受け取った4枚。2026-10-20 に社長の決定で公開した（名前も社長が決めた。id は取り込んだときのまま）。
 
-| id | 名前 | 用途 |
+| id | 名前 | 手に入れ方 |
 | --- | --- | --- |
-| `frame_halloween_night` | ハロウィン・夜 | ハロウィン（期間限定にするかは未定） |
-| `frame_halloween_pumpkin` | ハロウィン・パンプキン | ハロウィン（同上） |
-| `frame_eiki_zan` | エイキ&ザン | モンヒロビート用 |
-| `frame_undine_beat` | ウンディーネ種 | モンヒロビート用 |
+| `frame_halloween_night` | ハロウィン・恐（骨と青い炎） | マーケットで売る。ブリーダーP交換所 1P / ビートP交換所 100P（モンスターの枠と同じ）。レイドの大王ジャックが**みんなで倒されたあと**、または**ハロウィン・ナイトが終わったあと**に全員が買える（`condition.kind:'raidJackBossDown'`・参加は問わない） |
+| `frame_halloween_pumpkin` | ハロウィン・妖（かぼちゃと魔女の女の子） | 売らない。レイド「カボチャの大王ジャック」で大王まで倒せたときの終章（`raid_jack_ending_cleared`）を見た参加者へ、ギフトで1回だけ届く（`unlock:{ gift:'raidJackEnding' }`） |
+| `frame_eiki_zan` | ザン・エイキ | ザンとエイキのマスモンを、それぞれビートLv50以上にするとマーケットで買える（両方の交換所・1P / 100P） |
+| `frame_undine_beat` | ウンディーネ3姉妹 | ウンディーネ・ヤオビクニ・スネグーラチカのマスモンを、それぞれビートLv50以上にするとマーケットで買える（同上） |
 
-- 受け取った画像は**透過のないJPEG（黒背景）**だった。枠の外側と穴の中の黒を、端から塗りつぶすように透明にして384pxのPNGにした
-  （枠の絵に囲まれて残った大きな黒い塊も消し、細かい暗い部分＝輪郭・瞳などは残してある）。**元の透過PNGを受け取ったら差し替えてよい**
-- 売るときは `released:true` にして、`unlock` に売り値（`shops`）と条件を書く（§8.2・§8.3 と同じ）。更新履歴・ヘルプはそのとき書く
+**ビートLvの条件（`condition.kind:'buddyBeatLevel'`）**
+- `monsterIds` の種ごとに、自分のマスモンのビートLv（`RHYTHM_BUDDY_KEY` の経験値から `rhythmBuddyLevelInfo`）を見る。同じ種が何体かいるときは**いちばん高い子**。いない種は0。全部の種が `level` 以上で達成
+- 画面は `RHYTHM_BUDDY_STORE` の写し（`rhythmBuddyState`）で数え、買う処理（`buyMarketItem` / `exchangeRhythmEventPoints`）は保存を読み直して確かめる（`loadRhythmBuddyForFrames`）
+
+**大王が倒されたら（またはイベントが終わったら）買える条件（`condition.kind:'raidJackBossDown'`）**
+- 撃破はハロウィン・妖と同じ判定（`raidJackBossDown`：大王の段階の共有の合計が、その段階のライフ以上）。倒されたことは取り消されないので、一度見たら印 `mh_raid_jack_boss_down_v1` を持つ
+- 確かめるのは起動時（印だけ）・マーケットに入ったとき・買う直前（`refreshRaidJackBossDown`）。サーバーへ届かない・時間切れのときは「まだ」として鍵つきのまま
+- **倒されずにイベントが終わったとき**も、レイドの期間が終わったら全員に解放する（社長「終わったら解放」。終わりの判定はレイドの期間と同じ `raidJackWindowAt` が `'after'`）
+
+**プレゼントで届く枠（`unlock.gift`）**
+- 届くまでは選択画面に出さない（手に入れ方を先に見せない）。届いたら「イベントの枠」の見出しで並ぶ
+- ギフトの報酬の種類 `profileFrame`（`{ type:'profileFrame', frameId }`）を足した。受け取ると `mh_profile_frame_owned_v1` へ足す（ギフト・残高と同じ取引で保存）。この種類を知らない古い版では「受け取れないギフト」として残るだけ
+- 届けるのは `grantRaidJackFrameGift`（`60-app.jsx`）。条件は ①公開フラグが真・デバッグの強制表示ではない ②期間が終わっている（`raidJackWindowAt === 'after'`）③倒せたときの終章を見た ④この端末のレイドの記録で参加している（`raidJackParticipated`：挑んだ日・グランドスラムの累計・倒した段階・受け取った報酬・送り待ちのどれか）⑤届けた印 `mh_raid_jack_frame_gift_v1` が無い
+- **倒せなかったとき**（終章が `raid_jack_ending_notcleared`）は届かない。枠は届いた人にしか見えないので、一覧に鍵つきで残ることもない
+- **期間が終わってから起動した参加者**にも届く（終章は起動後の見回りで流れ、見終えたところで届く）。端末を移った・データを消した人は、この端末にレイドの記録が無いので届かない
+- 検査: `tools/ranking/raid-jack-frame-gift-check.js`

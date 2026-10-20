@@ -87,8 +87,9 @@ async function run() {
   const lowFrames = await readFrames(low);
   check('選択画面に枠が並ぶ', lowFrames.length >= 20, `${lowFrames.length}件`);
   const lockedLow = lowFrames.filter(f => f.locked);
-  // 助手の枠9枚 + マーケットで買うモンスターの枠10枚(2026-10-03)
-  check('Lv1では助手の枠9枚とマーケットで買う枠10枚が鍵つきで並ぶ', lockedLow.length === 19, `${lockedLow.length}枚`);
+  // 助手の枠9枚 + マーケットで買うモンスターの枠10枚(2026-10-03) + 2026-10-20 に公開した3枚(ハロウィン・恐・ザン・エイキ・ウンディーネ3姉妹)。
+  // プレゼントで届く ハロウィン・妖 は届くまで並ばないので数に入らない
+  check('Lv1では助手の枠9枚とマーケットで買う枠13枚が鍵つきで並ぶ', lockedLow.length === 22, `${lockedLow.length}枚`);
   check('鍵つきの枠にも、もらえる条件が出ている',
     lockedLow.every(f => /Lv\d|マーケットで購入/.test(f.text)), lockedLow.slice(0, 2).map(f => f.text).join(' / '));
   check('色の枠は鍵が付かない', lowFrames.filter(f => !f.locked).length >= 13, `${lowFrames.filter(f => !f.locked).length}枚`);

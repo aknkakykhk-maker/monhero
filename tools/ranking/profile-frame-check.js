@@ -110,7 +110,7 @@ if (!frameBlock) { console.log(`\n${failed}件のNGがあります`); process.ex
 
 const ctx = { BREEDER_MARKET_ITEMS: [] };
 vm.createContext(ctx);
-vm.runInContext(`${frameBlock}\n this.out={PROFILE_FRAME_NONE_ID,PROFILE_FRAME_KEY,PROFILE_FRAMES,PROFILE_FRAME_HOLE_FIT,profileFrameById,profileFrameImageStyle,normalizeProfileFrameId,releasedProfileFrames,rankingProfileFrameValue,profileFrameSale,profileFrameOwned};`, ctx);
+vm.runInContext(`${frameBlock}\n this.out={PROFILE_FRAME_NONE_ID,PROFILE_FRAME_KEY,PROFILE_FRAMES,PROFILE_FRAME_HOLE_FIT,profileFrameById,profileFrameImageStyle,normalizeProfileFrameId,releasedProfileFrames,rankingProfileFrameValue,profileFrameSale,profileFrameOwned,profileFrameGift};`, ctx);
 const F = ctx.out;
 
 check('保存キーは新設の mh_profile_frame_v1', F.PROFILE_FRAME_KEY === 'mh_profile_frame_v1', F.PROFILE_FRAME_KEY);
@@ -179,7 +179,8 @@ check('画像フレームは base64 で埋め込んでいない',
 // ★released(描いてよいか) と unlock(自分が選べるか) は別物。一緒にすると
 //   「解放した人の枠が他人のランキングで消える」(2026-09-16)
 check('画像フレームは、公開するなら必ずもらう条件が付いている',
-  imageFrames.every(frame => frame.released !== true || (frame.unlock && frame.unlock.assistantId) || F.profileFrameSale(frame)),
+  // 2026-10-20 からはプレゼントで届く枠(unlock.gift・ハロウィン・妖)もある
+  imageFrames.every(frame => frame.released !== true || (frame.unlock && frame.unlock.assistantId) || F.profileFrameSale(frame) || (typeof F.profileFrameGift === 'function' && F.profileFrameGift(frame))),
   imageFrames.filter(frame => frame.released === true && !frame.unlock).map(f => f.id).join(', ') || `${imageFrames.length}枚`);
 check('もらう条件つきの枠は、他人の記録なら描いてよい(選べるかとは別)',
   imageFrames.filter(frame => frame.unlock).every(frame => F.normalizeProfileFrameId(frame.id) === frame.id));
@@ -277,7 +278,8 @@ check('図鑑のモンスターアイコンに枠を付けていない', !/const
 //   frameId を書いてよいのは、type==='frame' の枝(MarketProductIcon の先頭)の1か所だけ
 check('マーケットの商品画像に枠を付けていない(フレームそのものを売る商品だけが例外)',
   (widgets.match(/const MarketProductIcon[\s\S]*?\n};\n/)?.[0].match(/frameId/g) || []).length === 1
-  && /if\(item\.type==='frame'\)\{[\s\S]{0,700}frameId=\{item\.id\}/.test(widgets));
+  // 2026-10-20 に枠の大きさの計算(商品名に重ならないよう縮める)を枝の頭へ足したので、範囲を広げた
+  && /if\(item\.type==='frame'\)\{[\s\S]{0,1600}frameId=\{item\.id\}/.test(widgets));
 check('円盤石・通常のモンスター画像に枠を付けていない',
   !/DyedMonsterImage[^\n]{0,200}frameId/.test(app) && !/DyedMonsterImage[^\n]{0,200}frameId/.test(widgets));
 

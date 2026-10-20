@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f7e79b5e5c407a16
+// source-sha256: dac0b47ab73c4e16
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-20 11:39";
+const BUILD_DATE = "2026-10-20 12:21";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -12712,6 +12712,11 @@ const grantNewPlayerCampaignGift = (gifts, now = Date.now(), extraRewards = []) 
   };
 };
 const GIFT_ITEM_REWARD_TYPE = 'gameItem';
+const GIFT_FRAME_REWARD_TYPE = 'profileFrame';
+const giftFrameRewardInfo = frameId => {
+  const frame = typeof profileFrameById === 'function' ? profileFrameById(frameId) : null;
+  return frame && frame.released === true ? frame : null;
+};
 const giftItemRewardInfo = itemId => {
   const id = typeof itemId === 'string' ? itemId : '';
   if (!id) return null;
@@ -12757,11 +12762,15 @@ const normalizeGiftRewards = gift => {
     type: GIFT_ITEM_REWARD_TYPE,
     itemId: typeof r?.itemId === 'string' ? r.itemId : '',
     amount: Math.floor(Number(r?.amount))
+  } : r?.type === GIFT_FRAME_REWARD_TYPE ? {
+    type: GIFT_FRAME_REWARD_TYPE,
+    frameId: typeof r?.frameId === 'string' ? r.frameId : '',
+    amount: 1
   } : {
     type: r?.type,
     amount: Math.floor(Number(r?.amount))
   });
-  return rewards.every(r => (r.type === GIFT_ITEM_REWARD_TYPE ? !!giftItemRewardInfo(r.itemId) : supported.includes(r.type)) && Number.isFinite(r.amount) && r.amount > 0) ? rewards : null;
+  return rewards.every(r => (r.type === GIFT_ITEM_REWARD_TYPE ? !!giftItemRewardInfo(r.itemId) : r.type === GIFT_FRAME_REWARD_TYPE ? !!giftFrameRewardInfo(r.frameId) : supported.includes(r.type)) && Number.isFinite(r.amount) && r.amount > 0) ? rewards : null;
 };
 const giftIsExpired = (gift, now = Date.now()) => {
   if (!gift) return true;
@@ -12775,7 +12784,7 @@ const summarizeClaimedGiftRewards = gifts => {
   const totals = new Map();
   (Array.isArray(gifts) ? gifts : []).forEach(gift => {
     (normalizeGiftRewards(gift) || []).forEach(reward => {
-      const key = reward.type === GIFT_ITEM_REWARD_TYPE ? `${reward.type}:${reward.itemId}` : reward.type;
+      const key = reward.type === GIFT_ITEM_REWARD_TYPE ? `${reward.type}:${reward.itemId}` : reward.type === GIFT_FRAME_REWARD_TYPE ? `${reward.type}:${reward.frameId}` : reward.type;
       const prev = totals.get(key);
       totals.set(key, prev ? {
         ...prev,
@@ -12803,7 +12812,8 @@ const buildGiftClaim = (gift, balances, now = Date.now()) => {
     breederXp: Math.max(0, Number(balances?.breederXp) || 0),
     ownedItems: {
       ...(balances?.ownedItems || {})
-    }
+    },
+    ownedProfileFrames: Array.isArray(balances?.ownedProfileFrames) ? [...balances.ownedProfileFrames] : []
   };
   const itemIds = {
     dyeMock: 'dye_mock',
@@ -12820,8 +12830,13 @@ const buildGiftClaim = (gift, balances, now = Date.now()) => {
   rewards.forEach(({
     type,
     itemId,
+    frameId,
     amount
   }) => {
+    if (type === GIFT_FRAME_REWARD_TYPE) {
+      if (!next.ownedProfileFrames.includes(frameId)) next.ownedProfileFrames.push(frameId);
+      return;
+    }
     if (type === 'diamond') next.gold += amount;else if (type === 'breederPoint') next.breederPoints += amount;else if (type === 'breederXp') next.breederXp += amount;else {
       const id = type === GIFT_ITEM_REWARD_TYPE ? itemId : itemIds[type];
       next.ownedItems[id] = (next.ownedItems[id] || 0) + amount;
@@ -12837,6 +12852,10 @@ const buildGiftClaim = (gift, balances, now = Date.now()) => {
   };
 };
 const giftRewardText = reward => {
+  if (reward && reward.type === GIFT_FRAME_REWARD_TYPE) {
+    const frame = giftFrameRewardInfo(reward.frameId);
+    return `🖼️ プロフィールフレーム「${frame ? frame.name : reward.frameId}」`;
+  }
   if (reward && reward.type === GIFT_ITEM_REWARD_TYPE) {
     const info = giftItemRewardInfo(reward.itemId);
     const name = info ? `${info.emoji ? `${info.emoji} ` : ''}${info.name}` : reward.itemId;
@@ -15279,6 +15298,9 @@ const MARKET_ICON_SIZE = {
   item: 'w-9 h-9',
   frame: 'w-10 h-10'
 };
+const MARKET_FRAME_BOX_PX = 56;
+const MARKET_FRAME_AVATAR_PX = 40;
+const MARKET_FRAME_RING_BOX = 1.2;
 const MARKET_PROFILE_ICON_STYLES = {
   Tiger: {
     scale: 2.31,
@@ -15691,8 +15713,22 @@ const MarketProductIcon = ({
   previewIcon = null
 }) => {
   if (item.type === 'frame') {
-    const frameCls = `${MARKET_ICON_SIZE.frame} shrink-0 ${disabled ? '' : 'active:scale-90'}`;
-    const inner = React.createElement(ProfileAvatar, {
+    const frame = typeof profileFrameById === 'function' ? profileFrameById(item.id) : null;
+    const box = frame && frame.kind === 'image' ? (parseFloat(profileFrameImageStyle(frame).width) || 100) / 100 : MARKET_FRAME_RING_BOX;
+    const avatarPx = Math.min(MARKET_FRAME_AVATAR_PX, Math.floor(MARKET_FRAME_BOX_PX / Math.max(1, box)));
+    const frameCls = `flex shrink-0 items-center justify-center ${disabled ? '' : 'active:scale-90'}`;
+    const frameStyle = {
+      width: MARKET_FRAME_BOX_PX,
+      height: MARKET_FRAME_BOX_PX
+    };
+    const inner = React.createElement("span", {
+      "data-market-frame-avatar": true,
+      className: "block shrink-0",
+      style: {
+        width: avatarPx,
+        height: avatarPx
+      }
+    }, React.createElement(ProfileAvatar, {
       src: previewIcon && previewIcon.src,
       id: previewIcon && previewIcon.id,
       frameId: item.id,
@@ -15700,14 +15736,18 @@ const MarketProductIcon = ({
       fallback: React.createElement("span", {
         className: "h-full w-full rounded-full bg-slate-800/80"
       })
-    });
+    }));
     return onZoom ? React.createElement("button", {
       type: "button",
       onClick: onZoom,
       "aria-label": `${item.name}を大きく見る`,
-      className: frameCls
+      className: frameCls,
+      style: frameStyle,
+      "data-market-frame-icon": true
     }, inner) : React.createElement("div", {
-      className: frameCls
+      className: frameCls,
+      style: frameStyle,
+      "data-market-frame-icon": true
     }, inner);
   }
   const content = item.icon ? item.type === 'icon' ? React.createElement(BreederIcon, {
@@ -16376,7 +16416,9 @@ const helpDataRows = id => {
         const label = sale => `${PROFILE_FRAME_SHOPS[sale.shop].label} ${sale.cost.toLocaleString()}P`;
         const gated = sales.filter(sale => cond && typeof profileFrameConditionFor === 'function' && profileFrameConditionFor(frame, sale.shop));
         const free = sales.filter(sale => !gated.includes(sale));
-        const how = unlock ? `${who && who.name || ''}との仲良し度 Lv${unlock.bondLevel}でもらえます。` : sales.length ? `${gated.length ? `「${cond.text}」を達成すると、マーケットの${gated.map(label).join(' か ')}で買えます。${free.length ? `${free.map(label).join(' か ')}なら条件なしで買えます。` : ''}` : `マーケットの${free.map(label).join(' か ')}で買えます。`}` : 'はじめから選べます。';
+        const gift = typeof profileFrameGift === 'function' ? profileFrameGift(frame) : null;
+        const giftHow = gift === 'raidJackEnding' ? 'レイド「カボチャの大王ジャック」に参加した人へ、イベントの終わりのお話のあとにプレゼントで届くことがあります。' : '';
+        const how = giftHow ? giftHow : unlock ? `${who && who.name || ''}との仲良し度 Lv${unlock.bondLevel}でもらえます。` : sales.length && cond && cond.kind === 'raidJackBossDown' ? `${cond.text}（マーケットの${sales.map(label).join(' か ')}）。` : sales.length ? `${gated.length ? `「${cond.text}」を達成すると、マーケットの${gated.map(label).join(' か ')}で買えます。${free.length ? `${free.map(label).join(' か ')}なら条件なしで買えます。` : ''}` : `マーケットの${free.map(label).join(' か ')}で買えます。`}` : 'はじめから選べます。';
         return [frame.name, `${how}${frame.desc ? ` ${frame.desc}` : ''}`];
       });
     case 'assistants':
@@ -47007,6 +47049,23 @@ const raidJackStoryCandidates = (totals, nowMs) => {
     out.push(defeatedAt(RAID_JACK_A_TIERS.length - 1) ? RAID_JACK_ENDING_CLEARED_ID : RAID_JACK_ENDING_NOTCLEARED_ID);
   }
   return out.filter(Boolean);
+};
+const RAID_JACK_BOSS_DOWN_KEY = 'mh_raid_jack_boss_down_v1';
+const RAID_JACK_FRAME_GIFT_KEY = 'mh_raid_jack_frame_gift_v1';
+const RAID_JACK_FRAME_GIFT_FRAME_ID = 'frame_halloween_pumpkin';
+const raidJackFrameGift = () => ({
+  id: `${RAID_JACK_EVENT.id}_frame_gift`,
+  title: 'ハロウィン・ナイトのお礼',
+  source: 'raidJack',
+  rewards: [{
+    type: 'profileFrame',
+    frameId: RAID_JACK_FRAME_GIFT_FRAME_ID,
+    amount: 1
+  }]
+});
+const raidJackParticipated = raw => {
+  const st = raidJackNormalizeState(raw);
+  return !!(st.a.day || st.b.day || st.b.total > 0 || st.a.defeated.length || st.b.defeated.length || st.claimed.length || st.pending.length);
 };
 const raidJackDayKey = nowMs => {
   const now = Number.isFinite(nowMs) ? nowMs : 0;
@@ -81463,6 +81522,13 @@ function MonsterHeroGame() {
   const goldRef = useRef(gold);
   goldRef.current = gold;
   const [masuMons, setMasuMons] = useState([]);
+  const [rhythmBuddyState, setRhythmBuddyState] = useState(() => RHYTHM_BUDDY_STORE.get());
+  const [raidJackBossDownNow, setRaidJackBossDownNow] = useState(false);
+  useEffect(() => {
+    const off = RHYTHM_BUDDY_STORE.subscribe(setRhythmBuddyState);
+    void RHYTHM_BUDDY_STORE.load();
+    return off;
+  }, []);
   const [lockedMasuIds, setLockedMasuIds] = useState([]);
   const [rebirthLockedMasuIds, setRebirthLockedMasuIds] = useState([]);
   const toggleMasuLock = (masuId, kind = 'keep') => {
@@ -85847,6 +85913,7 @@ function MonsterHeroGame() {
       setOwnedAssistantCostumes(loadedCostumes);
       setWornAssistantCostumes(normalizeWornAssistantCostumes(await storeGet(ASSISTANT_COSTUME_WORN_KEY, {}, false), loadedCostumes));
       setRhythmClearTotal(await loadRhythmClearTotal());
+      if (await storeGet(RAID_JACK_BOSS_DOWN_KEY, null, false)) setRaidJackBossDownNow(true);
       if (catchUp.length !== loadedFrames.length) {
         try {
           await storeSet(PROFILE_FRAME_OWNED_KEY, catchUp, false);
@@ -87455,9 +87522,61 @@ function MonsterHeroGame() {
     assistantId: selectedAssistantId,
     onTalk: () => addAssistantBond('talk')
   }), [assistantBond.points, assistantBondLevelNow, breederName, assistantCallStyle, selectedAssistantId, addAssistantBond]);
-  const profileFrameConditionStatus = (frame, clearTotal = rhythmClearTotal, shop = null) => {
+  const refreshRaidJackBossDown = async () => {
+    try {
+      if (await storeGet(RAID_JACK_BOSS_DOWN_KEY, null, false)) {
+        setRaidJackBossDownNow(true);
+        return true;
+      }
+      if (RELEASE_FLAGS.raidJack !== true || raidJackWindowAt(Date.now()) === 'before') return false;
+      const totals = await Promise.race([sbFetchRaidJackTierTotals(RAID_JACK_EVENT.id), new Promise(resolve => setTimeout(() => resolve(null), 4000))]);
+      if (!raidJackBossDown(totals)) return false;
+      try {
+        await storeSet(RAID_JACK_BOSS_DOWN_KEY, {
+          at: new Date().toISOString()
+        }, false);
+      } catch (e) {}
+      setRaidJackBossDownNow(true);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  };
+  const loadRhythmBuddyForFrames = async () => {
+    try {
+      await RHYTHM_BUDDY_STORE.load();
+    } catch (e) {}
+    return RHYTHM_BUDDY_STORE.get();
+  };
+  const profileFrameConditionStatus = (frame, clearTotal = rhythmClearTotal, shop = null, buddyState = rhythmBuddyState, bossDown = raidJackBossDownNow) => {
     const c = shop ? profileFrameConditionFor(frame, shop) : profileFrameCondition(frame);
     if (!c) return null;
+    if (c.kind === 'raidJackBossDown') {
+      const ended = raidJackWindowAt(Date.now()) === 'after';
+      const met = bossDown === true || ended;
+      return {
+        met,
+        text: c.text || '',
+        progress: bossDown === true ? 'カボチャの大王ジャックは倒されました' : ended ? 'ハロウィン・ナイトは終わりました' : 'まだ倒されていません'
+      };
+    }
+    if (c.kind === 'buddyBeatLevel') {
+      const need = Math.max(1, Math.floor(Number(c.level) || 1));
+      const mons = buddyState && buddyState.mons || {};
+      const rows = (Array.isArray(c.monsterIds) ? c.monsterIds : []).map(id => {
+        const best = (Array.isArray(masuMons) ? masuMons : []).reduce((top, mon) => mon && mon.baseId === id ? Math.max(top, rhythmBuddyLevelInfo((mons[mon.id] || {}).exp).level) : top, 0);
+        return {
+          name: ALL_PLAYER_MONSTERS[id] && ALL_PLAYER_MONSTERS[id].name || id,
+          best
+        };
+      });
+      const met = rows.length > 0 && rows.every(row => row.best >= need);
+      return {
+        met,
+        text: c.text || '',
+        progress: `${rows.map(row => `${row.name} ${row.best ? `Lv${row.best}` : 'まだいません'}`).join(' ／ ')}(必要 Lv${need})`
+      };
+    }
     if (c.kind === 'monsterReincarnate') {
       const need = Math.max(1, Math.floor(Number(c.count) || 1));
       const best = (Array.isArray(masuMons) ? masuMons : []).reduce((top, mon) => mon && mon.baseId === c.monsterId ? Math.max(top, Math.max(0, Math.floor(Number(mon.reincarnateCount) || 0))) : top, 0);
@@ -87570,7 +87689,7 @@ function MonsterHeroGame() {
     if (item.available === false) return false;
     if (isMarketItemOwned(item)) return false;
     if (item.type === 'frame') {
-      const status = profileFrameConditionStatus(profileFrameById(item.id), await loadRhythmClearTotal(), 'breederPoint');
+      const status = profileFrameConditionStatus(profileFrameById(item.id), await loadRhythmClearTotal(), 'breederPoint', await loadRhythmBuddyForFrames(), await refreshRaidJackBossDown());
       if (status && !status.met) {
         setMarketExchangeError('買える条件をまだ満たしていません。');
         return false;
@@ -87734,7 +87853,7 @@ function MonsterHeroGame() {
       const storedIcons = isIcon ? await storeGet('mh_market_icons', [], false) : null;
       const beforeIcons = Array.isArray(storedIcons) ? storedIcons.filter(id => typeof id === 'string') : [];
       if (isFrame) {
-        const frameStatus = profileFrameConditionStatus(profileFrameById(offer.frameId), await loadRhythmClearTotal(), 'beatPoint');
+        const frameStatus = profileFrameConditionStatus(profileFrameById(offer.frameId), await loadRhythmClearTotal(), 'beatPoint', await loadRhythmBuddyForFrames(), await refreshRaidJackBossDown());
         if (frameStatus && !frameStatus.met) {
           setMarketExchangeError('買える条件をまだ満たしていません。');
           return {
@@ -91466,11 +91585,13 @@ function MonsterHeroGame() {
       const wanted = new Set(ids);
       const sourceGifts = Array.isArray(baseGifts) ? baseGifts : gifts;
       const claimedGifts = [];
+      const storedFramesBefore = normalizeOwnedProfileFrames(await storeGet(PROFILE_FRAME_OWNED_KEY, [], false));
       let balances = {
         gold,
         breederPoints,
         ownedItems,
-        breederXp
+        breederXp,
+        ownedProfileFrames: normalizeOwnedProfileFrames([...storedFramesBefore, ...ownedProfileFramesRef.current])
       };
       let claimedCount = 0;
       const now = Date.now();
@@ -91519,6 +91640,12 @@ function MonsterHeroGame() {
         before: ownedItems,
         next: balances.ownedItems
       });
+      const framesAfter = normalizeOwnedProfileFrames(balances.ownedProfileFrames);
+      if (framesAfter.length !== storedFramesBefore.length) entries.push({
+        key: PROFILE_FRAME_OWNED_KEY,
+        before: storedFramesBefore,
+        next: framesAfter
+      });
       const keptGifts = pruneGiftHistory(nextGifts);
       entries.push({
         key: 'mh_gifts',
@@ -91535,6 +91662,10 @@ function MonsterHeroGame() {
       setBreederPoints(balances.breederPoints);
       setOwnedItems(balances.ownedItems);
       setGifts(keptGifts);
+      if (framesAfter.length !== ownedProfileFramesRef.current.length) {
+        ownedProfileFramesRef.current = framesAfter;
+        setOwnedProfileFrames(framesAfter);
+      }
       const rewards = summarizeClaimedGiftRewards(claimedGifts);
       setRewardReceipt({
         title,
@@ -97017,6 +97148,51 @@ function MonsterHeroGame() {
       raidJackClaimingRef.current = false;
     }
   };
+  const raidJackFrameGiftRef = useRef(false);
+  const grantRaidJackFrameGift = async () => {
+    if (RELEASE_FLAGS.raidJack !== true || raidJackDebugForce) return false;
+    if (raidJackWindowAt(Date.now()) !== 'after') return false;
+    if (raidJackFrameGiftRef.current) return false;
+    raidJackFrameGiftRef.current = true;
+    try {
+      const mark = await storeGet(RAID_JACK_FRAME_GIFT_KEY, null, false);
+      if (mark) return false;
+      if (!raidJackParticipated(await raidJackLoadState())) return false;
+      const savedGifts = await storeGet('mh_gifts', [], false);
+      const beforeGifts = Array.isArray(savedGifts) ? savedGifts : [];
+      const grant = grantGiftOnce(beforeGifts, raidJackFrameGift());
+      const saved = await saveStoredValuesOrRollback([...(grant.granted ? [{
+        key: 'mh_gifts',
+        before: beforeGifts,
+        next: grant.gifts
+      }] : []), {
+        key: RAID_JACK_FRAME_GIFT_KEY,
+        before: mark,
+        next: {
+          at: new Date().toISOString(),
+          frameId: RAID_JACK_FRAME_GIFT_FRAME_ID
+        }
+      }], storeGet, storeSet);
+      if (!saved) {
+        console.error('[raid-jack-frame-gift] save failed');
+        return false;
+      }
+      if (grant.granted) setGifts(grant.gifts);
+      return grant.granted;
+    } catch (error) {
+      return false;
+    } finally {
+      raidJackFrameGiftRef.current = false;
+    }
+  };
+  useEffect(() => {
+    if (gameState !== 'BREEDER_MARKET' || raidJackBossDownNow) return;
+    void refreshRaidJackBossDown();
+  }, [gameState]);
+  useEffect(() => {
+    if (!Array.isArray(rhythmEventStorySeen) || !rhythmEventStorySeen.includes(RAID_JACK_ENDING_CLEARED_ID)) return;
+    void grantRaidJackFrameGift();
+  }, [rhythmEventStorySeen]);
   useEffect(() => {
     if (gameState !== 'HOME') return;
     if (RELEASE_FLAGS.raidJack !== true || raidJackDebugForce) return;
@@ -108807,13 +108983,14 @@ function MonsterHeroGame() {
         setFrameQuery('');
         setFrameChip('all');
       };
-      const frames = releasedProfileFrames();
-      const q = frameQuery.trim().toLowerCase();
       const ownedOf = frame => profileFrameOwned(frame.id, ownedProfileFrames);
+      const frames = releasedProfileFrames().filter(frame => !profileFrameGift(frame) || ownedOf(frame));
+      const q = frameQuery.trim().toLowerCase();
       const matches = frames.filter(frame => (!q || String(frame.name || '').toLowerCase().includes(q)) && (frameChip === 'all' || (frameChip === 'owned' ? ownedOf(frame) : !ownedOf(frame))));
-      const colorFrames = matches.filter(frame => !profileFrameUnlock(frame) && !profileFrameSale(frame));
+      const colorFrames = matches.filter(frame => !profileFrameUnlock(frame) && !profileFrameSale(frame) && !profileFrameGift(frame));
       const assistantFrames = matches.filter(frame => !!profileFrameUnlock(frame));
       const saleFrames = matches.filter(frame => !profileFrameUnlock(frame) && !!profileFrameSale(frame));
+      const giftFrames = matches.filter(frame => !!profileFrameGift(frame));
       const ownedCount = frames.filter(ownedOf).length;
       const currentFrame = profileFrameById(normalizeProfileFrameId(profileFrameId)) || {};
       const cell = frame => {
@@ -108939,13 +109116,15 @@ function MonsterHeroGame() {
         className: "py-8 text-center text-[11px] font-bold text-slate-500"
       }, "当てはまるフレームがありません"), React.createElement("div", {
         className: "grid grid-cols-3 gap-2.5"
-      }, colorFrames.length > 0 && (assistantFrames.length > 0 || saleFrames.length > 0) && React.createElement(PickerGroupLabel, {
+      }, colorFrames.length > 0 && (assistantFrames.length > 0 || saleFrames.length > 0 || giftFrames.length > 0) && React.createElement(PickerGroupLabel, {
         count: colorFrames.length
       }, "色の枠"), colorFrames.map(cell), assistantFrames.length > 0 && React.createElement(PickerGroupLabel, {
         count: assistantFrames.length
       }, "助手の枠（仲良し度でもらえます）"), assistantFrames.map(cell), saleFrames.length > 0 && React.createElement(PickerGroupLabel, {
         count: saleFrames.length
-      }, "モンスターの枠（条件を達成するとマーケットで買えます）"), saleFrames.map(cell)));
+      }, "モンスターの枠（条件を達成するとマーケットで買えます）"), saleFrames.map(cell), giftFrames.length > 0 && React.createElement(PickerGroupLabel, {
+        count: giftFrames.length
+      }, "イベントの枠（プレゼントで届きました）"), giftFrames.map(cell)));
     })(), showCostumePicker && (() => {
       const closeCostume = () => {
         setShowCostumePicker(false);
