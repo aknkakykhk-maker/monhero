@@ -27104,7 +27104,7 @@ const roseHellNotes=((t,h,f,s,T,F,S)=>[
   t(163396,5,3,0),f(163876,8,2),
 // </rose-v3-hell-notes>
 ])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
-const roseHellChart=mhChart(45,roseHellNotes,ROSE_DURATION_MS,6);
+const roseHellChart=mhChart(52,roseHellNotes,ROSE_DURATION_MS,6);
 
 // ===== ROSE short ver.(2026-10-18 追加。全編の頭から2つ目のサビの終わりまで) =====
 const ROSE_SHORT_DURATION_MS=115452;
@@ -27525,7 +27525,7 @@ const roseShortHellNotes=((t,h,f,s,T,F,S)=>[
   t(113836,7,4,0),t(113956,7,4,0),f(114196,7,4),
 // </rose-short-v3-hell-notes>
 ])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
-const roseShortHellChart=mhChart(44,roseShortHellNotes,ROSE_SHORT_DURATION_MS,6);
+const roseShortHellChart=mhChart(50,roseShortHellNotes,ROSE_SHORT_DURATION_MS,6);
 
 // ===== SAD SONG(2026-10-18 追加。全編) =====
 const SAD_SONG_DURATION_MS=218556;
@@ -28434,7 +28434,7 @@ const sadSongHellNotes=((t,h,f,s,T,F,S)=>[
   t(217152,6,2,0),t(217239,8,4,0),
 // </sad-song-v3-hell-notes>
 ])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
-const sadSongHellChart=mhChart(34,sadSongHellNotes,SAD_SONG_DURATION_MS,6);
+const sadSongHellChart=mhChart(39,sadSongHellNotes,SAD_SONG_DURATION_MS,6);
 
 // ===== SAD SONG short ver.(2026-10-18 追加。全編の頭から1つ目のサビの終わりまで) =====
 const SAD_SONG_SHORT_DURATION_MS=82440;
@@ -28824,7 +28824,7 @@ const sadSongShortHellNotes=((t,h,f,s,T,F,S)=>[
   t(80677,1,3,0),
 // </sad-song-short-v3-hell-notes>
 ])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
-const sadSongShortHellChart=mhChart(35,sadSongShortHellNotes,SAD_SONG_SHORT_DURATION_MS,6);
+const sadSongShortHellChart=mhChart(43,sadSongShortHellNotes,SAD_SONG_SHORT_DURATION_MS,6);
 // ===== Toward the Stars, Paradise or Truth short ver.(2026-10-19 追加・hitoyakyuko) =====
 const TOWARD_THE_STARS_SHORT_DURATION_MS=136800;
 const towardTheStarsShortEasyNotes=((t,h,f,s)=>[
@@ -29376,7 +29376,7 @@ const towardTheStarsShortHellNotes=((t,h,f,s,T,F,S)=>[
   f(131427,3,3),t(131845,2,3,0),h(131950,1,2,132683),
 // </toward-the-stars-short-v3-hell-notes>
 ])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
-const towardTheStarsShortHellChart=mhChart(46,towardTheStarsShortHellNotes,TOWARD_THE_STARS_SHORT_DURATION_MS,6);
+const towardTheStarsShortHellChart=mhChart(57,towardTheStarsShortHellNotes,TOWARD_THE_STARS_SHORT_DURATION_MS,6);
 // HELL(デバッグ専用・2026-10-11)。参考譜面の空中(空中のタップ・高さのあるスライド)を土台に、親指2本で押せる形へ直した譜面
 // (tools/mode/rhythm-ref-thumbfix.js。同じ親指が地上と空中を行き来する間は1.5拍以上・押せない0・指の交差0)。速さの演出と組は MASTER と同じ
 // 2026-10-13 社長の決定「案3 X のまま」: 上下に交わる3か所(15.4・67.7・135.7秒)で、右手の空中スライドも左へ1レーン動かし、左手の地上スライドとすれ違う X にした

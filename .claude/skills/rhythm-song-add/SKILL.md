@@ -269,6 +269,9 @@ node tools/mode/rhythm-chart-v3-pipeline.js --track <track_id> --release
 node tools/mode/rhythm-chart-level.js --write
 ```
 
+> Lv. は**新しい測り方(v2)**で測る(2026-10-20 社長の決定。地上と空中の入り乱れを重く、押さえている手の側に来るノーツも重く)。
+> 新曲の songId を `rhythm-chart-level.js` の `LEVEL_V1_SONGS` へ**足さない**(足すと前の測り方になる)。決まりの本文は `docs/rules/CHART_ENGINE.md`「Lv. の新しい測り方」
+
 > ⚠️ `RHYTHM_SONGS[].bgmTrackId` が `BGM_TRACKS` に在るかを突き合わせる検査は**無い**。
 > 書き忘れると「曲えらびには並ぶのに無音で始まる」。ここは目で確かめる。
 
