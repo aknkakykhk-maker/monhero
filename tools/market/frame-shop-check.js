@@ -7,7 +7,7 @@
 //
 // 見るもの
 //   ① いま売っているのは、モンスターの枠10枚(モッチー・ムー・スエゾービート・スエゾー・ゴーレム・ライガー・ハム・ピクシー・ミーア・ラグナロク)と、
-//      2026-10-20 に公開した3枚(ハロウィン・恐=条件なし / ザン・エイキ・ウンディーネ3姉妹=ビートLv50の条件)。
+//      2026-10-20 に公開した3枚(ハロウィン・恐=大王ジャックが倒されたら / ザン・エイキ・ウンディーネ3姉妹=ビートLv50の条件)。
 //      ブリーダーP交換所にもビートP交換所にも並び、どれも買える条件が付いている(2026-10-03・ユーザー指示)。
 //      後ろの7枚は、条件がブリーダーP交換所だけにかかる(ビートP交換所は条件なし)。そのほかの枠は売らない
 //   ② 売り値(unlock:{shop,cost} と unlock:{shops:[…]})の読み方。壊れた書き方は「売り物ではない」になり、検査が拾う
@@ -49,7 +49,7 @@ const load = (fake = '') => {
 const real = load();
 const SOLD = ['frame_mocchi', 'frame_moo', 'frame_suezo_beat', 'frame_suezo', 'frame_golem', 'frame_tiger', 'frame_ham', 'frame_pixie', 'frame_mia', 'frame_ragnarok'];
 const NEW6 = SOLD.slice(3);
-// 2026-10-20 に公開した3枚(社長の決定)。値段はモンスターの枠と同じ。ハロウィン・恐だけ条件なし
+// 2026-10-20 に公開した3枚(社長の決定)。値段はモンスターの枠と同じ
 const SOLD_1020 = ['frame_halloween_night', 'frame_eiki_zan', 'frame_undine_beat'];
 const SOLD_ALL = [...SOLD, ...SOLD_1020];
 check('いま売っているフレームは、モンスターの枠10枚と10/20の3枚だけ(ブリーダーP・ビートPの両方)',
@@ -65,11 +65,24 @@ check('10枚とも買える条件が付いている', SOLD.every(id => !!real.pr
 check('売る枠として書かれているのに売り値が壊れている枠も無い', real.profileFramesWithBrokenSale().length === 0, real.profileFramesWithBrokenSale().join(','));
 check('いまの商品の一覧に入っているフレームは、売っている13枚だけ',
   real.BREEDER_MARKET_ITEMS.filter(item => item.type === 'frame').map(item => item.id).join() === SOLD_ALL.join());
-// 10/20 の3枚(社長の決定): ハロウィン・恐は条件なし、ザン・エイキとウンディーネ3姉妹はビートLv50の条件(どちらの交換所でも)
+// 10/20 の3枚(社長の決定): ハロウィン・恐は大王ジャックの撃破、ザン・エイキとウンディーネ3姉妹はビートLv50の条件(どちらの交換所でも)
 {
   const f = (id) => real.PROFILE_FRAMES.find(x => x.id === id);
-  check('ハロウィン・恐は条件なしで買える(買うまでは選べない)', !real.profileFrameCondition(f('frame_halloween_night'))
+  // 2026-10-20 社長「恐は大王倒したあとに解放ね」。みんなで大王を倒したら全員が買える(両方の交換所)
+  const night = real.profileFrameCondition(f('frame_halloween_night'));
+  check('ハロウィン・恐は、大王ジャックが倒されたら買える(両方の交換所・買うまでは選べない)', night && night.kind === 'raidJackBossDown' && !night.shops
+    && /カボチャの大王ジャックが倒されると買えるようになります/.test(night.text)
     && real.profileFrameOwned('frame_halloween_night', []) === false && real.profileFrameOwned('frame_halloween_night', ['frame_halloween_night']) === true);
+  {
+    const at2 = app.indexOf("if (c.kind === 'raidJackBossDown') {");
+    check('大王の条件は、確かめた値(bossDown)だけで決まる', at2 >= 0 && /const met = bossDown === true;/.test(app.slice(at2, at2 + 200)));
+    const ref = app.indexOf('const refreshRaidJackBossDown = async () => {');
+    const body = ref >= 0 ? app.slice(ref, app.indexOf('\n  };', ref)) : '';
+    check('撃破は妖のプレゼントと同じ判定(raidJackBossDown)で、一度見たら印を持つ', /raidJackBossDown\(totals\)/.test(body) && /storeSet\(RAID_JACK_BOSS_DOWN_KEY/.test(body)
+      && /storeGet\(RAID_JACK_BOSS_DOWN_KEY, null, false\)\) \{ setRaidJackBossDownNow\(true\); return true; \}/.test(body));
+    check('大王が倒された印の保存キーが SAVE_DATA.md に載っている', saveSpec.includes('mh_raid_jack_boss_down_v1'));
+    check('届かないときは鍵つきのまま(倒されていない扱い)', /if \(!raidJackBossDown\(totals\)\) return false;/.test(body) && /catch \(e\) \{ return false; \}/.test(body));
+  }
   const zan = real.profileFrameCondition(f('frame_eiki_zan')), undine = real.profileFrameCondition(f('frame_undine_beat'));
   check('ザン・エイキはザンとエイキのビートLv50が条件(両方の交換所)', zan && zan.kind === 'buddyBeatLevel' && zan.level === 50
     && zan.monsterIds.join() === 'Zan,Eiki' && !zan.shops);
@@ -185,9 +198,9 @@ check('転生は reincarnateCount を見る(限界突破の rebirthCount と取�
 check('壊れた条件(知らない種類)は「条件なし」でなく、売り値の壊れとして検査が拾う',
   load(FAKE("{ shop:'beatPoint', cost:100, condition:{ kind:'nothing' } }")).profileFramesWithBrokenSale().join() === 'fake_sale');
 check('ブリーダーP交換所で買うとき、条件を保存値で読み直して確かめる',
-  /if \(item\.type === 'frame'\) \{\s*const status = profileFrameConditionStatus\(profileFrameById\(item\.id\), await loadRhythmClearTotal\(\), 'breederPoint', await loadRhythmBuddyForFrames\(\)\);\s*if \(status && !status\.met\)/.test(app));
+  /if \(item\.type === 'frame'\) \{\s*const status = profileFrameConditionStatus\(profileFrameById\(item\.id\), await loadRhythmClearTotal\(\), 'breederPoint', await loadRhythmBuddyForFrames\(\), await refreshRaidJackBossDown\(\)\);\s*if \(status && !status\.met\)/.test(app));
 check('ビートP交換所で交換するときも、条件を保存値で読み直して確かめる',
-  /if \(isFrame\) \{\s*const frameStatus = profileFrameConditionStatus\(profileFrameById\(offer\.frameId\), await loadRhythmClearTotal\(\), 'beatPoint', await loadRhythmBuddyForFrames\(\)\);\s*if \(frameStatus && !frameStatus\.met\)/.test(app));
+  /if \(isFrame\) \{\s*const frameStatus = profileFrameConditionStatus\(profileFrameById\(offer\.frameId\), await loadRhythmClearTotal\(\), 'beatPoint', await loadRhythmBuddyForFrames\(\), await refreshRaidJackBossDown\(\)\);\s*if \(frameStatus && !frameStatus\.met\)/.test(app));
 check('条件が未達成のカードは買えない札が出る(ブリーダーP・ビートP)',
   market.includes('canBuy = !comingSoon && !frameLocked && !owned') && market.includes("canBuy={!owned&&!frameLocked&&safeEventPoints>=offer.cost&&!busy}"));
 check('モンヒロビートの通算クリア回数は新しいキーで数え、既存の mh_rhythm_best_v1 は書き換えない',

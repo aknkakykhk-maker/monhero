@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 069ed8bd5d8c0469
+// source-sha256: 8098086189f18a0b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-20 11:46";
+const BUILD_DATE = "2026-10-20 11:50";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -16397,7 +16397,7 @@ const helpDataRows = id => {
         const free = sales.filter(sale => !gated.includes(sale));
         const gift = typeof profileFrameGift === 'function' ? profileFrameGift(frame) : null;
         const giftHow = gift === 'raidJackEnding' ? 'レイド「カボチャの大王ジャック」に参加した人へ、イベントの終わりのお話のあとにプレゼントで届くことがあります。' : '';
-        const how = giftHow ? giftHow : unlock ? `${who && who.name || ''}との仲良し度 Lv${unlock.bondLevel}でもらえます。` : sales.length ? `${gated.length ? `「${cond.text}」を達成すると、マーケットの${gated.map(label).join(' か ')}で買えます。${free.length ? `${free.map(label).join(' か ')}なら条件なしで買えます。` : ''}` : `マーケットの${free.map(label).join(' か ')}で買えます。`}` : 'はじめから選べます。';
+        const how = giftHow ? giftHow : unlock ? `${who && who.name || ''}との仲良し度 Lv${unlock.bondLevel}でもらえます。` : sales.length && cond && cond.kind === 'raidJackBossDown' ? `${cond.text}（マーケットの${sales.map(label).join(' か ')}）。` : sales.length ? `${gated.length ? `「${cond.text}」を達成すると、マーケットの${gated.map(label).join(' か ')}で買えます。${free.length ? `${free.map(label).join(' か ')}なら条件なしで買えます。` : ''}` : `マーケットの${free.map(label).join(' か ')}で買えます。`}` : 'はじめから選べます。';
         return [frame.name, `${how}${frame.desc ? ` ${frame.desc}` : ''}`];
       });
     case 'assistants':
@@ -47029,6 +47029,7 @@ const raidJackStoryCandidates = (totals, nowMs) => {
   }
   return out.filter(Boolean);
 };
+const RAID_JACK_BOSS_DOWN_KEY = 'mh_raid_jack_boss_down_v1';
 const RAID_JACK_FRAME_GIFT_KEY = 'mh_raid_jack_frame_gift_v1';
 const RAID_JACK_FRAME_GIFT_FRAME_ID = 'frame_halloween_pumpkin';
 const raidJackFrameGift = () => ({
@@ -81447,6 +81448,7 @@ function MonsterHeroGame() {
   goldRef.current = gold;
   const [masuMons, setMasuMons] = useState([]);
   const [rhythmBuddyState, setRhythmBuddyState] = useState(() => RHYTHM_BUDDY_STORE.get());
+  const [raidJackBossDownNow, setRaidJackBossDownNow] = useState(false);
   useEffect(() => {
     const off = RHYTHM_BUDDY_STORE.subscribe(setRhythmBuddyState);
     void RHYTHM_BUDDY_STORE.load();
@@ -85836,6 +85838,7 @@ function MonsterHeroGame() {
       setOwnedAssistantCostumes(loadedCostumes);
       setWornAssistantCostumes(normalizeWornAssistantCostumes(await storeGet(ASSISTANT_COSTUME_WORN_KEY, {}, false), loadedCostumes));
       setRhythmClearTotal(await loadRhythmClearTotal());
+      if (await storeGet(RAID_JACK_BOSS_DOWN_KEY, null, false)) setRaidJackBossDownNow(true);
       if (catchUp.length !== loadedFrames.length) {
         try {
           await storeSet(PROFILE_FRAME_OWNED_KEY, catchUp, false);
@@ -87444,15 +87447,43 @@ function MonsterHeroGame() {
     assistantId: selectedAssistantId,
     onTalk: () => addAssistantBond('talk')
   }), [assistantBond.points, assistantBondLevelNow, breederName, assistantCallStyle, selectedAssistantId, addAssistantBond]);
+  const refreshRaidJackBossDown = async () => {
+    try {
+      if (await storeGet(RAID_JACK_BOSS_DOWN_KEY, null, false)) {
+        setRaidJackBossDownNow(true);
+        return true;
+      }
+      if (RELEASE_FLAGS.raidJack !== true || raidJackWindowAt(Date.now()) === 'before') return false;
+      const totals = await Promise.race([sbFetchRaidJackTierTotals(RAID_JACK_EVENT.id), new Promise(resolve => setTimeout(() => resolve(null), 4000))]);
+      if (!raidJackBossDown(totals)) return false;
+      try {
+        await storeSet(RAID_JACK_BOSS_DOWN_KEY, {
+          at: new Date().toISOString()
+        }, false);
+      } catch (e) {}
+      setRaidJackBossDownNow(true);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  };
   const loadRhythmBuddyForFrames = async () => {
     try {
       await RHYTHM_BUDDY_STORE.load();
     } catch (e) {}
     return RHYTHM_BUDDY_STORE.get();
   };
-  const profileFrameConditionStatus = (frame, clearTotal = rhythmClearTotal, shop = null, buddyState = rhythmBuddyState) => {
+  const profileFrameConditionStatus = (frame, clearTotal = rhythmClearTotal, shop = null, buddyState = rhythmBuddyState, bossDown = raidJackBossDownNow) => {
     const c = shop ? profileFrameConditionFor(frame, shop) : profileFrameCondition(frame);
     if (!c) return null;
+    if (c.kind === 'raidJackBossDown') {
+      const met = bossDown === true;
+      return {
+        met,
+        text: c.text || '',
+        progress: met ? 'カボチャの大王ジャックは倒されました' : 'まだ倒されていません'
+      };
+    }
     if (c.kind === 'buddyBeatLevel') {
       const need = Math.max(1, Math.floor(Number(c.level) || 1));
       const mons = buddyState && buddyState.mons || {};
@@ -87582,7 +87613,7 @@ function MonsterHeroGame() {
     if (item.available === false) return false;
     if (isMarketItemOwned(item)) return false;
     if (item.type === 'frame') {
-      const status = profileFrameConditionStatus(profileFrameById(item.id), await loadRhythmClearTotal(), 'breederPoint', await loadRhythmBuddyForFrames());
+      const status = profileFrameConditionStatus(profileFrameById(item.id), await loadRhythmClearTotal(), 'breederPoint', await loadRhythmBuddyForFrames(), await refreshRaidJackBossDown());
       if (status && !status.met) {
         setMarketExchangeError('買える条件をまだ満たしていません。');
         return false;
@@ -87746,7 +87777,7 @@ function MonsterHeroGame() {
       const storedIcons = isIcon ? await storeGet('mh_market_icons', [], false) : null;
       const beforeIcons = Array.isArray(storedIcons) ? storedIcons.filter(id => typeof id === 'string') : [];
       if (isFrame) {
-        const frameStatus = profileFrameConditionStatus(profileFrameById(offer.frameId), await loadRhythmClearTotal(), 'beatPoint', await loadRhythmBuddyForFrames());
+        const frameStatus = profileFrameConditionStatus(profileFrameById(offer.frameId), await loadRhythmClearTotal(), 'beatPoint', await loadRhythmBuddyForFrames(), await refreshRaidJackBossDown());
         if (frameStatus && !frameStatus.met) {
           setMarketExchangeError('買える条件をまだ満たしていません。');
           return {
@@ -97078,6 +97109,10 @@ function MonsterHeroGame() {
       raidJackFrameGiftRef.current = false;
     }
   };
+  useEffect(() => {
+    if (gameState !== 'BREEDER_MARKET' || raidJackBossDownNow) return;
+    void refreshRaidJackBossDown();
+  }, [gameState]);
   useEffect(() => {
     if (!Array.isArray(rhythmEventStorySeen) || !rhythmEventStorySeen.includes(RAID_JACK_ENDING_CLEARED_ID)) return;
     void grantRaidJackFrameGift();

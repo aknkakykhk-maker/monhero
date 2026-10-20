@@ -371,7 +371,7 @@ node tools/ranking/profile-frame-sql-check.js   # PostgreSQL があるときだ�
 
 | id | 名前 | 手に入れ方 |
 | --- | --- | --- |
-| `frame_halloween_night` | ハロウィン・恐（骨と青い炎） | マーケットで売る。ブリーダーP交換所 1P / ビートP交換所 100P（モンスターの枠と同じ）。条件なし |
+| `frame_halloween_night` | ハロウィン・恐（骨と青い炎） | マーケットで売る。ブリーダーP交換所 1P / ビートP交換所 100P（モンスターの枠と同じ）。レイドの大王ジャックが**みんなで倒されたあと**に全員が買える（`condition.kind:'raidJackBossDown'`・参加は問わない） |
 | `frame_halloween_pumpkin` | ハロウィン・妖（かぼちゃと魔女の女の子） | 売らない。レイド「カボチャの大王ジャック」で大王まで倒せたときの終章（`raid_jack_ending_cleared`）を見た参加者へ、ギフトで1回だけ届く（`unlock:{ gift:'raidJackEnding' }`） |
 | `frame_eiki_zan` | ザン・エイキ | ザンとエイキのマスモンを、それぞれビートLv50以上にするとマーケットで買える（両方の交換所・1P / 100P） |
 | `frame_undine_beat` | ウンディーネ3姉妹 | ウンディーネ・ヤオビクニ・スネグーラチカのマスモンを、それぞれビートLv50以上にするとマーケットで買える（同上） |
@@ -379,6 +379,11 @@ node tools/ranking/profile-frame-sql-check.js   # PostgreSQL があるときだ�
 **ビートLvの条件（`condition.kind:'buddyBeatLevel'`）**
 - `monsterIds` の種ごとに、自分のマスモンのビートLv（`RHYTHM_BUDDY_KEY` の経験値から `rhythmBuddyLevelInfo`）を見る。同じ種が何体かいるときは**いちばん高い子**。いない種は0。全部の種が `level` 以上で達成
 - 画面は `RHYTHM_BUDDY_STORE` の写し（`rhythmBuddyState`）で数え、買う処理（`buyMarketItem` / `exchangeRhythmEventPoints`）は保存を読み直して確かめる（`loadRhythmBuddyForFrames`）
+
+**大王が倒されたら買える条件（`condition.kind:'raidJackBossDown'`）**
+- 撃破はハロウィン・妖と同じ判定（`raidJackBossDown`：大王の段階の共有の合計が、その段階のライフ以上）。倒されたことは取り消されないので、一度見たら印 `mh_raid_jack_boss_down_v1` を持つ
+- 確かめるのは起動時（印だけ）・マーケットに入ったとき・買う直前（`refreshRaidJackBossDown`）。サーバーへ届かない・時間切れのときは「まだ」として鍵つきのまま
+- **倒されずにイベントが終わったとき**は、ずっと鍵つきのまま（売り場には並ぶが買えない）。社長の判断待ち
 
 **プレゼントで届く枠（`unlock.gift`）**
 - 届くまでは選択画面に出さない（手に入れ方を先に見せない）。届いたら「イベントの枠」の見出しで並ぶ

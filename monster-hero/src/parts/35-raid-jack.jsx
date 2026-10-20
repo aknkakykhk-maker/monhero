@@ -246,6 +246,9 @@ const raidJackStoryCandidates = (totals, nowMs) => {
   return out.filter(Boolean);
 };
 
+// 大王が倒されたのを見た印(2026-10-20)。フレーム「ハロウィン・恐」をマーケットで買えるようにする条件に使う。
+// 倒されたことは取り消されないので、一度見たら持っておき、サーバーへ届かないときもそのまま使う。値は { at }
+const RAID_JACK_BOSS_DOWN_KEY = 'mh_raid_jack_boss_down_v1';
 // 大王まで倒せたときの終章を見た参加者へ、プロフィールフレーム「ハロウィン・妖」をギフトで1回だけ届ける(2026-10-20 社長の決定)。
 // ★届けたかは新しいキー mh_raid_jack_frame_gift_v1 に持つ(ギフトの一覧は古いものから消えるので、それだけでは二重を防げない)。
 // ★倒せなかったとき(終章が raid_jack_ending_notcleared)は届けない。期間が終わってから起動した参加者にも、終章を見たところで届く

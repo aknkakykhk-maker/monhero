@@ -661,11 +661,11 @@ const PROFILE_FRAMES = [
   // ==================== ハロウィンとモンヒロビート用の4枚(2026-10-05 取り込み・2026-10-20 公開) ====================
   // ユーザーから受け取ったJPEG(透過なし・黒背景)を、枠の外と穴の中の黒を透明にして取り込んだ(384px)。
   // 2026-10-20 社長の決定で公開。名前も社長が決めた(id は取り込んだときのまま。変えると選んだ人・ランキングの記録が外れる)。
-  //   ハロウィン・恐 … マーケットで売る(値段はモンスターの枠と同じ。条件なし)
+  //   ハロウィン・恐 … マーケットで売る(値段はモンスターの枠と同じ)。レイドの大王ジャックがみんなで倒されたあとに、全員が買えるようになる(condition.kind:'raidJackBossDown')
   //   ハロウィン・妖 … レイド「カボチャの大王ジャック」の大王まで倒せたときの終章を見た参加者へ、ギフトで1回だけ届ける(unlock.gift)
   //   ウンディーネ3姉妹・ザン・エイキ … 対象のマスモンのビートLvを、それぞれ50以上にするとマーケットで買える(condition.kind:'buddyBeatLevel')
   { id:'frame_halloween_night', name:'ハロウィン・恐', kind:'image', released:true, hole:0.521,
-    unlock:{ shops:PROFILE_FRAME_MONSTER_SHOPS },
+    unlock:{ shops:PROFILE_FRAME_MONSTER_SHOPS, condition:{ kind:'raidJackBossDown', text:'カボチャの大王ジャックが倒されると買えるようになります' } },
     src:'images/profile-frames/halloween-night.png?v=647f32308d31', srcSmall:'images/profile-frames/small/halloween-night.png?v=5c47af1a0742',
     desc:'青い炎と骨、音符の輪に、ハロウィンの夜のモンスターたちが集まる、ちょっとこわいフレーム。' },
   { id:'frame_halloween_pumpkin', name:'ハロウィン・妖', kind:'image', released:true, hole:0.583,
@@ -847,7 +847,9 @@ const profileFramesForSale = (shop) => releasedProfileFrames().filter(frame => !
 //   kind:'rhythmClears'    … モンヒロビートを count 回以上クリア(通算。RHYTHM_CLEAR_TOTAL_KEY)
 //   kind:'buddyBeatLevel'  … monsterIds の種ごとに、自分のマスモンのビートLv(RHYTHM_BUDDY_KEY の経験値)が level 以上(2026-10-20)。
 //                            同じ種のマスモンが何体かいるときは、いちばん高い子で見る。全部の種がそろって達成
-const PROFILE_FRAME_CONDITION_KINDS = Object.freeze(['speciesRebirth', 'monsterReincarnate', 'difficultyCleared', 'rhythmClears', 'buddyBeatLevel']);
+//   kind:'raidJackBossDown' … レイド「カボチャの大王ジャック」の大王が、みんなで倒されたあと(共有の合計・raidJackBossDown。2026-10-20)。
+//                            自分が参加したかは問わない。text はそのまま鍵の文になる(ネタバレにならない書き方で)
+const PROFILE_FRAME_CONDITION_KINDS = Object.freeze(['speciesRebirth', 'monsterReincarnate', 'difficultyCleared', 'rhythmClears', 'buddyBeatLevel', 'raidJackBossDown']);
 const profileFrameCondition = (frame) => {
   const condition = frame && frame.unlock && frame.unlock.condition;
   return (condition && PROFILE_FRAME_CONDITION_KINDS.includes(condition.kind)) ? condition : null;

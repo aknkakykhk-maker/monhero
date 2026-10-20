@@ -1564,6 +1564,8 @@ function MonsterHeroGame() {
   // マスモンのビートLvの保存(RHYTHM_BUDDY_KEY)の写し。フレームの条件「ビートLv50以上」(2026-10-20)を画面で数えるために読むだけ。
   // 書くのはマスモン一覧(モンヒロビート)とマルチの部屋(80-screen-rhythm-buddy.jsx の RHYTHM_BUDDY_STORE)。ここからは書かない
   const [rhythmBuddyState, setRhythmBuddyState] = useState(() => RHYTHM_BUDDY_STORE.get());
+  // レイドの大王ジャックが倒されたか(フレーム「ハロウィン・恐」の条件・2026-10-20)。印(mh_raid_jack_boss_down_v1)か、サーバーの共有の合計で知る
+  const [raidJackBossDownNow, setRaidJackBossDownNow] = useState(false);
   useEffect(() => {
     const off = RHYTHM_BUDDY_STORE.subscribe(setRhythmBuddyState);
     void RHYTHM_BUDDY_STORE.load();
@@ -6002,6 +6004,8 @@ function MonsterHeroGame() {
       setOwnedAssistantCostumes(loadedCostumes);
       setWornAssistantCostumes(normalizeWornAssistantCostumes(await storeGet(ASSISTANT_COSTUME_WORN_KEY, {}, false), loadedCostumes));
       setRhythmClearTotal(await loadRhythmClearTotal());
+      // 大王が倒された印があれば、マーケットを開く前から鍵を外しておく(無ければマーケットに入ったときに確かめる)
+      if (await storeGet(RAID_JACK_BOSS_DOWN_KEY, null, false)) setRaidJackBossDownNow(true);
       if (catchUp.length !== loadedFrames.length) {
         try { await storeSet(PROFILE_FRAME_OWNED_KEY, catchUp, false); } catch {}
       }
@@ -7519,11 +7523,29 @@ function MonsterHeroGame() {
   // ★条件は「買えるか」だけを決める。買ったあとに条件を割っても枠は残る。
   // shop を渡すと、その交換所で必要な条件だけを見る(ビートP交換所は条件なしの枠もある)。渡さないときは枠の条件そのもの
   // 買う直前に、ビートLvの保存を読み直す(画面の値が古くても通さない)
+  // 大王が倒されたかを確かめる。印があればそれで決まり(取り消されない)。無ければ共有の合計を取りにいき、倒されていれば印を保存する。
+  // ★届かない・時間切れのときは「まだ」として扱う(鍵つきのまま。買えてしまう方へ倒さない)
+  const refreshRaidJackBossDown = async () => {
+    try {
+      if (await storeGet(RAID_JACK_BOSS_DOWN_KEY, null, false)) { setRaidJackBossDownNow(true); return true; }
+      if (RELEASE_FLAGS.raidJack !== true || raidJackWindowAt(Date.now()) === 'before') return false;
+      const totals = await Promise.race([sbFetchRaidJackTierTotals(RAID_JACK_EVENT.id), new Promise(resolve => setTimeout(() => resolve(null), 4000))]);
+      if (!raidJackBossDown(totals)) return false;
+      try { await storeSet(RAID_JACK_BOSS_DOWN_KEY, { at:new Date().toISOString() }, false); } catch (e) { /* 印を残せなくても、いまは倒されている */ }
+      setRaidJackBossDownNow(true);
+      return true;
+    } catch (e) { return false; }
+  };
   const loadRhythmBuddyForFrames = async () => { try { await RHYTHM_BUDDY_STORE.load(); } catch (e) { /* 読めなければいまの値 */ } return RHYTHM_BUDDY_STORE.get(); };
   // buddyState … マスモンのビートLvの保存(買う処理では読み直した値を渡す)
-  const profileFrameConditionStatus = (frame, clearTotal = rhythmClearTotal, shop = null, buddyState = rhythmBuddyState) => {
+  // bossDown … レイドの大王が倒されたか(買う処理では確かめ直した値を渡す)
+  const profileFrameConditionStatus = (frame, clearTotal = rhythmClearTotal, shop = null, buddyState = rhythmBuddyState, bossDown = raidJackBossDownNow) => {
     const c = shop ? profileFrameConditionFor(frame, shop) : profileFrameCondition(frame);
     if (!c) return null;
+    if (c.kind === 'raidJackBossDown') {
+      const met = bossDown === true;
+      return { met, text: c.text || '', progress: met ? 'カボチャの大王ジャックは倒されました' : 'まだ倒されていません' };
+    }
     if (c.kind === 'buddyBeatLevel') {
       // 種ごとに、自分のマスモンのいちばん高いビートLv。いない種は0(まだ育てていない)。全部の種がそろって達成
       const need = Math.max(1, Math.floor(Number(c.level) || 1));
@@ -7627,7 +7649,7 @@ function MonsterHeroGame() {
     if (isMarketItemOwned(item)) return false;
     // 条件つきのフレームは、保存されている回数を読み直して条件を確かめる(画面の値が古くても通さない)
     if (item.type === 'frame') {
-      const status = profileFrameConditionStatus(profileFrameById(item.id), await loadRhythmClearTotal(), 'breederPoint', await loadRhythmBuddyForFrames());
+      const status = profileFrameConditionStatus(profileFrameById(item.id), await loadRhythmClearTotal(), 'breederPoint', await loadRhythmBuddyForFrames(), await refreshRaidJackBossDown());
       if (status && !status.met) { setMarketExchangeError('買える条件をまだ満たしていません。'); return false; }
     }
     const purchase = buildMarketItemPurchase({ item, gold, breederPoints, ownedItems:ownedItemsRef.current, quantity });
@@ -7758,7 +7780,7 @@ function MonsterHeroGame() {
       const beforeIcons = Array.isArray(storedIcons) ? storedIcons.filter(id => typeof id === 'string') : [];
       // 条件つきのフレームは、保存されている回数を読み直して条件を確かめる(画面の値が古くても通さない)
       if (isFrame) {
-        const frameStatus = profileFrameConditionStatus(profileFrameById(offer.frameId), await loadRhythmClearTotal(), 'beatPoint', await loadRhythmBuddyForFrames());
+        const frameStatus = profileFrameConditionStatus(profileFrameById(offer.frameId), await loadRhythmClearTotal(), 'beatPoint', await loadRhythmBuddyForFrames(), await refreshRaidJackBossDown());
         if (frameStatus && !frameStatus.met) {
           setMarketExchangeError('買える条件をまだ満たしていません。');
           return { ok:false, reason:'condition' };
@@ -15032,6 +15054,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     } catch (error) { return false; }
     finally { raidJackFrameGiftRef.current = false; }
   };
+  // マーケットに入ったとき、大王が倒されたかを確かめ直す(フレーム「ハロウィン・恐」の鍵)
+  useEffect(() => {
+    if (gameState !== 'BREEDER_MARKET' || raidJackBossDownNow) return;
+    void refreshRaidJackBossDown();
+  }, [gameState]);
   useEffect(() => {
     if (!Array.isArray(rhythmEventStorySeen) || !rhythmEventStorySeen.includes(RAID_JACK_ENDING_CLEARED_ID)) return;
     void grantRaidJackFrameGift();
