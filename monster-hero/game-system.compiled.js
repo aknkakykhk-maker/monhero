@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 42036f0610a94bd4
+// source-sha256: be3f49fcef5f8d0e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-20 17:51";
+const BUILD_DATE = "2026-10-21 01:38";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -66756,7 +66756,7 @@ function BattleScreen({
     onClick: () => setShowBattleLog(true),
     "aria-label": "バトルの記録を見る",
     title: "バトルの記録",
-    className: "absolute left-2 top-1 z-20 flex w-[62px] flex-col items-center justify-center gap-0.5 rounded-2xl border border-white/20 bg-slate-900/85 py-1.5 active:scale-95",
+    className: "absolute left-2 top-1 z-20 flex w-[62px] flex-col items-center justify-center gap-0.5 rounded-2xl border border-white/20 bg-slate-900/85 py-1.5 active:scale-95 [@media(max-height:640px)]:h-7 [@media(max-height:640px)]:w-7 [@media(max-height:640px)]:rounded-full [@media(max-height:640px)]:p-0",
     style: {
       boxShadow: '0 4px 14px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.16)'
     }
@@ -66764,11 +66764,11 @@ function BattleScreen({
     size: 17,
     className: "text-amber-300"
   }), React.createElement("span", {
-    className: "text-[10px] font-black leading-none text-white"
+    className: "text-[10px] font-black leading-none text-white [@media(max-height:640px)]:sr-only"
   }, "ログ")), React.createElement("button", {
     onClick: () => setShowHeroInfo(true),
     "aria-label": "勇者モンのステータス",
-    className: `absolute left-2 bottom-1 z-20 flex w-[62px] flex-col items-center justify-center gap-0.5 rounded-2xl border border-white/20 bg-slate-900/85 py-1.5 active:scale-95${battleTutorialSpotClass('heroStatus')}`,
+    className: `absolute left-2 bottom-1 z-20 flex w-[62px] flex-col items-center justify-center gap-0.5 rounded-2xl border border-white/20 bg-slate-900/85 py-1.5 active:scale-95 [@media(max-height:640px)]:h-7 [@media(max-height:640px)]:w-7 [@media(max-height:640px)]:rounded-full [@media(max-height:640px)]:p-0 [@media(max-height:640px)]:bottom-auto [@media(max-height:640px)]:top-1 [@media(max-height:640px)]:left-[40px]${battleTutorialSpotClass('heroStatus')}`,
     style: {
       boxShadow: '0 4px 14px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.16)'
     }
@@ -66776,11 +66776,11 @@ function BattleScreen({
     size: 17,
     className: "text-indigo-300"
   }), React.createElement("span", {
-    className: "text-[10px] font-black leading-none text-white"
+    className: "text-[10px] font-black leading-none text-white [@media(max-height:640px)]:sr-only"
   }, "ステータス")), React.createElement("button", {
     onClick: () => setShowEnemyInfo(true),
     "aria-label": "敵を解析する",
-    className: "absolute right-2 top-1 z-20 flex w-[62px] flex-col items-center justify-center gap-0.5 rounded-2xl border border-white/20 bg-slate-900/85 py-1.5 active:scale-95",
+    className: "absolute right-2 top-1 z-20 flex w-[62px] flex-col items-center justify-center gap-0.5 rounded-2xl border border-white/20 bg-slate-900/85 py-1.5 active:scale-95 [@media(max-height:640px)]:h-7 [@media(max-height:640px)]:w-7 [@media(max-height:640px)]:rounded-full [@media(max-height:640px)]:p-0 [@media(max-height:640px)]:right-auto [@media(max-height:640px)]:left-[72px]",
     style: {
       boxShadow: '0 4px 14px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.16)'
     }
@@ -66788,13 +66788,13 @@ function BattleScreen({
     size: 17,
     className: "text-red-300"
   }), React.createElement("span", {
-    className: "text-[10px] font-black leading-none text-white"
+    className: "text-[10px] font-black leading-none text-white [@media(max-height:640px)]:sr-only"
   }, "解析")), battleSoulMasus.some(m => normalizeSoulRankStage(m.soulRankStage) > 0) && React.createElement("button", {
     "data-soul-battle-effects-button": true,
     type: "button",
     onClick: () => setShowSoulBattleEffects(true),
     "aria-label": "魂格効果",
-    className: "absolute right-2 top-[56px] z-20 flex w-[62px] flex-col items-center justify-center gap-0.5 rounded-2xl border border-white/20 bg-slate-900/85 py-1.5 active:scale-95",
+    className: "absolute right-2 top-[56px] z-20 flex w-[62px] flex-col items-center justify-center gap-0.5 rounded-2xl border border-white/20 bg-slate-900/85 py-1.5 active:scale-95 [@media(max-height:640px)]:h-7 [@media(max-height:640px)]:w-7 [@media(max-height:640px)]:rounded-full [@media(max-height:640px)]:p-0 [@media(max-height:640px)]:top-auto [@media(max-height:640px)]:bottom-1 [@media(max-height:640px)]:right-auto [@media(max-height:640px)]:left-2",
     style: {
       boxShadow: '0 4px 14px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.16)'
     }
@@ -66802,7 +66802,7 @@ function BattleScreen({
     size: 17,
     className: "text-sky-300"
   }), React.createElement("span", {
-    className: "text-[10px] font-black leading-none text-white"
+    className: "text-[10px] font-black leading-none text-white [@media(max-height:640px)]:sr-only"
   }, "魂格効果")), enemy && enemyIntent && !isBusy && (() => {
     const aimedSlot = coverActive ? tacticsCoverSlot : Number.isInteger(enemyIntent.targetSlot) ? enemyIntent.targetSlot : null;
     const rawDmg = getIncomingDamageBeforeTurnReduction(enemyIntent, aimedSlot);
@@ -66816,27 +66816,27 @@ function BattleScreen({
     const intentTitle = enemyIntent.type === 'CHARGE' && enemyIntent.category ? enemyIntent.category : enemyIntent.label;
     return React.createElement("div", {
       "data-enemy-intent": true,
-      className: `absolute right-2 bottom-1 z-[45] w-[100px] rounded-xl border px-1.5 py-1 shadow-lg animate-pulse${battleTutorialSpotClass('enemyIntent')} ${focusedCard && !tacticsNewLayout ? 'invisible' : 'visible'} ${tone}`
+      className: `absolute right-2 bottom-1 z-[45] w-[100px] rounded-xl border px-1.5 py-1 shadow-lg animate-pulse [@media(max-height:640px)]:grid [@media(max-height:640px)]:w-[112px] [@media(max-height:640px)]:grid-cols-[minmax(0,1fr)_auto] [@media(max-height:640px)]:items-center [@media(max-height:640px)]:gap-x-1 [@media(max-height:640px)]:py-0.5${battleTutorialSpotClass('enemyIntent')} ${focusedCard && !tacticsNewLayout ? 'invisible' : 'visible'} ${tone}`
     }, React.createElement("div", {
-      className: "flex items-center gap-1 text-[8px] font-black uppercase tracking-wider opacity-80"
+      className: "flex items-center gap-1 text-[8px] font-black uppercase tracking-wider opacity-80 [@media(max-height:640px)]:col-start-1"
     }, React.createElement(Target, {
       size: 9
     }), "次の行動"), React.createElement("div", {
-      className: "mt-0.5 text-[11px] font-black leading-tight"
+      className: "mt-0.5 text-[11px] font-black leading-tight [@media(max-height:640px)]:col-start-1 [@media(max-height:640px)]:min-w-0 [@media(max-height:640px)]:truncate"
     }, intentTitle), aimedName ? React.createElement("div", {
-      className: "mt-0.5 truncate text-[9px] font-bold leading-none opacity-90"
+      className: "mt-0.5 truncate text-[9px] font-bold leading-none opacity-90 [@media(max-height:640px)]:col-start-1"
     }, "🎯", aimedName) : null, enemyIntent.type === 'CONFUSED' ? React.createElement("div", {
       "data-enemy-confused": true,
       className: "mt-0.5 text-[9px] font-bold leading-tight opacity-90"
     }, "動けない・会心確定") : null, rawDmg > 0 && showPlannedInBubble && plannedText ? React.createElement("div", {
-      className: "mt-1 rounded bg-black/55 px-1 py-1 text-center leading-none"
+      className: "mt-1 rounded bg-black/55 px-1 py-1 text-center leading-none [@media(max-height:640px)]:col-start-2 [@media(max-height:640px)]:row-span-3 [@media(max-height:640px)]:row-start-1 [@media(max-height:640px)]:mt-0"
     }, React.createElement("div", {
       className: "text-[12px] font-black tabular-nums"
     }, plannedTotalText), plannedHit.parts.length > 1 ? React.createElement("div", {
       className: "mt-0.5 text-[9px] font-bold tabular-nums text-white/80"
     }, plannedText) : null) : null, regenHeal > 0 ? React.createElement("div", {
       "data-enemy-regen-heal": regenHeal,
-      className: "mt-1 rounded bg-black/55 px-1 py-1 text-center leading-none"
+      className: "mt-1 rounded bg-black/55 px-1 py-1 text-center leading-none [@media(max-height:640px)]:col-start-2 [@media(max-height:640px)]:row-span-3 [@media(max-height:640px)]:row-start-1 [@media(max-height:640px)]:mt-0"
     }, React.createElement("div", {
       className: "text-[12px] font-black tabular-nums text-emerald-300"
     }, "+", regenHeal), React.createElement("div", {
@@ -68168,27 +68168,28 @@ function BattleScreen({
       "data-slot-ring": true
     }), React.createElement("div", {
       "data-slot-head": tacticsNewLayout ? i : undefined,
-      className: `${tacticsNewLayout ? 'col-span-2 row-start-1 h-[18px] justify-start gap-0.5 pr-[84px] backdrop-blur-sm' : 'h-[18px] justify-center'} shrink-0 flex items-center px-1 border-b z-20 ${isHeroSlotMon(s) ? 'bg-amber-400/10 border-amber-200/20' : 'bg-white/[.025] border-white/[.055]'}`
+      className: `${tacticsNewLayout ? 'col-span-2 row-start-1 h-[18px] justify-start gap-0.5 pr-1 backdrop-blur-sm' : 'h-[18px] justify-center'} shrink-0 flex items-center px-1 border-b z-20 ${isHeroSlotMon(s) ? 'bg-amber-400/10 border-amber-200/20' : 'bg-white/[.025] border-white/[.055]'}`
     }, tacticsNewLayout && React.createElement("span", {
       className: `mr-1 shrink-0 rounded px-1 py-0.5 text-[8px] font-black leading-none ${RANGE_STYLES[i].labelBg}`
     }, RANGE_LABELS[i]), isHeroSlotMon(s) && React.createElement(Crown, {
       size: 8,
       className: "shrink-0 mr-0.5 text-amber-300"
     }), React.createElement("span", {
-      className: `text-[10px] font-black truncate uppercase leading-none ${isHeroSlotMon(s) ? 'text-amber-100' : 'text-white'}`
+      className: `min-w-0 text-[10px] font-black truncate uppercase leading-none ${isHeroSlotMon(s) ? 'text-amber-100' : 'text-white'}`
     }, s?.name || '---'), hateFlame && !tacticsNewLayout && hateFlame, assignedCount > 0 && !tacticsNewLayout && React.createElement("span", {
       className: "ml-1 text-[10px] font-black text-indigo-300"
-    }, "×", assignedCount), tacticsNewLayout && (hateFlame || slotExInfo) && React.createElement("span", {
-      className: "absolute right-1 top-[3px] flex items-center gap-0.5"
+    }, "×", assignedCount), slotBuffMarks.map(mark => React.createElement("span", {
+      key: mark.text,
+      "data-tactics-slot-buff": mark.text,
+      className: `ml-1 shrink-0 text-[8px] font-black leading-none ${mark.cls}`
+    }, mark.text)), tacticsNewLayout && (hateFlame || slotExInfo) && React.createElement("span", {
+      "data-slot-head-right": true,
+      className: "ml-auto flex shrink-0 items-center gap-0.5 pl-0.5"
     }, hateFlame, slotExInfo && React.createElement("span", {
       "data-tactics-ex-mark": i,
       "data-tactics-ex-state": slotExInfo.badge.text,
       className: `max-w-[80px] truncate rounded px-1 py-0.5 text-[8px] font-black leading-none ${slotExInfo.badge.active ? 'bg-fuchsia-600 text-white ring-1 ring-fuchsia-200' : 'bg-black/70 text-fuchsia-200 ring-1 ring-fuchsia-400/60'}`
-    }, "EX", slotExInfo.badge.text !== 'EX' ? ` ${slotExInfo.badge.text}` : slotExInfo.badge.uses != null ? `×${slotExInfo.badge.uses}` : '')), slotBuffMarks.map(mark => React.createElement("span", {
-      key: mark.text,
-      "data-tactics-slot-buff": mark.text,
-      className: `ml-1 shrink-0 text-[8px] font-black leading-none ${mark.cls}`
-    }, mark.text))), (() => {
+    }, "EX", slotExInfo.badge.text !== 'EX' ? ` ${slotExInfo.badge.text}` : slotExInfo.badge.uses != null ? `×${slotExInfo.badge.uses}` : ''))), (() => {
       const uOptions = getAvailableUniquesForSlot(s, ownedUniques, i);
       if (uOptions.length < 2) return null;
       const curKey = activeSlotUniqueKey(slotUniqueChoice, i, s);
@@ -74283,12 +74284,12 @@ const RHYTHM_MODE_SELECT_CSS = `
 .mhbt-mark{position:absolute;right:-10px;top:112px;font-size:58px;line-height:1;font-style:italic;font-weight:900;letter-spacing:-.03em;color:rgba(255,255,255,.2);white-space:nowrap;transform:rotate(-6deg);pointer-events:none}
 .mhbt-eyebrow{position:relative;font-size:9px;font-weight:900;letter-spacing:.3em;color:rgba(15,23,42,.58)}
 .mhbt-name{position:relative;margin-top:2px;font-weight:900;font-style:italic;line-height:1.12;letter-spacing:.01em}
-.mhbt-sub{position:relative;margin-top:4px;min-height:28px;font-size:10.5px;font-weight:800;line-height:1.35;color:rgba(15,23,42,.72)}
+.mhbt-sub{position:relative;margin-top:4px;min-height:28px;font-size:10.5px;font-weight:800;line-height:1.35;color:rgba(15,23,42,.72);word-break:keep-all;overflow-wrap:anywhere}
 .mhbt-score{position:relative;margin-top:8px}
 .mhbt-score b{display:block;font-size:30px;line-height:1;font-style:italic;font-weight:900;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mhbt-score small{display:block;margin-top:3px;font-size:9.5px;font-weight:900;color:rgba(15,23,42,.66);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mhbt-feats{position:relative;display:grid;gap:4px;margin-top:9px}
-.mhbt-feats li{display:flex;align-items:center;gap:6px;padding:4px 9px;border-radius:9px;font-size:10.5px;font-weight:900;background:rgba(255,255,255,.38);box-shadow:inset 0 1px 0 rgba(255,255,255,.5)}
+.mhbt-feats li{display:flex;align-items:center;gap:6px;padding:4px 9px;border-radius:9px;font-size:10.5px;font-weight:900;word-break:keep-all;overflow-wrap:anywhere;background:rgba(255,255,255,.38);box-shadow:inset 0 1px 0 rgba(255,255,255,.5)}
 .mhbt-cells{position:relative;display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:8px}
 .mhbt-cells>div{border-radius:9px;padding:3px 0;text-align:center;font-size:8.5px;font-weight:900;color:rgba(15,23,42,.62);background:rgba(255,255,255,.38);white-space:nowrap}
 .mhbt-cells b{display:block;font-size:13px;color:#0f172a}
@@ -74336,6 +74337,8 @@ const RHYTHM_MODE_SELECT_CSS = `
 .mhbt-go.sm{font-size:12px;letter-spacing:0}
 .mhbt-pb{flex:1 1 0;min-width:0;min-height:36px;border-radius:10px;font-size:11px;font-weight:900;white-space:nowrap;color:#0f172a;background:rgba(255,255,255,.45);box-shadow:inset 0 1px 0 rgba(255,255,255,.6)}
 .mhbt-pb:active{transform:scale(.96)}
+.mhbt-score small{white-space:normal;word-break:keep-all;overflow-wrap:anywhere;line-height:1.3}
+.mhbt-go.sm{white-space:normal;word-break:keep-all;overflow-wrap:anywhere;line-height:1.15;font-size:11px;padding:2px 8px}
 .mhbs-hint{text-align:center;font-size:8px;font-weight:900;letter-spacing:.24em;color:rgba(240,171,252,.7)}
 .mhbs-arrow{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:9999px;color:#fff;background:rgba(14,9,38,.78);border:1px solid rgba(255,255,255,.18);box-shadow:0 4px 14px rgba(0,0,0,.4)}
 .mhbs-dot{width:6px;height:6px;border-radius:9999px;background:rgba(255,255,255,.22);transition:all .2s}
@@ -101794,7 +101797,7 @@ function MonsterHeroGame() {
           });
           if (difficulties[best]?.[0] !== safeDifficulty) setDifficulty(difficulties[best][0]);
         },
-        className: "flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-0.5 mh-scroll",
+        className: "flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-0.5 mh-scroll max-[359px]:!px-[4%]",
         style: {
           paddingLeft: '11%',
           paddingRight: '11%',
@@ -101804,7 +101807,7 @@ function MonsterHeroGame() {
         const active = key === safeDifficulty;
         return React.createElement("article", {
           key: key,
-          className: `snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${active ? 'scale-100 opacity-100' : 'scale-[.92] opacity-55'}`,
+          className: `snap-center shrink-0 w-[82%] max-[359px]:w-[90%] rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${active ? 'scale-100 opacity-100' : 'scale-[.92] opacity-55'}`,
           style: {
             borderColor: active ? setting.text : 'rgba(255,255,255,.12)',
             background: `linear-gradient(160deg,color-mix(in srgb,${setting.text} 28%,#1d0d45),#150b38 55%,#0a1030)`,
@@ -102241,7 +102244,7 @@ function MonsterHeroGame() {
           if (modeLoopTimerRef.current) clearTimeout(modeLoopTimerRef.current);
           modeLoopTimerRef.current = setTimeout(recenterModeLoop, 180);
         },
-        className: "flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain pt-1 pb-4 mh-scroll",
+        className: "flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain pt-1 pb-4 mh-scroll max-[359px]:!px-[4%]",
         style: {
           paddingLeft: '11%',
           paddingRight: '11%',
@@ -102266,7 +102269,7 @@ function MonsterHeroGame() {
         return React.createElement("article", {
           key: `${m.id}-${loopIndex}`,
           "data-battle-mode": m.id,
-          className: `mhbt-tile snap-center shrink-0 w-[82%] h-[366px] px-4 pt-3.5 pb-4 transition-all flex flex-col ${active ? 'on scale-100 opacity-100' : 'scale-[.92] opacity-45'}`,
+          className: `mhbt-tile snap-center shrink-0 w-[82%] max-[359px]:w-[90%] h-[366px] px-4 pt-3.5 pb-4 transition-all flex flex-col ${active ? 'on scale-100 opacity-100' : 'scale-[.92] opacity-45'}`,
           style: {
             '--acc': m.color
           }
@@ -102456,7 +102459,7 @@ function MonsterHeroGame() {
           });
           if (difficulties[best]?.id !== extremeDifficulty) setExtremeDifficulty(difficulties[best].id);
         },
-        className: "flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-0.5 mh-scroll",
+        className: "flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-0.5 mh-scroll max-[359px]:!px-[4%]",
         style: {
           paddingLeft: '11%',
           paddingRight: '11%',
@@ -102474,7 +102477,7 @@ function MonsterHeroGame() {
           key: setting.id,
           "aria-disabled": !previewable,
           "data-extreme-difficulty-card": setting.id,
-          className: `mhbt-tile mhbt-d-${setting.id} dark snap-center shrink-0 w-[82%] h-[400px] flex flex-col px-4 pt-3 pb-2.5 transition-all ${active ? 'on scale-100 opacity-100' : 'scale-[.92] opacity-45'} ${previewable ? '' : 'dim'}`,
+          className: `mhbt-tile mhbt-d-${setting.id} dark snap-center shrink-0 w-[82%] max-[359px]:w-[90%] h-[400px] flex flex-col px-4 pt-3 pb-2.5 transition-all ${active ? 'on scale-100 opacity-100' : 'scale-[.92] opacity-45'} ${previewable ? '' : 'dim'}`,
           style: {
             '--acc': theme.accent
           }
@@ -102727,7 +102730,7 @@ function MonsterHeroGame() {
           });
           if (difficulties[best]?.[0] !== selectedDifficulty) chooseDifficulty(difficulties[best][0]);
         },
-        className: "flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-1 mh-scroll",
+        className: "flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-1 mh-scroll max-[359px]:!px-[4%]",
         style: {
           paddingLeft: '11%',
           paddingRight: '11%',
@@ -102755,7 +102758,7 @@ function MonsterHeroGame() {
           "aria-disabled": !quickUnlocked,
           "data-difficulty-card": key,
           "data-difficulty-look": key,
-          className: `mhbt-tile mhbt-d-${key} ${BATTLE_DIFFICULTY_DARK_LOOKS.has(key) ? 'dark' : ''} snap-center shrink-0 w-[82%] px-4 pt-3.5 pb-4 transition-all flex flex-col ${active ? 'on scale-100 opacity-100' : 'scale-[.92] opacity-45'} ${quickUnlocked ? '' : 'dim'}`,
+          className: `mhbt-tile mhbt-d-${key} ${BATTLE_DIFFICULTY_DARK_LOOKS.has(key) ? 'dark' : ''} snap-center shrink-0 w-[82%] max-[359px]:w-[90%] px-4 pt-3.5 pb-4 transition-all flex flex-col ${active ? 'on scale-100 opacity-100' : 'scale-[.92] opacity-45'} ${quickUnlocked ? '' : 'dim'}`,
           style: {
             '--acc': setting.text
           }
@@ -102820,7 +102823,7 @@ function MonsterHeroGame() {
         }, "🎖️ 勇者の証片：", heroProofShardReward, "個")))), React.createElement("div", {
           className: "mt-auto grid grid-cols-[minmax(0,1fr)] gap-1.5 pt-2"
         }, React.createElement("div", {
-          className: "flex min-w-0 items-stretch gap-1.5"
+          className: "flex min-w-0 items-stretch gap-1.5 max-[359px]:flex-col"
         }, !species && React.createElement("button", {
           disabled: !!battleTutorial,
           onClick: () => {
