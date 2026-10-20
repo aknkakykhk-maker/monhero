@@ -142,8 +142,16 @@ const LEVEL_V1_SONGS=Object.freeze(new Set([
   'rose_hell_debug', 'rose_short_hell_debug', 'sad_song_hell_debug', 'sad_song_short_hell_debug', 'toward_the_stars_short_hell_debug', 'kaze_ga_soyogu_hell_debug',
   'grievous_lady_hell'
 ]));
-const levelFormulaFor=songId=>LEVEL_V1_SONGS.has(songId)?'v1':'v2';
-const formulaWork=formula=>formula==='v1'?WORK:WORK_V2;
+// --- さらに新しい測り方(v3・2026-10-21 社長「地上と空中が近辺で入り混じってるのがあるけどこれかなり難易度高いから難易度もっと重く見てほしい」
+//     「空中地上は基本は指を離した位置に置くのが基本」「見分けづらいってのが相当難易度高いんだよ」) ---
+// v2 に、地上と空中の見分けにくさ(rhythm-chart-hand-rules.js の skyConfusable)を足す。指の動きより「どちらの高さか読み分けられない」を重く見る。
+//   見分けにくい所 … 500ms 以内に、重なって見える近いレーンへ高さの違うノーツ。近いほど・短いほど・形が同じほど重い(score 0〜1)。SKY_CONFUSE_WORK × score を足す
+//   指を離した位置への持ち上げ・下ろし(skyMixedSwitch の near)… ①の切り替えの重みから SKY_NATURAL_RELIEF を引く(自然な形なので軽く)
+// ★これから足す曲に使う(既定)。公開中の曲は v1(上の一覧)のまま測り、HELL 9譜面の表示は v2 の値(LEVEL_OVERRIDES)のまま
+const SKY_CONFUSE_WORK=10,SKY_NATURAL_RELIEF=.6;
+const WORK_V3=Object.freeze({...WORK_V2,skyConfuse:SKY_CONFUSE_WORK,skyNatural:SKY_NATURAL_RELIEF});
+const levelFormulaFor=songId=>LEVEL_V1_SONGS.has(songId)?'v1':'v3';
+const formulaWork=formula=>formula&&typeof formula==='object'?formula:formula==='v1'?WORK:formula==='v2'?WORK_V2:WORK_V3;  // 重みの表をそのまま渡すと、比べるための試し測り
 const SKY_FAST_MS=250;
 
 
@@ -193,6 +201,8 @@ const noteWork=(note,previous,context,WORK)=>{
   if(context.held)work+=WORK.whileHeld;
   if(context.cross)work+=WORK.cross;
   if(context.sameSideHeld&&WORK.sameSideHeld)work+=WORK.sameSideHeld;
+  if(context.skyConfuse&&WORK.skyConfuse)work+=WORK.skyConfuse*context.skyConfuse;
+  if(context.skyNatural&&WORK.skyNatural)work=Math.max(1,work-WORK.skyNatural);
   if(context.skySwitch)work+=WORK.skySwitch;
   if(context.skySwitchFast)work+=WORK.skySwitchFast*context.skySwitchFast;
   if(context.skySplit)work+=WORK.skySplit;
@@ -220,7 +230,7 @@ const noteWork=(note,previous,context,WORK)=>{
 // これより少ないノーツの譜面は測らない。数個しか無い確認用の型は、
 // 「いちばん忙しい4秒」を取っても意味のある数字にならない。
 const LEVEL_MIN_NOTES=8;
-const chartStrain=(chart,{formula='v2'}={})=>{
+const chartStrain=(chart,{formula='v3'}={})=>{
   const WORK=formulaWork(formula);
   const notes=(chart&&Array.isArray(chart.notes)?chart.notes:[])
     .slice().sort((a,b)=>(Number(a.timeMs)||0)-(Number(b.timeMs)||0));
@@ -275,7 +285,11 @@ const chartStrain=(chart,{formula='v2'}={})=>{
   const works=[];
   let previous=null;
   const lastByHand={};
-  const parts={sameSideHeld:0,gap:0,lane:0,thin:0,chord:0,chordChain:0,flick:0,held:0,cross:0,slide:0,skySwitch:0,...(sky?{skySwitchFast:0,skyCross:0,skySplit:0,sameHandFast:0}:{})};
+  // v3: 見分けにくさ(押し始めのノーツごとにいちばん重い組の score)と、指を離した位置への持ち上げ・下ろし(near)
+  const mixedKind=new Map(),confuse=new Map();
+  if(sky&&WORK.skyNatural)for(const m of HR.skyMixedSwitch(notes))if(!mixedKind.has(m.note))mixedKind.set(m.note,m.kind);
+  if(sky&&WORK.skyConfuse)for(const c of HR.skyConfusable(notes))confuse.set(c.note,c.score);
+  const parts={skyConfuse:0,skyNatural:0,sameSideHeld:0,gap:0,lane:0,thin:0,chord:0,chordChain:0,flick:0,held:0,cross:0,slide:0,skySwitch:0,...(sky?{skySwitchFast:0,skyCross:0,skySplit:0,sameHandFast:0}:{})};
   for(const note of notes){
     const timeMs=Number(note.timeMs)||0;
     const chordGapLanes=chordGapOf(note);
@@ -294,7 +308,9 @@ const chartStrain=(chart,{formula='v2'}={})=>{
     const hand=noteTouchLane(note)<3?'L':'R',handGap=lastByHand[hand]!=null?timeMs-lastByHand[hand]:Infinity;
     const sameHandFast=sky&&handGap>8&&handGap<HAND_MODEL.restrikeComfortMs?(HAND_MODEL.restrikeComfortMs-handGap)/HAND_MODEL.restrikeComfortMs:0;
     lastByHand[hand]=timeMs;
-    const work=noteWork(note,previous,{chordGapLanes,held,chordChain,cross,skySwitch,skySwitchFast,skySplit,sameHandFast,sameSideHeld},WORK);
+    const skyNatural=mixedKind.get(note)==='near',skyConfuse=confuse.get(note)||0;
+    const work=noteWork(note,previous,{chordGapLanes,held,chordChain,cross,skySwitch,skySwitchFast,skySplit,sameHandFast,sameSideHeld,skyConfuse,skyNatural},WORK);
+    if(skyConfuse)parts.skyConfuse++;if(skyNatural)parts.skyNatural++;
     if(sameSideHeld)parts.sameSideHeld++;
     if(sameHandFast)parts.sameHandFast++;
     if(skySwitchFast)parts.skySwitchFast++;
@@ -348,8 +364,8 @@ const chartHasSky=chart=>(chart&&Array.isArray(chart.notes)?chart.notes:[]).some
   ||(Array.isArray(note&&note.slidePoints)&&note.slidePoints.some(point=>Number(point&&point.sky)>0)));
 const groundedChart=chart=>({...chart,notes:chart.notes.map(note=>({...note,skyHeight:0,
   ...(Array.isArray(note.slidePoints)?{slidePoints:note.slidePoints.map(point=>({...point,sky:0}))}:{})}))});
-// formula … 'v2'(新しい測り方・既定)か 'v1'(前の測り方)。曲ごとの決め方は levelFormulaFor
-const chartLevel=(chart,{formula='v2'}={})=>{
+// formula … 'v3'(いちばん新しい測り方・既定)・'v2'・'v1'(前の測り方)。曲ごとの決め方は levelFormulaFor
+const chartLevel=(chart,{formula='v3'}={})=>{
   const strain=chartStrain(chart,{formula});
   if(!strain)return {level:0,strain:null};
   if(!chartHasSky(chart))return {level:levelFromRaw(strain.raw),strain};
@@ -471,7 +487,7 @@ const writeRuntimeLevels=()=>{
   return lines.length;
 };
 
-module.exports={levelFormulaFor,LEVEL_V1_SONGS,WORK_V2,SKY_MIX_FACTOR,SAME_SIDE_HELD,chartLevel,chartStrain,songLevels,levelFromRaw,loadRuntimeSongs,writeRuntimeLevels,LEVEL_MIN_NOTES,LEVEL_OVERRIDES,
+module.exports={levelFormulaFor,LEVEL_V1_SONGS,WORK_V2,WORK_V3,SKY_CONFUSE_WORK,SKY_NATURAL_RELIEF,SKY_MIX_FACTOR,SAME_SIDE_HELD,chartLevel,chartStrain,songLevels,levelFromRaw,loadRuntimeSongs,writeRuntimeLevels,LEVEL_MIN_NOTES,LEVEL_OVERRIDES,
   LEVEL_ANCHOR,LEVEL_SCALE,LEVEL_GAMMA,LEVEL_MIN,LEVEL_MAX,WORK,SKY_LEVEL_FACTOR,chartHasSky,LEVEL_OVERRIDES,shownLevel};
 
 if(require.main===module){
