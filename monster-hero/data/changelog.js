@@ -42,11 +42,12 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-10-20 12:26", type:'update', group:'rhythm', title:'モンヒロビート：いくつかの曲の HELL の難易度の数字を見直しました', status:'new',
+    date: "2026-10-20 12:26", type:'update', group:'rhythm', title:'モンヒロビート：HELL の難易度の数字を見直しました', status:'new',
     items:[
       '空中と地上を行き来する忙しさが、遊んだときの手ごたえに合うように、HELL の Lv. を見直しました。譜面はそのままです。',
       '「Toward the Stars, Paradise or Truth」の HELL は Lv.57、「ROSE」は Lv.52、「ROSE short ver.」は Lv.50、「SAD SONG」は Lv.39、「SAD SONG short ver.」は Lv.43 になりました。',
-      'ほかの曲の Lv. は変わりません。',
+      '「Grievous Lady」の HELL は Lv.69、「Sheriruth」は Lv.61、「Against My Own Shadow」は Lv.51、「風がそよぐ場所」は Lv.22 になりました。',
+      'HELL のない難易度の Lv. は変わりません。',
     ],
   },
   {
@@ -641,7 +642,7 @@ const CHANGELOG = [
     items:[
       '「Against My Own Shadow」に、6段目の難易度 HELL が加わりました。地上のノーツに加えて、空から SKY TAP と SKY SLIDE が流れてきます。',
       'MASTER を1回クリアすると遊べるようになります。',
-      'レベルは HELL Lv.42 です。ノーツ数は 438 です。',
+      'レベルは HELL Lv.51 です。ノーツ数は 438 です。',
       '同じ側の指で続けて叩く速い連打が多い譜面です。',
     ],
   },
@@ -719,7 +720,7 @@ const CHANGELOG = [
     items:[
       'Sheriruth・Grievous Lady・風がそよぐ場所に、6段目の難易度 HELL が加わりました。地上のノーツに加えて、空から SKY TAP と SKY SLIDE が流れてきます。',
       'その曲の MASTER を1回クリアすると、その曲の HELL が遊べるようになります。',
-      'レベルは Sheriruth Lv.54 ／ Grievous Lady Lv.60 ／ 風がそよぐ場所 Lv.23 です。風がそよぐ場所は、HELL に慣れるための入口です。',
+      'レベルは Sheriruth Lv.61 ／ Grievous Lady Lv.69 ／ 風がそよぐ場所 Lv.22 です。風がそよぐ場所は、HELL に慣れるための入口です。',
       'SKY TAP（赤い板）は、地上の判定ラインより上にある紫の線で叩きます。横の位置は地上と同じレーンです。',
       'SKY SLIDE は、押さえたまま帯をなぞります。帯が青なら左手、桃なら右手が取る目印です。',
       'HELL が遊べるようになった日に、助手のお話「空まで届くビート」と遊び方の説明が1度だけ流れます。プロフィールの「イベント回想」から見返せます。',

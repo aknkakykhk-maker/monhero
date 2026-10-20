@@ -132,11 +132,11 @@ const runtime=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js')
     // 1ノーツの重さに足した生の値そのもの(一律の倍率ではない)で、空中を地上と見なした Lv. より下にならない
     {const {levelFromRaw}=require('./rhythm-chart-level.js');const groundLv=chartLevel(grounded(hell)).level,lv=chartLevel(hell);
       check('Sheriruth HELL の式の Lv. は、空中込みの生の値から測った値(空中を地上と見なした Lv. 以上)',lv.level===levelFromRaw(lv.strain.raw)&&lv.level>=groundLv,`式 Lv.${lv.level} / 地上と見なして Lv.${groundLv}`);}
-    // 公開中の HELL 4曲(と古い試作の Sheriruth)の表示は、公開したときの値のまま(LEVEL_OVERRIDES で固定。Against My Own Shadow は新しい式の 42 で公開)
+    // 公開中の HELL 4曲の表示(2026-10-20 夕方からは新しい測り方 v2 の値。下の 5-2 で9譜面まとめて見る)
     {const {shownLevel,loadRuntimeSongs:loadSongs}=require('./rhythm-chart-level.js');const all=[...(loadSongs().RHYTHM_PROTO_SONGS||[])];
-      for(const [id,d,want] of [['sheriruth_hell_debug','HELL',54],['grievous_lady_hell','MASTER',60],['kaze_ga_soyogu_hell_debug','HELL',23],['against_my_own_shadow_hell_debug','HELL',42]]){
+      for(const [id,d,want] of [['sheriruth_hell_debug','HELL',61],['grievous_lady_hell','MASTER',69],['kaze_ga_soyogu_hell_debug','HELL',22],['against_my_own_shadow_hell_debug','HELL',51]]){
         const s=all.find(x=>x.songId===id),c=s&&s.difficulties[d];
-        check(`公開中の HELL ${id} の表示は前の値 Lv.${want} のまま(新しい式に変えても動かない)`,!!c&&shownLevel(id,d,c)===want&&c.level===want,`譜面 Lv.${c&&c.level} / 表示 ${c&&shownLevel(id,d,c)} / 新しい式 ${c&&chartLevel(c).level}`);}}
+        check(`公開中の HELL ${id} の表示は Lv.${want}(新しい測り方の値)`,!!c&&shownLevel(id,d,c)===want&&c.level===want,`譜面 Lv.${c&&c.level} / 表示 ${c&&shownLevel(id,d,c)} / 新しい式 ${c&&chartLevel(c).level}`);}}
     check('Sheriruth HELL は空中のぶん MASTER より重い',hellStrain.raw>masterStrain.raw&&hell.level>master.level,
       `HELL 生${hellStrain.raw} Lv.${hell.level} / MASTER 生${masterStrain.raw} Lv.${master.level}`);
   }
@@ -167,11 +167,13 @@ const runtime=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js')
   check('v2 の重み: 空中の入り乱れは 1.7倍、押さえている手の側は 3',L.SKY_MIX_FACTOR===1.7&&L.SAME_SIDE_HELD===3
     &&Math.abs(L.WORK_V2.sameHandFast-L.WORK.sameHandFast*1.7)<1e-9&&Math.abs(L.WORK_V2.skySwitch-L.WORK.skySwitch*1.7)<1e-9&&L.WORK_V2.sameSideHeld===3&&!L.WORK.sameSideHeld);
   // 社長が決めた5曲の HELL(2026-10-20)は、新しい測り方の値を表示にした。値は v2 で測った値と同じ・譜面の数字とも同じ
-  const SET={toward_the_stars_short_hell_debug:57,rose_hell_debug:52,rose_short_hell_debug:50,sad_song_hell_debug:39,sad_song_short_hell_debug:43};
+  // 2026-10-20 夕方からは公開中の HELL 9譜面すべて(Grievous Lady は試作の枠の MASTER の段に置いてある)
+  const SET={toward_the_stars_short_hell_debug:57,rose_hell_debug:52,rose_short_hell_debug:50,sad_song_hell_debug:39,sad_song_short_hell_debug:43,
+    sheriruth_hell_debug:61,grievous_lady_hell:69,against_my_own_shadow_hell_debug:51,kaze_ga_soyogu_hell_debug:22};
   for(const [id,want] of Object.entries(SET)){
-    const song=all.find(x=>x.songId===id),c=song&&song.difficulties.HELL;
-    check(`${id} の HELL は Lv.${want}(新しい測り方の値・譜面の数字と表示が同じ)`,!!c&&c.level===want&&L.shownLevel(id,'HELL',c)===want&&L.chartLevel(c).level===want,
-      c?`譜面 ${c.level} / 表示 ${L.shownLevel(id,'HELL',c)} / v2 ${L.chartLevel(c).level} / v1 ${L.chartLevel(c,{formula:'v1'}).level}`:'譜面が無い');
+    const d=id==='grievous_lady_hell'?'MASTER':'HELL',song=all.find(x=>x.songId===id),c=song&&song.difficulties[d];
+    check(`${id} の HELL は Lv.${want}(新しい測り方の値・譜面の数字と表示が同じ)`,!!c&&c.level===want&&L.shownLevel(id,d,c)===want&&L.chartLevel(c).level===want,
+      c?`譜面 ${c.level} / 表示 ${L.shownLevel(id,d,c)} / v2 ${L.chartLevel(c).level} / v1 ${L.chartLevel(c,{formula:'v1'}).level}`:'譜面が無い');
   }
   // ② 押さえている手の側に来るノーツ: 右で押さえている間に右へ来るタップは数え、左へ来るタップは数えない
   const hold={type:'HOLD',lane:4,subLane:8,subLaneWidth:2,timeMs:1000,endTimeMs:3000};
