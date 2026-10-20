@@ -4,6 +4,11 @@ const MARKET_GRID_CLASS = 'grid grid-cols-3 gap-2.5 pb-4';
 // 商品アイコンの大きさ。円盤石は絵を見せたいのでいちばん大きく、
 // ブリーダーアイコンやカード・アイテムは名前のほうが大事なので小さくする
 const MARKET_ICON_SIZE = { disc: 'w-12 h-12', assist: 'w-10 h-10', icon: 'w-10 h-10', item: 'w-9 h-9', frame: 'w-10 h-10' };
+// フレームの商品の絵(2026-10-20)。枠の外側まで MARKET_FRAME_BOX_PX 四方に収める。アイコンは最大 MARKET_FRAME_AVATAR_PX(前の w-10 と同じ)。
+// 色の輪の枠(CSS)は外側に少しだけ出るので、その分を見込む
+const MARKET_FRAME_BOX_PX = 56;
+const MARKET_FRAME_AVATAR_PX = 40;
+const MARKET_FRAME_RING_BOX = 1.2;
 // 全身画像を使う一部のアイコンは、画像自体には手を加えず表示時だけ顔まわりへ寄せる。
 // 帽子を残したまま顔が円の中央で大きく見えるよう、対象IDごとに拡大率と位置を固定する。
 const MARKET_PROFILE_ICON_STYLES = {
@@ -199,11 +204,17 @@ const MarketProductIcon = ({ item, onZoom, disabled=false, previewIcon=null }) =
   // プロフィールフレームの商品(2026-10-03)。枠は円の外へはみ出すので、overflow-hidden の円には入れず、
   // 中が空の円(薄い下地)に枠を重ねて見せる。枠の描き方は ProfileFrameLayer(全画面で同じ)
   if(item.type==='frame'){
-    const frameCls=`${MARKET_ICON_SIZE.frame} shrink-0 ${disabled?'':'active:scale-90'}`;
+    // 枠の絵はアイコンの外へはみ出す(穴の小さい絵ほど大きい。ハロウィン・恐はアイコンの約1.9倍)。そのままだと下の商品名に重なるので、
+    // 置き場所を MARKET_FRAME_BOX_PX 四方に取り、枠の外側までその中へ収まる大きさでアイコンを描く(2026-10-20 窓口「名前に重なる」)
+    const frame=typeof profileFrameById==='function'?profileFrameById(item.id):null;
+    const box=frame&&frame.kind==='image'?(parseFloat(profileFrameImageStyle(frame).width)||100)/100:MARKET_FRAME_RING_BOX;
+    const avatarPx=Math.min(MARKET_FRAME_AVATAR_PX,Math.floor(MARKET_FRAME_BOX_PX/Math.max(1,box)));
+    const frameCls=`flex shrink-0 items-center justify-center ${disabled?'':'active:scale-90'}`;
+    const frameStyle={width:MARKET_FRAME_BOX_PX,height:MARKET_FRAME_BOX_PX};
     // 商品の小さな絵は、自分のアイコンに付けた姿(買う前に自分に付けるとどう見えるか分かる)。
     // previewIcon={src,id} は商品カード(MarketProductCard)の呼び出し側から渡す。無いときは下地の円
-    const inner=<ProfileAvatar src={previewIcon&&previewIcon.src} id={previewIcon&&previewIcon.id} frameId={item.id} className="w-full h-full" fallback={<span className="h-full w-full rounded-full bg-slate-800/80"/>}/>;
-    return onZoom?<button type="button" onClick={onZoom} aria-label={`${item.name}を大きく見る`} className={frameCls}>{inner}</button>:<div className={frameCls}>{inner}</div>;
+    const inner=<span data-market-frame-avatar className="block shrink-0" style={{width:avatarPx,height:avatarPx}}><ProfileAvatar src={previewIcon&&previewIcon.src} id={previewIcon&&previewIcon.id} frameId={item.id} className="w-full h-full" fallback={<span className="h-full w-full rounded-full bg-slate-800/80"/>}/></span>;
+    return onZoom?<button type="button" onClick={onZoom} aria-label={`${item.name}を大きく見る`} className={frameCls} style={frameStyle} data-market-frame-icon>{inner}</button>:<div className={frameCls} style={frameStyle} data-market-frame-icon>{inner}</div>;
   }
   const content=item.icon?(item.type==='icon'?<BreederIcon src={item.icon} id={item.id} alt={item.name} className="w-full h-full"/>:item.type==='assist'&&ASSIST_CARD_ICON_STYLES[item.id]?<AssistCardIcon icon={item.icon} cardId={item.id} className="w-full h-full"/>:<img src={item.icon} alt={item.name} className="w-full h-full object-cover"/>):<span className="text-xl">{item.emoji}</span>;
   const cls=`${MARKET_ICON_SIZE[item.type]||'w-10 h-10'} rounded-full overflow-hidden border-2 border-white/10 shrink-0 flex items-center justify-center bg-black/30 ${disabled?'':'active:scale-90'}`;

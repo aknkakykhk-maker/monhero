@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8098086189f18a0b
+// source-sha256: 73a989c9518f2f6a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-20 11:50";
+const BUILD_DATE = "2026-10-20 11:57";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -15298,6 +15298,9 @@ const MARKET_ICON_SIZE = {
   item: 'w-9 h-9',
   frame: 'w-10 h-10'
 };
+const MARKET_FRAME_BOX_PX = 56;
+const MARKET_FRAME_AVATAR_PX = 40;
+const MARKET_FRAME_RING_BOX = 1.2;
 const MARKET_PROFILE_ICON_STYLES = {
   Tiger: {
     scale: 2.31,
@@ -15710,8 +15713,22 @@ const MarketProductIcon = ({
   previewIcon = null
 }) => {
   if (item.type === 'frame') {
-    const frameCls = `${MARKET_ICON_SIZE.frame} shrink-0 ${disabled ? '' : 'active:scale-90'}`;
-    const inner = React.createElement(ProfileAvatar, {
+    const frame = typeof profileFrameById === 'function' ? profileFrameById(item.id) : null;
+    const box = frame && frame.kind === 'image' ? (parseFloat(profileFrameImageStyle(frame).width) || 100) / 100 : MARKET_FRAME_RING_BOX;
+    const avatarPx = Math.min(MARKET_FRAME_AVATAR_PX, Math.floor(MARKET_FRAME_BOX_PX / Math.max(1, box)));
+    const frameCls = `flex shrink-0 items-center justify-center ${disabled ? '' : 'active:scale-90'}`;
+    const frameStyle = {
+      width: MARKET_FRAME_BOX_PX,
+      height: MARKET_FRAME_BOX_PX
+    };
+    const inner = React.createElement("span", {
+      "data-market-frame-avatar": true,
+      className: "block shrink-0",
+      style: {
+        width: avatarPx,
+        height: avatarPx
+      }
+    }, React.createElement(ProfileAvatar, {
       src: previewIcon && previewIcon.src,
       id: previewIcon && previewIcon.id,
       frameId: item.id,
@@ -15719,14 +15736,18 @@ const MarketProductIcon = ({
       fallback: React.createElement("span", {
         className: "h-full w-full rounded-full bg-slate-800/80"
       })
-    });
+    }));
     return onZoom ? React.createElement("button", {
       type: "button",
       onClick: onZoom,
       "aria-label": `${item.name}を大きく見る`,
-      className: frameCls
+      className: frameCls,
+      style: frameStyle,
+      "data-market-frame-icon": true
     }, inner) : React.createElement("div", {
-      className: frameCls
+      className: frameCls,
+      style: frameStyle,
+      "data-market-frame-icon": true
     }, inner);
   }
   const content = item.icon ? item.type === 'icon' ? React.createElement(BreederIcon, {

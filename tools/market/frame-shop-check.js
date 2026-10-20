@@ -201,6 +201,10 @@ check('ブリーダーP交換所で買うとき、条件を保存値で読み直
   /if \(item\.type === 'frame'\) \{\s*const status = profileFrameConditionStatus\(profileFrameById\(item\.id\), await loadRhythmClearTotal\(\), 'breederPoint', await loadRhythmBuddyForFrames\(\), await refreshRaidJackBossDown\(\)\);\s*if \(status && !status\.met\)/.test(app));
 check('ビートP交換所で交換するときも、条件を保存値で読み直して確かめる',
   /if \(isFrame\) \{\s*const frameStatus = profileFrameConditionStatus\(profileFrameById\(offer\.frameId\), await loadRhythmClearTotal\(\), 'beatPoint', await loadRhythmBuddyForFrames\(\), await refreshRaidJackBossDown\(\)\);\s*if \(frameStatus && !frameStatus\.met\)/.test(app));
+// 商品の絵(2026-10-20 窓口「枠が大きいフレームの絵が商品名の1行目に重なる」): 枠の外側まで決まった四方に収める
+check('フレームの商品の絵は、枠の外側まで置き場所に収める(商品名に重ならない)',
+  /const avatarPx=Math\.min\(MARKET_FRAME_AVATAR_PX,Math\.floor\(MARKET_FRAME_BOX_PX\/Math\.max\(1,box\)\)\);/.test(widgets)
+  && /const MARKET_FRAME_BOX_PX = 56;/.test(widgets));
 check('条件が未達成のカードは買えない札が出る(ブリーダーP・ビートP)',
   market.includes('canBuy = !comingSoon && !frameLocked && !owned') && market.includes("canBuy={!owned&&!frameLocked&&safeEventPoints>=offer.cost&&!busy}"));
 check('モンヒロビートの通算クリア回数は新しいキーで数え、既存の mh_rhythm_best_v1 は書き換えない',

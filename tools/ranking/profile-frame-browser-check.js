@@ -24,8 +24,10 @@ const PAGE_URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/in
 // どちらも data/breeder.js から作る(検査へ名前を書き写すと、増やしたときにここだけ古くなる)
 const BREEDER_DATA = fs.readFileSync(path.join(__dirname, '../../monster-hero/data/breeder.js'), 'utf8');
 const frameNames = (released) => [...BREEDER_DATA
-  .matchAll(/\{\s*id:'[a-z0-9_]+',\s*name:'([^']+)',\s*kind:'(?:none|css|image)',\s*released:(true|false)/g)]
-  .filter(m => (m[2] === 'true') === released).map(m => m[1]);
+  .matchAll(/\{\s*id:'[a-z0-9_]+',\s*name:'([^']+)',\s*kind:'(?:none|css|image)',\s*released:(true|false)[^\n]*\n(?:\s*unlock:\{ gift:'([A-Za-z]+)')?/g)]
+  .filter(m => (m[2] === 'true') === released && !m[3]).map(m => m[1]);
+// プレゼントで届く枠(unlock.gift・2026-10-20 ハロウィン・妖)は、届くまで選択画面に並ばない
+const GIFT_FRAMES = [...BREEDER_DATA.matchAll(/\{\s*id:'[a-z0-9_]+',\s*name:'([^']+)',\s*kind:'image',\s*released:true[^\n]*\n\s*unlock:\{ gift:'[A-Za-z]+'/g)].map(m => m[1]);
 const EXPECTED_FRAMES = frameNames(true);
 const HIDDEN_FRAMES = frameNames(false);
 const results = [];
@@ -170,6 +172,7 @@ async function run() {
   check('公開フレームが全部並ぶ', options.length === EXPECTED_FRAMES.length,
     `画面 ${options.length}件 / データ ${EXPECTED_FRAMES.length}件`);
   // もらっていない枠には名前の下に条件(「みゅあ Lv2」)も付くので、丸ごと一致ではなく含むかで見る
+  check('プレゼントで届く枠は、届くまで並ばない', GIFT_FRAMES.length > 0 && GIFT_FRAMES.every(n => !options.some(o => o.includes(n))), GIFT_FRAMES.join(','));
   check('名前がデータどおり', EXPECTED_FRAMES.every(n => options.some(o => o.includes(n))),
     EXPECTED_FRAMES.filter(n => !options.some(o => o.includes(n))).join(' / ') || `${options.length}件`);
   check('④ 未公開の豪華フレームは出ない',
