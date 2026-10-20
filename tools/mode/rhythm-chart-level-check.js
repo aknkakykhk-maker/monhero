@@ -156,6 +156,33 @@ const runtime=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js')
   check(`レベルが ${LEVEL_MIN}〜${LEVEL_MAX} に収まっている`,out.length===0,out.join(' / '));
 }
 
+// --- 5-2. 新しい測り方(v2・2026-10-20)。これから足す曲だけに使い、いまある曲の表示は1つも動かさない ---
+{
+  const L=require('./rhythm-chart-level.js');
+  const {RHYTHM_PROTO_SONGS}=loadRuntimeSongs();
+  const all=[...RHYTHM_SONGS,...(RHYTHM_PROTO_SONGS||[])];
+  check('いまある曲は全部、前の測り方(v1)で測る一覧に入っている',all.length>0&&all.every(song=>L.levelFormulaFor(song.songId)==='v1'),
+    all.filter(song=>L.levelFormulaFor(song.songId)!=='v1').map(song=>song.songId).join(','));
+  check('一覧に無い曲(これから足す曲)は新しい測り方(v2)',L.levelFormulaFor('a_new_song_not_listed')==='v2');
+  check('v2 の重み: 空中の入り乱れは 1.7倍、押さえている手の側は 3',L.SKY_MIX_FACTOR===1.7&&L.SAME_SIDE_HELD===3
+    &&Math.abs(L.WORK_V2.sameHandFast-L.WORK.sameHandFast*1.7)<1e-9&&Math.abs(L.WORK_V2.skySwitch-L.WORK.skySwitch*1.7)<1e-9&&L.WORK_V2.sameSideHeld===3&&!L.WORK.sameSideHeld);
+  // 社長が決めた5曲の HELL(2026-10-20)は、新しい測り方の値を表示にした。値は v2 で測った値と同じ・譜面の数字とも同じ
+  const SET={toward_the_stars_short_hell_debug:57,rose_hell_debug:52,rose_short_hell_debug:50,sad_song_hell_debug:39,sad_song_short_hell_debug:43};
+  for(const [id,want] of Object.entries(SET)){
+    const song=all.find(x=>x.songId===id),c=song&&song.difficulties.HELL;
+    check(`${id} の HELL は Lv.${want}(新しい測り方の値・譜面の数字と表示が同じ)`,!!c&&c.level===want&&L.shownLevel(id,'HELL',c)===want&&L.chartLevel(c).level===want,
+      c?`譜面 ${c.level} / 表示 ${L.shownLevel(id,'HELL',c)} / v2 ${L.chartLevel(c).level} / v1 ${L.chartLevel(c,{formula:'v1'}).level}`:'譜面が無い');
+  }
+  // ② 押さえている手の側に来るノーツ: 右で押さえている間に右へ来るタップは数え、左へ来るタップは数えない
+  const hold={type:'HOLD',lane:4,subLane:8,subLaneWidth:2,timeMs:1000,endTimeMs:3000};
+  const taps=(lane)=>Array.from({length:10},(_,i)=>({type:'TAP',lane,subLane:lane*2,subLaneWidth:2,timeMs:1200+i*150}));
+  const same=chartStrain({notes:[hold,...taps(5)]}),other=chartStrain({notes:[hold,...taps(0)]});
+  check('② 押さえている側へ来るノーツを数え、反対側は数えない',same.parts.sameSideHeld===10&&other.parts.sameSideHeld===0,`同じ側 ${same.parts.sameSideHeld} / 反対側 ${other.parts.sameSideHeld}`);
+  const sameV1=chartStrain({notes:[hold,...taps(5)]},{formula:'v1'}),otherV1=chartStrain({notes:[hold,...taps(0)]},{formula:'v1'});
+  check('② は新しい測り方だけで重くなる(前の測り方では足さない)',same.raw>sameV1.raw&&Math.abs(other.raw-otherV1.raw)<1e-9,
+    `同じ側 v2 ${same.raw} / v1 ${sameV1.raw}・反対側 v2 ${other.raw} / v1 ${otherV1.raw}`);
+}
+
 // --- 6. 画面へ出ている ---
 {
   const game=fs.readFileSync(path.join(ROOT,'monster-hero/src/game-system.jsx'),'utf8');

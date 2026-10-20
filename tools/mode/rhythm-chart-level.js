@@ -115,6 +115,35 @@ const WORK=Object.freeze({
   // 「1つ前のノーツとの間隔」だけを見る詰まり具合(1.)では、左右交互の連打と同じ側の連打が同じ重さになっていた
   sameHandFast:6,
 });
+// --- 新しい測り方(v2・2026-10-20 社長「ヘルは空中が入ることで難易度設定として地上空中の入り乱れを重く考えたほうがいい」
+//     「スライド、ホールドも例えば右側にスライドやホールドがあって右で押さえてるのに右側にノーツが来るパターンとかも難易度として重くなる」) ---
+// ① 地上と空中の入り乱れ: 切り替え・速い切り替え・上下の交差・高さの違う押さえ中・同じ手の速い連打の重みを、まとめて SKY_MIX_FACTOR 倍。
+//    Toward the Stars(short)の HELL が社長の体感 57 になる倍率(1.6倍で55・1.8倍で58)。空中の無い譜面では一度も起きない
+// ② 押さえている手の側にノーツが来る(sameSideHeld): ホールド・スライドを押さえている間に、その帯のいる側(左右の半分)へ別のノーツ。
+//    地上・空中・全難易度で数える。重みは SAME_SIDE_HELD(「押さえながら叩く」whileHeld の6倍)。今の267譜面で 1→27譜面がどれも+1、2→46譜面(+2が3)、
+//    3→67譜面(+1が53・+2が13・+4が1=The City Beneath the Comets EXPERT 押さえ側53個)、4→+6が出て HARD でも+4。社長「もっと重く(2倍より上)」で3
+// ★v2 はこれから足す曲に使う。いま公開・試作中の曲(LEVEL_V1_SONGS)は v1(上の WORK)のまま測るので、表示は1つも動かない
+const SKY_MIX_FACTOR=1.7,SAME_SIDE_HELD=3;
+const WORK_V2=Object.freeze({...WORK,
+  skySwitch:WORK.skySwitch*SKY_MIX_FACTOR,skySwitchFast:WORK.skySwitchFast*SKY_MIX_FACTOR,skyCross:WORK.skyCross*SKY_MIX_FACTOR,
+  skySplit:WORK.skySplit*SKY_MIX_FACTOR,sameHandFast:WORK.sameHandFast*SKY_MIX_FACTOR,sameSideHeld:SAME_SIDE_HELD});
+// v1(前の測り方)で測る曲。2026-10-20 にあった全曲(公開中・試作の枠)。ここへ足さない曲は v2 で測る。★消さない(消すと表示が動く)
+const LEVEL_V1_SONGS=Object.freeze(new Set([
+  'atsu_cup_theme_test', 'width_test', 'wide_width_test', 'end_flick_test', 'monster_note_test', 'monster_hero_theme_candidate',
+  'monster_hero_theme_candidate_v2', 'monster_hero_theme_candidate_v3', 'six_eternel_remix_beat', 'mf_ichika_mix', 'monster_hero', 'monster_hero_another',
+  'six_eternel_beat', 'six_eternel_remix', 'stay_with_me', 'kiki_issen', 'kaze_ga_soyogu', 'close_to_your_heart',
+  'eiki_boss_remix', 'pandora_boss_remix', 'dullahan', 'dullahan_clockwork', 'toriko', '4u_hitasura',
+  'kindan_no_resistance', 'crossing_field', 'nothing_without_you', 'mou_hitotsu_no_sekai_e', 'senjou_no_shippuu', 'makutsu_no_senritsu',
+  'the_city_beneath_the_comets', 'freedom_dive', 'only_my_railgun', 'big_bridge_no_shitou', 'rising_hope', 'haruka',
+  'stay_with_me_short', 'kiki_issen_short', 'crazy_party_night', 'crazy_party_night_full', 'emerald_rush', 'wrath_of_the_thorn_king',
+  'monster', 'monster_short', 'anima', 'journey', 'sheriruth', 'grievous_lady',
+  'against_my_own_shadow', 'rose', 'rose_short', 'sad_song', 'sad_song_short', 'toward_the_stars_short',
+  'atsu_cup_theme_debug_short', 'sheriruth_proto', 'sheriruth_hell_debug', 'sheriruth_stop_ref', 'sheriruth_stop_ref_trim', 'against_my_own_shadow_hell_debug',
+  'rose_hell_debug', 'rose_short_hell_debug', 'sad_song_hell_debug', 'sad_song_short_hell_debug', 'toward_the_stars_short_hell_debug', 'kaze_ga_soyogu_hell_debug',
+  'grievous_lady_hell'
+]));
+const levelFormulaFor=songId=>LEVEL_V1_SONGS.has(songId)?'v1':'v2';
+const formulaWork=formula=>formula==='v1'?WORK:WORK_V2;
 const SKY_FAST_MS=250;
 
 
@@ -136,7 +165,7 @@ const touchDistance=(laneDelta,skyDelta)=>Math.hypot(laneDelta,skyDelta*SKY_LANE
 const round=(value,digits=3)=>Math.round(value*10**digits)/10**digits;
 
 // --- 1ノーツぶんの仕事量 ---
-const noteWork=(note,previous,context)=>{
+const noteWork=(note,previous,context,WORK)=>{
   const timeMs=Number(note.timeMs)||0;
   let work=1;
   // 1. 詰まり具合
@@ -163,6 +192,7 @@ const noteWork=(note,previous,context)=>{
   if(note.endFlick===true)work+=WORK.endFlick;
   if(context.held)work+=WORK.whileHeld;
   if(context.cross)work+=WORK.cross;
+  if(context.sameSideHeld&&WORK.sameSideHeld)work+=WORK.sameSideHeld;
   if(context.skySwitch)work+=WORK.skySwitch;
   if(context.skySwitchFast)work+=WORK.skySwitchFast*context.skySwitchFast;
   if(context.skySplit)work+=WORK.skySplit;
@@ -190,7 +220,8 @@ const noteWork=(note,previous,context)=>{
 // これより少ないノーツの譜面は測らない。数個しか無い確認用の型は、
 // 「いちばん忙しい4秒」を取っても意味のある数字にならない。
 const LEVEL_MIN_NOTES=8;
-const chartStrain=chart=>{
+const chartStrain=(chart,{formula='v2'}={})=>{
+  const WORK=formulaWork(formula);
   const notes=(chart&&Array.isArray(chart.notes)?chart.notes:[])
     .slice().sort((a,b)=>(Number(a.timeMs)||0)-(Number(b.timeMs)||0));
   if(notes.length<LEVEL_MIN_NOTES)return null;
@@ -235,7 +266,7 @@ const chartStrain=chart=>{
     return holdLane<=2?noteLane<holdLane:noteLane>holdLane;
   };
   // 空中の難しさ(空中のある譜面だけ・2026-10-13)。上下に分かれた交差の時刻と、長押しのその時刻の高さ
-  const sky=chartHasSky(chart),HR=sky?require('./rhythm-chart-hand-rules.js'):null;
+  const sky=chartHasSky(chart),HR=sky||WORK.sameSideHeld?require('./rhythm-chart-hand-rules.js'):null;
   const skyCrossTimes=[];
   if(sky)for(let i=0;i<sustains.length;i++)for(let j=i+1;j<sustains.length;j++){const a=sustains[i],b=sustains[j];
     const s0=Math.max(a.startMs,b.startMs),e0=Math.min(a.endMs,b.endMs);if(e0-s0<10)continue;let prev=0;
@@ -244,13 +275,15 @@ const chartStrain=chart=>{
   const works=[];
   let previous=null;
   const lastByHand={};
-  const parts={gap:0,lane:0,thin:0,chord:0,chordChain:0,flick:0,held:0,cross:0,slide:0,skySwitch:0,...(sky?{skySwitchFast:0,skyCross:0,skySplit:0,sameHandFast:0}:{})};
+  const parts={sameSideHeld:0,gap:0,lane:0,thin:0,chord:0,chordChain:0,flick:0,held:0,cross:0,slide:0,skySwitch:0,...(sky?{skySwitchFast:0,skyCross:0,skySplit:0,sameHandFast:0}:{})};
   for(const note of notes){
     const timeMs=Number(note.timeMs)||0;
     const chordGapLanes=chordGapOf(note);
     const held=sustains.some(span=>span.startMs<timeMs-1&&timeMs<span.endMs);
     const chordChain=chordGapLanes!=null&&chainedChord(timeMs);
     const cross=held&&crossOf(note,timeMs);
+    // ② 押さえている手の側に来るノーツ(v2 だけが重みを持つ。v1 では空中のある譜面だけ数を内訳に出す)。帯のいる位置はその時刻の位置(スライドは動く)
+    const sameSideHeld=!!HR&&sustains.some(span=>span.note!==note&&span.startMs<timeMs-1&&timeMs<span.endMs-1&&(HR.centerAt(span.note,timeMs)<3)===(noteTouchLane(note)<3));
     // 空中(高さ半分以上)と地上の切り替え。同時押しの相方が違う段なのも切り替えに数える(並べた順で直前になる)
     const skySwitch=!!previous&&(noteTouchSky(note)>=.5)!==(noteTouchSky(previous)>=.5);
     const gapMs=previous?Math.max(1,timeMs-(Number(previous.timeMs)||0)):Infinity;
@@ -261,7 +294,8 @@ const chartStrain=chart=>{
     const hand=noteTouchLane(note)<3?'L':'R',handGap=lastByHand[hand]!=null?timeMs-lastByHand[hand]:Infinity;
     const sameHandFast=sky&&handGap>8&&handGap<HAND_MODEL.restrikeComfortMs?(HAND_MODEL.restrikeComfortMs-handGap)/HAND_MODEL.restrikeComfortMs:0;
     lastByHand[hand]=timeMs;
-    const work=noteWork(note,previous,{chordGapLanes,held,chordChain,cross,skySwitch,skySwitchFast,skySplit,sameHandFast});
+    const work=noteWork(note,previous,{chordGapLanes,held,chordChain,cross,skySwitch,skySwitchFast,skySplit,sameHandFast,sameSideHeld},WORK);
+    if(sameSideHeld)parts.sameSideHeld++;
     if(sameHandFast)parts.sameHandFast++;
     if(skySwitchFast)parts.skySwitchFast++;
     if(skySplit)parts.skySplit++;
@@ -314,14 +348,15 @@ const chartHasSky=chart=>(chart&&Array.isArray(chart.notes)?chart.notes:[]).some
   ||(Array.isArray(note&&note.slidePoints)&&note.slidePoints.some(point=>Number(point&&point.sky)>0)));
 const groundedChart=chart=>({...chart,notes:chart.notes.map(note=>({...note,skyHeight:0,
   ...(Array.isArray(note.slidePoints)?{slidePoints:note.slidePoints.map(point=>({...point,sky:0}))}:{})}))});
-const chartLevel=chart=>{
-  const strain=chartStrain(chart);
+// formula … 'v2'(新しい測り方・既定)か 'v1'(前の測り方)。曲ごとの決め方は levelFormulaFor
+const chartLevel=(chart,{formula='v2'}={})=>{
+  const strain=chartStrain(chart,{formula});
   if(!strain)return {level:0,strain:null};
   if(!chartHasSky(chart))return {level:levelFromRaw(strain.raw),strain};
   // 空中のある譜面(HELL)は、空中の難しさを1ノーツの重さに足した生の値をそのまま Lv. にする(2026-10-13 社長「今後作るものは測る形で」)。
   //   一律の SKY_LEVEL_FACTOR 倍はやめた。公開中の HELL 3曲の表示は LEVEL_OVERRIDES で前の値のまま(「今あるものは変えなくていい」)。
   //   groundLevel(空中を地上と見なした Lv.)・skyFactorLevel(前の式の値)は比べるために返す
-  const ground=chartStrain(groundedChart(chart)),groundLevel=levelFromRaw(ground.raw);
+  const ground=chartStrain(groundedChart(chart),{formula}),groundLevel=levelFromRaw(ground.raw);
   return {level:levelFromRaw(strain.raw),strain,groundLevel,skyFactorLevel:clamp(Math.round(groundLevel*SKY_LEVEL_FACTOR),LEVEL_MIN,LEVEL_MAX)};
 };
 
@@ -359,15 +394,22 @@ const LEVEL_OVERRIDES=Object.freeze({
   // Against My Own Shadow の HELL は新しい式で測った値(社長の体感42)。公開したので表示を固定する(2026-10-13)
   against_my_own_shadow_hell_debug:Object.freeze({HELL:42}),
   sheriruth_proto:Object.freeze({MASTER:47}),
+  // 2026-10-20 社長「この曲のヘルは難易度57はある」「ローズとさっどそんぐも変えといて」: 新しい測り方(v2)の値を表示にする(譜面は1音も変えない)。
+  // 前の測り方では Toward 46・ROSE 45・ROSE short 44・SAD SONG 34・SAD SONG short 35。ほかの公開中の HELL は前の値のまま
+  toward_the_stars_short_hell_debug:Object.freeze({HELL:57}),
+  rose_hell_debug:Object.freeze({HELL:52}),
+  rose_short_hell_debug:Object.freeze({HELL:50}),
+  sad_song_hell_debug:Object.freeze({HELL:39}),
+  sad_song_short_hell_debug:Object.freeze({HELL:43}),
 });
 // 表示に出す Lv.: 上書き(社長の値)があればそれ、無ければ式の値
-const shownLevel=(songId,difficultyId,chart)=>{const o=LEVEL_OVERRIDES[songId];return o&&Number.isFinite(o[difficultyId])?o[difficultyId]:chartLevel(chart).level;};
+const shownLevel=(songId,difficultyId,chart)=>{const o=LEVEL_OVERRIDES[songId];return o&&Number.isFinite(o[difficultyId])?o[difficultyId]:chartLevel(chart,{formula:levelFormulaFor(songId)}).level;};
 const songLevels=(song,difficulties)=>{
   const out={};
   let previous=null;
   const overrides=song&&LEVEL_OVERRIDES[song.songId]||null;
   for(const difficulty of difficulties){
-    const {level,strain}=chartLevel(song.difficulties[difficulty.id]);
+    const {level,strain}=chartLevel(song.difficulties[difficulty.id],{formula:levelFormulaFor(song&&song.songId)});
     if(!strain){out[difficulty.id]={level:0,strain:null};continue;}
     let shown=level;
     if(previous&&strain.raw>previous.raw&&shown<=previous.level)shown=Math.min(LEVEL_MAX,previous.level+1);
@@ -427,7 +469,7 @@ const writeRuntimeLevels=()=>{
   return lines.length;
 };
 
-module.exports={chartLevel,chartStrain,songLevels,levelFromRaw,loadRuntimeSongs,writeRuntimeLevels,LEVEL_MIN_NOTES,LEVEL_OVERRIDES,
+module.exports={levelFormulaFor,LEVEL_V1_SONGS,WORK_V2,SKY_MIX_FACTOR,SAME_SIDE_HELD,chartLevel,chartStrain,songLevels,levelFromRaw,loadRuntimeSongs,writeRuntimeLevels,LEVEL_MIN_NOTES,LEVEL_OVERRIDES,
   LEVEL_ANCHOR,LEVEL_SCALE,LEVEL_GAMMA,LEVEL_MIN,LEVEL_MAX,WORK,SKY_LEVEL_FACTOR,chartHasSky,LEVEL_OVERRIDES,shownLevel};
 
 if(require.main===module){

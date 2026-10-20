@@ -35,6 +35,14 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-10-20 12:26", type:'update', group:'rhythm', title:'モンヒロビート：いくつかの曲の HELL の難易度の数字を見直しました', status:'new',
+    items:[
+      '空中と地上を行き来する忙しさが、遊んだときの手ごたえに合うように、HELL の Lv. を見直しました。譜面はそのままです。',
+      '「Toward the Stars, Paradise or Truth」の HELL は Lv.57、「ROSE」は Lv.52、「ROSE short ver.」は Lv.50、「SAD SONG」は Lv.39、「SAD SONG short ver.」は Lv.43 になりました。',
+      'ほかの曲の Lv. は変わりません。',
+    ],
+  },
+  {
     date: "2026-10-20 11:45", type:'update', group:'items', title:'プロフィールフレームが4種類増えました', status:'new',
     assistantNotice:{ id:'update_notice_frames_1020_v1', type:'market' },
     items:[
@@ -139,7 +147,7 @@ const CHANGELOG = [
     items:[
       'モンヒロビートに、hitoyakyuko の「Toward the Stars, Paradise or Truth」short ver.（2分15秒）を追加しました。曲えらびからすぐ遊べます。',
       'EASY から MASTER までに加えて、空中のノーツが出る HELL があります。HELL は MASTER をクリアすると開きます。MASTER と HELL は手ごわい譜面になっています。',
-      'レベルは EASY Lv.7 ／ NORMAL Lv.8 ／ HARD Lv.13 ／ EXPERT Lv.17 ／ MASTER Lv.37 ／ HELL Lv.46 です。',
+      'レベルは EASY Lv.7 ／ NORMAL Lv.8 ／ HARD Lv.13 ／ EXPERT Lv.17 ／ MASTER Lv.37 ／ HELL Lv.57 です。',
       'ノーツ数は 174 ／ 205 ／ 278 ／ 332 ／ 481 ／ 563 です。',
     ],
     assistantNotice: { id:'update_notice_toward_the_stars_v1', type:'content' },
@@ -161,7 +169,7 @@ const CHANGELOG = [
     items:[
       'モンヒロビートに「SAD SONG」の全編（3分39秒）を追加しました。曲えらびからすぐ遊べます。',
       'EASY から MASTER までに加えて、空中のノーツが出る HELL があります。HELL は MASTER をクリアすると開きます。',
-      'レベルは EASY Lv.8 ／ NORMAL Lv.9 ／ HARD Lv.13 ／ EXPERT Lv.21 ／ MASTER Lv.29 ／ HELL Lv.34 です。',
+      'レベルは EASY Lv.8 ／ NORMAL Lv.9 ／ HARD Lv.13 ／ EXPERT Lv.21 ／ MASTER Lv.29 ／ HELL Lv.39 です。',
       'ノーツ数は 350 ／ 394 ／ 536 ／ 652 ／ 742 です。',
     ],
     assistantNotice:{ id:'update_notice_sad_song_v1', type:'content' },
@@ -173,7 +181,7 @@ const CHANGELOG = [
     items:[
       'モンヒロビートに「SAD SONG」の short ver.（1分22秒）も追加しました。曲えらびでは全編と同じ行にまとまっていて、難易度ボタンの上の「short ver.」で切り替えられます。',
       'short ver. にも HELL があります。short ver. の MASTER をクリアすると開きます。',
-      'レベルは EASY Lv.8 ／ NORMAL Lv.10 ／ HARD Lv.16 ／ EXPERT Lv.24 ／ MASTER Lv.28 ／ HELL Lv.35 です。',
+      'レベルは EASY Lv.8 ／ NORMAL Lv.10 ／ HARD Lv.16 ／ EXPERT Lv.24 ／ MASTER Lv.28 ／ HELL Lv.43 です。',
       'ノーツ数は 139 ／ 164 ／ 221 ／ 268 ／ 300 です。',
     ],
   },
@@ -223,7 +231,7 @@ const CHANGELOG = [
     items:[
       'モンヒロビートに、HANA の「ROSE」の全編（2分45秒）を追加しました。曲えらびからすぐ遊べます。',
       'EASY から MASTER までに加えて、空中のノーツが出る HELL があります。HELL は MASTER をクリアすると開きます。',
-      'レベルは EASY Lv.5 ／ NORMAL Lv.7 ／ HARD Lv.10 ／ EXPERT Lv.17 ／ MASTER Lv.30 ／ HELL Lv.45 です。',
+      'レベルは EASY Lv.5 ／ NORMAL Lv.7 ／ HARD Lv.10 ／ EXPERT Lv.17 ／ MASTER Lv.30 ／ HELL Lv.52 です。',
       'ノーツ数は 159 ／ 197 ／ 266 ／ 424 ／ 533 です。',
     ],
     assistantNotice: { id:'update_notice_rose_v1', type:'content' },
@@ -235,7 +243,7 @@ const CHANGELOG = [
     items:[
       'モンヒロビートに「ROSE」の short ver.（1分55秒）も追加しました。曲えらびでは全編と同じ行にまとまっていて、難易度ボタンの上の「short ver.」で切り替えられます。',
       'short ver. にも HELL があります。short ver. の MASTER をクリアすると開きます。',
-      'レベルは EASY Lv.5 ／ NORMAL Lv.6 ／ HARD Lv.10 ／ EXPERT Lv.17 ／ MASTER Lv.33 ／ HELL Lv.44 です。',
+      'レベルは EASY Lv.5 ／ NORMAL Lv.6 ／ HARD Lv.10 ／ EXPERT Lv.17 ／ MASTER Lv.33 ／ HELL Lv.50 です。',
       'ノーツ数は 113 ／ 131 ／ 183 ／ 286 ／ 356 です。',
     ],
   },
