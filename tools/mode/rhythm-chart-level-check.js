@@ -161,8 +161,10 @@ const runtime=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js')
   const L=require('./rhythm-chart-level.js');
   const {RHYTHM_PROTO_SONGS}=loadRuntimeSongs();
   const all=[...RHYTHM_SONGS,...(RHYTHM_PROTO_SONGS||[])];
-  check('いまある曲は全部、前の測り方(v1)で測る一覧に入っている',all.length>0&&all.every(song=>L.levelFormulaFor(song.songId)==='v1'),
-    all.filter(song=>L.levelFormulaFor(song.songId)!=='v1').map(song=>song.songId).join(','));
+  // 2026-10-21 社長の指示で HELL を作り直した5譜面だけは v3 で測る(見分けにくい形なしで作り直したので、新しい測り方の値を出す)
+  const REWORKED_V3=['toward_the_stars_short_hell_debug','rose_hell_debug','rose_short_hell_debug','sad_song_hell_debug','sad_song_short_hell_debug'];
+  check('いまある曲は全部、前の測り方(v1)で測る一覧に入っている(作り直した HELL 5譜面は v3)',all.length>0&&all.every(song=>L.levelFormulaFor(song.songId)===(REWORKED_V3.includes(song.songId)?'v3':'v1')),
+    all.filter(song=>L.levelFormulaFor(song.songId)!==(REWORKED_V3.includes(song.songId)?'v3':'v1')).map(song=>song.songId).join(','));
   check('一覧に無い曲(これから足す曲)はいちばん新しい測り方(v3・2026-10-21)',L.levelFormulaFor('a_new_song_not_listed')==='v3');
   check('v3 の重み: 見分けにくさ 10(× 近さ・短さ・形の score)・指を離した位置への持ち上げ・下ろしは 0.6 軽く(ほかは v2 と同じ)',L.SKY_CONFUSE_WORK===10&&L.SKY_NATURAL_RELIEF===.6
     &&L.WORK_V3.skyConfuse===10&&L.WORK_V3.skyNatural===.6&&L.WORK_V3.sameSideHeld===L.WORK_V2.sameSideHeld&&L.WORK_V3.skySwitch===L.WORK_V2.skySwitch&&!L.WORK_V2.skyConfuse);
@@ -170,12 +172,13 @@ const runtime=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js')
     &&Math.abs(L.WORK_V2.sameHandFast-L.WORK.sameHandFast*1.7)<1e-9&&Math.abs(L.WORK_V2.skySwitch-L.WORK.skySwitch*1.7)<1e-9&&L.WORK_V2.sameSideHeld===3&&!L.WORK.sameSideHeld);
   // 社長が決めた5曲の HELL(2026-10-20)は、新しい測り方の値を表示にした。値は v2 で測った値と同じ・譜面の数字とも同じ
   // 2026-10-20 夕方からは公開中の HELL 9譜面すべて(Grievous Lady は試作の枠の MASTER の段に置いてある)。表示は v2 の値のまま(v3 は新曲から)
-  const SET={toward_the_stars_short_hell_debug:57,rose_hell_debug:52,rose_short_hell_debug:50,sad_song_hell_debug:39,sad_song_short_hell_debug:43,
+  // 2026-10-21 作り直した5譜面は v3 の値(Toward 51・ROSE 53・ROSE short 49・SAD SONG 39・SAD SONG short 42)
+  const SET={toward_the_stars_short_hell_debug:51,rose_hell_debug:53,rose_short_hell_debug:49,sad_song_hell_debug:39,sad_song_short_hell_debug:42,
     sheriruth_hell_debug:61,grievous_lady_hell:69,against_my_own_shadow_hell_debug:51,kaze_ga_soyogu_hell_debug:22};
   for(const [id,want] of Object.entries(SET)){
-    const d=id==='grievous_lady_hell'?'MASTER':'HELL',song=all.find(x=>x.songId===id),c=song&&song.difficulties[d];
-    check(`${id} の HELL は Lv.${want}(新しい測り方の値・譜面の数字と表示が同じ)`,!!c&&c.level===want&&L.shownLevel(id,d,c)===want&&L.chartLevel(c,{formula:'v2'}).level===want,
-      c?`譜面 ${c.level} / 表示 ${L.shownLevel(id,d,c)} / v2 ${L.chartLevel(c,{formula:'v2'}).level} / v1 ${L.chartLevel(c,{formula:'v1'}).level}`:'譜面が無い');
+    const d=id==='grievous_lady_hell'?'MASTER':'HELL',song=all.find(x=>x.songId===id),c=song&&song.difficulties[d],f=REWORKED_V3.includes(id)?'v3':'v2';
+    check(`${id} の HELL は Lv.${want}(新しい測り方(${f})の値・譜面の数字と表示が同じ)`,!!c&&c.level===want&&L.shownLevel(id,d,c)===want&&L.chartLevel(c,{formula:f}).level===want,
+      c?`譜面 ${c.level} / 表示 ${L.shownLevel(id,d,c)} / ${f} ${L.chartLevel(c,{formula:f}).level} / v1 ${L.chartLevel(c,{formula:'v1'}).level}`:'譜面が無い');
   }
   // ② 押さえている手の側に来るノーツ: 右で押さえている間に右へ来るタップは数え、左へ来るタップは数えない
   const hold={type:'HOLD',lane:4,subLane:8,subLaneWidth:2,timeMs:1000,endTimeMs:3000};
