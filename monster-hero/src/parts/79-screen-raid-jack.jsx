@@ -561,7 +561,7 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
       {faceOf(mon, 'h-12 w-12')}
       <span className="mt-0.5 w-full truncate text-[9px] font-black text-slate-100">{mon.name}</span>
       {/* タイプの印(2026-10-19・社長「タイプわかるようにしてほしい」)。札が狭いのでメインだけ。サブは詳細(i)に出る */}
-      {monsterTypeProtoOn() && (() => { const t = MONSTER_TYPES[monsterTypeOf(mon.baseId || mon.id).main]; return t ? <span data-raid-mon-type={monsterTypeOf(mon.baseId || mon.id).main} className="mt-0.5 flex w-full items-center justify-center gap-px truncate rounded-full border border-white/15 bg-black/30 px-0.5 text-[8px] font-black leading-[12px] tracking-tight text-slate-200"><span aria-hidden="true">{t.icon}</span>{t.label}</span> : null; })()}
+      {monsterTypeProtoOn() && (() => { const t = MONSTER_TYPES[monsterTypeOf(mon.baseId || mon.id).main]; return t ? <span data-raid-mon-type={monsterTypeOf(mon.baseId || mon.id).main} className="mt-0.5 flex w-full items-center justify-center gap-px truncate rounded-full border border-white/15 bg-black/30 px-0.5 text-[8px] font-black leading-[12px] tracking-tight text-slate-200"><span aria-hidden="true">{cardIconNode(t.icon, 8)}</span>{t.label}</span> : null; })()}
       {/* 置いた距離(置いていなければ、いま光っている枠の距離)での適性 */}
       {pct != null && <span data-raid-mon-apt={showR} className="mt-0.5 flex items-center gap-0.5">{rangeChip(showR)}<span className={`text-[9px] font-black tabular-nums ${pctTone(pct)}`}>{formatAptPct(pct)}</span></span>}
     </button>

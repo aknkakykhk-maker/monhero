@@ -39,10 +39,10 @@ const SONGS={sheriruth:{marker:'sheriruth-v3',zero:711.6-2594.75,beat:324.342,le
     source:'audio',variant:3,crosses:'auto',crossUpper:'mover',crossDepth:-1,drawers:false},
   // ROSE(HANA・2026-10-18 社長「新曲。ショートとフルで両方作って。ヘルもありで」)。拍は解析ファイル(authoring/rose-v3-audio.json・rose-short-v3-audio.json の timing)。
   // 曲の解析から作る(source:'audio')。引き出し(R1〜R5)は曲の区切りを見て道具が使う/使わないを決める(出力に理由が出る)
-  rose:{marker:'rose-v3',zero:2116,beat:480,levelRe:/const roseHellChart=mhChart\((\d+),/,source:'audio',variant:1,crosses:'auto',crossUpper:'mover',crossDepth:-1},
-  rose_short:{marker:'rose-short-v3',zero:2116,beat:480,levelRe:/const roseShortHellChart=mhChart\((\d+),/,source:'audio',variant:3,crosses:'auto',crossUpper:'mover',crossDepth:-1},
+  rose:{marker:'rose-v3',zero:2116,beat:480,levelRe:/const roseHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1},
+  rose_short:{marker:'rose-short-v3',zero:2116,beat:480,levelRe:/const roseShortHellChart=mhChart\((\d+),/,source:'audio',variant:2,crosses:'auto',crossUpper:'mover',crossDepth:-1},
   // SAD SONG(2026-10-18 社長「SAD SONG フル、ショート」)。拍は解析ファイル(authoring/sad-song-v3-audio.json の timing。全編と short は同じ格子)
-  sad_song:{marker:'sad-song-v3',zero:99.5,beat:348.818,levelRe:/const sadSongHellChart=mhChart\((\d+),/,source:'audio',variant:3,crosses:'auto',crossUpper:'mover',crossDepth:-1},
+  sad_song:{marker:'sad-song-v3',zero:99.5,beat:348.818,levelRe:/const sadSongHellChart=mhChart\((\d+),/,source:'audio',variant:2,crosses:'auto',crossUpper:'mover',crossDepth:-1},
   sad_song_short:{marker:'sad-song-short-v3',zero:99.5,beat:348.818,levelRe:/const sadSongShortHellChart=mhChart\((\d+),/,source:'audio',variant:3,crosses:'auto',crossUpper:'mover',crossDepth:-1},
   // Toward the Stars, Paradise or Truth short ver.(hitoyakyuko・2026-10-19・新曲は基本 HELL あり)
   toward_the_stars_short:{marker:'toward-the-stars-short-v3',zero:1390.5,beat:418.796,levelRe:/const towardTheStarsShortHellChart=mhChart\((\d+),/,source:'audio',variant:2,crosses:'auto',crossUpper:'mover',crossDepth:-1,phrases:['L','both','R','both']}};
@@ -109,6 +109,14 @@ const audioDraft=(trackId,variant=0,drawersOn=true)=>{
   //   同時に来る2つの間が0〜0.5レーン・反対の手がふさがったまま真ん中を越える、など。2026-10-13 Against My Own Shadow で10件)
   for(let r=0;r<40;r++){const th=thumbCheck(notes,HELL_LANDSCAPE,timing.beatMs);const bad=th.issues.find(i=>i.kind==='impossible'&&/タップ/.test(i.what));if(!bad)break;
     const k=notes.findIndex(n=>(n.k==='t'||n.k==='f')&&!n.mon&&Math.abs(n.t-bad.t)<=2);if(k<0)break;notes.splice(k,1);}
+  // モンスターノーツは1〜4番がそろっていること(骨組みで欠けた番号があれば、前後のモンスターノーツの間の真ん中に一番近い、
+  //   同時押しでない地上のタップに付ける。2026-10-21 ROSE(short) の HELL で3個になった)
+  {const dur=Math.max(...notes.map(startOf)),monAt=f=>notes.filter(m=>m.mon&&f(m.mon)).map(m=>m.t);
+    for(let slot=1;slot<=4;slot++){if(notes.some(n=>n.mon===slot))continue;
+      const prev=Math.max(0,...monAt(s=>s<slot)),next=Math.min(dur,...monAt(s=>s>slot)),mid=(prev+next)/2;
+      const solo=notes.filter(n=>n.k==='t'&&!n.sky&&!n.mon&&n.t>prev&&n.t<next&&!notes.some(m=>m!==n&&Math.abs(startOf(m)-n.t)<=1))
+        .sort((x,y)=>Math.abs(x.t-mid)-Math.abs(y.t-mid));
+      if(solo[0])solo[0].mon=slot;}}
   return notes;};
 // 画面のどちら側か(ノーツの真ん中のレーン座標が 3 より左なら左)。スライドは始まりと終わりで見る
 const sideOf=(n,end)=>{const c=n.k==='s'?n.pts[end?n.pts.length-1:0][1]+0.5:(n.sub+n.w/2)/2;return c<3?'L':'R';};

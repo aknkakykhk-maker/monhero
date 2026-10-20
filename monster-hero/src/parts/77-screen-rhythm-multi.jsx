@@ -1564,12 +1564,12 @@ const RHYTHM_MODE_SELECT_CSS = `
 .mhbt-mark{position:absolute;right:-10px;top:112px;font-size:58px;line-height:1;font-style:italic;font-weight:900;letter-spacing:-.03em;color:rgba(255,255,255,.2);white-space:nowrap;transform:rotate(-6deg);pointer-events:none}
 .mhbt-eyebrow{position:relative;font-size:9px;font-weight:900;letter-spacing:.3em;color:rgba(15,23,42,.58)}
 .mhbt-name{position:relative;margin-top:2px;font-weight:900;font-style:italic;line-height:1.12;letter-spacing:.01em}
-.mhbt-sub{position:relative;margin-top:4px;min-height:28px;font-size:10.5px;font-weight:800;line-height:1.35;color:rgba(15,23,42,.72)}
+.mhbt-sub{position:relative;margin-top:4px;min-height:28px;font-size:10.5px;font-weight:800;line-height:1.35;color:rgba(15,23,42,.72);word-break:keep-all;overflow-wrap:anywhere}
 .mhbt-score{position:relative;margin-top:8px}
 .mhbt-score b{display:block;font-size:30px;line-height:1;font-style:italic;font-weight:900;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mhbt-score small{display:block;margin-top:3px;font-size:9.5px;font-weight:900;color:rgba(15,23,42,.66);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mhbt-feats{position:relative;display:grid;gap:4px;margin-top:9px}
-.mhbt-feats li{display:flex;align-items:center;gap:6px;padding:4px 9px;border-radius:9px;font-size:10.5px;font-weight:900;background:rgba(255,255,255,.38);box-shadow:inset 0 1px 0 rgba(255,255,255,.5)}
+.mhbt-feats li{display:flex;align-items:center;gap:6px;padding:4px 9px;border-radius:9px;font-size:10.5px;font-weight:900;word-break:keep-all;overflow-wrap:anywhere;background:rgba(255,255,255,.38);box-shadow:inset 0 1px 0 rgba(255,255,255,.5)}
 .mhbt-cells{position:relative;display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:8px}
 .mhbt-cells>div{border-radius:9px;padding:3px 0;text-align:center;font-size:8.5px;font-weight:900;color:rgba(15,23,42,.62);background:rgba(255,255,255,.38);white-space:nowrap}
 .mhbt-cells b{display:block;font-size:13px;color:#0f172a}
@@ -1617,6 +1617,8 @@ const RHYTHM_MODE_SELECT_CSS = `
 .mhbt-go.sm{font-size:12px;letter-spacing:0}
 .mhbt-pb{flex:1 1 0;min-width:0;min-height:36px;border-radius:10px;font-size:11px;font-weight:900;white-space:nowrap;color:#0f172a;background:rgba(255,255,255,.45);box-shadow:inset 0 1px 0 rgba(255,255,255,.6)}
 .mhbt-pb:active{transform:scale(.96)}
+.mhbt-score small{white-space:normal;word-break:keep-all;overflow-wrap:anywhere;line-height:1.3}
+.mhbt-go.sm{white-space:normal;word-break:keep-all;overflow-wrap:anywhere;line-height:1.15;font-size:11px;padding:2px 8px}
 .mhbs-hint{text-align:center;font-size:8px;font-weight:900;letter-spacing:.24em;color:rgba(240,171,252,.7)}
 .mhbs-arrow{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:9999px;color:#fff;background:rgba(14,9,38,.78);border:1px solid rgba(255,255,255,.18);box-shadow:0 4px 14px rgba(0,0,0,.4)}
 .mhbs-dot{width:6px;height:6px;border-radius:9999px;background:rgba(255,255,255,.22);transition:all .2s}
