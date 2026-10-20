@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4edd4c335770eda5
+// generated-sha256: e37a4dbffaa2d8fe
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-21 01:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-21 02:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -33040,7 +33040,7 @@ function MonsterTypeBadge({ monId, size = 'sm', compact = false }) {
     const iconOnly = isSub && compact;
     return (<span key={key} data-monster-type={key} data-monster-type-sub={isSub ? 'true' : undefined} title={`${isSub ? 'サブ' : 'メイン'}タイプ：${d.label}(${d.note})`}
       className={`inline-flex items-center gap-0.5 rounded-full border ${compact ? 'px-1' : 'px-1.5'} py-px font-black leading-none whitespace-nowrap ${size === 'md' ? 'text-[11px]' : 'text-[9px]'} ${isSub ? 'border-white/15 bg-white/5 text-slate-300' : 'border-amber-300/50 bg-amber-500/15 text-amber-100'}`}>
-      <span aria-hidden="true">{d.icon}</span>{iconOnly ? <span className="sr-only">{d.label}</span> : d.label}</span>);
+      <span aria-hidden="true">{cardIconNode(d.icon, 10)}</span>{iconOnly ? <span className="sr-only">{d.label}</span> : d.label}</span>);
   };
   return <span data-monster-type-badge={monId} className={`inline-flex max-w-full flex-wrap items-center justify-center ${compact ? 'gap-0.5' : 'gap-1'}`}>{chip(t.main, false)}{t.sub && chip(t.sub, true)}</span>;
 }
@@ -41306,13 +41306,13 @@ function BattleScreen({
                   const label=text?<div data-card-genre={genre} data-card-scope={scope||undefined} className="w-full truncate rounded-[5px] bg-black/35 px-0.5 text-[8px] font-black leading-[11px] text-white/85">{text}</div>:null;
                   return ['atk','range_atk','unique'].includes(c.type)?(<div role="button" aria-label={`${c.name}の技を変える`} data-skill-change={i} onClick={(ev)=>{ev.stopPropagation(); if(isBusy||autoBattleRef.current||Date.now()<=suppressCardClickRef.current)return; setSkillPicker({handIndex:i});}}
                     style={{height:HAND_CARD_FIT.skill}} className={`flex w-full shrink-0 flex-col items-stretch justify-between gap-px rounded-[7px] border border-white/60 bg-white/[.14] p-[2px] text-white shadow-[inset_0_1px_0_rgba(255,255,255,.25),0_0_6px_rgba(255,255,255,.12)] active:scale-95 active:bg-white/30${battleTutorialNeedCard&&tutorialTargeted?' is-battle-tutorial-spot':''}`}>
-                    <span className="flex items-center justify-center gap-0.5 pt-px text-[9px] font-black leading-none"><span aria-hidden="true">⇄</span>技変更</span>{label}</div>)
+                    {/* 「技変更」は言葉の途中で折らない(2026-10-21 窓口「技変 / 更と折れている」)。矢印と文字が別の部品で、文字のほうが縮んで折れていた */}<span className="flex items-center justify-center gap-0.5 whitespace-nowrap pt-px text-[9px] font-black leading-none"><span aria-hidden="true">⇄</span><span className="shrink-0">技変更</span></span>{label}</div>)
                     // 攻撃以外は同じ高さで、種類の札だけをいちばん下に置く(押しても何も起きない)
                     :(<div data-skill-change-spacer style={{height:HAND_CARD_FIT.skill}} className="flex w-full shrink-0 flex-col justify-end rounded-[7px] border border-transparent p-[2px] pointer-events-none">{label}</div>);
                 })()
                 :(['atk','range_atk','unique'].includes(c.type)?(<div role="button" aria-label={`${c.name}の技を変える`} data-skill-change={i} onClick={(ev)=>{ev.stopPropagation(); if(isBusy||autoBattleRef.current||Date.now()<=suppressCardClickRef.current)return; setSkillPicker({handIndex:i});}}
                   className={`flex w-full shrink-0 flex-col overflow-hidden rounded-[7px] border border-white/60 bg-white/[.12] shadow-[inset_0_1px_0_rgba(255,255,255,.25),0_0_6px_rgba(255,255,255,.12)] active:scale-95 active:bg-white/30${battleTutorialNeedCard&&tutorialTargeted?' is-battle-tutorial-spot':''}`}>
-                  <div style={{height:HAND_CARD_FIT.band}} className="flex shrink-0 items-center justify-center gap-0.5 text-[9px] font-black leading-none text-white"><span aria-hidden="true">⇄</span>技変更</div>
+                  <div style={{height:HAND_CARD_FIT.band}} className="flex shrink-0 items-center justify-center gap-0.5 whitespace-nowrap text-[9px] font-black leading-none text-white"><span aria-hidden="true">⇄</span><span className="shrink-0">技変更</span></div>
                   <div className="text-[10px] font-black bg-black/30 text-white rounded-[5px] flex items-center justify-center gap-0.5" style={{paddingTop:HAND_CARD_FIT.gutsPad,paddingBottom:HAND_CARD_FIT.gutsPad}}><Zap size={9}/>{curGuts}</div>
                 </div>):<div className="text-[10px] font-black bg-black/30 text-white rounded-[6px] flex items-center justify-center gap-0.5" style={{paddingTop:HAND_CARD_FIT.gutsPad,paddingBottom:HAND_CARD_FIT.gutsPad}}><Zap size={9}/>{curGuts}</div>)}</div></button>);
               // ★引きずっているカードは、本物のカード1枚だけを画面の最上層(body の直下)へ出して指につける
@@ -47984,7 +47984,7 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
       {faceOf(mon, 'h-12 w-12')}
       <span className="mt-0.5 w-full truncate text-[9px] font-black text-slate-100">{mon.name}</span>
       {/* タイプの印(2026-10-19・社長「タイプわかるようにしてほしい」)。札が狭いのでメインだけ。サブは詳細(i)に出る */}
-      {monsterTypeProtoOn() && (() => { const t = MONSTER_TYPES[monsterTypeOf(mon.baseId || mon.id).main]; return t ? <span data-raid-mon-type={monsterTypeOf(mon.baseId || mon.id).main} className="mt-0.5 flex w-full items-center justify-center gap-px truncate rounded-full border border-white/15 bg-black/30 px-0.5 text-[8px] font-black leading-[12px] tracking-tight text-slate-200"><span aria-hidden="true">{t.icon}</span>{t.label}</span> : null; })()}
+      {monsterTypeProtoOn() && (() => { const t = MONSTER_TYPES[monsterTypeOf(mon.baseId || mon.id).main]; return t ? <span data-raid-mon-type={monsterTypeOf(mon.baseId || mon.id).main} className="mt-0.5 flex w-full items-center justify-center gap-px truncate rounded-full border border-white/15 bg-black/30 px-0.5 text-[8px] font-black leading-[12px] tracking-tight text-slate-200"><span aria-hidden="true">{cardIconNode(t.icon, 8)}</span>{t.label}</span> : null; })()}
       {/* 置いた距離(置いていなければ、いま光っている枠の距離)での適性 */}
       {pct != null && <span data-raid-mon-apt={showR} className="mt-0.5 flex items-center gap-0.5">{rangeChip(showR)}<span className={`text-[9px] font-black tabular-nums ${pctTone(pct)}`}>{formatAptPct(pct)}</span></span>}
     </button>

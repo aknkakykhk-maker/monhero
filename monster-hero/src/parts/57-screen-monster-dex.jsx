@@ -195,7 +195,7 @@ function MonsterTypeBadge({ monId, size = 'sm', compact = false }) {
     const iconOnly = isSub && compact;
     return (<span key={key} data-monster-type={key} data-monster-type-sub={isSub ? 'true' : undefined} title={`${isSub ? 'サブ' : 'メイン'}タイプ：${d.label}(${d.note})`}
       className={`inline-flex items-center gap-0.5 rounded-full border ${compact ? 'px-1' : 'px-1.5'} py-px font-black leading-none whitespace-nowrap ${size === 'md' ? 'text-[11px]' : 'text-[9px]'} ${isSub ? 'border-white/15 bg-white/5 text-slate-300' : 'border-amber-300/50 bg-amber-500/15 text-amber-100'}`}>
-      <span aria-hidden="true">{d.icon}</span>{iconOnly ? <span className="sr-only">{d.label}</span> : d.label}</span>);
+      <span aria-hidden="true">{cardIconNode(d.icon, 10)}</span>{iconOnly ? <span className="sr-only">{d.label}</span> : d.label}</span>);
   };
   return <span data-monster-type-badge={monId} className={`inline-flex max-w-full flex-wrap items-center justify-center ${compact ? 'gap-0.5' : 'gap-1'}`}>{chip(t.main, false)}{t.sub && chip(t.sub, true)}</span>;
 }
