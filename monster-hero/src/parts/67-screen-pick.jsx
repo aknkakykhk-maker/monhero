@@ -62,7 +62,8 @@ function SkipPickScreen({
           <div className="flex items-center gap-2 mb-2">
             <span className="text-[10px] font-black text-slate-400 shrink-0">使う枚数</span>
             <button disabled={n<=1} onClick={()=>changeSkipCount(n-1)} aria-label="使う枚数を1枚減らす" className="shrink-0 w-11 h-11 rounded-xl bg-slate-800 text-white font-black text-lg active:scale-95 disabled:opacity-30">−</button>
-            <div className="flex-1 text-center"><span className="font-mono font-black text-white text-lg">{n}</span><span className="text-[10px] font-black text-slate-400"> / {max}枚</span></div>
+            {/* 枚数は直接打ち込める(2026-10-20 社長「クイックでのスキップチケットも直接入力できるようにして」) */}
+            <div className="flex flex-1 min-w-0 items-center justify-center gap-1"><CountInput value={n} max={max} onChange={changeSkipCount} unit="枚" label="使う枚数" className="w-16" dataAttrs={{'data-skip-count-input':true}}/><span className="shrink-0 text-[10px] font-black text-slate-400">/ {max}枚</span></div>
             <button disabled={n>=max} onClick={()=>changeSkipCount(n+1)} aria-label="使う枚数を1枚増やす" className="shrink-0 w-11 h-11 rounded-xl bg-slate-800 text-white font-black text-lg active:scale-95 disabled:opacity-30">＋</button>
             <button disabled={n>=max} onClick={()=>changeSkipCount(max)} className="shrink-0 h-11 px-3 rounded-xl bg-slate-700 text-white font-black text-[11px] active:scale-95 disabled:opacity-30">全部</button>
           </div>
