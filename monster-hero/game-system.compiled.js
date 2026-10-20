@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ed8497561d98d813
+// source-sha256: 42036f0610a94bd4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-20 13:30";
+const BUILD_DATE = "2026-10-20 17:51";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -15793,11 +15793,12 @@ const marketNameNodes = name => marketNameForWrap(name).split('​').map((seg, i
   key: index
 }, index > 0 && React.createElement("wbr", null), seg));
 const MARKET_LABEL_WRAP_AFTER = Object.freeze(['すると']);
+const marketLabelSegments = label => Array.isArray(label) ? label.map(String).filter(Boolean) : MARKET_LABEL_WRAP_AFTER.reduce((text, word) => text.split(word).join(`${word}​`), String(label || '')).split('​');
 const marketLabelFitSize = label => {
-  const longest = Math.max(1, ...MARKET_LABEL_WRAP_AFTER.reduce((text, word) => text.split(word).join(`${word}​`), String(label || '')).split('​').map(seg => seg.length));
-  return `clamp(7px, calc((100cqi - 14px) / ${longest}), 10px)`;
+  const longest = Math.max(1, ...marketLabelSegments(label).map(seg => seg.length));
+  return `clamp(7px, calc((100cqi - 10px) / ${longest}), 10px)`;
 };
-const marketLabelNodes = label => MARKET_LABEL_WRAP_AFTER.reduce((text, word) => text.split(word).join(`${word}​`), String(label || '')).split('​').map((seg, index) => React.createElement(React.Fragment, {
+const marketLabelNodes = label => marketLabelSegments(label).map((seg, index) => React.createElement(React.Fragment, {
   key: index
 }, index > 0 && React.createElement("wbr", null), seg));
 const MarketProductCard = ({
@@ -15852,7 +15853,7 @@ const MarketProductCard = ({
     className: "text-[10px] font-black text-slate-400 whitespace-nowrap"
   }, marketPriceText(item)), React.createElement("div", {
     "data-market-coming-soon-label": true,
-    className: "max-w-full text-center font-black leading-tight text-slate-400 bg-slate-800/60 px-1.5 py-1 rounded-xl",
+    className: "max-w-full text-center font-black leading-tight text-slate-400 bg-slate-800/60 px-1 py-1 rounded-xl",
     style: {
       wordBreak: 'keep-all',
       overflowWrap: 'anywhere',
@@ -51129,7 +51130,7 @@ function BreederMarketScreen({
       item: item,
       owned: owned,
       comingSoon: comingSoon || frameLocked,
-      comingSoonLabel: frameLocked ? '条件を達成すると買えます' : undefined,
+      comingSoonLabel: frameLocked ? profileFrameConditionShort(profileFrameById(item.id), 'breederPoint') || '条件を達成すると買えます' : undefined,
       canBuy: canBuy,
       onZoom: () => onZoomIcon(item),
       onBuy: () => openSheet({
@@ -51576,7 +51577,7 @@ function BreederMarketScreen({
       item: item,
       owned: owned,
       comingSoon: frameLocked,
-      comingSoonLabel: frameLocked ? '条件を達成すると買えます' : undefined,
+      comingSoonLabel: frameLocked ? profileFrameConditionShort(frame, 'beatPoint') || '条件を達成すると買えます' : undefined,
       canBuy: !owned && !frameLocked && safeEventPoints >= offer.cost && !busy,
       disabled: purchaseProcessing,
       onZoom: () => onZoomIcon(item),

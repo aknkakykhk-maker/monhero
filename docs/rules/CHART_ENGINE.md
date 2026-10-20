@@ -97,7 +97,7 @@
 - **2026-10-20 にあった全曲は v1 のまま測る**(`LEVEL_V1_SONGS`)。表示は1つも動かない。**新曲は一覧へ足さない**(足すと前の測り方になる)。
   曲ごとの選び方は `levelFormulaFor(songId)`。`songLevels`・`shownLevel`・`--write` はこれを通す。`rhythm-hell-mix.js` が作った HELL を測るときも v2
 - 公開中の HELL のうち、社長が決めた5曲だけ表示を v2 の値にした(`LEVEL_OVERRIDES`・譜面の数字も同じ): Toward the Stars(short) 46→57・
-  ROSE 45→52・ROSE(short) 44→50・SAD SONG 34→39・SAD SONG(short) 35→43。Grievous Lady・Sheriruth・Against My Own Shadow・風がそよぐ場所は前の値のまま
+  ROSE 45→52・ROSE(short) 44→50・SAD SONG 34→39・SAD SONG(short) 35→43。同じ日の夕方(改善部の指摘 L1)に、残りの Grievous Lady 60→69・Sheriruth 54→61・Against My Own Shadow 42→51・風がそよぐ場所 23→22 もそろえ、**公開中の HELL 9譜面はすべて v2 の値**
 - Lv. を計算に使っているのは、マルチで呼んだマスモン(CPU)の出来だけ(無理なく叩ける Lv. を超えたぶん1つにつき -1.5%)。表示を上げるとマスモンも苦戦する(社長了承)
 - `rhythm-chart-level-check.js` が、いまある曲が全部 v1 の一覧にあること・5曲の値・②の数え方を見張る
 

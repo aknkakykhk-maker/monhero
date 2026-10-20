@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2e418a01cd91cd70
+// generated-sha256: ac137393895446b5
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-20 13:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-20 17:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11162,11 +11162,14 @@ const marketNameNodes = (name) => marketNameForWrap(name).split('​')
 // 予告の札の折り位置(2026-10-20 窓口「条件を達成 / すると買え / ます」)。語の切れ目(「すると」の後ろ)だけで折る
 const MARKET_LABEL_WRAP_AFTER = Object.freeze(['すると']);
 // 札の字の大きさ: いちばん長い語(「条件を達成すると」8文字)が、カードの幅(札を包む枠の幅・cqi)から左右の余白12pxを引いた幅に1行で入る大きさ。最大10px・最小7px
+// 札は文字(「すると」の後ろで区切る)か、区切りの配列(フレームの条件の短い文・profileFrameConditionShort)
+const marketLabelSegments = (label) => (Array.isArray(label) ? label.map(String).filter(Boolean)
+  : MARKET_LABEL_WRAP_AFTER.reduce((text, word) => text.split(word).join(`${word}​`), String(label || '')).split('​'));
 const marketLabelFitSize = (label) => {
-  const longest = Math.max(1, ...MARKET_LABEL_WRAP_AFTER.reduce((text, word) => text.split(word).join(`${word}​`), String(label || '')).split('​').map(seg => seg.length));
-  return `clamp(7px, calc((100cqi - 14px) / ${longest}), 10px)`;
+  const longest = Math.max(1, ...marketLabelSegments(label).map(seg => seg.length));
+  return `clamp(7px, calc((100cqi - 10px) / ${longest}), 10px)`;
 };
-const marketLabelNodes = (label) => MARKET_LABEL_WRAP_AFTER.reduce((text, word) => text.split(word).join(`${word}​`), String(label || '')).split('​')
+const marketLabelNodes = (label) => marketLabelSegments(label)
   .map((seg, index) => <React.Fragment key={index}>{index>0&&<wbr/>}{seg}</React.Fragment>);
 // comingSoonLabel: 買えない予告の札。ふつうは「近日追加」。ビートP交換所の円盤石だけ、
 // ダイヤショップより先に出す予定なので「先行公開予定」と書く(札の形は同じ)。
@@ -11193,7 +11196,7 @@ const MarketProductCard = ({ item, owned=false, comingSoon=false, comingSoonLabe
     {/* 詳細は「近日追加」の品でも出す(2026-09-28。近日公開予定の新モンスターの中身を先に見られるように) */}
     <div className="w-full flex items-center justify-center gap-1" style={{height:'22px'}}>{middle||detail?<>{middle}{!middle&&<MarketDetailChip label={`${item.name}の詳細を見る`} onClick={onDetail}/>}</>:null}</div>
     {/* 予告の品は買うボタンの代わりに札が出るので、値段は札の上に出す(どの売り場でも同じ) */}
-    <div className="w-full flex items-center justify-center mt-auto pt-2">{comingSoon?<div className="flex w-full min-w-0 flex-col items-center gap-1 [container-type:inline-size]"><span data-market-coming-soon-price className="text-[10px] font-black text-slate-400 whitespace-nowrap">{marketPriceText(item)}</span>{/* 札はカードの幅で折り返す(2026-10-20 窓口「条件を達成すると買えます」がカードの外へはみ出していた・幅の狭い3列のカード) */}<div data-market-coming-soon-label className="max-w-full text-center font-black leading-tight text-slate-400 bg-slate-800/60 px-1.5 py-1 rounded-xl" style={{wordBreak:'keep-all',overflowWrap:'anywhere',fontSize:marketLabelFitSize(comingSoonLabel)}}>{marketLabelNodes(comingSoonLabel)}</div></div>:owned?<div className="text-[10px] font-black text-emerald-400 bg-emerald-950/50 px-2 py-1 rounded-full whitespace-nowrap">所持済み</div>:<button onClick={onBuy} disabled={disabled||!canBuy} aria-label={`${item.name}${disabled?'（デバッグのため購入不可）':`を${priceLabel}で${usesHeroProof||usesHeroProofShard||usesBeatPoint?'交換':'購入'}`}`} className={`mh-button mh-button-primary text-[11px] font-black px-2 min-h-[44px] w-full max-w-full rounded-xl flex items-center justify-center gap-1 whitespace-nowrap ${disabled||!canBuy?'bg-slate-800 text-slate-500':usesBeatPoint?'bg-violet-500 text-white active:scale-95':usesPsyche?'bg-fuchsia-600 text-white active:scale-95':'bg-amber-500 text-black active:scale-95'}`}>{usesBeatPoint?<><span aria-hidden="true">🎟️</span><span>{item.cost.toLocaleString()}</span></>:usesHeroProofShard?<><span aria-hidden="true">🎖️</span><span className="text-[10px]">証片 ×{item.cost.toLocaleString()}</span></>:usesHeroProof?<><span aria-hidden="true">🏅</span><span className="text-[10px]">勇者の証 ×{item.cost.toLocaleString()}</span></>:usesPsyche?<><span aria-hidden="true">🌈</span><span>{item.cost.toLocaleString()}</span></>:<>{usesGold?<Gem size={11} className="shrink-0"/>:<Coins size={11} className="shrink-0"/>}<span>{item.cost.toLocaleString()}</span></>}</button>}</div>
+    <div className="w-full flex items-center justify-center mt-auto pt-2">{comingSoon?<div className="flex w-full min-w-0 flex-col items-center gap-1 [container-type:inline-size]"><span data-market-coming-soon-price className="text-[10px] font-black text-slate-400 whitespace-nowrap">{marketPriceText(item)}</span>{/* 札はカードの幅で折り返す(2026-10-20 窓口「条件を達成すると買えます」がカードの外へはみ出していた・幅の狭い3列のカード) */}<div data-market-coming-soon-label className="max-w-full text-center font-black leading-tight text-slate-400 bg-slate-800/60 px-1 py-1 rounded-xl" style={{wordBreak:'keep-all',overflowWrap:'anywhere',fontSize:marketLabelFitSize(comingSoonLabel)}}>{marketLabelNodes(comingSoonLabel)}</div></div>:owned?<div className="text-[10px] font-black text-emerald-400 bg-emerald-950/50 px-2 py-1 rounded-full whitespace-nowrap">所持済み</div>:<button onClick={onBuy} disabled={disabled||!canBuy} aria-label={`${item.name}${disabled?'（デバッグのため購入不可）':`を${priceLabel}で${usesHeroProof||usesHeroProofShard||usesBeatPoint?'交換':'購入'}`}`} className={`mh-button mh-button-primary text-[11px] font-black px-2 min-h-[44px] w-full max-w-full rounded-xl flex items-center justify-center gap-1 whitespace-nowrap ${disabled||!canBuy?'bg-slate-800 text-slate-500':usesBeatPoint?'bg-violet-500 text-white active:scale-95':usesPsyche?'bg-fuchsia-600 text-white active:scale-95':'bg-amber-500 text-black active:scale-95'}`}>{usesBeatPoint?<><span aria-hidden="true">🎟️</span><span>{item.cost.toLocaleString()}</span></>:usesHeroProofShard?<><span aria-hidden="true">🎖️</span><span className="text-[10px]">証片 ×{item.cost.toLocaleString()}</span></>:usesHeroProof?<><span aria-hidden="true">🏅</span><span className="text-[10px]">勇者の証 ×{item.cost.toLocaleString()}</span></>:usesPsyche?<><span aria-hidden="true">🌈</span><span>{item.cost.toLocaleString()}</span></>:<>{usesGold?<Gem size={11} className="shrink-0"/>:<Coins size={11} className="shrink-0"/>}<span>{item.cost.toLocaleString()}</span></>}</button>}</div>
   </div>;
 };
 
@@ -32157,6 +32160,7 @@ function BreederMarketScreen({
     const comingSoon = item.available === false;
     const owned = !comingSoon && isItemOwned(item);
     // 買える条件つきのフレーム(2026-10-03)。条件を達成するまでは札を出して買えない。詳細で条件と進み具合が読める
+    // 札には条件を短く書く(2026-10-20・profileFrameConditionShort。「ジャックを倒すか / イベント終了で」「ザン・エイキ / ビートLv50」)
     const frameCondition = item.type==='frame' && frameConditionOf ? frameConditionOf(item.id,'breederPoint') : null;
     const frameLocked = !!frameCondition && !frameCondition.met && !owned;
     const balance = balanceOf(marketCurrencyOf(item));
@@ -32169,7 +32173,7 @@ function BreederMarketScreen({
     return (
       <React.Fragment key={item.id}>
         {showBase&&<MarketProductCard previewIcon={previewIcon}
-          item={item} owned={owned} comingSoon={comingSoon||frameLocked} comingSoonLabel={frameLocked?'条件を達成すると買えます':undefined} canBuy={canBuy}
+          item={item} owned={owned} comingSoon={comingSoon||frameLocked} comingSoonLabel={frameLocked?(profileFrameConditionShort(profileFrameById(item.id),'breederPoint')||'条件を達成すると買えます'):undefined} canBuy={canBuy}
           onZoom={()=>onZoomIcon(item)}
           onBuy={()=>openSheet({ item, stackable:item.type==='item', confirm:(count)=>onBuy(item,count),
             rebirth:item.type==='disc'?{monsterId:item.id,discIcon:item.icon}:null })}
@@ -32384,7 +32388,7 @@ function BreederMarketScreen({
             const frameLocked=!!frameCondition&&!frameCondition.met&&!owned;
             const detailItem=frameCondition?{...item,frameCondition}:item;
             return <MarketProductCard key={offer.id} dataAttrs={{'data-event-point-frame':offer.id}} previewIcon={previewIcon}
-              item={item} owned={owned} comingSoon={frameLocked} comingSoonLabel={frameLocked?'条件を達成すると買えます':undefined}
+              item={item} owned={owned} comingSoon={frameLocked} comingSoonLabel={frameLocked?(profileFrameConditionShort(frame,'beatPoint')||'条件を達成すると買えます'):undefined}
               canBuy={!owned&&!frameLocked&&safeEventPoints>=offer.cost&&!busy}
               disabled={purchaseProcessing}
               onZoom={()=>onZoomIcon(item)}

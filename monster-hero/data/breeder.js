@@ -862,6 +862,34 @@ const profileFrameConditionFor = (frame, shop) => {
   if (!condition) return null;
   return (Array.isArray(condition.shops) && !condition.shops.includes(shop)) ? null : condition;
 };
+// 鍵つきの札に出す、条件の短い文(2026-10-20 社長の決定・改善部の指摘 L3)。2行に収めるので、折ってよい区切りごとの配列で返す。
+// ★文は unlock.condition の中身(種類・モンスター・難易度・回数・Lv.)から作る。condition.text を書き写さない。
+//   読めない条件は null(呼ぶ側が「条件を達成すると買えます」に戻す)。shop を渡すと、その交換所にかかる条件だけを見る
+const profileFrameConditionShort = (frame, shop = null) => {
+  const c = shop ? profileFrameConditionFor(frame, shop) : profileFrameCondition(frame);
+  if (!c) return null;
+  const monName = (id) => (typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[id] && ALL_PLAYER_MONSTERS[id].name) || id;
+  const count = Math.max(1, Math.floor(Number(c.count) || 1));
+  if (c.kind === 'monsterReincarnate') return [`${monName(c.monsterId)}を`, count > 1 ? `${count}回転生` : '転生'];
+  if (c.kind === 'speciesRebirth') {
+    const lineage = typeof MONSTER_LINEAGES !== 'undefined' ? MONSTER_LINEAGES[c.lineage] : null;
+    return [`${(lineage && lineage.name) || c.lineage}種を`, count > 1 ? `${count}回限界突破` : '限界突破'];
+  }
+  if (c.kind === 'difficultyCleared') {
+    const d = c.difficulty === 'RAGNAROK' && typeof RAGNAROK_SETTING !== 'undefined' ? RAGNAROK_SETTING
+      : (typeof DIFFICULTY_SETTINGS !== 'undefined' ? DIFFICULTY_SETTINGS[c.difficulty] : null);
+    return [`${(d && (d.japanese || d.label)) || c.difficulty}を`, 'クリア'];
+  }
+  if (c.kind === 'rhythmClears') return ['モンヒロビートを', `${count}回クリア`];
+  if (c.kind === 'buddyBeatLevel') {
+    const ids = Array.isArray(c.monsterIds) ? c.monsterIds : [];
+    const level = Math.max(1, Math.floor(Number(c.level) || 1));
+    // 2体までは名前を並べる(ザン・エイキ)。3体以上は枠の名前(ウンディーネ3姉妹)
+    return [ids.length <= 2 ? ids.map(monName).join('・') : (frame && frame.name) || '', `ビートLv${level}`];
+  }
+  if (c.kind === 'raidJackBossDown') return ['ジャックを倒すか', 'イベント終了で'];
+  return null;
+};
 // 売る枠として書かれているのに、売り値が正しくない(shop だけ・cost が0など)枠のid。検査用
 const profileFramesWithBrokenSale = () => PROFILE_FRAMES
   .filter(frame => frame.unlock && (frame.unlock.shop !== undefined || frame.unlock.shops !== undefined)

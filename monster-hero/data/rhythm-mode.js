@@ -25426,7 +25426,7 @@ const sheriruthCharts=Object.freeze({
 // 公開の Sheriruth には入れず、デバッグ画面の試作の枠(RHYTHM_PROTO_SONGS の sheriruth_hell_debug)からだけ遊べる。
 // Lv.47 は tools/mode/rhythm-chart-level.js の式(空中⇄地上の切り替えも数える)で出した値(rhythm-chart-level-check.js が式と一致するか見る)。
 // 公開するときは、sheriruth の difficulties を RHYTHM_PLAY_DIFFICULTIES で回して HELL:sheriruthHellChart を足し、レベル表は --write で出す
-const sheriruthHellChart=mhChart(54,sheriruthHellNotes,SHERIRUTH_DURATION_MS,6,{scrollChanges:SHERIRUTH_SCROLL_CHANGES});
+const sheriruthHellChart=mhChart(61,sheriruthHellNotes,SHERIRUTH_DURATION_MS,6,{scrollChanges:SHERIRUTH_SCROLL_CHANGES});
 const GRIEVOUS_LADY_DURATION_MS=141912;
 const grievousLadyEasyNotes=((t,h,f,s)=>[
 // <grievous-lady-v3-easy-notes>
@@ -26506,7 +26506,7 @@ const againstMyOwnShadowHellNotes=((t,h,f,s,T,F,S)=>[
   t(116564,9,3,0),t(116668,7,3,0),
 // </against-my-own-shadow-v3-hell-notes>
 ])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
-const againstMyOwnShadowHellChart=mhChart(42,againstMyOwnShadowHellNotes,AGAINST_MY_OWN_SHADOW_DURATION_MS,6);
+const againstMyOwnShadowHellChart=mhChart(51,againstMyOwnShadowHellNotes,AGAINST_MY_OWN_SHADOW_DURATION_MS,6);
 
 // ===== ROSE(HANA・2026-10-18 追加。全編) =====
 const ROSE_DURATION_MS=165204;
@@ -29551,7 +29551,7 @@ const grievousLadyHellBaseNotes=((t,h,f,s,T,F,S)=>[
 const grievousLadyHellNotes=grievousLadyQuiet(grievousLadyHellBaseNotes);
 // Grievous Lady の HELL の譜面(2026-10-12)。試作の枠(grievous_lady_hell)と公開曲の HELL(RHYTHM_HELL_CHARTS)が同じものを指す。
 // Lv.60 は仮(社長の決定待ち)。流れの速さの演出と組は MASTER と同じ表
-const grievousLadyHellChart=mhChart(60,grievousLadyHellNotes,GRIEVOUS_LADY_DURATION_MS,6,{scrollChanges:GRIEVOUS_LADY_SCROLL_CHANGES,scrollGroups:GRIEVOUS_LADY_SCROLL_GROUPS});
+const grievousLadyHellChart=mhChart(69,grievousLadyHellNotes,GRIEVOUS_LADY_DURATION_MS,6,{scrollChanges:GRIEVOUS_LADY_SCROLL_CHANGES,scrollGroups:GRIEVOUS_LADY_SCROLL_GROUPS});
 const theCityBeneathTheCometsCharts=Object.freeze({
   EASY:mhChart(1,theCityBeneathTheCometsEasyNotes,THE_CITY_BENEATH_THE_COMETS_DURATION_MS,6),
   NORMAL:mhChart(3,theCityBeneathTheCometsNormalNotes,THE_CITY_BENEATH_THE_COMETS_DURATION_MS,6),
@@ -30382,7 +30382,7 @@ const kazeGaSoyoguHellNotes=((t,h,f,s,T,F,S)=>[
   t(97113,0,3,0),
 // </kaze-ga-soyogu-v4-hell-notes>
 ])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
-const kazeGaSoyoguHellChart=mhChart(23,kazeGaSoyoguHellNotes,KAZE_GA_SOYOGU_DURATION_MS,6);
+const kazeGaSoyoguHellChart=mhChart(22,kazeGaSoyoguHellNotes,KAZE_GA_SOYOGU_DURATION_MS,6);
 
 const closeToYourHeartV4EasyNotes=((t,h,f,s)=>[
 // <close-to-your-heart-v4-easy-notes>
