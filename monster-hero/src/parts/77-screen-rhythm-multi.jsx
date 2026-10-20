@@ -1513,7 +1513,7 @@ function RhythmMultiMemberCards({ members, hostId, selfId, resolveIconUrl, badge
               {openable && <span aria-hidden="true" className={`absolute -bottom-1 -right-1.5 flex items-center justify-center rounded-full bg-lime-300 font-black leading-none text-slate-950 ${tall ? 'h-4 w-4 text-[10px]' : 'h-3 w-3 text-[8px]'}`}>i</span>}
             </span>
             <span className={`min-w-0 ${tall ? 'mt-1 w-full text-center' : 'mt-0.5 w-full text-center landscape:mt-0 landscape:flex-1 landscape:text-left'}`}>
-              <span className={`block truncate font-black leading-tight ${tall ? 'text-[11px] landscape:text-sm' : 'text-[10px]'}`}>{m.cpu && <b data-rhythm-multi-cpu-mark className="mr-0.5 rounded bg-lime-300 px-0.5 text-[8px] font-black text-slate-950">CPU</b>}{m.name}{self ? '*' : ''}</span>
+              <span className={`block font-black leading-tight ${tall ? 'line-clamp-2 break-all text-[11px] landscape:text-sm' : 'truncate text-[10px]'}`}>{m.cpu && <b data-rhythm-multi-cpu-mark className="mr-0.5 rounded bg-lime-300 px-0.5 text-[8px] font-black text-slate-950">CPU</b>}{m.name}{self ? '*' : ''}</span>
               {badge.sub && <small className={`block truncate font-bold leading-tight text-slate-400 ${tall ? 'text-[9px] landscape:text-[11px]' : 'text-[8px]'}`}>{badge.sub}</small>}
             </span>
           </li>
@@ -2409,7 +2409,9 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
           : <>
             <RhythmMultiMemberCards onOpen={openBuddyInfo} bubbleOf={chatBubbleOf} members={members} hostId={view ? view.hostId : ''} selfId={view ? view.selfId : ''} resolveIconUrl={resolveIconUrl} size="tall"
               badgeOf={(m) => ({ text: view && m.id === view.hostId ? 'ホスト' : '入室', cls: view && m.id === view.hostId ? 'bg-amber-400 text-slate-950' : 'bg-cyan-500 text-slate-950', sub: `Lv.${m.level}` })} />
-            <div className="mt-auto max-h-[52%] shrink-0 overflow-y-auto border-t border-white/10 bg-slate-950/90 p-2 landscape:grid landscape:max-h-[58%] landscape:grid-cols-2 landscape:gap-2" style={{ paddingBottom: 'calc(.5rem + var(--mh-sa-bottom))' }}>
+            {/* 縦向きでは、下の欄を枠のすぐ下へ寄せる(2026-10-20 改善部 M5。390 で枠と欄のあいだが約300px 空いていた)。
+                高さの上限も広げ、320×568 で「ルームを出る」が画面の外へ切れないようにする。横向きは今のまま */}
+            <div className="max-h-[70%] shrink-0 overflow-y-auto border-t border-white/10 bg-slate-950/90 p-2 landscape:mt-auto landscape:grid landscape:max-h-[58%] landscape:grid-cols-2 landscape:gap-2" style={{ paddingBottom: 'calc(.5rem + var(--mh-sa-bottom))' }}>
               <section data-rhythm-multi-matching className="rounded-2xl border border-white/15 bg-slate-900/85 p-2">
                 <p className="animate-pulse text-sm font-black text-amber-200">{!view ? `${RHYTHM_MULTI_MODE_LABELS[searching]}ルームをさがしています…` : 'メンバーを待っています…'}</p>
                 <p className="mt-0.5 text-[10px] font-bold leading-snug text-slate-400">
@@ -2430,7 +2432,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
                   {isHost
                     ? RHYTHM_MULTI_SELECT_SEC_OPTIONS.map((sec) => (
                       <button key={sec} type="button" data-rhythm-multi-select-sec={sec} aria-pressed={rhythmMultiNormalizeSelectSec(room.selectSec) === sec} onClick={() => RHYTHM_MULTI.setSelectSeconds(sec)}
-                        className={`min-h-[36px] min-w-[52px] rounded-lg border px-2 text-[11px] font-black ${rhythmMultiNormalizeSelectSec(room.selectSec) === sec ? 'border-amber-300 bg-amber-600/80 text-white' : 'border-white/15 bg-slate-900/80 text-slate-300'}`}>{rhythmMultiSelectSecLabel(sec)}</button>))
+                        className={`min-h-[36px] min-w-[52px] rounded-lg border px-2 text-[11px] font-black max-[359px]:min-w-[44px] max-[359px]:px-1.5 ${rhythmMultiNormalizeSelectSec(room.selectSec) === sec ? 'border-amber-300 bg-amber-600/80 text-white' : 'border-white/15 bg-slate-900/80 text-slate-300'}`}>{rhythmMultiSelectSecLabel(sec)}</button>))
                     : <b data-rhythm-multi-select-sec-view className="text-[11px] font-black text-amber-200">{rhythmMultiSelectSecLabel(rhythmMultiNormalizeSelectSec(room.selectSec))}<small className="ml-1 text-[9px] font-bold text-slate-400">(ホストが決めます)</small></b>}
                 </div>}
               </section>

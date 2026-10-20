@@ -161,6 +161,59 @@ const SIZES = [
     }
     await page.close();
   }
+  // ---- 本物の画面でも測る(2026-10-20 改善部 M7) ----
+  // 上の見本は .mh-home- の CSS だけで組むので、index.html の CSS や吹き出しの本当の文の長さが入らない。
+  // 320×568 で「みゅあの吹き出しが M/B管理 の札の左上を隠す」のを見逃していた。本物を開いて、
+  // 吹き出しの文の行数(幅360未満は2行まで)と、吹き出しの下端が「M/B管理」の札の上端を越えないかを見る
+  {
+    const http = require('http');
+    const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.PNG': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.json': 'application/json', '.mp3': 'audio/mpeg', '.svg': 'image/svg+xml', '.woff2': 'font/woff2' };
+    const PORT = 8963;
+    const server = await new Promise(r => { const sv = http.createServer((req, res) => {
+      const u = decodeURIComponent(req.url.split('?')[0]); const f = path.join(root, u);
+      if (!f.startsWith(root) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { res.writeHead(404); res.end(); return; }
+      res.writeHead(200, { 'Content-Type': TYPES[path.extname(f)] || 'application/octet-stream' }); fs.createReadStream(f).pipe(res); }); sv.listen(PORT, () => r(sv)); });
+    for (const size of [{ name: '本物 320x568', width: 320, height: 568 }, { name: '本物 390x844', width: 390, height: 844 }]) {
+      console.log(`--- ${size.name}`);
+      const page = await browser.newPage({ viewport: { width: size.width, height: size.height }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+      await page.addInitScript(() => { if (sessionStorage.getItem('s')) return; sessionStorage.setItem('s', '1'); const put = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+        put('mh_breeder_name', 'テスト'); put('mh_breeder_icon', '🐣'); put('mh_intro_done', true); put('mh_onboarded', true); put('mh_tutorial_seen_v1', true);
+        put('mh_battle_tutorial_seen_v1', true); put('mh_battle_tutorial_guide_shown_v1', true); put('mh_assistant_selected_v1', 'mua'); put('mh_assistant_unlock_seen_v1', true);
+        put('mh_update_notice_seen_v1', true); put('mh_rhythm_tutorial_seen_v1', true); put('mh_inherited_unique_level_compensation_v1', true); put('mh_masu_level_cap_compensation_notice_seen_v1', true); });
+      await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'load', timeout: 60000 });
+      await page.waitForFunction(() => document.body?.innerText.includes('TAP TO START'), { timeout: 40000 });
+      await page.getByRole('button', { name: 'TAP TO START' }).click({ force: true });
+      await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
+      await page.waitForFunction(() => document.querySelector('.mh-home-assistant [data-bubble-text]'), { timeout: 40000 });
+      for (let i = 0; i < 14; i++) {
+        const did = await page.evaluate(() => { const inO = el => { for (let e = el; e && e !== document.body; e = e.parentElement) { const st = getComputedStyle(e); if (st.position === 'fixed' || (st.position === 'absolute' && Number(st.zIndex) >= 40)) return true; } return false; };
+          const l = [...document.querySelectorAll('button')].filter(b => inO(b) && /^(確認|閉じる|OK|受け取る|次へ|わかった|はい|スキップ|あとで読む)$/.test((b.innerText || '').replace(/\s+/g, ' ').trim()));
+          if (!l.length) return false; l[0].click(); return true; });
+        if (!did) break; await page.waitForTimeout(300);
+      }
+      // いちばん長くなりやすい文(3行ぶん)に差し替えて測る。ふだんのひとことは毎回ちがうので、長い文で確かめる
+      const res = await page.evaluate(() => {
+        const t = document.querySelector('.mh-home-assistant [data-bubble-text]');
+        if (t) t.textContent = '今日はどんな勇者モンが育つかなぁ〜٩(*´ᵕ`*)۶ワクワク まずはミッションとギフトを見てから、バトルへいこ！';
+        const st = t ? getComputedStyle(t) : null;
+        const lh = st ? parseFloat(st.lineHeight) || parseFloat(st.fontSize) * 1.6 : 0;
+        const lines = t ? Math.round(t.getBoundingClientRect().height / lh) : 0;
+        const a = document.querySelector('.mh-home-assistant');
+        const mb = [...document.querySelectorAll('.mh-home-facility')].find(x => /M\/B管理/.test(x.innerText));
+        const label = mb && (mb.querySelector('span') || mb);
+        // 吹き出しの本体(顔の絵を除く、文の枠)の下端
+        const bubble = t && t.closest('button,div[style*="border"]');
+        const bb = (bubble || a).getBoundingClientRect(), lb = label ? label.getBoundingClientRect() : null;
+        const overlapX = lb ? Math.min(bb.right, lb.right) - Math.max(bb.left, lb.left) : 0;
+        return { lines, bubbleBottom: Math.round(bb.bottom), labelTop: lb ? Math.round(lb.top) : null, overlapX: Math.round(overlapX) };
+      });
+      if (size.width < 360) check('  吹き出しの文は2行まで(幅360未満)', res.lines <= 2, `${res.lines}行`);
+      check('  みゅあの吹き出しが「M/B管理」の札を隠さない', res.labelTop === null || res.overlapX <= 0 || res.bubbleBottom <= res.labelTop + 1,
+        `吹き出しの下端 ${res.bubbleBottom}px / 札の上端 ${res.labelTop}px`);
+      await page.close();
+    }
+    server.close();
+  }
   await browser.close();
   console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
   process.exit(failed ? 1 : 0);

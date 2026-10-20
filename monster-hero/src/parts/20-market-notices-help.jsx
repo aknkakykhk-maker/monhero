@@ -246,7 +246,10 @@ const MARKET_NAME_WRAP_WORDS = Object.freeze(['チケット', 'カード', 'リ�
 const marketNameForWrap = (name) => MARKET_NAME_WRAP_WORDS.reduce(
   (text, word) => text.split(word).join(`​${word}`), String(name || ''))
   .split('（').join('​（').split('）').join('）​')
-  .split('・').join('・​').replace(/([ァ-ヶー])([0-9０-９])/g, '$1​$2');
+  .split('・').join('・​').replace(/([ァ-ヶー])([0-9０-９])/g, '$1​$2')
+  // 2026-10-20 改善部 M3「スネグーラチ／カの円盤石」(320): 7字以上続く長いカタカナの名前だけ、あとの「の」の前でも折ってよい
+  // (短い名前「モッチーの|フレーム」の折り方は今のまま)
+  .replace(/([ァ-ヶー]{7,})の/g, '$1​の');
 // ★印は文字(U+200B)のままDOMへ置かず、<wbr> に変えてから描く。
 //   U+200B は幅0でも**文字として残る**ので、画面の文字を拾う検査やブラウザの検索で
 //   「ウンディーネのアイコン」が見つからなくなる(2026-09-18に monster/mermaid-browser-check.js が
@@ -287,7 +290,7 @@ const MarketProductCard = ({ item, owned=false, comingSoon=false, comingSoonLabe
           (「トレーニングチケッ/ト」「アシストカード「き/き」」)。
           text-wrap:balance も試したが、行の長さをならす方を優先して「トレーニン/グチケット」に
           なるため使わない。印が無く1行に入りきらない名前だけ overflow-wrap:anywhere で折る。 */}
-    <div className={`w-full flex items-start justify-center text-center ${/（/.test(item.name||'')?'text-[10px]':'text-[11px]'} font-black leading-tight ${comingSoon?'text-slate-400':'text-white'}`} style={{minHeight:'36px',wordBreak:'keep-all',overflowWrap:'anywhere'}}>{marketNameNodes(item.name)}</div>
+    <div className={`w-full flex items-start justify-center text-center ${/[ァ-ヶー]{7,}/.test(item.name||'')?'text-[10px] max-[359px]:text-[9px]':/（/.test(item.name||'')?'text-[10px]':'text-[11px]'} font-black leading-tight ${comingSoon?'text-slate-400':'text-white'}`} style={{minHeight:'36px',wordBreak:'keep-all',overflowWrap:'anywhere'}}>{marketNameNodes(item.name)}</div>
     {/* 詳細は「近日追加」の品でも出す(2026-09-28。近日公開予定の新モンスターの中身を先に見られるように) */}
     <div className="w-full flex items-center justify-center gap-1" style={{height:'22px'}}>{middle||detail?<>{middle}{!middle&&<MarketDetailChip label={`${item.name}の詳細を見る`} onClick={onDetail}/>}</>:null}</div>
     {/* 予告の品は買うボタンの代わりに札が出るので、値段は札の上に出す(どの売り場でも同じ) */}

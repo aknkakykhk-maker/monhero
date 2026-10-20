@@ -35,6 +35,13 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-10-21 02:40", type:'update', group:'rhythm', title:'モンヒロビート：リザルトに、その難易度での出来が出るようになりました', status:'new',
+    items:[
+      'リザルトの難易度とLv.の横に、「満点の97%」のように、その難易度の満点に対して何％取れたかが出るようになりました。',
+      'やさしい難易度ではランクの上限が低いので、うまく遊べたかをこの数字で確かめられます。ランクの決まり方はこれまでどおりです。',
+    ],
+  },
+  {
     date: "2026-10-21 02:13", type:'update', group:'rhythm', title:'モンヒロビート：HELL の譜面を見やすく作り直しました', status:'new',
     items:[
       '「Toward the Stars, Paradise or Truth」「ROSE」「ROSE short ver.」「SAD SONG」「SAD SONG short ver.」の HELL の譜面を作り直しました。',

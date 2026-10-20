@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b0f72fddbc8a6007
+// generated-sha256: 5f1094ac9d3c2cba
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-21 02:35"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-21 02:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11151,7 +11151,10 @@ const MARKET_NAME_WRAP_WORDS = Object.freeze(['チケット', 'カード', 'リ�
 const marketNameForWrap = (name) => MARKET_NAME_WRAP_WORDS.reduce(
   (text, word) => text.split(word).join(`​${word}`), String(name || ''))
   .split('（').join('​（').split('）').join('）​')
-  .split('・').join('・​').replace(/([ァ-ヶー])([0-9０-９])/g, '$1​$2');
+  .split('・').join('・​').replace(/([ァ-ヶー])([0-9０-９])/g, '$1​$2')
+  // 2026-10-20 改善部 M3「スネグーラチ／カの円盤石」(320): 7字以上続く長いカタカナの名前だけ、あとの「の」の前でも折ってよい
+  // (短い名前「モッチーの|フレーム」の折り方は今のまま)
+  .replace(/([ァ-ヶー]{7,})の/g, '$1​の');
 // ★印は文字(U+200B)のままDOMへ置かず、<wbr> に変えてから描く。
 //   U+200B は幅0でも**文字として残る**ので、画面の文字を拾う検査やブラウザの検索で
 //   「ウンディーネのアイコン」が見つからなくなる(2026-09-18に monster/mermaid-browser-check.js が
@@ -11192,7 +11195,7 @@ const MarketProductCard = ({ item, owned=false, comingSoon=false, comingSoonLabe
           (「トレーニングチケッ/ト」「アシストカード「き/き」」)。
           text-wrap:balance も試したが、行の長さをならす方を優先して「トレーニン/グチケット」に
           なるため使わない。印が無く1行に入りきらない名前だけ overflow-wrap:anywhere で折る。 */}
-    <div className={`w-full flex items-start justify-center text-center ${/（/.test(item.name||'')?'text-[10px]':'text-[11px]'} font-black leading-tight ${comingSoon?'text-slate-400':'text-white'}`} style={{minHeight:'36px',wordBreak:'keep-all',overflowWrap:'anywhere'}}>{marketNameNodes(item.name)}</div>
+    <div className={`w-full flex items-start justify-center text-center ${/[ァ-ヶー]{7,}/.test(item.name||'')?'text-[10px] max-[359px]:text-[9px]':/（/.test(item.name||'')?'text-[10px]':'text-[11px]'} font-black leading-tight ${comingSoon?'text-slate-400':'text-white'}`} style={{minHeight:'36px',wordBreak:'keep-all',overflowWrap:'anywhere'}}>{marketNameNodes(item.name)}</div>
     {/* 詳細は「近日追加」の品でも出す(2026-09-28。近日公開予定の新モンスターの中身を先に見られるように) */}
     <div className="w-full flex items-center justify-center gap-1" style={{height:'22px'}}>{middle||detail?<>{middle}{!middle&&<MarketDetailChip label={`${item.name}の詳細を見る`} onClick={onDetail}/>}</>:null}</div>
     {/* 予告の品は買うボタンの代わりに札が出るので、値段は札の上に出す(どの売り場でも同じ) */}
@@ -12061,7 +12064,7 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
           <span className="absolute" style={{ left:'-9px', bottom:'14px', width:0, height:0, borderTop:'7px solid transparent', borderBottom:'7px solid transparent', borderRight:`9px solid ${color}` }}/>
           <span className="absolute" style={{ left:'-6px', bottom:'14px', width:0, height:0, borderTop:'7px solid transparent', borderBottom:'7px solid transparent', borderRight:'9px solid rgba(15,23,42,0.92)' }}/>
           <span className={`block font-black tracking-widest ${compact?'text-[9px]':'text-[10px]'}`} style={{ color }}>{who.name}</span>
-          <span className={`block text-white leading-relaxed ${compact?'text-[10px]':'text-[12px]'}`}>{text}</span>
+          <span data-bubble-text className={`block text-white leading-relaxed ${compact?'text-[10px]':'text-[12px]'}`}>{text}</span>
           {(hasDetail||footerSpace>0)&&<span className="mt-0.5 flex items-center justify-end gap-0.5 text-[9px] font-black" style={{ color, ...(footerSpace>0?{paddingLeft:`${footerSpace}px`,minHeight:'18px',whiteSpace:'nowrap'}:{}) }}>{hasDetail&&<><span data-bubble-more-text>タップで詳しく</span><ChevronRight size={11}/></>}</span>}
         </Wrapper>
       </div>
@@ -19786,14 +19789,14 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
         <button type="button" data-rhythm-genre-open aria-haspopup="dialog" onClick={()=>setGenreOpen(true)}
           className={`flex min-h-[40px] w-[42%] min-w-0 items-center justify-between gap-1 rounded-xl border px-3 text-[11px] font-black landscape:min-h-[52px] landscape:w-full landscape:px-2 ${genre&&genre.id!=='all'?'border-cyan-200/80 bg-cyan-500/20 text-cyan-50':'border-white/15 bg-slate-900/80 text-slate-200'}`}>
           <span data-rhythm-genre-current={genre?genre.id:'all'} className="min-w-0 truncate landscape:flex landscape:flex-col landscape:items-start landscape:leading-tight">
-            <small className="text-[11px] font-black landscape:text-[9px] landscape:text-slate-400">ジャンル<span className="landscape:hidden">：</span></small><b className="max-w-full truncate font-black landscape:text-[13px]">{genre&&genre.favorite?'♥ ':''}{genre?genre.label:'ALL'}</b>
+            <small className="text-[11px] font-black max-[359px]:hidden landscape:text-[9px] landscape:text-slate-400">ジャンル<span className="landscape:hidden">：</span></small><b className="max-w-full truncate font-black landscape:text-[13px]">{genre&&genre.favorite?'♥ ':''}{genre?genre.label:'ALL'}</b>
           </span>
           <span aria-hidden="true" className="shrink-0 text-slate-400">▾</span>
         </button>
         <button type="button" data-rhythm-song-sort onClick={()=>setSortOpen(true)}
           className="flex min-h-[40px] min-w-0 flex-1 items-center justify-between gap-1 rounded-xl border border-white/15 bg-slate-900/80 px-3 text-[11px] font-black text-slate-200 landscape:min-h-[52px] landscape:flex-none landscape:px-2">
           <span className="min-w-0 truncate landscape:flex landscape:flex-col landscape:items-start landscape:leading-tight">
-            <small className="text-[11px] font-black landscape:text-[9px] landscape:text-slate-400">並べ替え<span className="landscape:hidden">：</span></small><b className="max-w-full truncate font-black landscape:text-[12px]">{sortLabel}{state.desc?'（逆）':''}</b>
+            {/* 幅320ほどの画面では「並べ替え：」を外して値だけ出す(2026-10-20 改善部 M9。いまの並べ方が切れて読めなかった) */}<small className="text-[11px] font-black max-[359px]:hidden landscape:text-[9px] landscape:text-slate-400">並べ替え<span className="landscape:hidden">：</span></small><b className="max-w-full truncate font-black landscape:text-[12px]">{sortLabel}{state.desc?'（逆）':''}</b>
           </span>
           <span aria-hidden="true" className="shrink-0 text-slate-400">▾</span>
         </button>
@@ -21138,6 +21141,24 @@ const rhythmChartFingerprint=chart=>{
   const notes=Array.isArray(chart?.notes)?chart.notes:[];
   const times=notes.map(note=>Number(note.timeMs)).filter(Number.isFinite).sort((a,b)=>a-b);
   return `${notes.length}:${times.length?Math.round(times[0]):0}:${times.length?Math.round(times[times.length-1]):0}`;
+};
+// 結果の画面で、下の帯より下にまだ続き(ビートP・ライブログなど)があるあいだだけ、帯の上に「▼ …」の印を出す
+// (2026-10-20 改善部 M8。幅320ほどの画面では、帯が判定の表のすぐ下に来て、続きがあることに気づけなかった)。
+// スクロールの箱(data-rhythm-result-scroll)を見て、いちばん下まで来たら消す
+const RhythmResultMoreHint=({label})=>{
+  const [more,setMore]=React.useState(false);
+  React.useEffect(()=>{
+    const box=document.querySelector('[data-rhythm-result-scroll]');
+    if(!box) return undefined;
+    const update=()=>setMore(box.scrollHeight-box.scrollTop-box.clientHeight>24);
+    update();
+    box.addEventListener('scroll',update,{passive:true});
+    window.addEventListener('resize',update);
+    const t=setTimeout(update,600);
+    return ()=>{box.removeEventListener('scroll',update);window.removeEventListener('resize',update);clearTimeout(t);};
+  },[]);
+  if(!more) return null;
+  return <div data-rhythm-result-more aria-hidden="true" className="pointer-events-none absolute inset-x-0 -top-6 flex justify-center"><span className="rounded-full border border-white/15 bg-slate-950/90 px-3 py-0.5 text-[10px] font-black text-slate-200">▼ {label}</span></div>;
 };
 const RhythmChartNotePanel=({song,difficulty,chart})=>{
   const durationMs=Math.max(RHYTHM_CHART_NOTE_SEGMENT_MS,Number(song?.playDurationMs)||Number(chart?.durationMs)||0);
@@ -23283,7 +23304,8 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
   {hudArtSrc&&<img data-rhythm-result-jacket src={hudArtSrc} alt="" draggable={false} decoding="async" className="h-16 w-16 shrink-0 rounded-xl border border-white/20 object-cover"/>}
   <div className="min-w-0 flex-1">
     <b data-rhythm-result-song-name className="line-clamp-2 block text-base font-black leading-tight">{rhythmSongFullName(song)}</b>
-    <div className="mt-0.5 flex items-baseline gap-1.5 text-[11px]"><b data-rhythm-difficulty-name className={`font-black ${rhythmDifficultyTextColor(difficulty.id)}`}>{difficulty.id}</b>{Number.isFinite(Number(chart.level))&&<span data-rhythm-result-level className="font-black tabular-nums text-slate-300">Lv.{chart.level}</span>}</div>
+    <div className="mt-0.5 flex items-baseline gap-1.5 text-[11px]"><b data-rhythm-difficulty-name className={`font-black ${rhythmDifficultyTextColor(difficulty.id)}`}>{difficulty.id}</b>{Number.isFinite(Number(chart.level))&&<span data-rhythm-result-level className="font-black tabular-nums text-slate-300">Lv.{chart.level}</span>}{/* その難易度での出来(2026-10-20 改善部 M6)。ランクは点数そのもので決まり、EASY は満点でも B まで(上限ランクの決まりは変えない)。
+        ほぼ満点でも大きな「D」だけが見えないよう、その難易度の満点に対して何%取れたかを小さく添える */}{Number(difficulty.maxScore)>0&&<span data-rhythm-result-achievement className="whitespace-nowrap font-black tabular-nums text-amber-200">満点の{Math.min(100,Math.floor(view.score/Number(difficulty.maxScore)*100))}%</span>}</div>
     {/* ランクのゲージ。その難易度の満点で届く上の5ランクに目印を置き、いまのスコアまで塗る。
         区切りは RHYTHM_RANKS のまま(ランクの決め方は変えない)。満点で届かないランクは出さない */}
     {(()=>{const max=Number(difficulty.maxScore)>0?Number(difficulty.maxScore):1000000;const asc=RHYTHM_RANKS.filter(item=>item.min>0&&item.min<=max).slice().reverse();const marks=asc.slice(-5);if(!marks.length)return null;const lowIndex=asc.indexOf(marks[0])-1;const low=lowIndex>=0?asc[lowIndex].min:0;const span=Math.max(1,max-low);const at=value=>Math.max(0,Math.min(100,(value-low)/span*100));return <div data-rhythm-result-gauge className="mt-1.5 pr-1.5">
@@ -23327,7 +23349,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
     色は遊んでいるときに弾ける光と同じ(rhythmJudgmentColor)。0件の判定は帯に出さない */}
 {(()=>{const total=RHYTHM_JUDGMENT_IDS.reduce((sum,id)=>sum+(Number(view.counts[id])||0),0);if(!(total>0))return null;return <div data-rhythm-result-ratio aria-hidden="true" className="mb-1.5 flex h-2 w-full overflow-hidden rounded-full bg-slate-800">{RHYTHM_JUDGMENT_IDS.map(id=>{const count=Number(view.counts[id])||0;return count>0?<i key={id} data-rhythm-result-ratio-part={id} className="block h-full" style={{width:`${(count/total*100).toFixed(2)}%`,background:rhythmJudgmentColor(id)}}/>:null;})}</div>;})()}
 <section data-rhythm-result-judgments className="flex items-stretch gap-2">
-<dl data-rhythm-result-judgment-table className="grid min-w-0 flex-1 grid-cols-[1fr_auto] gap-x-2 gap-y-0.5 rounded-2xl border border-white/10 bg-slate-900/85 px-3 py-2 text-[15px] italic">{RHYTHM_JUDGMENT_IDS.map(id=><React.Fragment key={id}>
+<dl data-rhythm-result-judgment-table className="grid min-w-0 flex-1 grid-cols-[1fr_auto] gap-x-2 gap-y-0.5 rounded-2xl border border-white/10 bg-slate-900/85 px-3 py-2 text-[15px] italic max-[359px]:gap-y-0 max-[359px]:py-1.5 max-[359px]:text-[13px]">{RHYTHM_JUDGMENT_IDS.map(id=><React.Fragment key={id}>
   {/* ★ぴったりのMARVELOUS(前後0.02秒以内)の回数。MARVELOUSの**内数**だが、並びは
       MARVELOUSの**上**へ置く(2026-09-13・ユーザー指示「普通に表示はMarvelousの上に
       JUST Marvelousがくるようにして」)。スコア・ランク・自己ベストには一切関わらない。 */}
@@ -23346,10 +23368,11 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
 </dl>
 {/* MAX COMBO は判定の表の右に大きく出す(バンドリ！の COMBO の置き方)。色は遊んでいるときの段と同じ */}
 <div data-rhythm-result-combo className="flex w-[34%] shrink-0 flex-col items-center justify-center rounded-2xl border border-white/10 bg-slate-900/85 px-2 py-2 text-center [@container(min-width:680px)]:w-[31%]">
-  <small className={`text-[10px] font-black tracking-[.2em] ${rhythmComboTextColor(view.maxCombo)}`}>MAX COMBO</small>
-  <b data-rhythm-max-combo className={`block text-[34px] font-black leading-tight tabular-nums ${rhythmComboTextColor(view.maxCombo)}`}>{view.maxCombo}</b>
+  {/* 狭い画面で「MAX/COMBO」と2行にならないよう、字の間を詰めて1行に保つ(2026-10-20 改善部 M3) */}
+  <small className={`whitespace-nowrap text-[10px] font-black tracking-[.2em] max-[359px]:tracking-[.06em] ${rhythmComboTextColor(view.maxCombo)}`}>MAX COMBO</small>
+  <b data-rhythm-max-combo className={`block text-[34px] font-black leading-tight tabular-nums max-[359px]:text-[28px] ${rhythmComboTextColor(view.maxCombo)}`}>{view.maxCombo}</b>
   {/* 刻みの数え方(2026-10-17): ホールド・スライドの刻みもノーツとしてコンボに数えたことと、取れた刻みの数を出す */}
-  {view.result?.scoreVersion===2&&<small data-rhythm-result-ticks className="mt-0.5 block text-[10px] font-bold leading-tight text-slate-300">刻み <b className="tabular-nums text-white">{view.result.tickJust}</b>/{view.result.tickTotal}{view.result.tickMiss>0?<span className="text-rose-300">(MISS {view.result.tickMiss})</span>:null}<span className="block text-[9px] font-bold text-slate-400">ホールド・スライドの刻みもコンボに数えます</span></small>}
+  {view.result?.scoreVersion===2&&<small data-rhythm-result-ticks className="mt-0.5 block text-[10px] font-bold leading-tight text-slate-300">刻み <b className="tabular-nums text-white">{view.result.tickJust}</b>/{view.result.tickTotal}{view.result.tickMiss>0?<span className="text-rose-300">(MISS {view.result.tickMiss})</span>:null}<span className="block text-[9px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('ホールド・スライドの刻みもコンボに数えます')}</span></small>}
   <div className="mt-1.5 grid w-full grid-cols-2 gap-1 text-[10px] font-black"><span data-rhythm-result-fast className="rounded-lg bg-cyan-500/15 py-1 text-cyan-200">FAST<b className="block text-sm tabular-nums text-white">{view.fast}</b></span><span data-rhythm-result-slow className="rounded-lg bg-fuchsia-500/15 py-1 text-fuchsia-200">SLOW<b className="block text-sm tabular-nums text-white">{view.slow}</b></span></div>
 </div>
 </section>
@@ -23419,7 +23442,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
 {/* 譜面メモ(DEBUG ONLY)。デバッグ画面から始めた演奏にだけ出す */}
 {debugPlay&&!tutorial&&!calibrating&&<RhythmChartNotePanel song={song} difficulty={difficulty} chart={chart}/>}
 </div>
-<div data-rhythm-result-actions className="relative shrink-0 border-t border-white/10 bg-slate-950/90 px-4 pt-2" style={{paddingBottom:'calc(.5rem + var(--mh-sa-bottom))'}}>{/* マルチだけ、縦⇄横の切り替えを左に置く(部屋の見出しと同じ部品。2026-10-10・社長「マルチの演奏後の結果画面でも縦横切り替えボタンほしい」)。
+<div data-rhythm-result-actions className="relative shrink-0 border-t border-white/10 bg-slate-950/90 px-4 pt-2" style={{paddingBottom:'calc(.5rem + var(--mh-sa-bottom))'}}><RhythmResultMoreHint label={[result.eventPointAward&&result.eventPointAward.amount>0?'ビートP':null,Array.isArray(result.liveLog)&&result.liveLog.some(section=>section.total>0)?'ライブログ':null].filter(Boolean).join('・')||'続き'}/>{/* マルチだけ、縦⇄横の切り替えを左に置く(部屋の見出しと同じ部品。2026-10-10・社長「マルチの演奏後の結果画面でも縦横切り替えボタンほしい」)。
   ソロ・レイドの結果は今のまま。上は曲の札とランクの丸で埋まっているので、指の届く下の列へ置く */}<div className={multi?"flex items-center gap-2":""}>{multi&&<div data-rhythm-result-orientation className="shrink-0"><RhythmOrientationButton/></div>}<div className={multi?"grid min-w-0 flex-1 grid-cols-1 gap-2":(raidPlay?"grid grid-cols-1 gap-2":"grid grid-cols-2 gap-2")}>{!multi&&!raidPlay&&<button className="min-h-[48px] rounded-xl bg-fuchsia-700 font-black" disabled={startLockRef.current} onClick={()=>beginRun(mergeRhythmBestRecord(runRef.current?.startBest,result))}>もう一度プレイ</button>}<button data-rhythm-multi-result-back={multi?"":undefined} data-rhythm-raid-result-back={raidPlay?"":undefined} className="min-h-[48px] rounded-xl bg-indigo-700 font-black" onClick={abort}>{multi&&'みんなの結果を見る'}{!multi&&raidPlay&&'レイドの結果を見る'}{!multi&&!raidPlay&&<>{debugPlay?'音ゲーデバッグへ戻る':'曲えらびへ戻る'}</>}</button></div></div></div></div></div></main>}
   /* ★演奏画面そのものを器(container-type:inline-size)にして、HUDの幅や字の大きさは vw ではなく cqw で決める
      (2026-09-26・ユーザー報告「演奏中の曲名が切れてる / 時間バーが難易度に被ってる」)。
@@ -30867,6 +30890,21 @@ const ModalFrame = ({ label, border='border-amber-400/70', onClose, children, na
 const ModalCloseButton = ({ onClick, label='閉じる', disabled=false }) => (
   <button type="button" disabled={disabled} onClick={onClick} className="mh-button mh-button-secondary w-full min-h-[48px] rounded-2xl border border-white/20 bg-slate-900 font-black active:scale-[.98] disabled:opacity-40">{label}</button>
 );
+// 言葉の切れ目で折る(2026-10-20 改善部の見直し M3「継/承」「攻/撃」「ガッツ上/限」「スライ/ド」)。
+// 日本語は既定だとどの文字の間でも折れるので、幅ぴったりのときに言葉の途中で行が変わる。
+// Intl.Segmenter で言葉の切れ目に印(U+200B)を入れ、JA_WRAP_STYLE(keep-all)で印の所だけで折る。
+// 1行に入らない長い言葉だけは overflow-wrap:anywhere で折る(はみ出さない)。Segmenter の無い古い端末では今までどおり
+let _jaSegmenter;
+const jaWrap = (text) => {
+  const s = String(text ?? '');
+  if (!s) return s;
+  try {
+    if (_jaSegmenter === undefined) _jaSegmenter = (typeof Intl !== 'undefined' && Intl.Segmenter) ? new Intl.Segmenter('ja', { granularity: 'word' }) : null;
+    if (!_jaSegmenter) return s;
+    return [..._jaSegmenter.segment(s)].map(seg => seg.segment).join('\u200B');
+  } catch { return s; }
+};
+const JA_WRAP_STYLE = Object.freeze({ wordBreak: 'keep-all', overflowWrap: 'anywhere' });
 // 数を直接打ち込む欄(2026-10-19 社長「マーケットのアイテムは直接数値入力で買えるようにしよう！」、
 // 2026-10-20「個数系のやつは基本的に直接入力があったほうがいいね」)。★個数・回数・枚数を選ぶ所は、この欄を使う
 //   (−/＋/MAX のボタンは呼ぶ側に並べたまま。tools/boot/count-input-check.js が見張る)
@@ -31956,7 +31994,9 @@ function GiftBoxScreen({ gifts, giftTab, onSelectTab, onBack, onClaim, onOpenLog
       ]}/>
       {giftTab==='unclaimed'&&<button type="button" disabled={!claimable.length} onClick={()=>onClaim(claimable.map(g=>g.id))} className="mh-button mh-button-primary shrink-0 mb-2 min-h-[52px] rounded-xl bg-gradient-to-r from-cyan-600 to-indigo-600 text-[13px] font-black text-white shadow-lg active:scale-[.98] disabled:opacity-40">すべて受け取る</button>}
       <button type="button" onClick={onOpenLoginBonusList} className="mh-button mh-button-secondary shrink-0 mb-2 min-h-[44px] rounded-xl bg-slate-800 border border-amber-400/60 text-amber-200 font-black text-[12px] active:scale-95">ログインボーナス一覧を見る</button>
-      <div className={`mh-gift-list ${SCREEN_LIST_CLASS} pb-4`}>{shown.length===0?<ScreenEmpty emoji="🎁" lines={giftTab==='unclaimed'?['未受取のギフトはありません','ミッションやログインボーナスを達成すると、ここに届きます']:['受取済みのギフトはありません','受け取ったギフトは、ここに残ります']}/>:shown.map(g=>{const expired=giftIsExpired(g,now);const valid=!!normalizeGiftRewards(g);const display=giftTitleDisplay(g);return <article key={g.id} title={g.description||g.title||undefined} className={`mh-gift-card rounded-2xl border ${g.claimedAt?'bg-slate-900/70 border-white/10':expired?'bg-red-950/30 border-red-500/60':'bg-cyan-950/30 border-cyan-400/60'}`}>
+      {/* 札の地は不透明(2026-10-20 改善部 M10)。半透明だと、ハロウィンの画面の殻の背景にあるかぼちゃが字の上に透けて見えた。
+          色は前の半透明の色を夜空の地(#170a26)に重ねたときと同じにしてある */}
+      <div className={`mh-gift-list ${SCREEN_LIST_CLASS} pb-4`}>{shown.length===0?<ScreenEmpty emoji="🎁" lines={giftTab==='unclaimed'?['未受取のギフトはありません','ミッションやログインボーナスを達成すると、ここに届きます']:['受取済みのギフトはありません','受け取ったギフトは、ここに残ります']}/>:shown.map(g=>{const expired=giftIsExpired(g,now);const valid=!!normalizeGiftRewards(g);const display=giftTitleDisplay(g);return <article key={g.id} title={g.description||g.title||undefined} className={`mh-gift-card rounded-2xl border ${g.claimedAt?'bg-[#111329] border-white/10':expired?'bg-[#250a1e] border-red-500/60':'bg-[#131630] border-cyan-400/60'}`}>
         <div className="mh-gift-heading"><h3>{display.label&&<span>{display.label}</span>}<b>{display.title}</b></h3><em className={`${g.claimedAt?'bg-slate-700 text-slate-300':expired?'bg-red-900 text-red-200':valid?'bg-cyan-700 text-white':'bg-amber-900 text-amber-200'}`}>{g.claimedAt?'受取済み':expired?'期限切れ':valid?'受取可':'要確認'}</em></div>
         <div className="mh-gift-main"><div className="mh-gift-rewards">{Array.isArray(g.rewards)&&g.rewards.map((r,i)=><span key={i}>{giftRewardText(r)}</span>)}</div>{!g.claimedAt&&<button type="button" disabled={expired||!valid} onClick={()=>onClaim([g.id])} className="mh-button mh-button-primary">受け取る</button>}</div>
         <div className="mh-gift-deadline">{g.claimedAt?`受取日時: ${new Date(g.claimedAt).toLocaleString('ja-JP')}`:`受取期限: ${g.expiresAt?new Date(g.expiresAt).toLocaleString('ja-JP'):'期限なし'}`}</div>
@@ -37125,8 +37165,9 @@ function PickTeachingScreen({
         {phasePlan
           ? <PhaseSteps plan={phasePlan} current="teaching" nextWave={wave>0?wave+1:null}/>
           : <span className="mh-ph-plate">ASSIST CARD</span>}
-        <div className="mh-ph-heading"><h2 className="mh-ph-title text-xl font-black italic">アシストカードの継承・強化</h2></div>
-        <p className="mh-phase-tall text-[10px] font-bold text-slate-400">1枚選んで、新しく覚えるか、持っているカードを強化します</p>
+        {/* 題名と説明は言葉の切れ目で折る(2026-10-20 改善部 M3「継/承」) */}
+        <div className="mh-ph-heading"><h2 className="mh-ph-title text-xl font-black italic" style={JA_WRAP_STYLE}>{jaWrap('アシストカードの継承・強化')}</h2></div>
+        <p className="mh-phase-tall text-[10px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('1枚選んで、新しく覚えるか、持っているカードを強化します')}</p>
       </div>
       <div className="mh-phase-tall shrink-0 w-full max-w-sm mb-2"><AssistantBubble scene="pickTeaching" compact/></div>
       {/* 持っているカードとそのレベル。どれを伸ばすか決めるときに、今の手持ちを見比べられるようにする */}
@@ -37161,7 +37202,7 @@ function PickTeachingScreen({
             <span style={{fontSize:'44px'}} className="mh-ph-medal relative rounded-2xl p-1 leading-none">{cardIconNode(t.icon,52,t.id)}</span>
             <div className="relative text-[11px] font-black leading-tight flex flex-col items-center justify-center" style={{textShadow:'0 1px 0 rgba(0,0,0,.85), 0 0 4px rgba(0,0,0,.6)'}}>{owned&&!isMax&&<div className="text-[8px] text-amber-400 mb-0.5 line-through">{BREEDER_EVO_NAMES[t.id][level]}</div>}<div className={owned?"text-white":"text-slate-100"}>{owned?(isMax?BREEDER_EVO_NAMES[t.id][level]:BREEDER_EVO_NAMES[t.id][level+1]):BREEDER_EVO_NAMES[t.id][0]}</div></div>
             {levelPips(owned?level+1:0, isMax?-1:shownLevel)}
-            <div className="mh-ph-cell relative w-full flex-1 rounded-lg px-1.5 py-1 text-[9px] font-bold leading-snug text-slate-200" style={{display:'-webkit-box',WebkitLineClamp:3,WebkitBoxOrient:'vertical',overflow:'hidden'}}>{shownDesc}</div>
+            <div className="mh-ph-cell relative w-full flex-1 rounded-lg px-1.5 py-1 text-[9px] font-bold leading-snug text-slate-200" style={{display:'-webkit-box',WebkitLineClamp:3,WebkitBoxOrient:'vertical',overflow:'hidden',...JA_WRAP_STYLE}}>{jaWrap(shownDesc)}</div>
             {/* 新規 / 強化 / MAX の札。文字はカード名の後ろに置く(名前で探す検査がある) */}
             <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[8px] font-black text-white"
               style={{border:'1px solid #f3d27a',background:'linear-gradient(180deg, rgb(var(--mh-rc2)), rgb(var(--mh-rc)) 55%, rgba(var(--mh-rc),.7))',boxShadow:'0 0 0 1px rgba(30,18,4,.9), 0 0 10px rgba(var(--mh-rc),.7)',textShadow:'0 1px 2px rgba(0,0,0,.9)'}}>{owned?(isMax?"MAXレベル":`強化 Lv.${level}→${level+1}`):"新規習得"}</span>
@@ -37189,7 +37230,7 @@ function PickTeachingScreen({
             );})()}
             <div className="relative w-full space-y-2 mb-4 overflow-y-auto min-h-0 flex-1">
               {getFullEvolutionDetails(selectedTeachingCard).map(info=>{const owned=ownedTeachings.find(ot=>ot.id===selectedTeachingCard.id); const currentLvl=owned?owned.evoLevel:-1; const isCurrent=info.lvl===currentLvl; const isNext=info.lvl===currentLvl+1;
-                return(<div key={info.lvl} className={`p-2 rounded-xl border ${isCurrent?'bg-purple-900/50 border-purple-400':isNext?'bg-amber-900/30 border-amber-400/70 shadow-[0_0_12px_rgba(243,210,122,.3)]':'mh-ph-cell border-white/5'}`}><div className="flex justify-between items-center mb-1"><span className={`text-[9px] font-black ${isCurrent?'text-purple-300':isNext?'text-amber-300':'text-slate-500'}`}>Lv.{info.lvl} {info.name}</span>{isCurrent&&<span className="text-[9px] bg-purple-500 text-white px-1.5 rounded">所持</span>}{isNext&&<span className="text-[8px] bg-amber-600 text-white px-1.5 rounded">{owned?'強化後':'習得後'}</span>}</div><div className="text-[8px] text-slate-300">{info.desc}</div></div>);
+                return(<div key={info.lvl} className={`p-2 rounded-xl border ${isCurrent?'bg-purple-900/50 border-purple-400':isNext?'bg-amber-900/30 border-amber-400/70 shadow-[0_0_12px_rgba(243,210,122,.3)]':'mh-ph-cell border-white/5'}`}><div className="flex justify-between items-center mb-1"><span className={`text-[9px] font-black ${isCurrent?'text-purple-300':isNext?'text-amber-300':'text-slate-500'}`}>Lv.{info.lvl} {info.name}</span>{isCurrent&&<span className="text-[9px] bg-purple-500 text-white px-1.5 rounded">所持</span>}{isNext&&<span className="text-[8px] bg-amber-600 text-white px-1.5 rounded">{owned?'強化後':'習得後'}</span>}</div><div className="text-[8px] text-slate-300" style={JA_WRAP_STYLE}>{jaWrap(info.desc)}</div></div>);
               })}
             </div>
             <div className="relative flex gap-2 w-full mt-auto shrink-0"><button onClick={()=>setSelectedTeachingCard(null)} className="mh-ph-btn flex-1 min-h-[44px] py-3 rounded-xl font-bold text-xs">戻る</button><button onClick={()=>confirmPickTeaching()} className="mh-ph-btn-gold flex-1 min-h-[44px] py-3 rounded-xl font-black text-sm">{ownedTeachings.find(ot=>ot.id===selectedTeachingCard.id)?"強化する":"習得する"}</button></div>
@@ -44905,7 +44946,7 @@ function RhythmMultiMemberCards({ members, hostId, selfId, resolveIconUrl, badge
               {openable && <span aria-hidden="true" className={`absolute -bottom-1 -right-1.5 flex items-center justify-center rounded-full bg-lime-300 font-black leading-none text-slate-950 ${tall ? 'h-4 w-4 text-[10px]' : 'h-3 w-3 text-[8px]'}`}>i</span>}
             </span>
             <span className={`min-w-0 ${tall ? 'mt-1 w-full text-center' : 'mt-0.5 w-full text-center landscape:mt-0 landscape:flex-1 landscape:text-left'}`}>
-              <span className={`block truncate font-black leading-tight ${tall ? 'text-[11px] landscape:text-sm' : 'text-[10px]'}`}>{m.cpu && <b data-rhythm-multi-cpu-mark className="mr-0.5 rounded bg-lime-300 px-0.5 text-[8px] font-black text-slate-950">CPU</b>}{m.name}{self ? '*' : ''}</span>
+              <span className={`block font-black leading-tight ${tall ? 'line-clamp-2 break-all text-[11px] landscape:text-sm' : 'truncate text-[10px]'}`}>{m.cpu && <b data-rhythm-multi-cpu-mark className="mr-0.5 rounded bg-lime-300 px-0.5 text-[8px] font-black text-slate-950">CPU</b>}{m.name}{self ? '*' : ''}</span>
               {badge.sub && <small className={`block truncate font-bold leading-tight text-slate-400 ${tall ? 'text-[9px] landscape:text-[11px]' : 'text-[8px]'}`}>{badge.sub}</small>}
             </span>
           </li>
@@ -45801,7 +45842,9 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
           : <>
             <RhythmMultiMemberCards onOpen={openBuddyInfo} bubbleOf={chatBubbleOf} members={members} hostId={view ? view.hostId : ''} selfId={view ? view.selfId : ''} resolveIconUrl={resolveIconUrl} size="tall"
               badgeOf={(m) => ({ text: view && m.id === view.hostId ? 'ホスト' : '入室', cls: view && m.id === view.hostId ? 'bg-amber-400 text-slate-950' : 'bg-cyan-500 text-slate-950', sub: `Lv.${m.level}` })} />
-            <div className="mt-auto max-h-[52%] shrink-0 overflow-y-auto border-t border-white/10 bg-slate-950/90 p-2 landscape:grid landscape:max-h-[58%] landscape:grid-cols-2 landscape:gap-2" style={{ paddingBottom: 'calc(.5rem + var(--mh-sa-bottom))' }}>
+            {/* 縦向きでは、下の欄を枠のすぐ下へ寄せる(2026-10-20 改善部 M5。390 で枠と欄のあいだが約300px 空いていた)。
+                高さの上限も広げ、320×568 で「ルームを出る」が画面の外へ切れないようにする。横向きは今のまま */}
+            <div className="max-h-[70%] shrink-0 overflow-y-auto border-t border-white/10 bg-slate-950/90 p-2 landscape:mt-auto landscape:grid landscape:max-h-[58%] landscape:grid-cols-2 landscape:gap-2" style={{ paddingBottom: 'calc(.5rem + var(--mh-sa-bottom))' }}>
               <section data-rhythm-multi-matching className="rounded-2xl border border-white/15 bg-slate-900/85 p-2">
                 <p className="animate-pulse text-sm font-black text-amber-200">{!view ? `${RHYTHM_MULTI_MODE_LABELS[searching]}ルームをさがしています…` : 'メンバーを待っています…'}</p>
                 <p className="mt-0.5 text-[10px] font-bold leading-snug text-slate-400">
@@ -45822,7 +45865,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
                   {isHost
                     ? RHYTHM_MULTI_SELECT_SEC_OPTIONS.map((sec) => (
                       <button key={sec} type="button" data-rhythm-multi-select-sec={sec} aria-pressed={rhythmMultiNormalizeSelectSec(room.selectSec) === sec} onClick={() => RHYTHM_MULTI.setSelectSeconds(sec)}
-                        className={`min-h-[36px] min-w-[52px] rounded-lg border px-2 text-[11px] font-black ${rhythmMultiNormalizeSelectSec(room.selectSec) === sec ? 'border-amber-300 bg-amber-600/80 text-white' : 'border-white/15 bg-slate-900/80 text-slate-300'}`}>{rhythmMultiSelectSecLabel(sec)}</button>))
+                        className={`min-h-[36px] min-w-[52px] rounded-lg border px-2 text-[11px] font-black max-[359px]:min-w-[44px] max-[359px]:px-1.5 ${rhythmMultiNormalizeSelectSec(room.selectSec) === sec ? 'border-amber-300 bg-amber-600/80 text-white' : 'border-white/15 bg-slate-900/80 text-slate-300'}`}>{rhythmMultiSelectSecLabel(sec)}</button>))
                     : <b data-rhythm-multi-select-sec-view className="text-[11px] font-black text-amber-200">{rhythmMultiSelectSecLabel(rhythmMultiNormalizeSelectSec(room.selectSec))}<small className="ml-1 text-[9px] font-bold text-slate-400">(ホストが決めます)</small></b>}
                 </div>}
               </section>
