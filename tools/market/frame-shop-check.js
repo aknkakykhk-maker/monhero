@@ -206,6 +206,21 @@ check('ビートP交換所で交換するときも、条件を保存値で読み
 check('フレームの商品の絵は、枠の外側まで置き場所に収める(商品名に重ならない)',
   /const avatarPx=Math\.min\(MARKET_FRAME_AVATAR_PX,Math\.floor\(MARKET_FRAME_BOX_PX\/Math\.max\(1,box\)\)\);/.test(widgets)
   && /const MARKET_FRAME_BOX_PX = 56;/.test(widgets));
+// 商品名と札の折り位置(2026-10-20 窓口「モッチーのフ／レーム」「条件を達成 / すると買え / ます」): 言葉の切れ目だけで折る
+{
+  const take = (name) => { const at = widgets.indexOf(`const ${name} = `); return at >= 0 ? widgets.slice(at, widgets.indexOf(';\n', at) + 2) : ''; };
+  const code = [take('MARKET_NAME_WRAP_WORDS'), take('marketNameForWrap'), take('MARKET_LABEL_WRAP_AFTER')].join('\n');
+  const c = {};
+  vm.createContext(c);
+  vm.runInContext(`${code}\nthis.out={marketNameForWrap,MARKET_LABEL_WRAP_AFTER};`, c);
+  const seg = (name) => c.out.marketNameForWrap(name).split('\u200b').filter(Boolean).join('|');
+  check('フレームの名前は「〜の|フレーム」「・|」「カタカナ|数字」「|ビート」で折れる',
+    seg('モッチーのフレーム') === 'モッチーの|フレーム' && seg('ウンディーネ3姉妹のフレーム') === 'ウンディーネ|3姉妹の|フレーム'
+    && seg('ザン・エイキのフレーム') === 'ザン・|エイキの|フレーム' && seg('スエゾービートのフレーム') === 'スエゾー|ビートの|フレーム',
+    [seg('モッチーのフレーム'), seg('ウンディーネ3姉妹のフレーム'), seg('ザン・エイキのフレーム'), seg('スエゾービートのフレーム')].join(' / '));
+  check('札は「すると」の後ろで折り、いちばん長い語が1行に入る大きさにする', c.out.MARKET_LABEL_WRAP_AFTER.includes('すると')
+    && /fontSize:marketLabelFitSize\(comingSoonLabel\)/.test(widgets) && /wordBreak:'keep-all'/.test(widgets));
+}
 check('条件が未達成のカードは買えない札が出る(ブリーダーP・ビートP)',
   market.includes('canBuy = !comingSoon && !frameLocked && !owned') && market.includes("canBuy={!owned&&!frameLocked&&safeEventPoints>=offer.cost&&!busy}"));
 check('モンヒロビートの通算クリア回数は新しいキーで数え、既存の mh_rhythm_best_v1 は書き換えない',
