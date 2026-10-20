@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 42036f0610a94bd4
+// source-sha256: a34b1126ac0e69f7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-20 17:51";
+const BUILD_DATE = "2026-10-21 01:30";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -25527,6 +25527,30 @@ const storeList = async (prefix, shared = false) => {
     }
   } catch {}
   return Object.keys(_memStore).filter(k => k.startsWith(prefix));
+};
+const DEBUG_UNLOCK_KEY = 'mh_debug_unlocked_v1';
+const DEBUG_PASSPHRASE_SALT = 'ba3fc07d01681734a3e290689e0d5f32';
+const DEBUG_PASSPHRASE_ITERATIONS = 600000;
+const DEBUG_PASSPHRASE_HASH = '1378175ce209b7dd290f1c4f5f5a92f8d4ca8127dbd46a845e99ada95a7166e6';
+const debugPassphraseMatches = async text => {
+  const phrase = String(text || '').trim();
+  if (!phrase) return false;
+  try {
+    const subtle = typeof crypto !== 'undefined' && crypto.subtle;
+    if (!subtle || typeof TextEncoder === 'undefined') return false;
+    const salt = new Uint8Array(DEBUG_PASSPHRASE_SALT.match(/../g).map(h => parseInt(h, 16)));
+    const key = await subtle.importKey('raw', new TextEncoder().encode(phrase), 'PBKDF2', false, ['deriveBits']);
+    const bits = await subtle.deriveBits({
+      name: 'PBKDF2',
+      hash: 'SHA-256',
+      salt,
+      iterations: DEBUG_PASSPHRASE_ITERATIONS
+    }, key, 256);
+    const hex = [...new Uint8Array(bits)].map(b => b.toString(16).padStart(2, '0')).join('');
+    return hex === DEBUG_PASSPHRASE_HASH;
+  } catch {
+    return false;
+  }
 };
 const ASSET_CACHE_KEY = 'mh_asset_prefetch_v1';
 const ASSET_CACHE_NAME = 'mh-assets-v1';
@@ -80314,6 +80338,37 @@ function MonsterHeroGame() {
     } catch {}
     setDebugEntryKnown(true);
   }, [gameState]);
+  const [debugPassOpen, setDebugPassOpen] = useState(false);
+  const [debugPassText, setDebugPassText] = useState('');
+  const [debugPassError, setDebugPassError] = useState('');
+  const requestDebugSettings = () => {
+    let unlocked = false;
+    try {
+      unlocked = localStorage.getItem(DEBUG_UNLOCK_KEY) === '1';
+    } catch {}
+    if (unlocked || typeof navigator !== 'undefined' && navigator.webdriver) {
+      openDebugSettings();
+      return;
+    }
+    setShowHelp(false);
+    setDebugPassText('');
+    setDebugPassError('');
+    setDebugPassOpen(true);
+  };
+  const submitDebugPassphrase = async () => {
+    const ok = await debugPassphraseMatches(debugPassText);
+    if (!ok) {
+      setDebugPassError('合言葉が違います');
+      return;
+    }
+    try {
+      localStorage.setItem(DEBUG_UNLOCK_KEY, '1');
+    } catch {}
+    setDebugPassOpen(false);
+    setDebugPassText('');
+    setDebugPassError('');
+    openDebugSettings();
+  };
   const [rhythmInputRecOn, setRhythmInputRecOn] = useState(() => {
     try {
       return RHYTHM_INPUT_REC.enabled();
@@ -101483,7 +101538,47 @@ function MonsterHeroGame() {
       transcendAnimation: transcendAnimation
     }), soulRankAnimation && React.createElement(MasuSoulRankAnimation, {
       soulRankAnimation: soulRankAnimation
-    }), reincarnateAnimation && React.createElement(MasuReincarnateAnimation, {
+    }), debugPassOpen && React.createElement(ModalFrame, {
+      label: "合言葉",
+      border: "border-slate-400/60",
+      onClose: () => setDebugPassOpen(false),
+      narrow: true,
+      zIndex: MODAL_Z.dialog + 5
+    }, React.createElement("form", {
+      "data-debug-passphrase": true,
+      onSubmit: e => {
+        e.preventDefault();
+        submitDebugPassphrase();
+      }
+    }, React.createElement("h3", {
+      className: "text-center text-base font-black text-white"
+    }, "合言葉"), React.createElement("input", {
+      type: "password",
+      inputMode: "numeric",
+      autoComplete: "off",
+      "aria-label": "合言葉",
+      value: debugPassText,
+      onChange: e => {
+        setDebugPassText(e.target.value);
+        setDebugPassError('');
+      },
+      autoFocus: true,
+      style: {
+        fontSize: 16
+      },
+      className: "mt-3 w-full min-h-[48px] rounded-xl border border-slate-600 bg-black/50 p-3 text-center font-bold text-white outline-none focus:border-amber-300"
+    }), debugPassError && React.createElement("p", {
+      className: "mt-2 text-center text-[11px] font-black text-red-300"
+    }, debugPassError), React.createElement("div", {
+      className: "mt-3 grid grid-cols-1 gap-2"
+    }, React.createElement("button", {
+      type: "submit",
+      disabled: !debugPassText.trim(),
+      className: "mh-button mh-button-primary min-h-[48px] rounded-2xl font-black active:scale-[.98] disabled:opacity-40"
+    }, "開く"), React.createElement(ModalCloseButton, {
+      onClick: () => setDebugPassOpen(false),
+      label: "やめる"
+    })))), reincarnateAnimation && React.createElement(MasuReincarnateAnimation, {
       reincarnateAnimation: reincarnateAnimation
     }), donationAnimation && React.createElement(MasuDonationAnimation, {
       donationAnimation: donationAnimation
@@ -102996,7 +103091,7 @@ function MonsterHeroGame() {
         setRestoreMsg('');
       },
       onOpenHelp: () => openHelp(),
-      onOpenDebug: debugEntryKnown ? openDebugSettings : null,
+      onOpenDebug: debugEntryKnown ? requestDebugSettings : null,
       onOpenGameUpdate: () => setShowGameUpdateConfirm(true),
       gameUpdateDisabled: showGameUpdateConfirm || gameUpdatePending,
       onReturnToTitle: () => setShowOfficialTitleConfirm(true),
@@ -111137,7 +111232,7 @@ function MonsterHeroGame() {
         className: "mh-button mh-button-primary w-full min-h-[52px] py-3 rounded-2xl font-black text-sm active:scale-95"
       }, "わかった！冒険に戻る"), React.createElement("button", {
         "aria-label": "",
-        onClick: openDebugSettings,
+        onClick: requestDebugSettings,
         className: "mt-5 mx-auto block text-[10px] opacity-25 hover:opacity-40 active:opacity-60"
       }, "💊")));
     })(), titleModal, showOfficialTitleConfirm && React.createElement("div", {

@@ -155,6 +155,27 @@ function MonsterHeroGame() {
   // ふつうのプレイヤーはヘルプの奥の入口を開かないので、出ないまま(新しいキー mh_debug_entry_v1)
   const [debugEntryKnown,setDebugEntryKnown]=useState(()=>{try{return localStorage.getItem('mh_debug_entry_v1')==='1';}catch{return false;}});
   useEffect(()=>{if(gameState!=='DEBUG_SETTINGS')return;try{localStorage.setItem('mh_debug_entry_v1','1');}catch{}setDebugEntryKnown(true);},[gameState]);
+  // デバッグ設定の入口に合言葉(2026-10-20 社長決定・改善部の見直し M1)。
+  // ・合っていれば開き、その端末は覚えて次から聞かない(新しいキー mh_debug_unlocked_v1)
+  // ・リポジトリは公開なので、合言葉の文字は書かず、塩+PBKDF2 のハッシュで照らす(作り方: node tools/debug-passphrase-hash.js <合言葉>)
+  // ・自動操作のブラウザ(navigator.webdriver)では聞かない。検査・手順書がヘルプの「💊」から開く道を壊さないため
+  const [debugPassOpen,setDebugPassOpen]=useState(false);
+  const [debugPassText,setDebugPassText]=useState('');
+  const [debugPassError,setDebugPassError]=useState('');
+  const requestDebugSettings=()=>{
+    let unlocked=false;
+    try{unlocked=localStorage.getItem(DEBUG_UNLOCK_KEY)==='1';}catch{}
+    if(unlocked||(typeof navigator!=='undefined'&&navigator.webdriver)){openDebugSettings();return;}
+    // ヘルプ(重なり順がとても前)を閉じてから窓を出す。デバッグ設定を開くときもヘルプは閉じている
+    setShowHelp(false);setDebugPassText('');setDebugPassError('');setDebugPassOpen(true);
+  };
+  const submitDebugPassphrase=async()=>{
+    const ok=await debugPassphraseMatches(debugPassText);
+    if(!ok){setDebugPassError('合言葉が違います');return;}
+    try{localStorage.setItem(DEBUG_UNLOCK_KEY,'1');}catch{}
+    setDebugPassOpen(false);setDebugPassText('');setDebugPassError('');
+    openDebugSettings();
+  };
   const [rhythmInputRecOn,setRhythmInputRecOn]=useState(()=>{try{return RHYTHM_INPUT_REC.enabled();}catch{return false;}});
   const [rhythmInputRecMsg,setRhythmInputRecMsg]=useState('');
   // ホールド・スライドの離しの合図の遅れを、どこまで信じて戻すか(検証用・2026-10-11)。この端末だけの切り替え(mh_rhythm_fix_override_v1)
@@ -17234,6 +17255,18 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           />
         )}
         {/* 転生の演出。モンスターの背面で対応色の画像オーラを一度だけ強く発光させる。 */}
+        {debugPassOpen&&<ModalFrame label="合言葉" border="border-slate-400/60" onClose={()=>setDebugPassOpen(false)} narrow zIndex={MODAL_Z.dialog+5}>
+          <form data-debug-passphrase onSubmit={(e)=>{e.preventDefault();submitDebugPassphrase();}}>
+            <h3 className="text-center text-base font-black text-white">合言葉</h3>
+            <input type="password" inputMode="numeric" autoComplete="off" aria-label="合言葉" value={debugPassText} onChange={e=>{setDebugPassText(e.target.value);setDebugPassError('');}} autoFocus
+              style={{fontSize:16}} className="mt-3 w-full min-h-[48px] rounded-xl border border-slate-600 bg-black/50 p-3 text-center font-bold text-white outline-none focus:border-amber-300"/>
+            {debugPassError&&<p className="mt-2 text-center text-[11px] font-black text-red-300">{debugPassError}</p>}
+            <div className="mt-3 grid grid-cols-1 gap-2">
+              <button type="submit" disabled={!debugPassText.trim()} className="mh-button mh-button-primary min-h-[48px] rounded-2xl font-black active:scale-[.98] disabled:opacity-40">開く</button>
+              <ModalCloseButton onClick={()=>setDebugPassOpen(false)} label="やめる"/>
+            </div>
+          </form>
+        </ModalFrame>}
         {reincarnateAnimation&&(
           <MasuReincarnateAnimation
             reincarnateAnimation={reincarnateAnimation}
@@ -17824,7 +17857,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onOpenScreenTheme={()=>setShowScreenTheme(true)}
             onOpenBackup={()=>{setShowBackup(true);setBackupTab('export');setBackupCode('');setRestoreInput('');setRestoreMsg('');}}
             onOpenHelp={()=>openHelp()}
-            onOpenDebug={debugEntryKnown?openDebugSettings:null}
+            onOpenDebug={debugEntryKnown?requestDebugSettings:null}
             onOpenGameUpdate={()=>setShowGameUpdateConfirm(true)}
             gameUpdateDisabled={showGameUpdateConfirm||gameUpdatePending}
             onReturnToTitle={()=>setShowOfficialTitleConfirm(true)}
@@ -21669,7 +21702,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </div>
           <footer className="shrink-0 p-4 bg-slate-900 border-t border-white/10 text-center" style={{backgroundColor:'#0f172a',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
             <button onClick={()=>setShowHelp(false)} className="mh-button mh-button-primary w-full min-h-[52px] py-3 rounded-2xl font-black text-sm active:scale-95">わかった！冒険に戻る</button>
-            <button aria-label="" onClick={openDebugSettings} className="mt-5 mx-auto block text-[10px] opacity-25 hover:opacity-40 active:opacity-60">💊</button>
+            <button aria-label="" onClick={requestDebugSettings} className="mt-5 mx-auto block text-[10px] opacity-25 hover:opacity-40 active:opacity-60">💊</button>
           </footer>
         </div>);
       })()}

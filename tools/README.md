@@ -100,6 +100,7 @@ node tools/build.js --check
 | `node build.js --check` | compiled が jsx と一致しているか、`tailwind.css` が今のソースから作られているかを確認する(古ければ終了コード1)。出荷前チェック用。 |
 | `node build-tailwind.js` | 配信用の見た目のCSS `monster-hero/tailwind.css` を作る。**中身が変わったときだけ**作り直す(`--force` で必ず、`--check` で古くないかだけ見る)。`build.js` から自動で呼ばれるので、ふつうは直接叩かなくてよい。`landscape:` を自前回転(`data-mh-view-rotation`)でも効かせる差し替えはこの設定に入っている。 |
 | `node build-assistant-chat-digest.js` | 助手とおしゃべりの中継役が読む材料 `monster-hero/data/assistant-chat-digest.json`(ヘルプの中身・助手の人柄)を、`help.js`・`assistants.js` から作る。公開の印が付いたヘルプははぶく。`build.js` が毎回呼ぶ。`--check` で古くないかだけ見る。説明は `docs/spec/ASSISTANT_CHAT.md` |
+| `node debug-passphrase-hash.js <合言葉>` | デバッグ設定の入口の合言葉を、塩と PBKDF2 のハッシュにして出す(2026-10-20)。出た値だけを `25-storage.jsx` の `DEBUG_PASSPHRASE_*` へ書く。合言葉そのものはソース・コミット・PR に書かない。 |
 | `node build-asset-manifest.js` | 事前ダウンロード(Service Worker `monster-hero/sw.js`)が使う音源・画像の一覧と版の印 `monster-hero/asset-manifest.json` を作る。`build.js` が毎回呼ぶので手で打つことはふつう無い。`--check` で古くなっていないかだけ見る(`build.js --check` も見る)。説明は `docs/spec/ASSET_PREFETCH.md` |
 | `node check-syntax.js` | `monster-hero/game-system.jsx` をBabelで変換して構文エラーが無いか確認する。**改修後は必ず実行する。** |
 | `node undefined-reference-check.js` | `game-system.jsx` が「その場所からは見えない変数」を参照していないか、Babelでスコープをたどって確認する。構文としては正しいので `check-syntax.js` では見つからず、その画面を開いた瞬間だけ真っ白になる類の不具合を防ぐ。**改修後は必ず実行する。** |
