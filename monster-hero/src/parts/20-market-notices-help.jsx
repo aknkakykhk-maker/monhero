@@ -712,7 +712,10 @@ const helpDataRows = (id) => {
           const label = sale => `${PROFILE_FRAME_SHOPS[sale.shop].label} ${sale.cost.toLocaleString()}P`;
           const gated = sales.filter(sale => cond && typeof profileFrameConditionFor === 'function' && profileFrameConditionFor(frame, sale.shop));
           const free = sales.filter(sale => !gated.includes(sale));
-          const how = unlock ? `${(who && who.name) || ''}との仲良し度 Lv${unlock.bondLevel}でもらえます。`
+          // 贈り物で届く枠(2026-10-20)。決まった出来事のあとにギフトボックスへ届く
+          const gift = (typeof profileFrameGift === 'function') ? profileFrameGift(frame) : null;
+          const giftHow = gift === 'raidJackEnding' ? 'レイド「カボチャの大王ジャック」に参加した人へ、イベントの終わりのお話のあとにプレゼントで届くことがあります。' : '';
+          const how = giftHow ? giftHow : unlock ? `${(who && who.name) || ''}との仲良し度 Lv${unlock.bondLevel}でもらえます。`
             : sales.length ? `${gated.length ? `「${cond.text}」を達成すると、マーケットの${gated.map(label).join(' か ')}で買えます。${free.length ? `${free.map(label).join(' か ')}なら条件なしで買えます。` : ''}` : `マーケットの${free.map(label).join(' か ')}で買えます。`}`
             : 'はじめから選べます。';
           return [frame.name, `${how}${frame.desc ? ` ${frame.desc}` : ''}`];

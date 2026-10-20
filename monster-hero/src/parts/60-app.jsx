@@ -1561,6 +1561,14 @@ function MonsterHeroGame() {
   // { id, baseId(元のモンスター種id), name, bondXp, distAptPoints(未使用の強化ポイント),
   //   distApt:[g0,g1,g2,g3](このマスモン専用の間合い適性), statPoints:{hp,atk,def,guts}, color(染色もどきで変えた色id、無ければnull), createdAt }
   const [masuMons, setMasuMons] = useState([]);
+  // マスモンのビートLvの保存(RHYTHM_BUDDY_KEY)の写し。フレームの条件「ビートLv50以上」(2026-10-20)を画面で数えるために読むだけ。
+  // 書くのはマスモン一覧(モンヒロビート)とマルチの部屋(80-screen-rhythm-buddy.jsx の RHYTHM_BUDDY_STORE)。ここからは書かない
+  const [rhythmBuddyState, setRhythmBuddyState] = useState(() => RHYTHM_BUDDY_STORE.get());
+  useEffect(() => {
+    const off = RHYTHM_BUDDY_STORE.subscribe(setRhythmBuddyState);
+    void RHYTHM_BUDDY_STORE.load();
+    return off;
+  }, []);
   // マスモンのお気に入り(ロック)。IDの並び(mh_masu_locked_v1)。お気に入りの子は削除・合体の副・寄付ができない
   const [lockedMasuIds, setLockedMasuIds] = useState([]);
   // 転生ロック(mh_masu_lock_rebirth_v1)。お気に入りとは別に付け外しできる(MASU_LOCK_KINDS)。転生ロックの子は転生できない
@@ -7510,9 +7518,24 @@ function MonsterHeroGame() {
   // 種族は MONSTER_LINEAGE_MAP の主血統(main)で見る。ミタラシ・剣士モッチーもモッチー種に入る。
   // ★条件は「買えるか」だけを決める。買ったあとに条件を割っても枠は残る。
   // shop を渡すと、その交換所で必要な条件だけを見る(ビートP交換所は条件なしの枠もある)。渡さないときは枠の条件そのもの
-  const profileFrameConditionStatus = (frame, clearTotal = rhythmClearTotal, shop = null) => {
+  // 買う直前に、ビートLvの保存を読み直す(画面の値が古くても通さない)
+  const loadRhythmBuddyForFrames = async () => { try { await RHYTHM_BUDDY_STORE.load(); } catch (e) { /* 読めなければいまの値 */ } return RHYTHM_BUDDY_STORE.get(); };
+  // buddyState … マスモンのビートLvの保存(買う処理では読み直した値を渡す)
+  const profileFrameConditionStatus = (frame, clearTotal = rhythmClearTotal, shop = null, buddyState = rhythmBuddyState) => {
     const c = shop ? profileFrameConditionFor(frame, shop) : profileFrameCondition(frame);
     if (!c) return null;
+    if (c.kind === 'buddyBeatLevel') {
+      // 種ごとに、自分のマスモンのいちばん高いビートLv。いない種は0(まだ育てていない)。全部の種がそろって達成
+      const need = Math.max(1, Math.floor(Number(c.level) || 1));
+      const mons = (buddyState && buddyState.mons) || {};
+      const rows = (Array.isArray(c.monsterIds) ? c.monsterIds : []).map(id => {
+        const best = (Array.isArray(masuMons) ? masuMons : []).reduce((top, mon) => (
+          mon && mon.baseId === id ? Math.max(top, rhythmBuddyLevelInfo((mons[mon.id] || {}).exp).level) : top), 0);
+        return { name: (ALL_PLAYER_MONSTERS[id] && ALL_PLAYER_MONSTERS[id].name) || id, best };
+      });
+      const met = rows.length > 0 && rows.every(row => row.best >= need);
+      return { met, text: c.text || '', progress: `${rows.map(row => `${row.name} ${row.best ? `Lv${row.best}` : 'まだいません'}`).join(' ／ ')}(必要 Lv${need})` };
+    }
     if (c.kind === 'monsterReincarnate') {
       // そのモンスター自身の転生回数(reincarnateCount)。限界突破とは別の仕組み
       const need = Math.max(1, Math.floor(Number(c.count) || 1));
@@ -7604,7 +7627,7 @@ function MonsterHeroGame() {
     if (isMarketItemOwned(item)) return false;
     // 条件つきのフレームは、保存されている回数を読み直して条件を確かめる(画面の値が古くても通さない)
     if (item.type === 'frame') {
-      const status = profileFrameConditionStatus(profileFrameById(item.id), await loadRhythmClearTotal(), 'breederPoint');
+      const status = profileFrameConditionStatus(profileFrameById(item.id), await loadRhythmClearTotal(), 'breederPoint', await loadRhythmBuddyForFrames());
       if (status && !status.met) { setMarketExchangeError('買える条件をまだ満たしていません。'); return false; }
     }
     const purchase = buildMarketItemPurchase({ item, gold, breederPoints, ownedItems:ownedItemsRef.current, quantity });
@@ -7735,7 +7758,7 @@ function MonsterHeroGame() {
       const beforeIcons = Array.isArray(storedIcons) ? storedIcons.filter(id => typeof id === 'string') : [];
       // 条件つきのフレームは、保存されている回数を読み直して条件を確かめる(画面の値が古くても通さない)
       if (isFrame) {
-        const frameStatus = profileFrameConditionStatus(profileFrameById(offer.frameId), await loadRhythmClearTotal(), 'beatPoint');
+        const frameStatus = profileFrameConditionStatus(profileFrameById(offer.frameId), await loadRhythmClearTotal(), 'beatPoint', await loadRhythmBuddyForFrames());
         if (frameStatus && !frameStatus.met) {
           setMarketExchangeError('買える条件をまだ満たしていません。');
           return { ok:false, reason:'condition' };
@@ -10324,8 +10347,10 @@ function MonsterHeroGame() {
       const wanted = new Set(ids);
       const sourceGifts = Array.isArray(baseGifts) ? baseGifts : gifts;
       const claimedGifts = [];
-      // ブリーダー経験値の報酬もあるので、経験値も一緒に持って回る
-      let balances = { gold, breederPoints, ownedItems, breederXp };
+      // ブリーダー経験値の報酬もあるので、経験値も一緒に持って回る。
+      // プロフィールフレームの報酬(2026-10-20・ハロウィン・妖)もあるので、持っている枠も一緒に持って回る(保存から読み直した値)
+      const storedFramesBefore = normalizeOwnedProfileFrames(await storeGet(PROFILE_FRAME_OWNED_KEY, [], false));
+      let balances = { gold, breederPoints, ownedItems, breederXp, ownedProfileFrames: normalizeOwnedProfileFrames([...storedFramesBefore, ...ownedProfileFramesRef.current]) };
       let claimedCount = 0;
       const now = Date.now();
       const nextGifts = sourceGifts.map(gift => {
@@ -10360,6 +10385,9 @@ function MonsterHeroGame() {
       entries.push({ key:'mh_gold', before:gold, next:balances.gold });
       entries.push({ key:'mh_breeder_points', before:breederPoints, next:balances.breederPoints });
       entries.push({ key:'mh_owned_items', before:ownedItems, next:balances.ownedItems });
+      // フレームが増えたときだけ、同じ取引で枠の持ち物も保存する(どれか失敗したら全部元へ戻る)
+      const framesAfter = normalizeOwnedProfileFrames(balances.ownedProfileFrames);
+      if (framesAfter.length !== storedFramesBefore.length) entries.push({ key:PROFILE_FRAME_OWNED_KEY, before:storedFramesBefore, next:framesAfter });
       // 受け取ったぶんだけ「受取済み」が増えるので、ここでも古い控えを落とす
       const keptGifts = pruneGiftHistory(nextGifts);
       entries.push({ key:'mh_gifts', before:sourceGifts, next:keptGifts });
@@ -10368,6 +10396,7 @@ function MonsterHeroGame() {
       if (!saved) { console.error('[gift] claim persistence failed'); return null; }
       if (balances.breederXp !== breederXp) setBreederXp(balances.breederXp);
       setGold(balances.gold); setBreederPoints(balances.breederPoints); setOwnedItems(balances.ownedItems); setGifts(keptGifts);
+      if (framesAfter.length !== ownedProfileFramesRef.current.length) { ownedProfileFramesRef.current = framesAfter; setOwnedProfileFrames(framesAfter); }
       // 何をいくつ手に入れたかを見せる(保存に成功したあとだけ。失敗して巻き戻したときは出さない)
       const rewards = summarizeClaimedGiftRewards(claimedGifts);
       setRewardReceipt({ title, rewards, count:claimedCount });
@@ -14977,6 +15006,36 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     } catch (error) { return 0; }
     finally { raidJackClaimingRef.current = false; }
   };
+  // 大王まで倒せたときの終章を見たら、参加者へフレーム「ハロウィン・妖」をギフトで届ける(2026-10-20・1回だけ)。
+  // ★ギフトと「届けた」印(mh_raid_jack_frame_gift_v1)を同じ取引で保存する。どちらか失敗したら両方元へ戻る(CLAUDE.md ⑦)
+  // ★期間が終わる前(デバッグで終章を見たなど)と、デバッグの強制表示中は届けない。参加していなければ印も付けない
+  const raidJackFrameGiftRef = useRef(false);
+  const grantRaidJackFrameGift = async () => {
+    if (RELEASE_FLAGS.raidJack !== true || raidJackDebugForce) return false;
+    if (raidJackWindowAt(Date.now()) !== 'after') return false;
+    if (raidJackFrameGiftRef.current) return false;
+    raidJackFrameGiftRef.current = true;
+    try {
+      const mark = await storeGet(RAID_JACK_FRAME_GIFT_KEY, null, false);
+      if (mark) return false;
+      if (!raidJackParticipated(await raidJackLoadState())) return false;
+      const savedGifts = await storeGet('mh_gifts', [], false);
+      const beforeGifts = Array.isArray(savedGifts) ? savedGifts : [];
+      const grant = grantGiftOnce(beforeGifts, raidJackFrameGift());
+      const saved = await saveStoredValuesOrRollback([
+        ...(grant.granted ? [{ key:'mh_gifts', before:beforeGifts, next:grant.gifts }] : []),
+        { key:RAID_JACK_FRAME_GIFT_KEY, before:mark, next:{ at:new Date().toISOString(), frameId:RAID_JACK_FRAME_GIFT_FRAME_ID } },
+      ], storeGet, storeSet);
+      if (!saved) { console.error('[raid-jack-frame-gift] save failed'); return false; }
+      if (grant.granted) setGifts(grant.gifts);
+      return grant.granted;
+    } catch (error) { return false; }
+    finally { raidJackFrameGiftRef.current = false; }
+  };
+  useEffect(() => {
+    if (!Array.isArray(rhythmEventStorySeen) || !rhythmEventStorySeen.includes(RAID_JACK_ENDING_CLEARED_ID)) return;
+    void grantRaidJackFrameGift();
+  }, [rhythmEventStorySeen]);
   // HOMEにいるとき、報酬を受け取れるか確かめる(期間が終わると入口が消えるので、終了後の順位報酬もここで届く)
   useEffect(() => {
     if (gameState !== 'HOME') return;
@@ -20377,15 +20436,18 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // まだもらっていない枠も並べる(絵は見せて、鍵と条件だけを重ねる。2026-09-16にユーザーが「絵を見せて鍵だけ付ける」を選択)。
           // 並ぶのは公開済み(released:true)のフレームだけ。未公開の豪華フレームは出ない
           const closeFrame=()=>{ setShowFramePicker(false); setFrameQuery(''); setFrameChip('all'); };
-          const frames=releasedProfileFrames();
-          const q=frameQuery.trim().toLowerCase();
           const ownedOf=(frame)=>profileFrameOwned(frame.id, ownedProfileFrames);
+          // 贈り物で届く枠(ハロウィン・妖・2026-10-20)は、届くまで並べない(手に入れ方を先に見せない)
+          const frames=releasedProfileFrames().filter(frame=>!profileFrameGift(frame)||ownedOf(frame));
+          const q=frameQuery.trim().toLowerCase();
           const matches=frames.filter(frame=>(!q||String(frame.name||'').toLowerCase().includes(q))
             &&(frameChip==='all'||(frameChip==='owned'?ownedOf(frame):!ownedOf(frame))));
-          const colorFrames=matches.filter(frame=>!profileFrameUnlock(frame)&&!profileFrameSale(frame));
+          const colorFrames=matches.filter(frame=>!profileFrameUnlock(frame)&&!profileFrameSale(frame)&&!profileFrameGift(frame));
           const assistantFrames=matches.filter(frame=>!!profileFrameUnlock(frame));
           // 条件を達成するとマーケットで買える枠(2026-10-03・モッチー・ムー・スエゾービート)
           const saleFrames=matches.filter(frame=>!profileFrameUnlock(frame)&&!!profileFrameSale(frame));
+          // 贈り物で届いた枠(届いたものだけが上の frames に入っている)
+          const giftFrames=matches.filter(frame=>!!profileFrameGift(frame));
           const ownedCount=frames.filter(ownedOf).length;
           const currentFrame=profileFrameById(normalizeProfileFrameId(profileFrameId))||{};
           const cell=(frame)=>{
@@ -20453,12 +20515,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               chip={frameChip} onChip={setFrameChip} footerExtra={lockedInfo} dataPicker="frame">
               {matches.length===0&&<p className="py-8 text-center text-[11px] font-bold text-slate-500">当てはまるフレームがありません</p>}
               <div className="grid grid-cols-3 gap-2.5">
-                {colorFrames.length>0&&(assistantFrames.length>0||saleFrames.length>0)&&<PickerGroupLabel count={colorFrames.length}>色の枠</PickerGroupLabel>}
+                {colorFrames.length>0&&(assistantFrames.length>0||saleFrames.length>0||giftFrames.length>0)&&<PickerGroupLabel count={colorFrames.length}>色の枠</PickerGroupLabel>}
                 {colorFrames.map(cell)}
                 {assistantFrames.length>0&&<PickerGroupLabel count={assistantFrames.length}>助手の枠（仲良し度でもらえます）</PickerGroupLabel>}
                 {assistantFrames.map(cell)}
                 {saleFrames.length>0&&<PickerGroupLabel count={saleFrames.length}>モンスターの枠（条件を達成するとマーケットで買えます）</PickerGroupLabel>}
                 {saleFrames.map(cell)}
+                {giftFrames.length>0&&<PickerGroupLabel count={giftFrames.length}>イベントの枠（プレゼントで届きました）</PickerGroupLabel>}
+                {giftFrames.map(cell)}
               </div>
             </PickerSheet>
           );

@@ -246,6 +246,23 @@ const raidJackStoryCandidates = (totals, nowMs) => {
   return out.filter(Boolean);
 };
 
+// 大王まで倒せたときの終章を見た参加者へ、プロフィールフレーム「ハロウィン・妖」をギフトで1回だけ届ける(2026-10-20 社長の決定)。
+// ★届けたかは新しいキー mh_raid_jack_frame_gift_v1 に持つ(ギフトの一覧は古いものから消えるので、それだけでは二重を防げない)。
+// ★倒せなかったとき(終章が raid_jack_ending_notcleared)は届けない。期間が終わってから起動した参加者にも、終章を見たところで届く
+const RAID_JACK_FRAME_GIFT_KEY = 'mh_raid_jack_frame_gift_v1';
+const RAID_JACK_FRAME_GIFT_FRAME_ID = 'frame_halloween_pumpkin';
+const raidJackFrameGift = () => ({
+  id: `${RAID_JACK_EVENT.id}_frame_gift`,
+  title: 'ハロウィン・ナイトのお礼',
+  source: 'raidJack',
+  rewards: [{ type: 'profileFrame', frameId: RAID_JACK_FRAME_GIFT_FRAME_ID, amount: 1 }],
+});
+// レイドに参加したか(この端末の記録で見る)。1回でも挑んだ日・グランドスラムの累計・倒した段階・受け取った報酬・送り待ちのどれかがあれば参加
+const raidJackParticipated = (raw) => {
+  const st = raidJackNormalizeState(raw);
+  return !!(st.a.day || st.b.day || st.b.total > 0 || st.a.defeated.length || st.b.defeated.length || st.claimed.length || st.pending.length);
+};
+
 // 毎日5:00(JST)で回数が戻る。日付キー = 5時間引いたJSTの日付。
 const raidJackDayKey = (nowMs) => {
   const now = Number.isFinite(nowMs) ? nowMs : 0;
