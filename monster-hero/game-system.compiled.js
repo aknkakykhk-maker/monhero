@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: dcfe0854b4721f44
+// source-sha256: 90d5fd7446ec6e30
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-21 01:47";
+const BUILD_DATE = "2026-10-21 02:40";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -15788,7 +15788,7 @@ const MarketDetailChip = ({
   size: 10
 }), "詳細");
 const MARKET_NAME_WRAP_WORDS = Object.freeze(['チケット', 'カード', 'リセット', 'ショップ', 'ボーナス', 'プシュケー', '円盤石', 'アイコン', 'フレーム', 'ビート']);
-const marketNameForWrap = name => MARKET_NAME_WRAP_WORDS.reduce((text, word) => text.split(word).join(`​${word}`), String(name || '')).split('（').join('​（').split('）').join('）​').split('・').join('・​').replace(/([ァ-ヶー])([0-9０-９])/g, '$1​$2');
+const marketNameForWrap = name => MARKET_NAME_WRAP_WORDS.reduce((text, word) => text.split(word).join(`​${word}`), String(name || '')).split('（').join('​（').split('）').join('）​').split('・').join('・​').replace(/([ァ-ヶー])([0-9０-９])/g, '$1​$2').replace(/([ァ-ヶー]{7,})の/g, '$1​の');
 const marketNameNodes = name => marketNameForWrap(name).split('​').map((seg, index) => React.createElement(React.Fragment, {
   key: index
 }, index > 0 && React.createElement("wbr", null), seg));
@@ -15830,7 +15830,7 @@ const MarketProductCard = ({
     disabled: disabled,
     previewIcon: previewIcon
   }), React.createElement("div", {
-    className: `w-full flex items-start justify-center text-center ${/（/.test(item.name || '') ? 'text-[10px]' : 'text-[11px]'} font-black leading-tight ${comingSoon ? 'text-slate-400' : 'text-white'}`,
+    className: `w-full flex items-start justify-center text-center ${/[ァ-ヶー]{7,}/.test(item.name || '') ? 'text-[10px] max-[359px]:text-[9px]' : /（/.test(item.name || '') ? 'text-[10px]' : 'text-[11px]'} font-black leading-tight ${comingSoon ? 'text-slate-400' : 'text-white'}`,
     style: {
       minHeight: '36px',
       wordBreak: 'keep-all',
@@ -16969,6 +16969,7 @@ const AssistantBubble = ({
       color
     }
   }, who.name), React.createElement("span", {
+    "data-bubble-text": true,
     className: `block text-white leading-relaxed ${compact ? 'text-[10px]' : 'text-[12px]'}`
   }, text), (hasDetail || footerSpace > 0) && React.createElement("span", {
     className: "mt-0.5 flex items-center justify-end gap-0.5 text-[9px] font-black",
@@ -30991,7 +30992,7 @@ const RhythmSongSelect = ({
     "data-rhythm-genre-current": genre ? genre.id : 'all',
     className: "min-w-0 truncate landscape:flex landscape:flex-col landscape:items-start landscape:leading-tight"
   }, React.createElement("small", {
-    className: "text-[11px] font-black landscape:text-[9px] landscape:text-slate-400"
+    className: "text-[11px] font-black max-[359px]:hidden landscape:text-[9px] landscape:text-slate-400"
   }, "ジャンル", React.createElement("span", {
     className: "landscape:hidden"
   }, "：")), React.createElement("b", {
@@ -31007,7 +31008,7 @@ const RhythmSongSelect = ({
   }, React.createElement("span", {
     className: "min-w-0 truncate landscape:flex landscape:flex-col landscape:items-start landscape:leading-tight"
   }, React.createElement("small", {
-    className: "text-[11px] font-black landscape:text-[9px] landscape:text-slate-400"
+    className: "text-[11px] font-black max-[359px]:hidden landscape:text-[9px] landscape:text-slate-400"
   }, "並べ替え", React.createElement("span", {
     className: "landscape:hidden"
   }, "：")), React.createElement("b", {
@@ -33532,6 +33533,35 @@ const rhythmChartFingerprint = chart => {
   const notes = Array.isArray(chart?.notes) ? chart.notes : [];
   const times = notes.map(note => Number(note.timeMs)).filter(Number.isFinite).sort((a, b) => a - b);
   return `${notes.length}:${times.length ? Math.round(times[0]) : 0}:${times.length ? Math.round(times[times.length - 1]) : 0}`;
+};
+const RhythmResultMoreHint = ({
+  label
+}) => {
+  const [more, setMore] = React.useState(false);
+  React.useEffect(() => {
+    const box = document.querySelector('[data-rhythm-result-scroll]');
+    if (!box) return undefined;
+    const update = () => setMore(box.scrollHeight - box.scrollTop - box.clientHeight > 24);
+    update();
+    box.addEventListener('scroll', update, {
+      passive: true
+    });
+    window.addEventListener('resize', update);
+    const t = setTimeout(update, 600);
+    return () => {
+      box.removeEventListener('scroll', update);
+      window.removeEventListener('resize', update);
+      clearTimeout(t);
+    };
+  }, []);
+  if (!more) return null;
+  return React.createElement("div", {
+    "data-rhythm-result-more": true,
+    "aria-hidden": "true",
+    className: "pointer-events-none absolute inset-x-0 -top-6 flex justify-center"
+  }, React.createElement("span", {
+    className: "rounded-full border border-white/15 bg-slate-950/90 px-3 py-0.5 text-[10px] font-black text-slate-200"
+  }, "▼ ", label));
 };
 const RhythmChartNotePanel = ({
   song,
@@ -38083,7 +38113,10 @@ const RhythmTapTest = ({
     }, difficulty.id), Number.isFinite(Number(chart.level)) && React.createElement("span", {
       "data-rhythm-result-level": true,
       className: "font-black tabular-nums text-slate-300"
-    }, "Lv.", chart.level)), (() => {
+    }, "Lv.", chart.level), Number(difficulty.maxScore) > 0 && React.createElement("span", {
+      "data-rhythm-result-achievement": true,
+      className: "whitespace-nowrap font-black tabular-nums text-amber-200"
+    }, "満点の", Math.min(100, Math.floor(view.score / Number(difficulty.maxScore) * 100)), "%")), (() => {
       const max = Number(difficulty.maxScore) > 0 ? Number(difficulty.maxScore) : 1000000;
       const asc = RHYTHM_RANKS.filter(item => item.min > 0 && item.min <= max).slice().reverse();
       const marks = asc.slice(-5);
@@ -38238,7 +38271,7 @@ const RhythmTapTest = ({
       className: "flex items-stretch gap-2"
     }, React.createElement("dl", {
       "data-rhythm-result-judgment-table": true,
-      className: "grid min-w-0 flex-1 grid-cols-[1fr_auto] gap-x-2 gap-y-0.5 rounded-2xl border border-white/10 bg-slate-900/85 px-3 py-2 text-[15px] italic"
+      className: "grid min-w-0 flex-1 grid-cols-[1fr_auto] gap-x-2 gap-y-0.5 rounded-2xl border border-white/10 bg-slate-900/85 px-3 py-2 text-[15px] italic max-[359px]:gap-y-0 max-[359px]:py-1.5 max-[359px]:text-[13px]"
     }, RHYTHM_JUDGMENT_IDS.map(id => React.createElement(React.Fragment, {
       key: id
     }, id === 'MARVELOUS' && React.createElement(React.Fragment, {
@@ -38259,10 +38292,10 @@ const RhythmTapTest = ({
       "data-rhythm-result-combo": true,
       className: "flex w-[34%] shrink-0 flex-col items-center justify-center rounded-2xl border border-white/10 bg-slate-900/85 px-2 py-2 text-center [@container(min-width:680px)]:w-[31%]"
     }, React.createElement("small", {
-      className: `text-[10px] font-black tracking-[.2em] ${rhythmComboTextColor(view.maxCombo)}`
+      className: `whitespace-nowrap text-[10px] font-black tracking-[.2em] max-[359px]:tracking-[.06em] ${rhythmComboTextColor(view.maxCombo)}`
     }, "MAX COMBO"), React.createElement("b", {
       "data-rhythm-max-combo": true,
-      className: `block text-[34px] font-black leading-tight tabular-nums ${rhythmComboTextColor(view.maxCombo)}`
+      className: `block text-[34px] font-black leading-tight tabular-nums max-[359px]:text-[28px] ${rhythmComboTextColor(view.maxCombo)}`
     }, view.maxCombo), view.result?.scoreVersion === 2 && React.createElement("small", {
       "data-rhythm-result-ticks": true,
       className: "mt-0.5 block text-[10px] font-bold leading-tight text-slate-300"
@@ -38271,8 +38304,9 @@ const RhythmTapTest = ({
     }, view.result.tickJust), "/", view.result.tickTotal, view.result.tickMiss > 0 ? React.createElement("span", {
       className: "text-rose-300"
     }, "(MISS ", view.result.tickMiss, ")") : null, React.createElement("span", {
-      className: "block text-[9px] font-bold text-slate-400"
-    }, "ホールド・スライドの刻みもコンボに数えます")), React.createElement("div", {
+      className: "block text-[9px] font-bold text-slate-400",
+      style: JA_WRAP_STYLE
+    }, jaWrap('ホールド・スライドの刻みもコンボに数えます'))), React.createElement("div", {
       className: "mt-1.5 grid w-full grid-cols-2 gap-1 text-[10px] font-black"
     }, React.createElement("span", {
       "data-rhythm-result-fast": true,
@@ -38462,7 +38496,9 @@ const RhythmTapTest = ({
       style: {
         paddingBottom: 'calc(.5rem + var(--mh-sa-bottom))'
       }
-    }, React.createElement("div", {
+    }, React.createElement(RhythmResultMoreHint, {
+      label: [result.eventPointAward && result.eventPointAward.amount > 0 ? 'ビートP' : null, Array.isArray(result.liveLog) && result.liveLog.some(section => section.total > 0) ? 'ライブログ' : null].filter(Boolean).join('・') || '続き'
+    }), React.createElement("div", {
       className: multi ? "flex items-center gap-2" : ""
     }, multi && React.createElement("div", {
       "data-rhythm-result-orientation": true,
@@ -48919,6 +48955,24 @@ const ModalCloseButton = ({
   onClick: onClick,
   className: "mh-button mh-button-secondary w-full min-h-[48px] rounded-2xl border border-white/20 bg-slate-900 font-black active:scale-[.98] disabled:opacity-40"
 }, label);
+let _jaSegmenter;
+const jaWrap = text => {
+  const s = String(text ?? '');
+  if (!s) return s;
+  try {
+    if (_jaSegmenter === undefined) _jaSegmenter = typeof Intl !== 'undefined' && Intl.Segmenter ? new Intl.Segmenter('ja', {
+      granularity: 'word'
+    }) : null;
+    if (!_jaSegmenter) return s;
+    return [..._jaSegmenter.segment(s)].map(seg => seg.segment).join('\u200B');
+  } catch {
+    return s;
+  }
+};
+const JA_WRAP_STYLE = Object.freeze({
+  wordBreak: 'keep-all',
+  overflowWrap: 'anywhere'
+});
 const countInputClamp = (n, min, max) => Math.min(Math.max(min, n), Math.max(min, max));
 const CountInput = ({
   value,
@@ -50835,7 +50889,7 @@ function GiftBoxScreen({
     return React.createElement("article", {
       key: g.id,
       title: g.description || g.title || undefined,
-      className: `mh-gift-card rounded-2xl border ${g.claimedAt ? 'bg-slate-900/70 border-white/10' : expired ? 'bg-red-950/30 border-red-500/60' : 'bg-cyan-950/30 border-cyan-400/60'}`
+      className: `mh-gift-card rounded-2xl border ${g.claimedAt ? 'bg-[#111329] border-white/10' : expired ? 'bg-[#250a1e] border-red-500/60' : 'bg-[#131630] border-cyan-400/60'}`
     }, React.createElement("div", {
       className: "mh-gift-heading"
     }, React.createElement("h3", null, display.label && React.createElement("span", null, display.label), React.createElement("b", null, display.title)), React.createElement("em", {
@@ -61031,10 +61085,12 @@ function PickTeachingScreen({
     }, "ASSIST CARD"), React.createElement("div", {
       className: "mh-ph-heading"
     }, React.createElement("h2", {
-      className: "mh-ph-title text-xl font-black italic"
-    }, "アシストカードの継承・強化")), React.createElement("p", {
-      className: "mh-phase-tall text-[10px] font-bold text-slate-400"
-    }, "1枚選んで、新しく覚えるか、持っているカードを強化します")), React.createElement("div", {
+      className: "mh-ph-title text-xl font-black italic",
+      style: JA_WRAP_STYLE
+    }, jaWrap('アシストカードの継承・強化'))), React.createElement("p", {
+      className: "mh-phase-tall text-[10px] font-bold text-slate-400",
+      style: JA_WRAP_STYLE
+    }, jaWrap('1枚選んで、新しく覚えるか、持っているカードを強化します'))), React.createElement("div", {
       className: "mh-phase-tall shrink-0 w-full max-w-sm mb-2"
     }, React.createElement(AssistantBubble, {
       scene: "pickTeaching",
@@ -61104,9 +61160,10 @@ function PickTeachingScreen({
           display: '-webkit-box',
           WebkitLineClamp: 3,
           WebkitBoxOrient: 'vertical',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          ...JA_WRAP_STYLE
         }
-      }, shownDesc), React.createElement("span", {
+      }, jaWrap(shownDesc)), React.createElement("span", {
         className: "absolute -top-2.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[8px] font-black text-white",
         style: {
           border: '1px solid #f3d27a',
@@ -61182,8 +61239,9 @@ function PickTeachingScreen({
       }, "所持"), isNext && React.createElement("span", {
         className: "text-[8px] bg-amber-600 text-white px-1.5 rounded"
       }, owned ? '強化後' : '習得後')), React.createElement("div", {
-        className: "text-[8px] text-slate-300"
-      }, info.desc));
+        className: "text-[8px] text-slate-300",
+        style: JA_WRAP_STYLE
+      }, jaWrap(info.desc)));
     })), React.createElement("div", {
       className: "relative flex gap-2 w-full mt-auto shrink-0"
     }, React.createElement("button", {
@@ -74264,7 +74322,7 @@ function RhythmMultiMemberCards({
     }, "i")), React.createElement("span", {
       className: `min-w-0 ${tall ? 'mt-1 w-full text-center' : 'mt-0.5 w-full text-center landscape:mt-0 landscape:flex-1 landscape:text-left'}`
     }, React.createElement("span", {
-      className: `block truncate font-black leading-tight ${tall ? 'text-[11px] landscape:text-sm' : 'text-[10px]'}`
+      className: `block font-black leading-tight ${tall ? 'line-clamp-2 break-all text-[11px] landscape:text-sm' : 'truncate text-[10px]'}`
     }, m.cpu && React.createElement("b", {
       "data-rhythm-multi-cpu-mark": true,
       className: "mr-0.5 rounded bg-lime-300 px-0.5 text-[8px] font-black text-slate-950"
@@ -75700,7 +75758,7 @@ function RhythmMultiScreen({
         sub: `Lv.${m.level}`
       })
     }), React.createElement("div", {
-      className: "mt-auto max-h-[52%] shrink-0 overflow-y-auto border-t border-white/10 bg-slate-950/90 p-2 landscape:grid landscape:max-h-[58%] landscape:grid-cols-2 landscape:gap-2",
+      className: "max-h-[70%] shrink-0 overflow-y-auto border-t border-white/10 bg-slate-950/90 p-2 landscape:mt-auto landscape:grid landscape:max-h-[58%] landscape:grid-cols-2 landscape:gap-2",
       style: {
         paddingBottom: 'calc(.5rem + var(--mh-sa-bottom))'
       }
@@ -75741,7 +75799,7 @@ function RhythmMultiScreen({
       "data-rhythm-multi-select-sec": sec,
       "aria-pressed": rhythmMultiNormalizeSelectSec(room.selectSec) === sec,
       onClick: () => RHYTHM_MULTI.setSelectSeconds(sec),
-      className: `min-h-[36px] min-w-[52px] rounded-lg border px-2 text-[11px] font-black ${rhythmMultiNormalizeSelectSec(room.selectSec) === sec ? 'border-amber-300 bg-amber-600/80 text-white' : 'border-white/15 bg-slate-900/80 text-slate-300'}`
+      className: `min-h-[36px] min-w-[52px] rounded-lg border px-2 text-[11px] font-black max-[359px]:min-w-[44px] max-[359px]:px-1.5 ${rhythmMultiNormalizeSelectSec(room.selectSec) === sec ? 'border-amber-300 bg-amber-600/80 text-white' : 'border-white/15 bg-slate-900/80 text-slate-300'}`
     }, rhythmMultiSelectSecLabel(sec))) : React.createElement("b", {
       "data-rhythm-multi-select-sec-view": true,
       className: "text-[11px] font-black text-amber-200"

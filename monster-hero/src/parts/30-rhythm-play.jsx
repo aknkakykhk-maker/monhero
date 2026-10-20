@@ -964,6 +964,24 @@ const rhythmChartFingerprint=chart=>{
   const times=notes.map(note=>Number(note.timeMs)).filter(Number.isFinite).sort((a,b)=>a-b);
   return `${notes.length}:${times.length?Math.round(times[0]):0}:${times.length?Math.round(times[times.length-1]):0}`;
 };
+// 結果の画面で、下の帯より下にまだ続き(ビートP・ライブログなど)があるあいだだけ、帯の上に「▼ …」の印を出す
+// (2026-10-20 改善部 M8。幅320ほどの画面では、帯が判定の表のすぐ下に来て、続きがあることに気づけなかった)。
+// スクロールの箱(data-rhythm-result-scroll)を見て、いちばん下まで来たら消す
+const RhythmResultMoreHint=({label})=>{
+  const [more,setMore]=React.useState(false);
+  React.useEffect(()=>{
+    const box=document.querySelector('[data-rhythm-result-scroll]');
+    if(!box) return undefined;
+    const update=()=>setMore(box.scrollHeight-box.scrollTop-box.clientHeight>24);
+    update();
+    box.addEventListener('scroll',update,{passive:true});
+    window.addEventListener('resize',update);
+    const t=setTimeout(update,600);
+    return ()=>{box.removeEventListener('scroll',update);window.removeEventListener('resize',update);clearTimeout(t);};
+  },[]);
+  if(!more) return null;
+  return <div data-rhythm-result-more aria-hidden="true" className="pointer-events-none absolute inset-x-0 -top-6 flex justify-center"><span className="rounded-full border border-white/15 bg-slate-950/90 px-3 py-0.5 text-[10px] font-black text-slate-200">▼ {label}</span></div>;
+};
 const RhythmChartNotePanel=({song,difficulty,chart})=>{
   const durationMs=Math.max(RHYTHM_CHART_NOTE_SEGMENT_MS,Number(song?.playDurationMs)||Number(chart?.durationMs)||0);
   const count=Math.ceil(durationMs/RHYTHM_CHART_NOTE_SEGMENT_MS);
@@ -3108,7 +3126,8 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
   {hudArtSrc&&<img data-rhythm-result-jacket src={hudArtSrc} alt="" draggable={false} decoding="async" className="h-16 w-16 shrink-0 rounded-xl border border-white/20 object-cover"/>}
   <div className="min-w-0 flex-1">
     <b data-rhythm-result-song-name className="line-clamp-2 block text-base font-black leading-tight">{rhythmSongFullName(song)}</b>
-    <div className="mt-0.5 flex items-baseline gap-1.5 text-[11px]"><b data-rhythm-difficulty-name className={`font-black ${rhythmDifficultyTextColor(difficulty.id)}`}>{difficulty.id}</b>{Number.isFinite(Number(chart.level))&&<span data-rhythm-result-level className="font-black tabular-nums text-slate-300">Lv.{chart.level}</span>}</div>
+    <div className="mt-0.5 flex items-baseline gap-1.5 text-[11px]"><b data-rhythm-difficulty-name className={`font-black ${rhythmDifficultyTextColor(difficulty.id)}`}>{difficulty.id}</b>{Number.isFinite(Number(chart.level))&&<span data-rhythm-result-level className="font-black tabular-nums text-slate-300">Lv.{chart.level}</span>}{/* その難易度での出来(2026-10-20 改善部 M6)。ランクは点数そのもので決まり、EASY は満点でも B まで(上限ランクの決まりは変えない)。
+        ほぼ満点でも大きな「D」だけが見えないよう、その難易度の満点に対して何%取れたかを小さく添える */}{Number(difficulty.maxScore)>0&&<span data-rhythm-result-achievement className="whitespace-nowrap font-black tabular-nums text-amber-200">満点の{Math.min(100,Math.floor(view.score/Number(difficulty.maxScore)*100))}%</span>}</div>
     {/* ランクのゲージ。その難易度の満点で届く上の5ランクに目印を置き、いまのスコアまで塗る。
         区切りは RHYTHM_RANKS のまま(ランクの決め方は変えない)。満点で届かないランクは出さない */}
     {(()=>{const max=Number(difficulty.maxScore)>0?Number(difficulty.maxScore):1000000;const asc=RHYTHM_RANKS.filter(item=>item.min>0&&item.min<=max).slice().reverse();const marks=asc.slice(-5);if(!marks.length)return null;const lowIndex=asc.indexOf(marks[0])-1;const low=lowIndex>=0?asc[lowIndex].min:0;const span=Math.max(1,max-low);const at=value=>Math.max(0,Math.min(100,(value-low)/span*100));return <div data-rhythm-result-gauge className="mt-1.5 pr-1.5">
@@ -3152,7 +3171,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
     色は遊んでいるときに弾ける光と同じ(rhythmJudgmentColor)。0件の判定は帯に出さない */}
 {(()=>{const total=RHYTHM_JUDGMENT_IDS.reduce((sum,id)=>sum+(Number(view.counts[id])||0),0);if(!(total>0))return null;return <div data-rhythm-result-ratio aria-hidden="true" className="mb-1.5 flex h-2 w-full overflow-hidden rounded-full bg-slate-800">{RHYTHM_JUDGMENT_IDS.map(id=>{const count=Number(view.counts[id])||0;return count>0?<i key={id} data-rhythm-result-ratio-part={id} className="block h-full" style={{width:`${(count/total*100).toFixed(2)}%`,background:rhythmJudgmentColor(id)}}/>:null;})}</div>;})()}
 <section data-rhythm-result-judgments className="flex items-stretch gap-2">
-<dl data-rhythm-result-judgment-table className="grid min-w-0 flex-1 grid-cols-[1fr_auto] gap-x-2 gap-y-0.5 rounded-2xl border border-white/10 bg-slate-900/85 px-3 py-2 text-[15px] italic">{RHYTHM_JUDGMENT_IDS.map(id=><React.Fragment key={id}>
+<dl data-rhythm-result-judgment-table className="grid min-w-0 flex-1 grid-cols-[1fr_auto] gap-x-2 gap-y-0.5 rounded-2xl border border-white/10 bg-slate-900/85 px-3 py-2 text-[15px] italic max-[359px]:gap-y-0 max-[359px]:py-1.5 max-[359px]:text-[13px]">{RHYTHM_JUDGMENT_IDS.map(id=><React.Fragment key={id}>
   {/* ★ぴったりのMARVELOUS(前後0.02秒以内)の回数。MARVELOUSの**内数**だが、並びは
       MARVELOUSの**上**へ置く(2026-09-13・ユーザー指示「普通に表示はMarvelousの上に
       JUST Marvelousがくるようにして」)。スコア・ランク・自己ベストには一切関わらない。 */}
@@ -3171,10 +3190,11 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
 </dl>
 {/* MAX COMBO は判定の表の右に大きく出す(バンドリ！の COMBO の置き方)。色は遊んでいるときの段と同じ */}
 <div data-rhythm-result-combo className="flex w-[34%] shrink-0 flex-col items-center justify-center rounded-2xl border border-white/10 bg-slate-900/85 px-2 py-2 text-center [@container(min-width:680px)]:w-[31%]">
-  <small className={`text-[10px] font-black tracking-[.2em] ${rhythmComboTextColor(view.maxCombo)}`}>MAX COMBO</small>
-  <b data-rhythm-max-combo className={`block text-[34px] font-black leading-tight tabular-nums ${rhythmComboTextColor(view.maxCombo)}`}>{view.maxCombo}</b>
+  {/* 狭い画面で「MAX/COMBO」と2行にならないよう、字の間を詰めて1行に保つ(2026-10-20 改善部 M3) */}
+  <small className={`whitespace-nowrap text-[10px] font-black tracking-[.2em] max-[359px]:tracking-[.06em] ${rhythmComboTextColor(view.maxCombo)}`}>MAX COMBO</small>
+  <b data-rhythm-max-combo className={`block text-[34px] font-black leading-tight tabular-nums max-[359px]:text-[28px] ${rhythmComboTextColor(view.maxCombo)}`}>{view.maxCombo}</b>
   {/* 刻みの数え方(2026-10-17): ホールド・スライドの刻みもノーツとしてコンボに数えたことと、取れた刻みの数を出す */}
-  {view.result?.scoreVersion===2&&<small data-rhythm-result-ticks className="mt-0.5 block text-[10px] font-bold leading-tight text-slate-300">刻み <b className="tabular-nums text-white">{view.result.tickJust}</b>/{view.result.tickTotal}{view.result.tickMiss>0?<span className="text-rose-300">(MISS {view.result.tickMiss})</span>:null}<span className="block text-[9px] font-bold text-slate-400">ホールド・スライドの刻みもコンボに数えます</span></small>}
+  {view.result?.scoreVersion===2&&<small data-rhythm-result-ticks className="mt-0.5 block text-[10px] font-bold leading-tight text-slate-300">刻み <b className="tabular-nums text-white">{view.result.tickJust}</b>/{view.result.tickTotal}{view.result.tickMiss>0?<span className="text-rose-300">(MISS {view.result.tickMiss})</span>:null}<span className="block text-[9px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('ホールド・スライドの刻みもコンボに数えます')}</span></small>}
   <div className="mt-1.5 grid w-full grid-cols-2 gap-1 text-[10px] font-black"><span data-rhythm-result-fast className="rounded-lg bg-cyan-500/15 py-1 text-cyan-200">FAST<b className="block text-sm tabular-nums text-white">{view.fast}</b></span><span data-rhythm-result-slow className="rounded-lg bg-fuchsia-500/15 py-1 text-fuchsia-200">SLOW<b className="block text-sm tabular-nums text-white">{view.slow}</b></span></div>
 </div>
 </section>
@@ -3244,7 +3264,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
 {/* 譜面メモ(DEBUG ONLY)。デバッグ画面から始めた演奏にだけ出す */}
 {debugPlay&&!tutorial&&!calibrating&&<RhythmChartNotePanel song={song} difficulty={difficulty} chart={chart}/>}
 </div>
-<div data-rhythm-result-actions className="relative shrink-0 border-t border-white/10 bg-slate-950/90 px-4 pt-2" style={{paddingBottom:'calc(.5rem + var(--mh-sa-bottom))'}}>{/* マルチだけ、縦⇄横の切り替えを左に置く(部屋の見出しと同じ部品。2026-10-10・社長「マルチの演奏後の結果画面でも縦横切り替えボタンほしい」)。
+<div data-rhythm-result-actions className="relative shrink-0 border-t border-white/10 bg-slate-950/90 px-4 pt-2" style={{paddingBottom:'calc(.5rem + var(--mh-sa-bottom))'}}><RhythmResultMoreHint label={[result.eventPointAward&&result.eventPointAward.amount>0?'ビートP':null,Array.isArray(result.liveLog)&&result.liveLog.some(section=>section.total>0)?'ライブログ':null].filter(Boolean).join('・')||'続き'}/>{/* マルチだけ、縦⇄横の切り替えを左に置く(部屋の見出しと同じ部品。2026-10-10・社長「マルチの演奏後の結果画面でも縦横切り替えボタンほしい」)。
   ソロ・レイドの結果は今のまま。上は曲の札とランクの丸で埋まっているので、指の届く下の列へ置く */}<div className={multi?"flex items-center gap-2":""}>{multi&&<div data-rhythm-result-orientation className="shrink-0"><RhythmOrientationButton/></div>}<div className={multi?"grid min-w-0 flex-1 grid-cols-1 gap-2":(raidPlay?"grid grid-cols-1 gap-2":"grid grid-cols-2 gap-2")}>{!multi&&!raidPlay&&<button className="min-h-[48px] rounded-xl bg-fuchsia-700 font-black" disabled={startLockRef.current} onClick={()=>beginRun(mergeRhythmBestRecord(runRef.current?.startBest,result))}>もう一度プレイ</button>}<button data-rhythm-multi-result-back={multi?"":undefined} data-rhythm-raid-result-back={raidPlay?"":undefined} className="min-h-[48px] rounded-xl bg-indigo-700 font-black" onClick={abort}>{multi&&'みんなの結果を見る'}{!multi&&raidPlay&&'レイドの結果を見る'}{!multi&&!raidPlay&&<>{debugPlay?'音ゲーデバッグへ戻る':'曲えらびへ戻る'}</>}</button></div></div></div></div></div></main>}
   /* ★演奏画面そのものを器(container-type:inline-size)にして、HUDの幅や字の大きさは vw ではなく cqw で決める
      (2026-09-26・ユーザー報告「演奏中の曲名が切れてる / 時間バーが難易度に被ってる」)。

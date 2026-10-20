@@ -205,6 +205,21 @@ const ModalFrame = ({ label, border='border-amber-400/70', onClose, children, na
 const ModalCloseButton = ({ onClick, label='閉じる', disabled=false }) => (
   <button type="button" disabled={disabled} onClick={onClick} className="mh-button mh-button-secondary w-full min-h-[48px] rounded-2xl border border-white/20 bg-slate-900 font-black active:scale-[.98] disabled:opacity-40">{label}</button>
 );
+// 言葉の切れ目で折る(2026-10-20 改善部の見直し M3「継/承」「攻/撃」「ガッツ上/限」「スライ/ド」)。
+// 日本語は既定だとどの文字の間でも折れるので、幅ぴったりのときに言葉の途中で行が変わる。
+// Intl.Segmenter で言葉の切れ目に印(U+200B)を入れ、JA_WRAP_STYLE(keep-all)で印の所だけで折る。
+// 1行に入らない長い言葉だけは overflow-wrap:anywhere で折る(はみ出さない)。Segmenter の無い古い端末では今までどおり
+let _jaSegmenter;
+const jaWrap = (text) => {
+  const s = String(text ?? '');
+  if (!s) return s;
+  try {
+    if (_jaSegmenter === undefined) _jaSegmenter = (typeof Intl !== 'undefined' && Intl.Segmenter) ? new Intl.Segmenter('ja', { granularity: 'word' }) : null;
+    if (!_jaSegmenter) return s;
+    return [..._jaSegmenter.segment(s)].map(seg => seg.segment).join('\u200B');
+  } catch { return s; }
+};
+const JA_WRAP_STYLE = Object.freeze({ wordBreak: 'keep-all', overflowWrap: 'anywhere' });
 // 数を直接打ち込む欄(2026-10-19 社長「マーケットのアイテムは直接数値入力で買えるようにしよう！」、
 // 2026-10-20「個数系のやつは基本的に直接入力があったほうがいいね」)。★個数・回数・枚数を選ぶ所は、この欄を使う
 //   (−/＋/MAX のボタンは呼ぶ側に並べたまま。tools/boot/count-input-check.js が見張る)
