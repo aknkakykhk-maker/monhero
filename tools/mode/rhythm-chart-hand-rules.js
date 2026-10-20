@@ -120,6 +120,22 @@ const heldHandSwitch=notes=>{const out=[],ev=handEventsOf(notes);
         out.push({at:e.at,side:hand,gapMs:Math.round(d),from:e.level?'地上':'空中',to:e.level?'空中':'地上'});}}
   return out.sort((a,b)=>a.at-b.at);};
 
+// 地上と空中の入り乱れ(2026-10-21 社長「地上と空中が近辺で入り混じってるのがあるけどこれかなり難易度高い」「空中地上は基本は指を離した位置に置くのが基本」)。
+//   押し始めの点を時刻の順に見て、直前(同時押しはまとめる)と高さが違い、MIXED_GAP_MS 以内に来るものを分ける。手は handEventsOf の割り振り
+//   near  … 同じ手が、直前に叩いた・離した位置から MIXED_NEAR_LANES 以内で高さを変える(指を離した位置へ持ち上げる・下ろす。自然な形)
+//   far   … 同じ手が、それより遠い所で高さを変える(入り乱れ)
+//   cross … 違う手が、直前の点から MIXED_CROSS_LANES 以内の近い所で高さを変える(近くで地上と空中が交互に来る。入り乱れ)
+//   違う手が離れた所で高さを変えるもの(左手は地上・右手は空中で、それぞれの場所で叩く)は数えない
+const MIXED_GAP_MS=250,MIXED_NEAR_LANES=1,MIXED_CROSS_LANES=1.5;
+const skyMixedSwitch=(notes,{gapMs=MIXED_GAP_MS,nearLanes=MIXED_NEAR_LANES,crossLanes=MIXED_CROSS_LANES}={})=>{
+  const ev=handEventsOf((notes||[]).filter(n=>n&&Number.isFinite(n.timeMs))).filter(e=>!e.end),out=[];
+  for(let i=0;i<ev.length;i++){const e=ev[i];let j=i-1;while(j>=0&&e.at-ev[j].at<=SAME_TIME_MS)j--;if(j<0)continue;
+    const p=ev[j];if(e.at-p.at>gapMs||p.level===e.level)continue;
+    const pos=centerAt(e.n,e.at),dPrev=Math.abs(pos-centerAt(p.n,p.at));
+    const kind=p.hand===e.hand?(dPrev<=nearLanes?'near':'far'):(dPrev<=crossLanes?'cross':null);
+    if(kind)out.push({at:e.at,kind,hand:e.hand,note:e.n,prev:p.n,lanes:Math.round(dPrev*100)/100,gapMs:Math.round(e.at-p.at),level:e.level?'空中':'地上'});}
+  return out;};
+const SKY_MIXED_LABEL='地上と空中の入り乱れ(250ms以内に、離した位置から遠い所・近くの別の手で高さが変わる)';
 // 水平クロス(2026-10-13 社長「ヘル譜面で水平クロスは意味ないから、クロスのときは上下を活用してほしい」)。
 //   2本の長押し(HOLD・SLIDE)が同じ時間に押さえられていて、左右が入れ替わる瞬間に、2本が同じ高さ(地上どうし・空中どうし)のもの。
 //   HELL の交差は上下に分ける(交わる瞬間は片方が空中・片方が地上)。上下に分かれていれば親指の先どうしは当たらない。
@@ -191,7 +207,7 @@ const RULE_LABELS={sideHeightSwitch:`同じ側で${SIDE_GAP_MS}ms以内に高さ
 const analyze=notes=>Object.fromEntries(Object.entries(RULES).map(([k,f])=>[k,f(notes||[])]));
 const countsOf=notes=>Object.fromEntries(Object.entries(analyze(notes)).map(([k,v])=>[k,v.length]));
 
-module.exports={flatCross,hasSky,FLAT_CROSS_LABEL,onHeldBand,heldBandBlocked,fixHeldBand,spanAt,ON_HELD_BAND_LABEL,HELD_BAND_KINDS,SIDE_GAP_MS,SKY_RAISE_MS,FAST_SAME_SIDE_MS,centerAt,sideAt,levelAt,eventsOf,handEventsOf,heldHandSwitch,sideHeightSwitch,skyAfterGround,besideHeldBand,fastSameSide,RULES,RULE_LABELS,analyze,countsOf};
+module.exports={skyMixedSwitch,MIXED_GAP_MS,MIXED_NEAR_LANES,MIXED_CROSS_LANES,SKY_MIXED_LABEL,flatCross,hasSky,FLAT_CROSS_LABEL,onHeldBand,heldBandBlocked,fixHeldBand,spanAt,ON_HELD_BAND_LABEL,HELD_BAND_KINDS,SIDE_GAP_MS,SKY_RAISE_MS,FAST_SAME_SIDE_MS,centerAt,sideAt,levelAt,eventsOf,handEventsOf,heldHandSwitch,sideHeightSwitch,skyAfterGround,besideHeldBand,fastSameSide,RULES,RULE_LABELS,analyze,countsOf};
 
 if(require.main===module){
   const args=process.argv.slice(2),argOf=k=>{const i=args.indexOf(k);return i>=0?args[i+1]:undefined;};

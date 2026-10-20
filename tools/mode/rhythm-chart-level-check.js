@@ -163,26 +163,40 @@ const runtime=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js')
   const all=[...RHYTHM_SONGS,...(RHYTHM_PROTO_SONGS||[])];
   check('いまある曲は全部、前の測り方(v1)で測る一覧に入っている',all.length>0&&all.every(song=>L.levelFormulaFor(song.songId)==='v1'),
     all.filter(song=>L.levelFormulaFor(song.songId)!=='v1').map(song=>song.songId).join(','));
-  check('一覧に無い曲(これから足す曲)は新しい測り方(v2)',L.levelFormulaFor('a_new_song_not_listed')==='v2');
+  check('一覧に無い曲(これから足す曲)はいちばん新しい測り方(v3・2026-10-21)',L.levelFormulaFor('a_new_song_not_listed')==='v3');
+  check('v3 の重み: 入り乱れ 6・指を離した位置への持ち上げ・下ろしは 0.6 軽く(ほかは v2 と同じ)',L.SKY_MIXED_WORK===6&&L.SKY_NATURAL_RELIEF===.6
+    &&L.WORK_V3.skyMixed===6&&L.WORK_V3.skyNatural===.6&&L.WORK_V3.sameSideHeld===L.WORK_V2.sameSideHeld&&L.WORK_V3.skySwitch===L.WORK_V2.skySwitch&&!L.WORK_V2.skyMixed);
   check('v2 の重み: 空中の入り乱れは 1.7倍、押さえている手の側は 3',L.SKY_MIX_FACTOR===1.7&&L.SAME_SIDE_HELD===3
     &&Math.abs(L.WORK_V2.sameHandFast-L.WORK.sameHandFast*1.7)<1e-9&&Math.abs(L.WORK_V2.skySwitch-L.WORK.skySwitch*1.7)<1e-9&&L.WORK_V2.sameSideHeld===3&&!L.WORK.sameSideHeld);
   // 社長が決めた5曲の HELL(2026-10-20)は、新しい測り方の値を表示にした。値は v2 で測った値と同じ・譜面の数字とも同じ
-  // 2026-10-20 夕方からは公開中の HELL 9譜面すべて(Grievous Lady は試作の枠の MASTER の段に置いてある)
+  // 2026-10-20 夕方からは公開中の HELL 9譜面すべて(Grievous Lady は試作の枠の MASTER の段に置いてある)。表示は v2 の値のまま(v3 は新曲から)
   const SET={toward_the_stars_short_hell_debug:57,rose_hell_debug:52,rose_short_hell_debug:50,sad_song_hell_debug:39,sad_song_short_hell_debug:43,
     sheriruth_hell_debug:61,grievous_lady_hell:69,against_my_own_shadow_hell_debug:51,kaze_ga_soyogu_hell_debug:22};
   for(const [id,want] of Object.entries(SET)){
     const d=id==='grievous_lady_hell'?'MASTER':'HELL',song=all.find(x=>x.songId===id),c=song&&song.difficulties[d];
-    check(`${id} の HELL は Lv.${want}(新しい測り方の値・譜面の数字と表示が同じ)`,!!c&&c.level===want&&L.shownLevel(id,d,c)===want&&L.chartLevel(c).level===want,
-      c?`譜面 ${c.level} / 表示 ${L.shownLevel(id,d,c)} / v2 ${L.chartLevel(c).level} / v1 ${L.chartLevel(c,{formula:'v1'}).level}`:'譜面が無い');
+    check(`${id} の HELL は Lv.${want}(新しい測り方の値・譜面の数字と表示が同じ)`,!!c&&c.level===want&&L.shownLevel(id,d,c)===want&&L.chartLevel(c,{formula:'v2'}).level===want,
+      c?`譜面 ${c.level} / 表示 ${L.shownLevel(id,d,c)} / v2 ${L.chartLevel(c,{formula:'v2'}).level} / v1 ${L.chartLevel(c,{formula:'v1'}).level}`:'譜面が無い');
   }
   // ② 押さえている手の側に来るノーツ: 右で押さえている間に右へ来るタップは数え、左へ来るタップは数えない
   const hold={type:'HOLD',lane:4,subLane:8,subLaneWidth:2,timeMs:1000,endTimeMs:3000};
   const taps=(lane)=>Array.from({length:10},(_,i)=>({type:'TAP',lane,subLane:lane*2,subLaneWidth:2,timeMs:1200+i*150}));
-  const same=chartStrain({notes:[hold,...taps(5)]}),other=chartStrain({notes:[hold,...taps(0)]});
+  const same=chartStrain({notes:[hold,...taps(5)]},{formula:'v2'}),other=chartStrain({notes:[hold,...taps(0)]},{formula:'v2'});
   check('② 押さえている側へ来るノーツを数え、反対側は数えない',same.parts.sameSideHeld===10&&other.parts.sameSideHeld===0,`同じ側 ${same.parts.sameSideHeld} / 反対側 ${other.parts.sameSideHeld}`);
   const sameV1=chartStrain({notes:[hold,...taps(5)]},{formula:'v1'}),otherV1=chartStrain({notes:[hold,...taps(0)]},{formula:'v1'});
   check('② は新しい測り方だけで重くなる(前の測り方では足さない)',same.raw>sameV1.raw&&Math.abs(other.raw-otherV1.raw)<1e-9,
     `同じ側 v2 ${same.raw} / v1 ${sameV1.raw}・反対側 v2 ${other.raw} / v1 ${otherV1.raw}`);
+}
+
+// --- 5-3. 地上と空中の入り乱れ(v3・2026-10-21)。入り乱れは重く、指を離した位置への持ち上げ・下ろしは軽く ---
+{
+  const L=require('./rhythm-chart-level.js');
+  // 右手が地上の帯の終わり(レーン4)を離した直後に、同じ位置で空中のタップ(自然)/遠い位置で空中のタップ(入り乱れ)
+  const base=Array.from({length:12},(_,i)=>({type:'TAP',lane:i%2?4:1,subLane:i%2?8:2,subLaneWidth:2,timeMs:500+i*400}));
+  const pair=(lane)=>[{type:'TAP',lane:4,subLane:8,subLaneWidth:2,timeMs:6000},{type:'TAP',lane,subLane:lane*2,subLaneWidth:2,skyHeight:1,timeMs:6200}];
+  const near=chartStrain({notes:[...base,...pair(4)]}),far=chartStrain({notes:[...base,...pair(6)]});
+  check('v3 は、指を離した位置への持ち上げを自然として数え、遠い位置での高さの入れ替わりを入り乱れとして数える',near.parts.skyNatural===1&&near.parts.skyMixed===0&&far.parts.skyMixed===1&&far.parts.skyNatural===0,
+    `近い: 自然 ${near.parts.skyNatural}・入り乱れ ${near.parts.skyMixed} / 遠い: 自然 ${far.parts.skyNatural}・入り乱れ ${far.parts.skyMixed}`);
+  check('v3 は入り乱れを重く数える(同じ形の v2 より生の値が上)',far.raw>chartStrain({notes:[...base,...pair(6)]},{formula:'v2'}).raw&&far.raw>near.raw,`遠い v3 ${far.raw} / v2 ${chartStrain({notes:[...base,...pair(6)]},{formula:'v2'}).raw} / 近い v3 ${near.raw}`);
 }
 
 // --- 6. 画面へ出ている ---

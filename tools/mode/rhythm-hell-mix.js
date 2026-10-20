@@ -46,6 +46,8 @@ const SONGS={sheriruth:{marker:'sheriruth-v3',zero:711.6-2594.75,beat:324.342,le
   sad_song_short:{marker:'sad-song-short-v3',zero:99.5,beat:348.818,levelRe:/const sadSongShortHellChart=mhChart\((\d+),/,source:'audio',variant:3,crosses:'auto',crossUpper:'mover',crossDepth:-1},
   // Toward the Stars, Paradise or Truth short ver.(hitoyakyuko・2026-10-19・新曲は基本 HELL あり)
   toward_the_stars_short:{marker:'toward-the-stars-short-v3',zero:1390.5,beat:418.796,levelRe:/const towardTheStarsShortHellChart=mhChart\((\d+),/,source:'audio',variant:2,crosses:'auto',crossUpper:'mover',crossDepth:-1,phrases:['L','both','R','both']}};
+// mixedWindows:[[開始ms,終わりms],…] … 地上と空中の入り乱れを残してよい山場の区間(2026-10-21)。歯ごたえが最上位の曲だけ(topTier:true と一緒に書く)。
+//   書かない曲は入り乱れを作らない(地上⇄空中は指を離した位置へ)。いまある曲はどれも書いていない
 // drawers:false … 引き出し(2026-10-16)より前に作った HELL。作り直すときも今の形のまま(使うかは社長が決める)。新しい曲は書かない(=使う)
 const BEAT_GAP=1.5;                      // 同じ親指が段を変えるまでの拍
 // 同じ側(レーンの左右)で高さ(地上⇔空中)を変えるまでの間(2026-10-12 社長「HELL の操作性をもっと改良して」・テンポくんの数え方)。
@@ -119,7 +121,7 @@ const D=require('./rhythm-chart-drawers.js');
 const lanesCross=(a,b)=>{const s0=Math.max(startOf(a),startOf(b)),e0=Math.min(endOf(a),endOf(b));if(e0-s0<=0)return false;
   let sign=0;for(let k=0;k<=8;k++){const at=s0+(e0-s0)*k/8,d=laneAt(a.pts,at)-laneAt(b.pts,at);if(Math.abs(d)<.5)return true;const g=Math.sign(d);if(sign&&g!==sign)return true;sign=g;}
   return false;};
-const mix=(master,{zero,beat,crosses=[],gentle=false,crossUpper='hold',crossDepth=null,audio=null,drawersOn=false,drawerIds=null,phrases=null})=>{
+const mix=(master,{zero,beat,crosses=[],gentle=false,crossUpper='hold',crossDepth=null,audio=null,drawersOn=false,drawerIds=null,phrases=null,mixedWindows=null,keepMixed=false})=>{
   const want=id=>drawersOn&&audio&&(!drawerIds||drawerIds.includes(id));
   // 格子へ寄せる。元の譜面に近い時刻(3ms以内)があればその時刻を使う(丸め方が1ms違うと、2本のスライドの間がその瞬間だけ詰まる)
   const chartTimes=[...new Set(master.flatMap(n=>n.k==='s'?n.pts.map(p=>p[0]):[n.t,n.end].filter(x=>x!=null)))].sort((a,b)=>a-b);
@@ -354,6 +356,18 @@ const mix=(master,{zero,beat,crosses=[],gentle=false,crossUpper='hold',crossDept
         const sl=notes.find(n=>n.k==='s'&&!inCross(startOf(n))&&((Math.abs(endOf(n)-v.at)<=W&&n.pts[n.pts.length-1][3]>=0.5&&sideOf(n,true)===side)||(Math.abs(startOf(n)-v.at)<=2&&n.pts[0][3]>=0.5&&sideOf(n)===side)));
         if(sl){if(Math.abs(startOf(sl)-v.at)<=2&&sl.pts[0][3]>=0.5)sl.pts[0][3]=0;else sl.pts[sl.pts.length-1][3]=0;moved=true;break;}}
       if(!moved)break;}}
+  // 地上と空中の入り乱れ(2026-10-21 社長「地上と空中が近辺で入り混じってるのがあるけどこれかなり難易度高い」「気安くいれていい譜面の形ではない」
+  //   「空中地上は基本は指を離した位置に置くのが基本で、高難易度の曲はその辺を入り交じるとかにしないとヘルが全般的に無理ゲーになりそう」)。
+  //   地上⇄空中の行き来は「指を離した位置へ」が基本(rhythm-chart-hand-rules.js の skyMixedSwitch の near)。入り乱れ(far・cross)は、曲の設定の
+  //   mixedWindows(歯ごたえが最上位の曲だけ・その曲の山場だけ)の中にだけ残し、外のものは関わる空中のタップ(モンスター以外)を地上へ下ろす。
+  //   --keep-mixed で止められる(比べるときだけ)
+  if(!keepMixed){const HR=require('./rhythm-chart-hand-rules.js'),allowed=t=>(mixedWindows||[]).some(([a,b])=>t>=a&&t<=b);
+    for(let r=0;r<300;r++){const res=HR.skyMixedSwitch(toRuntime(notes)).filter(v=>v.kind!=='near'&&!allowed(v.at));if(!res.length)break;
+      let moved=false;
+      for(const v of res){const skyAt=v.level==='空中'?v.at:v.prev.timeMs;
+        const cand=notes.find(n=>n.k==='t'&&n.sky&&!n.mon&&Math.abs(n.t-skyAt)<=2);
+        if(cand){cand.sky=0;moved=true;break;}}
+      if(!moved)break;}}
   // 空中を付けたあとにも、横持ちの物差しで「押せない」と出る地上のタップ・フリックが交差の区間の外に残っていれば取り除く
   //   (骨組みのときと手の割り振りが変わって見えることがある。0件の曲では何もしない)
   for(let r=0;r<20;r++){const th=thumbCheck(notes,HELL_LANDSCAPE,beat);
@@ -444,7 +458,9 @@ if(require.main===module){
     const master=conf.source==='audio'?audioDraft(songId,conf.variant||0,drawersOn):readBlock(source,`${conf.marker}-master`);
     const before=rt0.markerBlock(source,`${conf.marker}-master`)?readBlock(source,`${conf.marker}-master`):master;
     const oldHell=conf.trial?null:rt0.markerBlock(source,`${conf.marker}-hell`);
-    const hell=mixBest(master,{...conf,audio,drawersOn,drawerIds:argOf('--drawers-only')?argOf('--drawers-only').split(','):null});
+    // mixedWindows(入り乱れを許す山場の区間)は、歯ごたえが最上位の曲(topTier:true)だけに書ける(2026-10-21)
+    if(conf.mixedWindows&&conf.mixedWindows.length&&conf.topTier!==true)throw new Error('mixedWindows は歯ごたえが最上位の曲(topTier:true)だけに書ける(docs/rules/CHART_ENGINE.md「HELL の地上と空中の入り乱れ」)');
+    const hell=mixBest(master,{...conf,audio,drawersOn,drawerIds:argOf('--drawers-only')?argOf('--drawers-only').split(','):null,keepMixed:args.includes('--keep-mixed')});
     for(const d of hell.drawers||[])console.log(`引き出し ${D.drawerLine(d)}${d.use&&d.lifted!=null?`(空へ上げた ${d.lifted}本・手直しのあと${d.id==='R3'?'区間の中で空を通るスライド':'空で終わる'} ${d.kept}本)`:''}`);
     if(!drawersOn)console.log('引き出し: 使わない(この曲は drawers:false。試すときは --drawers)');
     const {chartLevel}=require('./rhythm-chart-level.js');
@@ -457,6 +473,10 @@ if(require.main===module){
     const sim=simulateRuntime(rt.filter(n=>!(n.skyHeight>0)&&!(n.slidePoints&&n.slidePoints.some(p=>p.sky>0))));
     const viol=levelSwitchViolations(hell,conf.beat);
     console.log('数:',JSON.stringify(counts(hell)));
+    {const HR=require('./rhythm-chart-hand-rules.js'),mx=HR.skyMixedSwitch(rt),win=conf.mixedWindows||[],inMix=t=>win.some(([a,b])=>t>=a&&t<=b);
+      const bad=mx.filter(v=>v.kind!=='near'),out=bad.filter(v=>!inMix(v.at));
+      console.log(`${HR.SKY_MIXED_LABEL} ${bad.length}件(許した山場の区間の中 ${bad.length-out.length}・外 ${out.length})・指を離した位置への持ち上げ/下ろし ${mx.filter(v=>v.kind==='near').length}件`
+        +(out.length?': '+out.slice(0,12).map(v=>`${(v.at/1000).toFixed(2)}(${v.kind==='far'?'同じ手・遠い':'近くの別の手'})`).join(' / ')+' ← 下ろせなかった(モンスターノーツ・スライドの端)':''));}
     const ss=sideSwitches(hell);console.log(`同じ側で${SIDE_GAP_MS}ms以内に高さが変わる ${ss.length}件`+(ss.length?': '+ss.map(t=>(t/1000).toFixed(2)).join(' / '):''));
     // 共通の物差し(rhythm-chart-hand-rules.js・検査 rhythm-chart-hand-rules-check.js と同じ数え方)で、ほかの手の決まりも出す(作り方は変えない・目安)
     {const HR=require('./rhythm-chart-hand-rules.js'),res=HR.analyze(rt);
