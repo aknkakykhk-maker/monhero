@@ -160,8 +160,31 @@ check('購入ボタンの通貨表示がカード内に収まる',
     && has('usesPsyche?<><span aria-hidden="true">🌈</span><span>{item.cost.toLocaleString()}</span></>')
     // 勇者の証は名前が長いので、字を小さくして1行(whitespace-nowrap)に収めている
     && has('usesHeroProof?<><span aria-hidden="true">🏅</span><span className="text-[10px]">勇者の証 ×{item.cost.toLocaleString()}</span></>'));
-// 予告の札は既定で「近日追加」。ビートP交換所の円盤石だけ「先行公開予定」と書く(札の形は同じ)
-check('状態の表示も折り返さない', has('rounded-full whitespace-nowrap">{comingSoonLabel}</div>') && has("comingSoonLabel='近日追加'") && has('rounded-full whitespace-nowrap">所持済み</div>'));
+// 予告の札は既定で「近日追加」。ビートP交換所の円盤石だけ「先行公開予定」と書く(札の形は同じ)。
+// 2026-10-20 から、鍵つきフレームの札(条件の短い文)は言葉の切れ目で2行まで折ってよい(#3199・#3200・#3205)。
+// 見るのは「2行まで・言葉の途中で折らない・いちばん長い語が1行に入る大きさ」。所持済みの札は1行のまま
+{
+  const vm = require('vm');
+  const widgets = fs.readFileSync(path.join(root, 'monster-hero/src/parts/20-market-notices-help.jsx'), 'utf8');
+  const take = (name) => { const at = widgets.indexOf(`const ${name} = `); return at >= 0 ? widgets.slice(at, widgets.indexOf(';\n', at) + 2) : ''; };
+  const lc = {}; vm.createContext(lc);
+  vm.runInContext(`${take('MARKET_LABEL_WRAP_AFTER')}\n${take('marketLabelSegments')}\nthis.out={marketLabelSegments};`, lc);
+  // 鍵つきフレームの札の文を、本物のフレームの定義から作る(名前を引く表は仮の名前でよい・数えるのは区切りの数)
+  const breeder = fs.readFileSync(path.join(root, 'monster-hero/data/breeder.js'), 'utf8');
+  const fStart = breeder.indexOf('const PROFILE_FRAME_NONE_ID'), fEnd = breeder.indexOf('\n};', breeder.indexOf('const nextProfileFrameForAssistant')) + 3;
+  const fc = { BREEDER_MARKET_ITEMS: [], ALL_PLAYER_MONSTERS: new Proxy({}, { get: () => ({ name: 'モッチー' }) }), MONSTER_LINEAGES: new Proxy({}, { get: () => ({ name: 'モッチー' }) }),
+    DIFFICULTY_SETTINGS: new Proxy({}, { get: () => ({ label: 'Master' }) }), RAGNAROK_SETTING: { japanese: 'ラグナロク' } };
+  vm.createContext(fc);
+  vm.runInContext(`${breeder.slice(fStart, fEnd)}\nthis.out={PROFILE_FRAMES,profileFrameConditionShort};`, fc);
+  const frameLabels = fc.out.PROFILE_FRAMES.flatMap(f => ['breederPoint', 'beatPoint'].map(shop => fc.out.profileFrameConditionShort(f, shop))).filter(Boolean);
+  const labels = ['近日追加', '先行公開予定', '条件を達成すると買えます', ...frameLabels];
+  const over = labels.filter(l => lc.out.marketLabelSegments(l).length > 2);
+  check('予告の札は言葉の切れ目で2行まで(言葉の途中では折らない)',
+    has('data-market-coming-soon-label') && has("wordBreak:'keep-all'") && has('fontSize:marketLabelFitSize(comingSoonLabel)')
+      && has('{marketLabelNodes(comingSoonLabel)}') && has("comingSoonLabel='近日追加'") && frameLabels.length > 0 && over.length === 0,
+    `札 ${labels.length}種(フレームの条件 ${frameLabels.length})${over.length ? ` / 3行以上: ${over.map(l => [].concat(l).join('')).join('、')}` : ''}`);
+  check('所持済みの札は折り返さない', has('rounded-full whitespace-nowrap">所持済み</div>'));
+}
 // 拡大量は表示コードへ直接書かず、アイコンIDごとの表を1か所に持つ。
 // ききはマーケット商品とアシストカードの両方で同じ値を使うので、定数を共有する
 check('ききの拡大量を1か所の表で持ち、縦横比と円形クリップを保つ',
