@@ -135,6 +135,7 @@ function BreederMarketScreen({
     const comingSoon = item.available === false;
     const owned = !comingSoon && isItemOwned(item);
     // 買える条件つきのフレーム(2026-10-03)。条件を達成するまでは札を出して買えない。詳細で条件と進み具合が読める
+    // 札には条件を短く書く(2026-10-20・profileFrameConditionShort。「ジャックを倒すか / イベント終了で」「ザン・エイキ / ビートLv50」)
     const frameCondition = item.type==='frame' && frameConditionOf ? frameConditionOf(item.id,'breederPoint') : null;
     const frameLocked = !!frameCondition && !frameCondition.met && !owned;
     const balance = balanceOf(marketCurrencyOf(item));
@@ -147,7 +148,7 @@ function BreederMarketScreen({
     return (
       <React.Fragment key={item.id}>
         {showBase&&<MarketProductCard previewIcon={previewIcon}
-          item={item} owned={owned} comingSoon={comingSoon||frameLocked} comingSoonLabel={frameLocked?'条件を達成すると買えます':undefined} canBuy={canBuy}
+          item={item} owned={owned} comingSoon={comingSoon||frameLocked} comingSoonLabel={frameLocked?(profileFrameConditionShort(profileFrameById(item.id),'breederPoint')||'条件を達成すると買えます'):undefined} canBuy={canBuy}
           onZoom={()=>onZoomIcon(item)}
           onBuy={()=>openSheet({ item, stackable:item.type==='item', confirm:(count)=>onBuy(item,count),
             rebirth:item.type==='disc'?{monsterId:item.id,discIcon:item.icon}:null })}
@@ -362,7 +363,7 @@ function BreederMarketScreen({
             const frameLocked=!!frameCondition&&!frameCondition.met&&!owned;
             const detailItem=frameCondition?{...item,frameCondition}:item;
             return <MarketProductCard key={offer.id} dataAttrs={{'data-event-point-frame':offer.id}} previewIcon={previewIcon}
-              item={item} owned={owned} comingSoon={frameLocked} comingSoonLabel={frameLocked?'条件を達成すると買えます':undefined}
+              item={item} owned={owned} comingSoon={frameLocked} comingSoonLabel={frameLocked?(profileFrameConditionShort(frame,'beatPoint')||'条件を達成すると買えます'):undefined}
               canBuy={!owned&&!frameLocked&&safeEventPoints>=offer.cost&&!busy}
               disabled={purchaseProcessing}
               onZoom={()=>onZoomIcon(item)}

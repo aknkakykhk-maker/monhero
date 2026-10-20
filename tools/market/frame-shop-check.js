@@ -37,11 +37,14 @@ const end = breeder.indexOf('\n', breeder.indexOf('const nextProfileFrameForAssi
 const block = breeder.slice(start, breeder.indexOf('\n};', end) + 3);
 check('フレームと売り値の定義を取り出せる', start >= 0 && block.includes('const profileFrameSale') && block.includes('const profileFramesForSale'));
 const load = (fake = '') => {
-  const ctx = { BREEDER_MARKET_ITEMS: [] };
+  // 札の短い文(profileFrameConditionShort)が名前を引く表。本物と同じ名前を少しだけ置く
+  const ctx = { BREEDER_MARKET_ITEMS: [],
+    ALL_PLAYER_MONSTERS: { Suezo:{name:'スエゾー'}, Golem:{name:'ゴーレム'}, Tiger:{name:'ライガー'}, Ham:{name:'ハム'}, Pixie:{name:'ピクシー'}, Mia:{name:'ミーア'}, Zan:{name:'ザン'}, Eiki:{name:'エイキ'}, Undine:{name:'ウンディーネ'}, Yaobikuni:{name:'ヤオビクニ'}, Snegurochka:{name:'スネグーラチカ'} },
+    MONSTER_LINEAGES: { mocchi:{name:'モッチー'} }, DIFFICULTY_SETTINGS: { Master:{label:'Master'} }, RAGNAROK_SETTING: { japanese:'ラグナロク', label:'RAGNAROK' } };
   vm.createContext(ctx);
   // 検査の中だけで仮の売り物を足す(PROFILE_FRAMES の最後に差し込む)。ゲームのデータそのものは書き換えない(別のコンテキストで動かす)
   const src = fake ? block.replace(/\n\];\nconst PROFILE_FRAME_MAP/, `\n${fake}];\nconst PROFILE_FRAME_MAP`) : block;
-  vm.runInContext(`${src}\nthis.out={PROFILE_FRAMES,PROFILE_FRAME_SHOPS,profileFrameSale,profileFrameSaleIn,profileFrameSales,profileFrameCondition,profileFrameConditionFor,profileFramesForSale,profileFramesWithBrokenSale,profileFrameOwned,normalizeProfileFrameId,releasedProfileFrames,profileFrameUnlock,BREEDER_MARKET_ITEMS};`, ctx);
+  vm.runInContext(`${src}\nthis.out={PROFILE_FRAMES,PROFILE_FRAME_SHOPS,profileFrameSale,profileFrameSaleIn,profileFrameSales,profileFrameCondition,profileFrameConditionFor,profileFramesForSale,profileFramesWithBrokenSale,profileFrameOwned,normalizeProfileFrameId,releasedProfileFrames,profileFrameUnlock,BREEDER_MARKET_ITEMS,profileFrameConditionShort:typeof profileFrameConditionShort==='function'?profileFrameConditionShort:null};`, ctx);
   return ctx.out;
 };
 
@@ -62,6 +65,17 @@ check('値段はブリーダーP 1 / ビートP 100(ラグナロクだけビー�
     return real.profileFrameSaleIn(f, 'breederPoint').cost === 1 && real.profileFrameSaleIn(f, 'beatPoint').cost === (id === 'frame_ragnarok' ? 10000 : 100);
   }));
 check('10枚とも買える条件が付いている', SOLD.every(id => !!real.profileFrameCondition(real.PROFILE_FRAMES.find(x => x.id === id))));
+// 鍵つきの札の短い文(2026-10-20 社長の決定 L3): 条件の中身から作り、2つの区切りで2行に収まる
+{
+  const want = { frame_mocchi:'モッチー種を|限界突破', frame_moo:'Masterを|クリア', frame_suezo_beat:'モンヒロビートを|10回クリア', frame_suezo:'スエゾーを|転生', frame_golem:'ゴーレムを|転生',
+    frame_tiger:'ライガーを|転生', frame_ham:'ハムを|転生', frame_pixie:'ピクシーを|転生', frame_mia:'ミーアを|転生', frame_ragnarok:'ラグナロクを|クリア',
+    frame_halloween_night:'ジャックを倒すか|イベント終了で', frame_eiki_zan:'ザン・エイキ|ビートLv50', frame_undine_beat:'ウンディーネ3姉妹|ビートLv50' };
+  const got = Object.keys(want).map(id => [id, (real.profileFrameConditionShort ? real.profileFrameConditionShort(real.PROFILE_FRAMES.find(f => f.id === id), 'breederPoint') || [] : []).join('|')]);
+  check('鍵つきの札は、13枚とも条件を短く書く(条件の中身から作る・2区切り)', got.every(([id, text]) => text === want[id]), got.filter(([id, text]) => text !== want[id]).map(([id, text]) => `${id}:${text}`).join(' / '));
+  check('ビートP交換所で条件のかからない枠(転生の6枚・ラグナロク)には札を作らない', ['frame_suezo', 'frame_ragnarok'].every(id => real.profileFrameConditionShort(real.PROFILE_FRAMES.find(f => f.id === id), 'beatPoint') === null));
+  check('札の文は condition.text を書き写していない', !/condition\.text|c\.text/.test(breeder.slice(breeder.indexOf('const profileFrameConditionShort'), breeder.indexOf('const profileFramesWithBrokenSale'))));
+  check('売り場の2か所とも、札に条件の短い文を使う', (market.match(/profileFrameConditionShort\(/g) || []).length === 2);
+}
 check('売る枠として書かれているのに売り値が壊れている枠も無い', real.profileFramesWithBrokenSale().length === 0, real.profileFramesWithBrokenSale().join(','));
 check('いまの商品の一覧に入っているフレームは、売っている13枚だけ',
   real.BREEDER_MARKET_ITEMS.filter(item => item.type === 'frame').map(item => item.id).join() === SOLD_ALL.join());
