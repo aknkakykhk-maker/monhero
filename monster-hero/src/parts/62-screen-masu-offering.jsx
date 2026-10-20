@@ -120,7 +120,8 @@ function MasuOfferingScreen({
         </>}
         {mode==='levels'&&<>
           <div className="text-[11px] font-black text-slate-300">上げるレベル（いまのLvから）</div>
-          <div className="text-center font-mono text-2xl font-black text-white">+{amount}<span className="ml-2 text-sm text-slate-400">→ Lv.{lvl.level+amount}</span></div>
+          {/* レベル数・回数は直接打ち込める(2026-10-20 社長「個数系のやつは基本的に直接入力があったほうがいいね」) */}
+          <div className="flex items-center justify-center gap-1.5 font-mono text-2xl font-black text-white">+<CountInput value={amount} max={limits.maxLevels} onChange={setLevels} unit="レベル" label="上げるレベル" className="w-24"/><span className="ml-1 text-sm text-slate-400">→ Lv.{lvl.level+amount}</span></div>
           <div className="grid grid-cols-6 gap-1.5">
             {[...OFFERING_LEVEL_STEPS].reverse().map(step=><button key={`m${step}`} className={stepBtn} disabled={amount<=1} onClick={()=>setLevels(Math.max(1,amount-step))}>-{step}</button>)}
             {OFFERING_LEVEL_STEPS.map(step=><button key={`p${step}`} className={stepBtn} disabled={amount>=limits.maxLevels} onClick={()=>setLevels(Math.min(limits.maxLevels,amount+step))}>+{step}</button>)}
@@ -130,7 +131,7 @@ function MasuOfferingScreen({
         {mode==='reincarnate'&&<>
           <div className="text-[11px] font-black text-slate-300">転生する回数</div>
           <div className="text-[10px] font-bold leading-relaxed text-slate-400">Lv.{REINCARNATE_MIN_LEVEL}未満なら先に経験値を与え、Lv.{REINCARNATE_MIN_LEVEL}以上になったところで転生します。これを回数ぶん続けます。固有技は「あとで決める」（固有技ポイント+1）になります。</div>
-          <div className="text-center font-mono text-2xl font-black text-white">{amount}<span className="ml-1 text-sm text-slate-400">回</span></div>
+          <div className="flex items-center justify-center gap-1.5 font-mono text-2xl font-black text-white"><CountInput value={amount} max={limits.maxTimes} onChange={setTimes} unit="回" label="転生する回数" className="w-24"/><span className="ml-1 text-sm text-slate-400">回</span></div>
           <div className="grid grid-cols-4 gap-1.5">
             <button className={stepBtn} disabled={amount<=1} onClick={()=>setTimes(Math.max(1,amount-10))}>-10</button>
             <button className={stepBtn} disabled={amount<=1} onClick={()=>setTimes(Math.max(1,amount-1))}>-1</button>

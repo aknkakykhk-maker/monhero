@@ -41,6 +41,12 @@ node tools/render-error-check.js         # 実際に開いて真っ白になら�
 このチェックで機械的に拾う。
 
 
+### 個数・回数・枚数を選ぶ所は、数を直接打ち込める欄を使う(2026-10-20)
+
+社長「個数系のやつは基本的に直接入力があったほうがいいね」。−/＋/MAX のボタンで数を選ぶ所には、
+`CountInput`(41-screen-ui.jsx・数字のキーボード・字20px・打っている途中で範囲にそろえる)か、それを使う
+`QuantityStepper` を必ず置く。`tools/boot/count-input-check.js` が「MAX」「全部」「最大」のボタンのそばに欄があるかを見張る。
+
 ### 配信用JS(`game-system.compiled.js`)にはコメントが入らない(2026-09-26)
 
 `node tools/build.js` は配信用だけコメントを外し、日本語も `\uXXXX` にせずそのまま書く

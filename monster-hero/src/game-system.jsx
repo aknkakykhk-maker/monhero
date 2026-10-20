@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1576d476cb373f9f
+// generated-sha256: fe7a48db19966c44
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-20 01:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-20 11:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -30776,36 +30776,52 @@ const ModalFrame = ({ label, border='border-amber-400/70', onClose, children, na
 const ModalCloseButton = ({ onClick, label='閉じる', disabled=false }) => (
   <button type="button" disabled={disabled} onClick={onClick} className="mh-button mh-button-secondary w-full min-h-[48px] rounded-2xl border border-white/20 bg-slate-900 font-black active:scale-[.98] disabled:opacity-40">{label}</button>
 );
+// 数を直接打ち込む欄(2026-10-19 社長「マーケットのアイテムは直接数値入力で買えるようにしよう！」、
+// 2026-10-20「個数系のやつは基本的に直接入力があったほうがいいね」)。★個数・回数・枚数を選ぶ所は、この欄を使う
+//   (−/＋/MAX のボタンは呼ぶ側に並べたまま。tools/boot/count-input-check.js が見張る)
+// ・数字のキーボード(inputMode=numeric)。字は20px(16px未満だと iPhone で欄を押したときに画面が拡大される)
+// ・打っている途中でも、数として読めたら min〜max にそろえてすぐ onChange へ渡す(合計などの表示が追いつく)
+// ・空・min未満のあいだは min として数え、max を超えたら max にそろえる。小数は点より前だけ。全角数字も読む
+// ・欄に出すのは、打った字がいまの数と合うときだけ打った字、合わなければいまの数(−/＋ を押したら数が出し直される)
+const countInputClamp = (n, min, max) => Math.min(Math.max(min, n), Math.max(min, max));
+const CountInput = ({ value, max, min=1, onChange, unit='', label='数', className='', disabled=false, dataAttrs={} }) => {
+  const safeMin=Math.max(0, Math.floor(Number(min)||0));
+  const safeMax=Math.max(0, Math.floor(Number(max)||0));
+  const current=countInputClamp(Math.floor(Number(value)||safeMin), safeMin, safeMax);
+  const [draft,setDraft]=React.useState(null);
+  const readDraft=(raw)=>{
+    const digits=String(raw||'').split(/[.,．。]/)[0].replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)).replace(/[^0-9]/g,'');
+    const n=parseInt(digits,10);
+    return { digits, n:Number.isFinite(n)?n:null };
+  };
+  const type=(raw)=>{
+    const { digits, n }=readDraft(raw);
+    if(n!==null&&n>Math.max(safeMin,safeMax)) { const top=Math.max(safeMin,safeMax); setDraft(String(top)); onChange&&onChange(top); return; }
+    setDraft(digits);
+    onChange&&onChange(countInputClamp(n===null?safeMin:n, safeMin, safeMax));
+  };
+  const draftMatches=draft!==null&&countInputClamp(readDraft(draft).n??safeMin, safeMin, safeMax)===current;
+  return <input type="text" inputMode="numeric" pattern="[0-9]*" enterKeyHint="done" autoComplete="off" data-quantity-input {...dataAttrs}
+    aria-label={`${label}（${safeMin.toLocaleString()}〜${Math.max(safeMin,safeMax).toLocaleString()}${unit}）`}
+    disabled={disabled||safeMax<safeMin||safeMax<=0} value={draftMatches?draft:String(current)} onChange={(e)=>type(e.target.value)}
+    onFocus={(e)=>e.target.select()} onBlur={()=>setDraft(null)} onKeyDown={(e)=>{ if(e.key==='Enter') e.currentTarget.blur(); }}
+    style={{fontSize:20}} className={`min-h-[44px] min-w-0 rounded-xl border border-white/20 bg-black/40 px-1 text-center font-black font-mono text-white outline-none focus:border-amber-300 disabled:opacity-40 ${className}`}/>;
+};
 // value は 1〜max に収めてから onChange へ渡す。max が 0 のときは何も増やせない(MAX も押せない)
 const QuantityStepper = ({ value, max, onChange, unit='個', maxClass='' }) => {
   const safeMax=Math.max(0, Math.floor(Number(max)||0));
   const count=Math.min(Math.max(1, Math.floor(Number(value)||1)), Math.max(1, safeMax));
   const setCount=(next)=>onChange&&onChange(Math.min(Math.max(1, next), Math.max(1, safeMax)));
   const stepClass='mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-800 font-black active:scale-95 disabled:opacity-30';
-  // 数を直接打ち込める(2026-10-19 社長「マーケットのアイテムは直接数値入力で買えるようにしよう！」)。
-  // 打っている途中の字(draft)は欄にだけ持ち、数として読めたら 1〜max にそろえてすぐ onChange へ渡す(合計の表示が追いつく)。
-  // 空・0 のあいだは 1 として数え、欄を離れたら そろえた数を出し直す。小数は点より前だけを読む。
-  // 字の大きさは16px以上(iPhone で欄を押したときに画面が拡大されないように)
-  const [draft,setDraft]=React.useState(null);
-  const typeCount=(raw)=>{
-    const digits=String(raw||'').split(/[.,．。]/)[0].replace(/[^0-9０-９]/g,'').replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0));
-    const n=parseInt(digits,10);
-    if(Number.isFinite(n)&&n>Math.max(1,safeMax)) { setDraft(String(Math.max(1,safeMax))); setCount(safeMax); return; }
-    setDraft(digits);
-    setCount(Number.isFinite(n)&&n>=1?n:1);
-  };
   return <>
     <div className="mt-2 grid grid-cols-5 items-center gap-1.5">
-      <button type="button" disabled={count<=1} onClick={()=>{setDraft(null);setCount(count-10);}} className={stepClass}>-10</button>
-      <button type="button" disabled={count<=1} onClick={()=>{setDraft(null);setCount(count-1);}} className={stepClass}>-1</button>
-      <input type="text" inputMode="numeric" pattern="[0-9]*" enterKeyHint="done" autoComplete="off" aria-label={`数（1〜${Math.max(1,safeMax).toLocaleString()}${unit}）`} data-quantity-input
-        disabled={safeMax<=0} value={draft??String(count)} onChange={(e)=>typeCount(e.target.value)} onFocus={(e)=>e.target.select()} onBlur={()=>setDraft(null)}
-        onKeyDown={(e)=>{ if(e.key==='Enter') e.currentTarget.blur(); }}
-        style={{fontSize:20}} className="min-h-[44px] w-full min-w-0 rounded-xl border border-white/20 bg-black/40 px-1 text-center font-black font-mono text-white outline-none focus:border-amber-300 disabled:opacity-40"/>
-      <button type="button" disabled={count>=safeMax} onClick={()=>{setDraft(null);setCount(count+1);}} className={stepClass}>+1</button>
-      <button type="button" disabled={count>=safeMax} onClick={()=>{setDraft(null);setCount(count+10);}} className={stepClass}>+10</button>
+      <button type="button" disabled={count<=1} onClick={()=>setCount(count-10)} className={stepClass}>-10</button>
+      <button type="button" disabled={count<=1} onClick={()=>setCount(count-1)} className={stepClass}>-1</button>
+      <CountInput value={count} max={safeMax} onChange={setCount} unit={unit} className="w-full"/>
+      <button type="button" disabled={count>=safeMax} onClick={()=>setCount(count+1)} className={stepClass}>+1</button>
+      <button type="button" disabled={count>=safeMax} onClick={()=>setCount(count+10)} className={stepClass}>+10</button>
     </div>
-    <button type="button" disabled={safeMax<=0} onClick={()=>{setDraft(null);setCount(safeMax);}} className={`mh-button mh-button-secondary mt-2 min-h-[44px] w-full rounded-xl font-black active:scale-95 disabled:opacity-30 ${maxClass}`}>MAX（{safeMax.toLocaleString()}{unit}）</button>
+    <button type="button" disabled={safeMax<=0} onClick={()=>setCount(safeMax)} className={`mh-button mh-button-secondary mt-2 min-h-[44px] w-full rounded-xl font-black active:scale-95 disabled:opacity-30 ${maxClass}`}>MAX（{safeMax.toLocaleString()}{unit}）</button>
   </>;
 };
 // 名前を入れる窓(2026-10-05)。ブリーダー名とマスモンの名前の窓が、ほぼ同じ作りで別々に手書きされ、
@@ -34547,7 +34563,7 @@ function MasuReincarnateScreen({
         };
         return <div data-mh-screen className={SCREEN_SHELL_CLASS}><ScreenHead title="転生" accent="text-violet-300" onBack={onBackToTemple} backLabel="神殿へ戻る"/><div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="reincarnate" compact/></div>{renderScreenNote('reincarnate',`絆Lv.${REINCARNATE_MIN_LEVEL}以上のマスモンは、強化を振り直せます。`,[`レベルが${REINCARNATE_LEVEL_DROP}下がる代わりに、振った強化をすべて振り直せます。`,'限界突破の回数や★はそのまま残ります。','左上の□で選ぶと、何体かをまとめて転生できます。1体あたりの回数と「最大」も選べます。'])}{renderMonsterSortFilterBar({singleType:true})}<div className={SCREEN_LIST_CLASS}>{entries.length===0?<ScreenEmpty emoji="🔄" lines={['表示できるマスモンがいません。','並べ替え・絞り込みの設定を見直してください。']}/>:<div className="grid grid-cols-3 gap-2 pb-3">{entries.map(({masu})=>{const base=ALL_PLAYER_MONSTERS[masu.baseId];if(!base)return null;const lvl=masuBondLevelInfo(masu);const locked=isMasuLocked(rebirthLockedMasuIds,masu.id);const can=lvl.level>=REINCARNATE_MIN_LEVEL&&!locked;const on=can&&picked.some(id=>String(id)===String(masu.id));return <div key={masu.id} className="relative" data-reincarnate-card={masu.id}><button disabled={!can} data-reincarnate-locked={locked?'1':undefined} onClick={()=>{setReincarnateSelectedId(masu.id);setReincarnateSkillKey(null);setReincarnateTimes(1);setReincarnateError('');}} style={MONSTER_CARD_STYLE} className={`${MONSTER_CARD_CLASS} w-full ${on?'border-violet-200 ring-2 ring-violet-300':'border-violet-500/40'} bg-slate-900 disabled:opacity-60`}>{renderMonsterCardBody({masu,base,status:locked?<span className="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-amber-500/25 border border-amber-300/50 text-amber-100">🔁 転生ロック</span>:lvl.level<REINCARNATE_MIN_LEVEL?<span className="block text-center text-[10px] font-bold leading-tight text-slate-300">あとLv.{REINCARNATE_MIN_LEVEL-lvl.level}で転生</span>:<ReincarnateBadge count={masu.reincarnateCount} className="is-inline"/>})}</button>{can&&<button type="button" role="checkbox" aria-checked={on} aria-label={`${masu.name}をまとめて転生に選ぶ`} data-reincarnate-pick={masu.id} disabled={busy} onClick={()=>togglePick(masu.id)} className="absolute left-0 top-0 z-10 flex h-11 w-11 items-start justify-start p-1.5"><span aria-hidden="true" className={`flex h-6 w-6 items-center justify-center rounded-md border-2 text-[13px] font-black ${on?'border-violet-100 bg-violet-500 text-white':'border-white/70 bg-slate-950/80 text-transparent'}`}>✓</span></button>}</div>})}</div>}</div>
           {eligible.length>0&&<div className={SCREEN_FOOTER_CLASS} data-reincarnate-bulk-bar>
-            <div data-reincarnate-bulk-times className="mb-2 flex items-center gap-1.5"><span className="shrink-0 text-[11px] font-black text-slate-300">1体あたりの回数</span><button type="button" disabled={busy||bulkTimes!=='max'&&timesNum<=1} onClick={()=>setTimes(timesNum-1)} className="mh-button mh-button-secondary min-h-[44px] min-w-[44px] rounded-xl bg-slate-800 font-black active:scale-95 disabled:opacity-30">−</button><strong className="min-w-[2.5rem] text-center font-mono text-lg font-black text-white">{bulkTimes==='max'?'最大':timesNum}</strong><button type="button" disabled={busy||bulkTimes!=='max'&&timesNum>=timesMax} onClick={()=>setTimes(timesNum+1)} className="mh-button mh-button-secondary min-h-[44px] min-w-[44px] rounded-xl bg-slate-800 font-black active:scale-95 disabled:opacity-30">＋</button><button type="button" disabled={busy} onClick={()=>setBulkTimes('max')} className={`mh-button mh-button-secondary min-h-[44px] flex-1 rounded-xl text-xs font-black active:scale-95 disabled:opacity-30 ${bulkTimes==='max'?'bg-violet-600 text-white':'bg-slate-800'}`}>最大{picked.length?`（${timesMax}回）`:''}</button></div>
+            <div data-reincarnate-bulk-times className="mb-2 flex items-center gap-1.5"><span className="shrink-0 text-[11px] font-black text-slate-300">1体あたりの回数</span><button type="button" disabled={busy||bulkTimes!=='max'&&timesNum<=1} onClick={()=>setTimes(timesNum-1)} className="mh-button mh-button-secondary min-h-[44px] min-w-[44px] rounded-xl bg-slate-800 font-black active:scale-95 disabled:opacity-30">−</button>{/* 回数は直接打ち込める(2026-10-20)。打つと「最大」から数の指定に変わる */}<CountInput value={timesNum} max={timesMax} onChange={(n)=>setBulkTimes(n)} unit="回" label="1体あたりの回数" disabled={busy||!picked.length} className="w-14 shrink-0"/><button type="button" disabled={busy||bulkTimes!=='max'&&timesNum>=timesMax} onClick={()=>setTimes(timesNum+1)} className="mh-button mh-button-secondary min-h-[44px] min-w-[44px] rounded-xl bg-slate-800 font-black active:scale-95 disabled:opacity-30">＋</button><button type="button" disabled={busy} onClick={()=>setBulkTimes('max')} className={`mh-button mh-button-secondary min-h-[44px] flex-1 rounded-xl text-xs font-black active:scale-95 disabled:opacity-30 ${bulkTimes==='max'?'bg-violet-600 text-white':'bg-slate-800'}`}>最大{picked.length?`（${timesMax}回）`:''}</button></div>
             <div className="grid grid-cols-2 gap-2"><button type="button" disabled={busy} onClick={pickAll} className="mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-800 text-xs font-black active:scale-95 disabled:opacity-30">すべて選択</button><button type="button" disabled={busy||picked.length===0} onClick={()=>setBulkIds([])} className="mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-800 text-xs font-black active:scale-95 disabled:opacity-30">選択を外す</button></div>
             <button type="button" data-reincarnate-bulk-open disabled={busy||picked.length===0} onClick={()=>{setReincarnateError('');setBulkConfirmOpen(true);}} className="mh-button mh-button-primary mt-2 w-full min-h-[52px] rounded-2xl bg-violet-600 text-sm font-black active:scale-[.98] disabled:opacity-30">{picked.length?`まとめて転生（${picked.length}体${preview?.ok&&preview.total>preview.count?`・計${preview.total}回`:''}）`:'まとめて転生（□で選んでください）'}</button>
             <div className="mt-1 text-center text-[10px] font-bold text-slate-400">「すべて選択」は編成中とお気に入りの子を選びません</div>
@@ -34586,7 +34602,7 @@ function MasuReincarnateScreen({
       const nextPoints=batch.ok?batch.nextPoints:(nextLevel-1)+totalBreakthroughPoints(normalized.rebirthCount)+normalized.reincarnateBonusPoints+REINCARNATE_POINTS+normalized.inheritedReincarnateBonusPoints;
       return <div data-mh-screen className={SCREEN_SHELL_CLASS}><ScreenHead title="転生・固有技選択" accent="text-violet-300" onBack={()=>setReincarnateSelectedId(null)} backLabel="転生の一覧へ戻る" disabled={reincarnateProcessingRef.current}/>
         <div className="shrink-0 mb-3 flex items-center gap-3 mh-panel rounded-2xl border border-white/10 bg-slate-900 p-3"><div className="relative w-20 h-20 rounded-full overflow-hidden"><DyedMonsterImage baseId={selected.baseId} src={base?.iconUrl} alt={selected.name} masuColors={getMasuColors(selected)} className="w-full h-full object-cover"/><RebirthStars count={selected.rebirthCount} className="mh-rebirth-stars-overlay"/><ReincarnateBadge count={normalized.reincarnateCount}/></div><div><b>{selected.name}</b><div className="text-pink-300 text-xs">Lv.{lvl.level} → Lv.{nextLevel}</div><div className="text-slate-400 text-[10px]">上限Lv.{normalized.levelCap}はそのまま。振った強化は白紙に戻ります</div><div className="text-amber-300 text-[10px] font-black">振り直せる強化ポイント {nextPoints}（うち転生ぶん +{REINCARNATE_POINTS}）</div></div></div>
-        <div data-reincarnate-times className="shrink-0 mb-3 rounded-xl border border-white/10 bg-black/30 p-3"><div className="flex justify-between text-[11px] font-black"><span className="text-slate-300">転生する回数</span><span className="font-mono text-violet-200">最大 {maxTimes}回</span></div><div className="mt-2 grid grid-cols-5 items-center gap-1.5">{[['-10',-10],['-1',-1]].map(([l,d])=><button key={l} type="button" disabled={times<=1} onClick={()=>setReincarnateTimes(Math.max(1,times+d))} className="mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-800 font-black active:scale-95 disabled:opacity-30">{l}</button>)}<strong className="text-center text-xl font-black font-mono">{times}</strong>{[['+1',1],['+10',10]].map(([l,d])=><button key={l} type="button" disabled={times>=maxTimes} onClick={()=>setReincarnateTimes(Math.min(maxTimes,times+d))} className="mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-800 font-black active:scale-95 disabled:opacity-30">{l}</button>)}</div><button type="button" disabled={times>=maxTimes} onClick={()=>setReincarnateTimes(maxTimes)} className="mh-button mh-button-secondary mt-2 min-h-[44px] w-full rounded-xl font-black active:scale-95 disabled:opacity-30">MAX（{maxTimes}回）</button>{times>1&&<div className="mt-2 text-[10px] font-bold text-slate-400">Lv.{lvl.level} → Lv.{nextLevel}（{times}回ぶんまとめて転生）。固有技は選んだものを毎回上げ、最大になったあとはポイントとして残します</div>}{batch.ok&&batch.stopReason&&<div className="mt-1 text-[10px] font-bold text-amber-300">{batch.stopReason}</div>}</div>
+        <div data-reincarnate-times className="shrink-0 mb-3 rounded-xl border border-white/10 bg-black/30 p-3"><div className="flex justify-between text-[11px] font-black"><span className="text-slate-300">転生する回数</span><span className="font-mono text-violet-200">最大 {maxTimes}回</span></div><div className="mt-2 grid grid-cols-5 items-center gap-1.5">{[['-10',-10],['-1',-1]].map(([l,d])=><button key={l} type="button" disabled={times<=1} onClick={()=>setReincarnateTimes(Math.max(1,times+d))} className="mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-800 font-black active:scale-95 disabled:opacity-30">{l}</button>)}<CountInput value={times} max={maxTimes} onChange={(n)=>setReincarnateTimes(n)} unit="回" label="転生する回数" className="w-full"/>{[['+1',1],['+10',10]].map(([l,d])=><button key={l} type="button" disabled={times>=maxTimes} onClick={()=>setReincarnateTimes(Math.min(maxTimes,times+d))} className="mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-800 font-black active:scale-95 disabled:opacity-30">{l}</button>)}</div><button type="button" disabled={times>=maxTimes} onClick={()=>setReincarnateTimes(maxTimes)} className="mh-button mh-button-secondary mt-2 min-h-[44px] w-full rounded-xl font-black active:scale-95 disabled:opacity-30">MAX（{maxTimes}回）</button>{times>1&&<div className="mt-2 text-[10px] font-bold text-slate-400">Lv.{lvl.level} → Lv.{nextLevel}（{times}回ぶんまとめて転生）。固有技は選んだものを毎回上げ、最大になったあとはポイントとして残します</div>}{batch.ok&&batch.stopReason&&<div className="mt-1 text-[10px] font-bold text-amber-300">{batch.stopReason}</div>}</div>
         <div className="shrink-0 mb-3 rounded-xl border border-white/10 bg-black/30 p-3 space-y-1.5"><div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">必要ダイヤ{times>1?`（${times}回ぶん）`:``}</span><span className={`font-black flex items-center gap-1 ${gold>=cost?'text-amber-300':'text-red-400'}`}><Gem size={12}/>{cost.toLocaleString()}</span></div><div className="text-[10px] text-slate-400">{times>1?`その時点の絆Lv × ${REBIRTH_COST_PER_LEVEL} を回数ぶん`:`（絆Lv.${lvl.level}）× ${REBIRTH_COST_PER_LEVEL}`}</div><div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">所持ダイヤ</span><span className="text-slate-300 font-black">{gold.toLocaleString()}</span></div>{gold<cost&&<div className="text-[10px] text-red-400 font-black">ダイヤが足りません（あと {(cost-gold).toLocaleString()}）</div>}</div>
         <ScreenLead>LvUPする固有技を1つ選べます（最大Lv.8）。選ばないときは「あとで決める」でポイントとして残せます</ScreenLead>
         <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-3`}>{skills.map(skill=><button key={skill.key} disabled={skill.level>=MAX_UNIQUE_SKILL_LEVEL} onClick={()=>setReincarnateSkillKey(skill.key)} className={`w-full min-h-[44px] rounded-xl border p-3 text-left active:scale-[.99] disabled:opacity-30 ${reincarnateSkillKey===skill.key?'bg-violet-700 border-white':'bg-slate-900 border-violet-500/40'}`}><div className="font-black text-xs">{skill.name}</div><div className="text-[10px] text-amber-300">現在Lv.{skill.level} → Lv.{Math.min(MAX_UNIQUE_SKILL_LEVEL,skill.level+1)}</div></button>)}
@@ -34984,7 +35000,8 @@ function MasuOfferingScreen({
         </>}
         {mode==='levels'&&<>
           <div className="text-[11px] font-black text-slate-300">上げるレベル（いまのLvから）</div>
-          <div className="text-center font-mono text-2xl font-black text-white">+{amount}<span className="ml-2 text-sm text-slate-400">→ Lv.{lvl.level+amount}</span></div>
+          {/* レベル数・回数は直接打ち込める(2026-10-20 社長「個数系のやつは基本的に直接入力があったほうがいいね」) */}
+          <div className="flex items-center justify-center gap-1.5 font-mono text-2xl font-black text-white">+<CountInput value={amount} max={limits.maxLevels} onChange={setLevels} unit="レベル" label="上げるレベル" className="w-24"/><span className="ml-1 text-sm text-slate-400">→ Lv.{lvl.level+amount}</span></div>
           <div className="grid grid-cols-6 gap-1.5">
             {[...OFFERING_LEVEL_STEPS].reverse().map(step=><button key={`m${step}`} className={stepBtn} disabled={amount<=1} onClick={()=>setLevels(Math.max(1,amount-step))}>-{step}</button>)}
             {OFFERING_LEVEL_STEPS.map(step=><button key={`p${step}`} className={stepBtn} disabled={amount>=limits.maxLevels} onClick={()=>setLevels(Math.min(limits.maxLevels,amount+step))}>+{step}</button>)}
@@ -34994,7 +35011,7 @@ function MasuOfferingScreen({
         {mode==='reincarnate'&&<>
           <div className="text-[11px] font-black text-slate-300">転生する回数</div>
           <div className="text-[10px] font-bold leading-relaxed text-slate-400">Lv.{REINCARNATE_MIN_LEVEL}未満なら先に経験値を与え、Lv.{REINCARNATE_MIN_LEVEL}以上になったところで転生します。これを回数ぶん続けます。固有技は「あとで決める」（固有技ポイント+1）になります。</div>
-          <div className="text-center font-mono text-2xl font-black text-white">{amount}<span className="ml-1 text-sm text-slate-400">回</span></div>
+          <div className="flex items-center justify-center gap-1.5 font-mono text-2xl font-black text-white"><CountInput value={amount} max={limits.maxTimes} onChange={setTimes} unit="回" label="転生する回数" className="w-24"/><span className="ml-1 text-sm text-slate-400">回</span></div>
           <div className="grid grid-cols-4 gap-1.5">
             <button className={stepBtn} disabled={amount<=1} onClick={()=>setTimes(Math.max(1,amount-10))}>-10</button>
             <button className={stepBtn} disabled={amount<=1} onClick={()=>setTimes(Math.max(1,amount-1))}>-1</button>
@@ -36237,7 +36254,8 @@ function SkipPickScreen({
           <div className="flex items-center gap-2 mb-2">
             <span className="text-[10px] font-black text-slate-400 shrink-0">使う枚数</span>
             <button disabled={n<=1} onClick={()=>changeSkipCount(n-1)} aria-label="使う枚数を1枚減らす" className="shrink-0 w-11 h-11 rounded-xl bg-slate-800 text-white font-black text-lg active:scale-95 disabled:opacity-30">−</button>
-            <div className="flex-1 text-center"><span className="font-mono font-black text-white text-lg">{n}</span><span className="text-[10px] font-black text-slate-400"> / {max}枚</span></div>
+            {/* 枚数は直接打ち込める(2026-10-20 社長「クイックでのスキップチケットも直接入力できるようにして」) */}
+            <div className="flex flex-1 min-w-0 items-center justify-center gap-1"><CountInput value={n} max={max} onChange={changeSkipCount} unit="枚" label="使う枚数" className="w-16" dataAttrs={{'data-skip-count-input':true}}/><span className="shrink-0 text-[10px] font-black text-slate-400">/ {max}枚</span></div>
             <button disabled={n>=max} onClick={()=>changeSkipCount(n+1)} aria-label="使う枚数を1枚増やす" className="shrink-0 w-11 h-11 rounded-xl bg-slate-800 text-white font-black text-lg active:scale-95 disabled:opacity-30">＋</button>
             <button disabled={n>=max} onClick={()=>changeSkipCount(max)} className="shrink-0 h-11 px-3 rounded-xl bg-slate-700 text-white font-black text-[11px] active:scale-95 disabled:opacity-30">全部</button>
           </div>

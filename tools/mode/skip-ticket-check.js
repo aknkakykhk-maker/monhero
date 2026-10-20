@@ -182,6 +182,8 @@ check('ヘルプに報酬方針の条件が書いてある',
   fs.readFileSync(path.join(root, 'monster-hero/data/help.js'), 'utf8').includes('スキップが使えるのは、クイックモードの報酬方針が「育成」のときだけです'));
 check('枚数を選ぶボタンがある',
   has('aria-label="使う枚数を1枚減らす"') && has('aria-label="使う枚数を1枚増やす"') && has('changeSkipCount(max)'));
+// 2026-10-20 社長「クイックでのスキップチケットも直接入力できるようにして」。枚数は数を打ち込む欄(CountInput)でも決められる
+check('使う枚数は数を打ち込める(数字のキーボードの欄)', has('<CountInput value={n} max={max} onChange={changeSkipCount} unit="枚" label="使う枚数"'));
 check('所持数を超える枚数は選べない', has('disabled={n>=max}') && has('disabled={n<=1}'));
 check('確認画面とリザルトに使った枚数が出る',
   has('{item?.name}を{useCount}枚使いますか？') && has('経験値とダイヤを{useCount}周ぶん受け取ります') && has('count,'));
