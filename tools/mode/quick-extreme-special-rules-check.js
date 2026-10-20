@@ -82,7 +82,8 @@ assert(source.includes('if(penaltyRate==null) return QUICK_GROWTH_MULT-1;'), 'ot
 assert(source.includes("specialRuleDifficultyForRun('challenge','Normal',true,'ULTIMATE')") === false, 'production must not hard-code a Quick-only ULTIMATE rule branch');
 // 2026-10-08(c3409b62a)に難易度の札を入口と同じカラータイルへ作り直し、クイックだけの高さ固定(h-[384px])をやめた。
 // いまは全部の札が同じタイル(縦に並べる形)。クイック専用の高さ固定が戻っていないことと、共通のタイルであることを見る
-assert(source.includes('snap-center shrink-0 w-[82%] px-4 pt-3.5 pb-4 transition-all flex flex-col') && !source.includes("quick?'h-[384px]"), 'difficulty cards must stay the shared color tile without a quick-only fixed height');
+// 2026-10-21 から、横幅360未満だけカードを90%に広げる(max-[359px]:w-[90%]・改善部 M4)。共通のタイルであることは同じ
+assert(source.includes('snap-center shrink-0 w-[82%] max-[359px]:w-[90%] px-4 pt-3.5 pb-4 transition-all flex flex-col') && !source.includes("quick?'h-[384px]"), 'difficulty cards must stay the shared color tile without a quick-only fixed height');
 assert(source.includes('if (isQuickMode(runMode)) {') && source.includes('return;'), 'quick ranking exclusion path must remain present');
 const changelog=fs.readFileSync('monster-hero/data/changelog.js','utf8');
 const assistants=fs.readFileSync('monster-hero/data/assistants.js','utf8');
