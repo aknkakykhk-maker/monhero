@@ -164,8 +164,8 @@ const runtime=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js')
   check('いまある曲は全部、前の測り方(v1)で測る一覧に入っている',all.length>0&&all.every(song=>L.levelFormulaFor(song.songId)==='v1'),
     all.filter(song=>L.levelFormulaFor(song.songId)!=='v1').map(song=>song.songId).join(','));
   check('一覧に無い曲(これから足す曲)はいちばん新しい測り方(v3・2026-10-21)',L.levelFormulaFor('a_new_song_not_listed')==='v3');
-  check('v3 の重み: 入り乱れ 6・指を離した位置への持ち上げ・下ろしは 0.6 軽く(ほかは v2 と同じ)',L.SKY_MIXED_WORK===6&&L.SKY_NATURAL_RELIEF===.6
-    &&L.WORK_V3.skyMixed===6&&L.WORK_V3.skyNatural===.6&&L.WORK_V3.sameSideHeld===L.WORK_V2.sameSideHeld&&L.WORK_V3.skySwitch===L.WORK_V2.skySwitch&&!L.WORK_V2.skyMixed);
+  check('v3 の重み: 見分けにくさ 10(× 近さ・短さ・形の score)・指を離した位置への持ち上げ・下ろしは 0.6 軽く(ほかは v2 と同じ)',L.SKY_CONFUSE_WORK===10&&L.SKY_NATURAL_RELIEF===.6
+    &&L.WORK_V3.skyConfuse===10&&L.WORK_V3.skyNatural===.6&&L.WORK_V3.sameSideHeld===L.WORK_V2.sameSideHeld&&L.WORK_V3.skySwitch===L.WORK_V2.skySwitch&&!L.WORK_V2.skyConfuse);
   check('v2 の重み: 空中の入り乱れは 1.7倍、押さえている手の側は 3',L.SKY_MIX_FACTOR===1.7&&L.SAME_SIDE_HELD===3
     &&Math.abs(L.WORK_V2.sameHandFast-L.WORK.sameHandFast*1.7)<1e-9&&Math.abs(L.WORK_V2.skySwitch-L.WORK.skySwitch*1.7)<1e-9&&L.WORK_V2.sameSideHeld===3&&!L.WORK.sameSideHeld);
   // 社長が決めた5曲の HELL(2026-10-20)は、新しい測り方の値を表示にした。値は v2 で測った値と同じ・譜面の数字とも同じ
@@ -187,16 +187,23 @@ const runtime=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js')
     `同じ側 v2 ${same.raw} / v1 ${sameV1.raw}・反対側 v2 ${other.raw} / v1 ${otherV1.raw}`);
 }
 
-// --- 5-3. 地上と空中の入り乱れ(v3・2026-10-21)。入り乱れは重く、指を離した位置への持ち上げ・下ろしは軽く ---
+// --- 5-3. 地上と空中の見分けにくさ(v3・2026-10-21 社長「見分けづらいってのが相当難易度高い」)。見分けにくい所は重く、指を離した位置への持ち上げ・下ろしは軽く ---
 {
-  const L=require('./rhythm-chart-level.js');
-  // 右手が地上の帯の終わり(レーン4)を離した直後に、同じ位置で空中のタップ(自然)/遠い位置で空中のタップ(入り乱れ)
+  const HR=require('./rhythm-chart-hand-rules.js');
   const base=Array.from({length:12},(_,i)=>({type:'TAP',lane:i%2?4:1,subLane:i%2?8:2,subLaneWidth:2,timeMs:500+i*400}));
+  // 右手が地上のタップ(レーン4)を離した直後に、同じ位置で空中のタップ(自然)/2レーン離れた所で空中のタップ(重ならない)
   const pair=(lane)=>[{type:'TAP',lane:4,subLane:8,subLaneWidth:2,timeMs:6000},{type:'TAP',lane,subLane:lane*2,subLaneWidth:2,skyHeight:1,timeMs:6200}];
-  const near=chartStrain({notes:[...base,...pair(4)]}),far=chartStrain({notes:[...base,...pair(6)]});
-  check('v3 は、指を離した位置への持ち上げを自然として数え、遠い位置での高さの入れ替わりを入り乱れとして数える',near.parts.skyNatural===1&&near.parts.skyMixed===0&&far.parts.skyMixed===1&&far.parts.skyNatural===0,
-    `近い: 自然 ${near.parts.skyNatural}・入り乱れ ${near.parts.skyMixed} / 遠い: 自然 ${far.parts.skyNatural}・入り乱れ ${far.parts.skyMixed}`);
-  check('v3 は入り乱れを重く数える(同じ形の v2 より生の値が上)',far.raw>chartStrain({notes:[...base,...pair(6)]},{formula:'v2'}).raw&&far.raw>near.raw,`遠い v3 ${far.raw} / v2 ${chartStrain({notes:[...base,...pair(6)]},{formula:'v2'}).raw} / 近い v3 ${near.raw}`);
+  // 隣り合うレーンへ、地上(左手)と空中(右手)を同時に(重なって見える・形が同じ)
+  const chord=[{type:'TAP',lane:2,subLane:4,subLaneWidth:2,timeMs:6000},{type:'TAP',lane:3,subLane:6,subLaneWidth:2,skyHeight:1,timeMs:6000}];
+  const near=chartStrain({notes:[...base,...pair(4)]}),far=chartStrain({notes:[...base,...pair(6)]}),mix=chartStrain({notes:[...base,...chord]});
+  check('v3 は、指を離した位置への持ち上げを自然として数え、見分けにくさには数えない',near.parts.skyNatural===1&&near.parts.skyConfuse===0,
+    `自然 ${near.parts.skyNatural}・見分けにくい ${near.parts.skyConfuse}`);
+  check('重ならないほど離れた高さの入れ替わりは、見分けにくさに数えない',far.parts.skyConfuse===0,`見分けにくい ${far.parts.skyConfuse}`);
+  check('隣のレーンへ同時に地上と空中は、見分けにくい所に数え、v2 より重い',mix.parts.skyConfuse===1&&mix.raw>chartStrain({notes:[...base,...chord]},{formula:'v2'}).raw,
+    `見分けにくい ${mix.parts.skyConfuse} / v3 ${mix.raw} / v2 ${chartStrain({notes:[...base,...chord]},{formula:'v2'}).raw}`);
+  const one=HR.skyConfusable(chord)[0],slide=HR.skyConfusable([chord[0],{type:'HOLD',lane:3,subLane:6,subLaneWidth:2,skyHeight:1,timeMs:6000,endTimeMs:6400}])[0];
+  check('形が同じで高さだけ違う組は、形の違う組より重い',!!one&&!!slide&&one.sameShape&&!slide.sameShape&&one.score>slide.score,
+    one&&slide?`同じ形 ${one.score} / 違う形 ${slide.score}`:'拾えていない');
 }
 
 // --- 6. 画面へ出ている ---
