@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: cdd8e62729786e32
+// generated-sha256: 4edd4c335770eda5
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-21 01:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-21 01:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15569,6 +15569,29 @@ const storeList = async (prefix, shared=false) => {
     }
   } catch {}
   return Object.keys(_memStore).filter(k => k.startsWith(prefix));
+};
+
+// ===== デバッグ設定の合言葉(2026-10-20 社長決定・改善部の見直し M1) =====
+// 合っていた端末だけ mh_debug_unlocked_v1 = '1' を持ち、次から聞かない(新しいキー。既存のキーは触らない)。
+// リポジトリは公開なので、合言葉そのものは書かない。合言葉は短い(数字)ので、ただのハッシュだと総当たりで割れる。
+// 塩(ランダムな固定値)+ PBKDF2(SHA-256・600,000回)で照らす(端末で1回0.3〜0.5秒ほど)。
+// 合言葉を変えるときは node tools/debug-passphrase-hash.js <合言葉> で塩・回数・ハッシュを作り直す
+const DEBUG_UNLOCK_KEY = 'mh_debug_unlocked_v1';
+const DEBUG_PASSPHRASE_SALT = 'ba3fc07d01681734a3e290689e0d5f32';
+const DEBUG_PASSPHRASE_ITERATIONS = 600000;
+const DEBUG_PASSPHRASE_HASH = '1378175ce209b7dd290f1c4f5f5a92f8d4ca8127dbd46a845e99ada95a7166e6';
+const debugPassphraseMatches = async (text) => {
+  const phrase = String(text || '').trim();
+  if (!phrase) return false;
+  try {
+    const subtle = typeof crypto !== 'undefined' && crypto.subtle;
+    if (!subtle || typeof TextEncoder === 'undefined') return false;
+    const salt = new Uint8Array(DEBUG_PASSPHRASE_SALT.match(/../g).map(h => parseInt(h, 16)));
+    const key = await subtle.importKey('raw', new TextEncoder().encode(phrase), 'PBKDF2', false, ['deriveBits']);
+    const bits = await subtle.deriveBits({ name:'PBKDF2', hash:'SHA-256', salt, iterations:DEBUG_PASSPHRASE_ITERATIONS }, key, 256);
+    const hex = [...new Uint8Array(bits)].map(b => b.toString(16).padStart(2, '0')).join('');
+    return hex === DEBUG_PASSPHRASE_HASH;
+  } catch { return false; }
 };
 
 // ---- part: 25-asset-cache.jsx ----
@@ -48630,6 +48653,27 @@ function MonsterHeroGame() {
   // ふつうのプレイヤーはヘルプの奥の入口を開かないので、出ないまま(新しいキー mh_debug_entry_v1)
   const [debugEntryKnown,setDebugEntryKnown]=useState(()=>{try{return localStorage.getItem('mh_debug_entry_v1')==='1';}catch{return false;}});
   useEffect(()=>{if(gameState!=='DEBUG_SETTINGS')return;try{localStorage.setItem('mh_debug_entry_v1','1');}catch{}setDebugEntryKnown(true);},[gameState]);
+  // デバッグ設定の入口に合言葉(2026-10-20 社長決定・改善部の見直し M1)。
+  // ・合っていれば開き、その端末は覚えて次から聞かない(新しいキー mh_debug_unlocked_v1)
+  // ・リポジトリは公開なので、合言葉の文字は書かず、塩+PBKDF2 のハッシュで照らす(作り方: node tools/debug-passphrase-hash.js <合言葉>)
+  // ・自動操作のブラウザ(navigator.webdriver)では聞かない。検査・手順書がヘルプの「💊」から開く道を壊さないため
+  const [debugPassOpen,setDebugPassOpen]=useState(false);
+  const [debugPassText,setDebugPassText]=useState('');
+  const [debugPassError,setDebugPassError]=useState('');
+  const requestDebugSettings=()=>{
+    let unlocked=false;
+    try{unlocked=localStorage.getItem(DEBUG_UNLOCK_KEY)==='1';}catch{}
+    if(unlocked||(typeof navigator!=='undefined'&&navigator.webdriver)){openDebugSettings();return;}
+    // ヘルプ(重なり順がとても前)を閉じてから窓を出す。デバッグ設定を開くときもヘルプは閉じている
+    setShowHelp(false);setDebugPassText('');setDebugPassError('');setDebugPassOpen(true);
+  };
+  const submitDebugPassphrase=async()=>{
+    const ok=await debugPassphraseMatches(debugPassText);
+    if(!ok){setDebugPassError('合言葉が違います');return;}
+    try{localStorage.setItem(DEBUG_UNLOCK_KEY,'1');}catch{}
+    setDebugPassOpen(false);setDebugPassText('');setDebugPassError('');
+    openDebugSettings();
+  };
   const [rhythmInputRecOn,setRhythmInputRecOn]=useState(()=>{try{return RHYTHM_INPUT_REC.enabled();}catch{return false;}});
   const [rhythmInputRecMsg,setRhythmInputRecMsg]=useState('');
   // ホールド・スライドの離しの合図の遅れを、どこまで信じて戻すか(検証用・2026-10-11)。この端末だけの切り替え(mh_rhythm_fix_override_v1)
@@ -65709,6 +65753,18 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           />
         )}
         {/* 転生の演出。モンスターの背面で対応色の画像オーラを一度だけ強く発光させる。 */}
+        {debugPassOpen&&<ModalFrame label="合言葉" border="border-slate-400/60" onClose={()=>setDebugPassOpen(false)} narrow zIndex={MODAL_Z.dialog+5}>
+          <form data-debug-passphrase onSubmit={(e)=>{e.preventDefault();submitDebugPassphrase();}}>
+            <h3 className="text-center text-base font-black text-white">合言葉</h3>
+            <input type="password" inputMode="numeric" autoComplete="off" aria-label="合言葉" value={debugPassText} onChange={e=>{setDebugPassText(e.target.value);setDebugPassError('');}} autoFocus
+              style={{fontSize:16}} className="mt-3 w-full min-h-[48px] rounded-xl border border-slate-600 bg-black/50 p-3 text-center font-bold text-white outline-none focus:border-amber-300"/>
+            {debugPassError&&<p className="mt-2 text-center text-[11px] font-black text-red-300">{debugPassError}</p>}
+            <div className="mt-3 grid grid-cols-1 gap-2">
+              <button type="submit" disabled={!debugPassText.trim()} className="mh-button mh-button-primary min-h-[48px] rounded-2xl font-black active:scale-[.98] disabled:opacity-40">開く</button>
+              <ModalCloseButton onClick={()=>setDebugPassOpen(false)} label="やめる"/>
+            </div>
+          </form>
+        </ModalFrame>}
         {reincarnateAnimation&&(
           <MasuReincarnateAnimation
             reincarnateAnimation={reincarnateAnimation}
@@ -66301,7 +66357,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onOpenScreenTheme={()=>setShowScreenTheme(true)}
             onOpenBackup={()=>{setShowBackup(true);setBackupTab('export');setBackupCode('');setRestoreInput('');setRestoreMsg('');}}
             onOpenHelp={()=>openHelp()}
-            onOpenDebug={debugEntryKnown?openDebugSettings:null}
+            onOpenDebug={debugEntryKnown?requestDebugSettings:null}
             onOpenGameUpdate={()=>setShowGameUpdateConfirm(true)}
             gameUpdateDisabled={showGameUpdateConfirm||gameUpdatePending}
             onReturnToTitle={()=>setShowOfficialTitleConfirm(true)}
@@ -70146,7 +70202,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </div>
           <footer className="shrink-0 p-4 bg-slate-900 border-t border-white/10 text-center" style={{backgroundColor:'#0f172a',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
             <button onClick={()=>setShowHelp(false)} className="mh-button mh-button-primary w-full min-h-[52px] py-3 rounded-2xl font-black text-sm active:scale-95">わかった！冒険に戻る</button>
-            <button aria-label="" onClick={openDebugSettings} className="mt-5 mx-auto block text-[10px] opacity-25 hover:opacity-40 active:opacity-60">💊</button>
+            <button aria-label="" onClick={requestDebugSettings} className="mt-5 mx-auto block text-[10px] opacity-25 hover:opacity-40 active:opacity-60">💊</button>
           </footer>
         </div>);
       })()}

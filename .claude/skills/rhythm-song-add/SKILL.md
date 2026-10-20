@@ -269,7 +269,8 @@ node tools/mode/rhythm-chart-v3-pipeline.js --track <track_id> --release
 node tools/mode/rhythm-chart-level.js --write
 ```
 
-> Lv. は**新しい測り方(v2)**で測る(2026-10-20 社長の決定。地上と空中の入り乱れを重く、押さえている手の側に来るノーツも重く)。
+> Lv. は**新しい測り方(v3)**で測る(2026-10-20 の v2 = 地上と空中の入り乱れを重く・押さえている手の側に来るノーツも重く、に
+> 2026-10-21 の「重なって見える近いレーンへ短い間に高さの違うノーツ(見分けにくい所)」をいちばん重く、を足したもの)。
 > 新曲の songId を `rhythm-chart-level.js` の `LEVEL_V1_SONGS` へ**足さない**(足すと前の測り方になる)。決まりの本文は `docs/rules/CHART_ENGINE.md`「Lv. の新しい測り方」
 
 > ⚠️ `RHYTHM_SONGS[].bgmTrackId` が `BGM_TRACKS` に在るかを突き合わせる検査は**無い**。
@@ -290,7 +291,10 @@ node tools/mode/rhythm-chart-level.js --write
 4. `variant` を 0〜3 で比べ、**モンスター4個・水平クロス0・帯の中0**を満たすうち、横持ちの「交差」「届きにくい」が少ないものを選ぶ
    (ROSE は激しさ中間で、全編 1・short 3)。**歯ごたえ(`chartIntensity`・`challengeFactor`)を変えたら比べ直す**(同じ variant でもモンスターが4個から2個に減った)。`node tools/mode/rhythm-hell-mix.js --song <曲> --write` で書く(Lv. も書く)
 
-5. **HELL をもっと重くしてほしいと言われたら**(2026-10-18・Toward the Stars): 曲の一覧に `hellDensity`(例 1.3)を書いて拾う音を増やし、
+5. **空中・地上は指を離した位置へ**(2026-10-21 社長「見分けづらいってのが相当難易度高い」): `rhythm-hell-mix.js` が、重なって見える近いレーンへ
+   短い間に高さの違うノーツが来る所(見分けにくい所)の空中のタップを、自動で地上へ下ろす。残してよいのはその曲の山場だけで、
+   `SONGS` に `mixedWindows:'peak'`(または `[[開始ms,終了ms],…]`・合わせて曲の長さの12%まで)。本文は `docs/rules/CHART_ENGINE.md`「HELL の地上と空中の入り乱れ・見分けにくさ」
+6. **HELL をもっと重くしてほしいと言われたら**(2026-10-18・Toward the Stars): 曲の一覧に `hellDensity`(例 1.3)を書いて拾う音を増やし、
    `SONGS` の `phrases`(例 `['L','both','R','both']`)で両手とも地上の小節を減らす。どちらも書いた曲の HELL にだけ効く。本文は `docs/rules/CHART_ENGINE.md`「HELL を重くする」。
    MASTER だけ重くするのは `chartIntensityByDifficulty`(例 `{"MASTER":"extreme","HELL":"extreme"}`)。EASY〜EXPERT は変わらない
 
