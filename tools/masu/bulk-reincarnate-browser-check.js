@@ -73,9 +73,17 @@ const GOLD = 100000000;
 
     // 1体あたりの回数(2026-10-18)。＋で2回、「最大」で子ごとに続けられるいちばん多い回数(アーク・スエゾー4回、モッチー2回)
     const timesText = () => page.evaluate(() => document.querySelector('[data-reincarnate-bulk-times]')?.innerText.replace(/\s+/g, ' ') || '');
+    // 回数は数を打ち込む欄(2026-10-20)。欄の値を読む
+    const timesValue = () => page.evaluate(() => document.querySelector('[data-reincarnate-bulk-times] [data-quantity-input]')?.value ?? null);
     const pressTimes = (label) => page.evaluate(l => { const b = [...document.querySelectorAll('[data-reincarnate-bulk-times] button')].find(b => b.innerText.trim().startsWith(l)); if (!b || b.disabled) return false; b.click(); return true; }, label);
-    ok('一覧の下に「1体あたりの回数」があり、はじめは1回', /1体あたりの回数 − 1 ＋/.test(await timesText()), await timesText());
-    ok('＋で2回になる', await pressTimes('＋') && /− 2 ＋/.test(await timesText()));
+    ok('一覧の下に「1体あたりの回数」があり、はじめは1回', /1体あたりの回数/.test(await timesText()) && (await timesValue()) === '1', `${await timesText()} / ${await timesValue()}`);
+    ok('＋で2回になる', await pressTimes('＋') && (await timesValue()) === '2');
+    const timesInput = page.locator('[data-reincarnate-bulk-times] [data-quantity-input]');
+    await timesInput.fill('3'); await page.waitForTimeout(150);
+    ok('回数を打ち込める(3回。モッチーは2回までなので計8回)', (await timesValue()) === '3' && /計8回/.test(await page.evaluate(() => document.querySelector('[data-reincarnate-bulk-open]')?.innerText || '')));
+    await timesInput.fill('99'); await page.waitForTimeout(150);
+    ok('続けられる回数より多く打つと、いちばん多い回数(4)にそろう', (await timesValue()) === '4');
+    await timesInput.fill('2'); await timesInput.blur(); await page.waitForTimeout(150);
     ok('「最大」に、選んだ子のいちばん多い回数(4回)が出る', /最大（4回）/.test(await timesText()), await timesText());
     ok('「最大」を押せる', await pressTimes('最大')); await page.waitForTimeout(300);
     const barMax = await page.evaluate(() => document.querySelector('[data-reincarnate-bulk-open]')?.innerText || '');

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 55b7b8b1ea08da19
+// source-sha256: dac0b47ab73c4e16
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-20 12:07";
+const BUILD_DATE = "2026-10-20 12:21";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -48880,6 +48880,68 @@ const ModalCloseButton = ({
   onClick: onClick,
   className: "mh-button mh-button-secondary w-full min-h-[48px] rounded-2xl border border-white/20 bg-slate-900 font-black active:scale-[.98] disabled:opacity-40"
 }, label);
+const countInputClamp = (n, min, max) => Math.min(Math.max(min, n), Math.max(min, max));
+const CountInput = ({
+  value,
+  max,
+  min = 1,
+  onChange,
+  unit = '',
+  label = '数',
+  className = '',
+  disabled = false,
+  dataAttrs = {}
+}) => {
+  const safeMin = Math.max(0, Math.floor(Number(min) || 0));
+  const safeMax = Math.max(0, Math.floor(Number(max) || 0));
+  const current = countInputClamp(Math.floor(Number(value) || safeMin), safeMin, safeMax);
+  const [draft, setDraft] = React.useState(null);
+  const readDraft = raw => {
+    const digits = String(raw || '').split(/[.,．。]/)[0].replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0)).replace(/[^0-9]/g, '');
+    const n = parseInt(digits, 10);
+    return {
+      digits,
+      n: Number.isFinite(n) ? n : null
+    };
+  };
+  const type = raw => {
+    const {
+      digits,
+      n
+    } = readDraft(raw);
+    if (n !== null && n > Math.max(safeMin, safeMax)) {
+      const top = Math.max(safeMin, safeMax);
+      setDraft(String(top));
+      onChange && onChange(top);
+      return;
+    }
+    setDraft(digits);
+    onChange && onChange(countInputClamp(n === null ? safeMin : n, safeMin, safeMax));
+  };
+  const draftMatches = draft !== null && countInputClamp(readDraft(draft).n ?? safeMin, safeMin, safeMax) === current;
+  return React.createElement("input", _extends({
+    type: "text",
+    inputMode: "numeric",
+    pattern: "[0-9]*",
+    enterKeyHint: "done",
+    autoComplete: "off",
+    "data-quantity-input": true
+  }, dataAttrs, {
+    "aria-label": `${label}（${safeMin.toLocaleString()}〜${Math.max(safeMin, safeMax).toLocaleString()}${unit}）`,
+    disabled: disabled || safeMax < safeMin || safeMax <= 0,
+    value: draftMatches ? draft : String(current),
+    onChange: e => type(e.target.value),
+    onFocus: e => e.target.select(),
+    onBlur: () => setDraft(null),
+    onKeyDown: e => {
+      if (e.key === 'Enter') e.currentTarget.blur();
+    },
+    style: {
+      fontSize: 20
+    },
+    className: `min-h-[44px] min-w-0 rounded-xl border border-white/20 bg-black/40 px-1 text-center font-black font-mono text-white outline-none focus:border-amber-300 disabled:opacity-40 ${className}`
+  }));
+};
 const QuantityStepper = ({
   value,
   max,
@@ -48891,79 +48953,38 @@ const QuantityStepper = ({
   const count = Math.min(Math.max(1, Math.floor(Number(value) || 1)), Math.max(1, safeMax));
   const setCount = next => onChange && onChange(Math.min(Math.max(1, next), Math.max(1, safeMax)));
   const stepClass = 'mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-800 font-black active:scale-95 disabled:opacity-30';
-  const [draft, setDraft] = React.useState(null);
-  const typeCount = raw => {
-    const digits = String(raw || '').split(/[.,．。]/)[0].replace(/[^0-9０-９]/g, '').replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0));
-    const n = parseInt(digits, 10);
-    if (Number.isFinite(n) && n > Math.max(1, safeMax)) {
-      setDraft(String(Math.max(1, safeMax)));
-      setCount(safeMax);
-      return;
-    }
-    setDraft(digits);
-    setCount(Number.isFinite(n) && n >= 1 ? n : 1);
-  };
   return React.createElement(React.Fragment, null, React.createElement("div", {
     className: "mt-2 grid grid-cols-5 items-center gap-1.5"
   }, React.createElement("button", {
     type: "button",
     disabled: count <= 1,
-    onClick: () => {
-      setDraft(null);
-      setCount(count - 10);
-    },
+    onClick: () => setCount(count - 10),
     className: stepClass
   }, "-10"), React.createElement("button", {
     type: "button",
     disabled: count <= 1,
-    onClick: () => {
-      setDraft(null);
-      setCount(count - 1);
-    },
+    onClick: () => setCount(count - 1),
     className: stepClass
-  }, "-1"), React.createElement("input", {
-    type: "text",
-    inputMode: "numeric",
-    pattern: "[0-9]*",
-    enterKeyHint: "done",
-    autoComplete: "off",
-    "aria-label": `数（1〜${Math.max(1, safeMax).toLocaleString()}${unit}）`,
-    "data-quantity-input": true,
-    disabled: safeMax <= 0,
-    value: draft ?? String(count),
-    onChange: e => typeCount(e.target.value),
-    onFocus: e => e.target.select(),
-    onBlur: () => setDraft(null),
-    onKeyDown: e => {
-      if (e.key === 'Enter') e.currentTarget.blur();
-    },
-    style: {
-      fontSize: 20
-    },
-    className: "min-h-[44px] w-full min-w-0 rounded-xl border border-white/20 bg-black/40 px-1 text-center font-black font-mono text-white outline-none focus:border-amber-300 disabled:opacity-40"
+  }, "-1"), React.createElement(CountInput, {
+    value: count,
+    max: safeMax,
+    onChange: setCount,
+    unit: unit,
+    className: "w-full"
   }), React.createElement("button", {
     type: "button",
     disabled: count >= safeMax,
-    onClick: () => {
-      setDraft(null);
-      setCount(count + 1);
-    },
+    onClick: () => setCount(count + 1),
     className: stepClass
   }, "+1"), React.createElement("button", {
     type: "button",
     disabled: count >= safeMax,
-    onClick: () => {
-      setDraft(null);
-      setCount(count + 10);
-    },
+    onClick: () => setCount(count + 10),
     className: stepClass
   }, "+10")), React.createElement("button", {
     type: "button",
     disabled: safeMax <= 0,
-    onClick: () => {
-      setDraft(null);
-      setCount(safeMax);
-    },
+    onClick: () => setCount(safeMax),
     className: `mh-button mh-button-secondary mt-2 min-h-[44px] w-full rounded-xl font-black active:scale-95 disabled:opacity-30 ${maxClass}`
   }, "MAX（", safeMax.toLocaleString(), unit, "）"));
 };
@@ -55262,9 +55283,15 @@ function MasuReincarnateScreen({
       disabled: busy || bulkTimes !== 'max' && timesNum <= 1,
       onClick: () => setTimes(timesNum - 1),
       className: "mh-button mh-button-secondary min-h-[44px] min-w-[44px] rounded-xl bg-slate-800 font-black active:scale-95 disabled:opacity-30"
-    }, "−"), React.createElement("strong", {
-      className: "min-w-[2.5rem] text-center font-mono text-lg font-black text-white"
-    }, bulkTimes === 'max' ? '最大' : timesNum), React.createElement("button", {
+    }, "−"), React.createElement(CountInput, {
+      value: timesNum,
+      max: timesMax,
+      onChange: n => setBulkTimes(n),
+      unit: "回",
+      label: "1体あたりの回数",
+      disabled: busy || !picked.length,
+      className: "w-14 shrink-0"
+    }), React.createElement("button", {
       type: "button",
       disabled: busy || bulkTimes !== 'max' && timesNum >= timesMax,
       onClick: () => setTimes(timesNum + 1),
@@ -55464,9 +55491,14 @@ function MasuReincarnateScreen({
     disabled: times <= 1,
     onClick: () => setReincarnateTimes(Math.max(1, times + d)),
     className: "mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-800 font-black active:scale-95 disabled:opacity-30"
-  }, l)), React.createElement("strong", {
-    className: "text-center text-xl font-black font-mono"
-  }, times), [['+1', 1], ['+10', 10]].map(([l, d]) => React.createElement("button", {
+  }, l)), React.createElement(CountInput, {
+    value: times,
+    max: maxTimes,
+    onChange: n => setReincarnateTimes(n),
+    unit: "回",
+    label: "転生する回数",
+    className: "w-full"
+  }), [['+1', 1], ['+10', 10]].map(([l, d]) => React.createElement("button", {
     key: l,
     type: "button",
     disabled: times >= maxTimes,
@@ -56576,9 +56608,16 @@ function MasuOfferingScreen({
   }, "MAX（", fmt(limits.maxDiamonds), "）"))), mode === 'levels' && React.createElement(React.Fragment, null, React.createElement("div", {
     className: "text-[11px] font-black text-slate-300"
   }, "上げるレベル（いまのLvから）"), React.createElement("div", {
-    className: "text-center font-mono text-2xl font-black text-white"
-  }, "+", amount, React.createElement("span", {
-    className: "ml-2 text-sm text-slate-400"
+    className: "flex items-center justify-center gap-1.5 font-mono text-2xl font-black text-white"
+  }, "+", React.createElement(CountInput, {
+    value: amount,
+    max: limits.maxLevels,
+    onChange: setLevels,
+    unit: "レベル",
+    label: "上げるレベル",
+    className: "w-24"
+  }), React.createElement("span", {
+    className: "ml-1 text-sm text-slate-400"
   }, "→ Lv.", lvl.level + amount)), React.createElement("div", {
     className: "grid grid-cols-6 gap-1.5"
   }, [...OFFERING_LEVEL_STEPS].reverse().map(step => React.createElement("button", {
@@ -56600,8 +56639,15 @@ function MasuOfferingScreen({
   }, "転生する回数"), React.createElement("div", {
     className: "text-[10px] font-bold leading-relaxed text-slate-400"
   }, "Lv.", REINCARNATE_MIN_LEVEL, "未満なら先に経験値を与え、Lv.", REINCARNATE_MIN_LEVEL, "以上になったところで転生します。これを回数ぶん続けます。固有技は「あとで決める」（固有技ポイント+1）になります。"), React.createElement("div", {
-    className: "text-center font-mono text-2xl font-black text-white"
-  }, amount, React.createElement("span", {
+    className: "flex items-center justify-center gap-1.5 font-mono text-2xl font-black text-white"
+  }, React.createElement(CountInput, {
+    value: amount,
+    max: limits.maxTimes,
+    onChange: setTimes,
+    unit: "回",
+    label: "転生する回数",
+    className: "w-24"
+  }), React.createElement("span", {
     className: "ml-1 text-sm text-slate-400"
   }, "回")), React.createElement("div", {
     className: "grid grid-cols-4 gap-1.5"
@@ -59449,12 +59495,20 @@ function SkipPickScreen({
       "aria-label": "使う枚数を1枚減らす",
       className: "shrink-0 w-11 h-11 rounded-xl bg-slate-800 text-white font-black text-lg active:scale-95 disabled:opacity-30"
     }, "−"), React.createElement("div", {
-      className: "flex-1 text-center"
-    }, React.createElement("span", {
-      className: "font-mono font-black text-white text-lg"
-    }, n), React.createElement("span", {
-      className: "text-[10px] font-black text-slate-400"
-    }, " / ", max, "枚")), React.createElement("button", {
+      className: "flex flex-1 min-w-0 items-center justify-center gap-1"
+    }, React.createElement(CountInput, {
+      value: n,
+      max: max,
+      onChange: changeSkipCount,
+      unit: "枚",
+      label: "使う枚数",
+      className: "w-16",
+      dataAttrs: {
+        'data-skip-count-input': true
+      }
+    }), React.createElement("span", {
+      className: "shrink-0 text-[10px] font-black text-slate-400"
+    }, "/ ", max, "枚")), React.createElement("button", {
       disabled: n >= max,
       onClick: () => changeSkipCount(n + 1),
       "aria-label": "使う枚数を1枚増やす",
