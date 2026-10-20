@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9d5d84ac84d211f3
+// source-sha256: b6ff898d0b7646ff
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-21 01:51";
+const BUILD_DATE = "2026-10-21 02:07";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -52698,7 +52698,7 @@ function MonsterTypeBadge({
       className: `inline-flex items-center gap-0.5 rounded-full border ${compact ? 'px-1' : 'px-1.5'} py-px font-black leading-none whitespace-nowrap ${size === 'md' ? 'text-[11px]' : 'text-[9px]'} ${isSub ? 'border-white/15 bg-white/5 text-slate-300' : 'border-amber-300/50 bg-amber-500/15 text-amber-100'}`
     }, React.createElement("span", {
       "aria-hidden": "true"
-    }, d.icon), iconOnly ? React.createElement("span", {
+    }, cardIconNode(d.icon, 10)), iconOnly ? React.createElement("span", {
       className: "sr-only"
     }, d.label) : d.label);
   };
@@ -68894,10 +68894,12 @@ function BattleScreen({
         },
         className: `flex w-full shrink-0 flex-col items-stretch justify-between gap-px rounded-[7px] border border-white/60 bg-white/[.14] p-[2px] text-white shadow-[inset_0_1px_0_rgba(255,255,255,.25),0_0_6px_rgba(255,255,255,.12)] active:scale-95 active:bg-white/30${battleTutorialNeedCard && tutorialTargeted ? ' is-battle-tutorial-spot' : ''}`
       }, React.createElement("span", {
-        className: "flex items-center justify-center gap-0.5 pt-px text-[9px] font-black leading-none"
+        className: "flex items-center justify-center gap-0.5 whitespace-nowrap pt-px text-[9px] font-black leading-none"
       }, React.createElement("span", {
         "aria-hidden": "true"
-      }, "⇄"), "技変更"), label) : React.createElement("div", {
+      }, "⇄"), React.createElement("span", {
+        className: "shrink-0"
+      }, "技変更")), label) : React.createElement("div", {
         "data-skill-change-spacer": true,
         style: {
           height: HAND_CARD_FIT.skill
@@ -68920,10 +68922,12 @@ function BattleScreen({
       style: {
         height: HAND_CARD_FIT.band
       },
-      className: "flex shrink-0 items-center justify-center gap-0.5 text-[9px] font-black leading-none text-white"
+      className: "flex shrink-0 items-center justify-center gap-0.5 whitespace-nowrap text-[9px] font-black leading-none text-white"
     }, React.createElement("span", {
       "aria-hidden": "true"
-    }, "⇄"), "技変更"), React.createElement("div", {
+    }, "⇄"), React.createElement("span", {
+      className: "shrink-0"
+    }, "技変更")), React.createElement("div", {
       className: "text-[10px] font-black bg-black/30 text-white rounded-[5px] flex items-center justify-center gap-0.5",
       style: {
         paddingTop: HAND_CARD_FIT.gutsPad,
@@ -79418,7 +79422,7 @@ const RaidJackPrepScreen = ({
         className: "mt-0.5 flex w-full items-center justify-center gap-px truncate rounded-full border border-white/15 bg-black/30 px-0.5 text-[8px] font-black leading-[12px] tracking-tight text-slate-200"
       }, React.createElement("span", {
         "aria-hidden": "true"
-      }, t.icon), t.label) : null;
+      }, cardIconNode(t.icon, 8)), t.label) : null;
     })(), pct != null && React.createElement("span", {
       "data-raid-mon-apt": showR,
       className: "mt-0.5 flex items-center gap-0.5"

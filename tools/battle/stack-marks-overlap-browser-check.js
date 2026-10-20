@@ -9,6 +9,7 @@
 //   ① クラシック(チャレンジ。極限・GOD も同じ枠): 縦長の枠
 //   ② タクティクスプロ: 横長の新しい枠
 // 土台(起動・始め方)は unit-detail-browser-check.js から写した。
+const { pickProParty } = require('./lib/pro-party-pick');
 const TOOLS_DIR = require('path').join(__dirname, '..');
 const http = require('http');
 const path = require('path');
@@ -117,18 +118,9 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
       });
       if (!go) return '「この難易度で挑戦」が押せない';
       await page.waitForTimeout(1500);
-      const hero = await page.evaluate((name) => {
-        const b = [...document.querySelectorAll('button')].find(x => !x.disabled && x.offsetParent
-          && x.textContent.trim().replace(/^前回/, '') === name && !/DEBUG/.test(x.textContent)); // 勇者えらびは顔アイコンのグリッド。タイルの文字は名前だけ(上の絞り込みタブは名前+数、前回使った子には「前回」が付く)
-        if (b) b.click(); return !!b;
-      }, heroName);
-      if (!hero) return `勇者モンに ${heroName} が並んでいない: ` + await page.evaluate(() => [...document.querySelectorAll('button')].filter(x=>x.offsetParent).map(x=>x.textContent.trim().slice(0,30)).join(' | ').slice(0,1500));
-      // 顔アイコンのグリッドは、タイルを押すと下の詳細パネルが開き、「この子で挑む」で確定する
-      await page.waitForTimeout(500);
-      await page.evaluate(() => {
-        const b = [...document.querySelectorAll('button')].find(x => !x.disabled && x.offsetParent && /^この子で挑む$/.test(x.textContent.trim()));
-        if (b) b.click();
-      });
+      // プロモードの編成: 枠へ入れてから勇者モンを選ぶ(tools/battle/lib/pro-party-pick.js)
+      const proPickError = await pickProParty(page, heroName);
+      if (proPickError) return proPickError;
       await page.waitForTimeout(1200);
       if (heroStyle) {
         const b = page.locator(`[data-hero-style="${heroStyle}"]`);
