@@ -7543,8 +7543,10 @@ function MonsterHeroGame() {
     const c = shop ? profileFrameConditionFor(frame, shop) : profileFrameCondition(frame);
     if (!c) return null;
     if (c.kind === 'raidJackBossDown') {
-      const met = bossDown === true;
-      return { met, text: c.text || '', progress: met ? 'カボチャの大王ジャックは倒されました' : 'まだ倒されていません' };
+      // 倒されなかったときも、レイドの期間が終わったら全員に解放する(2026-10-20 社長「終わったら解放」)。終わりの判定はレイドの期間と同じ raidJackWindowAt
+      const ended = raidJackWindowAt(Date.now()) === 'after';
+      const met = bossDown === true || ended;
+      return { met, text: c.text || '', progress: bossDown === true ? 'カボチャの大王ジャックは倒されました' : ended ? 'ハロウィン・ナイトは終わりました' : 'まだ倒されていません' };
     }
     if (c.kind === 'buddyBeatLevel') {
       // 種ごとに、自分のマスモンのいちばん高いビートLv。いない種は0(まだ育てていない)。全部の種がそろって達成

@@ -278,7 +278,8 @@ check('図鑑のモンスターアイコンに枠を付けていない', !/const
 //   frameId を書いてよいのは、type==='frame' の枝(MarketProductIcon の先頭)の1か所だけ
 check('マーケットの商品画像に枠を付けていない(フレームそのものを売る商品だけが例外)',
   (widgets.match(/const MarketProductIcon[\s\S]*?\n};\n/)?.[0].match(/frameId/g) || []).length === 1
-  && /if\(item\.type==='frame'\)\{[\s\S]{0,700}frameId=\{item\.id\}/.test(widgets));
+  // 2026-10-20 に枠の大きさの計算(商品名に重ならないよう縮める)を枝の頭へ足したので、範囲を広げた
+  && /if\(item\.type==='frame'\)\{[\s\S]{0,1600}frameId=\{item\.id\}/.test(widgets));
 check('円盤石・通常のモンスター画像に枠を付けていない',
   !/DyedMonsterImage[^\n]{0,200}frameId/.test(app) && !/DyedMonsterImage[^\n]{0,200}frameId/.test(widgets));
 

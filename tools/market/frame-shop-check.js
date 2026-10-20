@@ -70,12 +70,13 @@ check('いまの商品の一覧に入っているフレームは、売ってい�
   const f = (id) => real.PROFILE_FRAMES.find(x => x.id === id);
   // 2026-10-20 社長「恐は大王倒したあとに解放ね」。みんなで大王を倒したら全員が買える(両方の交換所)
   const night = real.profileFrameCondition(f('frame_halloween_night'));
-  check('ハロウィン・恐は、大王ジャックが倒されたら買える(両方の交換所・買うまでは選べない)', night && night.kind === 'raidJackBossDown' && !night.shops
-    && /カボチャの大王ジャックが倒されると買えるようになります/.test(night.text)
+  check('ハロウィン・恐は、大王ジャックが倒されるかイベントが終わったら買える(両方の交換所・買うまでは選べない)', night && night.kind === 'raidJackBossDown' && !night.shops
+    && /カボチャの大王ジャックが倒されるか、ハロウィン・ナイトが終わると買えるようになります/.test(night.text)
     && real.profileFrameOwned('frame_halloween_night', []) === false && real.profileFrameOwned('frame_halloween_night', ['frame_halloween_night']) === true);
   {
     const at2 = app.indexOf("if (c.kind === 'raidJackBossDown') {");
-    check('大王の条件は、確かめた値(bossDown)だけで決まる', at2 >= 0 && /const met = bossDown === true;/.test(app.slice(at2, at2 + 200)));
+    check('大王の条件は、倒された(bossDown)か、レイドの期間が終わった(raidJackWindowAt)かで決まる', at2 >= 0
+      && /const ended = raidJackWindowAt\(Date\.now\(\)\) === 'after';\s*const met = bossDown === true \|\| ended;/.test(app.slice(at2, at2 + 400)));
     const ref = app.indexOf('const refreshRaidJackBossDown = async () => {');
     const body = ref >= 0 ? app.slice(ref, app.indexOf('\n  };', ref)) : '';
     check('撃破は妖のプレゼントと同じ判定(raidJackBossDown)で、一度見たら印を持つ', /raidJackBossDown\(totals\)/.test(body) && /storeSet\(RAID_JACK_BOSS_DOWN_KEY/.test(body)
