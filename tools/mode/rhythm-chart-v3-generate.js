@@ -503,6 +503,9 @@ let registryEntry=null;
     // HELL だけ音を多く拾う倍率(下の hellBoost)。書いた曲の HELL だけ
     const hellDensity=Number(entry&&entry.hellDensity);
     if(Number.isFinite(hellDensity)&&hellDensity>1)audio.hellDensity=hellDensity;
+    // --hell-density で HELL の量の倍率を渡せる(rhythm-hell-mix.js の SONGS の hellDensity・2026-10-21 社長「ざしてぃを60ぐらいまで下げる」「すてぃうぃずみーだけ上げる」)。
+    //   0.5〜2。1より小さいと量を減らす(拾う音の範囲は広げない)。曲の一覧の値より優先。HELL のときだけ効く
+    {const cli=Number(arg('--hell-density',NaN));if(Number.isFinite(cli)&&cli>=.5&&cli<=2&&cli!==1)audio.hellDensity=cli;}
     registryEntry=entry||null;
   }
 }
@@ -1223,7 +1226,7 @@ const buildChart=(difficulty,options={})=>{
   // 曲の一覧に hellDensity(1より大きく2まで)を書いた曲の HELL だけ、量に掛ける。書いていない曲・HELL 以外の難易度は今までと1音も変わらない
   // (公開中の曲の HELL は書いていないうえ、譜面は rhythm-mode.js に書き出し済みで、公開中の譜面の控え rhythm-released-chart-lock-check.js が見張る)。
   // 天井(hardMaxPerSecond・実際に鳴っている音の数)はそのまま。押せるかどうかは両手のシミュレートと rhythm-hell-mix.js の手の決まりが見張る
-  const hellBoost=hellWide?Math.min(2,Number(audio.hellDensity)):1;
+  const hellBoost=hellWide?Math.min(2,Number(audio.hellDensity)):(difficulty==='HELL'&&Number(audio&&audio.hellDensity)>=.5&&Number(audio.hellDensity)<1?Number(audio.hellDensity):1);
   const densityBoost=(Number(I.density)>0?Number(I.density):1)*hellBoost;
   // 激しさを書いた曲では、上限を1段上げる（既定の maxPerSecond ではなく hardMaxPerSecond を使う）。
   const softMax=densityBoost>1?target.hardMaxPerSecond:target.maxPerSecond;
