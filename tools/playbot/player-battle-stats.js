@@ -19,7 +19,7 @@
 // レイド「カボチャの大王ジャック」(raid_jack_hits・2026-10-21 社長「バトルデータはレイドからのデータも取れるよね？」)も読む。
 //   読むのは event_id・kind(a=レイドバトル / b=グランドスラム)・tier(段階)・damage・defeated・source(battle / rhythm=モンヒロビート挑戦)だけ。
 //   hit_id・breeder_id は読まない。★この表には使ったモンスターが入っていないので、モンスター別には分けられない
-//   (モンスター別に見るには battle_logs が要る。docs/spec/BATTLE_LOG.md)。event_id が raid_jack_debug の行(デバッグ)は数えない
+//   (モンスター別に見るには raid_battle_logs が要る。docs/spec/BATTLE_LOG.md)。event_id が raid_jack_debug の行(デバッグ)は数えない
 const fs = require('fs');
 const path = require('path');
 const https = require('https');

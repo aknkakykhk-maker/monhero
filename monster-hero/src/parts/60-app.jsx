@@ -6508,11 +6508,7 @@ function MonsterHeroGame() {
       tacticsProLogRef.current = null;
       try { void sbSendTacticsProLog(buildTacticsProLogRow(tpLog)); } catch {}
     }
-    // バトルの1回ごとの記録(2026-10-21・下準備)。RELEASE_FLAGS.battleLog が偽のあいだは何も送らない(sbSendBattleLog の頭で止まる)。
-    // 送るのは数字と monsterId だけ(名前・ブリーダーIDは渡さない)。ランキングの送信とは別で、待たない
-    if (RELEASE_FLAGS.battleLog === true) {
-      try { void sbSendBattleLog(buildBattleLogRow({ difficultyKey: diff, party: party.map(p => p && { role: p.role, monsterId: p.monsterId }), reachedWave, clearTurns, score: finalScore })); } catch {}
-    }
+    // ★通常のバトルの1回ごとの記録は送らない(2026-10-21 社長「レイドとタクティクスプロのベースモンのデータでいい。育てたモンスターははかれない」)
     const row = { difficulty: diff, user_name: name, hero: heroName, party, score: finalScore, level, icon, clear_id: clearId,
       ...(breederId ? { breeder_id: breederId } : {}),
       ...(reachedWave != null ? { reached_wave: reachedWave } : {}),
@@ -14932,7 +14928,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // バトルの1回ごとの記録(2026-10-21・下準備)。RELEASE_FLAGS.battleLog が偽のあいだは何も送らない。デバッグの戦いは送らない。
     // raid_jack_hits・討伐の記録・報酬とは別で、待たない。送るのは monsterId と数だけ
     if(RELEASE_FLAGS.battleLog===true&&!isDebugRun){
-      try { void sbSendBattleLog(buildBattleLogRow({ party: slots.map(sl=>sl&&{ role: sl===mainHero?'hero':'ally', monsterId: sl.id }), raid:{ event: run.eventId, kind: run.kind, tier: run.tierIndex+1, source:'battle', damage, defeated, turns: run.turns } })); } catch {}
+      try { void sbSendRaidBattleLog(buildRaidBattleLogRow({ party: slots.map(sl=>sl&&{ role: sl===mainHero?'hero':'ally', monsterId: sl.id }), raid:{ event: run.eventId, kind: run.kind, tier: run.tierIndex+1, source:'battle', damage, defeated, turns: run.turns } })); } catch {}
     }
     // クイック周回ぶんの報酬(経験値など)。本番のイベントの戦いだけ。与ダメージの記録とは別のまとまりで、失敗しても戦いの結果には影響しない
     let quickAward=null;
@@ -15044,7 +15040,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       }
       // バトルの1回ごとの記録(2026-10-21・下準備)。モンヒロビート挑戦は編成が無いので、段階と与ダメージだけ。印が偽のあいだは送らない
       if (RELEASE_FLAGS.battleLog === true && !isDebugRun && damage > 0) {
-        try { void sbSendBattleLog(buildBattleLogRow({ score, raid: { event: run.eventId, kind: 'a', tier: run.tierIndex + 1, source: 'rhythm', damage, defeated } })); } catch {}
+        try { void sbSendRaidBattleLog(buildRaidBattleLogRow({ score, raid: { event: run.eventId, kind: 'a', tier: run.tierIndex + 1, source: 'rhythm', damage, defeated } })); } catch {}
       }
     } catch (error) { outcome = 'error'; }
     return { way: 'rhythm', songName: song && song.displayName || '', difficultyName: difficulty && difficulty.id || '', score, assist,
@@ -15377,7 +15373,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setLastProParty(confirmedParty);
     storeSet(PRO_LAST_PARTY_KEY, confirmedParty, false);
     // タクティクスプロの1回ぶんの記録を始める(印が偽・デバッグの戦いなら null のまま)
-    tacticsProLogRef.current = runMode === BATTLE_MODE_TACTICS_PRO && !debugBattleRef.current
+    // ★ベースモン(育てていない基本の強さ)で戦う回だけ。マスモン(育てた個体)が混ざる回は記録しない(2026-10-21 社長の決定)
+    const proAllBase = mainHero.masuId == null && proAllyPool.every(mon => mon && mon.masuId == null);
+    tacticsProLogRef.current = runMode === BATTLE_MODE_TACTICS_PRO && !debugBattleRef.current && proAllBase
       ? tacticsProLogStart({ difficulty, hero: mainHero.id, heroDistance: initialBattleDistanceRef.current, candidates: proAllyPool.map(mon => mon.id), extreme: extremeRunRef.current ? extremeDifficulty : null })
       : null;
     repeatRunTemplateRef.current=createRepeatRunTemplate({ hero:mainHero, allies:proAllyPool });
