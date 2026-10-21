@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b0106a72c4a5a549
+// source-sha256: 68787fe3944b4e51
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-21 13:44";
+const BUILD_DATE = "2026-10-21 14:30";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -34878,6 +34878,26 @@ const RhythmTapTest = ({
   const [resumeCountdown, setResumeCountdown] = useState(false);
   const [songIntro, setSongIntro] = useState(null);
   const songIntroRef = useRef(null);
+  const songIntroKey = songIntro ? songIntro.key : null;
+  useEffect(() => {
+    if (songIntroKey == null) return;
+    let r2 = 0;
+    const r1 = requestAnimationFrame(() => {
+      r2 = requestAnimationFrame(() => {
+        const intro = songIntroRef.current;
+        if (!intro || intro.generation !== songIntroKey || !intro.visible || intro.shownAt != null) return;
+        intro.shownAt = rhythmSongIntroNow();
+        if (intro.skippable) {
+          intro.minEnd = Math.max(intro.minEnd, intro.shownAt + intro.minMs);
+          intro.maxEnd = Math.max(intro.maxEnd, intro.minEnd);
+        }
+      });
+    });
+    return () => {
+      cancelAnimationFrame(r1);
+      cancelAnimationFrame(r2);
+    };
+  }, [songIntroKey]);
   const resumingRef = useRef(false);
   const [pausedSongMs, setPausedSongMs] = useState(0);
   const songProgressRef = useRef(null);
@@ -36743,7 +36763,8 @@ const RhythmTapTest = ({
         setTimeout(step, Math.max(16, intro.closingAt - now));
         return;
       }
-      const ready = now >= intro.maxEnd || (intro.skipped || now >= intro.minEnd) && rhythmSongIntroHoldsDone(intro.holds);
+      const painted = !intro.visible || !intro.skippable || intro.shownAt != null;
+      const ready = now >= intro.maxEnd || (intro.skipped || painted && now >= intro.minEnd) && rhythmSongIntroHoldsDone(intro.holds);
       if (ready) {
         if (!intro.visible) {
           finish(intro);
@@ -36918,6 +36939,8 @@ const RhythmTapTest = ({
         skippable: !multi,
         skipped: false,
         closingAt: null,
+        minMs: introMinMs,
+        shownAt: null,
         minEnd: introStart + introMinMs,
         maxEnd: introStart + (multi ? introMinMs : Math.max(introMinMs, RHYTHM_SONG_INTRO_MAX_MS))
       };

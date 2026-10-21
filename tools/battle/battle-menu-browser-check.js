@@ -111,7 +111,15 @@ const URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/index.h
     const rect = card.getBoundingClientRect();
     const challenge = [...card.querySelectorAll('button')].find(button => button.textContent.includes('この難易度で挑戦')).getBoundingClientRect();
     const title = card.querySelector('h3').getBoundingClientRect();
-    return { scrollable:card.scrollHeight > card.clientHeight, inside:rect.top >= 0 && challenge.bottom <= innerHeight, titleVisible:title.height > 0 && title.top >= 0, pageY:scrollY, right:rect.right };
+    // ★scrollHeight では見ない。カードの光の飾り(.mhbt-tile::after)は上下へ20%ずつ外へ伸ばして描き、
+    //   カードが overflow:hidden で隠している。scrollHeight はこの飾りまで数えるので、中身が収まっていても
+    //   350px のカードで 421px になる(2026-10-08 にカードを共通のカラータイルへ作り直してから)。
+    //   はみ出しは「並んでいる部品(絶対位置の飾りの文字 .mhbt-mark は除く)の下端が、カードの中(下の余白の内側)にあるか」で見る
+    const cs = getComputedStyle(card);
+    const innerBottom = rect.bottom - parseFloat(cs.paddingBottom) - parseFloat(cs.borderBottomWidth) + 0.5;
+    const flowKids = [...card.children].filter(k => getComputedStyle(k).position !== 'absolute');
+    const overflowKid = flowKids.find(k => k.getBoundingClientRect().bottom > innerBottom);
+    return { scrollable:!!overflowKid, overflowKid:overflowKid ? overflowKid.className.split(' ').slice(0, 2).join(' ') : null, inside:rect.top >= 0 && challenge.bottom <= innerHeight, titleVisible:title.height > 0 && title.top >= 0, pageY:scrollY, right:rect.right };
   });
   if (cardLayout.scrollable || !cardLayout.inside || !cardLayout.titleVisible || cardLayout.pageY !== 0 || cardLayout.right > 390) throw new Error(`難易度カードが1画面に収まりません: ${JSON.stringify(cardLayout)}`);
 

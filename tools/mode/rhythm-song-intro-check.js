@@ -45,10 +45,18 @@ const serve=()=>new Promise(r=>{const s=http.createServer((req,res)=>{
         put('mh_breeder_name','テスト');put('mh_breeder_icon','🐣');put('mh_intro_done',true);put('mh_onboarded',true);
         put('mh_tutorial_seen_v1',true);put('mh_battle_tutorial_seen_v1',true);put('mh_battle_tutorial_guide_shown_v1',true);
         put('mh_assistant_selected_v1','mua');put('mh_assistant_unlock_seen_v1',true);put('mh_update_notice_seen_v1',true);
-        put('mh_rhythm_tutorial_seen_v1',true);});
+        put('mh_rhythm_tutorial_seen_v1',true);
+        // 幕が出た時刻・閉じた時刻(幕が消えてカウントダウンが出た時刻)を、ページの中で毎フレーム記録する(2026-10-21)。
+        //   前は「幕が出てから 900ms 待った」と決めつけて足していたので、読み込みが重いと実際に待った時間より短く見えて NG になった
+        window.__mhIntro={clicked:null,shown:null,closed:null};
+        const watch=()=>{const m=window.__mhIntro,now=performance.now(),intro=document.querySelector('[data-rhythm-song-intro]');
+          if(intro&&m.shown==null)m.shown=now;
+          if(m.shown!=null&&m.closed==null&&!intro&&document.querySelector('[data-rhythm-countdown-step]'))m.closed=now;
+          requestAnimationFrame(watch);};
+        requestAnimationFrame(watch);});
       const clickText=async(pat)=>page.evaluate((s)=>{const rx=new RegExp(s);
         const b=[...document.querySelectorAll('button')].find(x=>rx.test((x.innerText||'').replace(/\s+/g,' ').trim()));
-        if(!b)return false;b.click();return true;},pat);
+        if(!b)return false;if(window.__mhIntro&&/^\^\(決定/.test(s))window.__mhIntro.clicked=performance.now();b.click();return true;},pat);
       await page.goto(`http://localhost:${PORT}/monster-hero/index.html`,{waitUntil:'load',timeout:60000});
       await page.waitForFunction(()=>document.body?.innerText.includes('TAP TO START'),{timeout:40000});
       await page.getByRole('button',{name:'TAP TO START'}).click({force:true});
@@ -86,10 +94,13 @@ const serve=()=>new Promise(r=>{const s=http.createServer((req,res)=>{
       }
       if(name==='縦390×844'){
         const c=await consts(page);
-        const ms=await untilCountdown(page);
-        // 幕が出てから 900ms 待ってから測り始めている。最短は「決定」の処理の頭から数えるので、
-        // 幕が画面に出るまでの数十msぶんだけ短く見える(100msまでは許す)
-        ok('最短より早く閉じない',ms+900>=c.min-100,`${(ms+900).toFixed(0)}ms(最短${c.min}ms)`);
+        // ページの中で記録した時刻で測る。最短は「幕が見えてから」数える(2026-10-21 社長「幕が見えてから3秒」)ので、
+        //   幕が出てから閉じるまでが最短以上(丸めの1フレームぶんは許す)。読み込みが重いと幕が出るのが遅れる(2026-10-21 に押してから 678ms)
+        await page.waitForFunction(()=>window.__mhIntro&&window.__mhIntro.closed!=null,{timeout:15000}).catch(()=>{});
+        const t=await page.evaluate(()=>window.__mhIntro);
+        const fromClick=t.clicked!=null&&t.closed!=null?t.closed-t.clicked:-1,fromShown=t.shown!=null&&t.closed!=null?t.closed-t.shown:-1;
+        ok('最短より早く閉じない(幕が見えてから数える)',fromShown>=c.min-17&&fromClick>=fromShown,`押してから ${fromClick.toFixed(0)}ms・幕が出てから ${fromShown.toFixed(0)}ms(最短${c.min}ms)`);
+        const ms=fromShown;
         ok('閉じたあとカウントダウンが始まる',ms>0);
       }
       await page.close();

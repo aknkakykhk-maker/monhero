@@ -133,4 +133,15 @@ assert.ok(Array.isArray(entries) && entries.length > 0, '更新情報が読め�
   console.log('OK: 画面がこのまとめを使っている');
 }
 
+// ---- 新モンスターの札は、新しいモンスター・新血統のお知らせだけ(2026-10-21 社長「新モンスターは間違ってる」) ----
+// 魂格の結晶の戻り(マスモンの育成)や、マスモンのロック・技の名前の直しに group:'monster' が付いて「新モンスター」に並んでいた。
+// 書き手が group:'monster' と書いた項目は、題名か本文に新しいモンスターの言葉があること。育成なら masu、それ以外は書かずに見当に任せる
+{
+  const NEW_MONSTER_WORDS = /新モンスター|新しいモンスター|新しい仲間|新血統|実装予告|登場|仲間になり|先行/;
+  const wrong = entries.filter(entry => entry.group === 'monster')
+    .filter(entry => !NEW_MONSTER_WORDS.test([entry.title, ...(entry.items || [])].join(' ')));
+  assert.strictEqual(wrong.length, 0, `新モンスターの札に、新しいモンスターではない項目: ${wrong.map(entry => `${entry.date} ${entry.title}`).join(' / ')}`);
+  console.log(`OK: 新モンスターの札は新しいモンスターのお知らせだけ — ${entries.filter(entry => entry.group === 'monster').length}件`);
+}
+
 console.log('\nすべてOK');
