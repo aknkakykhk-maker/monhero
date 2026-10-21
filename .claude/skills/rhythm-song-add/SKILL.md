@@ -295,8 +295,8 @@ node tools/mode/rhythm-chart-level.js --write
    (ROSE は激しさ中間で、全編 1・short 3)。**歯ごたえ(`chartIntensity`・`challengeFactor`)を変えたら比べ直す**(同じ variant でもモンスターが4個から2個に減った)。`node tools/mode/rhythm-hell-mix.js --song <曲> --write` で書く(Lv. も書く)
 
 5. **空中・地上は指を離した位置へ**(2026-10-21 社長「見分けづらいってのが相当難易度高い」): `rhythm-hell-mix.js` が、重なって見える近いレーンへ
-   短い間に高さの違うノーツが来る所(見分けにくい所)の空中のタップを、自動で地上へ下ろす。残してよいのはその曲の山場だけで、
-   `SONGS` に `mixedWindows:'peak'`(または `[[開始ms,終了ms],…]`・合わせて曲の長さの12%まで)。本文は `docs/rules/CHART_ENGINE.md`「HELL の地上と空中の入り乱れ・見分けにくさ」
+   短い間に高さの違うノーツが来る所(見分けにくい所)の空中のタップを、自動で地上へ下ろす。**山場にも残さず0件にする**
+   (2026-10-21・公開中の HELL もすべて0件に直した)。`SONGS` に `mixedWindows` は書かない(仕組みは残っているが、使うのは社長が決めたときだけ)。本文は `docs/rules/CHART_ENGINE.md`「HELL の地上と空中の入り乱れ・見分けにくさ」
 6. **HELL をもっと重くしてほしいと言われたら**(2026-10-18・Toward the Stars): 曲の一覧に `hellDensity`(例 1.3)を書いて拾う音を増やし、
    `SONGS` の `phrases`(例 `['L','both','R','both']`)で両手とも地上の小節を減らす。どちらも書いた曲の HELL にだけ効く。本文は `docs/rules/CHART_ENGINE.md`「HELL を重くする」。
    MASTER だけ重くするのは `chartIntensityByDifficulty`(例 `{"MASTER":"extreme","HELL":"extreme"}`)。EASY〜EXPERT は変わらない
@@ -482,6 +482,10 @@ git push -u origin <ブランチ>
 ---
 
 ## 実際に踏んだ落とし穴（3曲ぶん）
+
+### 届いた音源が別の曲だった（2026-10-21 BLACK SHOUT）
+曲名・ジャケットと音源が合っているかを、こちらで聞き比べる手立ては無い。最初に届いた音源が別の曲のまま公開し、取り下げて作り直した(#3253 → #3255)。
+**7番の報告に、音源の冒頭の様子(何秒から鳴り始めるか・全体の長さ)を書き、社長に「この曲で合っているか」を確かめてもらう。**
 
 ### 待機ループが自分自身を見つけて止まらない
 
