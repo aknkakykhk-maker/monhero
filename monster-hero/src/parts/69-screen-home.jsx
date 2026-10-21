@@ -88,7 +88,8 @@ const HOME_RAID_JACK_BUTTON_STYLE = Object.freeze({
 //     ① 頭の上(幅184→120まで絞る) ② 頭の右 ③ 頭の左 ④ 少しずつ下げて頭の4分の3まで重ねる(それでもだめなときの控え)
 //   どれも重なるときは、重なりがいちばん小さいものを選ぶ。ボタン側は動かさない(押せる場所を変えない)。
 //   head … ジャック本体の絵の箱(跳ねる前の位置) / obstacles … 避ける箱 / measure(width) … その幅での吹き出しの高さ
-const HOME_RAID_SAY_WIDTHS = Object.freeze([184, 168, 152, 136, 120]);
+// 104・96 は狭い画面(幅320)でジャックの横へ置くとき用。広い順に試すので、入るならこれまでどおり広いほうになる(2026-10-21)
+const HOME_RAID_SAY_WIDTHS = Object.freeze([184, 168, 152, 136, 120, 104, 96]);
 const HOME_RAID_SAY_GAP = 6;
 const HOME_RAID_SAY_HOP = 18; // 跳ねる高さ(mhRaidJackHop の16px)+ゆとり。頭の上に置くときは、跳ねても頭がしっぽにかからない
 const homeRaidSayPlace = ({ head, obstacles, vw, vh, measure, top = 0 }) => {
@@ -117,6 +118,16 @@ const homeRaidSayPlace = ({ head, obstacles, vw, vh, measure, top = 0 }) => {
       const left = side === 'right' ? head.right + HOME_RAID_SAY_GAP + 6 : head.left - HOME_RAID_SAY_GAP - 6 - w;
       const midY = head.top + Math.min(head.bottom - head.top, 80) * 0.35;
       tries.push({ side, left, top: Math.max(top + edge, midY - h / 2), width: w, height: h });
+    }
+  }
+  // ③-2 横に置くときは、6pxずつ下げて施設の札(神殿・M/B管理)の下へ逃がす。吹き出しの上端は頭の半分まで(2026-10-21 窓口
+  //  「幅320で ジャックの吹き出しが M/B管理 の札にかかる」。320 は札のすぐ下にジャックがいて、頭の上にも横にも置けず、札と絵に重ねていた)
+  for (const side of ['right', 'left']) {
+    for (const w of HOME_RAID_SAY_WIDTHS) {
+      const h = measure(w);
+      const left = side === 'right' ? head.right + HOME_RAID_SAY_GAP + 6 : head.left - HOME_RAID_SAY_GAP - 6 - w;
+      const from = Math.max(top + edge, head.top + Math.min(head.bottom - head.top, 80) * 0.35 - h / 2), to = head.top + (head.bottom - head.top) * 0.5;
+      for (let y = from + 6; y <= to; y += 6) tries.push({ side, left, top: y, width: w, height: h });
     }
   }
   // ④ 頭の上の位置から6pxずつ下げ、頭の4分の3に重なるところまで探す(ジャックの絵に少し重なっても、文が読めるほうを選ぶ)
@@ -267,7 +278,8 @@ const HomeRaidJack = ({ eventId, onOpen }) => {
         padding:'6px 10px', borderRadius:'14px', boxSizing:'border-box',
         border:`2px solid ${speechAccent}`, background:'#1c0a02ee', color:'#ffedd5', fontSize:'11px', fontWeight:900, lineHeight:1.45, textAlign:'left', cursor:'pointer',
         boxShadow:`0 0 12px ${speechAccent}66`, animation:'storyPop .25s ease-out both', zIndex:2, pointerEvents:'auto' }}>
-      <span style={{ display:'block' }}>{speech}</span>
+      {/* 狭い幅(横へ置いたとき)でも「聞こえるの／う」と言葉の途中で折らず、行の長さをならす(2026-10-21) */}
+      <span data-home-raid-say-text style={{ display:'block', ...JA_LABEL_STYLE }}>{jaWrap(speech)}</span>
       <span aria-hidden="true" style={{ display:'block', textAlign:'right', fontSize:'8px', opacity:.7 }}>▶ つぎ</span>
       {/* しっぽはジャックのほうへ向ける(上に置いたら下向き、右に置いたら左向き、左に置いたら右向き) */}
       {(!sayPlace || sayPlace.side === 'top') && <span aria-hidden="true" style={{ position:'absolute', left:sayPlace ? sayPlace.tail : '50%', bottom:-9, marginLeft:-8, width:0, height:0, borderLeft:'8px solid transparent', borderRight:'8px solid transparent', borderTop:`9px solid ${speechAccent}` }} />}

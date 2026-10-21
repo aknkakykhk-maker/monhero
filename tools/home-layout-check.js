@@ -210,6 +210,25 @@ const SIZES = [
       if (size.width < 360) check('  吹き出しの文は2行まで(幅360未満)', res.lines <= 2, `${res.lines}行`);
       check('  みゅあの吹き出しが「M/B管理」の札を隠さない', res.labelTop === null || res.overlapX <= 0 || res.bubbleBottom <= res.labelTop + 1,
         `吹き出しの下端 ${res.bubbleBottom}px / 札の上端 ${res.labelTop}px`);
+      // ジャックの吹き出し(2026-10-21 窓口「幅320で ジャックのセリフの吹き出しが M/B管理 の札にかかる」)。
+      // 置き場所はときどき測り直すので、落ち着くのを待ってから、施設の札(見える札)とジャックの絵に重ならず、画面の中にあるかを見る
+      await page.waitForTimeout(2000);
+      const jack = await page.evaluate(() => {
+        const say = document.querySelector('[data-home-raid-say]');
+        if (!say) return null;
+        const r = say.getBoundingClientRect();
+        const img = document.querySelector('[data-home-raid-jack] img.mh-home-raid-jack-img');
+        const jr = img ? img.getBoundingClientRect() : null;
+        const hit = (o) => Math.min(r.right, o.right) - Math.max(r.left, o.left) > 0 && Math.min(r.bottom, o.bottom) - Math.max(r.top, o.top) > 0;
+        const labels = [...document.querySelectorAll('.mh-home-facility')].map(x => ({ t: x.innerText.replace(/\s+/g, '').slice(0, 8), r: (x.querySelector(':scope > span') || x).getBoundingClientRect() }))
+          .filter(x => x.r.width > 2 && hit(x.r)).map(x => x.t);
+        const jackHit = jr ? Math.max(0, Math.min(r.right, jr.right) - Math.max(r.left, jr.left)) * Math.max(0, Math.min(r.bottom, jr.bottom) - Math.max(r.top, jr.top)) / Math.max(1, jr.width * jr.height) : 0;
+        return { labels, jackHit: Math.round(jackHit * 100), inside: r.left >= 0 && r.right <= innerWidth && r.top >= 0 && r.bottom <= innerHeight, box: [r.left, r.top, r.right, r.bottom].map(Math.round) };
+      });
+      if (jack) {
+        check('  ジャックの吹き出しが施設の札(M/B管理・神殿など)にかからない', jack.labels.length === 0, `${jack.labels.join('・')} / 吹き出し ${jack.box.join(',')}`);
+        check('  ジャックの吹き出しがジャックの絵を半分以上かくさない・画面の中にある', jack.jackHit < 50 && jack.inside, `絵にかかる ${jack.jackHit}% / 吹き出し ${jack.box.join(',')}`);
+      }
       await page.close();
     }
     server.close();
