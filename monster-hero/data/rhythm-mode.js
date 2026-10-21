@@ -38109,6 +38109,18 @@ const monsterShortHellNotes=((t,h,f,s,T,F,S)=>[
 ])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
 const monsterShortHellChart=mhChart(35,monsterShortHellNotes,MONSTER_SHORT_DURATION_MS,6);
 const RHYTHM_HELL_CHARTS=Object.freeze({mf_ichika_mix:mfIchikaMixHellChart,monster_hero:monsterHeroHellChart,monster_hero_another:monsterHeroAnotherHellChart,six_eternel_beat:sixEternelBeatHellChart,six_eternel_remix:sixEternelRemixHellChart,stay_with_me:stayWithMeHellChart,kiki_issen:kikiIssenHellChart,close_to_your_heart:closeToYourHeartHellChart,eiki_boss_remix:eikiBossRemixHellChart,pandora_boss_remix:pandoraBossRemixHellChart,dullahan:dullahanHellChart,dullahan_clockwork:dullahanClockworkHellChart,toriko:torikoHellChart,'4u_hitasura':song4uHitasuraHellChart,kindan_no_resistance:kindanNoResistanceHellChart,crossing_field:crossingFieldHellChart,nothing_without_you:nothingWithoutYouHellChart,mou_hitotsu_no_sekai_e:mouHitotsuNoSekaiEHellChart,senjou_no_shippuu:senjouNoShippuuHellChart,makutsu_no_senritsu:makutsuNoSenritsuHellChart,the_city_beneath_the_comets:theCityBeneathTheCometsHellChart,freedom_dive:freedomDiveHellChart,only_my_railgun:onlyMyRailgunHellChart,big_bridge_no_shitou:bigBridgeNoShitouHellChart,rising_hope:risingHopeHellChart,haruka:harukaHellChart,stay_with_me_short:stayWithMeShortHellChart,kiki_issen_short:kikiIssenShortHellChart,crazy_party_night:crazyPartyNightHellChart,crazy_party_night_full:crazyPartyNightFullHellChart,emerald_rush:emeraldRushHellChart,wrath_of_the_thorn_king:wrathOfTheThornKingHellChart,monster:monsterHellChart,monster_short:monsterShortHellChart,anima:animaHellChart,journey:journeyHellChart,sheriruth:sheriruthHellChart,grievous_lady:grievousLadyHellChart,kaze_ga_soyogu:kazeGaSoyoguHellChart,against_my_own_shadow:againstMyOwnShadowHellChart,rose:roseHellChart,rose_short:roseShortHellChart,toward_the_stars_short:towardTheStarsShortHellChart,sad_song:sadSongHellChart,sad_song_short:sadSongShortHellChart});
+// はじめての HELL の目安(2026-10-21 改善部 N6・社長の決定)。HELL は MASTER を1回クリアで開くが、MASTER と HELL の Lv. の差が大きい曲がある
+//   (デュラハンテーマ MASTER 25 → HELL 59 など)。HELL の譜面のうち Lv. がいちばん低い公開曲を、実データから選ぶ(曲名・Lv. を手で書かない)
+const rhythmHellEntrySong=()=>{
+  let best=null;
+  for(const song of (typeof RHYTHM_SONGS!=='undefined'&&Array.isArray(RHYTHM_SONGS)?RHYTHM_SONGS:[])){
+    const chart=RHYTHM_HELL_CHARTS[song.songId];
+    if(!chart||!Number.isFinite(chart.level))continue;
+    if(!best||chart.level<best.level)best={songId:song.songId,name:song.displayName||song.songId,level:chart.level};
+  }
+  return best;
+};
+const rhythmHellEntryText=()=>{const entry=rhythmHellEntrySong();return entry?`はじめての HELL は「${entry.name}」(Lv.${entry.level})から`:'';};
 // HELL の説明の動画(2026-10-13 社長「ストーリー用にヘルの説明用の動画を撮って、動画で説明したい」)。ボットの自動演奏をノーツの速さ10で撮ったもの。
 // src は mp4(H.264・iPhone)、webm は VP9(Chrome など。どちらでも同じ中身)。説明(RHYTHM_HELL_GUIDE_PAGES の video)とヘルプ(help.js の {t:'video'})は、ここの名前で引く。撮り直したらファイルを替えるだけ(?v= は build が付ける)
 // play は曲の音つき(既定は無音で流し、「音ありで見る」で音を出す)。事前ダウンロードには入れない(movies/ は Range で取るため・ASSET_PREFETCH.md)

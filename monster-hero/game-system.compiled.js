@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 57ac6f483c783ac0
+// source-sha256: ecdaa106c73ffa02
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-21 19:00";
+const BUILD_DATE = "2026-10-21 20:19";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -16614,6 +16614,11 @@ const helpDataRows = id => {
       return Object.values(typeof ASSISTANT_BOND_ACTIONS !== 'undefined' && ASSISTANT_BOND_ACTIONS || {}).filter(x => typeof releasedForPlayers !== 'function' || releasedForPlayers(x)).map(x => [x.label, `1回 +${x.amount} ／ 1日 ${x.dailyMax} まで`]);
     case 'rhythmDifficultyRanks':
       return (typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : typeof RHYTHM_DIFFICULTIES !== 'undefined' ? RHYTHM_DIFFICULTIES : []).filter(d => typeof RHYTHM_DIFFICULTIES !== 'undefined' && RHYTHM_DIFFICULTIES.some(x => x.id === d.id) || typeof rhythmDemoSongs !== 'undefined' && rhythmDemoSongs(RHYTHM_SONGS).some(song => song.difficulties?.[d.id]?.notes?.length > 0)).map(d => [d.id, `満点 ${d.maxScore.toLocaleString()}点 → 上限ランク ${rhythmRankForScore(d.maxScore)}`]);
+    case 'rhythmHellEntry':
+      {
+        const entry = typeof rhythmHellEntrySong === 'function' ? rhythmHellEntrySong() : null;
+        return entry ? [['はじめての HELL', `「${entry.name}」Lv.${entry.level} から(HELL の中でいちばんやさしい曲)`]] : [];
+      }
     case 'rhythmHellSongs':
       {
         const songs = typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS : [];
@@ -16735,6 +16740,7 @@ const HELP_DATA_TITLES = {
   monsterLineages: 'モンスターの血統一覧',
   psycheRewards: '難易度ごとにもらえる虹のプシュケー',
   rhythmDifficultyRanks: '音ゲーの難易度ごとの満点と上限ランク',
+  rhythmHellEntry: 'はじめての HELL の目安',
   rhythmHellSongs: 'HELL がある曲',
   rhythmDemoSongLevels: '体験版で遊べる難易度とレベル',
   rhythmDemoSongList: '先行公開している曲',
@@ -31498,7 +31504,10 @@ const RhythmSongSelect = ({
         if (open) setDifficultyId(item.id);
       },
       className: `flex h-[52px] min-w-0 flex-1 flex-col items-center justify-center rounded-lg border-2 px-0.5 font-black leading-none [container-type:inline-size] landscape:h-[48px]${available.length > 5 ? ' gap-px' : ''} ${open ? on ? `${tone.on} shadow-[0_0_10px_rgba(255,255,255,.25)]` : `${tone.off} bg-slate-900/70` : 'border-white/10 bg-slate-900/70 text-slate-500'}`
-    }, React.createElement("b", {
+    }, item.id === 'HELL' ? React.createElement("b", {
+      "data-rhythm-hell-level": true,
+      className: "block text-[21px] tabular-nums text-rose-300 [text-shadow:0_0_8px_rgba(244,63,94,.65)] landscape:text-[19px]"
+    }, song.difficulties[item.id].level) : React.createElement("b", {
       className: "block text-[18px] tabular-nums"
     }, song.difficulties[item.id].level), React.createElement("span", {
       className: "block text-[8px] tracking-wide"
@@ -31890,7 +31899,20 @@ const RhythmHellGuide = ({
       lineHeight: 1.7,
       color: '#e2e8f0'
     }
-  }, page.text))), nextVideo && React.createElement("video", {
+  }, page.text), last && typeof rhythmHellEntryText === 'function' && rhythmHellEntryText() && React.createElement("p", {
+    "data-rhythm-hell-guide-entry": true,
+    style: {
+      margin: '12px 0 0',
+      padding: '8px 10px',
+      borderRadius: '12px',
+      border: '1px solid rgba(251,113,133,.5)',
+      background: 'rgba(76,5,25,.55)',
+      fontSize: '13px',
+      fontWeight: 900,
+      lineHeight: 1.6,
+      color: '#fecdd3'
+    }
+  }, "🔥 ", rhythmHellEntryText(), "。曲によって HELL の Lv. は大きく違います。曲えらびの HELL のボタンの数字を見て選んでください。"))), nextVideo && React.createElement("video", {
     key: nextVideo.src,
     muted: true,
     playsInline: true,
@@ -52034,6 +52056,7 @@ const AssistantBondRewardList = ({
   const rows = assistantBondRewardRows(who.id);
   const accent = who.accent || '#f472b6';
   const nextLv = rows.find(r => r.level > level)?.level || null;
+  const milestones = typeof ASSISTANT_BOND_REWARD_MILESTONES !== 'undefined' && ASSISTANT_BOND_REWARD_MILESTONES || [];
   const nowRef = React.useRef(null);
   const listRef = React.useRef(null);
   React.useEffect(() => {
@@ -52070,7 +52093,7 @@ const AssistantBondRewardList = ({
   }, "いまは Lv.", level, nextLv ? `・次は Lv.${nextLv}` : '・全部もらいました'))), React.createElement("p", {
     className: "mt-2 text-[10px] font-bold leading-snug text-slate-400",
     style: JA_WRAP_STYLE
-  }, jaWrap('Lvが上がると、そのLvのごほうびがギフトボックスへ届きます。助手ごとに1回ずつです。')), React.createElement("ol", {
+  }, jaWrap(`Lvが上がると、そのLvのごほうびがギフトボックスへ届きます。助手ごとに1回ずつです。${milestones.length ? `節目の Lv${milestones.join('・')} はほかのLvより豪華です。` : ''}`)), React.createElement("ol", {
     ref: listRef,
     className: "relative mt-2 max-h-[58vh] space-y-1.5 overflow-y-auto pr-0.5"
   }, rows.map(r => {
@@ -52092,7 +52115,10 @@ const AssistantBondRewardList = ({
       style: {
         color: got ? '#94a3b8' : accent
       }
-    }, "Lv.", r.level), React.createElement("span", {
+    }, "Lv.", r.level), milestones.includes(r.level) && React.createElement("span", {
+      "data-bond-reward-milestone": true,
+      className: "shrink-0 rounded-md bg-amber-500/90 px-1.5 py-px text-[9px] font-black text-slate-950"
+    }, "節目"), React.createElement("span", {
       className: "min-w-0 flex-1 text-[11px] font-black text-slate-300",
       style: JA_LABEL_STYLE
     }, jaWrap(r.title)), React.createElement("em", {
@@ -109436,7 +109462,7 @@ function MonsterHeroGame() {
       style: {
         color: activeAssistant.accent
       }
-    }, (tempCallStyle || '').includes('{name}') ? tempCallStyle.replace('{name}', breederName || 'あなた') : tempCallStyle || assistantSpeakText('{name}', breederName, assistantBondLevelNow, null, selectedAssistantId))), React.createElement("div", {
+    }, (tempCallStyle || '').includes('{name}') ? typeof assistantFillCallTemplate === 'function' ? assistantFillCallTemplate(tempCallStyle, breederName || 'あなた') : tempCallStyle.replace('{name}', breederName || 'あなた') : tempCallStyle || assistantSpeakText('{name}', breederName, assistantBondLevelNow, null, selectedAssistantId))), React.createElement("div", {
       className: "flex gap-2 mb-2"
     }, React.createElement("button", {
       onClick: () => setShowCallStylePicker(false),
