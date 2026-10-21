@@ -382,6 +382,14 @@ const mix=(master,{zero,beat,crosses=[],gentle=false,crossUpper='hold',crossDept
           const cand=notes.find(n=>n.k==='t'&&n.sky&&!n.mon&&Math.abs(n.t-x.timeMs)<=1&&n.sub===x.subLane);
           if(cand){cand.sky=0;moved=true;break;}}
         if(moved)break;}
+      // 下ろせない(空中の側が長押し・スライド・モンスターノーツ)ときは、相手の地上のタップ・フリックを抜く。
+      //   地上の側がモンスターノーツなら、抜かずに左右を反対側へ写す(1曲に4個の決まり・1つにつき1回だけ)。2026-10-21 社長「残りも直す」
+      if(!moved)for(const v of res){for(const x of [v.note,v.prev]){if(x.skyHeight>0||(x.type!=='TAP'&&x.type!=='FLICK'))continue;
+          const k=notes.findIndex(n=>(n.k==='t'||n.k==='f')&&!n.sky&&Math.abs(n.t-x.timeMs)<=1&&n.sub===x.subLane);if(k<0)continue;
+          const g=notes[k];
+          if(!g.mon){notes.splice(k,1);moved=true;break;}
+          if(!g.mirrored){g.sub=12-g.sub-g.w;if(g.hand)g.hand=g.hand==='L'?'R':'L';g.mirrored=true;moved=true;break;}}
+        if(moved)break;}
       if(!moved)break;}}
   // 空中を付けたあとにも、横持ちの物差しで「押せない」と出る地上のタップ・フリックが交差の区間の外に残っていれば取り除く
   //   (骨組みのときと手の割り振りが変わって見えることがある。0件の曲では何もしない)
