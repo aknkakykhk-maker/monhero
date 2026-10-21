@@ -243,12 +243,15 @@ async function run() {
   check('未公開・知らないidは描かない', byName('未公開さん').frame.length === 0, byName('未公開さん').frame.join(','));
   const rankFrames = await page.evaluate(() => [...document.querySelectorAll('[data-ranking-kind="breeder"] .mh-profile-frame')]
     .map(el => { const r = el.getBoundingClientRect(), p = el.parentElement.getBoundingClientRect();
-      return { out: +((r.width - p.width) / 2).toFixed(2), parent: Math.round(p.width) }; }));
+      const box = el.closest('[data-profile-avatar-box]'), b = box ? box.getBoundingClientRect() : p;
+      return { out: +((r.width - p.width) / 2).toFixed(2), parent: Math.round(p.width), box: Math.round(b.width), fits: r.width <= b.width + 0.5 }; }));
   // 2026-09-15にユーザー指摘「太すぎてかっこ悪い」を受けて細くした。細くしすぎて
-  // 32pxで消えてしまわないこと(はみ出し1.5px以上)を、実寸で見張る
-  check('小さいランキングアイコンでも枠が見える(32px前後で1.5px以上はみ出す)',
-    rankFrames.length > 0 && rankFrames.every(f => f.parent <= 40 && f.out >= 1.5),
-    rankFrames.map(f => `${f.parent}px/+${f.out}`).join(' '));
+  // 32pxで消えてしまわないこと(アイコンの外へ出る幅)を、実寸で見張る。
+  // 2026-10-21 社長「フレームのサイズ感微妙？」から、一覧の枠は枠ごと外側の四角(32px)に収める(ProfileAvatar の fit)。
+  //   中のアイコンが約27pxになるので、輪の出る幅は 1.4px 以上を見る(前は 32px のアイコンで 1.5px 以上)。輪の外形が四角に収まることも見る
+  check('小さいランキングアイコンでも枠が見え(1.4px以上出る)、枠ごと外側の四角に収まる',
+    rankFrames.length > 0 && rankFrames.every(f => f.box <= 40 && f.out >= 1.4 && f.fits),
+    rankFrames.map(f => `四角${f.box}px・アイコン${f.parent}px/+${f.out}${f.fits ? '' : '・はみ出す'}`).join(' '));
   check('iPhone縦画面で横にはみ出さない',
     await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1),
     await page.evaluate(() => `${document.documentElement.scrollWidth} / ${window.innerWidth}`));
