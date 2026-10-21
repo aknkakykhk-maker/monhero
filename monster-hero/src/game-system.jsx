@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: cc0017d9118b7713
+// generated-sha256: 0426757639641ac8
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-21 15:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-21 15:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -48341,6 +48341,31 @@ const assistantChatNoteKinds = (text, prevUserText) => {
   if (!/ノーツ/.test(`${text || ''}${prevUserText || ''}`)) return [];
   return rhythmNoteSwatchKindsInText(text);
 };
+// 助手の答えに味方モンスターの絵を出す(2026-10-21 社長「モッチーってどんなモンスター？と聞かれたら、答えと一緒に公式の絵を見せる」)。
+// 直前のプレイヤーの発言と答えに出た名前から機械で選び、ゲームにある立ち絵(無ければ顔アイコン)をそのまま出す(染色は使わず元の色)。
+// 選ぶのは図鑑に並ぶモンスター(debugOnly でないもの)だけ。長い名前から照らし(「剣士モッチー」を「モッチー」と取り違えない)、
+// 前後がカタカナの所は数えない(「ハムスター」の「ハム」)。多くても3体
+const ASSISTANT_CHAT_MONSTER_MAX = 3;
+const assistantChatMonsterIds = (text, prevUserText) => {
+  if (typeof ALL_PLAYER_MONSTERS === 'undefined') return [];
+  const mons = Object.values(ALL_PLAYER_MONSTERS).filter(m => m && !m.debugOnly && m.name && (m.imgUrl || m.faceIconUrl)).sort((a, b) => b.name.length - a.name.length);
+  const out = [];
+  for (const src of [prevUserText, text]) {
+    let t = String(src || '');
+    const found = [];
+    for (const m of mons) {
+      let at = t.indexOf(m.name);
+      while (at >= 0) {
+        const before = t[at - 1] || '', after = t[at + m.name.length] || '';
+        if (!/[ァ-ヺー]/.test(before) && !/[ァ-ヺー]/.test(after)) found.push({ id: m.id, at });
+        t = t.slice(0, at) + '　'.repeat(m.name.length) + t.slice(at + m.name.length);
+        at = t.indexOf(m.name);
+      }
+    }
+    found.sort((a, b) => a.at - b.at).forEach(f => { if (!out.includes(f.id)) out.push(f.id); });
+  }
+  return out.slice(0, ASSISTANT_CHAT_MONSTER_MAX);
+};
 const ASSISTANT_CHAT_TEXT_MAX = 200;
 const assistantChatSendWindow = (list) => {
   if (list.length <= ASSISTANT_CHAT_SEND_MAX) return list;
@@ -48497,6 +48522,13 @@ function AssistantChatWindow({ assistant, playerName, callName, bondLevel, bondT
                       <RhythmNoteSwatch kind={k} width={44} height={34}/>
                       <span className="text-[9px] font-bold leading-none text-slate-300">{(RHYTHM_NOTE_SWATCH_KINDS.find(x => x.id === k) || {}).label || k}</span>
                     </span>))}
+                </span>)}{m.role !== 'user' && assistantChatMonsterIds(m.text, (log.slice(0, i).reverse().find(x => x.role === 'user') || {}).text).length > 0 && (
+                <span data-assistant-chat-monsters className="mt-2 flex flex-wrap gap-1.5 whitespace-normal">
+                  {assistantChatMonsterIds(m.text, (log.slice(0, i).reverse().find(x => x.role === 'user') || {}).text).map(id => { const mon = ALL_PLAYER_MONSTERS[id]; return (
+                    <span key={id} data-assistant-chat-monster={id} className="flex w-[72px] flex-col items-center gap-0.5 rounded-lg bg-black/40 px-1 py-1">
+                      <img src={mon.imgUrl || mon.faceIconUrl} alt={mon.name} loading="lazy" decoding="async" className="h-16 w-16 object-contain"/>
+                      <span className="w-full truncate text-center text-[9px] font-bold leading-none text-slate-300">{mon.name}</span>
+                    </span>); })}
                 </span>)}</p>
             </div>
           ))}

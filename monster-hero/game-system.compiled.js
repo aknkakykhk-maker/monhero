@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9761536f34c6fb9c
+// source-sha256: 6eeac4ac3153b9ef
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-21 15:22";
+const BUILD_DATE = "2026-10-21 15:59";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -79958,6 +79958,33 @@ const assistantChatNoteKinds = (text, prevUserText) => {
   if (!/ノーツ/.test(`${text || ''}${prevUserText || ''}`)) return [];
   return rhythmNoteSwatchKindsInText(text);
 };
+const ASSISTANT_CHAT_MONSTER_MAX = 3;
+const assistantChatMonsterIds = (text, prevUserText) => {
+  if (typeof ALL_PLAYER_MONSTERS === 'undefined') return [];
+  const mons = Object.values(ALL_PLAYER_MONSTERS).filter(m => m && !m.debugOnly && m.name && (m.imgUrl || m.faceIconUrl)).sort((a, b) => b.name.length - a.name.length);
+  const out = [];
+  for (const src of [prevUserText, text]) {
+    let t = String(src || '');
+    const found = [];
+    for (const m of mons) {
+      let at = t.indexOf(m.name);
+      while (at >= 0) {
+        const before = t[at - 1] || '',
+          after = t[at + m.name.length] || '';
+        if (!/[ァ-ヺー]/.test(before) && !/[ァ-ヺー]/.test(after)) found.push({
+          id: m.id,
+          at
+        });
+        t = t.slice(0, at) + '　'.repeat(m.name.length) + t.slice(at + m.name.length);
+        at = t.indexOf(m.name);
+      }
+    }
+    found.sort((a, b) => a.at - b.at).forEach(f => {
+      if (!out.includes(f.id)) out.push(f.id);
+    });
+  }
+  return out.slice(0, ASSISTANT_CHAT_MONSTER_MAX);
+};
 const ASSISTANT_CHAT_TEXT_MAX = 200;
 const assistantChatSendWindow = list => {
   if (list.length <= ASSISTANT_CHAT_SEND_MAX) return list;
@@ -80190,7 +80217,25 @@ function AssistantChatWindow({
     height: 34
   }), React.createElement("span", {
     className: "text-[9px] font-bold leading-none text-slate-300"
-  }, (RHYTHM_NOTE_SWATCH_KINDS.find(x => x.id === k) || {}).label || k))))))), sending && React.createElement("p", {
+  }, (RHYTHM_NOTE_SWATCH_KINDS.find(x => x.id === k) || {}).label || k)))), m.role !== 'user' && assistantChatMonsterIds(m.text, (log.slice(0, i).reverse().find(x => x.role === 'user') || {}).text).length > 0 && React.createElement("span", {
+    "data-assistant-chat-monsters": true,
+    className: "mt-2 flex flex-wrap gap-1.5 whitespace-normal"
+  }, assistantChatMonsterIds(m.text, (log.slice(0, i).reverse().find(x => x.role === 'user') || {}).text).map(id => {
+    const mon = ALL_PLAYER_MONSTERS[id];
+    return React.createElement("span", {
+      key: id,
+      "data-assistant-chat-monster": id,
+      className: "flex w-[72px] flex-col items-center gap-0.5 rounded-lg bg-black/40 px-1 py-1"
+    }, React.createElement("img", {
+      src: mon.imgUrl || mon.faceIconUrl,
+      alt: mon.name,
+      loading: "lazy",
+      decoding: "async",
+      className: "h-16 w-16 object-contain"
+    }), React.createElement("span", {
+      className: "w-full truncate text-center text-[9px] font-bold leading-none text-slate-300"
+    }, mon.name));
+  }))))), sending && React.createElement("p", {
     "data-assistant-chat-sending": true,
     className: "text-[11px] text-slate-400"
   }, assistant.name, "が考え中…")), React.createElement("div", {
