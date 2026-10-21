@@ -94,12 +94,12 @@ const serve=()=>new Promise(r=>{const s=http.createServer((req,res)=>{
       }
       if(name==='縦390×844'){
         const c=await consts(page);
-        // ページの中で記録した時刻で測る。最短は「決定」の処理の頭から数える(画面の側の決まり)ので、押してから閉じるまでが最短以上(丸めの1フレームぶんは許す)。
-        //   幕が出てから閉じるまでは参考に出すだけ。読み込みが重いと幕が出るのが遅れ(2026-10-21 に 678ms)、そのぶん短く見える
+        // ページの中で記録した時刻で測る。最短は「幕が見えてから」数える(2026-10-21 社長「幕が見えてから3秒」)ので、
+        //   幕が出てから閉じるまでが最短以上(丸めの1フレームぶんは許す)。読み込みが重いと幕が出るのが遅れる(2026-10-21 に押してから 678ms)
         await page.waitForFunction(()=>window.__mhIntro&&window.__mhIntro.closed!=null,{timeout:15000}).catch(()=>{});
         const t=await page.evaluate(()=>window.__mhIntro);
         const fromClick=t.clicked!=null&&t.closed!=null?t.closed-t.clicked:-1,fromShown=t.shown!=null&&t.closed!=null?t.closed-t.shown:-1;
-        ok('最短より早く閉じない(押してから数える)',fromClick>=c.min-17,`押してから ${fromClick.toFixed(0)}ms・幕が出てから ${fromShown.toFixed(0)}ms(最短${c.min}ms)`);
+        ok('最短より早く閉じない(幕が見えてから数える)',fromShown>=c.min-17&&fromClick>=fromShown,`押してから ${fromClick.toFixed(0)}ms・幕が出てから ${fromShown.toFixed(0)}ms(最短${c.min}ms)`);
         const ms=fromShown;
         ok('閉じたあとカウントダウンが始まる',ms>0);
       }

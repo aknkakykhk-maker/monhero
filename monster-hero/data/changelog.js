@@ -35,6 +35,13 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-10-21 13:58", type:'fix', group:'rhythm', title:'モンヒロビート：曲が始まる前のジャケットと曲名が、短く消えることがあったのを直しました', status:'new',
+    items:[
+      '曲を選んだあとに出るジャケットと曲名が、読み込みの重いときに3秒より早く消えることがありました。幕が見えてから3秒は出るようにしました。',
+      '曲が始まる時刻や判定のタイミングは変わりません。マルチは、全員の開始をそろえるためこれまでどおりです。',
+    ],
+  },
+  {
     date: "2026-10-21 12:37", type:'update', group:'rhythm', title:'モンヒロビート：全曲に HELL が実装されました', status:'new',
     assistantNotice:{ id:'update_notice_rhythm_hell_all_songs_v1', type:'content' },
     items:[

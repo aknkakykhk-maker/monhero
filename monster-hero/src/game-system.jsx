@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: edb0d7024b794660
+// generated-sha256: fcf4903715ad5c97
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-21 13:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-21 13:58"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -20662,7 +20662,7 @@ const RHYTHM_RESUME_COUNTDOWN_STEPS=Object.freeze(['3','2','1']);
    ・軽量モード・演出「最小」では出さない。マルチだけは見た目を出さなくても待つ時間はそろえる */
 // 2026-10-11 社長「ジャケットが出てから消えるまでが早い。伸ばして読み込みの猶予にするのもあり」。
 //   1.8秒→3.0秒(リトライ0.9秒→1.4秒・社長が2案から選んだ)へ伸ばし、演奏前の準備(修理部・rhythmSongIntroHold)が済むまでは閉じない。
-//   ・最短 … RHYTHM_SONG_INTRO_MS(リトライは _RETRY_MS)。準備が早く済んでもここまでは出す
+//   ・最短 … RHYTHM_SONG_INTRO_MS(リトライは _RETRY_MS)。準備が早く済んでもここまでは出す。幕が実際に描かれたフレームから数える(2026-10-21 社長「幕が見えてから3秒」)
 //   ・最長 … RHYTHM_SONG_INTRO_MAX_MS。遅い端末で準備が済まなくても、ここで閉じてカウントダウンへ進む(準備は裏で続く)
 //   ・タップで飛ばしたとき … 最短は待たないが、準備が済むまでは閉じない(最長は同じ)
 //   ・マルチ … 全員そろえるため、最短=最長=RHYTHM_SONG_INTRO_MS(準備の待ちで延ばさない・飛ばせない)
@@ -21743,6 +21743,16 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
      songIntroRef は「幕のあいだか」「飛ばされたか」を beginRun の待ちとポーズが読む */
   const [songIntro,setSongIntro]=useState(null);
   const songIntroRef=useRef(null);
+  // 幕が実際に描かれたフレームの時刻を記録し、最短はそこから数える(2026-10-21 社長「最低3秒は幕が見えてから3秒」)。
+  //   読み込みが重いと、上げる処理から幕が描かれるまでに 0.6秒ほどかかり、見えている時間が短くなっていた。
+  //   2回 rAF を待つのは、1回目は描く前・2回目は描いたあとに呼ばれるため。マルチは全員の開始をそろえるため今までどおり(上げた時刻から数える)
+  const songIntroKey=songIntro?songIntro.key:null;
+  useEffect(()=>{if(songIntroKey==null)return;let r2=0;
+    const r1=requestAnimationFrame(()=>{r2=requestAnimationFrame(()=>{const intro=songIntroRef.current;
+      if(!intro||intro.generation!==songIntroKey||!intro.visible||intro.shownAt!=null)return;
+      intro.shownAt=rhythmSongIntroNow();
+      if(intro.skippable){intro.minEnd=Math.max(intro.minEnd,intro.shownAt+intro.minMs);intro.maxEnd=Math.max(intro.maxEnd,intro.minEnd);}});});
+    return()=>{cancelAnimationFrame(r1);cancelAnimationFrame(r2);};},[songIntroKey]);
   const resumingRef=useRef(false);
   // ポーズした時点の曲の位置(ミリ秒)。ポーズ画面の「いまどのあたりか」に使う
   const [pausedSongMs,setPausedSongMs]=useState(0);
@@ -22825,7 +22835,9 @@ if(RHYTHM_PERF.enabled)RHYTHM_PERF.tick(performance.now()-perfTickStart,perfTick
       const intro=songIntroRef.current,now=rhythmSongIntroNow();
       if(!intro||intro.generation!==generation){finish(null);return;}
       if(intro.closingAt!=null){if(now>=intro.closingAt){finish(intro);return;}setTimeout(step,Math.max(16,intro.closingAt-now));return;}
-      const ready=now>=intro.maxEnd||((intro.skipped||now>=intro.minEnd)&&rhythmSongIntroHoldsDone(intro.holds));
+      // ひとりで遊ぶときの見えている幕は、描かれた(shownAt)あとから最短を数えるので、描かれるまでは最短が過ぎたとみなさない(最長は今までどおり)
+      const painted=!intro.visible||!intro.skippable||intro.shownAt!=null;
+      const ready=now>=intro.maxEnd||((intro.skipped||(painted&&now>=intro.minEnd))&&rhythmSongIntroHoldsDone(intro.holds));
       if(ready){
         if(!intro.visible){finish(intro);return;}
         intro.closingAt=now+RHYTHM_SONG_INTRO_CLOSE_MS;setSongIntro(v=>v?{...v,closing:true}:v);
@@ -22914,7 +22926,7 @@ const introStart=rhythmSongIntroNow();
 // 幕を出さない設定(軽量・演出「最小」)やチュートリアルでも、準備の待ちだけは同じ決め事で行う(見た目なしで待つ)。
 // マルチは全員そろえるため、見た目の有無に関係なく同じ長さで待ち、準備では延ばさない
 const introMinMs=introShown||multi?introMs:0;
-songIntroRef.current={generation,holds,visible:introShown,skippable:!multi,skipped:false,closingAt:null,
+songIntroRef.current={generation,holds,visible:introShown,skippable:!multi,skipped:false,closingAt:null,minMs:introMinMs,shownAt:null,
   minEnd:introStart+introMinMs,maxEnd:introStart+(multi?introMinMs:Math.max(introMinMs,RHYTHM_SONG_INTRO_MAX_MS))};
 setSongIntro(introShown?{key:generation,ms:introMs,short:introMs<RHYTHM_SONG_INTRO_MS,skippable:!multi}:null);}/* 直し方の入れ切りは、ゲームが端末の直近の診断の記録から自分で決める(人が調整する前提にしない) */try{rhythmTouchFixAutoSet(rhythmTouchFixAutoFrom(await storeGet(RHYTHM_TOUCH_DIAG_KEY,[])));}catch{rhythmTouchFixAutoSet({});}const audio=await Audio_.startRhythmTrack(song.bgmTrackId,settings.bgmVolume,{autoStart:false});if(!mountedRef.current||generation!==generationRef.current){audio?.stop();return;}if(!audio){rhythmSongPrepSignal(false,song.songId);startLockRef.current=false;songIntroRef.current=null;setSongIntro(null);setView(v=>({...v,status:'error'}));return;}const startBest=normalizeRhythmBestRecord(startBestValue);/* 入力の記録(デバッグ設定で入れたときだけ。rhythm-mode.js の RHYTHM_INPUT_REC) */try{RHYTHM_INPUT_REC.begin(playAreaRef.current,()=>Number(audio.songTimeMs())||0,{songId:song.songId,difficultyId:difficulty.id,mirror:!!mirrorOn,assist:!!assistOn,offsetMs:Number(settings.judgmentTimingOffsetMs)||0,debugPlay:!!debugPlay,settings:(()=>{try{return JSON.parse(JSON.stringify(settings));}catch{return null;}})()});}catch{}RHYTHM_FRAME_DIAG.reset();RHYTHM_TIMING_DIAG.reset();RHYTHM_TIMING_DIAG.meta(audio.info?.());RHYTHM_TOUCH_BRIDGE.reset();const tickRules=rhythmTickRulesActive();rhythmFloatingNotesClear();runRef.current={audio,heroSeed:Math.random(),tickRules,notes:makeRuntimeNotes(tickRules),tickJust:0,tickMiss:0,tickTotal:null,activePointers:new Map(),standbyPointers:new Map(),activeTouchInputs:new Set(),inputTimes:[],combo:0,maxCombo:0,counts:emptyCounts(),fast:0,slow:0,precise:0,deltas:[],life:RHYTHM_LIFE_MAX,lifeDepleted:false,score:0,lockedScore:0,scoreOffset:0,abilities:createRhythmMonsterAbilityState(),konjoOwnerName:'',finished:false,paused:false,generation,startBest,startBestScore:startBest.bestScore};laneRefs.current.forEach(el=>{if(el){el.style.display='block';el.style.opacity='0';el.style.filter='';/* styleを直接書き戻したら、「前に何を書いたか」の控えも一緒に捨てる。   控えだけ古いまま残ると、値が同じだと判断して書き込みを飛ばし、   実際の見た目とズレたまま固まる(例: 透明のまま出てこない)ため */el._rhythmHidden=false;el._rhythmOpacity=undefined;el._rhythmWillChange=undefined;el._rhythmFailedFlag=undefined;el._rhythmClearFlag=undefined;delete el.dataset.rhythmClear;el._rhythmHoldBody=undefined;el._rhythmHoldFilter=undefined;el._rhythmDepthScale=undefined;el._rhythmDepthBrightness=undefined;el._rhythmTransform=undefined;el._rhythmSlideBody=undefined;}});if(canvasNotes)RHYTHM_CANVAS_RENDERER.clear();rhythmLayoutPlayArea(playAreaRef.current);updateJudgmentBand(measureTravel(),rhythmTravelMsForSpeed(settings.noteSpeed));
 /* 使い回すヒットエフェクトを先に作っておく。曲の途中で10個まとめて作ると、そこで一瞬引っかかる */
