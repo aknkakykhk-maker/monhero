@@ -193,6 +193,19 @@ const fakeDb = ({ facts = FLAGGED_FACTS, tokenOk = true, tokenThrows = false } =
     check('入口: API キー・合言葉の値をコードに書いていない', !/sk-ant-|ANTHROPIC_API_KEY\s*=|apiKey\s*:/.test(src) && !/RHYTHM_ANOMALY_CRON_TOKEN/.test(src));
     check('入口: POST だけを受ける', /req\.method !== "POST"/.test(src));
   }
+  // 曲の途中から放置したプレイ(入力5回以下・未クリア)を集計から外す(2026-10-21 社長の決定)。
+  // 外すのは見張りの集計だけ(関数を作り直すだけで、表・行には触れない)。連打を外す決まりも残っていること
+  {
+    const sql = fs.readFileSync(path.join(root, 'docs/sql/rankings/RHYTHM_ANOMALY_FACTS_ABANDON_APPLY.sql'), 'utf8');
+    const code = sql.split('\n').filter((l) => !l.trim().startsWith('--')).join('\n');
+    check('集計: 放置したプレイ(入力5回以下・未クリア)と連打の多いプレイを外し、外した数を返す',
+      /\(t\.stats->>'inputs'\)::int,0\) <= 5 and coalesce\(\(t\.stats->>'cleared'\)::boolean,true\) = false\) as abandoned/.test(code)
+        && /d as \(select \* from d0 where touches <= notes \* 5 and not abandoned\)/.test(code)
+        && /'abandoned_excluded_day'/.test(code) && /'mashed_excluded_day'/.test(code)
+        && /l\.cleared = false and \(select count\(\*\)[\s\S]*?<> 'zz'\) <= 5/.test(code));
+    check('集計: 関数を作り直すだけで、表・行を変えない', /create or replace function public\.rhythm_anomaly_facts\(p_day date\)/.test(code)
+      && !/\b(insert|update|delete|truncate|drop|alter)\b/i.test(code));
+  }
 
   console.log('');
   if (failed) { console.log(`${failed}件のNGがあります`); process.exit(1); }
