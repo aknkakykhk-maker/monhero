@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 55752c52264cfb76
+// generated-sha256: 2d3a36e38c62b8b7
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-21 21:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-21 21:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4268,7 +4268,6 @@ const BGM_TRACKS = [
   { id:'melo_sad_song', name:'SAD SONG', creator:'オリジナル', src:'audio/bgm-sad-song.mp3', gain:1, loop:true },
   { id:'melo_sad_song_short', name:'SAD SONG short ver.', creator:'オリジナル', src:'audio/bgm-sad-song-short.mp3', gain:1, loop:true },
   { id:'melo_toward_the_stars_short', name:'Toward the Stars, Paradise or Truth short ver.', creator:'hitoyakyuko', src:'audio/bgm-toward-the-stars-short.mp3', gain:1, loop:true },
-  { id:'melo_black_shout', name:'BLACK SHOUT', creator:'Roselia', src:'audio/bgm-black-shout.mp3', gain:1, loop:true },
   { id:'melo_dullahan_clockwork_alt', name:'呪われた騎士の時計仕掛け -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-clockwork-alt.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost', name:'鋼鉄の亡霊', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost_alt', name:'鋼鉄の亡霊 -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost-alt.mp3', gain:1, loop:true },
@@ -5473,7 +5472,6 @@ const Audio_ = (() => {
     "audio/bgm-battle-ichika.mp3": "ca746d1d2ba6",
     "audio/bgm-battle.mp3": "a1e6f8499e9e",
     "audio/bgm-big-bridge-no-shitou.mp3": "a36d408f3389",
-    "audio/bgm-black-shout.mp3": "1b4e637b9e2a",
     "audio/bgm-boss-ichika.mp3": "9c8bda857de7",
     "audio/bgm-boss.mp3": "a11bc8056d79",
     "audio/bgm-clear-ichika.mp3": "cf8bc41a228c",

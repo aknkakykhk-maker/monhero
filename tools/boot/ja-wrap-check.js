@@ -55,6 +55,14 @@ for(const el of document.querySelectorAll('[data-market-name-text]')){if(!el.par
  if(sorted.map(x=>x.c).join('')!==cs.map(x=>x.c).join(''))out.push({kind:'字の並びが崩れた',fs:getComputedStyle(el).fontSize,w:0,word:'',at:sorted.map(x=>x.c).join(''),cls:''});}
 // 画面の文に折り返し用の見えない文字(U+200B)が残っていない(2026-10-21: コピーすると混ざり、文を照らす検査も一致しなくなる。折り目は <wbr> で描く)
 {const t=document.body.innerText||'';const k=t.indexOf('\u200B');if(k>=0)out.push({kind:'見えない文字(U+200B)が画面の文にある',fs:'',w:0,word:'',at:t.slice(Math.max(0,k-8),k+8).replace(/\u200B/g,'|'),cls:''});}
+// ハロウィンの飾りのかぼちゃ(画面の枠の下の余白の左右の角)の上に、見えている字が乗っていない(2026-10-21 窓口「プロフィールの『助手』の見出しがかぼちゃにかかる」)。
+// かぼちゃは枠の下の余白の中だけに描くので、余白の左右の角(左40px・右32px)に見えている字があれば NG。
+// 見えているかは、字のうち余白に入った所の1点で elementFromPoint を引いて確かめる(スクロールの枠で切れて余白に出ていない字は数えない)
+for(const sh of document.querySelectorAll('[data-mh-theme="halloween"] .mh-screen-shell')){if(!visible(sh))continue;const R=sh.getBoundingClientRect(),pb=parseFloat(getComputedStyle(sh).paddingBottom)||0,top=R.bottom-Math.max(pb,30);
+ const w3=document.createTreeWalker(sh,NodeFilter.SHOW_TEXT);
+ for(let n=w3.nextNode();n;n=w3.nextNode()){const t=n.textContent;if(!t||!t.trim())continue;for(let i=0;i<t.length;i++){if(!t[i].trim())continue;range.setStart(n,i);range.setEnd(n,i+1);const rs=range.getClientRects();if(!rs.length)continue;const c=rs[0];
+  if(c.bottom<=top+1||c.top>=R.bottom)continue;const inCorner=c.left<R.left+40||c.right>R.right-32;if(!inCorner)continue;const py=Math.max((c.top+c.bottom)/2,top+2);if(py>=c.bottom)continue;const hit=document.elementFromPoint((c.left+c.right)/2,py);
+  if(hit&&(hit===n.parentElement||n.parentElement.contains(hit))){out.push({kind:'かぼちゃの上に字',fs:'',w:0,word:'',at:`${t.slice(Math.max(0,i-4),i+4)}@${Math.round(c.left)},${Math.round(c.top)}(枠の下${Math.round(R.bottom)}・余白${pb})`,cls:''});break;}}}}
 // 短い札(8字以下)が「…」で切れて読めない(2026-10-21「アイコン えらびな…」)
 for(const el of document.querySelectorAll('b,small,span,div,button')){const t=(el.innerText||'').replace(/[\u200B\s]/g,'');if(!t||t.length>8||!/[぀-ヿ一-鿿]/.test(t)||el.children.length)continue;
  const st=getComputedStyle(el);if(st.textOverflow!=='ellipsis'||!visible(el))continue;if(el.scrollWidth>el.clientWidth+1)out.push({kind:'「…」で切れた',fs:st.fontSize,w:Math.round(el.clientWidth),word:t,at:t,cls:''});}
