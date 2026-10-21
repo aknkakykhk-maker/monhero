@@ -30,6 +30,7 @@
 // ★9 版目(2026-10-15)で、置けるものが無いときにだれも使えないカード(倒れた子の固有技など)を捨てる(ボットと同じ)・
 //   トレーニングの候補(atkgut・adapt)と起こすかの決め方 simulateRun({ revive: 'bot'|'always'|'never'|'carry' })・
 //   結果に敵のライフの合計(enemyHpTotal)・再生(regenTotal)・最後の一撃の余り(overkill)を足した。比べた結果は docs/playbot/reports/tier/lab/training.md
+// ★11 版目(2026-10-22 社長「ヘイトをシミュレーターに入れて」): 敵の狙いにゲームと同じヘイトを入れた(tools/playbot/sim/hate-sim-check.js が見張る)。
 // ★10 版目(2026-10-16): EX=best(上手な遊び方)の列はトレーニングもドミノ倒し+走り込み(ハカセくんの決定)。bot の列は実戦のボットと同じまま
 // ★まだ入れていないもの: 魂格(Tier の対象外)・強化ポイントでガッツ+10・緊急回復の上手な使い方。近似したものは md の頭(APPROX)に書く。
 const fs = require('fs');
@@ -316,8 +317,27 @@ function slotGuardValue(st, guardBySlot, slot) {
 // 60-app.jsx spawnEnemy(13629)・advanceEnemyIntents(10241)・aimTacticsIntent(1320)
 const actionState = (st) => ({ definitions: G.enemyActionDefinitionsFor('tacticsPro', st.enemy.id, st.enemy.difficulty, st.enemy.actionCount), roarStacks: st.roarStacks });
 const nextAction = (st, dist, last, extra = {}) => G.chooseEnemyAction(st.enemy, dist, st.rng, { ...G.enemyActionStateFrom(last), ...actionState(st), ...extra });
-// st.aimHook … 狙いの決め方を差し替える口(2026-10-17 ヘイトの試算 hate-trial.js が使う)。渡さなければ今までどおり
-const aim = (st, intent) => (typeof st.aimHook === 'function' ? st.aimHook(st, intent) : G.withTacticsTarget(intent, st.units, st.rng));
+// st.aimHook … 狙いの決め方を差し替える口(2026-10-17 ヘイトの試算 hate-trial.js が使う)。渡さなければゲームと同じ狙い方
+// ★ヘイト(2026-10-22 社長「ヘイトをシミュレーターに入れて」): ゲームはタクティクスで公開ずみ(RELEASE_FLAGS.tacticsHate)。
+//   狙いは本体の withTacticsTarget にヘイトを渡す(60-app.jsx aimTacticsIntent 1413)。数字・式はすべて写した本体の関数(G.tacticsHate*)を使う
+const aim = (st, intent) => (typeof st.aimHook === 'function' ? st.aimHook(st, intent)
+  : G.withTacticsTarget(intent, st.units, st.rng, G.TACTICS_TARGET_LOW_HP_BIAS, st.hateOn ? st.hate : null));
+// ヘイトを1ターンぶん進める(60-app.jsx stepTacticsHate 1428: 敵の次の狙いを決める直前に、そのターンのぶんを足す)。
+//   gains … そのターンに使ったカード・EX のぶん / dealt … そのターンの枠ごとの与ダメージ(dmgBySlot の増えたぶん)
+const stepHate = (st) => {
+  if (!st.hateOn) return;
+  const dealt = [0, 1, 2, 3].map((i) => Math.max(0, (st.dmgBySlot[i] || 0) - (st.hateDmgMark[i] || 0)));
+  st.hate = G.tacticsHateStep(st.hate, { gains: st.hatePending, dealt }, st.units, st.heroSlot, st.units.map((u) => u && u.id));
+  st.hatePending = [0, 0, 0, 0];
+  st.hateDmgMark = [0, 1, 2, 3].map((i) => st.dmgBySlot[i] || 0);
+};
+// WAVE の始め: 0へ(勇者だけ下地)(60-app.jsx resetTacticsHate 1426)
+const resetHate = (st) => {
+  st.hate = st.hateOn ? G.tacticsHateWaveStart(st.heroSlot) : [0, 0, 0, 0];
+  st.hatePending = [0, 0, 0, 0];
+  st.hateDmgMark = [0, 1, 2, 3].map((i) => st.dmgBySlot[i] || 0);
+};
+const addHate = (st, slot, gain) => { if (st.hateOn && Number.isInteger(slot) && slot >= 0 && slot <= 3 && gain > 0) st.hatePending[slot] += gain; };
 const distAfterIntent = (intent, d) => (intent && intent.type === 'MOVE' && Number.isInteger(intent.targetDist)) ? intent.targetDist : d;
 function advanceIntents(st, executed, distAfter, performed) {
   const effective = performed ? executed : null;
@@ -325,6 +345,7 @@ function advanceIntents(st, executed, distAfter, performed) {
   if (reserved && reserved.type === 'SPECIAL' && !(performed && executed && executed.type === 'CHARGE')) reserved = null;
   if (reserved && reserved.variant === 'pierce' && !(performed && executed && executed.type === 'PIERCE_CHARGE')) reserved = null;
   if (reserved && reserved.type === 'MOVE' && reserved.targetDist === distAfter) reserved = null;
+  stepHate(st); // ヘイト: このターンのぶんを足してから狙う(60-app.jsx 10800)
   const aimed = aim(st, reserved || nextAction(st, distAfter, effective, { unannounced: true }));
   // 乱心(トリックコンフューズ): 残っていれば1つ使い、50%で「意味不明」(60-app.jsx 10251)
   const conf = G.rollEnemyConfusion(aimed, st.confuse, st.rng);
@@ -573,6 +594,7 @@ function useEx(st, slot, choice = null) {
   if (def.duration === 'style' && G.checkTacticsExChoice(def, st.ex, slot, mon.id, choice)) return false;
   if (G.checkTacticsExTarget(def, st.units, choice)) return false;
   const spentStacks = def.stackSpend ? G.sweetStackCountOf(st.sweet[slot]) : 0;
+  addHate(st, slot, G.tacticsHateExGain(def.effect, mon.id)); // ヘイト: EX を使った(60-app.jsx 12853)
   st.ex = G.applyTacticsExUse(st.ex, { def, slot, monId: mon.id, now,
     snapshot: life ? { atk: life.atk, def: life.def, spent: spentStacks, ...(def.effect === 'timeStop' ? { copied: G.tacticsExCopyableBuffs(st.ex, st.units, now, slot) } : {}) } : null,
     choice, target: def.target === 'ally' ? choice : null });
@@ -1004,6 +1026,7 @@ function playTurn(st) {
     const effMul = halved ? 0.5 : 1;
     const mon = st.mons[slot];
     if (typeof st.actHook === 'function') st.actHook(st, slot, card, effMul); // カードを使った子を知らせる口(2026-10-17 ヘイトの基準表 hate-table.js)
+    addHate(st, slot, G.tacticsHateCardGain(card, st.units[slot] && st.units[slot].id, effMul)); // ヘイト: 使ったカード(同じ子の2枚目からは半分。60-app.jsx 13009)
     // パンドラの箱: 箱のあいだの固有技は、天使の力で味方全員のライフ・ガッツを戻す(60-app.jsx 12408)
     const box = G.tacticsExPandoraBoxOf(st.ex, st.units, slot, now);
     if (box && card.type === 'unique' && box.angelRate > 0) st.units = G.rateHealTacticsBoard(st.units, box.angelRate, box.angelRate, false).units;
@@ -1428,12 +1451,14 @@ function trainAfterWave(st, w) {
   }
 }
 
-function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWave = 10, exMode = 'bot', assist = 'bot', assistPlay = 'bot', training = 'bot', exLog = false, distBonus = true, uniqueUp = true, emergency = 'auto', uniquePlan = 'bot', discardBlocked = true, revive = 'bot', aimHook = null, actHook = null }) {
+function simulateRun({ heroId, allies = [], hate = true, difficulty = 'Hard', seed = 1, maxWave = 10, exMode = 'bot', assist = 'bot', assistPlay = 'bot', training = 'bot', exLog = false, distBonus = true, uniqueUp = true, emergency = 'auto', uniquePlan = 'bot', discardBlocked = true, revive = 'bot', aimHook = null, actHook = null }) {
   const rng = mulberry32(hashSeed(seed, heroId, difficulty, allies.join(',')));
   const hero = MON_BY_ID[heroId];
   if (!hero) throw new Error(`勇者モンが見つからない: ${heroId}`);
   if (!EX_POLICIES[exMode]) throw new Error(`EX の使い方が分からない: ${exMode}`);
   const st = {
+    // ヘイト(ゲームと同じく既定で入)。hate:false で入れない(比べる用)。狙いを差し替える aimHook を渡したときは、その口に任せる
+    hateOn: hate !== false && typeof aimHook !== 'function', hate: [0, 0, 0, 0], hatePending: [0, 0, 0, 0], hateDmgMark: [0, 0, 0, 0],
     aimHook, actHook, rng, heroId, difficulty, exMode, maxWave, mons: [null, null, null, null], units: [null, null, null, null], trick: [{}, {}, {}, {}],
     autoHp: 0.1, joinCatchUp: 1, powerStart: monsterPowerOf(hero), powerNow: monsterPowerOf(hero),
     dealtTotal: 0, taken: 0, recentDealt: 0, recentWave: 0, turnsTotal: 0, waveTurns: [],
@@ -1472,6 +1497,7 @@ function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWa
     const pool = buildDeck(st.mons, computeAtkTier(st.mons, st.dist, st.distBonus), st.guardLevel, rng, st.teachings, st.uniqueLv);
     st.hand = pool.slice(0, 5); st.deck = pool.slice(5); st.graveyard = [];
     st.turn = 1;
+    resetHate(st); // ヘイトは WAVE ごとに0から(60-app.jsx initBattle 14382)
     st.intent = aim(st, nextAction(st, st.dist, null, { unannounced: true }));
     st.nextIntent = nextAction(st, distAfterIntent(st.intent, st.dist), st.intent);
     let out = null; let frozen = 0;
