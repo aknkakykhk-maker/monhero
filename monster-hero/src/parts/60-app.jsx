@@ -14425,11 +14425,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 結果がまだ反映されていない「一つ前のレンダーの値」を掴んでしまう(クロージャの陳腐化)ため、
   // 必ず呼び出し元が保持している最新のローカル値を渡す
   const initBattle = (w, s, u, t, defVal, forcedEnemyKey=null, heroForDeck=null, aptPctOverride=null, restoredStats=null) => {
+    // 強化フェーズの並びは次のバトルが始まったら用済み。残すと次のランの配置画面などに古い並びが出る
+    setPhasePlan(null);
     // タクティクスプロ以外(レイドなど)の戦いが始まったら、やり残しの記録は捨てる(混ざらないように)
     if (runMode !== BATTLE_MODE_TACTICS_PRO || raidJackRunRef.current) tacticsProLogRef.current = null;
     tacticsProLogWaveStart(tacticsProLogRef.current, { wave: w, party: (Array.isArray(s) ? s : []).filter(Boolean).map(m => ({ id: m.id, dist: m === mainHero ? initialBattleDistanceRef.current : null })), enemy: forcedEnemyKey });
-    // 強化フェーズの並びは次のバトルが始まったら用済み。残すと次のランの配置画面などに古い並びが出る
-    setPhasePlan(null);
     setDefeatFx(null);
     tacticsHateHeroIdRef.current = (heroForDeck || mainHero)?.id || null;   // ヘイトの勇者の下地を付ける子(tacticsHateHeroSlot)
     // 通常・クイック・プロ・極限・練習/デバッグの共通開始点で、新しいランだけ累計を初期化する。

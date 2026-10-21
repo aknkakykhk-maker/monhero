@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: eba1cf74f068bebb
+// generated-sha256: 2b9d345e5f6f84aa
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-22 04:35"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-22 04:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -63698,11 +63698,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 結果がまだ反映されていない「一つ前のレンダーの値」を掴んでしまう(クロージャの陳腐化)ため、
   // 必ず呼び出し元が保持している最新のローカル値を渡す
   const initBattle = (w, s, u, t, defVal, forcedEnemyKey=null, heroForDeck=null, aptPctOverride=null, restoredStats=null) => {
+    // 強化フェーズの並びは次のバトルが始まったら用済み。残すと次のランの配置画面などに古い並びが出る
+    setPhasePlan(null);
     // タクティクスプロ以外(レイドなど)の戦いが始まったら、やり残しの記録は捨てる(混ざらないように)
     if (runMode !== BATTLE_MODE_TACTICS_PRO || raidJackRunRef.current) tacticsProLogRef.current = null;
     tacticsProLogWaveStart(tacticsProLogRef.current, { wave: w, party: (Array.isArray(s) ? s : []).filter(Boolean).map(m => ({ id: m.id, dist: m === mainHero ? initialBattleDistanceRef.current : null })), enemy: forcedEnemyKey });
-    // 強化フェーズの並びは次のバトルが始まったら用済み。残すと次のランの配置画面などに古い並びが出る
-    setPhasePlan(null);
     setDefeatFx(null);
     tacticsHateHeroIdRef.current = (heroForDeck || mainHero)?.id || null;   // ヘイトの勇者の下地を付ける子(tacticsHateHeroSlot)
     // 通常・クイック・プロ・極限・練習/デバッグの共通開始点で、新しいランだけ累計を初期化する。
