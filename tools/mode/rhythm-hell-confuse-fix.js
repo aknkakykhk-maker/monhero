@@ -25,6 +25,8 @@ const SONGS=Object.freeze({
   grievous_lady:{marker:'grievous-lady-hell',slot:['grievous_lady_hell','MASTER'],beat:60000/210},
   against_my_own_shadow:{marker:'against-my-own-shadow-v3-hell',slot:['against_my_own_shadow_hell_debug','HELL'],beat:419.1788},
   kaze_ga_soyogu:{marker:'kaze-ga-soyogu-v4-hell',slot:['kaze_ga_soyogu_hell_debug','HELL'],beat:60000/118.88},
+  // 2026-10-21 量を0.78倍にして作り直したら1件だけ残った(社長「ざしてぃを60ぐらいまで下げる」)
+  the_city_beneath_the_comets:{marker:'the-city-beneath-the-comets-v3-hell',slot:['the_city_beneath_the_comets_hell_debug','HELL'],beat:351.976},
 });
 
 // rhythm-chart-level.js の loadRuntimeSongs と同じ読み方を、手元の文字列に使う

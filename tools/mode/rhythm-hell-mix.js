@@ -51,7 +51,8 @@ const SONGS={sheriruth:{marker:'sheriruth-v3',zero:711.6-2594.75,beat:324.342,le
   monster_hero_another:{marker:'monster-hero-theme-alt-v3',track:'monster_hero_theme_alt',zero:1268.3,beat:350.678,levelRe:/const monsterHeroAnotherHellChart=mhChart\((\d+),/,source:'audio',variant:1,crosses:'auto',crossUpper:'mover',crossDepth:-1},
   six_eternel_beat:{marker:'six-eternel-beat-v3',track:'six_eternel_beat',zero:562.4,beat:217.3992,levelRe:/const sixEternelBeatHellChart=mhChart\((\d+),/,source:'audio',variant:2,crosses:'auto',crossUpper:'mover',crossDepth:-1},
   six_eternel_remix:{marker:'six-eternel-remix-beat-v3',track:'six_eternel_remix_beat',zero:1452.6,beat:368.91,levelRe:/const sixEternelRemixHellChart=mhChart\((\d+),/,source:'audio',variant:3,crosses:'auto',crossUpper:'mover',crossDepth:-1},
-  stay_with_me:{marker:'pandora-boss-v3',track:'pandora_boss',zero:440,beat:352.9619,levelRe:/const stayWithMeHellChart=mhChart\((\d+),/,source:'audio',variant:1,crosses:'auto',crossUpper:'mover',crossDepth:-1},
+  // 2026-10-21 社長「すてぃうぃずみーだけ上げる」(35ぐらい): 量を少し多めに拾う(hellDensity)
+  stay_with_me:{marker:'pandora-boss-v3',track:'pandora_boss',zero:440,beat:352.9619,levelRe:/const stayWithMeHellChart=mhChart\((\d+),/,source:'audio',variant:2,hellDensity:1.02,crosses:'auto',crossUpper:'mover',crossDepth:-1},
   kiki_issen:{marker:'eiki-boss-v3',track:'eiki_boss',zero:188.4,beat:387.07,levelRe:/const kikiIssenHellChart=mhChart\((\d+),/,source:'audio',variant:2,crosses:'auto',crossUpper:'mover',crossDepth:-1},
   close_to_your_heart:{marker:'close-to-your-heart-v4',track:'close_to_your_heart',zero:570.5,beat:461.655,levelRe:/const closeToYourHeartHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1},
   eiki_boss_remix:{marker:'eiki-boss-remix-v3',track:'eiki_boss_remix',zero:992.5,beat:389.196,levelRe:/const eikiBossRemixHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1},
@@ -66,7 +67,8 @@ const SONGS={sheriruth:{marker:'sheriruth-v3',zero:711.6-2594.75,beat:324.342,le
   mou_hitotsu_no_sekai_e:{marker:'mou-hitotsu-no-sekai-e-v3',track:'mou_hitotsu_no_sekai_e',zero:384.1,beat:320,levelRe:/const mouHitotsuNoSekaiEHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1},
   senjou_no_shippuu:{marker:'senjou-no-shippuu-v3',track:'senjou_no_shippuu',zero:321.3,beat:428.676,levelRe:/const senjouNoShippuuHellChart=mhChart\((\d+),/,source:'audio',variant:3,crosses:'auto',crossUpper:'mover',crossDepth:-1},
   makutsu_no_senritsu:{marker:'makutsu-no-senritsu-v3',track:'makutsu_no_senritsu',zero:38,beat:416.9475,levelRe:/const makutsuNoSenritsuHellChart=mhChart\((\d+),/,source:'audio',variant:2,crosses:'auto',crossUpper:'mover',crossDepth:-1},
-  the_city_beneath_the_comets:{marker:'the-city-beneath-the-comets-v3',track:'the_city_beneath_the_comets',zero:1054.3,beat:351.976,levelRe:/const theCityBeneathTheCometsHellChart=mhChart\((\d+),/,source:'audio',variant:3,crosses:'auto',crossUpper:'mover',crossDepth:-1},
+  // 2026-10-21 社長「ざしてぃを60ぐらいまで下げる」: 量を0.78倍に(hellDensity)
+  the_city_beneath_the_comets:{marker:'the-city-beneath-the-comets-v3',track:'the_city_beneath_the_comets',zero:1054.3,beat:351.976,levelRe:/const theCityBeneathTheCometsHellChart=mhChart\((\d+),/,source:'audio',variant:3,hellDensity:0.78,crosses:'auto',crossUpper:'mover',crossDepth:-1},
   freedom_dive:{marker:'freedom-dive-v3',track:'freedom_dive',zero:117,beat:270.0027,levelRe:/const freedomDiveHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1},
   only_my_railgun:{marker:'only-my-railgun-v3',track:'only_my_railgun',zero:152.9,beat:419.5804,levelRe:/const onlyMyRailgunHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1},
   big_bridge_no_shitou:{marker:'big-bridge-no-shitou-v3',track:'big_bridge_no_shitou',zero:349.6,beat:337.6097,levelRe:/const bigBridgeNoShitouHellChart=mhChart\((\d+),/,source:'audio',variant:1,crosses:'auto',crossUpper:'mover',crossDepth:-1},
@@ -113,10 +115,10 @@ const readBlock=(source,name)=>{
 // 曲の解析から HELL の骨組みを作る(2026-10-13 社長「ヘル用に作り直して」「参考動画がない限り、各難易度を難易度ごとにちゃんと作る」)。
 //   MASTER の譜面は読まない。譜面を作る道具(rhythm-chart-v3-generate.js)を --difficulty HELL で回し、出た譜面を下書きの形へ直す。
 //   時刻への直し方は rhythm-chart-v3-pipeline.js の runtimeRow と同じ(拍の頭+格子×格子の長さ+テンポの揺れ)
-const audioDraft=(trackId,variant=0,drawersOn=true)=>{
+const audioDraft=(trackId,variant=0,drawersOn=true,hellDensity=null)=>{
   const os=require('os'),{spawnSync}=require('child_process'),{tempoWarpForChart}=require('./rhythm-chart-tempo-warp.js');
   const dashed=trackId.replace(/_/g,'-'),dir=fs.mkdtempSync(path.join(os.tmpdir(),'mh-hell-'));
-  const r=spawnSync(process.execPath,[path.join(__dirname,'rhythm-chart-v3-generate.js'),'--track',trackId,'--difficulty','HELL','--variant',String(variant),'--output-dir',dir,'--write',...(drawersOn?[]:['--no-drawers'])],{encoding:'utf8'});
+  const r=spawnSync(process.execPath,[path.join(__dirname,'rhythm-chart-v3-generate.js'),'--track',trackId,'--difficulty','HELL','--variant',String(variant),'--output-dir',dir,'--write',...(drawersOn?[]:['--no-drawers']),...(Number.isFinite(hellDensity)?['--hell-density',String(hellDensity)]:[])],{encoding:'utf8'});
   if(r.status!==0)throw new Error('HELL の骨組みを作れなかった: '+String(r.stderr||r.stdout).slice(-400));
   const chart=JSON.parse(fs.readFileSync(path.join(dir,`${dashed}-v3-chart-hell.json`),'utf8'));
   const audio=JSON.parse(fs.readFileSync(path.join(__dirname,'authoring',`${dashed}-v3-audio.json`),'utf8'));
@@ -541,7 +543,7 @@ if(require.main===module){
     const trackId=conf.track||songId;
     const audioFile=path.join(__dirname,'authoring',`${trackId.replace(/_/g,'-')}-v3-audio.json`);
     const audio=fs.existsSync(audioFile)?JSON.parse(fs.readFileSync(audioFile,'utf8')):null;
-    const master=conf.source==='audio'?audioDraft(trackId,argOf('--variant')!=null?Number(argOf('--variant')):(conf.variant||0),drawersOn):readBlock(source,`${conf.marker}-master`);
+    const master=conf.source==='audio'?audioDraft(trackId,argOf('--variant')!=null?Number(argOf('--variant')):(conf.variant||0),drawersOn,argOf('--hell-density')!=null?Number(argOf('--hell-density')):(Number.isFinite(conf.hellDensity)?conf.hellDensity:null)):readBlock(source,`${conf.marker}-master`);
     const before=rt0.markerBlock(source,`${conf.marker}-master`)?readBlock(source,`${conf.marker}-master`):master;
     const oldHell=conf.trial?null:rt0.markerBlock(source,`${conf.marker}-hell`);
     // mixedWindows(見分けにくい形を残してよい山場の区間・2026-10-21)。'peak' はいちばん混んだ区間を1つ選ぶ。どちらも合わせて曲の長さの PEAK_SHARE まで

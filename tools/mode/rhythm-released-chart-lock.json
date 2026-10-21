@@ -231,7 +231,7 @@
   "monster_hero_another/hell": "7ba7608212c0ccc1",
   "six_eternel_remix/hell": "1881b3d410b857df",
   "six_eternel_beat/hell": "74b5ce0246eba31b",
-  "stay_with_me/hell": "ef7abe49d3425e90",
+  "stay_with_me/hell": "109dce516b134abe",
   "kiki_issen/hell": "55ac99fde5ab51c0",
   "kaze_ga_soyogu/hell": "812426b02dcd7cdf",
   "close_to_your_heart/hell": "f0b18abed12d29f3",
@@ -245,7 +245,7 @@
   "crossing_field/hell": "808899d47f9f71b9",
   "nothing_without_you/hell": "fc734f33bf8f841b",
   "freedom_dive/hell": "70125b3564bfff5c",
-  "the_city_beneath_the_comets/hell": "9ec66262056c1cd7",
+  "the_city_beneath_the_comets/hell": "10c1c3fc089cde3c",
   "mou_hitotsu_no_sekai_e/hell": "a5a195ba21d8ad61",
   "senjou_no_shippuu/hell": "551c89bef4e76fd8",
   "makutsu_no_senritsu/hell": "4094c8483d6d79ad",
@@ -425,6 +425,14 @@
    "at": "2026-10-21 12:38",
    "reason": "2026-10-21 社長の指示「全曲ヘルを実装して」: HELL が無かった34曲に HELL を足した",
    "changedCount": 34
+  },
+  {
+   "at": "2026-10-21 13:25",
+   "reason": "2026-10-21 社長の決定: the_city_beneath_the_comets の HELL を60ぐらいへ(量0.78倍→Lv.61)、stay_with_me の HELL を35ぐらいへ(Lv.37)作り直した",
+   "changed": [
+    "stay_with_me/hell",
+    "the_city_beneath_the_comets/hell"
+   ]
   }
  ]
 }
