@@ -7,7 +7,7 @@
 // 見ているもの:
 //   ① 公開の印(RELEASE_FLAGS.assistantAtsu)が偽のまま … 仲良し度がそろっていても、お話は流れず、助手の一覧にも出ない
 //   ② 印が真で、仲良し度が足りない … お話は流れない。一覧には鍵つきの「？？？」
-//   ③ 印が真で、みゅあ Lv8・きき Lv8・ももすけ Lv5 … HOME でお話が流れる。見終わると一覧で選べる。選ぶと HOME の吹き出しがあつになる
+//   ③ 印が真で、みゅあ・きき・ももすけ がそろって Lv5 以上 … HOME でお話が流れる。見終わると一覧で選べる。選ぶと HOME の吹き出しがあつになる
 // 印を真にするのは、このページの中だけ(読み込み直後に RELEASE_FLAGS を書き換える)。ファイルの印は変えない
 const fs = require('fs');
 const path = require('path');
@@ -20,7 +20,7 @@ const results = [];
 const check = (name, ok, detail = '') => { results.push(ok); console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ' — ' + detail : ''}`); };
 
 // 仲良し度の points(段階の need)。data/assistants.js の ASSISTANT_BOND_LEVELS と同じ値
-const NEED = { 1: 0, 5: 800, 8: 2300 };
+const NEED = { 1: 0, 5: 800 };
 // ほかのお話・告知は見た扱いにする(あつのお話だけが流れるように)。id は実ファイルから読む(書き写さない)
 const assistantsSrc = fs.readFileSync(path.join(__dirname, '../../monster-hero/data/assistants.js'), 'utf8');
 const changelogSrc = fs.readFileSync(path.join(__dirname, '../../monster-hero/data/changelog.js'), 'utf8');
@@ -117,7 +117,7 @@ const pickerText = (page) => page.evaluate(() => {
     await page.addInitScript(seed, { storyIds: STORY_IDS, noticeIds: SEEN_NOTICE_IDS, ...opts });
     return page;
   };
-  const ready = { mua: NEED[8], kiki: NEED[8], momosuke: NEED[5] };
+  const ready = { mua: NEED[5], kiki: NEED[5], momosuke: NEED[5] };
   try {
     // ① 印が偽
     {

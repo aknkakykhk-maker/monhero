@@ -4713,7 +4713,7 @@ function MonsterHeroGame() {
     if (rhythmEventStoryStartedRef.current.includes(ASSISTANT_CHAT_STORY_ID)) return;
     setRhythmEventStoryPending(ASSISTANT_CHAT_STORY_ID);
   }, [assistantChatStorySeenLoaded, assistantChatStorySeenFlag, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
-  // あつの加入のお話(2026-10-22 社長の決定)。みゅあ Lv8・きき Lv8・ももすけ Lv5(ASSISTANT_ATSU_UNLOCK_BONDS)がそろった HOME で1回だけ流す。
+  // あつの加入のお話(2026-10-22 社長の決定)。みゅあ・きき・ももすけ がそろって Lv5 以上(ASSISTANT_ATSU_UNLOCK_BONDS)の HOME で1回だけ流す。
   // 見たかどうかはドラと同じ「見終えたお話の id」(mh_rhythm_event_story_v1)。最後まで見るか飛ばすと、あつを選べるようになる(assistantUnlockedBy)。
   // 公開の印 assistantAtsu が偽なら何もしない。置き方は上の HELL・おしゃべりのお話と同じ
   useEffect(() => {

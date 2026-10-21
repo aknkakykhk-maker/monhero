@@ -6,7 +6,7 @@
 //   ・口調 … 一人称は「俺」(ときどき「オレ」)。ほかの助手の一人称・笑い方(w・ｗ)・下ネタが混ざっていない。くせ(とりあえず・てか・まじで・やっぱ・いいね・笑)が出ている
 //   ・呼び方 … あつ→みゅあ「みゅあ」/きき「きき」/もも「もも」/ドラ「ドラちゃん」、みゅあ→「あつくん」/きき→「あっくん」/もも→「あつ」/ドラ→「あっくん」。お話の中でも守る
 //   ・仲良し度の段階 … 30段で「パーティの仲間」の流れ
-//   ・解放 … みゅあ Lv8・きき Lv8・ももすけ Lv5 → お話 → 選べる。見たかどうかはドラと同じ「見終えたお話の id」で持つ(新しいキーを作らない)
+//   ・解放 … みゅあ・きき・ももすけ がそろって Lv5 以上 → お話 → 選べる。見たかどうかはドラと同じ「見終えたお話の id」で持つ(新しいキーを作らない)
 //   ・公開前 … 公開の印 assistantAtsu が偽のあいだは選べない・カード「あつの挑発」で仲良し度が貯まらない・おしゃべりの材料に入らない
 //   ・絵 … 仮の顔の絵がそろっている。印を真にするなら、仮の絵(tempImageDir)をやめて大きい絵へ差し替えてあること
 // 実ブラウザでの流れは tools/assistant/atsu-unlock-browser-check.js
@@ -99,11 +99,11 @@ check('仲良し度は30段で、段階の名前は「パーティの仲間」�
 check('呼び方の例(Lv6から)が、あつ用にある', a.assistantCallStylesOf('atsu').some(st => st.template === '{name}'));
 
 // ---- 解放 ----
-check('解放の条件は みゅあ Lv8・きき Lv8・ももすけ Lv5(2026-10-22 社長の訂正)', JSON.stringify(a.ASSISTANT_ATSU_UNLOCK_BONDS) === JSON.stringify({ mua: 8, kiki: 8, momosuke: 5 }));
+check('解放の条件は みゅあ・きき・ももすけ がそろって Lv5 以上(2026-10-22 社長の変更)', JSON.stringify(a.ASSISTANT_ATSU_UNLOCK_BONDS) === JSON.stringify({ mua: 5, kiki: 5, momosuke: 5 }));
 const lv = (m) => (id) => m[id];
 check('条件がそろったときだけ満たす(1人でも足りなければ満たさない・壊れた値は満たさない)',
-  a.assistantAtsuUnlockReady(lv({ mua: 8, kiki: 8, momosuke: 5 })) === true && a.assistantAtsuUnlockReady(lv({ mua: 7, kiki: 8, momosuke: 5 })) === false && a.assistantAtsuUnlockReady(lv({ mua: 30, kiki: 30, momosuke: 4 })) === false
-  && a.assistantAtsuUnlockReady(lv({ mua: 8, kiki: NaN, momosuke: 5 })) === false && a.assistantAtsuUnlockReady(null) === false);
+  a.assistantAtsuUnlockReady(lv({ mua: 5, kiki: 5, momosuke: 5 })) === true && a.assistantAtsuUnlockReady(lv({ mua: 4, kiki: 30, momosuke: 30 })) === false && a.assistantAtsuUnlockReady(lv({ mua: 30, kiki: 30, momosuke: 4 })) === false
+  && a.assistantAtsuUnlockReady(lv({ mua: 5, kiki: NaN, momosuke: 5 })) === false && a.assistantAtsuUnlockReady(null) === false);
 const storyId = a.ASSISTANT_UNLOCK_STORIES.atsu;
 check('お話は回想に登録され、公開の印 assistantAtsu で出る', !!story && story.releaseFlag === 'assistantAtsu' && story.unlockedKey === 'atsuJoinSeen');
 const rel = read('monster-hero/src/parts/17-release-changelog-login-missions.jsx');

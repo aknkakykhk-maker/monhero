@@ -243,8 +243,8 @@ const assistantIdOrDefault = (id) => (ASSISTANTS.some(a => a.id === id) ? id : D
 // あつ(2026-10-22)は加入のお話 atsu_join_2026_10_22 を見たら。お話はほかの3人の仲良し度がそろうと流れる(ASSISTANT_ATSU_UNLOCK_BONDS)
 const ASSISTANT_UNLOCK_STORIES = Object.freeze({ dra: 'symphony_2026_09_17', atsu: 'atsu_join_2026_10_22' });
 const assistantUnlockStoryId = (assistantId) => ASSISTANT_UNLOCK_STORIES[assistantId] || null;
-// あつの加入のお話が流れる条件(2026-10-22 社長の決定。同日「みゅあもレベル8だよ」で みゅあ Lv10 → Lv8 に訂正)。助手ごとの仲良し度がこのLv以上(全部そろったとき)
-const ASSISTANT_ATSU_UNLOCK_BONDS = Object.freeze({ mua: 8, kiki: 8, momosuke: 5 });
+// あつの加入のお話が流れる条件(2026-10-22 社長の決定。同日 みゅあ Lv10・きき Lv8・もも Lv5 → みゅあ Lv8 → 3人そろって Lv5 以上に変更)。助手ごとの仲良し度がこのLv以上(全部そろったとき)
+const ASSISTANT_ATSU_UNLOCK_BONDS = Object.freeze({ mua: 5, kiki: 5, momosuke: 5 });
 // levelOf(助手id) で仲良し度のLvを返す関数を渡す。壊れた値は満たしていない扱い
 const assistantAtsuUnlockReady = (levelOf) => typeof levelOf === 'function'
   && Object.entries(ASSISTANT_ATSU_UNLOCK_BONDS).every(([id, need]) => { const lv = Number(levelOf(id)); return Number.isFinite(lv) && lv >= need; });
@@ -8086,7 +8086,7 @@ const RHYTHM_HELL_GUIDE_PAGES = Object.freeze([
 ]);
 
 // ---------- あつの加入のお話(2026-10-22・社長の決定) ----------
-// みゅあ Lv8・きき Lv8・ももすけ Lv5(仲良し度)がそろうと、HOME で1回だけ流れる(ASSISTANT_ATSU_UNLOCK_BONDS)。
+// みゅあ・きき・ももすけ の仲良し度がそろって Lv5 以上になると、HOME で1回だけ流れる(ASSISTANT_ATSU_UNLOCK_BONDS)。
 // 最後まで見ると助手あつが選べるようになる(ASSISTANT_UNLOCK_STORIES。見たかどうかはドラと同じ mh_rhythm_event_story_v1 の id)。
 // 公開の印 assistantAtsu が立つまでは流れず、回想にも出ない(デバッグの「全ストーリーを確認」には出る)。BGM は Against My Own Shadow。
 // 【世界の設定】(社長の決定)
