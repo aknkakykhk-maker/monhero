@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "245b56dc8eca",
-  "packs": {"beat":{"bytes":98024013,"count":87},"battle":{"bytes":106382340,"count":496},"all":{"bytes":204406353,"count":583}},
+  "id": "629cb30d51ed",
+  "packs": {"beat":{"bytes":97598493,"count":87},"battle":{"bytes":106382340,"count":496},"all":{"bytes":203980833,"count":583}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"ddce743e94fa","size":1416528,"pack":"beat"},
@@ -10,7 +10,7 @@
     "audio/bgm-battle-ichika.mp3": {"v":"ca746d1d2ba6","size":2259701,"pack":"battle"},
     "audio/bgm-battle.mp3": {"v":"a1e6f8499e9e","size":498745,"pack":"battle"},
     "audio/bgm-big-bridge-no-shitou.mp3": {"v":"a36d408f3389","size":1735344,"pack":"beat"},
-    "audio/bgm-black-shout.mp3": {"v":"1b4e637b9e2a","size":1735776,"pack":"beat"},
+    "audio/bgm-black-shout.mp3": {"v":"03a627c682de","size":1310256,"pack":"beat"},
     "audio/bgm-boss-ichika.mp3": {"v":"9c8bda857de7","size":1982739,"pack":"battle"},
     "audio/bgm-boss.mp3": {"v":"a11bc8056d79","size":1660249,"pack":"battle"},
     "audio/bgm-clear-ichika.mp3": {"v":"cf8bc41a228c","size":1457964,"pack":"battle"},

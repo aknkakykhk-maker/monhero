@@ -887,14 +887,15 @@
     "source": "command"
    }
   },
-  "black_shout": {"flowPlacement":true,
+  "black_shout": {
+   "flowPlacement": true,
    "audio": "monster-hero/audio/bgm-black-shout.mp3",
    "chartRevision": 32,
-   "audioSha256": "1b4e637b9e2ac5186f24b8a219db3ba9748b287805c8669718f6cf51c2553432",
-   "durationMs": 144648,
+   "audioSha256": "03a627c682deaebcb6e23dc196b3882fc0f89190abdfc36de50295b420b7a5aa",
+   "durationMs": 109188,
    "analyzedTiming": {
-    "bpm": 184.98,
-    "beatZeroMs": 2062.2,
+    "bpm": 185.07,
+    "beatZeroMs": 2285.8,
     "beatsPerBar": 4,
     "subdivisionsPerBeat": 4,
     "source": "command"

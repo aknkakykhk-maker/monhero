@@ -1685,21 +1685,21 @@
    "sideHeightSwitch": 0,
    "skyAfterGround": 0,
    "besideHeldBand": 0,
-   "fastSameSide": 9,
+   "fastSameSide": 10,
    "heldHandSwitch": 0
   },
   "black_shout/EXPERT": {
    "sideHeightSwitch": 0,
    "skyAfterGround": 0,
    "besideHeldBand": 0,
-   "fastSameSide": 30,
+   "fastSameSide": 45,
    "heldHandSwitch": 0
   },
   "black_shout/MASTER": {
    "sideHeightSwitch": 0,
    "skyAfterGround": 0,
    "besideHeldBand": 0,
-   "fastSameSide": 79,
+   "fastSameSide": 64,
    "heldHandSwitch": 0
   }
  },
@@ -1728,6 +1728,11 @@
    "at": "2026-10-21T12:07",
    "reason": "新曲 BLACK SHOUT の行だけを足す",
    "changed": 5
+  },
+  {
+   "at": "2026-10-21T13:16",
+   "reason": "BLACK SHOUT を正しい音源で作り直す",
+   "changed": 268
   }
  ]
 }
