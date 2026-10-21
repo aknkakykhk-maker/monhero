@@ -2,7 +2,7 @@
 //
 //   node tools/ranking/battle-log-check.js
 //
-//   ① RELEASE_FLAGS.battleLog は偽。偽のあいだ sbSendRaidBattleLog は送らない(fetch を呼ばない)
+//   ① RELEASE_FLAGS.battleLog は真(表を作って確かめたあと)。偽にすると sbSendRaidBattleLog は送らない(fetch を呼ばない)
 //   ② 送る形(buildRaidBattleLogRow)は決めた項目だけ。レイドでない入力からは行を作らない。名前・ブリーダーID・マスモンの中身を通さない
 //   ③ 記録の範囲(2026-10-21 社長「レイド、タクティクスプロのベースモンを使ったもののデータでいい。育てたモンスターははかれない」):
 //      送る所はレイドの2か所(レイドバトル・グランドスラム / モンヒロビート挑戦)だけ。通常のバトル(submitLocalScore)からは送らない。
@@ -26,7 +26,7 @@ const take = (src, name) => {
   return src.slice(at, at + end + 3);
 };
 // ①
-check('① RELEASE_FLAGS.battleLog は偽', /\n  battleLog: false,\n/.test(rel));
+check('① RELEASE_FLAGS.battleLog は真(2026-10-22 表を作って確かめたあと)', /\n  battleLog: true,\n/.test(rel));
 const names = ['RAID_BATTLE_LOG_TABLE', 'BATTLE_LOG_SCHEMA_VERSION', 'battleLogInt', 'battleLogId', 'buildRaidBattleLogRow', 'sbSendRaidBattleLog'];
 const code = `let raidBattleLogDisabled = false;\n${names.map((n) => take(supa, n)).join('\n')}`;
 check('使う関数を取り出せる', names.every((n) => code.includes(`const ${n} = `)), names.filter((n) => !code.includes(`const ${n} = `)).join(','));
@@ -83,7 +83,13 @@ const row = B({ party, raid: { event: 'raid_jack_2026', kind: 'b', tier: 3, sour
     && apply.slice(apply.indexOf('begin;'), apply.indexOf('commit;')).trim() === test.slice(test.indexOf('begin;'), test.indexOf('select t.table_name')).trim());
   check('④ 確かめ用は読むだけ(select だけ)', !/^\s*(create|alter|insert|grant|drop|update|delete|begin|commit)\b/im.test(verify) && /^select/im.test(verify));
   check('④ 新しい表の権限は、いったん外してから読む・足すだけを付ける(Supabase が初めから全部付けることがあるため)', ['raid_battle_logs', 'tactics_pro_logs'].every((t) => new RegExp(`revoke all on public\\.${t} from anon, authenticated;\\s*grant select, insert on public\\.${t} to anon, authenticated;`).test(apply)));
-  check('④ 書き換え・削除のポリシーを作らない・列は15ずつ', !/for\s+(update|delete|all)\b/i.test(allSql) && (apply.match(/column_count <> 15/g) || []).length === 2);
+  check('④ 書き換え・削除のポリシーを作らない・列の数の確かめは raid 15・tactics 14', !/for\s+(update|delete|all)\b/i.test(allSql) && (apply.match(/column_count <> 15/g) || []).length === 1 && (apply.match(/column_count <> 14/g) || []).length === 1);
+  // 表の列(create table の中の列)と、ゲームが送る項目+id・created_at が合っているか(2026-10-22 窓口: tactics_pro_logs は14列)
+  const colsOf = (t) => { const m = apply.match(new RegExp(`create table if not exists public\\.${t} \\(([\\s\\S]*?)\\n\\);`)); return m ? m[1].split('\n').map((l) => l.trim()).filter((l) => l && !/^constraint /.test(l)).map((l) => l.split(/\s+/)[0]) : []; };
+  const raidCols = colsOf('raid_battle_logs'), tpCols = colsOf('tactics_pro_logs');
+  check('④ raid_battle_logs の列は15で、送る形の項目と合う', raidCols.length === 15 && Object.keys(row).every((k) => raidCols.includes(k)) && raidCols.filter((c) => !['id', 'created_at'].includes(c)).every((c) => c in row), raidCols.join(','));
+  const tpKeys = ['difficulty', 'result', 'reached_wave', 'turns', 'score', 'hero', 'candidates', 'cause', 'seconds', 'detail', 'app_build', 'schema_version'];
+  check('④ tactics_pro_logs の列は14で、送る形(buildTacticsProLogRow)の項目と合う', tpCols.length === 14 && tpKeys.every((k) => tpCols.includes(k)) && tpCols.filter((c) => !['id', 'created_at'].includes(c)).every((c) => tpKeys.includes(c)) && tpKeys.every((k) => new RegExp(`\\b${k}[:,]`).test(take(supa, 'buildTacticsProLogRow'))), tpCols.join(','));
   check('④ 設計の1枚がある', fs.existsSync(path.join(ROOT, 'docs/spec/BATTLE_LOG.md')) && /raid_battle_logs/.test(read('docs/spec/BATTLE_LOG.md')));
   console.log(failed ? `\n${failed}件 NG` : '\nすべて OK');
   process.exit(failed ? 1 : 0);
