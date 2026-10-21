@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ecdaa106c73ffa02
+// source-sha256: 47ab393fdf5e229d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-21 20:19";
+const BUILD_DATE = "2026-10-21 20:21";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -49222,6 +49222,59 @@ const JA_LABEL_STYLE = Object.freeze({
   ...JA_WRAP_STYLE,
   textWrap: 'balance'
 });
+const compactCount = value => {
+  const n = Math.floor(Number(value));
+  if (!Number.isFinite(n)) return '0';
+  const a = Math.abs(n);
+  if (a < 1e8) return n.toLocaleString();
+  const [unit, div] = a >= 1e12 ? ['兆', 1e12] : ['億', 1e8];
+  const v = a / div,
+    digits = v >= 100 ? 0 : v >= 10 ? 1 : 2,
+    f = Math.pow(10, digits);
+  return `${n < 0 ? '-' : ''}${(Math.floor(v * f) / f).toLocaleString(undefined, {
+    maximumFractionDigits: digits
+  })}${unit}`;
+};
+const CompactCount = ({
+  value,
+  className = '',
+  style
+}) => {
+  const [open, setOpen] = React.useState(false);
+  React.useEffect(() => {
+    if (!open) return undefined;
+    const t = setTimeout(() => setOpen(false), 2500);
+    return () => clearTimeout(t);
+  }, [open]);
+  const exact = (Math.floor(Number(value)) || 0).toLocaleString();
+  const text = compactCount(value);
+  if (text === exact) return React.createElement("b", {
+    className: className,
+    style: style
+  }, text);
+  return React.createElement("b", {
+    role: "button",
+    tabIndex: 0,
+    "data-compact-count": exact,
+    "aria-label": exact,
+    title: exact,
+    className: `${className} relative cursor-pointer`,
+    style: style,
+    onClick: e => {
+      e.stopPropagation();
+      setOpen(o => !o);
+    },
+    onKeyDown: e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        setOpen(o => !o);
+      }
+    }
+  }, text, open && React.createElement("span", {
+    "data-compact-count-exact": true,
+    className: "absolute right-0 top-full z-50 mt-1 whitespace-nowrap rounded-lg border border-amber-300/60 bg-slate-950 px-2 py-1 text-[12px] font-black text-amber-200 shadow-lg"
+  }, exact));
+};
 const RhythmNoteSwatch = ({
   kind,
   width = 54,
@@ -51590,7 +51643,7 @@ function BreederMarketScreen({
     emoji: '💎',
     label: 'ダイヤショップ',
     titleLines: ['ダイヤ', 'ショップ'],
-    value: gold.toLocaleString(),
+    value: compactCount(gold),
     hint: 'ダイヤで購入',
     border: 'border-cyan-400/35',
     title: 'text-cyan-200',
@@ -51600,7 +51653,7 @@ function BreederMarketScreen({
     emoji: '🪙',
     label: 'ブリーダーP交換所',
     titleLines: ['ブリーダーP', '交換所'],
-    value: breederPoints.toLocaleString(),
+    value: compactCount(breederPoints),
     hint: 'Lv.UPで獲得',
     border: 'border-amber-400/35',
     title: 'text-amber-200',
@@ -51620,7 +51673,7 @@ function BreederMarketScreen({
     emoji: '🎟️',
     label: 'ビートP交換所',
     titleLines: ['ビートP', '交換所'],
-    value: safeEventPoints.toLocaleString(),
+    value: compactCount(safeEventPoints),
     hint: '所持ビートP',
     border: 'border-violet-400/35',
     title: 'text-violet-200',
@@ -52430,17 +52483,19 @@ function ProfileScreen({
     className: "flex items-center gap-1 text-[9px] font-bold text-amber-400"
   }, React.createElement(Gem, {
     size: 11
-  }), "ダイヤ"), React.createElement("span", {
+  }), "ダイヤ"), React.createElement(CompactCount, {
+    value: gold,
     className: "text-[13px] font-black text-amber-300 font-mono"
-  }, gold.toLocaleString())), React.createElement("div", {
+  })), React.createElement("div", {
     className: "flex min-h-[56px] flex-col items-center justify-center rounded-xl border border-amber-500/30 bg-amber-950/40 px-1 py-1.5 text-center"
   }, React.createElement("span", {
     className: "flex items-center gap-1 text-[9px] font-bold text-amber-400"
   }, React.createElement(Coins, {
     size: 11
-  }), "ブリーダーP"), React.createElement("span", {
+  }), "ブリーダーP"), React.createElement(CompactCount, {
+    value: breederPoints,
     className: "text-[13px] font-black text-amber-200 font-mono"
-  }, breederPoints.toLocaleString())), React.createElement("div", {
+  })), React.createElement("div", {
     className: "flex min-h-[56px] flex-col items-center justify-center rounded-xl border border-indigo-500/30 bg-indigo-950/40 px-1 py-1.5 text-center"
   }, React.createElement("span", {
     className: "flex items-center gap-1 text-[9px] font-bold text-indigo-300"
@@ -63434,7 +63489,10 @@ const HomeRaidJack = ({
     }
   }))), shadowEl, labelEl)));
 };
-const homeWalletGrowPx = (goldText, bpText) => Math.min(24, Math.max(0, Math.ceil(String(goldText).length * 6.4 - 50), Math.ceil(String(bpText).length * 6.4 - 29)));
+const homeWalletGrowPx = (goldText, bpText) => {
+  const w = t => [...String(t)].reduce((n, c) => n + (c.charCodeAt(0) > 0x7f ? 2.5 : 1), 0);
+  return Math.min(24, Math.max(0, Math.ceil(w(goldText) * 6.4 - 50), Math.ceil(w(bpText) * 6.4 - 29)));
+};
 function HomeScreen({
   assistantBondUp,
   friendRequestCount = 0,
@@ -63564,21 +63622,23 @@ function HomeScreen({
   }, Math.min(99, Number(friendRequestCount)))), React.createElement("section", {
     className: "mh-home-wallet",
     style: {
-      '--wal-grow': `${homeWalletGrowPx(gold.toLocaleString(), breederPoints.toLocaleString())}px`
+      '--wal-grow': `${homeWalletGrowPx(compactCount(gold), compactCount(breederPoints))}px`
     }
   }, React.createElement("div", null, React.createElement(Gem, {
     size: 14
-  }), React.createElement("b", {
+  }), React.createElement(CompactCount, {
+    value: gold,
     style: {
-      '--len': String(gold.toLocaleString()).length
+      '--len': String(compactCount(gold)).length
     }
-  }, gold.toLocaleString()), React.createElement("small", null, "ダイヤ")), React.createElement("div", null, React.createElement(Coins, {
+  }), React.createElement("small", null, "ダイヤ")), React.createElement("div", null, React.createElement(Coins, {
     size: 14
-  }), React.createElement("b", {
+  }), React.createElement(CompactCount, {
+    value: breederPoints,
     style: {
-      '--len': String(breederPoints.toLocaleString()).length
+      '--len': String(compactCount(breederPoints)).length
     }
-  }, breederPoints.toLocaleString()), React.createElement("small", null, "ブリーダーP")), React.createElement("button", {
+  }), React.createElement("small", null, "ブリーダーP")), React.createElement("button", {
     onClick: onOpenSettings,
     className: `mh-home-settings${spotClass('settings')}`,
     "aria-label": "設定"
