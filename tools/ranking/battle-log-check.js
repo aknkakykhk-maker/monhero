@@ -82,6 +82,7 @@ const row = B({ party, raid: { event: 'raid_jack_2026', kind: 'b', tier: 3, sour
   check('④ 予行演習は本番用と同じ中身で rollback で終わる', /rollback;\s*$/.test(read(`${dir}/BATTLE_LOGS_APPLY_TEST.sql`)) && !/^commit;$/m.test(test)
     && apply.slice(apply.indexOf('begin;'), apply.indexOf('commit;')).trim() === test.slice(test.indexOf('begin;'), test.indexOf('select t.table_name')).trim());
   check('④ 確かめ用は読むだけ(select だけ)', !/^\s*(create|alter|insert|grant|drop|update|delete|begin|commit)\b/im.test(verify) && /^select/im.test(verify));
+  check('④ 新しい表の権限は、いったん外してから読む・足すだけを付ける(Supabase が初めから全部付けることがあるため)', ['raid_battle_logs', 'tactics_pro_logs'].every((t) => new RegExp(`revoke all on public\\.${t} from anon, authenticated;\\s*grant select, insert on public\\.${t} to anon, authenticated;`).test(apply)));
   check('④ 書き換え・削除のポリシーを作らない・列は15ずつ', !/for\s+(update|delete|all)\b/i.test(allSql) && (apply.match(/column_count <> 15/g) || []).length === 2);
   check('④ 設計の1枚がある', fs.existsSync(path.join(ROOT, 'docs/spec/BATTLE_LOG.md')) && /raid_battle_logs/.test(read('docs/spec/BATTLE_LOG.md')));
   console.log(failed ? `\n${failed}件 NG` : '\nすべて OK');

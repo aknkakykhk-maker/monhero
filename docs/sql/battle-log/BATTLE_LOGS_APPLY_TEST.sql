@@ -61,6 +61,8 @@ create policy raid_battle_logs_insert on public.raid_battle_logs
 drop policy if exists raid_battle_logs_select on public.raid_battle_logs;
 create policy raid_battle_logs_select on public.raid_battle_logs
   for select to anon, authenticated using (true);
+-- Supabase は新しい表に anon・authenticated へ全部の権限を初めから付けることがあるので、いったん外して読む・足すだけにする(この表だけ)
+revoke all on public.raid_battle_logs from anon, authenticated;
 grant select, insert on public.raid_battle_logs to anon, authenticated;
 
 do $$
@@ -129,6 +131,8 @@ create policy tactics_pro_logs_insert on public.tactics_pro_logs
 drop policy if exists tactics_pro_logs_select on public.tactics_pro_logs;
 create policy tactics_pro_logs_select on public.tactics_pro_logs
   for select to anon, authenticated using (true);
+-- Supabase は新しい表に anon・authenticated へ全部の権限を初めから付けることがあるので、いったん外して読む・足すだけにする(この表だけ)
+revoke all on public.tactics_pro_logs from anon, authenticated;
 grant select, insert on public.tactics_pro_logs to anon, authenticated;
 
 do $$
