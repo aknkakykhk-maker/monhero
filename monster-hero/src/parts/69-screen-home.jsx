@@ -312,7 +312,8 @@ const HomeRaidJack = ({ eventId, onOpen }) => {
 // 数の字は 10px で1文字およそ 6.4px。枠の中で数に使える幅はダイヤが 50px・ブリーダーP が 29px(幅152pxのとき)なので、
 // 足りないぶんだけ最大 24px 広げ、それでも入らないぶんは字を小さくする(70-bootstrap.jsx の --wal-room)。
 // tools/home-layout-check.js がこの1行を取り出して同じ計算で測る
-const homeWalletGrowPx=(goldText,bpText)=>Math.min(24,Math.max(0,Math.ceil(String(goldText).length*6.4-50),Math.ceil(String(bpText).length*6.4-29)));
+// 「億」「兆」のような全角の字は数字より広いので、2.5字ぶんとして数える(N5・2026-10-21)。数字とカンマだけのときは今までと同じ
+const homeWalletGrowPx=(goldText,bpText)=>{const w=t=>[...String(t)].reduce((n,c)=>n+(c.charCodeAt(0)>0x7f?2.5:1),0);return Math.min(24,Math.max(0,Math.ceil(w(goldText)*6.4-50),Math.ceil(w(bpText)*6.4-29)));};
 function HomeScreen({
   assistantBondUp, friendRequestCount = 0, breederIcon, breederLevel, breederName, breederPoints, gifts, gold,
   hasUnreadChangelog, homeBackgroundReady, homeArt, homePastureMasumons, masuMons, missions,
@@ -377,8 +378,9 @@ function HomeScreen({
           </button>
           {/* ダイヤ・ブリーダーP は桁が増えても折り返さず1行のまま(2026-10-13 社長「8桁で『ダイヤ』が縦に折れて枠が伸びた」)。
               桁が多いときだけ枠を少し広げ(homeWalletGrowPx)、それでも入らないぶんは文字数(--len)に合わせて字を小さくする(70-bootstrap.jsx の --wal-room) */}
-          <section className="mh-home-wallet" style={{'--wal-grow':`${homeWalletGrowPx(gold.toLocaleString(),breederPoints.toLocaleString())}px`}}>
-            <div><Gem size={14}/><b style={{'--len':String(gold.toLocaleString()).length}}>{gold.toLocaleString()}</b><small>ダイヤ</small></div><div><Coins size={14}/><b style={{'--len':String(breederPoints.toLocaleString()).length}}>{breederPoints.toLocaleString()}</b><small>ブリーダーP</small></div>
+          {/* 9桁(1億)からは「67.3億」のように縮めて出す(N5)。押すと細かい数が出る(CompactCount) */}
+          <section className="mh-home-wallet" style={{'--wal-grow':`${homeWalletGrowPx(compactCount(gold),compactCount(breederPoints))}px`}}>
+            <div><Gem size={14}/><CompactCount value={gold} style={{'--len':String(compactCount(gold)).length}}/><small>ダイヤ</small></div><div><Coins size={14}/><CompactCount value={breederPoints} style={{'--len':String(compactCount(breederPoints)).length}}/><small>ブリーダーP</small></div>
             <button onClick={onOpenSettings} className={`mh-home-settings${spotClass('settings')}`} aria-label="設定"><Settings size={20}/><span>設定</span></button>
           </section>
         </header>

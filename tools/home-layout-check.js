@@ -179,7 +179,9 @@ const SIZES = [
       await page.addInitScript(() => { if (sessionStorage.getItem('s')) return; sessionStorage.setItem('s', '1'); const put = (k, v) => localStorage.setItem(k, JSON.stringify(v));
         put('mh_breeder_name', 'テスト'); put('mh_breeder_icon', '🐣'); put('mh_intro_done', true); put('mh_onboarded', true); put('mh_tutorial_seen_v1', true);
         put('mh_battle_tutorial_seen_v1', true); put('mh_battle_tutorial_guide_shown_v1', true); put('mh_assistant_selected_v1', 'mua'); put('mh_assistant_unlock_seen_v1', true);
-        put('mh_update_notice_seen_v1', true); put('mh_rhythm_tutorial_seen_v1', true); put('mh_inherited_unique_level_compensation_v1', true); put('mh_masu_level_cap_compensation_notice_seen_v1', true); });
+        put('mh_update_notice_seen_v1', true); put('mh_rhythm_tutorial_seen_v1', true); put('mh_inherited_unique_level_compensation_v1', true); put('mh_masu_level_cap_compensation_notice_seen_v1', true);
+        // 10桁のダイヤ・9桁のブリーダーP(2026-10-21 改善部 N5「数の字が約6px まで縮む」)。財布の字の大きさを下で測る
+        put('mh_gold', 6736760000); put('mh_breeder_points', 123456790); put('mh_breeder_points_granted', true); });
       await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'load', timeout: 60000 });
       await page.waitForFunction(() => document.body?.innerText.includes('TAP TO START'), { timeout: 40000 });
       await page.getByRole('button', { name: 'TAP TO START' }).click({ force: true });
@@ -210,6 +212,12 @@ const SIZES = [
       if (size.width < 360) check('  吹き出しの文は2行まで(幅360未満)', res.lines <= 2, `${res.lines}行`);
       check('  みゅあの吹き出しが「M/B管理」の札を隠さない', res.labelTop === null || res.overlapX <= 0 || res.bubbleBottom <= res.labelTop + 1,
         `吹き出しの下端 ${res.bubbleBottom}px / 札の上端 ${res.labelTop}px`);
+      // N5: 9桁(1億)からは「67.3億」のように縮めて出し、財布の字が8px 以上に保たれる。押すと細かい数が出る
+      const wallet = await page.evaluate(() => [...document.querySelectorAll('.mh-home-wallet > div b')].map(b => ({ t: b.innerText.trim(), px: parseFloat(getComputedStyle(b).fontSize) })));
+      check('  財布の数は9桁から縮めて出し、字は8px 以上(10桁のダイヤ・9桁のブリーダーP)', wallet.length === 2 && wallet[0].t === '67.3億' && wallet[1].t === '1.23億' && wallet.every(x => x.px >= 8),
+        wallet.map(x => `${x.t}@${x.px}px`).join(' / '));
+      const exact = await page.evaluate(() => { const b = document.querySelector('.mh-home-wallet [data-compact-count]'); if (!b) return ''; b.click(); return new Promise(r => setTimeout(() => r((document.querySelector('[data-compact-count-exact]') || {}).textContent || ''), 200)); });
+      check('  縮めた数を押すと、細かい数(6,736,760,000)が出る', exact === '6,736,760,000', exact);
       // ジャックの吹き出し(2026-10-21 窓口「幅320で ジャックのセリフの吹き出しが M/B管理 の札にかかる」)。
       // 置き場所はときどき測り直すので、落ち着くのを待ってから、施設の札(見える札)とジャックの絵に重ならず、画面の中にあるかを見る
       await page.waitForTimeout(2000);

@@ -45,6 +45,22 @@ check('HOME: ジャックの吹き出しは、狭い画面で横へ置いて札�
   home.includes('HOME_RAID_SAY_WIDTHS = Object.freeze([184, 168, 152, 136, 120, 104, 96])') && home.includes('for (let y = from + 6; y <= to; y += 6) tries.push({ side, left, top: y')
   && home.includes('<span data-home-raid-say-text style={{ display:\'block\', ...JA_LABEL_STYLE }}>{jaWrap(speech)}</span>'));
 
+// N5(2026-10-21 改善部の見直し・その3): 大きな所持数は9桁(1億)から縮めて出す。保存値は変えない・押すと細かい数
+{
+  let got = '', ok = false;
+  try {
+    const src = ui.slice(ui.indexOf('const compactCount = '), ui.indexOf('\n};\n', ui.indexOf('const compactCount = ')) + 3);
+    const f = new Function(`${src}\nreturn compactCount;`)();
+    const cases = [[99999999, '99,999,999'], [100000000, '1億'], [123456790, '1.23億'], [6736760000, '67.3億'], [999999999999, '9,999億'], [1234567890123, '1.23兆']];
+    got = cases.map(([n, want]) => `${f(n)}${f(n) === want ? '' : `(期待${want})`}`).join(' ');
+    ok = cases.every(([n, want]) => f(n) === want);
+  } catch (e) { got = String(e); }
+  check('N5 大きな所持数の縮め方(8桁まではそのまま・端は切り捨て)', ok, got);
+}
+check('N5 HOME の財布・プロフィールの所持数・マーケットの入口の札は縮めた数で出す(押すと細かい数)',
+  home.includes("<CompactCount value={gold} style=") && home.includes("<CompactCount value={breederPoints} style=")
+  && P('56-screen-profile.jsx').includes('<CompactCount value={gold} className=') && P('55-screen-breeder-market.jsx').includes('value:compactCount(gold),'));
+
 const multi = P('77-screen-rhythm-multi.jsx');
 check('M5 マルチの部屋: 縦向きは下の欄を枠のすぐ下へ(mt-auto は横向きだけ)・高さの上限 70%',
   multi.includes('<div className="max-h-[70%] shrink-0 overflow-y-auto border-t border-white/10 bg-slate-950/90 p-2 landscape:mt-auto landscape:grid landscape:max-h-[58%]'));
