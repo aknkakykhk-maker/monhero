@@ -256,7 +256,7 @@ function ProfileScreen({
                 return (
                   <button type="button" data-assistant-next-frame={nextFrame.id} onClick={onOpenFramePicker}
                     className="mt-2 flex w-full min-h-[44px] items-center gap-2 rounded-xl border border-amber-500/40 bg-amber-950/40 px-3 py-2 active:scale-[.98]">
-                    <ProfileAvatar src={resolveIconUrl(breederIcon)} id={breederIcon} frameId={nextFrame.id} alt={nextFrame.name} className="w-8 h-8 shrink-0" fallback={null}/>
+                    <ProfileAvatar src={resolveIconUrl(breederIcon)} id={breederIcon} frameId={nextFrame.id} alt={nextFrame.name} fit small className="w-8 h-8 shrink-0" fallback={null}/>
                     <span className="flex-1 min-w-0 text-left">
                       <span className="block text-[10px] font-black text-amber-400 leading-tight">Lv.{unlock.bondLevel}でもらえる飾り枠</span>
                       <span className="block text-[12px] font-black text-white leading-tight truncate">{nextFrame.name}</span>

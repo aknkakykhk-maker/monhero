@@ -16492,8 +16492,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // (ボタンの入れ子を避けるため span の role="button")
   const rankingBreederIcon = entry => {
     const avatar = resolveIconUrl(entry?.icon)
-      ? <ProfileAvatar src={resolveIconUrl(entry.icon)} id={entry.icon} frameId={entry?.profileFrame} className="w-8 h-8 shrink-0"/>
-      : <ProfileAvatar frameId={entry?.profileFrame} className="w-8 h-8 shrink-0" fallback={<span className="flex h-full w-full items-center justify-center rounded-full bg-slate-800 text-xs">👤</span>}/>;
+      // 枠ごと同じ四角に収める(fit)・小さい版の枠(small)。名前にかぶらないように(2026-10-21)
+      ? <ProfileAvatar src={resolveIconUrl(entry.icon)} id={entry.icon} frameId={entry?.profileFrame} fit small className="w-8 h-8 shrink-0"/>
+      : <ProfileAvatar frameId={entry?.profileFrame} fit small className="w-8 h-8 shrink-0" fallback={<span className="flex h-full w-full items-center justify-center rounded-full bg-slate-800 text-xs">👤</span>}/>;
     if (!(RELEASE_FLAGS.friends === true && friendsIdOfRankingEntry(entry))) return avatar;
     return (
       <span role="button" tabIndex={0} data-friend-candidate aria-label={`${entry?.userName||'名無しのブリーダー'}さんにフレンド申請`}

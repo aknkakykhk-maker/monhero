@@ -1476,7 +1476,8 @@ function RhythmMultiAvatar({ m, resolveIconUrl, sizeClass = 'h-10 w-10', small =
   //   アイコンの上に白とピンクの点が散ったように見えた(2026-10-19 社長「マスモンの染色ずれなおってない」・frame_mua_3)。
   //   いったん枠を外したが、社長「フレーム出なくしたの？」で、前もって縮めた小さい版(srcSmall)で出すことにした(同日)
   return (
-    <ProfileAvatar src={src} id={m.icon} frameId={m.frame} small={small} alt="" className={sizeClass}
+    // fit … 枠ごと同じ四角に収める(2026-10-21 社長「フレームのサイズ感微妙？」。隣の名前・発言にかぶらない)
+    <ProfileAvatar src={src} id={m.icon} frameId={m.frame} small={small} fit alt="" className={sizeClass}
       fallback={<span aria-hidden="true" className="flex h-full w-full items-center justify-center bg-slate-800 text-lg">🎵</span>} />
   );
 }
