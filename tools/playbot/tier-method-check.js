@@ -2,10 +2,10 @@
 //
 //   node tools/playbot/tier-method-check.js
 //
-//   ① --method current(既定)は、付けないときと1バイトも同じ(画面・md・json。更新時刻の行だけ除く)
-//   ② overall は別のファイル(monster-tier-overall.md・tier-overall.json)にだけ書き、いまの表(monster-tier.md・tier.json)には触らない。
-//      いまの表へ書こうとすると止まる。tier.html も作り直さない
-//   ③ overall の md に「勇者モン向き・供モン向き」と「いまの表との差」が出る。--player-weight を付けると実戦の重みが混ざる
+//   ① 既定は overall(2026-10-21 社長の決定で正式の決め方)。書き先は公開の表(monster-tier.md・tier.json)で、ページも作り直す
+//   ② current(前の決め方)は比べる用。公開の表へ書こうとすると止まる。検査のあいだ公開の表は変えない
+//   ③ overall の md・json に「勇者モン向き・供モン向き」「前の表との差」、供モンの回が10回未満の子は暫定(理由つき)、
+//      決め方の文が新しい決め方、--player-weight で実戦の重みが混ざる。ページにも向きの節と詳しい欄が出る
 //   ④ 実戦の集計: --from-cache で作り直せる。名前・ブリーダーid・アイコンを持たない(cache も集計も)。レイド(raid_jack_hits)も読む
 const fs = require('fs'), path = require('path'), os = require('os');
 const { spawnSync } = require('child_process');
@@ -25,33 +25,32 @@ const pageFile = path.join(ROOT, 'docs', 'playbot', 'dashboard', 'tier.html');
 const pageBefore = fs.existsSync(pageFile) ? read(pageFile) : null;
 
 // ①
-const a = tier([]), b = tier(['--method', 'current']);
-check('① 画面の出力: 付けないときと --method current が同じ', a.status === 0 && b.status === 0 && noTime(a.stdout) === noTime(b.stdout) && a.stdout.length > 1000);
-for (const [k, args] of [['a', []], ['b', ['--method', 'current']]]) {
-  fs.copyFileSync(path.join(TIER_DIR, 'tier.json'), path.join(tmp, `${k}.json`));
-  tier([...args, '--md', path.join(tmp, `${k}.md`), '--json', path.join(tmp, `${k}.json`)]);
-}
-check('① md も同じ', noTime(read(path.join(tmp, 'a.md'))) === noTime(read(path.join(tmp, 'b.md'))));
-check('① json も同じ', noTimeJson(read(path.join(tmp, 'a.json'))) === noTimeJson(read(path.join(tmp, 'b.json'))));
-check('① current の json に overall の項目が混ざらない', !/勇者モン向き|いまの表との差/.test(read(path.join(tmp, 'b.json'))));
-// ②
-const o = tier(['--method', 'overall', '--md', path.join(tmp, 'o.md'), '--json', path.join(tmp, 'o.json')]);
-check('② overall が書ける', o.status === 0 && fs.existsSync(path.join(tmp, 'o.md')) && fs.existsSync(path.join(tmp, 'o.json')), o.stderr.slice(0, 200));
-const stop1 = tier(['--method', 'overall', '--md', path.join(TIER_DIR, 'monster-tier.md')]);
-const stop2 = tier(['--method', 'overall', '--md', path.join(tmp, 'x.md'), '--json', path.join(TIER_DIR, 'tier.json')]);
-check('② overall はいまの表(monster-tier.md・tier.json)へ書こうとすると止まる', stop1.status !== 0 && stop2.status !== 0 && !fs.existsSync(path.join(tmp, 'x.md')));
+const a = tier([]), b = tier(['--method', 'overall']);
+check('① 既定は overall(正式の決め方)。付けないときと --method overall が同じ', a.status === 0 && b.status === 0 && noTime(a.stdout) === noTime(b.stdout) && a.stdout.length > 1000);
 const srcTier = read(path.join(__dirname, 'tactics-tier.js'));
-check('② overall の既定の書き先は別のファイル', srcTier.includes("'monster-tier-overall.md'") && srcTier.includes("'tier-overall.json'"));
-check('② overall は tier.html を作り直さない', srcTier.includes('if (jsonAt < 0 && !OVERALL)'));
+check('① 既定の書き先は公開の表(monster-tier.md・tier.json)で、ページ(tier.html)も作り直す', srcTier.includes("OVERALL ? 'monster-tier.md' : 'monster-tier-current.md'") && srcTier.includes("OVERALL ? 'tier.json' : 'tier-current.json'") && srcTier.includes('if (jsonAt < 0 && OVERALL)'));
+// ②
+const stop1 = tier(['--method', 'current', '--md', path.join(TIER_DIR, 'monster-tier.md')]);
+const stop2 = tier(['--method', 'current', '--md', path.join(tmp, 'x.md'), '--json', path.join(TIER_DIR, 'tier.json')]);
+check('② current(前の決め方)は公開の表へ書こうとすると止まる', stop1.status !== 0 && stop2.status !== 0 && !fs.existsSync(path.join(tmp, 'x.md')));
+const cu = tier(['--method', 'current', '--md', path.join(tmp, 'c.md'), '--json', path.join(tmp, 'c.json')]);
+check('② current は別のファイルになら書ける(比べる用)', cu.status === 0 && read(path.join(tmp, 'c.md')).includes('前の決め方 current'));
 const after = snap();
-check('② いまの表は1バイトも変わっていない', Object.keys(before).every((f) => before[f] === after[f]) && (pageBefore === (fs.existsSync(pageFile) ? read(pageFile) : null)));
+check('② 検査のあいだ、公開の表は1バイトも変わっていない', Object.keys(before).every((f) => before[f] === after[f]) && (pageBefore === (fs.existsSync(pageFile) ? read(pageFile) : null)));
 // ③
+fs.copyFileSync(path.join(TIER_DIR, 'tier.json'), path.join(tmp, 'o.json'));
+const o = tier(['--player-weight', '0.5', '--md', path.join(tmp, 'o.md'), '--json', path.join(tmp, 'o.json')]);
+check('③ overall(実戦 0.5)が書ける', o.status === 0, o.stderr.slice(0, 200));
 const om = read(path.join(tmp, 'o.md')), oj = JSON.parse(read(path.join(tmp, 'o.json')));
-check('③ overall の md に「勇者モン向き・供モン向き」と「いまの表との差」', om.includes('## 勇者モン向き・供モン向き') && om.includes('## いまの表との差') && om.includes('overall の試し'));
-check('③ overall の json に方法・差・向き', oj.決め方 && oj.決め方.方法 && oj.決め方.方法.名前 === 'overall' && Array.isArray(oj.いまの表との差) && oj.モンスター.every((m) => '勇者モン向き' in m && '供モン向き' in m));
-const op = tier(['--method', 'overall', '--player-weight', '0.5', '--md', path.join(tmp, 'p.md'), '--json', path.join(tmp, 'p.json')]);
-check('③ --player-weight で実戦の重みが混ざる', op.status === 0 && /実戦\(TacticsPro/.test(read(path.join(tmp, 'p.md'))) && JSON.parse(read(path.join(tmp, 'p.json'))).決め方.方法.実戦の重み === 0.5, op.stderr.slice(0, 200));
+check('③ md に「勇者モン向き・供モン向き」と「前の表との差」', om.includes('## 勇者モン向き・供モン向き') && om.includes('## 前の表との差'));
+check('③ json に方法・前の表との差・向き・供モンの回数', oj.決め方 && oj.決め方.方法 && oj.決め方.方法.名前 === 'overall' && oj.決め方.方法.実戦の重み === 0.5 && Array.isArray(oj.前の表との差)
+  && oj.モンスター.every((m) => '勇者モン向き' in m && '供モン向き' in m && Number.isFinite(m.供モンの回数)));
+check('③ 供モンとして入った回が10回未満の子は暫定(理由つき)', oj.モンスター.filter((m) => m.供モンの回数 < 10 && !['回数不足', '保留'].includes(m.総合)).every((m) => m.暫定 === true && /10回未満/.test(m.暫定の理由 || '')));
+check('③ 決め方の文が新しい決め方', /全体で見る/.test(oj.決め方.文[0]) && /重み 0\.5/.test(oj.決め方.文[0]) && /10回未満/.test(oj.決め方.暫定));
+check('③ 実戦の重みが混ざる', /実戦\(TacticsPro/.test(om) || oj.モンスター.some((m) => m.実戦));
 check('③ current では --player-weight を使わない', /const PLAYER_WEIGHT = OVERALL \?/.test(srcTier));
+const pageSrc = read(path.join(__dirname, 'tier-page.js'));
+check('③ ページに「勇者モン向き・供モン向き」の節と、詳しい欄の向き・暫定の理由', pageSrc.includes('id="monsters-role"') && pageSrc.includes("['向き'") && pageSrc.includes("['暫定の理由'"));
 // ④
 const cache = path.join(__dirname, 'player-battle-cache.json');
 if (fs.existsSync(cache)) {

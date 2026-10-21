@@ -264,6 +264,10 @@ function build(d) {
     m.仮の総合 ? ['仮の総合', `${tier(m.仮の総合)} (5回未満のマスから出した仮)`] : null,
     m.境目 ? ['境目', `${esc(m.総合)} とその隣の段の境目。3つの難易度とも5回以上あるのに差がぶれの中なので、回数はここで止めて暫定のまま置いている`] : null,
     ['ひとこと', esc(m.理由)],
+    // 全体で見る決め方(2026-10-21 社長「全体の決め方＋実戦を混ぜて全部更新」)。勇者モンにした回だけ・供モンの回だけで付けた段
+    m.勇者モン向き || m.供モン向き ? ['向き', `勇者モン向き ${tier(m.勇者モン向き || '—')} / 供モン向き ${tier(m.供モン向き || '—')}`] : null,
+    m.暫定の理由 ? ['暫定の理由', esc(m.暫定の理由)] : null,
+    m.実戦 ? ['実戦', `全国ランキングで ${m.実戦.回数}回使われ、届いた WAVE が平均より ${m.実戦.伸び >= 0 ? '+' : ''}${m.実戦.伸び}`] : null,
     m.強み ? ['強み', esc(m.強み)] : null,
     m.弱み ? ['弱み', esc(m.弱み)] : null,
     m.動いた理由 ? ['動き', esc(m.動いた理由)] : null,
@@ -338,6 +342,14 @@ function build(d) {
   const weights = DIFFS.map((k) => `${k} ${d.決め方.重み[k]}`).join('・');
   const c = d.数えた回;
 
+  // 勇者モン向き・供モン向き(2026-10-21 社長「全体の決め方＋実戦を混ぜて全部更新」)。勇者モンにした回だけ・供モンの回だけで付けた段を、段ごとに並べる
+  const roleTiers = ['S', 'A', 'B', 'C', 'D'];
+  const roleList = (key) => (d.モンスター || []).filter((m) => roleTiers.includes(m[key]));
+  const roleSection = roleList('勇者モン向き').length || roleList('供モン向き').length ? `<section id="monsters-role">
+    <h2>勇者モン向き・供モン向き</h2>
+    <p class="note" style="margin-bottom:10px">勇者モンにした回だけ・供モンとして入った回だけで付けた段。総合 Tier はこの2つを合わせて(供モンの回を主に)決めています。</p>
+    ${roleTiers.map((t) => { const face = (m) => `<span class="rpm">${iconOf('m', m.名前, 'sm')}<span>${esc(m.名前)}${m.暫定 ? '<small>暫定</small>' : ''}</span></span>`; const h = roleList('勇者モン向き').filter((m) => m.勇者モン向き === t); const a = roleList('供モン向き').filter((m) => m.供モン向き === t); return `<div class="rrow"><div class="rt">${tier(t)}</div><div class="rcols"><div><b>勇者モン向き</b><div class="rl2">${h.map(face).join('') || '<span class="none">—</span>'}</div></div><div><b>供モン向き</b><div class="rl2">${a.map(face).join('') || '<span class="none">—</span>'}</div></div></div></div>`; }).join('')}
+  </section>` : '';
   return `<title>モンスター Tier 表</title>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -465,6 +477,7 @@ html{scroll-behavior:smooth;scroll-padding-top:56px}
   dd,.ct,.evn{overflow-wrap:break-word}
 }
 .ic>i{position:absolute;inset:0;background-size:contain;background-position:center;background-repeat:no-repeat;transform-origin:center center}
+.rrow{display:flex;gap:8px;align-items:flex-start;padding:8px 0;border-top:1px solid rgba(0,0,0,.08)}.rrow .rt{flex:none;width:28px;padding-top:4px}.rcols{flex:1;min-width:0;display:grid;grid-template-columns:1fr;gap:6px}.rcols>div>b{display:block;font-size:11px;color:#64748b;margin-bottom:2px}.rl2{display:flex;flex-wrap:wrap;gap:4px}.rpm{display:inline-flex;flex-direction:column;align-items:center;width:62px;font-size:10px;line-height:1.2;text-align:center;word-break:break-all}.rpm small{display:block;font-size:9px;color:#b45309}.rl2 .none{color:#94a3b8;font-size:12px}
 ${css}
 </style>
 <div class="wrap">
@@ -473,12 +486,14 @@ ${css}
     <p class="lead">${esc(d.更新)} 更新 / 研究所:ハカセくん / 数えた回 ${c.合計}回(Hard ${c.Hard}・Expert ${c.Expert}・Master ${c.Master})・戦った ${d.戦った体数}/${d.全体数}体。アイコンを押すと詳細が開きます。</p>
   </header>
 
-  <nav class="jump" aria-label="ページ内の移動"><a href="#monsters">モンスター</a><a href="#assists">アシカ</a><a href="#combos">組み合わせ</a><a href="#party">パーティ</a></nav>
+  <nav class="jump" aria-label="ページ内の移動"><a href="#monsters">モンスター</a><a href="#monsters-role">向き</a><a href="#assists">アシカ</a><a href="#combos">組み合わせ</a><a href="#party">パーティ</a></nav>
 
   <section id="monsters">
     <h2>モンスター 総合 Tier</h2>
     <p class="note" style="margin-bottom:10px">${weights} の重みで難易度ごとの点を合わせた順。「暫定」の印は、試した回数が少なく動くかもしれない子。「境目」の印は、回数は足りているのに隣の段との差がぶれの中の子。モンスターの Tier はブラウザの実戦の記録から(ボットが緊急回復を使うようになったのは 2026-10-10 からで、それより前の回は使っていません)。</p>${panels('総合', fullBody, null, OVERALL_TIERS)}
   </section>
+
+  ${roleSection}
 
   <section id="monsters-diff">
     <h2>モンスターを難易度で見る</h2>

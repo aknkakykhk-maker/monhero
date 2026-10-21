@@ -5,14 +5,15 @@
 //   node tools/playbot/tactics-tier.js --md <file>        Markdown を書き出す(docs/playbot/reports/tier/monster-tier.md)。
 //                                                         あわせて tier.json の「モンスター」ほかも書き換える(下)
 //   --json <file>  tier.json の置き場所を変える / --no-json  tier.json を書かない
-//   --method current|overall  決め方(2026-10-21 社長「勇者モンの評価に寄りすぎ。もっと全体的に見てほしい」・まだ表は変えない)
-//       current(既定) … いまの決め方。出力は前と1バイトも変わらない(tools/playbot/tier-method-check.js が見張る)
-//       overall … 供モンとして入った回の働き(攻めは頭割り比、守り・支えは入った回の伸び)と、供モンで入った回の伸びを主にし、
+//   --method overall|current  決め方(2026-10-21 社長「勇者モンの評価に寄りすぎ。もっと全体的に見てほしい」→「全体の決め方＋実戦を混ぜて全部更新」)
+//       overall(既定・正式) … 供モンとして入った回の働き(攻めは頭割り比、守り・支えは入った回の伸び)と、供モンで入った回の伸びを主にし、
 //                 勇者モンにした回の伸びは軽く(OVERALL_HERO_WEIGHT)。「勇者モン向き」「供モン向き」の段も出す。
-//                 書くのは別のファイルだけ(monster-tier-overall.md・tier-overall.json)。いまの表(tier.json・monster-tier.md・tier.html)は書かない。
-//                 いま公開している tier.json の総合と比べた差(段が動いた子と理由)も出す
-//   --player-weight <w>  overall に「実戦の重み」を混ぜる(既定 0 = 混ぜない)。材料は player-battle-stats.js の集計
+//                 供モンとして入った回が OVERALL_ALLY_FIRM 回未満の子は「暫定」。公開の表(monster-tier.md・tier.json・tier.html)へ書き、
+//                 前に公開していた tier.json の総合と比べた差(段が動いた子と理由)も出す
+//       current … 2026-10-21 までの決め方(勇者モンの伸びも同じ重み)。比べる用。公開の表へは書かない(--md だけなら monster-tier-current.md・tier-current.json)
+//   --player-weight <w>  overall に「実戦の重み」を混ぜる(既定 0 = 混ぜない。公開の表は 0.5 で作る)。材料は player-battle-stats.js の集計
 //                        (--player-stats <file> で置き場所、--player-mode <モード> で数えるモード。既定 TacticsPro)
+//   公開の表を作り直す: node tools/playbot/player-battle-stats.js && node tools/playbot/tactics-tier.js --player-weight 0.5 --md
 //
 // tier.json(社長が見るページ tier-page.js の元)は、2026-10-10 まで人が monster-tier.md から写していた。
 // いまはここで書き出す。書き換えるのは 更新・数えた回・戦った体数・全体数・決め方・段・モンスター(1体ずつの Tier・理由・回数・机上)だけで、
@@ -40,20 +41,24 @@ const mdAt = args.indexOf('--md');
 const mdFileArg = mdAt >= 0 && args[mdAt + 1] && !args[mdAt + 1].startsWith('--') ? args[mdAt + 1] : '';
 const jsonAt = args.indexOf('--json');
 const optArg = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : d; };
-const METHOD = optArg('--method', 'current');
+const METHOD = optArg('--method', 'overall');
 if (!['current', 'overall'].includes(METHOD)) { console.error(`--method は current か overall: ${METHOD}`); process.exit(1); }
 const OVERALL = METHOD === 'overall';
 const TIER_DIR = path.join(ROOT, 'docs', 'playbot', 'reports', 'tier');
-// overall の書き先。いまの表(公開中)のファイルへは決して書かない
-const CURRENT_FILES = ['monster-tier.md', 'tier.json', 'tier.html'].map((f) => path.join(TIER_DIR, f));
-const mdFile = OVERALL && mdFileArg === '' && args.includes('--md') ? path.join(TIER_DIR, 'monster-tier-overall.md') : mdFileArg;
-const jsonFile = args.includes('--no-json') ? '' : (jsonAt >= 0 ? args[jsonAt + 1] : (mdFile ? path.join(TIER_DIR, OVERALL ? 'tier-overall.json' : 'tier.json') : ''));
-if (OVERALL && [mdFile, jsonFile].some((f) => f && CURRENT_FILES.includes(path.resolve(f)))) {
-  console.error('overall は いまの表(monster-tier.md・tier.json・tier.html)へは書かない。--md / --json を別のファイルにする(既定 monster-tier-overall.md・tier-overall.json)');
+// 公開の表のファイル。正式の決め方(overall)だけが書く。前の決め方(current)は比べる用で、公開の表へは決して書かない
+const PUBLISHED_FILES = ['monster-tier.md', 'tier.json', 'tier.html'].map((f) => path.join(TIER_DIR, f));
+const mdFile = mdFileArg === '' && args.includes('--md') ? path.join(TIER_DIR, OVERALL ? 'monster-tier.md' : 'monster-tier-current.md') : mdFileArg;
+const jsonFile = args.includes('--no-json') ? '' : (jsonAt >= 0 ? args[jsonAt + 1] : (mdFile ? path.join(TIER_DIR, OVERALL ? 'tier.json' : 'tier-current.json') : ''));
+if (!OVERALL && [mdFile, jsonFile].some((f) => f && PUBLISHED_FILES.includes(path.resolve(f)))) {
+  console.error('current(前の決め方)は 公開の表(monster-tier.md・tier.json・tier.html)へは書かない。--md / --json を別のファイルにする(既定 monster-tier-current.md・tier-current.json)');
   process.exit(1);
 }
+// 公開の表へ書くときは、前に公開していた tier.json を先に読んでおく(差を出すため。書いたあとでは読めない)
+const PREV_PUBLISHED = (() => { try { return JSON.parse(fs.readFileSync(path.join(TIER_DIR, 'tier.json'), 'utf8')); } catch (e) { return {}; } })();
 // 勇者モンにした回の伸びの重み(overall)。current は 1(回数が3回にそろうまでは軽く)
 const OVERALL_HERO_WEIGHT = 0.3;
+// 供モンとして入った回がこれより少ない子は「暫定」(overall。2026-10-21 社長の決定)
+const OVERALL_ALLY_FIRM = 10;
 const PLAYER_WEIGHT = OVERALL ? Math.max(0, Number(optArg('--player-weight', '0')) || 0) : 0;
 const PLAYER_MODE = optArg('--player-mode', 'TacticsPro');
 const playerStats = (() => {
@@ -273,11 +278,7 @@ const out = (t = '') => lines.push(t);
 const now = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 16).replace('T', ' ');
 const tried = stats.filter((s) => s.n).length;
 const measured = runs.filter((r) => r.use).length;
-out(OVERALL ? '# 味方モンスターの Tier 表(タクティクスプロ・全体で見る決め方 overall の試し)' : '# 味方モンスターの Tier 表(タクティクスプロ)');
-if (OVERALL) {
-  out();
-  out(`**試しの表です。公開中の表(monster-tier.md・tier.html)は変えていません。** 決め方 overall: 供モンとして入った回の働き(攻めは頭割り比、守り・支えは入った回の伸び)と、供モンで入った回の伸びを主にし、勇者モンにした回の伸びは重み ${OVERALL_HERO_WEIGHT}(いまの決め方は 1)。${PLAYER_WEIGHT ? `プレイヤーの実戦(${PLAYER_MODE}・全国ランキングの記録)の伸びを重み ${PLAYER_WEIGHT} で混ぜた(3回以上ある子だけ)。` : 'プレイヤーの実戦は混ぜていない(--player-weight で混ぜられる)。'}`);
-}
+out(OVERALL ? '# 味方モンスターの Tier 表(タクティクスプロ)' : '# 味方モンスターの Tier 表(タクティクスプロ・前の決め方 current。比べる用)');
 out();
 out(`更新: ${now}(JST)・数えた回: ${runs.length}回(${diffs.map((d) => `${d} ${runs.filter((r) => r.difficulty === d).length}`).join(' / ')})・戦ったモンスター: ${tried} / ${stats.length}体・技と間合いまで数えた回: ${measured}回`);
 out();
@@ -289,11 +290,15 @@ out();
 // 総合 Tier: 難易度ごとの点を Hard 0.4・Expert 0.4・Master 0.2 で重みづけ(Master はいまボットの戦い方の差が大きいので軽く見る)
 const DIFF_WEIGHT = { Hard: 0.2, Expert: 0.5, Master: 0.3 }; // 2026-10-10 改善部 T3: Hard は差が出にくいので軽く
 // 決め方の文は md と tier.json(→ tier.html)の両方へ、ここから同じものを書く(2026-10-10 改善部 W2: 2か所に手で書くと片方だけ古くなる)
-const HOW_TEXT = [
+const HOW_TEXT = OVERALL ? [
+  `決め方(2026-10-21 から): 勇者モンにしたときの強さに寄らないよう、全体で見る。供モンとして入った回の働き(攻め役は1回のダメージの頭割り比、守り・支え役は入った回に届いた WAVE の伸び)と、供モンで入った回の伸びを主にし、勇者モンにした回の伸びは重み ${OVERALL_HERO_WEIGHT} で軽く足す。${PLAYER_WEIGHT ? `プレイヤーの実戦(全国ランキングのタクティクスプロの記録。勇者モン・供モンで使われた回の届いた WAVE の伸び)を重み ${PLAYER_WEIGHT} で混ぜる(3回以上使われた子だけ)。` : ''}`,
+  `難易度ごとの点を ${Object.entries(DIFF_WEIGHT).map(([d, w]) => `${d} ${Math.round(w * 10)}`).join('・')} の重みで合わせる。Hard はほぼ全員が最後の WAVE まで届くので、クリアしたかどうか(クリアは WAVE 11 と数える)だけで差が付き、重みを軽くしている。「勇者モン向き」「供モン向き」は、勇者モンにした回だけ・供モンの回だけで付けた別の段。`,
+  '数えるのは、直したボット(勇者モン選び・EX の使い方を直したあと)で戦った回だけ。固有技・EX・勇者特性・間合いを使えた回の成績で見る(EX を一度も使えていない子は保留)。',
+] : [
   `決め方: 難易度ごとの点(下の「Tier の決め方」)を ${Object.entries(DIFF_WEIGHT).map(([d, w]) => `${d} ${Math.round(w * 10)}`).join('・')} の重みで合わせる。Hard はほぼ全員が最後の WAVE まで届くので、クリアしたかどうか(クリアは WAVE 11 と数える)だけで差が付き、重みを軽くしている。`,
   '数えるのは、直したボット(勇者モン選び・EX の使い方を直したあと)で戦った回だけ。固有技・EX・勇者特性・間合いを使えた回の成績で見る(EX を一度も使えていない子は保留)。',
 ];
-const PROVISIONAL_TEXT = 'その難易度で5回未満のマスは「*」で、総合には数えない。5回以上のマスが2つ以上ない子は「暫定」、5回以上のマスが1つも無い子は「回数不足」(総合はまだ付けず、* のマスから出した仮の Tier を添える)。回数が増えると Tier は動きます。';
+const PROVISIONAL_TEXT = (OVERALL ? `供モンとして入った回が${OVERALL_ALLY_FIRM}回未満の子は「暫定」。` : '') + 'その難易度で5回未満のマスは「*」で、総合には数えない。5回以上のマスが2つ以上ない子は「暫定」、5回以上のマスが1つも無い子は「回数不足」(総合はまだ付けず、* のマスから出した仮の Tier を添える)。回数が増えると Tier は動きます。';
 // まだ Tier の数字に効いていない機能(社長 2026-10-10「機能的なものも全て把握した上で」)。一覧の正本は mechanics.md の
 // 「入っていない・一部」の節。ここで読んで、md と tier.json(→ ページ)の決め方の文へ同じものを足す
 const MISSING_MECHANICS = (() => {
@@ -349,7 +354,9 @@ const overall = stats.map((s) => {
   const noisy = !!usable.length && !usable.some((v) => v.x.sigAny) && !['回数不足', '保留'].includes(tier);
   // 境目: 3つの難易度とも5回以上あり、ボットの事情も無いのに決め手がぶれの中。回数を足しても動きにくいので、ここで回すのを止める(2026-10-16)
   const border = noisy && !weakBot && per.length === TIER_DIFFS.length && per.every((v) => v.x.n >= 5);
-  return { s, tier, score, n, provisional: firmCells.length < 2 || weakBot || noisy, weakBot, noisy, border, usable, botGap: gap, short, guess };
+  // 供モンとして入った回が少ない子は暫定(overall は供モンの回が決め手なので)
+  const fewAlly = OVERALL && s.allyN < OVERALL_ALLY_FIRM;
+  return { s, tier, score, n, provisional: firmCells.length < 2 || weakBot || noisy || fewAlly, fewAlly, weakBot, noisy, border, usable, botGap: gap, short, guess };
 });
 const OVERALL_ORDER = ['S', 'A', 'B', 'C', 'D', '回数不足', '保留', '未計測'];
 overall.sort((a, z) => OVERALL_ORDER.indexOf(a.tier) - OVERALL_ORDER.indexOf(z.tier) || (z.score || -9) - (a.score || -9));
@@ -579,8 +586,7 @@ if (OVERALL) {
     out(`| ${st.m.name} | ${st.role} | ${Number.isFinite(st.heroOnly) ? tierOfScore(st.heroOnly) : '—'} | ${Number.isFinite(st.allyOnly) ? tierOfScore(st.allyOnly) : '—'} | ${st.heroN} | ${st.allyN} |`);
   }
   // いま公開している tier.json の総合と比べる
-  let published = [];
-  try { published = JSON.parse(fs.readFileSync(path.join(TIER_DIR, 'tier.json'), 'utf8')).モンスター || []; } catch (e) { published = []; }
+  const published = PREV_PUBLISHED.モンスター || [];
   for (const o of overall) {
     const was = (published.find((x) => x && x.名前 === o.s.m.name) || {}).総合;
     const now2 = o.tier === '未計測' ? '回数不足' : o.tier;
@@ -594,7 +600,7 @@ if (OVERALL) {
     overallDiff.push({ 名前: st.m.name, いま: was, overall: now2, 理由: why.join(' / ') });
   }
   out();
-  out(`## いまの表との差(段が動いた子 ${overallDiff.length}体)`);
+  out(`## 前の表との差(段が動いた子 ${overallDiff.length}体)`);
   out();
   if (!overallDiff.length) out('段が動いた子はいない。');
   else {
@@ -603,7 +609,7 @@ if (OVERALL) {
     for (const d of overallDiff) out(`| ${d.名前} | ${d.いま} | ${d.overall} | ${d.理由} |`);
   }
   out();
-  out(`- 作り直す: \`node tools/playbot/tactics-tier.js --method overall --md\`${PLAYER_WEIGHT ? '' : '(実戦を混ぜるなら --player-weight 0.5 など)'}`);
+  out('- 作り直す: `node tools/playbot/player-battle-stats.js && node tools/playbot/tactics-tier.js --player-weight 0.5 --md`');
 }
 
 let text = lines.join('\n') + '\n';
@@ -756,10 +762,17 @@ function tierJson(prev) {
   };
   if (OVERALL) {
     head.決め方.方法 = { 名前: 'overall', 勇者モンの重み: OVERALL_HERO_WEIGHT, 実戦の重み: PLAYER_WEIGHT, 実戦のモード: PLAYER_WEIGHT ? PLAYER_MODE : '' };
-    head.いまの表との差 = overallDiff;
+    head.前の表との差 = overallDiff;
     for (const e of mons) {
       const st = stats.find((x) => x.m.name === e.名前);
-      if (st) { e.勇者モン向き = Number.isFinite(st.heroOnly) ? tierOfScore(st.heroOnly) : '—'; e.供モン向き = Number.isFinite(st.allyOnly) ? tierOfScore(st.allyOnly) : '—'; }
+      const ov = overall.find((o) => o.s.m.name === e.名前);
+      if (st) {
+        e.勇者モン向き = Number.isFinite(st.heroOnly) ? tierOfScore(st.heroOnly) : '—';
+        e.供モン向き = Number.isFinite(st.allyOnly) ? tierOfScore(st.allyOnly) : '—';
+        e.供モンの回数 = st.allyN;
+        if (ov && ov.fewAlly && e.暫定) e.暫定の理由 = `供モンとして入った回が ${st.allyN}回(${OVERALL_ALLY_FIRM}回未満)`;
+        if (PLAYER_WEIGHT && st.plN) e.実戦 = { 回数: st.plN, 伸び: Math.round(st.plLift * 100) / 100 };
+      }
     }
   }
   const merged = { ...prev, ...head, モンスター: mons };
@@ -773,7 +786,7 @@ if (jsonFile) {
   fs.writeFileSync(path.resolve(jsonFile), JSON.stringify(tierJson(prev), null, 2) + '\n');
   console.log(`書き出した: ${jsonFile}(モンスター ${stats.length}体。アシカ・組み合わせ・おすすめアシカ・相性のいい供モンは残した)`);
   // ページ(tier.html)も同じ tier.json から作り直す。いつもの置き場所に書いたときだけ(試し用の --json では作らない)
-  if (jsonAt < 0 && !OVERALL) { const page = require('./tier-page'); const r = page.writePage(); console.log(r.ok ? `作り直した: ${r.out}` : `tier.html は作らなかった: ${r.problems.join(' / ')}`); }
+  if (jsonAt < 0 && OVERALL) { const page = require('./tier-page'); const r = page.writePage(); console.log(r.ok ? `作り直した: ${r.out}` : `tier.html は作らなかった: ${r.problems.join(' / ')}`); }
 }
 if (mdFile) {
   fs.mkdirSync(path.dirname(path.resolve(mdFile)), { recursive: true });

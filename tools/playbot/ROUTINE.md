@@ -171,13 +171,12 @@
   点検の時間(60分まで)で回る分だけ、「すべて解放してバトル」で勇者モンを**試した回数の少ない子から**入れ替えて足す。表と案は `tactics-tier.js` が覚え書きから作る(**案だけ。ゲームの数字は変えない**)
   ```
   PLAYBOT_TACTICS_ALL=1 PLAYBOT_TACTICS_EXPLORE=1 PLAYBOT_TACTICS_DIFF=Expert PLAYBOT_TACTICS_RUNS=2 node tools/playbot/playbot.js --only tactics
-  node tools/playbot/tactics-tier.js --md docs/playbot/reports/tier/monster-tier.md
+  node tools/playbot/player-battle-stats.js && node tools/playbot/tactics-tier.js --player-weight 0.5 --md
   ```
   更新したら統括部長へ「何体ぶん増えた・Tier が動いた子・新しい提案」を2〜3行で送る
-  - **決め方の試し(overall)**(2026-10-21 社長「勇者モンの評価に寄りすぎ。もっと全体的に見てほしい」・まだ公開の表は変えない):
-    `node tools/playbot/tactics-tier.js --method overall --md` で、供モンの働きを主にした表を `monster-tier-overall.md`・`tier-overall.json` に書く(いまの表は書かない)。
-    プレイヤーの実戦を混ぜるときは、先に `node tools/playbot/player-battle-stats.js`(全国ランキングを読むだけ。ネットに出られないときは `--from-cache`)を回し、`--player-weight 0.5` を付ける。
-    見張りは `node tools/playbot/tier-method-check.js`。バトルの1回ごとの記録の下準備は `docs/spec/BATTLE_LOG.md`
+  - **決め方**(2026-10-21 社長「全体の決め方＋実戦を混ぜて全部更新」): 正式は overall(供モンの働きを主に、勇者モンの回は重み 0.3、実戦を 0.5 で混ぜる。供モンの回が10回未満は暫定)。
+    公開の表を作り直すとき: `node tools/playbot/player-battle-stats.js`(全国ランキングを読むだけ。ネットに出られないときは `--from-cache`) → `node tools/playbot/tactics-tier.js --player-weight 0.5 --md`。
+    前の決め方と比べるなら `--method current --md`(monster-tier-current.md へ。公開の表は書かない)。見張りは `node tools/playbot/tier-method-check.js`。バトルの1回ごとの記録の下準備は `docs/spec/BATTLE_LOG.md`
 - 止まった・負けたときは、記録の `why`(理由)と `waves[].threats`(その WAVE の予告)を見て、ゲームの不具合か、ボットの判断の足りなさかを分けて書く。
   ボットの判断の足りなさは、研究所:部長ハカセくんへ回す(その場で済む待ち方・押し方の直しは部で直してよい)
 
