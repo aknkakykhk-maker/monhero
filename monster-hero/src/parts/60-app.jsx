@@ -2632,7 +2632,7 @@ function MonsterHeroGame() {
   const [raidDamageFx, setRaidDamageFx] = useState(null);   // 演奏が終わった直後の「ダメージを与える演出」(RaidJackDamageFx)
   useEffect(() => {
     if (!raidRhythm) return;
-    if (['RHYTHM_DEMO_HOME', 'RHYTHM_PLAY', 'RHYTHM_OPTIONS', 'RHYTHM_DEMO_HELP', 'RHYTHM_DEMO_MONSTERS', 'RHYTHM_RANKING'].includes(gameState)) return;
+    if (['RHYTHM_DEMO_HOME', 'RHYTHM_PLAY', 'RHYTHM_OPTIONS', 'RHYTHM_DEMO_HELP', 'RHYTHM_NOTE_DEX', 'RHYTHM_DEMO_MONSTERS', 'RHYTHM_RANKING'].includes(gameState)) return;
     setRaidRhythm(null);   // 曲えらび以外へ出たら、レイドの挑戦ではなくなる(あとでふつうに遊んで回数を使わないように)
   }, [gameState, raidRhythm]);
   const [raidJackStartRequest, setRaidJackStartRequest] = useState(null);
@@ -3992,7 +3992,7 @@ function MonsterHeroGame() {
   //    同じ壊れ方を2回している。tools/boot/bgm-screen-coverage-check.js が見張る)
   const BGM_SILENT_STATES = Object.freeze([
     // モンヒロビートは自分で音を管理する。ここでキーを持つと、譜面の曲と二重に鳴る
-    'RHYTHM_PLAY', 'RHYTHM_DEMO_HOME', 'RHYTHM_DEMO_HELP', 'RHYTHM_DEMO_MONSTERS',
+    'RHYTHM_PLAY', 'RHYTHM_DEMO_HOME', 'RHYTHM_DEMO_HELP', 'RHYTHM_NOTE_DEX', 'RHYTHM_DEMO_MONSTERS',
     'RHYTHM_INFO', 'RHYTHM_OPTIONS', 'RHYTHM_RANKING', 'RHYTHM_MULTI',
     // オンボーディングのプレビューで開く助手えらび。タイトルからの流れの中なので鳴らさない
     'ASSISTANT_SELECT',
@@ -4053,7 +4053,7 @@ function MonsterHeroGame() {
   //   あいだは周回が止まっていた(そのぶんは追いつきで取り戻していた)。
   // RHYTHM_MASU_BEAT(マスモン一覧)は、モードえらびと M/B管理の両方から開く。2026-10-07、名前が RHYTHM_ で始まっていなかったため、
   // 「ビートLv」を押すと「モンビーを離れた」と判断され、裏で進んでいた周回がバトル画面へ切り替わった(ユーザー報告)
-  const RHYTHM_BACKGROUND_RUN_SCREENS = ['RHYTHM_MODE_SELECT','RHYTHM_DEMO_HOME','RHYTHM_DEMO_HELP','RHYTHM_DEMO_MONSTERS','RHYTHM_RANKING','RHYTHM_OPTIONS','RHYTHM_MULTI','RHYTHM_MASU_BEAT'];
+  const RHYTHM_BACKGROUND_RUN_SCREENS = ['RHYTHM_MODE_SELECT','RHYTHM_DEMO_HOME','RHYTHM_DEMO_HELP','RHYTHM_NOTE_DEX','RHYTHM_DEMO_MONSTERS','RHYTHM_RANKING','RHYTHM_OPTIONS','RHYTHM_MULTI','RHYTHM_MASU_BEAT'];
   // モンビーを開いているか(演奏中も含む)。開いている間はランが進んでも画面を切り替えない。
   //
   // ★**一覧で持たず、gameStateの頭で見る。**
@@ -10095,6 +10095,15 @@ function MonsterHeroGame() {
     onEnd: leaveRhythmLineAdjust,
     onLoop: () => setRhythmLineAdjust(a => a && a.phase === 'try' ? { ...a, key:a.key + 1 } : a),
   } : null;
+  // ノーツ図鑑(2026-10-21)。選んだノーツだけが流れる短い譜面を、練習と同じく記録に残さない扱い(from:'notedex')で流す。
+  //   終わったら図鑑へ戻る(backTo)。帯の説明はヘルプの表から引く(rhythmNoteDexHelpText)
+  const startRhythmNoteDex = (id) => {
+    const entry = RHYTHM_NOTE_DEX.find(row => row.id === id);
+    if (!entry) return;
+    if (rhythmSettings.quietDuringPlay) RHYTHM_QUIET_MODE.enter();
+    setRhythmPlay({ song:rhythmNoteDexSong(entry.id, rhythmNoteDexHelpText(entry)), difficulty:RHYTHM_TUTORIAL_DIFFICULTY, from:'notedex', backTo:'RHYTHM_NOTE_DEX' });
+    setGameState('RHYTHM_PLAY');
+  };
   const startRhythmPractice = () => {
     if (rhythmSettings.quietDuringPlay) RHYTHM_QUIET_MODE.enter();
     setRhythmPlay({ song:RHYTHM_TUTORIAL_SONG, difficulty:RHYTHM_TUTORIAL_DIFFICULTY, from:'tutorial' });
@@ -18435,6 +18444,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 測った値はここで覚えるだけ。設定へ入れるかどうかはオプションの画面で選ぶ
           if(rhythmPlay.from==='calibration')return;
           if(rhythmPlay.from==='tutorial')return;
+          // ノーツ図鑑の試し打ちも何も残さない(記録・ランキング・ビートP・ミッションのどれにも入れない)
+          if(rhythmPlay.from==='notedex')return;
           // アシストモード(2026-09-24・バンドリ！アワーノーツから取り入れた遊び方)のプレイは、
           // 自己ベストにも全国ランキングにも残さない(CLAUDE.md ⑦「ランキング対象外の遊び方は送信しないだけでなく自己ベストも上書きしない」)
           if(result?.assist===true)return;
@@ -18454,7 +18465,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             if(RHYTHM_HELL_STORY_TRIGGER==='after-result')rhythmHellStoryAfterResultRef.current=true;
             else if(RHYTHM_HELL_STORY_TRIGGER==='home'||RHYTHM_HELL_STORY_TRIGGER==='release')setRhythmEventStoryPending(prev=>prev||RHYTHM_HELL_STORY_ID);
           }
-          void recordRhythmAchievements(records,{initialRecords:rhythmBestRecords});if(rhythmPlay.from==='demo'||rhythmPlay.from==='multi'||rhythmPlay.from==='raid')submitRhythmRankingScore(rhythmPlay.song,rhythmPlay.difficulty,result);}} onExit={()=>{if(rhythmPlay.from==='raid'){exitRaidJackRhythmPlay();return;}if(rhythmPlay.from==='multi'&&!RHYTHM_MULTI.hasReported(rhythmPlay.multiStartId))RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId,null,true,{diffId:rhythmPlay.difficulty.id});if(rhythmPlay.from==='lineAdjust'){rhythmLineAdjustRestore(rhythmLineAdjust?.orig);setRhythmLineAdjust(null);}const back=rhythmPlay.from==='multi'?'RHYTHM_MULTI':rhythmPlay.from==='calibration'||rhythmPlay.from==='lineAdjust'?'RHYTHM_OPTIONS':rhythmPlay.backTo==='RHYTHM_DEBUG_SELECT'?'RHYTHM_DEBUG_SELECT':rhythmPlay.from==='debug'||rhythmPlay.from==='proto'?'RHYTHM_DEBUG':'RHYTHM_DEMO_HOME';setRhythmPlay(null);setGameState(back);if(rhythmHellStoryAfterResultRef.current){rhythmHellStoryAfterResultRef.current=false;setEventReplay({id:RHYTHM_HELL_STORY_ID,step:0,live:true});}}} debugPlay={rhythmPlay.from==='debug'||rhythmPlay.from==='proto'} tutorial={rhythmPlay.from==='tutorial'} calibrating={rhythmPlay.from==='calibration'} lineAdjust={rhythmPlay.from==='lineAdjust'?rhythmLineAdjustProps:null} onApplyCalibration={async measured=>{
+          void recordRhythmAchievements(records,{initialRecords:rhythmBestRecords});if(rhythmPlay.from==='demo'||rhythmPlay.from==='multi'||rhythmPlay.from==='raid')submitRhythmRankingScore(rhythmPlay.song,rhythmPlay.difficulty,result);}} onExit={()=>{if(rhythmPlay.from==='raid'){exitRaidJackRhythmPlay();return;}if(rhythmPlay.from==='multi'&&!RHYTHM_MULTI.hasReported(rhythmPlay.multiStartId))RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId,null,true,{diffId:rhythmPlay.difficulty.id});if(rhythmPlay.from==='lineAdjust'){rhythmLineAdjustRestore(rhythmLineAdjust?.orig);setRhythmLineAdjust(null);}const back=rhythmPlay.from==='multi'?'RHYTHM_MULTI':rhythmPlay.from==='calibration'||rhythmPlay.from==='lineAdjust'?'RHYTHM_OPTIONS':rhythmPlay.backTo==='RHYTHM_DEBUG_SELECT'?'RHYTHM_DEBUG_SELECT':rhythmPlay.backTo==='RHYTHM_NOTE_DEX'?'RHYTHM_NOTE_DEX':rhythmPlay.from==='debug'||rhythmPlay.from==='proto'?'RHYTHM_DEBUG':'RHYTHM_DEMO_HOME';setRhythmPlay(null);setGameState(back);if(rhythmHellStoryAfterResultRef.current){rhythmHellStoryAfterResultRef.current=false;setEventReplay({id:RHYTHM_HELL_STORY_ID,step:0,live:true});}}} debugPlay={rhythmPlay.from==='debug'||rhythmPlay.from==='proto'} tutorial={rhythmPlay.from==='tutorial'||rhythmPlay.from==='notedex'} calibrating={rhythmPlay.from==='calibration'} lineAdjust={rhythmPlay.from==='lineAdjust'?rhythmLineAdjustProps:null} onApplyCalibration={async measured=>{
           // 測った値をその場で設定へ入れて保存し、オプションへ戻す。
           // 判定窓・スコア・ランキングには触れない(入れるのは judgmentTimingOffsetMs だけ)
           const offsetMs=Number(measured&&measured.offsetMs);
@@ -18609,9 +18620,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             見やすく作って」。以前は全項目を展開して縦に並べていたので、開くといきなり
             2万字が流れてくる画面になっていた。本ゲームのヘルプと同じ「項目一覧 → タップして本文」
             の2階層にし、一覧には group の小見出しを挟む。 */}
+        {gameState==='RHYTHM_NOTE_DEX'&&(
+          <RhythmNoteDexScreen onBack={()=>setGameState('RHYTHM_DEMO_HELP')} onPlay={startRhythmNoteDex}/>
+        )}
         {gameState==='RHYTHM_DEMO_HELP'&&(
           <RhythmHelpScreen
             onBackToSongSelect={()=>setGameState('RHYTHM_MODE_SELECT')}
+            onOpenNoteDex={()=>setGameState('RHYTHM_NOTE_DEX')}
             rhythmHelpTopicId={rhythmHelpTopicId}
             setRhythmHelpTopicId={setRhythmHelpTopicId}
             startRhythmPractice={startRhythmPractice}

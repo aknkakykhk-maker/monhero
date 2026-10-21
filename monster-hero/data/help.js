@@ -600,6 +600,7 @@ const HELP_CATEGORIES = [
         assistant:'8種類あるよ。色と形で見分けられるから、練習でひとつずつ触ってみてね♪', expression:'happy',
         blocks:[
           {t:'p',text:'ノーツは8種類です。色と形で見分けられます。'},
+          {t:'note',title:'ノーツ図鑑で試す',text:'「遊びかた」の「📒 ノーツ図鑑」で、ノーツを1種類ずつ選んで、実際のプレイ画面で流して試せます。判定もいつもどおり出ます。HELL の空のノーツも見られます。記録・ランキング・ビートP・ミッションには数えません。'},
           {t:'kv',rows:[
             ['TAP（水色）','判定ラインへ着いた瞬間に1回叩く。いちばん基本のノーツ'],
             ['同時押し','同じ時刻に2つ並ぶノーツ。指を2本使って同時に叩く'],
@@ -2339,6 +2340,7 @@ const HELP_SCREEN_COVERAGE = {
   RHYTHM_PLAY:       'rhythm/rhythm-play-screen',
   RHYTHM_DEMO_HOME:     'rhythm/rhythm-demo-song',
   RHYTHM_DEMO_HELP:     'rhythm/rhythm-tutorial',
+  RHYTHM_NOTE_DEX:      'rhythm/rhythm-note-types',
   RHYTHM_DEMO_MONSTERS: 'rhythm/rhythm-monster-note-display',
   RHYTHM_RANKING:       'rhythm/rhythm-ranking',
   RHYTHM_MULTI:         'rhythm/rhythm-multi',

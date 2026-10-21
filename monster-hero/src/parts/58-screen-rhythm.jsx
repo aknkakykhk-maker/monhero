@@ -439,8 +439,48 @@ function RhythmSongSelectScreen({
       );
 }
 
+// ノーツ図鑑(2026-10-21)の説明。ヘルプの表(topic の kv)から、見出しが entry.help[1] で始まる行を引く(書き写さない)。
+//   label … 表の見出し(色や形の手がかりが入っている)・text … 説明。見つからなければ空
+const rhythmNoteDexHelpRow=(entry)=>{
+  const category=typeof helpCategoryById==='function'?helpCategoryById('rhythm'):null;
+  const topic=((category&&category.topics)||[]).find(x=>x.id===(entry&&entry.help&&entry.help[0]));
+  for(const block of (topic&&topic.blocks)||[]){if(block.t!=='kv')continue;
+    for(const row of block.rows||[])if(Array.isArray(row)&&String(row[0]).startsWith(entry.help[1]))return {label:String(row[0]),text:String(row[1]||'')};}
+  return {label:entry?entry.name:'',text:''};
+};
+const rhythmNoteDexHelpText=(entry)=>rhythmNoteDexHelpRow(entry).text;
+
+// ノーツ図鑑の画面。ノーツを選ぶと、本物の演奏画面でそのノーツだけが流れてきて試し打ちできる(記録には残らない)
+function RhythmNoteDexScreen({onBack,onPlay}){
+  return (
+    <main data-rhythm-note-dex className="flex h-full min-h-0 flex-1 flex-col bg-slate-950 text-white">
+      <header className="z-10 flex shrink-0 items-center gap-2 border-b border-amber-400/15 bg-slate-950/95 px-3 py-1" style={{paddingTop:'calc(0.25rem + var(--mh-sa-top))'}}>
+        <button aria-label="戻る" data-rhythm-note-dex-back onClick={onBack} className="min-h-[44px] px-2 text-slate-400"><ArrowLeft size={18}/></button>
+        <div className="min-w-0 flex-1">
+          <small className="block text-[8px] font-black leading-none tracking-[0.2em] text-fuchsia-300">MONBEAT</small>
+          <h2 className="text-sm font-black leading-tight tracking-widest text-amber-200">📒 ノーツ図鑑</h2>
+        </div>
+      </header>
+      <div data-rhythm-note-dex-scroll className="flex-1 min-h-0 overflow-y-auto mh-scroll px-3 pb-6 pt-3" style={{paddingBottom:'calc(1.5rem + var(--mh-sa-bottom))'}}>
+        <p className="text-[11px] leading-relaxed text-slate-300">ノーツを選ぶと、実際のプレイ画面でそのノーツが流れてきます。叩いて、判定がどう出るか試せます。記録やランキング・ビートP・ミッションには数えません。</p>
+        <div data-rhythm-note-dex-list className="mt-3 grid gap-2" style={{gridTemplateColumns:'repeat(auto-fill,minmax(min(100%,300px),1fr))'}}>
+          {RHYTHM_NOTE_DEX.map(entry=>{const row=rhythmNoteDexHelpRow(entry);return (
+            <div key={entry.id} data-rhythm-note-dex-item={entry.id} className="flex flex-col gap-2 rounded-2xl border border-white/10 bg-slate-900/80 p-3">
+              <div className="min-w-0">
+                <b data-rhythm-note-dex-name className="block text-[13px] font-black text-amber-100">{row.label||entry.name}</b>
+                {row.text&&<span data-rhythm-note-dex-text className="mt-1 block text-[11px] leading-relaxed text-slate-300">{row.text}</span>}
+              </div>
+              <button data-rhythm-note-dex-play={entry.id} onClick={()=>onPlay(entry.id)}
+                className="mt-auto min-h-[44px] w-full rounded-xl bg-gradient-to-r from-amber-400 to-fuchsia-500 text-[12px] font-black text-slate-950">▶ 流して試す</button>
+            </div>);})}
+        </div>
+      </div>
+    </main>
+  );
+}
+
 function RhythmHelpScreen({
-  onBackToSongSelect, rhythmHelpTopicId, setRhythmHelpTopicId, startRhythmPractice, startRhythmTutorial,
+  onBackToSongSelect, rhythmHelpTopicId, setRhythmHelpTopicId, startRhythmPractice, startRhythmTutorial, onOpenNoteDex,
 }) {
       // 公開フラグで伏せてある項目を出さないよう、生の HELP_CATEGORIES ではなく
       // ふるい分け済みの HELP_GUIDE から引く
@@ -468,6 +508,11 @@ function RhythmHelpScreen({
             <button data-rhythm-demo-practice onClick={startRhythmPractice}
               className="mt-3 min-h-[56px] w-full rounded-2xl bg-gradient-to-r from-amber-400 to-fuchsia-500 text-sm font-black text-slate-950">🥁 叩いて練習する</button>
             <p className="mt-2 text-[10px] leading-relaxed text-slate-400">実際のプレイ画面で、タップ・同時押し・ホールド・スライド・フリック・終点フリック・モンスターノーツを1つずつ練習します。約20秒です。スコアも自己ベストも残りません。</p>
+            {onOpenNoteDex&&<>
+              <button data-rhythm-demo-note-dex onClick={onOpenNoteDex}
+                className="mt-3 min-h-[52px] w-full rounded-2xl border border-amber-300/50 bg-slate-900 text-sm font-black text-amber-100">📒 ノーツ図鑑</button>
+              <p className="mt-2 text-[10px] leading-relaxed text-slate-400">ノーツを1種類ずつ選んで、実際のプレイ画面で流して試せます。HELL の空のノーツも見られます。記録には残りません。</p>
+            </>}
             <button data-rhythm-demo-help-tutorial onClick={startRhythmTutorial}
               className="mt-3 min-h-[52px] w-full rounded-2xl bg-gradient-to-r from-cyan-500 to-fuchsia-600 text-sm font-black text-white">🎓 もう一度チュートリアルを見る</button>
             <p className="mt-2 text-[10px] leading-relaxed text-slate-400">曲えらびへ戻って、助手が最初から説明します。何度でも見られます。</p>
