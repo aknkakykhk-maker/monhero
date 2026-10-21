@@ -19,14 +19,15 @@ let failed = 0;
 const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failed++; };
 
 const ui = P('41-screen-ui.jsx');
-check('M3 言葉の切れ目で折る部品(jaWrap・JA_WRAP_STYLE)がある', /const jaWrap = \(text\) =>/.test(ui) && /Intl\.Segmenter\('ja', \{ granularity: 'word' \}\)/.test(ui)
+check('M3 言葉の切れ目で折る部品(jaWrap・JA_WRAP_STYLE)がある。印は文字(U+200B)のまま置かず <wbr> で描く(コピーに混ざらない)', /const jaWrap = \(text\) =>/.test(ui)
+  && ui.includes("return s.split('\\u200B').map((seg, i) => <React.Fragment key={i}>{i > 0 && <wbr/>}{seg}</React.Fragment>);") && /Intl\.Segmenter\('ja', \{ granularity: 'word' \}\)/.test(ui)
   && /const JA_WRAP_STYLE = Object\.freeze\(\{ wordBreak: 'keep-all', overflowWrap: 'anywhere'/.test(ui));
 // 2026-10-21: 印は禁則より強いので、「！」「、」「…」小さい字の前・「「」の後ろ・空白の前後には入れない(「きたわい／！」と折れた)
 {
   let got = '', ok = false;
   try {
-    const src = ui.slice(ui.indexOf('let _jaSegmenter;'), ui.indexOf('\n};\n', ui.indexOf('const jaWrap = (text) =>')) + 3);
-    const jaWrap = new Function(`${src}\nreturn jaWrap;`)();
+    const src = ui.slice(ui.indexOf('let _jaSegmenter;'), ui.indexOf('\n};\n', ui.indexOf('const jaWrapPoints = (text) =>')) + 3);
+    const jaWrap = new Function(`${src}\nreturn jaWrapPoints;`)();
     got = jaWrap('楽しくなってきたわい！ ほんとうじゃぞ！「よし」…っ');
     ok = !/\u200B[！、…」っ\s]/.test(got) && !/[「\s]\u200B/.test(got) && got.includes('\u200B');
   } catch (e) { got = String(e); }

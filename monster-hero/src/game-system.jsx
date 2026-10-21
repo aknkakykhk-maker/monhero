@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: edb0d7024b794660
+// generated-sha256: a3ac5391adc8d7ba
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-21 13:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-21 13:44"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -30942,7 +30942,8 @@ const ModalCloseButton = ({ onClick, label='閉じる', disabled=false }) => (
 // Intl.Segmenter で言葉の切れ目に印(U+200B)を入れ、JA_WRAP_STYLE(keep-all)で印の所だけで折る。
 // 1行に入らない長い言葉だけは overflow-wrap:anywhere で折る(はみ出さない)。Segmenter の無い古い端末では今までどおり
 let _jaSegmenter;
-const jaWrap = (text) => {
+// jaWrapPoints: 折ってよい所に印(U+200B)を入れた文字。jaWrap はその印を <wbr> に変えて描く
+const jaWrapPoints = (text) => {
   const s = String(text ?? '');
   if (!s) return s;
   try {
@@ -30954,6 +30955,13 @@ const jaWrap = (text) => {
     return segs.reduce((out, seg, i) => (i === 0 || /^[\s、。，．,.！？!?」』）)】〕〉》…‥ー〜～・：:；;ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ]/.test(seg) || /[\s「『（(【〔〈《]$/.test(segs[i - 1])
       ? out + seg : `${out}\u200B${seg}`), '');
   } catch { return s; }
+};
+// ★印を文字(U+200B)のまま画面へ置かない(2026-10-21 窓口)。U+200B は見えなくても文字として残るので、画面の文をコピーすると混ざり、
+//   文を照らす検査(mode/raid-jack-screen-browser-check.js)も一致しなくなった。<wbr> は「ここで折ってよい」だけで、innerText にもコピーにも出ない
+const jaWrap = (text) => {
+  const s = jaWrapPoints(text);
+  if (typeof s !== 'string' || !s.includes('\u200B')) return s;
+  return s.split('\u200B').map((seg, i) => <React.Fragment key={i}>{i > 0 && <wbr/>}{seg}</React.Fragment>);
 };
 // textWrap:'wrap' … 画面全体の text-wrap:pretty(index.html)と anywhere が組み合わさると、語の中へ1字だけ動かすことがある(「スキッ／プ」)ので外す
 const JA_WRAP_STYLE = Object.freeze({ wordBreak: 'keep-all', overflowWrap: 'anywhere', textWrap: 'wrap' });

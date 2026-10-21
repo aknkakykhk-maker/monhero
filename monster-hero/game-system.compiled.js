@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 170fe136c20d9630
+// source-sha256: b0106a72c4a5a549
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-21 13:25";
+const BUILD_DATE = "2026-10-21 13:44";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -49015,7 +49015,7 @@ const ModalCloseButton = ({
   className: "mh-button mh-button-secondary w-full min-h-[48px] rounded-2xl border border-white/20 bg-slate-900 font-black active:scale-[.98] disabled:opacity-40"
 }, label);
 let _jaSegmenter;
-const jaWrap = text => {
+const jaWrapPoints = text => {
   const s = String(text ?? '');
   if (!s) return s;
   try {
@@ -49028,6 +49028,13 @@ const jaWrap = text => {
   } catch {
     return s;
   }
+};
+const jaWrap = text => {
+  const s = jaWrapPoints(text);
+  if (typeof s !== 'string' || !s.includes('\u200B')) return s;
+  return s.split('\u200B').map((seg, i) => React.createElement(React.Fragment, {
+    key: i
+  }, i > 0 && React.createElement("wbr", null), seg));
 };
 const JA_WRAP_STYLE = Object.freeze({
   wordBreak: 'keep-all',

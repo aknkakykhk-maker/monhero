@@ -167,11 +167,12 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
   // トップ画面へ戻ってからマスモン一覧。
   // 戻る段数は画面が増えると変わるので、M/B管理のボタンが出るまで押し続ける
   for (let i = 0; i < 6; i++) {
-    if (await page.evaluate(() => [...document.querySelectorAll('button')].some((x) => (x.innerText || '').trim() === 'M/B管理'))) break;
+    // HOMEの札は「M/B管理」の下に「モンスター・編成」の1行がある(2026-10-10 #2435)。字ではなく aria-label で探す
+    if (await page.evaluate(() => !!document.querySelector('button[aria-label="M/B管理"]'))) break;
     await page.evaluate(() => { const b = document.querySelector('button[aria-label="戻る"]'); if (b) b.click(); });
     await page.waitForTimeout(700);
   }
-  const m4 = await measure('M/B管理', () => clickText('M/B管理'),
+  const m4 = await measure('M/B管理', () => page.evaluate(() => { const b = document.querySelector('button[aria-label="M/B管理"]'); if (b) b.click(); return !!b; }),
     () => (document.body.innerText || '').includes('マスモン') || (document.body.innerText || '').includes('ベースモン'));
   if (m4) rows.push(m4);
 
