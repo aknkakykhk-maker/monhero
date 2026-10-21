@@ -35,6 +35,16 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-10-21 12:37", type:'update', group:'rhythm', title:'モンヒロビート：全曲に HELL が実装されました', status:'new',
+    assistantNotice:{ id:'update_notice_rhythm_hell_all_songs_v1', type:'content' },
+    items:[
+      'これまで HELL が無かった曲すべてに、MASTER のさらに上の難易度 HELL を足しました。いま遊べるどの曲にも HELL があります。',
+      'その曲の MASTER を1回クリアすると、その曲の HELL が遊べるようになります。',
+      '地上と空中の行き来は、指を離した位置へ移る形が中心です。近いレーンで地上と空中のノーツが立て続けに来て、どちらの高さか見分けにくい所は作っていません。',
+      '曲ごとの Lv. とノーツ数は、ヘルプの「難易度 HELL と空のノーツ」にある「HELL がある曲」の表で見られます。',
+    ],
+  },
+  {
     date: "2026-10-21 11:59", type:'update', group:'rhythm', title:'モンヒロビート：前からある HELL の譜面も見やすく直しました', status:'new',
     items:[
       '「Sheriruth」「Grievous Lady」「Against My Own Shadow」「風がそよぐ場所」の HELL で、近いレーンに地上と空中のノーツが立て続けに来て、どちらの高さか見分けにくい所を直しました。',
