@@ -43,9 +43,9 @@ check('A のライフは 175万 / 320万 / 800万 / 3,500万 / 8,000万(ユー�
   const mk = (id, n, extra = {}) => dj({ difficultyId: id, judgments: { MARVELOUS: n }, precise: n, maxCombo: n, ...extra });
   check('モンヒロビート挑戦: 判定の割合(ジャスト1.0 / マーベラス0.95 / エクセレント0.70 / グレート0.50 / グッド0.25 / バッド-0.15 / ミス-0.30)',
     JSON.stringify(Object.values(o.RAID_JACK_RHYTHM_JUDGMENT_RATES)) === JSON.stringify([1.0, 0.95, 0.70, 0.50, 0.25, -0.15, -0.30]));
-  // HELL は 2026-10-17 に足した(それまで表に無く、HELL で遊ぶとダメージが0だった。社長の決定で MASTER と同じ)
-  check('モンヒロビート挑戦: 難易度の補正(EASY 0.25 / NORMAL 0.40 / HARD 0.55 / EXPERT 0.75 / MASTER 1.0 / HELL 1.0)・MASTER が基準',
-    JSON.stringify(Object.values(o.RAID_JACK_RHYTHM_DIFFICULTY_FACTORS)) === JSON.stringify([0.25, 0.40, 0.55, 0.75, 1.0, 1.0]));
+  // HELL は 2026-10-17 に足した(それまで表に無く、HELL で遊ぶとダメージが0だった)。2026-10-21 社長の決定で 1.5 へ
+  check('モンヒロビート挑戦: 難易度の補正(EASY 0.25 / NORMAL 0.40 / HARD 0.55 / EXPERT 0.75 / MASTER 1.0 / HELL 1.5)・MASTER が基準',
+    JSON.stringify(Object.values(o.RAID_JACK_RHYTHM_DIFFICULTY_FACTORS)) === JSON.stringify([0.25, 0.40, 0.55, 0.75, 1.0, 1.5]));
   check('モンヒロビート挑戦: 判定1個あたり(MASTER は 1000 / 950 / 700 / 500 / 250 / -150 / -300、EASY は 250 / 238 / 175 / 125 / 63 / -37 / -75)',
     JSON.stringify(Object.values(T.MASTER)) === JSON.stringify([1000, 950, 700, 500, 250, -150, -300]) && JSON.stringify(Object.values(T.EASY)) === JSON.stringify([250, 238, 175, 125, 63, -37, -75])
     && JSON.stringify(Object.values(T.NORMAL)) === JSON.stringify([400, 380, 280, 200, 100, -60, -120]) && JSON.stringify(Object.values(T.HARD)) === JSON.stringify([550, 523, 385, 275, 138, -82, -165])

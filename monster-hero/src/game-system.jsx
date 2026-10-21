@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b400324d956566a5
+// generated-sha256: 313ad1a6f62fe043
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-21 22:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-21 23:32"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -29470,8 +29470,9 @@ const RAID_JACK_PUMPKIN = raidJackTier('a6', 'ぱんぷきん', 13.0, 5, 1.0, 45
 //     数字を見てから決め直す。決めたら RAID_JACK_RHYTHM_DAMAGE_LIMIT に数字を入れる(null = 上限なし。1回の送信の上限 1億 は別に効く)
 const RAID_JACK_RHYTHM_JUDGMENT_RATES = Object.freeze({ JUST: 1.0, MARVELOUS: 0.95, EXCELLENT: 0.70, GREAT: 0.50, GOOD: 0.25, BAD: -0.15, MISS: -0.30 });
 const RAID_JACK_RHYTHM_BASE = 1000;   // MASTER のジャスト1個
-// HELL は 2026-10-17 に足した(それまでは表に無く、HELL で遊ぶとダメージが0だった)。社長の決定で MASTER と同じ値
-const RAID_JACK_RHYTHM_DIFFICULTY_FACTORS = Object.freeze({ EASY: 0.25, NORMAL: 0.40, HARD: 0.55, EXPERT: 0.75, MASTER: 1.0, HELL: 1.0 });
+// HELL は 2026-10-17 に足した(それまでは表に無く、HELL で遊ぶとダメージが0だった)。はじめは MASTER と同じ 1.0。
+// 2026-10-21 社長の決定で、レイドの曲えらびに HELL を出し、重みを 1.5 に上げた
+const RAID_JACK_RHYTHM_DIFFICULTY_FACTORS = Object.freeze({ EASY: 0.25, NORMAL: 0.40, HARD: 0.55, EXPERT: 0.75, MASTER: 1.0, HELL: 1.5 });
 const RAID_JACK_RHYTHM_COMBO_PER_COMBO = 0.0005;   // 1コンボあたりの上乗せ(100コンボで +5%)
 // 達成の補正: ふつうの演奏は基準の0.35倍(半分からさらに30%下げた)。オールマーベラス=1.0(従来どおり)・オールエクセレント=0.9・フルコンボ=0.7(いずれも従来比)
 const RAID_JACK_RHYTHM_ACHIEVE_FACTORS = Object.freeze({ NONE: 0.35, FULL_COMBO: 0.7, ALL_EXCELLENT: 0.9, ALL_MARVELOUS: 1.0 });
@@ -33714,8 +33715,8 @@ function RhythmSongSelectScreen({
 }) {
       const songs=rhythmDemoSongs(RHYTHM_SONGS);
       // 5難易度 + HELL(HELL は譜面がある曲だけボタンに出る。rhythmDemoDifficulties が空の譜面を外す)
-      // レイドバトルへ挑んでいるあいだは5難易度だけ(HELL はレイドのダメージの表に無い)
-      const difficulties=rhythmDemoDifficultyList(raidChallenge?RHYTHM_DIFFICULTIES:RHYTHM_PLAY_DIFFICULTIES);
+      // レイドバトルへ挑んでいるあいだも同じ(2026-10-21 社長「選べるようにして重みも上げる」。HELL の重みは RAID_JACK_RHYTHM_DIFFICULTY_FACTORS)
+      const difficulties=rhythmDemoDifficultyList(RHYTHM_PLAY_DIFFICULTIES);
       // 今週の対象曲の名前。曲名はデータから引くので、ここに書き写さない。
       // 副題まで入れるのは rhythmSongFullName の役目(原曲とリミックスが同じ displayName を持つため)
       const eventSongTitles=rhythmEventNotice

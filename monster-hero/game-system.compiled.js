@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: dd766a66257ae1f2
+// source-sha256: de59b3895a9148e7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-21 22:17";
+const BUILD_DATE = "2026-10-21 23:32";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -47269,7 +47269,7 @@ const RAID_JACK_RHYTHM_DIFFICULTY_FACTORS = Object.freeze({
   HARD: 0.55,
   EXPERT: 0.75,
   MASTER: 1.0,
-  HELL: 1.0
+  HELL: 1.5
 });
 const RAID_JACK_RHYTHM_COMBO_PER_COMBO = 0.0005;
 const RAID_JACK_RHYTHM_ACHIEVE_FACTORS = Object.freeze({
@@ -53794,7 +53794,7 @@ function RhythmSongSelectScreen({
   raidChallenge = null
 }) {
   const songs = rhythmDemoSongs(RHYTHM_SONGS);
-  const difficulties = rhythmDemoDifficultyList(raidChallenge ? RHYTHM_DIFFICULTIES : RHYTHM_PLAY_DIFFICULTIES);
+  const difficulties = rhythmDemoDifficultyList(RHYTHM_PLAY_DIFFICULTIES);
   const eventSongTitles = rhythmEventNotice ? rhythmEventNotice.songIds.map(songId => rhythmSongFullName(rhythmEventSong(songId, RHYTHM_SONGS)) || songId) : [];
   const beatPointReleased = RELEASE_FLAGS.rhythmEventPoints === true;
   const beatPointEvent = beatPointReleased ? rhythmLimitedEventAt(Date.now()) : null;
