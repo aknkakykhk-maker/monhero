@@ -40,8 +40,9 @@ const app=fs.readFileSync(path.join(ROOT,'monster-hero/src/parts/60-app.jsx'),'u
 ok('叩いたずれを貯める先は演奏の状態(run)であって画面の状態(view)ではない',
   /runRef\.current=\{[^}]*deltas:\[\]/.test(play)&&!/initialView=\(\)=>\(\{[^}]*deltas:/.test(play));
 ok('タイミング合わせをチュートリアル扱いで渡していない',
-  /tutorial=\{rhythmPlay\.from==='tutorial'\}/.test(app)
-  &&!/tutorial=\{rhythmPlay\.from==='tutorial'\|\|rhythmPlay\.from==='calibration'\}/.test(app));
+  // ノーツ図鑑(from:'notedex')はチュートリアル扱いで渡す(2026-10-21)。タイミング合わせだけは渡さない
+  /tutorial=\{rhythmPlay\.from==='tutorial'(\|\|rhythmPlay\.from==='notedex')?\}/.test(app)
+  &&!/tutorial=\{[^}]*rhythmPlay\.from==='calibration'/.test(app));
 ok('ライフはタイミング合わせでも減らない(途中で落ちて測れなくならない)',
   play.includes('run.life=(tutorial||calibrating)?RHYTHM_LIFE_MAX:')
   &&play.includes('const failed=!tutorial&&!calibrating&&run.lifeDepleted===true;'));
