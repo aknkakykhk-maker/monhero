@@ -6,7 +6,7 @@
 //   ② overall は別のファイル(monster-tier-overall.md・tier-overall.json)にだけ書き、いまの表(monster-tier.md・tier.json)には触らない。
 //      いまの表へ書こうとすると止まる。tier.html も作り直さない
 //   ③ overall の md に「勇者モン向き・供モン向き」と「いまの表との差」が出る。--player-weight を付けると実戦の重みが混ざる
-//   ④ 実戦の集計: --from-cache で作り直せる。名前・ブリーダーid・アイコンを持たない(cache も集計も)
+//   ④ 実戦の集計: --from-cache で作り直せる。名前・ブリーダーid・アイコンを持たない(cache も集計も)。レイド(raid_jack_hits)も読む
 const fs = require('fs'), path = require('path'), os = require('os');
 const { spawnSync } = require('child_process');
 const ROOT = path.resolve(__dirname, '..', '..');
@@ -61,7 +61,12 @@ if (fs.existsSync(cache)) {
   const keys = new Set(rows.flatMap((r) => Object.keys(r)));
   check('④ cache は決めた列だけ(名前・ブリーダーid・アイコンを持たない)', [...keys].every((k) => ['difficulty', 'hero', 'score', 'reached_wave', 'turns', 'party'].includes(k))
     && rows.every((r) => Array.isArray(r.party) && r.party.every((x) => x === null || typeof x === 'string')), [...keys].join(','));
+  const raidRows = JSON.parse(read(cache)).raidRows || [];
+  const raidKeys = new Set(raidRows.flatMap((r) => Object.keys(r)));
+  check('④ レイド(raid_jack_hits)も読んであり、hit_id・breeder_id を持たない', raidRows.length > 0 && [...raidKeys].every((k) => ['event_id', 'kind', 'tier', 'damage', 'defeated', 'source'].includes(k)), `${raidRows.length}行・${[...raidKeys].join(',')}`);
   const outText = read(path.join(tmp, 'ps.json'));
+  const psOut = JSON.parse(outText);
+  check('④ レイドの集計(段階ごとの回数・倒した回数・1回あたりのダメージ)が出る', !!(psOut.レイド && psOut.レイド.件数 && psOut.レイド.件数.数えた > 0 && JSON.stringify(psOut.レイド).includes('1回あたりのダメージ')));
   check('④ 集計に名前・ブリーダーidが出ない', !/user_name|breeder_id|icon|ブリーダー名/.test(outText));
 } else check('④ cache がある(node tools/playbot/player-battle-stats.js で作る)', false);
 const statsSrc = read(path.join(__dirname, 'player-battle-stats.js'));

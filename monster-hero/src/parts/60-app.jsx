@@ -14906,6 +14906,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         await raidJackSaveState(next);
       }
     } catch (error) { outcome='error'; }
+    // バトルの1回ごとの記録(2026-10-21・下準備)。RELEASE_FLAGS.battleLog が偽のあいだは何も送らない。デバッグの戦いは送らない。
+    // raid_jack_hits・討伐の記録・報酬とは別で、待たない。送るのは monsterId と数だけ
+    if(RELEASE_FLAGS.battleLog===true&&!isDebugRun){
+      try { void sbSendBattleLog(buildBattleLogRow({ party: slots.map(sl=>sl&&{ role: sl===mainHero?'hero':'ally', monsterId: sl.id }), raid:{ event: run.eventId, kind: run.kind, tier: run.tierIndex+1, source:'battle', damage, defeated, turns: run.turns } })); } catch {}
+    }
     // クイック周回ぶんの報酬(経験値など)。本番のイベントの戦いだけ。与ダメージの記録とは別のまとまりで、失敗しても戦いの結果には影響しない
     let quickAward=null;
     // リタイアは「いま進行中のターン」を数えない(1ターン目で降参しても0周)
@@ -15013,6 +15018,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const sent = await raidJackSubmitHit(next, hit, breederId, run.eventId);
         next = sent.state; outcome = sent.outcome;
         await raidJackSaveState(next);
+      }
+      // バトルの1回ごとの記録(2026-10-21・下準備)。モンヒロビート挑戦は編成が無いので、段階と与ダメージだけ。印が偽のあいだは送らない
+      if (RELEASE_FLAGS.battleLog === true && !isDebugRun && damage > 0) {
+        try { void sbSendBattleLog(buildBattleLogRow({ score, raid: { event: run.eventId, kind: 'a', tier: run.tierIndex + 1, source: 'rhythm', damage, defeated } })); } catch {}
       }
     } catch (error) { outcome = 'error'; }
     return { way: 'rhythm', songName: song && song.displayName || '', difficultyName: difficulty && difficulty.id || '', score, assist,

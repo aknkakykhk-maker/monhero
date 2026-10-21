@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 48ec92dd1e89cea6
+// generated-sha256: 70ff4ea0945487f5
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-22 04:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-22 04:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -18048,17 +18048,31 @@ let battleLogDisabled = false;
 const battleLogInt = (v, lo, hi) => { const n = Math.floor(Number(v)); return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : null; };
 const battleLogId = (v) => (typeof v === 'string' && /^[A-Za-z0-9_]{1,40}$/.test(v) ? v : null);
 // 1行の形を作る(純粋な関数。送るかどうかは決めない)。
-//   input: { difficultyKey, party:[{ role, monsterId }], reachedWave, clearTurns, score, units:{ [monsterId]: { dmg, ex, unique, taken } } }
+//   input: { difficultyKey, party:[{ role, monsterId }], reachedWave, clearTurns, score, units:{ [monsterId]: { dmg, ex, unique, taken } },
+//            raid:{ event, kind:'a'|'b', tier, source:'battle'|'rhythm', damage, defeated, turns } }
+//   raid はレイド「カボチャの大王ジャック」の1回(a=レイドバトル・b=グランドスラム・source rhythm=モンヒロビート挑戦)。
+//     raid_jack_hits(与ダメージ・討伐の正本)とは別に、使ったモンスター・段階・ターンと一緒に残す。難易度のキーは RaidJackA / RaidJackB / RaidJackRhythm。
+//     モンヒロビート挑戦は編成が無いので、勇者モンが無くても作る
 //   units は「次の段」で数え始める(いまは渡さないので空)。決めた4つの数だけ通し、ほかの項目は捨てる
 const buildBattleLogRow = (input) => {
   const src = input && typeof input === 'object' ? input : {};
-  const difficulty = typeof src.difficultyKey === 'string' && /^[A-Za-z0-9_-]{1,48}$/.test(src.difficultyKey) ? src.difficultyKey : null;
+  const rr = src.raid && typeof src.raid === 'object' ? src.raid : null;
+  const raid = rr && (rr.kind === 'a' || rr.kind === 'b') ? {
+    raid_event: typeof rr.event === 'string' && /^[A-Za-z0-9_-]{1,40}$/.test(rr.event) ? rr.event : null,
+    raid_kind: rr.kind,
+    raid_tier: battleLogInt(rr.tier, 1, 10),
+    raid_source: rr.source === 'rhythm' ? 'rhythm' : 'battle',
+    raid_damage: battleLogInt(rr.damage, 0, 1e12),
+  } : null;
+  const difficulty = raid ? (raid.raid_source === 'rhythm' ? 'RaidJackRhythm' : `RaidJack${raid.raid_kind.toUpperCase()}`)
+    : (typeof src.difficultyKey === 'string' && /^[A-Za-z0-9_-]{1,48}$/.test(src.difficultyKey) ? src.difficultyKey : null);
   const party = Array.isArray(src.party) ? src.party : [];
   const heroSlot = party.find(p => p && p.role === 'hero') || party[0] || null;
   const hero = heroSlot ? battleLogId(heroSlot.monsterId) : null;
-  if (!difficulty || !hero) return null;
+  if (!difficulty || (!hero && !(raid && raid.raid_source === 'rhythm'))) return null;
+  if (raid && (!raid.raid_event || !raid.raid_tier)) return null;
   const allies = party.filter(p => p && p !== heroSlot).map(p => battleLogId(p.monsterId)).filter(Boolean).slice(0, 3);
-  const turns = battleLogInt(src.clearTurns, 0, 100000);
+  const turns = battleLogInt(raid ? rr.turns : src.clearTurns, 0, 100000);
   const units = {};
   for (const [id, u] of Object.entries(src.units && typeof src.units === 'object' ? src.units : {})) {
     if (!battleLogId(id) || !u || typeof u !== 'object') continue;
@@ -18066,13 +18080,19 @@ const buildBattleLogRow = (input) => {
   }
   return {
     difficulty,
-    result: turns && turns > 0 ? 'clear' : 'end',
-    reached_wave: battleLogInt(src.reachedWave, 0, 100),
+    // レイドは倒したら clear。ほかはクリアのターンが入っていれば clear
+    result: (raid ? rr.defeated === true : turns && turns > 0) ? 'clear' : 'end',
+    reached_wave: raid ? null : battleLogInt(src.reachedWave, 0, 100),
     turns: turns && turns > 0 ? turns : null,
     score: battleLogInt(src.score, 0, 1e15),
     hero,
     allies,
     units,
+    raid_event: raid ? raid.raid_event : null,
+    raid_kind: raid ? raid.raid_kind : null,
+    raid_tier: raid ? raid.raid_tier : null,
+    raid_source: raid ? raid.raid_source : null,
+    raid_damage: raid ? raid.raid_damage : null,
     app_build: (typeof BUILD_DATE === 'string' ? BUILD_DATE : '').slice(0, 32),
     schema_version: BATTLE_LOG_SCHEMA_VERSION,
   };
@@ -64050,6 +64070,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         await raidJackSaveState(next);
       }
     } catch (error) { outcome='error'; }
+    // バトルの1回ごとの記録(2026-10-21・下準備)。RELEASE_FLAGS.battleLog が偽のあいだは何も送らない。デバッグの戦いは送らない。
+    // raid_jack_hits・討伐の記録・報酬とは別で、待たない。送るのは monsterId と数だけ
+    if(RELEASE_FLAGS.battleLog===true&&!isDebugRun){
+      try { void sbSendBattleLog(buildBattleLogRow({ party: slots.map(sl=>sl&&{ role: sl===mainHero?'hero':'ally', monsterId: sl.id }), raid:{ event: run.eventId, kind: run.kind, tier: run.tierIndex+1, source:'battle', damage, defeated, turns: run.turns } })); } catch {}
+    }
     // クイック周回ぶんの報酬(経験値など)。本番のイベントの戦いだけ。与ダメージの記録とは別のまとまりで、失敗しても戦いの結果には影響しない
     let quickAward=null;
     // リタイアは「いま進行中のターン」を数えない(1ターン目で降参しても0周)
@@ -64157,6 +64182,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const sent = await raidJackSubmitHit(next, hit, breederId, run.eventId);
         next = sent.state; outcome = sent.outcome;
         await raidJackSaveState(next);
+      }
+      // バトルの1回ごとの記録(2026-10-21・下準備)。モンヒロビート挑戦は編成が無いので、段階と与ダメージだけ。印が偽のあいだは送らない
+      if (RELEASE_FLAGS.battleLog === true && !isDebugRun && damage > 0) {
+        try { void sbSendBattleLog(buildBattleLogRow({ score, raid: { event: run.eventId, kind: 'a', tier: run.tierIndex + 1, source: 'rhythm', damage, defeated } })); } catch {}
       }
     } catch (error) { outcome = 'error'; }
     return { way: 'rhythm', songName: song && song.displayName || '', difficultyName: difficulty && difficulty.id || '', score, assist,

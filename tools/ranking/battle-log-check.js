@@ -5,6 +5,7 @@
 //   ① RELEASE_FLAGS.battleLog は偽。偽のあいだ sbSendBattleLog は送らない(fetch を呼ばない)
 //   ② 送る形(buildBattleLogRow)は決めた項目だけ。名前・ブリーダーID・アイコン・マスモンの中身を通さない。数は範囲に収める
 //   ③ 送る所は submitLocalScore の中で、印が真のときだけ。名前・IDを渡していない
+//   ③' レイド(レイドバトル・グランドスラム・モンヒロビート挑戦)も同じ表へ。raid_jack_hits・ランキング・報酬には触らない
 //   ④ SQL は新しい表を1つ作るだけ(既存の表を DROP・DELETE・UPDATE・ALTER しない)。予行演習は rollback で終わる
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const ROOT = path.resolve(__dirname, '..', '..');
@@ -46,7 +47,14 @@ const row = buildBattleLogRow(input);
   ctx.RELEASE_FLAGS.battleLog = false;
   // ②
   const keys = Object.keys(row).sort().join(',');
-  check('② 送る形は決めた項目だけ', keys === 'allies,app_build,difficulty,hero,reached_wave,result,schema_version,score,turns,units', keys);
+  check('② 送る形は決めた項目だけ', keys === 'allies,app_build,difficulty,hero,raid_damage,raid_event,raid_kind,raid_source,raid_tier,reached_wave,result,schema_version,score,turns,units', keys);
+  // レイド(2026-10-21 追加)
+  const ra = buildBattleLogRow({ ...input, raid: { event: 'raid_jack_2026', kind: 'b', tier: 3, source: 'battle', damage: 5659457, defeated: true, turns: 14 } });
+  check('② レイドの1回: 難易度 RaidJackB・段階・ダメージ・ターン・倒したら clear', ra && ra.difficulty === 'RaidJackB' && ra.raid_tier === 3 && ra.raid_damage === 5659457 && ra.turns === 14 && ra.result === 'clear' && ra.hero === 'Golem' && ra.reached_wave === null, JSON.stringify(ra));
+  const rh = buildBattleLogRow({ score: 900000, raid: { event: 'raid_jack_2026', kind: 'a', tier: 5, source: 'rhythm', damage: 12000, defeated: false } });
+  check('② モンヒロビート挑戦は勇者モンが無くても作る(RaidJackRhythm)', rh && rh.difficulty === 'RaidJackRhythm' && rh.hero === null && rh.raid_source === 'rhythm' && rh.result === 'end');
+  check('② ふつうのバトルはレイドの列が null', row.raid_event === null && row.raid_kind === null && row.raid_damage === null);
+  check('② レイドでもイベントidや段階がおかしければ作らない', buildBattleLogRow({ ...input, raid: { event: 'x y', kind: 'a', tier: 1 } }) === null && buildBattleLogRow({ party: [], raid: { event: 'raid_jack_2026', kind: 'a', tier: 2, source: 'battle' } }) === null);
   check('② 名前・ブリーダーID・アイコン・マスモンの中身を通さない', !/あつ|b1|Mocchi|ドラちゃん|m1|masu|name/.test(JSON.stringify(row)), JSON.stringify(row));
   check('② 勇者モン・供モンは monsterId', row.hero === 'Golem' && row.allies.join() === 'Pixie,Ham');
   check('② 負けた回は end・クリアは clear(ターンつき)', row.result === 'end' && row.turns === null && buildBattleLogRow({ ...input, clearTurns: 88 }).result === 'clear' && buildBattleLogRow({ ...input, clearTurns: 88 }).turns === 88);
@@ -59,6 +67,10 @@ const row = buildBattleLogRow(input);
   check('③ 送る所は submitLocalScore の中で、印が真のときだけ', /if \(RELEASE_FLAGS\.battleLog === true\) \{\s*try \{ void sbSendBattleLog\(buildBattleLogRow\(/.test(body));
   const callText = (body.match(/sbSendBattleLog\(buildBattleLogRow\(\{[^\n]*\}\)\)/) || [''])[0];
   check('③ 名前・ブリーダーID・アイコンを渡していない', !!callText && !/name|breederId|icon|masu/.test(callText.replace(/difficultyKey/, '')), callText);
+  const raidHooks = (app.match(/if ?\(RELEASE_FLAGS\.battleLog ?=== ?true ?&& ?!isDebugRun[^\n]*\n[^\n]*sbSendBattleLog\(buildBattleLogRow\(\{[^\n]*raid: ?\{[^\n]*/g) || []);
+  check('③ レイドの2か所(レイドバトル・グランドスラム / モンヒロビート挑戦)も、印が真で・デバッグでないときだけ', raidHooks.length === 2 && raidHooks.some((t) => /source: ?'battle'/.test(t)) && raidHooks.some((t) => /source: ?'rhythm'/.test(t)));
+  check('③ レイドの送る所でも名前・ブリーダーIDを渡していない', raidHooks.every((t) => !/breederId|user_name|breederName|icon/.test(t)));
+  check('③ raid_jack_hits への送り方は変えていない(raidJackSubmitHit・sbSendRaidJackHit はそのまま)', /const sent=await raidJackSubmitHit\(next,hit,breederId,run\.eventId\);/.test(app));
   check('③ 手元のサーバーからは送らない', /sbTelemetryLocal\(\)\) return false;/.test(take(supa, 'sbSendBattleLog')));
   // ④
   const dir = 'docs/sql/battle-log';
@@ -69,6 +81,7 @@ const row = buildBattleLogRow(input);
     !/drop\s+table|delete\s+from|truncate|\bupdate\s+public\./i.test(sqlAll) && [...sqlAll.matchAll(/alter\s+table\s+([\w.]+)/gi)].every((m) => m[1] === 'public.battle_logs')
     && [...sqlAll.matchAll(/(?:on|into|from)\s+public\.(\w+)/gi)].every((m) => m[1] === 'battle_logs'));
   check('④ 予行演習は rollback で終わる', /rollback;\s*$/.test(read(`${dir}/BATTLE_LOG_APPLY_TEST.sql`)));
+  check('④ 列は18個(レイドの5列を含む)', /column_count <> 18/.test(read(`${dir}/BATTLE_LOG_APPLY.sql`)) && /raid_damage bigint/.test(read(`${dir}/BATTLE_LOG_APPLY.sql`)));
   check('④ 書き換え・削除のポリシーを作らない', !/for\s+(update|delete|all)\b/i.test(sqlAll));
   check('④ 設計の1枚がある', fs.existsSync(path.join(ROOT, 'docs/spec/BATTLE_LOG.md')));
   console.log(failed ? `\n${failed}件 NG` : '\nすべて OK');

@@ -15,6 +15,11 @@
 //   ・クリア: turns が入っている行(クリアした回だけ送る clearTurns)か、届いた WAVE が 10 以上
 //   ・届いた WAVE: reached_wave。クリアは 11 と数える(tactics-tier.js の reach と同じ)
 //   ・供モン: party の2枠目以降。勇者モン(1枠目)は勇者モン別へ
+//
+// レイド「カボチャの大王ジャック」(raid_jack_hits・2026-10-21 社長「バトルデータはレイドからのデータも取れるよね？」)も読む。
+//   読むのは event_id・kind(a=レイドバトル / b=グランドスラム)・tier(段階)・damage・defeated・source(battle / rhythm=モンヒロビート挑戦)だけ。
+//   hit_id・breeder_id は読まない。★この表には使ったモンスターが入っていないので、モンスター別には分けられない
+//   (モンスター別に見るには battle_logs が要る。docs/spec/BATTLE_LOG.md)。event_id が raid_jack_debug の行(デバッグ)は数えない
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
@@ -52,16 +57,23 @@ const get = (url, headers) => new Promise((resolve, reject) => {
     res.on('end', () => (res.statusCode >= 200 && res.statusCode < 300 ? resolve(body) : reject(new Error(`${res.statusCode} ${body.slice(0, 200)}`))));
   }).on('error', reject);
 });
-const fetchAll = async () => {
+const fetchPaged = async (table, select, order) => {
   const rows = [];
   const PAGE = 1000;
   for (let from = 0; ; from += PAGE) {
-    const url = `${supa.url}/rest/v1/rankings?select=${encodeURI(SELECT)}&order=id.asc`;
+    const url = `${supa.url}/rest/v1/${table}?select=${encodeURI(select)}&order=${order}`;
     const body = await get(url, { apikey: supa.key, Range: `${from}-${from + PAGE - 1}`, 'Range-Unit': 'items' });
     const page = JSON.parse(body);
     rows.push(...page);
     if (page.length < PAGE) break;
   }
+  return rows;
+};
+const RAID_SELECT = 'event_id,kind,tier,damage,defeated,source';
+const fetchRaid = async () => (await fetchPaged('raid_jack_hits', RAID_SELECT, 'created_at.asc'))
+  .map((r) => ({ event_id: r.event_id, kind: r.kind, tier: r.tier, damage: r.damage, defeated: r.defeated, source: r.source || 'battle' }));
+const fetchAll = async () => {
+  const rows = await fetchPaged('rankings', SELECT, 'id.asc');
   // 1枠ごとに monsterId だけへまとめて残す(ほかの列は持たない)
   return rows.map((r) => ({
     difficulty: r.difficulty, hero: r.hero, score: r.score, reached_wave: r.reached_wave, turns: r.turns,
@@ -121,19 +133,41 @@ const aggregate = (rows) => {
   return out;
 };
 
+const RAID_WAY = { a: 'レイドバトル', b: 'グランドスラム' };
+const aggregateRaid = (raidRows) => {
+  const out = { 件数: { 読んだ行: raidRows.length, 数えた: 0, デバッグ: 0 }, イベント: {} };
+  for (const r of raidRows) {
+    if (String(r.event_id).includes('debug')) { out.件数.デバッグ++; continue; }
+    out.件数.数えた++;
+    const way = r.source === 'rhythm' ? 'モンヒロビート挑戦' : (RAID_WAY[r.kind] || String(r.kind));
+    const ev = (out.イベント[r.event_id] = out.イベント[r.event_id] || {});
+    const w = (ev[way] = ev[way] || {});
+    const t = (w[`段階${r.tier}`] = w[`段階${r.tier}`] || { 回数: 0, 倒した回数: 0, ダメージの合計: 0, 最大ダメージ: 0 });
+    const dmg = Math.max(0, Number(r.damage) || 0);
+    t.回数++; if (r.defeated) t.倒した回数++;
+    t.ダメージの合計 += dmg; t.最大ダメージ = Math.max(t.最大ダメージ, dmg);
+  }
+  for (const ev of Object.values(out.イベント)) for (const w of Object.values(ev)) for (const t of Object.values(w)) t['1回あたりのダメージ'] = Math.round(t.ダメージの合計 / t.回数);
+  return out;
+};
+
 (async () => {
   let rows;
+  let raidRows = [];
   if (FROM_CACHE) {
-    try { rows = JSON.parse(fs.readFileSync(CACHE, 'utf8')).rows; } catch (e) { console.error(`cache が読めない: ${CACHE}(一度ネットに出られる所で、--from-cache なしで回す)`); process.exit(1); }
+    try { const c = JSON.parse(fs.readFileSync(CACHE, 'utf8')); rows = c.rows; raidRows = c.raidRows || []; } catch (e) { console.error(`cache が読めない: ${CACHE}(一度ネットに出られる所で、--from-cache なしで回す)`); process.exit(1); }
   } else {
     if (!supa.url || !supa.key) { console.error('公開の鍵が読めない(26-supabase.jsx)'); process.exit(1); }
     rows = await fetchAll();
-    fs.writeFileSync(CACHE, JSON.stringify({ 読んだ時刻: new Date().toISOString(), rows }) + '\n');
+    // レイドの表が読めなくても(無い・権限が無い)ランキングの集計は続ける
+    try { raidRows = await fetchRaid(); } catch (e) { console.error(`raid_jack_hits は読めなかった: ${e.message}`); raidRows = []; }
+    fs.writeFileSync(CACHE, JSON.stringify({ 読んだ時刻: new Date().toISOString(), rows, raidRows }) + '\n');
   }
-  const stats = { 作った時刻: new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 16).replace('T', ' '), 決め: 'クリア = turns あり か 届いた WAVE 10 以上。届いた WAVE はクリアを 11 と数える。伸び = その回の届いた WAVE − 同じモード・難易度の平均', ...aggregate(rows) };
+  const stats = { 作った時刻: new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 16).replace('T', ' '), 決め: 'クリア = turns あり か 届いた WAVE 10 以上。届いた WAVE はクリアを 11 と数える。伸び = その回の届いた WAVE − 同じモード・難易度の平均', ...aggregate(rows), レイド: aggregateRaid(raidRows) };
   fs.mkdirSync(path.dirname(OUT), { recursive: true });
   fs.writeFileSync(OUT, JSON.stringify(stats, null, 2) + '\n');
   const modes = Object.entries(stats.モード).map(([k, v]) => `${k} ${v.回数}`).join(' / ');
   console.log(`読んだ行 ${stats.件数.読んだ行}(バトル ${stats.件数.バトル}・数えなかった ${stats.件数.数えなかった})。${modes}`);
+  console.log(`レイド(raid_jack_hits): 読んだ行 ${stats.レイド.件数.読んだ行}(数えた ${stats.レイド.件数.数えた}・デバッグ ${stats.レイド.件数.デバッグ})`);
   console.log(`書き出した: ${path.relative(ROOT, OUT)}`);
 })().catch((e) => { console.error(e.message || e); process.exit(1); });

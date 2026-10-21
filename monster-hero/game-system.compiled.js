@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 615f315f2cd11a35
+// source-sha256: 043d7779e81f438c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-22 04:18";
+const BUILD_DATE = "2026-10-22 04:28";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -28104,13 +28104,22 @@ const battleLogInt = (v, lo, hi) => {
 const battleLogId = v => typeof v === 'string' && /^[A-Za-z0-9_]{1,40}$/.test(v) ? v : null;
 const buildBattleLogRow = input => {
   const src = input && typeof input === 'object' ? input : {};
-  const difficulty = typeof src.difficultyKey === 'string' && /^[A-Za-z0-9_-]{1,48}$/.test(src.difficultyKey) ? src.difficultyKey : null;
+  const rr = src.raid && typeof src.raid === 'object' ? src.raid : null;
+  const raid = rr && (rr.kind === 'a' || rr.kind === 'b') ? {
+    raid_event: typeof rr.event === 'string' && /^[A-Za-z0-9_-]{1,40}$/.test(rr.event) ? rr.event : null,
+    raid_kind: rr.kind,
+    raid_tier: battleLogInt(rr.tier, 1, 10),
+    raid_source: rr.source === 'rhythm' ? 'rhythm' : 'battle',
+    raid_damage: battleLogInt(rr.damage, 0, 1e12)
+  } : null;
+  const difficulty = raid ? raid.raid_source === 'rhythm' ? 'RaidJackRhythm' : `RaidJack${raid.raid_kind.toUpperCase()}` : typeof src.difficultyKey === 'string' && /^[A-Za-z0-9_-]{1,48}$/.test(src.difficultyKey) ? src.difficultyKey : null;
   const party = Array.isArray(src.party) ? src.party : [];
   const heroSlot = party.find(p => p && p.role === 'hero') || party[0] || null;
   const hero = heroSlot ? battleLogId(heroSlot.monsterId) : null;
-  if (!difficulty || !hero) return null;
+  if (!difficulty || !hero && !(raid && raid.raid_source === 'rhythm')) return null;
+  if (raid && (!raid.raid_event || !raid.raid_tier)) return null;
   const allies = party.filter(p => p && p !== heroSlot).map(p => battleLogId(p.monsterId)).filter(Boolean).slice(0, 3);
-  const turns = battleLogInt(src.clearTurns, 0, 100000);
+  const turns = battleLogInt(raid ? rr.turns : src.clearTurns, 0, 100000);
   const units = {};
   for (const [id, u] of Object.entries(src.units && typeof src.units === 'object' ? src.units : {})) {
     if (!battleLogId(id) || !u || typeof u !== 'object') continue;
@@ -28123,13 +28132,18 @@ const buildBattleLogRow = input => {
   }
   return {
     difficulty,
-    result: turns && turns > 0 ? 'clear' : 'end',
-    reached_wave: battleLogInt(src.reachedWave, 0, 100),
+    result: (raid ? rr.defeated === true : turns && turns > 0) ? 'clear' : 'end',
+    reached_wave: raid ? null : battleLogInt(src.reachedWave, 0, 100),
     turns: turns && turns > 0 ? turns : null,
     score: battleLogInt(src.score, 0, 1e15),
     hero,
     allies,
     units,
+    raid_event: raid ? raid.raid_event : null,
+    raid_kind: raid ? raid.raid_kind : null,
+    raid_tier: raid ? raid.raid_tier : null,
+    raid_source: raid ? raid.raid_source : null,
+    raid_damage: raid ? raid.raid_damage : null,
     app_build: (typeof BUILD_DATE === 'string' ? BUILD_DATE : '').slice(0, 32),
     schema_version: BATTLE_LOG_SCHEMA_VERSION
   };
@@ -97956,6 +97970,25 @@ function MonsterHeroGame() {
     } catch (error) {
       outcome = 'error';
     }
+    if (RELEASE_FLAGS.battleLog === true && !isDebugRun) {
+      try {
+        void sbSendBattleLog(buildBattleLogRow({
+          party: slots.map(sl => sl && {
+            role: sl === mainHero ? 'hero' : 'ally',
+            monsterId: sl.id
+          }),
+          raid: {
+            event: run.eventId,
+            kind: run.kind,
+            tier: run.tierIndex + 1,
+            source: 'battle',
+            damage,
+            defeated,
+            turns: run.turns
+          }
+        }));
+      } catch {}
+    }
     let quickAward = null;
     if (!isDebugRun) {
       try {
@@ -98122,6 +98155,21 @@ function MonsterHeroGame() {
         next = sent.state;
         outcome = sent.outcome;
         await raidJackSaveState(next);
+      }
+      if (RELEASE_FLAGS.battleLog === true && !isDebugRun && damage > 0) {
+        try {
+          void sbSendBattleLog(buildBattleLogRow({
+            score,
+            raid: {
+              event: run.eventId,
+              kind: 'a',
+              tier: run.tierIndex + 1,
+              source: 'rhythm',
+              damage,
+              defeated
+            }
+          }));
+        } catch {}
       }
     } catch (error) {
       outcome = 'error';

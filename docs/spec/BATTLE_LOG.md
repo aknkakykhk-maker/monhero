@@ -26,14 +26,29 @@
 | `reached_wave` / `turns` / `score` | 届いた WAVE・クリアまでの累計ターン(クリアした回だけ)・スコア |
 | `hero` / `allies` | 勇者モンと供モンの monsterId(供モンは最大3) |
 | `units` | `{ monsterId: { dmg, ex, unique, taken } }`。与えたダメージ・EX を使った回数・固有技を撃った回数・受けたダメージ |
+| `raid_event` / `raid_kind` / `raid_tier` / `raid_source` / `raid_damage` | レイドの1回だけ。イベントid・a(レイドバトル)か b(グランドスラム)・段階・battle か rhythm(モンヒロビート挑戦)・その1回で与えたダメージ |
 | `app_build` / `schema_version` | ゲームの版(`BUILD_DATE`)と形の版 |
 
 - **送らないもの**: 名前・ブリーダーID・アイコン・プロフィールフレーム・マスモンの個体名や育て方・端末の情報。行と人は結び付かない。
 - 形は `buildBattleLogRow`(`monster-hero/src/parts/26-supabase.jsx`)が決める。決めた項目だけを通し、数は範囲に収め、ほかの項目は捨てる。
 
+## レイド(2026-10-21 社長「バトルデータはレイドからのデータも取れるよね？」)
+
+- 今の `raid_jack_hits` は、与えたダメージ・倒したか・段階・a/b・source だけで、**使ったモンスターは入っていない**。
+  - `player-battle-stats.js` は、この表も公開の鍵で読める(読むのは event_id・kind・tier・damage・defeated・source だけ。hit_id・breeder_id は読まない)。
+  - 集計は「段階ごとの回数・倒した回数・1回あたりのダメージ・最大ダメージ」。モンスター別には分けられない。
+- `battle_logs` ではレイドの1回も1行にする。勇者モン・供モン・段階・与えたダメージ・使ったターンを一緒に残す。
+  - 難易度のキーは `RaidJackA`(レイドバトル)・`RaidJackB`(グランドスラム)・`RaidJackRhythm`(モンヒロビート挑戦)。
+  - 倒した回は `result = clear`。
+  - モンヒロビート挑戦は編成が無いので、勇者モンは null。
+- **`raid_jack_hits`・ランキング・討伐報酬・mh_raid_jack_v1 には触らない**。送る所は今の送信のあとに足すだけで、待たない。デバッグの戦いは送らない。
+
 ## いつ送るか
 
-- バトルが終わってランキングへ記録を送るのと同じ所(`submitLocalScore`・60-app.jsx)で、1回だけ送る。クリア・負け・リタイアのどれもここを通る。
+- 1回だけ送る。送るのは次の3か所。
+  - 通常のバトル: ランキングへ記録を送るのと同じ所(`submitLocalScore`・60-app.jsx)。クリア・負け・リタイアのどれもここを通る。
+  - レイドバトル・グランドスラム: `finishRaidJack`。
+  - モンヒロビート挑戦: その結果を送る所。
 - ランキングの送信とは別に送り、待たない。送れなくてもゲームは何も変わらず、やり直しもしない。
 - 次のときは送らない。
   - `RELEASE_FLAGS.battleLog` が偽のあいだ(いま)。
@@ -51,7 +66,7 @@
 2. 社長が「集めていい」と決めたら、表を作る。
    - `docs/sql/battle-log/BATTLE_LOG_APPLY_TEST.sql` を流す(予行演習・末尾 rollback)。
    - `BATTLE_LOG_APPLY.sql` を流す。
-   - `BATTLE_LOG_VERIFY.sql` で、列 13・RLS・INSERT と SELECT だけのポリシーを確かめる。
+   - `BATTLE_LOG_VERIFY.sql` で、列 18・RLS・INSERT と SELECT だけのポリシーを確かめる。
 3. `RELEASE_FLAGS.battleLog` を真にする。表を作る前に真にしても、404 で止まるだけで壊れない。
 4. 読む道具を足す。`player-battle-stats.js` に `battle_logs` を読む口を足し、overall の「役割ごとの働き」へ混ぜる。
 
