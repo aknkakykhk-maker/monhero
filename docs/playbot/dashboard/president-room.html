@@ -68,13 +68,13 @@ section{display:flex;flex-direction:column;gap:10px}
 <div class="wrap">
   <header>
     <h1>モンヒロ社 社長室</h1>
-    <p class="lead">10/19 06:05 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。<br>モンスター Tier 表: <a href="https://claude.ai/artifact/3sUNc2pQgN5f4QdYYW5tW8">https://claude.ai/artifact/3sUNc2pQgN5f4QdYYW5tW8</a>(サイドバーにも固定)</p>
+    <p class="lead">10/21 09:24 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。<br>モンスター Tier 表: <a href="https://claude.ai/artifact/3sUNc2pQgN5f4QdYYW5tW8">https://claude.ai/artifact/3sUNc2pQgN5f4QdYYW5tW8</a>(サイドバーにも固定)</p>
   </header>
 
   <nav class="counts" aria-label="件数">
     <a class="count warn" href="#decide"><b>0</b><span>社長の判断待ち</span></a>
-    <a class="count" href="#work"><b>8</b><span>進行中</span></a>
-    <a class="count" href="#shipped"><b>11</b><span>公開したもの</span></a>
+    <a class="count" href="#work"><b>9</b><span>進行中</span></a>
+    <a class="count" href="#shipped"><b>0</b><span>公開したもの</span></a>
   </nav>
 
   <section id="decide">
@@ -88,6 +88,11 @@ section{display:flex;flex-direction:column;gap:10px}
     <section id="work">
       <h2>進行中の作業</h2>
       <ul class="list">
+      <li id="r2610210924anomaly">
+        <div class="row-title">判定の異変の報告(10/20分): toriko MASTER android の MISS 率が 3.9%(前の7日 0.08%)。曲の55〜100%に集中(29回だけ)。android 全体も 4.11%(前の7日 1.54%)。何も押していない MISS は増えていない。前日は版の公開が4回</div>
+        
+        <div class="meta"><span>部長テンポくん</span><span>見込み ビート部が原因を見立て中</span></div>
+      </li>
       <li id="r2610162040monlag">
         <div class="row-title">モンヒロビート: モンスターノーツでかくつくのが直っていない(社長の実機)</div>
         
@@ -238,62 +243,7 @@ section{display:flex;flex-direction:column;gap:10px}
     </section>
     <section id="shipped">
       <h2>公開したもの</h2>
-      <ul class="list">
-      <li id="r2610162201hellcross">
-        <div class="row-title">モンヒロビート: HELL の上下クロスで、交わった瞬間に一瞬判定が消えるのが直っていない</div>
-        
-        <div class="meta"><span>部長テンポくん</span><span>PR #3143</span></div>
-      </li>
-      <li id="r2610161715chartref">
-        <div class="row-title">参考動画から学んだ譜面の作り方を譜面生成ツールに「引き出し」として足す(密度の形を数える・片手地上片手空中/終わりを空中スライド2本・サビの空中スライドの見せ場・入り控えめ最後を高く)</div>
-        
-        <div class="meta"><span>部長テンポくん</span><span>PR #3119</span></div>
-      </li>
-      <li id="r2610161420tiermobile">
-        <div class="row-title">Tier表の詳細画面がスマホで見にくい(表の列が細く文字が縦に折れる)</div>
-        
-        <div class="meta"><span>部長ハカセくん</span><span>PR #3098</span></div>
-      </li>
-      <li id="r2610161400femmetone">
-        <div class="row-title">女の子のマスモンに、性格ごとの女の子用のセリフを足す(〜だぜ・〜ぞ等の口調)</div>
-        
-        <div class="meta"><span>部長テンポくん</span><span>PR #3096</span></div>
-      </li>
-      <li id="r2610161335femme">
-        <div class="row-title">モンヒロビートのマスモンの個体差: ウンディーネ種とピクシー種は必ず女の子にする</div>
-        
-        <div class="meta"><span>部長テンポくん</span><span>PR #3089</span></div>
-      </li>
-      <li id="r2610161305bgmmem">
-        <div class="row-title">AUTO∞で1時間たってホームに戻ると音が止まる件(BGMのメモリ): 案1(場面のBGMを軽く)＋案2(持つ曲を減らす)</div>
-        
-        <div class="meta"><span>部長ドライバーくん</span><span>PR #3083</span></div>
-      </li>
-      <li id="r2610161240anomaly">
-        <div class="row-title">APIクレジットの使い道: モンヒロビートの判定の異変を毎晩3:10に自動で見つけて報告する仕組み</div>
-        
-        <div class="meta"><span>部長テンポくん</span><span>PR #3076</span></div>
-      </li>
-      <li id="r2610160722cardname">
-        <div class="row-title">新しいカードの絵: 技名をもっと太く・技変更の下の種類の札が左寄せに見える</div>
-        
-        <div class="meta"><span>部長ブレイブくん</span><span>PR #3070</span></div>
-      </li>
-      <li id="r2610160800oldcard">
-        <div class="row-title">タクティクスの行動カードを、設定で前のカードの見た目にも戻せるようにする(改善部K2・社長の決定)</div>
-        
-        <div class="meta"><span>部長ブレイブくん</span><span>PR #3062</span></div>
-      </li>
-      <li id="r2610160800beat">
-        <div class="row-title">モンヒロビート: 曲の版切り替えボタンを大きく/Sheriruth HELL 77.6秒のカクつきを詰める(夜の点検の提案・社長の決定)</div>
-        
-        <div class="meta"><span>部長テンポくん</span><span>PR #3064</span></div>
-      </li>
-      <li id="r2610160158night">
-        <div class="row-title">夜の点検: モンビー周り・タクティクス周り・ダメ出しくんの確認</div>
-        
-        <div class="meta"><span>ブレイブくん・テンポくん・ダメダシくん</span><span>PR #3052・#3054・#3055・#3056・#3059</span></div>
-      </li></ul>
+      <p class="empty">ありません。</p>
       <p class="note">本番: https://aknkakykhk-maker.github.io/monhero/</p>
     </section>
   </div>
