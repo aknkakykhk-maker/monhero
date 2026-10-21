@@ -35,16 +35,30 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
-    date: "2026-10-21 10:53", type:'update', group:'rhythm', title:'モンヒロビート：「ANiMA」と「Journey」に HELL が加わりました', status:'new',
+    date: "2026-10-21 10:53", type:'update', group:'rhythm', title:'モンヒロビート：「Journey」に HELL が加わりました', status:'new',
+    image: 'images/song-art/journey.jpg?v=2285e26648c0',
     items:[
-      '「ANiMA」と「Journey」に、MASTER のさらに上の難易度 HELL を足しました。それぞれの曲で MASTER を1回クリアすると選べるようになります。',
+      '「Journey」に、MASTER のさらに上の難易度 HELL を足しました。この曲の MASTER を1回クリアすると選べるようになります。',
       '地上と空中の行き来は、指を離した位置へ移る形が中心です。近いレーンで地上と空中のノーツが立て続けに来る、見分けにくい所は入れていません。',
-      'レベルは「ANiMA」Lv.58 ／「Journey」Lv.51 です。',
-      'ノーツ数は「ANiMA」522 ／「Journey」716 です。',
+      'レベルは HELL Lv.51 です。',
+      'ノーツ数は 716 です。',
       'これまでの EASY〜MASTER の譜面は変わりません。',
     ],
-    assistantNotice: { id:'update_notice_hell_anima_journey_v1', type:'content' },
+    assistantNotice: { id:'update_notice_hell_journey_v1', type:'content' },
   },
+  {
+    date: "2026-10-21 10:53", type:'update', group:'rhythm', title:'モンヒロビート：「ANiMA」に HELL が加わりました', status:'new',
+    image: 'images/song-art/anima.jpg?v=2d830b603ed9',
+    items:[
+      '「ANiMA」に、MASTER のさらに上の難易度 HELL を足しました。この曲の MASTER を1回クリアすると選べるようになります。',
+      '地上と空中の行き来は、指を離した位置へ移る形が中心です。近いレーンで地上と空中のノーツが立て続けに来る、見分けにくい所は入れていません。',
+      'レベルは HELL Lv.58 です。',
+      'ノーツ数は 522 です。',
+      'これまでの EASY〜MASTER の譜面は変わりません。',
+    ],
+    assistantNotice: { id:'update_notice_hell_anima_v1', type:'content' },
+  },
+
   {
     date: "2026-10-21 02:40", type:'update', group:'rhythm', title:'モンヒロビート：リザルトに、その難易度での出来が出るようになりました', status:'new',
     items:[
