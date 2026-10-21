@@ -138,7 +138,8 @@ const check = (name, ok, detail = '') => {
     // 始まっていたため、開いても全国ランキングが無いように見えていた
     await speciesCard.locator('[data-species-record-link]').dispatchEvent('click');
     // 見出しは「種族チャレンジ」の下に小さく「ランキング」を添える形になった(2026-09-22)。見出しと種族のタブが出るのを待つ
-    await page.getByRole('heading', { name: /種族チャレンジ/ }).first().waitFor({ timeout: 20000 });
+    // 2026-10-08 から、ランキングの題名は上の帯(BattleScreenHead の <header>)の太字で、見出しの部品(heading)ではない
+    await page.locator('header').filter({ hasText: '種族チャレンジ' }).first().waitFor({ timeout: 20000 });
     await page.locator('[data-species-rank-tabs]').waitFor({ timeout: 20000 });
     const openedTab = String(await page.locator('[data-species-rank-tabs] button.bg-cyan-600').textContent()).trim();
     check('種族を指定せず開いたら「全種族」の全国ランキングから始まる',
@@ -196,7 +197,8 @@ const check = (name, ok, detail = '') => {
     // --- ⑥ 種族チャレンジのランキング画面 ---
     await beginner.locator('[data-species-difficulty-record-link]').dispatchEvent('click');
     // 見出しは「種族チャレンジ」の下に小さく「ランキング」を添える形になった(2026-09-22)。見出しと種族のタブが出るのを待つ
-    await page.getByRole('heading', { name: /種族チャレンジ/ }).first().waitFor({ timeout: 20000 });
+    // 2026-10-08 から、ランキングの題名は上の帯(BattleScreenHead の <header>)の太字で、見出しの部品(heading)ではない
+    await page.locator('header').filter({ hasText: '種族チャレンジ' }).first().waitFor({ timeout: 20000 });
     await page.locator('[data-species-rank-tabs]').waitFor({ timeout: 20000 });
     check('種族チャレンジのランキングを開ける', true);
     const rankTabs = page.locator('[data-species-rank-tabs] button');
@@ -215,8 +217,9 @@ const check = (name, ok, detail = '') => {
     const nationalText = await page.locator('[data-species-record-list]').textContent();
     check('種族を選ぶと全国ランキングへ切り替わる',
       !nationalText.includes('全国ランキングはモードの公開後に始まります'));
-    check('通信できないときも案内が出て無反応にならない',
-      /Loading|再[試読]|取得|まだ|ありません|エラー|失敗/.test(nationalText), nationalText.slice(0, 60).replace(/\s+/g, ' '));
+    // 通信が届く環境で記録があれば、本物の順位(「◯◯ pt」)が並ぶ。それも「無反応ではない」に入れる
+    check('通信できないときも案内が出て無反応にならない(届くときは順位が並ぶ)',
+      /Loading|再[試読]|取得|まだ|ありません|エラー|失敗/.test(nationalText) || /\d[\d,]*\s*pt/.test(nationalText), nationalText.slice(0, 60).replace(/\s+/g, ' '));
     // 「全種族」タブ(種族を問わない全国ランキング)へ切り替えられる。
     // 通信できない環境なので、自分の記録ではなく全国ランキングとして扱われていること
     // (＝自己ベストの行ではなく取得の案内が出ること)まで見る
@@ -226,8 +229,9 @@ const check = (name, ok, detail = '') => {
     check('「全種族」タブへ切り替えられる',
       String(await page.locator('[data-species-rank-tabs] button.bg-cyan-600').textContent()).trim() === '全種族');
     check('「全種族」も全国ランキングとして扱う(自己ベストの案内を出さない)',
+      // 通信が届く環境では本物の順位(「◯◯ pt」)が並ぶ。届かない環境では読み込み中・取得できない案内が出る。どちらも全国ランキングの形
       !/ここは自分の種族別ベストの比較です/.test(allSpeciesText)
-      && /Loading|再[試読]|取得|まだ|ありません|エラー|失敗/.test(allSpeciesText),
+      && (/Loading|再[試読]|取得|まだ|ありません|エラー|失敗/.test(allSpeciesText) || /\d[\d,]*\s*pt/.test(allSpeciesText)),
       allSpeciesText.slice(0, 60).replace(/\s+/g, ' '));
     check('「全種族」でも難易度タブを切り替えられる',
       await rankDiffTabs.nth(2).isEnabled());
