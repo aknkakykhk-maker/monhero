@@ -7,7 +7,7 @@
 // 【なぜ要るか】既存曲の譜面は変えない(tools/mode/CLAUDE.md ⑩-2)。
 //   2026-10-11、新曲の仕上げ(rhythm-chart-v3-pipeline.js)が呼ぶ rhythm-overlap-reach-fix.js --write が公開中の全曲を回っていて、
 //   新曲を作るたびに Sheriruth の HARD・EXPERT・MASTER のタップを1つ動かしていた。誰も気づかないまま main へ入った。
-// 【何を見るか】rhythm-runtime-notes.js の RELEASED_MARKERS に載っている曲の、5難易度のマーカーの中身。
+// 【何を見るか】rhythm-runtime-notes.js の RELEASED_MARKERS に載っている曲の、5難易度と HELL のマーカーの中身。
 //   控え(rhythm-released-chart-lock.json)の指紋(sha256)と1つでも違えば NG。まだ控えに無い曲(新曲)は OK のまま知らせる。
 //   意図した変更(社長・窓口が決めた直し)なら --update で控えを更新し、理由を控えの履歴に残す。
 // あわせて、直しの道具が指定した曲の外へ書かないこと(--write には --song が要る・ほかの曲は1バイトも変えない)も確かめる。
@@ -26,6 +26,11 @@ const DEMO=new Set(rt0.loadRuntime().RHYTHM_DEMO_SONG_IDS||[]);
 const current={};
 for(const [songId,marker] of Object.entries(rt0.RELEASED_MARKERS).filter(([id])=>DEMO.has(id)))for(const d of DIFFS){
   const block=rt0.markerBlock(source,`${marker}-${d}`);if(block)current[`${songId}/${d}`]=hash(block.body);}
+// HELL も見張る(2026-10-21 社長「HELL も指紋で見張る」)。HELL は試作の枠の曲に入っていて上の表の外だったので、作り直しても気づけなかった。
+//   ふつうは曲のマーカーの -hell。Grievous Lady の HELL だけは別の名前のマーカー
+const HELL_MARKERS={grievous_lady:'grievous-lady-hell'};
+for(const [songId,marker] of Object.entries(rt0.RELEASED_MARKERS).filter(([id])=>DEMO.has(id))){
+  const block=rt0.markerBlock(source,HELL_MARKERS[songId]||`${marker}-hell`);if(block)current[`${songId}/hell`]=hash(block.body);}
 
 if(args.includes('--update')){
   const reason=argOf('--reason');if(!reason)throw new Error('--reason "<理由>" が要る(だれが決めた、どの直しか)');

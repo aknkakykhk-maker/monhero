@@ -225,7 +225,16 @@
   "toward_the_stars_short/normal": "55b025e4205a0e6a",
   "toward_the_stars_short/hard": "afe02bc39240db70",
   "toward_the_stars_short/expert": "178a932c31f42eb8",
-  "toward_the_stars_short/master": "95c9471b49f7b83f"
+  "toward_the_stars_short/master": "95c9471b49f7b83f",
+  "kaze_ga_soyogu/hell": "db4bdda49c855f43",
+  "sheriruth/hell": "36db1897510eb07b",
+  "against_my_own_shadow/hell": "120eb36921577a4d",
+  "grievous_lady/hell": "bf3cd2055776a186",
+  "rose/hell": "8dcf1fa5467e4e5b",
+  "rose_short/hell": "6cf119bc1937d7ea",
+  "sad_song/hell": "2004f979cdecdbe1",
+  "sad_song_short/hell": "a672d52b7ee7ff88",
+  "toward_the_stars_short/hell": "1f46ea8aa7294349"
  },
  "history": [
   {
@@ -334,6 +343,21 @@
     "sad_song_short/hard",
     "sad_song_short/expert",
     "sad_song_short/master"
+   ]
+  },
+  {
+   "at": "2026-10-21 09:57",
+   "reason": "2026-10-21 社長の指示: 公開中の HELL 9譜面も見張りに足す(Toward(short)・ROSE・ROSE(short)・SAD SONG・SAD SONG(short) は同じ日に見分けにくい形なしで作り直した後の形)",
+   "changed": [
+    "kaze_ga_soyogu/hell",
+    "sheriruth/hell",
+    "against_my_own_shadow/hell",
+    "grievous_lady/hell",
+    "rose/hell",
+    "rose_short/hell",
+    "sad_song/hell",
+    "sad_song_short/hell",
+    "toward_the_stars_short/hell"
    ]
   }
  ]

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a123e0d3549e29c5
+// source-sha256: aecc58791185b09a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-21 02:41";
+const BUILD_DATE = "2026-10-21 10:09";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -62642,10 +62642,12 @@ const HomeRaidJack = ({
       lineHeight: 1.3
     }
   }, React.createElement("span", {
+    "data-home-raid-jack-title": true,
     style: {
-      display: 'block'
+      display: 'block',
+      ...JA_WRAP_STYLE
     }
-  }, allDone ? `${RAID_JACK_PUMPKIN.name}が遊びに来た！` : `${tier.name}があらわれた！`), allDone ? React.createElement("span", {
+  }, allDone ? React.createElement(React.Fragment, null, RAID_JACK_PUMPKIN.name, "が", React.createElement("wbr", null), "遊びに来た！") : React.createElement(React.Fragment, null, tier.name, "が", React.createElement("wbr", null), "あらわれた！")), allDone ? React.createElement("span", {
     "data-home-raid-pumpkin-note": true,
     style: {
       display: 'block',
