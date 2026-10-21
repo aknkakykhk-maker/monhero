@@ -32973,7 +32973,179 @@ const rhythmSongClimaxAt=(songId,ms)=>{const spans=RHYTHM_SONG_CLIMAX[songId];if
 // 風がそよぐ場所は空中を覚える入口の HELL(2026-10-12 社長)
 // Against My Own Shadow は中くらいの HELL(2026-10-13 社長「AMOSは実装してオーケー」)
 // ROSE(全編・short ver.)は新曲と一緒に HELL も出す(2026-10-18 社長「今後の新曲は基本ヘルあり」)
-const RHYTHM_HELL_CHARTS=Object.freeze({anima:animaHellChart,journey:journeyHellChart,sheriruth:sheriruthHellChart,grievous_lady:grievousLadyHellChart,kaze_ga_soyogu:kazeGaSoyoguHellChart,against_my_own_shadow:againstMyOwnShadowHellChart,rose:roseHellChart,rose_short:roseShortHellChart,toward_the_stars_short:towardTheStarsShortHellChart,sad_song:sadSongHellChart,sad_song_short:sadSongShortHellChart});
+// 6段目 HELL(2026-10-21 社長「全曲ヘルを実装して」)。曲の解析から HELL 用に一から作る(MASTER の写しではない)。
+// tools/mode/rhythm-hell-mix.js --song <曲> --write で目印の内側と Lv. を書く(手で書き換えない)
+const mfIchikaMixHellNotes=((t,h,f,s,T,F,S)=>[
+// <atsu-cup-theme-v3-hell-notes>
+// </atsu-cup-theme-v3-hell-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
+const mfIchikaMixHellChart=mhChart(1,mfIchikaMixHellNotes,ATSU_CUP_THEME_V3_DURATION_MS,6);
+const monsterHeroHellNotes=((t,h,f,s,T,F,S)=>[
+// <monster-hero-v4-hell-notes>
+// </monster-hero-v4-hell-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
+const monsterHeroHellChart=mhChart(1,monsterHeroHellNotes,MONSTER_HERO_EASY_DURATION_MS,6);
+const monsterHeroAnotherHellNotes=((t,h,f,s,T,F,S)=>[
+// <monster-hero-theme-alt-v3-hell-notes>
+// </monster-hero-theme-alt-v3-hell-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
+const monsterHeroAnotherHellChart=mhChart(1,monsterHeroAnotherHellNotes,MONSTER_HERO_ANOTHER_DURATION_MS,6);
+const sixEternelBeatHellNotes=((t,h,f,s,T,F,S)=>[
+// <six-eternel-beat-v3-hell-notes>
+// </six-eternel-beat-v3-hell-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
+const sixEternelBeatHellChart=mhChart(1,sixEternelBeatHellNotes,SIX_ETERNEL_BEAT_DURATION_MS,6);
+const sixEternelRemixHellNotes=((t,h,f,s,T,F,S)=>[
+// <six-eternel-remix-beat-v3-hell-notes>
+// </six-eternel-remix-beat-v3-hell-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
+const sixEternelRemixHellChart=mhChart(1,sixEternelRemixHellNotes,SIX_ETERNEL_REMIX_BEAT_DURATION_MS,6);
+const stayWithMeHellNotes=((t,h,f,s,T,F,S)=>[
+// <pandora-boss-v3-hell-notes>
+// </pandora-boss-v3-hell-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
+const stayWithMeHellChart=mhChart(1,stayWithMeHellNotes,PANDORA_BOSS_DURATION_MS,6);
+const kikiIssenHellNotes=((t,h,f,s,T,F,S)=>[
+// <eiki-boss-v3-hell-notes>
+// </eiki-boss-v3-hell-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
+const kikiIssenHellChart=mhChart(1,kikiIssenHellNotes,EIKI_BOSS_DURATION_MS,6);
+const closeToYourHeartHellNotes=((t,h,f,s,T,F,S)=>[
+// <close-to-your-heart-v4-hell-notes>
+// </close-to-your-heart-v4-hell-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
+const closeToYourHeartHellChart=mhChart(1,closeToYourHeartHellNotes,CLOSE_TO_YOUR_HEART_DURATION_MS,6);
+const eikiBossRemixHellNotes=((t,h,f,s,T,F,S)=>[
+// <eiki-boss-remix-v3-hell-notes>
+// </eiki-boss-remix-v3-hell-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
+const eikiBossRemixHellChart=mhChart(1,eikiBossRemixHellNotes,EIKI_BOSS_REMIX_DURATION_MS,6);
+const pandoraBossRemixHellNotes=((t,h,f,s,T,F,S)=>[
+// <pandora-boss-remix-v3-hell-notes>
+// </pandora-boss-remix-v3-hell-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
+const pandoraBossRemixHellChart=mhChart(1,pandoraBossRemixHellNotes,PANDORA_BOSS_REMIX_DURATION_MS,6);
+const dullahanHellNotes=((t,h,f,s,T,F,S)=>[
+// <dullahan-v3-hell-notes>
+// </dullahan-v3-hell-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
+const dullahanHellChart=mhChart(1,dullahanHellNotes,DULLAHAN_DURATION_MS,6);
+const dullahanClockworkHellNotes=((t,h,f,s,T,F,S)=>[
+// <dullahan-clockwork-v3-hell-notes>
+// </dullahan-clockwork-v3-hell-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
+const dullahanClockworkHellChart=mhChart(1,dullahanClockworkHellNotes,DULLAHAN_CLOCKWORK_DURATION_MS,6);
+const torikoHellNotes=((t,h,f,s,T,F,S)=>[
+// <toriko-v3-hell-notes>
+// </toriko-v3-hell-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
+const torikoHellChart=mhChart(1,torikoHellNotes,TORIKO_DURATION_MS,6);
+const song4uHitasuraHellNotes=((t,h,f,s,T,F,S)=>[
+// <4u-hitasura-v3-hell-notes>
+// </4u-hitasura-v3-hell-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
+const song4uHitasuraHellChart=mhChart(1,song4uHitasuraHellNotes,FOUR_U_DURATION_MS,6);
+const kindanNoResistanceHellNotes=((t,h,f,s,T,F,S)=>[
+// <kindan-no-resistance-v3-hell-notes>
+// </kindan-no-resistance-v3-hell-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
+const kindanNoResistanceHellChart=mhChart(1,kindanNoResistanceHellNotes,KINDAN_NO_RESISTANCE_DURATION_MS,6);
+const crossingFieldHellNotes=((t,h,f,s,T,F,S)=>[
+// <crossing-field-v3-hell-notes>
+// </crossing-field-v3-hell-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
+const crossingFieldHellChart=mhChart(1,crossingFieldHellNotes,CROSSING_FIELD_DURATION_MS,6);
+const nothingWithoutYouHellNotes=((t,h,f,s,T,F,S)=>[
+// <nothing-without-you-v3-hell-notes>
+// </nothing-without-you-v3-hell-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
+const nothingWithoutYouHellChart=mhChart(1,nothingWithoutYouHellNotes,NOTHING_WITHOUT_YOU_DURATION_MS,6);
+const mouHitotsuNoSekaiEHellNotes=((t,h,f,s,T,F,S)=>[
+// <mou-hitotsu-no-sekai-e-v3-hell-notes>
+// </mou-hitotsu-no-sekai-e-v3-hell-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
+const mouHitotsuNoSekaiEHellChart=mhChart(1,mouHitotsuNoSekaiEHellNotes,MOU_HITOTSU_NO_SEKAI_E_DURATION_MS,6);
+const senjouNoShippuuHellNotes=((t,h,f,s,T,F,S)=>[
+// <senjou-no-shippuu-v3-hell-notes>
+// </senjou-no-shippuu-v3-hell-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
+const senjouNoShippuuHellChart=mhChart(1,senjouNoShippuuHellNotes,SENJOU_NO_SHIPPUU_DURATION_MS,6);
+const makutsuNoSenritsuHellNotes=((t,h,f,s,T,F,S)=>[
+// <makutsu-no-senritsu-v3-hell-notes>
+// </makutsu-no-senritsu-v3-hell-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
+const makutsuNoSenritsuHellChart=mhChart(1,makutsuNoSenritsuHellNotes,MAKUTSU_NO_SENRITSU_DURATION_MS,6);
+const theCityBeneathTheCometsHellNotes=((t,h,f,s,T,F,S)=>[
+// <the-city-beneath-the-comets-v3-hell-notes>
+// </the-city-beneath-the-comets-v3-hell-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
+const theCityBeneathTheCometsHellChart=mhChart(1,theCityBeneathTheCometsHellNotes,THE_CITY_BENEATH_THE_COMETS_DURATION_MS,6);
+const freedomDiveHellNotes=((t,h,f,s,T,F,S)=>[
+// <freedom-dive-v3-hell-notes>
+// </freedom-dive-v3-hell-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
+const freedomDiveHellChart=mhChart(1,freedomDiveHellNotes,FREEDOM_DIVE_DURATION_MS,6);
+const onlyMyRailgunHellNotes=((t,h,f,s,T,F,S)=>[
+// <only-my-railgun-v3-hell-notes>
+// </only-my-railgun-v3-hell-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
+const onlyMyRailgunHellChart=mhChart(1,onlyMyRailgunHellNotes,ONLY_MY_RAILGUN_DURATION_MS,6);
+const bigBridgeNoShitouHellNotes=((t,h,f,s,T,F,S)=>[
+// <big-bridge-no-shitou-v3-hell-notes>
+// </big-bridge-no-shitou-v3-hell-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
+const bigBridgeNoShitouHellChart=mhChart(1,bigBridgeNoShitouHellNotes,BIG_BRIDGE_NO_SHITOU_DURATION_MS,6);
+const risingHopeHellNotes=((t,h,f,s,T,F,S)=>[
+// <rising-hope-v3-hell-notes>
+// </rising-hope-v3-hell-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
+const risingHopeHellChart=mhChart(1,risingHopeHellNotes,RISING_HOPE_DURATION_MS,6);
+const harukaHellNotes=((t,h,f,s,T,F,S)=>[
+// <haruka-v3-hell-notes>
+// </haruka-v3-hell-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
+const harukaHellChart=mhChart(1,harukaHellNotes,HARUKA_DURATION_MS,6);
+const stayWithMeShortHellNotes=((t,h,f,s,T,F,S)=>[
+// <stay-with-me-short-v3-hell-notes>
+// </stay-with-me-short-v3-hell-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
+const stayWithMeShortHellChart=mhChart(1,stayWithMeShortHellNotes,STAY_WITH_ME_SHORT_DURATION_MS,6);
+const kikiIssenShortHellNotes=((t,h,f,s,T,F,S)=>[
+// <kiki-issen-short-v3-hell-notes>
+// </kiki-issen-short-v3-hell-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
+const kikiIssenShortHellChart=mhChart(1,kikiIssenShortHellNotes,KIKI_ISSEN_SHORT_DURATION_MS,6);
+const crazyPartyNightHellNotes=((t,h,f,s,T,F,S)=>[
+// <crazy-party-night-v3-hell-notes>
+// </crazy-party-night-v3-hell-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
+const crazyPartyNightHellChart=mhChart(1,crazyPartyNightHellNotes,CRAZY_PARTY_NIGHT_DURATION_MS,6);
+const crazyPartyNightFullHellNotes=((t,h,f,s,T,F,S)=>[
+// <crazy-party-night-full-v3-hell-notes>
+// </crazy-party-night-full-v3-hell-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
+const crazyPartyNightFullHellChart=mhChart(1,crazyPartyNightFullHellNotes,CRAZY_PARTY_NIGHT_FULL_DURATION_MS,6);
+const emeraldRushHellNotes=((t,h,f,s,T,F,S)=>[
+// <emerald-rush-v3-hell-notes>
+// </emerald-rush-v3-hell-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
+const emeraldRushHellChart=mhChart(1,emeraldRushHellNotes,EMERALD_RUSH_DURATION_MS,6);
+const wrathOfTheThornKingHellNotes=((t,h,f,s,T,F,S)=>[
+// <wrath-of-the-thorn-king-v3-hell-notes>
+// </wrath-of-the-thorn-king-v3-hell-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
+const wrathOfTheThornKingHellChart=mhChart(1,wrathOfTheThornKingHellNotes,WRATH_OF_THE_THORN_KING_DURATION_MS,6);
+const monsterHellNotes=((t,h,f,s,T,F,S)=>[
+// <monster-v3-hell-notes>
+// </monster-v3-hell-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
+const monsterHellChart=mhChart(1,monsterHellNotes,MONSTER_DURATION_MS,6);
+const monsterShortHellNotes=((t,h,f,s,T,F,S)=>[
+// <monster-short-v3-hell-notes>
+// </monster-short-v3-hell-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
+const monsterShortHellChart=mhChart(1,monsterShortHellNotes,MONSTER_SHORT_DURATION_MS,6);
+const RHYTHM_HELL_CHARTS=Object.freeze({mf_ichika_mix:mfIchikaMixHellChart,monster_hero:monsterHeroHellChart,monster_hero_another:monsterHeroAnotherHellChart,six_eternel_beat:sixEternelBeatHellChart,six_eternel_remix:sixEternelRemixHellChart,stay_with_me:stayWithMeHellChart,kiki_issen:kikiIssenHellChart,close_to_your_heart:closeToYourHeartHellChart,eiki_boss_remix:eikiBossRemixHellChart,pandora_boss_remix:pandoraBossRemixHellChart,dullahan:dullahanHellChart,dullahan_clockwork:dullahanClockworkHellChart,toriko:torikoHellChart,'4u_hitasura':song4uHitasuraHellChart,kindan_no_resistance:kindanNoResistanceHellChart,crossing_field:crossingFieldHellChart,nothing_without_you:nothingWithoutYouHellChart,mou_hitotsu_no_sekai_e:mouHitotsuNoSekaiEHellChart,senjou_no_shippuu:senjouNoShippuuHellChart,makutsu_no_senritsu:makutsuNoSenritsuHellChart,the_city_beneath_the_comets:theCityBeneathTheCometsHellChart,freedom_dive:freedomDiveHellChart,only_my_railgun:onlyMyRailgunHellChart,big_bridge_no_shitou:bigBridgeNoShitouHellChart,rising_hope:risingHopeHellChart,haruka:harukaHellChart,stay_with_me_short:stayWithMeShortHellChart,kiki_issen_short:kikiIssenShortHellChart,crazy_party_night:crazyPartyNightHellChart,crazy_party_night_full:crazyPartyNightFullHellChart,emerald_rush:emeraldRushHellChart,wrath_of_the_thorn_king:wrathOfTheThornKingHellChart,monster:monsterHellChart,monster_short:monsterShortHellChart,anima:animaHellChart,journey:journeyHellChart,sheriruth:sheriruthHellChart,grievous_lady:grievousLadyHellChart,kaze_ga_soyogu:kazeGaSoyoguHellChart,against_my_own_shadow:againstMyOwnShadowHellChart,rose:roseHellChart,rose_short:roseShortHellChart,toward_the_stars_short:towardTheStarsShortHellChart,sad_song:sadSongHellChart,sad_song_short:sadSongShortHellChart});
 // HELL の説明の動画(2026-10-13 社長「ストーリー用にヘルの説明用の動画を撮って、動画で説明したい」)。ボットの自動演奏をノーツの速さ10で撮ったもの。
 // src は mp4(H.264・iPhone)、webm は VP9(Chrome など。どちらでも同じ中身)。説明(RHYTHM_HELL_GUIDE_PAGES の video)とヘルプ(help.js の {t:'video'})は、ここの名前で引く。撮り直したらファイルを替えるだけ(?v= は build が付ける)
 // play は曲の音つき(既定は無音で流し、「音ありで見る」で音を出す)。事前ダウンロードには入れない(movies/ は Range で取るため・ASSET_PREFETCH.md)
@@ -33086,6 +33258,380 @@ const RHYTHM_PROTO_SONGS=Object.freeze([
     bgmTrackId:'melo_against_my_own_shadow',
     difficulties:Object.freeze(Object.fromEntries(RHYTHM_PLAY_DIFFICULTIES.map(({id})=>[
       id,rhythmChartOnRoad(id==='HELL'?againstMyOwnShadowHellChart:emptyRhythmChart())
+    ])))
+  }),
+  // HELL(2026-10-21 全曲ヘル)。公開曲の HELL(RHYTHM_HELL_CHARTS)と同じ譜面。rhythm-hell-mix.js が Lv. を測るときにも使う
+  Object.freeze({
+    songId:'mf_ichika_mix_hell_debug',
+    displayName:'MF × ICHIKA MIX',
+    subtitle:'HELL',
+    debugDescription:'曲の解析から HELL 用に一から作った譜面(地上と空中が混ざる形・交差は上下に分ける・見分けにくい形は入れない)。遊んでも記録しない。',
+    bgmTrackId:'atsu_cup_theme',
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_PLAY_DIFFICULTIES.map(({id})=>[
+      id,rhythmChartOnRoad(id==='HELL'?mfIchikaMixHellChart:emptyRhythmChart())
+    ])))
+  }),
+  // HELL(2026-10-21 全曲ヘル)。公開曲の HELL(RHYTHM_HELL_CHARTS)と同じ譜面。rhythm-hell-mix.js が Lv. を測るときにも使う
+  Object.freeze({
+    songId:'monster_hero_hell_debug',
+    displayName:'Monster Hero',
+    subtitle:'HELL',
+    debugDescription:'曲の解析から HELL 用に一から作った譜面(地上と空中が混ざる形・交差は上下に分ける・見分けにくい形は入れない)。遊んでも記録しない。',
+    bgmTrackId:'monster_hero_theme',
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_PLAY_DIFFICULTIES.map(({id})=>[
+      id,rhythmChartOnRoad(id==='HELL'?monsterHeroHellChart:emptyRhythmChart())
+    ])))
+  }),
+  // HELL(2026-10-21 全曲ヘル)。公開曲の HELL(RHYTHM_HELL_CHARTS)と同じ譜面。rhythm-hell-mix.js が Lv. を測るときにも使う
+  Object.freeze({
+    songId:'monster_hero_another_hell_debug',
+    displayName:'Monster Hero -Another-',
+    subtitle:'HELL',
+    debugDescription:'曲の解析から HELL 用に一から作った譜面(地上と空中が混ざる形・交差は上下に分ける・見分けにくい形は入れない)。遊んでも記録しない。',
+    bgmTrackId:'monster_hero_theme_alt',
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_PLAY_DIFFICULTIES.map(({id})=>[
+      id,rhythmChartOnRoad(id==='HELL'?monsterHeroAnotherHellChart:emptyRhythmChart())
+    ])))
+  }),
+  // HELL(2026-10-21 全曲ヘル)。公開曲の HELL(RHYTHM_HELL_CHARTS)と同じ譜面。rhythm-hell-mix.js が Lv. を測るときにも使う
+  Object.freeze({
+    songId:'six_eternel_beat_hell_debug',
+    displayName:'SIX ÉTERNEL',
+    subtitle:'HELL',
+    debugDescription:'曲の解析から HELL 用に一から作った譜面(地上と空中が混ざる形・交差は上下に分ける・見分けにくい形は入れない)。遊んでも記録しない。',
+    bgmTrackId:'six_eternel_beat',
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_PLAY_DIFFICULTIES.map(({id})=>[
+      id,rhythmChartOnRoad(id==='HELL'?sixEternelBeatHellChart:emptyRhythmChart())
+    ])))
+  }),
+  // HELL(2026-10-21 全曲ヘル)。公開曲の HELL(RHYTHM_HELL_CHARTS)と同じ譜面。rhythm-hell-mix.js が Lv. を測るときにも使う
+  Object.freeze({
+    songId:'six_eternel_remix_hell_debug',
+    displayName:'SIX ÉTERNEL',
+    subtitle:'HELL',
+    debugDescription:'曲の解析から HELL 用に一から作った譜面(地上と空中が混ざる形・交差は上下に分ける・見分けにくい形は入れない)。遊んでも記録しない。',
+    bgmTrackId:'six_eternel_remix_beat',
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_PLAY_DIFFICULTIES.map(({id})=>[
+      id,rhythmChartOnRoad(id==='HELL'?sixEternelRemixHellChart:emptyRhythmChart())
+    ])))
+  }),
+  // HELL(2026-10-21 全曲ヘル)。公開曲の HELL(RHYTHM_HELL_CHARTS)と同じ譜面。rhythm-hell-mix.js が Lv. を測るときにも使う
+  Object.freeze({
+    songId:'stay_with_me_hell_debug',
+    displayName:'Stay With Me',
+    subtitle:'HELL',
+    debugDescription:'曲の解析から HELL 用に一から作った譜面(地上と空中が混ざる形・交差は上下に分ける・見分けにくい形は入れない)。遊んでも記録しない。',
+    bgmTrackId:'pandora_boss',
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_PLAY_DIFFICULTIES.map(({id})=>[
+      id,rhythmChartOnRoad(id==='HELL'?stayWithMeHellChart:emptyRhythmChart())
+    ])))
+  }),
+  // HELL(2026-10-21 全曲ヘル)。公開曲の HELL(RHYTHM_HELL_CHARTS)と同じ譜面。rhythm-hell-mix.js が Lv. を測るときにも使う
+  Object.freeze({
+    songId:'kiki_issen_hell_debug',
+    displayName:'綺季一閃',
+    subtitle:'HELL',
+    debugDescription:'曲の解析から HELL 用に一から作った譜面(地上と空中が混ざる形・交差は上下に分ける・見分けにくい形は入れない)。遊んでも記録しない。',
+    bgmTrackId:'eiki_boss',
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_PLAY_DIFFICULTIES.map(({id})=>[
+      id,rhythmChartOnRoad(id==='HELL'?kikiIssenHellChart:emptyRhythmChart())
+    ])))
+  }),
+  // HELL(2026-10-21 全曲ヘル)。公開曲の HELL(RHYTHM_HELL_CHARTS)と同じ譜面。rhythm-hell-mix.js が Lv. を測るときにも使う
+  Object.freeze({
+    songId:'close_to_your_heart_hell_debug',
+    displayName:'Close To Your Heart',
+    subtitle:'HELL',
+    debugDescription:'曲の解析から HELL 用に一から作った譜面(地上と空中が混ざる形・交差は上下に分ける・見分けにくい形は入れない)。遊んでも記録しない。',
+    bgmTrackId:'close_to_your_heart',
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_PLAY_DIFFICULTIES.map(({id})=>[
+      id,rhythmChartOnRoad(id==='HELL'?closeToYourHeartHellChart:emptyRhythmChart())
+    ])))
+  }),
+  // HELL(2026-10-21 全曲ヘル)。公開曲の HELL(RHYTHM_HELL_CHARTS)と同じ譜面。rhythm-hell-mix.js が Lv. を測るときにも使う
+  Object.freeze({
+    songId:'eiki_boss_remix_hell_debug',
+    displayName:'綺季一閃',
+    subtitle:'HELL',
+    debugDescription:'曲の解析から HELL 用に一から作った譜面(地上と空中が混ざる形・交差は上下に分ける・見分けにくい形は入れない)。遊んでも記録しない。',
+    bgmTrackId:'eiki_boss_remix',
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_PLAY_DIFFICULTIES.map(({id})=>[
+      id,rhythmChartOnRoad(id==='HELL'?eikiBossRemixHellChart:emptyRhythmChart())
+    ])))
+  }),
+  // HELL(2026-10-21 全曲ヘル)。公開曲の HELL(RHYTHM_HELL_CHARTS)と同じ譜面。rhythm-hell-mix.js が Lv. を測るときにも使う
+  Object.freeze({
+    songId:'pandora_boss_remix_hell_debug',
+    displayName:'Stay With Me',
+    subtitle:'HELL',
+    debugDescription:'曲の解析から HELL 用に一から作った譜面(地上と空中が混ざる形・交差は上下に分ける・見分けにくい形は入れない)。遊んでも記録しない。',
+    bgmTrackId:'pandora_boss_remix',
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_PLAY_DIFFICULTIES.map(({id})=>[
+      id,rhythmChartOnRoad(id==='HELL'?pandoraBossRemixHellChart:emptyRhythmChart())
+    ])))
+  }),
+  // HELL(2026-10-21 全曲ヘル)。公開曲の HELL(RHYTHM_HELL_CHARTS)と同じ譜面。rhythm-hell-mix.js が Lv. を測るときにも使う
+  Object.freeze({
+    songId:'dullahan_hell_debug',
+    displayName:'デュラハンテーマ',
+    subtitle:'HELL',
+    debugDescription:'曲の解析から HELL 用に一から作った譜面(地上と空中が混ざる形・交差は上下に分ける・見分けにくい形は入れない)。遊んでも記録しない。',
+    bgmTrackId:'original_dullahan',
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_PLAY_DIFFICULTIES.map(({id})=>[
+      id,rhythmChartOnRoad(id==='HELL'?dullahanHellChart:emptyRhythmChart())
+    ])))
+  }),
+  // HELL(2026-10-21 全曲ヘル)。公開曲の HELL(RHYTHM_HELL_CHARTS)と同じ譜面。rhythm-hell-mix.js が Lv. を測るときにも使う
+  Object.freeze({
+    songId:'dullahan_clockwork_hell_debug',
+    displayName:'呪われた騎士の時計仕掛け',
+    subtitle:'HELL',
+    debugDescription:'曲の解析から HELL 用に一から作った譜面(地上と空中が混ざる形・交差は上下に分ける・見分けにくい形は入れない)。遊んでも記録しない。',
+    bgmTrackId:'melo_dullahan_clockwork',
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_PLAY_DIFFICULTIES.map(({id})=>[
+      id,rhythmChartOnRoad(id==='HELL'?dullahanClockworkHellChart:emptyRhythmChart())
+    ])))
+  }),
+  // HELL(2026-10-21 全曲ヘル)。公開曲の HELL(RHYTHM_HELL_CHARTS)と同じ譜面。rhythm-hell-mix.js が Lv. を測るときにも使う
+  Object.freeze({
+    songId:'toriko_hell_debug',
+    displayName:'トリコ',
+    subtitle:'HELL',
+    debugDescription:'曲の解析から HELL 用に一から作った譜面(地上と空中が混ざる形・交差は上下に分ける・見分けにくい形は入れない)。遊んでも記録しない。',
+    bgmTrackId:'melo_toriko',
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_PLAY_DIFFICULTIES.map(({id})=>[
+      id,rhythmChartOnRoad(id==='HELL'?torikoHellChart:emptyRhythmChart())
+    ])))
+  }),
+  // HELL(2026-10-21 全曲ヘル)。公開曲の HELL(RHYTHM_HELL_CHARTS)と同じ譜面。rhythm-hell-mix.js が Lv. を測るときにも使う
+  Object.freeze({
+    songId:'4u_hitasura_hell_debug',
+    displayName:'4U ～ひたすら～',
+    subtitle:'HELL',
+    debugDescription:'曲の解析から HELL 用に一から作った譜面(地上と空中が混ざる形・交差は上下に分ける・見分けにくい形は入れない)。遊んでも記録しない。',
+    bgmTrackId:'melo_4u_hitasura',
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_PLAY_DIFFICULTIES.map(({id})=>[
+      id,rhythmChartOnRoad(id==='HELL'?song4uHitasuraHellChart:emptyRhythmChart())
+    ])))
+  }),
+  // HELL(2026-10-21 全曲ヘル)。公開曲の HELL(RHYTHM_HELL_CHARTS)と同じ譜面。rhythm-hell-mix.js が Lv. を測るときにも使う
+  Object.freeze({
+    songId:'kindan_no_resistance_hell_debug',
+    displayName:'禁断のレジスタンス',
+    subtitle:'HELL',
+    debugDescription:'曲の解析から HELL 用に一から作った譜面(地上と空中が混ざる形・交差は上下に分ける・見分けにくい形は入れない)。遊んでも記録しない。',
+    bgmTrackId:'melo_kindan_no_resistance',
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_PLAY_DIFFICULTIES.map(({id})=>[
+      id,rhythmChartOnRoad(id==='HELL'?kindanNoResistanceHellChart:emptyRhythmChart())
+    ])))
+  }),
+  // HELL(2026-10-21 全曲ヘル)。公開曲の HELL(RHYTHM_HELL_CHARTS)と同じ譜面。rhythm-hell-mix.js が Lv. を測るときにも使う
+  Object.freeze({
+    songId:'crossing_field_hell_debug',
+    displayName:'crossing field',
+    subtitle:'HELL',
+    debugDescription:'曲の解析から HELL 用に一から作った譜面(地上と空中が混ざる形・交差は上下に分ける・見分けにくい形は入れない)。遊んでも記録しない。',
+    bgmTrackId:'melo_crossing_field',
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_PLAY_DIFFICULTIES.map(({id})=>[
+      id,rhythmChartOnRoad(id==='HELL'?crossingFieldHellChart:emptyRhythmChart())
+    ])))
+  }),
+  // HELL(2026-10-21 全曲ヘル)。公開曲の HELL(RHYTHM_HELL_CHARTS)と同じ譜面。rhythm-hell-mix.js が Lv. を測るときにも使う
+  Object.freeze({
+    songId:'nothing_without_you_hell_debug',
+    displayName:'Nothing Without You',
+    subtitle:'HELL',
+    debugDescription:'曲の解析から HELL 用に一から作った譜面(地上と空中が混ざる形・交差は上下に分ける・見分けにくい形は入れない)。遊んでも記録しない。',
+    bgmTrackId:'melo_nothing_without_you',
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_PLAY_DIFFICULTIES.map(({id})=>[
+      id,rhythmChartOnRoad(id==='HELL'?nothingWithoutYouHellChart:emptyRhythmChart())
+    ])))
+  }),
+  // HELL(2026-10-21 全曲ヘル)。公開曲の HELL(RHYTHM_HELL_CHARTS)と同じ譜面。rhythm-hell-mix.js が Lv. を測るときにも使う
+  Object.freeze({
+    songId:'mou_hitotsu_no_sekai_e_hell_debug',
+    displayName:'もう一つの世界へ',
+    subtitle:'HELL',
+    debugDescription:'曲の解析から HELL 用に一から作った譜面(地上と空中が混ざる形・交差は上下に分ける・見分けにくい形は入れない)。遊んでも記録しない。',
+    bgmTrackId:'melo_mou_hitotsu_no_sekai_e',
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_PLAY_DIFFICULTIES.map(({id})=>[
+      id,rhythmChartOnRoad(id==='HELL'?mouHitotsuNoSekaiEHellChart:emptyRhythmChart())
+    ])))
+  }),
+  // HELL(2026-10-21 全曲ヘル)。公開曲の HELL(RHYTHM_HELL_CHARTS)と同じ譜面。rhythm-hell-mix.js が Lv. を測るときにも使う
+  Object.freeze({
+    songId:'senjou_no_shippuu_hell_debug',
+    displayName:'戦場の疾風',
+    subtitle:'HELL',
+    debugDescription:'曲の解析から HELL 用に一から作った譜面(地上と空中が混ざる形・交差は上下に分ける・見分けにくい形は入れない)。遊んでも記録しない。',
+    bgmTrackId:'senjou_no_shippuu',
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_PLAY_DIFFICULTIES.map(({id})=>[
+      id,rhythmChartOnRoad(id==='HELL'?senjouNoShippuuHellChart:emptyRhythmChart())
+    ])))
+  }),
+  // HELL(2026-10-21 全曲ヘル)。公開曲の HELL(RHYTHM_HELL_CHARTS)と同じ譜面。rhythm-hell-mix.js が Lv. を測るときにも使う
+  Object.freeze({
+    songId:'makutsu_no_senritsu_hell_debug',
+    displayName:'魔窟の旋律',
+    subtitle:'HELL',
+    debugDescription:'曲の解析から HELL 用に一から作った譜面(地上と空中が混ざる形・交差は上下に分ける・見分けにくい形は入れない)。遊んでも記録しない。',
+    bgmTrackId:'makutsu_no_senritsu',
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_PLAY_DIFFICULTIES.map(({id})=>[
+      id,rhythmChartOnRoad(id==='HELL'?makutsuNoSenritsuHellChart:emptyRhythmChart())
+    ])))
+  }),
+  // HELL(2026-10-21 全曲ヘル)。公開曲の HELL(RHYTHM_HELL_CHARTS)と同じ譜面。rhythm-hell-mix.js が Lv. を測るときにも使う
+  Object.freeze({
+    songId:'the_city_beneath_the_comets_hell_debug',
+    displayName:'The City Beneath the Comets',
+    subtitle:'HELL',
+    debugDescription:'曲の解析から HELL 用に一から作った譜面(地上と空中が混ざる形・交差は上下に分ける・見分けにくい形は入れない)。遊んでも記録しない。',
+    bgmTrackId:'melo_the_city_beneath_the_comets',
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_PLAY_DIFFICULTIES.map(({id})=>[
+      id,rhythmChartOnRoad(id==='HELL'?theCityBeneathTheCometsHellChart:emptyRhythmChart())
+    ])))
+  }),
+  // HELL(2026-10-21 全曲ヘル)。公開曲の HELL(RHYTHM_HELL_CHARTS)と同じ譜面。rhythm-hell-mix.js が Lv. を測るときにも使う
+  Object.freeze({
+    songId:'freedom_dive_hell_debug',
+    displayName:'FREEDOM DiVE↓',
+    subtitle:'HELL',
+    debugDescription:'曲の解析から HELL 用に一から作った譜面(地上と空中が混ざる形・交差は上下に分ける・見分けにくい形は入れない)。遊んでも記録しない。',
+    bgmTrackId:'melo_freedom_dive',
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_PLAY_DIFFICULTIES.map(({id})=>[
+      id,rhythmChartOnRoad(id==='HELL'?freedomDiveHellChart:emptyRhythmChart())
+    ])))
+  }),
+  // HELL(2026-10-21 全曲ヘル)。公開曲の HELL(RHYTHM_HELL_CHARTS)と同じ譜面。rhythm-hell-mix.js が Lv. を測るときにも使う
+  Object.freeze({
+    songId:'only_my_railgun_hell_debug',
+    displayName:'only my railgun',
+    subtitle:'HELL',
+    debugDescription:'曲の解析から HELL 用に一から作った譜面(地上と空中が混ざる形・交差は上下に分ける・見分けにくい形は入れない)。遊んでも記録しない。',
+    bgmTrackId:'melo_only_my_railgun',
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_PLAY_DIFFICULTIES.map(({id})=>[
+      id,rhythmChartOnRoad(id==='HELL'?onlyMyRailgunHellChart:emptyRhythmChart())
+    ])))
+  }),
+  // HELL(2026-10-21 全曲ヘル)。公開曲の HELL(RHYTHM_HELL_CHARTS)と同じ譜面。rhythm-hell-mix.js が Lv. を測るときにも使う
+  Object.freeze({
+    songId:'big_bridge_no_shitou_hell_debug',
+    displayName:'ビッグブリッヂの死闘',
+    subtitle:'HELL',
+    debugDescription:'曲の解析から HELL 用に一から作った譜面(地上と空中が混ざる形・交差は上下に分ける・見分けにくい形は入れない)。遊んでも記録しない。',
+    bgmTrackId:'melo_big_bridge_no_shitou',
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_PLAY_DIFFICULTIES.map(({id})=>[
+      id,rhythmChartOnRoad(id==='HELL'?bigBridgeNoShitouHellChart:emptyRhythmChart())
+    ])))
+  }),
+  // HELL(2026-10-21 全曲ヘル)。公開曲の HELL(RHYTHM_HELL_CHARTS)と同じ譜面。rhythm-hell-mix.js が Lv. を測るときにも使う
+  Object.freeze({
+    songId:'rising_hope_hell_debug',
+    displayName:'Rising Hope',
+    subtitle:'HELL',
+    debugDescription:'曲の解析から HELL 用に一から作った譜面(地上と空中が混ざる形・交差は上下に分ける・見分けにくい形は入れない)。遊んでも記録しない。',
+    bgmTrackId:'melo_rising_hope',
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_PLAY_DIFFICULTIES.map(({id})=>[
+      id,rhythmChartOnRoad(id==='HELL'?risingHopeHellChart:emptyRhythmChart())
+    ])))
+  }),
+  // HELL(2026-10-21 全曲ヘル)。公開曲の HELL(RHYTHM_HELL_CHARTS)と同じ譜面。rhythm-hell-mix.js が Lv. を測るときにも使う
+  Object.freeze({
+    songId:'haruka_hell_debug',
+    displayName:'ハルカ',
+    subtitle:'HELL',
+    debugDescription:'曲の解析から HELL 用に一から作った譜面(地上と空中が混ざる形・交差は上下に分ける・見分けにくい形は入れない)。遊んでも記録しない。',
+    bgmTrackId:'melo_haruka',
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_PLAY_DIFFICULTIES.map(({id})=>[
+      id,rhythmChartOnRoad(id==='HELL'?harukaHellChart:emptyRhythmChart())
+    ])))
+  }),
+  // HELL(2026-10-21 全曲ヘル)。公開曲の HELL(RHYTHM_HELL_CHARTS)と同じ譜面。rhythm-hell-mix.js が Lv. を測るときにも使う
+  Object.freeze({
+    songId:'stay_with_me_short_hell_debug',
+    displayName:'Stay With Me',
+    subtitle:'HELL(short ver.)',
+    debugDescription:'曲の解析から HELL 用に一から作った譜面(地上と空中が混ざる形・交差は上下に分ける・見分けにくい形は入れない)。遊んでも記録しない。',
+    bgmTrackId:'melo_stay_with_me_short',
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_PLAY_DIFFICULTIES.map(({id})=>[
+      id,rhythmChartOnRoad(id==='HELL'?stayWithMeShortHellChart:emptyRhythmChart())
+    ])))
+  }),
+  // HELL(2026-10-21 全曲ヘル)。公開曲の HELL(RHYTHM_HELL_CHARTS)と同じ譜面。rhythm-hell-mix.js が Lv. を測るときにも使う
+  Object.freeze({
+    songId:'kiki_issen_short_hell_debug',
+    displayName:'綺季一閃',
+    subtitle:'HELL(short ver.)',
+    debugDescription:'曲の解析から HELL 用に一から作った譜面(地上と空中が混ざる形・交差は上下に分ける・見分けにくい形は入れない)。遊んでも記録しない。',
+    bgmTrackId:'melo_kiki_issen_short',
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_PLAY_DIFFICULTIES.map(({id})=>[
+      id,rhythmChartOnRoad(id==='HELL'?kikiIssenShortHellChart:emptyRhythmChart())
+    ])))
+  }),
+  // HELL(2026-10-21 全曲ヘル)。公開曲の HELL(RHYTHM_HELL_CHARTS)と同じ譜面。rhythm-hell-mix.js が Lv. を測るときにも使う
+  Object.freeze({
+    songId:'crazy_party_night_hell_debug',
+    displayName:'Crazy Party Night',
+    subtitle:'HELL',
+    debugDescription:'曲の解析から HELL 用に一から作った譜面(地上と空中が混ざる形・交差は上下に分ける・見分けにくい形は入れない)。遊んでも記録しない。',
+    bgmTrackId:'melo_crazy_party_night',
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_PLAY_DIFFICULTIES.map(({id})=>[
+      id,rhythmChartOnRoad(id==='HELL'?crazyPartyNightHellChart:emptyRhythmChart())
+    ])))
+  }),
+  // HELL(2026-10-21 全曲ヘル)。公開曲の HELL(RHYTHM_HELL_CHARTS)と同じ譜面。rhythm-hell-mix.js が Lv. を測るときにも使う
+  Object.freeze({
+    songId:'crazy_party_night_full_hell_debug',
+    displayName:'Crazy Party Night',
+    subtitle:'HELL(全編)',
+    debugDescription:'曲の解析から HELL 用に一から作った譜面(地上と空中が混ざる形・交差は上下に分ける・見分けにくい形は入れない)。遊んでも記録しない。',
+    bgmTrackId:'melo_crazy_party_night_full',
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_PLAY_DIFFICULTIES.map(({id})=>[
+      id,rhythmChartOnRoad(id==='HELL'?crazyPartyNightFullHellChart:emptyRhythmChart())
+    ])))
+  }),
+  // HELL(2026-10-21 全曲ヘル)。公開曲の HELL(RHYTHM_HELL_CHARTS)と同じ譜面。rhythm-hell-mix.js が Lv. を測るときにも使う
+  Object.freeze({
+    songId:'emerald_rush_hell_debug',
+    displayName:'Emerald Rush',
+    subtitle:'HELL',
+    debugDescription:'曲の解析から HELL 用に一から作った譜面(地上と空中が混ざる形・交差は上下に分ける・見分けにくい形は入れない)。遊んでも記録しない。',
+    bgmTrackId:'melo_emerald_rush',
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_PLAY_DIFFICULTIES.map(({id})=>[
+      id,rhythmChartOnRoad(id==='HELL'?emeraldRushHellChart:emptyRhythmChart())
+    ])))
+  }),
+  // HELL(2026-10-21 全曲ヘル)。公開曲の HELL(RHYTHM_HELL_CHARTS)と同じ譜面。rhythm-hell-mix.js が Lv. を測るときにも使う
+  Object.freeze({
+    songId:'wrath_of_the_thorn_king_hell_debug',
+    displayName:'Wrath of the Thorn King',
+    subtitle:'HELL',
+    debugDescription:'曲の解析から HELL 用に一から作った譜面(地上と空中が混ざる形・交差は上下に分ける・見分けにくい形は入れない)。遊んでも記録しない。',
+    bgmTrackId:'melo_wrath_of_the_thorn_king',
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_PLAY_DIFFICULTIES.map(({id})=>[
+      id,rhythmChartOnRoad(id==='HELL'?wrathOfTheThornKingHellChart:emptyRhythmChart())
+    ])))
+  }),
+  // HELL(2026-10-21 全曲ヘル)。公開曲の HELL(RHYTHM_HELL_CHARTS)と同じ譜面。rhythm-hell-mix.js が Lv. を測るときにも使う
+  Object.freeze({
+    songId:'monster_hell_debug',
+    displayName:'Monster',
+    subtitle:'HELL',
+    debugDescription:'曲の解析から HELL 用に一から作った譜面(地上と空中が混ざる形・交差は上下に分ける・見分けにくい形は入れない)。遊んでも記録しない。',
+    bgmTrackId:'melo_monster',
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_PLAY_DIFFICULTIES.map(({id})=>[
+      id,rhythmChartOnRoad(id==='HELL'?monsterHellChart:emptyRhythmChart())
+    ])))
+  }),
+  // HELL(2026-10-21 全曲ヘル)。公開曲の HELL(RHYTHM_HELL_CHARTS)と同じ譜面。rhythm-hell-mix.js が Lv. を測るときにも使う
+  Object.freeze({
+    songId:'monster_short_hell_debug',
+    displayName:'Monster',
+    subtitle:'HELL(short ver.)',
+    debugDescription:'曲の解析から HELL 用に一から作った譜面(地上と空中が混ざる形・交差は上下に分ける・見分けにくい形は入れない)。遊んでも記録しない。',
+    bgmTrackId:'melo_monster_short',
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_PLAY_DIFFICULTIES.map(({id})=>[
+      id,rhythmChartOnRoad(id==='HELL'?monsterShortHellChart:emptyRhythmChart())
     ])))
   }),
   // HELL(2026-10-21)。公開曲の HELL(RHYTHM_HELL_CHARTS)と同じ譜面。rhythm-hell-mix.js が Lv. を測るときにも使う
