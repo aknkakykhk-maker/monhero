@@ -14,6 +14,14 @@ const ASSISTANT_CHAT_LOG_LIMIT = 60;
 // 送る会話は直近10往復まで。10件ずつ区切って送り、前のほうの並びを毎回変えない(中継役でキャッシュが効く)
 const ASSISTANT_CHAT_SEND_STEP = 10;
 const ASSISTANT_CHAT_SEND_MAX = 21;
+// 助手の答えにノーツの見本の絵を出す(2026-10-21 社長「見た目とかちゃんとわかるようにしてほしい」)。
+// どの絵を出すかは答えの文に出たノーツの名前から機械で選ぶ(rhythmNoteSwatchKindsInText)。絵は演奏画面と同じ描き方の RhythmNoteSwatch だけなので、作り話の色は出ない。
+// 「ボタンをタップ」のような言葉で絵が出ないよう、答えかその前のプレイヤーの発言に「ノーツ」があるときだけ出す
+const assistantChatNoteKinds = (text, prevUserText) => {
+  if (typeof rhythmNoteSwatchKindsInText !== 'function') return [];
+  if (!/ノーツ/.test(`${text || ''}${prevUserText || ''}`)) return [];
+  return rhythmNoteSwatchKindsInText(text);
+};
 const ASSISTANT_CHAT_TEXT_MAX = 200;
 const assistantChatSendWindow = (list) => {
   if (list.length <= ASSISTANT_CHAT_SEND_MAX) return list;
@@ -163,7 +171,14 @@ function AssistantChatWindow({ assistant, playerName, callName, bondLevel, bondT
           {log.length === 0 && <p className="text-[11px] text-slate-400 leading-relaxed">{assistant.greeting || '話しかけてみてね'}</p>}
           {log.map((m, i) => (
             <div key={i} data-assistant-chat-msg={m.role} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <p className={`max-w-[80%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-[12px] leading-relaxed ${m.role === 'user' ? 'bg-slate-700 text-white' : 'bg-slate-800/80 text-slate-100 border'}`} style={m.role === 'user' ? undefined : { borderColor: accent }}>{m.text}</p>
+              <p className={`max-w-[80%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-[12px] leading-relaxed ${m.role === 'user' ? 'bg-slate-700 text-white' : 'bg-slate-800/80 text-slate-100 border'}`} style={m.role === 'user' ? undefined : { borderColor: accent }}>{m.text}{m.role !== 'user' && assistantChatNoteKinds(m.text, (log.slice(0, i).reverse().find(x => x.role === 'user') || {}).text).length > 0 && (
+                <span data-assistant-chat-notes className="mt-2 flex flex-wrap gap-1.5 whitespace-normal">
+                  {assistantChatNoteKinds(m.text, (log.slice(0, i).reverse().find(x => x.role === 'user') || {}).text).map(k => (
+                    <span key={k} className="flex flex-col items-center gap-0.5 rounded-lg bg-black/40 px-1 py-1">
+                      <RhythmNoteSwatch kind={k} width={44} height={34}/>
+                      <span className="text-[9px] font-bold leading-none text-slate-300">{(RHYTHM_NOTE_SWATCH_KINDS.find(x => x.id === k) || {}).label || k}</span>
+                    </span>))}
+                </span>)}</p>
             </div>
           ))}
           {sending && <p data-assistant-chat-sending className="text-[11px] text-slate-400">{assistant.name}が考え中…</p>}

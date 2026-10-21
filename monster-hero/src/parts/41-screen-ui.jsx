@@ -236,6 +236,23 @@ const JA_WRAP_STYLE = Object.freeze({ wordBreak: 'keep-all', overflowWrap: 'anyw
 // 短い説明・札向け(2026-10-21 社長決定・改善部の見直しの洗い出し)。言葉の切れ目で折り、行の長さもそろえる
 // (「音が出ないと／き」「得意な曲を／見る」のように、最後の行に1〜2字だけ残らない)。jaWrap と一緒に使う
 const JA_LABEL_STYLE = Object.freeze({ ...JA_WRAP_STYLE, textWrap: 'balance' });
+// ノーツの見本の絵(2026-10-21 社長「見た目とかちゃんとわかるようにしてほしい」)。ヘルプの表と助手のおしゃべりで使う。
+// 絵は演奏画面と同じ描き方(data/rhythm-mode.js の rhythmDrawNoteSwatch)で描く。手描きの絵や写真は使わない。kind は RHYTHM_NOTE_SWATCH_KINDS の id
+const RhythmNoteSwatch = ({ kind, width = 54, height = 42, className = '' }) => {
+  const ref = React.useRef(null);
+  React.useEffect(() => {
+    const c = ref.current;
+    if (!c || typeof rhythmDrawNoteSwatch !== 'function') return;
+    const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+    c.width = Math.round(width * dpr); c.height = Math.round(height * dpr);
+    const g = c.getContext('2d');
+    if (!g) return;
+    g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, width, height);
+    rhythmDrawNoteSwatch(g, kind, width, height);
+  }, [kind, width, height]);
+  const label = ((typeof RHYTHM_NOTE_SWATCH_KINDS !== 'undefined' ? RHYTHM_NOTE_SWATCH_KINDS : []).find(k => k.id === kind) || {}).label || kind;
+  return <canvas ref={ref} data-rhythm-note-swatch={kind} role="img" aria-label={`${label}の見た目`} className={className} style={{ display: 'block', width, height }} />;
+};
 // 数を直接打ち込む欄(2026-10-19 社長「マーケットのアイテムは直接数値入力で買えるようにしよう！」、
 // 2026-10-20「個数系のやつは基本的に直接入力があったほうがいいね」)。★個数・回数・枚数を選ぶ所は、この欄を使う
 //   (−/＋/MAX のボタンは呼ぶ側に並べたまま。tools/boot/count-input-check.js が見張る)
