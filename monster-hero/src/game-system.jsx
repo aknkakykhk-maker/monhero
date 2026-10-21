@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8b7c2448d7f02902
+// generated-sha256: 54f9869f77ea0c59
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-22 00:36"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-22 07:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -306,6 +306,8 @@ const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
   get assistantChat() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantChat === true; },
   // 助手4人がタイプを教えるお話(tactics_types・2026-10-17)。ヘイトとタイプの公開(RELEASE_FLAGS.tacticsHate・2026-10-18)と一緒に出る
   get tacticsTypes() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.tacticsHate === true; },
+  // あつの加入のお話(atsu_join_2026_10_22・2026-10-22)。あつの公開と一緒に出る
+  get assistantAtsu() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantAtsu === true; },
 });
 const eventReplayReleased = (event) => !event?.releaseFlag || EVENT_REPLAY_RELEASE_FLAGS[event.releaseFlag] === true;
 // 画面に並べるイベント回想。3か所(プロフィール・回想一覧・再生)が同じ並びを見るための唯一の入口
@@ -8561,6 +8563,9 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   assistantChatRanking: true,
   // ふだんの吹き出しを1日1回まとめて作る(2026-10-14)。2026-10-14 社長「もう公開していいよ」→真にした(56-assistant-chat.jsx)
   assistantDailyLines: true,
+  // 5人目の助手あつ(2026-10-22 社長の決定)。大きい絵(1536×1024)が届くまで偽。届いたら絵を差し替えて真にする。
+  //   偽のあいだは、助手の一覧・加入のお話・回想・ヘルプの項目に出ない(data/assistants.js の ASSISTANT_RELEASE_FLAGS)
+  assistantAtsu: false,
   tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE,
   // タクティクスのヘイト(🔥)とモンスターのタイプ表記。2026-10-18 社長「ヘイトシステムは実装していいよ」で公開。
   //   数字は 32-tactics-units.jsx の TACTICS_HATE / MONSTER_TYPES。お話「タクティクスバトル ～4人のタイプ～」(tactics_types)もこの印で出る
@@ -8871,6 +8876,8 @@ const RHYTHM_HELL_STORY_TRIGGER = 'release';
 // 公開(RELEASE_FLAGS.assistantChat)のあとの最初の HOME で1回だけ流す。デバッグから見たぶんは立てない
 const ASSISTANT_CHAT_STORY_SEEN_KEY = 'mh_story_assistant_chat_seen_v1';
 const ASSISTANT_CHAT_STORY_ID = 'assistant_chat_story';
+// あつの加入のお話(2026-10-22)。id は data/assistants.js の ASSISTANT_UNLOCK_STORIES.atsu と同じ
+const ATSU_JOIN_STORY_ID = 'atsu_join_2026_10_22';
 // 助手4人がタイプを教えるお話「タクティクスバトル ～4人のタイプ～」(2026-10-18・新しいキー。既存のキーには触らない・CLAUDE.md ⑦)。
 // ヘイトとタイプの公開(RELEASE_FLAGS.tacticsHate)のあと、タクティクスバトルの導入のお話を見た人にだけ、最初の HOME で1回流す。デバッグから見たぶんは立てない
 const TACTICS_TYPES_STORY_SEEN_KEY = 'mh_story_tactics_types_seen_v1';
@@ -8904,6 +8911,9 @@ const assistantBondKeyFor = (assistantId) => {
 const assistantIdOfAssistCard = (cardId) => {
   const id = String(cardId == null ? '' : cardId);
   const list = (typeof ASSISTANTS !== 'undefined' && Array.isArray(ASSISTANTS)) ? ASSISTANTS : [];
+  // ★公開の印が立つまでの助手(あつ・2026-10-22)には結び付けない。カード「あつの挑発」は前からあるので、
+  //   結び付けると公開前に「あつ」の仲良し度が貯まり、ごほうびのギフトまで届いてしまう(assistantReleased・data/assistants.js)
+  if (typeof assistantReleased === 'function' && !assistantReleased(id)) return null;
   return list.some(a => a && a.id === id) ? id : null;
 };
 // 呼び方の上書きも助手ごとに分ける。みゅあのぶんは今までのキーのまま
@@ -11792,7 +11802,9 @@ const helpDataRows = (id) => {
         });
     // 助手の一覧。名前と性格の違いを実データから出す
     case 'assistants':
+      // 公開の印が立つまでの助手(あつ)は並べない(assistantReleased・data/assistants.js)
       return ((typeof ASSISTANT_LIST !== 'undefined' && ASSISTANT_LIST) || [])
+        .filter(who => typeof assistantReleased !== 'function' || assistantReleased(who.id))
         .map(who => [who.name, `${who.tagline || ''}${who.intro ? ` ／ ${who.intro}` : ''}`]);
     case 'monsterPower':
       // 総合力の内訳は、実際の計算に使っている定数から作る(ヘルプへ数字を手で書き写さない)
@@ -38643,6 +38655,7 @@ const FRIEND_NOTICE_LINES = Object.freeze({
   kiki: (who) => `${who}からフレンド申請が届いてまつよ。見にいきまつか？`,
   momosuke: (who) => `${who}からフレンド申請が来てるよw 見にいこ？`,
   dra: (who) => `${who}からフレンド申請が来てるわ。見にいくか`,
+  atsu: (who) => `${who}からフレンド申請来てるよ。とりあえず見にいこ`,
 });
 function HomeFriendRequestNotice({ activeAssistant, count, names, onOpen, onLater }) {
   const who = activeAssistant;
@@ -45482,6 +45495,8 @@ const RHYTHM_MODE_ASSISTANT_FRAMES = Object.freeze({
   momosuke: { zoom: 1.5, cx: 0.5, cy: 0.48, top: 0.42,
     cxBy: { angry: 0.545, happy: 0.545, crying: 0.44, wink: 0.46, excited: 0.38, surprise: 0.38, normal: 0.645, troubled: 0.655 } },
   dra: { zoom: 0.85, cx: 0.5, cy: 0.5, top: 0.4 },
+  // あつ(2026-10-22)。大きい絵が届くまでは顔の絵(正方形)なので、ドラと同じ寄せ方
+  atsu: { zoom: 0.85, cx: 0.5, cy: 0.5, top: 0.4 },
 });
 // 舞台の飾り(スポットライト3本・音符・キラキラ・床の光)。位置と遅れは固定(描くたびに変わらないように)
 const RHYTHM_MODE_SELECT_NOTES = Object.freeze([
@@ -53627,7 +53642,7 @@ function MonsterHeroGame() {
   // 時刻で出すのは第1部だけ(data/rhythm-event.js の HALLOWEEN_NIGHT_STORIES)。第2部以降はジャックのストーリー(RAID_JACK_STORY_IDS)で、
   // レイドの進み具合で出る。見たかどうかは同じ保存キーの配列へ入れる(新しいキーは作らない)
   const HALLOWEEN_NIGHT_STORY_IDS = HALLOWEEN_NIGHT_STORIES.map(story => story.id);
-  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID];
+  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID];
   // ★イベントid → そのイベントの会話id。**イベントを足したらここへ1行足す。**
   //   以前はここが第1回のidの直書きで、第2回が始まっても第1回の会話が流れる形になっていた
   //   (2026-09-17に第2回を足したときに直した)。書かなかったイベントでは会話は流れない。
@@ -53788,6 +53803,17 @@ function MonsterHeroGame() {
     if (rhythmEventStoryStartedRef.current.includes(ASSISTANT_CHAT_STORY_ID)) return;
     setRhythmEventStoryPending(ASSISTANT_CHAT_STORY_ID);
   }, [assistantChatStorySeenLoaded, assistantChatStorySeenFlag, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  // あつの加入のお話(2026-10-22 社長の決定)。みゅあ Lv10・きき Lv8・ももすけ Lv5(ASSISTANT_ATSU_UNLOCK_BONDS)がそろった HOME で1回だけ流す。
+  // 見たかどうかはドラと同じ「見終えたお話の id」(mh_rhythm_event_story_v1)。最後まで見るか飛ばすと、あつを選べるようになる(assistantUnlockedBy)。
+  // 公開の印 assistantAtsu が偽なら何もしない。置き方は上の HELL・おしゃべりのお話と同じ
+  useEffect(() => {
+    if (!EVENT_REPLAY_RELEASE_FLAGS.assistantAtsu) return;
+    if (!Array.isArray(rhythmEventStorySeen) || rhythmEventStorySeen.includes(ATSU_JOIN_STORY_ID)) return;
+    if (!assistantAtsuUnlockReady(id => assistantBondLevelOf(normalizeAssistantBond(assistantBonds[id]).points))) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
+    if (rhythmEventStoryStartedRef.current.includes(ATSU_JOIN_STORY_ID)) return;
+    setRhythmEventStoryPending(ATSU_JOIN_STORY_ID);
+  }, [rhythmEventStorySeen, assistantBonds, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
   // 助手4人がタイプを教えるお話を、ヘイトとタイプの公開のあとの最初の HOME で1回だけ流す(2026-10-18)。
   // タクティクスバトルの導入のお話をまだ見ていない人には流さない(何の話か分からないので。回想からは見られる)
   useEffect(() => {
@@ -56609,6 +56635,7 @@ function MonsterHeroGame() {
     rhythmMasuCallSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_MASU_CALL_STORY_ID),
     raidJackHowtoSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RAID_JACK_HOWTO_STORY_ID),
     raidJackRhythmStorySeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RAID_JACK_RHYTHM_STORY_ID),
+    atsuJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(ATSU_JOIN_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID) };
   // alwaysUnlocked のイベントは、本編でまだ見ていなくても回想から見られる
   const isEventReplayUnlocked = (event) => !!(event && event.alwaysUnlocked) || !!EVENT_REPLAY_UNLOCK_FLAGS[event && event.unlockedKey];
@@ -69362,7 +69389,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <h3 className="text-base font-black text-white mb-1 text-center">いっしょに遊ぶ助手</h3>
               <p className="text-[9px] text-slate-500 text-center mb-3 leading-tight">いつでも変えられます。仲良し度と呼び方は助手ごとに分かれているので、切り替えても消えません。</p>
               <div className="space-y-2 mb-3">
-                {ASSISTANT_LIST.map(who=>{
+                {/* 公開の印が立つまでの助手(あつ)は、鍵つきの「？？？」としても出さない(assistantReleased) */}
+                {ASSISTANT_LIST.filter(who=>assistantReleased(who.id)).map(who=>{
                   const active=who.id===selectedAssistantId;
                   const lv=assistantBondLevelOf(normalizeAssistantBond(assistantBonds[who.id]).points);
                   const t=(typeof assistantBondStageByLevel==='function')?assistantBondStageByLevel(lv,who.id):null;
@@ -69376,7 +69404,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       <span className="text-2xl" aria-hidden="true">🔒</span>
                       <span className="min-w-0 flex-1">
                         <b className="block text-[12px] font-black text-slate-400">？？？</b>
-                        <small className="block text-[9px] text-slate-500 leading-tight">{assistantUnlockStoryId(who.id)?'イベントの話を最後まで見ると選べるようになります。':'HOMEでの出会いを見ると選べるようになります。'}</small>
+                        <small className="block text-[9px] text-slate-500 leading-tight">{who.id==='atsu'?'助手たちともっと仲良くなると、会えるかもしれません。':assistantUnlockStoryId(who.id)?'イベントの話を最後まで見ると選べるようになります。':'HOMEでの出会いを見ると選べるようになります。'}</small>
                       </span>
                     </div>
                   );
@@ -69739,7 +69767,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const cell=(costume)=>{
             const owned=!costume||ownedAssistantCostumes.includes(costume.id);
             const selected=costume?(worn&&worn.id===costume.id):!worn;
-            const src=costume?faceOf(costume):`${who.imageDir}/face/${who.imagePrefix}_normal.PNG`;
+            const src=costume?faceOf(costume):(assistantTempImage(who,'normal')||`${who.imageDir}/face/${who.imagePrefix}_normal.PNG`);
             return (
               <button key={costume?costume.id:'original'} data-assistant-costume-option={costume?costume.id:'original'} data-assistant-costume-locked={owned?'no':'yes'}
                 onClick={()=>{ if(owned){ wearAssistantCostume(who.id, costume?costume.id:null); setCostumeLockedInfo(null); } else setCostumeLockedInfo(costume.id); }}
