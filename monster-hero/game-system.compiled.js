@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: cbe8e4c7d1299bdd
+// source-sha256: eee72305072ca469
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-21 21:10";
+const BUILD_DATE = "2026-10-21 21:15";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -5395,6 +5395,13 @@ const BGM_TRACKS = [{
   gain: 1,
   loop: true
 }, {
+  id: 'melo_black_shout',
+  name: 'BLACK SHOUT',
+  creator: 'Roselia',
+  src: 'audio/bgm-black-shout.mp3',
+  gain: 1,
+  loop: true
+}, {
   id: 'melo_dullahan_clockwork_alt',
   name: '呪われた騎士の時計仕掛け -Another-',
   creator: 'オリジナル',
@@ -6836,6 +6843,7 @@ const Audio_ = (() => {
     "audio/bgm-battle-ichika.mp3": "ca746d1d2ba6",
     "audio/bgm-battle.mp3": "a1e6f8499e9e",
     "audio/bgm-big-bridge-no-shitou.mp3": "a36d408f3389",
+    "audio/bgm-black-shout.mp3": "1b4e637b9e2a",
     "audio/bgm-boss-ichika.mp3": "9c8bda857de7",
     "audio/bgm-boss.mp3": "a11bc8056d79",
     "audio/bgm-clear-ichika.mp3": "cf8bc41a228c",
