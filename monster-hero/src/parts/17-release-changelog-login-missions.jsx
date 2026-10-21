@@ -482,11 +482,14 @@ const gainAssistantBond = (state, actionKey, now = Date.now()) => {
 };
 const assistantBondLevelOf = (points) => (typeof assistantBondLevel === 'function') ? assistantBondLevel(points) : 1;
 
-// ---------- 仲良し度の節目のごほうび(2026-10-21) ----------
-// 節目(ASSISTANT_BOND_LEVEL_REWARDS)を越えたら、助手ごとに1回ずつギフトで届ける。
-// 届けた節目は新しいキー mh_assistant_bond_rewards_v1 に { 助手のid: [22, 25, ...] } で残す(CLAUDE.md ⑦)。
-// ★ギフトは受け取ったあと一覧から消えることがあるので、ギフトのidだけでなくこの印で二重を防ぐ
+// ---------- 仲良し度のLvごとのごほうび(2026-10-21) ----------
+// Lvを越えたら、助手ごとに各Lv1回ずつギフトで届ける(量は ASSISTANT_BOND_LEVEL_REWARDS)。
+// 届けた印は2つ(どちらも { 助手のid: [Lv, ...] }・CLAUDE.md ⑦)
+//   mh_assistant_bond_rewards_v1 … 最初の量(ASSISTANT_BOND_LEVEL_REWARDS_V1・Lv22/25/28/30だけ)を届けた印。★意味は変えない・もう書かない
+//   mh_assistant_bond_rewards_v2 … 今の量を届けた印。v1 の印がある節目は、今の量との差のぶんだけを「追加ぶん」で届けて、この印を付ける
+// ★ギフトは受け取ったあと一覧から消えることがあるので、ギフトのidだけでなく印で二重を防ぐ
 const ASSISTANT_BOND_REWARDS_KEY = 'mh_assistant_bond_rewards_v1';
+const ASSISTANT_BOND_REWARDS_V2_KEY = 'mh_assistant_bond_rewards_v2';
 const normalizeAssistantBondRewardsDelivered = (value) => {
   const raw = (value && typeof value === 'object' && !Array.isArray(value)) ? value : {};
   const out = {};
@@ -497,42 +500,60 @@ const normalizeAssistantBondRewardsDelivered = (value) => {
   }
   return out;
 };
+// 最初の量のギフトのid(#3241)。今の量は _v2、差のぶんは _topup
 const assistantBondRewardGiftId = (assistantId, level) => `gift_assistant_bond_${assistantId}_lv${level}`;
-// まだ届けていない節目のぶんをギフトへ足した結果を返す(渡された値は変えない)。
-//   levels: { 助手のid: いまのLv }
-// 戻り値の changed が true のときだけ、gifts と delivered を一緒に保存する
-const buildAssistantBondRewardGrant = ({ gifts, delivered, levels, now = Date.now() } = {}) => {
+const assistantBondRewardV2GiftId = (assistantId, level, topup = false) => `gift_assistant_bond_v2_${assistantId}_lv${level}${topup ? '_topup' : ''}`;
+// 今の量から、もう渡した量を引いた残り(品ごと)。もう渡した量のほうが多い品は0にする(取り上げない)
+const assistantBondRewardRemainder = (next, given) => {
+  const keyOf = (r) => `${r && r.type}:${(r && r.itemId) || ''}`;
+  const had = {};
+  for (const r of (Array.isArray(given) ? given : [])) had[keyOf(r)] = (had[keyOf(r)] || 0) + Math.max(0, Math.floor(Number(r && r.amount) || 0));
+  return (Array.isArray(next) ? next : [])
+    .map(r => ({ ...r, amount: Math.max(0, Math.floor(Number(r.amount) || 0) - (had[keyOf(r)] || 0)) }))
+    .filter(r => r.amount > 0);
+};
+// まだ届けていないLvのぶんをギフトへ足した結果を返す(渡された値は変えない)。
+//   delivered: v1 の印(読むだけ) / deliveredV2: v2 の印 / levels: { 助手のid: いまのLv }
+// 戻り値の changed が true のときだけ、gifts と deliveredV2 を一緒に保存する
+const buildAssistantBondRewardGrant = ({ gifts, delivered, deliveredV2, levels, now = Date.now() } = {}) => {
   const table = (typeof ASSISTANT_BOND_LEVEL_REWARDS !== 'undefined' && ASSISTANT_BOND_LEVEL_REWARDS) || {};
+  const tableV1 = (typeof ASSISTANT_BOND_LEVEL_REWARDS_V1 !== 'undefined' && ASSISTANT_BOND_LEVEL_REWARDS_V1) || {};
   const milestones = Object.keys(table).map(Number).filter(Number.isFinite).sort((a, b) => a - b);
   const list = (typeof ASSISTANTS !== 'undefined' && Array.isArray(ASSISTANTS)) ? ASSISTANTS : [];
   let nextGifts = Array.isArray(gifts) ? gifts : [];
-  const nextDelivered = normalizeAssistantBondRewardsDelivered(delivered);
+  const v1 = normalizeAssistantBondRewardsDelivered(delivered);
+  const nextDelivered = normalizeAssistantBondRewardsDelivered(deliveredV2);
   const granted = [];
   let changed = false;
   for (const who of list) {
     const id = who && who.id;
     if (!id) continue;
     const level = Math.floor(Number(levels && levels[id]) || 0);
-    const done = nextDelivered[id] || [];
     for (const lv of milestones) {
-      if (lv > level || done.includes(lv)) continue;
+      if (lv > level || (nextDelivered[id] || []).includes(lv)) continue;
+      // 最初の量をもう受け取っている(印がある・ギフトが残っている)なら、差のぶんだけ
+      const topup = !!tableV1[lv] && ((v1[id] || []).includes(lv) || nextGifts.some(g => g && g.id === assistantBondRewardGiftId(id, lv)));
+      const rewards = topup ? assistantBondRewardRemainder(table[lv], tableV1[lv]) : table[lv].map(r => ({ ...r }));
+      const mark = () => { nextDelivered[id] = [...(nextDelivered[id] || []), lv].sort((a, b) => a - b); changed = true; };
+      if (!rewards.length) { mark(); continue; }
       const gift = {
-        id: assistantBondRewardGiftId(id, lv),
+        id: assistantBondRewardV2GiftId(id, lv, topup),
         source: 'assistantBond',
-        title: `${who.name}との仲良し度 Lv${lv} のごほうび`,
-        description: `${who.name}との仲良し度が Lv${lv} になりました。いつもありがとう！`,
-        rewards: table[lv].map(r => ({ ...r })),
+        title: topup ? `${who.name}との仲良し度 Lv${lv} のごほうび(追加ぶん)` : `${who.name}との仲良し度 Lv${lv} のごほうび`,
+        description: topup
+          ? `ごほうびの量が増えたので、前に受け取ったぶんとの差をお届けします。`
+          : `${who.name}との仲良し度が Lv${lv} になりました。いつもありがとう！`,
+        rewards,
       };
       const already = nextGifts.some(g => g && g.id === gift.id);
       const grant = grantGiftOnce(nextGifts, gift, now);
       // 中身が読めない(古い版で品物が無いなど)ときは印を付けず、次に読めたときに届ける
       if (!grant.granted && !already) continue;
-      if (grant.granted) { nextGifts = grant.gifts; granted.push({ assistantId:id, level:lv }); }
-      nextDelivered[id] = [...(nextDelivered[id] || []), lv].sort((a, b) => a - b);
-      changed = true;
+      if (grant.granted) { nextGifts = grant.gifts; granted.push({ assistantId:id, level:lv, topup }); }
+      mark();
     }
   }
-  return { changed, gifts:nextGifts, delivered:nextDelivered, granted };
+  return { changed, gifts:nextGifts, deliveredV2:nextDelivered, granted };
 };
 
 const normalizeLoginBonus = (value) => ({
