@@ -6,6 +6,8 @@
 // 画面の字を1文字ずつの位置で見て行の変わり目を出し、Intl.Segmenter の言葉の切れ目と合わない所を数える。
 //   ・数えるのは 30字までの字のうち、題名(h1〜h4)・タブ、または16字までの札。長い文(説明・助手の吹き出し)は
 //     日本語ではどこで折れても読めるので数えない。1行に入らないほど長い言葉(10字以上)・英数字だけの言葉も数えない
+//   ・最後の行に1〜2字だけ落ちたもの(「ジャック大王があらわれ／た！」)も数える(単語の切れ目だけでは拾えないため)
+//   ・ジャックのセリフの吹き出し([data-home-raid-say])は長い文なので数えない。レイドの札(「ジャック大王が／あらわれた！」)は数える(2026-10-20)
 //   ・見る画面: HOME・マーケット・ダイヤショップ・神殿・ギフト・ミッション・M/B管理・設定・モンヒロバトル(幅320と390)
 // 直し方: 字を言葉の切れ目で折る(41-screen-ui.jsx の jaWrap と JA_WRAP_STYLE、マーケットの札は marketNameForWrap)
 const http = require('http'), path = require('path'), fs = require('fs');
@@ -24,10 +26,14 @@ const byEl=new Map();
 for(let n=walker.nextNode();n;n=walker.nextNode()){const t=n.textContent;if(!t||!/[぀-ヿ一-鿿]/.test(t))continue;const el=n.parentElement;if(!el||!visible(el))continue;if(!byEl.has(el))byEl.set(el,[]);byEl.get(el).push(n);}
 for(const [el,nodes] of byEl){let text='';const tops=[];
 for(const n of nodes){const s=n.textContent;for(let i=0;i<s.length;i++){range.setStart(n,i);range.setEnd(n,i+1);const rs=range.getClientRects();if(!rs.length){continue;}text+=s[i];tops.push(Math.round(rs[0].top));}}
-const plain=text.replace(/\u200B/g,'');if(plain.length>30)continue;if(el.closest('[data-bubble-text],[class*="bubble"],[class*="speech"],[class*="mh-rj"]'))continue;if(!(el.closest('h1,h2,h3,h4,[role=tab]')||plain.length<=16))continue;
+const plain=text.replace(/\u200B/g,'');if(plain.length>30)continue;if(el.closest('[data-bubble-text],[class*="bubble"],[class*="speech"],[data-home-raid-say]'))continue;if(!(el.closest('h1,h2,h3,h4,[role=tab]')||plain.length<=16))continue;
 // 行の変わり目(文字の上端が大きく下がった所)
 const breaks=[];for(let i=1;i<tops.length;i++){if(tops[i]-tops[i-1]>4)breaks.push(i);}
 if(!breaks.length)continue;
+// 最後の行に1〜2字だけ落ちた(「ジャック大王があらわれ／た！」)。単語の切れ目の道具は「あらわれ」と「た」を別の語として扱うので、
+// 言葉の切れ目だけでは拾えない。句読点・かっこ・記号は数えない
+{const last=breaks[breaks.length-1];const rest=text.slice(last).replace(/[\u200B\s!！?？。、・…」』）)〜ー-]/g,'');
+ if(plain.length>4&&rest.length>0&&rest.length<=2)out.push({fs:getComputedStyle(el).fontSize,w:Math.round(el.getBoundingClientRect().width),word:'(最後の字だけ落ちた)',at:text.slice(Math.max(0,last-8),last)+'/'+text.slice(last),cls:''});}
 // 言葉の切れ目
 const bounds=new Set([0]);let pos=0;for(const s of seg.segment(text)){pos+=s.segment.length;bounds.add(pos);}
 for(const b of breaks){if(bounds.has(b))continue;// 言葉の途中
@@ -54,7 +60,12 @@ for(const [name,steps] of screens){await page.goto(`http://localhost:${PORT}/mon
 await page.waitForFunction(()=>document.body?.innerText.includes('TAP TO START'),{timeout:40000});await page.getByRole('button',{name:'TAP TO START'}).click({force:true});await page.getByRole('button',{name:'トップ画面へ進む'}).click({timeout:30000});await page.waitForFunction(()=>document.body.innerText.includes('モンヒロビート'),{timeout:40000});await dismiss();
 if(name==='設定')await page.evaluate(()=>document.querySelector('button[aria-label="設定"]')?.click());
 for(const st of steps){await clickText(st);await page.waitForTimeout(900);await dismiss();}
-await page.waitForTimeout(600);const r=await page.evaluate(SCAN);ok(`幅${W} ${name}: 短い字が言葉の途中で折れていない`,r.length===0,r.slice(0,4).map(x=>`「${x.at}」(${x.fs})`).join(' / '));}
+await page.waitForTimeout(600);const r=await page.evaluate(SCAN);
+// HOME のレイドの札は、いまの段階の文しか出ないので、段階ごとの文(男爵〜大王・ぱんぷきん)に差し替えて数える(2026-10-20)
+if(name==='HOME'){const titles=['ジャック男爵','ジャック子爵','ジャック伯爵','ジャック公爵','ジャック大王'].map(n=>[n,'あらわれた！']).concat([['ぱんぷきん','遊びに来た！']]);
+  const has=await page.evaluate(()=>!!document.querySelector('[data-home-raid-jack-title]'));
+  if(has){for(const [who,rest] of titles){const rr=await page.evaluate(([who,rest,scanSrc])=>{const el=document.querySelector('[data-home-raid-jack-title]');el.innerHTML='';el.append(who+'が',document.createElement('wbr'),rest);return (new Function('return ('+scanSrc+')'))()();},[who,rest,SCAN.toString()]);
+    ok(`幅${W} HOME のレイドの札「${who}が${rest}」が言葉の途中で折れていない`,rr.length===0,rr.map(x=>`「${x.at}」`).join(' / '));}}}ok(`幅${W} ${name}: 短い字が言葉の途中で折れていない`,r.length===0,r.slice(0,4).map(x=>`「${x.at}」(${x.fs})`).join(' / '));}
 await page.close();}
 await browser.close();server.close();
 console.log(failed===0?'\nすべてOK':`\n${failed}件NG`);process.exit(failed===0?0:1);})();
