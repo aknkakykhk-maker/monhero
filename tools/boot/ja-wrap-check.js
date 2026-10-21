@@ -39,7 +39,9 @@ if(!breaks.length)continue;
  // 見た目の字数(句読点も含む)で2字以下、かつ8字以上の文だけ。「フレーム／なし」のような短い札の折り方は数えない
  if(plain.length>=8&&rest.length>0&&rest.length<=2)out.push({kind:longText||inBubble?'文の最後':'札',fs:getComputedStyle(el).fontSize,w:Math.round(el.getBoundingClientRect().width),word:'(最後の字だけ落ちた)',at:text.slice(Math.max(0,last-8),last)+'/'+text.slice(last),cls:''});}
 // 言葉の切れ目
-const bounds=new Set([0,...wbrAt]);let pos=0;for(const s of seg.segment(text)){pos+=s.segment.length;bounds.add(pos);}
+// ひらがな同士の間(「書い|て」「ませ|ん」)は、言葉の切れ目の道具が切れ目と言っても言葉の途中として数える(2026-10-21「まだ書い／ていません」を見逃した)。
+// 「の」「を」などの助詞のあとと、<wbr> の所は折ってよい
+const hira=c=>/[ぁ-ゖ]/.test(c||'');const bounds=new Set([0,...wbrAt]);let pos=0;for(const s of seg.segment(text)){pos+=s.segment.length;const a=text.slice(0,pos).replace(/\u200B+$/,'').slice(-1),b=text.slice(pos).replace(/^\u200B+/,'')[0];if(hira(a)&&hira(b)&&!/[のをはがにともへ]/.test(a))continue;bounds.add(pos);}
 for(const b of breaks){if(!labelLike)break;if(bounds.has(b))continue;// 言葉の途中
 // その言葉が1行に入らないほど長いなら数えない(折るしかない)
 let st=b,en=b;const arr=[...bounds].sort((a,c)=>a-c);for(const x of arr){if(x<b)st=x;if(x>b){en=x;break;}}
@@ -51,6 +53,9 @@ for(const el of document.querySelectorAll('[data-market-name-text]')){if(!el.par
  for(let n=w2.nextNode();n;n=w2.nextNode()){for(let i=0;i<n.textContent.length;i++){range.setStart(n,i);range.setEnd(n,i+1);const rs=range.getClientRects();if(rs.length)cs.push({c:n.textContent[i],top:Math.round(rs[0].top),left:rs[0].left});}}
  const sorted=[...cs].sort((a,b)=>Math.abs(a.top-b.top)>4?a.top-b.top:a.left-b.left);
  if(sorted.map(x=>x.c).join('')!==cs.map(x=>x.c).join(''))out.push({kind:'字の並びが崩れた',fs:getComputedStyle(el).fontSize,w:0,word:'',at:sorted.map(x=>x.c).join(''),cls:''});}
+// 短い札(8字以下)が「…」で切れて読めない(2026-10-21「アイコン えらびな…」)
+for(const el of document.querySelectorAll('b,small,span,div,button')){const t=(el.innerText||'').replace(/[\u200B\s]/g,'');if(!t||t.length>8||!/[぀-ヿ一-鿿]/.test(t)||el.children.length)continue;
+ const st=getComputedStyle(el);if(st.textOverflow!=='ellipsis'||!visible(el))continue;if(el.scrollWidth>el.clientWidth+1)out.push({kind:'「…」で切れた',fs:st.fontSize,w:Math.round(el.clientWidth),word:t,at:t,cls:''});}
 return out;};
 (async()=>{let chromium;try{({chromium}=require(path.join(ROOT,'tools/node_modules/playwright')));}catch{console.log('SKIP: playwright が入っていないので確認できません');process.exit(0);}const server=await serve();const browser=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
 for(const W of [320,390]){const page=await browser.newPage({viewport:{width:W,height:W===320?568:844},deviceScaleFactor:2,isMobile:true,hasTouch:true});
