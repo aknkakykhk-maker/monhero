@@ -9,6 +9,9 @@
 //   ④ 読めるのは一覧の表・関数だけ。計画のおかしなキー・表は捨てる。書く操作はそもそも持たない
 //   ⑤ 総合力・絆Lv・ブリーダーLvの並びが、ゲームの関数(collectPowerRankingEntries・pickTopPerBreederMonster・aggregateBreederLevels)と同じ
 //   ⑥ 本人はゲームが送った名前ではなく、ブリーダーidから breeder_profiles で引いた名前で見分ける
+//   ⑦ 続きの発言(2026-10-22 社長「全部見られるようにして」): すぐ前の2つの発言にランキングの言葉があれば読む。3つ前・話題の無い続きは読まない。並べて読んでも順は計画のまま
+//   ⑧ ゲームの計画(56-assistant-chat.jsx の assistantChatRankingPlan)を実ブラウザで呼ぶ: モードを言えば全難易度・「エクストリーム」「極限」は極限の難易度を全部・
+//      難易度だけの続きは前のモードを引き継ぐ・関係ない続きは読まない・数は中継役の上限に収まる
 const path = require('path');
 const fs = require('fs');
 const root = path.resolve(__dirname, '..', '..');
@@ -138,9 +141,9 @@ const lastReminder = (params) => { const m = params.messages[params.messages.len
       { kind: 'score', keys: ['Normal', "x'; drop table rankings;--", 'a'.repeat(200)] },
       { kind: 'raid', view: 'c', eventId: 'raid_jack_2026' },
       { kind: 'rhythmEvent', songIds: ['journey'], from: 'x', to: 'y' },
-      { kind: 'delete' }, ...Array.from({ length: 10 }, () => ({ kind: 'breeder' })),
+      { kind: 'delete' }, ...Array.from({ length: 30 }, () => ({ kind: 'breeder' })),
     ]);
-    check('④ おかしなキー・知らない種類・形の悪い期間は捨て、1回6つまで', plan.length === 6 && plan[0].keys.join() === 'Normal' && plan.every(p => p.kind === 'score' || p.kind === 'breeder'), JSON.stringify(plan.map(p => p.kind)));
+    check(`④ おかしなキー・知らない種類・形の悪い期間は捨て、1回${ranking.RANKING_PLAN_MAX}まで(チャレンジの全部=通常9+極限8が入る)`, ranking.RANKING_PLAN_MAX === 18 && plan.length === ranking.RANKING_PLAN_MAX && plan[0].keys.join() === 'Normal' && plan.every(p => p.kind === 'score' || p.kind === 'breeder'), JSON.stringify(plan.map(p => p.kind)));
     const db = makeDb();
     const t = await ranking.fetchRankingText({ db: { select: (tb, o) => db.select(tb, o), rpc: (f, a, o) => db.rpc(f, a, o) }, plan: [{ kind: 'breeder' }], me: {} });
     check('④ 読める表・関数は一覧のものだけ(rankings・bond_levels・breeder_profiles・rhythm_total_rankings・rhythm_week_window・raid_jack_*・読むための3つの関数)',
@@ -170,6 +173,79 @@ const lastReminder = (params) => { const m = params.messages[params.messages.len
     check('⑤ ブリーダーLvの並び(ブリーダーidごとに最高・古い行は名前の橋で寄せる)がゲームと同じ', gameBreeder.join() === serverBreeder.join(), `ゲーム ${gameBreeder.join()} / 中継役 ${serverBreeder.join()}`);
     check('⑤ 総合力の記録が無い行は総合力に載せない(絆Lvには載る)', !serverPower.some(x => /Suezo/.test(x)) && ranking.bondEntriesFromRows(rows, 'bond').some(e => e.monster_id === 'Suezo'));
   }
+  // ⑦ 続きの発言
+  {
+    const turns = (...texts) => texts.map((text, i) => ({ role: i % 2 === 0 ? 'user' : 'assistant', text }));
+    const withTurns = (list, plan) => ({ ...body('x', plan), messages: list });
+    const plan = [{ kind: 'score', keys: ['Normal'], label: 'タクティクスプロ・EXTREME' }];
+    let db = makeDb(), client = fakeClient();
+    await core.handleChat({ body: withTurns(turns('タクティクスプロのランキングは見れないの？', 'Normal・Master・Legend だよ', 'エクストリームまで惜しいとこまで言ってるよ'), plan), digest, client, ...counter(), rankingDb: db });
+    check('⑦ すぐ前の発言がランキングの話なら、続きの「エクストリームまで…」でも読む', db.calls.length > 0 && /<ranking-data>[\s\S]*■タクティクスプロ・EXTREME/.test(lastReminder(client.calls[0])));
+    db = makeDb(); client = fakeClient();
+    await core.handleChat({ body: withTurns(turns('ランキング見せて', 'いいよ', 'ありがとう', 'どういたしまして', '今日は晴れ', 'そうだね', 'エクストリームは？'), plan), digest, client, ...counter(), rankingDb: db });
+    check('⑦ ランキングの話が3つ前の発言なら読まない(2つ前まで)', db.calls.length === 0);
+    db = makeDb(); client = fakeClient();
+    await core.handleChat({ body: withTurns(turns('今日は晴れ', 'そうだね', 'エクストリームは？'), plan), digest, client, ...counter(), rankingDb: db });
+    check('⑦ すぐ前の発言にもランキングの言葉が無ければ読まない', db.calls.length === 0);
+    const order = Array.from({ length: 9 }, (_, i) => ({ kind: i % 3 === 0 ? 'breeder' : 'score', keys: ['Normal'], label: `順番${i + 1}` }));
+    const text = await ranking.fetchRankingText({ db: makeDb(), plan: order, me: {} });
+    const heads = (text.match(/■順番\d+/g) || []).map(h => h.slice(1)).join();
+    check('⑦ 並べて読んでも、並びは計画の順のまま', heads === order.map(p => p.label).join(), heads);
+  }
+  // ⑧ ゲームの計画(実ブラウザ)
+  await (async () => {
+    let playwright;
+    try { playwright = require('playwright'); } catch (e) { check('⑧ 実ブラウザで確かめる(playwright が無い)', false); return; }
+    const http = require('http');
+    const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.mp3': 'audio/mpeg', '.woff2': 'font/woff2' };
+    const server = http.createServer((req, res) => {
+      const rel = decodeURIComponent(req.url.split('?')[0]).replace(/^\/+/, '');
+      const file = path.join(root, rel);
+      if (!file.startsWith(root) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) { res.writeHead(404); res.end(); return; }
+      res.writeHead(200, { 'Content-Type': MIME[path.extname(file).toLowerCase()] || 'application/octet-stream' });
+      fs.createReadStream(file).pipe(res);
+    });
+    await new Promise(r => server.listen(0, r));
+    const port = server.address().port;
+    const browser = await playwright.chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
+    try {
+      const context = await browser.newContext();
+      // 外への通信は止める(Supabase も読まない。計画を作るだけ)
+      await context.route('**/*', route => (route.request().url().startsWith(`http://localhost:${port}/`) ? route.continue() : route.abort()));
+      const page = await context.newPage();
+      await page.goto(`http://localhost:${port}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
+      await page.waitForFunction(() => typeof assistantChatRankingPlan === 'function' && typeof TACTICS_DIFFICULTY_IDS !== 'undefined', null, { timeout: 60000 });
+      const r = await page.evaluate(() => {
+        const P = (t, prev) => assistantChatRankingPlan(t, prev || []);
+        const Q = 'タクティクスプロのランキングは見れないの？';
+        const lab = (p) => (p || []).map(x => x.label);
+        const tacticsExtreme = TACTICS_DIFFICULTY_IDS.filter(id => isExtremeDifficultyId(id));
+        return {
+          max: ASSISTANT_CHAT_RANKING_MAX, prev: ASSISTANT_CHAT_RANKING_PREV,
+          tacticsIds: TACTICS_DIFFICULTY_IDS.length, tacticsExtreme: tacticsExtreme.length, publicExtreme: PUBLIC_EXTREME_DIFFICULTIES.length,
+          challengeAll: Object.keys(DIFFICULTY_SETTINGS).length + PUBLIC_EXTREME_DIFFICULTIES.length,
+          q1: lab(P(Q)), q2: lab(P('エクストリームまで惜しいとこまで言ってるよ', [Q])), q3: lab(P('タクティクスプロの極限のランキング')),
+          q4: lab(P('極限のランキングは？')), q5: lab(P('チャレンジのランキング全部')), q6: lab(P('Masterは？', [Q])),
+          q7: P('今日は晴れだね', [Q]), q8: (P('上位は？', ['ジャックのレイドのランキング']) || []).map(x => x.kind),
+          q9: lab(P('MASTERは？', ['Journeyのランキング教えて'])), q10: P('天気どう？'),
+          plans: [P(Q), P('チャレンジのランキング全部'), P('種族チャレンジのランキング')],
+        };
+      });
+      const all = (list, re) => list.length > 0 && list.every(l => re.test(l));
+      check('⑧ 上限はゲームと中継役で同じ・引き継ぐ発言の数も同じ', r.max === ranking.RANKING_PLAN_MAX && r.prev === ranking.RANKING_PREV_TURNS, `ゲーム ${r.max}/${r.prev}`);
+      check('⑧「タクティクスプロのランキング」は、タクティクスプロの全難易度(通常+極限)', r.q1.length === r.tacticsIds && all(r.q1, /^タクティクスプロ・/) && r.q1.some(l => /INFINITY/.test(l)), r.q1.join(' / '));
+      check('⑧ 続きの「エクストリームまで…」は、前のタクティクスプロを引き継いで極限の難易度を全部', r.q2.length === r.tacticsExtreme && all(r.q2, /^タクティクスプロ・(EXTREME|NIGHTMARE|CHAOS|ULTIMATE|INFINITY)/), r.q2.join(' / '));
+      check('⑧「タクティクスプロの極限」は、タクティクスプロの極限の難易度を全部(極限チャレンジと取り違えない)', r.q3.join() === r.q2.join(), r.q3.join(' / '));
+      check('⑧ モードの無い「極限のランキング」は、極限チャレンジの難易度を全部', r.q4.length === r.publicExtreme && all(r.q4, /^極限チャレンジ・/), r.q4.join(' / '));
+      check('⑧「チャレンジのランキング全部」は通常+極限の全部で、上限に収まる', r.q5.length === r.challengeAll && r.q5.length <= r.max, `${r.q5.length}件`);
+      check('⑧ 難易度だけの続き「Masterは？」は、前のモードのその難易度だけ', r.q6.join() === 'タクティクスプロ・Masterのスコア', r.q6.join(' / '));
+      check('⑧ 関係ない続き「今日は晴れだね」では計画を作らない(毎回は読まない)', r.q7 === null && r.q10 === null);
+      check('⑧ 続きの「上位は？」は前のレイドの話を引き継ぐ', r.q8.length === 2 && r.q8.every(k => k === 'raid'), r.q8.join());
+      check('⑧ モンヒロビートの曲の続き「MASTERは？」はバトルと取り違えない', r.q9.join() === 'モンヒロビート「Journey」MASTER', r.q9.join(' / '));
+      const kept = r.plans.every(p => p && ranking.normalizeRankingPlan(p).length === p.length);
+      check('⑧ ゲームの計画は中継役の確かめで1つも落ちない(キーの形・数)', kept, r.plans.map(p => `${(p || []).length}→${ranking.normalizeRankingPlan(p || []).length}`).join(' '));
+    } finally { await browser.close(); server.close(); }
+  })();
   // ① 計画が無いときも読まない
   {
     const db = makeDb(), client = fakeClient();
