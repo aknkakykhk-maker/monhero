@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7cee25403c42176f
+// generated-sha256: 2170d07a1d752fa7
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-21 11:58"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-21 12:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -32664,33 +32664,36 @@ function ProfileScreen({
             const base=favoriteMasu?ALL_PLAYER_MONSTERS[favoriteMasu.baseId]:null;
             const face=base?friendsFaceIconOf(favoriteMasu.baseId):null;
             const showFriendTiles=onboarded&&!onboardingPreview&&friendsEnabled;
-            const tile='flex min-h-[56px] items-center gap-2 rounded-xl border border-white/10 bg-slate-800/80 px-2.5 py-2 text-left active:scale-95';
+            // 幅360未満は、余白と絵を詰めて値の字を1段小さくし、「書いていません」「えらびなおす」が言葉の途中で折れずに入るようにする(2026-10-21)
+            const tile='flex min-h-[56px] items-center gap-2 rounded-xl border border-white/10 bg-slate-800/80 px-2.5 py-2 text-left active:scale-95 max-[359px]:gap-1.5 max-[359px]:px-2';
             return (
             <div className="mt-3 grid grid-cols-2 gap-2" data-profile-settings>
+              {/* 札の折り目は手で決める(<wbr/>)。言葉の切れ目の道具は「書い|て|い|ませ|ん」と細かく切るので、jaWrap だと「まだ書い／ていません」と折れた。
+                  「えらびなおす」は truncate だと幅320で「えらびな…」と切れて読めなかったので、2行にする(2026-10-21 窓口) */}
               <button type="button" data-profile-tile="icon" onClick={onOpenIconPicker} className={tile}>
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl" aria-hidden="true">🖼️</span>
-                <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-indigo-300">アイコン</small><b className="block truncate text-[11px] font-black text-white">えらびなおす</b></span>
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl max-[359px]:h-6 max-[359px]:w-6 max-[359px]:text-base" aria-hidden="true">🖼️</span>
+                <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-indigo-300">アイコン</small><b className="block text-[11px] max-[359px]:text-[10px] font-black leading-tight text-white" style={JA_LABEL_STYLE}>えらび<wbr/>なおす</b></span>
               </button>
               <button type="button" data-profile-tile="frame" onClick={onOpenFramePicker} className={tile}>
-                <Sparkles size={18} className="mx-1.5 shrink-0 text-amber-300"/>
-                <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-amber-300">フレーム</small><b className="block break-words text-[11px] font-black leading-tight text-white">{frameName}</b></span>
+                <Sparkles size={18} className="mx-1.5 shrink-0 text-amber-300 max-[359px]:mx-0.5"/>
+                <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-amber-300">フレーム</small><b className="block break-words text-[11px] max-[359px]:text-[10px] font-black leading-tight text-white">{frameName}</b></span>
               </button>
               {costumeEnabled&&onOpenCostumePicker&&(
                 <button type="button" data-profile-tile="costume" onClick={onOpenCostumePicker} className={tile}>
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl" aria-hidden="true">👗</span>
-                  <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300">着替え</small><b className="block break-words text-[11px] font-black leading-tight text-white">{wornCostume?wornCostume.name:'元の服'}</b></span>
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl max-[359px]:h-6 max-[359px]:w-6 max-[359px]:text-base" aria-hidden="true">👗</span>
+                  <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300">着替え</small><b className="block break-words text-[11px] max-[359px]:text-[10px] font-black leading-tight text-white">{wornCostume?wornCostume.name:'元の服'}</b></span>
                 </button>
               )}
               {showFriendTiles&&(
                 <button type="button" data-profile-message onClick={onOpenMessageEditor} className={tile}>
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl" aria-hidden="true">💬</span>
-                  <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300">ひとこと</small><b className="block text-[11px] font-black leading-tight text-white" style={JA_LABEL_STYLE}>{profileMessage||jaWrap('まだ書いていません')}</b></span>
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl max-[359px]:h-6 max-[359px]:w-6 max-[359px]:text-base" aria-hidden="true">💬</span>
+                  <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300">ひとこと</small><b className="block text-[11px] max-[359px]:text-[10px] font-black leading-tight text-white" style={JA_LABEL_STYLE}>{profileMessage||<>まだ<wbr/>書いていません</>}</b></span>
                 </button>
               )}
               {showFriendTiles&&(
                 <button type="button" data-profile-favorite-masu onClick={onOpenFavoritePicker} className={tile}>
-                  {face?<ProfileAvatar src={face.src} id={face.id} className="h-8 w-8 shrink-0"/>:<span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl" aria-hidden="true">💗</span>}
-                  <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300" style={JA_LABEL_STYLE}>{jaWrap('好きなモンスター')}</small><b className="block text-[11px] font-black leading-tight text-white" style={JA_LABEL_STYLE}>{base?`${base.name}（絆Lv.${masuBondLevelInfo(favoriteMasu).level}）`:jaWrap('まだ選んでいません')}</b></span>
+                  {face?<ProfileAvatar src={face.src} id={face.id} className="h-8 w-8 shrink-0 max-[359px]:h-6 max-[359px]:w-6"/>:<span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl max-[359px]:h-6 max-[359px]:w-6 max-[359px]:text-base" aria-hidden="true">💗</span>}
+                  <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300" style={JA_LABEL_STYLE}>{jaWrap('好きなモンスター')}</small><b className="block text-[11px] max-[359px]:text-[10px] font-black leading-tight text-white" style={JA_LABEL_STYLE}>{base?`${base.name}（絆Lv.${masuBondLevelInfo(favoriteMasu).level}）`:<>まだ<wbr/>選んでいません</>}</b></span>
                 </button>
               )}
             </div>);
