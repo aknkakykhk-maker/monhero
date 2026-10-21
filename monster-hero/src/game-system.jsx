@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c92a9fd3a6a60f2b
+// generated-sha256: 42a7c6724bb85e01
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-22 08:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-22 08:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -70494,7 +70494,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // ゲスト(ジャック・ぱんぷきん)は、下の助手の列には入れない。初めて話す行(か stage で呼ばれる行)から、画面の上部の「ステージ」に出る
         //  (2026-10-04・ユーザー指示「はじめからジャックやぱんぷきんが会話画面にいるのは違和感。出すタイミングをちゃんと」)
         const isGuestWho=(id)=>{const w=assistantById(id);return !!w&&w.role==='ゲスト';};
-        const cast=storyCastOf(script).filter(who=>who.role!=='ゲスト');
+        // hideUntilFirstLine に書いた助手は、初めて話す行までは下の列にも出さない(登場の場面で顔を伏せる。2026-10-22 社長「あつの顔は『呼んだ？』で登場するまで伏せる」)
+        const hiddenUntil=Array.isArray(event&&event.hideUntilFirstLine)?event.hideUntilFirstLine:[];
+        const cast=storyCastOf(script).filter(who=>who.role!=='ゲスト')
+          .filter(who=>!hiddenUntil.includes(who.id)||script.slice(0,step+1).some(l=>l&&l.who===who.id));
         let stageIdx=-1;
         for(let i=step;i>=0;i--){const l=script[i];if(l.stage==='none'){stageIdx=-1;break;}if(l.stage||isGuestWho(l.who)){stageIdx=i;break;}}
         const stageLine=stageIdx>=0?script[stageIdx]:null;

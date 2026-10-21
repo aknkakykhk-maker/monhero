@@ -55,7 +55,12 @@ check('一人称「俺」を使っている', allAtsu.filter(l => /俺|オレ/.t
 check('笑いは全角の「笑」(ももすけの w・みゅあの ｗ を使わない)', bad(/(?<![A-Za-z])[wｗ]+(?![A-Za-z])/).length === 0, bad(/(?<![A-Za-z])[wｗ]+(?![A-Za-z])/).map(l => l.t).slice(0, 3).join(' / '));
 check('下ネタを言わない(ドラの冗談の言い回しが混ざらない)', bad(/膝枕|おなら|何がとは|何想像|夜の部|下ネタ/).length === 0, bad(/膝枕|おなら|何がとは|何想像|夜の部|下ネタ/).map(l => l.t).slice(0, 3).join(' / '));
 check('です・ます調にしない', bad(/(です|ます|でした|ました|ください)[。！？]?$/).length === 0, bad(/(です|ます|でした|ました|ください)[。！？]?$/).map(l => l.t).slice(0, 3).join(' / '));
-check('顔文字を使わない', bad(/[（(][^)）]{0,6}[ω∀ᵕ][^)）]{0,6}[)）]|[ｦ-ﾟ]{2,}/).length === 0);
+// 2026-10-22 社長の決定(台帳 docs/rules/PRESIDENT_DECISIONS.md): セリフの最後に必ず「笑」か顔文字か記号。自分で「リーダー」と言わない(まわりを立てる)
+const endBad = allAtsu.filter(l => !/(笑|[！？!?…♪〜]|[)）]|[\u{1F300}-\u{1FAFF}])$/u.test(String(l.t).trim()));
+check('あつのセリフは、最後に必ず「笑」か顔文字か記号が付く', endBad.length === 0, endBad.slice(0, 3).map(l => `${l.k}:${l.t}`).join(' / '));
+check('あつは自分で「リーダー」と言わない', bad(/(?<!ブ)リーダー/).length === 0, bad(/(?<!ブ)リーダー/).map(l => l.t).join(' / '));
+const exBad = (a.ASSISTANT_CHAT_EXAMPLES.atsu || []).filter(x => !/(笑|[！？!?…♪〜]|[)）])$/.test(String(x.a).trim()));
+check('おしゃべりの見本も、最後に「笑」か記号が付く', exBad.length === 0, exBad.map(x => x.a).join(' / '));
 const quirk = (re) => allAtsu.filter(l => re.test(l.t)).length;
 check('くせが出ている(とりあえず・てか・まじで・やっぱ・いいね・笑)',
   quirk(/とりあえず/) >= 5 && quirk(/てか/) >= 5 && quirk(/まじで/) >= 5 && quirk(/やっぱ/) >= 5 && quirk(/いいね/) >= 5 && quirk(/笑/) >= 20,
@@ -75,6 +80,15 @@ const callBad = storyLines.map(l => ({ ...l, t: String(l.t).replace(/あつの�
   || (l.who === 'momosuke' && /あつくん|あっくん/.test(l.t))
   || (l.who === 'atsu' && /ひめちん|みゅあねぇ|ききちゃん|ももさん|みゅあちん|靴下さん|ドラケン/.test(l.t)));
 check('お話の中でも呼び方を守る', callBad.length === 0, callBad.map(l => `${l.who}:${l.t}`).join(' / '));
+// 仲間の呼び方(2026-10-22 社長の決定): もも→はるちゃん・ともちゃん・みりちゃん・さえちゃん・デムさん / みゅあ→キラボス・らっせ・ろむちゃん / きき→デロチー・デムさん・はるさん
+const storyText = storyLines.map(l => l.t).join('\n');
+const friendBad = storyLines.filter(l => /ガッデム|ゲズデロ|みりあ|ともちん|キラ(?!ボス)/.test(l.t)
+  || (l.who === 'momosuke' && /キラボス|ろむちゃん|デロチー|はるさん/.test(l.t))
+  || (l.who === 'mua' && /はるちゃん|デロチー|デムさん/.test(l.t))
+  || (l.who === 'kiki' && /はるちゃん|キラボス|みりちゃん/.test(l.t)));
+check('お話の仲間の呼び方が社長の決定どおり', friendBad.length === 0 && ['はるちゃん', 'ともちゃん', 'みりちゃん', 'さえちゃん', 'キラボス', 'らっせ', 'ろむちゃん', 'デロチー', 'デムさん'].every(w => storyText.includes(w)),
+  friendBad.map(l => `${l.who}:${l.t}`).join(' / '));
+check('お話では、あつの顔は登場するまで伏せる(hideUntilFirstLine)', !!story && Array.isArray(story.hideUntilFirstLine) && story.hideUntilFirstLine.includes('atsu'));
 check('お話に出るのは みゅあ・きき・ももすけ・あつ の4人', story && [...new Set(storyLines.map(l => l.who))].sort().join(',') === 'atsu,kiki,momosuke,mua');
 
 // ---- 仲良し度の段階・呼び方の例 ----
@@ -127,6 +141,9 @@ const face = exps.map(e => a.assistantFaceImage(atsu, e));
 check('顔の絵が8表情ぶんそろっている', face.every(p => fs.existsSync(path.join(ROOT, 'monster-hero', p))), face.filter(p => !fs.existsSync(path.join(ROOT, 'monster-hero', p))).join(', '));
 check('大きい絵の場所も、ある絵を指している', exps.every(e => fs.existsSync(path.join(ROOT, 'monster-hero', a.assistantFullImage(atsu, e)))));
 if (flagOn) check('公開するときは、仮の顔の絵(tempImageDir)をやめて大きい絵へ差し替えてある', !atsu.tempImageDir);
+// マーケットのあつの顔アイコン(id atsu_<表情>・images/breeder-icons/atsu_<表情>.png)は、助手の顔と同じ絵(2026-10-22 社長「アイコンも今回の絵に差し替える」)
+const sameArt = exps.filter(e => { try { return !fs.readFileSync(path.join(ROOT, 'monster-hero/images/breeder-icons', `atsu_${e}.png`)).equals(fs.readFileSync(path.join(ROOT, 'monster-hero', a.assistantFaceImage(atsu, e)))); } catch { return true; } });
+check('マーケットのあつの顔アイコン8枚は、助手の顔と同じ絵', sameArt.length === 0, sameArt.join(', '));
 check('フレンド申請の知らせ・対戦画面の絵の寄せ方にもあつがいる',
   /\n  atsu: \(who\) =>/.test(read('monster-hero/src/parts/69-screen-home.jsx')) && /\n  atsu: \{ zoom:/.test(read('monster-hero/src/parts/77-screen-rhythm-multi.jsx')));
 

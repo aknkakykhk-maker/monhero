@@ -249,19 +249,21 @@ const DRA_MARKET_ICONS = MYUA_ICON_EXPRESSIONS.map(([key, label]) => ({
 }));
 
 // あつの顔アイコンも、助手と同じ仕様(8表情・各1pt)で並べる(2026-10-03)。
-// あつは助手ではないので、顔アイコン(256px)を images/breeder-icons/atsu_<表情>.png に直接置いている。
+// 顔アイコン(256px)は images/breeder-icons/atsu_<表情>.png に直接置いている。
+// 2026-10-22 あつが助手になり、絵を助手あつの大きい絵から作った顔(images/assistant/face/atsu_*.PNG と同じ絵)へ差し替えた
+// (社長「アイコンも今回の絵に差し替える」。id・パスはそのままなので、買った人のアイコンも新しい絵になる)。
 // 既存の「あつのアイコン」(id:'atsu', images/breeder-icons/atsu.png)は別の絵で、購入済みの人がいるのでそのまま残す。
 // こちらは id を atsu_* に分けているので、既存の保存データには影響しない。
 // (使われていない画像の検査が見つけられるよう、パスは1枚ずつ文字で書いておく)
 const ATSU_EXPRESSION_ICONS = {
-  normal:   "images/breeder-icons/atsu_normal.png?v=f4d1376ca306",
-  happy:    "images/breeder-icons/atsu_happy.png?v=311560d5a472",
-  wink:     "images/breeder-icons/atsu_wink.png?v=702e6985867a",
-  excited:  "images/breeder-icons/atsu_excited.png?v=98eb2efc88fa",
-  surprise: "images/breeder-icons/atsu_surprise.png?v=5ea1fdd3873c",
-  troubled: "images/breeder-icons/atsu_troubled.png?v=e9ffa3a87f89",
-  angry:    "images/breeder-icons/atsu_angry.png?v=24449b0075a1",
-  crying:   "images/breeder-icons/atsu_crying.png?v=c8e7bc88c9c3",
+  normal:   "images/breeder-icons/atsu_normal.png?v=384b278b003f",
+  happy:    "images/breeder-icons/atsu_happy.png?v=c2feb3f32002",
+  wink:     "images/breeder-icons/atsu_wink.png?v=c97ce42b74bd",
+  excited:  "images/breeder-icons/atsu_excited.png?v=27a164870ba5",
+  surprise: "images/breeder-icons/atsu_surprise.png?v=0c0085c8c107",
+  troubled: "images/breeder-icons/atsu_troubled.png?v=86fb01ee4957",
+  angry:    "images/breeder-icons/atsu_angry.png?v=ccf910eef59f",
+  crying:   "images/breeder-icons/atsu_crying.png?v=c4b9d02d5df9",
 };
 const ATSU_MARKET_ICONS = MYUA_ICON_EXPRESSIONS.map(([key, label]) => ({
   id: `atsu_${key}`,

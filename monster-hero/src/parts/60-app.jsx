@@ -21212,7 +21212,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // ゲスト(ジャック・ぱんぷきん)は、下の助手の列には入れない。初めて話す行(か stage で呼ばれる行)から、画面の上部の「ステージ」に出る
         //  (2026-10-04・ユーザー指示「はじめからジャックやぱんぷきんが会話画面にいるのは違和感。出すタイミングをちゃんと」)
         const isGuestWho=(id)=>{const w=assistantById(id);return !!w&&w.role==='ゲスト';};
-        const cast=storyCastOf(script).filter(who=>who.role!=='ゲスト');
+        // hideUntilFirstLine に書いた助手は、初めて話す行までは下の列にも出さない(登場の場面で顔を伏せる。2026-10-22 社長「あつの顔は『呼んだ？』で登場するまで伏せる」)
+        const hiddenUntil=Array.isArray(event&&event.hideUntilFirstLine)?event.hideUntilFirstLine:[];
+        const cast=storyCastOf(script).filter(who=>who.role!=='ゲスト')
+          .filter(who=>!hiddenUntil.includes(who.id)||script.slice(0,step+1).some(l=>l&&l.who===who.id));
         let stageIdx=-1;
         for(let i=step;i>=0;i--){const l=script[i];if(l.stage==='none'){stageIdx=-1;break;}if(l.stage||isGuestWho(l.who)){stageIdx=i;break;}}
         const stageLine=stageIdx>=0?script[stageIdx]:null;

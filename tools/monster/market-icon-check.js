@@ -51,8 +51,8 @@ check('ファイルを指すアイコンがある', fileIcons.length > 0, `${fil
 // 表情を足したら商品も足す。片方だけ増えて「買えない表情」が出るのを防ぐ。
 // 助手を増やしたときも同じ仕様(8表情・各1pt)で追随しているかをここでまとめて見る
 const soldFaces = new Set(fileIcons.map(i => stripCacheKey(i.icon)));
-// ★あつ(2026-10-22 に助手へ加わった)は、助手になる前から images/breeder-icons/atsu_<表情>.png の絵で8種売っていて、買った人がいる。
-//   助手の吹き出しの顔(face/atsu_*.PNG)は新しい大きい絵からの切り出しで別の絵なので、売り物は前からの絵のまま見る(絵を勝手に差し替えない)
+// ★あつ(2026-10-22 に助手へ加わった)は、助手になる前から images/breeder-icons/atsu_<表情>.png で8種売っていて、買った人がいる。
+//   id・パスを変えないため、売り物はそのファイルのまま(中身は助手の顔 face/atsu_*.PNG と同じ絵に差し替えた・社長の決定)
 const MARKET_FACE_OF = { atsu: (e) => `images/breeder-icons/atsu_${e}.png` };
 const marketFace = (who, e) => (MARKET_FACE_OF[who.id] ? MARKET_FACE_OF[who.id](e) : assistantFaceImage(who, e));
 for (const who of ASSISTANTS) {

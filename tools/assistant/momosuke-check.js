@@ -192,7 +192,8 @@ check('イベントが終われば元の画面のBGMへ戻る', /const eventBgmS
 // 3か所のうち、回想の再生は「ゲスト(ジャック・ぱんぷきん)も話し手に含める」storyCastOf へ替わった(2026-10)。どちらも「台本に出る人だけ」を並べる
 check('会話に出てくる助手だけを並べる（無関係な助手を映さない）',
   (gameSrc.match(/const cast=ASSISTANT_LIST\.filter\(who=>script\.some\(l=>l\.who===who\.id\)\);/g) || []).length === 2
-    && /const cast=storyCastOf\(script\)\.filter\(who=>who\.role!=='ゲスト'\);/.test(gameSrc)
+    // 2026-10-22: 登場まで顔を伏せる助手(hideUntilFirstLine・あつ)は、初めて話す行までは並べない。台本に出る人だけ、は変わらない
+    && /const cast=storyCastOf\(script\)\.filter\(who=>who\.role!=='ゲスト'\)\s*\.filter\(who=>!hiddenUntil\.includes\(who\.id\)\|\|script\.slice\(0,step\+1\)\.some\(l=>l&&l\.who===who\.id\)\);/.test(gameSrc)
     && /const storyCastOf = \(script\) => \[\.\.\.ASSISTANT_LIST, \.\.\.STORY_GUEST_LIST\]\.filter\(who => \(script \|\| \[\]\)\.some\(l => l\.who === who\.id\)\);/.test(gameSrc));
 
 // ---- マーケット ----
