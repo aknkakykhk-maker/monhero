@@ -29,7 +29,7 @@ function SettingsMenuLink({ icon, label, desc, onClick, disabled = false, accent
       <span aria-hidden="true" data-icon={icon} className="mh-emoji-icon w-8 shrink-0 text-center text-[22px] leading-none"/>
       <span className="min-w-0 flex-1">
         <span className={`block text-[14px] font-black leading-tight ${accent}`}>{label}</span>
-        <span className="mt-0.5 block text-[10px] font-bold leading-snug text-slate-400">{desc}</span>
+        <span className="mt-0.5 block text-[10px] font-bold leading-snug text-slate-400" style={JA_LABEL_STYLE}>{jaWrap(desc)}</span>
       </span>
       <ChevronRight size={18} className="shrink-0 opacity-60"/>
     </button>

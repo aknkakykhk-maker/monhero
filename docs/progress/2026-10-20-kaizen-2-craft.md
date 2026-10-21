@@ -28,3 +28,9 @@
 - `tools/boot/kaizen2-layout-check.js`: M3・M5〜M10 の作りが戻っていないか
 - `tools/home-layout-check.js`: 本物の画面で 320×568 と 390×844 を測る部分を足した(M7)
 - 画面写し: `docs/playbot/reports/2026-10-20/kaizen-2-fix/`
+
+## 2026-10-21 折り返しの洗い出し15種類・幅320のジャックの吹き出し
+
+- 案どおりに直した。前後の写しと中身: `docs/playbot/reports/2026-10-21/wrap-sweep/README.md`
+- 落とし穴: 商品名の枠は flex なので、一部だけ `<span>` で包むと別々の並びになる(「スキップ　・序／チケット」)。名前全体を1つの span で包む
+- jaWrap の U+200B は禁則より強い。「！」などの前に入れると「きたわい／！」と折れるので入れない
