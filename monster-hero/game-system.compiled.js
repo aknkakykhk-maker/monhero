@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b64fbc23f2a29dce
+// source-sha256: ec196ede794a8428
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-21 16:32";
+const BUILD_DATE = "2026-10-21 17:25";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -15623,6 +15623,11 @@ const ProfileFrameLayer = ({
     className: `mh-profile-frame mh-profile-frame-ring ${frame.className || ''}`
   });
 };
+const profileFrameBoxRatio = frameId => {
+  const frame = profileFrameById(normalizeProfileFrameId(frameId));
+  if (!frame || frame.kind === 'none') return 1;
+  return frame.kind === 'image' ? Math.max(1, (parseFloat(profileFrameImageStyle(frame).width) || 100) / 100) : MARKET_FRAME_RING_BOX;
+};
 const ProfileAvatar = ({
   src,
   id,
@@ -15633,22 +15638,47 @@ const ProfileAvatar = ({
   adjustment,
   fallback = null,
   badge = null,
-  small = false
-}) => React.createElement("span", {
-  className: `mh-profile-avatar ${className}`
-}, React.createElement("span", {
-  className: `relative flex h-full w-full items-center justify-center overflow-hidden ${roundedClass}`
-}, src ? React.createElement(BreederIcon, {
-  src: src,
-  id: id,
-  adjustment: adjustment,
-  alt: alt,
-  roundedClass: roundedClass,
-  className: "w-full h-full"
-}) : fallback, badge), React.createElement(ProfileFrameLayer, {
-  frameId: frameId,
-  small: small
-}));
+  small = false,
+  fit = false,
+  style = null
+}) => {
+  const ratio = fit ? profileFrameBoxRatio(frameId) : 1;
+  if (fit && ratio > 1) return React.createElement("span", {
+    "data-profile-avatar-box": true,
+    className: `relative flex items-center justify-center ${className}`
+  }, React.createElement(ProfileAvatar, {
+    src: src,
+    id: id,
+    frameId: frameId,
+    alt: alt,
+    roundedClass: roundedClass,
+    adjustment: adjustment,
+    fallback: fallback,
+    badge: badge,
+    small: small,
+    style: {
+      width: `${100 / ratio}%`,
+      height: `${100 / ratio}%`,
+      flexShrink: 0
+    }
+  }));
+  return React.createElement("span", {
+    className: `mh-profile-avatar ${className}`,
+    style: style || undefined
+  }, React.createElement("span", {
+    className: `relative flex h-full w-full items-center justify-center overflow-hidden ${roundedClass}`
+  }, src ? React.createElement(BreederIcon, {
+    src: src,
+    id: id,
+    adjustment: adjustment,
+    alt: alt,
+    roundedClass: roundedClass,
+    className: "w-full h-full"
+  }) : fallback, badge), React.createElement(ProfileFrameLayer, {
+    frameId: frameId,
+    small: small
+  }));
+};
 const hasProfileFrame = frameId => normalizeProfileFrameId(frameId) !== PROFILE_FRAME_NONE_ID;
 const HomeProfileIcon = ({
   src,
@@ -52304,6 +52334,8 @@ function ProfileScreen({
         id: breederIcon,
         frameId: nextFrame.id,
         alt: nextFrame.name,
+        fit: true,
+        small: true,
         className: "w-8 h-8 shrink-0",
         fallback: null
       }), React.createElement("span", {
@@ -71523,9 +71555,13 @@ function FriendsScreen({
       src: url,
       id: look.icon,
       frameId: look.profileFrame,
+      fit: true,
+      small: true,
       className: `${sizeClass} shrink-0`
     }) : React.createElement(ProfileAvatar, {
       frameId: look.profileFrame,
+      fit: true,
+      small: true,
       className: `${sizeClass} shrink-0`,
       fallback: React.createElement("span", {
         className: `flex h-full w-full items-center justify-center rounded-full bg-slate-800 ${emojiClass}`
@@ -74520,18 +74556,20 @@ function RhythmMultiAvatar({
     }, "🐾"));
   }
   const src = resolveIconUrl ? resolveIconUrl(m.icon) : null;
-  return React.createElement(ProfileAvatar, {
-    src: src,
-    id: m.icon,
-    frameId: m.frame,
-    small: small,
-    alt: "",
-    className: sizeClass,
-    fallback: React.createElement("span", {
-      "aria-hidden": "true",
-      className: "flex h-full w-full items-center justify-center bg-slate-800 text-lg"
-    }, "🎵")
-  });
+  return (React.createElement(ProfileAvatar, {
+      src: src,
+      id: m.icon,
+      frameId: m.frame,
+      small: small,
+      fit: true,
+      alt: "",
+      className: sizeClass,
+      fallback: React.createElement("span", {
+        "aria-hidden": "true",
+        className: "flex h-full w-full items-center justify-center bg-slate-800 text-lg"
+      }, "🎵")
+    })
+  );
 }
 function RhythmMultiMemberCards({
   members,
@@ -100366,9 +100404,13 @@ function MonsterHeroGame() {
       src: resolveIconUrl(entry.icon),
       id: entry.icon,
       frameId: entry?.profileFrame,
+      fit: true,
+      small: true,
       className: "w-8 h-8 shrink-0"
     }) : React.createElement(ProfileAvatar, {
       frameId: entry?.profileFrame,
+      fit: true,
+      small: true,
       className: "w-8 h-8 shrink-0",
       fallback: React.createElement("span", {
         className: "flex h-full w-full items-center justify-center rounded-full bg-slate-800 text-xs"

@@ -147,8 +147,25 @@ const ProfileFrameLayer = ({ frameId, small = false }) => {
 // frameId を渡さない(または 'none')ときは、これまでの BreederIcon と見た目が変わらない。
 // badge は「アイコンと同じ円の中へ収めたい飾り」(プロフィールの鉛筆マークなど)。
 // 内側の円でクリップされ、フレームだけがその外へ出る。
-const ProfileAvatar = ({ src, id, frameId=null, alt='', className='', roundedClass='rounded-full', adjustment, fallback=null, badge=null, small=false }) => (
-  <span className={`mh-profile-avatar ${className}`}>
+// 枠の外形が、アイコンの何倍に広がるか(1 以上)。画像の枠は profileFrameImageStyle の幅(穴の小さい絵ほど大きい)、色の輪は MARKET_FRAME_RING_BOX
+const profileFrameBoxRatio = (frameId) => {
+  const frame = profileFrameById(normalizeProfileFrameId(frameId));
+  if (!frame || frame.kind === 'none') return 1;
+  return frame.kind === 'image' ? Math.max(1, (parseFloat(profileFrameImageStyle(frame).width) || 100) / 100) : MARKET_FRAME_RING_BOX;
+};
+// fit … 一覧に並べる所(フレンド・ランキング・マルチなど)で使う。外側の大きさ(className の w-8 h-8 など)を**枠ごとの四角**とみなし、
+//   枠のある人はそのぶん中のアイコンを縮めて真ん中に置く(2026-10-21 社長「フレームのサイズ感微妙？」→ 枠ごと同じ四角に収める)。
+//   枠の無い人と同じ大きさの四角に並び、右の名前や時刻に枠がかぶらない。マーケットの MARKET_FRAME_BOX_PX と同じ考え方
+const ProfileAvatar = ({ src, id, frameId=null, alt='', className='', roundedClass='rounded-full', adjustment, fallback=null, badge=null, small=false, fit=false, style=null }) => {
+  const ratio = fit ? profileFrameBoxRatio(frameId) : 1;
+  if (fit && ratio > 1) return (
+    <span data-profile-avatar-box className={`relative flex items-center justify-center ${className}`}>
+      <ProfileAvatar src={src} id={id} frameId={frameId} alt={alt} roundedClass={roundedClass} adjustment={adjustment} fallback={fallback} badge={badge} small={small}
+        style={{width:`${100/ratio}%`,height:`${100/ratio}%`,flexShrink:0}}/>
+    </span>
+  );
+  return (
+  <span className={`mh-profile-avatar ${className}`} style={style||undefined}>
     <span className={`relative flex h-full w-full items-center justify-center overflow-hidden ${roundedClass}`}>
       {src
         ? <BreederIcon src={src} id={id} adjustment={adjustment} alt={alt} roundedClass={roundedClass} className="w-full h-full"/>
@@ -157,7 +174,8 @@ const ProfileAvatar = ({ src, id, frameId=null, alt='', className='', roundedCla
     </span>
     <ProfileFrameLayer frameId={frameId} small={small}/>
   </span>
-);
+  );
+};
 // フレームを選んでいるか(もとから付いている縁を消すかどうかの判定に使う)
 const hasProfileFrame = (frameId) => normalizeProfileFrameId(frameId) !== PROFILE_FRAME_NONE_ID;
 
