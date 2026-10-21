@@ -7242,8 +7242,8 @@ function MonsterHeroGame() {
   };
 
   // マーケットアイテムが購入済み(=解放済み)かどうか。typeによって参照する解放リストが異なる。
-  // 仲良し度の節目のごほうびを届ける(2026-10-21)。Lvが上がったときと、起動が済んだときに呼ぶ。
-  // ★保存から読み直したギフト一覧へ足し、ギフトと「届けた」印(mh_assistant_bond_rewards_v1)を同じ取引で保存する。
+  // 仲良し度のLvごとのごほうびを届ける(2026-10-21)。Lvが上がったときと、起動が済んだときに呼ぶ。
+  // ★保存から読み直したギフト一覧へ足し、ギフトと「届けた」印(mh_assistant_bond_rewards_v2)を同じ取引で保存する。
   //   どちらか失敗したら両方元へ戻る(CLAUDE.md ⑦)。もう越えている人には、越えた節目のぶんがまとめて届く
   // ★同時に走らせない。走っているあいだに呼ばれたら、終わったあとにもう1回だけ見直す
   // ★「見るだけ」のプレビュー中は届けない
@@ -7260,12 +7260,14 @@ function MonsterHeroGame() {
           [who.id, assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[who.id]).points)]));
         const savedGifts = await storeGet('mh_gifts', [], false);
         const beforeGifts = Array.isArray(savedGifts) ? savedGifts : [];
-        const mark = await storeGet(ASSISTANT_BOND_REWARDS_KEY, null, false);
-        const grant = buildAssistantBondRewardGrant({ gifts:beforeGifts, delivered:mark, levels });
+        // 最初の量の印(v1)は読むだけ。今の量の印(v2)をギフトと一緒に書く
+        const markV1 = await storeGet(ASSISTANT_BOND_REWARDS_KEY, null, false);
+        const mark = await storeGet(ASSISTANT_BOND_REWARDS_V2_KEY, null, false);
+        const grant = buildAssistantBondRewardGrant({ gifts:beforeGifts, delivered:markV1, deliveredV2:mark, levels });
         if (!grant.changed) continue;
         const saved = await saveStoredValuesOrRollback([
           ...(grant.granted.length ? [{ key:'mh_gifts', before:beforeGifts, next:grant.gifts }] : []),
-          { key:ASSISTANT_BOND_REWARDS_KEY, before:mark, next:grant.delivered },
+          { key:ASSISTANT_BOND_REWARDS_V2_KEY, before:mark, next:grant.deliveredV2 },
         ], storeGet, storeSet);
         if (!saved) { console.error('[assistant-bond-reward] save failed'); break; }
         if (grant.granted.length) setGifts(grant.gifts);
@@ -7296,7 +7298,7 @@ function MonsterHeroGame() {
     // (アシストカードで本人の仲良し度が増える経路があるため)
     if (after > before) grantProfileFrames(id, after);
     try { storeSet(assistantBondKeyFor(id), result.state, false); } catch {}
-    // 節目(Lv22・25・28・30)を越えたら、ごほうびをギフトで届ける
+    // Lvが上がったら、そのLvのごほうびをギフトで届ける
     if (after > before) void deliverAssistantBondRewards();
   }, [grantProfileFrames, deliverAssistantBondRewards]);
   // 行動に応じて助手との仲良し度を増やす。

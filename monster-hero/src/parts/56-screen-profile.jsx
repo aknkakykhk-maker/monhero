@@ -39,6 +39,81 @@ function RhythmAchievementPanel({ rows, who = 'self' }) {
     </section>
   );
 }
+// 仲良し度のごほうび一覧(2026-10-21 社長の決定「助手の欄から一覧を開く」)。
+// 選んでいる助手の Lv2〜30 を1行ずつ並べ、そのLvでもらえるもの(ギフトのごほうび・飾り枠・呼び方を選べる)をまとめて見せる。
+// ★表は実データから作る: ごほうびは ASSISTANT_BOND_LEVEL_REWARDS、飾り枠は PROFILE_FRAMES の unlock、呼び方は ASSISTANT_CALL_STYLE_UNLOCK_LEVEL。
+//   どれかを足したり変えたりしても、ここは書き換えなくてよい
+const assistantBondRewardRows = (assistantId) => {
+  const table = (typeof ASSISTANT_BOND_LEVEL_REWARDS !== 'undefined' && ASSISTANT_BOND_LEVEL_REWARDS) || {};
+  const levels = ((typeof ASSISTANT_BOND_LEVELS !== 'undefined' && ASSISTANT_BOND_LEVELS) || []).map(s => s.level).filter(lv => lv >= 2);
+  const callLv = (typeof ASSISTANT_CALL_STYLE_UNLOCK_LEVEL !== 'undefined' && ASSISTANT_CALL_STYLE_UNLOCK_LEVEL) || 6;
+  const frames = (typeof releasedProfileFrames === 'function' ? releasedProfileFrames() : [])
+    .filter(frame => { const u = typeof profileFrameUnlock === 'function' ? profileFrameUnlock(frame) : null; return u && u.assistantId === assistantId; });
+  return levels.map(lv => ({
+    level: lv,
+    title: (typeof assistantBondStageByLevel === 'function' ? assistantBondStageByLevel(lv, assistantId) : null)?.title || '',
+    rewards: (table[lv] || []).map(r => (typeof giftRewardText === 'function' ? giftRewardText(r) : '')).filter(Boolean),
+    frames: frames.filter(frame => profileFrameUnlock(frame).bondLevel === lv),
+    callStyle: lv === callLv,
+  }));
+};
+const AssistantBondRewardList = ({ who, level, breederIcon, resolveIconUrl, onClose }) => {
+  const rows = assistantBondRewardRows(who.id);
+  const accent = who.accent || '#f472b6';
+  const nextLv = rows.find(r => r.level > level)?.level || null;
+  const nowRef = React.useRef(null);
+  const listRef = React.useRef(null);
+  // 開いたら、いまのLvの近くを見せる。動かすのは一覧の箱の中だけ(scrollIntoView は画面ごと動くので使わない・viewport-height-check)
+  React.useEffect(() => {
+    const box = listRef.current, row = nowRef.current;
+    if (box && row) box.scrollTop = Math.max(0, row.offsetTop - (box.clientHeight - row.offsetHeight) / 2);
+  }, []);
+  return (
+    <ModalFrame label={`${who.name}との仲良し度のごほうび一覧`} border="border-pink-400/70" onClose={onClose}>
+      <div data-assistant-bond-reward-list={who.id}>
+        <div className="flex items-center gap-2">
+          <AssistantFace who={who} size={36} accent={accent} expression="happy"/>
+          <div className="min-w-0 flex-1">
+            {/* 「仲良し度」の途中で折れないよう、2つのかたまりに分けて並べる(折れるのはかたまりの間だけ) */}
+            <h2 className="text-[15px] font-black leading-tight text-white"><span className="inline-block">{who.name}との仲良し度</span> <span className="inline-block">ごほうび一覧</span></h2>
+            <div className="text-[11px] font-black" style={{color:accent}}>いまは Lv.{level}{nextLv?`・次は Lv.${nextLv}`:'・全部もらいました'}</div>
+          </div>
+        </div>
+        <p className="mt-2 text-[10px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('Lvが上がると、そのLvのごほうびがギフトボックスへ届きます。助手ごとに1回ずつです。')}</p>
+        <ol ref={listRef} className="relative mt-2 max-h-[58vh] space-y-1.5 overflow-y-auto pr-0.5">
+          {rows.map(r => {
+            const got = r.level <= level;
+            const isNext = r.level === nextLv;
+            return (
+              <li key={r.level} ref={r.level === Math.max(2, level) ? nowRef : undefined} data-bond-reward-level={r.level} data-bond-reward-state={got?'got':isNext?'next':'later'}
+                className={`rounded-xl border px-2.5 py-2 ${got?'border-white/10 bg-slate-900/60':isNext?'bg-pink-950/50':'border-white/10 bg-slate-950'}`}
+                style={isNext?{borderColor:accent}:undefined}>
+                <div className="flex items-center gap-2">
+                  <b className="shrink-0 text-[13px] font-black" style={{color:got?'#94a3b8':accent}}>Lv.{r.level}</b>
+                  <span className="min-w-0 flex-1 text-[11px] font-black text-slate-300" style={JA_LABEL_STYLE}>{jaWrap(r.title)}</span>
+                  <em className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black not-italic ${got?'bg-slate-700 text-slate-300':isNext?'text-white':'bg-slate-800 text-slate-400'}`} style={isNext?{backgroundColor:accent}:undefined}>
+                    {got?'✓ もらった':isNext?'次はここ':'まだ'}
+                  </em>
+                </div>
+                <div className={`mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-[11px] font-black leading-tight ${got?'text-slate-400':'text-amber-200'}`}>
+                  {r.rewards.map((t, i) => <span key={i} style={JA_WRAP_STYLE}>{jaWrap(t)}</span>)}
+                </div>
+                {r.frames.map(frame => (
+                  <div key={frame.id} data-bond-reward-frame={frame.id} className="mt-1.5 flex items-center gap-2">
+                    <ProfileAvatar src={resolveIconUrl(breederIcon)} id={breederIcon} frameId={frame.id} alt={frame.name} fit small className="h-9 w-9 shrink-0" fallback={null}/>
+                    <span className={`min-w-0 text-[11px] font-black ${got?'text-slate-400':'text-pink-200'}`} style={JA_WRAP_STYLE}>{jaWrap(`飾り枠「${frame.name}」`)}</span>
+                  </div>
+                ))}
+                {r.callStyle && <div className={`mt-1 text-[11px] font-black ${got?'text-slate-400':'text-cyan-200'}`} style={JA_WRAP_STYLE}>{jaWrap('呼び方を自由に決められるようになる')}</div>}
+              </li>
+            );
+          })}
+        </ol>
+        <div className="mt-3"><ModalCloseButton onClick={onClose}/></div>
+      </div>
+    </ModalFrame>
+  );
+};
 function ProfileScreen({
   activeAssistant, assistantBond, assistantBondLevelNow, assistantBonds, assistantCallStyle, attemptCounts,
   breederIcon, breederLevel, breederName, breederPoints, extremeBestScores, extremeClearCounts,
@@ -63,6 +138,8 @@ function ProfileScreen({
 }) {
   // モンヒロビートの実績。曲の記録はモンヒロビートを開くまで読み込まれないので、ここで保存から直接読む
   const [rhythmAchRows, setRhythmAchRows] = React.useState([]);
+  // 仲良し度のごほうび一覧を開いているか(画面の中だけの状態。保存しない)
+  const [bondRewardListOpen, setBondRewardListOpen] = React.useState(false);
   React.useEffect(() => {
     let alive = true;
     (async () => {
@@ -246,6 +323,12 @@ function ProfileScreen({
               </div>
               <div className="mt-2 h-2 rounded-full border border-white/5 bg-black/40 overflow-hidden"><i className="block h-full rounded-full" style={{width:`${width}%`,background:`linear-gradient(90deg,${accent},#fbbf24)`}}/></div>
               <div className="text-[10px] text-slate-400 font-bold mt-1 text-right">{next?`次のLv.${next.level}まで あと${next.remain}`:'いちばん仲良し！'}</div>
+              {/* ごほうび一覧(2026-10-21)。Lvごとにもらえるもの(ギフト・飾り枠・呼び方)を見る */}
+              <button type="button" data-assistant-bond-reward-open onClick={()=>setBondRewardListOpen(true)}
+                className="mt-2 flex w-full min-h-[44px] items-center justify-center gap-1.5 rounded-xl border border-pink-400/50 bg-pink-950/40 px-3 text-[12px] font-black text-pink-100 active:scale-[.98]">
+                <Package size={15}/>ごほうび一覧<ChevronRight size={15} className="text-pink-300"/>
+              </button>
+              {bondRewardListOpen&&<AssistantBondRewardList who={activeAssistant} level={assistantBondLevelNow} breederIcon={breederIcon} resolveIconUrl={resolveIconUrl} onClose={()=>setBondRewardListOpen(false)}/>}
               {/* 次にもらえる飾り枠(2026-09-16)。貯める理由がその場で見えるように、
                   仲良し度の下へ1行だけ出す。全部もらっていれば出さない */}
               {(()=>{

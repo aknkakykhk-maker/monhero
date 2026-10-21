@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 266a5c95daee4dbc
+// generated-sha256: 8aa51cdb71286311
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-21 17:31"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-21 19:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8953,11 +8953,14 @@ const gainAssistantBond = (state, actionKey, now = Date.now()) => {
 };
 const assistantBondLevelOf = (points) => (typeof assistantBondLevel === 'function') ? assistantBondLevel(points) : 1;
 
-// ---------- 仲良し度の節目のごほうび(2026-10-21) ----------
-// 節目(ASSISTANT_BOND_LEVEL_REWARDS)を越えたら、助手ごとに1回ずつギフトで届ける。
-// 届けた節目は新しいキー mh_assistant_bond_rewards_v1 に { 助手のid: [22, 25, ...] } で残す(CLAUDE.md ⑦)。
-// ★ギフトは受け取ったあと一覧から消えることがあるので、ギフトのidだけでなくこの印で二重を防ぐ
+// ---------- 仲良し度のLvごとのごほうび(2026-10-21) ----------
+// Lvを越えたら、助手ごとに各Lv1回ずつギフトで届ける(量は ASSISTANT_BOND_LEVEL_REWARDS)。
+// 届けた印は2つ(どちらも { 助手のid: [Lv, ...] }・CLAUDE.md ⑦)
+//   mh_assistant_bond_rewards_v1 … 最初の量(ASSISTANT_BOND_LEVEL_REWARDS_V1・Lv22/25/28/30だけ)を届けた印。★意味は変えない・もう書かない
+//   mh_assistant_bond_rewards_v2 … 今の量を届けた印。v1 の印がある節目は、今の量との差のぶんだけを「追加ぶん」で届けて、この印を付ける
+// ★ギフトは受け取ったあと一覧から消えることがあるので、ギフトのidだけでなく印で二重を防ぐ
 const ASSISTANT_BOND_REWARDS_KEY = 'mh_assistant_bond_rewards_v1';
+const ASSISTANT_BOND_REWARDS_V2_KEY = 'mh_assistant_bond_rewards_v2';
 const normalizeAssistantBondRewardsDelivered = (value) => {
   const raw = (value && typeof value === 'object' && !Array.isArray(value)) ? value : {};
   const out = {};
@@ -8968,42 +8971,60 @@ const normalizeAssistantBondRewardsDelivered = (value) => {
   }
   return out;
 };
+// 最初の量のギフトのid(#3241)。今の量は _v2、差のぶんは _topup
 const assistantBondRewardGiftId = (assistantId, level) => `gift_assistant_bond_${assistantId}_lv${level}`;
-// まだ届けていない節目のぶんをギフトへ足した結果を返す(渡された値は変えない)。
-//   levels: { 助手のid: いまのLv }
-// 戻り値の changed が true のときだけ、gifts と delivered を一緒に保存する
-const buildAssistantBondRewardGrant = ({ gifts, delivered, levels, now = Date.now() } = {}) => {
+const assistantBondRewardV2GiftId = (assistantId, level, topup = false) => `gift_assistant_bond_v2_${assistantId}_lv${level}${topup ? '_topup' : ''}`;
+// 今の量から、もう渡した量を引いた残り(品ごと)。もう渡した量のほうが多い品は0にする(取り上げない)
+const assistantBondRewardRemainder = (next, given) => {
+  const keyOf = (r) => `${r && r.type}:${(r && r.itemId) || ''}`;
+  const had = {};
+  for (const r of (Array.isArray(given) ? given : [])) had[keyOf(r)] = (had[keyOf(r)] || 0) + Math.max(0, Math.floor(Number(r && r.amount) || 0));
+  return (Array.isArray(next) ? next : [])
+    .map(r => ({ ...r, amount: Math.max(0, Math.floor(Number(r.amount) || 0) - (had[keyOf(r)] || 0)) }))
+    .filter(r => r.amount > 0);
+};
+// まだ届けていないLvのぶんをギフトへ足した結果を返す(渡された値は変えない)。
+//   delivered: v1 の印(読むだけ) / deliveredV2: v2 の印 / levels: { 助手のid: いまのLv }
+// 戻り値の changed が true のときだけ、gifts と deliveredV2 を一緒に保存する
+const buildAssistantBondRewardGrant = ({ gifts, delivered, deliveredV2, levels, now = Date.now() } = {}) => {
   const table = (typeof ASSISTANT_BOND_LEVEL_REWARDS !== 'undefined' && ASSISTANT_BOND_LEVEL_REWARDS) || {};
+  const tableV1 = (typeof ASSISTANT_BOND_LEVEL_REWARDS_V1 !== 'undefined' && ASSISTANT_BOND_LEVEL_REWARDS_V1) || {};
   const milestones = Object.keys(table).map(Number).filter(Number.isFinite).sort((a, b) => a - b);
   const list = (typeof ASSISTANTS !== 'undefined' && Array.isArray(ASSISTANTS)) ? ASSISTANTS : [];
   let nextGifts = Array.isArray(gifts) ? gifts : [];
-  const nextDelivered = normalizeAssistantBondRewardsDelivered(delivered);
+  const v1 = normalizeAssistantBondRewardsDelivered(delivered);
+  const nextDelivered = normalizeAssistantBondRewardsDelivered(deliveredV2);
   const granted = [];
   let changed = false;
   for (const who of list) {
     const id = who && who.id;
     if (!id) continue;
     const level = Math.floor(Number(levels && levels[id]) || 0);
-    const done = nextDelivered[id] || [];
     for (const lv of milestones) {
-      if (lv > level || done.includes(lv)) continue;
+      if (lv > level || (nextDelivered[id] || []).includes(lv)) continue;
+      // 最初の量をもう受け取っている(印がある・ギフトが残っている)なら、差のぶんだけ
+      const topup = !!tableV1[lv] && ((v1[id] || []).includes(lv) || nextGifts.some(g => g && g.id === assistantBondRewardGiftId(id, lv)));
+      const rewards = topup ? assistantBondRewardRemainder(table[lv], tableV1[lv]) : table[lv].map(r => ({ ...r }));
+      const mark = () => { nextDelivered[id] = [...(nextDelivered[id] || []), lv].sort((a, b) => a - b); changed = true; };
+      if (!rewards.length) { mark(); continue; }
       const gift = {
-        id: assistantBondRewardGiftId(id, lv),
+        id: assistantBondRewardV2GiftId(id, lv, topup),
         source: 'assistantBond',
-        title: `${who.name}との仲良し度 Lv${lv} のごほうび`,
-        description: `${who.name}との仲良し度が Lv${lv} になりました。いつもありがとう！`,
-        rewards: table[lv].map(r => ({ ...r })),
+        title: topup ? `${who.name}との仲良し度 Lv${lv} のごほうび(追加ぶん)` : `${who.name}との仲良し度 Lv${lv} のごほうび`,
+        description: topup
+          ? `ごほうびの量が増えたので、前に受け取ったぶんとの差をお届けします。`
+          : `${who.name}との仲良し度が Lv${lv} になりました。いつもありがとう！`,
+        rewards,
       };
       const already = nextGifts.some(g => g && g.id === gift.id);
       const grant = grantGiftOnce(nextGifts, gift, now);
       // 中身が読めない(古い版で品物が無いなど)ときは印を付けず、次に読めたときに届ける
       if (!grant.granted && !already) continue;
-      if (grant.granted) { nextGifts = grant.gifts; granted.push({ assistantId:id, level:lv }); }
-      nextDelivered[id] = [...(nextDelivered[id] || []), lv].sort((a, b) => a - b);
-      changed = true;
+      if (grant.granted) { nextGifts = grant.gifts; granted.push({ assistantId:id, level:lv, topup }); }
+      mark();
     }
   }
-  return { changed, gifts:nextGifts, delivered:nextDelivered, granted };
+  return { changed, gifts:nextGifts, deliveredV2:nextDelivered, granted };
 };
 
 const normalizeLoginBonus = (value) => ({
@@ -11782,7 +11803,7 @@ const helpDataRows = (id) => {
         ['固有技を1つ持つ', `+${MONSTER_POWER_UNIQUE_OWNED}（Lv0でも付く。継承した固有技も同じ）`],
         ['固有技の強化Lv 1段階', `+${Math.round(MONSTER_POWER_UNIQUE_PER_LEVEL * 100) / 100}（3段階でちょうど+200）`],
       ];
-    // 仲良し度の節目のごほうび(2026-10-21)。表(ASSISTANT_BOND_LEVEL_REWARDS)から作るので、中身を変えてもヘルプが古くならない
+    // 仲良し度のLvごとのごほうび(2026-10-21)。表(ASSISTANT_BOND_LEVEL_REWARDS)から作るので、中身を変えてもヘルプが古くならない
     case 'assistantBondRewards':
       return Object.entries((typeof ASSISTANT_BOND_LEVEL_REWARDS !== 'undefined' && ASSISTANT_BOND_LEVEL_REWARDS) || {})
         .map(([lv, rewards]) => [`Lv.${lv}`, rewards.map(r => (typeof giftRewardText === 'function' ? giftRewardText(r) : '')).join(' ／ ')]);
@@ -11928,7 +11949,7 @@ const HELP_DATA_TITLES = {
   profileFrames: '選べるプロフィールフレーム',
   assistantBond: '仲良し度の段階と呼び方',
   assistantBondActions: '仲良し度が増える行動',
-  assistantBondRewards: '仲良し度の節目のごほうび(助手ごとに1回)',
+  assistantBondRewards: '仲良し度のLvごとのごほうび(助手ごとに1回)',
   monsterPower: '総合力の内訳',
   monsterLineages: 'モンスターの血統一覧',
   psycheRewards: '難易度ごとにもらえる虹のプシュケー',
@@ -31046,7 +31067,10 @@ const jaWrapPoints = (text) => {
     // 行の頭に来てはいけない字(「！」「、」「…」小さい字など)の前と、行の終わりに来てはいけない字(「「」「（」)の後ろ、空白の前後には印を入れない
     // (印は「ここで折ってよい」の意味なので、入れると禁則より強くなり「きたわい／！」と折れる。2026-10-21)
     const segs = [..._jaSegmenter.segment(s)].map(seg => seg.segment);
-    return segs.reduce((out, seg, i) => (i === 0 || /^[\s、。，．,.！？!?」』）)】〕〉》…‥ー〜～・：:；;ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ]/.test(seg) || /[\s「『（(【〔〈《]$/.test(segs[i - 1])
+    // 「ご」「お」で始まる言葉(ごほうび・おしらせ)は、頭の1字のあとで折らない(2026-10-21 窓口「〜のご／ほうび」。道具は「ご」「ほうび」を別の語にする)。
+    // ひらがな同士の間を全部つなぐと、長いひらがなのセリフが折れる所を失って「…じゃぞ／！」になるので、頭の1字だけにする
+    const inHiraWord = (i) => /^[ごお]$/.test(segs[i - 1]) && /^[ぁ-ゖ]/.test(segs[i]);
+    return segs.reduce((out, seg, i) => (i === 0 || inHiraWord(i) || /^[\s、。，．,.！？!?」』）)】〕〉》…‥ー〜～・：:；;ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ]/.test(seg) || /[\s「『（(【〔〈《]$/.test(segs[i - 1])
       ? out + seg : `${out}\u200B${seg}`), '');
   } catch { return s; }
 };
@@ -32171,7 +32195,7 @@ function GiftBoxScreen({ gifts, giftTab, onSelectTab, onBack, onClaim, onOpenLog
       {/* 札の地は不透明(2026-10-20 改善部 M10)。半透明だと、ハロウィンの画面の殻の背景にあるかぼちゃが字の上に透けて見えた。
           色は前の半透明の色を夜空の地(#170a26)に重ねたときと同じにしてある */}
       <div className={`mh-gift-list ${SCREEN_LIST_CLASS} pb-4`}>{shown.length===0?<ScreenEmpty emoji="🎁" lines={giftTab==='unclaimed'?['未受取のギフトはありません','ミッションやログインボーナスを達成すると、ここに届きます']:['受取済みのギフトはありません','受け取ったギフトは、ここに残ります']}/>:shown.map(g=>{const expired=giftIsExpired(g,now);const valid=!!normalizeGiftRewards(g);const display=giftTitleDisplay(g);return <article key={g.id} title={g.description||g.title||undefined} className={`mh-gift-card rounded-2xl border ${g.claimedAt?'bg-[#111329] border-white/10':expired?'bg-[#250a1e] border-red-500/60':'bg-[#131630] border-cyan-400/60'}`}>
-        <div className="mh-gift-heading"><h3>{display.label&&<span>{display.label}</span>}<b>{display.title}</b></h3><em className={`${g.claimedAt?'bg-slate-700 text-slate-300':expired?'bg-red-900 text-red-200':valid?'bg-cyan-700 text-white':'bg-amber-900 text-amber-200'}`}>{g.claimedAt?'受取済み':expired?'期限切れ':valid?'受取可':'要確認'}</em></div>
+        <div className="mh-gift-heading"><h3>{display.label&&<span>{display.label}</span>}<b style={JA_WRAP_STYLE}>{jaWrap(display.title)}</b></h3><em className={`${g.claimedAt?'bg-slate-700 text-slate-300':expired?'bg-red-900 text-red-200':valid?'bg-cyan-700 text-white':'bg-amber-900 text-amber-200'}`}>{g.claimedAt?'受取済み':expired?'期限切れ':valid?'受取可':'要確認'}</em></div>
         <div className="mh-gift-main"><div className="mh-gift-rewards">{Array.isArray(g.rewards)&&g.rewards.map((r,i)=><span key={i}>{giftRewardText(r)}</span>)}</div>{!g.claimedAt&&<button type="button" disabled={expired||!valid} onClick={()=>onClaim([g.id])} className="mh-button mh-button-primary">受け取る</button>}</div>
         <div className="mh-gift-deadline">{g.claimedAt?`受取日時: ${new Date(g.claimedAt).toLocaleString('ja-JP')}`:`受取期限: ${g.expiresAt?new Date(g.expiresAt).toLocaleString('ja-JP'):'期限なし'}`}</div>
       </article>})}</div>
@@ -32712,6 +32736,81 @@ function RhythmAchievementPanel({ rows, who = 'self' }) {
     </section>
   );
 }
+// 仲良し度のごほうび一覧(2026-10-21 社長の決定「助手の欄から一覧を開く」)。
+// 選んでいる助手の Lv2〜30 を1行ずつ並べ、そのLvでもらえるもの(ギフトのごほうび・飾り枠・呼び方を選べる)をまとめて見せる。
+// ★表は実データから作る: ごほうびは ASSISTANT_BOND_LEVEL_REWARDS、飾り枠は PROFILE_FRAMES の unlock、呼び方は ASSISTANT_CALL_STYLE_UNLOCK_LEVEL。
+//   どれかを足したり変えたりしても、ここは書き換えなくてよい
+const assistantBondRewardRows = (assistantId) => {
+  const table = (typeof ASSISTANT_BOND_LEVEL_REWARDS !== 'undefined' && ASSISTANT_BOND_LEVEL_REWARDS) || {};
+  const levels = ((typeof ASSISTANT_BOND_LEVELS !== 'undefined' && ASSISTANT_BOND_LEVELS) || []).map(s => s.level).filter(lv => lv >= 2);
+  const callLv = (typeof ASSISTANT_CALL_STYLE_UNLOCK_LEVEL !== 'undefined' && ASSISTANT_CALL_STYLE_UNLOCK_LEVEL) || 6;
+  const frames = (typeof releasedProfileFrames === 'function' ? releasedProfileFrames() : [])
+    .filter(frame => { const u = typeof profileFrameUnlock === 'function' ? profileFrameUnlock(frame) : null; return u && u.assistantId === assistantId; });
+  return levels.map(lv => ({
+    level: lv,
+    title: (typeof assistantBondStageByLevel === 'function' ? assistantBondStageByLevel(lv, assistantId) : null)?.title || '',
+    rewards: (table[lv] || []).map(r => (typeof giftRewardText === 'function' ? giftRewardText(r) : '')).filter(Boolean),
+    frames: frames.filter(frame => profileFrameUnlock(frame).bondLevel === lv),
+    callStyle: lv === callLv,
+  }));
+};
+const AssistantBondRewardList = ({ who, level, breederIcon, resolveIconUrl, onClose }) => {
+  const rows = assistantBondRewardRows(who.id);
+  const accent = who.accent || '#f472b6';
+  const nextLv = rows.find(r => r.level > level)?.level || null;
+  const nowRef = React.useRef(null);
+  const listRef = React.useRef(null);
+  // 開いたら、いまのLvの近くを見せる。動かすのは一覧の箱の中だけ(scrollIntoView は画面ごと動くので使わない・viewport-height-check)
+  React.useEffect(() => {
+    const box = listRef.current, row = nowRef.current;
+    if (box && row) box.scrollTop = Math.max(0, row.offsetTop - (box.clientHeight - row.offsetHeight) / 2);
+  }, []);
+  return (
+    <ModalFrame label={`${who.name}との仲良し度のごほうび一覧`} border="border-pink-400/70" onClose={onClose}>
+      <div data-assistant-bond-reward-list={who.id}>
+        <div className="flex items-center gap-2">
+          <AssistantFace who={who} size={36} accent={accent} expression="happy"/>
+          <div className="min-w-0 flex-1">
+            {/* 「仲良し度」の途中で折れないよう、2つのかたまりに分けて並べる(折れるのはかたまりの間だけ) */}
+            <h2 className="text-[15px] font-black leading-tight text-white"><span className="inline-block">{who.name}との仲良し度</span> <span className="inline-block">ごほうび一覧</span></h2>
+            <div className="text-[11px] font-black" style={{color:accent}}>いまは Lv.{level}{nextLv?`・次は Lv.${nextLv}`:'・全部もらいました'}</div>
+          </div>
+        </div>
+        <p className="mt-2 text-[10px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('Lvが上がると、そのLvのごほうびがギフトボックスへ届きます。助手ごとに1回ずつです。')}</p>
+        <ol ref={listRef} className="relative mt-2 max-h-[58vh] space-y-1.5 overflow-y-auto pr-0.5">
+          {rows.map(r => {
+            const got = r.level <= level;
+            const isNext = r.level === nextLv;
+            return (
+              <li key={r.level} ref={r.level === Math.max(2, level) ? nowRef : undefined} data-bond-reward-level={r.level} data-bond-reward-state={got?'got':isNext?'next':'later'}
+                className={`rounded-xl border px-2.5 py-2 ${got?'border-white/10 bg-slate-900/60':isNext?'bg-pink-950/50':'border-white/10 bg-slate-950'}`}
+                style={isNext?{borderColor:accent}:undefined}>
+                <div className="flex items-center gap-2">
+                  <b className="shrink-0 text-[13px] font-black" style={{color:got?'#94a3b8':accent}}>Lv.{r.level}</b>
+                  <span className="min-w-0 flex-1 text-[11px] font-black text-slate-300" style={JA_LABEL_STYLE}>{jaWrap(r.title)}</span>
+                  <em className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black not-italic ${got?'bg-slate-700 text-slate-300':isNext?'text-white':'bg-slate-800 text-slate-400'}`} style={isNext?{backgroundColor:accent}:undefined}>
+                    {got?'✓ もらった':isNext?'次はここ':'まだ'}
+                  </em>
+                </div>
+                <div className={`mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-[11px] font-black leading-tight ${got?'text-slate-400':'text-amber-200'}`}>
+                  {r.rewards.map((t, i) => <span key={i} style={JA_WRAP_STYLE}>{jaWrap(t)}</span>)}
+                </div>
+                {r.frames.map(frame => (
+                  <div key={frame.id} data-bond-reward-frame={frame.id} className="mt-1.5 flex items-center gap-2">
+                    <ProfileAvatar src={resolveIconUrl(breederIcon)} id={breederIcon} frameId={frame.id} alt={frame.name} fit small className="h-9 w-9 shrink-0" fallback={null}/>
+                    <span className={`min-w-0 text-[11px] font-black ${got?'text-slate-400':'text-pink-200'}`} style={JA_WRAP_STYLE}>{jaWrap(`飾り枠「${frame.name}」`)}</span>
+                  </div>
+                ))}
+                {r.callStyle && <div className={`mt-1 text-[11px] font-black ${got?'text-slate-400':'text-cyan-200'}`} style={JA_WRAP_STYLE}>{jaWrap('呼び方を自由に決められるようになる')}</div>}
+              </li>
+            );
+          })}
+        </ol>
+        <div className="mt-3"><ModalCloseButton onClick={onClose}/></div>
+      </div>
+    </ModalFrame>
+  );
+};
 function ProfileScreen({
   activeAssistant, assistantBond, assistantBondLevelNow, assistantBonds, assistantCallStyle, attemptCounts,
   breederIcon, breederLevel, breederName, breederPoints, extremeBestScores, extremeClearCounts,
@@ -32736,6 +32835,8 @@ function ProfileScreen({
 }) {
   // モンヒロビートの実績。曲の記録はモンヒロビートを開くまで読み込まれないので、ここで保存から直接読む
   const [rhythmAchRows, setRhythmAchRows] = React.useState([]);
+  // 仲良し度のごほうび一覧を開いているか(画面の中だけの状態。保存しない)
+  const [bondRewardListOpen, setBondRewardListOpen] = React.useState(false);
   React.useEffect(() => {
     let alive = true;
     (async () => {
@@ -32919,6 +33020,12 @@ function ProfileScreen({
               </div>
               <div className="mt-2 h-2 rounded-full border border-white/5 bg-black/40 overflow-hidden"><i className="block h-full rounded-full" style={{width:`${width}%`,background:`linear-gradient(90deg,${accent},#fbbf24)`}}/></div>
               <div className="text-[10px] text-slate-400 font-bold mt-1 text-right">{next?`次のLv.${next.level}まで あと${next.remain}`:'いちばん仲良し！'}</div>
+              {/* ごほうび一覧(2026-10-21)。Lvごとにもらえるもの(ギフト・飾り枠・呼び方)を見る */}
+              <button type="button" data-assistant-bond-reward-open onClick={()=>setBondRewardListOpen(true)}
+                className="mt-2 flex w-full min-h-[44px] items-center justify-center gap-1.5 rounded-xl border border-pink-400/50 bg-pink-950/40 px-3 text-[12px] font-black text-pink-100 active:scale-[.98]">
+                <Package size={15}/>ごほうび一覧<ChevronRight size={15} className="text-pink-300"/>
+              </button>
+              {bondRewardListOpen&&<AssistantBondRewardList who={activeAssistant} level={assistantBondLevelNow} breederIcon={breederIcon} resolveIconUrl={resolveIconUrl} onClose={()=>setBondRewardListOpen(false)}/>}
               {/* 次にもらえる飾り枠(2026-09-16)。貯める理由がその場で見えるように、
                   仲良し度の下へ1行だけ出す。全部もらっていれば出さない */}
               {(()=>{
@@ -56173,8 +56280,8 @@ function MonsterHeroGame() {
   };
 
   // マーケットアイテムが購入済み(=解放済み)かどうか。typeによって参照する解放リストが異なる。
-  // 仲良し度の節目のごほうびを届ける(2026-10-21)。Lvが上がったときと、起動が済んだときに呼ぶ。
-  // ★保存から読み直したギフト一覧へ足し、ギフトと「届けた」印(mh_assistant_bond_rewards_v1)を同じ取引で保存する。
+  // 仲良し度のLvごとのごほうびを届ける(2026-10-21)。Lvが上がったときと、起動が済んだときに呼ぶ。
+  // ★保存から読み直したギフト一覧へ足し、ギフトと「届けた」印(mh_assistant_bond_rewards_v2)を同じ取引で保存する。
   //   どちらか失敗したら両方元へ戻る(CLAUDE.md ⑦)。もう越えている人には、越えた節目のぶんがまとめて届く
   // ★同時に走らせない。走っているあいだに呼ばれたら、終わったあとにもう1回だけ見直す
   // ★「見るだけ」のプレビュー中は届けない
@@ -56191,12 +56298,14 @@ function MonsterHeroGame() {
           [who.id, assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[who.id]).points)]));
         const savedGifts = await storeGet('mh_gifts', [], false);
         const beforeGifts = Array.isArray(savedGifts) ? savedGifts : [];
-        const mark = await storeGet(ASSISTANT_BOND_REWARDS_KEY, null, false);
-        const grant = buildAssistantBondRewardGrant({ gifts:beforeGifts, delivered:mark, levels });
+        // 最初の量の印(v1)は読むだけ。今の量の印(v2)をギフトと一緒に書く
+        const markV1 = await storeGet(ASSISTANT_BOND_REWARDS_KEY, null, false);
+        const mark = await storeGet(ASSISTANT_BOND_REWARDS_V2_KEY, null, false);
+        const grant = buildAssistantBondRewardGrant({ gifts:beforeGifts, delivered:markV1, deliveredV2:mark, levels });
         if (!grant.changed) continue;
         const saved = await saveStoredValuesOrRollback([
           ...(grant.granted.length ? [{ key:'mh_gifts', before:beforeGifts, next:grant.gifts }] : []),
-          { key:ASSISTANT_BOND_REWARDS_KEY, before:mark, next:grant.delivered },
+          { key:ASSISTANT_BOND_REWARDS_V2_KEY, before:mark, next:grant.deliveredV2 },
         ], storeGet, storeSet);
         if (!saved) { console.error('[assistant-bond-reward] save failed'); break; }
         if (grant.granted.length) setGifts(grant.gifts);
@@ -56227,7 +56336,7 @@ function MonsterHeroGame() {
     // (アシストカードで本人の仲良し度が増える経路があるため)
     if (after > before) grantProfileFrames(id, after);
     try { storeSet(assistantBondKeyFor(id), result.state, false); } catch {}
-    // 節目(Lv22・25・28・30)を越えたら、ごほうびをギフトで届ける
+    // Lvが上がったら、そのLvのごほうびをギフトで届ける
     if (after > before) void deliverAssistantBondRewards();
   }, [grantProfileFrames, deliverAssistantBondRewards]);
   // 行動に応じて助手との仲良し度を増やす。

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: bf9e55643a0263d6
+// source-sha256: 57ac6f483c783ac0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-21 17:31";
+const BUILD_DATE = "2026-10-21 19:00";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -12490,6 +12490,7 @@ const gainAssistantBond = (state, actionKey, now = Date.now()) => {
 };
 const assistantBondLevelOf = points => typeof assistantBondLevel === 'function' ? assistantBondLevel(points) : 1;
 const ASSISTANT_BOND_REWARDS_KEY = 'mh_assistant_bond_rewards_v1';
+const ASSISTANT_BOND_REWARDS_V2_KEY = 'mh_assistant_bond_rewards_v2';
 const normalizeAssistantBondRewardsDelivered = value => {
   const raw = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
   const out = {};
@@ -12501,34 +12502,56 @@ const normalizeAssistantBondRewardsDelivered = value => {
   return out;
 };
 const assistantBondRewardGiftId = (assistantId, level) => `gift_assistant_bond_${assistantId}_lv${level}`;
+const assistantBondRewardV2GiftId = (assistantId, level, topup = false) => `gift_assistant_bond_v2_${assistantId}_lv${level}${topup ? '_topup' : ''}`;
+const assistantBondRewardRemainder = (next, given) => {
+  const keyOf = r => `${r && r.type}:${r && r.itemId || ''}`;
+  const had = {};
+  for (const r of Array.isArray(given) ? given : []) had[keyOf(r)] = (had[keyOf(r)] || 0) + Math.max(0, Math.floor(Number(r && r.amount) || 0));
+  return (Array.isArray(next) ? next : []).map(r => ({
+    ...r,
+    amount: Math.max(0, Math.floor(Number(r.amount) || 0) - (had[keyOf(r)] || 0))
+  })).filter(r => r.amount > 0);
+};
 const buildAssistantBondRewardGrant = ({
   gifts,
   delivered,
+  deliveredV2,
   levels,
   now = Date.now()
 } = {}) => {
   const table = typeof ASSISTANT_BOND_LEVEL_REWARDS !== 'undefined' && ASSISTANT_BOND_LEVEL_REWARDS || {};
+  const tableV1 = typeof ASSISTANT_BOND_LEVEL_REWARDS_V1 !== 'undefined' && ASSISTANT_BOND_LEVEL_REWARDS_V1 || {};
   const milestones = Object.keys(table).map(Number).filter(Number.isFinite).sort((a, b) => a - b);
   const list = typeof ASSISTANTS !== 'undefined' && Array.isArray(ASSISTANTS) ? ASSISTANTS : [];
   let nextGifts = Array.isArray(gifts) ? gifts : [];
-  const nextDelivered = normalizeAssistantBondRewardsDelivered(delivered);
+  const v1 = normalizeAssistantBondRewardsDelivered(delivered);
+  const nextDelivered = normalizeAssistantBondRewardsDelivered(deliveredV2);
   const granted = [];
   let changed = false;
   for (const who of list) {
     const id = who && who.id;
     if (!id) continue;
     const level = Math.floor(Number(levels && levels[id]) || 0);
-    const done = nextDelivered[id] || [];
     for (const lv of milestones) {
-      if (lv > level || done.includes(lv)) continue;
+      if (lv > level || (nextDelivered[id] || []).includes(lv)) continue;
+      const topup = !!tableV1[lv] && ((v1[id] || []).includes(lv) || nextGifts.some(g => g && g.id === assistantBondRewardGiftId(id, lv)));
+      const rewards = topup ? assistantBondRewardRemainder(table[lv], tableV1[lv]) : table[lv].map(r => ({
+        ...r
+      }));
+      const mark = () => {
+        nextDelivered[id] = [...(nextDelivered[id] || []), lv].sort((a, b) => a - b);
+        changed = true;
+      };
+      if (!rewards.length) {
+        mark();
+        continue;
+      }
       const gift = {
-        id: assistantBondRewardGiftId(id, lv),
+        id: assistantBondRewardV2GiftId(id, lv, topup),
         source: 'assistantBond',
-        title: `${who.name}との仲良し度 Lv${lv} のごほうび`,
-        description: `${who.name}との仲良し度が Lv${lv} になりました。いつもありがとう！`,
-        rewards: table[lv].map(r => ({
-          ...r
-        }))
+        title: topup ? `${who.name}との仲良し度 Lv${lv} のごほうび(追加ぶん)` : `${who.name}との仲良し度 Lv${lv} のごほうび`,
+        description: topup ? `ごほうびの量が増えたので、前に受け取ったぶんとの差をお届けします。` : `${who.name}との仲良し度が Lv${lv} になりました。いつもありがとう！`,
+        rewards
       };
       const already = nextGifts.some(g => g && g.id === gift.id);
       const grant = grantGiftOnce(nextGifts, gift, now);
@@ -12537,17 +12560,17 @@ const buildAssistantBondRewardGrant = ({
         nextGifts = grant.gifts;
         granted.push({
           assistantId: id,
-          level: lv
+          level: lv,
+          topup
         });
       }
-      nextDelivered[id] = [...(nextDelivered[id] || []), lv].sort((a, b) => a - b);
-      changed = true;
+      mark();
     }
   }
   return {
     changed,
     gifts: nextGifts,
-    delivered: nextDelivered,
+    deliveredV2: nextDelivered,
     granted
   };
 };
@@ -16707,7 +16730,7 @@ const HELP_DATA_TITLES = {
   profileFrames: '選べるプロフィールフレーム',
   assistantBond: '仲良し度の段階と呼び方',
   assistantBondActions: '仲良し度が増える行動',
-  assistantBondRewards: '仲良し度の節目のごほうび(助手ごとに1回)',
+  assistantBondRewards: '仲良し度のLvごとのごほうび(助手ごとに1回)',
   monsterPower: '総合力の内訳',
   monsterLineages: 'モンスターの血統一覧',
   psycheRewards: '難易度ごとにもらえる虹のプシュケー',
@@ -49155,7 +49178,8 @@ const jaWrapPoints = text => {
     }) : null;
     if (!_jaSegmenter) return s;
     const segs = [..._jaSegmenter.segment(s)].map(seg => seg.segment);
-    return segs.reduce((out, seg, i) => i === 0 || /^[\s、。，．,.！？!?」』）)】〕〉》…‥ー〜～・：:；;ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ]/.test(seg) || /[\s「『（(【〔〈《]$/.test(segs[i - 1]) ? out + seg : `${out}\u200B${seg}`, '');
+    const inHiraWord = i => /^[ごお]$/.test(segs[i - 1]) && /^[ぁ-ゖ]/.test(segs[i]);
+    return segs.reduce((out, seg, i) => i === 0 || inHiraWord(i) || /^[\s、。，．,.！？!?」』）)】〕〉》…‥ー〜～・：:；;ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ]/.test(seg) || /[\s「『（(【〔〈《]$/.test(segs[i - 1]) ? out + seg : `${out}\u200B${seg}`, '');
   } catch {
     return s;
   }
@@ -51129,7 +51153,9 @@ function GiftBoxScreen({
       className: `mh-gift-card rounded-2xl border ${g.claimedAt ? 'bg-[#111329] border-white/10' : expired ? 'bg-[#250a1e] border-red-500/60' : 'bg-[#131630] border-cyan-400/60'}`
     }, React.createElement("div", {
       className: "mh-gift-heading"
-    }, React.createElement("h3", null, display.label && React.createElement("span", null, display.label), React.createElement("b", null, display.title)), React.createElement("em", {
+    }, React.createElement("h3", null, display.label && React.createElement("span", null, display.label), React.createElement("b", {
+      style: JA_WRAP_STYLE
+    }, jaWrap(display.title))), React.createElement("em", {
       className: `${g.claimedAt ? 'bg-slate-700 text-slate-300' : expired ? 'bg-red-900 text-red-200' : valid ? 'bg-cyan-700 text-white' : 'bg-amber-900 text-amber-200'}`
     }, g.claimedAt ? '受取済み' : expired ? '期限切れ' : valid ? '受取可' : '要確認')), React.createElement("div", {
       className: "mh-gift-main"
@@ -51982,6 +52008,129 @@ function RhythmAchievementPanel({
     className: "text-[8px] font-bold text-slate-400"
   }, "/", r.total)))))));
 }
+const assistantBondRewardRows = assistantId => {
+  const table = typeof ASSISTANT_BOND_LEVEL_REWARDS !== 'undefined' && ASSISTANT_BOND_LEVEL_REWARDS || {};
+  const levels = (typeof ASSISTANT_BOND_LEVELS !== 'undefined' && ASSISTANT_BOND_LEVELS || []).map(s => s.level).filter(lv => lv >= 2);
+  const callLv = typeof ASSISTANT_CALL_STYLE_UNLOCK_LEVEL !== 'undefined' && ASSISTANT_CALL_STYLE_UNLOCK_LEVEL || 6;
+  const frames = (typeof releasedProfileFrames === 'function' ? releasedProfileFrames() : []).filter(frame => {
+    const u = typeof profileFrameUnlock === 'function' ? profileFrameUnlock(frame) : null;
+    return u && u.assistantId === assistantId;
+  });
+  return levels.map(lv => ({
+    level: lv,
+    title: (typeof assistantBondStageByLevel === 'function' ? assistantBondStageByLevel(lv, assistantId) : null)?.title || '',
+    rewards: (table[lv] || []).map(r => typeof giftRewardText === 'function' ? giftRewardText(r) : '').filter(Boolean),
+    frames: frames.filter(frame => profileFrameUnlock(frame).bondLevel === lv),
+    callStyle: lv === callLv
+  }));
+};
+const AssistantBondRewardList = ({
+  who,
+  level,
+  breederIcon,
+  resolveIconUrl,
+  onClose
+}) => {
+  const rows = assistantBondRewardRows(who.id);
+  const accent = who.accent || '#f472b6';
+  const nextLv = rows.find(r => r.level > level)?.level || null;
+  const nowRef = React.useRef(null);
+  const listRef = React.useRef(null);
+  React.useEffect(() => {
+    const box = listRef.current,
+      row = nowRef.current;
+    if (box && row) box.scrollTop = Math.max(0, row.offsetTop - (box.clientHeight - row.offsetHeight) / 2);
+  }, []);
+  return React.createElement(ModalFrame, {
+    label: `${who.name}との仲良し度のごほうび一覧`,
+    border: "border-pink-400/70",
+    onClose: onClose
+  }, React.createElement("div", {
+    "data-assistant-bond-reward-list": who.id
+  }, React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, React.createElement(AssistantFace, {
+    who: who,
+    size: 36,
+    accent: accent,
+    expression: "happy"
+  }), React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("h2", {
+    className: "text-[15px] font-black leading-tight text-white"
+  }, React.createElement("span", {
+    className: "inline-block"
+  }, who.name, "との仲良し度"), " ", React.createElement("span", {
+    className: "inline-block"
+  }, "ごほうび一覧")), React.createElement("div", {
+    className: "text-[11px] font-black",
+    style: {
+      color: accent
+    }
+  }, "いまは Lv.", level, nextLv ? `・次は Lv.${nextLv}` : '・全部もらいました'))), React.createElement("p", {
+    className: "mt-2 text-[10px] font-bold leading-snug text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('Lvが上がると、そのLvのごほうびがギフトボックスへ届きます。助手ごとに1回ずつです。')), React.createElement("ol", {
+    ref: listRef,
+    className: "relative mt-2 max-h-[58vh] space-y-1.5 overflow-y-auto pr-0.5"
+  }, rows.map(r => {
+    const got = r.level <= level;
+    const isNext = r.level === nextLv;
+    return React.createElement("li", {
+      key: r.level,
+      ref: r.level === Math.max(2, level) ? nowRef : undefined,
+      "data-bond-reward-level": r.level,
+      "data-bond-reward-state": got ? 'got' : isNext ? 'next' : 'later',
+      className: `rounded-xl border px-2.5 py-2 ${got ? 'border-white/10 bg-slate-900/60' : isNext ? 'bg-pink-950/50' : 'border-white/10 bg-slate-950'}`,
+      style: isNext ? {
+        borderColor: accent
+      } : undefined
+    }, React.createElement("div", {
+      className: "flex items-center gap-2"
+    }, React.createElement("b", {
+      className: "shrink-0 text-[13px] font-black",
+      style: {
+        color: got ? '#94a3b8' : accent
+      }
+    }, "Lv.", r.level), React.createElement("span", {
+      className: "min-w-0 flex-1 text-[11px] font-black text-slate-300",
+      style: JA_LABEL_STYLE
+    }, jaWrap(r.title)), React.createElement("em", {
+      className: `shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black not-italic ${got ? 'bg-slate-700 text-slate-300' : isNext ? 'text-white' : 'bg-slate-800 text-slate-400'}`,
+      style: isNext ? {
+        backgroundColor: accent
+      } : undefined
+    }, got ? '✓ もらった' : isNext ? '次はここ' : 'まだ')), React.createElement("div", {
+      className: `mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-[11px] font-black leading-tight ${got ? 'text-slate-400' : 'text-amber-200'}`
+    }, r.rewards.map((t, i) => React.createElement("span", {
+      key: i,
+      style: JA_WRAP_STYLE
+    }, jaWrap(t)))), r.frames.map(frame => React.createElement("div", {
+      key: frame.id,
+      "data-bond-reward-frame": frame.id,
+      className: "mt-1.5 flex items-center gap-2"
+    }, React.createElement(ProfileAvatar, {
+      src: resolveIconUrl(breederIcon),
+      id: breederIcon,
+      frameId: frame.id,
+      alt: frame.name,
+      fit: true,
+      small: true,
+      className: "h-9 w-9 shrink-0",
+      fallback: null
+    }), React.createElement("span", {
+      className: `min-w-0 text-[11px] font-black ${got ? 'text-slate-400' : 'text-pink-200'}`,
+      style: JA_WRAP_STYLE
+    }, jaWrap(`飾り枠「${frame.name}」`)))), r.callStyle && React.createElement("div", {
+      className: `mt-1 text-[11px] font-black ${got ? 'text-slate-400' : 'text-cyan-200'}`,
+      style: JA_WRAP_STYLE
+    }, jaWrap('呼び方を自由に決められるようになる')));
+  })), React.createElement("div", {
+    className: "mt-3"
+  }, React.createElement(ModalCloseButton, {
+    onClick: onClose
+  }))));
+};
 function ProfileScreen({
   activeAssistant,
   assistantBond,
@@ -52042,6 +52191,7 @@ function ProfileScreen({
   unlockedAssistants
 }) {
   const [rhythmAchRows, setRhythmAchRows] = React.useState([]);
+  const [bondRewardListOpen, setBondRewardListOpen] = React.useState(false);
   React.useEffect(() => {
     let alive = true;
     (async () => {
@@ -52389,7 +52539,23 @@ function ProfileScreen({
       }
     })), React.createElement("div", {
       className: "text-[10px] text-slate-400 font-bold mt-1 text-right"
-    }, next ? `次のLv.${next.level}まで あと${next.remain}` : 'いちばん仲良し！'), (() => {
+    }, next ? `次のLv.${next.level}まで あと${next.remain}` : 'いちばん仲良し！'), React.createElement("button", {
+      type: "button",
+      "data-assistant-bond-reward-open": true,
+      onClick: () => setBondRewardListOpen(true),
+      className: "mt-2 flex w-full min-h-[44px] items-center justify-center gap-1.5 rounded-xl border border-pink-400/50 bg-pink-950/40 px-3 text-[12px] font-black text-pink-100 active:scale-[.98]"
+    }, React.createElement(Package, {
+      size: 15
+    }), "ごほうび一覧", React.createElement(ChevronRight, {
+      size: 15,
+      className: "text-pink-300"
+    })), bondRewardListOpen && React.createElement(AssistantBondRewardList, {
+      who: activeAssistant,
+      level: assistantBondLevelNow,
+      breederIcon: breederIcon,
+      resolveIconUrl: resolveIconUrl,
+      onClose: () => setBondRewardListOpen(false)
+    }), (() => {
       const nextFrame = typeof nextProfileFrameForAssistant === 'function' ? nextProfileFrameForAssistant(selectedAssistantId, assistantBondLevelNow, ownedProfileFrames) : null;
       if (!nextFrame) return null;
       const unlock = profileFrameUnlock(nextFrame);
@@ -87924,10 +88090,12 @@ function MonsterHeroGame() {
         const levels = Object.fromEntries(ASSISTANT_LIST.map(who => [who.id, assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[who.id]).points)]));
         const savedGifts = await storeGet('mh_gifts', [], false);
         const beforeGifts = Array.isArray(savedGifts) ? savedGifts : [];
-        const mark = await storeGet(ASSISTANT_BOND_REWARDS_KEY, null, false);
+        const markV1 = await storeGet(ASSISTANT_BOND_REWARDS_KEY, null, false);
+        const mark = await storeGet(ASSISTANT_BOND_REWARDS_V2_KEY, null, false);
         const grant = buildAssistantBondRewardGrant({
           gifts: beforeGifts,
-          delivered: mark,
+          delivered: markV1,
+          deliveredV2: mark,
           levels
         });
         if (!grant.changed) continue;
@@ -87936,9 +88104,9 @@ function MonsterHeroGame() {
           before: beforeGifts,
           next: grant.gifts
         }] : []), {
-          key: ASSISTANT_BOND_REWARDS_KEY,
+          key: ASSISTANT_BOND_REWARDS_V2_KEY,
           before: mark,
-          next: grant.delivered
+          next: grant.deliveredV2
         }], storeGet, storeSet);
         if (!saved) {
           console.error('[assistant-bond-reward] save failed');

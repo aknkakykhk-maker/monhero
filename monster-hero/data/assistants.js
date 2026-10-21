@@ -909,11 +909,44 @@ const ASSISTANT_BOND_ACTIONS = {
 // ASSISTANT_BOND_ACTIONSへ行動を足し引きしても、ここは自動で追随する
 const ASSISTANT_BOND_DAILY_MAX = Object.values(ASSISTANT_BOND_ACTIONS).reduce((sum, a) => sum + (Number(a.dailyMax) || 0), 0);
 
-// 仲良し度の節目でもらえるごほうび(2026-10-21・Lv30への上限引き上げと同時)。
-// 助手ごとに1回ずつ、ギフトで届く。届けたかどうかは mh_assistant_bond_rewards_v1 に残す。
-// この表に節目を足したときは、もう越えている人にも次の起動でまとめて届く。
-// 中身は normalizeGiftRewards が読める形(品物は type:'gameItem' と itemId)で書く
+// 仲良し度のLvごとのごほうび(2026-10-21 社長と窓口で決定。Lv2〜30 の全部・助手ごとに各Lv1回)。
+// ギフトで届く。届けたかどうかは mh_assistant_bond_rewards_v2 に残す(17-release の buildAssistantBondRewardGrant)。
+// もう越えている人にも次の起動でまとめて届く。中身は normalizeGiftRewards が読める形(品物は type:'gameItem' と itemId)で書く。
+// プロフィールの「ごほうび一覧」とヘルプの表もここから作る
 const ASSISTANT_BOND_LEVEL_REWARDS = Object.freeze({
+  2: Object.freeze([{ type:'diamond', amount:10000 }, { type:'rainbowPsyche', amount:10 }]),
+  3: Object.freeze([{ type:'diamond', amount:30000 }, { type:'rainbowPsyche', amount:20 }]),
+  4: Object.freeze([{ type:'diamond', amount:50000 }, { type:'rainbowPsyche', amount:30 }]),
+  5: Object.freeze([{ type:'diamond', amount:100000 }, { type:'rainbowPsyche', amount:50 }, { type:'rainbowTranscendFruit', amount:1 }]),
+  6: Object.freeze([{ type:'diamond', amount:3000000 }, { type:'rainbowPsyche', amount:1000 }]),
+  7: Object.freeze([{ type:'diamond', amount:4000000 }, { type:'rainbowPsyche', amount:1200 }]),
+  8: Object.freeze([{ type:'diamond', amount:5000000 }, { type:'rainbowPsyche', amount:1500 }]),
+  9: Object.freeze([{ type:'diamond', amount:6000000 }, { type:'rainbowPsyche', amount:1500 }]),
+  10: Object.freeze([{ type:'diamond', amount:15000000 }, { type:'rainbowPsyche', amount:3000 }, { type:'rainbowTranscendFruit', amount:20 }, { type:'gameItem', itemId:'hero_proof', amount:1 }]),
+  11: Object.freeze([{ type:'diamond', amount:8000000 }, { type:'rainbowPsyche', amount:2000 }]),
+  12: Object.freeze([{ type:'diamond', amount:9000000 }, { type:'rainbowPsyche', amount:2000 }]),
+  13: Object.freeze([{ type:'diamond', amount:10000000 }, { type:'rainbowPsyche', amount:2500 }]),
+  14: Object.freeze([{ type:'diamond', amount:11000000 }, { type:'rainbowPsyche', amount:2500 }]),
+  15: Object.freeze([{ type:'diamond', amount:25000000 }, { type:'rainbowPsyche', amount:5000 }, { type:'rainbowTranscendFruit', amount:30 }, { type:'gameItem', itemId:'hero_proof', amount:2 }]),
+  16: Object.freeze([{ type:'diamond', amount:13000000 }, { type:'rainbowPsyche', amount:3000 }]),
+  17: Object.freeze([{ type:'diamond', amount:14000000 }, { type:'rainbowPsyche', amount:3000 }]),
+  18: Object.freeze([{ type:'diamond', amount:15000000 }, { type:'rainbowPsyche', amount:3500 }]),
+  19: Object.freeze([{ type:'diamond', amount:16000000 }, { type:'rainbowPsyche', amount:3500 }]),
+  20: Object.freeze([{ type:'diamond', amount:40000000 }, { type:'rainbowPsyche', amount:8000 }, { type:'rainbowTranscendFruit', amount:50 }, { type:'gameItem', itemId:'hero_proof', amount:3 }]),
+  21: Object.freeze([{ type:'diamond', amount:50000000 }, { type:'rainbowPsyche', amount:5000 }]),
+  22: Object.freeze([{ type:'diamond', amount:100000000 }, { type:'rainbowPsyche', amount:20000 }]),
+  23: Object.freeze([{ type:'diamond', amount:50000000 }, { type:'rainbowPsyche', amount:5000 }, { type:'rainbowTranscendFruit', amount:50 }]),
+  24: Object.freeze([{ type:'diamond', amount:50000000 }, { type:'rainbowPsyche', amount:5000 }, { type:'gameItem', itemId:'hero_proof', amount:3 }]),
+  25: Object.freeze([{ type:'diamond', amount:200000000 }, { type:'rainbowTranscendFruit', amount:300 }, { type:'gameItem', itemId:'hero_proof', amount:10 }]),
+  26: Object.freeze([{ type:'diamond', amount:70000000 }, { type:'rainbowPsyche', amount:10000 }]),
+  27: Object.freeze([{ type:'diamond', amount:70000000 }, { type:'rainbowPsyche', amount:10000 }, { type:'rainbowTranscendFruit', amount:100 }]),
+  28: Object.freeze([{ type:'diamond', amount:300000000 }, { type:'gameItem', itemId:'hero_proof', amount:20 }]),
+  29: Object.freeze([{ type:'diamond', amount:100000000 }, { type:'rainbowPsyche', amount:20000 }, { type:'gameItem', itemId:'hero_proof', amount:5 }]),
+  30: Object.freeze([{ type:'diamond', amount:500000000 }, { type:'gameItem', itemId:'hero_proof', amount:30 }]),
+});
+// 最初に配った量(#3241)。mh_assistant_bond_rewards_v1 に印がある節目は、この量をもう受け取っている。
+// 新しい量との差のぶんだけを追加で届けるために残す(多く渡した品は取り上げない)。★書き換えない
+const ASSISTANT_BOND_LEVEL_REWARDS_V1 = Object.freeze({
   22: Object.freeze([{ type:'diamond', amount:50000 }, { type:'rainbowPsyche', amount:30 }]),
   25: Object.freeze([{ type:'rainbowTranscendFruit', amount:5 }, { type:'gameItem', itemId:'hero_proof_shard', amount:10 }]),
   28: Object.freeze([{ type:'gameItem', itemId:'hero_proof', amount:1 }, { type:'diamond', amount:100000 }]),
