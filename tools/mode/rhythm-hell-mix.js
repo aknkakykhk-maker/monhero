@@ -435,17 +435,30 @@ const mix=(master,{zero,beat,crosses=[],gentle=false,crossUpper='hold',crossDept
           const k=notes.findIndex(n=>(n.k==='s'&&Math.abs(startOf(n)-x.timeMs)<=1&&n.pts[0][3]<.5&&Math.abs(n.pts[0][1]-x.lane)<.01)||(n.k==='h'&&Math.abs(n.t-x.timeMs)<=1&&n.sub===x.subLane));
           if(k>=0){notes.splice(k,1);moved=true;break;}}
         if(moved)break;}
+      // 相手がモンスターノーツで写しても残るとき(2026-10-21 Stay With Me short: 空中のスライドのあと 441ms で地上のモンスターノーツ)は、
+      //   空中で始まるスライドを抜く(モンスターノーツは1曲に4個の決まり)
+      if(!moved)for(const v of res){for(const x of [v.note,v.prev]){if(x.type!=='SLIDE'||!x.slidePoints||!x.slidePoints[0]||!(x.slidePoints[0].sky>=.5))continue;
+          const k=notes.findIndex(n=>n.k==='s'&&Math.abs(startOf(n)-x.timeMs)<=1&&n.pts[0][3]>=.5&&Math.abs(n.pts[0][1]-x.lane)<.01);
+          if(k>=0){notes.splice(k,1);moved=true;break;}}
+        if(moved)break;}
       if(!moved)break;}}
   // 空中を付けたあとにも、横持ちの物差しで「押せない」と出る地上のタップ・フリックが交差の区間の外に残っていれば取り除く
   //   (骨組みのときと手の割り振りが変わって見えることがある。0件の曲では何もしない)
   for(let r=0;r<20;r++){const th=thumbCheck(notes,HELL_LANDSCAPE,beat);
-    const bad=th.issues.find(i=>i.kind==='impossible'&&/タップ/.test(i.what)&&!crossWindows.some(([a,b])=>i.t>=a&&i.t<=b));if(!bad)break;
+    // タップだけでなく、ホールド・スライドが押せない所も見る(2026-10-21 全曲ヘル: SIX ÉTERNEL remix・綺季一閃 remix・The City Beneath the Comets・
+    //   Wrath of the Thorn King で、ふさがった手のスライドの始まり・同じ指の叩き直しのホールドが1つずつ残った)
+    const bad=th.issues.find(i=>i.kind==='impossible'&&!crossWindows.some(([a,b])=>i.t>=a&&i.t<=b));if(!bad)break;
     let k=notes.findIndex(n=>(n.k==='t'||n.k==='f')&&!n.mon&&!n.sky&&Math.abs(n.t-bad.t)<=2);
     // その時刻に地上のタップが無く、空中のタップが押せない所を作っているときは、空中のタップを抜く(2026-10-21 ANiMA・Journey の HELL で
     //   空中の連打が163ms・118ms で3レーン以上を跳ぶ所が2つずつ残った。地上のタップだけを見ていたので取り残されていた)
     if(k<0)k=notes.findIndex(n=>n.k==='t'&&n.sky&&!n.mon&&Math.abs(n.t-bad.t)<=2);
     // モンスターノーツは1曲に4個の決まりがあるので取り除かず、左右を反対側へ写す(ふさがっていない手の側へ)
-    if(k<0){const m=notes.find(n=>n.k==='t'&&n.mon&&!n.sky&&Math.abs(n.t-bad.t)<=2&&!n.mirrored);if(!m)break;m.sub=12-m.sub-m.w;m.hand=m.hand==='L'?'R':'L';m.mirrored=true;continue;}
+    if(k<0){const m=notes.find(n=>n.k==='t'&&n.mon&&!n.sky&&Math.abs(n.t-bad.t)<=2&&!n.mirrored);
+      if(m){m.sub=12-m.sub-m.w;m.hand=m.hand==='L'?'R':'L';m.mirrored=true;continue;}}
+    // それでも無ければ、その時刻に始まるホールド・スライドを抜き、無ければその時刻にかかっているスライドを抜く
+    if(k<0)k=notes.findIndex(n=>(n.k==='h'||n.k==='s')&&Math.abs(startOf(n)-bad.t)<=2);
+    if(k<0)k=notes.findIndex(n=>n.k==='s'&&startOf(n)<bad.t&&bad.t<=endOf(n));
+    if(k<0)break;
     notes.splice(k,1);}
   // 上の手直しで高さや置き場所が変わって、帯の中のノーツがまた出ていれば、もう一度外へ出す
   bandFix();
