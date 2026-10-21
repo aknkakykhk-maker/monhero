@@ -819,6 +819,11 @@ const helpDataRows = (id) => {
     // 譜面を作り直すたびに数字だけ古くなるため、実データからそのまま表にする
     // HELL がある曲(2026-10-21)。曲を足すたびに手で書き写すと古くなるので、HELL の譜面の一覧(RHYTHM_HELL_CHARTS)から作る。
     // 曲名は公開曲の一覧の名前。並びは曲えらびと同じ順
+    // はじめての HELL の目安(2026-10-21 改善部 N6)。Lv. がいちばん低い HELL を実データから選ぶ(rhythmHellEntrySong)
+    case 'rhythmHellEntry': {
+      const entry = typeof rhythmHellEntrySong === 'function' ? rhythmHellEntrySong() : null;
+      return entry ? [['はじめての HELL', `「${entry.name}」Lv.${entry.level} から(HELL の中でいちばんやさしい曲)`]] : [];
+    }
     case 'rhythmHellSongs': {
       const songs = typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS : [];
       const hell = typeof RHYTHM_HELL_CHARTS !== 'undefined' ? RHYTHM_HELL_CHARTS : {};
@@ -948,6 +953,7 @@ const HELP_DATA_TITLES = {
   monsterLineages: 'モンスターの血統一覧',
   psycheRewards: '難易度ごとにもらえる虹のプシュケー',
   rhythmDifficultyRanks: '音ゲーの難易度ごとの満点と上限ランク',
+  rhythmHellEntry: 'はじめての HELL の目安',
   rhythmHellSongs: 'HELL がある曲',
   rhythmDemoSongLevels: '体験版で遊べる難易度とレベル',
   rhythmDemoSongList: '先行公開している曲',

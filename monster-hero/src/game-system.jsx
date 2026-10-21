@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8aa51cdb71286311
+// generated-sha256: 8628c6f1b0279612
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-21 19:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-21 20:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11825,6 +11825,11 @@ const helpDataRows = (id) => {
     // 譜面を作り直すたびに数字だけ古くなるため、実データからそのまま表にする
     // HELL がある曲(2026-10-21)。曲を足すたびに手で書き写すと古くなるので、HELL の譜面の一覧(RHYTHM_HELL_CHARTS)から作る。
     // 曲名は公開曲の一覧の名前。並びは曲えらびと同じ順
+    // はじめての HELL の目安(2026-10-21 改善部 N6)。Lv. がいちばん低い HELL を実データから選ぶ(rhythmHellEntrySong)
+    case 'rhythmHellEntry': {
+      const entry = typeof rhythmHellEntrySong === 'function' ? rhythmHellEntrySong() : null;
+      return entry ? [['はじめての HELL', `「${entry.name}」Lv.${entry.level} から(HELL の中でいちばんやさしい曲)`]] : [];
+    }
     case 'rhythmHellSongs': {
       const songs = typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS : [];
       const hell = typeof RHYTHM_HELL_CHARTS !== 'undefined' ? RHYTHM_HELL_CHARTS : {};
@@ -11954,6 +11959,7 @@ const HELP_DATA_TITLES = {
   monsterLineages: 'モンスターの血統一覧',
   psycheRewards: '難易度ごとにもらえる虹のプシュケー',
   rhythmDifficultyRanks: '音ゲーの難易度ごとの満点と上限ランク',
+  rhythmHellEntry: 'はじめての HELL の目安',
   rhythmHellSongs: 'HELL がある曲',
   rhythmDemoSongLevels: '体験版で遊べる難易度とレベル',
   rhythmDemoSongList: '先行公開している曲',
@@ -20130,7 +20136,10 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
               onClick={()=>{if(open)setDifficultyId(item.id);}}
               className={`flex h-[52px] min-w-0 flex-1 flex-col items-center justify-center rounded-lg border-2 px-0.5 font-black leading-none [container-type:inline-size] landscape:h-[48px]${available.length>5?' gap-px':''} ${open?(on?`${tone.on} shadow-[0_0_10px_rgba(255,255,255,.25)]`:`${tone.off} bg-slate-900/70`):'border-white/10 bg-slate-900/70 text-slate-500'}`}>
               {/* Lv.の数字を大きく、難易度の名前を小さく(2026-09-26・参考: バンドリの難易度の並び) */}
-              <b className="block text-[18px] tabular-nums">{song.difficulties[item.id].level}</b>
+              {/* HELL の Lv. は大きく・赤く出す(2026-10-21 改善部 N6。MASTER を1回クリアで開くが、MASTER と Lv. の差が25以上の曲がある) */}
+              {item.id==='HELL'
+                ?<b data-rhythm-hell-level className="block text-[21px] tabular-nums text-rose-300 [text-shadow:0_0_8px_rgba(244,63,94,.65)] landscape:text-[19px]">{song.difficulties[item.id].level}</b>
+                :<b className="block text-[18px] tabular-nums">{song.difficulties[item.id].level}</b>}
               <span className="block text-[8px] tracking-wide">{open?item.id:`🔒${item.id}`}</span>
               {/* 自己ベストは**難易度ごと**に出す。全国ランキングは難易度をまたいだ
                   合算なので、そちらとは別のものだと分かるように、ここへ並べて置く */}
@@ -20310,6 +20319,8 @@ const RhythmHellGuide=({pageIndex,onPage,onClose})=>{
         <div>
           <h2 data-rhythm-hell-guide-title style={{margin:video?0:'6px 0 0',fontSize:'22px',fontWeight:900,lineHeight:1.25,color:'#fff'}}>{page.title}</h2>
           <p data-rhythm-hell-guide-text style={{margin:'10px 0 0',fontSize:'14px',fontWeight:700,lineHeight:1.7,color:'#e2e8f0'}}>{page.text}</p>
+          {/* 最後のページに、はじめての HELL の目安(Lv. がいちばん低い HELL・実データから。2026-10-21 改善部 N6) */}
+          {last&&typeof rhythmHellEntryText==='function'&&rhythmHellEntryText()&&<p data-rhythm-hell-guide-entry style={{margin:'12px 0 0',padding:'8px 10px',borderRadius:'12px',border:'1px solid rgba(251,113,133,.5)',background:'rgba(76,5,25,.55)',fontSize:'13px',fontWeight:900,lineHeight:1.6,color:'#fecdd3'}}>🔥 {rhythmHellEntryText()}。曲によって HELL の Lv. は大きく違います。曲えらびの HELL のボタンの数字を見て選んでください。</p>}
         </div>
       </div>
       {nextVideo&&<video key={nextVideo.src} muted playsInline preload="auto" aria-hidden="true" tabIndex={-1} style={{position:'absolute',width:'1px',height:'1px',opacity:0,pointerEvents:'none'}}>
@@ -31086,6 +31097,30 @@ const JA_WRAP_STYLE = Object.freeze({ wordBreak: 'keep-all', overflowWrap: 'anyw
 // 短い説明・札向け(2026-10-21 社長決定・改善部の見直しの洗い出し)。言葉の切れ目で折り、行の長さもそろえる
 // (「音が出ないと／き」「得意な曲を／見る」のように、最後の行に1〜2字だけ残らない)。jaWrap と一緒に使う
 const JA_LABEL_STYLE = Object.freeze({ ...JA_WRAP_STYLE, textWrap: 'balance' });
+// 大きな所持数を縮めて出す(2026-10-21 改善部の見直し N5「ダイヤが10桁になると HOME(320)の数が約6px まで縮む」)。
+// 8桁まではそのまま(1,234,567 のように)。9桁(1億)からは「1.23億」「67.3億」「6,736億」、13桁からは「兆」で、上から3桁ぶん。
+// 切り上げると持っていない数に見えるので、端は切り捨てる。保存値は変えない(出し方だけ)
+const compactCount = (value) => {
+  const n = Math.floor(Number(value));
+  if (!Number.isFinite(n)) return '0';
+  const a = Math.abs(n);
+  if (a < 1e8) return n.toLocaleString();
+  const [unit, div] = a >= 1e12 ? ['兆', 1e12] : ['億', 1e8];
+  const v = a / div, digits = v >= 100 ? 0 : v >= 10 ? 1 : 2, f = Math.pow(10, digits);
+  return `${n < 0 ? '-' : ''}${(Math.floor(v * f) / f).toLocaleString(undefined, { maximumFractionDigits: digits })}${unit}`;
+};
+// 縮めた数。押すと細かい数が小さな札で出る(2.5秒で消える)。縮めていないときはふつうの字のまま
+const CompactCount = ({ value, className = '', style }) => {
+  const [open, setOpen] = React.useState(false);
+  React.useEffect(() => { if (!open) return undefined; const t = setTimeout(() => setOpen(false), 2500); return () => clearTimeout(t); }, [open]);
+  const exact = (Math.floor(Number(value)) || 0).toLocaleString();
+  const text = compactCount(value);
+  if (text === exact) return <b className={className} style={style}>{text}</b>;
+  return <b role="button" tabIndex={0} data-compact-count={exact} aria-label={exact} title={exact} className={`${className} relative cursor-pointer`} style={style}
+    onClick={(e) => { e.stopPropagation(); setOpen(o => !o); }} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpen(o => !o); } }}>
+    {text}{open && <span data-compact-count-exact className="absolute right-0 top-full z-50 mt-1 whitespace-nowrap rounded-lg border border-amber-300/60 bg-slate-950 px-2 py-1 text-[12px] font-black text-amber-200 shadow-lg">{exact}</span>}
+  </b>;
+};
 // ノーツの見本の絵(2026-10-21 社長「見た目とかちゃんとわかるようにしてほしい」)。ヘルプの表と助手のおしゃべりで使う。
 // 絵は演奏画面と同じ描き方(data/rhythm-mode.js の rhythmDrawNoteSwatch)で描く。手描きの絵や写真は使わない。kind は RHYTHM_NOTE_SWATCH_KINDS の id
 const RhythmNoteSwatch = ({ kind, width = 54, height = 42, className = '' }) => {
@@ -32479,10 +32514,11 @@ function BreederMarketScreen({
         <div className="relative grid grid-cols-2 gap-2.5 pt-1 pb-2">
           {/* 4枚とも名前を語の切れ目で2行にそろえる(「ダイヤショッ／プ」「アイテム交換／所」と語の途中で折れていた) */}
           {[
-            {key:'diamond',emoji:'💎',label:'ダイヤショップ',titleLines:['ダイヤ','ショップ'],value:gold.toLocaleString(),hint:'ダイヤで購入',border:'border-cyan-400/35',title:'text-cyan-200',arrow:'text-cyan-300/80'},
-            {key:'breeder',emoji:'🪙',label:'ブリーダーP交換所',titleLines:['ブリーダーP','交換所'],value:breederPoints.toLocaleString(),hint:'Lv.UPで獲得',border:'border-amber-400/35',title:'text-amber-200',arrow:'text-amber-300/80'},
+            // 所持数は9桁(1億)から縮めて出す(N5)。細かい数は各ショップの中の大きな欄で見られる
+            {key:'diamond',emoji:'💎',label:'ダイヤショップ',titleLines:['ダイヤ','ショップ'],value:compactCount(gold),hint:'ダイヤで購入',border:'border-cyan-400/35',title:'text-cyan-200',arrow:'text-cyan-300/80'},
+            {key:'breeder',emoji:'🪙',label:'ブリーダーP交換所',titleLines:['ブリーダーP','交換所'],value:compactCount(breederPoints),hint:'Lv.UPで獲得',border:'border-amber-400/35',title:'text-amber-200',arrow:'text-amber-300/80'},
             {key:'exchange',emoji:'🔄',label:'アイテム交換所',titleLines:['アイテム','交換所'],value:`🌈${ownedItemCount(ownedItems,BREAKTHROUGH_ITEM_ID).toLocaleString()}`,hint:'所持している虹のプシュケー',border:'border-emerald-400/35',title:'text-emerald-200',arrow:'text-emerald-300/80'},
-            {key:'event',emoji:'🎟️',label:'ビートP交換所',titleLines:['ビートP','交換所'],value:safeEventPoints.toLocaleString(),hint:'所持ビートP',border:'border-violet-400/35',title:'text-violet-200',arrow:'text-violet-300/80'},
+            {key:'event',emoji:'🎟️',label:'ビートP交換所',titleLines:['ビートP','交換所'],value:compactCount(safeEventPoints),hint:'所持ビートP',border:'border-violet-400/35',title:'text-violet-200',arrow:'text-violet-300/80'},
           ].map(section=>(
             <button
               key={section.key}
@@ -32758,6 +32794,8 @@ const AssistantBondRewardList = ({ who, level, breederIcon, resolveIconUrl, onCl
   const rows = assistantBondRewardRows(who.id);
   const accent = who.accent || '#f472b6';
   const nextLv = rows.find(r => r.level > level)?.level || null;
+  // 節目(ASSISTANT_BOND_REWARD_MILESTONES)。札と説明の文はここから作る
+  const milestones = (typeof ASSISTANT_BOND_REWARD_MILESTONES !== 'undefined' && ASSISTANT_BOND_REWARD_MILESTONES) || [];
   const nowRef = React.useRef(null);
   const listRef = React.useRef(null);
   // 開いたら、いまのLvの近くを見せる。動かすのは一覧の箱の中だけ(scrollIntoView は画面ごと動くので使わない・viewport-height-check)
@@ -32776,7 +32814,7 @@ const AssistantBondRewardList = ({ who, level, breederIcon, resolveIconUrl, onCl
             <div className="text-[11px] font-black" style={{color:accent}}>いまは Lv.{level}{nextLv?`・次は Lv.${nextLv}`:'・全部もらいました'}</div>
           </div>
         </div>
-        <p className="mt-2 text-[10px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('Lvが上がると、そのLvのごほうびがギフトボックスへ届きます。助手ごとに1回ずつです。')}</p>
+        <p className="mt-2 text-[10px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap(`Lvが上がると、そのLvのごほうびがギフトボックスへ届きます。助手ごとに1回ずつです。${milestones.length?`節目の Lv${milestones.join('・')} はほかのLvより豪華です。`:''}`)}</p>
         <ol ref={listRef} className="relative mt-2 max-h-[58vh] space-y-1.5 overflow-y-auto pr-0.5">
           {rows.map(r => {
             const got = r.level <= level;
@@ -32787,6 +32825,7 @@ const AssistantBondRewardList = ({ who, level, breederIcon, resolveIconUrl, onCl
                 style={isNext?{borderColor:accent}:undefined}>
                 <div className="flex items-center gap-2">
                   <b className="shrink-0 text-[13px] font-black" style={{color:got?'#94a3b8':accent}}>Lv.{r.level}</b>
+                  {milestones.includes(r.level)&&<span data-bond-reward-milestone className="shrink-0 rounded-md bg-amber-500/90 px-1.5 py-px text-[9px] font-black text-slate-950">節目</span>}
                   <span className="min-w-0 flex-1 text-[11px] font-black text-slate-300" style={JA_LABEL_STYLE}>{jaWrap(r.title)}</span>
                   <em className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black not-italic ${got?'bg-slate-700 text-slate-300':isNext?'text-white':'bg-slate-800 text-slate-400'}`} style={isNext?{backgroundColor:accent}:undefined}>
                     {got?'✓ もらった':isNext?'次はここ':'まだ'}
@@ -32946,11 +32985,11 @@ function ProfileScreen({
         <div className="mb-3 grid grid-cols-3 gap-2" data-profile-stats>
           <div className="flex min-h-[56px] flex-col items-center justify-center rounded-xl border border-amber-500/30 bg-amber-950/40 px-1 py-1.5 text-center">
             <span className="flex items-center gap-1 text-[9px] font-bold text-amber-400"><Gem size={11}/>ダイヤ</span>
-            <span className="text-[13px] font-black text-amber-300 font-mono">{gold.toLocaleString()}</span>
+            <CompactCount value={gold} className="text-[13px] font-black text-amber-300 font-mono"/>
           </div>
           <div className="flex min-h-[56px] flex-col items-center justify-center rounded-xl border border-amber-500/30 bg-amber-950/40 px-1 py-1.5 text-center">
             <span className="flex items-center gap-1 text-[9px] font-bold text-amber-400"><Coins size={11}/>ブリーダーP</span>
-            <span className="text-[13px] font-black text-amber-200 font-mono">{breederPoints.toLocaleString()}</span>
+            <CompactCount value={breederPoints} className="text-[13px] font-black text-amber-200 font-mono"/>
           </div>
           <div className="flex min-h-[56px] flex-col items-center justify-center rounded-xl border border-indigo-500/30 bg-indigo-950/40 px-1 py-1.5 text-center">
             <span className="flex items-center gap-1 text-[9px] font-bold text-indigo-300"><Timer size={11}/>プレイ時間</span>
@@ -38382,7 +38421,8 @@ const HomeRaidJack = ({ eventId, onOpen }) => {
 // 数の字は 10px で1文字およそ 6.4px。枠の中で数に使える幅はダイヤが 50px・ブリーダーP が 29px(幅152pxのとき)なので、
 // 足りないぶんだけ最大 24px 広げ、それでも入らないぶんは字を小さくする(70-bootstrap.jsx の --wal-room)。
 // tools/home-layout-check.js がこの1行を取り出して同じ計算で測る
-const homeWalletGrowPx=(goldText,bpText)=>Math.min(24,Math.max(0,Math.ceil(String(goldText).length*6.4-50),Math.ceil(String(bpText).length*6.4-29)));
+// 「億」「兆」のような全角の字は数字より広いので、2.5字ぶんとして数える(N5・2026-10-21)。数字とカンマだけのときは今までと同じ
+const homeWalletGrowPx=(goldText,bpText)=>{const w=t=>[...String(t)].reduce((n,c)=>n+(c.charCodeAt(0)>0x7f?2.5:1),0);return Math.min(24,Math.max(0,Math.ceil(w(goldText)*6.4-50),Math.ceil(w(bpText)*6.4-29)));};
 function HomeScreen({
   assistantBondUp, friendRequestCount = 0, breederIcon, breederLevel, breederName, breederPoints, gifts, gold,
   hasUnreadChangelog, homeBackgroundReady, homeArt, homePastureMasumons, masuMons, missions,
@@ -38447,8 +38487,9 @@ function HomeScreen({
           </button>
           {/* ダイヤ・ブリーダーP は桁が増えても折り返さず1行のまま(2026-10-13 社長「8桁で『ダイヤ』が縦に折れて枠が伸びた」)。
               桁が多いときだけ枠を少し広げ(homeWalletGrowPx)、それでも入らないぶんは文字数(--len)に合わせて字を小さくする(70-bootstrap.jsx の --wal-room) */}
-          <section className="mh-home-wallet" style={{'--wal-grow':`${homeWalletGrowPx(gold.toLocaleString(),breederPoints.toLocaleString())}px`}}>
-            <div><Gem size={14}/><b style={{'--len':String(gold.toLocaleString()).length}}>{gold.toLocaleString()}</b><small>ダイヤ</small></div><div><Coins size={14}/><b style={{'--len':String(breederPoints.toLocaleString()).length}}>{breederPoints.toLocaleString()}</b><small>ブリーダーP</small></div>
+          {/* 9桁(1億)からは「67.3億」のように縮めて出す(N5)。押すと細かい数が出る(CompactCount) */}
+          <section className="mh-home-wallet" style={{'--wal-grow':`${homeWalletGrowPx(compactCount(gold),compactCount(breederPoints))}px`}}>
+            <div><Gem size={14}/><CompactCount value={gold} style={{'--len':String(compactCount(gold)).length}}/><small>ダイヤ</small></div><div><Coins size={14}/><CompactCount value={breederPoints} style={{'--len':String(compactCount(breederPoints)).length}}/><small>ブリーダーP</small></div>
             <button onClick={onOpenSettings} className={`mh-home-settings${spotClass('settings')}`} aria-label="設定"><Settings size={20}/><span>設定</span></button>
           </section>
         </header>
@@ -69300,7 +69341,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <button key={style.id} type="button" onClick={()=>setTempCallStyle(style.template)} className="px-2.5 min-h-[30px] rounded-full text-[10px] font-black bg-slate-800 border border-slate-700 text-slate-300 active:scale-95">{style.label}</button>
                 ))}
               </div>
-              <p className="text-[9px] text-slate-500 text-center mb-3">いまの呼び方プレビュー: <span className="font-black" style={{color:activeAssistant.accent}}>{(tempCallStyle||'').includes('{name}')?tempCallStyle.replace('{name}',breederName||'あなた'):(tempCallStyle||assistantSpeakText('{name}',breederName,assistantBondLevelNow,null,selectedAssistantId))}</span></p>
+              <p className="text-[9px] text-slate-500 text-center mb-3">いまの呼び方プレビュー: <span className="font-black" style={{color:activeAssistant.accent}}>{(tempCallStyle||'').includes('{name}')?(typeof assistantFillCallTemplate==='function'?assistantFillCallTemplate(tempCallStyle,breederName||'あなた'):tempCallStyle.replace('{name}',breederName||'あなた')):(tempCallStyle||assistantSpeakText('{name}',breederName,assistantBondLevelNow,null,selectedAssistantId))}</span></p>
               <div className="flex gap-2 mb-2">
                 <button onClick={()=>setShowCallStylePicker(false)} className="flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">閉じる</button>
                 <button onClick={()=>{chooseAssistantCallStyle(tempCallStyle);setShowCallStylePicker(false);}} className="flex-1 text-white py-3 rounded-xl font-black text-xs" style={{backgroundColor:activeAssistant.accent}}>保存</button>

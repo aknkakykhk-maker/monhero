@@ -48,7 +48,7 @@ ${code}
 const HERO_PROOF_ITEM = { id:HERO_PROOF_ITEM_ID, name:'勇者の証' };
 const HERO_PROOF_SHARD_ITEM = { id:HERO_PROOF_SHARD_ITEM_ID, name:'勇者の証片' };
 const SOUL_CRYSTAL_ITEM = { id:SOUL_CRYSTAL_ITEM_ID, name:'魂格の結晶' };
-this.out = { ASSISTANTS, ASSISTANT_BOND_LEVELS, ASSISTANT_BOND_LEVEL_REWARDS, ASSISTANT_BOND_LEVEL_REWARDS_V1, normalizeGiftRewards, grantGiftOnce,
+this.out = { ASSISTANTS, ASSISTANT_BOND_LEVELS, ASSISTANT_BOND_LEVEL_REWARDS, ASSISTANT_BOND_REWARD_MILESTONES, ASSISTANT_BOND_LEVEL_REWARDS_V1, normalizeGiftRewards, grantGiftOnce,
   ASSISTANT_BOND_REWARDS_KEY, ASSISTANT_BOND_REWARDS_V2_KEY, assistantBondRewardRemainder, normalizeAssistantBondRewardsDelivered, buildAssistantBondRewardGrant, assistantBondLevelOf,
   normalizeAssistantBond, saveStoredValuesOrRollback };`, ctx);
 const A = ctx.out;
@@ -77,6 +77,19 @@ const f = (n) => ({ type:'rainbowTranscendFruit', amount:n }), h = (n) => ({ typ
     22:[d(50000),p(30)], 25:[f(5),{ type:'gameItem', itemId:'hero_proof_shard', amount:10 }], 28:[h(1),d(100000)],
     30:[{ type:'gameItem', itemId:'soul_crystal', amount:3 },h(2),d(200000)] }));
   check('助手は4人', ids.join() === 'mua,kiki,momosuke,dra', ids.join());
+  // 節目の説明が表とずれていないか(改善部 N4「Lv10・15・20・25 は特に豪華」)
+  const ms = [...A.ASSISTANT_BOND_REWARD_MILESTONES];
+  check('節目は Lv5・10・15・20・22・25・28・30', ms.join() === '5,10,15,20,22,25,28,30', ms.join());
+  const msText = `Lv${ms.join('・')}`;
+  const changelog = read('monster-hero/data/changelog.js'), help = read('monster-hero/data/help.js'), profile = read('monster-hero/src/parts/56-screen-profile.jsx');
+  check('更新履歴の説明が節目と同じ', changelog.includes(`節目の ${msText} はほかのLvより豪華`) && !changelog.includes('Lv10・15・20・25 は特に豪華'));
+  check('ヘルプの説明が節目と同じ', help.includes(`節目の ${msText} はほかのLvより豪華`));
+  check('ごほうび一覧は節目を表から出す(書き写さない)', profile.includes('ASSISTANT_BOND_REWARD_MILESTONES') && profile.includes("milestones.join('・')") && profile.includes('data-bond-reward-milestone'));
+  check('節目にはほかのLvより多いダイヤか品がある', ms.every(lv => {
+    const dia = (r) => (r || []).filter(x => x.type === 'diamond').reduce((n, x) => n + x.amount, 0);
+    const extra = (T[lv] || []).some(x => x.type === 'rainbowTranscendFruit' || x.itemId === 'hero_proof');
+    return extra || dia(T[lv]) > dia(T[lv - 1]);
+  }));
 }
 // ② 組み立て
 {
