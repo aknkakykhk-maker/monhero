@@ -143,8 +143,8 @@ declare
 begin
   select count(*) into column_count from information_schema.columns
    where table_schema = 'public' and table_name = 'tactics_pro_logs';
-  if column_count <> 15 then
-    raise exception 'tactics_pro_logs の列が % 個です(15個のはず)。取り消しました', column_count;
+  if column_count <> 14 then
+    raise exception 'tactics_pro_logs の列が % 個です(14個のはず)。取り消しました', column_count;
   end if;
   select count(*) into policy_count from pg_policies
    where schemaname = 'public' and tablename = 'tactics_pro_logs' and cmd in ('UPDATE','DELETE','ALL');
@@ -156,7 +156,7 @@ end $$;
 commit;
 
 select t.table_name as "表",
-  (select count(*) from information_schema.columns c where c.table_schema = 'public' and c.table_name = t.table_name) as "列の数(どちらも15)",
+  (select count(*) from information_schema.columns c where c.table_schema = 'public' and c.table_name = t.table_name) as "列の数(raid 15・tactics 14)",
   (select c.relrowsecurity from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = 'public' and c.relname = t.table_name) as "RLS(true)",
   (select string_agg(p.policyname || ':' || p.cmd, ', ' order by p.policyname) from pg_policies p where p.schemaname = 'public' and p.tablename = t.table_name) as "ポリシー(INSERT と SELECT だけ)",
   (select string_agg(g.privilege_type, ',' order by g.privilege_type) from information_schema.role_table_grants g where g.table_schema = 'public' and g.table_name = t.table_name and g.grantee = 'anon') as "anon の権限(INSERT,SELECT)"
