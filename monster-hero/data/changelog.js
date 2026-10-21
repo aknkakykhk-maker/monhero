@@ -35,6 +35,13 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-10-21 19:58", type:'update', group:'rhythm', title:'モンヒロビート：曲えらびで HELL のレベルが目立つようになりました', status:'new',
+    items:[
+      '曲えらびの難易度のボタンで、HELL のレベルを赤く大きく出すようにしました。HELL は MASTER を1回クリアすると開きますが、曲によって MASTER とのレベルの差が大きく違います。',
+      'HELL を初めて開いたときの説明とヘルプに、はじめての HELL に向いた曲(HELL の中でいちばんレベルが低い曲)を出すようにしました。',
+    ],
+  },
+  {
     date: "2026-10-21 18:41", type:'content', title:'助手の仲良し度のごほうびが、Lvが上がるたびにもらえるようになりました', status:'new', group:'assistant',
     assistantNotice:{ id:'update_notice_assistant_bond_rewards_v2', type:'content' },
     items:[

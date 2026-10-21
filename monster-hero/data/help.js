@@ -580,6 +580,8 @@ const HELP_CATEGORIES = [
             'その曲の HELL が選べるようになる（開くのはクリアした曲の HELL だけ）',
             '曲えらびで HELL を選んで遊ぶ',
           ]},
+          {t:'note',title:'HELL の Lv. は曲ごとに大きく違います',text:'MASTER を1回クリアすれば開きますが、MASTER と HELL の Lv. の差が大きい曲があります。曲えらびの HELL のボタンの数字(赤く大きく出ます)を見て、まずは Lv. の低い曲から試してみてください。'},
+          {t:'data', id:'rhythmHellEntry'},
           {t:'data', id:'rhythmHellSongs'},
           {t:'kv',rows:[
             ['空の判定ライン','地上の判定ラインより上にある紫の線。空のノーツはこの線に重なったときに叩く',{notes:['SKY_LINE']}],
