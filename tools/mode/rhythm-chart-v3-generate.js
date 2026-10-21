@@ -43,6 +43,9 @@ const {CHART_REVISION_LATEST,chartRevisionLabel,laneCountForRevision,handModelFl
 
 const ROOT=path.resolve(__dirname,'..','..');
 const arg=(name,fallback=null)=>{const i=process.argv.indexOf(name);return i>=0&&i+1<process.argv.length?process.argv[i+1]:fallback;};
+// 手の流れを狙う配置(2026-10-21 社長「新しい譜面から流れを狙う」)。既定は切。曲の一覧に flowPlacement:true を書いた曲(新曲)か、
+//   --flow を付けたときだけ効く(--no-flow で切る)。切のときは今までと1バイトも同じ譜面になる(公開中の曲は作り直さない・⑩-2)
+let FLOW_ON=process.argv.includes('--flow')&&!process.argv.includes('--no-flow');
 const write=process.argv.includes('--write');
 const only=arg('--difficulty');
 const explain=arg('--explain');
@@ -507,6 +510,7 @@ let registryEntry=null;
     //   0.5〜2。1より小さいと量を減らす(拾う音の範囲は広げない)。曲の一覧の値より優先。HELL のときだけ効く
     {const cli=Number(arg('--hell-density',NaN));if(Number.isFinite(cli)&&cli>=.5&&cli<=2&&cli!==1)audio.hellDensity=cli;}
     registryEntry=entry||null;
+    if(entry&&entry.flowPlacement===true&&!process.argv.includes('--no-flow'))FLOW_ON=true;
   }
 }
 // 譜面の作り方のリビジョン(rhythm-chart-v3-revision.js)。2026-10-12 から最新リビジョンだけを作る
@@ -696,6 +700,40 @@ function motionRepeatsFor(placed,trial){
     }
   }
   return repeats;
+}
+// 手の流れ(FLOW_ON のときだけ)。速い続き(半拍以内)の1歩ずつを見て、手が一続きに動く並びほど安く・跳ぶ並びほど高くする。
+//   ・隣のレーンへ(0.25〜1.6レーン)動く … 同じ向きに続けば「階段・なで」、向きが返れば「往復」。どちらも安く
+//   ・左右の手に分かれる(真ん中をまたぐ・3.5レーン以内) … 左右交互の打ち分け。少し安く
+//   ・同じ側で1.6レーンより大きく跳ぶ … 高く(山場・アクセントの跳びは、ほかの費用が勝てば残る)
+//   ・同じ所の速い連打 … 少し高く(同じ指の叩き直し)
+// 同時押し(同じ格子)は真ん中の1点にまとめて数える。数え方は rhythm-chart-flow-report.js と同じ
+let FLOW_FAST_GRIDS=BEAT/2,FLOW_STAIR=-.6,FLOW_SWING=-.4,FLOW_ALTERNATE=-.2,FLOW_JUMP=.8,FLOW_JACK=.3,FLOW_WEIGHT=1,FLOW_EXTRA_ATTEMPTS=3;
+// 重みを比べるときだけ(--flow-tune '{"FLOW_WEIGHT":1.5}')。書かなければ上の値
+{const tune=arg('--flow-tune',null);if(tune){const t=JSON.parse(tune);
+  if('FLOW_STAIR'in t)FLOW_STAIR=t.FLOW_STAIR;if('FLOW_SWING'in t)FLOW_SWING=t.FLOW_SWING;if('FLOW_ALTERNATE'in t)FLOW_ALTERNATE=t.FLOW_ALTERNATE;
+  if('FLOW_JUMP'in t)FLOW_JUMP=t.FLOW_JUMP;if('FLOW_JACK'in t)FLOW_JACK=t.FLOW_JACK;if('FLOW_WEIGHT'in t)FLOW_WEIGHT=t.FLOW_WEIGHT;if('FLOW_EXTRA_ATTEMPTS'in t)FLOW_EXTRA_ATTEMPTS=t.FLOW_EXTRA_ATTEMPTS;}}
+function flowCostFor(placed,trial){
+  if(!trial.length)return 0;
+  const from=trial[0].grid-BEAT*2,flow=[];
+  for(const note of placed.filter(n=>n.grid>=from).concat(trial)){
+    const center=laneCenterOfNote(note),last=flow[flow.length-1];
+    if(last&&last.grid===note.grid){last.sum+=center;last.count++;continue;}
+    flow.push({grid:note.grid,sum:center,count:1,trial:trial.includes(note)});
+  }
+  let cost=0,lastDir=0;
+  for(let i=1;i<flow.length;i++){
+    const a=flow[i-1],b=flow[i],gap=b.grid-a.grid;
+    const ca=a.sum/a.count,cb=b.sum/b.count,d=cb-ca,dir=Math.sign(d);
+    if(gap>FLOW_FAST_GRIDS){lastDir=0;continue;}
+    let step=0;
+    if(Math.abs(d)<.25)step=FLOW_JACK;
+    else if(Math.abs(d)<=1.6)step=lastDir!==0&&dir===lastDir?FLOW_STAIR:FLOW_SWING;
+    else if((ca<CENTER_LANE+.5)!==(cb<CENTER_LANE+.5)&&Math.abs(d)<=3.5)step=FLOW_ALTERNATE;
+    else step=FLOW_JUMP;
+    if(b.trial)cost+=step;
+    lastDir=Math.abs(d)<.25?lastDir:dir;
+  }
+  return cost;
 }
 const focusData=(()=>{
   const layersFile=authoring(`${dashed}-v3-layers.json`);
@@ -1887,15 +1925,19 @@ const buildChart=(difficulty,options={})=>{
         if(sim.issues.some(issue=>issue.severity==='impossible'&&issue.noteIndex>=recentPlaced.length)){continue;}
         // Rev.10: 動きの使い回し(写しと形の記憶はわざと同じにしているので数えない)
         const mono=!attempt.fromMemory&&!attempt.fromCopy?motionRepeatsFor(placed,trial):0;
-        const total=scored.cost+mono*MOTION_REPEAT_COST;
-        if(!best||total<best.total)best={...scored,total,mono,base,trial};
+        // 手の流れ(FLOW_ON のときだけ。写しと形の記憶はわざと同じにしているので数えない)
+        const flow=FLOW_ON&&!attempt.fromMemory&&!attempt.fromCopy?flowCostFor(placed,trial):0;
+        const total=scored.cost+mono*MOTION_REPEAT_COST+flow*FLOW_WEIGHT;
+        if(!best||total<best.total)best={...scored,total,mono,flow,base,trial};
       }
       if(best){
         // Rev.10: どの起点でも動きを使い回す形なら、次の候補の形も MOTION_EXTRA_ATTEMPTS 個まで試し、
         //   使い回しのいちばん少ないもの(同じなら元の順位が上のもの)を採る
-        if(best.mono>0&&!attempt.fromMemory&&!attempt.fromCopy){
-          if(!held||best.mono<held.best.mono)held={best,attempt,offsets,patternId,mirrored};
-          if(heldTries<MOTION_EXTRA_ATTEMPTS){heldTries++;best=null;continue;}
+        // 手の流れ(FLOW_ON): 流れの費用が残る(跳び・連打を含む)ときも、次の候補の形を FLOW_EXTRA_ATTEMPTS 個まで試し、合計の費用がいちばん低いものを採る
+        const flowLeft=FLOW_ON&&best.flow>0;
+        if((best.mono>0||flowLeft)&&!attempt.fromMemory&&!attempt.fromCopy){
+          if(!held||(FLOW_ON?best.total<held.best.total:best.mono<held.best.mono))held={best,attempt,offsets,patternId,mirrored};
+          if(heldTries<(FLOW_ON?Math.max(MOTION_EXTRA_ATTEMPTS,FLOW_EXTRA_ATTEMPTS):MOTION_EXTRA_ATTEMPTS)){heldTries++;best=null;continue;}
           ({best,offsets,patternId,mirrored}=held);
           acceptAttempt(held.attempt);
           break;
