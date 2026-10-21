@@ -129,7 +129,8 @@ const str = (v, n) => String(v == null ? '' : v).slice(0, n);
 // プレイヤーごとに変わるもの(キャッシュの区切りより後ろに置く)
 export const contextText = (ctx) => [
   `プレイヤーの名前: ${str(ctx.playerName, 20) || '(未設定)'}`,
-  `プレイヤーの呼び方: ${str(ctx.callName, 20) || 'キミ'}(必ずこの呼び方で呼ぶ)`,
+  // 2026-10-21 社長「毎回名前呼んでくる」→ ときどき呼ぶ。呼ぶときの呼び方は変えない
+  `プレイヤーの呼び方: ${str(ctx.callName, 20) || 'キミ'}(呼ぶときは必ずこの呼び方。毎回の返事で呼ばなくてよい。話の始めや、気持ちを込めたいときだけ呼ぶ)`,
   `仲良し度: Lv${Number.isFinite(ctx.bondLevel) ? ctx.bondLevel : 1}「${str(ctx.bondTitle, 20)}」`,
   ctx.bondTone ? `この段階の話し方: ${str(ctx.bondTone, 60)}` : '',
   memoIsEmpty(ctx.memo) ? '思い出メモ: (まだない)' : `思い出メモ:\n${Object.entries(MEMO_FIELDS).map(([k, f]) => `・${f.label}: ${ctx.memo[k] || '(なし)'}`).join('\n')}`,
