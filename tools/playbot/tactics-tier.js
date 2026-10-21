@@ -5,6 +5,14 @@
 //   node tools/playbot/tactics-tier.js --md <file>        Markdown を書き出す(docs/playbot/reports/tier/monster-tier.md)。
 //                                                         あわせて tier.json の「モンスター」ほかも書き換える(下)
 //   --json <file>  tier.json の置き場所を変える / --no-json  tier.json を書かない
+//   --method current|overall  決め方(2026-10-21 社長「勇者モンの評価に寄りすぎ。もっと全体的に見てほしい」・まだ表は変えない)
+//       current(既定) … いまの決め方。出力は前と1バイトも変わらない(tools/playbot/tier-method-check.js が見張る)
+//       overall … 供モンとして入った回の働き(攻めは頭割り比、守り・支えは入った回の伸び)と、供モンで入った回の伸びを主にし、
+//                 勇者モンにした回の伸びは軽く(OVERALL_HERO_WEIGHT)。「勇者モン向き」「供モン向き」の段も出す。
+//                 書くのは別のファイルだけ(monster-tier-overall.md・tier-overall.json)。いまの表(tier.json・monster-tier.md・tier.html)は書かない。
+//                 いま公開している tier.json の総合と比べた差(段が動いた子と理由)も出す
+//   --player-weight <w>  overall に「実戦の重み」を混ぜる(既定 0 = 混ぜない)。材料は player-battle-stats.js の集計
+//                        (--player-stats <file> で置き場所、--player-mode <モード> で数えるモード。既定 TacticsPro)
 //
 // tier.json(社長が見るページ tier-page.js の元)は、2026-10-10 まで人が monster-tier.md から写していた。
 // いまはここで書き出す。書き換えるのは 更新・数えた回・戦った体数・全体数・決め方・段・モンスター(1体ずつの Tier・理由・回数・机上)だけで、
@@ -29,9 +37,32 @@ const HERE = __dirname;
 const ROOT = path.resolve(HERE, '..', '..');
 const args = process.argv.slice(2);
 const mdAt = args.indexOf('--md');
-const mdFile = mdAt >= 0 ? args[mdAt + 1] : '';
+const mdFileArg = mdAt >= 0 && args[mdAt + 1] && !args[mdAt + 1].startsWith('--') ? args[mdAt + 1] : '';
 const jsonAt = args.indexOf('--json');
-const jsonFile = args.includes('--no-json') ? '' : (jsonAt >= 0 ? args[jsonAt + 1] : (mdFile ? path.join(ROOT, 'docs', 'playbot', 'reports', 'tier', 'tier.json') : ''));
+const optArg = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : d; };
+const METHOD = optArg('--method', 'current');
+if (!['current', 'overall'].includes(METHOD)) { console.error(`--method は current か overall: ${METHOD}`); process.exit(1); }
+const OVERALL = METHOD === 'overall';
+const TIER_DIR = path.join(ROOT, 'docs', 'playbot', 'reports', 'tier');
+// overall の書き先。いまの表(公開中)のファイルへは決して書かない
+const CURRENT_FILES = ['monster-tier.md', 'tier.json', 'tier.html'].map((f) => path.join(TIER_DIR, f));
+const mdFile = OVERALL && mdFileArg === '' && args.includes('--md') ? path.join(TIER_DIR, 'monster-tier-overall.md') : mdFileArg;
+const jsonFile = args.includes('--no-json') ? '' : (jsonAt >= 0 ? args[jsonAt + 1] : (mdFile ? path.join(TIER_DIR, OVERALL ? 'tier-overall.json' : 'tier.json') : ''));
+if (OVERALL && [mdFile, jsonFile].some((f) => f && CURRENT_FILES.includes(path.resolve(f)))) {
+  console.error('overall は いまの表(monster-tier.md・tier.json・tier.html)へは書かない。--md / --json を別のファイルにする(既定 monster-tier-overall.md・tier-overall.json)');
+  process.exit(1);
+}
+// 勇者モンにした回の伸びの重み(overall)。current は 1(回数が3回にそろうまでは軽く)
+const OVERALL_HERO_WEIGHT = 0.3;
+const PLAYER_WEIGHT = OVERALL ? Math.max(0, Number(optArg('--player-weight', '0')) || 0) : 0;
+const PLAYER_MODE = optArg('--player-mode', 'TacticsPro');
+const playerStats = (() => {
+  if (!PLAYER_WEIGHT) return null;
+  try {
+    const all = JSON.parse(fs.readFileSync(path.resolve(optArg('--player-stats', path.join(TIER_DIR, 'player-battle-stats.json'))), 'utf8'));
+    return (all.モード || {})[PLAYER_MODE] || null;
+  } catch (e) { console.error('実戦の集計が読めない(node tools/playbot/player-battle-stats.js で作る)'); process.exit(1); }
+})();
 
 const readJson = (f, d) => { try { return JSON.parse(fs.readFileSync(path.join(HERE, f), 'utf8')); } catch (e) { return d; } };
 const roster = readJson('tactics-roster.json', { monsters: [], assists: [] });
@@ -157,10 +188,27 @@ const statsOf = (rs) => roster.monsters.filter((m) => m && !m.debugOnly).map((m)
   const share = avg(shares);
   const shareErr = err2(shares);
   // 勇者モンの回数が少ないうちは、勇者の伸びを軽く見る(1回だけの負けで Tier が大きく動かないように。3回で同じ重さ)
+  // 供モンとして入った回(勇者モンにした回を除く)の伸び。overall の主な材料
+  const allyDevs = inRuns.filter((r) => r.hero !== m.name).map((r) => reach(r) - meanWave[r.difficulty]);
+  const allyLift = avg(allyDevs);
+  const allyErr = err2(allyDevs);
+  // プレイヤーの実戦(overall に --player-weight を付けたときだけ)。勇者モン・供モンの回を合わせた伸び
+  const pl = playerStats ? [playerStats.勇者モン && playerStats.勇者モン[m.name], playerStats.供モン && playerStats.供モン[m.name]].filter(Boolean) : [];
+  const plN = sum(pl.map((e) => e.回数));
+  const plLift = plN ? sum(pl.map((e) => e.伸び * e.回数)) / plN : NaN;
   const parts = [];
-  if (role === '攻め' && shares.length) parts.push([(share - 1) * 1.2, 1, '頭割り比', share - 1, shareErr]);
-  if (role !== '攻め' && inRuns.length) parts.push([memberLift / 2, 1, '入った回の伸び', memberLift, memberErr]);
-  if (heroRuns.length) parts.push([heroLift / 2, Math.min(1, heroRuns.length / 3), '勇者モンにした回の伸び', heroLift, heroErr]);
+  if (!OVERALL) {
+    if (role === '攻め' && shares.length) parts.push([(share - 1) * 1.2, 1, '頭割り比', share - 1, shareErr]);
+    if (role !== '攻め' && inRuns.length) parts.push([memberLift / 2, 1, '入った回の伸び', memberLift, memberErr]);
+    if (heroRuns.length) parts.push([heroLift / 2, Math.min(1, heroRuns.length / 3), '勇者モンにした回の伸び', heroLift, heroErr]);
+  } else {
+    // 役割の働き: 攻めは頭割り比、守り・支えは供モンで入った回の伸び(無ければ入った回全部)
+    if (role === '攻め' && shares.length) parts.push([(share - 1) * 1.2, 1, '頭割り比', share - 1, shareErr]);
+    if (role !== '攻め' && (allyDevs.length || inRuns.length)) parts.push([(allyDevs.length ? allyLift : memberLift) / 2, 1, '供モンで入った回の伸び', allyDevs.length ? allyLift : memberLift, allyDevs.length ? allyErr : memberErr]);
+    if (role === '攻め' && allyDevs.length) parts.push([allyLift / 2, 1, '供モンで入った回の伸び', allyLift, allyErr]);
+    if (heroRuns.length) parts.push([heroLift / 2, OVERALL_HERO_WEIGHT * Math.min(1, heroRuns.length / 3), '勇者モンにした回の伸び', heroLift, heroErr]);
+    if (PLAYER_WEIGHT && plN >= 3) parts.push([plLift / 2, PLAYER_WEIGHT * Math.min(1, plN / 10), `実戦(${PLAYER_MODE} ${plN}回)の伸び`, plLift, NaN]);
+  }
   // 点の決め手(重みのある項目)のどれか1つでも、ぶれを超えているか
   const sigAny = parts.some((p) => Number.isFinite(p[4]) && Math.abs(p[3]) > p[4]);
   const wsum = sum(parts.map((p) => p[1]));
@@ -183,7 +231,12 @@ const statsOf = (rs) => roster.monsters.filter((m) => m && !m.debugOnly).map((m)
   let tier = '未計測';
   if (n && exTotal === 0) tier = '保留';
   else if (Number.isFinite(score)) tier = score >= 0.45 ? 'S' : score >= 0.15 ? 'A' : score >= -0.15 ? 'B' : score >= -0.45 ? 'C' : 'D';
-  return { m, dist, role, n, heroN: heroRuns.length, share, shareN: shares.length, heroLift, memberLift, byDiff, assistRank, uniqueTotal, useRuns: useRuns.length, aptGood, aptN, traitTotal, traitRuns: traitRuns.length, exTotal, score, tier, marks, provisional: n < 5, parts, sigAny, heroErr, memberErr, shareErr };
+  // 勇者モン向き・供モン向き(overall で別の段として出す)。勇者モン向きは勇者モンにした回の伸びだけ、供モン向きは勇者モンの回を除いた働き
+  const heroOnly = heroRuns.length ? heroLift / 2 : NaN;
+  const allyParts = parts.filter((p) => p[2] !== '勇者モンにした回の伸び' && !String(p[2]).startsWith('実戦'));
+  const allyOnly = allyParts.length ? sum(allyParts.map((p) => p[0] * p[1])) / sum(allyParts.map((p) => p[1])) : NaN;
+  return { allyLift, allyN: allyDevs.length, heroOnly, allyOnly, plN, plLift,
+    m, dist, role, n, heroN: heroRuns.length, share, shareN: shares.length, heroLift, memberLift, byDiff, assistRank, uniqueTotal, useRuns: useRuns.length, aptGood, aptN, traitTotal, traitRuns: traitRuns.length, exTotal, score, tier, marks, provisional: n < 5, parts, sigAny, heroErr, memberErr, shareErr };
 });
 
 const TIER_ORDER = ['S', 'A', 'B', 'C', 'D', '保留', '未計測'];
@@ -220,7 +273,11 @@ const out = (t = '') => lines.push(t);
 const now = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 16).replace('T', ' ');
 const tried = stats.filter((s) => s.n).length;
 const measured = runs.filter((r) => r.use).length;
-out('# 味方モンスターの Tier 表(タクティクスプロ)');
+out(OVERALL ? '# 味方モンスターの Tier 表(タクティクスプロ・全体で見る決め方 overall の試し)' : '# 味方モンスターの Tier 表(タクティクスプロ)');
+if (OVERALL) {
+  out();
+  out(`**試しの表です。公開中の表(monster-tier.md・tier.html)は変えていません。** 決め方 overall: 供モンとして入った回の働き(攻めは頭割り比、守り・支えは入った回の伸び)と、供モンで入った回の伸びを主にし、勇者モンにした回の伸びは重み ${OVERALL_HERO_WEIGHT}(いまの決め方は 1)。${PLAYER_WEIGHT ? `プレイヤーの実戦(${PLAYER_MODE}・全国ランキングの記録)の伸びを重み ${PLAYER_WEIGHT} で混ぜた(3回以上ある子だけ)。` : 'プレイヤーの実戦は混ぜていない(--player-weight で混ぜられる)。'}`);
+}
 out();
 out(`更新: ${now}(JST)・数えた回: ${runs.length}回(${diffs.map((d) => `${d} ${runs.filter((r) => r.difficulty === d).length}`).join(' / ')})・戦ったモンスター: ${tried} / ${stats.length}体・技と間合いまで数えた回: ${measured}回`);
 out();
@@ -507,6 +564,48 @@ out(`- まだ勇者モンにしていない子: ${least.length ? least.join('・
 out('- `PLAYBOT_TACTICS_ALL=1 PLAYBOT_TACTICS_EXPLORE=1` で、勇者モンを「試した回数の少ない子」から選びます。毎晩の点検(60分まで)で回る分だけ足していきます');
 out('- 表を作り直す: `node tools/playbot/tactics-tier.js --md docs/playbot/reports/tier/monster-tier.md`');
 
+// ---------- overall だけ: 勇者モン向き・供モン向きと、いまの表との差 ----------
+const overallDiff = [];
+if (OVERALL) {
+  out();
+  out('## 勇者モン向き・供モン向き(overall)');
+  out();
+  out('勇者モン向き = 勇者モンにした回の伸びだけで付けた段。供モン向き = 勇者モンの回を除いた働き(頭割り比・供モンで入った回の伸び)だけで付けた段。どちらも全部の難易度の回をまとめて見る。');
+  out();
+  out('| モンスター | 役 | 勇者モン向き | 供モン向き | 勇者モンの回 | 供モンの回 |');
+  out('| --- | --- | --- | --- | --- | --- |');
+  for (const st of [...stats].sort((a, b) => (b.allyOnly || -9) - (a.allyOnly || -9))) {
+    if (!st.n) continue;
+    out(`| ${st.m.name} | ${st.role} | ${Number.isFinite(st.heroOnly) ? tierOfScore(st.heroOnly) : '—'} | ${Number.isFinite(st.allyOnly) ? tierOfScore(st.allyOnly) : '—'} | ${st.heroN} | ${st.allyN} |`);
+  }
+  // いま公開している tier.json の総合と比べる
+  let published = [];
+  try { published = JSON.parse(fs.readFileSync(path.join(TIER_DIR, 'tier.json'), 'utf8')).モンスター || []; } catch (e) { published = []; }
+  for (const o of overall) {
+    const was = (published.find((x) => x && x.名前 === o.s.m.name) || {}).総合;
+    const now2 = o.tier === '未計測' ? '回数不足' : o.tier;
+    if (!was || was === now2) continue;
+    const st = o.s;
+    const why = [];
+    if (st.heroN && Number.isFinite(st.heroLift)) why.push(`勇者モンの回の伸び ${sgn(st.heroLift)}(${st.heroN}回)の重みを ${OVERALL_HERO_WEIGHT} に下げた`);
+    if (st.allyN && Number.isFinite(st.allyLift)) why.push(`供モンで入った回の伸び ${sgn(st.allyLift)}(${st.allyN}回)を主にした`);
+    if (st.role === '攻め' && st.shareN) why.push(`頭割り比 ${r1(st.share)}`);
+    if (PLAYER_WEIGHT && st.plN >= 3) why.push(`実戦の伸び ${sgn(st.plLift)}(${st.plN}回)`);
+    overallDiff.push({ 名前: st.m.name, いま: was, overall: now2, 理由: why.join(' / ') });
+  }
+  out();
+  out(`## いまの表との差(段が動いた子 ${overallDiff.length}体)`);
+  out();
+  if (!overallDiff.length) out('段が動いた子はいない。');
+  else {
+    out('| モンスター | いま | overall | 理由 |');
+    out('| --- | --- | --- | --- |');
+    for (const d of overallDiff) out(`| ${d.名前} | ${d.いま} | ${d.overall} | ${d.理由} |`);
+  }
+  out();
+  out(`- 作り直す: \`node tools/playbot/tactics-tier.js --method overall --md\`${PLAYER_WEIGHT ? '' : '(実戦を混ぜるなら --player-weight 0.5 など)'}`);
+}
+
 let text = lines.join('\n') + '\n';
 
 // ---------- 根拠(2026-10-10 社長「タップしたらその詳細を出すようにして。ちゃんと根拠があるように」) ----------
@@ -655,6 +754,14 @@ function tierJson(prev) {
     },
     段: ['S', 'A', 'B', 'C', 'D', '保留'],
   };
+  if (OVERALL) {
+    head.決め方.方法 = { 名前: 'overall', 勇者モンの重み: OVERALL_HERO_WEIGHT, 実戦の重み: PLAYER_WEIGHT, 実戦のモード: PLAYER_WEIGHT ? PLAYER_MODE : '' };
+    head.いまの表との差 = overallDiff;
+    for (const e of mons) {
+      const st = stats.find((x) => x.m.name === e.名前);
+      if (st) { e.勇者モン向き = Number.isFinite(st.heroOnly) ? tierOfScore(st.heroOnly) : '—'; e.供モン向き = Number.isFinite(st.allyOnly) ? tierOfScore(st.allyOnly) : '—'; }
+    }
+  }
   const merged = { ...prev, ...head, モンスター: mons };
   // 並び: 頭の項目 → モンスター → そのほか(アシカ・組み合わせ)
   const order = [...Object.keys(head), 'モンスター'];
@@ -666,7 +773,7 @@ if (jsonFile) {
   fs.writeFileSync(path.resolve(jsonFile), JSON.stringify(tierJson(prev), null, 2) + '\n');
   console.log(`書き出した: ${jsonFile}(モンスター ${stats.length}体。アシカ・組み合わせ・おすすめアシカ・相性のいい供モンは残した)`);
   // ページ(tier.html)も同じ tier.json から作り直す。いつもの置き場所に書いたときだけ(試し用の --json では作らない)
-  if (jsonAt < 0) { const page = require('./tier-page'); const r = page.writePage(); console.log(r.ok ? `作り直した: ${r.out}` : `tier.html は作らなかった: ${r.problems.join(' / ')}`); }
+  if (jsonAt < 0 && !OVERALL) { const page = require('./tier-page'); const r = page.writePage(); console.log(r.ok ? `作り直した: ${r.out}` : `tier.html は作らなかった: ${r.problems.join(' / ')}`); }
 }
 if (mdFile) {
   fs.mkdirSync(path.dirname(path.resolve(mdFile)), { recursive: true });

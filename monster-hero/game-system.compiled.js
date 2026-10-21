@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6ae06ee6393043a1
+// source-sha256: 615f315f2cd11a35
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-22 01:19";
+const BUILD_DATE = "2026-10-22 04:18";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -12062,6 +12062,7 @@ const RELEASE_FLAGS = {
   speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE,
   tactics: TACTICS_MODE_PUBLIC_RELEASE,
   rhythmHell: true,
+  battleLog: false,
   battleCardArt: true,
   assistantChat: true,
   assistantChatRanking: true,
@@ -28086,6 +28087,71 @@ const sbSendRhythmTouchDiag = async row => {
       } : {})
     });
     if (res.status === 404 || res.status === 401 || res.status === 403) rhythmTouchDiagDisabled = true;
+    return res.ok;
+  } catch {
+    return false;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+};
+const BATTLE_LOG_TABLE = 'battle_logs';
+const BATTLE_LOG_SCHEMA_VERSION = 1;
+let battleLogDisabled = false;
+const battleLogInt = (v, lo, hi) => {
+  const n = Math.floor(Number(v));
+  return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : null;
+};
+const battleLogId = v => typeof v === 'string' && /^[A-Za-z0-9_]{1,40}$/.test(v) ? v : null;
+const buildBattleLogRow = input => {
+  const src = input && typeof input === 'object' ? input : {};
+  const difficulty = typeof src.difficultyKey === 'string' && /^[A-Za-z0-9_-]{1,48}$/.test(src.difficultyKey) ? src.difficultyKey : null;
+  const party = Array.isArray(src.party) ? src.party : [];
+  const heroSlot = party.find(p => p && p.role === 'hero') || party[0] || null;
+  const hero = heroSlot ? battleLogId(heroSlot.monsterId) : null;
+  if (!difficulty || !hero) return null;
+  const allies = party.filter(p => p && p !== heroSlot).map(p => battleLogId(p.monsterId)).filter(Boolean).slice(0, 3);
+  const turns = battleLogInt(src.clearTurns, 0, 100000);
+  const units = {};
+  for (const [id, u] of Object.entries(src.units && typeof src.units === 'object' ? src.units : {})) {
+    if (!battleLogId(id) || !u || typeof u !== 'object') continue;
+    units[id] = {
+      dmg: battleLogInt(u.dmg, 0, 1e12) || 0,
+      ex: battleLogInt(u.ex, 0, 1000) || 0,
+      unique: battleLogInt(u.unique, 0, 1000) || 0,
+      taken: battleLogInt(u.taken, 0, 1e12) || 0
+    };
+  }
+  return {
+    difficulty,
+    result: turns && turns > 0 ? 'clear' : 'end',
+    reached_wave: battleLogInt(src.reachedWave, 0, 100),
+    turns: turns && turns > 0 ? turns : null,
+    score: battleLogInt(src.score, 0, 1e15),
+    hero,
+    allies,
+    units,
+    app_build: (typeof BUILD_DATE === 'string' ? BUILD_DATE : '').slice(0, 32),
+    schema_version: BATTLE_LOG_SCHEMA_VERSION
+  };
+};
+const sbSendBattleLog = async row => {
+  if (!(typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.battleLog === true)) return false;
+  if (battleLogDisabled || !row || typeof fetch !== 'function' || sbTelemetryLocal()) return false;
+  const controller = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = controller ? setTimeout(() => controller.abort(), 8000) : null;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${BATTLE_LOG_TABLE}`, {
+      method: 'POST',
+      headers: {
+        ...SB_HEADERS,
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify(row),
+      ...(controller ? {
+        signal: controller.signal
+      } : {})
+    });
+    if (res.status === 404 || res.status === 401 || res.status === 403) battleLogDisabled = true;
     return res.ok;
   } catch {
     return false;
@@ -87351,6 +87417,20 @@ function MonsterHeroGame() {
     const clearTurns = Number.isFinite(Number(runClearTurnsRef.current)) && Number(runClearTurnsRef.current) > 0 ? Number(runClearTurnsRef.current) : null;
     const profileFrame = rankingProfileFrameValue(profileFrameId);
     const breederId = await ensureBreederId();
+    if (RELEASE_FLAGS.battleLog === true) {
+      try {
+        void sbSendBattleLog(buildBattleLogRow({
+          difficultyKey: diff,
+          party: party.map(p => p && {
+            role: p.role,
+            monsterId: p.monsterId
+          }),
+          reachedWave,
+          clearTurns,
+          score: finalScore
+        }));
+      } catch {}
+    }
     const row = {
       difficulty: diff,
       user_name: name,

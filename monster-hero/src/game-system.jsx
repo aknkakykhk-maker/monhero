@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 315c140bbb84a680
+// generated-sha256: 48ec92dd1e89cea6
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-22 01:19"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-22 04:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8552,6 +8552,9 @@ const RHYTHM_EVENT_POINTS_PUBLIC_RELEASE = true;
 //   HOMEの「おしゃべり」・仲良し度の行動 chat のヘルプ表示・更新履歴・お話「話せるようになった日」がこの印で一緒に出る
 const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tactics: TACTICS_MODE_PUBLIC_RELEASE,
   rhythmHell: true,
+  // バトルの1回ごとの記録(battle_logs)を送る(2026-10-21 社長「仕組みは作って」)。表がまだ無く、送る中身も決め切っていないので偽。
+  //   偽のあいだは何も送らない(26-supabase.jsx の sbSendBattleLog)。表の SQL は docs/sql/battle-log/(まだ流していない)。設計は docs/spec/BATTLE_LOG.md
+  battleLog: false,
   // 行動カードの絵(枠4色・技のマーク・段階の札)。社長が今のカードと見比べて決めるまで偽(2026-10-15)。
   //   見比べはデバッグ設定の「行動カードの絵」の切り替えで(BATTLE_CARD_ART_DEBUG・71-screen-battle.jsx)
   battleCardArt: true,
@@ -18026,6 +18029,65 @@ const sbSendRhythmTouchDiag = async (row) => {
       ...(controller ? { signal: controller.signal } : {})
     });
     if (res.status === 404 || res.status === 401 || res.status === 403) rhythmTouchDiagDisabled = true;
+    return res.ok;
+  } catch {
+    return false;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+};
+// ===== バトルの1回ごとの記録(2026-10-21・下準備) =====
+// 社長「ティア表がそのモンスターの勇者モンの評価に寄りすぎ」→ プレイヤーの実戦の中身(誰がどれだけ働いたか・負けた回も)を集める仕組み。
+// ★RELEASE_FLAGS.battleLog が真になるまで何も送らない(いまは偽)。表 battle_logs もまだ作っていない(docs/sql/battle-log/BATTLE_LOG_APPLY.sql)。
+// ★送るのは数字と monsterId と難易度のキーだけ。名前・ブリーダーID・アイコン・マスモンの個体名や育て方は送らない。
+// ★送れなくてもゲームは何も変わらない(黙って捨てる。やり直さない)。表が無い(404)・権限が無い(401/403)と分かったら、ページを閉じるまで送らない。
+//   手元のサーバー(検査・ローカル確認)からは送らない(sbTelemetryLocal)。設計: docs/spec/BATTLE_LOG.md
+const BATTLE_LOG_TABLE = 'battle_logs';
+const BATTLE_LOG_SCHEMA_VERSION = 1;
+let battleLogDisabled = false;
+const battleLogInt = (v, lo, hi) => { const n = Math.floor(Number(v)); return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : null; };
+const battleLogId = (v) => (typeof v === 'string' && /^[A-Za-z0-9_]{1,40}$/.test(v) ? v : null);
+// 1行の形を作る(純粋な関数。送るかどうかは決めない)。
+//   input: { difficultyKey, party:[{ role, monsterId }], reachedWave, clearTurns, score, units:{ [monsterId]: { dmg, ex, unique, taken } } }
+//   units は「次の段」で数え始める(いまは渡さないので空)。決めた4つの数だけ通し、ほかの項目は捨てる
+const buildBattleLogRow = (input) => {
+  const src = input && typeof input === 'object' ? input : {};
+  const difficulty = typeof src.difficultyKey === 'string' && /^[A-Za-z0-9_-]{1,48}$/.test(src.difficultyKey) ? src.difficultyKey : null;
+  const party = Array.isArray(src.party) ? src.party : [];
+  const heroSlot = party.find(p => p && p.role === 'hero') || party[0] || null;
+  const hero = heroSlot ? battleLogId(heroSlot.monsterId) : null;
+  if (!difficulty || !hero) return null;
+  const allies = party.filter(p => p && p !== heroSlot).map(p => battleLogId(p.monsterId)).filter(Boolean).slice(0, 3);
+  const turns = battleLogInt(src.clearTurns, 0, 100000);
+  const units = {};
+  for (const [id, u] of Object.entries(src.units && typeof src.units === 'object' ? src.units : {})) {
+    if (!battleLogId(id) || !u || typeof u !== 'object') continue;
+    units[id] = { dmg: battleLogInt(u.dmg, 0, 1e12) || 0, ex: battleLogInt(u.ex, 0, 1000) || 0, unique: battleLogInt(u.unique, 0, 1000) || 0, taken: battleLogInt(u.taken, 0, 1e12) || 0 };
+  }
+  return {
+    difficulty,
+    result: turns && turns > 0 ? 'clear' : 'end',
+    reached_wave: battleLogInt(src.reachedWave, 0, 100),
+    turns: turns && turns > 0 ? turns : null,
+    score: battleLogInt(src.score, 0, 1e15),
+    hero,
+    allies,
+    units,
+    app_build: (typeof BUILD_DATE === 'string' ? BUILD_DATE : '').slice(0, 32),
+    schema_version: BATTLE_LOG_SCHEMA_VERSION,
+  };
+};
+const sbSendBattleLog = async (row) => {
+  if (!(typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.battleLog === true)) return false;
+  if (battleLogDisabled || !row || typeof fetch !== 'function' || sbTelemetryLocal()) return false;
+  const controller = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = controller ? setTimeout(() => controller.abort(), 8000) : null;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${BATTLE_LOG_TABLE}`, {
+      method: 'POST', headers: { ...SB_HEADERS, 'Prefer': 'return=minimal' }, body: JSON.stringify(row),
+      ...(controller ? { signal: controller.signal } : {})
+    });
+    if (res.status === 404 || res.status === 401 || res.status === 403) battleLogDisabled = true;
     return res.ok;
   } catch {
     return false;
@@ -55577,6 +55639,11 @@ function MonsterHeroGame() {
     // (ユーザー指摘「名前管理はさすがにだめだろ」)。作れない端末では列ごと付けない。
     // 順位・スコア・集計には関わらず、「誰の行か」を決めるためだけに使う
     const breederId = await ensureBreederId();
+    // バトルの1回ごとの記録(2026-10-21・下準備)。RELEASE_FLAGS.battleLog が偽のあいだは何も送らない(sbSendBattleLog の頭で止まる)。
+    // 送るのは数字と monsterId だけ(名前・ブリーダーIDは渡さない)。ランキングの送信とは別で、待たない
+    if (RELEASE_FLAGS.battleLog === true) {
+      try { void sbSendBattleLog(buildBattleLogRow({ difficultyKey: diff, party: party.map(p => p && { role: p.role, monsterId: p.monsterId }), reachedWave, clearTurns, score: finalScore })); } catch {}
+    }
     const row = { difficulty: diff, user_name: name, hero: heroName, party, score: finalScore, level, icon, clear_id: clearId,
       ...(breederId ? { breeder_id: breederId } : {}),
       ...(reachedWave != null ? { reached_wave: reachedWave } : {}),

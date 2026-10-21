@@ -6495,6 +6495,11 @@ function MonsterHeroGame() {
     // (ユーザー指摘「名前管理はさすがにだめだろ」)。作れない端末では列ごと付けない。
     // 順位・スコア・集計には関わらず、「誰の行か」を決めるためだけに使う
     const breederId = await ensureBreederId();
+    // バトルの1回ごとの記録(2026-10-21・下準備)。RELEASE_FLAGS.battleLog が偽のあいだは何も送らない(sbSendBattleLog の頭で止まる)。
+    // 送るのは数字と monsterId だけ(名前・ブリーダーIDは渡さない)。ランキングの送信とは別で、待たない
+    if (RELEASE_FLAGS.battleLog === true) {
+      try { void sbSendBattleLog(buildBattleLogRow({ difficultyKey: diff, party: party.map(p => p && { role: p.role, monsterId: p.monsterId }), reachedWave, clearTurns, score: finalScore })); } catch {}
+    }
     const row = { difficulty: diff, user_name: name, hero: heroName, party, score: finalScore, level, icon, clear_id: clearId,
       ...(breederId ? { breeder_id: breederId } : {}),
       ...(reachedWave != null ? { reached_wave: reachedWave } : {}),

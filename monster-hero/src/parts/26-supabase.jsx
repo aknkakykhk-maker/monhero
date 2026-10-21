@@ -1933,6 +1933,65 @@ const sbSendRhythmTouchDiag = async (row) => {
     if (timer) clearTimeout(timer);
   }
 };
+// ===== バトルの1回ごとの記録(2026-10-21・下準備) =====
+// 社長「ティア表がそのモンスターの勇者モンの評価に寄りすぎ」→ プレイヤーの実戦の中身(誰がどれだけ働いたか・負けた回も)を集める仕組み。
+// ★RELEASE_FLAGS.battleLog が真になるまで何も送らない(いまは偽)。表 battle_logs もまだ作っていない(docs/sql/battle-log/BATTLE_LOG_APPLY.sql)。
+// ★送るのは数字と monsterId と難易度のキーだけ。名前・ブリーダーID・アイコン・マスモンの個体名や育て方は送らない。
+// ★送れなくてもゲームは何も変わらない(黙って捨てる。やり直さない)。表が無い(404)・権限が無い(401/403)と分かったら、ページを閉じるまで送らない。
+//   手元のサーバー(検査・ローカル確認)からは送らない(sbTelemetryLocal)。設計: docs/spec/BATTLE_LOG.md
+const BATTLE_LOG_TABLE = 'battle_logs';
+const BATTLE_LOG_SCHEMA_VERSION = 1;
+let battleLogDisabled = false;
+const battleLogInt = (v, lo, hi) => { const n = Math.floor(Number(v)); return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : null; };
+const battleLogId = (v) => (typeof v === 'string' && /^[A-Za-z0-9_]{1,40}$/.test(v) ? v : null);
+// 1行の形を作る(純粋な関数。送るかどうかは決めない)。
+//   input: { difficultyKey, party:[{ role, monsterId }], reachedWave, clearTurns, score, units:{ [monsterId]: { dmg, ex, unique, taken } } }
+//   units は「次の段」で数え始める(いまは渡さないので空)。決めた4つの数だけ通し、ほかの項目は捨てる
+const buildBattleLogRow = (input) => {
+  const src = input && typeof input === 'object' ? input : {};
+  const difficulty = typeof src.difficultyKey === 'string' && /^[A-Za-z0-9_-]{1,48}$/.test(src.difficultyKey) ? src.difficultyKey : null;
+  const party = Array.isArray(src.party) ? src.party : [];
+  const heroSlot = party.find(p => p && p.role === 'hero') || party[0] || null;
+  const hero = heroSlot ? battleLogId(heroSlot.monsterId) : null;
+  if (!difficulty || !hero) return null;
+  const allies = party.filter(p => p && p !== heroSlot).map(p => battleLogId(p.monsterId)).filter(Boolean).slice(0, 3);
+  const turns = battleLogInt(src.clearTurns, 0, 100000);
+  const units = {};
+  for (const [id, u] of Object.entries(src.units && typeof src.units === 'object' ? src.units : {})) {
+    if (!battleLogId(id) || !u || typeof u !== 'object') continue;
+    units[id] = { dmg: battleLogInt(u.dmg, 0, 1e12) || 0, ex: battleLogInt(u.ex, 0, 1000) || 0, unique: battleLogInt(u.unique, 0, 1000) || 0, taken: battleLogInt(u.taken, 0, 1e12) || 0 };
+  }
+  return {
+    difficulty,
+    result: turns && turns > 0 ? 'clear' : 'end',
+    reached_wave: battleLogInt(src.reachedWave, 0, 100),
+    turns: turns && turns > 0 ? turns : null,
+    score: battleLogInt(src.score, 0, 1e15),
+    hero,
+    allies,
+    units,
+    app_build: (typeof BUILD_DATE === 'string' ? BUILD_DATE : '').slice(0, 32),
+    schema_version: BATTLE_LOG_SCHEMA_VERSION,
+  };
+};
+const sbSendBattleLog = async (row) => {
+  if (!(typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.battleLog === true)) return false;
+  if (battleLogDisabled || !row || typeof fetch !== 'function' || sbTelemetryLocal()) return false;
+  const controller = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = controller ? setTimeout(() => controller.abort(), 8000) : null;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${BATTLE_LOG_TABLE}`, {
+      method: 'POST', headers: { ...SB_HEADERS, 'Prefer': 'return=minimal' }, body: JSON.stringify(row),
+      ...(controller ? { signal: controller.signal } : {})
+    });
+    if (res.status === 404 || res.status === 401 || res.status === 403) battleLogDisabled = true;
+    return res.ok;
+  } catch {
+    return false;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+};
 const sbSendRhythmPlayLog = async (row) => {
   if (rhythmPlayLogDisabled || !row || typeof fetch !== 'function' || sbTelemetryLocal()) return false;
   const controller = typeof AbortController === 'function' ? new AbortController() : null;
