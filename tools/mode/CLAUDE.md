@@ -15,7 +15,7 @@
 
 **やってはいけない**: 配信中の曲の譜面を作り直して `monster-hero/data/rhythm-mode.js` へ書き戻す
 (`--release`)。既存の解析ファイル(`tools/mode/authoring/*-v3-audio.json`)を作り直す(`--reanalyze`)。
-公開中の譜面は `rhythm-released-chart-lock-check.js` が指紋で見張る(CI でも回る)。決まった直しで変えるときだけ
+公開中の譜面は `rhythm-released-chart-lock-check.js` が指紋で見張る(HELL も)。決まった直しで変えるときだけ
 `--update --reason "<理由>"` で控えを更新する。
 
 **作るのは最新リビジョンだけ**(2026-10-12)。生成器などは最新の作り方しか持たず、古い版へ分ける分かれ道は作らない。

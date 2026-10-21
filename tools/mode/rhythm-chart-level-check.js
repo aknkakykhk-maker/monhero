@@ -172,8 +172,8 @@ const runtime=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js')
     &&Math.abs(L.WORK_V2.sameHandFast-L.WORK.sameHandFast*1.7)<1e-9&&Math.abs(L.WORK_V2.skySwitch-L.WORK.skySwitch*1.7)<1e-9&&L.WORK_V2.sameSideHeld===3&&!L.WORK.sameSideHeld);
   // 社長が決めた5曲の HELL(2026-10-20)は、新しい測り方の値を表示にした。値は v2 で測った値と同じ・譜面の数字とも同じ
   // 2026-10-20 夕方からは公開中の HELL 9譜面すべて(Grievous Lady は試作の枠の MASTER の段に置いてある)。表示は v2 の値のまま(v3 は新曲から)
-  // 2026-10-21 作り直した5譜面は v3 の値(Toward 51・ROSE 53・ROSE short 49・SAD SONG 39・SAD SONG short 42)
-  const SET={toward_the_stars_short_hell_debug:51,rose_hell_debug:53,rose_short_hell_debug:49,sad_song_hell_debug:39,sad_song_short_hell_debug:42,
+  // 2026-10-21 作り直した5譜面は v3 の値(Toward 50・ROSE 51・ROSE short 49・SAD SONG 39・SAD SONG short 42。同じ日に残りの見分けにくい所も直した)
+  const SET={toward_the_stars_short_hell_debug:50,rose_hell_debug:51,rose_short_hell_debug:49,sad_song_hell_debug:39,sad_song_short_hell_debug:42,
     sheriruth_hell_debug:61,grievous_lady_hell:69,against_my_own_shadow_hell_debug:51,kaze_ga_soyogu_hell_debug:22};
   for(const [id,want] of Object.entries(SET)){
     const d=id==='grievous_lady_hell'?'MASTER':'HELL',song=all.find(x=>x.songId===id),c=song&&song.difficulties[d],f=REWORKED_V3.includes(id)?'v3':'v2';
