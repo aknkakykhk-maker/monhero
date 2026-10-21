@@ -1126,6 +1126,28 @@ const buildSoulCrystalUse = (masu, ownedItems, quantity = 1) => {
     ownedItems:{ ...before, [SOUL_CRYSTAL_ITEM_ID]:have - count },
   };
 };
+// 魂格再編の書を1冊使う(2026-10-21 社長「結晶で使った分は結晶にもどる仕様にしたい」)。
+//   ・振り分け(soulTraitLevels)を全部未使用へ戻す(buildMasuSoulTraitReset と同じ)
+//   ・結晶で足したボーナス魂格P(soulBonusPoints)の数だけ、魂格の結晶を持ち物へ戻し、ボーナスは0にする(0は保存しない)
+//     → この子の獲得済み魂格Pは初到達の分だけになり、戻った結晶はほかの子にも使える
+//   ・壊れた値(数でない・負)は normalizeSoulBonusPoints で0になるので、そのぶんは戻さない(キーは消す)
+//   ・振り分けが0でも、結晶のぶんがあれば使える(結晶を取り戻すため)
+// ★書の消費・結晶の戻り・個体の書き換えは、呼び出し側が mh_masu_mons と mh_owned_items を1つの取引で保存する。
+//   ボーナスを0にした個体と、結晶を足した持ち物を同時に書くので、もう一度使っても二重には戻らない
+const buildSoulTraitRespec = (masu, ownedItems) => {
+  const before = ownedItems && typeof ownedItems === 'object' && !Array.isArray(ownedItems) ? ownedItems : {};
+  if (!masu || typeof masu !== 'object') return { ok:false, reason:'noMasu' };
+  const normalized = normalizeMasuProgression(masu);
+  const refundedPoints = soulTraitSpentPoints(normalized);
+  const refundedCrystals = normalizeSoulBonusPoints(masu.soulBonusPoints);
+  if (refundedPoints <= 0 && refundedCrystals <= 0) return { ok:false, reason:'nothing' };
+  const scrollHave = ownedItemCount(before, SOUL_RANK_RESPEC_ITEM_ID);
+  if (scrollHave <= 0) return { ok:false, reason:'noScroll' };
+  const { soulBonusPoints: _dropBonus, ...rest } = normalized;
+  const nextItems = { ...before, [SOUL_RANK_RESPEC_ITEM_ID]:scrollHave - 1 };
+  if (refundedCrystals > 0) nextItems[SOUL_CRYSTAL_ITEM_ID] = ownedItemCount(before, SOUL_CRYSTAL_ITEM_ID) + refundedCrystals;
+  return { ok:true, refundedPoints, refundedCrystals, nextMasu:{ ...rest, soulTraitLevels:{} }, ownedItems:nextItems };
+};
 const HERO_PROOF_CLEAR_REWARDS = Object.freeze({
   extreme:Object.freeze({ GOD:1, RAGNAROK:2, HELHEIM:3 }),
   speciesChallenge:Object.freeze({ GOD:1, RAGNAROK:2, HELHEIM:3 }),

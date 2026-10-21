@@ -54,6 +54,9 @@ check('M6 結果に、その難易度の満点に対する出来(満点の◯%)�
 check('M6 ランクの決め方は変えない(rhythmRankForScore のまま)', play.includes('rank=rhythmRankForScore(view.score)'));
 
 const html = fs.readFileSync(path.join(ROOT, 'monster-hero/index.html'), 'utf8');
+// 2026-10-21: #3222 のマージで index.html のこの3行が消えていた(生成物と同じく main 側を採ったため)。消えたら止める
+check('文の最後の1〜2字だけ落とさない CSS(画面全体 pretty・助手の吹き出し balance・演奏中は外す)が index.html にある',
+  html.includes('.mh-app { text-wrap: pretty; }') && html.includes('.mh-app [data-bubble-text] { text-wrap: balance; }') && html.includes('[data-rhythm-play-area], [data-rhythm-play-area] * { text-wrap: wrap; }'));
 const assistant = P('21-assistant.jsx');
 check('M7 HOME: 幅360未満で吹き出しの文を2行まで', assistant.includes('<span data-bubble-text ') && html.includes('@media (max-width: 359px) { .mh-home-assistant [data-bubble-text] { display: -webkit-box; -webkit-line-clamp: 2;'));
 
