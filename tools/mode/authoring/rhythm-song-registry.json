@@ -886,6 +886,20 @@
     "subdivisionsPerBeat": 4,
     "source": "command"
    }
+  },
+  "black_shout": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-black-shout.mp3",
+   "chartRevision": 32,
+   "audioSha256": "03a627c682deaebcb6e23dc196b3882fc0f89190abdfc36de50295b420b7a5aa",
+   "durationMs": 109188,
+   "analyzedTiming": {
+    "bpm": 185.07,
+    "beatZeroMs": 2285.8,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
   }
  }
 }

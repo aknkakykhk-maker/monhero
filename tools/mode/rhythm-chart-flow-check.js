@@ -5,7 +5,7 @@
 //
 // ① 既定は切: 指定も曲の一覧の flowPlacement も無ければ、--no-flow を付けたときと1バイトも同じ譜面になる(公開中の曲は作り直さない・⑩-2)
 // ② --flow を付けると効く(同じ曲で譜面が変わり、流れの割合が下がらない)
-// ③ いまの曲の一覧(rhythm-song-registry.json)に flowPlacement を書いた公開曲は無い(書くのは新曲だけ)
+// ③ 曲の一覧(rhythm-song-registry.json)で、流れの配置より前(Rev.31 以下)の曲に flowPlacement を書いていない(書くのは新曲だけ)
 // ④ 数え方は rhythm-chart-flow-report.js と生成器で同じ区切り(半拍以内・1.6レーン・3.5レーン)
 'use strict';
 const fs=require('fs'),path=require('path');
@@ -21,9 +21,11 @@ const registry=JSON.parse(fs.readFileSync(path.join(__dirname,'authoring','rhyth
 const songs=registry&&registry.songs&&typeof registry.songs==='object'?registry.songs:{};
 const flagged=Object.entries(songs).filter(([,e])=>e&&e.flowPlacement===true).map(([id])=>id);
 ok('曲の一覧を読めた',Object.keys(songs).length>10,`${Object.keys(songs).length}曲`);
-const {RELEASED_TRACKS}=require('./rhythm-runtime-notes.js');
-const released=new Set(Object.values(RELEASED_TRACKS));
-ok('公開中の曲には flowPlacement を書いていない(書くのは新曲だけ)',flagged.filter(id=>released.has(id)).length===0,flagged.join(' ')||'なし');
+// 流れの配置より前の曲 = Rev.31 以下で作った曲(2026-10-21 に流れの配置を足したとき、公開中の曲はどれも Rev.31 以下だった)。
+// 新曲は Rev.32 以上で作るので、公開したあともここには入らない
+const FLOW_FIRST_REVISION=32;
+const older=new Set(Object.entries(songs).filter(([,e])=>!(Number(e&&e.chartRevision)>=FLOW_FIRST_REVISION)).map(([id])=>id));
+ok('前からある曲(Rev.31 以下)には flowPlacement を書いていない(書くのは新曲だけ)',flagged.filter(id=>older.has(id)).length===0,flagged.join(' ')||'なし');
 // ①② 実際に作って比べる(短い曲の HARD・書き込みなし)
 const track='toriko',diff='HARD';
 const plain=generate(track,diff,0,false);

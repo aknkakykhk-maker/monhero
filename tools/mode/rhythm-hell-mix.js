@@ -44,6 +44,8 @@ const SONGS={sheriruth:{marker:'sheriruth-v3',zero:711.6-2594.75,beat:324.342,le
   // SAD SONG(2026-10-18 社長「SAD SONG フル、ショート」)。拍は解析ファイル(authoring/sad-song-v3-audio.json の timing。全編と short は同じ格子)
   sad_song:{marker:'sad-song-v3',zero:99.5,beat:348.818,levelRe:/const sadSongHellChart=mhChart\((\d+),/,source:'audio',variant:2,crosses:'auto',crossUpper:'mover',crossDepth:-1},
   sad_song_short:{marker:'sad-song-short-v3',zero:99.5,beat:348.818,levelRe:/const sadSongShortHellChart=mhChart\((\d+),/,source:'audio',variant:3,crosses:'auto',crossUpper:'mover',crossDepth:-1},
+  // BLACK SHOUT(Roselia・2026-10-21 社長「譜面の新しい作り方で新曲作って」・手の流れを狙う配置 flowPlacement)。拍は解析ファイル(authoring/black-shout-v3-audio.json の timing)
+  black_shout:{marker:'black-shout-v3',zero:2285.8,beat:324.2017,levelRe:/const blackShoutHellChart=mhChart\((\d+),/,source:'audio',variant:2,crosses:'auto',crossUpper:'mover',crossDepth:-1},
   // Toward the Stars, Paradise or Truth short ver.(hitoyakyuko・2026-10-19・新曲は基本 HELL あり)
   // 全曲ヘル(2026-10-21 社長「全曲ヘルを実装して」)。marker・track は rhythm-runtime-notes.js の RELEASED_MARKERS・RELEASED_TRACKS、拍の頭と1拍は解析の timing
   mf_ichika_mix:{marker:'atsu-cup-theme-v3',track:'atsu_cup_theme',zero:40,beat:355.0296,levelRe:/const mfIchikaMixHellChart=mhChart\((\d+),/,source:'audio',variant:2,crosses:'auto',crossUpper:'mover',crossDepth:-1},

@@ -218,6 +218,7 @@ const RELEASED_MARKERS=Object.freeze({
   sad_song:'sad-song-v3',
   sad_song_short:'sad-song-short-v3',
   toward_the_stars_short:'toward-the-stars-short-v3',
+  black_shout:'black-shout-v3',
 });
 
 // 曲id → 音源の一覧(tools/mode/authoring/rhythm-song-registry.json)のid。
@@ -269,6 +270,7 @@ const RELEASED_TRACKS=Object.freeze({
   sad_song:'sad_song',
   sad_song_short:'sad_song_short',
   toward_the_stars_short:'toward_the_stars_short',
+  black_shout:'black_shout',
 });
 
 module.exports={SLIDE_EASE_CODES,FLICK_DIR_CODES,heldSpan,HOLD_SHIFT_SUB,ROOT,RUNTIME,FINGER_GAP_SUB,loadRuntime,makeSpanAt,usableSpan,maxSeparation,

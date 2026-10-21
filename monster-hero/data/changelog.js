@@ -35,6 +35,19 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    // 2026-10-21 社長の依頼(窓口経由・mp4 とジャケット)「譜面の新しい作り方で新曲作って」。最初に届いた音源が別の曲だったので取り下げ(#3253)、正しい音源で作り直した。難易度は社長が自動のままと決めた
+    date: "2026-10-21 22:17", type:'update', title:'モンヒロビート：新曲「BLACK SHOUT」を追加しました', status:'new',
+    image: 'images/song-art/black-shout.jpg?v=2b22abc63755',
+    items:[
+      'モンヒロビートに、Roselia の「BLACK SHOUT」（1分49秒）を追加しました。曲えらびからすぐ遊べます。',
+      '指が流れるように動ける並びを大事にした譜面です。階段のように隣へ移ったり、左右の手で交互に叩いたりする所が多くなっています。',
+      'EASY から MASTER までに加えて、空中のノーツが出る HELL があります。HELL は MASTER をクリアすると開きます。',
+      'レベルは EASY Lv.8 ／ NORMAL Lv.12 ／ HARD Lv.18 ／ EXPERT Lv.24 ／ MASTER Lv.33 ／ HELL Lv.61 です。',
+      'ノーツ数は 204 ／ 238 ／ 325 ／ 399 ／ 445 ／ 512 です。',
+    ],
+    assistantNotice: { id:'update_notice_black_shout_v1', type:'content' },
+  },
+  {
     date: "2026-10-21 20:18", type:'update', group:'rhythm', title:'モンヒロビート：曲えらびで HELL のレベルが目立つようになりました', status:'new',
     items:[
       '曲えらびの難易度のボタンで、HELL のレベルを赤く大きく出すようにしました。HELL は MASTER を1回クリアすると開きますが、曲によって MASTER とのレベルの差が大きく違います。',

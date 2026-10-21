@@ -226,6 +226,11 @@
   "toward_the_stars_short/hard": "afe02bc39240db70",
   "toward_the_stars_short/expert": "178a932c31f42eb8",
   "toward_the_stars_short/master": "95c9471b49f7b83f",
+  "black_shout/easy": "f8bd087550031ca1",
+  "black_shout/normal": "67fa46b040b849a4",
+  "black_shout/hard": "f6f8ff6e8fc7aa19",
+  "black_shout/expert": "75af6ec0c6a8fe85",
+  "black_shout/master": "dd82a6d2dfd4f0f6",
   "mf_ichika_mix/hell": "ee2cc9472e9e2a9c",
   "monster_hero/hell": "8a7beda69c136fe6",
   "monster_hero_another/hell": "7ba7608212c0ccc1",
@@ -270,7 +275,8 @@
   "rose_short/hell": "6cf119bc1937d7ea",
   "sad_song/hell": "2004f979cdecdbe1",
   "sad_song_short/hell": "a672d52b7ee7ff88",
-  "toward_the_stars_short/hell": "1f46ea8aa7294349"
+  "toward_the_stars_short/hell": "1f46ea8aa7294349",
+  "black_shout/hell": "ba210781df50e3dd"
  },
  "history": [
   {
@@ -432,6 +438,30 @@
    "changed": [
     "stay_with_me/hell",
     "the_city_beneath_the_comets/hell"
+   ]
+  },
+  {
+   "at": "2026-10-21 21:15",
+   "reason": "新曲 BLACK SHOUT を公開",
+   "changed": [
+    "black_shout/easy",
+    "black_shout/normal",
+    "black_shout/hard",
+    "black_shout/expert",
+    "black_shout/master",
+    "black_shout/hell"
+   ]
+  },
+  {
+   "at": "2026-10-21 22:17",
+   "reason": "BLACK SHOUT を正しい音源で作り直す",
+   "changed": [
+    "black_shout/easy",
+    "black_shout/normal",
+    "black_shout/hard",
+    "black_shout/expert",
+    "black_shout/master",
+    "black_shout/hell"
    ]
   }
  ]
