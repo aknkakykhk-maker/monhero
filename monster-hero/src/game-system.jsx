@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1f5e84bbbe4feef2
+// generated-sha256: b9280e3a37acd00d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-21 12:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-21 12:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2136,6 +2136,28 @@ const buildSoulCrystalUse = (masu, ownedItems, quantity = 1) => {
     nextMasu:{ ...masu, soulBonusPoints:bonusBefore + count },
     ownedItems:{ ...before, [SOUL_CRYSTAL_ITEM_ID]:have - count },
   };
+};
+// 魂格再編の書を1冊使う(2026-10-21 社長「結晶で使った分は結晶にもどる仕様にしたい」)。
+//   ・振り分け(soulTraitLevels)を全部未使用へ戻す(buildMasuSoulTraitReset と同じ)
+//   ・結晶で足したボーナス魂格P(soulBonusPoints)の数だけ、魂格の結晶を持ち物へ戻し、ボーナスは0にする(0は保存しない)
+//     → この子の獲得済み魂格Pは初到達の分だけになり、戻った結晶はほかの子にも使える
+//   ・壊れた値(数でない・負)は normalizeSoulBonusPoints で0になるので、そのぶんは戻さない(キーは消す)
+//   ・振り分けが0でも、結晶のぶんがあれば使える(結晶を取り戻すため)
+// ★書の消費・結晶の戻り・個体の書き換えは、呼び出し側が mh_masu_mons と mh_owned_items を1つの取引で保存する。
+//   ボーナスを0にした個体と、結晶を足した持ち物を同時に書くので、もう一度使っても二重には戻らない
+const buildSoulTraitRespec = (masu, ownedItems) => {
+  const before = ownedItems && typeof ownedItems === 'object' && !Array.isArray(ownedItems) ? ownedItems : {};
+  if (!masu || typeof masu !== 'object') return { ok:false, reason:'noMasu' };
+  const normalized = normalizeMasuProgression(masu);
+  const refundedPoints = soulTraitSpentPoints(normalized);
+  const refundedCrystals = normalizeSoulBonusPoints(masu.soulBonusPoints);
+  if (refundedPoints <= 0 && refundedCrystals <= 0) return { ok:false, reason:'nothing' };
+  const scrollHave = ownedItemCount(before, SOUL_RANK_RESPEC_ITEM_ID);
+  if (scrollHave <= 0) return { ok:false, reason:'noScroll' };
+  const { soulBonusPoints: _dropBonus, ...rest } = normalized;
+  const nextItems = { ...before, [SOUL_RANK_RESPEC_ITEM_ID]:scrollHave - 1 };
+  if (refundedCrystals > 0) nextItems[SOUL_CRYSTAL_ITEM_ID] = ownedItemCount(before, SOUL_CRYSTAL_ITEM_ID) + refundedCrystals;
+  return { ok:true, refundedPoints, refundedCrystals, nextMasu:{ ...rest, soulTraitLevels:{} }, ownedItems:nextItems };
 };
 const HERO_PROOF_CLEAR_REWARDS = Object.freeze({
   extreme:Object.freeze({ GOD:1, RAGNAROK:2, HELHEIM:3 }),
@@ -32664,33 +32686,36 @@ function ProfileScreen({
             const base=favoriteMasu?ALL_PLAYER_MONSTERS[favoriteMasu.baseId]:null;
             const face=base?friendsFaceIconOf(favoriteMasu.baseId):null;
             const showFriendTiles=onboarded&&!onboardingPreview&&friendsEnabled;
-            const tile='flex min-h-[56px] items-center gap-2 rounded-xl border border-white/10 bg-slate-800/80 px-2.5 py-2 text-left active:scale-95';
+            // 幅360未満は、余白と絵を詰めて値の字を1段小さくし、「書いていません」「えらびなおす」が言葉の途中で折れずに入るようにする(2026-10-21)
+            const tile='flex min-h-[56px] items-center gap-2 rounded-xl border border-white/10 bg-slate-800/80 px-2.5 py-2 text-left active:scale-95 max-[359px]:gap-1.5 max-[359px]:px-2';
             return (
             <div className="mt-3 grid grid-cols-2 gap-2" data-profile-settings>
+              {/* 札の折り目は手で決める(<wbr/>)。言葉の切れ目の道具は「書い|て|い|ませ|ん」と細かく切るので、jaWrap だと「まだ書い／ていません」と折れた。
+                  「えらびなおす」は truncate だと幅320で「えらびな…」と切れて読めなかったので、2行にする(2026-10-21 窓口) */}
               <button type="button" data-profile-tile="icon" onClick={onOpenIconPicker} className={tile}>
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl" aria-hidden="true">🖼️</span>
-                <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-indigo-300">アイコン</small><b className="block truncate text-[11px] font-black text-white">えらびなおす</b></span>
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl max-[359px]:h-6 max-[359px]:w-6 max-[359px]:text-base" aria-hidden="true">🖼️</span>
+                <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-indigo-300">アイコン</small><b className="block text-[11px] max-[359px]:text-[10px] font-black leading-tight text-white" style={JA_LABEL_STYLE}>えらび<wbr/>なおす</b></span>
               </button>
               <button type="button" data-profile-tile="frame" onClick={onOpenFramePicker} className={tile}>
-                <Sparkles size={18} className="mx-1.5 shrink-0 text-amber-300"/>
-                <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-amber-300">フレーム</small><b className="block break-words text-[11px] font-black leading-tight text-white">{frameName}</b></span>
+                <Sparkles size={18} className="mx-1.5 shrink-0 text-amber-300 max-[359px]:mx-0.5"/>
+                <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-amber-300">フレーム</small><b className="block break-words text-[11px] max-[359px]:text-[10px] font-black leading-tight text-white">{frameName}</b></span>
               </button>
               {costumeEnabled&&onOpenCostumePicker&&(
                 <button type="button" data-profile-tile="costume" onClick={onOpenCostumePicker} className={tile}>
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl" aria-hidden="true">👗</span>
-                  <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300">着替え</small><b className="block break-words text-[11px] font-black leading-tight text-white">{wornCostume?wornCostume.name:'元の服'}</b></span>
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl max-[359px]:h-6 max-[359px]:w-6 max-[359px]:text-base" aria-hidden="true">👗</span>
+                  <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300">着替え</small><b className="block break-words text-[11px] max-[359px]:text-[10px] font-black leading-tight text-white">{wornCostume?wornCostume.name:'元の服'}</b></span>
                 </button>
               )}
               {showFriendTiles&&(
                 <button type="button" data-profile-message onClick={onOpenMessageEditor} className={tile}>
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl" aria-hidden="true">💬</span>
-                  <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300">ひとこと</small><b className="block text-[11px] font-black leading-tight text-white" style={JA_LABEL_STYLE}>{profileMessage||jaWrap('まだ書いていません')}</b></span>
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl max-[359px]:h-6 max-[359px]:w-6 max-[359px]:text-base" aria-hidden="true">💬</span>
+                  <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300">ひとこと</small><b className="block text-[11px] max-[359px]:text-[10px] font-black leading-tight text-white" style={JA_LABEL_STYLE}>{profileMessage||<>まだ<wbr/>書いていません</>}</b></span>
                 </button>
               )}
               {showFriendTiles&&(
                 <button type="button" data-profile-favorite-masu onClick={onOpenFavoritePicker} className={tile}>
-                  {face?<ProfileAvatar src={face.src} id={face.id} className="h-8 w-8 shrink-0"/>:<span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl" aria-hidden="true">💗</span>}
-                  <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300" style={JA_LABEL_STYLE}>{jaWrap('好きなモンスター')}</small><b className="block text-[11px] font-black leading-tight text-white" style={JA_LABEL_STYLE}>{base?`${base.name}（絆Lv.${masuBondLevelInfo(favoriteMasu).level}）`:jaWrap('まだ選んでいません')}</b></span>
+                  {face?<ProfileAvatar src={face.src} id={face.id} className="h-8 w-8 shrink-0 max-[359px]:h-6 max-[359px]:w-6"/>:<span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl max-[359px]:h-6 max-[359px]:w-6 max-[359px]:text-base" aria-hidden="true">💗</span>}
+                  <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300" style={JA_LABEL_STYLE}>{jaWrap('好きなモンスター')}</small><b className="block text-[11px] max-[359px]:text-[10px] font-black leading-tight text-white" style={JA_LABEL_STYLE}>{base?`${base.name}（絆Lv.${masuBondLevelInfo(favoriteMasu).level}）`:<>まだ<wbr/>選んでいません</>}</b></span>
                 </button>
               )}
             </div>);
@@ -35377,7 +35402,7 @@ function MasuSoulTraitsScreen({
           </div>
           <div className="flex items-center gap-2">
             <div className="min-w-0 flex-1 rounded-xl border border-white/10 bg-slate-900 px-3 py-2"><div className="text-[10px] font-black text-slate-400">魂格再編の書</div><div className={`text-[11px] font-black ${scrollHave>0?'text-cyan-300':'text-slate-400'}`}>所持 {scrollHave}冊</div></div>
-            <button type="button" data-soul-trait-respec-open disabled={spent<=0||scrollHave<=0||soulTraitProcessingRef.current} onClick={()=>{setSoulTraitError('');setSoulTraitRespecOpen(true);}} className="min-h-[48px] shrink-0 rounded-xl bg-cyan-700 px-4 text-[11px] font-black text-white active:scale-95 disabled:opacity-30">全リセット</button>
+            <button type="button" data-soul-trait-respec-open disabled={(spent<=0&&bonusPoints<=0)||scrollHave<=0||soulTraitProcessingRef.current} onClick={()=>{setSoulTraitError('');setSoulTraitRespecOpen(true);}} className="min-h-[48px] shrink-0 rounded-xl bg-cyan-700 px-4 text-[11px] font-black text-white active:scale-95 disabled:opacity-30">全リセット</button>
           </div>
         </div>
         {soulTraitError&&<div className="shrink-0 mt-1 text-center text-[11px] font-black text-red-400">{soulTraitError}</div>}
@@ -35427,8 +35452,12 @@ function MasuSoulTraitsScreen({
         {soulTraitRespecOpen&&<div className="fixed inset-0 z-[32100] flex items-center justify-center bg-black/80 p-4" role="dialog" aria-modal="true" aria-label="魂格特性の全リセット確認">
           <div data-soul-trait-respec-sheet className="w-full max-w-sm rounded-2xl border-2 border-cyan-500/60 bg-slate-950 p-5">
             <div className="text-center text-xl mb-1">🌀</div><h3 className="text-center text-base font-black text-cyan-200">魂格特性を全リセット</h3>
-            <p className="mt-2 text-[10px] font-bold leading-relaxed text-slate-300">「{masu.name}」が使用した魂格P <b className="text-amber-300">{spent}P</b> をすべて未使用へ戻します。魂格段階・Lv・最高初到達Lvは変わりません。</p>
+            <p className="mt-2 text-[10px] font-bold leading-relaxed text-slate-300">{spent>0?<>「{masu.name}」が使用した魂格P <b className="text-amber-300">{spent}P</b> をすべて未使用へ戻します。</>:<>「{masu.name}」は、魂格特性にはまだ振っていません。</>}魂格段階・Lv・最高初到達Lvは変わりません。</p>
+            {/* 結晶で増やしたぶんは結晶として持ち物へ戻る(2026-10-21 社長「結晶で使った分は結晶にもどる仕様にしたい」)。0個のときは出さない */}
+            {bonusPoints>0&&<p data-soul-trait-respec-crystal={bonusPoints} className="mt-2 rounded-xl border border-fuchsia-400/40 bg-fuchsia-950/40 px-3 py-2 text-[10px] font-black leading-relaxed text-fuchsia-100">🔮 魂格の結晶 <b className="text-fuchsia-200">{bonusPoints}個</b> が持ち物に戻ります。結晶で増やした魂格P {bonusPoints}P はこの子から無くなり、戻った結晶はほかのマスモンにも使えます。</p>}
             <div className="mt-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[10px] font-black flex justify-between"><span className="text-slate-400">魂格再編の書</span><span className="text-cyan-300">{scrollHave} → {Math.max(0,scrollHave-1)}冊</span></div>
+            {bonusPoints>0&&<div className="mt-1 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[10px] font-black flex justify-between"><span className="text-slate-400">魂格の結晶</span><span className="text-fuchsia-300">{crystalHave} → {crystalHave+bonusPoints}個</span></div>}
+            {bonusPoints>0&&<div className="mt-1 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[10px] font-black flex justify-between"><span className="text-slate-400">この子の魂格P(獲得済み)</span><span className="text-amber-300">{earned} → {Math.max(0,earned-bonusPoints)}P</span></div>}
             <div className="mt-4 grid grid-cols-2 gap-2"><button type="button" disabled={soulTraitProcessingRef.current} onClick={()=>setSoulTraitRespecOpen(false)} className="mh-button mh-button-secondary min-h-[48px] rounded-xl bg-slate-700 text-[11px] font-black active:scale-95 disabled:opacity-30">やめる</button><button type="button" data-soul-trait-respec-confirm disabled={soulTraitProcessingRef.current} onClick={()=>commitSoulTraitRespec(masu.id)} className="mh-button mh-button-primary min-h-[48px] rounded-xl bg-cyan-600 text-slate-950 text-[11px] font-black active:scale-95 disabled:opacity-30">1冊使って再編</button></div>
           </div>
         </div>}
@@ -56632,20 +56661,19 @@ function MonsterHeroGame() {
       return null;
     } finally { soulTraitProcessingRef.current = false; }
   };
-  // 魂格再編の書1冊を使い、その個体の振り分けだけを全消去する。
-  // 魂格段階・Lv・XP・最高初到達LvはbuildMasuSoulTraitResetが保持し、
-  // mh_masu_mons / mh_owned_itemsを取引保存するので本だけ消える状態を作らない。
+  // 魂格再編の書1冊を使い、その個体の振り分けを全消去し、結晶で足したぶん(soulBonusPoints)を結晶として持ち物へ戻す(2026-10-21)。
+  // 魂格段階・Lv・XP・最高初到達LvはbuildSoulTraitRespecが保持し、
+  // mh_masu_mons / mh_owned_itemsを取引保存するので、本だけ消える・結晶だけ増える・ボーナスだけ消える状態を作らない。
   const commitSoulTraitRespec = async (masuId) => {
     if (soulTraitProcessingRef.current) return null;
     const beforeMasuMons = masuMonsRef.current;
     const beforeItems = ownedItemsRef.current;
     const masu = beforeMasuMons.find(m=>String(m.id)===String(masuId));
-    const reset = buildMasuSoulTraitReset(masu);
-    const scrollHave = ownedItemCount(beforeItems, SOUL_RANK_RESPEC_ITEM_ID);
-    if (!reset) { setSoulTraitError('リセットする魂格特性がありません。'); return null; }
-    if (scrollHave <= 0) { setSoulTraitError('魂格再編の書を所持していません。'); return null; }
+    const reset = buildSoulTraitRespec(masu, beforeItems);
+    if (!reset.ok && reset.reason==='noScroll') { setSoulTraitError('魂格再編の書を所持していません。'); return null; }
+    if (!reset.ok) { setSoulTraitError('リセットする魂格特性がありません。'); return null; }
     const nextMasuMons = beforeMasuMons.map(m=>String(m.id)===String(masuId)?reset.nextMasu:m);
-    const nextItems = { ...beforeItems, [SOUL_RANK_RESPEC_ITEM_ID]:scrollHave - 1 };
+    const nextItems = reset.ownedItems;
     soulTraitProcessingRef.current = true;
     setSoulTraitError('');
     try {
@@ -56665,7 +56693,7 @@ function MonsterHeroGame() {
       Audio_.se.levelUp();
       return reset;
     } catch {
-      setSoulTraitError('魂格再編を保存できませんでした。本と魂格Pは変更していません。');
+      setSoulTraitError('魂格再編を保存できませんでした。本・結晶・魂格Pは変更していません。');
       return null;
     } finally { soulTraitProcessingRef.current = false; }
   };

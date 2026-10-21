@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 30497531c0221252
+// source-sha256: d37ecd08c2f53e18
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-21 12:38";
+const BUILD_DATE = "2026-10-21 12:53";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -2092,6 +2092,44 @@ const buildSoulCrystalUse = (masu, ownedItems, quantity = 1) => {
       ...before,
       [SOUL_CRYSTAL_ITEM_ID]: have - count
     }
+  };
+};
+const buildSoulTraitRespec = (masu, ownedItems) => {
+  const before = ownedItems && typeof ownedItems === 'object' && !Array.isArray(ownedItems) ? ownedItems : {};
+  if (!masu || typeof masu !== 'object') return {
+    ok: false,
+    reason: 'noMasu'
+  };
+  const normalized = normalizeMasuProgression(masu);
+  const refundedPoints = soulTraitSpentPoints(normalized);
+  const refundedCrystals = normalizeSoulBonusPoints(masu.soulBonusPoints);
+  if (refundedPoints <= 0 && refundedCrystals <= 0) return {
+    ok: false,
+    reason: 'nothing'
+  };
+  const scrollHave = ownedItemCount(before, SOUL_RANK_RESPEC_ITEM_ID);
+  if (scrollHave <= 0) return {
+    ok: false,
+    reason: 'noScroll'
+  };
+  const {
+    soulBonusPoints: _dropBonus,
+    ...rest
+  } = normalized;
+  const nextItems = {
+    ...before,
+    [SOUL_RANK_RESPEC_ITEM_ID]: scrollHave - 1
+  };
+  if (refundedCrystals > 0) nextItems[SOUL_CRYSTAL_ITEM_ID] = ownedItemCount(before, SOUL_CRYSTAL_ITEM_ID) + refundedCrystals;
+  return {
+    ok: true,
+    refundedPoints,
+    refundedCrystals,
+    nextMasu: {
+      ...rest,
+      soulTraitLevels: {}
+    },
+    ownedItems: nextItems
   };
 };
 const HERO_PROOF_CLEAR_REWARDS = Object.freeze({
@@ -51953,7 +51991,7 @@ function ProfileScreen({
     const base = favoriteMasu ? ALL_PLAYER_MONSTERS[favoriteMasu.baseId] : null;
     const face = base ? friendsFaceIconOf(favoriteMasu.baseId) : null;
     const showFriendTiles = onboarded && !onboardingPreview && friendsEnabled;
-    const tile = 'flex min-h-[56px] items-center gap-2 rounded-xl border border-white/10 bg-slate-800/80 px-2.5 py-2 text-left active:scale-95';
+    const tile = 'flex min-h-[56px] items-center gap-2 rounded-xl border border-white/10 bg-slate-800/80 px-2.5 py-2 text-left active:scale-95 max-[359px]:gap-1.5 max-[359px]:px-2';
     return React.createElement("div", {
       className: "mt-3 grid grid-cols-2 gap-2",
       "data-profile-settings": true
@@ -51963,58 +52001,59 @@ function ProfileScreen({
       onClick: onOpenIconPicker,
       className: tile
     }, React.createElement("span", {
-      className: "flex h-8 w-8 shrink-0 items-center justify-center text-xl",
+      className: "flex h-8 w-8 shrink-0 items-center justify-center text-xl max-[359px]:h-6 max-[359px]:w-6 max-[359px]:text-base",
       "aria-hidden": "true"
     }, "🖼️"), React.createElement("span", {
       className: "min-w-0 flex-1"
     }, React.createElement("small", {
       className: "block text-[10px] font-black text-indigo-300"
     }, "アイコン"), React.createElement("b", {
-      className: "block truncate text-[11px] font-black text-white"
-    }, "えらびなおす"))), React.createElement("button", {
+      className: "block text-[11px] max-[359px]:text-[10px] font-black leading-tight text-white",
+      style: JA_LABEL_STYLE
+    }, "えらび", React.createElement("wbr", null), "なおす"))), React.createElement("button", {
       type: "button",
       "data-profile-tile": "frame",
       onClick: onOpenFramePicker,
       className: tile
     }, React.createElement(Sparkles, {
       size: 18,
-      className: "mx-1.5 shrink-0 text-amber-300"
+      className: "mx-1.5 shrink-0 text-amber-300 max-[359px]:mx-0.5"
     }), React.createElement("span", {
       className: "min-w-0 flex-1"
     }, React.createElement("small", {
       className: "block text-[10px] font-black text-amber-300"
     }, "フレーム"), React.createElement("b", {
-      className: "block break-words text-[11px] font-black leading-tight text-white"
+      className: "block break-words text-[11px] max-[359px]:text-[10px] font-black leading-tight text-white"
     }, frameName))), costumeEnabled && onOpenCostumePicker && React.createElement("button", {
       type: "button",
       "data-profile-tile": "costume",
       onClick: onOpenCostumePicker,
       className: tile
     }, React.createElement("span", {
-      className: "flex h-8 w-8 shrink-0 items-center justify-center text-xl",
+      className: "flex h-8 w-8 shrink-0 items-center justify-center text-xl max-[359px]:h-6 max-[359px]:w-6 max-[359px]:text-base",
       "aria-hidden": "true"
     }, "👗"), React.createElement("span", {
       className: "min-w-0 flex-1"
     }, React.createElement("small", {
       className: "block text-[10px] font-black text-pink-300"
     }, "着替え"), React.createElement("b", {
-      className: "block break-words text-[11px] font-black leading-tight text-white"
+      className: "block break-words text-[11px] max-[359px]:text-[10px] font-black leading-tight text-white"
     }, wornCostume ? wornCostume.name : '元の服'))), showFriendTiles && React.createElement("button", {
       type: "button",
       "data-profile-message": true,
       onClick: onOpenMessageEditor,
       className: tile
     }, React.createElement("span", {
-      className: "flex h-8 w-8 shrink-0 items-center justify-center text-xl",
+      className: "flex h-8 w-8 shrink-0 items-center justify-center text-xl max-[359px]:h-6 max-[359px]:w-6 max-[359px]:text-base",
       "aria-hidden": "true"
     }, "💬"), React.createElement("span", {
       className: "min-w-0 flex-1"
     }, React.createElement("small", {
       className: "block text-[10px] font-black text-pink-300"
     }, "ひとこと"), React.createElement("b", {
-      className: "block text-[11px] font-black leading-tight text-white",
+      className: "block text-[11px] max-[359px]:text-[10px] font-black leading-tight text-white",
       style: JA_LABEL_STYLE
-    }, profileMessage || jaWrap('まだ書いていません')))), showFriendTiles && React.createElement("button", {
+    }, profileMessage || React.createElement(React.Fragment, null, "まだ", React.createElement("wbr", null), "書いていません")))), showFriendTiles && React.createElement("button", {
       type: "button",
       "data-profile-favorite-masu": true,
       onClick: onOpenFavoritePicker,
@@ -52022,9 +52061,9 @@ function ProfileScreen({
     }, face ? React.createElement(ProfileAvatar, {
       src: face.src,
       id: face.id,
-      className: "h-8 w-8 shrink-0"
+      className: "h-8 w-8 shrink-0 max-[359px]:h-6 max-[359px]:w-6"
     }) : React.createElement("span", {
-      className: "flex h-8 w-8 shrink-0 items-center justify-center text-xl",
+      className: "flex h-8 w-8 shrink-0 items-center justify-center text-xl max-[359px]:h-6 max-[359px]:w-6 max-[359px]:text-base",
       "aria-hidden": "true"
     }, "💗"), React.createElement("span", {
       className: "min-w-0 flex-1"
@@ -52032,9 +52071,9 @@ function ProfileScreen({
       className: "block text-[10px] font-black text-pink-300",
       style: JA_LABEL_STYLE
     }, jaWrap('好きなモンスター')), React.createElement("b", {
-      className: "block text-[11px] font-black leading-tight text-white",
+      className: "block text-[11px] max-[359px]:text-[10px] font-black leading-tight text-white",
       style: JA_LABEL_STYLE
-    }, base ? `${base.name}（絆Lv.${masuBondLevelInfo(favoriteMasu).level}）` : jaWrap('まだ選んでいません')))));
+    }, base ? `${base.name}（絆Lv.${masuBondLevelInfo(favoriteMasu).level}）` : React.createElement(React.Fragment, null, "まだ", React.createElement("wbr", null), "選んでいません")))));
   })()), React.createElement("div", {
     className: "mb-3 grid grid-cols-3 gap-2",
     "data-profile-stats": true
@@ -57222,7 +57261,7 @@ function MasuSoulTraitsScreen({
   }, "所持 ", scrollHave, "冊")), React.createElement("button", {
     type: "button",
     "data-soul-trait-respec-open": true,
-    disabled: spent <= 0 || scrollHave <= 0 || soulTraitProcessingRef.current,
+    disabled: spent <= 0 && bonusPoints <= 0 || scrollHave <= 0 || soulTraitProcessingRef.current,
     onClick: () => {
       setSoulTraitError('');
       setSoulTraitRespecOpen(true);
@@ -57427,15 +57466,32 @@ function MasuSoulTraitsScreen({
     className: "text-center text-base font-black text-cyan-200"
   }, "魂格特性を全リセット"), React.createElement("p", {
     className: "mt-2 text-[10px] font-bold leading-relaxed text-slate-300"
-  }, "「", masu.name, "」が使用した魂格P ", React.createElement("b", {
+  }, spent > 0 ? React.createElement(React.Fragment, null, "「", masu.name, "」が使用した魂格P ", React.createElement("b", {
     className: "text-amber-300"
-  }, spent, "P"), " をすべて未使用へ戻します。魂格段階・Lv・最高初到達Lvは変わりません。"), React.createElement("div", {
+  }, spent, "P"), " をすべて未使用へ戻します。") : React.createElement(React.Fragment, null, "「", masu.name, "」は、魂格特性にはまだ振っていません。"), "魂格段階・Lv・最高初到達Lvは変わりません。"), bonusPoints > 0 && React.createElement("p", {
+    "data-soul-trait-respec-crystal": bonusPoints,
+    className: "mt-2 rounded-xl border border-fuchsia-400/40 bg-fuchsia-950/40 px-3 py-2 text-[10px] font-black leading-relaxed text-fuchsia-100"
+  }, "🔮 魂格の結晶 ", React.createElement("b", {
+    className: "text-fuchsia-200"
+  }, bonusPoints, "個"), " が持ち物に戻ります。結晶で増やした魂格P ", bonusPoints, "P はこの子から無くなり、戻った結晶はほかのマスモンにも使えます。"), React.createElement("div", {
     className: "mt-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[10px] font-black flex justify-between"
   }, React.createElement("span", {
     className: "text-slate-400"
   }, "魂格再編の書"), React.createElement("span", {
     className: "text-cyan-300"
-  }, scrollHave, " → ", Math.max(0, scrollHave - 1), "冊")), React.createElement("div", {
+  }, scrollHave, " → ", Math.max(0, scrollHave - 1), "冊")), bonusPoints > 0 && React.createElement("div", {
+    className: "mt-1 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[10px] font-black flex justify-between"
+  }, React.createElement("span", {
+    className: "text-slate-400"
+  }, "魂格の結晶"), React.createElement("span", {
+    className: "text-fuchsia-300"
+  }, crystalHave, " → ", crystalHave + bonusPoints, "個")), bonusPoints > 0 && React.createElement("div", {
+    className: "mt-1 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[10px] font-black flex justify-between"
+  }, React.createElement("span", {
+    className: "text-slate-400"
+  }, "この子の魂格P(獲得済み)"), React.createElement("span", {
+    className: "text-amber-300"
+  }, earned, " → ", Math.max(0, earned - bonusPoints), "P")), React.createElement("div", {
     className: "mt-4 grid grid-cols-2 gap-2"
   }, React.createElement("button", {
     type: "button",
@@ -88337,21 +88393,17 @@ function MonsterHeroGame() {
     const beforeMasuMons = masuMonsRef.current;
     const beforeItems = ownedItemsRef.current;
     const masu = beforeMasuMons.find(m => String(m.id) === String(masuId));
-    const reset = buildMasuSoulTraitReset(masu);
-    const scrollHave = ownedItemCount(beforeItems, SOUL_RANK_RESPEC_ITEM_ID);
-    if (!reset) {
-      setSoulTraitError('リセットする魂格特性がありません。');
-      return null;
-    }
-    if (scrollHave <= 0) {
+    const reset = buildSoulTraitRespec(masu, beforeItems);
+    if (!reset.ok && reset.reason === 'noScroll') {
       setSoulTraitError('魂格再編の書を所持していません。');
       return null;
     }
+    if (!reset.ok) {
+      setSoulTraitError('リセットする魂格特性がありません。');
+      return null;
+    }
     const nextMasuMons = beforeMasuMons.map(m => String(m.id) === String(masuId) ? reset.nextMasu : m);
-    const nextItems = {
-      ...beforeItems,
-      [SOUL_RANK_RESPEC_ITEM_ID]: scrollHave - 1
-    };
+    const nextItems = reset.ownedItems;
     soulTraitProcessingRef.current = true;
     setSoulTraitError('');
     try {
@@ -88376,7 +88428,7 @@ function MonsterHeroGame() {
       Audio_.se.levelUp();
       return reset;
     } catch {
-      setSoulTraitError('魂格再編を保存できませんでした。本と魂格Pは変更していません。');
+      setSoulTraitError('魂格再編を保存できませんでした。本・結晶・魂格Pは変更していません。');
       return null;
     } finally {
       soulTraitProcessingRef.current = false;

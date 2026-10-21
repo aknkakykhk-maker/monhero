@@ -206,9 +206,33 @@ const make = () => {
   check('上限なし(何度使っても足される)', h.buildSoulCrystalUse(h.buildSoulCrystalUse(base, { soul_crystal: 500 }, 500).nextMasu, { soul_crystal: 500 }, 500).nextMasu.soulBonusPoints === 1000);
   const reborn = h.resetMasuForRebirth(used.nextMasu);
   check('転生でボーナス分は残る', reborn && reborn.soulBonusPoints === 10, JSON.stringify(reborn && reborn.soulBonusPoints));
-  const spentMasu = h.normalizeMasuProgression({ ...used.nextMasu, soulTraitLevels: { attack_power: 3 } });
-  const reset = h.buildMasuSoulTraitReset(spentMasu);
-  check('魂格再編の書でも、ボーナス分は消えない', !reset || reset.nextMasu.soulBonusPoints === 10);
+  // allDamage(闘魂)は1段5P。3段で15Pを振ってある子
+  const spentMasu = h.normalizeMasuProgression({ ...used.nextMasu, soulTraitLevels: { allDamage: 3 } });
+  // 2026-10-21 から、魂格再編の書は結晶で足したぶんを結晶として持ち物へ戻す(社長「結晶で使った分は結晶にもどる仕様にしたい」)
+  const bag = { soul_rank_respec_scroll: 2, soul_crystal: 15, keep: 3 };
+  const respec = h.buildSoulTraitRespec(spentMasu, bag);
+  check('再編の書: 振り分けを戻し、結晶10個が持ち物へ戻る(15→25)・書は2→1・ほかは変えない',
+    respec.ok && respec.refundedPoints === 15 && respec.refundedCrystals === 10 && respec.ownedItems.soul_crystal === 25 && respec.ownedItems.soul_rank_respec_scroll === 1 && respec.ownedItems.keep === 3 && Object.keys(respec.nextMasu.soulTraitLevels).length === 0, JSON.stringify(respec.ownedItems));
+  check('再編の書: この子のボーナスは0になり(保存しない)、獲得済み魂格Pは初到達の分だけ(100)',
+    respec.ok && !('soulBonusPoints' in respec.nextMasu) && h.soulPointEarned(respec.nextMasu) === 100 && !('soulBonusPoints' in h.normalizeMasuProgression(respec.nextMasu)));
+  check('再編の書: 入力は壊さない', bag.soul_crystal === 15 && bag.soul_rank_respec_scroll === 2 && spentMasu.soulBonusPoints === 10);
+  const again = h.buildSoulTraitRespec(respec.nextMasu, respec.ownedItems);
+  check('再編の書: もう一度使っても結晶は二重に戻らない(戻すものが無いので使えない)', !again.ok && again.reason === 'nothing');
+  const again2 = h.buildSoulTraitRespec({ ...respec.nextMasu, soulTraitLevels: { allDamage: 1 } }, respec.ownedItems);
+  check('再編の書: 振り直したあとにもう一度使っても、結晶は増えない', again2.ok && again2.refundedCrystals === 0 && again2.ownedItems.soul_crystal === 25 && again2.ownedItems.soul_rank_respec_scroll === 0);
+  const bonusOnly = h.buildSoulTraitRespec(used.nextMasu, { soul_rank_respec_scroll: 1 });
+  check('再編の書: 振り分けが0でも、結晶のぶんがあれば使えて結晶が戻る(所持0→10)', bonusOnly.ok && bonusOnly.refundedPoints === 0 && bonusOnly.refundedCrystals === 10 && bonusOnly.ownedItems.soul_crystal === 10 && bonusOnly.ownedItems.soul_rank_respec_scroll === 0);
+  const broken = ['abc', -5, NaN, null].map((v) => h.buildSoulTraitRespec({ ...spentMasu, soulBonusPoints: v }, { soul_rank_respec_scroll: 1, soul_crystal: 4 }));
+  check('再編の書: 壊れた値(数でない・負)は0として扱い、結晶は戻さない', broken.every((r) => r.ok && r.refundedPoints === 15 && r.refundedCrystals === 0 && r.ownedItems.soul_crystal === 4 && !('soulBonusPoints' in r.nextMasu)), JSON.stringify(broken.map((r) => r.ownedItems)));
+  const noScroll = h.buildSoulTraitRespec(spentMasu, { soul_crystal: 15 });
+  check('再編の書: 書が無ければ使えず、何も変えない', !noScroll.ok && noScroll.reason === 'noScroll' && !noScroll.ownedItems);
+  check('再編の書: 個体が無ければ使えない', !h.buildSoulTraitRespec(null, bag).ok);
+  // 画面: 書の消費・結晶の戻り・個体の書き換えを同じ取引(mh_masu_mons と mh_owned_items)で保存する。確認の窓に戻る個数を出す
+  const app = require('fs').readFileSync(require('path').join(__dirname, '..', '..', 'monster-hero/src/parts/60-app.jsx'), 'utf8');
+  const respecFn = app.slice(app.indexOf('const commitSoulTraitRespec = async'), app.indexOf('const commitSoulCrystalUse = async'));
+  check('画面: 書・結晶・個体を1つの取引で保存する', /buildSoulTraitRespec\(masu, beforeItems\)/.test(respecFn) && /const nextItems = reset\.ownedItems;/.test(respecFn) && /saveStoredValuesOrRollback\(\[\s*\{ key:'mh_masu_mons'[^\]]*\{ key:'mh_owned_items'/.test(respecFn));
+  const traitsScreen = require('fs').readFileSync(require('path').join(__dirname, '..', '..', 'monster-hero/src/parts/63-screen-masu-soul-traits.jsx'), 'utf8');
+  check('画面: 確認の窓に「結晶◯個が持ち物に戻ります」(0個のときは出さない)', /\{bonusPoints>0&&<p data-soul-trait-respec-crystal=\{bonusPoints\}/.test(traitsScreen) && /が持ち物に戻ります/.test(traitsScreen));
   check('結晶のアイテム定義(名前・使う場所)', h.SOUL_CRYSTAL_ITEM.name === '魂格の結晶' && h.SOUL_CRYSTAL_ITEM.usage === 'soulCrystal' && h.SOUL_CRYSTAL_ITEM_ID === 'soul_crystal');
 
   console.log(failed ? `\nNG ${failed}件` : '\nすべてOK');
