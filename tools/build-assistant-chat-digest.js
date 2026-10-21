@@ -54,6 +54,25 @@ const TERM_GROUPS = [
   { variants: ['M/B管理'], topic: 'home/roster' },
 ];
 
+// 味方モンスターの材料を、ゲームと同じデータから読む(画像の定数 → モンスター → 血統と図鑑の順に、1つの入れ物で読む)。
+// タイプの表は本体の parts(32-tactics-units.jsx)にあるので、その2つの表だけを切り出して読む
+const loadMonsters = () => {
+  const ctx = vm.createContext({ console, Math, Date, JSON, Object, Array, String, Number });
+  for (const f of ['images/images-ally.js', 'ally-monsters.js', 'lineages.js']) vm.runInContext(fs.readFileSync(path.join(DATA, f), 'utf8'), ctx, { filename: f });
+  const tactics = fs.readFileSync(path.join(PARTS, '32-tactics-units.jsx'), 'utf8');
+  const tableOf = (name) => { const i = tactics.indexOf(`const ${name} = {`); return i < 0 ? '{}' : tactics.slice(i + `const ${name} = `.length, tactics.indexOf('\n};', i) + 2); };
+  const out = vm.runInContext(`({ mons: ALL_PLAYER_MONSTERS, map: MONSTER_LINEAGE_MAP, lineages: MONSTER_LINEAGES, cats: MONSTER_CATEGORIES, dex: MONSTER_DEX_DESCRIPTIONS,
+    types: ${tableOf('MONSTER_TYPES')}, typeOf: ${tableOf('MONSTER_TYPE_OF')} })`, ctx);
+  return Object.values(out.mons || {}).filter(m => m && !m.debugOnly && m.name).map(m => {
+    const e = out.map[m.id] || {};
+    const main = out.lineages[e.main], sub = out.lineages[e.sub != null ? e.sub : e.main];
+    const category = !main || !sub ? '' : (main.rare || sub.rare) ? out.cats.rare.name : main.id === sub.id ? out.cats.pure.name : out.cats.derived.name;
+    const t = out.typeOf[m.id], tm = t && out.types[t.main], ts = t && t.sub && t.sub !== t.main && out.types[t.sub];
+    return { id: m.id, name: clean(m.name), lineage: main && sub ? `${main.name}×${sub.name}` : '(図鑑に書いていない)', category,
+      type: tm ? `${tm.label}${ts ? `(サブは${ts.label})` : ''}` : '', unique: clean(m.unique && m.unique.name), dex: clean(out.dex[m.id] || '') };
+  });
+};
+
 // ノーツの見た目の表を写すヘルプの項目(カテゴリid/項目id)。表(kv)の行をそのまま毎回渡す部分へ入れる
 const LOOK_TOPICS = ['rhythm/rhythm-note-types', 'rhythm/rhythm-hell'];
 
@@ -174,6 +193,16 @@ const buildDigest = () => {
   if (looks.length) {
     glossary.push('', 'ノーツの見た目(色・形)。本当なのはここに書いてあることだけ:', ...looks,
       '決まり: ノーツや画面の色・形・数字を聞かれたら、この表と渡されたヘルプの項目に書いてあることだけで答える。書いていない色・形・数字や、「難易度やテーマで色が変わる」のような書いていない仕組みは作らない。分からないところは「ヘルプの「ノーツの種類と取り方」(空のノーツは「難易度 HELL と空のノーツ」)を見てね」と案内する。');
+  }
+  // ---- 味方モンスターの表(2026-10-21 社長「モッチーってどんなモンスター？と聞かれたら、答えと一緒に公式の絵を見せる」) ----
+  // ゲームのデータ(ALL_PLAYER_MONSTERS・MONSTER_LINEAGE_MAP・MONSTER_DEX_DESCRIPTIONS・タイプの表)から機械で作る(書き写さない)。
+  // 入れるのは図鑑に並ぶモンスター(debugOnly でないもの)だけ。案の段階のモンスターは ALL_PLAYER_MONSTERS に入っていないので出ない。
+  // 能力の数字(ライフ・ちからなど)と敵のことは入れない。タイプは公開の印(tacticsHate)が立っているときだけ
+  const mons = loadMonsters();
+  if (mons.length) {
+    glossary.push('', '味方モンスター(図鑑に並んでいるもの)。名前・血統・タイプ・固有技・図鑑の説明は、ここに書いてあることだけが本当:',
+      ...mons.map(m => `・${m.name}: 血統は${m.lineage}(${m.category})${flags.tacticsHate === true && m.type ? `／タイプは${m.type}` : ''}／固有技は「${m.unique}」${m.dex ? `／図鑑: ${m.dex}` : ''}`),
+      '決まり: モンスターの見た目・色・性格・強さ・覚える技などを聞かれたら、この表と渡されたヘルプの項目に書いてあることだけで答える。書いていないことや、この表に無いモンスターは作らない。分からないところは「M/B管理のモンスター図鑑を見てね」と案内する。能力の数字や、出てくる敵の強さは話さない。');
   }
   const assistants = {};
   for (const x of a.ASSISTANTS || []) {
