@@ -62,8 +62,10 @@ export const normalizeRankingPlan = (plan) => {
 // ---- 名前 ----
 const NAMELESS = '名無しのブリーダー';
 // 名前の中の改行・かぎかっこ・山かっこは見た目の近い字へ置き換える(区切りを壊させない)。長さは20字まで
+const LINE_SEPS = new RegExp(`[${String.fromCharCode(0x2028, 0x2029)}]+`, 'g');
 export const safeName = (v) => {
-  const s = String(v == null ? '' : v).replace(/[\r\n\t\u2028\u2029]+/g, ' ').replace(/[「」]/g, '\'').replace(/[<>]/g, (c) => (c === '<' ? '＜' : '＞')).trim();
+  // 改行の仲間(U+2028・U+2029)は文字コードで書く(送るときに書き方が本物の改行に化けて式が壊れたため・2026-10-21)
+  const s = String(v == null ? '' : v).replace(/[\r\n\t]+/g, ' ').replace(LINE_SEPS, ' ').replace(/[「」]/g, '\'').replace(/[<>]/g, (c) => (c === '<' ? '＜' : '＞')).trim();
   return (s || NAMELESS).slice(0, 20);
 };
 const numText = (n) => (Number.isFinite(Number(n)) ? Number(n).toLocaleString('ja-JP') : '-');
@@ -117,7 +119,7 @@ export const bondEntriesFromRows = (rows, kind) => {
   const seen = new Set();
   return list.filter(r => {
     const id = r.breeder_id || bridge.get(r.user_name) || null;
-    const key = `${id ? `id:${id}` : `name:${r.user_name}`}\u0000${r.monster_id || r.mon_name || ''}`;
+    const key = `${id ? `id:${id}` : `name:${r.user_name}`}${String.fromCharCode(0)}${r.monster_id || r.mon_name || ''}`;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
