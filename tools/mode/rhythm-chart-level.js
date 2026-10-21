@@ -138,9 +138,7 @@ const LEVEL_V1_SONGS=Object.freeze(new Set([
   'stay_with_me_short', 'kiki_issen_short', 'crazy_party_night', 'crazy_party_night_full', 'emerald_rush', 'wrath_of_the_thorn_king',
   'monster', 'monster_short', 'anima', 'journey', 'sheriruth', 'grievous_lady',
   'against_my_own_shadow', 'rose', 'rose_short', 'sad_song', 'sad_song_short', 'toward_the_stars_short',
-  'atsu_cup_theme_debug_short', 'sheriruth_proto', 'sheriruth_hell_debug', 'sheriruth_stop_ref', 'sheriruth_stop_ref_trim', 'against_my_own_shadow_hell_debug',
-  'kaze_ga_soyogu_hell_debug',
-  'grievous_lady_hell'
+  'atsu_cup_theme_debug_short', 'sheriruth_proto', 'sheriruth_stop_ref', 'sheriruth_stop_ref_trim'
 ]));
 // --- さらに新しい測り方(v3・2026-10-21 社長「地上と空中が近辺で入り混じってるのがあるけどこれかなり難易度高いから難易度もっと重く見てほしい」
 //     「空中地上は基本は指を離した位置に置くのが基本」「見分けづらいってのが相当難易度高いんだよ」) ---
@@ -404,16 +402,13 @@ const LEVEL_OVERRIDES=Object.freeze({
   // 2026-10-13 社長「(HELL の Lv. は)今後作るものは測る形で。今あるものは変えなくていい」: 空中を測る新しい式に変えても、
   // 公開中の HELL 3曲(と古い試作の Sheriruth)の表示は前の式(空中を地上と見なした Lv. の 1.2倍)の値のまま。
   // 新しい式の値は検査(rhythm-chart-level-check.js)で並べて出る。これから作る HELL は書かない(新しい式の値が出る)
-  sheriruth_hell_debug:Object.freeze({HELL:61}),
-  grievous_lady_hell:Object.freeze({MASTER:69}),
-  kaze_ga_soyogu_hell_debug:Object.freeze({HELL:22}),
   // Against My Own Shadow の HELL は新しい式で測った値(社長の体感42)。公開したので表示を固定する(2026-10-13)
-  against_my_own_shadow_hell_debug:Object.freeze({HELL:51}),
   sheriruth_proto:Object.freeze({MASTER:47}),
   // 2026-10-20 社長「この曲のヘルは難易度57はある」「ローズとさっどそんぐも変えといて」: 新しい測り方(v2)の値を表示にする(譜面は1音も変えない)。
   // 前の測り方では Toward 46・ROSE 45・ROSE short 44・SAD SONG 34・SAD SONG short 35。ほかの公開中の HELL は前の値のまま
   // 2026-10-20 夕方 社長の決定(改善部の指摘 L1): 残りの公開中の HELL 4曲(上の Sheriruth・Grievous Lady・風がそよぐ場所・AMOS)も v2 の値にそろえた。
   //   前の値 Sheriruth 54・Grievous Lady 60・風がそよぐ場所 23・AMOS 42 → 61・69・22・51(風がそよぐ場所だけ1下がる)。これで公開中の HELL 9譜面がすべて v2 の値
+  // 2026-10-21 社長「4曲とも直す」: Sheriruth・Grievous Lady・風がそよぐ場所・Against My Own Shadow の HELL も見分けにくい所を0件に直し、固定(61・69・22・51)を外して v3 で測る(51・64・21・49)
   // 2026-10-21 社長「今の難易度にあわせて最近のヘルは全譜面見直したほうがいい」: Toward(short)・ROSE・ROSE(short)・SAD SONG・SAD SONG(short) の
   //   HELL を見分けにくい形なしで作り直し、上の固定(57・52・50・39・43)を外して v3 で測った値を出す(v1 の一覧からも外した)
 });
