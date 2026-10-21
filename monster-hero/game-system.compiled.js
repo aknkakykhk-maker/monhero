@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1f41f844e04abe04
+// source-sha256: c1428758b072d278
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-22 07:12";
+const BUILD_DATE = "2026-10-22 07:35";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -12065,6 +12065,7 @@ const RELEASE_FLAGS = {
   speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE,
   tactics: TACTICS_MODE_PUBLIC_RELEASE,
   rhythmHell: true,
+  battleLog: false,
   battleCardArt: true,
   assistantChat: true,
   assistantChatRanking: true,
@@ -28092,6 +28093,278 @@ const sbSendRhythmTouchDiag = async row => {
       } : {})
     });
     if (res.status === 404 || res.status === 401 || res.status === 403) rhythmTouchDiagDisabled = true;
+    return res.ok;
+  } catch {
+    return false;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+};
+const RAID_BATTLE_LOG_TABLE = 'raid_battle_logs';
+const BATTLE_LOG_SCHEMA_VERSION = 1;
+let raidBattleLogDisabled = false;
+const battleLogInt = (v, lo, hi) => {
+  const n = Math.floor(Number(v));
+  return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : null;
+};
+const battleLogId = v => typeof v === 'string' && /^[A-Za-z0-9_]{1,40}$/.test(v) ? v : null;
+const buildRaidBattleLogRow = input => {
+  const src = input && typeof input === 'object' ? input : {};
+  const rr = src.raid && typeof src.raid === 'object' ? src.raid : null;
+  if (!rr || rr.kind !== 'a' && rr.kind !== 'b') return null;
+  const eventId = typeof rr.event === 'string' && /^[A-Za-z0-9_-]{1,40}$/.test(rr.event) ? rr.event : null;
+  const tier = battleLogInt(rr.tier, 1, 10);
+  const source = rr.source === 'rhythm' ? 'rhythm' : 'battle';
+  const party = Array.isArray(src.party) ? src.party : [];
+  const heroSlot = party.find(p => p && p.role === 'hero') || party[0] || null;
+  const hero = heroSlot ? battleLogId(heroSlot.monsterId) : null;
+  if (!eventId || !tier || !hero && source !== 'rhythm') return null;
+  const allies = party.filter(p => p && p !== heroSlot).map(p => battleLogId(p.monsterId)).filter(Boolean).slice(0, 3);
+  const turns = battleLogInt(rr.turns, 0, 1000);
+  const units = {};
+  for (const [id, u] of Object.entries(src.units && typeof src.units === 'object' ? src.units : {})) {
+    if (!battleLogId(id) || !u || typeof u !== 'object') continue;
+    units[id] = {
+      dmg: battleLogInt(u.dmg, 0, 1e12) || 0,
+      ex: battleLogInt(u.ex, 0, 1000) || 0,
+      unique: battleLogInt(u.unique, 0, 1000) || 0,
+      taken: battleLogInt(u.taken, 0, 1e12) || 0
+    };
+  }
+  return {
+    event_id: eventId,
+    kind: rr.kind,
+    tier,
+    source,
+    result: rr.defeated === true ? 'defeated' : 'end',
+    damage: battleLogInt(rr.damage, 0, 1e12),
+    turns: turns && turns > 0 ? turns : null,
+    score: battleLogInt(src.score, 0, 1e15),
+    hero,
+    allies,
+    units,
+    app_build: (typeof BUILD_DATE === 'string' ? BUILD_DATE : '').slice(0, 32),
+    schema_version: BATTLE_LOG_SCHEMA_VERSION
+  };
+};
+const TACTICS_PRO_LOG_TABLE = 'tactics_pro_logs';
+const TACTICS_PRO_LOG_MAX_BYTES = 24000;
+const TACTICS_PRO_LOG_MAX_EVENTS = 400;
+const tpId = v => battleLogId(typeof v === 'string' ? v : v && (v.monsterId || v.id));
+const tpIds = (list, max = 10) => (Array.isArray(list) ? list : []).map(tpId).filter(Boolean).slice(0, max);
+const tacticsProLogStart = ({
+  difficulty,
+  hero,
+  heroDistance,
+  candidates,
+  extreme
+} = {}) => {
+  if (!(typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.battleLog === true)) return null;
+  return {
+    v: 1,
+    startedAt: Date.now(),
+    difficulty: typeof difficulty === 'string' ? difficulty.slice(0, 32) : '',
+    extreme: typeof extreme === 'string' ? extreme.slice(0, 32) : null,
+    hero: tpId(hero),
+    heroDistance: battleLogInt(heroDistance, 0, 3),
+    candidates: tpIds(candidates, 5),
+    assists: [],
+    waves: [],
+    events: [],
+    units: {},
+    end: null
+  };
+};
+const tpWave = log => log && log.waves.length ? log.waves[log.waves.length - 1] : null;
+const tpUnit = (log, id) => {
+  const k = tpId(id);
+  if (!log || !k) return null;
+  return log.units[k] = log.units[k] || {
+    dmg: 0,
+    taken: 0,
+    ex: 0,
+    unique: 0,
+    downs: 0
+  };
+};
+const tpPush = (log, ev) => {
+  if (!log) return;
+  log.events.push(ev);
+  if (log.events.length > TACTICS_PRO_LOG_MAX_EVENTS) log.events.splice(0, log.events.length - TACTICS_PRO_LOG_MAX_EVENTS);
+};
+const tacticsProLogWaveStart = (log, {
+  wave,
+  party,
+  enemy
+} = {}) => {
+  if (!log) return;
+  log.waves.push({
+    wave: battleLogInt(wave, 1, 99),
+    party: (Array.isArray(party) ? party : []).map(p => p && {
+      id: tpId(p),
+      dist: battleLogInt(p.dist, 0, 3)
+    }).filter(p => p && p.id).slice(0, 4),
+    enemy: typeof enemy === 'string' ? enemy.slice(0, 40) : null,
+    offered: null,
+    picked: null,
+    training: null,
+    turns: null,
+    lifeLeft: null
+  });
+};
+const tacticsProLogOffer = (log, offered) => {
+  const w = tpWave(log);
+  if (w) w.offered = tpIds(offered, 4);
+};
+const tacticsProLogPick = (log, picked) => {
+  const w = tpWave(log);
+  if (w) w.picked = tpId(picked);
+};
+const tacticsProLogAssist = (log, assistId) => {
+  if (log && typeof assistId === 'string') log.assists.push({
+    wave: (tpWave(log) || {}).wave || 0,
+    id: assistId.slice(0, 40)
+  });
+};
+const tacticsProLogTraining = (log, picks) => {
+  const w = tpWave(log);
+  if (!w) return;
+  w.training = (Array.isArray(picks) ? picks : []).slice(0, 8).map(p => p && typeof p === 'object' ? p.revive != null ? {
+    revive: battleLogInt(p.revive, 0, 3)
+  } : {
+    slot: battleLogInt(p.slot, 0, 3),
+    id: typeof p.id === 'string' ? p.id.slice(0, 40) : null
+  } : typeof p === 'string' ? {
+    id: p.slice(0, 40)
+  } : null).filter(Boolean);
+};
+const tacticsProLogSkill = (log, kind, monsterId, turn) => {
+  const u = tpUnit(log, monsterId);
+  if (!u) return;
+  if (kind === 'ex') u.ex++;else if (kind === 'unique') u.unique++;
+  tpPush(log, [kind, (tpWave(log) || {}).wave || 0, battleLogInt(turn, 0, 999), tpId(monsterId)]);
+};
+const tacticsProLogDamage = (log, {
+  by,
+  to,
+  amount,
+  taken
+} = {}) => {
+  const n = battleLogInt(amount, 0, 1e12) || 0;
+  if (!log || !n) return;
+  const u = tpUnit(log, taken ? to : by);
+  if (!u) return;
+  if (taken) u.taken += n;else u.dmg += n;
+};
+const tacticsProLogDown = (log, monsterId, enemyKey, turn) => {
+  const u = tpUnit(log, monsterId);
+  if (!u) return;
+  u.downs++;
+  tpPush(log, ['down', (tpWave(log) || {}).wave || 0, battleLogInt(turn, 0, 999), tpId(monsterId), typeof enemyKey === 'string' ? enemyKey.slice(0, 40) : null]);
+};
+const tacticsProLogWaveEnd = (log, {
+  turns,
+  units
+} = {}) => {
+  const w = tpWave(log);
+  if (!w) return;
+  w.turns = battleLogInt(turns, 0, 999);
+  w.lifeLeft = (Array.isArray(units) ? units : []).map(u => u && {
+    id: tpId(u),
+    hp: battleLogInt(u.hp, 0, 1e9),
+    max: battleLogInt(u.maxHp, 0, 1e9)
+  }).filter(u => u && u.id).slice(0, 4);
+};
+const tacticsProLogFinish = (log, {
+  result,
+  reachedWave,
+  turns,
+  score,
+  cause
+} = {}) => {
+  if (!log) return null;
+  log.end = {
+    result: ['clear', 'lose', 'retire'].includes(result) ? result : 'lose',
+    reachedWave: battleLogInt(reachedWave, 0, 99),
+    turns: battleLogInt(turns, 0, 100000),
+    score: battleLogInt(score, 0, 1e15),
+    cause: typeof cause === 'string' ? cause.slice(0, 40) : null
+  };
+  return log;
+};
+const buildTacticsProLogRow = log => {
+  if (!log || !log.end || !log.hero || !log.difficulty) return null;
+  const detail = {
+    v: log.v,
+    extreme: log.extreme,
+    heroDistance: log.heroDistance,
+    candidates: log.candidates,
+    assists: log.assists.slice(0, 20),
+    waves: log.waves.slice(0, 20),
+    units: log.units,
+    events: log.events.slice()
+  };
+  while (detail.events.length && JSON.stringify(detail).length > TACTICS_PRO_LOG_MAX_BYTES) detail.events.splice(0, Math.ceil(detail.events.length / 4));
+  if (JSON.stringify(detail).length > TACTICS_PRO_LOG_MAX_BYTES) return null;
+  return {
+    difficulty: log.difficulty,
+    result: log.end.result,
+    reached_wave: log.end.reachedWave,
+    turns: log.end.turns,
+    score: log.end.score,
+    hero: log.hero,
+    candidates: log.candidates,
+    cause: log.end.cause,
+    seconds: battleLogInt((Date.now() - log.startedAt) / 1000, 0, 86400),
+    detail,
+    app_build: (typeof BUILD_DATE === 'string' ? BUILD_DATE : '').slice(0, 32),
+    schema_version: 1
+  };
+};
+let tacticsProLogDisabled = false;
+const sbSendTacticsProLog = async row => {
+  if (!(typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.battleLog === true)) return false;
+  if (tacticsProLogDisabled || !row || typeof fetch !== 'function' || sbTelemetryLocal()) return false;
+  const controller = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = controller ? setTimeout(() => controller.abort(), 8000) : null;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${TACTICS_PRO_LOG_TABLE}`, {
+      method: 'POST',
+      headers: {
+        ...SB_HEADERS,
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify(row),
+      ...(controller ? {
+        signal: controller.signal
+      } : {})
+    });
+    if (res.status === 404 || res.status === 401 || res.status === 403) tacticsProLogDisabled = true;
+    return res.ok;
+  } catch {
+    return false;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+};
+const sbSendRaidBattleLog = async row => {
+  if (!(typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.battleLog === true)) return false;
+  if (raidBattleLogDisabled || !row || typeof fetch !== 'function' || sbTelemetryLocal()) return false;
+  const controller = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = controller ? setTimeout(() => controller.abort(), 8000) : null;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${RAID_BATTLE_LOG_TABLE}`, {
+      method: 'POST',
+      headers: {
+        ...SB_HEADERS,
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify(row),
+      ...(controller ? {
+        signal: controller.signal
+      } : {})
+    });
+    if (res.status === 404 || res.status === 401 || res.status === 403) raidBattleLogDisabled = true;
     return res.ok;
   } catch {
     return false;
@@ -81794,6 +82067,8 @@ function MonsterHeroGame() {
   const [def, setDef] = useState(100);
   const [slots, setSlots] = useState([null, null, null, null]);
   const [tacticsUnits, setTacticsUnits] = useState([null, null, null, null]);
+  const tacticsProLogRef = useRef(null);
+  const tacticsProLogEnemyKey = e => e && (e.key || e.id || e.name) || null;
   const tacticsUnitsRef = useRef([null, null, null, null]);
   const tacticsPowerRef = useRef({
     start: 0,
@@ -82289,7 +82564,14 @@ function MonsterHeroGame() {
         }
         if (!normalizeTacticsUnit(was).downed && normalizeTacticsUnit(unit).downed) {
           pushBattleLog(`${slots[index]?.masuName || slots[index]?.name || '仲間'}が倒れた`, 'down');
+          tacticsProLogDown(tacticsProLogRef.current, slots[index]?.id, tacticsProLogEnemyKey(enemy), turnCount);
         }
+        const lost = normalizeTacticsUnit(was).hp - normalizeTacticsUnit(unit).hp;
+        if (lost > 0) tacticsProLogDamage(tacticsProLogRef.current, {
+          to: slots[index]?.id,
+          amount: lost,
+          taken: true
+        });
       });
     }
     tacticsUnitsRef.current = next;
@@ -87372,6 +87654,19 @@ function MonsterHeroGame() {
     const clearTurns = Number.isFinite(Number(runClearTurnsRef.current)) && Number(runClearTurnsRef.current) > 0 ? Number(runClearTurnsRef.current) : null;
     const profileFrame = rankingProfileFrameValue(profileFrameId);
     const breederId = await ensureBreederId();
+    if (tacticsProLogRef.current) {
+      const tpLog = tacticsProLogFinish(tacticsProLogRef.current, {
+        result: clearTurns ? 'clear' : gaveUp ? 'retire' : 'lose',
+        reachedWave,
+        turns: clearTurns,
+        score: finalScore,
+        cause: clearTurns ? null : tacticsProLogEnemyKey(enemy)
+      });
+      tacticsProLogRef.current = null;
+      try {
+        void sbSendTacticsProLog(buildTacticsProLogRow(tpLog));
+      } catch {}
+    }
     const row = {
       difficulty: diff,
       user_name: name,
@@ -94265,6 +94560,14 @@ function MonsterHeroGame() {
       autoHpRecovery: Math.max(0, (p.autoHpRecovery ?? 0.1) + recoveryDelta)
     }));
     setTotalRecoveryDelta(newTotalRecoveryDelta);
+    tacticsProLogWaveEnd(tacticsProLogRef.current, {
+      turns: turnCount,
+      units: (tacticsUnitsRef.current || []).map((u, i) => u && slots[i] && {
+        id: slots[i].id,
+        hp: u.hp,
+        maxHp: u.maxHp
+      })
+    });
     setWaveResult({
       wave,
       waveMult,
@@ -95381,6 +95684,7 @@ function MonsterHeroGame() {
       target: def.target === 'ally' ? choice : null
     });
     commitTacticsExState(next);
+    tacticsProLogSkill(tacticsProLogRef.current, 'ex', mon.id, turnCount);
     if (tacticsHateOnFor(runMode)) addTacticsHatePending(slotIdx, tacticsHateExGain(def.effect, mon.id));
     Audio_.se.card();
     const toggled = def.duration === 'style' ? `（${tacticsExStyleLabel(def, next, slotIdx, mon.id)}）` : '';
@@ -96242,6 +96546,10 @@ function MonsterHeroGame() {
                 ...prev,
                 hp: Math.max(0, prev.hp - h.dmg)
               } : prev);
+              tacticsProLogDamage(tacticsProLogRef.current, {
+                by: slots[h.slotIdx]?.id,
+                amount: h.dmg
+              });
               await battleWait(comboStepMs);
             }
             if (hit.rangeMoveTarget != null) {
@@ -96325,6 +96633,11 @@ function MonsterHeroGame() {
             ...prev,
             hp: Math.max(0, prev.hp - hit.dmg)
           } : prev);
+          tacticsProLogDamage(tacticsProLogRef.current, {
+            by: slots[hit.slotIdx]?.id,
+            amount: hit.dmg
+          });
+          if (hit.isUnique) tacticsProLogSkill(tacticsProLogRef.current, 'unique', slots[hit.slotIdx]?.id, turnCount);
           await battleWait(hit.noAnim ? 150 : 550);
           if (hit.rangeMoveTarget != null) {
             setEnemyDist(hit.rangeMoveTarget);
@@ -96858,6 +97171,7 @@ function MonsterHeroGame() {
     const avail = pickJoinCandidates(joinCandidatePool(), activeIds, mainHero?.id, joinOfferSize());
     if (joinWaves.includes(wave) && slots.filter(s => s).length < 4 && avail.length > 0) {
       setMonSelection(avail);
+      tacticsProLogOffer(tacticsProLogRef.current, avail);
       advanceRunStage('PICK_ALLY');
     } else {
       initBattle(wave + 1, slots, ownedUniques, ownedTeachings, nextDef !== undefined ? nextDef : def, null, null, null, nextStats);
@@ -97283,6 +97597,15 @@ function MonsterHeroGame() {
   }, [gameState, wave, turnCount, runMode, mainHero?.id]);
   const initBattle = (w, s, u, t, defVal, forcedEnemyKey = null, heroForDeck = null, aptPctOverride = null, restoredStats = null) => {
     setPhasePlan(null);
+    if (runMode !== BATTLE_MODE_TACTICS_PRO || raidJackRunRef.current) tacticsProLogRef.current = null;
+    tacticsProLogWaveStart(tacticsProLogRef.current, {
+      wave: w,
+      party: (Array.isArray(s) ? s : []).filter(Boolean).map(m => ({
+        id: m.id,
+        dist: m === mainHero ? initialBattleDistanceRef.current : null
+      })),
+      enemy: forcedEnemyKey
+    });
     setDefeatFx(null);
     tacticsHateHeroIdRef.current = (heroForDeck || mainHero)?.id || null;
     if (w === 1) {
@@ -97898,6 +98221,25 @@ function MonsterHeroGame() {
     } catch (error) {
       outcome = 'error';
     }
+    if (RELEASE_FLAGS.battleLog === true && !isDebugRun) {
+      try {
+        void sbSendRaidBattleLog(buildRaidBattleLogRow({
+          party: slots.map(sl => sl && {
+            role: sl === mainHero ? 'hero' : 'ally',
+            monsterId: sl.id
+          }),
+          raid: {
+            event: run.eventId,
+            kind: run.kind,
+            tier: run.tierIndex + 1,
+            source: 'battle',
+            damage,
+            defeated,
+            turns: run.turns
+          }
+        }));
+      } catch {}
+    }
     let quickAward = null;
     if (!isDebugRun) {
       try {
@@ -98064,6 +98406,21 @@ function MonsterHeroGame() {
         next = sent.state;
         outcome = sent.outcome;
         await raidJackSaveState(next);
+      }
+      if (RELEASE_FLAGS.battleLog === true && !isDebugRun && damage > 0) {
+        try {
+          void sbSendRaidBattleLog(buildRaidBattleLogRow({
+            score,
+            raid: {
+              event: run.eventId,
+              kind: 'a',
+              tier: run.tierIndex + 1,
+              source: 'rhythm',
+              damage,
+              defeated
+            }
+          }));
+        } catch {}
       }
     } catch (error) {
       outcome = 'error';
@@ -98389,6 +98746,7 @@ function MonsterHeroGame() {
   const setupMon = (m, slotIdx) => {
     if (!m) return;
     const isHero = !mainHero;
+    if (!isHero && gameState === 'PICK_ALLY') tacticsProLogPick(tacticsProLogRef.current, m.id);
     const speciesJoin = !isHero && speciesChallengeBattleRunRef.current ? joinSpeciesChallengeAlly(speciesChallengeBattleRunRef.current, joinRosterEntry(m)) : null;
     if (speciesJoin && !speciesJoin.joinedAllyId) return;
     const nextSlots = [...slots];
@@ -98602,6 +98960,14 @@ function MonsterHeroGame() {
     }, getUnlockedBaseMonsterList().map(mon => mon.id));
     setLastProParty(confirmedParty);
     storeSet(PRO_LAST_PARTY_KEY, confirmedParty, false);
+    const proAllBase = mainHero.masuId == null && proAllyPool.every(mon => mon && mon.masuId == null);
+    tacticsProLogRef.current = runMode === BATTLE_MODE_TACTICS_PRO && !debugBattleRef.current && proAllBase ? tacticsProLogStart({
+      difficulty,
+      hero: mainHero.id,
+      heroDistance: initialBattleDistanceRef.current,
+      candidates: proAllyPool.map(mon => mon.id),
+      extreme: extremeRunRef.current ? extremeDifficulty : null
+    }) : null;
     repeatRunTemplateRef.current = createRepeatRunTemplate({
       hero: mainHero,
       allies: proAllyPool
@@ -98614,6 +98980,7 @@ function MonsterHeroGame() {
     if (!teaching) return;
     if (teachingCommitRef.current) return;
     teachingCommitRef.current = true;
+    tacticsProLogAssist(tacticsProLogRef.current, teaching.id);
     if (!enemy && repeatRunTemplateRef.current && !repeatRunTemplateRef.current.initialTeachingId && teaching.id) {
       repeatRunTemplateRef.current = Object.freeze({
         ...repeatRunTemplateRef.current,
@@ -98681,6 +99048,7 @@ function MonsterHeroGame() {
   };
   const handleTraining = picks => {
     if (effect) return;
+    tacticsProLogTraining(tacticsProLogRef.current, picks);
     const specialRuleDifficulty = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
     const tacticsMode = isTacticsMode(runMode);
     const revivePick = tacticsMode && picks && !Array.isArray(picks) && Number.isInteger(picks.revive) ? picks.revive : null;
@@ -98819,6 +99187,7 @@ function MonsterHeroGame() {
       const avail = speciesChallengeJoinPool() || pickJoinCandidates(joinCandidatePool(), activeIds, mainHero?.id, joinOfferSize());
       if (joinWaves.includes(wave) && slots.filter(s => s).length < 4 && avail.length > 0) {
         setMonSelection(avail);
+        tacticsProLogOffer(tacticsProLogRef.current, avail);
         advanceRunStage('PICK_ALLY');
       } else if (joinWaves.includes(wave) && speciesChallengeBattleRunRef.current) {
         setUpgradePoints(prev => prev + (Math.floor(Math.random() * 4) + 1));

@@ -79,6 +79,10 @@ const RHYTHM_EVENT_POINTS_PUBLIC_RELEASE = true;
 //   HOMEの「おしゃべり」・仲良し度の行動 chat のヘルプ表示・更新履歴・お話「話せるようになった日」がこの印で一緒に出る
 const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tactics: TACTICS_MODE_PUBLIC_RELEASE,
   rhythmHell: true,
+  // レイド・タクティクスプロ(ベースモンだけの回)の1回ごとの記録(raid_battle_logs・tactics_pro_logs)を送る(2026-10-21 社長「仕組みは作って」)。
+  //   表がまだ無いので偽。偽のあいだは何も送らず、タクティクスプロは入れ物も作らない(26-supabase.jsx)。
+  //   表の SQL は docs/sql/battle-log/BATTLE_LOGS_APPLY.sql(まだ流していない)。社長の確認で流したあと真にする。設計は docs/spec/BATTLE_LOG.md
+  battleLog: false,
   // 行動カードの絵(枠4色・技のマーク・段階の札)。社長が今のカードと見比べて決めるまで偽(2026-10-15)。
   //   見比べはデバッグ設定の「行動カードの絵」の切り替えで(BATTLE_CARD_ART_DEBUG・71-screen-battle.jsx)
   battleCardArt: true,

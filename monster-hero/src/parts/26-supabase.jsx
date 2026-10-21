@@ -1933,6 +1933,186 @@ const sbSendRhythmTouchDiag = async (row) => {
     if (timer) clearTimeout(timer);
   }
 };
+// ===== レイドの1回ごとの記録(2026-10-21・下準備) =====
+// 社長「ティア表がそのモンスターの勇者モンの評価に寄りすぎ」→ 実戦の中身を集める仕組み。
+// 記録するのはレイド(レイドバトル・グランドスラム・モンヒロビート挑戦)と、下のタクティクスプロ(ベースモンだけの回)の2つだけ
+// (2026-10-21 社長「レイド、タクティクスプロのベースモンを使ったもののデータでいい。育てたモンスターははかれない」)。通常のバトルは送らない。
+// ★RELEASE_FLAGS.battleLog が真になるまで何も送らない(いまは偽)。表 raid_battle_logs もまだ作っていない(docs/sql/battle-log/BATTLE_LOGS_APPLY.sql)。
+// ★送るのは数字と monsterId と段階だけ。名前・ブリーダーID・アイコン・マスモンの個体名や育て方は送らない。
+// ★raid_jack_hits(与ダメージ・討伐の正本)・ランキング・討伐報酬とは別。送れなくてもゲームは何も変わらない(黙って捨てる。やり直さない)。
+//   表が無い(404)・権限が無い(401/403)と分かったら、ページを閉じるまで送らない。手元のサーバーからは送らない(sbTelemetryLocal)。設計: docs/spec/BATTLE_LOG.md
+const RAID_BATTLE_LOG_TABLE = 'raid_battle_logs';
+const BATTLE_LOG_SCHEMA_VERSION = 1;
+let raidBattleLogDisabled = false;
+const battleLogInt = (v, lo, hi) => { const n = Math.floor(Number(v)); return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : null; };
+const battleLogId = (v) => (typeof v === 'string' && /^[A-Za-z0-9_]{1,40}$/.test(v) ? v : null);
+// 1行の形を作る(純粋な関数。送るかどうかは決めない)。
+//   input: { party:[{ role, monsterId }], score, units:{ [monsterId]: { dmg, ex, unique, taken } },
+//            raid:{ event, kind:'a'|'b', tier, source:'battle'|'rhythm', damage, defeated, turns } }
+//   a=レイドバトル・b=グランドスラム・source rhythm=モンヒロビート挑戦(編成が無いので勇者モンが無くても作る)。
+//   units は「次の段」で数え始める(いまは渡さないので空)。決めた4つの数だけ通し、ほかの項目は捨てる
+const buildRaidBattleLogRow = (input) => {
+  const src = input && typeof input === 'object' ? input : {};
+  const rr = src.raid && typeof src.raid === 'object' ? src.raid : null;
+  if (!rr || (rr.kind !== 'a' && rr.kind !== 'b')) return null;
+  const eventId = typeof rr.event === 'string' && /^[A-Za-z0-9_-]{1,40}$/.test(rr.event) ? rr.event : null;
+  const tier = battleLogInt(rr.tier, 1, 10);
+  const source = rr.source === 'rhythm' ? 'rhythm' : 'battle';
+  const party = Array.isArray(src.party) ? src.party : [];
+  const heroSlot = party.find(p => p && p.role === 'hero') || party[0] || null;
+  const hero = heroSlot ? battleLogId(heroSlot.monsterId) : null;
+  if (!eventId || !tier || (!hero && source !== 'rhythm')) return null;
+  const allies = party.filter(p => p && p !== heroSlot).map(p => battleLogId(p.monsterId)).filter(Boolean).slice(0, 3);
+  const turns = battleLogInt(rr.turns, 0, 1000);
+  const units = {};
+  for (const [id, u] of Object.entries(src.units && typeof src.units === 'object' ? src.units : {})) {
+    if (!battleLogId(id) || !u || typeof u !== 'object') continue;
+    units[id] = { dmg: battleLogInt(u.dmg, 0, 1e12) || 0, ex: battleLogInt(u.ex, 0, 1000) || 0, unique: battleLogInt(u.unique, 0, 1000) || 0, taken: battleLogInt(u.taken, 0, 1e12) || 0 };
+  }
+  return {
+    event_id: eventId,
+    kind: rr.kind,
+    tier,
+    source,
+    result: rr.defeated === true ? 'defeated' : 'end',
+    damage: battleLogInt(rr.damage, 0, 1e12),
+    turns: turns && turns > 0 ? turns : null,
+    score: battleLogInt(src.score, 0, 1e15),
+    hero,
+    allies,
+    units,
+    app_build: (typeof BUILD_DATE === 'string' ? BUILD_DATE : '').slice(0, 32),
+    schema_version: BATTLE_LOG_SCHEMA_VERSION,
+  };
+};
+// ===== タクティクスプロの1回ぶんの記録(2026-10-21 社長「タクティクスバトルのプロモード仕様は全部取ってほしい」・下準備) =====
+// 勝ち・負け・途中でやめた回のどれも、プロモードの仕様で決まるものを漏れなく1回1行にする(表 tactics_pro_logs・docs/spec/BATTLE_LOG.md)。
+// ★ベースモン(育てていない基本の強さ)で戦う回だけ。入れ物を作るかは 60-app.jsx の confirmProParty が決める(マスモンが混ざれば作らない)
+// ★RELEASE_FLAGS.battleLog が偽のあいだは、入れ物も作らない(tacticsProLogStart が null を返す)ので、何も貯めず何も送らない。
+// ★入れるのは monsterId・アシカの id・数・難易度だけ。名前・ブリーダーID・マスモンの中身は入れない。
+// ★大きさの上限: 1回 TACTICS_PRO_LOG_MAX_BYTES。超えそうなら古い出来事(events)から捨てる(WAVE ごとのまとめは残す)
+const TACTICS_PRO_LOG_TABLE = 'tactics_pro_logs';
+const TACTICS_PRO_LOG_MAX_BYTES = 24000;
+const TACTICS_PRO_LOG_MAX_EVENTS = 400;
+const tpId = (v) => battleLogId(typeof v === 'string' ? v : (v && (v.monsterId || v.id)));
+const tpIds = (list, max = 10) => (Array.isArray(list) ? list : []).map(tpId).filter(Boolean).slice(0, max);
+// 1回ぶんの入れ物を作る。印が偽なら null(呼ぶ側は null なら何もしない)
+const tacticsProLogStart = ({ difficulty, hero, heroDistance, candidates, extreme } = {}) => {
+  if (!(typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.battleLog === true)) return null;
+  return {
+    v: 1, startedAt: Date.now(),
+    difficulty: typeof difficulty === 'string' ? difficulty.slice(0, 32) : '',
+    extreme: typeof extreme === 'string' ? extreme.slice(0, 32) : null,
+    hero: tpId(hero), heroDistance: battleLogInt(heroDistance, 0, 3),
+    candidates: tpIds(candidates, 5),       // 始める前に選んだ供モンの候補5体
+    assists: [],                            // 選んだアシカ [{ wave, id }]
+    waves: [],                              // WAVE ごとのまとめ(下の tacticsProLogWaveStart / WaveEnd)
+    events: [],                             // そのほかの出来事 [type, wave, turn, ...]
+    units: {},                              // { monsterId: { dmg, taken, ex, unique, downs } }(次の段で数える)
+    end: null,
+  };
+};
+const tpWave = (log) => (log && log.waves.length ? log.waves[log.waves.length - 1] : null);
+const tpUnit = (log, id) => { const k = tpId(id); if (!log || !k) return null; return (log.units[k] = log.units[k] || { dmg: 0, taken: 0, ex: 0, unique: 0, downs: 0 }); };
+const tpPush = (log, ev) => { if (!log) return; log.events.push(ev); if (log.events.length > TACTICS_PRO_LOG_MAX_EVENTS) log.events.splice(0, log.events.length - TACTICS_PRO_LOG_MAX_EVENTS); };
+// WAVE の始まり: 並び(勇者モン・供モンと立っている間合い)と敵
+const tacticsProLogWaveStart = (log, { wave, party, enemy } = {}) => {
+  if (!log) return;
+  log.waves.push({ wave: battleLogInt(wave, 1, 99), party: (Array.isArray(party) ? party : []).map(p => p && { id: tpId(p), dist: battleLogInt(p.dist, 0, 3) }).filter(p => p && p.id).slice(0, 4),
+    enemy: typeof enemy === 'string' ? enemy.slice(0, 40) : null, offered: null, picked: null, training: null, turns: null, lifeLeft: null });
+};
+// 供モンの候補として見せた3体と、選んだ1体
+const tacticsProLogOffer = (log, offered) => { const w = tpWave(log); if (w) w.offered = tpIds(offered, 4); };
+const tacticsProLogPick = (log, picked) => { const w = tpWave(log); if (w) w.picked = tpId(picked); };
+// アシカ(アシストカード)の選択
+const tacticsProLogAssist = (log, assistId) => { if (log && typeof assistId === 'string') log.assists.push({ wave: (tpWave(log) || {}).wave || 0, id: assistId.slice(0, 40) }); };
+// トレーニングの選び方(選んだ枠と中身。起こした枠も)
+const tacticsProLogTraining = (log, picks) => {
+  const w = tpWave(log); if (!w) return;
+  w.training = (Array.isArray(picks) ? picks : []).slice(0, 8).map(p => p && typeof p === 'object'
+    ? (p.revive != null ? { revive: battleLogInt(p.revive, 0, 3) } : { slot: battleLogInt(p.slot, 0, 3), id: typeof p.id === 'string' ? p.id.slice(0, 40) : null })
+    : (typeof p === 'string' ? { id: p.slice(0, 40) } : null)).filter(Boolean);
+};
+// EX・固有技を使った(誰が・何ターン目)
+const tacticsProLogSkill = (log, kind, monsterId, turn) => {
+  const u = tpUnit(log, monsterId); if (!u) return;
+  if (kind === 'ex') u.ex++; else if (kind === 'unique') u.unique++;
+  tpPush(log, [kind, (tpWave(log) || {}).wave || 0, battleLogInt(turn, 0, 999), tpId(monsterId)]);
+};
+// ダメージ(与えた・受けた)。from/to は monsterId(味方)か敵のキー
+const tacticsProLogDamage = (log, { by, to, amount, taken } = {}) => {
+  const n = battleLogInt(amount, 0, 1e12) || 0; if (!log || !n) return;
+  const u = tpUnit(log, taken ? to : by); if (!u) return;
+  if (taken) u.taken += n; else u.dmg += n;
+};
+// 味方が倒れた(倒した敵のキーも)
+const tacticsProLogDown = (log, monsterId, enemyKey, turn) => {
+  const u = tpUnit(log, monsterId); if (!u) return; u.downs++;
+  tpPush(log, ['down', (tpWave(log) || {}).wave || 0, battleLogInt(turn, 0, 999), tpId(monsterId), typeof enemyKey === 'string' ? enemyKey.slice(0, 40) : null]);
+};
+// WAVE の終わり: かかったターンと、1体ずつの残りライフ
+const tacticsProLogWaveEnd = (log, { turns, units } = {}) => {
+  const w = tpWave(log); if (!w) return;
+  w.turns = battleLogInt(turns, 0, 999);
+  w.lifeLeft = (Array.isArray(units) ? units : []).map(u => u && { id: tpId(u), hp: battleLogInt(u.hp, 0, 1e9), max: battleLogInt(u.maxHp, 0, 1e9) }).filter(u => u && u.id).slice(0, 4);
+};
+// 終わり: 結果('clear'・'lose'・'retire')、届いた WAVE、累計ターン、スコア、負けた原因の敵
+const tacticsProLogFinish = (log, { result, reachedWave, turns, score, cause } = {}) => {
+  if (!log) return null;
+  log.end = { result: ['clear', 'lose', 'retire'].includes(result) ? result : 'lose', reachedWave: battleLogInt(reachedWave, 0, 99), turns: battleLogInt(turns, 0, 100000), score: battleLogInt(score, 0, 1e15),
+    cause: typeof cause === 'string' ? cause.slice(0, 40) : null };
+  return log;
+};
+// 送る1行の形。大きすぎるときは出来事(events)の古いほうから捨てる
+const buildTacticsProLogRow = (log) => {
+  if (!log || !log.end || !log.hero || !log.difficulty) return null;
+  const detail = { v: log.v, extreme: log.extreme, heroDistance: log.heroDistance, candidates: log.candidates, assists: log.assists.slice(0, 20), waves: log.waves.slice(0, 20), units: log.units, events: log.events.slice() };
+  while (detail.events.length && JSON.stringify(detail).length > TACTICS_PRO_LOG_MAX_BYTES) detail.events.splice(0, Math.ceil(detail.events.length / 4));
+  if (JSON.stringify(detail).length > TACTICS_PRO_LOG_MAX_BYTES) return null;
+  return {
+    difficulty: log.difficulty, result: log.end.result, reached_wave: log.end.reachedWave, turns: log.end.turns, score: log.end.score,
+    hero: log.hero, candidates: log.candidates, cause: log.end.cause,
+    seconds: battleLogInt((Date.now() - log.startedAt) / 1000, 0, 86400),
+    detail, app_build: (typeof BUILD_DATE === 'string' ? BUILD_DATE : '').slice(0, 32), schema_version: 1,
+  };
+};
+let tacticsProLogDisabled = false;
+const sbSendTacticsProLog = async (row) => {
+  if (!(typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.battleLog === true)) return false;
+  if (tacticsProLogDisabled || !row || typeof fetch !== 'function' || sbTelemetryLocal()) return false;
+  const controller = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = controller ? setTimeout(() => controller.abort(), 8000) : null;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${TACTICS_PRO_LOG_TABLE}`, {
+      method: 'POST', headers: { ...SB_HEADERS, 'Prefer': 'return=minimal' }, body: JSON.stringify(row),
+      ...(controller ? { signal: controller.signal } : {})
+    });
+    if (res.status === 404 || res.status === 401 || res.status === 403) tacticsProLogDisabled = true;
+    return res.ok;
+  } catch {
+    return false;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+};
+const sbSendRaidBattleLog = async (row) => {
+  if (!(typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.battleLog === true)) return false;
+  if (raidBattleLogDisabled || !row || typeof fetch !== 'function' || sbTelemetryLocal()) return false;
+  const controller = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = controller ? setTimeout(() => controller.abort(), 8000) : null;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${RAID_BATTLE_LOG_TABLE}`, {
+      method: 'POST', headers: { ...SB_HEADERS, 'Prefer': 'return=minimal' }, body: JSON.stringify(row),
+      ...(controller ? { signal: controller.signal } : {})
+    });
+    if (res.status === 404 || res.status === 401 || res.status === 403) raidBattleLogDisabled = true;
+    return res.ok;
+  } catch {
+    return false;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+};
 const sbSendRhythmPlayLog = async (row) => {
   if (rhythmPlayLogDisabled || !row || typeof fetch !== 'function' || sbTelemetryLocal()) return false;
   const controller = typeof AbortController === 'function' ? new AbortController() : null;
