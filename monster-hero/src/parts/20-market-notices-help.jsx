@@ -249,14 +249,27 @@ const marketNameForWrap = (name) => MARKET_NAME_WRAP_WORDS.reduce(
   .split('・').join('・​').replace(/([ァ-ヶー])([0-9０-９])/g, '$1​$2')
   // 2026-10-20 改善部 M3「スネグーラチ／カの円盤石」(320): 7字以上続く長いカタカナの名前だけ、あとの「の」の前でも折ってよい
   // (短い名前「モッチーの|フレーム」の折り方は今のまま)
-  .replace(/([ァ-ヶー]{7,})の/g, '$1​の');
+  .replace(/([ァ-ヶー]{7,})の/g, '$1​の')
+  // 2026-10-21: カタカナのあとの「の＋漢字2字以上」は「の」の前でも折る(「ハロウィンの小悪／魔」→「ハロウィン／の小悪魔」)。
+  // 「の書」のように漢字1字なら折らない(「リセット／の書」と2字だけ落ちるため)
+  .replace(/([ァ-ヶー])の([一-龯]{2,})/g, '$1​の$2')
+  // 名前の終わりの「・序」のような1〜2字は、手前の「・」で切り離さない(「スキップチケット・／序」→「スキップ／チケット・序」)
+  .replace(/・​([^​]{1,2})$/, '・$1');
 // ★印は文字(U+200B)のままDOMへ置かず、<wbr> に変えてから描く。
 //   U+200B は幅0でも**文字として残る**ので、画面の文字を拾う検査やブラウザの検索で
 //   「ウンディーネのアイコン」が見つからなくなる(2026-09-18に monster/mermaid-browser-check.js が
 //   実際に落ちた。商品はちゃんと並んでいるのに「無い」と言われた)。
 //   <wbr> は「ここで折り返してよい」だけを表し、innerText には現れない。
-const marketNameNodes = (name) => marketNameForWrap(name).split('​')
-  .map((seg, index) => <React.Fragment key={index}>{index>0&&<wbr/>}{seg}</React.Fragment>);
+// 名前の終わりの「・序」のような短い尾は、「・序」だけをひとかたまり(nowrap)で描く。「・」のあとはブラウザがもともと折ってよい所なので、
+// 印を外すだけでは「スキップチケット・／序」と落ちる。「チケット・序」まで包むと前の「スキップ」が「スキッ／プ」と割れた。
+// 「・」の前は行頭に来られない字なので、「ト・序」の間でも折れない(2026-10-21)
+// ★全体を1つの <span> で包む。名前の枠は flex なので、包まないと字と「・序」の札が別々の並びになり、
+//   「スキップ　・序／チケット」と順番が崩れる(2026-10-21)
+const marketNameNodes = (name) => <span data-market-name-text>{marketNameForWrap(name).split('\u200b')
+  .map((seg, index, all) => {
+    const tail = index === all.length - 1 ? seg.match(/^(.*)(・[^・]{1,2})$/) : null;
+    return <React.Fragment key={index}>{index>0&&<wbr/>}{tail ? <>{tail[1]}<span style={{whiteSpace:'nowrap'}}>{tail[2]}</span></> : seg}</React.Fragment>;
+  })}</span>;
 // 予告の札の折り位置(2026-10-20 窓口「条件を達成 / すると買え / ます」)。語の切れ目(「すると」の後ろ)だけで折る
 const MARKET_LABEL_WRAP_AFTER = Object.freeze(['すると']);
 // 札の字の大きさ: いちばん長い語(「条件を達成すると」8文字)が、カードの幅(札を包む枠の幅・cqi)から左右の余白12pxを引いた幅に1行で入る大きさ。最大10px・最小7px
@@ -290,7 +303,7 @@ const MarketProductCard = ({ item, owned=false, comingSoon=false, comingSoonLabe
           (「トレーニングチケッ/ト」「アシストカード「き/き」」)。
           text-wrap:balance も試したが、行の長さをならす方を優先して「トレーニン/グチケット」に
           なるため使わない。印が無く1行に入りきらない名前だけ overflow-wrap:anywhere で折る。 */}
-    <div className={`w-full flex items-start justify-center text-center ${/[ァ-ヶー]{7,}/.test(item.name||'')?'text-[10px] max-[359px]:text-[9px]':/（/.test(item.name||'')?'text-[10px]':'text-[11px]'} font-black leading-tight ${comingSoon?'text-slate-400':'text-white'}`} style={{minHeight:'36px',wordBreak:'keep-all',overflowWrap:'anywhere'}}>{marketNameNodes(item.name)}</div>
+    <div className={`w-full flex items-start justify-center text-center ${/[ァ-ヶー]{7,}/.test(item.name||'')?'text-[10px] max-[359px]:text-[9px]':/（/.test(item.name||'')?'text-[10px]':'text-[11px]'} font-black leading-tight ${comingSoon?'text-slate-400':'text-white'}`} style={{minHeight:'36px',textWrap:'wrap',wordBreak:'keep-all',overflowWrap:'anywhere'}}>{marketNameNodes(item.name)}</div>
     {/* 詳細は「近日追加」の品でも出す(2026-09-28。近日公開予定の新モンスターの中身を先に見られるように) */}
     <div className="w-full flex items-center justify-center gap-1" style={{height:'22px'}}>{middle||detail?<>{middle}{!middle&&<MarketDetailChip label={`${item.name}の詳細を見る`} onClick={onDetail}/>}</>:null}</div>
     {/* 予告の品は買うボタンの代わりに札が出るので、値段は札の上に出す(どの売り場でも同じ) */}

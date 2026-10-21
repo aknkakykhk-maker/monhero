@@ -219,7 +219,7 @@ check('準備中の仕組みでも詳しいルールは読める', (() => {
 // 2026-10-08: モンヒロビートのモードえらびと同じ作り(舞台+大きな札)に変えた。札には名前とひとこと(tagline)だけを出し、
 // 細かい説明は「？」の詳しいルールへ回す
 check('札に名前とひとことを出している',
-  has('{sys.tagline}</small>') && has('className={`mhms-card mhms-in flex min-h-[84px]'));
+  (has('{sys.tagline}</small>') || has('{jaWrap(sys.tagline)}</small>')) && has('className={`mhms-card mhms-in flex min-h-[84px]'));
 // ★1画面に収まる高さは tools/battle/battle-system-fit-check.js が実際に測る。
 //   ここでは「収まる作りを崩していないか」の目印だけを見る
 check('1画面に収める作りが残っている',

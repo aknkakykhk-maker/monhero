@@ -20,13 +20,29 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
 
 const ui = P('41-screen-ui.jsx');
 check('M3 言葉の切れ目で折る部品(jaWrap・JA_WRAP_STYLE)がある', /const jaWrap = \(text\) =>/.test(ui) && /Intl\.Segmenter\('ja', \{ granularity: 'word' \}\)/.test(ui)
-  && /const JA_WRAP_STYLE = Object\.freeze\(\{ wordBreak: 'keep-all', overflowWrap: 'anywhere' \}\)/.test(ui));
+  && /const JA_WRAP_STYLE = Object\.freeze\(\{ wordBreak: 'keep-all', overflowWrap: 'anywhere'/.test(ui));
+// 2026-10-21: 印は禁則より強いので、「！」「、」「…」小さい字の前・「「」の後ろ・空白の前後には入れない(「きたわい／！」と折れた)
+{
+  let got = '', ok = false;
+  try {
+    const src = ui.slice(ui.indexOf('let _jaSegmenter;'), ui.indexOf('\n};\n', ui.indexOf('const jaWrap = (text) =>')) + 3);
+    const jaWrap = new Function(`${src}\nreturn jaWrap;`)();
+    got = jaWrap('楽しくなってきたわい！ ほんとうじゃぞ！「よし」…っ');
+    ok = !/\u200B[！、…」っ\s]/.test(got) && !/[「\s]\u200B/.test(got) && got.includes('\u200B');
+  } catch (e) { got = String(e); }
+  check('jaWrap は行の頭に来てはいけない字の前・「「」の後ろ・空白の前後に印を入れない', ok, got.replace(/\u200B/g, '|'));
+}
 const pick = P('67-screen-pick.jsx');
 check('M3 アシストカードの継承・強化の題名と説明は言葉の切れ目で折る', pick.includes("{jaWrap('アシストカードの継承・強化')}") && pick.includes("{jaWrap('1枚選んで、新しく覚えるか、持っているカードを強化します')}"));
 check('M3 カードの効果(3行まで)と、選んだカードの段の説明も言葉の切れ目で折る', pick.includes('...JA_WRAP_STYLE}}>{jaWrap(shownDesc)}') && pick.includes('style={JA_WRAP_STYLE}>{jaWrap(info.desc)}'));
 const play = P('30-rhythm-play.jsx');
 check('M3 結果の「刻み」の説明は言葉の切れ目で折る', play.includes("{jaWrap('ホールド・スライドの刻みもコンボに数えます')}"));
 check('M3 MAX COMBO は1行のまま(狭い画面は字の間を詰める)', /whitespace-nowrap text-\[10px\] font-black tracking-\[\.2em\] max-\[359px\]:tracking-\[\.06em\][^>]*>MAX COMBO</.test(play));
+
+const home = P('69-screen-home.jsx');
+check('HOME: ジャックの吹き出しは、狭い画面で横へ置いて札の下へ逃がせる(104・96の幅と、横で下げる候補がある)・セリフは言葉の切れ目で折る',
+  home.includes('HOME_RAID_SAY_WIDTHS = Object.freeze([184, 168, 152, 136, 120, 104, 96])') && home.includes('for (let y = from + 6; y <= to; y += 6) tries.push({ side, left, top: y')
+  && home.includes('<span data-home-raid-say-text style={{ display:\'block\', ...JA_LABEL_STYLE }}>{jaWrap(speech)}</span>'));
 
 const multi = P('77-screen-rhythm-multi.jsx');
 check('M5 マルチの部屋: 縦向きは下の欄を枠のすぐ下へ(mt-auto は横向きだけ)・高さの上限 70%',

@@ -116,9 +116,11 @@ check('モードのタブはランキングでは出さない',
 // 2026-09-18: 枠の高さに加えて「上寄せ(items-start)」もここで見る。中央寄せに戻すと、
 // 1行で収まる品だけが枠の真ん中へ降りて、2行の品の1行目と高さがそろわなくなる。
 check('商品名は行数が変わっても同じ高さの枠に入れる',
-  has("style={{minHeight:'36px',wordBreak:'keep-all',overflowWrap:'anywhere'}}>{marketNameNodes(item.name)}</div>")
+  (has("style={{minHeight:'36px',wordBreak:'keep-all',overflowWrap:'anywhere'}}>{marketNameNodes(item.name)}</div>")
+    // 2026-10-21: 画面全体の text-wrap:pretty を外すため textWrap:'wrap' を足した
+    || has("style={{minHeight:'36px',textWrap:'wrap',wordBreak:'keep-all',overflowWrap:'anywhere'}}>{marketNameNodes(item.name)}</div>"))
     // 名前に全角のかっこ（ ）を含む長い商品は文字を10pxに小さくする条件が足され、class が文字列から式(テンプレート)になった(2026-10)
-    && /w-full flex items-start justify-center text-center \$\{[^}]*\}[\s\S]{0,40}font-black leading-tight/.test(source));
+    && /w-full flex items-start justify-center text-center \$\{[\s\S]{0,300}?\}[\s\S]{0,40}font-black leading-tight/.test(source));
 // アイテムの効果は詳細ボタンから出す(カードに長い説明を載せると縦に伸びるため)
 // 2026-09-10(STEP 6-6)にマーケットを切り出したので、画面は onOpenItemDetail を呼び、
 // 本体がそれに setMarketItemDetail を渡す形になった
