@@ -51,10 +51,18 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
       check(`② 幅${W}: 短い札・名前が枠からはみ出して切れていない`, r.clipped.length === 0, r.clipped.slice(0, 8).join(' / '));
       check(`③ 幅${W}: ページが横にはみ出さない`, !r.wide);
       if (SHOT_DIR) {
-        for (const [id, name] of [['monsters', 'monsters'], ['monsters-role', 'role'], ['party', 'party']]) {
-          const loc = page.locator(`#${id}`);
-          if (await loc.count()) await loc.screenshot({ path: path.join(SHOT_DIR, `tier-${name}-${W}.png`) });
-        }
+        // ★要素だけを撮ると、上に貼り付くタブ(.jump)が途中に写り込んで本文を隠す(2026-10-22 カゲあつくん)。
+        //   ページ全体を撮る形で、その要素の場所だけを切り抜く(ページの上のタブは、ページのいちばん上にだけ写る)
+        const shotOf = async (sel, name) => {
+          const box = await page.evaluate((q) => { const el = document.querySelector(q); if (!el) return null; const r = el.getBoundingClientRect(); return { x: 0, y: Math.round(r.top + scrollY), width: innerWidth, height: Math.round(r.height) }; }, sel);
+          if (box) await page.screenshot({ path: path.join(SHOT_DIR, `tier-${name}-${W}.png`), fullPage: true, clip: box });
+        };
+        await page.evaluate(() => { window.scrollTo(0, 0); document.querySelectorAll('details').forEach((d) => { d.open = false; }); });
+        await shotOf('#monsters', 'monsters');
+        await shotOf('#monsters-role', 'role');
+        // 詳しい欄: ザン(決め手の行が要る子)を開いて撮る
+        const opened = await page.evaluate(() => { const d = [...document.querySelectorAll('#monsters details')].find((x) => /ザン/.test(x.querySelector('summary')?.textContent || '')); if (!d) return false; d.open = true; d.id = 'shot-detail'; return true; });
+        if (opened) await shotOf('#shot-detail', 'detail');
       }
       await page.close();
     }

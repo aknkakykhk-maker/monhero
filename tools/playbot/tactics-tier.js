@@ -14,6 +14,7 @@
 //   --player-weight <w>  overall に「実戦の重み」を混ぜる(既定 0 = 混ぜない。公開の表は 0.5 で作る)。材料は player-battle-stats.js の集計
 //                        (--player-stats <file> で置き場所、--player-mode <モード> で数えるモード。既定 TacticsPro)
 //   公開の表を作り直す: node tools/playbot/player-battle-stats.js && node tools/playbot/tactics-tier.js --player-weight 0.5 --md
+//   --prev <file>  「前の表との差」の比べる元(既定はいま公開している tier.json)
 //
 // tier.json(社長が見るページ tier-page.js の元)は、2026-10-10 まで人が monster-tier.md から写していた。
 // いまはここで書き出す。書き換えるのは 更新・数えた回・戦った体数・全体数・決め方・段・モンスター(1体ずつの Tier・理由・回数・机上)だけで、
@@ -54,7 +55,8 @@ if (!OVERALL && [mdFile, jsonFile].some((f) => f && PUBLISHED_FILES.includes(pat
   process.exit(1);
 }
 // 公開の表へ書くときは、前に公開していた tier.json を先に読んでおく(差を出すため。書いたあとでは読めない)
-const PREV_PUBLISHED = (() => { try { return JSON.parse(fs.readFileSync(path.join(TIER_DIR, 'tier.json'), 'utf8')); } catch (e) { return {}; } })();
+// --prev <file> で比べる元を変えられる(見せ方だけ直して出し直すとき、決め方を変える前の表と比べ続けるため)
+const PREV_PUBLISHED = (() => { try { return JSON.parse(fs.readFileSync(path.resolve(optArg('--prev', path.join(TIER_DIR, 'tier.json'))), 'utf8')); } catch (e) { return {}; } })();
 // 勇者モンにした回の伸びの重み(overall)。current は 1(回数が3回にそろうまでは軽く)
 const OVERALL_HERO_WEIGHT = 0.3;
 // 供モンとして入った回がこれより少ない子は「暫定」(overall。2026-10-21 社長の決定)
@@ -671,8 +673,10 @@ function evidenceOf(o) {
   if (s.role !== '攻め' && Number.isFinite(s.memberLift) && inRuns.length >= 5) so.push(Number.isFinite(s.memberErr) && Math.abs(s.memberLift) > s.memberErr ? `入った回は平均より WAVE ${sgn(s.memberLift)}(${s.role}役)。${s.memberLift > 0 ? '供モンに入れると伸びる' : '供モンに入れると下がる'}` : `入った回の伸び(WAVE ${sgn(s.memberLift)})は、ぶれ(±${r1(s.memberErr)})の中で、まだ言えない`);
   if (s.role === '攻め' && s.shareN >= 5) { const sig = Number.isFinite(s.shareErr) && Math.abs(s.share - 1) > s.shareErr; so.push(`ダメージは頭割りの ${r1(s.share)} 倍(${s.shareN}回)。${!sig ? 'ぶれの中で、火力が多い・少ないとはまだ言えない' : s.share >= 1.2 ? '火力の柱にできる' : s.share < 0.8 ? '火力は控えめ' : '火力はふつう'}`); }
   if (Number.isFinite(o.score) && !o.noisy) {
-    const keys = (o.usable || []).flatMap((v) => (v.x.parts || []).filter((p) => Number.isFinite(p[4]) && Math.abs(p[3]) > p[4]).map((p) => `${v.d} の${p[2]} ${sgn(p[3])}(ぶれ ±${r1(p[4])})`));
-    if (keys.length) so.unshift(`${o.tier} の決め手: ${keys.join('・')}`);
+    // ★ここは「ぶれを超えて、はっきり言える項目」だけを並べる(点に効いた大きさの順ではない)。決め手(効いた大きさの順)は tier.json の 決め手(ページの詳しい欄のいちばん上)。
+    //   2026-10-22 カゲあつくん: 「S の決め手: 勇者モンの伸び −3.0」と出て食い違って見えたので、名前を変え、勇者モンの回は軽く見ていることを添える
+    const keys = (o.usable || []).flatMap((v) => (v.x.parts || []).filter((p) => Number.isFinite(p[4]) && Math.abs(p[3]) > p[4]).map((p) => `${v.d} の${p[2]} ${sgn(p[3])}(ぶれ ±${r1(p[4])}${OVERALL && p[2] === '勇者モンにした回の伸び' ? `・重み ${OVERALL_HERO_WEIGHT}で軽く見ている` : ''})`));
+    if (keys.length) so.unshift(`${OVERALL ? 'ぶれを超えてはっきり言える項目' : `${o.tier} の決め手`}: ${keys.join('・')}`);
   }
   const unknown = [];
   const thin = per.filter(([, rs]) => rs.length && rs.length < 5).map(([d, rs]) => `${d} ${rs.length}回`);
@@ -772,6 +776,14 @@ function tierJson(prev) {
         e.供モンの回数 = st.allyN;
         if (ov && ov.fewAlly && e.暫定) e.暫定の理由 = `供モンとして入った回が ${st.allyN}回(${OVERALL_ALLY_FIRM}回未満)`;
         if (PLAYER_WEIGHT && st.plN) e.実戦 = { 回数: st.plN, 伸び: Math.round(st.plLift * 100) / 100 };
+        // 決め手(2026-10-22 カゲあつくん「見えている数字はほぼ平均より下なのに S に見える」)。点に効いた項目を、効いた大きさの順に。
+        // 押し上げた項目と押し下げた項目を分けて書き、勇者モンの回は重みを添える(全部の難易度の回をまとめた点の内訳)
+        const cnt = (label) => (label === '頭割り比' ? `${st.shareN}回` : label === '供モンで入った回の伸び' ? `${st.allyN}回` : label === '勇者モンにした回の伸び' ? `${st.heroN}回・重み ${OVERALL_HERO_WEIGHT}` : '');
+        const val = (p) => (p[2] === '頭割り比' ? `${r1(p[3] + 1)}倍` : `${sgn(p[3])}`);
+        const eff = st.parts.map((p) => ({ p, v: p[0] * p[1] })).filter((x) => Number.isFinite(x.v) && Math.abs(x.v) >= 0.01).sort((x, y) => Math.abs(y.v) - Math.abs(x.v));
+        const say = (x) => `${x.p[2].replace(/の伸び$/, '')} ${val(x.p)}${cnt(x.p[2]) ? `(${cnt(x.p[2])})` : ''}`;
+        const ups = eff.filter((x) => x.v > 0).slice(0, 3).map(say), downs = eff.filter((x) => x.v < 0).slice(0, 2).map(say);
+        if (ups.length || downs.length) e.決め手 = [ups.length ? `押し上げ: ${ups.join('・')}` : '', downs.length ? `押し下げ: ${downs.join('・')}` : ''].filter(Boolean).join(' / ');
       }
     }
   }
