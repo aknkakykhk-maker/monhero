@@ -228,7 +228,7 @@
   "toward_the_stars_short/master": "95c9471b49f7b83f",
   "kaze_ga_soyogu/hell": "db4bdda49c855f43",
   "anima/hell": "7887b99ea0847323",
-  "journey/hell": "9a4a42b90a175c0d",
+  "journey/hell": "28b6b69082a3541c",
   "sheriruth/hell": "36db1897510eb07b",
   "against_my_own_shadow/hell": "120eb36921577a4d",
   "grievous_lady/hell": "bf3cd2055776a186",
@@ -367,6 +367,13 @@
    "reason": "2026-10-21 社長「ジャーニーとアニマもヘル作って」: ANiMA・Journey に HELL を足した(既存の5難易度は変えていない)",
    "changed": [
     "anima/hell",
+    "journey/hell"
+   ]
+  },
+  {
+   "at": "2026-10-21 11:45",
+   "reason": "2026-10-21 窓口・社長: Journey の HELL に残っていた見分けにくい所2か所(2.15秒・30.27秒)の空中のタップを地上へ下ろした(Lv.51・716ノーツは同じ)",
+   "changed": [
     "journey/hell"
    ]
   }

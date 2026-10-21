@@ -147,7 +147,8 @@ const shapeOf=n=>n.type==='TAP'||n.type==='FLICK'?'tap':'long';
 const skyConfusable=(notes,{gapMs=CONFUSE_GAP_MS}={})=>{
   const ev=handEventsOf((notes||[]).filter(n=>n&&Number.isFinite(n.timeMs))),starts=ev.filter(e=>!e.end),out=[];
   // その手が最後に触った点(同じ時刻に2つ以上あれば、全部)。並び順で答えが変わらないように、同時の点はまとめて返す
-  //   (2026-10-21 Journey の HELL: 1913ms に地上 sub4 と空中 sub0 が同時にあり、ゲームの形と道具の形で並びが逆だったので数がずれた)
+  //   (2026-10-21 Journey の HELL: 1913ms に地上 sub4 と空中 sub0 が同時にあり、ゲームの形と道具の形で並びが逆だったので数がずれた。
+  //   以前は並びで最後の1つだけと比べていたので、並びによって数えたり数えなかったりした)
   const lastOfHand=(hand,at,self)=>{let best=[];for(const x of ev){if(x.at>=at-SAME_TIME_MS)break;if(x.hand!==hand||x.n===self)continue;
     if(best.length&&x.at-best[0].at>SAME_TIME_MS)best=[];best.push(x);}return best;};
   for(let i=0;i<starts.length;i++){const e=starts[i],pos=centerAt(e.n,e.at);let top=null;
@@ -157,7 +158,9 @@ const skyConfusable=(notes,{gapMs=CONFUSE_GAP_MS}={})=>{
       if(Math.abs(e.at-p.at)<=SAME_TIME_MS&&!(e.level>p.level))continue;
       const reach=(widthOf(e.n)+widthOf(p.n))/2,d=Math.abs(pos-centerAt(p.n,p.at));if(d>reach)continue;
       if(p.hand===e.hand&&dt>SAME_TIME_MS){const last=lastOfHand(e.hand,e.at,e.n);
-        const from=last.find(x=>x.n===p.n);if(from&&Math.abs(pos-centerAt(p.n,from.at))<=MIXED_NEAR_LANES)continue;}
+        // 自然な形(指を離した位置へ)とみなすのは、その手が最後に触った点が p ひとつだけのとき。同時に2つ以上触っていたら、
+        //   どちらの指を上げたのか決まらないので数える側にそろえる(2026-10-21 窓口「数えない側にそろえると見張りが緩くなる」)
+        if(last.length===1&&last[0].n===p.n&&Math.abs(pos-centerAt(p.n,last[0].at))<=MIXED_NEAR_LANES)continue;}
       const same=shapeOf(e.n)===shapeOf(p.n),score=(1-.5*d/reach)*(1-.6*dt/gapMs)*(same?1:CONFUSE_SHAPE_RELIEF);
       if(!top||score>top.score)top={at:e.at,note:e.n,prev:p.n,score:Math.round(score*100)/100,gapMs:Math.round(dt),lanes:Math.round(d*100)/100,sameShape:same,level:e.level?'空中':'地上'};}
     if(top)out.push(top);}
