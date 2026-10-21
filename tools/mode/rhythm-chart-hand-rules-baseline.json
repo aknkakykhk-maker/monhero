@@ -1666,41 +1666,6 @@
    "besideHeldBand": 0,
    "fastSameSide": 52,
    "heldHandSwitch": 0
-  },
-  "black_shout/EASY": {
-   "sideHeightSwitch": 0,
-   "skyAfterGround": 0,
-   "besideHeldBand": 0,
-   "fastSameSide": 0,
-   "heldHandSwitch": 0
-  },
-  "black_shout/NORMAL": {
-   "sideHeightSwitch": 0,
-   "skyAfterGround": 0,
-   "besideHeldBand": 0,
-   "fastSameSide": 0,
-   "heldHandSwitch": 0
-  },
-  "black_shout/HARD": {
-   "sideHeightSwitch": 0,
-   "skyAfterGround": 0,
-   "besideHeldBand": 0,
-   "fastSameSide": 9,
-   "heldHandSwitch": 0
-  },
-  "black_shout/EXPERT": {
-   "sideHeightSwitch": 0,
-   "skyAfterGround": 0,
-   "besideHeldBand": 0,
-   "fastSameSide": 30,
-   "heldHandSwitch": 0
-  },
-  "black_shout/MASTER": {
-   "sideHeightSwitch": 0,
-   "skyAfterGround": 0,
-   "besideHeldBand": 0,
-   "fastSameSide": 79,
-   "heldHandSwitch": 0
   }
  },
  "history": [
@@ -1723,11 +1688,6 @@
    "at": "2026-10-18T16:49",
    "reason": "新曲 SAD SONG(全編・short ver.)の行だけを足す",
    "changed": 10
-  },
-  {
-   "at": "2026-10-21T12:07",
-   "reason": "新曲 BLACK SHOUT の行だけを足す",
-   "changed": 5
   }
  ]
 }
