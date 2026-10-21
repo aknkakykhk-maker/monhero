@@ -205,8 +205,8 @@ const unit = async (core) => {
     for (const id of ['mua', 'kiki', 'momosuke', 'dra']) {
       const per = DIGEST.assistants[id];
       const sysText = core.buildSystem(DIGEST, id)[2].text;
-      check(`⑳ ${id}: 見本のセリフが60〜100本・必ず出すくせ・受け答えの見本5〜8組が人柄に入っている`, per.samples.length >= 60 && per.samples.length <= 100
-        && per.quirks.length >= 3 && per.examples.length >= 5 && per.examples.length <= 8 && /必ず出すくせ/.test(sysText) && /受け答えの見本/.test(sysText));
+      check(`⑳ ${id}: 見本のセリフが60〜100本・くせ・受け答えの見本5〜8組が人柄に入っている`, per.samples.length >= 60 && per.samples.length <= 100
+        && per.quirks.length >= 3 && per.examples.length >= 5 && per.examples.length <= 8 && /くせ\(この助手らしさ/.test(sysText) && /受け答えの見本/.test(sysText));
     }
     const kikiSamples = DIGEST.assistants.kiki.samples.join('\n');
     const draSamples = DIGEST.assistants.dra.samples.join('\n');
@@ -220,7 +220,9 @@ const unit = async (core) => {
     check('㉒ 関係のないヘルプの項目の名前を出さない(渡した項目にあるときだけ)', /関係のない項目の名前を出さない/.test(core.RULES_TEXT) && !/目次から近い項目/.test(core.RULES_TEXT) && /項目の名前は出さない/.test(core.topicsText([])));
     check('㉒ 決まりの区別(「ゲームのことじゃないけど」など)を口に出さない', /口に出さない/.test(core.RULES_TEXT) && /ゲームのことじゃないけど/.test(core.RULES_TEXT));
     check('㉒ 質問には中身で答え、質問だけで返さない', /まず中身で答える/.test(core.RULES_TEXT));
-    check('⑳ 決まりに「毎回くせを最低1つ入れる・ヘルプの文をそのまま写さない」が入っている', /最低1つは入れる/.test(core.RULES_TEXT) && /そのまま写さず/.test(core.RULES_TEXT));
+    // 2026-10-21 社長「リアルと同じような感じに」→ くせは自然に出るところで(毎回は入れない)・長さと形を話に合わせる
+    check('⑳ 決まりに「くせは自然に出るところで・ヘルプの文をそのまま写さない」が入っている', /自然に出るところで出す/.test(core.RULES_TEXT) && !/最低1つは入れる/.test(core.RULES_TEXT) && /そのまま写さず/.test(core.RULES_TEXT));
+    check('㉓ 決まりに「人と話しているように話す・長さと形を話に合わせる」が入っている', /人と話しているように話す/.test(core.RULES_TEXT) && /毎回同じ長さ・同じ形にしない/.test(core.RULES_TEXT) && !/1〜3行で短く/.test(core.RULES_TEXT));
     check('⑲ 決まりに「思い出メモにあることは『聞いていない』と言わない」が入っている', /「聞いていない」とは言わない/.test(core.RULES_TEXT));
     const named = core.validateDailyLines([{ scene: 'home', e: 'happy', t: 'テストちん、今日もがんばろ！' }, { scene: 'home', e: 'wink', t: 'キミの調子はどう？' }], ['home'], {}, { callName: 'テストちん', playerName: 'テスト' });
     check('⑲ ふだんの吹き出しに呼び名がそのまま入っていたら {name} へ置き換える', named.home && named.home[0].t === '{name}、今日もがんばろ！' && named.home[1].t === 'キミの調子はどう？');
