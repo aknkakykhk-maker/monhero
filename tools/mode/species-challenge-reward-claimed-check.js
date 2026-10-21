@@ -157,8 +157,22 @@ const UNCLAIMED_DIFFICULTY = 'Easy';
       /text-amber-200/.test(unclaimedClass) && !/line-through/.test(unclaimedClass), unclaimedClass);
     const claimedBoxClass = await claimedReward.getAttribute('class');
     const unclaimedBoxClass = await unclaimedReward.getAttribute('class');
-    check('受け取った難易度は枠ごとグレーに落ちる',
-      /bg-slate-900/.test(claimedBoxClass) && /bg-fuchsia-950/.test(unclaimedBoxClass));
+    // 2026-10-08 に難易度の札を共通のカラータイル(mhbt-reward)へ作り直してからは、枠の色を変えず、
+    // 受け取った難易度は枠ごと薄く(opacity-70)し、見出しの「クリア報酬」をグレーにする
+    const claimedHead = await claimedReward.locator('span').first().getAttribute('class');
+    const unclaimedHead = await unclaimedReward.locator('span').first().getAttribute('class');
+    check('受け取った難易度は枠ごと薄くなり、見出しの「クリア報酬」がグレーになる',
+      /\bmhbt-reward\b/.test(claimedBoxClass) && /\bopacity-70\b/.test(claimedBoxClass) && !/\bopacity-70\b/.test(unclaimedBoxClass)
+      && /text-slate-500/.test(claimedHead) && /text-fuchsia-200/.test(unclaimedHead),
+      `${claimedBoxClass} / ${unclaimedBoxClass} / ${claimedHead} / ${unclaimedHead}`);
+    if (process.env.SPECIES_SHOT_DIR) {
+      // 撮るときだけ、上に重なるお知らせ(お詫びの配布など)を閉じ、カードを画面の中へ出す
+      for (let i = 0; i < 4; i++) { const b = page.getByRole('button', { name: /^確認$|^閉じる$|^OK$/ }).first(); if (!(await b.isVisible().catch(() => false))) break; await b.click().catch(() => {}); await page.waitForTimeout(400); }
+      await claimedCard.scrollIntoViewIfNeeded(); await page.waitForTimeout(600);
+      await claimedCard.screenshot({ path: `${process.env.SPECIES_SHOT_DIR}/claimed.png` });
+      await unclaimedCard.scrollIntoViewIfNeeded(); await page.waitForTimeout(600);
+      await unclaimedCard.screenshot({ path: `${process.env.SPECIES_SHOT_DIR}/unclaimed.png` });
+    }
 
     // --- ② 見出しのクリア済みマーク ---
     check('クリア済みの難易度は見出しに✅が付く',
