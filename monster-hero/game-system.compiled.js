@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: aecc58791185b09a
+// source-sha256: 8951a204898dd24c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-21 10:09";
+const BUILD_DATE = "2026-10-21 11:16";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -16444,6 +16444,16 @@ const helpDataRows = id => {
       return Object.values(typeof ASSISTANT_BOND_ACTIONS !== 'undefined' && ASSISTANT_BOND_ACTIONS || {}).filter(x => typeof releasedForPlayers !== 'function' || releasedForPlayers(x)).map(x => [x.label, `1回 +${x.amount} ／ 1日 ${x.dailyMax} まで`]);
     case 'rhythmDifficultyRanks':
       return (typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : typeof RHYTHM_DIFFICULTIES !== 'undefined' ? RHYTHM_DIFFICULTIES : []).filter(d => typeof RHYTHM_DIFFICULTIES !== 'undefined' && RHYTHM_DIFFICULTIES.some(x => x.id === d.id) || typeof rhythmDemoSongs !== 'undefined' && rhythmDemoSongs(RHYTHM_SONGS).some(song => song.difficulties?.[d.id]?.notes?.length > 0)).map(d => [d.id, `満点 ${d.maxScore.toLocaleString()}点 → 上限ランク ${rhythmRankForScore(d.maxScore)}`]);
+    case 'rhythmHellSongs':
+      {
+        const songs = typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS : [];
+        const hell = typeof RHYTHM_HELL_CHARTS !== 'undefined' ? RHYTHM_HELL_CHARTS : {};
+        return songs.map(song => {
+          const chart = song && hell[song.songId];
+          if (!chart || !Number.isFinite(chart.level)) return null;
+          return [song.displayName || song.songId, `Lv.${chart.level} ／ ${chart.totalNotes}ノーツ`];
+        }).filter(Boolean);
+      }
     case 'rhythmDemoSongLevels':
       {
         const songs = typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS : [];
@@ -16554,6 +16564,7 @@ const HELP_DATA_TITLES = {
   monsterLineages: 'モンスターの血統一覧',
   psycheRewards: '難易度ごとにもらえる虹のプシュケー',
   rhythmDifficultyRanks: '音ゲーの難易度ごとの満点と上限ランク',
+  rhythmHellSongs: 'HELL がある曲',
   rhythmDemoSongLevels: '体験版で遊べる難易度とレベル',
   rhythmDemoSongList: '先行公開している曲',
   rhythmDifficultySpread: '同じ難易度でも曲でどれだけ違うか',

@@ -45,6 +45,9 @@ const SONGS={sheriruth:{marker:'sheriruth-v3',zero:711.6-2594.75,beat:324.342,le
   sad_song:{marker:'sad-song-v3',zero:99.5,beat:348.818,levelRe:/const sadSongHellChart=mhChart\((\d+),/,source:'audio',variant:2,crosses:'auto',crossUpper:'mover',crossDepth:-1},
   sad_song_short:{marker:'sad-song-short-v3',zero:99.5,beat:348.818,levelRe:/const sadSongShortHellChart=mhChart\((\d+),/,source:'audio',variant:3,crosses:'auto',crossUpper:'mover',crossDepth:-1},
   // Toward the Stars, Paradise or Truth short ver.(hitoyakyuko・2026-10-19・新曲は基本 HELL あり)
+  // ANiMA・Journey(2026-10-21 社長「ジャーニーとアニマもヘル作って」)。拍の頭と1拍は authoring/<曲>-v3-audio.json の timing。見分けにくい形は山場もなし(mixedWindows なし)
+  anima:{marker:'anima-v3',zero:200,beat:326.9755,levelRe:/const animaHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1},
+  journey:{marker:'journey-v3',zero:272.3,beat:468.749,levelRe:/const journeyHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1},
   toward_the_stars_short:{marker:'toward-the-stars-short-v3',zero:1390.5,beat:418.796,levelRe:/const towardTheStarsShortHellChart=mhChart\((\d+),/,source:'audio',variant:2,crosses:'auto',crossUpper:'mover',crossDepth:-1,phrases:['L','both','R','both']}};
 // mixedWindows:[[開始ms,終わりms],…] または 'peak' … 見分けにくい形(近いレーンで高さの違うノーツが続く)を残してよい山場の区間(2026-10-21)。
 //   'peak' はいちばん混んだ区間を1つ選ぶ。合わせて曲の長さの PEAK_SHARE(12%)まで。--peak でその場だけ 'peak' を試せる。
@@ -390,12 +393,22 @@ const mix=(master,{zero,beat,crosses=[],gentle=false,crossUpper='hold',crossDept
           if(!g.mon){notes.splice(k,1);moved=true;break;}
           if(!g.mirrored){g.sub=12-g.sub-g.w;if(g.hand)g.hand=g.hand==='L'?'R':'L';g.mirrored=true;moved=true;break;}}
         if(moved)break;}
+      // どちらも長押し(スライド・ホールド)の組は、地上で始まるほうを抜く(2026-10-21 Journey の HELL で、空中から降りるスライドの
+      //   468ms 後に、近い所から地上のスライドが始まる組が1つ残った。上の2つはタップ・フリックしか見ていない)
+      if(!moved)for(const v of res){for(const x of [v.note,v.prev]){if(x.skyHeight>0||(x.type!=='SLIDE'&&x.type!=='HOLD'))continue;
+          if(x.type==='SLIDE'&&x.slidePoints&&x.slidePoints[0]&&x.slidePoints[0].sky>=.5)continue;
+          const k=notes.findIndex(n=>(n.k==='s'&&Math.abs(startOf(n)-x.timeMs)<=1&&n.pts[0][3]<.5&&Math.abs(n.pts[0][1]-x.lane)<.01)||(n.k==='h'&&Math.abs(n.t-x.timeMs)<=1&&n.sub===x.subLane));
+          if(k>=0){notes.splice(k,1);moved=true;break;}}
+        if(moved)break;}
       if(!moved)break;}}
   // 空中を付けたあとにも、横持ちの物差しで「押せない」と出る地上のタップ・フリックが交差の区間の外に残っていれば取り除く
   //   (骨組みのときと手の割り振りが変わって見えることがある。0件の曲では何もしない)
   for(let r=0;r<20;r++){const th=thumbCheck(notes,HELL_LANDSCAPE,beat);
     const bad=th.issues.find(i=>i.kind==='impossible'&&/タップ/.test(i.what)&&!crossWindows.some(([a,b])=>i.t>=a&&i.t<=b));if(!bad)break;
-    const k=notes.findIndex(n=>(n.k==='t'||n.k==='f')&&!n.mon&&!n.sky&&Math.abs(n.t-bad.t)<=2);
+    let k=notes.findIndex(n=>(n.k==='t'||n.k==='f')&&!n.mon&&!n.sky&&Math.abs(n.t-bad.t)<=2);
+    // その時刻に地上のタップが無く、空中のタップが押せない所を作っているときは、空中のタップを抜く(2026-10-21 ANiMA・Journey の HELL で
+    //   空中の連打が163ms・118ms で3レーン以上を跳ぶ所が2つずつ残った。地上のタップだけを見ていたので取り残されていた)
+    if(k<0)k=notes.findIndex(n=>n.k==='t'&&n.sky&&!n.mon&&Math.abs(n.t-bad.t)<=2);
     // モンスターノーツは1曲に4個の決まりがあるので取り除かず、左右を反対側へ写す(ふさがっていない手の側へ)
     if(k<0){const m=notes.find(n=>n.k==='t'&&n.mon&&!n.sky&&Math.abs(n.t-bad.t)<=2&&!n.mirrored);if(!m)break;m.sub=12-m.sub-m.w;m.hand=m.hand==='L'?'R':'L';m.mirrored=true;continue;}
     notes.splice(k,1);}
