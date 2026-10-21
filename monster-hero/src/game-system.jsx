@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 65267e1230093874
+// generated-sha256: f8295a1d6216139d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-21 10:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-21 10:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11687,6 +11687,17 @@ const helpDataRows = (id) => {
         [d.id, `満点 ${d.maxScore.toLocaleString()}点 → 上限ランク ${rhythmRankForScore(d.maxScore)}`]);
     // 体験版で遊べる難易度と、そのレベル・ノーツ数。ヘルプへ手で書き写すと、
     // 譜面を作り直すたびに数字だけ古くなるため、実データからそのまま表にする
+    // HELL がある曲(2026-10-21)。曲を足すたびに手で書き写すと古くなるので、HELL の譜面の一覧(RHYTHM_HELL_CHARTS)から作る。
+    // 曲名は公開曲の一覧の名前。並びは曲えらびと同じ順
+    case 'rhythmHellSongs': {
+      const songs = typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS : [];
+      const hell = typeof RHYTHM_HELL_CHARTS !== 'undefined' ? RHYTHM_HELL_CHARTS : {};
+      return songs.map(song => {
+        const chart = song && hell[song.songId];
+        if (!chart || !Number.isFinite(chart.level)) return null;
+        return [song.displayName || song.songId, `Lv.${chart.level} ／ ${chart.totalNotes}ノーツ`];
+      }).filter(Boolean);
+    }
     case 'rhythmDemoSongLevels': {
       const songs = typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS : [];
       const song = typeof rhythmDemoSong !== 'undefined' ? rhythmDemoSong(songs) : null;
@@ -11806,6 +11817,7 @@ const HELP_DATA_TITLES = {
   monsterLineages: 'モンスターの血統一覧',
   psycheRewards: '難易度ごとにもらえる虹のプシュケー',
   rhythmDifficultyRanks: '音ゲーの難易度ごとの満点と上限ランク',
+  rhythmHellSongs: 'HELL がある曲',
   rhythmDemoSongLevels: '体験版で遊べる難易度とレベル',
   rhythmDemoSongList: '先行公開している曲',
   rhythmDifficultySpread: '同じ難易度でも曲でどれだけ違うか',
