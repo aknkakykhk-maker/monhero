@@ -206,7 +206,7 @@ const unit = async (core) => {
       const per = DIGEST.assistants[id];
       const sysText = core.buildSystem(DIGEST, id)[2].text;
       check(`⑳ ${id}: 見本のセリフが60〜100本・くせ・受け答えの見本5〜8組が人柄に入っている`, per.samples.length >= 60 && per.samples.length <= 100
-        && per.quirks.length >= 3 && per.examples.length >= 5 && per.examples.length <= 8 && /くせ\(この助手らしさ/.test(sysText) && /受け答えの見本/.test(sysText));
+        && per.quirks.length >= 3 && per.examples.length >= 5 && per.examples.length <= 8 && /くせ\(「返事に1つは入れる」/.test(sysText) && /毎回の返事で必ず守る/.test(sysText) && /受け答えの見本/.test(sysText));
     }
     const kikiSamples = DIGEST.assistants.kiki.samples.join('\n');
     const draSamples = DIGEST.assistants.dra.samples.join('\n');
@@ -222,6 +222,8 @@ const unit = async (core) => {
     check('㉒ 質問には中身で答え、質問だけで返さない', /まず中身で答える/.test(core.RULES_TEXT));
     // 2026-10-21 社長「リアルと同じような感じに」→ くせは自然に出るところで(毎回は入れない)・長さと形を話に合わせる
     check('⑳ 決まりに「くせは自然に出るところで・ヘルプの文をそのまま写さない」が入っている', /自然に出るところで出す/.test(core.RULES_TEXT) && !/最低1つは入れる/.test(core.RULES_TEXT) && /そのまま写さず/.test(core.RULES_TEXT));
+    // 2026-10-21 社長「ききのキャラが崩壊してる」→ 口調は毎回必ず守る(自然さより先)
+    check('㉔ 決まりに「口調は毎回の返事で必ず守る・自然さより口調が先・返事に1つは入れるくせは毎回」が入っている', /口調\(話し方・一人称・語尾\)を毎回の返事で必ず守る/.test(core.RULES_TEXT) && /自然に話すことより口調が先/.test(core.RULES_TEXT) && /「返事に1つは入れる」と書いてあるものは、毎回/.test(core.RULES_TEXT));
     check('㉓ 決まりに「人と話しているように話す・長さと形を話に合わせる」が入っている', /人と話しているように話す/.test(core.RULES_TEXT) && /毎回同じ長さ・同じ形にしない/.test(core.RULES_TEXT) && !/1〜3行で短く/.test(core.RULES_TEXT));
     check('⑲ 決まりに「思い出メモにあることは『聞いていない』と言わない」が入っている', /「聞いていない」とは言わない/.test(core.RULES_TEXT));
     const named = core.validateDailyLines([{ scene: 'home', e: 'happy', t: 'テストちん、今日もがんばろ！' }, { scene: 'home', e: 'wink', t: 'キミの調子はどう？' }], ['home'], {}, { callName: 'テストちん', playerName: 'テスト' });
