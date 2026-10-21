@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1c43cee528d899e9
+// source-sha256: ddd44641d6a3e462
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-21 20:00";
+const BUILD_DATE = "2026-10-21 20:19";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -52087,6 +52087,7 @@ const AssistantBondRewardList = ({
   const rows = assistantBondRewardRows(who.id);
   const accent = who.accent || '#f472b6';
   const nextLv = rows.find(r => r.level > level)?.level || null;
+  const milestones = typeof ASSISTANT_BOND_REWARD_MILESTONES !== 'undefined' && ASSISTANT_BOND_REWARD_MILESTONES || [];
   const nowRef = React.useRef(null);
   const listRef = React.useRef(null);
   React.useEffect(() => {
@@ -52123,7 +52124,7 @@ const AssistantBondRewardList = ({
   }, "いまは Lv.", level, nextLv ? `・次は Lv.${nextLv}` : '・全部もらいました'))), React.createElement("p", {
     className: "mt-2 text-[10px] font-bold leading-snug text-slate-400",
     style: JA_WRAP_STYLE
-  }, jaWrap('Lvが上がると、そのLvのごほうびがギフトボックスへ届きます。助手ごとに1回ずつです。')), React.createElement("ol", {
+  }, jaWrap(`Lvが上がると、そのLvのごほうびがギフトボックスへ届きます。助手ごとに1回ずつです。${milestones.length ? `節目の Lv${milestones.join('・')} はほかのLvより豪華です。` : ''}`)), React.createElement("ol", {
     ref: listRef,
     className: "relative mt-2 max-h-[58vh] space-y-1.5 overflow-y-auto pr-0.5"
   }, rows.map(r => {
@@ -52145,7 +52146,10 @@ const AssistantBondRewardList = ({
       style: {
         color: got ? '#94a3b8' : accent
       }
-    }, "Lv.", r.level), React.createElement("span", {
+    }, "Lv.", r.level), milestones.includes(r.level) && React.createElement("span", {
+      "data-bond-reward-milestone": true,
+      className: "shrink-0 rounded-md bg-amber-500/90 px-1.5 py-px text-[9px] font-black text-slate-950"
+    }, "節目"), React.createElement("span", {
       className: "min-w-0 flex-1 text-[11px] font-black text-slate-300",
       style: JA_LABEL_STYLE
     }, jaWrap(r.title)), React.createElement("em", {
@@ -109496,7 +109500,7 @@ function MonsterHeroGame() {
       style: {
         color: activeAssistant.accent
       }
-    }, (tempCallStyle || '').includes('{name}') ? tempCallStyle.replace('{name}', breederName || 'あなた') : tempCallStyle || assistantSpeakText('{name}', breederName, assistantBondLevelNow, null, selectedAssistantId))), React.createElement("div", {
+    }, (tempCallStyle || '').includes('{name}') ? typeof assistantFillCallTemplate === 'function' ? assistantFillCallTemplate(tempCallStyle, breederName || 'あなた') : tempCallStyle.replace('{name}', breederName || 'あなた') : tempCallStyle || assistantSpeakText('{name}', breederName, assistantBondLevelNow, null, selectedAssistantId))), React.createElement("div", {
       className: "flex gap-2 mb-2"
     }, React.createElement("button", {
       onClick: () => setShowCallStylePicker(false),
