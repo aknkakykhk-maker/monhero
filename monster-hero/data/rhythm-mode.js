@@ -41643,6 +41643,23 @@ const RHYTHM_NOTE_COLORS=Object.freeze({
   LEFT: Object.freeze({hi:'#fff7ed',mid:'#fb923c',lo:'#ea580c',rgb:'251,146,60',label:'オレンジ'}),
   RIGHT:Object.freeze({hi:'#f7fee7',mid:'#a3e635',lo:'#4d7c0f',rgb:'163,230,53',label:'黄緑'}),
 });
+// ノーツの見本の絵の種類(2026-10-21)。label はヘルプの表の書き方(画面に出す名前)。words は助手の答えの文からその絵を選ぶ言葉
+// (長い言葉から順に照らす。「SKY TAP」を「TAP」と取り違えない)。描くのは RHYTHM_CANVAS_RENDERER.drawSwatch(= rhythmDrawNoteSwatch)
+const RHYTHM_NOTE_SWATCH_KINDS=Object.freeze([
+  Object.freeze({id:'TAP',label:'TAP',words:Object.freeze(['TAP','タップノーツ'])}), // 「ボタンをタップ」の「タップ」は数えない
+  Object.freeze({id:'CHORD',label:'同時押し',words:Object.freeze(['同時押し'])}),
+  Object.freeze({id:'HOLD',label:'HOLD',words:Object.freeze(['HOLD','ホールド','長押し'])}),
+  Object.freeze({id:'SLIDE',label:'SLIDE',words:Object.freeze(['SLIDE','スライド'])}),
+  Object.freeze({id:'FLICK',label:'FLICK',words:Object.freeze(['FLICK','フリック'])}),
+  Object.freeze({id:'FLICK_LEFT',label:'横フリック(左)',words:Object.freeze(['横フリック'])}),
+  Object.freeze({id:'FLICK_RIGHT',label:'横フリック(右)',words:Object.freeze(['横フリック'])}),
+  Object.freeze({id:'END_FLICK',label:'終点フリック',words:Object.freeze(['終点フリック'])}),
+  Object.freeze({id:'MONSTER',label:'モンスターノーツ',words:Object.freeze(['モンスターノーツ'])}),
+  Object.freeze({id:'SKY_TAP',label:'SKY TAP',words:Object.freeze(['SKY TAP','SKYTAP','スカイタップ','空のタップ','空中のタップ'])}),
+  Object.freeze({id:'SKY_SLIDE_L',label:'SKY SLIDE(左手)',words:Object.freeze(['SKY SLIDE','SKYSLIDE','スカイスライド','空のスライド','空中のスライド'])}),
+  Object.freeze({id:'SKY_SLIDE_R',label:'SKY SLIDE(右手)',words:Object.freeze(['SKY SLIDE','SKYSLIDE','スカイスライド','空のスライド','空中のスライド'])}),
+  Object.freeze({id:'SKY_LINE',label:'空の判定ライン',words:Object.freeze(['空の判定ライン','上の判定ライン','空中の判定ライン'])}),
+]);
 const RHYTHM_CANVAS_RENDERER=(()=>{
   const HEAD_H=12;          // 粒の高さ(ノーツ要素 20px から inset 4px 0 を引いた値)
   const GLOW=20;            // 光の画像の余白(px)。いちばん広い光(18px)が収まる
@@ -43541,6 +43558,55 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       if(typeof ctx.setBloom==='function')ctx.setBloom(!!options.bloom&&additiveGlow&&effect!=='MINIMAL'&&!lightweight);
       return true;
     },
+    // ノーツの見本の絵(2026-10-21 社長「見た目とかちゃんとわかるようにしてほしい」)。ヘルプの表・助手のおしゃべり・ノーツ図鑑で使う。
+    // 演奏画面と同じ描き方の関数(drawHead・drawBand・drawSlide・drawEndBar・drawGlassBox・drawSkySlideZ)を、渡した 2D の描き込み先 c の上で呼ぶ。
+    // 色や形は同じ表(RHYTHM_NOTE_COLORS・RHYTHM_SKY_LOOK など)から取るので、演奏画面の見た目を変えればこの絵もそろう。
+    // 描く間だけ、描き込み先と演出の状態(演出量・ノーツの大きさ・試作の見た目)を見本用にして、終わったら元へ戻す(演奏中に呼んでも演奏の絵は変わらない)。
+    // 絵は横72×縦56の大きさで組み、c を w×h へ縮めて描く。kind は RHYTHM_NOTE_SWATCH_KINDS
+    drawSwatch(c,kind,w,h){
+      if(!c||typeof c.beginPath!=='function'||!(w>0)||!(h>0)||!RHYTHM_NOTE_SWATCH_KINDS.some(k=>k.id===kind))return false;
+      const keep={canvas,ctx,backend,dpr,cssW,cssH,frameNow,effect,lightweight,sizeScale,floor3d,floor3d2,floor3d3,sky3dWanted,case3,gpuBandWanted,motion};
+      const VW=72,VH=56;
+      c.save();
+      try{
+        canvas=c.canvas||null;ctx=c;backend='2d';dpr=Math.max(1,Math.min(3,(typeof window!=='undefined'&&window.devicePixelRatio)||1));cssW=VW;cssH=VH;frameNow=0;
+        effect='FULL';lightweight=false;sizeScale=1;floor3d=floor3d2=floor3d3=false;sky3dWanted=false;case3=false;gpuBandWanted=false;motion=false;
+        c.scale(w/VW,h/VH);
+        const o={failed:false,monster:false,wide:false,pressed:false,alpha:1,pop:null,depthScale:1,brightness:1};
+        const head=(note,cx,cy,hw,extra)=>drawHead(note,{head:{cx,cy,w:hw,h:HEAD_H}},{...o,...(extra||{})});
+        const holdBand=(note,cx,top,bottom,hw,endFlick)=>{
+          const geo={band:[{y:top,left:cx-hw/2*.5,right:cx+hw/2*.5},{y:bottom,left:cx-hw/2*.5,right:cx+hw/2*.5}],end:{cx,cy:top,w:hw,scale:1}};
+          drawBand(geo,o);drawEndBar(endFlick?{...note,endFlick:true}:note,geo,o);
+        };
+        // スライドの道すじ: 下(x0,y0)から上(x1,y1)へ、なめらかに曲がる帯を区切りで組む(sky は空中の高さ)
+        const slideQuads=(x0,y0,x1,y1,half,sky)=>{const n=8,pts=[];for(let i=0;i<=n;i++){const t=i/n,e=t*t*(3-2*t);pts.push({x:x0+(x1-x0)*e,y:y0+(y1-y0)*t});}
+          const q=[];for(let i=0;i<n;i++){const a=pts[i],b=pts[i+1];q.push({l0:a.x-half,r0:a.x+half,y0:a.y,l1:b.x-half,r1:b.x+half,y1:b.y,sky});}return q;};
+        if(kind==='TAP')head({type:'TAP'},36,34,46);
+        else if(kind==='CHORD'){head({type:'TAP'},19,34,30);head({type:'TAP'},53,34,30);}
+        else if(kind==='HOLD'){holdBand({type:'HOLD'},36,10,40,46);head({type:'HOLD'},36,40,46);}
+        else if(kind==='SLIDE'){const note={type:'SLIDE'};drawSlide({slide:slideQuads(26,42,48,10,8,0)},o,note);drawEndBar(note,{end:{cx:48,cy:10,w:34,scale:1}},o);head(note,26,42,34);}
+        else if(kind==='FLICK')head({type:'FLICK'},36,42,46);
+        else if(kind==='FLICK_LEFT')head({type:'FLICK',flickDir:'left'},36,42,46);
+        else if(kind==='FLICK_RIGHT')head({type:'FLICK',flickDir:'right'},36,42,46);
+        else if(kind==='END_FLICK'){holdBand({type:'HOLD'},36,24,46,40,true);head({type:'HOLD'},36,46,40);}
+        else if(kind==='MONSTER')head({type:'TAP'},36,32,50,{monster:true});
+        else if(kind==='SKY_TAP')drawGlassBox({cx:36,cy:30,w:62,h:HEAD_H},o);
+        else if(kind==='SKY_SLIDE_L'||kind==='SKY_SLIDE_R'){
+          const hand=kind==='SKY_SLIDE_L'?'L':'R',th=rhythmSkyTheme(),note={type:'SLIDE',hand};
+          drawSkySlideZ(slideQuads(hand==='L'?24:48,44,hand==='L'?44:28,8,8,1),{...o,skySlideRgb:th.rgb,skySlideCore:th.core,skyHand:hand},note);
+        }else if(kind==='SKY_LINE'){
+          // 上の判定ライン(空の判定ライン)。演奏画面と同じ値(RHYTHM_SKY_LOOK.line の帯と芯)で、横いっぱいに引く
+          const L=RHYTHM_SKY_LOOK.line,y=28;
+          c.fillStyle=`rgba(${L.bandRgb},${L.bandAlpha})`;c.fillRect(4,y-L.bandPx/2,VW-8,L.bandPx);
+          c.fillStyle=`rgba(${L.coreRgb},${L.coreAlpha})`;c.fillRect(4,y-L.corePx/2,VW-8,L.corePx);
+        }
+        return true;
+      }catch(e){return false;}
+      finally{
+        c.restore();c.globalAlpha=1;c.globalCompositeOperation='source-over';
+        ({canvas,ctx,backend,dpr,cssW,cssH,frameNow,effect,lightweight,sizeScale,floor3d,floor3d2,floor3d3,sky3dWanted,case3,gpuBandWanted,motion}=keep);
+      }
+    },
     // ノーツ1個。geo は rhythmNoteCanvasGeometry の結果。opts: {failed,monster,wide,pressed,heldMs(押さえ始めからの時間),alpha,pop(0..1|null),depthScale,brightness,hideBody}
     drawNote(note,geo,opts){
       if(!ctx||!geo)return;
@@ -43645,6 +43711,27 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     clear(){faces.length=0;pendingClear=false;if(ctx&&cssW&&cssH){ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,cssW,cssH);blank=true;}},
   };
 })();
+// ノーツ1つの見本の絵を描く(2026-10-21)。c … 2D の描き込み先(呼ぶ側が画面の細かさの倍率をかけておく)/ kind … RHYTHM_NOTE_SWATCH_KINDS の id / w,h … 描く大きさ(CSS px)。
+// 描けたら true。ヘルプの表・助手のおしゃべり・ノーツ図鑑はこれを使う(絵を手で描いたり写真を貼ったりしない)
+const rhythmDrawNoteSwatch=(c,kind,w,h)=>RHYTHM_CANVAS_RENDERER.drawSwatch(c,kind,w,h);
+// 文に出たノーツの名前から、見本の絵の種類を選ぶ(助手の答えの吹き出し用)。長い言葉から照らし、照らした所は消して短い言葉と二重に数えない。
+// 出てきた順に並べ、同じ種類は1回だけ
+const rhythmNoteSwatchKindsInText=(text)=>{
+  let t=String(text||'').normalize('NFKC').toUpperCase();
+  const words=[];
+  for(const k of RHYTHM_NOTE_SWATCH_KINDS)for(const w of k.words)words.push({w:w.normalize('NFKC').toUpperCase(),id:k.id});
+  words.sort((a,b)=>b.w.length-a.w.length);
+  const found=[];
+  for(const {w,id} of words){let at=t.indexOf(w);while(at>=0){found.push({id,at});t=t.slice(0,at)+' '.repeat(w.length)+t.slice(at+w.length);at=t.indexOf(w);}}
+  found.sort((a,b)=>a.at-b.at);
+  const out=[];
+  for(const f of found){
+    // 横フリック・空のスライドは左右(左手・右手)の2枚で見せる
+    const ids=f.id==='FLICK_LEFT'?['FLICK_LEFT','FLICK_RIGHT']:f.id==='SKY_SLIDE_L'?['SKY_SLIDE_L','SKY_SLIDE_R']:[f.id];
+    for(const id of ids)if(!out.includes(id))out.push(id);
+  }
+  return out;
+};
 
 // レーンのDOMが入れ替わった時だけ静的形状を設定する。ノーツはプレイ本体の1本のrAFから直接配置する。
 const installRhythmPerspectiveNoteVisuals=()=>{
