@@ -261,7 +261,9 @@ function build(d) {
     a.弱み ? ['弱み', esc(a.弱み)] : null,
     a.合うモンスター && a.合うモンスター.length ? ['合うモンスター', refList('m', a.合うモンスター)] : (a.合う子なし ? ['合うモンスター', esc(a.合う子なし)] : null),
   ]) + (a.回数 ? diffCards(a, false) + `<div class="tw wide"><table><thead><tr><th>難易度</th><th>Tier</th><th>試した回数</th></tr></thead><tbody>${DIFFS.map((k) => `<tr><td>${k}</td><td>${tier(a[k])}</td><td>${a.回数[k]}</td></tr>`).join('')}</tbody></table></div>` : '');
-  const fullBody = (m) => evidence(m) + kv([
+  // 決め手(2026-10-22 カゲあつくん)。詳しい欄のいちばん上に、何がこの段の決め手かを1行で出す
+  const decider = (m) => (m.決め手 ? `<p class="decider"><b>決め手</b> ${esc(m.決め手)}</p>` : '');
+  const fullBody = (m) => decider(m) + evidence(m) + kv([
     ['役', esc(m.役)],
     m.仮の総合 ? ['仮の総合', `${tier(m.仮の総合)} (5回未満のマスから出した仮)`] : null,
     m.境目 ? ['境目', `${esc(m.総合)} とその隣の段の境目。3つの難易度とも5回以上あるのに差がぶれの中なので、回数はここで止めて暫定のまま置いている`] : null,
@@ -345,6 +347,9 @@ function build(d) {
   const c = d.数えた回;
 
   // 勇者モン向き・供モン向き(2026-10-21 社長「全体の決め方＋実戦を混ぜて全部更新」)。勇者モンにした回だけ・供モンの回だけで付けた段を、段ごとに並べる
+  // 総合 Tier のいちばん上に出す決め方(2026-10-22 カゲあつくん「新しい決め方が一番上で分からない」)。tier.json の決め方.方法から作る
+  const method = (d.決め方 && d.決め方.方法) || null;
+  const howLead = method && method.名前 === 'overall' ? `<div class="howlead"><p><b>決め方</b>: 供モンとして入った回の働き(攻め役はダメージの頭割り、守り・支え役は入った回の伸び)が主。勇者モンにした回の伸びは重み ${esc(String(method.勇者モンの重み))} で軽く足す${method.実戦の重み ? `。全国ランキングの実戦(${esc(method.実戦のモード || '')})を重み ${esc(String(method.実戦の重み))} で混ぜる` : ''}。</p><p>ヘイト(10-18 に公開)はまだシミュレーターに入っていないので、入れたらもう一度動きます。</p></div>` : '';
   const roleTiers = ['S', 'A', 'B', 'C', 'D'];
   const roleList = (key) => (d.モンスター || []).filter((m) => roleTiers.includes(m[key]));
   const roleSection = roleList('勇者モン向き').length || roleList('供モン向き').length ? `<section id="monsters-role">
@@ -448,6 +453,8 @@ html{scroll-behavior:smooth;scroll-padding-top:56px}
 .ev th,.ev td{white-space:normal;overflow-wrap:anywhere;padding:3px 4px}
 .ev .dim td{color:var(--muted);opacity:.75}
 .evf{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin:6px 0}
+.decider{margin:0 0 8px;padding:6px 10px;border-left:3px solid var(--accent);background:var(--panel);font-size:13px;line-height:1.5}.decider b{margin-right:6px}
+.howlead{margin:0 0 8px;padding:8px 10px;border-radius:10px;background:var(--panel);border:1px solid var(--line);font-size:13px;line-height:1.55}.howlead p{margin:0}.howlead p+p{margin-top:4px;color:var(--muted);font-size:12px}
 .chip{display:inline-block;max-width:100%;font-size:11px;padding:1px 8px;border-radius:999px;border:1px solid var(--line);background:var(--panel)}@media (max-width:360px){.evf .chip{font-size:12px}}
 .ev p{margin:4px 0}.evu{color:var(--muted)}
 .cb{padding:0;display:block}
@@ -492,7 +499,7 @@ ${css}
 
   <section id="monsters">
     <h2>モンスター 総合 Tier</h2>
-    <p class="note" style="margin-bottom:10px">${weights} の重みで難易度ごとの点を合わせた順。「暫定」の印は、試した回数が少なく動くかもしれない子。「境目」の印は、回数は足りているのに隣の段との差がぶれの中の子。モンスターの Tier はブラウザの実戦の記録から(ボットが緊急回復を使うようになったのは 2026-10-10 からで、それより前の回は使っていません)。</p>${panels('総合', fullBody, null, OVERALL_TIERS)}
+    ${howLead}<p class="note" style="margin-bottom:10px">難易度ごとの点を ${weights} の重みで合わせた順。「暫定」の印は、試した回数が少なく動くかもしれない子。「境目」の印は、回数は足りているのに隣の段との差がぶれの中の子。モンスターの Tier はブラウザの実戦の記録から(ボットが緊急回復を使うようになったのは 2026-10-10 からで、それより前の回は使っていません)。</p>${panels('総合', fullBody, null, OVERALL_TIERS)}
   </section>
 
   ${roleSection}
