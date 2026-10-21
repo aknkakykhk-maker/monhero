@@ -17,12 +17,20 @@ export const RANKING_TABLES = Object.freeze(['rankings', 'bond_levels', 'breeder
 export const RANKING_FUNCTIONS = Object.freeze(['rhythm_week_score_totals', 'rhythm_event_totals', 'rhythm_event_totals_bonus']);
 export const RANKING_TOP = 5;
 // 1回の話題で読むランキングの数の上限(重さと費用を増やしすぎない)
-export const RANKING_PLAN_MAX = 6;
+export const RANKING_PLAN_MAX = 18;
+// すぐ前のプレイヤーの発言をいくつまで見て、ランキングの話の続きとみなすか(ゲームの ASSISTANT_CHAT_RANKING_PREV と同じ)
+export const RANKING_PREV_TURNS = 2;
+// 一度に並べて読むランキングの数(データベースへの問い合わせを一度に出しすぎない)
+export const RANKING_READ_PARALLEL = 4;
 // 本人の順位を数えるために、上から読む行の上限(ブリーダーLv・絆Lv・曲ごと)。これより下は「圏外」と伝える
 export const RANKING_SCAN_ROWS = 1000;
 // 発言がランキングの話題か。ゲームも同じ式で計画を付けるかを決める(ゲーム側は 56-assistant-chat.jsx の ASSISTANT_CHAT_RANKING_TOPIC)
 export const RANKING_TOPIC_RE = /ランキング|ランク(?:イン|上位)|順位|何位|なんい|[0-9０-９一二三四五]+位|トップ|上位|首位|一番(?:上|強い|高い)|いちばん(?:上|強い|高い)/;
 export const isRankingTopic = (text) => RANKING_TOPIC_RE.test(String(text || ''));
+// いまの発言か、すぐ前のプレイヤーの発言(RANKING_PREV_TURNS まで)がランキングの話か(2026-10-22 社長「全部見られるようにして」。
+// 「タクティクスプロのランキングは？」のあとの「エクストリームは？」のような続きを読む。ゲームの計画が付いているときだけ読むのは今までどおり)
+export const rankingTopicOf = (userText, prevUserTexts = []) => isRankingTopic(userText)
+  || (Array.isArray(prevUserTexts) ? prevUserTexts : []).slice(0, RANKING_PREV_TURNS).some(isRankingTopic);
 
 // ---- 計画の形を確かめる ----
 const KEY_RE = /^[A-Za-z0-9_:|.\-]{1,96}$/;
@@ -260,14 +268,18 @@ export const fetchRankingText = async ({ db, plan, me, log = () => {} }) => {
     select: (table, opts) => (RANKING_TABLES.includes(table) ? selectSafe(table, opts) : Promise.reject(new Error('table'))),
     rpc: (fn, args, opts) => (RANKING_FUNCTIONS.includes(fn) ? raw.rpc(fn, args, opts) : Promise.reject(new Error('function'))),
   };
-  const parts = [];
-  for (const spec of specs) {
+  // 読む数が増えた(1回18まで)ので、RANKING_READ_PARALLEL ずつ並べて読む。並びは計画の順のまま
+  const readOne = async (spec) => {
     let lines;
     try { lines = await readers[spec.kind](db, spec, me || {}); }
     catch (e) { log({ event: 'ranking_read_failed', kind: spec.kind }); lines = ['(いま読めませんでした)']; }
     // 見出しはゲームが作った文(曲名などの「」を残す)。改行と山かっこだけ置き換える
     const head = String(spec.label || '').replace(/[\r\n\t]+/g, ' ').replace(/[<>]/g, (c) => (c === '<' ? '＜' : '＞')).slice(0, 60);
-    parts.push(`■${head}(上位${RANKING_TOP}人と、あなたの順位)\n${lines.join('\n')}`);
+    return `■${head}(上位${RANKING_TOP}人と、あなたの順位)\n${lines.join('\n')}`;
+  };
+  const parts = [];
+  for (let i = 0; i < specs.length; i += RANKING_READ_PARALLEL) {
+    parts.push(...await Promise.all(specs.slice(i, i + RANKING_READ_PARALLEL).map(readOne)));
   }
   return `<ranking-data>\n${parts.join('\n')}\n</ranking-data>`;
 };

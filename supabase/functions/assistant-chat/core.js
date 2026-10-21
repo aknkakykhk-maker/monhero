@@ -1,4 +1,4 @@
-import { fetchRankingText, isRankingTopic, normalizeRankingPlan, rankingSelf } from './ranking.js';
+import { fetchRankingText, normalizeRankingPlan, RANKING_PLAN_MAX, RANKING_PREV_TURNS, rankingSelf, rankingTopicOf } from './ranking.js';
 // 助手とおしゃべり(2026-10-14・社長の決定)の中継役の中身。
 // index.ts(Deno の入口)から呼ぶ。Claude のクライアントと回数の数え方は外から渡すので、
 // 検査(tools/assistant/assistant-chat-check.js)は偽物を渡して、本番の API を叩かずに確かめられる。
@@ -271,7 +271,7 @@ export const normalizeRequest = (body, digest) => {
     bondTitle: str(c.bondTitle, 20), bondTone: str(c.bondTone, 60), memo: normalizeMemo(c.memo),
   };
   // ランキングの読み方の計画(ゲームが作る。ranking.js が形を確かめる)
-  return { breederId, assistantId, messages, ctx, ranking: Array.isArray(body.ranking) ? body.ranking.slice(0, 12) : null };
+  return { breederId, assistantId, messages, ctx, ranking: Array.isArray(body.ranking) ? body.ranking.slice(0, RANKING_PLAN_MAX) : null };
 };
 
 const parseReply = (response) => {
@@ -318,9 +318,11 @@ export const handleChat = async ({ body, digest, client, take, refund, log = () 
   // 質問(と、ひとつ前のプレイヤーの発言)に合うヘルプの項目を選ぶ
   const userTurns = req.messages.filter(m => m.role === 'user');
   const picked = selectHelpTopics(digest, userText, userTurns.length >= 2 ? userTurns[userTurns.length - 2].content : '');
-  // ランキングの話題のときだけ、上位と本人の順位を読む(毎回は読まない。発言の判定とゲームの計画の両方がそろったときだけ)
+  // ランキングの話題のときだけ、上位と本人の順位を読む(毎回は読まない。発言の判定とゲームの計画の両方がそろったときだけ)。
+  // 発言の判定は、いまの発言か、すぐ前のプレイヤーの発言(RANKING_PREV_TURNS まで)。続きの「エクストリームは？」も読む
   let rankingText = '';
-  if (rankingDb && req.ranking && isRankingTopic(userText)) {
+  const prevUserTexts = userTurns.slice(0, -1).reverse().slice(0, RANKING_PREV_TURNS).map(m => m.content);
+  if (rankingDb && req.ranking && rankingTopicOf(userText, prevUserTexts)) {
     try {
       const me = await rankingSelf(rankingDb, req.breederId);
       rankingText = await fetchRankingText({ db: rankingDb, plan: req.ranking, me, log });

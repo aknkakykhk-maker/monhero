@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 42a7c6724bb85e01
+// generated-sha256: 090f67d566036c8f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-22 08:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-22 08:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -48803,36 +48803,118 @@ const assistantChatMonsterIds = (text, prevUserText) => {
 // ランキングの話題のとき、中継役に「どのランキングを読むか」の計画を付けて送る(2026-10-21 社長の決定「おしゃべりでランキングの上位を答えられるようにする」)。
 // 種類・難易度のキー・曲・イベントの期間は、ランキング画面と同じ関数(rankingDifficultyForMode・rhythmRankingDifficultyKey・rhythmLimitedEventAt ほか)で作る。
 // 中継役(supabase/functions/assistant-chat/ranking.js)は形を確かめて読むだけ。話題の判定は中継役の RANKING_TOPIC_RE と同じ式
+// 2026-10-22 社長「全部見られるようにして」:
+//   ・モードを言ったら、そのモードでランキングがある難易度を全部見る(並べ方はランキング画面の renderScoreRankingBody と同じ)
+//   ・「エクストリーム」「極限」は、そのモードの極限の難易度を全部。「全部」「全難易度」は、そのモードの難易度を全部
+//   ・その発言にランキングの言葉やモードが無ければ、すぐ前のプレイヤーの発言(2つまで)から話題・モード・難易度を引き継ぐ
+//     (中継役も、すぐ前の発言にランキングの言葉があれば読む。ranking.js の rankingTopicOf)
 const ASSISTANT_CHAT_RANKING_TOPIC = /ランキング|ランク(?:イン|上位)|順位|何位|なんい|[0-9０-９一二三四五]+位|トップ|上位|首位|一番(?:上|強い|高い)|いちばん(?:上|強い|高い)/;
-const ASSISTANT_CHAT_RANKING_MAX = 6;
-const assistantChatRankingPlan = (rawText) => {
+// 1回に読むランキングの数。チャレンジの全部(通常9+極限8)が入る数。中継役の RANKING_PLAN_MAX と同じ
+const ASSISTANT_CHAT_RANKING_MAX = 18;
+// 引き継ぐ前の発言の数
+const ASSISTANT_CHAT_RANKING_PREV = 2;
+// 「その種類の難易度を全部」の言葉。英字の EXTREME は難易度そのものの名前なので、ここには入れない(カタカナ・漢字だけ)
+const ASSISTANT_CHAT_RANKING_EXTREME_WORD = /エクストリーム|極限/;
+const ASSISTANT_CHAT_RANKING_ALL_WORD = /全部|ぜんぶ|全難易度|全ての難易度|すべての難易度|難易度(?:ごと|別|全部)|全部の難易度/;
+const assistantChatRankingPlan = (rawText, prevUserTexts = []) => {
   const text = String(rawText || '');
-  if (!ASSISTANT_CHAT_RANKING_TOPIC.test(text)) return null;
+  const prevs = (Array.isArray(prevUserTexts) ? prevUserTexts : []).slice(0, ASSISTANT_CHAT_RANKING_PREV).map(t => String(t || ''));
+  const topicNow = ASSISTANT_CHAT_RANKING_TOPIC.test(text);
+  if (!topicNow && !prevs.some(t => ASSISTANT_CHAT_RANKING_TOPIC.test(t))) return null;
   try {
     const norm = (s) => String(s || '').normalize('NFKC').toLowerCase().replace(/\s+/g, '');
-    const t = norm(text);
-    const has = (word) => !!word && t.includes(norm(word));
     const plan = [];
     const push = (p) => { if (plan.length < ASSISTANT_CHAT_RANKING_MAX && p) plan.push(p); };
     // 種(絆Lv・総合力の絞り込み)。図鑑の種と、その種のモンスターのid
     const lineages = typeof dexMainLineages === 'function' ? dexMainLineages() : [];
-    const lineage = lineages.find(l => has(`${l.name}種`)) || lineages.find(l => has(l.name)) || null;
-    const lineageMonsters = lineage && typeof dexMonsterList === 'function' ? dexMonsterList().filter(m => monsterLineageOf(m.id).main?.id === lineage.id).map(m => m.id) : [];
     // ── モンヒロビート ──
     const songs = (typeof RHYTHM_DEMO_SONG_IDS !== 'undefined' ? RHYTHM_DEMO_SONG_IDS : [])
       .filter(id => typeof rhythmSongReleased !== 'function' || rhythmSongReleased(id))
       .map(id => (typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS.find(s => s.songId === id) : null)).filter(s => s && s.displayName)
       .sort((a, b) => b.displayName.length - a.displayName.length);
-    const song = songs.find(s => has(s.displayName)) || null;
-    const rhythmWords = /モンヒロビート|モンビー|モンビート|音ゲー|リズム|曲/.test(text) || !!song;
     const rhythmDiffs = typeof rhythmScoredDifficultyIds === 'function' ? rhythmScoredDifficultyIds() : [];
-    const rhythmDiff = rhythmDiffs.find(d => new RegExp(`(^|[^a-z])${d.toLowerCase()}([^a-z]|$)`).test(text.normalize('NFKC').toLowerCase())) || null;
-    if (song) {
-      const diffs = rhythmDiff ? [rhythmDiff] : rhythmDiffs.filter(d => d === 'MASTER');
-      diffs.forEach(d => { const key = rhythmRankingDifficultyKey(song.songId, d); if (key) push({ kind:'rhythmSong', keys:[key], label:`モンヒロビート「${song.displayName}」${d}` }); });
+    // ── バトルのモード(ランキングがあるモードだけ)と難易度 ──
+    const modes = [
+      ...(typeof BATTLE_MODES !== 'undefined' ? BATTLE_MODES : []),
+      ...[typeof EXTREME_MODE !== 'undefined' ? EXTREME_MODE : null, typeof SPECIES_CHALLENGE_MODE !== 'undefined' ? SPECIES_CHALLENGE_MODE : null,
+        typeof TACTICS_MODE !== 'undefined' ? TACTICS_MODE : null, typeof TACTICS_SPECIES_MODE !== 'undefined' ? TACTICS_SPECIES_MODE : null,
+        typeof TACTICS_PRO_MODE !== 'undefined' ? TACTICS_PRO_MODE : null].filter(Boolean),
+    ].filter(m => m && m.id && modeHasRanking(m.id));
+    const extremeMode = typeof EXTREME_MODE !== 'undefined' ? EXTREME_MODE : null;
+    const modeWords = modes.flatMap(m => [m.label, m.short].filter(Boolean).map(w => ({ w, m }))).sort((a, b) => b.w.length - a.w.length);
+    const extremeList = [...(typeof PUBLIC_EXTREME_DIFFICULTIES !== 'undefined' ? PUBLIC_EXTREME_DIFFICULTIES : []),
+      ...(typeof EXTREME_DIFFICULTIES !== 'undefined' ? EXTREME_DIFFICULTIES : [])];
+    const isExtremeId = (id) => (typeof isExtremeDifficultyId === 'function' ? isExtremeDifficultyId(id) : extremeList.some(st => st.id === id));
+    const diffLabel = (id) => (DIFFICULTY_SETTINGS[id] && DIFFICULTY_SETTINGS[id].label) || (extremeList.find(st => st.id === id) || {}).label || id;
+    const diffChoices = [
+      ...Object.entries(DIFFICULTY_SETTINGS).map(([id, st]) => ({ id, label: st.label })),
+      ...extremeList.filter((st, i, all) => all.findIndex(x => x.id === st.id) === i).map(st => ({ id: st.id, label: st.label })),
+    ].sort((a, b) => b.label.length - a.label.length);
+    // ランキング画面のタブと同じ並べ方(極限の入口は極限だけ・タクティクスは TACTICS_DIFFICULTY_IDS・チャレンジは通常+極限・ほかは通常)
+    const rankingDiffIds = (mode) => {
+      if (!mode) return [];
+      if (extremeMode && mode.id === extremeMode.id) return (typeof PUBLIC_EXTREME_DIFFICULTIES !== 'undefined' ? PUBLIC_EXTREME_DIFFICULTIES : []).map(st => st.id);
+      if (isTacticsMode(mode.id)) return typeof TACTICS_DIFFICULTY_IDS !== 'undefined' ? [...TACTICS_DIFFICULTY_IDS] : Object.keys(DIFFICULTY_SETTINGS);
+      return [...Object.keys(DIFFICULTY_SETTINGS), ...(mode.id === BATTLE_MODE_CHALLENGE && typeof PUBLIC_EXTREME_DIFFICULTIES !== 'undefined' ? PUBLIC_EXTREME_DIFFICULTIES.map(st => st.id) : [])];
+    };
+    // 1つの発言から読み取れること
+    const read = (raw) => {
+      const t = norm(raw);
+      const has = (word) => !!word && t.includes(norm(word));
+      const song = songs.find(s => has(s.displayName)) || null;
+      const rhythm = /モンヒロビート|モンビー|モンビート|音ゲー|リズム|曲/.test(raw) || !!song;
+      const rhythmDiff = rhythmDiffs.find(d => new RegExp(`(^|[^a-z])${d.toLowerCase()}([^a-z]|$)`).test(String(raw).normalize('NFKC').toLowerCase())) || null;
+      // モードは長い言葉から。「極限」は、ほかのモードと一緒に出たときは「そのモードの極限の難易度」の意味なので、モードとしては数えない
+      const hits = modeWords.filter(x => has(x.w));
+      const other = hits.find(x => !extremeMode || x.m.id !== extremeMode.id);
+      const modeHit = other ? other.m : (hits[0] ? hits[0].m : null);
+      const extreme = ASSISTANT_CHAT_RANKING_EXTREME_WORD.test(raw);
+      const all = ASSISTANT_CHAT_RANKING_ALL_WORD.test(raw);
+      const diffHit = rhythm && !/バトル/.test(raw) ? null : (diffChoices.find(d => has(d.label)) || null);
+      const lineage = lineages.find(l => has(`${l.name}種`)) || lineages.find(l => has(l.name)) || null;
+      const battle = /バトル|スコア|チャレンジ|難易度/.test(raw) || !!modeHit || !!diffHit || extreme;
+      return {
+        song, rhythm, rhythmDiff, modeHit, extreme, all, diffHit, lineage,
+        battle: battle && !(rhythm && !modeHit && !diffHit && !extreme),
+        week: /週間|今週/.test(raw), event: /イベント/.test(raw), total: /合算|全曲|総合/.test(raw),
+        raid: /ジャック|レイド/.test(raw), breeder: /ブリーダー\s*(?:lv|ＬＶ|レベル)|ブリーダーlv/i.test(String(raw).normalize('NFKC')),
+        bond: /絆/.test(raw), power: /総合力/.test(raw),
+      };
+    };
+    const now = read(text);
+    const before = prevs.map(read);
+    const hasKind = (x) => x.rhythm || x.raid || x.breeder || x.bond || x.power || x.battle;
+    // 難易度だけ・「全部」だけ・何も無い発言は、すぐ前の話題の続きとして読む
+    const selectorOnly = !now.rhythm && !now.raid && !now.breeder && !now.bond && !now.power && !now.modeHit && !/バトル|チャレンジ/.test(text);
+    let c = now;
+    const ownSelector = !!(now.diffHit || now.extreme || now.all || now.rhythmDiff);
+    // ランキングの言葉も難易度の指定も無い発言(「今日は晴れだね」)は、前の話題を引き継がない(毎回は読まない)
+    if (selectorOnly && !topicNow && !ownSelector) return null;
+    if (selectorOnly) {
+      const base = before.find(hasKind);
+      if (base) {
+        // 前の話題の種類を使い、難易度の指定はいまの発言を優先する(いまの発言に指定が無ければ前のまま)
+        const own = ownSelector;
+        c = { ...base, lineage: now.lineage || base.lineage,
+          diffHit: own ? now.diffHit : base.diffHit, extreme: own ? now.extreme : base.extreme, all: own ? now.all : base.all,
+          rhythmDiff: now.rhythmDiff || base.rhythmDiff, inherited: true };
+      } else if (!topicNow) return null;
+    } else if (!topicNow && !hasKind(now)) return null;
+    if (c.battle && !c.modeHit && !selectorOnly) {
+      // 「極限」だけなど、モードの言葉が無いバトルの話は、すぐ前に出たモードを引き継ぐ
+      const m = before.find(x => x.modeHit);
+      if (m) c = { ...c, modeHit: m.modeHit };
     }
-    if (rhythmWords && /週間|今週/.test(text)) push({ kind:'rhythmWeek', label:'モンヒロビート 週間ランキング' });
-    if (rhythmWords && /イベント/.test(text) && typeof rhythmLimitedEventAt === 'function') {
+    if (!c.lineage) { const l = before.find(x => x.lineage); if (l) c = { ...c, lineage: l.lineage }; }
+    const lineage = c.lineage;
+    const lineageMonsters = lineage && typeof dexMonsterList === 'function' ? dexMonsterList().filter(m => monsterLineageOf(m.id).main?.id === lineage.id).map(m => m.id) : [];
+    // ── モンヒロビート ──
+    if (c.song) {
+      const diffs = c.rhythmDiff ? [c.rhythmDiff] : rhythmDiffs.filter(d => d === 'MASTER');
+      diffs.forEach(d => { const key = rhythmRankingDifficultyKey(c.song.songId, d); if (key) push({ kind:'rhythmSong', keys:[key], label:`モンヒロビート「${c.song.displayName}」${d}` }); });
+    }
+    if (c.rhythm && c.week) push({ kind:'rhythmWeek', label:'モンヒロビート 週間ランキング' });
+    if (c.rhythm && c.event && typeof rhythmLimitedEventAt === 'function') {
       const event = rhythmLimitedEventAt(Date.now());
       const range = event && typeof rhythmEventWindow === 'function' ? rhythmEventWindow(event, null) : null;
       if (event && range) {
@@ -48841,47 +48923,41 @@ const assistantChatRankingPlan = (rawText) => {
           fn: bonusRates ? 'rhythm_event_totals_bonus' : 'rhythm_event_totals', bonusRates: bonusRates || undefined });
       }
     }
-    if (rhythmWords && (!song || /合算|全曲|総合/.test(text)) && !/週間|今週|イベント/.test(text)) push({ kind:'rhythmTotal', label:'モンヒロビート 全曲の合算' });
+    if (c.rhythm && (!c.song || c.total) && !c.week && !c.event) push({ kind:'rhythmTotal', label:'モンヒロビート 全曲の合算' });
     // ── ジャックのレイド ──
-    if (/ジャック|レイド/.test(text) && typeof RAID_JACK_EVENT !== 'undefined') {
+    if (c.raid && typeof RAID_JACK_EVENT !== 'undefined') {
       push({ kind:'raid', view:'a', eventId:RAID_JACK_EVENT.id, label:`${RAID_JACK_EVENT.name} レイドバトルの与ダメージ` });
       push({ kind:'raid', view:'b', eventId:RAID_JACK_EVENT.id, label:`${RAID_JACK_EVENT.name} グランドスラムの与ダメージ` });
     }
     // ── ブリーダーLv・絆Lv・総合力 ──
     const lineageLabel = lineage ? `(${lineage.name}種)` : '';
-    if (/ブリーダー\s*(?:lv|ＬＶ|レベル)|ブリーダーlv/i.test(text.normalize('NFKC'))) push({ kind:'breeder', label:'ブリーダーLv' });
-    if (/絆/.test(text)) push({ kind:'bond', label:`絆Lv${lineageLabel}`, monsters: lineageMonsters });
-    if (/総合力/.test(text)) push({ kind:'power', label:`総合力${lineageLabel}`, monsters: lineageMonsters });
-    // ── バトルのスコア(モード×難易度。ランキングがあるモードだけ) ──
-    const modes = [
-      ...(typeof BATTLE_MODES !== 'undefined' ? BATTLE_MODES : []),
-      ...[typeof EXTREME_MODE !== 'undefined' ? EXTREME_MODE : null, typeof SPECIES_CHALLENGE_MODE !== 'undefined' ? SPECIES_CHALLENGE_MODE : null,
-        typeof TACTICS_MODE !== 'undefined' ? TACTICS_MODE : null, typeof TACTICS_SPECIES_MODE !== 'undefined' ? TACTICS_SPECIES_MODE : null,
-        typeof TACTICS_PRO_MODE !== 'undefined' ? TACTICS_PRO_MODE : null].filter(Boolean),
-    ].filter(m => m && m.id && modeHasRanking(m.id));
-    const modeWords = modes.flatMap(m => [m.label, m.short].filter(Boolean).map(w => ({ w, m }))).sort((a, b) => b.w.length - a.w.length);
-    const modeHit = modeWords.find(x => has(x.w));
-    const diffChoices = [
-      ...Object.entries(DIFFICULTY_SETTINGS).map(([id, st]) => ({ id, label: st.label })),
-      ...(typeof PUBLIC_EXTREME_DIFFICULTIES !== 'undefined' ? PUBLIC_EXTREME_DIFFICULTIES : []).map(st => ({ id: st.id, label: st.label, extreme: true })),
-    ].sort((a, b) => b.label.length - a.label.length);
-    const diffHit = rhythmWords && !/バトル/.test(text) ? null : (diffChoices.find(d => has(d.label)) || null);
-    const battleWords = /バトル|スコア|チャレンジ|難易度/.test(text) || !!modeHit || !!diffHit;
-    if (battleWords && !(rhythmWords && !modeHit && !diffHit)) {
-      const mode = modeHit ? modeHit.m : modes.find(m => m.id === BATTLE_MODE_CHALLENGE) || modes[0];
+    if (c.breeder) push({ kind:'breeder', label:'ブリーダーLv' });
+    if (c.bond) push({ kind:'bond', label:`絆Lv${lineageLabel}`, monsters: lineageMonsters });
+    if (c.power) push({ kind:'power', label:`総合力${lineageLabel}`, monsters: lineageMonsters });
+    // ── バトルのスコア(モード×難易度) ──
+    if (c.battle) {
+      // モードが分からない「極限」はエクストリーム(極限チャレンジ)、ほかはチャレンジ
+      let mode = c.modeHit || (c.extreme && extremeMode && modes.some(m => m.id === extremeMode.id) ? extremeMode : null)
+        || modes.find(m => m.id === BATTLE_MODE_CHALLENGE) || modes[0];
+      let tabs = rankingDiffIds(mode);
+      // 極限の難易度が無いモードで「極限」と言われたら、極限チャレンジのぶんを見る
+      if (c.extreme && !c.diffHit && !tabs.some(isExtremeId) && extremeMode && modes.some(m => m.id === extremeMode.id)) { mode = extremeMode; tabs = rankingDiffIds(mode); }
+      let ids;
+      if (c.diffHit) ids = [c.diffHit.id];
+      else if (c.extreme) ids = tabs.filter(isExtremeId);
+      else if (c.all || c.modeHit) ids = tabs;
+      else ids = tabs.filter(id => id === 'Normal' || id === 'Master' || id === 'Legend');
       const isSpecies = mode && (mode.id === BATTLE_MODE_SPECIES_CHALLENGE || mode.id === BATTLE_MODE_TACTICS_SPECIES);
-      const diffs = diffHit ? [diffHit] : diffChoices.filter(d => d.id === 'Normal' || d.id === 'Master' || d.id === 'Legend');
-      for (const d of diffs) {
+      for (const id of ids) {
         let keys = [];
         if (isSpecies) {
           const species = (typeof speciesChallengeLineages === 'function' ? speciesChallengeLineages() : []).find(l => lineage && l.id === lineage.id);
-          keys = species ? [rankingDifficultyForMode(mode.id, d.id, species.id)] : speciesChallengeAllRankingMembers(d.id, mode.id);
+          keys = species ? [rankingDifficultyForMode(mode.id, id, species.id)] : speciesChallengeAllRankingMembers(id, mode.id);
         } else {
-          const useExtreme = d.extreme && !isTacticsMode(mode.id);
-          keys = [rankingDifficultyForMode(useExtreme ? EXTREME_MODE.id : mode.id, d.id)];
+          keys = [rankingDifficultyForMode(isExtremeId(id) && !isTacticsMode(mode.id) && extremeMode ? extremeMode.id : mode.id, id)];
         }
         keys = keys.filter(Boolean);
-        if (keys.length) push({ kind:'score', keys, label:`${mode.label}・${d.label}${isSpecies ? (lineage ? `・${lineage.name}種` : '・全種族') : ''}のスコア` });
+        if (keys.length) push({ kind:'score', keys, label:`${mode.label}・${diffLabel(id)}${isSpecies ? (lineage ? `・${lineage.name}種` : '・全種族') : ''}のスコア` });
       }
     }
     // 何も絞れなかったときは、全体の様子が分かる基本の5つ
@@ -48999,6 +49075,8 @@ function AssistantChatWindow({ assistant, playerName, callName, bondLevel, bondT
     }
     const withUser = [...log, { role: 'user', text }];
     saveLog(withUser);
+    // ランキングの計画。すぐ前のプレイヤーの発言(新しい順に2つ)から話題・モード・難易度を引き継ぐ
+    const rankingPlan = assistantChatRankingPlan(text, log.filter(m => m && m.role === 'user').map(m => m.text).reverse().slice(0, ASSISTANT_CHAT_RANKING_PREV));
     setSending(true);
     let res = null;
     try {
@@ -49012,7 +49090,7 @@ function AssistantChatWindow({ assistant, playerName, callName, bondLevel, bondT
           messages: assistantChatSendWindow(withUser).map(m => ({ role: m.role, text: m.text })),
           ctx: { playerName, callName, bondLevel, bondTitle, bondTone, memo: memos[id] || null },
           // ランキングの話題のときだけ、読むランキングの計画を付ける(それ以外は付けない)
-          ...(assistantChatRankingPlan(text) ? { ranking: assistantChatRankingPlan(text) } : {}),
+          ...(rankingPlan ? { ranking: rankingPlan } : {}),
         }),
       });
       if (r.ok) res = await r.json();
