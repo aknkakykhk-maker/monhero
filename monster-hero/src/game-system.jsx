@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ae46b8831dc85ed0
+// generated-sha256: 666bf56ca50e3582
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-21 16:32"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-21 17:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11077,8 +11077,25 @@ const ProfileFrameLayer = ({ frameId, small = false }) => {
 // frameId を渡さない(または 'none')ときは、これまでの BreederIcon と見た目が変わらない。
 // badge は「アイコンと同じ円の中へ収めたい飾り」(プロフィールの鉛筆マークなど)。
 // 内側の円でクリップされ、フレームだけがその外へ出る。
-const ProfileAvatar = ({ src, id, frameId=null, alt='', className='', roundedClass='rounded-full', adjustment, fallback=null, badge=null, small=false }) => (
-  <span className={`mh-profile-avatar ${className}`}>
+// 枠の外形が、アイコンの何倍に広がるか(1 以上)。画像の枠は profileFrameImageStyle の幅(穴の小さい絵ほど大きい)、色の輪は MARKET_FRAME_RING_BOX
+const profileFrameBoxRatio = (frameId) => {
+  const frame = profileFrameById(normalizeProfileFrameId(frameId));
+  if (!frame || frame.kind === 'none') return 1;
+  return frame.kind === 'image' ? Math.max(1, (parseFloat(profileFrameImageStyle(frame).width) || 100) / 100) : MARKET_FRAME_RING_BOX;
+};
+// fit … 一覧に並べる所(フレンド・ランキング・マルチなど)で使う。外側の大きさ(className の w-8 h-8 など)を**枠ごとの四角**とみなし、
+//   枠のある人はそのぶん中のアイコンを縮めて真ん中に置く(2026-10-21 社長「フレームのサイズ感微妙？」→ 枠ごと同じ四角に収める)。
+//   枠の無い人と同じ大きさの四角に並び、右の名前や時刻に枠がかぶらない。マーケットの MARKET_FRAME_BOX_PX と同じ考え方
+const ProfileAvatar = ({ src, id, frameId=null, alt='', className='', roundedClass='rounded-full', adjustment, fallback=null, badge=null, small=false, fit=false, style=null }) => {
+  const ratio = fit ? profileFrameBoxRatio(frameId) : 1;
+  if (fit && ratio > 1) return (
+    <span data-profile-avatar-box className={`relative flex items-center justify-center ${className}`}>
+      <ProfileAvatar src={src} id={id} frameId={frameId} alt={alt} roundedClass={roundedClass} adjustment={adjustment} fallback={fallback} badge={badge} small={small}
+        style={{width:`${100/ratio}%`,height:`${100/ratio}%`,flexShrink:0}}/>
+    </span>
+  );
+  return (
+  <span className={`mh-profile-avatar ${className}`} style={style||undefined}>
     <span className={`relative flex h-full w-full items-center justify-center overflow-hidden ${roundedClass}`}>
       {src
         ? <BreederIcon src={src} id={id} adjustment={adjustment} alt={alt} roundedClass={roundedClass} className="w-full h-full"/>
@@ -11087,7 +11104,8 @@ const ProfileAvatar = ({ src, id, frameId=null, alt='', className='', roundedCla
     </span>
     <ProfileFrameLayer frameId={frameId} small={small}/>
   </span>
-);
+  );
+};
 // フレームを選んでいるか(もとから付いている縁を消すかどうかの判定に使う)
 const hasProfileFrame = (frameId) => normalizeProfileFrameId(frameId) !== PROFILE_FRAME_NONE_ID;
 
@@ -32851,7 +32869,7 @@ function ProfileScreen({
                 return (
                   <button type="button" data-assistant-next-frame={nextFrame.id} onClick={onOpenFramePicker}
                     className="mt-2 flex w-full min-h-[44px] items-center gap-2 rounded-xl border border-amber-500/40 bg-amber-950/40 px-3 py-2 active:scale-[.98]">
-                    <ProfileAvatar src={resolveIconUrl(breederIcon)} id={breederIcon} frameId={nextFrame.id} alt={nextFrame.name} className="w-8 h-8 shrink-0" fallback={null}/>
+                    <ProfileAvatar src={resolveIconUrl(breederIcon)} id={breederIcon} frameId={nextFrame.id} alt={nextFrame.name} fit small className="w-8 h-8 shrink-0" fallback={null}/>
                     <span className="flex-1 min-w-0 text-left">
                       <span className="block text-[10px] font-black text-amber-400 leading-tight">Lv.{unlock.bondLevel}でもらえる飾り枠</span>
                       <span className="block text-[12px] font-black text-white leading-tight truncate">{nextFrame.name}</span>
@@ -43065,8 +43083,9 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
     const look = lookOf(id);
     const url = resolveIconUrl ? resolveIconUrl(look.icon) : null;
     return url
-      ? <ProfileAvatar src={url} id={look.icon} frameId={look.profileFrame} className={`${sizeClass} shrink-0`}/>
-      : <ProfileAvatar frameId={look.profileFrame} className={`${sizeClass} shrink-0`}
+      // 枠ごと同じ四角に収める(fit)・小さい版の枠(small)。枠のある人だけ大きく見えて名前や時刻にかぶらないように(2026-10-21 社長「フレームのサイズ感微妙？」)
+      ? <ProfileAvatar src={url} id={look.icon} frameId={look.profileFrame} fit small className={`${sizeClass} shrink-0`}/>
+      : <ProfileAvatar frameId={look.profileFrame} fit small className={`${sizeClass} shrink-0`}
           fallback={<span className={`flex h-full w-full items-center justify-center rounded-full bg-slate-800 ${emojiClass}`}>👤</span>}/>;
   };
   const run = async (task, { thenReload = true } = {}) => {
@@ -45075,7 +45094,8 @@ function RhythmMultiAvatar({ m, resolveIconUrl, sizeClass = 'h-10 w-10', small =
   //   アイコンの上に白とピンクの点が散ったように見えた(2026-10-19 社長「マスモンの染色ずれなおってない」・frame_mua_3)。
   //   いったん枠を外したが、社長「フレーム出なくしたの？」で、前もって縮めた小さい版(srcSmall)で出すことにした(同日)
   return (
-    <ProfileAvatar src={src} id={m.icon} frameId={m.frame} small={small} alt="" className={sizeClass}
+    // fit … 枠ごと同じ四角に収める(2026-10-21 社長「フレームのサイズ感微妙？」。隣の名前・発言にかぶらない)
+    <ProfileAvatar src={src} id={m.icon} frameId={m.frame} small={small} fit alt="" className={sizeClass}
       fallback={<span aria-hidden="true" className="flex h-full w-full items-center justify-center bg-slate-800 text-lg">🎵</span>} />
   );
 }
@@ -65308,8 +65328,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // (ボタンの入れ子を避けるため span の role="button")
   const rankingBreederIcon = entry => {
     const avatar = resolveIconUrl(entry?.icon)
-      ? <ProfileAvatar src={resolveIconUrl(entry.icon)} id={entry.icon} frameId={entry?.profileFrame} className="w-8 h-8 shrink-0"/>
-      : <ProfileAvatar frameId={entry?.profileFrame} className="w-8 h-8 shrink-0" fallback={<span className="flex h-full w-full items-center justify-center rounded-full bg-slate-800 text-xs">👤</span>}/>;
+      // 枠ごと同じ四角に収める(fit)・小さい版の枠(small)。名前にかぶらないように(2026-10-21)
+      ? <ProfileAvatar src={resolveIconUrl(entry.icon)} id={entry.icon} frameId={entry?.profileFrame} fit small className="w-8 h-8 shrink-0"/>
+      : <ProfileAvatar frameId={entry?.profileFrame} fit small className="w-8 h-8 shrink-0" fallback={<span className="flex h-full w-full items-center justify-center rounded-full bg-slate-800 text-xs">👤</span>}/>;
     if (!(RELEASE_FLAGS.friends === true && friendsIdOfRankingEntry(entry))) return avatar;
     return (
       <span role="button" tabIndex={0} data-friend-candidate aria-label={`${entry?.userName||'名無しのブリーダー'}さんにフレンド申請`}

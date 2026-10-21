@@ -176,8 +176,9 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
     const look = lookOf(id);
     const url = resolveIconUrl ? resolveIconUrl(look.icon) : null;
     return url
-      ? <ProfileAvatar src={url} id={look.icon} frameId={look.profileFrame} className={`${sizeClass} shrink-0`}/>
-      : <ProfileAvatar frameId={look.profileFrame} className={`${sizeClass} shrink-0`}
+      // 枠ごと同じ四角に収める(fit)・小さい版の枠(small)。枠のある人だけ大きく見えて名前や時刻にかぶらないように(2026-10-21 社長「フレームのサイズ感微妙？」)
+      ? <ProfileAvatar src={url} id={look.icon} frameId={look.profileFrame} fit small className={`${sizeClass} shrink-0`}/>
+      : <ProfileAvatar frameId={look.profileFrame} fit small className={`${sizeClass} shrink-0`}
           fallback={<span className={`flex h-full w-full items-center justify-center rounded-full bg-slate-800 ${emojiClass}`}>👤</span>}/>;
   };
   const run = async (task, { thenReload = true } = {}) => {
