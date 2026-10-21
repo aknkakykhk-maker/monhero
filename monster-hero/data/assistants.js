@@ -909,6 +909,17 @@ const ASSISTANT_BOND_ACTIONS = {
 // ASSISTANT_BOND_ACTIONSへ行動を足し引きしても、ここは自動で追随する
 const ASSISTANT_BOND_DAILY_MAX = Object.values(ASSISTANT_BOND_ACTIONS).reduce((sum, a) => sum + (Number(a.dailyMax) || 0), 0);
 
+// 仲良し度の節目でもらえるごほうび(2026-10-21・Lv30への上限引き上げと同時)。
+// 助手ごとに1回ずつ、ギフトで届く。届けたかどうかは mh_assistant_bond_rewards_v1 に残す。
+// この表に節目を足したときは、もう越えている人にも次の起動でまとめて届く。
+// 中身は normalizeGiftRewards が読める形(品物は type:'gameItem' と itemId)で書く
+const ASSISTANT_BOND_LEVEL_REWARDS = Object.freeze({
+  22: Object.freeze([{ type:'diamond', amount:50000 }, { type:'rainbowPsyche', amount:30 }]),
+  25: Object.freeze([{ type:'rainbowTranscendFruit', amount:5 }, { type:'gameItem', itemId:'hero_proof_shard', amount:10 }]),
+  28: Object.freeze([{ type:'gameItem', itemId:'hero_proof', amount:1 }, { type:'diamond', amount:100000 }]),
+  30: Object.freeze([{ type:'gameItem', itemId:'soul_crystal', amount:3 }, { type:'gameItem', itemId:'hero_proof', amount:2 }, { type:'diamond', amount:200000 }]),
+});
+
 // そのセリフが、いまの仲良し度で出せるか。bond を書いていなければどのLvでも出る
 const assistantLineMatchesBond = (line, level) => {
   const b = line && line.bond;

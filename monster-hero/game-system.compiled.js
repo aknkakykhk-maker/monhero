@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 20117be859a4e087
+// source-sha256: bc41de7a87815485
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-21 17:08";
+const BUILD_DATE = "2026-10-21 17:15";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -12489,6 +12489,68 @@ const gainAssistantBond = (state, actionKey, now = Date.now()) => {
   };
 };
 const assistantBondLevelOf = points => typeof assistantBondLevel === 'function' ? assistantBondLevel(points) : 1;
+const ASSISTANT_BOND_REWARDS_KEY = 'mh_assistant_bond_rewards_v1';
+const normalizeAssistantBondRewardsDelivered = value => {
+  const raw = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  const out = {};
+  for (const [id, levels] of Object.entries(raw)) {
+    if (!Array.isArray(levels)) continue;
+    const list = [...new Set(levels.map(n => Math.floor(Number(n))).filter(n => Number.isFinite(n) && n > 0))].sort((a, b) => a - b);
+    if (list.length) out[id] = list;
+  }
+  return out;
+};
+const assistantBondRewardGiftId = (assistantId, level) => `gift_assistant_bond_${assistantId}_lv${level}`;
+const buildAssistantBondRewardGrant = ({
+  gifts,
+  delivered,
+  levels,
+  now = Date.now()
+} = {}) => {
+  const table = typeof ASSISTANT_BOND_LEVEL_REWARDS !== 'undefined' && ASSISTANT_BOND_LEVEL_REWARDS || {};
+  const milestones = Object.keys(table).map(Number).filter(Number.isFinite).sort((a, b) => a - b);
+  const list = typeof ASSISTANTS !== 'undefined' && Array.isArray(ASSISTANTS) ? ASSISTANTS : [];
+  let nextGifts = Array.isArray(gifts) ? gifts : [];
+  const nextDelivered = normalizeAssistantBondRewardsDelivered(delivered);
+  const granted = [];
+  let changed = false;
+  for (const who of list) {
+    const id = who && who.id;
+    if (!id) continue;
+    const level = Math.floor(Number(levels && levels[id]) || 0);
+    const done = nextDelivered[id] || [];
+    for (const lv of milestones) {
+      if (lv > level || done.includes(lv)) continue;
+      const gift = {
+        id: assistantBondRewardGiftId(id, lv),
+        source: 'assistantBond',
+        title: `${who.name}との仲良し度 Lv${lv} のごほうび`,
+        description: `${who.name}との仲良し度が Lv${lv} になりました。いつもありがとう！`,
+        rewards: table[lv].map(r => ({
+          ...r
+        }))
+      };
+      const already = nextGifts.some(g => g && g.id === gift.id);
+      const grant = grantGiftOnce(nextGifts, gift, now);
+      if (!grant.granted && !already) continue;
+      if (grant.granted) {
+        nextGifts = grant.gifts;
+        granted.push({
+          assistantId: id,
+          level: lv
+        });
+      }
+      nextDelivered[id] = [...(nextDelivered[id] || []), lv].sort((a, b) => a - b);
+      changed = true;
+    }
+  }
+  return {
+    changed,
+    gifts: nextGifts,
+    delivered: nextDelivered,
+    granted
+  };
+};
 const normalizeLoginBonus = value => ({
   currentDay: Number.isInteger(value?.currentDay) && value.currentDay >= 1 && value.currentDay <= 7 ? value.currentDay : 1,
   lastGrantedPeriod: typeof value?.lastGrantedPeriod === 'string' ? value.lastGrantedPeriod : null,
@@ -12919,6 +12981,10 @@ const giftTitleDisplay = gift => {
   };
   if (gift?.source === 'raidJack') return {
     label: 'ジャック報酬',
+    title
+  };
+  if (gift?.source === 'assistantBond') return {
+    label: '仲良し度',
     title
   };
   if (gift?.source !== 'mission') return {
@@ -16489,6 +16555,8 @@ const helpDataRows = id => {
       return (typeof ASSISTANT_LIST !== 'undefined' && ASSISTANT_LIST || []).map(who => [who.name, `${who.tagline || ''}${who.intro ? ` ／ ${who.intro}` : ''}`]);
     case 'monsterPower':
       return [['ライフ 1', `+${MONSTER_POWER_STAT_WEIGHT.hp}`], ['ちから 1', `+${Math.round(MONSTER_POWER_STAT_WEIGHT.atk * 100) / 100}（強化P1つ=ちから+${STAT_POINT_GAIN.atk} で +10）`], ['丈夫さ 1', `+${Math.round(MONSTER_POWER_STAT_WEIGHT.def * 100) / 100}（強化P1つ=丈夫さ+${STAT_POINT_GAIN.def} で +10）`], ['ガッツ 1', `+${Math.round(MONSTER_POWER_STAT_WEIGHT.guts * 100) / 100}（強化P1つ=ガッツ+${STAT_POINT_GAIN.guts} で +10）`], ['間合い適性', DIST_APTITUDE_GRADES.slice().reverse().map(g => `${g} ${MONSTER_POWER_APTITUDE[g] > 0 ? '+' : ''}${MONSTER_POWER_APTITUDE[g]}`).join(' ／ ') + '（4距離すべてを合計）'], ['固有技を1つ持つ', `+${MONSTER_POWER_UNIQUE_OWNED}（Lv0でも付く。継承した固有技も同じ）`], ['固有技の強化Lv 1段階', `+${Math.round(MONSTER_POWER_UNIQUE_PER_LEVEL * 100) / 100}（3段階でちょうど+200）`]];
+    case 'assistantBondRewards':
+      return Object.entries(typeof ASSISTANT_BOND_LEVEL_REWARDS !== 'undefined' && ASSISTANT_BOND_LEVEL_REWARDS || {}).map(([lv, rewards]) => [`Lv.${lv}`, rewards.map(r => typeof giftRewardText === 'function' ? giftRewardText(r) : '').join(' ／ ')]);
     case 'assistantBondActions':
       return Object.values(typeof ASSISTANT_BOND_ACTIONS !== 'undefined' && ASSISTANT_BOND_ACTIONS || {}).filter(x => typeof releasedForPlayers !== 'function' || releasedForPlayers(x)).map(x => [x.label, `1回 +${x.amount} ／ 1日 ${x.dailyMax} まで`]);
     case 'rhythmDifficultyRanks':
@@ -16609,6 +16677,7 @@ const HELP_DATA_TITLES = {
   profileFrames: '選べるプロフィールフレーム',
   assistantBond: '仲良し度の段階と呼び方',
   assistantBondActions: '仲良し度が増える行動',
+  assistantBondRewards: '仲良し度の節目のごほうび(助手ごとに1回)',
   monsterPower: '総合力の内訳',
   monsterLineages: 'モンスターの血統一覧',
   psycheRewards: '難易度ごとにもらえる虹のプシュケー',
@@ -87802,6 +87871,52 @@ function MonsterHeroGame() {
     const list = TEACHING_CARDS.filter(t => teachingRosterIds.includes(t.id));
     return list.length > 0 ? list : TEACHING_CARDS.filter(t => unlockedTeachingIds.includes(t.id));
   };
+  const assistantBondRewardRunningRef = useRef(false);
+  const assistantBondRewardAgainRef = useRef(false);
+  const deliverAssistantBondRewards = useCallback(async () => {
+    if (onboardingPreview) return;
+    if (assistantBondRewardRunningRef.current) {
+      assistantBondRewardAgainRef.current = true;
+      return;
+    }
+    assistantBondRewardRunningRef.current = true;
+    try {
+      do {
+        assistantBondRewardAgainRef.current = false;
+        const levels = Object.fromEntries(ASSISTANT_LIST.map(who => [who.id, assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[who.id]).points)]));
+        const savedGifts = await storeGet('mh_gifts', [], false);
+        const beforeGifts = Array.isArray(savedGifts) ? savedGifts : [];
+        const mark = await storeGet(ASSISTANT_BOND_REWARDS_KEY, null, false);
+        const grant = buildAssistantBondRewardGrant({
+          gifts: beforeGifts,
+          delivered: mark,
+          levels
+        });
+        if (!grant.changed) continue;
+        const saved = await saveStoredValuesOrRollback([...(grant.granted.length ? [{
+          key: 'mh_gifts',
+          before: beforeGifts,
+          next: grant.gifts
+        }] : []), {
+          key: ASSISTANT_BOND_REWARDS_KEY,
+          before: mark,
+          next: grant.delivered
+        }], storeGet, storeSet);
+        if (!saved) {
+          console.error('[assistant-bond-reward] save failed');
+          break;
+        }
+        if (grant.granted.length) setGifts(grant.gifts);
+      } while (assistantBondRewardAgainRef.current);
+    } catch (error) {
+      console.error('[assistant-bond-reward] failed:', error && error.message ? error.message : error);
+    } finally {
+      assistantBondRewardRunningRef.current = false;
+    }
+  }, [onboardingPreview]);
+  useEffect(() => {
+    if (dataLoaded) void deliverAssistantBondRewards();
+  }, [dataLoaded, deliverAssistantBondRewards]);
   const addAssistantBondFor = useCallback((assistantId, actionKey) => {
     const id = normalizeAssistantId(assistantId);
     const current = normalizeAssistantBond(assistantBondsRef.current[id]);
@@ -87822,7 +87937,8 @@ function MonsterHeroGame() {
     try {
       storeSet(assistantBondKeyFor(id), result.state, false);
     } catch {}
-  }, [grantProfileFrames]);
+    if (after > before) void deliverAssistantBondRewards();
+  }, [grantProfileFrames, deliverAssistantBondRewards]);
   const addAssistantBond = useCallback(actionKey => {
     const id = selectedAssistantIdRef.current;
     addAssistantBondFor(id, actionKey);
