@@ -63,8 +63,9 @@ const page=(d,i)=>{const s=summary[i];
   body{margin:0;background:#16121f;color:#eee;font:14px/1.35 'Noto Sans CJK JP',sans-serif;width:390px}
   h1{font-size:17px;margin:12px 12px 4px}p{margin:0 12px 8px;font-size:12px;color:#bbb}
   table{border-collapse:collapse;width:366px;margin:0 12px 12px}td,th{padding:5px 4px;border-bottom:1px solid #332b44}
-  th{font-size:12px;color:#bbb;text-align:left}td.n{text-align:right;width:34px;font-variant-numeric:tabular-nums}
-  td.s{width:100px;word-break:break-all;font-size:13px}td.m{width:58px;font-size:11px;color:#ffcf5a}
+  th{font-size:12px;color:#bbb;text-align:left}td.n{text-align:right;width:26px;font-variant-numeric:tabular-nums}
+  /* 曲名は英単語の途中で折らない(単語の区切りで折る・2026-10-22 窓口の指摘)。数字と印の列を詰めて曲名の列を広げる */
+  td.s{word-break:normal;overflow-wrap:normal;font-size:13px}td.m{width:44px;font-size:11px;color:#ffcf5a}
   .up{color:#ff8a8a}.down{color:#7fc3ff}.big td{background:#2c2140}</style>
   <h1>${d}: 今の Lv. → v3 の参考</h1>
   <p>譜面${s.count} / 上がる${s.up}・下がる${s.down}・同じ${s.same} / ◆(±${BIG}以上) 上${s.bigUp}・下${s.bigDown} / 逆転 今${s.invNow}・v3 ${s.invV3}</p>
