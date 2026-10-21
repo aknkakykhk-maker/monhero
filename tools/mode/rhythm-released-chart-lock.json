@@ -226,12 +226,12 @@
   "toward_the_stars_short/hard": "afe02bc39240db70",
   "toward_the_stars_short/expert": "178a932c31f42eb8",
   "toward_the_stars_short/master": "95c9471b49f7b83f",
-  "kaze_ga_soyogu/hell": "db4bdda49c855f43",
+  "kaze_ga_soyogu/hell": "812426b02dcd7cdf",
   "anima/hell": "7887b99ea0847323",
   "journey/hell": "28b6b69082a3541c",
-  "sheriruth/hell": "36db1897510eb07b",
-  "against_my_own_shadow/hell": "120eb36921577a4d",
-  "grievous_lady/hell": "bf3cd2055776a186",
+  "sheriruth/hell": "03b8cc88424d44b8",
+  "against_my_own_shadow/hell": "df33cf30a9e98e26",
+  "grievous_lady/hell": "7285273f84cccfd1",
   "rose/hell": "8dcf1fa5467e4e5b",
   "rose_short/hell": "6cf119bc1937d7ea",
   "sad_song/hell": "2004f979cdecdbe1",
@@ -375,6 +375,16 @@
    "reason": "2026-10-21 窓口・社長: Journey の HELL に残っていた見分けにくい所2か所(2.15秒・30.27秒)の空中のタップを地上へ下ろした(Lv.51・716ノーツは同じ)",
    "changed": [
     "journey/hell"
+   ]
+  },
+  {
+   "at": "2026-10-21 12:00",
+   "reason": "2026-10-21 社長の指示(4曲とも直す): Sheriruth・Grievous Lady・Against My Own Shadow・風がそよぐ場所の HELL の見分けにくい所を0件に直した",
+   "changed": [
+    "kaze_ga_soyogu/hell",
+    "sheriruth/hell",
+    "against_my_own_shadow/hell",
+    "grievous_lady/hell"
    ]
   }
  ]

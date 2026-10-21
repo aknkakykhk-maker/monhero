@@ -35,6 +35,15 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-10-21 11:59", type:'update', group:'rhythm', title:'モンヒロビート：前からある HELL の譜面も見やすく直しました', status:'new',
+    items:[
+      '「Sheriruth」「Grievous Lady」「Against My Own Shadow」「風がそよぐ場所」の HELL で、近いレーンに地上と空中のノーツが立て続けに来て、どちらの高さか見分けにくい所を直しました。',
+      '直した所の空中のノーツは地上へ下ろし、いくつかは取り除きました。ほかの所はそのままです。',
+      'レベルは「Sheriruth」Lv.51 ／「Grievous Lady」Lv.64 ／「Against My Own Shadow」Lv.49 ／「風がそよぐ場所」Lv.21 です。',
+      'これまでの HELL のスコアやランキングの記録は、そのまま残ります。',
+    ],
+  },
+  {
     date: "2026-10-21 10:53", type:'update', group:'rhythm', title:'モンヒロビート：「Journey」に HELL が加わりました', status:'new',
     image: 'images/song-art/journey.jpg?v=2285e26648c0',
     items:[
@@ -109,7 +118,7 @@ const CHANGELOG = [
     items:[
       '空中と地上を行き来する忙しさが、遊んだときの手ごたえに合うように、HELL の Lv. を見直しました。譜面はそのままです。',
       '「Toward the Stars, Paradise or Truth」「ROSE」「ROSE short ver.」「SAD SONG」「SAD SONG short ver.」の HELL は、このあと譜面を作り直しました。いまの Lv. は「HELL の譜面を見やすく作り直しました」のお知らせにあります。',
-      '「Grievous Lady」の HELL は Lv.69、「Sheriruth」は Lv.61、「Against My Own Shadow」は Lv.51、「風がそよぐ場所」は Lv.22 になりました。',
+      '「Grievous Lady」「Sheriruth」「Against My Own Shadow」「風がそよぐ場所」の HELL も、このあと見やすく直しました。いまの Lv. は「前からある HELL の譜面も見やすく直しました」のお知らせにあります。',
       'HELL のない難易度の Lv. は変わりません。',
     ],
   },
@@ -705,7 +714,7 @@ const CHANGELOG = [
     items:[
       '「Against My Own Shadow」に、6段目の難易度 HELL が加わりました。地上のノーツに加えて、空から SKY TAP と SKY SLIDE が流れてきます。',
       'MASTER を1回クリアすると遊べるようになります。',
-      'レベルは HELL Lv.51 です。ノーツ数は 438 です。',
+      'レベルは HELL Lv.49 です。ノーツ数は 438 です。',
       '同じ側の指で続けて叩く速い連打が多い譜面です。',
     ],
   },
@@ -783,7 +792,7 @@ const CHANGELOG = [
     items:[
       'Sheriruth・Grievous Lady・風がそよぐ場所に、6段目の難易度 HELL が加わりました。地上のノーツに加えて、空から SKY TAP と SKY SLIDE が流れてきます。',
       'その曲の MASTER を1回クリアすると、その曲の HELL が遊べるようになります。',
-      'レベルは Sheriruth Lv.61 ／ Grievous Lady Lv.69 ／ 風がそよぐ場所 Lv.22 です。風がそよぐ場所は、HELL に慣れるための入口です。',
+      'レベルは Sheriruth Lv.51 ／ Grievous Lady Lv.64 ／ 風がそよぐ場所 Lv.21 です。風がそよぐ場所は、HELL に慣れるための入口です。',
       'SKY TAP（赤い板）は、地上の判定ラインより上にある紫の線で叩きます。横の位置は地上と同じレーンです。',
       'SKY SLIDE は、押さえたまま帯をなぞります。帯が青なら左手、桃なら右手が取る目印です。',
       'HELL が遊べるようになった日に、助手のお話「空まで届くビート」と遊び方の説明が1度だけ流れます。プロフィールの「イベント回想」から見返せます。',
