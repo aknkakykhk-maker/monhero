@@ -249,11 +249,11 @@ function ProfileScreen({
         <div className="mb-3 grid grid-cols-3 gap-2" data-profile-stats>
           <div className="flex min-h-[56px] flex-col items-center justify-center rounded-xl border border-amber-500/30 bg-amber-950/40 px-1 py-1.5 text-center">
             <span className="flex items-center gap-1 text-[9px] font-bold text-amber-400"><Gem size={11}/>ダイヤ</span>
-            <span className="text-[13px] font-black text-amber-300 font-mono">{gold.toLocaleString()}</span>
+            <CompactCount value={gold} className="text-[13px] font-black text-amber-300 font-mono"/>
           </div>
           <div className="flex min-h-[56px] flex-col items-center justify-center rounded-xl border border-amber-500/30 bg-amber-950/40 px-1 py-1.5 text-center">
             <span className="flex items-center gap-1 text-[9px] font-bold text-amber-400"><Coins size={11}/>ブリーダーP</span>
-            <span className="text-[13px] font-black text-amber-200 font-mono">{breederPoints.toLocaleString()}</span>
+            <CompactCount value={breederPoints} className="text-[13px] font-black text-amber-200 font-mono"/>
           </div>
           <div className="flex min-h-[56px] flex-col items-center justify-center rounded-xl border border-indigo-500/30 bg-indigo-950/40 px-1 py-1.5 text-center">
             <span className="flex items-center gap-1 text-[9px] font-bold text-indigo-300"><Timer size={11}/>プレイ時間</span>

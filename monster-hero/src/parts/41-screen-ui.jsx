@@ -239,6 +239,30 @@ const JA_WRAP_STYLE = Object.freeze({ wordBreak: 'keep-all', overflowWrap: 'anyw
 // 短い説明・札向け(2026-10-21 社長決定・改善部の見直しの洗い出し)。言葉の切れ目で折り、行の長さもそろえる
 // (「音が出ないと／き」「得意な曲を／見る」のように、最後の行に1〜2字だけ残らない)。jaWrap と一緒に使う
 const JA_LABEL_STYLE = Object.freeze({ ...JA_WRAP_STYLE, textWrap: 'balance' });
+// 大きな所持数を縮めて出す(2026-10-21 改善部の見直し N5「ダイヤが10桁になると HOME(320)の数が約6px まで縮む」)。
+// 8桁まではそのまま(1,234,567 のように)。9桁(1億)からは「1.23億」「67.3億」「6,736億」、13桁からは「兆」で、上から3桁ぶん。
+// 切り上げると持っていない数に見えるので、端は切り捨てる。保存値は変えない(出し方だけ)
+const compactCount = (value) => {
+  const n = Math.floor(Number(value));
+  if (!Number.isFinite(n)) return '0';
+  const a = Math.abs(n);
+  if (a < 1e8) return n.toLocaleString();
+  const [unit, div] = a >= 1e12 ? ['兆', 1e12] : ['億', 1e8];
+  const v = a / div, digits = v >= 100 ? 0 : v >= 10 ? 1 : 2, f = Math.pow(10, digits);
+  return `${n < 0 ? '-' : ''}${(Math.floor(v * f) / f).toLocaleString(undefined, { maximumFractionDigits: digits })}${unit}`;
+};
+// 縮めた数。押すと細かい数が小さな札で出る(2.5秒で消える)。縮めていないときはふつうの字のまま
+const CompactCount = ({ value, className = '', style }) => {
+  const [open, setOpen] = React.useState(false);
+  React.useEffect(() => { if (!open) return undefined; const t = setTimeout(() => setOpen(false), 2500); return () => clearTimeout(t); }, [open]);
+  const exact = (Math.floor(Number(value)) || 0).toLocaleString();
+  const text = compactCount(value);
+  if (text === exact) return <b className={className} style={style}>{text}</b>;
+  return <b role="button" tabIndex={0} data-compact-count={exact} aria-label={exact} title={exact} className={`${className} relative cursor-pointer`} style={style}
+    onClick={(e) => { e.stopPropagation(); setOpen(o => !o); }} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpen(o => !o); } }}>
+    {text}{open && <span data-compact-count-exact className="absolute right-0 top-full z-50 mt-1 whitespace-nowrap rounded-lg border border-amber-300/60 bg-slate-950 px-2 py-1 text-[12px] font-black text-amber-200 shadow-lg">{exact}</span>}
+  </b>;
+};
 // ノーツの見本の絵(2026-10-21 社長「見た目とかちゃんとわかるようにしてほしい」)。ヘルプの表と助手のおしゃべりで使う。
 // 絵は演奏画面と同じ描き方(data/rhythm-mode.js の rhythmDrawNoteSwatch)で描く。手描きの絵や写真は使わない。kind は RHYTHM_NOTE_SWATCH_KINDS の id
 const RhythmNoteSwatch = ({ kind, width = 54, height = 42, className = '' }) => {

@@ -750,7 +750,8 @@ check('マーケットを開くたびビートP保存値を読み直す',
 check('ビートP交換所はイベント非開催中・0Pでも常設表示する',
   marketScreen.includes("event:{label:'ビートP交換所'")
   &&marketScreen.includes("marketSection==='event'&&<>")
-  &&marketScreen.includes('value:safeEventPoints.toLocaleString()')
+  // 2026-10-21(改善部 N5): 入口の札の所持数は9桁から縮めて出す(compactCount)。8桁までは今までどおりの数
+  &&(marketScreen.includes('value:safeEventPoints.toLocaleString()')||marketScreen.includes('value:compactCount(safeEventPoints)'))
   &&marketScreen.includes('所持ビートP')
   &&!marketScreen.includes("marketSection==='event'&&!eventPointReleased")
   &&!marketScreen.includes('ビートP交換所は準備中'));
