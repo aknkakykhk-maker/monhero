@@ -6,7 +6,7 @@
 //   ② 印を真にして10 WAVE ぶんを流すと、プロモードの仕様で決まるものが全部入る
 //      (難易度・勇者モンと間合い・候補5体・WAVE ごとの3体と選んだ1体・アシカ・トレーニング・EX・固有技・与えた/受けたダメージ・倒れた回と敵・WAVE ごとの残りライフ・届いた WAVE・ターン・負けた原因)
 //   ③ 名前・ブリーダーID・マスモンの中身が入らない。大きすぎるときは出来事の古いほうから捨て、上限に収まる。1回のおおよその大きさを出す
-//   ④ ゲームの各所へつながっている(始まり・アシカ・WAVE の始まり・候補・選んだ子・トレーニング・EX・固有技・与えた/受けたダメージ・倒れた・WAVE の終わり・終わり)
+//   ④ ゲームの各所へつながっている(ベースモンだけの回に限る・始まり・アシカ・WAVE の始まり・候補・選んだ子・トレーニング・EX・固有技・与えた/受けたダメージ・倒れた・WAVE の終わり・終わり)
 //   ⑤ SQL は新しい表を1つ作るだけ(既存の表に触らない)。予行演習は rollback で終わる
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const ROOT = path.resolve(__dirname, '..', '..');
@@ -97,7 +97,8 @@ const play = ({ waves = 10, turnsPerWave = 6, hitsPerTurn = 4 } = {}) => {
   ctx.RELEASE_FLAGS.battleLog = false;
   // ④
   const hooks = {
-    '始まり(候補5体・勇者モンと間合い)': /tacticsProLogRef\.current = runMode === BATTLE_MODE_TACTICS_PRO && !debugBattleRef\.current\s*\? tacticsProLogStart\(/,
+    '始まり(候補5体・勇者モンと間合い)': /tacticsProLogRef\.current = runMode === BATTLE_MODE_TACTICS_PRO && !debugBattleRef\.current && proAllBase\s*\? tacticsProLogStart\(/,
+    'ベースモンだけの回に限る(マスモンが混ざれば作らない)': /const proAllBase = mainHero\.masuId == null && proAllyPool\.every\(mon => mon && mon\.masuId == null\);/,
     'アシカ': /tacticsProLogAssist\(tacticsProLogRef\.current, teaching\.id\)/,
     'WAVE の始まり': /tacticsProLogWaveStart\(tacticsProLogRef\.current, \{ wave: w,/,
     '候補の3体(2か所)': /tacticsProLogOffer\(tacticsProLogRef\.current, avail\)[\s\S]*tacticsProLogOffer\(tacticsProLogRef\.current, avail\)/,
@@ -115,12 +116,12 @@ const play = ({ waves = 10, turnsPerWave = 6, hitsPerTurn = 4 } = {}) => {
   check(`④ ゲームの各所へつながっている(${Object.keys(hooks).length}か所)`, missing.length === 0, missing.join('・'));
   // ⑤
   const dir = 'docs/sql/battle-log';
-  const files = ['TACTICS_PRO_LOG_APPLY.sql', 'TACTICS_PRO_LOG_APPLY_TEST.sql', 'TACTICS_PRO_LOG_VERIFY.sql'];
+  const files = ['BATTLE_LOGS_APPLY.sql', 'BATTLE_LOGS_APPLY_TEST.sql', 'BATTLE_LOGS_VERIFY.sql'];
   check('⑤ SQL のファイルがある', files.every((f) => fs.existsSync(path.join(ROOT, dir, f))));
   const sqlAll = files.map((f) => read(`${dir}/${f}`)).join('\n').split('\n').filter((l) => !/^\s*--/.test(l)).join('\n');
-  check('⑤ 既存の表に触らない', !/drop\s+table|delete\s+from|truncate|\bupdate\s+public\./i.test(sqlAll) && [...sqlAll.matchAll(/alter\s+table\s+([\w.]+)/gi)].every((m) => m[1] === 'public.tactics_pro_logs')
-    && [...sqlAll.matchAll(/(?:on|into|from)\s+public\.(\w+)/gi)].every((m) => m[1] === 'tactics_pro_logs'));
-  check('⑤ 予行演習は rollback で終わる・書き換え削除のポリシーを作らない', /rollback;\s*$/.test(read(`${dir}/TACTICS_PRO_LOG_APPLY_TEST.sql`)) && !/for\s+(update|delete|all)\b/i.test(sqlAll));
+  check('⑤ 既存の表に触らない', !/drop\s+table|delete\s+from|truncate|\bupdate\s+public\./i.test(sqlAll) && [...sqlAll.matchAll(/alter\s+table\s+([\w.]+)/gi)].every((m) => ['public.tactics_pro_logs', 'public.raid_battle_logs'].includes(m[1]))
+    && [...sqlAll.matchAll(/(?:on|into|from)\s+public\.(\w+)/gi)].every((m) => ['tactics_pro_logs', 'raid_battle_logs'].includes(m[1])));
+  check('⑤ 予行演習は rollback で終わる・書き換え削除のポリシーを作らない', /rollback;\s*$/.test(read(`${dir}/BATTLE_LOGS_APPLY_TEST.sql`)) && !/for\s+(update|delete|all)\b/i.test(sqlAll));
   check('⑤ detail の上限(32,000 バイト)は送る側の上限より大きい', /octet_length\(detail::text\) <= 32000/.test(sqlAll) && T.TACTICS_PRO_LOG_MAX_BYTES < 32000);
   console.log(failed ? `\n${failed}件 NG` : '\nすべて OK');
   process.exit(failed ? 1 : 0);
