@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 661555357b4dec9a
+// source-sha256: 9761536f34c6fb9c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-21 14:47";
+const BUILD_DATE = "2026-10-21 15:22";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -30799,7 +30799,7 @@ const rhythmChartPlayable = (song, difficultyId) => {
   return !!chart && Array.isArray(chart.notes) && chart.notes.length > 0;
 };
 const RHYTHM_PREVIEW_DELAY_MS = 350;
-const RHYTHM_PREVIEW_SCREENS = Object.freeze(['RHYTHM_DEMO_HOME', 'RHYTHM_DEMO_HELP', 'RHYTHM_DEMO_MONSTERS', 'RHYTHM_RANKING', 'RHYTHM_MULTI']);
+const RHYTHM_PREVIEW_SCREENS = Object.freeze(['RHYTHM_DEMO_HOME', 'RHYTHM_DEMO_HELP', 'RHYTHM_NOTE_DEX', 'RHYTHM_DEMO_MONSTERS', 'RHYTHM_RANKING', 'RHYTHM_MULTI']);
 const rhythmShortPortraitNow = () => typeof window !== 'undefined' && window.innerHeight <= 700 && window.innerHeight > window.innerWidth;
 const useRhythmShortPortrait = () => {
   const [isShortScreen, setIsShortScreen] = React.useState(rhythmShortPortraitNow);
@@ -36391,7 +36391,7 @@ const RhythmTapTest = ({
         }
       };
       if (tutorial) {
-        const step = rhythmTutorialStepAt(songTimeMs);
+        const step = rhythmTutorialStepAt(songTimeMs, song.tutorialSteps || RHYTHM_TUTORIAL_STEPS);
         if (step !== tutorialStepRef.current) {
           tutorialStepRef.current = step;
           const banner = tutorialBannerRef.current;
@@ -39292,10 +39292,10 @@ const RhythmTapTest = ({
   }, React.createElement("b", {
     "data-rhythm-tutorial-title": true,
     className: "block text-[14px] font-black text-cyan-100"
-  }, RHYTHM_TUTORIAL_STEPS[0].title), React.createElement("span", {
+  }, (song.tutorialSteps || RHYTHM_TUTORIAL_STEPS)[0].title), React.createElement("span", {
     "data-rhythm-tutorial-text": true,
     className: "mt-1 block text-[11px] font-bold leading-relaxed text-slate-200"
-  }, RHYTHM_TUTORIAL_STEPS[0].text)), view.status === 'paused' && !resumeCountdown && React.createElement("div", {
+  }, (song.tutorialSteps || RHYTHM_TUTORIAL_STEPS)[0].text)), view.status === 'paused' && !resumeCountdown && React.createElement("div", {
     "data-rhythm-pause-menu": true,
     "data-rhythm-debug-play": debugPlay ? '1' : undefined,
     className: "absolute inset-0 z-40 flex flex-col items-center justify-center gap-3 bg-slate-950/95 p-5"
@@ -53902,12 +53902,98 @@ function RhythmSongSelectScreen({
     }, "アシストON：フリックはタップで取れて、コンボをガードが守ります。スコアは8割で、自己ベスト・ランキングには残りません。"))
   }));
 }
+const rhythmNoteDexHelpRow = entry => {
+  const category = typeof helpCategoryById === 'function' ? helpCategoryById('rhythm') : null;
+  const topic = (category && category.topics || []).find(x => x.id === (entry && entry.help && entry.help[0]));
+  for (const block of topic && topic.blocks || []) {
+    if (block.t !== 'kv') continue;
+    for (const row of block.rows || []) if (Array.isArray(row) && String(row[0]).startsWith(entry.help[1])) return {
+      label: String(row[0]),
+      text: String(row[1] || '')
+    };
+  }
+  return {
+    label: entry ? entry.name : '',
+    text: ''
+  };
+};
+const rhythmNoteDexHelpText = entry => rhythmNoteDexHelpRow(entry).text;
+function RhythmNoteDexScreen({
+  onBack,
+  onPlay
+}) {
+  return React.createElement("main", {
+    "data-rhythm-note-dex": true,
+    className: "flex h-full min-h-0 flex-1 flex-col bg-slate-950 text-white"
+  }, React.createElement("header", {
+    className: "z-10 flex shrink-0 items-center gap-2 border-b border-amber-400/15 bg-slate-950/95 px-3 py-1",
+    style: {
+      paddingTop: 'calc(0.25rem + var(--mh-sa-top))'
+    }
+  }, React.createElement("button", {
+    "aria-label": "戻る",
+    "data-rhythm-note-dex-back": true,
+    onClick: onBack,
+    className: "min-h-[44px] px-2 text-slate-400"
+  }, React.createElement(ArrowLeft, {
+    size: 18
+  })), React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("small", {
+    className: "block text-[8px] font-black leading-none tracking-[0.2em] text-fuchsia-300"
+  }, "MONBEAT"), React.createElement("h2", {
+    className: "text-sm font-black leading-tight tracking-widest text-amber-200"
+  }, "📒 ノーツ図鑑"))), React.createElement("div", {
+    "data-rhythm-note-dex-scroll": true,
+    className: "flex-1 min-h-0 overflow-y-auto mh-scroll px-3 pb-6 pt-3",
+    style: {
+      paddingBottom: 'calc(1.5rem + var(--mh-sa-bottom))'
+    }
+  }, React.createElement("p", {
+    className: "text-[11px] leading-relaxed text-slate-300"
+  }, "ノーツを選ぶと、実際のプレイ画面でそのノーツが流れてきます。叩いて、判定がどう出るか試せます。記録やランキング・ビートP・ミッションには数えません。"), React.createElement("div", {
+    "data-rhythm-note-dex-list": true,
+    className: "mt-3 grid gap-2",
+    style: {
+      gridTemplateColumns: 'repeat(auto-fill,minmax(min(100%,300px),1fr))'
+    }
+  }, RHYTHM_NOTE_DEX.map(entry => {
+    const row = rhythmNoteDexHelpRow(entry);
+    return React.createElement("div", {
+      key: entry.id,
+      "data-rhythm-note-dex-item": entry.id,
+      className: "flex flex-col gap-2 rounded-2xl border border-white/10 bg-slate-900/80 p-3"
+    }, React.createElement("div", {
+      className: "flex min-w-0 items-start gap-3"
+    }, typeof RhythmNoteSwatch === 'function' && entry.swatch && React.createElement("span", {
+      "data-rhythm-note-dex-swatch": entry.swatch,
+      className: "shrink-0"
+    }, React.createElement(RhythmNoteSwatch, {
+      kind: entry.swatch,
+      width: 64,
+      height: 48
+    })), React.createElement("div", {
+      className: "min-w-0 flex-1"
+    }, React.createElement("b", {
+      "data-rhythm-note-dex-name": true,
+      className: "block text-[13px] font-black text-amber-100"
+    }, row.label || entry.name), row.text && React.createElement("span", {
+      "data-rhythm-note-dex-text": true,
+      className: "mt-1 block text-[11px] leading-relaxed text-slate-300"
+    }, row.text))), React.createElement("button", {
+      "data-rhythm-note-dex-play": entry.id,
+      onClick: () => onPlay(entry.id),
+      className: "mt-auto min-h-[44px] w-full rounded-xl bg-gradient-to-r from-amber-400 to-fuchsia-500 text-[12px] font-black text-slate-950"
+    }, "▶ 流して試す"));
+  }))));
+}
 function RhythmHelpScreen({
   onBackToSongSelect,
   rhythmHelpTopicId,
   setRhythmHelpTopicId,
   startRhythmPractice,
-  startRhythmTutorial
+  startRhythmTutorial,
+  onOpenNoteDex
 }) {
   const category = helpCategoryById('rhythm');
   const topics = category && category.topics || [];
@@ -53954,7 +54040,13 @@ function RhythmHelpScreen({
     className: "mt-3 min-h-[56px] w-full rounded-2xl bg-gradient-to-r from-amber-400 to-fuchsia-500 text-sm font-black text-slate-950"
   }, "🥁 叩いて練習する"), React.createElement("p", {
     className: "mt-2 text-[10px] leading-relaxed text-slate-400"
-  }, "実際のプレイ画面で、タップ・同時押し・ホールド・スライド・フリック・終点フリック・モンスターノーツを1つずつ練習します。約20秒です。スコアも自己ベストも残りません。"), React.createElement("button", {
+  }, "実際のプレイ画面で、タップ・同時押し・ホールド・スライド・フリック・終点フリック・モンスターノーツを1つずつ練習します。約20秒です。スコアも自己ベストも残りません。"), onOpenNoteDex && React.createElement(React.Fragment, null, React.createElement("button", {
+    "data-rhythm-demo-note-dex": true,
+    onClick: onOpenNoteDex,
+    className: "mt-3 min-h-[52px] w-full rounded-2xl border border-amber-300/50 bg-slate-900 text-sm font-black text-amber-100"
+  }, "📒 ノーツ図鑑"), React.createElement("p", {
+    className: "mt-2 text-[10px] leading-relaxed text-slate-400"
+  }, "ノーツを1種類ずつ選んで、実際のプレイ画面で流して試せます。HELL の空のノーツも見られます。記録には残りません。")), React.createElement("button", {
     "data-rhythm-demo-help-tutorial": true,
     onClick: startRhythmTutorial,
     className: "mt-3 min-h-[52px] w-full rounded-2xl bg-gradient-to-r from-cyan-500 to-fuchsia-600 text-sm font-black text-white"
@@ -82922,7 +83014,7 @@ function MonsterHeroGame() {
   const [raidDamageFx, setRaidDamageFx] = useState(null);
   useEffect(() => {
     if (!raidRhythm) return;
-    if (['RHYTHM_DEMO_HOME', 'RHYTHM_PLAY', 'RHYTHM_OPTIONS', 'RHYTHM_DEMO_HELP', 'RHYTHM_DEMO_MONSTERS', 'RHYTHM_RANKING'].includes(gameState)) return;
+    if (['RHYTHM_DEMO_HOME', 'RHYTHM_PLAY', 'RHYTHM_OPTIONS', 'RHYTHM_DEMO_HELP', 'RHYTHM_NOTE_DEX', 'RHYTHM_DEMO_MONSTERS', 'RHYTHM_RANKING'].includes(gameState)) return;
     setRaidRhythm(null);
   }, [gameState, raidRhythm]);
   const [raidJackStartRequest, setRaidJackStartRequest] = useState(null);
@@ -84515,7 +84607,7 @@ function MonsterHeroGame() {
     TRAINING_INFO: 'trainingMenu',
     TRAINING_BOARD: 'trainingBoard'
   };
-  const BGM_SILENT_STATES = Object.freeze(['RHYTHM_PLAY', 'RHYTHM_DEMO_HOME', 'RHYTHM_DEMO_HELP', 'RHYTHM_DEMO_MONSTERS', 'RHYTHM_INFO', 'RHYTHM_OPTIONS', 'RHYTHM_RANKING', 'RHYTHM_MULTI', 'ASSISTANT_SELECT', 'DEBUG_SETTINGS', 'DEBUG_BATTLE_SETUP', 'DEBUG_DATA_SETUP', 'RHYTHM_DEBUG', 'RHYTHM_DEBUG_SELECT', 'BREEDER_ICON_DEBUG', 'DYE_MASK_POSITION_DEBUG', 'MASU_PATTERN_DEBUG', 'MONSTER_CHECK_DEBUG', 'MONSTER_IMAGE_DEBUG', 'SPECIES_CHALLENGE_DEBUG', 'TRANSCEND_DEBUG', 'RAID_JACK_DEBUG', 'RPG_DEBUG_SETUP', 'RPG_DEBUG_BATTLE', 'RPG_DEBUG_RESULT']);
+  const BGM_SILENT_STATES = Object.freeze(['RHYTHM_PLAY', 'RHYTHM_DEMO_HOME', 'RHYTHM_DEMO_HELP', 'RHYTHM_NOTE_DEX', 'RHYTHM_DEMO_MONSTERS', 'RHYTHM_INFO', 'RHYTHM_OPTIONS', 'RHYTHM_RANKING', 'RHYTHM_MULTI', 'ASSISTANT_SELECT', 'DEBUG_SETTINGS', 'DEBUG_BATTLE_SETUP', 'DEBUG_DATA_SETUP', 'RHYTHM_DEBUG', 'RHYTHM_DEBUG_SELECT', 'BREEDER_ICON_DEBUG', 'DYE_MASK_POSITION_DEBUG', 'MASU_PATTERN_DEBUG', 'MONSTER_CHECK_DEBUG', 'MONSTER_IMAGE_DEBUG', 'SPECIES_CHALLENGE_DEBUG', 'TRANSCEND_DEBUG', 'RAID_JACK_DEBUG', 'RPG_DEBUG_SETUP', 'RPG_DEBUG_BATTLE', 'RPG_DEBUG_RESULT']);
   const PROFILE_BGM_STATES = ['ROSTER', 'OWNED_MONSTERS', 'MASU_MONS', 'MASU_ENHANCE', 'MASU_TRANSCEND_ENHANCE', 'MASU_AUTO_ENHANCE', 'MASU_SOUL_TRAITS'];
   const MASU_ENHANCE_STATES = ['MASU_ENHANCE', 'MASU_TRANSCEND_ENHANCE', 'MASU_AUTO_ENHANCE', 'MASU_SOUL_TRAITS'];
   const RUN_PHASE_STATES = ['PICK_HERO', 'PICK_ALLY', 'PICK_SLOT', 'PICK_TEACHING', 'PICK_PRO_ALLIES', 'REWARD_PICK', 'UPGRADE_SKILL', 'WAVE_RESULT', 'CHAMPION', 'QUICK_GROWTH', 'QUICK_JOIN'];
@@ -84526,7 +84618,7 @@ function MonsterHeroGame() {
   const isRunStage = value => RUN_STAGE_SCREENS.includes(value);
   const [runStage, setRunStage] = useState(null);
   const runStageRef = useRef(null);
-  const RHYTHM_BACKGROUND_RUN_SCREENS = ['RHYTHM_MODE_SELECT', 'RHYTHM_DEMO_HOME', 'RHYTHM_DEMO_HELP', 'RHYTHM_DEMO_MONSTERS', 'RHYTHM_RANKING', 'RHYTHM_OPTIONS', 'RHYTHM_MULTI', 'RHYTHM_MASU_BEAT'];
+  const RHYTHM_BACKGROUND_RUN_SCREENS = ['RHYTHM_MODE_SELECT', 'RHYTHM_DEMO_HOME', 'RHYTHM_DEMO_HELP', 'RHYTHM_NOTE_DEX', 'RHYTHM_DEMO_MONSTERS', 'RHYTHM_RANKING', 'RHYTHM_OPTIONS', 'RHYTHM_MULTI', 'RHYTHM_MASU_BEAT'];
   const rhythmScreenOpen = isRhythmScreen(gameState);
   const RHYTHM_AUTO_START_SCREENS = [...RHYTHM_BACKGROUND_RUN_SCREENS, 'RHYTHM_PLAY'];
   const QUICK_RUN_AUTO_RETRY_MS = 4000;
@@ -91534,6 +91626,18 @@ function MonsterHeroGame() {
       key: a.key + 1
     } : a)
   } : null;
+  const startRhythmNoteDex = id => {
+    const entry = RHYTHM_NOTE_DEX.find(row => row.id === id);
+    if (!entry) return;
+    if (rhythmSettings.quietDuringPlay) RHYTHM_QUIET_MODE.enter();
+    setRhythmPlay({
+      song: rhythmNoteDexSong(entry.id, rhythmNoteDexHelpText(entry)),
+      difficulty: RHYTHM_TUTORIAL_DIFFICULTY,
+      from: 'notedex',
+      backTo: 'RHYTHM_NOTE_DEX'
+    });
+    setGameState('RHYTHM_PLAY');
+  };
   const startRhythmPractice = () => {
     if (rhythmSettings.quietDuringPlay) RHYTHM_QUIET_MODE.enter();
     setRhythmPlay({
@@ -104837,6 +104941,7 @@ function MonsterHeroGame() {
         }
         if (rhythmPlay.from === 'calibration') return;
         if (rhythmPlay.from === 'tutorial') return;
+        if (rhythmPlay.from === 'notedex') return;
         if (result?.assist === true) return;
         if (result?.cleared !== false) {
           try {
@@ -104867,7 +104972,7 @@ function MonsterHeroGame() {
           rhythmLineAdjustRestore(rhythmLineAdjust?.orig);
           setRhythmLineAdjust(null);
         }
-        const back = rhythmPlay.from === 'multi' ? 'RHYTHM_MULTI' : rhythmPlay.from === 'calibration' || rhythmPlay.from === 'lineAdjust' ? 'RHYTHM_OPTIONS' : rhythmPlay.backTo === 'RHYTHM_DEBUG_SELECT' ? 'RHYTHM_DEBUG_SELECT' : rhythmPlay.from === 'debug' || rhythmPlay.from === 'proto' ? 'RHYTHM_DEBUG' : 'RHYTHM_DEMO_HOME';
+        const back = rhythmPlay.from === 'multi' ? 'RHYTHM_MULTI' : rhythmPlay.from === 'calibration' || rhythmPlay.from === 'lineAdjust' ? 'RHYTHM_OPTIONS' : rhythmPlay.backTo === 'RHYTHM_DEBUG_SELECT' ? 'RHYTHM_DEBUG_SELECT' : rhythmPlay.backTo === 'RHYTHM_NOTE_DEX' ? 'RHYTHM_NOTE_DEX' : rhythmPlay.from === 'debug' || rhythmPlay.from === 'proto' ? 'RHYTHM_DEBUG' : 'RHYTHM_DEMO_HOME';
         setRhythmPlay(null);
         setGameState(back);
         if (rhythmHellStoryAfterResultRef.current) {
@@ -104880,7 +104985,7 @@ function MonsterHeroGame() {
         }
       },
       debugPlay: rhythmPlay.from === 'debug' || rhythmPlay.from === 'proto',
-      tutorial: rhythmPlay.from === 'tutorial',
+      tutorial: rhythmPlay.from === 'tutorial' || rhythmPlay.from === 'notedex',
       calibrating: rhythmPlay.from === 'calibration',
       lineAdjust: rhythmPlay.from === 'lineAdjust' ? rhythmLineAdjustProps : null,
       onApplyCalibration: async measured => {
@@ -105147,8 +105252,12 @@ function MonsterHeroGame() {
       spotClass: spotClass,
       startQuickRunFromRhythm: startQuickRunFromRhythm,
       wave: wave
+    }), gameState === 'RHYTHM_NOTE_DEX' && React.createElement(RhythmNoteDexScreen, {
+      onBack: () => setGameState('RHYTHM_DEMO_HELP'),
+      onPlay: startRhythmNoteDex
     }), gameState === 'RHYTHM_DEMO_HELP' && React.createElement(RhythmHelpScreen, {
       onBackToSongSelect: () => setGameState('RHYTHM_MODE_SELECT'),
+      onOpenNoteDex: () => setGameState('RHYTHM_NOTE_DEX'),
       rhythmHelpTopicId: rhythmHelpTopicId,
       setRhythmHelpTopicId: setRhythmHelpTopicId,
       startRhythmPractice: startRhythmPractice,

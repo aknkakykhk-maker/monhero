@@ -44,7 +44,8 @@ check('デバッグ画面から始めたときだけ true になる',
   game.includes("debugPlay={rhythmPlay.from==='debug'||rhythmPlay.from==='proto'}")
   && game.includes("setRhythmPlay({song,difficulty,from:'proto',backTo:'RHYTHM_DEBUG_SELECT'})"));
 check('あそびかた練習も別に見分けている',
-  game.includes("tutorial={rhythmPlay.from==='tutorial'}"));
+  // ノーツ図鑑(from:'notedex'・2026-10-21)は練習と同じ扱い
+  game.includes("tutorial={rhythmPlay.from==='tutorial'}")||game.includes("tutorial={rhythmPlay.from==='tutorial'||rhythmPlay.from==='notedex'}"));
 check('画面を2つに分けていない(判定や描画を二重管理しない)',
   (game.match(/const RhythmTapTest=/g) || []).length === 1);
 
