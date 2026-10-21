@@ -1246,6 +1246,8 @@ const RHYTHM_SKY_BOX_VARIANT={id:(()=>{try{const v=typeof localStorage!=='undefi
   set(id){const v=RHYTHM_SKY_BOX_LOOKS[id]?id:'b';this.id=v;try{if(v==='b')localStorage.removeItem('mh_sky_box_look_proto');else localStorage.setItem('mh_sky_box_look_proto',v);}catch(e){}}};
 // 空中スライドの白い縁を描き始める高さ(2D の drawSkySlideZ と GPU の帯の mode 8 で同じ値を使う)
 const RHYTHM_SKY_EDGE_FROM=0.042;
+// 空中スライドの白い芯を描く高さ(2D の drawSkySlideZ と GPU の帯の mode 7 で同じ値。時刻の範囲 rhythmSlideSkyCoreSpans で切る)
+const RHYTHM_SKY_CORE_FROM=0.05;
 // ノーツの外の暗い縁取り(2026-10-07 道のふちと重なっても見やすくするため)。端も中も同じ(2026-10-12 社長の指示で、端の値にそろえた)
 const RHYTHM_NOTE_OUTLINE_PX=3;
 const RHYTHM_NOTE_OUTLINE_COLOR='rgba(2,6,23,.88)';
@@ -1360,11 +1362,13 @@ const rhythmSlideSegmentStart=(points,t)=>{
 // 空中スライドの高さが RHYTHM_SKY_EDGE_FROM を越えている時刻の範囲 [[始め,終わり],…](白い縁を描く所。2D と GPU で同じものを使う)。
 // 区間ごとの高さは曲がり方(ease)で単調に変わるので、越える時刻を区間ごとに二分探しで求める。点の並びごとに1回だけ数える
 const RHYTHM_SKY_EDGE_SPAN_CACHE=typeof WeakMap==='function'?new WeakMap():null;
-const rhythmSlideSkyEdgeSpans=note=>{
+const rhythmSlideSkySpansAbove=(note,E)=>{
   const points=Array.isArray(note?.slidePoints)?note.slidePoints:null;
   if(!points||points.length<2||!rhythmSlideHasSky(note))return [];
-  const cached=RHYTHM_SKY_EDGE_SPAN_CACHE&&RHYTHM_SKY_EDGE_SPAN_CACHE.get(points);if(cached)return cached;
-  const E=RHYTHM_SKY_EDGE_FROM,h=point=>Math.max(0,Math.min(1,Number(point?.sky)||0)),spans=[];
+  let memo=RHYTHM_SKY_EDGE_SPAN_CACHE&&RHYTHM_SKY_EDGE_SPAN_CACHE.get(points);
+  if(!memo){memo={};if(RHYTHM_SKY_EDGE_SPAN_CACHE)RHYTHM_SKY_EDGE_SPAN_CACHE.set(points,memo);}
+  if(memo[E])return memo[E];
+  const h=point=>Math.max(0,Math.min(1,Number(point?.sky)||0)),spans=[];
   let open=h(points[0])>E?Number(points[0].timeMs):null;
   for(let i=1;i<points.length;i++){
     const a=points[i-1],b=points[i],ha=h(a),hb=h(b),ta=Number(a.timeMs),tb=Number(b.timeMs);
@@ -1375,9 +1379,15 @@ const rhythmSlideSkyEdgeSpans=note=>{
     if(open==null)open=at;else{spans.push([open,at]);open=null;}
   }
   if(open!=null)spans.push([open,Number(points[points.length-1].timeMs)]);
-  if(RHYTHM_SKY_EDGE_SPAN_CACHE)RHYTHM_SKY_EDGE_SPAN_CACHE.set(points,spans);
+  memo[E]=spans;
   return spans;
 };
+const rhythmSlideSkyEdgeSpans=note=>rhythmSlideSkySpansAbove(note,RHYTHM_SKY_EDGE_FROM);
+// 白い芯を描く時刻の範囲(2026-10-21)。区切りの平均の高さで決めると、押さえている最中に 2D(いまの位置から刻み直す)と
+// GPU(譜面の点から刻む)で区切りの長さぶん(十数画素)芯の切れる所がずれていた(rhythm-gpu-band-check の HELL)。白い縁と同じく時刻で切る
+const rhythmSlideSkyCoreSpans=note=>rhythmSlideSkySpansAbove(note,RHYTHM_SKY_CORE_FROM);
+// 芯を時刻で切れるか(GPU に渡せる範囲は8つまで。超えるときは 2D も GPU も今までどおり区切りの高さで切る)
+const rhythmSlideSkyCoreSpansUsable=spans=>spans.length>0&&spans.length<=8;
 const rhythmSlideSkyAt=(note,chartTimeMs)=>{
   const points=Array.isArray(note?.slidePoints)?note.slidePoints:null;
   if(!points||points.length<2||!rhythmSlideHasSky(note))return 0;
@@ -41278,7 +41288,8 @@ const rhythmCreateGpuSlideBand=(gl,host)=>{
     'else if(uMode==2){float a=clamp(vSky*1.4,0.0,1.0);if(a<=0.02)discard;c=vec4(2.0/255.0,0.0,10.0/255.0,0.85*(uZ>0.5?0.18+0.22*a:0.25+0.45*a));}'+
     'else if(uMode==3){float a=air();if(a<=0.05)discard;c=vec4(uColor2.rgb,0.2*a);}'+
     'else if(uMode==4){float a=air();if(a<=0.05)discard;c=vec4(uColor.rgb,uColor.a*a*0.6);}'+
-    'else if(uMode==7){if(vSky<=0.05)discard;}'+
+    // 芯(mode 7)は、範囲を渡されたときは白い縁と同じく時刻で切る(rhythmSlideSkyCoreSpans)。渡されないときは区切りの高さで
+    'else if(uMode==7){if(uEdgeN>0){bool on=false;for(int i=0;i<8;i++){if(i>=uEdgeN)break;if(vT>=uEdgeT[i].x&&vT<=uEdgeT[i].y)on=true;}if(!on)discard;}else if(vSky<=0.05)discard;}'+
     'else if(uMode==8){bool on=false;for(int i=0;i<8;i++){if(i>=uEdgeN)break;if(vT>=uEdgeT[i].x&&vT<=uEdgeT[i].y)on=true;}if(!on)discard;c=uColor;}'+
     'else if(uMode==5){float t=clamp(vG,0.0,1.0);vec4 s0=vec4(245.0/255.0,243.0/255.0,1.0,0.56);vec4 s1=vec4(243.0/255.0,232.0/255.0,1.0,0.36);vec4 s2=vec4(243.0/255.0,232.0/255.0,1.0,0.2);'+
     'c=t<0.35?mix(s0,s1,t/0.35):mix(s1,s2,(t-0.35)/0.65);}'+
@@ -41498,7 +41509,7 @@ const rhythmCreateGpuSlideBand=(gl,host)=>{
       u1f('uHw',Number(o.hw)||0);u4f('uColor',rgba(o.color||'rgba(0,0,0,0)'));if(o.color2)u4f('uColor2',rgba(o.color2));
       u1f('uAlpha',Number.isFinite(Number(o.alpha))?Math.max(0,Math.min(1,Number(o.alpha))):1);u1f('uGround',o.ground?1:0);u1f('uMinHw',Number(o.minHw)||0);u1f('uCore',o.core?1:0);u1f('uZ',o.z?1:0);
       if(mode===5){u1f('uG0',Number(o.g0)||0);u1f('uG1',Number(o.g1)||0);}if(mode===6)u1f('uPhase',Number(o.phase)||0);
-      if(mode===8){const spans=Array.isArray(o.spans)?o.spans:[],now=cur.u.tnow+e.t0,n=Math.min(8,spans.length),buf=edgeSpanBuf;buf.fill(0);
+      if(mode===8||mode===7){const spans=Array.isArray(o.spans)?o.spans:[],now=cur.u.tnow+e.t0,n=mode===7&&!rhythmSlideSkyCoreSpansUsable(spans)?0:Math.min(8,spans.length),buf=edgeSpanBuf;buf.fill(0);
         for(let i=0;i<n;i++){buf[i*2]=spans[i][0]-now;buf[i*2+1]=spans[i][1]-now;}gl.uniform2fv(U.uEdgeT,buf);gl.uniform1i(U.uEdgeN,n);}
       if(o.stencil){const ref=host.nextStencil();gl.stencilFunc(gl.NOTEQUAL,ref,0xff);}else gl.stencilFunc(gl.ALWAYS,0,0xff);
       if(o.additive)gl.blendFuncSeparate(gl.ONE,gl.ONE,gl.ONE,gl.ONE_MINUS_SRC_ALPHA);
@@ -43286,10 +43297,16 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
           part.push([...at(k0),...at(k1)]);}});
       const stroke=(list,cap)=>{if(!list.length)return;ctx.lineCap=cap;ctx.beginPath();list.forEach(([a0,b0,y0,a1,b1,y1])=>{ctx.moveTo(a0,y0);ctx.lineTo(a1,y1);ctx.moveTo(b0,y0);ctx.lineTo(b1,y1);});ctx.stroke();};
       ctx.strokeStyle=`rgba(255,255,255,${A.edgeAlpha})`;ctx.lineWidth=A.edgePx;stroke(whole,'round');stroke(part,'butt');ctx.lineCap='butt';}
-    if(air.length){
+    if(air.length||rhythmSlideSkyCoreSpansUsable(rhythmSlideSkyCoreSpans(note))){
       // 芯は、中心線の左右へ半幅ずつ(横に)ずらした細い帯。GPU の帯(mode 7・core)と同じ作りにして、画素までそろえる
       glowBegin();ctx.globalAlpha=alpha*C.alpha;ctx.fillStyle=`rgb(${C.rgb})`;const ch=C.widthPx/2;
-      ctx.beginPath();air.forEach(q=>{const x0=(q.l0+q.r0)/2,x1=(q.l1+q.r1)/2;ctx.moveTo(x0-ch,q.y0);ctx.lineTo(x0+ch,q.y0);ctx.lineTo(x1+ch,q.y1);ctx.lineTo(x1-ch,q.y1);ctx.closePath();});
+      // 芯の出る所は時刻の範囲で切る(GPU の mode 7 と同じ。rhythmSlideSkyCoreSpans)
+      const spans=rhythmSlideSkyCoreSpans(note),pieces=[];
+      if(rhythmSlideSkyCoreSpansUsable(spans))quads.forEach(q=>{const t0=Number(q.t0),t1=Number(q.t1);if(!Number.isFinite(t0)||!Number.isFinite(t1)||!(t1>t0))return;
+        for(const [a,b] of spans){if(b<=t0||a>=t1)continue;const k0=Math.max(0,(a-t0)/(t1-t0)),k1=Math.min(1,(b-t0)/(t1-t0)),at=k=>[q.l0+(q.l1-q.l0)*k,q.r0+(q.r1-q.r0)*k,q.y0+(q.y1-q.y0)*k];
+          const [l0,r0,y0]=at(k0),[l1,r1,y1]=at(k1);pieces.push({l0,r0,y0,l1,r1,y1});}});
+      else pieces.push(...air);
+      ctx.beginPath();pieces.forEach(q=>{const x0=(q.l0+q.r0)/2,x1=(q.l1+q.r1)/2;ctx.moveTo(x0-ch,q.y0);ctx.lineTo(x0+ch,q.y0);ctx.lineTo(x1+ch,q.y1);ctx.lineTo(x1-ch,q.y1);ctx.closePath();});
       ctx.fill();glowEnd();
     }
     // 指が帯から外れている間(slideOff)は、帯・縁・芯をまとめて暗くする(見た目だけ。地上のスライドと同じ RHYTHM_SLIDE_DIM)
@@ -43442,7 +43459,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       const handRgb=opts.skyHand==='L'?A.left:opts.skyHand==='R'?A.right:A.rgb;
       band.pass('fill',{mode:0,color:`rgba(${handRgb},${A.alpha})`,alpha,minHw:A.minHalfWidthPx,stencil:true});
       band.pass('edges',{mode:8,hw:A.edgePx/2,color:`rgba(255,255,255,${A.edgeAlpha})`,alpha,minHw:A.minHalfWidthPx,stencil:true,spans:rhythmSlideSkyEdgeSpans(note)});
-      band.pass('fill',{mode:7,hw:C.widthPx/2,core:true,additive:true,color:`rgba(${C.rgb},${C.alpha})`,alpha,stencil:true});
+      band.pass('fill',{mode:7,hw:C.widthPx/2,core:true,additive:true,color:`rgba(${C.rgb},${C.alpha})`,alpha,stencil:true,spans:rhythmSlideSkyCoreSpans(note)});
       if(dim)band.pass('fill',{mode:0,color:`rgba(${RHYTHM_SLIDE_DIM.rgb},${RHYTHM_SLIDE_DIM.alpha})`,alpha,minHw:A.minHalfWidthPx,stencil:true});
       band.done();
       return;
