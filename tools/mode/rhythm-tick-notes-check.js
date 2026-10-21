@@ -79,7 +79,8 @@ check('SQL の新しい見方は4つ区切りの -2 だけを数える',/array_l
 
 // ===== レイド・マルチ =====
 check('レイドは刻みも判定の数に入れる(取った刻みは JUST MARVELOUS・落とした刻みは MISS)',/MARVELOUS: \(Math\.floor\(Number\(r\.judgments\.MARVELOUS\) \|\| 0\)\) \+ tickJust/.test(raid)&&/const precise = \(Math\.floor\(Number\(r\.precise\) \|\| 0\)\) \+ tickJust;/.test(raid));
-check('レイドの HELL の補正は MASTER と同じ',/MASTER: 1\.0, HELL: 1\.0 \}/.test(raid));
+// 2026-10-21 社長の決定で HELL は MASTER の1.5倍(それまでは MASTER と同じ 1.0)
+check('レイドの HELL の補正は MASTER の1.5倍',/MASTER: 1\.0, HELL: 1\.5 \}/.test(raid));
 check('マルチは通信路を版で分ける',(multi.match(/rhythmMultiTopicTag\(\)/g)||[]).length>=4);
 
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
