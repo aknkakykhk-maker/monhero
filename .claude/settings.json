@@ -30,7 +30,9 @@
       "mcp__Supabase__list_organizations",
       "mcp__Supabase__list_branches",
       "mcp__Supabase__search_docs",
-      "mcp__Supabase__generate_typescript_types"
+      "mcp__Supabase__generate_typescript_types",
+      "mcp__Supabase__execute_sql",
+      "mcp__Supabase__apply_migration"
     ]
   }
 }
