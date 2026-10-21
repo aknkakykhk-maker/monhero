@@ -210,7 +210,8 @@ const ModalCloseButton = ({ onClick, label='閉じる', disabled=false }) => (
 // Intl.Segmenter で言葉の切れ目に印(U+200B)を入れ、JA_WRAP_STYLE(keep-all)で印の所だけで折る。
 // 1行に入らない長い言葉だけは overflow-wrap:anywhere で折る(はみ出さない)。Segmenter の無い古い端末では今までどおり
 let _jaSegmenter;
-const jaWrap = (text) => {
+// jaWrapPoints: 折ってよい所に印(U+200B)を入れた文字。jaWrap はその印を <wbr> に変えて描く
+const jaWrapPoints = (text) => {
   const s = String(text ?? '');
   if (!s) return s;
   try {
@@ -222,6 +223,13 @@ const jaWrap = (text) => {
     return segs.reduce((out, seg, i) => (i === 0 || /^[\s、。，．,.！？!?」』）)】〕〉》…‥ー〜～・：:；;ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ]/.test(seg) || /[\s「『（(【〔〈《]$/.test(segs[i - 1])
       ? out + seg : `${out}\u200B${seg}`), '');
   } catch { return s; }
+};
+// ★印を文字(U+200B)のまま画面へ置かない(2026-10-21 窓口)。U+200B は見えなくても文字として残るので、画面の文をコピーすると混ざり、
+//   文を照らす検査(mode/raid-jack-screen-browser-check.js)も一致しなくなった。<wbr> は「ここで折ってよい」だけで、innerText にもコピーにも出ない
+const jaWrap = (text) => {
+  const s = jaWrapPoints(text);
+  if (typeof s !== 'string' || !s.includes('\u200B')) return s;
+  return s.split('\u200B').map((seg, i) => <React.Fragment key={i}>{i > 0 && <wbr/>}{seg}</React.Fragment>);
 };
 // textWrap:'wrap' … 画面全体の text-wrap:pretty(index.html)と anywhere が組み合わさると、語の中へ1字だけ動かすことがある(「スキッ／プ」)ので外す
 const JA_WRAP_STYLE = Object.freeze({ wordBreak: 'keep-all', overflowWrap: 'anywhere', textWrap: 'wrap' });

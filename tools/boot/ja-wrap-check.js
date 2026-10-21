@@ -53,6 +53,8 @@ for(const el of document.querySelectorAll('[data-market-name-text]')){if(!el.par
  for(let n=w2.nextNode();n;n=w2.nextNode()){for(let i=0;i<n.textContent.length;i++){range.setStart(n,i);range.setEnd(n,i+1);const rs=range.getClientRects();if(rs.length)cs.push({c:n.textContent[i],top:Math.round(rs[0].top),left:rs[0].left});}}
  const sorted=[...cs].sort((a,b)=>Math.abs(a.top-b.top)>4?a.top-b.top:a.left-b.left);
  if(sorted.map(x=>x.c).join('')!==cs.map(x=>x.c).join(''))out.push({kind:'字の並びが崩れた',fs:getComputedStyle(el).fontSize,w:0,word:'',at:sorted.map(x=>x.c).join(''),cls:''});}
+// 画面の文に折り返し用の見えない文字(U+200B)が残っていない(2026-10-21: コピーすると混ざり、文を照らす検査も一致しなくなる。折り目は <wbr> で描く)
+{const t=document.body.innerText||'';const k=t.indexOf('\u200B');if(k>=0)out.push({kind:'見えない文字(U+200B)が画面の文にある',fs:'',w:0,word:'',at:t.slice(Math.max(0,k-8),k+8).replace(/\u200B/g,'|'),cls:''});}
 // 短い札(8字以下)が「…」で切れて読めない(2026-10-21「アイコン えらびな…」)
 for(const el of document.querySelectorAll('b,small,span,div,button')){const t=(el.innerText||'').replace(/[\u200B\s]/g,'');if(!t||t.length>8||!/[぀-ヿ一-鿿]/.test(t)||el.children.length)continue;
  const st=getComputedStyle(el);if(st.textOverflow!=='ellipsis'||!visible(el))continue;if(el.scrollWidth>el.clientWidth+1)out.push({kind:'「…」で切れた',fs:st.fontSize,w:Math.round(el.clientWidth),word:t,at:t,cls:''});}
