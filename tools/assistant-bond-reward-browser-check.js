@@ -1,7 +1,7 @@
 // 助手の仲良し度の節目のごほうび(2026-10-21)を実ブラウザで見る。
 //
 //   python3 tools/serve.py 8899 を立ててから
-//   node tools/assistant-bond-reward-browser-check.js   (SHOT_DIR=<フォルダ> でギフト画面とプロフィールの写真も残す)
+//   node tools/assistant-bond-reward-browser-check.js   (WIDTH=320 で狭い画面。SHOT_DIR=<フォルダ> でギフト画面とプロフィールの写真も残す)
 //
 //   ① もう Lv30(みゅあ)・Lv25(きき)の人が起動すると、越えた節目のぶん(4+2)がギフトボックスへまとめて届く
 //   ② 届けた印 mh_assistant_bond_rewards_v1 が保存される
@@ -14,6 +14,8 @@ const { quietBootSeed, updateNoticeSeed } = require('./boot/quiet-boot-seed');
 
 const PAGE_URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/index.html';
 const SHOT_DIR = process.env.SHOT_DIR || '';
+// WIDTH=320 で狭い画面でも見る(写真の名前にも幅が入る)
+const W = Number(process.env.WIDTH) || 390;
 let failed = 0;
 const check = (name, ok, detail = '') => { if (!ok) failed++; console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ' — ' + detail : ''}`); };
 
@@ -70,7 +72,7 @@ const bondGifts = (page) => page.evaluate(() => (JSON.parse(localStorage.getItem
   const browser = await chromium.launch({ executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH || '/opt/pw-browsers/chromium' });
   const errors = [];
   try {
-    const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    const page = await browser.newPage({ viewport: { width: W, height: W === 320 ? 568 : 844 } });
     page.on('pageerror', (e) => errors.push(String(e)));
     await page.addInitScript(seed, { mua: needOf(30), kiki: needOf(25) });
     await page.addInitScript(quietBootSeed());
@@ -89,11 +91,11 @@ const bondGifts = (page) => page.evaluate(() => (JSON.parse(localStorage.getItem
     const text = await page.evaluate(() => document.body.innerText);
     check('④ ギフトボックスに並ぶ', text.includes('みゅあとの仲良し度 Lv30 のごほうび') && text.includes('ききとの仲良し度 Lv25 のごほうび'));
     check('④ 「仲良し度」の札が付く', text.includes('仲良し度'));
-    if (SHOT_DIR) { fs.mkdirSync(SHOT_DIR, { recursive: true }); await page.screenshot({ path: path.join(SHOT_DIR, 'gift-box-390.png') }); }
+    if (SHOT_DIR) { fs.mkdirSync(SHOT_DIR, { recursive: true }); await page.screenshot({ path: path.join(SHOT_DIR, `gift-box-${W}.png`) }); }
     // すべて受け取る
     await page.evaluate(() => [...document.querySelectorAll('button')].find(b => b.textContent.includes('すべて受け取る') && !b.disabled)?.click());
     await page.waitForTimeout(1500);
-    if (SHOT_DIR) await page.screenshot({ path: path.join(SHOT_DIR, 'gift-claimed-390.png') });
+    if (SHOT_DIR) await page.screenshot({ path: path.join(SHOT_DIR, `gift-claimed-${W}.png`) });
     const claimed = await bondGifts(page);
     check('受け取れる', claimed.length === 6 && claimed.every(g => g.claimed), JSON.stringify(claimed));
     for (let i = 0; i < 4; i++) {
@@ -124,7 +126,7 @@ const bondGifts = (page) => page.evaluate(() => (JSON.parse(localStorage.getItem
     if (SHOT_DIR) {
       await page.evaluate(() => [...document.querySelectorAll('div')].find(d => d.textContent.trim().endsWith('との仲良し度') && d.children.length === 0)?.scrollIntoView({ block: 'start' }));
       await page.waitForTimeout(500);
-      await page.screenshot({ path: path.join(SHOT_DIR, 'profile-bond-lv30-390.png') });
+      await page.screenshot({ path: path.join(SHOT_DIR, `profile-bond-lv30-${W}.png`) });
     }
     check('実行時エラーが無い', errors.length === 0, errors.slice(0, 3).join(' / '));
   } finally { await browser.close(); }

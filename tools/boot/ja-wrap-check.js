@@ -11,7 +11,7 @@
 //   ・2026-10-21 社長の指示で広げた: 30字より長い文・助手の吹き出しも「最後の行に1〜2字だけ落ちた」は数える(160字まで)。
 //     作り手が <wbr> で決めた折り目は、言葉の切れ目として扱う
 //   ・見る画面: ヘルプ・プロフィール・マーケットの全部の売り場とタブ・モンヒロビート・曲えらび・HOME・マーケット・ダイヤショップ・
-//     神殿・ギフト・ミッション・M/B管理・設定・モンヒロバトル(幅320と390)
+//     神殿・ギフト(長い題名のギフトを並べて)・ミッション・M/B管理・設定・モンヒロバトル(幅320と390)
 // 直し方: 字を言葉の切れ目で折る(41-screen-ui.jsx の jaWrap と JA_WRAP_STYLE、マーケットの札は marketNameForWrap)
 const http = require('http'), path = require('path'), fs = require('fs');
 const ROOT = path.resolve(__dirname, '..', '..'), PORT = 8964;
@@ -63,7 +63,10 @@ return out;};
 for(const W of [320,390]){const page=await browser.newPage({viewport:{width:W,height:W===320?568:844},deviceScaleFactor:2,isMobile:true,hasTouch:true});
 await page.addInitScript(()=>{if(sessionStorage.getItem('s'))return;sessionStorage.setItem('s','1');const put=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
 put('mh_breeder_name','テスト');put('mh_breeder_icon','🐣');put('mh_intro_done',true);put('mh_onboarded',true);put('mh_tutorial_seen_v1',true);put('mh_battle_tutorial_seen_v1',true);put('mh_battle_tutorial_guide_shown_v1',true);
-put('mh_assistant_selected_v1','mua');put('mh_assistant_unlock_seen_v1',true);put('mh_update_notice_seen_v1',true);put('mh_rhythm_tutorial_seen_v1',true);put('mh_inherited_unique_level_compensation_v1',true);put('mh_masu_level_cap_compensation_notice_seen_v1',true);});
+put('mh_assistant_selected_v1','mua');put('mh_assistant_unlock_seen_v1',true);put('mh_update_notice_seen_v1',true);put('mh_rhythm_tutorial_seen_v1',true);put('mh_inherited_unique_level_compensation_v1',true);put('mh_masu_level_cap_compensation_notice_seen_v1',true);
+// ギフトボックスに長い題名のギフトを並べる(2026-10-21 窓口「ききとの仲良し度 Lv25 のごほ／うび」)。助手4人の仲良し度・お詫び・ログインボーナス・ミッション・イベントの報酬
+const r=[{type:'diamond',amount:1}];const g=(id,title,source)=>({id:'jawrap_'+id,title,source,rewards:r,createdAt:new Date().toISOString(),claimedAt:null});
+put('mh_gifts',[...['みゅあ','きき','ももすけ','ドラ'].flatMap(n=>[22,25,28,30].map(lv=>g(n+lv,`${n}との仲良し度 Lv${lv} のごほうび`,'assistantBond'))),g('apology','お詫びのしるし','compensation'),g('login','ログインボーナス 7日目','loginBonus'),g('mission','ミッション報酬「ウィークリーコンプリート」','mission'),g('event','第3回 異世界交響祭 の報酬','rhythmEvent')]);});
 await page.goto(`http://localhost:${PORT}/monster-hero/index.html`,{waitUntil:'load',timeout:60000});
 await page.waitForFunction(()=>document.body?.innerText.includes('TAP TO START'),{timeout:40000});
 await page.getByRole('button',{name:'TAP TO START'}).click({force:true});await page.getByRole('button',{name:'トップ画面へ進む'}).click({timeout:30000});
@@ -77,6 +80,11 @@ await page.waitForFunction(()=>document.body?.innerText.includes('TAP TO START')
 if(name==='設定')await page.evaluate(()=>document.querySelector('button[aria-label="設定"]')?.click());
 for(const st of steps){await clickText(st);await page.waitForTimeout(900);await dismiss();}
 await page.waitForTimeout(600);const r=await page.evaluate(SCAN);
+// ギフトは長い題名のギフトが画面の下にも並ぶので、1枚ずつ見える所へ出して数える(2026-10-21)
+if(name==='ギフト'){const n=await page.evaluate(()=>document.querySelectorAll('.mh-gift-card').length);const seen=new Set(r.map(x=>x.at));
+  for(let i=0;i<n;i++){await page.evaluate(i=>document.querySelectorAll('.mh-gift-card')[i]?.scrollIntoView({block:'center'}),i);await page.waitForTimeout(80);
+    for(const x of await page.evaluate(SCAN)){if(!seen.has(x.at)){seen.add(x.at);r.push(x);}}}
+  ok(`幅${W} ギフト: 長い題名のギフトまで見た`,n>=20,`${n}枚`);}
 // JA_WRAP_SHOTS=<フォルダ> を付けると、画面ごとの写しを残す(直す前後を見比べる用)
 if(process.env.JA_WRAP_SHOTS){fs.mkdirSync(process.env.JA_WRAP_SHOTS,{recursive:true});await page.screenshot({path:path.join(process.env.JA_WRAP_SHOTS,`${W}-${name.replace(/[\/・]/g,'-')}.jpg`),type:'jpeg',quality:60});}
 // HOME のレイドの札は、いまの段階の文しか出ないので、段階ごとの文(男爵〜大王・ぱんぷきん)に差し替えて数える(2026-10-20)

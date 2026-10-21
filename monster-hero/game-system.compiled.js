@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: bf9e55643a0263d6
+// source-sha256: a6c9d1918d5a92ff
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-21 17:31";
+const BUILD_DATE = "2026-10-21 18:13";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -49155,7 +49155,8 @@ const jaWrapPoints = text => {
     }) : null;
     if (!_jaSegmenter) return s;
     const segs = [..._jaSegmenter.segment(s)].map(seg => seg.segment);
-    return segs.reduce((out, seg, i) => i === 0 || /^[\s、。，．,.！？!?」』）)】〕〉》…‥ー〜～・：:；;ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ]/.test(seg) || /[\s「『（(【〔〈《]$/.test(segs[i - 1]) ? out + seg : `${out}\u200B${seg}`, '');
+    const inHiraWord = i => /^[ごお]$/.test(segs[i - 1]) && /^[ぁ-ゖ]/.test(segs[i]);
+    return segs.reduce((out, seg, i) => i === 0 || inHiraWord(i) || /^[\s、。，．,.！？!?」』）)】〕〉》…‥ー〜～・：:；;ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ]/.test(seg) || /[\s「『（(【〔〈《]$/.test(segs[i - 1]) ? out + seg : `${out}\u200B${seg}`, '');
   } catch {
     return s;
   }
@@ -51129,7 +51130,9 @@ function GiftBoxScreen({
       className: `mh-gift-card rounded-2xl border ${g.claimedAt ? 'bg-[#111329] border-white/10' : expired ? 'bg-[#250a1e] border-red-500/60' : 'bg-[#131630] border-cyan-400/60'}`
     }, React.createElement("div", {
       className: "mh-gift-heading"
-    }, React.createElement("h3", null, display.label && React.createElement("span", null, display.label), React.createElement("b", null, display.title)), React.createElement("em", {
+    }, React.createElement("h3", null, display.label && React.createElement("span", null, display.label), React.createElement("b", {
+      style: JA_WRAP_STYLE
+    }, jaWrap(display.title))), React.createElement("em", {
       className: `${g.claimedAt ? 'bg-slate-700 text-slate-300' : expired ? 'bg-red-900 text-red-200' : valid ? 'bg-cyan-700 text-white' : 'bg-amber-900 text-amber-200'}`
     }, g.claimedAt ? '受取済み' : expired ? '期限切れ' : valid ? '受取可' : '要確認')), React.createElement("div", {
       className: "mh-gift-main"
