@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b2275bc0ad7ff97b
+// generated-sha256: 28742c53cb9b0697
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-21 14:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-21 14:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -33867,9 +33867,13 @@ function RhythmNoteDexScreen({onBack,onPlay}){
         <div data-rhythm-note-dex-list className="mt-3 grid gap-2" style={{gridTemplateColumns:'repeat(auto-fill,minmax(min(100%,300px),1fr))'}}>
           {RHYTHM_NOTE_DEX.map(entry=>{const row=rhythmNoteDexHelpRow(entry);return (
             <div key={entry.id} data-rhythm-note-dex-item={entry.id} className="flex flex-col gap-2 rounded-2xl border border-white/10 bg-slate-900/80 p-3">
-              <div className="min-w-0">
+              <div className="flex min-w-0 items-start gap-3">
+              {/* 一覧の絵は、演奏画面と同じ描き方の部品(開発部の RhythmNoteSwatch)。部品がまだ無い版では出さない */}
+              {typeof RhythmNoteSwatch==='function'&&entry.swatch&&<span data-rhythm-note-dex-swatch={entry.swatch} className="shrink-0"><RhythmNoteSwatch kind={entry.swatch} size={56}/></span>}
+              <div className="min-w-0 flex-1">
                 <b data-rhythm-note-dex-name className="block text-[13px] font-black text-amber-100">{row.label||entry.name}</b>
                 {row.text&&<span data-rhythm-note-dex-text className="mt-1 block text-[11px] leading-relaxed text-slate-300">{row.text}</span>}
+              </div>
               </div>
               <button data-rhythm-note-dex-play={entry.id} onClick={()=>onPlay(entry.id)}
                 className="mt-auto min-h-[44px] w-full rounded-xl bg-gradient-to-r from-amber-400 to-fuchsia-500 text-[12px] font-black text-slate-950">▶ 流して試す</button>

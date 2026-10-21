@@ -32790,17 +32790,18 @@ const RHYTHM_TUTORIAL_SONG=Object.freeze({
 // ノーツの種類を1つ選ぶと、本物の演奏画面でそのノーツだけが流れてきて試し打ちできる。記録には残さない(from:'notedex'・練習と同じ扱い)。
 //   help … 説明はヘルプの表(topic の kv の行)から引く。行の見出しがこの文字で始まる行の2つ目の列を使う(書き写さない)
 //   notes … 拍番号 → ミリ秒(練習と同じ曲・同じ拍)で、同じノーツを3回ほど流す
+//   swatch … 一覧の絵(開発部の RhythmNoteSwatch の kind・RHYTHM_NOTE_SWATCH_KINDS)。部品が無い版では絵を出さない
 const RHYTHM_NOTE_DEX=Object.freeze([
-  {id:'tap',name:'TAP',help:['rhythm-note-types','TAP'],notes:t=>[mhTap(t(4),4,4,0),mhTap(t(6),4,4,0),mhTap(t(8),4,4,0)]},
-  {id:'chord',name:'同時押し',help:['rhythm-note-types','同時押し'],notes:t=>[mhTap(t(4),0,3,0),mhTap(t(4),9,3,0),mhTap(t(7),0,3,0),mhTap(t(7),9,3,0),mhTap(t(10),0,3,0),mhTap(t(10),9,3,0)]},
-  {id:'hold',name:'HOLD',help:['rhythm-note-types','HOLD'],notes:t=>[mhHoldV2(t(4),4,4,t(6)),mhHoldV2(t(9),4,4,t(11))]},
-  {id:'slide',name:'SLIDE',help:['rhythm-note-types','SLIDE'],notes:t=>[mhSlideV2(t(4),t(8),[[t(4),0,3],[t(6),2,3],[t(8),4,3]]),mhSlideV2(t(10),t(13),[[t(10),4,3],[t(13),1,3]])]},
-  {id:'flick',name:'FLICK',help:['rhythm-note-types','FLICK'],notes:t=>[mhFlick(t(4),4,4),mhFlick(t(6),4,4),mhFlick(t(8),4,4)]},
-  {id:'sideFlick',name:'横フリック',help:['rhythm-note-types','横フリック'],notes:t=>[mhFlick(t(4),4,4,1),mhFlick(t(6),4,4,2),mhFlick(t(8),4,4,1),mhFlick(t(10),4,4,2)]},
-  {id:'endFlick',name:'終点フリック',help:['rhythm-note-types','終点フリック'],notes:t=>[mhHoldV2(t(4),4,4,t(6),1),mhHoldV2(t(9),4,4,t(11),1)]},
-  {id:'monster',name:'モンスターノーツ',help:['rhythm-note-types','モンスターノーツ'],notes:t=>[mhTap(t(4),4,4,1),mhTap(t(7),4,4,2),mhTap(t(10),4,4,3)]},
-  {id:'skyTap',name:'SKY TAP',help:['rhythm-hell','SKY TAP'],notes:t=>[mhSkyTap(t(4),4,4),mhSkyTap(t(6),4,4),mhSkyTap(t(8),4,4)]},
-  {id:'skySlide',name:'SKY SLIDE',help:['rhythm-hell','SKY SLIDE'],notes:t=>[mhSkySlide(t(4),t(8),[[t(4),1,3,1,0],[t(8),4,3,1,0]],0,'L'),mhSkySlide(t(10),t(13),[[t(10),5,3,1,0],[t(13),2,3,1,0]],0,'R')]},
+  {id:'tap',swatch:'TAP',name:'TAP',help:['rhythm-note-types','TAP'],notes:t=>[mhTap(t(4),4,4,0),mhTap(t(6),4,4,0),mhTap(t(8),4,4,0)]},
+  {id:'chord',swatch:'CHORD',name:'同時押し',help:['rhythm-note-types','同時押し'],notes:t=>[mhTap(t(4),0,3,0),mhTap(t(4),9,3,0),mhTap(t(7),0,3,0),mhTap(t(7),9,3,0),mhTap(t(10),0,3,0),mhTap(t(10),9,3,0)]},
+  {id:'hold',swatch:'HOLD',name:'HOLD',help:['rhythm-note-types','HOLD'],notes:t=>[mhHoldV2(t(4),4,4,t(6)),mhHoldV2(t(9),4,4,t(11))]},
+  {id:'slide',swatch:'SLIDE',name:'SLIDE',help:['rhythm-note-types','SLIDE'],notes:t=>[mhSlideV2(t(4),t(8),[[t(4),0,3],[t(6),2,3],[t(8),4,3]]),mhSlideV2(t(10),t(13),[[t(10),4,3],[t(13),1,3]])]},
+  {id:'flick',swatch:'FLICK',name:'FLICK',help:['rhythm-note-types','FLICK'],notes:t=>[mhFlick(t(4),4,4),mhFlick(t(6),4,4),mhFlick(t(8),4,4)]},
+  {id:'sideFlick',swatch:'FLICK_LEFT',name:'横フリック',help:['rhythm-note-types','横フリック'],notes:t=>[mhFlick(t(4),4,4,1),mhFlick(t(6),4,4,2),mhFlick(t(8),4,4,1),mhFlick(t(10),4,4,2)]},
+  {id:'endFlick',swatch:'END_FLICK',name:'終点フリック',help:['rhythm-note-types','終点フリック'],notes:t=>[mhHoldV2(t(4),4,4,t(6),1),mhHoldV2(t(9),4,4,t(11),1)]},
+  {id:'monster',swatch:'MONSTER',name:'モンスターノーツ',help:['rhythm-note-types','モンスターノーツ'],notes:t=>[mhTap(t(4),4,4,1),mhTap(t(7),4,4,2),mhTap(t(10),4,4,3)]},
+  {id:'skyTap',swatch:'SKY_TAP',name:'SKY TAP',help:['rhythm-hell','SKY TAP'],notes:t=>[mhSkyTap(t(4),4,4),mhSkyTap(t(6),4,4),mhSkyTap(t(8),4,4)]},
+  {id:'skySlide',swatch:'SKY_SLIDE_L',name:'SKY SLIDE',help:['rhythm-hell','SKY SLIDE'],notes:t=>[mhSkySlide(t(4),t(8),[[t(4),1,3,1,0],[t(8),4,3,1,0]],0,'L'),mhSkySlide(t(10),t(13),[[t(10),5,3,1,0],[t(13),2,3,1,0]],0,'R')]},
 ].map(row=>Object.freeze(row)));
 const RHYTHM_NOTE_DEX_END_BEAT=16;
 // 図鑑の1種類ぶんの曲(練習と同じ曲で、譜面だけ差し替える)。text は帯に出す説明(ヘルプから引いたもの)

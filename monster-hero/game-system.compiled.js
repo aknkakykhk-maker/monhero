@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4a9fae3f992d3871
+// source-sha256: c81624ffb1f0c75d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-21 14:41";
+const BUILD_DATE = "2026-10-21 14:46";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -53916,14 +53916,22 @@ function RhythmNoteDexScreen({
       "data-rhythm-note-dex-item": entry.id,
       className: "flex flex-col gap-2 rounded-2xl border border-white/10 bg-slate-900/80 p-3"
     }, React.createElement("div", {
-      className: "min-w-0"
+      className: "flex min-w-0 items-start gap-3"
+    }, typeof RhythmNoteSwatch === 'function' && entry.swatch && React.createElement("span", {
+      "data-rhythm-note-dex-swatch": entry.swatch,
+      className: "shrink-0"
+    }, React.createElement(RhythmNoteSwatch, {
+      kind: entry.swatch,
+      size: 56
+    })), React.createElement("div", {
+      className: "min-w-0 flex-1"
     }, React.createElement("b", {
       "data-rhythm-note-dex-name": true,
       className: "block text-[13px] font-black text-amber-100"
     }, row.label || entry.name), row.text && React.createElement("span", {
       "data-rhythm-note-dex-text": true,
       className: "mt-1 block text-[11px] leading-relaxed text-slate-300"
-    }, row.text)), React.createElement("button", {
+    }, row.text))), React.createElement("button", {
       "data-rhythm-note-dex-play": entry.id,
       onClick: () => onPlay(entry.id),
       className: "mt-auto min-h-[44px] w-full rounded-xl bg-gradient-to-r from-amber-400 to-fuchsia-500 text-[12px] font-black text-slate-950"
