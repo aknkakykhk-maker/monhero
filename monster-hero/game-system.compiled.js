@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2f826a78f3abaf72
+// source-sha256: d37ecd08c2f53e18
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-21 12:25";
+const BUILD_DATE = "2026-10-21 12:53";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -51991,7 +51991,7 @@ function ProfileScreen({
     const base = favoriteMasu ? ALL_PLAYER_MONSTERS[favoriteMasu.baseId] : null;
     const face = base ? friendsFaceIconOf(favoriteMasu.baseId) : null;
     const showFriendTiles = onboarded && !onboardingPreview && friendsEnabled;
-    const tile = 'flex min-h-[56px] items-center gap-2 rounded-xl border border-white/10 bg-slate-800/80 px-2.5 py-2 text-left active:scale-95';
+    const tile = 'flex min-h-[56px] items-center gap-2 rounded-xl border border-white/10 bg-slate-800/80 px-2.5 py-2 text-left active:scale-95 max-[359px]:gap-1.5 max-[359px]:px-2';
     return React.createElement("div", {
       className: "mt-3 grid grid-cols-2 gap-2",
       "data-profile-settings": true
@@ -52001,58 +52001,59 @@ function ProfileScreen({
       onClick: onOpenIconPicker,
       className: tile
     }, React.createElement("span", {
-      className: "flex h-8 w-8 shrink-0 items-center justify-center text-xl",
+      className: "flex h-8 w-8 shrink-0 items-center justify-center text-xl max-[359px]:h-6 max-[359px]:w-6 max-[359px]:text-base",
       "aria-hidden": "true"
     }, "🖼️"), React.createElement("span", {
       className: "min-w-0 flex-1"
     }, React.createElement("small", {
       className: "block text-[10px] font-black text-indigo-300"
     }, "アイコン"), React.createElement("b", {
-      className: "block truncate text-[11px] font-black text-white"
-    }, "えらびなおす"))), React.createElement("button", {
+      className: "block text-[11px] max-[359px]:text-[10px] font-black leading-tight text-white",
+      style: JA_LABEL_STYLE
+    }, "えらび", React.createElement("wbr", null), "なおす"))), React.createElement("button", {
       type: "button",
       "data-profile-tile": "frame",
       onClick: onOpenFramePicker,
       className: tile
     }, React.createElement(Sparkles, {
       size: 18,
-      className: "mx-1.5 shrink-0 text-amber-300"
+      className: "mx-1.5 shrink-0 text-amber-300 max-[359px]:mx-0.5"
     }), React.createElement("span", {
       className: "min-w-0 flex-1"
     }, React.createElement("small", {
       className: "block text-[10px] font-black text-amber-300"
     }, "フレーム"), React.createElement("b", {
-      className: "block break-words text-[11px] font-black leading-tight text-white"
+      className: "block break-words text-[11px] max-[359px]:text-[10px] font-black leading-tight text-white"
     }, frameName))), costumeEnabled && onOpenCostumePicker && React.createElement("button", {
       type: "button",
       "data-profile-tile": "costume",
       onClick: onOpenCostumePicker,
       className: tile
     }, React.createElement("span", {
-      className: "flex h-8 w-8 shrink-0 items-center justify-center text-xl",
+      className: "flex h-8 w-8 shrink-0 items-center justify-center text-xl max-[359px]:h-6 max-[359px]:w-6 max-[359px]:text-base",
       "aria-hidden": "true"
     }, "👗"), React.createElement("span", {
       className: "min-w-0 flex-1"
     }, React.createElement("small", {
       className: "block text-[10px] font-black text-pink-300"
     }, "着替え"), React.createElement("b", {
-      className: "block break-words text-[11px] font-black leading-tight text-white"
+      className: "block break-words text-[11px] max-[359px]:text-[10px] font-black leading-tight text-white"
     }, wornCostume ? wornCostume.name : '元の服'))), showFriendTiles && React.createElement("button", {
       type: "button",
       "data-profile-message": true,
       onClick: onOpenMessageEditor,
       className: tile
     }, React.createElement("span", {
-      className: "flex h-8 w-8 shrink-0 items-center justify-center text-xl",
+      className: "flex h-8 w-8 shrink-0 items-center justify-center text-xl max-[359px]:h-6 max-[359px]:w-6 max-[359px]:text-base",
       "aria-hidden": "true"
     }, "💬"), React.createElement("span", {
       className: "min-w-0 flex-1"
     }, React.createElement("small", {
       className: "block text-[10px] font-black text-pink-300"
     }, "ひとこと"), React.createElement("b", {
-      className: "block text-[11px] font-black leading-tight text-white",
+      className: "block text-[11px] max-[359px]:text-[10px] font-black leading-tight text-white",
       style: JA_LABEL_STYLE
-    }, profileMessage || jaWrap('まだ書いていません')))), showFriendTiles && React.createElement("button", {
+    }, profileMessage || React.createElement(React.Fragment, null, "まだ", React.createElement("wbr", null), "書いていません")))), showFriendTiles && React.createElement("button", {
       type: "button",
       "data-profile-favorite-masu": true,
       onClick: onOpenFavoritePicker,
@@ -52060,9 +52061,9 @@ function ProfileScreen({
     }, face ? React.createElement(ProfileAvatar, {
       src: face.src,
       id: face.id,
-      className: "h-8 w-8 shrink-0"
+      className: "h-8 w-8 shrink-0 max-[359px]:h-6 max-[359px]:w-6"
     }) : React.createElement("span", {
-      className: "flex h-8 w-8 shrink-0 items-center justify-center text-xl",
+      className: "flex h-8 w-8 shrink-0 items-center justify-center text-xl max-[359px]:h-6 max-[359px]:w-6 max-[359px]:text-base",
       "aria-hidden": "true"
     }, "💗"), React.createElement("span", {
       className: "min-w-0 flex-1"
@@ -52070,9 +52071,9 @@ function ProfileScreen({
       className: "block text-[10px] font-black text-pink-300",
       style: JA_LABEL_STYLE
     }, jaWrap('好きなモンスター')), React.createElement("b", {
-      className: "block text-[11px] font-black leading-tight text-white",
+      className: "block text-[11px] max-[359px]:text-[10px] font-black leading-tight text-white",
       style: JA_LABEL_STYLE
-    }, base ? `${base.name}（絆Lv.${masuBondLevelInfo(favoriteMasu).level}）` : jaWrap('まだ選んでいません')))));
+    }, base ? `${base.name}（絆Lv.${masuBondLevelInfo(favoriteMasu).level}）` : React.createElement(React.Fragment, null, "まだ", React.createElement("wbr", null), "選んでいません")))));
   })()), React.createElement("div", {
     className: "mb-3 grid grid-cols-3 gap-2",
     "data-profile-stats": true

@@ -163,7 +163,9 @@ const runtime=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js')
   const all=[...RHYTHM_SONGS,...(RHYTHM_PROTO_SONGS||[])];
   // 2026-10-21 社長の指示で HELL を作り直した5譜面だけは v3 で測る(見分けにくい形なしで作り直したので、新しい測り方の値を出す)
   const REWORKED_V3=['toward_the_stars_short_hell_debug','rose_hell_debug','rose_short_hell_debug','sad_song_hell_debug','sad_song_short_hell_debug',
-    'sheriruth_hell_debug','grievous_lady_hell','kaze_ga_soyogu_hell_debug','against_my_own_shadow_hell_debug'];
+    'sheriruth_hell_debug','grievous_lady_hell','kaze_ga_soyogu_hell_debug','against_my_own_shadow_hell_debug',
+    // 2026-10-21 社長「全曲ヘルを実装して」: 34曲の HELL(新しく作ったので v3)
+    'mf_ichika_mix_hell_debug','monster_hero_hell_debug','monster_hero_another_hell_debug','six_eternel_beat_hell_debug','six_eternel_remix_hell_debug','stay_with_me_hell_debug','kiki_issen_hell_debug','close_to_your_heart_hell_debug','eiki_boss_remix_hell_debug','pandora_boss_remix_hell_debug','dullahan_hell_debug','dullahan_clockwork_hell_debug','toriko_hell_debug','4u_hitasura_hell_debug','kindan_no_resistance_hell_debug','crossing_field_hell_debug','nothing_without_you_hell_debug','mou_hitotsu_no_sekai_e_hell_debug','senjou_no_shippuu_hell_debug','makutsu_no_senritsu_hell_debug','the_city_beneath_the_comets_hell_debug','freedom_dive_hell_debug','only_my_railgun_hell_debug','big_bridge_no_shitou_hell_debug','rising_hope_hell_debug','haruka_hell_debug','stay_with_me_short_hell_debug','kiki_issen_short_hell_debug','crazy_party_night_hell_debug','crazy_party_night_full_hell_debug','emerald_rush_hell_debug','wrath_of_the_thorn_king_hell_debug','monster_hell_debug','monster_short_hell_debug'];
   // 2026-10-21 に足した ANiMA・Journey の HELL(新しく足した譜面なので v1 の一覧には入れない・v3 で測る)
   REWORKED_V3.push('anima_hell_debug','journey_hell_debug');
   check('いまある曲は全部、前の測り方(v1)で測る一覧に入っている(作り直した HELL 5譜面と、10/21 に足した HELL 2譜面は v3)',all.length>0&&all.every(song=>L.levelFormulaFor(song.songId)===(REWORKED_V3.includes(song.songId)?'v3':'v1')),
