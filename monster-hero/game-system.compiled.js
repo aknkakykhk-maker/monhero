@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6eeac4ac3153b9ef
+// source-sha256: b64fbc23f2a29dce
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-21 15:59";
+const BUILD_DATE = "2026-10-21 16:32";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -12056,6 +12056,7 @@ const RELEASE_FLAGS = {
   rhythmHell: true,
   battleCardArt: true,
   assistantChat: true,
+  assistantChatRanking: false,
   assistantDailyLines: true,
   tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE,
   tacticsHate: true,
@@ -79985,6 +79986,158 @@ const assistantChatMonsterIds = (text, prevUserText) => {
   }
   return out.slice(0, ASSISTANT_CHAT_MONSTER_MAX);
 };
+const ASSISTANT_CHAT_RANKING_TOPIC = /ランキング|ランク(?:イン|上位)|順位|何位|なんい|[0-9０-９一二三四五]+位|トップ|上位|首位|一番(?:上|強い|高い)|いちばん(?:上|強い|高い)/;
+const ASSISTANT_CHAT_RANKING_MAX = 6;
+const assistantChatRankingPlan = rawText => {
+  const text = String(rawText || '');
+  if (!ASSISTANT_CHAT_RANKING_TOPIC.test(text)) return null;
+  try {
+    const norm = s => String(s || '').normalize('NFKC').toLowerCase().replace(/\s+/g, '');
+    const t = norm(text);
+    const has = word => !!word && t.includes(norm(word));
+    const plan = [];
+    const push = p => {
+      if (plan.length < ASSISTANT_CHAT_RANKING_MAX && p) plan.push(p);
+    };
+    const lineages = typeof dexMainLineages === 'function' ? dexMainLineages() : [];
+    const lineage = lineages.find(l => has(`${l.name}種`)) || lineages.find(l => has(l.name)) || null;
+    const lineageMonsters = lineage && typeof dexMonsterList === 'function' ? dexMonsterList().filter(m => monsterLineageOf(m.id).main?.id === lineage.id).map(m => m.id) : [];
+    const songs = (typeof RHYTHM_DEMO_SONG_IDS !== 'undefined' ? RHYTHM_DEMO_SONG_IDS : []).filter(id => typeof rhythmSongReleased !== 'function' || rhythmSongReleased(id)).map(id => typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS.find(s => s.songId === id) : null).filter(s => s && s.displayName).sort((a, b) => b.displayName.length - a.displayName.length);
+    const song = songs.find(s => has(s.displayName)) || null;
+    const rhythmWords = /モンヒロビート|モンビー|モンビート|音ゲー|リズム|曲/.test(text) || !!song;
+    const rhythmDiffs = typeof rhythmScoredDifficultyIds === 'function' ? rhythmScoredDifficultyIds() : [];
+    const rhythmDiff = rhythmDiffs.find(d => new RegExp(`(^|[^a-z])${d.toLowerCase()}([^a-z]|$)`).test(text.normalize('NFKC').toLowerCase())) || null;
+    if (song) {
+      const diffs = rhythmDiff ? [rhythmDiff] : rhythmDiffs.filter(d => d === 'MASTER');
+      diffs.forEach(d => {
+        const key = rhythmRankingDifficultyKey(song.songId, d);
+        if (key) push({
+          kind: 'rhythmSong',
+          keys: [key],
+          label: `モンヒロビート「${song.displayName}」${d}`
+        });
+      });
+    }
+    if (rhythmWords && /週間|今週/.test(text)) push({
+      kind: 'rhythmWeek',
+      label: 'モンヒロビート 週間ランキング'
+    });
+    if (rhythmWords && /イベント/.test(text) && typeof rhythmLimitedEventAt === 'function') {
+      const event = rhythmLimitedEventAt(Date.now());
+      const range = event && typeof rhythmEventWindow === 'function' ? rhythmEventWindow(event, null) : null;
+      if (event && range) {
+        const bonusRates = typeof rhythmEventPlayBonusRates === 'function' ? rhythmEventPlayBonusRates(event) : null;
+        push({
+          kind: 'rhythmEvent',
+          label: `モンヒロビート イベント「${event.title || event.name || 'イベント'}」総合`,
+          songIds: [...event.songIds],
+          from: new Date(range.startMs).toISOString(),
+          to: new Date(range.endMs).toISOString(),
+          fn: bonusRates ? 'rhythm_event_totals_bonus' : 'rhythm_event_totals',
+          bonusRates: bonusRates || undefined
+        });
+      }
+    }
+    if (rhythmWords && (!song || /合算|全曲|総合/.test(text)) && !/週間|今週|イベント/.test(text)) push({
+      kind: 'rhythmTotal',
+      label: 'モンヒロビート 全曲の合算'
+    });
+    if (/ジャック|レイド/.test(text) && typeof RAID_JACK_EVENT !== 'undefined') {
+      push({
+        kind: 'raid',
+        view: 'a',
+        eventId: RAID_JACK_EVENT.id,
+        label: `${RAID_JACK_EVENT.name} レイドバトルの与ダメージ`
+      });
+      push({
+        kind: 'raid',
+        view: 'b',
+        eventId: RAID_JACK_EVENT.id,
+        label: `${RAID_JACK_EVENT.name} グランドスラムの与ダメージ`
+      });
+    }
+    const lineageLabel = lineage ? `(${lineage.name}種)` : '';
+    if (/ブリーダー\s*(?:lv|ＬＶ|レベル)|ブリーダーlv/i.test(text.normalize('NFKC'))) push({
+      kind: 'breeder',
+      label: 'ブリーダーLv'
+    });
+    if (/絆/.test(text)) push({
+      kind: 'bond',
+      label: `絆Lv${lineageLabel}`,
+      monsters: lineageMonsters
+    });
+    if (/総合力/.test(text)) push({
+      kind: 'power',
+      label: `総合力${lineageLabel}`,
+      monsters: lineageMonsters
+    });
+    const modes = [...(typeof BATTLE_MODES !== 'undefined' ? BATTLE_MODES : []), ...[typeof EXTREME_MODE !== 'undefined' ? EXTREME_MODE : null, typeof SPECIES_CHALLENGE_MODE !== 'undefined' ? SPECIES_CHALLENGE_MODE : null, typeof TACTICS_MODE !== 'undefined' ? TACTICS_MODE : null, typeof TACTICS_SPECIES_MODE !== 'undefined' ? TACTICS_SPECIES_MODE : null, typeof TACTICS_PRO_MODE !== 'undefined' ? TACTICS_PRO_MODE : null].filter(Boolean)].filter(m => m && m.id && modeHasRanking(m.id));
+    const modeWords = modes.flatMap(m => [m.label, m.short].filter(Boolean).map(w => ({
+      w,
+      m
+    }))).sort((a, b) => b.w.length - a.w.length);
+    const modeHit = modeWords.find(x => has(x.w));
+    const diffChoices = [...Object.entries(DIFFICULTY_SETTINGS).map(([id, st]) => ({
+      id,
+      label: st.label
+    })), ...(typeof PUBLIC_EXTREME_DIFFICULTIES !== 'undefined' ? PUBLIC_EXTREME_DIFFICULTIES : []).map(st => ({
+      id: st.id,
+      label: st.label,
+      extreme: true
+    }))].sort((a, b) => b.label.length - a.label.length);
+    const diffHit = rhythmWords && !/バトル/.test(text) ? null : diffChoices.find(d => has(d.label)) || null;
+    const battleWords = /バトル|スコア|チャレンジ|難易度/.test(text) || !!modeHit || !!diffHit;
+    if (battleWords && !(rhythmWords && !modeHit && !diffHit)) {
+      const mode = modeHit ? modeHit.m : modes.find(m => m.id === BATTLE_MODE_CHALLENGE) || modes[0];
+      const isSpecies = mode && (mode.id === BATTLE_MODE_SPECIES_CHALLENGE || mode.id === BATTLE_MODE_TACTICS_SPECIES);
+      const diffs = diffHit ? [diffHit] : diffChoices.filter(d => d.id === 'Normal' || d.id === 'Master' || d.id === 'Legend');
+      for (const d of diffs) {
+        let keys = [];
+        if (isSpecies) {
+          const species = (typeof speciesChallengeLineages === 'function' ? speciesChallengeLineages() : []).find(l => lineage && l.id === lineage.id);
+          keys = species ? [rankingDifficultyForMode(mode.id, d.id, species.id)] : speciesChallengeAllRankingMembers(d.id, mode.id);
+        } else {
+          const useExtreme = d.extreme && !isTacticsMode(mode.id);
+          keys = [rankingDifficultyForMode(useExtreme ? EXTREME_MODE.id : mode.id, d.id)];
+        }
+        keys = keys.filter(Boolean);
+        if (keys.length) push({
+          kind: 'score',
+          keys,
+          label: `${mode.label}・${d.label}${isSpecies ? lineage ? `・${lineage.name}種` : '・全種族' : ''}のスコア`
+        });
+      }
+    }
+    if (plan.length === 0) {
+      push({
+        kind: 'breeder',
+        label: 'ブリーダーLv'
+      });
+      push({
+        kind: 'bond',
+        label: '絆Lv',
+        monsters: []
+      });
+      push({
+        kind: 'power',
+        label: '総合力',
+        monsters: []
+      });
+      push({
+        kind: 'score',
+        keys: [rankingDifficultyForMode(BATTLE_MODE_CHALLENGE, 'Normal')],
+        label: 'チャレンジモード・Normal のスコア'
+      });
+      push({
+        kind: 'rhythmTotal',
+        label: 'モンヒロビート 全曲の合算'
+      });
+    }
+    return plan;
+  } catch (e) {
+    return null;
+  }
+};
 const ASSISTANT_CHAT_TEXT_MAX = 200;
 const assistantChatSendWindow = list => {
   if (list.length <= ASSISTANT_CHAT_SEND_MAX) return list;
@@ -80127,7 +80280,10 @@ function AssistantChatWindow({
             bondTitle,
             bondTone,
             memo: memos[id] || null
-          }
+          },
+          ...(assistantChatRankingPlan(text) ? {
+            ranking: assistantChatRankingPlan(text)
+          } : {})
         })
       });
       if (r.ok) res = await r.json();
