@@ -2,7 +2,7 @@
 
 前の会話: session_01PJpWvkdmV4DQzZ3mp7c7EC(10/09〜。会話の長さが約67万で、交代の目安60万を超えたので窓口の依頼で交代)。
 報告先は **いまの窓口 session_014GTmSNS2ae9tRr57k3zFjC**(前の窓口 session_01MC7KZtt5oyrsS32Hc57TXv は引き継ぎ済み。送らない)。
-決まりは CLAUDE.md・`docs/playbot/RULES.md` のとおり。会話は日本語だけ。
+決まりは CLAUDE.md・`docs/playbot/RULES.md` のとおり。**社長の決めごとは `docs/rules/PRESIDENT_DECISIONS.md`(10/22〜)。作業を始める前に読む。**会話は日本語だけ。
 
 ## いまの状態
 - 手を付けている作業は無い。main はきれい。作業ブランチ `claude/kaizen-20261010` は main と同じ(**未マージのものは無い**)
