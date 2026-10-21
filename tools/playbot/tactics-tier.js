@@ -113,7 +113,8 @@ const roleOf = (m) => ROLE_BY_EFFECT[m && m.ex && m.ex.effect] || '攻め';
 // 供モンを決めて戦った回(r.bot.fixedAllies。おすすめパーティの確かめ)も、強い組み合わせで勇者モンが強く見えるので数えない
 // ヘイトを公開した日(RELEASE_FLAGS.tacticsHate。2026-10-18)。この日からのボットの回はヘイトのあるゲームで戦った回
 const HATE_SINCE = '2026-10-18';
-const runs = (know.runs || []).filter((r) => r && r.result && r.result !== 'stopped' && DIFF_ORDER.includes(r.difficulty) && r.use && !(r.bot && (r.bot.rotate || r.bot.fixedAllies)));
+// 勇者モンが記録されていない回(2026-10-19〜22 のボット。プロモードの編成画面が変わり、勇者モンを読めていなかった)は数えない
+const runs = (know.runs || []).filter((r) => r && r.result && r.result !== 'stopped' && r.hero && DIFF_ORDER.includes(r.difficulty) && r.use && !(r.bot && (r.bot.rotate || r.bot.fixedAllies)));
 // ★クリアした回は「WAVE 11 まで届いた」と数える(2026-10-10 改善部 T3)。Hard はほぼ全員が WAVE 10 に届くので、届いた WAVE だけでは差が出ない
 const reach = (r) => (r.wave || 0) + (r.result === 'clear' ? 1 : 0);
 const sum = (a) => a.reduce((x, y) => x + y, 0);
