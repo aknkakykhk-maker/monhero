@@ -1,6 +1,7 @@
 # あつの全セリフ(場面ごと・2026-10-22)
 
 `[表情 b段階]` の b は仲良し度(b[3,5] は Lv3〜5 のあいだだけ、b21 は Lv21 から)。`{name}` はプレイヤーの名前に置き換わる。
+束だけで作る場面(モードえらび rhythmModeSelect の7本)はこの一覧に入らない。
 
 ## battleSystemSelect (5) help=basics/battle-modes
 - [normal] まずはどのバトルにするか決めて

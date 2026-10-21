@@ -6,7 +6,7 @@
 //   ・口調 … 一人称は「俺」(ときどき「オレ」)。ほかの助手の一人称・笑い方(w・ｗ)・下ネタが混ざっていない。くせ(とりあえず・てか・まじで・やっぱ・いいね・笑)が出ている
 //   ・呼び方 … あつ→みゅあ「みゅあ」/きき「きき」/もも「もも」/ドラ「ドラちゃん」、みゅあ→「あつくん」/きき→「あっくん」/もも→「あつ」/ドラ→「あっくん」。お話の中でも守る
 //   ・仲良し度の段階 … 30段で「パーティの仲間」の流れ
-//   ・解放 … みゅあ Lv10・きき Lv8・ももすけ Lv5 → お話 → 選べる。見たかどうかはドラと同じ「見終えたお話の id」で持つ(新しいキーを作らない)
+//   ・解放 … みゅあ Lv8・きき Lv8・ももすけ Lv5 → お話 → 選べる。見たかどうかはドラと同じ「見終えたお話の id」で持つ(新しいキーを作らない)
 //   ・公開前 … 公開の印 assistantAtsu が偽のあいだは選べない・カード「あつの挑発」で仲良し度が貯まらない・おしゃべりの材料に入らない
 //   ・絵 … 仮の顔の絵がそろっている。印を真にするなら、仮の絵(tempImageDir)をやめて大きい絵へ差し替えてあること
 // 実ブラウザでの流れは tools/assistant/atsu-unlock-browser-check.js
@@ -23,7 +23,7 @@ const load = (extra = '') => {
   const ctx = { console, Date, Math, JSON, Object, Array, Set, Map, WeakMap, Number, String, RegExp, localStorage: { getItem() { return null; }, setItem() {} }, window: {} };
   vm.createContext(ctx);
   vm.runInContext(`${extra}\n${read('monster-hero/data/assistants.js')}
-;globalThis.__a = { ASSISTANTS, ASSISTANT_SCENES, ASSISTANT_PEER_CALLS, ASSISTANT_UNLOCK_STORIES, ASSISTANT_ATSU_UNLOCK_BONDS, EVENT_REPLAYS,
+;globalThis.__a = { ASSISTANTS, ASSISTANT_SCENES, ASSISTANT_LINE_PACKS, ASSISTANT_PEER_CALLS, ASSISTANT_UNLOCK_STORIES, ASSISTANT_ATSU_UNLOCK_BONDS, EVENT_REPLAYS,
   assistantBondLevelsOf, assistantReleased, assistantUnlockedBy, assistantAtsuUnlockReady, assistantCallStylesOf, ASSISTANT_CHAT_EXAMPLES,
   assistantFaceImage, assistantFullImage };`, ctx);
   return ctx.__a;
@@ -41,6 +41,15 @@ const storyLines = (story ? story.script : []);
 const allAtsu = [...lines, ...storyLines.filter(l => l.who === 'atsu').map(l => ({ k: 'story', t: l.t }))];
 const bad = (re) => allAtsu.filter(l => re.test(l.t));
 check('あつのセリフが十分にある(全場面で500本以上)', lines.length >= 500, `${lines.length}本`);
+// 場面の定義を持たず、束(addAssistantLinePack)だけで作る場面(rhythmModeSelect など)は ASSISTANT_SCENES に入らない。
+// ほかの助手が持っているのにあつが持っていないと、みゅあのセリフへ落ちる(2026-10-22 モードえらびで実際にそうなっていた)
+const packOnly = {};
+for (const pack of a.ASSISTANT_LINE_PACKS) for (const [k, list] of Object.entries(pack.lines || {})) {
+  if (a.ASSISTANT_SCENES[k] || !Array.isArray(list) || !list.length) continue;
+  (packOnly[k] = packOnly[k] || new Set()).add(pack.assistantId || 'mua');
+}
+const packMissing = Object.entries(packOnly).filter(([, who]) => who.size > 1 && !who.has('atsu')).map(([k]) => k);
+check('束だけで作る場面にも、あつのセリフがある', packMissing.length === 0, packMissing.join(', ') || Object.keys(packOnly).join(', '));
 check('一人称に、ほかの助手のもの(おで・ワイ・あたし・私・僕・もも)が混ざらない', bad(/おで|ワイ|あたし|私|僕|ももは|ももが/).length === 0, bad(/おで|ワイ|あたし|私|僕|ももは|ももが/).map(l => `${l.k}:${l.t}`).slice(0, 3).join(' / '));
 check('一人称「俺」を使っている', allAtsu.filter(l => /俺|オレ/.test(l.t)).length >= 15, `${allAtsu.filter(l => /俺|オレ/.test(l.t)).length}本`);
 check('笑いは全角の「笑」(ももすけの w・みゅあの ｗ を使わない)', bad(/(?<![A-Za-z])[wｗ]+(?![A-Za-z])/).length === 0, bad(/(?<![A-Za-z])[wｗ]+(?![A-Za-z])/).map(l => l.t).slice(0, 3).join(' / '));
@@ -60,7 +69,8 @@ check('遊ぶ人の腕をけなす言い方をしない', bad(/下手|へたく�
 const pc = a.ASSISTANT_PEER_CALLS;
 check('呼び方の表(あつ→ほか)', pc.atsu && pc.atsu.mua === 'みゅあ' && pc.atsu.kiki === 'きき' && pc.atsu.momosuke === 'もも' && pc.atsu.dra === 'ドラちゃん', JSON.stringify(pc.atsu));
 check('呼び方の表(ほか→あつ)', pc.mua.atsu === 'あつくん' && pc.kiki.atsu === 'あっくん' && pc.momosuke.atsu === 'あつ' && pc.dra.atsu === 'あっくん');
-const callBad = storyLines.filter(l => (l.who === 'mua' && /あつ|あっく/.test(l.t) && !/あつくん/.test(l.t))
+// カード名「あつの挑発」は呼び方ではないので、除いてから見る
+const callBad = storyLines.map(l => ({ ...l, t: String(l.t).replace(/あつの挑発/g, '') })).filter(l => (l.who === 'mua' && /あつ|あっく/.test(l.t) && !/あつくん/.test(l.t))
   || (l.who === 'kiki' && /あつ|あっく/.test(l.t) && !/あっくん/.test(l.t))
   || (l.who === 'momosuke' && /あつくん|あっくん/.test(l.t))
   || (l.who === 'atsu' && /ひめちん|みゅあねぇ|ききちゃん|ももさん|みゅあちん|靴下さん|ドラケン/.test(l.t)));
@@ -75,11 +85,11 @@ check('仲良し度は30段で、段階の名前は「パーティの仲間」�
 check('呼び方の例(Lv6から)が、あつ用にある', a.assistantCallStylesOf('atsu').some(st => st.template === '{name}'));
 
 // ---- 解放 ----
-check('解放の条件は みゅあ Lv10・きき Lv8・ももすけ Lv5', JSON.stringify(a.ASSISTANT_ATSU_UNLOCK_BONDS) === JSON.stringify({ mua: 10, kiki: 8, momosuke: 5 }));
+check('解放の条件は みゅあ Lv8・きき Lv8・ももすけ Lv5(2026-10-22 社長の訂正)', JSON.stringify(a.ASSISTANT_ATSU_UNLOCK_BONDS) === JSON.stringify({ mua: 8, kiki: 8, momosuke: 5 }));
 const lv = (m) => (id) => m[id];
 check('条件がそろったときだけ満たす(1人でも足りなければ満たさない・壊れた値は満たさない)',
-  a.assistantAtsuUnlockReady(lv({ mua: 10, kiki: 8, momosuke: 5 })) === true && a.assistantAtsuUnlockReady(lv({ mua: 30, kiki: 30, momosuke: 4 })) === false
-  && a.assistantAtsuUnlockReady(lv({ mua: 10, kiki: NaN, momosuke: 5 })) === false && a.assistantAtsuUnlockReady(null) === false);
+  a.assistantAtsuUnlockReady(lv({ mua: 8, kiki: 8, momosuke: 5 })) === true && a.assistantAtsuUnlockReady(lv({ mua: 7, kiki: 8, momosuke: 5 })) === false && a.assistantAtsuUnlockReady(lv({ mua: 30, kiki: 30, momosuke: 4 })) === false
+  && a.assistantAtsuUnlockReady(lv({ mua: 8, kiki: NaN, momosuke: 5 })) === false && a.assistantAtsuUnlockReady(null) === false);
 const storyId = a.ASSISTANT_UNLOCK_STORIES.atsu;
 check('お話は回想に登録され、公開の印 assistantAtsu で出る', !!story && story.releaseFlag === 'assistantAtsu' && story.unlockedKey === 'atsuJoinSeen');
 const rel = read('monster-hero/src/parts/17-release-changelog-login-missions.jsx');

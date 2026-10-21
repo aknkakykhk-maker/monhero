@@ -157,10 +157,7 @@ const ASSISTANTS = [
     role: '助手',
     imageDir: 'images/assistant',
     imagePrefix: 'atsu',
-    // ★大きい絵(1536×1024)が届くまでの仮の絵。顔の絵(256px)を、吹き出しにも大きい絵の場所にも使う。
-    //   届いたら images/assistant/atsu_*.PNG と face/ を置き、この2行を消す(assistantFaceImage・assistantFullImage)
-    tempImageDir: 'images/breeder-icons',
-    tempImageExt: 'png',
+    // 大きい絵は 2026-10-22 に社長から届いた 768×1024(窓口が256色に軽くした)。顔アイコン(face/)は tools/make-assistant-faces.js で作る
     expressions: ASSISTANT_EXPRESSIONS,
     defaultExpression: ASSISTANT_DEFAULT_EXPRESSION,
     emoji: '🗡️',
@@ -246,8 +243,8 @@ const assistantIdOrDefault = (id) => (ASSISTANTS.some(a => a.id === id) ? id : D
 // あつ(2026-10-22)は加入のお話 atsu_join_2026_10_22 を見たら。お話はほかの3人の仲良し度がそろうと流れる(ASSISTANT_ATSU_UNLOCK_BONDS)
 const ASSISTANT_UNLOCK_STORIES = Object.freeze({ dra: 'symphony_2026_09_17', atsu: 'atsu_join_2026_10_22' });
 const assistantUnlockStoryId = (assistantId) => ASSISTANT_UNLOCK_STORIES[assistantId] || null;
-// あつの加入のお話が流れる条件(2026-10-22 社長の決定)。助手ごとの仲良し度がこのLv以上(全部そろったとき)
-const ASSISTANT_ATSU_UNLOCK_BONDS = Object.freeze({ mua: 10, kiki: 8, momosuke: 5 });
+// あつの加入のお話が流れる条件(2026-10-22 社長の決定。同日「みゅあもレベル8だよ」で みゅあ Lv10 → Lv8 に訂正)。助手ごとの仲良し度がこのLv以上(全部そろったとき)
+const ASSISTANT_ATSU_UNLOCK_BONDS = Object.freeze({ mua: 8, kiki: 8, momosuke: 5 });
 // levelOf(助手id) で仲良し度のLvを返す関数を渡す。壊れた値は満たしていない扱い
 const assistantAtsuUnlockReady = (levelOf) => typeof levelOf === 'function'
   && Object.entries(ASSISTANT_ATSU_UNLOCK_BONDS).every(([id, need]) => { const lv = Number(levelOf(id)); return Number.isFinite(lv) && lv >= need; });
@@ -6685,6 +6682,16 @@ addAssistantLinePack({
       { e:'wink',     t:'{name}、スライドもなめらかに曲がるようになったよ。遊んでみて' },
       { e:'normal',   t:'道のまんなかで左右3本ずつに分かれてる。境目を目印にして' },
     ],
+    // モードえらび(場面の定義を持たず、束だけで作る場面。ドラは rhythmModeSelectDra・rhythmBuddyModeSelectDra)
+    rhythmModeSelect: [
+      { e:'happy',    t:'{name}、今日はどうする？ とりあえずみんなで叩こうよ' },
+      { e:'normal',   t:'ソロライブなら、いつもの曲えらびに行けるよ' },
+      { e:'excited',  t:'フリーマッチは、だれとでも最大5人で協力ライブ。パーティ戦っぽくていいね' },
+      { e:'normal',   t:'友だちと遊ぶなら「プライベート」で部屋つくって、合言葉を教えてあげて' },
+      { e:'wink',     t:'「ランキング」に全国とマスモンの順位が出るよ。上いこうぜ' },
+      { e:'normal',   t:'マスモン設定もここから。いっしょに演奏する子を選んで' },
+      { e:'excited',  t:'マルチにマスモンを呼べるんだよ。仲間は多いほうが強いからね' },
+    ],
     rhythmLookIntro: [
       { e:'happy',    t:'モンビーの見た目、もっと派手にできるようになったよ。いいね' },
       { e:'normal',   t:'オプションの「軽さ・演出」の「見た目のおまかせ」で、1回押すだけで切り替わるよ' },
@@ -8079,52 +8086,109 @@ const RHYTHM_HELL_GUIDE_PAGES = Object.freeze([
 ]);
 
 // ---------- あつの加入のお話(2026-10-22・社長の決定) ----------
-// みゅあ Lv10・きき Lv8・ももすけ Lv5(仲良し度)がそろうと、HOME で1回だけ流れる(ASSISTANT_ATSU_UNLOCK_BONDS)。
+// みゅあ Lv8・きき Lv8・ももすけ Lv5(仲良し度)がそろうと、HOME で1回だけ流れる(ASSISTANT_ATSU_UNLOCK_BONDS)。
 // 最後まで見ると助手あつが選べるようになる(ASSISTANT_UNLOCK_STORIES。見たかどうかはドラと同じ mh_rhythm_event_story_v1 の id)。
-// 公開の印 assistantAtsu が立つまでは流れず、回想にも出ない(デバッグの「全ストーリーを確認」には出る)。
-// ★出るのは みゅあ・きき・ももすけ・あつ の4人。呼び方は ASSISTANT_PEER_CALLS のとおり
-//   (あつ→「みゅあ」「きき」「もも」/ みゅあ→「あつくん」/ きき→「あっくん」/ もも→「あつ」)
-// ★お話の中では、仲良し度の数字や解放の条件は書かない(ゲームの世界の中のこととして書く)
+// 公開の印 assistantAtsu が立つまでは流れず、回想にも出ない(デバッグの「全ストーリーを確認」には出る)。BGM は Against My Own Shadow。
+// 【世界の設定】(社長の決定)
+//   あつ・みゅあ・きき・もも は、ギルド「W.o.F」の仲間。そこで冒険をして、たくさんの仲間
+//   (はる・ともちん・みりあ・キラ・らっせ・さえ・ろむ・ゲズデロ・ガッデム)と出会い、王道の冒険の末に魔王を倒して世界が平和になり、今に至る。
+//   あつはずっとアシカ(アシストカード「あつの挑発」)にはいたが、なかなか顔を見せなかった。
+// 【流れ】3人が W.o.F のころの思い出話をする → あつが現れる → 見終わると助手として選べる。王道で、あたたかく、少し笑える感じ
+// ★出るのは みゅあ・きき・ももすけ・あつ の4人。仲間9人は名前だけ(立ち絵は無い)。本人たちの人柄は作らず、みんなでした冒険の思い出だけにする
+// ★呼び方は ASSISTANT_PEER_CALLS のとおり(あつ→「みゅあ」「きき」「もも」/ みゅあ→「あつくん」/ きき→「あっくん」(敬語)/ もも→「あつ」)
+// ★魔王は昔の話として書く。まだ出ていない敵の名前は書かない。仲良し度の数字や解放の条件は書かない
 const ASSISTANT_ATSU_JOIN_STORY = [
-  { who:'mua',      e:'happy',    t:'{name}、最近ほんと強くなったよね〜！ あたし、まぢで自慢なんだけど♪' },
-  { who:'kiki',     e:'happy',    t:'毎日来てくれて、うれしいでつ。いつの間にか、すっかりいいパーティでつね。' },
-  { who:'momosuke', e:'wink',     t:'ま、ももが育てたようなもんだけどね♡ ……ちょっとだけ、だけどw' },
-  { who:'atsu',     e:'normal',   t:'へえ。いいパーティじゃん' },
-  { who:'mua',      e:'surprise', t:'えっ、だれ！？ いつからそこにいたの！？' },
-  { who:'atsu',     e:'happy',    t:'さっきから。俺はあつ。ギルドでリーダーやってる' },
-  { who:'kiki',     e:'surprise', t:'あれま……リーダーさんでつか。' },
-  { who:'momosuke', e:'normal',   t:'リーダー？ なんか偉そうなんだけどw' },
-  { who:'atsu',     e:'wink',     t:'偉そうなんじゃなくて、偉いの。……冗談だよ笑' },
-  { who:'atsu',     e:'normal',   t:'てか、{name}のこと、ずっと見てたんだよね。毎日ちゃんと来て、負けてもまた挑んでる' },
-  { who:'atsu',     e:'happy',    t:'そういう人、好きなんだよ。勇者ってそういうもんでしょ' },
-  { who:'mua',      e:'excited',  t:'わかる〜！ {name}、ほんとに諦めないんだよ！ (●゚ｪ゚))ｺｸｺｸ' },
-  { who:'atsu',     e:'normal',   t:'あと、みゅあたちがここまで仲良くなってるのも見てた。だから声かけようと思って' },
-  { who:'kiki',     e:'normal',   t:'あっくんは、どうしてこの村へ来たんでつか？' },
-  { who:'atsu',     e:'normal',   t:'とりあえず結論から言うね。俺も{name}のパーティに入りたい' },
-  { who:'momosuke', e:'surprise', t:'え、まって。いきなりすぎない！？' },
-  { who:'atsu',     e:'happy',    t:'いきなりでいいの。迷ってる時間がもったいないじゃん' },
-  { who:'atsu',     e:'excited',  t:'てか{name}、モンビーのHELLやった？ 上の難易度、やっぱ一番おもしろいんだって' },
-  { who:'mua',      e:'troubled', t:'うわ、いきなりHELL推し……あつくん、もしかしてスパルタ系？ｗ' },
-  { who:'atsu',     e:'wink',     t:'スパルタっていうか、伸びる人には上を見せたいだけ笑' },
-  { who:'momosuke', e:'angry',    t:'ふーん。じゃあさ、ももが「やだ」って言ったらどうすんの？' },
-  { who:'atsu',     e:'normal',   t:'もも、今ちょっと強がってるでしょ。{name}を取られそうで' },
+  // ---- 思い出話 ----
+  { who:'mua',      e:'happy',    t:'ねえねえ、ひめちん、もも！ 片づけしてたら、これ出てきたの！' },
+  { who:'kiki',     e:'surprise', t:'あれま……これ、W.o.F のギルドの旗でつね。' },
+  { who:'momosuke', e:'excited',  t:'うそ、なつかしー！！ まだ持ってたの、みゅあねぇ w' },
+  { who:'mua',      e:'wink',     t:'捨てられるわけないじゃん！ あたしたちの宝物だよ〜' },
+  { who:'mua',      e:'normal',   t:'{name}、聞いて。あたしたち、昔おなじギルドで冒険してたの。「W.o.F」っていうんだ' },
+  { who:'kiki',     e:'happy',    t:'いろんな人がいて、毎日にぎやかでした。いまも思い出すと、笑っちゃいまつ。' },
+  { who:'momosuke', e:'happy',    t:'ほんといっぱいいたよね！ はるでしょ、ともちんでしょ、みりあでしょ……' },
+  { who:'mua',      e:'excited',  t:'キラに、らっせに、さえに、ろむ！' },
+  { who:'kiki',     e:'normal',   t:'ゲズデロさんと、ガッデムさんも忘れちゃだめでつよ。' },
+  { who:'momosuke', e:'surprise', t:'あ、ガッデム忘れてた！！ ……本人には内緒ね w' },
+  { who:'mua',      e:'happy',    t:'みんなで、ほんとにいろんなとこ行ったよね〜' },
+  { who:'kiki',     e:'normal',   t:'最初のころは、近くの森で薬草を集めるだけで、一日が終わってましたね。' },
+  { who:'momosuke', e:'troubled', t:'そうそう、スライム1匹に全員で囲んで大騒ぎしてさ w' },
+  { who:'mua',      e:'wink',     t:'あれは作戦！ 全力で囲む作戦だったの！' },
+  { who:'kiki',     e:'happy',    t:'砂漠を越えたときは、水が足りなくなって、みんなで少しずつ分けまちたね。' },
+  { who:'momosuke', e:'normal',   t:'雪の山で迷子になったのもあったよね。ももが一番に見つけてあげたんだから♡' },
+  { who:'mua',      e:'troubled', t:'あれ、迷子になったの、ももでしょｗ' },
+  { who:'momosuke', e:'angry',    t:'……そうとも言うけど！！' },
+  { who:'kiki',     e:'normal',   t:'夜は焚き火を囲んで、次はどこへ行くか、みんなで決めまちた。' },
+  { who:'mua',      e:'happy',    t:'作戦会議ね！ だいたい途中から、ただのおしゃべりになってたけどｗ' },
+  { who:'momosuke', e:'happy',    t:'でもさ、最後はちゃんと決まるんだよね。あの人がいると' },
+  { who:'kiki',     e:'normal',   t:'……はい。いつも、いちばん前に立ってくれた人。' },
+  { who:'mua',      e:'normal',   t:'そうそう。そして、みんなで魔王のお城まで行ったんだよね' },
+  { who:'kiki',     e:'troubled', t:'あのときは、さすがに足がふるえまちた。' },
+  { who:'momosuke', e:'normal',   t:'ももも。……ちょっとだけね' },
+  { who:'mua',      e:'excited',  t:'でも、みんなで力を合わせて、魔王を倒したの！ (゜∀゜)･∵ﾌﾞﾊｯ!!' },
+  { who:'kiki',     e:'happy',    t:'それから世界は平和になって、いまの村の暮らしがあるんでつ。' },
+  { who:'momosuke', e:'wink',     t:'で、ももたちは助手になって、{name}と遊んでるってわけ♡' },
+  { who:'mua',      e:'normal',   t:'……でもさ。あの人だけ、ずっと顔見せないよね' },
+  { who:'kiki',     e:'normal',   t:'アシカ(アシストカード)には、ずっといるんでつけどね。「あつの挑発」。' },
+  { who:'momosuke', e:'angry',    t:'カードの中から挑発ばっかりして、本人はぜんぜん来ないの！ ずるくない！？' },
+  { who:'mua',      e:'troubled', t:'あつくん、いまどこで何してるんだろ……' },
+  // ---- あつ登場 ----
+  { who:'atsu',     e:'normal',   t:'呼んだ？' },
+  { who:'mua',      e:'surprise', t:'うわっ！？ あつくん！？' },
+  { who:'kiki',     e:'surprise', t:'あっくん……！ ほんとに、あっくんでつか？' },
+  { who:'momosuke', e:'surprise', t:'え、まって！！ なんでいるの！？' },
+  { who:'atsu',     e:'happy',    t:'なんでって、旗が見えたから。てか久しぶり' },
+  { who:'momosuke', e:'angry',    t:'久しぶり、じゃないし！ アシカの中にばっかりいて、ぜんぜん出てこなかったくせに！' },
+  { who:'atsu',     e:'wink',     t:'挑発は届いてたでしょ笑' },
+  { who:'momosuke', e:'angry',    t:'そういうとこ！！' },
+  { who:'kiki',     e:'normal',   t:'あっくん、いままでどちらにいらしたんでつか？' },
+  { who:'atsu',     e:'normal',   t:'平和になってから、ちょっと遠くまで見回り。魔王がいなくなっても、困ってる人はいるし' },
+  { who:'atsu',     e:'normal',   t:'でも、アシカからずっと見てたよ。みんなが助手やってるのも' },
+  { who:'mua',      e:'troubled', t:'見てたなら、もっと早く顔出してよ〜！ あたしたち、けっこう心配してたんだよ？' },
+  { who:'atsu',     e:'troubled', t:'……ごめん。それはまじでごめん' },
+  { who:'atsu',     e:'normal',   t:'てか、もも。さっきから一番怒ってるけど、一番さみしかったでしょ' },
   { who:'momosuke', e:'surprise', t:'……は！？ べ、別にそんなんじゃないし！！' },
-  { who:'atsu',     e:'happy',    t:'大丈夫。取ったりしないよ。パーティは人数が多いほうが強いの' },
-  { who:'kiki',     e:'happy',    t:'ふふ、ももさんの気持ち、ちゃんと見えてるんでつね♪♪' },
-  { who:'atsu',     e:'normal',   t:'ききは、さっきから一番落ち着いてるけど、一番ちゃんと考えてるよね。そういう人、頼りになる' },
-  { who:'kiki',     e:'surprise', t:'……そなのか。そんなふうに言われたの、はじめてでつ。' },
-  { who:'mua',      e:'wink',     t:'あつくん、人のことよく見てるじゃん！ ちょっと見直したかもｗ' },
-  { who:'atsu',     e:'happy',    t:'そりゃリーダーだし。仲間のことは見てるよ' },
-  { who:'atsu',     e:'wink',     t:'あ、アシストカードの「あつの挑発」、あれ俺が考えたんだよ笑 敵の気を引くのは得意なの' },
-  { who:'momosuke', e:'wink',     t:'それ自慢になる？ww ……まあ、悪くないけど♡' },
-  { who:'mua',      e:'happy',    t:'じゃあ決まりだね！ あつくん、ようこそ〜！' },
-  { who:'kiki',     e:'happy',    t:'よろしくお願いしまつ、あっくん♪♪' },
-  { who:'momosuke', e:'normal',   t:'しょうがないから入れてあげる。……あつ、よろしくね♡' },
-  { who:'atsu',     e:'excited',  t:'よし。{name}、今日から俺もパーティの一員ね' },
-  { who:'atsu',     e:'normal',   t:'プロフィールの助手のところで、俺を選べるようになってるよ。気が向いたら呼んで' },
-  { who:'atsu',     e:'happy',    t:'呼ばれたら、だいたい上の難易度に連れてくけどね笑 よろしく' },
+  { who:'mua',      e:'wink',     t:'もも、顔まっかじゃんｗ' },
+  { who:'momosuke', e:'troubled', t:'みゅあねぇまで！！ ……もう、ちょっとだけだよ、ちょっとだけ' },
+  { who:'atsu',     e:'happy',    t:'うん。ありがと' },
+  { who:'atsu',     e:'normal',   t:'ききは、ずっと旗の手入れしてくれてたよね。ほつれ、直ってる' },
+  { who:'kiki',     e:'surprise', t:'……気づいてたんでつか。' },
+  { who:'atsu',     e:'happy',    t:'そりゃ気づくよ。リーダーだし' },
+  { who:'kiki',     e:'happy',    t:'ふふ……あっくんは、昔からそういうところ、ちゃんと見てまつよね♪♪' },
+  { who:'mua',      e:'normal',   t:'あつくん、変わってないね。ちょっとSなとこも' },
+  { who:'atsu',     e:'wink',     t:'それは褒め言葉として受け取っとく笑' },
+  // ---- {name} とあつ ----
+  { who:'atsu',     e:'normal',   t:'で、{name}。はじめまして……ではないか。アシカでは何回も一緒に戦ったもんね' },
+  { who:'atsu',     e:'happy',    t:'俺はあつ。W.o.F でリーダーやってた' },
+  { who:'mua',      e:'excited',  t:'あたしたちの勇者なんだよ！ いつもいちばん前で戦ってくれたの！' },
+  { who:'atsu',     e:'troubled', t:'みゅあ、それ言うのやめて。恥ずいから' },
+  { who:'momosuke', e:'wink',     t:'照れてる照れてる w' },
+  { who:'atsu',     e:'normal',   t:'{name}のこと、ずっと見てた。毎日来て、負けてもまた挑んで、みんなと仲良くなって' },
+  { who:'atsu',     e:'happy',    t:'そういうの、勇者だと思う。まじで' },
+  { who:'kiki',     e:'happy',    t:'私たちも、{name}さんのおかげで、毎日が楽しいんでつ。' },
+  { who:'atsu',     e:'normal',   t:'だから、とりあえず結論から言うね' },
+  { who:'atsu',     e:'excited',  t:'俺も{name}のパーティに入れて。助手やる' },
+  { who:'mua',      e:'surprise', t:'えっ、あつくんが助手！？' },
+  { who:'momosuke', e:'normal',   t:'あつが助手とか、ぜったいスパルタじゃん……' },
+  { who:'atsu',     e:'wink',     t:'スパルタっていうか、伸びる人には上を見せたいだけ笑' },
+  { who:'atsu',     e:'excited',  t:'てか{name}、モンビーのHELLやった？ 上の難易度、やっぱ一番おもしろいんだって' },
+  { who:'mua',      e:'troubled', t:'ほらー！ いきなりHELL推しだよ、この人ｗ' },
+  { who:'kiki',     e:'normal',   t:'あっくん、{name}さんのペースも、ちゃんと見てあげてくださいね。' },
+  { who:'atsu',     e:'normal',   t:'分かってる。疲れてる日は休ませる。勇者だって宿屋で寝るし' },
+  { who:'momosuke', e:'happy',    t:'……ま、それならいいけど♡' },
+  // ---- しめくくり ----
+  { who:'mua',      e:'happy',    t:'なんかさ、W.o.F がちょっと戻ってきたみたい！' },
+  { who:'kiki',     e:'happy',    t:'はるさんたちにも、教えてあげたいでつね。あっくんが帰ってきたって。' },
+  { who:'momosuke', e:'wink',     t:'ガッデムには最後に教えよ。さっき忘れてたし w' },
+  { who:'atsu',     e:'happy',    t:'それ、ばれたら怒られるやつ笑' },
+  { who:'atsu',     e:'normal',   t:'みんな、待たせてごめん。これからは顔出すよ' },
+  { who:'mua',      e:'excited',  t:'うん！ おかえり、あつくん！' },
+  { who:'kiki',     e:'happy',    t:'おかえりなさい、あっくん♪♪' },
+  { who:'momosuke', e:'normal',   t:'……おかえり、あつ。もうどっか行っちゃだめだからね♡' },
+  { who:'atsu',     e:'happy',    t:'ただいま' },
+  { who:'atsu',     e:'normal',   t:'{name}、プロフィールの助手のところで、俺を選べるようになってるよ。気が向いたら呼んで' },
+  { who:'atsu',     e:'excited',  t:'呼ばれたら、だいたい上の難易度に連れてくけどね笑 よろしく' },
 ];
-const ASSISTANT_ATSU_JOIN_STORY_CALLS = { mua: 'あつくん', kiki: 'あっくん', momosuke: 'あつ', atsu: 'みゅあ／きき／もも' };
+const ASSISTANT_ATSU_JOIN_STORY_CALLS = { mua: 'ひめちん／もも／あつくん', kiki: 'みゅあちん／ももさん／あっくん', momosuke: 'みゅあねぇ／ききちゃん／あつ', atsu: 'みゅあ／きき／もも' };
 
 const EVENT_REPLAYS = [
   // ぱんぷきん×ジャックのストーリー(2026-10-04・台本は docs/spec/RAID_JACK_STORY.md)。**公開するまでは回想にも出さない**(releaseFlag)。
@@ -8191,7 +8255,7 @@ const EVENT_REPLAYS = [
   { id: 'assistant_chat_story', date: '2026-10-14 11:59', title: '話せるようになった日 ～ことのはの鈴～', script: ASSISTANT_CHAT_STORY, calls: ASSISTANT_CHAT_STORY_CALLS, unlockedKey: 'assistantChatStorySeen', releaseFlag: 'assistantChat', group: 'update' },
   // あつの加入のお話(2026-10-22)。みゅあ・きき・ももすけの仲良し度がそろったあとの HOME で1回流れ、見終わるとあつを選べる。
   // 公開の印 assistantAtsu が立つまでは流れず、回想にも出さない(releaseFlag)。見たかは mh_rhythm_event_story_v1 の id(新しいキーは作らない)
-  { id: 'atsu_join_2026_10_22', date: '2026-10-22 08:00', title: 'パーティに勇者がやってきた ～あつ参上～', script: ASSISTANT_ATSU_JOIN_STORY, calls: ASSISTANT_ATSU_JOIN_STORY_CALLS, unlockedKey: 'atsuJoinSeen', releaseFlag: 'assistantAtsu', group: 'update' },
+  { id: 'atsu_join_2026_10_22', date: '2026-10-22 08:00', title: 'おかえり、勇者 ～W.o.F の旗～', script: ASSISTANT_ATSU_JOIN_STORY, calls: ASSISTANT_ATSU_JOIN_STORY_CALLS, unlockedKey: 'atsuJoinSeen', releaseFlag: 'assistantAtsu', group: 'update' },
   { id: 'raid_jack_howto_2026_10_04', date: '2026-10-04 08:02', title: 'カボチャの大王ジャック ～レイドの遊び方～', script: ASSISTANT_RAID_JACK_HOWTO, calls: ASSISTANT_RAID_JACK_HOWTO_CALLS, unlockedKey: 'raidJackHowtoSeen', releaseFlag: 'raidJack', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, group: 'halloween' },
 ];
 

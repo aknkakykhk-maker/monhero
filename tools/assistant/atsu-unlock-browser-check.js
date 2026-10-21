@@ -7,7 +7,7 @@
 // 見ているもの:
 //   ① 公開の印(RELEASE_FLAGS.assistantAtsu)が偽のまま … 仲良し度がそろっていても、お話は流れず、助手の一覧にも出ない
 //   ② 印が真で、仲良し度が足りない … お話は流れない。一覧には鍵つきの「？？？」
-//   ③ 印が真で、みゅあ Lv10・きき Lv8・ももすけ Lv5 … HOME でお話が流れる。見終わると一覧で選べる。選ぶと HOME の吹き出しがあつになる
+//   ③ 印が真で、みゅあ Lv8・きき Lv8・ももすけ Lv5 … HOME でお話が流れる。見終わると一覧で選べる。選ぶと HOME の吹き出しがあつになる
 // 印を真にするのは、このページの中だけ(読み込み直後に RELEASE_FLAGS を書き換える)。ファイルの印は変えない
 const fs = require('fs');
 const path = require('path');
@@ -20,7 +20,7 @@ const results = [];
 const check = (name, ok, detail = '') => { results.push(ok); console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ' — ' + detail : ''}`); };
 
 // 仲良し度の points(段階の need)。data/assistants.js の ASSISTANT_BOND_LEVELS と同じ値
-const NEED = { 1: 0, 5: 800, 8: 2300, 10: 3550 };
+const NEED = { 1: 0, 5: 800, 8: 2300 };
 // ほかのお話・告知は見た扱いにする(あつのお話だけが流れるように)。id は実ファイルから読む(書き写さない)
 const assistantsSrc = fs.readFileSync(path.join(__dirname, '../../monster-hero/data/assistants.js'), 'utf8');
 const changelogSrc = fs.readFileSync(path.join(__dirname, '../../monster-hero/data/changelog.js'), 'utf8');
@@ -58,7 +58,7 @@ const shot = async (page, name) => {
   await page.screenshot({ path: path.join(SHOTS, `${name}.png`) });
 };
 const bodyText = (page) => page.evaluate(() => (document.body.innerText || '').replace(/\s+/g, ' '));
-const storyOn = (page) => page.evaluate(() => /いいパーティじゃん|俺はあつ|パーティに勇者がやってきた/.test(document.body.innerText || ''));
+const storyOn = (page) => page.evaluate(() => /W\.o\.F|おかえり、勇者|呼んだ？/.test(document.body.innerText || ''));
 
 // 起動して HOME まで進む。あつのお話が出たらそこで止める(お話の「次へ」「スキップ」は押さない)
 const boot = async (page) => {
@@ -117,7 +117,7 @@ const pickerText = (page) => page.evaluate(() => {
     await page.addInitScript(seed, { storyIds: STORY_IDS, noticeIds: SEEN_NOTICE_IDS, ...opts });
     return page;
   };
-  const ready = { mua: NEED[10], kiki: NEED[8], momosuke: NEED[5] };
+  const ready = { mua: NEED[8], kiki: NEED[8], momosuke: NEED[5] };
   try {
     // ① 印が偽
     {
@@ -146,13 +146,13 @@ const pickerText = (page) => page.evaluate(() => {
     {
       const page = await open({ bonds: ready, flagOn: true });
       await boot(page);
-      await page.waitForFunction(() => /いいパーティじゃん|強くなったよね/.test(document.body.innerText || ''), { timeout: 15000 }).catch(() => {});
-      const started = await page.evaluate(() => /強くなったよね|いいパーティじゃん/.test(document.body.innerText || ''));
+      await page.waitForFunction(() => /片づけしてたら|W\.o\.F/.test(document.body.innerText || ''), { timeout: 15000 }).catch(() => {});
+      const started = await page.evaluate(() => /片づけしてたら|W\.o\.F/.test(document.body.innerText || ''));
       check('仲良し度がそろうと、HOME でお話が流れる', started);
       // お話を「次へ」で最後まで進める。途中を何枚か写す
-      const want = { 3: '02-story-atsu-appears', 9: '03-story-hero', 21: '04-story-momo', 25: '05-story-kiki', 35: '06-story-end' };
+      const want = { 4: '02-story-wof', 8: '03-story-friends', 32: '04-story-atsu-appears', 45: '05-story-momo', 57: '06-story-name', 82: '07-story-end' };
       let last = '', reachedEnd = false;
-      for (let i = 0; i < 60; i++) {
+      for (let i = 0; i < 160; i++) {
         if (want[i]) await shot(page, want[i]);
         const t = await bodyText(page);
         if (!/次へ|スキップ/.test(t) || !(await storyOn(page) || /パーティ|あつ/.test(t))) break;
@@ -171,7 +171,7 @@ const pickerText = (page) => page.evaluate(() => {
       const seen = await page.evaluate((id) => { try { return JSON.parse(localStorage.getItem('mh_rhythm_event_story_v1') || '[]').includes(id); } catch { return false; } }, STORY_ID);
       check('見終わると「見た」が既存の並び(mh_rhythm_event_story_v1)に入る', seen);
       await openAssistantList(page);
-      await shot(page, '07-select-unlocked');
+      await shot(page, '08-select-unlocked');
       const picked = await page.evaluate(() => {
         const h = [...document.querySelectorAll('h3')].find(x => x.textContent.includes('いっしょに遊ぶ助手'));
         const b = h && [...h.parentElement.querySelectorAll('button')].find(x => /あつ/.test(x.innerText || ''));
@@ -182,7 +182,7 @@ const pickerText = (page) => page.evaluate(() => {
       await page.waitForTimeout(800);
       const selected = await page.evaluate(() => { try { return JSON.parse(localStorage.getItem('mh_assistant_selected_v1')); } catch { return null; } });
       check('選ぶと、選んだ助手があつになる', selected === 'atsu', String(selected));
-      await shot(page, '08-profile-atsu');
+      await shot(page, '09-profile-atsu');
       // HOME へ戻って吹き出しを見る
       await dismiss(page);
       await page.evaluate(() => (document.querySelector('button[aria-label="ホームへ戻る"]') || document.querySelector('button[aria-label="戻る"]'))?.click());
@@ -191,7 +191,7 @@ const pickerText = (page) => page.evaluate(() => {
       const homeText = await bodyText(page);
       const onHome = await page.evaluate(() => !!document.querySelector('button[aria-label="プロフィールを開く"]'));
       check('HOME の吹き出しに、あつの名前と顔が出る', onHome && /あつ/.test(homeText) && !!(await page.evaluate(() => document.querySelector('img[src*="atsu_"]'))));
-      await shot(page, '09-home-bubble');
+      await shot(page, '10-home-bubble');
       await page.close();
     }
   } catch (e) {

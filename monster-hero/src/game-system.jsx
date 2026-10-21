@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: be32b339594353ac
+// generated-sha256: be188c3db9075a64
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-22 07:35"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-22 08:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5162,7 +5162,7 @@ const eikiBossBgmForBattle = (heroId, currentWave, enemyId) =>
   heroId === 'Eiki' && (enemyId === 'Moo' || currentWave === 10) ? 'eiki_boss' : null;
 // 既存の battle / dullahan / boss はチャレンジ用として維持し、保存済み設定との互換性を守る。
 // 追加したモード別専用戦キーは、旧セーブでは従来その場面で使っていた dullahan / boss の選択を継承する。
-const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ tacticsTypesEvent:'original_event_01', rhythmHellStoryEvent:'melo_sheriruth', assistantChatStoryEvent:'close_to_your_heart_alt', title:'monster_hero_theme_alt', home:'original_home', management:'original_profile', market:'original_market', temple:'original_fusion', trainingMenu:'original_home', trainingBoard:'original_home', battle:'original_battle', dullahan:'original_dullahan', boss:'original_boss', quickBattle:'original_battle', quickDullahan:'original_dullahan', quickMoo:'original_boss', proBattle:'original_pro_battle_01', proDullahan:'melo_dullahan_steel_ghost', proMoo:'original_pro_battle_02', extremeBattle:'ichika_battle', extremeDullahan:'melo_dullahan_clockwork', extremeMoo:'ichika_boss', speciesBattle:'original_battle', speciesDullahan:'original_dullahan', speciesMoo:'original_boss', tacticsIntroEvent:'close_to_your_heart_alt', tacticsBattle:'senjou_no_shippuu', tacticsMidBoss:'melo_the_city_beneath_the_comets', tacticsBoss:'makutsu_no_senritsu', autoBattle:'monster_hero_theme', autoVictoryJingle:'off', autoPostWaveBgm:'off', autoRepeatResultBgm:'off', clear:'ichika_clear', enhance:'original_enhance', result:'original_result', gameOver:'original_game_over', kikiIntro:'original_event_01', momosukeIntro:'six_eternel_remix', monbeatCupEvent:'kaze_ga_soyogu', symphonyEvent:'melo_mou_hitotsu_no_sekai_e', rhythmMultiEvent:'melo_haruka', masuCallEvent:'six_eternel',halloweenNightEvent:'melo_crazy_party_night_full', rhythmModeSelect:'pandora_boss_remix' });
+const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ atsuJoinStoryEvent:'melo_against_my_own_shadow', tacticsTypesEvent:'original_event_01', rhythmHellStoryEvent:'melo_sheriruth', assistantChatStoryEvent:'close_to_your_heart_alt', title:'monster_hero_theme_alt', home:'original_home', management:'original_profile', market:'original_market', temple:'original_fusion', trainingMenu:'original_home', trainingBoard:'original_home', battle:'original_battle', dullahan:'original_dullahan', boss:'original_boss', quickBattle:'original_battle', quickDullahan:'original_dullahan', quickMoo:'original_boss', proBattle:'original_pro_battle_01', proDullahan:'melo_dullahan_steel_ghost', proMoo:'original_pro_battle_02', extremeBattle:'ichika_battle', extremeDullahan:'melo_dullahan_clockwork', extremeMoo:'ichika_boss', speciesBattle:'original_battle', speciesDullahan:'original_dullahan', speciesMoo:'original_boss', tacticsIntroEvent:'close_to_your_heart_alt', tacticsBattle:'senjou_no_shippuu', tacticsMidBoss:'melo_the_city_beneath_the_comets', tacticsBoss:'makutsu_no_senritsu', autoBattle:'monster_hero_theme', autoVictoryJingle:'off', autoPostWaveBgm:'off', autoRepeatResultBgm:'off', clear:'ichika_clear', enhance:'original_enhance', result:'original_result', gameOver:'original_game_over', kikiIntro:'original_event_01', momosukeIntro:'six_eternel_remix', monbeatCupEvent:'kaze_ga_soyogu', symphonyEvent:'melo_mou_hitotsu_no_sekai_e', rhythmMultiEvent:'melo_haruka', masuCallEvent:'six_eternel',halloweenNightEvent:'melo_crazy_party_night_full', rhythmModeSelect:'pandora_boss_remix' });
 // 設定欄を足したときに「前からある近い設定」を引き継ぐための対応表。
 // 種族チャレンジの3枠はチャレンジと同じ曲から始めるので、まだ自分で選んでいない人には
 // そのときのチャレンジの設定(自分で変えていればその曲)がそのまま入る
@@ -5196,6 +5196,7 @@ const BGM_ARRANGEMENT_LEGACY_FALLBACK = Object.freeze({ quickMoo:'boss', proDull
 // (既存プレイヤーの保存値には新しい枠が無いので、normalizeBgmArrangement が既定で埋める)
 // rhythm_hell_story … 難易度 HELL のお話(2026-10-11)。既定は Sheriruth(社長の指定)。BGMアレンジの画面に枠を並べるのは HELL の公開のとき
 // assistant_chat_story … 助手とおしゃべりのお話(2026-10-14)。既定はタクティクスの導入と同じ曲
+// atsu_join_2026_10_22 … あつの加入のお話(2026-10-22)。既定は Against My Own Shadow(社長の指定)。BGMアレンジの画面に枠を並べるのはあつの公開のとき
 // 会話イベントの台本で、その行までに書かれた最後の bgm:'<曲id>'。無ければ null(=会話イベントの曲のまま)。
 // 曲の表(BGM_TRACKS)に無い id は使わない(2026-10-17 社長「途中で変わるのいいね」)
 const eventScriptBgmAt = (script, step) => {
@@ -5209,7 +5210,7 @@ const eventScriptBgmAt = (script, step) => {
   return found;
 };
 const EVENT_BGM_FADE_MS = 800; // 会話イベントの途中で曲を替えるとき、今の曲を下げる長さ
-const EVENT_BGM_SCENES = Object.freeze({ tactics_types:'tacticsTypesEvent', kiki_intro:'kikiIntro', rhythm_hell_story:'rhythmHellStoryEvent', assistant_chat_story:'assistantChatStoryEvent', momosuke_intro:'momosukeIntro', monbeat_cup_2026_09:'monbeatCupEvent', monbeat_cup_2026_09_thanks:'monbeatCupEvent', symphony_2026_09_17:'symphonyEvent', symphony_2026_09_17_thanks:'symphonyEvent', tactics_intro:'tacticsIntroEvent', beat_point_always_2026_09_24:'monbeatCupEvent', rhythm_six_lane_2026_09_26:'monbeatCupEvent', beat_point_up_2026_09_28:'monbeatCupEvent', rhythm_multi_friends_2026_10_03:'rhythmMultiEvent', rhythm_masu_call_2026_10_07:'masuCallEvent', halloween_night_2026_part1:'halloweenNightEvent', raid_jack_howto_2026_10_04:'halloweenNightEvent', raid_jack_rhythm_story_2026_10_06:'halloweenNightEvent', raid_jack_story_1b:'halloweenNightEvent', raid_jack_story_2:'halloweenNightEvent', raid_jack_story_3:'halloweenNightEvent', raid_jack_story_4:'halloweenNightEvent', raid_jack_story_5:'halloweenNightEvent', raid_jack_story_6:'halloweenNightEvent', raid_jack_ending_cleared:'halloweenNightEvent', raid_jack_ending_notcleared:'halloweenNightEvent' });
+const EVENT_BGM_SCENES = Object.freeze({ atsu_join_2026_10_22:'atsuJoinStoryEvent', tactics_types:'tacticsTypesEvent', kiki_intro:'kikiIntro', rhythm_hell_story:'rhythmHellStoryEvent', assistant_chat_story:'assistantChatStoryEvent', momosuke_intro:'momosukeIntro', monbeat_cup_2026_09:'monbeatCupEvent', monbeat_cup_2026_09_thanks:'monbeatCupEvent', symphony_2026_09_17:'symphonyEvent', symphony_2026_09_17_thanks:'symphonyEvent', tactics_intro:'tacticsIntroEvent', beat_point_always_2026_09_24:'monbeatCupEvent', rhythm_six_lane_2026_09_26:'monbeatCupEvent', beat_point_up_2026_09_28:'monbeatCupEvent', rhythm_multi_friends_2026_10_03:'rhythmMultiEvent', rhythm_masu_call_2026_10_07:'masuCallEvent', halloween_night_2026_part1:'halloweenNightEvent', raid_jack_howto_2026_10_04:'halloweenNightEvent', raid_jack_rhythm_story_2026_10_06:'halloweenNightEvent', raid_jack_story_1b:'halloweenNightEvent', raid_jack_story_2:'halloweenNightEvent', raid_jack_story_3:'halloweenNightEvent', raid_jack_story_4:'halloweenNightEvent', raid_jack_story_5:'halloweenNightEvent', raid_jack_story_6:'halloweenNightEvent', raid_jack_ending_cleared:'halloweenNightEvent', raid_jack_ending_notcleared:'halloweenNightEvent' });
 const BGM_PRO_DEFAULT_MIGRATION_KEY = 'mh_bgm_pro_default_migrated_v1';
 const BGM_PRO_PREVIOUS_DEFAULTS = Object.freeze({ proBattle:'original_battle', proDullahan:'original_dullahan', proMoo:'original_boss' });
 // 既定曲を入れ替えたときの移行のしかたは毎回同じ(「以前の既定のままの枠だけ新しい既定へ」)なので、
@@ -45679,8 +45680,8 @@ const RHYTHM_MODE_ASSISTANT_FRAMES = Object.freeze({
   momosuke: { zoom: 1.5, cx: 0.5, cy: 0.48, top: 0.42,
     cxBy: { angry: 0.545, happy: 0.545, crying: 0.44, wink: 0.46, excited: 0.38, surprise: 0.38, normal: 0.645, troubled: 0.655 } },
   dra: { zoom: 0.85, cx: 0.5, cy: 0.5, top: 0.4 },
-  // あつ(2026-10-22)。大きい絵が届くまでは顔の絵(正方形)なので、ドラと同じ寄せ方
-  atsu: { zoom: 0.85, cx: 0.5, cy: 0.5, top: 0.4 },
+  // あつ(2026-10-22)。大きい絵は 768x1024(縦長・腰から上)。顔の位置で寄せる(写しで確かめて決める)
+  atsu: { zoom: 0.85, cx: 0.5, cy: 0.4, top: 0.42 },
 });
 // 舞台の飾り(スポットライト3本・音符・キラキラ・床の光)。位置と遅れは固定(描くたびに変わらないように)
 const RHYTHM_MODE_SELECT_NOTES = Object.freeze([
@@ -53994,7 +53995,7 @@ function MonsterHeroGame() {
     if (rhythmEventStoryStartedRef.current.includes(ASSISTANT_CHAT_STORY_ID)) return;
     setRhythmEventStoryPending(ASSISTANT_CHAT_STORY_ID);
   }, [assistantChatStorySeenLoaded, assistantChatStorySeenFlag, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
-  // あつの加入のお話(2026-10-22 社長の決定)。みゅあ Lv10・きき Lv8・ももすけ Lv5(ASSISTANT_ATSU_UNLOCK_BONDS)がそろった HOME で1回だけ流す。
+  // あつの加入のお話(2026-10-22 社長の決定)。みゅあ Lv8・きき Lv8・ももすけ Lv5(ASSISTANT_ATSU_UNLOCK_BONDS)がそろった HOME で1回だけ流す。
   // 見たかどうかはドラと同じ「見終えたお話の id」(mh_rhythm_event_story_v1)。最後まで見るか飛ばすと、あつを選べるようになる(assistantUnlockedBy)。
   // 公開の印 assistantAtsu が偽なら何もしない。置き方は上の HELL・おしゃべりのお話と同じ
   useEffect(() => {
