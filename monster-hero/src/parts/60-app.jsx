@@ -20262,7 +20262,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <button key={style.id} type="button" onClick={()=>setTempCallStyle(style.template)} className="px-2.5 min-h-[30px] rounded-full text-[10px] font-black bg-slate-800 border border-slate-700 text-slate-300 active:scale-95">{style.label}</button>
                 ))}
               </div>
-              <p className="text-[9px] text-slate-500 text-center mb-3">いまの呼び方プレビュー: <span className="font-black" style={{color:activeAssistant.accent}}>{(tempCallStyle||'').includes('{name}')?tempCallStyle.replace('{name}',breederName||'あなた'):(tempCallStyle||assistantSpeakText('{name}',breederName,assistantBondLevelNow,null,selectedAssistantId))}</span></p>
+              <p className="text-[9px] text-slate-500 text-center mb-3">いまの呼び方プレビュー: <span className="font-black" style={{color:activeAssistant.accent}}>{(tempCallStyle||'').includes('{name}')?(typeof assistantFillCallTemplate==='function'?assistantFillCallTemplate(tempCallStyle,breederName||'あなた'):tempCallStyle.replace('{name}',breederName||'あなた')):(tempCallStyle||assistantSpeakText('{name}',breederName,assistantBondLevelNow,null,selectedAssistantId))}</span></p>
               <div className="flex gap-2 mb-2">
                 <button onClick={()=>setShowCallStylePicker(false)} className="flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">閉じる</button>
                 <button onClick={()=>{chooseAssistantCallStyle(tempCallStyle);setShowCallStylePicker(false);}} className="flex-1 text-white py-3 rounded-xl font-black text-xs" style={{backgroundColor:activeAssistant.accent}}>保存</button>

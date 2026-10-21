@@ -61,6 +61,8 @@ const AssistantBondRewardList = ({ who, level, breederIcon, resolveIconUrl, onCl
   const rows = assistantBondRewardRows(who.id);
   const accent = who.accent || '#f472b6';
   const nextLv = rows.find(r => r.level > level)?.level || null;
+  // 節目(ASSISTANT_BOND_REWARD_MILESTONES)。札と説明の文はここから作る
+  const milestones = (typeof ASSISTANT_BOND_REWARD_MILESTONES !== 'undefined' && ASSISTANT_BOND_REWARD_MILESTONES) || [];
   const nowRef = React.useRef(null);
   const listRef = React.useRef(null);
   // 開いたら、いまのLvの近くを見せる。動かすのは一覧の箱の中だけ(scrollIntoView は画面ごと動くので使わない・viewport-height-check)
@@ -79,7 +81,7 @@ const AssistantBondRewardList = ({ who, level, breederIcon, resolveIconUrl, onCl
             <div className="text-[11px] font-black" style={{color:accent}}>いまは Lv.{level}{nextLv?`・次は Lv.${nextLv}`:'・全部もらいました'}</div>
           </div>
         </div>
-        <p className="mt-2 text-[10px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('Lvが上がると、そのLvのごほうびがギフトボックスへ届きます。助手ごとに1回ずつです。')}</p>
+        <p className="mt-2 text-[10px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap(`Lvが上がると、そのLvのごほうびがギフトボックスへ届きます。助手ごとに1回ずつです。${milestones.length?`節目の Lv${milestones.join('・')} はほかのLvより豪華です。`:''}`)}</p>
         <ol ref={listRef} className="relative mt-2 max-h-[58vh] space-y-1.5 overflow-y-auto pr-0.5">
           {rows.map(r => {
             const got = r.level <= level;
@@ -90,6 +92,7 @@ const AssistantBondRewardList = ({ who, level, breederIcon, resolveIconUrl, onCl
                 style={isNext?{borderColor:accent}:undefined}>
                 <div className="flex items-center gap-2">
                   <b className="shrink-0 text-[13px] font-black" style={{color:got?'#94a3b8':accent}}>Lv.{r.level}</b>
+                  {milestones.includes(r.level)&&<span data-bond-reward-milestone className="shrink-0 rounded-md bg-amber-500/90 px-1.5 py-px text-[9px] font-black text-slate-950">節目</span>}
                   <span className="min-w-0 flex-1 text-[11px] font-black text-slate-300" style={JA_LABEL_STYLE}>{jaWrap(r.title)}</span>
                   <em className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black not-italic ${got?'bg-slate-700 text-slate-300':isNext?'text-white':'bg-slate-800 text-slate-400'}`} style={isNext?{backgroundColor:accent}:undefined}>
                     {got?'✓ もらった':isNext?'次はここ':'まだ'}

@@ -850,14 +850,39 @@ const assistantBondStageByLevel = (level, assistantId) => {
 //              未入力・Lv6未満なら絆Lvの既定(stage.call)のまま
 // assistantId … 助手ごとに既定の呼び方が違う(みゅあは「ちん」、ききは「ちー」、ドラは呼び捨て)
 const ASSISTANT_NO_NAME = 'キミ';
+// 名前の終わりがもう敬称(くん・さん・ちゃん・様。ひらがな・カタカナ・漢字の揺れも)のとき(2026-10-21 改善部 N1)。
+// 「モンヒロくん」を「モンヒロくんさん」「モンヒロくんちん」と重ねて呼ばないよう、段や選んだ呼び方の敬称を付けずに名前だけで呼ぶ
+const ASSISTANT_NAME_HONORIFIC_RE = /(くん|クン|君|さん|サン|ちゃん|チャン|様|さま|サマ)$/;
+// 呼び方の型の「{name}のすぐ後ろ」に付く敬称。助手ごとの段の呼び方(ASSISTANT_BOND_LEVEL_SETS)と選べる呼び方(ASSISTANT_CALL_STYLE_SETS)から集める。
+// ★書き写さない。助手や呼び方を足しても、ここは自動で追いつく
+const assistantCallSuffixes = () => {
+  const templates = [
+    ...ASSISTANT_BOND_LEVELS.map(s => s.call),
+    ...Object.values(ASSISTANT_BOND_LEVEL_SETS).flatMap(levels => (levels || []).map(l => l && l.call)),
+    ...ASSISTANT_CALL_STYLES.map(c => c.template),
+    ...Object.values(ASSISTANT_CALL_STYLE_SETS).flatMap(list => (list || []).map(c => c.template)),
+  ];
+  return [...new Set(templates.filter(t => typeof t === 'string' && t.startsWith('{name}')).map(t => t.slice('{name}'.length)).filter(Boolean))]
+    .sort((a, b) => b.length - a.length);
+};
+// 呼び方の型へ名前を入れる。名前がもう敬称で終わるなら、{name} のすぐ後ろの敬称(さん・ちん・ちー・っち など)は付けない。
+// 型そのもの(保存してある呼び方の選択)は変えない。敬称でない言葉(「{name}先輩」の「先輩」など自由に書いた分)は残す
+const assistantFillCallTemplate = (template, name) => {
+  const raw = String(name || '').trim();
+  const t = String(template || '{name}');
+  if (!ASSISTANT_NAME_HONORIFIC_RE.test(raw) || !t.includes('{name}')) return t.replace('{name}', raw);
+  const at = t.indexOf('{name}') + '{name}'.length;
+  const suffix = assistantCallSuffixes().find(x => t.startsWith(x, at));
+  return (suffix ? t.slice(0, at) + t.slice(at + suffix.length) : t).replace('{name}', raw);
+};
 const assistantCallName = (name, level, customCall, assistantId) => {
   const raw = String(name || '').trim();
   if (!raw) return ASSISTANT_NO_NAME;
   const lv = Number.isFinite(level) ? level : ASSISTANT_BOND_MIN_LEVEL;
   const custom = (lv >= ASSISTANT_CALL_STYLE_UNLOCK_LEVEL && typeof customCall === 'string') ? customCall.trim() : '';
-  if (custom) return custom.includes('{name}') ? custom.replace('{name}', raw) : custom;
+  if (custom) return custom.includes('{name}') ? assistantFillCallTemplate(custom, raw) : custom;
   const stage = assistantBondStageByLevel(lv, assistantId);
-  return String(stage.call || '{name}').replace('{name}', raw);
+  return assistantFillCallTemplate(stage.call || '{name}', raw);
 };
 // セリフの中の {name} を、そのときの呼び方へ置き換える
 const assistantSpeak = (text, name, level, customCall, assistantId) =>
@@ -944,6 +969,9 @@ const ASSISTANT_BOND_LEVEL_REWARDS = Object.freeze({
   29: Object.freeze([{ type:'diamond', amount:100000000 }, { type:'rainbowPsyche', amount:20000 }, { type:'gameItem', itemId:'hero_proof', amount:5 }]),
   30: Object.freeze([{ type:'diamond', amount:500000000 }, { type:'gameItem', itemId:'hero_proof', amount:30 }]),
 });
+// 節目(2026-10-21 社長の決めた表のとおり)。ほかのLvより豪華なLv。ごほうび一覧で「節目」の札を付け、ヘルプ・更新履歴の説明もこれと同じLvで書く
+// (改善部 N4: 説明が「Lv10・15・20・25 は特に豪華」と表とずれていた。tools/assistant-bond-reward-check.js が文との食い違いを見張る)
+const ASSISTANT_BOND_REWARD_MILESTONES = Object.freeze([5, 10, 15, 20, 22, 25, 28, 30]);
 // 最初に配った量(#3241)。mh_assistant_bond_rewards_v1 に印がある節目は、この量をもう受け取っている。
 // 新しい量との差のぶんだけを追加で届けるために残す(多く渡した品は取り上げない)。★書き換えない
 const ASSISTANT_BOND_LEVEL_REWARDS_V1 = Object.freeze({
