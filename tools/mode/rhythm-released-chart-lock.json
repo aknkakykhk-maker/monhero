@@ -227,6 +227,8 @@
   "toward_the_stars_short/expert": "178a932c31f42eb8",
   "toward_the_stars_short/master": "95c9471b49f7b83f",
   "kaze_ga_soyogu/hell": "db4bdda49c855f43",
+  "anima/hell": "7887b99ea0847323",
+  "journey/hell": "9a4a42b90a175c0d",
   "sheriruth/hell": "36db1897510eb07b",
   "against_my_own_shadow/hell": "120eb36921577a4d",
   "grievous_lady/hell": "bf3cd2055776a186",
@@ -358,6 +360,14 @@
     "sad_song/hell",
     "sad_song_short/hell",
     "toward_the_stars_short/hell"
+   ]
+  },
+  {
+   "at": "2026-10-21 10:51",
+   "reason": "2026-10-21 社長「ジャーニーとアニマもヘル作って」: ANiMA・Journey に HELL を足した(既存の5難易度は変えていない)",
+   "changed": [
+    "anima/hell",
+    "journey/hell"
    ]
   }
  ]

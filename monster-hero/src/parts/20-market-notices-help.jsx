@@ -795,6 +795,17 @@ const helpDataRows = (id) => {
         [d.id, `満点 ${d.maxScore.toLocaleString()}点 → 上限ランク ${rhythmRankForScore(d.maxScore)}`]);
     // 体験版で遊べる難易度と、そのレベル・ノーツ数。ヘルプへ手で書き写すと、
     // 譜面を作り直すたびに数字だけ古くなるため、実データからそのまま表にする
+    // HELL がある曲(2026-10-21)。曲を足すたびに手で書き写すと古くなるので、HELL の譜面の一覧(RHYTHM_HELL_CHARTS)から作る。
+    // 曲名は公開曲の一覧の名前。並びは曲えらびと同じ順
+    case 'rhythmHellSongs': {
+      const songs = typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS : [];
+      const hell = typeof RHYTHM_HELL_CHARTS !== 'undefined' ? RHYTHM_HELL_CHARTS : {};
+      return songs.map(song => {
+        const chart = song && hell[song.songId];
+        if (!chart || !Number.isFinite(chart.level)) return null;
+        return [song.displayName || song.songId, `Lv.${chart.level} ／ ${chart.totalNotes}ノーツ`];
+      }).filter(Boolean);
+    }
     case 'rhythmDemoSongLevels': {
       const songs = typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS : [];
       const song = typeof rhythmDemoSong !== 'undefined' ? rhythmDemoSong(songs) : null;
@@ -914,6 +925,7 @@ const HELP_DATA_TITLES = {
   monsterLineages: 'モンスターの血統一覧',
   psycheRewards: '難易度ごとにもらえる虹のプシュケー',
   rhythmDifficultyRanks: '音ゲーの難易度ごとの満点と上限ランク',
+  rhythmHellSongs: 'HELL がある曲',
   rhythmDemoSongLevels: '体験版で遊べる難易度とレベル',
   rhythmDemoSongList: '先行公開している曲',
   rhythmDifficultySpread: '同じ難易度でも曲でどれだけ違うか',

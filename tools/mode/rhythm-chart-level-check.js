@@ -163,7 +163,9 @@ const runtime=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js')
   const all=[...RHYTHM_SONGS,...(RHYTHM_PROTO_SONGS||[])];
   // 2026-10-21 社長の指示で HELL を作り直した5譜面だけは v3 で測る(見分けにくい形なしで作り直したので、新しい測り方の値を出す)
   const REWORKED_V3=['toward_the_stars_short_hell_debug','rose_hell_debug','rose_short_hell_debug','sad_song_hell_debug','sad_song_short_hell_debug'];
-  check('いまある曲は全部、前の測り方(v1)で測る一覧に入っている(作り直した HELL 5譜面は v3)',all.length>0&&all.every(song=>L.levelFormulaFor(song.songId)===(REWORKED_V3.includes(song.songId)?'v3':'v1')),
+  // 2026-10-21 に足した ANiMA・Journey の HELL(新しく足した譜面なので v1 の一覧には入れない・v3 で測る)
+  REWORKED_V3.push('anima_hell_debug','journey_hell_debug');
+  check('いまある曲は全部、前の測り方(v1)で測る一覧に入っている(作り直した HELL 5譜面と、10/21 に足した HELL 2譜面は v3)',all.length>0&&all.every(song=>L.levelFormulaFor(song.songId)===(REWORKED_V3.includes(song.songId)?'v3':'v1')),
     all.filter(song=>L.levelFormulaFor(song.songId)!==(REWORKED_V3.includes(song.songId)?'v3':'v1')).map(song=>song.songId).join(','));
   check('一覧に無い曲(これから足す曲)はいちばん新しい測り方(v3・2026-10-21)',L.levelFormulaFor('a_new_song_not_listed')==='v3');
   check('v3 の重み: 見分けにくさ 10(× 近さ・短さ・形の score)・指を離した位置への持ち上げ・下ろしは 0.6 軽く(ほかは v2 と同じ)',L.SKY_CONFUSE_WORK===10&&L.SKY_NATURAL_RELIEF===.6

@@ -182,7 +182,7 @@ const CHANGELOG = [
    assistantBond assistantBondActions assistants difficulties extremeDifficulties
    items levelUpPointMultipliers loginBonus masuCosts missionsDaily missionsMonthly
    missionsWeekly monsterLineages monsterPower profileFrames psycheRewards
-   rhythmDemoSongLevels rhythmDemoSongList rhythmDifficultyRanks rhythmDifficultySpread
+   rhythmDemoSongLevels rhythmDemoSongList rhythmDifficultyRanks rhythmDifficultySpread rhythmHellSongs
    rhythmEventPlayBonus rhythmMonsterAbilities rhythmSongArtwork rhythmWeeklyRewards
    skipTickets speciesChallengeLineages speciesChallengeRewards teachings
    ```
