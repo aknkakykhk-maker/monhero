@@ -57,6 +57,8 @@ const dataTablePrelude = [
   // 難易度定義・ランクしきい値・曲と譜面の実データから作る。切り出すと材料が足りなくなるので
   // data/rhythm-mode.js をまるごと持ち込む（このファイルは単体で読める作りになっている）
   rhythmModeData,
+  // 表の行のノーツの見本の絵(2026-10-21)。描く部品は本体のものをそのまま持ち込む(サーバー描画では絵の中身は描かれず、canvas の枠だけ出る)
+  grab(source, 'const RhythmNoteSwatch = ', '// 数を直接打ち込む欄'),
   // イベントの回数ボーナスの表は data/rhythm-event.js の割合から作るので、そちらも持ち込む
   // (このファイルは単体で読める作りになっている。曲の一覧が要る所は typeof で守ってある)
   rhythmEventData,

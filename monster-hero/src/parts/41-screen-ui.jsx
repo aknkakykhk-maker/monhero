@@ -210,7 +210,8 @@ const ModalCloseButton = ({ onClick, label='閉じる', disabled=false }) => (
 // Intl.Segmenter で言葉の切れ目に印(U+200B)を入れ、JA_WRAP_STYLE(keep-all)で印の所だけで折る。
 // 1行に入らない長い言葉だけは overflow-wrap:anywhere で折る(はみ出さない)。Segmenter の無い古い端末では今までどおり
 let _jaSegmenter;
-const jaWrap = (text) => {
+// jaWrapPoints: 折ってよい所に印(U+200B)を入れた文字。jaWrap はその印を <wbr> に変えて描く
+const jaWrapPoints = (text) => {
   const s = String(text ?? '');
   if (!s) return s;
   try {
@@ -223,11 +224,35 @@ const jaWrap = (text) => {
       ? out + seg : `${out}\u200B${seg}`), '');
   } catch { return s; }
 };
+// ★印を文字(U+200B)のまま画面へ置かない(2026-10-21 窓口)。U+200B は見えなくても文字として残るので、画面の文をコピーすると混ざり、
+//   文を照らす検査(mode/raid-jack-screen-browser-check.js)も一致しなくなった。<wbr> は「ここで折ってよい」だけで、innerText にもコピーにも出ない
+const jaWrap = (text) => {
+  const s = jaWrapPoints(text);
+  if (typeof s !== 'string' || !s.includes('\u200B')) return s;
+  return s.split('\u200B').map((seg, i) => <React.Fragment key={i}>{i > 0 && <wbr/>}{seg}</React.Fragment>);
+};
 // textWrap:'wrap' … 画面全体の text-wrap:pretty(index.html)と anywhere が組み合わさると、語の中へ1字だけ動かすことがある(「スキッ／プ」)ので外す
 const JA_WRAP_STYLE = Object.freeze({ wordBreak: 'keep-all', overflowWrap: 'anywhere', textWrap: 'wrap' });
 // 短い説明・札向け(2026-10-21 社長決定・改善部の見直しの洗い出し)。言葉の切れ目で折り、行の長さもそろえる
 // (「音が出ないと／き」「得意な曲を／見る」のように、最後の行に1〜2字だけ残らない)。jaWrap と一緒に使う
 const JA_LABEL_STYLE = Object.freeze({ ...JA_WRAP_STYLE, textWrap: 'balance' });
+// ノーツの見本の絵(2026-10-21 社長「見た目とかちゃんとわかるようにしてほしい」)。ヘルプの表と助手のおしゃべりで使う。
+// 絵は演奏画面と同じ描き方(data/rhythm-mode.js の rhythmDrawNoteSwatch)で描く。手描きの絵や写真は使わない。kind は RHYTHM_NOTE_SWATCH_KINDS の id
+const RhythmNoteSwatch = ({ kind, width = 54, height = 42, className = '' }) => {
+  const ref = React.useRef(null);
+  React.useEffect(() => {
+    const c = ref.current;
+    if (!c || typeof rhythmDrawNoteSwatch !== 'function') return;
+    const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+    c.width = Math.round(width * dpr); c.height = Math.round(height * dpr);
+    const g = c.getContext('2d');
+    if (!g) return;
+    g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, width, height);
+    rhythmDrawNoteSwatch(g, kind, width, height);
+  }, [kind, width, height]);
+  const label = ((typeof RHYTHM_NOTE_SWATCH_KINDS !== 'undefined' ? RHYTHM_NOTE_SWATCH_KINDS : []).find(k => k.id === kind) || {}).label || kind;
+  return <canvas ref={ref} data-rhythm-note-swatch={kind} role="img" aria-label={`${label}の見た目`} className={className} style={{ display: 'block', width, height }} />;
+};
 // 数を直接打ち込む欄(2026-10-19 社長「マーケットのアイテムは直接数値入力で買えるようにしよう！」、
 // 2026-10-20「個数系のやつは基本的に直接入力があったほうがいいね」)。★個数・回数・枚数を選ぶ所は、この欄を使う
 //   (−/＋/MAX のボタンは呼ぶ側に並べたまま。tools/boot/count-input-check.js が見張る)

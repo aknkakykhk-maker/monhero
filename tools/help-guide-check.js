@@ -45,8 +45,16 @@ check('項目に必要な項目がそろっている', topics.every(t => t.id &&
 const BLOCK_TYPES = ['p', 'note', 'list', 'steps', 'kv', 'data', 'video'];
 const blocks = topics.flatMap(t => t.blocks);
 check('ブロックの種類が想定内', blocks.every(b => BLOCK_TYPES.includes(b.t)), [...new Set(blocks.map(b => b.t))].join('/'));
+// ノーツの見本の絵の種類(data/rhythm-mode.js の RHYTHM_NOTE_SWATCH_KINDS の id)
+const NOTE_SWATCH_KINDS = (() => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'monster-hero/data/rhythm-mode.js'), 'utf8');
+  const i = src.indexOf('const RHYTHM_NOTE_SWATCH_KINDS=');
+  return i < 0 ? [] : [...src.slice(i, src.indexOf(']);', i)).matchAll(/\{id:'([A-Z_]+)'/g)].map(m => m[1]);
+})();
 check('本文のブロックが空でない', blocks.every(b => {
-  if (b.t === 'kv') return b.rows.length > 0 && b.rows.every(r => r.length === 2 && r[0] && r[1]);
+  // 3つ目は、その行のノーツの見本の絵(2026-10-21)。{notes:[…]} だけ・種類は RHYTHM_NOTE_SWATCH_KINDS にあるものだけ
+  if (b.t === 'kv') return b.rows.length > 0 && b.rows.every(r => r[0] && r[1] && (r.length === 2
+    || (r.length === 3 && r[2] && Object.keys(r[2]).join() === 'notes' && Array.isArray(r[2].notes) && r[2].notes.length > 0 && r[2].notes.every(k => NOTE_SWATCH_KINDS.includes(k)))));
   if (b.t === 'list' || b.t === 'steps') return b.items.length > 0 && b.items.every(Boolean);
   if (b.t === 'data') return !!b.id;  // 中身は helpDataRows() が作る(tools/help-coverage-check.js で件数を照合)
   return !!b.text;

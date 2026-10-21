@@ -82,10 +82,14 @@ const serve=()=>new Promise(r=>{const s=http.createServer((req,res)=>{
     for(const [name,vp,file] of [['縦390×844',{width:390,height:844},'portrait-390.png'],['横844×390',{width:844,height:390},'landscape-844.png']]){
       const page=await openDex(vp);
       const info=await page.evaluate(()=>{const items=[...document.querySelectorAll('[data-rhythm-note-dex-item]')];
-        return {n:items.length,withText:items.filter(x=>x.querySelector('[data-rhythm-note-dex-text]')&&x.querySelector('[data-rhythm-note-dex-text]').textContent.trim().length>4).length,
+        // 一覧の絵(開発部の RhythmNoteSwatch・演奏画面と同じ描き方)。canvas に何か描かれているか(透明でない点がある)
+        const drawn=items.filter(x=>{const c=x.querySelector('[data-rhythm-note-dex-swatch] canvas');if(!c||!c.width)return false;
+          try{const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;for(let i=3;i<d.length;i+=4)if(d[i]>0)return true;}catch{return true;}return false;}).length;
+        return {drawn,n:items.length,withText:items.filter(x=>x.querySelector('[data-rhythm-note-dex-text]')&&x.querySelector('[data-rhythm-note-dex-text]').textContent.trim().length>4).length,
           over:document.documentElement.scrollWidth>innerWidth+1};});
       ok(`${name}: 図鑑に10種類が並び、どれにも説明が付く`,info.n===10&&info.withText===10,`${info.withText}/${info.n}`);
       ok(`${name}: 横にはみ出さない`,!info.over);
+      ok(`${name}: 10種類とも一覧に絵が出る(演奏画面と同じ描き方)`,info.drawn===10,`${info.drawn}/${info.n}`);
       if(SHOTS){fs.mkdirSync(SHOTS,{recursive:true});await page.screenshot({path:path.join(SHOTS,file)});}
       if(name.startsWith('縦')){
         for(const id of ['tap','chord','hold','slide','flick','sideFlick','endFlick','monster','skyTap','skySlide']){

@@ -468,7 +468,7 @@ function RhythmNoteDexScreen({onBack,onPlay}){
             <div key={entry.id} data-rhythm-note-dex-item={entry.id} className="flex flex-col gap-2 rounded-2xl border border-white/10 bg-slate-900/80 p-3">
               <div className="flex min-w-0 items-start gap-3">
               {/* 一覧の絵は、演奏画面と同じ描き方の部品(開発部の RhythmNoteSwatch)。部品がまだ無い版では出さない */}
-              {typeof RhythmNoteSwatch==='function'&&entry.swatch&&<span data-rhythm-note-dex-swatch={entry.swatch} className="shrink-0"><RhythmNoteSwatch kind={entry.swatch} size={56}/></span>}
+              {typeof RhythmNoteSwatch==='function'&&entry.swatch&&<span data-rhythm-note-dex-swatch={entry.swatch} className="shrink-0"><RhythmNoteSwatch kind={entry.swatch} width={64} height={48}/></span>}
               <div className="min-w-0 flex-1">
                 <b data-rhythm-note-dex-name className="block text-[13px] font-black text-amber-100">{row.label||entry.name}</b>
                 {row.text&&<span data-rhythm-note-dex-text className="mt-1 block text-[11px] leading-relaxed text-slate-300">{row.text}</span>}

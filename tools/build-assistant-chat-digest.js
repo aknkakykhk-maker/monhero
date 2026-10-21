@@ -54,6 +54,9 @@ const TERM_GROUPS = [
   { variants: ['M/B管理'], topic: 'home/roster' },
 ];
 
+// ノーツの見た目の表を写すヘルプの項目(カテゴリid/項目id)。表(kv)の行をそのまま毎回渡す部分へ入れる
+const LOOK_TOPICS = ['rhythm/rhythm-note-types', 'rhythm/rhythm-hell'];
+
 const loadScript = (file, names) => {
   const src = fs.readFileSync(path.join(DATA, file), 'utf8');
   const ctx = vm.createContext({ console, Math, Date, JSON, Object, Array, String, Number });
@@ -154,6 +157,23 @@ const buildDigest = () => {
     }
     const head = g.variants.length > 1 ? `${g.variants[0]}(＝${g.variants.slice(1).join('・')}。どれも同じもの)` : g.variants[0];
     glossary.push(`・${head}: ${meaning || '(ヘルプに説明なし)'}${g.variants.length > 1 && calls.length ? ` 助手の呼び方: ${calls.join('、')}` : ''}`);
+  }
+  // ---- ノーツの見た目の表(2026-10-21 社長「みゅあがノーツの色を作って答えた」TAP を白っぽい丸・HELL の空のノーツを紫の線と言った) ----
+  // ヘルプの「ノーツの種類と取り方」「難易度 HELL と空のノーツ」の表(kv)を、ヘルプから機械で写す(手で書き写さない。ヘルプを直せば次のビルドで追従する)。
+  // 項目の本文は TOPIC_MAX_CHARS で切られ、しかも質問の言葉で選ばれたときしか渡らないので、毎回渡す部分(用語の後ろ)へ入れる。
+  // 決まりも一緒に入れる(中継役の決まり RULES_TEXT を変えるには出し直しが要るため、ここに書いて公開だけで効くようにした)
+  const looks = [];
+  for (const id of LOOK_TOPICS) {
+    const [catId, topicId] = id.split('/');
+    const cat = (help.HELP_CATEGORIES || []).find(c => c.id === catId);
+    const topic = cat && (cat.topics || []).find(t => t.id === topicId);
+    if (!topic || !released(cat) || !released(topic)) continue;
+    const rows = (topic.blocks || []).filter(b => b && b.t === 'kv' && released(b)).flatMap(b => b.rows || []);
+    if (rows.length) looks.push(`■ヘルプ「${clean(topic.title)}」の表\n${rows.map(r => `・${clean(r[0])}: ${clean(r[1])}`).join('\n')}`);
+  }
+  if (looks.length) {
+    glossary.push('', 'ノーツの見た目(色・形)。本当なのはここに書いてあることだけ:', ...looks,
+      '決まり: ノーツや画面の色・形・数字を聞かれたら、この表と渡されたヘルプの項目に書いてあることだけで答える。書いていない色・形・数字や、「難易度やテーマで色が変わる」のような書いていない仕組みは作らない。分からないところは「ヘルプの「ノーツの種類と取り方」(空のノーツは「難易度 HELL と空のノーツ」)を見てね」と案内する。');
   }
   const assistants = {};
   for (const x of a.ASSISTANTS || []) {

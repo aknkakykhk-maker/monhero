@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c81624ffb1f0c75d
+// source-sha256: 9761536f34c6fb9c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-21 14:46";
+const BUILD_DATE = "2026-10-21 15:22";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -16748,7 +16748,15 @@ const renderHelpBlocks = (blocks, accent) => (blocks || []).map((b, i) => {
     className: `flex gap-3 px-4 py-2.5 ${j > 0 ? 'border-t border-white/5' : ''}`
   }, React.createElement("span", {
     className: "shrink-0 w-24 text-[11px] font-black text-slate-400 leading-tight"
-  }, r[0]), React.createElement("span", {
+  }, Array.isArray(r[2]?.notes) && r[2].notes.length > 0 && React.createElement("span", {
+    "data-help-note-swatches": true,
+    className: "mb-1 flex gap-1"
+  }, r[2].notes.map(k => React.createElement(RhythmNoteSwatch, {
+    key: k,
+    kind: k,
+    width: r[2].notes.length > 1 ? 44 : 54,
+    height: r[2].notes.length > 1 ? 34 : 42
+  }))), r[0]), React.createElement("span", {
     className: "flex-1 text-[11px] text-white leading-relaxed"
   }, r[1]))));
   if (b.t === 'data') {
@@ -49038,7 +49046,7 @@ const ModalCloseButton = ({
   className: "mh-button mh-button-secondary w-full min-h-[48px] rounded-2xl border border-white/20 bg-slate-900 font-black active:scale-[.98] disabled:opacity-40"
 }, label);
 let _jaSegmenter;
-const jaWrap = text => {
+const jaWrapPoints = text => {
   const s = String(text ?? '');
   if (!s) return s;
   try {
@@ -49052,6 +49060,13 @@ const jaWrap = text => {
     return s;
   }
 };
+const jaWrap = text => {
+  const s = jaWrapPoints(text);
+  if (typeof s !== 'string' || !s.includes('\u200B')) return s;
+  return s.split('\u200B').map((seg, i) => React.createElement(React.Fragment, {
+    key: i
+  }, i > 0 && React.createElement("wbr", null), seg));
+};
 const JA_WRAP_STYLE = Object.freeze({
   wordBreak: 'keep-all',
   overflowWrap: 'anywhere',
@@ -49061,6 +49076,39 @@ const JA_LABEL_STYLE = Object.freeze({
   ...JA_WRAP_STYLE,
   textWrap: 'balance'
 });
+const RhythmNoteSwatch = ({
+  kind,
+  width = 54,
+  height = 42,
+  className = ''
+}) => {
+  const ref = React.useRef(null);
+  React.useEffect(() => {
+    const c = ref.current;
+    if (!c || typeof rhythmDrawNoteSwatch !== 'function') return;
+    const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+    c.width = Math.round(width * dpr);
+    c.height = Math.round(height * dpr);
+    const g = c.getContext('2d');
+    if (!g) return;
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, width, height);
+    rhythmDrawNoteSwatch(g, kind, width, height);
+  }, [kind, width, height]);
+  const label = ((typeof RHYTHM_NOTE_SWATCH_KINDS !== 'undefined' ? RHYTHM_NOTE_SWATCH_KINDS : []).find(k => k.id === kind) || {}).label || kind;
+  return React.createElement("canvas", {
+    ref: ref,
+    "data-rhythm-note-swatch": kind,
+    role: "img",
+    "aria-label": `${label}の見た目`,
+    className: className,
+    style: {
+      display: 'block',
+      width,
+      height
+    }
+  });
+};
 const countInputClamp = (n, min, max) => Math.min(Math.max(min, n), Math.max(min, max));
 const CountInput = ({
   value,
@@ -53922,7 +53970,8 @@ function RhythmNoteDexScreen({
       className: "shrink-0"
     }, React.createElement(RhythmNoteSwatch, {
       kind: entry.swatch,
-      size: 56
+      width: 64,
+      height: 48
     })), React.createElement("div", {
       className: "min-w-0 flex-1"
     }, React.createElement("b", {
@@ -79904,6 +79953,11 @@ const ASSISTANT_CHAT_MEMO_FIELDS = {
 const ASSISTANT_CHAT_LOG_LIMIT = 60;
 const ASSISTANT_CHAT_SEND_STEP = 10;
 const ASSISTANT_CHAT_SEND_MAX = 21;
+const assistantChatNoteKinds = (text, prevUserText) => {
+  if (typeof rhythmNoteSwatchKindsInText !== 'function') return [];
+  if (!/ノーツ/.test(`${text || ''}${prevUserText || ''}`)) return [];
+  return rhythmNoteSwatchKindsInText(text);
+};
 const ASSISTANT_CHAT_TEXT_MAX = 200;
 const assistantChatSendWindow = list => {
   if (list.length <= ASSISTANT_CHAT_SEND_MAX) return list;
@@ -80124,7 +80178,19 @@ function AssistantChatWindow({
     style: m.role === 'user' ? undefined : {
       borderColor: accent
     }
-  }, m.text))), sending && React.createElement("p", {
+  }, m.text, m.role !== 'user' && assistantChatNoteKinds(m.text, (log.slice(0, i).reverse().find(x => x.role === 'user') || {}).text).length > 0 && React.createElement("span", {
+    "data-assistant-chat-notes": true,
+    className: "mt-2 flex flex-wrap gap-1.5 whitespace-normal"
+  }, assistantChatNoteKinds(m.text, (log.slice(0, i).reverse().find(x => x.role === 'user') || {}).text).map(k => React.createElement("span", {
+    key: k,
+    className: "flex flex-col items-center gap-0.5 rounded-lg bg-black/40 px-1 py-1"
+  }, React.createElement(RhythmNoteSwatch, {
+    kind: k,
+    width: 44,
+    height: 34
+  }), React.createElement("span", {
+    className: "text-[9px] font-bold leading-none text-slate-300"
+  }, (RHYTHM_NOTE_SWATCH_KINDS.find(x => x.id === k) || {}).label || k))))))), sending && React.createElement("p", {
     "data-assistant-chat-sending": true,
     className: "text-[11px] text-slate-400"
   }, assistant.name, "が考え中…")), React.createElement("div", {

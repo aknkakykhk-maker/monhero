@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 28742c53cb9b0697
+// generated-sha256: cc0017d9118b7713
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-21 14:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-21 15:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11933,7 +11933,8 @@ const renderHelpBlocks = (blocks, accent) => (blocks || []).map((b, i) => {
   if(b.t==='note') return <div key={i} className="rounded-2xl p-4 border" style={{borderColor:`${accent}55`,backgroundColor:'rgba(0,0,0,0.5)'}}>{b.title&&<div className="text-[11px] font-black text-white mb-1">{b.title}</div>}<div className="text-[12px] text-slate-300 leading-relaxed">{b.text}</div></div>;
   if(b.t==='list') return <ul key={i} className="text-[12px] text-slate-300 leading-relaxed space-y-2 list-disc pl-5">{b.items.map((x,j)=><li key={j}>{x}</li>)}</ul>;
   if(b.t==='steps') return <div key={i} className="space-y-2.5">{b.items.map((x,j)=>(<div key={j} className="flex items-start gap-3"><span className="shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-black text-black" style={{backgroundColor:accent}}>{j+1}</span><span className="text-[12px] text-slate-300 leading-relaxed pt-0.5">{x}</span></div>))}</div>;
-  if(b.t==='kv') return <div key={i} className="rounded-2xl bg-black/50 border border-white/5 overflow-hidden">{b.rows.map((r,j)=>(<div key={j} className={`flex gap-3 px-4 py-2.5 ${j>0?'border-t border-white/5':''}`}><span className="shrink-0 w-24 text-[11px] font-black text-slate-400 leading-tight">{r[0]}</span><span className="flex-1 text-[11px] text-white leading-relaxed">{r[1]}</span></div>))}</div>;
+  // 表の行の3つ目 {notes:[…]} は、その行のノーツの見本の絵(2026-10-21)。演奏画面と同じ描き方の RhythmNoteSwatch で、見出しの上に並べる
+  if(b.t==='kv') return <div key={i} className="rounded-2xl bg-black/50 border border-white/5 overflow-hidden">{b.rows.map((r,j)=>(<div key={j} className={`flex gap-3 px-4 py-2.5 ${j>0?'border-t border-white/5':''}`}><span className="shrink-0 w-24 text-[11px] font-black text-slate-400 leading-tight">{Array.isArray(r[2]?.notes)&&r[2].notes.length>0&&<span data-help-note-swatches className="mb-1 flex gap-1">{r[2].notes.map(k=><RhythmNoteSwatch key={k} kind={k} width={r[2].notes.length>1?44:54} height={r[2].notes.length>1?34:42}/>)}</span>}{r[0]}</span><span className="flex-1 text-[11px] text-white leading-relaxed">{r[1]}</span></div>))}</div>;
   // 実データから作る表。難易度・アイテム・ログボ・ミッションはここで全件出るので取りこぼさない
   if(b.t==='data'){const rows=helpDataRows(b.id);if(rows.length===0)return null;return(<div key={i}><div className="text-[10px] font-black mb-1 tracking-wider" style={{color:accent}}>{HELP_DATA_TITLES[b.id]||''}</div><div className="rounded-2xl bg-black/50 border border-white/5 overflow-hidden">{rows.map((r,j)=>(<div key={j} className={`flex gap-3 px-4 py-2.5 ${j>0?'border-t border-white/5':''}`}><span className="shrink-0 w-24 text-[11px] font-black text-slate-400 leading-tight">{r[0]}</span><span className="flex-1 text-[11px] text-white leading-relaxed">{r[1]}</span></div>))}</div></div>);}
   return <p key={i} className="text-[12px] text-slate-200 leading-relaxed">{b.text}</p>;
@@ -30954,7 +30955,8 @@ const ModalCloseButton = ({ onClick, label='閉じる', disabled=false }) => (
 // Intl.Segmenter で言葉の切れ目に印(U+200B)を入れ、JA_WRAP_STYLE(keep-all)で印の所だけで折る。
 // 1行に入らない長い言葉だけは overflow-wrap:anywhere で折る(はみ出さない)。Segmenter の無い古い端末では今までどおり
 let _jaSegmenter;
-const jaWrap = (text) => {
+// jaWrapPoints: 折ってよい所に印(U+200B)を入れた文字。jaWrap はその印を <wbr> に変えて描く
+const jaWrapPoints = (text) => {
   const s = String(text ?? '');
   if (!s) return s;
   try {
@@ -30967,11 +30969,35 @@ const jaWrap = (text) => {
       ? out + seg : `${out}\u200B${seg}`), '');
   } catch { return s; }
 };
+// ★印を文字(U+200B)のまま画面へ置かない(2026-10-21 窓口)。U+200B は見えなくても文字として残るので、画面の文をコピーすると混ざり、
+//   文を照らす検査(mode/raid-jack-screen-browser-check.js)も一致しなくなった。<wbr> は「ここで折ってよい」だけで、innerText にもコピーにも出ない
+const jaWrap = (text) => {
+  const s = jaWrapPoints(text);
+  if (typeof s !== 'string' || !s.includes('\u200B')) return s;
+  return s.split('\u200B').map((seg, i) => <React.Fragment key={i}>{i > 0 && <wbr/>}{seg}</React.Fragment>);
+};
 // textWrap:'wrap' … 画面全体の text-wrap:pretty(index.html)と anywhere が組み合わさると、語の中へ1字だけ動かすことがある(「スキッ／プ」)ので外す
 const JA_WRAP_STYLE = Object.freeze({ wordBreak: 'keep-all', overflowWrap: 'anywhere', textWrap: 'wrap' });
 // 短い説明・札向け(2026-10-21 社長決定・改善部の見直しの洗い出し)。言葉の切れ目で折り、行の長さもそろえる
 // (「音が出ないと／き」「得意な曲を／見る」のように、最後の行に1〜2字だけ残らない)。jaWrap と一緒に使う
 const JA_LABEL_STYLE = Object.freeze({ ...JA_WRAP_STYLE, textWrap: 'balance' });
+// ノーツの見本の絵(2026-10-21 社長「見た目とかちゃんとわかるようにしてほしい」)。ヘルプの表と助手のおしゃべりで使う。
+// 絵は演奏画面と同じ描き方(data/rhythm-mode.js の rhythmDrawNoteSwatch)で描く。手描きの絵や写真は使わない。kind は RHYTHM_NOTE_SWATCH_KINDS の id
+const RhythmNoteSwatch = ({ kind, width = 54, height = 42, className = '' }) => {
+  const ref = React.useRef(null);
+  React.useEffect(() => {
+    const c = ref.current;
+    if (!c || typeof rhythmDrawNoteSwatch !== 'function') return;
+    const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+    c.width = Math.round(width * dpr); c.height = Math.round(height * dpr);
+    const g = c.getContext('2d');
+    if (!g) return;
+    g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, width, height);
+    rhythmDrawNoteSwatch(g, kind, width, height);
+  }, [kind, width, height]);
+  const label = ((typeof RHYTHM_NOTE_SWATCH_KINDS !== 'undefined' ? RHYTHM_NOTE_SWATCH_KINDS : []).find(k => k.id === kind) || {}).label || kind;
+  return <canvas ref={ref} data-rhythm-note-swatch={kind} role="img" aria-label={`${label}の見た目`} className={className} style={{ display: 'block', width, height }} />;
+};
 // 数を直接打ち込む欄(2026-10-19 社長「マーケットのアイテムは直接数値入力で買えるようにしよう！」、
 // 2026-10-20「個数系のやつは基本的に直接入力があったほうがいいね」)。★個数・回数・枚数を選ぶ所は、この欄を使う
 //   (−/＋/MAX のボタンは呼ぶ側に並べたまま。tools/boot/count-input-check.js が見張る)
@@ -33869,7 +33895,7 @@ function RhythmNoteDexScreen({onBack,onPlay}){
             <div key={entry.id} data-rhythm-note-dex-item={entry.id} className="flex flex-col gap-2 rounded-2xl border border-white/10 bg-slate-900/80 p-3">
               <div className="flex min-w-0 items-start gap-3">
               {/* 一覧の絵は、演奏画面と同じ描き方の部品(開発部の RhythmNoteSwatch)。部品がまだ無い版では出さない */}
-              {typeof RhythmNoteSwatch==='function'&&entry.swatch&&<span data-rhythm-note-dex-swatch={entry.swatch} className="shrink-0"><RhythmNoteSwatch kind={entry.swatch} size={56}/></span>}
+              {typeof RhythmNoteSwatch==='function'&&entry.swatch&&<span data-rhythm-note-dex-swatch={entry.swatch} className="shrink-0"><RhythmNoteSwatch kind={entry.swatch} width={64} height={48}/></span>}
               <div className="min-w-0 flex-1">
                 <b data-rhythm-note-dex-name className="block text-[13px] font-black text-amber-100">{row.label||entry.name}</b>
                 {row.text&&<span data-rhythm-note-dex-text className="mt-1 block text-[11px] leading-relaxed text-slate-300">{row.text}</span>}
@@ -48307,6 +48333,14 @@ const ASSISTANT_CHAT_LOG_LIMIT = 60;
 // 送る会話は直近10往復まで。10件ずつ区切って送り、前のほうの並びを毎回変えない(中継役でキャッシュが効く)
 const ASSISTANT_CHAT_SEND_STEP = 10;
 const ASSISTANT_CHAT_SEND_MAX = 21;
+// 助手の答えにノーツの見本の絵を出す(2026-10-21 社長「見た目とかちゃんとわかるようにしてほしい」)。
+// どの絵を出すかは答えの文に出たノーツの名前から機械で選ぶ(rhythmNoteSwatchKindsInText)。絵は演奏画面と同じ描き方の RhythmNoteSwatch だけなので、作り話の色は出ない。
+// 「ボタンをタップ」のような言葉で絵が出ないよう、答えかその前のプレイヤーの発言に「ノーツ」があるときだけ出す
+const assistantChatNoteKinds = (text, prevUserText) => {
+  if (typeof rhythmNoteSwatchKindsInText !== 'function') return [];
+  if (!/ノーツ/.test(`${text || ''}${prevUserText || ''}`)) return [];
+  return rhythmNoteSwatchKindsInText(text);
+};
 const ASSISTANT_CHAT_TEXT_MAX = 200;
 const assistantChatSendWindow = (list) => {
   if (list.length <= ASSISTANT_CHAT_SEND_MAX) return list;
@@ -48456,7 +48490,14 @@ function AssistantChatWindow({ assistant, playerName, callName, bondLevel, bondT
           {log.length === 0 && <p className="text-[11px] text-slate-400 leading-relaxed">{assistant.greeting || '話しかけてみてね'}</p>}
           {log.map((m, i) => (
             <div key={i} data-assistant-chat-msg={m.role} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <p className={`max-w-[80%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-[12px] leading-relaxed ${m.role === 'user' ? 'bg-slate-700 text-white' : 'bg-slate-800/80 text-slate-100 border'}`} style={m.role === 'user' ? undefined : { borderColor: accent }}>{m.text}</p>
+              <p className={`max-w-[80%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-[12px] leading-relaxed ${m.role === 'user' ? 'bg-slate-700 text-white' : 'bg-slate-800/80 text-slate-100 border'}`} style={m.role === 'user' ? undefined : { borderColor: accent }}>{m.text}{m.role !== 'user' && assistantChatNoteKinds(m.text, (log.slice(0, i).reverse().find(x => x.role === 'user') || {}).text).length > 0 && (
+                <span data-assistant-chat-notes className="mt-2 flex flex-wrap gap-1.5 whitespace-normal">
+                  {assistantChatNoteKinds(m.text, (log.slice(0, i).reverse().find(x => x.role === 'user') || {}).text).map(k => (
+                    <span key={k} className="flex flex-col items-center gap-0.5 rounded-lg bg-black/40 px-1 py-1">
+                      <RhythmNoteSwatch kind={k} width={44} height={34}/>
+                      <span className="text-[9px] font-bold leading-none text-slate-300">{(RHYTHM_NOTE_SWATCH_KINDS.find(x => x.id === k) || {}).label || k}</span>
+                    </span>))}
+                </span>)}</p>
             </div>
           ))}
           {sending && <p data-assistant-chat-sending className="text-[11px] text-slate-400">{assistant.name}が考え中…</p>}
