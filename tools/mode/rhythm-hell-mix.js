@@ -45,6 +45,41 @@ const SONGS={sheriruth:{marker:'sheriruth-v3',zero:711.6-2594.75,beat:324.342,le
   sad_song:{marker:'sad-song-v3',zero:99.5,beat:348.818,levelRe:/const sadSongHellChart=mhChart\((\d+),/,source:'audio',variant:2,crosses:'auto',crossUpper:'mover',crossDepth:-1},
   sad_song_short:{marker:'sad-song-short-v3',zero:99.5,beat:348.818,levelRe:/const sadSongShortHellChart=mhChart\((\d+),/,source:'audio',variant:3,crosses:'auto',crossUpper:'mover',crossDepth:-1},
   // Toward the Stars, Paradise or Truth short ver.(hitoyakyuko・2026-10-19・新曲は基本 HELL あり)
+  // 全曲ヘル(2026-10-21 社長「全曲ヘルを実装して」)。marker・track は rhythm-runtime-notes.js の RELEASED_MARKERS・RELEASED_TRACKS、拍の頭と1拍は解析の timing
+  mf_ichika_mix:{marker:'atsu-cup-theme-v3',track:'atsu_cup_theme',zero:40,beat:355.0296,levelRe:/const mfIchikaMixHellChart=mhChart\((\d+),/,source:'audio',variant:2,crosses:'auto',crossUpper:'mover',crossDepth:-1},
+  monster_hero:{marker:'monster-hero-v4',track:'monster_hero_theme',zero:206,beat:346.515,levelRe:/const monsterHeroHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1},
+  monster_hero_another:{marker:'monster-hero-theme-alt-v3',track:'monster_hero_theme_alt',zero:1268.3,beat:350.678,levelRe:/const monsterHeroAnotherHellChart=mhChart\((\d+),/,source:'audio',variant:1,crosses:'auto',crossUpper:'mover',crossDepth:-1},
+  six_eternel_beat:{marker:'six-eternel-beat-v3',track:'six_eternel_beat',zero:562.4,beat:217.3992,levelRe:/const sixEternelBeatHellChart=mhChart\((\d+),/,source:'audio',variant:2,crosses:'auto',crossUpper:'mover',crossDepth:-1},
+  six_eternel_remix:{marker:'six-eternel-remix-beat-v3',track:'six_eternel_remix_beat',zero:1452.6,beat:368.91,levelRe:/const sixEternelRemixHellChart=mhChart\((\d+),/,source:'audio',variant:3,crosses:'auto',crossUpper:'mover',crossDepth:-1},
+  stay_with_me:{marker:'pandora-boss-v3',track:'pandora_boss',zero:440,beat:352.9619,levelRe:/const stayWithMeHellChart=mhChart\((\d+),/,source:'audio',variant:1,crosses:'auto',crossUpper:'mover',crossDepth:-1},
+  kiki_issen:{marker:'eiki-boss-v3',track:'eiki_boss',zero:188.4,beat:387.07,levelRe:/const kikiIssenHellChart=mhChart\((\d+),/,source:'audio',variant:2,crosses:'auto',crossUpper:'mover',crossDepth:-1},
+  close_to_your_heart:{marker:'close-to-your-heart-v4',track:'close_to_your_heart',zero:570.5,beat:461.655,levelRe:/const closeToYourHeartHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1},
+  eiki_boss_remix:{marker:'eiki-boss-remix-v3',track:'eiki_boss_remix',zero:992.5,beat:389.196,levelRe:/const eikiBossRemixHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1},
+  pandora_boss_remix:{marker:'pandora-boss-remix-v3',track:'pandora_boss_remix',zero:452.7,beat:371.017,levelRe:/const pandoraBossRemixHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1},
+  dullahan:{marker:'dullahan-v3',track:'dullahan',zero:602.7,beat:400.002,levelRe:/const dullahanHellChart=mhChart\((\d+),/,source:'audio',variant:3,crosses:'auto',crossUpper:'mover',crossDepth:-1},
+  dullahan_clockwork:{marker:'dullahan-clockwork-v3',track:'dullahan_clockwork',zero:99.8,beat:394.732,levelRe:/const dullahanClockworkHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1},
+  toriko:{marker:'toriko-v3',track:'toriko',zero:32.2,beat:444.472,levelRe:/const torikoHellChart=mhChart\((\d+),/,source:'audio',variant:2,crosses:'auto',crossUpper:'mover',crossDepth:-1},
+  '4u_hitasura':{marker:'4u-hitasura-v3',track:'4u_hitasura',zero:1442.8,beat:413.812,levelRe:/const song4uHitasuraHellChart=mhChart\((\d+),/,source:'audio',variant:2,crosses:'auto',crossUpper:'mover',crossDepth:-1},
+  kindan_no_resistance:{marker:'kindan-no-resistance-v3',track:'kindan_no_resistance',zero:76.1,beat:333.339,levelRe:/const kindanNoResistanceHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1},
+  crossing_field:{marker:'crossing-field-v3',track:'crossing_field',zero:792.7,beat:335.2517,levelRe:/const crossingFieldHellChart=mhChart\((\d+),/,source:'audio',variant:3,crosses:'auto',crossUpper:'mover',crossDepth:-1},
+  nothing_without_you:{marker:'nothing-without-you-v3',track:'nothing_without_you',zero:83.1,beat:309.271,levelRe:/const nothingWithoutYouHellChart=mhChart\((\d+),/,source:'audio',variant:3,crosses:'auto',crossUpper:'mover',crossDepth:-1},
+  mou_hitotsu_no_sekai_e:{marker:'mou-hitotsu-no-sekai-e-v3',track:'mou_hitotsu_no_sekai_e',zero:384.1,beat:320,levelRe:/const mouHitotsuNoSekaiEHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1},
+  senjou_no_shippuu:{marker:'senjou-no-shippuu-v3',track:'senjou_no_shippuu',zero:321.3,beat:428.676,levelRe:/const senjouNoShippuuHellChart=mhChart\((\d+),/,source:'audio',variant:3,crosses:'auto',crossUpper:'mover',crossDepth:-1},
+  makutsu_no_senritsu:{marker:'makutsu-no-senritsu-v3',track:'makutsu_no_senritsu',zero:38,beat:416.9475,levelRe:/const makutsuNoSenritsuHellChart=mhChart\((\d+),/,source:'audio',variant:2,crosses:'auto',crossUpper:'mover',crossDepth:-1},
+  the_city_beneath_the_comets:{marker:'the-city-beneath-the-comets-v3',track:'the_city_beneath_the_comets',zero:1054.3,beat:351.976,levelRe:/const theCityBeneathTheCometsHellChart=mhChart\((\d+),/,source:'audio',variant:3,crosses:'auto',crossUpper:'mover',crossDepth:-1},
+  freedom_dive:{marker:'freedom-dive-v3',track:'freedom_dive',zero:117,beat:270.0027,levelRe:/const freedomDiveHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1},
+  only_my_railgun:{marker:'only-my-railgun-v3',track:'only_my_railgun',zero:152.9,beat:419.5804,levelRe:/const onlyMyRailgunHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1},
+  big_bridge_no_shitou:{marker:'big-bridge-no-shitou-v3',track:'big_bridge_no_shitou',zero:349.6,beat:337.6097,levelRe:/const bigBridgeNoShitouHellChart=mhChart\((\d+),/,source:'audio',variant:1,crosses:'auto',crossUpper:'mover',crossDepth:-1},
+  rising_hope:{marker:'rising-hope-v3',track:'rising_hope',zero:551.7,beat:315.7895,levelRe:/const risingHopeHellChart=mhChart\((\d+),/,source:'audio',variant:3,crosses:'auto',crossUpper:'mover',crossDepth:-1},
+  haruka:{marker:'haruka-v3',track:'haruka',zero:104,beat:300.06,levelRe:/const harukaHellChart=mhChart\((\d+),/,source:'audio',variant:3,crosses:'auto',crossUpper:'mover',crossDepth:-1},
+  stay_with_me_short:{marker:'stay-with-me-short-v3',track:'stay_with_me_short',zero:474,beat:352.9619,levelRe:/const stayWithMeShortHellChart=mhChart\((\d+),/,source:'audio',variant:3,crosses:'auto',crossUpper:'mover',crossDepth:-1},
+  kiki_issen_short:{marker:'kiki-issen-short-v3',track:'kiki_issen_short',zero:234.4,beat:387.0693,levelRe:/const kikiIssenShortHellChart=mhChart\((\d+),/,source:'audio',variant:3,crosses:'auto',crossUpper:'mover',crossDepth:-1},
+  crazy_party_night:{marker:'crazy-party-night-v3',track:'crazy_party_night',zero:434.1,beat:468.777,levelRe:/const crazyPartyNightHellChart=mhChart\((\d+),/,source:'audio',variant:1,crosses:'auto',crossUpper:'mover',crossDepth:-1},
+  crazy_party_night_full:{marker:'crazy-party-night-full-v3',track:'crazy_party_night_full',zero:456,beat:468.7793,levelRe:/const crazyPartyNightFullHellChart=mhChart\((\d+),/,source:'audio',variant:3,crosses:'auto',crossUpper:'mover',crossDepth:-1},
+  emerald_rush:{marker:'emerald-rush-v3',track:'emerald_rush',zero:487.8,beat:396.021,levelRe:/const emeraldRushHellChart=mhChart\((\d+),/,source:'audio',variant:2,crosses:'auto',crossUpper:'mover',crossDepth:-1},
+  wrath_of_the_thorn_king:{marker:'wrath-of-the-thorn-king-v3',track:'wrath_of_the_thorn_king',zero:234,beat:424.0073,levelRe:/const wrathOfTheThornKingHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1},
+  monster:{marker:'monster-v3',track:'monster',zero:494,beat:444.4115,levelRe:/const monsterHellChart=mhChart\((\d+),/,source:'audio',variant:3,crosses:'auto',crossUpper:'mover',crossDepth:-1},
+  monster_short:{marker:'monster-short-v3',track:'monster_short',zero:494,beat:444.4115,levelRe:/const monsterShortHellChart=mhChart\((\d+),/,source:'audio',variant:2,crosses:'auto',crossUpper:'mover',crossDepth:-1},
   // ANiMA・Journey(2026-10-21 社長「ジャーニーとアニマもヘル作って」)。拍の頭と1拍は authoring/<曲>-v3-audio.json の timing。見分けにくい形は山場もなし(mixedWindows なし)
   anima:{marker:'anima-v3',zero:200,beat:326.9755,levelRe:/const animaHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1},
   journey:{marker:'journey-v3',zero:272.3,beat:468.749,levelRe:/const journeyHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1},
@@ -400,17 +435,30 @@ const mix=(master,{zero,beat,crosses=[],gentle=false,crossUpper='hold',crossDept
           const k=notes.findIndex(n=>(n.k==='s'&&Math.abs(startOf(n)-x.timeMs)<=1&&n.pts[0][3]<.5&&Math.abs(n.pts[0][1]-x.lane)<.01)||(n.k==='h'&&Math.abs(n.t-x.timeMs)<=1&&n.sub===x.subLane));
           if(k>=0){notes.splice(k,1);moved=true;break;}}
         if(moved)break;}
+      // 相手がモンスターノーツで写しても残るとき(2026-10-21 Stay With Me short: 空中のスライドのあと 441ms で地上のモンスターノーツ)は、
+      //   空中で始まるスライドを抜く(モンスターノーツは1曲に4個の決まり)
+      if(!moved)for(const v of res){for(const x of [v.note,v.prev]){if(x.type!=='SLIDE'||!x.slidePoints||!x.slidePoints[0]||!(x.slidePoints[0].sky>=.5))continue;
+          const k=notes.findIndex(n=>n.k==='s'&&Math.abs(startOf(n)-x.timeMs)<=1&&n.pts[0][3]>=.5&&Math.abs(n.pts[0][1]-x.lane)<.01);
+          if(k>=0){notes.splice(k,1);moved=true;break;}}
+        if(moved)break;}
       if(!moved)break;}}
   // 空中を付けたあとにも、横持ちの物差しで「押せない」と出る地上のタップ・フリックが交差の区間の外に残っていれば取り除く
   //   (骨組みのときと手の割り振りが変わって見えることがある。0件の曲では何もしない)
   for(let r=0;r<20;r++){const th=thumbCheck(notes,HELL_LANDSCAPE,beat);
-    const bad=th.issues.find(i=>i.kind==='impossible'&&/タップ/.test(i.what)&&!crossWindows.some(([a,b])=>i.t>=a&&i.t<=b));if(!bad)break;
+    // タップだけでなく、ホールド・スライドが押せない所も見る(2026-10-21 全曲ヘル: SIX ÉTERNEL remix・綺季一閃 remix・The City Beneath the Comets・
+    //   Wrath of the Thorn King で、ふさがった手のスライドの始まり・同じ指の叩き直しのホールドが1つずつ残った)
+    const bad=th.issues.find(i=>i.kind==='impossible'&&!crossWindows.some(([a,b])=>i.t>=a&&i.t<=b));if(!bad)break;
     let k=notes.findIndex(n=>(n.k==='t'||n.k==='f')&&!n.mon&&!n.sky&&Math.abs(n.t-bad.t)<=2);
     // その時刻に地上のタップが無く、空中のタップが押せない所を作っているときは、空中のタップを抜く(2026-10-21 ANiMA・Journey の HELL で
     //   空中の連打が163ms・118ms で3レーン以上を跳ぶ所が2つずつ残った。地上のタップだけを見ていたので取り残されていた)
     if(k<0)k=notes.findIndex(n=>n.k==='t'&&n.sky&&!n.mon&&Math.abs(n.t-bad.t)<=2);
     // モンスターノーツは1曲に4個の決まりがあるので取り除かず、左右を反対側へ写す(ふさがっていない手の側へ)
-    if(k<0){const m=notes.find(n=>n.k==='t'&&n.mon&&!n.sky&&Math.abs(n.t-bad.t)<=2&&!n.mirrored);if(!m)break;m.sub=12-m.sub-m.w;m.hand=m.hand==='L'?'R':'L';m.mirrored=true;continue;}
+    if(k<0){const m=notes.find(n=>n.k==='t'&&n.mon&&!n.sky&&Math.abs(n.t-bad.t)<=2&&!n.mirrored);
+      if(m){m.sub=12-m.sub-m.w;m.hand=m.hand==='L'?'R':'L';m.mirrored=true;continue;}}
+    // それでも無ければ、その時刻に始まるホールド・スライドを抜き、無ければその時刻にかかっているスライドを抜く
+    if(k<0)k=notes.findIndex(n=>(n.k==='h'||n.k==='s')&&Math.abs(startOf(n)-bad.t)<=2);
+    if(k<0)k=notes.findIndex(n=>n.k==='s'&&startOf(n)<bad.t&&bad.t<=endOf(n));
+    if(k<0)break;
     notes.splice(k,1);}
   // 上の手直しで高さや置き場所が変わって、帯の中のノーツがまた出ていれば、もう一度外へ出す
   bandFix();
@@ -489,9 +537,11 @@ if(require.main===module){
     // source:'audio' の曲は MASTER を読まず、曲の解析から HELL の骨組みを作る(before は比べるための MASTER)
     // 引き出し(rhythm-chart-drawers.js)。drawers:false の曲は使わない。--drawers で試しに使う(書くのは社長が決めてから)・--no-drawers で使わない
     const drawersOn=args.includes('--drawers')||(conf.drawers!==false&&!args.includes('--no-drawers'));
-    const audioFile=path.join(__dirname,'authoring',`${songId.replace(/_/g,'-')}-v3-audio.json`);
+    // 解析ファイルの名前は曲の名前と違う曲がある(mf_ichika_mix=atsu_cup_theme など)。SONGS の track に書く(書かなければ曲の名前)
+    const trackId=conf.track||songId;
+    const audioFile=path.join(__dirname,'authoring',`${trackId.replace(/_/g,'-')}-v3-audio.json`);
     const audio=fs.existsSync(audioFile)?JSON.parse(fs.readFileSync(audioFile,'utf8')):null;
-    const master=conf.source==='audio'?audioDraft(songId,conf.variant||0,drawersOn):readBlock(source,`${conf.marker}-master`);
+    const master=conf.source==='audio'?audioDraft(trackId,argOf('--variant')!=null?Number(argOf('--variant')):(conf.variant||0),drawersOn):readBlock(source,`${conf.marker}-master`);
     const before=rt0.markerBlock(source,`${conf.marker}-master`)?readBlock(source,`${conf.marker}-master`):master;
     const oldHell=conf.trial?null:rt0.markerBlock(source,`${conf.marker}-hell`);
     // mixedWindows(見分けにくい形を残してよい山場の区間・2026-10-21)。'peak' はいちばん混んだ区間を1つ選ぶ。どちらも合わせて曲の長さの PEAK_SHARE まで
