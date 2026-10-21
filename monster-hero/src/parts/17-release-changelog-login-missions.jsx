@@ -482,6 +482,59 @@ const gainAssistantBond = (state, actionKey, now = Date.now()) => {
 };
 const assistantBondLevelOf = (points) => (typeof assistantBondLevel === 'function') ? assistantBondLevel(points) : 1;
 
+// ---------- 仲良し度の節目のごほうび(2026-10-21) ----------
+// 節目(ASSISTANT_BOND_LEVEL_REWARDS)を越えたら、助手ごとに1回ずつギフトで届ける。
+// 届けた節目は新しいキー mh_assistant_bond_rewards_v1 に { 助手のid: [22, 25, ...] } で残す(CLAUDE.md ⑦)。
+// ★ギフトは受け取ったあと一覧から消えることがあるので、ギフトのidだけでなくこの印で二重を防ぐ
+const ASSISTANT_BOND_REWARDS_KEY = 'mh_assistant_bond_rewards_v1';
+const normalizeAssistantBondRewardsDelivered = (value) => {
+  const raw = (value && typeof value === 'object' && !Array.isArray(value)) ? value : {};
+  const out = {};
+  for (const [id, levels] of Object.entries(raw)) {
+    if (!Array.isArray(levels)) continue;
+    const list = [...new Set(levels.map(n => Math.floor(Number(n))).filter(n => Number.isFinite(n) && n > 0))].sort((a, b) => a - b);
+    if (list.length) out[id] = list;
+  }
+  return out;
+};
+const assistantBondRewardGiftId = (assistantId, level) => `gift_assistant_bond_${assistantId}_lv${level}`;
+// まだ届けていない節目のぶんをギフトへ足した結果を返す(渡された値は変えない)。
+//   levels: { 助手のid: いまのLv }
+// 戻り値の changed が true のときだけ、gifts と delivered を一緒に保存する
+const buildAssistantBondRewardGrant = ({ gifts, delivered, levels, now = Date.now() } = {}) => {
+  const table = (typeof ASSISTANT_BOND_LEVEL_REWARDS !== 'undefined' && ASSISTANT_BOND_LEVEL_REWARDS) || {};
+  const milestones = Object.keys(table).map(Number).filter(Number.isFinite).sort((a, b) => a - b);
+  const list = (typeof ASSISTANTS !== 'undefined' && Array.isArray(ASSISTANTS)) ? ASSISTANTS : [];
+  let nextGifts = Array.isArray(gifts) ? gifts : [];
+  const nextDelivered = normalizeAssistantBondRewardsDelivered(delivered);
+  const granted = [];
+  let changed = false;
+  for (const who of list) {
+    const id = who && who.id;
+    if (!id) continue;
+    const level = Math.floor(Number(levels && levels[id]) || 0);
+    const done = nextDelivered[id] || [];
+    for (const lv of milestones) {
+      if (lv > level || done.includes(lv)) continue;
+      const gift = {
+        id: assistantBondRewardGiftId(id, lv),
+        source: 'assistantBond',
+        title: `${who.name}との仲良し度 Lv${lv} のごほうび`,
+        description: `${who.name}との仲良し度が Lv${lv} になりました。いつもありがとう！`,
+        rewards: table[lv].map(r => ({ ...r })),
+      };
+      const already = nextGifts.some(g => g && g.id === gift.id);
+      const grant = grantGiftOnce(nextGifts, gift, now);
+      // 中身が読めない(古い版で品物が無いなど)ときは印を付けず、次に読めたときに届ける
+      if (!grant.granted && !already) continue;
+      if (grant.granted) { nextGifts = grant.gifts; granted.push({ assistantId:id, level:lv }); }
+      nextDelivered[id] = [...(nextDelivered[id] || []), lv].sort((a, b) => a - b);
+      changed = true;
+    }
+  }
+  return { changed, gifts:nextGifts, delivered:nextDelivered, granted };
+};
+
 const normalizeLoginBonus = (value) => ({
   currentDay: Number.isInteger(value?.currentDay) && value.currentDay >= 1 && value.currentDay <= 7 ? value.currentDay : 1,
   lastGrantedPeriod: typeof value?.lastGrantedPeriod === 'string' ? value.lastGrantedPeriod : null,
@@ -842,6 +895,8 @@ const giftTitleDisplay = (gift) => {
   if (gift?.source === 'rhythmEvent') return { label:'ランキング報酬', title };
   // イベント・レイドボス「ジャック」の報酬(2026-10-04)
   if (gift?.source === 'raidJack') return { label:'ジャック報酬', title };
+  // 助手の仲良し度の節目のごほうび(2026-10-21)
+  if (gift?.source === 'assistantBond') return { label:'仲良し度', title };
   if (gift?.source !== 'mission') return { label:null, title };
   const missionTitle = title.replace(/^ミッション報酬[「『]?/, '').replace(/[」』]$/, '').trim();
   return { label:'ミッション', title:missionTitle || title };

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f5b755fc92877a55
+// generated-sha256: 266a5c95daee4dbc
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-21 17:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-21 17:31"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8953,6 +8953,59 @@ const gainAssistantBond = (state, actionKey, now = Date.now()) => {
 };
 const assistantBondLevelOf = (points) => (typeof assistantBondLevel === 'function') ? assistantBondLevel(points) : 1;
 
+// ---------- 仲良し度の節目のごほうび(2026-10-21) ----------
+// 節目(ASSISTANT_BOND_LEVEL_REWARDS)を越えたら、助手ごとに1回ずつギフトで届ける。
+// 届けた節目は新しいキー mh_assistant_bond_rewards_v1 に { 助手のid: [22, 25, ...] } で残す(CLAUDE.md ⑦)。
+// ★ギフトは受け取ったあと一覧から消えることがあるので、ギフトのidだけでなくこの印で二重を防ぐ
+const ASSISTANT_BOND_REWARDS_KEY = 'mh_assistant_bond_rewards_v1';
+const normalizeAssistantBondRewardsDelivered = (value) => {
+  const raw = (value && typeof value === 'object' && !Array.isArray(value)) ? value : {};
+  const out = {};
+  for (const [id, levels] of Object.entries(raw)) {
+    if (!Array.isArray(levels)) continue;
+    const list = [...new Set(levels.map(n => Math.floor(Number(n))).filter(n => Number.isFinite(n) && n > 0))].sort((a, b) => a - b);
+    if (list.length) out[id] = list;
+  }
+  return out;
+};
+const assistantBondRewardGiftId = (assistantId, level) => `gift_assistant_bond_${assistantId}_lv${level}`;
+// まだ届けていない節目のぶんをギフトへ足した結果を返す(渡された値は変えない)。
+//   levels: { 助手のid: いまのLv }
+// 戻り値の changed が true のときだけ、gifts と delivered を一緒に保存する
+const buildAssistantBondRewardGrant = ({ gifts, delivered, levels, now = Date.now() } = {}) => {
+  const table = (typeof ASSISTANT_BOND_LEVEL_REWARDS !== 'undefined' && ASSISTANT_BOND_LEVEL_REWARDS) || {};
+  const milestones = Object.keys(table).map(Number).filter(Number.isFinite).sort((a, b) => a - b);
+  const list = (typeof ASSISTANTS !== 'undefined' && Array.isArray(ASSISTANTS)) ? ASSISTANTS : [];
+  let nextGifts = Array.isArray(gifts) ? gifts : [];
+  const nextDelivered = normalizeAssistantBondRewardsDelivered(delivered);
+  const granted = [];
+  let changed = false;
+  for (const who of list) {
+    const id = who && who.id;
+    if (!id) continue;
+    const level = Math.floor(Number(levels && levels[id]) || 0);
+    const done = nextDelivered[id] || [];
+    for (const lv of milestones) {
+      if (lv > level || done.includes(lv)) continue;
+      const gift = {
+        id: assistantBondRewardGiftId(id, lv),
+        source: 'assistantBond',
+        title: `${who.name}との仲良し度 Lv${lv} のごほうび`,
+        description: `${who.name}との仲良し度が Lv${lv} になりました。いつもありがとう！`,
+        rewards: table[lv].map(r => ({ ...r })),
+      };
+      const already = nextGifts.some(g => g && g.id === gift.id);
+      const grant = grantGiftOnce(nextGifts, gift, now);
+      // 中身が読めない(古い版で品物が無いなど)ときは印を付けず、次に読めたときに届ける
+      if (!grant.granted && !already) continue;
+      if (grant.granted) { nextGifts = grant.gifts; granted.push({ assistantId:id, level:lv }); }
+      nextDelivered[id] = [...(nextDelivered[id] || []), lv].sort((a, b) => a - b);
+      changed = true;
+    }
+  }
+  return { changed, gifts:nextGifts, delivered:nextDelivered, granted };
+};
+
 const normalizeLoginBonus = (value) => ({
   currentDay: Number.isInteger(value?.currentDay) && value.currentDay >= 1 && value.currentDay <= 7 ? value.currentDay : 1,
   lastGrantedPeriod: typeof value?.lastGrantedPeriod === 'string' ? value.lastGrantedPeriod : null,
@@ -9313,6 +9366,8 @@ const giftTitleDisplay = (gift) => {
   if (gift?.source === 'rhythmEvent') return { label:'ランキング報酬', title };
   // イベント・レイドボス「ジャック」の報酬(2026-10-04)
   if (gift?.source === 'raidJack') return { label:'ジャック報酬', title };
+  // 助手の仲良し度の節目のごほうび(2026-10-21)
+  if (gift?.source === 'assistantBond') return { label:'仲良し度', title };
   if (gift?.source !== 'mission') return { label:null, title };
   const missionTitle = title.replace(/^ミッション報酬[「『]?/, '').replace(/[」』]$/, '').trim();
   return { label:'ミッション', title:missionTitle || title };
@@ -11727,6 +11782,10 @@ const helpDataRows = (id) => {
         ['固有技を1つ持つ', `+${MONSTER_POWER_UNIQUE_OWNED}（Lv0でも付く。継承した固有技も同じ）`],
         ['固有技の強化Lv 1段階', `+${Math.round(MONSTER_POWER_UNIQUE_PER_LEVEL * 100) / 100}（3段階でちょうど+200）`],
       ];
+    // 仲良し度の節目のごほうび(2026-10-21)。表(ASSISTANT_BOND_LEVEL_REWARDS)から作るので、中身を変えてもヘルプが古くならない
+    case 'assistantBondRewards':
+      return Object.entries((typeof ASSISTANT_BOND_LEVEL_REWARDS !== 'undefined' && ASSISTANT_BOND_LEVEL_REWARDS) || {})
+        .map(([lv, rewards]) => [`Lv.${lv}`, rewards.map(r => (typeof giftRewardText === 'function' ? giftRewardText(r) : '')).join(' ／ ')]);
     case 'assistantBondActions':
       return Object.values((typeof ASSISTANT_BOND_ACTIONS !== 'undefined' && ASSISTANT_BOND_ACTIONS) || {})
         .filter(x => typeof releasedForPlayers !== 'function' || releasedForPlayers(x))
@@ -11869,6 +11928,7 @@ const HELP_DATA_TITLES = {
   profileFrames: '選べるプロフィールフレーム',
   assistantBond: '仲良し度の段階と呼び方',
   assistantBondActions: '仲良し度が増える行動',
+  assistantBondRewards: '仲良し度の節目のごほうび(助手ごとに1回)',
   monsterPower: '総合力の内訳',
   monsterLineages: 'モンスターの血統一覧',
   psycheRewards: '難易度ごとにもらえる虹のプシュケー',
@@ -56113,6 +56173,39 @@ function MonsterHeroGame() {
   };
 
   // マーケットアイテムが購入済み(=解放済み)かどうか。typeによって参照する解放リストが異なる。
+  // 仲良し度の節目のごほうびを届ける(2026-10-21)。Lvが上がったときと、起動が済んだときに呼ぶ。
+  // ★保存から読み直したギフト一覧へ足し、ギフトと「届けた」印(mh_assistant_bond_rewards_v1)を同じ取引で保存する。
+  //   どちらか失敗したら両方元へ戻る(CLAUDE.md ⑦)。もう越えている人には、越えた節目のぶんがまとめて届く
+  // ★同時に走らせない。走っているあいだに呼ばれたら、終わったあとにもう1回だけ見直す
+  // ★「見るだけ」のプレビュー中は届けない
+  const assistantBondRewardRunningRef = useRef(false);
+  const assistantBondRewardAgainRef = useRef(false);
+  const deliverAssistantBondRewards = useCallback(async () => {
+    if (onboardingPreview) return;
+    if (assistantBondRewardRunningRef.current) { assistantBondRewardAgainRef.current = true; return; }
+    assistantBondRewardRunningRef.current = true;
+    try {
+      do {
+        assistantBondRewardAgainRef.current = false;
+        const levels = Object.fromEntries(ASSISTANT_LIST.map(who =>
+          [who.id, assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[who.id]).points)]));
+        const savedGifts = await storeGet('mh_gifts', [], false);
+        const beforeGifts = Array.isArray(savedGifts) ? savedGifts : [];
+        const mark = await storeGet(ASSISTANT_BOND_REWARDS_KEY, null, false);
+        const grant = buildAssistantBondRewardGrant({ gifts:beforeGifts, delivered:mark, levels });
+        if (!grant.changed) continue;
+        const saved = await saveStoredValuesOrRollback([
+          ...(grant.granted.length ? [{ key:'mh_gifts', before:beforeGifts, next:grant.gifts }] : []),
+          { key:ASSISTANT_BOND_REWARDS_KEY, before:mark, next:grant.delivered },
+        ], storeGet, storeSet);
+        if (!saved) { console.error('[assistant-bond-reward] save failed'); break; }
+        if (grant.granted.length) setGifts(grant.gifts);
+      } while (assistantBondRewardAgainRef.current);
+    } catch (error) {
+      console.error('[assistant-bond-reward] failed:', error && error.message ? error.message : error);
+    } finally { assistantBondRewardRunningRef.current = false; }
+  }, [onboardingPreview]);
+  useEffect(() => { if (dataLoaded) void deliverAssistantBondRewards(); }, [dataLoaded, deliverAssistantBondRewards]);
   // type:'item'の消耗品は何度でも買えるため、常にfalse(所持数はownedItemsで別途表示)
   // 指定した助手の仲良し度を、行動に応じて増やす。上限に達していれば何も起きない。
   // 続けて呼ばれても取りこぼさないよう、いまの値は ref から読む。
@@ -56134,7 +56227,9 @@ function MonsterHeroGame() {
     // (アシストカードで本人の仲良し度が増える経路があるため)
     if (after > before) grantProfileFrames(id, after);
     try { storeSet(assistantBondKeyFor(id), result.state, false); } catch {}
-  }, [grantProfileFrames]);
+    // 節目(Lv22・25・28・30)を越えたら、ごほうびをギフトで届ける
+    if (after > before) void deliverAssistantBondRewards();
+  }, [grantProfileFrames, deliverAssistantBondRewards]);
   // 行動に応じて助手との仲良し度を増やす。
   // 増えるのは「いま選んでいる助手」のぶんだけ。もう片方の助手の値には触れない
   const addAssistantBond = useCallback((actionKey) => {

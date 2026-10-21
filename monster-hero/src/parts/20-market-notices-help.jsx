@@ -797,6 +797,10 @@ const helpDataRows = (id) => {
         ['固有技を1つ持つ', `+${MONSTER_POWER_UNIQUE_OWNED}（Lv0でも付く。継承した固有技も同じ）`],
         ['固有技の強化Lv 1段階', `+${Math.round(MONSTER_POWER_UNIQUE_PER_LEVEL * 100) / 100}（3段階でちょうど+200）`],
       ];
+    // 仲良し度の節目のごほうび(2026-10-21)。表(ASSISTANT_BOND_LEVEL_REWARDS)から作るので、中身を変えてもヘルプが古くならない
+    case 'assistantBondRewards':
+      return Object.entries((typeof ASSISTANT_BOND_LEVEL_REWARDS !== 'undefined' && ASSISTANT_BOND_LEVEL_REWARDS) || {})
+        .map(([lv, rewards]) => [`Lv.${lv}`, rewards.map(r => (typeof giftRewardText === 'function' ? giftRewardText(r) : '')).join(' ／ ')]);
     case 'assistantBondActions':
       return Object.values((typeof ASSISTANT_BOND_ACTIONS !== 'undefined' && ASSISTANT_BOND_ACTIONS) || {})
         .filter(x => typeof releasedForPlayers !== 'function' || releasedForPlayers(x))
@@ -939,6 +943,7 @@ const HELP_DATA_TITLES = {
   profileFrames: '選べるプロフィールフレーム',
   assistantBond: '仲良し度の段階と呼び方',
   assistantBondActions: '仲良し度が増える行動',
+  assistantBondRewards: '仲良し度の節目のごほうび(助手ごとに1回)',
   monsterPower: '総合力の内訳',
   monsterLineages: 'モンスターの血統一覧',
   psycheRewards: '難易度ごとにもらえる虹のプシュケー',
