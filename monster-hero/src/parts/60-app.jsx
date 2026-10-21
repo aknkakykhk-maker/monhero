@@ -8044,20 +8044,19 @@ function MonsterHeroGame() {
       return null;
     } finally { soulTraitProcessingRef.current = false; }
   };
-  // 魂格再編の書1冊を使い、その個体の振り分けだけを全消去する。
-  // 魂格段階・Lv・XP・最高初到達LvはbuildMasuSoulTraitResetが保持し、
-  // mh_masu_mons / mh_owned_itemsを取引保存するので本だけ消える状態を作らない。
+  // 魂格再編の書1冊を使い、その個体の振り分けを全消去し、結晶で足したぶん(soulBonusPoints)を結晶として持ち物へ戻す(2026-10-21)。
+  // 魂格段階・Lv・XP・最高初到達LvはbuildSoulTraitRespecが保持し、
+  // mh_masu_mons / mh_owned_itemsを取引保存するので、本だけ消える・結晶だけ増える・ボーナスだけ消える状態を作らない。
   const commitSoulTraitRespec = async (masuId) => {
     if (soulTraitProcessingRef.current) return null;
     const beforeMasuMons = masuMonsRef.current;
     const beforeItems = ownedItemsRef.current;
     const masu = beforeMasuMons.find(m=>String(m.id)===String(masuId));
-    const reset = buildMasuSoulTraitReset(masu);
-    const scrollHave = ownedItemCount(beforeItems, SOUL_RANK_RESPEC_ITEM_ID);
-    if (!reset) { setSoulTraitError('リセットする魂格特性がありません。'); return null; }
-    if (scrollHave <= 0) { setSoulTraitError('魂格再編の書を所持していません。'); return null; }
+    const reset = buildSoulTraitRespec(masu, beforeItems);
+    if (!reset.ok && reset.reason==='noScroll') { setSoulTraitError('魂格再編の書を所持していません。'); return null; }
+    if (!reset.ok) { setSoulTraitError('リセットする魂格特性がありません。'); return null; }
     const nextMasuMons = beforeMasuMons.map(m=>String(m.id)===String(masuId)?reset.nextMasu:m);
-    const nextItems = { ...beforeItems, [SOUL_RANK_RESPEC_ITEM_ID]:scrollHave - 1 };
+    const nextItems = reset.ownedItems;
     soulTraitProcessingRef.current = true;
     setSoulTraitError('');
     try {
@@ -8077,7 +8076,7 @@ function MonsterHeroGame() {
       Audio_.se.levelUp();
       return reset;
     } catch {
-      setSoulTraitError('魂格再編を保存できませんでした。本と魂格Pは変更していません。');
+      setSoulTraitError('魂格再編を保存できませんでした。本・結晶・魂格Pは変更していません。');
       return null;
     } finally { soulTraitProcessingRef.current = false; }
   };
