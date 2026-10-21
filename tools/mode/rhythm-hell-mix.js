@@ -539,6 +539,14 @@ if(require.main===module){
     const runtimeLevel=Number(String(probe.stdout).trim());
     let finalLevel=level;
     if(Number.isFinite(runtimeLevel)&&runtimeLevel!==level){finalLevel=runtimeLevel;fs.writeFileSync(rt0.RUNTIME,fs.readFileSync(rt0.RUNTIME,'utf8').replace(conf.levelRe,m=>m.replace(/\(\d+,/,`(${runtimeLevel},`)));}
+    // 書いた譜面をゲームに読み込んだ形で数え直し、道具の数(上の「見分けにくい所」)と食い違えば止める(2026-10-21 Journey の HELL で、
+    //   同時のノーツの並び順のせいで道具の形では0・ゲームの形では2と食い違った)。見分けにくい所は rhythm-chart-hand-rules-check.js も見る
+    {const probe2=spawnSync(process.execPath,['-e',`const {loadRuntimeSongs}=require(${JSON.stringify(path.join(__dirname,'rhythm-chart-level.js'))});
+      const HR=require(${JSON.stringify(path.join(__dirname,'rhythm-chart-hand-rules.js'))});const s=(loadRuntimeSongs().RHYTHM_PROTO_SONGS||[]).find(x=>x.songId===${JSON.stringify(songId+'_hell_debug')});
+      console.log(HR.skyConfusable(s.difficulties.HELL.notes).length);`],{encoding:'utf8'});
+      const HR=require('./rhythm-chart-hand-rules.js'),inTool=HR.skyConfusable(rt).length,inGame=Number(String(probe2.stdout).trim());
+      if(!Number.isFinite(inGame)||inGame!==inTool)throw new Error(`書いた譜面をゲームの形で数え直すと、見分けにくい所が ${inGame}件(道具では ${inTool}件)。数え方か書き方がずれている`);
+      console.log(`書いた譜面をゲームの形で数え直した: 見分けにくい所 ${inGame}件(道具と同じ)`);}
     console.log(`書いた: ${path.relative(rt0.ROOT,rt0.RUNTIME)} の <${conf.marker}-hell-notes> と HELL の Lv.${finalLevel}(ほかのマーカーは1バイトも変えていない)。この後 node tools/build.js`);
   }catch(e){console.error('止まった:',e.message);process.exit(1);}
 }
