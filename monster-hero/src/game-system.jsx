@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3ccd338a30c57e4e
+// generated-sha256: c2d19cf17ba22480
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-21 11:44"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-21 12:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11154,14 +11154,27 @@ const marketNameForWrap = (name) => MARKET_NAME_WRAP_WORDS.reduce(
   .split('・').join('・​').replace(/([ァ-ヶー])([0-9０-９])/g, '$1​$2')
   // 2026-10-20 改善部 M3「スネグーラチ／カの円盤石」(320): 7字以上続く長いカタカナの名前だけ、あとの「の」の前でも折ってよい
   // (短い名前「モッチーの|フレーム」の折り方は今のまま)
-  .replace(/([ァ-ヶー]{7,})の/g, '$1​の');
+  .replace(/([ァ-ヶー]{7,})の/g, '$1​の')
+  // 2026-10-21: カタカナのあとの「の＋漢字2字以上」は「の」の前でも折る(「ハロウィンの小悪／魔」→「ハロウィン／の小悪魔」)。
+  // 「の書」のように漢字1字なら折らない(「リセット／の書」と2字だけ落ちるため)
+  .replace(/([ァ-ヶー])の([一-龯]{2,})/g, '$1​の$2')
+  // 名前の終わりの「・序」のような1〜2字は、手前の「・」で切り離さない(「スキップチケット・／序」→「スキップ／チケット・序」)
+  .replace(/・​([^​]{1,2})$/, '・$1');
 // ★印は文字(U+200B)のままDOMへ置かず、<wbr> に変えてから描く。
 //   U+200B は幅0でも**文字として残る**ので、画面の文字を拾う検査やブラウザの検索で
 //   「ウンディーネのアイコン」が見つからなくなる(2026-09-18に monster/mermaid-browser-check.js が
 //   実際に落ちた。商品はちゃんと並んでいるのに「無い」と言われた)。
 //   <wbr> は「ここで折り返してよい」だけを表し、innerText には現れない。
-const marketNameNodes = (name) => marketNameForWrap(name).split('​')
-  .map((seg, index) => <React.Fragment key={index}>{index>0&&<wbr/>}{seg}</React.Fragment>);
+// 名前の終わりの「・序」のような短い尾は、「・序」だけをひとかたまり(nowrap)で描く。「・」のあとはブラウザがもともと折ってよい所なので、
+// 印を外すだけでは「スキップチケット・／序」と落ちる。「チケット・序」まで包むと前の「スキップ」が「スキッ／プ」と割れた。
+// 「・」の前は行頭に来られない字なので、「ト・序」の間でも折れない(2026-10-21)
+// ★全体を1つの <span> で包む。名前の枠は flex なので、包まないと字と「・序」の札が別々の並びになり、
+//   「スキップ　・序／チケット」と順番が崩れる(2026-10-21)
+const marketNameNodes = (name) => <span data-market-name-text>{marketNameForWrap(name).split('\u200b')
+  .map((seg, index, all) => {
+    const tail = index === all.length - 1 ? seg.match(/^(.*)(・[^・]{1,2})$/) : null;
+    return <React.Fragment key={index}>{index>0&&<wbr/>}{tail ? <>{tail[1]}<span style={{whiteSpace:'nowrap'}}>{tail[2]}</span></> : seg}</React.Fragment>;
+  })}</span>;
 // 予告の札の折り位置(2026-10-20 窓口「条件を達成 / すると買え / ます」)。語の切れ目(「すると」の後ろ)だけで折る
 const MARKET_LABEL_WRAP_AFTER = Object.freeze(['すると']);
 // 札の字の大きさ: いちばん長い語(「条件を達成すると」8文字)が、カードの幅(札を包む枠の幅・cqi)から左右の余白12pxを引いた幅に1行で入る大きさ。最大10px・最小7px
@@ -11195,7 +11208,7 @@ const MarketProductCard = ({ item, owned=false, comingSoon=false, comingSoonLabe
           (「トレーニングチケッ/ト」「アシストカード「き/き」」)。
           text-wrap:balance も試したが、行の長さをならす方を優先して「トレーニン/グチケット」に
           なるため使わない。印が無く1行に入りきらない名前だけ overflow-wrap:anywhere で折る。 */}
-    <div className={`w-full flex items-start justify-center text-center ${/[ァ-ヶー]{7,}/.test(item.name||'')?'text-[10px] max-[359px]:text-[9px]':/（/.test(item.name||'')?'text-[10px]':'text-[11px]'} font-black leading-tight ${comingSoon?'text-slate-400':'text-white'}`} style={{minHeight:'36px',wordBreak:'keep-all',overflowWrap:'anywhere'}}>{marketNameNodes(item.name)}</div>
+    <div className={`w-full flex items-start justify-center text-center ${/[ァ-ヶー]{7,}/.test(item.name||'')?'text-[10px] max-[359px]:text-[9px]':/（/.test(item.name||'')?'text-[10px]':'text-[11px]'} font-black leading-tight ${comingSoon?'text-slate-400':'text-white'}`} style={{minHeight:'36px',textWrap:'wrap',wordBreak:'keep-all',overflowWrap:'anywhere'}}>{marketNameNodes(item.name)}</div>
     {/* 詳細は「近日追加」の品でも出す(2026-09-28。近日公開予定の新モンスターの中身を先に見られるように) */}
     <div className="w-full flex items-center justify-center gap-1" style={{height:'22px'}}>{middle||detail?<>{middle}{!middle&&<MarketDetailChip label={`${item.name}の詳細を見る`} onClick={onDetail}/>}</>:null}</div>
     {/* 予告の品は買うボタンの代わりに札が出るので、値段は札の上に出す(どの売り場でも同じ) */}
@@ -30913,10 +30926,18 @@ const jaWrap = (text) => {
   try {
     if (_jaSegmenter === undefined) _jaSegmenter = (typeof Intl !== 'undefined' && Intl.Segmenter) ? new Intl.Segmenter('ja', { granularity: 'word' }) : null;
     if (!_jaSegmenter) return s;
-    return [..._jaSegmenter.segment(s)].map(seg => seg.segment).join('\u200B');
+    // 行の頭に来てはいけない字(「！」「、」「…」小さい字など)の前と、行の終わりに来てはいけない字(「「」「（」)の後ろ、空白の前後には印を入れない
+    // (印は「ここで折ってよい」の意味なので、入れると禁則より強くなり「きたわい／！」と折れる。2026-10-21)
+    const segs = [..._jaSegmenter.segment(s)].map(seg => seg.segment);
+    return segs.reduce((out, seg, i) => (i === 0 || /^[\s、。，．,.！？!?」』）)】〕〉》…‥ー〜～・：:；;ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ]/.test(seg) || /[\s「『（(【〔〈《]$/.test(segs[i - 1])
+      ? out + seg : `${out}\u200B${seg}`), '');
   } catch { return s; }
 };
-const JA_WRAP_STYLE = Object.freeze({ wordBreak: 'keep-all', overflowWrap: 'anywhere' });
+// textWrap:'wrap' … 画面全体の text-wrap:pretty(index.html)と anywhere が組み合わさると、語の中へ1字だけ動かすことがある(「スキッ／プ」)ので外す
+const JA_WRAP_STYLE = Object.freeze({ wordBreak: 'keep-all', overflowWrap: 'anywhere', textWrap: 'wrap' });
+// 短い説明・札向け(2026-10-21 社長決定・改善部の見直しの洗い出し)。言葉の切れ目で折り、行の長さもそろえる
+// (「音が出ないと／き」「得意な曲を／見る」のように、最後の行に1〜2字だけ残らない)。jaWrap と一緒に使う
+const JA_LABEL_STYLE = Object.freeze({ ...JA_WRAP_STYLE, textWrap: 'balance' });
 // 数を直接打ち込む欄(2026-10-19 社長「マーケットのアイテムは直接数値入力で買えるようにしよう！」、
 // 2026-10-20「個数系のやつは基本的に直接入力があったほうがいいね」)。★個数・回数・枚数を選ぶ所は、この欄を使う
 //   (−/＋/MAX のボタンは呼ぶ側に並べたまま。tools/boot/count-input-check.js が見張る)
@@ -31625,7 +31646,7 @@ function SettingsMenuLink({ icon, label, desc, onClick, disabled = false, accent
       <span aria-hidden="true" data-icon={icon} className="mh-emoji-icon w-8 shrink-0 text-center text-[22px] leading-none"/>
       <span className="min-w-0 flex-1">
         <span className={`block text-[14px] font-black leading-tight ${accent}`}>{label}</span>
-        <span className="mt-0.5 block text-[10px] font-bold leading-snug text-slate-400">{desc}</span>
+        <span className="mt-0.5 block text-[10px] font-bold leading-snug text-slate-400" style={JA_LABEL_STYLE}>{jaWrap(desc)}</span>
       </span>
       <ChevronRight size={18} className="shrink-0 opacity-60"/>
     </button>
@@ -32663,13 +32684,13 @@ function ProfileScreen({
               {showFriendTiles&&(
                 <button type="button" data-profile-message onClick={onOpenMessageEditor} className={tile}>
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl" aria-hidden="true">💬</span>
-                  <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300">ひとこと</small><b className="block break-words text-[11px] font-black leading-tight text-white [text-wrap:balance]">{profileMessage||'まだ書いていません'}</b></span>
+                  <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300">ひとこと</small><b className="block text-[11px] font-black leading-tight text-white" style={JA_LABEL_STYLE}>{profileMessage||jaWrap('まだ書いていません')}</b></span>
                 </button>
               )}
               {showFriendTiles&&(
                 <button type="button" data-profile-favorite-masu onClick={onOpenFavoritePicker} className={tile}>
                   {face?<ProfileAvatar src={face.src} id={face.id} className="h-8 w-8 shrink-0"/>:<span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl" aria-hidden="true">💗</span>}
-                  <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300">好きなモンスター</small><b className="block break-words text-[11px] font-black leading-tight text-white [text-wrap:balance]">{base?`${base.name}（絆Lv.${masuBondLevelInfo(favoriteMasu).level}）`:'まだ選んでいません'}</b></span>
+                  <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300" style={JA_LABEL_STYLE}>{jaWrap('好きなモンスター')}</small><b className="block text-[11px] font-black leading-tight text-white" style={JA_LABEL_STYLE}>{base?`${base.name}（絆Lv.${masuBondLevelInfo(favoriteMasu).level}）`:jaWrap('まだ選んでいません')}</b></span>
                 </button>
               )}
             </div>);
@@ -37833,7 +37854,8 @@ const HOME_RAID_JACK_BUTTON_STYLE = Object.freeze({
 //     ① 頭の上(幅184→120まで絞る) ② 頭の右 ③ 頭の左 ④ 少しずつ下げて頭の4分の3まで重ねる(それでもだめなときの控え)
 //   どれも重なるときは、重なりがいちばん小さいものを選ぶ。ボタン側は動かさない(押せる場所を変えない)。
 //   head … ジャック本体の絵の箱(跳ねる前の位置) / obstacles … 避ける箱 / measure(width) … その幅での吹き出しの高さ
-const HOME_RAID_SAY_WIDTHS = Object.freeze([184, 168, 152, 136, 120]);
+// 104・96 は狭い画面(幅320)でジャックの横へ置くとき用。広い順に試すので、入るならこれまでどおり広いほうになる(2026-10-21)
+const HOME_RAID_SAY_WIDTHS = Object.freeze([184, 168, 152, 136, 120, 104, 96]);
 const HOME_RAID_SAY_GAP = 6;
 const HOME_RAID_SAY_HOP = 18; // 跳ねる高さ(mhRaidJackHop の16px)+ゆとり。頭の上に置くときは、跳ねても頭がしっぽにかからない
 const homeRaidSayPlace = ({ head, obstacles, vw, vh, measure, top = 0 }) => {
@@ -37862,6 +37884,16 @@ const homeRaidSayPlace = ({ head, obstacles, vw, vh, measure, top = 0 }) => {
       const left = side === 'right' ? head.right + HOME_RAID_SAY_GAP + 6 : head.left - HOME_RAID_SAY_GAP - 6 - w;
       const midY = head.top + Math.min(head.bottom - head.top, 80) * 0.35;
       tries.push({ side, left, top: Math.max(top + edge, midY - h / 2), width: w, height: h });
+    }
+  }
+  // ③-2 横に置くときは、6pxずつ下げて施設の札(神殿・M/B管理)の下へ逃がす。吹き出しの上端は頭の半分まで(2026-10-21 窓口
+  //  「幅320で ジャックの吹き出しが M/B管理 の札にかかる」。320 は札のすぐ下にジャックがいて、頭の上にも横にも置けず、札と絵に重ねていた)
+  for (const side of ['right', 'left']) {
+    for (const w of HOME_RAID_SAY_WIDTHS) {
+      const h = measure(w);
+      const left = side === 'right' ? head.right + HOME_RAID_SAY_GAP + 6 : head.left - HOME_RAID_SAY_GAP - 6 - w;
+      const from = Math.max(top + edge, head.top + Math.min(head.bottom - head.top, 80) * 0.35 - h / 2), to = head.top + (head.bottom - head.top) * 0.5;
+      for (let y = from + 6; y <= to; y += 6) tries.push({ side, left, top: y, width: w, height: h });
     }
   }
   // ④ 頭の上の位置から6pxずつ下げ、頭の4分の3に重なるところまで探す(ジャックの絵に少し重なっても、文が読めるほうを選ぶ)
@@ -38012,7 +38044,8 @@ const HomeRaidJack = ({ eventId, onOpen }) => {
         padding:'6px 10px', borderRadius:'14px', boxSizing:'border-box',
         border:`2px solid ${speechAccent}`, background:'#1c0a02ee', color:'#ffedd5', fontSize:'11px', fontWeight:900, lineHeight:1.45, textAlign:'left', cursor:'pointer',
         boxShadow:`0 0 12px ${speechAccent}66`, animation:'storyPop .25s ease-out both', zIndex:2, pointerEvents:'auto' }}>
-      <span style={{ display:'block' }}>{speech}</span>
+      {/* 狭い幅(横へ置いたとき)でも「聞こえるの／う」と言葉の途中で折らず、行の長さをならす(2026-10-21) */}
+      <span data-home-raid-say-text style={{ display:'block', ...JA_LABEL_STYLE }}>{jaWrap(speech)}</span>
       <span aria-hidden="true" style={{ display:'block', textAlign:'right', fontSize:'8px', opacity:.7 }}>▶ つぎ</span>
       {/* しっぽはジャックのほうへ向ける(上に置いたら下向き、右に置いたら左向き、左に置いたら右向き) */}
       {(!sayPlace || sayPlace.side === 'top') && <span aria-hidden="true" style={{ position:'absolute', left:sayPlace ? sayPlace.tail : '50%', bottom:-9, marginLeft:-8, width:0, height:0, borderLeft:'8px solid transparent', borderRight:'8px solid transparent', borderTop:`9px solid ${speechAccent}` }} />}
@@ -65398,7 +65431,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <span className="min-w-0 flex-1 text-[13px] font-black leading-tight">{label}</span>
                 <ChevronRight size={16} className="shrink-0 text-indigo-300"/>
               </span>
-              <small className="mt-0.5 block text-[10px] font-bold leading-relaxed text-slate-400">{desc}</small>
+              <small className="mt-0.5 block text-[10px] font-bold leading-relaxed text-slate-400" style={JA_LABEL_STYLE}>{jaWrap(desc)}</small>
             </button>
           );
           return (
@@ -66040,7 +66073,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                             {beta&&<span data-battle-system-beta className="shrink-0 rounded border border-slate-900/50 bg-slate-950/80 px-1.5 py-0.5 text-[9px] font-black text-amber-200">β版</span>}
                             {!soon&&!beta&&sys.id===BATTLE_SYSTEM_TACTICS&&!TACTICS_MODE_PUBLIC_RELEASE&&<span className="shrink-0 rounded border border-slate-900/50 bg-slate-950/80 px-1 py-0.5 text-[8px] font-black text-amber-300">DEBUG</span>}
                           </span>
-                          <small className="block text-[10px] font-black leading-tight text-slate-900/80">{sys.tagline}</small>
+                          <small className="block text-[10px] font-black leading-tight text-slate-900/80" style={JA_LABEL_STYLE}>{jaWrap(sys.tagline)}</small>
                           {(soon||beta)&&<small className="mt-0.5 block text-[9px] font-black leading-tight text-slate-900/70">{soon?'いま準備しています。遊べるようになったらお知らせします':'いまはタクティクスプロだけ遊べます。ほかのモードは準備中です'}</small>}
                         </span>
                       </button>

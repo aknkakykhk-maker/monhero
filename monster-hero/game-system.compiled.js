@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 23944651732e46a4
+// source-sha256: a457ab3556ed8b2e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-21 11:44";
+const BUILD_DATE = "2026-10-21 12:21";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -15788,10 +15788,19 @@ const MarketDetailChip = ({
   size: 10
 }), "詳細");
 const MARKET_NAME_WRAP_WORDS = Object.freeze(['チケット', 'カード', 'リセット', 'ショップ', 'ボーナス', 'プシュケー', '円盤石', 'アイコン', 'フレーム', 'ビート']);
-const marketNameForWrap = name => MARKET_NAME_WRAP_WORDS.reduce((text, word) => text.split(word).join(`​${word}`), String(name || '')).split('（').join('​（').split('）').join('）​').split('・').join('・​').replace(/([ァ-ヶー])([0-9０-９])/g, '$1​$2').replace(/([ァ-ヶー]{7,})の/g, '$1​の');
-const marketNameNodes = name => marketNameForWrap(name).split('​').map((seg, index) => React.createElement(React.Fragment, {
-  key: index
-}, index > 0 && React.createElement("wbr", null), seg));
+const marketNameForWrap = name => MARKET_NAME_WRAP_WORDS.reduce((text, word) => text.split(word).join(`​${word}`), String(name || '')).split('（').join('​（').split('）').join('）​').split('・').join('・​').replace(/([ァ-ヶー])([0-9０-９])/g, '$1​$2').replace(/([ァ-ヶー]{7,})の/g, '$1​の').replace(/([ァ-ヶー])の([一-龯]{2,})/g, '$1​の$2').replace(/・​([^​]{1,2})$/, '・$1');
+const marketNameNodes = name => React.createElement("span", {
+  "data-market-name-text": true
+}, marketNameForWrap(name).split('\u200b').map((seg, index, all) => {
+  const tail = index === all.length - 1 ? seg.match(/^(.*)(・[^・]{1,2})$/) : null;
+  return React.createElement(React.Fragment, {
+    key: index
+  }, index > 0 && React.createElement("wbr", null), tail ? React.createElement(React.Fragment, null, tail[1], React.createElement("span", {
+    style: {
+      whiteSpace: 'nowrap'
+    }
+  }, tail[2])) : seg);
+}));
 const MARKET_LABEL_WRAP_AFTER = Object.freeze(['すると']);
 const marketLabelSegments = label => Array.isArray(label) ? label.map(String).filter(Boolean) : MARKET_LABEL_WRAP_AFTER.reduce((text, word) => text.split(word).join(`${word}​`), String(label || '')).split('​');
 const marketLabelFitSize = label => {
@@ -15833,6 +15842,7 @@ const MarketProductCard = ({
     className: `w-full flex items-start justify-center text-center ${/[ァ-ヶー]{7,}/.test(item.name || '') ? 'text-[10px] max-[359px]:text-[9px]' : /（/.test(item.name || '') ? 'text-[10px]' : 'text-[11px]'} font-black leading-tight ${comingSoon ? 'text-slate-400' : 'text-white'}`,
     style: {
       minHeight: '36px',
+      textWrap: 'wrap',
       wordBreak: 'keep-all',
       overflowWrap: 'anywhere'
     }
@@ -48975,14 +48985,20 @@ const jaWrap = text => {
       granularity: 'word'
     }) : null;
     if (!_jaSegmenter) return s;
-    return [..._jaSegmenter.segment(s)].map(seg => seg.segment).join('\u200B');
+    const segs = [..._jaSegmenter.segment(s)].map(seg => seg.segment);
+    return segs.reduce((out, seg, i) => i === 0 || /^[\s、。，．,.！？!?」』）)】〕〉》…‥ー〜～・：:；;ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ]/.test(seg) || /[\s「『（(【〔〈《]$/.test(segs[i - 1]) ? out + seg : `${out}\u200B${seg}`, '');
   } catch {
     return s;
   }
 };
 const JA_WRAP_STYLE = Object.freeze({
   wordBreak: 'keep-all',
-  overflowWrap: 'anywhere'
+  overflowWrap: 'anywhere',
+  textWrap: 'wrap'
+});
+const JA_LABEL_STYLE = Object.freeze({
+  ...JA_WRAP_STYLE,
+  textWrap: 'balance'
 });
 const countInputClamp = (n, min, max) => Math.min(Math.max(min, n), Math.max(min, max));
 const CountInput = ({
@@ -50191,8 +50207,9 @@ function SettingsMenuLink({
   }, React.createElement("span", {
     className: `block text-[14px] font-black leading-tight ${accent}`
   }, label), React.createElement("span", {
-    className: "mt-0.5 block text-[10px] font-bold leading-snug text-slate-400"
-  }, desc)), React.createElement(ChevronRight, {
+    className: "mt-0.5 block text-[10px] font-bold leading-snug text-slate-400",
+    style: JA_LABEL_STYLE
+  }, jaWrap(desc))), React.createElement(ChevronRight, {
     size: 18,
     className: "shrink-0 opacity-60"
   }));
@@ -51995,8 +52012,9 @@ function ProfileScreen({
     }, React.createElement("small", {
       className: "block text-[10px] font-black text-pink-300"
     }, "ひとこと"), React.createElement("b", {
-      className: "block break-words text-[11px] font-black leading-tight text-white [text-wrap:balance]"
-    }, profileMessage || 'まだ書いていません'))), showFriendTiles && React.createElement("button", {
+      className: "block text-[11px] font-black leading-tight text-white",
+      style: JA_LABEL_STYLE
+    }, profileMessage || jaWrap('まだ書いていません')))), showFriendTiles && React.createElement("button", {
       type: "button",
       "data-profile-favorite-masu": true,
       onClick: onOpenFavoritePicker,
@@ -52011,10 +52029,12 @@ function ProfileScreen({
     }, "💗"), React.createElement("span", {
       className: "min-w-0 flex-1"
     }, React.createElement("small", {
-      className: "block text-[10px] font-black text-pink-300"
-    }, "好きなモンスター"), React.createElement("b", {
-      className: "block break-words text-[11px] font-black leading-tight text-white [text-wrap:balance]"
-    }, base ? `${base.name}（絆Lv.${masuBondLevelInfo(favoriteMasu).level}）` : 'まだ選んでいません'))));
+      className: "block text-[10px] font-black text-pink-300",
+      style: JA_LABEL_STYLE
+    }, jaWrap('好きなモンスター')), React.createElement("b", {
+      className: "block text-[11px] font-black leading-tight text-white",
+      style: JA_LABEL_STYLE
+    }, base ? `${base.name}（絆Lv.${masuBondLevelInfo(favoriteMasu).level}）` : jaWrap('まだ選んでいません')))));
   })()), React.createElement("div", {
     className: "mb-3 grid grid-cols-3 gap-2",
     "data-profile-stats": true
@@ -62386,7 +62406,7 @@ const HOME_RAID_JACK_BUTTON_STYLE = Object.freeze({
   cursor: 'pointer',
   pointerEvents: 'auto'
 });
-const HOME_RAID_SAY_WIDTHS = Object.freeze([184, 168, 152, 136, 120]);
+const HOME_RAID_SAY_WIDTHS = Object.freeze([184, 168, 152, 136, 120, 104, 96]);
 const HOME_RAID_SAY_GAP = 6;
 const HOME_RAID_SAY_HOP = 18;
 const homeRaidSayPlace = ({
@@ -62432,6 +62452,21 @@ const homeRaidSayPlace = ({
         side,
         left,
         top: Math.max(top + edge, midY - h / 2),
+        width: w,
+        height: h
+      });
+    }
+  }
+  for (const side of ['right', 'left']) {
+    for (const w of HOME_RAID_SAY_WIDTHS) {
+      const h = measure(w);
+      const left = side === 'right' ? head.right + HOME_RAID_SAY_GAP + 6 : head.left - HOME_RAID_SAY_GAP - 6 - w;
+      const from = Math.max(top + edge, head.top + Math.min(head.bottom - head.top, 80) * 0.35 - h / 2),
+        to = head.top + (head.bottom - head.top) * 0.5;
+      for (let y = from + 6; y <= to; y += 6) tries.push({
+        side,
+        left,
+        top: y,
         width: w,
         height: h
       });
@@ -62772,10 +62807,12 @@ const HomeRaidJack = ({
       pointerEvents: 'auto'
     }
   }, React.createElement("span", {
+    "data-home-raid-say-text": true,
     style: {
-      display: 'block'
+      display: 'block',
+      ...JA_LABEL_STYLE
     }
-  }, speech), React.createElement("span", {
+  }, jaWrap(speech)), React.createElement("span", {
     "aria-hidden": "true",
     style: {
       display: 'block',
@@ -100929,8 +100966,9 @@ function MonsterHeroGame() {
         size: 16,
         className: "shrink-0 text-indigo-300"
       })), React.createElement("small", {
-        className: "mt-0.5 block text-[10px] font-bold leading-relaxed text-slate-400"
-      }, desc));
+        className: "mt-0.5 block text-[10px] font-bold leading-relaxed text-slate-400",
+        style: JA_LABEL_STYLE
+      }, jaWrap(desc)));
       return React.createElement("div", {
         "data-mh-screen": true,
         className: SCREEN_SHELL_CLASS
@@ -102275,8 +102313,9 @@ function MonsterHeroGame() {
         }, "β版"), !soon && !beta && sys.id === BATTLE_SYSTEM_TACTICS && !TACTICS_MODE_PUBLIC_RELEASE && React.createElement("span", {
           className: "shrink-0 rounded border border-slate-900/50 bg-slate-950/80 px-1 py-0.5 text-[8px] font-black text-amber-300"
         }, "DEBUG")), React.createElement("small", {
-          className: "block text-[10px] font-black leading-tight text-slate-900/80"
-        }, sys.tagline), (soon || beta) && React.createElement("small", {
+          className: "block text-[10px] font-black leading-tight text-slate-900/80",
+          style: JA_LABEL_STYLE
+        }, jaWrap(sys.tagline)), (soon || beta) && React.createElement("small", {
           className: "mt-0.5 block text-[9px] font-black leading-tight text-slate-900/70"
         }, soon ? 'いま準備しています。遊べるようになったらお知らせします' : 'いまはタクティクスプロだけ遊べます。ほかのモードは準備中です'))), React.createElement("button", {
           "data-battle-system-info": sys.id,
