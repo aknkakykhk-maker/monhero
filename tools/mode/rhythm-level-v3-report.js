@@ -57,6 +57,11 @@ fs.mkdirSync(OUT,{recursive:true});
 
 // --- PNG(難易度ごと・幅390) ---
 const esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+// 曲名は意味のまとまりでだけ折る(2026-10-22 窓口の指摘「ドパガキリミック/ス」「—愛はひとつじゃ/ない—」「Thorn Ki/ng」)。
+// keep-all で日本語の字の間では折らず、折ってよいのは空白と副題の始まり(「～」「—」「―」「「」の前)だけ。1行に入らない時だけ anywhere で折る。
+// ゲームの jaWrapPoints(41-screen-ui.jsx・Intl.Segmenter)は曲名の造語を「ド|パ|ガキ|リ|ミックス」「ぱ|ん|ぷ|きん」と細かく切るので、ここでは使わない
+// 副題(「～…～」「―…―」「「…」」)は始まりから終わりまでをひとかたまりにし、中では折らない(「～/ぱんぷきんの逆襲～」と記号だけ残らない)
+const wrapName=s=>esc(s).split(/([～〜—―「][^～〜—―」]*[～〜—―」])/).map((x,i)=>i%2?`<wbr><span class="u">${x}</span>`:x).join('');
 const page=(d,i)=>{const s=summary[i];
   const list=rows.map(r=>({name:r.name,c:r.cells[i]})).filter(x=>x.c);
   return `<!doctype html><meta charset="utf-8"><style>
@@ -65,19 +70,28 @@ const page=(d,i)=>{const s=summary[i];
   table{border-collapse:collapse;width:366px;margin:0 12px 12px}td,th{padding:5px 4px;border-bottom:1px solid #332b44}
   th{font-size:12px;color:#bbb;text-align:left}td.n{text-align:right;width:26px;font-variant-numeric:tabular-nums}
   /* 曲名は英単語の途中で折らない(単語の区切りで折る・2026-10-22 窓口の指摘)。数字と印の列を詰めて曲名の列を広げる */
-  td.s{word-break:normal;overflow-wrap:normal;font-size:13px}td.m{width:44px;font-size:11px;color:#ffcf5a}
+  td.s{word-break:keep-all;overflow-wrap:anywhere;font-size:13px}td.s .u{white-space:nowrap}td.m{width:44px;font-size:11px;color:#ffcf5a}
   .up{color:#ff8a8a}.down{color:#7fc3ff}.big td{background:#2c2140}</style>
   <h1>${d}: 今の Lv. → v3 の参考</h1>
   <p>譜面${s.count} / 上がる${s.up}・下がる${s.down}・同じ${s.same} / ◆(±${BIG}以上) 上${s.bigUp}・下${s.bigDown} / 逆転 今${s.invNow}・v3 ${s.invV3}</p>
   <table><tr><th>曲</th><th>今</th><th>v3</th><th>差</th><th>印</th></tr>
-  ${list.map(({name,c})=>`<tr class="${Math.abs(c.diff)>=BIG?'big':''}"><td class="s">${esc(name)}</td><td class="n">${c.now}</td><td class="n">${c.v3}</td><td class="n ${c.diff>0?'up':c.diff<0?'down':''}">${sign(c.diff)}</td><td class="m">${mark(c)}</td></tr>`).join('')}
+  ${list.map(({name,c})=>`<tr class="${Math.abs(c.diff)>=BIG?'big':''}"><td class="s">${wrapName(name)}</td><td class="n">${c.now}</td><td class="n">${c.v3}</td><td class="n ${c.diff>0?'up':c.diff<0?'down':''}">${sign(c.diff)}</td><td class="m">${mark(c)}</td></tr>`).join('')}
   </table>`;};
 (async()=>{
   fs.writeFileSync(path.join(OUT,'README.md'),text+DIFFS.map(d=>`\n![${d}](./${d.toLowerCase()}.png)`).join('')+'\n');
   let playwright;try{playwright=require('playwright');}catch{console.log('playwright が無いので PNG は作らない');return;}
   const browser=await playwright.chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
   try{const p=await browser.newPage({viewport:{width:390,height:400},deviceScaleFactor:2});
-    for(const [i,d] of DIFFS.entries()){await p.setContent(page(d,i));await p.screenshot({path:path.join(OUT,`${d.toLowerCase()}.png`),fullPage:true});}}
+    const bad=[];let breaks=0;
+    for(const [i,d] of DIFFS.entries()){await p.setContent(page(d,i));
+      // 曲名が行をまたぐ所を1字ずつの位置で探し、空白のあと・副題の始まり(～ — 「)の前以外で折れていないかを見る
+      const found=await p.evaluate(()=>[...document.querySelectorAll('td.s')].flatMap(td=>{const t=[];const w=document.createTreeWalker(td,NodeFilter.SHOW_TEXT);let n;
+        while((n=w.nextNode()))for(let k=0;k<n.length;k++){const rg=document.createRange();rg.setStart(n,k);rg.setEnd(n,k+1);const rc=rg.getClientRects()[0];if(rc)t.push([n.data[k],rc.top]);}
+        const text=t.map(x=>x[0]).join('');const out=[];for(let k=1;k<t.length;k++)if(t[k][1]>t[k-1][1]+3)out.push({ok:/\s/.test(t[k-1][0])||/[\s～〜—―「]/.test(t[k][0]),at:`${text.slice(0,k)}/${text.slice(k)}`});return out;}));
+      breaks+=found.length;for(const f of found)if(!f.ok)bad.push(`${d}: ${f.at}`);
+      await p.screenshot({path:path.join(OUT,`${d.toLowerCase()}.png`),fullPage:true});}
+    console.log(`曲名の折れ ${breaks}か所・言葉の途中で折れた所 ${bad.length}${bad.length?` — ${bad.join(' / ')}`:''}`);
+    if(bad.length)process.exitCode=1;}
   finally{await browser.close();}
   console.log(`書いた: ${path.relative(process.cwd(),OUT)}/README.md と ${DIFFS.map(d=>d.toLowerCase()+'.png').join(' ')}`);
 })();
