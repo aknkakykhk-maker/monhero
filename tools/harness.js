@@ -321,6 +321,7 @@ const EXPORTED_NAMES = [
   'maxSoulTraitUpgradeLevels',
   'buildSoulTraitUpgrade',
   'buildMasuSoulTraitReset',
+  'buildSoulTraitRespec',
   'SOUL_RANK_RESPEC_ITEM_ID',
   'SOUL_RANK_RESPEC_DIAMOND_COST',
   'buildSoulRankRespecProofExchange',
