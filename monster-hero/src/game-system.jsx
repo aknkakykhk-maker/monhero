@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: aa6b111f90537815
+// generated-sha256: 8aa51cdb71286311
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-21 18:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-21 19:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -32759,8 +32759,12 @@ const AssistantBondRewardList = ({ who, level, breederIcon, resolveIconUrl, onCl
   const accent = who.accent || '#f472b6';
   const nextLv = rows.find(r => r.level > level)?.level || null;
   const nowRef = React.useRef(null);
-  // 開いたら、いまのLvの近くを見せる
-  React.useEffect(() => { try { nowRef.current?.scrollIntoView({ block:'center' }); } catch {} }, []);
+  const listRef = React.useRef(null);
+  // 開いたら、いまのLvの近くを見せる。動かすのは一覧の箱の中だけ(scrollIntoView は画面ごと動くので使わない・viewport-height-check)
+  React.useEffect(() => {
+    const box = listRef.current, row = nowRef.current;
+    if (box && row) box.scrollTop = Math.max(0, row.offsetTop - (box.clientHeight - row.offsetHeight) / 2);
+  }, []);
   return (
     <ModalFrame label={`${who.name}との仲良し度のごほうび一覧`} border="border-pink-400/70" onClose={onClose}>
       <div data-assistant-bond-reward-list={who.id}>
@@ -32773,7 +32777,7 @@ const AssistantBondRewardList = ({ who, level, breederIcon, resolveIconUrl, onCl
           </div>
         </div>
         <p className="mt-2 text-[10px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('Lvが上がると、そのLvのごほうびがギフトボックスへ届きます。助手ごとに1回ずつです。')}</p>
-        <ol className="mt-2 max-h-[58vh] space-y-1.5 overflow-y-auto pr-0.5">
+        <ol ref={listRef} className="relative mt-2 max-h-[58vh] space-y-1.5 overflow-y-auto pr-0.5">
           {rows.map(r => {
             const got = r.level <= level;
             const isNext = r.level === nextLv;

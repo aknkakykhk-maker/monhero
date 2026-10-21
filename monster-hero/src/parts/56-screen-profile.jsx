@@ -62,8 +62,12 @@ const AssistantBondRewardList = ({ who, level, breederIcon, resolveIconUrl, onCl
   const accent = who.accent || '#f472b6';
   const nextLv = rows.find(r => r.level > level)?.level || null;
   const nowRef = React.useRef(null);
-  // 開いたら、いまのLvの近くを見せる
-  React.useEffect(() => { try { nowRef.current?.scrollIntoView({ block:'center' }); } catch {} }, []);
+  const listRef = React.useRef(null);
+  // 開いたら、いまのLvの近くを見せる。動かすのは一覧の箱の中だけ(scrollIntoView は画面ごと動くので使わない・viewport-height-check)
+  React.useEffect(() => {
+    const box = listRef.current, row = nowRef.current;
+    if (box && row) box.scrollTop = Math.max(0, row.offsetTop - (box.clientHeight - row.offsetHeight) / 2);
+  }, []);
   return (
     <ModalFrame label={`${who.name}との仲良し度のごほうび一覧`} border="border-pink-400/70" onClose={onClose}>
       <div data-assistant-bond-reward-list={who.id}>
@@ -76,7 +80,7 @@ const AssistantBondRewardList = ({ who, level, breederIcon, resolveIconUrl, onCl
           </div>
         </div>
         <p className="mt-2 text-[10px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('Lvが上がると、そのLvのごほうびがギフトボックスへ届きます。助手ごとに1回ずつです。')}</p>
-        <ol className="mt-2 max-h-[58vh] space-y-1.5 overflow-y-auto pr-0.5">
+        <ol ref={listRef} className="relative mt-2 max-h-[58vh] space-y-1.5 overflow-y-auto pr-0.5">
           {rows.map(r => {
             const got = r.level <= level;
             const isNext = r.level === nextLv;
