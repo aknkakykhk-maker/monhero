@@ -174,6 +174,10 @@
   node tools/playbot/tactics-tier.js --md docs/playbot/reports/tier/monster-tier.md
   ```
   更新したら統括部長へ「何体ぶん増えた・Tier が動いた子・新しい提案」を2〜3行で送る
+  - **決め方の試し(overall)**(2026-10-21 社長「勇者モンの評価に寄りすぎ。もっと全体的に見てほしい」・まだ公開の表は変えない):
+    `node tools/playbot/tactics-tier.js --method overall --md` で、供モンの働きを主にした表を `monster-tier-overall.md`・`tier-overall.json` に書く(いまの表は書かない)。
+    プレイヤーの実戦を混ぜるときは、先に `node tools/playbot/player-battle-stats.js`(全国ランキングを読むだけ。ネットに出られないときは `--from-cache`)を回し、`--player-weight 0.5` を付ける。
+    見張りは `node tools/playbot/tier-method-check.js`。バトルの1回ごとの記録の下準備は `docs/spec/BATTLE_LOG.md`
 - 止まった・負けたときは、記録の `why`(理由)と `waves[].threats`(その WAVE の予告)を見て、ゲームの不具合か、ボットの判断の足りなさかを分けて書く。
   ボットの判断の足りなさは、研究所:部長ハカセくんへ回す(その場で済む待ち方・押し方の直しは部で直してよい)
 
