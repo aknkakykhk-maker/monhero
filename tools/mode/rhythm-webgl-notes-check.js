@@ -48,8 +48,11 @@ const NOTES=[
 // グラデーションの位置は頂点側で 0〜1 にしてから渡す(vT)。
 {
   const src=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js'),'utf8');
-  const fsText=(src.match(/const FS='([\s\S]*?)';\n/)||[])[1]||'';
-  const vsText=(src.match(/const VS='([\s\S]*?)';\n/)||[])[1]||'';
+  // シェーダは rhythmCreateGL2D の中のものを読む。ファイルの最初の const VS / FS を読むと、
+  // 2026-10-16(#3136)に前へ足した空中の3D(rhythmCreateGpuSky3d)のシェーダを拾ってしまう
+  const gl2dText=(src.match(/const rhythmCreateGL2D=[\s\S]*?\n\};\n/)||[''])[0];
+  const fsText=(gl2dText.match(/const FS='([\s\S]*?)';\n/)||[])[1]||'';
+  const vsText=(gl2dText.match(/const VS='([\s\S]*?)';\n/)||[])[1]||'';
   check('シェーダを読めた',!!fsText&&!!vsText);
   check('グラデーションの位置は頂点側で計算して渡している(vT)',/varying float vT/.test(vsText)&&/vT=dot\(aPos-uG0,d\)/.test(vsText)&&/clamp\(vT,0\.0,1\.0\)/.test(fsText));
   check('塗り側で画素座標(vPos・uG0・uG1)を使っていない',!/vPos|uG0|uG1/.test(fsText));
