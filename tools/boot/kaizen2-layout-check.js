@@ -88,5 +88,13 @@ const gift = P('53-screen-gift-box.jsx');
 check('M10 ギフト: 札の地は不透明(かぼちゃが字の上に透けない)', gift.includes("bg-[#111329] border-white/10") && gift.includes("bg-[#250a1e] border-red-500/60") && gift.includes("bg-[#131630] border-cyan-400/60")
   && !/mh-gift-card rounded-2xl border \$\{g\.claimedAt\?'bg-slate-900\/70/.test(gift));
 
+// 2026-10-21 窓口「ハロウィンのかぼちゃの飾りが字にかかる」: 枠の無い画面(.mh-app)にはかぼちゃを置かない。枠の画面は下の余白 30px の中に収まる大きさで置く
+{
+  const appRule = (html.match(/\.mh-app\[data-mh-theme="halloween"\] \{[\s\S]*?\n  \}/) || [''])[0];
+  const shellRule = (html.match(/\[data-mh-theme="halloween"\] \.mh-screen-shell \{[\s\S]*?\n  \}/) || [''])[0];
+  check('ハロウィン: 枠の無い画面にはかぼちゃを置かず、枠の画面は下の余白(30px)の中に収まる大きさ(40px・31px)で置く',
+    appRule && !appRule.includes('--mh-halloween-pumpkin') && shellRule.includes('padding-bottom: 30px;') && shellRule.includes('background-size: 44px auto, 28px auto, 40px auto, 31px auto'));
+}
+
 console.log(failed === 0 ? '\nすべてOK' : `\n${failed}件NG`);
 process.exit(failed === 0 ? 0 : 1);

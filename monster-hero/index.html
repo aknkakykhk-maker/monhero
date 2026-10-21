@@ -98,7 +98,7 @@ window.__mhBoot = (function () {
 })();
 // 本体JSのキャッシュキー。ここで一度だけ宣言し、下の読み込み処理でも同じ値を使う。
 // 先読みと <script> のURLがずれると、同じ2.7MBを2回取りに行くことになる
-var GAME_BUILD = '202610212021';
+var GAME_BUILD = '202610212025';
 window.__mhGameBuild = GAME_BUILD;
 // 起動でいちばん大きいのは本体JS(約2.7MB)。いちばん後ろで読むため、そこへ来ると
 // ゲージが止まって見えていた。先に取りはじめて、受け取ったバイト数をそのまま出す。
@@ -468,19 +468,24 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
   :root[data-mh-song-active="1"] .mh-screen-shell { background-image: none !important; }
   .mh-app[data-mh-theme="halloween"] {
     background-color: #170a26;
-    /* 画面の枠(.mh-screen-shell)を使わないバトル系の画面にも、同じ夜空と飾りが透けて見えるようにする */
-    background-image: var(--mh-halloween-bat), var(--mh-halloween-bat), var(--mh-halloween-pumpkin), var(--mh-halloween-pumpkin), var(--mh-halloween-sky);
+    /* 画面の枠(.mh-screen-shell)を使わないバトル系の画面にも、同じ夜空と飾りが透けて見えるようにする。
+       ★かぼちゃは置かない(2026-10-21 窓口「かぼちゃの飾りが字にかかる」)。枠の無い画面は下の端までボタンや札が並ぶので、
+         どこに置いても中身の下に透ける。こうもりと夜空だけにした(夜空はグラデーション3枚。こうもり2枚と合わせて5枚ぶん並べる) */
+    background-image: var(--mh-halloween-bat), var(--mh-halloween-bat), var(--mh-halloween-sky);
     background-repeat: no-repeat;
-    background-position: right 66px top 0, right 112px top 4px, left -8px bottom -6px, right -6px bottom -4px, 0 0, 0 0, 0 0;
-    background-size: 44px auto, 28px auto, 64px auto, 48px auto, 100% 100%, 100% 100%, 100% 100%;
+    background-position: right 66px top 0, right 112px top 4px, 0 0, 0 0, 0 0;
+    background-size: 44px auto, 28px auto, 100% 100%, 100% 100%, 100% 100%;
   }
   [data-mh-theme="halloween"] .mh-screen-shell {
     background-color: #170a26;
     background-image: var(--mh-halloween-bat), var(--mh-halloween-bat), var(--mh-halloween-pumpkin), var(--mh-halloween-pumpkin), var(--mh-halloween-sky);
     background-repeat: no-repeat;
     /* 夜空(--mh-halloween-sky)はグラデーション3枚の重ね。飾り4枚と合わせて7枚ぶん並べる(数がずれると先頭の指定が繰り返される) */
-    background-position: right 66px top 0, right 112px top 4px, left -8px bottom -6px, right -6px bottom -4px, 0 0, 0 0, 0 0;
-    background-size: 44px auto, 28px auto, 64px auto, 48px auto, 100% 100%, 100% 100%, 100% 100%;
+    background-position: right 66px top 0, right 112px top 4px, left -6px bottom -6px, right -4px bottom -5px, 0 0, 0 0, 0 0;
+    /* かぼちゃは下の余白(padding-bottom 30px)の中に収まる大きさ(見える高さ 29px・22px)。中身はこの余白より上で止まるので、
+       スクロールしても字や札がかぼちゃの上に乗らない(2026-10-21 窓口「プロフィールの『助手』の見出しがかぼちゃにかかる」) */
+    background-size: 44px auto, 28px auto, 40px auto, 31px auto, 100% 100%, 100% 100%, 100% 100%;
+    padding-bottom: 30px;
   }
   [data-mh-theme="halloween"] .mh-screen-head h2 { color: #ffb45e; text-shadow: 0 0 14px rgba(255,140,40,.6); }
   [data-mh-theme="halloween"] .mh-tab[aria-selected="true"] { background: #c2580c; }
