@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 76adcd804a343ab5
+// source-sha256: 7b11c3a1d17f3aa6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-22 22:42";
+const BUILD_DATE = "2026-10-22 22:43";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -64434,7 +64434,6 @@ function KikiIntroOverlay({
   const line = script[step];
   const speaker = assistantById(line.who);
   const last = step === script.length - 1;
-  const calls = typeof ASSISTANT_KIKI_INTRO_CALLS !== 'undefined' && ASSISTANT_KIKI_INTRO_CALLS || {};
   const cast = ASSISTANT_LIST.filter(who => script.some(l => l.who === who.id));
   const next = () => {
     if (last) markKikiIntroSeen();else setKikiIntroStep(step + 1);
@@ -64502,7 +64501,7 @@ function KikiIntroOverlay({
     className: "block text-[13px] font-bold leading-relaxed text-white mt-1"
   }, line.t)), React.createElement("p", {
     className: "mt-2 text-center text-[8px] text-slate-500"
-  }, step + 1, " / ", script.length, "\u3000／\u3000みゅあは「", calls.mua || '', "」、ききは「", calls.kiki || '', "」と呼び合います"), React.createElement("div", {
+  }, step + 1, " / ", script.length), React.createElement("div", {
     className: `relative mt-3 grid ${last ? 'grid-cols-1' : 'grid-cols-[1fr_2fr]'} gap-2`,
     style: {
       pointerEvents: 'auto'
@@ -112179,7 +112178,6 @@ function MonsterHeroGame() {
       const line = script[step];
       const speaker = assistantById(line.who);
       const last = step === script.length - 1;
-      const calls = event && event.calls || {};
       const isGuestWho = id => {
         const w = assistantById(id);
         return !!w && w.role === 'ゲスト';
@@ -112478,7 +112476,7 @@ function MonsterHeroGame() {
         className: "rounded-2xl border-2 border-slate-700 bg-slate-900 px-3 py-3 text-center text-[11px] font-bold text-slate-400"
       }, "▲ 上のことばを読んでね"), React.createElement("p", {
         className: "mt-2 text-center text-[8px] text-slate-500"
-      }, step + 1, " / ", script.length, Object.keys(calls).length > 0 && `　／　${cast.filter(who => calls[who.id]).map(who => `${who.name}は「${calls[who.id]}」`).join('、')}と呼び合います`), React.createElement("div", {
+      }, step + 1, " / ", script.length), React.createElement("div", {
         className: `relative mt-3 grid ${last ? 'grid-cols-1' : 'grid-cols-[1fr_2fr]'} gap-2`,
         style: {
           pointerEvents: 'auto',

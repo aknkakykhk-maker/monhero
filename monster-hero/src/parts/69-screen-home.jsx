@@ -438,7 +438,6 @@ function KikiIntroOverlay({
     const line=script[step];
     const speaker=assistantById(line.who);
     const last=step===script.length-1;
-    const calls=(typeof ASSISTANT_KIKI_INTRO_CALLS!=='undefined'&&ASSISTANT_KIKI_INTRO_CALLS)||{};
     // 顔を並べるのは、この台本に出てくる助手だけ。
     // 全員を並べると、まだ登場していない助手までここに映ってしまう
     const cast=ASSISTANT_LIST.filter(who=>script.some(l=>l.who===who.id));
@@ -466,7 +465,7 @@ function KikiIntroOverlay({
           <span className="block text-[13px] font-bold leading-relaxed text-white mt-1">{line.t}</span>
         </div>
         <p className="mt-2 text-center text-[8px] text-slate-500">
-          {step+1} / {script.length}　／　みゅあは「{calls.mua||''}」、ききは「{calls.kiki||''}」と呼び合います
+          {step+1} / {script.length}
         </p>
         {/* スキップ(2026-10-10・改善部の提案K2「あたらしい助手の紹介が10ページでスキップが無い」とユーザー指示)。
             飛ばしても、最後まで見たときと同じ markKikiIntroSeen を通る(見たことになり、次の起動で出ない。回想からいつでも見直せる) */}

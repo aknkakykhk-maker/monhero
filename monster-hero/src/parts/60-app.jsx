@@ -21334,7 +21334,6 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const line=script[step];
         const speaker=assistantById(line.who);
         const last=step===script.length-1;
-        const calls=(event&&event.calls)||{};
         // ゲスト(ジャック・ぱんぷきん)は、下の助手の列には入れない。初めて話す行(か stage で呼ばれる行)から、画面の上部の「ステージ」に出る
         //  (2026-10-04・ユーザー指示「はじめからジャックやぱんぷきんが会話画面にいるのは違和感。出すタイミングをちゃんと」)
         const isGuestWho=(id)=>{const w=assistantById(id);return !!w&&w.role==='ゲスト';};
@@ -21479,7 +21478,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             </div>:<div className="rounded-2xl border-2 border-slate-700 bg-slate-900 px-3 py-3 text-center text-[11px] font-bold text-slate-400">▲ 上のことばを読んでね</div>}
             <p className="mt-2 text-center text-[8px] text-slate-500">
               {step+1} / {script.length}
-              {Object.keys(calls).length>0&&`　／　${cast.filter(who=>calls[who.id]).map(who=>`${who.name}は「${calls[who.id]}」`).join('、')}と呼び合います`}
+              {/* 「○○は「…」と呼び合います」の案内は出さない(2026-10-22 社長「ストーリー上に出さないでほしい」)。呼び方の表(EVENT_REPLAYS の calls)は台本を書く人の控えとしてデータに残す */}
             </p>
             <div className={`relative mt-3 grid ${last?'grid-cols-1':'grid-cols-[1fr_2fr]'} gap-2`} style={{pointerEvents:'auto',zIndex:2}}>
               {!last&&<button type="button" onClick={(e)=>{e.stopPropagation();skip();}} className="min-h-[50px] rounded-2xl bg-slate-700 text-sm font-black text-white active:scale-[.98]">スキップ</button>}

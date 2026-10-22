@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: fde662df19b875df
+// generated-sha256: 83746c5389d9e96e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-22 22:42"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-22 22:43"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -38995,7 +38995,6 @@ function KikiIntroOverlay({
     const line=script[step];
     const speaker=assistantById(line.who);
     const last=step===script.length-1;
-    const calls=(typeof ASSISTANT_KIKI_INTRO_CALLS!=='undefined'&&ASSISTANT_KIKI_INTRO_CALLS)||{};
     // 顔を並べるのは、この台本に出てくる助手だけ。
     // 全員を並べると、まだ登場していない助手までここに映ってしまう
     const cast=ASSISTANT_LIST.filter(who=>script.some(l=>l.who===who.id));
@@ -39023,7 +39022,7 @@ function KikiIntroOverlay({
           <span className="block text-[13px] font-bold leading-relaxed text-white mt-1">{line.t}</span>
         </div>
         <p className="mt-2 text-center text-[8px] text-slate-500">
-          {step+1} / {script.length}　／　みゅあは「{calls.mua||''}」、ききは「{calls.kiki||''}」と呼び合います
+          {step+1} / {script.length}
         </p>
         {/* スキップ(2026-10-10・改善部の提案K2「あたらしい助手の紹介が10ページでスキップが無い」とユーザー指示)。
             飛ばしても、最後まで見たときと同じ markKikiIntroSeen を通る(見たことになり、次の起動で出ない。回想からいつでも見直せる) */}
@@ -70964,7 +70963,6 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const line=script[step];
         const speaker=assistantById(line.who);
         const last=step===script.length-1;
-        const calls=(event&&event.calls)||{};
         // ゲスト(ジャック・ぱんぷきん)は、下の助手の列には入れない。初めて話す行(か stage で呼ばれる行)から、画面の上部の「ステージ」に出る
         //  (2026-10-04・ユーザー指示「はじめからジャックやぱんぷきんが会話画面にいるのは違和感。出すタイミングをちゃんと」)
         const isGuestWho=(id)=>{const w=assistantById(id);return !!w&&w.role==='ゲスト';};
@@ -71109,7 +71107,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             </div>:<div className="rounded-2xl border-2 border-slate-700 bg-slate-900 px-3 py-3 text-center text-[11px] font-bold text-slate-400">▲ 上のことばを読んでね</div>}
             <p className="mt-2 text-center text-[8px] text-slate-500">
               {step+1} / {script.length}
-              {Object.keys(calls).length>0&&`　／　${cast.filter(who=>calls[who.id]).map(who=>`${who.name}は「${calls[who.id]}」`).join('、')}と呼び合います`}
+              {/* 「○○は「…」と呼び合います」の案内は出さない(2026-10-22 社長「ストーリー上に出さないでほしい」)。呼び方の表(EVENT_REPLAYS の calls)は台本を書く人の控えとしてデータに残す */}
             </p>
             <div className={`relative mt-3 grid ${last?'grid-cols-1':'grid-cols-[1fr_2fr]'} gap-2`} style={{pointerEvents:'auto',zIndex:2}}>
               {!last&&<button type="button" onClick={(e)=>{e.stopPropagation();skip();}} className="min-h-[50px] rounded-2xl bg-slate-700 text-sm font-black text-white active:scale-[.98]">スキップ</button>}
