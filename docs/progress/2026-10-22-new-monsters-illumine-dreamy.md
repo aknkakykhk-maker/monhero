@@ -30,7 +30,7 @@
 ## 残り
 
 - [x] 社長の答え: イルミネの顔アイコンの位置 / 染色の部位分けのOK / 開発部で決めた楔の扱いもそのまま
-- [ ] 公開のとき(きゅうこと同時): `ALL_PLAYER_MONSTERS` へ移す・`MONSTER_LINEAGE_MAP`(illumine に monId)・
-      マーケット3件ずつ(`available` を外す)・`MARKET_ICON_FRAMING`・`SKILL_MOTION_SETS`(技ごとの動き)・
-      `MONSTER_ART_CONTAIN_IDS`・ヘルプ(楔・セレーネチェイサー・ドリームペインを分かる形で)・
-      更新履歴(§8 の3種の絵・market の告知)。monster-add スキル §1・§9 で漏れを確かめる
+- [x] 実装予告(#3335)・技ごとの攻撃アクション(#3336)・タクティクスEX ジエンド/ミルフィーシールド(#3338)
+- [x] 2026-10-23 正式公開(#3341・きゅうこと同時)。円盤石はビートP交換所で先行(各1,500P)、ダイヤショップは「近日追加」のまま(社長)。
+      ゴースト・スプーキーのダイヤの円盤石も同時に販売。見え方: `docs/playbot/reports/2026-10-22/new-monsters/release-in-game.jpg`
+- [ ] あとで: ダイヤショップの円盤石の販売開始(社長の合図で available:false を外す)
