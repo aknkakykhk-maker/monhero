@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 03035fefa48a712b
+// source-sha256: 47a1fd898c5e32ef
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-22 10:27";
+const BUILD_DATE = "2026-10-22 10:44";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -60736,6 +60736,7 @@ function ProMonsterGridPicker({
     return first ? first.id : null;
   });
   const focus = list.find(m => m.id === focusId) || null;
+  const [detailFolded, setDetailFolded] = React.useState(false);
   const toggleFav = id => setPrefs(prev => {
     const next = {
       ...prev,
@@ -60794,7 +60795,7 @@ function ProMonsterGridPicker({
       size: 9,
       className: "text-white"
     })), React.createElement("div", {
-      className: "w-14 h-14 rounded-full overflow-hidden bg-black/30 border border-white/10 flex items-center justify-center"
+      className: "w-14 h-14 [@media(max-height:760px)]:w-12 [@media(max-height:760px)]:h-12 rounded-full overflow-hidden bg-black/30 border border-white/10 flex items-center justify-center"
     }, m.imgUrl ? React.createElement(DyedMonsterImage, {
       baseId: m.id,
       src: m.imgUrl,
@@ -60832,7 +60833,7 @@ function ProMonsterGridPicker({
         if (first) setFocusId(first.id);
       }
     },
-    className: `shrink-0 min-h-[34px] px-2.5 rounded-full border text-[11px] font-black active:scale-95 ${activeTab === t.id ? ac.tab : 'border-slate-700 bg-slate-900 text-slate-400'}`
+    className: `shrink-0 min-h-[34px] [@media(max-height:760px)]:min-h-[30px] px-2.5 rounded-full border text-[11px] font-black active:scale-95 ${activeTab === t.id ? ac.tab : 'border-slate-700 bg-slate-900 text-slate-400'}`
   }, t.name, React.createElement("span", {
     className: "ml-1 text-[9px] font-mono opacity-70"
   }, t.count)))), React.createElement("div", {
@@ -60843,7 +60844,7 @@ function ProMonsterGridPicker({
   }, "★お気に入り・前回使った子"), React.createElement("div", {
     className: "grid grid-cols-4 gap-1.5 mb-3"
   }, pinnedIds.map(id => tile(byId.get(id), 'pin-')))), React.createElement("div", {
-    className: "px-1 mb-1 text-[9px] font-black text-slate-400"
+    className: `px-1 mb-1 text-[9px] font-black text-slate-400${header ? ' [@media(max-height:760px)]:hidden' : ''}`
   }, activeTab === 'all' ? 'すべて' : `${(lineageTabs.find(t => t.id === activeTab) || {}).name}血統`, "（", shownList.length, "体）"), React.createElement("div", {
     className: "grid grid-cols-4 gap-1.5 pb-3"
   }, shownList.map(m => tile(m, 'all-')))), React.createElement("div", {
@@ -60857,7 +60858,7 @@ function ProMonsterGridPicker({
   }, "モンスターをタップすると、ここに詳しい情報が出ます") : React.createElement(React.Fragment, null, React.createElement("div", {
     className: "flex items-center gap-2"
   }, React.createElement("div", {
-    className: `w-16 h-16 shrink-0 rounded-2xl overflow-hidden bg-black/30 border border-white/10 flex items-center justify-center${header ? ' [@media(max-height:640px)]:hidden' : ''}`
+    className: `w-12 h-12 shrink-0${detailFolded ? ' hidden' : ''} rounded-2xl overflow-hidden bg-black/30 border border-white/10 flex items-center justify-center${header ? ' [@media(max-height:640px)]:hidden' : ''}`
   }, focus.imgUrl ? React.createElement(DyedMonsterImage, {
     baseId: focus.id,
     src: focus.imgUrl,
@@ -60869,14 +60870,21 @@ function ProMonsterGridPicker({
   }, focus.emoji)), React.createElement("div", {
     className: "min-w-0 flex-1"
   }, React.createElement("div", {
-    className: "flex items-baseline justify-between gap-2"
+    className: "flex items-center justify-between gap-2"
   }, React.createElement("b", {
     className: "truncate text-[14px] text-white leading-tight"
   }, focus.name), React.createElement("span", {
-    className: "shrink-0 text-[9px] text-slate-500 font-black"
+    className: "ml-auto shrink-0 text-[9px] text-slate-500 font-black"
   }, "総合力 ", React.createElement("b", {
     className: "text-[12px] text-amber-300 font-mono"
-  }, formatMonsterPower(monsterPowerOf(focus))))), monsterTypeProtoOn() && React.createElement("div", {
+  }, formatMonsterPower(monsterPowerOf(focus)))), React.createElement("button", {
+    type: "button",
+    "data-pro-pick-fold": true,
+    "aria-expanded": !detailFolded,
+    "aria-label": detailFolded ? '詳しい情報をひらく' : '詳しい情報をたたむ',
+    onClick: () => setDetailFolded(v => !v),
+    className: "shrink-0 -my-1 min-h-[28px] rounded-lg border border-white/15 bg-slate-900 px-1.5 text-[9px] font-black text-slate-300 active:scale-95"
+  }, detailFolded ? '▲ ひらく' : '▼ たたむ')), !detailFolded && React.createElement(React.Fragment, null, monsterTypeProtoOn() && React.createElement("div", {
     "data-pick-type-row": true,
     className: "flex"
   }, React.createElement(MonsterTypeBadge, {
@@ -60886,48 +60894,47 @@ function ProMonsterGridPicker({
   }, (() => {
     const l = monsterLineageOf(focus.id);
     return l.main.id === l.sub.id ? `${l.main.name}の純血` : `${l.main.name} × ${l.sub.name}`;
-  })()), React.createElement("div", {
-    className: `truncate text-[10px] font-black text-amber-300 leading-tight${header ? ' [@media(max-height:640px)]:hidden' : ''}`
+  })(), React.createElement("span", {
+    className: "ml-1.5 text-[10px] text-amber-300"
   }, React.createElement(Zap, {
     size: 10,
     className: "inline mr-0.5"
-  }), focus.unique.name), React.createElement("div", {
-    className: `text-[9px] text-indigo-200 font-black leading-tight line-clamp-2${header ? ' [@media(max-height:640px)]:hidden' : ''}`
+  }), focus.unique.name)), React.createElement("div", {
+    className: `truncate text-[9px] text-indigo-200 font-black leading-tight${header ? ' [@media(max-height:640px)]:hidden' : ''}`
   }, React.createElement("span", {
     className: "text-indigo-400"
-  }, "勇者特性 "), focus.trait || '特性なし'))), React.createElement("div", {
-    className: `mt-1.5 grid grid-cols-4 gap-1 text-center font-mono${header ? ' [@media(max-height:640px)]:hidden' : ''}`
+  }, "勇者特性 "), focus.trait || '特性なし')))), !detailFolded && React.createElement("div", {
+    "data-pro-pick-stats": true,
+    className: `mt-1 grid grid-cols-8 gap-0.5 text-center font-mono${header ? ' [@media(max-height:640px)]:hidden' : ''}`
   }, [['ライフ', focus.baseHp, 'text-pink-300'], ['ちから', focus.baseAtk, 'text-red-300'], ['丈夫さ', focus.baseDef, 'text-emerald-300'], ['ガッツ', focus.baseGuts, 'text-amber-300']].map(([label, value, tint]) => React.createElement("div", {
     key: label,
-    className: "rounded-lg bg-white/5 py-0.5"
+    className: "min-w-0 rounded-md bg-white/5 py-0.5"
   }, React.createElement("div", {
-    className: "text-[8px] text-slate-500 font-black leading-tight"
+    className: "text-[7px] text-slate-500 font-black leading-tight whitespace-nowrap"
   }, label), React.createElement("div", {
-    className: `text-[12px] font-black leading-tight ${tint}`
-  }, value)))), React.createElement("div", {
-    className: `mt-1 grid grid-cols-4 gap-1 text-center${header ? ' [@media(max-height:640px)]:hidden' : ''}`
-  }, RANGE_LABELS.map((label, i) => React.createElement("div", {
+    className: `text-[11px] font-black leading-tight ${tint}`
+  }, value))), RANGE_LABELS.map((label, i) => React.createElement("div", {
     key: label,
-    className: "rounded-lg bg-white/5 py-0.5"
+    className: "min-w-0 rounded-md bg-white/5 py-0.5"
   }, React.createElement("div", {
-    className: "text-[8px] text-slate-500 font-black leading-tight"
+    className: "text-[7px] text-slate-500 font-black leading-tight whitespace-nowrap"
   }, label), React.createElement("div", {
-    className: `text-[11px] font-black rounded ${DIST_APTITUDE_COLOR[apt(focus, i)]}`
+    className: `text-[11px] font-black leading-tight rounded ${DIST_APTITUDE_COLOR[apt(focus, i)]}`
   }, apt(focus, i))))), React.createElement("div", {
     className: "mt-1.5 flex gap-1.5"
   }, React.createElement("button", {
     onClick: () => toggleFav(focus.id),
     "aria-pressed": prefs.fav.includes(focus.id),
     "aria-label": prefs.fav.includes(focus.id) ? 'お気に入りを外す' : 'お気に入りに入れる',
-    className: `shrink-0 w-11 min-h-[44px] rounded-xl border text-lg font-black active:scale-95 ${prefs.fav.includes(focus.id) ? 'border-amber-400/60 bg-amber-900/40 text-amber-300' : 'border-slate-700 bg-slate-900 text-slate-500'}`
+    className: `shrink-0 w-11 min-h-[40px] rounded-xl border text-lg font-black active:scale-95 ${prefs.fav.includes(focus.id) ? 'border-amber-400/60 bg-amber-900/40 text-amber-300' : 'border-slate-700 bg-slate-900 text-slate-500'}`
   }, "★"), React.createElement("button", {
     onClick: () => onDetail && onDetail(focus),
-    className: "shrink-0 px-3 min-h-[44px] rounded-xl border border-indigo-400/30 bg-indigo-950/60 text-[11px] font-black text-indigo-200 active:scale-95"
+    className: "shrink-0 px-3 min-h-[40px] rounded-xl border border-indigo-400/30 bg-indigo-950/60 text-[11px] font-black text-indigo-200 active:scale-95"
   }, "詳しく"), React.createElement("button", {
     disabled: disabled(focus),
     onClick: () => onSelect(focus),
     "aria-label": confirmAria ? confirmAria(focus) : undefined,
-    className: `flex-1 min-h-[44px] rounded-xl text-[13px] font-black active:scale-[.98] disabled:opacity-30 ${ac.button}`
+    className: `flex-1 min-h-[40px] rounded-xl text-[13px] font-black active:scale-[.98] disabled:opacity-30 ${ac.button}`
   }, typeof confirmLabel === 'function' ? confirmLabel(focus) : confirmLabel))))));
 }
 function ProPartyPicker({
@@ -61003,7 +61010,7 @@ function ProPartyPicker({
       "aria-label": step === 'hero' ? m ? `${m.name}を勇者モンにする` : '空き' : m ? `${m.name}を枠から外す` : `${i + 1}番目の枠に入れる子を選ぶ`,
       className: `relative flex min-w-0 flex-col items-center rounded-xl border-2 px-0.5 pb-1 pt-0.5 text-center active:scale-95 ${on ? 'border-indigo-300 bg-indigo-900/40 shadow-[0_0_10px_rgba(165,180,252,.55)]' : isHero ? 'border-amber-300 bg-amber-900/50 shadow-[0_0_10px_rgba(252,211,77,.55)]' : m ? 'border-pink-300/50 bg-slate-900/80' : 'border-dashed border-white/20 bg-slate-900/40'}`
     }, React.createElement("span", {
-      className: "flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-black/30 [@media(max-height:640px)]:h-7 [@media(max-height:640px)]:w-7"
+      className: "flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-black/30 [@media(max-height:760px)]:h-8 [@media(max-height:760px)]:w-8 [@media(max-height:640px)]:h-7 [@media(max-height:640px)]:w-7"
     }, m ? m.imgUrl ? React.createElement(DyedMonsterImage, {
       baseId: m.id,
       src: m.imgUrl,
@@ -61034,7 +61041,7 @@ function ProPartyPicker({
       className: "absolute -top-1.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border border-amber-200 bg-amber-500 px-1 text-[8px] font-black leading-[12px] text-black"
     }, "👑勇者"));
   };
-  const guide = step === 'hero' ? hero ? `${hero.name}が勇者モンです。ほかの子を押すと替えられます` : '勇者モンにする子を、上の枠から1体えらんでください' : full ? 'そろいました。枠を押すとその子を外せます。勇者モンは次でえらびます' : `好きな枠を押してから、下で子をえらんで「枠に入れる」(どの順でもOK・あと${need - filled}体)`;
+  const guide = step === 'hero' ? hero ? `${hero.name}が勇者モンです。ほかの子を押すと替えられます` : '勇者モンにする子を、上の枠から1体えらんでください' : full ? 'そろいました。枠を押すとその子を外せます。勇者モンは次でえらびます' : `枠を押して、下の子を「枠に入れる」(どの順でもOK・あと${need - filled}体)`;
   const top = React.createElement("section", {
     "data-pro-party": true,
     className: "mb-2 shrink-0 rounded-2xl border border-indigo-300/30 bg-black/30 p-2 [@media(max-height:640px)]:mb-1 [@media(max-height:640px)]:py-1.5"
@@ -61093,7 +61100,7 @@ function ProPartyPicker({
     "data-pro-party-next": true,
     disabled: !full,
     onClick: () => setStep('hero'),
-    className: "mt-2 shrink-0 min-h-[48px] w-full rounded-2xl bg-indigo-600 px-3 text-[13px] font-black text-white active:scale-95 disabled:bg-slate-800 disabled:text-slate-500"
+    className: "mt-1.5 shrink-0 min-h-[44px] w-full rounded-2xl bg-indigo-600 px-3 text-[13px] font-black text-white active:scale-95 disabled:bg-slate-800 disabled:text-slate-500"
   }, full ? '次へ(勇者モンをえらぶ)' : `あと${need - filled}体えらんでください`));
 }
 function PickHeroAllyScreen({
@@ -61186,7 +61193,7 @@ function PickHeroAllyScreen({
       className: `text-xl font-black italic uppercase tracking-widest ${pickMode === 'ally' ? 'mh-ph-title' : 'text-indigo-400'}`
     }, pickMode === 'hero' ? '勇者モンを選択' : '供モンを選択'), React.createElement("p", {
       "data-pick-term-note": true,
-      className: `mt-0.5 text-[10px] font-bold leading-snug text-slate-400${pickMode === 'hero' && isProMode(runMode) && !battleTutorial ? ' [@media(max-height:640px)]:hidden' : ''}`
+      className: `mt-0.5 text-[10px] font-bold leading-snug text-slate-400${pickMode === 'hero' && isProMode(runMode) && !battleTutorial ? ' [@media(max-height:760px)]:hidden' : ''}`
     }, pickMode === 'hero' ? '勇者モン＝バトルの主役。この子の勇者特性が効く' : '供モン＝勇者モンと一緒に戦う仲間')), React.createElement("div", {
       className: "w-10"
     })), pickMode === 'ally' && React.createElement("div", {
@@ -61309,8 +61316,8 @@ function PickHeroAllyScreen({
       "aria-pressed": heroPickTab === key,
       className: `flex-1 min-h-[40px] rounded-2xl font-black text-[12px] border-2 active:scale-95 ${heroPickTab === key ? 'bg-indigo-600 border-indigo-300 text-white shadow-lg' : 'bg-slate-900 border-slate-700 text-slate-400'}`
     }, label))), React.createElement("div", {
-      className: `text-[9px] text-slate-500 font-bold mt-1 px-1 text-center${isProMode(runMode) && !battleTutorial ? ' [@media(max-height:640px)]:hidden' : ''}`
-    }, isProMode(runMode) ? 'プロモードはベースモンだけで挑みます。育てたマスモンは連れていけません' : heroPickTab === 'base' ? '解放済みのベースモンから選べます。編成に入れていなくても、ラン終了時にマスモン登録できます' : 'M/B管理で組んだ編成から選びます')), React.createElement("div", {
+      className: `text-[9px] text-slate-500 font-bold mt-1 px-1 text-center${isProMode(runMode) && !battleTutorial ? ' [@media(max-height:760px)]:hidden' : ''}`
+    }, isProMode(runMode) ? 'プロモードはベースモンだけ(育てたマスモンは連れていけません)' : heroPickTab === 'base' ? '解放済みのベースモンから選べます。編成に入れていなくても、ラン終了時にマスモン登録できます' : 'M/B管理で組んだ編成から選びます')), React.createElement("div", {
       className: `flex-1 ${pickMode === 'hero' && isProMode(runMode) ? 'overflow-hidden' : 'overflow-y-auto mh-scroll'} w-full max-w-md mx-auto pb-4 min-h-0 flex flex-col`
     }, React.createElement("div", {
       className: `w-full${pickMode === 'ally' ? ' m-auto' : ''}${pickMode === 'hero' && isProMode(runMode) ? ' flex-1 min-h-0 flex flex-col' : ''}`
