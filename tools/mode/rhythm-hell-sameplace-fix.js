@@ -29,8 +29,12 @@ const LANES=12,MAX_SHIFT=4;   // 横へずらすのは2レーン(半レーン4�
 const runtime=src=>{const c={Object,Number,Math,JSON,Array,String,Date,__MH_RHYTHM_CHART_SWITCH:null};
   vm.runInNewContext(`${src}\nthis.o={H:RHYTHM_HELL_CHARTS,B:RHYTHM_SONG_BEATS,C:typeof RHYTHM_SONG_CLIMAX!=='undefined'?RHYTHM_SONG_CLIMAX:{}};`,c);return c.o;};
 // 曲 → HELL の目印(RHYTHM_HELL_CHARTS の変数名 → その Notes の入れ物の目印)
-const markerOf=(src,id)=>{const m=new RegExp(`[{,]${id}:(\\w+)HellChart[,}]`).exec(src);if(!m)return null;
-  const at=src.indexOf(`const ${m[1]}HellNotes=`);if(at<0)return null;const mk=/\/\/ <([\w-]+)-notes>/.exec(src.slice(at,at+400));return mk?mk[1]:null;};
+// 数字で始まる曲(4u_hitasura)は鍵が引用符つき('4u_hitasura':)なので、引用符があっても見つける
+const markerOf=(src,id)=>{const m=new RegExp(`[{,]['"]?${id}['"]?:(\\w+)HellChart[,}]`).exec(src);if(!m)return null;
+  // 演出の間を外す曲(grievous_lady)は、本体が …HellBaseNotes にある(…HellNotes はそれを通した結果)
+  for(const name of [`${m[1]}HellNotes`,`${m[1]}HellBaseNotes`]){const at=src.indexOf(`const ${name}=`);if(at<0)continue;
+    const mk=/\/\/ <([\w-]+)-notes>/.exec(src.slice(at,at+400));if(mk)return mk[1];}
+  return null;};
 const internalOf=notes=>notes.map(n=>n.type==='SLIDE'?{k:'s',hand:n.hand||null,pts:(n.slidePoints||[]).map(p=>[p.timeMs,p.lane,p.subLaneWidth??2,p.sky||0,0])}
   :n.type==='HOLD'?{k:'h',t:n.timeMs,sub:n.subLane,w:n.subLaneWidth,end:n.endTimeMs,sky:0}
   :n.type==='FLICK'?{k:'f',t:n.timeMs,sub:n.subLane,w:n.subLaneWidth,args:[n.timeMs,n.subLane,n.subLaneWidth],sky:n.skyHeight>0?1:0}
