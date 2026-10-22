@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: cc097bd9767e2820
+// source-sha256: c6e8665dff1ee8d0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-22 22:16";
+const BUILD_DATE = "2026-10-22 22:21";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -6404,6 +6404,7 @@ const rhythmAchievementPending = (ledger, rules, eligible) => {
 const pandoraBossBgmForBattle = (heroId, currentWave, enemyId) => heroId === 'Pandora' && (enemyId === 'Moo' || currentWave === 10) ? 'pandora_boss' : null;
 const eikiBossBgmForBattle = (heroId, currentWave, enemyId) => heroId === 'Eiki' && (enemyId === 'Moo' || currentWave === 10) ? 'eiki_boss' : null;
 const DEFAULT_BGM_ARRANGEMENT = Object.freeze({
+  kyukoJoinStoryEvent: 'original_event_01',
   atsuJoinStoryEvent: 'melo_against_my_own_shadow',
   tacticsTypesEvent: 'original_event_01',
   rhythmHellStoryEvent: 'melo_sheriruth',
@@ -6498,6 +6499,7 @@ const eventScriptBgmAt = (script, step) => {
 };
 const EVENT_BGM_FADE_MS = 800;
 const EVENT_BGM_SCENES = Object.freeze({
+  kyuko_join_2026_10_22: 'kyukoJoinStoryEvent',
   atsu_join_2026_10_22: 'atsuJoinStoryEvent',
   tactics_types: 'tacticsTypesEvent',
   kiki_intro: 'kikiIntro',
@@ -64625,7 +64627,8 @@ const FRIEND_NOTICE_LINES = Object.freeze({
   kiki: who => `${who}からフレンド申請が届いてまつよ。見にいきまつか？`,
   momosuke: who => `${who}からフレンド申請が来てるよw 見にいこ？`,
   dra: who => `${who}からフレンド申請が来てるわ。見にいくか`,
-  atsu: who => `${who}からフレンド申請来てるよ。とりあえず見にいこ`
+  atsu: who => `${who}からフレンド申請来てるよ。とりあえず見にいこ`,
+  kyuko: who => `ほい！ ${who}からフレンド申請来てるよぉ。見にいこ笑`
 });
 function HomeFriendRequestNotice({
   activeAssistant,
@@ -75837,6 +75840,12 @@ const RHYTHM_MODE_ASSISTANT_FRAMES = Object.freeze({
   atsu: {
     zoom: 1.1,
     cx: 0.48,
+    cy: 0,
+    top: 0.02
+  },
+  kyuko: {
+    zoom: 1.1,
+    cx: 0.5,
     cy: 0,
     top: 0.02
   }
@@ -94258,6 +94267,10 @@ function MonsterHeroGame() {
   });
   const tacticsExFrozenRef = useRef(false);
   const kyukoRedirectRef = useRef(null);
+  const eventReplayStepShownAtRef = useRef({
+    key: '',
+    at: 0
+  });
   const tacticsExAimRef = useRef({
     intent: null,
     dist: 2
@@ -101664,7 +101677,7 @@ function MonsterHeroGame() {
     }, {
       id: 'event',
       label: 'イベント',
-      items: [['kikiIntro', 'きき加入イベント BGM'], ['momosukeIntro', 'ももすけ登場イベント BGM'], ['monbeatCupEvent', 'モンヒロビート大会イベント BGM'], ['rhythmMultiEvent', 'みんなで対戦のお話 BGM'], ['masuCallEvent', 'マスモンとセッションのお話 BGM'], ['halloweenNightEvent', 'ハロウィン・ナイトのお話 BGM'], ['assistantChatStoryEvent', '助手とおしゃべりのお話 BGM'], ['atsuJoinStoryEvent', 'あつ加入のお話 BGM']]
+      items: [['kikiIntro', 'きき加入イベント BGM'], ['momosukeIntro', 'ももすけ登場イベント BGM'], ['monbeatCupEvent', 'モンヒロビート大会イベント BGM'], ['rhythmMultiEvent', 'みんなで対戦のお話 BGM'], ['masuCallEvent', 'マスモンとセッションのお話 BGM'], ['halloweenNightEvent', 'ハロウィン・ナイトのお話 BGM'], ['assistantChatStoryEvent', '助手とおしゃべりのお話 BGM'], ['atsuJoinStoryEvent', 'あつ加入のお話 BGM'], ['kyukoJoinStoryEvent', 'きゅうこ加入のお話 BGM']]
     }, {
       id: 'other',
       label: 'その他',
@@ -112221,7 +112234,14 @@ function MonsterHeroGame() {
         const bond = normalizeAssistantBond(assistantBonds[w.id]);
         return assistantSpeakText(l.t, breederName, assistantBondLevelOf(bond.points), assistantCallStyles[w.id] || null, w.id);
       };
+      const stepKey = `${eventReplay.id}:${step}`;
+      if (eventReplayStepShownAtRef.current.key !== stepKey) eventReplayStepShownAtRef.current = {
+        key: stepKey,
+        at: Date.now()
+      };
       const next = () => {
+        const holdMs = Number(line.holdMs);
+        if (Number.isFinite(holdMs) && holdMs > 0 && Date.now() - eventReplayStepShownAtRef.current.at < holdMs) return;
         if (!last) {
           setEventReplay(r => r && {
             ...r,
@@ -112641,7 +112661,33 @@ function MonsterHeroGame() {
         expression: e
       }), React.createElement("span", {
         className: "text-[8px] text-slate-400 font-black"
-      }, e)))), assistantDebug === 'spam' && React.createElement("div", null, spam.map((l, i) => row(l, i)), React.createElement("div", {
+      }, e)))), assistantDebug === 'expressions' && ASSISTANT_LIST.filter(a => a.id !== selectedAssistantId && typeof assistantReleased === 'function' && !assistantReleased(a.id)).map(a => React.createElement("div", {
+        key: a.id,
+        "data-debug-unreleased-assistant": a.id,
+        className: "border-t border-white/10 p-3"
+      }, React.createElement("div", {
+        className: "text-[10px] font-black text-pink-200 mb-2"
+      }, a.name, "(公開前)"), React.createElement("div", {
+        className: "grid grid-cols-4 gap-2"
+      }, exprs.map(e => React.createElement("div", {
+        key: e,
+        className: "flex flex-col items-center gap-1"
+      }, React.createElement(AssistantFace, {
+        who: a,
+        size: 64,
+        accent: a.accent,
+        expression: e
+      }), React.createElement("span", {
+        className: "text-[8px] text-slate-400 font-black"
+      }, e)))), React.createElement("div", {
+        className: "mt-2 grid grid-cols-4 gap-2"
+      }, exprs.map(e => React.createElement("img", {
+        key: e,
+        src: `${a.imageDir}/${a.imagePrefix}_${e}.PNG`,
+        alt: `${a.name} ${e}`,
+        loading: "lazy",
+        className: "w-full rounded-lg bg-slate-900"
+      }))))), assistantDebug === 'spam' && React.createElement("div", null, spam.map((l, i) => row(l, i)), React.createElement("div", {
         className: "p-3 text-[10px] text-slate-500 leading-relaxed"
       }, "上から順に切り替わります。最後の「…………」のあと、少し待つと最後の行を話して通常へ戻ります。")), (assistantDebug === 'lines' || assistantDebug === 'conditions') && React.createElement("div", null, Object.entries(scenes).map(([key, def]) => {
         const list = assistantDebug === 'conditions' ? Object.entries(def.when || {}).flatMap(([c, ls]) => ls.map(l => ({

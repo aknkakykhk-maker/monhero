@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9a099091a980a659
+// generated-sha256: fbcbd9347c59181e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-22 22:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-22 22:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5164,7 +5164,7 @@ const eikiBossBgmForBattle = (heroId, currentWave, enemyId) =>
   heroId === 'Eiki' && (enemyId === 'Moo' || currentWave === 10) ? 'eiki_boss' : null;
 // 既存の battle / dullahan / boss はチャレンジ用として維持し、保存済み設定との互換性を守る。
 // 追加したモード別専用戦キーは、旧セーブでは従来その場面で使っていた dullahan / boss の選択を継承する。
-const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ atsuJoinStoryEvent:'melo_against_my_own_shadow', tacticsTypesEvent:'original_event_01', rhythmHellStoryEvent:'melo_sheriruth', assistantChatStoryEvent:'close_to_your_heart_alt', title:'monster_hero_theme_alt', home:'original_home', management:'original_profile', market:'original_market', temple:'original_fusion', trainingMenu:'original_home', trainingBoard:'original_home', battle:'original_battle', dullahan:'original_dullahan', boss:'original_boss', quickBattle:'original_battle', quickDullahan:'original_dullahan', quickMoo:'original_boss', proBattle:'original_pro_battle_01', proDullahan:'melo_dullahan_steel_ghost', proMoo:'original_pro_battle_02', extremeBattle:'ichika_battle', extremeDullahan:'melo_dullahan_clockwork', extremeMoo:'ichika_boss', speciesBattle:'original_battle', speciesDullahan:'original_dullahan', speciesMoo:'original_boss', tacticsIntroEvent:'close_to_your_heart_alt', tacticsBattle:'senjou_no_shippuu', tacticsMidBoss:'melo_the_city_beneath_the_comets', tacticsBoss:'makutsu_no_senritsu', autoBattle:'monster_hero_theme', autoVictoryJingle:'off', autoPostWaveBgm:'off', autoRepeatResultBgm:'off', clear:'ichika_clear', enhance:'original_enhance', result:'original_result', gameOver:'original_game_over', kikiIntro:'original_event_01', momosukeIntro:'six_eternel_remix', monbeatCupEvent:'kaze_ga_soyogu', symphonyEvent:'melo_mou_hitotsu_no_sekai_e', rhythmMultiEvent:'melo_haruka', masuCallEvent:'six_eternel',halloweenNightEvent:'melo_crazy_party_night_full', rhythmModeSelect:'pandora_boss_remix' });
+const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ kyukoJoinStoryEvent:'original_event_01', atsuJoinStoryEvent:'melo_against_my_own_shadow', tacticsTypesEvent:'original_event_01', rhythmHellStoryEvent:'melo_sheriruth', assistantChatStoryEvent:'close_to_your_heart_alt', title:'monster_hero_theme_alt', home:'original_home', management:'original_profile', market:'original_market', temple:'original_fusion', trainingMenu:'original_home', trainingBoard:'original_home', battle:'original_battle', dullahan:'original_dullahan', boss:'original_boss', quickBattle:'original_battle', quickDullahan:'original_dullahan', quickMoo:'original_boss', proBattle:'original_pro_battle_01', proDullahan:'melo_dullahan_steel_ghost', proMoo:'original_pro_battle_02', extremeBattle:'ichika_battle', extremeDullahan:'melo_dullahan_clockwork', extremeMoo:'ichika_boss', speciesBattle:'original_battle', speciesDullahan:'original_dullahan', speciesMoo:'original_boss', tacticsIntroEvent:'close_to_your_heart_alt', tacticsBattle:'senjou_no_shippuu', tacticsMidBoss:'melo_the_city_beneath_the_comets', tacticsBoss:'makutsu_no_senritsu', autoBattle:'monster_hero_theme', autoVictoryJingle:'off', autoPostWaveBgm:'off', autoRepeatResultBgm:'off', clear:'ichika_clear', enhance:'original_enhance', result:'original_result', gameOver:'original_game_over', kikiIntro:'original_event_01', momosukeIntro:'six_eternel_remix', monbeatCupEvent:'kaze_ga_soyogu', symphonyEvent:'melo_mou_hitotsu_no_sekai_e', rhythmMultiEvent:'melo_haruka', masuCallEvent:'six_eternel',halloweenNightEvent:'melo_crazy_party_night_full', rhythmModeSelect:'pandora_boss_remix' });
 // 設定欄を足したときに「前からある近い設定」を引き継ぐための対応表。
 // 種族チャレンジの3枠はチャレンジと同じ曲から始めるので、まだ自分で選んでいない人には
 // そのときのチャレンジの設定(自分で変えていればその曲)がそのまま入る
@@ -5212,7 +5212,7 @@ const eventScriptBgmAt = (script, step) => {
   return found;
 };
 const EVENT_BGM_FADE_MS = 800; // 会話イベントの途中で曲を替えるとき、今の曲を下げる長さ
-const EVENT_BGM_SCENES = Object.freeze({ atsu_join_2026_10_22:'atsuJoinStoryEvent', tactics_types:'tacticsTypesEvent', kiki_intro:'kikiIntro', rhythm_hell_story:'rhythmHellStoryEvent', assistant_chat_story:'assistantChatStoryEvent', momosuke_intro:'momosukeIntro', monbeat_cup_2026_09:'monbeatCupEvent', monbeat_cup_2026_09_thanks:'monbeatCupEvent', symphony_2026_09_17:'symphonyEvent', symphony_2026_09_17_thanks:'symphonyEvent', tactics_intro:'tacticsIntroEvent', beat_point_always_2026_09_24:'monbeatCupEvent', rhythm_six_lane_2026_09_26:'monbeatCupEvent', beat_point_up_2026_09_28:'monbeatCupEvent', rhythm_multi_friends_2026_10_03:'rhythmMultiEvent', rhythm_masu_call_2026_10_07:'masuCallEvent', halloween_night_2026_part1:'halloweenNightEvent', raid_jack_howto_2026_10_04:'halloweenNightEvent', raid_jack_rhythm_story_2026_10_06:'halloweenNightEvent', raid_jack_story_1b:'halloweenNightEvent', raid_jack_story_2:'halloweenNightEvent', raid_jack_story_3:'halloweenNightEvent', raid_jack_story_4:'halloweenNightEvent', raid_jack_story_5:'halloweenNightEvent', raid_jack_story_6:'halloweenNightEvent', raid_jack_ending_cleared:'halloweenNightEvent', raid_jack_ending_notcleared:'halloweenNightEvent' });
+const EVENT_BGM_SCENES = Object.freeze({ kyuko_join_2026_10_22:'kyukoJoinStoryEvent', atsu_join_2026_10_22:'atsuJoinStoryEvent', tactics_types:'tacticsTypesEvent', kiki_intro:'kikiIntro', rhythm_hell_story:'rhythmHellStoryEvent', assistant_chat_story:'assistantChatStoryEvent', momosuke_intro:'momosukeIntro', monbeat_cup_2026_09:'monbeatCupEvent', monbeat_cup_2026_09_thanks:'monbeatCupEvent', symphony_2026_09_17:'symphonyEvent', symphony_2026_09_17_thanks:'symphonyEvent', tactics_intro:'tacticsIntroEvent', beat_point_always_2026_09_24:'monbeatCupEvent', rhythm_six_lane_2026_09_26:'monbeatCupEvent', beat_point_up_2026_09_28:'monbeatCupEvent', rhythm_multi_friends_2026_10_03:'rhythmMultiEvent', rhythm_masu_call_2026_10_07:'masuCallEvent', halloween_night_2026_part1:'halloweenNightEvent', raid_jack_howto_2026_10_04:'halloweenNightEvent', raid_jack_rhythm_story_2026_10_06:'halloweenNightEvent', raid_jack_story_1b:'halloweenNightEvent', raid_jack_story_2:'halloweenNightEvent', raid_jack_story_3:'halloweenNightEvent', raid_jack_story_4:'halloweenNightEvent', raid_jack_story_5:'halloweenNightEvent', raid_jack_story_6:'halloweenNightEvent', raid_jack_ending_cleared:'halloweenNightEvent', raid_jack_ending_notcleared:'halloweenNightEvent' });
 const BGM_PRO_DEFAULT_MIGRATION_KEY = 'mh_bgm_pro_default_migrated_v1';
 const BGM_PRO_PREVIOUS_DEFAULTS = Object.freeze({ proBattle:'original_battle', proDullahan:'original_dullahan', proMoo:'original_boss' });
 // 既定曲を入れ替えたときの移行のしかたは毎回同じ(「以前の既定のままの枠だけ新しい既定へ」)なので、
@@ -39089,6 +39089,7 @@ const FRIEND_NOTICE_LINES = Object.freeze({
   momosuke: (who) => `${who}からフレンド申請が来てるよw 見にいこ？`,
   dra: (who) => `${who}からフレンド申請が来てるわ。見にいくか`,
   atsu: (who) => `${who}からフレンド申請来てるよ。とりあえず見にいこ`,
+  kyuko: (who) => `ほい！ ${who}からフレンド申請来てるよぉ。見にいこ笑`,
 });
 function HomeFriendRequestNotice({ activeAssistant, count, names, onOpen, onLater }) {
   const who = activeAssistant;
@@ -45943,6 +45944,8 @@ const RHYTHM_MODE_ASSISTANT_FRAMES = Object.freeze({
   // 絵の端がすべて枠の外へ出るよう 1.1 倍に広げた(切れるのは枠の左右と下だけ・両肩は同じくらい・王冠は枠の中)。
   // 顔の大きさと高さは みゅあ・きき と並べて合わせた(1.25 倍はききより顔が大きくなった)
   atsu: { zoom: 1.1, cx: 0.48, cy: 0, top: 0.02 },
+  // きゅうこ(2026-10-22)。大きい絵は 384x512(胸から上・髪のてっぺんが絵の上端近く)。あつと同じ置き方で、絵の端が枠の外へ出るようにする
+  kyuko: { zoom: 1.1, cx: 0.5, cy: 0, top: 0.02 },
 });
 // 舞台の飾り(スポットライト3本・音符・キラキラ・床の光)。位置と遅れは固定(描くたびに変わらないように)
 const RHYTHM_MODE_SELECT_NOTES = Object.freeze([
@@ -60789,6 +60792,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const tacticsExFrozenRef = useRef(false);
   // きゅうこの譜面(2026-10-22): このターン単体攻撃を引き受ける子の枠(タクティクスだけ)。null なら引き受けない
   const kyukoRedirectRef = useRef(null);
+  // お話の再生で、いまの行が出た時刻(holdMs の行をタップで進めないため)
+  const eventReplayStepShownAtRef = useRef({ key:'', at:0 });
   const tacticsExAimRef = useRef({ intent:null, dist:2 });
   tacticsExAimRef.current = { intent:enemyIntent, dist:enemyDist };
   const tacticsExCrossRef = useRef({ wave:-1, turn:-1, slots:{} });
@@ -66274,7 +66279,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // 既定値は今まで鳴っていた曲そのものなので、これまでの音は変わらない
         ['enhance','準備・強化フェーズ BGM'],['result','WAVE後リザルト BGM'],['gameOver','敗北 BGM']]},
       {id:'battle',label:'バトル'},
-      {id:'event',label:'イベント',items:[['kikiIntro','きき加入イベント BGM'],['momosukeIntro','ももすけ登場イベント BGM'],['monbeatCupEvent','モンヒロビート大会イベント BGM'],['rhythmMultiEvent','みんなで対戦のお話 BGM'],['masuCallEvent','マスモンとセッションのお話 BGM'],['halloweenNightEvent','ハロウィン・ナイトのお話 BGM'],['assistantChatStoryEvent','助手とおしゃべりのお話 BGM'],['atsuJoinStoryEvent','あつ加入のお話 BGM']]},
+      {id:'event',label:'イベント',items:[['kikiIntro','きき加入イベント BGM'],['momosukeIntro','ももすけ登場イベント BGM'],['monbeatCupEvent','モンヒロビート大会イベント BGM'],['rhythmMultiEvent','みんなで対戦のお話 BGM'],['masuCallEvent','マスモンとセッションのお話 BGM'],['halloweenNightEvent','ハロウィン・ナイトのお話 BGM'],['assistantChatStoryEvent','助手とおしゃべりのお話 BGM'],['atsuJoinStoryEvent','あつ加入のお話 BGM'],['kyukoJoinStoryEvent','きゅうこ加入のお話 BGM']]},
       {id:'other',label:'その他',items:[['rhythmModeSelect','モンヒロビート モードえらび BGM'],['market','マーケット BGM'],['temple','神殿 BGM'],['trainingMenu','修行メニュー BGM'],['trainingBoard','修行中 BGM']]},
     ];const battleModes=BGM_BATTLE_MODE_TABS;const selected=categories.find(category=>category.id===bgmArrangementCategory)||categories[0];const selectedMode=battleModes.find(mode=>mode.id===bgmArrangementBattleMode)||battleModes[0];const items=selected.id==='battle'?selectedMode.items:selected.items;return <><div role="tablist" aria-label="BGMカテゴリ" className="grid grid-cols-4 gap-1 mb-3">{categories.map(category=><button key={category.id} type="button" role="tab" aria-selected={selected.id===category.id} onClick={()=>setBgmArrangementCategory(category.id)} className={`min-h-[44px] rounded-xl border px-1 text-[10px] font-black ${selected.id===category.id?'bg-indigo-600 border-indigo-300 text-white':'bg-slate-900 border-white/15 text-slate-300'}`}>{category.label}</button>)}</div>{selected.id==='battle'&&<div role="tablist" aria-label="バトルモード" className={`grid ${battleModes.length>=6?'grid-cols-3':battleModes.length>=5?'grid-cols-5':'grid-cols-4'} gap-1 mb-4`}>{battleModes.map(mode=><button key={mode.id} type="button" role="tab" aria-selected={selectedMode.id===mode.id} onClick={()=>setBgmArrangementBattleMode(mode.id)} className={`min-h-[44px] rounded-xl border px-1 text-[10px] font-black ${selectedMode.id===mode.id?'bg-fuchsia-700 border-fuchsia-300 text-white':'bg-slate-900 border-white/15 text-slate-300'}`}>{mode.label}</button>)}</div>}<div className="space-y-4">{selected.id==='other'&&[
       ['autoVictoryJingle','AUTO時 敵撃破ファンファーレ'],
@@ -70994,7 +70999,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // 回想でも最後まで見たら「見たことがある」として扱う。
         // ももすけ登場を本編より先にここで見た人は、この時点でももすけが解放され、
         // あとから本編で同じ会話が重ねて流れることもなくなる
+        // holdMs を書いた行は、出てからその時間はタップしても進まない(2026-10-22 社長「Toward the Stars が流れ出して数秒止まる」。きゅうこの加入のお話)
+        const stepKey=`${eventReplay.id}:${step}`;
+        if(eventReplayStepShownAtRef.current.key!==stepKey) eventReplayStepShownAtRef.current={key:stepKey,at:Date.now()};
         const next=()=>{
+          const holdMs=Number(line.holdMs);
+          if(Number.isFinite(holdMs)&&holdMs>0&&Date.now()-eventReplayStepShownAtRef.current.at<holdMs) return;
           if(!last){ setEventReplay(r=>r&&({...r,step:r.step+1})); return; }
           if(event&&event.id==='momosuke_intro'&&!eventReplay.debug) markMomosukeIntroSeen();
           if(event&&event.id==='tactics_intro'&&!eventReplay.debug) markTacticsIntroSeen();
@@ -71171,6 +71181,18 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <div key={e} className="flex flex-col items-center gap-1"><AssistantFace who={who} size={64} accent={who.accent} expression={e}/><span className="text-[8px] text-slate-400 font-black">{e}</span></div>
               ))}</div>
             )}
+            {/* 公開の印が立つ前の助手(2026-10-22 きゅうこ)も、絵の組み込みをここで確かめられるようにする。選んだことにはしない */}
+            {assistantDebug==='expressions'&&ASSISTANT_LIST.filter(a=>a.id!==selectedAssistantId&&typeof assistantReleased==='function'&&!assistantReleased(a.id)).map(a=>(
+              <div key={a.id} data-debug-unreleased-assistant={a.id} className="border-t border-white/10 p-3">
+                <div className="text-[10px] font-black text-pink-200 mb-2">{a.name}(公開前)</div>
+                <div className="grid grid-cols-4 gap-2">{exprs.map(e=>(
+                  <div key={e} className="flex flex-col items-center gap-1"><AssistantFace who={a} size={64} accent={a.accent} expression={e}/><span className="text-[8px] text-slate-400 font-black">{e}</span></div>
+                ))}</div>
+                <div className="mt-2 grid grid-cols-4 gap-2">{exprs.map(e=>(
+                  <img key={e} src={`${a.imageDir}/${a.imagePrefix}_${e}.PNG`} alt={`${a.name} ${e}`} loading="lazy" className="w-full rounded-lg bg-slate-900"/>
+                ))}</div>
+              </div>
+            ))}
             {assistantDebug==='spam'&&(
               <div>{spam.map((l,i)=>row(l,i))}<div className="p-3 text-[10px] text-slate-500 leading-relaxed">上から順に切り替わります。最後の「…………」のあと、少し待つと最後の行を話して通常へ戻ります。</div></div>
             )}

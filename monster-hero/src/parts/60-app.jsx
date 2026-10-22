@@ -11162,6 +11162,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const tacticsExFrozenRef = useRef(false);
   // きゅうこの譜面(2026-10-22): このターン単体攻撃を引き受ける子の枠(タクティクスだけ)。null なら引き受けない
   const kyukoRedirectRef = useRef(null);
+  // お話の再生で、いまの行が出た時刻(holdMs の行をタップで進めないため)
+  const eventReplayStepShownAtRef = useRef({ key:'', at:0 });
   const tacticsExAimRef = useRef({ intent:null, dist:2 });
   tacticsExAimRef.current = { intent:enemyIntent, dist:enemyDist };
   const tacticsExCrossRef = useRef({ wave:-1, turn:-1, slots:{} });
@@ -16647,7 +16649,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // 既定値は今まで鳴っていた曲そのものなので、これまでの音は変わらない
         ['enhance','準備・強化フェーズ BGM'],['result','WAVE後リザルト BGM'],['gameOver','敗北 BGM']]},
       {id:'battle',label:'バトル'},
-      {id:'event',label:'イベント',items:[['kikiIntro','きき加入イベント BGM'],['momosukeIntro','ももすけ登場イベント BGM'],['monbeatCupEvent','モンヒロビート大会イベント BGM'],['rhythmMultiEvent','みんなで対戦のお話 BGM'],['masuCallEvent','マスモンとセッションのお話 BGM'],['halloweenNightEvent','ハロウィン・ナイトのお話 BGM'],['assistantChatStoryEvent','助手とおしゃべりのお話 BGM'],['atsuJoinStoryEvent','あつ加入のお話 BGM']]},
+      {id:'event',label:'イベント',items:[['kikiIntro','きき加入イベント BGM'],['momosukeIntro','ももすけ登場イベント BGM'],['monbeatCupEvent','モンヒロビート大会イベント BGM'],['rhythmMultiEvent','みんなで対戦のお話 BGM'],['masuCallEvent','マスモンとセッションのお話 BGM'],['halloweenNightEvent','ハロウィン・ナイトのお話 BGM'],['assistantChatStoryEvent','助手とおしゃべりのお話 BGM'],['atsuJoinStoryEvent','あつ加入のお話 BGM'],['kyukoJoinStoryEvent','きゅうこ加入のお話 BGM']]},
       {id:'other',label:'その他',items:[['rhythmModeSelect','モンヒロビート モードえらび BGM'],['market','マーケット BGM'],['temple','神殿 BGM'],['trainingMenu','修行メニュー BGM'],['trainingBoard','修行中 BGM']]},
     ];const battleModes=BGM_BATTLE_MODE_TABS;const selected=categories.find(category=>category.id===bgmArrangementCategory)||categories[0];const selectedMode=battleModes.find(mode=>mode.id===bgmArrangementBattleMode)||battleModes[0];const items=selected.id==='battle'?selectedMode.items:selected.items;return <><div role="tablist" aria-label="BGMカテゴリ" className="grid grid-cols-4 gap-1 mb-3">{categories.map(category=><button key={category.id} type="button" role="tab" aria-selected={selected.id===category.id} onClick={()=>setBgmArrangementCategory(category.id)} className={`min-h-[44px] rounded-xl border px-1 text-[10px] font-black ${selected.id===category.id?'bg-indigo-600 border-indigo-300 text-white':'bg-slate-900 border-white/15 text-slate-300'}`}>{category.label}</button>)}</div>{selected.id==='battle'&&<div role="tablist" aria-label="バトルモード" className={`grid ${battleModes.length>=6?'grid-cols-3':battleModes.length>=5?'grid-cols-5':'grid-cols-4'} gap-1 mb-4`}>{battleModes.map(mode=><button key={mode.id} type="button" role="tab" aria-selected={selectedMode.id===mode.id} onClick={()=>setBgmArrangementBattleMode(mode.id)} className={`min-h-[44px] rounded-xl border px-1 text-[10px] font-black ${selectedMode.id===mode.id?'bg-fuchsia-700 border-fuchsia-300 text-white':'bg-slate-900 border-white/15 text-slate-300'}`}>{mode.label}</button>)}</div>}<div className="space-y-4">{selected.id==='other'&&[
       ['autoVictoryJingle','AUTO時 敵撃破ファンファーレ'],
@@ -21367,7 +21369,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // 回想でも最後まで見たら「見たことがある」として扱う。
         // ももすけ登場を本編より先にここで見た人は、この時点でももすけが解放され、
         // あとから本編で同じ会話が重ねて流れることもなくなる
+        // holdMs を書いた行は、出てからその時間はタップしても進まない(2026-10-22 社長「Toward the Stars が流れ出して数秒止まる」。きゅうこの加入のお話)
+        const stepKey=`${eventReplay.id}:${step}`;
+        if(eventReplayStepShownAtRef.current.key!==stepKey) eventReplayStepShownAtRef.current={key:stepKey,at:Date.now()};
         const next=()=>{
+          const holdMs=Number(line.holdMs);
+          if(Number.isFinite(holdMs)&&holdMs>0&&Date.now()-eventReplayStepShownAtRef.current.at<holdMs) return;
           if(!last){ setEventReplay(r=>r&&({...r,step:r.step+1})); return; }
           if(event&&event.id==='momosuke_intro'&&!eventReplay.debug) markMomosukeIntroSeen();
           if(event&&event.id==='tactics_intro'&&!eventReplay.debug) markTacticsIntroSeen();
@@ -21544,6 +21551,18 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <div key={e} className="flex flex-col items-center gap-1"><AssistantFace who={who} size={64} accent={who.accent} expression={e}/><span className="text-[8px] text-slate-400 font-black">{e}</span></div>
               ))}</div>
             )}
+            {/* 公開の印が立つ前の助手(2026-10-22 きゅうこ)も、絵の組み込みをここで確かめられるようにする。選んだことにはしない */}
+            {assistantDebug==='expressions'&&ASSISTANT_LIST.filter(a=>a.id!==selectedAssistantId&&typeof assistantReleased==='function'&&!assistantReleased(a.id)).map(a=>(
+              <div key={a.id} data-debug-unreleased-assistant={a.id} className="border-t border-white/10 p-3">
+                <div className="text-[10px] font-black text-pink-200 mb-2">{a.name}(公開前)</div>
+                <div className="grid grid-cols-4 gap-2">{exprs.map(e=>(
+                  <div key={e} className="flex flex-col items-center gap-1"><AssistantFace who={a} size={64} accent={a.accent} expression={e}/><span className="text-[8px] text-slate-400 font-black">{e}</span></div>
+                ))}</div>
+                <div className="mt-2 grid grid-cols-4 gap-2">{exprs.map(e=>(
+                  <img key={e} src={`${a.imageDir}/${a.imagePrefix}_${e}.PNG`} alt={`${a.name} ${e}`} loading="lazy" className="w-full rounded-lg bg-slate-900"/>
+                ))}</div>
+              </div>
+            ))}
             {assistantDebug==='spam'&&(
               <div>{spam.map((l,i)=>row(l,i))}<div className="p-3 text-[10px] text-slate-500 leading-relaxed">上から順に切り替わります。最後の「…………」のあと、少し待つと最後の行を話して通常へ戻ります。</div></div>
             )}
