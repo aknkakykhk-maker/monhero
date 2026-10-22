@@ -449,12 +449,13 @@ const BREEDER_MARKET_ITEMS = [
   // 値段はユグドラシル種と同じ(円盤石150,000ダイヤ・アイコンは各1)。
   // 2026-10-05 の正式実装で、ユグドラシル種と同じく円盤石はビートP交換所で先行公開(data/rhythm-event.js・各1,500P)し、
   // アイコン2種(本人・円盤石)の available:false を外した。ダイヤショップの円盤石は「近日追加」のまま
+  // 2026-10-23 イルミネ・ドリーミィの公開と同時に、ダイヤショップの円盤石も買えるようにした(社長)
   { id:'ghost_icon', name:"ゴーストのアイコン", type:'icon', icon:GHOST_FACE_ICON, cost:1 },
   { id:'ghost_disc_icon', name:"ゴーストの円盤石アイコン", type:'icon', icon:GHOST_DISC_ICON, cost:1 },
-  { id:'Ghost', name:"ゴーストの円盤石", type:'disc', icon:GHOST_DISC_ICON, cost:150000, available:false },
+  { id:'Ghost', name:"ゴーストの円盤石", type:'disc', icon:GHOST_DISC_ICON, cost:150000 },
   { id:'spooky_icon', name:"スプーキーのアイコン", type:'icon', icon:SPOOKY_FACE_ICON, cost:1 },
   { id:'spooky_disc_icon', name:"スプーキーの円盤石アイコン", type:'icon', icon:SPOOKY_DISC_ICON, cost:1 },
-  { id:'Spooky', name:"スプーキーの円盤石", type:'disc', icon:SPOOKY_DISC_ICON, cost:150000, available:false },
+  { id:'Spooky', name:"スプーキーの円盤石", type:'disc', icon:SPOOKY_DISC_ICON, cost:150000 },
   // メロディーとクロミー(ユグドラシル×？？？のレア2体)。
   // 2026-10-07 ユーザー指示「ゴーストのときと同じを一式」で、6件とも available:false(「近日追加」)で並べた。
   // 本体はまだ案の段階(UPCOMING_MONSTER_DRAFTS)。値段はゴースト・スプーキーと同じ(円盤石150,000ダイヤ・アイコンは各1)。
@@ -470,14 +471,14 @@ const BREEDER_MARKET_ITEMS = [
   { id:'Kuromy', name:"クロミーの円盤石", type:'disc', icon:KUROMY_DISC_ICON, cost:150000, available:false },
   // イルミネ(イルミネ×イルミネ)とドリーミィ(イルミネ×ニャー)。
   // 2026-10-22 社長「先にモンスター実装予告をいつもの出したい」で、メロディー・クロミーと同じく6件とも available:false(「近日追加」)で並べた。
-  // 本体はまだ案の段階(UPCOMING_MONSTER_DRAFTS)。値段はほかの新モンスターと同じ(円盤石150,000ダイヤ・アイコンは各1)。
-  // 公開(新しい助手のお話と同時)のときに available:false を外す
-  { id:'illumine_icon', name:"イルミネのアイコン", type:'icon', icon:ILLUMINE_FACE_ICON, cost:1, available:false },
-  { id:'illumine_disc_icon', name:"イルミネの円盤石アイコン", type:'icon', icon:ILLUMINE_DISC_ICON, cost:1, available:false },
-  { id:'Illumine', name:"イルミネの円盤石", type:'disc', icon:ILLUMINE_DISC_ICON, cost:150000, available:false },
-  { id:'dreamy_icon', name:"ドリーミィのアイコン", type:'icon', icon:DREAMY_FACE_ICON, cost:1, available:false },
-  { id:'dreamy_disc_icon', name:"ドリーミィの円盤石アイコン", type:'icon', icon:DREAMY_DISC_ICON, cost:1, available:false },
-  { id:'Dreamy', name:"ドリーミィの円盤石", type:'disc', icon:DREAMY_DISC_ICON, cost:150000, available:false },
+  // 値段はほかの新モンスターと同じ(円盤石150,000ダイヤ・アイコンは各1)。
+  // 2026-10-23 正式実装(新しい助手きゅうこのお話と同時)で、6件とも available:false を外した
+  { id:'illumine_icon', name:"イルミネのアイコン", type:'icon', icon:ILLUMINE_FACE_ICON, cost:1 },
+  { id:'illumine_disc_icon', name:"イルミネの円盤石アイコン", type:'icon', icon:ILLUMINE_DISC_ICON, cost:1 },
+  { id:'Illumine', name:"イルミネの円盤石", type:'disc', icon:ILLUMINE_DISC_ICON, cost:150000 },
+  { id:'dreamy_icon', name:"ドリーミィのアイコン", type:'icon', icon:DREAMY_FACE_ICON, cost:1 },
+  { id:'dreamy_disc_icon', name:"ドリーミィの円盤石アイコン", type:'icon', icon:DREAMY_DISC_ICON, cost:1 },
+  { id:'Dreamy', name:"ドリーミィの円盤石", type:'disc', icon:DREAMY_DISC_ICON, cost:150000 },
   { id:'bond_reset_scroll', name:"絆ポイントリセットの書", type:'item', emoji:"📜", cost:500, desc:"マスモンに使うと、そのマスモンが使用した強化ポイント(間合い適性・ステータス強化)がすべて未使用に戻る。絆レベル・絆経験値はそのまま。" },
   { id:'transcend_reset_scroll', name:"超越ポイントリセットの書", type:'item', emoji:"🌠", cost:10000, usage:'transcendReset', desc:"マスモンに使うと、超越強化へ使った超越ポイントがすべて未使用の超越Pへ戻る。絆レベル・絆経験値・通常の強化・超越済みかどうかは変わらない。虹のプシュケーは戻らない。" },
   { id:'soul_rank_respec_scroll', name:"魂格再編の書", type:'item', emoji:"🌀", cost:1000000, usage:'soulRankRespec', desc:"マスモンの魂格特性に使った魂格Pをすべて未使用へ戻す。魂格の結晶で増やしたぶんは、結晶として持ち物に戻る。魂格段階・Lv・最高初到達Lvは変わらない。マーケットでは100万ダイヤ、または勇者の証1個と交換できる。" },

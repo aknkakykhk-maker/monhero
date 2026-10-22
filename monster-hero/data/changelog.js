@@ -35,6 +35,43 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    // 2026-10-23 社長「いま公開作業に入る」。きゅうこの加入のお話と同時に、イルミネ・ドリーミィを正式実装した。
+    // 絵は tools/image/make-illumine-dreamy-release-notice.js(キー画像1枚＋2体の紹介カード)。染色イメージは予告と同じ絵
+    date: "2026-10-23 00:52", type:'update', group:'monster', title:'新モンスター「イルミネ」「ドリーミィ」が仲間になりました', status:'new',
+    image: 'images/events/illumine-dreamy-release-notice.jpg?v=558f931f7555',
+    items:[
+      '新しい血統「イルミネ」のふたりが登場しました。ダイヤショップで、円盤石をそれぞれ150,000ダイヤで買えます。本人アイコンと円盤石アイコンは、ブリーダーP交換所で交換できます。',
+      'イルミネは、影に潜むのが得意な純血のモンスターで、ちからが高く中距離が得意です。ドリーミィは「イルミネ × ニャー」で、ライフとガッツが多めで遠い間合いが得意です。',
+      '勇者特性「影潜」(ふたりとも)：勇者モンにすると、攻撃が当たるたびに敵へ楔を1つ付けます(最大6つ)。楔1つごとに、与ダメージ15%の連撃が1回付き、回避率が15%上がります。自分が回避すると楔は0に戻ります。',
+      'イルミネの固有技(消費ガッツ46・ダメージ2.3倍)の効果「セレーネチェイサー」：当てるたびに、与ダメージ5%の連撃と連撃ダメージ+1%がバトル中ずっと重なります。どちらも、そのときの楔の数+1倍になります。',
+      'ドリーミィの固有技(消費ガッツ52・ダメージ2.6倍)の効果「ドリームペイン」：次のターンから3ターン、敵の受けるダメージが20%上がり、楔1つごとにさらに20%上がります(楔6つで+140%)。',
+      'タクティクスのEXスキルは、イルミネが「ジエンド」(3ターン、楔が1回で2つ付き上限12・使うと狙われやすさが下がる・1ラン5回)、ドリーミィが「ミルフィーシールド」(味方全員に最大ライフぶんのシールド・シールドのある子はちから・丈夫さ・ライフ上限・ガッツ上限がアップ・1ラン5回)です。',
+      'モンヒロビートでは、イルミネのモンスターノーツで能力「我慢」、ドリーミィのモンスターノーツで能力「必死」が出ます。',
+      'ゴーストとスプーキーの円盤石が、ダイヤショップ(各150,000ダイヤ)でも買えるようになりました。',
+      '技は1つずつ専用の動きがあります。下にふたりの紹介カードと染色イメージを載せました。',
+    ],
+    gallery: [
+      { caption:'イルミネの紹介', image:'images/events/illumine-profile.jpg?v=5e6ac696ca6b' },
+      { caption:'ドリーミィの紹介', image:'images/events/dreamy-profile.jpg?v=b0b01f8e3321' },
+      { caption:'イルミネ 染色イメージ「エメラルドオーロラ」', image:'images/events/illumine-dye-preview.jpg?v=a1e13016cd61' },
+      { caption:'ドリーミィ 染色イメージ「ラベンダードリーム」', image:'images/events/dreamy-dye-preview.jpg?v=bfaca221c64c' },
+    ],
+    assistantNotice: { id:'update_notice_illumine_dreamy_release_v1', type:'market' },
+  },
+  {
+    // 2026-10-23 社長「いま公開作業に入る」(加入のお話は 2026-10-22 に社長が全文を読んで OK)。公開の印 assistantKyuko を真にした。
+    // 話し方の説明は書かない(社長の決め)
+    date: "2026-10-23 00:52", type:'content', group:'assistant', title:'6人目の助手「きゅうこ」が加わりました', status:'new',
+    items:[
+      'HOMEで新しいお話「月影とニャーニャー人形 ～きゅうこ登場～」が流れます。新しいモンスターのイルミネとドリーミィも登場します。',
+      'きゅうこは、はじめからプロフィールの「いっしょに遊ぶ助手」で選べます。仲良し度・ごほうび・おしゃべりは、ほかの助手と同じように楽しめます。',
+      'お話を見ると、マーケットのブリーダーP交換所にアシストカード「きゅうこ」(150,000)が並びます。使ったターンは敵の単体攻撃をカードを置いた子が引き受け、その子の受けるダメージが数ターン減ります。',
+      'きゅうこの表情アイコン8種も、ブリーダーP交換所で交換できます。',
+      'お話はあとから「イベント回想」で見直せます。',
+    ],
+    assistantNotice:{ id:'update_notice_assistant_kyuko_v1', type:'content' },
+  },
+  {
     // 2026-10-22 社長「先にモンスター実装予告をいつもの出したい」。メロディー・クロミーの予告と同じ一式。値段も同じ(円盤石150,000ダイヤ)。
     // 画像は tools/image/make-illumine-dreamy-lineage-notice.js(予告)と make-illumine-dreamy-dye-preview.js(染色イメージ・ゲームと同じ染め方)で作った
     date: "2026-10-22 23:34", type:'update', group:'monster', title:'「イルミネ」「ドリーミィ」実装予告', status:'new',
@@ -53,8 +90,8 @@ const CHANGELOG = [
       { caption:'イルミネ 染色イメージ「エメラルドオーロラ」', image:'images/events/illumine-dye-preview.jpg?v=a1e13016cd61' },
       { caption:'ドリーミィ 染色イメージ「ラベンダードリーム」', image:'images/events/dreamy-dye-preview.jpg?v=bfaca221c64c' },
     ],
-    // 公開の告知(v2)を足すときに supersededBy:'update_notice_illumine_dreamy_v2' を付ける(相手が無いうちは付けられない)
-    assistantNotice: { id:'update_notice_illumine_dreamy_soon_v1', type:'market' },
+    // 公開(2026-10-23)の告知が出たら、まだ読んでいない人にはこちらを出さない
+    assistantNotice: { id:'update_notice_illumine_dreamy_soon_v1', type:'market', supersededBy:'update_notice_illumine_dreamy_release_v1' },
   },
   {
     // 2026-10-22 社長「顔アイコンをもっと近くにしたい。立ち絵のバランスが悪い。王冠も見えない」→「寄せ過ぎ」「左肩切れてる」→ 3案から A →「もっとアップに」でアップの形
