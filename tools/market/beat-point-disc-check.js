@@ -58,8 +58,9 @@ const serve = () => new Promise(r => { const s = http.createServer((req, res) =>
     //   ダイヤショップに並ぶ実装済みの円盤石12体も加わり、14枚になった。全部1,500P
     //   2026-10-05 ゴースト・スプーキーを先行公開(先頭に2枚)して16枚
     //   2026-10-08 メロディー・クロミーを先行公開(先頭に2枚)して18枚(同じ日に取り下げ、再公開した)
-    const DISC_IDS = ['disc_melody','disc_kuromy','disc_ghost','disc_spooky','disc_yggdrasil','disc_mel_whip','disc_zan','disc_mitarashi','disc_ark','disc_iblis','disc_snegurochka','disc_undine','disc_yaobikuni','disc_plant','disc_mia','disc_pandora','disc_eiki','disc_kenshi_mocchi'];
-    ok('ビートP交換所に円盤石が18枚ある(予告カードは残っていない)', intoEvent && cards.join() === DISC_IDS.join()
+    //   2026-10-23 イルミネ・ドリーミィを先行公開(先頭に2枚)して20枚
+    const DISC_IDS = ['disc_illumine','disc_dreamy','disc_melody','disc_kuromy','disc_ghost','disc_spooky','disc_yggdrasil','disc_mel_whip','disc_zan','disc_mitarashi','disc_ark','disc_iblis','disc_snegurochka','disc_undine','disc_yaobikuni','disc_plant','disc_mia','disc_pandora','disc_eiki','disc_kenshi_mocchi'];
+    ok('ビートP交換所に円盤石が20枚ある(予告カードは残っていない)', intoEvent && cards.join() === DISC_IDS.join()
       && (await page.$$('[data-event-point-coming-soon]')).length === 0, cards.join('・'));
     const costs = await page.$$eval('[data-event-point-disc] button[aria-label$="で交換"]', els => els.map(e => e.getAttribute('aria-label')));
     ok('円盤石は全部1500ビートP', costs.length >= 1 && costs.every(l => /1500ビートPで交換$/.test(l)), costs.slice(0, 2).join(' / '));
