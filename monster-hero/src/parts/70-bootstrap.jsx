@@ -2373,6 +2373,58 @@ const createAnimationStyle = () => {
       background:radial-gradient(circle, #fff 0 18%, var(--ex-c1) 30%, var(--ex-c2) 62%, transparent 70%); box-shadow:0 0 22px var(--ex-c2);
       animation:exFist 560ms cubic-bezier(.2,.9,.2,1) forwards; animation-delay:calc(160ms + var(--i) * 70ms); }
     @keyframes exFist { 0% { opacity:0; transform:translate(0,0) scale(.3); } 25% { opacity:1; } 100% { opacity:0; transform:translate(calc((var(--i) - 2.5) * 70px), calc((var(--i) % 2 - .5) * 90px)) scale(3); } }
+    /* ==== ハムのカウンター(24-battle-fx.jsx の HamCounterFx・2026-10-22 社長「演出も派手に」「フルからはカットイン」) ====
+       長さは --cfx-ms(HAM_COUNTER_FX_MS)。cross は押せる場所を塞がない。full・revenge は画面を覆い、タップで飛ばせる */
+    .ham-cfx { position:fixed; inset:0; z-index:9650; pointer-events:none; overflow:hidden; --cfx-ms:900ms; --c1:#fed7aa; --c2:#ea580c; }
+    .ham-cfx--full, .ham-cfx--revenge { pointer-events:auto; cursor:pointer; touch-action:none; }
+    .ham-cfx--revenge { --c1:#fde68a; --c2:#dc2626; }
+    .ham-cfx > * { position:absolute; pointer-events:none; }
+    .ham-cfx__shade { inset:0; opacity:0; background:radial-gradient(ellipse at 50% 50%, rgba(30,10,4,.6), rgba(4,2,2,.9)); animation:hamCfxShade var(--cfx-ms) ease-out forwards; }
+    @keyframes hamCfxShade { 0% { opacity:0; } 6%,86% { opacity:1; } 100% { opacity:0; } }
+    .ham-cfx__rays { left:50%; top:46%; width:170vmax; height:170vmax; margin:-85vmax 0 0 -85vmax; opacity:0;
+      background:repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--c2) 55%, transparent) 0 7deg, transparent 7deg 16deg);
+      -webkit-mask-image:radial-gradient(circle, #000 0 16%, transparent 58%); mask-image:radial-gradient(circle, #000 0 16%, transparent 58%);
+      animation:hamCfxRays var(--cfx-ms) ease-out forwards; }
+    @keyframes hamCfxRays { 0% { opacity:0; transform:rotate(0deg) scale(.5); } 10% { opacity:.95; } 85% { opacity:.75; } 100% { opacity:0; transform:rotate(60deg) scale(1.15); } }
+    .ham-cfx__ring { left:50%; top:46%; width:100px; height:100px; margin:-50px 0 0 -50px; border-radius:50%; opacity:0;
+      border:4px solid var(--c1); box-shadow:0 0 18px var(--c2), inset 0 0 18px var(--c2);
+      animation:hamCfxRing calc(var(--cfx-ms) * .5) ease-out forwards; animation-delay:calc(var(--cfx-ms) * .12 + var(--i) * var(--cfx-ms) * .07); }
+    @keyframes hamCfxRing { 0% { opacity:0; transform:scale(.2); } 20% { opacity:1; } 100% { opacity:0; transform:scale(6.5); } }
+    .ham-cfx__fist { left:50%; top:46%; width:120px; height:120px; margin:-60px 0 0 -60px; display:flex; align-items:center; justify-content:center;
+      font-size:78px; line-height:1; filter:drop-shadow(0 0 14px var(--c2)) drop-shadow(0 0 30px var(--c1)); opacity:0;
+      animation:hamCfxFist calc(var(--cfx-ms) * .6) cubic-bezier(.2,1.4,.3,1) forwards; }
+    .ham-cfx--cross .ham-cfx__fist { top:38%; font-size:64px; animation-duration:var(--cfx-ms); }
+    @keyframes hamCfxFist { 0% { opacity:0; transform:scale(.2) rotate(-30deg); } 30% { opacity:1; transform:scale(1.35) rotate(8deg); } 55% { opacity:1; transform:scale(1) rotate(0); } 100% { opacity:0; transform:scale(1.6); } }
+    .ham-cfx__band { left:-12%; right:-12%; top:46%; height:132px; margin-top:-120px;
+      background:linear-gradient(90deg, rgba(20,6,2,.35), rgba(24,8,4,.95) 18%, rgba(24,8,4,.95) 82%, rgba(20,6,2,.35));
+      border-top:3px solid var(--c1); border-bottom:3px solid var(--c1);
+      box-shadow:0 0 20px var(--c2), 0 0 48px color-mix(in srgb, var(--c2) 60%, transparent), inset 0 0 30px color-mix(in srgb, var(--c2) 45%, transparent);
+      transform:translateX(-120%) skewY(-7deg); animation:hamCfxBand var(--cfx-ms) cubic-bezier(.2,.8,.2,1) forwards; }
+    @keyframes hamCfxBand { 0% { transform:translateX(-120%) skewY(-7deg); } 12% { transform:translateX(0) skewY(-7deg); } 84% { transform:translateX(2%) skewY(-7deg); opacity:1; } 100% { transform:translateX(125%) skewY(-7deg); opacity:.5; } }
+    .ham-cfx__art { position:absolute; left:calc(12% + 4px); bottom:-10px; width:140px; height:140px; transform:skewY(7deg);
+      filter:drop-shadow(0 0 10px var(--c2)) drop-shadow(0 6px 10px rgba(0,0,0,.7)); }
+    .ham-cfx__emoji { display:flex; width:100%; height:100%; align-items:center; justify-content:center; font-size:96px; }
+    .ham-cfx__text { position:absolute; left:calc(12% + 150px); right:calc(12% + 8px); top:50%; transform:translateY(-50%) skewY(7deg); min-width:0; }
+    .ham-cfx__tag { font:900 13px/1.1 system-ui, sans-serif; letter-spacing:.22em; color:var(--c1); text-shadow:0 0 8px var(--c2); white-space:nowrap; }
+    .ham-cfx__sub { margin-top:8px; font:800 12px/1.2 system-ui, sans-serif; color:#fde68a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .ham-cfx__title { left:0; right:0; top:46%; margin-top:30px; text-align:center; white-space:nowrap; color:#fff;
+      font:italic 900 min(38px, 9.4vw)/1.1 system-ui, sans-serif; opacity:0;
+      text-shadow:0 0 3px var(--c2), 3px 3px 0 var(--c2), -2px -2px 0 color-mix(in srgb, var(--c2) 70%, #000), 0 0 22px var(--c2), 0 0 40px var(--c1);
+      animation:hamCfxTitle var(--cfx-ms) cubic-bezier(.2,.8,.2,1) forwards; }
+    .ham-cfx--revenge .ham-cfx__title { font-size:min(46px, 10vw); }
+    @keyframes hamCfxTitle { 0%,10% { opacity:0; transform:scale(2.4); } 20% { opacity:1; transform:scale(.94); } 26%,86% { opacity:1; transform:scale(1); } 100% { opacity:0; transform:scale(1.08); } }
+    .ham-cfx__mult { left:0; right:0; top:46%; margin-top:82px; text-align:center; color:var(--c1);
+      font:italic 900 min(54px, 13vw)/1 system-ui, sans-serif; opacity:0; text-shadow:0 0 4px var(--c2), 3px 3px 0 var(--c2), 0 0 26px var(--c2);
+      animation:hamCfxTitle var(--cfx-ms) cubic-bezier(.2,.8,.2,1) calc(var(--cfx-ms) * .08) forwards; }
+    .ham-cfx--revenge .ham-cfx__mult { font-size:min(72px, 17vw); margin-top:94px; }
+    .ham-cfx__flash { inset:0; background:#fff; opacity:0; animation:hamCfxFlash var(--cfx-ms) linear forwards; }
+    @keyframes hamCfxFlash { 0% { opacity:0; } 3% { opacity:.95; } 10% { opacity:0; } 27% { opacity:0; } 30% { opacity:.85; } 38% { opacity:0; } 100% { opacity:0; } }
+    .ham-cfx__skip { right:12px; bottom:calc(14px + env(safe-area-inset-bottom)); padding:4px 10px; border-radius:999px; background:rgba(0,0,0,.55);
+      border:1px solid rgba(255,255,255,.25); font:800 11px/1.4 system-ui, sans-serif; color:#e2e8f0; opacity:0; animation:hamCfxShade var(--cfx-ms) ease-out forwards; }
+    @media (prefers-reduced-motion: reduce) {
+      .ham-cfx__rays, .ham-cfx__ring, .ham-cfx__flash { display:none; }
+      .ham-cfx__band { animation:none; transform:skewY(-7deg); }
+    }
     /* EXが効いているあいだの、距離枠のゆっくり脈打つ光(2026-10-06 ユーザー指示「効果中の見やすさ」。使った瞬間の .ex-aura とは別に、ずっと出る) */
     [data-tactics-ex-on] { --ex-on-c:#e879f9; }
     /* 光は枠のうえに重ねた膜(::after)の透明度だけを動かす(バトルの飾りは transform と opacity だけを動かす決まり) */

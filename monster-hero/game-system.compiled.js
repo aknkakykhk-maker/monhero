@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5135aefa615ce530
+// source-sha256: ed924dedf29c6d5c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-22 11:50";
+const BUILD_DATE = "2026-10-22 11:57";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -22983,6 +22983,75 @@ const TacticsExCutin = ({
     className: "ex-cutin__flash"
   })), document.body);
 };
+const HAM_COUNTER_FX_MS = Object.freeze({
+  cross: 900,
+  full: 1900,
+  revenge: 2500
+});
+const HamCounterFx = ({
+  fx,
+  onSkip
+}) => {
+  if (!fx) return null;
+  const big = fx.tier !== 'cross';
+  const rings = fx.tier === 'revenge' ? 6 : fx.tier === 'full' ? 3 : 0;
+  return ReactDOM.createPortal(React.createElement("div", {
+    key: fx.key,
+    "data-ham-counter-fx": fx.tier,
+    className: `ham-cfx ham-cfx--${fx.tier}`,
+    style: {
+      '--cfx-ms': `${fx.ms}ms`
+    },
+    "aria-hidden": big ? undefined : 'true',
+    role: big ? 'button' : undefined,
+    "aria-label": big ? `${fx.name}の演出をとばす` : undefined,
+    onPointerDown: big ? e => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (onSkip) onSkip();
+    } : undefined
+  }, big && React.createElement("div", {
+    className: "ham-cfx__shade"
+  }), big && React.createElement("div", {
+    className: "ham-cfx__rays"
+  }), [...Array(rings)].map((_, i) => React.createElement("i", {
+    key: i,
+    className: "ham-cfx__ring",
+    style: {
+      '--i': i
+    }
+  })), React.createElement("div", {
+    className: "ham-cfx__fist"
+  }, "🥊"), big && React.createElement("div", {
+    className: "ham-cfx__band"
+  }, React.createElement("div", {
+    className: "ham-cfx__art"
+  }, fx.imgUrl ? React.createElement(DyedMonsterImage, {
+    baseId: fx.monId,
+    src: fx.imgUrl,
+    alt: "",
+    masuColors: fx.colors,
+    draggable: false,
+    className: "w-full h-full object-contain"
+  }) : React.createElement("span", {
+    className: "ham-cfx__emoji"
+  }, "🐹")), React.createElement("div", {
+    className: "ham-cfx__text"
+  }, React.createElement("div", {
+    className: "ham-cfx__tag"
+  }, fx.tier === 'revenge' ? 'REVENGE COUNTER' : 'FULL COUNTER'), React.createElement("div", {
+    className: "ham-cfx__sub"
+  }, fx.monName, " ／ 攻撃を回避"))), big && React.createElement("div", {
+    "data-ham-counter-name": true,
+    className: "ham-cfx__title"
+  }, fx.name), big && React.createElement("div", {
+    className: "ham-cfx__mult"
+  }, "×", fx.mult), fx.tier === 'revenge' && React.createElement("div", {
+    className: "ham-cfx__flash"
+  }), big && React.createElement("div", {
+    className: "ham-cfx__skip"
+  }, "タップでとばす")), document.body);
+};
 const ExDescText = ({
   text
 }) => {
@@ -40905,6 +40974,22 @@ const TACTICS_EX_DURATION_TEXT = Object.freeze({
 });
 const TACTICS_EX_DIST_MATCH_MULT = 1.7;
 const tacticsExDistMatchDodges = (effect, slotIdx, enemyDist) => (effect === 'distMatch' || effect === 'dodgeCombo') && Number.isInteger(slotIdx) && Number.isInteger(enemyDist) && slotIdx === enemyDist;
+const TACTICS_EX_COUNTER_MAX = 3;
+const tacticsExCounterMax = cfg => {
+  const m = tacticsSafeInt(cfg && cfg.max, 0);
+  return m > 0 ? m : TACTICS_EX_COUNTER_MAX;
+};
+const TACTICS_EX_COUNTER_NAMES = Object.freeze([Object.freeze({
+  name: 'クロスカウンター',
+  tier: 'cross'
+}), Object.freeze({
+  name: 'フルカウンター',
+  tier: 'full'
+}), Object.freeze({
+  name: 'リベンジカウンター',
+  tier: 'revenge'
+})]);
+const tacticsExCounterNameOf = counter => TACTICS_EX_COUNTER_NAMES[Math.max(1, Math.min(TACTICS_EX_COUNTER_NAMES.length, tacticsSafeInt(counter, 1))) - 1];
 const TACTICS_EX_SKILLS = Object.freeze({
   Monol: Object.freeze({
     id: 'monol_cover_all',
@@ -41228,8 +41313,8 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Ham: Object.freeze({
     id: 'ham_boxing',
     name: 'ハムボクシング',
-    useNote: '3ターン カウンター1・狙われた日に攻撃するとクロスカウンター(与ダメ×2×カウンター)',
-    desc: '3ターンのあいだ、ハムがボクシングの構えで敵の攻撃を迎え撃つ。\n・使うと「カウンター」が1つ付く\n・敵が予告した攻撃がハムを狙っているターンに、ハムが攻撃すると、攻撃のタイミングで「クロスカウンター」が発動する\n・クロスカウンター：敵の攻撃を回避し、そのターンにハムが与えるダメージが「2×カウンターの数」倍になる（カウンター1なら2倍、2なら4倍）\n・クロスカウンターが発動するたび、カウンターが1つ増える\n・効果が切れると、カウンターもなくなる',
+    useNote: '3ターン カウンター1・狙われた日に攻撃するとカウンター発動(与ダメ×2×カウンター・最大3)',
+    desc: '3ターンのあいだ、ハムがボクシングの構えで敵の攻撃を迎え撃つ。\n・使うと「カウンター」が1つ付く\n・敵が予告した攻撃がハムを狙っているターンに、ハムが攻撃すると、攻撃のタイミングでカウンターの技が発動する\n・敵の攻撃を回避し、そのターンにハムが与えるダメージが「2×カウンターの数」倍になる\n　カウンター1：クロスカウンター(2倍)\n　カウンター2：フルカウンター(4倍)\n　カウンター3：リベンジカウンター(6倍)\n・発動するたび、カウンターが1つ増える(最大3)\n・効果が切れると、カウンターもなくなる',
     maxUses: 5,
     unlimited: false,
     withCards: true,
@@ -41237,7 +41322,8 @@ const TACTICS_EX_SKILLS = Object.freeze({
     turns: 3,
     counter: Object.freeze({
       start: 1,
-      mult: 2
+      mult: 2,
+      max: 3
     }),
     effect: 'counter',
     conditions: Object.freeze(['notActive'])
@@ -41452,7 +41538,8 @@ const normalizeTacticsExDef = raw => {
     target: raw.target === 'ally' ? 'ally' : null,
     counter: raw.counter && typeof raw.counter === 'object' ? {
       start: Math.max(0, tacticsSafeInt(raw.counter.start, 0)),
-      mult: Math.max(0, Number(raw.counter.mult) || 0)
+      mult: Math.max(0, Number(raw.counter.mult) || 0),
+      max: Math.max(1, tacticsSafeInt(raw.counter.max, TACTICS_EX_COUNTER_MAX))
     } : null,
     psychoLock: raw.psychoLock && typeof raw.psychoLock === 'object' ? {
       enemyDmgDown: Math.min(0.9, Math.max(0, Number(raw.psychoLock.enemyDmgDown) || 0)),
@@ -42621,7 +42708,7 @@ const tacticsExCounterOf = (state, units, slot, now) => {
   const mult = Number(cfg.mult);
   return {
     slot,
-    counter: Math.min(99, Math.max(0, tacticsSafeInt(mine.counter, 0))),
+    counter: Math.min(tacticsExCounterMax(cfg), Math.max(0, tacticsSafeInt(mine.counter, 0))),
     mult: Number.isFinite(mult) && mult > 0 ? mult : 0
   };
 };
@@ -42636,7 +42723,7 @@ const addTacticsExCounter = (state, units, now, slot, n) => {
       ...safe.effects,
       [slot]: {
         ...safe.effects[slot],
-        counter: Math.min(99, c.counter + add)
+        counter: Math.min(tacticsExCounterMax(safe.effects[slot].counterCfg), c.counter + add)
       }
     }
   };
@@ -66170,7 +66257,7 @@ const TacticsEnemyStageFx = ({
     }))));
   })()), document.body);
 };
-const isEnemyDamagePopupText = text => /^(\d[\d,]*!*|合計\s|反射\s*\d|クロスカウンター\s*\d)/.test(String(text == null ? '' : text));
+const isEnemyDamagePopupText = text => /^(\d[\d,]*!*|合計\s|反射\s*\d|(?:クロス|フル|リベンジ)カウンター\s*\d)/.test(String(text == null ? '' : text));
 const enemyFxChipTone = color => String(color || '').split(/\s+/).filter(c => /^text-[a-z]+-\d{2,3}$/.test(c) || /^text-(white|black)$/.test(c)).join(' ') || 'text-white';
 const tacticsDiscardGeo = () => {
   if (typeof document === 'undefined') return null;
@@ -66729,6 +66816,8 @@ function BattleScreen({
   tacticsExInfo,
   activateTacticsEx,
   tacticsExCutin,
+  hamCounterFx,
+  skipHamCounterFx,
   tacticsExTurnUsed,
   passTacticsTurn,
   tacticsCoverSlot,
@@ -68140,6 +68229,9 @@ function BattleScreen({
     attackerId: slots[attackAnim.slotIndex]?.id
   }), React.createElement(TacticsExCutin, {
     cutin: tacticsExCutin
+  }), React.createElement(HamCounterFx, {
+    fx: hamCounterFx,
+    onSkip: skipHamCounterFx
   }), !ecoBattleView && !liteBattleView && slotSkill && slotSkill.type === 'unique' && attackAnim && React.createElement(SpecialMoveFx, {
     slotSkill: slotSkill,
     attackAnim: attackAnim,
@@ -93949,16 +94041,27 @@ function MonsterHeroGame() {
       liveNow = tacticsExLiveRef.current.now,
       cx = tacticsExCrossRef.current;
     const mine = cx.wave === liveNow.wave && cx.turn === liveNow.turn ? cx.slots : {};
-    if (crossMult <= 1 || mine[slotIdx]) return;
+    if (crossMult <= 1 || mine[slotIdx]) return null;
+    const ct = tacticsExCounterOf(tacticsExStateRef.current, tacticsUnitsRef.current, slotIdx, liveNow);
+    const named = tacticsExCounterNameOf(ct ? ct.counter : 1);
     tacticsExCrossRef.current = {
       wave: liveNow.wave,
       turn: liveNow.turn,
       slots: {
         ...mine,
-        [slotIdx]: true
+        [slotIdx]: {
+          name: named.name,
+          tier: named.tier
+        }
       }
     };
-    addPopup(`🥊 クロスカウンター ×${crossMult}!`, 'hero', 'text-orange-300 font-black text-3xl drop-shadow-lg');
+    addPopup(`🥊 ${named.name} ×${crossMult}!`, 'hero', named.tier === 'cross' ? 'text-orange-300 font-black text-4xl drop-shadow-lg' : 'text-amber-200 font-black text-4xl drop-shadow-lg');
+    return {
+      name: named.name,
+      tier: named.tier,
+      mult: crossMult,
+      counter: ct ? ct.counter : 1
+    };
   };
   const commitTacticsExCrossCounters = () => {
     const cx = tacticsExCrossRef.current,
@@ -95037,7 +95140,7 @@ function MonsterHeroGame() {
                   slotFx[slotIdx] = {
                     evade: true
                   };
-                  pushBattleLog(`🥊 ${hamName}のクロスカウンター！ 攻撃を回避した`, 'ally');
+                  pushBattleLog(`🥊 ${hamName}の${cx.slots[slotIdx].name || 'クロスカウンター'}！ 攻撃を回避した`, 'ally');
                   return;
                 }
               }
@@ -95598,7 +95701,7 @@ function MonsterHeroGame() {
         }
         if (def.effect === 'counter' && isTacticsExEffectActive(state, slotIdx, mon.id, tacticsExNow)) {
           const ct = tacticsExCounterOf(state, tacticsUnits, slotIdx, tacticsExNow);
-          if (ct) out.push(`カウンター ${ct.counter}（クロスカウンターの威力：与ダメ×${ct.mult * ct.counter}。発動するたび+1）`);
+          if (ct) out.push(`カウンター ${ct.counter}（${tacticsExCounterNameOf(ct.counter).name}の威力：与ダメ×${ct.mult * ct.counter}。発動するたび+1・最大${tacticsExCounterMax(def.counter)}）`);
         }
         if (def.effect === 'thunder' && isTacticsExEffectActive(state, slotIdx, mon.id, tacticsExNow)) {
           const th = tacticsExThunderOf(state, tacticsUnits, slotIdx, tacticsExNow);
@@ -95634,6 +95737,59 @@ function MonsterHeroGame() {
     };
   };
   const TACTICS_EX_ON_USE = {};
+  const [hamCounterFx, setHamCounterFx] = useState(null);
+  const hamCounterFxDoneRef = useRef(null);
+  const hamCounterFxTimerRef = useRef(null);
+  const skipHamCounterFx = () => {
+    if (hamCounterFxTimerRef.current) {
+      clearTimeout(hamCounterFxTimerRef.current);
+      hamCounterFxTimerRef.current = null;
+    }
+    const done = hamCounterFxDoneRef.current;
+    hamCounterFxDoneRef.current = null;
+    setHamCounterFx(null);
+    if (done) done();
+  };
+  const playHamCounterFx = (fx, slotIdx, mon) => new Promise(resolve => {
+    const tier = fx && HAM_COUNTER_FX_MS[fx.tier] != null ? fx.tier : 'cross';
+    const ms = Math.max(200, battleMs(HAM_COUNTER_FX_MS[tier]));
+    if (hamCounterFxDoneRef.current) skipHamCounterFx();
+    setHamCounterFx({
+      key: Date.now(),
+      tier,
+      name: fx.name,
+      mult: fx.mult,
+      counter: fx.counter,
+      slotIndex: slotIdx,
+      ms,
+      monId: mon && mon.id,
+      imgUrl: mon && mon.imgUrl,
+      colors: mon && mon.colors,
+      monName: mon && (mon.masuName || mon.name) || 'ハム'
+    });
+    if (tier === 'cross') {
+      Audio_.se.crit();
+      triggerShake(false);
+    } else if (tier === 'full') {
+      Audio_.se.special();
+      triggerShake(true);
+      setTimeout(() => Audio_.se.crit(), Math.round(ms * 0.22));
+    } else {
+      Audio_.se.special();
+      triggerShake(true);
+      setTimeout(() => {
+        Audio_.se.crit();
+        triggerShake(true);
+      }, Math.round(ms * 0.28));
+      setTimeout(() => Audio_.se.crit(), Math.round(ms * 0.36));
+    }
+    hamCounterFxDoneRef.current = resolve;
+    hamCounterFxTimerRef.current = setTimeout(skipHamCounterFx, ms);
+    if (tier === 'cross') {
+      hamCounterFxDoneRef.current = null;
+      resolve();
+    }
+  });
   const [tacticsExCutin, setTacticsExCutin] = useState(null);
   const tacticsExCutinTimerRef = useRef(null);
   const showGuardImpact = bySlot => {
@@ -96349,7 +96505,10 @@ function MonsterHeroGame() {
           immediateStun = true;
           setImmediateTurnBuff('stunEnemy', true);
         }
-        fireTacticsExCross(slotIdx);
+        {
+          const crossFx = fireTacticsExCross(slotIdx);
+          if (crossFx) await playHamCounterFx(crossFx, slotIdx, activeMon);
+        }
         const rangeMoveTarget = card.type === 'range_atk' && card.rangeIdx != null ? card.rangeIdx : null;
         attackHits.push({
           dmg: finalD,
@@ -110988,6 +111147,8 @@ function MonsterHeroGame() {
       tacticsExInfo: tacticsExInfo,
       activateTacticsEx: activateTacticsEx,
       tacticsExCutin: tacticsExCutin,
+      hamCounterFx: hamCounterFx,
+      skipHamCounterFx: skipHamCounterFx,
       tacticsExIntroVisible: tacticsExIntroVisible,
       dismissTacticsExIntro: dismissTacticsExIntro,
       tacticsPandoraForms: tacticsPandoraForms,
@@ -116592,6 +116753,58 @@ const createAnimationStyle = () => {
       background:radial-gradient(circle, #fff 0 18%, var(--ex-c1) 30%, var(--ex-c2) 62%, transparent 70%); box-shadow:0 0 22px var(--ex-c2);
       animation:exFist 560ms cubic-bezier(.2,.9,.2,1) forwards; animation-delay:calc(160ms + var(--i) * 70ms); }
     @keyframes exFist { 0% { opacity:0; transform:translate(0,0) scale(.3); } 25% { opacity:1; } 100% { opacity:0; transform:translate(calc((var(--i) - 2.5) * 70px), calc((var(--i) % 2 - .5) * 90px)) scale(3); } }
+    /* ==== ハムのカウンター(24-battle-fx.jsx の HamCounterFx・2026-10-22 社長「演出も派手に」「フルからはカットイン」) ====
+       長さは --cfx-ms(HAM_COUNTER_FX_MS)。cross は押せる場所を塞がない。full・revenge は画面を覆い、タップで飛ばせる */
+    .ham-cfx { position:fixed; inset:0; z-index:9650; pointer-events:none; overflow:hidden; --cfx-ms:900ms; --c1:#fed7aa; --c2:#ea580c; }
+    .ham-cfx--full, .ham-cfx--revenge { pointer-events:auto; cursor:pointer; touch-action:none; }
+    .ham-cfx--revenge { --c1:#fde68a; --c2:#dc2626; }
+    .ham-cfx > * { position:absolute; pointer-events:none; }
+    .ham-cfx__shade { inset:0; opacity:0; background:radial-gradient(ellipse at 50% 50%, rgba(30,10,4,.6), rgba(4,2,2,.9)); animation:hamCfxShade var(--cfx-ms) ease-out forwards; }
+    @keyframes hamCfxShade { 0% { opacity:0; } 6%,86% { opacity:1; } 100% { opacity:0; } }
+    .ham-cfx__rays { left:50%; top:46%; width:170vmax; height:170vmax; margin:-85vmax 0 0 -85vmax; opacity:0;
+      background:repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--c2) 55%, transparent) 0 7deg, transparent 7deg 16deg);
+      -webkit-mask-image:radial-gradient(circle, #000 0 16%, transparent 58%); mask-image:radial-gradient(circle, #000 0 16%, transparent 58%);
+      animation:hamCfxRays var(--cfx-ms) ease-out forwards; }
+    @keyframes hamCfxRays { 0% { opacity:0; transform:rotate(0deg) scale(.5); } 10% { opacity:.95; } 85% { opacity:.75; } 100% { opacity:0; transform:rotate(60deg) scale(1.15); } }
+    .ham-cfx__ring { left:50%; top:46%; width:100px; height:100px; margin:-50px 0 0 -50px; border-radius:50%; opacity:0;
+      border:4px solid var(--c1); box-shadow:0 0 18px var(--c2), inset 0 0 18px var(--c2);
+      animation:hamCfxRing calc(var(--cfx-ms) * .5) ease-out forwards; animation-delay:calc(var(--cfx-ms) * .12 + var(--i) * var(--cfx-ms) * .07); }
+    @keyframes hamCfxRing { 0% { opacity:0; transform:scale(.2); } 20% { opacity:1; } 100% { opacity:0; transform:scale(6.5); } }
+    .ham-cfx__fist { left:50%; top:46%; width:120px; height:120px; margin:-60px 0 0 -60px; display:flex; align-items:center; justify-content:center;
+      font-size:78px; line-height:1; filter:drop-shadow(0 0 14px var(--c2)) drop-shadow(0 0 30px var(--c1)); opacity:0;
+      animation:hamCfxFist calc(var(--cfx-ms) * .6) cubic-bezier(.2,1.4,.3,1) forwards; }
+    .ham-cfx--cross .ham-cfx__fist { top:38%; font-size:64px; animation-duration:var(--cfx-ms); }
+    @keyframes hamCfxFist { 0% { opacity:0; transform:scale(.2) rotate(-30deg); } 30% { opacity:1; transform:scale(1.35) rotate(8deg); } 55% { opacity:1; transform:scale(1) rotate(0); } 100% { opacity:0; transform:scale(1.6); } }
+    .ham-cfx__band { left:-12%; right:-12%; top:46%; height:132px; margin-top:-120px;
+      background:linear-gradient(90deg, rgba(20,6,2,.35), rgba(24,8,4,.95) 18%, rgba(24,8,4,.95) 82%, rgba(20,6,2,.35));
+      border-top:3px solid var(--c1); border-bottom:3px solid var(--c1);
+      box-shadow:0 0 20px var(--c2), 0 0 48px color-mix(in srgb, var(--c2) 60%, transparent), inset 0 0 30px color-mix(in srgb, var(--c2) 45%, transparent);
+      transform:translateX(-120%) skewY(-7deg); animation:hamCfxBand var(--cfx-ms) cubic-bezier(.2,.8,.2,1) forwards; }
+    @keyframes hamCfxBand { 0% { transform:translateX(-120%) skewY(-7deg); } 12% { transform:translateX(0) skewY(-7deg); } 84% { transform:translateX(2%) skewY(-7deg); opacity:1; } 100% { transform:translateX(125%) skewY(-7deg); opacity:.5; } }
+    .ham-cfx__art { position:absolute; left:calc(12% + 4px); bottom:-10px; width:140px; height:140px; transform:skewY(7deg);
+      filter:drop-shadow(0 0 10px var(--c2)) drop-shadow(0 6px 10px rgba(0,0,0,.7)); }
+    .ham-cfx__emoji { display:flex; width:100%; height:100%; align-items:center; justify-content:center; font-size:96px; }
+    .ham-cfx__text { position:absolute; left:calc(12% + 150px); right:calc(12% + 8px); top:50%; transform:translateY(-50%) skewY(7deg); min-width:0; }
+    .ham-cfx__tag { font:900 13px/1.1 system-ui, sans-serif; letter-spacing:.22em; color:var(--c1); text-shadow:0 0 8px var(--c2); white-space:nowrap; }
+    .ham-cfx__sub { margin-top:8px; font:800 12px/1.2 system-ui, sans-serif; color:#fde68a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .ham-cfx__title { left:0; right:0; top:46%; margin-top:30px; text-align:center; white-space:nowrap; color:#fff;
+      font:italic 900 min(38px, 9.4vw)/1.1 system-ui, sans-serif; opacity:0;
+      text-shadow:0 0 3px var(--c2), 3px 3px 0 var(--c2), -2px -2px 0 color-mix(in srgb, var(--c2) 70%, #000), 0 0 22px var(--c2), 0 0 40px var(--c1);
+      animation:hamCfxTitle var(--cfx-ms) cubic-bezier(.2,.8,.2,1) forwards; }
+    .ham-cfx--revenge .ham-cfx__title { font-size:min(46px, 10vw); }
+    @keyframes hamCfxTitle { 0%,10% { opacity:0; transform:scale(2.4); } 20% { opacity:1; transform:scale(.94); } 26%,86% { opacity:1; transform:scale(1); } 100% { opacity:0; transform:scale(1.08); } }
+    .ham-cfx__mult { left:0; right:0; top:46%; margin-top:82px; text-align:center; color:var(--c1);
+      font:italic 900 min(54px, 13vw)/1 system-ui, sans-serif; opacity:0; text-shadow:0 0 4px var(--c2), 3px 3px 0 var(--c2), 0 0 26px var(--c2);
+      animation:hamCfxTitle var(--cfx-ms) cubic-bezier(.2,.8,.2,1) calc(var(--cfx-ms) * .08) forwards; }
+    .ham-cfx--revenge .ham-cfx__mult { font-size:min(72px, 17vw); margin-top:94px; }
+    .ham-cfx__flash { inset:0; background:#fff; opacity:0; animation:hamCfxFlash var(--cfx-ms) linear forwards; }
+    @keyframes hamCfxFlash { 0% { opacity:0; } 3% { opacity:.95; } 10% { opacity:0; } 27% { opacity:0; } 30% { opacity:.85; } 38% { opacity:0; } 100% { opacity:0; } }
+    .ham-cfx__skip { right:12px; bottom:calc(14px + env(safe-area-inset-bottom)); padding:4px 10px; border-radius:999px; background:rgba(0,0,0,.55);
+      border:1px solid rgba(255,255,255,.25); font:800 11px/1.4 system-ui, sans-serif; color:#e2e8f0; opacity:0; animation:hamCfxShade var(--cfx-ms) ease-out forwards; }
+    @media (prefers-reduced-motion: reduce) {
+      .ham-cfx__rays, .ham-cfx__ring, .ham-cfx__flash { display:none; }
+      .ham-cfx__band { animation:none; transform:skewY(-7deg); }
+    }
     /* EXが効いているあいだの、距離枠のゆっくり脈打つ光(2026-10-06 ユーザー指示「効果中の見やすさ」。使った瞬間の .ex-aura とは別に、ずっと出る) */
     [data-tactics-ex-on] { --ex-on-c:#e879f9; }
     /* 光は枠のうえに重ねた膜(::after)の透明度だけを動かす(バトルの飾りは transform と opacity だけを動かす決まり) */

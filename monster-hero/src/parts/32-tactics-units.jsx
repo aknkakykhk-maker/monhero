@@ -1194,6 +1194,17 @@ const TACTICS_EX_DIST_MATCH_MULT = 1.7;
 // (枠の番号がそのまま距離なので、枠の番号と敵の距離が同じかどうかで見る)
 const tacticsExDistMatchDodges = (effect, slotIdx, enemyDist) =>
   (effect === 'distMatch' || effect === 'dodgeCombo') && Number.isInteger(slotIdx) && Number.isInteger(enemyDist) && slotIdx === enemyDist;
+// カウンターの上限(ハムボクシングは3)。使ったときに写した設定(counterCfg)に max が無い古い状態でも3にする
+const TACTICS_EX_COUNTER_MAX = 3;
+const tacticsExCounterMax = (cfg) => { const m = tacticsSafeInt(cfg && cfg.max, 0); return m > 0 ? m : TACTICS_EX_COUNTER_MAX; };
+// カウンターの数ごとの技名(2026-10-22 社長「1回めがクロスカウンターで、数増えるごとにフルカウンター、リベンジカウンター」)。
+// tier は演出の強さ: cross … 大きな文字と揺れ / full … カットイン / revenge … もっと派手で長いカットイン
+const TACTICS_EX_COUNTER_NAMES = Object.freeze([
+  Object.freeze({ name: 'クロスカウンター', tier: 'cross' }),
+  Object.freeze({ name: 'フルカウンター', tier: 'full' }),
+  Object.freeze({ name: 'リベンジカウンター', tier: 'revenge' }),
+]);
+const tacticsExCounterNameOf = (counter) => TACTICS_EX_COUNTER_NAMES[Math.max(1, Math.min(TACTICS_EX_COUNTER_NAMES.length, tacticsSafeInt(counter, 1))) - 1];
 const TACTICS_EX_SKILLS = Object.freeze({
   Monol: Object.freeze({
     id: 'monol_cover_all',
@@ -1427,10 +1438,12 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Ham: Object.freeze({
     id: 'ham_boxing',
     name: 'ハムボクシング',
-    useNote: '3ターン カウンター1・狙われた日に攻撃するとクロスカウンター(与ダメ×2×カウンター)',
-    desc: '3ターンのあいだ、ハムがボクシングの構えで敵の攻撃を迎え撃つ。\n・使うと「カウンター」が1つ付く\n・敵が予告した攻撃がハムを狙っているターンに、ハムが攻撃すると、攻撃のタイミングで「クロスカウンター」が発動する\n・クロスカウンター：敵の攻撃を回避し、そのターンにハムが与えるダメージが「2×カウンターの数」倍になる（カウンター1なら2倍、2なら4倍）\n・クロスカウンターが発動するたび、カウンターが1つ増える\n・効果が切れると、カウンターもなくなる',
+    // 2026-10-22 社長「1回めがクロスカウンターで、数増えるごとにフルカウンター、リベンジカウンターって名前変えられる？ 最大3だよね？」。
+    //   技名はカウンターの数で変わる(TACTICS_EX_COUNTER_NAMES)。カウンターは最大3(counter.max)。効く3ターンで出るのは3回までなので、遊び方は変わらない
+    useNote: '3ターン カウンター1・狙われた日に攻撃するとカウンター発動(与ダメ×2×カウンター・最大3)',
+    desc: '3ターンのあいだ、ハムがボクシングの構えで敵の攻撃を迎え撃つ。\n・使うと「カウンター」が1つ付く\n・敵が予告した攻撃がハムを狙っているターンに、ハムが攻撃すると、攻撃のタイミングでカウンターの技が発動する\n・敵の攻撃を回避し、そのターンにハムが与えるダメージが「2×カウンターの数」倍になる\n　カウンター1：クロスカウンター(2倍)\n　カウンター2：フルカウンター(4倍)\n　カウンター3：リベンジカウンター(6倍)\n・発動するたび、カウンターが1つ増える(最大3)\n・効果が切れると、カウンターもなくなる',
     maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,
-    counter: Object.freeze({ start: 1, mult: 2 }),
+    counter: Object.freeze({ start: 1, mult: 2, max: 3 }),
     effect: 'counter',
     // 効いている途中でもう一度使うと、カウンターが1に戻ってしまうので使えない
     conditions: Object.freeze(['notActive']),
@@ -1615,7 +1628,7 @@ const normalizeTacticsExDef = (raw) => {
     usesPerWave: raw.usesPerWave === true,
     target: raw.target === 'ally' ? 'ally' : null,
     counter: raw.counter && typeof raw.counter === 'object'
-      ? { start: Math.max(0, tacticsSafeInt(raw.counter.start, 0)), mult: Math.max(0, Number(raw.counter.mult) || 0) } : null,
+      ? { start: Math.max(0, tacticsSafeInt(raw.counter.start, 0)), mult: Math.max(0, Number(raw.counter.mult) || 0), max: Math.max(1, tacticsSafeInt(raw.counter.max, TACTICS_EX_COUNTER_MAX)) } : null,
     psychoLock: raw.psychoLock && typeof raw.psychoLock === 'object'
       ? { enemyDmgDown: Math.min(0.9, Math.max(0, Number(raw.psychoLock.enemyDmgDown) || 0)), enemyTakenUp: Math.max(0, Number(raw.psychoLock.enemyTakenUp) || 0) } : null,
     damageBack: raw.damageBack && typeof raw.damageBack === 'object'
@@ -2353,7 +2366,7 @@ const tacticsExCounterOf = (state, units, slot, now) => {
   const mine = normalizeTacticsExState(state).effects[slot], cfg = mine.counterCfg;
   if (!cfg) return null;
   const mult = Number(cfg.mult);
-  return { slot, counter: Math.min(99, Math.max(0, tacticsSafeInt(mine.counter, 0))), mult: Number.isFinite(mult) && mult > 0 ? mult : 0 };
+  return { slot, counter: Math.min(tacticsExCounterMax(cfg), Math.max(0, tacticsSafeInt(mine.counter, 0))), mult: Number.isFinite(mult) && mult > 0 ? mult : 0 };
 };
 // クロスカウンターが発動した子のカウンターを n 増やす(効いていなければ状態をそのまま返す)
 const addTacticsExCounter = (state, units, now, slot, n) => {
@@ -2361,7 +2374,7 @@ const addTacticsExCounter = (state, units, now, slot, n) => {
   const c = tacticsExCounterOf(safe, units, slot, now);
   const add = Math.max(0, tacticsSafeInt(n, 0));
   if (!c || add <= 0) return safe;
-  return { ...safe, effects: { ...safe.effects, [slot]: { ...safe.effects[slot], counter: Math.min(99, c.counter + add) } } };
+  return { ...safe, effects: { ...safe.effects, [slot]: { ...safe.effects[slot], counter: Math.min(tacticsExCounterMax(safe.effects[slot].counterCfg), c.counter + add) } } };
 };
 // クロスカウンターが発動したときの、ハムの与ダメ倍率(2 × カウンターの数。カウンター1なら×2・2なら×4・3なら×6)。効いていなければ 1
 const tacticsExCounterMult = (state, units, slot, now) => {

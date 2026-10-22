@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1f743a519e423baa
+// generated-sha256: dea5b727c7802a6d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-22 11:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-22 11:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -14763,6 +14763,46 @@ const TacticsExCutin = ({ cutin }) => {
     document.body
   );
 };
+// ==== ハムのカウンターの演出(2026-10-22 社長「名前変えられる？」「演出も派手にしてほしい」「フルからはカットイン付きでも良さそう」
+//      「滅多にないし演出が少し長くなっても良さそう」「タップで早送り」) ====
+// 段はカウンターの数で決まる(TACTICS_EX_COUNTER_NAMES の tier)。長さはこの表の1か所(バトルの速さで縮む)。
+//   cross   … 大きな拳の光(技名は大きくしたポップアップ)。押せる場所は塞がない(待たない)
+//   full    … カットイン(暗転・斜めの帯にハム・名前・倍率)+光の輪。画面を覆い、タップで飛ばせる
+//   revenge … full より長く、画面全体の白い光・炎の色・大きな文字・輪を増やす
+const HAM_COUNTER_FX_MS = Object.freeze({ cross: 900, full: 1900, revenge: 2500 });
+const HamCounterFx = ({ fx, onSkip }) => {
+  if (!fx) return null;
+  const big = fx.tier !== 'cross';
+  const rings = fx.tier === 'revenge' ? 6 : fx.tier === 'full' ? 3 : 0;
+  return ReactDOM.createPortal(
+    <div key={fx.key} data-ham-counter-fx={fx.tier} className={`ham-cfx ham-cfx--${fx.tier}`} style={{ '--cfx-ms':`${fx.ms}ms` }}
+      aria-hidden={big ? undefined : 'true'} role={big ? 'button' : undefined} aria-label={big ? `${fx.name}の演出をとばす` : undefined}
+      onPointerDown={big ? (e) => { e.preventDefault(); e.stopPropagation(); if (onSkip) onSkip(); } : undefined}>
+      {big && <div className="ham-cfx__shade"/>}
+      {big && <div className="ham-cfx__rays"/>}
+      {[...Array(rings)].map((_, i) => <i key={i} className="ham-cfx__ring" style={{ '--i':i }}/>)}
+      <div className="ham-cfx__fist">🥊</div>
+      {big && (
+        <div className="ham-cfx__band">
+          <div className="ham-cfx__art">
+            {fx.imgUrl ? <DyedMonsterImage baseId={fx.monId} src={fx.imgUrl} alt="" masuColors={fx.colors} draggable={false} className="w-full h-full object-contain"/> : <span className="ham-cfx__emoji">🐹</span>}
+          </div>
+          <div className="ham-cfx__text">
+            <div className="ham-cfx__tag">{fx.tier === 'revenge' ? 'REVENGE COUNTER' : 'FULL COUNTER'}</div>
+            <div className="ham-cfx__sub">{fx.monName} ／ 攻撃を回避</div>
+          </div>
+        </div>
+      )}
+      {/* 技名は帯の外に、画面幅いっぱいの大きな文字で出す(帯の中だと「リベンジカウンター」が狭い画面で入り切らない)。
+          クロスの技名は今までどおりのポップアップ(大きくした「🥊 クロスカウンター ×2!」)が出すので、ここは拳の光だけ */}
+      {big && <div data-ham-counter-name className="ham-cfx__title">{fx.name}</div>}
+      {big && <div className="ham-cfx__mult">×{fx.mult}</div>}
+      {fx.tier === 'revenge' && <div className="ham-cfx__flash"/>}
+      {big && <div className="ham-cfx__skip">タップでとばす</div>}
+    </div>,
+    document.body
+  );
+};
 // ==== EXの説明文(2026-10-06 ユーザー指示「説明欄の見やすさ」) ====
 // def.desc の書き方: 1行目＝要約 / 「・」で始まる行＝効果の項目 / 全角空白で始まる行＝その項目の細かい内訳 / 「◯◯：…」の行＝名前つきの項目。
 // 図鑑と、距離枠から開く詳細の両方で同じ見た目にする(文字そのものは変えず、段と印だけを付ける)
@@ -25240,6 +25280,17 @@ const TACTICS_EX_DIST_MATCH_MULT = 1.7;
 // (枠の番号がそのまま距離なので、枠の番号と敵の距離が同じかどうかで見る)
 const tacticsExDistMatchDodges = (effect, slotIdx, enemyDist) =>
   (effect === 'distMatch' || effect === 'dodgeCombo') && Number.isInteger(slotIdx) && Number.isInteger(enemyDist) && slotIdx === enemyDist;
+// カウンターの上限(ハムボクシングは3)。使ったときに写した設定(counterCfg)に max が無い古い状態でも3にする
+const TACTICS_EX_COUNTER_MAX = 3;
+const tacticsExCounterMax = (cfg) => { const m = tacticsSafeInt(cfg && cfg.max, 0); return m > 0 ? m : TACTICS_EX_COUNTER_MAX; };
+// カウンターの数ごとの技名(2026-10-22 社長「1回めがクロスカウンターで、数増えるごとにフルカウンター、リベンジカウンター」)。
+// tier は演出の強さ: cross … 大きな文字と揺れ / full … カットイン / revenge … もっと派手で長いカットイン
+const TACTICS_EX_COUNTER_NAMES = Object.freeze([
+  Object.freeze({ name: 'クロスカウンター', tier: 'cross' }),
+  Object.freeze({ name: 'フルカウンター', tier: 'full' }),
+  Object.freeze({ name: 'リベンジカウンター', tier: 'revenge' }),
+]);
+const tacticsExCounterNameOf = (counter) => TACTICS_EX_COUNTER_NAMES[Math.max(1, Math.min(TACTICS_EX_COUNTER_NAMES.length, tacticsSafeInt(counter, 1))) - 1];
 const TACTICS_EX_SKILLS = Object.freeze({
   Monol: Object.freeze({
     id: 'monol_cover_all',
@@ -25473,10 +25524,12 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Ham: Object.freeze({
     id: 'ham_boxing',
     name: 'ハムボクシング',
-    useNote: '3ターン カウンター1・狙われた日に攻撃するとクロスカウンター(与ダメ×2×カウンター)',
-    desc: '3ターンのあいだ、ハムがボクシングの構えで敵の攻撃を迎え撃つ。\n・使うと「カウンター」が1つ付く\n・敵が予告した攻撃がハムを狙っているターンに、ハムが攻撃すると、攻撃のタイミングで「クロスカウンター」が発動する\n・クロスカウンター：敵の攻撃を回避し、そのターンにハムが与えるダメージが「2×カウンターの数」倍になる（カウンター1なら2倍、2なら4倍）\n・クロスカウンターが発動するたび、カウンターが1つ増える\n・効果が切れると、カウンターもなくなる',
+    // 2026-10-22 社長「1回めがクロスカウンターで、数増えるごとにフルカウンター、リベンジカウンターって名前変えられる？ 最大3だよね？」。
+    //   技名はカウンターの数で変わる(TACTICS_EX_COUNTER_NAMES)。カウンターは最大3(counter.max)。効く3ターンで出るのは3回までなので、遊び方は変わらない
+    useNote: '3ターン カウンター1・狙われた日に攻撃するとカウンター発動(与ダメ×2×カウンター・最大3)',
+    desc: '3ターンのあいだ、ハムがボクシングの構えで敵の攻撃を迎え撃つ。\n・使うと「カウンター」が1つ付く\n・敵が予告した攻撃がハムを狙っているターンに、ハムが攻撃すると、攻撃のタイミングでカウンターの技が発動する\n・敵の攻撃を回避し、そのターンにハムが与えるダメージが「2×カウンターの数」倍になる\n　カウンター1：クロスカウンター(2倍)\n　カウンター2：フルカウンター(4倍)\n　カウンター3：リベンジカウンター(6倍)\n・発動するたび、カウンターが1つ増える(最大3)\n・効果が切れると、カウンターもなくなる',
     maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,
-    counter: Object.freeze({ start: 1, mult: 2 }),
+    counter: Object.freeze({ start: 1, mult: 2, max: 3 }),
     effect: 'counter',
     // 効いている途中でもう一度使うと、カウンターが1に戻ってしまうので使えない
     conditions: Object.freeze(['notActive']),
@@ -25661,7 +25714,7 @@ const normalizeTacticsExDef = (raw) => {
     usesPerWave: raw.usesPerWave === true,
     target: raw.target === 'ally' ? 'ally' : null,
     counter: raw.counter && typeof raw.counter === 'object'
-      ? { start: Math.max(0, tacticsSafeInt(raw.counter.start, 0)), mult: Math.max(0, Number(raw.counter.mult) || 0) } : null,
+      ? { start: Math.max(0, tacticsSafeInt(raw.counter.start, 0)), mult: Math.max(0, Number(raw.counter.mult) || 0), max: Math.max(1, tacticsSafeInt(raw.counter.max, TACTICS_EX_COUNTER_MAX)) } : null,
     psychoLock: raw.psychoLock && typeof raw.psychoLock === 'object'
       ? { enemyDmgDown: Math.min(0.9, Math.max(0, Number(raw.psychoLock.enemyDmgDown) || 0)), enemyTakenUp: Math.max(0, Number(raw.psychoLock.enemyTakenUp) || 0) } : null,
     damageBack: raw.damageBack && typeof raw.damageBack === 'object'
@@ -26399,7 +26452,7 @@ const tacticsExCounterOf = (state, units, slot, now) => {
   const mine = normalizeTacticsExState(state).effects[slot], cfg = mine.counterCfg;
   if (!cfg) return null;
   const mult = Number(cfg.mult);
-  return { slot, counter: Math.min(99, Math.max(0, tacticsSafeInt(mine.counter, 0))), mult: Number.isFinite(mult) && mult > 0 ? mult : 0 };
+  return { slot, counter: Math.min(tacticsExCounterMax(cfg), Math.max(0, tacticsSafeInt(mine.counter, 0))), mult: Number.isFinite(mult) && mult > 0 ? mult : 0 };
 };
 // クロスカウンターが発動した子のカウンターを n 増やす(効いていなければ状態をそのまま返す)
 const addTacticsExCounter = (state, units, now, slot, n) => {
@@ -26407,7 +26460,7 @@ const addTacticsExCounter = (state, units, now, slot, n) => {
   const c = tacticsExCounterOf(safe, units, slot, now);
   const add = Math.max(0, tacticsSafeInt(n, 0));
   if (!c || add <= 0) return safe;
-  return { ...safe, effects: { ...safe.effects, [slot]: { ...safe.effects[slot], counter: Math.min(99, c.counter + add) } } };
+  return { ...safe, effects: { ...safe.effects, [slot]: { ...safe.effects[slot], counter: Math.min(tacticsExCounterMax(safe.effects[slot].counterCfg), c.counter + add) } } };
 };
 // クロスカウンターが発動したときの、ハムの与ダメ倍率(2 × カウンターの数。カウンター1なら×2・2なら×4・3なら×6)。効いていなければ 1
 const tacticsExCounterMult = (state, units, slot, now) => {
@@ -39732,7 +39785,7 @@ const TacticsEnemyStageFx = ({ fx, motion, isMoo, enemyId, skillLabel, lite = fa
 };
 // 敵の上の文字のうち、ダメージの数字(与えた数・合計・反射・クロスカウンター)かどうか。
 // それ以外(スタン・咆哮・再生・移動の予告など)は「効果」として、敵の足元の小さな札へ回す
-const isEnemyDamagePopupText = (text) => /^(\d[\d,]*!*|合計\s|反射\s*\d|クロスカウンター\s*\d)/.test(String(text == null ? '' : text));
+const isEnemyDamagePopupText = (text) => /^(\d[\d,]*!*|合計\s|反射\s*\d|(?:クロス|フル|リベンジ)カウンター\s*\d)/.test(String(text == null ? '' : text));
 // 札の文字の色は、もとの色の指定(text-◯◯-300 など)だけ残す。大きさの指定(text-xl など)は札の側で決める
 const enemyFxChipTone = (color) => String(color || '').split(/\s+/)
   .filter(c => /^text-[a-z]+-\d{2,3}$/.test(c) || /^text-(white|black)$/.test(c)).join(' ') || 'text-white';
@@ -39985,7 +40038,7 @@ function BattleScreen({
   setShowSoulBattleEffects, setSkillPicker, setSlotSettle, slotMaxUses, slotSettle, slotSkill,
   slotUniqueChoice, slots, soulBattleParty, soulCoordinationCardBonus, suppressCardClickRef,
   tacticsCanAssign, tacticsCardBlock, enemyDebuffs, battleUnitStatusOf, battleEnemyStatus, enemyStackCounts, debugStackMarks, tacticsSlotCountersAt, discardCards, actionUsed, tacticsCardGenre, tacticsCardScope, tacticsSlotFx, tacticsUnits,
-  tacticsExInfo, activateTacticsEx, tacticsExCutin, tacticsExTurnUsed, passTacticsTurn, tacticsCoverSlot, tacticsHate, tacticsHateOn,
+  tacticsExInfo, activateTacticsEx, tacticsExCutin, hamCounterFx, skipHamCounterFx, tacticsExTurnUsed, passTacticsTurn, tacticsCoverSlot, tacticsHate, tacticsHateOn,
   tacticsExIntroVisible, dismissTacticsExIntro, tacticsPandoraForms, trickStartView, sweetStackView, bowStackView, fateWheelView, enemyConfuseTurns, luckBanners,
   teachingFx, totalTurnCount, turnCount, ultimateDistanceBreakLevels, ultraBattleView, enemyDefeating,
   unifiedSpecialDefense, useEmergency, wave,
@@ -40903,6 +40956,8 @@ function BattleScreen({
               {/* 味方の攻撃が敵に当たった瞬間の着弾(体当たり・突進・ザン/エイキの斬撃)。攻撃中だけ出る */}
               {!ecoBattleView&&attackAnim&&<AttackTargetFx anim={attackAnim} attackerId={slots[attackAnim.slotIndex]?.id}/>}
               <TacticsExCutin cutin={tacticsExCutin}/>
+              {/* ハムのカウンター(クロス・フル・リベンジ)。フル・リベンジは画面を覆い、タップで飛ばせる */}
+              <HamCounterFx fx={hamCounterFx} onSkip={skipHamCounterFx}/>
               {!ecoBattleView&&!liteBattleView&&slotSkill&&slotSkill.type==='unique'&&attackAnim&&<SpecialMoveFx slotSkill={slotSkill} attackAnim={attackAnim} mon={slots[slotSkill.slotIndex]} ownerId={slotSkill.ownerId}/>}
               {/* ラスボス・ムー: 丸枠内は台座オーラのみ（本体は枠外に巨大表示） */}
               {!ecoBattleView&&isMooBoss(enemy?.id)&&(
@@ -60660,12 +60715,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   };
   // ハムのクロスカウンターを出す: 攻撃のタイミングで名前を出し、出した枠を控える(ターンごとに1回だけ。与ダメの倍率は getDmg の中で掛かっている)。
   // カウンター+1は、同じターンの次の攻撃まで倍率が変わらないよう、カードを出し終えてから(下の commitTacticsExCrossCounters)入れる
+  // ★技名はカウンターの数で変わる(1 クロス・2 フル・3 リベンジ。2026-10-22 社長)。出した枠には技名を控え、回避の記録にも同じ名前を出す。
+  //   戻り値は演出に使う { name, tier, mult, counter }(出なかったときは null)。フル・リベンジのカットインは呼んだ側で待つ
   const fireTacticsExCross = (slotIdx) => {
     const crossMult=tacticsExCrossMultNow(slotIdx), liveNow=tacticsExLiveRef.current.now, cx=tacticsExCrossRef.current;
     const mine=cx.wave===liveNow.wave&&cx.turn===liveNow.turn?cx.slots:{};
-    if(crossMult<=1||mine[slotIdx]) return;
-    tacticsExCrossRef.current={ wave:liveNow.wave, turn:liveNow.turn, slots:{ ...mine, [slotIdx]:true } };
-    addPopup(`🥊 クロスカウンター ×${crossMult}!`,'hero','text-orange-300 font-black text-3xl drop-shadow-lg');
+    if(crossMult<=1||mine[slotIdx]) return null;
+    const ct=tacticsExCounterOf(tacticsExStateRef.current,tacticsUnitsRef.current,slotIdx,liveNow);
+    const named=tacticsExCounterNameOf(ct?ct.counter:1);
+    tacticsExCrossRef.current={ wave:liveNow.wave, turn:liveNow.turn, slots:{ ...mine, [slotIdx]:{ name:named.name, tier:named.tier } } };
+    addPopup(`🥊 ${named.name} ×${crossMult}!`,'hero',named.tier==='cross'?'text-orange-300 font-black text-4xl drop-shadow-lg':'text-amber-200 font-black text-4xl drop-shadow-lg');
+    return { name:named.name, tier:named.tier, mult:crossMult, counter:ct?ct.counter:1 };
   };
   const commitTacticsExCrossCounters = () => {
     const cx=tacticsExCrossRef.current, liveNow=tacticsExLiveRef.current.now;
@@ -61637,7 +61697,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 if(cx.wave===liveNow.wave&&cx.turn===liveNow.turn&&cx.slots[slotIdx]){
                   const hamName=tacticsTargetName(units,slotIdx);
                   evadedName=hamName; slotFx[slotIdx]={evade:true};
-                  pushBattleLog(`🥊 ${hamName}のクロスカウンター！ 攻撃を回避した`,'ally');
+                  pushBattleLog(`🥊 ${hamName}の${cx.slots[slotIdx].name||'クロスカウンター'}！ 攻撃を回避した`,'ally');
                   return;
                 }
               }
@@ -62123,7 +62183,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // ハムのハムボクシング: いまのカウンターの数と、クロスカウンターの威力
           if(def.effect==='counter'&&isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)){
             const ct=tacticsExCounterOf(state,tacticsUnits,slotIdx,tacticsExNow);
-            if(ct) out.push(`カウンター ${ct.counter}（クロスカウンターの威力：与ダメ×${ct.mult*ct.counter}。発動するたび+1）`);
+            if(ct) out.push(`カウンター ${ct.counter}（${tacticsExCounterNameOf(ct.counter).name}の威力：与ダメ×${ct.mult*ct.counter}。発動するたび+1・最大${tacticsExCounterMax(def.counter)}）`);
           }
           // ライガーの雷狼影: いまの雷の数と、ためている/雷纏の段階
           if(def.effect==='thunder'&&isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)){
@@ -62158,6 +62218,34 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // ★効き目そのもの(攻撃の引き受け・ステータスの上下・固有技の切り替え)は、戦闘の計算側で
   //   isTacticsExEffectActive を見て決める。ここは「使った瞬間」に1度だけ起こすもの(演出・ログ)の置き場
   const TACTICS_EX_ON_USE = {};
+  // ハムのカウンターの演出(HamCounterFx・2026-10-22 社長「演出も派手にしてほしい」「フルからはカットイン付き」「タップで早送り」)。
+  //   cross   … 大きな文字・拳の光・揺れ(待たない)
+  //   full    … カットイン HAM_COUNTER_FX_MS.full(光の輪・強い揺れ)。このあいだ進行は止まり、タップで飛ばせる
+  //   revenge … さらに長く派手なカットイン(画面全体の白い光・大きな文字・2回の強い揺れ)
+  //   揺れは triggerShake を通すので、バトル設定の「画面の揺れ」を切っていれば揺れない
+  const [hamCounterFx, setHamCounterFx] = useState(null);
+  const hamCounterFxDoneRef = useRef(null);
+  const hamCounterFxTimerRef = useRef(null);
+  const skipHamCounterFx = () => {
+    if (hamCounterFxTimerRef.current) { clearTimeout(hamCounterFxTimerRef.current); hamCounterFxTimerRef.current = null; }
+    const done = hamCounterFxDoneRef.current; hamCounterFxDoneRef.current = null;
+    setHamCounterFx(null);
+    if (done) done();
+  };
+  const playHamCounterFx = (fx, slotIdx, mon) => new Promise(resolve => {
+    const tier = fx && HAM_COUNTER_FX_MS[fx.tier] != null ? fx.tier : 'cross';
+    const ms = Math.max(200, battleMs(HAM_COUNTER_FX_MS[tier]));
+    if (hamCounterFxDoneRef.current) skipHamCounterFx();
+    setHamCounterFx({ key: Date.now(), tier, name: fx.name, mult: fx.mult, counter: fx.counter, slotIndex: slotIdx, ms,
+      monId: mon && mon.id, imgUrl: mon && mon.imgUrl, colors: mon && mon.colors, monName: (mon && (mon.masuName || mon.name)) || 'ハム' });
+    if (tier === 'cross') { Audio_.se.crit(); triggerShake(false); }
+    else if (tier === 'full') { Audio_.se.special(); triggerShake(true); setTimeout(() => Audio_.se.crit(), Math.round(ms * 0.22)); }
+    else { Audio_.se.special(); triggerShake(true); setTimeout(() => { Audio_.se.crit(); triggerShake(true); }, Math.round(ms * 0.28)); setTimeout(() => Audio_.se.crit(), Math.round(ms * 0.36)); }
+    hamCounterFxDoneRef.current = resolve;
+    hamCounterFxTimerRef.current = setTimeout(skipHamCounterFx, ms);
+    // クロスは見せるだけで待たない(文字と揺れは時間で消える)
+    if (tier === 'cross') { hamCounterFxDoneRef.current = null; resolve(); }
+  });
   // EXを使った瞬間のカットイン(TacticsExCutin)。見た目だけなので、進行は待たずに時間で片付ける
   const [tacticsExCutin, setTacticsExCutin] = useState(null);
   const tacticsExCutinTimerRef = useRef(null);
@@ -62663,7 +62751,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1, exCombos:withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx,halved,card),livePermaBuff('fateStacks',null),slotIdx),blackNoteEffectAt(slotIdx,activeMon?.id).combo), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
         const isCrit=hits[0].crit; const finalD=hits[0].dmg; if(isCrit) hasCrit=true; totalDmg+=finalD;
         if(aquaStackFromCard(slotIdx,card)==='finale'){ immediateStun=true; setImmediateTurnBuff('stunEnemy',true); } // ★アクアフィールドの水牢・氷結(ウンディーネ種の攻撃カード)
-        fireTacticsExCross(slotIdx); // ★ハムのクロスカウンター(狙われたハムが攻撃したら、攻撃のタイミングで名前を出す)
+        // ★ハムのカウンター(狙われたハムが攻撃したら、攻撃のタイミングで名前を出す)。クロスは文字と揺れ、フル・リベンジはカットインを待つ(タップで飛ばせる)
+        { const crossFx=fireTacticsExCross(slotIdx); if(crossFx) await playHamCounterFx(crossFx,slotIdx,activeMon); }
         const rangeMoveTarget=card.type==='range_atk' && card.rangeIdx!=null ? card.rangeIdx : null;
         attackHits.push({dmg:finalD, isCrit, slotIdx, isSpecial:(card.type==='unique'||card.type==='range_atk'), skillName:(card.name||card.baseName), isUnique:card.type==='unique', monId:card.type==='unique'?card.monId:undefined, rangeMoveTarget});
         // 連撃・全体連撃。専用モーションを続けて再生しないもの(禁忌解錠・全体連撃)は noAnim で数値だけを表示する
@@ -70231,7 +70320,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             getNextTurnBuff={getNextTurnBuff} getPermaBuff={getPermaBuff} getTurnBuff={getTurnBuff}
             getWaveBuff={getWaveBuff} guardCardWeight={guardCardWeight} guardFx={guardFx} guardImpact={guardImpact} guardLevel={guardLevel}
             guardValueOf={guardValueOf} tacticsSlotGuardValue={tacticsSlotGuardValue}
-            tacticsExInfo={tacticsExInfo} activateTacticsEx={activateTacticsEx} tacticsExCutin={tacticsExCutin}
+            tacticsExInfo={tacticsExInfo} activateTacticsEx={activateTacticsEx} tacticsExCutin={tacticsExCutin} hamCounterFx={hamCounterFx} skipHamCounterFx={skipHamCounterFx}
             tacticsExIntroVisible={tacticsExIntroVisible} dismissTacticsExIntro={dismissTacticsExIntro} tacticsPandoraForms={tacticsPandoraForms} trickStartView={trickStartView} sweetStackView={sweetStackView} bowStackView={bowStackView} fateWheelView={fateWheelView} enemyConfuseTurns={enemyConfuseTurns} luckBanners={luckBanners}
             tacticsExTurnUsed={tacticsExTurnUsed} passTacticsTurn={passTacticsTurn} tacticsHate={tacticsHate} tacticsHateOn={tacticsHateOnFor(runMode)} tacticsCoverSlot={tacticsExEnabled?tacticsExCoverSlot(tacticsExState,tacticsUnits,tacticsExNow):null}
             guts={guts} hand={hand} heroCardBonus={heroCardBonus} heroDist={heroDist}
@@ -74240,6 +74329,58 @@ const createAnimationStyle = () => {
       background:radial-gradient(circle, #fff 0 18%, var(--ex-c1) 30%, var(--ex-c2) 62%, transparent 70%); box-shadow:0 0 22px var(--ex-c2);
       animation:exFist 560ms cubic-bezier(.2,.9,.2,1) forwards; animation-delay:calc(160ms + var(--i) * 70ms); }
     @keyframes exFist { 0% { opacity:0; transform:translate(0,0) scale(.3); } 25% { opacity:1; } 100% { opacity:0; transform:translate(calc((var(--i) - 2.5) * 70px), calc((var(--i) % 2 - .5) * 90px)) scale(3); } }
+    /* ==== ハムのカウンター(24-battle-fx.jsx の HamCounterFx・2026-10-22 社長「演出も派手に」「フルからはカットイン」) ====
+       長さは --cfx-ms(HAM_COUNTER_FX_MS)。cross は押せる場所を塞がない。full・revenge は画面を覆い、タップで飛ばせる */
+    .ham-cfx { position:fixed; inset:0; z-index:9650; pointer-events:none; overflow:hidden; --cfx-ms:900ms; --c1:#fed7aa; --c2:#ea580c; }
+    .ham-cfx--full, .ham-cfx--revenge { pointer-events:auto; cursor:pointer; touch-action:none; }
+    .ham-cfx--revenge { --c1:#fde68a; --c2:#dc2626; }
+    .ham-cfx > * { position:absolute; pointer-events:none; }
+    .ham-cfx__shade { inset:0; opacity:0; background:radial-gradient(ellipse at 50% 50%, rgba(30,10,4,.6), rgba(4,2,2,.9)); animation:hamCfxShade var(--cfx-ms) ease-out forwards; }
+    @keyframes hamCfxShade { 0% { opacity:0; } 6%,86% { opacity:1; } 100% { opacity:0; } }
+    .ham-cfx__rays { left:50%; top:46%; width:170vmax; height:170vmax; margin:-85vmax 0 0 -85vmax; opacity:0;
+      background:repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--c2) 55%, transparent) 0 7deg, transparent 7deg 16deg);
+      -webkit-mask-image:radial-gradient(circle, #000 0 16%, transparent 58%); mask-image:radial-gradient(circle, #000 0 16%, transparent 58%);
+      animation:hamCfxRays var(--cfx-ms) ease-out forwards; }
+    @keyframes hamCfxRays { 0% { opacity:0; transform:rotate(0deg) scale(.5); } 10% { opacity:.95; } 85% { opacity:.75; } 100% { opacity:0; transform:rotate(60deg) scale(1.15); } }
+    .ham-cfx__ring { left:50%; top:46%; width:100px; height:100px; margin:-50px 0 0 -50px; border-radius:50%; opacity:0;
+      border:4px solid var(--c1); box-shadow:0 0 18px var(--c2), inset 0 0 18px var(--c2);
+      animation:hamCfxRing calc(var(--cfx-ms) * .5) ease-out forwards; animation-delay:calc(var(--cfx-ms) * .12 + var(--i) * var(--cfx-ms) * .07); }
+    @keyframes hamCfxRing { 0% { opacity:0; transform:scale(.2); } 20% { opacity:1; } 100% { opacity:0; transform:scale(6.5); } }
+    .ham-cfx__fist { left:50%; top:46%; width:120px; height:120px; margin:-60px 0 0 -60px; display:flex; align-items:center; justify-content:center;
+      font-size:78px; line-height:1; filter:drop-shadow(0 0 14px var(--c2)) drop-shadow(0 0 30px var(--c1)); opacity:0;
+      animation:hamCfxFist calc(var(--cfx-ms) * .6) cubic-bezier(.2,1.4,.3,1) forwards; }
+    .ham-cfx--cross .ham-cfx__fist { top:38%; font-size:64px; animation-duration:var(--cfx-ms); }
+    @keyframes hamCfxFist { 0% { opacity:0; transform:scale(.2) rotate(-30deg); } 30% { opacity:1; transform:scale(1.35) rotate(8deg); } 55% { opacity:1; transform:scale(1) rotate(0); } 100% { opacity:0; transform:scale(1.6); } }
+    .ham-cfx__band { left:-12%; right:-12%; top:46%; height:132px; margin-top:-120px;
+      background:linear-gradient(90deg, rgba(20,6,2,.35), rgba(24,8,4,.95) 18%, rgba(24,8,4,.95) 82%, rgba(20,6,2,.35));
+      border-top:3px solid var(--c1); border-bottom:3px solid var(--c1);
+      box-shadow:0 0 20px var(--c2), 0 0 48px color-mix(in srgb, var(--c2) 60%, transparent), inset 0 0 30px color-mix(in srgb, var(--c2) 45%, transparent);
+      transform:translateX(-120%) skewY(-7deg); animation:hamCfxBand var(--cfx-ms) cubic-bezier(.2,.8,.2,1) forwards; }
+    @keyframes hamCfxBand { 0% { transform:translateX(-120%) skewY(-7deg); } 12% { transform:translateX(0) skewY(-7deg); } 84% { transform:translateX(2%) skewY(-7deg); opacity:1; } 100% { transform:translateX(125%) skewY(-7deg); opacity:.5; } }
+    .ham-cfx__art { position:absolute; left:calc(12% + 4px); bottom:-10px; width:140px; height:140px; transform:skewY(7deg);
+      filter:drop-shadow(0 0 10px var(--c2)) drop-shadow(0 6px 10px rgba(0,0,0,.7)); }
+    .ham-cfx__emoji { display:flex; width:100%; height:100%; align-items:center; justify-content:center; font-size:96px; }
+    .ham-cfx__text { position:absolute; left:calc(12% + 150px); right:calc(12% + 8px); top:50%; transform:translateY(-50%) skewY(7deg); min-width:0; }
+    .ham-cfx__tag { font:900 13px/1.1 system-ui, sans-serif; letter-spacing:.22em; color:var(--c1); text-shadow:0 0 8px var(--c2); white-space:nowrap; }
+    .ham-cfx__sub { margin-top:8px; font:800 12px/1.2 system-ui, sans-serif; color:#fde68a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .ham-cfx__title { left:0; right:0; top:46%; margin-top:30px; text-align:center; white-space:nowrap; color:#fff;
+      font:italic 900 min(38px, 9.4vw)/1.1 system-ui, sans-serif; opacity:0;
+      text-shadow:0 0 3px var(--c2), 3px 3px 0 var(--c2), -2px -2px 0 color-mix(in srgb, var(--c2) 70%, #000), 0 0 22px var(--c2), 0 0 40px var(--c1);
+      animation:hamCfxTitle var(--cfx-ms) cubic-bezier(.2,.8,.2,1) forwards; }
+    .ham-cfx--revenge .ham-cfx__title { font-size:min(46px, 10vw); }
+    @keyframes hamCfxTitle { 0%,10% { opacity:0; transform:scale(2.4); } 20% { opacity:1; transform:scale(.94); } 26%,86% { opacity:1; transform:scale(1); } 100% { opacity:0; transform:scale(1.08); } }
+    .ham-cfx__mult { left:0; right:0; top:46%; margin-top:82px; text-align:center; color:var(--c1);
+      font:italic 900 min(54px, 13vw)/1 system-ui, sans-serif; opacity:0; text-shadow:0 0 4px var(--c2), 3px 3px 0 var(--c2), 0 0 26px var(--c2);
+      animation:hamCfxTitle var(--cfx-ms) cubic-bezier(.2,.8,.2,1) calc(var(--cfx-ms) * .08) forwards; }
+    .ham-cfx--revenge .ham-cfx__mult { font-size:min(72px, 17vw); margin-top:94px; }
+    .ham-cfx__flash { inset:0; background:#fff; opacity:0; animation:hamCfxFlash var(--cfx-ms) linear forwards; }
+    @keyframes hamCfxFlash { 0% { opacity:0; } 3% { opacity:.95; } 10% { opacity:0; } 27% { opacity:0; } 30% { opacity:.85; } 38% { opacity:0; } 100% { opacity:0; } }
+    .ham-cfx__skip { right:12px; bottom:calc(14px + env(safe-area-inset-bottom)); padding:4px 10px; border-radius:999px; background:rgba(0,0,0,.55);
+      border:1px solid rgba(255,255,255,.25); font:800 11px/1.4 system-ui, sans-serif; color:#e2e8f0; opacity:0; animation:hamCfxShade var(--cfx-ms) ease-out forwards; }
+    @media (prefers-reduced-motion: reduce) {
+      .ham-cfx__rays, .ham-cfx__ring, .ham-cfx__flash { display:none; }
+      .ham-cfx__band { animation:none; transform:skewY(-7deg); }
+    }
     /* EXが効いているあいだの、距離枠のゆっくり脈打つ光(2026-10-06 ユーザー指示「効果中の見やすさ」。使った瞬間の .ex-aura とは別に、ずっと出る) */
     [data-tactics-ex-on] { --ex-on-c:#e879f9; }
     /* 光は枠のうえに重ねた膜(::after)の透明度だけを動かす(バトルの飾りは transform と opacity だけを動かす決まり) */

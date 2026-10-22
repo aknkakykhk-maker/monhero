@@ -66,7 +66,7 @@ vm.runInContext([
   slice('// ==== タクティクス専用 EXスキル(STEP1: 共通基盤) ====', '// ==== タクティクス専用 EXスキルここまで ===='),
   'globalThis.ex={TACTICS_EX_SKILLS,TACTICS_EX_DURATION_TEXT,TACTICS_EX_IMPLEMENTED_EFFECTS,normalizeTacticsExDef,'
     + 'tacticsExAvoidLeftOf,spendTacticsExAvoid,tacticsExCritFixedAt,tacticsExConfusesOnHit,rollEnemyConfusion,confusedEnemyIntent,ENEMY_CONFUSE_TURNS,ENEMY_CONFUSE_CHANCE,'
-    + 'tacticsExTotalUsesOf,tacticsExPresentScaled,tacticsExCopyableBuffs,setTacticsExSpringKind,tacticsExSpringDmgMult,tacticsExKonjoLeftOf,spendTacticsExKonjo,tacticsExAquaOf,addTacticsExAquaStack,tacticsExUniqueGuaranteeSlot,tacticsExUniqueGuaranteeSlots,tacticsExDefOf,tacticsExCounterOf,addTacticsExCounter,tacticsExCounterMult,tacticsExPsychoLockOf,tacticsExDamageBackRates,tacticsExPartyStatRate,tacticsExPartyBoostRegenRate,tacticsExRemainOf,tacticsExThunderOf,addTacticsExThunder,tacticsExMultiBuffOf,tacticsExExtraCombosAt,tacticsExPresentNote,tacticsExPresentKindText,isTacticsExEffectImplemented,createTacticsExState,normalizeTacticsExState,tacticsExUsesOf,'
+    + 'tacticsExTotalUsesOf,tacticsExPresentScaled,tacticsExCopyableBuffs,setTacticsExSpringKind,tacticsExSpringDmgMult,tacticsExKonjoLeftOf,spendTacticsExKonjo,tacticsExAquaOf,addTacticsExAquaStack,tacticsExUniqueGuaranteeSlot,tacticsExUniqueGuaranteeSlots,tacticsExDefOf,tacticsExCounterOf,addTacticsExCounter,tacticsExCounterMult,tacticsExCounterNameOf,tacticsExCounterMax,tacticsExPsychoLockOf,tacticsExDamageBackRates,tacticsExPartyStatRate,tacticsExPartyBoostRegenRate,tacticsExRemainOf,tacticsExThunderOf,addTacticsExThunder,tacticsExMultiBuffOf,tacticsExExtraCombosAt,tacticsExPresentNote,tacticsExPresentKindText,isTacticsExEffectImplemented,createTacticsExState,normalizeTacticsExState,tacticsExUsesOf,'
     + 'tacticsExRemaining,isTacticsExEffectActive,isTacticsExCardLocked,tacticsExLockedSlots,isTacticsExTurnUsed,checkTacticsExUse,'
     + 'applyTacticsExUse,scaleTacticsUnits,setTacticsExMaxRate,expireTacticsExMaxRates,tacticsExDurationText,tacticsExTurnsLeft,tacticsExStyleOf,tacticsExStyleLabel,checkTacticsExChoice,setTacticsExInitialStyle,tacticsExActiveStyle,TACTICS_EX_DUAL_HIT_REPEAT,tacticsExActiveEffect,tacticsExRegenRateAt,applyTacticsExStats,tacticsExCoverSlot,coverTacticsTargets,tacticsExPartyTakenMult,tacticsExPartyRegenRate,tacticsExExtraCombosAt,tacticsExMultiBuffOf,tacticsExLifeCost,tacticsExTargetOptions,checkTacticsExTarget,tacticsExPandoraBoxOf,tacticsExPandoraDevil,tacticsExPandoraTurnEnd,spendTacticsExPandoraBox,setTacticsExMaxHpRate,tacticsExTimeStopSlot,spendTacticsExTimeStop,tacticsExUniqueGuaranteeSlot,ensureTacticsExUniqueInHand,tacticsExCardBonusTotal,tacticsExCardBonusAt,tacticsExVoltageOf,addTacticsExVoltage,rollTacticsExPresent,setTacticsExPresent,tacticsExPresentOf,resetTacticsExWaveUses,TACTICS_EX_PRESENT_KINDS,recordTacticsExDodge,TACTICS_EX_DIST_MATCH_MULT,tacticsExDistMatchDodges};',
 ].join('\n'), sandbox);
@@ -852,9 +852,27 @@ const use = (state, def, slot, monId, now, extra = {}) => {
   const app = fs.readFileSync(path.join(__dirname, '..', '..', 'monster-hero', 'src', 'parts', '60-app.jsx'), 'utf8');
   check('本体へ結線してある(狙いを読んで与ダメを倍にする・攻撃時に名前を出す・敵の番で回避してカウンター+1)',
     /out\.dmg\*=tacticsExCrossMultNow\(slotIdx\)/.test(app) && /tacticsExCounterMult\(tacticsExStateRef\.current,tacticsUnitsRef\.current,slotIdx,live\.now\)/.test(app)
-    && /クロスカウンター ×\$\{crossMult\}/.test(app) && /cx\.slots\[slotIdx\]/.test(app) && /commitTacticsExCrossCounters\(\);/.test(app) && (app.match(/fireTacticsExCross\(slotIdx\)/g) || []).length >= 2
+    && /🥊 \$\{named\.name\} ×\$\{crossMult\}/.test(app) && /cx\.slots\[slotIdx\]/.test(app) && /commitTacticsExCrossCounters\(\);/.test(app) && (app.match(/fireTacticsExCross\(slotIdx\)/g) || []).length >= 2
     && /addTacticsExCounter\(tacticsExStateRef\.current,tacticsUnitsRef\.current,liveNow,Number\(key\),1\)/.test(app)
     && !/counterBack/.test(app));
+  // 2026-10-22 社長「1回めがクロスカウンターで、数増えるごとにフルカウンター、リベンジカウンターって名前変えられる？ 最大3だよね？」
+  const nm = (n) => ex.tacticsExCounterNameOf(n);
+  check('技名はカウンターの数で変わる(1 クロス・2 フル・3 リベンジ)', nm(1).name === 'クロスカウンター' && nm(2).name === 'フルカウンター' && nm(3).name === 'リベンジカウンター'
+    && nm(1).tier === 'cross' && nm(2).tier === 'full' && nm(3).tier === 'revenge' && nm(9).name === 'リベンジカウンター' && nm(0).name === 'クロスカウンター');
+  let st3 = st;
+  for (let k = 0; k < 6; k++) st3 = ex.addTacticsExCounter(st3, units, A(1, 3), 1, 1);
+  check('カウンターは最大3(何度出しても×6まで)', hm.counter.max === 3 && ex.tacticsExCounterOf(st3, units, 1, A(1, 3)).counter === 3 && ex.tacticsExCounterMult(st3, units, 1, A(1, 3)) === 6);
+  const oldCfg = { ...st3, effects: { ...st3.effects, 1: { ...st3.effects[1], counterCfg: { start: 1, mult: 2 }, counter: 7 } } };
+  check('max の無い古い状態でも3で止まる', ex.tacticsExCounterOf(oldCfg, units, 1, A(1, 3)).counter === 3);
+  check('説明文に3つの技名と最大3がある', /クロスカウンター\(2倍\)/.test(hm.desc) && /フルカウンター\(4倍\)/.test(hm.desc) && /リベンジカウンター\(6倍\)/.test(hm.desc) && /最大3/.test(hm.desc) && /最大3/.test(hm.useNote));
+  check('回避の記録と「詳しく」の行も、そのときの技名を出す', /\$\{hamName\}の\$\{cx\.slots\[slotIdx\]\.name/.test(app) && /tacticsExCounterNameOf\(ct\.counter\)\.name\}の威力/.test(app));
+  // 演出: クロスは待たない・フルとリベンジはカットインを待つ(タップで飛ばせる)・リベンジのほうが長い
+  const fxSrc = fs.readFileSync(path.join(__dirname, '..', '..', 'monster-hero', 'src', 'parts', '24-battle-fx.jsx'), 'utf8');
+  const msM = /HAM_COUNTER_FX_MS = Object\.freeze\(\{ cross: (\d+), full: (\d+), revenge: (\d+) \}\)/.exec(fxSrc);
+  check('演出の長さ: フルは1.5〜2.5秒・リベンジはそれより長く2.5秒まで', !!msM && +msM[2] >= 1500 && +msM[3] > +msM[2] && +msM[3] <= 2500 && +msM[1] < 1500);
+  check('フル・リベンジは画面を覆い、タップで飛ばす(onSkip)', /onPointerDown=\{big \? /.test(fxSrc) && /if \(onSkip\) onSkip\(\)/.test(fxSrc) && /タップでとばす/.test(fxSrc)
+    && /await playHamCounterFx\(crossFx,slotIdx,activeMon\)/.test(app) && /if \(tier === 'cross'\) \{ hamCounterFxDoneRef\.current = null; resolve\(\); \}/.test(app));
+  check('揺れは triggerShake を通す(揺れの設定に従う)', /tier === 'cross'\) \{ Audio_\.se\.crit\(\); triggerShake\(false\)/.test(app) && /tier === 'full'\) \{ Audio_\.se\.special\(\); triggerShake\(true\)/.test(app));
 }
 
 // ---------- ㉑ スエゾー「サイコロックオン」(2026-10-05 ユーザー指定) ----------

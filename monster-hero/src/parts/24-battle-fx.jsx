@@ -962,6 +962,46 @@ const TacticsExCutin = ({ cutin }) => {
     document.body
   );
 };
+// ==== ハムのカウンターの演出(2026-10-22 社長「名前変えられる？」「演出も派手にしてほしい」「フルからはカットイン付きでも良さそう」
+//      「滅多にないし演出が少し長くなっても良さそう」「タップで早送り」) ====
+// 段はカウンターの数で決まる(TACTICS_EX_COUNTER_NAMES の tier)。長さはこの表の1か所(バトルの速さで縮む)。
+//   cross   … 大きな拳の光(技名は大きくしたポップアップ)。押せる場所は塞がない(待たない)
+//   full    … カットイン(暗転・斜めの帯にハム・名前・倍率)+光の輪。画面を覆い、タップで飛ばせる
+//   revenge … full より長く、画面全体の白い光・炎の色・大きな文字・輪を増やす
+const HAM_COUNTER_FX_MS = Object.freeze({ cross: 900, full: 1900, revenge: 2500 });
+const HamCounterFx = ({ fx, onSkip }) => {
+  if (!fx) return null;
+  const big = fx.tier !== 'cross';
+  const rings = fx.tier === 'revenge' ? 6 : fx.tier === 'full' ? 3 : 0;
+  return ReactDOM.createPortal(
+    <div key={fx.key} data-ham-counter-fx={fx.tier} className={`ham-cfx ham-cfx--${fx.tier}`} style={{ '--cfx-ms':`${fx.ms}ms` }}
+      aria-hidden={big ? undefined : 'true'} role={big ? 'button' : undefined} aria-label={big ? `${fx.name}の演出をとばす` : undefined}
+      onPointerDown={big ? (e) => { e.preventDefault(); e.stopPropagation(); if (onSkip) onSkip(); } : undefined}>
+      {big && <div className="ham-cfx__shade"/>}
+      {big && <div className="ham-cfx__rays"/>}
+      {[...Array(rings)].map((_, i) => <i key={i} className="ham-cfx__ring" style={{ '--i':i }}/>)}
+      <div className="ham-cfx__fist">🥊</div>
+      {big && (
+        <div className="ham-cfx__band">
+          <div className="ham-cfx__art">
+            {fx.imgUrl ? <DyedMonsterImage baseId={fx.monId} src={fx.imgUrl} alt="" masuColors={fx.colors} draggable={false} className="w-full h-full object-contain"/> : <span className="ham-cfx__emoji">🐹</span>}
+          </div>
+          <div className="ham-cfx__text">
+            <div className="ham-cfx__tag">{fx.tier === 'revenge' ? 'REVENGE COUNTER' : 'FULL COUNTER'}</div>
+            <div className="ham-cfx__sub">{fx.monName} ／ 攻撃を回避</div>
+          </div>
+        </div>
+      )}
+      {/* 技名は帯の外に、画面幅いっぱいの大きな文字で出す(帯の中だと「リベンジカウンター」が狭い画面で入り切らない)。
+          クロスの技名は今までどおりのポップアップ(大きくした「🥊 クロスカウンター ×2!」)が出すので、ここは拳の光だけ */}
+      {big && <div data-ham-counter-name className="ham-cfx__title">{fx.name}</div>}
+      {big && <div className="ham-cfx__mult">×{fx.mult}</div>}
+      {fx.tier === 'revenge' && <div className="ham-cfx__flash"/>}
+      {big && <div className="ham-cfx__skip">タップでとばす</div>}
+    </div>,
+    document.body
+  );
+};
 // ==== EXの説明文(2026-10-06 ユーザー指示「説明欄の見やすさ」) ====
 // def.desc の書き方: 1行目＝要約 / 「・」で始まる行＝効果の項目 / 全角空白で始まる行＝その項目の細かい内訳 / 「◯◯：…」の行＝名前つきの項目。
 // 図鑑と、距離枠から開く詳細の両方で同じ見た目にする(文字そのものは変えず、段と印だけを付ける)
