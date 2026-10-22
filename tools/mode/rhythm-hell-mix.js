@@ -101,6 +101,9 @@ const SKY_RAISE_MS=require('./rhythm-chart-hand-rules.js').SKY_RAISE_MS;
 const PHRASE_BEATS=4;                    // タップの段を回す長さ(1小節)
 const PHRASE_MODES=['L','R','ground','both'];   // L=左手が空 / R=右手が空 / ground=両手とも地上 / both=両手が空(同時押しは片方だけ)
 const HELL_LANDSCAPE={...THUMB_PROFILES.landscape,name:'横持ち(HELL・高さの差39%)',skyDy:390*0.39};
+// この道具を直接動かしたとき、途中で読み込む直しの道具(rhythm-hell-sameplace-fix.js・rhythm-hell-confuse-fix.js)は
+// 読み込みが輪になって、末尾の module.exports より前のこのモジュールを見る。物差しだけは先に渡しておく(2026-10-22)
+Object.assign(module.exports,{HELL_LANDSCAPE});
 
 // MASTER のマーカーを下書きの形へ(t=タップ・h=ホールド・s=スライド)
 const readBlock=(source,name)=>{
@@ -586,6 +589,13 @@ if(require.main===module){
     const bad=names(source).filter(n=>(rt0.markerBlock(source,n)||{}).body!==(rt0.markerBlock(next,n)||{}).body);
     if(bad.length)throw new Error(`HELL のほかのマーカーまで変わりそうなので止めた: ${bad.join(' ')}`);
     fs.writeFileSync(rt0.RUNTIME,next);
+    // 指が同じ位置に来る形(空中スライドの通り道・押さえている所の真上真下)を、HELL の Lv. ごとの許す数まで直す
+    //   (2026-10-22 社長「空中入り交じるとまじで厳しいからなんでもかんでもそういうのいれないで。高難易度ならまだしも」。rhythm-hell-sameplace-fix.js)
+    try{const SP=require('./rhythm-hell-sameplace-fix.js'),r=SP.planAll({ids:[songId],write:true}),row=r.rows[0];
+      if(row&&row.log.length){fs.writeFileSync(rt0.RUNTIME,r.text);
+        console.log(`指が同じ位置に来る形: ${row.before}→${row.after}件(許す${row.allow}) ずらす${SP.howCount(row,'ずらす')} 下ろす${SP.howCount(row,'下ろす')} 抜く${SP.howCount(row,'抜く')}`);}
+      else if(row)console.log(`指が同じ位置に来る形: ${row.before}件(許す${row.allow})。直すところは無い`);}
+    catch(e){if(/HELL が無い/.test(e.message))console.log('指が同じ位置に来る形: この曲の HELL がまだ一覧(RHYTHM_HELL_CHARTS)に無いので、ここでは直していない。一覧に足したら rhythm-hell-sameplace-fix.js --song で直す');else throw e;}
     // Lv. はゲームに読み込んだ形(道の上へ置き直したあと)で式を通した値にする。社長の値(rhythm-chart-level.js の LEVEL_OVERRIDES)があればそちら(rhythm-chart-level-check.js が同じ値か見る)
     const {spawnSync}=require('child_process');
     const probe=spawnSync(process.execPath,['-e',`const {loadRuntimeSongs,chartLevel}=require(${JSON.stringify(path.join(__dirname,'rhythm-chart-level.js'))});
@@ -599,8 +609,9 @@ if(require.main===module){
       const HR=require(${JSON.stringify(path.join(__dirname,'rhythm-chart-hand-rules.js'))});const s=(loadRuntimeSongs().RHYTHM_PROTO_SONGS||[]).find(x=>x.songId===${JSON.stringify(songId+'_hell_debug')});
       console.log(HR.skyConfusable(s.difficulties.HELL.notes).length);`],{encoding:'utf8'});
       const HR=require('./rhythm-chart-hand-rules.js'),inTool=HR.skyConfusable(rt).length,inGame=Number(String(probe2.stdout).trim());
-      if(!Number.isFinite(inGame)||inGame!==inTool)throw new Error(`書いた譜面をゲームの形で数え直すと、見分けにくい所が ${inGame}件(道具では ${inTool}件)。数え方か書き方がずれている`);
-      console.log(`書いた譜面をゲームの形で数え直した: 見分けにくい所 ${inGame}件(道具と同じ)`);}
+      // 指が同じ位置に来る形を抜いて直すと減ることがあるので、増えたときだけ止める
+      if(!Number.isFinite(inGame)||inGame>inTool)throw new Error(`書いた譜面をゲームの形で数え直すと、見分けにくい所が ${inGame}件(道具では ${inTool}件)。数え方か書き方がずれている`);
+      console.log(`書いた譜面をゲームの形で数え直した: 見分けにくい所 ${inGame}件(道具では ${inTool}件・増えていない)`);}
     console.log(`書いた: ${path.relative(rt0.ROOT,rt0.RUNTIME)} の <${conf.marker}-hell-notes> と HELL の Lv.${finalLevel}(ほかのマーカーは1バイトも変えていない)。この後 node tools/build.js`);
   }catch(e){console.error('止まった:',e.message);process.exit(1);}
 }

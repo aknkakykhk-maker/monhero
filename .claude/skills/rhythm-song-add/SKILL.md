@@ -297,6 +297,10 @@ node tools/mode/rhythm-chart-level.js --write
 5. **空中・地上は指を離した位置へ**(2026-10-21 社長「見分けづらいってのが相当難易度高い」): `rhythm-hell-mix.js` が、重なって見える近いレーンへ
    短い間に高さの違うノーツが来る所(見分けにくい所)の空中のタップを、自動で地上へ下ろす。**山場にも残さず0件にする**
    (2026-10-21・公開中の HELL もすべて0件に直した)。`SONGS` に `mixedWindows` は書かない(仕組みは残っているが、使うのは社長が決めたときだけ)。本文は `docs/rules/CHART_ENGINE.md`「HELL の地上と空中の入り乱れ・見分けにくさ」
+5-2. **指が同じ位置に来る形は Lv. ごとの許す数まで**(2026-10-22 社長「空中入り交じるとまじで厳しいからなんでもかんでもそういうのいれないで」):
+   空中スライドの通り道・押さえている所の真上真下に来るノーツを、`rhythm-hell-mix.js --write` が `rhythm-hell-sameplace-fix.js` で
+   横へずらす・地上へ下ろす・抜くで直す(許す数 Lv.45未満0・45〜54は2・55〜64は4・65以上は6。盛り上がる区間のものから残す)。
+   `rhythm-chart-hand-rules-check.js` が超えたら止める。曲が `RHYTHM_HELL_CHARTS` に無いと直さないので、手順2を先に済ませる
 6. **HELL をもっと重くしてほしいと言われたら**(2026-10-18・Toward the Stars): 曲の一覧に `hellDensity`(例 1.3)を書いて拾う音を増やし、
    `SONGS` の `phrases`(例 `['L','both','R','both']`)で両手とも地上の小節を減らす。どちらも書いた曲の HELL にだけ効く。本文は `docs/rules/CHART_ENGINE.md`「HELL を重くする」。
    MASTER だけ重くするのは `chartIntensityByDifficulty`(例 `{"MASTER":"extreme","HELL":"extreme"}`)。EASY〜EXPERT は変わらない
