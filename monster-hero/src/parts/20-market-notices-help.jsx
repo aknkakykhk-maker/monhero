@@ -98,6 +98,11 @@ const MARKET_PROFILE_ICON_STYLES = {
   Melody: { scale: 0.95, x: 0, y: 0 },
   kuromy_disc_icon: { scale: 0.95, x: 0, y: 0 },
   Kuromy: { scale: 0.95, x: 0, y: 0 },
+  // イルミネ・ドリーミィ(2026-10-22・近日追加)。円盤石はほかの子と同じ作り方なので同じ収まり
+  illumine_disc_icon: { scale: 0.95, x: 0, y: 0 },
+  Illumine: { scale: 0.95, x: 0, y: 0 },
+  dreamy_disc_icon: { scale: 0.95, x: 0, y: 0 },
+  Dreamy: { scale: 0.95, x: 0, y: 0 },
 };
 const DEFAULT_PROFILE_ICON_STYLE = Object.freeze({ scale:1, x:0, y:0 });
 // 実際のプロフィール選択と調整Debugが共有するアイコン一覧。Debugだけの一覧は持たない。

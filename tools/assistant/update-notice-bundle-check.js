@@ -47,7 +47,10 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     if (!shown) throw new Error('まとめが出なかった');
     const first = await items();
     check('一覧に2件以上の見出しが並ぶ', first.length >= 2, first.join(' / '));
-    check('実装予告(本物が出ているもの)は一覧に並ばない', !first.some(id => /_soon_v1$|lineage_preview_v1$/.test(id)), first.join(' / '));
+    // 本物(supersededBy の先)がもう出ている予告だけを見る。本物がまだの予告(公開前)は並んでよい
+    const superseded = new Set([...fs.readFileSync(path.join(ROOT, 'monster-hero/data/changelog.js'), 'utf8')
+      .matchAll(/id:'(update_notice_[a-z0-9_]+)'[^}]*supersededBy:'/g)].map(m => m[1]));
+    check('実装予告(本物が出ているもの)は一覧に並ばない', superseded.size > 0 && !first.some(id => superseded.has(id)), first.join(' / '));
     const seen0 = await seenIds();
     check('一覧を出しただけでは既読にならない', Array.isArray(seen0) && !first.some(id => seen0.includes(id)));
 

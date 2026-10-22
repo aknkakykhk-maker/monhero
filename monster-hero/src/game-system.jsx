@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3436de145679c383
+// generated-sha256: 04ea3726e7059f48
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-22 23:32"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-22 23:36"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7244,10 +7244,11 @@ const MASU_COLOR_REGION_DYE = {
   // 光る髪のつやと体の陰影を残す
   Illumine: [{ gloss: 0.73 }, { gloss: 0.74 }, { gloss: 0.71 }, { gloss: 0.59 }, { gloss: 0.56 }],
   // ドリーミィ(2026-10-22・案の段階): ①体の毛(0.17/0.31)はクリーム色の陰影を残すため上のほうに合わせる。
-  // ②雲(0.15/0.22)・③帽子(0.17/0.33)も上のほうに合わせる。付けないと雲の縞(桃・水色・黄)が消えて1色ののっぺりした塗りになった
+  // ②雲(0.15/0.22)は上のほうに合わせる。付けないと雲の縞(桃・水色・黄)が消えて1色ののっぺりした塗りになった
   // (配色の見本で確かめた。白い所は淡く残るが、雲のもこもこの形が見えるほうを選んだ)。
+  // ③帽子は付けない。付けると白いてっぺんが灰色に濁って、染めると帽子が透けて見えた(2026-10-22 社長「直す」。元の絵は不透明)
   // ④玉(0.58/0.71)と⑤ピンクの飾り(0.48/0.55)は上のほうに合わせて玉のつやを残す
-  Dreamy: [{ gloss: 0.15 }, { gloss: 0.22 }, { gloss: 0.33 }, { gloss: 0.71 }, { gloss: 0.55 }],
+  Dreamy: [{ gloss: 0.15 }, { gloss: 0.22 }, {}, { gloss: 0.71 }, { gloss: 0.55 }],
 };
 const _NO_REGION_DYE = { gloss: false, sat: 1 };
 // 指定した部位に効く染め方の設定を返す(配列でなければ全部位に同じ設定が効く)
@@ -11157,6 +11158,11 @@ const MARKET_PROFILE_ICON_STYLES = {
   Melody: { scale: 0.95, x: 0, y: 0 },
   kuromy_disc_icon: { scale: 0.95, x: 0, y: 0 },
   Kuromy: { scale: 0.95, x: 0, y: 0 },
+  // イルミネ・ドリーミィ(2026-10-22・近日追加)。円盤石はほかの子と同じ作り方なので同じ収まり
+  illumine_disc_icon: { scale: 0.95, x: 0, y: 0 },
+  Illumine: { scale: 0.95, x: 0, y: 0 },
+  dreamy_disc_icon: { scale: 0.95, x: 0, y: 0 },
+  Dreamy: { scale: 0.95, x: 0, y: 0 },
 };
 const DEFAULT_PROFILE_ICON_STYLE = Object.freeze({ scale:1, x:0, y:0 });
 // 実際のプロフィール選択と調整Debugが共有するアイコン一覧。Debugだけの一覧は持たない。
@@ -43067,7 +43073,8 @@ const monsterCheckImplRows = (mon) => {
   const draftLineage = mon.draft && mon.draftLineage && typeof MONSTER_LINEAGES !== 'undefined'
     ? { main: MONSTER_LINEAGES[mon.draftLineage.main], sub: MONSTER_LINEAGES[mon.draftLineage.sub] } : null;
   return [
-    ...(mon.draft ? [{ label: '段階', code: 'UPCOMING_MONSTER_DRAFTS', state: 'warn', value: '案の段階（本体に未登録）',
+    // 案の段階の子は、ほかの項目がそろっても「本体へ移す」が残っているので要確認(2026-10-22 イルミネ・ドリーミィは数値も商品もそろった)
+    ...(mon.draft ? [{ label: '段階', code: 'UPCOMING_MONSTER_DRAFTS', state: 'ng', value: '案の段階（本体に未登録）',
       note: '図鑑・ロースター・マーケットの解放には出ない。正式実装で ALL_PLAYER_MONSTERS へ移す' }] : []),
     { label: '立ち絵', code: 'imgUrl', state: mon.imgUrl ? 'ok' : 'ng', value: bare(mon.imgUrl) || '未設定' },
     { label: '一覧アイコン', code: 'iconUrl', state: mon.iconUrl ? 'ok' : 'ng', value: bare(mon.iconUrl) || '未設定' },
