@@ -104,6 +104,8 @@ check('ジエンドを使うとヘイトを下げる', /def\.hateDown>0\)\{ cons
 check('ミルフィーシールドは使った瞬間の楔とシールドを控える', /const millefeuilleSnapshot=def\.millefeuille\?\{ kusabi:/.test(app) && /\.\.\.\(def\.millefeuille\?millefeuilleSnapshot:\{\}\)/.test(app));
 check('受けるダメージはシールドから先に減る', /const shieldHit=spendTacticsExShield\(tacticsExStateRef\.current,slotIdx,fd,/.test(app));
 check('ミルフィーシールドのちから・丈夫さは味方全員の上げ幅に入る', /e\.effect !== 'millefeuille'\) \|\| !isTacticsExEffectActive/.test(tactics2));
+check('ライフ・ガッツの上限は別の項目(exShieldRate)で足し、上げ下げを戦闘中に見直す', /const shield = withShield \? Number\(unit && unit\.exShieldRate\)/.test(tactics2)
+  && /const shield = syncTacticsExShieldMaxRates\(result\.units,/.test(app));
 {
   // 純関数: 定義をそろえる・使う・シールドを削る(本体の関数を抜き出して動かす)
   const t = {};
@@ -114,11 +116,20 @@ check('ミルフィーシールドのちから・丈夫さは味方全員の上�
 ${cut('const createTacticsExState', 'const sameTacticsExTurn')}
 const isTacticsExEffectActive=()=>true;
 ${cut('// ---- ドリーミィ(millefeuille): ミルフィーシールド ----', '// ---- イルミネ(kusabiDouble): ジエンド ----')}
-globalThis.y={spendTacticsExShield,tacticsExShieldAt};`, t);
+${cut('const tacticsExPartyStatRate', '// ---- ドリーミィ(millefeuille)')}
+${cut('// ミルフィーシールドの上限アップ', '// ターン数で切れる効果の')}
+globalThis.y={spendTacticsExShield,tacticsExShieldAt,tacticsExPartyStatRate,syncTacticsExShieldMaxRates};`, t);
     const st = { uses:{}, effects:{ 2:{ monId:'Dreamy', effect:'millefeuille', shields:{ 0:300, 1:500 } } } };
     const a = t.y.spendTacticsExShield(st, 0, 120, null), b = t.y.spendTacticsExShield(a.state, 0, 400, null);
     check('シールドは受けたぶんだけ減り、足りないぶんはライフへ', a.absorbed === 120 && a.rest === 0 && t.y.tacticsExShieldAt(a.state, 0, null) === 180
       && b.absorbed === 180 && b.rest === 220 && t.y.tacticsExShieldAt(b.state, 1, null) === 500);
+    // 全ステータス(ちから・丈夫さ・ライフ上限・ガッツ上限)は、シールドが残っている子だけ(2026-10-22 社長)
+    const st2 = { uses:{}, effects:{ 2:{ monId:'Dreamy', effect:'millefeuille', partyStatRate:0.2, shields:{ 0:300, 1:0 } } } };
+    check('ちから・丈夫さのアップはシールドが残っている子だけ', Math.abs(t.y.tacticsExPartyStatRate(st2, null, 0) - 0.2) < 1e-9 && t.y.tacticsExPartyStatRate(st2, null, 1) === 0);
+    const units = [{ id:'A', exShieldRate:0 }, { id:'B', exShieldRate:0.2 }, null, { id:'D', downed:true }];
+    const sync = t.y.syncTacticsExShieldMaxRates(units, st2, null), again = t.y.syncTacticsExShieldMaxRates(sync.units, st2, null);
+    check('ライフ・ガッツの上限アップもシールドに合わせて上げ下げする(壊れた子は戻す・何度走っても同じ)',
+      sync.changed && Math.abs(sync.units[0].exShieldRate - 0.2) < 1e-9 && sync.units[1].exShieldRate === 0 && !again.changed);
   } catch (e) { check('シールドの関数を動かせる', false, String(e).slice(0, 120)); }
 }
 

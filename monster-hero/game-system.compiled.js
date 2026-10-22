@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1354068348dd59c1
+// source-sha256: 4472f6cc4922eb71
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-22 23:20";
+const BUILD_DATE = "2026-10-22 23:27";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -40219,10 +40219,11 @@ const tacticsHasGutsRoom = units => tacticsAliveSlots(units).some(index => {
   return unit.guts < unit.maxGuts;
 });
 const tacticsTotalBaseMaxHp = units => (Array.isArray(units) ? units : []).reduce((sum, unit) => sum + (unit ? normalizeTacticsUnit(unit).baseMaxHp : 0), 0);
-const tacticsExMaxRateOf = (unit, kind = 'hp') => {
+const tacticsExMaxRateOf = (unit, kind = 'hp', withShield = true) => {
   const own = kind === 'guts' ? Number(unit && unit.exMaxGutsRate) : NaN;
   const rate = Number.isFinite(own) ? own : Number(unit && unit.exMaxRate);
-  return Number.isFinite(rate) && rate > 0 ? rate : 0;
+  const shield = withShield ? Number(unit && unit.exShieldRate) : 0;
+  return (Number.isFinite(rate) && rate > 0 ? rate : 0) + (Number.isFinite(shield) && shield > 0 ? shield : 0);
 };
 const scaleTacticsUnitMaxHp = (unit, hpPct = 0) => {
   const target = normalizeTacticsUnit(unit);
@@ -41770,8 +41771,8 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Dreamy: Object.freeze({
     id: 'dreamy_millefeuille_shield',
     name: 'ミルフィーシールド',
-    useNote: '全員に最大ライフぶんのシールド・3ターン シールドのある子はちから丈夫さ+5%(楔1つごとに+5%)',
-    desc: '夢の雲を何層にも重ねて、味方を包む。\n・使った瞬間に、立っている味方全員（ドリーミィも）へ、それぞれ自分の最大ライフと同じ量のシールドを張る。敵の攻撃はシールドが先に受け、0になってからライフが減る\n・シールドが残っている子は、ちから・丈夫さ+5%。さらに、使った瞬間の敵の楔の数（いちばん多いもの）1つごとに+5%（楔0で+5%・3つで+20%・6つで+35%）\n・シールドが0になった子は、ちから・丈夫さのアップもなくなる（ほかの子はそのまま）\n・3ターンたつと、残ったシールドもアップも消える\n・効いているあいだにもう一度使うと、シールドは残りに足され、残りターンは3に戻る。アップは、そのときの楔の数で決め直した値になる（重ならない）',
+    useNote: '全員に最大ライフぶんのシールド・3ターン シールドのある子は全ステータス+5%(楔1つごとに+5%)',
+    desc: '夢の雲を何層にも重ねて、味方を包む。\n・使った瞬間に、立っている味方全員（ドリーミィも）へ、それぞれ自分の最大ライフと同じ量のシールドを張る。敵の攻撃はシールドが先に受け、0になってからライフが減る\n・シールドが残っている子は、ちから・丈夫さ・ライフ上限・ガッツ上限が+5%。さらに、使った瞬間の敵の楔の数（いちばん多いもの）1つごとに+5%（楔0で+5%・3つで+20%・6つで+35%）\n・シールドが0になった子は、アップもなくなる（ライフ・ガッツが元の上限より多ければ上限まで戻る。ほかの子はそのまま）\n・3ターンたつと、残ったシールドもアップも消える\n・効いているあいだにもう一度使うと、シールドは残りに足され、残りターンは3に戻る。アップは、そのときの楔の数で決め直した値になる（重ならない）',
     maxUses: 5,
     unlimited: false,
     withCards: true,
@@ -43298,8 +43299,8 @@ const setTacticsExMaxRate = (units, slot, rate, gutsRate = rate) => (Array.isArr
 } : unit);
 const setTacticsExMaxHpRate = (units, slot, rate) => (Array.isArray(units) ? units : []).map((unit, i) => unit && i === slot ? {
   ...unit,
-  exMaxGutsRate: tacticsExMaxRateOf(unit, 'guts'),
-  exMaxRate: Math.max(tacticsExMaxRateOf(unit), Math.max(0, Number(rate) || 0))
+  exMaxGutsRate: tacticsExMaxRateOf(unit, 'guts', false),
+  exMaxRate: Math.max(tacticsExMaxRateOf(unit, 'hp', false), Math.max(0, Number(rate) || 0))
 } : unit);
 const expireTacticsExMaxRates = (units, state, now) => {
   let changed = false;
@@ -43309,7 +43310,7 @@ const expireTacticsExMaxRates = (units, state, now) => {
     return caster && tacticsExActiveEffect(state, from, caster.id, now) === 'lifeSpring' && Number.isInteger(springEffects[from].target);
   }).map(from => springEffects[from].target));
   const next = (Array.isArray(units) ? units : []).map((unit, slot) => {
-    if (!unit || !(tacticsExMaxRateOf(unit) > 0 || tacticsExMaxRateOf(unit, 'guts') > 0)) return unit;
+    if (!unit || !(tacticsExMaxRateOf(unit, 'hp', false) > 0 || tacticsExMaxRateOf(unit, 'guts', false) > 0)) return unit;
     if (tacticsExActiveEffect(state, slot, unit.id, now) === 'statBoost') return unit;
     if (springTargets.has(slot)) return unit;
     changed = true;
@@ -43317,6 +43318,33 @@ const expireTacticsExMaxRates = (units, state, now) => {
       ...unit,
       exMaxRate: 0,
       exMaxGutsRate: 0
+    };
+  });
+  return {
+    units: next,
+    changed
+  };
+};
+const tacticsExShieldMaxRateAt = (state, slot, now) => {
+  const effects = normalizeTacticsExState(state).effects;
+  return Object.keys(effects).reduce((sum, key) => {
+    const e = effects[key];
+    if (!e || e.effect !== 'millefeuille' || !e.shields || !(tacticsSafeInt(e.shields[String(slot)], 0) > 0) || !isTacticsExEffectActive(state, key, e.monId, now)) return sum;
+    const rate = Number(e.partyStatRate);
+    return Number.isFinite(rate) && rate > 0 ? sum + rate : sum;
+  }, 0);
+};
+const syncTacticsExShieldMaxRates = (units, state, now) => {
+  let changed = false;
+  const next = (Array.isArray(units) ? units : []).map((unit, slot) => {
+    if (!unit) return unit;
+    const want = unit.downed ? 0 : tacticsExShieldMaxRateAt(state, slot, now);
+    const have = Number(unit.exShieldRate) > 0 ? Number(unit.exShieldRate) : 0;
+    if (Math.abs(want - have) < 1e-9) return unit;
+    changed = true;
+    return {
+      ...unit,
+      exShieldRate: want
     };
   });
   return {
@@ -94338,7 +94366,11 @@ function MonsterHeroGame() {
       wave,
       turn: turnCount
     });
-    if (result.changed) commitTacticsUnits(scaleTacticsUnits(result.units, getPermaBuff('muaHpPct'), getPermaBuff('muaGutsPct')));
+    const shield = syncTacticsExShieldMaxRates(result.units, tacticsExStateRef.current, {
+      wave,
+      turn: turnCount
+    });
+    if (result.changed || shield.changed) commitTacticsUnits(scaleTacticsUnits(shield.units, getPermaBuff('muaHpPct'), getPermaBuff('muaGutsPct')));
   }, [wave, turnCount, tacticsExState, runMode]);
   useEffect(() => {
     if (!isTacticsMode(runMode)) return;

@@ -11160,7 +11160,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   useEffect(() => {
     if (!isTacticsMode(runMode)) return;
     const result = expireTacticsExMaxRates(tacticsUnitsRef.current, tacticsExStateRef.current, { wave, turn:turnCount });
-    if (result.changed) commitTacticsUnits(scaleTacticsUnits(result.units, getPermaBuff('muaHpPct'), getPermaBuff('muaGutsPct')));
+    // ミルフィーシールド(ドリーミィ)の上限アップも、シールドの残りに合わせて上げ下げする
+    const shield = syncTacticsExShieldMaxRates(result.units, tacticsExStateRef.current, { wave, turn:turnCount });
+    if (result.changed || shield.changed) commitTacticsUnits(scaleTacticsUnits(shield.units, getPermaBuff('muaHpPct'), getPermaBuff('muaGutsPct')));
   }, [wave, turnCount, tacticsExState, runMode]);
   // ★「各WAVEで回数が戻る」EX(スネグーラチカ)は、WAVEが変わったところで回数を0へ戻す(2026-10-03)。戻すものが無ければ何もしない
   useEffect(() => {

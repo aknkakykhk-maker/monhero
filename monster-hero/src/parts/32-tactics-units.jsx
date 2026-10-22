@@ -169,10 +169,13 @@ const tacticsTotalBaseMaxHp = (units) => (Array.isArray(units) ? units : [])
 //   みゅあ補正で上限を作り直しても消えないよう、ここで一緒に掛ける(既存の子は0なので値は今までどおり)
 //   ★ガッツの上限は exMaxGutsRate を別に持てる(ミタラシのように上げ幅がライフと違うEX)。
 //     無ければ exMaxRate と同じ(ガッツ全開っちーはライフ・ガッツとも同じ率)
-const tacticsExMaxRateOf = (unit, kind = 'hp') => {
+//   ★exShieldRate … ミルフィーシールド(ドリーミィのEX)で上がっている上限の割合(ライフ・ガッツ共通)。
+//     ほかのEXの上限とは別に持ち、足し算で効かせる(片方が切れても、もう片方を消さない)。withShield=false でそれを除く
+const tacticsExMaxRateOf = (unit, kind = 'hp', withShield = true) => {
   const own = kind === 'guts' ? Number(unit && unit.exMaxGutsRate) : NaN;
   const rate = Number.isFinite(own) ? own : Number(unit && unit.exMaxRate);
-  return Number.isFinite(rate) && rate > 0 ? rate : 0;
+  const shield = withShield ? Number(unit && unit.exShieldRate) : 0;
+  return (Number.isFinite(rate) && rate > 0 ? rate : 0) + (Number.isFinite(shield) && shield > 0 ? shield : 0);
 };
 const scaleTacticsUnitMaxHp = (unit, hpPct = 0) => {
   const target = normalizeTacticsUnit(unit);
@@ -1640,8 +1643,8 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Dreamy: Object.freeze({
     id: 'dreamy_millefeuille_shield',
     name: 'ミルフィーシールド',
-    useNote: '全員に最大ライフぶんのシールド・3ターン シールドのある子はちから丈夫さ+5%(楔1つごとに+5%)',
-    desc: '夢の雲を何層にも重ねて、味方を包む。\n・使った瞬間に、立っている味方全員（ドリーミィも）へ、それぞれ自分の最大ライフと同じ量のシールドを張る。敵の攻撃はシールドが先に受け、0になってからライフが減る\n・シールドが残っている子は、ちから・丈夫さ+5%。さらに、使った瞬間の敵の楔の数（いちばん多いもの）1つごとに+5%（楔0で+5%・3つで+20%・6つで+35%）\n・シールドが0になった子は、ちから・丈夫さのアップもなくなる（ほかの子はそのまま）\n・3ターンたつと、残ったシールドもアップも消える\n・効いているあいだにもう一度使うと、シールドは残りに足され、残りターンは3に戻る。アップは、そのときの楔の数で決め直した値になる（重ならない）',
+    useNote: '全員に最大ライフぶんのシールド・3ターン シールドのある子は全ステータス+5%(楔1つごとに+5%)',
+    desc: '夢の雲を何層にも重ねて、味方を包む。\n・使った瞬間に、立っている味方全員（ドリーミィも）へ、それぞれ自分の最大ライフと同じ量のシールドを張る。敵の攻撃はシールドが先に受け、0になってからライフが減る\n・シールドが残っている子は、ちから・丈夫さ・ライフ上限・ガッツ上限が+5%。さらに、使った瞬間の敵の楔の数（いちばん多いもの）1つごとに+5%（楔0で+5%・3つで+20%・6つで+35%）\n・シールドが0になった子は、アップもなくなる（ライフ・ガッツが元の上限より多ければ上限まで戻る。ほかの子はそのまま）\n・3ターンたつと、残ったシールドもアップも消える\n・効いているあいだにもう一度使うと、シールドは残りに足され、残りターンは3に戻る。アップは、そのときの楔の数で決め直した値になる（重ならない）',
     maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,
     millefeuille: Object.freeze({ statBase: 0.05, statPer: 0.05 }),
     effect: 'millefeuille',
@@ -1775,7 +1778,7 @@ const normalizeTacticsExDef = (raw) => {
     conditionText: raw.conditionText ? String(raw.conditionText) : null,
     // ジエンド(イルミネ): 使った瞬間に下げるその子のヘイト
     hateDown: Math.min(100, Math.max(0, tacticsSafeInt(raw.hateDown, 0))),
-    // ミルフィーシールド(ドリーミィ): 味方全員のちから・丈夫さの上げ幅 = statBase + statPer × 使った瞬間の楔の数
+    // ミルフィーシールド(ドリーミィ): シールドのある子のちから・丈夫さ・ライフ上限・ガッツ上限の上げ幅 = statBase + statPer × 使った瞬間の楔の数
     millefeuille: raw.millefeuille && typeof raw.millefeuille === 'object'
       ? { statBase: Math.min(1, Math.max(0, Number(raw.millefeuille.statBase) || 0)), statPer: Math.min(0.5, Math.max(0, Number(raw.millefeuille.statPer) || 0)) } : null,
     effect: typeof raw.effect === 'string' ? raw.effect : null,
@@ -2675,7 +2678,7 @@ const setTacticsExMaxRate = (units, slot, rate, gutsRate = rate) => (Array.isArr
 const setTacticsExMaxHpRate = (units, slot, rate) => (Array.isArray(units) ? units : [])
   .map((unit, i) => (unit && i === slot
     // ★ガッツの上限の率は、いまの値のまま明示する(書かないと、ライフの率がガッツの上限にまで効いてしまう)
-    ? { ...unit, exMaxGutsRate: tacticsExMaxRateOf(unit, 'guts'), exMaxRate: Math.max(tacticsExMaxRateOf(unit), Math.max(0, Number(rate) || 0)) } : unit));
+    ? { ...unit, exMaxGutsRate: tacticsExMaxRateOf(unit, 'guts', false), exMaxRate: Math.max(tacticsExMaxRateOf(unit, 'hp', false), Math.max(0, Number(rate) || 0)) } : unit));
 // 効果が切れているのに上限が上がったままの枠を、0へ戻す。戻した枠があれば changed:true
 const expireTacticsExMaxRates = (units, state, now) => {
   let changed = false;
@@ -2686,11 +2689,35 @@ const expireTacticsExMaxRates = (units, state, now) => {
     return caster && tacticsExActiveEffect(state, from, caster.id, now) === 'lifeSpring' && Number.isInteger(springEffects[from].target);
   }).map(from => springEffects[from].target));
   const next = (Array.isArray(units) ? units : []).map((unit, slot) => {
-    if (!unit || !(tacticsExMaxRateOf(unit) > 0 || tacticsExMaxRateOf(unit, 'guts') > 0)) return unit;
+    if (!unit || !(tacticsExMaxRateOf(unit, 'hp', false) > 0 || tacticsExMaxRateOf(unit, 'guts', false) > 0)) return unit;
     if (tacticsExActiveEffect(state, slot, unit.id, now) === 'statBoost') return unit;
     if (springTargets.has(slot)) return unit; // 生命の泉の対象(効いているあいだ)
     changed = true;
     return { ...unit, exMaxRate: 0, exMaxGutsRate: 0 };
+  });
+  return { units: next, changed };
+};
+// ミルフィーシールドの上限アップ(ライフ・ガッツ)を、いまのシールドに合わせる(2026-10-22 社長「全ステータス」)。
+//   シールドが残っている子だけ partyStatRate ぶん上げ、壊れた子・3ターン終わった子は0へ戻す
+//   (ライフ・ガッツが新しい上限を超えていたら、normalizeTacticsUnit が上限まで切り詰める)。変えた枠があれば changed:true
+const tacticsExShieldMaxRateAt = (state, slot, now) => {
+  const effects = normalizeTacticsExState(state).effects;
+  return Object.keys(effects).reduce((sum, key) => {
+    const e = effects[key];
+    if (!e || e.effect !== 'millefeuille' || !e.shields || !(tacticsSafeInt(e.shields[String(slot)], 0) > 0) || !isTacticsExEffectActive(state, key, e.monId, now)) return sum;
+    const rate = Number(e.partyStatRate);
+    return Number.isFinite(rate) && rate > 0 ? sum + rate : sum;
+  }, 0);
+};
+const syncTacticsExShieldMaxRates = (units, state, now) => {
+  let changed = false;
+  const next = (Array.isArray(units) ? units : []).map((unit, slot) => {
+    if (!unit) return unit;
+    const want = unit.downed ? 0 : tacticsExShieldMaxRateAt(state, slot, now);
+    const have = Number(unit.exShieldRate) > 0 ? Number(unit.exShieldRate) : 0;
+    if (Math.abs(want - have) < 1e-9) return unit;
+    changed = true;
+    return { ...unit, exShieldRate: want };
   });
   return { units: next, changed };
 };
