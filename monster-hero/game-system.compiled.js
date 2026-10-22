@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9b0ac7a382120a0b
+// source-sha256: f503696dbf64f2e2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-22 21:09";
+const BUILD_DATE = "2026-10-22 21:12";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -16779,10 +16779,12 @@ const helpDataRows = id => {
     case 'rhythmMonsterAbilities':
       {
         const abilities = typeof RHYTHM_MONSTER_ABILITIES !== 'undefined' ? RHYTHM_MONSTER_ABILITIES : {};
-        const byLineage = typeof RHYTHM_MONSTER_ABILITY_BY_LINEAGE !== 'undefined' ? RHYTHM_MONSTER_ABILITY_BY_LINEAGE : {};
         return Object.values(abilities).map(ability => {
-          const lineages = Object.entries(byLineage).filter(([, id]) => id === ability.id).map(([lineageId]) => lineageById(lineageId).name);
-          return [ability.name, `${rhythmAbilityEffectText(ability)}（主血統: ${lineages.join(' / ')}）`];
+          const {
+            lineages,
+            monsters
+          } = rhythmAbilityHolderNames(ability.id);
+          return [ability.name, `${rhythmAbilityEffectText(ability)}（主血統: ${lineages.join(' / ')}${monsters.length ? `／${monsters.join('・')}だけはこの能力` : ''}）`];
         });
       }
     case 'missionsDaily':
@@ -33171,11 +33173,17 @@ const rhythmClockLabel = ms => {
 const RHYTHM_TAP_REJUDGE_MOVE_SUBLANES = .20;
 const rhythmAbilityEmoji = abilityId => abilityId === 'GENKI' ? '💚' : abilityId === 'MUTEKI' ? '🛡️' : abilityId === 'GAMAN' ? '🧱' : abilityId === 'KONJO' ? '🔥' : abilityId === 'HISSHI' ? '🎯' : abilityId === 'ITAZURA' ? '👻' : '✨';
 const rhythmAbilityTone = abilityId => abilityId === 'GENKI' ? 'border-emerald-300/50 bg-emerald-950/40 text-emerald-100' : abilityId === 'MUTEKI' ? 'border-cyan-300/50 bg-cyan-950/40 text-cyan-100' : abilityId === 'GAMAN' ? 'border-amber-300/50 bg-amber-950/40 text-amber-100' : abilityId === 'KONJO' ? 'border-rose-300/50 bg-rose-950/40 text-rose-100' : abilityId === 'HISSHI' ? 'border-lime-300/50 bg-lime-950/40 text-lime-100' : abilityId === 'ITAZURA' ? 'border-violet-300/50 bg-violet-950/40 text-violet-100' : 'border-white/20 bg-slate-900/60 text-slate-300';
-const rhythmAbilityRows = () => Object.values(RHYTHM_MONSTER_ABILITIES).map(ability => ({
-  ability,
-  lineages: Object.entries(RHYTHM_MONSTER_ABILITY_BY_LINEAGE).filter(([, id]) => id === ability.id).map(([lineageId]) => lineageById(lineageId).name)
-}));
-const rhythmSlotAbility = masu => masu && masu.baseId ? rhythmMonsterAbilityForLineage(monsterLineageOf(masu.baseId).main.id) : null;
+const rhythmAbilityRows = () => Object.values(RHYTHM_MONSTER_ABILITIES).map(ability => {
+  const {
+    lineages,
+    monsters
+  } = rhythmAbilityHolderNames(ability.id);
+  return {
+    ability,
+    lineages: [...lineages, ...monsters]
+  };
+});
+const rhythmSlotAbility = masu => masu && masu.baseId ? rhythmMonsterAbilityForMonster(masu.baseId) : null;
 function RhythmSkyStage({
   plane,
   still = false
@@ -83233,7 +83241,7 @@ function MonsterHeroGame() {
       baseId: masu.baseId,
       imageUrl: masuDisplayImageUrl(base),
       colors: getMasuColors(masu),
-      ability: rhythmMonsterAbilityForLineage(monsterLineageOf(masu.baseId).main.id)
+      ability: rhythmMonsterAbilityForMonster(masu.baseId)
     };
   });
   const applyRhythmMonsterSlots = async (next, message = '') => {

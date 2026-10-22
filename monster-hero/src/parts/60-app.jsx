@@ -1619,7 +1619,7 @@ function MonsterHeroGame() {
     const base = ALL_PLAYER_MONSTERS[masu.baseId] || null;
     return { id:String(masu.id), name:masu.name, baseId:masu.baseId,
       imageUrl:masuDisplayImageUrl(base), colors:getMasuColors(masu),
-      ability:rhythmMonsterAbilityForLineage(monsterLineageOf(masu.baseId).main.id) };
+      ability:rhythmMonsterAbilityForMonster(masu.baseId) };
   });
   const applyRhythmMonsterSlots = async (next, message='') => {
     const saved = await saveRhythmMonsterSlots(next);

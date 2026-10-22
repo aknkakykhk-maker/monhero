@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: be513e7a8c96d93c
+// generated-sha256: 6e0bc5154994ed94
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-22 21:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-22 21:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11965,11 +11965,10 @@ const helpDataRows = (id) => {
     // 値を変えたときにヘルプだけ古いまま残るため、実データから表にする
     case 'rhythmMonsterAbilities': {
       const abilities = typeof RHYTHM_MONSTER_ABILITIES !== 'undefined' ? RHYTHM_MONSTER_ABILITIES : {};
-      const byLineage = typeof RHYTHM_MONSTER_ABILITY_BY_LINEAGE !== 'undefined' ? RHYTHM_MONSTER_ABILITY_BY_LINEAGE : {};
+      // 公開前の子しかいない血統と、公開前の子の上書きは出さない(rhythmAbilityHolderNames)
       return Object.values(abilities).map(ability => {
-        const lineages = Object.entries(byLineage).filter(([, id]) => id === ability.id)
-          .map(([lineageId]) => lineageById(lineageId).name);
-        return [ability.name, `${rhythmAbilityEffectText(ability)}（主血統: ${lineages.join(' / ')}）`];
+        const { lineages, monsters } = rhythmAbilityHolderNames(ability.id);
+        return [ability.name, `${rhythmAbilityEffectText(ability)}（主血統: ${lineages.join(' / ')}${monsters.length ? `／${monsters.join('・')}だけはこの能力` : ''}）`];
       });
     }
     case 'missionsDaily':
@@ -21118,14 +21117,13 @@ const rhythmAbilityTone=abilityId=>abilityId==='GENKI'?'border-emerald-300/50 bg
   :abilityId==='ITAZURA'?'border-violet-300/50 bg-violet-950/40 text-violet-100'
   :'border-white/20 bg-slate-900/60 text-slate-300';
 // 能力ごとに「その能力になる血統」をまとめる。並びは RHYTHM_MONSTER_ABILITIES の順。
-const rhythmAbilityRows=()=>Object.values(RHYTHM_MONSTER_ABILITIES).map(ability=>({
-  ability,
-  lineages:Object.entries(RHYTHM_MONSTER_ABILITY_BY_LINEAGE)
-    .filter(([,id])=>id===ability.id)
-    .map(([lineageId])=>lineageById(lineageId).name),
-}));
-const rhythmSlotAbility=masu=>(masu&&masu.baseId)
-  ?rhythmMonsterAbilityForLineage(monsterLineageOf(masu.baseId).main.id):null;
+// 血統と子ごとの上書きの名前は rhythmAbilityHolderNames(data/rhythm-mode.js)が実データから作る。
+// 公開前の子しかいない血統は出さない。子ごとの上書き(ドリーミィ)は血統のあとに子の名前で足す
+const rhythmAbilityRows=()=>Object.values(RHYTHM_MONSTER_ABILITIES).map(ability=>{
+  const {lineages,monsters}=rhythmAbilityHolderNames(ability.id);
+  return {ability,lineages:[...lineages,...monsters]};
+});
+const rhythmSlotAbility=masu=>(masu&&masu.baseId)?rhythmMonsterAbilityForMonster(masu.baseId):null;
 
 // モンスターノーツの説明。マスモン設定の画面へ置く「詳細」。
 // 【2026-09-05・ユーザー指示】「マスモン設定のとこをUIやレイアウトを整えて。
@@ -51185,7 +51183,7 @@ function MonsterHeroGame() {
     const base = ALL_PLAYER_MONSTERS[masu.baseId] || null;
     return { id:String(masu.id), name:masu.name, baseId:masu.baseId,
       imageUrl:masuDisplayImageUrl(base), colors:getMasuColors(masu),
-      ability:rhythmMonsterAbilityForLineage(monsterLineageOf(masu.baseId).main.id) };
+      ability:rhythmMonsterAbilityForMonster(masu.baseId) };
   });
   const applyRhythmMonsterSlots = async (next, message='') => {
     const saved = await saveRhythmMonsterSlots(next);
