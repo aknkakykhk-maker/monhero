@@ -92,9 +92,9 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   assistantChatRanking: true,
   // ふだんの吹き出しを1日1回まとめて作る(2026-10-14)。2026-10-14 社長「もう公開していいよ」→真にした(56-assistant-chat.jsx)
   assistantDailyLines: true,
-  // 5人目の助手あつ(2026-10-22 社長の決定)。大きい絵(1536×1024)が届くまで偽。届いたら絵を差し替えて真にする。
+  // 5人目の助手あつ(2026-10-22 社長の決定)。社長がお話の全文を読んで「公開ok」→真にした(2026-10-22)。
   //   偽のあいだは、助手の一覧・加入のお話・回想・ヘルプの項目に出ない(data/assistants.js の ASSISTANT_RELEASE_FLAGS)
-  assistantAtsu: false,
+  assistantAtsu: true,
   tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE,
   // タクティクスのヘイト(🔥)とモンスターのタイプ表記。2026-10-18 社長「ヘイトシステムは実装していいよ」で公開。
   //   数字は 32-tactics-units.jsx の TACTICS_HATE / MONSTER_TYPES。お話「タクティクスバトル ～4人のタイプ～」(tactics_types)もこの印で出る
