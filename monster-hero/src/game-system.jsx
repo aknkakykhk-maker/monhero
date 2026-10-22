@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a0bfe3f4a3a2640f
+// generated-sha256: bcf56ffe05fe6367
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-23 00:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-23 00:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -50971,8 +50971,10 @@ function MonsterHeroGame() {
   const [kusabiView, setKusabiView] = useState({});
   // その子のいまの上限。タクティクスのEX「ジエンド」(イルミネ)が効いているあいだは12、ふだんは6。
   //   ジエンドが切れたあとは、貯めてあった数を読むときに6で切る(楔は6個までに戻る)
-  const kusabiCapAt = (slotIdx) => (isTacticsMode(runMode) && Number.isInteger(slotIdx) && tacticsExLiveRef.current.enabled
-    && tacticsExKusabiDoubleAt(tacticsExStateRef.current, tacticsUnitsRef.current, slotIdx, tacticsExLiveRef.current.now) ? KUSABI_MAX_EX : KUSABI_MAX);
+  //   ★描画の途中でも呼ばれるので、ここより後で宣言する tacticsExLiveRef は読まない(宣言前に読むと画面が落ちる)。
+  //     ジエンドの効果はEXを使えるときにしか置かれないので、「使えるか」は見なくてよい
+  const kusabiCapAt = (slotIdx) => (isTacticsMode(runMode) && Number.isInteger(slotIdx)
+    && tacticsExKusabiDoubleAt(tacticsExStateRef.current, tacticsUnitsRef.current, slotIdx, { wave, turn:turnCount }) ? KUSABI_MAX_EX : KUSABI_MAX);
   const kusabiAt = (slotIdx) => { const key = trickStartKeyOf(slotIdx); return key ? kusabiCountOf(kusabiRef.current[key], kusabiCapAt(slotIdx)) : 0; };
   const writeKusabiKey = (key, n) => { if (!key) return; const next = { ...kusabiRef.current, [key]: kusabiCountOf(n, KUSABI_MAX_EX) }; kusabiRef.current = next; setKusabiView(next); };
   const resetKusabi = () => { kusabiRef.current = {}; setKusabiView({}); };

@@ -1181,8 +1181,10 @@ function MonsterHeroGame() {
   const [kusabiView, setKusabiView] = useState({});
   // その子のいまの上限。タクティクスのEX「ジエンド」(イルミネ)が効いているあいだは12、ふだんは6。
   //   ジエンドが切れたあとは、貯めてあった数を読むときに6で切る(楔は6個までに戻る)
-  const kusabiCapAt = (slotIdx) => (isTacticsMode(runMode) && Number.isInteger(slotIdx) && tacticsExLiveRef.current.enabled
-    && tacticsExKusabiDoubleAt(tacticsExStateRef.current, tacticsUnitsRef.current, slotIdx, tacticsExLiveRef.current.now) ? KUSABI_MAX_EX : KUSABI_MAX);
+  //   ★描画の途中でも呼ばれるので、ここより後で宣言する tacticsExLiveRef は読まない(宣言前に読むと画面が落ちる)。
+  //     ジエンドの効果はEXを使えるときにしか置かれないので、「使えるか」は見なくてよい
+  const kusabiCapAt = (slotIdx) => (isTacticsMode(runMode) && Number.isInteger(slotIdx)
+    && tacticsExKusabiDoubleAt(tacticsExStateRef.current, tacticsUnitsRef.current, slotIdx, { wave, turn:turnCount }) ? KUSABI_MAX_EX : KUSABI_MAX);
   const kusabiAt = (slotIdx) => { const key = trickStartKeyOf(slotIdx); return key ? kusabiCountOf(kusabiRef.current[key], kusabiCapAt(slotIdx)) : 0; };
   const writeKusabiKey = (key, n) => { if (!key) return; const next = { ...kusabiRef.current, [key]: kusabiCountOf(n, KUSABI_MAX_EX) }; kusabiRef.current = next; setKusabiView(next); };
   const resetKusabi = () => { kusabiRef.current = {}; setKusabiView({}); };
