@@ -56,7 +56,11 @@ if (!OVERALL && [mdFile, jsonFile].some((f) => f && PUBLISHED_FILES.includes(pat
 }
 // 公開の表へ書くときは、前に公開していた tier.json を先に読んでおく(差を出すため。書いたあとでは読めない)
 // --prev <file> で比べる元を変えられる(見せ方だけ直して出し直すとき、決め方を変える前の表と比べ続けるため)
-const PREV_PUBLISHED = (() => { try { return JSON.parse(fs.readFileSync(path.resolve(optArg('--prev', path.join(TIER_DIR, 'tier.json'))), 'utf8')); } catch (e) { return {}; } })();
+// 比べる元・据え置きの元(2026-10-22 社長「暫定の子は前の段のまま据え置く」): 決め方を変える前に公開していた表(tier-base-2026-10-16.json)。
+//   無ければいま公開している tier.json
+const BASE_FILE = path.join(TIER_DIR, 'tier-base-2026-10-16.json');
+const PREV_PUBLISHED = (() => { try { return JSON.parse(fs.readFileSync(path.resolve(optArg('--prev', fs.existsSync(BASE_FILE) ? BASE_FILE : path.join(TIER_DIR, 'tier.json'))), 'utf8')); } catch (e) { return {}; } })();
+const prevTierOf = (name) => ((PREV_PUBLISHED.モンスター || []).find((x) => x && x.名前 === name) || {}).総合 || '';
 // 勇者モンにした回の伸びの重み(overall)。current は 1(回数が3回にそろうまでは軽く)
 const OVERALL_HERO_WEIGHT = 0.3;
 // 供モンとして入った回がこれより少ない子は「暫定」(overall。2026-10-21 社長の決定)
@@ -107,7 +111,10 @@ const roleOf = (m) => ROLE_BY_EFFECT[m && m.ex && m.ex.effect] || '攻め';
 // アシカを「順番に選ぶ」(r.bot.rotate)で戦った回は、モンスターの Tier に数えない。弱いアシカ(みゃる・ドラなど)から入るので、
 // その回の勇者モンが弱く見える(2026-10-10 ダイスくん: ユグドラシル Expert が3回とも WAVE 3 止まりだったわけ)。その回はアシカの記録にだけ使う。
 // 供モンを決めて戦った回(r.bot.fixedAllies。おすすめパーティの確かめ)も、強い組み合わせで勇者モンが強く見えるので数えない
-const runs = (know.runs || []).filter((r) => r && r.result && r.result !== 'stopped' && DIFF_ORDER.includes(r.difficulty) && r.use && !(r.bot && (r.bot.rotate || r.bot.fixedAllies)));
+// ヘイトを公開した日(RELEASE_FLAGS.tacticsHate。2026-10-18)。この日からのボットの回はヘイトのあるゲームで戦った回
+const HATE_SINCE = '2026-10-18';
+// 勇者モンが記録されていない回(2026-10-19〜22 のボット。プロモードの編成画面が変わり、勇者モンを読めていなかった)は数えない
+const runs = (know.runs || []).filter((r) => r && r.result && r.result !== 'stopped' && r.hero && DIFF_ORDER.includes(r.difficulty) && r.use && !(r.bot && (r.bot.rotate || r.bot.fixedAllies)));
 // ★クリアした回は「WAVE 11 まで届いた」と数える(2026-10-10 改善部 T3)。Hard はほぼ全員が WAVE 10 に届くので、届いた WAVE だけでは差が出ない
 const reach = (r) => (r.wave || 0) + (r.result === 'clear' ? 1 : 0);
 const sum = (a) => a.reduce((x, y) => x + y, 0);
@@ -296,6 +303,7 @@ const HOW_TEXT = OVERALL ? [
   `決め方(2026-10-21 から): 勇者モンにしたときの強さに寄らないよう、全体で見る。供モンとして入った回の働き(攻め役は1回のダメージの頭割り比、守り・支え役は入った回に届いた WAVE の伸び)と、供モンで入った回の伸びを主にし、勇者モンにした回の伸びは重み ${OVERALL_HERO_WEIGHT} で軽く足す。${PLAYER_WEIGHT ? `プレイヤーの実戦(全国ランキングのタクティクスプロの記録。勇者モン・供モンで使われた回の届いた WAVE の伸び)を重み ${PLAYER_WEIGHT} で混ぜる(3回以上使われた子だけ)。` : ''}`,
   `難易度ごとの点を ${Object.entries(DIFF_WEIGHT).map(([d, w]) => `${d} ${Math.round(w * 10)}`).join('・')} の重みで合わせる。Hard はほぼ全員が最後の WAVE まで届くので、クリアしたかどうか(クリアは WAVE 11 と数える)だけで差が付き、重みを軽くしている。「勇者モン向き」「供モン向き」は、勇者モンにした回だけ・供モンの回だけで付けた別の段。`,
   '数えるのは、直したボット(勇者モン選び・EX の使い方を直したあと)で戦った回だけ。固有技・EX・勇者特性・間合いを使えた回の成績で見る(EX を一度も使えていない子は保留)。',
+  `ヘイト(2026-10-18 に公開)のあとのボットの回: ${runs.filter((r) => String(r.at || '') >= HATE_SINCE).length}回 / ${runs.length}回。それより前の回はヘイトの無いゲームで戦った回で、回数がたまったら入れ替えていく。アシカ・組み合わせ・4体パーティのシミュレーターはヘイト入り(11 版目)。`,
 ] : [
   `決め方: 難易度ごとの点(下の「Tier の決め方」)を ${Object.entries(DIFF_WEIGHT).map(([d, w]) => `${d} ${Math.round(w * 10)}`).join('・')} の重みで合わせる。Hard はほぼ全員が最後の WAVE まで届くので、クリアしたかどうか(クリアは WAVE 11 と数える)だけで差が付き、重みを軽くしている。`,
   '数えるのは、直したボット(勇者モン選び・EX の使い方を直したあと)で戦った回だけ。固有技・EX・勇者特性・間合いを使えた回の成績で見る(EX を一度も使えていない子は保留)。',
@@ -358,7 +366,12 @@ const overall = stats.map((s) => {
   const border = noisy && !weakBot && per.length === TIER_DIFFS.length && per.every((v) => v.x.n >= 5);
   // 供モンとして入った回が少ない子は暫定(overall は供モンの回が決め手なので)
   const fewAlly = OVERALL && s.allyN < OVERALL_ALLY_FIRM;
-  return { s, tier, score, n, provisional: firmCells.length < 2 || weakBot || noisy || fewAlly, fewAlly, weakBot, noisy, border, usable, botGap: gap, short, guess };
+  // 供モンの回が足りない子は、前の段のまま据え置く(2026-10-22 社長の決定)。新しい決め方での段は「見込み」として残す
+  const before = fewAlly ? prevTierOf(s.m.name) : '';
+  const held = !!before && ['S', 'A', 'B', 'C', 'D'].includes(before) && ['S', 'A', 'B', 'C', 'D'].includes(tier);
+  const expected = held ? tier : '';
+  if (held) tier = before;
+  return { s, tier, score, n, provisional: firmCells.length < 2 || weakBot || noisy || fewAlly, fewAlly, held, expected, weakBot, noisy, border, usable, botGap: gap, short, guess };
 });
 const OVERALL_ORDER = ['S', 'A', 'B', 'C', 'D', '回数不足', '保留', '未計測'];
 overall.sort((a, z) => OVERALL_ORDER.indexOf(a.tier) - OVERALL_ORDER.indexOf(z.tier) || (z.score || -9) - (a.score || -9));
@@ -382,6 +395,8 @@ for (const t of ['S', 'A', 'B', 'C', 'D']) {
   const xs = overall.filter((o) => o.tier === t);
   if (xs.length) out(`- **${t}** ${xs.map((o) => `${o.s.m.name}${o.provisional ? '(暫定)' : ''}`).join('・')}`);
 }
+const heldAllOv = overall.filter((o) => o.held);
+if (heldAllOv.length) { out(); out(`前の段のまま据え置いた子(供モンとして入った回が${OVERALL_ALLY_FIRM}回未満なので、新しい決め方の段はまだ見込み。かっこは見込み): ${heldAllOv.map((o) => `${o.s.m.name}(${o.expected})`).join('・')}`); }
 const few = overall.filter((o) => o.tier === '回数不足');
 if (few.length) { out(); out(`回数不足(どの難易度も5回未満なので、総合はまだ付けない。かっこは * のマスから出した仮の Tier): ${few.map((o) => `${o.s.m.name}(仮${o.guess})`).join('・')}`); }
 const weakAll = overall.filter((o) => o.weakBot && !['回数不足', '保留', '未計測'].includes(o.tier));
@@ -774,7 +789,8 @@ function tierJson(prev) {
         e.勇者モン向き = Number.isFinite(st.heroOnly) ? tierOfScore(st.heroOnly) : '—';
         e.供モン向き = Number.isFinite(st.allyOnly) ? tierOfScore(st.allyOnly) : '—';
         e.供モンの回数 = st.allyN;
-        if (ov && ov.fewAlly && e.暫定) e.暫定の理由 = `供モンとして入った回が ${st.allyN}回(${OVERALL_ALLY_FIRM}回未満)`;
+        if (ov && ov.fewAlly && e.暫定) e.暫定の理由 = `供モンとして入った回が ${st.allyN}回(${OVERALL_ALLY_FIRM}回未満)${ov.held ? '。前の段のまま据え置いている' : ''}`;
+        if (ov && ov.held) e.新しい決め方なら = ov.expected;
         if (PLAYER_WEIGHT && st.plN) e.実戦 = { 回数: st.plN, 伸び: Math.round(st.plLift * 100) / 100 };
         // 決め手(2026-10-22 カゲあつくん「見えている数字はほぼ平均より下なのに S に見える」)。点に効いた項目を、効いた大きさの順に。
         // 押し上げた項目と押し下げた項目を分けて書き、勇者モンの回は重みを添える(全部の難易度の回をまとめた点の内訳)
