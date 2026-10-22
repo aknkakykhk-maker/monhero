@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5c6665978d591575
+// source-sha256: 37150628417c28de
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-22 08:31";
+const BUILD_DATE = "2026-10-22 09:01";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -398,6 +398,9 @@ const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
   },
   get tacticsTypes() {
     return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.tacticsHate === true;
+  },
+  get assistantAtsu() {
+    return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantAtsu === true;
   }
 });
 const eventReplayReleased = event => !event?.releaseFlag || EVENT_REPLAY_RELEASE_FLAGS[event.releaseFlag] === true;
@@ -6398,6 +6401,7 @@ const rhythmAchievementPending = (ledger, rules, eligible) => {
 const pandoraBossBgmForBattle = (heroId, currentWave, enemyId) => heroId === 'Pandora' && (enemyId === 'Moo' || currentWave === 10) ? 'pandora_boss' : null;
 const eikiBossBgmForBattle = (heroId, currentWave, enemyId) => heroId === 'Eiki' && (enemyId === 'Moo' || currentWave === 10) ? 'eiki_boss' : null;
 const DEFAULT_BGM_ARRANGEMENT = Object.freeze({
+  atsuJoinStoryEvent: 'melo_against_my_own_shadow',
   tacticsTypesEvent: 'original_event_01',
   rhythmHellStoryEvent: 'melo_sheriruth',
   assistantChatStoryEvent: 'close_to_your_heart_alt',
@@ -6491,6 +6495,7 @@ const eventScriptBgmAt = (script, step) => {
 };
 const EVENT_BGM_FADE_MS = 800;
 const EVENT_BGM_SCENES = Object.freeze({
+  atsu_join_2026_10_22: 'atsuJoinStoryEvent',
   tactics_types: 'tacticsTypesEvent',
   kiki_intro: 'kikiIntro',
   rhythm_hell_story: 'rhythmHellStoryEvent',
@@ -12067,6 +12072,7 @@ const RELEASE_FLAGS = {
   assistantChat: true,
   assistantChatRanking: true,
   assistantDailyLines: true,
+  assistantAtsu: false,
   tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE,
   tacticsHate: true,
   tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE,
@@ -12412,6 +12418,7 @@ const rhythmHellStorySeenKey = () => typeof rhythmHellReleased === 'function' &&
 const RHYTHM_HELL_STORY_TRIGGER = 'release';
 const ASSISTANT_CHAT_STORY_SEEN_KEY = 'mh_story_assistant_chat_seen_v1';
 const ASSISTANT_CHAT_STORY_ID = 'assistant_chat_story';
+const ATSU_JOIN_STORY_ID = 'atsu_join_2026_10_22';
 const TACTICS_TYPES_STORY_SEEN_KEY = 'mh_story_tactics_types_seen_v1';
 const TACTICS_TYPES_STORY_ID = 'tactics_types';
 const normalizeAssistantId = value => typeof assistantIdOrDefault === 'function' ? assistantIdOrDefault(typeof value === 'string' ? value : null) : typeof DEFAULT_ASSISTANT_ID !== 'undefined' && DEFAULT_ASSISTANT_ID || 'mua';
@@ -12423,6 +12430,7 @@ const assistantBondKeyFor = assistantId => {
 const assistantIdOfAssistCard = cardId => {
   const id = String(cardId == null ? '' : cardId);
   const list = typeof ASSISTANTS !== 'undefined' && Array.isArray(ASSISTANTS) ? ASSISTANTS : [];
+  if (typeof assistantReleased === 'function' && !assistantReleased(id)) return null;
   return list.some(a => a && a.id === id) ? id : null;
 };
 const ASSISTANT_CALL_STYLE_KEY = 'mh_assistant_call_style';
@@ -16614,7 +16622,7 @@ const helpDataRows = id => {
         return [frame.name, `${how}${frame.desc ? ` ${frame.desc}` : ''}`];
       });
     case 'assistants':
-      return (typeof ASSISTANT_LIST !== 'undefined' && ASSISTANT_LIST || []).map(who => [who.name, `${who.tagline || ''}${who.intro ? ` ／ ${who.intro}` : ''}`]);
+      return (typeof ASSISTANT_LIST !== 'undefined' && ASSISTANT_LIST || []).filter(who => typeof assistantReleased !== 'function' || assistantReleased(who.id)).map(who => [who.name, `${who.tagline || ''}${who.intro ? ` ／ ${who.intro}` : ''}`]);
     case 'monsterPower':
       return [['ライフ 1', `+${MONSTER_POWER_STAT_WEIGHT.hp}`], ['ちから 1', `+${Math.round(MONSTER_POWER_STAT_WEIGHT.atk * 100) / 100}（強化P1つ=ちから+${STAT_POINT_GAIN.atk} で +10）`], ['丈夫さ 1', `+${Math.round(MONSTER_POWER_STAT_WEIGHT.def * 100) / 100}（強化P1つ=丈夫さ+${STAT_POINT_GAIN.def} で +10）`], ['ガッツ 1', `+${Math.round(MONSTER_POWER_STAT_WEIGHT.guts * 100) / 100}（強化P1つ=ガッツ+${STAT_POINT_GAIN.guts} で +10）`], ['間合い適性', DIST_APTITUDE_GRADES.slice().reverse().map(g => `${g} ${MONSTER_POWER_APTITUDE[g] > 0 ? '+' : ''}${MONSTER_POWER_APTITUDE[g]}`).join(' ／ ') + '（4距離すべてを合計）'], ['固有技を1つ持つ', `+${MONSTER_POWER_UNIQUE_OWNED}（Lv0でも付く。継承した固有技も同じ）`], ['固有技の強化Lv 1段階', `+${Math.round(MONSTER_POWER_UNIQUE_PER_LEVEL * 100) / 100}（3段階でちょうど+200）`]];
     case 'assistantBondRewards':
@@ -64206,7 +64214,8 @@ const FRIEND_NOTICE_LINES = Object.freeze({
   mua: who => `${who}からフレンド申請が届いてるよ♪ 見にいってみよう！`,
   kiki: who => `${who}からフレンド申請が届いてまつよ。見にいきまつか？`,
   momosuke: who => `${who}からフレンド申請が来てるよw 見にいこ？`,
-  dra: who => `${who}からフレンド申請が来てるわ。見にいくか`
+  dra: who => `${who}からフレンド申請が来てるわ。見にいくか`,
+  atsu: who => `${who}からフレンド申請来てるよ。とりあえず見にいこ`
 });
 function HomeFriendRequestNotice({
   activeAssistant,
@@ -75379,6 +75388,12 @@ const RHYTHM_MODE_ASSISTANT_FRAMES = Object.freeze({
     cx: 0.5,
     cy: 0.5,
     top: 0.4
+  },
+  atsu: {
+    zoom: 0.85,
+    cx: 0.5,
+    cy: 0.4,
+    top: 0.42
   }
 });
 const RHYTHM_MODE_SELECT_NOTES = Object.freeze([{
@@ -85908,7 +85923,7 @@ function MonsterHeroGame() {
   const RAID_JACK_HOWTO_AFTER_STORY_ID = 'halloween_night_2026_part1';
   const RAID_JACK_RHYTHM_STORY_ID = 'raid_jack_rhythm_story_2026_10_06';
   const HALLOWEEN_NIGHT_STORY_IDS = HALLOWEEN_NIGHT_STORIES.map(story => story.id);
-  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID];
+  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID];
   const RHYTHM_EVENT_STORY_BY_EVENT = {
     [MONBEAT_CUP_EVENT_ID]: MONBEAT_CUP_STORY_ID,
     [SYMPHONY_EVENT_ID]: SYMPHONY_STORY_ID
@@ -86086,6 +86101,14 @@ function MonsterHeroGame() {
     if (rhythmEventStoryStartedRef.current.includes(ASSISTANT_CHAT_STORY_ID)) return;
     setRhythmEventStoryPending(ASSISTANT_CHAT_STORY_ID);
   }, [assistantChatStorySeenLoaded, assistantChatStorySeenFlag, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  useEffect(() => {
+    if (!EVENT_REPLAY_RELEASE_FLAGS.assistantAtsu) return;
+    if (!Array.isArray(rhythmEventStorySeen) || rhythmEventStorySeen.includes(ATSU_JOIN_STORY_ID)) return;
+    if (!assistantAtsuUnlockReady(id => assistantBondLevelOf(normalizeAssistantBond(assistantBonds[id]).points))) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
+    if (rhythmEventStoryStartedRef.current.includes(ATSU_JOIN_STORY_ID)) return;
+    setRhythmEventStoryPending(ATSU_JOIN_STORY_ID);
+  }, [rhythmEventStorySeen, assistantBonds, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
   useEffect(() => {
     if (!EVENT_REPLAY_RELEASE_FLAGS.tacticsTypes || !EVENT_REPLAY_RELEASE_FLAGS.tacticsBattle) return;
     if (!tacticsTypesStorySeenLoaded || tacticsTypesStorySeenFlag || !tacticsIntroSeenFlag) return;
@@ -88872,6 +88895,7 @@ function MonsterHeroGame() {
     rhythmMasuCallSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_MASU_CALL_STORY_ID),
     raidJackHowtoSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RAID_JACK_HOWTO_STORY_ID),
     raidJackRhythmStorySeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RAID_JACK_RHYTHM_STORY_ID),
+    atsuJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(ATSU_JOIN_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID)
   };
   const isEventReplayUnlocked = event => !!(event && event.alwaysUnlocked) || !!EVENT_REPLAY_UNLOCK_FLAGS[event && event.unlockedKey];
@@ -110017,7 +110041,7 @@ function MonsterHeroGame() {
       className: "text-[9px] text-slate-500 text-center mb-3 leading-tight"
     }, "いつでも変えられます。仲良し度と呼び方は助手ごとに分かれているので、切り替えても消えません。"), React.createElement("div", {
       className: "space-y-2 mb-3"
-    }, ASSISTANT_LIST.map(who => {
+    }, ASSISTANT_LIST.filter(who => assistantReleased(who.id)).map(who => {
       const active = who.id === selectedAssistantId;
       const lv = assistantBondLevelOf(normalizeAssistantBond(assistantBonds[who.id]).points);
       const t = typeof assistantBondStageByLevel === 'function' ? assistantBondStageByLevel(lv, who.id) : null;
@@ -110034,7 +110058,7 @@ function MonsterHeroGame() {
         className: "block text-[12px] font-black text-slate-400"
       }, "？？？"), React.createElement("small", {
         className: "block text-[9px] text-slate-500 leading-tight"
-      }, assistantUnlockStoryId(who.id) ? 'イベントの話を最後まで見ると選べるようになります。' : 'HOMEでの出会いを見ると選べるようになります。')));
+      }, who.id === 'atsu' ? '助手たちともっと仲良くなると、会えるかもしれません。' : assistantUnlockStoryId(who.id) ? 'イベントの話を最後まで見ると選べるようになります。' : 'HOMEでの出会いを見ると選べるようになります。')));
       return React.createElement("button", {
         key: who.id,
         type: "button",
@@ -110689,7 +110713,7 @@ function MonsterHeroGame() {
       const cell = costume => {
         const owned = !costume || ownedAssistantCostumes.includes(costume.id);
         const selected = costume ? worn && worn.id === costume.id : !worn;
-        const src = costume ? faceOf(costume) : `${who.imageDir}/face/${who.imagePrefix}_normal.PNG`;
+        const src = costume ? faceOf(costume) : assistantTempImage(who, 'normal') || `${who.imageDir}/face/${who.imagePrefix}_normal.PNG`;
         return React.createElement("button", {
           key: costume ? costume.id : 'original',
           "data-assistant-costume-option": costume ? costume.id : 'original',
@@ -111511,7 +111535,8 @@ function MonsterHeroGame() {
         const w = assistantById(id);
         return !!w && w.role === 'ゲスト';
       };
-      const cast = storyCastOf(script).filter(who => who.role !== 'ゲスト');
+      const hiddenUntil = Array.isArray(event && event.hideUntilFirstLine) ? event.hideUntilFirstLine : [];
+      const cast = storyCastOf(script).filter(who => who.role !== 'ゲスト').filter(who => !hiddenUntil.includes(who.id) || script.slice(0, step + 1).some(l => l && l.who === who.id));
       let stageIdx = -1;
       for (let i = step; i >= 0; i--) {
         const l = script[i];

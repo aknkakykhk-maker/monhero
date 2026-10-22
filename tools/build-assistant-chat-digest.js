@@ -127,7 +127,13 @@ const buildDigest = () => {
     if (titles.length) index.push(`【${clean(cat.title)}】${titles.join('／')}`);
   });
 
-  const a = loadScript('assistants.js', ['ASSISTANTS', 'assistantSceneLines', 'ASSISTANT_SCENES', 'ASSISTANT_LINE_PACKS', 'ASSISTANT_UPDATE_NOTICE_SCRIPTS', 'ASSISTANT_PEER_CALLS', 'ASSISTANT_CHAT_EXAMPLES', 'EVENT_REPLAYS', 'DEFAULT_ASSISTANT_ID']);
+  const a = loadScript('assistants.js', ['ASSISTANTS', 'assistantSceneLines', 'ASSISTANT_SCENES', 'ASSISTANT_LINE_PACKS', 'ASSISTANT_UPDATE_NOTICE_SCRIPTS', 'ASSISTANT_PEER_CALLS', 'ASSISTANT_CHAT_EXAMPLES', 'EVENT_REPLAYS', 'DEFAULT_ASSISTANT_ID', 'ASSISTANT_RELEASE_FLAGS']);
+  // 公開の印がまだ偽の助手(2026-10-22 あつ)は、材料に入れない(人柄・ほかの助手の呼び方・お話のセリフ・用語の呼び方)。
+  // 入れると、ほかの助手がおしゃべりで「まだ会えない助手」の名前を出してしまう。公開の印を真にしたら作り直す
+  const hiddenFlags = Object.entries(a.ASSISTANT_RELEASE_FLAGS || {}).filter(([, f]) => flags[f] !== true);
+  const hiddenIds = new Set(hiddenFlags.map(([id]) => id));
+  const hiddenFlagNames = new Set(hiddenFlags.map(([, f]) => f));
+  const shownAssistants = (a.ASSISTANTS || []).filter(x => x && !hiddenIds.has(x.id));
 
   // ---- 用語の表 ----
   // 助手ごとのセリフを全部集める(場面の通常・条件つき・あとから足した束)
@@ -149,7 +155,10 @@ const buildDigest = () => {
     for (const [who, list] of Object.entries(byAssistant || {})) for (const line of Array.isArray(list) ? list : []) addLine(line, who);
   }
   // イベントのお話(回想)の台詞。掛け合いのくせがいちばんよく出る
-  for (const ev of a.EVENT_REPLAYS || []) for (const line of (ev && Array.isArray(ev.script)) ? ev.script : []) if (line && line.who) addLine(line, line.who);
+  for (const ev of a.EVENT_REPLAYS || []) {
+    if (ev && hiddenFlagNames.has(ev.releaseFlag)) continue;
+    for (const line of (ev && Array.isArray(ev.script)) ? ev.script : []) if (line && line.who) addLine(line, line.who);
+  }
   const countIn = (texts, word) => texts.reduce((n, t) => n + (t.split(word).length - 1), 0);
   const firstSentence = (word, preferId) => {
     const pool = [topics.find(t => t.id === preferId), ...topics].filter(Boolean);
@@ -163,7 +172,7 @@ const buildDigest = () => {
   for (const g of TERM_GROUPS) {
     const meaning = firstSentence(g.variants[0], g.topic);
     const calls = [];
-    for (const x of a.ASSISTANTS || []) {
+    for (const x of shownAssistants) {
       if (!x || x.role !== '助手') continue;
       const texts = linesBy[x.id] || [];
       // その助手が実際に使う言い方を、多い順に全部並べる(いちばん多いものだけにすると、愛称を「知らない」ことになる)
@@ -205,7 +214,7 @@ const buildDigest = () => {
       '決まり: モンスターの見た目・色・性格・強さ・覚える技などを聞かれたら、この表と渡されたヘルプの項目に書いてあることだけで答える。書いていないことや、この表に無いモンスターは作らない。分からないところは「M/B管理のモンスター図鑑を見てね」と案内する。能力の数字や、出てくる敵の強さは話さない。');
   }
   const assistants = {};
-  for (const x of a.ASSISTANTS || []) {
+  for (const x of shownAssistants) {
     if (!x || x.role !== '助手') continue;
     // 見本は、その助手の全セリフ(場面・あとから足した束・告知の読み上げ・お話)から、くせの目印(speechMarkers)が多く、
     // ゲームの説明っぽい言葉が少ないものを選ぶ。点が同じなら台本に出てくる順。毎回同じ並びになる(乱数は使わない)
@@ -223,7 +232,7 @@ const buildDigest = () => {
     scored.sort((p, q) => q.score - p.score || p.i - q.i);
     const picked = scored.slice(0, SAMPLE_LINES).sort((p, q) => p.i - q.i).map(x => x.t);
     // ほかの助手の呼び方(ASSISTANT_PEER_CALLS)。「きき → ひめちん」のように名前つきで並べる
-    const peers = (a.ASSISTANT_PEER_CALLS && a.ASSISTANT_PEER_CALLS[x.id]) || {};
+    const peers = Object.fromEntries(Object.entries((a.ASSISTANT_PEER_CALLS && a.ASSISTANT_PEER_CALLS[x.id]) || {}).filter(([id]) => !hiddenIds.has(id)));
     const nameOf = (id) => ((a.ASSISTANTS || []).find(y => y && y.id === id) || {}).name || id;
     assistants[x.id] = {
       name: x.name, tagline: clean(x.tagline), intro: clean(x.intro), greeting: clean(x.greeting),

@@ -117,6 +117,9 @@ const FORCE_CHECKS = [
   // ファイル名の語(app・home・core)では拾えないので名指しする
   { re: /^monster-hero\/(src\/parts\/(10-core|60-app|69-screen-home)\.jsx|data\/(help|assistants)\.js)$/,
     checks: ['battle/battle-system-select-check.js'], why: 'モンヒロバトルの入口と導線' },
+  // 5人目の助手あつの解放(仲良し度 → お話 → 選べる)。公開の印・お話の流し方・一覧の出し分けは実ブラウザでないと通らない(2026-10-22)
+  { re: /^monster-hero\/(src\/parts\/(10-core|17-release-changelog-login-missions|56-screen-profile|60-app)\.jsx|data\/assistants\.js)$/,
+    checks: ['assistant/atsu-unlock-browser-check.js'], why: 'あつの解放の流れ(公開の印・お話・選ぶ画面)' },
   // 入口のカードは、行を1つ足すだけで小さい端末から簡単にあふれる。
   // あふれてもエラーは出ず、大きい端末では気づけない(2026-09-21・ユーザー報告)
   { re: /^monster-hero\/src\/parts\/(10-core|60-app)\.jsx$/,
