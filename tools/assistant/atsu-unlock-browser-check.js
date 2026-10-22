@@ -150,7 +150,7 @@ const pickerText = (page) => page.evaluate(() => {
       const started = await page.evaluate(() => /片づけしてたら|W\.o\.F/.test(document.body.innerText || ''));
       check('仲良し度がそろうと、HOME でお話が流れる', started);
       // お話を「次へ」で最後まで進める。途中を何枚か写す
-      const want = { 4: '02-story-wof', 9: '03-story-friends', 33: '04-story-before', 34: '04b-story-atsu-appears', 47: '05-story-momo', 58: '06-story-name', 86: '07-story-end' };
+      const want = { 4: '02-story-wof', 9: '03-story-friends', 32: '04-story-before', 33: '04b-story-atsu-appears', 46: '05-story-momo', 57: '06-story-name', 85: '07-story-end' };
       let last = '', reachedEnd = false;
       for (let i = 0; i < 160; i++) {
         if (want[i]) await shot(page, want[i]);
