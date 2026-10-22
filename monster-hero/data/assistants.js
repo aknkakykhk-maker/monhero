@@ -172,6 +172,30 @@ const ASSISTANTS = [
     tagline: 'ぐいぐい上へ誘う、人をよく見ている勇者',
     intro: '上を目指して遊びたい人向け。上の難易度へぐいぐい誘うけれど、人の気持ちにはいちばん敏感なリーダー。',
   },
+  {
+    // きゅうこ(2026-10-22・6人目の助手。社長の依頼)。公開の印 assistantKyuko が立つまでは、一覧にも出ない(ASSISTANT_RELEASE_FLAGS)。
+    // 絵は 2026-10-22 に社長から届いた表情8枚の1枚絵(tools/art-sources/kyuko-2026-10-22/)を切り分けたもの。
+    // 表情の枠: normal=微笑み・happy=笑顔・excited=ウインク・wink=したり顔・surprise=驚き・angry=むくれ・troubled=困り・crying=照れ
+    //   (ウインクは「わくわく」の excited、したり顔は問いかけに使う wink、まれにしか出ない crying に照れを当てた)
+    // ★一人称・口調・性格は社長に決めてもらう(下は仮)
+    id: 'kyuko',
+    name: 'きゅうこ',
+    role: '助手',
+    imageDir: 'images/assistant',
+    imagePrefix: 'kyuko',
+    expressions: ASSISTANT_EXPRESSIONS,
+    defaultExpression: ASSISTANT_DEFAULT_EXPRESSION,
+    emoji: '🌸',
+    accent: '#fb7185',
+    greeting: 'よろしくね。困ったら、いつでも声をかけて。',
+    firstPerson: '「わたし」',
+    speech: 'やわらかい口調。',
+    speechQuirks: [],
+    speechMarkers: 'わたし',
+    rhythmCall: 'モンヒロビート',
+    tagline: '(準備中)',
+    intro: '(準備中)',
+  },
 ];
 // 助手どうしの呼び方(だれ → だれ)。台本の決めごと(きき加入・異世界交響祭などの冒頭のコメント)をここへ1か所にまとめた。
 // おしゃべりの人柄(tools/build-assistant-chat-digest.js)はここから作る。台本で実際に使っているかは
@@ -250,7 +274,7 @@ const assistantAtsuUnlockReady = (levelOf) => typeof levelOf === 'function'
   && Object.entries(ASSISTANT_ATSU_UNLOCK_BONDS).every(([id, need]) => { const lv = Number(levelOf(id)); return Number.isFinite(lv) && lv >= need; });
 // 公開の印が立つまで、一覧にも出さない助手(印の名前は RELEASE_FLAGS・17-release-changelog-login-missions.jsx)。
 // RELEASE_FLAGS はあとの部品で作られるので、見るたびに引く(読み込み時に触ると画面が真っ白になる)
-const ASSISTANT_RELEASE_FLAGS = Object.freeze({ atsu: 'assistantAtsu' });
+const ASSISTANT_RELEASE_FLAGS = Object.freeze({ atsu: 'assistantAtsu', kyuko: 'assistantKyuko' });
 const assistantReleased = (assistantId) => {
   const flag = ASSISTANT_RELEASE_FLAGS[assistantId];
   if (!flag) return true;

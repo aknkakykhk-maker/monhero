@@ -21448,6 +21448,18 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <div key={e} className="flex flex-col items-center gap-1"><AssistantFace who={who} size={64} accent={who.accent} expression={e}/><span className="text-[8px] text-slate-400 font-black">{e}</span></div>
               ))}</div>
             )}
+            {/* 公開の印が立つ前の助手(2026-10-22 きゅうこ)も、絵の組み込みをここで確かめられるようにする。選んだことにはしない */}
+            {assistantDebug==='expressions'&&ASSISTANT_LIST.filter(a=>a.id!==selectedAssistantId&&typeof assistantReleased==='function'&&!assistantReleased(a.id)).map(a=>(
+              <div key={a.id} data-debug-unreleased-assistant={a.id} className="border-t border-white/10 p-3">
+                <div className="text-[10px] font-black text-pink-200 mb-2">{a.name}(公開前)</div>
+                <div className="grid grid-cols-4 gap-2">{exprs.map(e=>(
+                  <div key={e} className="flex flex-col items-center gap-1"><AssistantFace who={a} size={64} accent={a.accent} expression={e}/><span className="text-[8px] text-slate-400 font-black">{e}</span></div>
+                ))}</div>
+                <div className="mt-2 grid grid-cols-4 gap-2">{exprs.map(e=>(
+                  <img key={e} src={`${a.imageDir}/${a.imagePrefix}_${e}.PNG`} alt={`${a.name} ${e}`} loading="lazy" className="w-full rounded-lg bg-slate-900"/>
+                ))}</div>
+              </div>
+            ))}
             {assistantDebug==='spam'&&(
               <div>{spam.map((l,i)=>row(l,i))}<div className="p-3 text-[10px] text-slate-500 leading-relaxed">上から順に切り替わります。最後の「…………」のあと、少し待つと最後の行を話して通常へ戻ります。</div></div>
             )}

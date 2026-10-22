@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e2f36d273ebdadd7
+// source-sha256: c5caf51e1054e012
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-22 13:50";
+const BUILD_DATE = "2026-10-22 20:07";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -401,6 +401,9 @@ const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
   },
   get assistantAtsu() {
     return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantAtsu === true;
+  },
+  get assistantKyuko() {
+    return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantKyuko === true;
   }
 });
 const eventReplayReleased = event => !event?.releaseFlag || EVENT_REPLAY_RELEASE_FLAGS[event.releaseFlag] === true;
@@ -12073,6 +12076,7 @@ const RELEASE_FLAGS = {
   assistantChatRanking: true,
   assistantDailyLines: true,
   assistantAtsu: true,
+  assistantKyuko: false,
   tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE,
   tacticsHate: true,
   tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE,
@@ -75586,6 +75590,12 @@ const RHYTHM_MODE_ASSISTANT_FRAMES = Object.freeze({
     cx: 0.48,
     cy: 0,
     top: 0.02
+  },
+  kyuko: {
+    zoom: 1.1,
+    cx: 0.5,
+    cy: 0,
+    top: 0.02
   }
 });
 const RHYTHM_MODE_SELECT_NOTES = Object.freeze([{
@@ -112269,7 +112279,33 @@ function MonsterHeroGame() {
         expression: e
       }), React.createElement("span", {
         className: "text-[8px] text-slate-400 font-black"
-      }, e)))), assistantDebug === 'spam' && React.createElement("div", null, spam.map((l, i) => row(l, i)), React.createElement("div", {
+      }, e)))), assistantDebug === 'expressions' && ASSISTANT_LIST.filter(a => a.id !== selectedAssistantId && typeof assistantReleased === 'function' && !assistantReleased(a.id)).map(a => React.createElement("div", {
+        key: a.id,
+        "data-debug-unreleased-assistant": a.id,
+        className: "border-t border-white/10 p-3"
+      }, React.createElement("div", {
+        className: "text-[10px] font-black text-pink-200 mb-2"
+      }, a.name, "(公開前)"), React.createElement("div", {
+        className: "grid grid-cols-4 gap-2"
+      }, exprs.map(e => React.createElement("div", {
+        key: e,
+        className: "flex flex-col items-center gap-1"
+      }, React.createElement(AssistantFace, {
+        who: a,
+        size: 64,
+        accent: a.accent,
+        expression: e
+      }), React.createElement("span", {
+        className: "text-[8px] text-slate-400 font-black"
+      }, e)))), React.createElement("div", {
+        className: "mt-2 grid grid-cols-4 gap-2"
+      }, exprs.map(e => React.createElement("img", {
+        key: e,
+        src: `${a.imageDir}/${a.imagePrefix}_${e}.PNG`,
+        alt: `${a.name} ${e}`,
+        loading: "lazy",
+        className: "w-full rounded-lg bg-slate-900"
+      }))))), assistantDebug === 'spam' && React.createElement("div", null, spam.map((l, i) => row(l, i)), React.createElement("div", {
         className: "p-3 text-[10px] text-slate-500 leading-relaxed"
       }, "上から順に切り替わります。最後の「…………」のあと、少し待つと最後の行を話して通常へ戻ります。")), (assistantDebug === 'lines' || assistantDebug === 'conditions') && React.createElement("div", null, Object.entries(scenes).map(([key, def]) => {
         const list = assistantDebug === 'conditions' ? Object.entries(def.when || {}).flatMap(([c, ls]) => ls.map(l => ({

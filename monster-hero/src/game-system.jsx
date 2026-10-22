@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 0fc9951e51193a4e
+// generated-sha256: 8a4842e514587e06
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-22 13:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-22 20:07"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -308,6 +308,8 @@ const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
   get tacticsTypes() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.tacticsHate === true; },
   // あつの加入のお話(atsu_join_2026_10_22・2026-10-22)。あつの公開と一緒に出る
   get assistantAtsu() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantAtsu === true; },
+  // きゅうこの加入のお話(2026-10-22〜)。きゅうこの公開と一緒に出る
+  get assistantKyuko() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantKyuko === true; },
 });
 const eventReplayReleased = (event) => !event?.releaseFlag || EVENT_REPLAY_RELEASE_FLAGS[event.releaseFlag] === true;
 // 画面に並べるイベント回想。3か所(プロフィール・回想一覧・再生)が同じ並びを見るための唯一の入口
@@ -8571,6 +8573,9 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   // 5人目の助手あつ(2026-10-22 社長の決定)。社長がお話の全文を読んで「公開ok」→真にした(2026-10-22)。
   //   偽のあいだは、助手の一覧・加入のお話・回想・ヘルプの項目に出ない(data/assistants.js の ASSISTANT_RELEASE_FLAGS)
   assistantAtsu: true,
+  // 6人目の助手きゅうこ(2026-10-22 社長の依頼)。性格・解放・アシストカード・お話を社長が決めて、お話の全文を読むまで偽。
+  //   偽のあいだは、助手の一覧・加入のお話・回想・ヘルプの項目に出ない(data/assistants.js の ASSISTANT_RELEASE_FLAGS)
+  assistantKyuko: false,
   tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE,
   // タクティクスのヘイト(🔥)とモンスターのタイプ表記。2026-10-18 社長「ヘイトシステムは実装していいよ」で公開。
   //   数字は 32-tactics-units.jsx の TACTICS_HATE / MONSTER_TYPES。お話「タクティクスバトル ～4人のタイプ～」(tactics_types)もこの印で出る
@@ -45849,6 +45854,8 @@ const RHYTHM_MODE_ASSISTANT_FRAMES = Object.freeze({
   // 絵の端がすべて枠の外へ出るよう 1.1 倍に広げた(切れるのは枠の左右と下だけ・両肩は同じくらい・王冠は枠の中)。
   // 顔の大きさと高さは みゅあ・きき と並べて合わせた(1.25 倍はききより顔が大きくなった)
   atsu: { zoom: 1.1, cx: 0.48, cy: 0, top: 0.02 },
+  // きゅうこ(2026-10-22)。大きい絵は 768x1024(胸から上・髪のてっぺんが絵の上端近く)。あつと同じ置き方で、絵の端が枠の外へ出るようにする
+  kyuko: { zoom: 1.1, cx: 0.5, cy: 0, top: 0.02 },
 });
 // 舞台の飾り(スポットライト3本・音符・キラキラ・床の光)。位置と遅れは固定(描くたびに変わらないように)
 const RHYTHM_MODE_SELECT_NOTES = Object.freeze([
@@ -70981,6 +70988,18 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <div key={e} className="flex flex-col items-center gap-1"><AssistantFace who={who} size={64} accent={who.accent} expression={e}/><span className="text-[8px] text-slate-400 font-black">{e}</span></div>
               ))}</div>
             )}
+            {/* 公開の印が立つ前の助手(2026-10-22 きゅうこ)も、絵の組み込みをここで確かめられるようにする。選んだことにはしない */}
+            {assistantDebug==='expressions'&&ASSISTANT_LIST.filter(a=>a.id!==selectedAssistantId&&typeof assistantReleased==='function'&&!assistantReleased(a.id)).map(a=>(
+              <div key={a.id} data-debug-unreleased-assistant={a.id} className="border-t border-white/10 p-3">
+                <div className="text-[10px] font-black text-pink-200 mb-2">{a.name}(公開前)</div>
+                <div className="grid grid-cols-4 gap-2">{exprs.map(e=>(
+                  <div key={e} className="flex flex-col items-center gap-1"><AssistantFace who={a} size={64} accent={a.accent} expression={e}/><span className="text-[8px] text-slate-400 font-black">{e}</span></div>
+                ))}</div>
+                <div className="mt-2 grid grid-cols-4 gap-2">{exprs.map(e=>(
+                  <img key={e} src={`${a.imageDir}/${a.imagePrefix}_${e}.PNG`} alt={`${a.name} ${e}`} loading="lazy" className="w-full rounded-lg bg-slate-900"/>
+                ))}</div>
+              </div>
+            ))}
             {assistantDebug==='spam'&&(
               <div>{spam.map((l,i)=>row(l,i))}<div className="p-3 text-[10px] text-slate-500 leading-relaxed">上から順に切り替わります。最後の「…………」のあと、少し待つと最後の行を話して通常へ戻ります。</div></div>
             )}
