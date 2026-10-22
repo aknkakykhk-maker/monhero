@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3a24f8f870215ff4
+// generated-sha256: 40ca627a5f0b7f97
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-22 21:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-22 21:36"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -12876,10 +12876,12 @@ const blackNoteEffectOf = (n) => {
   return { dmgMult: 1 + BLACK_NOTE_DMG_PER * c, critAdd: c >= BLACK_NOTE_CRIT_FROM ? BLACK_NOTE_CRIT_ADD : 0,
     combo: c >= BLACK_NOTE_COMBO_FROM ? { count: 1, rate: BLACK_NOTE_COMBO_RATE, label: '黒音符の連撃' } : null };
 };
-// buildAttackHits へ渡す exCombos へ、黒音符の連撃を足す(withFateCombo と同じ形)
-const withBlackNoteCombo = (exCombos, combo) => {
-  if (!combo) return exCombos;
-  return [...(Array.isArray(exCombos) ? exCombos : [exCombos]).filter(Boolean), combo];
+// buildAttackHits へ渡す exCombos へ、黒音符の連撃を足す(withFateCombo と同じ形)。
+// extra … ほかに足す連撃(2026-10-22 イルミネ・ドリーミィの楔の連撃・セレーネチェイサー。null は足さない)
+const withBlackNoteCombo = (exCombos, combo, extra = null) => {
+  const add = [combo, ...(Array.isArray(extra) ? extra : [extra])].filter(Boolean);
+  if (!add.length) return exCombos;
+  return [...(Array.isArray(exCombos) ? exCombos : [exCombos]).filter(Boolean), ...add];
 };
 // ==== 勇者特性「影潜」(イルミネ・ドリーミィ)と、楔の数で強くなる2体の固有技。2026-10-22 社長の決定 ====
 // 楔(くさび) … 持ち主本人の攻撃が当たるたびに、相手へ1つ付ける(上限6)。楔は敵に付くので、WAVEが変わる(敵が替わる)と0。
@@ -12917,12 +12919,6 @@ const startDreamPain = (n) => ({ wait: 1, turns: DREAM_PAIN_TURNS, bonus: dreamP
 const tickDreamPain = (v) => { const d = dreamPainOf(v); if (d.wait > 0) return { ...d, wait: d.wait - 1 };
   return d.turns > 1 ? { ...d, turns: d.turns - 1 } : { wait: 0, turns: 0, bonus: 0 }; };
 const dreamPainTakenBonus = (v) => { const d = dreamPainOf(v); return d.wait === 0 && d.turns > 0 ? d.bonus : 0; };
-// exCombos(配列か1つ)へ連撃を足す(withBlackNoteCombo と同じ形。null は足さない)
-const withExtraCombos = (exCombos, extra) => {
-  const add = (Array.isArray(extra) ? extra : [extra]).filter(Boolean);
-  if (!add.length) return exCombos;
-  return [...(Array.isArray(exCombos) ? exCombos : [exCombos]).filter(Boolean), ...add];
-};
 // 楔の効き目の短い文(バフの札)
 const kusabiEffectText = (n) => { const c = kusabiCountOf(n);
   return c > 0 ? `楔${c}/${KUSABI_MAX} 連撃15%×${c}・回避+${kusabiEvasionOf(c)}%` : ''; };
@@ -39282,6 +39278,8 @@ const BATTLE_CARD_NAME_BREAKS = Object.freeze({
   'アクシズバレット': 'アクシズ|バレット', 'ブラッディクロス': 'ブラッディ|クロス', 'ワンダーブレイズ': 'ワンダー|ブレイズ', 'パピヨンバースト': 'パピヨン|バースト',
   'パウンドメテオ': 'パウンド|メテオ', 'ホリゾンタル・スクエア': 'ホリゾンタル・|スクエア', 'グランドイリュージョン': 'グランド|イリュージョン',
   'ムーンサルトメロディー': 'ムーンサルト|メロディー', 'ライジングブースト': 'ライジング|ブースト', 'スウィートパレード': 'スウィート|パレード', 'マリーランドアーチ': 'マリーランド|アーチ',
+  // イルミネ・ドリーミィ(2026-10-22・案の段階の技名)
+  'ヴェノムエッジ': 'ヴェノム|エッジ', 'シールドバッシュ': 'シールド|バッシュ', 'モーニングスター': 'モーニング|スター', 'アサシンクロウ': 'アサシン|クロウ', 'アサルトアロー': 'アサルト|アロー', 'ブレードダンス': 'ブレード|ダンス', 'バスターソード': 'バスター|ソード', 'ドールバッシュ': 'ドール|バッシュ', 'キャットクロウ': 'キャット|クロウ', 'ドリームダンス': 'ドリーム|ダンス', 'パステルソード': 'パステル|ソード', 'エーテルアイス': 'エーテル|アイス', 'アルカナフレア': 'アルカナ|フレア', 'アルスマグナ': 'アルス|マグナ', 'ミラージュクロウ': 'ミラージュ|クロウ', 'クリムゾンノヴァ': 'クリムゾン|ノヴァ', 'ムーンライトヴェール': 'ムーンライト|ヴェール', 'ルミナスオーロラ': 'ルミナス|オーロラ', 'レクイエムエンド': 'レクイエム|エンド', 'ララバイノクターン': 'ララバイ|ノクターン', 'スウィートドリーム': 'スウィート|ドリーム', 'ドリーミィパレード': 'ドリーミィ|パレード', 'おもちゃの爆弾': 'おもちゃの|爆弾',
   '巨大雪だるま転がし': '巨大雪だるま|転がし', '熾天の剣よ降り立て': '熾天の剣よ|降り立て', '天の慈悲を示されよ': '天の慈悲を|示されよ', '聖夜の鐘を鳴響け': '聖夜の鐘を|鳴響け', '終焉に救いを与えよ': '終焉に|救いを与えよ', '永劫の贖いを全うせよ': '永劫の贖いを|全うせよ',
 });
 const battleCardNameBreakCache = new Map();
@@ -61400,7 +61398,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       *fateAtkMult(livePermaBuff('fateStacks',null),slotIdx);
     // ★skillDmgMult … 運命のコイン(表4倍・裏0.5倍)・運命の輪(3倍・2倍)の「この技のダメージ」。ほかの呼び出しは渡さないので1倍
     // ★運命の輪の「敵の被ダメ+30%」は、モッチーの被ダメUP・サイコロックオンと同じ足し算の枠へ入れる
-    let finalDmg=Math.floor(attackerAtk*distMult*baseDmgMult*(Number(skillDmgMult)>0?Number(skillDmgMult):1)*totalBuffMult*(1.0+getWaveBuff('enemyTakenDmgBonus')+fateWheelEnemyTakenBonus(fateWheelRef.current)+dreamPainTakenBonus(dreamPainRef.current)+tacticsExPsychoLockNow().enemyTakenBonus+additionalDmgMod));
+    let finalDmg=Math.floor(attackerAtk*distMult*baseDmgMult*(Number(skillDmgMult)>0?Number(skillDmgMult):1)*totalBuffMult*(1.0+getWaveBuff('enemyTakenDmgBonus')+fateWheelEnemyTakenBonus(fateWheelRef.current)+tacticsExPsychoLockNow().enemyTakenBonus+additionalDmgMod+dreamPainTakenBonus(dreamPainRef.current)));
     if (isSecondOrLaterAtk) finalDmg=Math.floor(finalDmg*0.5);
     const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
     const elapsedTotalTurns=totalTurnCount+Math.max(0,turnCount-1);
@@ -61428,7 +61426,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit')||tacticsCritFixedNow(slotIdx,card), rollCrit:()=>false,
       globalComboRate:getPermaBuff('globalComboDmgPct')+additionalGlobalCombo, mainCanCrit:card.subType!=='stun_atsu',
       comboFinalMultiplier:soulAttack.comboFinalMultiplier, swordSkill:tacticsExStyleAt(slotIdx)!=='shield',
-      hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1, exCombos:withExtraCombos(withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx,halved,card),getPermaBuff('fateStacks',null),slotIdx),blackNoteEffectAt(slotIdx,mon?.id).combo),kusabiCombosAt(slotIdx,mon?.id,card)), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
+      hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1, exCombos:withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx,halved,card),getPermaBuff('fateStacks',null),slotIdx),blackNoteEffectAt(slotIdx,mon?.id).combo,kusabiCombosAt(slotIdx,mon?.id,card)), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
     // 贖罪の追撃も「追撃」なので、連撃強化の最終倍率を同じく適用する。
     return hits.reduce((sum,hit)=>sum+hit.dmg,0)+attackAtonementDmg(card, hits[0].dmg, soulAttack.comboFinalMultiplier);
   }, [mainHero, turnBuffs, permaBuffs, enemyIntent]);
@@ -62811,7 +62809,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 魂格の闘魂/距離補正はgetDmg、会心眼/会心極/連撃強化はここで本人分だけ適用する。
           const stunHits=buildAttackHits({ d, card, attackerId:stunMon?.id, heroId:mainHero?.id, traitOwnerId:traitOwnerOf(stunMon), comboDmgBonus:getPermaBuff('comboDmgPct'), critDmgBonus:getPermaBuff('critDmgPct')+soulAttack.critDamageBonus, kenshiExtraCombos:getPermaBuff('kenshiExtraCombo'),
             guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit')||tacticsCritFixedNow(slotIdx,card), rollCrit:()=>Math.random()<Math.min(1,(card.crit||0.1)+getPermaBuff('critRatePct')+soulAttack.critRateBonus),
-            globalComboRate:getPermaBuff('globalComboDmgPct')+localGlobalComboAdd, mainCanCrit:false, comboFinalMultiplier:soulAttack.comboFinalMultiplier, exCombos:withExtraCombos(withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx,true),livePermaBuff('fateStacks',null),slotIdx),blackNoteEffectAt(slotIdx,stunMon?.id).combo),kusabiCombosAt(slotIdx,stunMon?.id,card)), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
+            globalComboRate:getPermaBuff('globalComboDmgPct')+localGlobalComboAdd, mainCanCrit:false, comboFinalMultiplier:soulAttack.comboFinalMultiplier, exCombos:withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx,true),livePermaBuff('fateStacks',null),slotIdx),blackNoteEffectAt(slotIdx,stunMon?.id).combo,kusabiCombosAt(slotIdx,stunMon?.id,card)), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
           totalDmg+=d; attackCount++; attackHits.push({dmg:d, isCrit:false, slotIdx});
           if(d>0) gainKusabi(slotIdx,stunMon?.id); // ★楔(影潜): あつの挑発も本人の攻撃なので数える
           fireTacticsExCross(slotIdx);
@@ -62960,7 +62958,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit')||tacticsCritFixedNow(slotIdx,card), rollCrit:()=>Math.random()<Math.min(1,((card.crit||0.1)+critRateBonus+(tacticsExMultiBuffNow(slotIdx).critAdd||0)+blackNoteEffectAt(slotIdx,activeMon?.id).critAdd)*tacticsExMultiBuffNow(slotIdx).critRate),
           globalComboRate:getPermaBuff('globalComboDmgPct')+localGlobalComboAdd, comboFinalMultiplier:soulAttack.comboFinalMultiplier,
           swordSkill:tacticsExStyleAt(slotIdx)!=='shield',
-          hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1, exCombos:withExtraCombos(withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx,halved,card),livePermaBuff('fateStacks',null),slotIdx),blackNoteEffectAt(slotIdx,activeMon?.id).combo),kusabiCombosAt(slotIdx,activeMon?.id,card)), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
+          hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1, exCombos:withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx,halved,card),livePermaBuff('fateStacks',null),slotIdx),blackNoteEffectAt(slotIdx,activeMon?.id).combo,kusabiCombosAt(slotIdx,activeMon?.id,card)), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
         const isCrit=hits[0].crit; const finalD=hits[0].dmg; if(isCrit) hasCrit=true; totalDmg+=finalD;
         if(aquaStackFromCard(slotIdx,card)==='finale'){ immediateStun=true; setImmediateTurnBuff('stunEnemy',true); } // ★アクアフィールドの水牢・氷結(ウンディーネ種の攻撃カード)
         // ★ハムのカウンター(狙われたハムが攻撃したら、攻撃のタイミングで名前を出す)。クロスは文字と揺れ、フル・リベンジはカットインを待つ(タップで飛ばせる)
@@ -64092,7 +64090,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // バトルの記録もWAVEの区切りを入れる。ランの1WAVE目では前のランのぶんを消す
     if (w === 1) { setBattleLog([]); battleLogSeqRef.current = 0; }
     pushBattleLog(isRaidJackMode(runMode)?`── ${battleModeInfo(runMode).short}：${newEnemy.name} ──`:`── WAVE ${w}：${newEnemy.name} ──`, 'turn');
-    setTurnCount(1); setSelectedCards([]); setDiscardCards([]); setLastActionSlot(null); setCardAssignments({}); setPendingCard(null); setCurrentWaveDamage(0); setWaveDistDamage([0,0,0,0]); setWaveBuffs({}); resetFateWheel(); resetEnemyConfuse(); resetKusabi(); resetDreamPain(); // WAVE毎リセットのバフ・デバフ(waveEnemyAtkDebuff/chuuniDmgCutUses/enemyTakenDmgBonus等)を全てクリア
+    setTurnCount(1); setSelectedCards([]); setDiscardCards([]); setLastActionSlot(null); setCardAssignments({}); setPendingCard(null); setCurrentWaveDamage(0); setWaveDistDamage([0,0,0,0]); resetKusabi(); resetDreamPain(); setWaveBuffs({}); resetFateWheel(); resetEnemyConfuse(); // WAVE毎リセットのバフ・デバフ(waveEnemyAtkDebuff/chuuniDmgCutUses/enemyTakenDmgBonus等)を全てクリア
     return dist;
   }, [getNextEnemyAction, difficulty, extremeDifficulty, totalTurnCount, highestWaves, quickHighestWaves, proHighestWaves, tacticsRecords, runMode]);
   // 勇者特性「トリックスタート」(ゴースト・スプーキー)の抽選。WAVEの1ターン目と、そこから3ターンごと。

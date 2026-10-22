@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3bec682b5948c227
+// source-sha256: f6a08eec275d123d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-22 21:17";
+const BUILD_DATE = "2026-10-22 21:36";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -18247,9 +18247,10 @@ const blackNoteEffectOf = n => {
     } : null
   };
 };
-const withBlackNoteCombo = (exCombos, combo) => {
-  if (!combo) return exCombos;
-  return [...(Array.isArray(exCombos) ? exCombos : [exCombos]).filter(Boolean), combo];
+const withBlackNoteCombo = (exCombos, combo, extra = null) => {
+  const add = [combo, ...(Array.isArray(extra) ? extra : [extra])].filter(Boolean);
+  if (!add.length) return exCombos;
+  return [...(Array.isArray(exCombos) ? exCombos : [exCombos]).filter(Boolean), ...add];
 };
 const KUSABI_TRAIT_MONSTER_IDS = Object.freeze(['Illumine', 'Dreamy']);
 const KUSABI_MAX = 6;
@@ -18313,11 +18314,6 @@ const tickDreamPain = v => {
 const dreamPainTakenBonus = v => {
   const d = dreamPainOf(v);
   return d.wait === 0 && d.turns > 0 ? d.bonus : 0;
-};
-const withExtraCombos = (exCombos, extra) => {
-  const add = (Array.isArray(extra) ? extra : [extra]).filter(Boolean);
-  if (!add.length) return exCombos;
-  return [...(Array.isArray(exCombos) ? exCombos : [exCombos]).filter(Boolean), ...add];
 };
 const kusabiEffectText = n => {
   const c = kusabiCountOf(n);
@@ -65011,6 +65007,29 @@ const BATTLE_CARD_NAME_BREAKS = Object.freeze({
   'ライジングブースト': 'ライジング|ブースト',
   'スウィートパレード': 'スウィート|パレード',
   'マリーランドアーチ': 'マリーランド|アーチ',
+  'ヴェノムエッジ': 'ヴェノム|エッジ',
+  'シールドバッシュ': 'シールド|バッシュ',
+  'モーニングスター': 'モーニング|スター',
+  'アサシンクロウ': 'アサシン|クロウ',
+  'アサルトアロー': 'アサルト|アロー',
+  'ブレードダンス': 'ブレード|ダンス',
+  'バスターソード': 'バスター|ソード',
+  'ドールバッシュ': 'ドール|バッシュ',
+  'キャットクロウ': 'キャット|クロウ',
+  'ドリームダンス': 'ドリーム|ダンス',
+  'パステルソード': 'パステル|ソード',
+  'エーテルアイス': 'エーテル|アイス',
+  'アルカナフレア': 'アルカナ|フレア',
+  'アルスマグナ': 'アルス|マグナ',
+  'ミラージュクロウ': 'ミラージュ|クロウ',
+  'クリムゾンノヴァ': 'クリムゾン|ノヴァ',
+  'ムーンライトヴェール': 'ムーンライト|ヴェール',
+  'ルミナスオーロラ': 'ルミナス|オーロラ',
+  'レクイエムエンド': 'レクイエム|エンド',
+  'ララバイノクターン': 'ララバイ|ノクターン',
+  'スウィートドリーム': 'スウィート|ドリーム',
+  'ドリーミィパレード': 'ドリーミィ|パレード',
+  'おもちゃの爆弾': 'おもちゃの|爆弾',
   '巨大雪だるま転がし': '巨大雪だるま|転がし',
   '熾天の剣よ降り立て': '熾天の剣よ|降り立て',
   '天の慈悲を示されよ': '天の慈悲を|示されよ',
@@ -94988,7 +95007,7 @@ function MonsterHeroGame() {
     const soulAttack = soulTraitAttackProfile(mon?.masuId ? getMasuMon(mon.masuId) : null, card, slotIdx);
     const totalBuffMult = traitMult * cookieEffectNow().dmgMult * blackNoteEffectAt(slotIdx, mon?.id).dmgMult * bowAtkMultAt(slotIdx) * tacticsExMultiBuffNow(slotIdx).dmg * (card.type === 'unique' ? tacticsExPandoraDevilNow(slotIdx, false).dmg : 1) * getTurnBuff('atkMult', 1.0) * tacticsSlotAtkMult(slotIdx) * (1.0 + getPermaBuff('atkPct') + getPermaBuff('muaAtkPct') + additionalOryo) * distBonusMult * soulAttack.damageMultiplier;
     const attackerAtk = (isTacticsMode(runMode) && tacticsUnitsRef.current[slotIdx] ? Math.max(0, normalizeTacticsUnit(tacticsBattleUnit(slotIdx)).atk) : atk) * trickStartAtkMult(trickStartStacksAt(slotIdx)) * fateAtkMult(livePermaBuff('fateStacks', null), slotIdx);
-    let finalDmg = Math.floor(attackerAtk * distMult * baseDmgMult * (Number(skillDmgMult) > 0 ? Number(skillDmgMult) : 1) * totalBuffMult * (1.0 + getWaveBuff('enemyTakenDmgBonus') + fateWheelEnemyTakenBonus(fateWheelRef.current) + dreamPainTakenBonus(dreamPainRef.current) + tacticsExPsychoLockNow().enemyTakenBonus + additionalDmgMod));
+    let finalDmg = Math.floor(attackerAtk * distMult * baseDmgMult * (Number(skillDmgMult) > 0 ? Number(skillDmgMult) : 1) * totalBuffMult * (1.0 + getWaveBuff('enemyTakenDmgBonus') + fateWheelEnemyTakenBonus(fateWheelRef.current) + tacticsExPsychoLockNow().enemyTakenBonus + additionalDmgMod + dreamPainTakenBonus(dreamPainRef.current)));
     if (isSecondOrLaterAtk) finalDmg = Math.floor(finalDmg * 0.5);
     const specialRuleDifficulty = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
     const elapsedTotalTurns = totalTurnCount + Math.max(0, turnCount - 1);
@@ -95020,7 +95039,7 @@ function MonsterHeroGame() {
       comboFinalMultiplier: soulAttack.comboFinalMultiplier,
       swordSkill: tacticsExStyleAt(slotIdx) !== 'shield',
       hitRepeat: tacticsExStyleAt(slotIdx) === 'dual' ? TACTICS_EX_DUAL_HIT_REPEAT : 1,
-      exCombos: withExtraCombos(withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx, halved, card), getPermaBuff('fateStacks', null), slotIdx), blackNoteEffectAt(slotIdx, mon?.id).combo), kusabiCombosAt(slotIdx, mon?.id, card)),
+      exCombos: withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx, halved, card), getPermaBuff('fateStacks', null), slotIdx), blackNoteEffectAt(slotIdx, mon?.id).combo, kusabiCombosAt(slotIdx, mon?.id, card)),
       critDmgMult: tacticsExMultiBuffNow(slotIdx).critDmg
     });
     return hits.reduce((sum, hit) => sum + hit.dmg, 0) + attackAtonementDmg(card, hits[0].dmg, soulAttack.comboFinalMultiplier);
@@ -96628,7 +96647,7 @@ function MonsterHeroGame() {
             globalComboRate: getPermaBuff('globalComboDmgPct') + localGlobalComboAdd,
             mainCanCrit: false,
             comboFinalMultiplier: soulAttack.comboFinalMultiplier,
-            exCombos: withExtraCombos(withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx, true), livePermaBuff('fateStacks', null), slotIdx), blackNoteEffectAt(slotIdx, stunMon?.id).combo), kusabiCombosAt(slotIdx, stunMon?.id, card)),
+            exCombos: withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx, true), livePermaBuff('fateStacks', null), slotIdx), blackNoteEffectAt(slotIdx, stunMon?.id).combo, kusabiCombosAt(slotIdx, stunMon?.id, card)),
             critDmgMult: tacticsExMultiBuffNow(slotIdx).critDmg
           });
           totalDmg += d;
@@ -96846,7 +96865,7 @@ function MonsterHeroGame() {
           comboFinalMultiplier: soulAttack.comboFinalMultiplier,
           swordSkill: tacticsExStyleAt(slotIdx) !== 'shield',
           hitRepeat: tacticsExStyleAt(slotIdx) === 'dual' ? TACTICS_EX_DUAL_HIT_REPEAT : 1,
-          exCombos: withExtraCombos(withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx, halved, card), livePermaBuff('fateStacks', null), slotIdx), blackNoteEffectAt(slotIdx, activeMon?.id).combo), kusabiCombosAt(slotIdx, activeMon?.id, card)),
+          exCombos: withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx, halved, card), livePermaBuff('fateStacks', null), slotIdx), blackNoteEffectAt(slotIdx, activeMon?.id).combo, kusabiCombosAt(slotIdx, activeMon?.id, card)),
           critDmgMult: tacticsExMultiBuffNow(slotIdx).critDmg
         });
         const isCrit = hits[0].crit;
@@ -98172,11 +98191,11 @@ function MonsterHeroGame() {
     setPendingCard(null);
     setCurrentWaveDamage(0);
     setWaveDistDamage([0, 0, 0, 0]);
+    resetKusabi();
+    resetDreamPain();
     setWaveBuffs({});
     resetFateWheel();
     resetEnemyConfuse();
-    resetKusabi();
-    resetDreamPain();
     return dist;
   }, [getNextEnemyAction, difficulty, extremeDifficulty, totalTurnCount, highestWaves, quickHighestWaves, proHighestWaves, tacticsRecords, runMode]);
   useEffect(() => {

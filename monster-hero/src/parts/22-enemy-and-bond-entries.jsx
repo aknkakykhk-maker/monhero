@@ -541,10 +541,12 @@ const blackNoteEffectOf = (n) => {
   return { dmgMult: 1 + BLACK_NOTE_DMG_PER * c, critAdd: c >= BLACK_NOTE_CRIT_FROM ? BLACK_NOTE_CRIT_ADD : 0,
     combo: c >= BLACK_NOTE_COMBO_FROM ? { count: 1, rate: BLACK_NOTE_COMBO_RATE, label: '黒音符の連撃' } : null };
 };
-// buildAttackHits へ渡す exCombos へ、黒音符の連撃を足す(withFateCombo と同じ形)
-const withBlackNoteCombo = (exCombos, combo) => {
-  if (!combo) return exCombos;
-  return [...(Array.isArray(exCombos) ? exCombos : [exCombos]).filter(Boolean), combo];
+// buildAttackHits へ渡す exCombos へ、黒音符の連撃を足す(withFateCombo と同じ形)。
+// extra … ほかに足す連撃(2026-10-22 イルミネ・ドリーミィの楔の連撃・セレーネチェイサー。null は足さない)
+const withBlackNoteCombo = (exCombos, combo, extra = null) => {
+  const add = [combo, ...(Array.isArray(extra) ? extra : [extra])].filter(Boolean);
+  if (!add.length) return exCombos;
+  return [...(Array.isArray(exCombos) ? exCombos : [exCombos]).filter(Boolean), ...add];
 };
 // ==== 勇者特性「影潜」(イルミネ・ドリーミィ)と、楔の数で強くなる2体の固有技。2026-10-22 社長の決定 ====
 // 楔(くさび) … 持ち主本人の攻撃が当たるたびに、相手へ1つ付ける(上限6)。楔は敵に付くので、WAVEが変わる(敵が替わる)と0。
@@ -582,12 +584,6 @@ const startDreamPain = (n) => ({ wait: 1, turns: DREAM_PAIN_TURNS, bonus: dreamP
 const tickDreamPain = (v) => { const d = dreamPainOf(v); if (d.wait > 0) return { ...d, wait: d.wait - 1 };
   return d.turns > 1 ? { ...d, turns: d.turns - 1 } : { wait: 0, turns: 0, bonus: 0 }; };
 const dreamPainTakenBonus = (v) => { const d = dreamPainOf(v); return d.wait === 0 && d.turns > 0 ? d.bonus : 0; };
-// exCombos(配列か1つ)へ連撃を足す(withBlackNoteCombo と同じ形。null は足さない)
-const withExtraCombos = (exCombos, extra) => {
-  const add = (Array.isArray(extra) ? extra : [extra]).filter(Boolean);
-  if (!add.length) return exCombos;
-  return [...(Array.isArray(exCombos) ? exCombos : [exCombos]).filter(Boolean), ...add];
-};
 // 楔の効き目の短い文(バフの札)
 const kusabiEffectText = (n) => { const c = kusabiCountOf(n);
   return c > 0 ? `楔${c}/${KUSABI_MAX} 連撃15%×${c}・回避+${kusabiEvasionOf(c)}%` : ''; };

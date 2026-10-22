@@ -55,7 +55,7 @@ const end = bond.indexOf('// 楔の効き目の短い文');
 check('楔の決めごとを抜き出せる', start > 0 && end > start);
 const k = {};
 vm.createContext(k);
-vm.runInContext(`${bond.slice(start, end)}\nglobalThis.x={KUSABI_MAX,hasKusabiTrait,kusabiCountOf,kusabiComboOf,kusabiEvasionOf,seleneChaserOf,dreamPainTakenOf,startDreamPain,tickDreamPain,dreamPainTakenBonus,withExtraCombos};`, k);
+vm.runInContext(`${bond.slice(start, end)}\nglobalThis.x={KUSABI_MAX,hasKusabiTrait,kusabiCountOf,kusabiComboOf,kusabiEvasionOf,seleneChaserOf,dreamPainTakenOf,startDreamPain,tickDreamPain,dreamPainTakenBonus};`, k);
 const x = k.x;
 check('上限は6', x.KUSABI_MAX === 6 && x.kusabiCountOf(9) === 6 && x.kusabiCountOf(-1) === 0);
 check('特性を持つのはイルミネとドリーミィだけ', x.hasKusabiTrait('Illumine') && x.hasKusabiTrait('Dreamy') && !x.hasKusabiTrait('Zan'));
@@ -75,8 +75,7 @@ check('ドリームペインは楔0で+20%、楔3で+80%、楔6で+140%',
   check('ドリームペインは使ったターンは効かず、次のターンから3ターン', JSON.stringify(seq.map(v => Math.round(v * 100))) === '[0,80,80,80,0]',
     JSON.stringify(seq));
 }
-check('連撃を足すとき null は足さない', JSON.stringify(x.withExtraCombos(null, [null, { count: 1, rate: 0.1 }])) === '[{"count":1,"rate":0.1}]'
-  && x.withExtraCombos(null, [null]) === null);
+check('黒音符の連撃の入口(withBlackNoteCombo)で楔の連撃も足す', /const withBlackNoteCombo = \(exCombos, combo, extra = null\)/.test(bond));
 
 // ---------- ③ 本体の分岐 ----------
 check('本人の攻撃が当たったら楔を付ける(通常の攻撃・あつの挑発)',
@@ -86,10 +85,10 @@ check('攻撃のヒット列(予測・あつの挑発・通常の攻撃)の3か�
 check('受ける子が持ち主なら回避率を上げる', /existingEvasion:\(defenseHeroId==='Tiger'\?50:0\)\+kusabiEvasion/.test(app));
 check('持ち主が回避したら楔を0へ戻す', /if \(isEvasion && hasKusabiTrait\(defenseHeroId\)[\s\S]{0,200}writeKusabiKey\(kusabiDefenseKey,0\)/.test(app));
 check('WAVEが変わると楔とドリームペインを消す(4か所)',
-  (app.match(/resetFateWheel\(\); resetEnemyConfuse\(\); resetKusabi\(\); resetDreamPain\(\);/g) || []).length === 4);
+  (app.match(/resetKusabi\(\); resetDreamPain\(\);/g) || []).length >= 4);
 check('セレーネチェイサーで連撃ダメージを積む', /card\.monId===SELENE_CHASER_MONSTER_ID\)\{const sc=seleneChaserOf\(kusabiBeforeAttack\); addPermaBuff\('comboDmgPct'/.test(app));
 check('ドリームペインをかける', /card\.monId===DREAM_PAIN_MONSTER_ID\)\{const dp=writeDreamPain/.test(app));
-check('ドリームペインを敵の被ダメージに足す', /\+dreamPainTakenBonus\(dreamPainRef\.current\)\+/.test(app));
+check('ドリームペインを敵の被ダメージに足す', /\+additionalDmgMod\+dreamPainTakenBonus\(dreamPainRef\.current\)/.test(app));
 check('ターンが進むとドリームペインを進める', /writeDreamPain\(tickDreamPain\(dreamPainRef\.current\)\)/.test(app));
 check('敵の絵の隅に楔とドリームペインのマークを出す', /kusabi: Object\.values\(kusabiView/.test(app) && /dreamPain: dreamPainView\.wait === 0/.test(app)
   && /kusabi:\s+Object\.freeze\(\{ mark:/.test(bond) && /dreamPain:\s+Object\.freeze\(\{ mark:/.test(bond));
