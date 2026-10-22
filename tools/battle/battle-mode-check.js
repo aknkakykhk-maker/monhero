@@ -650,7 +650,7 @@ check('プロの勇者モン選択はベースモンだけ',
     && has("const savedRawList=pickMode==='hero'&&(heroPickTab==='base'||isProMode(runMode))?getUnlockedBaseMonsterList():monSelection;")
     && has('{!isProMode(runMode)&&<div className="flex gap-1.5">'));
 check('プロの勇者モン選択に編成タブを出さない',
-  has("isProMode(runMode)?'プロモードはベースモンだけで挑みます。育てたマスモンは連れていけません'"));
+  has("isProMode(runMode)?'プロモードはベースモンだけ(育てたマスモンは連れていけません)'"));
 // 供モンの候補は「始める前に選んだ5体」からしか出さない
 check('ラン中の加入候補はモードで切り替える',
   has('if (!isProMode(runMode)) return getActiveMonsterList();')

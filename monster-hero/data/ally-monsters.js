@@ -114,6 +114,23 @@ const ALL_PLAYER_MONSTERS = {
   // 固有技の倍率はコイン・輪の上乗せを入れて決めた(ゴースト2.0倍・スプーキー2.4倍。消費は倍率×20)
   Ghost:     { id:'Ghost', name:"ゴースト", emoji:"👻", imgUrl:GHOST_IMG, iconUrl:GHOST_ICON, faceIconUrl:GHOST_FACE_ICON, atkMotion:'default', trait:"トリックスタート", traitDesc:"勇者モン選択時：WAVEの1ターン目から3ターン毎に、ちから+20%・丈夫さ+20%・毎ターンライフ5%回復をそれぞれ50%で付与(重複あり・そのWAVEのあいだ)。攻撃が当たると、その技の消費ガッツの半分を回復", baseHp:450, baseGuts:150, baseAtk:130, baseDef:50, plusStats:{hp:150,atk:35,def:10,guts:45}, distAptitude:['C','C','A','C'], unique:{name:"連続カード",icon:GHOST_ICON,monId:"Ghost",baseMult:2.0,baseGuts:40,evoLevel:0,names:["連続カード","ドクロビーム","大きなおとしもの","びっくりドクロ","スリーセブン","Woフォーチュン","RSF","運命のコイン","グランドイリュージョン"],effectDesc:"運命のコイン：コインを投げ、表ならダメージ4倍＆この子の連撃+10%、裏ならダメージ0.5倍＆固有技の消費ガッツ+20%(連撃と消費ガッツの増減はバトル中ずっと残り、重なる)"}},
   Spooky:    { id:'Spooky', name:"スプーキー", emoji:"🎃", imgUrl:SPOOKY_IMG, iconUrl:SPOOKY_ICON, faceIconUrl:SPOOKY_FACE_ICON, atkMotion:'default', trait:"トリックスタート", traitDesc:"勇者モン選択時：WAVEの1ターン目から3ターン毎に、ちから+20%・丈夫さ+20%・毎ターンライフ5%回復をそれぞれ50%で付与(重複あり・そのWAVEのあいだ)。攻撃が当たると、その技の消費ガッツの半分を回復", baseHp:510, baseGuts:160, baseAtk:150, baseDef:55, plusStats:{hp:160,atk:40,def:5,guts:50}, distAptitude:['B','D','B','A'], unique:{name:"連続カード",icon:SPOOKY_ICON,monId:"Spooky",baseMult:2.4,baseGuts:48,evoLevel:0,names:["連続カード","ドクロビーム","大きなおとしもの","びっくりドクロ","スリーセブン","Woフォーチュン","RSF","運命のコイン","グランドイリュージョン"],effectDesc:"運命の輪：当てると6つから1つがランダムで出る。敵の与ダメージ−30%(2ターン)／敵の被ダメージ+30%(2ターン)／ダメージ3倍／ダメージ2倍／この子の連撃+10%(バトル中ずっと・重なる)／この子のちから+15%(バトル中ずっと・重なる)"}},
+  // イルミネ種(2026-10-23 正式実装・きゅうこの加入のお話と同時)。名前と血統は社長指定(イルミネ×イルミネ / イルミネ×ニャー)。
+  // 能力値・供モン加算・間合い・勇者特性・固有技は 2026-10-22 の社長の決定(能力値はザンをもとに)。
+  // 勇者特性「影潜」の楔(くさび)と、固有技の楔の数で強くなる効果は 60-app.jsx の ILLUMINE_KUSABI_* が作る
+  Illumine: { id:'Illumine', name:"イルミネ", emoji:"🌌", imgUrl:ILLUMINE_IMG, iconUrl:ILLUMINE_ICON,
+    faceIconUrl:ILLUMINE_FACE_ICON, atkMotion:'default',
+    trait:"影潜", traitDesc:"勇者モン選択時：攻撃するたびに相手に楔を1つ付ける(最大6)。楔1つごとに、与ダメージ15%の連撃が1回出て、回避率+15%。自分が回避すると楔は0に戻る",
+    baseHp:330, baseGuts:120, baseAtk:130, baseDef:50, plusStats:{hp:110,atk:40,def:10,guts:40}, distAptitude:['B','C','A','E'],
+    unique:{ name:"エーテルアイス", icon:ILLUMINE_ICON, monId:"Illumine", baseMult:2.3, baseGuts:46, evoLevel:0,
+      names:["エーテルアイス","アルカナフレア","アルスマグナ","ノクターン","ミラージュクロウ","クリムゾンノヴァ","ムーンライトヴェール","ルミナスオーロラ","レクイエムエンド"],
+      effectDesc:"セレーネチェイサー：与ダメ5%の連撃＆連撃ダメージ+1%(永続/重複可/次のターンから)。どちらも(楔の数+1)倍" } },
+  Dreamy: { id:'Dreamy', name:"ドリーミィ", emoji:"🧸", imgUrl:DREAMY_IMG, iconUrl:DREAMY_ICON,
+    faceIconUrl:DREAMY_FACE_ICON, atkMotion:'default',
+    trait:"影潜", traitDesc:"勇者モン選択時：攻撃するたびに相手に楔を1つ付ける(最大6)。楔1つごとに、与ダメージ15%の連撃が1回出て、回避率+15%。自分が回避すると楔は0に戻る",
+    baseHp:360, baseGuts:130, baseAtk:115, baseDef:60, plusStats:{hp:120,atk:35,def:15,guts:40}, distAptitude:['B','D','D','A'],
+    unique:{ name:"おもちゃの爆弾", icon:DREAMY_ICON, monId:"Dreamy", baseMult:2.6, baseGuts:52, evoLevel:0,
+      names:["おもちゃの爆弾","エーテルアイス","アルカナフレア","アルスマグナ","ララバイノクターン","ミラージュクロウ","クリムゾンノヴァ","スウィートドリーム","ドリーミィパレード"],
+      effectDesc:"ドリームペイン：次のターンから3ターン、敵の被ダメージ+20%。楔1つごとにさらに+20%(楔3つで+80%・6つで+140%)" } },
 };
 
 // 初期から無料で使えるモンスターのid一覧(固定)。
@@ -129,25 +146,8 @@ const STARTER_MONSTER_IDS = ['Mocchi','Suezo','Golem','Tiger','Ham','Pixie','Mon
 // 決まっていない項目(能力値・技・勇者特性・攻撃モーション)は書かない。画面で「未設定」と赤く出るので、
 // 何が足りないかがそのまま一覧になる。正式に実装したら ALL_PLAYER_MONSTERS へ移し、ここからは消す。
 //   draftLineage … 血統の案。本体の MONSTER_LINEAGE_MAP へ足すのは正式実装のとき(lineage-dex-check.js の決まり)
-// ユグドラシルとメルホイップは 2026-09-29、ゴーストとスプーキーは 2026-10-05、メロディーとクロミーは 2026-10-08 に正式実装したので ALL_PLAYER_MONSTERS へ移した。
+// ユグドラシルとメルホイップは 2026-09-29、ゴーストとスプーキーは 2026-10-05、メロディーとクロミーは 2026-10-08、イルミネとドリーミィは 2026-10-23 に正式実装したので ALL_PLAYER_MONSTERS へ移した。
 //   draftUniqueNames … 固有技の9段階名(正式実装のとき unique.names へ移す)
 const UPCOMING_MONSTER_DRAFTS = Object.freeze({
-  // イルミネ・ドリーミィ(2026-10-22・案の段階)。名前と血統は社長指定(イルミネ×イルミネ / イルミネ×ニャー)。
-  // 能力値・供モン加算・間合い・勇者特性・固有技は 2026-10-22 の社長の決定(能力値はザンをもとに)。
-  // 公開はきゅうこの解放のお話と同時(社長)。それまでは案の子のまま。公開のときに ALL_PLAYER_MONSTERS へそのまま移す。
-  // 勇者特性「影潜」の楔(くさび)と、固有技の楔の数で強くなる効果は 60-app.jsx の ILLUMINE_KUSABI_* が作る
-  Illumine: Object.freeze({ id:'Illumine', name:"イルミネ", emoji:"🌌", imgUrl:ILLUMINE_IMG, iconUrl:ILLUMINE_ICON,
-    faceIconUrl:ILLUMINE_FACE_ICON, atkMotion:'default', draft:true, draftLineage:Object.freeze({ main:'illumine', sub:'illumine' }),
-    trait:"影潜", traitDesc:"勇者モン選択時：攻撃するたびに相手に楔を1つ付ける(最大6)。楔1つごとに、与ダメージ15%の連撃が1回出て、回避率+15%。自分が回避すると楔は0に戻る",
-    baseHp:330, baseGuts:120, baseAtk:130, baseDef:50, plusStats:{hp:110,atk:40,def:10,guts:40}, distAptitude:['B','C','A','E'],
-    unique:{ name:"エーテルアイス", icon:ILLUMINE_ICON, monId:"Illumine", baseMult:2.3, baseGuts:46, evoLevel:0,
-      names:["エーテルアイス","アルカナフレア","アルスマグナ","ノクターン","ミラージュクロウ","クリムゾンノヴァ","ムーンライトヴェール","ルミナスオーロラ","レクイエムエンド"],
-      effectDesc:"セレーネチェイサー：与ダメ5%の連撃＆連撃ダメージ+1%(永続/重複可/次のターンから)。どちらも(楔の数+1)倍" } }),
-  Dreamy: Object.freeze({ id:'Dreamy', name:"ドリーミィ", emoji:"🧸", imgUrl:DREAMY_IMG, iconUrl:DREAMY_ICON,
-    faceIconUrl:DREAMY_FACE_ICON, atkMotion:'default', draft:true, draftLineage:Object.freeze({ main:'illumine', sub:'nya' }),
-    trait:"影潜", traitDesc:"勇者モン選択時：攻撃するたびに相手に楔を1つ付ける(最大6)。楔1つごとに、与ダメージ15%の連撃が1回出て、回避率+15%。自分が回避すると楔は0に戻る",
-    baseHp:360, baseGuts:130, baseAtk:115, baseDef:60, plusStats:{hp:120,atk:35,def:15,guts:40}, distAptitude:['B','D','D','A'],
-    unique:{ name:"おもちゃの爆弾", icon:DREAMY_ICON, monId:"Dreamy", baseMult:2.6, baseGuts:52, evoLevel:0,
-      names:["おもちゃの爆弾","エーテルアイス","アルカナフレア","アルスマグナ","ララバイノクターン","ミラージュクロウ","クリムゾンノヴァ","スウィートドリーム","ドリーミィパレード"],
-      effectDesc:"ドリームペイン：次のターンから3ターン、敵の被ダメージ+20%。楔1つごとにさらに+20%(楔3つで+80%・6つで+140%)" } }),
+
 });

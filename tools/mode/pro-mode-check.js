@@ -105,7 +105,7 @@ const check = (name, ok, detail = '') => {
     check('プロの勇者モン選択に編成タブを出さない',
       await page.getByRole('button', { name: '編成' }).count() === 0);
     check('プロはベースモンだけで挑むと書いてある',
-      await page.getByText('プロモードはベースモンだけで挑みます').count() === 1);
+      await page.getByText('プロモードはベースモンだけ(育てたマスモンは連れていけません)').count() === 1);
     check('育てたマスモンは勇者モンの一覧に出ない',
       await page.getByText('プロ検査マスモン').count() === 0);
     // 2026-10-19 から、編成は「① 上に固定した6つの枠へ好きな順で入れる → ② 入れた子から勇者モンを選ぶ」(ProPartyPicker)。

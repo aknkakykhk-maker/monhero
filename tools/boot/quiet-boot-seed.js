@@ -35,8 +35,11 @@ const eventStoryIds = () => {
   // 検査を回す時刻によっては、どれかが開幕の会話のように画面を覆うので、全部「見た」ことにする(2026-10-04)
   const halloween = fs.readFileSync(path.resolve(__dirname, '..', '..', 'monster-hero/data/rhythm-event.js'), 'utf8')
     .match(/id: '(halloween_night_2026_part\d)'/g) || [];
+  // あつ・きゅうこの加入のお話の id は 17-release-changelog-login-missions.jsx にあるので、そちらも見る(2026-10-23 きゅうこの公開で、
+  // お話が起動直後に流れて「話せるようになった日」の検査が止まった)
+  const release = fs.readFileSync(path.resolve(__dirname, '..', '..', 'monster-hero/src/parts/17-release-changelog-login-missions.jsx'), 'utf8');
   const ids = names.split(',').map(s => s.trim()).filter(Boolean)
-    .flatMap(name => name.startsWith('...') ? halloween.map(h => h.slice(5, -1)) : [idOf(source, name)]).filter(Boolean);
+    .flatMap(name => name.startsWith('...') ? halloween.map(h => h.slice(5, -1)) : [idOf(source, name) || idOf(release, name)]).filter(Boolean);
   if (!ids.length) throw new Error('RHYTHM_EVENT_STORY_IDS を読めませんでした(本体の書き方が変わった可能性)');
   return ids;
 };
