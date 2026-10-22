@@ -5,6 +5,7 @@
 //
 //   node tools/mode/rhythm-same-place-report.js                   # 一覧を出すだけ
 //   node tools/mode/rhythm-same-place-report.js --out <フォルダ>   # README.md と hell.png・master.png(スマホ幅)も書く
+//   … --plan を足すと、直す案(rhythm-hell-sameplace-fix.js を書き込みなしで回した結果)の表と plan.png も書く
 //   node tools/mode/rhythm-same-place-report.js --song kiki_issen_hell_debug [--diff HELL]   # 1譜面の場所の一覧
 //
 // 譜面は変えない(数えるだけ)。型の決め方は rhythm-chart-hand-rules.js の samePlace の上の説明。
@@ -60,6 +61,20 @@ for(const r of hell)md.push(`| ${r.name} | ${r.notes} | ${r.skyPath} | ${r.stack
 md.push('',`## MASTER(${master.length}曲・地上だけなので「すぐ横」「同時隣」「真ん中」と帯の中)`,'',`合計: すぐ横 ${sum(master,'beside')} / 同時隣 ${sum(master,'chord')} / 真ん中 ${sum(master,'centerSwap')} / 帯の中 ${sum(master,'band')}`,'');
 md.push('| 曲 | ノーツ | すぐ横 | 同時隣 | 真ん中 | 帯の中(上限) | 計 | 千あたり |','| --- | --- | --- | --- | --- | --- | --- | --- |');
 for(const r of master)md.push(`| ${r.name} | ${r.notes} | ${r.beside} | ${r.chord} | ${r.centerSwap} | ${r.band}${r.cap!=null?`(${r.cap})`:''} | ${r.total} | ${r.per} |`);
+// --plan: 直す案(rhythm-hell-sameplace-fix.js を書き込みなしで回す)。空中が絡む2つの型(通り道・真上・真下)だけ・Lv. ごとの許す数まで
+const PLAN=args.includes('--plan')?(()=>{const F=require('./rhythm-hell-sameplace-fix.js');const {rows}=F.planAll();
+  const byId=Object.fromEntries(hell.map(r=>[r.id,r.name]));
+  return rows.map(r=>({...r,name:byId[r.id]||r.id,shift:F.howCount(r,'ずらす'),lower:F.howCount(r,'下ろす'),drop:F.howCount(r,'抜く')})).sort((a,b)=>b.before-a.before);})():null;
+if(PLAN){const S=k=>PLAN.reduce((a,r)=>a+r[k],0);
+  md.push('',`## 直す案(HELL・空中が絡む2つの型だけ・書き込みなしで試した結果)`,'');
+  md.push('社長「空中がないやつはそういうシビア差の譜面で良いけど空中入り交じるとまじで厳しいからなんでもかんでもそういうのいれないで。高難易度ならまだしも」。');
+  md.push('- 対象は空中の混ざる HELL の「通り道」「真上・真下」だけ。空中の無い譜面・地上どうしの型(すぐ横・同時隣・真ん中)は今のまま');
+  md.push('- 許す数(HELL の Lv.): 45未満 0 / 45〜54 2 / 55〜64 4 / 65以上 6。残すのは曲の盛り上がる区間(`RHYTHM_SONG_CLIMAX`)の中から');
+  md.push('- 直し方(1か所ずつ): ① 時刻と幅はそのまま、2レーンまで横へずらす ② 空中のタップは同じ位置のまま地上へ下ろす ③ どちらもできなければ抜く。モンスターのノーツは動かさない');
+  md.push('- どの手も、押せない所(横持ちの物差し)・帯の中・見分けにくい所・水平クロスが1つでも増えるなら使わない。`node tools/mode/rhythm-hell-sameplace-fix.js --all`',''); 
+  md.push(`合計: ${S('before')} → ${S('after')} / ずらす ${S('shift')} ・ 下ろす ${S('lower')} ・ 抜く ${S('drop')} / 測った Lv. が変わる曲 ${PLAN.filter(r=>r.lv0!==r.lv1).length}(${PLAN.filter(r=>r.lv0!==r.lv1).map(r=>`${r.name} ${r.lv0}→${r.lv1}`).join('・')})`,'');
+  md.push('| 曲 | Lv. | 許す | 前 | 後 | ずらす | 下ろす | 抜く | ノーツ | 測った Lv. |','| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |');
+  for(const r of PLAN)md.push(`| ${r.name} | ${r.level} | ${r.allow} | ${r.before} | ${r.after} | ${r.shift} | ${r.lower} | ${r.drop} | ${r.notes0}→${r.notes1} | ${r.lv0}→${r.lv1} |`);}
 md.push('');
 const text=md.join('\n');
 if(!OUT){console.log(text);process.exit(0);}
@@ -88,12 +103,15 @@ const hellPage=page('HELL: 指が同じ位置に来る形',
 const masterPage=page('MASTER: 指が同じ位置に来る形',
   `地上だけなので 横=地上の帯のすぐ横 / 同時=同時押しが隣り合う / 真中=真ん中で左右が同じ所 / 帯中=帯の中(かっこは前からある曲に許している上限)/ 計=横・同時・真中の合計(多い順)/ 千=ノーツ千あたり。合計 横${sum(master,'beside')}・同時${sum(master,'chord')}・真中${sum(master,'centerSwap')}・帯中${sum(master,'band')}`,
   ['横','同時','真中','帯中','計','千'],master.map((r,i)=>({name:r.name,hot:i<10,cells:[r.beside,r.chord,r.centerSwap,`${r.band}${r.cap!=null?`(${r.cap})`:''}`,r.total,r.per]})));
+const planPage=PLAN&&page('HELL: 直す案(空中が絡む2つの型)',
+  `前=通り道+真上・真下の件数 / 許=Lv.ごとの許す数(45未満0・45〜54は2・55〜64は4・65以上6)/ 後=直したあと / ずら=横へずらす(2レーンまで)/ 下ろ=空中タップを地上へ / 抜=抜く / Lv=測ったLv.の変化。押せない所・帯の中・見分けにくい所・水平クロスは増やさない。合計 ${PLAN.reduce((a,r)=>a+r.before,0)}→${PLAN.reduce((a,r)=>a+r.after,0)}`,
+  ['Lv.','前','許','後','ずら','下ろ','抜','Lv'],PLAN.map((r,i)=>({name:r.name,hot:i<10,cells:[r.level,r.before,r.allow,r.after,r.shift,r.lower,r.drop,r.lv0===r.lv1?'—':`${r.lv1-r.lv0>0?'+':''}${r.lv1-r.lv0}`]})));
 (async()=>{
-  fs.writeFileSync(path.join(OUT,'README.md'),`${text}\n![HELL](./hell.png)\n![MASTER](./master.png)\n`);
+  fs.writeFileSync(path.join(OUT,'README.md'),`${text}\n![HELL](./hell.png)\n![MASTER](./master.png)\n${PLAN?'![直す案](./plan.png)\n':''}`);
   let playwright;try{playwright=require('playwright');}catch{console.log('playwright が無いので PNG は作らない');return;}
   const browser=await playwright.chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
   try{const p=await browser.newPage({viewport:{width:390,height:400},deviceScaleFactor:2});const bad=[];let breaks=0;
-    for(const [file,html] of [['hell.png',hellPage],['master.png',masterPage]]){await p.setContent(html);
+    for(const [file,html] of [['hell.png',hellPage],['master.png',masterPage],...(planPage?[['plan.png',planPage]]:[])]){await p.setContent(html);
       // 曲名が言葉の途中で折れていないか(rhythm-level-v3-report.js と同じ確かめ方)
       const found=await p.evaluate(()=>[...document.querySelectorAll('td.s')].flatMap(td=>{const t=[];const w=document.createTreeWalker(td,NodeFilter.SHOW_TEXT);let n;
         while((n=w.nextNode()))for(let k=0;k<n.length;k++){const rg=document.createRange();rg.setStart(n,k);rg.setEnd(n,k+1);const rc=rg.getClientRects()[0];if(rc)t.push([n.data[k],rc.top]);}
