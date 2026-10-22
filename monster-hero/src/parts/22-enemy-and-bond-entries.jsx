@@ -438,6 +438,8 @@ const BATTLE_STACK_MARKS = Object.freeze({
   aquaPrison: Object.freeze({ mark:'💧', img:'', label:'水牢' }),              // 敵: ウンディーネ種のアクアフィールド
   aquaFreeze: Object.freeze({ mark:'❄️', img:'', label:'氷結' }),
   roar:       Object.freeze({ mark:'📢', img:'', label:'咆哮' }),              // 敵: 自分にかけた攻撃アップ
+  kusabi:     Object.freeze({ mark:'🔻', img:'', label:'楔' }),                // 敵: イルミネ・ドリーミィ(影潜)が付けた楔
+  dreamPain:  Object.freeze({ mark:'💤', img:'', label:'ドリームペイン', unit:'T' }), // 敵: ドリーミィの固有技(被ダメージ上昇の残りターン)
 });
 // ★モンスターごとの演出(2026-10-12 社長の決定「3体を入れて、残りも順に」。案の一覧は docs/proto/monster-visuals/README.md)。
 //   「マーク×数」の上乗せで、数字の代わりにはしない。置くのは枠の絵のまわりだけ。軽量表示・超省エネでは出さない。
@@ -544,6 +546,51 @@ const withBlackNoteCombo = (exCombos, combo) => {
   if (!combo) return exCombos;
   return [...(Array.isArray(exCombos) ? exCombos : [exCombos]).filter(Boolean), combo];
 };
+// ==== 勇者特性「影潜」(イルミネ・ドリーミィ)と、楔の数で強くなる2体の固有技。2026-10-22 社長の決定 ====
+// 楔(くさび) … 持ち主本人の攻撃が当たるたびに、相手へ1つ付ける(上限6)。楔は敵に付くので、WAVEが変わる(敵が替わる)と0。
+//   楔1つごとに: 持ち主本人の攻撃に与ダメージ15%の連撃が1回(楔3つなら15%×3回) / 持ち主の回避率+15%(6つで+90%)。
+//   持ち主が回避すると楔は0へ戻り、連撃と回避率アップも消える。
+//   既存5モードは勇者モンが持っているとき(キー 'party')、タクティクスは持っている子それぞれ(枠ごと)。持ち方は 60-app の kusabiRef
+// セレーネチェイサー(イルミネの固有技) … 与ダメ5%の連撃と、連撃ダメージ+1%(バトル中ずっと・重なる)。どちらも(楔の数+1)倍
+// ドリームペイン(ドリーミィの固有技) … 次のターンから3ターン、敵の被ダメージ+20%。楔1つごとにさらに+20%
+//   (楔3つで+80%・6つで+140%)。数は使ったときの楔で決まる。敵1体ぶんなのでWAVEが変わると消える
+const KUSABI_TRAIT_MONSTER_IDS = Object.freeze(['Illumine', 'Dreamy']);
+const KUSABI_MAX = 6;
+const KUSABI_COMBO_RATE = 0.15;
+const KUSABI_EVASION_PER = 15;   // 回避率(%)。回避の表(buildUnifiedSpecialDefense)は%で持つ
+const SELENE_CHASER_MONSTER_ID = 'Illumine';
+const SELENE_CHASER_COMBO_RATE = 0.05;
+const SELENE_CHASER_COMBO_DMG = 0.01;
+const DREAM_PAIN_MONSTER_ID = 'Dreamy';
+const DREAM_PAIN_TURNS = 3;
+const DREAM_PAIN_BASE = 0.2, DREAM_PAIN_PER = 0.2;
+const hasKusabiTrait = (id) => !!id && KUSABI_TRAIT_MONSTER_IDS.includes(id);
+const kusabiCountOf = (n) => Math.min(KUSABI_MAX, Math.max(0, Math.floor(Number(n) || 0)));
+// 楔の連撃(持ち主本人の攻撃だけ)。buildAttackHits の exCombos の形
+const kusabiComboOf = (n) => { const c = kusabiCountOf(n); return c > 0 ? { count: c, rate: KUSABI_COMBO_RATE, label: '楔の連撃' } : null; };
+const kusabiEvasionOf = (n) => KUSABI_EVASION_PER * kusabiCountOf(n);
+// セレーネチェイサー: { combo(exCombos の形), comboDmgAdd(連撃ダメージに足す率) }
+const seleneChaserOf = (n) => { const k = kusabiCountOf(n) + 1;
+  return { combo: { count: k, rate: SELENE_CHASER_COMBO_RATE, label: 'セレーネチェイサー' }, comboDmgAdd: SELENE_CHASER_COMBO_DMG * k }; };
+// ドリームペイン: 敵の被ダメージに足す率
+const dreamPainTakenOf = (n) => DREAM_PAIN_BASE + DREAM_PAIN_PER * kusabiCountOf(n);
+// ドリームペインの残り。{ wait: 効きはじめるまでのターン, turns: 効く残りターン, bonus: 被ダメージに足す率 }。
+//   使ったターンは効かず(wait 1)、次のターンから3ターン。ターンが進むたびに tick する
+const dreamPainOf = (v) => ({ wait: Math.max(0, Math.floor(Number(v?.wait) || 0)), turns: Math.max(0, Math.floor(Number(v?.turns) || 0)),
+  bonus: Math.max(0, Number(v?.bonus) || 0) });
+const startDreamPain = (n) => ({ wait: 1, turns: DREAM_PAIN_TURNS, bonus: dreamPainTakenOf(n) });
+const tickDreamPain = (v) => { const d = dreamPainOf(v); if (d.wait > 0) return { ...d, wait: d.wait - 1 };
+  return d.turns > 1 ? { ...d, turns: d.turns - 1 } : { wait: 0, turns: 0, bonus: 0 }; };
+const dreamPainTakenBonus = (v) => { const d = dreamPainOf(v); return d.wait === 0 && d.turns > 0 ? d.bonus : 0; };
+// exCombos(配列か1つ)へ連撃を足す(withBlackNoteCombo と同じ形。null は足さない)
+const withExtraCombos = (exCombos, extra) => {
+  const add = (Array.isArray(extra) ? extra : [extra]).filter(Boolean);
+  if (!add.length) return exCombos;
+  return [...(Array.isArray(exCombos) ? exCombos : [exCombos]).filter(Boolean), ...add];
+};
+// 楔の効き目の短い文(バフの札)
+const kusabiEffectText = (n) => { const c = kusabiCountOf(n);
+  return c > 0 ? `楔${c}/${KUSABI_MAX} 連撃15%×${c}・回避+${kusabiEvasionOf(c)}%` : ''; };
 // いま効いている段階を短い文にする(バフの札・ヘルプの説明に出す)
 const sweetStackEffectText = (id, n) => {
   const trait = sweetStackTraitOf(id);
