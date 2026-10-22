@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f7f54948b98c95aa
+// generated-sha256: 9216c656d1be12c4
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-22 10:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-22 10:43"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -12185,8 +12185,9 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
   useEffect(() => () => { if (spamTimerRef.current) clearTimeout(spamTimerRef.current); }, []);
   // 場面が変われば、送ったセリフも連打の状態もリセットする
   useEffect(() => { setTapped(null); setSpam(null); tapTimesRef.current = []; }, [pickKey]);
-  const spamLines = (typeof ASSISTANT_SPAM_LINES !== 'undefined' && ASSISTANT_SPAM_LINES) || [];
-  const spamRecover = (typeof ASSISTANT_SPAM_RECOVER !== 'undefined' && ASSISTANT_SPAM_RECOVER) || null;
+  // 連打のセリフは助手ごと(書いていない助手はみゅあのぶん)
+  const spamLines = (typeof assistantSpamLinesOf === 'function' ? assistantSpamLinesOf(who.id) : (typeof ASSISTANT_SPAM_LINES !== 'undefined' && ASSISTANT_SPAM_LINES)) || [];
+  const spamRecover = (typeof assistantSpamRecoverOf === 'function' ? assistantSpamRecoverOf(who.id) : (typeof ASSISTANT_SPAM_RECOVER !== 'undefined' && ASSISTANT_SPAM_RECOVER)) || null;
   const onFaceTap = () => {
     // 話しかけると少しだけ仲良くなる(1日に増える量は data/assistants.js 側で頭打ち)
     if (typeof bond.onTalk === 'function') bond.onTalk();
@@ -70734,8 +70735,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const who=activeAssistant;
         const scenes=(typeof ASSISTANT_SCENES!=='undefined'&&ASSISTANT_SCENES)||{};
         const exprs=(typeof ASSISTANT_EXPRESSIONS!=='undefined'&&ASSISTANT_EXPRESSIONS)||[];
-        const spam=[...((typeof ASSISTANT_SPAM_LINES!=='undefined'&&ASSISTANT_SPAM_LINES)||[]),
-                    ...((typeof ASSISTANT_SPAM_RECOVER!=='undefined'&&ASSISTANT_SPAM_RECOVER)?[ASSISTANT_SPAM_RECOVER]:[])];
+        const spamLinesOf=(typeof assistantSpamLinesOf==='function')?assistantSpamLinesOf(selectedAssistantId):((typeof ASSISTANT_SPAM_LINES!=='undefined'&&ASSISTANT_SPAM_LINES)||[]);
+        const spamRecoverOf=(typeof assistantSpamRecoverOf==='function')?assistantSpamRecoverOf(selectedAssistantId):((typeof ASSISTANT_SPAM_RECOVER!=='undefined'&&ASSISTANT_SPAM_RECOVER)||null);
+        const spam=[...(spamLinesOf||[]),...(spamRecoverOf?[spamRecoverOf]:[])].map(l=>({...l,who:selectedAssistantId}));
         const titles={lines:'全助手コメント',expressions:'全表情',conditions:'条件コメント',spam:'連打リアクション',bond:'親密度と呼び方',random:'ランダムテスト'};
         const stages=(typeof assistantBondLevelsOf==='function'&&assistantBondLevelsOf(selectedAssistantId))||[];
         // 見ているLv。切り替えるとセリフの絞り込みも呼び方も、そのLvのものになる

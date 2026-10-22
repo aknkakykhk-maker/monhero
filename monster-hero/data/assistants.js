@@ -6765,6 +6765,56 @@ const ASSISTANT_SPAM_LINES = [
   { e:'normal',   t:'…………', last:true },
 ];
 const ASSISTANT_SPAM_RECOVER = { e:'happy', t:'……うそだよ♪ いつでも呼んでね！' };
+// 助手ごとの連打リアクション(2026-10-22 社長「キャラ別に言葉変えて」)。書かなければ上のみゅあのぶんを使う。
+// 形はみゅあと同じ: 最後の行に last:true、recover で笑って(照れて)元に戻る
+const ASSISTANT_SPAM_SETS = {
+  kiki: {
+    lines: [
+      { e:'happy',    t:'まだお話ありまつよ♪♪' },
+      { e:'wink',     t:'そんなに押すんでつか？ (・∀・)' },
+      { e:'surprise', t:'あれま……ちゃんと聞いてくれてまつか？' },
+      { e:'angry',    t:'もう……押しすぎでつ！' },
+      { e:'troubled', t:'少し休ませてくださいな (´ー`*)' },
+      { e:'normal',   t:'…………', last:true },
+    ],
+    recover: { e:'happy', t:'……なんて、怒ってないでつよ♪♪ いつでも呼んでくださいね。' },
+  },
+  momosuke: {
+    lines: [
+      { e:'happy',    t:'なになに、ももに用？♡' },
+      { e:'wink',     t:'まって、押しすぎじゃない？w' },
+      { e:'surprise', t:'え、まだ押すの！？！？' },
+      { e:'angry',    t:'もー！！ ももで遊ばないでってば！！' },
+      { e:'troubled', t:'ちょっと……指つかれないの？w' },
+      { e:'normal',   t:'…………', last:true },
+    ],
+    recover: { e:'wink', t:'……なーんてね♡ かまってほしいなら、そう言えばいいのに' },
+  },
+  dra: {
+    lines: [
+      { e:'happy',    t:'お、呼んだか？ えへへ' },
+      { e:'wink',     t:'そんなにつつくなよ。おでの膝じゃないんだから' },
+      { e:'surprise', t:'わぁ、まだ押すのか……' },
+      { e:'angry',    t:'こら、押しすぎだぞ！ そこは敏感なんだからな' },
+      { e:'troubled', t:'ふむ……おで、だんだん膝にきてるわ' },
+      { e:'normal',   t:'…………', last:true },
+    ],
+    recover: { e:'happy', t:'……なんてな。ほんとは嬉しいんだよ、えへへ。いつでも呼べよ' },
+  },
+  atsu: {
+    lines: [
+      { e:'happy',    t:'まだ話ある？笑' },
+      { e:'wink',     t:'てか押しすぎじゃない？笑' },
+      { e:'surprise', t:'まじで？ まだ押すの！？' },
+      { e:'angry',    t:'だから押しすぎだって！' },
+      { e:'troubled', t:'その連打、モンビーでやったら？笑' },
+      { e:'normal',   t:'…………', last:true },
+    ],
+    recover: { e:'happy', t:'……冗談だよ笑 いつでも呼んで！' },
+  },
+};
+const assistantSpamLinesOf = (assistantId) => (ASSISTANT_SPAM_SETS[assistantId] && ASSISTANT_SPAM_SETS[assistantId].lines) || ASSISTANT_SPAM_LINES;
+const assistantSpamRecoverOf = (assistantId) => (ASSISTANT_SPAM_SETS[assistantId] && ASSISTANT_SPAM_SETS[assistantId].recover) || ASSISTANT_SPAM_RECOVER;
 // これ以内に続けてタップされたら「連打」とみなす(ミリ秒)
 const ASSISTANT_SPAM_WINDOW_MS = 1200;
 // 連打を始めてから、この回数で専用のセリフへ入る
