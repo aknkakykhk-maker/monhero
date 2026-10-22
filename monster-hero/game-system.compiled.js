@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c67e8835889f3861
+// source-sha256: be77b24f717ac00c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-23 00:11";
+const BUILD_DATE = "2026-10-23 00:39";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -18279,6 +18279,7 @@ const withBlackNoteCombo = (exCombos, combo, extra = null) => {
 };
 const KUSABI_TRAIT_MONSTER_IDS = Object.freeze(['Illumine', 'Dreamy']);
 const KUSABI_MAX = 6;
+const KUSABI_MAX_EX = 12;
 const KUSABI_COMBO_RATE = 0.15;
 const KUSABI_EVASION_PER = 15;
 const SELENE_CHASER_MONSTER_ID = 'Illumine';
@@ -18289,18 +18290,18 @@ const DREAM_PAIN_TURNS = 3;
 const DREAM_PAIN_BASE = 0.2,
   DREAM_PAIN_PER = 0.2;
 const hasKusabiTrait = id => !!id && KUSABI_TRAIT_MONSTER_IDS.includes(id);
-const kusabiCountOf = n => Math.min(KUSABI_MAX, Math.max(0, Math.floor(Number(n) || 0)));
+const kusabiCountOf = (n, max = KUSABI_MAX) => Math.min(max, Math.max(0, Math.floor(Number(n) || 0)));
 const kusabiComboOf = n => {
-  const c = kusabiCountOf(n);
+  const c = kusabiCountOf(n, KUSABI_MAX_EX);
   return c > 0 ? {
     count: c,
     rate: KUSABI_COMBO_RATE,
     label: '楔の連撃'
   } : null;
 };
-const kusabiEvasionOf = n => KUSABI_EVASION_PER * kusabiCountOf(n);
+const kusabiEvasionOf = n => KUSABI_EVASION_PER * kusabiCountOf(n, KUSABI_MAX_EX);
 const seleneChaserOf = n => {
-  const k = kusabiCountOf(n) + 1;
+  const k = kusabiCountOf(n, KUSABI_MAX_EX) + 1;
   return {
     combo: {
       count: k,
@@ -18310,7 +18311,7 @@ const seleneChaserOf = n => {
     comboDmgAdd: SELENE_CHASER_COMBO_DMG * k
   };
 };
-const dreamPainTakenOf = n => DREAM_PAIN_BASE + DREAM_PAIN_PER * kusabiCountOf(n);
+const dreamPainTakenOf = n => DREAM_PAIN_BASE + DREAM_PAIN_PER * kusabiCountOf(n, KUSABI_MAX_EX);
 const dreamPainOf = v => ({
   wait: Math.max(0, Math.floor(Number(v?.wait) || 0)),
   turns: Math.max(0, Math.floor(Number(v?.turns) || 0)),
@@ -18340,9 +18341,9 @@ const dreamPainTakenBonus = v => {
   const d = dreamPainOf(v);
   return d.wait === 0 && d.turns > 0 ? d.bonus : 0;
 };
-const kusabiEffectText = n => {
-  const c = kusabiCountOf(n);
-  return c > 0 ? `楔${c}/${KUSABI_MAX} 連撃15%×${c}・回避+${kusabiEvasionOf(c)}%` : '';
+const kusabiEffectText = (n, max = KUSABI_MAX) => {
+  const c = kusabiCountOf(n, max);
+  return c > 0 ? `楔${c}/${max} 連撃15%×${c}・回避+${kusabiEvasionOf(c)}%` : '';
 };
 const sweetStackEffectText = (id, n) => {
   const trait = sweetStackTraitOf(id);
@@ -40438,10 +40439,11 @@ const tacticsHasGutsRoom = units => tacticsAliveSlots(units).some(index => {
   return unit.guts < unit.maxGuts;
 });
 const tacticsTotalBaseMaxHp = units => (Array.isArray(units) ? units : []).reduce((sum, unit) => sum + (unit ? normalizeTacticsUnit(unit).baseMaxHp : 0), 0);
-const tacticsExMaxRateOf = (unit, kind = 'hp') => {
+const tacticsExMaxRateOf = (unit, kind = 'hp', withShield = true) => {
   const own = kind === 'guts' ? Number(unit && unit.exMaxGutsRate) : NaN;
   const rate = Number.isFinite(own) ? own : Number(unit && unit.exMaxRate);
-  return Number.isFinite(rate) && rate > 0 ? rate : 0;
+  const shield = withShield ? Number(unit && unit.exShieldRate) : 0;
+  return (Number.isFinite(rate) && rate > 0 ? rate : 0) + (Number.isFinite(shield) && shield > 0 ? shield : 0);
 };
 const scaleTacticsUnitMaxHp = (unit, hpPct = 0) => {
   const target = normalizeTacticsUnit(unit);
@@ -41974,13 +41976,42 @@ const TACTICS_EX_SKILLS = Object.freeze({
     }),
     conditions: Object.freeze(['hasStack']),
     effect: 'nightmareKey'
+  }),
+  Illumine: Object.freeze({
+    id: 'illumine_the_end',
+    name: 'ジエンド',
+    useNote: '3ターン 楔が1回で2つ・上限12・使うとヘイト−30',
+    desc: '影に潜み、敵へ楔を打ち込み続ける。\n・3ターンのあいだ、イルミネの攻撃が当たると楔が2つ付く（ふだんは1つ）\n・3ターンのあいだ、楔の上限が12になる（ふだんは6）。楔の連撃と回避率アップも、12個まで数が増える\n・使った瞬間に、イルミネのヘイトが30下がる（0より下がらない）\n・効果が切れると、楔は6個までに戻る',
+    maxUses: 5,
+    unlimited: false,
+    withCards: true,
+    duration: 'turns',
+    turns: 3,
+    hateDown: 30,
+    effect: 'kusabiDouble'
+  }),
+  Dreamy: Object.freeze({
+    id: 'dreamy_millefeuille_shield',
+    name: 'ミルフィーシールド',
+    useNote: '全員に最大ライフぶんのシールド・3ターン シールドのある子は全ステータス+5%(楔1つごとに+5%)',
+    desc: '夢の雲を何層にも重ねて、味方を包む。\n・使った瞬間に、立っている味方全員（ドリーミィも）へ、それぞれ自分の最大ライフと同じ量のシールドを張る。敵の攻撃はシールドが先に受け、0になってからライフが減る\n・シールドが残っている子は、ちから・丈夫さ・ライフ上限・ガッツ上限が+5%。さらに、使った瞬間の敵の楔の数（いちばん多いもの）1つごとに+5%（楔0で+5%・3つで+20%・6つで+35%）\n・シールドが0になった子は、アップもなくなる（ライフ・ガッツが元の上限より多ければ上限まで戻る。ほかの子はそのまま）\n・3ターンたつと、残ったシールドもアップも消える\n・効いているあいだにもう一度使うと、シールドは残りに足され、残りターンは3に戻る。アップは、そのときの楔の数で決め直した値になる（重ならない）',
+    maxUses: 5,
+    unlimited: false,
+    withCards: true,
+    duration: 'turns',
+    turns: 3,
+    millefeuille: Object.freeze({
+      statBase: 0.05,
+      statPer: 0.05
+    }),
+    effect: 'millefeuille'
   })
 });
 const TACTICS_EX_CONDITIONS = Object.freeze({
   notActive: ctx => ctx && ctx.active ? '効果が続いているあいだは使えない' : null,
   hasStack: ctx => ctx && Number(ctx.stacks) > 0 ? null : `${ctx && ctx.stackLabel || 'スタック'}が1つも無いと使えない`
 });
-const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox', 'thunder', 'partyBoost', 'damageBack', 'psychoLock', 'counter', 'avoidCharge', 'trickConfuse', 'cookieBox', 'nightmareKey']);
+const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox', 'thunder', 'partyBoost', 'damageBack', 'psychoLock', 'counter', 'avoidCharge', 'trickConfuse', 'cookieBox', 'nightmareKey', 'kusabiDouble', 'millefeuille']);
 const TACTICS_EX_ALL_IN_ATK_RATE = 0.5;
 const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'style', 'turns']);
 const TACTICS_EX_DUAL_HIT_REPEAT = 2;
@@ -42155,6 +42186,11 @@ const normalizeTacticsExDef = raw => {
     } : null,
     conditions: Array.isArray(raw.conditions) ? raw.conditions.filter(k => typeof TACTICS_EX_CONDITIONS[k] === 'function') : [],
     conditionText: raw.conditionText ? String(raw.conditionText) : null,
+    hateDown: Math.min(100, Math.max(0, tacticsSafeInt(raw.hateDown, 0))),
+    millefeuille: raw.millefeuille && typeof raw.millefeuille === 'object' ? {
+      statBase: Math.min(1, Math.max(0, Number(raw.millefeuille.statBase) || 0)),
+      statPer: Math.min(0.5, Math.max(0, Number(raw.millefeuille.statPer) || 0))
+    } : null,
     effect: typeof raw.effect === 'string' ? raw.effect : null
   };
 };
@@ -42382,7 +42418,13 @@ const applyTacticsExUse = (state, {
         dodgeComboRate: def.dodgeComboRate || 0,
         dodges: 0,
         avoidLeft: def.avoidCharges || 0,
-        partyStatRate: def.partyStatRate || 0,
+        partyStatRate: def.millefeuille ? def.millefeuille.statBase + def.millefeuille.statPer * Math.max(0, tacticsSafeInt(snapshot && snapshot.kusabi, 0)) : def.partyStatRate || 0,
+        shields: def.millefeuille && snapshot && snapshot.shields && typeof snapshot.shields === 'object' ? (() => {
+          const prev = safe.effects[slot];
+          const keep = prev && prev.effect === 'millefeuille' && prev.monId === monId && prev.shields && isTacticsExEffectActive(safe, slot, monId, now) ? prev.shields : {};
+          const keys = new Set([...Object.keys(keep), ...Object.keys(snapshot.shields)]);
+          return Object.fromEntries([...keys].map(k => [k, Math.max(0, tacticsSafeInt(keep[k], 0)) + Math.max(0, tacticsSafeInt(snapshot.shields[k], 0))]).filter(([, v]) => v > 0));
+        })() : null,
         dmgRate: def.dmgRate || 0,
         selfTakenRate: def.selfTakenRate || 0,
         critRateRate: def.critRateRate || 0,
@@ -43196,14 +43238,60 @@ const spendTacticsExAvoid = (state, units, slot, now) => {
   };
 };
 const tacticsExCritFixedAt = (state, units, slot, now) => tacticsExAvoidLeftOf(state, units, slot, now) > 0;
-const tacticsExPartyStatRate = (state, now) => {
+const tacticsExPartyStatRate = (state, now, slot = null) => {
   const effects = normalizeTacticsExState(state).effects;
   return Object.keys(effects).reduce((sum, key) => {
     const e = effects[key];
-    if (!e || e.effect !== 'partyBoost' && e.effect !== 'trickConfuse' || !isTacticsExEffectActive(state, key, e.monId, now)) return sum;
+    if (!e || e.effect !== 'partyBoost' && e.effect !== 'trickConfuse' && e.effect !== 'millefeuille' || !isTacticsExEffectActive(state, key, e.monId, now)) return sum;
+    if (e.effect === 'millefeuille' && slot != null && !(e.shields && tacticsSafeInt(e.shields[String(slot)], 0) > 0)) return sum;
     const rate = Number(e.effect === 'partyBoost' ? e.partyBoostCfg && e.partyBoostCfg.statRate : e.partyStatRate);
     return Number.isFinite(rate) && rate > 0 ? sum + rate : sum;
   }, 0);
+};
+const tacticsExShieldAt = (state, slot, now) => {
+  const effects = normalizeTacticsExState(state).effects;
+  return Object.keys(effects).reduce((sum, key) => {
+    const e = effects[key];
+    if (!e || e.effect !== 'millefeuille' || !e.shields || !isTacticsExEffectActive(state, key, e.monId, now)) return sum;
+    return sum + Math.max(0, tacticsSafeInt(e.shields[String(slot)], 0));
+  }, 0);
+};
+const spendTacticsExShield = (state, slot, damage, now) => {
+  const safe = normalizeTacticsExState(state);
+  let rest = Math.max(0, tacticsSafeInt(damage, 0)),
+    absorbed = 0;
+  const effects = {
+    ...safe.effects
+  };
+  for (const key of Object.keys(effects).sort()) {
+    const e = effects[key];
+    if (rest <= 0) break;
+    if (!e || e.effect !== 'millefeuille' || !e.shields || !isTacticsExEffectActive(safe, key, e.monId, now)) continue;
+    const have = Math.max(0, tacticsSafeInt(e.shields[String(slot)], 0));
+    if (have <= 0) continue;
+    const use = Math.min(have, rest);
+    effects[key] = {
+      ...e,
+      shields: {
+        ...e.shields,
+        [String(slot)]: have - use
+      }
+    };
+    rest -= use;
+    absorbed += use;
+  }
+  return {
+    state: absorbed > 0 ? {
+      ...safe,
+      effects
+    } : safe,
+    absorbed,
+    rest
+  };
+};
+const tacticsExKusabiDoubleAt = (state, units, slot, now) => {
+  const unit = Array.isArray(units) ? units[slot] : null;
+  return !!unit && tacticsExActiveEffect(state, slot, unit.id, now) === 'kusabiDouble';
 };
 const tacticsExCounterOf = (state, units, slot, now) => {
   const unit = Array.isArray(units) ? units[slot] : null;
@@ -43370,7 +43458,7 @@ const rollEnemyConfusion = (intent, turns, rnd = Math.random) => {
 };
 const applyTacticsExStats = (unit, state, slot, now) => {
   const own = applyTacticsExOwnStats(unit, state, slot, now);
-  const party = unit && typeof unit === 'object' ? tacticsExPartyStatRate(state, now) : 0;
+  const party = unit && typeof unit === 'object' ? tacticsExPartyStatRate(state, now, slot) : 0;
   return party > 0 ? {
     ...own,
     atk: Math.floor(Math.max(0, tacticsSafeInt(own.atk, 0)) * (1 + party)),
@@ -43433,8 +43521,8 @@ const setTacticsExMaxRate = (units, slot, rate, gutsRate = rate) => (Array.isArr
 } : unit);
 const setTacticsExMaxHpRate = (units, slot, rate) => (Array.isArray(units) ? units : []).map((unit, i) => unit && i === slot ? {
   ...unit,
-  exMaxGutsRate: tacticsExMaxRateOf(unit, 'guts'),
-  exMaxRate: Math.max(tacticsExMaxRateOf(unit), Math.max(0, Number(rate) || 0))
+  exMaxGutsRate: tacticsExMaxRateOf(unit, 'guts', false),
+  exMaxRate: Math.max(tacticsExMaxRateOf(unit, 'hp', false), Math.max(0, Number(rate) || 0))
 } : unit);
 const expireTacticsExMaxRates = (units, state, now) => {
   let changed = false;
@@ -43444,7 +43532,7 @@ const expireTacticsExMaxRates = (units, state, now) => {
     return caster && tacticsExActiveEffect(state, from, caster.id, now) === 'lifeSpring' && Number.isInteger(springEffects[from].target);
   }).map(from => springEffects[from].target));
   const next = (Array.isArray(units) ? units : []).map((unit, slot) => {
-    if (!unit || !(tacticsExMaxRateOf(unit) > 0 || tacticsExMaxRateOf(unit, 'guts') > 0)) return unit;
+    if (!unit || !(tacticsExMaxRateOf(unit, 'hp', false) > 0 || tacticsExMaxRateOf(unit, 'guts', false) > 0)) return unit;
     if (tacticsExActiveEffect(state, slot, unit.id, now) === 'statBoost') return unit;
     if (springTargets.has(slot)) return unit;
     changed = true;
@@ -43452,6 +43540,33 @@ const expireTacticsExMaxRates = (units, state, now) => {
       ...unit,
       exMaxRate: 0,
       exMaxGutsRate: 0
+    };
+  });
+  return {
+    units: next,
+    changed
+  };
+};
+const tacticsExShieldMaxRateAt = (state, slot, now) => {
+  const effects = normalizeTacticsExState(state).effects;
+  return Object.keys(effects).reduce((sum, key) => {
+    const e = effects[key];
+    if (!e || e.effect !== 'millefeuille' || !e.shields || !(tacticsSafeInt(e.shields[String(slot)], 0) > 0) || !isTacticsExEffectActive(state, key, e.monId, now)) return sum;
+    const rate = Number(e.partyStatRate);
+    return Number.isFinite(rate) && rate > 0 ? sum + rate : sum;
+  }, 0);
+};
+const syncTacticsExShieldMaxRates = (units, state, now) => {
+  let changed = false;
+  const next = (Array.isArray(units) ? units : []).map((unit, slot) => {
+    if (!unit) return unit;
+    const want = unit.downed ? 0 : tacticsExShieldMaxRateAt(state, slot, now);
+    const have = Number(unit.exShieldRate) > 0 ? Number(unit.exShieldRate) : 0;
+    if (Math.abs(want - have) < 1e-9) return unit;
+    changed = true;
+    return {
+      ...unit,
+      exShieldRate: want
     };
   });
   return {
@@ -67364,6 +67479,7 @@ function BattleScreen({
   sweetStackView,
   bowStackView,
   fateWheelView,
+  tacticsShields,
   enemyConfuseTurns,
   luckBanners,
   teachingFx,
@@ -70142,12 +70258,15 @@ function BattleScreen({
         className: "text-[8px] font-black tracking-wider text-pink-300"
       }, "ライフ"), React.createElement("span", {
         className: "font-mono leading-none"
-      }, React.createElement("span", {
+      }, Array.isArray(tacticsShields) && tacticsShields[i] > 0 && React.createElement("span", {
+        "data-tactics-shield": tacticsShields[i],
+        className: "mr-1 text-[9px] font-black text-sky-200"
+      }, "🛡️", tacticsShields[i]), React.createElement("span", {
         className: "text-[11px] font-black text-white"
       }, tacticsUnit.hp), React.createElement("span", {
         className: "text-[8px] text-slate-400"
       }, "/", tacticsUnit.maxHp))), React.createElement("div", {
-        className: "h-[2px] overflow-hidden rounded-full bg-black/60",
+        className: "relative h-[2px] overflow-hidden rounded-full bg-black/60",
         style: {
           boxShadow: 'inset 0 1px 2px rgba(0,0,0,.9)'
         }
@@ -70157,6 +70276,13 @@ function BattleScreen({
         style: {
           transform: `scaleX(${Math.min(100, Math.max(0, hpPct)) / 100})`,
           boxShadow: '0 0 6px rgba(244,114,182,.55)'
+        }
+      }), Array.isArray(tacticsShields) && tacticsShields[i] > 0 && tacticsUnit.maxHp > 0 && React.createElement("div", {
+        "data-tactics-shield-bar": true,
+        className: "absolute inset-y-0 left-0 bg-sky-300/80",
+        style: {
+          width: `${Math.min(100, tacticsShields[i] / tacticsUnit.maxHp * 100)}%`,
+          boxShadow: '0 0 6px rgba(125,211,252,.8)'
         }
       })), React.createElement("div", {
         className: "flex h-[10px] items-center justify-between leading-none"
@@ -83216,15 +83342,19 @@ function MonsterHeroGame() {
   const resetEnemyConfuse = () => writeEnemyConfuse(0);
   const kusabiRef = useRef({});
   const [kusabiView, setKusabiView] = useState({});
+  const kusabiCapAt = slotIdx => isTacticsMode(runMode) && Number.isInteger(slotIdx) && tacticsExKusabiDoubleAt(tacticsExStateRef.current, tacticsUnitsRef.current, slotIdx, {
+    wave,
+    turn: turnCount
+  }) ? KUSABI_MAX_EX : KUSABI_MAX;
   const kusabiAt = slotIdx => {
     const key = trickStartKeyOf(slotIdx);
-    return key ? kusabiCountOf(kusabiRef.current[key]) : 0;
+    return key ? kusabiCountOf(kusabiRef.current[key], kusabiCapAt(slotIdx)) : 0;
   };
   const writeKusabiKey = (key, n) => {
     if (!key) return;
     const next = {
       ...kusabiRef.current,
-      [key]: kusabiCountOf(n)
+      [key]: kusabiCountOf(n, KUSABI_MAX_EX)
     };
     kusabiRef.current = next;
     setKusabiView(next);
@@ -83236,11 +83366,12 @@ function MonsterHeroGame() {
   const gainKusabi = (slotIdx, actorId) => {
     const owner = sweetOwnerAt(slotIdx);
     if (!hasKusabiTrait(owner) || owner !== actorId) return;
-    const before = kusabiAt(slotIdx),
-      after = kusabiCountOf(before + 1);
+    const cap = kusabiCapAt(slotIdx),
+      before = kusabiAt(slotIdx),
+      after = kusabiCountOf(before + (cap > KUSABI_MAX ? 2 : 1), cap);
     if (after === before) return;
     writeKusabiKey(trickStartKeyOf(slotIdx), after);
-    addPopup(`🔻 楔 ${after}/${KUSABI_MAX}`, 'hero', 'text-violet-200 text-base font-bold drop-shadow-md', undefined, slotIdx);
+    addPopup(`🔻 楔 ${after}/${cap}`, 'hero', 'text-violet-200 text-base font-bold drop-shadow-md', undefined, slotIdx);
   };
   const kusabiCombosAt = (slotIdx, actorId, card) => {
     const owner = sweetOwnerAt(slotIdx),
@@ -94286,7 +94417,7 @@ function MonsterHeroGame() {
       aquaPrison: aq && aq.active && aq.route === 'prison' ? aq.stacks : 0,
       aquaFreeze: aq && aq.active && aq.route === 'freeze' ? aq.stacks : 0,
       roar: Math.max(0, Math.floor(Number(enemy.roarStacks) || 0)),
-      kusabi: Object.values(kusabiView || {}).reduce((most, n) => Math.max(most, kusabiCountOf(n)), 0),
+      kusabi: (isTacticsMode(runMode) ? [0, 1, 2, 3] : [null]).reduce((most, i) => Math.max(most, kusabiAt(i)), 0),
       dreamPain: dreamPainView.wait === 0 ? dreamPainView.turns : 0,
       ...(debugStackMarks && debugStackMarks.enemy ? debugStackMarks.enemy : {})
     };
@@ -94495,7 +94626,11 @@ function MonsterHeroGame() {
       wave,
       turn: turnCount
     });
-    if (result.changed) commitTacticsUnits(scaleTacticsUnits(result.units, getPermaBuff('muaHpPct'), getPermaBuff('muaGutsPct')));
+    const shield = syncTacticsExShieldMaxRates(result.units, tacticsExStateRef.current, {
+      wave,
+      turn: turnCount
+    });
+    if (result.changed || shield.changed) commitTacticsUnits(scaleTacticsUnits(shield.units, getPermaBuff('muaHpPct'), getPermaBuff('muaGutsPct')));
   }, [wave, turnCount, tacticsExState, runMode]);
   useEffect(() => {
     if (!isTacticsMode(runMode)) return;
@@ -95602,7 +95737,7 @@ function MonsterHeroGame() {
         const defenseSlot = aimedSlots && aimedSlots.length ? aimedSlots[Math.floor(Math.random() * aimedSlots.length)] : null;
         const defenseHeroId = !isTacticsMode(runMode) ? mainHero?.id : defenseSlot != null ? tacticsUnitsRef.current[defenseSlot]?.id || null : null;
         const kusabiDefenseKey = !isTacticsMode(runMode) ? 'party' : defenseSlot != null ? String(defenseSlot) : null;
-        const kusabiEvasion = hasKusabiTrait(defenseHeroId) && kusabiDefenseKey ? kusabiEvasionOf(kusabiRef.current[kusabiDefenseKey]) : 0;
+        const kusabiEvasion = hasKusabiTrait(defenseHeroId) && kusabiDefenseKey ? kusabiEvasionOf(kusabiAt(defenseSlot)) : 0;
         const defenseTable = !isTacticsMode(runMode) && kusabiEvasion <= 0 ? unifiedSpecialDefense : buildUnifiedSpecialDefense({
           soulEvasion: soulBattleParty.evasion,
           soulReflect: soulBattleParty.reflect,
@@ -95807,6 +95942,14 @@ function MonsterHeroGame() {
               if (slotGuard > 0) fx.guard = true;
               if (hit.taken > 0) {
                 let fd = applyImmediateTakenReduction(hit.taken, slotIdx);
+                {
+                  const shieldHit = spendTacticsExShield(tacticsExStateRef.current, slotIdx, fd, tacticsExLiveRef.current.now);
+                  if (shieldHit.absorbed > 0) {
+                    commitTacticsExState(shieldHit.state);
+                    fd = shieldHit.rest;
+                    addPopup(`🛡️ シールド −${shieldHit.absorbed}`, 'hero', 'text-sky-200 font-black text-base drop-shadow-md', undefined, slotIdx);
+                  }
+                }
                 const konjoUnit = normalizeTacticsUnit(units[slotIdx]);
                 if (konjoUnit && !konjoUnit.downed && fd >= konjoUnit.hp && tacticsExKonjoLeftOf(tacticsExStateRef.current, units, slotIdx, tacticsExLiveRef.current.now) > 0) {
                   fd = Math.max(0, konjoUnit.hp - 1);
@@ -96549,6 +96692,10 @@ function MonsterHeroGame() {
     if (checkTacticsExTarget(def, tacticsUnitsRef.current, choice)) return false;
     const usedUnit = normalizeTacticsUnit(tacticsUnitsRef.current[slotIdx]);
     const spentStacks = def.stackSpend ? sweetStackAt(slotIdx) : 0;
+    const millefeuilleSnapshot = def.millefeuille ? {
+      kusabi: [0, 1, 2, 3].reduce((most, i) => Math.max(most, kusabiAt(i)), 0),
+      shields: Object.fromEntries([0, 1, 2, 3].map(i => [i, normalizeTacticsUnit(tacticsUnitsRef.current[i])]).filter(([, u]) => u && !u.downed).map(([i, u]) => [String(i), u.maxHp]))
+    } : null;
     const next = applyTacticsExUse(state, {
       def,
       slot: slotIdx,
@@ -96559,6 +96706,7 @@ function MonsterHeroGame() {
         atk: usedUnit.atk,
         def: usedUnit.def,
         spent: spentStacks,
+        ...(def.millefeuille ? millefeuilleSnapshot : {}),
         ...(def.effect === 'timeStop' ? {
           copied: tacticsExCopyableBuffs(state, tacticsUnitsRef.current, tacticsExNow, slotIdx)
         } : {})
@@ -96568,7 +96716,11 @@ function MonsterHeroGame() {
     });
     commitTacticsExState(next);
     tacticsProLogSkill(tacticsProLogRef.current, 'ex', mon.id, turnCount);
-    if (tacticsHateOnFor(runMode)) addTacticsHatePending(slotIdx, tacticsHateExGain(def.effect, mon.id));
+    if (tacticsHateOnFor(runMode) && def.hateDown > 0) {
+      const h = [...tacticsHateRef.current];
+      h[slotIdx] = Math.max(0, (Number(h[slotIdx]) || 0) - def.hateDown);
+      commitTacticsHate(h);
+    } else if (tacticsHateOnFor(runMode)) addTacticsHatePending(slotIdx, tacticsHateExGain(def.effect, mon.id));
     Audio_.se.card();
     const toggled = def.duration === 'style' ? `（${tacticsExStyleLabel(def, next, slotIdx, mon.id)}）` : '';
     pushBattleLog(`EX ${mon.masuName || mon.name}「${def.name}」${toggled}`, 'ally');
@@ -111821,6 +111973,7 @@ function MonsterHeroGame() {
       dismissTacticsExIntro: dismissTacticsExIntro,
       tacticsPandoraForms: tacticsPandoraForms,
       trickStartView: trickStartView,
+      tacticsShields: isTacticsMode(runMode) && tacticsExEnabled ? [0, 1, 2, 3].map(i => tacticsExShieldAt(tacticsExState, i, tacticsExNow)) : null,
       sweetStackView: sweetStackView,
       bowStackView: bowStackView,
       fateWheelView: fateWheelView,

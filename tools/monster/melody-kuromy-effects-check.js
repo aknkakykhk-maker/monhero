@@ -114,7 +114,7 @@ check('与ダメ(getDmg)にクッキー10個と黒音符が乗る', app.includes
 check('会心率に黒音符(5個から)が足される', app.includes('+blackNoteEffectAt(slotIdx,activeMon?.id).critAdd)*tacticsExMultiBuffNow(slotIdx).critRate'));
 // 2026-10-12 社長の決定で、あつの挑発(バフ札から出る攻撃)にも黒音符の連撃を乗せた(#2859)ので3か所
 check('連撃は実際の攻撃・予測表示・あつの挑発の3か所に付く', (app.match(/withBlackNoteCombo\(withFateCombo\(/g) || []).length === 3);
-check('被ダメの最後にクッキー7個からの軽減が掛かる', app.includes('*cookieEffectNow().takenMult)) // クッキー7個から'));
+check('被ダメの最後にクッキー7個からの軽減が掛かる', /\*cookieEffectNow\(\)\.takenMult\)+ \/\/ クッキー7個から/.test(app));
 check('毎ターンの回復にクッキーのぶんが入る', app.includes('const cookie=cookieEffectNow();') && app.includes('tacticsRateHeal(cookie.hpRegen,cookie.gutsRegen,false)'));
 check('バトル画面の札に貯まった数が出る', screen.includes("Object.entries(sweetStackView||{}).forEach") && app.includes('sweetStackView={sweetStackView}'));
 
