@@ -228,6 +228,9 @@ const lastReminder = (params) => { const m = params.messages[params.messages.len
           q4: lab(P('極限のランキングは？')), q5: lab(P('チャレンジのランキング全部')), q6: lab(P('Masterは？', [Q])),
           q7: P('今日は晴れだね', [Q]), q8: (P('上位は？', ['ジャックのレイドのランキング']) || []).map(x => x.kind),
           q9: lab(P('MASTERは？', ['Journeyのランキング教えて'])), q10: P('天気どう？'),
+          // 2026-10-22 社長の実機: 「タクティクス」はタクティクスプロ(ランキングがあるのはプロだけ)、種類の無い前の話題の続きの「エクストリーム」も読む
+          q11: lab(P('タクティクスの極限のエクストリーム見れないの？', ['ランキング見せて'])),
+          q12: lab(P('もっと上の難易度みてみ？エクストリームとかみれるよね？', ['ランキング見せて'])),
           plans: [P(Q), P('チャレンジのランキング全部'), P('種族チャレンジのランキング')],
         };
       });
@@ -237,6 +240,8 @@ const lastReminder = (params) => { const m = params.messages[params.messages.len
       check('⑧ 続きの「エクストリームまで…」は、前のタクティクスプロを引き継いで極限の難易度を全部', r.q2.length === r.tacticsExtreme && all(r.q2, /^タクティクスプロ・(EXTREME|NIGHTMARE|CHAOS|ULTIMATE|INFINITY)/), r.q2.join(' / '));
       check('⑧「タクティクスプロの極限」は、タクティクスプロの極限の難易度を全部(極限チャレンジと取り違えない)', r.q3.join() === r.q2.join(), r.q3.join(' / '));
       check('⑧ モードの無い「極限のランキング」は、極限チャレンジの難易度を全部', r.q4.length === r.publicExtreme && all(r.q4, /^極限チャレンジ・/), r.q4.join(' / '));
+      check('⑧「タクティクスの極限」は、タクティクスプロの極限の難易度を全部(極限チャレンジと取り違えない)', r.q11.length === r.tacticsExtreme && all(r.q11, /^タクティクスプロ・/), r.q11.join(' / '));
+      check('⑧ 種類の無いランキングの話の続きの「エクストリームとか」は、極限チャレンジの難易度を全部', r.q12.length === r.publicExtreme && all(r.q12, /^極限チャレンジ・/), r.q12.join(' / '));
       check('⑧「チャレンジのランキング全部」は通常+極限の全部で、上限に収まる', r.q5.length === r.challengeAll && r.q5.length <= r.max, `${r.q5.length}件`);
       check('⑧ 難易度だけの続き「Masterは？」は、前のモードのその難易度だけ', r.q6.join() === 'タクティクスプロ・Masterのスコア', r.q6.join(' / '));
       check('⑧ 関係ない続き「今日は晴れだね」では計画を作らない(毎回は読まない)', r.q7 === null && r.q10 === null);
