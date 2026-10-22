@@ -230,6 +230,42 @@ const fixHeldBand=(notes,{canRemove=()=>true,canMirror=()=>false,lanes=12,keepWi
     else if(canMirror(n)&&fits(mirror,w0)){n.subLane=mirror;n.lane=Math.floor(mirror/2);done.mirrored++;stuck.add(n);}
     else{stuck.add(n);done.left++;}}
   return done;};
+// 指が同じ位置に来る形(2026-10-22 社長「指が同じ位置くるやつが多い。ききいっせんの原曲とか」「空中スライドにほぼ同じ位置に空中タップとか」)。
+//   どれも、片方の親指が押さえている・叩く所の、真横・真上・真下を、もう片方の親指で叩くことになる形。帯の中(onHeldBand の blocked)より外側の、近さの話。
+//   kind:
+//     skyPath   … 空中スライドの通り道に空中のノーツ: 空中のノーツ(長押しでない)の時刻の前後 SAME_PLACE_PATH_MS に、空中にいるスライドが
+//                 すき間 SAME_PLACE_NEAR レーン未満を通る(重なりも含む)。スライドが通り過ぎる所・これから通る所を、もう片方の指で叩く
+//     stacked   … 押さえている所の真上・真下: 押さえている長押しの最中に、高さの違うノーツがその時刻の帯と横に重なる
+//                 (押さえている親指の真上・真下をもう片方の親指で叩く。帯の決まりでは「地上と空中なら同じ位置でもよい」としていた形)
+//     beside    … 地上の帯のすぐ横: 地上の長押しの最中に、地上のノーツがすき間 SAME_PLACE_NEAR レーン未満(半レーンの重なりを許した形も含む)
+//     chord     … 同時押しが隣り合う: 同じ高さの同時押しが、すき間 SAME_PLACE_NEAR レーン未満(重なりも含む)
+//     centerSwap … 真ん中で左右が同じ所: 続く2つの押し始め(SAME_PLACE_SWAP_MS 以内・同じ高さ)が SAME_PLACE_SWAP_OVERLAP レーン以上重なり、真ん中(レーン3)の左右に分かれる
+//                 (半レーンだけの重なりは流れの階段なので数えない)
+//                 (左の親指が叩いた所とほぼ同じ所を、すぐに右の親指が叩く。ききいっせん原曲がいちばん多い)
+const SAME_PLACE_PATH_MS=250,SAME_PLACE_NEAR=.5,SAME_PLACE_STEP_MS=20,SAME_PLACE_SWAP_MS=250,SAME_PLACE_SWAP_OVERLAP=1;
+const SAME_PLACE_KINDS=Object.freeze({skyPath:'空中スライドの通り道に空中のノーツ',stacked:'押さえている所の真上・真下',beside:'地上の帯のすぐ横',chord:'同時押しが隣り合う',centerSwap:'真ん中で左右が同じ所'});
+const samePlace=notes=>{const out=[],list=(notes||[]).filter(n=>n&&Number.isFinite(n.timeMs)),longs=list.filter(isLong);
+  const gapOf=(a,b)=>Math.max(a[0],b[0])-Math.min(a[1],b[1]);
+  const put=(kind,n,h,gap)=>out.push({kind,at:n.timeMs,note:n,heldNote:h,type:n.type,side:sideAt(n,n.timeMs),gap:Math.round(gap*100)/100,
+    lanes:spanAt(n,n.timeMs).map(v=>v.toFixed(2)).join('〜'),held:h?`${h.type} ${h.timeMs}〜${endOf(h)}`:''});
+  for(const h of longs)for(const n of list){if(n===h)continue;const t=n.timeMs,ln=levelAt(n,t),sn=spanAt(n,t);
+    if(h.type==='SLIDE'&&!isLong(n)&&ln===1&&t>=h.timeMs-SAME_PLACE_PATH_MS&&t<=endOf(h)+SAME_PLACE_PATH_MS){let best=Infinity;
+      for(let u=Math.max(h.timeMs,t-SAME_PLACE_PATH_MS);u<=Math.min(endOf(h),t+SAME_PLACE_PATH_MS)+EPS;u+=SAME_PLACE_STEP_MS)
+        if(levelAt(h,u)===1)best=Math.min(best,gapOf(spanAt(h,u),sn));
+      if(best<SAME_PLACE_NEAR-EPS){put('skyPath',n,h,best);continue;}}
+    if(t<=h.timeMs+SAME_TIME_MS||t>=endOf(h)-SAME_TIME_MS)continue;
+    const lh=levelAt(h,t),gap=gapOf(spanAt(h,t),sn);
+    if(lh!==ln&&gap<-EPS)put('stacked',n,h,gap);
+    else if(lh===0&&ln===0&&gap<SAME_PLACE_NEAR-EPS&&gap>=-HELD_BAND_HALF-EPS)put('beside',n,h,gap);}
+  const st=list.slice().sort((a,b)=>a.timeMs-b.timeMs);
+  for(let i=0;i<st.length;i++)for(let j=i+1;j<st.length&&st[j].timeMs-st[i].timeMs<=SAME_TIME_MS;j++){const a=st[i],b=st[j],t=a.timeMs;
+    if(levelAt(a,t)!==levelAt(b,t))continue;const gap=gapOf(spanAt(a,t),spanAt(b,t));if(gap<SAME_PLACE_NEAR-EPS)put('chord',b,a,gap);}
+  for(let i=1;i<st.length;i++){const b=st[i];let j=i-1;while(j>=0&&b.timeMs-st[j].timeMs<=SAME_TIME_MS)j--;if(j<0)continue;
+    const a=st[j],dt=b.timeMs-a.timeMs;if(dt>SAME_PLACE_SWAP_MS||levelAt(a,a.timeMs)!==levelAt(b,b.timeMs))continue;
+    const sa=spanAt(a,a.timeMs),sb=spanAt(b,b.timeMs),gap=gapOf(sa,sb);
+    if(gap<=-SAME_PLACE_SWAP_OVERLAP+EPS&&(sa[0]+sa[1]<6)!==(sb[0]+sb[1]<6))put('centerSwap',b,a,gap);}
+  // 同じノーツが2つの長押しに数えられても1件にする(型ごと)
+  const seen=new Set();return out.filter(x=>{const k=`${x.kind}|${list.indexOf(x.note)}`;if(seen.has(k))return false;seen.add(k);return true;}).sort((x,y)=>x.at-y.at);};
 const FLAT_CROSS_LABEL='同じ高さのまま左右が入れ替わる(水平クロス・HELL は0にする)';
 const RULES={sideHeightSwitch,skyAfterGround,besideHeldBand,fastSameSide,heldHandSwitch};
 const RULE_LABELS={sideHeightSwitch:`同じ側で${SIDE_GAP_MS}ms以内に高さが変わる`,skyAfterGround:`同じ側の地上から${SKY_RAISE_MS}ms以内に空中`,
@@ -257,3 +293,4 @@ if(require.main===module){
       +(bl.length?' — '+bl.slice(0,12).map(x=>`${(x.at/1000).toFixed(3)} ${x.type} ${x.level} ${x.lanes}(押さえ ${x.held} ${x.heldLanes}・${HELD_BAND_KINDS[x.kind]})`).join(' / '):''));}
     for(const [k,list] of Object.entries(res))console.log(`  ${RULE_LABELS[k]}: ${list.length}件`+(list.length?' — '+list.slice(0,12).map(x=>`${(x.at/1000).toFixed(2)}${x.side}`+(x.gapMs!=null?`(${x.gapMs})`:'')).join(' ')+(list.length>12?' …':''):''));}
 }
+module.exports.samePlace=samePlace;module.exports.SAME_PLACE_KINDS=SAME_PLACE_KINDS;module.exports.SAME_PLACE_PATH_MS=SAME_PLACE_PATH_MS;module.exports.SAME_PLACE_NEAR=SAME_PLACE_NEAR;
