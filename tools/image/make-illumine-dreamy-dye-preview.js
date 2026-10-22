@@ -40,8 +40,8 @@ const DYE_CANDIDATES = {
     D: { style: 'そらとほし', colors: [c(205,60,95), c(50,45,100), c(205,75,80), c(50,85,100), c(20,80,100)], bg: ['#0a1d45', '#2f6fc0', '#ffe58a'], accent: '#fff2a8', dots: ['rgba(255,240,150,.7)', 'rgba(170,210,255,.55)', 'rgba(255,255,255,.5)'] },
   },
 };
-// 予告に載せる配色(社長が選んだ案)。選ぶ前は A を仮に入れておく
-const CHOSEN = { Illumine: 'A', Dreamy: 'A' };
+// 予告に載せる配色(2026-10-22 社長が選んだ案。イルミネ C エメラルドオーロラ / ドリーミィ B ラベンダードリーム)
+const CHOSEN = { Illumine: 'C', Dreamy: 'B' };
 const PREVIEWS = [
   { baseId: 'Illumine', out: 'illumine-dye-preview.jpg', name: 'イルミネ', ...DYE_CANDIDATES.Illumine[CHOSEN.Illumine] },
   { baseId: 'Dreamy', out: 'dreamy-dye-preview.jpg', name: 'ドリーミィ', ...DYE_CANDIDATES.Dreamy[CHOSEN.Dreamy] },

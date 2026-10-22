@@ -37,8 +37,8 @@ const CHANGELOG = [
   {
     // 2026-10-22 社長「先にモンスター実装予告をいつもの出したい」。メロディー・クロミーの予告と同じ一式。値段も同じ(円盤石150,000ダイヤ)。
     // 画像は tools/image/make-illumine-dreamy-lineage-notice.js(予告)と make-illumine-dreamy-dye-preview.js(染色イメージ・ゲームと同じ染め方)で作った
-    date: "2026-10-22 22:31", type:'update', group:'monster', title:'「イルミネ」「ドリーミィ」実装予告', status:'new',
-    image: 'images/events/illumine-dreamy-notice.jpg?v=85e96d91d4ac',
+    date: "2026-10-22 23:15", type:'update', group:'monster', title:'「イルミネ」「ドリーミィ」実装予告', status:'new',
+    image: 'images/events/illumine-dreamy-notice.jpg?v=a0c8e6fc243c',
     items:[
       '新しいモンスター「イルミネ」と「ドリーミィ」を近日実装します。どちらも、イルミネの血を引く新しい血統のモンスターです。',
       'イルミネは、月明かりが見える静かな場所に棲むモンスター。影に潜んで行動するのが得意で、光る長い髪をなびかせます。',
@@ -50,8 +50,8 @@ const CHANGELOG = [
     ],
     // 染色イメージ。ゲームと同じ染め方で作った見本。一覧の詳細にだけ出る(助手の告知は image の1枚)
     gallery: [
-      { caption:'イルミネ 染色イメージ「ムーンライト」', image:'images/events/illumine-dye-preview.jpg?v=cfdd4604849a' },
-      { caption:'ドリーミィ 染色イメージ「ミントキャンディ」', image:'images/events/dreamy-dye-preview.jpg?v=1010088b9206' },
+      { caption:'イルミネ 染色イメージ「エメラルドオーロラ」', image:'images/events/illumine-dye-preview.jpg?v=a1e13016cd61' },
+      { caption:'ドリーミィ 染色イメージ「ラベンダードリーム」', image:'images/events/dreamy-dye-preview.jpg?v=bfaca221c64c' },
     ],
     // 公開の告知(v2)を足すときに supersededBy:'update_notice_illumine_dreamy_v2' を付ける(相手が無いうちは付けられない)
     assistantNotice: { id:'update_notice_illumine_dreamy_soon_v1', type:'market' },

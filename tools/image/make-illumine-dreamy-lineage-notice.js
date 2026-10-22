@@ -53,12 +53,15 @@ let seed=20261022;const rnd=()=>{seed=(seed*1103515245+12345)%2147483648;return 
  x.restore();
 
  // 上のリボン「新血統 実装予告」
+ // 金の板は文字の長さに合わせて伸ばす(左右の余白は字の大きさの0.6倍ずつ)。後ろの茶色のリボンも板の端に付いてくる。
+ // 文字は字の形の上下の中心を板の中心にそろえる(2026-10-22 社長「文字の位置というか後ろのやつずれてない？」)
  const ribbon=(cy,w,h,text,size)=>{x.save();x.translate(W/2,cy);
+  x.font=`${size}px MPR`;const tm=x.measureText(text);w=Math.max(w,Math.ceil(tm.width+size*1.2));
   x.fillStyle='#7a4a12';x.beginPath();x.moveTo(-w/2-70,-h/2+18);x.lineTo(-w/2+10,-h/2+18);x.lineTo(-w/2+10,h/2+18);x.lineTo(-w/2-70,h/2+18);x.lineTo(-w/2-40,18);x.closePath();x.fill();
   x.beginPath();x.moveTo(w/2+70,-h/2+18);x.lineTo(w/2-10,-h/2+18);x.lineTo(w/2-10,h/2+18);x.lineTo(w/2+70,h/2+18);x.lineTo(w/2+40,18);x.closePath();x.fill();
   const rg=x.createLinearGradient(0,-h/2,0,h/2);rg.addColorStop(0,'#fff3b0');rg.addColorStop(.5,'#e7b43a');rg.addColorStop(1,'#b87918');
   x.fillStyle=rg;x.beginPath();x.roundRect(-w/2,-h/2,w,h,22);x.fill();x.lineWidth=6;x.strokeStyle='#fff8d6';x.stroke();
-  x.font=`${size}px MPR`;x.textAlign='center';x.textBaseline='middle';x.fillStyle='#3d2305';x.fillText(text,0,4);x.restore();};
+  x.font=`${size}px MPR`;x.textAlign='center';x.textBaseline='alphabetic';x.fillStyle='#3d2305';x.fillText(text,0,(tm.actualBoundingBoxAscent-tm.actualBoundingBoxDescent)/2);x.restore();};
  ribbon(150,720,120,'新モンスター 実装予告',78);
 
  // 大見出し「ユグドラシル」
