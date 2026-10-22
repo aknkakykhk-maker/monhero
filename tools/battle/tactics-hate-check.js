@@ -27,8 +27,12 @@ const near = (a, b) => Math.abs(a - b) < 1e-9;
 // ①
 const mons = Object.values(G.ALL_PLAYER_MONSTERS).filter((m) => m && !m.debugOnly);
 const T = G.MONSTER_TYPES, TO = G.MONSTER_TYPE_OF;
-const missing = mons.filter((m) => !TO[m.id] || !T[TO[m.id].main] || (TO[m.id].sub != null && (!T[TO[m.id].sub] || TO[m.id].sub === TO[m.id].main))).map((m) => m.id);
+// サブはメインと同じタイプでもよい(2026-10-22 社長。ゴーレム アタッカー/アタッカー・モノリス タンク/タンク)
+const missing = mons.filter((m) => !TO[m.id] || !T[TO[m.id].main] || (TO[m.id].sub != null && !T[TO[m.id].sub])).map((m) => m.id);
 check('① 全モンスターがタイプの表にあり、メイン・サブが MONSTER_TYPES にある', missing.length === 0 && mons.length > 0, missing.length ? `足りない・違う: ${missing.join(', ')}(MONSTER_TYPE_OF に1行足す)` : `${mons.length}体`);
+const noSub = mons.filter((m) => !TO[m.id] || !T[TO[m.id].sub]).map((m) => m.name || m.id);
+check('① 全員にサブがある(2026-10-22 社長「サブないやつはぜんぶなにかつけたい」)', noSub.length === 0, noSub.join('・'));
+check('① メインと同じサブも、そのまま持てる(消さない)', G.monsterTypeOf('Monol').sub === 'tank' && G.monsterTypeOf('Golem').sub === 'attacker');
 check('① タイプの倍率は数で、0より大きい・名前とアイコンがある', Object.values(T).every((r) => Number.isFinite(r.hateMult) && r.hateMult > 0 && r.label && r.icon));
 check('① ヘイトに役割の表を二重に持たない', !('roles' in H) && Object.values(H.monsters).every((m) => !('role' in m)));
 check('① ヘイトの倍率はタイプの表から引く', mons.every((m) => H.monsters[m.id]?.mult != null || G.tacticsHateProfile(m.id).mult === T[TO[m.id].main].hateMult));
@@ -47,32 +51,37 @@ check('② 入のときは ×(weightCurve の倍率)・ヘイト0の子は今ま
 
 // ③
 const ids = units.map((u) => u.id);
-const s0 = G.tacticsHateStep([40, 40, 40, 40], {}, units, -1, ids);
+const s0 = G.tacticsHateStep([40, 40, 40, 40], {}, units, ids);
 check('③ 何もしなければ ×decay・倒れた子は0', near(s0[0], 40 * H.decay) && near(s0[1], 40 * H.decay) && s0[3] === 0);
-const capped = G.tacticsHateStep([0, 90, 0, 0], { gains: [0, 300, 0, 0] }, units, -1, ids);
+const capped = G.tacticsHateStep([0, 90, 0, 0], { gains: [0, 300, 0, 0] }, units, ids);
 check('③ 上限で止まる', capped[1] === H.cap);
 const emptyUnits = [units[0], null, units[2], null];
-check('③ 空き枠は0', G.tacticsHateStep([10, 10, 10, 10], { gains: [5, 5, 5, 5] }, emptyUnits, -1, ids)[1] === 0);
-const hero = G.tacticsHateStep([0, 0, 0, 0], {}, units, 0, ids);
-check('③ 勇者は下地より下がらない', hero[0] === H.hero.floor && hero[1] === 0);
-check('③ WAVE の始めは0・勇者だけ下地', JSON.stringify(G.tacticsHateWaveStart(2)) === JSON.stringify([0, 0, H.hero.floor, 0]));
-const share = G.tacticsHateStep([0, 0, 0, 0], { dealt: [300, 100, 0, 0] }, units, -1, ids);
+check('③ 空き枠は0', G.tacticsHateStep([10, 10, 10, 10], { gains: [5, 5, 5, 5] }, emptyUnits, ids)[1] === 0);
+// WAVE の始めはタイプ(メイン + サブ)で決まる。勇者モンかどうかは見ない・下限も無い(2026-10-22 社長)
+const st0 = G.tacticsHateWaveStart(['Monol', 'Golem', 'Ghost', 'Pandora']);
+check('③ WAVE の始めはタイプで決まる(モノリス 30・ゴーレム 15・ゴースト 5・パンドラ 5)', JSON.stringify(st0) === JSON.stringify([30, 15, 5, 5]), JSON.stringify(st0));
+check('③ ユグドラシル 25・メロディー 20・スネグーラチカ 10・空き枠は0', JSON.stringify(G.tacticsHateWaveStart(['Yggdrasil', 'Melody', 'Snegurochka', null])) === JSON.stringify([25, 20, 10, 0]));
+check('③ 0 未満にはしない(シャドウ0 + サブのシャドウ −5 なら0)', (() => { const keep = TO.Tiger; TO.Tiger = { main: 'shadow', sub: 'shadow' }; const v = G.tacticsHateStartOf('Tiger'); TO.Tiger = keep; return v === 0; })());
+check('③ 勇者の下限は無い(何もしなければ下がる)', !('hero' in H) && G.tacticsHateStep([20, 0, 0, 0], {}, units, ids)[0] === 20 * H.decay);
+check('③ 初期ヘイトの数字は社長が決めた表のまま', JSON.stringify(H.start) === JSON.stringify({ main: { tank: 20, healer: 10, attacker: 10, supporter: 5, shadow: 0 }, sub: { tank: 10, healer: 5, attacker: 5, supporter: 3, shadow: -5 } }));
+const share = G.tacticsHateStep([0, 0, 0, 0], { dealt: [300, 100, 0, 0] }, units, ids);
 const monolMult = G.tacticsHateProfile('Monol').mult;
 check('③ 与ダメージは味方の中の割合 × dmgShare(敵のライフに左右されない)', near(share[0], H.action.dmgShare * 0.75) && near(share[1], monolMult * H.action.dmgShare * 0.25));
-const big = G.tacticsHateStep([0, 0, 0, 0], { dealt: [300000, 100000, 0, 0] }, units, -1, ids);
+const big = G.tacticsHateStep([0, 0, 0, 0], { dealt: [300000, 100000, 0, 0] }, units, ids);
 check('③ A:10,000 と B:100,000 のように桁が違っても、割合が同じなら同じヘイト', near(big[0], share[0]) && near(big[1], share[1]));
 
 // ④
-const f = (v, hero = false) => G.tacticsHateFlame(v, hero);
+const f = (v) => G.tacticsHateFlame(v);
 check('④ 炎は 20・50・80 で1段ずつ', [f(19), f(20), f(49), f(50), f(79), f(80), f(100)].join() === '0,1,1,2,2,3,3');
-check('④ 勇者は下地を引いた値で見る', f(H.hero.floor, true) === 0 && f(H.hero.floor + 20, true) === 1);
+check('④ だれでも同じ値で見る(勇者の下地を引かない)', G.tacticsHateFlame.length === 1);
 
 // ⑤
 const gain = (card, id) => G.tacticsHateCardGain(card, id) * G.tacticsHateProfile(id).mult;
 check('⑤ あつの挑発 +40(攻撃の子)', near(gain({ id: 'atsu', type: 'debuff', subType: 'stun_atsu' }, 'Mocchi'), 40));
 check('⑤ みゅあの愛 +15 / +31.5 / +40.5', [0, 1, 2].map((lv) => gain({ id: 'mua', type: 'heal', evoLevel: lv }, 'Mocchi')).every((v, k) => near(v, [15, 31.5, 40.5][k])));
 check('⑤ ももすけのおねだり +7.5 / +31.5 / +40.5', [0, 1, 2].map((lv) => gain({ id: 'momosuke', type: 'heal', evoLevel: lv }, 'Mocchi')).every((v, k) => near(v, [7.5, 31.5, 40.5][k])));
-check('⑤ ガード +25(盾は +6 上乗せ)', near(G.tacticsHateCardGain({ type: 'guard' }, 'Mocchi'), 25) && near(G.tacticsHateCardGain({ type: 'guard' }, 'Yggdrasil'), 31));
+// 2026-10-22 社長「ガードは狙われたら使うからそこまでむしろ上げないほうがよさそう。ヘイトはアシカとかexでためる」
+check('⑤ ガード +5(タンクは +2 上乗せ)・攻撃や強化と同じくらい', near(G.tacticsHateCardGain({ type: 'guard' }, 'Mocchi'), 5) && near(G.tacticsHateCardGain({ type: 'guard' }, 'Yggdrasil'), 7));
 const cover = G.tacticsHateExGain('coverAll', 'Monol') * monolMult;
 check('⑤ モノリスのかばう (60 + 行動のたび3) × 1.5', near(cover, (60 + 3) * 1.5) && monolMult === 1.5 && G.tacticsHateProfile('Monol').always === 3);
 
@@ -91,7 +100,7 @@ check('⑥ 公開の印が真なら入・偽なら切(試作のキーは読ま�
 check('⑥ 確認待ちの試作の一覧から外した', !trials.includes("key: 'mh_tactics_hate_proto_v1'") && !trials.includes("key: 'mh_monster_type_proto_v1'"));
 const app = read('monster-hero/src/parts/60-app.jsx');
 check('⑥ タクティクスの盤面のバトル全部(レイドバトル・グランドスラムも。既存5モードは見ない)', /const tacticsHateOnFor = \(mode\) => isTacticsMode\(mode\) && tacticsHateProtoOn\(\);/.test(app) && /const isTacticsMode = \(mode\) => TACTICS_BATTLE_MODES\.includes\(mode\) \|\| isRaidJackMode\(mode\);/.test(read('monster-hero/src/parts/10-core.jsx')));
-check('⑥ 勇者の下地は、戦闘の始めに写した勇者の id で付ける(レイドは勇者を決めた同じ描画で始まる)', /tacticsHateHeroIdRef\.current = \(heroForDeck \|\| mainHero\)\?\.id \|\| null;/.test(app) && /const tacticsHateHeroSlot = \(\) => \{ const id = tacticsHateHeroIdRef\.current/.test(app));
+check('⑥ WAVE の始めは、盤面の子の id でタイプから決める(勇者モンかどうかは見ない)', /tacticsHateWaveStart\(tacticsUnitsRef\.current\.map\(u => u && u\.id\)\)/.test(app) && !/tacticsHateHeroSlot|tacticsHateHeroIdRef/.test(app));
 check('⑥ 保存データの一覧に試作のキーが残っている(消さない)', read('docs/spec/SAVE_DATA.md').includes('mh_tactics_hate_proto_v1'));
 
 // ⑦
@@ -104,14 +113,15 @@ check('⑦ 図鑑・図鑑の詳細・パーティ選びに印がある', (dex.m
 check('⑧ カードの段の基準が TACTICS_HATE にある', Array.isArray(H.cardFlames) && H.cardFlames.length === 2 && H.cardFlames[0] < H.cardFlames[1] && Number.isFinite(H.cardDmgShareGuess));
 check('⑧ 段は 0〜3(小・中・大)', G.tacticsHateGainLevel(0) === 0 && G.tacticsHateGainLevel(1) === 1 && G.tacticsHateGainLevel(H.cardFlames[0]) === 2 && G.tacticsHateGainLevel(H.cardFlames[1]) === 3 && G.TACTICS_HATE_LEVEL_LABELS.join() === ',小,中,大');
 const lv = (card, id) => G.tacticsHateCardLevel(card, id);
-check('⑧ 通常攻撃は小・ガードは中・挑発は大', lv({ type: 'atk' }, 'Mocchi') === 1 && lv({ type: 'guard' }, 'Mocchi') === 2 && lv({ id: 'atsu', type: 'taunt' }, 'Mocchi') === 3);
-check('⑧ 子のタイプ・特性で変わる(盾のガード・モノリスの攻撃)', lv({ type: 'guard' }, 'Yggdrasil') === 3 && lv({ type: 'atk' }, 'Monol') === 2);
+check('⑧ 通常攻撃は小・ガードも小(2026-10-22)・挑発は大', lv({ type: 'atk' }, 'Mocchi') === 1 && lv({ type: 'guard' }, 'Mocchi') === 1 && lv({ type: 'guard' }, 'Yggdrasil') === 1 && lv({ id: 'atsu', type: 'taunt' }, 'Mocchi') === 3);
+check('⑧ 子のタイプ・特性で変わる(タンクのガードは多め・モノリスの攻撃)', G.tacticsHateCardEstimate({ type: 'guard' }, 'Yggdrasil') > G.tacticsHateCardEstimate({ type: 'guard' }, 'Mocchi') && lv({ type: 'atk' }, 'Monol') === 2);
 check('⑧ EX のかばうは大', G.tacticsHateExLevel('coverAll', 'Monol') === 3);
 const battle = read('monster-hero/src/parts/71-screen-battle.jsx');
 check('⑧ 手札と EX の詳細に段を出す(ヘイトが切なら出さない)', /tacticsHateOn&&\(\(\)=>\{const lv=tacticsHateCardLevel\(/.test(battle) && /tacticsHateOn&&\(\(\)=>\{const lv=tacticsHateExLevel\(/.test(battle));
 
 // ⑨ 狙われる確率の強さ(2026-10-22 社長「最大40%じゃヘイト調整してもなかなかこない」で選んだ強さ)
-//   4体ともライフ満タン・WAVE の始め(勇者は下地20・ほかは0)に、タンクがガード → そのタンクが約65%・ヘイト上限100で約90%
+//   4体ともライフ満タンで、1体がヘイト40・1体が20・2体が0 → ヘイト40の子が約65%・ヘイト上限100で約90%。
+//   社長「ガードは…そこまで上げない」「ヘイトはアシカとかexでためる」ので、ガードではなくヘイトの値で見る
 {
   const W = H.weightCurve;
   check('⑨ 倍率の点が TACTICS_HATE.weightCurve にあり、0 で ×1・上限まで増える一方', Array.isArray(W) && W[0][0] === 0 && W[0][1] === 1 && W[W.length - 1][0] === H.cap
@@ -120,13 +130,21 @@ check('⑧ 手札と EX の詳細に段を出す(ヘイトが切なら出さな�
   const full = (id) => ({ id, name: id, hp: 500, maxHp: 500, guts: 10, maxGuts: 10, atk: 100, def: 100 });
   const ids4 = ['Mocchi', 'Yggdrasil', 'Ghost', 'Ham'], us = ids4.map(full);
   const prob = (hate, i) => { const w = G.tacticsTargetWeights(us, G.TACTICS_TARGET_LOW_HP_BIAS, hate); return w.find((x) => x.index === i).weight / w.reduce((a, x) => a + x.weight, 0); };
-  const guard = G.tacticsHateCardGain({ type: 'guard' }, 'Yggdrasil');
-  const afterGuard = G.tacticsHateStep(G.tacticsHateWaveStart(0), { gains: [0, guard, 0, 0] }, us, 0, ids4);
-  const pg = prob(afterGuard, 1), pc = prob([H.hero.floor, H.cap, 0, 0], 1), ph = prob(G.tacticsHateWaveStart(0), 0);
-  check('⑨ WAVE の始めにタンクがガード(ヘイト約40)→ そのタンクが約65%', afterGuard[1] > 35 && afterGuard[1] < 45 && pg > 0.62 && pg < 0.68, `ヘイト ${afterGuard[1].toFixed(1)}・${(pg * 100).toFixed(1)}%`);
+  const p40 = prob([20, 40, 0, 0], 1), pc = prob([20, H.cap, 0, 0], 1);
+  check('⑨ ヘイト40の子は約65%(ほかは20・0・0)', p40 > 0.62 && p40 < 0.68, `${(p40 * 100).toFixed(1)}%`);
   check('⑨ ヘイト上限100の子は約90%', pc > 0.87 && pc < 0.93, `${(pc * 100).toFixed(1)}%`);
-  check('⑨ 勇者の下地だけのときは前と同じ(×1.8・約38%。勇者ばかり狙わせない)', near(G.tacticsHateWeightMult([H.hero.floor], 0), 1.8) && ph < 0.4, `${(ph * 100).toFixed(1)}%`);
+  check('⑨ ヘイト20 は ×1.8', near(G.tacticsHateWeightMult([20], 0), 1.8));
   check('⑨ 4体とも同じヘイト0なら、ライフの減り具合だけで決まる(等分)', [0, 1, 2, 3].every((i) => near(prob([0, 0, 0, 0], i), 0.25)));
+  // WAVE の始め(だれも動いていない)に、1体へ偏りすぎない: 26体から4体のどの組でも、いちばん狙われる子は 60% 未満
+  const all = mons.map((m) => m.id);
+  let worst = { p: 0, team: null };
+  for (let a = 0; a < all.length; a++) for (let b = a + 1; b < all.length; b++) for (let c = b + 1; c < all.length; c++) for (let d = c + 1; d < all.length; d++) {
+    const team = [all[a], all[b], all[c], all[d]], h = G.tacticsHateWaveStart(team);
+    const w = team.map((_, i) => G.tacticsHateWeightMult(h, i)), sum = w.reduce((x, y) => x + y, 0);
+    const p = Math.max(...w) / sum;
+    if (p > worst.p) worst = { p, team };
+  }
+  check('⑨ WAVE の始めは、どの4体でもいちばん狙われる子が 60% 未満', worst.p < 0.6, `いちばん偏る組 ${worst.team.join('・')} → ${(worst.p * 100).toFixed(1)}%`);
 }
 
 console.log(failed ? `\nNG ${failed}件` : '\nすべてOK');

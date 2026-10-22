@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8efa76d7fbf168e2
+// source-sha256: 3cc04ce0619b13d7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-22 12:12";
+const BUILD_DATE = "2026-10-22 12:28";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -40381,8 +40381,21 @@ const TACTICS_HATE = {
   flames: [20, 50, 80],
   cardFlames: [15, 40],
   cardDmgShareGuess: 0.5,
-  hero: {
-    floor: 20
+  start: {
+    main: {
+      tank: 20,
+      healer: 10,
+      attacker: 10,
+      supporter: 5,
+      shadow: 0
+    },
+    sub: {
+      tank: 10,
+      healer: 5,
+      attacker: 5,
+      supporter: 3,
+      shadow: -5
+    }
   },
   action: {
     atk: 2,
@@ -40391,7 +40404,7 @@ const TACTICS_HATE = {
     heal: 30,
     buff: 5,
     debuff: 8,
-    guard: 25,
+    guard: 5,
     taunt: 40,
     ex: 10
   },
@@ -40441,7 +40454,7 @@ const MONSTER_TYPES = {
     note: '前に立って攻撃を引き受ける',
     hateMult: 1.3,
     hateAdd: {
-      guard: 6
+      guard: 2
     }
   },
   supporter: {
@@ -40476,33 +40489,40 @@ const MONSTER_TYPE_OF = {
     sub: 'tank'
   },
   Golem: {
-    main: 'attacker'
+    main: 'attacker',
+    sub: 'attacker'
   },
   Suezo: {
     main: 'attacker',
     sub: 'supporter'
   },
   Ham: {
-    main: 'attacker'
+    main: 'attacker',
+    sub: 'tank'
   },
   Pandora: {
-    main: 'attacker'
+    main: 'attacker',
+    sub: 'shadow'
   },
   KenshiMocchi: {
-    main: 'attacker'
+    main: 'attacker',
+    sub: 'shadow'
   },
   Eiki: {
-    main: 'attacker'
+    main: 'attacker',
+    sub: 'shadow'
   },
   Kuromy: {
-    main: 'attacker'
+    main: 'attacker',
+    sub: 'tank'
   },
   Spooky: {
     main: 'attacker',
-    sub: 'supporter'
+    sub: 'shadow'
   },
   Monol: {
-    main: 'tank'
+    main: 'tank',
+    sub: 'tank'
   },
   Yggdrasil: {
     main: 'tank',
@@ -40513,7 +40533,8 @@ const MONSTER_TYPE_OF = {
     sub: 'attacker'
   },
   Oboro: {
-    main: 'tank'
+    main: 'tank',
+    sub: 'healer'
   },
   Plant: {
     main: 'tank',
@@ -40544,7 +40565,8 @@ const MONSTER_TYPE_OF = {
     sub: 'attacker'
   },
   Snegurochka: {
-    main: 'supporter'
+    main: 'supporter',
+    sub: 'healer'
   },
   Yaobikuni: {
     main: 'supporter',
@@ -40566,7 +40588,7 @@ const MONSTER_TYPE_OF = {
 const monsterTypeOf = monId => {
   const t = MONSTER_TYPE_OF[monId];
   const main = t && MONSTER_TYPES[t.main] ? t.main : 'attacker';
-  const sub = t && MONSTER_TYPES[t.sub] && t.sub !== main ? t.sub : null;
+  const sub = t && MONSTER_TYPES[t.sub] ? t.sub : null;
   return {
     main,
     sub
@@ -40626,11 +40648,17 @@ const tacticsHateCardEstimate = (card, monId = null) => {
 const tacticsHateCardLevel = (card, monId = null) => tacticsHateGainLevel(tacticsHateCardEstimate(card, monId));
 const tacticsHateExLevel = (effect, monId) => tacticsHateGainLevel(tacticsHateProfile(monId).mult * tacticsHateExGain(effect, monId));
 const normalizeTacticsHate = hate => [0, 1, 2, 3].map(i => tacticsClamp(tacticsHateNum(Array.isArray(hate) ? hate[i] : 0), 0, TACTICS_HATE.cap));
-const tacticsHateWaveStart = heroSlot => [0, 1, 2, 3].map(i => i === heroSlot ? TACTICS_HATE.hero.floor : 0);
+const tacticsHateStartOf = monId => {
+  if (!monId) return 0;
+  const t = monsterTypeOf(monId),
+    st = TACTICS_HATE.start;
+  return Math.min(TACTICS_HATE.cap, Math.max(0, tacticsHateNum(st.main[t.main]) + (t.sub ? tacticsHateNum(st.sub[t.sub]) : 0)));
+};
+const tacticsHateWaveStart = (monIds = []) => [0, 1, 2, 3].map(i => tacticsHateStartOf(Array.isArray(monIds) ? monIds[i] : null));
 const tacticsHateStep = (hate, {
   gains = TACTICS_HATE_EMPTY,
   dealt = TACTICS_HATE_EMPTY
-} = {}, units, heroSlot, monIds = []) => {
+} = {}, units, monIds = []) => {
   const prev = normalizeTacticsHate(hate);
   const filled = tacticsFilledSlots(units);
   const team = filled.reduce((sum, i) => sum + Math.max(0, tacticsHateNum(dealt[i])), 0);
@@ -40640,7 +40668,6 @@ const tacticsHateStep = (hate, {
     const p = tacticsHateProfile(monIds[i]);
     const share = team > 0 ? TACTICS_HATE.action.dmgShare * Math.max(0, tacticsHateNum(dealt[i])) / team : 0;
     let v = prev[i] * TACTICS_HATE.decay + p.mult * (Math.max(0, tacticsHateNum(gains[i])) + share);
-    if (i === heroSlot) v = Math.max(v, TACTICS_HATE.hero.floor);
     return Math.min(TACTICS_HATE.cap, v);
   });
 };
@@ -40655,8 +40682,8 @@ const tacticsHateWeightMult = (hate, index) => {
   }
   return pts[pts.length - 1][1];
 };
-const tacticsHateFlame = (value, isHero = false) => {
-  const v = tacticsHateNum(value) - (isHero ? TACTICS_HATE.hero.floor : 0);
+const tacticsHateFlame = value => {
+  const v = tacticsHateNum(value);
   return TACTICS_HATE.flames.filter(x => v >= x).length;
 };
 const isTacticsSweepOnSpot = (intent, units, enemyDist) => {
@@ -68987,7 +69014,7 @@ function BattleScreen({
     const slotAimed = aimedSlots.includes(i);
     const slotAimHit = slotAimed ? plannedHitWithCover(i) : null;
     const slotExInfo = tacticsExInfo ? tacticsExInfo(i) : null;
-    const hateLv = s && tacticsHateOn && Array.isArray(tacticsHate) && !normalizeTacticsUnit(tacticsUnits[i])?.downed ? tacticsHateFlame(tacticsHate[i], isHeroSlotMon(s)) : 0;
+    const hateLv = s && tacticsHateOn && Array.isArray(tacticsHate) && !normalizeTacticsUnit(tacticsUnits[i])?.downed ? tacticsHateFlame(tacticsHate[i]) : 0;
     const hateFlame = hateLv > 0 ? React.createElement("span", {
       "data-tactics-hate": i,
       "data-tactics-hate-level": hateLv,
@@ -82849,11 +82876,6 @@ function MonsterHeroGame() {
     tacticsHateRef.current = next;
     setTacticsHate(next);
   };
-  const tacticsHateHeroIdRef = useRef(null);
-  const tacticsHateHeroSlot = () => {
-    const id = tacticsHateHeroIdRef.current || mainHero && mainHero.id;
-    return id ? tacticsUnitsRef.current.findIndex(u => !!(u && u.id === id)) : -1;
-  };
   const addTacticsHatePending = (slotIdx, gain) => {
     if (!Number.isInteger(slotIdx) || slotIdx < 0 || slotIdx > 3 || !(gain > 0)) return;
     const next = [...tacticsHatePendingRef.current];
@@ -82866,7 +82888,7 @@ function MonsterHeroGame() {
   };
   const resetTacticsHate = mode => {
     clearTacticsHateTurn();
-    commitTacticsHate(tacticsHateOnFor(mode) ? tacticsHateWaveStart(tacticsHateHeroSlot()) : TACTICS_HATE_EMPTY);
+    commitTacticsHate(tacticsHateOnFor(mode) ? tacticsHateWaveStart(tacticsUnitsRef.current.map(u => u && u.id)) : TACTICS_HATE_EMPTY);
   };
   const stepTacticsHate = mode => {
     if (!tacticsHateOnFor(mode)) return;
@@ -82874,7 +82896,7 @@ function MonsterHeroGame() {
     commitTacticsHate(tacticsHateStep(tacticsHateRef.current, {
       gains: tacticsHatePendingRef.current,
       dealt: tacticsHateDealtRef.current
-    }, units, tacticsHateHeroSlot(), units.map(u => u && u.id)));
+    }, units, units.map(u => u && u.id)));
     clearTacticsHateTurn();
   };
   const tacticsDamage = (damage, intent, actingDist) => {
@@ -97881,7 +97903,6 @@ function MonsterHeroGame() {
       enemy: forcedEnemyKey
     });
     setDefeatFx(null);
-    tacticsHateHeroIdRef.current = (heroForDeck || mainHero)?.id || null;
     if (w === 1) {
       setTotalTurnCount(0);
       totalTurnCountRef.current = 0;
