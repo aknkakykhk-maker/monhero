@@ -78,7 +78,7 @@ const dataTablePrelude = [
   // タクティクスの狙われやすさ(🔥)の表(2026-10-22)。ヘイトの定義・タイプの表・狙いの重みの倍率を持ち込む
   grab(source, 'const tacticsClamp', '// モンスター1体から、ラン中の現在値を作る。'),
   grab(source, 'const TACTICS_TARGET_LOW_HP_BIAS', '// hate … ヘイト(試作)の配列。'),
-  grab(source, '// ===== ヘイト(確認待ちの試作', '// 炎の段(0〜3)'),
+  grab(source, '// ===== ヘイト(確認待ちの試作', '// ===== ヘイトの数字ここまで'),
   grab(source, '// ==== タクティクス専用 EXスキル(STEP1: 共通基盤) ====', '// ==== タクティクス専用 EXスキルここまで ===='),
   // 曲一覧が使う曲名の組み立て。helpDataRows より前にあるので、別に持ち込む
   grab(source, 'const rhythmSongFullName =', 'const helpDataRows = (id)'),
