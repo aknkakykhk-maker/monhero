@@ -44,6 +44,14 @@ const guards=(notes,beat)=>({impossible:thumbCheck(internalOf(notes),HELL_LANDSC
 const worse=(a,b)=>b.impossible>a.impossible||b.band>a.band||b.confuse>a.confuse||b.flat>a.flat;
 const skyHits=notes=>HR.samePlace(notes).filter(x=>SKY_KINDS.includes(x.kind));
 const inClimax=(t,cl)=>(cl||[]).some(([a,b])=>t>=a&&t<=b);
+// ずらす先が空いているか(2026-10-22 窓口: Journey HELL 154.725秒で、同時の空中タップと重なる所へずらし、真ん中を押すと取れなくなった)。
+//   同時のノーツ(高さを問わない)と横に重ならない・同じ高さで押さえている帯(長押しの最中)と重ならない所だけを候補にする
+const SAME_TIME_MS=2,EPS=1e-6;
+const freeAt=(notes,n,sub,w)=>{const a=sub/2,b=(sub+w)/2,t=n.timeMs,lv=HR.levelAt(n,t);
+  for(const m of notes){if(m===n)continue;
+    const same=Math.abs(m.timeMs-t)<=SAME_TIME_MS,held=(m.type==='HOLD'||m.type==='SLIDE')&&m.timeMs<t-SAME_TIME_MS&&t<Number(m.endTimeMs)-SAME_TIME_MS&&HR.levelAt(m,t)===lv;
+    if(!same&&!held)continue;const [m0,m1]=HR.spanAt(m,t);if(Math.min(b,m1)-Math.max(a,m0)>EPS)return false;}
+  return true;};
 
 // 1曲ぶん: ゲームの形のノーツをその場で直し、どのノーツをどうしたかを返す
 const planSong=(notes,{level,beat,climax})=>{
@@ -59,7 +67,7 @@ const planSong=(notes,{level,beat,climax})=>{
     if(!n||n.type==='HOLD'||n.type==='SLIDE'||n.monsterSlot){stuck.add(n);continue;}
     const count0=skyHits(notes).length,sub0=n.subLane,w=Number(n.subLaneWidth)||2;let done=false;
     const cands=[];for(let s=0;s+w<=LANES;s++)if(s!==sub0&&Math.abs(s-sub0)<=MAX_SHIFT)cands.push(s);cands.sort((a,b)=>Math.abs(a-sub0)-Math.abs(b-sub0));
-    for(const s of cands){n.subLane=s;n.lane=Math.floor(s/2);
+    for(const s of cands){if(!freeAt(notes,n,s,w))continue;n.subLane=s;n.lane=Math.floor(s/2);
       const still=skyHits(notes).some(x=>x.note===n||x.heldNote===n),cnt=skyHits(notes).length;
       if(!still&&cnt<count0&&!worse(g0,guards(notes,beat))){log.push({at:n.timeMs,how:'ずらす',from:sub0,to:s,w,sky:n.skyHeight>0,type:n.type});done=true;break;}}
     if(done)continue;n.subLane=sub0;n.lane=Math.floor(sub0/2);

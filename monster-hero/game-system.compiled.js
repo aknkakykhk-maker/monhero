@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 10ee372cceb6cd7a
+// source-sha256: 5135aefa615ce530
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-22 11:32";
+const BUILD_DATE = "2026-10-22 11:50";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -40306,9 +40306,9 @@ const withTacticsTarget = (intent, units, random = Math.random, bias = TACTICS_T
   };
 };
 const TACTICS_HATE = {
-  k: 25,
   decay: 0.7,
   cap: 100,
+  weightCurve: [[0, 1], [20, 1.8], [40, 7.1], [100, 34]],
   flames: [20, 50, 80],
   cardFlames: [15, 40],
   cardDmgShareGuess: 0.5,
@@ -40575,7 +40575,17 @@ const tacticsHateStep = (hate, {
     return Math.min(TACTICS_HATE.cap, v);
   });
 };
-const tacticsHateWeightMult = (hate, index) => Array.isArray(hate) ? 1 + tacticsClamp(tacticsHateNum(hate[index]), 0, TACTICS_HATE.cap) / TACTICS_HATE.k : 1;
+const tacticsHateWeightMult = (hate, index) => {
+  if (!Array.isArray(hate)) return 1;
+  const h = tacticsClamp(tacticsHateNum(hate[index]), 0, TACTICS_HATE.cap);
+  const pts = TACTICS_HATE.weightCurve;
+  for (let i = 1; i < pts.length; i++) {
+    const [x0, y0] = pts[i - 1],
+      [x1, y1] = pts[i];
+    if (h <= x1) return y0 + (y1 - y0) * (h - x0) / (x1 - x0);
+  }
+  return pts[pts.length - 1][1];
+};
 const tacticsHateFlame = (value, isHero = false) => {
   const v = tacticsHateNum(value) - (isHero ? TACTICS_HATE.hero.floor : 0);
   return TACTICS_HATE.flames.filter(x => v >= x).length;
