@@ -11,6 +11,8 @@
 //   ⑤ 名前の出た子の値(資料の★おすすめ): あつの挑発・みゅあの愛・ももすけのおねだり・モノリスのかばう
 //   ⑥ 確認待ちの試作の一覧にあり、既定は切(キーが無ければ効かない)。タクティクスの盤面のバトル全部(タクティクスバトル・レイド。既存5モードは見ない)
 //   ⑦ タイプの表記: 確認待ちの試作の一覧にあり、既定は切。図鑑・図鑑の詳細・パーティ選びに印がある
+//   ⑧ 行動カードの🔥の段
+//   ⑨ 狙われる確率の強さ: WAVE の始めにタンクがガードで約65%・上限で約90%・勇者の下地だけは前と同じ
 const fs = require('fs');
 const path = require('path');
 const { loadGame } = require('../playbot/sim/load-game');
@@ -41,7 +43,7 @@ const seq = [0.1, 0.5, 0.9, 0.33];
 const pick = (hate) => seq.map((r) => G.withTacticsTarget({ type: 'ATTACK', value: 10 }, units, () => r, G.TACTICS_TARGET_LOW_HP_BIAS, hate).targetSlot);
 check('② 切のときの抽選は今までと同じ(引数なし = null)', JSON.stringify(pick(undefined)) === JSON.stringify(pick(null)));
 const hw = G.tacticsTargetWeights(units, G.TACTICS_TARGET_LOW_HP_BIAS, [50, 0, 0, 0]);
-check('② 入のときは ×(1 + ヘイト ÷ k)', near(hw[0].weight, old[0].weight * (1 + 50 / H.k)) && near(hw[1].weight, old[1].weight));
+check('② 入のときは ×(weightCurve の倍率)・ヘイト0の子は今までどおり', near(hw[0].weight, old[0].weight * G.tacticsHateWeightMult([50], 0)) && near(hw[1].weight, old[1].weight));
 
 // ③
 const ids = units.map((u) => u.id);
@@ -107,6 +109,25 @@ check('⑧ 子のタイプ・特性で変わる(盾のガード・モノリス�
 check('⑧ EX のかばうは大', G.tacticsHateExLevel('coverAll', 'Monol') === 3);
 const battle = read('monster-hero/src/parts/71-screen-battle.jsx');
 check('⑧ 手札と EX の詳細に段を出す(ヘイトが切なら出さない)', /tacticsHateOn&&\(\(\)=>\{const lv=tacticsHateCardLevel\(/.test(battle) && /tacticsHateOn&&\(\(\)=>\{const lv=tacticsHateExLevel\(/.test(battle));
+
+// ⑨ 狙われる確率の強さ(2026-10-22 社長「最大40%じゃヘイト調整してもなかなかこない」で選んだ強さ)
+//   4体ともライフ満タン・WAVE の始め(勇者は下地20・ほかは0)に、タンクがガード → そのタンクが約65%・ヘイト上限100で約90%
+{
+  const W = H.weightCurve;
+  check('⑨ 倍率の点が TACTICS_HATE.weightCurve にあり、0 で ×1・上限まで増える一方', Array.isArray(W) && W[0][0] === 0 && W[0][1] === 1 && W[W.length - 1][0] === H.cap
+    && W.every((pt, i) => i === 0 || (pt[0] > W[i - 1][0] && pt[1] > W[i - 1][1])) && !('k' in H));
+  check('⑨ 倍率の式は tacticsHateWeightMult の1か所だけ', (read('monster-hero/src/parts/32-tactics-units.jsx').match(/TACTICS_HATE\.weightCurve/g) || []).length === 1);
+  const full = (id) => ({ id, name: id, hp: 500, maxHp: 500, guts: 10, maxGuts: 10, atk: 100, def: 100 });
+  const ids4 = ['Mocchi', 'Yggdrasil', 'Ghost', 'Ham'], us = ids4.map(full);
+  const prob = (hate, i) => { const w = G.tacticsTargetWeights(us, G.TACTICS_TARGET_LOW_HP_BIAS, hate); return w.find((x) => x.index === i).weight / w.reduce((a, x) => a + x.weight, 0); };
+  const guard = G.tacticsHateCardGain({ type: 'guard' }, 'Yggdrasil');
+  const afterGuard = G.tacticsHateStep(G.tacticsHateWaveStart(0), { gains: [0, guard, 0, 0] }, us, 0, ids4);
+  const pg = prob(afterGuard, 1), pc = prob([H.hero.floor, H.cap, 0, 0], 1), ph = prob(G.tacticsHateWaveStart(0), 0);
+  check('⑨ WAVE の始めにタンクがガード(ヘイト約40)→ そのタンクが約65%', afterGuard[1] > 35 && afterGuard[1] < 45 && pg > 0.62 && pg < 0.68, `ヘイト ${afterGuard[1].toFixed(1)}・${(pg * 100).toFixed(1)}%`);
+  check('⑨ ヘイト上限100の子は約90%', pc > 0.87 && pc < 0.93, `${(pc * 100).toFixed(1)}%`);
+  check('⑨ 勇者の下地だけのときは前と同じ(×1.8・約38%。勇者ばかり狙わせない)', near(G.tacticsHateWeightMult([H.hero.floor], 0), 1.8) && ph < 0.4, `${(ph * 100).toFixed(1)}%`);
+  check('⑨ 4体とも同じヘイト0なら、ライフの減り具合だけで決まる(等分)', [0, 1, 2, 3].every((i) => near(prob([0, 0, 0, 0], i), 0.25)));
+}
 
 console.log(failed ? `\nNG ${failed}件` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
