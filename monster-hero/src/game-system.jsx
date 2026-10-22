@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 0fc9951e51193a4e
+// generated-sha256: d6c397d607eea700
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-22 13:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-22 20:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -308,6 +308,8 @@ const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
   get tacticsTypes() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.tacticsHate === true; },
   // あつの加入のお話(atsu_join_2026_10_22・2026-10-22)。あつの公開と一緒に出る
   get assistantAtsu() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantAtsu === true; },
+  // きゅうこの加入のお話(kyuko_join_2026_10_22・2026-10-22)。きゅうこの公開と一緒に出る
+  get assistantKyuko() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantKyuko === true; },
 });
 const eventReplayReleased = (event) => !event?.releaseFlag || EVENT_REPLAY_RELEASE_FLAGS[event.releaseFlag] === true;
 // 画面に並べるイベント回想。3か所(プロフィール・回想一覧・再生)が同じ並びを見るための唯一の入口
@@ -8571,6 +8573,9 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   // 5人目の助手あつ(2026-10-22 社長の決定)。社長がお話の全文を読んで「公開ok」→真にした(2026-10-22)。
   //   偽のあいだは、助手の一覧・加入のお話・回想・ヘルプの項目に出ない(data/assistants.js の ASSISTANT_RELEASE_FLAGS)
   assistantAtsu: true,
+  // 6人目の助手きゅうこ(2026-10-22 社長の決定)。新モンスターのイルミネ・ドリーミィも出る加入のお話を社長が全文読んで OK を出したら、3つ同時に真にする。
+  //   偽のあいだは、助手の一覧・加入のお話・回想・マーケットのカード「きゅうこ」に出ない(data/assistants.js の ASSISTANT_RELEASE_FLAGS・data/breeder.js の kyukoCardOnSale)
+  assistantKyuko: false,
   tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE,
   // タクティクスのヘイト(🔥)とモンスターのタイプ表記。2026-10-18 社長「ヘイトシステムは実装していいよ」で公開。
   //   数字は 32-tactics-units.jsx の TACTICS_HATE / MONSTER_TYPES。お話「タクティクスバトル ～4人のタイプ～」(tactics_types)もこの印で出る
@@ -8883,6 +8888,8 @@ const ASSISTANT_CHAT_STORY_SEEN_KEY = 'mh_story_assistant_chat_seen_v1';
 const ASSISTANT_CHAT_STORY_ID = 'assistant_chat_story';
 // あつの加入のお話(2026-10-22)。id は data/assistants.js の ASSISTANT_UNLOCK_STORIES.atsu と同じ
 const ATSU_JOIN_STORY_ID = 'atsu_join_2026_10_22';
+// きゅうこの加入のお話(2026-10-22)。id は data/assistants.js の EVENT_REPLAYS と data/breeder.js の KYUKO_JOIN_STORY_ID_FOR_SHOP と同じ
+const KYUKO_JOIN_STORY_ID = 'kyuko_join_2026_10_22';
 // 助手4人がタイプを教えるお話「タクティクスバトル ～4人のタイプ～」(2026-10-18・新しいキー。既存のキーには触らない・CLAUDE.md ⑦)。
 // ヘイトとタイプの公開(RELEASE_FLAGS.tacticsHate)のあと、タクティクスバトルの導入のお話を見た人にだけ、最初の HOME で1回流す。デバッグから見たぶんは立てない
 const TACTICS_TYPES_STORY_SEEN_KEY = 'mh_story_tactics_types_seen_v1';
@@ -13197,6 +13204,7 @@ const TEACHING_FX_STYLE = {
   myaru:   { icon:"🐈", label:"怪薬投与!",   text:"text-purple-300",  ring:"border-purple-300",  rgb:"168,85,247", c1:'#e9d5ff', c2:'#a855f7', motif:'rise' },
   kiki:    { icon:"📣", label:"全力応援!",   text:"text-sky-300",     ring:"border-sky-300",     rgb:"56,189,248", c1:'#bae6fd', c2:'#38bdf8', motif:'blade' },
   momosuke:{ icon:"🍑", label:"ひとりじめ!", text:"text-pink-300",    ring:"border-pink-300",    rgb:"244,114,182", c1:'#fbcfe8', c2:'#f472b6', motif:'rise' },
+  kyuko:   { icon:"🎼", label:"譜面どおり!", text:"text-pink-300",    ring:"border-pink-300",    rgb:"244,114,182", c1:'#fbcfe8', c2:'#f472b6', motif:'shield' },
   poltz:   { icon:"🍱", label:"弁当を構える!", text:"text-lime-300",    ring:"border-lime-300",    rgb:"163,230,53", c1:'#d9f99d', c2:'#84cc16', motif:'rise' },
   // メロソ(回復＋ガード)。2026-09-29 まで演出が無かった
   meloso:  { icon:"🔍", label:"解析完了!",   text:"text-teal-300",    ring:"border-teal-300",    rgb:"20,184,166", c1:'#99f6e4', c2:'#14b8a6', motif:'shield' },
@@ -24710,10 +24718,11 @@ const TACTICS_HATE = {
     sub: { tank: 10, healer: 5, attacker: 5, supporter: 3, shadow: -5 },
   },
   // guard は 25 → 5(2026-10-22 社長「ガードは狙われたら使うからそこまでむしろ上げないほうがよさそう」)。ヘイトはアシカ・EX でためる
-  action: { atk: 2, unique: 4, dmgShare: 15, heal: 30, buff: 5, debuff: 8, guard: 5, taunt: 40, ex: 10 },
+  // cover はきゅうこの譜面(2026-10-22 社長「やっぱりヘイトアップはなし」)。狙いを引き受けても🔥は上がらない
+  action: { atk: 2, unique: 4, dmgShare: 15, heal: 30, buff: 5, debuff: 8, guard: 5, taunt: 40, cover: 0, ex: 10 },
   exByEffect: { coverAll: 60, partyGuard: 20, lifeSpring: 20, cookieBox: 15, partyBoost: 15, present: 10 },
   // 助手のカード(id)がどの行動か
-  assist: { atsu: 'taunt', mua: 'heal', momosuke: 'heal', meloso: 'heal', oryo: 'buff', dra: 'buff', cadmium: 'buff', myaru: 'buff', kiki: 'buff', poltz: 'buff' },
+  assist: { atsu: 'taunt', kyuko: 'cover', mua: 'heal', momosuke: 'heal', meloso: 'heal', oryo: 'buff', dra: 'buff', cadmium: 'buff', myaru: 'buff', kiki: 'buff', poltz: 'buff' },
   // 回復の量(ライフの回復率 + ガッツの回復率 × 0.5)。段 0〜2
   healAmount: { mua: [0.5, 1.05, 1.35], momosuke: [0.25, 1.05, 1.35], meloso: [0.45, 0.45, 0.45] },
   // 子ごとの上書き(タイプの既定値より強く/弱くしたい子だけ)。mult … 増え方の倍率 / add … 行動ごとの上乗せ / always … 行動のたびの上乗せ
@@ -26758,6 +26767,13 @@ const tacticsExCoverSlot = (state, units, now) => {
 // 敵の攻撃の当たり先を、かばう子へ集める。★当たる回数はそのまま
 // (全体攻撃で3体に当たるはずなら、かばう子が3回受ける。連撃は連撃のまま)。
 // 攻撃の性質(貫通ならガードが効かない、など)は変えない
+// きゅうこの譜面(2026-10-22 社長の決定): 使ったターンだけ、敵の単体攻撃を使った子(slot)へ向ける。
+// 全体攻撃(targetsAll)・当たり先が無い攻撃はそのまま。倒れている子には向けない。「みんなをかばう」はこのあとに掛かる(かばうが勝つ)
+const redirectTacticsSingleTarget = (targets, intent, slot, units) => {
+  const list = Array.isArray(targets) ? targets : [];
+  if (!Number.isInteger(slot) || !intent || intent.targetsAll || list.length !== 1) return list;
+  return tacticsAliveSlots(units).includes(slot) ? [slot] : list;
+};
 const coverTacticsTargets = (targets, coverSlot) => (Number.isInteger(coverSlot) && Array.isArray(targets) && targets.length
   ? targets.map(() => coverSlot) : (Array.isArray(targets) ? targets : []));
 // ==== タクティクス専用 EXスキルここまで ====
@@ -40158,6 +40174,8 @@ function BattleScreen({
             if(comboDmg>0) chip('combo',<Sword size={9}/>,'連撃',`+${comboDmg}%`,'text-cyan-400 border-cyan-400/50');
             if(getPermaBuff('globalComboDmgPct')>0) chip('globalCombo',<Sword size={9}/>,'全体連撃',`+${Math.round(getPermaBuff('globalComboDmgPct')*100)}%`,'text-sky-300 border-sky-300/50');
             if(kikiCardBonus>0) chip('kikiCard',<PlusCircle size={9}/>,'カード上限',`+1（残り${Math.ceil(getPermaBuff('kikiCardBonusTurns'))}T）`,'text-violet-300 border-violet-300/50',{short:'+1'});
+            // きゅうこの譜面(2026-10-22)。受けるダメージダウンの残りターン(タクティクスは使った子だけに効く)
+            if(getPermaBuff('kyukoCutTurns')>0&&getPermaBuff('kyukoCutRate')>0) chip('kyukoCut',<Shield size={9}/>,'被ダメ',`-${Math.round(getPermaBuff('kyukoCutRate')*100)}%（残り${Math.ceil(getPermaBuff('kyukoCutTurns'))}T）`,'text-pink-300 border-pink-300/50',{short:`-${Math.round(getPermaBuff('kyukoCutRate')*100)}%`});
             // ソードスキル(剣士モッチー)。連撃パワーは3たまるごとに永久追加連撃へ変わるので、
             // 両方が見えないと進み具合が分からない
             if(getPermaBuff('kenshiComboPower')>0||getPermaBuff('kenshiExtraCombo')>0){
@@ -54082,7 +54100,7 @@ function MonsterHeroGame() {
   // 時刻で出すのは第1部だけ(data/rhythm-event.js の HALLOWEEN_NIGHT_STORIES)。第2部以降はジャックのストーリー(RAID_JACK_STORY_IDS)で、
   // レイドの進み具合で出る。見たかどうかは同じ保存キーの配列へ入れる(新しいキーは作らない)
   const HALLOWEEN_NIGHT_STORY_IDS = HALLOWEEN_NIGHT_STORIES.map(story => story.id);
-  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID];
+  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID];
   // ★イベントid → そのイベントの会話id。**イベントを足したらここへ1行足す。**
   //   以前はここが第1回のidの直書きで、第2回が始まっても第1回の会話が流れる形になっていた
   //   (2026-09-17に第2回を足したときに直した)。書かなかったイベントでは会話は流れない。
@@ -54254,6 +54272,17 @@ function MonsterHeroGame() {
     if (rhythmEventStoryStartedRef.current.includes(ATSU_JOIN_STORY_ID)) return;
     setRhythmEventStoryPending(ATSU_JOIN_STORY_ID);
   }, [rhythmEventStorySeen, assistantBonds, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  // きゅうこの加入のお話(2026-10-22 社長の決定)。きゅうこは最初から選べるので、公開のあとの最初の HOME でだれにでも1回だけ流す。
+  // 見たかどうかはあつと同じ「見終えたお話の id」(mh_rhythm_event_story_v1)。見たらマーケットにカード「きゅうこ」が並ぶ(data/breeder.js の kyukoCardOnSale)。
+  // 公開の印 assistantKyuko が偽なら何もしない
+  useEffect(() => {
+    if (typeof setKyukoJoinSeenForShop === 'function') setKyukoJoinSeenForShop(Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(KYUKO_JOIN_STORY_ID));
+    if (!EVENT_REPLAY_RELEASE_FLAGS.assistantKyuko) return;
+    if (!Array.isArray(rhythmEventStorySeen) || rhythmEventStorySeen.includes(KYUKO_JOIN_STORY_ID)) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
+    if (rhythmEventStoryStartedRef.current.includes(KYUKO_JOIN_STORY_ID)) return;
+    setRhythmEventStoryPending(KYUKO_JOIN_STORY_ID);
+  }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
   // 助手4人がタイプを教えるお話を、ヘイトとタイプの公開のあとの最初の HOME で1回だけ流す(2026-10-18)。
   // タクティクスバトルの導入のお話をまだ見ていない人には流さない(何の話か分からないので。回想からは見られる)
   useEffect(() => {
@@ -57083,6 +57112,7 @@ function MonsterHeroGame() {
     raidJackHowtoSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RAID_JACK_HOWTO_STORY_ID),
     raidJackRhythmStorySeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RAID_JACK_RHYTHM_STORY_ID),
     atsuJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(ATSU_JOIN_STORY_ID),
+    kyukoJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(KYUKO_JOIN_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID) };
   // alwaysUnlocked のイベントは、本編でまだ見ていなくても回想から見られる
   const isEventReplayUnlocked = (event) => !!(event && event.alwaysUnlocked) || !!EVENT_REPLAY_UNLOCK_FLAGS[event && event.unlockedKey];
@@ -60482,11 +60512,21 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   //     剣士モッチーの二刀流は「勇者モンにしたからこそ強い」設定なので、
   //     **勇者モンのときだけ**発動させる(buildAttackHits が heroId で見分ける)
   const traitOwnerOf = (mon) => (isTacticsMode(runMode) ? (mon?.id || null) : (mainHero?.id || null));
+  // きゅうこの譜面(2026-10-22)の被ダメ倍率。kyukoCutTurns が残っているあいだだけ効く。
+  //   タクティクスは使った子(kyukoCutSlot)だけ、ほかのモードはパーティのライフ全体。壊れた値は効かない扱い
+  const kyukoTakenMultAt = (slotIdx = null) => {
+    const p = permaBuffsRef.current || {};
+    const turns = Number(p.kyukoCutTurns), rate = Number(p.kyukoCutRate), slot = p.kyukoCutSlot;
+    if (!(turns > 0) || !(rate > 0)) return 1;
+    if (isTacticsMode(runMode) && Number.isInteger(slot) && slot >= 0 && slot !== slotIdx) return 1;
+    return Math.max(0.1, 1 - Math.min(0.9, rate));
+  };
   const applyTurnDamageReduction = useCallback((damage, slotIdx = null) => damage>0
     ? Math.max(1,Math.floor(damage*getTurnBuff('takenDamageMult',1.0)
       *tacticsSlotRate(isTacticsMode(runMode)?turnBuffs.bySlot:null,slotIdx,'takenDamageMult',1.0)
       *(isTacticsMode(runMode)?tacticsExPartyTakenMultNow()*tacticsExMultiBuffNow(slotIdx).taken*tacticsExPartyBuffNow().taken:1)
-      *cookieEffectNow().takenMult)) // クッキー7個から(メロディー): 味方全体の被ダメ軽減
+      *cookieEffectNow().takenMult) // クッキー7個から(メロディー): 味方全体の被ダメ軽減
+      *kyukoTakenMultAt(slotIdx)) // きゅうこの譜面: 使った子(タクティクス以外はパーティ)の被ダメ軽減。残りターンは permaBuffs
     : 0, [turnBuffs, runMode]);
   const getPredictedDamage = useCallback((intent) => applyTurnDamageReduction(
     getIncomingDamageBeforeTurnReduction(intent)
@@ -60639,6 +60679,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // ハムのクロスカウンター用: 予告された攻撃の狙い(敵の予告と間合い)と、そのターンにクロスカウンターを出した枠(ターンの印つき。別のターンの値は見ない)
   // 悠久の刻で時間が止まったターンか(止まったターンは、敵の次の行動を決め直さない)
   const tacticsExFrozenRef = useRef(false);
+  // きゅうこの譜面(2026-10-22): このターン単体攻撃を引き受ける子の枠(タクティクスだけ)。null なら引き受けない
+  const kyukoRedirectRef = useRef(null);
   const tacticsExAimRef = useRef({ intent:null, dist:2 });
   tacticsExAimRef.current = { intent:enemyIntent, dist:enemyDist };
   const tacticsExCrossRef = useRef({ wave:-1, turn:-1, slots:{} });
@@ -60867,7 +60909,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 使い方案内を出すか。EXを持つ子が盤面にいるバトルで、まだ見ていないときだけ
   const tacticsExIntroVisible = RELEASE_FLAGS.tacticsExSkills === true && !tacticsExIntroSeen
     && gameState === 'BATTLE' && tacticsExEnabled && slots.some(mon => mon && raidExDefOf(mon.id));
-  const tacticsTargetsNow = (intent, dist) => coverTacticsTargets(tacticsIntentTargets(intent,tacticsUnitsRef.current,dist), tacticsCoverSlotNow());
+  // きゅうこの譜面を使ったターンは、単体攻撃の当たり先を使った子へ(kyukoRedirectRef・ターンの始めと敵の番のあとで消す)
+  const tacticsTargetsNow = (intent, dist) => coverTacticsTargets(redirectTacticsSingleTarget(tacticsIntentTargets(intent,tacticsUnitsRef.current,dist),intent,kyukoRedirectRef.current,tacticsUnitsRef.current), tacticsCoverSlotNow());
   const tacticsUsableSlots = (card, excludeHandIndex = null) => {
     if(!isTacticsMode(runMode)||!card) return [];
     const spent={}, used={};
@@ -62534,6 +62577,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   };
 
   const processTurn = async (explicitEntries = null) => {
+    kyukoRedirectRef.current = null; // きゅうこの譜面の「引き受け」は使ったターンだけ
     const hasExplicitEntries=Array.isArray(explicitEntries);
     const usedCardEntries=hasExplicitEntries
       ? explicitEntries.filter(entry=>entry&&Number.isInteger(entry.handIndex)&&hand[entry.handIndex]&&entry.card===hand[entry.handIndex])
@@ -62724,6 +62768,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const conf=POLTZ_TIERS[tier];
           writePermaBuffs(p=>({...p, poltzTier:tier, poltzEffMul:effMul, poltzCharges:conf.charges}));
           addPopup(`🍱 ${BREEDER_EVO_NAMES.poltz[tier]} ×${conf.charges}`,'hero','text-lime-300 font-black text-xl drop-shadow-md');
+        }
+        // きゅうこの譜面: このターンの単体攻撃を使った子へ向け(タクティクス)、使った子の被ダメを数ターン減らす。🔥は上げない。
+        //   効果量は data/breeder.js の KYUKO_TIERS。重ねて使ったら、あとのカードで張り直す(足さない)
+        else if (card.subType==='cover_kyuko') {
+          const owned=ownedTeachings.find(ot=>ot.id===card.id); const tier=Math.min(owned?owned.evoLevel:0,KYUKO_TIERS.length-1);
+          const conf=KYUKO_TIERS[tier]; const cut=Math.min(0.9,conf.cut*effMul);
+          const tactics=isTacticsMode(runMode);
+          if(tactics) kyukoRedirectRef.current=slotIdx;
+          writePermaBuffs(p=>({...p, kyukoCutRate:cut, kyukoCutTurns:conf.turns, kyukoCutSlot:tactics?slotIdx:-1}));
+          addPopup(`🎼 ${BREEDER_EVO_NAMES.kyuko[tier]} 被ダメ${Math.round(cut*100)}%減(${conf.turns}T)`,'hero','text-pink-300 font-black text-xl drop-shadow-md');
+          if(tactics) pushBattleLog(`🎼 ${battleActorName(slotIdx)}が、このターンの単体攻撃を引き受ける`,'ally');
         }
         else if (card.subType==='buff_kiki') { const owned=ownedTeachings.find(ot=>ot.id===card.id); const level=Math.min(owned?owned.evoLevel:0,2); const comboAdd=localBoostFromCard(card).combo*effMul; localGlobalComboAdd+=comboAdd; addPermaBuff('globalComboDmgPct',comboAdd); writePermaBuffs(p=>({...p,kikiCardBonusTurns:Math.max(1,(level+1)*effMul)+2})); addPopup(`全体連撃+${((3+level*2)*effMul).toFixed(effMul===1?0:1)}%!`,'hero','text-sky-300 text-lg font-bold'); }
       }
@@ -63204,6 +63259,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const executedIntent=enemyIntent;
     // distLocked: このターン距離撃を撃ったか。敵の移動は距離撃で上書きされるため、行動しなかった扱いにする
     await handleEnemyTurn(finalActionType,{invincible:immediateInvincible,stun:immediateStun,guardFlat:currentTurnGuardFlat,guardMult:currentTurnGuardMult,guardBySlot,distLocked:forcedMoveTarget!=null,forcedMoveTarget,iceLockRefreshed:activatedIceLockThisTurn,takenMult:immediateTakenMult,takenMultBySlot:immediateTakenMultBySlot},executedIntent,hpBeforeEnemyAttack,enemyHpAfterOurAttacks);
+    // きゅうこの譜面: 引き受けは使ったターンだけ。ダメージダウンは敵の番を1回過ぎるごとに1ターン減る(使ったターンも1と数える)
+    kyukoRedirectRef.current=null;
+    writePermaBuffs(p=>p.kyukoCutTurns>0?({...p,kyukoCutTurns:Math.max(0,p.kyukoCutTurns-1)}):p);
     // 通常の距離変更を先に処理した後、最後の距離撃の指定距離を再適用して最終距離を確定する。
     if (forcedMoveTarget!=null) {
       setEnemyDist(forcedMoveTarget);
@@ -65428,6 +65486,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if(t.id==='atsu') return `このターン敵の行動を無効・攻撃 ${(t.baseValue+level*t.step).toFixed(1)}倍`;
     if(t.id==='myaru'){const v=t.baseValue+level*t.step, d=pct(myaruSelfDamageRate(t,level)); return `次ターン攻撃 ${v.toFixed(1)}倍・自傷 ${d}%`;}
     if(t.id==='kiki') return `次の${level+2}ターン 使用可能カード枚数 +1・全体連撃 ${3+level*2}%アップ（バトル中永続・使用ごとに加算）`;
+    if(t.id==='kyuko'){
+      const tier=KYUKO_TIERS[Math.min(level,KYUKO_TIERS.length-1)];
+      return `このターン敵の単体攻撃を引き受ける（タクティクス）・受けるダメージ ${pct(tier.cut)}%ダウン（${tier.turns}ターン・タクティクス以外はパーティ全体）`;
+    }
     if(t.id==='poltz'){
       const tier=POLTZ_TIERS[Math.min(level,POLTZ_TIERS.length-1)];
       const parts=[`敵の攻撃を受けるたびに発動（${tier.charges}回まで）`,`発動ごとにガッツ ${pct(tier.healGuts)}%回復`,`ガッツ自動回復 ${pct(tier.gutsRecover)}%アップ（次のターンから・バトル中永続）`];

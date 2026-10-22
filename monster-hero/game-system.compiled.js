@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e2f36d273ebdadd7
+// source-sha256: c5bc7727c5c57704
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-22 13:50";
+const BUILD_DATE = "2026-10-22 20:54";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -401,6 +401,9 @@ const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
   },
   get assistantAtsu() {
     return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantAtsu === true;
+  },
+  get assistantKyuko() {
+    return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantKyuko === true;
   }
 });
 const eventReplayReleased = event => !event?.releaseFlag || EVENT_REPLAY_RELEASE_FLAGS[event.releaseFlag] === true;
@@ -12073,6 +12076,7 @@ const RELEASE_FLAGS = {
   assistantChatRanking: true,
   assistantDailyLines: true,
   assistantAtsu: true,
+  assistantKyuko: false,
   tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE,
   tacticsHate: true,
   tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE,
@@ -12419,6 +12423,7 @@ const RHYTHM_HELL_STORY_TRIGGER = 'release';
 const ASSISTANT_CHAT_STORY_SEEN_KEY = 'mh_story_assistant_chat_seen_v1';
 const ASSISTANT_CHAT_STORY_ID = 'assistant_chat_story';
 const ATSU_JOIN_STORY_ID = 'atsu_join_2026_10_22';
+const KYUKO_JOIN_STORY_ID = 'kyuko_join_2026_10_22';
 const TACTICS_TYPES_STORY_SEEN_KEY = 'mh_story_tactics_types_seen_v1';
 const TACTICS_TYPES_STORY_ID = 'tactics_types';
 const normalizeAssistantId = value => typeof assistantIdOrDefault === 'function' ? assistantIdOrDefault(typeof value === 'string' ? value : null) : typeof DEFAULT_ASSISTANT_ID !== 'undefined' && DEFAULT_ASSISTANT_ID || 'mua';
@@ -18592,6 +18597,16 @@ const TEACHING_FX_STYLE = {
     c1: '#fbcfe8',
     c2: '#f472b6',
     motif: 'rise'
+  },
+  kyuko: {
+    icon: "🎼",
+    label: "譜面どおり!",
+    text: "text-pink-300",
+    ring: "border-pink-300",
+    rgb: "244,114,182",
+    c1: '#fbcfe8',
+    c2: '#f472b6',
+    motif: 'shield'
   },
   poltz: {
     icon: "🍱",
@@ -40437,6 +40452,7 @@ const TACTICS_HATE = {
     debuff: 8,
     guard: 5,
     taunt: 40,
+    cover: 0,
     ex: 10
   },
   exByEffect: {
@@ -40449,6 +40465,7 @@ const TACTICS_HATE = {
   },
   assist: {
     atsu: 'taunt',
+    kyuko: 'cover',
     mua: 'heal',
     momosuke: 'heal',
     meloso: 'heal',
@@ -43084,6 +43101,11 @@ const tacticsExCoverSlot = (state, units, now) => {
     if (tacticsExActiveEffect(safe, slot, unit.id, now) === 'coverAll') return slot;
   }
   return null;
+};
+const redirectTacticsSingleTarget = (targets, intent, slot, units) => {
+  const list = Array.isArray(targets) ? targets : [];
+  if (!Number.isInteger(slot) || !intent || intent.targetsAll || list.length !== 1) return list;
+  return tacticsAliveSlots(units).includes(slot) ? [slot] : list;
 };
 const coverTacticsTargets = (targets, coverSlot) => Number.isInteger(coverSlot) && Array.isArray(targets) && targets.length ? targets.map(() => coverSlot) : Array.isArray(targets) ? targets : [];
 const RHYTHM_BUDDY_KEY = 'mh_rhythm_buddy_v1';
@@ -66981,6 +67003,11 @@ function BattleScreen({
     }), 'カード上限', `+1（残り${Math.ceil(getPermaBuff('kikiCardBonusTurns'))}T）`, 'text-violet-300 border-violet-300/50', {
       short: '+1'
     });
+    if (getPermaBuff('kyukoCutTurns') > 0 && getPermaBuff('kyukoCutRate') > 0) chip('kyukoCut', React.createElement(Shield, {
+      size: 9
+    }), '被ダメ', `-${Math.round(getPermaBuff('kyukoCutRate') * 100)}%（残り${Math.ceil(getPermaBuff('kyukoCutTurns'))}T）`, 'text-pink-300 border-pink-300/50', {
+      short: `-${Math.round(getPermaBuff('kyukoCutRate') * 100)}%`
+    });
     if (getPermaBuff('kenshiComboPower') > 0 || getPermaBuff('kenshiExtraCombo') > 0) {
       const kenshiExtra = getPermaBuff('kenshiExtraCombo');
       chip('kenshi', React.createElement(Sword, {
@@ -86123,7 +86150,7 @@ function MonsterHeroGame() {
   const RAID_JACK_HOWTO_AFTER_STORY_ID = 'halloween_night_2026_part1';
   const RAID_JACK_RHYTHM_STORY_ID = 'raid_jack_rhythm_story_2026_10_06';
   const HALLOWEEN_NIGHT_STORY_IDS = HALLOWEEN_NIGHT_STORIES.map(story => story.id);
-  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID];
+  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID];
   const RHYTHM_EVENT_STORY_BY_EVENT = {
     [MONBEAT_CUP_EVENT_ID]: MONBEAT_CUP_STORY_ID,
     [SYMPHONY_EVENT_ID]: SYMPHONY_STORY_ID
@@ -86309,6 +86336,14 @@ function MonsterHeroGame() {
     if (rhythmEventStoryStartedRef.current.includes(ATSU_JOIN_STORY_ID)) return;
     setRhythmEventStoryPending(ATSU_JOIN_STORY_ID);
   }, [rhythmEventStorySeen, assistantBonds, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  useEffect(() => {
+    if (typeof setKyukoJoinSeenForShop === 'function') setKyukoJoinSeenForShop(Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(KYUKO_JOIN_STORY_ID));
+    if (!EVENT_REPLAY_RELEASE_FLAGS.assistantKyuko) return;
+    if (!Array.isArray(rhythmEventStorySeen) || rhythmEventStorySeen.includes(KYUKO_JOIN_STORY_ID)) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
+    if (rhythmEventStoryStartedRef.current.includes(KYUKO_JOIN_STORY_ID)) return;
+    setRhythmEventStoryPending(KYUKO_JOIN_STORY_ID);
+  }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
   useEffect(() => {
     if (!EVENT_REPLAY_RELEASE_FLAGS.tacticsTypes || !EVENT_REPLAY_RELEASE_FLAGS.tacticsBattle) return;
     if (!tacticsTypesStorySeenLoaded || tacticsTypesStorySeenFlag || !tacticsIntroSeenFlag) return;
@@ -89096,6 +89131,7 @@ function MonsterHeroGame() {
     raidJackHowtoSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RAID_JACK_HOWTO_STORY_ID),
     raidJackRhythmStorySeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RAID_JACK_RHYTHM_STORY_ID),
     atsuJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(ATSU_JOIN_STORY_ID),
+    kyukoJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(KYUKO_JOIN_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID)
   };
   const isEventReplayUnlocked = event => !!(event && event.alwaysUnlocked) || !!EVENT_REPLAY_UNLOCK_FLAGS[event && event.unlockedKey];
@@ -93812,7 +93848,16 @@ function MonsterHeroGame() {
     return Math.max(1, Math.floor(dmgBase * Math.max(0.01, 1.0 - getPermaBuff('dmgCutPct')) * iceLockEnemyDamageMult * tacticsExPsychoLockNow().enemyDmgMult * soulDamageRemaining));
   }, [effectiveDef, mainHero, permaBuffs, waveBuffs, soulBattleParty.damageReduction, runMode, turnCount, fateWheelView]);
   const traitOwnerOf = mon => isTacticsMode(runMode) ? mon?.id || null : mainHero?.id || null;
-  const applyTurnDamageReduction = useCallback((damage, slotIdx = null) => damage > 0 ? Math.max(1, Math.floor(damage * getTurnBuff('takenDamageMult', 1.0) * tacticsSlotRate(isTacticsMode(runMode) ? turnBuffs.bySlot : null, slotIdx, 'takenDamageMult', 1.0) * (isTacticsMode(runMode) ? tacticsExPartyTakenMultNow() * tacticsExMultiBuffNow(slotIdx).taken * tacticsExPartyBuffNow().taken : 1) * cookieEffectNow().takenMult)) : 0, [turnBuffs, runMode]);
+  const kyukoTakenMultAt = (slotIdx = null) => {
+    const p = permaBuffsRef.current || {};
+    const turns = Number(p.kyukoCutTurns),
+      rate = Number(p.kyukoCutRate),
+      slot = p.kyukoCutSlot;
+    if (!(turns > 0) || !(rate > 0)) return 1;
+    if (isTacticsMode(runMode) && Number.isInteger(slot) && slot >= 0 && slot !== slotIdx) return 1;
+    return Math.max(0.1, 1 - Math.min(0.9, rate));
+  };
+  const applyTurnDamageReduction = useCallback((damage, slotIdx = null) => damage > 0 ? Math.max(1, Math.floor(damage * getTurnBuff('takenDamageMult', 1.0) * tacticsSlotRate(isTacticsMode(runMode) ? turnBuffs.bySlot : null, slotIdx, 'takenDamageMult', 1.0) * (isTacticsMode(runMode) ? tacticsExPartyTakenMultNow() * tacticsExMultiBuffNow(slotIdx).taken * tacticsExPartyBuffNow().taken : 1) * cookieEffectNow().takenMult) * kyukoTakenMultAt(slotIdx)) : 0, [turnBuffs, runMode]);
   const getPredictedDamage = useCallback(intent => applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(intent)), [getIncomingDamageBeforeTurnReduction, applyTurnDamageReduction]);
   const BATTLE_LOG_LIMIT = 60;
   const battleActorName = slotIdx => slots[slotIdx]?.masuName || slots[slotIdx]?.name || '味方';
@@ -93940,6 +93985,7 @@ function MonsterHeroGame() {
     }
   });
   const tacticsExFrozenRef = useRef(false);
+  const kyukoRedirectRef = useRef(null);
   const tacticsExAimRef = useRef({
     intent: null,
     dist: 2
@@ -94241,7 +94287,7 @@ function MonsterHeroGame() {
     return live.enabled ? tacticsExCoverSlot(tacticsExStateRef.current, tacticsUnitsRef.current, live.now) : null;
   };
   const tacticsExIntroVisible = RELEASE_FLAGS.tacticsExSkills === true && !tacticsExIntroSeen && gameState === 'BATTLE' && tacticsExEnabled && slots.some(mon => mon && raidExDefOf(mon.id));
-  const tacticsTargetsNow = (intent, dist) => coverTacticsTargets(tacticsIntentTargets(intent, tacticsUnitsRef.current, dist), tacticsCoverSlotNow());
+  const tacticsTargetsNow = (intent, dist) => coverTacticsTargets(redirectTacticsSingleTarget(tacticsIntentTargets(intent, tacticsUnitsRef.current, dist), intent, kyukoRedirectRef.current, tacticsUnitsRef.current), tacticsCoverSlotNow());
   const tacticsUsableSlots = (card, excludeHandIndex = null) => {
     if (!isTacticsMode(runMode) || !card) return [];
     const spent = {},
@@ -96175,6 +96221,7 @@ function MonsterHeroGame() {
     if (!tacticsExFrozenRef.current) advanceEnemyIntents(acting, distForNextPredict, enemyActionPerformedRef.current);
   };
   const processTurn = async (explicitEntries = null) => {
+    kyukoRedirectRef.current = null;
     const hasExplicitEntries = Array.isArray(explicitEntries);
     const usedCardEntries = hasExplicitEntries ? explicitEntries.filter(entry => entry && Number.isInteger(entry.handIndex) && hand[entry.handIndex] && entry.card === hand[entry.handIndex]).map(entry => ({
       card: entry.card,
@@ -96416,6 +96463,21 @@ function MonsterHeroGame() {
             poltzCharges: conf.charges
           }));
           addPopup(`🍱 ${BREEDER_EVO_NAMES.poltz[tier]} ×${conf.charges}`, 'hero', 'text-lime-300 font-black text-xl drop-shadow-md');
+        } else if (card.subType === 'cover_kyuko') {
+          const owned = ownedTeachings.find(ot => ot.id === card.id);
+          const tier = Math.min(owned ? owned.evoLevel : 0, KYUKO_TIERS.length - 1);
+          const conf = KYUKO_TIERS[tier];
+          const cut = Math.min(0.9, conf.cut * effMul);
+          const tactics = isTacticsMode(runMode);
+          if (tactics) kyukoRedirectRef.current = slotIdx;
+          writePermaBuffs(p => ({
+            ...p,
+            kyukoCutRate: cut,
+            kyukoCutTurns: conf.turns,
+            kyukoCutSlot: tactics ? slotIdx : -1
+          }));
+          addPopup(`🎼 ${BREEDER_EVO_NAMES.kyuko[tier]} 被ダメ${Math.round(cut * 100)}%減(${conf.turns}T)`, 'hero', 'text-pink-300 font-black text-xl drop-shadow-md');
+          if (tactics) pushBattleLog(`🎼 ${battleActorName(slotIdx)}が、このターンの単体攻撃を引き受ける`, 'ally');
         } else if (card.subType === 'buff_kiki') {
           const owned = ownedTeachings.find(ot => ot.id === card.id);
           const level = Math.min(owned ? owned.evoLevel : 0, 2);
@@ -97140,6 +97202,11 @@ function MonsterHeroGame() {
       takenMult: immediateTakenMult,
       takenMultBySlot: immediateTakenMultBySlot
     }, executedIntent, hpBeforeEnemyAttack, enemyHpAfterOurAttacks);
+    kyukoRedirectRef.current = null;
+    writePermaBuffs(p => p.kyukoCutTurns > 0 ? {
+      ...p,
+      kyukoCutTurns: Math.max(0, p.kyukoCutTurns - 1)
+    } : p);
     if (forcedMoveTarget != null) {
       setEnemyDist(forcedMoveTarget);
       syncAtkTierForDist(forcedMoveTarget);
@@ -99961,6 +100028,10 @@ function MonsterHeroGame() {
       return `次ターン攻撃 ${v.toFixed(1)}倍・自傷 ${d}%`;
     }
     if (t.id === 'kiki') return `次の${level + 2}ターン 使用可能カード枚数 +1・全体連撃 ${3 + level * 2}%アップ（バトル中永続・使用ごとに加算）`;
+    if (t.id === 'kyuko') {
+      const tier = KYUKO_TIERS[Math.min(level, KYUKO_TIERS.length - 1)];
+      return `このターン敵の単体攻撃を引き受ける（タクティクス）・受けるダメージ ${pct(tier.cut)}%ダウン（${tier.turns}ターン・タクティクス以外はパーティ全体）`;
+    }
     if (t.id === 'poltz') {
       const tier = POLTZ_TIERS[Math.min(level, POLTZ_TIERS.length - 1)];
       const parts = [`敵の攻撃を受けるたびに発動（${tier.charges}回まで）`, `発動ごとにガッツ ${pct(tier.healGuts)}%回復`, `ガッツ自動回復 ${pct(tier.gutsRecover)}%アップ（次のターンから・バトル中永続）`];
