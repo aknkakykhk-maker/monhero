@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5276b4e3d5443b6d
+// source-sha256: c67e8835889f3861
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-22 23:55";
+const BUILD_DATE = "2026-10-23 00:11";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -19327,7 +19327,7 @@ const skillMotionSlotOf = (monId, skillName, isUnique) => {
   if (!skillName || typeof SKILL_MOTION_SETS === 'undefined') return null;
   const lookup = id => {
     const set = SKILL_MOTION_SETS[id];
-    const mon = typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[id] : null;
+    const mon = typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[id] || typeof UPCOMING_MONSTER_DRAFTS !== 'undefined' && UPCOMING_MONSTER_DRAFTS[id] || null;
     if (!set || !mon) return null;
     const lists = isUnique === true ? [['unique', mon.unique?.names]] : isUnique === false ? [['normal', HERO_ATK_NAMES[id]]] : [['normal', HERO_ATK_NAMES[id]], ['unique', mon.unique?.names]];
     for (const [kind, names] of lists) {
@@ -22190,13 +22190,198 @@ const SKM_KUROMY = Object.freeze({
     burst: 'bnote'
   })]
 });
+const SKM_ILLUMINE = Object.freeze({
+  normal: [skm('cast', {
+    c: 'psy',
+    line: 'bolt',
+    burst: 'spark'
+  }), skm('slash', {
+    c: 'gas',
+    fx: skmFx('shot', 'blade', 2),
+    over: 'slash',
+    burst: 'dust'
+  }), skm('bash', {
+    c: 'cosmic',
+    over: 'fist',
+    burst: 'star'
+  }), skm('jab', {
+    c: 'dark',
+    over: 'fist',
+    burst: 'spark'
+  }), skm('toss', {
+    c: 'gold',
+    fx: skmFx('lob', 'star', 3, {
+      s: 1.3
+    }),
+    over: 'boom',
+    burst: 'star'
+  }), skm('warp', {
+    c: 'dark',
+    over: 'claw',
+    burst: 'dust'
+  }), skm('cast', {
+    c: 'sky',
+    fx: skmFx('shot', 'needle', 5, {
+      step: 40
+    }),
+    burst: 'spark'
+  }), skm('spin', {
+    c: 'psy',
+    fx: skmFx('orbit', 'blade', 6),
+    over: 'xslash',
+    burst: 'spark'
+  }), skm('slash', {
+    c: 'dark',
+    fx: skmFx('fall', 'sword', 1, {
+      s: 1.6
+    }),
+    over: 'sword',
+    burst: 'dust'
+  })],
+  unique: [skm('cast', {
+    c: 'ice',
+    fx: skmFx('fall', 'ice', 8),
+    over: 'ice',
+    burst: 'snow'
+  }), skm('cast', {
+    c: 'psy',
+    fx: skmFx('orbit', 'fire', 6),
+    over: 'boom',
+    burst: 'star',
+    form: 'fire'
+  }), skm('gather', {
+    c: 'gold',
+    line: 'ray',
+    over: 'pillar',
+    burst: 'star'
+  }), skm('float', {
+    c: 'dark',
+    fx: skmFx('orbit', 'note', 8),
+    over: 'shadow',
+    burst: 'bnote'
+  }), skm('warp', {
+    c: 'cosmic',
+    fx: skmFx('shot', 'blade', 4, {
+      step: 35
+    }),
+    over: 'claw',
+    burst: 'spark'
+  }), skm('gather', {
+    c: 'blood',
+    fx: skmFx('orbit', 'flame', 8),
+    over: 'eclipse',
+    burst: 'star',
+    form: 'fire'
+  }), skm('float', {
+    c: 'cosmic',
+    line: 'arc',
+    over: 'aurora',
+    burst: 'star'
+  }), skm('float', {
+    c: 'psy',
+    line: 'ray',
+    over: 'aurora',
+    burst: 'spark',
+    form: 'light'
+  }), skm('gather', {
+    c: 'dark',
+    fx: skmFx('orbit', 'blade', 10),
+    over: 'nightmare',
+    burst: 'dust',
+    form: 'void'
+  })]
+});
+const SKM_DREAMY = Object.freeze({
+  normal: [{
+    ...SKM_ILLUMINE.normal[0],
+    c: 'pink'
+  }, {
+    ...SKM_ILLUMINE.normal[1],
+    c: 'pink'
+  }, skm('bash', {
+    c: 'pink',
+    over: 'fist',
+    burst: 'heart'
+  }), {
+    ...SKM_ILLUMINE.normal[3],
+    c: 'sakura'
+  }, {
+    ...SKM_ILLUMINE.normal[4],
+    c: 'sky'
+  }, skm('jab', {
+    c: 'pink',
+    over: 'claw',
+    burst: 'heart'
+  }), skm('cast', {
+    c: 'pink',
+    fx: skmFx('shot', 'heart', 5, {
+      step: 40
+    }),
+    burst: 'heart'
+  }), skm('spin', {
+    c: 'sky',
+    fx: skmFx('orbit', 'star', 6),
+    over: 'bloom',
+    burst: 'star'
+  }), skm('slash', {
+    c: 'sakura',
+    fx: skmFx('fall', 'sword', 1, {
+      s: 1.6
+    }),
+    over: 'sword',
+    burst: 'sakura'
+  })],
+  unique: [skm('toss', {
+    c: 'pink',
+    fx: skmFx('lob', 'candy', 3, {
+      s: 1.4
+    }),
+    over: 'boom',
+    burst: 'candy',
+    form: 'bloom'
+  }), {
+    ...SKM_ILLUMINE.unique[0],
+    c: 'sky'
+  }, {
+    ...SKM_ILLUMINE.unique[1],
+    c: 'pink'
+  }, {
+    ...SKM_ILLUMINE.unique[2],
+    c: 'sakura'
+  }, skm('float', {
+    c: 'cosmic',
+    fx: skmFx('orbit', 'note', 8),
+    over: 'aurora',
+    burst: 'note'
+  }), {
+    ...SKM_ILLUMINE.unique[4],
+    c: 'pink'
+  }, {
+    ...SKM_ILLUMINE.unique[5],
+    c: 'red'
+  }, skm('float', {
+    c: 'sakura',
+    fx: skmFx('fall', 'candy', 14),
+    over: 'rainbow',
+    burst: 'candy',
+    form: 'bloom'
+  }), skm('gather', {
+    c: 'pink',
+    fx: skmFx('orbit', 'heart', 10),
+    over: 'rainbow',
+    burst: 'heart',
+    form: 'bloom'
+  })]
+});
 const SKILL_MOTION_SETS = Object.freeze({
   ...SKILL_MOTION_SETS_MAIN,
   Yaobikuni: skmRecolor(SKILL_MOTION_SETS_MAIN.Undine, 'red'),
   Ghost: SKM_GHOST,
   Spooky: SKM_SPOOKY,
   Melody: SKM_MELODY,
-  Kuromy: SKM_KUROMY
+  Kuromy: SKM_KUROMY,
+  Illumine: SKM_ILLUMINE,
+  Dreamy: SKM_DREAMY
 });
 const SKM_BODY_TIMING = Object.freeze({
   bash: [.48, 560],
