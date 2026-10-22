@@ -126,7 +126,11 @@ check('⑧ 手札と EX の詳細に段を出す(ヘイトが切なら出さな�
   const W = H.weightCurve;
   check('⑨ 倍率の点が TACTICS_HATE.weightCurve にあり、0 で ×1・上限まで増える一方', Array.isArray(W) && W[0][0] === 0 && W[0][1] === 1 && W[W.length - 1][0] === H.cap
     && W.every((pt, i) => i === 0 || (pt[0] > W[i - 1][0] && pt[1] > W[i - 1][1])) && !('k' in H));
-  check('⑨ 倍率の式は tacticsHateWeightMult の1か所だけ', (read('monster-hero/src/parts/32-tactics-units.jsx').match(/TACTICS_HATE\.weightCurve/g) || []).length === 1);
+  // 倍率の計算は tacticsHateWeightMult だけ。ヘルプの表(tacticsHateHelpRows)は点を表示に読むだけで、確率は tacticsHateWeightMult で出す
+  const unitsSrc = read('monster-hero/src/parts/32-tactics-units.jsx');
+  const helpFn = unitsSrc.slice(unitsSrc.indexOf('const tacticsHateHelpRows'), unitsSrc.indexOf('// 炎の段(0〜3)'));
+  check('⑨ 倍率の式は tacticsHateWeightMult の1か所だけ(ヘルプの表は点を表示するだけ)', (unitsSrc.match(/TACTICS_HATE\.weightCurve/g) || []).length === 2
+    && (helpFn.match(/TACTICS_HATE\.weightCurve/g) || []).length === 1 && /tacticsHateWeightMult\(hate, i\)/.test(helpFn));
   const full = (id) => ({ id, name: id, hp: 500, maxHp: 500, guts: 10, maxGuts: 10, atk: 100, def: 100 });
   const ids4 = ['Mocchi', 'Yggdrasil', 'Ghost', 'Ham'], us = ids4.map(full);
   const prob = (hate, i) => { const w = G.tacticsTargetWeights(us, G.TACTICS_TARGET_LOW_HP_BIAS, hate); return w.find((x) => x.index === i).weight / w.reduce((a, x) => a + x.weight, 0); };
