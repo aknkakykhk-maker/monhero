@@ -558,6 +558,8 @@ const withBlackNoteCombo = (exCombos, combo, extra = null) => {
 //   (楔3つで+80%・6つで+140%)。数は使ったときの楔で決まる。敵1体ぶんなのでWAVEが変わると消える
 const KUSABI_TRAIT_MONSTER_IDS = Object.freeze(['Illumine', 'Dreamy']);
 const KUSABI_MAX = 6;
+// タクティクスのEX「ジエンド」(イルミネ)が効いているあいだの上限
+const KUSABI_MAX_EX = 12;
 const KUSABI_COMBO_RATE = 0.15;
 const KUSABI_EVASION_PER = 15;   // 回避率(%)。回避の表(buildUnifiedSpecialDefense)は%で持つ
 const SELENE_CHASER_MONSTER_ID = 'Illumine';
@@ -567,15 +569,16 @@ const DREAM_PAIN_MONSTER_ID = 'Dreamy';
 const DREAM_PAIN_TURNS = 3;
 const DREAM_PAIN_BASE = 0.2, DREAM_PAIN_PER = 0.2;
 const hasKusabiTrait = (id) => !!id && KUSABI_TRAIT_MONSTER_IDS.includes(id);
-const kusabiCountOf = (n) => Math.min(KUSABI_MAX, Math.max(0, Math.floor(Number(n) || 0)));
+// max … その子のいまの上限(ふだん6・ジエンドのあいだ12)。効き目の計算は上限で切ったあとの数を受け取る(12まで数える)
+const kusabiCountOf = (n, max = KUSABI_MAX) => Math.min(max, Math.max(0, Math.floor(Number(n) || 0)));
 // 楔の連撃(持ち主本人の攻撃だけ)。buildAttackHits の exCombos の形
-const kusabiComboOf = (n) => { const c = kusabiCountOf(n); return c > 0 ? { count: c, rate: KUSABI_COMBO_RATE, label: '楔の連撃' } : null; };
-const kusabiEvasionOf = (n) => KUSABI_EVASION_PER * kusabiCountOf(n);
+const kusabiComboOf = (n) => { const c = kusabiCountOf(n, KUSABI_MAX_EX); return c > 0 ? { count: c, rate: KUSABI_COMBO_RATE, label: '楔の連撃' } : null; };
+const kusabiEvasionOf = (n) => KUSABI_EVASION_PER * kusabiCountOf(n, KUSABI_MAX_EX);
 // セレーネチェイサー: { combo(exCombos の形), comboDmgAdd(連撃ダメージに足す率) }
-const seleneChaserOf = (n) => { const k = kusabiCountOf(n) + 1;
+const seleneChaserOf = (n) => { const k = kusabiCountOf(n, KUSABI_MAX_EX) + 1;
   return { combo: { count: k, rate: SELENE_CHASER_COMBO_RATE, label: 'セレーネチェイサー' }, comboDmgAdd: SELENE_CHASER_COMBO_DMG * k }; };
 // ドリームペイン: 敵の被ダメージに足す率
-const dreamPainTakenOf = (n) => DREAM_PAIN_BASE + DREAM_PAIN_PER * kusabiCountOf(n);
+const dreamPainTakenOf = (n) => DREAM_PAIN_BASE + DREAM_PAIN_PER * kusabiCountOf(n, KUSABI_MAX_EX);
 // ドリームペインの残り。{ wait: 効きはじめるまでのターン, turns: 効く残りターン, bonus: 被ダメージに足す率 }。
 //   使ったターンは効かず(wait 1)、次のターンから3ターン。ターンが進むたびに tick する
 const dreamPainOf = (v) => ({ wait: Math.max(0, Math.floor(Number(v?.wait) || 0)), turns: Math.max(0, Math.floor(Number(v?.turns) || 0)),
@@ -585,8 +588,8 @@ const tickDreamPain = (v) => { const d = dreamPainOf(v); if (d.wait > 0) return 
   return d.turns > 1 ? { ...d, turns: d.turns - 1 } : { wait: 0, turns: 0, bonus: 0 }; };
 const dreamPainTakenBonus = (v) => { const d = dreamPainOf(v); return d.wait === 0 && d.turns > 0 ? d.bonus : 0; };
 // 楔の効き目の短い文(バフの札)
-const kusabiEffectText = (n) => { const c = kusabiCountOf(n);
-  return c > 0 ? `楔${c}/${KUSABI_MAX} 連撃15%×${c}・回避+${kusabiEvasionOf(c)}%` : ''; };
+const kusabiEffectText = (n, max = KUSABI_MAX) => { const c = kusabiCountOf(n, max);
+  return c > 0 ? `楔${c}/${max} 連撃15%×${c}・回避+${kusabiEvasionOf(c)}%` : ''; };
 // いま効いている段階を短い文にする(バフの札・ヘルプの説明に出す)
 const sweetStackEffectText = (id, n) => {
   const trait = sweetStackTraitOf(id);

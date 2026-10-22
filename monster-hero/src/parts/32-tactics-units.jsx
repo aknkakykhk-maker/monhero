@@ -1626,6 +1626,26 @@ const TACTICS_EX_SKILLS = Object.freeze({
     conditions: Object.freeze(['hasStack']),
     effect: 'nightmareKey',
   }),
+  // ★2026-10-22 社長が決めた値(イルミネ・ドリーミィ。いまは案の段階・公開はほかの2つと同時)。勇者特性「影潜」の楔とつながるEX。
+  //   イルミネは「楔を貯める」側、ドリーミィは「貯まった楔で味方を守り強くする」側
+  Illumine: Object.freeze({
+    id: 'illumine_the_end',
+    name: 'ジエンド',
+    useNote: '3ターン 楔が1回で2つ・上限12・使うとヘイト−30',
+    desc: '影に潜み、敵へ楔を打ち込み続ける。\n・3ターンのあいだ、イルミネの攻撃が当たると楔が2つ付く（ふだんは1つ）\n・3ターンのあいだ、楔の上限が12になる（ふだんは6）。楔の連撃と回避率アップも、12個まで数が増える\n・使った瞬間に、イルミネのヘイトが30下がる（0より下がらない）\n・効果が切れると、楔は6個までに戻る',
+    maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,
+    hateDown: 30,
+    effect: 'kusabiDouble',
+  }),
+  Dreamy: Object.freeze({
+    id: 'dreamy_millefeuille_shield',
+    name: 'ミルフィーシールド',
+    useNote: '全員に最大ライフぶんのシールド・3ターン 全員ちから丈夫さ+5%(楔1つごとに+5%)',
+    desc: '夢の雲を何層にも重ねて、味方全員を包む。\n・使った瞬間に、味方全員へ、それぞれ自分の最大ライフと同じ量のシールドを張る（受けるダメージはシールドから先に減る・3ターンで消える）\n・3ターンのあいだ、味方全員のちから・丈夫さ+5%\n・さらに、使った瞬間の敵の楔の数（いちばん多いもの）1つごとに+5%（楔0で+5%・3つで+20%・6つで+35%）。数は使ったときで決まり、3ターンのあいだ変わらない',
+    maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,
+    millefeuille: Object.freeze({ statBase: 0.05, statPer: 0.05 }),
+    effect: 'millefeuille',
+  }),
 });
 // 追加の条件。ctx を受け取り、使えないときだけ理由の文を返す(使えるなら null)。
 // ctx: { active(その子のEXがいま効いているか) }
@@ -1638,7 +1658,7 @@ const TACTICS_EX_CONDITIONS = Object.freeze({
 // 効果を実装済みの種類。★ここに無い effect は「回数と併用の決まりだけ動き、効果はまだ出ない」。
 //   画面は「開発中」と出す(使ったのに何も起きない、を黙って出さない)。
 //   STEP2 で効果を入れたら、ここへ名前を足す
-const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox', 'thunder', 'partyBoost', 'damageBack', 'psychoLock', 'counter', 'avoidCharge', 'trickConfuse', 'cookieBox', 'nightmareKey']);
+const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox', 'thunder', 'partyBoost', 'damageBack', 'psychoLock', 'counter', 'avoidCharge', 'trickConfuse', 'cookieBox', 'nightmareKey', 'kusabiDouble', 'millefeuille']);
 // 捨て身で力へ移す割合(0にした丈夫さの50%)
 const TACTICS_EX_ALL_IN_ATK_RATE = 0.5;
 const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'style', 'turns']);
@@ -1753,6 +1773,11 @@ const normalizeTacticsExDef = (raw) => {
       ? { count: tacticsSafeInt(raw.extraCombos.count, 0), rate: Number(raw.extraCombos.rate) } : null,
     conditions: Array.isArray(raw.conditions) ? raw.conditions.filter(k => typeof TACTICS_EX_CONDITIONS[k] === 'function') : [],
     conditionText: raw.conditionText ? String(raw.conditionText) : null,
+    // ジエンド(イルミネ): 使った瞬間に下げるその子のヘイト
+    hateDown: Math.min(100, Math.max(0, tacticsSafeInt(raw.hateDown, 0))),
+    // ミルフィーシールド(ドリーミィ): 味方全員のちから・丈夫さの上げ幅 = statBase + statPer × 使った瞬間の楔の数
+    millefeuille: raw.millefeuille && typeof raw.millefeuille === 'object'
+      ? { statBase: Math.min(1, Math.max(0, Number(raw.millefeuille.statBase) || 0)), statPer: Math.min(0.5, Math.max(0, Number(raw.millefeuille.statPer) || 0)) } : null,
     effect: typeof raw.effect === 'string' ? raw.effect : null,
   };
 };
@@ -1900,7 +1925,11 @@ const applyTacticsExUse = (state, { def, slot, monId, now, snapshot = null, choi
       partyTakenRate: def.partyTakenRate || 0, partyRegenRate: def.partyRegenRate || 0,
       extraCombos: def.extraCombos ? { ...def.extraCombos } : null,
       dodgeComboRate: def.dodgeComboRate || 0, dodges: 0,
-      avoidLeft: def.avoidCharges || 0, partyStatRate: def.partyStatRate || 0,
+      avoidLeft: def.avoidCharges || 0,
+      // ミルフィーシールド: 上げ幅は使った瞬間の楔の数で決めて固定する(snapshot.kusabi)。シールドは枠ごとの残り(snapshot.shields)
+      partyStatRate: def.millefeuille ? def.millefeuille.statBase + def.millefeuille.statPer * Math.max(0, tacticsSafeInt(snapshot && snapshot.kusabi, 0)) : (def.partyStatRate || 0),
+      shields: def.millefeuille && snapshot && snapshot.shields && typeof snapshot.shields === 'object'
+        ? Object.fromEntries(Object.entries(snapshot.shields).map(([k, v]) => [k, Math.max(0, tacticsSafeInt(v, 0))]).filter(([, v]) => v > 0)) : null,
       dmgRate: def.dmgRate || 0, selfTakenRate: def.selfTakenRate || 0, critRateRate: def.critRateRate || 0, critDmgRate: def.critDmgRate || 0,
       distMult: def.distMult || 0, guaranteeUnique: def.guaranteeUnique === true, uniqueCrit: def.uniqueCrit === true, cardBonus: def.cardBonus || 0,
       voltageCfg: def.voltage ? { ...def.voltage } : null, voltage: 0,
@@ -2428,10 +2457,43 @@ const tacticsExPartyStatRate = (state, now) => {
   const effects = normalizeTacticsExState(state).effects;
   return Object.keys(effects).reduce((sum, key) => {
     const e = effects[key];
-    if (!e || (e.effect !== 'partyBoost' && e.effect !== 'trickConfuse') || !isTacticsExEffectActive(state, key, e.monId, now)) return sum;
+    if (!e || (e.effect !== 'partyBoost' && e.effect !== 'trickConfuse' && e.effect !== 'millefeuille') || !isTacticsExEffectActive(state, key, e.monId, now)) return sum;
     const rate = Number(e.effect === 'partyBoost' ? (e.partyBoostCfg && e.partyBoostCfg.statRate) : e.partyStatRate);
     return Number.isFinite(rate) && rate > 0 ? sum + rate : sum;
   }, 0);
+};
+// ---- ドリーミィ(millefeuille): ミルフィーシールド ----
+// その枠に残っているシールド(効いているミルフィーシールドぶんの合計)
+const tacticsExShieldAt = (state, slot, now) => {
+  const effects = normalizeTacticsExState(state).effects;
+  return Object.keys(effects).reduce((sum, key) => {
+    const e = effects[key];
+    if (!e || e.effect !== 'millefeuille' || !e.shields || !isTacticsExEffectActive(state, key, e.monId, now)) return sum;
+    return sum + Math.max(0, tacticsSafeInt(e.shields[String(slot)], 0));
+  }, 0);
+};
+// 受けるダメージをシールドで減らす。{ state, absorbed, rest }。シールドが複数あれば、使った枠の若い順に削る
+const spendTacticsExShield = (state, slot, damage, now) => {
+  const safe = normalizeTacticsExState(state);
+  let rest = Math.max(0, tacticsSafeInt(damage, 0)), absorbed = 0;
+  const effects = { ...safe.effects };
+  for (const key of Object.keys(effects).sort()) {
+    const e = effects[key];
+    if (rest <= 0) break;
+    if (!e || e.effect !== 'millefeuille' || !e.shields || !isTacticsExEffectActive(safe, key, e.monId, now)) continue;
+    const have = Math.max(0, tacticsSafeInt(e.shields[String(slot)], 0));
+    if (have <= 0) continue;
+    const use = Math.min(have, rest);
+    effects[key] = { ...e, shields: { ...e.shields, [String(slot)]: have - use } };
+    rest -= use; absorbed += use;
+  }
+  return { state: absorbed > 0 ? { ...safe, effects } : safe, absorbed, rest };
+};
+// ---- イルミネ(kusabiDouble): ジエンド ----
+// その子のジエンドが効いているか(楔が1回で2つ・上限12)
+const tacticsExKusabiDoubleAt = (state, units, slot, now) => {
+  const unit = Array.isArray(units) ? units[slot] : null;
+  return !!unit && tacticsExActiveEffect(state, slot, unit.id, now) === 'kusabiDouble';
 };
 // ---- ハム(counter): ハムボクシング ----
 // いまのカウンターの数(効いていなければ null)。mult は「カウンター1つあたりの与ダメ倍率」(2 なら 1つで×2・2つで×4)

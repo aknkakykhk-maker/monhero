@@ -55,9 +55,10 @@ const end = bond.indexOf('// 楔の効き目の短い文');
 check('楔の決めごとを抜き出せる', start > 0 && end > start);
 const k = {};
 vm.createContext(k);
-vm.runInContext(`${bond.slice(start, end)}\nglobalThis.x={KUSABI_MAX,hasKusabiTrait,kusabiCountOf,kusabiComboOf,kusabiEvasionOf,seleneChaserOf,dreamPainTakenOf,startDreamPain,tickDreamPain,dreamPainTakenBonus};`, k);
+vm.runInContext(`${bond.slice(start, end)}\nglobalThis.x={KUSABI_MAX,KUSABI_MAX_EX,hasKusabiTrait,kusabiCountOf,kusabiComboOf,kusabiEvasionOf,seleneChaserOf,dreamPainTakenOf,startDreamPain,tickDreamPain,dreamPainTakenBonus};`, k);
 const x = k.x;
-check('上限は6', x.KUSABI_MAX === 6 && x.kusabiCountOf(9) === 6 && x.kusabiCountOf(-1) === 0);
+check('上限は6(ジエンドのあいだは12)', x.KUSABI_MAX === 6 && x.KUSABI_MAX_EX === 12 && x.kusabiCountOf(9) === 6 && x.kusabiCountOf(-1) === 0 && x.kusabiCountOf(15, 12) === 12);
+check('ジエンドで12個になれば、連撃は12回・回避率+180%', x.kusabiComboOf(12).count === 12 && x.kusabiEvasionOf(12) === 180);
 check('特性を持つのはイルミネとドリーミィだけ', x.hasKusabiTrait('Illumine') && x.hasKusabiTrait('Dreamy') && !x.hasKusabiTrait('Zan'));
 check('楔1つごとに与ダメ15%の連撃が1回(楔0なら無し)', x.kusabiComboOf(0) === null
   && x.kusabiComboOf(3).count === 3 && near(x.kusabiComboOf(3).rate, 0.15));
@@ -90,8 +91,36 @@ check('セレーネチェイサーで連撃ダメージを積む', /card\.monId=
 check('ドリームペインをかける', /card\.monId===DREAM_PAIN_MONSTER_ID\)\{const dp=writeDreamPain/.test(app));
 check('ドリームペインを敵の被ダメージに足す', /\+additionalDmgMod\+dreamPainTakenBonus\(dreamPainRef\.current\)/.test(app));
 check('ターンが進むとドリームペインを進める', /writeDreamPain\(tickDreamPain\(dreamPainRef\.current\)\)/.test(app));
-check('敵の絵の隅に楔とドリームペインのマークを出す', /kusabi: Object\.values\(kusabiView/.test(app) && /dreamPain: dreamPainView\.wait === 0/.test(app)
+check('敵の絵の隅に楔とドリームペインのマークを出す', /kusabi: \(isTacticsMode\(runMode\) \? \[0, 1, 2, 3\] : \[null\]\)\.reduce\(\(most, i\) => Math\.max\(most, kusabiAt\(i\)\), 0\)/.test(app) && /dreamPain: dreamPainView\.wait === 0/.test(app)
   && /kusabi:\s+Object\.freeze\(\{ mark:/.test(bond) && /dreamPain:\s+Object\.freeze\(\{ mark:/.test(bond));
+
+// ---------- ④ タクティクスのEX(2026-10-22 社長の決定) ----------
+const tactics2 = tactics;
+check('ジエンド: 3ターン・5回・ヘイト−30・楔が2倍', /Illumine: Object\.freeze\(\{\s*id: 'illumine_the_end',\s*name: 'ジエンド',[\s\S]{0,800}maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,\s*hateDown: 30,\s*effect: 'kusabiDouble'/.test(tactics2));
+check('ミルフィーシールド: 3ターン・5回・ちから丈夫さ+5%と楔1つごとに+5%', /Dreamy: Object\.freeze\(\{\s*id: 'dreamy_millefeuille_shield',\s*name: 'ミルフィーシールド',[\s\S]{0,900}maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,\s*millefeuille: Object\.freeze\(\{ statBase: 0\.05, statPer: 0\.05 \}\),\s*effect: 'millefeuille'/.test(tactics2));
+check('2つとも効果を実装済みの一覧に入っている', /'kusabiDouble', 'millefeuille'\]\);/.test(tactics2));
+check('ジエンドのあいだは楔が1回で2つ・上限12', /const cap = kusabiCapAt\(slotIdx\), before = kusabiAt\(slotIdx\), after = kusabiCountOf\(before \+ \(cap > KUSABI_MAX \? 2 : 1\), cap\);/.test(app));
+check('ジエンドを使うとヘイトを下げる', /def\.hateDown>0\)\{ const h=\[\.\.\.tacticsHateRef\.current\]; h\[slotIdx\]=Math\.max\(0,/.test(app));
+check('ミルフィーシールドは使った瞬間の楔とシールドを控える', /const millefeuilleSnapshot=def\.millefeuille\?\{ kusabi:/.test(app) && /\.\.\.\(def\.millefeuille\?millefeuilleSnapshot:\{\}\)/.test(app));
+check('受けるダメージはシールドから先に減る', /const shieldHit=spendTacticsExShield\(tacticsExStateRef\.current,slotIdx,fd,/.test(app));
+check('ミルフィーシールドのちから・丈夫さは味方全員の上げ幅に入る', /e\.effect !== 'millefeuille'\) \|\| !isTacticsExEffectActive/.test(tactics2));
+{
+  // 純関数: 定義をそろえる・使う・シールドを削る(本体の関数を抜き出して動かす)
+  const t = {};
+  vm.createContext(t);
+  const cut = (from, to) => { const i = tactics2.indexOf(from), j = tactics2.indexOf(to, i); return i >= 0 && j > i ? tactics2.slice(i, j) : ''; };
+  try {
+    vm.runInContext(`const tacticsSafeInt=(v,d=0)=>{const n=Math.floor(Number(v));return Number.isFinite(n)?n:d;};
+${cut('const createTacticsExState', 'const sameTacticsExTurn')}
+const isTacticsExEffectActive=()=>true;
+${cut('// ---- ドリーミィ(millefeuille): ミルフィーシールド ----', '// ---- イルミネ(kusabiDouble): ジエンド ----')}
+globalThis.y={spendTacticsExShield,tacticsExShieldAt};`, t);
+    const st = { uses:{}, effects:{ 2:{ monId:'Dreamy', effect:'millefeuille', shields:{ 0:300, 1:500 } } } };
+    const a = t.y.spendTacticsExShield(st, 0, 120, null), b = t.y.spendTacticsExShield(a.state, 0, 400, null);
+    check('シールドは受けたぶんだけ減り、足りないぶんはライフへ', a.absorbed === 120 && a.rest === 0 && t.y.tacticsExShieldAt(a.state, 0, null) === 180
+      && b.absorbed === 180 && b.rest === 220 && t.y.tacticsExShieldAt(b.state, 1, null) === 500);
+  } catch (e) { check('シールドの関数を動かせる', false, String(e).slice(0, 120)); }
+}
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);

@@ -1179,17 +1179,22 @@ function MonsterHeroGame() {
   //   持ち主が回避したときも0へ戻す(敵の攻撃の回避の判定のところ)
   const kusabiRef = useRef({});
   const [kusabiView, setKusabiView] = useState({});
-  const kusabiAt = (slotIdx) => { const key = trickStartKeyOf(slotIdx); return key ? kusabiCountOf(kusabiRef.current[key]) : 0; };
-  const writeKusabiKey = (key, n) => { if (!key) return; const next = { ...kusabiRef.current, [key]: kusabiCountOf(n) }; kusabiRef.current = next; setKusabiView(next); };
+  // その子のいまの上限。タクティクスのEX「ジエンド」(イルミネ)が効いているあいだは12、ふだんは6。
+  //   ジエンドが切れたあとは、貯めてあった数を読むときに6で切る(楔は6個までに戻る)
+  const kusabiCapAt = (slotIdx) => (isTacticsMode(runMode) && Number.isInteger(slotIdx) && tacticsExLiveRef.current.enabled
+    && tacticsExKusabiDoubleAt(tacticsExStateRef.current, tacticsUnitsRef.current, slotIdx, tacticsExLiveRef.current.now) ? KUSABI_MAX_EX : KUSABI_MAX);
+  const kusabiAt = (slotIdx) => { const key = trickStartKeyOf(slotIdx); return key ? kusabiCountOf(kusabiRef.current[key], kusabiCapAt(slotIdx)) : 0; };
+  const writeKusabiKey = (key, n) => { if (!key) return; const next = { ...kusabiRef.current, [key]: kusabiCountOf(n, KUSABI_MAX_EX) }; kusabiRef.current = next; setKusabiView(next); };
   const resetKusabi = () => { kusabiRef.current = {}; setKusabiView({}); };
   // 持ち主本人の攻撃が当たったら1つ付ける(上限6)
   const gainKusabi = (slotIdx, actorId) => {
     const owner = sweetOwnerAt(slotIdx);
     if (!hasKusabiTrait(owner) || owner !== actorId) return;
-    const before = kusabiAt(slotIdx), after = kusabiCountOf(before + 1);
+    // ジエンドのあいだは1回で2つ・上限12
+    const cap = kusabiCapAt(slotIdx), before = kusabiAt(slotIdx), after = kusabiCountOf(before + (cap > KUSABI_MAX ? 2 : 1), cap);
     if (after === before) return;
     writeKusabiKey(trickStartKeyOf(slotIdx), after);
-    addPopup(`🔻 楔 ${after}/${KUSABI_MAX}`, 'hero', 'text-violet-200 text-base font-bold drop-shadow-md', undefined, slotIdx);
+    addPopup(`🔻 楔 ${after}/${cap}`, 'hero', 'text-violet-200 text-base font-bold drop-shadow-md', undefined, slotIdx);
   };
   // 攻撃に足す連撃。楔の連撃は持ち主本人の攻撃だけ、セレーネチェイサーは技の出自がイルミネなら誰が使っても(楔はその枠のぶん)
   const kusabiCombosAt = (slotIdx, actorId, card) => {
@@ -10893,7 +10898,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       aquaFreeze: aq && aq.active && aq.route === 'freeze' ? aq.stacks : 0,
       roar: Math.max(0, Math.floor(Number(enemy.roarStacks) || 0)),
       // 楔(影潜)は敵に付く。タクティクスで持ち主が複数いるときは、いちばん多い数を出す
-      kusabi: Object.values(kusabiView || {}).reduce((most, n) => Math.max(most, kusabiCountOf(n)), 0),
+      kusabi: (isTacticsMode(runMode) ? [0, 1, 2, 3] : [null]).reduce((most, i) => Math.max(most, kusabiAt(i)), 0),
       dreamPain: dreamPainView.wait === 0 ? dreamPainView.turns : 0,
       ...(debugStackMarks && debugStackMarks.enemy ? debugStackMarks.enemy : {}),
     };
@@ -12105,7 +12110,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           : (defenseSlot!=null ? (tacticsUnitsRef.current[defenseSlot]?.id || null) : null);
         // ★影潜(イルミネ・ドリーミィ): 受ける子が持ち主なら、楔1つごとに回避率+15%。キーは既存5モード 'party'・タクティクスは受ける子の枠
         const kusabiDefenseKey = !isTacticsMode(runMode) ? 'party' : (defenseSlot!=null ? String(defenseSlot) : null);
-        const kusabiEvasion = hasKusabiTrait(defenseHeroId) && kusabiDefenseKey ? kusabiEvasionOf(kusabiRef.current[kusabiDefenseKey]) : 0;
+        const kusabiEvasion = hasKusabiTrait(defenseHeroId) && kusabiDefenseKey ? kusabiEvasionOf(kusabiAt(defenseSlot)) : 0;
         const defenseTable = (!isTacticsMode(runMode) && kusabiEvasion<=0) ? unifiedSpecialDefense : buildUnifiedSpecialDefense({
           soulEvasion:soulBattleParty.evasion,
           soulReflect:soulBattleParty.reflect,
@@ -12335,6 +12340,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               if(slotGuard>0) fx.guard=true;
               if(hit.taken>0){
                 let fd=applyImmediateTakenReduction(hit.taken,slotIdx);
+                // ★ミルフィーシールド(ドリーミィのEX): 受けるダメージはシールドから先に減る
+                { const shieldHit=spendTacticsExShield(tacticsExStateRef.current,slotIdx,fd,tacticsExLiveRef.current.now);
+                  if(shieldHit.absorbed>0){ commitTacticsExState(shieldHit.state); fd=shieldHit.rest;
+                    addPopup(`🛡️ シールド −${shieldHit.absorbed}`,'hero','text-sky-200 font-black text-base drop-shadow-md',undefined,slotIdx); } }
                 // ★ウンディーネの「生命の泉」で立ち上がった子の根性: ライフが0になる攻撃を、1回だけライフ1で踏ん張る
                 const konjoUnit=normalizeTacticsUnit(units[slotIdx]);
                 if(konjoUnit&&!konjoUnit.downed&&fd>=konjoUnit.hp&&tacticsExKonjoLeftOf(tacticsExStateRef.current,units,slotIdx,tacticsExLiveRef.current.now)>0){
@@ -12930,11 +12939,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const usedUnit=normalizeTacticsUnit(tacticsUnitsRef.current[slotIdx]);
     // ★クッキー・黒音符を全部使うEX(メロディー・クロミー)。使った個数を控え、スタックは0へ戻す
     const spentStacks=def.stackSpend?sweetStackAt(slotIdx):0;
+    // ★ミルフィーシールド(ドリーミィ): 使った瞬間の敵の楔(いちばん多い数)と、立っている味方それぞれの最大ライフぶんのシールドを控える
+    const millefeuilleSnapshot=def.millefeuille?{ kusabi:[0,1,2,3].reduce((most,i)=>Math.max(most,kusabiAt(i)),0),
+      shields:Object.fromEntries([0,1,2,3].map(i=>[i,normalizeTacticsUnit(tacticsUnitsRef.current[i])]).filter(([,u])=>u&&!u.downed).map(([i,u])=>[String(i),u.maxHp])) }:null;
     const next=applyTacticsExUse(state,{ def, slot:slotIdx, monId:mon.id, now:tacticsExNow,
-      presentLevel:def.present&&raidJackRunRef.current?tacticsRaidPresentLevel(tacticsExNow.turn):null, snapshot:usedUnit?{ atk:usedUnit.atk, def:usedUnit.def, spent:spentStacks, ...(def.effect==='timeStop'?{ copied:tacticsExCopyableBuffs(state,tacticsUnitsRef.current,tacticsExNow,slotIdx) }:{}) }:null, choice, target:def.target==='ally'?choice:null });
+      presentLevel:def.present&&raidJackRunRef.current?tacticsRaidPresentLevel(tacticsExNow.turn):null, snapshot:usedUnit?{ atk:usedUnit.atk, def:usedUnit.def, spent:spentStacks, ...(def.millefeuille?millefeuilleSnapshot:{}), ...(def.effect==='timeStop'?{ copied:tacticsExCopyableBuffs(state,tacticsUnitsRef.current,tacticsExNow,slotIdx) }:{}) }:null, choice, target:def.target==='ally'?choice:null });
     commitTacticsExState(next);
     tacticsProLogSkill(tacticsProLogRef.current, 'ex', mon.id, turnCount);
-    if(tacticsHateOnFor(runMode)) addTacticsHatePending(slotIdx,tacticsHateExGain(def.effect,mon.id)); // ヘイト(試作): EX を使った
+    // ★ジエンド(イルミネ): 使った瞬間にその子のヘイトを下げる(0未満にしない)。下げるEXは、使ったぶんのヘイトを足さない
+    if(tacticsHateOnFor(runMode)&&def.hateDown>0){ const h=[...tacticsHateRef.current]; h[slotIdx]=Math.max(0,(Number(h[slotIdx])||0)-def.hateDown); commitTacticsHate(h); }
+    else if(tacticsHateOnFor(runMode)) addTacticsHatePending(slotIdx,tacticsHateExGain(def.effect,mon.id)); // ヘイト(試作): EX を使った
     Audio_.se.card();
     const toggled=def.duration==='style'?`（${tacticsExStyleLabel(def,next,slotIdx,mon.id)}）`:'';
     pushBattleLog(`EX ${mon.masuName||mon.name}「${def.name}」${toggled}`, 'ally');
