@@ -350,7 +350,7 @@ function build(d) {
   // 勇者モン向き・供モン向き(2026-10-21 社長「全体の決め方＋実戦を混ぜて全部更新」)。勇者モンにした回だけ・供モンの回だけで付けた段を、段ごとに並べる
   // 総合 Tier のいちばん上に出す決め方(2026-10-22 カゲあつくん「新しい決め方が一番上で分からない」)。tier.json の決め方.方法から作る
   const method = (d.決め方 && d.決め方.方法) || null;
-  const howLead = method && method.名前 === 'overall' ? `<div class="howlead"><p><b>決め方</b>: 供モンとして入った回の働き(攻め役はダメージの頭割り、守り・支え役は入った回の伸び)が主。勇者モンにした回の伸びは重み ${esc(String(method.勇者モンの重み))} で軽く足す${method.実戦の重み ? `。全国ランキングの実戦(${esc(method.実戦のモード || '')})を重み ${esc(String(method.実戦の重み))} で混ぜる` : ''}。</p><p>ヘイト(10-18 に公開)はまだシミュレーターに入っていないので、入れたらもう一度動きます。</p></div>` : '';
+  const howLead = method && method.名前 === 'overall' ? `<div class="howlead"><p><b>決め方</b>: 供モンとして入った回の働き(攻め役はダメージの頭割り、守り・支え役は入った回の伸び)が主。勇者モンにした回の伸びは重み ${esc(String(method.勇者モンの重み))} で軽く足す${method.実戦の重み ? `。全国ランキングの実戦(${esc(method.実戦のモード || '')})を重み ${esc(String(method.実戦の重み))} で混ぜる` : ''}。</p><p>供モンとして入った回が10回未満の子は、前の表の段のまま据え置いて「暫定」の印を付けています(新しい決め方での見込みは詳しい欄に)。アシカ・組み合わせ・4体パーティのシミュレーターはヘイト入り。ボットの回はヘイトの公開(10-18)のあとの回がまだ少ないので、回数がたまると動きます。</p></div>` : '';
   const roleTiers = ['S', 'A', 'B', 'C', 'D'];
   const roleList = (key) => (d.モンスター || []).filter((m) => roleTiers.includes(m[key]));
   const roleSection = roleList('勇者モン向き').length || roleList('供モン向き').length ? `<section id="monsters-role">
