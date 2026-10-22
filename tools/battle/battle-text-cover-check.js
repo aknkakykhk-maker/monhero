@@ -27,6 +27,8 @@ const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分�
 // 【わざと重ねているもの】
 // ・使えないカードの赤い札(枚数上限など)は、カードの絵の上に出す。絵は絵なので読めなくてよい。
 //   文字の上には出ないことだけを見たいので、絵(data-decoration)との組は数えない。
+//   カードの絵の段階の札(I・II・III。data-card-art-roman)も絵の一部として数えない(2026-10-22。引いたカードに段階の札があると
+//   「I」と「枚数上限」が重なるとして落ち、引いたカードしだいで落ちたり通ったりしていた)
 // ・固有技セットのオーラの⚡も飾り。重ね順は文字より下にしてあり、同じく数えない。
 const http = require('http');
 const path = require('path');
@@ -70,7 +72,9 @@ const OVERLAP_FN = () => {
     const own = [...el.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent.trim()).join('');
     return own.length > 0;
   }).map((el) => ({ el, r: el.getBoundingClientRect(), t: el.textContent.trim().slice(0, 16),
-    icon: !!el.closest('[data-decoration]') }));
+    // 行動カードの絵の段階の札(I・II・III・2026-10-15 のカードの絵)もカードの絵の一部。印は data-card-art-roman
+    // (data-decoration を付けると、タクティクスの見た目の CSS が絵の部品へ金の枠を付けてしまうので、別の印のまま見る)
+    icon: !!el.closest('[data-decoration],[data-card-art-roman]') }));
   const out = [];
   for (let i = 0; i < leaves.length; i += 1) {
     for (let j = i + 1; j < leaves.length; j += 1) {

@@ -534,7 +534,8 @@ check('モード選択は極限チャレンジもクイックも出さず、残�
   has(MODE_LIST_LINE) && count(MODE_LIST_LINE) === 2
     && has('aria-label="前のモード"') && has('aria-label="次のモード"')
     // モードカードは色のタイル(mhbt-tile・2026-10-10 の作り直し)。横スライドの1枚の幅と高さはそのまま
-    && has('mhbt-tile snap-center shrink-0 w-[82%] h-[366px]'),
+    // (幅360未満だけ 90% に広げる・#3210 改善部 M2。それ以外の幅と高さは変わらない)
+    && has('mhbt-tile snap-center shrink-0 w-[82%] max-[359px]:w-[90%] h-[366px]'),
   'モード一覧はモード選択と難易度選択の2か所とも同じ並べ方');
 // 極限の一覧は「公開ぶんだけ」の共通定義(PUBLIC_EXTREME_DIFFICULTIES)へまとまった
 check('モードカードは選択難易度固定でなくモード内最高スコアを表示する',
