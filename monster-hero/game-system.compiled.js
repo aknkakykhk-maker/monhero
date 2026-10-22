@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 02e1590de3d38e62
+// source-sha256: 3cc04ce0619b13d7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-22 12:04";
+const BUILD_DATE = "2026-10-22 12:28";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -75526,10 +75526,12 @@ const RHYTHM_MODE_ASSISTANT_FRAMES = Object.freeze({
     top: 0.4
   },
   atsu: {
-    zoom: 0.8,
+    zoom: 0.6,
     cx: 0.48,
     cy: 0,
-    top: 0.03
+    top: 0.03,
+    fadeBottom: 0.7,
+    fadeSides: 0.08
   }
 });
 const RHYTHM_MODE_SELECT_NOTES = Object.freeze([{
@@ -75713,6 +75715,13 @@ function ModeSelectAssistantPanel({
     const fr = RHYTHM_MODE_ASSISTANT_FRAMES[assistant.id];
     const ex = (/_([a-z]+)\.png$/i.exec(assistant.image || '') || [])[1];
     const cx = fr.cxBy && fr.cxBy[ex] || fr.cx;
+    const masks = [Number.isFinite(fr.fadeBottom) ? `linear-gradient(to bottom, #000 ${fr.fadeBottom * 100}%, transparent 100%)` : null, Number.isFinite(fr.fadeSides) ? `linear-gradient(to right, transparent 0%, #000 ${fr.fadeSides * 100}%, #000 ${100 - fr.fadeSides * 100}%, transparent 100%)` : null].filter(Boolean);
+    const mask = masks.length ? {
+      WebkitMaskImage: masks.join(', '),
+      maskImage: masks.join(', '),
+      WebkitMaskComposite: masks.length > 1 ? 'source-in' : undefined,
+      maskComposite: masks.length > 1 ? 'intersect' : undefined
+    } : {};
     return React.createElement("img", {
       "data-rhythm-mode-assistant-art": true,
       src: assistant.image,
@@ -75724,7 +75733,8 @@ function ModeSelectAssistantPanel({
         height: 'auto',
         left: '50%',
         top: `${fr.top * 100}%`,
-        transform: `translate(-${cx * 100}%, -${fr.cy * 100}%)`
+        transform: `translate(-${cx * 100}%, -${fr.cy * 100}%)`,
+        ...mask
       }
     });
   })() : React.createElement("img", {
