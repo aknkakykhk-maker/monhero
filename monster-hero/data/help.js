@@ -581,6 +581,7 @@ const HELP_CATEGORIES = [
             '曲えらびで HELL を選んで遊ぶ',
           ]},
           {t:'note',title:'HELL の Lv. は曲ごとに大きく違います',text:'MASTER を1回クリアすれば開きますが、MASTER と HELL の Lv. の差が大きい曲があります。曲えらびの HELL のボタンの数字(赤く大きく出ます)を見て、まずは Lv. の低い曲から試してみてください。'},
+          {t:'note',title:'空中の重なりは、難しい曲の山場だけ',text:'空中のスライドが通る所や、押さえている指の真上・真下にノーツが重なって来る配置は、押しにくいので控えめにしています。Lv. の高い曲の盛り上がる所にだけ、少し残っています。'},
           {t:'data', id:'rhythmHellEntry'},
           {t:'data', id:'rhythmHellSongs'},
           {t:'kv',rows:[
