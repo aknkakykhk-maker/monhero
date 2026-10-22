@@ -44,6 +44,7 @@ const laterSrc = (source.match(/const withBlackNoteCombo = \(exCombos, combo(, e
   + '\nconst blackNoteEffectAt = () => ({ combo: null });'
   // 2026-10-22 イルミネ・ドリーミィの楔の連撃(楔0・イルミネの固有技でなければ何も足さない)
   + '\nconst kusabiCombosAt = () => [];'
+  + '\nconst gainKusabi = () => {};'
   // タクティクス専用(ほかのモードでは何もしない)
   + '\nconst aquaStackFromCard = () => null;'
   + '\nconst fireTacticsExCross = () => null;';
@@ -67,6 +68,11 @@ const makePredicted = (mainHero, getPermaBuff, getTurnBuff) => Function('mainHer
 const anchor = source.indexOf("const d=getDmg(card,slotIdx,activeMon,localOryoAdd,localDmgModAdd,halved,attackStartDist,fateDmgMult)");
 if (anchor < 0) throw new Error('processTurn の攻撃ブロックが見つからない');
 const act = slice("const soulAttack=soulTraitAttackProfile(activeMon?.masuId?getMasuMon(activeMon.masuId):null,card,slotIdx);", 'if (rangeMoveTarget!=null)', anchor);
+// 2026-10-21(#3309)からハムのカウンターの演出(await で演出を待つ1行)がこの区間に入った。ダメージには関わらず、
+// 同期の Function では await を書けないので、取り出した写しからだけ外す(本体は変えない)
+const HAM_COUNTER_FX_LINE = /\{ const crossFx=fireTacticsExCross\(slotIdx\); if\(crossFx\) await playHamCounterFx\(crossFx,slotIdx,activeMon\); \}/;
+check('ハムのカウンターの演出の1行を写しから外せる(書き方が変わったらここを直す)', !act.text.includes('await ') || HAM_COUNTER_FX_LINE.test(act.text));
+act.text = act.text.replace(HAM_COUNTER_FX_LINE, '');
 const makeActual = (rng) => Function('d', 'card', 'activeMon', 'mainHero', 'getPermaBuff', 'getTurnBuff', 'localGlobalComboAdd', 'slotIdx', 'Math', 'buildAttackHits', 'soulTraitAttackProfile', 'getMasuMon', 'tacticsSlotFlag', 'traitOwnerOf', `
   let totalDmg = 0, hasCrit = false; const attackHits = [];
   const halved = false; // 「同じ子の2枚目」ではない(パンドラの箱の悪魔側が見る値)

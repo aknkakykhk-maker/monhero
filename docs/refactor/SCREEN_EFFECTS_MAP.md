@@ -1,4 +1,4 @@
-# 画面ライフサイクルの分類表 — setTimeout 94 箇所を「画面専用 / 進行 / 対象外」に仕分ける
+# 画面ライフサイクルの分類表 — setTimeout 110 箇所を「画面専用 / 進行 / 対象外」に仕分ける
 
 2026-09-10 作成(STEP 6-1)。対象は `monster-hero/src/parts/60-app.jsx`(`MonsterHeroGame`)。
 `tools/ui/screen-effects-check.js` がこの表を読み、目印が本体にちょうど1つあることと、
@@ -19,7 +19,7 @@ STEP 6 は「画面を離れたらタイマーが必ず止まる」ようにす�
 | `progress` | 進行。フラグ戻し・次の画面へ進む・保存・掃除・`await` の resolve | **止めない**(登録簿から手を離すだけ) |
 | 対象外 | 画面(`gameState`)に紐づかない。起動経路・アプリ常駐 | 登録簿に載せない |
 
-内訳は **画面専用 22 / 進行 30 / 対象外 16**(2026-09-27 に表を今に合わせた。作成時は 16 / 31 / 15。
+内訳は **画面専用 39 / 進行 41 / 対象外 30**(2026-10-22 に、表から漏れていた16か所を足して今に合わせた。下の節の見出しの数は作成時のまま。2026-09-27 は 22 / 30 / 16。作成時は 16 / 31 / 15。
 タップの波紋は 24-battle-fx.jsx へ、画像デバッグのモーション再生3つは 23-rpg-debug.jsx の `attackMotionPreviewSequence` へ移ったので表から外した)。`interval` `raf` `listen` は種別を取らず常に画面専用
 (放っておくと永久に走る・参照を掴んだままになるため)。
 
@@ -80,7 +80,7 @@ STEP 6 は「画面を離れたらタイマーが必ず止まる」ようにす�
 | `setTimeout(()=>{ setRebi` | progress | 投げっぱなし | 限界突破の演出終了と `rebirthProcessingRef=false`。止めると二度と限界突破できない |
 | `setTimeout(()=>{ setTran` | progress | 投げっぱなし | 超越の演出終了と `transcendProcessingRef=false`。止めると二度と超越できない |
 | `setSoulRankAnimation(null)` | progress | 投げっぱなし | 魂ランクの演出終了と `soulRankProcessingRef=false`。止めると二度と上げられない |
-| `setTimeout(()=>{ setRein` | progress | 投げっぱなし | 転生の演出終了と `reincarnateProcessingRef=false`。止めると二度と転生できない |
+| `setTimeout(()=>{ setReincarnateAnimation(null); setReincarnateSelectedId(null);` | progress | 投げっぱなし | 転生の演出終了と `reincarnateProcessingRef=false`。止めると二度と転生できない |
 | `setResultActionPending(false)` | progress | 投げっぱなし | リザルトの連打防止を戻す。止めると次の周回を始められない |
 | `setTimeout(()=>setPopups` | progress | 投げっぱなし | バトルのダメージ表示を1件消す。止めると溜まり続ける |
 | `setTimeout(() => setLuckBanners(` | progress | 投げっぱなし | 運しだいの結果の帯(運命のコイン・運命の輪・トリックスタート・乱心・眼力)を1枚消す。吹き出しと同じく、止めると溜まり続ける(2026-10-06) |
@@ -141,10 +141,27 @@ STEP 6 は「画面を離れたらタイマーが必ず止まる」ようにす�
 | `setCopied(false), 2000` | progress | 投げっぱなし | 「コピーしました」の表示を戻す。止めると出たまま |
 | `if (reduce || from === to) { setValue(to); return undefined; }` | screen | 止める | 数字のカウントアップ演出(画面を離れたら止める) |
 | `const raidTotals = await Promise.race([sbFetchRaidJackTierTotals(RAID_JACK_EVENT.id)` | 対象外 | await | HOMEの見回りで、ジャックの段階の合計を取る通信の時間切れ(4秒で null を返して今回は出さない) |
-| `const totals = await Promise.race([sbFetchRaidJackTierTotals(raidJackEventId)` | 対象外 | await | レイド画面の段階の合計を取る通信の時間切れ(4秒で null を返す) |
+| `const done = totals && totals.a && totals.a[prep.tierIndex + 1]` | 対象外 | await | レイド画面の段階の合計を取る通信の時間切れ(4秒で null を返す)。同じ形の行が3つあるので、目印は次の行(段の数え方が違う) |
 | `const loop = () => { timer = setTimeout(` | screen | 止める | HOMEのジャックが「ときどき両腕ポーズ」を取る間隔(約5.6秒おき)。画面を離れたら止める(`alive`・`clearTimeout`) |
 | `setPose(false); loop(); }, 1400)` | screen | 止める | 両腕ポーズを戻して次の間隔へ(1.4秒)。画面を離れたら止める |
 | `setRaidGrowthBanner(null), 3200` | screen | 止める | レイドバトルの「強化が入ったターン」の帯を消す(3.2秒)。後始末で `clearTimeout` |
+<!-- 2026-10-22 開発部: 表から漏れていた16か所(レイド・ハムのカウンター・まとめて転生・クイックの自動周回・切り出した画面)を足した -->
+| `setTimeout(() => { void syncBuddyRanksLive(); }, wait)` | 対象外 | 止める | 相棒ランキングの裏での送り直し(起動中ずっと)。effect の後始末で `clearTimeout` |
+| `const totals = await Promise.race([sbFetchRaidJackTierTotals(RAID_JACK_EVENT.id)` | 対象外 | await | 大王が倒されたかを確かめる通信の時間切れ(4秒で null。届かなければ「まだ」) |
+| `const done = totals && totals.a && totals.a[rr.tierIndex + 1]` | 対象外 | await | レイドの演奏前に、演出で見せるジャックのライフを裏で取る通信の時間切れ(4秒)。目印は次の行 |
+| `const done = totals && totals.a && totals.a[run.tierIndex + 1]` | 対象外 | await | レイドの演奏後に、倒しきったかを共有ライフと比べる通信の時間切れ(4秒)。目印は次の行 |
+| `Promise.resolve(null), new Promise((resolve) => setTimeout(() => resolve(null), 500))` | 対象外 | await | 裏で取っておいたライフを演出に使うときの待ち時間の上限(0.5秒) |
+| `setTimeout(()=>{ setReincarnateAnimation(null); reincarnateProcessingRef.current=false; }` | progress | 投げっぱなし | まとめて転生の演出終了と `reincarnateProcessingRef=false`。止めると二度と転生できない |
+| `setTimeout(() => Audio_.se.crit(), Math.round(ms * 0.22))` | screen | 投げっぱなし | ハムのカウンター(フル)の2つめの効果音 |
+| `setTimeout(() => { Audio_.se.crit(); triggerShake(true); }, Math.round(ms * 0.28))` | screen | 投げっぱなし | ハムのカウンター(リベンジ)の2つめの効果音と揺れ |
+| `setTimeout(() => Audio_.se.crit(), Math.round(ms * 0.36))` | screen | 投げっぱなし | ハムのカウンター(リベンジ)の3つめの効果音 |
+| `hamCounterFxTimerRef.current = setTimeout(skipHamCounterFx, ms)` | progress | 止める | ハムのカウンターの演出を見せ終えて、待っている攻撃を進める(`await` の resolve)。止めると攻撃が止まったままになる |
+| `}, QUICK_RUN_AUTO_RETRY_MS);` | progress | 止める | クイックの自動周回で負けたあと、少し待って1周目から始め直す(次の画面へ進む)。effect の後始末で `clearTimeout` |
+| `const t = setTimeout(() => setOpen(false), 2500)` | screen | 止める | 小さな説明の吹き出しを2.5秒で閉じる(41-screen-ui.jsx)。後始末で `clearTimeout` |
+| `setTimeout(place, 120)` | screen | 止める | HOMEの置き場所を測り直す(1回目・69-screen-home.jsx) |
+| `setTimeout(place, 700)` | screen | 止める | HOMEの置き場所を測り直す(2回目。絵が読み込まれたあと) |
+| `setTimeout(run, 600 + Math.floor(Math.random() * 1800)` | progress | 投げっぱなし | モンヒロビートのフリーマッチで、CPUの発言を少し遅らせて部屋へ送る(77-screen-rhythm-multi.jsx)。止めるとほかの人に届かない |
+| `setTimeout(() => setNote(RHYTHM_BUDDY_REFUND_NOTE.get())` | progress | 止める | 相棒の返金のお知らせを、期限が来たら消す(80-screen-rhythm-buddy.jsx)。止めると出たまま(`setCopied` と同じ) |
 
 ## 次の本でやること
 

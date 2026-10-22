@@ -72,11 +72,12 @@ check('回避・反射・吸収は統一特殊防御を1回だけ抽選',
 // ★新モードは、先に受ける子を1体決めて**その子の特性**で表を作る(2026-09-20)。
 //   俊足50・反射30・吸収30はその子が持っているときだけ乗り、魂格由来のぶんは誰が受けても乗る
 check('新モードは受ける子の特性で表を作る',
-  app.includes('const defenseTable = !isTacticsMode(runMode) ? unifiedSpecialDefense : buildUnifiedSpecialDefense({')
-  && app.includes("existingEvasion:defenseHeroId==='Tiger'?50:0,")
+  // 2026-10-22 イルミネ・ドリーミィ(影潜)の楔の回避率も、受ける子の特性として同じ表へ足す(楔0なら既存モードは従来の表のまま)
+  app.includes('const defenseTable = (!isTacticsMode(runMode) && kusabiEvasion<=0) ? unifiedSpecialDefense : buildUnifiedSpecialDefense({')
+  && app.includes("existingEvasion:(defenseHeroId==='Tiger'?50:0)+kusabiEvasion,")
   && app.includes("rollUnifiedSpecialDefense(defenseTable,Math.random(),Math.random())"));
 check('その子の特性で作る表にも魂格の3つを渡す',
-  /defenseTable = !isTacticsMode\(runMode\) \? unifiedSpecialDefense : buildUnifiedSpecialDefense\(\{\s*soulEvasion:soulBattleParty\.evasion,\s*soulReflect:soulBattleParty\.reflect,\s*soulAbsorb:soulBattleParty\.absorb,/.test(app));
+  /defenseTable = \(!isTacticsMode\(runMode\) && kusabiEvasion<=0\) \? unifiedSpecialDefense : buildUnifiedSpecialDefense\(\{\s*soulEvasion:soulBattleParty\.evasion,\s*soulReflect:soulBattleParty\.reflect,\s*soulAbsorb:soulBattleParty\.absorb,/.test(app));
 check('既存確定反射バフは従来どおり確定で優先',
   app.includes("getTurnBuff('reflect',false)")&&app.includes("? 'reflect'"));
 // ★新モードのスエゾーは「攻撃したターンに引く」へ移したので、敵ターン頭のこの表から外す
