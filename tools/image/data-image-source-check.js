@@ -97,8 +97,9 @@ const GRANDFATHERED = new Set([
 const shapeOf = {
   disc: id => /^[A-Z][A-Za-z0-9]*$/.test(id),
   // 助手の表情アイコンは `<だれ>_<表情>`、着替えの服の表情アイコンは `<だれ>_<服>_<表情>`(例: myua_halloween_wink)という1つの家族の形。
+  // きゅうこ(kyuko・2026-10-22)の8種も同じ形。
   // アツ(atsu)の8種とハロウィンの衣装(みゅあ・きき・ももすけ 各8種)も同じ形で出した(2026-10-04)。_icon が付かないのは、この家族だけ
-  icon: id => /_icon$/.test(id) || /^(myua|kiki|momosuke|dra|atsu)(?:_[a-z0-9]+)?_(normal|happy|wink|excited|surprise|troubled|angry|crying)$/.test(id),
+  icon: id => /_icon$/.test(id) || /^(myua|kiki|momosuke|dra|atsu|kyuko)(?:_[a-z0-9]+)?_(normal|happy|wink|excited|surprise|troubled|angry|crying)$/.test(id),
   assist: id => /^[a-z][a-z0-9_]*$/.test(id),
   item: id => /^[a-z][a-z0-9_]*$/.test(id),
 };

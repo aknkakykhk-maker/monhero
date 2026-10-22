@@ -96,7 +96,8 @@ const monsterCheckImplRows = (mon) => {
   const draftLineage = mon.draft && mon.draftLineage && typeof MONSTER_LINEAGES !== 'undefined'
     ? { main: MONSTER_LINEAGES[mon.draftLineage.main], sub: MONSTER_LINEAGES[mon.draftLineage.sub] } : null;
   return [
-    ...(mon.draft ? [{ label: '段階', code: 'UPCOMING_MONSTER_DRAFTS', state: 'warn', value: '案の段階（本体に未登録）',
+    // 案の段階の子は、ほかの項目がそろっても「本体へ移す」が残っているので要確認(2026-10-22 イルミネ・ドリーミィは数値も商品もそろった)
+    ...(mon.draft ? [{ label: '段階', code: 'UPCOMING_MONSTER_DRAFTS', state: 'ng', value: '案の段階（本体に未登録）',
       note: '図鑑・ロースター・マーケットの解放には出ない。正式実装で ALL_PLAYER_MONSTERS へ移す' }] : []),
     { label: '立ち絵', code: 'imgUrl', state: mon.imgUrl ? 'ok' : 'ng', value: bare(mon.imgUrl) || '未設定' },
     { label: '一覧アイコン', code: 'iconUrl', state: mon.iconUrl ? 'ok' : 'ng', value: bare(mon.iconUrl) || '未設定' },

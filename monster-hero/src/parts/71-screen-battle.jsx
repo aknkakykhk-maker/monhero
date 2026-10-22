@@ -1081,6 +1081,8 @@ function BattleScreen({
             if(comboDmg>0) chip('combo',<Sword size={9}/>,'連撃',`+${comboDmg}%`,'text-cyan-400 border-cyan-400/50');
             if(getPermaBuff('globalComboDmgPct')>0) chip('globalCombo',<Sword size={9}/>,'全体連撃',`+${Math.round(getPermaBuff('globalComboDmgPct')*100)}%`,'text-sky-300 border-sky-300/50');
             if(kikiCardBonus>0) chip('kikiCard',<PlusCircle size={9}/>,'カード上限',`+1（残り${Math.ceil(getPermaBuff('kikiCardBonusTurns'))}T）`,'text-violet-300 border-violet-300/50',{short:'+1'});
+            // きゅうこの譜面(2026-10-22)。受けるダメージダウンの残りターン(タクティクスは使った子だけに効く)
+            if(getPermaBuff('kyukoCutTurns')>0&&getPermaBuff('kyukoCutRate')>0) chip('kyukoCut',<Shield size={9}/>,'被ダメ',`-${Math.round(getPermaBuff('kyukoCutRate')*100)}%（残り${Math.ceil(getPermaBuff('kyukoCutTurns'))}T）`,'text-pink-300 border-pink-300/50',{short:`-${Math.round(getPermaBuff('kyukoCutRate')*100)}%`});
             // ソードスキル(剣士モッチー)。連撃パワーは3たまるごとに永久追加連撃へ変わるので、
             // 両方が見えないと進み具合が分からない
             if(getPermaBuff('kenshiComboPower')>0||getPermaBuff('kenshiExtraCombo')>0){

@@ -55,12 +55,15 @@ const sparkles = (x, W, H, n, col) => {
   for (let i = 0; i < n; i++) { const px = rnd() * W, py = rnd() * H, pr = 2 + rnd() * 6; const g = x.createRadialGradient(px, py, 0, px, py, pr * 3); g.addColorStop(0, col); g.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = g; x.beginPath(); x.arc(px, py, pr * 3, 0, 7); x.fill(); }
   x.restore();
 };
+// 板は文字の長さに合わせて伸ばし(左右の余白は字の大きさの0.6倍ずつ)、文字は字の形の上下の中心を板の中心にそろえる
+// (2026-10-22 社長「文字の位置というか後ろのやつずれてない？」。前に出した絵は作り直していない)
 const ribbon = (x, cx, cy, w, h, text, size, from = '#fff3b0', to = '#b87918', ink = '#3d2305') => {
   x.save(); x.translate(cx, cy);
+  x.font = `${size}px MPB`; const tm = x.measureText(text); w = Math.max(w, Math.ceil(tm.width + size * 1.2));
   x.fillStyle = 'rgba(0,0,0,.35)'; x.beginPath(); x.roundRect(-w / 2 + 6, -h / 2 + 12, w, h, 24); x.fill();
   const g = x.createLinearGradient(0, -h / 2, 0, h / 2); g.addColorStop(0, from); g.addColorStop(1, to);
   x.fillStyle = g; x.beginPath(); x.roundRect(-w / 2, -h / 2, w, h, 24); x.fill(); x.lineWidth = 6; x.strokeStyle = '#fff8d6'; x.stroke();
-  x.font = `${size}px MPB`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = ink; x.fillText(text, 0, 4); x.restore();
+  x.font = `${size}px MPB`; x.textAlign = 'center'; x.textBaseline = 'alphabetic'; x.fillStyle = ink; x.fillText(text, 0, (tm.actualBoundingBoxAscent - tm.actualBoundingBoxDescent) / 2); x.restore();
 };
 const outlined = (x, text, cx, cy, size, from, to, stroke, align = 'center') => {
   x.save(); x.font = `${size}px MPB`; x.textAlign = align; x.textBaseline = 'middle'; x.lineJoin = 'round';

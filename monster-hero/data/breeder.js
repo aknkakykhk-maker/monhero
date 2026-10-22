@@ -16,6 +16,8 @@ const CADMIUM_FACE_ICON = "images/breeder-icons/cadmium.png?v=bfaf6e5ecfad";
 const MOMOSUKE_FACE_ICON = "images/assistant/face/momosuke_happy.PNG?v=26508bc26c81";
 const KIKI_FACE_ICON = "images/breeder-icons/kiki.PNG?v=35362d7b6e3e";
 const POLTZ_FACE_ICON = "images/breeder-icons/poltz.PNG?v=a17ca7fa2869";
+// きゅうこ(2026-10-22)。顔アイコン(案B)をそのまま使う
+const KYUKO_FACE_ICON = "images/assistant/face/kyuko_happy.PNG?v=6ad5eda132bf";
 // マーケットのアイコン商品だけで使う立ち絵。
 // 本体の絵(images-ally.js の SNEGUROCHKA_IMG)とは別ファイルなので、ここで持つ
 const SNEGUROCHKA_MARKET_ICON = "images/monsters/SNEGUROCHKA.PNG?v=54c9540841fe";
@@ -46,8 +48,7 @@ const MEL_WHIP_DISC_ICON = "images/disc-icons/mel-whip-disc.PNG?v=aeabb9f0992b";
 // メロディー・クロミー(2026-10-07・実装予告)。作り方はほかの円盤石と同じ(make-disc-icon.js)。?v= は build.js が打ち直す
 const MELODY_DISC_ICON = "images/disc-icons/melody-disc.PNG?v=634ff5eb63a4";
 const KUROMY_DISC_ICON = "images/disc-icons/kuromy-disc.PNG?v=8b1aa76636ad";
-// イルミネ・ドリーミィ(2026-10-22・案の段階)。円盤石アイコンだけ先に作った。マーケットの商品(アイコン2種・円盤石)は
-// 正式実装のときに足す(いま足すと本番のマーケットに「近日追加」で見えてしまうため)
+// イルミネ・ドリーミィ(2026-10-22・案の段階)。円盤石アイコン。商品はこのファイルの下の BREEDER_MARKET_ITEMS(近日追加)
 const ILLUMINE_DISC_ICON = "images/disc-icons/illumine-disc.PNG?v=5e82d79e0bfb";
 const DREAMY_DISC_ICON = "images/disc-icons/dreamy-disc.PNG?v=66626d663904";
 
@@ -61,7 +62,8 @@ const BREEDER_EVO_NAMES = {
   kiki: ["ききの応援", "ききの本気", "ききの全力全開"],
   meloso: ["メロソの解析", "メロソの予測", "メロソの最適解"],
   poltz: ["ポルツの弁当", "ポルツの挫折", "ポルツの目覚め"],
-  momosuke: ["ももすけのおねだり", "ももすけのだだこね", "ももすけの独り占め"]
+  momosuke: ["ももすけのおねだり", "ももすけのだだこね", "ももすけの独り占め"],
+  kyuko: ["きゅうこの譜面", "きゅうこの編曲", "きゅうこの交響曲"]
 };
 
 // かどみうむ(guts_buff)の進化段階ごとの効果量。
@@ -88,6 +90,16 @@ const POLTZ_TIERS = [
   { charges:1, healGuts:0.2, gutsRecover:0.01,  atk:0 },
   { charges:2, healGuts:0.2, gutsRecover:0.025, atk:0 },
   { charges:3, healGuts:0.2, gutsRecover:0.035, atk:0.10 },
+];
+
+// きゅうこの譜面(cover_kyuko・2026-10-22 社長の決定)。効果の適用も説明文もこの表だけを見る。
+//   使ったターンだけ、敵の単体攻撃が「使った子」に向く(タクティクス。全体攻撃は変えない・🔥は上げない)。
+//   cut   : 使った子の受けるダメージを減らす割合(タクティクス以外はパーティのライフ全体)
+//   turns : 減らすのが続くターン数(使ったターンを含む)。続くのはダメージダウンだけ
+const KYUKO_TIERS = [
+  { cut:0.30, turns:2 },
+  { cut:0.45, turns:3 },
+  { cut:0.60, turns:4 },
 ];
 
 // 行動カードの絵(2026-10-15 社長「バトルカードの変更も進めて」。原本は tools/art-sources/card-frames・skill-icons)。
@@ -140,7 +152,9 @@ const TEACHING_CARDS = [
   { id:'poltz',   baseName:"ポルツの弁当",      icon:POLTZ_FACE_ICON,   type:'buff',   subType:'buff_poltz', baseValue:0.2, step:0,  desc:"敵の攻撃を受けるたびガッツ回復・自動ガッツ回復アップ", evoLevel:0, guts:20 },
   // ももすけは「みゅあのガッツ回復版」。回復と上限アップの量は60-app.jsxのmomosuke分岐と
   // getDynamicDescの2か所に同じ表がある。攻撃アップの代わりに丈夫さ(defPct)を上げる
-  { id:'momosuke', baseName:"ももすけのおねだり", icon:MOMOSUKE_FACE_ICON, type:'heal', subType:'heal_momosuke', baseValue:0.5, step:0.2, desc:"ガッツ回復・能力永続アップ", evoLevel:0, guts:20 }
+  { id:'momosuke', baseName:"ももすけのおねだり", icon:MOMOSUKE_FACE_ICON, type:'heal', subType:'heal_momosuke', baseValue:0.5, step:0.2, desc:"ガッツ回復・能力永続アップ", evoLevel:0, guts:20 },
+  // きゅうこ(2026-10-22)。加入のお話を見たあとマーケットで買える(BREEDER_MARKET_ITEMS の shop)。効果量は KYUKO_TIERS
+  { id:'kyuko', baseName:"きゅうこの譜面", icon:KYUKO_FACE_ICON, type:'buff', subType:'cover_kyuko', baseValue:0.3, step:0.15, desc:"このターン敵の単体攻撃を引き受け・受けるダメージダウン", evoLevel:0, guts:20 }
 ];
 
 // 初期から無料で使えるアシストカード(教えカード)のid一覧(固定)。
@@ -252,6 +266,17 @@ const DRA_MARKET_ICONS = MYUA_ICON_EXPRESSIONS.map(([key, label]) => ({
   cost: 1,
 }));
 
+// 助手きゅうこの顔アイコンも同じ仕様(8表情・各1pt)。画像は吹き出しの face/kyuko_*.PNG をそのまま使う(2026-10-22)。
+// 公開の印 assistantKyuko が立つまでは交換所に並べない(見るたびに読む)
+const KYUKO_MARKET_ICONS = MYUA_ICON_EXPRESSIONS.map(([key, label]) => ({
+  id: `kyuko_${key}`,
+  name: `きゅうこ（${label}）のアイコン`,
+  type: 'icon',
+  icon: `images/assistant/face/kyuko_${key}.PNG`,
+  cost: 1,
+  get shop() { try { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantKyuko === true ? undefined : false; } catch { return false; } },
+}));
+
 // あつの顔アイコンも、助手と同じ仕様(8表情・各1pt)で並べる(2026-10-03)。
 // 顔アイコン(256px)は images/breeder-icons/atsu_<表情>.png に直接置いている。
 // 2026-10-22 あつが助手になり、絵を助手あつの大きい絵から作った顔(images/assistant/face/atsu_*.PNG と同じ絵)へ差し替えた
@@ -328,6 +353,14 @@ const HALLOWEEN_MARKET_ICONS = HALLOWEEN_ICON_SETS.flatMap(set => set.items.map(
   get shop() { return halloweenIconSale() === 'breederPoint' ? undefined : false; },
 })));
 
+// きゅうこのカードが交換所に並ぶか。公開の印と「加入のお話を見たか」を見るたびに読む。
+// 見たかどうかは、ゲーム側が「見終えたお話の id」(mh_rhythm_event_story_v1。新しいキーは作らない)を読んだときに
+// setKyukoJoinSeenForShop で知らせる(保存の読み書きは Claude アプリの保存場所も通るので、ここでは直接読まない)
+let kyukoJoinSeenForShop = false;
+const setKyukoJoinSeenForShop = (seen) => { kyukoJoinSeenForShop = seen === true; };
+const kyukoCardOnSale = () => {
+  try { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantKyuko === true && kyukoJoinSeenForShop; } catch { return false; }
+};
 const BREEDER_MARKET_ITEMS = [
   // プロフィール用の追加画像は助手画像と分け、images/breeder-icons/ に置く。
   { id:'kiki_icon', name:"ききのアイコン", type:'icon', icon:KIKI_FACE_ICON, cost:1 },
@@ -335,6 +368,10 @@ const BREEDER_MARKET_ITEMS = [
   { id:'meloso', name:"アシストカード「メロソ」", type:'assist', icon:MELOPANMAN_ICON, cost:150000, desc:"緊急回復相当＋現在ガード。複数枚使用で次ターンを強化" },
   { id:'momosuke', name:"アシストカード「ももすけ」", type:'assist', icon:MOMOSUKE_FACE_ICON, cost:150000, desc:"ガッツ回復・ライフ/ガッツ上限と丈夫さが永続アップ" },
   { id:'poltz', name:"アシストカード「ポルツ」", type:'assist', icon:POLTZ_FACE_ICON, cost:150000, desc:"敵の攻撃を受けるたびガッツ回復・自動ガッツ回復アップ（Lv3は攻撃アップも）" },
+  // きゅうこ(2026-10-22 社長の決定)。公開の印 assistantKyuko が立ち、加入のお話(kyuko_join_2026_10_22)を見たら並ぶ(kyukoCardOnSale)。150000(ももすけ・ポルツと同じ)
+  { id:'kyuko', name:"アシストカード「きゅうこ」", type:'assist', icon:KYUKO_FACE_ICON, cost:150000, desc:"このターン敵の単体攻撃を引き受け、数ターン受けるダメージダウン",
+    get shop() { return kyukoCardOnSale() ? undefined : false; } },
+
   { id:'oryo',    name:"ニコラオのアイコン",     type:'icon', icon:NICOLAO_FACE_ICON, cost:1 },
   { id:'dra',     name:"ドラのアイコン",        type:'icon', icon:DRA_FACE_ICON,     cost:1 },
   { id:'cadmium', name:"かどみうむのアイコン",   type:'icon', icon:CADMIUM_FACE_ICON, cost:1 },
@@ -431,6 +468,16 @@ const BREEDER_MARKET_ITEMS = [
   { id:'kuromy_icon', name:"クロミーのアイコン", type:'icon', icon:KUROMY_FACE_ICON, cost:1 },
   { id:'kuromy_disc_icon', name:"クロミーの円盤石アイコン", type:'icon', icon:KUROMY_DISC_ICON, cost:1 },
   { id:'Kuromy', name:"クロミーの円盤石", type:'disc', icon:KUROMY_DISC_ICON, cost:150000, available:false },
+  // イルミネ(イルミネ×イルミネ)とドリーミィ(イルミネ×ニャー)。
+  // 2026-10-22 社長「先にモンスター実装予告をいつもの出したい」で、メロディー・クロミーと同じく6件とも available:false(「近日追加」)で並べた。
+  // 本体はまだ案の段階(UPCOMING_MONSTER_DRAFTS)。値段はほかの新モンスターと同じ(円盤石150,000ダイヤ・アイコンは各1)。
+  // 公開(新しい助手のお話と同時)のときに available:false を外す
+  { id:'illumine_icon', name:"イルミネのアイコン", type:'icon', icon:ILLUMINE_FACE_ICON, cost:1, available:false },
+  { id:'illumine_disc_icon', name:"イルミネの円盤石アイコン", type:'icon', icon:ILLUMINE_DISC_ICON, cost:1, available:false },
+  { id:'Illumine', name:"イルミネの円盤石", type:'disc', icon:ILLUMINE_DISC_ICON, cost:150000, available:false },
+  { id:'dreamy_icon', name:"ドリーミィのアイコン", type:'icon', icon:DREAMY_FACE_ICON, cost:1, available:false },
+  { id:'dreamy_disc_icon', name:"ドリーミィの円盤石アイコン", type:'icon', icon:DREAMY_DISC_ICON, cost:1, available:false },
+  { id:'Dreamy', name:"ドリーミィの円盤石", type:'disc', icon:DREAMY_DISC_ICON, cost:150000, available:false },
   { id:'bond_reset_scroll', name:"絆ポイントリセットの書", type:'item', emoji:"📜", cost:500, desc:"マスモンに使うと、そのマスモンが使用した強化ポイント(間合い適性・ステータス強化)がすべて未使用に戻る。絆レベル・絆経験値はそのまま。" },
   { id:'transcend_reset_scroll', name:"超越ポイントリセットの書", type:'item', emoji:"🌠", cost:10000, usage:'transcendReset', desc:"マスモンに使うと、超越強化へ使った超越ポイントがすべて未使用の超越Pへ戻る。絆レベル・絆経験値・通常の強化・超越済みかどうかは変わらない。虹のプシュケーは戻らない。" },
   { id:'soul_rank_respec_scroll', name:"魂格再編の書", type:'item', emoji:"🌀", cost:1000000, usage:'soulRankRespec', desc:"マスモンの魂格特性に使った魂格Pをすべて未使用へ戻す。魂格の結晶で増やしたぶんは、結晶として持ち物に戻る。魂格段階・Lv・最高初到達Lvは変わらない。マーケットでは100万ダイヤ、または勇者の証1個と交換できる。" },
@@ -471,6 +518,7 @@ const BREEDER_MARKET_ITEMS = [
   // 助手ドラの表情アイコン(8種)
   ...DRA_MARKET_ICONS,
   ...ATSU_MARKET_ICONS,
+  ...KYUKO_MARKET_ICONS,
   ...HALLOWEEN_MARKET_ICONS
 ];
 // ==================== アイコンのまとめ売り(2026-10-03・ユーザー指示) ====================
@@ -494,9 +542,10 @@ const breederIconGroupKeyOf = (id) => {
   if (key === 'kiki_icon' || /^kiki_/.test(key)) return 'kiki';
   if (/^momosuke_/.test(key)) return 'momosuke';
   if (key === 'atsu' || /^atsu_/.test(key)) return 'atsu';
+  if (/^kyuko_/.test(key)) return 'kyuko';
   return key.replace(/_disc_icon$/, '').replace(/_awakened_icon$/, '').replace(/_icon$/, '');
 };
-const BREEDER_ICON_GROUP_NAMES = Object.freeze({ mua:'みゅあ', dra:'ドラ', kiki:'きき', momosuke:'ももすけ', atsu:'あつ',
+const BREEDER_ICON_GROUP_NAMES = Object.freeze({ mua:'みゅあ', dra:'ドラ', kiki:'きき', momosuke:'ももすけ', atsu:'あつ', kyuko:'きゅうこ',
   mua_halloween:'みゅあ（ハロウィン）', kiki_halloween:'きき（ハロウィン）', momosuke_halloween:'ももすけ（ハロウィン）', snegurochka_halloween:'スネグーラチカ（ハロウィン）' });
 // 中身が2つ以上あるキャラだけがまとまる(1つしかないアイコンは今までどおり1枚で売る)。並びは商品の並びのまま
 const BREEDER_ICON_GROUPS = (() => {
