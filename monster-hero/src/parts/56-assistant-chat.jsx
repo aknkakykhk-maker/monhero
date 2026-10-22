@@ -88,7 +88,12 @@ const assistantChatRankingPlan = (rawText, prevUserTexts = []) => {
         typeof TACTICS_PRO_MODE !== 'undefined' ? TACTICS_PRO_MODE : null].filter(Boolean),
     ].filter(m => m && m.id && modeHasRanking(m.id));
     const extremeMode = typeof EXTREME_MODE !== 'undefined' ? EXTREME_MODE : null;
-    const modeWords = modes.flatMap(m => [m.label, m.short].filter(Boolean).map(w => ({ w, m }))).sort((a, b) => b.w.length - a.w.length);
+    // ランキングの無いタクティクス(タクティクスチャレンジ)の呼び名は、ランキングがあるタクティクスプロへ寄せる
+    // (2026-10-22 社長「タクティクスの極限のエクストリーム見れないの？」が極限チャレンジに取り違えられた)
+    const tacticsPro = typeof TACTICS_PRO_MODE !== 'undefined' && modes.some(m => m.id === TACTICS_PRO_MODE.id) ? TACTICS_PRO_MODE : null;
+    const tacticsAlias = tacticsPro && typeof TACTICS_MODE !== 'undefined' && !modes.some(m => m.id === TACTICS_MODE.id)
+      ? [TACTICS_MODE.label, TACTICS_MODE.short].filter(Boolean).map(w => ({ w, m: tacticsPro })) : [];
+    const modeWords = [...modes.flatMap(m => [m.label, m.short].filter(Boolean).map(w => ({ w, m }))), ...tacticsAlias].sort((a, b) => b.w.length - a.w.length);
     const extremeList = [...(typeof PUBLIC_EXTREME_DIFFICULTIES !== 'undefined' ? PUBLIC_EXTREME_DIFFICULTIES : []),
       ...(typeof EXTREME_DIFFICULTIES !== 'undefined' ? EXTREME_DIFFICULTIES : [])];
     const isExtremeId = (id) => (typeof isExtremeDifficultyId === 'function' ? isExtremeDifficultyId(id) : extremeList.some(st => st.id === id));
@@ -145,7 +150,8 @@ const assistantChatRankingPlan = (rawText, prevUserTexts = []) => {
         c = { ...base, lineage: now.lineage || base.lineage,
           diffHit: own ? now.diffHit : base.diffHit, extreme: own ? now.extreme : base.extreme, all: own ? now.all : base.all,
           rhythmDiff: now.rhythmDiff || base.rhythmDiff, inherited: true };
-      } else if (!topicNow) return null;
+      } else if (!topicNow && !(ownSelector && prevs.some(t => ASSISTANT_CHAT_RANKING_TOPIC.test(t)))) return null;
+      // 前の話題に種類が無くても、ランキングの話の続きで「エクストリーム」「全部」などと言われたら、その指定で読む(モードが無ければ下でバトルの既定へ)
     } else if (!topicNow && !hasKind(now)) return null;
     if (c.battle && !c.modeHit && !selectorOnly) {
       // 「極限」だけなど、モードの言葉が無いバトルの話は、すぐ前に出たモードを引き継ぐ

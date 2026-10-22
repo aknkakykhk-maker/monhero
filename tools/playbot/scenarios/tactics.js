@@ -217,7 +217,7 @@ async function enterTactics(s, { mode, difficulty = 'keep', stats = {}, ctx = nu
           if (!done.disabled) { done.click(); return 'pro-done'; }
           const slots = [...document.querySelectorAll('[data-pro-party-slot][aria-label$="を勇者モンにする"]')];
           const h = slots.find((x) => want[0] && x.getAttribute('aria-label').startsWith(want[0])) || slots[0];
-          if (h) { h.click(); return 'pro-hero'; }
+          if (h) { h.click(); return `pro-hero:${h.getAttribute('aria-label').replace(/を勇者モンにする$/, '')}`; }
         }
         const next = document.querySelector('[data-pro-party-next]');
         if (next && !next.disabled) { next.click(); return 'pro-next'; }
@@ -225,7 +225,7 @@ async function enterTactics(s, { mode, difficulty = 'keep', stats = {}, ctx = nu
         const put = live.find((x) => /を枠に入れる$/.test(x.getAttribute('aria-label') || '') && !chosen.has(x.getAttribute('aria-label').replace(/を枠に入れる$/, '')));
         const tiles = [...document.querySelectorAll('[data-pro-pick-scroll] button[aria-label$="を見る"]')].filter((x) => !x.disabled && !chosen.has(x.getAttribute('aria-label').replace(/を見る$/, '')));
         const wantTile = tiles.find((x) => want.includes(x.getAttribute('aria-label').replace(/を見る$/, '')));
-        if (put && (!wantTile || put.getAttribute('aria-label').replace(/を枠に入れる$/, '') === wantTile.getAttribute('aria-label').replace(/を見る$/, ''))) { put.click(); return 'pro-put'; }
+        if (put && (!wantTile || put.getAttribute('aria-label').replace(/を枠に入れる$/, '') === wantTile.getAttribute('aria-label').replace(/を見る$/, ''))) { put.click(); return `pro-put:${put.getAttribute('aria-label').replace(/を枠に入れる$/, '')}`; }
         const t = wantTile || tiles[0];
         if (t) { t.click(); return 'pro-focus'; }
       }
@@ -253,6 +253,10 @@ async function enterTactics(s, { mode, difficulty = 'keep', stats = {}, ctx = nu
     });
     if (!step) break;
     // 編成を記録する(勇者モン・供モンの候補5体)
+    // ★2026-10-19 からのプロモードの編成(上の枠へ入れる → 勇者モンを選ぶ)でも記録する。入れた子は候補、勇者モンにした子は勇者モン
+    //   (2026-10-22 まで記録していなかったので、その間のボットの回は勇者モン・候補が空だった。tactics-tier.js はその回を数えない)
+    if (ctx && step.startsWith('pro-put:')) { const nm = step.slice(8); if (nm && !ctx.log.data.build.pool.includes(nm)) ctx.log.data.build.pool.push(nm); }
+    if (ctx && step.startsWith('pro-hero:')) { const nm = step.slice(9); if (nm) { ctx.log.data.build.hero = nm; ctx.log.data.build.pool = ctx.log.data.build.pool.filter((x) => x !== nm); ctx.mem.lastPicked = nm; } }
     if (ctx && step.startsWith('mon:')) {
       const nm = step.slice(4);
       if (/勇者モン/.test(scrName)) ctx.log.data.build.hero = nm;

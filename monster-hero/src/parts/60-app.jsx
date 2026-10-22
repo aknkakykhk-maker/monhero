@@ -21374,8 +21374,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const who=activeAssistant;
         const scenes=(typeof ASSISTANT_SCENES!=='undefined'&&ASSISTANT_SCENES)||{};
         const exprs=(typeof ASSISTANT_EXPRESSIONS!=='undefined'&&ASSISTANT_EXPRESSIONS)||[];
-        const spam=[...((typeof ASSISTANT_SPAM_LINES!=='undefined'&&ASSISTANT_SPAM_LINES)||[]),
-                    ...((typeof ASSISTANT_SPAM_RECOVER!=='undefined'&&ASSISTANT_SPAM_RECOVER)?[ASSISTANT_SPAM_RECOVER]:[])];
+        const spamLinesOf=(typeof assistantSpamLinesOf==='function')?assistantSpamLinesOf(selectedAssistantId):((typeof ASSISTANT_SPAM_LINES!=='undefined'&&ASSISTANT_SPAM_LINES)||[]);
+        const spamRecoverOf=(typeof assistantSpamRecoverOf==='function')?assistantSpamRecoverOf(selectedAssistantId):((typeof ASSISTANT_SPAM_RECOVER!=='undefined'&&ASSISTANT_SPAM_RECOVER)||null);
+        const spam=[...(spamLinesOf||[]),...(spamRecoverOf?[spamRecoverOf]:[])].map(l=>({...l,who:selectedAssistantId}));
         const titles={lines:'全助手コメント',expressions:'全表情',conditions:'条件コメント',spam:'連打リアクション',bond:'親密度と呼び方',random:'ランダムテスト'};
         const stages=(typeof assistantBondLevelsOf==='function'&&assistantBondLevelsOf(selectedAssistantId))||[];
         // 見ているLv。切り替えるとセリフの絞り込みも呼び方も、そのLvのものになる
