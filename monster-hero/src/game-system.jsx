@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 881c511db0252217
+// generated-sha256: 82ae5942851220c2
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-22 12:58"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-22 13:19"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -24621,6 +24621,22 @@ const tacticsTargetWeights = (units, bias = TACTICS_TARGET_LOW_HP_BIAS, hate = n
     return { index, weight: (1 + safeBias * (1 - remain)) * tacticsHateWeightMult(hate, index) };
   });
 };
+// 枠ごとの「狙われる確率(%)」(2026-10-22 社長「ヘイトは炎じゃなくて数値化したほうがいいかもね。ひとりなら常に100%で
+// 2人とか3人とかでも今の計算で狙われる率がそのまま出るようにして」)。
+// ★敵が狙いを決めるのと同じ重み(tacticsTargetWeights: ライフの減り具合 × ヘイトの倍率)を、生きている子だけで割る。
+//   表示と実際の抽選が食い違わないよう、ここで重みを作り直さない。
+// ★合計がちょうど100になるように、切り捨てたあと端数の大きい順に1ずつ足す。倒れた子・空き枠は null
+const tacticsTargetChances = (units, hate = null, bias = TACTICS_TARGET_LOW_HP_BIAS) => {
+  const out = [null, null, null, null];
+  const weights = tacticsTargetWeights(units, bias, hate);
+  const total = weights.reduce((sum, entry) => sum + entry.weight, 0);
+  if (!weights.length || !(total > 0)) return out;
+  const parts = weights.map(entry => { const v = entry.weight / total * 100; return { index: entry.index, pct: Math.floor(v), rest: v - Math.floor(v) }; });
+  let left = 100 - parts.reduce((sum, p) => sum + p.pct, 0);
+  [...parts].sort((a, b) => (b.rest - a.rest) || (a.index - b.index)).forEach(p => { if (left > 0) { p.pct += 1; left -= 1; } });
+  parts.forEach(p => { out[p.index] = p.pct; });
+  return out;
+};
 // 狙うスロットを1つ選ぶ。生きている子がいなければ null
 const chooseTacticsTarget = (units, random = Math.random, bias = TACTICS_TARGET_LOW_HP_BIAS, hate = null) => {
   const weights = tacticsTargetWeights(units, bias, hate);
@@ -24682,7 +24698,6 @@ const TACTICS_HATE = {
   //    約65%・約90% は「ガードで」ではなく「ヘイト約40で」「上限100で」の目安として守る)
   // 前は ×(1 + ヘイト ÷ 25)。全員ヘイト0なら ×1 で、ライフの減り具合だけで決まるのは今までどおり
   weightCurve: [[0, 1], [20, 1.8], [40, 7.1], [100, 34]],
-  flames: [20, 50, 80],
   // 行動カード・EX に出す「使うと🔥がどれだけ上がるか」の段(2026-10-19 社長「各カードにヘイト割合も書いたほうがわかりやすいかもね」)。
   //   1回で上がる量(使う子の倍率を掛けたあと)が cardFlames[0] 未満なら🔥(小)・cardFlames[1] 未満なら🔥🔥(中)・それ以上は🔥🔥🔥(大)
   //   攻撃は与ダメージのぶんも入るので、そのターンの味方の与ダメージのうち cardDmgShareGuess を出したとして見積もる
@@ -24874,11 +24889,7 @@ const tacticsHateHelpRows = (id) => {
   }
   return [];
 };
-// 炎の段(0〜3)。だれでも同じ値で見る(2026-10-22 勇者モンの下地を外したので、引かない)
-const tacticsHateFlame = (value) => {
-  const v = tacticsHateNum(value);
-  return TACTICS_HATE.flames.filter(x => v >= x).length;
-};
+// ===== ヘイトの数字ここまで(枠には炎の段ではなく狙われる確率を出す・tacticsTargetChances。2026-10-22 社長) =====
 // その行動が実際に当たるスロット。予告と実行で同じ関数を通すので食い違わない
 // 間合い攻撃が「当たり」(×TACTICS_SWEEP_MULT)になる条件。
 // ★見るのは2つだけ。**敵がどの距離にいるか**と、**狙われた子がどの距離にいるか**
@@ -41601,9 +41612,11 @@ function BattleScreen({
               const slotAimHit=slotAimed?plannedHitWithCover(i):null;
               // この子のEXスキル(タクティクスだけ。持っていなければ null)
               const slotExInfo=tacticsExInfo?tacticsExInfo(i):null;
-              // ヘイト(確認待ちの試作): 炎の段。倒れている子には出さない。勇者は下地を引いた値で見る
-              const hateLv=s&&tacticsHateOn&&Array.isArray(tacticsHate)&&!normalizeTacticsUnit(tacticsUnits[i])?.downed?tacticsHateFlame(tacticsHate[i]):0;
-              const hateFlame=hateLv>0?<span data-tactics-hate={i} data-tactics-hate-level={hateLv} title="ヘイト(狙われやすさ)" className="ml-0.5 shrink-0 pr-[0.3em] text-[8px] leading-none tracking-[-0.3em] drop-shadow-[0_0_3px_rgba(251,146,60,.9)]">{'🔥'.repeat(hateLv)}</span>:null;
+              // 狙われる確率(%)。2026-10-22 社長「ヘイトは炎じゃなくて数値化したほうがいい」で、炎の段から数字に替えた。
+              // 敵が狙いを決めるのと同じ重み(tacticsTargetChances → tacticsTargetWeights)で、生きている子だけで割る。倒れている子には出さない。
+              // 印は「狙」の小さな字(予告の当たり先の🎯と紛れないように・狭い枠で名前を削りすぎないように)
+              const hatePct=s&&tacticsHateOn&&Array.isArray(tacticsHate)?tacticsTargetChances(tacticsUnits,tacticsHate)[i]:null;
+              const hateFlame=Number.isInteger(hatePct)?<span data-tactics-hate={i} data-tactics-hate-pct={hatePct} title="狙われる確率" className={`ml-0.5 shrink-0 rounded px-[2px] py-px text-[8px] font-black leading-none tracking-tighter tabular-nums ${hatePct>=50?'bg-red-950/80 text-red-200':hatePct>=30?'bg-orange-950/70 text-orange-200':'bg-black/50 text-slate-300'}`}><span className="text-[6px] opacity-80">狙</span>{hatePct}%</span>:null;
               // パンドラの箱: 効いているあいだは、悪魔と天使の2体を1つの枠に並べて出す(ライフ・ガッツ・距離・狙われ方は1体のまま)。
               // 待機アニメ(MonsterIdleArt)は本体の絵のパーツ用なので、2体のときは通さない。カードを切る間は、そのカードの側(1枚目=悪魔・2枚目以降=天使)が前に出て、もう片方は暗くなる。染色は本体用なので2体には掛けない
               const pandoraForm = s && s.id === 'Pandora' ? (tacticsPandoraForms && tacticsPandoraForms[i]) : null;
@@ -41679,7 +41692,9 @@ function BattleScreen({
                     枠いっぱいまで使える仕様。ただし左側の別の表示(味方攻撃等)との位置かぶりがないように」)
                     ★1本の flex の段に並べるので、🎯が伸びても左の札の手前で止まり、重ならない。
                       入り切らないときは🎯の内訳のほうから「…」で縮む(合計の数字は縮めない) */}
-                {tacticsNewLayout&&(previewDmg>0||previewGuard>0||slotAimHit)&&(<div data-tactics-slot-top-row className="absolute left-1 right-1.5 top-[20px] z-[63] flex h-[13px] items-center gap-1 pointer-events-none">
+                {/* 狙われる確率(%)はこの段の左端に置く(名前の行に入れると、狭い端末で名前が「モッ…」まで縮む・2026-10-22) */}
+                {tacticsNewLayout&&(previewDmg>0||previewGuard>0||slotAimHit||hateFlame)&&(<div data-tactics-slot-top-row className="absolute left-1 right-1.5 top-[20px] z-[63] flex h-[13px] items-center gap-1 pointer-events-none">
+                  {hateFlame}
                   {(previewDmg>0||previewGuard>0)&&<div data-tactics-image-previews className="flex shrink-0 items-center gap-0.5">{previewDmg>0&&<span data-tactics-damage-preview={previewDmg} className={`rounded px-1 py-0.5 text-[8px] font-black leading-none shadow ring-1 ${isPendingPreview?'bg-yellow-500 text-black ring-yellow-200':'bg-red-600 text-white ring-white/50'}`}>{isPendingPreview&&isPendingHalved?'½':''}攻{previewDmg}</span>}{previewGuard>0&&<span data-tactics-guard-preview={previewGuard} className="rounded bg-emerald-600 px-1 py-0.5 text-[8px] font-black leading-none text-white shadow ring-1 ring-emerald-200">{isPendingGuardHalved?'½':''}守{previewGuard}</span>}</div>}
                   <div className="flex min-w-0 flex-1 justify-end">{slotAimHit&&<span data-tactics-aimed-damage={slotAimHit.taken} data-tactics-aimed-parts={slotAimHit.parts.length>1?slotAimHit.parts.join('/'):undefined} className="inline-flex h-[13px] max-w-full min-w-0 items-center gap-0.5 overflow-hidden whitespace-nowrap rounded border border-red-300 bg-red-950 px-1 text-[9px] font-black leading-none text-red-100 shadow"><span className="shrink-0">🎯{slotAimHit.taken>0?`-${tacticsAimNum(slotAimHit.taken)}`:''}</span>{slotAimHit.parts.length>1?<span className="min-w-0 truncate text-[7px] font-bold text-red-200/85">{tacticsAimParts(slotAimHit.parts,tacticsAimNum(slotAimHit.taken))}</span>:null}</span>}</div>
                 </div>)}
@@ -41750,7 +41765,7 @@ function BattleScreen({
                     「勇者モン選択時だけ効く特性」が効いているのか判断できないため */}
                 {/* 縁を回る光。回すのは中の大きな光の輪(transform)だけにして、塗りを毎コマ描き直さない(70-bootstrap の data-slot-ring) */}
                 {tacticsNewLayout&&<i aria-hidden="true" data-slot-ring/>}
-                <div data-slot-head={tacticsNewLayout?i:undefined} className={`${tacticsNewLayout?'col-span-2 row-start-1 h-[18px] justify-start gap-0.5 pr-1 backdrop-blur-sm':'h-[18px] justify-center'} shrink-0 flex items-center px-1 border-b z-20 ${isHeroSlotMon(s)?'bg-amber-400/10 border-amber-200/20':'bg-white/[.025] border-white/[.055]'}`}>{tacticsNewLayout&&<span className={`mr-1 shrink-0 rounded px-1 py-0.5 text-[8px] font-black leading-none ${RANGE_STYLES[i].labelBg}`}>{RANGE_LABELS[i]}</span>}{isHeroSlotMon(s)&&<Crown size={8} className="shrink-0 mr-0.5 text-amber-300"/>}<span className={`min-w-0 text-[10px] font-black truncate uppercase leading-none ${isHeroSlotMon(s)?'text-amber-100':'text-white'}`}>{s?.name||'---'}</span>{hateFlame&&!tacticsNewLayout&&hateFlame}{assignedCount>0&&!tacticsNewLayout&&<span className="ml-1 text-[10px] font-black text-indigo-300">×{assignedCount}</span>}{slotBuffMarks.map(mark=>(<span key={mark.text} data-tactics-slot-buff={mark.text} className={`ml-1 shrink-0 text-[8px] font-black leading-none ${mark.cls}`}>{mark.text}</span>))}{tacticsNewLayout&&(hateFlame||slotExInfo)&&(<span data-slot-head-right className="ml-auto flex shrink-0 items-center gap-0.5 pl-0.5">{hateFlame}{slotExInfo&&(<span data-tactics-ex-mark={i} data-tactics-ex-state={slotExInfo.badge.text} className={`max-w-[80px] truncate rounded px-1 py-0.5 text-[8px] font-black leading-none ${slotExInfo.badge.active?'bg-fuchsia-600 text-white ring-1 ring-fuchsia-200':'bg-black/70 text-fuchsia-200 ring-1 ring-fuchsia-400/60'}`}>EX{slotExInfo.badge.text!=='EX'?` ${slotExInfo.badge.text}`:(slotExInfo.badge.uses!=null?`×${slotExInfo.badge.uses}`:'')}</span>)}</span>)}</div>
+                <div data-slot-head={tacticsNewLayout?i:undefined} className={`${tacticsNewLayout?'col-span-2 row-start-1 h-[18px] justify-start gap-0.5 pr-1 backdrop-blur-sm':'h-[18px] justify-center'} shrink-0 flex items-center px-1 border-b z-20 ${isHeroSlotMon(s)?'bg-amber-400/10 border-amber-200/20':'bg-white/[.025] border-white/[.055]'}`}>{tacticsNewLayout&&<span className={`mr-1 shrink-0 rounded px-1 py-0.5 text-[8px] font-black leading-none ${RANGE_STYLES[i].labelBg}`}>{RANGE_LABELS[i]}</span>}{isHeroSlotMon(s)&&<Crown size={8} className="shrink-0 mr-0.5 text-amber-300"/>}<span className={`min-w-0 text-[10px] font-black truncate uppercase leading-none ${isHeroSlotMon(s)?'text-amber-100':'text-white'}`}>{s?.name||'---'}</span>{hateFlame&&!tacticsNewLayout&&hateFlame}{assignedCount>0&&!tacticsNewLayout&&<span className="ml-1 text-[10px] font-black text-indigo-300">×{assignedCount}</span>}{slotBuffMarks.map(mark=>(<span key={mark.text} data-tactics-slot-buff={mark.text} className={`ml-1 shrink-0 text-[8px] font-black leading-none ${mark.cls}`}>{mark.text}</span>))}{tacticsNewLayout&&slotExInfo&&(<span data-slot-head-right className="ml-auto flex shrink-0 items-center gap-0.5 pl-0.5">{slotExInfo&&(<span data-tactics-ex-mark={i} data-tactics-ex-state={slotExInfo.badge.text} className={`max-w-[80px] truncate rounded px-1 py-0.5 text-[8px] font-black leading-none ${slotExInfo.badge.active?'bg-fuchsia-600 text-white ring-1 ring-fuchsia-200':'bg-black/70 text-fuchsia-200 ring-1 ring-fuchsia-400/60'}`}>EX{slotExInfo.badge.text!=='EX'?` ${slotExInfo.badge.text}`:(slotExInfo.badge.uses!=null?`×${slotExInfo.badge.uses}`:'')}</span>)}</span>)}</div>
                 {(()=>{const uOptions=getAvailableUniquesForSlot(s,ownedUniques,i); if(uOptions.length<2) return null; const curKey=activeSlotUniqueKey(slotUniqueChoice,i,s); const curIdx=Math.max(0,uOptions.findIndex(o=>o.key===curKey));
                   return(<div onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation(); if(isBusy||autoBattleRef.current)return; cycleActiveUniqueForSlot(i);}} className={`${tacticsNewLayout?'absolute left-1 top-[20px]':'shrink-0'} z-20 flex items-center justify-center gap-0.5 bg-purple-700/90 border-b border-purple-300/50 py-0.5 active:scale-95${autoBattle?' opacity-40':''}`}>
                     <RefreshCcw size={7} className="text-white"/><span className="text-[10px] font-black text-white leading-none">固有技 {curIdx+1}/{uOptions.length}</span>

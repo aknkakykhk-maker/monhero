@@ -525,6 +525,22 @@ const tacticsTargetWeights = (units, bias = TACTICS_TARGET_LOW_HP_BIAS, hate = n
     return { index, weight: (1 + safeBias * (1 - remain)) * tacticsHateWeightMult(hate, index) };
   });
 };
+// 枠ごとの「狙われる確率(%)」(2026-10-22 社長「ヘイトは炎じゃなくて数値化したほうがいいかもね。ひとりなら常に100%で
+// 2人とか3人とかでも今の計算で狙われる率がそのまま出るようにして」)。
+// ★敵が狙いを決めるのと同じ重み(tacticsTargetWeights: ライフの減り具合 × ヘイトの倍率)を、生きている子だけで割る。
+//   表示と実際の抽選が食い違わないよう、ここで重みを作り直さない。
+// ★合計がちょうど100になるように、切り捨てたあと端数の大きい順に1ずつ足す。倒れた子・空き枠は null
+const tacticsTargetChances = (units, hate = null, bias = TACTICS_TARGET_LOW_HP_BIAS) => {
+  const out = [null, null, null, null];
+  const weights = tacticsTargetWeights(units, bias, hate);
+  const total = weights.reduce((sum, entry) => sum + entry.weight, 0);
+  if (!weights.length || !(total > 0)) return out;
+  const parts = weights.map(entry => { const v = entry.weight / total * 100; return { index: entry.index, pct: Math.floor(v), rest: v - Math.floor(v) }; });
+  let left = 100 - parts.reduce((sum, p) => sum + p.pct, 0);
+  [...parts].sort((a, b) => (b.rest - a.rest) || (a.index - b.index)).forEach(p => { if (left > 0) { p.pct += 1; left -= 1; } });
+  parts.forEach(p => { out[p.index] = p.pct; });
+  return out;
+};
 // 狙うスロットを1つ選ぶ。生きている子がいなければ null
 const chooseTacticsTarget = (units, random = Math.random, bias = TACTICS_TARGET_LOW_HP_BIAS, hate = null) => {
   const weights = tacticsTargetWeights(units, bias, hate);
@@ -586,7 +602,6 @@ const TACTICS_HATE = {
   //    約65%・約90% は「ガードで」ではなく「ヘイト約40で」「上限100で」の目安として守る)
   // 前は ×(1 + ヘイト ÷ 25)。全員ヘイト0なら ×1 で、ライフの減り具合だけで決まるのは今までどおり
   weightCurve: [[0, 1], [20, 1.8], [40, 7.1], [100, 34]],
-  flames: [20, 50, 80],
   // 行動カード・EX に出す「使うと🔥がどれだけ上がるか」の段(2026-10-19 社長「各カードにヘイト割合も書いたほうがわかりやすいかもね」)。
   //   1回で上がる量(使う子の倍率を掛けたあと)が cardFlames[0] 未満なら🔥(小)・cardFlames[1] 未満なら🔥🔥(中)・それ以上は🔥🔥🔥(大)
   //   攻撃は与ダメージのぶんも入るので、そのターンの味方の与ダメージのうち cardDmgShareGuess を出したとして見積もる
@@ -778,11 +793,7 @@ const tacticsHateHelpRows = (id) => {
   }
   return [];
 };
-// 炎の段(0〜3)。だれでも同じ値で見る(2026-10-22 勇者モンの下地を外したので、引かない)
-const tacticsHateFlame = (value) => {
-  const v = tacticsHateNum(value);
-  return TACTICS_HATE.flames.filter(x => v >= x).length;
-};
+// ===== ヘイトの数字ここまで(枠には炎の段ではなく狙われる確率を出す・tacticsTargetChances。2026-10-22 社長) =====
 // その行動が実際に当たるスロット。予告と実行で同じ関数を通すので食い違わない
 // 間合い攻撃が「当たり」(×TACTICS_SWEEP_MULT)になる条件。
 // ★見るのは2つだけ。**敵がどの距離にいるか**と、**狙われた子がどの距離にいるか**

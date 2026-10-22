@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 322f84c9d6ad2e88
+// source-sha256: e478a3e4fe12947f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-22 12:58";
+const BUILD_DATE = "2026-10-22 13:19";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -40348,6 +40348,31 @@ const tacticsTargetWeights = (units, bias = TACTICS_TARGET_LOW_HP_BIAS, hate = n
     };
   });
 };
+const tacticsTargetChances = (units, hate = null, bias = TACTICS_TARGET_LOW_HP_BIAS) => {
+  const out = [null, null, null, null];
+  const weights = tacticsTargetWeights(units, bias, hate);
+  const total = weights.reduce((sum, entry) => sum + entry.weight, 0);
+  if (!weights.length || !(total > 0)) return out;
+  const parts = weights.map(entry => {
+    const v = entry.weight / total * 100;
+    return {
+      index: entry.index,
+      pct: Math.floor(v),
+      rest: v - Math.floor(v)
+    };
+  });
+  let left = 100 - parts.reduce((sum, p) => sum + p.pct, 0);
+  [...parts].sort((a, b) => b.rest - a.rest || a.index - b.index).forEach(p => {
+    if (left > 0) {
+      p.pct += 1;
+      left -= 1;
+    }
+  });
+  parts.forEach(p => {
+    out[p.index] = p.pct;
+  });
+  return out;
+};
 const chooseTacticsTarget = (units, random = Math.random, bias = TACTICS_TARGET_LOW_HP_BIAS, hate = null) => {
   const weights = tacticsTargetWeights(units, bias, hate);
   if (!weights.length) return null;
@@ -40385,7 +40410,6 @@ const TACTICS_HATE = {
   decay: 0.7,
   cap: 100,
   weightCurve: [[0, 1], [20, 1.8], [40, 7.1], [100, 34]],
-  flames: [20, 50, 80],
   cardFlames: [15, 40],
   cardDmgShareGuess: 0.5,
   start: {
@@ -40715,10 +40739,6 @@ const tacticsHateHelpRows = id => {
     return rows;
   }
   return [];
-};
-const tacticsHateFlame = value => {
-  const v = tacticsHateNum(value);
-  return TACTICS_HATE.flames.filter(x => v >= x).length;
 };
 const isTacticsSweepOnSpot = (intent, units, enemyDist) => {
   if (!intent || intent.variant !== 'sweep') return true;
@@ -69048,13 +69068,15 @@ function BattleScreen({
     const slotAimed = aimedSlots.includes(i);
     const slotAimHit = slotAimed ? plannedHitWithCover(i) : null;
     const slotExInfo = tacticsExInfo ? tacticsExInfo(i) : null;
-    const hateLv = s && tacticsHateOn && Array.isArray(tacticsHate) && !normalizeTacticsUnit(tacticsUnits[i])?.downed ? tacticsHateFlame(tacticsHate[i]) : 0;
-    const hateFlame = hateLv > 0 ? React.createElement("span", {
+    const hatePct = s && tacticsHateOn && Array.isArray(tacticsHate) ? tacticsTargetChances(tacticsUnits, tacticsHate)[i] : null;
+    const hateFlame = Number.isInteger(hatePct) ? React.createElement("span", {
       "data-tactics-hate": i,
-      "data-tactics-hate-level": hateLv,
-      title: "ヘイト(狙われやすさ)",
-      className: "ml-0.5 shrink-0 pr-[0.3em] text-[8px] leading-none tracking-[-0.3em] drop-shadow-[0_0_3px_rgba(251,146,60,.9)]"
-    }, '🔥'.repeat(hateLv)) : null;
+      "data-tactics-hate-pct": hatePct,
+      title: "狙われる確率",
+      className: `ml-0.5 shrink-0 rounded px-[2px] py-px text-[8px] font-black leading-none tracking-tighter tabular-nums ${hatePct >= 50 ? 'bg-red-950/80 text-red-200' : hatePct >= 30 ? 'bg-orange-950/70 text-orange-200' : 'bg-black/50 text-slate-300'}`
+    }, React.createElement("span", {
+      className: "text-[6px] opacity-80"
+    }, "狙"), hatePct, "%") : null;
     const pandoraForm = s && s.id === 'Pandora' ? tacticsPandoraForms && tacticsPandoraForms[i] : null;
     const pandoraArt = s && s.id === 'Pandora' && slotExInfo && slotExInfo.active && slotExInfo.def && slotExInfo.def.effect === 'pandoraBox' ? (() => {
       const ph = tacticsNewLayout ? 58 : 64,
@@ -69219,10 +69241,10 @@ function BattleScreen({
           animation: 'tacticsHitRing 520ms ease-out 110ms forwards'
         }
       })));
-    })(), tacticsNewLayout && (previewDmg > 0 || previewGuard > 0 || slotAimHit) && React.createElement("div", {
+    })(), tacticsNewLayout && (previewDmg > 0 || previewGuard > 0 || slotAimHit || hateFlame) && React.createElement("div", {
       "data-tactics-slot-top-row": true,
       className: "absolute left-1 right-1.5 top-[20px] z-[63] flex h-[13px] items-center gap-1 pointer-events-none"
-    }, (previewDmg > 0 || previewGuard > 0) && React.createElement("div", {
+    }, hateFlame, (previewDmg > 0 || previewGuard > 0) && React.createElement("div", {
       "data-tactics-image-previews": true,
       className: "flex shrink-0 items-center gap-0.5"
     }, previewDmg > 0 && React.createElement("span", {
@@ -69347,10 +69369,10 @@ function BattleScreen({
       key: mark.text,
       "data-tactics-slot-buff": mark.text,
       className: `ml-1 shrink-0 text-[8px] font-black leading-none ${mark.cls}`
-    }, mark.text)), tacticsNewLayout && (hateFlame || slotExInfo) && React.createElement("span", {
+    }, mark.text)), tacticsNewLayout && slotExInfo && React.createElement("span", {
       "data-slot-head-right": true,
       className: "ml-auto flex shrink-0 items-center gap-0.5 pl-0.5"
-    }, hateFlame, slotExInfo && React.createElement("span", {
+    }, slotExInfo && React.createElement("span", {
       "data-tactics-ex-mark": i,
       "data-tactics-ex-state": slotExInfo.badge.text,
       className: `max-w-[80px] truncate rounded px-1 py-0.5 text-[8px] font-black leading-none ${slotExInfo.badge.active ? 'bg-fuchsia-600 text-white ring-1 ring-fuchsia-200' : 'bg-black/70 text-fuchsia-200 ring-1 ring-fuchsia-400/60'}`
