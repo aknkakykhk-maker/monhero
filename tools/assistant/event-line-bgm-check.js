@@ -42,7 +42,9 @@ const types = assistants.slice(assistants.indexOf('const ASSISTANT_TACTICS_TYPES
 const lines = types.split('\n').filter((l) => /\{ who:/.test(l));
 const switchAt = lines.findIndex((l) => /bgm:'senjou_no_shippuu'/.test(l));
 check('⑤ 案Dはドラが前に立つ行から戦場の疾風', switchAt > 0 && /who:'dra'/.test(lines[switchAt]) && /タンク/.test(lines[switchAt]), `${switchAt + 1}行目`);
-check('③ bgm を書いているのは案Dだけ(ほかの会話イベントは今までどおり)', written.length === 1);
+// 2026-10-22 きゅうこの加入のお話も、きゅうこ登場の前に Toward the Stars へ替える(社長の決定。holdMs で数秒止まる)
+check('③ bgm を書いているのは案Dと、きゅうこの加入のお話だけ(ほかの会話イベントは今までどおり)',
+  written.length === 2 && written.includes('senjou_no_shippuu') && written.includes('melo_toward_the_stars_short'), written.join(', '));
 check('⑤ 案Dの会話イベントの曲はイベントBGM 1', /tactics_types:'tacticsTypesEvent'/.test(bgm) && /tacticsTypesEvent:'original_event_01'/.test(bgm));
 const core = read('monster-hero/src/parts/10-core.jsx');
 check('⑤ 案Dはヘイトの公開の印と一緒に出る', /get tacticsTypes\(\) \{ return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS\.tacticsHate === true; \}/.test(core) && /releaseFlag: 'tacticsTypes'/.test(assistants));

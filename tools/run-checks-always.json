@@ -7,6 +7,7 @@
   "assistant/assistant-unlock-notice-render-check.js",
   "assistant/assistant-update-notice-check.js",
   "assistant/atsu-check.js",
+  "assistant/kyuko-check.js",
   "assistant/daily-masu-advice-check.js",
   "assistant/dra-tone-check.js",
   "assistant/momosuke-check.js",

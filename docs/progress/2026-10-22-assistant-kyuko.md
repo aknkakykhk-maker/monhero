@@ -15,14 +15,15 @@
 
 ## 決めることは全部そろった(10/22 夜)。次は作る
 
-## 進み具合
-- [x] 絵の切り分け(scratchpad。まだリポジトリへ入れていない)
-- [ ] 絵と顔アイコン(案B)を images/assistant/kyuko_*.PNG・face/ へ
-- [ ] ASSISTANTS・呼び方・見本・仲良し度の段階・全場面のセリフ
-- [ ] アシストカード「きゅうこの譜面」(breeder.js・バトルの処理・説明)
-- [ ] 加わるときのお話(社長に全文を見せる)
-- [ ] 公開の印は切のまま入れる → 社長の OK で公開
-- [ ] あつに社長の話し方を足す
+## 進み具合(10/22 夜)
+- [x] 絵(384×512)と顔アイコン(案B)を images/assistant/kyuko_*.PNG・face/ へ
+- [x] ASSISTANTS・呼び方・見本・仲良し度の30段・呼び方の例・連打・全場面のセリフ(552本・あつと同じ場面と事実)
+- [x] アシストカード「きゅうこの譜面/編曲/交響曲」(breeder.js の KYUKO_TIERS・バトルの処理・説明・残りターンの札・タクティクスは単体攻撃を引き受け🔥なし)
+- [x] マーケットに 150000。公開の印が立ち、お話を見たあとだけ並ぶ(kyukoCardOnSale)
+- [x] 加入のお話(社長OK)。イルミネ・ドリーミィは STORY_GUEST_SPEAKERS。Toward the Stars の行で holdMs 4秒止まる
+- [x] あつに社長の話し方を足した(speech・くせ・見本・HOMEのセリフ6本)
+- [x] 見張り tools/assistant/kyuko-check.js(run-checks-always.json に登録)
+- [ ] 公開: 社長の OK でイルミネ・ドリーミィと同時に assistantKyuko を真に。そのとき更新履歴・ヘルプ・告知(changelog-help-update スキル)と、おしゃべりの材料の作り直し
 
 ## 作る場所(あつと同じ)
 - `data/assistants.js`: ASSISTANTS・ASSISTANT_PEER_CALLS・ASSISTANT_CHAT_EXAMPLES・ASSISTANT_UNLOCK_STORIES・ASSISTANT_BOND_STYLES・全68場面の基本セリフ・お話と EVENT_REPLAYS
