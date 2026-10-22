@@ -157,7 +157,7 @@ check('アシストカード「ドラの緑膝」がある(使うとドラの仲
   /\{ id:'dra',\s+baseName:"ドラの緑膝"/.test(breederSrc));
 check('カードidと助手idが同じ綴りなので本人へ結び付く',
   A.ASSISTANTS.some(a => a.id === 'dra')
-  && /const assistantIdOfAssistCard = \(cardId\) => \{[\s\S]{0,300}list\.some\(a => a && a\.id === id\) \? id : null/
+  && /const assistantIdOfAssistCard = \(cardId\) => \{[\s\S]{0,800}list\.some\(a => a && a\.id === id\) \? id : null/
     .test(read('monster-hero/src/parts/17-release-changelog-login-missions.jsx')));
 check('カードを切ったときに本人の仲良し度を足している',
   /assistantIdOfAssistCard\(card\.id\); if\(cardAssistant\) addAssistantBondFor\(cardAssistant,'assistantCardUse'\)/

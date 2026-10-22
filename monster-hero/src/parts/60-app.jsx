@@ -4552,7 +4552,7 @@ function MonsterHeroGame() {
   // 時刻で出すのは第1部だけ(data/rhythm-event.js の HALLOWEEN_NIGHT_STORIES)。第2部以降はジャックのストーリー(RAID_JACK_STORY_IDS)で、
   // レイドの進み具合で出る。見たかどうかは同じ保存キーの配列へ入れる(新しいキーは作らない)
   const HALLOWEEN_NIGHT_STORY_IDS = HALLOWEEN_NIGHT_STORIES.map(story => story.id);
-  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID];
+  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID];
   // ★イベントid → そのイベントの会話id。**イベントを足したらここへ1行足す。**
   //   以前はここが第1回のidの直書きで、第2回が始まっても第1回の会話が流れる形になっていた
   //   (2026-09-17に第2回を足したときに直した)。書かなかったイベントでは会話は流れない。
@@ -4713,6 +4713,17 @@ function MonsterHeroGame() {
     if (rhythmEventStoryStartedRef.current.includes(ASSISTANT_CHAT_STORY_ID)) return;
     setRhythmEventStoryPending(ASSISTANT_CHAT_STORY_ID);
   }, [assistantChatStorySeenLoaded, assistantChatStorySeenFlag, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  // あつの加入のお話(2026-10-22 社長の決定)。みゅあ・きき・ももすけ がそろって Lv5 以上(ASSISTANT_ATSU_UNLOCK_BONDS)の HOME で1回だけ流す。
+  // 見たかどうかはドラと同じ「見終えたお話の id」(mh_rhythm_event_story_v1)。最後まで見るか飛ばすと、あつを選べるようになる(assistantUnlockedBy)。
+  // 公開の印 assistantAtsu が偽なら何もしない。置き方は上の HELL・おしゃべりのお話と同じ
+  useEffect(() => {
+    if (!EVENT_REPLAY_RELEASE_FLAGS.assistantAtsu) return;
+    if (!Array.isArray(rhythmEventStorySeen) || rhythmEventStorySeen.includes(ATSU_JOIN_STORY_ID)) return;
+    if (!assistantAtsuUnlockReady(id => assistantBondLevelOf(normalizeAssistantBond(assistantBonds[id]).points))) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
+    if (rhythmEventStoryStartedRef.current.includes(ATSU_JOIN_STORY_ID)) return;
+    setRhythmEventStoryPending(ATSU_JOIN_STORY_ID);
+  }, [rhythmEventStorySeen, assistantBonds, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
   // 助手4人がタイプを教えるお話を、ヘイトとタイプの公開のあとの最初の HOME で1回だけ流す(2026-10-18)。
   // タクティクスバトルの導入のお話をまだ見ていない人には流さない(何の話か分からないので。回想からは見られる)
   useEffect(() => {
@@ -7541,6 +7552,7 @@ function MonsterHeroGame() {
     rhythmMasuCallSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_MASU_CALL_STORY_ID),
     raidJackHowtoSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RAID_JACK_HOWTO_STORY_ID),
     raidJackRhythmStorySeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RAID_JACK_RHYTHM_STORY_ID),
+    atsuJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(ATSU_JOIN_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID) };
   // alwaysUnlocked のイベントは、本編でまだ見ていなくても回想から見られる
   const isEventReplayUnlocked = (event) => !!(event && event.alwaysUnlocked) || !!EVENT_REPLAY_UNLOCK_FLAGS[event && event.unlockedKey];
@@ -20322,7 +20334,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <h3 className="text-base font-black text-white mb-1 text-center">いっしょに遊ぶ助手</h3>
               <p className="text-[9px] text-slate-500 text-center mb-3 leading-tight">いつでも変えられます。仲良し度と呼び方は助手ごとに分かれているので、切り替えても消えません。</p>
               <div className="space-y-2 mb-3">
-                {ASSISTANT_LIST.map(who=>{
+                {/* 公開の印が立つまでの助手(あつ)は、鍵つきの「？？？」としても出さない(assistantReleased) */}
+                {ASSISTANT_LIST.filter(who=>assistantReleased(who.id)).map(who=>{
                   const active=who.id===selectedAssistantId;
                   const lv=assistantBondLevelOf(normalizeAssistantBond(assistantBonds[who.id]).points);
                   const t=(typeof assistantBondStageByLevel==='function')?assistantBondStageByLevel(lv,who.id):null;
@@ -20336,7 +20349,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       <span className="text-2xl" aria-hidden="true">🔒</span>
                       <span className="min-w-0 flex-1">
                         <b className="block text-[12px] font-black text-slate-400">？？？</b>
-                        <small className="block text-[9px] text-slate-500 leading-tight">{assistantUnlockStoryId(who.id)?'イベントの話を最後まで見ると選べるようになります。':'HOMEでの出会いを見ると選べるようになります。'}</small>
+                        <small className="block text-[9px] text-slate-500 leading-tight">{who.id==='atsu'?'助手たちともっと仲良くなると、会えるかもしれません。':assistantUnlockStoryId(who.id)?'イベントの話を最後まで見ると選べるようになります。':'HOMEでの出会いを見ると選べるようになります。'}</small>
                       </span>
                     </div>
                   );
@@ -20699,7 +20712,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const cell=(costume)=>{
             const owned=!costume||ownedAssistantCostumes.includes(costume.id);
             const selected=costume?(worn&&worn.id===costume.id):!worn;
-            const src=costume?faceOf(costume):`${who.imageDir}/face/${who.imagePrefix}_normal.PNG`;
+            const src=costume?faceOf(costume):(assistantTempImage(who,'normal')||`${who.imageDir}/face/${who.imagePrefix}_normal.PNG`);
             return (
               <button key={costume?costume.id:'original'} data-assistant-costume-option={costume?costume.id:'original'} data-assistant-costume-locked={owned?'no':'yes'}
                 onClick={()=>{ if(owned){ wearAssistantCostume(who.id, costume?costume.id:null); setCostumeLockedInfo(null); } else setCostumeLockedInfo(costume.id); }}
@@ -21199,7 +21212,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // ゲスト(ジャック・ぱんぷきん)は、下の助手の列には入れない。初めて話す行(か stage で呼ばれる行)から、画面の上部の「ステージ」に出る
         //  (2026-10-04・ユーザー指示「はじめからジャックやぱんぷきんが会話画面にいるのは違和感。出すタイミングをちゃんと」)
         const isGuestWho=(id)=>{const w=assistantById(id);return !!w&&w.role==='ゲスト';};
-        const cast=storyCastOf(script).filter(who=>who.role!=='ゲスト');
+        // hideUntilFirstLine に書いた助手は、初めて話す行までは下の列にも出さない(登場の場面で顔を伏せる。2026-10-22 社長「あつの顔は『呼んだ？』で登場するまで伏せる」)
+        const hiddenUntil=Array.isArray(event&&event.hideUntilFirstLine)?event.hideUntilFirstLine:[];
+        const cast=storyCastOf(script).filter(who=>who.role!=='ゲスト')
+          .filter(who=>!hiddenUntil.includes(who.id)||script.slice(0,step+1).some(l=>l&&l.who===who.id));
         let stageIdx=-1;
         for(let i=step;i>=0;i--){const l=script[i];if(l.stage==='none'){stageIdx=-1;break;}if(l.stage||isGuestWho(l.who)){stageIdx=i;break;}}
         const stageLine=stageIdx>=0?script[stageIdx]:null;

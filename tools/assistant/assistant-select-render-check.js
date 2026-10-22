@@ -38,8 +38,11 @@ const jsx = source.slice(from, to);
 // --- 助手データを読む ---
 const ctx = {};
 vm.createContext(ctx);
-vm.runInContext(`${assistantsSrc}\nglobalThis.__a={ASSISTANTS,assistantFaceImage,assistantsUnlockedFrom,ASSISTANT_UNLOCK_STORIES};`, ctx);
-const { ASSISTANTS, assistantFaceImage, assistantsUnlockedFrom, ASSISTANT_UNLOCK_STORIES } = ctx.__a;
+vm.runInContext(`${assistantsSrc}\nglobalThis.__a={ASSISTANTS,assistantFaceImage,assistantsUnlockedFrom,ASSISTANT_UNLOCK_STORIES,assistantReleased};`, ctx);
+const { ASSISTANTS: ALL_ASSISTANTS, assistantFaceImage, assistantsUnlockedFrom, ASSISTANT_UNLOCK_STORIES, assistantReleased } = ctx.__a;
+// 公開の印が立つまでの助手(2026-10-22 あつ)は、会話を見ても並ばない。ここで見るのは公開済みの助手だけ(RELEASE_FLAGS はこの中では無い=公開前)
+const ASSISTANTS = ALL_ASSISTANTS.filter(w => assistantReleased(w.id));
+const HIDDEN_ASSISTANTS = ALL_ASSISTANTS.filter(w => !assistantReleased(w.id));
 // イベントで加入する助手(ドラ)は、その回の会話を見終えるまで並ばない(2026-09-17に足した)。
 // 「見終えた会話のid」を渡し分けて、出す・出さないの両方を描いて確かめる
 const UNLOCK_STORY_IDS = Object.values(ASSISTANT_UNLOCK_STORIES || {});
@@ -93,6 +96,8 @@ check('イベントで加入する助手は、見終えるまで並ばない',
   EVENT_ASSISTANTS.map(w => w.name).join(', ') || '(いない)');
 check('会話を見終えると並ぶ', ASSISTANTS.every(w => textUnlocked.includes(w.name)),
   ASSISTANTS.map(w => w.name).join(', '));
+check('公開の印が立つまでの助手は、会話を見終えても並ばない', HIDDEN_ASSISTANTS.every(w => !htmlUnlocked.includes(`aria-label="${w.name}を選ぶ"`)),
+  HIDDEN_ASSISTANTS.map(w => w.name).join(', ') || '(いない)');
 check('助手ごとの紹介文が出る',
   ASSISTANTS.every(w => !w.tagline || textUnlocked.includes(w.tagline)));
 check('助手ごとの顔アイコンが出る',
