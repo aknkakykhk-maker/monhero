@@ -24964,7 +24964,7 @@ const journeyHellNotes=((t,h,f,s,T,F,S)=>[
   t(150506,4,2,0),t(150624,8,2,0),S(150741,151561,[[150741,3,3,0,0],[151327,3,2,0,0],[151444,4,2,0,0],[151561,5,2,0,0]],0,'R'),S(150741,151561,[[150741,0,2,0,0],[151561,2,2,0,0]],0,'L'),
   t(151678,7,3,0),h(151795,10,2,152733),t(152850,1,4,0),t(152967,1,4,0),
   t(153085,2,2,0),S(153202,154374,[[153202,1.5,3,0,0],[153553,1.5,2,0,0],[153670,1.5,3,0.25,0],[153788,1.5,3,0.5,0],[153905,1.5,2,0.75,0],[154022,1.5,3,1,0],[154374,1.5,2,1,0]],0,'L'),T(153670,7,3,1),T(153788,8,2,1),
-  T(154491,7,3,1),T(154608,7,2,1),T(154725,9,3,1),T(154725,7,4,1),
+  T(154491,7,3,1),T(154608,7,2,1),T(154725,9,3,1),
   S(154960,156014,[[154960,1.5,3,1,0],[155077,1.833,3,1,0],[155194,2.167,3,1,0],[155311,2.5,2,1,0],[155428,3,3,0.75,0],[155545,3.5,2,0.5,0],[155663,3.751,3,0.25,0],[155780,4,2,0,0],[156014,4,2,0,0]],0,'R'),t(156131,7,3,0),t(156131,1,4,0),S(156249,157069,[[156249,2,3,0,0],[156366,2,3,0,0],[156483,0,3,0,0],[157069,0,3,0,0]],0,'L'),
   S(156249,157069,[[156249,4,2,0,0],[157069,2,2,0,0]],0,'R'),t(157186,6,3,0),t(157186,0,4,0),t(157303,3,3,0),
   t(157538,7,4,0),t(157655,7,3,0),t(157772,8,2,0),t(157889,7,4,0),
@@ -25760,7 +25760,7 @@ const sheriruthCharts=Object.freeze({
 // 公開の Sheriruth には入れず、デバッグ画面の試作の枠(RHYTHM_PROTO_SONGS の sheriruth_hell_debug)からだけ遊べる。
 // Lv.47 は tools/mode/rhythm-chart-level.js の式(空中⇄地上の切り替えも数える)で出した値(rhythm-chart-level-check.js が式と一致するか見る)。
 // 公開するときは、sheriruth の difficulties を RHYTHM_PLAY_DIFFICULTIES で回して HELL:sheriruthHellChart を足し、レベル表は --write で出す
-const sheriruthHellChart=mhChart(51,sheriruthHellNotes,SHERIRUTH_DURATION_MS,6,{scrollChanges:SHERIRUTH_SCROLL_CHANGES});
+const sheriruthHellChart=mhChart(50,sheriruthHellNotes,SHERIRUTH_DURATION_MS,6,{scrollChanges:SHERIRUTH_SCROLL_CHANGES});
 const GRIEVOUS_LADY_DURATION_MS=141912;
 const grievousLadyEasyNotes=((t,h,f,s)=>[
 // <grievous-lady-v3-easy-notes>
@@ -28765,7 +28765,7 @@ const sadSongHellNotes=((t,h,f,s,T,F,S)=>[
   t(216541,7,4,0),h(216715,7,4,217064),t(217152,6,2,0),t(217239,8,4,0),
 // </sad-song-v3-hell-notes>
 ])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
-const sadSongHellChart=mhChart(39,sadSongHellNotes,SAD_SONG_DURATION_MS,6);
+const sadSongHellChart=mhChart(38,sadSongHellNotes,SAD_SONG_DURATION_MS,6);
 
 // ===== SAD SONG short ver.(2026-10-18 追加。全編の頭から1つ目のサビの終わりまで) =====
 const SAD_SONG_SHORT_DURATION_MS=82440;
@@ -29154,7 +29154,7 @@ const sadSongShortHellNotes=((t,h,f,s,T,F,S)=>[
   S(79892,81200,[[79892,4,3,0,0],[79979,3.75,3,1,0],[80066,3.5,3,1,0],[80153,3,3,1,0],[80241,3.5,3,1,0],[80415,3.5,3,1,0],[80502,3.5,3,0.75,0],[80589,3,3,0.5,0],[80677,2.5,3,0.25,0],[80764,2,3,0,0],[80851,1.5,3,0,0],[81200,1.5,3,0,0]],1,'R'),t(80241,2,4,0),t(80502,4,3,0),t(80677,1,3,0),
 // </sad-song-short-v3-hell-notes>
 ])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
-const sadSongShortHellChart=mhChart(42,sadSongShortHellNotes,SAD_SONG_SHORT_DURATION_MS,6);
+const sadSongShortHellChart=mhChart(43,sadSongShortHellNotes,SAD_SONG_SHORT_DURATION_MS,6);
 // ===== Toward the Stars, Paradise or Truth short ver.(2026-10-19 追加・hitoyakyuko) =====
 const TOWARD_THE_STARS_SHORT_DURATION_MS=136800;
 const towardTheStarsShortEasyNotes=((t,h,f,s)=>[

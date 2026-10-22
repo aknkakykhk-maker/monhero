@@ -267,7 +267,7 @@
   "monster/hell": "a0c1de1859b66301",
   "monster_short/hell": "5f035c10b1f01259",
   "anima/hell": "de9b68873609c6b9",
-  "journey/hell": "d2dd96c95ce3e8dc",
+  "journey/hell": "de8f71683d62e469",
   "sheriruth/hell": "c8c72361a054b9ae",
   "against_my_own_shadow/hell": "7a561059c0486639",
   "grievous_lady/hell": "08ae75620ee6e121",
@@ -468,6 +468,13 @@
    "at": "2026-10-22 09:24",
    "reason": "HELL の指が同じ位置に来る形を Lv. ごとの許す数まで直す(2026-10-22 社長)",
    "changedCount": 43
+  },
+  {
+   "at": "2026-10-22 09:38",
+   "reason": "Journey HELL 154.72秒の重なったノーツを抜く(指が同じ位置に来る形の直しの続き)",
+   "changed": [
+    "journey/hell"
+   ]
   }
  ]
 }
