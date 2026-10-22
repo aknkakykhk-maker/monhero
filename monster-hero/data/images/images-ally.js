@@ -164,6 +164,8 @@ const KUROMY_DYE_MASK = "images/monsters/kuromy-dye-mask.PNG?v=7e06f8e564b2";
 // イルミネ・ドリーミィ(2026-10-22・案の段階・イルミネ×イルミネ / イルミネ×ニャー)。
 // 元絵は tools/art-sources/new-monsters-2026-10-22/。透明な余白を切って高さ916pxへ縮め、256色へ減色(グラデーションの段が出ないよう誤差拡散)
 const ILLUMINE_IMG = "images/monsters/illumine.png?v=856c3192a848";
+const ILLUMINE_DYE_MASK = "images/monsters/illumine-dye-mask.PNG?v=f129752bb07a";
+const DREAMY_DYE_MASK = "images/monsters/dreamy-dye-mask.PNG?v=0a38c9def40d";
 const DREAMY_IMG = "images/monsters/dreamy.png?v=14e1f738cec9";
 
 const MOCCHI_ICON = MOCCHI_IMG;
