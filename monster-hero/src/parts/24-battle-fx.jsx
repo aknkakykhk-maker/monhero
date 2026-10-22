@@ -662,8 +662,55 @@ const SKM_KUROMY = Object.freeze({
     skm('float', { c:'dark', line:'ray', over:'aurora', burst:'bnote', form:'psy' }),                      // ダークオーロラ
     skm('gather', { c:'dark', fx:skmFx('orbit', 'skull', 10), over:'nightmare', burst:'bnote' })],        // 悪夢フィナーレ
 });
+// イルミネ(2026-10-22・案の段階): 影に潜む刃の使い手。影・刃・月・連撃寄り(社長の依頼)
+const SKM_ILLUMINE = Object.freeze({
+  normal:[
+    skm('cast', { c:'psy', line:'bolt', burst:'spark' }),                                                   // プラズマ
+    skm('slash', { c:'gas', fx:skmFx('shot', 'blade', 2), over:'slash', burst:'dust' }),                    // ヴェノムエッジ
+    skm('bash', { c:'cosmic', over:'fist', burst:'star' }),                                                 // シールドバッシュ
+    skm('jab', { c:'dark', over:'fist', burst:'spark' }),                                                   // ストレート
+    skm('toss', { c:'gold', fx:skmFx('lob', 'star', 3, { s:1.3 }), over:'boom', burst:'star' }),            // モーニングスター
+    skm('warp', { c:'dark', over:'claw', burst:'dust' }),                                                   // アサシンクロウ
+    skm('cast', { c:'sky', fx:skmFx('shot', 'needle', 5, { step:40 }), burst:'spark' }),                   // アサルトアロー
+    skm('spin', { c:'psy', fx:skmFx('orbit', 'blade', 6), over:'xslash', burst:'spark' }),                 // ブレードダンス
+    skm('slash', { c:'dark', fx:skmFx('fall', 'sword', 1, { s:1.6 }), over:'sword', burst:'dust' })],     // バスターソード
+  unique:[
+    skm('cast', { c:'ice', fx:skmFx('fall', 'ice', 8), over:'ice', burst:'snow' }),                        // エーテルアイス
+    skm('cast', { c:'psy', fx:skmFx('orbit', 'fire', 6), over:'boom', burst:'star', form:'fire' }),         // アルカナフレア
+    skm('gather', { c:'gold', line:'ray', over:'pillar', burst:'star' }),                                   // アルスマグナ
+    skm('float', { c:'dark', fx:skmFx('orbit', 'note', 8), over:'shadow', burst:'bnote' }),                // ノクターン
+    skm('warp', { c:'cosmic', fx:skmFx('shot', 'blade', 4, { step:35 }), over:'claw', burst:'spark' }),    // ミラージュクロウ
+    skm('gather', { c:'blood', fx:skmFx('orbit', 'flame', 8), over:'eclipse', burst:'star', form:'fire' }), // クリムゾンノヴァ
+    skm('float', { c:'cosmic', line:'arc', over:'aurora', burst:'star' }),                                  // ムーンライトヴェール
+    skm('float', { c:'psy', line:'ray', over:'aurora', burst:'spark', form:'light' }),                      // ルミナスオーロラ
+    skm('gather', { c:'dark', fx:skmFx('orbit', 'blade', 10), over:'nightmare', burst:'dust', form:'void' })], // レクイエムエンド
+});
+// ドリーミィ(2026-10-22・案の段階): おもちゃの爆弾・人形・夢寄り。イルミネと同じ名前の技は、同じ動きで色だけ変える
+const SKM_DREAMY = Object.freeze({
+  normal:[
+    { ...SKM_ILLUMINE.normal[0], c:'pink' },                                                                 // プラズマ
+    { ...SKM_ILLUMINE.normal[1], c:'pink' },                                                                 // ヴェノムエッジ
+    skm('bash', { c:'pink', over:'fist', burst:'heart' }),                                                   // ドールバッシュ
+    { ...SKM_ILLUMINE.normal[3], c:'sakura' },                                                               // ストレート
+    { ...SKM_ILLUMINE.normal[4], c:'sky' },                                                                  // モーニングスター
+    skm('jab', { c:'pink', over:'claw', burst:'heart' }),                                                    // キャットクロウ
+    skm('cast', { c:'pink', fx:skmFx('shot', 'heart', 5, { step:40 }), burst:'heart' }),                    // ハートアロー
+    skm('spin', { c:'sky', fx:skmFx('orbit', 'star', 6), over:'bloom', burst:'star' }),                     // ドリームダンス
+    skm('slash', { c:'sakura', fx:skmFx('fall', 'sword', 1, { s:1.6 }), over:'sword', burst:'sakura' })],  // パステルソード
+  unique:[
+    skm('toss', { c:'pink', fx:skmFx('lob', 'candy', 3, { s:1.4 }), over:'boom', burst:'candy', form:'bloom' }), // おもちゃの爆弾
+    { ...SKM_ILLUMINE.unique[0], c:'sky' },                                                                  // エーテルアイス
+    { ...SKM_ILLUMINE.unique[1], c:'pink' },                                                                 // アルカナフレア
+    { ...SKM_ILLUMINE.unique[2], c:'sakura' },                                                               // アルスマグナ
+    skm('float', { c:'cosmic', fx:skmFx('orbit', 'note', 8), over:'aurora', burst:'note' }),                // ララバイノクターン
+    { ...SKM_ILLUMINE.unique[4], c:'pink' },                                                                 // ミラージュクロウ
+    { ...SKM_ILLUMINE.unique[5], c:'red' },                                                                  // クリムゾンノヴァ
+    skm('float', { c:'sakura', fx:skmFx('fall', 'candy', 14), over:'rainbow', burst:'candy', form:'bloom' }), // スウィートドリーム
+    skm('gather', { c:'pink', fx:skmFx('orbit', 'heart', 10), over:'rainbow', burst:'heart', form:'bloom' })], // ドリーミィパレード
+});
 // ヤオビクニはウンディーネと同じ技の並び(色は深い赤へ)
-const SKILL_MOTION_SETS = Object.freeze({ ...SKILL_MOTION_SETS_MAIN, Yaobikuni:skmRecolor(SKILL_MOTION_SETS_MAIN.Undine, 'red'), Ghost:SKM_GHOST, Spooky:SKM_SPOOKY, Melody:SKM_MELODY, Kuromy:SKM_KUROMY });
+const SKILL_MOTION_SETS = Object.freeze({ ...SKILL_MOTION_SETS_MAIN, Yaobikuni:skmRecolor(SKILL_MOTION_SETS_MAIN.Undine, 'red'), Ghost:SKM_GHOST, Spooky:SKM_SPOOKY, Melody:SKM_MELODY, Kuromy:SKM_KUROMY,
+  Illumine:SKM_ILLUMINE, Dreamy:SKM_DREAMY });
 
 // 本体の動きごとの [当たる時刻の割合, 既定の尺ms]。70-bootstrap.jsx の .skfx-body--◯◯ の keyframes で、敵に届く位置に合わせてある
 const SKM_BODY_TIMING = Object.freeze({ bash:[.48,560], dive:[.62,760], roll:[.5,780], flip:[.62,840], toss:[.6,720], cast:[.55,700],
