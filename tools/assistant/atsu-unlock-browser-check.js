@@ -8,7 +8,7 @@
 //   ① 公開の印(RELEASE_FLAGS.assistantAtsu)が偽のまま … 仲良し度がそろっていても、お話は流れず、助手の一覧にも出ない
 //   ② 印が真で、仲良し度が足りない … お話は流れない。一覧には鍵つきの「？？？」
 //   ③ 印が真で、みゅあ・きき・ももすけ がそろって Lv5 以上 … HOME でお話が流れる。見終わると一覧で選べる。選ぶと HOME の吹き出しがあつになる
-// 印を真にするのは、このページの中だけ(読み込み直後に RELEASE_FLAGS を書き換える)。ファイルの印は変えない
+// 印を真・偽にするのは、このページの中だけ(読み込み直後に RELEASE_FLAGS を書き換える)。ファイルの印は変えない
 const fs = require('fs');
 const path = require('path');
 const { chromium } = require(path.join(__dirname, '../node_modules/playwright'));
@@ -44,12 +44,11 @@ const seed = ({ bonds, storyIds, noticeIds, flagOn }) => {
   put('mh_assistant_bond_v1', { points: bonds.mua, day: null, daily: {}, dailyTotal: 0 });
   put('mh_assistant_bond_kiki_v1', { points: bonds.kiki, day: null, daily: {}, dailyTotal: 0 });
   put('mh_assistant_bond_momosuke_v1', { points: bonds.momosuke, day: null, daily: {}, dailyTotal: 0 });
-  // 公開の印は、部品が読み込まれた直後に書き換える(const の中身なので、読み込み前には触れない)
-  if (flagOn) {
-    const timer = setInterval(() => {
-      try { if (typeof RELEASE_FLAGS !== 'undefined') { RELEASE_FLAGS.assistantAtsu = true; clearInterval(timer); } } catch {}
-    }, 2);
-  }
+  // 公開の印は、部品が読み込まれた直後に書き換える(const の中身なので、読み込み前には触れない)。
+  // 公開したあと(ファイルの印が真)でも ① の「偽のとき」を確かめられるよう、どちらの向きにも合わせる(2026-10-22 公開)
+  const timer = setInterval(() => {
+    try { if (typeof RELEASE_FLAGS !== 'undefined') { RELEASE_FLAGS.assistantAtsu = !!flagOn; clearInterval(timer); } } catch {}
+  }, 2);
 };
 
 const shot = async (page, name) => {
