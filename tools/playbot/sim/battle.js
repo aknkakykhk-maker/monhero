@@ -327,13 +327,13 @@ const aim = (st, intent) => (typeof st.aimHook === 'function' ? st.aimHook(st, i
 const stepHate = (st) => {
   if (!st.hateOn) return;
   const dealt = [0, 1, 2, 3].map((i) => Math.max(0, (st.dmgBySlot[i] || 0) - (st.hateDmgMark[i] || 0)));
-  st.hate = G.tacticsHateStep(st.hate, { gains: st.hatePending, dealt }, st.units, st.heroSlot, st.units.map((u) => u && u.id));
+  st.hate = G.tacticsHateStep(st.hate, { gains: st.hatePending, dealt }, st.units, st.units.map((u) => u && u.id));
   st.hatePending = [0, 0, 0, 0];
   st.hateDmgMark = [0, 1, 2, 3].map((i) => st.dmgBySlot[i] || 0);
 };
 // WAVE の始め: 0へ(勇者だけ下地)(60-app.jsx resetTacticsHate 1426)
 const resetHate = (st) => {
-  st.hate = st.hateOn ? G.tacticsHateWaveStart(st.heroSlot) : [0, 0, 0, 0];
+  st.hate = st.hateOn ? G.tacticsHateWaveStart(st.units.map((u) => u && u.id)) : [0, 0, 0, 0];
   st.hatePending = [0, 0, 0, 0];
   st.hateDmgMark = [0, 1, 2, 3].map((i) => st.dmgBySlot[i] || 0);
 };
@@ -1497,7 +1497,7 @@ function simulateRun({ heroId, allies = [], hate = true, difficulty = 'Hard', se
     const pool = buildDeck(st.mons, computeAtkTier(st.mons, st.dist, st.distBonus), st.guardLevel, rng, st.teachings, st.uniqueLv);
     st.hand = pool.slice(0, 5); st.deck = pool.slice(5); st.graveyard = [];
     st.turn = 1;
-    resetHate(st); // ヘイトは WAVE ごとに0から(60-app.jsx initBattle 14382)
+    resetHate(st); // ヘイトは WAVE ごとに、その子のタイプで決まる値から(60-app.jsx の resetTacticsHate)
     st.intent = aim(st, nextAction(st, st.dist, null, { unannounced: true }));
     st.nextIntent = nextAction(st, distAfterIntent(st.intent, st.dist), st.intent);
     let out = null; let frozen = 0;
