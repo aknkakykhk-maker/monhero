@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 23f5036285aa5994
+// generated-sha256: f8e59f30e54ab875
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-22 12:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-22 12:31"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11675,6 +11675,13 @@ const helpDataRows = (id) => {
         return [`${monName}「${def.name}」`,
           `${def.unlimited ? '無制限' : `1ラン${def.maxUses}回`} ／ ${def.withCards ? 'カードと併用可' : 'その子はカード不可'} ／ ${duration}`];
       });
+    // タクティクスの狙われやすさ(🔥・ヘイト)の仕組みの数字(2026-10-22 社長「こういう質問とかにもおしゃべりで答えられたらいいね」→「ヘルプに目安の表を足す」)。
+    // ★数字は TACTICS_HATE・MONSTER_TYPES・TACTICS_TARGET_LOW_HP_BIAS から作り、目安の確率はゲームの狙いの関数(tacticsTargetWeights)で計算する。
+    //   書き写さないので、ヘイトを調整してもヘルプが古いままにならない。敵の数字は出さない。2列目は短く(help-render-check)
+    case 'tacticsHateGains':
+    case 'tacticsHateTypes':
+    case 'tacticsHateOdds':
+      return typeof tacticsHateHelpRows === 'function' ? tacticsHateHelpRows(id) : [];
     // イベント・レイドボス「ジャック」の段階(2026-10-04)。名前・ライフ・技の本数は 35-raid-jack.jsx の定義から作る。
     // ★ライフや倍率を調整したときにヘルプが古いままにならないよう、行を書き写さない。2列目は短く(help-render-check)
     case 'raidJackTiersA':
@@ -11954,6 +11961,9 @@ const HELP_DATA_TITLES = {
   raidJackTiersA: 'レイドバトルのジャック(段階ごとの共有ライフ)',
   raidJackTiersB: 'グランドスラムのジャック(段階ごとのライフ)',
   tacticsExSkills: 'タクティクスバトルのEXスキル',
+  tacticsHateGains: '🔥(ヘイト)の増え方',
+  tacticsHateTypes: 'タイプごとの🔥',
+  tacticsHateOdds: '狙われやすさの目安',
   proQuickLoops: 'プロモードで入るクイック周回数',
   extremeDifficulties: '極限チャレンジの難易度',
   rhythmEventPlayBonus: 'イベントの回数ボーナス（1回あたり）',
@@ -24818,6 +24828,51 @@ const tacticsHateWeightMult = (hate, index) => {
     if (h <= x1) return y0 + (y1 - y0) * (h - x0) / (x1 - x0);
   }
   return pts[pts.length - 1][1];
+};
+// ヘルプ「タクティクスバトルの狙われやすさ(🔥)」の表(2026-10-22 社長「こういう質問とかにもおしゃべりで答えられたらいいね」→「ヘルプに目安の表を足す」)。
+// ★数字は TACTICS_HATE・MONSTER_TYPES・TACTICS_TARGET_LOW_HP_BIAS から作り、目安の確率はゲームの狙いの重み(tacticsHateWeightMult)で計算する。
+//   書き写さないので、ヘイトを調整してもヘルプが古いままにならない。敵の数字は出さない。2列目は短く(help-render-check)。
+//   ヘルプ(helpDataRows)と、おしゃべりの材料(tools/build-assistant-chat-digest.js)の両方がこれを読む
+const tacticsHateHelpRows = (id) => {
+  if (id === 'tacticsHateGains') {
+    const a = TACTICS_HATE.action, ex = TACTICS_HATE.exByEffect || {};
+    const exVals = Object.values(ex).concat([a.ex]).filter(v => Number.isFinite(v));
+    const tankGuard = (MONSTER_TYPES.tank && MONSTER_TYPES.tank.hateAdd && MONSTER_TYPES.tank.hateAdd.guard) || 0;
+    return [
+      ['通常攻撃', `+${a.atk}`],
+      ['固有技', `+${a.unique}`],
+      ['与えたダメージ', `味方の中の割合 × ${a.dmgShare}`],
+      ['強化のカード', `+${a.buff}`],
+      ['弱体のカード', `+${a.debuff}`],
+      ['ガード', `+${a.guard}${tankGuard ? `（タンクは +${tankGuard}）` : ''}`],
+      ['回復', `回復した割合 × ${a.heal}`],
+      ['あつの挑発', `+${a.taunt}`],
+      ['EXスキル', `+${Math.min(...exVals)}〜${Math.max(...exVals)}`],
+      ['毎ターン', `×${TACTICS_HATE.decay}（${Math.round((1 - TACTICS_HATE.decay) * 10)}割へる）`],
+      ['上限', `${TACTICS_HATE.cap}`],
+    ];
+  }
+  if (id === 'tacticsHateTypes') {
+    const st = TACTICS_HATE.start;
+    const sign = (v) => (v > 0 ? `+${v}` : `${v}`);
+    return Object.entries(MONSTER_TYPES).map(([key, t]) => [`${t.icon} ${t.label}`,
+      `増え方 ×${t.hateMult} ／ 始め ${st.main[key] || 0}（サブ ${sign(st.sub[key] || 0)}）`]);
+  }
+  if (id === 'tacticsHateOdds') {
+    const rows = TACTICS_HATE.weightCurve.map(([h, m]) => [`🔥ヘイト ${h}`, `狙われやすさ ×${m}`]);
+    const bias = typeof TACTICS_TARGET_LOW_HP_BIAS !== 'undefined' ? TACTICS_TARGET_LOW_HP_BIAS : 0;
+    rows.push(['ライフ満タン', '×1'], ['ライフ半分', `×${1 + bias * 0.5}`], ['ライフわずか', `×${1 + bias}近く`]);
+    // 目安: 4体ともライフ満タン(ライフの倍率は1)・ほかの3体はヘイト0のとき、1体のヘイトがいくつなら何%狙われるか。
+    //   狙いの重みはゲームと同じ tacticsHateWeightMult で計算する(ライフ満タンなら tacticsTargetWeights と同じ値になる。tactics-hate-check で確かめる)
+    [0, 20, 40, 60, 90, 100].forEach(h => {
+      const hate = [h, 0, 0, 0];
+      const w = [0, 1, 2, 3].map(i => tacticsHateWeightMult(hate, i));
+      const sum = w.reduce((x, y) => x + y, 0) || 1;
+      rows.push([`1体が🔥${h}・ほか0`, `その子 ${Math.round(w[0] / sum * 100)}% ／ ほか ${Math.round(w[1] / sum * 100)}%ずつ`]);
+    });
+    return rows;
+  }
+  return [];
 };
 // 炎の段(0〜3)。だれでも同じ値で見る(2026-10-22 勇者モンの下地を外したので、引かない)
 const tacticsHateFlame = (value) => {

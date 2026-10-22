@@ -144,6 +144,14 @@ check('⑧ 手札と EX の詳細に段を出す(ヘイトが切なら出さな�
     const p = Math.max(...w) / sum;
     if (p > worst.p) worst = { p, team };
   }
+  // ヘルプ「狙われやすさ(🔥)の数字」の目安(tacticsHateHelpRows)は、ライフ満タンの4体を狙いの関数(tacticsTargetWeights)で計算した値と同じ
+  const odds = G.tacticsHateHelpRows('tacticsHateOdds').filter((r) => /^1体が🔥/.test(r[0]));
+  const oddsOk = odds.length === 6 && odds.every((r) => {
+    const h = Number(/🔥(\d+)/.exec(r[0])[1]), m = /その子 (\d+)% ／ ほか (\d+)%/.exec(r[1]);
+    return m && +m[1] === Math.round(prob([h, 0, 0, 0], 0) * 100) && +m[2] === Math.round(prob([h, 0, 0, 0], 1) * 100);
+  });
+  check('⑨ ヘルプの目安の表は、ゲームの狙いの関数と同じ値(🔥90 なら その子91%・ほか3%)', oddsOk && odds.some((r) => r[0] === '1体が🔥90・ほか0' && r[1] === 'その子 91% ／ ほか 3%ずつ'), odds.map((r) => r.join(' ')).join(' / '));
+  check('⑨ ヘルプの表は3つとも行がある(数字は TACTICS_HATE から作る)', ['tacticsHateGains', 'tacticsHateTypes', 'tacticsHateOdds'].every((id) => G.tacticsHateHelpRows(id).length > 0));
   check('⑨ WAVE の始めは、どの4体でもいちばん狙われる子が 60% 未満', worst.p < 0.6, `いちばん偏る組 ${worst.team.join('・')} → ${(worst.p * 100).toFixed(1)}%`);
 }
 

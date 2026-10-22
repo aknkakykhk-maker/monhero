@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 02e1590de3d38e62
+// source-sha256: 7502fe6e077998f3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-22 12:04";
+const BUILD_DATE = "2026-10-22 12:31";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -16541,6 +16541,10 @@ const helpDataRows = id => {
         }[def.duration] || '';
         return [`${monName}「${def.name}」`, `${def.unlimited ? '無制限' : `1ラン${def.maxUses}回`} ／ ${def.withCards ? 'カードと併用可' : 'その子はカード不可'} ／ ${duration}`];
       });
+    case 'tacticsHateGains':
+    case 'tacticsHateTypes':
+    case 'tacticsHateOdds':
+      return typeof tacticsHateHelpRows === 'function' ? tacticsHateHelpRows(id) : [];
     case 'raidJackTiersA':
       return (typeof RAID_JACK_A_TIERS !== 'undefined' ? RAID_JACK_A_TIERS : []).map(t => [t.name, `ライフ ${t.hp.toLocaleString()} ／ 技${t.actionCount}本`]);
     case 'raidJackTiersB':
@@ -16733,6 +16737,9 @@ const HELP_DATA_TITLES = {
   raidJackTiersA: 'レイドバトルのジャック(段階ごとの共有ライフ)',
   raidJackTiersB: 'グランドスラムのジャック(段階ごとのライフ)',
   tacticsExSkills: 'タクティクスバトルのEXスキル',
+  tacticsHateGains: '🔥(ヘイト)の増え方',
+  tacticsHateTypes: 'タイプごとの🔥',
+  tacticsHateOdds: '狙われやすさの目安',
   proQuickLoops: 'プロモードで入るクイック周回数',
   extremeDifficulties: '極限チャレンジの難易度',
   rhythmEventPlayBonus: 'イベントの回数ボーナス（1回あたり）',
@@ -40681,6 +40688,33 @@ const tacticsHateWeightMult = (hate, index) => {
     if (h <= x1) return y0 + (y1 - y0) * (h - x0) / (x1 - x0);
   }
   return pts[pts.length - 1][1];
+};
+const tacticsHateHelpRows = id => {
+  if (id === 'tacticsHateGains') {
+    const a = TACTICS_HATE.action,
+      ex = TACTICS_HATE.exByEffect || {};
+    const exVals = Object.values(ex).concat([a.ex]).filter(v => Number.isFinite(v));
+    const tankGuard = MONSTER_TYPES.tank && MONSTER_TYPES.tank.hateAdd && MONSTER_TYPES.tank.hateAdd.guard || 0;
+    return [['通常攻撃', `+${a.atk}`], ['固有技', `+${a.unique}`], ['与えたダメージ', `味方の中の割合 × ${a.dmgShare}`], ['強化のカード', `+${a.buff}`], ['弱体のカード', `+${a.debuff}`], ['ガード', `+${a.guard}${tankGuard ? `（タンクは +${tankGuard}）` : ''}`], ['回復', `回復した割合 × ${a.heal}`], ['あつの挑発', `+${a.taunt}`], ['EXスキル', `+${Math.min(...exVals)}〜${Math.max(...exVals)}`], ['毎ターン', `×${TACTICS_HATE.decay}（${Math.round((1 - TACTICS_HATE.decay) * 10)}割へる）`], ['上限', `${TACTICS_HATE.cap}`]];
+  }
+  if (id === 'tacticsHateTypes') {
+    const st = TACTICS_HATE.start;
+    const sign = v => v > 0 ? `+${v}` : `${v}`;
+    return Object.entries(MONSTER_TYPES).map(([key, t]) => [`${t.icon} ${t.label}`, `増え方 ×${t.hateMult} ／ 始め ${st.main[key] || 0}（サブ ${sign(st.sub[key] || 0)}）`]);
+  }
+  if (id === 'tacticsHateOdds') {
+    const rows = TACTICS_HATE.weightCurve.map(([h, m]) => [`🔥ヘイト ${h}`, `狙われやすさ ×${m}`]);
+    const bias = typeof TACTICS_TARGET_LOW_HP_BIAS !== 'undefined' ? TACTICS_TARGET_LOW_HP_BIAS : 0;
+    rows.push(['ライフ満タン', '×1'], ['ライフ半分', `×${1 + bias * 0.5}`], ['ライフわずか', `×${1 + bias}近く`]);
+    [0, 20, 40, 60, 90, 100].forEach(h => {
+      const hate = [h, 0, 0, 0];
+      const w = [0, 1, 2, 3].map(i => tacticsHateWeightMult(hate, i));
+      const sum = w.reduce((x, y) => x + y, 0) || 1;
+      rows.push([`1体が🔥${h}・ほか0`, `その子 ${Math.round(w[0] / sum * 100)}% ／ ほか ${Math.round(w[1] / sum * 100)}%ずつ`]);
+    });
+    return rows;
+  }
+  return [];
 };
 const tacticsHateFlame = value => {
   const v = tacticsHateNum(value);
