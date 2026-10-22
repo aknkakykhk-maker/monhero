@@ -107,7 +107,7 @@ check('見たかどうかは既存の「見終えたお話の id」の並びで�
   && !/mh_[a-z_]*kyuko/.test(app + rel + read('monster-hero/data/breeder.js')));
 check('お話を流すのは公開の印が立ったときだけ(だれにでも1回)',
   /setKyukoJoinSeenForShop\([\s\S]{0,200}EVENT_REPLAY_RELEASE_FLAGS\.assistantKyuko\) return;[\s\S]{0,200}rhythmEventStorySeen\.includes\(KYUKO_JOIN_STORY_ID\)\) return;/.test(app));
-check('holdMs の行はタップしても進まない', /const holdMs=Number\(line\.holdMs\);\s*if\(Number\.isFinite\(holdMs\)&&holdMs>0&&Date\.now\(\)-eventReplayStepShownAtRef\.current\.at<holdMs\) return;/.test(app));
+check('holdMs の行はタップしても進まない', /const holdMs=Number\(line\.holdMs\);\s*if\(Number\.isFinite\(holdMs\)&&holdMs>0&&Date\.now\(\)-\(Number\(eventReplay\.shownAt\)\|\|0\)<holdMs\) return;[\s\S]{0,80}shownAt:Date\.now\(\)/.test(app));
 const digest = JSON.parse(read('monster-hero/data/assistant-chat-digest.json'));
 if (!flagOn) check('公開前は、おしゃべりの材料にきゅうこを入れない(ほかの助手も名前を出さない)', !digest.assistants.kyuko && !/きゅうこ|きゅきゅ|きゅうちゃん/.test(JSON.stringify(digest)));
 else check('公開したら、おしゃべりの材料にきゅうこの人柄がある', !!digest.assistants.kyuko);

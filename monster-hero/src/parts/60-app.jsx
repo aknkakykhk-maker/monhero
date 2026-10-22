@@ -11162,8 +11162,6 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const tacticsExFrozenRef = useRef(false);
   // きゅうこの譜面(2026-10-22): このターン単体攻撃を引き受ける子の枠(タクティクスだけ)。null なら引き受けない
   const kyukoRedirectRef = useRef(null);
-  // お話の再生で、いまの行が出た時刻(holdMs の行をタップで進めないため)
-  const eventReplayStepShownAtRef = useRef({ key:'', at:0 });
   const tacticsExAimRef = useRef({ intent:null, dist:2 });
   tacticsExAimRef.current = { intent:enemyIntent, dist:enemyDist };
   const tacticsExCrossRef = useRef({ wave:-1, turn:-1, slots:{} });
@@ -21369,13 +21367,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // 回想でも最後まで見たら「見たことがある」として扱う。
         // ももすけ登場を本編より先にここで見た人は、この時点でももすけが解放され、
         // あとから本編で同じ会話が重ねて流れることもなくなる
-        // holdMs を書いた行は、出てからその時間はタップしても進まない(2026-10-22 社長「Toward the Stars が流れ出して数秒止まる」。きゅうこの加入のお話)
-        const stepKey=`${eventReplay.id}:${step}`;
-        if(eventReplayStepShownAtRef.current.key!==stepKey) eventReplayStepShownAtRef.current={key:stepKey,at:Date.now()};
+        // holdMs を書いた行は、出てからその時間はタップしても進まない(2026-10-22 社長「Toward the Stars が流れ出して数秒止まる」。きゅうこの加入のお話)。
+        //   行が出た時刻は、次へ進めたときに eventReplay.shownAt へ入れる(最初の行には無いので止まらない)
         const next=()=>{
           const holdMs=Number(line.holdMs);
-          if(Number.isFinite(holdMs)&&holdMs>0&&Date.now()-eventReplayStepShownAtRef.current.at<holdMs) return;
-          if(!last){ setEventReplay(r=>r&&({...r,step:r.step+1})); return; }
+          if(Number.isFinite(holdMs)&&holdMs>0&&Date.now()-(Number(eventReplay.shownAt)||0)<holdMs) return;
+          if(!last){ setEventReplay(r=>r&&({...r,step:r.step+1,shownAt:Date.now()})); return; }
           if(event&&event.id==='momosuke_intro'&&!eventReplay.debug) markMomosukeIntroSeen();
           if(event&&event.id==='tactics_intro'&&!eventReplay.debug) markTacticsIntroSeen();
           // イベントの会話も、最後まで見たら「見た」にする(次の起動で重ねて流さない)

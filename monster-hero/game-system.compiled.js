@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c6e8665dff1ee8d0
+// source-sha256: 76adcd804a343ab5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-22 22:21";
+const BUILD_DATE = "2026-10-22 22:42";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -94267,10 +94267,6 @@ function MonsterHeroGame() {
   });
   const tacticsExFrozenRef = useRef(false);
   const kyukoRedirectRef = useRef(null);
-  const eventReplayStepShownAtRef = useRef({
-    key: '',
-    at: 0
-  });
   const tacticsExAimRef = useRef({
     intent: null,
     dist: 2
@@ -112234,18 +112230,14 @@ function MonsterHeroGame() {
         const bond = normalizeAssistantBond(assistantBonds[w.id]);
         return assistantSpeakText(l.t, breederName, assistantBondLevelOf(bond.points), assistantCallStyles[w.id] || null, w.id);
       };
-      const stepKey = `${eventReplay.id}:${step}`;
-      if (eventReplayStepShownAtRef.current.key !== stepKey) eventReplayStepShownAtRef.current = {
-        key: stepKey,
-        at: Date.now()
-      };
       const next = () => {
         const holdMs = Number(line.holdMs);
-        if (Number.isFinite(holdMs) && holdMs > 0 && Date.now() - eventReplayStepShownAtRef.current.at < holdMs) return;
+        if (Number.isFinite(holdMs) && holdMs > 0 && Date.now() - (Number(eventReplay.shownAt) || 0) < holdMs) return;
         if (!last) {
           setEventReplay(r => r && {
             ...r,
-            step: r.step + 1
+            step: r.step + 1,
+            shownAt: Date.now()
           });
           return;
         }

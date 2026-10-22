@@ -38,7 +38,8 @@ check('台詞に {name} が残っていない(ジャックの台本は名前を�
 
 // ② 話し手
 check('ジャックは助手の一覧に入っていない(助手の選択画面などに出さない)', !e.ASSISTANTS.some((a) => a.id === 'jack'));
-check('話し手(STORY_GUEST_SPEAKERS)は ジャック と 素のぱんぷきん(pumpkin)の2人', Array.isArray(e.STORY_GUEST_SPEAKERS) && e.STORY_GUEST_SPEAKERS.length === 2 && e.STORY_GUEST_SPEAKERS[0].id === 'jack' && e.STORY_GUEST_SPEAKERS[1].id === 'pumpkin');
+// 2026-10-22 きゅうこの加入のお話でイルミネ・ドリーミィが足された。ジャックのお話の2人は先頭のまま
+check('話し手(STORY_GUEST_SPEAKERS)の先頭は ジャック と 素のぱんぷきん(pumpkin)', Array.isArray(e.STORY_GUEST_SPEAKERS) && e.STORY_GUEST_SPEAKERS.length >= 2 && e.STORY_GUEST_SPEAKERS[0].id === 'jack' && e.STORY_GUEST_SPEAKERS[1].id === 'pumpkin');
 check('ぱんぷきんの顔アイコンは、ジャックとは別の絵(images/raid/pumpkin-icon.png)', fs.existsSync(path.join(root, 'monster-hero/images/raid/pumpkin-icon.png')) && /const PUMPKIN_ICON_IMG = "images\/raid\/pumpkin-icon\.png\?v=[0-9a-f]+"/.test(read('monster-hero/data/images/images-enemy.js')) && !/\?v=0"/.test(read('monster-hero/data/images/images-enemy.js').match(/const PUMPKIN_ICON_IMG = .*/)[0]));
 const assistantIds = new Set(e.ASSISTANTS.map((a) => a.id));
 check('台本の話し手は 助手(みゅあ・きき・もも・ドラ)か jack・pumpkin だけ', allScripts.every((s) => s.every((l) => assistantIds.has(l.who) || l.who === 'jack' || l.who === 'pumpkin')));
