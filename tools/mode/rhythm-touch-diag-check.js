@@ -129,7 +129,7 @@ const verdictOf=rows=>diagnose(aggregate(rows)).filter(line=>line.level==='found
   ok('報告: 名前・ブリーダーIDは送らない・公開中の曲だけ',reportBlock.length>0&&!/user_name|breeder|userName|breederId/i.test(reportBlock)&&/RHYTHM_DEMO_SONG_IDS\.includes\(report\.song_id\)/.test(reportBlock));
   ok('報告: 診断の行に、結ぶための playId と、効いていた直し方を入れる',/playId:rhythmTouchDiagPlayId\(\),fixes:rhythmTouchFixesActive\(\)/.test(diagBlock));
   ok('報告: ボタンはタッチで遊ぶ端末の公開プレイだけ(練習・タイミング合わせ・デバッグは診断そのものを作らない)',
-    /const touchDiag=!debugPlay&&!tutorial&&!calibrating\?rhythmTouchDiagOf\(/.test(play)&&/touchDiag&&touchDiag\.platform!=='other'\?/.test(play)&&/\{result\.touchReport&&<div data-rhythm-touch-report/.test(play));
+    /const touchDiag=!debugPlay&&!tutorial&&!calibrating\?(rhythmTouchDiagWithMon\()?rhythmTouchDiagOf\(/.test(play)&&/touchDiag&&touchDiag\.platform!=='other'\?/.test(play)&&/\{result\.touchReport&&<div data-rhythm-touch-report/.test(play));
   ok('報告: 同じ曲では1回だけ送る',/touchReportSent===result\.touchReport\.playId/.test(play));
   // 報告の行は数に入れず、playId で結ぶ
   const ios=make('ios',30),android=make('android',30);

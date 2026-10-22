@@ -105,6 +105,8 @@ const seed = () => {
     await page.evaluate(() => { window.__mhSupabaseStubbed = true; }).catch(() => {});
     await page.route('**/rest/v1/**', (route) => route.fulfill({ status: 201, contentType: 'application/json', body: '[]' }));
     await page.addInitScript(seed);
+    // 起動直後に流れるお話(きゅうこの加入など)は見たことにする(2026-10-23 きゅうこの公開で、お話が画面を覆って止まった)
+    await page.addInitScript(require('../boot/quiet-boot-seed').eventStorySeed());
     const clickText = (p) => page.evaluate((s) => { const rx = new RegExp(s); const x = [...document.querySelectorAll('button')].find((b) => rx.test((b.innerText || '').replace(/\s+/g, ' ').trim())); if (!x) return false; x.click(); return true; }, p);
     await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'load', timeout: 60000 });
     await page.getByRole('button', { name: 'TAP TO START' }).click({ force: true, timeout: 60000 });
