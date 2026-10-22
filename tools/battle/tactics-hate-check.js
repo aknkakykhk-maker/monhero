@@ -7,7 +7,7 @@
 //     ヘイトの倍率はタイプの表から引く(TACTICS_HATE に役割の表を二重に持たない)
 //   ② 切のとき(hate を渡さない)は、狙いの重みが今までの式とまったく同じ
 //   ③ 1ターンの動き: 毎ターン ×decay・上限・倒れたら0・空き枠は0・勇者は下地より下がらない・与ダメージは割合で配る
-//   ④ 炎の段は 20・50・80。勇者は下地を引いた値で見る
+//   ④ 枠の狙われる確率(%): 敵が狙いを決める重みと同じ割合・生きている子だけで割る・合計100・1人なら100%
 //   ⑤ 名前の出た子の値(資料の★おすすめ): あつの挑発・みゅあの愛・ももすけのおねだり・モノリスのかばう
 //   ⑥ 確認待ちの試作の一覧にあり、既定は切(キーが無ければ効かない)。タクティクスの盤面のバトル全部(タクティクスバトル・レイド。既存5モードは見ない)
 //   ⑦ タイプの表記: 確認待ちの試作の一覧にあり、既定は切。図鑑・図鑑の詳細・パーティ選びに印がある
@@ -71,9 +71,23 @@ const big = G.tacticsHateStep([0, 0, 0, 0], { dealt: [300000, 100000, 0, 0] }, u
 check('③ A:10,000 と B:100,000 のように桁が違っても、割合が同じなら同じヘイト', near(big[0], share[0]) && near(big[1], share[1]));
 
 // ④
-const f = (v) => G.tacticsHateFlame(v);
-check('④ 炎は 20・50・80 で1段ずつ', [f(19), f(20), f(49), f(50), f(79), f(80), f(100)].join() === '0,1,1,2,2,3,3');
-check('④ だれでも同じ値で見る(勇者の下地を引かない)', G.tacticsHateFlame.length === 1);
+// 枠には炎の段ではなく「狙われる確率(%)」を出す(2026-10-22 社長「ヘイトは炎じゃなくて数値化したほうがいいかもね。ひとりなら常に100%で…」)
+{
+  const full = (id, hp = 500, downed = false) => ({ id, name: id, hp: downed ? 0 : hp, maxHp: 500, guts: 10, maxGuts: 10, atk: 100, def: 100, downed });
+  const ch = (us, hate) => G.tacticsTargetChances(us, hate);
+  const sum = (a) => a.filter(Number.isInteger).reduce((x, y) => x + y, 0);
+  check('④ 1人なら100%・空き枠は出さない', JSON.stringify(ch([full('Mocchi'), null, null, null], [50, 0, 0, 0])) === JSON.stringify([100, null, null, null]));
+  check('④ 倒れた子は出さず、生きている子だけで割る', JSON.stringify(ch([full('Mocchi'), full('Ham', 0, true), full('Ghost'), null], [0, 90, 0, 0])) === JSON.stringify([50, null, 50, null]));
+  const mixes = [[[20, 40, 0, 0], [500, 500, 500, 500]], [[30, 20, 5, 5], [500, 250, 100, 500]], [[0, 0, 0, 0], [500, 500, 500, 500]], [[33, 33, 33, 0], [500, 500, 500, 500]], [[100, 7, 3, 61], [480, 12, 300, 77]]];
+  const allSum100 = mixes.every(([hate, hps]) => sum(ch(['Mocchi', 'Ham', 'Ghost', 'Pixie'].map((id, k) => full(id, hps[k])), hate)) === 100);
+  check('④ 2〜4人でも、合計はちょうど100%', allSum100 && sum(ch([full('Mocchi'), full('Ham'), full('Ghost'), null], [0, 0, 0, 0])) === 100);
+  // 敵が実際に狙いを決める重み(tacticsTargetWeights)と同じ割合(四捨五入の差は1まで)
+  const us = ['Mocchi', 'Ham', 'Ghost', 'Pixie'].map((id, k) => full(id, [500, 250, 100, 500][k])), hate = [30, 20, 5, 5];
+  const w = G.tacticsTargetWeights(us, G.TACTICS_TARGET_LOW_HP_BIAS, hate), tot = w.reduce((a, x) => a + x.weight, 0), c = ch(us, hate);
+  check('④ 敵が狙いを決める重みと同じ割合(表示と抽選が食い違わない)', w.every((x) => Math.abs(c[x.index] - x.weight / tot * 100) < 1), JSON.stringify(c));
+  const battleSrc = read('monster-hero/src/parts/71-screen-battle.jsx');
+  check('④ 枠の表示は tacticsTargetChances を通す(炎の段は出さない)', /tacticsTargetChances\(tacticsUnits,tacticsHate\)\[i\]/.test(battleSrc) && /data-tactics-hate-pct=\{hatePct\}/.test(battleSrc)  && !/tacticsHateFlame/.test(battleSrc) && !('flames' in H));
+}
 
 // ⑤
 const gain = (card, id) => G.tacticsHateCardGain(card, id) * G.tacticsHateProfile(id).mult;
@@ -128,7 +142,7 @@ check('⑧ 手札と EX の詳細に段を出す(ヘイトが切なら出さな�
     && W.every((pt, i) => i === 0 || (pt[0] > W[i - 1][0] && pt[1] > W[i - 1][1])) && !('k' in H));
   // 倍率の計算は tacticsHateWeightMult だけ。ヘルプの表(tacticsHateHelpRows)は点を表示に読むだけで、確率は tacticsHateWeightMult で出す
   const unitsSrc = read('monster-hero/src/parts/32-tactics-units.jsx');
-  const helpFn = unitsSrc.slice(unitsSrc.indexOf('const tacticsHateHelpRows'), unitsSrc.indexOf('// 炎の段(0〜3)'));
+  const helpFn = unitsSrc.slice(unitsSrc.indexOf('const tacticsHateHelpRows'), unitsSrc.indexOf('// ===== ヘイトの数字ここまで'));
   check('⑨ 倍率の式は tacticsHateWeightMult の1か所だけ(ヘルプの表は点を表示するだけ)', (unitsSrc.match(/TACTICS_HATE\.weightCurve/g) || []).length === 2
     && (helpFn.match(/TACTICS_HATE\.weightCurve/g) || []).length === 1 && /tacticsHateWeightMult\(hate, i\)/.test(helpFn));
   const full = (id) => ({ id, name: id, hp: 500, maxHp: 500, guts: 10, maxGuts: 10, atk: 100, def: 100 });
