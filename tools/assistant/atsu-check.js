@@ -113,7 +113,7 @@ const rel = read('monster-hero/src/parts/17-release-changelog-login-missions.jsx
 const app = read('monster-hero/src/parts/60-app.jsx');
 check('ゲーム側のお話の id がデータと同じ', rel.includes(`const ATSU_JOIN_STORY_ID = '${storyId}';`));
 check('見たかどうかは既存の「見終えたお話の id」の並びで持つ(新しい保存キーを作らない)',
-  /RHYTHM_EVENT_STORY_IDS = \[[^\]]*ATSU_JOIN_STORY_ID\]/.test(app) && /atsuJoinSeen: Array\.isArray\(rhythmEventStorySeen\) && rhythmEventStorySeen\.includes\(ATSU_JOIN_STORY_ID\)/.test(app)
+  /RHYTHM_EVENT_STORY_IDS = \[[^\]]*ATSU_JOIN_STORY_ID[,\]]/.test(app) && /atsuJoinSeen: Array\.isArray\(rhythmEventStorySeen\) && rhythmEventStorySeen\.includes\(ATSU_JOIN_STORY_ID\)/.test(app)
   && !/mh_[a-z_]*atsu[a-z_]*_seen/.test(app + rel));
 check('お話を流すのは、公開の印と仲良し度の条件がそろったときだけ',
   /EVENT_REPLAY_RELEASE_FLAGS\.assistantAtsu\) return;[\s\S]{0,200}rhythmEventStorySeen\.includes\(ATSU_JOIN_STORY_ID\)[\s\S]{0,200}assistantAtsuUnlockReady\(/.test(app));
