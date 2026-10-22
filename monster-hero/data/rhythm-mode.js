@@ -218,7 +218,7 @@ const RHYTHM_MONSTER_SAME_ABILITY_MAX=2;
 const rhythmMonsterSlotAbilityId=masu=>{
   try{
     if(!masu||!masu.baseId||typeof monsterLineageOf!=='function'||typeof rhythmMonsterAbilityForLineage!=='function')return '';
-    const ability=rhythmMonsterAbilityForLineage(monsterLineageOf(masu.baseId).main.id);
+    const ability=rhythmMonsterAbilityForMonster(masu.baseId);
     return ability&&ability.id?String(ability.id):'';
   }catch{return '';}
 };
@@ -361,9 +361,35 @@ const RHYTHM_MONSTER_ABILITY_BY_LINEAGE=Object.freeze({
   ham:'KONJO', zan:'KONJO',
   yggdrasil:'HISSHI',
   ghost:'ITAZURA',
+  // イルミネ(2026-10-22 社長「イルミネ 我慢」)。ドリーミィも主血統はイルミネだが、下の子ごとの表で「必死」にする
+  illumine:'GAMAN',
+});
+// 子ごとの上書き(2026-10-22 社長「イルミネ 我慢・ドリーミィ 必死」)。能力は主血統で決まるのが基本(§4.5)だが、
+// ドリーミィ(イルミネ×ニャー)だけ同じ血統のイルミネと違う能力にするため、ここに書いた子は血統より先に引く。
+// 血統の側を変える(ドリーミィの主血統をニャーにする)と、図鑑・種族チャレンジ・絆ランキングの種族まで変わってしまうので、こちらにした
+const RHYTHM_MONSTER_ABILITY_BY_MONSTER=Object.freeze({
+  Dreamy:'HISSHI',
 });
 const rhythmMonsterAbilityForLineage=lineageId=>
   RHYTHM_MONSTER_ABILITIES[RHYTHM_MONSTER_ABILITY_BY_LINEAGE[String(lineageId||'')]]||null;
+// ベースモンスターの能力。子ごとの上書きがあればそれ、無ければ主血統の能力(血統の表は別ファイル。引けなければ null)
+const rhythmMonsterAbilityForMonster=baseId=>{
+  const own=RHYTHM_MONSTER_ABILITY_BY_MONSTER[String(baseId||'')];
+  if(own)return RHYTHM_MONSTER_ABILITIES[own]||null;
+  try{return typeof monsterLineageOf==='function'?rhythmMonsterAbilityForLineage(monsterLineageOf(baseId).main.id):null;}catch{return null;}
+};
+// 能力ごとの「その能力になる血統・子」の名前(ヘルプとモンスターノーツの説明の一覧で使う)。
+// まだ公開していない子しかいない血統(案の段階)と、まだ公開していない子の上書きは出さない(公開前に名前が見えないように)
+const rhythmAbilityHolderNames=abilityId=>{
+  const released=typeof ALL_PLAYER_MONSTERS!=='undefined'?ALL_PLAYER_MONSTERS:null;
+  const lineageMap=typeof MONSTER_LINEAGE_MAP!=='undefined'?MONSTER_LINEAGE_MAP:null;
+  const lineageName=id=>(typeof MONSTER_LINEAGES!=='undefined'&&MONSTER_LINEAGES[id]?.name)||id;
+  const lineageReleased=id=>!released||!lineageMap||Object.keys(released).some(monId=>lineageMap[monId]?.main===id);
+  const lineages=Object.entries(RHYTHM_MONSTER_ABILITY_BY_LINEAGE).filter(([id,ab])=>ab===abilityId&&lineageReleased(id)).map(([id])=>lineageName(id));
+  const monsters=Object.entries(RHYTHM_MONSTER_ABILITY_BY_MONSTER).filter(([monId,ab])=>ab===abilityId&&(!released||released[monId]))
+    .map(([monId])=>released?.[monId]?.name||monId);
+  return {lineages,monsters};
+};
 // 能力発動は GREAT 以上(§3.4)。判定窓そのものはモンスターノーツ専用に甘くしない。
 const RHYTHM_MONSTER_ABILITY_JUDGMENTS=Object.freeze(['MARVELOUS','EXCELLENT','GREAT']);
 const rhythmMonsterAbilityTriggers=judgment=>RHYTHM_MONSTER_ABILITY_JUDGMENTS.includes(judgment);

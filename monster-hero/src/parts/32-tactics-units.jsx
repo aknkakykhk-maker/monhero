@@ -651,6 +651,8 @@ const MONSTER_TYPE_OF = {
   Ark: { main: 'supporter', sub: 'attacker' }, Iblis: { main: 'supporter', sub: 'attacker' },
   Snegurochka: { main: 'supporter', sub: 'healer' }, Yaobikuni: { main: 'supporter', sub: 'tank' },
   Tiger: { main: 'shadow', sub: 'attacker' }, Zan: { main: 'shadow', sub: 'attacker' }, Ghost: { main: 'shadow', sub: 'attacker' },
+  // イルミネ・ドリーミィ(2026-10-22・案の段階。社長の決定)
+  Illumine: { main: 'shadow', sub: 'attacker' }, Dreamy: { main: 'supporter', sub: 'shadow' },
 };
 // その子のタイプ({ main, sub } の形。表に無い子はアタッカー・サブなし)
 const monsterTypeOf = (monId) => {

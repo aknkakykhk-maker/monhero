@@ -40,8 +40,10 @@ const fateSrc = slice('// ==== 固有技「運命のコイン」', '// ★タク
 const fate = Function(`${fateSrc}\nreturn { withFateCombo };`)();
 // 2026-10-08 からの黒音符(クロミー)の連撃など、あとから攻撃の式へ足された決めごと。足す関数は本体の本物を取り出し、
 // 効果の段階は「誰も貯めていない」中立の値で、予測・実処理・あつの挑発の3つへ同じものを入れる(比べる中身は変わらない)
-const laterSrc = (source.match(/const withBlackNoteCombo = \(exCombos, combo\) => \{[\s\S]*?\n\};/) || [''])[0]
+const laterSrc = (source.match(/const withBlackNoteCombo = \(exCombos, combo(, extra = null)?\) => \{[\s\S]*?\n\};/) || [''])[0]
   + '\nconst blackNoteEffectAt = () => ({ combo: null });'
+  // 2026-10-22 イルミネ・ドリーミィの楔の連撃(楔0・イルミネの固有技でなければ何も足さない)
+  + '\nconst kusabiCombosAt = () => [];'
   // タクティクス専用(ほかのモードでは何もしない)
   + '\nconst aquaStackFromCard = () => null;'
   + '\nconst fireTacticsExCross = () => null;';

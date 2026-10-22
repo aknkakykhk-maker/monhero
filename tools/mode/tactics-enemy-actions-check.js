@@ -377,12 +377,13 @@ check('先に受ける子を1体決めてから抽選する',
     && has('          ? aimedSlots[Math.floor(Math.random()*aimedSlots.length)] : null;')
     && has('const pickDefenseSlot = () => defenseSlot;'));
 check('抽選の表はその子の特性だけで作る',
-  has('const defenseTable = !isTacticsMode(runMode) ? unifiedSpecialDefense : buildUnifiedSpecialDefense({')
-    && has("existingEvasion:defenseHeroId==='Tiger'?50:0,")
+  // 2026-10-22 イルミネ・ドリーミィ(影潜)は、受ける子の楔の数だけ回避率を足す(その子の特性なので同じ表に入る)
+  has('const defenseTable = (!isTacticsMode(runMode) && kusabiEvasion<=0) ? unifiedSpecialDefense : buildUnifiedSpecialDefense({')
+    && has("existingEvasion:(defenseHeroId==='Tiger'?50:0)+kusabiEvasion,")
     && has("existingReflect:defenseHeroId==='Monol'?30:0,")
     && has("existingAbsorb:(defenseHeroId==='Oboro'||defenseHeroId==='Plant')?30:0,"));
 check('その表にも魂格由来のぶんは今までどおり渡す',
-  /defenseTable = !isTacticsMode\(runMode\) \? unifiedSpecialDefense : buildUnifiedSpecialDefense\(\{\s*soulEvasion:soulBattleParty\.evasion,\s*soulReflect:soulBattleParty\.reflect,\s*soulAbsorb:soulBattleParty\.absorb,/.test(src));
+  /defenseTable = \(!isTacticsMode\(runMode\) && kusabiEvasion<=0\) \? unifiedSpecialDefense : buildUnifiedSpecialDefense\(\{\s*soulEvasion:soulBattleParty\.evasion,\s*soulReflect:soulBattleParty\.reflect,\s*soulAbsorb:soulBattleParty\.absorb,/.test(src));
 check('抽選は1回だけ・その表を引く',
   has('rollUnifiedSpecialDefense(defenseTable,Math.random(),Math.random());')
     && (src.match(/rollUnifiedSpecialDefense\(/g) || []).length === 1);

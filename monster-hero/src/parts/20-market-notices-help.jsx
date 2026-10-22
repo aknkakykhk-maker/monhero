@@ -913,11 +913,10 @@ const helpDataRows = (id) => {
     // 値を変えたときにヘルプだけ古いまま残るため、実データから表にする
     case 'rhythmMonsterAbilities': {
       const abilities = typeof RHYTHM_MONSTER_ABILITIES !== 'undefined' ? RHYTHM_MONSTER_ABILITIES : {};
-      const byLineage = typeof RHYTHM_MONSTER_ABILITY_BY_LINEAGE !== 'undefined' ? RHYTHM_MONSTER_ABILITY_BY_LINEAGE : {};
+      // 公開前の子しかいない血統と、公開前の子の上書きは出さない(rhythmAbilityHolderNames)
       return Object.values(abilities).map(ability => {
-        const lineages = Object.entries(byLineage).filter(([, id]) => id === ability.id)
-          .map(([lineageId]) => lineageById(lineageId).name);
-        return [ability.name, `${rhythmAbilityEffectText(ability)}（主血統: ${lineages.join(' / ')}）`];
+        const { lineages, monsters } = rhythmAbilityHolderNames(ability.id);
+        return [ability.name, `${rhythmAbilityEffectText(ability)}（主血統: ${lineages.join(' / ')}${monsters.length ? `／${monsters.join('・')}だけはこの能力` : ''}）`];
       });
     }
     case 'missionsDaily':

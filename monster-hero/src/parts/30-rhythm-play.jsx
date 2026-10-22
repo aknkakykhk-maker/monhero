@@ -498,14 +498,13 @@ const rhythmAbilityTone=abilityId=>abilityId==='GENKI'?'border-emerald-300/50 bg
   :abilityId==='ITAZURA'?'border-violet-300/50 bg-violet-950/40 text-violet-100'
   :'border-white/20 bg-slate-900/60 text-slate-300';
 // 能力ごとに「その能力になる血統」をまとめる。並びは RHYTHM_MONSTER_ABILITIES の順。
-const rhythmAbilityRows=()=>Object.values(RHYTHM_MONSTER_ABILITIES).map(ability=>({
-  ability,
-  lineages:Object.entries(RHYTHM_MONSTER_ABILITY_BY_LINEAGE)
-    .filter(([,id])=>id===ability.id)
-    .map(([lineageId])=>lineageById(lineageId).name),
-}));
-const rhythmSlotAbility=masu=>(masu&&masu.baseId)
-  ?rhythmMonsterAbilityForLineage(monsterLineageOf(masu.baseId).main.id):null;
+// 血統と子ごとの上書きの名前は rhythmAbilityHolderNames(data/rhythm-mode.js)が実データから作る。
+// 公開前の子しかいない血統は出さない。子ごとの上書き(ドリーミィ)は血統のあとに子の名前で足す
+const rhythmAbilityRows=()=>Object.values(RHYTHM_MONSTER_ABILITIES).map(ability=>{
+  const {lineages,monsters}=rhythmAbilityHolderNames(ability.id);
+  return {ability,lineages:[...lineages,...monsters]};
+});
+const rhythmSlotAbility=masu=>(masu&&masu.baseId)?rhythmMonsterAbilityForMonster(masu.baseId):null;
 
 // モンスターノーツの説明。マスモン設定の画面へ置く「詳細」。
 // 【2026-09-05・ユーザー指示】「マスモン設定のとこをUIやレイアウトを整えて。
