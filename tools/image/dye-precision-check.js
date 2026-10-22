@@ -46,6 +46,9 @@ const APPROVED_MASKS = {
   Melody: 'images/monsters/melody-dye-mask.PNG',
   // クロミー(2026-10-07・案の段階・5部位)
   Kuromy: 'images/monsters/kuromy-dye-mask.PNG',
+  // イルミネ・ドリーミィ(2026-10-22・案の段階・5部位)
+  Illumine: 'images/monsters/illumine-dye-mask.PNG',
+  Dreamy: 'images/monsters/dreamy-dye-mask.PNG',
 };
 // これ未満しか染まらない画素を「染まっていない」とみなす
 const COVER_MIN = 0.5;

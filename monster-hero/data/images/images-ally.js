@@ -93,6 +93,12 @@ const IDLE_MELODY_TAIL_MASK = "images/monsters/idle/melody-tail.png?v=579615044f
 const IDLE_MELODY_BODY_MASK = "images/monsters/idle/melody-body.png?v=3869ff0db58d";
 const IDLE_KUROMY_TAIL_MASK = "images/monsters/idle/kuromy-tail.png?v=a02f098899c3";
 const IDLE_KUROMY_BODY_MASK = "images/monsters/idle/kuromy-body.png?v=583be302c81f";
+const IDLE_ILLUMINE_HAIR_L_MASK = "images/monsters/idle/illumine-hair-l.png?v=42f83fd1c48c";
+const IDLE_ILLUMINE_HAIR_R_MASK = "images/monsters/idle/illumine-hair-r.png?v=3422e29ad168";
+const IDLE_ILLUMINE_BODY_MASK = "images/monsters/idle/illumine-body.png?v=21237b3cdd06";
+const IDLE_DREAMY_BEADS_L_MASK = "images/monsters/idle/dreamy-beads-l.png?v=0eab9c502bfa";
+const IDLE_DREAMY_BEADS_R_MASK = "images/monsters/idle/dreamy-beads-r.png?v=b454bc9f0327";
+const IDLE_DREAMY_BODY_MASK = "images/monsters/idle/dreamy-body.png?v=6b6215543408";
 // ==== 待機アニメのマスク ここまで ====
 const PANDORA_IMG = "images/monsters/pandora.PNG?v=f8009b5d2b5e";
 const PANDORA_DYE_MASK = "images/monsters/pandora-dye-mask.PNG?v=3dae0c26d9a1";
@@ -155,6 +161,12 @@ const MELODY_DYE_MASK = "images/monsters/melody-dye-mask.PNG?v=54d7600776ef";
 // ③黒い帽子(頭巾・耳・ケープ・しっぽ) / ④乗っている子の白い所 / ⑤下の生き物の濃い紫)。原本は tools/art-sources/dye-masks/kuromy-dye-mask-received.png
 const KUROMY_IMG = "images/monsters/kuromy.png?v=02bdee0dc9f6";
 const KUROMY_DYE_MASK = "images/monsters/kuromy-dye-mask.PNG?v=7e06f8e564b2";
+// イルミネ・ドリーミィ(2026-10-22・案の段階・イルミネ×イルミネ / イルミネ×ニャー)。
+// 元絵は tools/art-sources/new-monsters-2026-10-22/。透明な余白を切って高さ916pxへ縮め、256色へ減色(グラデーションの段が出ないよう誤差拡散)
+const ILLUMINE_IMG = "images/monsters/illumine.png?v=856c3192a848";
+const ILLUMINE_DYE_MASK = "images/monsters/illumine-dye-mask.PNG?v=f129752bb07a";
+const DREAMY_DYE_MASK = "images/monsters/dreamy-dye-mask.PNG?v=0a38c9def40d";
+const DREAMY_IMG = "images/monsters/dreamy.png?v=14e1f738cec9";
 
 const MOCCHI_ICON = MOCCHI_IMG;
 const HAM_ICON = HAM_IMG;
@@ -203,6 +215,8 @@ const GHOST_ICON = GHOST_IMG;
 const SPOOKY_ICON = SPOOKY_IMG;
 const MELODY_ICON = MELODY_IMG;
 const KUROMY_ICON = KUROMY_IMG;
+const ILLUMINE_ICON = ILLUMINE_IMG;
+const DREAMY_ICON = DREAMY_IMG;
 const ZAN_FACE_ICON = "images/monster-icons/face/zan.png?v=f341b74babb9";
 const MITARASHI_FACE_ICON = "images/monster-icons/face/mitarashi.png?v=36f1cf509e8e";
 const ARK_FACE_ICON = "images/monster-icons/face/ark.png?v=1ddd19baef6b";
@@ -220,6 +234,9 @@ const GHOST_FACE_ICON = "images/monster-icons/face/ghost.png?v=fdbc8d32d2cd";
 const SPOOKY_FACE_ICON = "images/monster-icons/face/spooky.png?v=2c047a771ffe";
 const MELODY_FACE_ICON = "images/monster-icons/face/melody.png?v=95bbe06158e4";
 const KUROMY_FACE_ICON = "images/monster-icons/face/kuromy.png?v=29d41f754746";
+// イルミネ・ドリーミィ(2026-10-22・案の段階)。顔アイコンは社長に案から選んでもらうまで、仮の1案(A)
+const ILLUMINE_FACE_ICON = "images/monster-icons/face/illumine.png?v=15c760b34e99";
+const DREAMY_FACE_ICON = "images/monster-icons/face/dreamy.png?v=ff318780a036";
 
 // 血統別のアイコン(エンブレム・144x146・金の枠つき)。2026-10-05・ユーザー提供の37個(blood-icons.zip)。
 // 血統のid(MONSTER_LINEAGES)との対応は、このファイルの下の MONSTER_LINEAGE_ICONS。ゲームにまだ無い血統のぶんも先に入れてある(使うのは血統を足すとき)。
@@ -279,6 +296,8 @@ const MONSTER_LINEAGE_ICONS = Object.freeze({
   undine: LINEAGE_ICON_UNDINE,
   yggdrasil: LINEAGE_ICON_YGGDRASIL,
   ghost: LINEAGE_ICON_GHOST,
+  illumine: LINEAGE_ICON_ILLUMINE,
+  nya: LINEAGE_ICON_NYAA,
   dragon: LINEAGE_ICON_DRAGON,
   joker: LINEAGE_ICON_JOKER,
   plant: LINEAGE_ICON_PLANT,
