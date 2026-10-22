@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e44dd0d62c313ec3
+// generated-sha256: e008fe68cc3368b8
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-22 10:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-22 10:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -48847,7 +48847,12 @@ const assistantChatRankingPlan = (rawText, prevUserTexts = []) => {
         typeof TACTICS_PRO_MODE !== 'undefined' ? TACTICS_PRO_MODE : null].filter(Boolean),
     ].filter(m => m && m.id && modeHasRanking(m.id));
     const extremeMode = typeof EXTREME_MODE !== 'undefined' ? EXTREME_MODE : null;
-    const modeWords = modes.flatMap(m => [m.label, m.short].filter(Boolean).map(w => ({ w, m }))).sort((a, b) => b.w.length - a.w.length);
+    // ランキングの無いタクティクス(タクティクスチャレンジ)の呼び名は、ランキングがあるタクティクスプロへ寄せる
+    // (2026-10-22 社長「タクティクスの極限のエクストリーム見れないの？」が極限チャレンジに取り違えられた)
+    const tacticsPro = typeof TACTICS_PRO_MODE !== 'undefined' && modes.some(m => m.id === TACTICS_PRO_MODE.id) ? TACTICS_PRO_MODE : null;
+    const tacticsAlias = tacticsPro && typeof TACTICS_MODE !== 'undefined' && !modes.some(m => m.id === TACTICS_MODE.id)
+      ? [TACTICS_MODE.label, TACTICS_MODE.short].filter(Boolean).map(w => ({ w, m: tacticsPro })) : [];
+    const modeWords = [...modes.flatMap(m => [m.label, m.short].filter(Boolean).map(w => ({ w, m }))), ...tacticsAlias].sort((a, b) => b.w.length - a.w.length);
     const extremeList = [...(typeof PUBLIC_EXTREME_DIFFICULTIES !== 'undefined' ? PUBLIC_EXTREME_DIFFICULTIES : []),
       ...(typeof EXTREME_DIFFICULTIES !== 'undefined' ? EXTREME_DIFFICULTIES : [])];
     const isExtremeId = (id) => (typeof isExtremeDifficultyId === 'function' ? isExtremeDifficultyId(id) : extremeList.some(st => st.id === id));
@@ -48904,7 +48909,8 @@ const assistantChatRankingPlan = (rawText, prevUserTexts = []) => {
         c = { ...base, lineage: now.lineage || base.lineage,
           diffHit: own ? now.diffHit : base.diffHit, extreme: own ? now.extreme : base.extreme, all: own ? now.all : base.all,
           rhythmDiff: now.rhythmDiff || base.rhythmDiff, inherited: true };
-      } else if (!topicNow) return null;
+      } else if (!topicNow && !(ownSelector && prevs.some(t => ASSISTANT_CHAT_RANKING_TOPIC.test(t)))) return null;
+      // 前の話題に種類が無くても、ランキングの話の続きで「エクストリーム」「全部」などと言われたら、その指定で読む(モードが無ければ下でバトルの既定へ)
     } else if (!topicNow && !hasKind(now)) return null;
     if (c.battle && !c.modeHit && !selectorOnly) {
       // 「極限」だけなど、モードの言葉が無いバトルの話は、すぐ前に出たモードを引き継ぐ

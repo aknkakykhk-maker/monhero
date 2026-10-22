@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3f44fd24198cbced
+// source-sha256: bc6e2586e606d4ac
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-22 10:55";
+const BUILD_DATE = "2026-10-22 10:59";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -80669,10 +80669,15 @@ const assistantChatRankingPlan = (rawText, prevUserTexts = []) => {
     const rhythmDiffs = typeof rhythmScoredDifficultyIds === 'function' ? rhythmScoredDifficultyIds() : [];
     const modes = [...(typeof BATTLE_MODES !== 'undefined' ? BATTLE_MODES : []), ...[typeof EXTREME_MODE !== 'undefined' ? EXTREME_MODE : null, typeof SPECIES_CHALLENGE_MODE !== 'undefined' ? SPECIES_CHALLENGE_MODE : null, typeof TACTICS_MODE !== 'undefined' ? TACTICS_MODE : null, typeof TACTICS_SPECIES_MODE !== 'undefined' ? TACTICS_SPECIES_MODE : null, typeof TACTICS_PRO_MODE !== 'undefined' ? TACTICS_PRO_MODE : null].filter(Boolean)].filter(m => m && m.id && modeHasRanking(m.id));
     const extremeMode = typeof EXTREME_MODE !== 'undefined' ? EXTREME_MODE : null;
-    const modeWords = modes.flatMap(m => [m.label, m.short].filter(Boolean).map(w => ({
+    const tacticsPro = typeof TACTICS_PRO_MODE !== 'undefined' && modes.some(m => m.id === TACTICS_PRO_MODE.id) ? TACTICS_PRO_MODE : null;
+    const tacticsAlias = tacticsPro && typeof TACTICS_MODE !== 'undefined' && !modes.some(m => m.id === TACTICS_MODE.id) ? [TACTICS_MODE.label, TACTICS_MODE.short].filter(Boolean).map(w => ({
+      w,
+      m: tacticsPro
+    })) : [];
+    const modeWords = [...modes.flatMap(m => [m.label, m.short].filter(Boolean).map(w => ({
       w,
       m
-    }))).sort((a, b) => b.w.length - a.w.length);
+    }))), ...tacticsAlias].sort((a, b) => b.w.length - a.w.length);
     const extremeList = [...(typeof PUBLIC_EXTREME_DIFFICULTIES !== 'undefined' ? PUBLIC_EXTREME_DIFFICULTIES : []), ...(typeof EXTREME_DIFFICULTIES !== 'undefined' ? EXTREME_DIFFICULTIES : [])];
     const isExtremeId = id => typeof isExtremeDifficultyId === 'function' ? isExtremeDifficultyId(id) : extremeList.some(st => st.id === id);
     const diffLabel = id => DIFFICULTY_SETTINGS[id] && DIFFICULTY_SETTINGS[id].label || (extremeList.find(st => st.id === id) || {}).label || id;
@@ -80742,7 +80747,7 @@ const assistantChatRankingPlan = (rawText, prevUserTexts = []) => {
           rhythmDiff: now.rhythmDiff || base.rhythmDiff,
           inherited: true
         };
-      } else if (!topicNow) return null;
+      } else if (!topicNow && !(ownSelector && prevs.some(t => ASSISTANT_CHAT_RANKING_TOPIC.test(t)))) return null;
     } else if (!topicNow && !hasKind(now)) return null;
     if (c.battle && !c.modeHit && !selectorOnly) {
       const m = before.find(x => x.modeHit);
