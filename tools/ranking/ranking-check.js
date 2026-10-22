@@ -64,6 +64,14 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
     const party = (bond, explicit = true) => ([{ role:'hero', name: 'モッチー', emoji: '🍡', imgUrl: null, bondLevel: bond, bondRankingTarget:explicit }, null, null]);
     window.fetch = async (input, init) => {
       const url = typeof input === 'string' ? input : (input && input.url) || '';
+      // ★絆Lvの一覧は、いまは正本の bond_levels 表から取る(rankings からの集計ではない)。
+      //   差し替えないと本物の表を読みにいってしまうので、ここで同じ「アルファ 絆Lv.12」を返す
+      if (url.includes('/rest/v1/bond_levels')) {
+        if (init && init.method && init.method !== 'GET') return new Response('', { status: 201 });
+        const bondRows = [{ user_name: 'アルファ', individual_id: 'alpha-mocchi', monster_id: 'Mocchi', mon_name: 'モッチー', bond_level: 12, icon: null, detail: null, colors: null }];
+        for (let i = 0; i < 5; i++) bondRows.push({ user_name: '埋め' + i, individual_id: 'fill-' + i, monster_id: 'Mocchi', mon_name: 'モッチー', bond_level: 1, icon: null, detail: null, colors: null });
+        return new Response(JSON.stringify(bondRows), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
       if (!url.includes('/rest/v1/rankings')) return orig(input, init);
       if (init && init.method && init.method !== 'GET') return new Response('', { status: 201 });
       const u = new URL(url);
@@ -139,9 +147,12 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
   if (!openedBattle) { check('バトルモード選択を開ける', false, 'トップ画面の「バトル」が見つからない'); await browser.close(); process.exit(1); }
   await page.waitForTimeout(1500);
   const openedScore = await page.evaluate(() => {
-    const b = [...document.querySelectorAll('button')].find((x) => /のランキング/.test(x.innerText || '') && !x.disabled);
+    // ★モードの札をカラータイルに作り直したとき(c3409b62)、ボタンの文字は「🏆 ランキング」になり、
+    //   どのモードのものかは印(data-mode-ranking-link)で見分けるようになった。いま選んでいる札のボタンを押す
+    const b = document.querySelector('article.on [data-mode-ranking-link]:not([disabled])')
+      || [...document.querySelectorAll('[data-mode-ranking-link]')].find((x) => !x.disabled);
     if (b) b.click();
-    return b ? (b.innerText || '').replace(/\s+/g, ' ').trim() : null;
+    return b ? `${b.getAttribute('data-mode-ranking-link')} ${(b.innerText || '').replace(/\s+/g, ' ').trim()}` : null;
   });
   check('モードのカードからスコアランキングを開ける', !!openedScore, openedScore || '「◯◯のランキング」が見つからない');
   if (!openedScore) { await browser.close(); process.exit(1); }
