@@ -58,6 +58,9 @@ check('です・ます調にしない', bad(/(です|ます|でした|ました|
 // 2026-10-22 社長の決定(台帳 docs/rules/PRESIDENT_DECISIONS.md): セリフの最後に必ず「笑」か顔文字か記号。自分で「リーダー」と言わない(まわりを立てる)
 const endBad = allAtsu.filter(l => !/(笑|[！？!?…♪〜]|[)）]|[\u{1F300}-\u{1FAFF}])$/u.test(String(l.t).trim()));
 check('あつのセリフは、最後に必ず「笑」か顔文字か記号が付く', endBad.length === 0, endBad.slice(0, 3).map(l => `${l.k}:${l.t}`).join(' / '));
+// 2026-10-22 社長「S要素は遠回しに」: あつにもまわりにも「S」「ドS」と言わせない(お話のだれのセリフでも)
+const sBad = [...allAtsu.map(l => l.t), ...storyLines.map(l => l.t)].filter(t => /ドS|Sっ気|Sな(?:とこ|ところ|人)|(?<![A-Za-z])S(?![A-Za-z.])/.test(t));
+check('「S」「ドS」とは言わせない(からかい方でにじませる)', sBad.length === 0, sBad.join(' / '));
 check('あつは自分で「リーダー」と言わない', bad(/(?<!ブ)リーダー/).length === 0, bad(/(?<!ブ)リーダー/).map(l => l.t).join(' / '));
 const exBad = (a.ASSISTANT_CHAT_EXAMPLES.atsu || []).filter(x => !/(笑|[！？!?…♪〜]|[)）])$/.test(String(x.a).trim()));
 check('おしゃべりの見本も、最後に「笑」か記号が付く', exBad.length === 0, exBad.map(x => x.a).join(' / '));
