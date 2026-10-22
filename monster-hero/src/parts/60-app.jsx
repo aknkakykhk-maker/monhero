@@ -11271,12 +11271,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   };
   // ハムのクロスカウンターを出す: 攻撃のタイミングで名前を出し、出した枠を控える(ターンごとに1回だけ。与ダメの倍率は getDmg の中で掛かっている)。
   // カウンター+1は、同じターンの次の攻撃まで倍率が変わらないよう、カードを出し終えてから(下の commitTacticsExCrossCounters)入れる
+  // ★技名はカウンターの数で変わる(1 クロス・2 フル・3 リベンジ。2026-10-22 社長)。出した枠には技名を控え、回避の記録にも同じ名前を出す。
+  //   戻り値は演出に使う { name, tier, mult, counter }(出なかったときは null)。フル・リベンジのカットインは呼んだ側で待つ
   const fireTacticsExCross = (slotIdx) => {
     const crossMult=tacticsExCrossMultNow(slotIdx), liveNow=tacticsExLiveRef.current.now, cx=tacticsExCrossRef.current;
     const mine=cx.wave===liveNow.wave&&cx.turn===liveNow.turn?cx.slots:{};
-    if(crossMult<=1||mine[slotIdx]) return;
-    tacticsExCrossRef.current={ wave:liveNow.wave, turn:liveNow.turn, slots:{ ...mine, [slotIdx]:true } };
-    addPopup(`🥊 クロスカウンター ×${crossMult}!`,'hero','text-orange-300 font-black text-3xl drop-shadow-lg');
+    if(crossMult<=1||mine[slotIdx]) return null;
+    const ct=tacticsExCounterOf(tacticsExStateRef.current,tacticsUnitsRef.current,slotIdx,liveNow);
+    const named=tacticsExCounterNameOf(ct?ct.counter:1);
+    tacticsExCrossRef.current={ wave:liveNow.wave, turn:liveNow.turn, slots:{ ...mine, [slotIdx]:{ name:named.name, tier:named.tier } } };
+    addPopup(`🥊 ${named.name} ×${crossMult}!`,'hero',named.tier==='cross'?'text-orange-300 font-black text-4xl drop-shadow-lg':'text-amber-200 font-black text-4xl drop-shadow-lg');
+    return { name:named.name, tier:named.tier, mult:crossMult, counter:ct?ct.counter:1 };
   };
   const commitTacticsExCrossCounters = () => {
     const cx=tacticsExCrossRef.current, liveNow=tacticsExLiveRef.current.now;
@@ -12248,7 +12253,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 if(cx.wave===liveNow.wave&&cx.turn===liveNow.turn&&cx.slots[slotIdx]){
                   const hamName=tacticsTargetName(units,slotIdx);
                   evadedName=hamName; slotFx[slotIdx]={evade:true};
-                  pushBattleLog(`🥊 ${hamName}のクロスカウンター！ 攻撃を回避した`,'ally');
+                  pushBattleLog(`🥊 ${hamName}の${cx.slots[slotIdx].name||'クロスカウンター'}！ 攻撃を回避した`,'ally');
                   return;
                 }
               }
@@ -12734,7 +12739,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // ハムのハムボクシング: いまのカウンターの数と、クロスカウンターの威力
           if(def.effect==='counter'&&isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)){
             const ct=tacticsExCounterOf(state,tacticsUnits,slotIdx,tacticsExNow);
-            if(ct) out.push(`カウンター ${ct.counter}（クロスカウンターの威力：与ダメ×${ct.mult*ct.counter}。発動するたび+1）`);
+            if(ct) out.push(`カウンター ${ct.counter}（${tacticsExCounterNameOf(ct.counter).name}の威力：与ダメ×${ct.mult*ct.counter}。発動するたび+1・最大${tacticsExCounterMax(def.counter)}）`);
           }
           // ライガーの雷狼影: いまの雷の数と、ためている/雷纏の段階
           if(def.effect==='thunder'&&isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)){
@@ -12769,6 +12774,34 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // ★効き目そのもの(攻撃の引き受け・ステータスの上下・固有技の切り替え)は、戦闘の計算側で
   //   isTacticsExEffectActive を見て決める。ここは「使った瞬間」に1度だけ起こすもの(演出・ログ)の置き場
   const TACTICS_EX_ON_USE = {};
+  // ハムのカウンターの演出(HamCounterFx・2026-10-22 社長「演出も派手にしてほしい」「フルからはカットイン付き」「タップで早送り」)。
+  //   cross   … 大きな文字・拳の光・揺れ(待たない)
+  //   full    … カットイン HAM_COUNTER_FX_MS.full(光の輪・強い揺れ)。このあいだ進行は止まり、タップで飛ばせる
+  //   revenge … さらに長く派手なカットイン(画面全体の白い光・大きな文字・2回の強い揺れ)
+  //   揺れは triggerShake を通すので、バトル設定の「画面の揺れ」を切っていれば揺れない
+  const [hamCounterFx, setHamCounterFx] = useState(null);
+  const hamCounterFxDoneRef = useRef(null);
+  const hamCounterFxTimerRef = useRef(null);
+  const skipHamCounterFx = () => {
+    if (hamCounterFxTimerRef.current) { clearTimeout(hamCounterFxTimerRef.current); hamCounterFxTimerRef.current = null; }
+    const done = hamCounterFxDoneRef.current; hamCounterFxDoneRef.current = null;
+    setHamCounterFx(null);
+    if (done) done();
+  };
+  const playHamCounterFx = (fx, slotIdx, mon) => new Promise(resolve => {
+    const tier = fx && HAM_COUNTER_FX_MS[fx.tier] != null ? fx.tier : 'cross';
+    const ms = Math.max(200, battleMs(HAM_COUNTER_FX_MS[tier]));
+    if (hamCounterFxDoneRef.current) skipHamCounterFx();
+    setHamCounterFx({ key: Date.now(), tier, name: fx.name, mult: fx.mult, counter: fx.counter, slotIndex: slotIdx, ms,
+      monId: mon && mon.id, imgUrl: mon && mon.imgUrl, colors: mon && mon.colors, monName: (mon && (mon.masuName || mon.name)) || 'ハム' });
+    if (tier === 'cross') { Audio_.se.crit(); triggerShake(false); }
+    else if (tier === 'full') { Audio_.se.special(); triggerShake(true); setTimeout(() => Audio_.se.crit(), Math.round(ms * 0.22)); }
+    else { Audio_.se.special(); triggerShake(true); setTimeout(() => { Audio_.se.crit(); triggerShake(true); }, Math.round(ms * 0.28)); setTimeout(() => Audio_.se.crit(), Math.round(ms * 0.36)); }
+    hamCounterFxDoneRef.current = resolve;
+    hamCounterFxTimerRef.current = setTimeout(skipHamCounterFx, ms);
+    // クロスは見せるだけで待たない(文字と揺れは時間で消える)
+    if (tier === 'cross') { hamCounterFxDoneRef.current = null; resolve(); }
+  });
   // EXを使った瞬間のカットイン(TacticsExCutin)。見た目だけなので、進行は待たずに時間で片付ける
   const [tacticsExCutin, setTacticsExCutin] = useState(null);
   const tacticsExCutinTimerRef = useRef(null);
@@ -13274,7 +13307,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1, exCombos:withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx,halved,card),livePermaBuff('fateStacks',null),slotIdx),blackNoteEffectAt(slotIdx,activeMon?.id).combo), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
         const isCrit=hits[0].crit; const finalD=hits[0].dmg; if(isCrit) hasCrit=true; totalDmg+=finalD;
         if(aquaStackFromCard(slotIdx,card)==='finale'){ immediateStun=true; setImmediateTurnBuff('stunEnemy',true); } // ★アクアフィールドの水牢・氷結(ウンディーネ種の攻撃カード)
-        fireTacticsExCross(slotIdx); // ★ハムのクロスカウンター(狙われたハムが攻撃したら、攻撃のタイミングで名前を出す)
+        // ★ハムのカウンター(狙われたハムが攻撃したら、攻撃のタイミングで名前を出す)。クロスは文字と揺れ、フル・リベンジはカットインを待つ(タップで飛ばせる)
+        { const crossFx=fireTacticsExCross(slotIdx); if(crossFx) await playHamCounterFx(crossFx,slotIdx,activeMon); }
         const rangeMoveTarget=card.type==='range_atk' && card.rangeIdx!=null ? card.rangeIdx : null;
         attackHits.push({dmg:finalD, isCrit, slotIdx, isSpecial:(card.type==='unique'||card.type==='range_atk'), skillName:(card.name||card.baseName), isUnique:card.type==='unique', monId:card.type==='unique'?card.monId:undefined, rangeMoveTarget});
         // 連撃・全体連撃。専用モーションを続けて再生しないもの(禁忌解錠・全体連撃)は noAnim で数値だけを表示する
@@ -20842,7 +20876,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             getNextTurnBuff={getNextTurnBuff} getPermaBuff={getPermaBuff} getTurnBuff={getTurnBuff}
             getWaveBuff={getWaveBuff} guardCardWeight={guardCardWeight} guardFx={guardFx} guardImpact={guardImpact} guardLevel={guardLevel}
             guardValueOf={guardValueOf} tacticsSlotGuardValue={tacticsSlotGuardValue}
-            tacticsExInfo={tacticsExInfo} activateTacticsEx={activateTacticsEx} tacticsExCutin={tacticsExCutin}
+            tacticsExInfo={tacticsExInfo} activateTacticsEx={activateTacticsEx} tacticsExCutin={tacticsExCutin} hamCounterFx={hamCounterFx} skipHamCounterFx={skipHamCounterFx}
             tacticsExIntroVisible={tacticsExIntroVisible} dismissTacticsExIntro={dismissTacticsExIntro} tacticsPandoraForms={tacticsPandoraForms} trickStartView={trickStartView} sweetStackView={sweetStackView} bowStackView={bowStackView} fateWheelView={fateWheelView} enemyConfuseTurns={enemyConfuseTurns} luckBanners={luckBanners}
             tacticsExTurnUsed={tacticsExTurnUsed} passTacticsTurn={passTacticsTurn} tacticsHate={tacticsHate} tacticsHateOn={tacticsHateOnFor(runMode)} tacticsCoverSlot={tacticsExEnabled?tacticsExCoverSlot(tacticsExState,tacticsUnits,tacticsExNow):null}
             guts={guts} hand={hand} heroCardBonus={heroCardBonus} heroDist={heroDist}
