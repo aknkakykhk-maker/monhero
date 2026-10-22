@@ -1261,6 +1261,8 @@ const MONSTER_IDLE_RIGS = Object.freeze({
   Spooky: { body:'hover', bodyMask:IDLE_SPOOKY_BODY_MASK, parts:[{ mask:IDLE_SPOOKY_TAIL_MASK, origin:'58% 86%', anim:'wag', amp:5, dur:1900, delay:0, layer:'back' }, { mask:IDLE_SPOOKY_HAT_TIP_MASK, origin:'66% 12%', anim:'swing', amp:-6, dur:2600, delay:500, layer:'front' }] },
   Melody: { body:'breathe', bodyMask:IDLE_MELODY_BODY_MASK, parts:[{ mask:IDLE_MELODY_TAIL_MASK, origin:'81.8% 79.5%', anim:'wag', amp:8, dur:1800, delay:0, layer:'back' }] },
   Kuromy: { body:'breathe', bodyMask:IDLE_KUROMY_BODY_MASK, parts:[{ mask:IDLE_KUROMY_TAIL_MASK, origin:'65.9% 53.4%', anim:'wag', amp:7, dur:1700, delay:0, layer:'back' }] },
+  Illumine: { body:'hover', bodyMask:IDLE_ILLUMINE_BODY_MASK, parts:[{ mask:IDLE_ILLUMINE_HAIR_L_MASK, origin:'17.1% 75%', anim:'swing', amp:5, dur:2800, delay:0, layer:'back' }, { mask:IDLE_ILLUMINE_HAIR_R_MASK, origin:'82.9% 75%', anim:'swing', amp:-5, dur:2800, delay:600, layer:'back' }] },
+  Dreamy: { body:'breathe', bodyMask:IDLE_DREAMY_BODY_MASK, parts:[{ mask:IDLE_DREAMY_BEADS_L_MASK, origin:'20% 35%', anim:'swing', amp:2.5, dur:2400, delay:0, layer:'back' }, { mask:IDLE_DREAMY_BEADS_R_MASK, origin:'79.3% 34%', anim:'swing', amp:-2.5, dur:2400, delay:500, layer:'back' }] },
 });
 // ==== MONSTER_IDLE_RIGS ここまで ====
 const MONSTER_IDLE_MASK_STYLE = (url) => ({

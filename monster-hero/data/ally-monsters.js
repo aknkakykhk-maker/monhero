@@ -128,5 +128,10 @@ const STARTER_MONSTER_IDS = ['Mocchi','Suezo','Golem','Tiger','Ham','Pixie','Mon
 // ユグドラシルとメルホイップは 2026-09-29、ゴーストとスプーキーは 2026-10-05、メロディーとクロミーは 2026-10-08 に正式実装したので ALL_PLAYER_MONSTERS へ移した。
 //   draftUniqueNames … 固有技の9段階名(正式実装のとき unique.names へ移す)
 const UPCOMING_MONSTER_DRAFTS = Object.freeze({
-  // (2026-10-08 にメロディー・クロミーを正式実装したので、いまは案の段階の子はいない)
+  // イルミネ・ドリーミィ(2026-10-22・案の段階)。名前と血統は社長指定(イルミネ×イルミネ / イルミネ×ニャー)。
+  // 立ち絵・顔アイコン(仮)・図鑑の文・待機アニメまで入れた。能力値・技・勇者特性・固有技・タイプ・顔アイコンの本決めは社長の答え待ち
+  Illumine: Object.freeze({ id:'Illumine', name:"イルミネ", emoji:"🌌", imgUrl:ILLUMINE_IMG, iconUrl:ILLUMINE_ICON,
+    faceIconUrl:ILLUMINE_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'illumine', sub:'illumine' }) }),
+  Dreamy: Object.freeze({ id:'Dreamy', name:"ドリーミィ", emoji:"🧸", imgUrl:DREAMY_IMG, iconUrl:DREAMY_ICON,
+    faceIconUrl:DREAMY_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'illumine', sub:'nya' }) }),
 });

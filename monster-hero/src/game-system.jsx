@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 0fc9951e51193a4e
+// generated-sha256: 1a38a2d41ace0a71
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-22 13:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-22 20:07"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15072,6 +15072,8 @@ const MONSTER_IDLE_RIGS = Object.freeze({
   Spooky: { body:'hover', bodyMask:IDLE_SPOOKY_BODY_MASK, parts:[{ mask:IDLE_SPOOKY_TAIL_MASK, origin:'58% 86%', anim:'wag', amp:5, dur:1900, delay:0, layer:'back' }, { mask:IDLE_SPOOKY_HAT_TIP_MASK, origin:'66% 12%', anim:'swing', amp:-6, dur:2600, delay:500, layer:'front' }] },
   Melody: { body:'breathe', bodyMask:IDLE_MELODY_BODY_MASK, parts:[{ mask:IDLE_MELODY_TAIL_MASK, origin:'81.8% 79.5%', anim:'wag', amp:8, dur:1800, delay:0, layer:'back' }] },
   Kuromy: { body:'breathe', bodyMask:IDLE_KUROMY_BODY_MASK, parts:[{ mask:IDLE_KUROMY_TAIL_MASK, origin:'65.9% 53.4%', anim:'wag', amp:7, dur:1700, delay:0, layer:'back' }] },
+  Illumine: { body:'hover', bodyMask:IDLE_ILLUMINE_BODY_MASK, parts:[{ mask:IDLE_ILLUMINE_HAIR_L_MASK, origin:'17.1% 75%', anim:'swing', amp:5, dur:2800, delay:0, layer:'back' }, { mask:IDLE_ILLUMINE_HAIR_R_MASK, origin:'82.9% 75%', anim:'swing', amp:-5, dur:2800, delay:600, layer:'back' }] },
+  Dreamy: { body:'breathe', bodyMask:IDLE_DREAMY_BODY_MASK, parts:[{ mask:IDLE_DREAMY_BEADS_L_MASK, origin:'20% 35%', anim:'swing', amp:2.5, dur:2400, delay:0, layer:'back' }, { mask:IDLE_DREAMY_BEADS_R_MASK, origin:'79.3% 34%', anim:'swing', amp:-2.5, dur:2400, delay:500, layer:'back' }] },
 });
 // ==== MONSTER_IDLE_RIGS ここまで ====
 const MONSTER_IDLE_MASK_STYLE = (url) => ({
