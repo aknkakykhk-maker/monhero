@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4f155bbae5cd9d33
+// generated-sha256: c1e11622b023bbe3
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-23 00:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-23 02:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -33997,10 +33997,11 @@ function MonsterAttackPreviewScreen({ dexMonsterId, dexAttackPreview, unlockedMo
 function MonsterTypeBadge({ monId, size = 'sm', compact = false }) {
   if (!monsterTypeProtoOn()) return null;
   const t = monsterTypeOf(monId);
+  // key はメイン/サブで分ける(メインとサブが同じタイプの子で key がかぶると、図鑑で次の子へ移ったときに前の子の印が残る)
   const chip = (key, isSub) => {
     const d = MONSTER_TYPES[key];
     const iconOnly = isSub && compact;
-    return (<span key={key} data-monster-type={key} data-monster-type-sub={isSub ? 'true' : undefined} title={`${isSub ? 'サブ' : 'メイン'}タイプ：${d.label}(${d.note})`}
+    return (<span key={`${isSub ? 'sub' : 'main'}-${key}`} data-monster-type={key} data-monster-type-sub={isSub ? 'true' : undefined} title={`${isSub ? 'サブ' : 'メイン'}タイプ：${d.label}(${d.note})`}
       className={`inline-flex items-center gap-0.5 rounded-full border ${compact ? 'px-1' : 'px-1.5'} py-px font-black leading-none whitespace-nowrap ${size === 'md' ? 'text-[11px]' : 'text-[9px]'} ${isSub ? 'border-white/15 bg-white/5 text-slate-300' : 'border-amber-300/50 bg-amber-500/15 text-amber-100'}`}>
       <span aria-hidden="true">{cardIconNode(d.icon, 10)}</span>{iconOnly ? <span className="sr-only">{d.label}</span> : d.label}</span>);
   };
