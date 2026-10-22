@@ -426,6 +426,15 @@ check('連打のあとは笑って元に戻す',
     const last = c.__s.ASSISTANT_SPAM_LINES[c.__s.ASSISTANT_SPAM_LINES.length - 1];
     return c.__s.ASSISTANT_SPAM_LINES.length >= 5 && last.last === true && /うそだよ/.test(c.__s.ASSISTANT_SPAM_RECOVER.t);
   })());
+check('連打のセリフは助手ごと(みゅあ以外の全員に専用の6行と戻りがある)',
+  has('assistantSpamLinesOf(who.id)') && has('assistantSpamRecoverOf(who.id)')
+    && (() => { const c = {}; require('vm').createContext(c);
+      require('vm').runInContext(assistantsSrc + ';globalThis.__s={ASSISTANTS,ASSISTANT_SPAM_SETS};', c);
+      return c.__s.ASSISTANTS.filter(a => a.id !== 'mua').every(a => {
+        const set = c.__s.ASSISTANT_SPAM_SETS[a.id];
+        return set && Array.isArray(set.lines) && set.lines.length >= 5 && set.lines[set.lines.length - 1].last === true
+          && set.recover && typeof set.recover.t === 'string' && set.recover.t.length > 0;
+      }); })());
 check('場面が変わったら送ったセリフも連打もリセットする',
   has('useEffect(() => { setTapped(null); setSpam(null); tapTimesRef.current = []; }, [pickKey]);'));
 check('場面キーだけでも、直接指定でも呼べる',

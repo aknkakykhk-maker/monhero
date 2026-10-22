@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 47a1fd898c5e32ef
+// source-sha256: 3f44fd24198cbced
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-22 10:44";
+const BUILD_DATE = "2026-10-22 10:55";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -17086,8 +17086,8 @@ const AssistantBubble = ({
     setSpam(null);
     tapTimesRef.current = [];
   }, [pickKey]);
-  const spamLines = typeof ASSISTANT_SPAM_LINES !== 'undefined' && ASSISTANT_SPAM_LINES || [];
-  const spamRecover = typeof ASSISTANT_SPAM_RECOVER !== 'undefined' && ASSISTANT_SPAM_RECOVER || null;
+  const spamLines = (typeof assistantSpamLinesOf === 'function' ? assistantSpamLinesOf(who.id) : typeof ASSISTANT_SPAM_LINES !== 'undefined' && ASSISTANT_SPAM_LINES) || [];
+  const spamRecover = (typeof assistantSpamRecoverOf === 'function' ? assistantSpamRecoverOf(who.id) : typeof ASSISTANT_SPAM_RECOVER !== 'undefined' && ASSISTANT_SPAM_RECOVER) || null;
   const onFaceTap = () => {
     if (typeof bond.onTalk === 'function') bond.onTalk();
     const now = Date.now();
@@ -111921,7 +111921,12 @@ function MonsterHeroGame() {
       const who = activeAssistant;
       const scenes = typeof ASSISTANT_SCENES !== 'undefined' && ASSISTANT_SCENES || {};
       const exprs = typeof ASSISTANT_EXPRESSIONS !== 'undefined' && ASSISTANT_EXPRESSIONS || [];
-      const spam = [...(typeof ASSISTANT_SPAM_LINES !== 'undefined' && ASSISTANT_SPAM_LINES || []), ...(typeof ASSISTANT_SPAM_RECOVER !== 'undefined' && ASSISTANT_SPAM_RECOVER ? [ASSISTANT_SPAM_RECOVER] : [])];
+      const spamLinesOf = typeof assistantSpamLinesOf === 'function' ? assistantSpamLinesOf(selectedAssistantId) : typeof ASSISTANT_SPAM_LINES !== 'undefined' && ASSISTANT_SPAM_LINES || [];
+      const spamRecoverOf = typeof assistantSpamRecoverOf === 'function' ? assistantSpamRecoverOf(selectedAssistantId) : typeof ASSISTANT_SPAM_RECOVER !== 'undefined' && ASSISTANT_SPAM_RECOVER || null;
+      const spam = [...(spamLinesOf || []), ...(spamRecoverOf ? [spamRecoverOf] : [])].map(l => ({
+        ...l,
+        who: selectedAssistantId
+      }));
       const titles = {
         lines: '全助手コメント',
         expressions: '全表情',

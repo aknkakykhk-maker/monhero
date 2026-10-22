@@ -187,8 +187,9 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
   useEffect(() => () => { if (spamTimerRef.current) clearTimeout(spamTimerRef.current); }, []);
   // 場面が変われば、送ったセリフも連打の状態もリセットする
   useEffect(() => { setTapped(null); setSpam(null); tapTimesRef.current = []; }, [pickKey]);
-  const spamLines = (typeof ASSISTANT_SPAM_LINES !== 'undefined' && ASSISTANT_SPAM_LINES) || [];
-  const spamRecover = (typeof ASSISTANT_SPAM_RECOVER !== 'undefined' && ASSISTANT_SPAM_RECOVER) || null;
+  // 連打のセリフは助手ごと(書いていない助手はみゅあのぶん)
+  const spamLines = (typeof assistantSpamLinesOf === 'function' ? assistantSpamLinesOf(who.id) : (typeof ASSISTANT_SPAM_LINES !== 'undefined' && ASSISTANT_SPAM_LINES)) || [];
+  const spamRecover = (typeof assistantSpamRecoverOf === 'function' ? assistantSpamRecoverOf(who.id) : (typeof ASSISTANT_SPAM_RECOVER !== 'undefined' && ASSISTANT_SPAM_RECOVER)) || null;
   const onFaceTap = () => {
     // 話しかけると少しだけ仲良くなる(1日に増える量は data/assistants.js 側で頭打ち)
     if (typeof bond.onTalk === 'function') bond.onTalk();
