@@ -733,6 +733,51 @@ const tacticsHateWeightMult = (hate, index) => {
   }
   return pts[pts.length - 1][1];
 };
+// ヘルプ「タクティクスバトルの狙われやすさ(🔥)」の表(2026-10-22 社長「こういう質問とかにもおしゃべりで答えられたらいいね」→「ヘルプに目安の表を足す」)。
+// ★数字は TACTICS_HATE・MONSTER_TYPES・TACTICS_TARGET_LOW_HP_BIAS から作り、目安の確率はゲームの狙いの重み(tacticsHateWeightMult)で計算する。
+//   書き写さないので、ヘイトを調整してもヘルプが古いままにならない。敵の数字は出さない。2列目は短く(help-render-check)。
+//   ヘルプ(helpDataRows)と、おしゃべりの材料(tools/build-assistant-chat-digest.js)の両方がこれを読む
+const tacticsHateHelpRows = (id) => {
+  if (id === 'tacticsHateGains') {
+    const a = TACTICS_HATE.action, ex = TACTICS_HATE.exByEffect || {};
+    const exVals = Object.values(ex).concat([a.ex]).filter(v => Number.isFinite(v));
+    const tankGuard = (MONSTER_TYPES.tank && MONSTER_TYPES.tank.hateAdd && MONSTER_TYPES.tank.hateAdd.guard) || 0;
+    return [
+      ['通常攻撃', `+${a.atk}`],
+      ['固有技', `+${a.unique}`],
+      ['与えたダメージ', `味方の中の割合 × ${a.dmgShare}`],
+      ['強化のカード', `+${a.buff}`],
+      ['弱体のカード', `+${a.debuff}`],
+      ['ガード', `+${a.guard}${tankGuard ? `（タンクは +${tankGuard}）` : ''}`],
+      ['回復', `回復した割合 × ${a.heal}`],
+      ['あつの挑発', `+${a.taunt}`],
+      ['EXスキル', `+${Math.min(...exVals)}〜${Math.max(...exVals)}`],
+      ['毎ターン', `×${TACTICS_HATE.decay}（${Math.round((1 - TACTICS_HATE.decay) * 10)}割へる）`],
+      ['上限', `${TACTICS_HATE.cap}`],
+    ];
+  }
+  if (id === 'tacticsHateTypes') {
+    const st = TACTICS_HATE.start;
+    const sign = (v) => (v > 0 ? `+${v}` : `${v}`);
+    return Object.entries(MONSTER_TYPES).map(([key, t]) => [`${t.icon} ${t.label}`,
+      `増え方 ×${t.hateMult} ／ 始め ${st.main[key] || 0}（サブ ${sign(st.sub[key] || 0)}）`]);
+  }
+  if (id === 'tacticsHateOdds') {
+    const rows = TACTICS_HATE.weightCurve.map(([h, m]) => [`🔥ヘイト ${h}`, `狙われやすさ ×${m}`]);
+    const bias = typeof TACTICS_TARGET_LOW_HP_BIAS !== 'undefined' ? TACTICS_TARGET_LOW_HP_BIAS : 0;
+    rows.push(['ライフ満タン', '×1'], ['ライフ半分', `×${1 + bias * 0.5}`], ['ライフわずか', `×${1 + bias}近く`]);
+    // 目安: 4体ともライフ満タン(ライフの倍率は1)・ほかの3体はヘイト0のとき、1体のヘイトがいくつなら何%狙われるか。
+    //   狙いの重みはゲームと同じ tacticsHateWeightMult で計算する(ライフ満タンなら tacticsTargetWeights と同じ値になる。tactics-hate-check で確かめる)
+    [0, 20, 40, 60, 90, 100].forEach(h => {
+      const hate = [h, 0, 0, 0];
+      const w = [0, 1, 2, 3].map(i => tacticsHateWeightMult(hate, i));
+      const sum = w.reduce((x, y) => x + y, 0) || 1;
+      rows.push([`1体が🔥${h}・ほか0`, `その子 ${Math.round(w[0] / sum * 100)}% ／ ほか ${Math.round(w[1] / sum * 100)}%ずつ`]);
+    });
+    return rows;
+  }
+  return [];
+};
 // 炎の段(0〜3)。だれでも同じ値で見る(2026-10-22 勇者モンの下地を外したので、引かない)
 const tacticsHateFlame = (value) => {
   const v = tacticsHateNum(value);

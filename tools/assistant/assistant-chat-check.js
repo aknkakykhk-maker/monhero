@@ -320,6 +320,9 @@ const unit = async (core) => {
     ['種族チャレンジのやり方', 'basics/species-challenge'],
     ['タクティクスバトルってなに', 'basics/tactics-battle'],
     ['EXスキルの使い方', 'basics/tactics-ex-skills'],
+    // 2026-10-22 社長「タンクが90のときほかの子は何%？」→「こういう質問とかにもおしゃべりで答えられたらいいね」(数字の表の項目を選ぶ)
+    ['タンクが90のときほかは何%？', 'basics/tactics-hate-numbers'],
+    ['ヘイトってどうやったら増えるの', 'basics/tactics-hate-numbers'],
   ];
   const misses = [];
   for (const [q, want] of CASES) {

@@ -652,6 +652,13 @@ const helpDataRows = (id) => {
         return [`${monName}「${def.name}」`,
           `${def.unlimited ? '無制限' : `1ラン${def.maxUses}回`} ／ ${def.withCards ? 'カードと併用可' : 'その子はカード不可'} ／ ${duration}`];
       });
+    // タクティクスの狙われやすさ(🔥・ヘイト)の仕組みの数字(2026-10-22 社長「こういう質問とかにもおしゃべりで答えられたらいいね」→「ヘルプに目安の表を足す」)。
+    // ★数字は TACTICS_HATE・MONSTER_TYPES・TACTICS_TARGET_LOW_HP_BIAS から作り、目安の確率はゲームの狙いの関数(tacticsTargetWeights)で計算する。
+    //   書き写さないので、ヘイトを調整してもヘルプが古いままにならない。敵の数字は出さない。2列目は短く(help-render-check)
+    case 'tacticsHateGains':
+    case 'tacticsHateTypes':
+    case 'tacticsHateOdds':
+      return typeof tacticsHateHelpRows === 'function' ? tacticsHateHelpRows(id) : [];
     // イベント・レイドボス「ジャック」の段階(2026-10-04)。名前・ライフ・技の本数は 35-raid-jack.jsx の定義から作る。
     // ★ライフや倍率を調整したときにヘルプが古いままにならないよう、行を書き写さない。2列目は短く(help-render-check)
     case 'raidJackTiersA':
@@ -931,6 +938,9 @@ const HELP_DATA_TITLES = {
   raidJackTiersA: 'レイドバトルのジャック(段階ごとの共有ライフ)',
   raidJackTiersB: 'グランドスラムのジャック(段階ごとのライフ)',
   tacticsExSkills: 'タクティクスバトルのEXスキル',
+  tacticsHateGains: '🔥(ヘイト)の増え方',
+  tacticsHateTypes: 'タイプごとの🔥',
+  tacticsHateOdds: '狙われやすさの目安',
   proQuickLoops: 'プロモードで入るクイック周回数',
   extremeDifficulties: '極限チャレンジの難易度',
   rhythmEventPlayBonus: 'イベントの回数ボーナス（1回あたり）',

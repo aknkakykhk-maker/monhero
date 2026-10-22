@@ -126,7 +126,11 @@ check('⑧ 手札と EX の詳細に段を出す(ヘイトが切なら出さな�
   const W = H.weightCurve;
   check('⑨ 倍率の点が TACTICS_HATE.weightCurve にあり、0 で ×1・上限まで増える一方', Array.isArray(W) && W[0][0] === 0 && W[0][1] === 1 && W[W.length - 1][0] === H.cap
     && W.every((pt, i) => i === 0 || (pt[0] > W[i - 1][0] && pt[1] > W[i - 1][1])) && !('k' in H));
-  check('⑨ 倍率の式は tacticsHateWeightMult の1か所だけ', (read('monster-hero/src/parts/32-tactics-units.jsx').match(/TACTICS_HATE\.weightCurve/g) || []).length === 1);
+  // 倍率の計算は tacticsHateWeightMult だけ。ヘルプの表(tacticsHateHelpRows)は点を表示に読むだけで、確率は tacticsHateWeightMult で出す
+  const unitsSrc = read('monster-hero/src/parts/32-tactics-units.jsx');
+  const helpFn = unitsSrc.slice(unitsSrc.indexOf('const tacticsHateHelpRows'), unitsSrc.indexOf('// 炎の段(0〜3)'));
+  check('⑨ 倍率の式は tacticsHateWeightMult の1か所だけ(ヘルプの表は点を表示するだけ)', (unitsSrc.match(/TACTICS_HATE\.weightCurve/g) || []).length === 2
+    && (helpFn.match(/TACTICS_HATE\.weightCurve/g) || []).length === 1 && /tacticsHateWeightMult\(hate, i\)/.test(helpFn));
   const full = (id) => ({ id, name: id, hp: 500, maxHp: 500, guts: 10, maxGuts: 10, atk: 100, def: 100 });
   const ids4 = ['Mocchi', 'Yggdrasil', 'Ghost', 'Ham'], us = ids4.map(full);
   const prob = (hate, i) => { const w = G.tacticsTargetWeights(us, G.TACTICS_TARGET_LOW_HP_BIAS, hate); return w.find((x) => x.index === i).weight / w.reduce((a, x) => a + x.weight, 0); };
@@ -144,6 +148,14 @@ check('⑧ 手札と EX の詳細に段を出す(ヘイトが切なら出さな�
     const p = Math.max(...w) / sum;
     if (p > worst.p) worst = { p, team };
   }
+  // ヘルプ「狙われやすさ(🔥)の数字」の目安(tacticsHateHelpRows)は、ライフ満タンの4体を狙いの関数(tacticsTargetWeights)で計算した値と同じ
+  const odds = G.tacticsHateHelpRows('tacticsHateOdds').filter((r) => /^1体が🔥/.test(r[0]));
+  const oddsOk = odds.length === 6 && odds.every((r) => {
+    const h = Number(/🔥(\d+)/.exec(r[0])[1]), m = /その子 (\d+)% ／ ほか (\d+)%/.exec(r[1]);
+    return m && +m[1] === Math.round(prob([h, 0, 0, 0], 0) * 100) && +m[2] === Math.round(prob([h, 0, 0, 0], 1) * 100);
+  });
+  check('⑨ ヘルプの目安の表は、ゲームの狙いの関数と同じ値(🔥90 なら その子91%・ほか3%)', oddsOk && odds.some((r) => r[0] === '1体が🔥90・ほか0' && r[1] === 'その子 91% ／ ほか 3%ずつ'), odds.map((r) => r.join(' ')).join(' / '));
+  check('⑨ ヘルプの表は3つとも行がある(数字は TACTICS_HATE から作る)', ['tacticsHateGains', 'tacticsHateTypes', 'tacticsHateOdds'].every((id) => G.tacticsHateHelpRows(id).length > 0));
   check('⑨ WAVE の始めは、どの4体でもいちばん狙われる子が 60% 未満', worst.p < 0.6, `いちばん偏る組 ${worst.team.join('・')} → ${(worst.p * 100).toFixed(1)}%`);
 }
 

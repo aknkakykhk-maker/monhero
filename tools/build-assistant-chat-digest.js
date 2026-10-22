@@ -36,6 +36,9 @@ const EXPLAIN_WORDS = /難易度|編成|ボタン|画面|設定|タブ|一覧|�
 // 答えの中身ではなく「その項目を選ぶための言葉」なので、ここに説明は書かない
 const TOPIC_ALIASES = {
   'rhythm/rhythm-multi': 'マルチ マルチプレイ 協力 部屋 フリーマッチ プライベート',
+  // 2026-10-22 社長「タンクが90のときほかの子は何%？」(ゲームの中の名前は🔥・狙われやすさ。プレイヤーは「ヘイト」とも呼ぶ)
+  'basics/tactics-hate': 'ヘイト 狙われ 狙われる 狙われやすさ タゲ',
+  'basics/tactics-hate-numbers': 'ヘイト 狙われ 確率 何% 何パーセント 増え方 タンク 数字 目安',
 };
 // 用語の小さな表(2026-10-14 窓口の指摘「みゅあが自分の愛称『モンビー』を知らないと答えた」)。
 // ここに書くのは「同じものの言い方の組」と「説明を取るヘルプの項目」だけ。
@@ -104,6 +107,16 @@ const loadReleaseFlags = () => {
   return out;
 };
 
+// 実データから作る表(t:'data')のうち、ブラウザなしで作れるものは行を本文に入れる(2026-10-22 社長「こういう質問とかにもおしゃべりで答えられたらいいね」)。
+// 行を作るのはゲームと同じ関数(32-tactics-units.jsx の tacticsHateHelpRows)。ほかの表は今までどおり入れない
+let game = null;
+const dataBlockText = (id) => {
+  if (!/^tacticsHate/.test(String(id))) return '';
+  if (!game) game = require('./playbot/sim/load-game').loadGame();
+  const rows = typeof game.tacticsHateHelpRows === 'function' ? game.tacticsHateHelpRows(id) : [];
+  return rows.map(r => `${r[0]}: ${r[1]}`).join('\n');
+};
+
 const buildDigest = () => {
   const flags = loadReleaseFlags();
   const released = (x) => !x || ((!x.releaseFlag || flags[x.releaseFlag] === true) && (!x.unreleasedFlag || flags[x.unreleasedFlag] === false));
@@ -114,7 +127,7 @@ const buildDigest = () => {
   (help.HELP_CATEGORIES || []).filter(released).forEach((cat, ci) => {
     const titles = [];
     for (const topic of (cat.topics || []).filter(released)) {
-      const body = (topic.blocks || []).filter(released).map(b => clean(help.helpBlockPlainText(b))).filter(Boolean).join(' ');
+      const body = (topic.blocks || []).filter(released).map(b => clean(b && b.t === 'data' ? dataBlockText(b.id) : help.helpBlockPlainText(b))).filter(Boolean).join(' ');
       if (!body) continue;
       const title = clean(topic.title);
       titles.push(title);
