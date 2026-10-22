@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: edd64fe69d86a78c
+// source-sha256: 1354068348dd59c1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-22 23:00";
+const BUILD_DATE = "2026-10-22 23:20";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -41770,8 +41770,8 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Dreamy: Object.freeze({
     id: 'dreamy_millefeuille_shield',
     name: 'ミルフィーシールド',
-    useNote: '全員に最大ライフぶんのシールド・3ターン 全員ちから丈夫さ+5%(楔1つごとに+5%)',
-    desc: '夢の雲を何層にも重ねて、味方全員を包む。\n・使った瞬間に、味方全員へ、それぞれ自分の最大ライフと同じ量のシールドを張る（受けるダメージはシールドから先に減る・3ターンで消える）\n・3ターンのあいだ、味方全員のちから・丈夫さ+5%\n・さらに、使った瞬間の敵の楔の数（いちばん多いもの）1つごとに+5%（楔0で+5%・3つで+20%・6つで+35%）。数は使ったときで決まり、3ターンのあいだ変わらない',
+    useNote: '全員に最大ライフぶんのシールド・3ターン シールドのある子はちから丈夫さ+5%(楔1つごとに+5%)',
+    desc: '夢の雲を何層にも重ねて、味方を包む。\n・使った瞬間に、立っている味方全員（ドリーミィも）へ、それぞれ自分の最大ライフと同じ量のシールドを張る。敵の攻撃はシールドが先に受け、0になってからライフが減る\n・シールドが残っている子は、ちから・丈夫さ+5%。さらに、使った瞬間の敵の楔の数（いちばん多いもの）1つごとに+5%（楔0で+5%・3つで+20%・6つで+35%）\n・シールドが0になった子は、ちから・丈夫さのアップもなくなる（ほかの子はそのまま）\n・3ターンたつと、残ったシールドもアップも消える\n・効いているあいだにもう一度使うと、シールドは残りに足され、残りターンは3に戻る。アップは、そのときの楔の数で決め直した値になる（重ならない）',
     maxUses: 5,
     unlimited: false,
     withCards: true,
@@ -42196,7 +42196,12 @@ const applyTacticsExUse = (state, {
         dodges: 0,
         avoidLeft: def.avoidCharges || 0,
         partyStatRate: def.millefeuille ? def.millefeuille.statBase + def.millefeuille.statPer * Math.max(0, tacticsSafeInt(snapshot && snapshot.kusabi, 0)) : def.partyStatRate || 0,
-        shields: def.millefeuille && snapshot && snapshot.shields && typeof snapshot.shields === 'object' ? Object.fromEntries(Object.entries(snapshot.shields).map(([k, v]) => [k, Math.max(0, tacticsSafeInt(v, 0))]).filter(([, v]) => v > 0)) : null,
+        shields: def.millefeuille && snapshot && snapshot.shields && typeof snapshot.shields === 'object' ? (() => {
+          const prev = safe.effects[slot];
+          const keep = prev && prev.effect === 'millefeuille' && prev.monId === monId && prev.shields && isTacticsExEffectActive(safe, slot, monId, now) ? prev.shields : {};
+          const keys = new Set([...Object.keys(keep), ...Object.keys(snapshot.shields)]);
+          return Object.fromEntries([...keys].map(k => [k, Math.max(0, tacticsSafeInt(keep[k], 0)) + Math.max(0, tacticsSafeInt(snapshot.shields[k], 0))]).filter(([, v]) => v > 0));
+        })() : null,
         dmgRate: def.dmgRate || 0,
         selfTakenRate: def.selfTakenRate || 0,
         critRateRate: def.critRateRate || 0,
@@ -43010,11 +43015,12 @@ const spendTacticsExAvoid = (state, units, slot, now) => {
   };
 };
 const tacticsExCritFixedAt = (state, units, slot, now) => tacticsExAvoidLeftOf(state, units, slot, now) > 0;
-const tacticsExPartyStatRate = (state, now) => {
+const tacticsExPartyStatRate = (state, now, slot = null) => {
   const effects = normalizeTacticsExState(state).effects;
   return Object.keys(effects).reduce((sum, key) => {
     const e = effects[key];
     if (!e || e.effect !== 'partyBoost' && e.effect !== 'trickConfuse' && e.effect !== 'millefeuille' || !isTacticsExEffectActive(state, key, e.monId, now)) return sum;
+    if (e.effect === 'millefeuille' && slot != null && !(e.shields && tacticsSafeInt(e.shields[String(slot)], 0) > 0)) return sum;
     const rate = Number(e.effect === 'partyBoost' ? e.partyBoostCfg && e.partyBoostCfg.statRate : e.partyStatRate);
     return Number.isFinite(rate) && rate > 0 ? sum + rate : sum;
   }, 0);
@@ -43229,7 +43235,7 @@ const rollEnemyConfusion = (intent, turns, rnd = Math.random) => {
 };
 const applyTacticsExStats = (unit, state, slot, now) => {
   const own = applyTacticsExOwnStats(unit, state, slot, now);
-  const party = unit && typeof unit === 'object' ? tacticsExPartyStatRate(state, now) : 0;
+  const party = unit && typeof unit === 'object' ? tacticsExPartyStatRate(state, now, slot) : 0;
   return party > 0 ? {
     ...own,
     atk: Math.floor(Math.max(0, tacticsSafeInt(own.atk, 0)) * (1 + party)),
@@ -67218,6 +67224,7 @@ function BattleScreen({
   sweetStackView,
   bowStackView,
   fateWheelView,
+  tacticsShields,
   enemyConfuseTurns,
   luckBanners,
   teachingFx,
@@ -69991,12 +69998,15 @@ function BattleScreen({
         className: "text-[8px] font-black tracking-wider text-pink-300"
       }, "ライフ"), React.createElement("span", {
         className: "font-mono leading-none"
-      }, React.createElement("span", {
+      }, Array.isArray(tacticsShields) && tacticsShields[i] > 0 && React.createElement("span", {
+        "data-tactics-shield": tacticsShields[i],
+        className: "mr-1 text-[9px] font-black text-sky-200"
+      }, "🛡️", tacticsShields[i]), React.createElement("span", {
         className: "text-[11px] font-black text-white"
       }, tacticsUnit.hp), React.createElement("span", {
         className: "text-[8px] text-slate-400"
       }, "/", tacticsUnit.maxHp))), React.createElement("div", {
-        className: "h-[2px] overflow-hidden rounded-full bg-black/60",
+        className: "relative h-[2px] overflow-hidden rounded-full bg-black/60",
         style: {
           boxShadow: 'inset 0 1px 2px rgba(0,0,0,.9)'
         }
@@ -70006,6 +70016,13 @@ function BattleScreen({
         style: {
           transform: `scaleX(${Math.min(100, Math.max(0, hpPct)) / 100})`,
           boxShadow: '0 0 6px rgba(244,114,182,.55)'
+        }
+      }), Array.isArray(tacticsShields) && tacticsShields[i] > 0 && tacticsUnit.maxHp > 0 && React.createElement("div", {
+        "data-tactics-shield-bar": true,
+        className: "absolute inset-y-0 left-0 bg-sky-300/80",
+        style: {
+          width: `${Math.min(100, tacticsShields[i] / tacticsUnit.maxHp * 100)}%`,
+          boxShadow: '0 0 6px rgba(125,211,252,.8)'
         }
       })), React.createElement("div", {
         className: "flex h-[10px] items-center justify-between leading-none"
@@ -111639,6 +111656,7 @@ function MonsterHeroGame() {
       dismissTacticsExIntro: dismissTacticsExIntro,
       tacticsPandoraForms: tacticsPandoraForms,
       trickStartView: trickStartView,
+      tacticsShields: isTacticsMode(runMode) && tacticsExEnabled ? [0, 1, 2, 3].map(i => tacticsExShieldAt(tacticsExState, i, tacticsExNow)) : null,
       sweetStackView: sweetStackView,
       bowStackView: bowStackView,
       fateWheelView: fateWheelView,

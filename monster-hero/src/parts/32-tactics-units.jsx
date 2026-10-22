@@ -1640,8 +1640,8 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Dreamy: Object.freeze({
     id: 'dreamy_millefeuille_shield',
     name: 'ミルフィーシールド',
-    useNote: '全員に最大ライフぶんのシールド・3ターン 全員ちから丈夫さ+5%(楔1つごとに+5%)',
-    desc: '夢の雲を何層にも重ねて、味方全員を包む。\n・使った瞬間に、味方全員へ、それぞれ自分の最大ライフと同じ量のシールドを張る（受けるダメージはシールドから先に減る・3ターンで消える）\n・3ターンのあいだ、味方全員のちから・丈夫さ+5%\n・さらに、使った瞬間の敵の楔の数（いちばん多いもの）1つごとに+5%（楔0で+5%・3つで+20%・6つで+35%）。数は使ったときで決まり、3ターンのあいだ変わらない',
+    useNote: '全員に最大ライフぶんのシールド・3ターン シールドのある子はちから丈夫さ+5%(楔1つごとに+5%)',
+    desc: '夢の雲を何層にも重ねて、味方を包む。\n・使った瞬間に、立っている味方全員（ドリーミィも）へ、それぞれ自分の最大ライフと同じ量のシールドを張る。敵の攻撃はシールドが先に受け、0になってからライフが減る\n・シールドが残っている子は、ちから・丈夫さ+5%。さらに、使った瞬間の敵の楔の数（いちばん多いもの）1つごとに+5%（楔0で+5%・3つで+20%・6つで+35%）\n・シールドが0になった子は、ちから・丈夫さのアップもなくなる（ほかの子はそのまま）\n・3ターンたつと、残ったシールドもアップも消える\n・効いているあいだにもう一度使うと、シールドは残りに足され、残りターンは3に戻る。アップは、そのときの楔の数で決め直した値になる（重ならない）',
     maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,
     millefeuille: Object.freeze({ statBase: 0.05, statPer: 0.05 }),
     effect: 'millefeuille',
@@ -1928,8 +1928,13 @@ const applyTacticsExUse = (state, { def, slot, monId, now, snapshot = null, choi
       avoidLeft: def.avoidCharges || 0,
       // ミルフィーシールド: 上げ幅は使った瞬間の楔の数で決めて固定する(snapshot.kusabi)。シールドは枠ごとの残り(snapshot.shields)
       partyStatRate: def.millefeuille ? def.millefeuille.statBase + def.millefeuille.statPer * Math.max(0, tacticsSafeInt(snapshot && snapshot.kusabi, 0)) : (def.partyStatRate || 0),
-      shields: def.millefeuille && snapshot && snapshot.shields && typeof snapshot.shields === 'object'
-        ? Object.fromEntries(Object.entries(snapshot.shields).map(([k, v]) => [k, Math.max(0, tacticsSafeInt(v, 0))]).filter(([, v]) => v > 0)) : null,
+      // 効いているあいだにもう一度使ったら、残りのシールドへ足す(2026-10-22 社長の決定。残りターンは3に戻り、上げ幅は決め直し)
+      shields: def.millefeuille && snapshot && snapshot.shields && typeof snapshot.shields === 'object' ? (() => {
+        const prev = safe.effects[slot];
+        const keep = prev && prev.effect === 'millefeuille' && prev.monId === monId && prev.shields && isTacticsExEffectActive(safe, slot, monId, now) ? prev.shields : {};
+        const keys = new Set([...Object.keys(keep), ...Object.keys(snapshot.shields)]);
+        return Object.fromEntries([...keys].map((k) => [k, Math.max(0, tacticsSafeInt(keep[k], 0)) + Math.max(0, tacticsSafeInt(snapshot.shields[k], 0))]).filter(([, v]) => v > 0));
+      })() : null,
       dmgRate: def.dmgRate || 0, selfTakenRate: def.selfTakenRate || 0, critRateRate: def.critRateRate || 0, critDmgRate: def.critDmgRate || 0,
       distMult: def.distMult || 0, guaranteeUnique: def.guaranteeUnique === true, uniqueCrit: def.uniqueCrit === true, cardBonus: def.cardBonus || 0,
       voltageCfg: def.voltage ? { ...def.voltage } : null, voltage: 0,
@@ -2453,11 +2458,14 @@ const tacticsExCritFixedAt = (state, units, slot, now) => tacticsExAvoidLeftOf(s
 // 味方全員のちから・丈夫さへ上乗せする倍率。効いている子が複数いれば足し算(使った子が倒れても残る)。効いていなければ 0
 //   緑のめぐみ(partyBoost・プラント) … partyBoostCfg.statRate
 //   トリックコンフューズ(trickConfuse・スプーキー。2026-10-05) … partyStatRate
-const tacticsExPartyStatRate = (state, now) => {
+//   ミルフィーシールド(millefeuille・ドリーミィ。2026-10-22) … partyStatRate。ただし、その子のシールドが残っているあいだだけ
+//   (社長「シールドが壊れたらステアップもなくなる」。slot を渡さないときは、シールドを見ずに数える)
+const tacticsExPartyStatRate = (state, now, slot = null) => {
   const effects = normalizeTacticsExState(state).effects;
   return Object.keys(effects).reduce((sum, key) => {
     const e = effects[key];
     if (!e || (e.effect !== 'partyBoost' && e.effect !== 'trickConfuse' && e.effect !== 'millefeuille') || !isTacticsExEffectActive(state, key, e.monId, now)) return sum;
+    if (e.effect === 'millefeuille' && slot != null && !(e.shields && tacticsSafeInt(e.shields[String(slot)], 0) > 0)) return sum;
     const rate = Number(e.effect === 'partyBoost' ? (e.partyBoostCfg && e.partyBoostCfg.statRate) : e.partyStatRate);
     return Number.isFinite(rate) && rate > 0 ? sum + rate : sum;
   }, 0);
@@ -2616,7 +2624,7 @@ const rollEnemyConfusion = (intent, turns, rnd = Math.random) => {
 // 味方全員のちから・丈夫さ(緑のめぐみ・トリックコンフューズ)は、その子自身のEXで変わったあとの値へ掛ける
 const applyTacticsExStats = (unit, state, slot, now) => {
   const own = applyTacticsExOwnStats(unit, state, slot, now);
-  const party = unit && typeof unit === 'object' ? tacticsExPartyStatRate(state, now) : 0;
+  const party = unit && typeof unit === 'object' ? tacticsExPartyStatRate(state, now, slot) : 0;
   return party > 0 ? { ...own, atk: Math.floor(Math.max(0, tacticsSafeInt(own.atk, 0)) * (1 + party)), def: Math.floor(Math.max(0, tacticsSafeInt(own.def, 0)) * (1 + party)) } : own;
 };
 const applyTacticsExOwnStats = (unit, state, slot, now) => {

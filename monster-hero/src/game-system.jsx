@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6e391bd645571947
+// generated-sha256: c3b59b1cf74406e6
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-22 23:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-22 23:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -25811,8 +25811,8 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Dreamy: Object.freeze({
     id: 'dreamy_millefeuille_shield',
     name: 'ミルフィーシールド',
-    useNote: '全員に最大ライフぶんのシールド・3ターン 全員ちから丈夫さ+5%(楔1つごとに+5%)',
-    desc: '夢の雲を何層にも重ねて、味方全員を包む。\n・使った瞬間に、味方全員へ、それぞれ自分の最大ライフと同じ量のシールドを張る（受けるダメージはシールドから先に減る・3ターンで消える）\n・3ターンのあいだ、味方全員のちから・丈夫さ+5%\n・さらに、使った瞬間の敵の楔の数（いちばん多いもの）1つごとに+5%（楔0で+5%・3つで+20%・6つで+35%）。数は使ったときで決まり、3ターンのあいだ変わらない',
+    useNote: '全員に最大ライフぶんのシールド・3ターン シールドのある子はちから丈夫さ+5%(楔1つごとに+5%)',
+    desc: '夢の雲を何層にも重ねて、味方を包む。\n・使った瞬間に、立っている味方全員（ドリーミィも）へ、それぞれ自分の最大ライフと同じ量のシールドを張る。敵の攻撃はシールドが先に受け、0になってからライフが減る\n・シールドが残っている子は、ちから・丈夫さ+5%。さらに、使った瞬間の敵の楔の数（いちばん多いもの）1つごとに+5%（楔0で+5%・3つで+20%・6つで+35%）\n・シールドが0になった子は、ちから・丈夫さのアップもなくなる（ほかの子はそのまま）\n・3ターンたつと、残ったシールドもアップも消える\n・効いているあいだにもう一度使うと、シールドは残りに足され、残りターンは3に戻る。アップは、そのときの楔の数で決め直した値になる（重ならない）',
     maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,
     millefeuille: Object.freeze({ statBase: 0.05, statPer: 0.05 }),
     effect: 'millefeuille',
@@ -26099,8 +26099,13 @@ const applyTacticsExUse = (state, { def, slot, monId, now, snapshot = null, choi
       avoidLeft: def.avoidCharges || 0,
       // ミルフィーシールド: 上げ幅は使った瞬間の楔の数で決めて固定する(snapshot.kusabi)。シールドは枠ごとの残り(snapshot.shields)
       partyStatRate: def.millefeuille ? def.millefeuille.statBase + def.millefeuille.statPer * Math.max(0, tacticsSafeInt(snapshot && snapshot.kusabi, 0)) : (def.partyStatRate || 0),
-      shields: def.millefeuille && snapshot && snapshot.shields && typeof snapshot.shields === 'object'
-        ? Object.fromEntries(Object.entries(snapshot.shields).map(([k, v]) => [k, Math.max(0, tacticsSafeInt(v, 0))]).filter(([, v]) => v > 0)) : null,
+      // 効いているあいだにもう一度使ったら、残りのシールドへ足す(2026-10-22 社長の決定。残りターンは3に戻り、上げ幅は決め直し)
+      shields: def.millefeuille && snapshot && snapshot.shields && typeof snapshot.shields === 'object' ? (() => {
+        const prev = safe.effects[slot];
+        const keep = prev && prev.effect === 'millefeuille' && prev.monId === monId && prev.shields && isTacticsExEffectActive(safe, slot, monId, now) ? prev.shields : {};
+        const keys = new Set([...Object.keys(keep), ...Object.keys(snapshot.shields)]);
+        return Object.fromEntries([...keys].map((k) => [k, Math.max(0, tacticsSafeInt(keep[k], 0)) + Math.max(0, tacticsSafeInt(snapshot.shields[k], 0))]).filter(([, v]) => v > 0));
+      })() : null,
       dmgRate: def.dmgRate || 0, selfTakenRate: def.selfTakenRate || 0, critRateRate: def.critRateRate || 0, critDmgRate: def.critDmgRate || 0,
       distMult: def.distMult || 0, guaranteeUnique: def.guaranteeUnique === true, uniqueCrit: def.uniqueCrit === true, cardBonus: def.cardBonus || 0,
       voltageCfg: def.voltage ? { ...def.voltage } : null, voltage: 0,
@@ -26624,11 +26629,14 @@ const tacticsExCritFixedAt = (state, units, slot, now) => tacticsExAvoidLeftOf(s
 // 味方全員のちから・丈夫さへ上乗せする倍率。効いている子が複数いれば足し算(使った子が倒れても残る)。効いていなければ 0
 //   緑のめぐみ(partyBoost・プラント) … partyBoostCfg.statRate
 //   トリックコンフューズ(trickConfuse・スプーキー。2026-10-05) … partyStatRate
-const tacticsExPartyStatRate = (state, now) => {
+//   ミルフィーシールド(millefeuille・ドリーミィ。2026-10-22) … partyStatRate。ただし、その子のシールドが残っているあいだだけ
+//   (社長「シールドが壊れたらステアップもなくなる」。slot を渡さないときは、シールドを見ずに数える)
+const tacticsExPartyStatRate = (state, now, slot = null) => {
   const effects = normalizeTacticsExState(state).effects;
   return Object.keys(effects).reduce((sum, key) => {
     const e = effects[key];
     if (!e || (e.effect !== 'partyBoost' && e.effect !== 'trickConfuse' && e.effect !== 'millefeuille') || !isTacticsExEffectActive(state, key, e.monId, now)) return sum;
+    if (e.effect === 'millefeuille' && slot != null && !(e.shields && tacticsSafeInt(e.shields[String(slot)], 0) > 0)) return sum;
     const rate = Number(e.effect === 'partyBoost' ? (e.partyBoostCfg && e.partyBoostCfg.statRate) : e.partyStatRate);
     return Number.isFinite(rate) && rate > 0 ? sum + rate : sum;
   }, 0);
@@ -26787,7 +26795,7 @@ const rollEnemyConfusion = (intent, turns, rnd = Math.random) => {
 // 味方全員のちから・丈夫さ(緑のめぐみ・トリックコンフューズ)は、その子自身のEXで変わったあとの値へ掛ける
 const applyTacticsExStats = (unit, state, slot, now) => {
   const own = applyTacticsExOwnStats(unit, state, slot, now);
-  const party = unit && typeof unit === 'object' ? tacticsExPartyStatRate(state, now) : 0;
+  const party = unit && typeof unit === 'object' ? tacticsExPartyStatRate(state, now, slot) : 0;
   return party > 0 ? { ...own, atk: Math.floor(Math.max(0, tacticsSafeInt(own.atk, 0)) * (1 + party)), def: Math.floor(Math.max(0, tacticsSafeInt(own.def, 0)) * (1 + party)) } : own;
 };
 const applyTacticsExOwnStats = (unit, state, slot, now) => {
@@ -40263,7 +40271,7 @@ function BattleScreen({
   slotUniqueChoice, slots, soulBattleParty, soulCoordinationCardBonus, suppressCardClickRef,
   tacticsCanAssign, tacticsCardBlock, enemyDebuffs, battleUnitStatusOf, battleEnemyStatus, enemyStackCounts, debugStackMarks, tacticsSlotCountersAt, discardCards, actionUsed, tacticsCardGenre, tacticsCardScope, tacticsSlotFx, tacticsUnits,
   tacticsExInfo, activateTacticsEx, tacticsExCutin, hamCounterFx, skipHamCounterFx, tacticsExTurnUsed, passTacticsTurn, tacticsCoverSlot, tacticsHate, tacticsHateOn,
-  tacticsExIntroVisible, dismissTacticsExIntro, tacticsPandoraForms, trickStartView, sweetStackView, bowStackView, fateWheelView, enemyConfuseTurns, luckBanners,
+  tacticsExIntroVisible, dismissTacticsExIntro, tacticsPandoraForms, trickStartView, sweetStackView, bowStackView, fateWheelView, tacticsShields, enemyConfuseTurns, luckBanners,
   teachingFx, totalTurnCount, turnCount, ultimateDistanceBreakLevels, ultraBattleView, enemyDefeating,
   unifiedSpecialDefense, useEmergency, wave,
 }) {
@@ -42085,10 +42093,14 @@ function BattleScreen({
                           読む順が「何の値か → いくつか」で固定され、4枚並べたときに縦がそろう */}
                       <div className="flex h-[10px] items-center justify-between leading-none">
                         <span className="text-[8px] font-black tracking-wider text-pink-300">ライフ</span>
-                        <span className="font-mono leading-none"><span className="text-[11px] font-black text-white">{tacticsUnit.hp}</span><span className="text-[8px] text-slate-400">/{tacticsUnit.maxHp}</span></span>
+                        <span className="font-mono leading-none">{/* ★ミルフィーシールド(ドリーミィのEX)の残り。ライフの数字の前に出す */}
+                          {Array.isArray(tacticsShields)&&tacticsShields[i]>0&&<span data-tactics-shield={tacticsShields[i]} className="mr-1 text-[9px] font-black text-sky-200">🛡️{tacticsShields[i]}</span>}
+                          <span className="text-[11px] font-black text-white">{tacticsUnit.hp}</span><span className="text-[8px] text-slate-400">/{tacticsUnit.maxHp}</span></span>
                       </div>
-                      <div className="h-[2px] overflow-hidden rounded-full bg-black/60" style={{boxShadow:'inset 0 1px 2px rgba(0,0,0,.9)'}}>
+                      <div className="relative h-[2px] overflow-hidden rounded-full bg-black/60" style={{boxShadow:'inset 0 1px 2px rgba(0,0,0,.9)'}}>
                         <div data-tactics-hp-bar className={`h-full w-full origin-left transition-transform duration-1000 ${tacticsUnit.downed?'bg-gradient-to-r from-emerald-500 to-teal-300':'bg-gradient-to-r from-rose-500 to-pink-300'}`} style={{transform:`scaleX(${Math.min(100,Math.max(0,hpPct))/100})`,boxShadow:'0 0 6px rgba(244,114,182,.55)'}}></div>
+                        {/* シールドの残りを、ライフの棒の上へ水色の帯で重ねる(最大ライフに対する割合) */}
+                        {Array.isArray(tacticsShields)&&tacticsShields[i]>0&&tacticsUnit.maxHp>0&&<div data-tactics-shield-bar className="absolute inset-y-0 left-0 bg-sky-300/80" style={{width:`${Math.min(100,tacticsShields[i]/tacticsUnit.maxHp*100)}%`,boxShadow:'0 0 6px rgba(125,211,252,.8)'}}></div>}
                       </div>
                       <div className="flex h-[10px] items-center justify-between leading-none">
                         <span className="text-[8px] font-black tracking-wider text-amber-300">GUTS</span>
@@ -70613,7 +70625,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             getWaveBuff={getWaveBuff} guardCardWeight={guardCardWeight} guardFx={guardFx} guardImpact={guardImpact} guardLevel={guardLevel}
             guardValueOf={guardValueOf} tacticsSlotGuardValue={tacticsSlotGuardValue}
             tacticsExInfo={tacticsExInfo} activateTacticsEx={activateTacticsEx} tacticsExCutin={tacticsExCutin} hamCounterFx={hamCounterFx} skipHamCounterFx={skipHamCounterFx}
-            tacticsExIntroVisible={tacticsExIntroVisible} dismissTacticsExIntro={dismissTacticsExIntro} tacticsPandoraForms={tacticsPandoraForms} trickStartView={trickStartView} sweetStackView={sweetStackView} bowStackView={bowStackView} fateWheelView={fateWheelView} enemyConfuseTurns={enemyConfuseTurns} luckBanners={luckBanners}
+            tacticsExIntroVisible={tacticsExIntroVisible} dismissTacticsExIntro={dismissTacticsExIntro} tacticsPandoraForms={tacticsPandoraForms} trickStartView={trickStartView} tacticsShields={isTacticsMode(runMode)&&tacticsExEnabled?[0,1,2,3].map(i=>tacticsExShieldAt(tacticsExState,i,tacticsExNow)):null} sweetStackView={sweetStackView} bowStackView={bowStackView} fateWheelView={fateWheelView} enemyConfuseTurns={enemyConfuseTurns} luckBanners={luckBanners}
             tacticsExTurnUsed={tacticsExTurnUsed} passTacticsTurn={passTacticsTurn} tacticsHate={tacticsHate} tacticsHateOn={tacticsHateOnFor(runMode)} tacticsCoverSlot={tacticsExEnabled?tacticsExCoverSlot(tacticsExState,tacticsUnits,tacticsExNow):null}
             guts={guts} hand={hand} heroCardBonus={heroCardBonus} heroDist={heroDist}
             hp={hp} iceLockActive={iceLockActive} iceLockPreparing={iceLockPreparing} iceLockTurns={iceLockTurns}
