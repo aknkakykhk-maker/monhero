@@ -45,6 +45,8 @@ const seed = () => {
   await page.addInitScript(seed);
   // 起動直後に流れるお話(きゅうこの加入など)は見たことにする(2026-10-23 きゅうこの公開で、お話が画面を覆って止まった)
   await page.addInitScript(require('../boot/quiet-boot-seed').eventStorySeed());
+  // 更新履歴の助手の告知も見たことにする(起動直後の「マーケットを見る」を押して、マーケットへ行ってしまった)
+  await page.addInitScript(require('../boot/quiet-boot-seed').updateNoticeSeed());
 
   const pointerDown = (find) => page.evaluate((f) => {
     const b = f.aria ? document.querySelector(`button[aria-label="${f.aria}"]`)
