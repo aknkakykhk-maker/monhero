@@ -1336,22 +1336,22 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Eiki: Object.freeze({
     id: 'eiki_dist_match',
     name: '緋桜瞬歩',
-    useNote: '3ターン 距離補正×1.7・同じ距離は完全回避',
-    desc: '3ターンのあいだ、エイキの攻撃が強くなり、敵の攻撃をよける。\n・攻撃の距離補正が、どの距離でも×1.7に固定される（ふだんは、敵と同じ距離で×1.5、離れるほど下がって×0.9）\n・敵と同じ距離の枠にいるとき、エイキが狙われた攻撃を完全に回避する\n・使ったターン、エイキはカードを使えない（ほかの子は使える）',
-    maxUses: 3, unlimited: false, withCards: false, duration: 'turns', turns: 3,
+    useNote: '5ターン 距離補正×1.7・同じ距離は完全回避',
+    desc: '5ターンのあいだ、エイキの攻撃が強くなり、敵の攻撃をよける。\n・攻撃の距離補正が、どの距離でも×1.7に固定される（ふだんは、敵と同じ距離で×1.5、離れるほど下がって×0.9）\n・敵と同じ距離の枠にいるとき、エイキが狙われた攻撃を完全に回避する\n・使ったターン、エイキはカードを使えない（ほかの子は使える）',
+    maxUses: 3, unlimited: false, withCards: false, duration: 'turns', turns: 5,
     effect: 'distMatch',
   }),
   // ★2026-10-02 ユーザー指示(ザンのEX)。「敵と同じ距離の場合は完全回避、回避するごとに10%連撃付与
   //   (与ダメ10%連撃が増えてく) 5ターン、ラン5回 併用あり」。名前はユーザー指定「血踊」(最初は仮に「見切り連斬」)。
-  //   のちに社長が3ターンに修正(2026-10-10 確認。ゲームの3ターンが正しい)。
+  //   のちに社長が3ターンに修正(2026-10-10 確認)。2026-10-23 社長「ザンとエイキ戻して」で5ターンに戻した。
   //   回避の判定はエイキの緋桜瞬歩と同じ(tacticsExDistMatchDodges)。回避した数(effects[slot].dodges)だけ、
   //   その子の攻撃へ与ダメージ10%の連撃が1回ずつ増える(tacticsExExtraCombosAt)。効果が切れたら数も消える
   Zan: Object.freeze({
     id: 'zan_dodge_combo',
     name: '血踊',
-    useNote: '3ターン 同じ距離は完全回避・回避で連撃が増える',
-    desc: '3ターンのあいだ、敵をよけるたびにザンの攻撃が増える。\n・敵と同じ距離の枠にいるとき、ザンが狙われた攻撃を完全に回避する\n・回避するたびに、攻撃へ「与ダメージ10%の連撃」が1回ずつ増える（2回よければ2回）',
-    maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,
+    useNote: '5ターン 同じ距離は完全回避・回避で連撃が増える',
+    desc: '5ターンのあいだ、敵をよけるたびにザンの攻撃が増える。\n・敵と同じ距離の枠にいるとき、ザンが狙われた攻撃を完全に回避する\n・回避するたびに、攻撃へ「与ダメージ10%の連撃」が1回ずつ増える（2回よければ2回）',
+    maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 5,
     dodgeComboRate: 0.1,
     effect: 'dodgeCombo',
   }),

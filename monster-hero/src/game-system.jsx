@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6769ac5bbc5b0da1
+// generated-sha256: dc8876c592fd8be0
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-23 01:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-23 03:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -25571,22 +25571,22 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Eiki: Object.freeze({
     id: 'eiki_dist_match',
     name: '緋桜瞬歩',
-    useNote: '3ターン 距離補正×1.7・同じ距離は完全回避',
-    desc: '3ターンのあいだ、エイキの攻撃が強くなり、敵の攻撃をよける。\n・攻撃の距離補正が、どの距離でも×1.7に固定される（ふだんは、敵と同じ距離で×1.5、離れるほど下がって×0.9）\n・敵と同じ距離の枠にいるとき、エイキが狙われた攻撃を完全に回避する\n・使ったターン、エイキはカードを使えない（ほかの子は使える）',
-    maxUses: 3, unlimited: false, withCards: false, duration: 'turns', turns: 3,
+    useNote: '5ターン 距離補正×1.7・同じ距離は完全回避',
+    desc: '5ターンのあいだ、エイキの攻撃が強くなり、敵の攻撃をよける。\n・攻撃の距離補正が、どの距離でも×1.7に固定される（ふだんは、敵と同じ距離で×1.5、離れるほど下がって×0.9）\n・敵と同じ距離の枠にいるとき、エイキが狙われた攻撃を完全に回避する\n・使ったターン、エイキはカードを使えない（ほかの子は使える）',
+    maxUses: 3, unlimited: false, withCards: false, duration: 'turns', turns: 5,
     effect: 'distMatch',
   }),
   // ★2026-10-02 ユーザー指示(ザンのEX)。「敵と同じ距離の場合は完全回避、回避するごとに10%連撃付与
   //   (与ダメ10%連撃が増えてく) 5ターン、ラン5回 併用あり」。名前はユーザー指定「血踊」(最初は仮に「見切り連斬」)。
-  //   のちに社長が3ターンに修正(2026-10-10 確認。ゲームの3ターンが正しい)。
+  //   のちに社長が3ターンに修正(2026-10-10 確認)。2026-10-23 社長「ザンとエイキ戻して」で5ターンに戻した。
   //   回避の判定はエイキの緋桜瞬歩と同じ(tacticsExDistMatchDodges)。回避した数(effects[slot].dodges)だけ、
   //   その子の攻撃へ与ダメージ10%の連撃が1回ずつ増える(tacticsExExtraCombosAt)。効果が切れたら数も消える
   Zan: Object.freeze({
     id: 'zan_dodge_combo',
     name: '血踊',
-    useNote: '3ターン 同じ距離は完全回避・回避で連撃が増える',
-    desc: '3ターンのあいだ、敵をよけるたびにザンの攻撃が増える。\n・敵と同じ距離の枠にいるとき、ザンが狙われた攻撃を完全に回避する\n・回避するたびに、攻撃へ「与ダメージ10%の連撃」が1回ずつ増える（2回よければ2回）',
-    maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,
+    useNote: '5ターン 同じ距離は完全回避・回避で連撃が増える',
+    desc: '5ターンのあいだ、敵をよけるたびにザンの攻撃が増える。\n・敵と同じ距離の枠にいるとき、ザンが狙われた攻撃を完全に回避する\n・回避するたびに、攻撃へ「与ダメージ10%の連撃」が1回ずつ増える（2回よければ2回）',
+    maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 5,
     dodgeComboRate: 0.1,
     effect: 'dodgeCombo',
   }),
@@ -33997,10 +33997,11 @@ function MonsterAttackPreviewScreen({ dexMonsterId, dexAttackPreview, unlockedMo
 function MonsterTypeBadge({ monId, size = 'sm', compact = false }) {
   if (!monsterTypeProtoOn()) return null;
   const t = monsterTypeOf(monId);
+  // key はメイン/サブで分ける(メインとサブが同じタイプの子で key がかぶると、図鑑で次の子へ移ったときに前の子の印が残る)
   const chip = (key, isSub) => {
     const d = MONSTER_TYPES[key];
     const iconOnly = isSub && compact;
-    return (<span key={key} data-monster-type={key} data-monster-type-sub={isSub ? 'true' : undefined} title={`${isSub ? 'サブ' : 'メイン'}タイプ：${d.label}(${d.note})`}
+    return (<span key={`${isSub ? 'sub' : 'main'}-${key}`} data-monster-type={key} data-monster-type-sub={isSub ? 'true' : undefined} title={`${isSub ? 'サブ' : 'メイン'}タイプ：${d.label}(${d.note})`}
       className={`inline-flex items-center gap-0.5 rounded-full border ${compact ? 'px-1' : 'px-1.5'} py-px font-black leading-none whitespace-nowrap ${size === 'md' ? 'text-[11px]' : 'text-[9px]'} ${isSub ? 'border-white/15 bg-white/5 text-slate-300' : 'border-amber-300/50 bg-amber-500/15 text-amber-100'}`}>
       <span aria-hidden="true">{cardIconNode(d.icon, 10)}</span>{iconOnly ? <span className="sr-only">{d.label}</span> : d.label}</span>);
   };
