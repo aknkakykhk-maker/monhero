@@ -1653,6 +1653,8 @@ const RHYTHM_MODE_ASSISTANT_FRAMES = Object.freeze({
   momosuke: { zoom: 1.5, cx: 0.5, cy: 0.48, top: 0.42,
     cxBy: { angry: 0.545, happy: 0.545, crying: 0.44, wink: 0.46, excited: 0.38, surprise: 0.38, normal: 0.645, troubled: 0.655 } },
   dra: { zoom: 0.85, cx: 0.5, cy: 0.5, top: 0.4 },
+  // あつ(2026-10-22)。大きい絵は 768x1024(縦長・腰から上)。顔の位置で寄せる(写しで確かめて決める)
+  atsu: { zoom: 0.85, cx: 0.5, cy: 0.4, top: 0.42 },
 });
 // 舞台の飾り(スポットライト3本・音符・キラキラ・床の光)。位置と遅れは固定(描くたびに変わらないように)
 const RHYTHM_MODE_SELECT_NOTES = Object.freeze([

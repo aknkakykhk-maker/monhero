@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f38d0d6c6b0a7512
+// generated-sha256: de9b47aee0b4af51
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-22 06:48"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-22 10:44"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -306,6 +306,8 @@ const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
   get assistantChat() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantChat === true; },
   // 助手4人がタイプを教えるお話(tactics_types・2026-10-17)。ヘイトとタイプの公開(RELEASE_FLAGS.tacticsHate・2026-10-18)と一緒に出る
   get tacticsTypes() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.tacticsHate === true; },
+  // あつの加入のお話(atsu_join_2026_10_22・2026-10-22)。あつの公開と一緒に出る
+  get assistantAtsu() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantAtsu === true; },
 });
 const eventReplayReleased = (event) => !event?.releaseFlag || EVENT_REPLAY_RELEASE_FLAGS[event.releaseFlag] === true;
 // 画面に並べるイベント回想。3か所(プロフィール・回想一覧・再生)が同じ並びを見るための唯一の入口
@@ -5160,7 +5162,7 @@ const eikiBossBgmForBattle = (heroId, currentWave, enemyId) =>
   heroId === 'Eiki' && (enemyId === 'Moo' || currentWave === 10) ? 'eiki_boss' : null;
 // 既存の battle / dullahan / boss はチャレンジ用として維持し、保存済み設定との互換性を守る。
 // 追加したモード別専用戦キーは、旧セーブでは従来その場面で使っていた dullahan / boss の選択を継承する。
-const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ tacticsTypesEvent:'original_event_01', rhythmHellStoryEvent:'melo_sheriruth', assistantChatStoryEvent:'close_to_your_heart_alt', title:'monster_hero_theme_alt', home:'original_home', management:'original_profile', market:'original_market', temple:'original_fusion', trainingMenu:'original_home', trainingBoard:'original_home', battle:'original_battle', dullahan:'original_dullahan', boss:'original_boss', quickBattle:'original_battle', quickDullahan:'original_dullahan', quickMoo:'original_boss', proBattle:'original_pro_battle_01', proDullahan:'melo_dullahan_steel_ghost', proMoo:'original_pro_battle_02', extremeBattle:'ichika_battle', extremeDullahan:'melo_dullahan_clockwork', extremeMoo:'ichika_boss', speciesBattle:'original_battle', speciesDullahan:'original_dullahan', speciesMoo:'original_boss', tacticsIntroEvent:'close_to_your_heart_alt', tacticsBattle:'senjou_no_shippuu', tacticsMidBoss:'melo_the_city_beneath_the_comets', tacticsBoss:'makutsu_no_senritsu', autoBattle:'monster_hero_theme', autoVictoryJingle:'off', autoPostWaveBgm:'off', autoRepeatResultBgm:'off', clear:'ichika_clear', enhance:'original_enhance', result:'original_result', gameOver:'original_game_over', kikiIntro:'original_event_01', momosukeIntro:'six_eternel_remix', monbeatCupEvent:'kaze_ga_soyogu', symphonyEvent:'melo_mou_hitotsu_no_sekai_e', rhythmMultiEvent:'melo_haruka', masuCallEvent:'six_eternel',halloweenNightEvent:'melo_crazy_party_night_full', rhythmModeSelect:'pandora_boss_remix' });
+const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ atsuJoinStoryEvent:'melo_against_my_own_shadow', tacticsTypesEvent:'original_event_01', rhythmHellStoryEvent:'melo_sheriruth', assistantChatStoryEvent:'close_to_your_heart_alt', title:'monster_hero_theme_alt', home:'original_home', management:'original_profile', market:'original_market', temple:'original_fusion', trainingMenu:'original_home', trainingBoard:'original_home', battle:'original_battle', dullahan:'original_dullahan', boss:'original_boss', quickBattle:'original_battle', quickDullahan:'original_dullahan', quickMoo:'original_boss', proBattle:'original_pro_battle_01', proDullahan:'melo_dullahan_steel_ghost', proMoo:'original_pro_battle_02', extremeBattle:'ichika_battle', extremeDullahan:'melo_dullahan_clockwork', extremeMoo:'ichika_boss', speciesBattle:'original_battle', speciesDullahan:'original_dullahan', speciesMoo:'original_boss', tacticsIntroEvent:'close_to_your_heart_alt', tacticsBattle:'senjou_no_shippuu', tacticsMidBoss:'melo_the_city_beneath_the_comets', tacticsBoss:'makutsu_no_senritsu', autoBattle:'monster_hero_theme', autoVictoryJingle:'off', autoPostWaveBgm:'off', autoRepeatResultBgm:'off', clear:'ichika_clear', enhance:'original_enhance', result:'original_result', gameOver:'original_game_over', kikiIntro:'original_event_01', momosukeIntro:'six_eternel_remix', monbeatCupEvent:'kaze_ga_soyogu', symphonyEvent:'melo_mou_hitotsu_no_sekai_e', rhythmMultiEvent:'melo_haruka', masuCallEvent:'six_eternel',halloweenNightEvent:'melo_crazy_party_night_full', rhythmModeSelect:'pandora_boss_remix' });
 // 設定欄を足したときに「前からある近い設定」を引き継ぐための対応表。
 // 種族チャレンジの3枠はチャレンジと同じ曲から始めるので、まだ自分で選んでいない人には
 // そのときのチャレンジの設定(自分で変えていればその曲)がそのまま入る
@@ -5194,6 +5196,7 @@ const BGM_ARRANGEMENT_LEGACY_FALLBACK = Object.freeze({ quickMoo:'boss', proDull
 // (既存プレイヤーの保存値には新しい枠が無いので、normalizeBgmArrangement が既定で埋める)
 // rhythm_hell_story … 難易度 HELL のお話(2026-10-11)。既定は Sheriruth(社長の指定)。BGMアレンジの画面に枠を並べるのは HELL の公開のとき
 // assistant_chat_story … 助手とおしゃべりのお話(2026-10-14)。既定はタクティクスの導入と同じ曲
+// atsu_join_2026_10_22 … あつの加入のお話(2026-10-22)。既定は Against My Own Shadow(社長の指定)。BGMアレンジの画面に枠を並べるのはあつの公開のとき
 // 会話イベントの台本で、その行までに書かれた最後の bgm:'<曲id>'。無ければ null(=会話イベントの曲のまま)。
 // 曲の表(BGM_TRACKS)に無い id は使わない(2026-10-17 社長「途中で変わるのいいね」)
 const eventScriptBgmAt = (script, step) => {
@@ -5207,7 +5210,7 @@ const eventScriptBgmAt = (script, step) => {
   return found;
 };
 const EVENT_BGM_FADE_MS = 800; // 会話イベントの途中で曲を替えるとき、今の曲を下げる長さ
-const EVENT_BGM_SCENES = Object.freeze({ tactics_types:'tacticsTypesEvent', kiki_intro:'kikiIntro', rhythm_hell_story:'rhythmHellStoryEvent', assistant_chat_story:'assistantChatStoryEvent', momosuke_intro:'momosukeIntro', monbeat_cup_2026_09:'monbeatCupEvent', monbeat_cup_2026_09_thanks:'monbeatCupEvent', symphony_2026_09_17:'symphonyEvent', symphony_2026_09_17_thanks:'symphonyEvent', tactics_intro:'tacticsIntroEvent', beat_point_always_2026_09_24:'monbeatCupEvent', rhythm_six_lane_2026_09_26:'monbeatCupEvent', beat_point_up_2026_09_28:'monbeatCupEvent', rhythm_multi_friends_2026_10_03:'rhythmMultiEvent', rhythm_masu_call_2026_10_07:'masuCallEvent', halloween_night_2026_part1:'halloweenNightEvent', raid_jack_howto_2026_10_04:'halloweenNightEvent', raid_jack_rhythm_story_2026_10_06:'halloweenNightEvent', raid_jack_story_1b:'halloweenNightEvent', raid_jack_story_2:'halloweenNightEvent', raid_jack_story_3:'halloweenNightEvent', raid_jack_story_4:'halloweenNightEvent', raid_jack_story_5:'halloweenNightEvent', raid_jack_story_6:'halloweenNightEvent', raid_jack_ending_cleared:'halloweenNightEvent', raid_jack_ending_notcleared:'halloweenNightEvent' });
+const EVENT_BGM_SCENES = Object.freeze({ atsu_join_2026_10_22:'atsuJoinStoryEvent', tactics_types:'tacticsTypesEvent', kiki_intro:'kikiIntro', rhythm_hell_story:'rhythmHellStoryEvent', assistant_chat_story:'assistantChatStoryEvent', momosuke_intro:'momosukeIntro', monbeat_cup_2026_09:'monbeatCupEvent', monbeat_cup_2026_09_thanks:'monbeatCupEvent', symphony_2026_09_17:'symphonyEvent', symphony_2026_09_17_thanks:'symphonyEvent', tactics_intro:'tacticsIntroEvent', beat_point_always_2026_09_24:'monbeatCupEvent', rhythm_six_lane_2026_09_26:'monbeatCupEvent', beat_point_up_2026_09_28:'monbeatCupEvent', rhythm_multi_friends_2026_10_03:'rhythmMultiEvent', rhythm_masu_call_2026_10_07:'masuCallEvent', halloween_night_2026_part1:'halloweenNightEvent', raid_jack_howto_2026_10_04:'halloweenNightEvent', raid_jack_rhythm_story_2026_10_06:'halloweenNightEvent', raid_jack_story_1b:'halloweenNightEvent', raid_jack_story_2:'halloweenNightEvent', raid_jack_story_3:'halloweenNightEvent', raid_jack_story_4:'halloweenNightEvent', raid_jack_story_5:'halloweenNightEvent', raid_jack_story_6:'halloweenNightEvent', raid_jack_ending_cleared:'halloweenNightEvent', raid_jack_ending_notcleared:'halloweenNightEvent' });
 const BGM_PRO_DEFAULT_MIGRATION_KEY = 'mh_bgm_pro_default_migrated_v1';
 const BGM_PRO_PREVIOUS_DEFAULTS = Object.freeze({ proBattle:'original_battle', proDullahan:'original_dullahan', proMoo:'original_boss' });
 // 既定曲を入れ替えたときの移行のしかたは毎回同じ(「以前の既定のままの枠だけ新しい既定へ」)なので、
@@ -8553,9 +8556,9 @@ const RHYTHM_EVENT_POINTS_PUBLIC_RELEASE = true;
 const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tactics: TACTICS_MODE_PUBLIC_RELEASE,
   rhythmHell: true,
   // レイド・タクティクスプロ(ベースモンだけの回)の1回ごとの記録(raid_battle_logs・tactics_pro_logs)を送る(2026-10-21 社長「仕組みは作って」)。
-  //   表がまだ無いので偽。偽のあいだは何も送らず、タクティクスプロは入れ物も作らない(26-supabase.jsx)。
-  //   表の SQL は docs/sql/battle-log/BATTLE_LOGS_APPLY.sql(まだ流していない)。社長の確認で流したあと真にする。設計は docs/spec/BATTLE_LOG.md
-  battleLog: false,
+  //   2026-10-22 窓口が表を2つとも作って確かめた(docs/sql/battle-log/BATTLE_LOGS_APPLY.sql)ので真にした。設計は docs/spec/BATTLE_LOG.md
+  //   偽にすると何も送らず、タクティクスプロは入れ物も作らない(26-supabase.jsx)
+  battleLog: true,
   // 行動カードの絵(枠4色・技のマーク・段階の札)。社長が今のカードと見比べて決めるまで偽(2026-10-15)。
   //   見比べはデバッグ設定の「行動カードの絵」の切り替えで(BATTLE_CARD_ART_DEBUG・71-screen-battle.jsx)
   battleCardArt: true,
@@ -8565,6 +8568,9 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   assistantChatRanking: true,
   // ふだんの吹き出しを1日1回まとめて作る(2026-10-14)。2026-10-14 社長「もう公開していいよ」→真にした(56-assistant-chat.jsx)
   assistantDailyLines: true,
+  // 5人目の助手あつ(2026-10-22 社長の決定)。社長がお話の全文を読んで「公開ok」→真にした(2026-10-22)。
+  //   偽のあいだは、助手の一覧・加入のお話・回想・ヘルプの項目に出ない(data/assistants.js の ASSISTANT_RELEASE_FLAGS)
+  assistantAtsu: true,
   tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE,
   // タクティクスのヘイト(🔥)とモンスターのタイプ表記。2026-10-18 社長「ヘイトシステムは実装していいよ」で公開。
   //   数字は 32-tactics-units.jsx の TACTICS_HATE / MONSTER_TYPES。お話「タクティクスバトル ～4人のタイプ～」(tactics_types)もこの印で出る
@@ -8875,6 +8881,8 @@ const RHYTHM_HELL_STORY_TRIGGER = 'release';
 // 公開(RELEASE_FLAGS.assistantChat)のあとの最初の HOME で1回だけ流す。デバッグから見たぶんは立てない
 const ASSISTANT_CHAT_STORY_SEEN_KEY = 'mh_story_assistant_chat_seen_v1';
 const ASSISTANT_CHAT_STORY_ID = 'assistant_chat_story';
+// あつの加入のお話(2026-10-22)。id は data/assistants.js の ASSISTANT_UNLOCK_STORIES.atsu と同じ
+const ATSU_JOIN_STORY_ID = 'atsu_join_2026_10_22';
 // 助手4人がタイプを教えるお話「タクティクスバトル ～4人のタイプ～」(2026-10-18・新しいキー。既存のキーには触らない・CLAUDE.md ⑦)。
 // ヘイトとタイプの公開(RELEASE_FLAGS.tacticsHate)のあと、タクティクスバトルの導入のお話を見た人にだけ、最初の HOME で1回流す。デバッグから見たぶんは立てない
 const TACTICS_TYPES_STORY_SEEN_KEY = 'mh_story_tactics_types_seen_v1';
@@ -8908,6 +8916,9 @@ const assistantBondKeyFor = (assistantId) => {
 const assistantIdOfAssistCard = (cardId) => {
   const id = String(cardId == null ? '' : cardId);
   const list = (typeof ASSISTANTS !== 'undefined' && Array.isArray(ASSISTANTS)) ? ASSISTANTS : [];
+  // ★公開の印が立つまでの助手(あつ・2026-10-22)には結び付けない。カード「あつの挑発」は前からあるので、
+  //   結び付けると公開前に「あつ」の仲良し度が貯まり、ごほうびのギフトまで届いてしまう(assistantReleased・data/assistants.js)
+  if (typeof assistantReleased === 'function' && !assistantReleased(id)) return null;
   return list.some(a => a && a.id === id) ? id : null;
 };
 // 呼び方の上書きも助手ごとに分ける。みゅあのぶんは今までのキーのまま
@@ -11796,7 +11807,9 @@ const helpDataRows = (id) => {
         });
     // 助手の一覧。名前と性格の違いを実データから出す
     case 'assistants':
+      // 公開の印が立つまでの助手(あつ)は並べない(assistantReleased・data/assistants.js)
       return ((typeof ASSISTANT_LIST !== 'undefined' && ASSISTANT_LIST) || [])
+        .filter(who => typeof assistantReleased !== 'function' || assistantReleased(who.id))
         .map(who => [who.name, `${who.tagline || ''}${who.intro ? ` ／ ${who.intro}` : ''}`]);
     case 'monsterPower':
       // 総合力の内訳は、実際の計算に使っている定数から作る(ヘルプへ数字を手で書き写さない)
@@ -37070,6 +37083,8 @@ function ProMonsterGridPicker({ list, selectedId=null, selectedIds=null, isDisab
     return first?first.id:null;
   });
   const focus=list.find(m=>m.id===focusId)||null;
+  // 下の詳しいパネルはたためる(2026-10-22 社長「モンスター選びの枠が狭すぎる」。たたむと名前とボタンだけになり、一覧が広がる)
+  const [detailFolded,setDetailFolded]=React.useState(false);
   const toggleFav=(id)=>setPrefs(prev=>{
     const next={...prev,fav:prev.fav.includes(id)?prev.fav.filter(x=>x!==id):[...prev.fav,id]};
     writeProPickPrefs(next);
@@ -37099,7 +37114,7 @@ function ProMonsterGridPicker({ list, selectedId=null, selectedIds=null, isDisab
         className={`relative rounded-2xl border p-1.5 flex flex-col items-center gap-1 active:scale-95 transition-all disabled:opacity-25 ${on?ac.ring:'border-slate-700 bg-slate-900'}${disabled(m)?'':(spotClassFor?spotClassFor(m):'')}`}>
         {tag&&<span className={`absolute top-0.5 left-0.5 z-10 rounded-full bg-black/70 px-1 text-[7px] font-black leading-tight ${tag==='★'?'text-amber-300':'text-cyan-300'}`}>{tag}</span>}
         {chosen&&<span className={`absolute top-0.5 right-0.5 z-10 rounded-full p-0.5 ${ac.check}`}><Check size={9} className="text-white"/></span>}
-        <div className="w-14 h-14 rounded-full overflow-hidden bg-black/30 border border-white/10 flex items-center justify-center">
+        <div className="w-14 h-14 [@media(max-height:760px)]:w-12 [@media(max-height:760px)]:h-12 rounded-full overflow-hidden bg-black/30 border border-white/10 flex items-center justify-center">
           {m.imgUrl?<DyedMonsterImage baseId={m.id} src={m.imgUrl} alt="" masuColors={m.colors} className="w-full h-full object-contain"/>:<span className="text-3xl">{m.emoji}</span>}
         </div>
         <div className="w-full truncate text-center text-[9px] font-black text-white leading-tight">{m.name}</div>
@@ -37114,7 +37129,7 @@ function ProMonsterGridPicker({ list, selectedId=null, selectedIds=null, isDisab
         <div data-pro-pick-tabs role="tablist" aria-label="血統" className={`shrink-0 pb-1.5 flex gap-1.5 overflow-x-auto mh-scroll${header?' [@media(max-height:640px)]:hidden':''}`}>
           {[{id:'all',name:'すべて',count:list.length},...lineageTabs].map(t=>(
             <button key={t.id} role="tab" aria-selected={activeTab===t.id} onClick={()=>{setLineageTab(t.id);const inTab=t.id==='all'?list:list.filter(m=>lineageOfMon(m).id===t.id);if(!inTab.some(m=>m.id===focusId)){const first=inTab.find(m=>!disabled(m));if(first)setFocusId(first.id);}}}
-              className={`shrink-0 min-h-[34px] px-2.5 rounded-full border text-[11px] font-black active:scale-95 ${activeTab===t.id?ac.tab:'border-slate-700 bg-slate-900 text-slate-400'}`}>{t.name}<span className="ml-1 text-[9px] font-mono opacity-70">{t.count}</span></button>
+              className={`shrink-0 min-h-[34px] [@media(max-height:760px)]:min-h-[30px] px-2.5 rounded-full border text-[11px] font-black active:scale-95 ${activeTab===t.id?ac.tab:'border-slate-700 bg-slate-900 text-slate-400'}`}>{t.name}<span className="ml-1 text-[9px] font-mono opacity-70">{t.count}</span></button>
           ))}
         </div>
       )}
@@ -37123,7 +37138,7 @@ function ProMonsterGridPicker({ list, selectedId=null, selectedIds=null, isDisab
         <div className={`px-1 mb-1 text-[9px] font-black ${ac.head}`}>★お気に入り・前回使った子</div>
         <div className="grid grid-cols-4 gap-1.5 mb-3">{pinnedIds.map(id=>tile(byId.get(id),'pin-'))}</div>
       </>)}
-      <div className="px-1 mb-1 text-[9px] font-black text-slate-400">{activeTab==='all'?'すべて':`${(lineageTabs.find(t=>t.id===activeTab)||{}).name}血統`}（{shownList.length}体）</div>
+      <div className={`px-1 mb-1 text-[9px] font-black text-slate-400${header?' [@media(max-height:760px)]:hidden':''}`}>{activeTab==='all'?'すべて':`${(lineageTabs.find(t=>t.id===activeTab)||{}).name}血統`}（{shownList.length}体）</div>
       <div className="grid grid-cols-4 gap-1.5 pb-3">{shownList.map(m=>tile(m,'all-'))}</div>
       </div>
       {/* 詳細パネルはスクロールの外に固定する。スクロール領域の中へ sticky で置くと、iPhoneのSafariで
@@ -37135,31 +37150,34 @@ function ProMonsterGridPicker({ list, selectedId=null, selectedIds=null, isDisab
             <div className="py-3 text-center text-[10px] font-black text-slate-400">モンスターをタップすると、ここに詳しい情報が出ます</div>
           ):(<>
             <div className="flex items-center gap-2">
-              <div className={`w-16 h-16 shrink-0 rounded-2xl overflow-hidden bg-black/30 border border-white/10 flex items-center justify-center${header?' [@media(max-height:640px)]:hidden':''}`}>
+              <div className={`w-12 h-12 shrink-0${detailFolded?' hidden':''} rounded-2xl overflow-hidden bg-black/30 border border-white/10 flex items-center justify-center${header?' [@media(max-height:640px)]:hidden':''}`}>
                 {focus.imgUrl?<DyedMonsterImage baseId={focus.id} src={focus.imgUrl} alt={focus.name} masuColors={focus.colors} className="w-full h-full object-contain"/>:<span className="text-4xl">{focus.emoji}</span>}
               </div>
               <div className="min-w-0 flex-1">
-                <div className="flex items-baseline justify-between gap-2"><b className="truncate text-[14px] text-white leading-tight">{focus.name}</b><span className="shrink-0 text-[9px] text-slate-500 font-black">総合力 <b className="text-[12px] text-amber-300 font-mono">{formatMonsterPower(monsterPowerOf(focus))}</b></span></div>
+                <div className="flex items-center justify-between gap-2"><b className="truncate text-[14px] text-white leading-tight">{focus.name}</b><span className="ml-auto shrink-0 text-[9px] text-slate-500 font-black">総合力 <b className="text-[12px] text-amber-300 font-mono">{formatMonsterPower(monsterPowerOf(focus))}</b></span>
+                  <button type="button" data-pro-pick-fold aria-expanded={!detailFolded} aria-label={detailFolded?'詳しい情報をひらく':'詳しい情報をたたむ'} onClick={()=>setDetailFolded(v=>!v)}
+                    className="shrink-0 -my-1 min-h-[28px] rounded-lg border border-white/15 bg-slate-900 px-1.5 text-[9px] font-black text-slate-300 active:scale-95">{detailFolded?'▲ ひらく':'▼ たたむ'}</button></div>
+                {!detailFolded&&<>
                 {monsterTypeProtoOn()&&<div data-pick-type-row className="flex"><MonsterTypeBadge monId={focus.id}/></div>}
-                <div className={`truncate text-[9px] font-black text-slate-400 leading-tight${header?' [@media(max-height:640px)]:hidden':''}`}>{(()=>{const l=monsterLineageOf(focus.id);return l.main.id===l.sub.id?`${l.main.name}の純血`:`${l.main.name} × ${l.sub.name}`;})()}</div>
-                <div className={`truncate text-[10px] font-black text-amber-300 leading-tight${header?' [@media(max-height:640px)]:hidden':''}`}><Zap size={10} className="inline mr-0.5"/>{focus.unique.name}</div>
-                <div className={`text-[9px] text-indigo-200 font-black leading-tight line-clamp-2${header?' [@media(max-height:640px)]:hidden':''}`}><span className="text-indigo-400">勇者特性 </span>{focus.trait||'特性なし'}</div>
+                {/* 血統と固有技は1行にまとめる(2026-10-22。一覧を広げるため) */}
+                <div className={`truncate text-[9px] font-black text-slate-400 leading-tight${header?' [@media(max-height:640px)]:hidden':''}`}>{(()=>{const l=monsterLineageOf(focus.id);return l.main.id===l.sub.id?`${l.main.name}の純血`:`${l.main.name} × ${l.sub.name}`;})()}<span className="ml-1.5 text-[10px] text-amber-300"><Zap size={10} className="inline mr-0.5"/>{focus.unique.name}</span></div>
+                <div className={`truncate text-[9px] text-indigo-200 font-black leading-tight${header?' [@media(max-height:640px)]:hidden':''}`}><span className="text-indigo-400">勇者特性 </span>{focus.trait||'特性なし'}</div>
+                </>}
               </div>
             </div>
-            <div className={`mt-1.5 grid grid-cols-4 gap-1 text-center font-mono${header?' [@media(max-height:640px)]:hidden':''}`}>
+            {/* ステータス4つと間合い4つは1行に並べる(2026-10-22。前は2行) */}
+            {!detailFolded&&<div data-pro-pick-stats className={`mt-1 grid grid-cols-8 gap-0.5 text-center font-mono${header?' [@media(max-height:640px)]:hidden':''}`}>
               {[['ライフ',focus.baseHp,'text-pink-300'],['ちから',focus.baseAtk,'text-red-300'],['丈夫さ',focus.baseDef,'text-emerald-300'],['ガッツ',focus.baseGuts,'text-amber-300']].map(([label,value,tint])=>(
-                <div key={label} className="rounded-lg bg-white/5 py-0.5"><div className="text-[8px] text-slate-500 font-black leading-tight">{label}</div><div className={`text-[12px] font-black leading-tight ${tint}`}>{value}</div></div>
+                <div key={label} className="min-w-0 rounded-md bg-white/5 py-0.5"><div className="text-[7px] text-slate-500 font-black leading-tight whitespace-nowrap">{label}</div><div className={`text-[11px] font-black leading-tight ${tint}`}>{value}</div></div>
               ))}
-            </div>
-            <div className={`mt-1 grid grid-cols-4 gap-1 text-center${header?' [@media(max-height:640px)]:hidden':''}`}>
               {RANGE_LABELS.map((label,i)=>(
-                <div key={label} className="rounded-lg bg-white/5 py-0.5"><div className="text-[8px] text-slate-500 font-black leading-tight">{label}</div><div className={`text-[11px] font-black rounded ${DIST_APTITUDE_COLOR[apt(focus,i)]}`}>{apt(focus,i)}</div></div>
+                <div key={label} className="min-w-0 rounded-md bg-white/5 py-0.5"><div className="text-[7px] text-slate-500 font-black leading-tight whitespace-nowrap">{label}</div><div className={`text-[11px] font-black leading-tight rounded ${DIST_APTITUDE_COLOR[apt(focus,i)]}`}>{apt(focus,i)}</div></div>
               ))}
-            </div>
+            </div>}
             <div className="mt-1.5 flex gap-1.5">
-              <button onClick={()=>toggleFav(focus.id)} aria-pressed={prefs.fav.includes(focus.id)} aria-label={prefs.fav.includes(focus.id)?'お気に入りを外す':'お気に入りに入れる'} className={`shrink-0 w-11 min-h-[44px] rounded-xl border text-lg font-black active:scale-95 ${prefs.fav.includes(focus.id)?'border-amber-400/60 bg-amber-900/40 text-amber-300':'border-slate-700 bg-slate-900 text-slate-500'}`}>★</button>
-              <button onClick={()=>onDetail&&onDetail(focus)} className="shrink-0 px-3 min-h-[44px] rounded-xl border border-indigo-400/30 bg-indigo-950/60 text-[11px] font-black text-indigo-200 active:scale-95">詳しく</button>
-              <button disabled={disabled(focus)} onClick={()=>onSelect(focus)} aria-label={confirmAria?confirmAria(focus):undefined} className={`flex-1 min-h-[44px] rounded-xl text-[13px] font-black active:scale-[.98] disabled:opacity-30 ${ac.button}`}>{typeof confirmLabel==='function'?confirmLabel(focus):confirmLabel}</button>
+              <button onClick={()=>toggleFav(focus.id)} aria-pressed={prefs.fav.includes(focus.id)} aria-label={prefs.fav.includes(focus.id)?'お気に入りを外す':'お気に入りに入れる'} className={`shrink-0 w-11 min-h-[40px] rounded-xl border text-lg font-black active:scale-95 ${prefs.fav.includes(focus.id)?'border-amber-400/60 bg-amber-900/40 text-amber-300':'border-slate-700 bg-slate-900 text-slate-500'}`}>★</button>
+              <button onClick={()=>onDetail&&onDetail(focus)} className="shrink-0 px-3 min-h-[40px] rounded-xl border border-indigo-400/30 bg-indigo-950/60 text-[11px] font-black text-indigo-200 active:scale-95">詳しく</button>
+              <button disabled={disabled(focus)} onClick={()=>onSelect(focus)} aria-label={confirmAria?confirmAria(focus):undefined} className={`flex-1 min-h-[40px] rounded-xl text-[13px] font-black active:scale-[.98] disabled:opacity-30 ${ac.button}`}>{typeof confirmLabel==='function'?confirmLabel(focus):confirmLabel}</button>
             </div>
           </>)}
         </div>
@@ -37201,7 +37219,7 @@ function ProPartyPicker({ list, need, initialIds=[], isDisabled, onDone, onDetai
         onClick={()=>{if(step==='hero'){if(m)setHeroId(m.id);return;}if(m)removeAt(i);else setActive(i);}}
         aria-label={step==='hero'?(m?`${m.name}を勇者モンにする`:'空き'):(m?`${m.name}を枠から外す`:`${i+1}番目の枠に入れる子を選ぶ`)}
         className={`relative flex min-w-0 flex-col items-center rounded-xl border-2 px-0.5 pb-1 pt-0.5 text-center active:scale-95 ${on?'border-indigo-300 bg-indigo-900/40 shadow-[0_0_10px_rgba(165,180,252,.55)]':isHero?'border-amber-300 bg-amber-900/50 shadow-[0_0_10px_rgba(252,211,77,.55)]':m?'border-pink-300/50 bg-slate-900/80':'border-dashed border-white/20 bg-slate-900/40'}`}>
-        <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-black/30 [@media(max-height:640px)]:h-7 [@media(max-height:640px)]:w-7">
+        <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-black/30 [@media(max-height:760px)]:h-8 [@media(max-height:760px)]:w-8 [@media(max-height:640px)]:h-7 [@media(max-height:640px)]:w-7">
           {m?(m.imgUrl?<DyedMonsterImage baseId={m.id} src={m.imgUrl} alt="" masuColors={m.colors} className="h-full w-full object-contain"/>:<span className="text-xl">{m.emoji}</span>):<span className={`text-[15px] font-black ${on?'text-indigo-100':'text-slate-600'}`}>+</span>}
         </span>
         <span className="mt-0.5 w-full truncate text-[9px] font-black leading-tight text-white">{m?m.name:(on?'ここに入る':'空き')}</span>
@@ -37214,7 +37232,7 @@ function ProPartyPicker({ list, need, initialIds=[], isDisabled, onDone, onDetai
   };
   const guide=step==='hero'?(hero?`${hero.name}が勇者モンです。ほかの子を押すと替えられます`:'勇者モンにする子を、上の枠から1体えらんでください')
     :full?'そろいました。枠を押すとその子を外せます。勇者モンは次でえらびます'
-    :`好きな枠を押してから、下で子をえらんで「枠に入れる」(どの順でもOK・あと${need-filled}体)`;
+    :`枠を押して、下の子を「枠に入れる」(どの順でもOK・あと${need-filled}体)`;
   const top=(
     <section data-pro-party className="mb-2 shrink-0 rounded-2xl border border-indigo-300/30 bg-black/30 p-2 [@media(max-height:640px)]:mb-1 [@media(max-height:640px)]:py-1.5">
       <div className="mb-1 flex items-baseline justify-between gap-1 text-[11px] font-black text-indigo-200"><span>{step==='hero'?'② 勇者モンをえらぶ':'① 編成する子をえらぶ'}</span><span className="text-[9px] text-slate-400">{filled} / {need}</span></div>
@@ -37245,7 +37263,7 @@ function ProPartyPicker({ list, need, initialIds=[], isDisabled, onDone, onDetai
         confirmAria={m=>ids.includes(m.id)?`${m.name}を枠から外す`:`${m.name}を枠に入れる`}
         onSelect={m=>{if(!ids.includes(m.id)&&full)return;put(m);}} onDetail={onDetail}/>
       <button type="button" data-pro-party-next disabled={!full} onClick={()=>setStep('hero')}
-        className="mt-2 shrink-0 min-h-[48px] w-full rounded-2xl bg-indigo-600 px-3 text-[13px] font-black text-white active:scale-95 disabled:bg-slate-800 disabled:text-slate-500">{full?'次へ(勇者モンをえらぶ)':`あと${need-filled}体えらんでください`}</button>
+        className="mt-1.5 shrink-0 min-h-[44px] w-full rounded-2xl bg-indigo-600 px-3 text-[13px] font-black text-white active:scale-95 disabled:bg-slate-800 disabled:text-slate-500">{full?'次へ(勇者モンをえらぶ)':`あと${need-filled}体えらんでください`}</button>
     </div>
   );
 }
@@ -37275,7 +37293,7 @@ function PickHeroAllyScreen({
       {/* 戻るボタンは ScreenHead と同じ枠つきの形にそろえる(2026-10-05。この画面だけ枠の無い矢印だった) */}
       <div className="mb-2 text-center flex items-center justify-between px-2 shrink-0"><button type="button" aria-label="戻る" disabled={!!battleTutorial} onClick={onBack} className="mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90 disabled:opacity-25"><ArrowLeft size={20}/></button><div className="min-w-0"><h2 className={`text-xl font-black italic uppercase tracking-widest ${pickMode==='ally'?'mh-ph-title':'text-indigo-400'}`}>{pickMode==='hero'?'勇者モンを選択':'供モンを選択'}</h2>
         {/* 呼び名の説明を1行(2026-10-09 G7。呼び名は変えず、何のことかを足す) */}
-        <p data-pick-term-note className={`mt-0.5 text-[10px] font-bold leading-snug text-slate-400${pickMode==='hero'&&isProMode(runMode)&&!battleTutorial?' [@media(max-height:640px)]:hidden':''}`}>{pickMode==='hero'?'勇者モン＝バトルの主役。この子の勇者特性が効く':'供モン＝勇者モンと一緒に戦う仲間'}</p></div><div className="w-10"></div></div>
+        <p data-pick-term-note className={`mt-0.5 text-[10px] font-bold leading-snug text-slate-400${pickMode==='hero'&&isProMode(runMode)&&!battleTutorial?' [@media(max-height:760px)]:hidden':''}`}>{pickMode==='hero'?'勇者モン＝バトルの主役。この子の勇者特性が効く':'供モン＝勇者モンと一緒に戦う仲間'}</p></div><div className="w-10"></div></div>
       {/* 供モン合流はバトルの途中に挟まる場面なので、どのWAVEを抜けたごほうびなのかを見出しの下に出す */}
       {pickMode==='ally'&&<div className="-mt-1 mb-2 flex shrink-0 flex-col items-center gap-1.5">
         <span className="mh-ph-plate">{waveResult?.wave>0?`WAVE ${waveResult.wave} CLEAR ・ `:''}新しい仲間が合流</span>
@@ -37360,7 +37378,7 @@ function PickHeroAllyScreen({
               <button key={key} onClick={()=>{setHeroPickTab(key); setCurrentPickingMon(null);}} aria-pressed={heroPickTab===key} className={`flex-1 min-h-[40px] rounded-2xl font-black text-[12px] border-2 active:scale-95 ${heroPickTab===key?'bg-indigo-600 border-indigo-300 text-white shadow-lg':'bg-slate-900 border-slate-700 text-slate-400'}`}>{label}</button>
             ))}
           </div>}
-          <div className={`text-[9px] text-slate-500 font-bold mt-1 px-1 text-center${isProMode(runMode)&&!battleTutorial?' [@media(max-height:640px)]:hidden':''}`}>{isProMode(runMode)?'プロモードはベースモンだけで挑みます。育てたマスモンは連れていけません':heroPickTab==='base'?'解放済みのベースモンから選べます。編成に入れていなくても、ラン終了時にマスモン登録できます':'M/B管理で組んだ編成から選びます'}</div>
+          <div className={`text-[9px] text-slate-500 font-bold mt-1 px-1 text-center${isProMode(runMode)&&!battleTutorial?' [@media(max-height:760px)]:hidden':''}`}>{isProMode(runMode)?'プロモードはベースモンだけ(育てたマスモンは連れていけません)':heroPickTab==='base'?'解放済みのベースモンから選べます。編成に入れていなくても、ラン終了時にマスモン登録できます':'M/B管理で組んだ編成から選びます'}</div>
         </div>
       )}
       {/* あふれる可能性のあるスクロール領域へ justify-center を付けると、あふれたぶんが
@@ -38827,6 +38845,7 @@ const FRIEND_NOTICE_LINES = Object.freeze({
   kiki: (who) => `${who}からフレンド申請が届いてまつよ。見にいきまつか？`,
   momosuke: (who) => `${who}からフレンド申請が来てるよw 見にいこ？`,
   dra: (who) => `${who}からフレンド申請が来てるわ。見にいくか`,
+  atsu: (who) => `${who}からフレンド申請来てるよ。とりあえず見にいこ`,
 });
 function HomeFriendRequestNotice({ activeAssistant, count, names, onOpen, onLater }) {
   const who = activeAssistant;
@@ -45666,6 +45685,8 @@ const RHYTHM_MODE_ASSISTANT_FRAMES = Object.freeze({
   momosuke: { zoom: 1.5, cx: 0.5, cy: 0.48, top: 0.42,
     cxBy: { angry: 0.545, happy: 0.545, crying: 0.44, wink: 0.46, excited: 0.38, surprise: 0.38, normal: 0.645, troubled: 0.655 } },
   dra: { zoom: 0.85, cx: 0.5, cy: 0.5, top: 0.4 },
+  // あつ(2026-10-22)。大きい絵は 768x1024(縦長・腰から上)。顔の位置で寄せる(写しで確かめて決める)
+  atsu: { zoom: 0.85, cx: 0.5, cy: 0.4, top: 0.42 },
 });
 // 舞台の飾り(スポットライト3本・音符・キラキラ・床の光)。位置と遅れは固定(描くたびに変わらないように)
 const RHYTHM_MODE_SELECT_NOTES = Object.freeze([
@@ -48787,36 +48808,118 @@ const assistantChatMonsterIds = (text, prevUserText) => {
 // ランキングの話題のとき、中継役に「どのランキングを読むか」の計画を付けて送る(2026-10-21 社長の決定「おしゃべりでランキングの上位を答えられるようにする」)。
 // 種類・難易度のキー・曲・イベントの期間は、ランキング画面と同じ関数(rankingDifficultyForMode・rhythmRankingDifficultyKey・rhythmLimitedEventAt ほか)で作る。
 // 中継役(supabase/functions/assistant-chat/ranking.js)は形を確かめて読むだけ。話題の判定は中継役の RANKING_TOPIC_RE と同じ式
+// 2026-10-22 社長「全部見られるようにして」:
+//   ・モードを言ったら、そのモードでランキングがある難易度を全部見る(並べ方はランキング画面の renderScoreRankingBody と同じ)
+//   ・「エクストリーム」「極限」は、そのモードの極限の難易度を全部。「全部」「全難易度」は、そのモードの難易度を全部
+//   ・その発言にランキングの言葉やモードが無ければ、すぐ前のプレイヤーの発言(2つまで)から話題・モード・難易度を引き継ぐ
+//     (中継役も、すぐ前の発言にランキングの言葉があれば読む。ranking.js の rankingTopicOf)
 const ASSISTANT_CHAT_RANKING_TOPIC = /ランキング|ランク(?:イン|上位)|順位|何位|なんい|[0-9０-９一二三四五]+位|トップ|上位|首位|一番(?:上|強い|高い)|いちばん(?:上|強い|高い)/;
-const ASSISTANT_CHAT_RANKING_MAX = 6;
-const assistantChatRankingPlan = (rawText) => {
+// 1回に読むランキングの数。チャレンジの全部(通常9+極限8)が入る数。中継役の RANKING_PLAN_MAX と同じ
+const ASSISTANT_CHAT_RANKING_MAX = 18;
+// 引き継ぐ前の発言の数
+const ASSISTANT_CHAT_RANKING_PREV = 2;
+// 「その種類の難易度を全部」の言葉。英字の EXTREME は難易度そのものの名前なので、ここには入れない(カタカナ・漢字だけ)
+const ASSISTANT_CHAT_RANKING_EXTREME_WORD = /エクストリーム|極限/;
+const ASSISTANT_CHAT_RANKING_ALL_WORD = /全部|ぜんぶ|全難易度|全ての難易度|すべての難易度|難易度(?:ごと|別|全部)|全部の難易度/;
+const assistantChatRankingPlan = (rawText, prevUserTexts = []) => {
   const text = String(rawText || '');
-  if (!ASSISTANT_CHAT_RANKING_TOPIC.test(text)) return null;
+  const prevs = (Array.isArray(prevUserTexts) ? prevUserTexts : []).slice(0, ASSISTANT_CHAT_RANKING_PREV).map(t => String(t || ''));
+  const topicNow = ASSISTANT_CHAT_RANKING_TOPIC.test(text);
+  if (!topicNow && !prevs.some(t => ASSISTANT_CHAT_RANKING_TOPIC.test(t))) return null;
   try {
     const norm = (s) => String(s || '').normalize('NFKC').toLowerCase().replace(/\s+/g, '');
-    const t = norm(text);
-    const has = (word) => !!word && t.includes(norm(word));
     const plan = [];
     const push = (p) => { if (plan.length < ASSISTANT_CHAT_RANKING_MAX && p) plan.push(p); };
     // 種(絆Lv・総合力の絞り込み)。図鑑の種と、その種のモンスターのid
     const lineages = typeof dexMainLineages === 'function' ? dexMainLineages() : [];
-    const lineage = lineages.find(l => has(`${l.name}種`)) || lineages.find(l => has(l.name)) || null;
-    const lineageMonsters = lineage && typeof dexMonsterList === 'function' ? dexMonsterList().filter(m => monsterLineageOf(m.id).main?.id === lineage.id).map(m => m.id) : [];
     // ── モンヒロビート ──
     const songs = (typeof RHYTHM_DEMO_SONG_IDS !== 'undefined' ? RHYTHM_DEMO_SONG_IDS : [])
       .filter(id => typeof rhythmSongReleased !== 'function' || rhythmSongReleased(id))
       .map(id => (typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS.find(s => s.songId === id) : null)).filter(s => s && s.displayName)
       .sort((a, b) => b.displayName.length - a.displayName.length);
-    const song = songs.find(s => has(s.displayName)) || null;
-    const rhythmWords = /モンヒロビート|モンビー|モンビート|音ゲー|リズム|曲/.test(text) || !!song;
     const rhythmDiffs = typeof rhythmScoredDifficultyIds === 'function' ? rhythmScoredDifficultyIds() : [];
-    const rhythmDiff = rhythmDiffs.find(d => new RegExp(`(^|[^a-z])${d.toLowerCase()}([^a-z]|$)`).test(text.normalize('NFKC').toLowerCase())) || null;
-    if (song) {
-      const diffs = rhythmDiff ? [rhythmDiff] : rhythmDiffs.filter(d => d === 'MASTER');
-      diffs.forEach(d => { const key = rhythmRankingDifficultyKey(song.songId, d); if (key) push({ kind:'rhythmSong', keys:[key], label:`モンヒロビート「${song.displayName}」${d}` }); });
+    // ── バトルのモード(ランキングがあるモードだけ)と難易度 ──
+    const modes = [
+      ...(typeof BATTLE_MODES !== 'undefined' ? BATTLE_MODES : []),
+      ...[typeof EXTREME_MODE !== 'undefined' ? EXTREME_MODE : null, typeof SPECIES_CHALLENGE_MODE !== 'undefined' ? SPECIES_CHALLENGE_MODE : null,
+        typeof TACTICS_MODE !== 'undefined' ? TACTICS_MODE : null, typeof TACTICS_SPECIES_MODE !== 'undefined' ? TACTICS_SPECIES_MODE : null,
+        typeof TACTICS_PRO_MODE !== 'undefined' ? TACTICS_PRO_MODE : null].filter(Boolean),
+    ].filter(m => m && m.id && modeHasRanking(m.id));
+    const extremeMode = typeof EXTREME_MODE !== 'undefined' ? EXTREME_MODE : null;
+    const modeWords = modes.flatMap(m => [m.label, m.short].filter(Boolean).map(w => ({ w, m }))).sort((a, b) => b.w.length - a.w.length);
+    const extremeList = [...(typeof PUBLIC_EXTREME_DIFFICULTIES !== 'undefined' ? PUBLIC_EXTREME_DIFFICULTIES : []),
+      ...(typeof EXTREME_DIFFICULTIES !== 'undefined' ? EXTREME_DIFFICULTIES : [])];
+    const isExtremeId = (id) => (typeof isExtremeDifficultyId === 'function' ? isExtremeDifficultyId(id) : extremeList.some(st => st.id === id));
+    const diffLabel = (id) => (DIFFICULTY_SETTINGS[id] && DIFFICULTY_SETTINGS[id].label) || (extremeList.find(st => st.id === id) || {}).label || id;
+    const diffChoices = [
+      ...Object.entries(DIFFICULTY_SETTINGS).map(([id, st]) => ({ id, label: st.label })),
+      ...extremeList.filter((st, i, all) => all.findIndex(x => x.id === st.id) === i).map(st => ({ id: st.id, label: st.label })),
+    ].sort((a, b) => b.label.length - a.label.length);
+    // ランキング画面のタブと同じ並べ方(極限の入口は極限だけ・タクティクスは TACTICS_DIFFICULTY_IDS・チャレンジは通常+極限・ほかは通常)
+    const rankingDiffIds = (mode) => {
+      if (!mode) return [];
+      if (extremeMode && mode.id === extremeMode.id) return (typeof PUBLIC_EXTREME_DIFFICULTIES !== 'undefined' ? PUBLIC_EXTREME_DIFFICULTIES : []).map(st => st.id);
+      if (isTacticsMode(mode.id)) return typeof TACTICS_DIFFICULTY_IDS !== 'undefined' ? [...TACTICS_DIFFICULTY_IDS] : Object.keys(DIFFICULTY_SETTINGS);
+      return [...Object.keys(DIFFICULTY_SETTINGS), ...(mode.id === BATTLE_MODE_CHALLENGE && typeof PUBLIC_EXTREME_DIFFICULTIES !== 'undefined' ? PUBLIC_EXTREME_DIFFICULTIES.map(st => st.id) : [])];
+    };
+    // 1つの発言から読み取れること
+    const read = (raw) => {
+      const t = norm(raw);
+      const has = (word) => !!word && t.includes(norm(word));
+      const song = songs.find(s => has(s.displayName)) || null;
+      const rhythm = /モンヒロビート|モンビー|モンビート|音ゲー|リズム|曲/.test(raw) || !!song;
+      const rhythmDiff = rhythmDiffs.find(d => new RegExp(`(^|[^a-z])${d.toLowerCase()}([^a-z]|$)`).test(String(raw).normalize('NFKC').toLowerCase())) || null;
+      // モードは長い言葉から。「極限」は、ほかのモードと一緒に出たときは「そのモードの極限の難易度」の意味なので、モードとしては数えない
+      const hits = modeWords.filter(x => has(x.w));
+      const other = hits.find(x => !extremeMode || x.m.id !== extremeMode.id);
+      const modeHit = other ? other.m : (hits[0] ? hits[0].m : null);
+      const extreme = ASSISTANT_CHAT_RANKING_EXTREME_WORD.test(raw);
+      const all = ASSISTANT_CHAT_RANKING_ALL_WORD.test(raw);
+      const diffHit = rhythm && !/バトル/.test(raw) ? null : (diffChoices.find(d => has(d.label)) || null);
+      const lineage = lineages.find(l => has(`${l.name}種`)) || lineages.find(l => has(l.name)) || null;
+      const battle = /バトル|スコア|チャレンジ|難易度/.test(raw) || !!modeHit || !!diffHit || extreme;
+      return {
+        song, rhythm, rhythmDiff, modeHit, extreme, all, diffHit, lineage,
+        battle: battle && !(rhythm && !modeHit && !diffHit && !extreme),
+        week: /週間|今週/.test(raw), event: /イベント/.test(raw), total: /合算|全曲|総合/.test(raw),
+        raid: /ジャック|レイド/.test(raw), breeder: /ブリーダー\s*(?:lv|ＬＶ|レベル)|ブリーダーlv/i.test(String(raw).normalize('NFKC')),
+        bond: /絆/.test(raw), power: /総合力/.test(raw),
+      };
+    };
+    const now = read(text);
+    const before = prevs.map(read);
+    const hasKind = (x) => x.rhythm || x.raid || x.breeder || x.bond || x.power || x.battle;
+    // 難易度だけ・「全部」だけ・何も無い発言は、すぐ前の話題の続きとして読む
+    const selectorOnly = !now.rhythm && !now.raid && !now.breeder && !now.bond && !now.power && !now.modeHit && !/バトル|チャレンジ/.test(text);
+    let c = now;
+    const ownSelector = !!(now.diffHit || now.extreme || now.all || now.rhythmDiff);
+    // ランキングの言葉も難易度の指定も無い発言(「今日は晴れだね」)は、前の話題を引き継がない(毎回は読まない)
+    if (selectorOnly && !topicNow && !ownSelector) return null;
+    if (selectorOnly) {
+      const base = before.find(hasKind);
+      if (base) {
+        // 前の話題の種類を使い、難易度の指定はいまの発言を優先する(いまの発言に指定が無ければ前のまま)
+        const own = ownSelector;
+        c = { ...base, lineage: now.lineage || base.lineage,
+          diffHit: own ? now.diffHit : base.diffHit, extreme: own ? now.extreme : base.extreme, all: own ? now.all : base.all,
+          rhythmDiff: now.rhythmDiff || base.rhythmDiff, inherited: true };
+      } else if (!topicNow) return null;
+    } else if (!topicNow && !hasKind(now)) return null;
+    if (c.battle && !c.modeHit && !selectorOnly) {
+      // 「極限」だけなど、モードの言葉が無いバトルの話は、すぐ前に出たモードを引き継ぐ
+      const m = before.find(x => x.modeHit);
+      if (m) c = { ...c, modeHit: m.modeHit };
     }
-    if (rhythmWords && /週間|今週/.test(text)) push({ kind:'rhythmWeek', label:'モンヒロビート 週間ランキング' });
-    if (rhythmWords && /イベント/.test(text) && typeof rhythmLimitedEventAt === 'function') {
+    if (!c.lineage) { const l = before.find(x => x.lineage); if (l) c = { ...c, lineage: l.lineage }; }
+    const lineage = c.lineage;
+    const lineageMonsters = lineage && typeof dexMonsterList === 'function' ? dexMonsterList().filter(m => monsterLineageOf(m.id).main?.id === lineage.id).map(m => m.id) : [];
+    // ── モンヒロビート ──
+    if (c.song) {
+      const diffs = c.rhythmDiff ? [c.rhythmDiff] : rhythmDiffs.filter(d => d === 'MASTER');
+      diffs.forEach(d => { const key = rhythmRankingDifficultyKey(c.song.songId, d); if (key) push({ kind:'rhythmSong', keys:[key], label:`モンヒロビート「${c.song.displayName}」${d}` }); });
+    }
+    if (c.rhythm && c.week) push({ kind:'rhythmWeek', label:'モンヒロビート 週間ランキング' });
+    if (c.rhythm && c.event && typeof rhythmLimitedEventAt === 'function') {
       const event = rhythmLimitedEventAt(Date.now());
       const range = event && typeof rhythmEventWindow === 'function' ? rhythmEventWindow(event, null) : null;
       if (event && range) {
@@ -48825,47 +48928,41 @@ const assistantChatRankingPlan = (rawText) => {
           fn: bonusRates ? 'rhythm_event_totals_bonus' : 'rhythm_event_totals', bonusRates: bonusRates || undefined });
       }
     }
-    if (rhythmWords && (!song || /合算|全曲|総合/.test(text)) && !/週間|今週|イベント/.test(text)) push({ kind:'rhythmTotal', label:'モンヒロビート 全曲の合算' });
+    if (c.rhythm && (!c.song || c.total) && !c.week && !c.event) push({ kind:'rhythmTotal', label:'モンヒロビート 全曲の合算' });
     // ── ジャックのレイド ──
-    if (/ジャック|レイド/.test(text) && typeof RAID_JACK_EVENT !== 'undefined') {
+    if (c.raid && typeof RAID_JACK_EVENT !== 'undefined') {
       push({ kind:'raid', view:'a', eventId:RAID_JACK_EVENT.id, label:`${RAID_JACK_EVENT.name} レイドバトルの与ダメージ` });
       push({ kind:'raid', view:'b', eventId:RAID_JACK_EVENT.id, label:`${RAID_JACK_EVENT.name} グランドスラムの与ダメージ` });
     }
     // ── ブリーダーLv・絆Lv・総合力 ──
     const lineageLabel = lineage ? `(${lineage.name}種)` : '';
-    if (/ブリーダー\s*(?:lv|ＬＶ|レベル)|ブリーダーlv/i.test(text.normalize('NFKC'))) push({ kind:'breeder', label:'ブリーダーLv' });
-    if (/絆/.test(text)) push({ kind:'bond', label:`絆Lv${lineageLabel}`, monsters: lineageMonsters });
-    if (/総合力/.test(text)) push({ kind:'power', label:`総合力${lineageLabel}`, monsters: lineageMonsters });
-    // ── バトルのスコア(モード×難易度。ランキングがあるモードだけ) ──
-    const modes = [
-      ...(typeof BATTLE_MODES !== 'undefined' ? BATTLE_MODES : []),
-      ...[typeof EXTREME_MODE !== 'undefined' ? EXTREME_MODE : null, typeof SPECIES_CHALLENGE_MODE !== 'undefined' ? SPECIES_CHALLENGE_MODE : null,
-        typeof TACTICS_MODE !== 'undefined' ? TACTICS_MODE : null, typeof TACTICS_SPECIES_MODE !== 'undefined' ? TACTICS_SPECIES_MODE : null,
-        typeof TACTICS_PRO_MODE !== 'undefined' ? TACTICS_PRO_MODE : null].filter(Boolean),
-    ].filter(m => m && m.id && modeHasRanking(m.id));
-    const modeWords = modes.flatMap(m => [m.label, m.short].filter(Boolean).map(w => ({ w, m }))).sort((a, b) => b.w.length - a.w.length);
-    const modeHit = modeWords.find(x => has(x.w));
-    const diffChoices = [
-      ...Object.entries(DIFFICULTY_SETTINGS).map(([id, st]) => ({ id, label: st.label })),
-      ...(typeof PUBLIC_EXTREME_DIFFICULTIES !== 'undefined' ? PUBLIC_EXTREME_DIFFICULTIES : []).map(st => ({ id: st.id, label: st.label, extreme: true })),
-    ].sort((a, b) => b.label.length - a.label.length);
-    const diffHit = rhythmWords && !/バトル/.test(text) ? null : (diffChoices.find(d => has(d.label)) || null);
-    const battleWords = /バトル|スコア|チャレンジ|難易度/.test(text) || !!modeHit || !!diffHit;
-    if (battleWords && !(rhythmWords && !modeHit && !diffHit)) {
-      const mode = modeHit ? modeHit.m : modes.find(m => m.id === BATTLE_MODE_CHALLENGE) || modes[0];
+    if (c.breeder) push({ kind:'breeder', label:'ブリーダーLv' });
+    if (c.bond) push({ kind:'bond', label:`絆Lv${lineageLabel}`, monsters: lineageMonsters });
+    if (c.power) push({ kind:'power', label:`総合力${lineageLabel}`, monsters: lineageMonsters });
+    // ── バトルのスコア(モード×難易度) ──
+    if (c.battle) {
+      // モードが分からない「極限」はエクストリーム(極限チャレンジ)、ほかはチャレンジ
+      let mode = c.modeHit || (c.extreme && extremeMode && modes.some(m => m.id === extremeMode.id) ? extremeMode : null)
+        || modes.find(m => m.id === BATTLE_MODE_CHALLENGE) || modes[0];
+      let tabs = rankingDiffIds(mode);
+      // 極限の難易度が無いモードで「極限」と言われたら、極限チャレンジのぶんを見る
+      if (c.extreme && !c.diffHit && !tabs.some(isExtremeId) && extremeMode && modes.some(m => m.id === extremeMode.id)) { mode = extremeMode; tabs = rankingDiffIds(mode); }
+      let ids;
+      if (c.diffHit) ids = [c.diffHit.id];
+      else if (c.extreme) ids = tabs.filter(isExtremeId);
+      else if (c.all || c.modeHit) ids = tabs;
+      else ids = tabs.filter(id => id === 'Normal' || id === 'Master' || id === 'Legend');
       const isSpecies = mode && (mode.id === BATTLE_MODE_SPECIES_CHALLENGE || mode.id === BATTLE_MODE_TACTICS_SPECIES);
-      const diffs = diffHit ? [diffHit] : diffChoices.filter(d => d.id === 'Normal' || d.id === 'Master' || d.id === 'Legend');
-      for (const d of diffs) {
+      for (const id of ids) {
         let keys = [];
         if (isSpecies) {
           const species = (typeof speciesChallengeLineages === 'function' ? speciesChallengeLineages() : []).find(l => lineage && l.id === lineage.id);
-          keys = species ? [rankingDifficultyForMode(mode.id, d.id, species.id)] : speciesChallengeAllRankingMembers(d.id, mode.id);
+          keys = species ? [rankingDifficultyForMode(mode.id, id, species.id)] : speciesChallengeAllRankingMembers(id, mode.id);
         } else {
-          const useExtreme = d.extreme && !isTacticsMode(mode.id);
-          keys = [rankingDifficultyForMode(useExtreme ? EXTREME_MODE.id : mode.id, d.id)];
+          keys = [rankingDifficultyForMode(isExtremeId(id) && !isTacticsMode(mode.id) && extremeMode ? extremeMode.id : mode.id, id)];
         }
         keys = keys.filter(Boolean);
-        if (keys.length) push({ kind:'score', keys, label:`${mode.label}・${d.label}${isSpecies ? (lineage ? `・${lineage.name}種` : '・全種族') : ''}のスコア` });
+        if (keys.length) push({ kind:'score', keys, label:`${mode.label}・${diffLabel(id)}${isSpecies ? (lineage ? `・${lineage.name}種` : '・全種族') : ''}のスコア` });
       }
     }
     // 何も絞れなかったときは、全体の様子が分かる基本の5つ
@@ -48983,6 +49080,8 @@ function AssistantChatWindow({ assistant, playerName, callName, bondLevel, bondT
     }
     const withUser = [...log, { role: 'user', text }];
     saveLog(withUser);
+    // ランキングの計画。すぐ前のプレイヤーの発言(新しい順に2つ)から話題・モード・難易度を引き継ぐ
+    const rankingPlan = assistantChatRankingPlan(text, log.filter(m => m && m.role === 'user').map(m => m.text).reverse().slice(0, ASSISTANT_CHAT_RANKING_PREV));
     setSending(true);
     let res = null;
     try {
@@ -48996,7 +49095,7 @@ function AssistantChatWindow({ assistant, playerName, callName, bondLevel, bondT
           messages: assistantChatSendWindow(withUser).map(m => ({ role: m.role, text: m.text })),
           ctx: { playerName, callName, bondLevel, bondTitle, bondTone, memo: memos[id] || null },
           // ランキングの話題のときだけ、読むランキングの計画を付ける(それ以外は付けない)
-          ...(assistantChatRankingPlan(text) ? { ranking: assistantChatRankingPlan(text) } : {}),
+          ...(rankingPlan ? { ranking: rankingPlan } : {}),
         }),
       });
       if (r.ok) res = await r.json();
@@ -53818,7 +53917,7 @@ function MonsterHeroGame() {
   // 時刻で出すのは第1部だけ(data/rhythm-event.js の HALLOWEEN_NIGHT_STORIES)。第2部以降はジャックのストーリー(RAID_JACK_STORY_IDS)で、
   // レイドの進み具合で出る。見たかどうかは同じ保存キーの配列へ入れる(新しいキーは作らない)
   const HALLOWEEN_NIGHT_STORY_IDS = HALLOWEEN_NIGHT_STORIES.map(story => story.id);
-  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID];
+  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID];
   // ★イベントid → そのイベントの会話id。**イベントを足したらここへ1行足す。**
   //   以前はここが第1回のidの直書きで、第2回が始まっても第1回の会話が流れる形になっていた
   //   (2026-09-17に第2回を足したときに直した)。書かなかったイベントでは会話は流れない。
@@ -53979,6 +54078,17 @@ function MonsterHeroGame() {
     if (rhythmEventStoryStartedRef.current.includes(ASSISTANT_CHAT_STORY_ID)) return;
     setRhythmEventStoryPending(ASSISTANT_CHAT_STORY_ID);
   }, [assistantChatStorySeenLoaded, assistantChatStorySeenFlag, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  // あつの加入のお話(2026-10-22 社長の決定)。みゅあ・きき・ももすけ がそろって Lv5 以上(ASSISTANT_ATSU_UNLOCK_BONDS)の HOME で1回だけ流す。
+  // 見たかどうかはドラと同じ「見終えたお話の id」(mh_rhythm_event_story_v1)。最後まで見るか飛ばすと、あつを選べるようになる(assistantUnlockedBy)。
+  // 公開の印 assistantAtsu が偽なら何もしない。置き方は上の HELL・おしゃべりのお話と同じ
+  useEffect(() => {
+    if (!EVENT_REPLAY_RELEASE_FLAGS.assistantAtsu) return;
+    if (!Array.isArray(rhythmEventStorySeen) || rhythmEventStorySeen.includes(ATSU_JOIN_STORY_ID)) return;
+    if (!assistantAtsuUnlockReady(id => assistantBondLevelOf(normalizeAssistantBond(assistantBonds[id]).points))) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
+    if (rhythmEventStoryStartedRef.current.includes(ATSU_JOIN_STORY_ID)) return;
+    setRhythmEventStoryPending(ATSU_JOIN_STORY_ID);
+  }, [rhythmEventStorySeen, assistantBonds, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
   // 助手4人がタイプを教えるお話を、ヘイトとタイプの公開のあとの最初の HOME で1回だけ流す(2026-10-18)。
   // タクティクスバトルの導入のお話をまだ見ていない人には流さない(何の話か分からないので。回想からは見られる)
   useEffect(() => {
@@ -56807,6 +56917,7 @@ function MonsterHeroGame() {
     rhythmMasuCallSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_MASU_CALL_STORY_ID),
     raidJackHowtoSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RAID_JACK_HOWTO_STORY_ID),
     raidJackRhythmStorySeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RAID_JACK_RHYTHM_STORY_ID),
+    atsuJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(ATSU_JOIN_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID) };
   // alwaysUnlocked のイベントは、本編でまだ見ていなくても回想から見られる
   const isEventReplayUnlocked = (event) => !!(event && event.alwaysUnlocked) || !!EVENT_REPLAY_UNLOCK_FLAGS[event && event.unlockedKey];
@@ -65775,7 +65886,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // 既定値は今まで鳴っていた曲そのものなので、これまでの音は変わらない
         ['enhance','準備・強化フェーズ BGM'],['result','WAVE後リザルト BGM'],['gameOver','敗北 BGM']]},
       {id:'battle',label:'バトル'},
-      {id:'event',label:'イベント',items:[['kikiIntro','きき加入イベント BGM'],['momosukeIntro','ももすけ登場イベント BGM'],['monbeatCupEvent','モンヒロビート大会イベント BGM'],['rhythmMultiEvent','みんなで対戦のお話 BGM'],['masuCallEvent','マスモンとセッションのお話 BGM'],['halloweenNightEvent','ハロウィン・ナイトのお話 BGM'],['assistantChatStoryEvent','助手とおしゃべりのお話 BGM']]},
+      {id:'event',label:'イベント',items:[['kikiIntro','きき加入イベント BGM'],['momosukeIntro','ももすけ登場イベント BGM'],['monbeatCupEvent','モンヒロビート大会イベント BGM'],['rhythmMultiEvent','みんなで対戦のお話 BGM'],['masuCallEvent','マスモンとセッションのお話 BGM'],['halloweenNightEvent','ハロウィン・ナイトのお話 BGM'],['assistantChatStoryEvent','助手とおしゃべりのお話 BGM'],['atsuJoinStoryEvent','あつ加入のお話 BGM']]},
       {id:'other',label:'その他',items:[['rhythmModeSelect','モンヒロビート モードえらび BGM'],['market','マーケット BGM'],['temple','神殿 BGM'],['trainingMenu','修行メニュー BGM'],['trainingBoard','修行中 BGM']]},
     ];const battleModes=BGM_BATTLE_MODE_TABS;const selected=categories.find(category=>category.id===bgmArrangementCategory)||categories[0];const selectedMode=battleModes.find(mode=>mode.id===bgmArrangementBattleMode)||battleModes[0];const items=selected.id==='battle'?selectedMode.items:selected.items;return <><div role="tablist" aria-label="BGMカテゴリ" className="grid grid-cols-4 gap-1 mb-3">{categories.map(category=><button key={category.id} type="button" role="tab" aria-selected={selected.id===category.id} onClick={()=>setBgmArrangementCategory(category.id)} className={`min-h-[44px] rounded-xl border px-1 text-[10px] font-black ${selected.id===category.id?'bg-indigo-600 border-indigo-300 text-white':'bg-slate-900 border-white/15 text-slate-300'}`}>{category.label}</button>)}</div>{selected.id==='battle'&&<div role="tablist" aria-label="バトルモード" className={`grid ${battleModes.length>=6?'grid-cols-3':battleModes.length>=5?'grid-cols-5':'grid-cols-4'} gap-1 mb-4`}>{battleModes.map(mode=><button key={mode.id} type="button" role="tab" aria-selected={selectedMode.id===mode.id} onClick={()=>setBgmArrangementBattleMode(mode.id)} className={`min-h-[44px] rounded-xl border px-1 text-[10px] font-black ${selectedMode.id===mode.id?'bg-fuchsia-700 border-fuchsia-300 text-white':'bg-slate-900 border-white/15 text-slate-300'}`}>{mode.label}</button>)}</div>}<div className="space-y-4">{selected.id==='other'&&[
       ['autoVictoryJingle','AUTO時 敵撃破ファンファーレ'],
@@ -69588,7 +69699,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <h3 className="text-base font-black text-white mb-1 text-center">いっしょに遊ぶ助手</h3>
               <p className="text-[9px] text-slate-500 text-center mb-3 leading-tight">いつでも変えられます。仲良し度と呼び方は助手ごとに分かれているので、切り替えても消えません。</p>
               <div className="space-y-2 mb-3">
-                {ASSISTANT_LIST.map(who=>{
+                {/* 公開の印が立つまでの助手(あつ)は、鍵つきの「？？？」としても出さない(assistantReleased) */}
+                {ASSISTANT_LIST.filter(who=>assistantReleased(who.id)).map(who=>{
                   const active=who.id===selectedAssistantId;
                   const lv=assistantBondLevelOf(normalizeAssistantBond(assistantBonds[who.id]).points);
                   const t=(typeof assistantBondStageByLevel==='function')?assistantBondStageByLevel(lv,who.id):null;
@@ -69602,7 +69714,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       <span className="text-2xl" aria-hidden="true">🔒</span>
                       <span className="min-w-0 flex-1">
                         <b className="block text-[12px] font-black text-slate-400">？？？</b>
-                        <small className="block text-[9px] text-slate-500 leading-tight">{assistantUnlockStoryId(who.id)?'イベントの話を最後まで見ると選べるようになります。':'HOMEでの出会いを見ると選べるようになります。'}</small>
+                        <small className="block text-[9px] text-slate-500 leading-tight">{who.id==='atsu'?'助手たちともっと仲良くなると、会えるかもしれません。':assistantUnlockStoryId(who.id)?'イベントの話を最後まで見ると選べるようになります。':'HOMEでの出会いを見ると選べるようになります。'}</small>
                       </span>
                     </div>
                   );
@@ -69965,7 +70077,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const cell=(costume)=>{
             const owned=!costume||ownedAssistantCostumes.includes(costume.id);
             const selected=costume?(worn&&worn.id===costume.id):!worn;
-            const src=costume?faceOf(costume):`${who.imageDir}/face/${who.imagePrefix}_normal.PNG`;
+            const src=costume?faceOf(costume):(assistantTempImage(who,'normal')||`${who.imageDir}/face/${who.imagePrefix}_normal.PNG`);
             return (
               <button key={costume?costume.id:'original'} data-assistant-costume-option={costume?costume.id:'original'} data-assistant-costume-locked={owned?'no':'yes'}
                 onClick={()=>{ if(owned){ wearAssistantCostume(who.id, costume?costume.id:null); setCostumeLockedInfo(null); } else setCostumeLockedInfo(costume.id); }}
@@ -70465,7 +70577,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // ゲスト(ジャック・ぱんぷきん)は、下の助手の列には入れない。初めて話す行(か stage で呼ばれる行)から、画面の上部の「ステージ」に出る
         //  (2026-10-04・ユーザー指示「はじめからジャックやぱんぷきんが会話画面にいるのは違和感。出すタイミングをちゃんと」)
         const isGuestWho=(id)=>{const w=assistantById(id);return !!w&&w.role==='ゲスト';};
-        const cast=storyCastOf(script).filter(who=>who.role!=='ゲスト');
+        // hideUntilFirstLine に書いた助手は、初めて話す行までは下の列にも出さない(登場の場面で顔を伏せる。2026-10-22 社長「あつの顔は『呼んだ？』で登場するまで伏せる」)
+        const hiddenUntil=Array.isArray(event&&event.hideUntilFirstLine)?event.hideUntilFirstLine:[];
+        const cast=storyCastOf(script).filter(who=>who.role!=='ゲスト')
+          .filter(who=>!hiddenUntil.includes(who.id)||script.slice(0,step+1).some(l=>l&&l.who===who.id));
         let stageIdx=-1;
         for(let i=step;i>=0;i--){const l=script[i];if(l.stage==='none'){stageIdx=-1;break;}if(l.stage||isGuestWho(l.who)){stageIdx=i;break;}}
         const stageLine=stageIdx>=0?script[stageIdx]:null;

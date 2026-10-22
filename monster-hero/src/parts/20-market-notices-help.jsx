@@ -784,7 +784,9 @@ const helpDataRows = (id) => {
         });
     // 助手の一覧。名前と性格の違いを実データから出す
     case 'assistants':
+      // 公開の印が立つまでの助手(あつ)は並べない(assistantReleased・data/assistants.js)
       return ((typeof ASSISTANT_LIST !== 'undefined' && ASSISTANT_LIST) || [])
+        .filter(who => typeof assistantReleased !== 'function' || assistantReleased(who.id))
         .map(who => [who.name, `${who.tagline || ''}${who.intro ? ` ／ ${who.intro}` : ''}`]);
     case 'monsterPower':
       // 総合力の内訳は、実際の計算に使っている定数から作る(ヘルプへ数字を手で書き写さない)

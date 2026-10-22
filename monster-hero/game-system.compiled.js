@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 90d3baeecc3f2cc1
+// source-sha256: 47a1fd898c5e32ef
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-22 06:48";
+const BUILD_DATE = "2026-10-22 10:44";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -398,6 +398,9 @@ const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
   },
   get tacticsTypes() {
     return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.tacticsHate === true;
+  },
+  get assistantAtsu() {
+    return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantAtsu === true;
   }
 });
 const eventReplayReleased = event => !event?.releaseFlag || EVENT_REPLAY_RELEASE_FLAGS[event.releaseFlag] === true;
@@ -6398,6 +6401,7 @@ const rhythmAchievementPending = (ledger, rules, eligible) => {
 const pandoraBossBgmForBattle = (heroId, currentWave, enemyId) => heroId === 'Pandora' && (enemyId === 'Moo' || currentWave === 10) ? 'pandora_boss' : null;
 const eikiBossBgmForBattle = (heroId, currentWave, enemyId) => heroId === 'Eiki' && (enemyId === 'Moo' || currentWave === 10) ? 'eiki_boss' : null;
 const DEFAULT_BGM_ARRANGEMENT = Object.freeze({
+  atsuJoinStoryEvent: 'melo_against_my_own_shadow',
   tacticsTypesEvent: 'original_event_01',
   rhythmHellStoryEvent: 'melo_sheriruth',
   assistantChatStoryEvent: 'close_to_your_heart_alt',
@@ -6491,6 +6495,7 @@ const eventScriptBgmAt = (script, step) => {
 };
 const EVENT_BGM_FADE_MS = 800;
 const EVENT_BGM_SCENES = Object.freeze({
+  atsu_join_2026_10_22: 'atsuJoinStoryEvent',
   tactics_types: 'tacticsTypesEvent',
   kiki_intro: 'kikiIntro',
   rhythm_hell_story: 'rhythmHellStoryEvent',
@@ -12062,11 +12067,12 @@ const RELEASE_FLAGS = {
   speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE,
   tactics: TACTICS_MODE_PUBLIC_RELEASE,
   rhythmHell: true,
-  battleLog: false,
+  battleLog: true,
   battleCardArt: true,
   assistantChat: true,
   assistantChatRanking: true,
   assistantDailyLines: true,
+  assistantAtsu: true,
   tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE,
   tacticsHate: true,
   tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE,
@@ -12412,6 +12418,7 @@ const rhythmHellStorySeenKey = () => typeof rhythmHellReleased === 'function' &&
 const RHYTHM_HELL_STORY_TRIGGER = 'release';
 const ASSISTANT_CHAT_STORY_SEEN_KEY = 'mh_story_assistant_chat_seen_v1';
 const ASSISTANT_CHAT_STORY_ID = 'assistant_chat_story';
+const ATSU_JOIN_STORY_ID = 'atsu_join_2026_10_22';
 const TACTICS_TYPES_STORY_SEEN_KEY = 'mh_story_tactics_types_seen_v1';
 const TACTICS_TYPES_STORY_ID = 'tactics_types';
 const normalizeAssistantId = value => typeof assistantIdOrDefault === 'function' ? assistantIdOrDefault(typeof value === 'string' ? value : null) : typeof DEFAULT_ASSISTANT_ID !== 'undefined' && DEFAULT_ASSISTANT_ID || 'mua';
@@ -12423,6 +12430,7 @@ const assistantBondKeyFor = assistantId => {
 const assistantIdOfAssistCard = cardId => {
   const id = String(cardId == null ? '' : cardId);
   const list = typeof ASSISTANTS !== 'undefined' && Array.isArray(ASSISTANTS) ? ASSISTANTS : [];
+  if (typeof assistantReleased === 'function' && !assistantReleased(id)) return null;
   return list.some(a => a && a.id === id) ? id : null;
 };
 const ASSISTANT_CALL_STYLE_KEY = 'mh_assistant_call_style';
@@ -16614,7 +16622,7 @@ const helpDataRows = id => {
         return [frame.name, `${how}${frame.desc ? ` ${frame.desc}` : ''}`];
       });
     case 'assistants':
-      return (typeof ASSISTANT_LIST !== 'undefined' && ASSISTANT_LIST || []).map(who => [who.name, `${who.tagline || ''}${who.intro ? ` ／ ${who.intro}` : ''}`]);
+      return (typeof ASSISTANT_LIST !== 'undefined' && ASSISTANT_LIST || []).filter(who => typeof assistantReleased !== 'function' || assistantReleased(who.id)).map(who => [who.name, `${who.tagline || ''}${who.intro ? ` ／ ${who.intro}` : ''}`]);
     case 'monsterPower':
       return [['ライフ 1', `+${MONSTER_POWER_STAT_WEIGHT.hp}`], ['ちから 1', `+${Math.round(MONSTER_POWER_STAT_WEIGHT.atk * 100) / 100}（強化P1つ=ちから+${STAT_POINT_GAIN.atk} で +10）`], ['丈夫さ 1', `+${Math.round(MONSTER_POWER_STAT_WEIGHT.def * 100) / 100}（強化P1つ=丈夫さ+${STAT_POINT_GAIN.def} で +10）`], ['ガッツ 1', `+${Math.round(MONSTER_POWER_STAT_WEIGHT.guts * 100) / 100}（強化P1つ=ガッツ+${STAT_POINT_GAIN.guts} で +10）`], ['間合い適性', DIST_APTITUDE_GRADES.slice().reverse().map(g => `${g} ${MONSTER_POWER_APTITUDE[g] > 0 ? '+' : ''}${MONSTER_POWER_APTITUDE[g]}`).join(' ／ ') + '（4距離すべてを合計）'], ['固有技を1つ持つ', `+${MONSTER_POWER_UNIQUE_OWNED}（Lv0でも付く。継承した固有技も同じ）`], ['固有技の強化Lv 1段階', `+${Math.round(MONSTER_POWER_UNIQUE_PER_LEVEL * 100) / 100}（3段階でちょうど+200）`]];
     case 'assistantBondRewards':
@@ -60728,6 +60736,7 @@ function ProMonsterGridPicker({
     return first ? first.id : null;
   });
   const focus = list.find(m => m.id === focusId) || null;
+  const [detailFolded, setDetailFolded] = React.useState(false);
   const toggleFav = id => setPrefs(prev => {
     const next = {
       ...prev,
@@ -60786,7 +60795,7 @@ function ProMonsterGridPicker({
       size: 9,
       className: "text-white"
     })), React.createElement("div", {
-      className: "w-14 h-14 rounded-full overflow-hidden bg-black/30 border border-white/10 flex items-center justify-center"
+      className: "w-14 h-14 [@media(max-height:760px)]:w-12 [@media(max-height:760px)]:h-12 rounded-full overflow-hidden bg-black/30 border border-white/10 flex items-center justify-center"
     }, m.imgUrl ? React.createElement(DyedMonsterImage, {
       baseId: m.id,
       src: m.imgUrl,
@@ -60824,7 +60833,7 @@ function ProMonsterGridPicker({
         if (first) setFocusId(first.id);
       }
     },
-    className: `shrink-0 min-h-[34px] px-2.5 rounded-full border text-[11px] font-black active:scale-95 ${activeTab === t.id ? ac.tab : 'border-slate-700 bg-slate-900 text-slate-400'}`
+    className: `shrink-0 min-h-[34px] [@media(max-height:760px)]:min-h-[30px] px-2.5 rounded-full border text-[11px] font-black active:scale-95 ${activeTab === t.id ? ac.tab : 'border-slate-700 bg-slate-900 text-slate-400'}`
   }, t.name, React.createElement("span", {
     className: "ml-1 text-[9px] font-mono opacity-70"
   }, t.count)))), React.createElement("div", {
@@ -60835,7 +60844,7 @@ function ProMonsterGridPicker({
   }, "★お気に入り・前回使った子"), React.createElement("div", {
     className: "grid grid-cols-4 gap-1.5 mb-3"
   }, pinnedIds.map(id => tile(byId.get(id), 'pin-')))), React.createElement("div", {
-    className: "px-1 mb-1 text-[9px] font-black text-slate-400"
+    className: `px-1 mb-1 text-[9px] font-black text-slate-400${header ? ' [@media(max-height:760px)]:hidden' : ''}`
   }, activeTab === 'all' ? 'すべて' : `${(lineageTabs.find(t => t.id === activeTab) || {}).name}血統`, "（", shownList.length, "体）"), React.createElement("div", {
     className: "grid grid-cols-4 gap-1.5 pb-3"
   }, shownList.map(m => tile(m, 'all-')))), React.createElement("div", {
@@ -60849,7 +60858,7 @@ function ProMonsterGridPicker({
   }, "モンスターをタップすると、ここに詳しい情報が出ます") : React.createElement(React.Fragment, null, React.createElement("div", {
     className: "flex items-center gap-2"
   }, React.createElement("div", {
-    className: `w-16 h-16 shrink-0 rounded-2xl overflow-hidden bg-black/30 border border-white/10 flex items-center justify-center${header ? ' [@media(max-height:640px)]:hidden' : ''}`
+    className: `w-12 h-12 shrink-0${detailFolded ? ' hidden' : ''} rounded-2xl overflow-hidden bg-black/30 border border-white/10 flex items-center justify-center${header ? ' [@media(max-height:640px)]:hidden' : ''}`
   }, focus.imgUrl ? React.createElement(DyedMonsterImage, {
     baseId: focus.id,
     src: focus.imgUrl,
@@ -60861,14 +60870,21 @@ function ProMonsterGridPicker({
   }, focus.emoji)), React.createElement("div", {
     className: "min-w-0 flex-1"
   }, React.createElement("div", {
-    className: "flex items-baseline justify-between gap-2"
+    className: "flex items-center justify-between gap-2"
   }, React.createElement("b", {
     className: "truncate text-[14px] text-white leading-tight"
   }, focus.name), React.createElement("span", {
-    className: "shrink-0 text-[9px] text-slate-500 font-black"
+    className: "ml-auto shrink-0 text-[9px] text-slate-500 font-black"
   }, "総合力 ", React.createElement("b", {
     className: "text-[12px] text-amber-300 font-mono"
-  }, formatMonsterPower(monsterPowerOf(focus))))), monsterTypeProtoOn() && React.createElement("div", {
+  }, formatMonsterPower(monsterPowerOf(focus)))), React.createElement("button", {
+    type: "button",
+    "data-pro-pick-fold": true,
+    "aria-expanded": !detailFolded,
+    "aria-label": detailFolded ? '詳しい情報をひらく' : '詳しい情報をたたむ',
+    onClick: () => setDetailFolded(v => !v),
+    className: "shrink-0 -my-1 min-h-[28px] rounded-lg border border-white/15 bg-slate-900 px-1.5 text-[9px] font-black text-slate-300 active:scale-95"
+  }, detailFolded ? '▲ ひらく' : '▼ たたむ')), !detailFolded && React.createElement(React.Fragment, null, monsterTypeProtoOn() && React.createElement("div", {
     "data-pick-type-row": true,
     className: "flex"
   }, React.createElement(MonsterTypeBadge, {
@@ -60878,48 +60894,47 @@ function ProMonsterGridPicker({
   }, (() => {
     const l = monsterLineageOf(focus.id);
     return l.main.id === l.sub.id ? `${l.main.name}の純血` : `${l.main.name} × ${l.sub.name}`;
-  })()), React.createElement("div", {
-    className: `truncate text-[10px] font-black text-amber-300 leading-tight${header ? ' [@media(max-height:640px)]:hidden' : ''}`
+  })(), React.createElement("span", {
+    className: "ml-1.5 text-[10px] text-amber-300"
   }, React.createElement(Zap, {
     size: 10,
     className: "inline mr-0.5"
-  }), focus.unique.name), React.createElement("div", {
-    className: `text-[9px] text-indigo-200 font-black leading-tight line-clamp-2${header ? ' [@media(max-height:640px)]:hidden' : ''}`
+  }), focus.unique.name)), React.createElement("div", {
+    className: `truncate text-[9px] text-indigo-200 font-black leading-tight${header ? ' [@media(max-height:640px)]:hidden' : ''}`
   }, React.createElement("span", {
     className: "text-indigo-400"
-  }, "勇者特性 "), focus.trait || '特性なし'))), React.createElement("div", {
-    className: `mt-1.5 grid grid-cols-4 gap-1 text-center font-mono${header ? ' [@media(max-height:640px)]:hidden' : ''}`
+  }, "勇者特性 "), focus.trait || '特性なし')))), !detailFolded && React.createElement("div", {
+    "data-pro-pick-stats": true,
+    className: `mt-1 grid grid-cols-8 gap-0.5 text-center font-mono${header ? ' [@media(max-height:640px)]:hidden' : ''}`
   }, [['ライフ', focus.baseHp, 'text-pink-300'], ['ちから', focus.baseAtk, 'text-red-300'], ['丈夫さ', focus.baseDef, 'text-emerald-300'], ['ガッツ', focus.baseGuts, 'text-amber-300']].map(([label, value, tint]) => React.createElement("div", {
     key: label,
-    className: "rounded-lg bg-white/5 py-0.5"
+    className: "min-w-0 rounded-md bg-white/5 py-0.5"
   }, React.createElement("div", {
-    className: "text-[8px] text-slate-500 font-black leading-tight"
+    className: "text-[7px] text-slate-500 font-black leading-tight whitespace-nowrap"
   }, label), React.createElement("div", {
-    className: `text-[12px] font-black leading-tight ${tint}`
-  }, value)))), React.createElement("div", {
-    className: `mt-1 grid grid-cols-4 gap-1 text-center${header ? ' [@media(max-height:640px)]:hidden' : ''}`
-  }, RANGE_LABELS.map((label, i) => React.createElement("div", {
+    className: `text-[11px] font-black leading-tight ${tint}`
+  }, value))), RANGE_LABELS.map((label, i) => React.createElement("div", {
     key: label,
-    className: "rounded-lg bg-white/5 py-0.5"
+    className: "min-w-0 rounded-md bg-white/5 py-0.5"
   }, React.createElement("div", {
-    className: "text-[8px] text-slate-500 font-black leading-tight"
+    className: "text-[7px] text-slate-500 font-black leading-tight whitespace-nowrap"
   }, label), React.createElement("div", {
-    className: `text-[11px] font-black rounded ${DIST_APTITUDE_COLOR[apt(focus, i)]}`
+    className: `text-[11px] font-black leading-tight rounded ${DIST_APTITUDE_COLOR[apt(focus, i)]}`
   }, apt(focus, i))))), React.createElement("div", {
     className: "mt-1.5 flex gap-1.5"
   }, React.createElement("button", {
     onClick: () => toggleFav(focus.id),
     "aria-pressed": prefs.fav.includes(focus.id),
     "aria-label": prefs.fav.includes(focus.id) ? 'お気に入りを外す' : 'お気に入りに入れる',
-    className: `shrink-0 w-11 min-h-[44px] rounded-xl border text-lg font-black active:scale-95 ${prefs.fav.includes(focus.id) ? 'border-amber-400/60 bg-amber-900/40 text-amber-300' : 'border-slate-700 bg-slate-900 text-slate-500'}`
+    className: `shrink-0 w-11 min-h-[40px] rounded-xl border text-lg font-black active:scale-95 ${prefs.fav.includes(focus.id) ? 'border-amber-400/60 bg-amber-900/40 text-amber-300' : 'border-slate-700 bg-slate-900 text-slate-500'}`
   }, "★"), React.createElement("button", {
     onClick: () => onDetail && onDetail(focus),
-    className: "shrink-0 px-3 min-h-[44px] rounded-xl border border-indigo-400/30 bg-indigo-950/60 text-[11px] font-black text-indigo-200 active:scale-95"
+    className: "shrink-0 px-3 min-h-[40px] rounded-xl border border-indigo-400/30 bg-indigo-950/60 text-[11px] font-black text-indigo-200 active:scale-95"
   }, "詳しく"), React.createElement("button", {
     disabled: disabled(focus),
     onClick: () => onSelect(focus),
     "aria-label": confirmAria ? confirmAria(focus) : undefined,
-    className: `flex-1 min-h-[44px] rounded-xl text-[13px] font-black active:scale-[.98] disabled:opacity-30 ${ac.button}`
+    className: `flex-1 min-h-[40px] rounded-xl text-[13px] font-black active:scale-[.98] disabled:opacity-30 ${ac.button}`
   }, typeof confirmLabel === 'function' ? confirmLabel(focus) : confirmLabel))))));
 }
 function ProPartyPicker({
@@ -60995,7 +61010,7 @@ function ProPartyPicker({
       "aria-label": step === 'hero' ? m ? `${m.name}を勇者モンにする` : '空き' : m ? `${m.name}を枠から外す` : `${i + 1}番目の枠に入れる子を選ぶ`,
       className: `relative flex min-w-0 flex-col items-center rounded-xl border-2 px-0.5 pb-1 pt-0.5 text-center active:scale-95 ${on ? 'border-indigo-300 bg-indigo-900/40 shadow-[0_0_10px_rgba(165,180,252,.55)]' : isHero ? 'border-amber-300 bg-amber-900/50 shadow-[0_0_10px_rgba(252,211,77,.55)]' : m ? 'border-pink-300/50 bg-slate-900/80' : 'border-dashed border-white/20 bg-slate-900/40'}`
     }, React.createElement("span", {
-      className: "flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-black/30 [@media(max-height:640px)]:h-7 [@media(max-height:640px)]:w-7"
+      className: "flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-black/30 [@media(max-height:760px)]:h-8 [@media(max-height:760px)]:w-8 [@media(max-height:640px)]:h-7 [@media(max-height:640px)]:w-7"
     }, m ? m.imgUrl ? React.createElement(DyedMonsterImage, {
       baseId: m.id,
       src: m.imgUrl,
@@ -61026,7 +61041,7 @@ function ProPartyPicker({
       className: "absolute -top-1.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border border-amber-200 bg-amber-500 px-1 text-[8px] font-black leading-[12px] text-black"
     }, "👑勇者"));
   };
-  const guide = step === 'hero' ? hero ? `${hero.name}が勇者モンです。ほかの子を押すと替えられます` : '勇者モンにする子を、上の枠から1体えらんでください' : full ? 'そろいました。枠を押すとその子を外せます。勇者モンは次でえらびます' : `好きな枠を押してから、下で子をえらんで「枠に入れる」(どの順でもOK・あと${need - filled}体)`;
+  const guide = step === 'hero' ? hero ? `${hero.name}が勇者モンです。ほかの子を押すと替えられます` : '勇者モンにする子を、上の枠から1体えらんでください' : full ? 'そろいました。枠を押すとその子を外せます。勇者モンは次でえらびます' : `枠を押して、下の子を「枠に入れる」(どの順でもOK・あと${need - filled}体)`;
   const top = React.createElement("section", {
     "data-pro-party": true,
     className: "mb-2 shrink-0 rounded-2xl border border-indigo-300/30 bg-black/30 p-2 [@media(max-height:640px)]:mb-1 [@media(max-height:640px)]:py-1.5"
@@ -61085,7 +61100,7 @@ function ProPartyPicker({
     "data-pro-party-next": true,
     disabled: !full,
     onClick: () => setStep('hero'),
-    className: "mt-2 shrink-0 min-h-[48px] w-full rounded-2xl bg-indigo-600 px-3 text-[13px] font-black text-white active:scale-95 disabled:bg-slate-800 disabled:text-slate-500"
+    className: "mt-1.5 shrink-0 min-h-[44px] w-full rounded-2xl bg-indigo-600 px-3 text-[13px] font-black text-white active:scale-95 disabled:bg-slate-800 disabled:text-slate-500"
   }, full ? '次へ(勇者モンをえらぶ)' : `あと${need - filled}体えらんでください`));
 }
 function PickHeroAllyScreen({
@@ -61178,7 +61193,7 @@ function PickHeroAllyScreen({
       className: `text-xl font-black italic uppercase tracking-widest ${pickMode === 'ally' ? 'mh-ph-title' : 'text-indigo-400'}`
     }, pickMode === 'hero' ? '勇者モンを選択' : '供モンを選択'), React.createElement("p", {
       "data-pick-term-note": true,
-      className: `mt-0.5 text-[10px] font-bold leading-snug text-slate-400${pickMode === 'hero' && isProMode(runMode) && !battleTutorial ? ' [@media(max-height:640px)]:hidden' : ''}`
+      className: `mt-0.5 text-[10px] font-bold leading-snug text-slate-400${pickMode === 'hero' && isProMode(runMode) && !battleTutorial ? ' [@media(max-height:760px)]:hidden' : ''}`
     }, pickMode === 'hero' ? '勇者モン＝バトルの主役。この子の勇者特性が効く' : '供モン＝勇者モンと一緒に戦う仲間')), React.createElement("div", {
       className: "w-10"
     })), pickMode === 'ally' && React.createElement("div", {
@@ -61301,8 +61316,8 @@ function PickHeroAllyScreen({
       "aria-pressed": heroPickTab === key,
       className: `flex-1 min-h-[40px] rounded-2xl font-black text-[12px] border-2 active:scale-95 ${heroPickTab === key ? 'bg-indigo-600 border-indigo-300 text-white shadow-lg' : 'bg-slate-900 border-slate-700 text-slate-400'}`
     }, label))), React.createElement("div", {
-      className: `text-[9px] text-slate-500 font-bold mt-1 px-1 text-center${isProMode(runMode) && !battleTutorial ? ' [@media(max-height:640px)]:hidden' : ''}`
-    }, isProMode(runMode) ? 'プロモードはベースモンだけで挑みます。育てたマスモンは連れていけません' : heroPickTab === 'base' ? '解放済みのベースモンから選べます。編成に入れていなくても、ラン終了時にマスモン登録できます' : 'M/B管理で組んだ編成から選びます')), React.createElement("div", {
+      className: `text-[9px] text-slate-500 font-bold mt-1 px-1 text-center${isProMode(runMode) && !battleTutorial ? ' [@media(max-height:760px)]:hidden' : ''}`
+    }, isProMode(runMode) ? 'プロモードはベースモンだけ(育てたマスモンは連れていけません)' : heroPickTab === 'base' ? '解放済みのベースモンから選べます。編成に入れていなくても、ラン終了時にマスモン登録できます' : 'M/B管理で組んだ編成から選びます')), React.createElement("div", {
       className: `flex-1 ${pickMode === 'hero' && isProMode(runMode) ? 'overflow-hidden' : 'overflow-y-auto mh-scroll'} w-full max-w-md mx-auto pb-4 min-h-0 flex flex-col`
     }, React.createElement("div", {
       className: `w-full${pickMode === 'ally' ? ' m-auto' : ''}${pickMode === 'hero' && isProMode(runMode) ? ' flex-1 min-h-0 flex flex-col' : ''}`
@@ -64206,7 +64221,8 @@ const FRIEND_NOTICE_LINES = Object.freeze({
   mua: who => `${who}からフレンド申請が届いてるよ♪ 見にいってみよう！`,
   kiki: who => `${who}からフレンド申請が届いてまつよ。見にいきまつか？`,
   momosuke: who => `${who}からフレンド申請が来てるよw 見にいこ？`,
-  dra: who => `${who}からフレンド申請が来てるわ。見にいくか`
+  dra: who => `${who}からフレンド申請が来てるわ。見にいくか`,
+  atsu: who => `${who}からフレンド申請来てるよ。とりあえず見にいこ`
 });
 function HomeFriendRequestNotice({
   activeAssistant,
@@ -75379,6 +75395,12 @@ const RHYTHM_MODE_ASSISTANT_FRAMES = Object.freeze({
     cx: 0.5,
     cy: 0.5,
     top: 0.4
+  },
+  atsu: {
+    zoom: 0.85,
+    cx: 0.5,
+    cy: 0.4,
+    top: 0.42
   }
 });
 const RHYTHM_MODE_SELECT_NOTES = Object.freeze([{
@@ -80627,42 +80649,133 @@ const assistantChatMonsterIds = (text, prevUserText) => {
   return out.slice(0, ASSISTANT_CHAT_MONSTER_MAX);
 };
 const ASSISTANT_CHAT_RANKING_TOPIC = /ランキング|ランク(?:イン|上位)|順位|何位|なんい|[0-9０-９一二三四五]+位|トップ|上位|首位|一番(?:上|強い|高い)|いちばん(?:上|強い|高い)/;
-const ASSISTANT_CHAT_RANKING_MAX = 6;
-const assistantChatRankingPlan = rawText => {
+const ASSISTANT_CHAT_RANKING_MAX = 18;
+const ASSISTANT_CHAT_RANKING_PREV = 2;
+const ASSISTANT_CHAT_RANKING_EXTREME_WORD = /エクストリーム|極限/;
+const ASSISTANT_CHAT_RANKING_ALL_WORD = /全部|ぜんぶ|全難易度|全ての難易度|すべての難易度|難易度(?:ごと|別|全部)|全部の難易度/;
+const assistantChatRankingPlan = (rawText, prevUserTexts = []) => {
   const text = String(rawText || '');
-  if (!ASSISTANT_CHAT_RANKING_TOPIC.test(text)) return null;
+  const prevs = (Array.isArray(prevUserTexts) ? prevUserTexts : []).slice(0, ASSISTANT_CHAT_RANKING_PREV).map(t => String(t || ''));
+  const topicNow = ASSISTANT_CHAT_RANKING_TOPIC.test(text);
+  if (!topicNow && !prevs.some(t => ASSISTANT_CHAT_RANKING_TOPIC.test(t))) return null;
   try {
     const norm = s => String(s || '').normalize('NFKC').toLowerCase().replace(/\s+/g, '');
-    const t = norm(text);
-    const has = word => !!word && t.includes(norm(word));
     const plan = [];
     const push = p => {
       if (plan.length < ASSISTANT_CHAT_RANKING_MAX && p) plan.push(p);
     };
     const lineages = typeof dexMainLineages === 'function' ? dexMainLineages() : [];
-    const lineage = lineages.find(l => has(`${l.name}種`)) || lineages.find(l => has(l.name)) || null;
-    const lineageMonsters = lineage && typeof dexMonsterList === 'function' ? dexMonsterList().filter(m => monsterLineageOf(m.id).main?.id === lineage.id).map(m => m.id) : [];
     const songs = (typeof RHYTHM_DEMO_SONG_IDS !== 'undefined' ? RHYTHM_DEMO_SONG_IDS : []).filter(id => typeof rhythmSongReleased !== 'function' || rhythmSongReleased(id)).map(id => typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS.find(s => s.songId === id) : null).filter(s => s && s.displayName).sort((a, b) => b.displayName.length - a.displayName.length);
-    const song = songs.find(s => has(s.displayName)) || null;
-    const rhythmWords = /モンヒロビート|モンビー|モンビート|音ゲー|リズム|曲/.test(text) || !!song;
     const rhythmDiffs = typeof rhythmScoredDifficultyIds === 'function' ? rhythmScoredDifficultyIds() : [];
-    const rhythmDiff = rhythmDiffs.find(d => new RegExp(`(^|[^a-z])${d.toLowerCase()}([^a-z]|$)`).test(text.normalize('NFKC').toLowerCase())) || null;
-    if (song) {
-      const diffs = rhythmDiff ? [rhythmDiff] : rhythmDiffs.filter(d => d === 'MASTER');
+    const modes = [...(typeof BATTLE_MODES !== 'undefined' ? BATTLE_MODES : []), ...[typeof EXTREME_MODE !== 'undefined' ? EXTREME_MODE : null, typeof SPECIES_CHALLENGE_MODE !== 'undefined' ? SPECIES_CHALLENGE_MODE : null, typeof TACTICS_MODE !== 'undefined' ? TACTICS_MODE : null, typeof TACTICS_SPECIES_MODE !== 'undefined' ? TACTICS_SPECIES_MODE : null, typeof TACTICS_PRO_MODE !== 'undefined' ? TACTICS_PRO_MODE : null].filter(Boolean)].filter(m => m && m.id && modeHasRanking(m.id));
+    const extremeMode = typeof EXTREME_MODE !== 'undefined' ? EXTREME_MODE : null;
+    const modeWords = modes.flatMap(m => [m.label, m.short].filter(Boolean).map(w => ({
+      w,
+      m
+    }))).sort((a, b) => b.w.length - a.w.length);
+    const extremeList = [...(typeof PUBLIC_EXTREME_DIFFICULTIES !== 'undefined' ? PUBLIC_EXTREME_DIFFICULTIES : []), ...(typeof EXTREME_DIFFICULTIES !== 'undefined' ? EXTREME_DIFFICULTIES : [])];
+    const isExtremeId = id => typeof isExtremeDifficultyId === 'function' ? isExtremeDifficultyId(id) : extremeList.some(st => st.id === id);
+    const diffLabel = id => DIFFICULTY_SETTINGS[id] && DIFFICULTY_SETTINGS[id].label || (extremeList.find(st => st.id === id) || {}).label || id;
+    const diffChoices = [...Object.entries(DIFFICULTY_SETTINGS).map(([id, st]) => ({
+      id,
+      label: st.label
+    })), ...extremeList.filter((st, i, all) => all.findIndex(x => x.id === st.id) === i).map(st => ({
+      id: st.id,
+      label: st.label
+    }))].sort((a, b) => b.label.length - a.label.length);
+    const rankingDiffIds = mode => {
+      if (!mode) return [];
+      if (extremeMode && mode.id === extremeMode.id) return (typeof PUBLIC_EXTREME_DIFFICULTIES !== 'undefined' ? PUBLIC_EXTREME_DIFFICULTIES : []).map(st => st.id);
+      if (isTacticsMode(mode.id)) return typeof TACTICS_DIFFICULTY_IDS !== 'undefined' ? [...TACTICS_DIFFICULTY_IDS] : Object.keys(DIFFICULTY_SETTINGS);
+      return [...Object.keys(DIFFICULTY_SETTINGS), ...(mode.id === BATTLE_MODE_CHALLENGE && typeof PUBLIC_EXTREME_DIFFICULTIES !== 'undefined' ? PUBLIC_EXTREME_DIFFICULTIES.map(st => st.id) : [])];
+    };
+    const read = raw => {
+      const t = norm(raw);
+      const has = word => !!word && t.includes(norm(word));
+      const song = songs.find(s => has(s.displayName)) || null;
+      const rhythm = /モンヒロビート|モンビー|モンビート|音ゲー|リズム|曲/.test(raw) || !!song;
+      const rhythmDiff = rhythmDiffs.find(d => new RegExp(`(^|[^a-z])${d.toLowerCase()}([^a-z]|$)`).test(String(raw).normalize('NFKC').toLowerCase())) || null;
+      const hits = modeWords.filter(x => has(x.w));
+      const other = hits.find(x => !extremeMode || x.m.id !== extremeMode.id);
+      const modeHit = other ? other.m : hits[0] ? hits[0].m : null;
+      const extreme = ASSISTANT_CHAT_RANKING_EXTREME_WORD.test(raw);
+      const all = ASSISTANT_CHAT_RANKING_ALL_WORD.test(raw);
+      const diffHit = rhythm && !/バトル/.test(raw) ? null : diffChoices.find(d => has(d.label)) || null;
+      const lineage = lineages.find(l => has(`${l.name}種`)) || lineages.find(l => has(l.name)) || null;
+      const battle = /バトル|スコア|チャレンジ|難易度/.test(raw) || !!modeHit || !!diffHit || extreme;
+      return {
+        song,
+        rhythm,
+        rhythmDiff,
+        modeHit,
+        extreme,
+        all,
+        diffHit,
+        lineage,
+        battle: battle && !(rhythm && !modeHit && !diffHit && !extreme),
+        week: /週間|今週/.test(raw),
+        event: /イベント/.test(raw),
+        total: /合算|全曲|総合/.test(raw),
+        raid: /ジャック|レイド/.test(raw),
+        breeder: /ブリーダー\s*(?:lv|ＬＶ|レベル)|ブリーダーlv/i.test(String(raw).normalize('NFKC')),
+        bond: /絆/.test(raw),
+        power: /総合力/.test(raw)
+      };
+    };
+    const now = read(text);
+    const before = prevs.map(read);
+    const hasKind = x => x.rhythm || x.raid || x.breeder || x.bond || x.power || x.battle;
+    const selectorOnly = !now.rhythm && !now.raid && !now.breeder && !now.bond && !now.power && !now.modeHit && !/バトル|チャレンジ/.test(text);
+    let c = now;
+    const ownSelector = !!(now.diffHit || now.extreme || now.all || now.rhythmDiff);
+    if (selectorOnly && !topicNow && !ownSelector) return null;
+    if (selectorOnly) {
+      const base = before.find(hasKind);
+      if (base) {
+        const own = ownSelector;
+        c = {
+          ...base,
+          lineage: now.lineage || base.lineage,
+          diffHit: own ? now.diffHit : base.diffHit,
+          extreme: own ? now.extreme : base.extreme,
+          all: own ? now.all : base.all,
+          rhythmDiff: now.rhythmDiff || base.rhythmDiff,
+          inherited: true
+        };
+      } else if (!topicNow) return null;
+    } else if (!topicNow && !hasKind(now)) return null;
+    if (c.battle && !c.modeHit && !selectorOnly) {
+      const m = before.find(x => x.modeHit);
+      if (m) c = {
+        ...c,
+        modeHit: m.modeHit
+      };
+    }
+    if (!c.lineage) {
+      const l = before.find(x => x.lineage);
+      if (l) c = {
+        ...c,
+        lineage: l.lineage
+      };
+    }
+    const lineage = c.lineage;
+    const lineageMonsters = lineage && typeof dexMonsterList === 'function' ? dexMonsterList().filter(m => monsterLineageOf(m.id).main?.id === lineage.id).map(m => m.id) : [];
+    if (c.song) {
+      const diffs = c.rhythmDiff ? [c.rhythmDiff] : rhythmDiffs.filter(d => d === 'MASTER');
       diffs.forEach(d => {
-        const key = rhythmRankingDifficultyKey(song.songId, d);
+        const key = rhythmRankingDifficultyKey(c.song.songId, d);
         if (key) push({
           kind: 'rhythmSong',
           keys: [key],
-          label: `モンヒロビート「${song.displayName}」${d}`
+          label: `モンヒロビート「${c.song.displayName}」${d}`
         });
       });
     }
-    if (rhythmWords && /週間|今週/.test(text)) push({
+    if (c.rhythm && c.week) push({
       kind: 'rhythmWeek',
       label: 'モンヒロビート 週間ランキング'
     });
-    if (rhythmWords && /イベント/.test(text) && typeof rhythmLimitedEventAt === 'function') {
+    if (c.rhythm && c.event && typeof rhythmLimitedEventAt === 'function') {
       const event = rhythmLimitedEventAt(Date.now());
       const range = event && typeof rhythmEventWindow === 'function' ? rhythmEventWindow(event, null) : null;
       if (event && range) {
@@ -80678,11 +80791,11 @@ const assistantChatRankingPlan = rawText => {
         });
       }
     }
-    if (rhythmWords && (!song || /合算|全曲|総合/.test(text)) && !/週間|今週|イベント/.test(text)) push({
+    if (c.rhythm && (!c.song || c.total) && !c.week && !c.event) push({
       kind: 'rhythmTotal',
       label: 'モンヒロビート 全曲の合算'
     });
-    if (/ジャック|レイド/.test(text) && typeof RAID_JACK_EVENT !== 'undefined') {
+    if (c.raid && typeof RAID_JACK_EVENT !== 'undefined') {
       push({
         kind: 'raid',
         view: 'a',
@@ -80697,54 +80810,43 @@ const assistantChatRankingPlan = rawText => {
       });
     }
     const lineageLabel = lineage ? `(${lineage.name}種)` : '';
-    if (/ブリーダー\s*(?:lv|ＬＶ|レベル)|ブリーダーlv/i.test(text.normalize('NFKC'))) push({
+    if (c.breeder) push({
       kind: 'breeder',
       label: 'ブリーダーLv'
     });
-    if (/絆/.test(text)) push({
+    if (c.bond) push({
       kind: 'bond',
       label: `絆Lv${lineageLabel}`,
       monsters: lineageMonsters
     });
-    if (/総合力/.test(text)) push({
+    if (c.power) push({
       kind: 'power',
       label: `総合力${lineageLabel}`,
       monsters: lineageMonsters
     });
-    const modes = [...(typeof BATTLE_MODES !== 'undefined' ? BATTLE_MODES : []), ...[typeof EXTREME_MODE !== 'undefined' ? EXTREME_MODE : null, typeof SPECIES_CHALLENGE_MODE !== 'undefined' ? SPECIES_CHALLENGE_MODE : null, typeof TACTICS_MODE !== 'undefined' ? TACTICS_MODE : null, typeof TACTICS_SPECIES_MODE !== 'undefined' ? TACTICS_SPECIES_MODE : null, typeof TACTICS_PRO_MODE !== 'undefined' ? TACTICS_PRO_MODE : null].filter(Boolean)].filter(m => m && m.id && modeHasRanking(m.id));
-    const modeWords = modes.flatMap(m => [m.label, m.short].filter(Boolean).map(w => ({
-      w,
-      m
-    }))).sort((a, b) => b.w.length - a.w.length);
-    const modeHit = modeWords.find(x => has(x.w));
-    const diffChoices = [...Object.entries(DIFFICULTY_SETTINGS).map(([id, st]) => ({
-      id,
-      label: st.label
-    })), ...(typeof PUBLIC_EXTREME_DIFFICULTIES !== 'undefined' ? PUBLIC_EXTREME_DIFFICULTIES : []).map(st => ({
-      id: st.id,
-      label: st.label,
-      extreme: true
-    }))].sort((a, b) => b.label.length - a.label.length);
-    const diffHit = rhythmWords && !/バトル/.test(text) ? null : diffChoices.find(d => has(d.label)) || null;
-    const battleWords = /バトル|スコア|チャレンジ|難易度/.test(text) || !!modeHit || !!diffHit;
-    if (battleWords && !(rhythmWords && !modeHit && !diffHit)) {
-      const mode = modeHit ? modeHit.m : modes.find(m => m.id === BATTLE_MODE_CHALLENGE) || modes[0];
+    if (c.battle) {
+      let mode = c.modeHit || (c.extreme && extremeMode && modes.some(m => m.id === extremeMode.id) ? extremeMode : null) || modes.find(m => m.id === BATTLE_MODE_CHALLENGE) || modes[0];
+      let tabs = rankingDiffIds(mode);
+      if (c.extreme && !c.diffHit && !tabs.some(isExtremeId) && extremeMode && modes.some(m => m.id === extremeMode.id)) {
+        mode = extremeMode;
+        tabs = rankingDiffIds(mode);
+      }
+      let ids;
+      if (c.diffHit) ids = [c.diffHit.id];else if (c.extreme) ids = tabs.filter(isExtremeId);else if (c.all || c.modeHit) ids = tabs;else ids = tabs.filter(id => id === 'Normal' || id === 'Master' || id === 'Legend');
       const isSpecies = mode && (mode.id === BATTLE_MODE_SPECIES_CHALLENGE || mode.id === BATTLE_MODE_TACTICS_SPECIES);
-      const diffs = diffHit ? [diffHit] : diffChoices.filter(d => d.id === 'Normal' || d.id === 'Master' || d.id === 'Legend');
-      for (const d of diffs) {
+      for (const id of ids) {
         let keys = [];
         if (isSpecies) {
           const species = (typeof speciesChallengeLineages === 'function' ? speciesChallengeLineages() : []).find(l => lineage && l.id === lineage.id);
-          keys = species ? [rankingDifficultyForMode(mode.id, d.id, species.id)] : speciesChallengeAllRankingMembers(d.id, mode.id);
+          keys = species ? [rankingDifficultyForMode(mode.id, id, species.id)] : speciesChallengeAllRankingMembers(id, mode.id);
         } else {
-          const useExtreme = d.extreme && !isTacticsMode(mode.id);
-          keys = [rankingDifficultyForMode(useExtreme ? EXTREME_MODE.id : mode.id, d.id)];
+          keys = [rankingDifficultyForMode(isExtremeId(id) && !isTacticsMode(mode.id) && extremeMode ? extremeMode.id : mode.id, id)];
         }
         keys = keys.filter(Boolean);
         if (keys.length) push({
           kind: 'score',
           keys,
-          label: `${mode.label}・${d.label}${isSpecies ? lineage ? `・${lineage.name}種` : '・全種族' : ''}のスコア`
+          label: `${mode.label}・${diffLabel(id)}${isSpecies ? lineage ? `・${lineage.name}種` : '・全種族' : ''}のスコア`
         });
       }
     }
@@ -80899,6 +81001,7 @@ function AssistantChatWindow({
       text
     }];
     saveLog(withUser);
+    const rankingPlan = assistantChatRankingPlan(text, log.filter(m => m && m.role === 'user').map(m => m.text).reverse().slice(0, ASSISTANT_CHAT_RANKING_PREV));
     setSending(true);
     let res = null;
     try {
@@ -80921,8 +81024,8 @@ function AssistantChatWindow({
             bondTone,
             memo: memos[id] || null
           },
-          ...(assistantChatRankingPlan(text) ? {
-            ranking: assistantChatRankingPlan(text)
+          ...(rankingPlan ? {
+            ranking: rankingPlan
           } : {})
         })
       });
@@ -85827,7 +85930,7 @@ function MonsterHeroGame() {
   const RAID_JACK_HOWTO_AFTER_STORY_ID = 'halloween_night_2026_part1';
   const RAID_JACK_RHYTHM_STORY_ID = 'raid_jack_rhythm_story_2026_10_06';
   const HALLOWEEN_NIGHT_STORY_IDS = HALLOWEEN_NIGHT_STORIES.map(story => story.id);
-  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID];
+  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID];
   const RHYTHM_EVENT_STORY_BY_EVENT = {
     [MONBEAT_CUP_EVENT_ID]: MONBEAT_CUP_STORY_ID,
     [SYMPHONY_EVENT_ID]: SYMPHONY_STORY_ID
@@ -86005,6 +86108,14 @@ function MonsterHeroGame() {
     if (rhythmEventStoryStartedRef.current.includes(ASSISTANT_CHAT_STORY_ID)) return;
     setRhythmEventStoryPending(ASSISTANT_CHAT_STORY_ID);
   }, [assistantChatStorySeenLoaded, assistantChatStorySeenFlag, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  useEffect(() => {
+    if (!EVENT_REPLAY_RELEASE_FLAGS.assistantAtsu) return;
+    if (!Array.isArray(rhythmEventStorySeen) || rhythmEventStorySeen.includes(ATSU_JOIN_STORY_ID)) return;
+    if (!assistantAtsuUnlockReady(id => assistantBondLevelOf(normalizeAssistantBond(assistantBonds[id]).points))) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
+    if (rhythmEventStoryStartedRef.current.includes(ATSU_JOIN_STORY_ID)) return;
+    setRhythmEventStoryPending(ATSU_JOIN_STORY_ID);
+  }, [rhythmEventStorySeen, assistantBonds, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
   useEffect(() => {
     if (!EVENT_REPLAY_RELEASE_FLAGS.tacticsTypes || !EVENT_REPLAY_RELEASE_FLAGS.tacticsBattle) return;
     if (!tacticsTypesStorySeenLoaded || tacticsTypesStorySeenFlag || !tacticsIntroSeenFlag) return;
@@ -88791,6 +88902,7 @@ function MonsterHeroGame() {
     rhythmMasuCallSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_MASU_CALL_STORY_ID),
     raidJackHowtoSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RAID_JACK_HOWTO_STORY_ID),
     raidJackRhythmStorySeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RAID_JACK_RHYTHM_STORY_ID),
+    atsuJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(ATSU_JOIN_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID)
   };
   const isEventReplayUnlocked = event => !!(event && event.alwaysUnlocked) || !!EVENT_REPLAY_UNLOCK_FLAGS[event && event.unlockedKey];
@@ -100921,7 +101033,7 @@ function MonsterHeroGame() {
     }, {
       id: 'event',
       label: 'イベント',
-      items: [['kikiIntro', 'きき加入イベント BGM'], ['momosukeIntro', 'ももすけ登場イベント BGM'], ['monbeatCupEvent', 'モンヒロビート大会イベント BGM'], ['rhythmMultiEvent', 'みんなで対戦のお話 BGM'], ['masuCallEvent', 'マスモンとセッションのお話 BGM'], ['halloweenNightEvent', 'ハロウィン・ナイトのお話 BGM'], ['assistantChatStoryEvent', '助手とおしゃべりのお話 BGM']]
+      items: [['kikiIntro', 'きき加入イベント BGM'], ['momosukeIntro', 'ももすけ登場イベント BGM'], ['monbeatCupEvent', 'モンヒロビート大会イベント BGM'], ['rhythmMultiEvent', 'みんなで対戦のお話 BGM'], ['masuCallEvent', 'マスモンとセッションのお話 BGM'], ['halloweenNightEvent', 'ハロウィン・ナイトのお話 BGM'], ['assistantChatStoryEvent', '助手とおしゃべりのお話 BGM'], ['atsuJoinStoryEvent', 'あつ加入のお話 BGM']]
     }, {
       id: 'other',
       label: 'その他',
@@ -109936,7 +110048,7 @@ function MonsterHeroGame() {
       className: "text-[9px] text-slate-500 text-center mb-3 leading-tight"
     }, "いつでも変えられます。仲良し度と呼び方は助手ごとに分かれているので、切り替えても消えません。"), React.createElement("div", {
       className: "space-y-2 mb-3"
-    }, ASSISTANT_LIST.map(who => {
+    }, ASSISTANT_LIST.filter(who => assistantReleased(who.id)).map(who => {
       const active = who.id === selectedAssistantId;
       const lv = assistantBondLevelOf(normalizeAssistantBond(assistantBonds[who.id]).points);
       const t = typeof assistantBondStageByLevel === 'function' ? assistantBondStageByLevel(lv, who.id) : null;
@@ -109953,7 +110065,7 @@ function MonsterHeroGame() {
         className: "block text-[12px] font-black text-slate-400"
       }, "？？？"), React.createElement("small", {
         className: "block text-[9px] text-slate-500 leading-tight"
-      }, assistantUnlockStoryId(who.id) ? 'イベントの話を最後まで見ると選べるようになります。' : 'HOMEでの出会いを見ると選べるようになります。')));
+      }, who.id === 'atsu' ? '助手たちともっと仲良くなると、会えるかもしれません。' : assistantUnlockStoryId(who.id) ? 'イベントの話を最後まで見ると選べるようになります。' : 'HOMEでの出会いを見ると選べるようになります。')));
       return React.createElement("button", {
         key: who.id,
         type: "button",
@@ -110608,7 +110720,7 @@ function MonsterHeroGame() {
       const cell = costume => {
         const owned = !costume || ownedAssistantCostumes.includes(costume.id);
         const selected = costume ? worn && worn.id === costume.id : !worn;
-        const src = costume ? faceOf(costume) : `${who.imageDir}/face/${who.imagePrefix}_normal.PNG`;
+        const src = costume ? faceOf(costume) : assistantTempImage(who, 'normal') || `${who.imageDir}/face/${who.imagePrefix}_normal.PNG`;
         return React.createElement("button", {
           key: costume ? costume.id : 'original',
           "data-assistant-costume-option": costume ? costume.id : 'original',
@@ -111430,7 +111542,8 @@ function MonsterHeroGame() {
         const w = assistantById(id);
         return !!w && w.role === 'ゲスト';
       };
-      const cast = storyCastOf(script).filter(who => who.role !== 'ゲスト');
+      const hiddenUntil = Array.isArray(event && event.hideUntilFirstLine) ? event.hideUntilFirstLine : [];
+      const cast = storyCastOf(script).filter(who => who.role !== 'ゲスト').filter(who => !hiddenUntil.includes(who.id) || script.slice(0, step + 1).some(l => l && l.who === who.id));
       let stageIdx = -1;
       for (let i = step; i >= 0; i--) {
         const l = script[i];

@@ -1,7 +1,7 @@
 # レイドとタクティクスプロの1回ごとの記録(raid_battle_logs・tactics_pro_logs)の設計
 
 2026-10-21 社長「(ティア表を変えるのは)まだやらなくていいけど仕組みは作って」。ティア表が勇者モンの評価に寄りすぎている、という指摘への材料集め。
-**いまは下準備だけ。表はまだ作っておらず(SQL は流していない)、ゲームからも何も送らない(`RELEASE_FLAGS.battleLog = false`)。**
+**2026-10-22 窓口が表を2つとも作って確かめた(raid_battle_logs 15列・tactics_pro_logs 14列・RLS・INSERT と SELECT だけ)。`RELEASE_FLAGS.battleLog = true` にして送り始めた。**
 
 ## 何を記録するか(範囲)
 
@@ -107,7 +107,7 @@
    - `BATTLE_LOGS_APPLY.sql`: 本番用の1本。2つの表を1つのトランザクションで作る。
    - `BATTLE_LOGS_VERIFY.sql`: 流したあとに確かめる。読むだけ。
 3. 確かめる: `BATTLE_LOGS_VERIFY.sql` で、2つの表とも次のとおりか。
-   - 列は15。
+   - 列は raid_battle_logs 15・tactics_pro_logs 14。
    - RLS は true。
    - ポリシーは INSERT と SELECT だけ。
    - anon の権限は INSERT,SELECT。

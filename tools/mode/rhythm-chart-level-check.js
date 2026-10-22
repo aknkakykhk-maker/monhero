@@ -134,7 +134,7 @@ const runtime=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js')
       check('Sheriruth HELL の式の Lv. は、空中込みの生の値から測った値(空中を地上と見なした Lv. 以上)',lv.level===levelFromRaw(lv.strain.raw)&&lv.level>=groundLv,`式 Lv.${lv.level} / 地上と見なして Lv.${groundLv}`);}
     // 公開中の HELL 4曲の表示(2026-10-20 夕方からは新しい測り方 v2 の値。下の 5-2 で9譜面まとめて見る)
     {const {shownLevel,loadRuntimeSongs:loadSongs}=require('./rhythm-chart-level.js');const all=[...(loadSongs().RHYTHM_PROTO_SONGS||[])];
-      for(const [id,d,want] of [['sheriruth_hell_debug','HELL',51],['grievous_lady_hell','MASTER',64],['kaze_ga_soyogu_hell_debug','HELL',21],['against_my_own_shadow_hell_debug','HELL',49]]){
+      for(const [id,d,want] of [['sheriruth_hell_debug','HELL',50],['grievous_lady_hell','MASTER',64],['kaze_ga_soyogu_hell_debug','HELL',21],['against_my_own_shadow_hell_debug','HELL',49]]){
         const s=all.find(x=>x.songId===id),c=s&&s.difficulties[d];
         check(`公開中の HELL ${id} の表示は Lv.${want}(新しい測り方の値)`,!!c&&shownLevel(id,d,c)===want&&c.level===want,`譜面 Lv.${c&&c.level} / 表示 ${c&&shownLevel(id,d,c)} / 新しい式 ${c&&chartLevel(c).level}`);}}
     check('Sheriruth HELL は空中のぶん MASTER より重い',hellStrain.raw>masterStrain.raw&&hell.level>master.level,
@@ -180,8 +180,9 @@ const runtime=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js')
   // 社長が決めた5曲の HELL(2026-10-20)は、新しい測り方の値を表示にした。値は v2 で測った値と同じ・譜面の数字とも同じ
   // 2026-10-20 夕方からは公開中の HELL 9譜面すべて(Grievous Lady は試作の枠の MASTER の段に置いてある)。表示は v2 の値のまま(v3 は新曲から)
   // 2026-10-21 作り直した5譜面は v3 の値(Toward 50・ROSE 51・ROSE short 49・SAD SONG 39・SAD SONG short 42。同じ日に残りの見分けにくい所も直した)
-  const SET={toward_the_stars_short_hell_debug:50,rose_hell_debug:51,rose_short_hell_debug:49,sad_song_hell_debug:39,sad_song_short_hell_debug:42,
-    sheriruth_hell_debug:51,grievous_lady_hell:64,against_my_own_shadow_hell_debug:49,kaze_ga_soyogu_hell_debug:21};
+  // 2026-10-22 指が同じ位置に来る形を直した(社長の決定)ので、SAD SONG 38・SAD SONG short 43・Sheriruth 50 に変わった(測った値どおり)
+  const SET={toward_the_stars_short_hell_debug:50,rose_hell_debug:51,rose_short_hell_debug:49,sad_song_hell_debug:38,sad_song_short_hell_debug:43,
+    sheriruth_hell_debug:50,grievous_lady_hell:64,against_my_own_shadow_hell_debug:49,kaze_ga_soyogu_hell_debug:21};
   for(const [id,want] of Object.entries(SET)){
     const d=id==='grievous_lady_hell'?'MASTER':'HELL',song=all.find(x=>x.songId===id),c=song&&song.difficulties[d],f=REWORKED_V3.includes(id)?'v3':'v2';
     check(`${id} の HELL は Lv.${want}(新しい測り方(${f})の値・譜面の数字と表示が同じ)`,!!c&&c.level===want&&L.shownLevel(id,d,c)===want&&L.chartLevel(c,{formula:f}).level===want,
