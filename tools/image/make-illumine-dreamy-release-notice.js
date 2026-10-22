@@ -138,9 +138,9 @@ const keyVisual = async () => {
   const bg = x.createLinearGradient(0, 1540, 0, H); bg.addColorStop(0, 'rgba(30,14,70,0)'); bg.addColorStop(.22, 'rgba(26,12,60,.92)'); bg.addColorStop(1, 'rgba(14,6,34,.96)');
   x.fillStyle = bg; x.fillRect(0, 1540, W, H - 1540);
   x.save(); x.font = '78px MPB'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineJoin = 'round'; x.lineWidth = 16; x.strokeStyle = '#2e1065';
-  const msg = 'ダイヤショップで販売スタート！'; x.strokeText(msg, W / 2, 1640);
+  const msg = 'ビートP交換所で交換スタート！'; x.strokeText(msg, W / 2, 1640);
   const bt = x.createLinearGradient(0, 1600, 0, 1680); bt.addColorStop(0, '#fff6c2'); bt.addColorStop(1, '#f0b93a'); x.fillStyle = bt; x.fillText(msg, W / 2, 1640); x.restore();
-  x.save(); x.font = '42px MPB'; x.textAlign = 'center'; x.fillStyle = '#ede9fe'; x.fillText('円盤石 各150,000ダイヤ', W / 2, 1726); x.restore();
+  x.save(); x.font = '42px MPB'; x.textAlign = 'center'; x.fillStyle = '#ede9fe'; x.fillText('円盤石 各1,500ビートP', W / 2, 1726); x.restore();
   x.lineWidth = 14; x.strokeStyle = '#c4b5fd'; x.strokeRect(7, 7, W - 14, H - 14);
   await save(c, 'illumine-dreamy-release-notice.jpg', 880, 880);
 };
