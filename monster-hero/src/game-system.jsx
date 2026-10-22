@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 66afff00f0fcc07c
+// generated-sha256: 1d74ac019368e0e1
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-22 11:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-22 11:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -24622,7 +24622,14 @@ const withTacticsTarget = (intent, units, random = Math.random, bias = TACTICS_T
 //   勇者は hero.floor より下がらない(炎は下地を引いた値で出す)。狙いの重み = 今の重み ×(1 + ヘイト ÷ k)
 // 入/切を読むのは 81-debug-trials.jsx の tacticsHateProtoOn(この部品は保存に触らない)
 const TACTICS_HATE = {
-  k: 25, decay: 0.7, cap: 100,
+  decay: 0.7, cap: 100,
+  // 狙いの重みに掛ける倍率を、ヘイトの点 [ヘイト, 倍率] で決める(あいだは直線でつなぐ・上限より上は最後の点)。
+  // 2026-10-22 社長「もうちょい狙われる確率を上げて。最大40%じゃヘイト調整してもなかなかこない」で選んだ強さ:
+  //   4体ともライフ満タン・WAVE の始め(勇者は下地20・ほかは0)に、タンクがガードしてヘイト40 → そのタンクが約65%(前は約40%)
+  //   ヘイト上限100 → 約90%(前は約57%)
+  //   勇者の下地20 だけのとき(ほかは0)は前と同じ ×1.8(勇者が約38%)。べき乗の式だと 64% まで上がって勇者ばかり狙われるので、点で決めた
+  // 前は ×(1 + ヘイト ÷ 25)。全員ヘイト0なら ×1 で、ライフの減り具合だけで決まるのは今までどおり
+  weightCurve: [[0, 1], [20, 1.8], [40, 7.1], [100, 34]],
   flames: [20, 50, 80],
   // 行動カード・EX に出す「使うと🔥がどれだけ上がるか」の段(2026-10-19 社長「各カードにヘイト割合も書いたほうがわかりやすいかもね」)。
   //   1回で上がる量(使う子の倍率を掛けたあと)が cardFlames[0] 未満なら🔥(小)・cardFlames[1] 未満なら🔥🔥(中)・それ以上は🔥🔥🔥(大)
@@ -24744,8 +24751,17 @@ const tacticsHateStep = (hate, { gains = TACTICS_HATE_EMPTY, dealt = TACTICS_HAT
     return Math.min(TACTICS_HATE.cap, v);
   });
 };
-// 狙いの重みに掛ける倍率(hate が無ければ 1)
-const tacticsHateWeightMult = (hate, index) => (Array.isArray(hate) ? 1 + tacticsClamp(tacticsHateNum(hate[index]), 0, TACTICS_HATE.cap) / TACTICS_HATE.k : 1);
+// 狙いの重みに掛ける倍率(hate が無ければ 1)。ヘイトの点(weightCurve)のあいだを直線でつなぐ
+const tacticsHateWeightMult = (hate, index) => {
+  if (!Array.isArray(hate)) return 1;
+  const h = tacticsClamp(tacticsHateNum(hate[index]), 0, TACTICS_HATE.cap);
+  const pts = TACTICS_HATE.weightCurve;
+  for (let i = 1; i < pts.length; i++) {
+    const [x0, y0] = pts[i - 1], [x1, y1] = pts[i];
+    if (h <= x1) return y0 + (y1 - y0) * (h - x0) / (x1 - x0);
+  }
+  return pts[pts.length - 1][1];
+};
 // 炎の段(0〜3)。勇者は下地を引いた値で見る
 const tacticsHateFlame = (value, isHero = false) => {
   const v = tacticsHateNum(value) - (isHero ? TACTICS_HATE.hero.floor : 0);
