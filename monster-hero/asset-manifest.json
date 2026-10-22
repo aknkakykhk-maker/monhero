@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "0a0149ce29b1",
-  "packs": {"beat":{"bytes":97598493,"count":87},"battle":{"bytes":109613829,"count":526},"all":{"bytes":207212322,"count":613}},
+  "id": "474d4c56c13f",
+  "packs": {"beat":{"bytes":97598493,"count":87},"battle":{"bytes":109624119,"count":526},"all":{"bytes":207222612,"count":613}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"ddce743e94fa","size":1416528,"pack":"beat"},
@@ -352,7 +352,7 @@
     "images/monster-icons/face/golem.png": {"v":"8ef71840d1d5","size":22691,"pack":"battle"},
     "images/monster-icons/face/ham.png": {"v":"fbe8e4f70214","size":25368,"pack":"battle"},
     "images/monster-icons/face/iblis.png": {"v":"9663afec97f9","size":17096,"pack":"battle"},
-    "images/monster-icons/face/illumine.png": {"v":"15c760b34e99","size":71424,"pack":"battle"},
+    "images/monster-icons/face/illumine.png": {"v":"68f84dc1972f","size":81714,"pack":"battle"},
     "images/monster-icons/face/kenshi-mocchi.png": {"v":"fed887e4c278","size":31270,"pack":"battle"},
     "images/monster-icons/face/kuromy.png": {"v":"29d41f754746","size":86318,"pack":"battle"},
     "images/monster-icons/face/mel-whip.png": {"v":"5016f704506c","size":36344,"pack":"battle"},

@@ -234,8 +234,8 @@ const GHOST_FACE_ICON = "images/monster-icons/face/ghost.png?v=fdbc8d32d2cd";
 const SPOOKY_FACE_ICON = "images/monster-icons/face/spooky.png?v=2c047a771ffe";
 const MELODY_FACE_ICON = "images/monster-icons/face/melody.png?v=95bbe06158e4";
 const KUROMY_FACE_ICON = "images/monster-icons/face/kuromy.png?v=29d41f754746";
-// イルミネ・ドリーミィ(2026-10-22・案の段階)。顔アイコンは社長に案から選んでもらうまで、仮の1案(A)
-const ILLUMINE_FACE_ICON = "images/monster-icons/face/illumine.png?v=15c760b34e99";
+// イルミネ・ドリーミィ(2026-10-22・案の段階)。顔アイコンは社長が選んだ案(範囲は tools/image/make-face-icons.js の FACE_BOXES)
+const ILLUMINE_FACE_ICON = "images/monster-icons/face/illumine.png?v=68f84dc1972f";
 const DREAMY_FACE_ICON = "images/monster-icons/face/dreamy.png?v=ff318780a036";
 
 // 血統別のアイコン(エンブレム・144x146・金の枠つき)。2026-10-05・ユーザー提供の37個(blood-icons.zip)。
