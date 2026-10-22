@@ -190,10 +190,11 @@ function MonsterAttackPreviewScreen({ dexMonsterId, dexAttackPreview, unlockedMo
 function MonsterTypeBadge({ monId, size = 'sm', compact = false }) {
   if (!monsterTypeProtoOn()) return null;
   const t = monsterTypeOf(monId);
+  // key はメイン/サブで分ける(メインとサブが同じタイプの子で key がかぶると、図鑑で次の子へ移ったときに前の子の印が残る)
   const chip = (key, isSub) => {
     const d = MONSTER_TYPES[key];
     const iconOnly = isSub && compact;
-    return (<span key={key} data-monster-type={key} data-monster-type-sub={isSub ? 'true' : undefined} title={`${isSub ? 'サブ' : 'メイン'}タイプ：${d.label}(${d.note})`}
+    return (<span key={`${isSub ? 'sub' : 'main'}-${key}`} data-monster-type={key} data-monster-type-sub={isSub ? 'true' : undefined} title={`${isSub ? 'サブ' : 'メイン'}タイプ：${d.label}(${d.note})`}
       className={`inline-flex items-center gap-0.5 rounded-full border ${compact ? 'px-1' : 'px-1.5'} py-px font-black leading-none whitespace-nowrap ${size === 'md' ? 'text-[11px]' : 'text-[9px]'} ${isSub ? 'border-white/15 bg-white/5 text-slate-300' : 'border-amber-300/50 bg-amber-500/15 text-amber-100'}`}>
       <span aria-hidden="true">{cardIconNode(d.icon, 10)}</span>{iconOnly ? <span className="sr-only">{d.label}</span> : d.label}</span>);
   };

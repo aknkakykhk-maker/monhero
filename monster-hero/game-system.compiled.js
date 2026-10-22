@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: be77b24f717ac00c
+// source-sha256: 35961194fc4a46a0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-23 00:39";
+const BUILD_DATE = "2026-10-23 02:49";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -41553,25 +41553,25 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Eiki: Object.freeze({
     id: 'eiki_dist_match',
     name: '緋桜瞬歩',
-    useNote: '3ターン 距離補正×1.7・同じ距離は完全回避',
-    desc: '3ターンのあいだ、エイキの攻撃が強くなり、敵の攻撃をよける。\n・攻撃の距離補正が、どの距離でも×1.7に固定される（ふだんは、敵と同じ距離で×1.5、離れるほど下がって×0.9）\n・敵と同じ距離の枠にいるとき、エイキが狙われた攻撃を完全に回避する\n・使ったターン、エイキはカードを使えない（ほかの子は使える）',
+    useNote: '5ターン 距離補正×1.7・同じ距離は完全回避',
+    desc: '5ターンのあいだ、エイキの攻撃が強くなり、敵の攻撃をよける。\n・攻撃の距離補正が、どの距離でも×1.7に固定される（ふだんは、敵と同じ距離で×1.5、離れるほど下がって×0.9）\n・敵と同じ距離の枠にいるとき、エイキが狙われた攻撃を完全に回避する\n・使ったターン、エイキはカードを使えない（ほかの子は使える）',
     maxUses: 3,
     unlimited: false,
     withCards: false,
     duration: 'turns',
-    turns: 3,
+    turns: 5,
     effect: 'distMatch'
   }),
   Zan: Object.freeze({
     id: 'zan_dodge_combo',
     name: '血踊',
-    useNote: '3ターン 同じ距離は完全回避・回避で連撃が増える',
-    desc: '3ターンのあいだ、敵をよけるたびにザンの攻撃が増える。\n・敵と同じ距離の枠にいるとき、ザンが狙われた攻撃を完全に回避する\n・回避するたびに、攻撃へ「与ダメージ10%の連撃」が1回ずつ増える（2回よければ2回）',
+    useNote: '5ターン 同じ距離は完全回避・回避で連撃が増える',
+    desc: '5ターンのあいだ、敵をよけるたびにザンの攻撃が増える。\n・敵と同じ距離の枠にいるとき、ザンが狙われた攻撃を完全に回避する\n・回避するたびに、攻撃へ「与ダメージ10%の連撃」が1回ずつ増える（2回よければ2回）',
     maxUses: 5,
     unlimited: false,
     withCards: true,
     duration: 'turns',
-    turns: 3,
+    turns: 5,
     dodgeComboRate: 0.1,
     effect: 'dodgeCombo'
   }),
@@ -54247,7 +54247,7 @@ function MonsterTypeBadge({
     const d = MONSTER_TYPES[key];
     const iconOnly = isSub && compact;
     return React.createElement("span", {
-      key: key,
+      key: `${isSub ? 'sub' : 'main'}-${key}`,
       "data-monster-type": key,
       "data-monster-type-sub": isSub ? 'true' : undefined,
       title: `${isSub ? 'サブ' : 'メイン'}タイプ：${d.label}(${d.note})`,
