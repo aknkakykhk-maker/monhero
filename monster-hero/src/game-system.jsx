@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d6c397d607eea700
+// generated-sha256: 413706263827531a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,11 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-22 20:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+<<<<<<< HEAD
+const BUILD_DATE = "2026-10-22 22:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+=======
+const BUILD_DATE = "2026-10-22 22:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+>>>>>>> origin/main
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6463,6 +6467,27 @@ const MASU_COLOR_REGION_HUES = {
     { hue: 60, noAAGuard: true, noEdgeGuard: true },
     { hue: 300, noAAGuard: true, noEdgeGuard: true },
   ],
+  // イルミネ(2026-10-22・案の段階・5部位。社長「染色マスク イルミネ 5色 ドリーミィ 5色 イメージ見て作ってみて」で開発部が部位を決めた)。
+  // ①=黒い体(顔・体・ドレス・脚) / ②=頭の後ろの黒い髪 / ③=光る髪とスカートの裏(桃・青紫・橙・黄のグラデーション) /
+  // ④=耳と頭の金の飾り / ⑤=目と体の模様(ピンクの楕円)。マスクの原本は tools/art-sources/dye-masks/illumine-dye-mask-made.png
+  Illumine: [
+    { hue: 0, noAAGuard: true, noEdgeGuard: true },
+    { hue: 120, noAAGuard: true, noEdgeGuard: true },
+    { hue: 240, noAAGuard: true, noEdgeGuard: true },
+    { hue: 60, noAAGuard: true, noEdgeGuard: true },
+    { hue: 300, noAAGuard: true, noEdgeGuard: true },
+  ],
+  // ドリーミィ(2026-10-22・案の段階・5部位。同じく開発部が部位を決めた)。
+  // ①=体の毛(顔・耳・腕・脚・左右の大きな毛) / ②=雲(頭のもこもこ・服・スカート・足元) / ③=頭の後ろの縞の帽子 /
+  // ④=玉の飾り(左右に垂れた玉・頭の玉・ピン) / ⑤=ピンクと水色の飾り(ボタンの目・胸のハート・服の花・耳のふち)。
+  // 目の×・口・縫い目の線は染めない。マスクの原本は tools/art-sources/dye-masks/dreamy-dye-mask-made.png
+  Dreamy: [
+    { hue: 0, noAAGuard: true, noEdgeGuard: true },
+    { hue: 120, noAAGuard: true, noEdgeGuard: true },
+    { hue: 240, noAAGuard: true, noEdgeGuard: true },
+    { hue: 60, noAAGuard: true, noEdgeGuard: true },
+    { hue: 300, noAAGuard: true, noEdgeGuard: true },
+  ],
   // 2026年に新規イラストへ差し替え。体(赤、染色①)・お腹/頭上クレスト/翼の金色(染色②)・
   // 口元(染色③)の3部位。
   // 以前は口元を位置だけで決めるposBboxで指定していたが、矩形を積み重ねた形が実際の口の輪郭と
@@ -6899,7 +6924,7 @@ const _getUndineExactRegion = (nx, ny) => {
 };
 // 保存済みの正式RGBマスクは本体画像と同じ座標で作成されている。
 // 本番、エディタの「合成」、「ゲームで試す」のすべてがこの対応表を通る。
-const EXACT_DYE_MASKS = Object.freeze({ Mocchi:MOCCHI_DYE_MASK, Yaobikuni:YAOBIKUNI_DYE_MASK, Plant:PLANT_DYE_MASK, Eiki:EIKI_DYE_MASK, Pandora:PANDORA_DYE_MASK, KenshiMocchi:KENSHI_MOCCHI_DYE_MASK, Yggdrasil:YGGDRASIL_DYE_MASK, MelWhip:MEL_WHIP_DYE_MASK, Ghost:GHOST_DYE_MASK, Spooky:SPOOKY_DYE_MASK, Melody:MELODY_DYE_MASK, Kuromy:KUROMY_DYE_MASK });
+const EXACT_DYE_MASKS = Object.freeze({ Mocchi:MOCCHI_DYE_MASK, Yaobikuni:YAOBIKUNI_DYE_MASK, Plant:PLANT_DYE_MASK, Eiki:EIKI_DYE_MASK, Pandora:PANDORA_DYE_MASK, KenshiMocchi:KENSHI_MOCCHI_DYE_MASK, Yggdrasil:YGGDRASIL_DYE_MASK, MelWhip:MEL_WHIP_DYE_MASK, Ghost:GHOST_DYE_MASK, Spooky:SPOOKY_DYE_MASK, Melody:MELODY_DYE_MASK, Kuromy:KUROMY_DYE_MASK, Illumine:ILLUMINE_DYE_MASK, Dreamy:DREAMY_DYE_MASK });
 const EXACT_DYE_MASK_PLACEMENT = Object.freeze({ scaleX: 1, scaleY: 1, x: 0, y: 0 });
 // タッチ式マスクエディタの対象は ALL_PLAYER_MONSTERS から実行時に生成する。
 // モンスター名・画像URLをDebug用に複製せず、新規ベースモンも自動的に候補へ加わる。
@@ -7219,6 +7244,14 @@ const MASU_COLOR_REGION_DYE = {
   // ②フリルは白いひだとクリーム色の影が混ざっていて、gloss を付けると白いひだに色が乗らず白い筋が残ったので付けない。
   // ③黒い帽子(0.15)と④白い所(0.04)も元の彩度がほぼ無いので付けない
   Kuromy: [{ gloss: 0.56 }, {}, {}, {}, { gloss: 0.4 }],
+  // イルミネ(2026-10-22・案の段階): 5部位とも元の彩度が高い(上のほう ①0.73 ②0.74 ③0.71 ④0.59 ⑤0.56)ので、上のほうに合わせて
+  // 光る髪のつやと体の陰影を残す
+  Illumine: [{ gloss: 0.73 }, { gloss: 0.74 }, { gloss: 0.71 }, { gloss: 0.59 }, { gloss: 0.56 }],
+  // ドリーミィ(2026-10-22・案の段階): ①体の毛(0.17/0.31)はクリーム色の陰影を残すため上のほうに合わせる。
+  // ②雲(0.15/0.22)・③帽子(0.17/0.33)も上のほうに合わせる。付けないと雲の縞(桃・水色・黄)が消えて1色ののっぺりした塗りになった
+  // (配色の見本で確かめた。白い所は淡く残るが、雲のもこもこの形が見えるほうを選んだ)。
+  // ④玉(0.58/0.71)と⑤ピンクの飾り(0.48/0.55)は上のほうに合わせて玉のつやを残す
+  Dreamy: [{ gloss: 0.15 }, { gloss: 0.22 }, { gloss: 0.33 }, { gloss: 0.71 }, { gloss: 0.55 }],
 };
 const _NO_REGION_DYE = { gloss: false, sat: 1 };
 // 指定した部位に効く染め方の設定を返す(配列でなければ全部位に同じ設定が効く)
@@ -11943,11 +11976,10 @@ const helpDataRows = (id) => {
     // 値を変えたときにヘルプだけ古いまま残るため、実データから表にする
     case 'rhythmMonsterAbilities': {
       const abilities = typeof RHYTHM_MONSTER_ABILITIES !== 'undefined' ? RHYTHM_MONSTER_ABILITIES : {};
-      const byLineage = typeof RHYTHM_MONSTER_ABILITY_BY_LINEAGE !== 'undefined' ? RHYTHM_MONSTER_ABILITY_BY_LINEAGE : {};
+      // 公開前の子しかいない血統と、公開前の子の上書きは出さない(rhythmAbilityHolderNames)
       return Object.values(abilities).map(ability => {
-        const lineages = Object.entries(byLineage).filter(([, id]) => id === ability.id)
-          .map(([lineageId]) => lineageById(lineageId).name);
-        return [ability.name, `${rhythmAbilityEffectText(ability)}（主血統: ${lineages.join(' / ')}）`];
+        const { lineages, monsters } = rhythmAbilityHolderNames(ability.id);
+        return [ability.name, `${rhythmAbilityEffectText(ability)}（主血統: ${lineages.join(' / ')}${monsters.length ? `／${monsters.join('・')}だけはこの能力` : ''}）`];
       });
     }
     case 'missionsDaily':
@@ -12752,6 +12784,8 @@ const BATTLE_STACK_MARKS = Object.freeze({
   aquaPrison: Object.freeze({ mark:'💧', img:'', label:'水牢' }),              // 敵: ウンディーネ種のアクアフィールド
   aquaFreeze: Object.freeze({ mark:'❄️', img:'', label:'氷結' }),
   roar:       Object.freeze({ mark:'📢', img:'', label:'咆哮' }),              // 敵: 自分にかけた攻撃アップ
+  kusabi:     Object.freeze({ mark:'🔻', img:'', label:'楔' }),                // 敵: イルミネ・ドリーミィ(影潜)が付けた楔
+  dreamPain:  Object.freeze({ mark:'💤', img:'', label:'ドリームペイン', unit:'T' }), // 敵: ドリーミィの固有技(被ダメージ上昇の残りターン)
 });
 // ★モンスターごとの演出(2026-10-12 社長の決定「3体を入れて、残りも順に」。案の一覧は docs/proto/monster-visuals/README.md)。
 //   「マーク×数」の上乗せで、数字の代わりにはしない。置くのは枠の絵のまわりだけ。軽量表示・超省エネでは出さない。
@@ -12853,11 +12887,52 @@ const blackNoteEffectOf = (n) => {
   return { dmgMult: 1 + BLACK_NOTE_DMG_PER * c, critAdd: c >= BLACK_NOTE_CRIT_FROM ? BLACK_NOTE_CRIT_ADD : 0,
     combo: c >= BLACK_NOTE_COMBO_FROM ? { count: 1, rate: BLACK_NOTE_COMBO_RATE, label: '黒音符の連撃' } : null };
 };
-// buildAttackHits へ渡す exCombos へ、黒音符の連撃を足す(withFateCombo と同じ形)
-const withBlackNoteCombo = (exCombos, combo) => {
-  if (!combo) return exCombos;
-  return [...(Array.isArray(exCombos) ? exCombos : [exCombos]).filter(Boolean), combo];
+// buildAttackHits へ渡す exCombos へ、黒音符の連撃を足す(withFateCombo と同じ形)。
+// extra … ほかに足す連撃(2026-10-22 イルミネ・ドリーミィの楔の連撃・セレーネチェイサー。null は足さない)
+const withBlackNoteCombo = (exCombos, combo, extra = null) => {
+  const add = [combo, ...(Array.isArray(extra) ? extra : [extra])].filter(Boolean);
+  if (!add.length) return exCombos;
+  return [...(Array.isArray(exCombos) ? exCombos : [exCombos]).filter(Boolean), ...add];
 };
+// ==== 勇者特性「影潜」(イルミネ・ドリーミィ)と、楔の数で強くなる2体の固有技。2026-10-22 社長の決定 ====
+// 楔(くさび) … 持ち主本人の攻撃が当たるたびに、相手へ1つ付ける(上限6)。楔は敵に付くので、WAVEが変わる(敵が替わる)と0。
+//   楔1つごとに: 持ち主本人の攻撃に与ダメージ15%の連撃が1回(楔3つなら15%×3回) / 持ち主の回避率+15%(6つで+90%)。
+//   持ち主が回避すると楔は0へ戻り、連撃と回避率アップも消える。
+//   既存5モードは勇者モンが持っているとき(キー 'party')、タクティクスは持っている子それぞれ(枠ごと)。持ち方は 60-app の kusabiRef
+// セレーネチェイサー(イルミネの固有技) … 与ダメ5%の連撃と、連撃ダメージ+1%(バトル中ずっと・重なる)。どちらも(楔の数+1)倍
+// ドリームペイン(ドリーミィの固有技) … 次のターンから3ターン、敵の被ダメージ+20%。楔1つごとにさらに+20%
+//   (楔3つで+80%・6つで+140%)。数は使ったときの楔で決まる。敵1体ぶんなのでWAVEが変わると消える
+const KUSABI_TRAIT_MONSTER_IDS = Object.freeze(['Illumine', 'Dreamy']);
+const KUSABI_MAX = 6;
+const KUSABI_COMBO_RATE = 0.15;
+const KUSABI_EVASION_PER = 15;   // 回避率(%)。回避の表(buildUnifiedSpecialDefense)は%で持つ
+const SELENE_CHASER_MONSTER_ID = 'Illumine';
+const SELENE_CHASER_COMBO_RATE = 0.05;
+const SELENE_CHASER_COMBO_DMG = 0.01;
+const DREAM_PAIN_MONSTER_ID = 'Dreamy';
+const DREAM_PAIN_TURNS = 3;
+const DREAM_PAIN_BASE = 0.2, DREAM_PAIN_PER = 0.2;
+const hasKusabiTrait = (id) => !!id && KUSABI_TRAIT_MONSTER_IDS.includes(id);
+const kusabiCountOf = (n) => Math.min(KUSABI_MAX, Math.max(0, Math.floor(Number(n) || 0)));
+// 楔の連撃(持ち主本人の攻撃だけ)。buildAttackHits の exCombos の形
+const kusabiComboOf = (n) => { const c = kusabiCountOf(n); return c > 0 ? { count: c, rate: KUSABI_COMBO_RATE, label: '楔の連撃' } : null; };
+const kusabiEvasionOf = (n) => KUSABI_EVASION_PER * kusabiCountOf(n);
+// セレーネチェイサー: { combo(exCombos の形), comboDmgAdd(連撃ダメージに足す率) }
+const seleneChaserOf = (n) => { const k = kusabiCountOf(n) + 1;
+  return { combo: { count: k, rate: SELENE_CHASER_COMBO_RATE, label: 'セレーネチェイサー' }, comboDmgAdd: SELENE_CHASER_COMBO_DMG * k }; };
+// ドリームペイン: 敵の被ダメージに足す率
+const dreamPainTakenOf = (n) => DREAM_PAIN_BASE + DREAM_PAIN_PER * kusabiCountOf(n);
+// ドリームペインの残り。{ wait: 効きはじめるまでのターン, turns: 効く残りターン, bonus: 被ダメージに足す率 }。
+//   使ったターンは効かず(wait 1)、次のターンから3ターン。ターンが進むたびに tick する
+const dreamPainOf = (v) => ({ wait: Math.max(0, Math.floor(Number(v?.wait) || 0)), turns: Math.max(0, Math.floor(Number(v?.turns) || 0)),
+  bonus: Math.max(0, Number(v?.bonus) || 0) });
+const startDreamPain = (n) => ({ wait: 1, turns: DREAM_PAIN_TURNS, bonus: dreamPainTakenOf(n) });
+const tickDreamPain = (v) => { const d = dreamPainOf(v); if (d.wait > 0) return { ...d, wait: d.wait - 1 };
+  return d.turns > 1 ? { ...d, turns: d.turns - 1 } : { wait: 0, turns: 0, bonus: 0 }; };
+const dreamPainTakenBonus = (v) => { const d = dreamPainOf(v); return d.wait === 0 && d.turns > 0 ? d.bonus : 0; };
+// 楔の効き目の短い文(バフの札)
+const kusabiEffectText = (n) => { const c = kusabiCountOf(n);
+  return c > 0 ? `楔${c}/${KUSABI_MAX} 連撃15%×${c}・回避+${kusabiEvasionOf(c)}%` : ''; };
 // いま効いている段階を短い文にする(バフの札・ヘルプの説明に出す)
 const sweetStackEffectText = (id, n) => {
   const trait = sweetStackTraitOf(id);
@@ -15080,6 +15155,8 @@ const MONSTER_IDLE_RIGS = Object.freeze({
   Spooky: { body:'hover', bodyMask:IDLE_SPOOKY_BODY_MASK, parts:[{ mask:IDLE_SPOOKY_TAIL_MASK, origin:'58% 86%', anim:'wag', amp:5, dur:1900, delay:0, layer:'back' }, { mask:IDLE_SPOOKY_HAT_TIP_MASK, origin:'66% 12%', anim:'swing', amp:-6, dur:2600, delay:500, layer:'front' }] },
   Melody: { body:'breathe', bodyMask:IDLE_MELODY_BODY_MASK, parts:[{ mask:IDLE_MELODY_TAIL_MASK, origin:'81.8% 79.5%', anim:'wag', amp:8, dur:1800, delay:0, layer:'back' }] },
   Kuromy: { body:'breathe', bodyMask:IDLE_KUROMY_BODY_MASK, parts:[{ mask:IDLE_KUROMY_TAIL_MASK, origin:'65.9% 53.4%', anim:'wag', amp:7, dur:1700, delay:0, layer:'back' }] },
+  Illumine: { body:'hover', bodyMask:IDLE_ILLUMINE_BODY_MASK, parts:[{ mask:IDLE_ILLUMINE_HAIR_L_MASK, origin:'17.1% 75%', anim:'swing', amp:5, dur:2800, delay:0, layer:'back' }, { mask:IDLE_ILLUMINE_HAIR_R_MASK, origin:'82.9% 75%', anim:'swing', amp:-5, dur:2800, delay:600, layer:'back' }] },
+  Dreamy: { body:'breathe', bodyMask:IDLE_DREAMY_BODY_MASK, parts:[{ mask:IDLE_DREAMY_BEADS_L_MASK, origin:'20% 35%', anim:'swing', amp:2.5, dur:2400, delay:0, layer:'back' }, { mask:IDLE_DREAMY_BEADS_R_MASK, origin:'79.3% 34%', anim:'swing', amp:-2.5, dur:2400, delay:500, layer:'back' }] },
 });
 // ==== MONSTER_IDLE_RIGS ここまで ====
 const MONSTER_IDLE_MASK_STYLE = (url) => ({
@@ -21095,14 +21172,13 @@ const rhythmAbilityTone=abilityId=>abilityId==='GENKI'?'border-emerald-300/50 bg
   :abilityId==='ITAZURA'?'border-violet-300/50 bg-violet-950/40 text-violet-100'
   :'border-white/20 bg-slate-900/60 text-slate-300';
 // 能力ごとに「その能力になる血統」をまとめる。並びは RHYTHM_MONSTER_ABILITIES の順。
-const rhythmAbilityRows=()=>Object.values(RHYTHM_MONSTER_ABILITIES).map(ability=>({
-  ability,
-  lineages:Object.entries(RHYTHM_MONSTER_ABILITY_BY_LINEAGE)
-    .filter(([,id])=>id===ability.id)
-    .map(([lineageId])=>lineageById(lineageId).name),
-}));
-const rhythmSlotAbility=masu=>(masu&&masu.baseId)
-  ?rhythmMonsterAbilityForLineage(monsterLineageOf(masu.baseId).main.id):null;
+// 血統と子ごとの上書きの名前は rhythmAbilityHolderNames(data/rhythm-mode.js)が実データから作る。
+// 公開前の子しかいない血統は出さない。子ごとの上書き(ドリーミィ)は血統のあとに子の名前で足す
+const rhythmAbilityRows=()=>Object.values(RHYTHM_MONSTER_ABILITIES).map(ability=>{
+  const {lineages,monsters}=rhythmAbilityHolderNames(ability.id);
+  return {ability,lineages:[...lineages,...monsters]};
+});
+const rhythmSlotAbility=masu=>(masu&&masu.baseId)?rhythmMonsterAbilityForMonster(masu.baseId):null;
 
 // モンスターノーツの説明。マスモン設定の画面へ置く「詳細」。
 // 【2026-09-05・ユーザー指示】「マスモン設定のとこをUIやレイアウトを整えて。
@@ -24756,6 +24832,8 @@ const MONSTER_TYPE_OF = {
   Ark: { main: 'supporter', sub: 'attacker' }, Iblis: { main: 'supporter', sub: 'attacker' },
   Snegurochka: { main: 'supporter', sub: 'healer' }, Yaobikuni: { main: 'supporter', sub: 'tank' },
   Tiger: { main: 'shadow', sub: 'attacker' }, Zan: { main: 'shadow', sub: 'attacker' }, Ghost: { main: 'shadow', sub: 'attacker' },
+  // イルミネ・ドリーミィ(2026-10-22・案の段階。社長の決定)
+  Illumine: { main: 'shadow', sub: 'attacker' }, Dreamy: { main: 'supporter', sub: 'shadow' },
 };
 // その子のタイプ({ main, sub } の形。表に無い子はアタッカー・サブなし)
 const monsterTypeOf = (monId) => {
@@ -39220,6 +39298,8 @@ const BATTLE_CARD_NAME_BREAKS = Object.freeze({
   'アクシズバレット': 'アクシズ|バレット', 'ブラッディクロス': 'ブラッディ|クロス', 'ワンダーブレイズ': 'ワンダー|ブレイズ', 'パピヨンバースト': 'パピヨン|バースト',
   'パウンドメテオ': 'パウンド|メテオ', 'ホリゾンタル・スクエア': 'ホリゾンタル・|スクエア', 'グランドイリュージョン': 'グランド|イリュージョン',
   'ムーンサルトメロディー': 'ムーンサルト|メロディー', 'ライジングブースト': 'ライジング|ブースト', 'スウィートパレード': 'スウィート|パレード', 'マリーランドアーチ': 'マリーランド|アーチ',
+  // イルミネ・ドリーミィ(2026-10-22・案の段階の技名)
+  'ヴェノムエッジ': 'ヴェノム|エッジ', 'シールドバッシュ': 'シールド|バッシュ', 'モーニングスター': 'モーニング|スター', 'アサシンクロウ': 'アサシン|クロウ', 'アサルトアロー': 'アサルト|アロー', 'ブレードダンス': 'ブレード|ダンス', 'バスターソード': 'バスター|ソード', 'ドールバッシュ': 'ドール|バッシュ', 'キャットクロウ': 'キャット|クロウ', 'ドリームダンス': 'ドリーム|ダンス', 'パステルソード': 'パステル|ソード', 'エーテルアイス': 'エーテル|アイス', 'アルカナフレア': 'アルカナ|フレア', 'アルスマグナ': 'アルス|マグナ', 'ミラージュクロウ': 'ミラージュ|クロウ', 'クリムゾンノヴァ': 'クリムゾン|ノヴァ', 'ムーンライトヴェール': 'ムーンライト|ヴェール', 'ルミナスオーロラ': 'ルミナス|オーロラ', 'レクイエムエンド': 'レクイエム|エンド', 'ララバイノクターン': 'ララバイ|ノクターン', 'スウィートドリーム': 'スウィート|ドリーム', 'ドリーミィパレード': 'ドリーミィ|パレード', 'おもちゃの爆弾': 'おもちゃの|爆弾',
   '巨大雪だるま転がし': '巨大雪だるま|転がし', '熾天の剣よ降り立て': '熾天の剣よ|降り立て', '天の慈悲を示されよ': '天の慈悲を|示されよ', '聖夜の鐘を鳴響け': '聖夜の鐘を|鳴響け', '終焉に救いを与えよ': '終焉に|救いを与えよ', '永劫の贖いを全うせよ': '永劫の贖いを|全うせよ',
 });
 const battleCardNameBreakCache = new Map();
@@ -50538,6 +50618,7 @@ function MonsterHeroGame() {
     commitTacticsExState(createTacticsExState());
     setTacticsHeroStyle(null);
     resetSweetStack(); // メロディー・クロミーのスタックもランごと(WAVEでは消さない)
+  resetKusabi(); resetDreamPain(); // 楔・ドリームペインは敵に付くのでWAVEでも消すが、ランの片付けでも念のため
   };
   // ULTIMATEのラン内だけで持つ永久弱体と、次WAVE開始時に一度だけ消費する発動予約。
   const [ultimateDistanceBreakLevels,setUltimateDistanceBreakLevels]=useState([0,0,0,0]);
@@ -50724,6 +50805,34 @@ function MonsterHeroGame() {
   const [enemyConfuseTurns, setEnemyConfuseTurns] = useState(0);
   const writeEnemyConfuse = (n) => { const v = Math.max(0, Math.floor(Number(n) || 0)); enemyConfuseRef.current = v; setEnemyConfuseTurns(v); return v; };
   const resetEnemyConfuse = () => writeEnemyConfuse(0);
+  // ★楔(イルミネ・ドリーミィの勇者特性「影潜」。2026-10-22 社長の決定)。決めごとは 22-enemy-and-bond-entries.jsx の KUSABI_*。
+  //   キーはトリックスタートと同じ(既存5モードは 'party'、タクティクスは枠)。楔は敵に付くので、WAVEが変わると0へ戻す。
+  //   持ち主が回避したときも0へ戻す(敵の攻撃の回避の判定のところ)
+  const kusabiRef = useRef({});
+  const [kusabiView, setKusabiView] = useState({});
+  const kusabiAt = (slotIdx) => { const key = trickStartKeyOf(slotIdx); return key ? kusabiCountOf(kusabiRef.current[key]) : 0; };
+  const writeKusabiKey = (key, n) => { if (!key) return; const next = { ...kusabiRef.current, [key]: kusabiCountOf(n) }; kusabiRef.current = next; setKusabiView(next); };
+  const resetKusabi = () => { kusabiRef.current = {}; setKusabiView({}); };
+  // 持ち主本人の攻撃が当たったら1つ付ける(上限6)
+  const gainKusabi = (slotIdx, actorId) => {
+    const owner = sweetOwnerAt(slotIdx);
+    if (!hasKusabiTrait(owner) || owner !== actorId) return;
+    const before = kusabiAt(slotIdx), after = kusabiCountOf(before + 1);
+    if (after === before) return;
+    writeKusabiKey(trickStartKeyOf(slotIdx), after);
+    addPopup(`🔻 楔 ${after}/${KUSABI_MAX}`, 'hero', 'text-violet-200 text-base font-bold drop-shadow-md', undefined, slotIdx);
+  };
+  // 攻撃に足す連撃。楔の連撃は持ち主本人の攻撃だけ、セレーネチェイサーは技の出自がイルミネなら誰が使っても(楔はその枠のぶん)
+  const kusabiCombosAt = (slotIdx, actorId, card) => {
+    const owner = sweetOwnerAt(slotIdx), n = kusabiAt(slotIdx);
+    return [hasKusabiTrait(owner) && owner === actorId ? kusabiComboOf(n) : null,
+      card && card.type === 'unique' && card.monId === SELENE_CHASER_MONSTER_ID ? seleneChaserOf(n).combo : null];
+  };
+  // ★ドリームペイン(ドリーミィの固有技)の残り。敵1体ぶんなのでWAVEが変わると消す。ダメージ計算はターンの途中でも読むので ref が正本
+  const dreamPainRef = useRef(dreamPainOf(null));
+  const [dreamPainView, setDreamPainView] = useState(dreamPainOf(null));
+  const writeDreamPain = (v) => { const d = dreamPainOf(v); dreamPainRef.current = d; setDreamPainView(d); return d; };
+  const resetDreamPain = () => writeDreamPain(null);
   const [turnBuffs, setTurnBuffs] = useState({});
   const [nextTurnBuffs, setNextTurnBuffs] = useState({});
   // 次ターン予約(nextTurnBuffs)は敵ターンの終わりに「読んで→効果を出して→消す」を行う。
@@ -51170,7 +51279,7 @@ function MonsterHeroGame() {
     const base = ALL_PLAYER_MONSTERS[masu.baseId] || null;
     return { id:String(masu.id), name:masu.name, baseId:masu.baseId,
       imageUrl:masuDisplayImageUrl(base), colors:getMasuColors(masu),
-      ability:rhythmMonsterAbilityForLineage(monsterLineageOf(masu.baseId).main.id) };
+      ability:rhythmMonsterAbilityForMonster(masu.baseId) };
   });
   const applyRhythmMonsterSlots = async (next, message='') => {
     const saved = await saveRhythmMonsterSlots(next);
@@ -60426,6 +60535,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       aquaPrison: aq && aq.active && aq.route === 'prison' ? aq.stacks : 0,
       aquaFreeze: aq && aq.active && aq.route === 'freeze' ? aq.stacks : 0,
       roar: Math.max(0, Math.floor(Number(enemy.roarStacks) || 0)),
+      // 楔(影潜)は敵に付く。タクティクスで持ち主が複数いるときは、いちばん多い数を出す
+      kusabi: Object.values(kusabiView || {}).reduce((most, n) => Math.max(most, kusabiCountOf(n)), 0),
+      dreamPain: dreamPainView.wait === 0 ? dreamPainView.turns : 0,
       ...(debugStackMarks && debugStackMarks.enemy ? debugStackMarks.enemy : {}),
     };
   })();
@@ -61333,7 +61445,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       *fateAtkMult(livePermaBuff('fateStacks',null),slotIdx);
     // ★skillDmgMult … 運命のコイン(表4倍・裏0.5倍)・運命の輪(3倍・2倍)の「この技のダメージ」。ほかの呼び出しは渡さないので1倍
     // ★運命の輪の「敵の被ダメ+30%」は、モッチーの被ダメUP・サイコロックオンと同じ足し算の枠へ入れる
-    let finalDmg=Math.floor(attackerAtk*distMult*baseDmgMult*(Number(skillDmgMult)>0?Number(skillDmgMult):1)*totalBuffMult*(1.0+getWaveBuff('enemyTakenDmgBonus')+fateWheelEnemyTakenBonus(fateWheelRef.current)+tacticsExPsychoLockNow().enemyTakenBonus+additionalDmgMod));
+    let finalDmg=Math.floor(attackerAtk*distMult*baseDmgMult*(Number(skillDmgMult)>0?Number(skillDmgMult):1)*totalBuffMult*(1.0+getWaveBuff('enemyTakenDmgBonus')+fateWheelEnemyTakenBonus(fateWheelRef.current)+tacticsExPsychoLockNow().enemyTakenBonus+additionalDmgMod+dreamPainTakenBonus(dreamPainRef.current)));
     if (isSecondOrLaterAtk) finalDmg=Math.floor(finalDmg*0.5);
     const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
     const elapsedTotalTurns=totalTurnCount+Math.max(0,turnCount-1);
@@ -61361,7 +61473,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit')||tacticsCritFixedNow(slotIdx,card), rollCrit:()=>false,
       globalComboRate:getPermaBuff('globalComboDmgPct')+additionalGlobalCombo, mainCanCrit:card.subType!=='stun_atsu',
       comboFinalMultiplier:soulAttack.comboFinalMultiplier, swordSkill:tacticsExStyleAt(slotIdx)!=='shield',
-      hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1, exCombos:withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx,halved,card),getPermaBuff('fateStacks',null),slotIdx),blackNoteEffectAt(slotIdx,mon?.id).combo), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
+      hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1, exCombos:withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx,halved,card),getPermaBuff('fateStacks',null),slotIdx),blackNoteEffectAt(slotIdx,mon?.id).combo,kusabiCombosAt(slotIdx,mon?.id,card)), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
     // 贖罪の追撃も「追撃」なので、連撃強化の最終倍率を同じく適用する。
     return hits.reduce((sum,hit)=>sum+hit.dmg,0)+attackAtonementDmg(card, hits[0].dmg, soulAttack.comboFinalMultiplier);
   }, [mainHero, turnBuffs, permaBuffs, enemyIntent]);
@@ -61647,11 +61759,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           ? aimedSlots[Math.floor(Math.random()*aimedSlots.length)] : null;
         const defenseHeroId = !isTacticsMode(runMode) ? mainHero?.id
           : (defenseSlot!=null ? (tacticsUnitsRef.current[defenseSlot]?.id || null) : null);
-        const defenseTable = !isTacticsMode(runMode) ? unifiedSpecialDefense : buildUnifiedSpecialDefense({
+        // ★影潜(イルミネ・ドリーミィ): 受ける子が持ち主なら、楔1つごとに回避率+15%。キーは既存5モード 'party'・タクティクスは受ける子の枠
+        const kusabiDefenseKey = !isTacticsMode(runMode) ? 'party' : (defenseSlot!=null ? String(defenseSlot) : null);
+        const kusabiEvasion = hasKusabiTrait(defenseHeroId) && kusabiDefenseKey ? kusabiEvasionOf(kusabiRef.current[kusabiDefenseKey]) : 0;
+        const defenseTable = (!isTacticsMode(runMode) && kusabiEvasion<=0) ? unifiedSpecialDefense : buildUnifiedSpecialDefense({
           soulEvasion:soulBattleParty.evasion,
           soulReflect:soulBattleParty.reflect,
           soulAbsorb:soulBattleParty.absorb,
-          existingEvasion:defenseHeroId==='Tiger'?50:0,
+          existingEvasion:(defenseHeroId==='Tiger'?50:0)+kusabiEvasion,
           existingReflect:defenseHeroId==='Monol'?30:0,
           existingAbsorb:(defenseHeroId==='Oboro'||defenseHeroId==='Plant')?30:0,
         });
@@ -61675,6 +61790,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const isReflect = soulDefenseResult==='reflect';
         const isAbsorb = soulDefenseResult==='absorb';
         const isEvasion = soulDefenseResult==='evasion';
+        // 持ち主が回避したら楔は0へ戻る(連撃と回避率アップも消える)
+        if (isEvasion && hasKusabiTrait(defenseHeroId) && kusabiDefenseKey && kusabiCountOf(kusabiRef.current[kusabiDefenseKey])>0) {
+          writeKusabiKey(kusabiDefenseKey,0);
+          addPopup('🔻 回避！ 楔が外れた','hero','text-violet-200 text-sm font-bold drop-shadow-md');
+        }
         // ポルツの待機を消化してよいか。敵の攻撃をこちらが受け止めたときだけ true にする
         let tookEnemyAttack=false;
 
@@ -62051,6 +62171,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if (gutsRegen>0) { if(showRegenTotal) addPopup(`🌿 自動ガッツ +${gutsRegen}`,'guts','text-cyan-300 font-black text-lg italic drop-shadow-md'); didRegen=true; }
     // 運命の輪(スプーキー)の弱体は、使ったターンを1ターン目と数えて2ターン。次のターンへ進むここで1つ減らす
     if (timeStopSlot==null&&(fateWheelRef.current.atkDown>0||fateWheelRef.current.takenUp>0)) writeFateWheel(tickFateWheelDebuff(fateWheelRef.current));
+    // ドリームペイン(ドリーミィ)は使ったターンは効かず、次のターンから3ターン。次のターンへ進むここで1つ進める
+    if (timeStopSlot==null&&(dreamPainRef.current.wait>0||dreamPainRef.current.turns>0)) writeDreamPain(tickDreamPain(dreamPainRef.current));
     // 生命の源(ユグドラシル・メルホイップ): 次のターンが6・9・12…ターン目なら、ガッツを最大の30%回復。
     // タクティクスは特性を持つ子それぞれ(その子の上限×30%)、既存モードは勇者モンが持っているとき(合計上限×30%)
     {
@@ -62735,8 +62857,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 魂格の闘魂/距離補正はgetDmg、会心眼/会心極/連撃強化はここで本人分だけ適用する。
           const stunHits=buildAttackHits({ d, card, attackerId:stunMon?.id, heroId:mainHero?.id, traitOwnerId:traitOwnerOf(stunMon), comboDmgBonus:getPermaBuff('comboDmgPct'), critDmgBonus:getPermaBuff('critDmgPct')+soulAttack.critDamageBonus, kenshiExtraCombos:getPermaBuff('kenshiExtraCombo'),
             guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit')||tacticsCritFixedNow(slotIdx,card), rollCrit:()=>Math.random()<Math.min(1,(card.crit||0.1)+getPermaBuff('critRatePct')+soulAttack.critRateBonus),
-            globalComboRate:getPermaBuff('globalComboDmgPct')+localGlobalComboAdd, mainCanCrit:false, comboFinalMultiplier:soulAttack.comboFinalMultiplier, exCombos:withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx,true),livePermaBuff('fateStacks',null),slotIdx),blackNoteEffectAt(slotIdx,stunMon?.id).combo), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
+            globalComboRate:getPermaBuff('globalComboDmgPct')+localGlobalComboAdd, mainCanCrit:false, comboFinalMultiplier:soulAttack.comboFinalMultiplier, exCombos:withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx,true),livePermaBuff('fateStacks',null),slotIdx),blackNoteEffectAt(slotIdx,stunMon?.id).combo,kusabiCombosAt(slotIdx,stunMon?.id,card)), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
           totalDmg+=d; attackCount++; attackHits.push({dmg:d, isCrit:false, slotIdx});
+          if(d>0) gainKusabi(slotIdx,stunMon?.id); // ★楔(影潜): あつの挑発も本人の攻撃なので数える
           fireTacticsExCross(slotIdx);
           for (const hit of stunHits.slice(1)) { if (hit.crit) hasCrit=true; totalDmg+=hit.dmg; attackHits.push({dmg:hit.dmg, isCrit:hit.crit, slotIdx, isSpecial:true, skillName:hit.skillName, isUnique:false, ...(hit.noAnim?{noAnim:true}:{})}); }
         }
@@ -62825,6 +62948,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       }
       else if (card.type!=='guard'&&card.type!=='weak_guard') {
         const activeMon=slots[slotIdx];
+        // 楔の数は、この攻撃で1つ増える前の数で固有技の効果を決める(セレーネチェイサー・ドリームペイン)
+        const kusabiBeforeAttack=kusabiAt(slotIdx);
         // 運命のコイン・運命の輪で決まる「この技のダメージ」の倍率と、運命の輪の出目(当たったあとに効かせる)
         let fateDmgMult=1, fateWheelPick=null;
         if (card.type==='unique') {
@@ -62836,6 +62961,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           if(card.monId==='Mocchi'||card.monId==='Mitarashi'){addPermaBuff('dmgCutPct',0.03*effMul); const boost=localBoostFromCard(card).dmgMod*effMul; addWaveBuff('enemyTakenDmgBonus',boost); localDmgModAdd+=boost; addPopup('被ダメ軽減UP!','hero','text-emerald-400 text-lg font-bold');}
           else if(card.monId==='Golem'){const boost=localBoostFromCard(card).oryo*effMul; addPermaBuff('atkPct',boost); localOryoAdd+=boost; addPopup('闘志UP!','hero','text-red-600 text-lg font-bold');}
           else if(card.monId==='Zan'){addPermaBuff('comboDmgPct',0.03*effMul); addPopup('連斬!','hero','text-cyan-400 text-lg font-bold');}
+          // セレーネチェイサー(イルミネ): 連撃ダメージ+1%×(楔の数+1)をザンの連斬と同じ comboDmgPct へ積む(永続・重複可・次のターンから)。
+          //   5%の連撃×(楔の数+1)はヒット列(kusabiCombosAt)が足す
+          else if(card.monId===SELENE_CHASER_MONSTER_ID){const sc=seleneChaserOf(kusabiBeforeAttack); addPermaBuff('comboDmgPct',sc.comboDmgAdd*effMul); addPopup(`セレーネチェイサー! 連撃×${sc.combo.count}`,'hero','text-violet-300 text-lg font-bold');}
           // 緋桜連華: 連撃ダメージ+3%はザンの連斬と同じ comboDmgPct、攻撃力+3%はゴーレムの闘志と
           // 同じ atkPct へ積む。どちらも addPermaBuff なので「永続・重複可・次のターンから」になる
           // (このターンのダメージ計算は localOryoAdd を通すが、ここでは足さないので反映は次ターン)
@@ -62889,7 +63017,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit')||tacticsCritFixedNow(slotIdx,card), rollCrit:()=>Math.random()<Math.min(1,((card.crit||0.1)+critRateBonus+(tacticsExMultiBuffNow(slotIdx).critAdd||0)+blackNoteEffectAt(slotIdx,activeMon?.id).critAdd)*tacticsExMultiBuffNow(slotIdx).critRate),
           globalComboRate:getPermaBuff('globalComboDmgPct')+localGlobalComboAdd, comboFinalMultiplier:soulAttack.comboFinalMultiplier,
           swordSkill:tacticsExStyleAt(slotIdx)!=='shield',
-          hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1, exCombos:withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx,halved,card),livePermaBuff('fateStacks',null),slotIdx),blackNoteEffectAt(slotIdx,activeMon?.id).combo), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
+          hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1, exCombos:withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx,halved,card),livePermaBuff('fateStacks',null),slotIdx),blackNoteEffectAt(slotIdx,activeMon?.id).combo,kusabiCombosAt(slotIdx,activeMon?.id,card)), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
         const isCrit=hits[0].crit; const finalD=hits[0].dmg; if(isCrit) hasCrit=true; totalDmg+=finalD;
         if(aquaStackFromCard(slotIdx,card)==='finale'){ immediateStun=true; setImmediateTurnBuff('stunEnemy',true); } // ★アクアフィールドの水牢・氷結(ウンディーネ種の攻撃カード)
         // ★ハムのカウンター(狙われたハムが攻撃したら、攻撃のタイミングで名前を出す)。クロスは文字と揺れ、フル・リベンジはカットインを待つ(タップで飛ばせる)
@@ -62913,6 +63041,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         }
         // ★クロミノート(クロミー): 本人の攻撃が当たったら黒音符+1(固有技は+2)
         if (finalD>0) gainSweetStack(slotIdx,activeMon?.id,card,true);
+        // ★影潜(イルミネ・ドリーミィ): 本人の攻撃が当たったら敵に楔を1つ(上限6)。この攻撃の楔の連撃は、付ける前の数で出ている
+        if (finalD>0) gainKusabi(slotIdx,activeMon?.id);
         // ★トリックコンフューズ(スプーキー): 効いているあいだに本人の攻撃が当たったら、敵を3ターン乱心にする(当て直すと3へ数え直す)
         if (finalD>0 && isTacticsMode(runMode) && tacticsExLiveRef.current.enabled
           && tacticsExConfusesOnHit(tacticsExStateRef.current,tacticsUnitsRef.current,slotIdx,tacticsExLiveRef.current.now)) {
@@ -62921,6 +63051,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         }
         if (card.type==='unique') {
           // 固有技の効果は技の出自(card.monId)で判定する(activeMon.idではない)。理由は上のコメントと同じ
+          // ドリームペイン(ドリーミィ): 次のターンから3ターン、敵の被ダメージ+20%(楔1つごとに+20%)。数は使ったときの楔(増える前)で決める
+          if(card.monId===DREAM_PAIN_MONSTER_ID){const dp=writeDreamPain({...startDreamPain(kusabiBeforeAttack),bonus:dreamPainTakenOf(kusabiBeforeAttack)*effMul}); addPopup(`💤 ドリームペイン 被ダメ+${Math.round(dp.bonus*100)}%`,'enemy','text-fuchsia-300 text-lg font-bold');}
           if(card.monId==='Ham'){immediateStun=true; setImmediateTurnBuff('stunEnemy',true); addPopup('スタン!','enemy','text-yellow-400 text-lg font-bold');}
           else if(card.monId==='Suezo'){const gRec=gainGutsByRate(slotIdx,0.5*effMul); if(gRec>0) addPopup(`⚡ ガッツ +${gRec}`,'guts','text-amber-400 text-xl font-black drop-shadow-md');}
           // ★タクティクスは「使った子だけ」に効く(2026-09-22 ユーザー選択)。ステータスが
@@ -64020,7 +64152,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // バトルの記録もWAVEの区切りを入れる。ランの1WAVE目では前のランのぶんを消す
     if (w === 1) { setBattleLog([]); battleLogSeqRef.current = 0; }
     pushBattleLog(isRaidJackMode(runMode)?`── ${battleModeInfo(runMode).short}：${newEnemy.name} ──`:`── WAVE ${w}：${newEnemy.name} ──`, 'turn');
-    setTurnCount(1); setSelectedCards([]); setDiscardCards([]); setLastActionSlot(null); setCardAssignments({}); setPendingCard(null); setCurrentWaveDamage(0); setWaveDistDamage([0,0,0,0]); setWaveBuffs({}); resetFateWheel(); resetEnemyConfuse(); // WAVE毎リセットのバフ・デバフ(waveEnemyAtkDebuff/chuuniDmgCutUses/enemyTakenDmgBonus等)を全てクリア
+    setTurnCount(1); setSelectedCards([]); setDiscardCards([]); setLastActionSlot(null); setCardAssignments({}); setPendingCard(null); setCurrentWaveDamage(0); setWaveDistDamage([0,0,0,0]); resetKusabi(); resetDreamPain(); setWaveBuffs({}); resetFateWheel(); resetEnemyConfuse(); // WAVE毎リセットのバフ・デバフ(waveEnemyAtkDebuff/chuuniDmgCutUses/enemyTakenDmgBonus等)を全てクリア
     return dist;
   }, [getNextEnemyAction, difficulty, extremeDifficulty, totalTurnCount, highestWaves, quickHighestWaves, proHighestWaves, tacticsRecords, runMode]);
   // 勇者特性「トリックスタート」(ゴースト・スプーキー)の抽選。WAVEの1ターン目と、そこから3ターンごと。
@@ -64204,7 +64336,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setDebugBattle(true); setExtremeRun(false); setDebugOutcome(null); setGaveUp(false);
     setScore(0); setWaveHistory([]); setFinalRewardSummary(null);
     resetTacticsJoinCatchUp(); // あとから入る子の追いつき補正は1周ごとに数え直す
-    writePermaBuffs({autoHpRecovery:0.1}); setWaveBuffs({}); setTurnBuffs({}); writeNextTurnBuffs({}); resetTrickStart(); resetFateWheel(); resetEnemyConfuse();
+    writePermaBuffs({autoHpRecovery:0.1}); setWaveBuffs({}); setTurnBuffs({}); writeNextTurnBuffs({}); resetTrickStart(); resetFateWheel(); resetEnemyConfuse(); resetKusabi(); resetDreamPain();
     setDistDmgBonus([0,0,0,0]); setTotalDistDamage([0,0,0,0]); writeTotalAllDamage(0); setTotalRecoveryDelta(0);
     setUpgradePoints(0); setAtkLevel(0); setGuardLevel(0); setGuardBonusCount(0);
     setMainHero(null); applySlots([null,null,null,null]); setOwnedUniques([]); setOwnedTeachings([]);
@@ -64400,7 +64532,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     debugResultRef.current = false;
     setDebugBattle(true); setExtremeRun(extreme); setDebugOutcome(null); setGaveUp(false); setScore(0); setWaveHistory([]);
     resetTacticsJoinCatchUp();
-    writePermaBuffs({autoHpRecovery:0.1}); setWaveBuffs({}); setTurnBuffs({}); writeNextTurnBuffs({}); resetTrickStart(); resetFateWheel(); resetEnemyConfuse();
+    writePermaBuffs({autoHpRecovery:0.1}); setWaveBuffs({}); setTurnBuffs({}); writeNextTurnBuffs({}); resetTrickStart(); resetFateWheel(); resetEnemyConfuse(); resetKusabi(); resetDreamPain();
     setDistDmgBonus([0,0,0,0]); setTotalDistDamage([0,0,0,0]); writeTotalAllDamage(0); setTotalRecoveryDelta(0);
     setUpgradePoints(0); setAtkLevel(0); setGuardLevel(0); setGuardBonusCount(0); setFinalRewardSummary(null);
     clearSlotUniqueSelection(); // デバッグ戦でも前の周回の一時選択を持ち込まない
@@ -64448,7 +64580,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     debugBattleRef.current=true; extremeRunRef.current=false; debugResultRef.current=false;
     setDebugBattle(true); setExtremeRun(false); setDebugOutcome(null); setGaveUp(false); setScore(0); setWaveHistory([]);
     resetTacticsJoinCatchUp();
-    writePermaBuffs({autoHpRecovery:0.1}); setWaveBuffs({}); setTurnBuffs({}); writeNextTurnBuffs({}); resetTrickStart(); resetFateWheel(); resetEnemyConfuse();
+    writePermaBuffs({autoHpRecovery:0.1}); setWaveBuffs({}); setTurnBuffs({}); writeNextTurnBuffs({}); resetTrickStart(); resetFateWheel(); resetEnemyConfuse(); resetKusabi(); resetDreamPain();
     setDistDmgBonus([0,0,0,0]); setTotalDistDamage([0,0,0,0]); writeTotalAllDamage(0); setTotalRecoveryDelta(0);
     setUpgradePoints(0); setAtkLevel(0); setGuardLevel(0); setGuardBonusCount(0); setFinalRewardSummary(null);
     clearSlotUniqueSelection();

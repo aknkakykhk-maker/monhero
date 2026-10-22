@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c5bc7727c5c57704
+// source-sha256: 3a783c759e904961
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-22 20:54";
+const BUILD_DATE = "2026-10-22 22:11";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -401,9 +401,6 @@ const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
   },
   get assistantAtsu() {
     return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantAtsu === true;
-  },
-  get assistantKyuko() {
-    return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantKyuko === true;
   }
 });
 const eventReplayReleased = event => !event?.releaseFlag || EVENT_REPLAY_RELEASE_FLAGS[event.releaseFlag] === true;
@@ -9190,6 +9187,48 @@ const MASU_COLOR_REGION_HUES = {
     noAAGuard: true,
     noEdgeGuard: true
   }],
+  Illumine: [{
+    hue: 0,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 120,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 240,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 60,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 300,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }],
+  Dreamy: [{
+    hue: 0,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 120,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 240,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 60,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 300,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }],
   Mitarashi: [{
     hue: 0,
     sMin: 0.3
@@ -9628,7 +9667,9 @@ const EXACT_DYE_MASKS = Object.freeze({
   Ghost: GHOST_DYE_MASK,
   Spooky: SPOOKY_DYE_MASK,
   Melody: MELODY_DYE_MASK,
-  Kuromy: KUROMY_DYE_MASK
+  Kuromy: KUROMY_DYE_MASK,
+  Illumine: ILLUMINE_DYE_MASK,
+  Dreamy: DREAMY_DYE_MASK
 });
 const EXACT_DYE_MASK_PLACEMENT = Object.freeze({
   scaleX: 1,
@@ -9995,6 +10036,28 @@ const MASU_COLOR_REGION_DYE = {
     gloss: 0.56
   }, {}, {}, {}, {
     gloss: 0.4
+  }],
+  Illumine: [{
+    gloss: 0.73
+  }, {
+    gloss: 0.74
+  }, {
+    gloss: 0.71
+  }, {
+    gloss: 0.59
+  }, {
+    gloss: 0.56
+  }],
+  Dreamy: [{
+    gloss: 0.15
+  }, {
+    gloss: 0.22
+  }, {
+    gloss: 0.33
+  }, {
+    gloss: 0.71
+  }, {
+    gloss: 0.55
   }]
 };
 const _NO_REGION_DYE = {
@@ -12076,7 +12139,6 @@ const RELEASE_FLAGS = {
   assistantChatRanking: true,
   assistantDailyLines: true,
   assistantAtsu: true,
-  assistantKyuko: false,
   tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE,
   tacticsHate: true,
   tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE,
@@ -12423,7 +12485,6 @@ const RHYTHM_HELL_STORY_TRIGGER = 'release';
 const ASSISTANT_CHAT_STORY_SEEN_KEY = 'mh_story_assistant_chat_seen_v1';
 const ASSISTANT_CHAT_STORY_ID = 'assistant_chat_story';
 const ATSU_JOIN_STORY_ID = 'atsu_join_2026_10_22';
-const KYUKO_JOIN_STORY_ID = 'kyuko_join_2026_10_22';
 const TACTICS_TYPES_STORY_SEEN_KEY = 'mh_story_tactics_types_seen_v1';
 const TACTICS_TYPES_STORY_ID = 'tactics_types';
 const normalizeAssistantId = value => typeof assistantIdOrDefault === 'function' ? assistantIdOrDefault(typeof value === 'string' ? value : null) : typeof DEFAULT_ASSISTANT_ID !== 'undefined' && DEFAULT_ASSISTANT_ID || 'mua';
@@ -16718,10 +16779,12 @@ const helpDataRows = id => {
     case 'rhythmMonsterAbilities':
       {
         const abilities = typeof RHYTHM_MONSTER_ABILITIES !== 'undefined' ? RHYTHM_MONSTER_ABILITIES : {};
-        const byLineage = typeof RHYTHM_MONSTER_ABILITY_BY_LINEAGE !== 'undefined' ? RHYTHM_MONSTER_ABILITY_BY_LINEAGE : {};
         return Object.values(abilities).map(ability => {
-          const lineages = Object.entries(byLineage).filter(([, id]) => id === ability.id).map(([lineageId]) => lineageById(lineageId).name);
-          return [ability.name, `${rhythmAbilityEffectText(ability)}（主血統: ${lineages.join(' / ')}）`];
+          const {
+            lineages,
+            monsters
+          } = rhythmAbilityHolderNames(ability.id);
+          return [ability.name, `${rhythmAbilityEffectText(ability)}（主血統: ${lineages.join(' / ')}${monsters.length ? `／${monsters.join('・')}だけはこの能力` : ''}）`];
         });
       }
     case 'missionsDaily':
@@ -17997,6 +18060,17 @@ const BATTLE_STACK_MARKS = Object.freeze({
     mark: '📢',
     img: '',
     label: '咆哮'
+  }),
+  kusabi: Object.freeze({
+    mark: '🔻',
+    img: '',
+    label: '楔'
+  }),
+  dreamPain: Object.freeze({
+    mark: '💤',
+    img: '',
+    label: 'ドリームペイン',
+    unit: 'T'
   })
 });
 const BATTLE_MONSTER_FX = Object.freeze({
@@ -18173,9 +18247,77 @@ const blackNoteEffectOf = n => {
     } : null
   };
 };
-const withBlackNoteCombo = (exCombos, combo) => {
-  if (!combo) return exCombos;
-  return [...(Array.isArray(exCombos) ? exCombos : [exCombos]).filter(Boolean), combo];
+const withBlackNoteCombo = (exCombos, combo, extra = null) => {
+  const add = [combo, ...(Array.isArray(extra) ? extra : [extra])].filter(Boolean);
+  if (!add.length) return exCombos;
+  return [...(Array.isArray(exCombos) ? exCombos : [exCombos]).filter(Boolean), ...add];
+};
+const KUSABI_TRAIT_MONSTER_IDS = Object.freeze(['Illumine', 'Dreamy']);
+const KUSABI_MAX = 6;
+const KUSABI_COMBO_RATE = 0.15;
+const KUSABI_EVASION_PER = 15;
+const SELENE_CHASER_MONSTER_ID = 'Illumine';
+const SELENE_CHASER_COMBO_RATE = 0.05;
+const SELENE_CHASER_COMBO_DMG = 0.01;
+const DREAM_PAIN_MONSTER_ID = 'Dreamy';
+const DREAM_PAIN_TURNS = 3;
+const DREAM_PAIN_BASE = 0.2,
+  DREAM_PAIN_PER = 0.2;
+const hasKusabiTrait = id => !!id && KUSABI_TRAIT_MONSTER_IDS.includes(id);
+const kusabiCountOf = n => Math.min(KUSABI_MAX, Math.max(0, Math.floor(Number(n) || 0)));
+const kusabiComboOf = n => {
+  const c = kusabiCountOf(n);
+  return c > 0 ? {
+    count: c,
+    rate: KUSABI_COMBO_RATE,
+    label: '楔の連撃'
+  } : null;
+};
+const kusabiEvasionOf = n => KUSABI_EVASION_PER * kusabiCountOf(n);
+const seleneChaserOf = n => {
+  const k = kusabiCountOf(n) + 1;
+  return {
+    combo: {
+      count: k,
+      rate: SELENE_CHASER_COMBO_RATE,
+      label: 'セレーネチェイサー'
+    },
+    comboDmgAdd: SELENE_CHASER_COMBO_DMG * k
+  };
+};
+const dreamPainTakenOf = n => DREAM_PAIN_BASE + DREAM_PAIN_PER * kusabiCountOf(n);
+const dreamPainOf = v => ({
+  wait: Math.max(0, Math.floor(Number(v?.wait) || 0)),
+  turns: Math.max(0, Math.floor(Number(v?.turns) || 0)),
+  bonus: Math.max(0, Number(v?.bonus) || 0)
+});
+const startDreamPain = n => ({
+  wait: 1,
+  turns: DREAM_PAIN_TURNS,
+  bonus: dreamPainTakenOf(n)
+});
+const tickDreamPain = v => {
+  const d = dreamPainOf(v);
+  if (d.wait > 0) return {
+    ...d,
+    wait: d.wait - 1
+  };
+  return d.turns > 1 ? {
+    ...d,
+    turns: d.turns - 1
+  } : {
+    wait: 0,
+    turns: 0,
+    bonus: 0
+  };
+};
+const dreamPainTakenBonus = v => {
+  const d = dreamPainOf(v);
+  return d.wait === 0 && d.turns > 0 ? d.bonus : 0;
+};
+const kusabiEffectText = n => {
+  const c = kusabiCountOf(n);
+  return c > 0 ? `楔${c}/${KUSABI_MAX} 連撃15%×${c}・回避+${kusabiEvasionOf(c)}%` : '';
 };
 const sweetStackEffectText = (id, n) => {
   const trait = sweetStackTraitOf(id);
@@ -18597,16 +18739,6 @@ const TEACHING_FX_STYLE = {
     c1: '#fbcfe8',
     c2: '#f472b6',
     motif: 'rise'
-  },
-  kyuko: {
-    icon: "🎼",
-    label: "譜面どおり!",
-    text: "text-pink-300",
-    ring: "border-pink-300",
-    rgb: "244,114,182",
-    c1: '#fbcfe8',
-    c2: '#f472b6',
-    motif: 'shield'
   },
   poltz: {
     icon: "🍱",
@@ -24535,6 +24667,48 @@ const MONSTER_IDLE_RIGS = Object.freeze({
       amp: 7,
       dur: 1700,
       delay: 0,
+      layer: 'back'
+    }]
+  },
+  Illumine: {
+    body: 'hover',
+    bodyMask: IDLE_ILLUMINE_BODY_MASK,
+    parts: [{
+      mask: IDLE_ILLUMINE_HAIR_L_MASK,
+      origin: '17.1% 75%',
+      anim: 'swing',
+      amp: 5,
+      dur: 2800,
+      delay: 0,
+      layer: 'back'
+    }, {
+      mask: IDLE_ILLUMINE_HAIR_R_MASK,
+      origin: '82.9% 75%',
+      anim: 'swing',
+      amp: -5,
+      dur: 2800,
+      delay: 600,
+      layer: 'back'
+    }]
+  },
+  Dreamy: {
+    body: 'breathe',
+    bodyMask: IDLE_DREAMY_BODY_MASK,
+    parts: [{
+      mask: IDLE_DREAMY_BEADS_L_MASK,
+      origin: '20% 35%',
+      anim: 'swing',
+      amp: 2.5,
+      dur: 2400,
+      delay: 0,
+      layer: 'back'
+    }, {
+      mask: IDLE_DREAMY_BEADS_R_MASK,
+      origin: '79.3% 34%',
+      anim: 'swing',
+      amp: -2.5,
+      dur: 2400,
+      delay: 500,
       layer: 'back'
     }]
   }
@@ -33078,11 +33252,17 @@ const rhythmClockLabel = ms => {
 const RHYTHM_TAP_REJUDGE_MOVE_SUBLANES = .20;
 const rhythmAbilityEmoji = abilityId => abilityId === 'GENKI' ? '💚' : abilityId === 'MUTEKI' ? '🛡️' : abilityId === 'GAMAN' ? '🧱' : abilityId === 'KONJO' ? '🔥' : abilityId === 'HISSHI' ? '🎯' : abilityId === 'ITAZURA' ? '👻' : '✨';
 const rhythmAbilityTone = abilityId => abilityId === 'GENKI' ? 'border-emerald-300/50 bg-emerald-950/40 text-emerald-100' : abilityId === 'MUTEKI' ? 'border-cyan-300/50 bg-cyan-950/40 text-cyan-100' : abilityId === 'GAMAN' ? 'border-amber-300/50 bg-amber-950/40 text-amber-100' : abilityId === 'KONJO' ? 'border-rose-300/50 bg-rose-950/40 text-rose-100' : abilityId === 'HISSHI' ? 'border-lime-300/50 bg-lime-950/40 text-lime-100' : abilityId === 'ITAZURA' ? 'border-violet-300/50 bg-violet-950/40 text-violet-100' : 'border-white/20 bg-slate-900/60 text-slate-300';
-const rhythmAbilityRows = () => Object.values(RHYTHM_MONSTER_ABILITIES).map(ability => ({
-  ability,
-  lineages: Object.entries(RHYTHM_MONSTER_ABILITY_BY_LINEAGE).filter(([, id]) => id === ability.id).map(([lineageId]) => lineageById(lineageId).name)
-}));
-const rhythmSlotAbility = masu => masu && masu.baseId ? rhythmMonsterAbilityForLineage(monsterLineageOf(masu.baseId).main.id) : null;
+const rhythmAbilityRows = () => Object.values(RHYTHM_MONSTER_ABILITIES).map(ability => {
+  const {
+    lineages,
+    monsters
+  } = rhythmAbilityHolderNames(ability.id);
+  return {
+    ability,
+    lineages: [...lineages, ...monsters]
+  };
+});
+const rhythmSlotAbility = masu => masu && masu.baseId ? rhythmMonsterAbilityForMonster(masu.baseId) : null;
 function RhythmSkyStage({
   plane,
   still = false
@@ -40452,7 +40632,6 @@ const TACTICS_HATE = {
     debuff: 8,
     guard: 5,
     taunt: 40,
-    cover: 0,
     ex: 10
   },
   exByEffect: {
@@ -40465,7 +40644,6 @@ const TACTICS_HATE = {
   },
   assist: {
     atsu: 'taunt',
-    kyuko: 'cover',
     mua: 'heal',
     momosuke: 'heal',
     meloso: 'heal',
@@ -40631,6 +40809,14 @@ const MONSTER_TYPE_OF = {
   Ghost: {
     main: 'shadow',
     sub: 'attacker'
+  },
+  Illumine: {
+    main: 'shadow',
+    sub: 'attacker'
+  },
+  Dreamy: {
+    main: 'supporter',
+    sub: 'shadow'
   }
 };
 const monsterTypeOf = monId => {
@@ -43101,11 +43287,6 @@ const tacticsExCoverSlot = (state, units, now) => {
     if (tacticsExActiveEffect(safe, slot, unit.id, now) === 'coverAll') return slot;
   }
   return null;
-};
-const redirectTacticsSingleTarget = (targets, intent, slot, units) => {
-  const list = Array.isArray(targets) ? targets : [];
-  if (!Number.isInteger(slot) || !intent || intent.targetsAll || list.length !== 1) return list;
-  return tacticsAliveSlots(units).includes(slot) ? [slot] : list;
 };
 const coverTacticsTargets = (targets, coverSlot) => Number.isInteger(coverSlot) && Array.isArray(targets) && targets.length ? targets.map(() => coverSlot) : Array.isArray(targets) ? targets : [];
 const RHYTHM_BUDDY_KEY = 'mh_rhythm_buddy_v1';
@@ -64826,6 +65007,29 @@ const BATTLE_CARD_NAME_BREAKS = Object.freeze({
   'ライジングブースト': 'ライジング|ブースト',
   'スウィートパレード': 'スウィート|パレード',
   'マリーランドアーチ': 'マリーランド|アーチ',
+  'ヴェノムエッジ': 'ヴェノム|エッジ',
+  'シールドバッシュ': 'シールド|バッシュ',
+  'モーニングスター': 'モーニング|スター',
+  'アサシンクロウ': 'アサシン|クロウ',
+  'アサルトアロー': 'アサルト|アロー',
+  'ブレードダンス': 'ブレード|ダンス',
+  'バスターソード': 'バスター|ソード',
+  'ドールバッシュ': 'ドール|バッシュ',
+  'キャットクロウ': 'キャット|クロウ',
+  'ドリームダンス': 'ドリーム|ダンス',
+  'パステルソード': 'パステル|ソード',
+  'エーテルアイス': 'エーテル|アイス',
+  'アルカナフレア': 'アルカナ|フレア',
+  'アルスマグナ': 'アルス|マグナ',
+  'ミラージュクロウ': 'ミラージュ|クロウ',
+  'クリムゾンノヴァ': 'クリムゾン|ノヴァ',
+  'ムーンライトヴェール': 'ムーンライト|ヴェール',
+  'ルミナスオーロラ': 'ルミナス|オーロラ',
+  'レクイエムエンド': 'レクイエム|エンド',
+  'ララバイノクターン': 'ララバイ|ノクターン',
+  'スウィートドリーム': 'スウィート|ドリーム',
+  'ドリーミィパレード': 'ドリーミィ|パレード',
+  'おもちゃの爆弾': 'おもちゃの|爆弾',
   '巨大雪だるま転がし': '巨大雪だるま|転がし',
   '熾天の剣よ降り立て': '熾天の剣よ|降り立て',
   '天の慈悲を示されよ': '天の慈悲を|示されよ',
@@ -67002,11 +67206,6 @@ function BattleScreen({
       size: 9
     }), 'カード上限', `+1（残り${Math.ceil(getPermaBuff('kikiCardBonusTurns'))}T）`, 'text-violet-300 border-violet-300/50', {
       short: '+1'
-    });
-    if (getPermaBuff('kyukoCutTurns') > 0 && getPermaBuff('kyukoCutRate') > 0) chip('kyukoCut', React.createElement(Shield, {
-      size: 9
-    }), '被ダメ', `-${Math.round(getPermaBuff('kyukoCutRate') * 100)}%（残り${Math.ceil(getPermaBuff('kyukoCutTurns'))}T）`, 'text-pink-300 border-pink-300/50', {
-      short: `-${Math.round(getPermaBuff('kyukoCutRate') * 100)}%`
     });
     if (getPermaBuff('kenshiComboPower') > 0 || getPermaBuff('kenshiExtraCombo') > 0) {
       const kenshiExtra = getPermaBuff('kenshiExtraCombo');
@@ -82582,6 +82781,8 @@ function MonsterHeroGame() {
     commitTacticsExState(createTacticsExState());
     setTacticsHeroStyle(null);
     resetSweetStack();
+    resetKusabi();
+    resetDreamPain();
   };
   const [ultimateDistanceBreakLevels, setUltimateDistanceBreakLevels] = useState([0, 0, 0, 0]);
   const ultimateDistanceBreakLevelsRef = useRef([0, 0, 0, 0]);
@@ -82775,6 +82976,48 @@ function MonsterHeroGame() {
     return v;
   };
   const resetEnemyConfuse = () => writeEnemyConfuse(0);
+  const kusabiRef = useRef({});
+  const [kusabiView, setKusabiView] = useState({});
+  const kusabiAt = slotIdx => {
+    const key = trickStartKeyOf(slotIdx);
+    return key ? kusabiCountOf(kusabiRef.current[key]) : 0;
+  };
+  const writeKusabiKey = (key, n) => {
+    if (!key) return;
+    const next = {
+      ...kusabiRef.current,
+      [key]: kusabiCountOf(n)
+    };
+    kusabiRef.current = next;
+    setKusabiView(next);
+  };
+  const resetKusabi = () => {
+    kusabiRef.current = {};
+    setKusabiView({});
+  };
+  const gainKusabi = (slotIdx, actorId) => {
+    const owner = sweetOwnerAt(slotIdx);
+    if (!hasKusabiTrait(owner) || owner !== actorId) return;
+    const before = kusabiAt(slotIdx),
+      after = kusabiCountOf(before + 1);
+    if (after === before) return;
+    writeKusabiKey(trickStartKeyOf(slotIdx), after);
+    addPopup(`🔻 楔 ${after}/${KUSABI_MAX}`, 'hero', 'text-violet-200 text-base font-bold drop-shadow-md', undefined, slotIdx);
+  };
+  const kusabiCombosAt = (slotIdx, actorId, card) => {
+    const owner = sweetOwnerAt(slotIdx),
+      n = kusabiAt(slotIdx);
+    return [hasKusabiTrait(owner) && owner === actorId ? kusabiComboOf(n) : null, card && card.type === 'unique' && card.monId === SELENE_CHASER_MONSTER_ID ? seleneChaserOf(n).combo : null];
+  };
+  const dreamPainRef = useRef(dreamPainOf(null));
+  const [dreamPainView, setDreamPainView] = useState(dreamPainOf(null));
+  const writeDreamPain = v => {
+    const d = dreamPainOf(v);
+    dreamPainRef.current = d;
+    setDreamPainView(d);
+    return d;
+  };
+  const resetDreamPain = () => writeDreamPain(null);
   const [turnBuffs, setTurnBuffs] = useState({});
   const [nextTurnBuffs, setNextTurnBuffs] = useState({});
   const nextTurnBuffsRef = useRef({});
@@ -83144,7 +83387,7 @@ function MonsterHeroGame() {
       baseId: masu.baseId,
       imageUrl: masuDisplayImageUrl(base),
       colors: getMasuColors(masu),
-      ability: rhythmMonsterAbilityForLineage(monsterLineageOf(masu.baseId).main.id)
+      ability: rhythmMonsterAbilityForMonster(masu.baseId)
     };
   });
   const applyRhythmMonsterSlots = async (next, message = '') => {
@@ -86150,7 +86393,7 @@ function MonsterHeroGame() {
   const RAID_JACK_HOWTO_AFTER_STORY_ID = 'halloween_night_2026_part1';
   const RAID_JACK_RHYTHM_STORY_ID = 'raid_jack_rhythm_story_2026_10_06';
   const HALLOWEEN_NIGHT_STORY_IDS = HALLOWEEN_NIGHT_STORIES.map(story => story.id);
-  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID];
+  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID];
   const RHYTHM_EVENT_STORY_BY_EVENT = {
     [MONBEAT_CUP_EVENT_ID]: MONBEAT_CUP_STORY_ID,
     [SYMPHONY_EVENT_ID]: SYMPHONY_STORY_ID
@@ -86336,14 +86579,6 @@ function MonsterHeroGame() {
     if (rhythmEventStoryStartedRef.current.includes(ATSU_JOIN_STORY_ID)) return;
     setRhythmEventStoryPending(ATSU_JOIN_STORY_ID);
   }, [rhythmEventStorySeen, assistantBonds, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
-  useEffect(() => {
-    if (typeof setKyukoJoinSeenForShop === 'function') setKyukoJoinSeenForShop(Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(KYUKO_JOIN_STORY_ID));
-    if (!EVENT_REPLAY_RELEASE_FLAGS.assistantKyuko) return;
-    if (!Array.isArray(rhythmEventStorySeen) || rhythmEventStorySeen.includes(KYUKO_JOIN_STORY_ID)) return;
-    if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
-    if (rhythmEventStoryStartedRef.current.includes(KYUKO_JOIN_STORY_ID)) return;
-    setRhythmEventStoryPending(KYUKO_JOIN_STORY_ID);
-  }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
   useEffect(() => {
     if (!EVENT_REPLAY_RELEASE_FLAGS.tacticsTypes || !EVENT_REPLAY_RELEASE_FLAGS.tacticsBattle) return;
     if (!tacticsTypesStorySeenLoaded || tacticsTypesStorySeenFlag || !tacticsIntroSeenFlag) return;
@@ -89131,7 +89366,6 @@ function MonsterHeroGame() {
     raidJackHowtoSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RAID_JACK_HOWTO_STORY_ID),
     raidJackRhythmStorySeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RAID_JACK_RHYTHM_STORY_ID),
     atsuJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(ATSU_JOIN_STORY_ID),
-    kyukoJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(KYUKO_JOIN_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID)
   };
   const isEventReplayUnlocked = event => !!(event && event.alwaysUnlocked) || !!EVENT_REPLAY_UNLOCK_FLAGS[event && event.unlockedKey];
@@ -93805,6 +94039,8 @@ function MonsterHeroGame() {
       aquaPrison: aq && aq.active && aq.route === 'prison' ? aq.stacks : 0,
       aquaFreeze: aq && aq.active && aq.route === 'freeze' ? aq.stacks : 0,
       roar: Math.max(0, Math.floor(Number(enemy.roarStacks) || 0)),
+      kusabi: Object.values(kusabiView || {}).reduce((most, n) => Math.max(most, kusabiCountOf(n)), 0),
+      dreamPain: dreamPainView.wait === 0 ? dreamPainView.turns : 0,
       ...(debugStackMarks && debugStackMarks.enemy ? debugStackMarks.enemy : {})
     };
   })();
@@ -93848,16 +94084,7 @@ function MonsterHeroGame() {
     return Math.max(1, Math.floor(dmgBase * Math.max(0.01, 1.0 - getPermaBuff('dmgCutPct')) * iceLockEnemyDamageMult * tacticsExPsychoLockNow().enemyDmgMult * soulDamageRemaining));
   }, [effectiveDef, mainHero, permaBuffs, waveBuffs, soulBattleParty.damageReduction, runMode, turnCount, fateWheelView]);
   const traitOwnerOf = mon => isTacticsMode(runMode) ? mon?.id || null : mainHero?.id || null;
-  const kyukoTakenMultAt = (slotIdx = null) => {
-    const p = permaBuffsRef.current || {};
-    const turns = Number(p.kyukoCutTurns),
-      rate = Number(p.kyukoCutRate),
-      slot = p.kyukoCutSlot;
-    if (!(turns > 0) || !(rate > 0)) return 1;
-    if (isTacticsMode(runMode) && Number.isInteger(slot) && slot >= 0 && slot !== slotIdx) return 1;
-    return Math.max(0.1, 1 - Math.min(0.9, rate));
-  };
-  const applyTurnDamageReduction = useCallback((damage, slotIdx = null) => damage > 0 ? Math.max(1, Math.floor(damage * getTurnBuff('takenDamageMult', 1.0) * tacticsSlotRate(isTacticsMode(runMode) ? turnBuffs.bySlot : null, slotIdx, 'takenDamageMult', 1.0) * (isTacticsMode(runMode) ? tacticsExPartyTakenMultNow() * tacticsExMultiBuffNow(slotIdx).taken * tacticsExPartyBuffNow().taken : 1) * cookieEffectNow().takenMult) * kyukoTakenMultAt(slotIdx)) : 0, [turnBuffs, runMode]);
+  const applyTurnDamageReduction = useCallback((damage, slotIdx = null) => damage > 0 ? Math.max(1, Math.floor(damage * getTurnBuff('takenDamageMult', 1.0) * tacticsSlotRate(isTacticsMode(runMode) ? turnBuffs.bySlot : null, slotIdx, 'takenDamageMult', 1.0) * (isTacticsMode(runMode) ? tacticsExPartyTakenMultNow() * tacticsExMultiBuffNow(slotIdx).taken * tacticsExPartyBuffNow().taken : 1) * cookieEffectNow().takenMult)) : 0, [turnBuffs, runMode]);
   const getPredictedDamage = useCallback(intent => applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(intent)), [getIncomingDamageBeforeTurnReduction, applyTurnDamageReduction]);
   const BATTLE_LOG_LIMIT = 60;
   const battleActorName = slotIdx => slots[slotIdx]?.masuName || slots[slotIdx]?.name || '味方';
@@ -93985,7 +94212,6 @@ function MonsterHeroGame() {
     }
   });
   const tacticsExFrozenRef = useRef(false);
-  const kyukoRedirectRef = useRef(null);
   const tacticsExAimRef = useRef({
     intent: null,
     dist: 2
@@ -94287,7 +94513,7 @@ function MonsterHeroGame() {
     return live.enabled ? tacticsExCoverSlot(tacticsExStateRef.current, tacticsUnitsRef.current, live.now) : null;
   };
   const tacticsExIntroVisible = RELEASE_FLAGS.tacticsExSkills === true && !tacticsExIntroSeen && gameState === 'BATTLE' && tacticsExEnabled && slots.some(mon => mon && raidExDefOf(mon.id));
-  const tacticsTargetsNow = (intent, dist) => coverTacticsTargets(redirectTacticsSingleTarget(tacticsIntentTargets(intent, tacticsUnitsRef.current, dist), intent, kyukoRedirectRef.current, tacticsUnitsRef.current), tacticsCoverSlotNow());
+  const tacticsTargetsNow = (intent, dist) => coverTacticsTargets(tacticsIntentTargets(intent, tacticsUnitsRef.current, dist), tacticsCoverSlotNow());
   const tacticsUsableSlots = (card, excludeHandIndex = null) => {
     if (!isTacticsMode(runMode) || !card) return [];
     const spent = {},
@@ -94781,7 +95007,7 @@ function MonsterHeroGame() {
     const soulAttack = soulTraitAttackProfile(mon?.masuId ? getMasuMon(mon.masuId) : null, card, slotIdx);
     const totalBuffMult = traitMult * cookieEffectNow().dmgMult * blackNoteEffectAt(slotIdx, mon?.id).dmgMult * bowAtkMultAt(slotIdx) * tacticsExMultiBuffNow(slotIdx).dmg * (card.type === 'unique' ? tacticsExPandoraDevilNow(slotIdx, false).dmg : 1) * getTurnBuff('atkMult', 1.0) * tacticsSlotAtkMult(slotIdx) * (1.0 + getPermaBuff('atkPct') + getPermaBuff('muaAtkPct') + additionalOryo) * distBonusMult * soulAttack.damageMultiplier;
     const attackerAtk = (isTacticsMode(runMode) && tacticsUnitsRef.current[slotIdx] ? Math.max(0, normalizeTacticsUnit(tacticsBattleUnit(slotIdx)).atk) : atk) * trickStartAtkMult(trickStartStacksAt(slotIdx)) * fateAtkMult(livePermaBuff('fateStacks', null), slotIdx);
-    let finalDmg = Math.floor(attackerAtk * distMult * baseDmgMult * (Number(skillDmgMult) > 0 ? Number(skillDmgMult) : 1) * totalBuffMult * (1.0 + getWaveBuff('enemyTakenDmgBonus') + fateWheelEnemyTakenBonus(fateWheelRef.current) + tacticsExPsychoLockNow().enemyTakenBonus + additionalDmgMod));
+    let finalDmg = Math.floor(attackerAtk * distMult * baseDmgMult * (Number(skillDmgMult) > 0 ? Number(skillDmgMult) : 1) * totalBuffMult * (1.0 + getWaveBuff('enemyTakenDmgBonus') + fateWheelEnemyTakenBonus(fateWheelRef.current) + tacticsExPsychoLockNow().enemyTakenBonus + additionalDmgMod + dreamPainTakenBonus(dreamPainRef.current)));
     if (isSecondOrLaterAtk) finalDmg = Math.floor(finalDmg * 0.5);
     const specialRuleDifficulty = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
     const elapsedTotalTurns = totalTurnCount + Math.max(0, turnCount - 1);
@@ -94813,7 +95039,7 @@ function MonsterHeroGame() {
       comboFinalMultiplier: soulAttack.comboFinalMultiplier,
       swordSkill: tacticsExStyleAt(slotIdx) !== 'shield',
       hitRepeat: tacticsExStyleAt(slotIdx) === 'dual' ? TACTICS_EX_DUAL_HIT_REPEAT : 1,
-      exCombos: withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx, halved, card), getPermaBuff('fateStacks', null), slotIdx), blackNoteEffectAt(slotIdx, mon?.id).combo),
+      exCombos: withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx, halved, card), getPermaBuff('fateStacks', null), slotIdx), blackNoteEffectAt(slotIdx, mon?.id).combo, kusabiCombosAt(slotIdx, mon?.id, card)),
       critDmgMult: tacticsExMultiBuffNow(slotIdx).critDmg
     });
     return hits.reduce((sum, hit) => sum + hit.dmg, 0) + attackAtonementDmg(card, hits[0].dmg, soulAttack.comboFinalMultiplier);
@@ -95118,11 +95344,13 @@ function MonsterHeroGame() {
         const aimedSlots = isTacticsMode(runMode) ? tacticsTargetsNow(intent, actingEnemyDist) : null;
         const defenseSlot = aimedSlots && aimedSlots.length ? aimedSlots[Math.floor(Math.random() * aimedSlots.length)] : null;
         const defenseHeroId = !isTacticsMode(runMode) ? mainHero?.id : defenseSlot != null ? tacticsUnitsRef.current[defenseSlot]?.id || null : null;
-        const defenseTable = !isTacticsMode(runMode) ? unifiedSpecialDefense : buildUnifiedSpecialDefense({
+        const kusabiDefenseKey = !isTacticsMode(runMode) ? 'party' : defenseSlot != null ? String(defenseSlot) : null;
+        const kusabiEvasion = hasKusabiTrait(defenseHeroId) && kusabiDefenseKey ? kusabiEvasionOf(kusabiRef.current[kusabiDefenseKey]) : 0;
+        const defenseTable = !isTacticsMode(runMode) && kusabiEvasion <= 0 ? unifiedSpecialDefense : buildUnifiedSpecialDefense({
           soulEvasion: soulBattleParty.evasion,
           soulReflect: soulBattleParty.reflect,
           soulAbsorb: soulBattleParty.absorb,
-          existingEvasion: defenseHeroId === 'Tiger' ? 50 : 0,
+          existingEvasion: (defenseHeroId === 'Tiger' ? 50 : 0) + kusabiEvasion,
           existingReflect: defenseHeroId === 'Monol' ? 30 : 0,
           existingAbsorb: defenseHeroId === 'Oboro' || defenseHeroId === 'Plant' ? 30 : 0
         });
@@ -95140,6 +95368,10 @@ function MonsterHeroGame() {
         const isReflect = soulDefenseResult === 'reflect';
         const isAbsorb = soulDefenseResult === 'absorb';
         const isEvasion = soulDefenseResult === 'evasion';
+        if (isEvasion && hasKusabiTrait(defenseHeroId) && kusabiDefenseKey && kusabiCountOf(kusabiRef.current[kusabiDefenseKey]) > 0) {
+          writeKusabiKey(kusabiDefenseKey, 0);
+          addPopup('🔻 回避！ 楔が外れた', 'hero', 'text-violet-200 text-sm font-bold drop-shadow-md');
+        }
         let tookEnemyAttack = false;
         const fxKind = isMooBoss(enemy?.id) ? 'moo' : intent.type === 'SPECIAL' ? 'special' : 'normal';
         const fxSkill = intent.variant || (intent.type === 'SPECIAL' ? 'special' : 'normal');
@@ -95522,6 +95754,7 @@ function MonsterHeroGame() {
       didRegen = true;
     }
     if (timeStopSlot == null && (fateWheelRef.current.atkDown > 0 || fateWheelRef.current.takenUp > 0)) writeFateWheel(tickFateWheelDebuff(fateWheelRef.current));
+    if (timeStopSlot == null && (dreamPainRef.current.wait > 0 || dreamPainRef.current.turns > 0)) writeDreamPain(tickDreamPain(dreamPainRef.current));
     {
       const lifeSourceTurn = turnCount + 1;
       let lifeSourceGain = 0;
@@ -96221,7 +96454,6 @@ function MonsterHeroGame() {
     if (!tacticsExFrozenRef.current) advanceEnemyIntents(acting, distForNextPredict, enemyActionPerformedRef.current);
   };
   const processTurn = async (explicitEntries = null) => {
-    kyukoRedirectRef.current = null;
     const hasExplicitEntries = Array.isArray(explicitEntries);
     const usedCardEntries = hasExplicitEntries ? explicitEntries.filter(entry => entry && Number.isInteger(entry.handIndex) && hand[entry.handIndex] && entry.card === hand[entry.handIndex]).map(entry => ({
       card: entry.card,
@@ -96415,7 +96647,7 @@ function MonsterHeroGame() {
             globalComboRate: getPermaBuff('globalComboDmgPct') + localGlobalComboAdd,
             mainCanCrit: false,
             comboFinalMultiplier: soulAttack.comboFinalMultiplier,
-            exCombos: withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx, true), livePermaBuff('fateStacks', null), slotIdx), blackNoteEffectAt(slotIdx, stunMon?.id).combo),
+            exCombos: withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx, true), livePermaBuff('fateStacks', null), slotIdx), blackNoteEffectAt(slotIdx, stunMon?.id).combo, kusabiCombosAt(slotIdx, stunMon?.id, card)),
             critDmgMult: tacticsExMultiBuffNow(slotIdx).critDmg
           });
           totalDmg += d;
@@ -96425,6 +96657,7 @@ function MonsterHeroGame() {
             isCrit: false,
             slotIdx
           });
+          if (d > 0) gainKusabi(slotIdx, stunMon?.id);
           fireTacticsExCross(slotIdx);
           for (const hit of stunHits.slice(1)) {
             if (hit.crit) hasCrit = true;
@@ -96463,21 +96696,6 @@ function MonsterHeroGame() {
             poltzCharges: conf.charges
           }));
           addPopup(`🍱 ${BREEDER_EVO_NAMES.poltz[tier]} ×${conf.charges}`, 'hero', 'text-lime-300 font-black text-xl drop-shadow-md');
-        } else if (card.subType === 'cover_kyuko') {
-          const owned = ownedTeachings.find(ot => ot.id === card.id);
-          const tier = Math.min(owned ? owned.evoLevel : 0, KYUKO_TIERS.length - 1);
-          const conf = KYUKO_TIERS[tier];
-          const cut = Math.min(0.9, conf.cut * effMul);
-          const tactics = isTacticsMode(runMode);
-          if (tactics) kyukoRedirectRef.current = slotIdx;
-          writePermaBuffs(p => ({
-            ...p,
-            kyukoCutRate: cut,
-            kyukoCutTurns: conf.turns,
-            kyukoCutSlot: tactics ? slotIdx : -1
-          }));
-          addPopup(`🎼 ${BREEDER_EVO_NAMES.kyuko[tier]} 被ダメ${Math.round(cut * 100)}%減(${conf.turns}T)`, 'hero', 'text-pink-300 font-black text-xl drop-shadow-md');
-          if (tactics) pushBattleLog(`🎼 ${battleActorName(slotIdx)}が、このターンの単体攻撃を引き受ける`, 'ally');
         } else if (card.subType === 'buff_kiki') {
           const owned = ownedTeachings.find(ot => ot.id === card.id);
           const level = Math.min(owned ? owned.evoLevel : 0, 2);
@@ -96550,6 +96768,7 @@ function MonsterHeroGame() {
         }
       } else if (card.type !== 'guard' && card.type !== 'weak_guard') {
         const activeMon = slots[slotIdx];
+        const kusabiBeforeAttack = kusabiAt(slotIdx);
         let fateDmgMult = 1,
           fateWheelPick = null;
         if (card.type === 'unique') {
@@ -96567,6 +96786,10 @@ function MonsterHeroGame() {
           } else if (card.monId === 'Zan') {
             addPermaBuff('comboDmgPct', 0.03 * effMul);
             addPopup('連斬!', 'hero', 'text-cyan-400 text-lg font-bold');
+          } else if (card.monId === SELENE_CHASER_MONSTER_ID) {
+            const sc = seleneChaserOf(kusabiBeforeAttack);
+            addPermaBuff('comboDmgPct', sc.comboDmgAdd * effMul);
+            addPopup(`セレーネチェイサー! 連撃×${sc.combo.count}`, 'hero', 'text-violet-300 text-lg font-bold');
           } else if (card.monId === 'Eiki') {
             addPermaBuff('comboDmgPct', 0.03 * effMul);
             addPermaBuff('atkPct', 0.03 * effMul);
@@ -96642,7 +96865,7 @@ function MonsterHeroGame() {
           comboFinalMultiplier: soulAttack.comboFinalMultiplier,
           swordSkill: tacticsExStyleAt(slotIdx) !== 'shield',
           hitRepeat: tacticsExStyleAt(slotIdx) === 'dual' ? TACTICS_EX_DUAL_HIT_REPEAT : 1,
-          exCombos: withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx, halved, card), livePermaBuff('fateStacks', null), slotIdx), blackNoteEffectAt(slotIdx, activeMon?.id).combo),
+          exCombos: withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx, halved, card), livePermaBuff('fateStacks', null), slotIdx), blackNoteEffectAt(slotIdx, activeMon?.id).combo, kusabiCombosAt(slotIdx, activeMon?.id, card)),
           critDmgMult: tacticsExMultiBuffNow(slotIdx).critDmg
         });
         const isCrit = hits[0].crit;
@@ -96704,6 +96927,7 @@ function MonsterHeroGame() {
           }
         }
         if (finalD > 0) gainSweetStack(slotIdx, activeMon?.id, card, true);
+        if (finalD > 0) gainKusabi(slotIdx, activeMon?.id);
         if (finalD > 0 && isTacticsMode(runMode) && tacticsExLiveRef.current.enabled && tacticsExConfusesOnHit(tacticsExStateRef.current, tacticsUnitsRef.current, slotIdx, tacticsExLiveRef.current.now)) {
           writeEnemyConfuse(ENEMY_CONFUSE_TURNS);
           showLuckBanner({
@@ -96714,6 +96938,13 @@ function MonsterHeroGame() {
           });
         }
         if (card.type === 'unique') {
+          if (card.monId === DREAM_PAIN_MONSTER_ID) {
+            const dp = writeDreamPain({
+              ...startDreamPain(kusabiBeforeAttack),
+              bonus: dreamPainTakenOf(kusabiBeforeAttack) * effMul
+            });
+            addPopup(`💤 ドリームペイン 被ダメ+${Math.round(dp.bonus * 100)}%`, 'enemy', 'text-fuchsia-300 text-lg font-bold');
+          }
           if (card.monId === 'Ham') {
             immediateStun = true;
             setImmediateTurnBuff('stunEnemy', true);
@@ -97202,11 +97433,6 @@ function MonsterHeroGame() {
       takenMult: immediateTakenMult,
       takenMultBySlot: immediateTakenMultBySlot
     }, executedIntent, hpBeforeEnemyAttack, enemyHpAfterOurAttacks);
-    kyukoRedirectRef.current = null;
-    writePermaBuffs(p => p.kyukoCutTurns > 0 ? {
-      ...p,
-      kyukoCutTurns: Math.max(0, p.kyukoCutTurns - 1)
-    } : p);
     if (forcedMoveTarget != null) {
       setEnemyDist(forcedMoveTarget);
       syncAtkTierForDist(forcedMoveTarget);
@@ -97965,6 +98191,8 @@ function MonsterHeroGame() {
     setPendingCard(null);
     setCurrentWaveDamage(0);
     setWaveDistDamage([0, 0, 0, 0]);
+    resetKusabi();
+    resetDreamPain();
     setWaveBuffs({});
     resetFateWheel();
     resetEnemyConfuse();
@@ -98187,6 +98415,8 @@ function MonsterHeroGame() {
     resetTrickStart();
     resetFateWheel();
     resetEnemyConfuse();
+    resetKusabi();
+    resetDreamPain();
     setDistDmgBonus([0, 0, 0, 0]);
     setTotalDistDamage([0, 0, 0, 0]);
     writeTotalAllDamage(0);
@@ -98398,6 +98628,8 @@ function MonsterHeroGame() {
     resetTrickStart();
     resetFateWheel();
     resetEnemyConfuse();
+    resetKusabi();
+    resetDreamPain();
     setDistDmgBonus([0, 0, 0, 0]);
     setTotalDistDamage([0, 0, 0, 0]);
     writeTotalAllDamage(0);
@@ -98488,6 +98720,8 @@ function MonsterHeroGame() {
     resetTrickStart();
     resetFateWheel();
     resetEnemyConfuse();
+    resetKusabi();
+    resetDreamPain();
     setDistDmgBonus([0, 0, 0, 0]);
     setTotalDistDamage([0, 0, 0, 0]);
     writeTotalAllDamage(0);
@@ -100028,10 +100262,6 @@ function MonsterHeroGame() {
       return `次ターン攻撃 ${v.toFixed(1)}倍・自傷 ${d}%`;
     }
     if (t.id === 'kiki') return `次の${level + 2}ターン 使用可能カード枚数 +1・全体連撃 ${3 + level * 2}%アップ（バトル中永続・使用ごとに加算）`;
-    if (t.id === 'kyuko') {
-      const tier = KYUKO_TIERS[Math.min(level, KYUKO_TIERS.length - 1)];
-      return `このターン敵の単体攻撃を引き受ける（タクティクス）・受けるダメージ ${pct(tier.cut)}%ダウン（${tier.turns}ターン・タクティクス以外はパーティ全体）`;
-    }
     if (t.id === 'poltz') {
       const tier = POLTZ_TIERS[Math.min(level, POLTZ_TIERS.length - 1)];
       const parts = [`敵の攻撃を受けるたびに発動（${tier.charges}回まで）`, `発動ごとにガッツ ${pct(tier.healGuts)}%回復`, `ガッツ自動回復 ${pct(tier.gutsRecover)}%アップ（次のターンから・バトル中永続）`];

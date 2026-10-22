@@ -210,8 +210,9 @@ check('根性ストックの自動復活を判定のたびに見ている',
   /const stockRevive=rhythmConsumeKonjoStock\(run\.abilities,run\.life\);/.test(game));
 check('モンスターノーツはGREAT以上のときだけ能力を出す',
   /if\(monster&&monster\.ability&&rhythmMonsterAbilityTriggers\(judgment\)\)\{/.test(game));
-check('能力は主血統から引く',
-  /ability:rhythmMonsterAbilityForLineage\(monsterLineageOf\(masu\.baseId\)\.main\.id\)/.test(game));
+// 2026-10-22 子ごとの上書き(ドリーミィ)を先に引き、無ければ主血統(rhythmMonsterAbilityForMonster)
+check('能力は子ごとの上書き→主血統の順に引く',
+  /ability:rhythmMonsterAbilityForMonster\(masu\.baseId\)/.test(game));
 check('ノーツ中央にマスモンの染色済みの絵を出す',
   /data-rhythm-monster-face[\s\S]{0,400}<DyedMonsterImage baseId=\{monster\.baseId\} src=\{monster\.imageUrl\}[\s\S]{0,120}masuColors=\{monster\.colors\}/.test(game));
 const monsterFaceTag=game.match(/<span data-rhythm-monster-face[^>]+>/)?.[0]||'';

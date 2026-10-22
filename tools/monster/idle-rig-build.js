@@ -188,6 +188,18 @@ const RIGS = [
   { id:'Kuromy', img:'images/monsters/kuromy.png', body:'breathe', parts:[
     { name:'tail', poly:[[74,45],[86,45],[86,52.5],[78.5,52.5],[76.5,54.2],[74.6,53.4],[77,50.6],[74.6,49]], share:[[74.6,52.4],[77,52.4],[77,54.3],[74.6,54.3]], pivot:[75.6,53.4], anim:'wag', amp:7, dur:1700, layer:'back' },
   ]},
+  // イルミネ(2026-10-22・案の段階): 足の先がとがった、宙に浮く子なので体ごとふわふわ(hover)。
+  // 左右へ長く垂れた光る髪の先(黄〜橙)だけを、スカートの下のあたりを軸にゆらゆら揺らす。スカートの紫・青は色で外す
+  { id:'Illumine', img:'images/monsters/illumine.png', body:'hover', parts:[
+    { name:'hairL', poly:[[0,74],[17,74],[14,100],[0,100]], keep:{ hue:[15,75], minSat:0.15, orDark:70 }, pivot:[12,75], anim:'swing', amp:5, dur:2800, layer:'back' },
+    { name:'hairR', poly:[[83,74],[100,74],[100,96],[80,96]], keep:{ hue:[15,75], minSat:0.15, orDark:70 }, pivot:[88,75], anim:'swing', amp:-5, dur:2800, delay:600, layer:'back' },
+  ]},
+  // ドリーミィ(2026-10-22・案の段階): 雲に乗って立つ子なので体ごとゆったり息をする(breathe)。
+  // 左右に垂れた玉の飾りを、雲の髪から出ている上の端を軸に振る。となりのクリーム色の体は彩度で外す
+  { id:'Dreamy', img:'images/monsters/dreamy.png', body:'breathe', parts:[
+    { name:'beadsL', poly:[[0,34],[9,34],[9,82],[0,82]], keep:{ hue:[0,360], minSat:0.3, orDark:70 }, pivot:[7,35], anim:'swing', amp:2.5, dur:2400, layer:'back' },
+    { name:'beadsR', poly:[[89,33],[100,33],[100,82],[89,82]], keep:{ hue:[0,360], minSat:0.3, orDark:70 }, pivot:[92,34], anim:'swing', amp:-2.5, dur:2400, delay:500, layer:'back' },
+  ]},
 ];
 
 const constName = (id, name) => `IDLE_${id.replace(/([a-z])([A-Z])/g, '$1_$2').toUpperCase()}_${name.replace(/([a-z])([A-Z])/g, '$1_$2').toUpperCase()}_MASK`;

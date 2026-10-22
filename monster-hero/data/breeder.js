@@ -48,6 +48,10 @@ const MEL_WHIP_DISC_ICON = "images/disc-icons/mel-whip-disc.PNG?v=aeabb9f0992b";
 // メロディー・クロミー(2026-10-07・実装予告)。作り方はほかの円盤石と同じ(make-disc-icon.js)。?v= は build.js が打ち直す
 const MELODY_DISC_ICON = "images/disc-icons/melody-disc.PNG?v=634ff5eb63a4";
 const KUROMY_DISC_ICON = "images/disc-icons/kuromy-disc.PNG?v=8b1aa76636ad";
+// イルミネ・ドリーミィ(2026-10-22・案の段階)。円盤石アイコンだけ先に作った。マーケットの商品(アイコン2種・円盤石)は
+// 正式実装のときに足す(いま足すと本番のマーケットに「近日追加」で見えてしまうため)
+const ILLUMINE_DISC_ICON = "images/disc-icons/illumine-disc.PNG?v=5e82d79e0bfb";
+const DREAMY_DISC_ICON = "images/disc-icons/dreamy-disc.PNG?v=66626d663904";
 
 const BREEDER_EVO_NAMES = {
   oryo: ["ニコラオの力", "ニコラオの気合", "ニコラオの憤怒"],
