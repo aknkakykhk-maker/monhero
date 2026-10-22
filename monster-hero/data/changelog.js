@@ -37,7 +37,7 @@ const CHANGELOG = [
   {
     // 2026-10-22 社長「先にモンスター実装予告をいつもの出したい」。メロディー・クロミーの予告と同じ一式。値段も同じ(円盤石150,000ダイヤ)。
     // 画像は tools/image/make-illumine-dreamy-lineage-notice.js(予告)と make-illumine-dreamy-dye-preview.js(染色イメージ・ゲームと同じ染め方)で作った
-    date: "2026-10-22 23:15", type:'update', group:'monster', title:'「イルミネ」「ドリーミィ」実装予告', status:'new',
+    date: "2026-10-22 23:34", type:'update', group:'monster', title:'「イルミネ」「ドリーミィ」実装予告', status:'new',
     image: 'images/events/illumine-dreamy-notice.jpg?v=a0c8e6fc243c',
     items:[
       '新しいモンスター「イルミネ」と「ドリーミィ」を近日実装します。どちらも、イルミネの血を引く新しい血統のモンスターです。',
