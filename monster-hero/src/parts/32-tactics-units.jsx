@@ -573,15 +573,17 @@ const withTacticsTarget = (intent, units, random = Math.random, bias = TACTICS_T
 // ★数字はこの TACTICS_HATE の1か所だけに置く(試算: docs/playbot/reports/2026-10-17/tactics-hate-numbers.md の★おすすめ)。
 //   action … 行動ごとの基準値 / monsters … 子ごとの上書き(mult・add・always)。タイプごとの倍率は下の MONSTER_TYPES(1か所)
 //   1ターンの動き: ヘイト = 前のヘイト × decay + 倍率 ×(そのターンに増えたぶん)。上限 cap・倒れたら0・WAVE で0。
-//   勇者は hero.floor より下がらない(炎は下地を引いた値で出す)。狙いの重み = 今の重み ×(1 + ヘイト ÷ k)
+//   WAVE の始めのヘイトは、メインとサブのタイプで決める(start。勇者モンかどうかは関係ない・2026-10-22 社長)。狙いの重みは weightCurve
 // 入/切を読むのは 81-debug-trials.jsx の tacticsHateProtoOn(この部品は保存に触らない)
 const TACTICS_HATE = {
   decay: 0.7, cap: 100,
   // 狙いの重みに掛ける倍率を、ヘイトの点 [ヘイト, 倍率] で決める(あいだは直線でつなぐ・上限より上は最後の点)。
   // 2026-10-22 社長「もうちょい狙われる確率を上げて。最大40%じゃヘイト調整してもなかなかこない」で選んだ強さ:
-  //   4体ともライフ満タン・WAVE の始め(勇者は下地20・ほかは0)に、タンクがガードしてヘイト40 → そのタンクが約65%(前は約40%)
+  //   4体ともライフ満タンで、1体がヘイト40・1体が20・2体が0 → ヘイト40の子が約65%(前は約40%)
   //   ヘイト上限100 → 約90%(前は約57%)
-  //   勇者の下地20 だけのとき(ほかは0)は前と同じ ×1.8(勇者が約38%)。べき乗の式だと 64% まで上がって勇者ばかり狙われるので、点で決めた
+  //   ヘイト20 は前と同じ ×1.8。べき乗の式だと低いヘイトでも偏りすぎるので、点で決めた
+  //   (2026-10-22 社長「ガードは狙われたら使うからそこまでむしろ上げないほうがよさそう。ヘイトはアシカとかexでためる」で、
+  //    約65%・約90% は「ガードで」ではなく「ヘイト約40で」「上限100で」の目安として守る)
   // 前は ×(1 + ヘイト ÷ 25)。全員ヘイト0なら ×1 で、ライフの減り具合だけで決まるのは今までどおり
   weightCurve: [[0, 1], [20, 1.8], [40, 7.1], [100, 34]],
   flames: [20, 50, 80],
@@ -590,8 +592,14 @@ const TACTICS_HATE = {
   //   攻撃は与ダメージのぶんも入るので、そのターンの味方の与ダメージのうち cardDmgShareGuess を出したとして見積もる
   cardFlames: [15, 40],
   cardDmgShareGuess: 0.5,
-  hero: { floor: 20 },
-  action: { atk: 2, unique: 4, dmgShare: 15, heal: 30, buff: 5, debuff: 8, guard: 25, taunt: 40, ex: 10 },
+  // WAVE の始めのヘイト(2026-10-22 社長「初期ヘイトは勇者モンとか決めないでメインサブのタイプで決めたらどう？」・数字は社長が決めた)。
+  //   メインの値 + サブの値。0 未満にはしない(サブがシャドウの子は下がる)。前は勇者モンだけ20(下地)で、20より下がらなかった
+  start: {
+    main: { tank: 20, healer: 10, attacker: 10, supporter: 5, shadow: 0 },
+    sub: { tank: 10, healer: 5, attacker: 5, supporter: 3, shadow: -5 },
+  },
+  // guard は 25 → 5(2026-10-22 社長「ガードは狙われたら使うからそこまでむしろ上げないほうがよさそう」)。ヘイトはアシカ・EX でためる
+  action: { atk: 2, unique: 4, dmgShare: 15, heal: 30, buff: 5, debuff: 8, guard: 5, taunt: 40, ex: 10 },
   exByEffect: { coverAll: 60, partyGuard: 20, lifeSpring: 20, cookieBox: 15, partyBoost: 15, present: 10 },
   // 助手のカード(id)がどの行動か
   assist: { atsu: 'taunt', mua: 'heal', momosuke: 'heal', meloso: 'heal', oryo: 'buff', dra: 'buff', cadmium: 'buff', myaru: 'buff', kiki: 'buff', poltz: 'buff' },
@@ -610,29 +618,31 @@ const TACTICS_HATE = {
 // 表記の入/切を読むのは 81-debug-trials.jsx の monsterTypeProtoOn
 const MONSTER_TYPES = {
   attacker: { label: 'アタッカー', icon: '⚔️', note: '攻めの主役', hateMult: 1.0, hateAdd: {} },
-  tank: { label: 'タンク', icon: '🛡️', note: '前に立って攻撃を引き受ける', hateMult: 1.3, hateAdd: { guard: 6 } },
+  tank: { label: 'タンク', icon: '🛡️', note: '前に立って攻撃を引き受ける', hateMult: 1.3, hateAdd: { guard: 2 } },
   supporter: { label: 'サポーター', icon: '✨', note: '味方を強くする', hateMult: 1.1, hateAdd: {} },
   healer: { label: 'ヒーラー', icon: '💚', note: '味方を癒やす', hateMult: 1.2, hateAdd: {} },
   shadow: { label: 'シャドウ', icon: '🌙', note: 'かわして、目立たずに攻める', hateMult: 0.8, hateAdd: {} },
 };
 const MONSTER_TYPE_OF = {
+  // 2026-10-22 社長がサブを1体ずつ決めた(サブの無い子はいない・メインと同じタイプのサブもある)
   Mocchi: { main: 'attacker', sub: 'tank' }, Mitarashi: { main: 'attacker', sub: 'tank' },
-  Golem: { main: 'attacker' }, Suezo: { main: 'attacker', sub: 'supporter' }, Ham: { main: 'attacker' },
-  Pandora: { main: 'attacker' }, KenshiMocchi: { main: 'attacker' }, Eiki: { main: 'attacker' },
-  Kuromy: { main: 'attacker' }, Spooky: { main: 'attacker', sub: 'supporter' },
-  Monol: { main: 'tank' }, Yggdrasil: { main: 'tank', sub: 'healer' }, MelWhip: { main: 'tank', sub: 'attacker' },
-  Oboro: { main: 'tank' }, Plant: { main: 'tank', sub: 'healer' },
+  Golem: { main: 'attacker', sub: 'attacker' }, Suezo: { main: 'attacker', sub: 'supporter' }, Ham: { main: 'attacker', sub: 'tank' },
+  Pandora: { main: 'attacker', sub: 'shadow' }, KenshiMocchi: { main: 'attacker', sub: 'shadow' }, Eiki: { main: 'attacker', sub: 'shadow' },
+  Kuromy: { main: 'attacker', sub: 'tank' }, Spooky: { main: 'attacker', sub: 'shadow' },
+  Monol: { main: 'tank', sub: 'tank' }, Yggdrasil: { main: 'tank', sub: 'healer' }, MelWhip: { main: 'tank', sub: 'attacker' },
+  Oboro: { main: 'tank', sub: 'healer' }, Plant: { main: 'tank', sub: 'healer' },
   Melody: { main: 'healer', sub: 'tank' }, Undine: { main: 'healer', sub: 'supporter' },
   Pixie: { main: 'supporter', sub: 'attacker' }, Mia: { main: 'supporter', sub: 'attacker' },
   Ark: { main: 'supporter', sub: 'attacker' }, Iblis: { main: 'supporter', sub: 'attacker' },
-  Snegurochka: { main: 'supporter' }, Yaobikuni: { main: 'supporter', sub: 'tank' },
+  Snegurochka: { main: 'supporter', sub: 'healer' }, Yaobikuni: { main: 'supporter', sub: 'tank' },
   Tiger: { main: 'shadow', sub: 'attacker' }, Zan: { main: 'shadow', sub: 'attacker' }, Ghost: { main: 'shadow', sub: 'attacker' },
 };
 // その子のタイプ({ main, sub } の形。表に無い子はアタッカー・サブなし)
 const monsterTypeOf = (monId) => {
   const t = MONSTER_TYPE_OF[monId];
   const main = t && MONSTER_TYPES[t.main] ? t.main : 'attacker';
-  const sub = t && MONSTER_TYPES[t.sub] && t.sub !== main ? t.sub : null;
+  // メインと同じタイプのサブも持てる(2026-10-22 社長。ゴーレム アタッカー/アタッカー・モノリス タンク/タンク)
+  const sub = t && MONSTER_TYPES[t.sub] ? t.sub : null;
   return { main, sub };
 };
 const TACTICS_HATE_EMPTY = [0, 0, 0, 0];
@@ -689,9 +699,17 @@ const tacticsHateCardLevel = (card, monId = null) => tacticsHateGainLevel(tactic
 const tacticsHateExLevel = (effect, monId) => tacticsHateGainLevel(tacticsHateProfile(monId).mult * tacticsHateExGain(effect, monId));
 const normalizeTacticsHate = (hate) => [0, 1, 2, 3].map(i => tacticsClamp(tacticsHateNum(Array.isArray(hate) ? hate[i] : 0), 0, TACTICS_HATE.cap));
 // WAVE の始め(勇者だけ下地から)
-const tacticsHateWaveStart = (heroSlot) => [0, 1, 2, 3].map(i => (i === heroSlot ? TACTICS_HATE.hero.floor : 0));
+// その子の WAVE の始めのヘイト(メイン + サブ。0 未満にはしない)
+const tacticsHateStartOf = (monId) => {
+  if (!monId) return 0;
+  const t = monsterTypeOf(monId), st = TACTICS_HATE.start;
+  return Math.min(TACTICS_HATE.cap, Math.max(0, tacticsHateNum(st.main[t.main]) + (t.sub ? tacticsHateNum(st.sub[t.sub]) : 0)));
+};
+// WAVE の始め: 4つの枠それぞれ、その子のタイプで決まる値(空き枠は0)。monIds … 枠ごとの子の id
+const tacticsHateWaveStart = (monIds = []) => [0, 1, 2, 3].map(i => tacticsHateStartOf(Array.isArray(monIds) ? monIds[i] : null));
 // 1ターンぶん進める。gains … 枠ごとの行動のぶん(倍率の前)/ dealt … 枠ごとのそのターンの与ダメージ / monIds … 枠ごとの子の id
-const tacticsHateStep = (hate, { gains = TACTICS_HATE_EMPTY, dealt = TACTICS_HATE_EMPTY } = {}, units, heroSlot, monIds = []) => {
+// 2026-10-22 勇者モンの下限(20より下がらない)は外した。勇者モンかどうかは見ない
+const tacticsHateStep = (hate, { gains = TACTICS_HATE_EMPTY, dealt = TACTICS_HATE_EMPTY } = {}, units, monIds = []) => {
   const prev = normalizeTacticsHate(hate);
   const filled = tacticsFilledSlots(units);
   const team = filled.reduce((sum, i) => sum + Math.max(0, tacticsHateNum(dealt[i])), 0);
@@ -701,7 +719,6 @@ const tacticsHateStep = (hate, { gains = TACTICS_HATE_EMPTY, dealt = TACTICS_HAT
     const p = tacticsHateProfile(monIds[i]);
     const share = team > 0 ? TACTICS_HATE.action.dmgShare * Math.max(0, tacticsHateNum(dealt[i])) / team : 0;
     let v = prev[i] * TACTICS_HATE.decay + p.mult * (Math.max(0, tacticsHateNum(gains[i])) + share);
-    if (i === heroSlot) v = Math.max(v, TACTICS_HATE.hero.floor);
     return Math.min(TACTICS_HATE.cap, v);
   });
 };
@@ -716,9 +733,9 @@ const tacticsHateWeightMult = (hate, index) => {
   }
   return pts[pts.length - 1][1];
 };
-// 炎の段(0〜3)。勇者は下地を引いた値で見る
-const tacticsHateFlame = (value, isHero = false) => {
-  const v = tacticsHateNum(value) - (isHero ? TACTICS_HATE.hero.floor : 0);
+// 炎の段(0〜3)。だれでも同じ値で見る(2026-10-22 勇者モンの下地を外したので、引かない)
+const tacticsHateFlame = (value) => {
+  const v = tacticsHateNum(value);
   return TACTICS_HATE.flames.filter(x => v >= x).length;
 };
 // その行動が実際に当たるスロット。予告と実行で同じ関数を通すので食い違わない

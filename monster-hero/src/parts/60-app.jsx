@@ -1414,21 +1414,18 @@ function MonsterHeroGame() {
     ? withTacticsTarget(intent, tacticsUnitsRef.current, Math.random, TACTICS_TARGET_LOW_HP_BIAS, tacticsHateOnFor(mode) ? tacticsHateRef.current : null)
     : intent);
   const commitTacticsHate = (next) => { tacticsHateRef.current = next; setTacticsHate(next); };
-  // 勇者モンの id は戦闘の始めに参照用の値へ写す。レイドは勇者モンを決めた同じ描画で戦闘を始めるので、mainHero(state)がまだ前のままのことがある
-  const tacticsHateHeroIdRef = useRef(null);
-  const tacticsHateHeroSlot = () => { const id = tacticsHateHeroIdRef.current || (mainHero && mainHero.id); return id ? tacticsUnitsRef.current.findIndex(u => !!(u && u.id === id)) : -1; };
   const addTacticsHatePending = (slotIdx, gain) => {
     if (!Number.isInteger(slotIdx) || slotIdx < 0 || slotIdx > 3 || !(gain > 0)) return;
     const next = [...tacticsHatePendingRef.current]; next[slotIdx] += gain; tacticsHatePendingRef.current = next;
   };
   const clearTacticsHateTurn = () => { tacticsHatePendingRef.current = [0, 0, 0, 0]; tacticsHateDealtRef.current = [0, 0, 0, 0]; };
-  // WAVE の始め: 0へ(勇者だけ下地)
-  const resetTacticsHate = (mode) => { clearTacticsHateTurn(); commitTacticsHate(tacticsHateOnFor(mode) ? tacticsHateWaveStart(tacticsHateHeroSlot()) : TACTICS_HATE_EMPTY); };
+  // WAVE の始め: その子のタイプ(メイン + サブ)で決まる値へ(2026-10-22 社長。勇者モンかどうかは見ない)
+  const resetTacticsHate = (mode) => { clearTacticsHateTurn(); commitTacticsHate(tacticsHateOnFor(mode) ? tacticsHateWaveStart(tacticsUnitsRef.current.map(u => u && u.id)) : TACTICS_HATE_EMPTY); };
   // 敵の次の狙いを決める直前に、そのターンのぶんを足す(倒れた子は0)
   const stepTacticsHate = (mode) => {
     if (!tacticsHateOnFor(mode)) return;
     const units = tacticsUnitsRef.current;
-    commitTacticsHate(tacticsHateStep(tacticsHateRef.current, { gains: tacticsHatePendingRef.current, dealt: tacticsHateDealtRef.current }, units, tacticsHateHeroSlot(), units.map(u => u && u.id)));
+    commitTacticsHate(tacticsHateStep(tacticsHateRef.current, { gains: tacticsHatePendingRef.current, dealt: tacticsHateDealtRef.current }, units, units.map(u => u && u.id)));
     clearTacticsHateTurn();
   };
   // ===== ライフの増減(新モードだけ盤面へ) =====
@@ -14473,7 +14470,6 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if (runMode !== BATTLE_MODE_TACTICS_PRO || raidJackRunRef.current) tacticsProLogRef.current = null;
     tacticsProLogWaveStart(tacticsProLogRef.current, { wave: w, party: (Array.isArray(s) ? s : []).filter(Boolean).map(m => ({ id: m.id, dist: m === mainHero ? initialBattleDistanceRef.current : null })), enemy: forcedEnemyKey });
     setDefeatFx(null);
-    tacticsHateHeroIdRef.current = (heroForDeck || mainHero)?.id || null;   // ヘイトの勇者の下地を付ける子(tacticsHateHeroSlot)
     // 通常・クイック・プロ・極限・練習/デバッグの共通開始点で、新しいランだけ累計を初期化する。
     if (w === 1) {
       setTotalTurnCount(0);

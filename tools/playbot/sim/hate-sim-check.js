@@ -24,7 +24,7 @@ check('② 敵が狙う直前に1ターンぶん進める', /stepHate\(st\);[^\n
 check('② 使ったカード(同じ子の2枚目は半分)', /addHate\(st, slot, G\.tacticsHateCardGain\(card, st\.units\[slot\] && st\.units\[slot\]\.id, effMul\)\)/.test(src) && /const effMul = halved \? 0\.5 : 1;/.test(src));
 check('② EX を使った', /addHate\(st, slot, G\.tacticsHateExGain\(def\.effect, mon\.id\)\);[^\n]*\n\s*st\.ex = G\.applyTacticsExUse\(/.test(src));
 check('② 与ダメージはそのターンのぶん(dmgBySlot の増えたぶん)', /const dealt = \[0, 1, 2, 3\]\.map\(\(i\) => Math\.max\(0, \(st\.dmgBySlot\[i\] \|\| 0\) - \(st\.hateDmgMark\[i\] \|\| 0\)\)\);/.test(src));
-check('② WAVE の始めに0(勇者だけ下地)', /resetHate\(st\); \/\/ ヘイトは WAVE ごとに0から/.test(src) && /G\.tacticsHateWaveStart\(st\.heroSlot\)/.test(src));
+check('② WAVE の始めはタイプで決める(ゲームと同じく盤面の子の id を渡す)', /resetHate\(st\);/.test(src) && /G\.tacticsHateWaveStart\(st\.units\.map\(\(u\) => u && u\.id\)\)/.test(src));
 // ③
 const { simulateRun } = require('./battle');
 let diff = 0, wOn = 0, wOff = 0;
@@ -38,8 +38,8 @@ check('③ 既定で入(hate を渡さないと入)', /hateOn: hate !== false &&
 check('③ 入と切で結果が変わる(狙いにヘイトが効いている)', diff >= 10, `40回中 ${diff}回で違う(平均 WAVE 入 ${(wOn / 40).toFixed(2)} / 切 ${(wOff / 40).toFixed(2)})`);
 // ④
 const units = [G.createTacticsUnit({ id: 'Monol', hp: 500, def: 100, atk: 50, guts: 100 }), G.createTacticsUnit({ id: 'Mocchi', hp: 400, def: 50, atk: 80, guts: 100 }), null, null];
-const h0 = G.tacticsHateWaveStart(1);
-const h1 = G.tacticsHateStep(h0, { gains: [10, 0, 0, 0], dealt: [0, 100, 0, 0] }, units, 1, ['Monol', 'Mocchi', null, null]);
-check('④ タンク(モノリス)は倍率 1.5、勇者は下地 20 から', Math.abs(h1[0] - 1.5 * 10) < 1e-9 && h1[1] >= G.TACTICS_HATE.hero.floor, JSON.stringify(h1.map((x) => Math.round(x * 10) / 10)));
+const h0 = G.tacticsHateWaveStart(['Monol', 'Mocchi', null, null]);
+const h1 = G.tacticsHateStep([0, 0, 0, 0], { gains: [10, 0, 0, 0], dealt: [0, 100, 0, 0] }, units, ['Monol', 'Mocchi', null, null]);
+check('④ WAVE の始めはモノリス 30・モッチー 20、タンク(モノリス)の増え方は倍率 1.5', JSON.stringify(h0) === JSON.stringify([30, 20, 0, 0]) && Math.abs(h1[0] - 1.5 * 10) < 1e-9, JSON.stringify(h1.map((x) => Math.round(x * 10) / 10)));
 console.log(failed ? `\n${failed}件 NG` : '\nすべて OK');
 process.exit(failed ? 1 : 0);

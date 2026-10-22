@@ -2534,7 +2534,7 @@ function BattleScreen({
               // この子のEXスキル(タクティクスだけ。持っていなければ null)
               const slotExInfo=tacticsExInfo?tacticsExInfo(i):null;
               // ヘイト(確認待ちの試作): 炎の段。倒れている子には出さない。勇者は下地を引いた値で見る
-              const hateLv=s&&tacticsHateOn&&Array.isArray(tacticsHate)&&!normalizeTacticsUnit(tacticsUnits[i])?.downed?tacticsHateFlame(tacticsHate[i],isHeroSlotMon(s)):0;
+              const hateLv=s&&tacticsHateOn&&Array.isArray(tacticsHate)&&!normalizeTacticsUnit(tacticsUnits[i])?.downed?tacticsHateFlame(tacticsHate[i]):0;
               const hateFlame=hateLv>0?<span data-tactics-hate={i} data-tactics-hate-level={hateLv} title="ヘイト(狙われやすさ)" className="ml-0.5 shrink-0 pr-[0.3em] text-[8px] leading-none tracking-[-0.3em] drop-shadow-[0_0_3px_rgba(251,146,60,.9)]">{'🔥'.repeat(hateLv)}</span>:null;
               // パンドラの箱: 効いているあいだは、悪魔と天使の2体を1つの枠に並べて出す(ライフ・ガッツ・距離・狙われ方は1体のまま)。
               // 待機アニメ(MonsterIdleArt)は本体の絵のパーツ用なので、2体のときは通さない。カードを切る間は、そのカードの側(1枚目=悪魔・2枚目以降=天使)が前に出て、もう片方は暗くなる。染色は本体用なので2体には掛けない
