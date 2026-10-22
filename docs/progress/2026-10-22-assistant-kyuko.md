@@ -23,7 +23,7 @@
 - [x] 加入のお話(社長OK)。イルミネ・ドリーミィは STORY_GUEST_SPEAKERS。Toward the Stars の行で holdMs 4秒止まる
 - [x] あつに社長の話し方を足した(speech・くせ・見本・HOMEのセリフ6本)
 - [x] 見張り tools/assistant/kyuko-check.js(run-checks-always.json に登録)
-- [ ] 公開: 社長の OK でイルミネ・ドリーミィと同時に assistantKyuko を真に。そのとき更新履歴・ヘルプ・告知(changelog-help-update スキル)と、おしゃべりの材料の作り直し
+- [x] 公開(2026-10-23 #3341): イルミネ・ドリーミィと同時に assistantKyuko を真に。そのとき更新履歴・ヘルプ・告知(changelog-help-update スキル)と、おしゃべりの材料の作り直し
 
 ## 作る場所(あつと同じ)
 - `data/assistants.js`: ASSISTANTS・ASSISTANT_PEER_CALLS・ASSISTANT_CHAT_EXAMPLES・ASSISTANT_UNLOCK_STORIES・ASSISTANT_BOND_STYLES・全68場面の基本セリフ・お話と EVENT_REPLAYS
