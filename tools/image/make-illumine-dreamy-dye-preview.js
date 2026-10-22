@@ -74,7 +74,7 @@ const dyed = async (dye, url, baseId, colors) => {
 (async () => {
   // 案を並べて選んでもらうとき(CANDIDATES=1): DYE_CANDIDATES の全部を OUT_DIR へ <ID>-<案>.jpg で書く
   const list = process.env.CANDIDATES ? Object.entries(DYE_CANDIDATES).flatMap(([baseId, set]) => Object.entries(set).map(([key, v]) =>
-    ({ baseId, out: `${baseId}-${key}.jpg`, name: baseId === 'Illumine' ? 'イルミネ' : 'ドリーミィ', ...v }))) : PREVIEWS;
+    ({ baseId, out: `${baseId}-${key}.jpg`, name: baseId === 'Illumine' ? 'イルミネ' : 'ドリーミィ', ...v }))) : [...PREVIEWS];
   PREVIEWS.length = 0; PREVIEWS.push(...list);
   const dye = loadDyeModule();
   const images = loadEmbeddedImages();
