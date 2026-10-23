@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c89bf3d4f54b42a7
+// source-sha256: 2a47845d540f0fdd
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-23 03:42";
+const BUILD_DATE = "2026-10-23 10:11";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -112781,35 +112781,44 @@ function MonsterHeroGame() {
         }
       }, React.createElement("p", {
         className: "mb-2 text-center text-[10px] font-black tracking-widest text-fuchsia-300"
-      }, eventReplay.live ? '' : '回想・', event?.title || ''), React.createElement("div", {
-        className: "mb-3 flex items-end justify-center gap-3"
-      }, cast.map(who => {
-        const talking = !speakingGuest && who.id === line.who;
+      }, eventReplay.live ? '' : '回想・', event?.title || ''), (() => {
+        const many = cast.length > 4;
+        const big = many ? 60 : 84,
+          small = many ? 48 : 64;
         return React.createElement("div", {
-          key: who.id,
-          className: `flex flex-col items-center gap-1 ${talking ? '' : 'opacity-35'}`,
-          style: {
-            transform: talking ? 'scale(1)' : 'scale(.86)',
-            transition: 'opacity .18s, transform .18s'
-          }
-        }, React.createElement("span", {
-          style: {
-            display: 'block',
-            filter: talking ? `drop-shadow(0 0 10px ${who.accent})` : 'none',
-            transition: 'filter .2s'
-          }
-        }, React.createElement(AssistantFace, {
-          who: who,
-          size: talking ? 84 : 64,
-          accent: who.accent,
-          expression: talking ? line.e : 'normal'
-        })), React.createElement("span", {
-          className: "text-[9px] font-black",
-          style: {
-            color: talking ? who.accent : '#64748b'
-          }
-        }, talking && line.name ? line.name : who.name));
-      })), bottomLine ? React.createElement("div", {
+          "data-story-cast": cast.length,
+          className: `mb-3 flex items-end justify-center ${many ? 'flex-wrap gap-x-1 gap-y-1.5' : 'gap-3'}`
+        }, cast.map(who => {
+          const talking = !speakingGuest && who.id === line.who;
+          return React.createElement("div", {
+            key: who.id,
+            "data-story-cast-member": who.id,
+            className: `flex min-w-0 flex-col items-center justify-end gap-1 ${talking ? '' : 'opacity-35'}`,
+            style: {
+              width: many ? 'calc(25% - 4px)' : undefined,
+              height: many ? big + 16 : undefined,
+              transform: talking || many ? 'scale(1)' : 'scale(.86)',
+              transition: 'opacity .18s, transform .18s'
+            }
+          }, React.createElement("span", {
+            style: {
+              display: 'block',
+              filter: talking ? `drop-shadow(0 0 10px ${who.accent})` : 'none',
+              transition: 'filter .2s'
+            }
+          }, React.createElement(AssistantFace, {
+            who: who,
+            size: talking ? big : small,
+            accent: who.accent,
+            expression: talking ? line.e : 'normal'
+          })), React.createElement("span", {
+            className: "max-w-full truncate text-[9px] font-black leading-none",
+            style: {
+              color: talking ? who.accent : '#64748b'
+            }
+          }, talking && line.name ? line.name : who.name));
+        }));
+      })(), bottomLine ? React.createElement("div", {
         key: speakingGuest ? 'keep' : `x${step}`,
         "data-story-pop": speakingGuest ? undefined : '1',
         className: "rounded-2xl border-2 bg-slate-900 px-3 py-3",
