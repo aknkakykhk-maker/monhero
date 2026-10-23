@@ -8580,8 +8580,10 @@ const STORY_GUEST_SPEAKERS = [
   { id: 'jack', name: 'ジャック', role: 'ゲスト', emoji: '🎃', accent: '#fb923c', image: (typeof JACK_ICON_IMG !== 'undefined' ? JACK_ICON_IMG : null), expressions: [], defaultExpression: 'normal' },
   { id: 'pumpkin', name: 'ぱんぷきん', role: 'ゲスト', emoji: '🎃', accent: '#fdba74', image: (typeof PUMPKIN_ICON_IMG !== 'undefined' ? PUMPKIN_ICON_IMG : null), expressions: [], defaultExpression: 'normal' },
   // きゅうこの加入のお話(2026-10-22)に出る新モンスター2体。絵は data/images/images-ally.js の全身の絵(本体の実装はクラフトくん)
-  { id: 'illumine', name: 'イルミネ', role: 'ゲスト', emoji: '🌌', accent: '#a78bfa', image: (typeof ILLUMINE_IMG !== 'undefined' ? ILLUMINE_IMG : null), expressions: [], defaultExpression: 'normal' },
-  { id: 'dreamy', name: 'ドリーミィ', role: 'ゲスト', emoji: '🐱', accent: '#fde68a', image: (typeof DREAMY_IMG !== 'undefined' ? DREAMY_IMG : null), expressions: [], defaultExpression: 'normal' },
+  //   imageFit:'contain' … 縦長の全身の絵を、四角い枠へ切らずに収める(2026-10-23 社長「ドリーミィも微妙にあってない」。
+  //   枠いっぱいに切り抜くと、細長いドリーミィは耳・帽子・頭の玉と足元の雲が切れていた)
+  { id: 'illumine', name: 'イルミネ', role: 'ゲスト', emoji: '🌌', accent: '#a78bfa', image: (typeof ILLUMINE_IMG !== 'undefined' ? ILLUMINE_IMG : null), imageFit: 'contain', expressions: [], defaultExpression: 'normal' },
+  { id: 'dreamy', name: 'ドリーミィ', role: 'ゲスト', emoji: '🐱', accent: '#fde68a', image: (typeof DREAMY_IMG !== 'undefined' ? DREAMY_IMG : null), imageFit: 'contain', expressions: [], defaultExpression: 'normal' },
 ];
 
 // ===== ぱんぷきん×ジャックのストーリー(第1.5部〜終章) =====
