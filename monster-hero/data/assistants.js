@@ -276,7 +276,9 @@ const assistantIdOrDefault = (id) => (ASSISTANTS.some(a => a.id === id) ? id : D
 // ★「見た」が付くのは最後まで見たときだけ。回想で何度見ても同じidが並ぶだけなので、
 //   二重解放にならない(冪等)。イベントが終わってもidは消えないため、解放も残る。
 // あつ(2026-10-22)は加入のお話 atsu_join_2026_10_22 を見たら。お話はほかの3人の仲良し度がそろうと流れる(ASSISTANT_ATSU_UNLOCK_BONDS)
-const ASSISTANT_UNLOCK_STORIES = Object.freeze({ dra: 'symphony_2026_09_17', atsu: 'atsu_join_2026_10_22' });
+// ドラは 2026-10-23 から最初から選べる(社長「最初から使えるようにする」)。もとは異世界交響祭のお話(symphony_2026_09_17)を見たら、
+//   だったが、お話はイベント中にしか流れないので、あとから始めた人は選べなかった。見た記録(mh_rhythm_event_story_v1)はそのまま残す
+const ASSISTANT_UNLOCK_STORIES = Object.freeze({ atsu: 'atsu_join_2026_10_22' });
 const assistantUnlockStoryId = (assistantId) => ASSISTANT_UNLOCK_STORIES[assistantId] || null;
 // あつの加入のお話が流れる条件(2026-10-22 社長の決定。同日 みゅあ Lv10・きき Lv8・もも Lv5 → みゅあ Lv8 → 3人そろって Lv5 以上に変更)。助手ごとの仲良し度がこのLv以上(全部そろったとき)
 const ASSISTANT_ATSU_UNLOCK_BONDS = Object.freeze({ mua: 5, kiki: 5, momosuke: 5 });
