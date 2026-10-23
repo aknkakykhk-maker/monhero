@@ -231,6 +231,26 @@
   "black_shout/hard": "f6f8ff6e8fc7aa19",
   "black_shout/expert": "75af6ec0c6a8fe85",
   "black_shout/master": "dd82a6d2dfd4f0f6",
+  "light_player/easy": "b1a19514fafeed64",
+  "light_player/normal": "2c04fd664ed95e5e",
+  "light_player/hard": "e47e857817bb2a00",
+  "light_player/expert": "2b344a930c763dfd",
+  "light_player/master": "0e34b8a2f281b980",
+  "light_player_short/easy": "55a3fe32ebbfa229",
+  "light_player_short/normal": "5df3d64753c2c3ee",
+  "light_player_short/hard": "284eaad60764024f",
+  "light_player_short/expert": "6ea182d96401fab2",
+  "light_player_short/master": "9beea9629cf75afd",
+  "tsuki_ga_michiru_mae_ni/easy": "3c205972018bf177",
+  "tsuki_ga_michiru_mae_ni/normal": "88155e93494187bd",
+  "tsuki_ga_michiru_mae_ni/hard": "e61cef9223cc48ea",
+  "tsuki_ga_michiru_mae_ni/expert": "ff0c6ce362c5e8a4",
+  "tsuki_ga_michiru_mae_ni/master": "be7bcea887d41369",
+  "tsuki_ga_michiru_mae_ni_short/easy": "688f52657c94643d",
+  "tsuki_ga_michiru_mae_ni_short/normal": "fe91cc494e08841f",
+  "tsuki_ga_michiru_mae_ni_short/hard": "d64cdab32aa2dfd6",
+  "tsuki_ga_michiru_mae_ni_short/expert": "a6a8ec87e0d415e9",
+  "tsuki_ga_michiru_mae_ni_short/master": "7a715b499715400e",
   "mf_ichika_mix/hell": "fb44abd7b8b62f15",
   "monster_hero/hell": "5e9db00bf41b8e59",
   "monster_hero_another/hell": "5dc329f75601a73e",
@@ -276,7 +296,11 @@
   "sad_song/hell": "d75fe56ad4f6469a",
   "sad_song_short/hell": "ac8e88e716252e1e",
   "toward_the_stars_short/hell": "36d49102d9dd2b78",
-  "black_shout/hell": "b682ef78769746d0"
+  "black_shout/hell": "b682ef78769746d0",
+  "light_player/hell": "1373eda9e3d07706",
+  "light_player_short/hell": "87684abfa3a11ca0",
+  "tsuki_ga_michiru_mae_ni/hell": "9cace59faae230f8",
+  "tsuki_ga_michiru_mae_ni_short/hell": "270a9bd2954e5578"
  },
  "history": [
   {
@@ -475,6 +499,11 @@
    "changed": [
     "journey/hell"
    ]
+  },
+  {
+   "at": "2026-10-23 21:06",
+   "reason": "新曲 light player・月が満ちる前に(全編と short ver.)を公開",
+   "changedCount": 24
   }
  ]
 }

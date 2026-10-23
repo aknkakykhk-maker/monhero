@@ -35,6 +35,52 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    // 2026-10-23 社長の依頼(窓口経由・m4a とジャケット)「フル、ショート両方」。難易度は社長が自動のままと決めた
+    date: "2026-10-23 21:06", type:'update', title:'モンヒロビート：新曲「light player」を追加しました', status:'new',
+    image: 'images/song-art/light-player.jpg?v=ee4b36415bac',
+    items:[
+      'モンヒロビートに、school food punishment の「light player」の全編（4分29秒）を追加しました。曲えらびからすぐ遊べます。',
+      'EASY から MASTER までに加えて、空中のノーツが出る HELL があります。HELL は MASTER をクリアすると開きます。',
+      'レベルは EASY Lv.8 ／ NORMAL Lv.9 ／ HARD Lv.14 ／ EXPERT Lv.23 ／ MASTER Lv.30 ／ HELL Lv.54 です。',
+      'ノーツ数は 491 ／ 568 ／ 765 ／ 921 ／ 1060 です。',
+    ],
+    assistantNotice: { id:'update_notice_light_player_v1', type:'content' },
+  },
+  {
+    // 同じ依頼の短い版。曲えらびでは全編と1行にまとまる
+    date: "2026-10-23 21:06", type:'update', title:'モンヒロビート：新曲「light player short ver.」を追加しました', status:'new',
+    image: 'images/song-art/light-player.jpg?v=ee4b36415bac',
+    items:[
+      'light player の短い版（2分31秒）です。曲の頭から2つ目のサビの終わりまでを遊べます。曲えらびでは全編と同じ行にまとまり、難易度ボタンの上で切り替えられます。',
+      'EASY から MASTER までに加えて、空中のノーツが出る HELL があります。HELL は MASTER をクリアすると開きます。',
+      'レベルは EASY Lv.8 ／ NORMAL Lv.9 ／ HARD Lv.14 ／ EXPERT Lv.20 ／ MASTER Lv.27 ／ HELL Lv.52 です。',
+      'ノーツ数は 268 ／ 298 ／ 409 ／ 496 ／ 569 です。',
+    ],
+  },
+  {
+    // 2026-10-23 社長の依頼(窓口経由・m4a とジャケット)「フル、ショート両方」。難易度は社長が自動のままと決めた
+    date: "2026-10-23 21:06", type:'update', title:'モンヒロビート：新曲「月が満ちる前に」を追加しました', status:'new',
+    image: 'images/song-art/tsuki-ga-michiru-mae-ni.jpg?v=cc3224d7112f',
+    items:[
+      'モンヒロビートに、Fuki Commune の「月が満ちる前に」の全編（4分37秒）を追加しました。曲えらびからすぐ遊べます。',
+      'EASY から MASTER までに加えて、空中のノーツが出る HELL があります。HELL は MASTER をクリアすると開きます。',
+      'レベルは EASY Lv.10 ／ NORMAL Lv.11 ／ HARD Lv.16 ／ EXPERT Lv.24 ／ MASTER Lv.31 ／ HELL Lv.63 です。',
+      'ノーツ数は 562 ／ 644 ／ 865 ／ 1048 ／ 1212 です。',
+    ],
+    assistantNotice: { id:'update_notice_tsuki_ga_michiru_mae_ni_v1', type:'content' },
+  },
+  {
+    // 同じ依頼の短い版。曲えらびでは全編と1行にまとまる
+    date: "2026-10-23 21:06", type:'update', title:'モンヒロビート：新曲「月が満ちる前に short ver.」を追加しました', status:'new',
+    image: 'images/song-art/tsuki-ga-michiru-mae-ni.jpg?v=cc3224d7112f',
+    items:[
+      '月が満ちる前にの短い版（1分52秒）です。曲の頭から2つ目のサビの終わりまでを遊べます。曲えらびでは全編と同じ行にまとまり、難易度ボタンの上で切り替えられます。',
+      'EASY から MASTER までに加えて、空中のノーツが出る HELL があります。HELL は MASTER をクリアすると開きます。',
+      'レベルは EASY Lv.9 ／ NORMAL Lv.12 ／ HARD Lv.16 ／ EXPERT Lv.23 ／ MASTER Lv.33 ／ HELL Lv.65 です。',
+      'ノーツ数は 232 ／ 266 ／ 354 ／ 438 ／ 496 です。',
+    ],
+  },
+  {
     // 2026-10-23 社長「染色するときに色の変化の動きがかくつく。前はスムーズに変わってたんだけど直せない？」
     date: "2026-10-23 16:28", type:'fix', group:'masu', title:'染色するときの色の変わり方が、なめらかになりました', status:'new',
     items:[
