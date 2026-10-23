@@ -22,5 +22,6 @@
 | ブレイブくん | バトル部 部長 | [brave.md](brave.md) |
 | クラフトくん | 開発部 | [craft.md](craft.md) |
 | ダメダシくん | 改善部 部長 | [dameda.md](dameda.md) |
+| デッキくん | カード部 部長 | [deck.md](deck.md) |
 
 新しい会話・部署ができたら、ここに1行と1枚を足す。
