@@ -420,7 +420,7 @@ const portsOf = (src) => {
   return [...ports];
 };
 // 時間を測る検査は、ほかと同時に回すと遅く出て落ちるので、最後に1本ずつ回す
-const TIMING_SENSITIVE_RE = /(perf|fps|budget|timing|latency|jank|sync|frame-rate|smooth|long-task|stall|freeze)/i;
+const TIMING_SENSITIVE_RE = /(perf|fps|budget|timing|latency|jank|sync|frame-rate|smooth|long-task|stall|freeze|cost|speed|slow|gpu|touch-bridge)/i;
 function planLanes(commands, n) {
   const times = readTimes();
   const metas = commands.map(c => {
@@ -475,25 +475,37 @@ async function runParallel(commands, opts, wanted) {
     void list;
   });
   let results = [];
-  try {
-    const laneResults = await Promise.all(lanes.map(runLane));
-    results = laneResults.flat();
-  } finally { if (server) server.stop(); }
-  // 自分で配信を立てる検査・時間を測る検査は、ほかが終わってから1本ずつ
-  for (const command of solo) {
+  // 共有の配信は、1本ずつ回す番でも使い続ける。自分で配信を立てる検査の前だけ止め、閉じ切るまで待つ
+  // (止めた直後に「まだ開いている」と取り違えて、配信の無いまま回して落ちたことがある)
+  const releaseShared = async () => { if (server) { server.stop(); server = null; for (let i = 0; i < 50 && await portOpen(SERVER_PORT); i++) await new Promise(r => setTimeout(r, 100)); } };
+  const ensureShared = async () => { if (!server && opts.server) server = await startServer(); };
+  const runSolo = async (command, label) => {
     const meta = scriptMeta(command);
     let res;
     if (!meta.exists) res = { status: 'MISSING', sec: 0, output: '' };
     else if (meta.needsPlaywright && !canResolve('playwright')) res = { status: 'SKIP', sec: 0, output: 'playwright が無い' };
     else {
-      let s = null;
-      if (meta.needsServer && !meta.ownServer && opts.server) s = await startServer();
+      if (meta.ownServer) await releaseShared(); else if (meta.needsServer) await ensureShared();
       res = runOne(command, opts.timeoutSec);
-      if (s) s.stop();
     }
-    results.push({ command, status: res.status, sec: Math.round(res.sec * 10) / 10, ...(['OK', 'SKIP'].includes(res.status) ? {} : { output: String(res.output || '').slice(-6000) }) });
-    console.log(`[1本ずつ] ${res.status.padEnd(4)} ${res.sec.toFixed(1).padStart(6)}s  ${command}`);
-  }
+    console.log(`[${label}] ${res.status.padEnd(4)} ${res.sec.toFixed(1).padStart(6)}s  ${command}`);
+    return { command, status: res.status, sec: Math.round(res.sec * 10) / 10, ...(['OK', 'SKIP'].includes(res.status) ? {} : { output: String(res.output || '').slice(-6000) }) };
+  };
+  const retried = [];
+  try {
+    const laneResults = await Promise.all(lanes.map(runLane));
+    results = laneResults.flat();
+    // 自分で配信を立てる検査・時間を測る検査は、ほかが終わってから1本ずつ
+    for (const command of solo) results.push(await runSolo(command, '1本ずつ'));
+    // 同時に回して落ちたものは、もう一度だけ1本で回す。1本で通ったら「同時に回すと落ちる」として分けて出す(OK に数える)
+    for (let i = 0; i < results.length; i++) {
+      const r = results[i];
+      if (['OK', 'SKIP', 'MISSING'].includes(r.status) || solo.includes(r.command)) continue;
+      const again = await runSolo(r.command, '1本で回し直し');
+      if (again.status === 'OK') { retried.push(r.command); results[i] = { ...again, sec: r.sec, retriedAlone: true }; }
+      else results[i] = again;
+    }
+  } finally { await releaseShared(); }
   const order = new Map(commands.map((c, i) => [c, i]));
   results.sort((a, b) => order.get(a.command) - order.get(b.command));
   const count = s => results.filter(r => r.status === s).length;
@@ -508,7 +520,7 @@ async function runParallel(commands, opts, wanted) {
     console.log((core.length ? core.slice(0, 10) : lines.slice(-8)).map(l => '    ' + (l.length > 200 ? l.slice(0, 200) + ' …' : l)).join('\n'));
   }
   if (bad.length > 8) console.log(`\n… ほか ${bad.length - 8} 本が失敗しています（1本ずつ見るなら  node tools/run-checks.js --script <名前>）`);
-  if (bad.length) console.log('\n※ 同時に回したせいで落ちた検査かもしれないときは、1本だけ回し直して確かめる: node tools/run-checks.js --script <名前>');
+  if (retried.length) console.log(`\n同時に回すと落ちたが、1本で回し直すと通った検査(${retried.length}本・OK に数えた。続くなら最後に1本ずつ回す組へ):\n  ${retried.join('\n  ')}`);
   if (opts.saveTimes) {
     const times = readTimes();
     for (const r of results) if (r.status !== 'SKIP' && r.status !== 'MISSING') times[r.command] = r.sec;
