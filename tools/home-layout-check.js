@@ -242,6 +242,11 @@ const SIZES = [
     server.close();
   }
   await browser.close();
+  // 助手の吹き出しは下へ伸びるので、行数に上限を付けておかないと、セリフが長いときに施設の札「M/B管理」へかぶって押せなくなる
+  // (2026-10-23 社長「MB管理に助手のコメントが被ってくる」。きゅうこの3行のセリフで起きた)。全文は「タップで詳しく」の画面に出る
+  check('HOMEの助手の吹き出しは2行までで切る(長いセリフでも施設の札へかぶらない)',
+    /<AssistantBubble scene="home"[^>]*\bcompact maxLines=\{2\}/.test(source)
+    && /WebkitLineClamp:maxLines/.test(source));
   console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
   process.exit(failed ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

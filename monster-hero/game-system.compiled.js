@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9bf898d299549611
+// source-sha256: 1c0f5308d5464d94
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-23 15:23";
+const BUILD_DATE = "2026-10-23 16:21";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -17143,7 +17143,8 @@ const AssistantBubble = ({
   faceSize = null,
   compact = false,
   defaultOpen = false,
-  footerSpace = 0
+  footerSpace = 0,
+  maxLines = 0
 }) => {
   const [open, setOpen] = useState(defaultOpen);
   const bubbleSetting = useAssistantBubbleState();
@@ -17283,7 +17284,14 @@ const AssistantBubble = ({
     }
   }, who.name), React.createElement("span", {
     "data-bubble-text": true,
-    className: `block text-white leading-relaxed ${compact ? 'text-[10px]' : 'text-[12px]'}`
+    "data-bubble-max-lines": maxLines > 0 ? maxLines : undefined,
+    className: `block text-white leading-relaxed ${compact ? 'text-[10px]' : 'text-[12px]'}`,
+    style: maxLines > 0 ? {
+      display: '-webkit-box',
+      WebkitBoxOrient: 'vertical',
+      WebkitLineClamp: maxLines,
+      overflow: 'hidden'
+    } : undefined
   }, text), (hasDetail || footerSpace > 0) && React.createElement("span", {
     className: "mt-0.5 flex items-center justify-end gap-0.5 text-[9px] font-black",
     style: {
@@ -64730,6 +64738,7 @@ function HomeScreen({
     scene: "home",
     condition: assistantBondUp ? 'bondUp' : masuMons.length === 0 ? 'firstRun' : null,
     compact: true,
+    maxLines: 2,
     footerSpace: typeof onOpenAssistantChat === 'function' ? 70 : 0
   }), typeof onOpenAssistantChat === 'function' && React.createElement("button", {
     type: "button",
