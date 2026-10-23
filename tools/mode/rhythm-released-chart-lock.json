@@ -239,8 +239,8 @@
   "light_player_short/easy": "55a3fe32ebbfa229",
   "light_player_short/normal": "5df3d64753c2c3ee",
   "light_player_short/hard": "284eaad60764024f",
-  "light_player_short/expert": "6ea182d96401fab2",
-  "light_player_short/master": "9beea9629cf75afd",
+  "light_player_short/expert": "15f66c218d16f3ce",
+  "light_player_short/master": "9803b1e4a33cd001",
   "tsuki_ga_michiru_mae_ni/easy": "0021d39a99b3afea",
   "tsuki_ga_michiru_mae_ni/normal": "2026692ea256ee71",
   "tsuki_ga_michiru_mae_ni/hard": "3dceeb3e7f6cd136",
@@ -515,6 +515,14 @@
     "tsuki_ga_michiru_mae_ni/expert",
     "tsuki_ga_michiru_mae_ni/master",
     "tsuki_ga_michiru_mae_ni/hell"
+   ]
+  },
+  {
+   "at": "2026-10-23 22:02",
+   "reason": "新曲 light player short ver. の終点フリック2本を外す(公開前)",
+   "changed": [
+    "light_player_short/expert",
+    "light_player_short/master"
    ]
   }
  ]
