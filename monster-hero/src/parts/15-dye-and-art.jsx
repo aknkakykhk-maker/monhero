@@ -1497,7 +1497,12 @@ const DyedMonsterImage = ({ baseId, src, masuColors, alt, className, style: rawS
   if (!debugMaskPlacement) {
     const bakedUrl = bakeKey && baked.key === bakeKey ? baked.url : undefined;
     if (bakedUrl) return <img src={bakedUrl} alt={alt} draggable={draggable} className={className} style={style}/>;
-    if (bakedUrl === undefined) return <img src={src} alt={alt} draggable={draggable} className={className} style={style}/>;
+    if (bakedUrl === undefined) {
+      // ★新しい色を焼いているあいだは、同じ絵のひとつ前に焼いた絵を出し続ける(2026-10-23 社長「染色するときに色の変化の動きがかくつく」)。
+      //   元の絵(src)へ戻していたため、色を変えるたびに「染めた絵 → 元の色 → 新しい色」と一瞬もどってチラついていた
+      if (baked.url && baked.key && baked.key.startsWith(`${baseId}|${src}|`)) return <img src={baked.url} alt={alt} draggable={draggable} className={className} style={style}/>;
+      return <img src={src} alt={alt} draggable={draggable} className={className} style={style}/>;
+    }
   }
   return (
     <div className={className} style={{...style, position:'relative', overflow:'hidden'}}>

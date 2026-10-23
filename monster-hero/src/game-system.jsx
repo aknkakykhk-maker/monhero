@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 416bdafbe2fb433d
+// generated-sha256: bdb7a61ddcbab702
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-23 15:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-23 16:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7658,7 +7658,12 @@ const DyedMonsterImage = ({ baseId, src, masuColors, alt, className, style: rawS
   if (!debugMaskPlacement) {
     const bakedUrl = bakeKey && baked.key === bakeKey ? baked.url : undefined;
     if (bakedUrl) return <img src={bakedUrl} alt={alt} draggable={draggable} className={className} style={style}/>;
-    if (bakedUrl === undefined) return <img src={src} alt={alt} draggable={draggable} className={className} style={style}/>;
+    if (bakedUrl === undefined) {
+      // ★新しい色を焼いているあいだは、同じ絵のひとつ前に焼いた絵を出し続ける(2026-10-23 社長「染色するときに色の変化の動きがかくつく」)。
+      //   元の絵(src)へ戻していたため、色を変えるたびに「染めた絵 → 元の色 → 新しい色」と一瞬もどってチラついていた
+      if (baked.url && baked.key && baked.key.startsWith(`${baseId}|${src}|`)) return <img src={baked.url} alt={alt} draggable={draggable} className={className} style={style}/>;
+      return <img src={src} alt={alt} draggable={draggable} className={className} style={style}/>;
+    }
   }
   return (
     <div className={className} style={{...style, position:'relative', overflow:'hidden'}}>
