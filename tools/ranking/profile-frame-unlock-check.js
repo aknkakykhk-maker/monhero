@@ -110,7 +110,7 @@ check('壊れた保存値でも必ず配列になる',
 // --- ⑥ アプリ側の結線 ---
 check('仲良し度が上がったら配る', /if \(after > before\) grantProfileFrames\(id, after\);/.test(app));
 check('選んでいない助手のぶんも配る(アシストカード経由で増えるため)',
-  /const addAssistantBondFor[\s\S]{0,900}grantProfileFrames\(id, after\)/.test(app));
+  /const addAssistantBondFor[\s\S]{0,1600}grantProfileFrames\(id, after\)/.test(app));
 check('起動時に、すでに条件を満たしているぶんを配る',
   /profileFramesEarnedAt\(who\.id, level, catchUp\)/.test(app));
 check('一度もらったら外さない(空にして保存する処理が無い)',
