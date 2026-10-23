@@ -1701,6 +1701,146 @@
    "besideHeldBand": 0,
    "fastSameSide": 64,
    "heldHandSwitch": 0
+  },
+  "light_player/EASY": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "light_player/NORMAL": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "light_player/HARD": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 8,
+   "heldHandSwitch": 0
+  },
+  "light_player/EXPERT": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 34,
+   "heldHandSwitch": 0
+  },
+  "light_player/MASTER": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 84,
+   "heldHandSwitch": 0
+  },
+  "light_player_short/EASY": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "light_player_short/NORMAL": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "light_player_short/HARD": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 5,
+   "heldHandSwitch": 0
+  },
+  "light_player_short/EXPERT": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 10,
+   "heldHandSwitch": 0
+  },
+  "light_player_short/MASTER": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 42,
+   "heldHandSwitch": 0
+  },
+  "tsuki_ga_michiru_mae_ni/EASY": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "tsuki_ga_michiru_mae_ni/NORMAL": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "tsuki_ga_michiru_mae_ni/HARD": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 9,
+   "heldHandSwitch": 0
+  },
+  "tsuki_ga_michiru_mae_ni/EXPERT": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 46,
+   "heldHandSwitch": 0
+  },
+  "tsuki_ga_michiru_mae_ni/MASTER": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 117,
+   "heldHandSwitch": 0
+  },
+  "tsuki_ga_michiru_mae_ni_short/EASY": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "tsuki_ga_michiru_mae_ni_short/NORMAL": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "tsuki_ga_michiru_mae_ni_short/HARD": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 1,
+   "heldHandSwitch": 0
+  },
+  "tsuki_ga_michiru_mae_ni_short/EXPERT": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 17,
+   "heldHandSwitch": 0
+  },
+  "tsuki_ga_michiru_mae_ni_short/MASTER": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 71,
+   "heldHandSwitch": 0
   }
  },
  "history": [
@@ -1733,6 +1873,11 @@
    "at": "2026-10-21T13:16",
    "reason": "BLACK SHOUT を正しい音源で作り直す",
    "changed": 268
+  },
+  {
+   "at": "2026-10-23T20:35",
+   "reason": "新曲 light player・月が満ちる前に(全編と short ver.)の行だけを足す",
+   "changed": 20
   }
  ]
 }

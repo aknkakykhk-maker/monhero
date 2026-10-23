@@ -48,8 +48,8 @@ const SONGS={sheriruth:{marker:'sheriruth-v3',zero:711.6-2594.75,beat:324.342,le
   black_shout:{marker:'black-shout-v3',zero:2285.8,beat:324.2017,levelRe:/const blackShoutHellChart=mhChart\((\d+),/,source:'audio',variant:2,crosses:'auto',crossUpper:'mover',crossDepth:-1},
   // light player(school food punishment)・月が満ちる前に(Fuki Commune)の全編と short ver.(2026-10-23 社長「フル、ショート両方」)。拍は解析ファイルの timing
   light_player:{marker:'light-player-v3',zero:1116.6,beat:319.157,levelRe:/const lightPlayerHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1},
-  light_player_short:{marker:'light-player-short-v3',zero:1116.6,beat:319.1574,levelRe:/const lightPlayerShortHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1},
-  tsuki_ga_michiru_mae_ni:{marker:'tsuki-ga-michiru-mae-ni-v3',zero:849.9,beat:319.1489,levelRe:/const tsukiGaMichiruMaeNiHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1},
+  light_player_short:{marker:'light-player-short-v3',zero:1116.6,beat:319.1574,levelRe:/const lightPlayerShortHellChart=mhChart\((\d+),/,source:'audio',variant:2,crosses:'auto',crossUpper:'mover',crossDepth:-1},
+  tsuki_ga_michiru_mae_ni:{marker:'tsuki-ga-michiru-mae-ni-v3',zero:849.9,beat:319.1489,levelRe:/const tsukiGaMichiruMaeNiHellChart=mhChart\((\d+),/,source:'audio',variant:1,crosses:'auto',crossUpper:'mover',crossDepth:-1},
   tsuki_ga_michiru_mae_ni_short:{marker:'tsuki-ga-michiru-mae-ni-short-v3',zero:849.9,beat:319.1489,levelRe:/const tsukiGaMichiruMaeNiShortHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1},
   // Toward the Stars, Paradise or Truth short ver.(hitoyakyuko・2026-10-19・新曲は基本 HELL あり)
   // 全曲ヘル(2026-10-21 社長「全曲ヘルを実装して」)。marker・track は rhythm-runtime-notes.js の RELEASED_MARKERS・RELEASED_TRACKS、拍の頭と1拍は解析の timing
