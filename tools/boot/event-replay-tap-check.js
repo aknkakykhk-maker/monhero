@@ -77,6 +77,8 @@ const storyCastOf=(script)=>[...ASSISTANTS,...STORY_GUESTS].filter(who=>script.s
 const normalizeAssistantBond=()=>({points:0});
 const assistantBonds={},assistantCallStyles={};
 const assistantSpeakText=(t)=>t; const assistantBondLevelOf=()=>1; const breederName='ブリーダー';
+// あつの解放で台本の行を選ぶ(2026-10-23・eventScriptForPlayer は assistants.js にある)。ここでは見たお話なし
+const rhythmEventStorySeen=[];
 const RHYTHM_EVENT_STORY_IDS=[${JSON.stringify(target.id)}];
 window.__seen=[]; const markRhythmEventStorySeen=(id)=>{window.__seen.push(id);};
 const markMomosukeIntroSeen=()=>{};

@@ -3,7 +3,7 @@
 //   node tools/mode/raid-jack-story-check.js
 //
 // 見るもの
-//   ① 台本の本数と台詞数が文書どおり(第1.5部15 / 第2部16 / 第3部19 / 第4部21 / 第5部20 / 第6部19 / 終章は結末ごとに29)
+//   ① 台本の本数と台詞数が文書どおり(第1.5部34 / 第2部16 / 第3部19 / 第4部21 / 第5部20 / 第6部 あつ解放あり34・なし32 / 終章 倒せた48・倒せなかった47)
 //   ② ジャックは助手(ASSISTANT_LIST)に入れず、話し手(STORY_GUEST_SPEAKERS)として持つ
 //   ③ ジャックの台詞は、爵位ごとの名前(ジャック(男爵)など)かぱんぷきんを name に持つ
 //   ④ 再生画面が、ジャックを話し手として出せる(名前の上書き・顔の並び)
@@ -22,19 +22,32 @@ let failed = 0;
 const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failed++; };
 
 const assistantsSrc = read('monster-hero/data/assistants.js');
-const ctx = { JACK_ICON_IMG: 'images/raid/jack-icon.png' };
+// あつの解放の判定(assistantUnlockedBy)は公開の印も見るので、本番と同じく公開済みにしておく
+const ctx = { JACK_ICON_IMG: 'images/raid/jack-icon.png', RELEASE_FLAGS: { assistantAtsu: true, assistantKyuko: true } };
 vm.createContext(ctx);
-vm.runInContext(`${assistantsSrc}\nglobalThis.__e={EVENT_REPLAYS,ASSISTANTS,STORY_GUEST_SPEAKERS,RAID_JACK_STORY_1B,RAID_JACK_STORY_2,RAID_JACK_STORY_3,RAID_JACK_STORY_4,RAID_JACK_STORY_5,RAID_JACK_STORY_6,RAID_JACK_ENDING_CLEARED,RAID_JACK_ENDING_NOTCLEARED};`, ctx);
+vm.runInContext(`${assistantsSrc}\nglobalThis.__e={EVENT_REPLAYS,ASSISTANTS,STORY_GUEST_SPEAKERS,RAID_JACK_STORY_1B,RAID_JACK_STORY_2,RAID_JACK_STORY_3,RAID_JACK_STORY_4,RAID_JACK_STORY_5,RAID_JACK_STORY_6,RAID_JACK_ENDING_CLEARED,RAID_JACK_ENDING_NOTCLEARED,eventScriptForPlayer};`, ctx);
 const e = ctx.__e;
 
 // ① 台本の本数
-const want = [['第1.5部', e.RAID_JACK_STORY_1B, 34], ['第2部', e.RAID_JACK_STORY_2, 16], ['第3部', e.RAID_JACK_STORY_3, 19], ['第4部', e.RAID_JACK_STORY_4, 21],
-  ['第5部', e.RAID_JACK_STORY_5, 20], ['第6部', e.RAID_JACK_STORY_6, 19], ['終章(大王まで倒せた)', e.RAID_JACK_ENDING_CLEARED, 29], ['終章(倒せなかった)', e.RAID_JACK_ENDING_NOTCLEARED, 29]];
+// 2026-10-23 社長「ジャック大王を倒した以降のイベントにあつときゅうこもいれて」「あつが解放されてるかどうかの分岐も」。
+//   第6部と終章は、あつを解放している人(ATSU_SEEN)としていない人で行が替わる(atsu:'with'/'without'。台本 docs/playbot/reports/2026-10-23/raid-jack-after/story.md)
+const ATSU_SEEN = ['atsu_join_2026_10_22'];
+const pick = (s, on) => e.eventScriptForPlayer(s, on ? ATSU_SEEN : []);
+const want = [['第1.5部', e.RAID_JACK_STORY_1B, 34, 'raid_jack_story_1b'], ['第2部', e.RAID_JACK_STORY_2, 16, 'raid_jack_story_2'], ['第3部', e.RAID_JACK_STORY_3, 19, 'raid_jack_story_3'], ['第4部', e.RAID_JACK_STORY_4, 21, 'raid_jack_story_4'],
+  ['第5部', e.RAID_JACK_STORY_5, 20, 'raid_jack_story_5'],
+  ['第6部(あつ解放あり)', pick(e.RAID_JACK_STORY_6, true), 34, 'raid_jack_story_6', ATSU_SEEN], ['第6部(あつ解放なし)', pick(e.RAID_JACK_STORY_6, false), 32, 'raid_jack_story_6', []],
+  ['終章(倒せた・あつ解放あり)', pick(e.RAID_JACK_ENDING_CLEARED, true), 48, 'raid_jack_ending_cleared', ATSU_SEEN], ['終章(倒せた・あつ解放なし)', pick(e.RAID_JACK_ENDING_CLEARED, false), 48, 'raid_jack_ending_cleared', []],
+  ['終章(倒せなかった・あつ解放あり)', pick(e.RAID_JACK_ENDING_NOTCLEARED, true), 47, 'raid_jack_ending_notcleared', ATSU_SEEN], ['終章(倒せなかった・あつ解放なし)', pick(e.RAID_JACK_ENDING_NOTCLEARED, false), 47, 'raid_jack_ending_notcleared', []]];
 want.forEach(([n, s, c]) => check(`${n}の台詞は ${c} 行`, Array.isArray(s) && s.length === c, String(s && s.length)));
 const allScripts = want.map(([, s]) => s);
+check('あつを解放していない人の版には、あつが一度も出ない(話し手にも台詞にも)', want.filter((w) => /解放なし/.test(w[0])).every(([, s]) => s.every((l) => l.who !== 'atsu' && l.atsu !== 'with')));
+check('あつを解放している人の版には、差し替えの行(atsu:\'without\')が出ない', want.filter((w) => /解放あり/.test(w[0])).every(([, s]) => s.every((l) => l.atsu !== 'without')) && want.filter((w) => /解放あり/.test(w[0])).every(([, s]) => s.some((l) => l.who === 'atsu')));
+check('あつ・きゅうこが撃破後のお話に出る(社長「あつときゅうこもいれて」)', ['第6部(あつ解放あり)', '終章(倒せた・あつ解放あり)', '終章(倒せなかった・あつ解放あり)'].every((n) => { const s = want.find((w) => w[0] === n)[1]; return s.some((l) => l.who === 'atsu') && s.some((l) => l.who === 'kyuko'); }));
+check('印の無いお話は、今までと同じ台本をそのまま返す', e.eventScriptForPlayer(e.RAID_JACK_STORY_2, []) === e.RAID_JACK_STORY_2);
 check('台詞はすべて 話し手(who)・表情(e)・本文(t) を持つ',
   allScripts.every((s) => s.every((l) => l.who && l.e && typeof l.t === 'string' && l.t.length > 0)));
-check('台詞に {name} が残っていない(ジャックの台本は名前を呼ばない)', allScripts.every((s) => s.every((l) => !/\{name\}/.test(l.t))));
+// {name} は、きゅうこの加入のお話と同じく再生でブリーダーの名前に替わる(終章の最後のお礼で使う。下の④で確かめる)
+check('{name} を使うのは終章の最後のお礼だけ', allScripts.slice(0, 7).every((s) => s.every((l) => !/\{name\}/.test(l.t))));
 
 // ② 話し手
 check('ジャックは助手の一覧に入っていない(助手の選択画面などに出さない)', !e.ASSISTANTS.some((a) => a.id === 'jack'));
@@ -42,7 +55,7 @@ check('ジャックは助手の一覧に入っていない(助手の選択画面
 check('話し手(STORY_GUEST_SPEAKERS)の先頭は ジャック と 素のぱんぷきん(pumpkin)', Array.isArray(e.STORY_GUEST_SPEAKERS) && e.STORY_GUEST_SPEAKERS.length >= 2 && e.STORY_GUEST_SPEAKERS[0].id === 'jack' && e.STORY_GUEST_SPEAKERS[1].id === 'pumpkin');
 check('ぱんぷきんの顔アイコンは、ジャックとは別の絵(images/raid/pumpkin-icon.png)', fs.existsSync(path.join(root, 'monster-hero/images/raid/pumpkin-icon.png')) && /const PUMPKIN_ICON_IMG = "images\/raid\/pumpkin-icon\.png\?v=[0-9a-f]+"/.test(read('monster-hero/data/images/images-enemy.js')) && !/\?v=0"/.test(read('monster-hero/data/images/images-enemy.js').match(/const PUMPKIN_ICON_IMG = .*/)[0]));
 const assistantIds = new Set(e.ASSISTANTS.map((a) => a.id));
-check('台本の話し手は 助手(みゅあ・きき・もも・ドラ)か jack・pumpkin だけ', allScripts.every((s) => s.every((l) => assistantIds.has(l.who) || l.who === 'jack' || l.who === 'pumpkin')));
+check('台本の話し手は 助手(みゅあ・きき・もも・ドラ・あつ・きゅうこ)か jack・pumpkin だけ', allScripts.every((s) => s.every((l) => assistantIds.has(l.who) || l.who === 'jack' || l.who === 'pumpkin')));
 
 // ③ 爵位ごとの名前
 const jackNames = new Set();
@@ -96,7 +109,7 @@ const block = gameSource.slice(from, to);   // 既存の検査と同じく、そ
 const transformed = babel.transformSync(
   'const Screen = ({ eventReplay, setEventReplay, EVENT_REPLAYS, eventReplayList, ASSISTANT_LIST, assistantById, storyCastOf, AssistantFace,\n'
   + '  normalizeAssistantBond, assistantBonds, assistantCallStyles, assistantSpeakText, assistantBondLevelOf,\n'
-  + '  breederName, markRhythmEventStorySeen, markMomosukeIntroSeen, markTacticsIntroSeen, RHYTHM_EVENT_STORY_IDS }) => (<>\n'
+  + '  breederName, markRhythmEventStorySeen, markMomosukeIntroSeen, markTacticsIntroSeen, RHYTHM_EVENT_STORY_IDS, eventScriptForPlayer, rhythmEventStorySeen }) => (<>\n'
   + block + '\n</>);\nmodule.exports = { Screen };',
   { presets: [[PRESET_REACT, { runtime: 'classic' }]], filename: 'raid-jack-story-check.jsx' });
 const moduleScope = { exports: {} };
@@ -105,11 +118,12 @@ const GUESTS = e.STORY_GUEST_SPEAKERS;
 const byId = (id) => e.ASSISTANTS.find((x) => x.id === id) || GUESTS.find((x) => x.id === id) || e.ASSISTANTS[0];
 const castOf = (script) => [...e.ASSISTANTS, ...GUESTS].filter((who) => script.some((l) => l.who === who.id));
 const Face = ({ who, size, expression }) => React.createElement('img', { 'data-face': who && who.id, 'data-size': size, 'data-expression': expression, alt: who && who.name });
-const render = (id, step) => ReactDOMServer.renderToStaticMarkup(React.createElement(moduleScope.exports.Screen, {
+const render = (id, step, seen = ATSU_SEEN) => ReactDOMServer.renderToStaticMarkup(React.createElement(moduleScope.exports.Screen, {
+  eventScriptForPlayer: e.eventScriptForPlayer, rhythmEventStorySeen: seen,
   eventReplay: { id, step }, setEventReplay: () => {}, EVENT_REPLAYS: e.EVENT_REPLAYS, eventReplayList: () => e.EVENT_REPLAYS,
   ASSISTANT_LIST: e.ASSISTANTS, assistantById: byId, storyCastOf: castOf, AssistantFace: Face,
   normalizeAssistantBond: (v) => ({ points: 0, ...(v && typeof v === 'object' ? v : {}) }), assistantBonds: {}, assistantCallStyles: {},
-  assistantSpeakText: (t) => t, assistantBondLevelOf: () => 1, breederName: 'テスト', markRhythmEventStorySeen: () => {},
+  assistantSpeakText: (t, name) => String(t).replace(/\{name\}/g, name || 'テスト'), assistantBondLevelOf: () => 1, breederName: 'テスト', markRhythmEventStorySeen: () => {},
   markMomosukeIntroSeen: () => {}, markTacticsIntroSeen: () => {}, RHYTHM_EVENT_STORY_IDS: ids,
 }));
 const text = (html) => html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
@@ -121,15 +135,27 @@ check('第2部の顔の並びに、ジャックが入る(話しているので�
 const s2k = render('raid_jack_story_2', 8);
 check('第2部の9行目は「ジャック(子爵)」の台詞', text(s2k).includes('ジャック(子爵)') && text(s2k).includes('ほっほっほ'), text(s2k).slice(0, 140));
 // 第6部の「素」はぱんぷきんの名前
-const s6 = render('raid_jack_story_6', 5);
+const s6 = render('raid_jack_story_6', pick(e.RAID_JACK_STORY_6, true).findIndex((l) => l.who === 'pumpkin' && /ごめんなさい/.test(l.t)));
 check('第6部の「素」の台詞は、名前が「ぱんぷきん」で出る', text(s6).includes('ぱんぷきん') && text(s6).includes('ごめんなさい'), text(s6).slice(0, 140));
 // 助手の台詞は今までどおり
 const sa = render('raid_jack_story_2', 2);
 check('助手(みゅあ)の台詞は今までどおり助手の名前で出る', text(sa).includes('みゅあ') && sa.includes('data-face="mua"'));
 // 最後まで進める(どの行でも落ちない)
 let ok = true; let bad = '';
-for (const [n, s] of want) { const id = ids[want.findIndex((w) => w[0] === n)]; for (let i = 0; i < s.length; i++) { try { render(id, i); } catch (err) { ok = false; bad = `${n} ${i}: ${err.message}`; break; } } if (!ok) break; }
-check('全部の台詞を最後まで再生しても、画面が落ちない', ok, bad);
+// あつを解放している人・していない人の両方で、最後の行まで流す。どの行でも、その版の台詞が出る(差し替えの行がずれない)
+for (const [n, s, , id, seen] of want) {
+  for (let i = 0; i < s.length; i++) {
+    try {
+      const html = text(render(id, i, seen || ATSU_SEEN));
+      const want1 = String(s[i].t).replace(/\{name\}/g, 'テスト').slice(0, 12);
+      if (!html.includes(want1)) { ok = false; bad = `${n} ${i + 1}行目: 「${want1}」が出ない`; break; }
+      if (seen && seen.length === 0 && /data-face="atsu"/.test(render(id, i, seen))) { ok = false; bad = `${n} ${i + 1}行目: あつの顔が出ている`; break; }
+    } catch (err) { ok = false; bad = `${n} ${i + 1}行目: ${err.message}`; break; }
+  }
+  if (!ok) break;
+}
+check('全部の台詞を最後まで再生しても画面が落ちず、どの行もその版の台詞が出る・解放していない人の版はあつの顔が一度も出ない', ok, bad);
+check('終章の最後のお礼の {name} は、ブリーダーの名前に替わる', text(render('raid_jack_ending_cleared', 44, ATSU_SEEN)).includes('テスト、おつかれさまぁ'), text(render('raid_jack_ending_cleared', 44, ATSU_SEEN)).slice(0, 100));
 
 // ⑦ 画面の出し方(2026-10-04・ユーザー指示「はじめからジャックやぱんぷきんが会話画面にいるのは違和感。出すタイミングをちゃんと」「敵側上部にコメント」「画面演出」)
 {
@@ -153,7 +179,7 @@ check('全部の台詞を最後まで再生しても、画面が落ちない', o
   const rank = [[e.RAID_JACK_STORY_2, '子爵'], [e.RAID_JACK_STORY_3, '伯爵'], [e.RAID_JACK_STORY_4, '公爵'], [e.RAID_JACK_STORY_5, '大王']];
   const rankIds = ['raid_jack_story_2', 'raid_jack_story_3', 'raid_jack_story_4', 'raid_jack_story_5'];
   check('第2〜5部の「次の爵位が出る行」に、爵位あがりの演出(帯の文言つき)がある', rank.every(([sc, t], i) => { const idx = sc.findIndex((l) => l.fx === 'rankup'); return idx > 0 && sc[idx].name === `ジャック(${t})` && render(rankIds[i], idx).includes(`ジャック(${t})があらわれた`) && render(rankIds[i], idx).includes('data-story-fx-flash="rankup"'); }));
-  const shrinkIdx = e.RAID_JACK_STORY_6.findIndex((l) => l.fx === 'shrink');
+  const shrinkIdx = pick(e.RAID_JACK_STORY_6, true).findIndex((l) => l.fx === 'shrink');
   const s6s = shrinkIdx >= 0 ? render('raid_jack_story_6', shrinkIdx) : '';
   check('第6部の「小さくなる」行で、ステージがぱんぷきんへ替わる(しぼむ演出・助手が話しているので吹き出しは出さない)', shrinkIdx > 0 && s6s.includes('data-story-guest="pumpkin"') && s6s.includes('data-story-fx-flash="shrink"') && !s6s.includes('data-story-guest-bubble'));
   check('第2部の最初の行(ジャックが話す)では、ジャックが上のステージに出て、下には「上のことばを読んでね」の案内が出る', render('raid_jack_story_2', 0).includes('data-story-guest="jack"') && render('raid_jack_story_2', 0).includes('上のことばを読んでね'));
@@ -163,9 +189,10 @@ check('全部の台詞を最後まで再生しても、画面が落ちない', o
   const mia = e.EVENT_REPLAYS.find((r) => r.id === 'halloween_night_2026_part1');
   const htm = ReactDOMServer.renderToStaticMarkup(React.createElement(moduleScope.exports.Screen, {
     eventReplay: { id: 'halloween_night_2026_part1', step: 3 }, setEventReplay: () => {}, EVENT_REPLAYS: e.EVENT_REPLAYS, eventReplayList: () => e.EVENT_REPLAYS,
+    eventScriptForPlayer: e.eventScriptForPlayer, rhythmEventStorySeen: ATSU_SEEN,
     ASSISTANT_LIST: e.ASSISTANTS, assistantById: byId, storyCastOf: castOf, AssistantFace: Face,
     normalizeAssistantBond: (v) => ({ points: 0, ...(v && typeof v === 'object' ? v : {}) }), assistantBonds: {}, assistantCallStyles: {},
-    assistantSpeakText: (t) => t, assistantBondLevelOf: () => 1, breederName: 'テスト', markRhythmEventStorySeen: () => {},
+    assistantSpeakText: (t, name) => String(t).replace(/\{name\}/g, name || 'テスト'), assistantBondLevelOf: () => 1, breederName: 'テスト', markRhythmEventStorySeen: () => {},
     markMomosukeIntroSeen: () => {}, markTacticsIntroSeen: () => {}, RHYTHM_EVENT_STORY_IDS: ids,
   }));
   check('ジャックが出ない会話(ハロウィン第1部)には、上のステージも演出も出ない', !!mia && !htm.includes('data-story-stage') && !htm.includes('data-story-fx-flash') && !htm.includes('上のことばを読んでね') && htm.includes('data-face="mua"'));
