@@ -9257,9 +9257,9 @@ const EVENT_REPLAYS = [
   // あつの加入のお話(2026-10-22)。みゅあ・きき・ももすけの仲良し度がそろったあとの HOME で1回流れ、見終わるとあつを選べる。
   // 公開の印 assistantAtsu が立つまでは流れず、回想にも出さない(releaseFlag)。見たかは mh_rhythm_event_story_v1 の id(新しいキーは作らない)
   // hideUntilFirstLine … あつの顔は「呼んだ？」で登場するまで、下の顔の列にも出さない(2026-10-22 社長の決定)
-  { id: 'atsu_join_2026_10_22', date: '2026-10-22 08:00', title: 'おかえり、勇者 ～W.o.F の旗～', script: ASSISTANT_ATSU_JOIN_STORY, calls: ASSISTANT_ATSU_JOIN_STORY_CALLS, unlockedKey: 'atsuJoinSeen', releaseFlag: 'assistantAtsu', hideUntilFirstLine: ['atsu'], group: 'update' },
+  { id: 'atsu_join_2026_10_22', date: '2026-10-22 08:00', title: 'おかえり、勇者 ～W.o.F の旗～', script: ASSISTANT_ATSU_JOIN_STORY, calls: ASSISTANT_ATSU_JOIN_STORY_CALLS, unlockedKey: 'atsuJoinSeen', releaseFlag: 'assistantAtsu', hideUntilFirstLine: ['atsu'], group: 'assistant' },
   // きゅうこの加入のお話(2026-10-22)。公開の印 assistantKyuko が立つまで出ない。きゅうこは登場の行まで顔を伏せる
-  { id: 'kyuko_join_2026_10_22', date: '2026-10-22 22:00', title: '月影とニャーニャー人形 ～きゅうこ登場～', script: ASSISTANT_KYUKO_JOIN_STORY, calls: ASSISTANT_KYUKO_JOIN_STORY_CALLS, unlockedKey: 'kyukoJoinSeen', releaseFlag: 'assistantKyuko', hideUntilFirstLine: ['kyuko'], group: 'update' },
+  { id: 'kyuko_join_2026_10_22', date: '2026-10-22 22:00', title: '月影とニャーニャー人形 ～きゅうこ登場～', script: ASSISTANT_KYUKO_JOIN_STORY, calls: ASSISTANT_KYUKO_JOIN_STORY_CALLS, unlockedKey: 'kyukoJoinSeen', releaseFlag: 'assistantKyuko', hideUntilFirstLine: ['kyuko'], group: 'assistant' },
   { id: 'raid_jack_howto_2026_10_04', date: '2026-10-04 08:02', title: 'カボチャの大王ジャック ～レイドの遊び方～', script: ASSISTANT_RAID_JACK_HOWTO, calls: ASSISTANT_RAID_JACK_HOWTO_CALLS, unlockedKey: 'raidJackHowtoSeen', releaseFlag: 'raidJack', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, group: 'halloween' },
 ];
 

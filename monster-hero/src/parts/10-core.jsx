@@ -180,7 +180,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-23 11:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-23 11:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -342,7 +342,8 @@ const EVENT_REPLAY_GROUPS = Object.freeze([
   { id:'beat_point', emoji:'🎵', label:'ビートP', note:'ビートPと交換所のお話', color:'#34d399' },
   { id:'symphony', emoji:'🎼', label:'異世界交響祭', note:'モンヒロビートの大会', color:'#38bdf8' },
   { id:'cup', emoji:'🏆', label:'週末ゲリラ杯', note:'モンヒロビートの大会', color:'#fbbf24' },
-  { id:'assistant', emoji:'💬', label:'助手のお話', note:'きき・ももすけとの出会い', color:'#f472b6' },
+  // あつ・きゅうこの加入のお話も、ここへ並べる(2026-10-23 社長「あつときゅうこは助手のお話のほうがいいんじゃない？」。前は「新しい遊びのお話」)
+  { id:'assistant', emoji:'💬', label:'助手のお話', note:'きき・ももすけ・あつ・きゅうことの出会い', color:'#f472b6' },
 ]);
 const EVENT_REPLAY_GROUP_FALLBACK = 'update';
 const eventReplayGroups = (keep = eventReplayReleased) => {
