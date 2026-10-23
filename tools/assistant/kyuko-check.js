@@ -4,7 +4,7 @@
 //
 // 見ているもの(決めごとの正本は docs/rules/PRESIDENT_DECISIONS.md の 2026-10-22 の行):
 //   ・口調 … 一人称は「俺」。語尾に「笑」と「w」の両方(1行に両方は付けない)。ほかの助手の一人称・下ネタ・あつのくせ(勇者・パーティ)が混ざらない
-//   ・呼び方 … きゅうこ→みゅあ「みゅあネキ」/きき「ききさん」/もも「ももすけ」/ドラ「ドラちゃん」/あつ「あつニキ」、
+//   ・呼び方 … きゅうこ→みゅあ「みゅあねぇ」(2026-10-23 社長。前は「みゅあネキ」)/きき「ききさん」/もも「ももすけ」/ドラ「ドラちゃん」/あつ「あつニキ」、
 //              みゅあ→「きゅきゅ」/きき→「きゅうこさん」/もも→「きゅうちゃん」/ドラ・あつ→「きゅうこちゃん」。お話の中でも守る
 //   ・解放 … 最初から選べる(ASSISTANT_UNLOCK_STORIES に入れない)。公開の印 assistantKyuko が偽のあいだは一覧にも出ない
 //   ・お話 … イルミネ・ドリーミィが出る。きゅうこは登場まで顔を伏せる。Toward the Stars に変わる行で数秒止まる。技名は「おもちゃの爆弾」だけ。モンバトのランカー
@@ -24,7 +24,7 @@ const load = (extra = '') => {
   vm.createContext(ctx);
   vm.runInContext(`${extra}\n${read('monster-hero/data/assistants.js')}
 ;globalThis.__a = { ASSISTANTS, ASSISTANT_SCENES, ASSISTANT_LINE_PACKS, ASSISTANT_PEER_CALLS, ASSISTANT_UNLOCK_STORIES, EVENT_REPLAYS, STORY_GUEST_SPEAKERS,
-  assistantBondLevelsOf, assistantReleased, assistantUnlockedBy, assistantCallStylesOf, ASSISTANT_CHAT_EXAMPLES, assistantFaceImage, assistantFullImage, assistantSpamLinesOf };`, ctx);
+  assistantBondLevelsOf, assistantReleased, assistantUnlockedBy, assistantCallStylesOf, ASSISTANT_CHAT_EXAMPLES, assistantFaceImage, assistantFullImage, assistantSpamLinesOf, eventScriptForPlayer };`, ctx);
   return ctx.__a;
 };
 const a = load();
@@ -62,7 +62,7 @@ check('連打のセリフ・おしゃべりの見本がある', a.assistantSpamL
 
 // ---- 呼び方 ----
 const pc = a.ASSISTANT_PEER_CALLS;
-check('呼び方の表(きゅうこ→ほか)', JSON.stringify(pc.kyuko) === JSON.stringify({ mua: 'みゅあネキ', kiki: 'ききさん', momosuke: 'ももすけ', dra: 'ドラちゃん', atsu: 'あつニキ' }), JSON.stringify(pc.kyuko));
+check('呼び方の表(きゅうこ→ほか)', JSON.stringify(pc.kyuko) === JSON.stringify({ mua: 'みゅあねぇ', kiki: 'ききさん', momosuke: 'ももすけ', dra: 'ドラちゃん', atsu: 'あつニキ' }), JSON.stringify(pc.kyuko));
 check('呼び方の表(ほか→きゅうこ)', pc.mua.kyuko === 'きゅきゅ' && pc.kiki.kyuko === 'きゅうこさん' && pc.momosuke.kyuko === 'きゅうちゃん' && pc.dra.kyuko === 'きゅうこちゃん' && pc.atsu.kyuko === 'きゅうこちゃん');
 const callBad = storyLines.filter(l => {
   const t = String(l.t).replace(/きゅうこの譜面/g, '');
@@ -70,10 +70,21 @@ const callBad = storyLines.filter(l => {
   if (l.who === 'kiki') return /きゅきゅ|きゅうちゃん|きゅうこちゃん/.test(t);
   if (l.who === 'momosuke') return /きゅきゅ|きゅうこ/.test(t);
   if (l.who === 'dra' || l.who === 'atsu') return /きゅきゅ|きゅうちゃん|きゅうこさん/.test(t);
-  if (l.who === 'kyuko') return /みゅあ(?!ネキ)|もも(?!すけ)|あつ(?!ニキ)|きき(?!さん)/.test(t);
+  if (l.who === 'kyuko') return /みゅあ(?!ねぇ)|もも(?!すけ)|あつ(?!ニキ)|きき(?!さん)/.test(t);
   return false;
 });
 check('お話の中でも呼び方を守る', callBad.length === 0, callBad.map(l => `${l.who}:${l.t}`).join(' / '));
+// 加入のお話は、あつを解放しているかで行が替わる(2026-10-23 社長「あつが解放されてるかどうかの分岐もきゅうこ登場含めて」)
+{
+  const ar = load('var RELEASE_FLAGS = { assistantAtsu: true, assistantKyuko: true };');
+  const st = ar.EVENT_REPLAYS.find(e => e.id === 'kyuko_join_2026_10_22');
+  const withAtsu = ar.eventScriptForPlayer(st.script, ['atsu_join_2026_10_22']), noAtsu = ar.eventScriptForPlayer(st.script, []);
+  check('加入のお話: あつを解放している人の版は、今までどおりあつが出る(差し替えの行は出ない)', withAtsu.some(l => l.who === 'atsu') && withAtsu.every(l => l.atsu !== 'without') && withAtsu.length === 55, `${withAtsu.length}行`);
+  check('加入のお話: 解放していない人の版には、あつが一度も出ない・あつの話も出ない', noAtsu.every(l => l.who !== 'atsu' && l.atsu !== 'with' && !/あつ/.test(String(l.t))) && noAtsu.length === 55, `${noAtsu.length}行`);
+  check('加入のお話: きゅうこ→みゅあは「みゅあねぇ」(両方の版)', [withAtsu, noAtsu].every(v => v.some(l => l.who === 'kyuko' && /みゅあねぇに、ききさん/.test(l.t))));
+}
+// あつを解放していない人への差し替えの行(atsu:'without')も、上の見張りに入っている(2026-10-23)
+check('あつなしの差し替えの行も見ている', storyLines.some(l => l.atsu === 'without') && storyLines.filter(l => l.atsu === 'with').length > 0, `差し替え ${storyLines.filter(l => l.atsu === 'without').length}行`);
 
 // ---- お話 ----
 check('お話は回想に登録され、公開の印 assistantKyuko で出る', !!story && story.releaseFlag === 'assistantKyuko' && story.unlockedKey === 'kyukoJoinSeen');

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 32b0e7b9d80fe65f
+// generated-sha256: f083a85dfe9f1de0
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-23 10:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-23 11:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -54969,7 +54969,7 @@ function MonsterHeroGame() {
     if (!eventReplay || kikiIntroPlaying || momosukeIntroPlaying) return null;
     const list = eventReplay.debug ? eventReplayAllList() : eventReplayList();
     const ev = list.find(x => x.id === eventReplay.id);
-    return eventScriptBgmAt(ev && ev.script, eventReplay.step);
+    return eventScriptBgmAt(ev && eventScriptForPlayer(ev.script, rhythmEventStorySeen), eventReplay.step);
   })();
   // 同じお話の中で曲が替わるときだけ、今の曲を下げてから移す(お話に入る・出るときは今までどおり)
   const eventBgmPlayedRef = useRef(null);
@@ -71137,7 +71137,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       {eventReplay!=null&&(()=>{
         const list=eventReplay.debug?eventReplayAllList():eventReplayList();
         const event=list.find(ev=>ev.id===eventReplay.id);
-        const script=(event&&event.script)||[];
+        // あつを解放しているかで行を選んでから再生する(atsu:'with'/'without'・2026-10-23)。曲の切り替え(eventLineBgm)も同じ台本を見る
+        const script=event?eventScriptForPlayer(event.script,rhythmEventStorySeen):[];
         if(script.length===0) return null;
         const step=Math.max(0,Math.min(eventReplay.step,script.length-1));
         const line=script[step];

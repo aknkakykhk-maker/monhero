@@ -5178,7 +5178,7 @@ function MonsterHeroGame() {
     if (!eventReplay || kikiIntroPlaying || momosukeIntroPlaying) return null;
     const list = eventReplay.debug ? eventReplayAllList() : eventReplayList();
     const ev = list.find(x => x.id === eventReplay.id);
-    return eventScriptBgmAt(ev && ev.script, eventReplay.step);
+    return eventScriptBgmAt(ev && eventScriptForPlayer(ev.script, rhythmEventStorySeen), eventReplay.step);
   })();
   // 同じお話の中で曲が替わるときだけ、今の曲を下げてから移す(お話に入る・出るときは今までどおり)
   const eventBgmPlayedRef = useRef(null);
@@ -21346,7 +21346,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       {eventReplay!=null&&(()=>{
         const list=eventReplay.debug?eventReplayAllList():eventReplayList();
         const event=list.find(ev=>ev.id===eventReplay.id);
-        const script=(event&&event.script)||[];
+        // あつを解放しているかで行を選んでから再生する(atsu:'with'/'without'・2026-10-23)。曲の切り替え(eventLineBgm)も同じ台本を見る
+        const script=event?eventScriptForPlayer(event.script,rhythmEventStorySeen):[];
         if(script.length===0) return null;
         const step=Math.max(0,Math.min(eventReplay.step,script.length-1));
         const line=script[step];

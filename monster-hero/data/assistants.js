@@ -209,7 +209,7 @@ const ASSISTANT_PEER_CALLS = Object.freeze({
   // あつ(2026-10-22 社長の決定)
   atsu:     { mua: 'みゅあ', kiki: 'きき', momosuke: 'もも', dra: 'ドラちゃん', kyuko: 'きゅうこちゃん' },
   // きゅうこ(2026-10-22 社長の決定)
-  kyuko:    { mua: 'みゅあネキ', kiki: 'ききさん', momosuke: 'ももすけ', dra: 'ドラちゃん', atsu: 'あつニキ' },
+  kyuko:    { mua: 'みゅあねぇ', kiki: 'ききさん', momosuke: 'ももすけ', dra: 'ドラちゃん', atsu: 'あつニキ' },
 });
 // おしゃべりの受け答えの見本(2026-10-14 社長「キャラごとの喋り方の特徴がちゃんと反映されてない気がする」)。
 // 台本の実際のセリフの言い回し・くせを元に書いた。答えはどれも1〜3行・ゲームの数字や仕組みは書かない。
@@ -296,6 +296,16 @@ const assistantUnlockedBy = (assistantId, seenStoryIds) => {
   const need = assistantUnlockStoryId(assistantId);
   if (!need) return true;
   return Array.isArray(seenStoryIds) && seenStoryIds.includes(need);
+};
+// お話の行を、あつを解放しているかで選ぶ(2026-10-23 社長「あつが解放されてるかどうかの分岐もきゅうこ登場含めて仕組み変えれる？」)。
+//   atsu:'with' … あつを解放している人だけに出す行 / atsu:'without' … 解放していない人だけに出す行(あつの行の代わり) / 印なし … 両方
+//   解放の判定はあつの解放と同じ(assistantUnlockedBy)。印の無いお話は、同じ台本をそのまま返す(今までと何も変わらない)。
+//   再生の画面は選んだあとの台本から話し手・顔の列を作るので、解放していない人にはあつが一度も出ない
+const eventScriptForPlayer = (script, seenStoryIds) => {
+  const list = Array.isArray(script) ? script : [];
+  if (!list.some(l => l && (l.atsu === 'with' || l.atsu === 'without'))) return list;
+  const atsuOn = assistantUnlockedBy('atsu', seenStoryIds);
+  return list.filter(l => !l || (l.atsu !== 'with' && l.atsu !== 'without') || ((l.atsu === 'with') === atsuOn));
 };
 // 選べる助手だけを残す。読み込みが間に合っていない・壊れた値でも、
 // 条件のない助手は必ず残る(画面から助手が消えない)
@@ -829,7 +839,7 @@ const ASSISTANT_CALL_STYLE_SETS = {
     { id:'kun',   label:'くん付け', template:'{name}くん' },
     { id:'hero',  label:'勇者',     template:'勇者{name}' },
   ],
-  // きゅうこ。はじめは「さん」付けで、仲良くなると「ニキ」「ネキ」で呼ぶ人(みゅあネキ・あつニキ)なので、それも選べる(既定にはしない)
+  // きゅうこ。はじめは「さん」付けで、仲良くなると「ニキ」「ネキ」で呼ぶ人(あつニキ。みゅあは「みゅあねぇ」・2026-10-23 社長)なので、それも選べる(既定にはしない)
   kyuko: [
     { id:'plain', label:'呼び捨て', template:'{name}' },
     { id:'san',   label:'さん付け', template:'{name}さん' },
@@ -8726,37 +8736,66 @@ const RAID_JACK_STORY_5 = [
 ];
 
 // 第6部 ～ただ、遊びたかっただけ(大王を倒したあと)
+// 2026-10-23 社長「ジャック大王を倒した以降のイベントにあつときゅうこもいれて内容ももっと濃くして」。台本は docs/playbot/reports/2026-10-23/raid-jack-after/story.md。
+// atsu:'with' はあつを解放している人だけ、atsu:'without' は解放していない人だけに出す行(eventScriptForPlayer が選ぶ・社長の決定)
 const RAID_JACK_STORY_6 = [
   { who:'jack', name:'ジャック(大王)', e:'normal', t:'ぐおお……！ ワシが、負けた……のか……' },
   { who:'jack', name:'ジャック(大王)', e:'normal', t:'…………' },
   { who:'mua', e:'normal', t:'……ジャック？ 大丈夫？' },
-  { who:'momosuke', e:'excited', stage:'pumpkin', stageName:'ぱんぷきん', fx:'shrink', fxText:'ジャックが、ぱんぷきんにもどった', t:'あっ、体がしぼんでいく！ ちっちゃく……！' },
+  { who:'atsu', e:'surprise', atsu:'with', t:'間に合った……いや、もう終わったんだね。' },
+  { who:'dra', e:'normal', atsu:'without', t:'……終わった、みたいだな' },
+  { who:'kyuko', e:'normal', t:'……おつかれさま。最後の一押し、ちゃんと見てたよぉ' },
+  { who:'momosuke', stage:'pumpkin', stageName:'ぱんぷきん', fx:'shrink', fxText:'ジャックが、ぱんぷきんにもどった', e:'excited', t:'あっ、体がしぼんでいく！ ちっちゃく……！' },
   { who:'kiki', e:'normal', t:'元の、ぱんぷきんでつ。光るおなかも、そのままでつ。' },
+  { who:'kyuko', e:'surprise', t:'え……ジャックの中身って、こんなに小さい子だったの……？' },
   { who:'pumpkin', e:'troubled', t:'……ごめんなさい' },
   { who:'pumpkin', e:'normal', t:'ぼく、ほんとうは大王なんかじゃないんだ。爵位も、ぜんぶ飾りなんだ' },
+  { who:'atsu', e:'normal', atsu:'with', t:'飾りでも、みんなを本気にさせたんだ。大したもんだよ。' },
+  { who:'mua', e:'normal', atsu:'without', t:'飾りでも、みんなを本気にさせたんだもん。すごかったよ' },
   { who:'pumpkin', e:'normal', t:'ハロウィン・ナイトが始まると、みんなの楽しそうな声が聞こえてきて……' },
   { who:'pumpkin', e:'normal', t:'ぼくも仲間に入りたかったのに、どう言えばいいか分からなくて。強そうにして、暴れちゃったんだ' },
   { who:'kiki', e:'troubled', t:'……ずっと、さみしかったんでつね。' },
   { who:'dra', e:'troubled', t:'おで、ドラっていう。こいつらの仲間だ。おまえ、さびしかったんだろ' },
   { who:'pumpkin', e:'troubled', t:'……うん。みんなと、ただ遊びたかっただけなんだ。ごめんなさい' },
+  { who:'kyuko', e:'normal', t:'なるほどねぇ。爵位をひとつずつ上げてたのも、気づいてほしかったからかぁ。……わかるよ。俺も最初、声かけるの苦手だったから。' },
+  { who:'atsu', e:'normal', atsu:'with', t:'声のかけ方は、ちょっと派手すぎたけどね。……でも、気持ちは分かる！' },
+  { who:'momosuke', e:'normal', atsu:'without', t:'声のかけ方は、ちょっと派手すぎたけどね。……でも、気持ちは分かるよ' },
   { who:'mua', e:'excited', t:'なーんだ！ それなら最初から言ってくれればよかったのに！' },
   { who:'momosuke', e:'happy', t:'だいじょうぶだよ♡ ももたち、もう怒ってないもん。ねえ、ぱんぷきん。ももたちと一緒に、パーティー、やらない？' },
   { who:'pumpkin', e:'normal', t:'ほんとう……？ また、遊んでくれる……？' },
   { who:'mua', e:'excited', t:'もちろん！ 今度はみんなで、思いっきり遊ぼう！' },
+  { who:'atsu', e:'excited', atsu:'with', t:'俺も混ぜて！ ちなみに、本気で遊ぶなら上の難易度もあるらしい笑' },
+  { who:'momosuke', e:'troubled', atsu:'with', t:'あつ、すぐそっちに連れてこうとする〜' },
+  { who:'atsu', e:'happy', atsu:'with', t:'それね笑 伸びる子には、上を見せたくなるんだって笑' },
+  { who:'kyuko', e:'happy', atsu:'with', t:'あつニキのそれ、半分は自分が楽しいだけだと思うw' },
+  { who:'kyuko', e:'happy', atsu:'without', t:'俺も混ぜてほしいなぁ。編成、もう考えはじめてるし笑' },
+  { who:'momosuke', e:'excited', atsu:'without', t:'きゅうちゃん、もう本気モードじゃん〜♡' },
   { who:'dra', e:'normal', t:'いくらでも相手になるぞ。ぱんぷきんが疲れるまでな' },
   { who:'pumpkin', e:'happy', t:'やった……！ ありがとう！ ぼく、いくらでも遊ぶよ！ 元気いっぱいだから、ぜんぜん倒れないよ！' },
-  { who:'kiki', e:'normal', t:'それは頼もしいでつ。ここからは、ぱんぷきんと思いきり遊ぶ時間でつね。' },
+  { who:'kyuko', e:'normal', t:'……いま「ぜんぜん倒れない」って言ったね。ってことは、ここからはどれだけ削れるかの勝負だぁ' },
+  { who:'kiki', e:'normal', t:'はい。ここからは、ぱんぷきんと思いきり遊ぶ時間でつね。与えたダメージは、そのまま記録に残りまつ。' },
+  { who:'atsu', e:'excited', atsu:'with', t:'よし、記録の続き、みんなで伸ばそ！ 誰が一番出せるか、勝負ね笑' },
+  { who:'mua', e:'excited', atsu:'without', t:'よし、記録の続き、みんなで伸ばそう！ 誰が一番出せるか、勝負だよ！' },
+  { who:'kyuko', e:'wink', t:'ほい、おけ〜！ 俺は無課金だけど、編成でなんとかするよぉw' },
+  { who:'mua', e:'happy', t:'ぱんぷきん、今夜はとことん遊ぼうね！' },
+  { who:'pumpkin', e:'happy', t:'うん！ ぼく、こんなにたくさんの友だち、はじめてだよ！' },
 ];
 
 // 終章の冒頭 結末A(大王まで倒せた)
 const RAID_JACK_ENDING_A_HEAD = [
   { who:'mua', e:'excited', t:'いよいよ、ハロウィン・ナイト最後の夜だね！ ……みんなで、ぱんぷきんを大王まで止められたんだもん' },
   { who:'kiki', e:'normal', t:'街中のランタンがぜんぶ灯って、音も全部戻ってきたでつ。きれいでつね……' },
+  { who:'kyuko', e:'happy', t:'夜の街って、こんなに明るかったんだぁ。曲がいっぱい聞こえる🥹' },
   { who:'momosuke', e:'happy', t:'あとは主役が来るのを待つだけだよ♡' },
+  { who:'atsu', e:'normal', atsu:'with', t:'主役、ちょっと緊張してるかもね笑 迎えに行く？笑' },
+  { who:'kiki', e:'normal', atsu:'without', t:'主役は、ちょっと緊張しているかもしれないでつね。' },
   { who:'dra', e:'normal', t:'来るかな、ぱんぷきん' },
   { who:'mua', e:'normal', t:'来るよ。だって、ビートはちゃんと届いたもん' },
   { who:'pumpkin', e:'normal', t:'……来たよ。みんな、ぼくの仲間も連れてきたんだ' },
   { who:'dra', e:'normal', t:'畑にいた、ランタンになれなかったかぼちゃたちが、みんな来たんだな' },
+  { who:'kyuko', e:'surprise', t:'え、いっぱいいる笑 ちっちゃいのがぞろぞろ……かわいいねぇ' },
+  { who:'atsu', e:'happy', atsu:'with', t:'いいじゃん、大所帯！ 今日はみんな主役ね笑' },
+  { who:'momosuke', e:'excited', atsu:'without', t:'いいじゃん、大所帯！ 今日はみんな主役だね♡' },
   { who:'mua', e:'excited', t:'来てくれた……！ ようこそ、ぱんぷきん！ ハロウィン・ナイトへ！' },
 ];
 
@@ -8764,11 +8803,16 @@ const RAID_JACK_ENDING_A_HEAD = [
 const RAID_JACK_ENDING_B_HEAD = [
   { who:'mua', e:'normal', t:'いよいよ、ハロウィン・ナイト最後の夜だね。……大王ジャックには、あと少し届かなかったけど' },
   { who:'jack', name:'ジャック(大王)', e:'normal', t:'ガハハ……夜が明けるようじゃな。今回は、ワシの勝ちじゃ' },
+  { who:'atsu', e:'normal', atsu:'with', t:'今回は、ジャックの勝ちだ。……次は、もっと上から行く！' },
+  { who:'dra', e:'normal', atsu:'without', t:'……今回は、ジャックの勝ちだな' },
   { who:'kiki', e:'normal', t:'それでも、ビートは届いていたはずでつ。ジャックの笑い声が、前より優しくなっていまつ。' },
+  { who:'kyuko', e:'normal', t:'削ったぶんは、ちゃんと記録に残ってるよ。あと一押しだった。来年は、編成から考え直そう。' },
   { who:'dra', e:'normal', t:'ああ。ここまで食い下がったんだ。胸を張っていい' },
   { who:'jack', name:'ジャック(大王)', e:'normal', t:'……フン。なかなか、楽しかったぞ。だから……もう、暴れなくてよいのじゃ' },
   { who:'pumpkin', e:'happy', t:'……ありがとう。みんなのビート、ちゃんと聞こえたよ。ぼくも、パーティーに入れてほしいんだ' },
   { who:'momosuke', e:'happy', t:'もちろんだよ♡ ぱんぷきんも、後ろのみんなも、ようこそ！' },
+  { who:'atsu', e:'happy', atsu:'with', t:'勝ち負けは、また来年！ 今日は、ただの楽しい夜にしよう！' },
+  { who:'kyuko', e:'happy', atsu:'without', t:'勝ち負けは、また来年。今日は、ただの楽しい夜にしよう' },
   { who:'mua', e:'excited', t:'来年こそ、大王のジャックまで止めて、もっとたくさん遊ぼうね！ ようこそ、ハロウィン・ナイトへ！' },
 ];
 
@@ -8776,22 +8820,45 @@ const RAID_JACK_ENDING_B_HEAD = [
 const RAID_JACK_ENDING_COMMON = [
   { who:'dra', e:'normal', t:'よし、始めるぞ！ 最後の『Crazy Party Night ～ぱんぷきんの逆襲～』だ！' },
   { who:'mua', e:'excited', t:'みんなで踊ろう！ 魔女も、うさ耳も、小悪魔も、かぼちゃ頭も、ぜーんぶ一緒に！' },
+  { who:'kyuko', e:'excited', t:'この曲、譜面がおもしろいんだよねぇ。ほい、俺も入るよぉ' },
   { who:'kiki', e:'normal', t:'ぱんぷきんが、一緒にステップを踏んでいまつ！' },
   { who:'momosuke', e:'happy', t:'かわいい〜♡ 光るおなかが、リズムに合わせてぴかぴかしてる' },
+  { who:'atsu', e:'excited', atsu:'with', t:'いいね、ぱんぷきん！ その調子で、もう一段速くいこ笑' },
+  { who:'pumpkin', e:'troubled', atsu:'with', t:'ま、待って……もう少し、ゆっくり……！' },
+  { who:'kyuko', e:'happy', atsu:'with', t:'あつニキ、ぱんぷきんの目が回ってるw ゆっくりでいいんだよぉ' },
+  { who:'atsu', e:'troubled', atsu:'with', t:'……悪かった。ごめんね(｡-人-｡)' },
+  { who:'momosuke', e:'excited', atsu:'without', t:'いいね、ぱんぷきん！ その調子で、もっと速くいっちゃお♡' },
+  { who:'pumpkin', e:'troubled', atsu:'without', t:'ま、待って……もう少し、ゆっくり……！' },
+  { who:'kyuko', e:'happy', atsu:'without', t:'ももすけ、ぱんぷきんの目が回ってるw ゆっくりでいいんだよぉ' },
+  { who:'momosuke', e:'troubled', atsu:'without', t:'ごめん〜、つい楽しくなっちゃった♡' },
   { who:'dra', e:'normal', t:'おでも、負けてられないな。……あ、足がもつれた' },
   { who:'mua', e:'normal', t:'ドラケン、またぁｗ' },
+  { who:'kyuko', e:'happy', t:'ドラちゃん、いまのリズムは合ってたよぉ。足だけ置いてかれただけw' },
   { who:'pumpkin', e:'troubled', t:'あのね、これ。……ぼくが盗んじゃった音の、瓶。ごめんなさい。中身は、もう空っぽなんだ' },
   { who:'momosuke', e:'troubled', t:'ううん、もう怒ってないよ。ももたちこそ、ぱんぷきんの気持ち、気づくのが遅れてごめんね' },
+  { who:'atsu', e:'normal', atsu:'with', t:'空っぽなら、また今夜の音で満たせばいいじゃん！' },
+  { who:'dra', e:'normal', atsu:'without', t:'空っぽなら、また今夜の音で満たせばいいさ' },
+  { who:'kyuko', e:'normal', t:'いいねぇ。今夜の曲、ちょっとずつ詰めて帰ろ。来年までのお土産ってことで。' },
+  { who:'pumpkin', e:'happy', t:'……うん！ いっぱい入れて帰る！' },
   { who:'mua', e:'normal', t:'来年も、再来年も、ぱんぷきんが一番前で踊れる夜にしようね' },
   { who:'kiki', e:'normal', t:'約束でつ。ぱんぷきんも、うれしそうに跳ねていまつ。' },
   { who:'momosuke', e:'normal', t:'空が少し明るくなってきたね……もう、夜明けだ' },
   { who:'kiki', e:'normal', t:'ハロウィン・ナイトも、もうすぐおしまいでつね。' },
   { who:'mua', e:'normal', t:'ちょっと寂しいな。ずっと続けばいいのに' },
+  { who:'kyuko', e:'troubled', t:'わかるなぁ……楽しい夜って、終わるの早いんだよね。' },
+  { who:'atsu', e:'normal', atsu:'with', t:'終わるから、また来たくなるんだよ。来年も、全員そろって来よう！' },
+  { who:'momosuke', e:'normal', atsu:'without', t:'終わるから、また来たくなるんだよ。来年も、みんなそろって来ようね' },
   { who:'dra', e:'normal', t:'またやればいいさ。ハロウィンは、来年も来る。ぱんぷきんも、モンヒロビートの中でいつでも待ってるよ' },
   { who:'momosuke', e:'happy', t:'あ、そうそう。ハロウィンの衣装はね、イベントが終わっても、ダイヤショップで買えるようになるよ♡' },
   { who:'kiki', e:'normal', t:'ビートP交換所に並んでいたぶんは、ここまでになりまつ。着たかった人は、ダイヤショップをのぞいてほしいでつ。' },
   { who:'mua', e:'excited', t:'もう持ってる子は、ずっと着てていいよ！ 魔女のみゅあを、これからもよろしくね！' },
+  { who:'kyuko', e:'wink', t:'俺は今年、衣装なしだったからなぁ。来年は着たいなぁw' },
+  { who:'atsu', e:'happy', atsu:'with', t:'それ見たい笑 俺も来年は着る！' },
+  { who:'mua', e:'excited', atsu:'without', t:'それ見たい！ きゅきゅの衣装、来年いっしょに選ぼ！' },
   { who:'dra', e:'normal', t:'最後に、遊んでくれた全員にお礼だ。おまえたちのビートのおかげで、ぱんぷきんは笑えた' },
+  { who:'atsu', e:'normal', atsu:'with', t:'{name}、最後まで付き合ってくれてありがと！ 一番がんばってたの、ちゃんと見てたよ！' },
+  { who:'mua', e:'happy', atsu:'without', t:'{name}、最後まで付き合ってくれてありがと！ 一番がんばってたの、ちゃんと見てたよ！' },
+  { who:'kyuko', e:'happy', t:'{name}、おつかれさまぁ。いい夜だったねぇ🫂' },
   { who:'pumpkin', e:'happy', t:'ありがとう、みんな！ また来年、いっしょに遊ぼうね！' },
   { who:'momosuke', e:'happy', t:'ありがとう〜♡ また次のイベントで会おうね！' },
   { who:'mua', e:'happy', t:'ハッピー・ハロウィン！' },
@@ -9049,6 +9116,7 @@ const ASSISTANT_ATSU_JOIN_STORY_CALLS = { mua: 'ひめちん／もも／あつ�
 // 見るとマーケットにカード「きゅうこ」が並ぶ(data/breeder.js の kyukoCardOnSale)。きゅうこ自身は最初から選べる(ASSISTANT_UNLOCK_STORIES には入れない)
 // ★技名は「おもちゃの爆弾」だけ(クラフトくんと合わせた)。手に入れ方・値段は書かない。きゅうこはモンバトのランカー(モンビーではない)
 // ★呼び方は ASSISTANT_PEER_CALLS のとおり
+// 2026-10-23 社長「あつが解放されてるかどうかの分岐もきゅうこ登場含めて」。atsu:'with' はあつを解放している人だけ、atsu:'without' はその代わりに解放していない人へ出す行
 const ASSISTANT_KYUKO_JOIN_STORY = [
   // ---- 広場で、2体が遊んでいる(曲はイベントBGM 1) ----
   { who:'mua',      e:'surprise', t:'ねえねえ、見て！ 広場のすみっこで、なんか遊んでる子たちがいる〜' },
@@ -9056,7 +9124,8 @@ const ASSISTANT_KYUKO_JOIN_STORY = [
   { who:'illumine', e:'normal',   t:'…………' },
   { who:'kiki',     e:'surprise', t:'あれま……あの黒い子、イルミネでつね。影に潜んでるから、めったに見られないんでつよ。' },
   { who:'dra',      e:'surprise', t:'ふむ。しかも、となりにドリーミィまでいるぞ。2体そろってるのは、そうとう珍しいな' },
-  { who:'atsu',     e:'surprise', t:'まじで？ 俺、2体いっしょなの初めて見た笑' },
+  { who:'atsu',     e:'surprise', atsu:'with', t:'まじで？ 俺、2体いっしょなの初めて見た笑' },
+  { who:'mua',     e:'surprise',  atsu:'without', t:'えっ、そうなの？ あたし、2体いっしょなの初めて見た〜' },
   { who:'momosuke', e:'surprise', t:'え、まって。ドリーミィ……？' },
   { who:'momosuke', e:'excited',  t:'ニャーニャー人形にそっくりじゃん！！！ ふわふわ！！ かわいすぎるんだけど！！♡♡♡' },
   { who:'mua',      e:'happy',    t:'ももの目が、きらっきらになってるｗ' },
@@ -9067,27 +9136,34 @@ const ASSISTANT_KYUKO_JOIN_STORY = [
   { who:'illumine', e:'normal',   t:'……(すっ)' },
   { who:'mua',      e:'surprise', t:'わっ、イルミネが影から出てきて、ドリーミィの前に立った！' },
   { who:'kiki',     e:'normal',   t:'イルミネは、月明かりの見える静かな場所に住む子でつ。影に潜むのが得意で、ボディーガードとして重宝されるんでつよ。' },
-  { who:'atsu',     e:'happy',    t:'ちゃんとドリーミィを守ってるんだ。いいコンビじゃん！' },
+  { who:'atsu',     e:'happy',    atsu:'with', t:'ちゃんとドリーミィを守ってるんだ。いいコンビじゃん！' },
+  { who:'dra',     e:'happy',   atsu:'without', t:'ちゃんとドリーミィを守ってるんだな。いいコンビだ' },
   { who:'momosuke', e:'troubled', t:'ももは悪い人じゃないよ〜……ぎゅってしたいだけだよ〜' },
   { who:'mua',      e:'wink',     t:'それが一番あやしいやつｗ' },
   // ---- ロック調の曲が流れて、数秒止まる(ここから Toward the Stars) ----
   { who:'kiki',     e:'surprise', t:'……あれ？ どこからか、曲が聞こえてきまつ。', bgm:'melo_toward_the_stars_short', holdMs:4000 },
-  { who:'atsu',     e:'surprise', t:'この曲……まさか！' },
+  { who:'atsu',     e:'surprise', atsu:'with', t:'この曲……まさか！' },
+  { who:'dra',     e:'surprise',  atsu:'without', t:'この曲……どこかで聞いたことがあるぞ' },
   // ---- きゅうこ登場 ----
   { who:'kyuko',    e:'happy',    t:'ほい！ うちの子たちが、おじゃましてまぁす笑' },
   { who:'dreamy',   e:'normal',   t:'にゃ〜ん♪' },
   { who:'illumine', e:'normal',   t:'……(こくり)' },
   { who:'kyuko',    e:'normal',   t:'イルミネとドリーミィ、俺の子なんだぁ。ちょっと目をはなしたら、ここまで遊びにきちゃってて' },
-  { who:'atsu',     e:'excited',  t:'やっぱり、きゅうこちゃん！ 来てたんだ笑' },
-  { who:'kyuko',    e:'wink',     t:'あつニキ、ひさしぶりぃ。この曲が聞こえたら、だいたい俺だよw' },
-  { who:'mua',      e:'surprise', t:'えっ、あつくんの知り合い！？' },
-  { who:'atsu',     e:'happy',    t:'そ。きゅうこちゃん。モンバトのランカーで、しかも課金ゼロ！' },
+  { who:'atsu',     e:'excited',  atsu:'with', t:'やっぱり、きゅうこちゃん！ 来てたんだ笑' },
+  { who:'dra',     e:'surprise',  atsu:'without', t:'……やっぱり。モンバトのランキングで、いつも上のほうにいる名前だ' },
+  { who:'kyuko',    e:'wink',     atsu:'with', t:'あつニキ、ひさしぶりぃ。この曲が聞こえたら、だいたい俺だよw' },
+  { who:'kyuko',   e:'wink',    atsu:'without', t:'あ、知っててくれたんだぁ。この曲が聞こえたら、だいたい俺だよw' },
+  { who:'mua',      e:'surprise', atsu:'with', t:'えっ、あつくんの知り合い！？' },
+  { who:'mua',     e:'surprise',  atsu:'without', t:'えっ、ドラケンの知り合い！？' },
+  { who:'atsu',     e:'happy',    atsu:'with', t:'そ。きゅうこちゃん。モンバトのランカーで、しかも課金ゼロ！' },
+  { who:'dra',     e:'normal',  atsu:'without', t:'知り合いじゃない。ランキングで見てただけだ。モンバトのランカーで、しかも課金ゼロらしいぞ' },
   { who:'kiki',     e:'surprise', t:'あれま、課金なしで、でつか……！？' },
   { who:'kyuko',    e:'normal',   t:'お金かけなくても、育て方と組み方を考えればけっこういけるんですよね' },
   { who:'kyuko',    e:'excited',  t:'イルミネで守って、ドリーミィで崩す。曲の譜面を読むのと似てて、考えるの好きなんだよねぇ' },
   { who:'dra',      e:'normal',   t:'なるほど。だから2体ともあんなに息が合ってたのか' },
   // ---- あいさつ ----
-  { who:'kyuko',    e:'happy',    t:'みゅあネキに、ききさん、ももすけ、ドラちゃん。話はあつニキから聞いてるよぉ' },
+  { who:'kyuko',    e:'happy',    atsu:'with', t:'みゅあねぇに、ききさん、ももすけ、ドラちゃん。話はあつニキから聞いてるよぉ' },
+  { who:'kyuko',   e:'happy',   atsu:'without', t:'みゅあねぇに、ききさん、ももすけ、ドラちゃん。みんな、ここの助手さんだよねぇ。うわさは聞いてるよぉ' },
   { who:'mua',      e:'excited',  t:'よろしくね、きゅきゅ！ もうあだ名つけちゃったｗ' },
   { who:'kiki',     e:'happy',    t:'よろしくお願いしまつ、きゅうこさん (´ー`*)' },
   { who:'dra',      e:'happy',    t:'きゅうこちゃん、よろしくな。えへへ' },
@@ -9097,7 +9173,8 @@ const ASSISTANT_KYUKO_JOIN_STORY = [
   { who:'kyuko',    e:'happy',    t:'ありがとん笑' },
   // ---- なんやかんやで助手に ----
   { who:'momosuke', e:'troubled', t:'ねえ、きゅうちゃん、もう帰っちゃうの？ ももまだドリーミィと遊びたい〜……' },
-  { who:'atsu',     e:'wink',     t:'てかさ、きゅうこちゃんもここで助手やればよくない？ そしたら毎日会えるよ笑' },
+  { who:'atsu',     e:'wink',     atsu:'with', t:'てかさ、きゅうこちゃんもここで助手やればよくない？ そしたら毎日会えるよ笑' },
+  { who:'mua',     e:'wink',    atsu:'without', t:'じゃあさ、きゅきゅもここで助手やればいいじゃん！ そしたら、ももも毎日ドリーミィと遊べるよ！' },
   { who:'kyuko',    e:'normal',   t:'んー……まあ、なんとかなるっしょ。ここ、居心地よさそうだし' },
   { who:'kyuko',    e:'happy',    t:'おけ〜！ 育て方とか編成のことなら、俺わりと役に立てると思う' },
   { who:'kyuko',    e:'normal',   t:'あと、アシカも持ってきたよぉ。「きゅうこの譜面」' },
@@ -9108,10 +9185,11 @@ const ASSISTANT_KYUKO_JOIN_STORY = [
   { who:'dreamy',   e:'normal',   t:'にゃっ♪' },
   { who:'illumine', e:'normal',   t:'……(すっ)' },
   { who:'dra',      e:'happy',    t:'イルミネも、まんざらでもなさそうだな。えへへ' },
-  { who:'atsu',     e:'excited',  t:'よし、これで全員そろったね！' },
+  { who:'atsu',     e:'excited',  atsu:'with', t:'よし、これで全員そろったね！' },
+  { who:'mua',     e:'excited',  atsu:'without', t:'よし、これでまたにぎやかになるね！' },
   { who:'kyuko',    e:'happy',    t:'{name}、これからよろしくねぇ。困ったら、いつでも呼んで🫂' },
 ];
-const ASSISTANT_KYUKO_JOIN_STORY_CALLS = { mua: 'きゅきゅ', kiki: 'きゅうこさん', momosuke: 'きゅうちゃん', dra: 'きゅうこちゃん', atsu: 'きゅうこちゃん', kyuko: 'みゅあネキ／ききさん／ももすけ／ドラちゃん／あつニキ' };
+const ASSISTANT_KYUKO_JOIN_STORY_CALLS = { mua: 'きゅきゅ', kiki: 'きゅうこさん', momosuke: 'きゅうちゃん', dra: 'きゅうこちゃん', atsu: 'きゅうこちゃん', kyuko: 'みゅあねぇ／ききさん／ももすけ／ドラちゃん／あつニキ' };
 
 const EVENT_REPLAYS = [
   // ぱんぷきん×ジャックのストーリー(2026-10-04・台本は docs/spec/RAID_JACK_STORY.md)。**公開するまでは回想にも出さない**(releaseFlag)。

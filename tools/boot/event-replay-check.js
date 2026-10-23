@@ -32,7 +32,7 @@ const has = (needle) => source.includes(needle);
 // --- データ構造 ---
 const ctx = {};
 vm.createContext(ctx);
-vm.runInContext(`${assistantsSrc}\nglobalThis.__e={EVENT_REPLAYS,ASSISTANT_KIKI_INTRO,ASSISTANT_KIKI_INTRO_CALLS,ASSISTANTS,ASSISTANT_EXPRESSIONS,assistantFaceImage};`, ctx);
+vm.runInContext(`${assistantsSrc}\nglobalThis.__e={EVENT_REPLAYS,ASSISTANT_KIKI_INTRO,ASSISTANT_KIKI_INTRO_CALLS,ASSISTANTS,ASSISTANT_EXPRESSIONS,assistantFaceImage,eventScriptForPlayer};`, ctx);
 const { EVENT_REPLAYS: list, ASSISTANT_KIKI_INTRO: kikiScript, ASSISTANT_KIKI_INTRO_CALLS: kikiCalls, ASSISTANTS, ASSISTANT_EXPRESSIONS, assistantFaceImage } = ctx.__e;
 
 check('共通のイベント回想一覧がデータで持たれている', Array.isArray(list) && list.length >= 1, `${list ? list.length : 0}件`);
@@ -182,7 +182,7 @@ if (from >= 0 && to > from) {
   const transformed = babel.transformSync(
     'const Screen = ({ eventReplay, setEventReplay, EVENT_REPLAYS, eventReplayList, ASSISTANT_LIST, assistantById, storyCastOf, AssistantFace,\n'
     + '  normalizeAssistantBond, assistantBonds, assistantCallStyles, assistantSpeakText, assistantBondLevelOf,\n'
-    + '  breederName, markRhythmEventStorySeen, MONBEAT_CUP_STORY_ID }) => (<>\n'
+    + '  breederName, markRhythmEventStorySeen, MONBEAT_CUP_STORY_ID, eventScriptForPlayer, rhythmEventStorySeen }) => (<>\n'
     + replayBlock + '\n</>);\nmodule.exports = { Screen };',
     { presets: [[PRESET_REACT, { runtime: 'classic' }]], filename: 'event-replay-check.jsx' });
   const moduleScope = { exports: {} };
@@ -209,6 +209,8 @@ if (from >= 0 && to > from) {
     breederName: 'テストブリーダー',
     markRhythmEventStorySeen: () => {},
     MONBEAT_CUP_STORY_ID: 'monbeat_cup_2026_09',
+    // あつの解放で行を選ぶ(2026-10-23)。きき加入の会話は印が無いので、台本はそのまま
+    eventScriptForPlayer: ctx.__e.eventScriptForPlayer, rhythmEventStorySeen: [],
   }));
   const text = (html) => html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
   const first = render(0);
