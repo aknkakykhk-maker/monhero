@@ -269,7 +269,7 @@ CLAUDE.md ②③のとおり、**確認を取らずに最後まで進める**。
 node tools/build.js                      # 忘れると変更が反映されない
 node tools/run-checks.js --area required 2>&1 | tail -20
 git add -A && git commit
-git fetch origin main                    # ★PRを作る直前に取り込む（コンフリクトはほぼこれで防げる）
+node tools/merge-main.js                 # ★PRを作る直前に main を取り込む(生成物・更新履歴のぶつかりは道具が解く)
 git push -u origin <branch>
 # PR作成 → squash merge → git fetch origin main && git reset --hard origin/main
 ```

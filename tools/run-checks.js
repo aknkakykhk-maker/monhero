@@ -12,6 +12,10 @@
 //   オプション: --limit N(選ぶ上限。既定40) --wide(当たった領域を丸ごと) --base <ref>(そのrefとの差も見る)
 //   オプション: --skip-file <ファイル>(1行1検査。# で始まる行は無視。その検査を回さない)
 //   オプション: --no-server(実ブラウザ検査用の配信を起動しない) --timeout <秒> --json <出力先>
+//   node tools/run-checks.js --area all --parallel 5 … 全部を5組に分けて同時に回す(1時間弱)(2026-10-23。1本ずつだと2時間を超える)
+//     組は前回かかった時間(run-checks-times.json)で平らに分ける。同じポートを使う検査は同じ組へ、
+//     自分で :8899 を立てる検査と時間を測る検査(perf・fps など)は、最後に1本ずつ回す。結果は1つにまとめて出す
+//     --save-times を付けると、今回かかった時間で run-checks-times.json を書き直す
 //
 // 【なぜ要るか】
 // 検査は 300 本以上あるが CI で回るのは 28 本だけで、残りは担当者が変更範囲を見て手で選んでいた。
@@ -22,7 +26,8 @@
 // ・検査の中身や判定は一切変えない。ここは既存のスクリプトを順に呼ぶだけ。
 // ・領域の中身はできるだけ「探して決める」。フォルダの *-check.js を集め、ci は yml を読む。
 //   一覧を手で写すと、検査を足したときにここへ書き忘れて「回っているつもり」になる。
-// ・並列にはしない。実ブラウザ検査が固定ポート(8899 / 8977 など)を使うため、ぶつかる。
+// ・ふつうは並列にしない。実ブラウザ検査が固定ポート(8899 / 8977 など)を使うため、ぶつかる。
+//   --parallel N のときだけ、ぶつからない組に分けて同時に回す(共有の配信 :8899 は親が1つ立てて、全部の組で使う)。
 // ・playwright が入っていない環境では、それを要る検査を SKIP として数える(NG にはしない)。react・canvas も同じ。
 // ・既存の GitHub Actions は触らない。CI に何を足すかは、この結果(所要時間)を見て別途決める。
 const fs = require('fs');
@@ -289,6 +294,9 @@ function parseArgs(argv) {
     else if (a === '--timeout') opts.timeoutSec = Number(argv[++i]) || opts.timeoutSec;
     else if (a === '--json') opts.json = argv[++i];
     else if (a === '--skip-file') opts.skipFile = String(argv[++i] || '');
+    else if (a === '--parallel') opts.parallel = Math.max(1, Math.min(8, Number(argv[++i]) || 4));
+    else if (a === '--save-times') opts.saveTimes = true;
+    else if (a === '--lane') opts.lane = String(argv[++i] || '');
     else if (a === '--script') opts.scripts = (opts.scripts || []).concat(String(argv[++i] || '').split(',').filter(Boolean));
     else if (a.startsWith('--area=')) opts.areas.push(...a.slice(7).split(',').filter(Boolean));
     else if (!a.startsWith('--')) opts.areas.push(a);
@@ -397,6 +405,137 @@ function measureAlways(areas) {
   for (const c of failed) console.log(`  いま落ちている: ${c}`);
 }
 
+// ==================== 分けて同時に回す(--parallel N・2026-10-23) ====================
+// 全部の検査(680本あまり)を1本ずつ回すと2時間を超え、1回で回せる時間の上限で止まった。
+// 子の run-checks を N 個立てて、それぞれに --script で受け持ちを渡す。親は共有の配信(:8899)を1つ立て、子は --no-server で使う。
+const TIMES_FILE = path.join(TOOLS_DIR, 'run-checks-times.json');
+const readTimes = () => { try { return (JSON.parse(fs.readFileSync(TIMES_FILE, 'utf8')).times) || {}; } catch { return {}; } };
+// その検査が使う固定ポート(:8899 は共有の配信なので数えない)。同じポートを使う検査は同じ組に入れる
+const portsOf = (src) => {
+  const ports = new Set();
+  // 待ち時間(timeout: 60000 など)をポートと取り違えないよう、ポートを書く形だけを見て、3000〜20000 の数だけを数える
+  for (const re of [/localhost:(\d{4,5})/g, /\bPORT\s*=\s*[^;\n]*?\b(\d{4,5})\b/g, /\.listen\(\s*(\d{4,5})/g, /serve\.py['"][^\n]{0,40}?['"](\d{4,5})['"]/g]) {
+    let m; while ((m = re.exec(src))) { const p = Number(m[1]); if (p >= 3000 && p <= 20000 && p !== SERVER_PORT) ports.add(p); }
+  }
+  return [...ports];
+};
+// 時間を測る検査は、ほかと同時に回すと遅く出て落ちるので、最後に1本ずつ回す
+const TIMING_SENSITIVE_RE = /(perf|fps|budget|timing|latency|jank|sync|frame-rate|smooth|long-task|stall|freeze|cost|speed|slow|gpu|touch-bridge|flicker|background-run)/i;
+function planLanes(commands, n) {
+  const times = readTimes();
+  const metas = commands.map(c => {
+    const file = path.join(TOOLS_DIR, c.split(' ')[0]);
+    let src = ''; try { src = fs.readFileSync(file, 'utf8'); } catch {}
+    const meta = scriptMeta(c);
+    const ownsShared = meta.ownServer && (/\b8899\b/.test(src) || /serve\.py['"]\s*\)\s*\]/.test(src));
+    const browser = meta.needsPlaywright || meta.needsServer || meta.ownServer;
+    const sec = Number.isFinite(times[c]) ? times[c] : (browser ? 30 : 2);
+    return { c, sec, ports: portsOf(src), solo: ownsShared || (browser && TIMING_SENSITIVE_RE.test(c)) };
+  });
+  // 同じポートを使う検査をつなぐ(素朴な union-find)
+  const parent = metas.map((_, i) => i);
+  const find = (i) => (parent[i] === i ? i : (parent[i] = find(parent[i])));
+  const byPort = new Map();
+  metas.forEach((m, i) => { if (m.solo) return; for (const p of m.ports) { if (byPort.has(p)) parent[find(i)] = find(byPort.get(p)); else byPort.set(p, i); } });
+  const groups = new Map();
+  metas.forEach((m, i) => { if (m.solo) return; const r = find(i); if (!groups.has(r)) groups.set(r, []); groups.get(r).push(m); });
+  // 重い組から、いちばん空いている組へ(LPT)
+  const lanes = Array.from({ length: n }, () => ({ commands: [], sec: 0 }));
+  [...groups.values()].map(g => ({ g, sec: g.reduce((a, m) => a + m.sec, 0) })).sort((a, b) => b.sec - a.sec).forEach(({ g, sec }) => {
+    const lane = lanes.reduce((min, l) => (l.sec < min.sec ? l : min), lanes[0]);
+    lane.commands.push(...g.map(m => m.c)); lane.sec += sec;
+  });
+  // 並びは元の順に戻す(領域ごとのまとまりを保つ)
+  const order = new Map(commands.map((c, i) => [c, i]));
+  lanes.forEach(l => l.commands.sort((a, b) => order.get(a) - order.get(b)));
+  const solo = metas.filter(m => m.solo).map(m => m.c);
+  return { lanes: lanes.filter(l => l.commands.length), solo, soloSec: metas.filter(m => m.solo).reduce((a, m) => a + m.sec, 0) };
+}
+async function runParallel(commands, opts, wanted) {
+  const { lanes, solo, soloSec } = planLanes(commands, opts.parallel);
+  if (opts.plan) {
+    lanes.forEach((l, i) => console.log(`組${i + 1}: ${l.commands.length}本・見込み${Math.round(l.sec / 60)}分`));
+    console.log(`最後に1本ずつ: ${solo.length}本・見込み${Math.round(soloSec / 60)}分\n  ${solo.join('\n  ')}`);
+    console.log(`見込みの合計: ${Math.round((Math.max(...lanes.map(l => l.sec)) + soloSec) / 60)}分`);
+    return;
+  }
+  const started = Date.now();
+  const tmp = fs.mkdtempSync(path.join(require('os').tmpdir(), 'run-checks-par-'));
+  console.log(`検査 ${commands.length} 本を ${lanes.length} 組で同時に回す(見込み: ${lanes.map(l => Math.round(l.sec / 60) + '分').join(' / ')})・最後に1本ずつ ${solo.length} 本(${Math.round(soloSec / 60)}分)`);
+  let server = null;
+  if (opts.server) { server = await startServer(); console.log(`  (${server.note})`); }
+  const runLane = (lane, idx) => new Promise((resolve) => {
+    const list = path.join(tmp, `lane${idx}.txt`), out = path.join(tmp, `lane${idx}.json`);
+    const args = [__filename, '--lane', String(idx), '--no-server', '--timeout', String(opts.timeoutSec), '--json', out, '--script', lane.commands.join(',')];
+    const child = spawn(process.execPath, args, { cwd: REPO_ROOT, stdio: ['ignore', 'pipe', 'pipe'] });
+    let buf = '';
+    const onData = (d) => { buf += d; let k; while ((k = buf.indexOf('\n')) >= 0) { const line = buf.slice(0, k); buf = buf.slice(k + 1); if (/^(OK|NG|TIMEOUT|SKIP|MISSING)\s/.test(line)) console.log(`[組${idx + 1}] ${line}`); } };
+    child.stdout.on('data', onData); child.stderr.on('data', () => {});
+    child.on('close', () => { let j = null; try { j = JSON.parse(fs.readFileSync(out, 'utf8')); } catch {} resolve(j ? j.results : lane.commands.map(c => ({ command: c, status: 'NG', sec: 0, output: '組が結果を返さなかった' }))); });
+    void list;
+  });
+  let results = [];
+  // 共有の配信は、1本ずつ回す番でも使い続ける。自分で配信を立てる検査の前だけ止め、閉じ切るまで待つ
+  // (止めた直後に「まだ開いている」と取り違えて、配信の無いまま回して落ちたことがある)
+  const releaseShared = async () => { if (server) { server.stop(); server = null; for (let i = 0; i < 50 && await portOpen(SERVER_PORT); i++) await new Promise(r => setTimeout(r, 100)); } };
+  const ensureShared = async () => { if (!server && opts.server) server = await startServer(); };
+  const runSolo = async (command, label) => {
+    const meta = scriptMeta(command);
+    let res;
+    if (!meta.exists) res = { status: 'MISSING', sec: 0, output: '' };
+    else if (meta.needsPlaywright && !canResolve('playwright')) res = { status: 'SKIP', sec: 0, output: 'playwright が無い' };
+    else {
+      if (meta.ownServer) await releaseShared(); else if (meta.needsServer) await ensureShared();
+      res = runOne(command, opts.timeoutSec);
+    }
+    console.log(`[${label}] ${res.status.padEnd(4)} ${res.sec.toFixed(1).padStart(6)}s  ${command}`);
+    return { command, status: res.status, sec: Math.round(res.sec * 10) / 10, ...(['OK', 'SKIP'].includes(res.status) ? {} : { output: String(res.output || '').slice(-6000) }) };
+  };
+  const retried = [];
+  try {
+    const laneResults = await Promise.all(lanes.map(runLane));
+    results = laneResults.flat();
+    // 自分で配信を立てる検査・時間を測る検査は、ほかが終わってから1本ずつ
+    for (const command of solo) results.push(await runSolo(command, '1本ずつ'));
+    // 同時に回して落ちたものは、もう一度だけ1本で回す。1本で通ったら「同時に回すと落ちる」として分けて出す(OK に数える)
+    for (let i = 0; i < results.length; i++) {
+      const r = results[i];
+      if (['OK', 'SKIP', 'MISSING'].includes(r.status) || solo.includes(r.command)) continue;
+      const again = await runSolo(r.command, '1本で回し直し');
+      if (again.status === 'OK') { retried.push(r.command); results[i] = { ...again, sec: r.sec, retriedAlone: true }; }
+      else results[i] = again;
+    }
+  } finally { await releaseShared(); }
+  const order = new Map(commands.map((c, i) => [c, i]));
+  results.sort((a, b) => order.get(a.command) - order.get(b.command));
+  const count = s => results.filter(r => r.status === s).length;
+  const totalSec = (Date.now() - started) / 1000;
+  console.log(`\n合計 ${results.length} 本 / OK ${count('OK')} / NG ${count('NG')} / TIMEOUT ${count('TIMEOUT')} / SKIP ${count('SKIP')} / MISSING ${count('MISSING')} / ${Math.round(totalSec)}秒(${lanes.length}組で同時)`);
+  const bad = results.filter(r => !['OK', 'SKIP'].includes(r.status));
+  const FAIL_LINE = /(^|\s)(NG|FAIL|失敗|不一致|エラー|Error|Cannot|undefined|✗|❌)/;
+  for (const r of bad.slice(0, 8)) {
+    console.log(`\n--- ${r.status}: ${r.command}`);
+    const lines = String(r.output || '').trim().split('\n').filter(l => l.trim());
+    const core = lines.filter(l => FAIL_LINE.test(l));
+    console.log((core.length ? core.slice(0, 10) : lines.slice(-8)).map(l => '    ' + (l.length > 200 ? l.slice(0, 200) + ' …' : l)).join('\n'));
+  }
+  if (bad.length > 8) console.log(`\n… ほか ${bad.length - 8} 本が失敗しています（1本ずつ見るなら  node tools/run-checks.js --script <名前>）`);
+  if (retried.length) console.log(`\n同時に回すと落ちたが、1本で回し直すと通った検査(${retried.length}本・OK に数えた。続くなら最後に1本ずつ回す組へ):\n  ${retried.join('\n  ')}`);
+  if (opts.saveTimes) {
+    const times = readTimes();
+    for (const r of results) if (r.status !== 'SKIP' && r.status !== 'MISSING') times[r.command] = r.sec;
+    const doc = { _説明: 'run-checks.js --parallel が組を分けるときに使う、検査1本ごとのかかった秒数(前回の記録)。作り直しは node tools/run-checks.js --area all --parallel 5 --save-times', times: Object.fromEntries(Object.entries(times).sort()) };
+    fs.writeFileSync(TIMES_FILE, JSON.stringify(doc, null, 1) + '\n');
+    console.log(`\nかかった時間を書き直した: ${path.relative(REPO_ROOT, TIMES_FILE)}`);
+  }
+  if (opts.json) {
+    fs.writeFileSync(opts.json, JSON.stringify({ at: new Date().toISOString(), areas: wanted, totalSec, parallel: lanes.length, results }, null, 1));
+    console.log(`\n結果を書き出した: ${opts.json}`);
+  }
+  try { fs.rmSync(tmp, { recursive: true, force: true }); } catch {}
+  process.exit(bad.length ? 1 : 0);
+}
+
 async function main() {
   const opts = parseArgs(process.argv.slice(2));
   const areas = discoverAreas();
@@ -444,6 +583,7 @@ async function main() {
     for (let i = commands.length - 1; i >= 0; i--) if (skip.has(commands[i])) commands.splice(i, 1);
   }
 
+  if (opts.parallel > 1 && !opts.lane) { await runParallel(commands, opts, wanted); return; }
   const hasPlaywright = canResolve('playwright');
   const hasCanvas = canResolve('canvas');
   const hasReact = canResolve('react');
@@ -493,7 +633,7 @@ async function main() {
   }
   if (bad.length > 5) console.log(`\n… ほか ${bad.length - 5} 本が失敗しています（1本ずつ見るなら  node tools/run-checks.js --script <名前>）`);
   if (opts.json) {
-    fs.writeFileSync(opts.json, JSON.stringify({ at: new Date().toISOString(), areas: wanted, totalSec, results: results.map(r => ({ command: r.command, status: r.status, sec: Math.round(r.sec * 10) / 10, needsServer: r.needsServer, needsPlaywright: r.needsPlaywright, tail: r.status === 'OK' ? undefined : r.output.trim().split('\n').slice(-8) })) }, null, 2));
+    fs.writeFileSync(opts.json, JSON.stringify({ at: new Date().toISOString(), areas: wanted, totalSec, results: results.map(r => ({ command: r.command, status: r.status, sec: Math.round(r.sec * 10) / 10, ...(['OK', 'SKIP'].includes(r.status) ? {} : { output: String(r.output || '').slice(-6000) }), needsServer: r.needsServer, needsPlaywright: r.needsPlaywright, tail: r.status === 'OK' ? undefined : r.output.trim().split('\n').slice(-8) })) }, null, 2));
     console.log(`\n結果を書き出した: ${opts.json}`);
   }
   process.exit(bad.length ? 1 : 0);
