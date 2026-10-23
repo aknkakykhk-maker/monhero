@@ -407,7 +407,7 @@ check('場面の足しかたが手順として書いてある',
   assistantsSrc.includes('<AssistantBubble scene="home"/>') && assistantsSrc.includes('ASSISTANT_SCENES に場面を1つ足す'));
 
 // --- ④ 共通コンポーネント ---
-check('吹き出しは1つの共通コンポーネント', has('const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null, helpRef=null, condition=null, expression=null, accent=null, faceSize=null, compact=false, defaultOpen=false, footerSpace=0 })'));
+check('吹き出しは1つの共通コンポーネント', has('const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null, helpRef=null, condition=null, expression=null, accent=null, faceSize=null, compact=false, defaultOpen=false, footerSpace=0, maxLines=0 })'));
 check('選んだセリフの表情がそのまま顔に渡る', has('const face = expression || shown?.e || null;') && has('<AssistantFace who={who} size={size} accent={color} expression={face}/>'));
 // 場面や条件が変わったときだけ選び直す。ほかの再描画でセリフが入れ替わると読めない
 check('セリフは場面と条件が変わったときだけ選び直す',
@@ -458,12 +458,13 @@ check('セリフをJSXへ直接書いていない', (() => {
 check('画像のパスをJSXへ直接書いていない', !/images\/assistant\//.test(source));
 // HOMEは絶対配置なので、置き場所をCSSで決める。施設のボタンやマスモンに
 // かぶらないよう、プレイヤー情報と更新履歴の下の空きへ置く
+// 2026-10-23 からセリフは2行まで(maxLines={2})。長いセリフで吹き出しが伸びて「M/B管理」にかぶった(社長「MB管理に助手のコメントが被ってくる」)
 check('HOMEの吹き出しは施設の上に重ならない場所へ置く',
   has('.mh-home-assistant{position:absolute;z-index:5;left:3%;width:70%;top:calc(72px + env(safe-area-inset-top));pointer-events:auto}')
     && has('@media(max-width:350px){.mh-home-assistant{width:62%}}')
     // 助手とおしゃべり(2026-10-14)の「おしゃべり」ボタンは、同じ置き場所の中で吹き出しの下の行(左の空き)へ重ねる。
     // 吹き出しの下へ1段足すと高くなり、横持ちの「M/B管理」・小さい画面のジャックの吹き出しにかぶった(2026-10-16。raid-jack-home-say-tap-check)
-    && has('<div className={`mh-home-assistant${spotClass(\'assistant\')}`}><AssistantBubble scene="home" condition={assistantBondUp?\'bondUp\':(masuMons.length===0?\'firstRun\':null)} compact footerSpace={typeof onOpenAssistantChat===\'function\'?70:0}/>')
+    && has('<div className={`mh-home-assistant${spotClass(\'assistant\')}`}><AssistantBubble scene="home" condition={assistantBondUp?\'bondUp\':(masuMons.length===0?\'firstRun\':null)} compact maxLines={2} footerSpace={typeof onOpenAssistantChat===\'function\'?70:0}/>')
     && has('data-home-assistant-chat onClick={onOpenAssistantChat} className="absolute bottom-[6px] z-10'));
 // 上のプロフィールカードに重ならないことを、CSSの数値から計算して確かめる。
 // safe-area は帯にも吹き出しにも同じだけ効くので、比べるのは固定の px だけでよい
