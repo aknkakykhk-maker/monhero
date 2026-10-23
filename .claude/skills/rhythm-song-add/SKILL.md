@@ -475,7 +475,7 @@ ln -sfn "$PWD/tools/node_modules" "$SCRATCH/pre/tools/node_modules"
 
 ```bash
 git add -A && git commit    # ②③のとおり確認は取らない
-git fetch origin main && git merge origin/main    # ★PRを作る直前に必ず
+node tools/merge-main.js    # ★PRを作る直前に必ず(main を取り込み、生成物のぶつかりは道具が作り直して解く)
 git push -u origin <ブランチ>
 # PR作成 → squash merge → git reset --hard origin/main → push
 ```
