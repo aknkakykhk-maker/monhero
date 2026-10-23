@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5bb5bbfe81fde16f
+// source-sha256: f5e176721e0bcafa
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-23 16:50";
+const BUILD_DATE = "2026-10-23 20:15";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -5408,6 +5408,34 @@ const BGM_TRACKS = [{
   gain: 1,
   loop: true
 }, {
+  id: 'melo_light_player',
+  name: 'light player',
+  creator: 'school food punishment',
+  src: 'audio/bgm-light-player.mp3',
+  gain: 1,
+  loop: true
+}, {
+  id: 'melo_light_player_short',
+  name: 'light player short ver.',
+  creator: 'school food punishment',
+  src: 'audio/bgm-light-player-short.mp3',
+  gain: 1,
+  loop: true
+}, {
+  id: 'melo_tsuki_ga_michiru_mae_ni',
+  name: '月が満ちる前に',
+  creator: 'Fuki Commune',
+  src: 'audio/bgm-tsuki-ga-michiru-mae-ni.mp3',
+  gain: 1,
+  loop: true
+}, {
+  id: 'melo_tsuki_ga_michiru_mae_ni_short',
+  name: '月が満ちる前に short ver.',
+  creator: 'Fuki Commune',
+  src: 'audio/bgm-tsuki-ga-michiru-mae-ni-short.mp3',
+  gain: 1,
+  loop: true
+}, {
   id: 'melo_dullahan_clockwork_alt',
   name: '呪われた騎士の時計仕掛け -Another-',
   creator: 'オリジナル',
@@ -6883,6 +6911,8 @@ const Audio_ = (() => {
     "audio/bgm-kaze-ga-soyogu-basho.mp3": "9cc789151e7e",
     "audio/bgm-kiki-issen-short.mp3": "1dc188dbb7a7",
     "audio/bgm-kindan-no-resistance.mp3": "efca5c01d0b7",
+    "audio/bgm-light-player-short.mp3": "785e78c69005",
+    "audio/bgm-light-player.mp3": "6656f3a71344",
     "audio/bgm-makutsu-no-senritsu.mp3": "8db199451f0b",
     "audio/bgm-market.mp3": "a85ba65f90e7",
     "audio/bgm-menu.mp3": "a6aef603fd6a",
@@ -6918,6 +6948,8 @@ const Audio_ = (() => {
     "audio/bgm-title.mp3": "b7bdc68bb0c0",
     "audio/bgm-toriko.mp3": "3870d26f6322",
     "audio/bgm-toward-the-stars-short.mp3": "25c386c48439",
+    "audio/bgm-tsuki-ga-michiru-mae-ni-short.mp3": "f2e9585907f2",
+    "audio/bgm-tsuki-ga-michiru-mae-ni.mp3": "acc9940193c2",
     "audio/bgm-wrath-of-the-thorn-king.mp3": "d1ea326a4ee2",
     "audio/jingle-victory.mp3": "689c9715a824",
     "audio/se-awakened-moo-apocalypse.mp3": "3ed18e30e8e7",

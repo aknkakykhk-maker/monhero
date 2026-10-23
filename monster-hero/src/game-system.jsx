@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b430d0e336b778fd
+// generated-sha256: be4d60d486772e8c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-23 16:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-23 20:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4274,6 +4274,10 @@ const BGM_TRACKS = [
   { id:'melo_sad_song_short', name:'SAD SONG short ver.', creator:'オリジナル', src:'audio/bgm-sad-song-short.mp3', gain:1, loop:true },
   { id:'melo_toward_the_stars_short', name:'Toward the Stars, Paradise or Truth short ver.', creator:'hitoyakyuko', src:'audio/bgm-toward-the-stars-short.mp3', gain:1, loop:true },
   { id:'melo_black_shout', name:'BLACK SHOUT', creator:'Roselia', src:'audio/bgm-black-shout.mp3', gain:1, loop:true },
+  { id:'melo_light_player', name:'light player', creator:'school food punishment', src:'audio/bgm-light-player.mp3', gain:1, loop:true },
+  { id:'melo_light_player_short', name:'light player short ver.', creator:'school food punishment', src:'audio/bgm-light-player-short.mp3', gain:1, loop:true },
+  { id:'melo_tsuki_ga_michiru_mae_ni', name:'月が満ちる前に', creator:'Fuki Commune', src:'audio/bgm-tsuki-ga-michiru-mae-ni.mp3', gain:1, loop:true },
+  { id:'melo_tsuki_ga_michiru_mae_ni_short', name:'月が満ちる前に short ver.', creator:'Fuki Commune', src:'audio/bgm-tsuki-ga-michiru-mae-ni-short.mp3', gain:1, loop:true },
   { id:'melo_dullahan_clockwork_alt', name:'呪われた騎士の時計仕掛け -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-clockwork-alt.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost', name:'鋼鉄の亡霊', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost_alt', name:'鋼鉄の亡霊 -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost-alt.mp3', gain:1, loop:true },
@@ -5509,6 +5513,8 @@ const Audio_ = (() => {
     "audio/bgm-kaze-ga-soyogu-basho.mp3": "9cc789151e7e",
     "audio/bgm-kiki-issen-short.mp3": "1dc188dbb7a7",
     "audio/bgm-kindan-no-resistance.mp3": "efca5c01d0b7",
+    "audio/bgm-light-player-short.mp3": "785e78c69005",
+    "audio/bgm-light-player.mp3": "6656f3a71344",
     "audio/bgm-makutsu-no-senritsu.mp3": "8db199451f0b",
     "audio/bgm-market.mp3": "a85ba65f90e7",
     "audio/bgm-menu.mp3": "a6aef603fd6a",
@@ -5544,6 +5550,8 @@ const Audio_ = (() => {
     "audio/bgm-title.mp3": "b7bdc68bb0c0",
     "audio/bgm-toriko.mp3": "3870d26f6322",
     "audio/bgm-toward-the-stars-short.mp3": "25c386c48439",
+    "audio/bgm-tsuki-ga-michiru-mae-ni-short.mp3": "f2e9585907f2",
+    "audio/bgm-tsuki-ga-michiru-mae-ni.mp3": "acc9940193c2",
     "audio/bgm-wrath-of-the-thorn-king.mp3": "d1ea326a4ee2",
     "audio/jingle-victory.mp3": "689c9715a824",
     "audio/se-awakened-moo-apocalypse.mp3": "3ed18e30e8e7",

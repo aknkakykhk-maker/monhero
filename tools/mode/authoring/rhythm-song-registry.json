@@ -900,6 +900,62 @@
     "subdivisionsPerBeat": 4,
     "source": "command"
    }
+  },
+  "light_player": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-light-player.mp3",
+   "chartRevision": 32,
+   "audioSha256": "6656f3a71344757fef4950696b5b9f5a43e83004520520d5c4229a9c9906de98",
+   "durationMs": 268776,
+   "analyzedTiming": {
+    "bpm": 187.995,
+    "beatZeroMs": 1116.6,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   }
+  },
+  "tsuki_ga_michiru_mae_ni": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-tsuki-ga-michiru-mae-ni.mp3",
+   "chartRevision": 32,
+   "audioSha256": "acc9940193c2cf578f86a6f11f9c1e0a835bdac94f232426b2f128a3e60159d9",
+   "durationMs": 276696,
+   "analyzedTiming": {
+    "bpm": 188,
+    "beatZeroMs": 849.9,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
+  },
+  "light_player_short": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-light-player-short.mp3",
+   "chartRevision": 32,
+   "audioSha256": "785e78c69005b82ca9e0c87004b0a3b31c27644ba1319db56ec93fd87dd02c4c",
+   "durationMs": 150552,
+   "analyzedTiming": {
+    "bpm": 187.995,
+    "beatZeroMs": 1116.6,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
+  },
+  "tsuki_ga_michiru_mae_ni_short": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-tsuki-ga-michiru-mae-ni-short.mp3",
+   "chartRevision": 32,
+   "audioSha256": "f2e9585907f20e833d7b50ce2cd8b3453f8d772c0376eabae31fb9e8bfe8aa7e",
+   "durationMs": 111960,
+   "analyzedTiming": {
+    "bpm": 188,
+    "beatZeroMs": 849.9,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
   }
  }
 }
