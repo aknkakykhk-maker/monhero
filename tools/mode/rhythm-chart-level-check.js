@@ -170,6 +170,8 @@ const runtime=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js')
   REWORKED_V3.push('anima_hell_debug','journey_hell_debug');
   // 2026-10-21 の新曲 BLACK SHOUT(新曲は v3 で測る)
   REWORKED_V3.push('black_shout','black_shout_hell_debug');
+  // 2026-10-23 に足した新曲 light player・月が満ちる前に(全編と short ver.・5難易度と HELL・v3 で測る)
+  REWORKED_V3.push('light_player','light_player_hell_debug','light_player_short','light_player_short_hell_debug','tsuki_ga_michiru_mae_ni','tsuki_ga_michiru_mae_ni_hell_debug','tsuki_ga_michiru_mae_ni_short','tsuki_ga_michiru_mae_ni_short_hell_debug');
   check('いまある曲は全部、前の測り方(v1)で測る一覧に入っている(作り直した HELL 5譜面と、10/21 に足した HELL 2譜面は v3)',all.length>0&&all.every(song=>L.levelFormulaFor(song.songId)===(REWORKED_V3.includes(song.songId)?'v3':'v1')),
     all.filter(song=>L.levelFormulaFor(song.songId)!==(REWORKED_V3.includes(song.songId)?'v3':'v1')).map(song=>song.songId).join(','));
   check('一覧に無い曲(これから足す曲)はいちばん新しい測り方(v3・2026-10-21)',L.levelFormulaFor('a_new_song_not_listed')==='v3');
