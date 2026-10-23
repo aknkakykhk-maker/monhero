@@ -1797,14 +1797,14 @@
    "sideHeightSwitch": 0,
    "skyAfterGround": 0,
    "besideHeldBand": 0,
-   "fastSameSide": 46,
+   "fastSameSide": 35,
    "heldHandSwitch": 0
   },
   "tsuki_ga_michiru_mae_ni/MASTER": {
    "sideHeightSwitch": 0,
    "skyAfterGround": 0,
    "besideHeldBand": 0,
-   "fastSameSide": 117,
+   "fastSameSide": 123,
    "heldHandSwitch": 0
   },
   "tsuki_ga_michiru_mae_ni_short/EASY": {

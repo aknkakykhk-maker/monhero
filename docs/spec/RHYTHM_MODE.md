@@ -8589,12 +8589,12 @@ songId `rose`（全編）/ `rose_short`（副題 `short ver.`）、bgmTrackId `m
 社長の依頼（窓口経由・m4a とジャケット）「フル、ショート両方」。school food punishment「light player」と Fuki Commune「月が満ちる前に」。
 songId `light_player`・`light_player_short`・`tsuki_ga_michiru_mae_ni`・`tsuki_ga_michiru_mae_ni_short`（`flowPlacement:true`）。
 
-- **音源**: 頭に2秒の無音を足し、4曲とも -14 LUFS にそろえた（全編 light ×0.8946・月 ×0.7413、short は short だけで測って light ×0.8810・月 ×0.7595）。元はモノラル
+- **音源**: 頭に2秒の無音を足し(月が満ちる前にの全編だけ 1.95秒。2秒だと最初の音に乗る格子が 3.004秒で、最初のノーツが3秒を超えた。1.9秒では作った譜面の EXPERT に押せない所が1件残った)、4曲とも -14 LUFS にそろえた（全編 light ×0.8946・月 ×0.7413、short は short だけで測って light ×0.8810・月 ×0.7595）。元はモノラル
 - **テンポ**: light player は自動の 188.00 BPM（強い打点の60%が16分に乗る）。月が満ちる前には自動判定 153.16 BPM が格子に乗らず（偶然と同じ割合）、
-  60〜240 BPM を広く探して 188.00 BPM・拍の頭 850ms に決めた（8分の乗り 56%・偶然 25%）。2曲とも 188 BPM
+  60〜240 BPM を広く探して 188.00 BPM に決めた(拍の頭 全編 799.9ms・short 849.9ms)（8分の乗り 56%・偶然 25%）。2曲とも 188 BPM
 - **short ver.**: 頭から2つ目のサビの終わりまで・最後の1小節でフェードアウト（light 0〜150.5秒・月 0〜111.9秒）。一番盛り上がるのは2曲とも最後のサビで、そこで切ると全編とほぼ同じ長さになるため
 - **歯ごたえは社長が「自動のまま」と決めた**（`challengeFactor`・`chartIntensity` は書かない）。候補: 0.9 で light 7/8/11/19/26・月 7/9/13/19/24、1.15 で light 8/9/14/24/33・月 9/12/15/24/29（月は 1.15 で MASTER が下がる）
-- Lv.: light 8/9/14/23/30・HELL 54 / light short 8/9/14/20/27・HELL 52 / 月 10/11/16/24/31・HELL 63 / 月 short 9/12/16/23/33・HELL 65
-- **HELL**: variant を比べて light 0・light short 2・月 1・月 short 0。空中の「指が同じ位置にくる」形は許す数の内（月の全編は 7→4 に直した）
+- Lv.: light 8/9/14/23/30・HELL 54 / light short 8/9/14/20/27・HELL 52 / 月 9/11/16/24/34・HELL 65 / 月 short 9/12/16/23/33・HELL 65
+- **HELL**: variant を比べて light 0・light short 2・月 0・月 short 0。空中の「指が同じ位置にくる」形は許す数の内（月の全編は 9→6 に直した）
 - 作ったあとに直したもの（時刻・ノーツ数はそのまま）: 帯の中に戻っていたノーツ12件を帯の外へ（`fixHeldBand`）、月 MASTER のモンスター枠1（欠けていた）を 57.02秒の拍の頭の単打へ、
   月 short MASTER の 6.0秒で通り道が交わっていた地上スライド2本の片方を同じ位置のタップへ

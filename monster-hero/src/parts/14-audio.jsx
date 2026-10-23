@@ -186,7 +186,7 @@ const Audio_ = (() => {
     "audio/bgm-toriko.mp3": "3870d26f6322",
     "audio/bgm-toward-the-stars-short.mp3": "25c386c48439",
     "audio/bgm-tsuki-ga-michiru-mae-ni-short.mp3": "f2e9585907f2",
-    "audio/bgm-tsuki-ga-michiru-mae-ni.mp3": "acc9940193c2",
+    "audio/bgm-tsuki-ga-michiru-mae-ni.mp3": "2ee86e1947fd",
     "audio/bgm-wrath-of-the-thorn-king.mp3": "d1ea326a4ee2",
     "audio/jingle-victory.mp3": "689c9715a824",
     "audio/se-awakened-moo-apocalypse.mp3": "3ed18e30e8e7",

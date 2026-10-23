@@ -241,11 +241,11 @@
   "light_player_short/hard": "284eaad60764024f",
   "light_player_short/expert": "6ea182d96401fab2",
   "light_player_short/master": "9beea9629cf75afd",
-  "tsuki_ga_michiru_mae_ni/easy": "3c205972018bf177",
-  "tsuki_ga_michiru_mae_ni/normal": "88155e93494187bd",
-  "tsuki_ga_michiru_mae_ni/hard": "e61cef9223cc48ea",
-  "tsuki_ga_michiru_mae_ni/expert": "ff0c6ce362c5e8a4",
-  "tsuki_ga_michiru_mae_ni/master": "be7bcea887d41369",
+  "tsuki_ga_michiru_mae_ni/easy": "0021d39a99b3afea",
+  "tsuki_ga_michiru_mae_ni/normal": "2026692ea256ee71",
+  "tsuki_ga_michiru_mae_ni/hard": "3dceeb3e7f6cd136",
+  "tsuki_ga_michiru_mae_ni/expert": "336cb0eb53b8321f",
+  "tsuki_ga_michiru_mae_ni/master": "a4287b8076559b5a",
   "tsuki_ga_michiru_mae_ni_short/easy": "688f52657c94643d",
   "tsuki_ga_michiru_mae_ni_short/normal": "fe91cc494e08841f",
   "tsuki_ga_michiru_mae_ni_short/hard": "d64cdab32aa2dfd6",
@@ -299,7 +299,7 @@
   "black_shout/hell": "b682ef78769746d0",
   "light_player/hell": "1373eda9e3d07706",
   "light_player_short/hell": "87684abfa3a11ca0",
-  "tsuki_ga_michiru_mae_ni/hell": "9cace59faae230f8",
+  "tsuki_ga_michiru_mae_ni/hell": "7c53909ece20ab67",
   "tsuki_ga_michiru_mae_ni_short/hell": "270a9bd2954e5578"
  },
  "history": [
@@ -504,6 +504,18 @@
    "at": "2026-10-23 21:06",
    "reason": "新曲 light player・月が満ちる前に(全編と short ver.)を公開",
    "changedCount": 24
+  },
+  {
+   "at": "2026-10-23 21:38",
+   "reason": "新曲 light player・月が満ちる前に(全編と short ver.)を公開",
+   "changed": [
+    "tsuki_ga_michiru_mae_ni/easy",
+    "tsuki_ga_michiru_mae_ni/normal",
+    "tsuki_ga_michiru_mae_ni/hard",
+    "tsuki_ga_michiru_mae_ni/expert",
+    "tsuki_ga_michiru_mae_ni/master",
+    "tsuki_ga_michiru_mae_ni/hell"
+   ]
   }
  ]
 }
