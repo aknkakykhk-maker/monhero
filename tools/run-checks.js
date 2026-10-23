@@ -12,7 +12,7 @@
 //   オプション: --limit N(選ぶ上限。既定40) --wide(当たった領域を丸ごと) --base <ref>(そのrefとの差も見る)
 //   オプション: --skip-file <ファイル>(1行1検査。# で始まる行は無視。その検査を回さない)
 //   オプション: --no-server(実ブラウザ検査用の配信を起動しない) --timeout <秒> --json <出力先>
-//   node tools/run-checks.js --area all --parallel 4 … 全部を4組に分けて同時に回す(2026-10-23。1本ずつだと2時間を超える)
+//   node tools/run-checks.js --area all --parallel 5 … 全部を5組に分けて同時に回す(1時間弱)(2026-10-23。1本ずつだと2時間を超える)
 //     組は前回かかった時間(run-checks-times.json)で平らに分ける。同じポートを使う検査は同じ組へ、
 //     自分で :8899 を立てる検査と時間を測る検査(perf・fps など)は、最後に1本ずつ回す。結果は1つにまとめて出す
 //     --save-times を付けると、今回かかった時間で run-checks-times.json を書き直す
@@ -420,7 +420,7 @@ const portsOf = (src) => {
   return [...ports];
 };
 // 時間を測る検査は、ほかと同時に回すと遅く出て落ちるので、最後に1本ずつ回す
-const TIMING_SENSITIVE_RE = /(perf|fps|budget|timing|latency|jank|sync|frame-rate|smooth|long-task|stall|freeze|cost|speed|slow|gpu|touch-bridge)/i;
+const TIMING_SENSITIVE_RE = /(perf|fps|budget|timing|latency|jank|sync|frame-rate|smooth|long-task|stall|freeze|cost|speed|slow|gpu|touch-bridge|flicker|background-run)/i;
 function planLanes(commands, n) {
   const times = readTimes();
   const metas = commands.map(c => {
@@ -524,7 +524,7 @@ async function runParallel(commands, opts, wanted) {
   if (opts.saveTimes) {
     const times = readTimes();
     for (const r of results) if (r.status !== 'SKIP' && r.status !== 'MISSING') times[r.command] = r.sec;
-    const doc = { _説明: 'run-checks.js --parallel が組を分けるときに使う、検査1本ごとのかかった秒数(前回の記録)。作り直しは node tools/run-checks.js --area all --parallel 4 --save-times', times: Object.fromEntries(Object.entries(times).sort()) };
+    const doc = { _説明: 'run-checks.js --parallel が組を分けるときに使う、検査1本ごとのかかった秒数(前回の記録)。作り直しは node tools/run-checks.js --area all --parallel 5 --save-times', times: Object.fromEntries(Object.entries(times).sort()) };
     fs.writeFileSync(TIMES_FILE, JSON.stringify(doc, null, 1) + '\n');
     console.log(`\nかかった時間を書き直した: ${path.relative(REPO_ROOT, TIMES_FILE)}`);
   }
