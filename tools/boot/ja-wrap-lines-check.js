@@ -30,6 +30,10 @@ const texts = [...new Set([
   ...[...asst.matchAll(/t:'([^'\n{}]{8,200})'/g)].map((m) => m[1]),
 ].filter((t) => /[ぁ-ん]/.test(t)))];
 check('台詞を集められた', texts.length >= 500, `${texts.length}本`);
+// お話(HOME で流れるお話・回想・助手の加入など)の台詞。お話の画面は字が大きく(13px・客の吹き出しは14px)幅も広いので、別の幅でも描く。
+// お話は端末の状態(ほかのお話を見たか)で出たり出なかったりするので、画面を開く ja-wrap-check.js では毎回は見られない(2026-10-24 窓口)
+const storyTexts = [...new Set([...asst.matchAll(/who:'[^']+',\s*e:'[^']*',\s*t:'([^'\n{}]{8,200})'/g)].map((m) => m[1]))];
+check('お話の台詞を集められた', storyTexts.length >= 300, `${storyTexts.length}本`);
 
 (async () => {
   // ほかのブラウザの検査(ja-wrap-check.js)と同じ起動の仕方
@@ -38,13 +42,16 @@ check('台詞を集められた', texts.length >= 500, `${texts.length}本`);
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
   const page = await browser.newPage();
   await page.setContent('<!doctype html><meta charset="utf-8"><div id=r></div>');
-  const res = await page.evaluate(({ fnSrc, texts }) => {
+  const res = await page.evaluate(({ fnSrc, texts, storyTexts }) => {
     let _jaSegmenter, jaWrapPoints, jaKeepWhole, JA_PARTICLE_END, JA_WRAP_TIGHT, jaWrapPieces, JA_WRAP_LINE; eval(fnSrc);
     const tails = [], mids = [], soft = [], overflow = [];
     const range = document.createRange();
     // 本文の幅と字の大きさ。ふつうは字11px で120px(吹き出し144px)から、狭い画面(幅360未満)は字10px で112px(吹き出し136px)
     const sizes = [[96, 9], [112, 10], ...Array.from({ length: 16 }, (_, i) => [120 + i * 12, 11])];
-    for (const t of texts) for (const [w, fs] of sizes) {
+    // お話の下の枠(13px)は本文が約250〜370px、客の吹き出し(14px)は約200〜310px
+    const storySizes = [[200, 14], [248, 14], [296, 14], [252, 13], [284, 13], [316, 13], [348, 13], [372, 13]];
+    const jobs = [...texts.flatMap((t) => sizes.map((z) => [t, ...z])), ...storyTexts.flatMap((t) => storySizes.map((z) => [t, ...z]))];
+    for (const [t, w, fs] of jobs) {
       // 吹き出しと同じ: 言葉の切れ目(印)で折り、行の長さをそろえる(JA_LABEL_STYLE)
       const d = document.createElement('div');
       d.style.cssText = `width:${w}px;font-size:${fs}px;font-weight:900;line-height:1.45;word-break:keep-all;overflow-wrap:anywhere;text-wrap:balance;font-family:sans-serif`;
@@ -84,11 +91,11 @@ check('台詞を集められた', texts.length >= 500, `${texts.length}本`);
       d.remove();
     }
     return { tails, mids, soft, overflow };
-  }, { fnSrc, texts });
+  }, { fnSrc, texts, storyTexts });
   await browser.close();
   const show = (a) => a.slice(0, 6).join(' / ');
   if (process.env.SHOW_ALL) console.log([...res.tails, ...res.mids].join('\n'));
-  check('最後の行に1〜2字だけ落ちた台詞が無い(字11pxで本文120〜300px・字10pxで112px・字9pxで96px)', res.tails.length === 0, show(res.tails) || `${texts.length}本`);
+  check('最後の行に1〜2字だけ落ちた台詞が無い(字11pxで本文120〜300px・字10pxで112px・字9pxで96px・お話は13〜14pxで200〜372px)', res.tails.length === 0, show(res.tails) || `${texts.length}本`);
   check('言葉の途中(印の無い所)で折れた台詞が無い', res.mids.length === 0, show(res.mids));
   check('本文が吹き出しの幅からはみ出さない', res.overflow.length === 0, show(res.overflow));
   // 2026-10-24 の時点で 3件(すべて90pxの顔文字の中)。増えたら部品を見直す

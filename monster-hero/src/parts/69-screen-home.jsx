@@ -488,7 +488,7 @@ function KikiIntroOverlay({
         </div>
         <div className="rounded-2xl border-2 bg-slate-900 px-3 py-3" style={{borderColor:speaker.accent}}>
           <span className="block text-[9px] font-black tracking-widest" style={{color:speaker.accent}}>{speaker.name}</span>
-          <span className="block text-[13px] font-bold leading-relaxed text-white mt-1">{line.t}</span>
+          <span className="block text-[13px] font-bold leading-relaxed text-white mt-1" style={bubbleWrapStyle()}>{bubbleWrap(line.t)}</span>
         </div>
         <p className="mt-2 text-center text-[8px] text-slate-500">
           {step+1} / {script.length}
@@ -535,7 +535,7 @@ function MomosukeIntroOverlay({
         </div>
         <div className="rounded-2xl border-2 bg-slate-900 px-3 py-3" style={{borderColor:speaker.accent}}>
           <span className="block text-[9px] font-black tracking-widest" style={{color:speaker.accent}}>{speaker.name}</span>
-          <span className="block text-[13px] font-bold leading-relaxed text-white mt-1">{line.t}</span>
+          <span className="block text-[13px] font-bold leading-relaxed text-white mt-1" style={bubbleWrapStyle()}>{bubbleWrap(line.t)}</span>
         </div>
         <p className="mt-2 text-center text-[8px] text-slate-500">{step+1} / {script.length}</p>
         {/* スキップ(2026-10-07・モンヒロくんの報告とユーザー指示)。39場面あり、イベントのお話のように飛ばせなかった。
@@ -571,7 +571,7 @@ function HomeFriendRequestNotice({ activeAssistant, count, names, onOpen, onLate
         <h2 className="mb-2 text-center text-base font-black text-rose-200">フレンド申請が届いています</h2>
         <div className="flex items-end gap-2">
           {who&&<AssistantFace who={who} size={76} accent={who.accent} expression="happy"/>}
-          <div className="flex-1 rounded-2xl border-2 border-rose-400 bg-slate-900 p-3 text-[13px] font-bold leading-relaxed text-white">{line}</div>
+          <div className="flex-1 rounded-2xl border-2 border-rose-400 bg-slate-900 p-3 text-[13px] font-bold leading-relaxed text-white" style={bubbleWrapStyle()}>{bubbleWrap(line)}</div>
         </div>
         <div className="mt-4 grid grid-cols-2 gap-2">
           <button type="button" data-friend-notice-later onClick={onLater} className="min-h-[50px] rounded-2xl border border-white/20 bg-slate-800 text-sm font-black text-slate-200 active:scale-95">あとで</button>
@@ -629,7 +629,7 @@ return(
           onError={e=>{e.currentTarget.style.display='none';}} decoding="async"
           className="mb-3 w-full max-h-[42vh] rounded-2xl border border-pink-400/50 object-contain"/>}
         <h2 className="mb-1 text-center text-base font-black text-pink-200">{notice.title}</h2><p className="mb-3 text-center text-[10px] font-bold text-slate-400">{page+1} / {pages.length}</p>
-        <div className="flex items-end gap-2"><AssistantFace who={who} size={76} accent={who.accent} expression={pageExpression}/><div className="flex-1 rounded-2xl border-2 border-pink-400 bg-slate-900 px-3 py-3 text-[13px] font-bold leading-relaxed text-white">{assistantSpeakText(pageText,breederName,assistantBondLevelNow,assistantCallStyle,selectedAssistantId)}</div></div>
+        <div className="flex items-end gap-2"><AssistantFace who={who} size={76} accent={who.accent} expression={pageExpression}/><div className="flex-1 rounded-2xl border-2 border-pink-400 bg-slate-900 px-3 py-3 text-[13px] font-bold leading-relaxed text-white" style={bubbleWrapStyle()}>{bubbleWrap(assistantSpeakText(pageText,breederName,assistantBondLevelNow,assistantCallStyle,selectedAssistantId))}</div></div>
         {!last?<button onClick={()=>setUpdateGuidePage(page+1)} className="mt-4 min-h-[50px] w-full rounded-2xl bg-pink-500 text-sm font-black text-slate-950">次へ</button>:<div className={`mt-4 grid ${notice.destination?'grid-cols-2':'grid-cols-1'} gap-2`}>{notice.destination&&<button onClick={()=>finishUpdateGuide(notice.destination)} className="min-h-[50px] rounded-2xl bg-pink-500 text-sm font-black text-slate-950">{notice.buttonLabel||'見に行く'}</button>}<button onClick={()=>finishUpdateGuide()} className="min-h-[50px] rounded-2xl bg-slate-700 text-sm font-black text-white">{notice.destination?'あとで':'閉じる'}</button></div>}
       </div>
     </div>);

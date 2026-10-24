@@ -92,6 +92,9 @@ const setRhythmHellGuide=()=>{}; const setShowDebugStoryList=()=>{}; const setSh
 // ★MFバトルカードのはじまり(2026-10-24 #3452)。スキップ・最後まで見たときに event.id と比べて「見た」にするので、
 //   定義していないと ReferenceError でスキップが効かなくなる(会話が閉じない)。ここでは比べられれば足りる
 const CARD_BATTLE_INTRO_STORY_ID='card_battle_intro'; const markCardBattleIntroSeen=()=>{};
+// ★お話の文は言葉の区切りの部品(21-assistant.jsx の bubbleWrap)を通して描く(2026-10-24)。定義していないと ReferenceError で描画ごと落ちる。
+//   ここでは押せる場所を見るので、文はそのまま返せば足りる
+const bubbleWrap=(t)=>t; const bubbleWrapStyle=()=>undefined;
 function Screen(){
   const [eventReplay,setEventReplay]=useState({id:${JSON.stringify(target.id)},step:0,live:true});
   window.__state=eventReplay;

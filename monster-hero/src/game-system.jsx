@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 0c91c075b789d6c8
+// generated-sha256: 3a95f0f33ca8d948
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-25 04:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-25 04:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11376,7 +11376,8 @@ const marketNameForWrap = (name) => MARKET_NAME_WRAP_WORDS.reduce(
 //   「スキップ　・序／チケット」と順番が崩れる(2026-10-21)
 const marketNameNodes = (name) => <span data-market-name-text>{marketNameForWrap(name).split('\u200b')
   .map((seg, index, all) => {
-    const tail = index === all.length - 1 ? seg.match(/^(.*)(・[^・]{1,2})$/) : null;
+    // 最後の「・1〜2字」と、受け取る数「チケット ×3」は、前の言葉と離さない(2026-10-24 ja-wrap-check「トレーニングチケット／×3」)
+    const tail = index === all.length - 1 ? (seg.match(/^(.*)(・[^・]{1,2})$/) || seg.match(/^(.*?)([^\s]*\s+×[\d,]+)$/)) : null;
     return <React.Fragment key={index}>{index>0&&<wbr/>}{tail ? <>{tail[1]}<span style={{whiteSpace:'nowrap'}}>{tail[2]}</span></> : seg}</React.Fragment>;
   })}</span>;
 // 予告の札の折り位置(2026-10-20 窓口「条件を達成 / すると買え / ます」)。語の切れ目(「すると」の後ろ)だけで折る
@@ -39452,7 +39453,7 @@ function KikiIntroOverlay({
         </div>
         <div className="rounded-2xl border-2 bg-slate-900 px-3 py-3" style={{borderColor:speaker.accent}}>
           <span className="block text-[9px] font-black tracking-widest" style={{color:speaker.accent}}>{speaker.name}</span>
-          <span className="block text-[13px] font-bold leading-relaxed text-white mt-1">{line.t}</span>
+          <span className="block text-[13px] font-bold leading-relaxed text-white mt-1" style={bubbleWrapStyle()}>{bubbleWrap(line.t)}</span>
         </div>
         <p className="mt-2 text-center text-[8px] text-slate-500">
           {step+1} / {script.length}
@@ -39499,7 +39500,7 @@ function MomosukeIntroOverlay({
         </div>
         <div className="rounded-2xl border-2 bg-slate-900 px-3 py-3" style={{borderColor:speaker.accent}}>
           <span className="block text-[9px] font-black tracking-widest" style={{color:speaker.accent}}>{speaker.name}</span>
-          <span className="block text-[13px] font-bold leading-relaxed text-white mt-1">{line.t}</span>
+          <span className="block text-[13px] font-bold leading-relaxed text-white mt-1" style={bubbleWrapStyle()}>{bubbleWrap(line.t)}</span>
         </div>
         <p className="mt-2 text-center text-[8px] text-slate-500">{step+1} / {script.length}</p>
         {/* スキップ(2026-10-07・モンヒロくんの報告とユーザー指示)。39場面あり、イベントのお話のように飛ばせなかった。
@@ -39535,7 +39536,7 @@ function HomeFriendRequestNotice({ activeAssistant, count, names, onOpen, onLate
         <h2 className="mb-2 text-center text-base font-black text-rose-200">フレンド申請が届いています</h2>
         <div className="flex items-end gap-2">
           {who&&<AssistantFace who={who} size={76} accent={who.accent} expression="happy"/>}
-          <div className="flex-1 rounded-2xl border-2 border-rose-400 bg-slate-900 p-3 text-[13px] font-bold leading-relaxed text-white">{line}</div>
+          <div className="flex-1 rounded-2xl border-2 border-rose-400 bg-slate-900 p-3 text-[13px] font-bold leading-relaxed text-white" style={bubbleWrapStyle()}>{bubbleWrap(line)}</div>
         </div>
         <div className="mt-4 grid grid-cols-2 gap-2">
           <button type="button" data-friend-notice-later onClick={onLater} className="min-h-[50px] rounded-2xl border border-white/20 bg-slate-800 text-sm font-black text-slate-200 active:scale-95">あとで</button>
@@ -39593,7 +39594,7 @@ return(
           onError={e=>{e.currentTarget.style.display='none';}} decoding="async"
           className="mb-3 w-full max-h-[42vh] rounded-2xl border border-pink-400/50 object-contain"/>}
         <h2 className="mb-1 text-center text-base font-black text-pink-200">{notice.title}</h2><p className="mb-3 text-center text-[10px] font-bold text-slate-400">{page+1} / {pages.length}</p>
-        <div className="flex items-end gap-2"><AssistantFace who={who} size={76} accent={who.accent} expression={pageExpression}/><div className="flex-1 rounded-2xl border-2 border-pink-400 bg-slate-900 px-3 py-3 text-[13px] font-bold leading-relaxed text-white">{assistantSpeakText(pageText,breederName,assistantBondLevelNow,assistantCallStyle,selectedAssistantId)}</div></div>
+        <div className="flex items-end gap-2"><AssistantFace who={who} size={76} accent={who.accent} expression={pageExpression}/><div className="flex-1 rounded-2xl border-2 border-pink-400 bg-slate-900 px-3 py-3 text-[13px] font-bold leading-relaxed text-white" style={bubbleWrapStyle()}>{bubbleWrap(assistantSpeakText(pageText,breederName,assistantBondLevelNow,assistantCallStyle,selectedAssistantId))}</div></div>
         {!last?<button onClick={()=>setUpdateGuidePage(page+1)} className="mt-4 min-h-[50px] w-full rounded-2xl bg-pink-500 text-sm font-black text-slate-950">次へ</button>:<div className={`mt-4 grid ${notice.destination?'grid-cols-2':'grid-cols-1'} gap-2`}>{notice.destination&&<button onClick={()=>finishUpdateGuide(notice.destination)} className="min-h-[50px] rounded-2xl bg-pink-500 text-sm font-black text-slate-950">{notice.buttonLabel||'見に行く'}</button>}<button onClick={()=>finishUpdateGuide()} className="min-h-[50px] rounded-2xl bg-slate-700 text-sm font-black text-white">{notice.destination?'あとで':'閉じる'}</button></div>}
       </div>
     </div>);
@@ -61490,7 +61491,7 @@ function MonsterHeroGame() {
     <div data-assistant-unlock-notice={scene} className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:76000,backgroundColor:'rgba(2,6,23,.94)'}} role="dialog" aria-modal="true" aria-label={notice.title}>
       <div className="w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] overflow-y-auto rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
         <h2 className="mb-1 text-center text-base font-black text-pink-200">{notice.title}</h2><p className="mb-3 text-center text-[10px] font-bold text-slate-400">{page+1} / {pages.length}</p>
-        <div className="flex items-end gap-2"><AssistantFace who={who} size={76} accent={who.accent} expression={notice.expression||'happy'}/><div className="flex-1 rounded-2xl border-2 border-pink-400 bg-slate-900 px-3 py-3 text-[13px] font-bold leading-relaxed text-white">{assistantSpeakText(pages[page],breederName,assistantBondLevelNow,assistantCallStyle,selectedAssistantId)}</div></div>
+        <div className="flex items-end gap-2"><AssistantFace who={who} size={76} accent={who.accent} expression={notice.expression||'happy'}/><div className="flex-1 rounded-2xl border-2 border-pink-400 bg-slate-900 px-3 py-3 text-[13px] font-bold leading-relaxed text-white" style={bubbleWrapStyle()}>{bubbleWrap(assistantSpeakText(pages[page],breederName,assistantBondLevelNow,assistantCallStyle,selectedAssistantId))}</div></div>
         {!last
           ?<button onClick={()=>setAssistantUnlockPage(page+1)} className="mt-4 min-h-[50px] w-full rounded-2xl bg-pink-500 text-sm font-black text-slate-950">次へ</button>
           :<div className={`mt-4 grid ${notice.destination?'grid-cols-2':'grid-cols-1'} gap-2`}>
@@ -75561,7 +75562,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     {/* 話している人の顔を指すしっぽ */}
                     <span aria-hidden="true" style={{position:'absolute',left:-9,top:22,width:0,height:0,borderTop:'8px solid transparent',borderBottom:'8px solid transparent',borderRight:`9px solid ${stageGuest.accent}`}}/>
                     <span className="inline-block rounded-full px-2 py-0.5 text-[10px] font-black" style={{color:'#0f172a',background:stageGuest.accent}}>{bubbleLine.name||stageGuest.name}</span>
-                    <span className="mt-1 block text-[14px] font-bold leading-relaxed text-white">{speakText(bubbleLine,stageGuest)}</span>
+                    <span className="mt-1 block text-[14px] font-bold leading-relaxed text-white" style={bubbleWrapStyle()}>{bubbleWrap(speakText(bubbleLine,stageGuest))}</span>
                   </div>
                 )}
               </div>
@@ -75597,7 +75598,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   ここを素の {line.t} で出していたため、画面に {name} がそのまま出ていた
                   (2026-09-11・ユーザー指摘「名前呼びのとこが変換されてない」)。
                   呼び方も絆Lvも助手ごとに違うので、選んでいる助手ではなく「話している助手」から引く */}
-              <span className="block text-[13px] font-bold leading-relaxed text-white mt-1">{speakText(bottomLine,bottomSpeaker)}</span>
+              <span className="block text-[13px] font-bold leading-relaxed text-white mt-1" style={bubbleWrapStyle()}>{bubbleWrap(speakText(bottomLine,bottomSpeaker))}</span>
             </div>:<div className="rounded-2xl border-2 border-slate-700 bg-slate-900 px-3 py-3 text-center text-[11px] font-bold text-slate-400">▲ 上のことばを読んでね</div>}
             <p className="mt-2 text-center text-[8px] text-slate-500">
               {step+1} / {script.length}

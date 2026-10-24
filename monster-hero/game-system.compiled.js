@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f2d3a8ac3560736a
+// source-sha256: d76b92dc5d0d0e4a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-25 04:08";
+const BUILD_DATE = "2026-10-25 04:25";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -16105,7 +16105,7 @@ const marketNameForWrap = name => MARKET_NAME_WRAP_WORDS.reduce((text, word) => 
 const marketNameNodes = name => React.createElement("span", {
   "data-market-name-text": true
 }, marketNameForWrap(name).split('\u200b').map((seg, index, all) => {
-  const tail = index === all.length - 1 ? seg.match(/^(.*)(・[^・]{1,2})$/) : null;
+  const tail = index === all.length - 1 ? seg.match(/^(.*)(・[^・]{1,2})$/) || seg.match(/^(.*?)([^\s]*\s+×[\d,]+)$/) : null;
   return React.createElement(React.Fragment, {
     key: index
   }, index > 0 && React.createElement("wbr", null), tail ? React.createElement(React.Fragment, null, tail[1], React.createElement("span", {
@@ -65279,8 +65279,9 @@ function KikiIntroOverlay({
       color: speaker.accent
     }
   }, speaker.name), React.createElement("span", {
-    className: "block text-[13px] font-bold leading-relaxed text-white mt-1"
-  }, line.t)), React.createElement("p", {
+    className: "block text-[13px] font-bold leading-relaxed text-white mt-1",
+    style: bubbleWrapStyle()
+  }, bubbleWrap(line.t))), React.createElement("p", {
     className: "mt-2 text-center text-[8px] text-slate-500"
   }, step + 1, " / ", script.length), React.createElement("div", {
     className: `relative mt-3 grid ${last ? 'grid-cols-1' : 'grid-cols-[1fr_2fr]'} gap-2`,
@@ -65378,8 +65379,9 @@ function MomosukeIntroOverlay({
       color: speaker.accent
     }
   }, speaker.name), React.createElement("span", {
-    className: "block text-[13px] font-bold leading-relaxed text-white mt-1"
-  }, line.t)), React.createElement("p", {
+    className: "block text-[13px] font-bold leading-relaxed text-white mt-1",
+    style: bubbleWrapStyle()
+  }, bubbleWrap(line.t))), React.createElement("p", {
     className: "mt-2 text-center text-[8px] text-slate-500"
   }, step + 1, " / ", script.length), React.createElement("div", {
     className: `relative mt-3 grid ${last ? 'grid-cols-1' : 'grid-cols-[1fr_2fr]'} gap-2`,
@@ -65448,8 +65450,9 @@ function HomeFriendRequestNotice({
     accent: who.accent,
     expression: "happy"
   }), React.createElement("div", {
-    className: "flex-1 rounded-2xl border-2 border-rose-400 bg-slate-900 p-3 text-[13px] font-bold leading-relaxed text-white"
-  }, line)), React.createElement("div", {
+    className: "flex-1 rounded-2xl border-2 border-rose-400 bg-slate-900 p-3 text-[13px] font-bold leading-relaxed text-white",
+    style: bubbleWrapStyle()
+  }, bubbleWrap(line))), React.createElement("div", {
     className: "mt-4 grid grid-cols-2 gap-2"
   }, React.createElement("button", {
     type: "button",
@@ -65601,8 +65604,9 @@ function HomeUpdateGuideOverlay({
     accent: who.accent,
     expression: pageExpression
   }), React.createElement("div", {
-    className: "flex-1 rounded-2xl border-2 border-pink-400 bg-slate-900 px-3 py-3 text-[13px] font-bold leading-relaxed text-white"
-  }, assistantSpeakText(pageText, breederName, assistantBondLevelNow, assistantCallStyle, selectedAssistantId))), !last ? React.createElement("button", {
+    className: "flex-1 rounded-2xl border-2 border-pink-400 bg-slate-900 px-3 py-3 text-[13px] font-bold leading-relaxed text-white",
+    style: bubbleWrapStyle()
+  }, bubbleWrap(assistantSpeakText(pageText, breederName, assistantBondLevelNow, assistantCallStyle, selectedAssistantId)))), !last ? React.createElement("button", {
     onClick: () => setUpdateGuidePage(page + 1),
     className: "mt-4 min-h-[50px] w-full rounded-2xl bg-pink-500 text-sm font-black text-slate-950"
   }, "次へ") : React.createElement("div", {
@@ -96829,8 +96833,9 @@ function MonsterHeroGame() {
       accent: who.accent,
       expression: notice.expression || 'happy'
     }), React.createElement("div", {
-      className: "flex-1 rounded-2xl border-2 border-pink-400 bg-slate-900 px-3 py-3 text-[13px] font-bold leading-relaxed text-white"
-    }, assistantSpeakText(pages[page], breederName, assistantBondLevelNow, assistantCallStyle, selectedAssistantId))), !last ? React.createElement("button", {
+      className: "flex-1 rounded-2xl border-2 border-pink-400 bg-slate-900 px-3 py-3 text-[13px] font-bold leading-relaxed text-white",
+      style: bubbleWrapStyle()
+    }, bubbleWrap(assistantSpeakText(pages[page], breederName, assistantBondLevelNow, assistantCallStyle, selectedAssistantId)))), !last ? React.createElement("button", {
       onClick: () => setAssistantUnlockPage(page + 1),
       className: "mt-4 min-h-[50px] w-full rounded-2xl bg-pink-500 text-sm font-black text-slate-950"
     }, "次へ") : React.createElement("div", {
@@ -120207,8 +120212,9 @@ function MonsterHeroGame() {
           background: stageGuest.accent
         }
       }, bubbleLine.name || stageGuest.name), React.createElement("span", {
-        className: "mt-1 block text-[14px] font-bold leading-relaxed text-white"
-      }, speakText(bubbleLine, stageGuest))))), fx && React.createElement("div", {
+        className: "mt-1 block text-[14px] font-bold leading-relaxed text-white",
+        style: bubbleWrapStyle()
+      }, bubbleWrap(speakText(bubbleLine, stageGuest)))))), fx && React.createElement("div", {
         key: `fx${step}`,
         "aria-hidden": "true",
         className: "pointer-events-none",
@@ -120304,8 +120310,9 @@ function MonsterHeroGame() {
           background: bottomSpeaker.accent
         }
       }, bottomLine.name || bottomSpeaker.name), React.createElement("span", {
-        className: "block text-[13px] font-bold leading-relaxed text-white mt-1"
-      }, speakText(bottomLine, bottomSpeaker))) : React.createElement("div", {
+        className: "block text-[13px] font-bold leading-relaxed text-white mt-1",
+        style: bubbleWrapStyle()
+      }, bubbleWrap(speakText(bottomLine, bottomSpeaker)))) : React.createElement("div", {
         className: "rounded-2xl border-2 border-slate-700 bg-slate-900 px-3 py-3 text-center text-[11px] font-bold text-slate-400"
       }, "▲ 上のことばを読んでね"), React.createElement("p", {
         className: "mt-2 text-center text-[8px] text-slate-500"
