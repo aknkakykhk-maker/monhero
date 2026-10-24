@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: bf1355d6740e2326
+// source-sha256: 7498130d137451ce
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-25 08:42";
+const BUILD_DATE = "2026-10-25 08:52";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -87287,7 +87287,7 @@ const CardBattleScreen = ({
     return React.createElement("div", {
       "data-mh-screen": true,
       "data-card-top": "mode",
-      className: "mhms-stage relative flex h-full min-h-0 flex-1 flex-col overflow-hidden text-white"
+      className: "mhms-stage relative flex h-full min-h-0 flex-1 flex-col overflow-hidden p-4 text-white"
     }, React.createElement(RhythmModeSelectStage, {
       notes: false
     }), React.createElement("div", {
@@ -87298,7 +87298,7 @@ const CardBattleScreen = ({
       onBack: () => setView('top'),
       note: "だれと戦うかをえらびます"
     })), React.createElement("div", {
-      className: `${SCREEN_LIST_CLASS} relative z-[1] flex flex-col justify-center space-y-3 px-3 pb-4`
+      className: `${SCREEN_LIST_CLASS} relative z-[1] flex flex-col justify-center space-y-3 pb-4`
     }, React.createElement("button", {
       type: "button",
       "data-card-mode-assistant": true,

@@ -683,7 +683,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       check('⑰ 戦績は投了を負けに数える(「0勝 1敗(うち投了1)」の形)', /\d+勝 \d+敗\(うち投了\d+\)/.test(recText) && !/・投了/.test(recText), recText);
       await page.locator('[data-card-cpu]').click();
       await page.locator('[data-card-top="mode"]').waitFor({ timeout: 10000 });
-      if (SHOT) await shot(page, '33-mode');
+      if (SHOT) { await page.waitForTimeout(900); await shot(page, '33-mode'); }
       const multiOff = await page.locator('[data-card-mode-multi]').isDisabled();
       const multiText = await page.locator('[data-card-mode-multi]').innerText();
       check('⑰ 対戦は「助手と対戦」と「マルチ対戦(準備中・押せない)」から選ぶ', multiOff && /準備中/.test(multiText) && (await page.locator('[data-card-mode-assistant]').count()) === 1, multiText);
