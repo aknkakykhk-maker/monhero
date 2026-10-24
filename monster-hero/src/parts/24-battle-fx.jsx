@@ -1310,6 +1310,22 @@ const MONSTER_IDLE_RIGS = Object.freeze({
   Kuromy: { body:'breathe', bodyMask:IDLE_KUROMY_BODY_MASK, parts:[{ mask:IDLE_KUROMY_TAIL_MASK, origin:'65.9% 53.4%', anim:'wag', amp:7, dur:1700, delay:0, layer:'back' }] },
   Illumine: { body:'hover', bodyMask:IDLE_ILLUMINE_BODY_MASK, parts:[{ mask:IDLE_ILLUMINE_HAIR_L_MASK, origin:'17.1% 75%', anim:'swing', amp:5, dur:2800, delay:0, layer:'back' }, { mask:IDLE_ILLUMINE_HAIR_R_MASK, origin:'82.9% 75%', anim:'swing', amp:-5, dur:2800, delay:600, layer:'back' }] },
   Dreamy: { body:'breathe', bodyMask:IDLE_DREAMY_BODY_MASK, parts:[{ mask:IDLE_DREAMY_BEADS_L_MASK, origin:'20% 35%', anim:'swing', amp:2.5, dur:2400, delay:0, layer:'back' }, { mask:IDLE_DREAMY_BEADS_R_MASK, origin:'79.3% 34%', anim:'swing', amp:-2.5, dur:2400, delay:500, layer:'back' }] },
+  Dino: { body:'breathe', bodyMask:null, parts:[] },
+  Gali: { body:'sway', bodyMask:null, parts:[] },
+  Naga: { body:'sway', bodyMask:null, parts:[] },
+  Dragon: { body:'breathe', bodyMask:null, parts:[] },
+  Henger: { body:'heavy', bodyMask:null, parts:[] },
+  Durahan: { body:'heavy', bodyMask:null, parts:[] },
+  Arrowhead: { body:'breathe', bodyMask:null, parts:[] },
+  Zilla: { body:'breathe', bodyMask:null, parts:[] },
+  Phoenix: { body:'glide', bodyMask:null, parts:[] },
+  Joker: { body:'sway', bodyMask:null, parts:[] },
+  Jell: { body:'jelly', bodyMask:null, parts:[] },
+  Mew: { body:'breathe', bodyMask:null, parts:[] },
+  Metalner: { body:'drift', bodyMask:null, parts:[] },
+  Worm: { body:'jelly', bodyMask:null, parts:[] },
+  Centaur: { body:'breathe', bodyMask:null, parts:[] },
+  Colorpandora: { body:'hop', bodyMask:null, parts:[] },
 });
 // ==== MONSTER_IDLE_RIGS ここまで ====
 const MONSTER_IDLE_MASK_STYLE = (url) => ({

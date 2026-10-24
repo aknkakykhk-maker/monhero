@@ -149,5 +149,38 @@ const STARTER_MONSTER_IDS = ['Mocchi','Suezo','Golem','Tiger','Ham','Pixie','Mon
 // ユグドラシルとメルホイップは 2026-09-29、ゴーストとスプーキーは 2026-10-05、メロディーとクロミーは 2026-10-08、イルミネとドリーミィは 2026-10-23 に正式実装したので ALL_PLAYER_MONSTERS へ移した。
 //   draftUniqueNames … 固有技の9段階名(正式実装のとき unique.names へ移す)
 const UPCOMING_MONSTER_DRAFTS = Object.freeze({
-
+  // 新しい16種(2026-10-24・案の段階)。カードバトルの種族と同じ顔ぶれで、立ち絵はカードの対戦画面と共用(images/monsters/<種族名>.png)。
+  // 名前・血統(16種とも純血)・図鑑の文は社長から。顔アイコンは社長が A〜D から選んだ案。能力値・技・勇者特性・タイプはまだ決まっていない
+  Dino: Object.freeze({ id:'Dino', name:"ディノ", emoji:"🦖", imgUrl:MF_DINO_IMG, iconUrl:MF_DINO_IMG,
+    faceIconUrl:MF_DINO_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'dino', sub:'dino' }) }),
+  Gali: Object.freeze({ id:'Gali', name:"ガリ", emoji:"☀️", imgUrl:MF_GALI_IMG, iconUrl:MF_GALI_IMG,
+    faceIconUrl:MF_GALI_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'gali', sub:'gali' }) }),
+  Naga: Object.freeze({ id:'Naga', name:"ナーガ", emoji:"🐍", imgUrl:MF_NAGA_IMG, iconUrl:MF_NAGA_IMG,
+    faceIconUrl:MF_NAGA_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'naga', sub:'naga' }) }),
+  Dragon: Object.freeze({ id:'Dragon', name:"ドラゴン", emoji:"🐉", imgUrl:MF_DRAGON_IMG, iconUrl:MF_DRAGON_IMG,
+    faceIconUrl:MF_DRAGON_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'dragon', sub:'dragon' }) }),
+  Henger: Object.freeze({ id:'Henger', name:"ヘンガー", emoji:"🤖", imgUrl:MF_HENGER_IMG, iconUrl:MF_HENGER_IMG,
+    faceIconUrl:MF_HENGER_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'henger', sub:'henger' }) }),
+  Durahan: Object.freeze({ id:'Durahan', name:"デュラハン", emoji:"🛡️", imgUrl:MF_DURAHAN_IMG, iconUrl:MF_DURAHAN_IMG,
+    faceIconUrl:MF_DURAHAN_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'durahan', sub:'durahan' }) }),
+  Arrowhead: Object.freeze({ id:'Arrowhead', name:"アローヘッド", emoji:"🦞", imgUrl:MF_ARROWHEAD_IMG, iconUrl:MF_ARROWHEAD_IMG,
+    faceIconUrl:MF_ARROWHEAD_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'arrowhead', sub:'arrowhead' }) }),
+  Zilla: Object.freeze({ id:'Zilla', name:"グジラ", emoji:"🐳", imgUrl:MF_ZILLA_IMG, iconUrl:MF_ZILLA_IMG,
+    faceIconUrl:MF_ZILLA_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'zilla', sub:'zilla' }) }),
+  Phoenix: Object.freeze({ id:'Phoenix', name:"ヒノトリ", emoji:"🔥", imgUrl:MF_PHOENIX_IMG, iconUrl:MF_PHOENIX_IMG,
+    faceIconUrl:MF_PHOENIX_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'phoenix', sub:'phoenix' }) }),
+  Joker: Object.freeze({ id:'Joker', name:"ジョーカー", emoji:"🃏", imgUrl:MF_JOKER_IMG, iconUrl:MF_JOKER_IMG,
+    faceIconUrl:MF_JOKER_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'joker', sub:'joker' }) }),
+  Jell: Object.freeze({ id:'Jell', name:"ゲル", emoji:"💧", imgUrl:MF_JELL_IMG, iconUrl:MF_JELL_IMG,
+    faceIconUrl:MF_JELL_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'gel', sub:'gel' }) }),
+  Mew: Object.freeze({ id:'Mew', name:"ニャー", emoji:"🐱", imgUrl:MF_MEW_IMG, iconUrl:MF_MEW_IMG,
+    faceIconUrl:MF_MEW_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'nya', sub:'nya' }) }),
+  Metalner: Object.freeze({ id:'Metalner', name:"メタルナー", emoji:"🛸", imgUrl:MF_METALNER_IMG, iconUrl:MF_METALNER_IMG,
+    faceIconUrl:MF_METALNER_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'metalner', sub:'metalner' }) }),
+  Worm: Object.freeze({ id:'Worm', name:"ワーム", emoji:"🪱", imgUrl:MF_WORM_IMG, iconUrl:MF_WORM_IMG,
+    faceIconUrl:MF_WORM_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'worm', sub:'worm' }) }),
+  Centaur: Object.freeze({ id:'Centaur', name:"ケンタウロス", emoji:"🏹", imgUrl:MF_CENTAUR_IMG, iconUrl:MF_CENTAUR_IMG,
+    faceIconUrl:MF_CENTAUR_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'centaur', sub:'centaur' }) }),
+  Colorpandora: Object.freeze({ id:'Colorpandora', name:"コロペンドラ", emoji:"🟩", imgUrl:MF_COLORPANDORA_IMG, iconUrl:MF_COLORPANDORA_IMG,
+    faceIconUrl:MF_COLORPANDORA_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'colorpandora', sub:'colorpandora' }) }),
 });
