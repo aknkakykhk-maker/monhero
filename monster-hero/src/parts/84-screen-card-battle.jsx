@@ -22,7 +22,7 @@ const CARD_AI_BGM = Object.freeze({
 });
 const CARD_PVP_BGM = 'ichika_battle';
 // モンスターの絵(5-3)。モンヒロにいる種族はいまのゲームの絵、いない16種族は社長から届いた立ち絵(#3437 でクラフトくんが取り込んだ)。
-// 混血の15体はカードの絵で代える(社長)
+// 混血の15体は、立ち絵が届いた子から立ち絵にする(HYBRID_MONSTER_IMGS)。まだの子はカードの絵で代える(社長)
 const CARD_SPECIES_ART = Object.freeze({ tiger: 'Tiger', golem: 'Golem', suezo: 'Suezo', pixie: 'Pixie', hare: 'Ham', mocchi: 'Mocchi', monol: 'Monol', plant: 'Plant' });
 const cardNewSpeciesArt = () => ({
   dino: typeof MF_DINO_IMG !== 'undefined' ? MF_DINO_IMG : null,
@@ -43,7 +43,8 @@ const cardNewSpeciesArt = () => ({
   colorpandora: typeof MF_COLORPANDORA_IMG !== 'undefined' ? MF_COLORPANDORA_IMG : null,
 });
 const cardMonArt = (mon) => {
-  if (mon.main) return null; // 混血はカードの絵
+  // 混血は、立ち絵が届いた子だけ立ち絵(クラフトくんの HYBRID_MONSTER_IMGS。番号から引く)。まだの子はカードの絵
+  if (mon.main) return (typeof HYBRID_MONSTER_IMGS !== 'undefined' && HYBRID_MONSTER_IMGS && HYBRID_MONSTER_IMGS[mon.no]) || null;
   const id = CARD_SPECIES_ART[mon.species];
   const m = id && typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[id] : null;
   if (m && m.imgUrl) return m.imgUrl;
@@ -550,7 +551,7 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
 };
 
 // ---- トップ・スターター選び・相手えらび・結果 ----
-const CardBattleScreen = ({ screen, onNavigate, onExit, seenStoryIds = [], debug = false, onBgm }) => {
+const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', seenStoryIds = [], debug = false, onBgm }) => {
   const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
   const [save, setSave] = useState(null);
   const [view, setView] = useState('top');
@@ -751,7 +752,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, seenStoryIds = [], debug
   const soon = (label) => <button type="button" disabled className={`${btn} border border-white/10 bg-slate-900 text-slate-400`}>{label}<span className="block text-[10px] font-bold">つぎの区切りで作ります</span></button>;
   return (
     <div data-mh-screen data-card-top="top" className={SCREEN_SHELL_CLASS}>
-      <ScreenHead title="MFバトルカード" accent="text-amber-200" onBack={onExit} backLabel="デバッグ設定へ戻る" note={debug ? 'デバッグ専用(まだ公開していません)' : ''}/>
+      <ScreenHead title="MFバトルカード" accent="text-amber-200" onBack={onExit} backLabel={exitLabel} note={debug ? 'デバッグ専用(まだ公開していません)' : ''}/>
       <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
         <div className={`${SCREEN_PANEL_CLASS} flex items-center justify-between`}>
           <div className="text-[13px] font-black text-slate-200">カードポイント</div>
