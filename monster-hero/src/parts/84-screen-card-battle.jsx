@@ -35,6 +35,36 @@ const cardUserLabel = (db, c) => {
   const m = Object.values(db.monsters).find((x) => x.species === c.user && !x.variant);
   return m ? `${m.name}専用` : c.user;
 };
+// 守りの番に使える回避・防御が無いとき、なぜ使えないかを短く出す(手札の守りのカードごとに、最初に引っかかった理由)
+const cardGuardBlockReasons = (db, st) => {
+  const pd = st.pending;
+  if (!pd) return [];
+  const q = pd.defender;
+  const me = st.players[q];
+  const t = pd.targets[pd.ti];
+  const target = t ? st.players[t.p].mons[t.m] : null;
+  const atk = cardOf(db, pd.main);
+  const kindName = { pow: 'ちから技', int: 'かしこさ技' };
+  const out = [];
+  const guards = me.hand.map((no) => cardOf(db, no)).filter((c) => c && cardIsGuardKind(c.kind));
+  if (!guards.length) return ['手札に回避・防御のカードがありません'];
+  guards.forEach((c) => {
+    const ev = cardEff(c, 'evade');
+    const re = cardEff(c, 'reduce') || cardEff(c, 'reduceHalf') || cardEff(c, 'reduceAll') || cardEff(c, 'reflect');
+    let why = null;
+    if (!c.ready) why = `「${c.name}」は準備中`;
+    else if ((st.forbid[q] || []).includes(c.kind)) why = `このターンは${c.kind === 'dge' ? '回避' : '防御'}を使えません`;
+    else if (c.guts > me.guts.length) why = `「${c.name}」はガッツが足りません(あと${c.guts - me.guts.length})`;
+    else if (cardHasEff(c, 'cover')) why = `「${c.name}」は味方が狙われたときに、別の子が使います`;
+    else if (target && t.p === q && !cardUsableBy(c, target)) why = `「${c.name}」は${target.name}が使えるカードではありません`;
+    else if (ev && cardHasEff(atk, 'noEvade')) why = `「${atk.name}」は回避できません`;
+    else if (ev && !ev.kinds.includes(atk.kind)) why = `「${c.name}」は${ev.kinds.map((k) => kindName[k] || k).join('・')}にしか使えません`;
+    else if (ev && ev.minGuts && pd.cost < ev.minGuts) why = `「${c.name}」はガッツ${ev.minGuts}以上の技にしか使えません`;
+    else if (re && !re.kinds.includes(atk.kind)) why = `「${c.name}」は${re.kinds.map((k) => kindName[k] || k).join('・')}にしか使えません`;
+    if (why && !out.includes(why)) out.push(why);
+  });
+  return out.slice(0, 2);
+};
 const CARD_CPU = 1;
 const CARD_ME = 0;
 const cardDeciderOf = (st) => (st.pendingDiscard ? st.pendingDiscard.p : st.phase === 'setup' ? 1 - st.first : cardDecider(st));
@@ -398,6 +428,9 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
       <div className="flex shrink-0 justify-end px-2 py-1">{strip(CARD_ME)}</div>
       <div className="min-h-0 flex-1"/>
       {guide && <div className="mx-auto mb-1 shrink-0 rounded-lg bg-amber-300 px-2 py-0.5 text-[11px] font-black text-slate-900">{hint || guide}</div>}
+      {mode === 'guard' && !guardOpts.length && (
+        <div data-card-guard-why className="mx-auto mb-1 max-w-[94%] shrink-0 text-center text-[11px] font-bold leading-snug text-slate-300" style={JA_WRAP_STYLE}>{cardGuardBlockReasons(db, st).join(' / ')}</div>
+      )}
       {!guide && hint && <div className="mx-auto mb-1 shrink-0 rounded-lg bg-amber-300 px-2 py-0.5 text-[11px] font-black text-slate-900">{hint}</div>}
       {mode === 'attack' && sel && monChosen !== undefined && sets.length > 1 && (
         <div className="mb-1 flex shrink-0 flex-wrap justify-center gap-1 px-2">
@@ -606,7 +639,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, seenStoryIds = [], debug
         <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
           {a && (
             <div className="flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2">
-              <img src={assistantFullImage(a, win ? 'crying' : 'happy')} alt={a.name} className="h-[220px] w-[46%] shrink-0 object-contain object-bottom"/>
+              <img src={assistantFullImage(a, line ? line.face : 'normal')} alt={a.name} className="h-[220px] w-[46%] shrink-0 object-contain object-bottom"/>
               <div className="mb-2 min-w-0 flex-1 rounded-2xl border-2 bg-white px-2 py-1 text-[13px] font-extrabold leading-snug text-[#1f1333]" style={{ borderColor: a.accent, ...JA_WRAP_STYLE }}>{line ? line.text : ''}</div>
             </div>
           )}
