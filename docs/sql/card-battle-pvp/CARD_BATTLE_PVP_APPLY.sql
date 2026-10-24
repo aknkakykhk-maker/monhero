@@ -66,6 +66,8 @@ begin
   if m.applied or m.a_winner is null or m.b_winner is null then return 'wait'; end if;
   if m.a_winner <> m.b_winner then update public.card_battle_pvp_matches set applied = true where match_id = p_match_id; return 'mismatch'; end if;
   w := m.a_winner; l := case when w = m.a_id then m.b_id else m.a_id end;
+  -- 3つの部屋(だれとでも・合言葉・フレンド招待)のどれでも点数を動かす(2026-10-24 社長「マルチは全部動くようにして」)。
+  -- 同じ2人が続けて対戦しても小さくしない(いつも最大32点。社長「同じ相手と続けて当たったときも小さくしないで」)
   insert into public.card_battle_pvp_ratings (breeder_id, user_name) values (l, '') on conflict (breeder_id) do nothing;
   select rating into ra from public.card_battle_pvp_ratings where breeder_id = w;
   select rating into rb from public.card_battle_pvp_ratings where breeder_id = l;

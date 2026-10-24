@@ -230,7 +230,9 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
   // 演出の設定(オプション)。はやい … 相手の考える間と、決着から結果までを短くする
   const settings = normalizeCardSettings(game.settings);
   const pace = settings.speed === 'fast' ? 0.5 : 1;
-  const who = ASSISTANTS.find((a) => a.id === game.who) || ASSISTANTS[0];
+  // マルチ対戦(91-card-battle-multi.jsx)では、相手は助手ではなくブリーダー。名前とアイコンだけを出す
+  const pvp = game.pvp || null;
+  const who = pvp ? { id: 'pvp', name: pvp.name, accent: '#38bdf8' } : (ASSISTANTS.find((a) => a.id === game.who) || ASSISTANTS[0]);
   const policy = useMemo(() => cardAiPolicy(game.who, game.level), [game.who, game.level]);
   const [st, setSt] = useState(game.st);
   const [sel, setSel] = useState(null);      // 攻撃: { hand, mon, set } / 守り: { hand }
@@ -272,7 +274,7 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
   const paused = !!detail || !!discard || quit;
 
   const say = (scene) => {
-    if (!scene) return;
+    if (!scene || pvp) return;
     const turn = st.turn;
     if (spoke.current.turn !== turn) spoke.current = { turn, n: 0 };
     if (spoke.current.n >= CARD_LINE_PER_TURN && scene !== 'win' && scene !== 'lose') return;
@@ -304,10 +306,13 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
   // 操作を1つ進める(だめな操作は何もしない)
   const tutAllow = (act) => !tutorial || (!tutStage.next && tutQ.length <= 1 && (!tutQ.length || tutQ[0][0] === 'D') && cardTutorialAllow(db, tutStage.id, st, act));
   const tutWrongSay = () => { const id = CARD_TUTORIAL_WRONG[tutWrong.current % CARD_TUTORIAL_WRONG.length]; tutWrong.current += 1; setHint(CARD_TUTORIAL_LINES[id]); };
-  const step = (act) => {
-    if (tutorial && cardDeciderOf(st) === CARD_ME && !tutAllow(act)) { tutWrongSay(); return false; }
-    const next = cardApplyAction(db, st, act);
+  // forced … マルチ対戦で、届いた相手の手をこちらで当てた次の場(91 の cardPvpApplyRemote)。動きと音は同じように出す
+  const step = (act, forced = null) => {
+    if (!forced && tutorial && cardDeciderOf(st) === CARD_ME && !tutAllow(act)) { tutWrongSay(); return false; }
+    const next = forced || cardApplyAction(db, st, act);
     if (!next) return false;
+    if (pvp && !forced) CARD_PVP.local(st, act, next);
+    stRef.current = next;
     const evs = next.events || [];
     // 次のことが起きたら、吹き出しはその時点で消す(5-3)
     // ★練習試合では消さない(みゅあの台詞が消えたあと、次の台詞まで光る所も吹き出しも無い時間ができていた)
@@ -356,7 +361,7 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
 
   // コンピューターの番(守りの番・始める前・捨てる番も)。詳しい画面や捨て札を見ているあいだは待つ
   useEffect(() => {
-    if (st.winner !== null || paused || game.demo) return undefined;
+    if (st.winner !== null || paused || game.demo || pvp) return undefined;
     if (tutorial && !cardTutorialCpu(db, tutStage.id, st)) return undefined;
     if (cardDeciderOf(st) !== CARD_CPU) return undefined;
     const wait = Math.round((st.pending ? 950 : st.phase === 'guts' ? 600 : 900) * pace); // 守りの番は、技の動きを見せ切ってから
@@ -368,6 +373,20 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
     return () => clearTimeout(t);
   }, [st, paused, tutI]);
 
+  // マルチ対戦: 届いた相手の手を当てる・相手の捨て札の並びを本物にする・相手の投了や抜けたで終える(91 の CARD_PVP)
+  const stRef = useRef(st);
+  stRef.current = st;
+  const stepRef = useRef(step);
+  stepRef.current = step;
+  useEffect(() => {
+    if (!pvp) return undefined;
+    return CARD_PVP.attach({
+      onAct: (msg) => { const next = cardPvpApplyRemote(db, stRef.current, msg); if (next) stepRef.current(null, next); return next; },
+      onDiscard: (list) => setSt((cur) => { const n = cardPvpPatchDiscard(db, cur, list); stRef.current = n; return n; }),
+      onForceEnd: (outcome) => { if (finished.current) return; finished.current = true; onFinish({ outcome, st: stRef.current }); },
+    });
+  }, []);
+  useCardPvpAuto(db, pvp, st, step, paused); // 検査のときだけ自分の番を自動で打つ(91。ふだんは何もしない)
   // 動きの見本(デバッグ): 決まった順に1手ずつ進める
   const demoAt = useRef(0);
   useEffect(() => {
@@ -626,8 +645,9 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
       </div>
       {/* 相手の帯(隠さない) */}
       <div className={`flex ${compact ? 'h-[42px]' : 'h-[50px]'} shrink-0 items-center gap-2 px-2`}>
-        <img src={assistantFaceImage(who, face)} alt={who.name} className="h-[42px] w-[42px] rounded-xl border-2 bg-black object-cover object-top" style={{ borderColor: who.accent }}/>
-        <div className="min-w-0 text-[13px] font-black leading-tight">{who.name}<small className="block text-[10px] font-bold text-rose-200">{CARD_LEVEL_LABEL[game.level]}</small></div>
+        {pvp ? <span data-card-pvp-foe className="grid h-[42px] w-[42px] place-items-center rounded-xl border-2 bg-black text-[24px]" style={{ borderColor: who.accent }}>{cardIconNode(pvp.icon, 30)}</span>
+          : <img src={assistantFaceImage(who, face)} alt={who.name} className="h-[42px] w-[42px] rounded-xl border-2 bg-black object-cover object-top" style={{ borderColor: who.accent }}/>}
+        <div className="min-w-0 text-[13px] font-black leading-tight">{who.name}<small className="block text-[10px] font-bold text-rose-200">{pvp ? 'マルチ対戦' : CARD_LEVEL_LABEL[game.level]}</small></div>
         <div className="ml-auto">{strip(CARD_CPU)}</div>
       </div>
       {/* 吹き出し(帯の下・相手のモンスターの上。指の操作は下へ通す) */}
@@ -721,7 +741,7 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
         </div>, document.body)}
       {detail && <CardDetailModal db={db} no={detail} onClose={() => setDetail(null)}/>}
       {discard && <CardDiscardModal db={db} st={st} initial={discard.tab} onDetail={(no) => setDetail(no)} onClose={() => setDiscard(null)}/>}
-      {quit && !tutorial && <ConfirmSheet title="投了しますか？" message={'投了すると負けになります(カードポイントとクイック周回は、倒した相手のモンスターの数に応じて少しだけ)'} confirmLabel="投了する" danger onCancel={() => setQuit(false)} onConfirm={() => { setQuit(false); finished.current = true; onFinish({ outcome: 'surrender', st }); }}/>}
+      {quit && !tutorial && <ConfirmSheet title="投了しますか？" message={pvp ? '投了すると負けになります' : '投了すると負けになります(カードポイントとクイック周回は、倒した相手のモンスターの数に応じて少しだけ)'} confirmLabel="投了する" danger onCancel={() => setQuit(false)} onConfirm={() => { setQuit(false); finished.current = true; if (pvp) CARD_PVP.surrender(); onFinish({ outcome: 'surrender', st }); }}/>}
       {quit && tutorial && <ConfirmSheet title="チュートリアルを飛ばしますか？" message={'ルールの画面からいつでもできます'} confirmLabel="飛ばす" onCancel={() => setQuit(false)} onConfirm={() => { setQuit(false); finished.current = true; onFinish({ outcome: 'tutorialSkip', st }); }}/>}
     </div>
   );
@@ -850,6 +870,14 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
 
   if (screen === 'CARD_BATTLE' && game) {
     return <CardBattleBoard key={game.key} db={db} game={game} onFinish={async ({ outcome, st }) => {
+      // マルチ対戦: 封を開けて確かめるのは 91 の CARD_PVP。結果は部屋の画面に出す(報酬は区切り2)
+      if (game.pvp) {
+        CARD_PVP.finish(outcome);
+        onBgm && onBgm(null);
+        onNavigate('CARD_TOP');
+        setView('pvp');
+        return;
+      }
       if (game.tutorial) {
         // 練習試合: 終えた・飛ばしたの印と、はじめて最後までやったときだけカードポイント 100(1日の上限とは別)
         const fin = cardTutorialFinish(save.tutorial, outcome === 'tutorialDone' ? 'done' : 'skip', Date.now());
@@ -948,13 +976,22 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             <span className="text-[18px] font-black">助手と対戦</span>
             <span className="mt-1 text-[12px] font-bold opacity-80">助手のみんなと戦う</span>
           </button>
-          <button type="button" data-card-mode-multi disabled className="mh-button flex min-h-[96px] w-full flex-col items-center justify-center rounded-2xl border border-white/10 bg-slate-900 px-3 py-3 text-slate-400">
+          {/* マルチ対戦(91-card-battle-multi.jsx)。つくっている途中なので、デバッグ設定から入ったときだけ押せる */}
+          <button type="button" data-card-mode-multi disabled={!debug} onClick={() => { Audio_.se.tap(); setView('pvp'); }} className="mh-button flex min-h-[96px] w-full flex-col items-center justify-center rounded-2xl border border-white/10 bg-slate-900 px-3 py-3 text-slate-400 enabled:text-sky-100">
             <span className="text-[18px] font-black">マルチ対戦</span>
-            <span className="mt-1 rounded-full bg-slate-700 px-2 py-0.5 text-[11px] font-black text-slate-200">準備中</span>
+            <span className="mt-1 rounded-full bg-slate-700 px-2 py-0.5 text-[11px] font-black text-slate-200">{debug ? 'つくっている途中(デバッグ)' : '準備中'}</span>
           </button>
         </div>
       </div>
     );
+  }
+  if (view === 'pvp') {
+    return <CardPvpLobby deck={activeDeck} deckIssues={deckIssues} onBack={() => setView('mode')} onStart={(g) => {
+      setResult(null);
+      setGame({ ...g, settings: save.settings });
+      onBgm && onBgm(save.bgm.pvp || null);
+      onNavigate('CARD_BATTLE');
+    }}/>;
   }
   if (view === 'foe') {
     const a = allAssistants.find((x) => x.id === foe.who) || foes[0];
