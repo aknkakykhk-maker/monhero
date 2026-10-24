@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8078e1ec37c3ae28
+// generated-sha256: e558545b668071e8
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-25 01:19"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-25 01:24"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -39051,7 +39051,7 @@ const HOME_RAID_JACK_BUTTON_STYLE = Object.freeze({
 //   そこで「ボタン・みゅあの吹き出し・画面の端」を障害物として測り、重ならない場所と幅を順に試す:
 //     頭の上で、広い幅から順に、左右へずらし、少しずつ下げて頭の4分の3まで重ねる。帯(〜があらわれた！・共有HP)には乗せない。
 //     以前は頭の右・左にも置いたが、狭い画面で帯を隠した(2026-10-24 窓口「iPhone 13 と同じように、かぼちゃの上に」)
-//   どれも重なるときは、重なりがいちばん小さいものを選ぶ(札にかけるより絵にかける)。絵を3分の1以上隠すときは出さない。
+//   札・帯にかかる所、かぼちゃの顔を隠す所には置かない。置ける所が無いときは出さない。
 //   ボタン側は動かさない(押せる場所を変えない)。
 //   head … ジャック本体の絵の箱(跳ねる前の位置) / band … 帯の箱 / obstacles … 避ける箱 / measure(width) … その幅での吹き出しの高さ
 // 広い順に試すので、入るならこれまでどおり広いほうになる。いちばん狭くて 144px(2026-10-24 窓口・カゲあつくん「言葉の途中で折れないように」。
@@ -39059,55 +39059,50 @@ const HOME_RAID_JACK_BUTTON_STYLE = Object.freeze({
 // 144px なら本文が約120pxで、太字の11pxが10字入る(jaWrap は言葉のかたまりを10字までに分ける。41-screen-ui.jsx の JA_WRAP_LINE)。
 // 台詞を全部描いて確かめる検査は tools/boot/ja-wrap-lines-check.js
 const HOME_RAID_SAY_WIDTHS = Object.freeze([184, 168, 152, 144]);
-// 上の幅がどれも置けないときだけ、字を10pxにした 136px、字9pxにした 124px(本文は約100px。10字の言葉のかたまりが1行に入る)も使う。
+// 上の幅がどれも置けないときだけ、字を10pxにした 136px、字9pxにした 120px(本文は約96px。10字の言葉のかたまりが1行に入る)も使う。
 // 幅320や 360×640 では、みゅあの吹き出しと M/B管理・神殿の札のすき間が狭く、それより広いとかぼちゃの上に置けなかった(2026-10-24)
-const HOME_RAID_SAY_SMALL_WIDTHS = Object.freeze([136, 124]);
-const HOME_RAID_SAY_INLINE_NEXT = 130; // これより狭い吹き出しは字9pxにし、「▶ つぎ」を文のあとへ続けて1行減らす
+const HOME_RAID_SAY_SMALL_WIDTHS = Object.freeze([136, 120]);
+const HOME_RAID_SAY_INLINE_NEXT = 130; // これより狭い吹き出しは字9pxにし、「▶ つぎ」を下の枠線の上に乗せて1行減らす
 const homeRaidSayFont = (width) => (width < HOME_RAID_SAY_INLINE_NEXT ? 9 : width < 144 ? 10 : 11);
 // 幅360未満の画面では、帯の「ジャック大王があらわれた！」を字9pxにして1行に収める
 const HOME_RAID_SAY_NARROW_VW = 360;
 const HOME_RAID_SAY_HOP = 18; // 跳ねる高さ(mhRaidJackHop の16px)+ゆとり。頭の上に置くときは、跳ねても頭がしっぽにかからない
+// かぼちゃの目の高さ(絵の箱の上から45%)。吹き出しは、しっぽの先まで、目より HOME_RAID_SAY_FACE_GAP だけ上に置く
+// (2026-10-24 窓口「320 で大王の吹き出しがかぼちゃの顔を隠している」。跳ねる16pxの半分のゆとり)
+const HOME_RAID_SAY_FACE = 0.45;
+const HOME_RAID_SAY_FACE_GAP = 8;
 const homeRaidSayPlace = ({ head, band = null, obstacles, vw, vh, measure, top = 0 }) => {
   const widths = [...HOME_RAID_SAY_WIDTHS, ...HOME_RAID_SAY_SMALL_WIDTHS];
   const pad = 4, edge = 6, tail = 9;
   const hit = (r, o, p = 0) => { const w = Math.min(r.right, o.right + p) - Math.max(r.left, o.left - p), h = Math.min(r.bottom, o.bottom + p) - Math.max(r.top, o.top - p); return w > 0 && h > 0 ? w * h : 0; };
-  const overlap = (r) => {
-    let area = 0;
-    if (r.left < edge || r.top < top + edge || r.right > vw - edge || r.bottom > vh - edge) area += 1e6;
-    // 帯(「ジャック大王があらわれた！」と共有HP)には、しっぽも含めて乗せない(2026-10-24 窓口「SE・320 で帯を隠している」)
-    if (band && hit({ ...r, bottom: r.bottom + tail }, band, 2)) area += 1e6;
-    // 札(ボタン)にかかるのは、ジャックの絵にかかるより重く数える。狭い画面では、札にかけるより絵の上半分に重ねるほうを選ぶ
-    for (const o of obstacles) area += hit(r, o, pad) * 20;
-    // ジャックの絵を隠すのも数える(半分の重み)
-    area += hit(r, head) * 0.5;
-    return area;
+  const faceTop = head.top + (head.bottom - head.top) * HOME_RAID_SAY_FACE - HOME_RAID_SAY_FACE_GAP;
+  // 置いてよいのは、画面の中で、札(ボタン)・みゅあの吹き出し・帯(〜があらわれた！・共有HP)のどれにもかからず、かぼちゃの顔を隠さない所だけ。
+  // 札にかけて置くのはやめた(2026-10-24 窓口「M/B管理の札にかぶり『モンスター・編』で切れている。置ける場所がなければ出さない扱いで構わない」)
+  const fits = (r) => {
+    if (r.left < edge || r.top < top + edge || r.right > vw - edge || r.bottom > vh - edge) return false;
+    if (r.bottom + tail > faceTop) return false;
+    if (band && hit({ ...r, bottom: r.bottom + tail }, band, 2)) return false;
+    return obstacles.every((o) => !hit(r, o, pad));
   };
   const clampX = (x, w) => Math.max(edge, Math.min(vw - edge - w, x));
   const cx = (head.left + head.right) / 2;
-  // いつも頭の上(帯より上)に置く。横へ置くのはやめた(2026-10-24 窓口「狭い画面でも iPhone 13 と同じように、かぼちゃの上に」)。
-  // 真上から6pxずつ下げ(頭の4分の3まで・帯にかからないところまで)、それぞれで左右へ6pxずつ(48pxまで)ずらして、札とのすき間を探す
+  // いつも頭の上に置く。横へ置くのはやめた(2026-10-24 窓口「狭い画面でも iPhone 13 と同じように、かぼちゃの上に」)。
+  // 広い幅から順に、真上(跳ねても頭がしっぽにかからない高さ)から6pxずつ下げ(顔の上まで)、それぞれで左右へ6pxずつ(48pxまで)ずらして、札とのすき間を探す
   const tries = [];
   for (const w of widths) {
     const h = measure(w);
-    const from = head.top - HOME_RAID_SAY_HOP - h, to = head.top + (head.bottom - head.top) * 0.75 - h;
+    const from = head.top - HOME_RAID_SAY_HOP - h, to = faceTop - tail - h;
     for (let y = from; y <= Math.max(from, to); y += 6) {
       tries.push({ side: 'top', left: clampX(cx - w / 2, w), top: y, width: w, height: h });
       for (let dx = 6; dx <= 48; dx += 6) for (const sign of [1, -1]) tries.push({ side: 'top', left: clampX(cx - w / 2 + sign * dx, w), top: y, width: w, height: h });
+      // 札の端にそろえた位置も試す(幅320は M/B管理と神殿のすき間がちょうど吹き出しの幅ほどで、6pxずつでは当たらない)
+      for (const o of obstacles) for (const left of [o.right + pad, o.left - pad - w]) if (Math.abs(left + w / 2 - cx) <= 60) tries.push({ side: 'top', left: clampX(left, w), top: y, width: w, height: h });
     }
   }
-  let best = null;
-  for (const t of tries) {
-    const area = overlap({ left: t.left, top: t.top, right: t.left + t.width, bottom: t.top + t.height });
-    if (area === 0) return { ...t, clear: true };
-    if (!best || area < best.area) best = { ...t, area };
-  }
-  if (!best) return null;
-  // それでもジャックの絵の箱を3分の1以上隠すなら、吹き出しは出さない(幅320で、みゅあの台詞が3行以上あるとき。2026-10-24)。
-  // 絵の箱の上のほうは透明で、かぼちゃは下の8割ほどにあるので、3分の1かかると顔が見えなくなる。
-  // ジャックを押せばレイド画面へ行けるのは同じ。みゅあの台詞が変われば、測り直して出す
-  const headArea = Math.max(1, (head.right - head.left) * (head.bottom - head.top));
-  const cover = hit({ left: best.left, top: best.top, right: best.left + best.width, bottom: best.top + best.height }, head) / headArea;
-  return { side: best.side, left: best.left, top: best.top, width: best.width, height: best.height, clear: false, hidden: cover >= 1 / 3 };
+  for (const t of tries) if (fits({ left: t.left, top: t.top, right: t.left + t.width, bottom: t.top + t.height })) return { ...t, clear: true };
+  // 置ける所が無いときは、吹き出しを出さない(幅320で、みゅあ・ジャックの台詞が長いとき)。ジャックを押せばレイド画面へ行けるのは同じ。
+  // みゅあの台詞・ジャックの台詞が変われば、測り直して出す
+  return tries.length ? { ...tries[0], clear: false, hidden: true } : null;
 };
 const homeRaidSayObstacles = (wrap) => {
   if (typeof document === 'undefined') return [];
@@ -39168,7 +39163,7 @@ const HomeRaidJack = ({ eventId, onOpen }) => {
       const keepNext = [nextInline && nextInline.style.display, nextRow && nextRow.style.display];
       const measure = (w) => {
         say.style.width = `${w}px`; say.style.fontSize = `${homeRaidSayFont(w)}px`;
-        if (nextInline && nextRow) { const inl = w < HOME_RAID_SAY_INLINE_NEXT; nextInline.style.display = inl ? 'inline-block' : 'none'; nextRow.style.display = inl ? 'none' : 'block'; }
+        if (nextInline && nextRow) { const inl = w < HOME_RAID_SAY_INLINE_NEXT; nextInline.style.display = inl ? 'block' : 'none'; nextRow.style.display = inl ? 'none' : 'block'; }
         return say.offsetHeight;
       };
       const bandEl = wrap.querySelector('[data-home-raid-jack] [data-home-raid-jack-title]');
@@ -39259,8 +39254,9 @@ const HomeRaidJack = ({ eventId, onOpen }) => {
         boxShadow:`0 0 12px ${speechAccent}66`, animation:'storyPop .25s ease-out both', zIndex:2, pointerEvents:(sayPlace && sayPlace.hidden) ? 'none' : 'auto',
         ...(sayPlace && sayPlace.hidden ? { visibility:'hidden' } : {}) }}>
       {/* 狭い幅(横へ置いたとき)でも「聞こえるの／う」と言葉の途中で折らず、行の長さをならす(2026-10-21) */}
-      {/* いちばん狭い124pxのときは「▶ つぎ」を文のあとへ続けて1行減らす(幅320で、かぼちゃを隠さないため。2026-10-24) */}
-      <span data-home-raid-say-text style={{ display:'block', ...JA_LABEL_STYLE }}>{jaWrap(speech)}<span aria-hidden="true" data-say-next-inline style={{ display:sayInline ? 'inline-block' : 'none', marginLeft:'4px', fontSize:'8px', opacity:.7, whiteSpace:'nowrap' }}>▶ つぎ</span></span>
+      {/* いちばん狭い120pxのときは「▶ つぎ」を下の枠線の上に乗せ、行を使わない(幅320で、かぼちゃの顔を隠さないため。2026-10-24) */}
+      <span data-home-raid-say-text style={{ display:'block', ...JA_LABEL_STYLE }}>{jaWrap(speech)}</span>
+      <span aria-hidden="true" data-say-next-inline style={{ display:sayInline ? 'block' : 'none', position:'absolute', right:'10px', bottom:'-6px', padding:'0 4px', borderRadius:'4px', background:'#1c0a02', color:'#ffedd5', fontSize:'8px', lineHeight:'10px', whiteSpace:'nowrap' }}>▶ つぎ</span>
       <span aria-hidden="true" data-say-next-row style={{ display:sayInline ? 'none' : 'block', textAlign:'right', fontSize:'8px', opacity:.7 }}>▶ つぎ</span>
       {/* しっぽはジャックのほうへ向ける(上に置いたら下向き、右に置いたら左向き、左に置いたら右向き) */}
       {(!sayPlace || sayPlace.side === 'top') && <span aria-hidden="true" style={{ position:'absolute', left:sayPlace ? sayPlace.tail : '50%', bottom:-9, marginLeft:-8, width:0, height:0, borderLeft:'8px solid transparent', borderRight:'8px solid transparent', borderTop:`9px solid ${speechAccent}` }} />}
