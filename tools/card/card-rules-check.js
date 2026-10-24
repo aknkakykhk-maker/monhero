@@ -12,7 +12,9 @@ const GAME = path.join(ROOT, 'monster-hero');
 const load = () => {
   const ctx = vm.createContext({ console, Math, JSON, Object, Array, Number, String, Set, Map });
   const src = `${fs.readFileSync(path.join(GAME, 'data', 'card-battle-cards.js'), 'utf8')}\n;\n${fs.readFileSync(path.join(GAME, 'src', 'parts', '82-card-battle-core.jsx'), 'utf8')}\n;\n`
-    + 'this.E = { CARD_BATTLE_DATA, cardCreateGame, cardApplyAction, cardLegalActions, cardAttackOptions, cardGuardOptions, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardSimulate, CARD_AI_LEVELS, CARD_AI_HABITS, CARD_AI_DECKS, cardDeckProblems, cardNormalizeCollection, cardNormalizeDecks, cardNormalizePoint, cardNormalizeDaily, cardNormalizeRecord, cardNormalizeCpuUnlocked, cardGrantStarter, cardCpuReward, cardUnlockAfterWin };';
+    // 85 は画面の部品(SkillFxMotion)を使うので、ルールだけで動く「動きの見本」の所だけ読む
+    + `${fs.readFileSync(path.join(GAME, 'src', 'parts', '85-card-battle-motion.jsx'), 'utf8').split('// ---- 動きの見本')[1].replace(/^[^\n]*\n/, '')}\n;\n`
+    + 'this.E = { CARD_BATTLE_DATA, cardCreateGame, cardApplyAction, cardLegalActions, cardAttackOptions, cardGuardOptions, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardSimulate, CARD_AI_LEVELS, CARD_AI_HABITS, CARD_AI_DECKS, cardDeckProblems, cardNormalizeCollection, cardNormalizeDecks, cardNormalizePoint, cardNormalizeDaily, cardNormalizeRecord, cardNormalizeCpuUnlocked, cardGrantStarter, cardCpuReward, cardUnlockAfterWin, cardMotionDemo, cardMotionDemoAction };';
   vm.runInContext(src, ctx, { filename: '82-card-battle-core.jsx' });
   return ctx.E;
 };
@@ -215,7 +217,23 @@ const dataAndImages = () => {
   ok(!missing.length, `カードの絵が無い ${missing.length} 枚(node tools/card/card-image-build.js --build): ${missing.slice(0, 8).join(', ')}`);
 };
 
+// 技の動きの見本(85): 決まった順の手が全部出せて、よける・防ぐ・受ける・倒れるが1回ずつ起きる
+const motionDemo = () => {
+  let { st, steps } = E.cardMotionDemo(db);
+  const seen = new Set();
+  for (const s of steps) {
+    const a = E.cardMotionDemoAction(db, st, s);
+    ok(a, `動きの見本の手が出せない: ${JSON.stringify(s)}`);
+    if (!a) return;
+    st = E.cardApplyAction(db, st, a);
+    ok(st, `動きの見本の手がだめ: ${JSON.stringify(a)}`);
+    if (!st) return;
+    st.events.forEach((e) => { if (e.t === 'hit') seen.add(e.evaded ? 'よける' : e.guarded ? '防ぐ' : '受ける'); if (e.t === 'ko') seen.add('倒れる'); });
+  }
+  ok(['よける', '防ぐ', '受ける', '倒れる'].every((k) => seen.has(k)), `動きの見本で出ない動きがある(${[...seen].join('・')})`);
+};
 scenes();
+motionDemo();
 decksAndSaves();
 dataAndImages();
 sims();

@@ -81,3 +81,8 @@
 | 攻撃の途中(ナーガの「くしざし」がスエゾーへ。左から順に約0.1秒ずつ) |
 | --- |
 | ![](card-battle/motion-attack-strip.jpg) |
+
+**動きの動画**(`docs/progress/card-battle/motion-demo.mp4`・iPhone 13 の大きさ・約19秒)。デバッグ設定 → MFバトルカード → 「技の動きの見本を流す」で、同じ場面を決まった順に流せる(保存はしない)。撮り直しは `node tools/card/card-motion-video.js docs/progress/card-battle/motion-demo.mp4`。
+1. スエゾーの「かみつき」(モンヒロに同じ名前の技がある)→ ナーガが受ける
+2. ガリの「雷」(名前から決めた動き)→ モッチーが受ける
+3. ゴーレムの「竜巻アタック」(全ての相手に)→ ピクシーは「ステップ」でよける・モッチーは「まるまる」で防ぐ・ナーガは倒れる

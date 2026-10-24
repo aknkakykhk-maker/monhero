@@ -321,7 +321,7 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
 
   // コンピューターの番(守りの番・始める前・捨てる番も)。詳しい画面や捨て札を見ているあいだは待つ
   useEffect(() => {
-    if (st.winner !== null || paused) return undefined;
+    if (st.winner !== null || paused || game.demo) return undefined;
     if (cardDeciderOf(st) !== CARD_CPU) return undefined;
     const wait = st.pending ? 950 : st.phase === 'guts' ? 600 : 900; // 守りの番は、技の動きを見せ切ってから
     const t = setTimeout(() => {
@@ -331,6 +331,19 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
     return () => clearTimeout(t);
   }, [st, paused]);
 
+  // 動きの見本(デバッグ): 決まった順に1手ずつ進める
+  const demoAt = useRef(0);
+  useEffect(() => {
+    if (!game.demo || paused) return undefined;
+    const t = setTimeout(() => {
+      const demoStep = game.demo.steps[demoAt.current];
+      if (!demoStep) return;
+      demoAt.current += 1;
+      const act = cardMotionDemoAction(db, st, demoStep);
+      if (act) step(act);
+    }, demoAt.current === 0 ? 1400 : 1700);
+    return () => clearTimeout(t);
+  }, [st, paused]);
   // 勝ち負けが決まったら、少し見せてから結果へ
   useEffect(() => {
     if (st.winner === null || finished.current) return undefined;
@@ -772,6 +785,14 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         {debug && (
           <div className={`${SCREEN_PANEL_FLAT_CLASS} space-y-1`}>
             <div className="text-[11px] font-bold text-slate-400">デバッグ: カードバトルの記録(mh_card_* の新しいキーだけ)</div>
+            <button type="button" data-card-motion-demo className="mh-button mh-button-secondary min-h-[44px] w-full rounded-xl border border-white/20 bg-slate-800 text-[12px] font-black" onClick={() => {
+              // 技の動きの見本(決まった順に自動で進む。保存は何もしない)
+              const demo = cardMotionDemo(db);
+              setResult(null);
+              setGame({ key: `demo-${Date.now()}`, st: demo.st, who: 'mua', level: 'easy', demo: { steps: demo.steps } });
+              onBgm && onBgm(CARD_AI_BGM.mua);
+              onNavigate('CARD_BATTLE');
+            }}>技の動きの見本を流す(保存しない)</button>
             <button type="button" className="mh-button mh-button-danger min-h-[44px] w-full rounded-xl text-[12px] font-black" onClick={() => setConfirmReset(true)}>カードバトルの記録を消して、スターター選びからやり直す</button>
           </div>
         )}
