@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1c3dd508405e3c3e
+// source-sha256: 75b440f8a7ea5a4c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-25 05:48";
+const BUILD_DATE = "2026-10-25 07:08";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -83010,6 +83010,23 @@ const cardLegalActions = (db, st) => {
   return [];
 };
 const cardDecider = st => st.pending ? st.pending.defender : st.active;
+const cardUseWho = (db, st, p, mi, cardNo) => {
+  const c = cardOf(db, cardNo);
+  const pl = st.players[p];
+  const mon = mi >= 0 ? pl.mons[mi] : null;
+  if (c && c.user === 'breeder') return {
+    who: pl.name,
+    by: mon ? mon.name : ''
+  };
+  return {
+    who: mon ? mon.name : pl.name,
+    by: ''
+  };
+};
+const cardUseText = (db, st, p, mi, cards) => {
+  const l = cardUseWho(db, st, p, mi, cards[0]);
+  return `${l.who}の「${cards.map(n => (cardOf(db, n) || {}).name || '').join('＋')}」${l.by ? `(${l.by}で)` : ''}`;
+};
 const cardStartAttack = (db, st, act) => {
   const p = st.active;
   const me = st.players[p];
@@ -83025,8 +83042,7 @@ const cardStartAttack = (db, st, act) => {
     mon.attacks += 1;
     mon.lastCard = mainNo;
   }
-  const who = isBreeder ? `${me.name}(ブリーダー)` : mon.name;
-  cardLog(st, `${who}の「${used.map(n => cardOf(db, n).name).join('＋')}」`, {
+  cardLog(st, cardUseText(db, st, p, mi, used), {
     kind: 'use',
     p,
     cards: used
@@ -85703,7 +85719,12 @@ const CardBattleBoard = ({
 }) => {
   const settings = normalizeCardSettings(game.settings);
   const pace = settings.speed === 'fast' ? 0.5 : 1;
-  const who = ASSISTANTS.find(a => a.id === game.who) || ASSISTANTS[0];
+  const pvp = game.pvp || null;
+  const who = pvp ? {
+    id: 'pvp',
+    name: pvp.name,
+    accent: '#38bdf8'
+  } : ASSISTANTS.find(a => a.id === game.who) || ASSISTANTS[0];
   const policy = useMemo(() => cardAiPolicy(game.who, game.level), [game.who, game.level]);
   const [st, setSt] = useState(game.st);
   const [sel, setSel] = useState(null);
@@ -85755,7 +85776,7 @@ const CardBattleBoard = ({
   const press = useCardLongPress(no => setDetail(no));
   const paused = !!detail || !!discard || quit;
   const say = scene => {
-    if (!scene) return;
+    if (!scene || pvp) return;
     const turn = st.turn;
     if (spoke.current.turn !== turn) spoke.current = {
       turn,
@@ -85808,13 +85829,15 @@ const CardBattleBoard = ({
     tutWrong.current += 1;
     setHint(CARD_TUTORIAL_LINES[id]);
   };
-  const step = act => {
-    if (tutorial && cardDeciderOf(st) === CARD_ME && !tutAllow(act)) {
+  const step = (act, forced = null) => {
+    if (!forced && tutorial && cardDeciderOf(st) === CARD_ME && !tutAllow(act)) {
       tutWrongSay();
       return false;
     }
-    const next = cardApplyAction(db, st, act);
+    const next = forced || cardApplyAction(db, st, act);
     if (!next) return false;
+    if (pvp && !forced) CARD_PVP.local(st, act, next);
+    stRef.current = next;
     const evs = next.events || [];
     if (!tutorial && evs.some(e => e.t === 'use' || e.t === 'guard')) {
       clearTimeout(bubbleTimer.current);
@@ -85872,12 +85895,12 @@ const CardBattleBoard = ({
     });
     const use = evs.find(e => e.t === 'use');
     if (use) {
-      const p0 = next.players[use.p];
       const key = `${next.log.length}-${Date.now()}`;
+      const ul = cardUseWho(db, next, use.p, use.mon, use.cards[0]);
       setAction({
         key,
         cards: use.cards,
-        who: use.mon >= 0 ? p0.mons[use.mon].name : `${p0.name}(ブリーダー)`
+        who: ul.by ? `${ul.who}(${ul.by}で)` : ul.who
       });
       setTimeout(() => setAction(cur => cur && cur.key === key ? null : cur), 2200);
     } else if (evs.some(e => e.t === 'guard')) Audio_.fgSe.guard();
@@ -85891,7 +85914,7 @@ const CardBattleBoard = ({
     return true;
   };
   useEffect(() => {
-    if (st.winner !== null || paused || game.demo) return undefined;
+    if (st.winner !== null || paused || game.demo || pvp) return undefined;
     if (tutorial && !cardTutorialCpu(db, tutStage.id, st)) return undefined;
     if (cardDeciderOf(st) !== CARD_CPU) return undefined;
     const wait = Math.round((st.pending ? 950 : st.phase === 'guts' ? 600 : 900) * pace);
@@ -85909,6 +85932,44 @@ const CardBattleBoard = ({
     }, wait);
     return () => clearTimeout(t);
   }, [st, paused, tutI]);
+  const stRef = useRef(st);
+  stRef.current = st;
+  const stepRef = useRef(step);
+  stepRef.current = step;
+  useEffect(() => {
+    if (!pvp) return undefined;
+    return CARD_PVP.attach({
+      onAct: msg => {
+        const next = cardPvpApplyRemote(db, stRef.current, msg);
+        if (next) stepRef.current(null, next);
+        return next;
+      },
+      onDiscard: list => setSt(cur => {
+        const n = cardPvpPatchDiscard(db, cur, list);
+        stRef.current = n;
+        return n;
+      }),
+      onForceEnd: outcome => {
+        if (finished.current) return;
+        finished.current = true;
+        onFinish({
+          outcome,
+          st: stRef.current
+        });
+      },
+      onChat: text => {
+        setFace('normal');
+        setBubble({
+          text,
+          key: `chat-${Date.now()}`
+        });
+        clearTimeout(bubbleTimer.current);
+        bubbleTimer.current = setTimeout(() => setBubble(null), 4500);
+      }
+    });
+  }, []);
+  useCardPvpAuto(db, pvp, st, step, paused);
+  const pvpClock = useCardPvpClock(pvp, st, step);
   const demoAt = useRef(0);
   useEffect(() => {
     if (!game.demo || paused) return undefined;
@@ -86142,11 +86203,9 @@ const CardBattleBoard = ({
   };
   const pd = st.pending;
   const pendingText = pd ? (() => {
-    const c = cardOf(db, pd.main);
     const t = pd.targets[pd.ti];
     const tm = t ? st.players[t.p].mons[t.m] : null;
-    const atk = pd.mon >= 0 ? st.players[pd.attacker].mons[pd.mon].name : 'ブリーダー';
-    return `${atk}の「${c.name}」(ダメージ${pd.base * pd.mult})が${tm ? tm.name : ''}に！`;
+    return `${cardUseText(db, st, pd.attacker, pd.mon, [pd.main])}が${tm ? tm.name : ''}に！(ダメージ${pd.base * pd.mult})`;
   })() : null;
   const logLines = st.log.filter(l => l.kind !== 'turn').slice(-3);
   const strip = p => {
@@ -86289,12 +86348,16 @@ const CardBattleBoard = ({
     }
   }, React.createElement("div", {
     className: `flex ${compact ? 'h-[36px]' : 'h-[44px]'} shrink-0 items-center justify-between bg-black/35 px-2`
+  }, React.createElement("div", {
+    className: "flex shrink-0 items-center gap-1.5"
   }, React.createElement("button", {
     type: "button",
     "data-card-quit": true,
     onClick: () => setQuit(true),
     className: "rounded-lg border border-white/20 px-2 py-1 text-[12px] font-black text-slate-200"
-  }, tutorial ? '飛ばす' : '投了'), React.createElement("span", {
+  }, tutorial ? '飛ばす' : '投了'), pvp && React.createElement(CardPvpChat, null)), pvp ? React.createElement(CardPvpStatus, {
+    clock: pvpClock
+  }) : React.createElement("span", {
     className: "min-w-0 truncate text-[15px] font-black"
   }, "MFバトルカード"), React.createElement("span", {
     className: "flex shrink-0 items-center gap-1.5"
@@ -86306,7 +86369,13 @@ const CardBattleBoard = ({
     className: "text-[12px] font-bold text-violet-200"
   }, "ターン ", Math.max(1, st.turn), " ・ ", st.active === CARD_ME ? 'あなたの番' : `${who.name}の番`))), React.createElement("div", {
     className: `flex ${compact ? 'h-[42px]' : 'h-[50px]'} shrink-0 items-center gap-2 px-2`
-  }, React.createElement("img", {
+  }, pvp ? React.createElement("span", {
+    "data-card-pvp-foe": true,
+    className: "grid h-[42px] w-[42px] place-items-center rounded-xl border-2 bg-black text-[24px]",
+    style: {
+      borderColor: who.accent
+    }
+  }, cardIconNode(pvp.icon, 30)) : React.createElement("img", {
     src: assistantFaceImage(who, face),
     alt: who.name,
     className: "h-[42px] w-[42px] rounded-xl border-2 bg-black object-cover object-top",
@@ -86317,7 +86386,7 @@ const CardBattleBoard = ({
     className: "min-w-0 text-[13px] font-black leading-tight"
   }, who.name, React.createElement("small", {
     className: "block text-[10px] font-bold text-rose-200"
-  }, CARD_LEVEL_LABEL[game.level])), React.createElement("div", {
+  }, pvp ? 'マルチ対戦' : CARD_LEVEL_LABEL[game.level])), React.createElement("div", {
     className: "ml-auto"
   }, strip(CARD_CPU))), React.createElement("div", {
     className: "flex shrink-0 items-start justify-around px-1"
@@ -86544,13 +86613,14 @@ const CardBattleBoard = ({
     onClose: () => setDiscard(null)
   }), quit && !tutorial && React.createElement(ConfirmSheet, {
     title: "投了しますか？",
-    message: '投了すると負けになります(カードポイントとクイック周回は、倒した相手のモンスターの数に応じて少しだけ)',
+    message: pvp ? '投了すると負けになります' : '投了すると負けになります(カードポイントとクイック周回は、倒した相手のモンスターの数に応じて少しだけ)',
     confirmLabel: "投了する",
     danger: true,
     onCancel: () => setQuit(false),
     onConfirm: () => {
       setQuit(false);
       finished.current = true;
+      if (pvp) CARD_PVP.surrender();
       onFinish({
         outcome: 'surrender',
         st
@@ -86810,6 +86880,13 @@ const CardBattleScreen = ({
         outcome,
         st
       }) => {
+        if (game.pvp) {
+          CARD_PVP.finish(outcome, st);
+          onBgm && onBgm(null);
+          onNavigate('CARD_TOP');
+          setView('pvp');
+          return;
+        }
         if (game.tutorial) {
           const fin = cardTutorialFinish(save.tutorial, outcome === 'tutorialDone' ? 'done' : 'skip', Date.now());
           const ok = await persist({
@@ -87004,13 +87081,69 @@ const CardBattleScreen = ({
     }, "助手のみんなと戦う")), React.createElement("button", {
       type: "button",
       "data-card-mode-multi": true,
-      disabled: true,
-      className: "mh-button flex min-h-[96px] w-full flex-col items-center justify-center rounded-2xl border border-white/10 bg-slate-900 px-3 py-3 text-slate-400"
+      disabled: !debug,
+      onClick: () => {
+        Audio_.fgSe.tap();
+        setView('pvp');
+      },
+      className: "mh-button flex min-h-[96px] w-full flex-col items-center justify-center rounded-2xl border border-white/10 bg-slate-900 px-3 py-3 text-slate-400 enabled:text-sky-100"
     }, React.createElement("span", {
       className: "text-[18px] font-black"
     }, "マルチ対戦"), React.createElement("span", {
       className: "mt-1 rounded-full bg-slate-700 px-2 py-0.5 text-[11px] font-black text-slate-200"
-    }, "準備中"))));
+    }, debug ? 'つくっている途中(デバッグ)' : '準備中'))));
+  }
+  if (view === 'pvp') {
+    const pvpReward = async r => {
+      const got = cardPvpReward(r.reward, r.facts);
+      const daily = cardNormalizeDaily(save.daily, cardTodayJst());
+      const record = cardNormalizeRecord(save.record);
+      const win = r.outcome === 'win';
+      const ok = await persist({
+        point: save.point + got.point,
+        daily: {
+          ...daily,
+          pvpPoint: daily.pvpPoint + got.point
+        },
+        record: {
+          ...record,
+          pvp: {
+            win: record.pvp.win + (win ? 1 : 0),
+            lose: record.pvp.lose + (win ? 0 : 1)
+          }
+        }
+      });
+      let quick = null;
+      if (ok && got.loops > 0 && onQuickLoops) {
+        try {
+          quick = await onQuickLoops(got.loops);
+        } catch (_) {
+          quick = null;
+        }
+      }
+      return {
+        ...got,
+        saved: ok,
+        quick
+      };
+    };
+    return React.createElement(CardPvpLobby, {
+      deck: activeDeck,
+      deckIssues: deckIssues,
+      onBack: () => setView('mode'),
+      onReward: pvpReward,
+      assistant: topAssistant,
+      point: save.point,
+      onStart: g => {
+        setResult(null);
+        setGame({
+          ...g,
+          settings: save.settings
+        });
+        onBgm && onBgm(save.bgm.pvp || null);
+        onNavigate('CARD_BATTLE');
+      }
+    });
   }
   if (view === 'foe') {
     const a = allAssistants.find(x => x.id === foe.who) || foes[0];
@@ -89352,6 +89485,1237 @@ const CardRankingBoard = ({
       className: "ml-0.5 text-[10px] font-bold text-slate-400"
     }, unit)));
   })));
+};
+const CARD_PVP_HIDDEN = -1;
+const CARD_PVP_ROOM_TOPIC = 'realtime:mhc-room-';
+const CARD_PVP_HEARTBEAT_MS = 2000;
+const CARD_PVP_RESEND_MS = 1500;
+const CARD_PVP_ALIVE_MS = 60000;
+const CARD_PVP_NAME_MAX = 16;
+const CARD_PVP_TURN_MS = 60000;
+const CARD_PVP_GUARD_MS = 15000;
+const CARD_PVP_TIMEOUT_LOSE = 3;
+const CARD_PVP_STALL_GRACE_MS = 20000;
+const CARD_PVP_QUIET_MS = 6000;
+const CARD_PVP_RECONNECT_MS = 3000;
+const CARD_PVP_VERIFY_WAIT_MS = 15000;
+const CARD_PVP_PENALTY_KEY = 'mh_card_pvp_penalty_v1';
+const CARD_PVP_PENALTY_MS = 3 * 60 * 1000;
+const cardPvpNormalizePenalty = v => Number.isFinite(v) && v > 0 ? v : 0;
+const CARD_PVP_STAMPS = Object.freeze(['よろしく！', 'ナイス！', 'うまい！', '考え中…', 'ありがとう！', 'もう1回やろ！']);
+const CARD_PVP_CHAT_GAP_MS = 1500;
+const cardPvpFlip = act => {
+  if (!act || typeof act !== 'object') return act;
+  const out = JSON.parse(JSON.stringify(act));
+  if (out.target && (out.target.p === 0 || out.target.p === 1)) out.target.p = 1 - out.target.p;
+  return out;
+};
+const cardPvpRevealOf = (st, act, p = 0) => {
+  if (!st || !act) return {};
+  const hand = st.players[p].hand;
+  const idxs = act.type === 'guard' ? [act.hand] : act.type === 'attack' || act.type === 'breeder' || act.type === 'discard' ? act.hand || [] : [];
+  const out = {};
+  idxs.forEach(i => {
+    if (Number.isInteger(i) && i >= 0 && i < hand.length) out[i] = hand[i];
+  });
+  return out;
+};
+const cardPvpNewGame = (db, {
+  myDeck,
+  mySeed,
+  foeMonsters,
+  foeCount = CARD_BATTLE_DECK_SIZE,
+  first,
+  names
+}) => cardCreateGame(db, {
+  decks: [{
+    monsters: myDeck.monsters,
+    cards: myDeck.cards
+  }, {
+    monsters: foeMonsters,
+    cards: Array.from({
+      length: foeCount
+    }, () => CARD_PVP_HIDDEN)
+  }],
+  names,
+  seed: mySeed >>> 0,
+  first
+});
+const cardPvpDecider = st => st.pendingDiscard ? st.pendingDiscard.p : st.phase === 'setup' ? 1 - st.first : cardDecider(st);
+const cardPvpApplyRemote = (db, st, msg) => {
+  if (!st || !msg || !msg.act || st.winner !== null || cardPvpDecider(st) !== 1) return null;
+  const s = cardClone(st);
+  const foe = s.players[1];
+  const reveal = msg.reveal && typeof msg.reveal === 'object' ? msg.reveal : {};
+  for (const [k, no] of Object.entries(reveal)) {
+    const i = Number(k);
+    if (!Number.isInteger(i) || i < 0 || i >= foe.hand.length || foe.hand[i] !== CARD_PVP_HIDDEN || !cardOf(db, no)) return null;
+    foe.hand[i] = no;
+  }
+  const next = cardApplyAction(db, s, cardPvpFlip(msg.act));
+  if (!next) return null;
+  if (Array.isArray(msg.discard)) {
+    if (msg.discard.length !== next.players[1].discard.length) return null;
+    for (let i = 0; i < msg.discard.length; i++) {
+      const have = next.players[1].discard[i];
+      if (!cardOf(db, msg.discard[i]) || have !== CARD_PVP_HIDDEN && have !== msg.discard[i]) return null;
+    }
+    next.players[1].discard = msg.discard.slice();
+  }
+  return next;
+};
+const cardPvpPatchDiscard = (db, st, list) => {
+  if (!st || !Array.isArray(list) || list.length !== st.players[1].discard.length) return st;
+  if (list.some((no, i) => !cardOf(db, no) || st.players[1].discard[i] !== CARD_PVP_HIDDEN && st.players[1].discard[i] !== no)) return st;
+  const s = cardClone(st);
+  s.players[1].discard = list.slice();
+  return s;
+};
+const cardPvpLimitMs = st => st.pending || st.pendingDiscard ? CARD_PVP_GUARD_MS : CARD_PVP_TURN_MS;
+const cardPvpClockKey = st => `${cardPvpDecider(st)}-${st.turn}-${st.pending ? `g${st.log.length}` : st.pendingDiscard ? `d${st.log.length}` : st.phase === 'setup' ? 's' : 'm'}`;
+const cardPvpTimeoutAct = st => st.pendingDiscard ? {
+  type: 'discard',
+  hand: Array.from({
+    length: st.pendingDiscard.n
+  }, (_, i) => i)
+} : st.phase === 'setup' ? {
+  type: 'setupGuts',
+  hand: []
+} : st.pending ? {
+  type: 'pass'
+} : st.phase === 'main' ? {
+  type: 'endAttacks'
+} : {
+  type: 'guts',
+  hand: []
+};
+const cardPvpReward = (outcome, facts) => {
+  const f = facts || {
+    ownTurns: 0,
+    kos: 0
+  };
+  if (f.ownTurns < CARD_MIN_OWN_TURNS || outcome === 'left') return {
+    point: 0,
+    loops: 0,
+    short: f.ownTurns < CARD_MIN_OWN_TURNS
+  };
+  const W = CARD_PVP_REWARD.win,
+    L = CARD_PVP_REWARD.lose;
+  if (outcome === 'win') return {
+    point: W.point,
+    loops: W.loops,
+    short: false
+  };
+  if (outcome === 'surrender') return {
+    point: Math.min(L.point, f.kos * CARD_SURRENDER_POINT_PER_KO),
+    loops: Math.min(L.loops, Math.round(f.kos * L.loops / 3)),
+    short: false
+  };
+  return {
+    point: L.point,
+    loops: Math.floor(L.loops * Math.min(1, f.ownTurns / CARD_LOSE_FULL_TURNS)),
+    short: false
+  };
+};
+const cardPvpSealText = ({
+  seed,
+  salt,
+  deck
+}) => JSON.stringify({
+  s: seed >>> 0,
+  k: String(salt),
+  m: deck.monsters,
+  c: deck.cards
+});
+const cardPvpSha256 = async text => {
+  const c = typeof crypto !== 'undefined' && crypto.subtle ? crypto : null;
+  if (!c) return '';
+  const buf = await c.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+};
+const cardPvpTruthGame = (db, {
+  myDeck,
+  mySeed,
+  foeDeck,
+  foeSeed,
+  first,
+  names
+}) => {
+  const st = cardCreateGame(db, {
+    decks: [myDeck, foeDeck],
+    names,
+    seed: mySeed >>> 0,
+    first
+  });
+  const theirs = cardCreateGame(db, {
+    decks: [foeDeck, myDeck],
+    seed: foeSeed >>> 0,
+    first: 1 - first
+  });
+  st.players[1] = {
+    ...theirs.players[0],
+    name: st.players[1].name
+  };
+  return st;
+};
+const cardPvpVerify = (db, {
+  myDeck,
+  mySeed,
+  foeDeck,
+  foeSeed,
+  first,
+  names,
+  history,
+  winner
+}) => {
+  if (!foeDeck || !Array.isArray(foeDeck.cards) || !Array.isArray(foeDeck.monsters)) return {
+    ok: false,
+    why: '相手のデッキが読めない'
+  };
+  const problems = cardDeckProblems(db, foeDeck);
+  if (problems.length) return {
+    ok: false,
+    why: `相手のデッキが決まりに合わない(${problems[0]})`
+  };
+  let st = cardPvpTruthGame(db, {
+    myDeck,
+    mySeed,
+    foeDeck,
+    foeSeed,
+    first,
+    names
+  });
+  for (let n = 0; n < history.length; n++) {
+    const e = history[n];
+    if (cardPvpDecider(st) !== e.by) return {
+      ok: false,
+      why: `${n + 1}手目: 番でない人の手`
+    };
+    if (e.by === 1) {
+      for (const [k, no] of Object.entries(e.reveal || {})) {
+        if (st.players[1].hand[Number(k)] !== no) return {
+          ok: false,
+          why: `${n + 1}手目: 相手の手札に無い札を使った`
+        };
+      }
+    }
+    const next = cardApplyAction(db, st, e.act);
+    if (!next) return {
+      ok: false,
+      why: `${n + 1}手目: ルールに合わない手`
+    };
+    st = next;
+  }
+  if (winner !== undefined && winner !== null && st.winner !== winner) return {
+    ok: false,
+    why: '勝ち負けが合わない'
+  };
+  return {
+    ok: true,
+    why: '',
+    winner: st.winner
+  };
+};
+const cardPvpInt = (v, max) => Number.isInteger(v) && v >= 0 && v <= max ? v : null;
+const cardPvpCleanAct = raw => {
+  if (!raw || typeof raw !== 'object') return null;
+  const types = ['setupGuts', 'guts', 'attack', 'breeder', 'guard', 'pass', 'endAttacks', 'discard'];
+  if (!types.includes(raw.type)) return null;
+  const act = {
+    type: raw.type
+  };
+  if (raw.type === 'guard') {
+    act.hand = cardPvpInt(raw.hand, 20);
+    act.mon = cardPvpInt(raw.mon, 2);
+    if (act.hand === null || act.mon === null) return null;
+    return act;
+  }
+  if (Array.isArray(raw.hand)) {
+    act.hand = raw.hand.slice(0, 20).map(i => cardPvpInt(i, 20));
+    if (act.hand.some(i => i === null)) return null;
+  }
+  if (raw.mon !== undefined) {
+    act.mon = cardPvpInt(raw.mon, 2);
+    if (act.mon === null) return null;
+  }
+  if (raw.target !== undefined) {
+    if (raw.target === null) act.target = null;else {
+      const p = cardPvpInt(raw.target && raw.target.p, 1);
+      const m = cardPvpInt(raw.target && raw.target.m, 2);
+      if (p === null || m === null) return null;
+      act.target = {
+        p,
+        m
+      };
+    }
+  }
+  return act;
+};
+const cardPvpCardId = v => typeof v === 'string' && /^[0-9A-Z-]{1,10}$/.test(v) ? v : null;
+const cardPvpCleanCards = (list, max) => Array.isArray(list) ? list.slice(0, max).map(cardPvpCardId) : null;
+const cardPvpCleanMessage = raw => {
+  if (!raw || typeof raw !== 'object' || typeof raw.t !== 'string' || typeof raw.from !== 'string') return null;
+  const from = raw.from.slice(0, 40);
+  if (raw.t === 'hb') {
+    const mons = cardPvpCleanCards(raw.mons, 3);
+    return {
+      t: 'hb',
+      from,
+      name: rhythmMultiText(raw.name, CARD_PVP_NAME_MAX),
+      icon: rhythmMultiText(raw.icon, 8),
+      at: Number.isFinite(raw.at) ? raw.at : 0,
+      mons: mons && mons.length === 3 && !mons.includes(null) ? mons : null,
+      count: cardPvpInt(raw.count, 60),
+      seal: typeof raw.seal === 'string' && /^[0-9a-f]{64}$/.test(raw.seal) ? raw.seal : null,
+      match: typeof raw.match === 'string' ? raw.match.slice(0, 40) : null
+    };
+  }
+  if (raw.t === 'start') return {
+    t: 'start',
+    from,
+    match: typeof raw.match === 'string' ? raw.match.slice(0, 40) : '',
+    hostFirst: raw.hostFirst === true,
+    guest: typeof raw.guest === 'string' ? raw.guest.slice(0, 40) : ''
+  };
+  if (raw.t === 'act') {
+    const act = cardPvpCleanAct(raw.act);
+    const seq = cardPvpInt(raw.seq, 100000);
+    const discard = cardPvpCleanCards(raw.discard, 60);
+    if (!act || !seq || discard && discard.includes(null)) return null;
+    const reveal = {};
+    if (raw.reveal && typeof raw.reveal === 'object') for (const [k, v] of Object.entries(raw.reveal).slice(0, 5)) {
+      const i = Number(k);
+      if (Number.isInteger(i) && i >= 0 && i < 20 && cardPvpCardId(v)) reveal[i] = v;
+    }
+    return {
+      t: 'act',
+      from,
+      match: typeof raw.match === 'string' ? raw.match.slice(0, 40) : '',
+      seq,
+      act,
+      reveal,
+      discard
+    };
+  }
+  if (raw.t === 'ack') {
+    const discard = cardPvpCleanCards(raw.discard, 60);
+    return {
+      t: 'ack',
+      from,
+      seq: cardPvpInt(raw.seq, 100000) || 0,
+      discard: discard && !discard.includes(null) ? discard : null
+    };
+  }
+  if (raw.t === 'open') {
+    const cards = cardPvpCleanCards(raw.cards, 60);
+    const mons = cardPvpCleanCards(raw.mons, 3);
+    if (!cards || cards.includes(null) || !mons || mons.includes(null)) return null;
+    return {
+      t: 'open',
+      from,
+      seed: Number.isInteger(raw.seed) ? raw.seed >>> 0 : 0,
+      salt: typeof raw.salt === 'string' ? raw.salt.slice(0, 40) : '',
+      deck: {
+        monsters: mons,
+        cards
+      }
+    };
+  }
+  if (raw.t === 'chat') {
+    const i = cardPvpInt(raw.i, CARD_PVP_STAMPS.length - 1);
+    return i === null ? null : {
+      t: 'chat',
+      from,
+      i
+    };
+  }
+  if (raw.t === 'surrender' || raw.t === 'bye' || raw.t === 'timeout') return {
+    t: raw.t,
+    from
+  };
+  return null;
+};
+const CARD_PVP = (() => {
+  const listeners = new Set();
+  let s = null;
+  let socket = null;
+  let alive = false;
+  let tick = null;
+  let retry = null;
+  let board = null;
+  const blank = () => ({
+    phase: 'idle',
+    code: '',
+    me: null,
+    foe: null,
+    deck: null,
+    seed: 0,
+    salt: '',
+    seal: '',
+    match: '',
+    hostFirst: false,
+    first: 0,
+    game: null,
+    startMsg: null,
+    foeInMatch: false,
+    mySeq: 0,
+    outbox: [],
+    theirSeq: 0,
+    inbox: {},
+    history: [],
+    result: null,
+    foeOpen: null,
+    error: '',
+    broken: '',
+    offline: false,
+    timeouts: 0,
+    autoActing: false,
+    chatAt: 0
+  });
+  const emit = () => listeners.forEach(fn => {
+    try {
+      fn(s);
+    } catch (_) {}
+  });
+  const set = patch => {
+    s = {
+      ...s,
+      ...patch
+    };
+    emit();
+  };
+  const send = payload => {
+    if (socket && alive) socket.send({
+      ...payload,
+      from: s.me.id
+    });
+  };
+  const isHost = () => !!(s.foe && (s.me.at < s.foe.at || s.me.at === s.foe.at && s.me.id < s.foe.id));
+  const hb = () => send({
+    t: 'hb',
+    name: s.me.name,
+    icon: s.me.icon,
+    at: s.me.at,
+    mons: s.deck.monsters,
+    count: s.deck.cards.length,
+    seal: s.seal,
+    match: s.match || null
+  });
+  const sendOpen = () => send({
+    t: 'open',
+    seed: s.seed,
+    salt: s.salt,
+    mons: s.deck.monsters,
+    cards: s.deck.cards
+  });
+  const inGame = () => !!s && (s.phase === 'playing' || s.phase === 'over');
+  const stop = () => {
+    if (tick) clearInterval(tick);
+    tick = null;
+    if (retry) clearTimeout(retry);
+    retry = null;
+    alive = false;
+    if (socket) {
+      try {
+        socket.close();
+      } catch (_) {}
+    }
+    socket = null;
+  };
+  const penalize = () => {
+    try {
+      void storeSet(CARD_PVP_PENALTY_KEY, Date.now() + CARD_PVP_PENALTY_MS, false);
+    } catch (_) {}
+  };
+  const begin = msg => {
+    if (s.match || !s.foe) return;
+    const iHost = isHost();
+    const first = iHost === msg.hostFirst ? 0 : 1;
+    const st = cardPvpNewGame(CARD_BATTLE_DATA, {
+      myDeck: s.deck,
+      mySeed: s.seed,
+      foeMonsters: s.foe.mons,
+      foeCount: s.foe.count || CARD_BATTLE_DECK_SIZE,
+      first,
+      names: ['あなた', s.foe.name || 'あいて']
+    });
+    set({
+      phase: 'playing',
+      match: msg.match,
+      hostFirst: msg.hostFirst,
+      first,
+      game: {
+        key: `pvp-${msg.match}`,
+        st,
+        who: 'pvp',
+        level: 'normal',
+        pvp: {
+          name: s.foe.name || 'あいて',
+          icon: s.foe.icon || '🙂'
+        }
+      }
+    });
+  };
+  const deliver = () => {
+    while (board && s.inbox[s.theirSeq + 1]) {
+      const msg = s.inbox[s.theirSeq + 1];
+      const inbox = {
+        ...s.inbox
+      };
+      delete inbox[s.theirSeq + 1];
+      const next = board.onAct(msg);
+      if (!next) {
+        set({
+          inbox,
+          broken: '相手の手がルールに合いませんでした。この試合は続けられません'
+        });
+        return;
+      }
+      s = {
+        ...s,
+        inbox,
+        theirSeq: msg.seq,
+        history: [...s.history, {
+          by: 1,
+          act: cardPvpFlip(msg.act),
+          reveal: msg.reveal
+        }]
+      };
+      send({
+        t: 'ack',
+        seq: msg.seq,
+        discard: next.players[0].discard
+      });
+      emit();
+    }
+  };
+  const forceEnd = outcome => {
+    if (s && s.phase === 'playing' && board) board.onForceEnd(outcome);
+  };
+  const tryVerify = async () => {
+    if (!s.result || !s.foeOpen || s.result.verify !== 'wait') return;
+    const o = s.foeOpen;
+    const seal = await cardPvpSha256(cardPvpSealText({
+      seed: o.seed,
+      salt: o.salt,
+      deck: o.deck
+    }));
+    if (!s.result || s.result.verify !== 'wait') return;
+    if (!seal || seal !== (s.foe && s.foe.seal)) {
+      set({
+        result: {
+          ...s.result,
+          verify: 'ng',
+          why: '相手の山札の封が合いませんでした'
+        }
+      });
+      return;
+    }
+    const winner = s.result.reward === 'win' && !s.result.forced ? 0 : s.result.reward === 'lose' && !s.result.forced ? 1 : null;
+    const v = cardPvpVerify(CARD_BATTLE_DATA, {
+      myDeck: s.deck,
+      mySeed: s.seed,
+      foeDeck: o.deck,
+      foeSeed: o.seed,
+      first: s.first,
+      names: ['あなた', 'あいて'],
+      history: s.history,
+      winner
+    });
+    set({
+      result: {
+        ...s.result,
+        verify: v.ok ? 'ok' : 'ng',
+        why: v.why
+      }
+    });
+  };
+  const onMessage = raw => {
+    const msg = cardPvpCleanMessage(raw);
+    if (!s || !msg) return;
+    if (msg.from === s.me.id) {
+      if (msg.t === 'start' && isHost()) begin(msg);
+      return;
+    }
+    if (s.foe && s.foe.id !== msg.from) return;
+    const now = Date.now();
+    if (msg.t === 'hb') {
+      if (!s.foe && s.phase !== 'waiting') return;
+      const foe = {
+        id: msg.from,
+        name: msg.name || 'あいて',
+        icon: msg.icon || '🙂',
+        at: msg.at,
+        mons: msg.mons,
+        count: msg.count,
+        seal: msg.seal,
+        seen: now
+      };
+      if (s.foe && s.foe.seal && msg.seal && s.foe.seal !== msg.seal && s.phase !== 'waiting') return;
+      s = {
+        ...s,
+        foe: {
+          ...(s.foe || {}),
+          ...foe
+        }
+      };
+      if (s.phase === 'waiting' && !s.match && !s.startMsg && isHost() && s.foe.mons && s.foe.seal) {
+        s = {
+          ...s,
+          startMsg: {
+            t: 'start',
+            match: rhythmMultiMakeId('m'),
+            hostFirst: Math.random() < 0.5,
+            guest: s.foe.id
+          }
+        };
+        send(s.startMsg);
+      }
+      if (s.match && msg.match === s.match) s = {
+        ...s,
+        foeInMatch: true
+      };
+      emit();
+      return;
+    }
+    if (s.foe) s = {
+      ...s,
+      foe: {
+        ...s.foe,
+        seen: now
+      }
+    };
+    if (msg.t === 'start') {
+      if (!isHost() && msg.guest === s.me.id) begin(msg);
+      return;
+    }
+    if (msg.t === 'act') {
+      if (msg.match !== s.match) return;
+      if (msg.seq <= s.theirSeq) {
+        send({
+          t: 'ack',
+          seq: s.theirSeq
+        });
+        return;
+      }
+      s = {
+        ...s,
+        inbox: {
+          ...s.inbox,
+          [msg.seq]: msg
+        }
+      };
+      deliver();
+      return;
+    }
+    if (msg.t === 'ack') {
+      s = {
+        ...s,
+        outbox: s.outbox.filter(m => m.seq > msg.seq)
+      };
+      if (msg.discard && board) board.onDiscard(msg.discard);
+      emit();
+      return;
+    }
+    if (msg.t === 'open') {
+      if (!s.foeOpen) {
+        set({
+          foeOpen: msg
+        });
+        void tryVerify();
+      }
+      return;
+    }
+    if (msg.t === 'chat') {
+      if (s.phase === 'playing' && board && board.onChat) board.onChat(CARD_PVP_STAMPS[msg.i]);
+      return;
+    }
+    if (msg.t === 'surrender' || msg.t === 'bye' || msg.t === 'timeout') {
+      if (s.phase === 'playing') forceEnd(msg.t === 'surrender' ? 'foeSurrender' : msg.t === 'timeout' ? 'foeTimeout' : 'foeLeft');else if (s.phase === 'waiting') set({
+        foe: null
+      });
+    }
+  };
+  const connect = () => {
+    if (retry) clearTimeout(retry);
+    retry = null;
+    if (socket) {
+      try {
+        socket.close();
+      } catch (_) {}
+    }
+    alive = false;
+    const me = socket = rhythmMultiOpenSocket({
+      topic: `${CARD_PVP_ROOM_TOPIC}${s.code}`,
+      onOpen: () => {
+        if (socket !== me) return;
+        alive = true;
+        set({
+          offline: false,
+          phase: s.phase === 'connecting' ? 'waiting' : s.phase
+        });
+        hb();
+      },
+      onMessage: raw => {
+        if (socket === me) onMessage(raw);
+      },
+      onClose: () => {
+        if (socket !== me || !s) return;
+        alive = false;
+        if (s.phase === 'connecting') {
+          set({
+            phase: 'error',
+            error: 'つながりませんでした。電波のよい所で、もう一度お試しください'
+          });
+          return;
+        }
+        if (s.phase === 'idle' || s.phase === 'error') return;
+        set({
+          offline: true
+        });
+        retry = setTimeout(connect, CARD_PVP_RECONNECT_MS);
+      }
+    });
+  };
+  const open = async (code, profile, deck) => {
+    stop();
+    const seed = (Math.floor(Math.random() * 0x7fffffff) ^ Date.now()) >>> 0;
+    const salt = rhythmMultiMakeId('k');
+    const seal = await cardPvpSha256(cardPvpSealText({
+      seed,
+      salt,
+      deck
+    }));
+    s = {
+      ...blank(),
+      phase: 'connecting',
+      code,
+      deck: {
+        monsters: deck.monsters.slice(),
+        cards: deck.cards.slice()
+      },
+      seed,
+      salt,
+      seal,
+      me: {
+        id: rhythmMultiMakeId('c'),
+        name: rhythmMultiText(profile.name || 'ブリーダー', CARD_PVP_NAME_MAX),
+        icon: rhythmMultiText(profile.icon || '🙂', 8),
+        at: Date.now()
+      }
+    };
+    emit();
+    if (!seal) {
+      set({
+        phase: 'error',
+        error: 'この端末では、マルチ対戦の封を作れませんでした'
+      });
+      return;
+    }
+    connect();
+    tick = setInterval(() => {
+      if (!s || !socket) return;
+      hb();
+      if (s.startMsg && !s.foeInMatch && isHost()) send(s.startMsg);
+      s.outbox.forEach(m => send(m));
+      if (s.phase === 'over') sendOpen();
+      if (s.phase === 'playing' && s.foe && alive && Date.now() - s.foe.seen > CARD_PVP_ALIVE_MS) forceEnd('foeLeft');
+    }, CARD_PVP_HEARTBEAT_MS);
+  };
+  if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && inGame() && !alive) connect();
+    });
+  }
+  if (typeof window !== 'undefined') {
+    window.addEventListener('pagehide', () => {
+      if (s && s.phase === 'playing') {
+        send({
+          t: 'bye'
+        });
+        penalize();
+      }
+    });
+  }
+  return {
+    get: () => s || blank(),
+    subscribe: fn => {
+      listeners.add(fn);
+      return () => listeners.delete(fn);
+    },
+    create: (profile, deck) => open(rhythmMultiMakeCode(), profile, deck),
+    join: (code, profile, deck) => {
+      const c = rhythmMultiNormalizeCode(code);
+      if (!c) return false;
+      void open(c, profile, deck);
+      return true;
+    },
+    leave: () => {
+      if (s && s.phase === 'playing') penalize();
+      if (s && socket) send({
+        t: 'bye'
+      });
+      stop();
+      board = null;
+      s = blank();
+      emit();
+    },
+    attach: h => {
+      board = h;
+      deliver();
+      return () => {
+        if (board === h) board = null;
+      };
+    },
+    local: (prev, act, next) => {
+      if (!s || s.phase !== 'playing') return;
+      const msg = {
+        t: 'act',
+        match: s.match,
+        seq: s.mySeq + 1,
+        act,
+        reveal: cardPvpRevealOf(prev, act),
+        discard: next.players[0].discard
+      };
+      s = {
+        ...s,
+        mySeq: msg.seq,
+        outbox: [...s.outbox, msg],
+        history: [...s.history, {
+          by: 0,
+          act,
+          reveal: {}
+        }],
+        timeouts: s.autoActing ? s.timeouts : 0
+      };
+      send(msg);
+      emit();
+    },
+    timedOut: () => {
+      if (!s || s.phase !== 'playing') return 0;
+      s = {
+        ...s,
+        timeouts: s.timeouts + 1
+      };
+      emit();
+      return s.timeouts;
+    },
+    timeoutLose: () => {
+      if (!s || s.phase !== 'playing') return;
+      send({
+        t: 'timeout'
+      });
+      forceEnd('timeout');
+    },
+    foeStalled: () => forceEnd('foeTimeout'),
+    auto: fn => {
+      if (!s) return fn();
+      s.autoActing = true;
+      try {
+        return fn();
+      } finally {
+        s.autoActing = false;
+      }
+    },
+    chat: i => {
+      if (!s || s.phase !== 'playing' || !CARD_PVP_STAMPS[i] || Date.now() - s.chatAt < CARD_PVP_CHAT_GAP_MS) return false;
+      s = {
+        ...s,
+        chatAt: Date.now()
+      };
+      send({
+        t: 'chat',
+        i
+      });
+      return true;
+    },
+    alive: () => alive,
+    surrender: () => {
+      if (s && s.phase === 'playing') send({
+        t: 'surrender'
+      });
+    },
+    finish: (outcome, st) => {
+      if (!s || s.phase !== 'playing') return;
+      const label = {
+        win: '勝ち',
+        lose: '負け',
+        surrender: '投了',
+        foeSurrender: '相手の投了',
+        foeLeft: '相手が抜けた',
+        timeout: '時間切れ',
+        foeTimeout: '相手の時間切れ'
+      }[outcome] || '';
+      const reward = ['win', 'foeSurrender', 'foeLeft', 'foeTimeout'].includes(outcome) ? 'win' : outcome === 'surrender' ? 'surrender' : 'lose';
+      const forced = !['win', 'lose'].includes(outcome);
+      set({
+        phase: 'over',
+        result: {
+          outcome: reward === 'win' ? 'win' : 'lose',
+          reward,
+          forced,
+          reason: label,
+          facts: cardResultFacts(st, CARD_ME),
+          verify: outcome === 'foeLeft' ? 'skip' : 'wait',
+          why: '',
+          rewarded: false
+        }
+      });
+      sendOpen();
+      void tryVerify();
+      setTimeout(() => {
+        if (s && s.result && s.result.verify === 'wait') set({
+          result: {
+            ...s.result,
+            verify: 'skip'
+          }
+        });
+      }, CARD_PVP_VERIFY_WAIT_MS);
+    },
+    markRewarded: got => {
+      if (s && s.result) set({
+        result: {
+          ...s.result,
+          rewarded: true,
+          got
+        }
+      });
+    }
+  };
+})();
+const CardPvpLobby = ({
+  deck,
+  deckIssues = [],
+  onStart,
+  onBack,
+  onReward,
+  assistant = null,
+  point = null
+}) => {
+  const [room, setRoom] = useState(() => CARD_PVP.get());
+  const [code, setCode] = useState('');
+  const [profile, setProfile] = useState({
+    name: 'ブリーダー',
+    icon: '🙂'
+  });
+  useEffect(() => CARD_PVP.subscribe(setRoom), []);
+  const [penaltyUntil, setPenaltyUntil] = useState(0);
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    storeGet(CARD_PVP_PENALTY_KEY, 0, false).then(v => setPenaltyUntil(cardPvpNormalizePenalty(v))).catch(() => {});
+  }, [room.phase]);
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const penaltyMin = penaltyUntil > now ? Math.ceil((penaltyUntil - now) / 60000) : 0;
+  const rewardRef = useRef(onReward);
+  rewardRef.current = onReward;
+  useEffect(() => {
+    const r = room.result;
+    if (room.phase !== 'over' || !r || r.rewarded) return;
+    if (r.verify === 'ng') {
+      CARD_PVP.markRewarded(null);
+      return;
+    }
+    if (r.verify !== 'ok' && r.verify !== 'skip') return;
+    CARD_PVP.markRewarded({
+      pending: true
+    });
+    Promise.resolve(rewardRef.current ? rewardRef.current(r) : null).then(got => CARD_PVP.markRewarded(got)).catch(() => CARD_PVP.markRewarded(null));
+  }, [room.phase, room.result && room.result.verify]);
+  useEffect(() => {
+    let alive = true;
+    Promise.all([storeGet('mh_breeder_name', 'ブリーダー', false), storeGet('mh_breeder_icon', '🙂', false)]).then(([name, icon]) => {
+      if (alive) setProfile({
+        name: typeof name === 'string' && name ? name : 'ブリーダー',
+        icon: typeof icon === 'string' && icon ? icon : '🙂'
+      });
+    }).catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const started = useRef('');
+  useEffect(() => {
+    if (room.phase === 'playing' && room.game && started.current !== room.match) {
+      started.current = room.match;
+      onStart(room.game);
+    }
+  }, [room.phase, room.match]);
+  const btn = 'mh-button min-h-[52px] w-full rounded-2xl font-black active:scale-[.98] disabled:opacity-40';
+  const ready = !!deck && deckIssues.length === 0 && penaltyMin === 0;
+  const back = () => {
+    CARD_PVP.leave();
+    onBack();
+  };
+  const r = room.result;
+  if (room.phase === 'over' && r) {
+    const win = r.outcome === 'win';
+    const a = assistant && typeof ASSISTANTS !== 'undefined' ? ASSISTANTS.find(x => x.id === assistant.id) || null : null;
+    const got = r.got && !r.got.pending ? r.got : null;
+    const foeName = room.foe ? room.foe.name : 'あいて';
+    const verifyText = r.verify === 'ok' ? 'おたがいの山札を見せ合って、正しく終わったことを確かめました' : r.verify === 'ng' ? `この試合は無効です(${r.why})` : r.verify === 'skip' ? '相手の山札は届きませんでした(相手が抜けたため)' : 'おたがいの山札を見せ合って、確かめています…';
+    return React.createElement("div", {
+      "data-mh-screen": true,
+      "data-card-pvp": "over",
+      "data-card-pvp-result": r.outcome,
+      className: SCREEN_SHELL_CLASS
+    }, React.createElement(ScreenHead, {
+      title: win ? '勝ち！' : r.reward === 'surrender' ? '投了' : '負け…',
+      accent: win ? 'text-amber-200' : 'text-slate-300',
+      onBack: back
+    }), React.createElement("div", {
+      className: `${SCREEN_LIST_CLASS} space-y-2 pb-4`
+    }, React.createElement("div", {
+      className: "flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2"
+    }, a && React.createElement(CardAssistantArt, {
+      src: assistantFullImage(a, win ? 'happy' : 'troubled'),
+      alt: a.name,
+      className: "h-[220px] w-[46%]"
+    }), React.createElement("div", {
+      className: "mb-2 min-w-0 flex-1 space-y-1"
+    }, React.createElement("div", {
+      className: "text-[15px] font-black text-white",
+      style: JA_WRAP_STYLE
+    }, jaWrap(`${foeName}さんとのマルチ対戦`)), React.createElement("div", {
+      className: "text-[12px] font-bold text-slate-300"
+    }, win ? '勝ち' : r.reward === 'surrender' ? '投了' : '負け', r.reason && !['勝ち', '負け', '投了'].includes(r.reason) ? `(${r.reason})` : ''), React.createElement("p", {
+      "data-card-pvp-verify": r.verify,
+      className: `rounded-xl px-2 py-1.5 text-[12px] font-bold ${r.verify === 'ok' ? 'bg-emerald-500/15 text-emerald-100' : r.verify === 'ng' ? 'bg-rose-500/15 text-rose-100' : 'bg-white/5 text-slate-200'}`,
+      style: JA_WRAP_STYLE
+    }, jaWrap(verifyText)))), React.createElement("div", {
+      className: SCREEN_PANEL_CLASS
+    }, !got && r.verify !== 'ng' && React.createElement("div", {
+      className: "text-[12px] font-bold text-slate-300"
+    }, "ごほうびを確かめています…"), r.verify === 'ng' && React.createElement("div", {
+      className: "text-[12px] font-bold text-slate-300"
+    }, "無効の試合なので、カードポイントとクイック周回は入りません"), got && React.createElement(React.Fragment, null, React.createElement("div", {
+      "data-card-pvp-reward": true,
+      className: "text-[13px] font-black text-amber-200"
+    }, "もらったカードポイント: ", got.point), got.short && React.createElement("div", {
+      className: "mt-1 text-[12px] font-bold text-slate-400",
+      style: JA_LABEL_STYLE
+    }, jaWrap('自分の番を3回やる前に終わったので、カードポイントとクイック周回は入りません')), !got.short && got.loops > 0 && React.createElement("div", {
+      "data-card-quick-loops": got.quick ? got.loops : 0,
+      className: "mt-2 rounded-xl border border-sky-300/40 bg-sky-500/10 px-2 py-1.5"
+    }, got.quick ? React.createElement(React.Fragment, null, React.createElement("div", {
+      className: "text-[13px] font-black text-sky-200"
+    }, "クイック周回 ", got.loops, "周ぶん"), React.createElement("div", {
+      className: "mt-0.5 text-[11px] font-bold text-slate-300",
+      style: JA_WRAP_STYLE
+    }, "裏のクイック周回(", got.quick.quickDifficulty && quickDifficultySetting(got.quick.quickDifficulty)?.label || 'AUTO設定', ")が", got.loops, "周ぶん進みました")) : React.createElement("div", {
+      className: "text-[12px] font-bold text-slate-300",
+      style: JA_LABEL_STYLE
+    }, jaWrap('クイック周回をしていないときは入りません'))), point !== null && React.createElement("div", {
+      className: "mt-1 text-[12px] font-bold text-slate-300"
+    }, "いまのカードポイント: ", point), got.saved === false && React.createElement("div", {
+      className: "mt-1 text-[12px] font-bold text-rose-300",
+      style: JA_LABEL_STYLE
+    }, jaWrap('保存できませんでした(カードポイントは増えていません)'))))), React.createElement("div", {
+      className: SCREEN_FOOTER_CLASS
+    }, React.createElement("button", {
+      type: "button",
+      "data-card-pvp-leave": true,
+      className: `${btn} mh-button-primary`,
+      onClick: () => {
+        Audio_.fgSe.tap();
+        CARD_PVP.leave();
+      }
+    }, "部屋を出る")));
+  }
+  return React.createElement("div", {
+    "data-mh-screen": true,
+    "data-card-pvp": room.phase,
+    className: SCREEN_SHELL_CLASS
+  }, React.createElement(ScreenHead, {
+    title: "マルチ対戦",
+    accent: "text-sky-200",
+    onBack: back,
+    note: "合言葉で、友だちと1対1で戦えます(デバッグ専用・つくっている途中)"
+  }), React.createElement("div", {
+    className: `${SCREEN_LIST_CLASS} space-y-3 pb-4`
+  }, room.phase === 'idle' && React.createElement(React.Fragment, null, penaltyMin > 0 && React.createElement("p", {
+    "data-card-pvp-penalty": true,
+    className: "rounded-xl border border-rose-300/40 bg-rose-500/10 p-2 text-[13px] font-bold text-rose-100"
+  }, "試合の途中で抜けたので、あと", penaltyMin, "分は部屋に入れません"), penaltyMin === 0 && !ready && React.createElement("p", {
+    className: "rounded-xl border border-amber-300/40 bg-amber-500/10 p-2 text-[13px] font-bold text-amber-100"
+  }, deckIssues.join('・') || 'デッキがありません'), React.createElement("button", {
+    type: "button",
+    "data-card-pvp-create": true,
+    disabled: !ready,
+    className: `${btn} mh-button-primary`,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      void CARD_PVP.create(profile, deck);
+    }
+  }, "合言葉で部屋を作る"), React.createElement("div", {
+    className: "rounded-2xl border border-white/10 bg-slate-900/80 p-3"
+  }, React.createElement("p", {
+    className: "mb-2 text-[13px] font-bold text-slate-300"
+  }, "友だちの合言葉で入る"), React.createElement("div", {
+    className: "flex gap-2"
+  }, React.createElement("input", {
+    "data-card-pvp-code": true,
+    value: code,
+    onChange: e => setCode(e.target.value.toUpperCase().slice(0, 4)),
+    maxLength: 4,
+    inputMode: "text",
+    autoCapitalize: "characters",
+    placeholder: "ABCD",
+    className: "min-h-[48px] w-0 flex-1 rounded-xl border border-white/20 bg-black/40 px-3 text-center text-[22px] font-black tracking-[.3em] text-white"
+  }), React.createElement("button", {
+    type: "button",
+    "data-card-pvp-join": true,
+    disabled: !ready || !rhythmMultiNormalizeCode(code),
+    className: "mh-button mh-button-primary min-h-[48px] rounded-xl px-4 font-black disabled:opacity-40",
+    onClick: () => {
+      Audio_.fgSe.tap();
+      CARD_PVP.join(code, profile, deck);
+    }
+  }, "入る")))), (room.phase === 'connecting' || room.phase === 'waiting') && React.createElement("div", {
+    className: "rounded-2xl border border-sky-300/40 bg-sky-500/10 p-4 text-center"
+  }, React.createElement("p", {
+    className: "text-[13px] font-bold text-sky-100"
+  }, "合言葉"), React.createElement("p", {
+    "data-card-pvp-room": true,
+    className: "my-1 text-[40px] font-black tracking-[.3em] text-white"
+  }, room.code), React.createElement("p", {
+    className: "text-[13px] font-bold text-slate-200"
+  }, room.phase === 'connecting' ? 'つないでいます…' : room.foe ? `${room.foe.name}さんが来ました。始めます…` : 'この合言葉を友だちに伝えて、待っています…')), room.phase === 'error' && React.createElement("p", {
+    className: "rounded-xl border border-rose-300/40 bg-rose-500/10 p-3 text-[13px] font-bold text-rose-100"
+  }, room.error), room.broken && React.createElement("p", {
+    className: "rounded-xl border border-rose-300/40 bg-rose-500/10 p-3 text-[13px] font-bold text-rose-100"
+  }, room.broken)), room.phase !== 'idle' && React.createElement("div", {
+    className: SCREEN_FOOTER_CLASS
+  }, React.createElement("button", {
+    type: "button",
+    "data-card-pvp-leave": true,
+    className: `${btn} border border-white/15 bg-slate-900 text-slate-100`,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      CARD_PVP.leave();
+    }
+  }, "部屋を出る")));
+};
+const useCardPvpAuto = (db, pvp, st, step, paused) => useEffect(() => {
+  if (!pvp || paused || typeof window === 'undefined' || !window.__mhCardPvpAuto || st.winner !== null || cardPvpDecider(st) !== 0) return undefined;
+  const t = setTimeout(() => {
+    const act = cardAiChooseAction(db, st, cardAiPolicy('kyuko', 'easy'));
+    if (act && step(act)) return;
+    step(st.pendingDiscard ? {
+      type: 'discard',
+      hand: [0]
+    } : st.phase === 'setup' ? {
+      type: 'setupGuts',
+      hand: []
+    } : st.pending ? {
+      type: 'pass'
+    } : st.phase === 'main' ? {
+      type: 'endAttacks'
+    } : {
+      type: 'guts',
+      hand: []
+    });
+  }, Number(window.__mhCardPvpAutoMs) || 150);
+  return () => clearTimeout(t);
+}, [st, paused]);
+const useCardPvpClock = (pvp, st, step) => {
+  const [now, setNow] = useState(() => Date.now());
+  const keyRef = useRef('');
+  const startRef = useRef(Date.now());
+  const firedRef = useRef('');
+  const gutsRef = useRef(-1);
+  const key = pvp ? cardPvpClockKey(st) : '';
+  if (key !== keyRef.current) {
+    keyRef.current = key;
+    startRef.current = Date.now();
+  }
+  useEffect(() => {
+    if (!pvp) return undefined;
+    const t = setInterval(() => setNow(Date.now()), 500);
+    return () => clearInterval(t);
+  }, []);
+  const decider = pvp ? cardPvpDecider(st) : -1;
+  const left = pvp ? cardPvpLimitMs(st) - (now - startRef.current) : 0;
+  useEffect(() => {
+    if (!pvp || st.winner !== null) return;
+    if (decider === 0 && st.phase === 'guts' && !st.pending && gutsRef.current === st.turn) {
+      gutsRef.current = -1;
+      CARD_PVP.auto(() => step({
+        type: 'guts',
+        hand: []
+      }));
+      return;
+    }
+    if (decider === 0 && left <= 0 && firedRef.current !== key) {
+      firedRef.current = key;
+      if (CARD_PVP.timedOut() >= CARD_PVP_TIMEOUT_LOSE) {
+        CARD_PVP.timeoutLose();
+        return;
+      }
+      if (st.phase === 'main' && !st.pending) gutsRef.current = st.turn;
+      CARD_PVP.auto(() => step(cardPvpTimeoutAct(st)));
+      return;
+    }
+    if (decider === 1 && left <= -CARD_PVP_STALL_GRACE_MS && CARD_PVP.alive() && firedRef.current !== key) {
+      firedRef.current = key;
+      CARD_PVP.foeStalled();
+    }
+  }, [now, key]);
+  const room = CARD_PVP.get();
+  const quiet = pvp && room.foe ? now - room.foe.seen : 0;
+  return {
+    left: Math.max(0, Math.ceil(left / 1000)),
+    mine: decider === 0,
+    timeouts: room.timeouts,
+    offline: room.offline,
+    foeQuietSec: quiet > CARD_PVP_QUIET_MS ? Math.max(0, Math.ceil((CARD_PVP_ALIVE_MS - quiet) / 1000)) : 0
+  };
+};
+const CardPvpStatus = ({
+  clock
+}) => React.createElement(React.Fragment, null, React.createElement("span", {
+  "data-card-pvp-clock": clock.mine ? 'mine' : 'foe',
+  className: `rounded-full px-2 py-0.5 text-[13px] font-black tabular-nums ${clock.mine ? clock.left <= 10 ? 'bg-rose-500/30 text-rose-100' : 'bg-amber-400/20 text-amber-100' : 'bg-white/10 text-slate-200'}`
+}, clock.mine ? `残り ${clock.left}秒` : `相手 ${clock.left}秒`, clock.mine && clock.timeouts > 0 ? `(時間切れ ${clock.timeouts}/${CARD_PVP_TIMEOUT_LOSE})` : ''), (clock.offline || clock.foeQuietSec > 0) && React.createElement("div", {
+  "data-card-pvp-signal": true,
+  className: "pointer-events-none absolute inset-x-2 top-[46px] z-[30] rounded-xl border border-amber-300/50 bg-black/80 px-2 py-1 text-center text-[12px] font-bold text-amber-100"
+}, clock.offline ? '電波が途切れています。つなぎ直しています…' : `相手の電波が途切れています(あと${clock.foeQuietSec}秒で相手の負け)`));
+const CardPvpChat = () => {
+  const [open, setOpen] = useState(false);
+  const [sent, setSent] = useState('');
+  useEffect(() => {
+    if (!sent) return undefined;
+    const t = setTimeout(() => setSent(''), 1600);
+    return () => clearTimeout(t);
+  }, [sent]);
+  return React.createElement("div", {
+    className: "relative"
+  }, React.createElement("button", {
+    type: "button",
+    "data-card-pvp-chat": true,
+    "aria-label": "定型文を送る",
+    onClick: () => {
+      Audio_.fgSe.tap();
+      setOpen(v => !v);
+    },
+    className: "grid h-[28px] w-[30px] place-items-center rounded-lg border border-white/20 bg-white/10 text-[14px]"
+  }, "💬"), sent && React.createElement("span", {
+    className: "pointer-events-none absolute left-0 top-[32px] z-[40] whitespace-nowrap rounded-full bg-sky-500/80 px-2 py-0.5 text-[11px] font-black text-white"
+  }, "「", sent, "」"), open && React.createElement("div", {
+    "data-card-pvp-stamps": true,
+    className: "absolute left-0 top-[34px] z-[40] grid w-[200px] grid-cols-2 gap-1 rounded-xl border border-white/15 bg-slate-950/95 p-1.5 shadow-xl"
+  }, CARD_PVP_STAMPS.map((t, i) => React.createElement("button", {
+    key: t,
+    type: "button",
+    "data-card-pvp-stamp": i,
+    className: "min-h-[36px] rounded-lg bg-white/10 px-1 text-[12px] font-bold text-white active:scale-[.97]",
+    onClick: () => {
+      if (CARD_PVP.chat(i)) setSent(t);
+      setOpen(false);
+    }
+  }, t))));
 };
 const DEBUG_TRIALS = [{
   id: 'rhythm_mon_layers',

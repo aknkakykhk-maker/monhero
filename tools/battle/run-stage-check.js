@@ -179,7 +179,7 @@ check('カードからバトルへ戻った瞬間から、段階と一緒に画�
 // カードの画面の部品が自分で移る先は、全部 CARD_ で始まる(始まらない名前へ移ると「カードを離れた」と数えられ、周回がバトルへ飛ぶ)
 {
   const partsDir = path.join(root, 'monster-hero/src/parts');
-  const cardParts = fs.readdirSync(partsDir).filter(name => /^(8[2-9]|90)-card/.test(name) || name === '84-screen-card-battle.jsx');
+  const cardParts = fs.readdirSync(partsDir).filter(name => /^(8[2-9]|9[0-9])-card/.test(name) || name === '84-screen-card-battle.jsx');
   const moves = cardParts.flatMap(name => [...fs.readFileSync(path.join(partsDir, name), 'utf8').matchAll(/onNavigate\(\s*([^)]*?)\s*\)/g)].map(m => m[1]));
   const bad = moves.filter(arg => !/^'CARD_[A-Z_]+'$/.test(arg));
   check('MFバトルカードの部品が移る先は、全部 CARD_ で始まる名前', moves.length > 0 && bad.length === 0, bad.length ? `始まらない: ${bad.join(', ')}` : `${moves.length}か所`);
@@ -261,7 +261,7 @@ check('MFバトルカードにいる間は、裏の周回の効果音だけを�
   && source.includes('(...args) => (backgroundSeQuiet ? Promise.resolve() : play(...args))')
   && source.includes('if (!enabled || !src || backgroundSeQuiet) return null;'));
 check('MFバトルカードの画面の効果音は、印を受けない Audio_.fgSe から鳴らす',
-  ['84-screen-card-battle.jsx', '87-card-deck-edit.jsx', '89-card-pack.jsx', '90-card-rank.jsx', '86-card-tutorial.jsx', '88-card-rules.jsx', '85-card-battle-motion.jsx']
+  fs.readdirSync(path.join(root, 'monster-hero/src/parts')).filter(name => /^(8[2-9]|9[0-9])-card/.test(name) || name === '84-screen-card-battle.jsx')
     .every(name => !/Audio_\.se[.\[]/.test(fs.readFileSync(path.join(root, 'monster-hero/src/parts', name), 'utf8'))));
 check('∞周回中のバトルから MFバトルカードへ移れる（returnToHomeを通さない）',
   source.includes('data-quick-to-card') && source.includes("const openCardBattleKeepRun = () => { setCardOrigin('home'); setGameState('CARD_TOP'); };"));
