@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 86929722e4d0bd1a
+// source-sha256: ad2ccf263fb1c285
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-24 17:08";
+const BUILD_DATE = "2026-10-24 19:17";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -83902,7 +83902,7 @@ const CARD_BATTLE_LINES = Object.freeze({
     deckMine: ['山札、思ったより減ってるなぁ笑', 'カード切れ、気をつけないとだぁ'],
     deckTheirs: ['そっちの山札、もう少ないねぇ', '山札が切れたら負けだから、数えといたほうがいいよw'],
     win: ['ほい、俺の勝ち！ ありがとん笑', '計算どおり…ってことにしといて笑', 'いい勝負だったねぇ。またやろw'],
-    lose: [['ぐぬぬぬ…負けたぁ', 'angry'], ['見立てがずれてたかぁ🥲 強いねぇ', 'troubled'], ['おけ、次は組み方から考え直すよw', 'normal']]
+    lose: [['ぐぬぬぬ…負けたぁ', 'angry'], ['見立てがずれてたかぁ🥲 強いねぇ', 'troubled'], ['おけ、組み方から考え直すよw', 'normal']]
   },
   dra: {
     challenge: ['おでとカード勝負か。守りの固さ、見せてやるからな', 'ふむ、いいよ。膝以外も固いってとこ見せるわ', 'よろしくな。カードの組み合わせで勝つのが、おでのやり方だよ', 'えへへ、手札は見せないよ。隠しごとは得意なんだ'],

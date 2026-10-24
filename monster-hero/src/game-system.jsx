@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f8504b6e32257644
+// generated-sha256: d7d2274a85f9d28d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-24 17:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-24 19:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -50845,7 +50845,7 @@ const CARD_BATTLE_LINES = Object.freeze({
     deckMine: ['山札、思ったより減ってるなぁ笑', 'カード切れ、気をつけないとだぁ'],
     deckTheirs: ['そっちの山札、もう少ないねぇ', '山札が切れたら負けだから、数えといたほうがいいよw'],
     win: ['ほい、俺の勝ち！ ありがとん笑', '計算どおり…ってことにしといて笑', 'いい勝負だったねぇ。またやろw'],
-    lose: [['ぐぬぬぬ…負けたぁ', 'angry'], ['見立てがずれてたかぁ🥲 強いねぇ', 'troubled'], ['おけ、次は組み方から考え直すよw', 'normal']],
+    lose: [['ぐぬぬぬ…負けたぁ', 'angry'], ['見立てがずれてたかぁ🥲 強いねぇ', 'troubled'], ['おけ、組み方から考え直すよw', 'normal']],
   },
   dra: {
     challenge: ['おでとカード勝負か。守りの固さ、見せてやるからな', 'ふむ、いいよ。膝以外も固いってとこ見せるわ', 'よろしくな。カードの組み合わせで勝つのが、おでのやり方だよ', 'えへへ、手札は見せないよ。隠しごとは得意なんだ'],
