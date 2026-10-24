@@ -71,6 +71,15 @@ const show = arr => arr.slice(0, 5).map(l => `${l.no}行「${l.text}」`).join('
 check('みゅあのセリフを読めた', mua.length >= 800, `${mua.length}本`);
 const old = mua.filter(l => /ぢゃ|\\'ω\\'/.test(l.text));
 check('前の話し方の名残(「ぢゃん」・( \'ω\') )が無い', old.length === 0, show(old));
+// セリフの外(助手の人柄 speech・speechQuirks・おしゃべりの答え・決まりの文)にも残っていた(2026-10-24 窓口「語尾を『じゃん』にそろえて」)。
+// おしゃべりの人柄(assistant-chat-digest.json)は assistants.js から作るので、両方を丸ごと見る
+{
+  const fsx = require('fs'), px = require('path');
+  const whole = ['monster-hero/data/assistants.js', 'monster-hero/data/assistant-chat-digest.json']
+    .map((f) => [f, fsx.readFileSync(px.join(__dirname, '..', '..', f), 'utf8')]);
+  const left = whole.filter(([, t]) => /ぢゃん|まぢ/.test(t)).map(([f]) => f);
+  check('助手のデータとおしゃべりの人柄に「ぢゃん」「まぢ」が残っていない', left.length === 0, left.join(' / '));
+}
 const other = mua.filter(l => /でつ|まつ[。！？♪]|おで[はがのも]/.test(l.text));
 check('ほかの助手の話し方(でつ・まつ・おで)が混ざっていない', other.length === 0, show(other));
 const many = mua.filter(l => (l.text.match(/\p{Extended_Pictographic}/gu) || []).length > 2);
