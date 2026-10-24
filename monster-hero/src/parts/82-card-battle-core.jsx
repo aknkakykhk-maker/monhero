@@ -422,6 +422,8 @@ const cardResolveTarget = (db, st) => {
     atkMon.charge = null;
     cardEvent(st, { t: 'hit', p: pd.attacker, m: pd.mon, dmg: reflected, reflect: true });
     cardLog(st, `${reflected}ダメージをはね返した`);
+    // はね返されてライフが0になったら、攻撃した子も倒れる(2026-10-24 までここが抜けていて、ライフ0のまま場に残っていた)
+    if (atkMon.life <= 0) cardKo(st, pd.attacker, pd.mon);
   }
   if (target.life <= 0 && !target.ko) cardKo(st, t.p, t.m);
   // 次の相手へ(守りの状態は1体ごとに戻す)

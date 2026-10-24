@@ -199,7 +199,11 @@ const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact
   const stunned = mon.stunTurn === st.turn + (st.active === p ? 0 : 1) && !mon.ko;
   const info = (
     <div className="flex items-center gap-1">
-      <img src={CARD_IMG(cardMonsterOf(db, mon.no).img)} alt={mon.name} className={`${tiny ? 'h-[40px] w-[28px]' : 'h-[52px] w-[37px]'} shrink-0 rounded-[3px] object-cover shadow ${mon.ko ? 'grayscale opacity-40' : ''}`}/>
+      {/* 倒れたら、倒れる動きのあとカードを裏返して暗くする(設計書 5-3)。小さい画面(tiny)はカードを小さく */}
+      <span data-card-flip={mon.ko ? 'ko' : undefined} className={`relative block ${tiny ? 'h-[40px] w-[28px]' : 'h-[52px] w-[37px]'} shrink-0 ${mon.ko ? 'mh-card-flip' : ''}`}>
+        <img src={CARD_IMG(cardMonsterOf(db, mon.no).img)} alt={mon.name} className={`mh-card-flip-face ${tiny ? 'h-[40px] w-[28px]' : 'h-[52px] w-[37px]'} rounded-[3px] object-cover shadow ${mon.ko ? 'grayscale opacity-40' : ''}`}/>
+        {mon.ko && <span className="mh-card-flip-back" aria-hidden="true"/>}
+      </span>
       <div className={`${tiny ? 'w-[56px]' : 'w-[62px]'} min-w-0`}>
         <div className="truncate text-[12px] font-black leading-tight">{mon.name}</div>
         {/* 小さい画面(tiny)は、地上・空中の札をライフと同じ行へ(1行ぶん低くする) */}
@@ -211,20 +215,24 @@ const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact
       </div>
     </div>
   );
-  // 動き(85-card-battle-motion.jsx): attack … SkillFxMotion で技の動き / hit 揺れ / dodge よける / guard 防ぐ(光の盾) / KO は倒れたまま
+  // 動き(85-card-battle-motion.jsx): attack … SkillFxMotion で技の動き / hit 揺れ / dodge よける(残像) / jump 跳んでよける / guard 防ぐ(光の盾と数字) / KO は倒れたまま
   const artSize = tiny ? 'max-h-[44px] max-w-[60px]' : compact ? 'max-h-[56px] max-w-[72px]' : 'max-h-[78px] max-w-[96px]';
   const imgEl = art
     ? <img src={art} alt="" className={`${artSize} object-contain drop-shadow-[0_6px_6px_rgba(0,0,0,.6)] ${opp ? '-scale-x-100' : ''}`}/>
     : <img src={CARD_IMG(cardMonsterOf(db, mon.no).img)} alt="" className={`${tiny ? 'h-[42px]' : compact ? 'h-[54px]' : 'h-[74px]'} rounded-md object-cover`}/>;
   const mv = motion && !mon.ko ? motion : null;
-  const poseClass = mon.ko ? 'mh-card-ko' : mv && mv.type === 'hit' ? 'mh-card-hit' : mv && mv.type === 'dodge' ? 'mh-card-dodge' : mv && mv.type === 'guard' ? 'mh-card-guard' : '';
+  const poseClass = mon.ko ? 'mh-card-ko' : mv && mv.type === 'hit' ? 'mh-card-hit' : mv && mv.type === 'dodge' ? 'mh-card-dodge' : mv && mv.type === 'jump' ? 'mh-card-jump' : mv && mv.type === 'guard' ? 'mh-card-guard' : '';
   const artEl = (
     <div data-card-art={`${p}-${m}`} className={`relative flex ${tiny ? 'h-[44px]' : compact ? 'h-[56px]' : 'h-[78px]'} w-full items-end justify-center`}
       style={mv && mv.type === 'attack' ? { '--atk-dx': `${mv.dx}px`, '--atk-dy': `${mv.dy}px`, zIndex: 40 } : undefined}>
       {mv && mv.type === 'attack' && mv.kind
         ? <SkillFxMotion key={mv.key} kind={mv.kind} image={imgEl}/>
         : <div key={mv ? mv.key : 'still'} data-card-pose={mon.ko ? 'ko' : mv ? mv.type : 'still'} className={`flex items-end justify-center ${poseClass}`}>{imgEl}</div>}
+      {/* よけた: 元の場所に残像が残って消える / ジャンプでよけた: 上で止まって「空中」の印 */}
+      {mv && mv.type === 'dodge' && <div key={`${mv.key}-a`} className="mh-card-afterimage" aria-hidden="true">{imgEl}</div>}
+      {mv && mv.type === 'jump' && <span key={`${mv.key}-j`} data-card-air-mark className="mh-card-air-mark">空中</span>}
       {mv && mv.type === 'guard' && <span key={`${mv.key}-s`} className="mh-card-shield" aria-hidden="true"/>}
+      {mv && mv.type === 'guard' && mv.label && <span key={`${mv.key}-n`} data-card-guard-num className="mh-card-guard-num">{mv.label}</span>}
       {mon.ko && <span className="absolute bottom-2 rounded bg-black/70 px-1.5 text-[12px] font-black text-slate-300">KO</span>}
       {fx.map((f) => (
         <span key={f.key} className={`pointer-events-none absolute top-1 z-[50] text-[30px] font-black ${f.dmg > 0 ? 'animate-bounce text-white' : 'text-sky-200'}`} style={{ WebkitTextStroke: f.dmg > 0 ? '2px #dc2626' : '1px #0369a1', textShadow: '0 0 10px rgba(248,113,113,.8)' }}>
@@ -242,7 +250,7 @@ const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact
 };
 
 // ---- 対戦の盤面 ----
-const CardBattleBoard = ({ db, game, onFinish, quickRun = null }) => {
+const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null }) => {
   // 演出の設定(オプション)。はやい … 相手が考える時間と、決着から結果までを短くする
   const settings = normalizeCardSettings(game.settings);
   const pace = settings.speed === 'fast' ? 0.5 : 1;
@@ -261,6 +269,9 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null }) => {
   const [hint, setHint] = useState('');
   const [quit, setQuit] = useState(false);
   const [action, setAction] = useState(null);   // まんなかに出す、いま使った技
+  const [breederFx, setBreederFx] = useState(null); // ブリーダーのカードを使ったとき、まんなかの端に出す顔 { p, key }
+  const [beams, setBeams] = useState([]);
+  const lastGuard = useRef({}); // 'p-m' → 守りのカードを出したときの控え { jump, label, at }           // はね返したときの光線 [{ key, x, y, len, deg }](画面の位置)
   const [drag, setDrag] = useState(null);       // 運んでいる手札 { i, no, x, y, active }
   const [dropOver, setDropOver] = useState(null); // 指の下の置ける所('p-m' か 'guts')
   const dragRef = useRef(null);
@@ -350,19 +361,47 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null }) => {
       const kind = cardMotionKindOf(db, e.cards[0], mon);
       if (!kind) return;
       const from = centerOf(`${e.p}-${e.mon}`);
-      const to = e.target ? centerOf(`${e.target.p}-${e.target.m}`) : centerOf(`${1 - e.p}-1`);
+      // 相手を狙わない特殊技(自分や味方にかけるもの)は、その場で光る
+      const c0 = cardOf(db, e.cards[0]);
+      const inPlace = !!c0 && c0.kind === 'spe' && (!e.target || e.target.p === e.p);
+      const to = inPlace ? from : e.target ? centerOf(`${e.target.p}-${e.target.m}`) : centerOf(`${1 - e.p}-1`);
       if (!from || !to) return;
       const key = `${next.log.length}-${n}-${Date.now()}`;
       playMotion(`${e.p}-${e.mon}`, { type: 'attack', kind, dx: Math.round(to.x - from.x), dy: Math.round(to.y - from.y), key }, cardMotionMs(kind) + 80);
     });
+    // ブリーダーのカード: モンスターは動かさず、まんなかの端に使った側の助手・ブリーダーの顔を出す(設計書 5-4)
+    const breederUse = evs.find((e) => e.t === 'use' && cardIsBreederCard(db, e.cards[0]));
+    if (breederUse) {
+      const key = `b${next.log.length}-${Date.now()}`;
+      setBreederFx({ p: breederUse.p, key });
+      motionTimers.current.push(setTimeout(() => setBreederFx((cur) => (cur && cur.key === key ? null : cur)), 1700));
+    }
+    // はね返した: 防いだ子から攻撃した子へ光線(少し遅らせて、盾のあとに出す)
+    const back = evs.find((e) => e.t === 'hit' && e.reflect);
+    const shield = back && evs.find((e) => e.t === 'hit' && !e.reflect && e.guarded);
+    if (back && shield) {
+      const a = centerOf(`${shield.p}-${shield.m}`); const b = centerOf(`${back.p}-${back.m}`);
+      if (a && b) {
+        const key = `r${next.log.length}-${Date.now()}`;
+        const beam = { key, x: a.x, y: a.y, len: Math.round(Math.hypot(b.x - a.x, b.y - a.y)), deg: Math.atan2(b.y - a.y, b.x - a.x) * 180 / Math.PI };
+        motionTimers.current.push(setTimeout(() => setBeams((cur) => [...cur, beam]), 260));
+        motionTimers.current.push(setTimeout(() => setBeams((cur) => cur.filter((x) => x.key !== key)), 1100));
+      }
+    }
     // 受ける・よける・防ぐ
+    // ★守りのカードを出した手と、当たりが決まる手は別のことがある。よけ方(ジャンプ)・盾の数字は、守りのカードを出したときの控えから引く
+    evs.filter((e) => e.t === 'guard').forEach((e) => { const c = cardOf(db, e.card); lastGuard.current[`${e.p}-${e.mon}`] = { jump: cardDodgeIsJump(c), label: c && c.kind !== 'dge' ? cardGuardLabel(c) : '', at: Date.now() }; });
     evs.filter((e) => e.t === 'hit').forEach((e, n) => {
-      const type = e.evaded && !e.dmg ? 'dodge' : e.guarded && !e.dmg ? 'guard' : e.dmg > 0 ? 'hit' : (e.evaded ? 'dodge' : null);
-      if (type) playMotion(`${e.p}-${e.m}`, { type, key: `h${next.log.length}-${n}-${Date.now()}` }, 720);
+      let type = e.evaded && !e.dmg ? 'dodge' : e.guarded && !e.dmg ? 'guard' : e.dmg > 0 ? 'hit' : (e.evaded ? 'dodge' : null);
+      const g = lastGuard.current[`${e.p}-${e.m}`];
+      const recent = g && Date.now() - g.at < 20000;
+      if (type === 'dodge' && recent && g.jump) type = 'jump';
+      if (type) playMotion(`${e.p}-${e.m}`, { type, label: type === 'guard' && recent ? g.label : '', key: `h${next.log.length}-${n}-${Date.now()}` }, type === 'jump' ? 920 : 720);
     });
     evs.filter((e) => e.t === 'guard').forEach((e, n) => {
       const c = cardOf(db, e.card);
-      playMotion(`${e.p}-${e.mon}`, { type: c && c.kind === 'dge' ? 'dodge' : 'guard', key: `g${next.log.length}-${n}-${Date.now()}` }, 720);
+      const type = c && c.kind === 'dge' ? (cardDodgeIsJump(c) ? 'jump' : 'dodge') : 'guard';
+      playMotion(`${e.p}-${e.mon}`, { type, label: type === 'guard' ? cardGuardLabel(c) : '', key: `g${next.log.length}-${n}-${Date.now()}` }, type === 'jump' ? 920 : 720);
     });
     const use = evs.find((e) => e.t === 'use');
     if (use) {
@@ -691,6 +730,16 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null }) => {
           </div>
         )}
         <div className="pointer-events-none absolute inset-x-6 top-1/2 h-px bg-gradient-to-r from-transparent via-violet-300/40 to-transparent"/>
+        {/* ブリーダーのカード: 使った側の助手・ブリーダーの顔を、まんなかの端に光らせて出す(相手は右上・自分は左下。設計書 5-4) */}
+        {breederFx && (
+          <div key={breederFx.key} data-card-breeder-fx={breederFx.p === CARD_ME ? 'me' : 'foe'} aria-hidden="true"
+            className={`mh-card-breeder pointer-events-none absolute z-[3] grid h-[46px] w-[46px] place-items-center overflow-hidden rounded-2xl border-2 bg-black ${breederFx.p === CARD_ME ? 'bottom-1 left-2 border-amber-300' : 'right-2 top-1'}`}
+            style={breederFx.p === CARD_ME ? undefined : { borderColor: who.accent }}>
+            {breederFx.p === CARD_ME
+              ? (meProfile && meProfile.icon ? cardIconNode(meProfile.icon, 34) : <span className="text-[26px]">🧑</span>)
+              : pvp ? cardIconNode(pvp.icon, 34) : <img src={assistantFaceImage(who, 'happy')} alt="" className="h-full w-full object-cover object-top"/>}
+          </div>
+        )}
         {action && (
           <div key={action.key} data-card-action className={`relative z-[1] flex items-center gap-2 rounded-2xl border border-amber-300/50 bg-black/55 px-2 ${compact ? "py-0.5" : "py-1"} shadow-lg`}>
             {!compact && action.cards.slice(0, 3).map((no, i) => { const c = cardOf(db, no); return c ? <img key={i} src={CARD_IMG(c.img)} alt={c.name} className={`${compact ? 'h-[40px] w-[29px]' : 'h-[64px] w-[46px]'} rounded-[4px] object-cover shadow`}/> : null; })}
@@ -769,6 +818,11 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null }) => {
       {drag && drag.active && typeof ReactDOM !== 'undefined' && ReactDOM.createPortal(
         <div data-drag-card-layer className="pointer-events-none fixed inset-0" style={{ zIndex: MODAL_Z.dialog - 1 }}>
           <img ref={ghostRef} data-dragging-card src={CARD_IMG((cardOf(db, drag.no) || {}).img || drag.no)} alt="" className="fixed w-[76px] -translate-x-1/2 -translate-y-[70%] rotate-[-4deg] rounded-[5px] shadow-[0_8px_18px_rgba(0,0,0,.7)]" style={{ left: drag.x, top: drag.y }}/>
+        </div>, document.body)}
+      {/* はね返した光線(画面の位置で引く。運ぶカードと同じく body の上に出す) */}
+      {beams.length > 0 && typeof ReactDOM !== 'undefined' && ReactDOM.createPortal(
+        <div data-card-beam-layer className="pointer-events-none fixed inset-0" style={{ zIndex: MODAL_Z.dialog - 2 }}>
+          {beams.map((b) => <span key={b.key} data-card-beam className="mh-card-beam" style={{ left: b.x, top: b.y, width: b.len, transform: `rotate(${b.deg}deg)` }}/>)}
         </div>, document.body)}
       {detail && <CardDetailModal db={db} no={detail} onClose={() => setDetail(null)}/>}
       {discard && <CardDiscardModal db={db} st={st} initial={discard.tab} onDetail={(no) => setDetail(no)} onClose={() => setDiscard(null)}/>}
@@ -901,7 +955,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   if (!save) return <div data-mh-screen className={SCREEN_SHELL_CLASS}><ScreenHead title="MFバトルカード" onBack={onExit}/><ScreenEmpty emoji="⏳" lines={['読み込み中…']}/></div>;
 
   if (screen === 'CARD_BATTLE' && game) {
-    return <CardBattleBoard key={game.key} db={db} game={game} quickRun={quickRun ? { loops: quickRun.loops, stopped: quickRun.stopped } : null} onFinish={async ({ outcome, st }) => {
+    return <CardBattleBoard key={game.key} db={db} game={game} meProfile={rank && rank.profile} quickRun={quickRun ? { loops: quickRun.loops, stopped: quickRun.stopped } : null} onFinish={async ({ outcome, st }) => {
       // マルチ対戦: 封を開けて確かめるのは 91 の CARD_PVP。結果は部屋の画面に出す(報酬は区切り2)
       if (game.pvp) {
         CARD_PVP.finish(outcome, st);
