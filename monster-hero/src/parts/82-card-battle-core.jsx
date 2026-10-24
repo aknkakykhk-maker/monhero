@@ -959,6 +959,8 @@ const CARD_SAVE_KEYS = Object.freeze({
   shop: 'mh_card_shop_v1',       // マーケットで買ったスターターキットの印(89-card-pack.jsx)
   topAssist: 'mh_card_top_assist_v1', // トップの助手の「立ち絵/コメント」の出し入れ(84。無ければ両方ON)
   rankSync: 'mh_card_rank_sync_v1',   // ランキングへ最後に送った行の中身(同じなら送り直さない。90-card-rank.jsx)
+  bgm: 'mh_card_bgm_v1',              // 対戦の BGM { cpu: 'auto' か 曲id, pvp: 曲id }(設計書 5-3。いまの mh_bgm_arrangement は触らない)
+  settings: 'mh_card_settings_v1',    // 演出の速さ・守れないときの自動パス(normalizeCardSettings)
 });
 const cardIsPlainObject = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
 const cardNormalizeCollection = (v) => {
@@ -987,6 +989,22 @@ const cardNormalizeDaily = (v, today) => {
   return { day: today, cpuPoint: cardNormalizePoint(v.cpuPoint), pvpPoint: cardNormalizePoint(v.pvpPoint), firstWin: v.firstWin === true, foes: cardIsPlainObject(v.foes) ? { ...v.foes } : {} };
 };
 const CARD_LEVEL_ORDER = Object.freeze(['easy', 'normal', 'hard', 'expert', 'master']);
+// 対戦の BGM。cpu は 'auto'(相手の助手に合わせる)か曲id、pvp は曲id。無い・知らない曲idは既定へ戻す(isTrack: 曲idか確かめる関数)
+const CARD_BGM_DEFAULT = Object.freeze({ cpu: 'auto', pvp: 'ichika_battle' });
+const normalizeCardBgm = (v, isTrack = () => true) => {
+  const r = cardIsPlainObject(v) ? v : {};
+  return {
+    cpu: r.cpu === 'auto' || (typeof r.cpu === 'string' && isTrack(r.cpu)) ? r.cpu : CARD_BGM_DEFAULT.cpu,
+    pvp: typeof r.pvp === 'string' && isTrack(r.pvp) ? r.pvp : CARD_BGM_DEFAULT.pvp,
+  };
+};
+// 演出の設定。speed … 'normal' / 'fast'(相手の考える間と、決着から結果までを短くする)
+//   autoPass … 守れるカードが1枚も無いとき、自動で「守らない」にする(既定は ON。理由の一言は少し見せてから進む)
+const CARD_SETTINGS_DEFAULT = Object.freeze({ speed: 'normal', autoPass: true });
+const normalizeCardSettings = (v) => {
+  const r = cardIsPlainObject(v) ? v : {};
+  return { speed: r.speed === 'fast' ? 'fast' : 'normal', autoPass: r.autoPass !== false };
+};
 // 難易度ごとの数 { easy: n, … }。知らない難易度は捨てる
 const cardNormalizeLevelCounts = (v) => {
   const r = cardIsPlainObject(v) ? v : {};

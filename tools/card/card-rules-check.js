@@ -16,7 +16,7 @@ const load = () => {
     + `${fs.readFileSync(path.join(GAME, 'src', 'parts', '89-card-pack.jsx'), 'utf8')}\n;\n`
     // 85 は画面の部品(SkillFxMotion)を使うので、ルールだけで動く「動きの見本」の所だけ読む
     + `${fs.readFileSync(path.join(GAME, 'src', 'parts', '85-card-battle-motion.jsx'), 'utf8').split('// ---- 動きの見本')[1].replace(/^[^\n]*\n/, '')}\n;\n`
-    + 'this.E = { CARD_BATTLE_DATA, cardCreateGame, cardApplyAction, cardLegalActions, cardAttackOptions, cardGuardOptions, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardSimulate, CARD_AI_LEVELS, CARD_AI_HABITS, CARD_AI_DECKS, cardDeckProblems, cardNormalizeCollection, cardNormalizeDecks, cardNormalizePoint, cardNormalizeDaily, cardNormalizeRecord, cardNormalizeCpuUnlocked, cardGrantStarter, cardCpuReward, cardUnlockAfterWin, cardMotionDemo, cardMotionDemoAction, cardTutorialGame, cardTutorialMutate, cardTutorialAllow, cardTutorialDone, cardTutorialCpu, CARD_TUTORIAL_STAGES, cardTutorialCopyProblems, cardTutorialFinish, CARD_TUTORIAL_LINES, cardCpuLoops, cardOwnTurns, cardDeckAddReason, cardDeckReady, cardDecksPut, cardDecksRemove, CARD_PACKS, cardOpenPack, cardBuyPacks, cardPackRates, cardBuyStarter, cardMonRarity, cardNormalizePity, cardNormalizeShop, CARD_SAVE_KEYS, cardRecordAfter, cardRankRow, cardWeekKeyJst };';
+    + 'this.E = { CARD_BATTLE_DATA, cardCreateGame, cardApplyAction, cardLegalActions, cardAttackOptions, cardGuardOptions, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardSimulate, CARD_AI_LEVELS, CARD_AI_HABITS, CARD_AI_DECKS, cardDeckProblems, cardNormalizeCollection, cardNormalizeDecks, cardNormalizePoint, cardNormalizeDaily, cardNormalizeRecord, cardNormalizeCpuUnlocked, cardGrantStarter, cardCpuReward, cardUnlockAfterWin, cardMotionDemo, cardMotionDemoAction, cardTutorialGame, cardTutorialMutate, cardTutorialAllow, cardTutorialDone, cardTutorialCpu, CARD_TUTORIAL_STAGES, cardTutorialCopyProblems, cardTutorialFinish, CARD_TUTORIAL_LINES, cardCpuLoops, cardOwnTurns, cardDeckAddReason, cardDeckReady, cardDecksPut, cardDecksRemove, CARD_PACKS, cardOpenPack, cardBuyPacks, cardPackRates, cardBuyStarter, cardMonRarity, cardNormalizePity, cardNormalizeShop, CARD_SAVE_KEYS, cardRecordAfter, cardRankRow, cardWeekKeyJst, normalizeCardBgm, normalizeCardSettings };';
   vm.runInContext(src, ctx, { filename: '82-card-battle-core.jsx' });
   return ctx.E;
 };
@@ -222,6 +222,11 @@ const decksAndSaves = () => {
     const row = E.cardRankRow(rec, { dexCount: 30, dexTotal: 405, userName: 'テスト', icon: '🐣', profileFrame: null, breederId: 'b1', now: Date.UTC(2026, 9, 27, 3, 0) });
     ok(row.week_key === '2026-10-26' && row.week_wins_hard === 0 && row.wins_hard === 1 && row.best_streak === 2 && row.current_streak === 0 && row.dex_count === 30 && row.breeder_id === 'b1' && !('profile_frame' in row), `送る行が合わない ${JSON.stringify(row)}`);
     ok(Object.values(E.CARD_SAVE_KEYS).every((k) => /^mh_card_/.test(k)), '保存キーが mh_card_ で始まらない');
+    // 対戦の BGM と演出の設定(無い・壊れた・知らない曲は既定へ)
+    const tracks = new Set(['melo_toriko', 'ichika_battle']);
+    const isT = (id) => tracks.has(id);
+    ok(JSON.stringify(E.normalizeCardBgm(null, isT)) === '{"cpu":"auto","pvp":"ichika_battle"}' && E.normalizeCardBgm({ cpu: 'nope', pvp: 'nope' }, isT).cpu === 'auto' && E.normalizeCardBgm({ cpu: 'melo_toriko' }, isT).cpu === 'melo_toriko', '対戦のBGMの読み込みで、既定・知らない曲の戻しが合わない');
+    ok(JSON.stringify(E.normalizeCardSettings(null)) === '{"speed":"normal","autoPass":true}' && E.normalizeCardSettings({ speed: 'fast', autoPass: false }).autoPass === false && E.normalizeCardSettings({ speed: 'x' }).speed === 'normal', '演出の設定の読み込みが合わない');
   }
   // カードポイントとクイック周回(案A・台帳 #3484): 1日1,500まで・はじめての勝ちは+50
   const full = { ownTurns: 10, kos: 0 };
