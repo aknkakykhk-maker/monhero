@@ -356,7 +356,11 @@ check('図鑑のEXスキルは既存定義から回数・効果時間・通常�
 {
   const lineageIds = Object.keys(vm.runInContext('MONSTER_LINEAGES', ctx));
   const icons = vm.runInContext('MONSTER_LINEAGE_ICONS', ctx);
-  const noIcon = lineageIds.filter((id) => typeof icons[id] !== 'string' || !/^images\/lineage-icons\/[a-z]+\.png\?v=[0-9a-f]{12}$/.test(icons[id]));
+  // 血統別のアイコンの絵がまだ無い血統(名指しで足す)。画面の血統アイコンは顔アイコン(lineageIconUrl)を使うので困らない。
+  // コロペンドラ(2026-10-24・純血)は社長から届いた37個に入っていなかった。絵が届いたら対応表へ足し、ここから消す
+  const NO_ICON_YET = ['colorpandora'];
+  const noIcon = lineageIds.filter((id) => !NO_ICON_YET.includes(id) && (typeof icons[id] !== 'string' || !/^images\/lineage-icons\/[a-z]+\.png\?v=[0-9a-f]{12}$/.test(icons[id])));
+  check('絵がまだ無い血統は、本当に絵が無いものだけ(絵が届いたら名指しから外す)', NO_ICON_YET.every((id) => lineageIds.includes(id) && !icons[id]), NO_ICON_YET.join(', '));
   check('すべての血統に、血統別のアイコンが対応している', noIcon.length === 0, noIcon.join(', ') || `${lineageIds.length}血統`);
   const extra = Object.keys(icons).filter((id) => !lineageIds.includes(id));
   check('対応表に、存在しない血統が混ざっていない', extra.length === 0, extra.join(', '));
