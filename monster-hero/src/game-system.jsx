@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: fe884d321fc1a0bc
+// generated-sha256: 875ab37f4ef7df60
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-24 14:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-24 15:19"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -50929,22 +50929,53 @@ const CARD_TUTORIAL_STAGES = Object.freeze([
 
 // 練習試合の場面(決まった手札・山札)。自分はドラが貸すデッキ(ディノ・ピクシー・ゴーレム)、みゅあはスピードチーム
 const cardTutorialGame = (db) => {
-  const filler = '064'; // ディノのかみつき(ガッツ4。最初はガッツが無いので出せない)
-  // 山札は末尾が上。①で上から「パンチ」「でこぴん」を引く
-  const myDeck = [...Array(43).fill(filler), '026', '061'];
+  // 同じ名前は3枚まで(デッキの決まり)。自分の山札は、ディノ・ピクシー・ゴーレムが使える札を3枚ずつ順に入れて作る
+  //   ★最初は 064(かみつき)だけで埋めていて、手札に同じカードが4枚並んだ(2026-10-24 社長の実機・#3478)
+  const myHand = ['027', CARD_TUTORIAL_CARD.step, '029']; // キック・ステップ・チョップ(練習試合だけ3枚から)
+  const myTop = ['026', CARD_TUTORIAL_CARD.punch];        // 山札の上(末尾が上): ①で「パンチ」「でこぴん」を引く
+  const count = {};
+  const nameOf = (no) => (cardOf(db, no) || {}).name;
+  [...myHand, ...myTop].forEach((no) => { count[nameOf(no)] = (count[nameOf(no)] || 0) + 1; });
+  const mons = ['C-006', 'C-005', 'C-003'].map((no) => ({ ...cardMonsterOf(db, no), ko: false }));
+  // 2ターン目に引く札は、ガッツ2では出せない重い技にする(④で教える「パンチ」だけが光るように)
+  const pool = Object.values(db.cards).filter((c) => c.ready && c.wave === 1 && c.kind !== 'spe' && c.user !== 'breeder' && (c.user === 'any' || mons.some((m) => cardUsableBy(c, m))) && !cardHasEff(c, 'attach'))
+    .sort((a, b) => (b.guts - a.guts) || (a.no < b.no ? -1 : 1));
+  const rest = [];
+  for (const c of pool) {
+    while ((count[c.name] || 0) < CARD_DECK_COPY_MAX && rest.length < 43) { rest.push(c.no); count[c.name] = (count[c.name] || 0) + 1; }
+    if (rest.length >= 43) break;
+  }
+  const myDeck = [...rest.reverse(), ...myTop];
+  // みゅあはスピードチームの50枚をそのまま分ける(手札5枚・ガッツ2枚・残りが山札)。手札の1枚目は「ソバット」
+  const kit = cardAiBuildDeck(db, 'speed').cards.slice();
+  const take = (no) => { const k = kit.indexOf(no); return k >= 0 ? kit.splice(k, 1)[0] : null; };
+  const muaHand = [take(CARD_TUTORIAL_CARD.sobat) || CARD_TUTORIAL_CARD.sobat];
+  while (muaHand.length < CARD_BATTLE_HAND_MAX) muaHand.push(kit.pop());
+  const muaGuts = [kit.pop(), kit.pop()];
   const decks = [
-    { monsters: ['C-006', 'C-005', 'C-003'], cards: Array(50).fill(filler) },
-    { monsters: ['C-006', 'C-008', 'C-009'], cards: Array(50).fill('062') },
+    { monsters: ['C-006', 'C-005', 'C-003'], cards: [...myHand, ...myDeck] },
+    { monsters: ['C-006', 'C-008', 'C-009'], cards: [...muaHand, ...muaGuts, ...kit] },
   ];
   let st = cardCreateGame(db, { decks, names: ['あなた', 'みゅあ'], seed: 11, first: 0 });
   st = cardApplyAction(db, st, { type: 'setupGuts', hand: [] });
-  st.players[0].hand = ['027', CARD_TUTORIAL_CARD.step, '029']; // キック・ステップ・チョップ(練習試合だけ3枚から)
+  st.players[0].hand = myHand.slice();
   st.players[0].deck = myDeck;
   st.players[0].guts = [];
-  st.players[1].hand = [CARD_TUTORIAL_CARD.sobat, '062', '062', '062', '062'];
-  st.players[1].guts = ['062', '062'];
+  st.players[1].hand = muaHand;
+  st.players[1].guts = muaGuts;
+  st.players[1].deck = kit;
   st.log = [{ turn: 1, text: '練習試合(あなたが先攻)' }];
   return st;
+};
+// 練習試合の自分・みゅあのカード(手札・山札・ガッツ)が、同じ名前3枚までになっているか(検査用)
+const cardTutorialCopyProblems = (db, st) => {
+  const out = [];
+  st.players.forEach((pl, p) => {
+    const n = {};
+    [...pl.hand, ...pl.deck, ...pl.guts, ...pl.discard].forEach((no) => { const c = cardOf(db, no); if (c) n[c.name] = (n[c.name] || 0) + 1; });
+    Object.entries(n).forEach(([name, k]) => { if (k > CARD_DECK_COPY_MAX) out.push(`${p === 0 ? '自分' : 'みゅあ'}の「${name}」が${k}枚`); });
+  });
+  return out;
 };
 
 // 「次へ」で場面を変える
@@ -51470,7 +51501,8 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
     if (!next) return false;
     const evs = next.events || [];
     // 次のことが起きたら、吹き出しはその時点で消す(5-3)
-    if (evs.some((e) => e.t === 'use' || e.t === 'guard')) { clearTimeout(bubbleTimer.current); setBubble(null); }
+    // ★練習試合では消さない(みゅあの台詞が消えたあと、次の台詞まで光る所も吹き出しも無い時間ができていた)
+    if (!tutorial && evs.some((e) => e.t === 'use' || e.t === 'guard')) { clearTimeout(bubbleTimer.current); setBubble(null); }
     const hits = evs.filter((e) => e.t === 'hit' || e.t === 'heal').map((e, i) => ({ ...e, key: `${next.log.length}-${i}-${Date.now()}`, heal: e.t === 'heal' ? e.n : 0, dmg: e.t === 'hit' ? e.dmg : 0 }));
     if (hits.length) {
       setFx(hits);
@@ -51728,6 +51760,25 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
     );
   };
 
+  // 練習試合で、いま教えている所(光らせる手札・押せるボタン)。ほかのボタンは押せない(暗くする)
+  const tutFocus = (() => {
+    if (!tutorial) return { hand: [], button: null };
+    if (tutStage.next || tutQ.length > 1 || (tutQ[0] && tutQ[0][0] === 'M') || !myTurn) return { hand: [], button: null };
+    const okAct = (act) => cardTutorialAllow(db, tutStage.id, st, act);
+    const hand = me.hand.map((_, i) => i).filter((i) => cardTutorialHandOk(tutStage.id, st, i) && !picks.includes(i));
+    if (mode === 'attack') {
+      if (okAct({ type: 'endAttacks' })) return { hand: [], button: 'end' };
+      return { hand: sel ? [] : hand.filter((i) => attackOpts.some((o) => o.hand.includes(i))), button: null };
+    }
+    if (mode === 'guts') {
+      if (tutStage.id === 'guts') return { hand: picks.length >= 2 ? [] : hand, button: picks.length ? 'turn' : null };
+      return { hand: [], button: 'turn' };
+    }
+    if (mode === 'guard') return st.pending && st.pending.evaded ? { hand: [], button: 'pass' } : { hand: hand.filter((i) => guardOpts.some((o) => o.hand === i)), button: null };
+    return { hand: [], button: null };
+  })();
+  const tutBtn = (key) => (tutorial ? (tutFocus.button === key ? ' animate-pulse ring-4 ring-emerald-300' : '') : '');
+  const tutOff = (key) => tutorial && tutFocus.button !== key;
   const footer = (() => {
     const btn = 'mh-button min-h-[44px] flex-1 rounded-xl text-[14px] font-black active:scale-[.98] disabled:opacity-40';
     if (st.winner !== null && !tutorial) return <div className="flex-1 text-center text-[15px] font-black text-amber-200">{st.winner === CARD_ME ? '勝ち！' : '負け…'}</div>;
@@ -51735,12 +51786,12 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
     if (mode === 'wait') return <div className="flex-1 text-center text-[13px] font-bold text-slate-300">{who.name}の番…</div>;
     if (mode === 'setup') return <button type="button" className={`${btn} mh-button-primary`} onClick={() => step({ type: 'setupGuts', hand: picks })}>{picks.length ? `${picks.length}枚をガッツにして始める` : 'ガッツにしないで始める'}</button>;
     if (mode === 'discard') return <button type="button" disabled={picks.length !== st.pendingDiscard.n} className={`${btn} mh-button-danger`} onClick={() => step({ type: 'discard', hand: picks })}>{`${st.pendingDiscard.n}枚えらんで捨てる`}</button>;
-    if (mode === 'guard') return <button type="button" className={`${btn} border border-white/20 bg-slate-800`} onClick={() => step({ type: 'pass' })}>{tutorial && st.pending && st.pending.evaded ? 'これで守る' : '守らない'}</button>;
-    if (mode === 'guts') return <button type="button" className={`${btn} bg-gradient-to-b from-orange-400 to-orange-600`} onClick={() => step({ type: 'guts', hand: picks })}>{picks.length ? `${picks.length}枚をガッツにしてターン終了` : 'ガッツにしないでターン終了'}</button>;
+    if (mode === 'guard') return <button type="button" disabled={tutOff('pass')} className={`${btn} border border-white/20 bg-slate-800${tutBtn('pass')}`} onClick={() => step({ type: 'pass' })}>{tutorial && st.pending && st.pending.evaded ? 'これで守る' : '守らない'}</button>;
+    if (mode === 'guts') return <button type="button" disabled={tutOff('turn')} className={`${btn} bg-gradient-to-b from-orange-400 to-orange-600${tutBtn('turn')}`} onClick={() => step({ type: 'guts', hand: picks })}>{picks.length ? `${picks.length}枚をガッツにしてターン終了` : 'ガッツにしないでターン終了'}</button>;
     const useBtn = sel && monChosen !== undefined && finalOpts.length && !needTarget;
     return (<>
       {useBtn ? <button type="button" className={`${btn} mh-button-primary`} onClick={() => step(finalOpts[0])}>使う</button> : null}
-      <button type="button" className={`${btn} border border-violet-300/60 bg-violet-900`} onClick={() => step({ type: 'endAttacks' })}>攻撃おわり → ガッツへ</button>
+      <button type="button" disabled={tutOff('end')} className={`${btn} border border-violet-300/60 bg-violet-900${tutBtn('end')}`} onClick={() => step({ type: 'endAttacks' })}>攻撃おわり → ガッツへ</button>
     </>);
   })();
   const guide = tutorial && (tutStage.next || tutQ.length > 1) ? '' : mode === 'attack' ? (sel ? (monChosen === undefined ? '使う子をタップ' : needTarget ? '狙う相手をタップ' : '「使う」をタップ') : attackOpts.length ? '技をタップ → 相手をタップ(相手まで運んでもOK)' : '使える技がありません →「攻撃おわり」でガッツへ')
@@ -51786,8 +51837,13 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
           {pendingText && <div className="text-rose-200">{pendingText}</div>}
           {(pendingText ? [] : (compact || tutorial) ? logLines.slice(action || bubble || tutorial ? -1 : -2) : logLines.slice(bubble && action ? -2 : -3)).map((l, i, arr) => <div key={i} className={i === arr.length - 1 && !pendingText ? '' : 'text-[11px] text-violet-200'}>{l.text}</div>)}
         </div>
-        {/* 練習試合: ドラの説明の窓(まんなかの下)。操作が要らない台詞は「次へ」で進む */}
-        {tutorial && tutSay && (() => {
+      </div>
+      <div className="flex shrink-0 items-end justify-around px-1">
+        {me.mons.map((_, m) => <CardMonSlot key={m} db={db} st={st} p={CARD_ME} m={m} mark={markOf(CARD_ME, m)} fx={fx.filter((f) => f.p === CARD_ME && f.m === m)} onTap={() => tapMon(CARD_ME, m)} press={press} compact={compact} motion={motions[`0-${m}`] || null}/>)}
+      </div>
+      <div className="flex shrink-0 justify-end px-2 py-1">{strip(CARD_ME)}</div>
+        {/* 練習試合: ドラの説明の窓。手札のすぐ上に、中身の高さぶん場所を取って出す(まんなかに入れると、背の低い iPhone で自分の場の下に隠れて「次へ」が押せなかった・2026-10-24 社長の実機 #3475〜#3477) */}
+      {tutorial && tutSay && (() => {
           const dra = ASSISTANTS.find((a) => a.id === 'dra');
           const head = tutQ[0];
           const showNext = tutStage.next ? (!head || head[0] === 'D') : (head && head[0] === 'D' && tutQ.length > 1);
@@ -51800,23 +51856,20 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
             setTutI((i) => i + 1);
           };
           return (
-            <div data-card-tutor={tutStage.id} className="relative z-[3] flex w-full max-w-[420px] items-start gap-2 rounded-2xl border-2 border-emerald-300/70 bg-slate-950/90 px-2 py-1.5 shadow-lg">
+            <div data-card-tutor={tutStage.id} className="relative z-[30] mx-2 mb-1 flex shrink-0 items-start gap-2 rounded-2xl border-2 border-emerald-300/80 bg-slate-950 px-2 py-1.5 shadow-lg">
               {dra && <img src={assistantFaceImage(dra, 'happy')} alt="ドラ" className="h-[36px] w-[36px] shrink-0 rounded-lg object-cover object-top"/>}
-              <div className="min-w-0 flex-1 text-[12px] font-bold leading-snug text-emerald-50" style={JA_WRAP_STYLE}><b className="mr-1 text-[11px] text-emerald-300">ドラ</b>{CARD_TUTORIAL_LINES[tutSay]}</div>
-              {showNext && <button type="button" data-card-tutor-next onClick={onNext} className="shrink-0 self-center rounded-xl bg-emerald-500 px-2.5 py-1.5 text-[12px] font-black text-slate-950 active:scale-95">次へ</button>}
+              <div className="min-w-0 flex-1 text-[12px] font-bold leading-snug text-emerald-50" style={JA_WRAP_STYLE}><b className="mr-1 text-[11px] text-emerald-300">ドラ</b>{CARD_TUTORIAL_LINES[tutSay]}{hint && <span data-card-tutor-hint className="mt-0.5 block text-[11px] text-amber-200">{hint}</span>}</div>
+              {showNext && <button type="button" data-card-tutor-next onClick={onNext} className="shrink-0 self-center animate-pulse rounded-xl bg-emerald-400 px-3 py-2 text-[13px] font-black text-slate-950 ring-4 ring-emerald-300/70 active:scale-95">次へ</button>}
             </div>
           );
-        })()}
-      </div>
-      <div className="flex shrink-0 items-end justify-around px-1">
-        {me.mons.map((_, m) => <CardMonSlot key={m} db={db} st={st} p={CARD_ME} m={m} mark={markOf(CARD_ME, m)} fx={fx.filter((f) => f.p === CARD_ME && f.m === m)} onTap={() => tapMon(CARD_ME, m)} press={press} compact={compact} motion={motions[`0-${m}`] || null}/>)}
-      </div>
-      <div className="flex shrink-0 justify-end px-2 py-1">{strip(CARD_ME)}</div>
-      {guide && <div className="mx-auto mb-1 shrink-0 rounded-lg bg-amber-300 px-2 py-0.5 text-[11px] font-black text-slate-900">{hint || guide}</div>}
+      })()}
+      {/* 練習試合で、いまタップ(か運ぶ)カードの上に出す案内 */}
+      {tutorial && tutFocus.hand.length > 0 && <div data-card-tutor-arrow className="mx-auto mb-1 shrink-0 animate-bounce rounded-lg bg-emerald-300 px-2 py-0.5 text-[12px] font-black text-slate-900">👇 {mode === 'guts' ? 'タップでガッツに(ガッツへ運んでもOK)' : mode === 'guard' ? 'タップで守る(狙われた子へ運んでもOK)' : 'タップ → 相手をタップ(相手へ運んでもOK)'}</div>}
+      {guide && !tutorial && <div className="mx-auto mb-1 shrink-0 rounded-lg bg-amber-300 px-2 py-0.5 text-[11px] font-black text-slate-900">{hint || guide}</div>}
       {mode === 'guard' && !guardOpts.length && (
         <div data-card-guard-why className="mx-auto mb-1 max-w-[94%] shrink-0 text-center text-[11px] font-bold leading-snug text-slate-300" style={JA_WRAP_STYLE}>{cardGuardBlockReasons(db, st).join(' / ')}</div>
       )}
-      {!guide && hint && <div className="mx-auto mb-1 shrink-0 rounded-lg bg-amber-300 px-2 py-0.5 text-[11px] font-black text-slate-900">{hint}</div>}
+      {!guide && !tutorial && hint && <div className="mx-auto mb-1 shrink-0 rounded-lg bg-amber-300 px-2 py-0.5 text-[11px] font-black text-slate-900">{hint}</div>}
       {mode === 'attack' && sel && monChosen !== undefined && sets.length > 1 && (
         <div className="mb-1 flex shrink-0 flex-wrap justify-center gap-1 px-2">
           {sets.map((s) => <button key={s} type="button" onClick={() => setSel({ ...sel, mon: monChosen, set: s })} className={`rounded-lg border px-2 py-1 text-[12px] font-black ${s === setChosen ? 'border-amber-300 bg-amber-500/25' : 'border-white/20 bg-slate-800'}`}>{JSON.parse(s).map((i) => cardOf(db, me.hand[i]).name).join('＋')}</button>)}
@@ -51828,7 +51881,7 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
           const on = handUsable(i);
           const up = (sel && sel.hand === i) || picks.includes(i) || (setChosen && JSON.parse(setChosen).includes(i));
           return (
-            <div key={`${no}-${i}`} data-card-hand-card={i} onPointerDown={(e) => handDown(e, i, no)} onContextMenu={(e) => e.preventDefault()} onDragStart={(e) => e.preventDefault()} style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }} className={`flex w-[19%] ${compact ? 'max-w-[58px]' : 'max-w-[76px]'} flex-col items-center transition-transform ${up ? '-translate-y-3' : ''} ${myTurn && !on ? 'opacity-45' : ''} ${drag && drag.i === i ? 'opacity-30' : ''}`}>
+            <div key={`${no}-${i}`} data-card-hand-card={i} onPointerDown={(e) => handDown(e, i, no)} onContextMenu={(e) => e.preventDefault()} onDragStart={(e) => e.preventDefault()} style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }} className={`flex w-[19%] ${compact ? 'max-w-[58px]' : 'max-w-[76px]'} flex-col items-center transition-transform ${up ? '-translate-y-3' : ''} ${myTurn && !on && !tutorial ? 'opacity-45' : ''} ${tutorial && myTurn && !tutFocus.hand.includes(i) && !picks.includes(i) && !(sel && sel.hand === i) ? 'opacity-40' : ''} ${tutorial && tutFocus.hand.includes(i) ? 'animate-pulse rounded-[7px] ring-4 ring-emerald-300' : ''} ${drag && drag.i === i ? 'opacity-30' : ''}`} data-card-tutor-focus={tutorial && tutFocus.hand.includes(i) ? true : undefined}>
               <img src={CARD_IMG(c ? c.img : no)} alt={c ? c.name : no} draggable={false} style={{ WebkitUserDrag: 'none' }} className={`w-full rounded-[5px] shadow-[0_3px_6px_#000] ${up ? 'outline outline-[3px] outline-amber-300' : ''}`}/>
               <div className="mt-0.5 w-full rounded-md bg-black/60 py-0.5 text-center leading-tight">
                 <b className={`block ${compact ? 'text-[10px]' : 'text-[11px]'} leading-tight`} style={{ ...JA_WRAP_STYLE, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{c ? c.name : no}</b>

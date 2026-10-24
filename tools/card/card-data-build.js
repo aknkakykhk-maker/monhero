@@ -180,8 +180,8 @@ const build = () => {
       }
     }
     const mons = kit.monsters.map((nm) => Object.values(monsters).find((m) => m.name === nm && !m.variant).no);
-    // 箱の名前(台帳: 黄色のキットは「一発必殺ミラクルチーム」)
-    const name = kitId === 'miracle' ? '一発必殺ミラクルチーム' : kit.name;
+    // 箱の名前(台帳: 黄色のキットは「一発逆転ミラクルチーム」・2026-10-24 社長が一発必殺を取り消し)
+    const name = kitId === 'miracle' ? '一発逆転ミラクルチーム' : kit.name;
     starters[kitId] = { id: kitId, name, monsters: mons, cards: list };
   }
   for (const [id, kit] of Object.entries(starters)) {
