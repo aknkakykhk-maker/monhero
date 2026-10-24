@@ -4271,6 +4271,36 @@ const createAnimationStyle = () => {
     .mh-card-hit { animation: mhRjJackHit .6s ease-out both; }
     .mh-card-ko { animation: mhCardKo .9s ease-in forwards; transform-origin: 50% 90%; }
     .mh-card-shield { position: absolute; inset: 6% 14%; border-radius: 45% 45% 50% 50%; border: 3px solid rgba(147,197,253,.95); background: radial-gradient(circle, rgba(191,219,254,.35), rgba(59,130,246,.15) 60%, transparent 72%); box-shadow: 0 0 18px rgba(96,165,250,.9); pointer-events: none; animation: mhCardShield .7s ease-out both; }
+    /* ==== MFバトルカードのパックを開ける演出(87-card-deck-edit.jsx の CardPackOpen。社長「派手に」台帳 #3503) ====
+       破る: 上の帯がちぎれて飛ぶ・光があふれる / めくる: 1枚ずつ裏返る / キラ: めくる前から裏が光って揺れる・めくったら大きく光る */
+    @keyframes mhPackIdle { 0%,100% { transform: translateY(0) rotate(-1deg); } 50% { transform: translateY(-6px) rotate(1deg); } }
+    @keyframes mhPackTearStrip { 0% { transform: none; opacity: 1; } 35% { transform: translate(6px,-6px) rotate(3deg); opacity: 1; } 100% { transform: translate(160px,-260px) rotate(38deg); opacity: 0; } }
+    @keyframes mhPackShake { 0%,100% { transform: none; } 20% { transform: translateX(-5px) rotate(-2deg); } 40% { transform: translateX(5px) rotate(2deg); } 60% { transform: translateX(-4px) rotate(-1deg); } 80% { transform: translateX(3px); } }
+    @keyframes mhPackDrop { 0% { transform: none; opacity: 1; } 100% { transform: translateY(120px) scale(.85); opacity: 0; } }
+    @keyframes mhPackBurst { 0% { opacity: 0; transform: scale(.3); } 25% { opacity: 1; } 100% { opacity: 0; transform: scale(2.6); } }
+    @keyframes mhPackDeal { 0% { opacity: 0; transform: translateY(-80px) scale(.6) rotate(-8deg); } 100% { opacity: 1; transform: none; } }
+    @keyframes mhPackKiraBack { 0%,100% { transform: rotate(0); filter: brightness(1) drop-shadow(0 0 6px rgba(253,224,71,.6)); } 25% { transform: rotate(-3deg) translateY(-2px); filter: brightness(1.35) drop-shadow(0 0 16px rgba(253,224,71,1)); } 75% { transform: rotate(3deg) translateY(-2px); filter: brightness(1.35) drop-shadow(0 0 16px rgba(253,224,71,1)); } }
+    @keyframes mhPackShimmer { 0% { background-position: -120% 0; } 100% { background-position: 220% 0; } }
+    @keyframes mhPackFlash { 0% { opacity: 0; } 15% { opacity: .95; } 100% { opacity: 0; } }
+    @keyframes mhPackRays { 0% { opacity: 0; transform: scale(.4) rotate(0); } 30% { opacity: 1; } 100% { opacity: 0; transform: scale(1.8) rotate(40deg); } }
+    .mh-pack-idle { animation: mhPackIdle 2.4s ease-in-out infinite; }
+    .mh-pack-shake { animation: mhPackShake .35s ease-in-out both; }
+    .mh-pack-strip { animation: mhPackTearStrip .6s cubic-bezier(.3,.6,.4,1) forwards; }
+    .mh-pack-drop { animation: mhPackDrop .45s ease-in .25s forwards; }
+    .mh-pack-burst { position: absolute; left: 50%; top: 30%; width: 320px; height: 320px; margin: -160px 0 0 -160px; border-radius: 50%; pointer-events: none; background: radial-gradient(circle, rgba(255,255,255,1), rgba(253,230,138,.85) 30%, rgba(253,186,116,.35) 55%, transparent 70%); animation: mhPackBurst .8s ease-out forwards; }
+    .mh-pack-deal { animation: mhPackDeal .42s cubic-bezier(.2,.8,.3,1.2) both; }
+    .mh-pack-card { perspective: 700px; }
+    .mh-pack-card-in { position: relative; transition: transform .45s cubic-bezier(.3,.7,.3,1.1); transform-style: preserve-3d; }
+    .mh-pack-card-in.flipped { transform: rotateY(180deg); }
+    .mh-pack-face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+    .mh-pack-front { transform: rotateY(180deg); }
+    .mh-pack-kira-back { animation: mhPackKiraBack .9s ease-in-out infinite; }
+    .mh-pack-kira-back::after { content: ''; position: absolute; inset: 0; border-radius: 5px; background: linear-gradient(105deg, transparent 35%, rgba(255,255,255,.75) 50%, transparent 65%); background-size: 220% 100%; animation: mhPackShimmer 1.1s linear infinite; }
+    .mh-pack-kira-front { box-shadow: 0 0 0 3px rgba(253,224,71,.95), 0 0 24px 6px rgba(253,224,71,.85); border-radius: 6px; }
+    .mh-pack-kira-front::after { content: ''; position: absolute; inset: 0; border-radius: 5px; background: linear-gradient(105deg, transparent 30%, rgba(255,255,255,.55) 45%, rgba(147,197,253,.45) 55%, transparent 70%); background-size: 220% 100%; animation: mhPackShimmer 1.6s linear infinite; pointer-events: none; }
+    .mh-pack-flash { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(circle at 50% 45%, rgba(255,255,255,.95), rgba(253,224,71,.6) 35%, rgba(253,224,71,0) 70%); animation: mhPackFlash .7s ease-out forwards; z-index: 70; }
+    .mh-pack-rays { position: absolute; inset: -60%; pointer-events: none; background: repeating-conic-gradient(rgba(253,224,71,.55) 0 8deg, transparent 8deg 22deg); border-radius: 50%; animation: mhPackRays .9s ease-out forwards; }
+    @media (prefers-reduced-motion: reduce) { .mh-pack-idle, .mh-pack-kira-back { animation: none; } }
     @keyframes mhRjJackHit { 0% { transform: none; filter: brightness(1); } 12% { transform: translate(-14px, 2px) rotate(-4deg); filter: brightness(2.6); } 30% { transform: translate(12px, -2px) rotate(3deg); filter: brightness(1.6); } 55% { transform: translate(-6px, 0); filter: brightness(1.2); } 100% { transform: none; filter: brightness(1); } }
     @keyframes mhRjBarDrop { 0% { transform: scaleX(var(--from)); } 100% { transform: scaleX(var(--to)); } }
     @media (max-height: 760px) { .mh-rjdmg { gap: 3px; } .mh-rjdmg-score b { font-size: 30px; } .mh-rjdmg-damage b { font-size: 40px !important; } .mh-rjdmg-down { font-size: 48px; } }

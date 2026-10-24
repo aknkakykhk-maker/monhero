@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7f4a0f1008eaefa5
+// generated-sha256: 84e4dff559fcf887
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-25 00:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-25 00:29"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -52523,7 +52523,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   const [confirmReset, setConfirmReset] = useState(false);
   const [detail, setDetail] = useState(null);
   const [demoWho, setDemoWho] = useState('mua');
-  const [editDeck, setEditDeck] = useState(null); // デッキ編成で組んでいるデッキ // デバッグの「結果の見本」の相手
+  const [editDeck, setEditDeck] = useState(null);
+  const [packDemo, setPackDemo] = useState(null); // デバッグの「パックを開ける見本」 // デッキ編成で組んでいるデッキ // デバッグの「結果の見本」の相手
   const press = useCardLongPress((no) => setDetail(no));
 
   const load = async () => {
@@ -52727,6 +52728,17 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       setEditDeck(null); setView('decks');
     }}/>;
   }
+  if (view === 'packArt') {
+    return (
+      <div data-mh-screen data-card-pack-art-list className={SCREEN_SHELL_CLASS}>
+        <ScreenHead title="パックの絵(見本)" accent="text-amber-200" onBack={() => setView('top')} note="弾ごとに色を変えて、その弾で出るモンスターを並べた"/>
+        <div className={`${SCREEN_LIST_CLASS} pb-4`}>
+          <div className="flex flex-wrap justify-center gap-x-2 gap-y-3">{CARD_PACKS.map((pk) => <div key={pk.id} className="flex flex-col items-center"><CardPackArt db={db} pack={pk} width={114}/><span className="mt-1 text-[12px] font-black text-white">{pk.name}</span></div>)}</div>
+        </div>
+      </div>
+    );
+  }
+  if (view === 'packOpen' && packDemo) return <CardPackOpen key={`demo-${packDemo.packs.length}`} db={db} result={packDemo} onDone={() => { setPackDemo(null); setView('top'); }}/>;
   if (view === 'dex') return <CardDex db={db} collection={save.collection} onBack={() => setView('top')}/>;
   if (view === 'rules') return <CardRules onBack={() => setView('top')} onTutorial={() => startTutorial()}/>;
   if (view === 'decks') {
@@ -52832,6 +52844,21 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         {debug && (
           <div className={`${SCREEN_PANEL_FLAT_CLASS} space-y-1`}>
             {/* 結果の画面の見本(NORMAL の勝ち・自分の番8回・2体倒した)。クイック周回が入るとき/入らないとき。保存は何もしない */}
+            {/* パックの絵と開ける演出の見本(社長 台帳 #3503。保存はしない) */}
+            <div className="grid grid-cols-2 gap-1">
+              <button type="button" data-card-pack-art-demo className="mh-button mh-button-secondary min-h-[40px] rounded-xl border border-white/20 bg-slate-800 text-[11px] font-black" onClick={() => { Audio_.se.tap(); setView('packArt'); }}>パックの絵の見本</button>
+              <button type="button" data-card-pack-open-demo className="mh-button mh-button-secondary min-h-[40px] rounded-xl border border-white/20 bg-slate-800 text-[11px] font-black" onClick={() => {
+                // 第1弾を2パック。1パック目の最後のモンスターの枠は別絵キラ、2パック目はキラ(演出を見るため)
+                const a = cardOpenPack(db, 'w1', { collection: {}, pity: {} }, Math.random);
+                const b = cardOpenPack(db, 'w1', { collection: a.collection, pity: {} }, Math.random);
+                const alt = Object.values(db.monsters).find((m) => String(m.wave) === '1' && /別絵/.test(m.variant || ''));
+                const kira = Object.values(db.monsters).find((m) => String(m.wave) === '1' && m.variant === 'キラ');
+                a.cards[a.cards.length - 1] = { no: alt.no, slot: 'mon', rarity: 'alt', dup: false, point: 0 };
+                b.cards[b.cards.length - 1] = { no: kira.no, slot: 'mon', rarity: 'kira', dup: false, point: 0 };
+                setPackDemo({ packId: 'w1', packs: [a.cards, b.cards], dupPoint: 0, cost: 0, demo: true });
+                setView('packOpen');
+              }}>パックを開ける見本</button>
+            </div>
             <select data-card-result-demo-who value={demoWho} onChange={(e) => setDemoWho(e.target.value)} className="w-full rounded-lg border border-white/20 bg-slate-800 px-2 py-1 text-[12px] font-bold text-white">
               {allAssistants.filter((x) => CARD_AI_HABITS[x.id]).map((x) => <option key={x.id} value={x.id}>見本の相手: {x.name}</option>)}
             </select>
@@ -53128,35 +53155,94 @@ const CardRules = ({ onBack, onTutorial }) => (
   </div>
 );
 
+// ==================== パックの絵(社長「パックの絵に出る奴らをいい感じにのせて」台帳 #3503) ====================
+// 新しい画像ファイルは作らない。弾の色の袋に、その弾で出るモンスターの立ち絵(84 の cardMonArt。無ければカードの絵)を5体まで並べて描く
+// torn … 上のふち(ちぎれる所)を描かない(パックを開ける画面で、ちぎれた帯を別に飛ばすとき)
+const cardPackMonsters = (db, pack, n = 5) => {
+  const seen = new Set();
+  const list = Object.values(db.monsters).filter((m) => String(m.wave) === pack.wave && !m.variant && m.ready !== false && !seen.has(m.species) && seen.add(m.species));
+  if (list.length <= n) return list;
+  const step = list.length / n;
+  return Array.from({ length: n }, (_, k) => list[Math.floor(k * step)]);
+};
+const CARD_PACK_SLOTS = Object.freeze([
+  { left: '-8%', w: '50%', b: '19%', z: 1, o: .9 }, { right: '-8%', w: '50%', b: '19%', z: 1, o: .9 },
+  { left: '6%', w: '56%', b: '9%', z: 2, o: 1 }, { right: '6%', w: '56%', b: '9%', z: 2, o: 1 },
+  { left: '50%', w: '74%', b: '2%', z: 3, o: 1, center: true },
+]);
+const CardPackArt = ({ db, pack, width = 200, torn = false, className = '' }) => {
+  const mons = cardPackMonsters(db, pack);
+  // 真ん中を最後に(いちばん手前)。並べる順: 奥の左右 → 中の左右 → 真ん中
+  const order = mons.length >= 5 ? [mons[0], mons[4], mons[1], mons[3], mons[2]] : mons;
+  const slots = mons.length >= 5 ? CARD_PACK_SLOTS : CARD_PACK_SLOTS.slice(5 - mons.length);
+  const h = Math.round(width * 1.48);
+  const label = pack.id === 'hybrid' ? '混血' : `第${pack.wave}弾`;
+  return (
+    <div data-card-pack-art={pack.id} className={`relative overflow-hidden rounded-[14px] border-[3px] border-white/85 shadow-2xl ${className}`} style={{ width, height: h, background: `linear-gradient(165deg, ${pack.color} 0%, ${pack.color} 38%, #0b1020 100%)` }}>
+      <div aria-hidden="true" className="absolute inset-0 opacity-35" style={{ background: `repeating-conic-gradient(from 0deg at 50% 62%, rgba(255,255,255,.55) 0 6deg, transparent 6deg 18deg)` }}/>
+      <div aria-hidden="true" className="absolute inset-0" style={{ background: 'linear-gradient(115deg, transparent 30%, rgba(255,255,255,.28) 45%, transparent 60%)' }}/>
+      {!torn && <div aria-hidden="true" className="absolute inset-x-0 top-0 h-[7%]" style={{ background: 'repeating-linear-gradient(90deg, rgba(255,255,255,.9) 0 6px, rgba(255,255,255,.45) 6px 12px)' }}/>}
+      {order.map((m, k) => {
+        const sl = slots[k]; const src = cardMonArt(m) || CARD_IMG(m.img);
+        return <img key={m.no} src={src} alt="" aria-hidden="true" draggable={false} className="absolute object-contain object-bottom drop-shadow-[0_4px_6px_rgba(0,0,0,.6)]"
+          style={{ width: sl.w, height: '58%', bottom: sl.b, zIndex: sl.z, opacity: sl.o, ...(sl.center ? { left: sl.left, transform: 'translateX(-50%)' } : sl.left ? { left: sl.left } : { right: sl.right }) }}/>;
+      })}
+      <div className="absolute inset-x-0 top-[9%] z-[5] text-center">
+        <div className="font-black leading-none text-white" style={{ fontSize: Math.round(width * 0.2), WebkitTextStroke: `${Math.max(2, Math.round(width / 50))}px #111`, paintOrder: 'stroke fill', textShadow: '0 4px 0 rgba(0,0,0,.45)' }}>{label}</div>
+        <div className="mt-1 font-black tracking-wider text-white/90" style={{ fontSize: Math.round(width * 0.075), textShadow: '0 2px 2px rgba(0,0,0,.7)' }}>MFバトルカード</div>
+      </div>
+      <div className="absolute inset-x-[18%] bottom-[3%] z-[6] rounded-full bg-black/55 py-0.5 text-center font-black text-white" style={{ fontSize: Math.round(width * 0.07) }}>{pack.id === 'hybrid' ? '混血パック' : 'ブースターパック'}</div>
+    </div>
+  );
+};
+
 // ==================== パックを開ける画面(区切り2・CARD_PACK_OPEN) ====================
 // マーケットの「カードポイント」の売り場で買ったら、ここへ来る(買うのと保存は 60-app。この部品は見せるだけ)
 // result: { packId, packs:[[{ no, slot, rarity, dup, point }…]…], dupPoint, cost }
-// 1パックずつ。裏のカードをタップでめくる(モンスターの枠は最後)・「全部めくる」。キラは光る。だぶりは「+◯」
+// 演出(社長「派手に」台帳 #3503): パックをタップ → 上の帯がちぎれて飛び、光があふれる → カードが配られる → タップで1枚ずつ裏返る(音)
+//   キラ・別絵キラは、めくる前から裏が光って揺れる。めくると画面が光り、大きな音。「全部めくる」で続けてめくれる(飛ばせる)
+//   音は今ある効果音(Audio_.se の special・card・crit・levelUp・fusion)
 const CARD_RARITY_LABEL = Object.freeze({ normal: '', kira: 'キラ', alt: '別絵キラ' });
 const CardPackOpen = ({ db, result, onDone }) => {
   const [pi, setPi] = useState(0);
-  const [open, setOpen] = useState(false);
+  const [phase, setPhase] = useState('closed'); // closed → tearing → open
   const [flipped, setFlipped] = useState([]);
+  const [flash, setFlash] = useState(0);
   const [detail, setDetail] = useState(null);
+  const timers = useRef([]);
+  useEffect(() => () => timers.current.forEach(clearTimeout), []);
+  const later = (fn, ms) => { timers.current.push(setTimeout(fn, ms)); };
   const press = useCardLongPress((no) => setDetail(no));
-  const pack = cardPackOf(result.packId) || { name: 'パック', color: '#f59e0b' };
+  const pack = cardPackOf(result.packId) || { id: 'w1', wave: '1', name: 'パック', color: '#f59e0b' };
   const cards = result.packs[pi] || [];
   const allOpen = flipped.length >= cards.length;
   const last = pi >= result.packs.length - 1;
-  const flip = (i) => { if (flipped.includes(i)) return; Audio_.se.card(); setFlipped((f) => [...f, i]); };
-  const flipAll = () => { Audio_.se.card(); setFlipped(cards.map((_, i) => i)); };
-  const next = () => { Audio_.se.tap(); setPi((x) => x + 1); setOpen(false); setFlipped([]); };
+  const tear = () => {
+    if (phase !== 'closed') return;
+    Audio_.se.special();
+    setPhase('tearing');
+    later(() => setPhase('open'), 900);
+  };
+  const reveal = (i) => {
+    Audio_.se.card();
+    setFlipped((f) => (f.includes(i) ? f : [...f, i]));
+    const c = cards[i];
+    if (c && c.rarity !== 'normal') later(() => { setFlash((x) => x + 1); Audio_.se.crit(); if (c.rarity === 'alt') Audio_.se.fusion(); else Audio_.se.levelUp(); }, 380);
+  };
+  const flip = (i) => { if (flipped.includes(i) || phase !== 'open') return; reveal(i); };
+  const flipAll = () => { cards.map((_, i) => i).filter((i) => !flipped.includes(i)).forEach((i, k) => later(() => reveal(i), k * 140)); };
+  const next = () => { Audio_.se.tap(); timers.current.forEach(clearTimeout); timers.current = []; setPi((x) => x + 1); setPhase('closed'); setFlipped([]); };
   const packPoint = cards.reduce((a, c) => a + (c.point || 0), 0);
   return (
-    <div data-mh-screen data-card-pack-open className={SCREEN_SHELL_CLASS}>
+    <div data-mh-screen data-card-pack-open data-card-pack-phase={phase} className={SCREEN_SHELL_CLASS}>
       <ScreenHead title={pack.name} accent="text-amber-200" note={result.packs.length > 1 ? `${pi + 1} / ${result.packs.length}パック` : ''}/>
-      <div className={`${SCREEN_LIST_CLASS} flex flex-col items-center justify-center pb-2`}>
-        {!open ? (
-          <button type="button" data-card-pack-tear onClick={() => { Audio_.se.tap(); setOpen(true); }} className="relative flex h-[300px] w-[200px] flex-col items-center justify-center rounded-2xl border-4 border-white/70 text-center shadow-2xl active:scale-95" style={{ background: `linear-gradient(160deg, ${pack.color}, #1e1b4b)` }}>
-            <span className="text-[44px]">🎴</span>
-            <span className="mt-2 text-[18px] font-black text-white">{pack.name}</span>
-            <span className="mt-1 text-[12px] font-bold text-white/80">{cards.length}枚入り</span>
-            <span className="absolute inset-x-0 bottom-4 animate-pulse text-[13px] font-black text-white">タップで開ける</span>
+      <div className={`${SCREEN_LIST_CLASS} relative flex flex-col items-center justify-center overflow-hidden pb-2`}>
+        {phase !== 'open' ? (
+          <button type="button" data-card-pack-tear onClick={tear} className={`relative ${phase === 'closed' ? 'mh-pack-idle' : 'mh-pack-shake'}`} aria-label="パックを開ける">
+            <div className={phase === 'tearing' ? 'mh-pack-drop' : ''}><CardPackArt db={db} pack={pack} width={210} torn={phase === 'tearing'}/></div>
+            {phase === 'tearing' && <div aria-hidden="true" className="mh-pack-strip absolute inset-x-0 top-0 h-[7%] rounded-t-[14px]" style={{ background: 'repeating-linear-gradient(90deg, rgba(255,255,255,.95) 0 6px, rgba(255,255,255,.5) 6px 12px)' }}/>}
+            {phase === 'tearing' && <div aria-hidden="true" className="mh-pack-burst"/>}
+            {phase === 'closed' && <span className="absolute inset-x-0 -bottom-9 animate-pulse text-center text-[14px] font-black text-white">タップで開ける</span>}
           </button>
         ) : (
           <div className={`grid w-full gap-2 ${cards.length > 4 ? 'grid-cols-4' : 'grid-cols-3'} px-1`}>
@@ -53164,33 +53250,40 @@ const CardPackOpen = ({ db, result, onDone }) => {
               const on = flipped.includes(i);
               const card = cardOf(db, c.no); const m = card ? null : cardMonsterOf(db, c.no);
               const name = card ? card.name : m ? m.name : c.no;
-              const shine = c.rarity !== 'normal';
+              const rare = c.rarity !== 'normal';
               return (
-                <button key={i} type="button" data-card-pack-card={i} data-card-pack-flipped={on ? 1 : 0} data-card-pack-rarity={c.rarity} {...(on ? press(c.no, () => setDetail(c.no)) : { onClick: () => flip(i) })} className={`relative flex flex-col items-center rounded-lg p-0.5 text-center active:scale-95 ${on && shine ? 'animate-pulse ring-4 ring-amber-300 shadow-[0_0_18px_rgba(252,211,77,0.9)]' : ''}`} style={{ WebkitUserSelect: 'none', userSelect: 'none' }}>
-                  {on
-                    ? <img src={CARD_IMG(card ? card.img : m ? m.img : c.no)} alt={name} draggable={false} className="aspect-[5/7] w-full rounded-[5px] object-cover"/>
-                    : <div className="flex aspect-[5/7] w-full items-center justify-center rounded-[5px] border-2 border-white/40 text-[22px]" style={{ background: `linear-gradient(160deg, ${pack.color}, #0f172a)` }}>{c.slot === 'mon' ? '★' : '🃏'}</div>}
-                  {on && c.dup && <span className="absolute right-0.5 top-0.5 rounded-md bg-slate-950/90 px-1 text-[10px] font-black text-amber-200">+{c.point}</span>}
-                  {on && !c.dup && <span className="absolute right-0.5 top-0.5 rounded-md bg-emerald-400 px-1 text-[9px] font-black text-slate-950">NEW</span>}
-                  {on && shine && <span className="absolute left-0.5 top-0.5 rounded-md bg-amber-300 px-1 text-[9px] font-black text-slate-950">{CARD_RARITY_LABEL[c.rarity]}</span>}
-                  <span className="mt-0.5 line-clamp-2 min-h-[26px] text-[10px] font-bold leading-tight text-slate-100" style={JA_WRAP_STYLE}>{on ? name : ''}</span>
-                </button>
+                <div key={`${pi}-${i}`} className="mh-pack-deal flex flex-col items-center" style={{ animationDelay: `${i * 70}ms` }}>
+                  <button type="button" data-card-pack-card={i} data-card-pack-flipped={on ? 1 : 0} data-card-pack-rarity={c.rarity} {...(on ? press(c.no, () => setDetail(c.no)) : { onClick: () => flip(i) })} className="mh-pack-card relative w-full active:scale-95" style={{ WebkitUserSelect: 'none', userSelect: 'none' }}>
+                    <div className={`mh-pack-card-in aspect-[5/7] w-full ${on ? 'flipped' : ''}`}>
+                      <div className={`mh-pack-face flex items-center justify-center rounded-[5px] border-2 border-white/50 text-[22px] ${rare && !on ? 'mh-pack-kira-back' : ''}`} style={{ background: `linear-gradient(160deg, ${pack.color}, #0f172a)` }}>{c.slot === 'mon' ? '★' : '🃏'}</div>
+                      <div className={`mh-pack-face mh-pack-front ${rare ? 'mh-pack-kira-front' : ''}`}>
+                        <img src={CARD_IMG(card ? card.img : m ? m.img : c.no)} alt={name} draggable={false} className="h-full w-full rounded-[5px] object-cover"/>
+                      </div>
+                    </div>
+                    {on && rare && <div aria-hidden="true" className="mh-pack-rays"/>}
+                    {on && c.dup && <span className="absolute right-0.5 top-0.5 z-[2] rounded-md bg-slate-950/90 px-1 text-[10px] font-black text-amber-200">+{c.point}</span>}
+                    {on && !c.dup && <span className="absolute right-0.5 top-0.5 z-[2] rounded-md bg-emerald-400 px-1 text-[9px] font-black text-slate-950">NEW</span>}
+                    {on && rare && <span className="absolute left-0.5 top-0.5 z-[2] rounded-md bg-amber-300 px-1 text-[9px] font-black text-slate-950">{CARD_RARITY_LABEL[c.rarity]}</span>}
+                  </button>
+                  <span className="mt-0.5 line-clamp-2 min-h-[26px] text-center text-[10px] font-bold leading-tight text-slate-100" style={JA_WRAP_STYLE}>{on ? name : ''}</span>
+                </div>
               );
             })}
           </div>
         )}
-        {open && allOpen && (
+        {phase === 'open' && allOpen && (
           <div data-card-pack-summary className="mt-3 text-center text-[12px] font-bold text-slate-300">
             {packPoint > 0 ? <>だぶったカードは <b className="text-amber-200">カードポイント +{packPoint}</b> になりました</> : 'だぶったカードはありません'}
             {last && result.packs.length > 1 && <div className="mt-0.5">({result.packs.length}パックで +{result.dupPoint})</div>}
           </div>
         )}
       </div>
+      {flash > 0 && <div key={flash} aria-hidden="true" className="mh-pack-flash"/>}
       <div className={SCREEN_FOOTER_CLASS}>
-        {!open ? <div className="text-center text-[12px] font-bold text-slate-400">パックをタップしてください</div>
+        {phase !== 'open' ? <div className="text-center text-[12px] font-bold text-slate-400">パックをタップしてください</div>
           : !allOpen ? <button type="button" data-card-pack-flip-all className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]" onClick={flipAll}>全部めくる</button>
           : !last ? <button type="button" data-card-pack-next className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]" onClick={next}>つぎのパック</button>
-          : <button type="button" data-card-pack-done className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]" onClick={() => { Audio_.se.tap(); onDone(); }}>マーケットへ戻る</button>}
+          : <button type="button" data-card-pack-done className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]" onClick={() => { Audio_.se.tap(); onDone(); }}>{result.demo ? 'トップへ戻る' : 'マーケットへ戻る'}</button>}
       </div>
       {detail && <CardDetailModal db={db} no={detail} onClose={() => setDetail(null)}/>}
     </div>
@@ -53211,7 +53304,7 @@ const CardShopPacks = ({ db, point, busy, onBuyPack }) => {
         return (
           <div key={pack.id} data-card-shop-pack={pack.id} className={SCREEN_PANEL_CLASS} style={{ borderColor: `${pack.color}88` }}>
             <div className="flex items-center gap-2">
-              <div className="flex h-[56px] w-[40px] shrink-0 items-center justify-center rounded-md border-2 border-white/60 text-[20px]" style={{ background: `linear-gradient(160deg, ${pack.color}, #1e1b4b)` }}>🎴</div>
+              <CardPackArt db={db} pack={pack} width={58} className="shrink-0 !rounded-[8px] !border-2"/>
               <div className="min-w-0 flex-1">
                 <div className="text-[14px] font-black text-white">{pack.name}</div>
                 <div className="text-[11px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{jaWrap(pack.tech ? `${pack.tech + pack.mon}枚入り(技など${pack.tech}枚・モンスター${pack.mon}枚)` : `${pack.mon}枚入り(3枚とも混血モンスター)`)}</div>
@@ -80448,6 +80541,36 @@ const createAnimationStyle = () => {
     .mh-card-hit { animation: mhRjJackHit .6s ease-out both; }
     .mh-card-ko { animation: mhCardKo .9s ease-in forwards; transform-origin: 50% 90%; }
     .mh-card-shield { position: absolute; inset: 6% 14%; border-radius: 45% 45% 50% 50%; border: 3px solid rgba(147,197,253,.95); background: radial-gradient(circle, rgba(191,219,254,.35), rgba(59,130,246,.15) 60%, transparent 72%); box-shadow: 0 0 18px rgba(96,165,250,.9); pointer-events: none; animation: mhCardShield .7s ease-out both; }
+    /* ==== MFバトルカードのパックを開ける演出(87-card-deck-edit.jsx の CardPackOpen。社長「派手に」台帳 #3503) ====
+       破る: 上の帯がちぎれて飛ぶ・光があふれる / めくる: 1枚ずつ裏返る / キラ: めくる前から裏が光って揺れる・めくったら大きく光る */
+    @keyframes mhPackIdle { 0%,100% { transform: translateY(0) rotate(-1deg); } 50% { transform: translateY(-6px) rotate(1deg); } }
+    @keyframes mhPackTearStrip { 0% { transform: none; opacity: 1; } 35% { transform: translate(6px,-6px) rotate(3deg); opacity: 1; } 100% { transform: translate(160px,-260px) rotate(38deg); opacity: 0; } }
+    @keyframes mhPackShake { 0%,100% { transform: none; } 20% { transform: translateX(-5px) rotate(-2deg); } 40% { transform: translateX(5px) rotate(2deg); } 60% { transform: translateX(-4px) rotate(-1deg); } 80% { transform: translateX(3px); } }
+    @keyframes mhPackDrop { 0% { transform: none; opacity: 1; } 100% { transform: translateY(120px) scale(.85); opacity: 0; } }
+    @keyframes mhPackBurst { 0% { opacity: 0; transform: scale(.3); } 25% { opacity: 1; } 100% { opacity: 0; transform: scale(2.6); } }
+    @keyframes mhPackDeal { 0% { opacity: 0; transform: translateY(-80px) scale(.6) rotate(-8deg); } 100% { opacity: 1; transform: none; } }
+    @keyframes mhPackKiraBack { 0%,100% { transform: rotate(0); filter: brightness(1) drop-shadow(0 0 6px rgba(253,224,71,.6)); } 25% { transform: rotate(-3deg) translateY(-2px); filter: brightness(1.35) drop-shadow(0 0 16px rgba(253,224,71,1)); } 75% { transform: rotate(3deg) translateY(-2px); filter: brightness(1.35) drop-shadow(0 0 16px rgba(253,224,71,1)); } }
+    @keyframes mhPackShimmer { 0% { background-position: -120% 0; } 100% { background-position: 220% 0; } }
+    @keyframes mhPackFlash { 0% { opacity: 0; } 15% { opacity: .95; } 100% { opacity: 0; } }
+    @keyframes mhPackRays { 0% { opacity: 0; transform: scale(.4) rotate(0); } 30% { opacity: 1; } 100% { opacity: 0; transform: scale(1.8) rotate(40deg); } }
+    .mh-pack-idle { animation: mhPackIdle 2.4s ease-in-out infinite; }
+    .mh-pack-shake { animation: mhPackShake .35s ease-in-out both; }
+    .mh-pack-strip { animation: mhPackTearStrip .6s cubic-bezier(.3,.6,.4,1) forwards; }
+    .mh-pack-drop { animation: mhPackDrop .45s ease-in .25s forwards; }
+    .mh-pack-burst { position: absolute; left: 50%; top: 30%; width: 320px; height: 320px; margin: -160px 0 0 -160px; border-radius: 50%; pointer-events: none; background: radial-gradient(circle, rgba(255,255,255,1), rgba(253,230,138,.85) 30%, rgba(253,186,116,.35) 55%, transparent 70%); animation: mhPackBurst .8s ease-out forwards; }
+    .mh-pack-deal { animation: mhPackDeal .42s cubic-bezier(.2,.8,.3,1.2) both; }
+    .mh-pack-card { perspective: 700px; }
+    .mh-pack-card-in { position: relative; transition: transform .45s cubic-bezier(.3,.7,.3,1.1); transform-style: preserve-3d; }
+    .mh-pack-card-in.flipped { transform: rotateY(180deg); }
+    .mh-pack-face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+    .mh-pack-front { transform: rotateY(180deg); }
+    .mh-pack-kira-back { animation: mhPackKiraBack .9s ease-in-out infinite; }
+    .mh-pack-kira-back::after { content: ''; position: absolute; inset: 0; border-radius: 5px; background: linear-gradient(105deg, transparent 35%, rgba(255,255,255,.75) 50%, transparent 65%); background-size: 220% 100%; animation: mhPackShimmer 1.1s linear infinite; }
+    .mh-pack-kira-front { box-shadow: 0 0 0 3px rgba(253,224,71,.95), 0 0 24px 6px rgba(253,224,71,.85); border-radius: 6px; }
+    .mh-pack-kira-front::after { content: ''; position: absolute; inset: 0; border-radius: 5px; background: linear-gradient(105deg, transparent 30%, rgba(255,255,255,.55) 45%, rgba(147,197,253,.45) 55%, transparent 70%); background-size: 220% 100%; animation: mhPackShimmer 1.6s linear infinite; pointer-events: none; }
+    .mh-pack-flash { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(circle at 50% 45%, rgba(255,255,255,.95), rgba(253,224,71,.6) 35%, rgba(253,224,71,0) 70%); animation: mhPackFlash .7s ease-out forwards; z-index: 70; }
+    .mh-pack-rays { position: absolute; inset: -60%; pointer-events: none; background: repeating-conic-gradient(rgba(253,224,71,.55) 0 8deg, transparent 8deg 22deg); border-radius: 50%; animation: mhPackRays .9s ease-out forwards; }
+    @media (prefers-reduced-motion: reduce) { .mh-pack-idle, .mh-pack-kira-back { animation: none; } }
     @keyframes mhRjJackHit { 0% { transform: none; filter: brightness(1); } 12% { transform: translate(-14px, 2px) rotate(-4deg); filter: brightness(2.6); } 30% { transform: translate(12px, -2px) rotate(3deg); filter: brightness(1.6); } 55% { transform: translate(-6px, 0); filter: brightness(1.2); } 100% { transform: none; filter: brightness(1); } }
     @keyframes mhRjBarDrop { 0% { transform: scaleX(var(--from)); } 100% { transform: scaleX(var(--to)); } }
     @media (max-height: 760px) { .mh-rjdmg { gap: 3px; } .mh-rjdmg-score b { font-size: 30px; } .mh-rjdmg-damage b { font-size: 40px !important; } .mh-rjdmg-down { font-size: 48px; } }
