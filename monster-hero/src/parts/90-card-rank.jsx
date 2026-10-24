@@ -163,7 +163,7 @@ const CardRankingBoard = ({ onBack, renderBreederIcon = null, selfName = '', rec
       <ScreenHead title="ランキング" accent="text-amber-200" onBack={onBack} note="MFバトルカード"/>
       <div className="mb-2 grid shrink-0 grid-cols-4 gap-1">
         {CARD_RANK_KINDS.map((k) => (
-          <button key={k.id} type="button" data-card-ranking-tab={k.id} aria-pressed={kind === k.id} onClick={() => { Audio_.se.tap(); setKind(k.id); }}
+          <button key={k.id} type="button" data-card-ranking-tab={k.id} aria-pressed={kind === k.id} onClick={() => { Audio_.fgSe.tap(); setKind(k.id); }}
             className={`min-h-[44px] rounded-xl border text-[11px] font-black ${kind === k.id ? 'border-amber-300 bg-amber-500/25 text-amber-100' : 'border-white/10 bg-slate-900/80 text-slate-300'}`}>
             <span aria-hidden="true" className="block text-base leading-none">{k.emoji}</span>{k.label}
           </button>

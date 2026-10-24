@@ -627,7 +627,7 @@ const CardPvpLobby = ({ deck, deckIssues = [], onStart, onBack, onReward, assist
           </div>
         </div>
         <div className={SCREEN_FOOTER_CLASS}>
-          <button type="button" data-card-pvp-leave className={`${btn} mh-button-primary`} onClick={() => { Audio_.se.tap(); CARD_PVP.leave(); }}>部屋を出る</button>
+          <button type="button" data-card-pvp-leave className={`${btn} mh-button-primary`} onClick={() => { Audio_.fgSe.tap(); CARD_PVP.leave(); }}>部屋を出る</button>
         </div>
       </div>
     );
@@ -639,15 +639,15 @@ const CardPvpLobby = ({ deck, deckIssues = [], onStart, onBack, onReward, assist
         {room.phase === 'idle' && (<>
           {penaltyMin > 0 && <p data-card-pvp-penalty className="rounded-xl border border-rose-300/40 bg-rose-500/10 p-2 text-[13px] font-bold text-rose-100">試合の途中で抜けたので、あと{penaltyMin}分は部屋に入れません</p>}
           {penaltyMin === 0 && !ready && <p className="rounded-xl border border-amber-300/40 bg-amber-500/10 p-2 text-[13px] font-bold text-amber-100">{deckIssues.join('・') || 'デッキがありません'}</p>}
-          <button type="button" data-card-pvp-free disabled={!ready} className={`${btn} mh-button-primary`} onClick={() => { Audio_.se.tap(); void CARD_PVP.free(profile, deck); }}>だれとでも</button>
-          <button type="button" data-card-pvp-create disabled={!ready} className={`${btn} border border-sky-300/40 bg-slate-900 text-sky-100`} onClick={() => { Audio_.se.tap(); void CARD_PVP.create(profile, deck); }}>合言葉で部屋を作る</button>
+          <button type="button" data-card-pvp-free disabled={!ready} className={`${btn} mh-button-primary`} onClick={() => { Audio_.fgSe.tap(); void CARD_PVP.free(profile, deck); }}>だれとでも</button>
+          <button type="button" data-card-pvp-create disabled={!ready} className={`${btn} border border-sky-300/40 bg-slate-900 text-sky-100`} onClick={() => { Audio_.fgSe.tap(); void CARD_PVP.create(profile, deck); }}>合言葉で部屋を作る</button>
           <div className="rounded-2xl border border-white/10 bg-slate-900/80 p-3">
             <p className="mb-2 text-[13px] font-bold text-slate-300">友だちの合言葉で入る</p>
             <div className="flex gap-2">
               <input data-card-pvp-code value={code} onChange={(e) => setCode(e.target.value.toUpperCase().slice(0, 4))} maxLength={4} inputMode="text" autoCapitalize="characters" placeholder="ABCD"
                 className="min-h-[48px] w-0 flex-1 rounded-xl border border-white/20 bg-black/40 px-3 text-center text-[22px] font-black tracking-[.3em] text-white"/>
               <button type="button" data-card-pvp-join disabled={!ready || !rhythmMultiNormalizeCode(code)} className="mh-button mh-button-primary min-h-[48px] rounded-xl px-4 font-black disabled:opacity-40"
-                onClick={() => { Audio_.se.tap(); CARD_PVP.join(code, profile, deck); }}>入る</button>
+                onClick={() => { Audio_.fgSe.tap(); CARD_PVP.join(code, profile, deck); }}>入る</button>
             </div>
           </div>
         </>)}
@@ -659,8 +659,8 @@ const CardPvpLobby = ({ deck, deckIssues = [], onStart, onBack, onReward, assist
             {!room.foe && now - room.seekAt > CARD_PVP_LOBBY_LIMIT_MS && (
               <div data-card-pvp-nobody className="mt-3 space-y-2">
                 <p className="text-[13px] font-bold text-amber-100">いまは、だれも来ませんでした</p>
-                <button type="button" data-card-pvp-seek-again className={`${btn} border border-white/15 bg-slate-900 text-slate-100`} onClick={() => { Audio_.se.tap(); CARD_PVP.seekAgain(); }}>もう一度さがす</button>
-                {onAssistant && <button type="button" data-card-pvp-to-assistant className={`${btn} mh-button-primary`} onClick={() => { Audio_.se.tap(); CARD_PVP.leave(); onAssistant(); }}>助手と対戦へ</button>}
+                <button type="button" data-card-pvp-seek-again className={`${btn} border border-white/15 bg-slate-900 text-slate-100`} onClick={() => { Audio_.fgSe.tap(); CARD_PVP.seekAgain(); }}>もう一度さがす</button>
+                {onAssistant && <button type="button" data-card-pvp-to-assistant className={`${btn} mh-button-primary`} onClick={() => { Audio_.fgSe.tap(); CARD_PVP.leave(); onAssistant(); }}>助手と対戦へ</button>}
               </div>
             )}
           </div>
@@ -677,7 +677,7 @@ const CardPvpLobby = ({ deck, deckIssues = [], onStart, onBack, onReward, assist
       </div>
       {room.phase !== 'idle' && (
         <div className={SCREEN_FOOTER_CLASS}>
-          <button type="button" data-card-pvp-leave className={`${btn} border border-white/15 bg-slate-900 text-slate-100`} onClick={() => { Audio_.se.tap(); CARD_PVP.leave(); }}>部屋を出る</button>
+          <button type="button" data-card-pvp-leave className={`${btn} border border-white/15 bg-slate-900 text-slate-100`} onClick={() => { Audio_.fgSe.tap(); CARD_PVP.leave(); }}>部屋を出る</button>
         </div>
       )}
     </div>
@@ -748,7 +748,7 @@ const CardPvpChat = () => {
   useEffect(() => { if (!sent) return undefined; const t = setTimeout(() => setSent(''), 1600); return () => clearTimeout(t); }, [sent]);
   return (
     <div className="relative">
-      <button type="button" data-card-pvp-chat aria-label="定型文を送る" onClick={() => { Audio_.se.tap(); setOpen((v) => !v); }} className="grid h-[28px] w-[30px] place-items-center rounded-lg border border-white/20 bg-white/10 text-[14px]">💬</button>
+      <button type="button" data-card-pvp-chat aria-label="定型文を送る" onClick={() => { Audio_.fgSe.tap(); setOpen((v) => !v); }} className="grid h-[28px] w-[30px] place-items-center rounded-lg border border-white/20 bg-white/10 text-[14px]">💬</button>
       {sent && <span className="pointer-events-none absolute left-0 top-[32px] z-[40] whitespace-nowrap rounded-full bg-sky-500/80 px-2 py-0.5 text-[11px] font-black text-white">「{sent}」</span>}
       {open && (
         <div data-card-pvp-stamps className="absolute left-0 top-[34px] z-[40] grid w-[200px] grid-cols-2 gap-1 rounded-xl border border-white/15 bg-slate-950/95 p-1.5 shadow-xl">

@@ -57,6 +57,7 @@ const Audio_ = (() => {
   let bgmSource = null, bgmSourceKey = null, bgmRequest = 0, previewSource = null, previewKey = null, previewRequest = 0;
   let jingleSource = null, jingleTimer = null;
   let currentKey = null, bgmVolumePct = 0, seVolumePct = 0, pageHidden = false;
+  let backgroundSeQuiet = false; // 裏の周回の効果音を止める印(下の setBackgroundSeQuiet)
   let enabled = false;
   // 音ゲーのBGM音量は、メインのBGM音量設定(対数カーブ・bgmGain)を経由させず独立させる。
   // ただし全体ミュート(タイトルの「音がオフです」)だけは共通で効かせる。
@@ -628,7 +629,8 @@ const Audio_ = (() => {
   //   止められるように { stop(秒) } を返す。鳴らせなかったら null
   const preloadSE = (src) => { if (enabled && src) loadBuffer(src).catch(() => {}); };
   const playSeFile = async (src) => {
-    if (!enabled || !src) return null;
+    // ボスの登場の音(バトルだけが使う)。MFバトルカードにいるあいだは裏の周回のものなので鳴らさない(下の setBackgroundSeQuiet)
+    if (!enabled || !src || backgroundSeQuiet) return null;
     await ensure(); if (!Tone || !seBus) return null;
     let buffer = null;
     try { buffer = await loadBuffer(src); } catch (e) { return null; }
@@ -746,7 +748,12 @@ const Audio_ = (() => {
   const ensurePlaying = (key) => { if (enabled && key === currentKey && !bgmSource && !jingleSource) playBGM(key); };
   const isContextRunning = () => !!audioCtx && audioCtx.state === 'running';
 
-  const se = {
+  // 裏の周回の効果音を止める印(MFバトルカードの画面にいるあいだ。docs/spec/CARD_BATTLE.md 5-3「音」)。
+  // カードもバトルも同じ se を使うので、音量(seBus)を0にするとカードの音まで消える。
+  // そこで、se.* は印が立っているあいだ何もしない口にし、カードの画面は印を見ない fgSe.* から鳴らす。
+  // 音量の保存値・seBus には触らない(手で変えた音量は上書きしない)。
+  const setBackgroundSeQuiet = (on) => { backgroundSeQuiet = !!on; };
+  const fgSe = {
     trainingDice: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t=Tone.now(); const n=new Tone.NoiseSynth({noise:{type:'brown'},envelope:{attack:.001,decay:.22,sustain:0},volume:-15}).connect(seBus); n.triggerAttackRelease('8n',t); setTimeout(()=>{try{n.dispose();}catch(e){}},500); },
     trainingDecide: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const s=new Tone.Synth({volume:-14}).connect(seBus); s.triggerAttackRelease('C6','16n'); setTimeout(()=>{try{s.dispose();}catch(e){}},300); },
     trainingGood: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const s=new Tone.Synth({volume:-14}).connect(reverb); s.triggerAttackRelease('E6','8n'); setTimeout(()=>{try{s.dispose();}catch(e){}},400); },
@@ -797,6 +804,7 @@ const Audio_ = (() => {
     // 合体演出用: 上昇アルペジオ→(両者が重なるタイミングで)ベルの一撃+きらめき和音の「ピカーン」
     fusion: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const v = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'triangle' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.25, release: 0.5 }, volume: -10 }).connect(reverb); const seq = [[0,'C5','8n'],[0.12,'E5','8n'],[0.24,'G5','8n'],[0.36,'C6','8n'],[0.48,'E6','4n']]; seq.forEach(([tt, n, d]) => v.triggerAttackRelease(n, d, t + tt)); const bt = t + 0.6; const bell = new Tone.MetalSynth({ frequency: 800, envelope: { attack: 0.001, decay: 0.6, release: 0.3 }, harmonicity: 8, modulationIndex: 20, resonance: 5000, octaves: 1.5, volume: -14 }).connect(reverb); bell.triggerAttackRelease('16n', bt); const sparkle = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'sine' }, envelope: { attack: 0.005, decay: 0.4, sustain: 0.1, release: 0.5 }, volume: -12 }).connect(reverb); ['C6','E6','G6','C7'].forEach((n, i) => sparkle.triggerAttackRelease(n, '8n', bt + i * 0.03)); setTimeout(() => { try { v.dispose(); bell.dispose(); sparkle.dispose(); } catch (e) {} }, 2200); }
   };
+  const se = Object.fromEntries(Object.entries(fgSe).map(([name, play]) => [name, (...args) => (backgroundSeQuiet ? Promise.resolve() : play(...args))]));
 
-  return { playSeFile, preloadSE, playBGM, fadeToBGM, stopBGM, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se };
+  return { playSeFile, preloadSE, playBGM, fadeToBGM, stopBGM, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se, fgSe, setBackgroundSeQuiet };
 })();
