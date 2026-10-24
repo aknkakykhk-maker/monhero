@@ -526,22 +526,28 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     await page.locator('[data-card-pack-open]').waitFor({ timeout: 10000 });
     if (SHOT) await shot(page, '26-pack-closed');
     let packsOpened = 0;
+    let tearPhase = '';
     for (let k = 0; k < 5; k++) {
-      await page.locator('[data-card-pack-tear]').click();
-      await page.locator('[data-card-pack-card="0"]').click();
-      await page.waitForTimeout(150);
+      // パックは揺れ続けている・カードは配られる動きがあるので、押すのは dispatchEvent(演出の途中でも押せる)
+      await page.locator('[data-card-pack-tear]').dispatchEvent('click');
+      if (k === 0) tearPhase = await page.locator('[data-card-pack-open]').getAttribute('data-card-pack-phase');
+      await page.locator('[data-card-pack-open][data-card-pack-phase="open"]').waitFor({ timeout: 10000 });
+      await page.locator('[data-card-pack-card="0"]').dispatchEvent('click');
+      await page.waitForTimeout(600);
       if (k === 0 && SHOT) await shot(page, '27-pack-one');
-      await page.locator('[data-card-pack-flip-all]').click();
-      await page.waitForTimeout(200);
+      await page.locator('[data-card-pack-flip-all]').dispatchEvent('click');
+      // 全部めくるは1枚ずつ順にめくる(キラ以上は光る分だけ長い)
+      await page.waitForFunction(() => document.querySelectorAll('[data-card-pack-card][data-card-pack-flipped="0"]').length === 0, null, { timeout: 10000 });
+      await page.waitForTimeout(900);
       if (k === 0 && SHOT) await shot(page, '28-pack-all');
       packsOpened += 1;
-      if (await page.locator('[data-card-pack-next]').count()) await page.locator('[data-card-pack-next]').click();
+      if (await page.locator('[data-card-pack-next]').count()) await page.locator('[data-card-pack-next]').dispatchEvent('click');
     }
     const flippedAll = await page.locator('[data-card-pack-card][data-card-pack-flipped="1"]').count();
-    await page.locator('[data-card-pack-done]').click();
+    await page.locator('[data-card-pack-done]').dispatchEvent('click');
     await page.locator('[data-card-shop]').waitFor({ timeout: 10000 });
     const afterPack = await page.evaluate(() => ({ point: JSON.parse(localStorage.getItem('mh_card_point_v1') || '0'), pity: JSON.parse(localStorage.getItem('mh_card_pack_pity_v1') || 'null'), col: Object.values(JSON.parse(localStorage.getItem('mh_card_collection_v1') || '{}')).reduce((a, n) => a + n, 0) }));
-    check('⑯ 第1弾パックを5つ(450)買って開けると、カードが増え、カードポイントが減り、天井の数が残る', packsOpened === 5 && flippedAll === 8 && afterPack.point <= 5000 - 450 + 40 * 5 * 5 && afterPack.point >= 4550 && afterPack.col > colBefore && afterPack.pity && typeof afterPack.pity.w1 === 'number' && /技などの枠/.test(rateText), JSON.stringify({ packsOpened, flippedAll, afterPack, colBefore }));
+    check('⑯ 第1弾パックを5つ(450)買って開けると、カードが増え、カードポイントが減り、天井の数が残る', packsOpened === 5 && flippedAll === 8 && tearPhase === 'tearing' && afterPack.point <= 5000 - 450 + 40 * 5 * 5 && afterPack.point >= 4550 && afterPack.col > colBefore && afterPack.pity && typeof afterPack.pity.w1 === 'number' && /技などの枠/.test(rateText), JSON.stringify({ packsOpened, flippedAll, tearPhase, afterPack, colBefore }));
     await page.getByRole('tab', { name: 'スターター' }).click();
     await page.waitForTimeout(300);
     if (SHOT) await shot(page, '29-shop-starters');

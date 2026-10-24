@@ -783,7 +783,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   const [confirmReset, setConfirmReset] = useState(false);
   const [detail, setDetail] = useState(null);
   const [demoWho, setDemoWho] = useState('mua');
-  const [editDeck, setEditDeck] = useState(null); // デッキ編成で組んでいるデッキ // デバッグの「結果の見本」の相手
+  const [editDeck, setEditDeck] = useState(null);
+  const [packDemo, setPackDemo] = useState(null); // デバッグの「パックを開ける見本」 // デッキ編成で組んでいるデッキ // デバッグの「結果の見本」の相手
   const press = useCardLongPress((no) => setDetail(no));
 
   const load = async () => {
@@ -987,6 +988,17 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       setEditDeck(null); setView('decks');
     }}/>;
   }
+  if (view === 'packArt') {
+    return (
+      <div data-mh-screen data-card-pack-art-list className={SCREEN_SHELL_CLASS}>
+        <ScreenHead title="パックの絵(見本)" accent="text-amber-200" onBack={() => setView('top')} note="弾ごとに色を変えて、その弾で出るモンスターを並べた"/>
+        <div className={`${SCREEN_LIST_CLASS} pb-4`}>
+          <div className="flex flex-wrap justify-center gap-x-2 gap-y-3">{CARD_PACKS.map((pk) => <div key={pk.id} className="flex flex-col items-center"><CardPackArt db={db} pack={pk} width={114}/><span className="mt-1 text-[12px] font-black text-white">{pk.name}</span></div>)}</div>
+        </div>
+      </div>
+    );
+  }
+  if (view === 'packOpen' && packDemo) return <CardPackOpen key={`demo-${packDemo.packs.length}`} db={db} result={packDemo} onDone={() => { setPackDemo(null); setView('top'); }}/>;
   if (view === 'dex') return <CardDex db={db} collection={save.collection} onBack={() => setView('top')}/>;
   if (view === 'rules') return <CardRules onBack={() => setView('top')} onTutorial={() => startTutorial()}/>;
   if (view === 'decks') {
@@ -1092,6 +1104,21 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         {debug && (
           <div className={`${SCREEN_PANEL_FLAT_CLASS} space-y-1`}>
             {/* 結果の画面の見本(NORMAL の勝ち・自分の番8回・2体倒した)。クイック周回が入るとき/入らないとき。保存は何もしない */}
+            {/* パックの絵と開ける演出の見本(社長 台帳 #3503。保存はしない) */}
+            <div className="grid grid-cols-2 gap-1">
+              <button type="button" data-card-pack-art-demo className="mh-button mh-button-secondary min-h-[40px] rounded-xl border border-white/20 bg-slate-800 text-[11px] font-black" onClick={() => { Audio_.se.tap(); setView('packArt'); }}>パックの絵の見本</button>
+              <button type="button" data-card-pack-open-demo className="mh-button mh-button-secondary min-h-[40px] rounded-xl border border-white/20 bg-slate-800 text-[11px] font-black" onClick={() => {
+                // 第1弾を2パック。1パック目の最後のモンスターの枠は別絵キラ、2パック目はキラ(演出を見るため)
+                const a = cardOpenPack(db, 'w1', { collection: {}, pity: {} }, Math.random);
+                const b = cardOpenPack(db, 'w1', { collection: a.collection, pity: {} }, Math.random);
+                const alt = Object.values(db.monsters).find((m) => String(m.wave) === '1' && /別絵/.test(m.variant || ''));
+                const kira = Object.values(db.monsters).find((m) => String(m.wave) === '1' && m.variant === 'キラ');
+                a.cards[a.cards.length - 1] = { no: alt.no, slot: 'mon', rarity: 'alt', dup: false, point: 0 };
+                b.cards[b.cards.length - 1] = { no: kira.no, slot: 'mon', rarity: 'kira', dup: false, point: 0 };
+                setPackDemo({ packId: 'w1', packs: [a.cards, b.cards], dupPoint: 0, cost: 0, demo: true });
+                setView('packOpen');
+              }}>パックを開ける見本</button>
+            </div>
             <select data-card-result-demo-who value={demoWho} onChange={(e) => setDemoWho(e.target.value)} className="w-full rounded-lg border border-white/20 bg-slate-800 px-2 py-1 text-[12px] font-bold text-white">
               {allAssistants.filter((x) => CARD_AI_HABITS[x.id]).map((x) => <option key={x.id} value={x.id}>見本の相手: {x.name}</option>)}
             </select>
