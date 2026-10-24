@@ -605,6 +605,8 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       await page.locator('[data-home-card-battle]').click();
       await page.locator('[data-card-top="top"]').waitFor({ timeout: 20000 });
       if (SHOT) await shot(page, '32-top-from-home');
+      const recText = await page.locator('[data-card-record]').innerText().catch(() => '');
+      check('⑰ 戦績は投了を負けに数える(「0勝 1敗(うち投了1)」の形)', /\d+勝 \d+敗\(うち投了\d+\)/.test(recText) && !/・投了/.test(recText), recText);
       await page.locator('[data-card-cpu]').click();
       await page.locator('[data-card-top="mode"]').waitFor({ timeout: 10000 });
       if (SHOT) await shot(page, '33-mode');
@@ -613,9 +615,13 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       check('⑰ 対戦は「助手と対戦」と「マルチ対戦(準備中・押せない)」から選ぶ', multiOff && /準備中/.test(multiText) && (await page.locator('[data-card-mode-assistant]').count()) === 1, multiText);
       const shown = await page.evaluate(() => document.body.innerText);
       check('⑰ 画面に「コンピューター戦」が出ていない', !/コンピューター戦/.test(shown));
+      const modeText = await page.locator('[data-card-mode-assistant]').innerText();
+      check('⑰ 「助手と対戦」の説明に助手の名前を並べない(会っていない子のネタバレ)', !/みゅあ|もも|きき|きゅうこ|ドラ|あつ/.test(modeText), modeText);
       await page.locator('[data-card-mode-assistant]').click();
       await page.locator('[data-card-top="foe"]').waitFor({ timeout: 10000 });
       if (SHOT) await shot(page, '34-foe');
+      const brokenFoe = await page.evaluate(() => [...document.querySelectorAll('[data-card-top="foe"] span.whitespace-nowrap')].filter((el) => el.getClientRects().length > 1).map((el) => el.textContent));
+      check('⑰ 助手と対戦の画面で、印を付けた言葉(今日はじめての勝ちで +50 など)が途中で折れていない', brokenFoe.length === 0, brokenFoe.join('・'));
     }
     check('どこでも実行時エラーが出ない', errors.length === 0, errors.slice(0, 3).join(' / '));
   } catch (e) {
