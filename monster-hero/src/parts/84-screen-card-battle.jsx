@@ -423,7 +423,7 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
       <button type="button" className={`${btn} border border-violet-300/60 bg-violet-900`} onClick={() => step({ type: 'endAttacks' })}>攻撃おわり → ガッツへ</button>
     </>);
   })();
-  const guide = mode === 'attack' ? (sel ? (monChosen === undefined ? '使う子をタップ' : needTarget ? '狙う相手をタップ' : '「使う」をタップ') : '技をタップ → 相手のモンスターをタップ')
+  const guide = mode === 'attack' ? (sel ? (monChosen === undefined ? '使う子をタップ' : needTarget ? '狙う相手をタップ' : '「使う」をタップ') : attackOpts.length ? '技をタップ → 相手のモンスターをタップ' : '使える技がありません →「攻撃おわり」でガッツへ')
     : mode === 'guard' ? (guardOpts.length ? '使える回避・防御だけが明るくなっています' : '使える回避・防御はありません')
     : mode === 'guts' ? 'ガッツにするカードをタップ(何枚でも)'
     : mode === 'setup' ? '後攻: 始める前に2枚までガッツにできます'
@@ -443,17 +443,18 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
         <div className="ml-auto">{strip(CARD_CPU)}</div>
       </div>
       {/* 吹き出し(帯の下・相手のモンスターの上。指の操作は下へ通す) */}
-      {bubble && (
-        <div key={bubble.key} data-card-bubble className={`pointer-events-none absolute left-[56px] right-2 ${compact ? 'top-[118px]' : 'top-[150px]'} z-10 rounded-2xl border-[3px] bg-white px-2.5 py-1 text-[13px] font-extrabold leading-snug text-[#1f1333] shadow-lg`} style={{ borderColor: who.accent, ...JA_WRAP_STYLE }}>
-          {bubble.text}
-        </div>
-      )}
       <div className="flex shrink-0 items-start justify-around px-1">
         {opp.mons.map((_, m) => <CardMonSlot key={m} db={db} st={st} p={CARD_CPU} m={m} mark={markOf(CARD_CPU, m)} fx={fx.filter((f) => f.p === CARD_CPU && f.m === m)} onTap={() => tapMon(CARD_CPU, m)} press={press} compact={compact}/>)}
       </div>
       {/* まんなか: 技の動き(アクション)と、起きたことの記録(ログ)の場所。相手の場と自分の場をここで上下に分ける(社長 2026-10-24)
           ★次の区切りの技ごとの動きも、この data-card-stage の中で見せる */}
       <div data-card-stage className="relative flex min-h-[64px] flex-1 flex-col items-center justify-center gap-1.5 overflow-hidden px-3 py-1">
+        {/* 相手の助手の吹き出し(まんなかのいちばん上。相手のモンスターにはかけない。指の操作は下へ通す) */}
+        {bubble && (
+          <div key={bubble.key} data-card-bubble className={`pointer-events-none relative z-[2] max-w-full rounded-2xl border-[3px] bg-white px-2.5 py-0.5 ${compact ? 'text-[12px]' : 'text-[13px]'} font-extrabold leading-snug text-[#1f1333] shadow-lg`} style={{ borderColor: who.accent, ...JA_WRAP_STYLE }}>
+            <span className="mr-1 text-[11px]" style={{ color: who.accent }}>{who.name}</span>{bubble.text}
+          </div>
+        )}
         <div className="pointer-events-none absolute inset-x-6 top-1/2 h-px bg-gradient-to-r from-transparent via-violet-300/40 to-transparent"/>
         {action && (
           <div key={action.key} data-card-action className={`relative z-[1] flex items-center gap-2 rounded-2xl border border-amber-300/50 bg-black/55 px-2 ${compact ? "py-0.5" : "py-1"} shadow-lg`}>
@@ -463,7 +464,7 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
         )}
         <div data-card-log className="relative z-[1] max-w-full rounded-xl border border-white/15 bg-black/45 px-3 py-1 text-center text-[13px] font-bold leading-snug" style={JA_WRAP_STYLE}>
           {pendingText && <div className="text-rose-200">{pendingText}</div>}
-          {(pendingText ? logLines.slice(-1).slice(compact ? 1 : 0) : compact ? logLines.slice(action ? -1 : -2) : logLines).map((l, i, arr) => <div key={i} className={i === arr.length - 1 && !pendingText ? '' : 'text-[11px] text-violet-200'}>{l.text}</div>)}
+          {(pendingText ? [] : compact ? logLines.slice(action || bubble ? -1 : -2) : logLines.slice(bubble && action ? -2 : -3)).map((l, i, arr) => <div key={i} className={i === arr.length - 1 && !pendingText ? '' : 'text-[11px] text-violet-200'}>{l.text}</div>)}
         </div>
       </div>
       <div className="flex shrink-0 items-end justify-around px-1">
@@ -489,7 +490,7 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
             <div key={`${no}-${i}`} data-card-hand-card={i} {...press(no, () => tapHand(i))} className={`flex w-[19%] ${compact ? 'max-w-[58px]' : 'max-w-[76px]'} flex-col items-center transition-transform ${up ? '-translate-y-3' : ''} ${myTurn && !on ? 'opacity-45' : ''}`}>
               <img src={CARD_IMG(c ? c.img : no)} alt={c ? c.name : no} className={`w-full rounded-[5px] shadow-[0_3px_6px_#000] ${up ? 'outline outline-[3px] outline-amber-300' : ''}`}/>
               <div className="mt-0.5 w-full rounded-md bg-black/60 py-0.5 text-center leading-tight">
-                <b className="block truncate text-[12px]">{c ? c.name : no}</b>
+                <b className={`block ${compact ? 'text-[10px]' : 'text-[11px]'} leading-tight`} style={{ ...JA_WRAP_STYLE, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{c ? c.name : no}</b>
                 {compact ? <>
                   <span className="block text-[10px] font-extrabold leading-tight text-amber-200">ガッツ{c ? c.guts : '-'}</span>
                   <span className="block whitespace-nowrap text-[10px] font-extrabold leading-tight text-amber-200">{cardCaption(c)}</span>
