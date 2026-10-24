@@ -33,6 +33,14 @@ const cardPvpNormalizePenalty = (v) => (Number.isFinite(v) && v > 0 ? v : 0);
 // 定型のチャット(打たない。1.5秒に1回まで)
 const CARD_PVP_STAMPS = Object.freeze(['よろしく！', 'ナイス！', 'うまい！', '考え中…', 'ありがとう！', 'もう1回やろ！']);
 const CARD_PVP_CHAT_GAP_MS = 1500;
+// 区切り3: だれとでも(受付)。待っている人どうしが自分の部屋の合言葉を知らせ合い、あとから来た人が、先に待っている人の部屋へ入る
+const CARD_PVP_LOBBY_TOPIC = 'realtime:mhc-lobby-free';
+const CARD_PVP_LOBBY_FRESH_MS = 6000;     // これより古い知らせの人は、もう待っていない
+const CARD_PVP_LOBBY_JOIN_MS = 8000;      // 入った部屋で、これだけ始まらなければ、自分の部屋へ戻ってさがし直す
+const CARD_PVP_LOBBY_LIMIT_MS = 90000;    // これだけだれも来なければ「助手と対戦へ」の案内(カゲあつくん)
+// 強さの点数(勝つと上がる・はじめ1500)。表と関数は docs/sql/card-battle-pvp/CARD_BATTLE_PVP_APPLY.sql(窓口が流す)
+const CARD_PVP_RATING_TABLE = 'card_battle_pvp_ratings';
+const CARD_PVP_RATING_START = 1500;
 
 // ---- 純粋な計算(ここから下の UI と通信を使わない。tools/card/card-pvp-check.js が node で確かめる) ----
 
@@ -175,7 +183,8 @@ const cardPvpCleanMessage = (raw) => {
     const mons = cardPvpCleanCards(raw.mons, 3);
     return { t: 'hb', from, name: rhythmMultiText(raw.name, CARD_PVP_NAME_MAX), icon: rhythmMultiText(raw.icon, 8), at: Number.isFinite(raw.at) ? raw.at : 0,
       mons: mons && mons.length === 3 && !mons.includes(null) ? mons : null, count: cardPvpInt(raw.count, 60),
-      seal: typeof raw.seal === 'string' && /^[0-9a-f]{64}$/.test(raw.seal) ? raw.seal : null, match: typeof raw.match === 'string' ? raw.match.slice(0, 40) : null };
+      seal: typeof raw.seal === 'string' && /^[0-9a-f]{64}$/.test(raw.seal) ? raw.seal : null, match: typeof raw.match === 'string' ? raw.match.slice(0, 40) : null,
+      bid: typeof raw.bid === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(raw.bid) ? raw.bid : null };
   }
   if (raw.t === 'start') return { t: 'start', from, match: typeof raw.match === 'string' ? raw.match.slice(0, 40) : '', hostFirst: raw.hostFirst === true, guest: typeof raw.guest === 'string' ? raw.guest.slice(0, 40) : '' };
   if (raw.t === 'act') {
@@ -197,12 +206,48 @@ const cardPvpCleanMessage = (raw) => {
     if (!cards || cards.includes(null) || !mons || mons.includes(null)) return null;
     return { t: 'open', from, seed: Number.isInteger(raw.seed) ? raw.seed >>> 0 : 0, salt: typeof raw.salt === 'string' ? raw.salt.slice(0, 40) : '', deck: { monsters: mons, cards } };
   }
+  if (raw.t === 'seek') { const code = rhythmMultiNormalizeCode(raw.code); return code && Number.isFinite(raw.at) ? { t: 'seek', from, code, at: raw.at } : null; }
   if (raw.t === 'chat') { const i = cardPvpInt(raw.i, CARD_PVP_STAMPS.length - 1); return i === null ? null : { t: 'chat', from, i }; }
   if (raw.t === 'surrender' || raw.t === 'bye' || raw.t === 'timeout') return { t: raw.t, from };
   return null;
 };
 
 // ---- 部屋と通信(ここから下は画面と通信。区切り1)
+// ---- 強さの点数(表 card_battle_pvp_ratings・関数 card_battle_pvp_report)。表がまだ無い環境でも壊れない(無いと分かったら以後アクセスしない) ----
+let _cardPvpRatingsUnavailable = false;
+const sbCardPvpReport = async ({ match, me, foe, winner, reason, turns, name, icon, frame }) => {
+  if (_cardPvpRatingsUnavailable || typeof SUPABASE_URL === 'undefined') return null;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/card_battle_pvp_report`, {
+      method: 'POST', headers: SB_HEADERS, signal: controller.signal,
+      body: JSON.stringify({ p_match_id: match, p_me: me, p_foe: foe, p_winner: winner, p_reason: String(reason || '').slice(0, 20), p_turns: Number.isFinite(turns) ? turns : 0, p_name: String(name || '').slice(0, 40), p_icon: icon || null, p_frame: frame || null }),
+    });
+    const body = await res.text();
+    if (!res.ok) { if (_isMissingTableError(res.status, body) || res.status === 404) _cardPvpRatingsUnavailable = true; return null; }
+    try { return JSON.parse(body); } catch (_) { return body; }
+  } catch (_) { return null; } finally { clearTimeout(timer); }
+};
+const cardPvpRatingFromRow = (row) => {
+  if (!row || typeof row !== 'object' || typeof row.breeder_id !== 'string') return null;
+  const n = (v) => (Number.isFinite(v) ? v : 0);
+  return { breederId: row.breeder_id, userName: typeof row.user_name === 'string' ? row.user_name : '', icon: typeof row.icon === 'string' ? row.icon : '', profileFrame: typeof row.profile_frame === 'string' ? row.profile_frame : '',
+    rating: Number.isFinite(row.rating) ? row.rating : CARD_PVP_RATING_START, wins: n(row.wins), loses: n(row.loses) };
+};
+const sbFetchCardPvpRatings = async () => {
+  if (_cardPvpRatingsUnavailable || typeof SUPABASE_URL === 'undefined') return null;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${CARD_PVP_RATING_TABLE}?select=breeder_id,user_name,icon,profile_frame,rating,wins,loses&wins=gte.0&order=rating.desc,updated_at.asc&limit=50`, { headers: SB_HEADERS, cache: 'no-store', signal: controller.signal });
+    const body = await res.text();
+    if (!res.ok) { if (_isMissingTableError(res.status, body)) { _cardPvpRatingsUnavailable = true; return null; } throw new Error(`${CARD_PVP_RATING_TABLE} ${res.status}`); }
+    const rows = JSON.parse(body || '[]');
+    return (Array.isArray(rows) ? rows : []).map(cardPvpRatingFromRow).filter((e) => e && e.wins + e.loses > 0);
+  } finally { clearTimeout(timer); }
+};
+
 // 部屋の状態は React の外に置く(対戦の画面へ行って戻っても、部屋は切れない。モンヒロビートの RHYTHM_MULTI と同じ)
 const CARD_PVP = (() => {
   const listeners = new Set();
@@ -211,15 +256,18 @@ const CARD_PVP = (() => {
   let alive = false;                // いまつながっているか
   let tick = null;
   let retry = null;                 // つなぎ直しの予約
+  let lobby = null;                 // だれとでもの受付(部屋とは別のつながり)
+  let lobbyAlive = false;
   let board = null;                 // 対戦の画面の受け口 { onAct(msg) → 次の場|null, onDiscard(list), onForceEnd(outcome), onChat(text) }
   const blank = () => ({ phase: 'idle', code: '', me: null, foe: null, deck: null, seed: 0, salt: '', seal: '', match: '', hostFirst: false, first: 0,
     game: null, startMsg: null, foeInMatch: false, mySeq: 0, outbox: [], theirSeq: 0, inbox: {}, history: [], result: null, foeOpen: null, error: '', broken: '',
-    offline: false, timeouts: 0, autoActing: false, chatAt: 0 });
+    offline: false, timeouts: 0, autoActing: false, chatAt: 0, mode: 'private', seekAt: 0, seekers: {}, lobbyCount: 0, joining: '', joinAt: 0, ownCode: '', reported: '' });
   const emit = () => listeners.forEach((fn) => { try { fn(s); } catch (_) { /* 画面の都合で落ちても部屋は続ける */ } });
   const set = (patch) => { s = { ...s, ...patch }; emit(); };
   const send = (payload) => { if (socket && alive) socket.send({ ...payload, from: s.me.id }); };
   const isHost = () => !!(s.foe && (s.me.at < s.foe.at || (s.me.at === s.foe.at && s.me.id < s.foe.id)));
-  const hb = () => send({ t: 'hb', name: s.me.name, icon: s.me.icon, at: s.me.at, mons: s.deck.monsters, count: s.deck.cards.length, seal: s.seal, match: s.match || null });
+  const hb = () => send({ t: 'hb', name: s.me.name, icon: s.me.icon, at: s.me.at, mons: s.deck.monsters, count: s.deck.cards.length, seal: s.seal, match: s.match || null, bid: s.me.bid || null });
+  const closeLobby = () => { lobbyAlive = false; if (lobby) { try { lobby.close(); } catch (_) { /* 閉じている */ } } lobby = null; };
   const sendOpen = () => send({ t: 'open', seed: s.seed, salt: s.salt, mons: s.deck.monsters, cards: s.deck.cards });
   const inGame = () => !!s && (s.phase === 'playing' || s.phase === 'over');
   const stop = () => {
@@ -227,6 +275,7 @@ const CARD_PVP = (() => {
     if (retry) clearTimeout(retry); retry = null;
     alive = false;
     if (socket) { try { socket.close(); } catch (_) { /* 閉じている */ } } socket = null;
+    closeLobby();
   };
   // 抜けた人は、少しのあいだ部屋に入れない(試合の途中で部屋を出た・アプリを閉じたとき)
   const penalize = () => { try { void storeSet(CARD_PVP_PENALTY_KEY, Date.now() + CARD_PVP_PENALTY_MS, false); } catch (_) { /* 保存できなくても続ける */ } };
@@ -236,6 +285,7 @@ const CARD_PVP = (() => {
     const iHost = isHost();
     const first = (iHost === msg.hostFirst) ? 0 : 1;
     const st = cardPvpNewGame(CARD_BATTLE_DATA, { myDeck: s.deck, mySeed: s.seed, foeMonsters: s.foe.mons, foeCount: s.foe.count || CARD_BATTLE_DECK_SIZE, first, names: ['あなた', s.foe.name || 'あいて'] });
+    closeLobby();
     set({ phase: 'playing', match: msg.match, hostFirst: msg.hostFirst, first, game: { key: `pvp-${msg.match}`, st, who: 'pvp', level: 'normal', pvp: { name: s.foe.name || 'あいて', icon: s.foe.icon || '🙂' } } });
   };
   const deliver = () => {
@@ -270,7 +320,7 @@ const CARD_PVP = (() => {
     const now = Date.now();
     if (msg.t === 'hb') {
       if (!s.foe && s.phase !== 'waiting') return;
-      const foe = { id: msg.from, name: msg.name || 'あいて', icon: msg.icon || '🙂', at: msg.at, mons: msg.mons, count: msg.count, seal: msg.seal, seen: now };
+      const foe = { id: msg.from, name: msg.name || 'あいて', icon: msg.icon || '🙂', at: msg.at, mons: msg.mons, count: msg.count, seal: msg.seal, bid: msg.bid, seen: now };
       if (s.foe && s.foe.seal && msg.seal && s.foe.seal !== msg.seal && s.phase !== 'waiting') return; // 始まったあとに封を変えさせない
       s = { ...s, foe: { ...(s.foe || {}), ...foe } };
       // ホストが、2人そろったら先攻・後攻のくじを引く
@@ -324,19 +374,55 @@ const CARD_PVP = (() => {
       },
     });
   };
-  const open = async (code, profile, deck) => {
+  // ---- だれとでも(受付) ----
+  const lobbySend = (payload) => { if (lobby && lobbyAlive) lobby.send({ ...payload, from: s.me.id }); };
+  const onLobby = (raw) => {
+    const msg = cardPvpCleanMessage(raw);
+    if (!s || !msg || msg.t !== 'seek' || msg.from === s.me.id) return;
+    s = { ...s, seekers: { ...s.seekers, [msg.from]: { code: msg.code, at: msg.at, seen: Date.now() } } };
+  };
+  const openLobby = () => {
+    closeLobby();
+    const me = lobby = rhythmMultiOpenSocket({
+      topic: CARD_PVP_LOBBY_TOPIC,
+      onOpen: () => { if (lobby === me) lobbyAlive = true; },
+      onMessage: (raw) => { if (lobby === me) onLobby(raw); },
+      onClose: () => { if (lobby !== me) return; lobbyAlive = false; if (s && s.mode === 'free' && s.phase === 'waiting') setTimeout(() => { if (lobby === me && s && s.phase === 'waiting') openLobby(); }, CARD_PVP_RECONNECT_MS); },
+    });
+  };
+  // 2秒ごと: 自分の部屋を知らせ、先に待っている人がいれば、その部屋へ移る(同じ時刻なら id の小さい人が待つ側)
+  const seekTick = () => {
+    const now = Date.now();
+    const fresh = Object.entries(s.seekers).filter(([, x]) => now - x.seen <= CARD_PVP_LOBBY_FRESH_MS);
+    s = { ...s, seekers: Object.fromEntries(fresh), lobbyCount: fresh.length + 1 };
+    if (s.foe) { emit(); return; }
+    if (s.joining) {
+      // 入った部屋で始まらない(もう相手が決まっていた など)ときは、自分の部屋へ戻ってさがし直す
+      if (now - s.joinAt > CARD_PVP_LOBBY_JOIN_MS) { const code = rhythmMultiMakeCode(); s = { ...s, joining: '', code, ownCode: code, seekAt: now }; connect(); }
+      emit();
+      return;
+    }
+    const older = fresh.filter(([id, x]) => x.at < s.seekAt || (x.at === s.seekAt && id < s.me.id)).sort((a, b) => a[1].at - b[1].at)[0];
+    if (older) { s = { ...s, joining: older[1].code, joinAt: now, code: older[1].code }; connect(); emit(); return; }
+    lobbySend({ t: 'seek', code: s.code, at: s.seekAt });
+    emit();
+  };
+  const open = async (code, profile, deck, mode = 'private') => {
     stop();
+    const bid = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
     const seed = (Math.floor(Math.random() * 0x7fffffff) ^ Date.now()) >>> 0;
     const salt = rhythmMultiMakeId('k');
     const seal = await cardPvpSha256(cardPvpSealText({ seed, salt, deck }));
-    s = { ...blank(), phase: 'connecting', code, deck: { monsters: deck.monsters.slice(), cards: deck.cards.slice() }, seed, salt, seal,
-      me: { id: rhythmMultiMakeId('c'), name: rhythmMultiText(profile.name || 'ブリーダー', CARD_PVP_NAME_MAX), icon: rhythmMultiText(profile.icon || '🙂', 8), at: Date.now() } };
+    s = { ...blank(), phase: 'connecting', code, ownCode: code, mode, seekAt: Date.now(), deck: { monsters: deck.monsters.slice(), cards: deck.cards.slice() }, seed, salt, seal,
+      me: { id: rhythmMultiMakeId('c'), name: rhythmMultiText(profile.name || 'ブリーダー', CARD_PVP_NAME_MAX), icon: rhythmMultiText(profile.icon || '🙂', 8), at: Date.now(), bid: typeof bid === 'string' ? bid : null } };
     emit();
     if (!seal) { set({ phase: 'error', error: 'この端末では、マルチ対戦の封を作れませんでした' }); return; }
     connect();
+    if (mode === 'free') openLobby();
     tick = setInterval(() => {
       if (!s || !socket) return;
       hb();
+      if (s.mode === 'free' && s.phase === 'waiting') seekTick();
       if (s.startMsg && !s.foeInMatch && isHost()) send(s.startMsg);
       s.outbox.forEach((m) => send(m)); // 「受け取った」が来ていない手は送り直す
       if (s.phase === 'over') sendOpen();
@@ -355,6 +441,10 @@ const CARD_PVP = (() => {
     get: () => s || blank(),
     subscribe: (fn) => { listeners.add(fn); return () => listeners.delete(fn); },
     create: (profile, deck) => open(rhythmMultiMakeCode(), profile, deck),
+    // だれとでも: 自分の部屋を作って受付で待つ。先に待っている人がいれば、その部屋へ入る
+    free: (profile, deck) => open(rhythmMultiMakeCode(), profile, deck, 'free'),
+    // さがし直す(90秒だれも来なかったあと)
+    seekAgain: () => { if (s && s.mode === 'free' && s.phase === 'waiting') { s = { ...s, seekAt: Date.now(), joining: '' }; emit(); } },
     join: (code, profile, deck) => { const c = rhythmMultiNormalizeCode(code); if (!c) return false; void open(c, profile, deck); return true; },
     leave: () => { if (s && s.phase === 'playing') penalize(); if (s && socket) send({ t: 'bye' }); stop(); board = null; s = blank(); emit(); },
     // 対戦の画面がつなぐ。届いていた手があれば、ここで当てる
@@ -390,6 +480,14 @@ const CARD_PVP = (() => {
       setTimeout(() => { if (s && s.result && s.result.verify === 'wait') set({ result: { ...s.result, verify: 'skip' } }); }, CARD_PVP_VERIFY_WAIT_MS);
     },
     markRewarded: (got) => { if (s && s.result) set({ result: { ...s.result, rewarded: true, got } }); },
+    // 強さの点数へ届ける(確かめが済んだ試合だけ・1試合1回)。2人の届けが合ったときだけ、データベースの関数が点数を動かす
+    report: async ({ frame = null } = {}) => {
+      if (!s || !s.result || s.reported === s.match || !s.match || !s.me.bid || !s.foe || !s.foe.bid) return null;
+      if (s.result.verify !== 'ok' && s.result.verify !== 'skip') return null;
+      s = { ...s, reported: s.match };
+      const winner = s.result.outcome === 'win' ? s.me.bid : s.foe.bid;
+      return sbCardPvpReport({ match: s.match, me: s.me.bid, foe: s.foe.bid, winner, reason: s.result.reason, turns: (s.result.facts && s.result.facts.ownTurns) || 0, name: s.me.name, icon: s.me.icon, frame });
+    },
   };
 })();
 
@@ -397,7 +495,8 @@ const CARD_PVP = (() => {
 // onStart(game) … 試合が始まったら対戦の画面へ。onBack … 対戦の選び方へ戻る(部屋も出る)
 // onReward(result) … 確かめが済んだら1回だけ呼ぶ(84 が保存して { point, loops, quick, saved } を返す)。確かめで無効になった試合は呼ばない
 // assistant … 結果の画面に立ち絵を出す自分の助手(84 の topAssistant)/ point … いまのカードポイント
-const CardPvpLobby = ({ deck, deckIssues = [], onStart, onBack, onReward, assistant = null, point = null }) => {
+// onAssistant … 「助手と対戦へ」(だれとでもで、だれも来なかったとき)/ rankSend … 強さの点数へ届けてよいか(公開後のふつうの入口だけ。84→60-app の rank.send)
+const CardPvpLobby = ({ deck, deckIssues = [], onStart, onBack, onReward, assistant = null, point = null, onAssistant = null, rankSend = false }) => {
   const [room, setRoom] = useState(() => CARD_PVP.get());
   const [code, setCode] = useState('');
   const [profile, setProfile] = useState({ name: 'ブリーダー', icon: '🙂' });
@@ -418,6 +517,8 @@ const CardPvpLobby = ({ deck, deckIssues = [], onStart, onBack, onReward, assist
     if (r.verify !== 'ok' && r.verify !== 'skip') return;
     CARD_PVP.markRewarded({ pending: true });
     Promise.resolve(rewardRef.current ? rewardRef.current(r) : null).then((got) => CARD_PVP.markRewarded(got)).catch(() => CARD_PVP.markRewarded(null));
+    // 強さの点数へ届ける(公開後のふつうの入口から遊んだときだけ。検査は window.__mhCardPvpRankTest で通す)
+    if (rankSend || (typeof window !== 'undefined' && window.__mhCardPvpRankTest === true)) void CARD_PVP.report();
   }, [room.phase, room.result && room.result.verify]);
   useEffect(() => {
     let alive = true;
@@ -482,12 +583,13 @@ const CardPvpLobby = ({ deck, deckIssues = [], onStart, onBack, onReward, assist
   }
   return (
     <div data-mh-screen data-card-pvp={room.phase} className={SCREEN_SHELL_CLASS}>
-      <ScreenHead title="マルチ対戦" accent="text-sky-200" onBack={back} note="合言葉で、友だちと1対1で戦えます(デバッグ専用・つくっている途中)"/>
+      <ScreenHead title="マルチ対戦" accent="text-sky-200" onBack={back} note="ほかのブリーダーと1対1で戦えます(デバッグ専用・つくっている途中)"/>
       <div className={`${SCREEN_LIST_CLASS} space-y-3 pb-4`}>
         {room.phase === 'idle' && (<>
           {penaltyMin > 0 && <p data-card-pvp-penalty className="rounded-xl border border-rose-300/40 bg-rose-500/10 p-2 text-[13px] font-bold text-rose-100">試合の途中で抜けたので、あと{penaltyMin}分は部屋に入れません</p>}
           {penaltyMin === 0 && !ready && <p className="rounded-xl border border-amber-300/40 bg-amber-500/10 p-2 text-[13px] font-bold text-amber-100">{deckIssues.join('・') || 'デッキがありません'}</p>}
-          <button type="button" data-card-pvp-create disabled={!ready} className={`${btn} mh-button-primary`} onClick={() => { Audio_.se.tap(); void CARD_PVP.create(profile, deck); }}>合言葉で部屋を作る</button>
+          <button type="button" data-card-pvp-free disabled={!ready} className={`${btn} mh-button-primary`} onClick={() => { Audio_.se.tap(); void CARD_PVP.free(profile, deck); }}>だれとでも</button>
+          <button type="button" data-card-pvp-create disabled={!ready} className={`${btn} border border-sky-300/40 bg-slate-900 text-sky-100`} onClick={() => { Audio_.se.tap(); void CARD_PVP.create(profile, deck); }}>合言葉で部屋を作る</button>
           <div className="rounded-2xl border border-white/10 bg-slate-900/80 p-3">
             <p className="mb-2 text-[13px] font-bold text-slate-300">友だちの合言葉で入る</p>
             <div className="flex gap-2">
@@ -498,7 +600,21 @@ const CardPvpLobby = ({ deck, deckIssues = [], onStart, onBack, onReward, assist
             </div>
           </div>
         </>)}
-        {(room.phase === 'connecting' || room.phase === 'waiting') && (
+        {(room.phase === 'connecting' || room.phase === 'waiting') && room.mode === 'free' && (
+          <div data-card-pvp-seek className="rounded-2xl border border-sky-300/40 bg-sky-500/10 p-4 text-center">
+            <p className="text-[15px] font-black text-white">{room.foe ? `${room.foe.name}さんが見つかりました。始めます…` : '相手をさがしています…'}</p>
+            <p data-card-pvp-waiting={room.lobbyCount} className="mt-1 text-[13px] font-bold text-sky-100">いま待っている人 {Math.max(1, room.lobbyCount)}人</p>
+            {!room.foe && now - room.seekAt <= CARD_PVP_LOBBY_LIMIT_MS && <p className="mt-1 text-[12px] font-bold text-slate-300 tabular-nums">あと{Math.max(0, Math.ceil((CARD_PVP_LOBBY_LIMIT_MS - (now - room.seekAt)) / 1000))}秒</p>}
+            {!room.foe && now - room.seekAt > CARD_PVP_LOBBY_LIMIT_MS && (
+              <div data-card-pvp-nobody className="mt-3 space-y-2">
+                <p className="text-[13px] font-bold text-amber-100">いまは、だれも来ませんでした</p>
+                <button type="button" data-card-pvp-seek-again className={`${btn} border border-white/15 bg-slate-900 text-slate-100`} onClick={() => { Audio_.se.tap(); CARD_PVP.seekAgain(); }}>もう一度さがす</button>
+                {onAssistant && <button type="button" data-card-pvp-to-assistant className={`${btn} mh-button-primary`} onClick={() => { Audio_.se.tap(); CARD_PVP.leave(); onAssistant(); }}>助手と対戦へ</button>}
+              </div>
+            )}
+          </div>
+        )}
+        {(room.phase === 'connecting' || room.phase === 'waiting') && room.mode !== 'free' && (
           <div className="rounded-2xl border border-sky-300/40 bg-sky-500/10 p-4 text-center">
             <p className="text-[13px] font-bold text-sky-100">合言葉</p>
             <p data-card-pvp-room className="my-1 text-[40px] font-black tracking-[.3em] text-white">{room.code}</p>
@@ -592,5 +708,34 @@ const CardPvpChat = () => {
         </div>
       )}
     </div>
+  );
+};
+
+// ---- ランキングの「マルチ」の札(90-card-rank.jsx の CardRankingBoard から出す) ----
+// 勝つと上がる強さの点数(はじめ1500)の順。表がまだ無いときは「準備中」のまま
+const CardPvpRankingList = ({ renderBreederIcon = null, selfId = '' }) => {
+  const [state, setState] = useState({ status: 'loading', entries: [] });
+  useEffect(() => {
+    let alive = true;
+    sbFetchCardPvpRatings().then((entries) => { if (alive) setState(entries == null ? { status: 'missing', entries: [] } : { status: 'ready', entries }); })
+      .catch(() => { if (alive) setState({ status: 'error', entries: [] }); });
+    return () => { alive = false; };
+  }, []);
+  if (state.status === 'loading') return <p className="py-4 text-center text-[13px] font-bold text-slate-400">読み込み中…</p>;
+  if (state.status === 'missing') return <p data-card-pvp-rank="missing" className="py-3 text-center text-[12px] font-bold text-slate-400">強さの点数の表は、まだ準備中です</p>;
+  if (state.status === 'error') return <p className="py-3 text-center text-[12px] font-bold text-rose-200">読み込めませんでした</p>;
+  if (!state.entries.length) return <p data-card-pvp-rank="empty" className="py-3 text-center text-[12px] font-bold text-slate-400">まだ記録がありません</p>;
+  return (
+    <ol data-card-pvp-rank="ready" className="mt-2 space-y-1 text-left">
+      {state.entries.map((e, i) => (
+        <li key={e.breederId} className={`flex items-center gap-2 rounded-xl px-2 py-1.5 ${e.breederId === selfId ? 'bg-amber-500/15' : 'bg-black/25'}`}>
+          <b className="w-7 text-right text-[13px] font-black text-amber-200">{i + 1}</b>
+          {renderBreederIcon ? renderBreederIcon({ userName: e.userName, icon: e.icon, profileFrame: e.profileFrame, breederId: e.breederId }) : <span aria-hidden="true">{cardIconNode(e.icon || '🙂', 22)}</span>}
+          <span className="min-w-0 flex-1 truncate text-[13px] font-bold text-white">{e.userName || 'ブリーダー'}</span>
+          <span className="text-[11px] font-bold text-slate-300">{e.wins}勝{e.loses}敗</span>
+          <b className="w-12 text-right text-[15px] font-black text-sky-200">{e.rating}</b>
+        </li>
+      ))}
+    </ol>
   );
 };
