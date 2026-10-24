@@ -9,7 +9,7 @@
 // 使い方:
 //   node tools/card/card-image-build.js --sample <出力.png> [カード画像...]   消す前と後を並べた見本を1枚作る(配信には何も書かない)
 //   node tools/card/card-image-build.js --build                                   全カードを monster-hero/images/card-battle/{s,l}/ へ書き出す
-//   --art-copyright を付けると、技カードの絵の右下に乗っている「© TECMO」も同じやり方で消す(絵に触れるので既定では消さない)
+//   技カードの絵の右下に乗っている「© TECMO」も同じやり方で消す(2026-10-24 社長が決めた)。--keep-art-copyright で残せる(比べる見本用)
 const fs = require('fs');
 const path = require('path');
 const sharp = require(path.join(__dirname, '..', 'node_modules', 'sharp'));
@@ -100,7 +100,7 @@ module.exports = { erase, allCards };
 
 if (require.main === module) (async () => {
   const args = process.argv.slice(2);
-  const opts = { artCopyright: args.includes('--art-copyright') };
+  const opts = { artCopyright: !args.includes('--keep-art-copyright') };
   const rest = args.filter((a) => !a.startsWith('--'));
   if (args.includes('--sample')) {
     const [out, ...files] = rest;
@@ -109,6 +109,6 @@ if (require.main === module) (async () => {
   } else if (args.includes('--build')) {
     await build(opts);
   } else {
-    console.log('使い方: --sample <出力.png> <カード画像...> / --build  (どちらにも --art-copyright を足せる)');
+    console.log('使い方: --sample <出力.png> <カード画像...> / --build  (どちらにも --keep-art-copyright を足せる)');
   }
 })().catch((e) => { console.error(e.message || e); process.exit(1); });
