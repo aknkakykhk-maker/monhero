@@ -4286,7 +4286,7 @@ const createAnimationStyle = () => {
     .mh-pack-idle { animation: mhPackIdle 2.4s ease-in-out infinite; }
     .mh-pack-shake { animation: mhPackShake .35s ease-in-out both; }
     .mh-pack-strip { animation: mhPackTearStrip .6s cubic-bezier(.3,.6,.4,1) forwards; }
-    .mh-pack-drop { animation: mhPackDrop .45s ease-in .25s forwards; }
+    .mh-pack-drop { animation: mhPackDrop .3s ease-in .62s forwards; }
     .mh-pack-burst { position: absolute; left: 50%; top: 30%; width: 320px; height: 320px; margin: -160px 0 0 -160px; border-radius: 50%; pointer-events: none; background: radial-gradient(circle, rgba(255,255,255,1), rgba(253,230,138,.85) 30%, rgba(253,186,116,.35) 55%, transparent 70%); animation: mhPackBurst .8s ease-out forwards; }
     .mh-pack-deal { animation: mhPackDeal .42s cubic-bezier(.2,.8,.3,1.2) both; }
     .mh-pack-card { perspective: 700px; }
@@ -4300,7 +4300,28 @@ const createAnimationStyle = () => {
     .mh-pack-kira-front::after { content: ''; position: absolute; inset: 0; border-radius: 5px; background: linear-gradient(105deg, transparent 30%, rgba(255,255,255,.55) 45%, rgba(147,197,253,.45) 55%, transparent 70%); background-size: 220% 100%; animation: mhPackShimmer 1.6s linear infinite; pointer-events: none; }
     .mh-pack-flash { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(circle at 50% 45%, rgba(255,255,255,.95), rgba(253,224,71,.6) 35%, rgba(253,224,71,0) 70%); animation: mhPackFlash .7s ease-out forwards; z-index: 70; }
     .mh-pack-rays { position: absolute; inset: -60%; pointer-events: none; background: repeating-conic-gradient(rgba(253,224,71,.55) 0 8deg, transparent 8deg 22deg); border-radius: 50%; animation: mhPackRays .9s ease-out forwards; }
-    @media (prefers-reduced-motion: reduce) { .mh-pack-idle, .mh-pack-kira-back { animation: none; } }
+    @keyframes mhPackPillar { 0% { opacity: 0; transform: translateX(-50%) scaleX(.15) scaleY(0); } 20% { opacity: 1; transform: translateX(-50%) scaleX(.35) scaleY(1); } 60% { opacity: 1; transform: translateX(-50%) scaleX(1.25) scaleY(1); } 100% { opacity: 0; transform: translateX(-50%) scaleX(2.4) scaleY(1); } }
+    @keyframes mhPackWhiteout { 0%, 46% { opacity: 0; } 64% { opacity: 1; } 100% { opacity: 0; } }
+    @keyframes mhPackSpotIn { 0% { transform: scale(.25) rotateY(180deg); opacity: 0; } 55% { transform: scale(1.12) rotateY(0); opacity: 1; } 75% { transform: scale(.97); } 100% { transform: scale(1); } }
+    @keyframes mhPackSpotOut { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(.25) translateY(-30vh); opacity: 0; } }
+    @keyframes mhPackSpin { 0% { transform: translate(-50%,-50%) rotate(0); } 100% { transform: translate(-50%,-50%) rotate(360deg); } }
+    @keyframes mhPackHue { 0% { filter: hue-rotate(0deg) brightness(1.2); } 100% { filter: hue-rotate(360deg) brightness(1.2); } }
+    @keyframes mhPackRainbowMove { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
+    .mh-pack-pillar { position: absolute; left: 50%; bottom: 86%; width: 170px; height: 120vh; transform-origin: 50% 100%; pointer-events: none; background: linear-gradient(to top, rgba(255,255,255,1), rgba(254,240,138,.9) 25%, rgba(253,186,116,.35) 70%, transparent); filter: blur(3px); -webkit-mask: linear-gradient(90deg, transparent, #000 32%, #000 68%, transparent); mask: linear-gradient(90deg, transparent, #000 32%, #000 68%, transparent); animation: mhPackPillar .95s ease-out .12s both; z-index: 3; }
+    .mh-pack-whiteout { position: fixed; inset: 0; pointer-events: none; background: #fff; z-index: 71; animation: mhPackWhiteout 1.15s ease-out forwards; }
+    .mh-pack-flash-alt { background: radial-gradient(circle at 50% 45%, rgba(255,255,255,.95), rgba(244,114,182,.6) 25%, rgba(96,165,250,.55) 45%, rgba(74,222,128,.35) 60%, transparent 75%); }
+    .mh-pack-rays-alt { background: repeating-conic-gradient(#f87171 0 6deg, transparent 6deg 12deg, #facc15 12deg 18deg, transparent 18deg 24deg, #4ade80 24deg 30deg, transparent 30deg 36deg, #60a5fa 36deg 42deg, transparent 42deg 48deg, #c084fc 48deg 54deg, transparent 54deg 60deg); opacity: .8; }
+    .mh-pack-alt-back { animation: mhPackKiraBack .7s ease-in-out infinite; background: linear-gradient(120deg, #f87171, #facc15, #4ade80, #60a5fa, #c084fc, #f87171) !important; background-size: 200% 100% !important; box-shadow: 0 0 18px 4px rgba(192,132,252,.9); }
+    .mh-pack-alt-back::after { content: ''; position: absolute; inset: 0; border-radius: 5px; background: linear-gradient(105deg, transparent 35%, rgba(255,255,255,.9) 50%, transparent 65%); background-size: 220% 100%; animation: mhPackShimmer .8s linear infinite; }
+    .mh-pack-alt-front { border-radius: 8px; box-shadow: 0 0 0 3px #fff, 0 0 18px 6px rgba(244,114,182,.9), 0 0 36px 14px rgba(96,165,250,.7); }
+    .mh-pack-alt-front::before { content: ''; position: absolute; inset: -4px; border-radius: 10px; z-index: -1; background: conic-gradient(#f87171, #facc15, #4ade80, #60a5fa, #c084fc, #f87171); animation: mhPackHue 1.6s linear infinite; }
+    .mh-pack-alt-front::after { content: ''; position: absolute; inset: 0; border-radius: 7px; pointer-events: none; background: linear-gradient(115deg, rgba(248,113,113,.0) 20%, rgba(248,113,113,.35) 32%, rgba(250,204,21,.35) 42%, rgba(74,222,128,.35) 52%, rgba(96,165,250,.35) 62%, rgba(192,132,252,.35) 72%, transparent 84%); background-size: 200% 100%; mix-blend-mode: screen; animation: mhPackShimmer 1.4s linear infinite; }
+    .mh-pack-alt-label { background: linear-gradient(90deg, #f87171, #facc15, #4ade80, #60a5fa, #c084fc, #f87171); background-size: 200% 100%; animation: mhPackRainbowMove 1.2s linear infinite; }
+    .mh-pack-spot-in { animation: mhPackSpotIn .55s cubic-bezier(.2,.8,.3,1.1) both; perspective: 900px; }
+    .mh-pack-spot-out { animation: mhPackSpotOut .32s ease-in forwards; }
+    .mh-pack-spot-rays { position: absolute; left: 50%; top: 46%; width: 180vmax; height: 180vmax; pointer-events: none; background: repeating-conic-gradient(rgba(253,224,71,.4) 0 7deg, transparent 7deg 20deg); border-radius: 50%; animation: mhPackSpin 9s linear infinite; -webkit-mask: radial-gradient(circle, #000 10%, transparent 55%); mask: radial-gradient(circle, #000 10%, transparent 55%); }
+    .mh-pack-spot-rays-alt { background: repeating-conic-gradient(rgba(248,113,113,.55) 0 6deg, transparent 6deg 12deg, rgba(250,204,21,.55) 12deg 18deg, transparent 18deg 24deg, rgba(74,222,128,.55) 24deg 30deg, transparent 30deg 36deg, rgba(96,165,250,.55) 36deg 42deg, transparent 42deg 48deg, rgba(192,132,252,.55) 48deg 54deg, transparent 54deg 60deg); animation-duration: 6s; }
+    @media (prefers-reduced-motion: reduce) { .mh-pack-idle, .mh-pack-kira-back, .mh-pack-alt-back, .mh-pack-spot-rays { animation: none; } }
     @keyframes mhRjJackHit { 0% { transform: none; filter: brightness(1); } 12% { transform: translate(-14px, 2px) rotate(-4deg); filter: brightness(2.6); } 30% { transform: translate(12px, -2px) rotate(3deg); filter: brightness(1.6); } 55% { transform: translate(-6px, 0); filter: brightness(1.2); } 100% { transform: none; filter: brightness(1); } }
     @keyframes mhRjBarDrop { 0% { transform: scaleX(var(--from)); } 100% { transform: scaleX(var(--to)); } }
     @media (max-height: 760px) { .mh-rjdmg { gap: 3px; } .mh-rjdmg-score b { font-size: 30px; } .mh-rjdmg-damage b { font-size: 40px !important; } .mh-rjdmg-down { font-size: 48px; } }
