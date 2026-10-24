@@ -14,17 +14,40 @@ const CARD_IMG = (img, size = 's') => `${CARD_IMAGE_SET.imageDir}/${size}/${img}
 const CARD_KIND_LABEL = Object.freeze({ pow: 'ちから', int: 'かしこさ', spe: '特殊', dge: '回避', blk: '防御' });
 const CARD_TYPE_LABEL = Object.freeze({ ground: '地上', air: '空中', water: '水中' });
 const CARD_LEVEL_LABEL = Object.freeze({ easy: 'EASY', normal: 'NORMAL', hard: 'HARD', expert: 'EXPERT', master: 'MASTER' });
-// 相手の助手に合わせた曲(5-3)。ももすけの曲は「あとで決める」(社長)ので、いまは仮にトリコ
+// 相手の助手ごとの対戦の既定の曲(社長 台帳 #3438)。対人戦は ichika_battle(対人戦の区切りで使う)
+// ききは綺季一閃のフル版(eiki_boss)。きゅうこの Toward the Stars はゲームに short 版しかないので、それを使う
 const CARD_AI_BGM = Object.freeze({
-  mua: 'ichika_battle', momosuke: 'melo_toriko', kiki: 'melo_kiki_issen_short',
+  mua: 'melo_toriko', kiki: 'eiki_boss', momosuke: 'melo_crossing_field',
   kyuko: 'melo_toward_the_stars_short', dra: 'melo_mou_hitotsu_no_sekai_e', atsu: 'melo_against_my_own_shadow',
 });
-// モンヒロにいる種族は、いまのゲームの絵を使う(ほかの種族は、絵が届くまでカードの絵で代える。5-3)
+const CARD_PVP_BGM = 'ichika_battle';
+// モンスターの絵(5-3)。モンヒロにいる種族はいまのゲームの絵、いない16種族は社長から届いた立ち絵(#3437 でクラフトくんが取り込んだ)。
+// 混血の15体はカードの絵で代える(社長)
 const CARD_SPECIES_ART = Object.freeze({ tiger: 'Tiger', golem: 'Golem', suezo: 'Suezo', pixie: 'Pixie', hare: 'Ham', mocchi: 'Mocchi', monol: 'Monol', plant: 'Plant' });
+const cardNewSpeciesArt = () => ({
+  dino: typeof NEW16_DINO_IMG !== 'undefined' ? NEW16_DINO_IMG : null,
+  gali: typeof NEW16_GALI_IMG !== 'undefined' ? NEW16_GALI_IMG : null,
+  naga: typeof NEW16_NAGA_IMG !== 'undefined' ? NEW16_NAGA_IMG : null,
+  dragon: typeof NEW16_DRAGON_IMG !== 'undefined' ? NEW16_DRAGON_IMG : null,
+  henger: typeof NEW16_HENGER_IMG !== 'undefined' ? NEW16_HENGER_IMG : null,
+  durahan: typeof NEW16_DURAHAN_IMG !== 'undefined' ? NEW16_DURAHAN_IMG : null,
+  arrowhead: typeof NEW16_ARROWHEAD_IMG !== 'undefined' ? NEW16_ARROWHEAD_IMG : null,
+  zilla: typeof NEW16_ZILLA_IMG !== 'undefined' ? NEW16_ZILLA_IMG : null,       // グジラは地上も水中も同じ立ち絵(社長)
+  phoenix: typeof NEW16_PHOENIX_IMG !== 'undefined' ? NEW16_PHOENIX_IMG : null,
+  joker: typeof NEW16_JOKER_IMG !== 'undefined' ? NEW16_JOKER_IMG : null,
+  jell: typeof NEW16_JELL_IMG !== 'undefined' ? NEW16_JELL_IMG : null,
+  mew: typeof NEW16_MEW_IMG !== 'undefined' ? NEW16_MEW_IMG : null,
+  metalner: typeof NEW16_METALNER_IMG !== 'undefined' ? NEW16_METALNER_IMG : null,
+  worm: typeof NEW16_WORM_IMG !== 'undefined' ? NEW16_WORM_IMG : null,
+  centaur: typeof NEW16_CENTAUR_IMG !== 'undefined' ? NEW16_CENTAUR_IMG : null,
+  colorpandora: typeof NEW16_COLORPANDORA_IMG !== 'undefined' ? NEW16_COLORPANDORA_IMG : null,
+});
 const cardMonArt = (mon) => {
-  const id = CARD_SPECIES_ART[mon.species] || CARD_SPECIES_ART[mon.main];
+  if (mon.main) return null; // 混血はカードの絵
+  const id = CARD_SPECIES_ART[mon.species];
   const m = id && typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[id] : null;
-  return m && m.imgUrl ? m.imgUrl : null;
+  if (m && m.imgUrl) return m.imgUrl;
+  return cardNewSpeciesArt()[mon.species] || null;
 };
 const cardTodayJst = () => new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
 const cardCaption = (c) => (!c ? '' : c.kind === 'dge' ? '回避' : c.kind === 'blk' ? '防御' : c.kind === 'spe' ? '特殊' : `ダメージ${c.damage}`);

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 599604becd9a7136
+// source-sha256: ee661db174ceb861
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-24 12:11";
+const BUILD_DATE = "2026-10-24 12:16";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -12184,6 +12184,7 @@ const RELEASE_FLAGS = {
   assistantDailyLines: true,
   assistantAtsu: true,
   assistantKyuko: true,
+  cardBattle: false,
   tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE,
   tacticsHate: true,
   tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE,
@@ -83843,13 +83844,14 @@ const CARD_LEVEL_LABEL = Object.freeze({
   master: 'MASTER'
 });
 const CARD_AI_BGM = Object.freeze({
-  mua: 'ichika_battle',
-  momosuke: 'melo_toriko',
-  kiki: 'melo_kiki_issen_short',
+  mua: 'melo_toriko',
+  kiki: 'eiki_boss',
+  momosuke: 'melo_crossing_field',
   kyuko: 'melo_toward_the_stars_short',
   dra: 'melo_mou_hitotsu_no_sekai_e',
   atsu: 'melo_against_my_own_shadow'
 });
+const CARD_PVP_BGM = 'ichika_battle';
 const CARD_SPECIES_ART = Object.freeze({
   tiger: 'Tiger',
   golem: 'Golem',
@@ -83860,10 +83862,30 @@ const CARD_SPECIES_ART = Object.freeze({
   monol: 'Monol',
   plant: 'Plant'
 });
+const cardNewSpeciesArt = () => ({
+  dino: typeof NEW16_DINO_IMG !== 'undefined' ? NEW16_DINO_IMG : null,
+  gali: typeof NEW16_GALI_IMG !== 'undefined' ? NEW16_GALI_IMG : null,
+  naga: typeof NEW16_NAGA_IMG !== 'undefined' ? NEW16_NAGA_IMG : null,
+  dragon: typeof NEW16_DRAGON_IMG !== 'undefined' ? NEW16_DRAGON_IMG : null,
+  henger: typeof NEW16_HENGER_IMG !== 'undefined' ? NEW16_HENGER_IMG : null,
+  durahan: typeof NEW16_DURAHAN_IMG !== 'undefined' ? NEW16_DURAHAN_IMG : null,
+  arrowhead: typeof NEW16_ARROWHEAD_IMG !== 'undefined' ? NEW16_ARROWHEAD_IMG : null,
+  zilla: typeof NEW16_ZILLA_IMG !== 'undefined' ? NEW16_ZILLA_IMG : null,
+  phoenix: typeof NEW16_PHOENIX_IMG !== 'undefined' ? NEW16_PHOENIX_IMG : null,
+  joker: typeof NEW16_JOKER_IMG !== 'undefined' ? NEW16_JOKER_IMG : null,
+  jell: typeof NEW16_JELL_IMG !== 'undefined' ? NEW16_JELL_IMG : null,
+  mew: typeof NEW16_MEW_IMG !== 'undefined' ? NEW16_MEW_IMG : null,
+  metalner: typeof NEW16_METALNER_IMG !== 'undefined' ? NEW16_METALNER_IMG : null,
+  worm: typeof NEW16_WORM_IMG !== 'undefined' ? NEW16_WORM_IMG : null,
+  centaur: typeof NEW16_CENTAUR_IMG !== 'undefined' ? NEW16_CENTAUR_IMG : null,
+  colorpandora: typeof NEW16_COLORPANDORA_IMG !== 'undefined' ? NEW16_COLORPANDORA_IMG : null
+});
 const cardMonArt = mon => {
-  const id = CARD_SPECIES_ART[mon.species] || CARD_SPECIES_ART[mon.main];
+  if (mon.main) return null;
+  const id = CARD_SPECIES_ART[mon.species];
   const m = id && typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[id] : null;
-  return m && m.imgUrl ? m.imgUrl : null;
+  if (m && m.imgUrl) return m.imgUrl;
+  return cardNewSpeciesArt()[mon.species] || null;
 };
 const cardTodayJst = () => new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
 const cardCaption = c => !c ? '' : c.kind === 'dge' ? '回避' : c.kind === 'blk' ? '防御' : c.kind === 'spe' ? '特殊' : `ダメージ${c.damage}`;
