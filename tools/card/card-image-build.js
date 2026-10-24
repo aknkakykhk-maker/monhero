@@ -52,7 +52,7 @@ const fillRect = (px, ch, r) => {
   }
 };
 
-const erase = async (file, { artCopyright = false } = {}) => {
+const erase = async (file, { artCopyright = true } = {}) => {
   const { data, info } = await sharp(file).removeAlpha().raw().toBuffer({ resolveWithObject: true });
   if (info.width !== W || info.height !== H) throw new Error(`${file}: 大きさが ${info.width}×${info.height}(${W}×${H} のはず)`);
   const rects = [...(isMonster(file) ? BAND.monster : BAND.skill)];
