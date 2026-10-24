@@ -63,6 +63,7 @@ const STRIP_BACKGROUND = { IBLIS: 'Iblis' };
 //
 // 第5要素は縦位置の微調整(枠の一辺に対する割合。正で下へ)。頭の下に体が続く
 // モンスターは少し上に寄せたほうが、丸くトリミングしたときの収まりが良い。
+// 第6要素は横位置の微調整(同じく割合。正で右へ)。絵の左右が非対称で、測った中心では顔が片側へ寄って見えるときに使う
 const FACE_BOXES = {
   // 葉っぱの帽子の上端〜あご。頭の実際の左右端は0.297〜0.700なので、
   // 切り落とさないよう少し広めに取る(以前は右端を0.675で切っていたため
@@ -132,6 +133,20 @@ const FACE_BOXES = {
   //           ドリーミィ A [0.30,0.10,0.60,0.31,0.02] / B 下 / C [0.34,0.14,0.54,0.28,0] / D [0.12,0.0,0.78,0.42,0.05]
   ILLUMINE: [0.30, 0.0, 0.68, 0.40, -0.08],
   DREAMY: [0.18, 0.0, 0.72, 0.32, 0.03],
+  // 新しい16種(2026-10-24・まだ味方には入れていない)。立ち絵は NEW16_<種族>_IMG(images/monsters/<種族>.png)。
+  // 案は元の絵から作ったので(docs/playbot/reports/2026-10-24/face-options/)、ここでは余白を切った立ち絵の座標へ直した値。
+  // 社長が A〜D の4案から選んだ(A=顔まんなか / B=耳・角まで / C=寄り / D=引き)
+  NEW16_DINO: [0.074, 0, 0.611, 0.334, 0], // B
+  NEW16_NAGA: [0.316, 0.058, 0.684, 0.274, 0], // C
+  NEW16_HENGER: [0, 0, 1, 1, 0], // D
+  NEW16_ARROWHEAD: [0.013, 0.291, 0.986, 0.983, 0], // B
+  NEW16_ZILLA: [0.099, 0.032, 0.881, 0.449, 0], // A
+  NEW16_JOKER: [0.424, 0.135, 0.616, 0.358, 0], // A
+  NEW16_JELL: [0.293, 0, 0.707, 0.265, 0], // B
+  NEW16_MEW: [0, 0.108, 0.851, 0.629, 0], // A
+  NEW16_METALNER: [0.11, 0.043, 0.915, 0.355, 0], // A
+  NEW16_CENTAUR: [0.405, 0.168, 0.673, 0.38, 0], // A
+  NEW16_COLORPANDORA: [0, 0, 1, 0.627, 0], // B
 };
 
 // MASU_COLOR_EXCLUDE に合致する画素(背景の飾り)を透明にした元画像を作る
@@ -192,7 +207,7 @@ async function makeFaceIcon(dataUrl, box, name, dye) {
     console.log(`  背景の飾りを ${removed}px 透明化しました`);
     img = canvas;
   }
-  const [x0, y0, x1, y1, biasY = 0] = box;
+  const [x0, y0, x1, y1, biasY = 0, biasX = 0] = box;
   // FACE_BOXES は目視で測った値なので、指定した矩形の中心と、実際に絵が描かれている
   // 部分の中心はズレることがある(モッチーが横にずれて見えていた原因)。
   // 指定範囲の中で不透明な画素が実際に占める範囲を測り直し、そちらを中心として使う。
@@ -204,9 +219,9 @@ async function makeFaceIcon(dataUrl, box, name, dye) {
   const headCx = opaque.cx, headCy = opaque.cy;
   // 頭の長辺が枠のFIT分を占めるように倍率を決める
   const scale = (SIZE * FIT) / Math.max(headW, headH);
-  // 頭の中心が枠の中心(縦だけbiasYぶんずらす)に来るよう、元絵全体を配置する。
+  // 頭の中心が枠の中心(biasY・biasXぶんずらす)に来るよう、元絵全体を配置する。
   // 枠からはみ出た体や翼は自動的に切り落とされ、直線的な断面は残らない
-  const dx = SIZE / 2 - headCx * scale;
+  const dx = SIZE / 2 + biasX * SIZE - headCx * scale;
   const dy = SIZE / 2 + biasY * SIZE - headCy * scale;
 
   const c = createCanvas(SIZE, SIZE);
