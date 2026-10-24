@@ -256,35 +256,94 @@ const CardRules = ({ onBack, onTutorial }) => (
   </div>
 );
 
+// ==================== パックの絵(社長「パックの絵に出る奴らをいい感じにのせて」台帳 #3503) ====================
+// 新しい画像ファイルは作らない。弾の色の袋に、その弾で出るモンスターの立ち絵(84 の cardMonArt。無ければカードの絵)を5体まで並べて描く
+// torn … 上のふち(ちぎれる所)を描かない(パックを開ける画面で、ちぎれた帯を別に飛ばすとき)
+const cardPackMonsters = (db, pack, n = 5) => {
+  const seen = new Set();
+  const list = Object.values(db.monsters).filter((m) => String(m.wave) === pack.wave && !m.variant && m.ready !== false && !seen.has(m.species) && seen.add(m.species));
+  if (list.length <= n) return list;
+  const step = list.length / n;
+  return Array.from({ length: n }, (_, k) => list[Math.floor(k * step)]);
+};
+const CARD_PACK_SLOTS = Object.freeze([
+  { left: '-8%', w: '50%', b: '19%', z: 1, o: .9 }, { right: '-8%', w: '50%', b: '19%', z: 1, o: .9 },
+  { left: '6%', w: '56%', b: '9%', z: 2, o: 1 }, { right: '6%', w: '56%', b: '9%', z: 2, o: 1 },
+  { left: '50%', w: '74%', b: '2%', z: 3, o: 1, center: true },
+]);
+const CardPackArt = ({ db, pack, width = 200, torn = false, className = '' }) => {
+  const mons = cardPackMonsters(db, pack);
+  // 真ん中を最後に(いちばん手前)。並べる順: 奥の左右 → 中の左右 → 真ん中
+  const order = mons.length >= 5 ? [mons[0], mons[4], mons[1], mons[3], mons[2]] : mons;
+  const slots = mons.length >= 5 ? CARD_PACK_SLOTS : CARD_PACK_SLOTS.slice(5 - mons.length);
+  const h = Math.round(width * 1.48);
+  const label = pack.id === 'hybrid' ? '混血' : `第${pack.wave}弾`;
+  return (
+    <div data-card-pack-art={pack.id} className={`relative overflow-hidden rounded-[14px] border-[3px] border-white/85 shadow-2xl ${className}`} style={{ width, height: h, background: `linear-gradient(165deg, ${pack.color} 0%, ${pack.color} 38%, #0b1020 100%)` }}>
+      <div aria-hidden="true" className="absolute inset-0 opacity-35" style={{ background: `repeating-conic-gradient(from 0deg at 50% 62%, rgba(255,255,255,.55) 0 6deg, transparent 6deg 18deg)` }}/>
+      <div aria-hidden="true" className="absolute inset-0" style={{ background: 'linear-gradient(115deg, transparent 30%, rgba(255,255,255,.28) 45%, transparent 60%)' }}/>
+      {!torn && <div aria-hidden="true" className="absolute inset-x-0 top-0 h-[7%]" style={{ background: 'repeating-linear-gradient(90deg, rgba(255,255,255,.9) 0 6px, rgba(255,255,255,.45) 6px 12px)' }}/>}
+      {order.map((m, k) => {
+        const sl = slots[k]; const src = cardMonArt(m) || CARD_IMG(m.img);
+        return <img key={m.no} src={src} alt="" aria-hidden="true" draggable={false} className="absolute object-contain object-bottom drop-shadow-[0_4px_6px_rgba(0,0,0,.6)]"
+          style={{ width: sl.w, height: '58%', bottom: sl.b, zIndex: sl.z, opacity: sl.o, ...(sl.center ? { left: sl.left, transform: 'translateX(-50%)' } : sl.left ? { left: sl.left } : { right: sl.right }) }}/>;
+      })}
+      <div className="absolute inset-x-0 top-[9%] z-[5] text-center">
+        <div className="font-black leading-none text-white" style={{ fontSize: Math.round(width * 0.2), WebkitTextStroke: `${Math.max(2, Math.round(width / 50))}px #111`, paintOrder: 'stroke fill', textShadow: '0 4px 0 rgba(0,0,0,.45)' }}>{label}</div>
+        <div className="mt-1 font-black tracking-wider text-white/90" style={{ fontSize: Math.round(width * 0.075), textShadow: '0 2px 2px rgba(0,0,0,.7)' }}>MFバトルカード</div>
+      </div>
+      <div className="absolute inset-x-[18%] bottom-[3%] z-[6] rounded-full bg-black/55 py-0.5 text-center font-black text-white" style={{ fontSize: Math.round(width * 0.07) }}>{pack.id === 'hybrid' ? '混血パック' : 'ブースターパック'}</div>
+    </div>
+  );
+};
+
 // ==================== パックを開ける画面(区切り2・CARD_PACK_OPEN) ====================
 // マーケットの「カードポイント」の売り場で買ったら、ここへ来る(買うのと保存は 60-app。この部品は見せるだけ)
 // result: { packId, packs:[[{ no, slot, rarity, dup, point }…]…], dupPoint, cost }
-// 1パックずつ。裏のカードをタップでめくる(モンスターの枠は最後)・「全部めくる」。キラは光る。だぶりは「+◯」
+// 演出(社長「派手に」台帳 #3503): パックをタップ → 上の帯がちぎれて飛び、光があふれる → カードが配られる → タップで1枚ずつ裏返る(音)
+//   キラ・別絵キラは、めくる前から裏が光って揺れる。めくると画面が光り、大きな音。「全部めくる」で続けてめくれる(飛ばせる)
+//   音は今ある効果音(Audio_.se の special・card・crit・levelUp・fusion)
 const CARD_RARITY_LABEL = Object.freeze({ normal: '', kira: 'キラ', alt: '別絵キラ' });
 const CardPackOpen = ({ db, result, onDone }) => {
   const [pi, setPi] = useState(0);
-  const [open, setOpen] = useState(false);
+  const [phase, setPhase] = useState('closed'); // closed → tearing → open
   const [flipped, setFlipped] = useState([]);
+  const [flash, setFlash] = useState(0);
   const [detail, setDetail] = useState(null);
+  const timers = useRef([]);
+  useEffect(() => () => timers.current.forEach(clearTimeout), []);
+  const later = (fn, ms) => { timers.current.push(setTimeout(fn, ms)); };
   const press = useCardLongPress((no) => setDetail(no));
-  const pack = cardPackOf(result.packId) || { name: 'パック', color: '#f59e0b' };
+  const pack = cardPackOf(result.packId) || { id: 'w1', wave: '1', name: 'パック', color: '#f59e0b' };
   const cards = result.packs[pi] || [];
   const allOpen = flipped.length >= cards.length;
   const last = pi >= result.packs.length - 1;
-  const flip = (i) => { if (flipped.includes(i)) return; Audio_.se.card(); setFlipped((f) => [...f, i]); };
-  const flipAll = () => { Audio_.se.card(); setFlipped(cards.map((_, i) => i)); };
-  const next = () => { Audio_.se.tap(); setPi((x) => x + 1); setOpen(false); setFlipped([]); };
+  const tear = () => {
+    if (phase !== 'closed') return;
+    Audio_.se.special();
+    setPhase('tearing');
+    later(() => setPhase('open'), 900);
+  };
+  const reveal = (i) => {
+    Audio_.se.card();
+    setFlipped((f) => (f.includes(i) ? f : [...f, i]));
+    const c = cards[i];
+    if (c && c.rarity !== 'normal') later(() => { setFlash((x) => x + 1); Audio_.se.crit(); if (c.rarity === 'alt') Audio_.se.fusion(); else Audio_.se.levelUp(); }, 380);
+  };
+  const flip = (i) => { if (flipped.includes(i) || phase !== 'open') return; reveal(i); };
+  const flipAll = () => { cards.map((_, i) => i).filter((i) => !flipped.includes(i)).forEach((i, k) => later(() => reveal(i), k * 140)); };
+  const next = () => { Audio_.se.tap(); timers.current.forEach(clearTimeout); timers.current = []; setPi((x) => x + 1); setPhase('closed'); setFlipped([]); };
   const packPoint = cards.reduce((a, c) => a + (c.point || 0), 0);
   return (
-    <div data-mh-screen data-card-pack-open className={SCREEN_SHELL_CLASS}>
+    <div data-mh-screen data-card-pack-open data-card-pack-phase={phase} className={SCREEN_SHELL_CLASS}>
       <ScreenHead title={pack.name} accent="text-amber-200" note={result.packs.length > 1 ? `${pi + 1} / ${result.packs.length}パック` : ''}/>
-      <div className={`${SCREEN_LIST_CLASS} flex flex-col items-center justify-center pb-2`}>
-        {!open ? (
-          <button type="button" data-card-pack-tear onClick={() => { Audio_.se.tap(); setOpen(true); }} className="relative flex h-[300px] w-[200px] flex-col items-center justify-center rounded-2xl border-4 border-white/70 text-center shadow-2xl active:scale-95" style={{ background: `linear-gradient(160deg, ${pack.color}, #1e1b4b)` }}>
-            <span className="text-[44px]">🎴</span>
-            <span className="mt-2 text-[18px] font-black text-white">{pack.name}</span>
-            <span className="mt-1 text-[12px] font-bold text-white/80">{cards.length}枚入り</span>
-            <span className="absolute inset-x-0 bottom-4 animate-pulse text-[13px] font-black text-white">タップで開ける</span>
+      <div className={`${SCREEN_LIST_CLASS} relative flex flex-col items-center justify-center overflow-hidden pb-2`}>
+        {phase !== 'open' ? (
+          <button type="button" data-card-pack-tear onClick={tear} className={`relative ${phase === 'closed' ? 'mh-pack-idle' : 'mh-pack-shake'}`} aria-label="パックを開ける">
+            <div className={phase === 'tearing' ? 'mh-pack-drop' : ''}><CardPackArt db={db} pack={pack} width={210} torn={phase === 'tearing'}/></div>
+            {phase === 'tearing' && <div aria-hidden="true" className="mh-pack-strip absolute inset-x-0 top-0 h-[7%] rounded-t-[14px]" style={{ background: 'repeating-linear-gradient(90deg, rgba(255,255,255,.95) 0 6px, rgba(255,255,255,.5) 6px 12px)' }}/>}
+            {phase === 'tearing' && <div aria-hidden="true" className="mh-pack-burst"/>}
+            {phase === 'closed' && <span className="absolute inset-x-0 -bottom-9 animate-pulse text-center text-[14px] font-black text-white">タップで開ける</span>}
           </button>
         ) : (
           <div className={`grid w-full gap-2 ${cards.length > 4 ? 'grid-cols-4' : 'grid-cols-3'} px-1`}>
@@ -292,33 +351,40 @@ const CardPackOpen = ({ db, result, onDone }) => {
               const on = flipped.includes(i);
               const card = cardOf(db, c.no); const m = card ? null : cardMonsterOf(db, c.no);
               const name = card ? card.name : m ? m.name : c.no;
-              const shine = c.rarity !== 'normal';
+              const rare = c.rarity !== 'normal';
               return (
-                <button key={i} type="button" data-card-pack-card={i} data-card-pack-flipped={on ? 1 : 0} data-card-pack-rarity={c.rarity} {...(on ? press(c.no, () => setDetail(c.no)) : { onClick: () => flip(i) })} className={`relative flex flex-col items-center rounded-lg p-0.5 text-center active:scale-95 ${on && shine ? 'animate-pulse ring-4 ring-amber-300 shadow-[0_0_18px_rgba(252,211,77,0.9)]' : ''}`} style={{ WebkitUserSelect: 'none', userSelect: 'none' }}>
-                  {on
-                    ? <img src={CARD_IMG(card ? card.img : m ? m.img : c.no)} alt={name} draggable={false} className="aspect-[5/7] w-full rounded-[5px] object-cover"/>
-                    : <div className="flex aspect-[5/7] w-full items-center justify-center rounded-[5px] border-2 border-white/40 text-[22px]" style={{ background: `linear-gradient(160deg, ${pack.color}, #0f172a)` }}>{c.slot === 'mon' ? '★' : '🃏'}</div>}
-                  {on && c.dup && <span className="absolute right-0.5 top-0.5 rounded-md bg-slate-950/90 px-1 text-[10px] font-black text-amber-200">+{c.point}</span>}
-                  {on && !c.dup && <span className="absolute right-0.5 top-0.5 rounded-md bg-emerald-400 px-1 text-[9px] font-black text-slate-950">NEW</span>}
-                  {on && shine && <span className="absolute left-0.5 top-0.5 rounded-md bg-amber-300 px-1 text-[9px] font-black text-slate-950">{CARD_RARITY_LABEL[c.rarity]}</span>}
-                  <span className="mt-0.5 line-clamp-2 min-h-[26px] text-[10px] font-bold leading-tight text-slate-100" style={JA_WRAP_STYLE}>{on ? name : ''}</span>
-                </button>
+                <div key={`${pi}-${i}`} className="mh-pack-deal flex flex-col items-center" style={{ animationDelay: `${i * 70}ms` }}>
+                  <button type="button" data-card-pack-card={i} data-card-pack-flipped={on ? 1 : 0} data-card-pack-rarity={c.rarity} {...(on ? press(c.no, () => setDetail(c.no)) : { onClick: () => flip(i) })} className="mh-pack-card relative w-full active:scale-95" style={{ WebkitUserSelect: 'none', userSelect: 'none' }}>
+                    <div className={`mh-pack-card-in aspect-[5/7] w-full ${on ? 'flipped' : ''}`}>
+                      <div className={`mh-pack-face flex items-center justify-center rounded-[5px] border-2 border-white/50 text-[22px] ${rare && !on ? 'mh-pack-kira-back' : ''}`} style={{ background: `linear-gradient(160deg, ${pack.color}, #0f172a)` }}>{c.slot === 'mon' ? '★' : '🃏'}</div>
+                      <div className={`mh-pack-face mh-pack-front ${rare ? 'mh-pack-kira-front' : ''}`}>
+                        <img src={CARD_IMG(card ? card.img : m ? m.img : c.no)} alt={name} draggable={false} className="h-full w-full rounded-[5px] object-cover"/>
+                      </div>
+                    </div>
+                    {on && rare && <div aria-hidden="true" className="mh-pack-rays"/>}
+                    {on && c.dup && <span className="absolute right-0.5 top-0.5 z-[2] rounded-md bg-slate-950/90 px-1 text-[10px] font-black text-amber-200">+{c.point}</span>}
+                    {on && !c.dup && <span className="absolute right-0.5 top-0.5 z-[2] rounded-md bg-emerald-400 px-1 text-[9px] font-black text-slate-950">NEW</span>}
+                    {on && rare && <span className="absolute left-0.5 top-0.5 z-[2] rounded-md bg-amber-300 px-1 text-[9px] font-black text-slate-950">{CARD_RARITY_LABEL[c.rarity]}</span>}
+                  </button>
+                  <span className="mt-0.5 line-clamp-2 min-h-[26px] text-center text-[10px] font-bold leading-tight text-slate-100" style={JA_WRAP_STYLE}>{on ? name : ''}</span>
+                </div>
               );
             })}
           </div>
         )}
-        {open && allOpen && (
+        {phase === 'open' && allOpen && (
           <div data-card-pack-summary className="mt-3 text-center text-[12px] font-bold text-slate-300">
             {packPoint > 0 ? <>だぶったカードは <b className="text-amber-200">カードポイント +{packPoint}</b> になりました</> : 'だぶったカードはありません'}
             {last && result.packs.length > 1 && <div className="mt-0.5">({result.packs.length}パックで +{result.dupPoint})</div>}
           </div>
         )}
       </div>
+      {flash > 0 && <div key={flash} aria-hidden="true" className="mh-pack-flash"/>}
       <div className={SCREEN_FOOTER_CLASS}>
-        {!open ? <div className="text-center text-[12px] font-bold text-slate-400">パックをタップしてください</div>
+        {phase !== 'open' ? <div className="text-center text-[12px] font-bold text-slate-400">パックをタップしてください</div>
           : !allOpen ? <button type="button" data-card-pack-flip-all className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]" onClick={flipAll}>全部めくる</button>
           : !last ? <button type="button" data-card-pack-next className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]" onClick={next}>つぎのパック</button>
-          : <button type="button" data-card-pack-done className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]" onClick={() => { Audio_.se.tap(); onDone(); }}>マーケットへ戻る</button>}
+          : <button type="button" data-card-pack-done className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]" onClick={() => { Audio_.se.tap(); onDone(); }}>{result.demo ? 'トップへ戻る' : 'マーケットへ戻る'}</button>}
       </div>
       {detail && <CardDetailModal db={db} no={detail} onClose={() => setDetail(null)}/>}
     </div>
@@ -339,7 +405,7 @@ const CardShopPacks = ({ db, point, busy, onBuyPack }) => {
         return (
           <div key={pack.id} data-card-shop-pack={pack.id} className={SCREEN_PANEL_CLASS} style={{ borderColor: `${pack.color}88` }}>
             <div className="flex items-center gap-2">
-              <div className="flex h-[56px] w-[40px] shrink-0 items-center justify-center rounded-md border-2 border-white/60 text-[20px]" style={{ background: `linear-gradient(160deg, ${pack.color}, #1e1b4b)` }}>🎴</div>
+              <CardPackArt db={db} pack={pack} width={58} className="shrink-0 !rounded-[8px] !border-2"/>
               <div className="min-w-0 flex-1">
                 <div className="text-[14px] font-black text-white">{pack.name}</div>
                 <div className="text-[11px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{jaWrap(pack.tech ? `${pack.tech + pack.mon}枚入り(技など${pack.tech}枚・モンスター${pack.mon}枚)` : `${pack.mon}枚入り(3枚とも混血モンスター)`)}</div>
