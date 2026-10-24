@@ -556,11 +556,12 @@ const cardApplyAction = (db, st0, act) => {
 // 先読みの深さと気まぐれは難易度で決まる(5-5)。★次の1手を選ぶ所・デッキを組む所は差し替えられる口にしておく
 // sloppy … その場の1手を、考えずに選ぶ割合(守りを出し忘れる・手札を適当にガッツへ回す・適当な相手を狙う)
 const CARD_AI_LEVELS = Object.freeze({
-  easy:   { depth: 0, whim: 0.30, sloppy: 0.55, point: 30 },
-  normal: { depth: 1, whim: 0.15, sloppy: 0.30, point: 45 },
-  hard:   { depth: 2, whim: 0.08, sloppy: 0.15, point: 60 },
-  expert: { depth: 3, whim: 0.04, sloppy: 0.06, point: 75 },
-  master: { depth: 3, whim: 0.01, sloppy: 0, point: 90, readHand: true },
+  // point … 勝ったときのカードポイント / loops … 勝ったときのクイック周回(◯周ぶん)。社長が案Aに決めた(台帳 #3484)
+  easy:   { depth: 0, whim: 0.30, sloppy: 0.55, point: 80, loops: 14 },
+  normal: { depth: 1, whim: 0.15, sloppy: 0.30, point: 110, loops: 16 },
+  hard:   { depth: 2, whim: 0.08, sloppy: 0.15, point: 140, loops: 18 },
+  expert: { depth: 3, whim: 0.04, sloppy: 0.06, point: 170, loops: 20 },
+  master: { depth: 3, whim: 0.01, sloppy: 0, point: 200, loops: 22, readHand: true },
 });
 // くせの重み(設計書 5-5 の表と同じ数)
 const CARD_AI_HABITS = Object.freeze({
@@ -936,17 +937,53 @@ const cardGrantStarter = (db, { collection, decks, point, starter }, kitId, now)
   return { collection: nextCol, decks: nextDecks, point: point + CARD_STARTER_POINT, starter: { kit: kitId, at: now } };
 };
 
-// コンピューター戦の結果のカードポイント(4-1)。勝ちは難易度の点・負けは10・降参は0。1日600まで・その日はじめての勝ちは+50(上限の外)
-const CARD_CPU_LOSE_POINT = 10;
-const CARD_CPU_DAILY_MAX = 600;
+// コンピューター戦の結果(4-1・社長が案Aに決めた 台帳 #3484)
+//   カードポイント: 勝ち … 難易度の点 / 負け(最後まで)… どの難易度も 25 / 降参 … 倒した相手のモンスター × 10(25まで。0体なら0)
+//   クイック周回: 勝ち … 難易度の周 / 負け … 勝ちの半分 × (自分の番の数 ÷ 10。10回で満額)/ 降参 … 倒した数 × 負けの3分の1(0体なら0)
+//   ★かかった時間は見ない(止めて放っておいても増えない)。自分の番を3回やる前に終わった試合は、どちらも0(すぐ降参・すぐ負けで回せないように)
+//   ★負けのポイントを難易度で増やさないのは、MASTER でわざと早く負けるのがいちばん得にならないようにするため
+//   1日の上限は CPU 1,500(その日はじめての勝ちの +50 は上限の外)
+const CARD_CPU_LOSE_POINT = 25;
+const CARD_SURRENDER_POINT_PER_KO = 10;
+const CARD_CPU_DAILY_MAX = 1500;
 const CARD_FIRST_WIN_BONUS = 50;
-const cardCpuReward = (daily, levelId, outcome) => {
+const CARD_MIN_OWN_TURNS = 3;
+const CARD_LOSE_FULL_TURNS = 10;
+// 対人戦(区切り4で使う。数は案A): 勝ち・負け(最後まで)・途中で抜けた で分かれる。同じ相手からは1日3戦まで
+const CARD_PVP_REWARD = Object.freeze({ win: { point: 200, loops: 24 }, lose: { point: 50, loops: 12 }, left: { point: 0, loops: 0 }, dailyMax: 2200, sameFoePerDay: 3 });
+// その人が自分の番を何回やったか(1ターン目は先攻の番)
+const cardOwnTurns = (st, p) => {
+  const t = Math.max(0, Number(st && st.turn) || 0);
+  return st && st.first === p ? Math.ceil(t / 2) : Math.floor(t / 2);
+};
+// 倒した相手のモンスターの数
+const cardKoCount = (st, p) => ((st && st.players && st.players[cardOther(p)]) ? st.players[cardOther(p)].mons.filter((m) => m.ko).length : 0);
+// 1戦の結果のもと(自分の番の数・倒した数)。st が無いとき(古い呼び方)は満額あつかい
+const cardResultFacts = (st, p = CARD_ME) => (st ? { ownTurns: cardOwnTurns(st, p), kos: cardKoCount(st, p) } : { ownTurns: CARD_LOSE_FULL_TURNS, kos: 0 });
+const cardCpuBasePoint = (levelId, outcome, facts) => {
   const level = CARD_AI_LEVELS[levelId] || CARD_AI_LEVELS.normal;
-  const base = outcome === 'win' ? level.point : outcome === 'lose' ? CARD_CPU_LOSE_POINT : 0;
+  if (facts.ownTurns < CARD_MIN_OWN_TURNS) return 0;
+  if (outcome === 'win') return level.point;
+  if (outcome === 'lose') return CARD_CPU_LOSE_POINT;
+  if (outcome === 'surrender') return Math.min(CARD_CPU_LOSE_POINT, facts.kos * CARD_SURRENDER_POINT_PER_KO);
+  return 0;
+};
+// コンピューター戦のクイック周回(◯周ぶん)。周回クリア扱いにするかどうか(クイックで通したことがあるか)は、配る側(60-app)が決める
+const cardCpuLoops = (levelId, outcome, facts = cardResultFacts(null)) => {
+  const level = CARD_AI_LEVELS[levelId] || CARD_AI_LEVELS.normal;
+  if (facts.ownTurns < CARD_MIN_OWN_TURNS) return 0;
+  const loseFull = Math.floor(level.loops / 2);
+  if (outcome === 'win') return level.loops;
+  if (outcome === 'lose') return Math.floor(loseFull * Math.min(1, facts.ownTurns / CARD_LOSE_FULL_TURNS));
+  if (outcome === 'surrender') return Math.min(loseFull, Math.round((facts.kos * loseFull) / 3));
+  return 0;
+};
+const cardCpuReward = (daily, levelId, outcome, facts = cardResultFacts(null)) => {
+  const base = cardCpuBasePoint(levelId, outcome, facts);
   const room = Math.max(0, CARD_CPU_DAILY_MAX - daily.cpuPoint);
   const got = Math.min(base, room);
-  const bonus = outcome === 'win' && !daily.firstWin ? CARD_FIRST_WIN_BONUS : 0;
-  return { base, got, capped: got < base, bonus, total: got + bonus, daily: { ...daily, cpuPoint: daily.cpuPoint + got, firstWin: daily.firstWin || outcome === 'win' } };
+  const bonus = outcome === 'win' && base > 0 && !daily.firstWin ? CARD_FIRST_WIN_BONUS : 0;
+  return { base, got, capped: got < base, bonus, total: got + bonus, short: facts.ownTurns < CARD_MIN_OWN_TURNS, daily: { ...daily, cpuPoint: daily.cpuPoint + got, firstWin: daily.firstWin || bonus > 0 } };
 };
 // 勝ったら次の難易度を開く(NORMAL→HARD→EXPERT→MASTER)
 const cardUnlockAfterWin = (unlocked, levelId) => {
