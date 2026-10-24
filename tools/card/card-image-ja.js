@@ -10,6 +10,9 @@
 //   node tools/card/card-image-ja.js --font-dir <dir> --out <フォルダ> 109 112 C-051   … 指定したカードだけ書き出す(見本)
 //   node tools/card/card-image-ja.js --font-dir <dir> --out <フォルダ> --all          … 52枚全部
 //   書き出した絵は <フォルダ>/<元のファイル名>(742×1038 の JPEG)。配信用に縮めるのは card-image-build.js
+// ゲームに入れるとき(社長 台帳 #3511「このやり方で全部作る」):
+//   --out tools/art-sources/card-battle-ja --all → node tools/card/card-image-build.js --build
+//   (card-image-build は、card-battle-ja に同じ名前の絵があれば英語版の代わりに使い、©・URL を消して縮める)
 const fs = require('fs');
 const path = require('path');
 
@@ -25,7 +28,8 @@ const TYPE_JA = { G: '地上', A: '空中', W: '水中' };
 const LAYOUTS = {
   any: {
     erase: [
-      { name: 'title', rect: [205, 48, 486, 142], keep: 'light' },
+      // 題字の下と右は、絵のふちの黒い線(下は y≈129、x≈485 から右上へ斜めに上がる)。その先は絵なので消さない(tab)
+      { name: 'title', rect: [205, 48, 524, 127], keep: 'white', shape: 'tab', tab: [484, 124, 0.95], grow: 3 },
       { name: 'kind', rect: [72, 80, 170, 232], keep: 'colored', shape: 'stadium' },
       { name: 'label', rect: [52, 698, 260, 741], keep: 'light' },
       { name: 'guts', rect: [64, 900, 150, 941], keep: 'light' },
@@ -42,7 +46,8 @@ const LAYOUTS = {
   // ブリーダー(題字と「BREEDER」の地は、横へ色が変わる暗い灰色なので列ごとに埋める。種類の札は赤い角丸の四角)
   breeder: {
     erase: [
-      { name: 'title', rect: [208, 50, 340, 136], keep: 'dark', dir: 'col' },
+      // 長い題字(Shadow Bind など)は x≈480 まで。下と右は絵のふちの黒い線(下 y≈128、x≈478 から右上へ)
+      { name: 'title', rect: [208, 50, 520, 125], keep: 'dark', dir: 'col', shape: 'tab', tab: [476, 122, 1.0] },
       { name: 'kind', rect: [74, 80, 171, 200], keep: 'colored' },
       // 左のほうは地がほとんど黒で、黒いふちと見分けられない。すぐ下の2行の色を、列ごとにそのまま写す(card-image-build の © の消し方と同じ)
       { name: 'label', rect: [56, 699, 256, 742], from: 'bottom' },
@@ -60,18 +65,20 @@ const LAYOUTS = {
   // 混血のモンスター(左上「メイン」の札・右上の特徴の丸・右下「サブ」の札・左下の名前)
   hybrid: {
     erase: [
-      { name: 'main', rect: [68, 74, 180, 131], keep: 'colored' },
+      // 札の地は色つき・黒・灰色とさまざまなので、列ごとに上と下の端の色を地と見なし、それと違う点(白い字・黒いふち)を消す(edge)
+      // 英語の名前は長いと札の端近くまである(DURAHAN・ARMOR DRAGON など)ので、範囲は札いっぱい
+      { name: 'main', rect: [64, 71, 194, 133], keep: 'edge', dir: 'col', grow: 5 },
       { name: 'type', rect: [554, 83, 660, 187], keep: 'colored', shape: 'circle' },
-      { name: 'sub', rect: [600, 782, 676, 840], keep: 'colored' },
-      { name: 'name', rect: [64, 920, 236, 959], keep: 'colored', dir: 'col' },
+      { name: 'sub', rect: [558, 779, 679, 843], keep: 'edge', dir: 'col', grow: 5, cut: [574, 806] },
+      { name: 'name', rect: [40, 916, 240, 966], keep: 'edge', dir: 'col', grow: 6 },
     ],
     draw: (c) => [
-      { t: c.main || '', x: 76, y: 101, size: 23, weight: 900, align: 'left', style: 'title', sw: 5, maxW: 100 },
+      { t: c.main || '', x: 72, y: 101, size: 23, weight: 900, align: 'left', style: 'title', sw: 5, maxW: 116 },
       { t: 'メイン', x: 76, y: 126, size: 19, weight: 900, align: 'left', style: 'title', sw: 5 },
       ...kindLines(TYPE_JA[c.type] || c.type, 607, 136, 38, 1.06),
       { t: 'サブ', x: 668, y: 806, size: 19, weight: 900, align: 'right', style: 'title', sw: 5 },
-      { t: c.sub || '', x: 668, y: 833, size: 23, weight: 900, align: 'right', style: 'title', sw: 5, maxW: 70 },
-      { t: c.name, x: 76, y: 953, size: 32, weight: 900, align: 'left', style: 'title', maxW: 160 },
+      { t: c.sub || '', x: 670, y: 833, size: 23, weight: 900, align: 'right', style: 'title', sw: 5, maxW: 96 },
+      { t: c.name, x: 48, y: 953, size: 32, weight: 900, align: 'left', style: 'title', maxW: 180 },
     ],
   },
 };
@@ -112,6 +119,7 @@ const pageScript = async ({ imgUrl, fontUrls, layout, ops }) => {
   const sat = (r, g, b) => Math.max(r, g, b) - Math.min(r, g, b);
   const keepOf = {
     light: (r, g, b) => Math.min(r, g, b) > 195 && sat(r, g, b) < 40,
+    white: (r, g, b) => Math.min(r, g, b) > 236 && sat(r, g, b) < 18, // 題字のうしろの白い枠(英語の字の薄い影も消す)
     colored: (r, g, b) => sat(r, g, b) > 70 && lum(r, g, b) > 40 && lum(r, g, b) < 215,
     dark: (r, g, b) => lum(r, g, b) > 45 && lum(r, g, b) < 225 && sat(r, g, b) < 45, // 灰色の地(白い字と黒いふちを除く)
   };
@@ -132,6 +140,9 @@ const pageScript = async ({ imgUrl, fontUrls, layout, ops }) => {
     const keep = keepOf[e.keep];
     const inShape = (x, y) => {
       if (e.shape === 'circle') return (x - w / 2) ** 2 + (y - h / 2) ** 2 <= (Math.min(w, h) / 2) ** 2;
+      if (e.shape === 'tab') { const ax = x + x0, ay = y + y0; const [tx, ty, tk] = e.tab; return ax <= tx || ay < ty - (ax - tx) * tk; }
+      // cut: 左上の角(札の丸い角のふち)は消さない。[x, y] より左かつ上
+      if (e.cut && x + x0 < e.cut[0] && y + y0 < e.cut[1]) return false;
       if (e.shape !== 'stadium') return true;
       const r = w / 2; const cxx = w / 2;
       if (y < r) return (x - cxx) ** 2 + (y - r) ** 2 <= r * r;
@@ -141,13 +152,47 @@ const pageScript = async ({ imgUrl, fontUrls, layout, ops }) => {
     // 字の点(地の色でない点)を印にし、まわり grow 点ぶんも広げる(字のふちの薄い線を残さない)
     const grow = e.grow ?? 2;
     const raw = new Uint8Array(w * h);
-    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const i = (y * w + x) * 4; raw[y * w + x] = inShape(x, y) && !keep(d[i], d[i + 1], d[i + 2]) ? 1 : 0; }
+    if (e.keep === 'edge') {
+      // 列ごとの地の色: 上の2行・下の2行。どちらかに近ければ地(tol)。消すのは地と違う白い字の点だけで、黒いふちは grow で広げて消す
+      //   (黒い点まで消すと、札の角の外=上下が地の列で、札の黒い所まで塗りつぶしてしまう)
+      const px = (x, y) => { const i = (y * w + x) * 4; return [d[i], d[i + 1], d[i + 2]]; };
+      const avg = (a, b) => a.map((v, j) => (v + b[j]) / 2);
+      const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+      const tol = e.tol || 60;
+      for (let x = 0; x < w; x++) {
+        const top = avg(px(x, 0), px(x, 1)), bot = avg(px(x, h - 1), px(x, h - 2));
+        for (let y = 0; y < h; y++) { const c = px(x, y); raw[y * w + x] = inShape(x, y) && Math.min(dist(c, top), dist(c, bot)) > tol && Math.min(...c) > 185 && sat(...c) < 50 ? 1 : 0; }
+      }
+    } else for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const i = (y * w + x) * 4; raw[y * w + x] = inShape(x, y) && !keep(d[i], d[i + 1], d[i + 2]) ? 1 : 0; }
     const mask = new Uint8Array(w * h);
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
       if (!inShape(x, y)) continue;
       let on = 0;
       for (let dy = -grow; dy <= grow && !on; dy++) for (let dx = -grow; dx <= grow; dx++) { const xx = x + dx, yy = y + dy; if (xx >= 0 && yy >= 0 && xx < w && yy < h && raw[yy * w + xx]) { on = 1; break; } }
       mask[y * w + x] = on;
+    }
+    if (e.keep === 'edge') {
+      // 列ごとに、消す点の続きを、そのすぐ上とすぐ下の点の色でつなぐ(札の上の明るい帯などの、縦の色の変わり方を残す)
+      for (let x = 0; x < w; x++) {
+        for (let y = 0; y < h; y++) {
+          if (!mask[y * w + x]) continue;
+          let y2 = y; while (y2 < h && mask[y2 * w + x]) y2++;
+          const a = y > 0 ? (y - 1) * w + x : null, b = y2 < h ? y2 * w + x : null;
+          for (let t = y; t < y2; t++) {
+            const f = a === null ? 1 : b === null ? 0 : (t - y + 1) / (y2 - y + 1);
+            for (let c = 0; c < 3; c++) d[(t * w + x) * 4 + c] = Math.round((a === null ? d[b * 4 + c] : d[a * 4 + c]) * (1 - f) + (b === null ? d[a * 4 + c] : d[b * 4 + c]) * f);
+          }
+          y = y2;
+        }
+      }
+      // 列ごとにつなぐと細い縦じまが出るので、塗った所だけ横に軽くならす(前後3点)
+      const src = new Uint8ClampedArray(d);
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+        if (!mask[y * w + x]) continue;
+        for (let c = 0; c < 3; c++) { let sum = 0, n = 0; for (let dx = -3; dx <= 3; dx++) { const xx = x + dx; if (xx < 0 || xx >= w) continue; sum += src[(y * w + xx) * 4 + c]; n++; } d[(y * w + x) * 4 + c] = Math.round(sum / n); }
+      }
+      cx.putImageData(id, x0, y0);
+      continue;
     }
     const med = (q) => q.sort((p1, p2) => p1 - p2)[q.length >> 1];
     const lines = e.dir === 'col' ? w : h;
@@ -189,9 +234,20 @@ const pageScript = async ({ imgUrl, fontUrls, layout, ops }) => {
       // 日本語版のカードと同じく、「、」「。」と助詞のあとでだけ折る(「回避/する」のように言葉の途中で切らない)
       const out = [];
       let cur = '';
-      seg.forEach((x) => { cur += x; if (/[、。をはがにでともへのや」)]$/.test(cur)) { out.push(cur); cur = ''; } });
+      seg.forEach((x) => {
+        // 「、」「。」「」」などは前のかたまりにつける(行の頭に来ないように)
+        if (!cur && out.length && /^[、。」)]/.test(x)) { out[out.length - 1] += x; return; }
+        cur += x; if (/[、。をはがにでともへのや」)]$/.test(cur)) { out.push(cur); cur = ''; }
+      });
       if (cur) out.push(cur);
-      return out;
+      // 1つのかたまりが1行に入りきらないときは、語の切れ目でも折る
+      return out.flatMap((piece) => (cx.measureText(piece).width <= o.w * 0.98 ? [piece] : seg.length ? (() => {
+        const sub = [...new Intl.Segmenter('ja', { granularity: 'word' }).segment(piece)].map((x) => x.segment);
+        const res = []; let c2 = '';
+        sub.forEach((x) => { if (c2 && cx.measureText(c2 + x).width > o.w * 0.6 && !/^[\u3041-\u309f、。」)ー]/.test(x)) { res.push(c2); c2 = x; } else c2 += x; });
+        if (c2) res.push(c2);
+        return res;
+      })() : [piece]));
     };
     let lines;
     for (; size >= 20; size -= 1) {
