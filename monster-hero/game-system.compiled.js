@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: baeef218273ccd38
+// source-sha256: 4cffe7c4a4588a9c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-25 08:08";
+const BUILD_DATE = "2026-10-25 08:22";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -85723,6 +85723,7 @@ const CardMonSlot = ({
   onTap,
   press,
   compact = false,
+  wide = false,
   motion = null
 }) => {
   const mon = st.players[p].mons[m];
@@ -85763,7 +85764,7 @@ const CardMonSlot = ({
   }, CARD_TYPE_LABEL[ty]), stunned && React.createElement("span", {
     className: "ml-0.5 inline-block rounded bg-rose-900 px-1 text-[10px] font-bold"
   }, "攻撃できない")));
-  const artSize = compact ? 'max-h-[56px] max-w-[72px]' : 'max-h-[78px] max-w-[96px]';
+  const artSize = wide ? 'max-h-[40px] max-w-[56px]' : compact ? 'max-h-[56px] max-w-[72px]' : 'max-h-[78px] max-w-[96px]';
   const imgEl = art ? React.createElement("img", {
     src: art,
     alt: "",
@@ -85777,7 +85778,7 @@ const CardMonSlot = ({
   const poseClass = mon.ko ? 'mh-card-ko' : mv && mv.type === 'hit' ? 'mh-card-hit' : mv && mv.type === 'dodge' ? 'mh-card-dodge' : mv && mv.type === 'jump' ? 'mh-card-jump' : mv && mv.type === 'guard' ? 'mh-card-guard' : '';
   const artEl = React.createElement("div", {
     "data-card-art": `${p}-${m}`,
-    className: `relative flex ${compact ? 'h-[56px]' : 'h-[78px]'} w-full items-end justify-center`,
+    className: `relative flex ${wide ? 'h-[40px]' : compact ? 'h-[56px]' : 'h-[78px]'} w-full items-end justify-center`,
     style: mv && mv.type === 'attack' ? {
       '--atk-dx': `${mv.dx}px`,
       '--atk-dy': `${mv.dy}px`,
@@ -85887,6 +85888,19 @@ const CardBattleBoard = ({
     const on = () => setCompact(window.innerHeight < 760);
     window.addEventListener('resize', on);
     return () => window.removeEventListener('resize', on);
+  }, []);
+  const boardRef = useRef(null);
+  const [wide, setWide] = useState(false);
+  useEffect(() => {
+    const el = boardRef.current;
+    if (!el) return undefined;
+    const on = () => setWide(el.clientWidth > el.clientHeight * 1.3);
+    on();
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(on) : null;
+    if (ro) ro.observe(el);else window.addEventListener('resize', on);
+    return () => {
+      if (ro) ro.disconnect();else window.removeEventListener('resize', on);
+    };
   }, []);
   const lastLine = useRef({});
   const spoke = useRef({
@@ -86504,9 +86518,11 @@ const CardBattleBoard = ({
   })();
   const guide = tutorial && (tutStage.next || tutQ.length > 1) ? '' : mode === 'attack' ? sel ? monChosen === undefined ? '使う子をタップ' : needTarget ? '狙う相手をタップ' : '「使う」をタップ' : attackOpts.length ? '技をタップ → 相手をタップ(相手まで運んでもOK)' : '使える技がありません →「攻撃おわり」でガッツへ' : mode === 'guard' ? guardOpts.length ? '使える回避・防御だけが明るくなっています' : '使える回避・防御はありません' : mode === 'guts' ? 'ガッツにするカードをタップ(ガッツへ運んでもOK・何枚でも)' : mode === 'setup' ? '後攻: 始める前に2枚までガッツにできます' : mode === 'discard' ? `捨てるカードを${st.pendingDiscard ? st.pendingDiscard.n : 0}枚タップ` : '';
   return React.createElement("div", {
+    ref: boardRef,
     "data-mh-screen": true,
     "data-card-battle": true,
     "data-card-mode": mode,
+    "data-card-wide": wide ? 'true' : undefined,
     className: "relative flex h-full min-h-0 flex-1 flex-col overflow-hidden text-white",
     style: {
       background: 'radial-gradient(ellipse at 50% 45%,#3b2a6b 0%,#1b1438 55%,#0d0a1f 100%)'
@@ -86533,6 +86549,12 @@ const CardBattleBoard = ({
   }, "⚔ ", quickRun.loops, "周目"), React.createElement("span", {
     className: "text-[12px] font-bold text-violet-200"
   }, "ターン ", Math.max(1, st.turn), " ・ ", st.active === CARD_ME ? 'あなたの番' : `${who.name}の番`))), React.createElement("div", {
+    "data-card-wide-row": true,
+    className: wide ? 'flex min-h-0 flex-1 flex-row' : 'contents'
+  }, React.createElement("div", {
+    "data-card-field": true,
+    className: wide ? 'flex min-h-0 min-w-0 flex-1 flex-col' : 'contents'
+  }, React.createElement("div", {
     className: `flex ${compact ? 'h-[42px]' : 'h-[50px]'} shrink-0 items-center gap-2 px-2`
   }, pvp ? React.createElement("span", {
     "data-card-pvp-foe": true,
@@ -86566,6 +86588,7 @@ const CardBattleBoard = ({
     onTap: () => tapMon(CARD_CPU, m),
     press: press,
     compact: compact,
+    wide: wide,
     motion: motions[`1-${m}`] || null
   }))), React.createElement("div", {
     "data-card-stage": true,
@@ -86639,10 +86662,14 @@ const CardBattleBoard = ({
     onTap: () => tapMon(CARD_ME, m),
     press: press,
     compact: compact,
+    wide: wide,
     motion: motions[`0-${m}`] || null
   }))), React.createElement("div", {
     className: "flex shrink-0 justify-end px-2 py-1"
-  }, strip(CARD_ME)), tutorial && tutSay && (() => {
+  }, strip(CARD_ME))), React.createElement("div", {
+    "data-card-side": true,
+    className: wide ? 'flex min-h-0 w-[42%] max-w-[420px] shrink-0 flex-col justify-end overflow-y-auto border-l border-white/10 bg-black/20' : 'contents'
+  }, tutorial && tutSay && (() => {
     const dra = ASSISTANTS.find(a => a.id === 'dra');
     const head = tutQ[0];
     const showNext = tutStage.next ? !head || head[0] === 'D' : head && head[0] === 'D' && tutQ.length > 1;
@@ -86759,7 +86786,7 @@ const CardBattleBoard = ({
     style: {
       paddingBottom: 'max(8px, env(safe-area-inset-bottom))'
     }
-  }, footer), drag && drag.active && typeof ReactDOM !== 'undefined' && ReactDOM.createPortal(React.createElement("div", {
+  }, footer))), drag && drag.active && typeof ReactDOM !== 'undefined' && ReactDOM.createPortal(React.createElement("div", {
     "data-drag-card-layer": true,
     className: "pointer-events-none fixed inset-0",
     style: {
@@ -88369,7 +88396,7 @@ const CardDeckEditor = ({
       type: "button",
       "data-card-deck-mon": i
     }, press(no, () => removeOne(no)), {
-      className: "relative w-[20%] max-w-[64px] active:scale-95"
+      className: "relative w-[20%] max-w-[64px] active:scale-95 landscape:max-w-[42px]"
     }), React.createElement("img", {
       src: CARD_IMG(m.img),
       alt: m.name,
@@ -88382,7 +88409,7 @@ const CardDeckEditor = ({
       type: "button",
       "data-card-deck-mon": i,
       onClick: () => setTab('mon'),
-      className: "flex aspect-[5/7] w-[20%] max-w-[64px] items-center justify-center rounded-[5px] border-2 border-dashed border-white/30 text-[10px] font-bold text-slate-400"
+      className: "flex aspect-[5/7] w-[20%] max-w-[64px] items-center justify-center rounded-[5px] border-2 border-dashed border-white/30 text-[10px] font-bold text-slate-400 landscape:max-w-[42px] landscape:whitespace-nowrap landscape:text-[7px]"
     }, "モンスター");
   }), React.createElement("div", {
     className: "min-w-0 flex-1 text-right"
@@ -88396,7 +88423,7 @@ const CardDeckEditor = ({
     className: `text-[11px] font-black ${ready ? 'text-emerald-300' : 'text-amber-200'}`
   }, ready ? '対戦に使えます' : 'まだ対戦に使えません'))), React.createElement("div", {
     "data-card-deck-legend": true,
-    className: "text-[10px] font-bold text-slate-400"
+    className: "text-[10px] font-bold text-slate-400 landscape:hidden"
   }, "カードの右上: ", React.createElement("span", {
     className: "text-emerald-300"
   }, "入"), "=デッキに入れた枚数 / 持=持っている枚数"), !ready && React.createElement("div", {
@@ -88462,7 +88489,7 @@ const CardDeckEditor = ({
   }, React.createElement("button", {
     type: "button",
     "data-card-deck-save": true,
-    className: "mh-button mh-button-primary min-h-[52px] rounded-2xl font-black active:scale-[.98]",
+    className: "mh-button mh-button-primary min-h-[52px] landscape:min-h-[44px] rounded-2xl font-black active:scale-[.98]",
     onClick: () => {
       Audio_.fgSe.tap();
       onSave({
@@ -88472,7 +88499,7 @@ const CardDeckEditor = ({
     }
   }, "保存する"), React.createElement("button", {
     type: "button",
-    className: "mh-button mh-button-secondary min-h-[52px] rounded-2xl border border-white/20 bg-slate-800 font-black active:scale-[.98]",
+    className: "mh-button mh-button-secondary min-h-[52px] landscape:min-h-[44px] rounded-2xl border border-white/20 bg-slate-800 font-black active:scale-[.98]",
     onClick: () => changed ? setLeave(true) : onCancel()
   }, "やめる")), detail && React.createElement(CardDetailModal, {
     db: db,
