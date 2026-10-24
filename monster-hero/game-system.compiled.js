@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 511a8f83db6931b8
+// source-sha256: 54baad39001fa849
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-24 21:34";
+const BUILD_DATE = "2026-10-24 22:07";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -16143,7 +16143,8 @@ const MarketProductCard = ({
   const usesHeroProof = item.currency === 'heroProof';
   const usesHeroProofShard = item.currency === 'heroProofShard';
   const usesBeatPoint = item.currency === 'beatPoint';
-  const priceLabel = usesBeatPoint ? `${item.cost}ビートP` : usesHeroProofShard ? `勇者の証片${item.cost}個` : usesHeroProof ? `勇者の証${item.cost}個` : usesPsyche ? `${item.cost}プシュケー` : usesGold ? `${item.cost}ダイヤ` : `${item.cost}pt`;
+  const usesCardPoint = item.currency === 'cardPoint';
+  const priceLabel = usesCardPoint ? `${item.cost}カードポイント` : usesBeatPoint ? `${item.cost}ビートP` : usesHeroProofShard ? `勇者の証片${item.cost}個` : usesHeroProof ? `勇者の証${item.cost}個` : usesPsyche ? `${item.cost}プシュケー` : usesGold ? `${item.cost}ダイヤ` : `${item.cost}pt`;
   return React.createElement("div", _extends({}, dataAttrs || {}, {
     className: `rounded-2xl border p-2 flex flex-col items-center gap-1 ${owned ? 'bg-emerald-900/30 border-emerald-500/60' : comingSoon ? 'bg-slate-900/60 border-white/10' : 'bg-slate-900 border-white/10'}`
   }), React.createElement(MarketProductIcon, {
@@ -16187,9 +16188,11 @@ const MarketProductCard = ({
   }, "所持済み") : React.createElement("button", {
     onClick: onBuy,
     disabled: disabled || !canBuy,
-    "aria-label": `${item.name}${disabled ? '（デバッグのため購入不可）' : `を${priceLabel}で${usesHeroProof || usesHeroProofShard || usesBeatPoint ? '交換' : '購入'}`}`,
-    className: `mh-button mh-button-primary text-[11px] font-black px-2 min-h-[44px] w-full max-w-full rounded-xl flex items-center justify-center gap-1 whitespace-nowrap ${disabled || !canBuy ? 'bg-slate-800 text-slate-500' : usesBeatPoint ? 'bg-violet-500 text-white active:scale-95' : usesPsyche ? 'bg-fuchsia-600 text-white active:scale-95' : 'bg-amber-500 text-black active:scale-95'}`
-  }, usesBeatPoint ? React.createElement(React.Fragment, null, React.createElement("span", {
+    "aria-label": `${item.name}${disabled ? '（デバッグのため購入不可）' : `を${priceLabel}で${usesHeroProof || usesHeroProofShard || usesBeatPoint || usesCardPoint ? '交換' : '購入'}`}`,
+    className: `mh-button mh-button-primary text-[11px] font-black px-2 min-h-[44px] w-full max-w-full rounded-xl flex items-center justify-center gap-1 whitespace-nowrap ${disabled || !canBuy ? 'bg-slate-800 text-slate-500' : usesCardPoint ? 'bg-orange-500 text-white active:scale-95' : usesBeatPoint ? 'bg-violet-500 text-white active:scale-95' : usesPsyche ? 'bg-fuchsia-600 text-white active:scale-95' : 'bg-amber-500 text-black active:scale-95'}`
+  }, usesCardPoint ? React.createElement(React.Fragment, null, React.createElement("span", {
+    "aria-hidden": "true"
+  }, "🃏"), React.createElement("span", null, item.cost.toLocaleString())) : usesBeatPoint ? React.createElement(React.Fragment, null, React.createElement("span", {
     "aria-hidden": "true"
   }, "🎟️"), React.createElement("span", null, item.cost.toLocaleString())) : usesHeroProofShard ? React.createElement(React.Fragment, null, React.createElement("span", {
     "aria-hidden": "true"
@@ -16281,6 +16284,18 @@ const MARKET_CURRENCY_META = Object.freeze({
     border: 'border-violet-400/70',
     button: 'bg-violet-500 text-white',
     max: 'bg-violet-800'
+  }),
+  cardPoint: Object.freeze({
+    have: '所持カードポイント',
+    label: 'カードポイント',
+    emoji: '🃏',
+    verb: '交換',
+    format: n => `${n}カードポイント`,
+    text: 'text-orange-200',
+    bar: 'text-orange-100 border-orange-500/30 bg-orange-950/30',
+    border: 'border-orange-400/70',
+    button: 'bg-orange-500 text-white',
+    max: 'bg-orange-800'
   })
 });
 const marketCurrencyOf = item => MARKET_CURRENCY_META[item?.currency] ? item.currency : item?.type === 'disc' || item?.type === 'assist' || item?.type === 'item' || item?.type === 'costume' ? 'diamond' : 'breederPoint';
@@ -52540,9 +52555,11 @@ function BreederMarketScreen({
   eventPoints = 0,
   onExchangeEventPoints,
   onOpenUpcomingDetail,
-  frameConditionOf = null
+  frameConditionOf = null,
+  cardShop = null,
+  initialSection = null
 }) {
-  const [marketSection, setMarketSection] = useState(null);
+  const [marketSection, setMarketSection] = useState(initialSection);
   const [sheet, setSheet] = useState(null);
   const [sheetQuantity, setSheetQuantity] = useState(1);
   const [sheetPending, setSheetPending] = useState(false);
@@ -52618,6 +52635,22 @@ function BreederMarketScreen({
         label: '勇者の証'
       }]
     },
+    card: {
+      color: '#ea580c',
+      tabs: [{
+        key: 'pack',
+        label: 'パック'
+      }, {
+        key: 'starter',
+        label: 'スターター'
+      }, {
+        key: 'disc',
+        label: '円盤石'
+      }, {
+        key: 'assist',
+        label: 'アシスト'
+      }]
+    },
     event: {
       color: '#7c3aed',
       tabs: [{
@@ -52684,9 +52717,13 @@ function BreederMarketScreen({
     event: {
       label: 'ビートP交換所',
       emoji: '🎟️'
+    },
+    card: {
+      label: 'カードポイント',
+      emoji: '🃏'
     }
   };
-  const balanceOf = currency => currency === 'psyche' ? psycheHave : currency === 'heroProofShard' ? shardHave : currency === 'heroProof' ? proofHave : currency === 'beatPoint' ? safeEventPoints : currency === 'breederPoint' ? breederPoints : gold;
+  const balanceOf = currency => currency === 'psyche' ? psycheHave : currency === 'heroProofShard' ? shardHave : currency === 'heroProof' ? proofHave : currency === 'beatPoint' ? safeEventPoints : currency === 'cardPoint' ? cardShop ? cardShop.point : 0 : currency === 'breederPoint' ? breederPoints : gold;
   const busy = purchaseProcessing || sheetPending;
   const openSheet = next => {
     setSheetQuantity(1);
@@ -52805,7 +52842,7 @@ function BreederMarketScreen({
   };
   const headerTitle = marketSection ? sectionMeta[marketSection].label : 'マーケット';
   const handleBack = () => {
-    if (marketSection) {
+    if (marketSection && !(initialSection && marketSection === initialSection)) {
       setMarketSection(null);
       return;
     }
@@ -52877,7 +52914,17 @@ function BreederMarketScreen({
     border: 'border-violet-400/35',
     title: 'text-violet-200',
     arrow: 'text-violet-300/80'
-  }].map(section => React.createElement("button", {
+  }, ...(cardShop ? [{
+    key: 'card',
+    emoji: '🃏',
+    label: 'カードポイント',
+    titleLines: ['カード', 'ポイント'],
+    value: compactCount(cardShop.point),
+    hint: 'MFバトルカードでためる',
+    border: 'border-orange-400/35',
+    title: 'text-orange-200',
+    arrow: 'text-orange-300/80'
+  }] : [])].map(section => React.createElement("button", {
     key: section.key,
     "data-market-section": section.key,
     "aria-label": section.label,
@@ -52916,6 +52963,9 @@ function BreederMarketScreen({
     }, {
       currency: 'heroProof',
       value: proofHave
+    }] : marketSection === 'card' ? [{
+      currency: 'cardPoint',
+      value: cardShop ? cardShop.point : 0
     }] : [{
       currency: 'beatPoint',
       value: safeEventPoints
@@ -52976,7 +53026,104 @@ function BreederMarketScreen({
       }),
       middle: ownedMiddle(proofHave, HERO_PROOF_ITEM)
     });
-  })()))), marketSection === 'event' && React.createElement(React.Fragment, null, renderSectionTabs('event'), React.createElement("div", {
+  })()))), marketSection === 'card' && cardShop && (() => {
+    const tab = activeSectionTab('card');
+    const cp = cardShop.point;
+    return React.createElement(React.Fragment, null, renderSectionTabs('card'), React.createElement("div", {
+      className: SCREEN_LIST_CLASS,
+      "data-card-shop": true,
+      "data-card-shop-tab": tab
+    }, tab === 'pack' && React.createElement(CardShopPacks, {
+      db: CARD_BATTLE_DATA,
+      point: cp,
+      busy: busy || cardShop.busy,
+      onBuyPack: cardShop.onBuyPack
+    }), tab === 'starter' && React.createElement(CardShopStarters, {
+      db: CARD_BATTLE_DATA,
+      point: cp,
+      busy: busy || cardShop.busy,
+      starter: cardShop.starter,
+      shop: cardShop.shop,
+      onBuyStarter: cardShop.onBuyStarter
+    }), (tab === 'disc' || tab === 'assist') && React.createElement("div", {
+      className: MARKET_GRID_CLASS
+    }, tab === 'disc' && RHYTHM_EVENT_POINT_SHOP_DISC_OFFERS.map(offer => {
+      const disc = BREEDER_MARKET_ITEMS.find(item => item.id === offer.monsterId && item.type === 'disc');
+      const mon = ALL_PLAYER_MONSTERS[offer.monsterId] || null;
+      const item = {
+        id: offer.id,
+        name: offer.name,
+        emoji: '💿',
+        icon: disc?.icon,
+        type: 'disc',
+        currency: 'cardPoint',
+        cost: offer.cost
+      };
+      const owned = isItemOwned({
+        id: offer.monsterId,
+        type: 'disc'
+      });
+      return React.createElement(MarketProductCard, {
+        key: offer.id,
+        dataAttrs: {
+          'data-card-shop-disc': offer.id
+        },
+        item: item,
+        owned: owned,
+        comingSoon: false,
+        canBuy: !owned && cp >= offer.cost && !busy,
+        disabled: purchaseProcessing,
+        onZoom: () => onZoomIcon(disc || item),
+        onBuy: () => openSheet({
+          item,
+          confirm: () => cardShop.onExchange(offer),
+          rebirth: {
+            monsterId: offer.monsterId,
+            discIcon: disc?.icon || item.icon
+          }
+        }),
+        detail: mon,
+        onDetail: () => mon && onOpenDetail(disc || item, mon, null)
+      });
+    }), tab === 'assist' && RHYTHM_EVENT_POINT_SHOP_ASSIST_OFFERS.map(offer => {
+      const card = BREEDER_MARKET_ITEMS.find(item => item.id === offer.cardId && item.type === 'assist');
+      const teaching = TEACHING_CARDS.find(t => t.id === offer.cardId) || null;
+      const item = {
+        id: offer.id,
+        name: offer.name,
+        emoji: '🃏',
+        icon: card?.icon,
+        type: 'assist',
+        currency: 'cardPoint',
+        cost: offer.cost
+      };
+      const owned = isItemOwned({
+        id: offer.cardId,
+        type: 'assist'
+      });
+      return React.createElement(MarketProductCard, {
+        key: offer.id,
+        dataAttrs: {
+          'data-card-shop-assist': offer.id
+        },
+        item: item,
+        owned: owned,
+        comingSoon: false,
+        canBuy: !owned && cp >= offer.cost && !busy,
+        disabled: purchaseProcessing,
+        onZoom: () => onZoomIcon(card ? {
+          ...card,
+          name: offer.name
+        } : item),
+        onBuy: () => openSheet({
+          item,
+          confirm: () => cardShop.onExchange(offer)
+        }),
+        detail: teaching,
+        onDetail: () => teaching && onOpenDetail(card || item, null, teaching)
+      });
+    }))));
+  })(), marketSection === 'event' && React.createElement(React.Fragment, null, renderSectionTabs('event'), React.createElement("div", {
     className: SCREEN_LIST_CLASS
   }, React.createElement("div", {
     "data-event-point-shop": true,
@@ -83704,7 +83851,9 @@ const CARD_SAVE_KEYS = Object.freeze({
   daily: 'mh_card_daily_v1',
   record: 'mh_card_record_v1',
   cpuUnlocked: 'mh_card_cpu_unlocked_v1',
-  tutorial: 'mh_card_tutorial_v1'
+  tutorial: 'mh_card_tutorial_v1',
+  pity: 'mh_card_pack_pity_v1',
+  shop: 'mh_card_shop_v1'
 });
 const cardIsPlainObject = v => !!v && typeof v === 'object' && !Array.isArray(v);
 const cardNormalizeCollection = v => {
@@ -84387,13 +84536,287 @@ const CARD_RULE_PAGES = Object.freeze([{
   id: 'win',
   emoji: '🏆',
   title: '勝ち負け',
-  lines: ['相手のモンスター3体を全員KOしたら勝ち', '相手が引くときに山札が無かったら勝ち(山札切れ)', '相手が投了したら勝ち', '両方の最後の1体が同時にKOされたときは、攻撃した側の勝ち']
+  lines: ['相手のモンスター3体を全員KOしたら勝ち', '引くときに山札が無かったら、そのプレイヤーの負け(山札切れ。相手が切れたら自分の勝ち)', '相手が投了したら勝ち', '両方の最後の1体が同時にKOされたときは、攻撃した側の勝ち']
 }, {
   id: 'text',
   emoji: '📜',
   title: 'カードの文がいちばん',
   lines: ['カードに書いてある文は、ここの決まりより先に効く', '「同時に使用できる」「同一ターンに連続して使用できる」などは、その文のとおり', 'カードを長押しすると、大きな絵と文が見られる']
 }]);
+const CARD_PACKS = Object.freeze([{
+  id: 'w1',
+  wave: '1',
+  name: '第1弾パック',
+  price: 100,
+  bundle: {
+    n: 5,
+    price: 450
+  },
+  tech: 7,
+  mon: 1,
+  rarity: {
+    normal: 85,
+    kira: 12,
+    alt: 3
+  },
+  pity: true,
+  color: '#f59e0b'
+}, {
+  id: 'w2',
+  wave: '2',
+  name: '第2弾パック',
+  price: 100,
+  bundle: {
+    n: 5,
+    price: 450
+  },
+  tech: 7,
+  mon: 1,
+  rarity: {
+    normal: 85,
+    kira: 15,
+    alt: 0
+  },
+  pity: true,
+  color: '#ef4444'
+}, {
+  id: 'w3',
+  wave: '3',
+  name: '第3弾パック',
+  price: 100,
+  bundle: {
+    n: 5,
+    price: 450
+  },
+  tech: 7,
+  mon: 1,
+  rarity: {
+    normal: 85,
+    kira: 15,
+    alt: 0
+  },
+  pity: true,
+  color: '#22c55e'
+}, {
+  id: 'w4',
+  wave: '4',
+  name: '第4弾パック',
+  price: 100,
+  bundle: {
+    n: 5,
+    price: 450
+  },
+  tech: 7,
+  mon: 1,
+  rarity: {
+    normal: 85,
+    kira: 15,
+    alt: 0
+  },
+  pity: true,
+  color: '#3b82f6'
+}, {
+  id: 'hybrid',
+  wave: 'hybrid',
+  name: '混血パック',
+  price: 150,
+  bundle: null,
+  tech: 0,
+  mon: 3,
+  rarity: {
+    normal: 100,
+    kira: 0,
+    alt: 0
+  },
+  pity: false,
+  color: '#a855f7'
+}]);
+const CARD_PACK_PITY_AT = 7;
+const CARD_TECH_KEEP_MAX = 3;
+const CARD_DUP_POINT = Object.freeze({
+  tech: 5,
+  normal: 50,
+  kira: 100,
+  alt: 200,
+  hybrid: 20
+});
+const CARD_STARTER_SHOP_PRICE = 500;
+const cardPackOf = id => CARD_PACKS.find(p => p.id === id) || null;
+const cardMonRarity = m => !m || !m.variant ? 'normal' : /別絵キラ/.test(m.variant) ? 'alt' : /キラ/.test(m.variant) ? 'kira' : 'normal';
+const cardPackTechPool = (db, pack) => Object.values(db.cards).filter(c => String(c.wave) === pack.wave && c.ready).map(c => c.no).sort();
+const cardPackMonPool = (db, pack, rarity) => Object.values(db.monsters).filter(m => String(m.wave) === pack.wave && m.ready !== false && cardMonRarity(m) === rarity).map(m => m.no).sort();
+const cardOwnsSpecies = (db, collection, species) => Object.keys(collection || {}).some(no => collection[no] > 0 && (cardMonsterOf(db, no) || {}).species === species);
+const cardNormalizePity = v => {
+  const out = {};
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return out;
+  CARD_PACKS.forEach(p => {
+    const x = Number(v[p.id]);
+    if (Number.isFinite(x) && x > 0) out[p.id] = Math.min(999, Math.floor(x));
+  });
+  return out;
+};
+const cardNormalizeShop = v => {
+  const r = v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+  const st = r.starters && typeof r.starters === 'object' && !Array.isArray(r.starters) ? r.starters : {};
+  return {
+    starters: Object.fromEntries(Object.entries(st).filter(([, at]) => Number.isFinite(Number(at))).map(([k, at]) => [k, Number(at)]))
+  };
+};
+const cardPickWeighted = (items, weightOf, rand) => {
+  const total = items.reduce((a, x) => a + weightOf(x), 0);
+  if (!(total > 0)) return items[0];
+  let r = rand() * total;
+  for (const x of items) {
+    r -= weightOf(x);
+    if (r < 0) return x;
+  }
+  return items[items.length - 1];
+};
+const cardOpenPack = (db, packId, {
+  collection,
+  pity
+}, rand) => {
+  const pack = cardPackOf(packId);
+  if (!pack) return null;
+  const col = {
+    ...(collection || {})
+  };
+  const nextPity = {
+    ...(pity || {})
+  };
+  const cards = [];
+  let point = 0;
+  const techPool = cardPackTechPool(db, pack);
+  for (let i = 0; i < pack.tech && techPool.length; i++) {
+    const no = techPool[Math.floor(rand() * techPool.length) % techPool.length];
+    const dup = (col[no] || 0) >= CARD_TECH_KEEP_MAX;
+    if (dup) point += CARD_DUP_POINT.tech;else col[no] = (col[no] || 0) + 1;
+    cards.push({
+      no,
+      slot: 'tech',
+      rarity: 'normal',
+      dup,
+      point: dup ? CARD_DUP_POINT.tech : 0
+    });
+  }
+  let hit = false;
+  for (let i = 0; i < pack.mon; i++) {
+    const forced = pack.pity && i === pack.mon - 1 && (nextPity[pack.id] || 0) >= CARD_PACK_PITY_AT;
+    const rar = Object.entries(pack.rarity).filter(([k, w]) => w > 0 && (!forced || k !== 'normal') && cardPackMonPool(db, pack, k).length);
+    const rarity = cardPickWeighted(rar, ([, w]) => w, rand)[0];
+    const pool = cardPackMonPool(db, pack, rarity);
+    const no = cardPickWeighted(pool, x => cardOwnsSpecies(db, col, (cardMonsterOf(db, x) || {}).species) ? 1 : 2, rand);
+    const dup = (col[no] || 0) >= 1;
+    const dupPoint = pack.id === 'hybrid' ? CARD_DUP_POINT.hybrid : CARD_DUP_POINT[rarity];
+    if (dup) point += dupPoint;else col[no] = 1;
+    if (rarity !== 'normal') hit = true;
+    cards.push({
+      no,
+      slot: 'mon',
+      rarity,
+      dup,
+      point: dup ? dupPoint : 0
+    });
+  }
+  if (pack.pity) nextPity[pack.id] = hit ? 0 : (nextPity[pack.id] || 0) + 1;
+  return {
+    cards,
+    collection: col,
+    pity: nextPity,
+    point,
+    hit
+  };
+};
+const cardPackPrice = (pack, count) => pack.bundle && count === pack.bundle.n ? pack.bundle.price : pack.price * count;
+const cardBuyPacks = (db, packId, count, {
+  collection,
+  pity,
+  point
+}, rand) => {
+  const pack = cardPackOf(packId);
+  const n = Math.max(1, Math.min(5, Math.floor(Number(count) || 1)));
+  if (!pack) return null;
+  const cost = cardPackPrice(pack, n);
+  if (!(point >= cost)) return null;
+  let cur = {
+    collection,
+    pity
+  };
+  const packs = [];
+  let dupPoint = 0;
+  for (let i = 0; i < n; i++) {
+    const r = cardOpenPack(db, packId, cur, rand);
+    packs.push(r.cards);
+    dupPoint += r.point;
+    cur = {
+      collection: r.collection,
+      pity: r.pity
+    };
+  }
+  return {
+    packs,
+    collection: cur.collection,
+    pity: cur.pity,
+    point: point - cost + dupPoint,
+    cost,
+    dupPoint
+  };
+};
+const cardPackRates = (db, packId) => {
+  const pack = cardPackOf(packId);
+  if (!pack) return null;
+  const tech = cardPackTechPool(db, pack).length;
+  const mons = Object.fromEntries(['normal', 'kira', 'alt'].map(k => [k, cardPackMonPool(db, pack, k).length]));
+  return {
+    pack,
+    techKinds: tech,
+    techEach: tech ? 1 / tech : 0,
+    mons,
+    rarity: pack.rarity
+  };
+};
+const cardBuyStarter = (db, kitId, {
+  collection,
+  decks,
+  point,
+  starter,
+  shop
+}, now) => {
+  const kit = db.starters[kitId];
+  if (!kit || starter && starter.kit === kitId || shop.starters && shop.starters[kitId] || !(point >= CARD_STARTER_SHOP_PRICE)) return null;
+  const col = {
+    ...(collection || {})
+  };
+  let dupPoint = 0;
+  kit.monsters.forEach(no => {
+    if ((col[no] || 0) >= 1) dupPoint += CARD_DUP_POINT[cardMonRarity(cardMonsterOf(db, no))];else col[no] = 1;
+  });
+  kit.cards.forEach(no => {
+    if ((col[no] || 0) >= CARD_TECH_KEEP_MAX) dupPoint += CARD_DUP_POINT.tech;else col[no] = (col[no] || 0) + 1;
+  });
+  const deck = {
+    id: `starter_${kitId}`,
+    name: kit.name,
+    monsters: kit.monsters.slice(),
+    cards: kit.cards.slice()
+  };
+  const nextDecks = decks.decks.some(d => d.id === deck.id) || decks.decks.length >= CARD_DECK_MAX ? decks : {
+    ...decks,
+    decks: [...decks.decks, deck]
+  };
+  return {
+    collection: col,
+    decks: nextDecks,
+    point: point - CARD_STARTER_SHOP_PRICE + dupPoint,
+    shop: {
+      starters: {
+        ...shop.starters,
+        [kitId]: Math.floor(Number(now) || 0)
+      }
+    },
+    dupPoint
+  };
+};
 const CARD_MOTION_SPECS = Object.freeze({
   cardJab: skm('jab', {
     c: 'white',
@@ -85938,7 +86361,8 @@ const CardBattleScreen = ({
   seenStoryIds = [],
   debug = false,
   onBgm,
-  onQuickLoops
+  onQuickLoops,
+  onOpenMarket
 }) => {
   const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
   const [save, setSave] = useState(null);
@@ -86470,13 +86894,6 @@ const CardBattleScreen = ({
       onClick: () => setView('foe')
     }, "相手をえらぶ")));
   }
-  const soon = label => React.createElement("button", {
-    type: "button",
-    disabled: true,
-    className: `${btn} border border-white/10 bg-slate-900 text-slate-400`
-  }, label, React.createElement("span", {
-    className: "block text-[10px] font-bold"
-  }, "つぎの区切りで作ります"));
   return React.createElement("div", {
     "data-mh-screen": true,
     "data-card-top": "top",
@@ -86538,7 +86955,19 @@ const CardBattleScreen = ({
       setNotice('');
       setView('decks');
     }
-  }, "デッキ編成"), soon('マーケットへ'), React.createElement("button", {
+  }, "デッキ編成"), React.createElement("button", {
+    type: "button",
+    "data-card-market-open": true,
+    className: `${btn} border border-orange-300/50 bg-orange-900/50 text-orange-50`,
+    disabled: !onOpenMarket,
+    onClick: () => {
+      Audio_.se.tap();
+      setNotice('');
+      onOpenMarket && onOpenMarket();
+    }
+  }, "マーケットへ", React.createElement("span", {
+    className: "block text-[10px] font-bold"
+  }, "パック・キット・円盤石")), React.createElement("button", {
     type: "button",
     "data-card-dex-open": true,
     className: `${btn} border border-sky-300/50 bg-sky-900/50 text-sky-50`,
@@ -87176,6 +87605,12 @@ const CardDex = ({
     onClose: () => setDetail(null)
   }));
 };
+const cardRuleLine = t => String(t).split(/(「[^」]*」)/).map((seg, i) => /^「/.test(seg) ? React.createElement("span", {
+  key: i,
+  className: "whitespace-nowrap"
+}, seg) : React.createElement(React.Fragment, {
+  key: i
+}, jaWrap(seg)));
 const CardRules = ({
   onBack,
   onTutorial
@@ -87203,7 +87638,7 @@ const CardRules = ({
   style: JA_WRAP_STYLE
 }, React.createElement("span", {
   className: "shrink-0 text-amber-300"
-}, "・"), React.createElement("span", null, jaWrap(t)))))))), React.createElement("div", {
+}, "・"), React.createElement("span", null, cardRuleLine(t)))))))), React.createElement("div", {
   className: SCREEN_FOOTER_CLASS
 }, React.createElement("button", {
   type: "button",
@@ -87216,6 +87651,292 @@ const CardRules = ({
 }, "練習試合をもう一度", React.createElement("span", {
   className: "block text-[10px] font-bold text-emerald-200"
 }, "ドラと、みゅあ相手に5つの決まりをおさらい"))));
+const CARD_RARITY_LABEL = Object.freeze({
+  normal: '',
+  kira: 'キラ',
+  alt: '別絵キラ'
+});
+const CardPackOpen = ({
+  db,
+  result,
+  onDone
+}) => {
+  const [pi, setPi] = useState(0);
+  const [open, setOpen] = useState(false);
+  const [flipped, setFlipped] = useState([]);
+  const [detail, setDetail] = useState(null);
+  const press = useCardLongPress(no => setDetail(no));
+  const pack = cardPackOf(result.packId) || {
+    name: 'パック',
+    color: '#f59e0b'
+  };
+  const cards = result.packs[pi] || [];
+  const allOpen = flipped.length >= cards.length;
+  const last = pi >= result.packs.length - 1;
+  const flip = i => {
+    if (flipped.includes(i)) return;
+    Audio_.se.card();
+    setFlipped(f => [...f, i]);
+  };
+  const flipAll = () => {
+    Audio_.se.card();
+    setFlipped(cards.map((_, i) => i));
+  };
+  const next = () => {
+    Audio_.se.tap();
+    setPi(x => x + 1);
+    setOpen(false);
+    setFlipped([]);
+  };
+  const packPoint = cards.reduce((a, c) => a + (c.point || 0), 0);
+  return React.createElement("div", {
+    "data-mh-screen": true,
+    "data-card-pack-open": true,
+    className: SCREEN_SHELL_CLASS
+  }, React.createElement(ScreenHead, {
+    title: pack.name,
+    accent: "text-amber-200",
+    note: result.packs.length > 1 ? `${pi + 1} / ${result.packs.length}パック` : ''
+  }), React.createElement("div", {
+    className: `${SCREEN_LIST_CLASS} flex flex-col items-center justify-center pb-2`
+  }, !open ? React.createElement("button", {
+    type: "button",
+    "data-card-pack-tear": true,
+    onClick: () => {
+      Audio_.se.tap();
+      setOpen(true);
+    },
+    className: "relative flex h-[300px] w-[200px] flex-col items-center justify-center rounded-2xl border-4 border-white/70 text-center shadow-2xl active:scale-95",
+    style: {
+      background: `linear-gradient(160deg, ${pack.color}, #1e1b4b)`
+    }
+  }, React.createElement("span", {
+    className: "text-[44px]"
+  }, "🎴"), React.createElement("span", {
+    className: "mt-2 text-[18px] font-black text-white"
+  }, pack.name), React.createElement("span", {
+    className: "mt-1 text-[12px] font-bold text-white/80"
+  }, cards.length, "枚入り"), React.createElement("span", {
+    className: "absolute inset-x-0 bottom-4 animate-pulse text-[13px] font-black text-white"
+  }, "タップで開ける")) : React.createElement("div", {
+    className: `grid w-full gap-2 ${cards.length > 4 ? 'grid-cols-4' : 'grid-cols-3'} px-1`
+  }, cards.map((c, i) => {
+    const on = flipped.includes(i);
+    const card = cardOf(db, c.no);
+    const m = card ? null : cardMonsterOf(db, c.no);
+    const name = card ? card.name : m ? m.name : c.no;
+    const shine = c.rarity !== 'normal';
+    return React.createElement("button", _extends({
+      key: i,
+      type: "button",
+      "data-card-pack-card": i,
+      "data-card-pack-flipped": on ? 1 : 0,
+      "data-card-pack-rarity": c.rarity
+    }, on ? press(c.no, () => setDetail(c.no)) : {
+      onClick: () => flip(i)
+    }, {
+      className: `relative flex flex-col items-center rounded-lg p-0.5 text-center active:scale-95 ${on && shine ? 'animate-pulse ring-4 ring-amber-300 shadow-[0_0_18px_rgba(252,211,77,0.9)]' : ''}`,
+      style: {
+        WebkitUserSelect: 'none',
+        userSelect: 'none'
+      }
+    }), on ? React.createElement("img", {
+      src: CARD_IMG(card ? card.img : m ? m.img : c.no),
+      alt: name,
+      draggable: false,
+      className: "aspect-[5/7] w-full rounded-[5px] object-cover"
+    }) : React.createElement("div", {
+      className: "flex aspect-[5/7] w-full items-center justify-center rounded-[5px] border-2 border-white/40 text-[22px]",
+      style: {
+        background: `linear-gradient(160deg, ${pack.color}, #0f172a)`
+      }
+    }, c.slot === 'mon' ? '★' : '🃏'), on && c.dup && React.createElement("span", {
+      className: "absolute right-0.5 top-0.5 rounded-md bg-slate-950/90 px-1 text-[10px] font-black text-amber-200"
+    }, "+", c.point), on && !c.dup && React.createElement("span", {
+      className: "absolute right-0.5 top-0.5 rounded-md bg-emerald-400 px-1 text-[9px] font-black text-slate-950"
+    }, "NEW"), on && shine && React.createElement("span", {
+      className: "absolute left-0.5 top-0.5 rounded-md bg-amber-300 px-1 text-[9px] font-black text-slate-950"
+    }, CARD_RARITY_LABEL[c.rarity]), React.createElement("span", {
+      className: "mt-0.5 line-clamp-2 min-h-[26px] text-[10px] font-bold leading-tight text-slate-100",
+      style: JA_WRAP_STYLE
+    }, on ? name : ''));
+  })), open && allOpen && React.createElement("div", {
+    "data-card-pack-summary": true,
+    className: "mt-3 text-center text-[12px] font-bold text-slate-300"
+  }, packPoint > 0 ? React.createElement(React.Fragment, null, "だぶったカードは ", React.createElement("b", {
+    className: "text-amber-200"
+  }, "カードポイント +", packPoint), " になりました") : 'だぶったカードはありません', last && result.packs.length > 1 && React.createElement("div", {
+    className: "mt-0.5"
+  }, "(", result.packs.length, "パックで +", result.dupPoint, ")"))), React.createElement("div", {
+    className: SCREEN_FOOTER_CLASS
+  }, !open ? React.createElement("div", {
+    className: "text-center text-[12px] font-bold text-slate-400"
+  }, "パックをタップしてください") : !allOpen ? React.createElement("button", {
+    type: "button",
+    "data-card-pack-flip-all": true,
+    className: "mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]",
+    onClick: flipAll
+  }, "全部めくる") : !last ? React.createElement("button", {
+    type: "button",
+    "data-card-pack-next": true,
+    className: "mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]",
+    onClick: next
+  }, "つぎのパック") : React.createElement("button", {
+    type: "button",
+    "data-card-pack-done": true,
+    className: "mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]",
+    onClick: () => {
+      Audio_.se.tap();
+      onDone();
+    }
+  }, "マーケットへ戻る")), detail && React.createElement(CardDetailModal, {
+    db: db,
+    no: detail,
+    onClose: () => setDetail(null)
+  }));
+};
+const CardShopPacks = ({
+  db,
+  point,
+  busy,
+  onBuyPack
+}) => {
+  const [rates, setRates] = useState(null);
+  const [confirm, setConfirm] = useState(null);
+  const pct = x => `${(Math.round(x * 1000) / 10).toFixed(1)}%`;
+  return React.createElement("div", {
+    "data-card-shop-packs": true,
+    className: "space-y-2 pb-2"
+  }, CARD_PACKS.map(pack => {
+    const r = cardPackRates(db, pack.id);
+    return React.createElement("div", {
+      key: pack.id,
+      "data-card-shop-pack": pack.id,
+      className: SCREEN_PANEL_CLASS,
+      style: {
+        borderColor: `${pack.color}88`
+      }
+    }, React.createElement("div", {
+      className: "flex items-center gap-2"
+    }, React.createElement("div", {
+      className: "flex h-[56px] w-[40px] shrink-0 items-center justify-center rounded-md border-2 border-white/60 text-[20px]",
+      style: {
+        background: `linear-gradient(160deg, ${pack.color}, #1e1b4b)`
+      }
+    }, "🎴"), React.createElement("div", {
+      className: "min-w-0 flex-1"
+    }, React.createElement("div", {
+      className: "text-[14px] font-black text-white"
+    }, pack.name), React.createElement("div", {
+      className: "text-[11px] font-bold text-slate-300",
+      style: JA_WRAP_STYLE
+    }, pack.tech ? `${pack.tech + pack.mon}枚入り(技など${pack.tech}枚・モンスター${pack.mon}枚)` : `${pack.mon}枚入り(3枚とも混血モンスター)`), React.createElement("button", {
+      type: "button",
+      "data-card-shop-rates": pack.id,
+      onClick: () => setRates(rates === pack.id ? null : pack.id),
+      className: "mt-0.5 text-[11px] font-black text-sky-300 underline"
+    }, "出る確率を見る"))), rates === pack.id && r && React.createElement("div", {
+      "data-card-shop-rate-table": true,
+      className: "mt-1.5 rounded-lg bg-black/30 p-2 text-[11px] font-bold leading-relaxed text-slate-200"
+    }, pack.tech > 0 && React.createElement("div", null, "技などの枠(1パック", pack.tech, "枚): ", r.techKinds, "種類から同じ確率(1種類 ", pct(r.techEach), ")。準備中のカードは出ません"), React.createElement("div", null, "モンスターの枠(1パック", pack.mon, "枚): 通常 ", pack.rarity.normal, "%", pack.rarity.kira ? `・キラ ${pack.rarity.kira}%` : '', pack.rarity.alt ? `・別絵キラ ${pack.rarity.alt}%` : '', "(通常", r.mons.normal, "種", r.mons.kira ? `・キラ${r.mons.kira}種` : '', r.mons.alt ? `・別絵キラ${r.mons.alt}種` : '', ")。まだ持っていない種族は2倍出やすい"), pack.pity && React.createElement("div", null, "キラも別絵キラも出ないまま", CARD_PACK_PITY_AT, "パック開けたら、つぎのパックはキラ以上"), React.createElement("div", null, "だぶったカードはカードポイントになります(技など4枚目から", CARD_DUP_POINT.tech, "・モンスター2枚目から", pack.id === 'hybrid' ? CARD_DUP_POINT.hybrid : `${CARD_DUP_POINT.normal}〔キラ${CARD_DUP_POINT.kira}・別絵キラ${CARD_DUP_POINT.alt}〕`, ")")), React.createElement("div", {
+      className: `mt-2 grid gap-1.5 ${pack.bundle ? 'grid-cols-2' : 'grid-cols-1'}`
+    }, React.createElement("button", {
+      type: "button",
+      "data-card-shop-buy": `${pack.id}-1`,
+      disabled: busy || point < pack.price,
+      onClick: () => setConfirm({
+        pack,
+        count: 1
+      }),
+      className: "mh-button min-h-[44px] rounded-xl bg-orange-500 text-[13px] font-black text-white active:scale-[.98] disabled:opacity-40"
+    }, "1パック ", pack.price), pack.bundle && React.createElement("button", {
+      type: "button",
+      "data-card-shop-buy": `${pack.id}-${pack.bundle.n}`,
+      disabled: busy || point < pack.bundle.price,
+      onClick: () => setConfirm({
+        pack,
+        count: pack.bundle.n
+      }),
+      className: "mh-button min-h-[44px] rounded-xl bg-orange-600 text-[13px] font-black text-white active:scale-[.98] disabled:opacity-40"
+    }, pack.bundle.n, "パック ", pack.bundle.price, React.createElement("span", {
+      className: "block text-[9px] font-bold"
+    }, "(", pack.price * pack.bundle.n - pack.bundle.price, "おトク)"))));
+  }), confirm && React.createElement(ConfirmSheet, {
+    title: `${confirm.pack.name}を${confirm.count}パック買いますか？`,
+    message: `カードポイント ${cardPackPrice(confirm.pack, confirm.count)} を使います(いま ${point})`,
+    confirmLabel: "買って開ける",
+    onCancel: () => setConfirm(null),
+    onConfirm: () => {
+      const c = confirm;
+      setConfirm(null);
+      void onBuyPack(c.pack.id, c.count);
+    }
+  }));
+};
+const CardShopStarters = ({
+  db,
+  point,
+  busy,
+  starter,
+  shop,
+  onBuyStarter
+}) => {
+  const [confirm, setConfirm] = useState(null);
+  const [done, setDone] = useState('');
+  const kits = Object.values(db.starters).filter(k => !starter || k.id !== starter.kit);
+  return React.createElement("div", {
+    "data-card-shop-starters": true,
+    className: "space-y-2 pb-2"
+  }, done && React.createElement("div", {
+    "data-card-shop-starter-done": true,
+    className: "rounded-xl border border-emerald-400/40 bg-emerald-950/40 px-3 py-2 text-[12px] font-black text-emerald-200"
+  }, done), React.createElement("p", {
+    className: "text-[11px] font-bold text-slate-400"
+  }, "はじめに選ばなかったスターターキット。1つにつき1回、", CARD_STARTER_SHOP_PRICE, "カードポイント。デッキも1つ増えます"), kits.map(k => {
+    const bought = !!(shop && shop.starters && shop.starters[k.id]);
+    return React.createElement("div", {
+      key: k.id,
+      "data-card-shop-starter": k.id,
+      className: SCREEN_PANEL_CLASS
+    }, React.createElement("div", {
+      className: "flex items-center gap-2"
+    }, React.createElement("div", {
+      className: "flex shrink-0 gap-0.5"
+    }, k.monsters.map(no => {
+      const m = cardMonsterOf(db, no);
+      return m ? React.createElement("img", {
+        key: no,
+        src: CARD_IMG(m.img),
+        alt: m.name,
+        className: "h-[52px] w-[37px] rounded-[4px] object-cover"
+      }) : null;
+    })), React.createElement("div", {
+      className: "min-w-0 flex-1"
+    }, React.createElement("div", {
+      className: "text-[13px] font-black text-white",
+      style: JA_WRAP_STYLE
+    }, jaWrap(k.name)), React.createElement("div", {
+      className: "text-[11px] font-bold text-slate-300"
+    }, "モンスター3枚・カード", k.cards.length, "枚"))), React.createElement("button", {
+      type: "button",
+      "data-card-shop-starter-buy": k.id,
+      disabled: bought || busy || point < CARD_STARTER_SHOP_PRICE,
+      onClick: () => setConfirm(k),
+      className: "mh-button mt-2 min-h-[44px] w-full rounded-xl bg-orange-500 text-[13px] font-black text-white active:scale-[.98] disabled:opacity-40"
+    }, bought ? '買いました' : `${CARD_STARTER_SHOP_PRICE}カードポイント`));
+  }), confirm && React.createElement(ConfirmSheet, {
+    title: `「${confirm.name}」を買いますか？`,
+    message: `カードポイント ${CARD_STARTER_SHOP_PRICE} を使います(いま ${point})。だぶったカードはカードポイントになります`,
+    confirmLabel: "買う",
+    onCancel: () => setConfirm(null),
+    onConfirm: async () => {
+      const k = confirm;
+      setConfirm(null);
+      const r = await onBuyStarter(k.id);
+      if (r && r.ok) setDone(`「${k.name}」を買いました。デッキ編成に1つ増えています${r.dupPoint > 0 ? `(だぶったカードはカードポイント +${r.dupPoint})` : ''}`);
+    }
+  }));
+};
 const DEBUG_TRIALS = [{
   id: 'rhythm_mon_layers',
   added: '2026-10-16',
@@ -91909,6 +92630,9 @@ function MonsterHeroGame() {
   const [rhythmEventStorySeen, setRhythmEventStorySeen] = useState(null);
   const [cardBgm, setCardBgm] = useState(null);
   const [cardOrigin, setCardOrigin] = useState('home');
+  const [cardMarketEntry, setCardMarketEntry] = useState(false);
+  const [cardShopState, setCardShopState] = useState(null);
+  const [cardPackOpen, setCardPackOpen] = useState(null);
   const rhythmEventStorySeenRef = useRef(null);
   const [rhythmEventStoryPending, setRhythmEventStoryPending] = useState(null);
   const [pendingFriendCode, setPendingFriendCode] = useState('');
@@ -92452,6 +93176,7 @@ function MonsterHeroGame() {
     }
     if (BGM_SILENT_STATES.includes(state)) return null;
     if (state === 'CARD_TOP' || state === 'CARD_BATTLE') return cardBgm || homeBgm;
+    if (state === 'CARD_PACK_OPEN') return homeBgm;
     if (state === 'HOME' || state === 'PROFILE' || state === 'ITEM_INVENTORY') return homeBgm;
     if (BGM_STATE_MAP[state] === 'home') return homeBgm;
     if (BGM_STATE_MAP[state]) return bgmArrangementWithEventDefault(bgmArrangement, BGM_STATE_MAP[state]) || BGM_STATE_MAP[state];
@@ -95398,6 +96123,237 @@ function MonsterHeroGame() {
       return exchange;
     } catch {
       setMarketExchangeError('交換を保存できませんでした。ビートPと所持品は変更していません。');
+      return {
+        ok: false,
+        reason: 'save'
+      };
+    } finally {
+      marketPurchaseProcessingRef.current = false;
+    }
+  };
+  const loadCardShop = async () => {
+    const K = CARD_SAVE_KEYS;
+    const [point, starter, shop] = await Promise.all([storeGet(K.point, null), storeGet(K.starter, null), storeGet(K.shop, null)]);
+    const next = {
+      point: cardNormalizePoint(point),
+      starter: cardNormalizeStarter(starter),
+      shop: cardNormalizeShop(shop)
+    };
+    setCardShopState(next);
+    return next;
+  };
+  const buyCardPacks = async (packId, count) => {
+    if (marketPurchaseProcessingRef.current || typeof CARD_BATTLE_DATA === 'undefined') return {
+      ok: false,
+      reason: 'busy'
+    };
+    marketPurchaseProcessingRef.current = true;
+    setMarketExchangeError('');
+    try {
+      const K = CARD_SAVE_KEYS;
+      const [rawCol, rawPity, rawPoint] = await Promise.all([storeGet(K.collection, null), storeGet(K.pity, null), storeGet(K.point, null)]);
+      const point = cardNormalizePoint(rawPoint);
+      const r = cardBuyPacks(CARD_BATTLE_DATA, packId, count, {
+        collection: cardNormalizeCollection(rawCol),
+        pity: cardNormalizePity(rawPity),
+        point
+      }, Math.random);
+      if (!r) {
+        setMarketExchangeError('カードポイントが足りません。');
+        return {
+          ok: false,
+          reason: 'points'
+        };
+      }
+      const saved = await saveStoredValuesOrRollback([{
+        key: K.collection,
+        before: rawCol,
+        next: r.collection
+      }, {
+        key: K.pity,
+        before: rawPity,
+        next: r.pity
+      }, {
+        key: K.point,
+        before: rawPoint,
+        next: r.point
+      }], storeGet, storeSet);
+      if (!saved) {
+        setMarketExchangeError('保存できませんでした。カードポイントは変わっていません。');
+        return {
+          ok: false,
+          reason: 'save'
+        };
+      }
+      setCardShopState(cur => ({
+        ...(cur || {}),
+        point: r.point
+      }));
+      setCardPackOpen({
+        packId,
+        packs: r.packs,
+        dupPoint: r.dupPoint,
+        cost: r.cost
+      });
+      setGameState('CARD_PACK_OPEN');
+      return {
+        ok: true
+      };
+    } catch {
+      setMarketExchangeError('保存できませんでした。カードポイントは変わっていません。');
+      return {
+        ok: false,
+        reason: 'save'
+      };
+    } finally {
+      marketPurchaseProcessingRef.current = false;
+    }
+  };
+  const buyCardStarter = async kitId => {
+    if (marketPurchaseProcessingRef.current || typeof CARD_BATTLE_DATA === 'undefined') return {
+      ok: false,
+      reason: 'busy'
+    };
+    marketPurchaseProcessingRef.current = true;
+    setMarketExchangeError('');
+    try {
+      const K = CARD_SAVE_KEYS;
+      const [rawCol, rawDecks, rawPoint, rawStarter, rawShop] = await Promise.all([storeGet(K.collection, null), storeGet(K.decks, null), storeGet(K.point, null), storeGet(K.starter, null), storeGet(K.shop, null)]);
+      const r = cardBuyStarter(CARD_BATTLE_DATA, kitId, {
+        collection: cardNormalizeCollection(rawCol),
+        decks: cardNormalizeDecks(rawDecks),
+        point: cardNormalizePoint(rawPoint),
+        starter: cardNormalizeStarter(rawStarter),
+        shop: cardNormalizeShop(rawShop)
+      }, Date.now());
+      if (!r) {
+        setMarketExchangeError('買えませんでした(カードポイントが足りないか、もう持っています)。');
+        return {
+          ok: false,
+          reason: 'points'
+        };
+      }
+      const saved = await saveStoredValuesOrRollback([{
+        key: K.collection,
+        before: rawCol,
+        next: r.collection
+      }, {
+        key: K.decks,
+        before: rawDecks,
+        next: r.decks
+      }, {
+        key: K.point,
+        before: rawPoint,
+        next: r.point
+      }, {
+        key: K.shop,
+        before: rawShop,
+        next: r.shop
+      }], storeGet, storeSet);
+      if (!saved) {
+        setMarketExchangeError('保存できませんでした。カードポイントは変わっていません。');
+        return {
+          ok: false,
+          reason: 'save'
+        };
+      }
+      setCardShopState(cur => ({
+        ...(cur || {}),
+        point: r.point,
+        shop: r.shop
+      }));
+      return {
+        ok: true,
+        dupPoint: r.dupPoint
+      };
+    } catch {
+      setMarketExchangeError('保存できませんでした。カードポイントは変わっていません。');
+      return {
+        ok: false,
+        reason: 'save'
+      };
+    } finally {
+      marketPurchaseProcessingRef.current = false;
+    }
+  };
+  const exchangeCardPoints = async offer => {
+    if (marketPurchaseProcessingRef.current) return {
+      ok: false,
+      reason: 'busy'
+    };
+    marketPurchaseProcessingRef.current = true;
+    setMarketExchangeError('');
+    try {
+      const K = CARD_SAVE_KEYS;
+      const rawPoint = await storeGet(K.point, null);
+      const point = cardNormalizePoint(rawPoint);
+      const isDisc = offer?.kind === 'disc';
+      const isAssist = offer?.kind === 'assist';
+      if (!isDisc && !isAssist) return {
+        ok: false,
+        reason: 'invalidOffer'
+      };
+      const storedUnlocked = isDisc ? await storeGet('mh_unlocked_monsters', STARTER_MONSTER_IDS, false) : null;
+      const storedTeachings = isAssist ? await storeGet('mh_unlocked_teachings', STARTER_TEACHING_IDS, false) : null;
+      const exchange = rhythmEventPointExchangePreview({
+        offer,
+        eventPoints: point,
+        gold: Math.max(0, Math.floor(Number(gold) || 0)),
+        ownedItems: ownedItemsRef.current,
+        quantity: 1,
+        unlockedMonsterIds: Array.isArray(storedUnlocked) ? storedUnlocked : unlockedMonsterIds,
+        unlockedTeachingIds: Array.isArray(storedTeachings) ? storedTeachings : unlockedTeachingIds
+      });
+      if (!exchange.ok) {
+        setMarketExchangeError(exchange.reason === 'points' ? 'カードポイントが足りません。' : exchange.reason === 'owned' ? isAssist ? 'このアシストカードはもう持っています。' : 'このモンスターはもう持っています。' : '交換できませんでした。');
+        return exchange;
+      }
+      const saved = await saveStoredValuesOrRollback([{
+        key: K.point,
+        before: rawPoint,
+        next: exchange.eventPoints
+      }, ...(isDisc ? [{
+        key: 'mh_unlocked_monsters',
+        before: storedUnlocked,
+        next: exchange.unlockedMonsterIds
+      }] : []), ...(isAssist ? [{
+        key: 'mh_unlocked_teachings',
+        before: storedTeachings,
+        next: exchange.unlockedTeachingIds
+      }] : [])], storeGet, storeSet);
+      if (!saved) {
+        setMarketExchangeError('交換を保存できませんでした。カードポイントと所持品は変更していません。');
+        return {
+          ok: false,
+          reason: 'save'
+        };
+      }
+      setCardShopState(cur => ({
+        ...(cur || {}),
+        point: exchange.eventPoints
+      }));
+      if (isDisc) {
+        setUnlockedMonsterIds(exchange.unlockedMonsterIds);
+        if (monsterRosterIds.length < STARTER_MONSTER_IDS.length) {
+          const rosters = monsterPartySets.rosters.map((roster, index) => index === monsterPartySets.activeIndex ? [...roster, exchange.monsterId] : roster);
+          saveMonsterPartySets({
+            ...monsterPartySets,
+            rosters
+          });
+        }
+      }
+      if (isAssist) {
+        setUnlockedTeachingIds(exchange.unlockedTeachingIds);
+        setTeachingRosterIds(prev => {
+          if (prev.length >= TEACHING_ROSTER_SIZE) return prev;
+          const next = [...prev, exchange.cardId];
+          storeSet('mh_teaching_roster', next, false);
+          return next;
+        });
+      }
+      return exchange;
+    } catch {
+      setMarketExchangeError('交換を保存できませんでした。カードポイントと所持品は変更していません。');
       return {
         ok: false,
         reason: 'save'
@@ -113673,7 +114629,7 @@ function MonsterHeroGame() {
       accent: 'indigo',
       readOnly: true,
       label: `${raidJackDetailMon.name}の詳細`
-    })), (gameState === 'CARD_TOP' || gameState === 'CARD_BATTLE') && React.createElement(CardBattleScreen, {
+    })), (gameState === 'CARD_TOP' || gameState === 'CARD_BATTLE' || gameState === 'CARD_PACK_OPEN' && !cardPackOpen) && React.createElement(CardBattleScreen, {
       screen: gameState,
       onNavigate: setGameState,
       onExit: () => {
@@ -113685,7 +114641,13 @@ function MonsterHeroGame() {
       seenStoryIds: rhythmEventStorySeen || [],
       debug: cardOrigin === 'debug',
       onBgm: setCardBgm,
-      onQuickLoops: awardBackQuickLoops
+      onQuickLoops: awardBackQuickLoops,
+      onOpenMarket: () => {
+        setCardMarketEntry(true);
+        setMarketExchangeError('');
+        void loadCardShop();
+        setGameState('BREEDER_MARKET');
+      }
     }), gameState === 'RAID_JACK_DEBUG' && React.createElement(RaidJackDebugScreen, {
       onBack: () => setGameState('DEBUG_SETTINGS'),
       raidForce: raidJackDebugForce,
@@ -114594,7 +115556,11 @@ function MonsterHeroGame() {
         src: resolveIconUrl(breederIcon),
         id: breederIcon
       },
-      onBack: returnToHome,
+      onBack: cardMarketEntry ? () => {
+        setCardMarketEntry(false);
+        setMarketExchangeError('');
+        setGameState('CARD_TOP');
+      } : returnToHome,
       onSelectTab: key => {
         setMarketTab(key);
         setMarketExchangeError('');
@@ -114613,7 +115579,22 @@ function MonsterHeroGame() {
       onExchangeHeroProof: exchangeHeroProofByShard,
       eventPoints: rhythmEventPoints,
       onExchangeEventPoints: exchangeRhythmEventPoints,
-      onOpenUpcomingDetail: setUpcomingMonsterDetail
+      onOpenUpcomingDetail: setUpcomingMonsterDetail,
+      cardShop: cardMarketEntry && cardShopState ? {
+        ...cardShopState,
+        busy: false,
+        onBuyPack: buyCardPacks,
+        onBuyStarter: buyCardStarter,
+        onExchange: exchangeCardPoints
+      } : null,
+      initialSection: cardMarketEntry ? 'card' : null
+    }), gameState === 'CARD_PACK_OPEN' && cardPackOpen && typeof CARD_BATTLE_DATA !== 'undefined' && React.createElement(CardPackOpen, {
+      db: CARD_BATTLE_DATA,
+      result: cardPackOpen,
+      onDone: () => {
+        setCardPackOpen(null);
+        setGameState('BREEDER_MARKET');
+      }
     }), gameState === 'ROSTER' && React.createElement("div", {
       "data-mh-screen": true,
       className: SCREEN_SHELL_CLASS

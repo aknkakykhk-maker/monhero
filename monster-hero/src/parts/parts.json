@@ -309,6 +309,11 @@
       "pure": true
     },
     {
+      "file": "89-card-pack.jsx",
+      "role": "MFバトルカードのパック(弾ごとの中身・確率・天井・だぶりのカードポイント)とスターターキットを買う決まり。乱数は外から渡す",
+      "pure": true
+    },
+    {
       "file": "85-card-battle-motion.jsx",
       "role": "MFバトルカードの技の動き。カードの技を、モンヒロの技の動き(24-battle-fx.jsx の SkillFxMotion)に当てる表。守り・受ける・倒れるの動きは 70-bootstrap.jsx の CSS"
     },

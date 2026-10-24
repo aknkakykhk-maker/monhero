@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b906ee0d049934fb
+// generated-sha256: 6f3cde846f2dd3f0
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-24 21:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-24 22:07"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11400,7 +11400,8 @@ const MarketProductCard = ({ item, owned=false, comingSoon=false, comingSoonLabe
   const usesHeroProof=item.currency==='heroProof';
   const usesHeroProofShard=item.currency==='heroProofShard';
   const usesBeatPoint=item.currency==='beatPoint';
-  const priceLabel=usesBeatPoint?`${item.cost}ビートP`:usesHeroProofShard?`勇者の証片${item.cost}個`:usesHeroProof?`勇者の証${item.cost}個`:usesPsyche?`${item.cost}プシュケー`:usesGold?`${item.cost}ダイヤ`:`${item.cost}pt`;
+  const usesCardPoint=item.currency==='cardPoint'; // MFバトルカードのカードポイント
+  const priceLabel=usesCardPoint?`${item.cost}カードポイント`:usesBeatPoint?`${item.cost}ビートP`:usesHeroProofShard?`勇者の証片${item.cost}個`:usesHeroProof?`勇者の証${item.cost}個`:usesPsyche?`${item.cost}プシュケー`:usesGold?`${item.cost}ダイヤ`:`${item.cost}pt`;
   return <div {...(dataAttrs||{})} className={`rounded-2xl border p-2 flex flex-col items-center gap-1 ${owned?'bg-emerald-900/30 border-emerald-500/60':comingSoon?'bg-slate-900/60 border-white/10':'bg-slate-900 border-white/10'}`}>
     <MarketProductIcon item={item} onZoom={onZoom} disabled={disabled} previewIcon={previewIcon}/>
     {/* 商品名(2026-09-18・ユーザー指摘「商品名の行ズレがださい」)。
@@ -11416,7 +11417,7 @@ const MarketProductCard = ({ item, owned=false, comingSoon=false, comingSoonLabe
     {/* 詳細は「近日追加」の品でも出す(2026-09-28。近日公開予定の新モンスターの中身を先に見られるように) */}
     <div className="w-full flex items-center justify-center gap-1" style={{height:'22px'}}>{middle||detail?<>{middle}{!middle&&<MarketDetailChip label={`${item.name}の詳細を見る`} onClick={onDetail}/>}</>:null}</div>
     {/* 予告の品は買うボタンの代わりに札が出るので、値段は札の上に出す(どの売り場でも同じ) */}
-    <div className="w-full flex items-center justify-center mt-auto pt-2">{comingSoon?<div className="flex w-full min-w-0 flex-col items-center gap-1 [container-type:inline-size]"><span data-market-coming-soon-price className="text-[10px] font-black text-slate-400 whitespace-nowrap">{marketPriceText(item)}</span>{/* 札はカードの幅で折り返す(2026-10-20 窓口「条件を達成すると買えます」がカードの外へはみ出していた・幅の狭い3列のカード) */}<div data-market-coming-soon-label className="max-w-full text-center font-black leading-tight text-slate-400 bg-slate-800/60 px-1 py-1 rounded-xl" style={{wordBreak:'keep-all',overflowWrap:'anywhere',fontSize:marketLabelFitSize(comingSoonLabel)}}>{marketLabelNodes(comingSoonLabel)}</div></div>:owned?<div className="text-[10px] font-black text-emerald-400 bg-emerald-950/50 px-2 py-1 rounded-full whitespace-nowrap">所持済み</div>:<button onClick={onBuy} disabled={disabled||!canBuy} aria-label={`${item.name}${disabled?'（デバッグのため購入不可）':`を${priceLabel}で${usesHeroProof||usesHeroProofShard||usesBeatPoint?'交換':'購入'}`}`} className={`mh-button mh-button-primary text-[11px] font-black px-2 min-h-[44px] w-full max-w-full rounded-xl flex items-center justify-center gap-1 whitespace-nowrap ${disabled||!canBuy?'bg-slate-800 text-slate-500':usesBeatPoint?'bg-violet-500 text-white active:scale-95':usesPsyche?'bg-fuchsia-600 text-white active:scale-95':'bg-amber-500 text-black active:scale-95'}`}>{usesBeatPoint?<><span aria-hidden="true">🎟️</span><span>{item.cost.toLocaleString()}</span></>:usesHeroProofShard?<><span aria-hidden="true">🎖️</span><span className="text-[10px]">証片 ×{item.cost.toLocaleString()}</span></>:usesHeroProof?<><span aria-hidden="true">🏅</span><span className="text-[10px]">勇者の証 ×{item.cost.toLocaleString()}</span></>:usesPsyche?<><span aria-hidden="true">🌈</span><span>{item.cost.toLocaleString()}</span></>:<>{usesGold?<Gem size={11} className="shrink-0"/>:<Coins size={11} className="shrink-0"/>}<span>{item.cost.toLocaleString()}</span></>}</button>}</div>
+    <div className="w-full flex items-center justify-center mt-auto pt-2">{comingSoon?<div className="flex w-full min-w-0 flex-col items-center gap-1 [container-type:inline-size]"><span data-market-coming-soon-price className="text-[10px] font-black text-slate-400 whitespace-nowrap">{marketPriceText(item)}</span>{/* 札はカードの幅で折り返す(2026-10-20 窓口「条件を達成すると買えます」がカードの外へはみ出していた・幅の狭い3列のカード) */}<div data-market-coming-soon-label className="max-w-full text-center font-black leading-tight text-slate-400 bg-slate-800/60 px-1 py-1 rounded-xl" style={{wordBreak:'keep-all',overflowWrap:'anywhere',fontSize:marketLabelFitSize(comingSoonLabel)}}>{marketLabelNodes(comingSoonLabel)}</div></div>:owned?<div className="text-[10px] font-black text-emerald-400 bg-emerald-950/50 px-2 py-1 rounded-full whitespace-nowrap">所持済み</div>:<button onClick={onBuy} disabled={disabled||!canBuy} aria-label={`${item.name}${disabled?'（デバッグのため購入不可）':`を${priceLabel}で${usesHeroProof||usesHeroProofShard||usesBeatPoint||usesCardPoint?'交換':'購入'}`}`} className={`mh-button mh-button-primary text-[11px] font-black px-2 min-h-[44px] w-full max-w-full rounded-xl flex items-center justify-center gap-1 whitespace-nowrap ${disabled||!canBuy?'bg-slate-800 text-slate-500':usesCardPoint?'bg-orange-500 text-white active:scale-95':usesBeatPoint?'bg-violet-500 text-white active:scale-95':usesPsyche?'bg-fuchsia-600 text-white active:scale-95':'bg-amber-500 text-black active:scale-95'}`}>{usesCardPoint?<><span aria-hidden="true">🃏</span><span>{item.cost.toLocaleString()}</span></>:usesBeatPoint?<><span aria-hidden="true">🎟️</span><span>{item.cost.toLocaleString()}</span></>:usesHeroProofShard?<><span aria-hidden="true">🎖️</span><span className="text-[10px]">証片 ×{item.cost.toLocaleString()}</span></>:usesHeroProof?<><span aria-hidden="true">🏅</span><span className="text-[10px]">勇者の証 ×{item.cost.toLocaleString()}</span></>:usesPsyche?<><span aria-hidden="true">🌈</span><span>{item.cost.toLocaleString()}</span></>:<>{usesGold?<Gem size={11} className="shrink-0"/>:<Coins size={11} className="shrink-0"/>}<span>{item.cost.toLocaleString()}</span></>}</button>}</div>
   </div>;
 };
 
@@ -11438,6 +11439,8 @@ const MARKET_CURRENCY_META = Object.freeze({
   heroProofShard: Object.freeze({ have:'勇者の証片', label:'勇者の証片',   emoji:'🎖️', verb:'交換', format:n=>`勇者の証片${n}個`,   text:'text-amber-100',   bar:'text-amber-100 border-amber-400/30 bg-amber-950/30',       border:'border-amber-400/70',   button:'bg-amber-500 text-black',   max:'bg-amber-700' }),
   heroProof:      Object.freeze({ have:'勇者の証', label:'勇者の証',     emoji:'🏅', verb:'交換', format:n=>`勇者の証${n}個`,     text:'text-amber-200',   bar:'text-amber-200 border-amber-400/30 bg-amber-950/30',       border:'border-amber-400/70',   button:'bg-amber-500 text-black',   max:'bg-amber-700' }),
   beatPoint:      Object.freeze({ have:'所持ビートP', label:'ビートP',      emoji:'🎟️', verb:'交換', format:n=>`${n}ビートP`,        text:'text-violet-200',  bar:'text-violet-100 border-violet-500/30 bg-violet-950/30',    border:'border-violet-400/70',  button:'bg-violet-500 text-white',  max:'bg-violet-800' }),
+  // MFバトルカードのカードポイント(マーケットの「カードポイント」の売り場。いまはMFバトルカードのトップから入ったときだけ出す)
+  cardPoint:      Object.freeze({ have:'所持カードポイント', label:'カードポイント', emoji:'🃏', verb:'交換', format:n=>`${n}カードポイント`, text:'text-orange-200',  bar:'text-orange-100 border-orange-500/30 bg-orange-950/30',    border:'border-orange-400/70',  button:'bg-orange-500 text-white',  max:'bg-orange-800' }),
 });
 // 商品が何で買うものか。currency を書いた商品はそれ、無ければ種類で決める(アイコンはブリーダーP、ほかはダイヤ)
 const marketCurrencyOf = (item) => MARKET_CURRENCY_META[item?.currency] ? item.currency
@@ -33046,10 +33049,13 @@ function BreederMarketScreen({
   gold, breederPoints, ownedItems, marketTab, marketExchangeError, purchaseProcessing,
   isItemOwned, previewIcon=null, onBack, onSelectTab, onZoomIcon, onBuy, onOpenDetail, onOpenItemDetail, onExchangeSoulRankRespec,
   onExchangeHeroProof, eventPoints=0, onExchangeEventPoints, onOpenUpcomingDetail, frameConditionOf=null,
+  // MFバトルカードの「カードポイント」の売り場(区切り2)。いまはMFバトルカードのトップの「マーケットへ」から入ったときだけ渡す(デバッグ専用のあいだ)。
+  // { point, starter, shop, busy, onBuyPack(packId,count), onBuyStarter(kit), onExchange(offer) }。initialSection … 最初に開く売り場
+  cardShop=null, initialSection=null,
 }) {
   // 2026-09-14・マーケットのタブ乱立を避けるため、最初に用途別の入口を選ぶ。
   // 入口だけこの画面のローカル状態で持ち、購入・交換・商品タブの既存stateは親側をそのまま使う。
-  const [marketSection,setMarketSection]=useState(null);
+  const [marketSection,setMarketSection]=useState(initialSection);
   // 開いている購入/交換の確認窓。{ item, balance, stackable, countUnit, grantAmount, grantUnit, confirm(count) }
   const [sheet,setSheet]=useState(null);
   const [sheetQuantity,setSheetQuantity]=useState(1);
@@ -33097,6 +33103,7 @@ function BreederMarketScreen({
   const SECTION_TABS = {
     breeder:{ color:'#d97706', tabs:[{key:'face',label:'アイコン'},...(hasDiscIconCards?[{key:'disc',label:'円盤石アイコン'}]:[]),...(breederFrameItems.length?[{key:'frame',label:'フレーム'}]:[])] },
     exchange:{ color:'#059669', tabs:[{key:'psyche',label:'プシュケー'},{key:'proof',label:'勇者の証'}] },
+    card:{ color:'#ea580c', tabs:[{key:'pack',label:'パック'},{key:'starter',label:'スターター'},{key:'disc',label:'円盤石'},{key:'assist',label:'アシスト'}] },
     event:{ color:'#7c3aed', tabs:[{key:'disc',label:'円盤石'},{key:'assist',label:'アシスト'},...(RHYTHM_EVENT_POINT_SHOP_FRAME_OFFERS.length?[{key:'frame',label:'フレーム'}]:[]),...(RHYTHM_EVENT_POINT_SHOP_COSTUME_OFFERS.some(offer=>offer.available!==false)?[{key:'costume',label:'着替え'}]:[]),...(RHYTHM_EVENT_POINT_SHOP_ICON_OFFERS.some(offer=>offer.available!==false)?[{key:'icon',label:'アイコン'}]:[]),{key:'item',label:'アイテム'},{key:'material',label:'強化素材'}] },
   };
   const activeSectionTab = (section) => {
@@ -33119,9 +33126,10 @@ function BreederMarketScreen({
     breeder:{label:'ブリーダーP交換所',emoji:'🪙'},
     exchange:{label:'アイテム交換所',emoji:'🔄'},
     event:{label:'ビートP交換所',emoji:'🎟️'},
+    card:{label:'カードポイント',emoji:'🃏'},
   };
   const balanceOf = (currency) => currency==='psyche' ? psycheHave : currency==='heroProofShard' ? shardHave : currency==='heroProof' ? proofHave
-    : currency==='beatPoint' ? safeEventPoints : currency==='breederPoint' ? breederPoints : gold;
+    : currency==='beatPoint' ? safeEventPoints : currency==='cardPoint' ? (cardShop ? cardShop.point : 0) : currency==='breederPoint' ? breederPoints : gold;
   const busy = purchaseProcessing || sheetPending;
 
   const openSheet = (next) => { setSheetQuantity(1); setSheet(next); };
@@ -33195,7 +33203,8 @@ function BreederMarketScreen({
 
   const headerTitle = marketSection ? sectionMeta[marketSection].label : 'マーケット';
   const handleBack = ()=>{
-    if(marketSection){ setMarketSection(null); return; }
+    // MFバトルカードから入ったときは、その売り場から戻るとMFバトルカードのトップへ(マーケットの入口を通らない)
+    if(marketSection&&!(initialSection&&marketSection===initialSection)){ setMarketSection(null); return; }
     onBack();
   };
 
@@ -33215,6 +33224,7 @@ function BreederMarketScreen({
             {key:'breeder',emoji:'🪙',label:'ブリーダーP交換所',titleLines:['ブリーダーP','交換所'],value:compactCount(breederPoints),hint:'Lv.UPで獲得',border:'border-amber-400/35',title:'text-amber-200',arrow:'text-amber-300/80'},
             {key:'exchange',emoji:'🔄',label:'アイテム交換所',titleLines:['アイテム','交換所'],value:`🌈${ownedItemCount(ownedItems,BREAKTHROUGH_ITEM_ID).toLocaleString()}`,hint:'所持している虹のプシュケー',border:'border-emerald-400/35',title:'text-emerald-200',arrow:'text-emerald-300/80'},
             {key:'event',emoji:'🎟️',label:'ビートP交換所',titleLines:['ビートP','交換所'],value:compactCount(safeEventPoints),hint:'所持ビートP',border:'border-violet-400/35',title:'text-violet-200',arrow:'text-violet-300/80'},
+            ...(cardShop?[{key:'card',emoji:'🃏',label:'カードポイント',titleLines:['カード','ポイント'],value:compactCount(cardShop.point),hint:'MFバトルカードでためる',border:'border-orange-400/35',title:'text-orange-200',arrow:'text-orange-300/80'}]:[]),
           ].map(section=>(
             <button
               key={section.key}
@@ -33240,6 +33250,7 @@ function BreederMarketScreen({
           marketSection==='diamond'?[{currency:'diamond',value:gold}]
           :marketSection==='breeder'?[{currency:'breederPoint',value:breederPoints}]
           :marketSection==='exchange'?[{currency:'psyche',value:psycheHave},{currency:'heroProofShard',value:shardHave},{currency:'heroProof',value:proofHave}]
+          :marketSection==='card'?[{currency:'cardPoint',value:cardShop?cardShop.point:0}]
           :[{currency:'beatPoint',value:safeEventPoints}]}/>
         {/* ビートPアップキャンペーン中の知らせ(2026-09-28)。開いたときの時刻で数え直す */}
         {marketSection==='event'&&(()=>{const campaign=typeof rhythmEventPointCampaignAt==='function'&&!rhythmLimitedEventAt(Date.now())?rhythmEventPointCampaignAt(Date.now()):null;
@@ -33280,6 +33291,52 @@ function BreederMarketScreen({
         </div>
         </div>
       </>}
+
+      {marketSection==='card'&&cardShop&&(()=>{
+        const tab=activeSectionTab('card');
+        const cp=cardShop.point;
+        return <>
+          {renderSectionTabs('card')}
+          <div className={SCREEN_LIST_CLASS} data-card-shop data-card-shop-tab={tab}>
+            {tab==='pack'&&<CardShopPacks db={CARD_BATTLE_DATA} point={cp} busy={busy||cardShop.busy} onBuyPack={cardShop.onBuyPack}/>}
+            {tab==='starter'&&<CardShopStarters db={CARD_BATTLE_DATA} point={cp} busy={busy||cardShop.busy} starter={cardShop.starter} shop={cardShop.shop} onBuyStarter={cardShop.onBuyStarter}/>}
+            {/* 円盤石・アシストカードは、ビートP交換所と同じ物を同じ値段(1,500)で並べる(社長 台帳 #3405)。一覧はビートP交換所のものをそのまま引く */}
+            {(tab==='disc'||tab==='assist')&&<div className={MARKET_GRID_CLASS}>
+              {tab==='disc'&&RHYTHM_EVENT_POINT_SHOP_DISC_OFFERS.map(offer=>{
+                const disc=BREEDER_MARKET_ITEMS.find(item=>item.id===offer.monsterId&&item.type==='disc');
+                const mon=ALL_PLAYER_MONSTERS[offer.monsterId]||null;
+                const item={ id:offer.id, name:offer.name, emoji:'💿', icon:disc?.icon, type:'disc', currency:'cardPoint', cost:offer.cost };
+                const owned=isItemOwned({ id:offer.monsterId, type:'disc' });
+                return <MarketProductCard key={offer.id} dataAttrs={{'data-card-shop-disc':offer.id}}
+                  item={item} owned={owned} comingSoon={false}
+                  canBuy={!owned&&cp>=offer.cost&&!busy}
+                  disabled={purchaseProcessing}
+                  onZoom={()=>onZoomIcon(disc||item)}
+                  onBuy={()=>openSheet({ item, confirm:()=>cardShop.onExchange(offer),
+                    rebirth:{monsterId:offer.monsterId,discIcon:disc?.icon||item.icon} })}
+                  detail={mon}
+                  onDetail={()=>mon&&onOpenDetail(disc||item,mon,null)}
+                />;
+              })}
+              {tab==='assist'&&RHYTHM_EVENT_POINT_SHOP_ASSIST_OFFERS.map(offer=>{
+                const card=BREEDER_MARKET_ITEMS.find(item=>item.id===offer.cardId&&item.type==='assist');
+                const teaching=TEACHING_CARDS.find(t=>t.id===offer.cardId)||null;
+                const item={ id:offer.id, name:offer.name, emoji:'🃏', icon:card?.icon, type:'assist', currency:'cardPoint', cost:offer.cost };
+                const owned=isItemOwned({ id:offer.cardId, type:'assist' });
+                return <MarketProductCard key={offer.id} dataAttrs={{'data-card-shop-assist':offer.id}}
+                  item={item} owned={owned} comingSoon={false}
+                  canBuy={!owned&&cp>=offer.cost&&!busy}
+                  disabled={purchaseProcessing}
+                  onZoom={()=>onZoomIcon(card?{...card,name:offer.name}:item)}
+                  onBuy={()=>openSheet({ item, confirm:()=>cardShop.onExchange(offer) })}
+                  detail={teaching}
+                  onDetail={()=>teaching&&onOpenDetail(card||item,null,teaching)}
+                />;
+              })}
+            </div>}
+          </div>
+        </>;
+      })()}
 
       {marketSection==='event'&&<>
         {renderSectionTabs('event')}
@@ -50737,6 +50794,8 @@ const CARD_SAVE_KEYS = Object.freeze({
   collection: 'mh_card_collection_v1', decks: 'mh_card_decks_v1', point: 'mh_card_point_v1', starter: 'mh_card_starter_v1',
   daily: 'mh_card_daily_v1', record: 'mh_card_record_v1', cpuUnlocked: 'mh_card_cpu_unlocked_v1',
   tutorial: 'mh_card_tutorial_v1', // 練習試合(チュートリアル)を終えた・飛ばした・100 を渡した印(86-card-tutorial.jsx)
+  pity: 'mh_card_pack_pity_v1', // パックの天井(弾ごとに、キラなしで開けた数。89-card-pack.jsx)
+  shop: 'mh_card_shop_v1',       // マーケットで買ったスターターキットの印(89-card-pack.jsx)
 });
 const cardIsPlainObject = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
 const cardNormalizeCollection = (v) => {
@@ -51276,7 +51335,7 @@ const CARD_RULE_PAGES = Object.freeze([
   ] },
   { id: 'win', emoji: '🏆', title: '勝ち負け', lines: [
     '相手のモンスター3体を全員KOしたら勝ち',
-    '相手が引くときに山札が無かったら勝ち(山札切れ)',
+    '引くときに山札が無かったら、そのプレイヤーの負け(山札切れ。相手が切れたら自分の勝ち)',
     '相手が投了したら勝ち',
     '両方の最後の1体が同時にKOされたときは、攻撃した側の勝ち',
   ] },
@@ -51286,6 +51345,136 @@ const CARD_RULE_PAGES = Object.freeze([
     'カードを長押しすると、大きな絵と文が見られる',
   ] },
 ]);
+
+// ---- part: 89-card-pack.jsx ----
+// ==================== MFバトルカード パック(区切り2) ====================
+// 設計: docs/spec/CARD_BATTLE.md 4-2(社長: 種族ごとの4弾を最初から全部出す・ヒノトリは第2弾・混血パック・C-060C は入れない)
+// ここは pure(画面・保存・乱数の元を持たない)。乱数は rand(0〜1 を返す関数)を外から渡す(検査で同じ並びを作れるように)
+//
+// 1パックの中身
+//   第1〜4弾 … 8枚・100カードポイント(5パックまとめて 450)。技の枠7・モンスターの枠1(最後にめくる)
+//   混血パック … 3枚・150カードポイント。3枚とも混血モンスター(キラは無い)
+// 技の枠: その弾の「準備中でない」カード(技・全モンスター・ブリーダー)から同じ確率で1枚。技にレア度の差は無い(社長)
+// モンスターの枠: まずレア度(第1弾 通常85%/キラ12%/別絵キラ3%・第2〜4弾 通常85%/キラ15%)、そのレア度のモンスターから1枚。
+//   まだ持っていない種族は2倍の重みで引く(持っていない種族が出やすいように)
+// 天井: その弾のパックでキラも別絵キラも出ないまま7パック開けたら、8パック目のモンスターの枠はキラ以上(弾ごとに数える。混血は無し)
+// だぶり(自動でカードポイントへ): 技カードは4枚目から1枚 5 / モンスターは2枚目から 50(キラ 100・別絵キラ 200)/ 混血は 20
+//   ★持てる枚数を超えた分だけをカードポイントにする(持っている分は減らさない)
+const CARD_PACKS = Object.freeze([
+  { id: 'w1', wave: '1', name: '第1弾パック', price: 100, bundle: { n: 5, price: 450 }, tech: 7, mon: 1, rarity: { normal: 85, kira: 12, alt: 3 }, pity: true, color: '#f59e0b' },
+  { id: 'w2', wave: '2', name: '第2弾パック', price: 100, bundle: { n: 5, price: 450 }, tech: 7, mon: 1, rarity: { normal: 85, kira: 15, alt: 0 }, pity: true, color: '#ef4444' },
+  { id: 'w3', wave: '3', name: '第3弾パック', price: 100, bundle: { n: 5, price: 450 }, tech: 7, mon: 1, rarity: { normal: 85, kira: 15, alt: 0 }, pity: true, color: '#22c55e' },
+  { id: 'w4', wave: '4', name: '第4弾パック', price: 100, bundle: { n: 5, price: 450 }, tech: 7, mon: 1, rarity: { normal: 85, kira: 15, alt: 0 }, pity: true, color: '#3b82f6' },
+  { id: 'hybrid', wave: 'hybrid', name: '混血パック', price: 150, bundle: null, tech: 0, mon: 3, rarity: { normal: 100, kira: 0, alt: 0 }, pity: false, color: '#a855f7' },
+]);
+const CARD_PACK_PITY_AT = 7;          // キラなしでこの数だけ開けたら、次のパックはキラ以上
+const CARD_TECH_KEEP_MAX = 3;         // 技カードは3枚まで持つ(4枚目からカードポイントへ)
+const CARD_DUP_POINT = Object.freeze({ tech: 5, normal: 50, kira: 100, alt: 200, hybrid: 20 });
+// 保存は CARD_SAVE_KEYS.pity(mh_card_pack_pity_v1 { パックid: 数 })と CARD_SAVE_KEYS.shop(mh_card_shop_v1 { starters: { キット: 時刻 } })
+const CARD_STARTER_SHOP_PRICE = 500;
+
+const cardPackOf = (id) => CARD_PACKS.find((p) => p.id === id) || null;
+// モンスターカードのレア度(通常・キラ・別絵キラ)。水中のグジラは通常/キラのあつかい
+const cardMonRarity = (m) => (!m || !m.variant ? 'normal' : /別絵キラ/.test(m.variant) ? 'alt' : /キラ/.test(m.variant) ? 'kira' : 'normal');
+const cardPackTechPool = (db, pack) => Object.values(db.cards).filter((c) => String(c.wave) === pack.wave && c.ready).map((c) => c.no).sort();
+const cardPackMonPool = (db, pack, rarity) => Object.values(db.monsters).filter((m) => String(m.wave) === pack.wave && m.ready !== false && cardMonRarity(m) === rarity).map((m) => m.no).sort();
+const cardOwnsSpecies = (db, collection, species) => Object.keys(collection || {}).some((no) => collection[no] > 0 && (cardMonsterOf(db, no) || {}).species === species);
+
+const cardNormalizePity = (v) => {
+  const out = {};
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return out;
+  CARD_PACKS.forEach((p) => { const x = Number(v[p.id]); if (Number.isFinite(x) && x > 0) out[p.id] = Math.min(999, Math.floor(x)); });
+  return out;
+};
+const cardNormalizeShop = (v) => {
+  const r = v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+  const st = r.starters && typeof r.starters === 'object' && !Array.isArray(r.starters) ? r.starters : {};
+  return { starters: Object.fromEntries(Object.entries(st).filter(([, at]) => Number.isFinite(Number(at))).map(([k, at]) => [k, Number(at)])) };
+};
+
+// 重みつきで1つ選ぶ
+const cardPickWeighted = (items, weightOf, rand) => {
+  const total = items.reduce((a, x) => a + weightOf(x), 0);
+  if (!(total > 0)) return items[0];
+  let r = rand() * total;
+  for (const x of items) { r -= weightOf(x); if (r < 0) return x; }
+  return items[items.length - 1];
+};
+
+// 1パック開ける。返す: { cards:[{ no, slot:'tech'|'mon', rarity, dup, point }], collection, pity, point(だぶりのカードポイント), hit(キラ以上が出たか) }
+const cardOpenPack = (db, packId, { collection, pity }, rand) => {
+  const pack = cardPackOf(packId);
+  if (!pack) return null;
+  const col = { ...(collection || {}) };
+  const nextPity = { ...(pity || {}) };
+  const cards = [];
+  let point = 0;
+  const techPool = cardPackTechPool(db, pack);
+  for (let i = 0; i < pack.tech && techPool.length; i++) {
+    const no = techPool[Math.floor(rand() * techPool.length) % techPool.length];
+    const dup = (col[no] || 0) >= CARD_TECH_KEEP_MAX;
+    if (dup) point += CARD_DUP_POINT.tech; else col[no] = (col[no] || 0) + 1;
+    cards.push({ no, slot: 'tech', rarity: 'normal', dup, point: dup ? CARD_DUP_POINT.tech : 0 });
+  }
+  let hit = false;
+  for (let i = 0; i < pack.mon; i++) {
+    const forced = pack.pity && i === pack.mon - 1 && (nextPity[pack.id] || 0) >= CARD_PACK_PITY_AT;
+    const rar = Object.entries(pack.rarity).filter(([k, w]) => w > 0 && (!forced || k !== 'normal') && cardPackMonPool(db, pack, k).length);
+    const rarity = cardPickWeighted(rar, ([, w]) => w, rand)[0];
+    const pool = cardPackMonPool(db, pack, rarity);
+    const no = cardPickWeighted(pool, (x) => (cardOwnsSpecies(db, col, (cardMonsterOf(db, x) || {}).species) ? 1 : 2), rand);
+    const dup = (col[no] || 0) >= 1;
+    const dupPoint = pack.id === 'hybrid' ? CARD_DUP_POINT.hybrid : CARD_DUP_POINT[rarity];
+    if (dup) point += dupPoint; else col[no] = 1;
+    if (rarity !== 'normal') hit = true;
+    cards.push({ no, slot: 'mon', rarity, dup, point: dup ? dupPoint : 0 });
+  }
+  if (pack.pity) nextPity[pack.id] = hit ? 0 : (nextPity[pack.id] || 0) + 1;
+  return { cards, collection: col, pity: nextPity, point, hit };
+};
+
+// まとめて買う(1つ・5つ)。カードポイントが足りなければ null。返す: { packs:[1パックぶん…], collection, pity, point(残り), cost, dupPoint }
+const cardPackPrice = (pack, count) => (pack.bundle && count === pack.bundle.n ? pack.bundle.price : pack.price * count);
+const cardBuyPacks = (db, packId, count, { collection, pity, point }, rand) => {
+  const pack = cardPackOf(packId);
+  const n = Math.max(1, Math.min(5, Math.floor(Number(count) || 1)));
+  if (!pack) return null;
+  const cost = cardPackPrice(pack, n);
+  if (!(point >= cost)) return null;
+  let cur = { collection, pity };
+  const packs = [];
+  let dupPoint = 0;
+  for (let i = 0; i < n; i++) {
+    const r = cardOpenPack(db, packId, cur, rand);
+    packs.push(r.cards);
+    dupPoint += r.point;
+    cur = { collection: r.collection, pity: r.pity };
+  }
+  return { packs, collection: cur.collection, pity: cur.pity, point: point - cost + dupPoint, cost, dupPoint };
+};
+
+// 画面に出す「出る確率」(パックの画面で、だれでも見られる)
+const cardPackRates = (db, packId) => {
+  const pack = cardPackOf(packId);
+  if (!pack) return null;
+  const tech = cardPackTechPool(db, pack).length;
+  const mons = Object.fromEntries(['normal', 'kira', 'alt'].map((k) => [k, cardPackMonPool(db, pack, k).length]));
+  return { pack, techKinds: tech, techEach: tech ? 1 / tech : 0, mons, rarity: pack.rarity };
+};
+
+// 選ばなかったスターターキットを買う(1つにつき1回・500)。持っていた分を超えるカードは、パックと同じ決まりでカードポイントへ
+//   デッキも1つ足す(5つに満たないとき)。返す: { collection, decks, point, shop, dupPoint } / 買えないとき null
+const cardBuyStarter = (db, kitId, { collection, decks, point, starter, shop }, now) => {
+  const kit = db.starters[kitId];
+  if (!kit || (starter && starter.kit === kitId) || (shop.starters && shop.starters[kitId]) || !(point >= CARD_STARTER_SHOP_PRICE)) return null;
+  const col = { ...(collection || {}) };
+  let dupPoint = 0;
+  kit.monsters.forEach((no) => { if ((col[no] || 0) >= 1) dupPoint += CARD_DUP_POINT[cardMonRarity(cardMonsterOf(db, no))]; else col[no] = 1; });
+  kit.cards.forEach((no) => { if ((col[no] || 0) >= CARD_TECH_KEEP_MAX) dupPoint += CARD_DUP_POINT.tech; else col[no] = (col[no] || 0) + 1; });
+  const deck = { id: `starter_${kitId}`, name: kit.name, monsters: kit.monsters.slice(), cards: kit.cards.slice() };
+  const nextDecks = decks.decks.some((d) => d.id === deck.id) || decks.decks.length >= CARD_DECK_MAX ? decks : { ...decks, decks: [...decks.decks, deck] };
+  return { collection: col, decks: nextDecks, point: point - CARD_STARTER_SHOP_PRICE + dupPoint, shop: { starters: { ...shop.starters, [kitId]: Math.floor(Number(now) || 0) } }, dupPoint };
+};
 
 // ---- part: 85-card-battle-motion.jsx ----
 // ===== MFバトルカード: 技の動き(設計書 5-4「技と動きの対応表」) =====
@@ -52192,7 +52381,8 @@ const CardAssistantArt = ({ src, alt, className = '' }) => {
 };
 
 // onQuickLoops(loops) … 1戦ぶんをクイック周回の周回クリアとして配る(60-app の awardBackQuickLoops)。配れたら配った中身、配れなければ null
-const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', seenStoryIds = [], debug = false, onBgm, onQuickLoops }) => {
+// onOpenMarket … マーケットの「カードポイント」の売り場へ(60-app)
+const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', seenStoryIds = [], debug = false, onBgm, onQuickLoops, onOpenMarket }) => {
   const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
   const [save, setSave] = useState(null);
   const [view, setView] = useState('top');
@@ -52468,7 +52658,6 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   }
 
   // ---- トップ ----
-  const soon = (label) => <button type="button" disabled className={`${btn} border border-white/10 bg-slate-900 text-slate-400`}>{label}<span className="block text-[10px] font-bold">つぎの区切りで作ります</span></button>;
   return (
     <div data-mh-screen data-card-top="top" className={SCREEN_SHELL_CLASS}>
       <ScreenHead title="MFバトルカード" accent="text-amber-200" onBack={onExit} backLabel={exitLabel} note={debug ? 'デバッグ専用(まだ公開していません)' : ''}/>
@@ -52487,7 +52676,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         )}
         {notice && <p className="text-[12px] font-bold text-amber-200">{notice}</p>}
         <button type="button" data-card-cpu className={`${btn} mh-button-primary`} disabled={!activeDeck} onClick={() => { Audio_.se.tap(); setNotice(''); setView('foe'); }}>コンピューター戦</button>
-        <div className="grid grid-cols-2 gap-2"><button type="button" data-card-decks className={`${btn} border border-amber-300/50 bg-amber-900/50 text-amber-50`} onClick={() => { Audio_.se.tap(); setNotice(''); setView('decks'); }}>デッキ編成</button>{soon('マーケットへ')}
+        <div className="grid grid-cols-2 gap-2"><button type="button" data-card-decks className={`${btn} border border-amber-300/50 bg-amber-900/50 text-amber-50`} onClick={() => { Audio_.se.tap(); setNotice(''); setView('decks'); }}>デッキ編成</button><button type="button" data-card-market-open className={`${btn} border border-orange-300/50 bg-orange-900/50 text-orange-50`} disabled={!onOpenMarket} onClick={() => { Audio_.se.tap(); setNotice(''); onOpenMarket && onOpenMarket(); }}>マーケットへ<span className="block text-[10px] font-bold">パック・キット・円盤石</span></button>
           <button type="button" data-card-dex-open className={`${btn} border border-sky-300/50 bg-sky-900/50 text-sky-50`} onClick={() => { Audio_.se.tap(); setNotice(''); setView('dex'); }}>カード図鑑</button>
           {/* 練習試合のやり直しは、ルールの画面の中(ドラの D20「ルールの画面から、いつでもこの練習試合をやり直せる」) */}
           <button type="button" data-card-rules-open className={`${btn} border border-emerald-300/50 bg-emerald-900/60 text-emerald-50`} onClick={() => { Audio_.se.tap(); setNotice(''); setView('rules'); }}>ルール<span className="block text-[10px] font-bold">練習試合もここから</span></button>
@@ -52768,6 +52957,8 @@ const CardDex = ({ db, collection, onBack }) => {
 
 // ==================== ルールの画面(区切り2) ====================
 // 文は 88-card-rules.jsx の CARD_RULE_PAGES(正本は RULES_SOURCE.md)。練習試合のやり直しもここから(ドラの D20)
+// 「」で囲んだ言葉は途中で折らない(「全モンスター」が「全/モンスター」と折れていた。言葉の切れ目を探す jaWrap は「全」と「モンスター」を別の言葉と見る)
+const cardRuleLine = (t) => String(t).split(/(「[^」]*」)/).map((seg, i) => (/^「/.test(seg) ? <span key={i} className="whitespace-nowrap">{seg}</span> : <React.Fragment key={i}>{jaWrap(seg)}</React.Fragment>));
 const CardRules = ({ onBack, onTutorial }) => (
   <div data-mh-screen data-card-rules className={SCREEN_SHELL_CLASS}>
     <ScreenHead title="ルール" accent="text-amber-200" onBack={onBack}/>
@@ -52776,7 +52967,7 @@ const CardRules = ({ onBack, onTutorial }) => (
         <div key={pg.id} data-card-rule={pg.id} className={SCREEN_PANEL_CLASS}>
           <div className="text-[14px] font-black text-amber-200">{pg.emoji} {pg.title}</div>
           <ul className="mt-1 space-y-0.5">
-            {pg.lines.map((t, i) => <li key={i} className="flex gap-1 text-[12px] font-bold leading-snug text-slate-100" style={JA_WRAP_STYLE}><span className="shrink-0 text-amber-300">・</span><span>{jaWrap(t)}</span></li>)}
+            {pg.lines.map((t, i) => <li key={i} className="flex gap-1 text-[12px] font-bold leading-snug text-slate-100" style={JA_WRAP_STYLE}><span className="shrink-0 text-amber-300">・</span><span>{cardRuleLine(t)}</span></li>)}
           </ul>
         </div>
       ))}
@@ -52786,6 +52977,143 @@ const CardRules = ({ onBack, onTutorial }) => (
     </div>
   </div>
 );
+
+// ==================== パックを開ける画面(区切り2・CARD_PACK_OPEN) ====================
+// マーケットの「カードポイント」の売り場で買ったら、ここへ来る(買うのと保存は 60-app。この部品は見せるだけ)
+// result: { packId, packs:[[{ no, slot, rarity, dup, point }…]…], dupPoint, cost }
+// 1パックずつ。裏のカードをタップでめくる(モンスターの枠は最後)・「全部めくる」。キラは光る。だぶりは「+◯」
+const CARD_RARITY_LABEL = Object.freeze({ normal: '', kira: 'キラ', alt: '別絵キラ' });
+const CardPackOpen = ({ db, result, onDone }) => {
+  const [pi, setPi] = useState(0);
+  const [open, setOpen] = useState(false);
+  const [flipped, setFlipped] = useState([]);
+  const [detail, setDetail] = useState(null);
+  const press = useCardLongPress((no) => setDetail(no));
+  const pack = cardPackOf(result.packId) || { name: 'パック', color: '#f59e0b' };
+  const cards = result.packs[pi] || [];
+  const allOpen = flipped.length >= cards.length;
+  const last = pi >= result.packs.length - 1;
+  const flip = (i) => { if (flipped.includes(i)) return; Audio_.se.card(); setFlipped((f) => [...f, i]); };
+  const flipAll = () => { Audio_.se.card(); setFlipped(cards.map((_, i) => i)); };
+  const next = () => { Audio_.se.tap(); setPi((x) => x + 1); setOpen(false); setFlipped([]); };
+  const packPoint = cards.reduce((a, c) => a + (c.point || 0), 0);
+  return (
+    <div data-mh-screen data-card-pack-open className={SCREEN_SHELL_CLASS}>
+      <ScreenHead title={pack.name} accent="text-amber-200" note={result.packs.length > 1 ? `${pi + 1} / ${result.packs.length}パック` : ''}/>
+      <div className={`${SCREEN_LIST_CLASS} flex flex-col items-center justify-center pb-2`}>
+        {!open ? (
+          <button type="button" data-card-pack-tear onClick={() => { Audio_.se.tap(); setOpen(true); }} className="relative flex h-[300px] w-[200px] flex-col items-center justify-center rounded-2xl border-4 border-white/70 text-center shadow-2xl active:scale-95" style={{ background: `linear-gradient(160deg, ${pack.color}, #1e1b4b)` }}>
+            <span className="text-[44px]">🎴</span>
+            <span className="mt-2 text-[18px] font-black text-white">{pack.name}</span>
+            <span className="mt-1 text-[12px] font-bold text-white/80">{cards.length}枚入り</span>
+            <span className="absolute inset-x-0 bottom-4 animate-pulse text-[13px] font-black text-white">タップで開ける</span>
+          </button>
+        ) : (
+          <div className={`grid w-full gap-2 ${cards.length > 4 ? 'grid-cols-4' : 'grid-cols-3'} px-1`}>
+            {cards.map((c, i) => {
+              const on = flipped.includes(i);
+              const card = cardOf(db, c.no); const m = card ? null : cardMonsterOf(db, c.no);
+              const name = card ? card.name : m ? m.name : c.no;
+              const shine = c.rarity !== 'normal';
+              return (
+                <button key={i} type="button" data-card-pack-card={i} data-card-pack-flipped={on ? 1 : 0} data-card-pack-rarity={c.rarity} {...(on ? press(c.no, () => setDetail(c.no)) : { onClick: () => flip(i) })} className={`relative flex flex-col items-center rounded-lg p-0.5 text-center active:scale-95 ${on && shine ? 'animate-pulse ring-4 ring-amber-300 shadow-[0_0_18px_rgba(252,211,77,0.9)]' : ''}`} style={{ WebkitUserSelect: 'none', userSelect: 'none' }}>
+                  {on
+                    ? <img src={CARD_IMG(card ? card.img : m ? m.img : c.no)} alt={name} draggable={false} className="aspect-[5/7] w-full rounded-[5px] object-cover"/>
+                    : <div className="flex aspect-[5/7] w-full items-center justify-center rounded-[5px] border-2 border-white/40 text-[22px]" style={{ background: `linear-gradient(160deg, ${pack.color}, #0f172a)` }}>{c.slot === 'mon' ? '★' : '🃏'}</div>}
+                  {on && c.dup && <span className="absolute right-0.5 top-0.5 rounded-md bg-slate-950/90 px-1 text-[10px] font-black text-amber-200">+{c.point}</span>}
+                  {on && !c.dup && <span className="absolute right-0.5 top-0.5 rounded-md bg-emerald-400 px-1 text-[9px] font-black text-slate-950">NEW</span>}
+                  {on && shine && <span className="absolute left-0.5 top-0.5 rounded-md bg-amber-300 px-1 text-[9px] font-black text-slate-950">{CARD_RARITY_LABEL[c.rarity]}</span>}
+                  <span className="mt-0.5 line-clamp-2 min-h-[26px] text-[10px] font-bold leading-tight text-slate-100" style={JA_WRAP_STYLE}>{on ? name : ''}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+        {open && allOpen && (
+          <div data-card-pack-summary className="mt-3 text-center text-[12px] font-bold text-slate-300">
+            {packPoint > 0 ? <>だぶったカードは <b className="text-amber-200">カードポイント +{packPoint}</b> になりました</> : 'だぶったカードはありません'}
+            {last && result.packs.length > 1 && <div className="mt-0.5">({result.packs.length}パックで +{result.dupPoint})</div>}
+          </div>
+        )}
+      </div>
+      <div className={SCREEN_FOOTER_CLASS}>
+        {!open ? <div className="text-center text-[12px] font-bold text-slate-400">パックをタップしてください</div>
+          : !allOpen ? <button type="button" data-card-pack-flip-all className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]" onClick={flipAll}>全部めくる</button>
+          : !last ? <button type="button" data-card-pack-next className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]" onClick={next}>つぎのパック</button>
+          : <button type="button" data-card-pack-done className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]" onClick={() => { Audio_.se.tap(); onDone(); }}>マーケットへ戻る</button>}
+      </div>
+      {detail && <CardDetailModal db={db} no={detail} onClose={() => setDetail(null)}/>}
+    </div>
+  );
+};
+
+// ==================== マーケットの「カードポイント」の売り場: パックとスターターキット(区切り2) ====================
+// 55-screen-breeder-market.jsx の「カードポイント」の売り場から出す。円盤石・アシストカードは 55 側(ビートP交換所と同じ並べ方)
+// onBuyPack(packId, count) / onBuyStarter(kitId) … 60-app が保存して、パックならパックを開ける画面へ進む
+const CardShopPacks = ({ db, point, busy, onBuyPack }) => {
+  const [rates, setRates] = useState(null);
+  const [confirm, setConfirm] = useState(null);
+  const pct = (x) => `${(Math.round(x * 1000) / 10).toFixed(1)}%`;
+  return (
+    <div data-card-shop-packs className="space-y-2 pb-2">
+      {CARD_PACKS.map((pack) => {
+        const r = cardPackRates(db, pack.id);
+        return (
+          <div key={pack.id} data-card-shop-pack={pack.id} className={SCREEN_PANEL_CLASS} style={{ borderColor: `${pack.color}88` }}>
+            <div className="flex items-center gap-2">
+              <div className="flex h-[56px] w-[40px] shrink-0 items-center justify-center rounded-md border-2 border-white/60 text-[20px]" style={{ background: `linear-gradient(160deg, ${pack.color}, #1e1b4b)` }}>🎴</div>
+              <div className="min-w-0 flex-1">
+                <div className="text-[14px] font-black text-white">{pack.name}</div>
+                <div className="text-[11px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{pack.tech ? `${pack.tech + pack.mon}枚入り(技など${pack.tech}枚・モンスター${pack.mon}枚)` : `${pack.mon}枚入り(3枚とも混血モンスター)`}</div>
+                <button type="button" data-card-shop-rates={pack.id} onClick={() => setRates(rates === pack.id ? null : pack.id)} className="mt-0.5 text-[11px] font-black text-sky-300 underline">出る確率を見る</button>
+              </div>
+            </div>
+            {rates === pack.id && r && (
+              <div data-card-shop-rate-table className="mt-1.5 rounded-lg bg-black/30 p-2 text-[11px] font-bold leading-relaxed text-slate-200">
+                {pack.tech > 0 && <div>技などの枠(1パック{pack.tech}枚): {r.techKinds}種類から同じ確率(1種類 {pct(r.techEach)})。準備中のカードは出ません</div>}
+                <div>モンスターの枠(1パック{pack.mon}枚): 通常 {pack.rarity.normal}%{pack.rarity.kira ? `・キラ ${pack.rarity.kira}%` : ''}{pack.rarity.alt ? `・別絵キラ ${pack.rarity.alt}%` : ''}(通常{r.mons.normal}種{r.mons.kira ? `・キラ${r.mons.kira}種` : ''}{r.mons.alt ? `・別絵キラ${r.mons.alt}種` : ''})。まだ持っていない種族は2倍出やすい</div>
+                {pack.pity && <div>キラも別絵キラも出ないまま{CARD_PACK_PITY_AT}パック開けたら、つぎのパックはキラ以上</div>}
+                <div>だぶったカードはカードポイントになります(技など4枚目から{CARD_DUP_POINT.tech}・モンスター2枚目から{pack.id === 'hybrid' ? CARD_DUP_POINT.hybrid : `${CARD_DUP_POINT.normal}〔キラ${CARD_DUP_POINT.kira}・別絵キラ${CARD_DUP_POINT.alt}〕`})</div>
+              </div>
+            )}
+            <div className={`mt-2 grid gap-1.5 ${pack.bundle ? 'grid-cols-2' : 'grid-cols-1'}`}>
+              <button type="button" data-card-shop-buy={`${pack.id}-1`} disabled={busy || point < pack.price} onClick={() => setConfirm({ pack, count: 1 })} className="mh-button min-h-[44px] rounded-xl bg-orange-500 text-[13px] font-black text-white active:scale-[.98] disabled:opacity-40">1パック {pack.price}</button>
+              {pack.bundle && <button type="button" data-card-shop-buy={`${pack.id}-${pack.bundle.n}`} disabled={busy || point < pack.bundle.price} onClick={() => setConfirm({ pack, count: pack.bundle.n })} className="mh-button min-h-[44px] rounded-xl bg-orange-600 text-[13px] font-black text-white active:scale-[.98] disabled:opacity-40">{pack.bundle.n}パック {pack.bundle.price}<span className="block text-[9px] font-bold">({pack.price * pack.bundle.n - pack.bundle.price}おトク)</span></button>}
+            </div>
+          </div>
+        );
+      })}
+      {confirm && <ConfirmSheet title={`${confirm.pack.name}を${confirm.count}パック買いますか？`} message={`カードポイント ${cardPackPrice(confirm.pack, confirm.count)} を使います(いま ${point})`} confirmLabel="買って開ける" onCancel={() => setConfirm(null)} onConfirm={() => { const c = confirm; setConfirm(null); void onBuyPack(c.pack.id, c.count); }}/>}
+    </div>
+  );
+};
+const CardShopStarters = ({ db, point, busy, starter, shop, onBuyStarter }) => {
+  const [confirm, setConfirm] = useState(null);
+  const [done, setDone] = useState('');
+  const kits = Object.values(db.starters).filter((k) => !starter || k.id !== starter.kit);
+  return (
+    <div data-card-shop-starters className="space-y-2 pb-2">
+      {done && <div data-card-shop-starter-done className="rounded-xl border border-emerald-400/40 bg-emerald-950/40 px-3 py-2 text-[12px] font-black text-emerald-200">{done}</div>}
+      <p className="text-[11px] font-bold text-slate-400">はじめに選ばなかったスターターキット。1つにつき1回、{CARD_STARTER_SHOP_PRICE}カードポイント。デッキも1つ増えます</p>
+      {kits.map((k) => {
+        const bought = !!(shop && shop.starters && shop.starters[k.id]);
+        return (
+          <div key={k.id} data-card-shop-starter={k.id} className={SCREEN_PANEL_CLASS}>
+            <div className="flex items-center gap-2">
+              <div className="flex shrink-0 gap-0.5">{k.monsters.map((no) => { const m = cardMonsterOf(db, no); return m ? <img key={no} src={CARD_IMG(m.img)} alt={m.name} className="h-[52px] w-[37px] rounded-[4px] object-cover"/> : null; })}</div>
+              <div className="min-w-0 flex-1">
+                <div className="text-[13px] font-black text-white" style={JA_WRAP_STYLE}>{jaWrap(k.name)}</div>
+                <div className="text-[11px] font-bold text-slate-300">モンスター3枚・カード{k.cards.length}枚</div>
+              </div>
+            </div>
+            <button type="button" data-card-shop-starter-buy={k.id} disabled={bought || busy || point < CARD_STARTER_SHOP_PRICE} onClick={() => setConfirm(k)} className="mh-button mt-2 min-h-[44px] w-full rounded-xl bg-orange-500 text-[13px] font-black text-white active:scale-[.98] disabled:opacity-40">{bought ? '買いました' : `${CARD_STARTER_SHOP_PRICE}カードポイント`}</button>
+          </div>
+        );
+      })}
+      {confirm && <ConfirmSheet title={`「${confirm.name}」を買いますか？`} message={`カードポイント ${CARD_STARTER_SHOP_PRICE} を使います(いま ${point})。だぶったカードはカードポイントになります`} confirmLabel="買う" onCancel={() => setConfirm(null)} onConfirm={async () => { const k = confirm; setConfirm(null); const r = await onBuyStarter(k.id); if (r && r.ok) setDone(`「${k.name}」を買いました。デッキ編成に1つ増えています${r.dupPoint > 0 ? `(だぶったカードはカードポイント +${r.dupPoint})` : ''}`); }}/>}
+    </div>
+  );
+};
 
 // ---- part: 81-debug-trials.jsx ----
 // ===== 確認待ちの試作(デバッグ設定のいちばん上・2026-10-16 社長「新しいのを確認するのも分かりやすくしないと探すのが大変すぎる」) =====
@@ -57495,6 +57823,10 @@ function MonsterHeroGame() {
   const [cardBgm, setCardBgm] = useState(null);
   // MFバトルカードへどこから入ったか('debug' … デバッグ設定から / 'home' … HOME の入口・公開のお話のあと)。戻るボタンの行き先と、デバッグの道具を出すかに使う
   const [cardOrigin, setCardOrigin] = useState('home');
+  // MFバトルカードの「マーケットへ」から入ったときだけ、マーケットに「カードポイント」の売り場を出す(デバッグ専用のあいだ。区切り2)
+  const [cardMarketEntry, setCardMarketEntry] = useState(false);
+  const [cardShopState, setCardShopState] = useState(null); // { point, starter, shop }(売り場に出す分だけ。保存の正本は mh_card_*)
+  const [cardPackOpen, setCardPackOpen] = useState(null);   // パックを開ける画面に渡す結果 { packId, packs, dupPoint, cost }
   const rhythmEventStorySeenRef = useRef(null);
   const [rhythmEventStoryPending, setRhythmEventStoryPending] = useState(null);
   // 招待リンク(?friend=フレンドコード)で開いたとき。URLからコードを拾って(拾ったらURLからは消す)、
@@ -58118,6 +58450,7 @@ function MonsterHeroGame() {
     if (BGM_SILENT_STATES.includes(state)) return null;
     // MFバトルカードは画面の部品が曲を決める(対戦は相手の助手の曲。それ以外はHOMEの曲を続ける)
     if (state === 'CARD_TOP' || state === 'CARD_BATTLE') return cardBgm || homeBgm;
+    if (state === 'CARD_PACK_OPEN') return homeBgm; // パックを開ける(マーケットと同じく HOME の曲を続ける)
     if (state === 'HOME' || state === 'PROFILE' || state === 'ITEM_INVENTORY') return homeBgm;
     if (BGM_STATE_MAP[state] === 'home') return homeBgm;
     if (BGM_STATE_MAP[state]) return bgmArrangementWithEventDefault(bgmArrangement, BGM_STATE_MAP[state]) || BGM_STATE_MAP[state];
@@ -60889,6 +61222,110 @@ function MonsterHeroGame() {
       return exchange;
     } catch {
       setMarketExchangeError('交換を保存できませんでした。ビートPと所持品は変更していません。');
+      return { ok:false, reason:'save' };
+    } finally { marketPurchaseProcessingRef.current = false; }
+  };
+
+  // ===== MFバトルカードの「カードポイント」の売り場(区切り2) =====
+  // ★どれも保存されている値を読み直してから計算し、まとめて1つの取引で保存する(失敗したら全部戻す)
+  // ★カードの保存は mh_card_* の新しいキーだけ。円盤石・アシストカードは、ビートP交換所と同じ入れ物(mh_unlocked_monsters・mh_unlocked_teachings)へ
+  const loadCardShop = async () => {
+    const K = CARD_SAVE_KEYS;
+    const [point, starter, shop] = await Promise.all([storeGet(K.point, null), storeGet(K.starter, null), storeGet(K.shop, null)]);
+    const next = { point: cardNormalizePoint(point), starter: cardNormalizeStarter(starter), shop: cardNormalizeShop(shop) };
+    setCardShopState(next);
+    return next;
+  };
+  const buyCardPacks = async (packId, count) => {
+    if (marketPurchaseProcessingRef.current || typeof CARD_BATTLE_DATA === 'undefined') return { ok:false, reason:'busy' };
+    marketPurchaseProcessingRef.current = true;
+    setMarketExchangeError('');
+    try {
+      const K = CARD_SAVE_KEYS;
+      const [rawCol, rawPity, rawPoint] = await Promise.all([storeGet(K.collection, null), storeGet(K.pity, null), storeGet(K.point, null)]);
+      const point = cardNormalizePoint(rawPoint);
+      const r = cardBuyPacks(CARD_BATTLE_DATA, packId, count, { collection: cardNormalizeCollection(rawCol), pity: cardNormalizePity(rawPity), point }, Math.random);
+      if (!r) { setMarketExchangeError('カードポイントが足りません。'); return { ok:false, reason:'points' }; }
+      const saved = await saveStoredValuesOrRollback([
+        { key: K.collection, before: rawCol, next: r.collection },
+        { key: K.pity, before: rawPity, next: r.pity },
+        { key: K.point, before: rawPoint, next: r.point },
+      ], storeGet, storeSet);
+      if (!saved) { setMarketExchangeError('保存できませんでした。カードポイントは変わっていません。'); return { ok:false, reason:'save' }; }
+      setCardShopState((cur) => ({ ...(cur || {}), point: r.point }));
+      setCardPackOpen({ packId, packs: r.packs, dupPoint: r.dupPoint, cost: r.cost });
+      setGameState('CARD_PACK_OPEN');
+      return { ok:true };
+    } catch {
+      setMarketExchangeError('保存できませんでした。カードポイントは変わっていません。');
+      return { ok:false, reason:'save' };
+    } finally { marketPurchaseProcessingRef.current = false; }
+  };
+  const buyCardStarter = async (kitId) => {
+    if (marketPurchaseProcessingRef.current || typeof CARD_BATTLE_DATA === 'undefined') return { ok:false, reason:'busy' };
+    marketPurchaseProcessingRef.current = true;
+    setMarketExchangeError('');
+    try {
+      const K = CARD_SAVE_KEYS;
+      const [rawCol, rawDecks, rawPoint, rawStarter, rawShop] = await Promise.all([storeGet(K.collection, null), storeGet(K.decks, null), storeGet(K.point, null), storeGet(K.starter, null), storeGet(K.shop, null)]);
+      const r = cardBuyStarter(CARD_BATTLE_DATA, kitId, { collection: cardNormalizeCollection(rawCol), decks: cardNormalizeDecks(rawDecks), point: cardNormalizePoint(rawPoint), starter: cardNormalizeStarter(rawStarter), shop: cardNormalizeShop(rawShop) }, Date.now());
+      if (!r) { setMarketExchangeError('買えませんでした(カードポイントが足りないか、もう持っています)。'); return { ok:false, reason:'points' }; }
+      const saved = await saveStoredValuesOrRollback([
+        { key: K.collection, before: rawCol, next: r.collection },
+        { key: K.decks, before: rawDecks, next: r.decks },
+        { key: K.point, before: rawPoint, next: r.point },
+        { key: K.shop, before: rawShop, next: r.shop },
+      ], storeGet, storeSet);
+      if (!saved) { setMarketExchangeError('保存できませんでした。カードポイントは変わっていません。'); return { ok:false, reason:'save' }; }
+      setCardShopState((cur) => ({ ...(cur || {}), point: r.point, shop: r.shop }));
+      return { ok:true, dupPoint: r.dupPoint };
+    } catch {
+      setMarketExchangeError('保存できませんでした。カードポイントは変わっていません。');
+      return { ok:false, reason:'save' };
+    } finally { marketPurchaseProcessingRef.current = false; }
+  };
+  // 円盤石・アシストカード(ビートP交換所と同じ物・同じ1,500)。確かめは rhythmEventPointExchangePreview をそのまま使い、引くのはカードポイント
+  const exchangeCardPoints = async (offer) => {
+    if (marketPurchaseProcessingRef.current) return { ok:false, reason:'busy' };
+    marketPurchaseProcessingRef.current = true;
+    setMarketExchangeError('');
+    try {
+      const K = CARD_SAVE_KEYS;
+      const rawPoint = await storeGet(K.point, null);
+      const point = cardNormalizePoint(rawPoint);
+      const isDisc = offer?.kind==='disc';
+      const isAssist = offer?.kind==='assist';
+      if (!isDisc && !isAssist) return { ok:false, reason:'invalidOffer' };
+      const storedUnlocked = isDisc ? await storeGet('mh_unlocked_monsters', STARTER_MONSTER_IDS, false) : null;
+      const storedTeachings = isAssist ? await storeGet('mh_unlocked_teachings', STARTER_TEACHING_IDS, false) : null;
+      const exchange = rhythmEventPointExchangePreview({ offer, eventPoints: point, gold: Math.max(0, Math.floor(Number(gold) || 0)), ownedItems: ownedItemsRef.current, quantity: 1,
+        unlockedMonsterIds: Array.isArray(storedUnlocked) ? storedUnlocked : unlockedMonsterIds, unlockedTeachingIds: Array.isArray(storedTeachings) ? storedTeachings : unlockedTeachingIds });
+      if (!exchange.ok) {
+        setMarketExchangeError(exchange.reason==='points'?'カードポイントが足りません。':exchange.reason==='owned'?(isAssist?'このアシストカードはもう持っています。':'このモンスターはもう持っています。'):'交換できませんでした。');
+        return exchange;
+      }
+      const saved = await saveStoredValuesOrRollback([
+        { key: K.point, before: rawPoint, next: exchange.eventPoints },
+        ...(isDisc ? [{ key:'mh_unlocked_monsters', before:storedUnlocked, next:exchange.unlockedMonsterIds }] : []),
+        ...(isAssist ? [{ key:'mh_unlocked_teachings', before:storedTeachings, next:exchange.unlockedTeachingIds }] : []),
+      ], storeGet, storeSet);
+      if (!saved) { setMarketExchangeError('交換を保存できませんでした。カードポイントと所持品は変更していません。'); return { ok:false, reason:'save' }; }
+      setCardShopState((cur) => ({ ...(cur || {}), point: exchange.eventPoints }));
+      if (isDisc) {
+        setUnlockedMonsterIds(exchange.unlockedMonsterIds);
+        // ビートP交換所と同じく、編成に空きがあれば自動で入れる
+        if (monsterRosterIds.length < STARTER_MONSTER_IDS.length) {
+          const rosters = monsterPartySets.rosters.map((roster,index)=>index===monsterPartySets.activeIndex?[...roster,exchange.monsterId]:roster);
+          saveMonsterPartySets({ ...monsterPartySets, rosters });
+        }
+      }
+      if (isAssist) {
+        setUnlockedTeachingIds(exchange.unlockedTeachingIds);
+        setTeachingRosterIds(prev => { if (prev.length >= TEACHING_ROSTER_SIZE) return prev; const next = [...prev, exchange.cardId]; storeSet('mh_teaching_roster', next, false); return next; });
+      }
+      return exchange;
+    } catch {
+      setMarketExchangeError('交換を保存できませんでした。カードポイントと所持品は変更していません。');
       return { ok:false, reason:'save' };
     } finally { marketPurchaseProcessingRef.current = false; }
   };
@@ -72187,7 +72624,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onClose:()=>setRaidJackDetailMon(null),accent:'indigo',readOnly:true,
             label:`${raidJackDetailMon.name}の詳細`,
           })}</>)}
-        {(gameState==='CARD_TOP'||gameState==='CARD_BATTLE')&&(<CardBattleScreen screen={gameState} onNavigate={setGameState} onExit={()=>{setCardBgm(null);setCardOrigin('home');setGameState(cardOrigin==='debug'?'DEBUG_SETTINGS':'HOME');}} exitLabel={cardOrigin==='debug'?'デバッグ設定へ戻る':'HOMEへ戻る'} seenStoryIds={rhythmEventStorySeen||[]} debug={cardOrigin==='debug'} onBgm={setCardBgm} onQuickLoops={awardBackQuickLoops}/>)}
+        {(gameState==='CARD_TOP'||gameState==='CARD_BATTLE'||(gameState==='CARD_PACK_OPEN'&&!cardPackOpen))&&(<CardBattleScreen screen={gameState} onNavigate={setGameState} onExit={()=>{setCardBgm(null);setCardOrigin('home');setGameState(cardOrigin==='debug'?'DEBUG_SETTINGS':'HOME');}} exitLabel={cardOrigin==='debug'?'デバッグ設定へ戻る':'HOMEへ戻る'} seenStoryIds={rhythmEventStorySeen||[]} debug={cardOrigin==='debug'} onBgm={setCardBgm} onQuickLoops={awardBackQuickLoops} onOpenMarket={()=>{setCardMarketEntry(true);setMarketExchangeError('');void loadCardShop();setGameState('BREEDER_MARKET');}}/>)}
         {gameState==='RAID_JACK_DEBUG'&&(<RaidJackDebugScreen onBack={()=>setGameState('DEBUG_SETTINGS')} raidForce={raidJackDebugForce} onToggleRaidForce={()=>setRaidJackDebugForce(v=>!v)} realRules={raidJackDebugRealRules} onToggleRealRules={()=>setRaidJackDebugRealRules(v=>!v)} onOpenRaid={async()=>{setRaidJackDebugForce(true);await openRaidJack();}} onGoHome={returnToHome} onPreviewRhythmResult={(kind)=>{const pumpkin=kind==='pumpkin';const t=pumpkin?RAID_JACK_PUMPKIN:RAID_JACK_A_TIERS[2];const hp=t.hp;const before=Math.floor(hp*0.6);const damage=523456;setRaidJackResult({way:'rhythm',songName:'Monster Hero',difficultyName:'HARD',score:523456,assist:false,kind:'a',tierIndex:pumpkin?RAID_JACK_A_TIERS.length-1:2,tierName:t.name,reason:'rhythm',damage,defeated:false,turns:0,levelUps:0,growths:0,outcome:'sent',opened:false,eventId:'raid_jack_debug',quickAward:null,lifeLeft:pumpkin?hp:Math.max(0,before-damage),lifeBefore:pumpkin?null:before,lifeMax:hp,pumpkin});}} onPreviewDamageFx={(kind)=>{const t=RAID_JACK_A_TIERS[2];const hp=t.hp;setRaidDamageFx(kind==='none'?{key:`preview-${Date.now()}`,tierIndex:2,tierName:t.name,score:0,damage:0,assist:true,lifeBefore:Math.floor(hp*0.6),max:hp,pumpkin:false}:{key:`preview-${Date.now()}`,tierIndex:2,tierName:t.name,score:523456,damage:kind==='down'?hp:523456,assist:false,lifeBefore:kind==='down'?Math.floor(hp*0.05):Math.floor(hp*0.6),max:hp,pumpkin:false});}} onStartBattle={(kind,tierIndex,opts)=>{
           // 回数は使わず、別のイベントID(raid_jack_debug)で送る確認用の入口。runMode は反映されてから始まる(useEffect)
           const isB=kind==='b'; const mode=isB?BATTLE_MODE_RAID_JACK_B:BATTLE_MODE_RAID_JACK_A;
@@ -72490,7 +72927,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             isItemOwned={isMarketItemOwned}
             frameConditionOf={(frameId,shop)=>profileFrameConditionStatus(profileFrameById(frameId),rhythmClearTotal,shop)}
             previewIcon={{ src:resolveIconUrl(breederIcon), id:breederIcon }}
-            onBack={returnToHome}
+            onBack={cardMarketEntry?()=>{setCardMarketEntry(false);setMarketExchangeError('');setGameState('CARD_TOP');}:returnToHome}
             onSelectTab={(key)=>{setMarketTab(key);setMarketExchangeError('');}}
             onZoomIcon={setMarketIconZoom}
             onBuy={buyMarketItem}
@@ -72501,7 +72938,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             eventPoints={rhythmEventPoints}
             onExchangeEventPoints={exchangeRhythmEventPoints}
             onOpenUpcomingDetail={setUpcomingMonsterDetail}
+            cardShop={cardMarketEntry&&cardShopState?{ ...cardShopState, busy:false, onBuyPack:buyCardPacks, onBuyStarter:buyCardStarter, onExchange:exchangeCardPoints }:null}
+            initialSection={cardMarketEntry?'card':null}
           />
+        )}
+        {/* MFバトルカード: パックを開ける(区切り2)。買うのはマーケットの「カードポイント」の売り場 */}
+        {gameState==='CARD_PACK_OPEN'&&cardPackOpen&&typeof CARD_BATTLE_DATA!=='undefined'&&(
+          <CardPackOpen db={CARD_BATTLE_DATA} result={cardPackOpen} onDone={()=>{setCardPackOpen(null);setGameState('BREEDER_MARKET');}}/>
         )}
 
         {/* ROSTER (編成) */}
