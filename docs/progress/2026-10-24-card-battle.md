@@ -36,3 +36,13 @@
 - 裏でクイック∞周回とのつなぎ(5-3)・横画面(`landscape-screens-check.js`)・BGM の設定画面(`mh_card_bgm_v1`)・演出の設定(`mh_card_settings_v1`)は公開の区切りで入れる(いまはデバッグからしか入れず、周回中に入る道がない)。
 - 守れるカードが無いときの自動パス(`mh_card_settings_v1`)。
 - 区切り2: デッキ編成・パック・マーケットの「カードポイント」欄・図鑑・ルール。
+
+### 区切り1の画面の写真(390×844・`card-battle-browser-check.js` で撮った)
+
+| | |
+| --- | --- |
+| スターター選び ![](card-battle/step1-01-starter.jpg) | トップ ![](card-battle/step1-02-top.jpg) |
+| 相手えらび ![](card-battle/step1-03-foe.jpg) | 対戦の始まり ![](card-battle/step1-04-battle-start.jpg) |
+| 長押しの詳しい画面 ![](card-battle/step1-05-detail.jpg) | 狙う相手を選ぶ ![](card-battle/step1-06-target.jpg) |
+| 守りの番 ![](card-battle/step1-07-guard.jpg) | 捨て札の一覧 ![](card-battle/step1-08-discard.jpg) |
+| 結果(投了) ![](card-battle/step1-09-result.jpg) | |
