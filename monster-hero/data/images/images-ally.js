@@ -320,6 +320,28 @@ const HYBRID_C059_FACE_ICON = "images/monster-icons/face/c059.png?v=106d33ba40e0
 const HYBRID_C060_FACE_ICON = "images/monster-icons/face/c060.png?v=6068ebe63111";
 const HYBRID_C061_FACE_ICON = "images/monster-icons/face/c061.png?v=920ea9e836ad";
 const HYBRID_C062_FACE_ICON = "images/monster-icons/face/c062.png?v=07f17eb1dfee";
+const HYBRID_C055_FACE_ICON = "images/monster-icons/face/c055.png?v=a71918e0b84b";
+const HYBRID_C063_FACE_ICON = "images/monster-icons/face/c063.png?v=c15a3b0c53cf";
+const HYBRID_C064_FACE_ICON = "images/monster-icons/face/c064.png?v=59768761cc69";
+const HYBRID_C065_FACE_ICON = "images/monster-icons/face/c065.png?v=c0a6301e2c2a";
+// カードの対戦画面などが番号から引く顔アイコンの表(立ち絵の HYBRID_MONSTER_IMGS と同じ番号)
+const HYBRID_MONSTER_FACE_ICONS = Object.freeze({
+  'C-051': HYBRID_C051_FACE_ICON,
+  'C-052': HYBRID_C052_FACE_ICON,
+  'C-053': HYBRID_C053_FACE_ICON,
+  'C-054': HYBRID_C054_FACE_ICON,
+  'C-055': HYBRID_C055_FACE_ICON,
+  'C-056': HYBRID_C056_FACE_ICON,
+  'C-057': HYBRID_C057_FACE_ICON,
+  'C-058': HYBRID_C058_FACE_ICON,
+  'C-059': HYBRID_C059_FACE_ICON,
+  'C-060': HYBRID_C060_FACE_ICON,
+  'C-061': HYBRID_C061_FACE_ICON,
+  'C-062': HYBRID_C062_FACE_ICON,
+  'C-063': HYBRID_C063_FACE_ICON,
+  'C-064': HYBRID_C064_FACE_ICON,
+  'C-065': HYBRID_C065_FACE_ICON,
+});
 
 // 血統別のアイコン(エンブレム・144x146・金の枠つき)。2026-10-05・ユーザー提供の37個(blood-icons.zip)。
 // 血統のid(MONSTER_LINEAGES)との対応は、このファイルの下の MONSTER_LINEAGE_ICONS。ゲームにまだ無い血統のぶんも先に入れてある(使うのは血統を足すとき)。
