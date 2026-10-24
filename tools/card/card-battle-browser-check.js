@@ -152,12 +152,14 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     check('⑥ 詳しい画面はタップで閉じる', await page.locator('[data-card-detail]').count() === 0);
 
     // ⑤ 自分の番を進める(使えるカードを出す → 狙える相手 → 攻撃おわり → ガッツ)
-    let myActions = 0, guards = 0, gutsTurns = 0, shotGuard = false, shotTarget = false;
+    let myActions = 0, guards = 0, gutsTurns = 0, shotGuard = false, shotTarget = false, motionSeen = false, poseSeen = new Set();
     const deadline = Date.now() + 150000;
     while (Date.now() < deadline && gutsTurns < 6) {
       const mode = await page.locator('[data-card-battle]').getAttribute('data-card-mode').catch(() => null);
       if (mode === null) break;
-      if (mode === 'wait') { await page.waitForTimeout(300); continue; }
+      (await page.locator('[data-card-pose]').evaluateAll((els) => els.map((e) => e.getAttribute('data-card-pose')))).forEach((x) => poseSeen.add(x));
+      if ((await page.locator('[data-card-mon] [data-skill-fx]').count()) > 0) poseSeen.add('attack');
+      if (mode === 'wait') { await page.waitForTimeout(150); continue; }
       if (mode === 'setup') { await page.getByRole('button', { name: /始める$/ }).click(); continue; }
       if (mode === 'discard') { const n = await page.locator('[data-card-hand-card]').count(); for (let i = 0; i < n; i++) await page.locator(`[data-card-hand-card="${i}"]`).click(); await page.getByRole('button', { name: /捨てる$/ }).click().catch(() => {}); continue; }
       if (mode === 'guard') {
@@ -186,7 +188,13 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
           const target = page.locator('[data-card-mon].ring-rose-400').first();
           if (await target.count()) {
             if (!shotTarget) { await shot(page, '06-target'); layoutSeen.push(...(await layoutIssues(page)).map((x) => `狙う相手を選ぶ: ${x}`)); shotTarget = true; }
-            await target.click(); acted = true; break;
+            await target.click(); acted = true;
+            // ⑩ 技の動き: 攻撃した子の絵が、モンヒロの技の動き(SkillFxMotion)に差しかわる
+            if (!motionSeen) {
+              motionSeen = await page.locator('[data-card-mon] [data-skill-fx]').count() > 0;
+              if (motionSeen && SHOT) for (const [t, nm] of [[120, 'a'], [260, 'b'], [420, 'c']]) { await page.waitForTimeout(t === 120 ? 0 : 150); await shot(page, `10-motion-${nm}`); }
+            }
+            break;
           }
           const use = page.getByRole('button', { name: '使う' });
           if (await use.count()) { await use.click(); acted = true; break; }
@@ -199,6 +207,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       await page.waitForTimeout(300);
     }
     check(`⑨ ${VW}×${VH} で相手の場・まんなか・自分の場・手札・ボタンが重ならない`, layoutSeen.length === 0, layoutSeen.join(' / '));
+    check('⑩ 技を出すと、攻撃した子がモンヒロの技の動きをする', motionSeen || poseSeen.has('attack'), `見えた動き: ${[...poseSeen].join('・')}`);
     check('⑤ 自分の番を何ターンも進められる(技・守り・ガッツ)', gutsTurns >= 3 && errors.length === 0, `技 ${myActions} 回・守りの番 ${guards} 回・ターン終了 ${gutsTurns} 回`);
     // 捨て札の一覧
     await page.getByRole('button', { name: /^捨て札/ }).last().click();

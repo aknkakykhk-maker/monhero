@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7e38018da90e4f02
+// generated-sha256: fa8a6e12536b4c52
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-24 12:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-24 12:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -50845,6 +50845,100 @@ const cardLineSceneOf = (db, before, after, cpu) => {
   return null;
 };
 
+// ---- part: 85-card-battle-motion.jsx ----
+// ===== MFバトルカード: 技の動き(設計書 5-4「技と動きの対応表」) =====
+// カードの技を出したら、そのモンスターの立ち絵がモンヒロのバトルと同じ動きをする(社長 台帳 #3381「モンヒロのバトルを生かせるところは生かす」)。
+// 動きそのものは 24-battle-fx.jsx の SkillFxMotion(体の動き・飛ぶもの・敵に重ねる絵・当たったときの小片)をそのまま使う。
+// ここで決めるのは「どのカードに、どの動きを当てるか」だけ。
+//   1. モンヒロに同じ名前の技があれば、その子の動き(SKILL_MOTION_SETS)をそのまま使う
+//   2. ほかは、技の名前と種類から決まった動きに当てる(下の CARD_MOTION_RULES。当て方はデータなので、1枚ずつ上書きできる: CARD_MOTION_BY_NO)
+// 守り・受ける・倒れるの動き(よける・防ぐ・揺れ・倒れる)は CSS の mh-card-dodge / mh-card-guard / mh-card-hit / mh-card-ko(70-bootstrap.jsx)
+const CARD_MOTION_SPECS = Object.freeze({
+  cardJab:     skm('jab',   { c:'white',   over:'fist',  burst:'star' }),
+  cardKick:    skm('kick',  { c:'gold',    burst:'star' }),
+  cardDash:    skm('dash',  { c:'white',   burst:'dust' }),
+  cardBash:    skm('bash',  { c:'white',   burst:'star' }),
+  cardClaw:    skm('slash', { c:'white',   over:'claw' }),
+  cardBlade:   skm('slash', { c:'sky',     over:'xslash' }),
+  cardBite:    skm('bash',  { c:'red',     over:'bite' }),
+  cardThrow:   skm('flip',  { c:'rock',    over:'boom',  burst:'dust' }),
+  cardSpin:    skm('spin',  { c:'wind',    over:'tornado' }),
+  cardThunder: skm('cast',  { c:'thunder', over:'thunder', fx:skmFx('fall', 'bolt', 3) }),
+  cardFire:    skm('cast',  { c:'fire',    fx:skmFx('shot', 'fire', 3),  burst:'spark' }),
+  cardIce:     skm('cast',  { c:'ice',     fx:skmFx('shot', 'ice', 3),   over:'ice' }),
+  cardWater:   skm('cast',  { c:'blue',    fx:skmFx('shot', 'water', 3), burst:'water' }),
+  cardKiss:    skm('lick',  { c:'pink',    line:'tongue', burst:'heart' }),
+  cardSong:    skm('cast',  { c:'pink',    fx:skmFx('shot', 'note', 3),  burst:'note' }),
+  cardOrb:     skm('cast',  { c:'cosmic',  fx:skmFx('shot', 'orb', 3),   burst:'spark' }),
+  cardLight:   skm('float', { c:'holy',    line:'ray',   over:'pillar' }),
+  cardRock:    skm('toss',  { c:'rock',    fx:skmFx('lob', 'rock', 3),   burst:'rock' }),
+  cardLeaf:    skm('cast',  { c:'plant',   fx:skmFx('shot', 'leaf', 3),  burst:'leaf' }),
+  cardGas:     skm('toss',  { c:'gas',     fx:skmFx('lob', 'gas', 3),    over:'gas' }),
+  // 全ての相手に当たる技: 上から降らせて、波で広げる
+  cardAreaFire:  skm('cast', { c:'fire',    fx:skmFx('fall', 'fire', 8),  over:'wave' }),
+  cardAreaIce:   skm('cast', { c:'ice',     fx:skmFx('fall', 'snow', 8),  over:'wave' }),
+  cardAreaRock:  skm('jump', { c:'rock',    fx:skmFx('rise', 'rock', 6),  over:'wave', burst:'dust' }),
+  cardAreaWind:  skm('spin', { c:'wind',    over:'tornado', fx:skmFx('fall', 'feather', 6) }),
+  cardAreaStar:  skm('cast', { c:'gold',    fx:skmFx('fall', 'star', 8),  over:'wave' }),
+});
+// 動きの表を SkillFxMotion が読む入れ物へ入れておく(skillFxSpecOf は SKILL_FX_SPEC_CACHE を先に見る)
+Object.entries(CARD_MOTION_SPECS).forEach(([kind, sp]) => { SKILL_FX_SPEC_CACHE[kind] = skmNormalize(sp); });
+
+// [名前に当たる言葉, 動き]。上から順に見て、最初に当たったものを使う
+const CARD_MOTION_RULES = Object.freeze([
+  [/キッス|ぺろ|なめ|ベロ|舌/, 'cardKiss'],
+  [/歌|うた|ソング|音/, 'cardSong'],
+  [/雷|電撃|ライトニング|サンダー|稲妻|放電/, 'cardThunder'],
+  [/炎|火|ファイア|フレイム|熱|バーニング/, 'cardFire'],
+  [/冷|氷|ブリザード|吹雪|凍/, 'cardIce'],
+  [/水|泡|ツバ|しぶき|ウォーター/, 'cardWater'],
+  [/光|聖|レーザー|ビーム|ビッグバン/, 'cardLight'],
+  [/魔空|ドレイン|弾|玉|波動|念/, 'cardOrb'],
+  [/毒|ガス|おなら|胞子/, 'cardGas'],
+  [/葉|花|さくら|種|つる/, 'cardLeaf'],
+  [/岩|石|地震|ロック/, 'cardRock'],
+  [/投げ/, 'cardThrow'],
+  [/回転|ぐるぐる|竜巻|スピン|旋風|まわし/, 'cardSpin'],
+  [/剣|斬|まっぷたつ|Vの字|居合|カッター/, 'cardBlade'],
+  [/かみ|噛|かじ/, 'cardBite'],
+  [/ひっかき|爪|ツノ|クロー|突き|つき|くしざし|ヤリ|槍/, 'cardClaw'],
+  [/キック|けり|蹴|ひざ/, 'cardKick'],
+  [/体当たり|タックル|頭つき|突進|ダッシュ|ころがる|転がる/, 'cardDash'],
+  [/パンチ|チョップ|はたき|ソバット|ビンタ|でこぴん|こぶし|殴/, 'cardJab'],
+]);
+// カード番号ごとの上書き(社長が見て「この技はこう動いてほしい」と言ったら、その1枚だけここに足す)
+const CARD_MOTION_BY_NO = Object.freeze({});
+const CARD_MOTION_GAME_ID = Object.freeze({ tiger: 'Tiger', golem: 'Golem', suezo: 'Suezo', pixie: 'Pixie', hare: 'Ham', mocchi: 'Mocchi', monol: 'Monol', plant: 'Plant' });
+
+// そのカードの技を、その子が出すときの動き(SkillFxMotion の kind)。特殊技・ブリーダーは体を動かさない(null)
+const cardMotionKindOf = (db, cardNo, mon) => {
+  const c = cardOf(db, cardNo);
+  if (!c || !cardIsAttackKind(c.kind) || c.kind === 'spe' || c.user === 'breeder') return null;
+  if (CARD_MOTION_BY_NO[c.no]) return CARD_MOTION_BY_NO[c.no];
+  // 1. モンヒロに同じ名前の技がある(スエゾーのかみつき・モッチーのもっちゃん など)
+  const id = mon && (CARD_MOTION_GAME_ID[mon.species] || CARD_MOTION_GAME_ID[mon.main]);
+  const names = id && typeof HERO_ATK_NAMES !== 'undefined' ? HERO_ATK_NAMES[id] : null;
+  const i = Array.isArray(names) ? names.indexOf(c.name) : -1;
+  const set = id && typeof SKILL_MOTION_SETS !== 'undefined' ? SKILL_MOTION_SETS[id] : null;
+  if (i >= 0 && set && set.normal && set.normal[i] && set.normal[i] !== SKM_SIG && i < 10) return `${id}-n${i}`;
+  // 2. 名前と種類から
+  const hit = CARD_MOTION_RULES.find(([re]) => re.test(c.name));
+  const base = hit ? hit[1] : (c.kind === 'int' ? 'cardOrb' : 'cardBash');
+  if (cardHasEff(c, 'area')) {
+    if (base === 'cardFire') return 'cardAreaFire';
+    if (base === 'cardIce') return 'cardAreaIce';
+    if (base === 'cardRock') return 'cardAreaRock';
+    if (base === 'cardSpin') return 'cardAreaWind';
+    return 'cardAreaStar';
+  }
+  return base;
+};
+// 動きの長さ(この長さのあいだ、動いている子の絵を SkillFxMotion に差しかえる)
+const cardMotionMs = (kind) => {
+  const sp = kind && typeof skillFxSpecOf === 'function' ? skillFxSpecOf(kind) : null;
+  return sp && sp.ms ? sp.ms : 650;
+};
+
 // ---- part: 84-screen-card-battle.jsx ----
 // ==================== 画面: MFバトルカード ====================
 // 紙の『モンスターファームバトルカード』を元にしたカードバトル。設計: docs/spec/CARD_BATTLE.md
@@ -51021,7 +51115,7 @@ const CardDiscardModal = ({ db, st, initial = CARD_ME, onDetail, onClose }) => {
 };
 
 // ---- 場のモンスター1体(カードの小さい絵・名前・ライフ・特徴・モンヒロの絵) ----
-const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact = false }) => {
+const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact = false, motion = null }) => {
   const mon = st.players[p].mons[m];
   const art = cardMonArt(mon);
   const ty = cardMonType(mon, st.turn);
@@ -51040,13 +51134,23 @@ const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact
       </div>
     </div>
   );
+  // 動き(85-card-battle-motion.jsx): attack … SkillFxMotion で技の動き / hit 揺れ / dodge よける / guard 防ぐ(光の盾) / KO は倒れたまま
+  const artSize = compact ? 'max-h-[56px] max-w-[72px]' : 'max-h-[78px] max-w-[96px]';
+  const imgEl = art
+    ? <img src={art} alt="" className={`${artSize} object-contain drop-shadow-[0_6px_6px_rgba(0,0,0,.6)] ${opp ? '-scale-x-100' : ''}`}/>
+    : <img src={CARD_IMG(cardMonsterOf(db, mon.no).img)} alt="" className={`${compact ? 'h-[54px]' : 'h-[74px]'} rounded-md object-cover`}/>;
+  const mv = motion && !mon.ko ? motion : null;
+  const poseClass = mon.ko ? 'mh-card-ko' : mv && mv.type === 'hit' ? 'mh-card-hit' : mv && mv.type === 'dodge' ? 'mh-card-dodge' : mv && mv.type === 'guard' ? 'mh-card-guard' : '';
   const artEl = (
-    <div className={`relative flex ${compact ? 'h-[56px]' : 'h-[78px]'} w-full items-end justify-center`}>
-      {art ? <img src={art} alt="" className={`${compact ? 'max-h-[56px] max-w-[72px]' : 'max-h-[78px] max-w-[96px]'} object-contain drop-shadow-[0_6px_6px_rgba(0,0,0,.6)] ${opp ? '-scale-x-100' : ''} ${mon.ko ? 'grayscale opacity-30' : ''}`}/>
-        : <img src={CARD_IMG(cardMonsterOf(db, mon.no).img)} alt="" className={`${compact ? 'h-[54px]' : 'h-[74px]'} rounded-md object-cover ${mon.ko ? 'grayscale opacity-30' : ''}`}/>}
+    <div data-card-art={`${p}-${m}`} className={`relative flex ${compact ? 'h-[56px]' : 'h-[78px]'} w-full items-end justify-center`}
+      style={mv && mv.type === 'attack' ? { '--atk-dx': `${mv.dx}px`, '--atk-dy': `${mv.dy}px`, zIndex: 40 } : undefined}>
+      {mv && mv.type === 'attack' && mv.kind
+        ? <SkillFxMotion key={mv.key} kind={mv.kind} image={imgEl}/>
+        : <div key={mv ? mv.key : 'still'} data-card-pose={mon.ko ? 'ko' : mv ? mv.type : 'still'} className={`flex items-end justify-center ${poseClass}`}>{imgEl}</div>}
+      {mv && mv.type === 'guard' && <span key={`${mv.key}-s`} className="mh-card-shield" aria-hidden="true"/>}
       {mon.ko && <span className="absolute bottom-2 rounded bg-black/70 px-1.5 text-[12px] font-black text-slate-300">KO</span>}
       {fx.map((f) => (
-        <span key={f.key} className={`pointer-events-none absolute top-1 text-[30px] font-black ${f.dmg > 0 ? 'animate-bounce text-white' : 'text-sky-200'}`} style={{ WebkitTextStroke: f.dmg > 0 ? '2px #dc2626' : '1px #0369a1', textShadow: '0 0 10px rgba(248,113,113,.8)' }}>
+        <span key={f.key} className={`pointer-events-none absolute top-1 z-[50] text-[30px] font-black ${f.dmg > 0 ? 'animate-bounce text-white' : 'text-sky-200'}`} style={{ WebkitTextStroke: f.dmg > 0 ? '2px #dc2626' : '1px #0369a1', textShadow: '0 0 10px rgba(248,113,113,.8)' }}>
           {f.dmg > 0 ? `−${f.dmg}` : f.heal ? `＋${f.heal}` : 'ミス'}
         </span>
       ))}
@@ -51054,7 +51158,7 @@ const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact
   );
   const ring = mark === 'target' ? 'ring-4 ring-rose-400' : mark === 'user' ? 'ring-4 ring-amber-300' : mark === 'acting' ? 'ring-2 ring-amber-300/80' : '';
   return (
-    <div data-card-mon={`${p}-${m}`} {...(press ? press(mon.no, onTap) : { onClick: onTap })} className={`relative flex w-[31%] flex-col items-center rounded-xl p-0.5 ${ring} ${fx.some((f) => f.dmg > 0) ? 'brightness-125' : ''}`}>
+    <div data-card-mon={`${p}-${m}`} {...(press ? press(mon.no, onTap) : { onClick: onTap })} className={`relative flex w-[31%] flex-col items-center rounded-xl p-0.5 ${ring}`} style={motion && motion.type === 'attack' ? { zIndex: 40 } : undefined}>
       {opp ? <>{info}{artEl}</> : <>{artEl}{info}</>}
     </div>
   );
@@ -51075,6 +51179,13 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
   const [hint, setHint] = useState('');
   const [quit, setQuit] = useState(false);
   const [action, setAction] = useState(null);   // まんなかに出す、いま使った技
+  const [motions, setMotions] = useState({});   // 場の子の動き { 'p-m': { type, kind, dx, dy, key } }
+  const motionTimers = useRef([]);
+  useEffect(() => () => motionTimers.current.forEach(clearTimeout), []);
+  const playMotion = (id, mv, ms) => {
+    setMotions((cur) => ({ ...cur, [id]: mv }));
+    motionTimers.current.push(setTimeout(() => setMotions((cur) => (cur[id] && cur[id].key === mv.key ? (({ [id]: _, ...rest }) => rest)(cur) : cur)), ms));
+  };
   // 背の低い画面(iPhone SE など)では、絵と手札を少し小さくして、まんなかの場所を残す
   const [compact, setCompact] = useState(() => typeof window !== 'undefined' && window.innerHeight < 760);
   useEffect(() => { const on = () => setCompact(window.innerHeight < 760); window.addEventListener('resize', on); return () => window.removeEventListener('resize', on); }, []);
@@ -51114,6 +51225,27 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
       setTimeout(() => setFx((cur) => cur.filter((f) => !hits.some((h) => h.key === f.key))), 1000);
       if (hits.some((h) => h.dmg >= 3)) Audio_.se.crit(); else if (hits.some((h) => h.dmg > 0)) Audio_.se.attack(); else if (hits.some((h) => h.heal)) Audio_.se.heal(); else Audio_.se.guard();
     } else if (evs.some((e) => e.t === 'use')) Audio_.se.card();
+    // 技の動き: 攻撃した子が狙った子へ向かって動く(位置は画面で測る。全員に当たる技は相手の真ん中へ)
+    const centerOf = (id) => { const el = document.querySelector(`[data-card-art="${id}"]`); if (!el) return null; const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; };
+    evs.filter((e) => e.t === 'use' && e.mon >= 0).forEach((e, n) => {
+      const mon = next.players[e.p].mons[e.mon];
+      const kind = cardMotionKindOf(db, e.cards[0], mon);
+      if (!kind) return;
+      const from = centerOf(`${e.p}-${e.mon}`);
+      const to = e.target ? centerOf(`${e.target.p}-${e.target.m}`) : centerOf(`${1 - e.p}-1`);
+      if (!from || !to) return;
+      const key = `${next.log.length}-${n}-${Date.now()}`;
+      playMotion(`${e.p}-${e.mon}`, { type: 'attack', kind, dx: Math.round(to.x - from.x), dy: Math.round(to.y - from.y), key }, cardMotionMs(kind) + 80);
+    });
+    // 受ける・よける・防ぐ
+    evs.filter((e) => e.t === 'hit').forEach((e, n) => {
+      const type = e.evaded && !e.dmg ? 'dodge' : e.guarded && !e.dmg ? 'guard' : e.dmg > 0 ? 'hit' : (e.evaded ? 'dodge' : null);
+      if (type) playMotion(`${e.p}-${e.m}`, { type, key: `h${next.log.length}-${n}-${Date.now()}` }, 720);
+    });
+    evs.filter((e) => e.t === 'guard').forEach((e, n) => {
+      const c = cardOf(db, e.card);
+      playMotion(`${e.p}-${e.mon}`, { type: c && c.kind === 'dge' ? 'dodge' : 'guard', key: `g${next.log.length}-${n}-${Date.now()}` }, 720);
+    });
     const use = evs.find((e) => e.t === 'use');
     if (use) {
       const p0 = next.players[use.p];
@@ -51132,7 +51264,7 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
   useEffect(() => {
     if (st.winner !== null || paused) return undefined;
     if (cardDeciderOf(st) !== CARD_CPU) return undefined;
-    const wait = st.pending ? 700 : st.phase === 'guts' ? 600 : 900;
+    const wait = st.pending ? 950 : st.phase === 'guts' ? 600 : 900; // 守りの番は、技の動きを見せ切ってから
     const t = setTimeout(() => {
       const act = cardAiChooseAction(db, st, policy);
       if (!step(act)) step(st.pending ? { type: 'pass' } : st.phase === 'main' ? { type: 'endAttacks' } : { type: 'guts', hand: [] });
@@ -51292,7 +51424,7 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
       </div>
       {/* 吹き出し(帯の下・相手のモンスターの上。指の操作は下へ通す) */}
       <div className="flex shrink-0 items-start justify-around px-1">
-        {opp.mons.map((_, m) => <CardMonSlot key={m} db={db} st={st} p={CARD_CPU} m={m} mark={markOf(CARD_CPU, m)} fx={fx.filter((f) => f.p === CARD_CPU && f.m === m)} onTap={() => tapMon(CARD_CPU, m)} press={press} compact={compact}/>)}
+        {opp.mons.map((_, m) => <CardMonSlot key={m} db={db} st={st} p={CARD_CPU} m={m} mark={markOf(CARD_CPU, m)} fx={fx.filter((f) => f.p === CARD_CPU && f.m === m)} onTap={() => tapMon(CARD_CPU, m)} press={press} compact={compact} motion={motions[`1-${m}`] || null}/>)}
       </div>
       {/* まんなか: 技の動き(アクション)と、起きたことの記録(ログ)の場所。相手の場と自分の場をここで上下に分ける(社長 2026-10-24)
           ★次の区切りの技ごとの動きも、この data-card-stage の中で見せる */}
@@ -51316,7 +51448,7 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
         </div>
       </div>
       <div className="flex shrink-0 items-end justify-around px-1">
-        {me.mons.map((_, m) => <CardMonSlot key={m} db={db} st={st} p={CARD_ME} m={m} mark={markOf(CARD_ME, m)} fx={fx.filter((f) => f.p === CARD_ME && f.m === m)} onTap={() => tapMon(CARD_ME, m)} press={press} compact={compact}/>)}
+        {me.mons.map((_, m) => <CardMonSlot key={m} db={db} st={st} p={CARD_ME} m={m} mark={markOf(CARD_ME, m)} fx={fx.filter((f) => f.p === CARD_ME && f.m === m)} onTap={() => tapMon(CARD_ME, m)} press={press} compact={compact} motion={motions[`0-${m}`] || null}/>)}
       </div>
       <div className="flex shrink-0 justify-end px-2 py-1">{strip(CARD_ME)}</div>
       {guide && <div className="mx-auto mb-1 shrink-0 rounded-lg bg-amber-300 px-2 py-0.5 text-[11px] font-black text-slate-900">{hint || guide}</div>}
@@ -78642,6 +78774,17 @@ const createAnimationStyle = () => {
     @keyframes mhRjDmgIn { 0% { opacity: 0; } 100% { opacity: 1; } }
     @keyframes mhRjDmgOut { 0% { opacity: 1; } 100% { opacity: 0; } }
     @keyframes mhRjJackIn { 0% { opacity: 0; transform: translateY(14px) scale(.9); } 100% { opacity: 1; transform: none; } }
+    /* ==== MFバトルカード(85-card-battle-motion.jsx)の守りと倒れる動き。味方モンスターでもそのまま使える形にしておく(設計書 5-4) ====
+       よける: 横にすっと避けて戻る(残像つき) / 防ぐ: 身構えて光の盾 / 受ける: 揺れて光る / 倒れる: 横に倒れて沈み、暗くなる */
+    @keyframes mhCardDodge { 0% { transform: none; opacity: 1; } 30% { transform: translateX(34px) skewX(-10deg); opacity: .55; filter: drop-shadow(-14px 0 0 rgba(125,211,252,.55)); } 60% { transform: translateX(34px); opacity: .7; } 100% { transform: none; opacity: 1; } }
+    @keyframes mhCardGuard { 0% { transform: none; filter: none; } 25% { transform: scale(.9) translateY(4px); filter: drop-shadow(0 0 12px rgba(96,165,250,1)) brightness(1.25); } 70% { transform: scale(.94) translateY(2px); filter: drop-shadow(0 0 10px rgba(96,165,250,.8)); } 100% { transform: none; filter: none; } }
+    @keyframes mhCardShield { 0% { opacity: 0; transform: scale(.5); } 30% { opacity: .95; transform: scale(1.05); } 75% { opacity: .8; transform: scale(1); } 100% { opacity: 0; transform: scale(1.15); } }
+    @keyframes mhCardKo { 0% { transform: none; filter: none; } 20% { transform: translateY(-6px) rotate(-6deg); filter: brightness(1.8); } 100% { transform: translateY(14px) rotate(78deg) scale(.86); filter: grayscale(1) brightness(.55); opacity: .45; } }
+    .mh-card-dodge { animation: mhCardDodge .62s ease-out both; }
+    .mh-card-guard { animation: mhCardGuard .7s ease-out both; }
+    .mh-card-hit { animation: mhRjJackHit .6s ease-out both; }
+    .mh-card-ko { animation: mhCardKo .9s ease-in forwards; transform-origin: 50% 90%; }
+    .mh-card-shield { position: absolute; inset: 6% 14%; border-radius: 45% 45% 50% 50%; border: 3px solid rgba(147,197,253,.95); background: radial-gradient(circle, rgba(191,219,254,.35), rgba(59,130,246,.15) 60%, transparent 72%); box-shadow: 0 0 18px rgba(96,165,250,.9); pointer-events: none; animation: mhCardShield .7s ease-out both; }
     @keyframes mhRjJackHit { 0% { transform: none; filter: brightness(1); } 12% { transform: translate(-14px, 2px) rotate(-4deg); filter: brightness(2.6); } 30% { transform: translate(12px, -2px) rotate(3deg); filter: brightness(1.6); } 55% { transform: translate(-6px, 0); filter: brightness(1.2); } 100% { transform: none; filter: brightness(1); } }
     @keyframes mhRjBarDrop { 0% { transform: scaleX(var(--from)); } 100% { transform: scaleX(var(--to)); } }
     @media (max-height: 760px) { .mh-rjdmg { gap: 3px; } .mh-rjdmg-score b { font-size: 30px; } .mh-rjdmg-damage b { font-size: 40px !important; } .mh-rjdmg-down { font-size: 48px; } }
