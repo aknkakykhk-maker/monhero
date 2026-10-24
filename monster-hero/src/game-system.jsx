@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 5dbce4a3de9ce2fd
+// generated-sha256: a0e5b7cd4be3e31b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-24 22:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-24 22:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -31722,6 +31722,12 @@ const ModalCloseButton = ({ onClick, label='閉じる', disabled=false }) => (
 // 1行に入らない長い言葉だけは overflow-wrap:anywhere で折る(はみ出さない)。Segmenter の無い古い端末では今までどおり
 let _jaSegmenter;
 // jaWrapPoints: 折ってよい所に印(U+200B)を入れた文字。jaWrap はその印を <wbr> に変えて描く
+// 吹き出しのいちばん狭い1行に入る字数。ジャックの吹き出しは字11pxで本文120px(吹き出し144px)、狭い画面は字10pxで112px(136px)。
+// どちらも太字で10字入る(2026-10-24。69-screen-home.jsx の HOME_RAID_SAY_WIDTHS と、検査 tools/boot/ja-wrap-lines-check.js)
+const JA_WRAP_LINE = 10;
+// 文節の終わりになる言葉(このあとでは折ってよい)。助詞・句読点・閉じかっこ
+// (「な」「か」「って」は「強くな|ければ」「いって|らっしゃい」のように言葉の途中にも来るので入れない)
+const JA_PARTICLE_END = /(?:は|が|を|に|で|と|も|へ|や|から|まで|より|けど|ので|のに|ても|でも|には|では|とは|ね|よ|ぞ|の)$|[、。！？!?」』…‥〜～・)）》〉】〕%％\s]$/; // 記号は、ブラウザがそのあとを印が無くても折るので入れる
 const jaWrapPoints = (text) => {
   const s = String(text ?? '');
   if (!s) return s;
@@ -31732,64 +31738,150 @@ const jaWrapPoints = (text) => {
     // ・行の頭に来てはいけない字(「！」「、」「…」小さい字など)の前と、行の終わりに来てはいけない字(「「」「（」)の後ろ、空白の前後
     //   (印は禁則より強いので、入れると「きたわい／！」と折れる。2026-10-21)
     // ・「ご」「お」で始まる言葉の頭の1字のあと(「〜のご／ほうび」2026-10-21)
-    // ・1字の助詞は前の言葉につなぐ(漢字・カタカナのあと「仲間|に」は6字まで。ひらがなのあと「これ|は」は5字まで)
+    // ・文節の途中(ひらがなで始まる区切りの手前が助詞・句読点でない所。「いけ|ませ|ん」)。1字の助詞は前の言葉につなぐ(「仲間|に」「これ|は」)
+    //   ただし8字を超える文節は、中のよい所(「て・で」のあと、漢字・カタカナの前)で分ける
     // ・閉じかっこ・「？」「！」のすぐあとのひらがな(「』|って言った」「？|ってとき」。ブラウザはそこを印が無くても折るので、jaKeepWhole で包む)
     // ・顔文字(かっこの中に、かな・漢字・英数字・句読点以外の記号があるもの。(｡･ω･)ﾉﾞ・(っ`･ω･´)っﾌ など)の中。顔文字の手前では折ってよい
     // そのうえで、最後のかたまり(終わりの顔文字の手前)が1〜2字(✨・♡も)なら手前とつなぐ(「いってらっしゃ／い〜」「であるぞ／！」)。
     // 2026-10-24: 1字のひらがなを広くつなげた形(#3487)は、かたまりが長くなり狭い吹き出しでかえって崩れたのでやめた。
     //   助手とジャックの台詞を全部、幅90〜300pxで描いて数える検査は tools/boot/ja-wrap-lines-check.js(最後の行が1〜2字・言葉の途中で折れた: 0件)
+    // 長さは句読点・記号も含めた見た目の字数で数える(「伝えてほしいでつ。」は字が8でも、句点を入れると9字ぶんの幅)
+    const visible = (t) => [...t.replace(/\s/g, '')].length;
     const letters = (t) => (t.match(/[ぁ-ゖァ-ヶ一-龯ーA-Za-z0-9０-９Ａ-Ｚａ-ｖｘ-ｚ]/g) || []).length; // 笑いの「ｗ」は字に数えない
     const kao = [];
-    for (const m of s.matchAll(/(?:ε-|[٩«ヾ＼])*[(（][^()（）\n]{1,14}[)）][っو۶»ﾉﾞ✧･]*/g)) {
+    for (const m of s.matchAll(/(?:ε-|[٩«ヾ＼ｦ-ﾟ])*[(（][^()（）\n]{1,14}[)）][っو۶»ﾉﾞ✧･‼❗!！\uFE0F]*/g)) {
       if (/[^ぁ-ゖァ-ヶ一-龯ーA-Za-z0-9０-９\s、。・！？!?()（）]/.test(m[0])) kao.push([m.index, m.index + m[0].length]);
     }
     const inKao = (pos) => kao.some(([a, b]) => pos > a && pos < b);
     // 道具が空白と「(」を1つの区切りにすることがあるので、空白のすぐあとから顔文字が始まる所も「始まり」とみなす
     const kaoStart = (pos) => kao.some(([a]) => pos === a || (a > pos && /^\s+$/.test(s.slice(pos, a))));
-    const segs = [..._jaSegmenter.segment(s)].map(seg => seg.segment);
-    const chunks = [];
+    const segs = [];
+    for (const { segment } of _jaSegmenter.segment(s)) {
+      // 道具は「これは|いけません」を「これ|はい|けませ」と、返事の「はい」に読むことがある。指す言葉のあとの「は〜」は「は」で分け直す
+      if (/^は[ぁ-ゖ]/.test(segment) && /^(?:これ|それ|あれ|どれ|ここ|そこ|あそこ|わたし|あたし|ワシ|吾輩|余)$/.test(segs[segs.length - 1] || '')) segs.push('は', segment.slice(1));
+      else segs.push(segment);
+    }
+    // ① 文節ごとにまとめる。かたまりは区切りの並び(parts)と、区切りごとの「固い(hard)・柔らかい(soft)」を持つ。
+    //   固い: 禁則・顔文字の中・空白の前後(ここでは切らない)。柔らかい: 文節や助詞の規則でつないだ所(長すぎるときだけ切る)
+    const groups = [];
     let pos = 0;
     for (let i = 0; i < segs.length; i++) {
       const seg = segs[i];
-      if (i === 0) { chunks.push(seg); pos += seg.length; continue; }
-      const prev = segs[i - 1], cur = chunks[chunks.length - 1];
-      const join = inKao(pos) || (!kaoStart(pos) && (
+      if (i === 0) { groups.push({ parts: [seg], hard: [] }); pos += seg.length; continue; }
+      const prev = segs[i - 1], g = groups[groups.length - 1], cur = g.parts.join('');
+      const hard = inKao(pos) || (!kaoStart(pos) && (
         /^[\s、。，．,.！？!?」』）)】〕〉》…‥ー〜～・：:；;ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ]/.test(seg) || /[\s「『（(【〔〈《]$/.test(prev)
         || (/^[ごお]$/.test(prev) && /^[ぁ-ゖ]/.test(seg))
-        || (/^[ぁ-ゖ]$/.test(seg) && /[一-龯ァ-ヶー]$/.test(prev) && letters(cur) + 1 <= 6)
-        || (/^[はがをにでとものへ]$/.test(seg) && /[ぁ-ゖ]$/.test(prev) && letters(cur) + 1 <= 5)
         || (/[」』？！?!]$/.test(prev) && /^[ぁ-ゖ]/.test(seg))));
-      if (join) chunks[chunks.length - 1] += seg; else chunks.push(seg);
+      const soft = !hard && !kaoStart(pos) && (
+        (/^[ぁ-ゖ]$/.test(seg) && /[一-龯ァ-ヶー]$/.test(prev) && letters(cur) + 1 <= 6)
+        || (/^[はがをにでとものへ]$/.test(seg) && /[ぁ-ゖ]$/.test(prev))
+        // ひらがなで始まる区切りは、手前が助詞・句読点のときだけ折る(文節で折る)。活用の途中(「いけ|ませ|ん」「強|く|な|け|れ|ば」「聞い|てい」)では折らない
+        || (/^[ぁ-ゖ]/.test(seg) && !JA_PARTICLE_END.test(prev))
+        // カタカナどうしで片方が1字の区切りは、道具が1語を割ったもの(「レ|ア」)。「モンスター|ファーム|バトル」のような長い言葉の区切りは残す
+        || (/^[ァ-ヶー]+$/.test(seg) && /^[ァ-ヶー]+$/.test(prev) && (seg.length === 1 || prev.length === 1))
+        // 1字の漢字のすぐあとの1字のひらがなは、助詞ではなく送り仮名(「強|が|らなくても」「強|く|なければ」)
+        || (/^[ぁ-ゖ]/.test(seg) && /^[ぁ-ゖ]$/.test(prev) && /^[一-龯]$/.test(segs[i - 2] || ''))
+        // 「です・でつ・でしょ」の「で」は助詞ではない(「なんで|すか」「しないで|つよ」と折れた)
+        || (/で$/.test(prev) && /^(?:す|つ|しょ)/.test(seg)));
+      if (hard || soft) { g.parts.push(seg); g.hard.push(hard); } else groups.push({ parts: [seg], hard: [] });
       pos += seg.length;
     }
-    // 7字を超えるかたまりは、狭い吹き出しで1行に入らず好きな所で折られるので、カタカナからひらがなへ変わる所でも折ってよい
-    // (道具が「スパルタっていう」「チュートリアルって」を1語にする)
-    for (let k = 0; k < chunks.length; k++) {
-      const m = letters(chunks[k]) > 7 && chunks[k].match(/^(.*[ァ-ヶー])([ぁ-ゖ].*)$/s);
-      if (m && letters(m[1]) >= 2 && letters(m[2]) >= 2) chunks.splice(k, 1, m[1], m[2]);
-    }
-    // 終わりの顔文字(とそのうしろの「ﾌﾚｰｯ!」「ﾌﾞﾌｫｗ」のような、かな・漢字の無い飾り)は飛ばして、その手前の本文の最後のかたまりで見る
-    let end = chunks.length - 1;
+    // ①-2 終わりの顔文字(とそのうしろの「ﾌﾚｰｯ!」「ﾌﾞﾌｫｗ」のような、かな・漢字の無い飾り)は飛ばして、その手前の本文の最後の文節が
+    //   1〜2字(✨・♡も)なら手前とつなぐ(「いってらっしゃ／い〜」「であるぞ／！」)。長くなりすぎたら②で、語尾が短く残らない所で分け直す
     {
-      let at = s.length, k = chunks.length - 1;
-      while (k > 0 && !/[ぁ-ゖァ-ヶ一-龯]/.test(chunks[k]) && !kaoStart(at - chunks[k].length)) { at -= chunks[k].length; k--; }
-      if (k > 0 && kaoStart(at - chunks[k].length)) end = k - 1;
+      const gText = (g) => g.parts.join('');
+      // 終わりから、顔文字と、かな・漢字の無い飾りを全部飛ばす(顔文字が2つ続く「(｡ ˘-˘)(｡ ˘_˘)ｳﾝｳﾝ」もある)
+      let at = s.length, k = groups.length - 1, sawKao = false;
+      while (k > 0) {
+        const t = gText(groups[k]), from = at - t.length;
+        if (kaoStart(from)) sawKao = true; else if (/[ぁ-ゖァ-ヶ一-龯]/.test(t)) break;
+        at = from; k--;
+      }
+      let end = sawKao ? k : groups.length - 1;
+      // 漢字で始まる最後の文節(「押す。」)は語尾ではなく言葉なので、つなぐと1行(10字)を超えるならつながない(1行に入らなくなる)
+      while (end > 0 && letters(gText(groups[end])) <= 2
+        && !(/^[一-龯]/.test(gText(groups[end])) && visible(gText(groups[end - 1]) + gText(groups[end])) > JA_WRAP_LINE)) {
+        const t = groups[end], h = groups[end - 1];
+        h.hard.push(false, ...t.hard); h.parts.push(...t.parts); groups.splice(end, 1); end--;
+      }
     }
-    while (end > 0 && letters(chunks[end]) <= 2) { chunks[end - 1] += chunks[end]; chunks.splice(end, 1); end--; }
+    // ② 長すぎる文節を中で分ける。吹き出しの本文はいちばん狭くて約104〜112px(10字ほど)なので、10字を超えると1行からはみ出して
+    //   ブラウザに好きな所で折られる(「冷めてしまいます／ぞ」)。柔らかい区切りのうち、「て・で」のあと(冷めて|しまいますぞ)、
+    //   漢字・カタカナの前、の順に選ぶ。どちらの側も3字以上残し、なるべく真ん中で。空白は元から折れるので、空白で分けた部分ごとに数える
+    const runLetters = (parts) => Math.max(...parts.join('').split(/\s+/).map(visible));
+    const chunks = [];
+    const split = (g) => {
+      if (runLetters(g.parts) <= JA_WRAP_LINE || g.parts.length < 2) { chunks.push(g.parts.join('')); return; }
+      const total = visible(g.parts.join(''));
+      let best = -1, bestScore = -1;
+      for (let k = 1; k < g.parts.length; k++) {
+        if (g.hard[k - 1]) continue;
+        const left = visible(g.parts.slice(0, k).join('')), right = total - left;
+        // どちらの側にも字(かな・漢字)を3字以上残す。決まった言い方(「いって|らっしゃい」)の中では分けない
+        if (letters(g.parts.slice(0, k).join('')) < 3 || letters(g.parts.slice(k).join('')) < 3 || /^らっしゃ/.test(g.parts.slice(k).join(''))) continue;
+        const score = (/[てで]$/.test(g.parts[k - 1]) ? 300 : /^[一-龯ァ-ヶ]/.test(g.parts[k]) ? 200 : 100) - Math.abs(left - right);
+        if (score > bestScore) { bestScore = score; best = k; }
+      }
+      // 3字ずつ残せる所が無ければ、前だけ2字まで許す(「二度|おいしいってやつ。」)。後ろ(語尾)は3字を守る
+      if (best < 0) for (let k = 1; k < g.parts.length; k++) {
+        if (g.hard[k - 1]) continue;
+        const left = visible(g.parts.slice(0, k).join('')), right = total - left;
+        // 後ろは字が3字以上か、句読点も入れて4字以上(「せいいっぱい|でつ……。」)
+        if (letters(g.parts.slice(0, k).join('')) < 2 || (letters(g.parts.slice(k).join('')) < 3 && right < 4) || /^らっしゃ/.test(g.parts.slice(k).join(''))) continue;
+        if (100 - Math.abs(left - right) > bestScore) { bestScore = 100 - Math.abs(left - right); best = k; }
+      }
+      if (best < 0) { chunks.push(g.parts.join('')); return; }
+      split({ parts: g.parts.slice(0, best), hard: g.hard.slice(0, best - 1) });
+      split({ parts: g.parts.slice(best), hard: g.hard.slice(best) });
+    };
+    groups.forEach(split);
+    // 道具が1語にした長いもの(「スパルタっていう」「チュートリアルって」)は、カタカナからひらがなへ変わる所で分ける
+    for (let k = 0; k < chunks.length; k++) {
+      const m = chunks[k].match(/^(.*[ァ-ヶー])([ぁ-ゖ].*)$/s);
+      // 境目を含む部分(空白で区切った中)が7字を超えるときだけ分ける
+      if (m && visible(m[1].split(/\s/).pop() + m[2].split(/\s/)[0]) > 7 && letters(m[1]) >= 2 && letters(m[2]) >= 2) chunks.splice(k, 1, m[1], m[2]);
+    }
     return chunks.join('​');
   } catch { return s; }
 };
-const jaKeepWhole = (seg) => seg.length <= 14 && (/[…‥～〜♡]/u.test(seg) || /\p{Extended_Pictographic}/u.test(seg) || /[」』？！?!][ぁ-ゖ]/.test(seg)
+// 丸ごと包むのは、吹き出しのいちばん狭い1行(本文104〜112pxで約10字)に入るものだけ(長いと字が吹き出しの外へ出る)。字の無い顔文字だけは14字まで
+const jaKeepWhole = (seg) => ([...seg].length <= JA_WRAP_LINE || (!/[ぁ-ゖァ-ヶ一-龯A-Za-z0-9]/.test(seg) && seg.length <= 14))
+  && (/[…‥～〜♡]/u.test(seg) || /\p{Extended_Pictographic}/u.test(seg) || /[」』？！?!][ぁ-ゖ]/.test(seg) || /[。、][ぁぃぅぇぉっゃゅょ]/.test(seg)
   || !/[ぁ-ゖァ-ヶ一-龯A-Za-z0-9]/.test(seg) || /[(（][^()（）]*[^ぁ-ゖァ-ヶ一-龯ーA-Za-z0-9０-９\s、。・！？!?()（）][^()（）]*[)）]/.test(seg));
+// かたまり1つを、折らない枠で包む所([字, true])とそのままの所([字, false])に分ける(jaWrap と検査 ja-wrap-lines-check.js が使う)。
+// 空白で分けてから部分ごとに決める(空白をまたいで包むと、「大丈夫！ いってらっしゃい〜」が1行のまま吹き出しからはみ出した。2026-10-24)。
+// 長い部分(「『MONSTERS』で」)は、かぎかっこの名前や、閉じかっこ・？・！とその前後の字だけを包む。「。って」「、っぽい」も(ブラウザは句点のあとを折る)。
+// 「でつ……。」の三点リーダー、「……？💦」の終わりの絵文字も、手前の数字といっしょに包む(ブラウザはその手前を折る)
+const JA_WRAP_TIGHT = /([「『][^「」『』\s]{1,8}[」』][ぁ-ゖ]{0,6}[！？!?、。…‥]*|(?:[ァ-ヶー]+|.)[」』？！?!][ぁ-ゖ]{1,6}[！？!?、。…‥]*|.[。、][ぁぃぅぇぉっゃゅょ][ぁ-ゖ]{0,5}[！？!?、。…‥]*|[^\s…‥]{1,6}[…‥]+[。、！？!?]*(?:\p{Extended_Pictographic}|[♪♡✨])*\uFE0F?|[^\s]{1,3}[！？!?…]*(?:\p{Extended_Pictographic}|[♪♡✨])+\uFE0F?)/u;
+const jaWrapPieces = (seg) => {
+  const out = [];
+  // 顔文字のかっこの中の空白((｡ ˘ω˘))では分けない
+  for (const part of String(seg).split(/(\s+)(?![^(（]*[)）])/)) {
+    if (!part) continue;
+    if (/^\s+$/.test(part)) out.push([part, false]);
+    else if (jaKeepWhole(part)) out.push([part, true]);
+    // かぎかっこの名前は「「」からまとめて包む(「「ドラシ／ル」だって」と名前の中で折れた)。1行(10字)に入らないものは包まず、閉じかっこのあとで折れるのに任せる
+    else if (/[」』？！?!][ぁ-ゖ]|[。、][ぁぃぅぇぉっゃゅょ]|[…‥]|\p{Extended_Pictographic}|[♪♡✨]/u.test(part)) part.split(JA_WRAP_TIGHT).forEach((t, k) => {
+      if (!t) return;
+      if (k % 2 === 0 || [...t].length <= JA_WRAP_LINE) { out.push([t, k % 2 === 1]); return; }
+      // 10字を超える「かぎかっこの名前+あとの字」は、名前だけを包む(「「チュートリア／ル」から」と名前の中で折れた)
+      const m = t.match(/^([「『][^「」『』]+[」』])(.*)$/s);
+      if (m && [...m[1]].length <= JA_WRAP_LINE) out.push([m[1], true], [m[2], false]); else out.push([t, false]);
+    });
+    else out.push([part, false]);
+  }
+  return out;
+};
 const jaWrap = (text) => {
   const s = jaWrapPoints(text);
   if (typeof s !== 'string' || !s.includes('\u200B')) return s;
   // ブラウザは「…」「～」「♡」・絵文字・顔文字の手前や中を、印が無くても折り目として扱う。「入れんのじゃ／……」「(っ`･／ω･´)」と
   // 崩れないよう、それを含む14字までのかたまりは折らずに置く(2026-10-24。見えない字は足さない)
   const keep = (t, k) => <span key={k} data-ja-keep style={{ whiteSpace: 'nowrap' }}>{t}</span>;
-  return s.split('\u200B').map((seg, i) => <React.Fragment key={i}>{i > 0 && <wbr/>}{jaKeepWhole(seg) ? keep(seg)
-    // 長いかたまり(「『MONSTERS』で」)は、閉じかっこ・？・！とその前後の字だけを包む
-    : /[」』？！?!][ぁ-ゖ]/.test(seg) ? seg.split(/(.[」』？！?!][ぁ-ゖ]{1,3})/).map((t, k) => (k % 2 ? keep(t, k) : t)) : seg}</React.Fragment>);
+  // 空白で始まるかたまりの手前には印(<wbr>)を置かない。空白はもともと折れるうえ、「折らない枠」+<wbr>+「空白で始まる字」の並びで
+  // Chromium が落ちた(行の長さをそろえる text-wrap: balance・pretty のとき。2026-10-24 台詞「本当に極限…！ (>人<;)」で見つけた)
+  return s.split('\u200B').map((seg, i) => <React.Fragment key={i}>{i > 0 && !/^\s/.test(seg) && <wbr/>}{jaWrapPieces(seg).map(([t, kp], k) => (kp ? keep(t, k) : t))}</React.Fragment>);
 };
 // textWrap:'wrap' … 画面全体の text-wrap:pretty(index.html)と anywhere が組み合わさると、語の中へ1字だけ動かすことがある(「スキッ／プ」)ので外す
 const JA_WRAP_STYLE = Object.freeze({ wordBreak: 'keep-all', overflowWrap: 'anywhere', textWrap: 'wrap' });
@@ -38960,11 +39052,19 @@ const HOME_RAID_JACK_BUTTON_STYLE = Object.freeze({
 //     ① 頭の上(幅184→120まで絞る) ② 頭の右 ③ 頭の左 ④ 少しずつ下げて頭の4分の3まで重ねる(それでもだめなときの控え)
 //   どれも重なるときは、重なりがいちばん小さいものを選ぶ。ボタン側は動かさない(押せる場所を変えない)。
 //   head … ジャック本体の絵の箱(跳ねる前の位置) / obstacles … 避ける箱 / measure(width) … その幅での吹き出しの高さ
-// 104・96 は狭い画面(幅320)でジャックの横へ置くとき用。広い順に試すので、入るならこれまでどおり広いほうになる(2026-10-21)
-const HOME_RAID_SAY_WIDTHS = Object.freeze([184, 168, 152, 136, 120, 104, 96]);
+// 広い順に試すので、入るならこれまでどおり広いほうになる。いちばん狭くて 144px(2026-10-24 窓口・カゲあつくん「言葉の途中で折れないように」。
+// 以前は狭い画面(幅320)でジャックの横へ置くとき用に 104・96 まであったが、1行に8字ほどしか入らず「いってらっ／しゃい」と折れた。
+// 144px なら本文が約120pxで、太字の11pxが10字入る(jaWrap は言葉のかたまりを10字までに分ける。41-screen-ui.jsx の JA_WRAP_LINE)。
+// 台詞を全部描いて確かめる検査は tools/boot/ja-wrap-lines-check.js
+const HOME_RAID_SAY_WIDTHS = Object.freeze([184, 168, 152, 144]);
+// 狭い画面(幅360未満)は M/B管理の札とジャックの頭のあいだが狭いので、字を 10px にして 136px まで使う(本文は約112pxで10字入る。
+// 幅320ではジャックの左横に置き、絵に少しかかる)
+const HOME_RAID_SAY_NARROW_VW = 360;
+const HOME_RAID_SAY_NARROW_WIDTHS = Object.freeze([...HOME_RAID_SAY_WIDTHS, 136]);
 const HOME_RAID_SAY_GAP = 6;
 const HOME_RAID_SAY_HOP = 18; // 跳ねる高さ(mhRaidJackHop の16px)+ゆとり。頭の上に置くときは、跳ねても頭がしっぽにかからない
 const homeRaidSayPlace = ({ head, obstacles, vw, vh, measure, top = 0 }) => {
+  const widths = vw < HOME_RAID_SAY_NARROW_VW ? HOME_RAID_SAY_NARROW_WIDTHS : HOME_RAID_SAY_WIDTHS;
   const pad = 4, edge = 6;
   const overlap = (r) => {
     let area = 0;
@@ -38974,36 +39074,47 @@ const homeRaidSayPlace = ({ head, obstacles, vw, vh, measure, top = 0 }) => {
       const h = Math.min(r.bottom, o.bottom + pad) - Math.max(r.top, o.top - pad);
       if (w > 0 && h > 0) area += w * h;
     }
+    // ジャックの絵を隠すのも数える(札より軽く、半分の重み)。狭い画面で、置けない所の代わりに絵の上へ重ねていた(2026-10-24)
+    { const w = Math.min(r.right, head.right) - Math.max(r.left, head.left), h = Math.min(r.bottom, head.bottom) - Math.max(r.top, head.top); if (w > 0 && h > 0) area += w * h * 0.5; }
     return area;
   };
   const clampX = (x, w) => Math.max(edge, Math.min(vw - edge - w, x));
   const cx = (head.left + head.right) / 2;
   const tries = [];
-  for (const w of HOME_RAID_SAY_WIDTHS) {
+  for (const w of widths) {
     const h = measure(w);
     const left = clampX(cx - w / 2, w);
     tries.push({ side: 'top', left, top: head.top - HOME_RAID_SAY_HOP - h, width: w, height: h });
   }
+  // ①-2 頭の上で、左右へ6pxずつ(36pxまで)ずらしたもの。真上だと施設の札に少しかかる狭い画面(幅320)で、札とのすき間へ入れる(2026-10-24)
+  for (const w of widths) {
+    const h = measure(w);
+    for (let dx = 6; dx <= 36; dx += 6) for (const sign of [1, -1]) {
+      tries.push({ side: 'top', left: clampX(cx - w / 2 + sign * dx, w), top: head.top - HOME_RAID_SAY_HOP - h, width: w, height: h });
+    }
+  }
   for (const side of ['right', 'left']) {
-    for (const w of HOME_RAID_SAY_WIDTHS) {
+    for (const w of widths) {
       const h = measure(w);
       const left = side === 'right' ? head.right + HOME_RAID_SAY_GAP + 6 : head.left - HOME_RAID_SAY_GAP - 6 - w;
       const midY = head.top + Math.min(head.bottom - head.top, 80) * 0.35;
       tries.push({ side, left, top: Math.max(top + edge, midY - h / 2), width: w, height: h });
+      // 画面からはみ出すなら、はみ出すぶんジャック側へ寄せる(幅320の左横。ジャックの絵に少しかかる)
+      if (clampX(left, w) !== left) tries.push({ side, left: clampX(left, w), top: Math.max(top + edge, midY - h / 2), width: w, height: h });
     }
   }
   // ③-2 横に置くときは、6pxずつ下げて施設の札(神殿・M/B管理)の下へ逃がす。吹き出しの上端は頭の半分まで(2026-10-21 窓口
   //  「幅320で ジャックの吹き出しが M/B管理 の札にかかる」。320 は札のすぐ下にジャックがいて、頭の上にも横にも置けず、札と絵に重ねていた)
   for (const side of ['right', 'left']) {
-    for (const w of HOME_RAID_SAY_WIDTHS) {
+    for (const w of widths) {
       const h = measure(w);
-      const left = side === 'right' ? head.right + HOME_RAID_SAY_GAP + 6 : head.left - HOME_RAID_SAY_GAP - 6 - w;
+      const left0 = side === 'right' ? head.right + HOME_RAID_SAY_GAP + 6 : head.left - HOME_RAID_SAY_GAP - 6 - w;
       const from = Math.max(top + edge, head.top + Math.min(head.bottom - head.top, 80) * 0.35 - h / 2), to = head.top + (head.bottom - head.top) * 0.5;
-      for (let y = from + 6; y <= to; y += 6) tries.push({ side, left, top: y, width: w, height: h });
+      for (const left of [...new Set([left0, clampX(left0, w)])]) for (let y = from + 6; y <= to; y += 6) tries.push({ side, left, top: y, width: w, height: h });
     }
   }
   // ④ 頭の上の位置から6pxずつ下げ、頭の4分の3に重なるところまで探す(ジャックの絵に少し重なっても、文が読めるほうを選ぶ)
-  for (const w of HOME_RAID_SAY_WIDTHS) {
+  for (const w of widths) {
     const h = measure(w);
     const from = head.top - HOME_RAID_SAY_HOP - h, to = head.top + (head.bottom - head.top) * 0.75 - h;
     for (let y = from + 6; y <= to; y += 6) tries.push({ side: 'top', left: clampX(cx - w / 2, w), top: y, width: w, height: h });
@@ -39148,7 +39259,7 @@ const HomeRaidJack = ({ eventId, onOpen }) => {
     <button type="button" ref={sayRef} key={`say${lineNo}`} data-home-raid-say data-story-pop="1" data-say-side={sayPlace ? sayPlace.side : 'top'} onClick={() => setLineNo((n) => n + 1)} aria-label="ジャックのひとこと(押すと次のセリフ)"
       style={{ position:'absolute', ...(sayPlace ? { left:sayPlace.left, top:sayPlace.top, width:sayPlace.width } : { left:'50%', bottom:'100%', marginLeft:-92, marginBottom:'4px', width:184 }),
         padding:'6px 10px', borderRadius:'14px', boxSizing:'border-box',
-        border:`2px solid ${speechAccent}`, background:'#1c0a02ee', color:'#ffedd5', fontSize:'11px', fontWeight:900, lineHeight:1.45, textAlign:'left', cursor:'pointer',
+        border:`2px solid ${speechAccent}`, background:'#1c0a02ee', color:'#ffedd5', fontSize:(typeof window !== 'undefined' && window.innerWidth < HOME_RAID_SAY_NARROW_VW) ? '10px' : '11px', fontWeight:900, lineHeight:1.45, textAlign:'left', cursor:'pointer',
         boxShadow:`0 0 12px ${speechAccent}66`, animation:'storyPop .25s ease-out both', zIndex:2, pointerEvents:'auto' }}>
       {/* 狭い幅(横へ置いたとき)でも「聞こえるの／う」と言葉の途中で折らず、行の長さをならす(2026-10-21) */}
       <span data-home-raid-say-text style={{ display:'block', ...JA_LABEL_STYLE }}>{jaWrap(speech)}</span>

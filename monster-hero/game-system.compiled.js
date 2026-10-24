@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 072e1ef58d164edf
+// source-sha256: 96795c7d8b4e95e6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-24 22:53";
+const BUILD_DATE = "2026-10-24 22:59";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -50357,6 +50357,8 @@ const ModalCloseButton = ({
   className: "mh-button mh-button-secondary w-full min-h-[48px] rounded-2xl border border-white/20 bg-slate-900 font-black active:scale-[.98] disabled:opacity-40"
 }, label);
 let _jaSegmenter;
+const JA_WRAP_LINE = 10;
+const JA_PARTICLE_END = /(?:は|が|を|に|で|と|も|へ|や|から|まで|より|けど|ので|のに|ても|でも|には|では|とは|ね|よ|ぞ|の)$|[、。！？!?」』…‥〜～・)）》〉】〕%％\s]$/;
 const jaWrapPoints = text => {
   const s = String(text ?? '');
   if (!s) return s;
@@ -50365,54 +50367,140 @@ const jaWrapPoints = text => {
       granularity: 'word'
     }) : null;
     if (!_jaSegmenter) return s;
+    const visible = t => [...t.replace(/\s/g, '')].length;
     const letters = t => (t.match(/[ぁ-ゖァ-ヶ一-龯ーA-Za-z0-9０-９Ａ-Ｚａ-ｖｘ-ｚ]/g) || []).length;
     const kao = [];
-    for (const m of s.matchAll(/(?:ε-|[٩«ヾ＼])*[(（][^()（）\n]{1,14}[)）][っو۶»ﾉﾞ✧･]*/g)) {
+    for (const m of s.matchAll(/(?:ε-|[٩«ヾ＼ｦ-ﾟ])*[(（][^()（）\n]{1,14}[)）][っو۶»ﾉﾞ✧･‼❗!！\uFE0F]*/g)) {
       if (/[^ぁ-ゖァ-ヶ一-龯ーA-Za-z0-9０-９\s、。・！？!?()（）]/.test(m[0])) kao.push([m.index, m.index + m[0].length]);
     }
     const inKao = pos => kao.some(([a, b]) => pos > a && pos < b);
     const kaoStart = pos => kao.some(([a]) => pos === a || a > pos && /^\s+$/.test(s.slice(pos, a)));
-    const segs = [..._jaSegmenter.segment(s)].map(seg => seg.segment);
-    const chunks = [];
+    const segs = [];
+    for (const {
+      segment
+    } of _jaSegmenter.segment(s)) {
+      if (/^は[ぁ-ゖ]/.test(segment) && /^(?:これ|それ|あれ|どれ|ここ|そこ|あそこ|わたし|あたし|ワシ|吾輩|余)$/.test(segs[segs.length - 1] || '')) segs.push('は', segment.slice(1));else segs.push(segment);
+    }
+    const groups = [];
     let pos = 0;
     for (let i = 0; i < segs.length; i++) {
       const seg = segs[i];
       if (i === 0) {
-        chunks.push(seg);
+        groups.push({
+          parts: [seg],
+          hard: []
+        });
         pos += seg.length;
         continue;
       }
       const prev = segs[i - 1],
-        cur = chunks[chunks.length - 1];
-      const join = inKao(pos) || !kaoStart(pos) && (/^[\s、。，．,.！？!?」』）)】〕〉》…‥ー〜～・：:；;ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ]/.test(seg) || /[\s「『（(【〔〈《]$/.test(prev) || /^[ごお]$/.test(prev) && /^[ぁ-ゖ]/.test(seg) || /^[ぁ-ゖ]$/.test(seg) && /[一-龯ァ-ヶー]$/.test(prev) && letters(cur) + 1 <= 6 || /^[はがをにでとものへ]$/.test(seg) && /[ぁ-ゖ]$/.test(prev) && letters(cur) + 1 <= 5 || /[」』？！?!]$/.test(prev) && /^[ぁ-ゖ]/.test(seg));
-      if (join) chunks[chunks.length - 1] += seg;else chunks.push(seg);
+        g = groups[groups.length - 1],
+        cur = g.parts.join('');
+      const hard = inKao(pos) || !kaoStart(pos) && (/^[\s、。，．,.！？!?」』）)】〕〉》…‥ー〜～・：:；;ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ]/.test(seg) || /[\s「『（(【〔〈《]$/.test(prev) || /^[ごお]$/.test(prev) && /^[ぁ-ゖ]/.test(seg) || /[」』？！?!]$/.test(prev) && /^[ぁ-ゖ]/.test(seg));
+      const soft = !hard && !kaoStart(pos) && (/^[ぁ-ゖ]$/.test(seg) && /[一-龯ァ-ヶー]$/.test(prev) && letters(cur) + 1 <= 6 || /^[はがをにでとものへ]$/.test(seg) && /[ぁ-ゖ]$/.test(prev) || /^[ぁ-ゖ]/.test(seg) && !JA_PARTICLE_END.test(prev) || /^[ァ-ヶー]+$/.test(seg) && /^[ァ-ヶー]+$/.test(prev) && (seg.length === 1 || prev.length === 1) || /^[ぁ-ゖ]/.test(seg) && /^[ぁ-ゖ]$/.test(prev) && /^[一-龯]$/.test(segs[i - 2] || '') || /で$/.test(prev) && /^(?:す|つ|しょ)/.test(seg));
+      if (hard || soft) {
+        g.parts.push(seg);
+        g.hard.push(hard);
+      } else groups.push({
+        parts: [seg],
+        hard: []
+      });
       pos += seg.length;
     }
-    for (let k = 0; k < chunks.length; k++) {
-      const m = letters(chunks[k]) > 7 && chunks[k].match(/^(.*[ァ-ヶー])([ぁ-ゖ].*)$/s);
-      if (m && letters(m[1]) >= 2 && letters(m[2]) >= 2) chunks.splice(k, 1, m[1], m[2]);
-    }
-    let end = chunks.length - 1;
     {
+      const gText = g => g.parts.join('');
       let at = s.length,
-        k = chunks.length - 1;
-      while (k > 0 && !/[ぁ-ゖァ-ヶ一-龯]/.test(chunks[k]) && !kaoStart(at - chunks[k].length)) {
-        at -= chunks[k].length;
+        k = groups.length - 1,
+        sawKao = false;
+      while (k > 0) {
+        const t = gText(groups[k]),
+          from = at - t.length;
+        if (kaoStart(from)) sawKao = true;else if (/[ぁ-ゖァ-ヶ一-龯]/.test(t)) break;
+        at = from;
         k--;
       }
-      if (k > 0 && kaoStart(at - chunks[k].length)) end = k - 1;
+      let end = sawKao ? k : groups.length - 1;
+      while (end > 0 && letters(gText(groups[end])) <= 2 && !(/^[一-龯]/.test(gText(groups[end])) && visible(gText(groups[end - 1]) + gText(groups[end])) > JA_WRAP_LINE)) {
+        const t = groups[end],
+          h = groups[end - 1];
+        h.hard.push(false, ...t.hard);
+        h.parts.push(...t.parts);
+        groups.splice(end, 1);
+        end--;
+      }
     }
-    while (end > 0 && letters(chunks[end]) <= 2) {
-      chunks[end - 1] += chunks[end];
-      chunks.splice(end, 1);
-      end--;
+    const runLetters = parts => Math.max(...parts.join('').split(/\s+/).map(visible));
+    const chunks = [];
+    const split = g => {
+      if (runLetters(g.parts) <= JA_WRAP_LINE || g.parts.length < 2) {
+        chunks.push(g.parts.join(''));
+        return;
+      }
+      const total = visible(g.parts.join(''));
+      let best = -1,
+        bestScore = -1;
+      for (let k = 1; k < g.parts.length; k++) {
+        if (g.hard[k - 1]) continue;
+        const left = visible(g.parts.slice(0, k).join('')),
+          right = total - left;
+        if (letters(g.parts.slice(0, k).join('')) < 3 || letters(g.parts.slice(k).join('')) < 3 || /^らっしゃ/.test(g.parts.slice(k).join(''))) continue;
+        const score = (/[てで]$/.test(g.parts[k - 1]) ? 300 : /^[一-龯ァ-ヶ]/.test(g.parts[k]) ? 200 : 100) - Math.abs(left - right);
+        if (score > bestScore) {
+          bestScore = score;
+          best = k;
+        }
+      }
+      if (best < 0) for (let k = 1; k < g.parts.length; k++) {
+        if (g.hard[k - 1]) continue;
+        const left = visible(g.parts.slice(0, k).join('')),
+          right = total - left;
+        if (letters(g.parts.slice(0, k).join('')) < 2 || letters(g.parts.slice(k).join('')) < 3 && right < 4 || /^らっしゃ/.test(g.parts.slice(k).join(''))) continue;
+        if (100 - Math.abs(left - right) > bestScore) {
+          bestScore = 100 - Math.abs(left - right);
+          best = k;
+        }
+      }
+      if (best < 0) {
+        chunks.push(g.parts.join(''));
+        return;
+      }
+      split({
+        parts: g.parts.slice(0, best),
+        hard: g.hard.slice(0, best - 1)
+      });
+      split({
+        parts: g.parts.slice(best),
+        hard: g.hard.slice(best)
+      });
+    };
+    groups.forEach(split);
+    for (let k = 0; k < chunks.length; k++) {
+      const m = chunks[k].match(/^(.*[ァ-ヶー])([ぁ-ゖ].*)$/s);
+      if (m && visible(m[1].split(/\s/).pop() + m[2].split(/\s/)[0]) > 7 && letters(m[1]) >= 2 && letters(m[2]) >= 2) chunks.splice(k, 1, m[1], m[2]);
     }
     return chunks.join('​');
   } catch {
     return s;
   }
 };
-const jaKeepWhole = seg => seg.length <= 14 && (/[…‥～〜♡]/u.test(seg) || /\p{Extended_Pictographic}/u.test(seg) || /[」』？！?!][ぁ-ゖ]/.test(seg) || !/[ぁ-ゖァ-ヶ一-龯A-Za-z0-9]/.test(seg) || /[(（][^()（）]*[^ぁ-ゖァ-ヶ一-龯ーA-Za-z0-9０-９\s、。・！？!?()（）][^()（）]*[)）]/.test(seg));
+const jaKeepWhole = seg => ([...seg].length <= JA_WRAP_LINE || !/[ぁ-ゖァ-ヶ一-龯A-Za-z0-9]/.test(seg) && seg.length <= 14) && (/[…‥～〜♡]/u.test(seg) || /\p{Extended_Pictographic}/u.test(seg) || /[」』？！?!][ぁ-ゖ]/.test(seg) || /[。、][ぁぃぅぇぉっゃゅょ]/.test(seg) || !/[ぁ-ゖァ-ヶ一-龯A-Za-z0-9]/.test(seg) || /[(（][^()（）]*[^ぁ-ゖァ-ヶ一-龯ーA-Za-z0-9０-９\s、。・！？!?()（）][^()（）]*[)）]/.test(seg));
+const JA_WRAP_TIGHT = /([「『][^「」『』\s]{1,8}[」』][ぁ-ゖ]{0,6}[！？!?、。…‥]*|(?:[ァ-ヶー]+|.)[」』？！?!][ぁ-ゖ]{1,6}[！？!?、。…‥]*|.[。、][ぁぃぅぇぉっゃゅょ][ぁ-ゖ]{0,5}[！？!?、。…‥]*|[^\s…‥]{1,6}[…‥]+[。、！？!?]*(?:\p{Extended_Pictographic}|[♪♡✨])*\uFE0F?|[^\s]{1,3}[！？!?…]*(?:\p{Extended_Pictographic}|[♪♡✨])+\uFE0F?)/u;
+const jaWrapPieces = seg => {
+  const out = [];
+  for (const part of String(seg).split(/(\s+)(?![^(（]*[)）])/)) {
+    if (!part) continue;
+    if (/^\s+$/.test(part)) out.push([part, false]);else if (jaKeepWhole(part)) out.push([part, true]);else if (/[」』？！?!][ぁ-ゖ]|[。、][ぁぃぅぇぉっゃゅょ]|[…‥]|\p{Extended_Pictographic}|[♪♡✨]/u.test(part)) part.split(JA_WRAP_TIGHT).forEach((t, k) => {
+      if (!t) return;
+      if (k % 2 === 0 || [...t].length <= JA_WRAP_LINE) {
+        out.push([t, k % 2 === 1]);
+        return;
+      }
+      const m = t.match(/^([「『][^「」『』]+[」』])(.*)$/s);
+      if (m && [...m[1]].length <= JA_WRAP_LINE) out.push([m[1], true], [m[2], false]);else out.push([t, false]);
+    });else out.push([part, false]);
+  }
+  return out;
+};
 const jaWrap = text => {
   const s = jaWrapPoints(text);
   if (typeof s !== 'string' || !s.includes('\u200B')) return s;
@@ -50425,7 +50513,7 @@ const jaWrap = text => {
   }, t);
   return s.split('\u200B').map((seg, i) => React.createElement(React.Fragment, {
     key: i
-  }, i > 0 && React.createElement("wbr", null), jaKeepWhole(seg) ? keep(seg) : /[」』？！?!][ぁ-ゖ]/.test(seg) ? seg.split(/(.[」』？！?!][ぁ-ゖ]{1,3})/).map((t, k) => k % 2 ? keep(t, k) : t) : seg));
+  }, i > 0 && !/^\s/.test(seg) && React.createElement("wbr", null), jaWrapPieces(seg).map(([t, kp], k) => kp ? keep(t, k) : t)));
 };
 const JA_WRAP_STYLE = Object.freeze({
   wordBreak: 'keep-all',
@@ -64337,7 +64425,9 @@ const HOME_RAID_JACK_BUTTON_STYLE = Object.freeze({
   cursor: 'pointer',
   pointerEvents: 'auto'
 });
-const HOME_RAID_SAY_WIDTHS = Object.freeze([184, 168, 152, 136, 120, 104, 96]);
+const HOME_RAID_SAY_WIDTHS = Object.freeze([184, 168, 152, 144]);
+const HOME_RAID_SAY_NARROW_VW = 360;
+const HOME_RAID_SAY_NARROW_WIDTHS = Object.freeze([...HOME_RAID_SAY_WIDTHS, 136]);
 const HOME_RAID_SAY_GAP = 6;
 const HOME_RAID_SAY_HOP = 18;
 const homeRaidSayPlace = ({
@@ -64348,6 +64438,7 @@ const homeRaidSayPlace = ({
   measure,
   top = 0
 }) => {
+  const widths = vw < HOME_RAID_SAY_NARROW_VW ? HOME_RAID_SAY_NARROW_WIDTHS : HOME_RAID_SAY_WIDTHS;
   const pad = 4,
     edge = 6;
   const overlap = r => {
@@ -64358,12 +64449,17 @@ const homeRaidSayPlace = ({
       const h = Math.min(r.bottom, o.bottom + pad) - Math.max(r.top, o.top - pad);
       if (w > 0 && h > 0) area += w * h;
     }
+    {
+      const w = Math.min(r.right, head.right) - Math.max(r.left, head.left),
+        h = Math.min(r.bottom, head.bottom) - Math.max(r.top, head.top);
+      if (w > 0 && h > 0) area += w * h * 0.5;
+    }
     return area;
   };
   const clampX = (x, w) => Math.max(edge, Math.min(vw - edge - w, x));
   const cx = (head.left + head.right) / 2;
   const tries = [];
-  for (const w of HOME_RAID_SAY_WIDTHS) {
+  for (const w of widths) {
     const h = measure(w);
     const left = clampX(cx - w / 2, w);
     tries.push({
@@ -64374,8 +64470,20 @@ const homeRaidSayPlace = ({
       height: h
     });
   }
+  for (const w of widths) {
+    const h = measure(w);
+    for (let dx = 6; dx <= 36; dx += 6) for (const sign of [1, -1]) {
+      tries.push({
+        side: 'top',
+        left: clampX(cx - w / 2 + sign * dx, w),
+        top: head.top - HOME_RAID_SAY_HOP - h,
+        width: w,
+        height: h
+      });
+    }
+  }
   for (const side of ['right', 'left']) {
-    for (const w of HOME_RAID_SAY_WIDTHS) {
+    for (const w of widths) {
       const h = measure(w);
       const left = side === 'right' ? head.right + HOME_RAID_SAY_GAP + 6 : head.left - HOME_RAID_SAY_GAP - 6 - w;
       const midY = head.top + Math.min(head.bottom - head.top, 80) * 0.35;
@@ -64386,15 +64494,22 @@ const homeRaidSayPlace = ({
         width: w,
         height: h
       });
+      if (clampX(left, w) !== left) tries.push({
+        side,
+        left: clampX(left, w),
+        top: Math.max(top + edge, midY - h / 2),
+        width: w,
+        height: h
+      });
     }
   }
   for (const side of ['right', 'left']) {
-    for (const w of HOME_RAID_SAY_WIDTHS) {
+    for (const w of widths) {
       const h = measure(w);
-      const left = side === 'right' ? head.right + HOME_RAID_SAY_GAP + 6 : head.left - HOME_RAID_SAY_GAP - 6 - w;
+      const left0 = side === 'right' ? head.right + HOME_RAID_SAY_GAP + 6 : head.left - HOME_RAID_SAY_GAP - 6 - w;
       const from = Math.max(top + edge, head.top + Math.min(head.bottom - head.top, 80) * 0.35 - h / 2),
         to = head.top + (head.bottom - head.top) * 0.5;
-      for (let y = from + 6; y <= to; y += 6) tries.push({
+      for (const left of [...new Set([left0, clampX(left0, w)])]) for (let y = from + 6; y <= to; y += 6) tries.push({
         side,
         left,
         top: y,
@@ -64403,7 +64518,7 @@ const homeRaidSayPlace = ({
       });
     }
   }
-  for (const w of HOME_RAID_SAY_WIDTHS) {
+  for (const w of widths) {
     const h = measure(w);
     const from = head.top - HOME_RAID_SAY_HOP - h,
       to = head.top + (head.bottom - head.top) * 0.75 - h;
@@ -64727,7 +64842,7 @@ const HomeRaidJack = ({
       border: `2px solid ${speechAccent}`,
       background: '#1c0a02ee',
       color: '#ffedd5',
-      fontSize: '11px',
+      fontSize: typeof window !== 'undefined' && window.innerWidth < HOME_RAID_SAY_NARROW_VW ? '10px' : '11px',
       fontWeight: 900,
       lineHeight: 1.45,
       textAlign: 'left',
