@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c2866ef1c7598180
+// source-sha256: 32a526d09f55f627
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-25 08:01";
+const BUILD_DATE = "2026-10-25 08:11";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -85788,7 +85788,8 @@ const CardBattleBoard = ({
     }) => rest)(cur) : cur), ms));
   };
   const [compact, setCompact] = useState(() => typeof window !== 'undefined' && window.innerHeight < 760);
-  const [tiny, setTiny] = useState(() => typeof window !== 'undefined' && (window.innerWidth < 360 || window.innerHeight < 620));
+  const [tinyScreen, setTiny] = useState(() => typeof window !== 'undefined' && (window.innerWidth < 360 || window.innerHeight < 620));
+  const tiny = tinyScreen || compact && !!tutorial;
   useEffect(() => {
     const on = () => {
       setCompact(window.innerHeight < 760);
@@ -86460,7 +86461,7 @@ const CardBattleBoard = ({
     key: action.key,
     "data-card-action": true,
     className: `relative z-[1] flex items-center gap-2 rounded-2xl border border-amber-300/50 bg-black/55 px-2 ${compact ? "py-0.5" : "py-1"} shadow-lg`
-  }, !tiny && action.cards.slice(0, 3).map((no, i) => {
+  }, !compact && action.cards.slice(0, 3).map((no, i) => {
     const c = cardOf(db, no);
     return c ? React.createElement("img", {
       key: i,
@@ -86740,7 +86741,8 @@ const cardArtBox = src => new Promise(resolve => {
 const CardAssistantArt = ({
   src,
   alt,
-  className = ''
+  className = '',
+  style = null
 }) => {
   const ref = useRef(null);
   const [fit, setFit] = useState(null);
@@ -86771,7 +86773,8 @@ const CardAssistantArt = ({
     "data-card-assistant-art": true,
     "data-card-art-h": fit ? fit.artH : undefined,
     "data-card-art-w": fit ? fit.artW : undefined,
-    className: `relative shrink-0 overflow-hidden ${className}`
+    className: `relative shrink-0 overflow-hidden ${className}`,
+    style: style || undefined
   }, fit ? React.createElement("img", {
     src: src,
     alt: alt,
@@ -87229,7 +87232,10 @@ const CardBattleScreen = ({
     }, React.createElement(CardAssistantArt, {
       src: assistantFullImage(a, 'wink'),
       alt: a.name,
-      className: "h-[150px] w-[42%]"
+      className: "w-[42%]",
+      style: {
+        height: 'min(150px, 17vh)'
+      }
     }), React.createElement("div", {
       className: "min-w-0 flex-1 pb-2"
     }, React.createElement("div", {
