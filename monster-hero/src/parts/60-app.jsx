@@ -19733,7 +19733,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           />
         )}
         {/* MFバトルカード: パックを開ける(区切り2)。買うのはマーケットの「カードポイント」の売り場 */}
-        {gameState==='CARD_PACK_OPEN'&&cardPackOpen&&typeof CARD_BATTLE_DATA!=='undefined'&&(
+        {/* ★条件は「gameState===…&&名前&&(<部品」の形のまま(layout-consistency-check が部品の名前を読み取る)。cardPackOpen はカードの表があるときだけ作られる(buyCardPacks) */}
+        {gameState==='CARD_PACK_OPEN'&&cardPackOpen&&(
           <CardPackOpen db={CARD_BATTLE_DATA} result={cardPackOpen} onDone={()=>{setCardPackOpen(null);setGameState('BREEDER_MARKET');}}/>
         )}
 
