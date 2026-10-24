@@ -69,3 +69,15 @@
 | 対戦の始まり | ![](card-battle/layout2-13-04-battle-start.jpg) | ![](card-battle/layout2-se-04-battle-start.jpg) |
 | 攻撃の途中(狙う相手を選ぶ) | ![](card-battle/layout2-13-06-target.jpg) | ![](card-battle/layout2-se-06-target.jpg) |
 | 守りの番 | ![](card-battle/layout2-13-07-guard.jpg) | ![](card-battle/layout2-se-07-guard.jpg) |
+
+### 技の動き(社長「カードアクションは攻撃ならモンスターが動いてとかにならないの？」・2026-10-24)
+
+- 攻撃した子の立ち絵が、モンヒロのバトルと同じ技の動き(`SkillFxMotion`・`SKILL_MOTION_SETS`)で、狙った子へ向かって動く。位置は画面で測る(上下に並んでいてもそのまま当たる)。
+- 当て方は `85-card-battle-motion.jsx`: モンヒロに同じ名前の技があればその動き、ほかは名前と種類から(なぐる・ける・爪・剣・投げる・回る・雷・炎・氷・水・キッス・歌・光・魔法の玉・毒・葉・岩、全ての相手は上から降らせる)。1枚ずつ上書きできる(`CARD_MOTION_BY_NO`)。
+- 受けた子は揺れて光る・よけた子は横へすっと避ける・防いだ子は身構えて光の盾・KO の子は横に倒れて暗くなる(CSS `mh-card-*`。味方モンスターでもそのまま使える)。
+- 特殊技・ブリーダーのカードは、体は動かさず、まんなかの技のカードと記録だけ(いままでどおり)。
+- `card-battle-browser-check.js` の ⑩ で、攻撃すると動きの部品が出るかを見る。
+
+| 攻撃の途中(ナーガの「くしざし」がスエゾーへ。左から順に約0.1秒ずつ) |
+| --- |
+| ![](card-battle/motion-attack-strip.jpg) |

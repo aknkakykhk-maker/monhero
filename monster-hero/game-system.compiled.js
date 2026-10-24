@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2a3dcc2d17805fae
+// source-sha256: 00586d188afc68ab
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-24 12:36";
+const BUILD_DATE = "2026-10-24 12:41";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -404,6 +404,9 @@ const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
   },
   get assistantKyuko() {
     return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantKyuko === true;
+  },
+  get cardBattle() {
+    return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.cardBattle === true;
   }
 });
 const eventReplayReleased = event => !event?.releaseFlag || EVENT_REPLAY_RELEASE_FLAGS[event.releaseFlag] === true;
@@ -12534,6 +12537,8 @@ const ATSU_JOIN_STORY_ID = 'atsu_join_2026_10_22';
 const KYUKO_JOIN_STORY_ID = 'kyuko_join_2026_10_22';
 const TACTICS_TYPES_STORY_SEEN_KEY = 'mh_story_tactics_types_seen_v1';
 const TACTICS_TYPES_STORY_ID = 'tactics_types';
+const CARD_BATTLE_INTRO_STORY_SEEN_KEY = 'mh_story_card_battle_seen_v1';
+const CARD_BATTLE_INTRO_STORY_ID = 'card_battle_intro_2026';
 const normalizeAssistantId = value => typeof assistantIdOrDefault === 'function' ? assistantIdOrDefault(typeof value === 'string' ? value : null) : typeof DEFAULT_ASSISTANT_ID !== 'undefined' && DEFAULT_ASSISTANT_ID || 'mua';
 const ASSISTANT_BOND_KEY = 'mh_assistant_bond_v1';
 const assistantBondKeyFor = assistantId => {
@@ -83900,6 +83905,166 @@ const cardLineSceneOf = (db, before, after, cpu) => {
   if (after.players[you].deck.length <= 10 && before.players[you].deck.length > 10) return 'deckTheirs';
   return null;
 };
+const CARD_MOTION_SPECS = Object.freeze({
+  cardJab: skm('jab', {
+    c: 'white',
+    over: 'fist',
+    burst: 'star'
+  }),
+  cardKick: skm('kick', {
+    c: 'gold',
+    burst: 'star'
+  }),
+  cardDash: skm('dash', {
+    c: 'white',
+    burst: 'dust'
+  }),
+  cardBash: skm('bash', {
+    c: 'white',
+    burst: 'star'
+  }),
+  cardClaw: skm('slash', {
+    c: 'white',
+    over: 'claw'
+  }),
+  cardBlade: skm('slash', {
+    c: 'sky',
+    over: 'xslash'
+  }),
+  cardBite: skm('bash', {
+    c: 'red',
+    over: 'bite'
+  }),
+  cardThrow: skm('flip', {
+    c: 'rock',
+    over: 'boom',
+    burst: 'dust'
+  }),
+  cardSpin: skm('spin', {
+    c: 'wind',
+    over: 'tornado'
+  }),
+  cardThunder: skm('cast', {
+    c: 'thunder',
+    over: 'thunder',
+    fx: skmFx('fall', 'bolt', 3)
+  }),
+  cardFire: skm('cast', {
+    c: 'fire',
+    fx: skmFx('shot', 'fire', 3),
+    burst: 'spark'
+  }),
+  cardIce: skm('cast', {
+    c: 'ice',
+    fx: skmFx('shot', 'ice', 3),
+    over: 'ice'
+  }),
+  cardWater: skm('cast', {
+    c: 'blue',
+    fx: skmFx('shot', 'water', 3),
+    burst: 'water'
+  }),
+  cardKiss: skm('lick', {
+    c: 'pink',
+    line: 'tongue',
+    burst: 'heart'
+  }),
+  cardSong: skm('cast', {
+    c: 'pink',
+    fx: skmFx('shot', 'note', 3),
+    burst: 'note'
+  }),
+  cardOrb: skm('cast', {
+    c: 'cosmic',
+    fx: skmFx('shot', 'orb', 3),
+    burst: 'spark'
+  }),
+  cardLight: skm('float', {
+    c: 'holy',
+    line: 'ray',
+    over: 'pillar'
+  }),
+  cardRock: skm('toss', {
+    c: 'rock',
+    fx: skmFx('lob', 'rock', 3),
+    burst: 'rock'
+  }),
+  cardLeaf: skm('cast', {
+    c: 'plant',
+    fx: skmFx('shot', 'leaf', 3),
+    burst: 'leaf'
+  }),
+  cardGas: skm('toss', {
+    c: 'gas',
+    fx: skmFx('lob', 'gas', 3),
+    over: 'gas'
+  }),
+  cardAreaFire: skm('cast', {
+    c: 'fire',
+    fx: skmFx('fall', 'fire', 8),
+    over: 'wave'
+  }),
+  cardAreaIce: skm('cast', {
+    c: 'ice',
+    fx: skmFx('fall', 'snow', 8),
+    over: 'wave'
+  }),
+  cardAreaRock: skm('jump', {
+    c: 'rock',
+    fx: skmFx('rise', 'rock', 6),
+    over: 'wave',
+    burst: 'dust'
+  }),
+  cardAreaWind: skm('spin', {
+    c: 'wind',
+    over: 'tornado',
+    fx: skmFx('fall', 'feather', 6)
+  }),
+  cardAreaStar: skm('cast', {
+    c: 'gold',
+    fx: skmFx('fall', 'star', 8),
+    over: 'wave'
+  })
+});
+Object.entries(CARD_MOTION_SPECS).forEach(([kind, sp]) => {
+  SKILL_FX_SPEC_CACHE[kind] = skmNormalize(sp);
+});
+const CARD_MOTION_RULES = Object.freeze([[/キッス|ぺろ|なめ|ベロ|舌/, 'cardKiss'], [/歌|うた|ソング|音/, 'cardSong'], [/雷|電撃|ライトニング|サンダー|稲妻|放電/, 'cardThunder'], [/炎|火|ファイア|フレイム|熱|バーニング/, 'cardFire'], [/冷|氷|ブリザード|吹雪|凍/, 'cardIce'], [/水|泡|ツバ|しぶき|ウォーター/, 'cardWater'], [/光|聖|レーザー|ビーム|ビッグバン/, 'cardLight'], [/魔空|ドレイン|弾|玉|波動|念/, 'cardOrb'], [/毒|ガス|おなら|胞子/, 'cardGas'], [/葉|花|さくら|種|つる/, 'cardLeaf'], [/岩|石|地震|ロック/, 'cardRock'], [/投げ/, 'cardThrow'], [/回転|ぐるぐる|竜巻|スピン|旋風|まわし/, 'cardSpin'], [/剣|斬|まっぷたつ|Vの字|居合|カッター/, 'cardBlade'], [/かみ|噛|かじ/, 'cardBite'], [/ひっかき|爪|ツノ|クロー|突き|つき|くしざし|ヤリ|槍/, 'cardClaw'], [/キック|けり|蹴|ひざ/, 'cardKick'], [/体当たり|タックル|頭つき|突進|ダッシュ|ころがる|転がる/, 'cardDash'], [/パンチ|チョップ|はたき|ソバット|ビンタ|でこぴん|こぶし|殴/, 'cardJab']]);
+const CARD_MOTION_BY_NO = Object.freeze({});
+const CARD_MOTION_GAME_ID = Object.freeze({
+  tiger: 'Tiger',
+  golem: 'Golem',
+  suezo: 'Suezo',
+  pixie: 'Pixie',
+  hare: 'Ham',
+  mocchi: 'Mocchi',
+  monol: 'Monol',
+  plant: 'Plant'
+});
+const cardMotionKindOf = (db, cardNo, mon) => {
+  const c = cardOf(db, cardNo);
+  if (!c || !cardIsAttackKind(c.kind) || c.kind === 'spe' || c.user === 'breeder') return null;
+  if (CARD_MOTION_BY_NO[c.no]) return CARD_MOTION_BY_NO[c.no];
+  const id = mon && (CARD_MOTION_GAME_ID[mon.species] || CARD_MOTION_GAME_ID[mon.main]);
+  const names = id && typeof HERO_ATK_NAMES !== 'undefined' ? HERO_ATK_NAMES[id] : null;
+  const i = Array.isArray(names) ? names.indexOf(c.name) : -1;
+  const set = id && typeof SKILL_MOTION_SETS !== 'undefined' ? SKILL_MOTION_SETS[id] : null;
+  if (i >= 0 && set && set.normal && set.normal[i] && set.normal[i] !== SKM_SIG && i < 10) return `${id}-n${i}`;
+  const hit = CARD_MOTION_RULES.find(([re]) => re.test(c.name));
+  const base = hit ? hit[1] : c.kind === 'int' ? 'cardOrb' : 'cardBash';
+  if (cardHasEff(c, 'area')) {
+    if (base === 'cardFire') return 'cardAreaFire';
+    if (base === 'cardIce') return 'cardAreaIce';
+    if (base === 'cardRock') return 'cardAreaRock';
+    if (base === 'cardSpin') return 'cardAreaWind';
+    return 'cardAreaStar';
+  }
+  return base;
+};
+const cardMotionMs = kind => {
+  const sp = kind && typeof skillFxSpecOf === 'function' ? skillFxSpecOf(kind) : null;
+  return sp && sp.ms ? sp.ms : 650;
+};
 const CARD_IMAGE_SET = Object.freeze({
   imageDir: 'images/card-battle'
 });
@@ -84145,7 +84310,8 @@ const CardMonSlot = ({
   fx = [],
   onTap,
   press,
-  compact = false
+  compact = false,
+  motion = null
 }) => {
   const mon = st.players[p].mons[m];
   const art = cardMonArt(mon);
@@ -84179,21 +84345,43 @@ const CardMonSlot = ({
   }, CARD_TYPE_LABEL[ty]), stunned && React.createElement("span", {
     className: "ml-0.5 inline-block rounded bg-rose-900 px-1 text-[10px] font-bold"
   }, "攻撃できない")));
-  const artEl = React.createElement("div", {
-    className: `relative flex ${compact ? 'h-[56px]' : 'h-[78px]'} w-full items-end justify-center`
-  }, art ? React.createElement("img", {
+  const artSize = compact ? 'max-h-[56px] max-w-[72px]' : 'max-h-[78px] max-w-[96px]';
+  const imgEl = art ? React.createElement("img", {
     src: art,
     alt: "",
-    className: `${compact ? 'max-h-[56px] max-w-[72px]' : 'max-h-[78px] max-w-[96px]'} object-contain drop-shadow-[0_6px_6px_rgba(0,0,0,.6)] ${opp ? '-scale-x-100' : ''} ${mon.ko ? 'grayscale opacity-30' : ''}`
+    className: `${artSize} object-contain drop-shadow-[0_6px_6px_rgba(0,0,0,.6)] ${opp ? '-scale-x-100' : ''}`
   }) : React.createElement("img", {
     src: CARD_IMG(cardMonsterOf(db, mon.no).img),
     alt: "",
-    className: `${compact ? 'h-[54px]' : 'h-[74px]'} rounded-md object-cover ${mon.ko ? 'grayscale opacity-30' : ''}`
+    className: `${compact ? 'h-[54px]' : 'h-[74px]'} rounded-md object-cover`
+  });
+  const mv = motion && !mon.ko ? motion : null;
+  const poseClass = mon.ko ? 'mh-card-ko' : mv && mv.type === 'hit' ? 'mh-card-hit' : mv && mv.type === 'dodge' ? 'mh-card-dodge' : mv && mv.type === 'guard' ? 'mh-card-guard' : '';
+  const artEl = React.createElement("div", {
+    "data-card-art": `${p}-${m}`,
+    className: `relative flex ${compact ? 'h-[56px]' : 'h-[78px]'} w-full items-end justify-center`,
+    style: mv && mv.type === 'attack' ? {
+      '--atk-dx': `${mv.dx}px`,
+      '--atk-dy': `${mv.dy}px`,
+      zIndex: 40
+    } : undefined
+  }, mv && mv.type === 'attack' && mv.kind ? React.createElement(SkillFxMotion, {
+    key: mv.key,
+    kind: mv.kind,
+    image: imgEl
+  }) : React.createElement("div", {
+    key: mv ? mv.key : 'still',
+    "data-card-pose": mon.ko ? 'ko' : mv ? mv.type : 'still',
+    className: `flex items-end justify-center ${poseClass}`
+  }, imgEl), mv && mv.type === 'guard' && React.createElement("span", {
+    key: `${mv.key}-s`,
+    className: "mh-card-shield",
+    "aria-hidden": "true"
   }), mon.ko && React.createElement("span", {
     className: "absolute bottom-2 rounded bg-black/70 px-1.5 text-[12px] font-black text-slate-300"
   }, "KO"), fx.map(f => React.createElement("span", {
     key: f.key,
-    className: `pointer-events-none absolute top-1 text-[30px] font-black ${f.dmg > 0 ? 'animate-bounce text-white' : 'text-sky-200'}`,
+    className: `pointer-events-none absolute top-1 z-[50] text-[30px] font-black ${f.dmg > 0 ? 'animate-bounce text-white' : 'text-sky-200'}`,
     style: {
       WebkitTextStroke: f.dmg > 0 ? '2px #dc2626' : '1px #0369a1',
       textShadow: '0 0 10px rgba(248,113,113,.8)'
@@ -84205,7 +84393,10 @@ const CardMonSlot = ({
   }, press ? press(mon.no, onTap) : {
     onClick: onTap
   }, {
-    className: `relative flex w-[31%] flex-col items-center rounded-xl p-0.5 ${ring} ${fx.some(f => f.dmg > 0) ? 'brightness-125' : ''}`
+    className: `relative flex w-[31%] flex-col items-center rounded-xl p-0.5 ${ring}`,
+    style: motion && motion.type === 'attack' ? {
+      zIndex: 40
+    } : undefined
   }), opp ? React.createElement(React.Fragment, null, info, artEl) : React.createElement(React.Fragment, null, artEl, info));
 };
 const CardBattleBoard = ({
@@ -84226,6 +84417,19 @@ const CardBattleBoard = ({
   const [hint, setHint] = useState('');
   const [quit, setQuit] = useState(false);
   const [action, setAction] = useState(null);
+  const [motions, setMotions] = useState({});
+  const motionTimers = useRef([]);
+  useEffect(() => () => motionTimers.current.forEach(clearTimeout), []);
+  const playMotion = (id, mv, ms) => {
+    setMotions(cur => ({
+      ...cur,
+      [id]: mv
+    }));
+    motionTimers.current.push(setTimeout(() => setMotions(cur => cur[id] && cur[id].key === mv.key ? (({
+      [id]: _,
+      ...rest
+    }) => rest)(cur) : cur), ms));
+  };
   const [compact, setCompact] = useState(() => typeof window !== 'undefined' && window.innerHeight < 760);
   useEffect(() => {
     const on = () => setCompact(window.innerHeight < 760);
@@ -84287,6 +84491,45 @@ const CardBattleBoard = ({
       setTimeout(() => setFx(cur => cur.filter(f => !hits.some(h => h.key === f.key))), 1000);
       if (hits.some(h => h.dmg >= 3)) Audio_.se.crit();else if (hits.some(h => h.dmg > 0)) Audio_.se.attack();else if (hits.some(h => h.heal)) Audio_.se.heal();else Audio_.se.guard();
     } else if (evs.some(e => e.t === 'use')) Audio_.se.card();
+    const centerOf = id => {
+      const el = document.querySelector(`[data-card-art="${id}"]`);
+      if (!el) return null;
+      const r = el.getBoundingClientRect();
+      return {
+        x: r.left + r.width / 2,
+        y: r.top + r.height / 2
+      };
+    };
+    evs.filter(e => e.t === 'use' && e.mon >= 0).forEach((e, n) => {
+      const mon = next.players[e.p].mons[e.mon];
+      const kind = cardMotionKindOf(db, e.cards[0], mon);
+      if (!kind) return;
+      const from = centerOf(`${e.p}-${e.mon}`);
+      const to = e.target ? centerOf(`${e.target.p}-${e.target.m}`) : centerOf(`${1 - e.p}-1`);
+      if (!from || !to) return;
+      const key = `${next.log.length}-${n}-${Date.now()}`;
+      playMotion(`${e.p}-${e.mon}`, {
+        type: 'attack',
+        kind,
+        dx: Math.round(to.x - from.x),
+        dy: Math.round(to.y - from.y),
+        key
+      }, cardMotionMs(kind) + 80);
+    });
+    evs.filter(e => e.t === 'hit').forEach((e, n) => {
+      const type = e.evaded && !e.dmg ? 'dodge' : e.guarded && !e.dmg ? 'guard' : e.dmg > 0 ? 'hit' : e.evaded ? 'dodge' : null;
+      if (type) playMotion(`${e.p}-${e.m}`, {
+        type,
+        key: `h${next.log.length}-${n}-${Date.now()}`
+      }, 720);
+    });
+    evs.filter(e => e.t === 'guard').forEach((e, n) => {
+      const c = cardOf(db, e.card);
+      playMotion(`${e.p}-${e.mon}`, {
+        type: c && c.kind === 'dge' ? 'dodge' : 'guard',
+        key: `g${next.log.length}-${n}-${Date.now()}`
+      }, 720);
+    });
     const use = evs.find(e => e.t === 'use');
     if (use) {
       const p0 = next.players[use.p];
@@ -84309,7 +84552,7 @@ const CardBattleBoard = ({
   useEffect(() => {
     if (st.winner !== null || paused) return undefined;
     if (cardDeciderOf(st) !== CARD_CPU) return undefined;
-    const wait = st.pending ? 700 : st.phase === 'guts' ? 600 : 900;
+    const wait = st.pending ? 950 : st.phase === 'guts' ? 600 : 900;
     const t = setTimeout(() => {
       const act = cardAiChooseAction(db, st, policy);
       if (!step(act)) step(st.pending ? {
@@ -84557,7 +84800,8 @@ const CardBattleBoard = ({
     fx: fx.filter(f => f.p === CARD_CPU && f.m === m),
     onTap: () => tapMon(CARD_CPU, m),
     press: press,
-    compact: compact
+    compact: compact,
+    motion: motions[`1-${m}`] || null
   }))), React.createElement("div", {
     "data-card-stage": true,
     className: "relative flex min-h-[64px] flex-1 flex-col items-center justify-center gap-1.5 overflow-hidden px-3 py-1"
@@ -84613,7 +84857,8 @@ const CardBattleBoard = ({
     fx: fx.filter(f => f.p === CARD_ME && f.m === m),
     onTap: () => tapMon(CARD_ME, m),
     press: press,
-    compact: compact
+    compact: compact,
+    motion: motions[`0-${m}`] || null
   }))), React.createElement("div", {
     className: "flex shrink-0 justify-end px-2 py-1"
   }, strip(CARD_ME)), guide && React.createElement("div", {
@@ -86953,6 +87198,8 @@ function MonsterHeroGame() {
   const [assistantChatStorySeenLoaded, setAssistantChatStorySeenLoaded] = useState(false);
   const [tacticsTypesStorySeenFlag, setTacticsTypesStorySeenFlag] = useState(false);
   const [tacticsTypesStorySeenLoaded, setTacticsTypesStorySeenLoaded] = useState(false);
+  const [cardBattleIntroSeenFlag, setCardBattleIntroSeenFlag] = useState(false);
+  const [cardBattleIntroSeenLoaded, setCardBattleIntroSeenLoaded] = useState(false);
   const [rhythmHellStorySeenLoaded, setRhythmHellStorySeenLoaded] = useState(false);
   const [rhythmHellGuide, setRhythmHellGuide] = useState(null);
   const rhythmHellStoryAfterResultRef = useRef(false);
@@ -90043,6 +90290,13 @@ function MonsterHeroGame() {
     setRhythmEventStoryPending(prev => prev || TACTICS_TYPES_STORY_ID);
   }, [tacticsTypesStorySeenLoaded, tacticsTypesStorySeenFlag, tacticsIntroSeenFlag, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
   useEffect(() => {
+    if (!EVENT_REPLAY_RELEASE_FLAGS.cardBattle) return;
+    if (!cardBattleIntroSeenLoaded || cardBattleIntroSeenFlag) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
+    if (rhythmEventStoryStartedRef.current.includes(CARD_BATTLE_INTRO_STORY_ID)) return;
+    setRhythmEventStoryPending(prev => prev || CARD_BATTLE_INTRO_STORY_ID);
+  }, [cardBattleIntroSeenLoaded, cardBattleIntroSeenFlag, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  useEffect(() => {
     if (!tacticsIntroPending) return;
     if (!(bootPhase === 'GAME' && gameState === 'HOME' && onboarded && !onboardingPreview && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && !rhythmEventStoryPending && !eventReplay)) return;
     setTacticsIntroPending(false);
@@ -91404,6 +91658,12 @@ function MonsterHeroGame() {
         try {
           setTacticsTypesStorySeenFlag((await storeGet(TACTICS_TYPES_STORY_SEEN_KEY, false, false)) === true);
           setTacticsTypesStorySeenLoaded(true);
+        } catch {}
+      }
+      if (EVENT_REPLAY_RELEASE_FLAGS.cardBattle) {
+        try {
+          setCardBattleIntroSeenFlag((await storeGet(CARD_BATTLE_INTRO_STORY_SEEN_KEY, false, false)) === true);
+          setCardBattleIntroSeenLoaded(true);
         } catch {}
       }
       if (EVENT_REPLAY_RELEASE_FLAGS.tacticsBattle) {
@@ -92804,6 +93064,12 @@ function MonsterHeroGame() {
       storeSet(TACTICS_TYPES_STORY_SEEN_KEY, true, false);
     } catch {}
   }, []);
+  const markCardBattleIntroSeen = useCallback(() => {
+    setCardBattleIntroSeenFlag(true);
+    try {
+      storeSet(CARD_BATTLE_INTRO_STORY_SEEN_KEY, true, false);
+    } catch {}
+  }, []);
   const EVENT_REPLAY_UNLOCK_FLAGS = {
     kikiIntroSeen: kikiIntroSeenFlag,
     momosukeIntroSeen: momosukeIntroSeenFlag,
@@ -92811,6 +93077,7 @@ function MonsterHeroGame() {
     rhythmHellStorySeen: rhythmHellStorySeenFlag,
     assistantChatStorySeen: assistantChatStorySeenFlag,
     tacticsTypesSeen: tacticsTypesStorySeenFlag,
+    cardBattleIntroSeen: cardBattleIntroSeenFlag,
     monbeatCupEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(MONBEAT_CUP_STORY_ID),
     monbeatCupThanksSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(MONBEAT_CUP_THANKS_STORY_ID),
     symphonyThanksSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_THANKS_STORY_ID),
@@ -115700,6 +115967,12 @@ function MonsterHeroGame() {
         if (event && event.id === RAID_JACK_STORY_START_ID && eventReplay.live && !eventReplay.debug && RELEASE_FLAGS.raidJack === true && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(RAID_JACK_HOWTO_STORY_ID)) setRhythmEventStoryPending(prev => prev || RAID_JACK_HOWTO_STORY_ID);
         if (event && event.id === ASSISTANT_CHAT_STORY_ID && eventReplay.live && !eventReplay.debug) markAssistantChatStorySeen();
         if (event && event.id === TACTICS_TYPES_STORY_ID && eventReplay.live && !eventReplay.debug) markTacticsTypesStorySeen();
+        if (event && event.id === CARD_BATTLE_INTRO_STORY_ID && eventReplay.live && !eventReplay.debug) {
+          markCardBattleIntroSeen();
+          setEventReplay(null);
+          setGameState('CARD_TOP');
+          return;
+        }
         if (event && event.id === RHYTHM_HELL_STORY_ID) {
           if (!eventReplay.debug) markRhythmHellStorySeen();
           setRhythmHellGuide({
@@ -115719,6 +115992,7 @@ function MonsterHeroGame() {
         if (eventReplay.live && !eventReplay.debug && event && event.id === 'tactics_intro') markTacticsIntroSeen();
         if (eventReplay.live && !eventReplay.debug && event && event.id === ASSISTANT_CHAT_STORY_ID) markAssistantChatStorySeen();
         if (eventReplay.live && !eventReplay.debug && event && event.id === TACTICS_TYPES_STORY_ID) markTacticsTypesStorySeen();
+        if (eventReplay.live && !eventReplay.debug && event && event.id === CARD_BATTLE_INTRO_STORY_ID) markCardBattleIntroSeen();
         if (event && event.id === RHYTHM_HELL_STORY_ID) {
           if (eventReplay.live && !eventReplay.debug) markRhythmHellStorySeen();
           setRhythmHellGuide({
@@ -122596,6 +122870,17 @@ const createAnimationStyle = () => {
     @keyframes mhRjDmgIn { 0% { opacity: 0; } 100% { opacity: 1; } }
     @keyframes mhRjDmgOut { 0% { opacity: 1; } 100% { opacity: 0; } }
     @keyframes mhRjJackIn { 0% { opacity: 0; transform: translateY(14px) scale(.9); } 100% { opacity: 1; transform: none; } }
+    /* ==== MFバトルカード(85-card-battle-motion.jsx)の守りと倒れる動き。味方モンスターでもそのまま使える形にしておく(設計書 5-4) ====
+       よける: 横にすっと避けて戻る(残像つき) / 防ぐ: 身構えて光の盾 / 受ける: 揺れて光る / 倒れる: 横に倒れて沈み、暗くなる */
+    @keyframes mhCardDodge { 0% { transform: none; opacity: 1; } 30% { transform: translateX(34px) skewX(-10deg); opacity: .55; filter: drop-shadow(-14px 0 0 rgba(125,211,252,.55)); } 60% { transform: translateX(34px); opacity: .7; } 100% { transform: none; opacity: 1; } }
+    @keyframes mhCardGuard { 0% { transform: none; filter: none; } 25% { transform: scale(.9) translateY(4px); filter: drop-shadow(0 0 12px rgba(96,165,250,1)) brightness(1.25); } 70% { transform: scale(.94) translateY(2px); filter: drop-shadow(0 0 10px rgba(96,165,250,.8)); } 100% { transform: none; filter: none; } }
+    @keyframes mhCardShield { 0% { opacity: 0; transform: scale(.5); } 30% { opacity: .95; transform: scale(1.05); } 75% { opacity: .8; transform: scale(1); } 100% { opacity: 0; transform: scale(1.15); } }
+    @keyframes mhCardKo { 0% { transform: none; filter: none; } 20% { transform: translateY(-6px) rotate(-6deg); filter: brightness(1.8); } 100% { transform: translateY(14px) rotate(78deg) scale(.86); filter: grayscale(1) brightness(.55); opacity: .45; } }
+    .mh-card-dodge { animation: mhCardDodge .62s ease-out both; }
+    .mh-card-guard { animation: mhCardGuard .7s ease-out both; }
+    .mh-card-hit { animation: mhRjJackHit .6s ease-out both; }
+    .mh-card-ko { animation: mhCardKo .9s ease-in forwards; transform-origin: 50% 90%; }
+    .mh-card-shield { position: absolute; inset: 6% 14%; border-radius: 45% 45% 50% 50%; border: 3px solid rgba(147,197,253,.95); background: radial-gradient(circle, rgba(191,219,254,.35), rgba(59,130,246,.15) 60%, transparent 72%); box-shadow: 0 0 18px rgba(96,165,250,.9); pointer-events: none; animation: mhCardShield .7s ease-out both; }
     @keyframes mhRjJackHit { 0% { transform: none; filter: brightness(1); } 12% { transform: translate(-14px, 2px) rotate(-4deg); filter: brightness(2.6); } 30% { transform: translate(12px, -2px) rotate(3deg); filter: brightness(1.6); } 55% { transform: translate(-6px, 0); filter: brightness(1.2); } 100% { transform: none; filter: brightness(1); } }
     @keyframes mhRjBarDrop { 0% { transform: scaleX(var(--from)); } 100% { transform: scaleX(var(--to)); } }
     @media (max-height: 760px) { .mh-rjdmg { gap: 3px; } .mh-rjdmg-score b { font-size: 30px; } .mh-rjdmg-damage b { font-size: 40px !important; } .mh-rjdmg-down { font-size: 48px; } }

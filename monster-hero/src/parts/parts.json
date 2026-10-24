@@ -299,6 +299,10 @@
       "pure": true
     },
     {
+      "file": "85-card-battle-motion.jsx",
+      "role": "MFバトルカードの技の動き。カードの技を、モンヒロの技の動き(24-battle-fx.jsx の SkillFxMotion)に当てる表。守り・受ける・倒れるの動きは 70-bootstrap.jsx の CSS"
+    },
+    {
       "file": "84-screen-card-battle.jsx",
       "role": "画面: MFバトルカード(CARD_TOP=トップ・スターター選び・相手えらび / CARD_BATTLE=対戦 / 結果)。保存は mh_card_* の新しいキーだけ。いまはデバッグ設定からだけ入れる"
     },

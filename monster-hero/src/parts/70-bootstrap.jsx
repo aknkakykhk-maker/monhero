@@ -4260,6 +4260,17 @@ const createAnimationStyle = () => {
     @keyframes mhRjDmgIn { 0% { opacity: 0; } 100% { opacity: 1; } }
     @keyframes mhRjDmgOut { 0% { opacity: 1; } 100% { opacity: 0; } }
     @keyframes mhRjJackIn { 0% { opacity: 0; transform: translateY(14px) scale(.9); } 100% { opacity: 1; transform: none; } }
+    /* ==== MFバトルカード(85-card-battle-motion.jsx)の守りと倒れる動き。味方モンスターでもそのまま使える形にしておく(設計書 5-4) ====
+       よける: 横にすっと避けて戻る(残像つき) / 防ぐ: 身構えて光の盾 / 受ける: 揺れて光る / 倒れる: 横に倒れて沈み、暗くなる */
+    @keyframes mhCardDodge { 0% { transform: none; opacity: 1; } 30% { transform: translateX(34px) skewX(-10deg); opacity: .55; filter: drop-shadow(-14px 0 0 rgba(125,211,252,.55)); } 60% { transform: translateX(34px); opacity: .7; } 100% { transform: none; opacity: 1; } }
+    @keyframes mhCardGuard { 0% { transform: none; filter: none; } 25% { transform: scale(.9) translateY(4px); filter: drop-shadow(0 0 12px rgba(96,165,250,1)) brightness(1.25); } 70% { transform: scale(.94) translateY(2px); filter: drop-shadow(0 0 10px rgba(96,165,250,.8)); } 100% { transform: none; filter: none; } }
+    @keyframes mhCardShield { 0% { opacity: 0; transform: scale(.5); } 30% { opacity: .95; transform: scale(1.05); } 75% { opacity: .8; transform: scale(1); } 100% { opacity: 0; transform: scale(1.15); } }
+    @keyframes mhCardKo { 0% { transform: none; filter: none; } 20% { transform: translateY(-6px) rotate(-6deg); filter: brightness(1.8); } 100% { transform: translateY(14px) rotate(78deg) scale(.86); filter: grayscale(1) brightness(.55); opacity: .45; } }
+    .mh-card-dodge { animation: mhCardDodge .62s ease-out both; }
+    .mh-card-guard { animation: mhCardGuard .7s ease-out both; }
+    .mh-card-hit { animation: mhRjJackHit .6s ease-out both; }
+    .mh-card-ko { animation: mhCardKo .9s ease-in forwards; transform-origin: 50% 90%; }
+    .mh-card-shield { position: absolute; inset: 6% 14%; border-radius: 45% 45% 50% 50%; border: 3px solid rgba(147,197,253,.95); background: radial-gradient(circle, rgba(191,219,254,.35), rgba(59,130,246,.15) 60%, transparent 72%); box-shadow: 0 0 18px rgba(96,165,250,.9); pointer-events: none; animation: mhCardShield .7s ease-out both; }
     @keyframes mhRjJackHit { 0% { transform: none; filter: brightness(1); } 12% { transform: translate(-14px, 2px) rotate(-4deg); filter: brightness(2.6); } 30% { transform: translate(12px, -2px) rotate(3deg); filter: brightness(1.6); } 55% { transform: translate(-6px, 0); filter: brightness(1.2); } 100% { transform: none; filter: brightness(1); } }
     @keyframes mhRjBarDrop { 0% { transform: scaleX(var(--from)); } 100% { transform: scaleX(var(--to)); } }
     @media (max-height: 760px) { .mh-rjdmg { gap: 3px; } .mh-rjdmg-score b { font-size: 30px; } .mh-rjdmg-damage b { font-size: 40px !important; } .mh-rjdmg-down { font-size: 48px; } }
