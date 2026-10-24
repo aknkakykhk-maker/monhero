@@ -202,6 +202,7 @@ const HYBRID_C060_IMG = "images/monsters/c060.png?v=6c8364b880c5";
 const HYBRID_C061_IMG = "images/monsters/c061.png?v=4e015080a484";
 const HYBRID_C062_IMG = "images/monsters/c062.png?v=090cdd583324";
 const HYBRID_C063_IMG = "images/monsters/c063.png?v=97693bd14c3a";
+const HYBRID_C064_IMG = "images/monsters/c064.png?v=7e039c580e69";
 const HYBRID_MONSTER_IMGS = Object.freeze({
   'C-051': HYBRID_C051_IMG,
   'C-052': HYBRID_C052_IMG,
@@ -216,6 +217,7 @@ const HYBRID_MONSTER_IMGS = Object.freeze({
   'C-061': HYBRID_C061_IMG,
   'C-062': HYBRID_C062_IMG,
   'C-063': HYBRID_C063_IMG,
+  'C-064': HYBRID_C064_IMG,
 });
 
 const MOCCHI_ICON = MOCCHI_IMG;
