@@ -16,7 +16,7 @@ const load = () => {
     + `${fs.readFileSync(path.join(GAME, 'src', 'parts', '89-card-pack.jsx'), 'utf8')}\n;\n`
     // 85 は画面の部品(SkillFxMotion)を使うので、ルールだけで動く「動きの見本」の所だけ読む
     + `${fs.readFileSync(path.join(GAME, 'src', 'parts', '85-card-battle-motion.jsx'), 'utf8').split('// ---- 動きの見本')[1].replace(/^[^\n]*\n/, '')}\n;\n`
-    + 'this.E = { CARD_BATTLE_DATA, cardCreateGame, cardApplyAction, cardLegalActions, cardAttackOptions, cardGuardOptions, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardSimulate, CARD_AI_LEVELS, CARD_AI_HABITS, CARD_AI_DECKS, cardDeckProblems, cardNormalizeCollection, cardNormalizeDecks, cardNormalizePoint, cardNormalizeDaily, cardNormalizeRecord, cardNormalizeCpuUnlocked, cardGrantStarter, cardCpuReward, cardUnlockAfterWin, cardMotionDemo, cardMotionDemoAction, cardTutorialGame, cardTutorialMutate, cardTutorialAllow, cardTutorialDone, cardTutorialCpu, CARD_TUTORIAL_STAGES, cardTutorialCopyProblems, cardTutorialFinish, CARD_TUTORIAL_LINES, cardCpuLoops, cardOwnTurns, cardDeckAddReason, cardDeckReady, cardDecksPut, cardDecksRemove, CARD_PACKS, cardOpenPack, cardBuyPacks, cardPackRates, cardBuyStarter, cardMonRarity, cardNormalizePity, cardNormalizeShop, CARD_SAVE_KEYS };';
+    + 'this.E = { CARD_BATTLE_DATA, cardCreateGame, cardApplyAction, cardLegalActions, cardAttackOptions, cardGuardOptions, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardSimulate, CARD_AI_LEVELS, CARD_AI_HABITS, CARD_AI_DECKS, cardDeckProblems, cardNormalizeCollection, cardNormalizeDecks, cardNormalizePoint, cardNormalizeDaily, cardNormalizeRecord, cardNormalizeCpuUnlocked, cardGrantStarter, cardCpuReward, cardUnlockAfterWin, cardMotionDemo, cardMotionDemoAction, cardTutorialGame, cardTutorialMutate, cardTutorialAllow, cardTutorialDone, cardTutorialCpu, CARD_TUTORIAL_STAGES, cardTutorialCopyProblems, cardTutorialFinish, CARD_TUTORIAL_LINES, cardCpuLoops, cardOwnTurns, cardDeckAddReason, cardDeckReady, cardDecksPut, cardDecksRemove, CARD_PACKS, cardOpenPack, cardBuyPacks, cardPackRates, cardBuyStarter, cardMonRarity, cardNormalizePity, cardNormalizeShop, CARD_SAVE_KEYS, cardRecordAfter, cardRankRow, cardWeekKeyJst };';
   vm.runInContext(src, ctx, { filename: '82-card-battle-core.jsx' });
   return ctx.E;
 };
@@ -204,6 +204,25 @@ const decksAndSaves = () => {
   ok(g1 && g1.point === 300 && g1.starter.kit === 'speed' && g1.decks.decks.length === 1, 'スターターを配れない');
   ok(g1 && Object.values(g1.collection).reduce((s, v) => s + v, 0) === 53, 'スターターの枚数が 3体＋50枚 にならない');
   ok(E.cardGrantStarter(db, g1, 'powerful', 2) === null, 'スターターを2回配れてしまう');
+  // 記録とランキング(台帳 #3513): 難易度ごとの勝ち負け・週の勝ち・連勝。ランキングに数えるのは rankable の対戦だけ
+  {
+    // 2026-10-26(月)0:00 JST = 2026-10-25T15:00Z。その直前は前の週(10-19)
+    ok(E.cardWeekKeyJst(Date.UTC(2026, 9, 25, 14, 59)) === '2026-10-19' && E.cardWeekKeyJst(Date.UTC(2026, 9, 25, 15, 0)) === '2026-10-26', '週の区切りが日本時間の月曜 0:00 になっていない');
+    const old = E.cardNormalizeRecord({ cpu: { win: 3, lose: 1, surrender: 0 } });
+    ok(old.byLevel.win.master === 0 && old.rank.streak.best === 0 && old.rank.week.key === '' && old.cpu.win === 3, '前からの記録に新しい項目が既定値で補われない');
+    const t0 = Date.UTC(2026, 9, 20, 3, 0);
+    let rec = E.cardRecordAfter(null, { who: 'mua', level: 'hard', outcome: 'win', at: t0, rankable: false });
+    ok(rec.cpu.win === 1 && rec.byLevel.win.hard === 1 && rec.rank.total.hard === 0 && rec.rank.streak.now === 0, 'デバッグ・公開前の勝ちがランキングの数に入ってしまう');
+    rec = E.cardRecordAfter(rec, { who: 'mua', level: 'hard', outcome: 'win', at: t0, rankable: true });
+    rec = E.cardRecordAfter(rec, { who: 'kiki', level: 'master', outcome: 'win', at: t0 + 1000, rankable: true });
+    rec = E.cardRecordAfter(rec, { who: 'kiki', level: 'master', outcome: 'surrender', at: t0 + 2000, rankable: true });
+    ok(rec.rank.total.hard === 1 && rec.rank.total.master === 1 && rec.rank.streak.now === 0 && rec.rank.streak.best === 2 && rec.byLevel.lose.master === 1 && rec.cpu.surrender === 1, `連勝・難易度ごとの数が合わない ${JSON.stringify(rec.rank)}`);
+    const next = E.cardRecordAfter(rec, { who: 'mua', level: 'hard', outcome: 'win', at: Date.UTC(2026, 9, 27, 3, 0), rankable: true });
+    ok(next.rank.week.key === '2026-10-26' && next.rank.week.wins.hard === 1 && next.rank.week.wins.master === 0 && next.rank.total.hard === 2, '週が変わったら週の勝ち数が 0 から数え直されない');
+    const row = E.cardRankRow(rec, { dexCount: 30, dexTotal: 405, userName: 'テスト', icon: '🐣', profileFrame: null, breederId: 'b1', now: Date.UTC(2026, 9, 27, 3, 0) });
+    ok(row.week_key === '2026-10-26' && row.week_wins_hard === 0 && row.wins_hard === 1 && row.best_streak === 2 && row.current_streak === 0 && row.dex_count === 30 && row.breeder_id === 'b1' && !('profile_frame' in row), `送る行が合わない ${JSON.stringify(row)}`);
+    ok(Object.values(E.CARD_SAVE_KEYS).every((k) => /^mh_card_/.test(k)), '保存キーが mh_card_ で始まらない');
+  }
   // カードポイントとクイック周回(案A・台帳 #3484): 1日1,500まで・はじめての勝ちは+50
   const full = { ownTurns: 10, kos: 0 };
   let daily = E.cardNormalizeDaily(null, '2026-10-24');

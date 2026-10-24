@@ -957,6 +957,8 @@ const CARD_SAVE_KEYS = Object.freeze({
   tutorial: 'mh_card_tutorial_v1', // 練習試合(チュートリアル)を終えた・飛ばした・100 を渡した印(86-card-tutorial.jsx)
   pity: 'mh_card_pack_pity_v1', // パックの天井(弾ごとに、キラなしで開けた数。89-card-pack.jsx)
   shop: 'mh_card_shop_v1',       // マーケットで買ったスターターキットの印(89-card-pack.jsx)
+  topAssist: 'mh_card_top_assist_v1', // トップの助手の「立ち絵/コメント」の出し入れ(84。無ければ両方ON)
+  rankSync: 'mh_card_rank_sync_v1',   // ランキングへ最後に送った行の中身(同じなら送り直さない。90-card-rank.jsx)
 });
 const cardIsPlainObject = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
 const cardNormalizeCollection = (v) => {
@@ -984,19 +986,90 @@ const cardNormalizeDaily = (v, today) => {
   if (!cardIsPlainObject(v) || v.day !== today) return base;
   return { day: today, cpuPoint: cardNormalizePoint(v.cpuPoint), pvpPoint: cardNormalizePoint(v.pvpPoint), firstWin: v.firstWin === true, foes: cardIsPlainObject(v.foes) ? { ...v.foes } : {} };
 };
+const CARD_LEVEL_ORDER = Object.freeze(['easy', 'normal', 'hard', 'expert', 'master']);
+// 難易度ごとの数 { easy: n, … }。知らない難易度は捨てる
+const cardNormalizeLevelCounts = (v) => {
+  const r = cardIsPlainObject(v) ? v : {};
+  return Object.fromEntries(CARD_LEVEL_ORDER.map((lv) => [lv, cardNormalizePoint(r[lv])]));
+};
+// 週の区切り: 日本時間の月曜 0:00 から。週の鍵はその月曜の日付(YYYY-MM-DD)
+const cardWeekKeyJst = (now) => {
+  const d = new Date(Number(now) + 9 * 3600 * 1000);
+  d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7));
+  return d.toISOString().slice(0, 10);
+};
+// ランキングの元にする数(台帳 #3513)。本当に対戦した勝ちだけを数える(デバッグから・公開前は数えない)。
+//   total … 難易度ごとの勝ち数(通算) / week … その週の難易度ごとの勝ち数 / streak … いまの連勝と、いちばん長い連勝
+const cardNormalizeRank = (v) => {
+  const r = cardIsPlainObject(v) ? v : {};
+  const week = cardIsPlainObject(r.week) ? r.week : {};
+  const streak = cardIsPlainObject(r.streak) ? r.streak : {};
+  const now = cardNormalizePoint(streak.now);
+  return {
+    total: cardNormalizeLevelCounts(r.total),
+    week: { key: typeof week.key === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(week.key) ? week.key : '', wins: cardNormalizeLevelCounts(week.wins) },
+    streak: { now, best: Math.max(now, cardNormalizePoint(streak.best)) },
+  };
+};
 const cardNormalizeRecord = (v) => {
   const r = cardIsPlainObject(v) ? v : {};
   const cpu = cardIsPlainObject(r.cpu) ? r.cpu : {};
   const pvp = cardIsPlainObject(r.pvp) ? r.pvp : {};
   const beaten = cardIsPlainObject(r.beaten) ? r.beaten : {};
+  const byLevel = cardIsPlainObject(r.byLevel) ? r.byLevel : {};
   return {
     cpu: { win: cardNormalizePoint(cpu.win), lose: cardNormalizePoint(cpu.lose), surrender: cardNormalizePoint(cpu.surrender) },
     pvp: { win: cardNormalizePoint(pvp.win), lose: cardNormalizePoint(pvp.lose) },
     beaten: Object.fromEntries(Object.entries(beaten).filter(([, x]) => x === true)), // 1回でも勝った助手(印だけ)
     recent: Array.isArray(r.recent) ? r.recent.filter(cardIsPlainObject).slice(0, 30) : [],
+    // 2026-10-24 足した項目(前からの人は 0 で補う)。難易度ごとの勝ち・負け(投了も負け)。記録の画面に出す
+    byLevel: { win: cardNormalizeLevelCounts(byLevel.win), lose: cardNormalizeLevelCounts(byLevel.lose) },
+    rank: cardNormalizeRank(r.rank),
   };
 };
-const CARD_LEVEL_ORDER = Object.freeze(['easy', 'normal', 'hard', 'expert', 'master']);
+// 1戦の結果を記録へ足す。rankable … ランキングに数えてよい対戦か(公開後・デバッグでない人・デバッグの入口でない)
+const cardRecordAfter = (record, { who, level, outcome, at, rankable }) => {
+  const rec = cardNormalizeRecord(record);
+  const win = outcome === 'win';
+  const lv = CARD_LEVEL_ORDER.includes(level) ? level : null;
+  const side = win ? 'win' : 'lose';
+  const next = {
+    ...rec,
+    cpu: { ...rec.cpu, [outcome]: (rec.cpu[outcome] || 0) + 1 },
+    beaten: win ? { ...rec.beaten, [who]: true } : rec.beaten,
+    recent: [{ at, who, level, outcome }, ...rec.recent].slice(0, 30),
+    byLevel: lv ? { ...rec.byLevel, [side]: { ...rec.byLevel[side], [lv]: rec.byLevel[side][lv] + 1 } } : rec.byLevel,
+  };
+  if (!rankable || !lv) return next;
+  const key = cardWeekKeyJst(at);
+  const weekWins = rec.rank.week.key === key ? rec.rank.week.wins : cardNormalizeLevelCounts(null);
+  const streakNow = win ? rec.rank.streak.now + 1 : 0;
+  next.rank = {
+    total: win ? { ...rec.rank.total, [lv]: rec.rank.total[lv] + 1 } : rec.rank.total,
+    week: { key, wins: win ? { ...weekWins, [lv]: weekWins[lv] + 1 } : weekWins },
+    streak: { now: streakNow, best: Math.max(rec.rank.streak.best, streakNow) },
+  };
+  return next;
+};
+// ランキングの表 card_battle_ranks へ送る1行(1人1行・上書き)。週が変わっていたら、その週の数は 0 にして送る
+const cardRankRow = (record, { dexCount, dexTotal, userName, icon, profileFrame, breederId, now }) => {
+  const rank = cardNormalizeRecord(record).rank;
+  const key = cardWeekKeyJst(now);
+  const weekWins = rank.week.key === key ? rank.week.wins : cardNormalizeLevelCounts(null);
+  const row = {
+    user_name: String(userName || '名無しのブリーダー').slice(0, 40),
+    ...(typeof breederId === 'string' && breederId ? { breeder_id: breederId } : {}),
+    icon: icon ?? null,
+    ...(profileFrame ? { profile_frame: profileFrame } : {}),
+    week_key: key,
+    best_streak: rank.streak.best,
+    current_streak: rank.streak.now,
+    dex_count: cardNormalizePoint(dexCount),
+    dex_total: cardNormalizePoint(dexTotal),
+  };
+  CARD_LEVEL_ORDER.forEach((lv) => { row[`wins_${lv}`] = rank.total[lv]; row[`week_wins_${lv}`] = weekWins[lv]; });
+  return row;
+};
 const cardNormalizeCpuUnlocked = (v) => {
   const r = cardIsPlainObject(v) ? v : {};
   return { hard: r.hard === true, expert: r.expert === true, master: r.master === true };

@@ -1156,6 +1156,11 @@ const ASSISTANT_SCENES = {
     help: 'basics/battle-modes',
     lines: [],
   },
+  // MFバトルカードのトップ(社長 台帳 #3513。モンヒロビート・モンヒロバトルの入口と同じ作り)。本文は下の addAssistantLinePack から合流する
+  //   MFバトルカードは公開前(デバッグだけ)なので、ヘルプのページはまだ無い
+  cardTop: {
+    lines: [],
+  },
   // クイック∞周回 × モンビーの連携(docs/spec/QUICK_RHYTHM_LINK.md PR8)。
   // 「別の画面へ移っても裏で進む」「演奏中だけ止まる」は遊んでいるだけでは気づけないので、
   // 公開と同時に画面のなかでも伝える。本文は下の addAssistantLinePack から合流する。
@@ -7522,6 +7527,91 @@ addAssistantLinePack({
         { e:'happy',    t:'前の自分に勝ったね。それがいちばんえらい！' },
       ],
     },
+  },
+});
+
+// MFバトルカードのトップのひとこと(社長 台帳 #3513)。6人ぶん(1人でも欠けると assistant-check が落ちる)
+addAssistantLinePack({
+  id: 'cardTopGuide',
+  label: 'MFバトルカードのトップ(みゅあ)',
+  lines: {
+    cardTop: [
+      { e:'happy',   t:'MFバトルカードへようこそ〜！ 今日はだれと対戦する？(｡･ω･)ﾉﾞ' },
+      { e:'normal',  t:'勝つとカードポイントがたまるよ〜。パックはマーケットで買えるからね' },
+      { e:'wink',    t:'デッキは「デッキ編成」で、いつでも組みかえられるよ👍' },
+      { e:'excited', t:'ランキングもあるよ！ {name}の勝ち数、どこまでいくかな〜' },
+      { e:'normal',  t:'ルールを忘れちゃったら「ルール」から練習試合をやり直せるよ〜' },
+    ],
+  },
+});
+addAssistantLinePack({
+  id: 'cardTopGuideKiki',
+  assistantId: 'kiki',
+  label: 'MFバトルカードのトップ(きき)',
+  lines: {
+    cardTop: [
+      { e:'normal', t:'ここがMFバトルカードの入口だよ。' },
+      { e:'happy',  t:'勝つとカードポイントがもらえる。パックはマーケットで買えるよ。' },
+      { e:'normal', t:'デッキは「デッキ編成」で組みかえられる。モンスター3体の組み合わせが大事だよ。' },
+      { e:'wink',   t:'{name}、ランキングは勝ち数と連勝と図鑑の数で競うよ。' },
+      { e:'happy',  t:'迷ったら「ルール」の練習試合で、もう一度流れを見てみて。' },
+    ],
+  },
+});
+addAssistantLinePack({
+  id: 'cardTopGuideMomosuke',
+  assistantId: 'momosuke',
+  label: 'MFバトルカードのトップ(ももすけ)',
+  lines: {
+    cardTop: [
+      { e:'wink',    t:'MFバトルカードへようこそw だれと対戦する？' },
+      { e:'excited', t:'勝てばカードポイント！ パックを開けるのが楽しみだね♪' },
+      { e:'normal',  t:'デッキは「デッキ編成」でいつでも変えられるよ。' },
+      { e:'happy',   t:'ランキングもあるからね。{name}、連勝ねらっちゃう？w' },
+      { e:'normal',  t:'ルールが不安なら「ルール」から練習試合ができるよ。' },
+    ],
+  },
+});
+addAssistantLinePack({
+  id: 'cardTopGuideDra',
+  assistantId: 'dra',
+  label: 'MFバトルカードのトップ(どらごん)',
+  lines: {
+    cardTop: [
+      { e:'normal', t:'ここがMFバトルカードのトップだな' },
+      { e:'normal', t:'勝つとカードポイントがたまる。パックはマーケットで買えるよ' },
+      { e:'happy',  t:'デッキは「デッキ編成」で組みかえられるよ。3体の組み合わせで変わるからな' },
+      { e:'normal', t:'ランキングもある。勝ち数と連勝と図鑑の数で競うんだ' },
+      { e:'happy',  t:'{name}、ルールを忘れたら「ルール」から練習試合ができるよ' },
+    ],
+  },
+});
+addAssistantLinePack({
+  id: 'cardTopGuideKyuko',
+  assistantId: 'kyuko',
+  label: 'MFバトルカードのトップ(きゅうこ)',
+  lines: {
+    cardTop: [
+      { e:'normal', t:'ほい、MFバトルカードだねぇ。だれと対戦する？' },
+      { e:'happy',  t:'勝つとカードポイントがたまるよ。パックはマーケットで買えるねぇ' },
+      { e:'normal', t:'デッキは「デッキ編成」で組みかえよ。ガッツの安い技を混ぜると回るよぉ' },
+      { e:'wink',   t:'ランキングもあるよ。{name}の連勝、数えとくねw' },
+      { e:'normal', t:'おけ〜、ルールが不安なら「ルール」から練習試合ができるよ' },
+    ],
+  },
+});
+addAssistantLinePack({
+  id: 'cardTopGuideAtsu',
+  assistantId: 'atsu',
+  label: 'MFバトルカードのトップ(あつ)',
+  lines: {
+    cardTop: [
+      { e:'excited', t:'MFバトルカードね！ 今日もやろうぜ笑' },
+      { e:'normal',  t:'勝つとカードポイントたまるよ。パックはマーケットで買えるからな！' },
+      { e:'happy',   t:'デッキは3体の組み合わせが大事。大会でもそこが勝負だったんだよね笑' },
+      { e:'wink',    t:'ランキングもあるじゃん。{name}、連勝で上いこうぜ笑' },
+      { e:'normal',  t:'ルール忘れたら「ルール」から練習試合な！' },
+    ],
   },
 });
 

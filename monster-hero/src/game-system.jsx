@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7886e0142aa7355c
+// generated-sha256: 24c95057996ab43d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-25 03:24"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-25 03:44"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -50928,6 +50928,8 @@ const CARD_SAVE_KEYS = Object.freeze({
   tutorial: 'mh_card_tutorial_v1', // 練習試合(チュートリアル)を終えた・飛ばした・100 を渡した印(86-card-tutorial.jsx)
   pity: 'mh_card_pack_pity_v1', // パックの天井(弾ごとに、キラなしで開けた数。89-card-pack.jsx)
   shop: 'mh_card_shop_v1',       // マーケットで買ったスターターキットの印(89-card-pack.jsx)
+  topAssist: 'mh_card_top_assist_v1', // トップの助手の「立ち絵/コメント」の出し入れ(84。無ければ両方ON)
+  rankSync: 'mh_card_rank_sync_v1',   // ランキングへ最後に送った行の中身(同じなら送り直さない。90-card-rank.jsx)
 });
 const cardIsPlainObject = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
 const cardNormalizeCollection = (v) => {
@@ -50955,19 +50957,90 @@ const cardNormalizeDaily = (v, today) => {
   if (!cardIsPlainObject(v) || v.day !== today) return base;
   return { day: today, cpuPoint: cardNormalizePoint(v.cpuPoint), pvpPoint: cardNormalizePoint(v.pvpPoint), firstWin: v.firstWin === true, foes: cardIsPlainObject(v.foes) ? { ...v.foes } : {} };
 };
+const CARD_LEVEL_ORDER = Object.freeze(['easy', 'normal', 'hard', 'expert', 'master']);
+// 難易度ごとの数 { easy: n, … }。知らない難易度は捨てる
+const cardNormalizeLevelCounts = (v) => {
+  const r = cardIsPlainObject(v) ? v : {};
+  return Object.fromEntries(CARD_LEVEL_ORDER.map((lv) => [lv, cardNormalizePoint(r[lv])]));
+};
+// 週の区切り: 日本時間の月曜 0:00 から。週の鍵はその月曜の日付(YYYY-MM-DD)
+const cardWeekKeyJst = (now) => {
+  const d = new Date(Number(now) + 9 * 3600 * 1000);
+  d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7));
+  return d.toISOString().slice(0, 10);
+};
+// ランキングの元にする数(台帳 #3513)。本当に対戦した勝ちだけを数える(デバッグから・公開前は数えない)。
+//   total … 難易度ごとの勝ち数(通算) / week … その週の難易度ごとの勝ち数 / streak … いまの連勝と、いちばん長い連勝
+const cardNormalizeRank = (v) => {
+  const r = cardIsPlainObject(v) ? v : {};
+  const week = cardIsPlainObject(r.week) ? r.week : {};
+  const streak = cardIsPlainObject(r.streak) ? r.streak : {};
+  const now = cardNormalizePoint(streak.now);
+  return {
+    total: cardNormalizeLevelCounts(r.total),
+    week: { key: typeof week.key === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(week.key) ? week.key : '', wins: cardNormalizeLevelCounts(week.wins) },
+    streak: { now, best: Math.max(now, cardNormalizePoint(streak.best)) },
+  };
+};
 const cardNormalizeRecord = (v) => {
   const r = cardIsPlainObject(v) ? v : {};
   const cpu = cardIsPlainObject(r.cpu) ? r.cpu : {};
   const pvp = cardIsPlainObject(r.pvp) ? r.pvp : {};
   const beaten = cardIsPlainObject(r.beaten) ? r.beaten : {};
+  const byLevel = cardIsPlainObject(r.byLevel) ? r.byLevel : {};
   return {
     cpu: { win: cardNormalizePoint(cpu.win), lose: cardNormalizePoint(cpu.lose), surrender: cardNormalizePoint(cpu.surrender) },
     pvp: { win: cardNormalizePoint(pvp.win), lose: cardNormalizePoint(pvp.lose) },
     beaten: Object.fromEntries(Object.entries(beaten).filter(([, x]) => x === true)), // 1回でも勝った助手(印だけ)
     recent: Array.isArray(r.recent) ? r.recent.filter(cardIsPlainObject).slice(0, 30) : [],
+    // 2026-10-24 足した項目(前からの人は 0 で補う)。難易度ごとの勝ち・負け(投了も負け)。記録の画面に出す
+    byLevel: { win: cardNormalizeLevelCounts(byLevel.win), lose: cardNormalizeLevelCounts(byLevel.lose) },
+    rank: cardNormalizeRank(r.rank),
   };
 };
-const CARD_LEVEL_ORDER = Object.freeze(['easy', 'normal', 'hard', 'expert', 'master']);
+// 1戦の結果を記録へ足す。rankable … ランキングに数えてよい対戦か(公開後・デバッグでない人・デバッグの入口でない)
+const cardRecordAfter = (record, { who, level, outcome, at, rankable }) => {
+  const rec = cardNormalizeRecord(record);
+  const win = outcome === 'win';
+  const lv = CARD_LEVEL_ORDER.includes(level) ? level : null;
+  const side = win ? 'win' : 'lose';
+  const next = {
+    ...rec,
+    cpu: { ...rec.cpu, [outcome]: (rec.cpu[outcome] || 0) + 1 },
+    beaten: win ? { ...rec.beaten, [who]: true } : rec.beaten,
+    recent: [{ at, who, level, outcome }, ...rec.recent].slice(0, 30),
+    byLevel: lv ? { ...rec.byLevel, [side]: { ...rec.byLevel[side], [lv]: rec.byLevel[side][lv] + 1 } } : rec.byLevel,
+  };
+  if (!rankable || !lv) return next;
+  const key = cardWeekKeyJst(at);
+  const weekWins = rec.rank.week.key === key ? rec.rank.week.wins : cardNormalizeLevelCounts(null);
+  const streakNow = win ? rec.rank.streak.now + 1 : 0;
+  next.rank = {
+    total: win ? { ...rec.rank.total, [lv]: rec.rank.total[lv] + 1 } : rec.rank.total,
+    week: { key, wins: win ? { ...weekWins, [lv]: weekWins[lv] + 1 } : weekWins },
+    streak: { now: streakNow, best: Math.max(rec.rank.streak.best, streakNow) },
+  };
+  return next;
+};
+// ランキングの表 card_battle_ranks へ送る1行(1人1行・上書き)。週が変わっていたら、その週の数は 0 にして送る
+const cardRankRow = (record, { dexCount, dexTotal, userName, icon, profileFrame, breederId, now }) => {
+  const rank = cardNormalizeRecord(record).rank;
+  const key = cardWeekKeyJst(now);
+  const weekWins = rank.week.key === key ? rank.week.wins : cardNormalizeLevelCounts(null);
+  const row = {
+    user_name: String(userName || '名無しのブリーダー').slice(0, 40),
+    ...(typeof breederId === 'string' && breederId ? { breeder_id: breederId } : {}),
+    icon: icon ?? null,
+    ...(profileFrame ? { profile_frame: profileFrame } : {}),
+    week_key: key,
+    best_streak: rank.streak.best,
+    current_streak: rank.streak.now,
+    dex_count: cardNormalizePoint(dexCount),
+    dex_total: cardNormalizePoint(dexTotal),
+  };
+  CARD_LEVEL_ORDER.forEach((lv) => { row[`wins_${lv}`] = rank.total[lv]; row[`week_wins_${lv}`] = weekWins[lv]; });
+  return row;
+};
 const cardNormalizeCpuUnlocked = (v) => {
   const r = cardIsPlainObject(v) ? v : {};
   return { hard: r.hard === true, expert: r.expert === true, master: r.master === true };
@@ -52514,7 +52587,9 @@ const CardAssistantArt = ({ src, alt, className = '' }) => {
 
 // onQuickLoops(loops) … 1戦ぶんをクイック周回の周回クリアとして配る(60-app の awardBackQuickLoops)。配れたら配った中身、配れなければ null
 // onOpenMarket … マーケットの「カードポイント」の売り場へ(60-app)
-const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', seenStoryIds = [], debug = false, onBgm, onQuickLoops, onOpenMarket }) => {
+// topAssistant … トップに出す助手の立ち絵とひとこと({ id, name, accent, image, text }。60-app が場面 cardTop から選ぶ)
+// rank … ランキング({ send: 送ってよいか, profile: { name, icon, frame }, renderBreederIcon })。送るのは公開後のふつうの対戦だけ
+const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', seenStoryIds = [], debug = false, onBgm, onQuickLoops, onOpenMarket, topAssistant = null, rank = null }) => {
   const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
   const [save, setSave] = useState(null);
   const [view, setView] = useState('top');
@@ -52529,6 +52604,19 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   const [editDeck, setEditDeck] = useState(null);
   const [packDemo, setPackDemo] = useState(null); // デバッグの「パックを開ける見本」 // デッキ編成で組んでいるデッキ // デバッグの「結果の見本」の相手
   const press = useCardLongPress((no) => setDetail(no));
+  // トップの助手の「立ち絵/コメント」の出し入れ(モンヒロビート・モンヒロバトルの入口と同じ札。保存は mh_card_top_assist_v1。無い・壊れていたら両方ON)
+  const [assist, setAssist] = useState({ modeSelectArt: true, modeSelectComment: true });
+  useEffect(() => {
+    let alive = true;
+    storeGet(CARD_SAVE_KEYS.topAssist, null).then((v) => { if (alive && v && typeof v === 'object' && !Array.isArray(v)) setAssist({ modeSelectArt: v.modeSelectArt !== false, modeSelectComment: v.modeSelectComment !== false }); }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
+  const toggleAssist = (key) => {
+    if (key !== 'modeSelectArt' && key !== 'modeSelectComment') return;
+    const next = { ...assist, [key]: assist[key] === false };
+    setAssist(next);
+    void storeSet(CARD_SAVE_KEYS.topAssist, next).catch(() => {});
+  };
 
   const load = async () => {
     const K = CARD_SAVE_KEYS;
@@ -52577,16 +52665,13 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       const facts = cardResultFacts(st, CARD_ME);
       const reward = cardCpuReward(cardNormalizeDaily(save.daily, cardTodayJst()), game.level, outcome, facts);
       const loops = cardCpuLoops(game.level, outcome, facts);
-      const rec = cardNormalizeRecord(save.record);
-      const nextRecord = {
-        ...rec,
-        cpu: { ...rec.cpu, [outcome]: rec.cpu[outcome] + 1 },
-        beaten: outcome === 'win' ? { ...rec.beaten, [game.who]: true } : rec.beaten,
-        recent: [{ at: Date.now(), who: game.who, level: game.level, outcome }, ...rec.recent].slice(0, 30),
-      };
+      // ランキングに数えるのは、公開後に、デバッグでない人がふつうの入口から戦ったぶんだけ(rank.send。60-app が決める)
+      const rankable = !!(rank && rank.send) && !debug;
+      const nextRecord = cardRecordAfter(save.record, { who: game.who, level: game.level, outcome, at: Date.now(), rankable });
       const nextUnlocked = outcome === 'win' ? cardUnlockAfterWin(save.unlocked, game.level) : save.unlocked;
       const opened = CARD_LEVEL_ORDER.find((lv) => nextUnlocked[lv] && !save.unlocked[lv]) || null;
       const ok = await persist({ point: save.point + reward.total, daily: reward.daily, record: nextRecord, unlocked: nextUnlocked });
+      if (ok && rankable) void cardRankSync(db, { record: nextRecord, collection: save.collection, profile: rank.profile });
       // クイック周回ぶん: 周回クリア扱いにするのは、ビートと同じく、AUTO設定のクイックの難易度を通したことがある人だけ(配る側が決める)
       let quick = null;
       if (loops > 0 && onQuickLoops) { try { quick = await onQuickLoops(loops); } catch (_) { quick = null; } }
@@ -52819,31 +52904,126 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     );
   }
 
-  // ---- トップ ----
-  return (
-    <div data-mh-screen data-card-top="top" className={SCREEN_SHELL_CLASS}>
-      <ScreenHead title="MFバトルカード" accent="text-amber-200" onBack={onExit} backLabel={exitLabel} note={debug ? 'デバッグ専用(まだ公開していません)' : ''}/>
-      <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
-        <div className={`${SCREEN_PANEL_CLASS} flex items-center justify-between`}>
-          <div className="text-[13px] font-black text-slate-200">カードポイント</div>
-          <div data-card-point className="text-xl font-black text-amber-200">{save.point}</div>
-        </div>
-        {activeDeck && (
+  // ---- 記録 ----
+  if (view === 'record') {
+    const rec = save.record;
+    const r = rec.rank;
+    const weekNow = cardWeekKeyJst(Date.now());
+    return (
+      <div data-mh-screen data-card-record-view className={SCREEN_SHELL_CLASS}>
+        <ScreenHead title="記録" accent="text-amber-200" onBack={() => setView('top')} note="MFバトルカード"/>
+        <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
+          {/* 投了は負けに数える(カゲあつくんの確認)。保存の形(cpu.lose と cpu.surrender を別に持つ)はそのまま、見せるときに足す */}
           <div className={SCREEN_PANEL_CLASS}>
-            <div className="text-[12px] font-bold text-slate-400">いまのデッキ</div>
-            <div className="text-[14px] font-black text-white">{activeDeck.name}</div>
-            <div className="mt-1 flex gap-1.5">{activeDeck.monsters.map((no) => { const m = cardMonsterOf(db, no); return m ? <img key={no} {...press(no)} src={CARD_IMG(m.img)} alt={m.name} className="w-[22%] rounded-md"/> : null; })}</div>
-            {/* 投了は負けに数える(カゲあつくんの確認)。保存の形(cpu.lose と cpu.surrender を別に持つ)はそのまま、見せるときに足す */}
-            <div data-card-record className="mt-1 text-[11px] font-bold text-slate-400">戦績(助手と対戦): {save.record.cpu.win}勝 {save.record.cpu.lose + save.record.cpu.surrender}敗{save.record.cpu.surrender ? `(うち投了${save.record.cpu.surrender})` : ''}</div>
+            <div className="text-[12px] font-bold text-slate-400">助手と対戦</div>
+            <div data-card-record className="text-[16px] font-black text-white">{rec.cpu.win}勝 {rec.cpu.lose + rec.cpu.surrender}敗{rec.cpu.surrender ? `(うち投了${rec.cpu.surrender})` : ''}</div>
+            <table data-card-record-levels className="mt-2 w-full text-[12px] font-bold">
+              <thead><tr className="text-slate-400"><th className="py-1 text-left font-bold">難易度</th><th className="py-1 text-right font-bold">勝ち</th><th className="py-1 text-right font-bold">負け</th></tr></thead>
+              <tbody>{CARD_LEVEL_ORDER.map((lv) => <tr key={lv} className="border-t border-white/10"><td className="py-1 text-slate-200">{CARD_LEVEL_LABEL[lv]}</td><td className="py-1 text-right text-amber-200">{rec.byLevel.win[lv]}</td><td className="py-1 text-right text-slate-300">{rec.byLevel.lose[lv]}</td></tr>)}</tbody>
+            </table>
+            <p className="mt-1 text-[10px] font-bold text-slate-500">難易度ごとの数は、この記録ができてからのぶんです</p>
           </div>
-        )}
-        {notice && <p className="text-[12px] font-bold text-amber-200">{notice}</p>}
-        <button type="button" data-card-cpu className={`${btn} mh-button-primary`} disabled={!activeDeck} onClick={() => { Audio_.se.tap(); setNotice(''); setView('mode'); }}>対戦</button>
-        <div className="grid grid-cols-2 gap-2"><button type="button" data-card-decks className={`${btn} border border-amber-300/50 bg-amber-900/50 text-amber-50`} onClick={() => { Audio_.se.tap(); setNotice(''); setView('decks'); }}>デッキ編成</button><button type="button" data-card-market-open className={`${btn} border border-orange-300/50 bg-orange-900/50 text-orange-50`} disabled={!onOpenMarket} onClick={() => { Audio_.se.tap(); setNotice(''); onOpenMarket && onOpenMarket(); }}>マーケットへ<span className="block text-[10px] font-bold">パック・キット・円盤石</span></button>
-          <button type="button" data-card-dex-open className={`${btn} border border-sky-300/50 bg-sky-900/50 text-sky-50`} onClick={() => { Audio_.se.tap(); setNotice(''); setView('dex'); }}>カード図鑑</button>
-          {/* 練習試合のやり直しは、ルールの画面の中(ドラの D20「ルールの画面から、いつでもこの練習試合をやり直せる」) */}
-          <button type="button" data-card-rules-open className={`${btn} border border-emerald-300/50 bg-emerald-900/60 text-emerald-50`} onClick={() => { Audio_.se.tap(); setNotice(''); setView('rules'); }}>ルール<span className="block text-[10px] font-bold">練習試合もここから</span></button>
+          <div className={SCREEN_PANEL_CLASS}>
+            <div className="text-[12px] font-bold text-slate-400">ランキングの記録</div>
+            <div className="mt-1 grid grid-cols-3 gap-1.5 text-center">
+              {[['今週の勝ち', CARD_LEVEL_ORDER.reduce((a, lv) => a + (r.week.key === weekNow ? r.week.wins[lv] : 0), 0), '勝'], ['いまの連勝', r.streak.now, '連勝'], ['最高の連勝', r.streak.best, '連勝']].map(([label, v, u]) => (
+                <div key={label} className="rounded-xl bg-black/30 py-1.5"><small className="block text-[10px] font-bold text-slate-400">{label}</small><b className="text-[16px] font-black text-amber-200">{v}</b><small className="text-[10px] font-bold text-slate-400">{u}</small></div>
+              ))}
+            </div>
+            <p className="mt-1 text-[10px] font-bold leading-snug text-slate-500" style={JA_WRAP_STYLE}>{jaWrap('ランキングに数えるのは、公開してからのふつうの対戦だけです')}</p>
+          </div>
         </div>
+      </div>
+    );
+  }
+  // ---- オプション(BGM・演出) ----
+  if (view === 'options') {
+    return (
+      <div data-mh-screen data-card-options className={SCREEN_SHELL_CLASS}>
+        <ScreenHead title="オプション" accent="text-amber-200" onBack={() => setView('top')} note="MFバトルカード"/>
+        <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
+          <div className={SCREEN_PANEL_CLASS}>
+            <div className="text-[13px] font-black text-white">トップの助手</div>
+            <div className="mt-1.5 flex justify-end"><ModeSelectAssistToggles assistant={topAssistant} showArt={assist.modeSelectArt} showComment={assist.modeSelectComment} onToggle={toggleAssist} cls="" withLabel/></div>
+          </div>
+          <div className={SCREEN_PANEL_CLASS}>
+            <div className="flex items-center gap-2"><span className="text-[13px] font-black text-white">対戦のBGM</span><span className="rounded border border-slate-500 px-1.5 py-0.5 text-[10px] font-black text-slate-300">準備中</span></div>
+            <p className="mt-1 text-[12px] font-bold leading-snug text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('いまは、対戦する助手に合わせて曲が変わります。自分で曲を決められるようにするのは準備中です')}</p>
+          </div>
+          <div className={SCREEN_PANEL_CLASS}>
+            <div className="flex items-center gap-2"><span className="text-[13px] font-black text-white">演出</span><span className="rounded border border-slate-500 px-1.5 py-0.5 text-[10px] font-black text-slate-300">準備中</span></div>
+            <p className="mt-1 text-[12px] font-bold leading-snug text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('技の動きやパックを開ける演出の速さを選べるようにするのは準備中です')}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  // ---- ランキング ----
+  if (view === 'ranking') {
+    return <CardRankingBoard onBack={() => setView('top')} renderBreederIcon={rank && rank.renderBreederIcon} selfName={(rank && rank.profile && rank.profile.name) || ''} record={save.record} dex={cardDexCounts(db, save.collection)} sendOn={!!(rank && rank.send) && !debug}/>;
+  }
+
+  // ---- トップ(モンヒロビートのモードえらび・モンヒロバトルの入口と同じ作り。社長 台帳 #3513) ----
+  //   上: 英字の小見出しと題 / まんなか: 助手の大きい立ち絵と吹き出し / その下: 色つきの大きい札 2×2 / いちばん下: 小さいボタンの列
+  // 吹き出しの文は言葉の切れ目で折る(「どこまでいく/かな」のように折れないように)
+  const topAssistantShown = topAssistant ? { ...topAssistant, text: <span style={JA_WRAP_STYLE}>{jaWrap(topAssistant.text)}</span> } : null;
+  const assistShown = !!topAssistant && (assist.modeSelectArt || assist.modeSelectComment);
+  const go = (v) => () => { Audio_.se.tap(); setNotice(''); setView(v); };
+  const bigCards = [
+    { key: 'cpu', attr: { 'data-card-cpu': '' }, label: '対戦', sub: '助手と対戦・マルチ対戦', mark: 'BATTLE', ico: '⚔️', grad: 'from-orange-200 via-orange-400 to-rose-500', disabled: !activeDeck, onClick: go('mode') },
+    { key: 'decks', attr: { 'data-card-decks': '' }, label: 'デッキ編成', sub: 'デッキを組む・えらぶ', mark: 'DECK', ico: '🃏', grad: 'from-yellow-200 via-amber-300 to-orange-400', onClick: go('decks') },
+    { key: 'market', attr: { 'data-card-market-open': '' }, label: 'マーケット', sub: 'パック・スターターキット', mark: 'MARKET', ico: '🛒', grad: 'from-sky-200 via-sky-400 to-blue-500', onClick: () => { Audio_.se.tap(); setNotice(''); onOpenMarket && onOpenMarket(); } },
+    { key: 'ranking', attr: { 'data-card-ranking-open': '' }, label: 'ランキング', sub: '勝ち数・連勝・図鑑', mark: 'RANKING', ico: '🏆', grad: 'from-lime-200 via-emerald-300 to-teal-500', onClick: go('ranking') },
+  ];
+  const smallButtons = [
+    { key: 'dex', attr: { 'data-card-dex-open': '' }, label: 'カード図鑑', ico: '📖', tone: 'text-sky-100', onClick: go('dex') },
+    // 練習試合のやり直しは、ルールの画面の中(ドラの D20「ルールの画面から、いつでもこの練習試合をやり直せる」)
+    { key: 'rules', attr: { 'data-card-rules-open': '' }, label: 'ルール', sub: '練習試合', ico: '📘', tone: 'text-emerald-100', onClick: go('rules') },
+    { key: 'record', attr: { 'data-card-record-open': '' }, label: '記録', ico: '📊', tone: 'text-amber-100', onClick: go('record') },
+    { key: 'options', attr: { 'data-card-options-open': '' }, label: 'オプション', sub: 'BGM・演出', ico: '⚙️', tone: 'text-fuchsia-100', onClick: go('options') },
+  ];
+  return (
+    <div data-mh-screen data-card-top="top" className="mhms-stage relative flex h-full min-h-0 flex-1 flex-col overflow-hidden text-white">
+      <RhythmModeSelectStage notes={false}/>
+      <header className="relative z-10 flex shrink-0 items-center gap-1.5 border-b border-fuchsia-300/20 bg-slate-950/55 px-2 py-1 backdrop-blur-sm">
+        <button type="button" aria-label={exitLabel} onClick={onExit} className="min-h-[44px] min-w-[44px] shrink-0 rounded-xl text-lg font-black text-slate-300 active:scale-90">←</button>
+        <div className="min-w-0 flex-1 leading-none">
+          <small className="block truncate text-[8px] font-black tracking-[0.2em] text-fuchsia-300">MF BATTLE CARD ・ TOP</small>
+          <b className="mhms-title block truncate text-lg font-black leading-tight tracking-wider">MFバトルカード</b>
+          <small className="block truncate text-[9px] font-black text-slate-300/90">{debug ? 'デバッグ専用(まだ公開していません)' : 'カードで助手と対戦しよう'}</small>
+        </div>
+        <span data-card-point-pill className="shrink-0 rounded-full border border-amber-300/50 bg-slate-950/70 px-2.5 py-1 text-[11px] font-black text-amber-100"><span aria-hidden="true">🃏</span> <span data-card-point>{save.point}</span></span>
+      </header>
+      <div className={`relative z-[1] flex min-h-0 flex-1 flex-col overflow-y-auto landscape:flex-row landscape:overflow-hidden ${assistShown && assist.modeSelectArt ? '' : 'portrait:justify-center'}`}>
+        <ModeSelectAssistantPanel assistant={topAssistantShown} showArt={assist.modeSelectArt} showComment={assist.modeSelectComment} onToggle={toggleAssist}/>
+        <div className="shrink-0 space-y-2 p-3 landscape:flex landscape:min-h-0 landscape:flex-1 landscape:shrink landscape:flex-col landscape:justify-center landscape:overflow-y-auto landscape:py-2">
+          {!assistShown && topAssistant && <ModeSelectAssistToggles assistant={topAssistant} showArt={assist.modeSelectArt} showComment={assist.modeSelectComment} onToggle={toggleAssist} cls="justify-end" withLabel/>}
+          {/* いまのデッキ(小さく。押すとデッキ編成へ) */}
+          {activeDeck && (
+            <button type="button" data-card-active-deck onClick={go('decks')} className="mhms-glass mhms-in flex w-full min-w-0 items-center gap-2 rounded-xl px-2.5 py-1.5 text-left active:scale-[.98]">
+              <small className="shrink-0 text-[10px] font-black text-slate-400">いまのデッキ</small>
+              <b className="min-w-0 flex-1 truncate text-[12px] font-black text-white">{activeDeck.name}</b>
+              <span aria-hidden="true" className="flex shrink-0 -space-x-2">{activeDeck.monsters.map((no) => { const m = cardMonsterOf(db, no); return m ? <img key={no} src={CARD_IMG(m.img)} alt="" className="h-8 w-6 rounded-[3px] border border-white/40 object-cover"/> : null; })}</span>
+            </button>
+          )}
+          {notice && <p className="text-[12px] font-bold text-amber-200">{notice}</p>}
+          <div data-card-top-cards className="grid grid-cols-2 gap-2">
+            {bigCards.map((c, idx) => (
+              <button key={c.key} type="button" {...c.attr} disabled={!!c.disabled} onClick={c.onClick}
+                className={`mhms-card mhms-in flex min-h-[84px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br ${c.grad} px-3 text-left text-slate-950 active:scale-[.97] disabled:opacity-50 landscape:min-h-[76px]`} style={{ animationDelay: `${0.05 + idx * 0.06}s` }}>
+                <span aria-hidden="true" className="mhms-mark">{c.mark}</span>
+                <span aria-hidden="true" className="mhms-ico relative text-3xl leading-none">{c.ico}</span>
+                <span className="relative min-w-0"><b className="block text-[18px] font-black italic leading-tight">{c.label}</b><small className="block text-[10px] font-black leading-tight text-slate-900/80">{c.sub}</small></span>
+              </button>
+            ))}
+          </div>
+          <div data-card-top-shortcuts className="mhms-in grid grid-cols-4 gap-1.5" style={{ animationDelay: '.28s' }}>
+            {smallButtons.map((b) => (
+              <button key={b.key} type="button" {...b.attr} onClick={b.onClick} className={`mhms-glass flex min-h-[52px] min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-0.5 leading-none active:scale-95 ${b.tone}`}>
+                <span aria-hidden="true" className="text-lg">{b.ico}</span><b className="text-[11px] font-black">{b.label}</b>{b.sub && <small className="text-[9px] font-black text-slate-300/90">{b.sub}</small>}
+              </button>
+            ))}
+          </div>
         {debug && (
           <div className={`${SCREEN_PANEL_FLAT_CLASS} space-y-1`}>
             {/* 結果の画面の見本(NORMAL の勝ち・自分の番8回・2体倒した)。クイック周回が入るとき/入らないとき。保存は何もしない */}
@@ -52887,6 +53067,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             <button type="button" className="mh-button mh-button-danger min-h-[44px] w-full rounded-xl text-[12px] font-black" onClick={() => setConfirmReset(true)}>カードバトルの記録を消して、スターター選びからやり直す</button>
           </div>
         )}
+        </div>
       </div>
       {detail && <CardDetailModal db={db} no={detail} onClose={() => setDetail(null)}/>}
       {confirmReset && <ConfirmSheet title="カードバトルの記録を消しますか？" message={'持っているカード・デッキ・カードポイント・戦績・スターターの印を消します。\nほかのモードの保存データには触れません。'} confirmLabel="消す" danger onCancel={() => setConfirmReset(false)} onConfirm={async () => {
@@ -53406,6 +53587,235 @@ const CardShopStarters = ({ db, point, busy, starter, shop, onBuyStarter }) => {
         );
       })}
       {confirm && <ConfirmSheet title={`「${confirm.name}」を買いますか？`} message={`カードポイント ${CARD_STARTER_SHOP_PRICE} を使います(いま ${point})。だぶったカードはカードポイントになります`} confirmLabel="買う" onCancel={() => setConfirm(null)} onConfirm={async () => { const k = confirm; setConfirm(null); const r = await onBuyStarter(k.id); if (r && r.ok) setDone(`「${k.name}」を買いました。デッキ編成に1つ増えています${r.dupPoint > 0 ? `(だぶったカードはカードポイント +${r.dupPoint})` : ''}`); }}/>}
+    </div>
+  );
+};
+
+// ---- part: 90-card-rank.jsx ----
+// ==================== MFバトルカードのランキング(社長 台帳 #3513) ====================
+// 競うもの: 助手と対戦の勝ち数(難易度ごと・今週と通算)/ 連勝の数 / カード図鑑の集めた数 / マルチ対戦の強さ(マルチができてから。いまは「準備中」の札だけ)
+// 作り: マスモンランキング(39-rhythm-buddy-rank-api.jsx)と同じ。新しい表 card_battle_ranks へ「1人1行」を上書き保存し、並べ替えは表の側で行う。
+//   既存の rankings / bond_levels / rhythm_buddy_ranks には一切書かない。表がまだ無い環境でも壊れない(無いと分かったら以後アクセスしない)。
+//   SQL: docs/sql/card-battle-ranks/CARD_BATTLE_RANKS_APPLY.sql
+// 送ってよいのは、本当に対戦して勝った記録だけ(cardRecordAfter の rankable。公開前・デバッグの人・デバッグの入口からの対戦は数えない・送らない)
+const CARD_RANK_TABLE = 'card_battle_ranks';
+const CARD_RANK_SELECT = 'user_name,breeder_id,icon,profile_frame,week_key,'
+  + CARD_LEVEL_ORDER.map((lv) => `wins_${lv},week_wins_${lv}`).join(',') + ',best_streak,current_streak,dex_count,dex_total,updated_at';
+const CARD_RANK_FETCH_LIMIT = 150;
+const CARD_RANK_SHOW_LIMIT = 50;
+const CARD_RANK_CACHE_MS = 60 * 1000;
+let _cardRanksUnavailable = false;
+const cardRanksUnavailable = () => _cardRanksUnavailable;
+const cardRankCache = new Map();
+
+// カード図鑑の集めた種類(図鑑の「集めた種類」と同じ数え方: 全モンスター＋技・ブリーダー)
+const cardDexCounts = (db, collection) => {
+  const all = [...Object.values(db.monsters).map((m) => m.no), ...Object.values(db.cards).map((c) => c.no)];
+  const col = collection || {};
+  return { count: all.filter((no) => col[no] > 0).length, total: all.length };
+};
+
+// 1行を画面で使う形へ。壊れた値は捨てる
+const cardRankEntryFromRow = (row) => {
+  if (!row || typeof row !== 'object') return null;
+  const n = (k) => { const x = Number(row[k]); return Number.isFinite(x) && x > 0 ? Math.floor(x) : 0; };
+  return {
+    userName: String(row.user_name || '名無しのブリーダー'),
+    breederId: typeof row.breeder_id === 'string' ? row.breeder_id : '',
+    icon: row.icon || null,
+    profileFrame: typeof normalizeProfileFrameId === 'function' ? normalizeProfileFrameId(row.profile_frame) : null,
+    weekKey: typeof row.week_key === 'string' ? row.week_key : '',
+    wins: Object.fromEntries(CARD_LEVEL_ORDER.map((lv) => [lv, n(`wins_${lv}`)])),
+    weekWins: Object.fromEntries(CARD_LEVEL_ORDER.map((lv) => [lv, n(`week_wins_${lv}`)])),
+    bestStreak: n('best_streak'),
+    dexCount: n('dex_count'),
+    dexTotal: n('dex_total'),
+    updatedAt: String(row.updated_at || ''),
+  };
+};
+// 改名で同じ人が2行になっていたら、新しい方だけ見せる(ブリーダーIDがあればIDで、無ければ名前で同じ人とみなす)
+const cardRankMerge = (entries) => {
+  const byKey = new Map();
+  (Array.isArray(entries) ? entries : []).forEach((e) => {
+    if (!e) return;
+    const key = e.breederId || `name:${e.userName}`;
+    const cur = byKey.get(key);
+    if (!cur || e.updatedAt > cur.updatedAt) byKey.set(key, e);
+  });
+  return [...byKey.values()];
+};
+// 何で並べるか。kind: 'wins'(period: 'week' | 'total', level)/ 'streak' / 'dex'
+const cardRankColumn = ({ kind, period, level }) => (kind === 'streak' ? 'best_streak' : kind === 'dex' ? 'dex_count'
+  : `${period === 'week' ? 'week_wins' : 'wins'}_${level}`);
+const cardRankValue = (e, { kind, period, level }) => (kind === 'streak' ? e.bestStreak : kind === 'dex' ? e.dexCount
+  : (period === 'week' ? e.weekWins : e.wins)[level] || 0);
+
+// 表から上位を取る。表が無ければ null
+const sbFetchCardRanks = async (q, now = Date.now()) => {
+  if (_cardRanksUnavailable) return null;
+  const column = cardRankColumn(q);
+  const week = q.kind === 'wins' && q.period === 'week' ? `&week_key=eq.${cardWeekKeyJst(now)}` : '';
+  const url = `${SUPABASE_URL}/rest/v1/${CARD_RANK_TABLE}?select=${CARD_RANK_SELECT}&${column}=gt.0${week}`
+    + `&order=${column}.desc.nullslast,updated_at.asc&limit=${CARD_RANK_FETCH_LIMIT}`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch(url, { headers: SB_HEADERS, cache: 'no-store', signal: controller.signal });
+    const body = await res.text();
+    if (!res.ok) {
+      if (_isMissingTableError(res.status, body)) { _cardRanksUnavailable = true; return null; }
+      throw new Error(`${CARD_RANK_TABLE} ${res.status}: ${body || res.statusText}`);
+    }
+    const rows = JSON.parse(body || '[]');
+    const entries = cardRankMerge((Array.isArray(rows) ? rows : []).map(cardRankEntryFromRow));
+    entries.sort((a, b) => cardRankValue(b, q) - cardRankValue(a, q));
+    return entries;
+  } finally {
+    clearTimeout(timer);
+  }
+};
+// 上書き保存。同じ人(同じ名前)は何度書いても1行のまま、最新の値になる
+const sbUpsertCardRank = async (row) => {
+  if (_cardRanksUnavailable || !row) return false;
+  const url = `${SUPABASE_URL}/rest/v1/${CARD_RANK_TABLE}?on_conflict=user_name`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { ...SB_HEADERS, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify([row]), signal: controller.signal,
+    });
+    if (!res.ok) {
+      const body = await res.text();
+      if (_isMissingTableError(res.status, body)) { _cardRanksUnavailable = true; return false; }
+      throw new Error(`${CARD_RANK_TABLE} upsert ${res.status}: ${body || res.statusText}`);
+    }
+    return true;
+  } finally {
+    clearTimeout(timer);
+  }
+};
+// 記録から1行を作って送る(前に送った中身と同じなら送らない)。呼ぶのは「ランキングに数えてよい対戦」のあとだけ
+const cardRankSync = async (db, { record, collection, profile }) => {
+  try {
+    if (_cardRanksUnavailable || !profile) return false;
+    const breederId = typeof ensureBreederId === 'function' ? await ensureBreederId() : null;
+    const dex = cardDexCounts(db, collection);
+    const row = cardRankRow(record, { dexCount: dex.count, dexTotal: dex.total, userName: profile.name, icon: profile.icon, profileFrame: profile.frame, breederId, now: Date.now() });
+    const sign = JSON.stringify(row);
+    if ((await storeGet(CARD_SAVE_KEYS.rankSync, null)) === sign) return true;
+    const ok = await sbUpsertCardRank(row);
+    if (ok) { await storeSet(CARD_SAVE_KEYS.rankSync, sign); cardRankCache.clear(); }
+    return ok;
+  } catch (err) {
+    console.error('[ranking] card_battle_ranks sync failed:', err && err.message ? err.message : err);
+    return false;
+  }
+};
+
+// ---- 画面: ランキング(トップの「ランキング」から) ----
+const CARD_RANK_KINDS = Object.freeze([
+  { id: 'wins', label: '勝ち数', emoji: '🏆' }, { id: 'streak', label: '連勝', emoji: '🔥' },
+  { id: 'dex', label: '図鑑', emoji: '📖' }, { id: 'multi', label: 'マルチ', emoji: '🎮' },
+]);
+const CardRankingBoard = ({ onBack, renderBreederIcon = null, selfName = '', record = null, dex = null, sendOn = false }) => {
+  const [kind, setKind] = useState('wins');
+  const [period, setPeriod] = useState('week');
+  const [level, setLevel] = useState('normal');
+  const [state, setState] = useState({ status: 'loading', entries: [] });
+  const [selfId, setSelfId] = useState('');
+  const [retry, setRetry] = useState(0);
+  const q = { kind, period, level };
+  const cacheKey = kind === 'wins' ? `wins:${period}:${level}` : kind;
+  useEffect(() => { let alive = true; if (typeof ensureBreederId === 'function') ensureBreederId().then((id) => { if (alive && typeof id === 'string') setSelfId(id); }).catch(() => {}); return () => { alive = false; }; }, []);
+  useEffect(() => {
+    if (kind === 'multi') return undefined;
+    let alive = true;
+    const hit = cardRankCache.get(cacheKey);
+    setState(hit ? { status: 'ready', entries: hit.entries } : { status: 'loading', entries: [] });
+    if (hit && Date.now() - hit.at < CARD_RANK_CACHE_MS) return () => { alive = false; };
+    sbFetchCardRanks(q).then((entries) => {
+      if (!alive) return;
+      if (entries == null) { setState({ status: 'missing', entries: [] }); return; }
+      cardRankCache.set(cacheKey, { at: Date.now(), entries });
+      setState({ status: 'ready', entries });
+    }).catch(() => { if (alive && !hit) setState({ status: 'error', entries: [] }); });
+    return () => { alive = false; };
+  }, [cacheKey, retry]);
+  const rec = cardNormalizeRecord(record);
+  const weekNow = cardWeekKeyJst(Date.now());
+  const mineValue = kind === 'streak' ? rec.rank.streak.best : kind === 'dex' ? (dex ? dex.count : 0)
+    : (period === 'week' ? (rec.rank.week.key === weekNow ? rec.rank.week.wins : {}) : rec.rank.total)[level] || 0;
+  const unit = kind === 'dex' ? '種類' : kind === 'streak' ? '連勝' : '勝';
+  const shown = state.entries.slice(0, CARD_RANK_SHOW_LIMIT);
+  const chip = (on) => `min-h-[36px] shrink-0 rounded-full border px-3 text-[11px] font-black ${on ? 'border-amber-300 bg-amber-500/25 text-amber-100' : 'border-white/10 bg-slate-900 text-slate-400'}`;
+  const medal = (i) => (i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : String(i + 1));
+  const levelLabel = (lv) => CARD_LEVEL_LABEL[lv] || lv.toUpperCase();
+  return (
+    <div data-mh-screen data-card-ranking={kind} className={SCREEN_SHELL_CLASS}>
+      <ScreenHead title="ランキング" accent="text-amber-200" onBack={onBack} note="MFバトルカード"/>
+      <div className="mb-2 grid shrink-0 grid-cols-4 gap-1">
+        {CARD_RANK_KINDS.map((k) => (
+          <button key={k.id} type="button" data-card-ranking-tab={k.id} aria-pressed={kind === k.id} onClick={() => { Audio_.se.tap(); setKind(k.id); }}
+            className={`min-h-[44px] rounded-xl border text-[11px] font-black ${kind === k.id ? 'border-amber-300 bg-amber-500/25 text-amber-100' : 'border-white/10 bg-slate-900/80 text-slate-300'}`}>
+            <span aria-hidden="true" className="block text-base leading-none">{k.emoji}</span>{k.label}
+          </button>
+        ))}
+      </div>
+      {kind === 'wins' && (
+        <div className="mb-1.5 shrink-0 space-y-1.5">
+          <div className="flex gap-1.5">
+            {[['week', '今週'], ['total', '通算']].map(([id, label]) => <button key={id} type="button" data-card-ranking-period={id} onClick={() => setPeriod(id)} className={chip(period === id)}>{label}</button>)}
+            <small className="ml-auto self-center text-[10px] font-bold text-slate-400">{period === 'week' ? '月曜 0:00 から' : '助手と対戦で勝った数'}</small>
+          </div>
+          <div className="flex gap-1.5 overflow-x-auto">
+            {CARD_LEVEL_ORDER.map((lv) => <button key={lv} type="button" data-card-ranking-level={lv} onClick={() => setLevel(lv)} className={chip(level === lv)}>{levelLabel(lv)}</button>)}
+          </div>
+        </div>
+      )}
+      {kind !== 'multi' && (
+        <div data-card-ranking-mine className={`${SCREEN_PANEL_FLAT_CLASS} mb-1.5 flex shrink-0 items-center gap-2 text-[12px] font-bold`}>
+          <span className="text-slate-300">あなたの記録</span>
+          <b className="ml-auto text-base font-black text-amber-200">{mineValue.toLocaleString()}<small className="ml-0.5 text-[10px] text-slate-400">{unit}</small></b>
+        </div>
+      )}
+      {kind !== 'multi' && !sendOn && <p data-card-ranking-preview className="mb-1.5 shrink-0 text-[10px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('いまは見本です。ランキングへ送るのは、公開してからのふつうの対戦の記録だけです')}</p>}
+      <div className={`${SCREEN_LIST_CLASS} space-y-1.5 pb-3`}>
+        {kind === 'multi' && (
+          <div data-card-ranking-multi className="mt-6 rounded-2xl border border-white/10 bg-slate-900/80 p-5 text-center">
+            <div aria-hidden="true" className="text-3xl">🎮</div>
+            <b className="mt-1 block text-[15px] font-black text-white">マルチ対戦の強さ</b>
+            <span className="mt-1 inline-block rounded border border-slate-500 px-2 py-0.5 text-[11px] font-black text-slate-300">準備中</span>
+            <p className="mt-2 text-[12px] font-bold text-slate-400">マルチ対戦ができるようになったら、ここに順位が出ます</p>
+          </div>
+        )}
+        {kind !== 'multi' && state.status === 'loading' && <p className="py-8 text-center text-sm font-bold text-slate-400">読み込み中…</p>}
+        {kind !== 'multi' && state.status === 'missing' && <p data-card-ranking-missing className="py-8 text-center text-sm font-bold text-amber-200">ランキングは準備中です</p>}
+        {kind !== 'multi' && state.status === 'error' && (
+          <div className="py-8 text-center">
+            <p className="text-sm font-bold text-amber-200">ランキングを読み込めませんでした</p>
+            <button type="button" onClick={() => { cardRankCache.delete(cacheKey); setRetry((n) => n + 1); }} className="mt-2 min-h-[44px] rounded-xl bg-slate-800 px-4 text-sm font-black">もう一度読み込む</button>
+          </div>
+        )}
+        {kind !== 'multi' && state.status === 'ready' && shown.length === 0 && <p data-card-ranking-empty className="py-8 text-center text-sm font-bold text-slate-400">まだ記録がありません</p>}
+        {kind !== 'multi' && state.status === 'ready' && shown.map((e, i) => {
+          const mine = (selfId && e.breederId === selfId) || (!e.breederId && !!selfName && e.userName === selfName);
+          const v = cardRankValue(e, q);
+          return (
+            <article key={e.breederId || e.userName} data-card-ranking-row={i + 1} data-mine={mine ? '1' : undefined}
+              className={`grid grid-cols-[28px_32px_minmax(0,1fr)_auto] items-center gap-2 rounded-xl border p-2 ${mine ? 'border-amber-300/70 bg-amber-500/10' : i === 0 ? 'border-amber-500/50 bg-amber-500/10' : 'border-white/10 bg-slate-900/80'}`}>
+              <b className="text-center text-sm font-black text-slate-200">{medal(i)}</b>
+              {renderBreederIcon ? renderBreederIcon({ userName: e.userName, icon: e.icon, profileFrame: e.profileFrame, breederId: e.breederId }) : <span aria-hidden="true" className="text-lg">👤</span>}
+              <span className="min-w-0 leading-tight">
+                <b className="block truncate text-[13px] font-black text-white">{e.userName}{mine ? '(あなた)' : ''}</b>
+                {kind === 'dex' && e.dexTotal > 0 && <small className="block text-[10px] font-bold text-slate-400">{e.dexTotal}種類のうち</small>}
+              </span>
+              <b className="text-right text-base font-black leading-tight text-amber-200">{v.toLocaleString()}<small className="ml-0.5 text-[10px] font-bold text-slate-400">{unit}</small></b>
+            </article>
+          );
+        })}
+      </div>
     </div>
   );
 };
@@ -60997,6 +61407,15 @@ function MonsterHeroGame() {
     return { id: activeAssistant.id, name: activeAssistant.name, accent: activeAssistant.accent,
       image: assistantFullImage(activeAssistant, (line && line.e) || 'happy'), face: assistantFaceSrc(activeAssistant, (line && line.e) || 'happy'), text };
   }, [battleSystemSelectOpen, activeAssistant && activeAssistant.id]);
+  // MFバトルカードのトップでも、助手が立ち絵でひとこと(社長 台帳 #3513「モンビーやモンバトと同じ仕様に」)。開くたびに1本えらぶ
+  const cardTopOpen = gameState === 'CARD_TOP';
+  const cardTopAssistant = useMemo(() => {
+    if (!cardTopOpen || !activeAssistant) return null;
+    const line = (typeof pickAssistantLine === 'function') ? pickAssistantLine('cardTop', null, assistantBondLevelNow, activeAssistant.id) : null;
+    const text = line ? assistantSpeakText(line.t, breederName, assistantBondLevelNow, assistantCallStyles[activeAssistant.id] || null, activeAssistant.id) : '';
+    return { id: activeAssistant.id, name: activeAssistant.name, accent: activeAssistant.accent,
+      image: assistantFullImage(activeAssistant, (line && line.e) || 'happy'), face: assistantFaceSrc(activeAssistant, (line && line.e) || 'happy'), text };
+  }, [cardTopOpen, activeAssistant && activeAssistant.id]);
   // まだ助手が知らせていない飾り枠。もらった順に並ぶ
   const newProfileFrames = ownedProfileFrames
     .filter(id => !profileFrameNoticed.includes(id)).map(id => profileFrameById(id)).filter(Boolean);
@@ -72924,7 +73343,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onClose:()=>setRaidJackDetailMon(null),accent:'indigo',readOnly:true,
             label:`${raidJackDetailMon.name}の詳細`,
           })}</>)}
-        {(gameState==='CARD_TOP'||gameState==='CARD_BATTLE'||(gameState==='CARD_PACK_OPEN'&&!cardPackOpen))&&(<CardBattleScreen screen={gameState} onNavigate={setGameState} onExit={()=>{setCardBgm(null);setCardOrigin('home');setGameState(cardOrigin==='debug'?'DEBUG_SETTINGS':'HOME');}} exitLabel={cardOrigin==='debug'?'デバッグ設定へ戻る':'HOMEへ戻る'} seenStoryIds={rhythmEventStorySeen||[]} debug={cardOrigin==='debug'} onBgm={setCardBgm} onQuickLoops={awardBackQuickLoops} onOpenMarket={()=>{setCardMarketEntry(true);setMarketExchangeError('');void loadCardShop();setGameState('BREEDER_MARKET');}}/>)}
+        {(gameState==='CARD_TOP'||gameState==='CARD_BATTLE'||(gameState==='CARD_PACK_OPEN'&&!cardPackOpen))&&(<CardBattleScreen screen={gameState} onNavigate={setGameState} onExit={()=>{setCardBgm(null);setCardOrigin('home');setGameState(cardOrigin==='debug'?'DEBUG_SETTINGS':'HOME');}} exitLabel={cardOrigin==='debug'?'デバッグ設定へ戻る':'HOMEへ戻る'} seenStoryIds={rhythmEventStorySeen||[]} debug={cardOrigin==='debug'} onBgm={setCardBgm} onQuickLoops={awardBackQuickLoops} onOpenMarket={()=>{setCardMarketEntry(true);setMarketExchangeError('');void loadCardShop();setGameState('BREEDER_MARKET');}}
+          topAssistant={cardTopAssistant}
+          /* ランキングへ送るのは、公開してから・デバッグでない人だけ(台帳 #3513「公開前は、デバッグの人の記録も送らない」) */
+          rank={{send:EVENT_REPLAY_RELEASE_FLAGS.cardBattle===true&&!cardBattleDebugHome,profile:{name:breederName||'名無しのブリーダー',icon:breederIcon,frame:rankingProfileFrameValue(profileFrameId)},renderBreederIcon:rankingBreederIcon}}/>)}
         {gameState==='RAID_JACK_DEBUG'&&(<RaidJackDebugScreen onBack={()=>setGameState('DEBUG_SETTINGS')} raidForce={raidJackDebugForce} onToggleRaidForce={()=>setRaidJackDebugForce(v=>!v)} realRules={raidJackDebugRealRules} onToggleRealRules={()=>setRaidJackDebugRealRules(v=>!v)} onOpenRaid={async()=>{setRaidJackDebugForce(true);await openRaidJack();}} onGoHome={returnToHome} onPreviewRhythmResult={(kind)=>{const pumpkin=kind==='pumpkin';const t=pumpkin?RAID_JACK_PUMPKIN:RAID_JACK_A_TIERS[2];const hp=t.hp;const before=Math.floor(hp*0.6);const damage=523456;setRaidJackResult({way:'rhythm',songName:'Monster Hero',difficultyName:'HARD',score:523456,assist:false,kind:'a',tierIndex:pumpkin?RAID_JACK_A_TIERS.length-1:2,tierName:t.name,reason:'rhythm',damage,defeated:false,turns:0,levelUps:0,growths:0,outcome:'sent',opened:false,eventId:'raid_jack_debug',quickAward:null,lifeLeft:pumpkin?hp:Math.max(0,before-damage),lifeBefore:pumpkin?null:before,lifeMax:hp,pumpkin});}} onPreviewDamageFx={(kind)=>{const t=RAID_JACK_A_TIERS[2];const hp=t.hp;setRaidDamageFx(kind==='none'?{key:`preview-${Date.now()}`,tierIndex:2,tierName:t.name,score:0,damage:0,assist:true,lifeBefore:Math.floor(hp*0.6),max:hp,pumpkin:false}:{key:`preview-${Date.now()}`,tierIndex:2,tierName:t.name,score:523456,damage:kind==='down'?hp:523456,assist:false,lifeBefore:kind==='down'?Math.floor(hp*0.05):Math.floor(hp*0.6),max:hp,pumpkin:false});}} onStartBattle={(kind,tierIndex,opts)=>{
           // 回数は使わず、別のイベントID(raid_jack_debug)で送る確認用の入口。runMode は反映されてから始まる(useEffect)
           const isB=kind==='b'; const mode=isB?BATTLE_MODE_RAID_JACK_B:BATTLE_MODE_RAID_JACK_A;
