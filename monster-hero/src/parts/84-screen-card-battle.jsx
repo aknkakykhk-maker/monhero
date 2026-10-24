@@ -968,6 +968,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       setEditDeck(null); setView('decks');
     }}/>;
   }
+  if (view === 'dex') return <CardDex db={db} collection={save.collection} onBack={() => setView('top')}/>;
+  if (view === 'rules') return <CardRules onBack={() => setView('top')} onTutorial={() => startTutorial()}/>;
   if (view === 'decks') {
     return (
       <>
@@ -1063,9 +1065,10 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         )}
         {notice && <p className="text-[12px] font-bold text-amber-200">{notice}</p>}
         <button type="button" data-card-cpu className={`${btn} mh-button-primary`} disabled={!activeDeck} onClick={() => { Audio_.se.tap(); setNotice(''); setView('foe'); }}>コンピューター戦</button>
-        <div className="grid grid-cols-2 gap-2"><button type="button" data-card-decks className={`${btn} border border-amber-300/50 bg-amber-900/50 text-amber-50`} onClick={() => { Audio_.se.tap(); setNotice(''); setView('decks'); }}>デッキ編成</button>{soon('マーケットへ')}{soon('カード図鑑')}
-          {/* ルールの画面ができるまでは、練習試合(チュートリアル)の入口をここに置く(設計書 7-4「もう一度できる」) */}
-          <button type="button" data-card-tutorial-again className={`${btn} border border-emerald-300/50 bg-emerald-900/60 text-emerald-50`} onClick={() => { Audio_.se.tap(); startTutorial(); }}>練習試合<span className="block text-[10px] font-bold">ドラが教えるチュートリアル</span></button>
+        <div className="grid grid-cols-2 gap-2"><button type="button" data-card-decks className={`${btn} border border-amber-300/50 bg-amber-900/50 text-amber-50`} onClick={() => { Audio_.se.tap(); setNotice(''); setView('decks'); }}>デッキ編成</button>{soon('マーケットへ')}
+          <button type="button" data-card-dex-open className={`${btn} border border-sky-300/50 bg-sky-900/50 text-sky-50`} onClick={() => { Audio_.se.tap(); setNotice(''); setView('dex'); }}>カード図鑑</button>
+          {/* 練習試合のやり直しは、ルールの画面の中(ドラの D20「ルールの画面から、いつでもこの練習試合をやり直せる」) */}
+          <button type="button" data-card-rules-open className={`${btn} border border-emerald-300/50 bg-emerald-900/60 text-emerald-50`} onClick={() => { Audio_.se.tap(); setNotice(''); setView('rules'); }}>ルール<span className="block text-[10px] font-bold">練習試合もここから</span></button>
         </div>
         {debug && (
           <div className={`${SCREEN_PANEL_FLAT_CLASS} space-y-1`}>

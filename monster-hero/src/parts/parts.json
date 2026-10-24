@@ -304,6 +304,11 @@
       "pure": true
     },
     {
+      "file": "88-card-rules.jsx",
+      "role": "MFバトルカードのルールの画面の文(CARD_RULE_PAGES)。正本は docs/spec/card-battle/RULES_SOURCE.md",
+      "pure": true
+    },
+    {
       "file": "85-card-battle-motion.jsx",
       "role": "MFバトルカードの技の動き。カードの技を、モンヒロの技の動き(24-battle-fx.jsx の SkillFxMotion)に当てる表。守り・受ける・倒れるの動きは 70-bootstrap.jsx の CSS"
     },
@@ -313,7 +318,7 @@
     },
     {
       "file": "87-card-deck-edit.jsx",
-      "role": "画面: MFバトルカードのデッキ編成(デッキの一覧・組む画面)。決まりは 82 の cardDeckProblems・cardDeckAddReason。保存は 84 の CardBattleScreen が入れる"
+      "role": "画面: MFバトルカードのデッキ編成(デッキの一覧・組む画面)・カード図鑑・ルールの画面。決まりは 82 の cardDeckProblems・cardDeckAddReason。保存は 84 の CardBattleScreen が入れる"
     },
     {
       "file": "81-debug-trials.jsx",

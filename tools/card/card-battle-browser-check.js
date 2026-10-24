@@ -59,7 +59,8 @@ const layoutIssues = async (page) => page.evaluate(() => {
   return out;
 });
 const layoutSeen = [];
-const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive: true }); await page.screenshot({ path: path.join(SHOT, `${name}.png`) }).catch(() => {}); } };
+// 写真には、押した跡の波紋(TapRippleLayer の白い丸)を写さない(社長に見せる写真のため)
+const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive: true }); await page.screenshot({ path: path.join(SHOT, `${name}.png`), style: 'div[style*="2147483647"] > span { display: none !important; }' }).catch(() => {}); } };
   try {
     browser = await playwright.chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
     const page = await browser.newPage({ viewport: { width: VW, height: VH } });
@@ -187,7 +188,12 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     check('⑪ はじめて最後までやると 100(印 done・rewarded)', tut.t && tut.t.done && tut.t.rewarded && tut.point === 400, JSON.stringify(tut));
     await page.getByRole('button', { name: 'トップへ' }).click();
     await page.locator('[data-card-top="top"]').waitFor({ timeout: 20000 });
-    // もう一度 → 飛ばす: 100 は二度ともらえない
+    // もう一度 → 飛ばす: 100 は二度ともらえない(練習試合のやり直しはルールの画面から)
+    await page.locator('[data-card-rules-open]').click();
+    await page.locator('[data-card-rules]').waitFor({ timeout: 5000 });
+    const ruleCount = await page.locator('[data-card-rule]').count();
+    if (SHOT) await shot(page, '22-rules');
+    check('⑮ ルールの画面に節が並び、練習試合のやり直しがある', ruleCount >= 8 && (await page.locator('[data-card-rules] [data-card-tutorial-again]').count()) === 1, String(ruleCount));
     await page.locator('[data-card-tutorial-again]').click();
     await page.locator('[data-card-tutor]').waitFor({ timeout: 20000 });
     await page.locator('[data-card-quit]').click();
@@ -244,7 +250,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     // ⑤ 自分の番を進める(使えるカードを出す → 狙える相手 → 攻撃おわり → ガッツ)
     let myActions = 0, guards = 0, gutsTurns = 0, shotGuard = false, shotTarget = false, motionSeen = false, poseSeen = new Set();
     // ⑫ 運ぶ操作: 指(マウス)で手札を持って、置ける所まで運んで離す
-    let dragAttack = null, dragGuts = null, dragNoGlow = null, dragTries = 0;
+    let dragAttack = null, dragGuts = null, dragNoGlow = null, dragTries = 0, dragShotNo = false;
     const center = async (loc) => { const b = await loc.boundingBox(); return b ? { x: b.x + b.width / 2, y: b.y + b.height / 2 } : null; };
     const carry = async (from, to, mid = null, onMid = null) => {
       await page.mouse.move(from.x, from.y); await page.mouse.down();
@@ -257,7 +263,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       return glow;
     };
     const deadline = Date.now() + 150000;
-    while (Date.now() < deadline && gutsTurns < 6) {
+    while (Date.now() < deadline && (gutsTurns < 6 || (dragAttack === null && gutsTurns < 12))) {
       const mode = await page.locator('[data-card-battle]').getAttribute('data-card-mode').catch(() => null);
       if (mode === null) break;
       (await page.locator('[data-card-pose]').evaluateAll((els) => els.map((e) => e.getAttribute('data-card-pose')))).forEach((x) => poseSeen.add(x));
@@ -294,20 +300,34 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
         let acted = false;
         if (dragAttack === null && usable.length) {
           // 技を相手のモンスターまで運ぶ。途中で自分の場(置けない所)の上を通るときは光らない
+          // ★相手の上で光るかを見てから離す。光らない札(自分の子に使う札など)は元の場所へ戻して離し(使わない)、次の札で試す
           const logBefore = await page.locator('[data-card-log]').innerText();
-          const from = await center(page.locator(`[data-card-hand-card="${usable[0]}"]`));
           const mine = await center(page.locator('[data-card-mon="0-0"]'));
-          let midGlow = 0;
-          const tries = ['1-0', '1-1', '1-2'];
-          for (const t of tries) {
-            const to = await center(page.locator(`[data-card-mon="${t}"]`));
-            const glow = await carry(from, to, mine, async () => { midGlow += await page.locator('[data-card-mon].ring-emerald-300').count(); });
-            await page.waitForTimeout(300);
-            const changed = (await page.locator('[data-card-log]').innerText()) !== logBefore || (await page.locator('[data-card-battle]').getAttribute('data-card-mode')) !== 'attack';
-            // 自分の子に使う札(回復など)は相手の上で光らないので、光って使えたときだけ成功にする(ほかは次の札で試し直す)
-            if (changed) { myActions += 1; if (glow > 0) { dragAttack = true; dragNoGlow = midGlow === 0; } break; }
+          let tried = false;
+          for (const hi of usable.slice(0, 5)) {
+            const from = await center(page.locator(`[data-card-hand-card="${hi}"]`));
+            for (const t of ['1-0', '1-1', '1-2']) {
+              const to = await center(page.locator(`[data-card-mon="${t}"]`));
+              if (!from || !to) continue;
+              let midGlow = 0;
+              await page.mouse.move(from.x, from.y); await page.mouse.down();
+              await page.mouse.move(from.x + 4, from.y - 20, { steps: 4 });
+              await page.mouse.move(mine.x, mine.y, { steps: 6 }); midGlow += await page.locator('[data-card-mon].ring-emerald-300').count();
+              await page.mouse.move(to.x, to.y, { steps: 8 });
+              const glow = await page.locator('[data-card-mon].ring-emerald-300, [data-card-guts-drop].ring-emerald-300').count();
+              if (!glow && SHOT && !dragShotNo) { dragShotNo = true; await shot(page, 'zz-drag-noglow'); }
+              if (!glow) { await page.mouse.move(from.x, from.y, { steps: 6 }); await page.mouse.up(); await page.waitForTimeout(150); continue; }
+              if (SHOT) await shot(page, '15-drag');
+              await page.mouse.up();
+              tried = true;
+              await page.waitForTimeout(300);
+              const changed = (await page.locator('[data-card-log]').innerText()) !== logBefore || (await page.locator('[data-card-battle]').getAttribute('data-card-mode')) !== 'attack';
+              if (changed) { myActions += 1; dragAttack = true; dragNoGlow = midGlow === 0; }
+              break;
+            }
+            if (tried) break;
           }
-          if (dragAttack === null) { dragTries += 1; if (dragTries >= 3) dragAttack = false; else { await page.getByRole('button', { name: '攻撃おわり → ガッツへ' }).click().catch(() => {}); } }
+          if (dragAttack === null) { dragTries += 1; if (dragTries >= 6) dragAttack = false; else { await page.getByRole('button', { name: '攻撃おわり → ガッツへ' }).click().catch(() => {}); } }
           continue;
         }
         for (const i of usable) {
@@ -418,10 +438,16 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const monCount = await page.locator('[data-card-deck-mon] img').count();
     // 同じ種類の2体目は入らない(キラがあれば)・技は「使える子だけ」で絞って入れる
     await page.getByRole('tab', { name: /技・ブリーダー/ }).click();
-    let sameNameStop = '';
+    let sameNameStop = '', shortShot = false, shortProblems = '';
     for (let guard = 0; guard < 400; guard++) {
       const n = Number((await page.locator('[data-card-deck-count]').innerText()).replace(/\/.*$/, '').trim());
       if (n >= 50) break;
+      if (n >= 47 && !shortShot) {
+        shortShot = true;
+        await page.evaluate(() => document.querySelectorAll('[data-card-deck-edit] .mh-scroll').forEach((el) => { el.scrollTop = 0; }));
+        shortProblems = await page.locator('[data-card-deck-problems]').innerText().catch(() => '');
+        if (SHOT) await shot(page, '19b-deck-short');
+      }
       const tiles = page.locator('[data-card-deck-tile]');
       const k = await tiles.count();
       let added = false;
@@ -445,6 +471,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const names = {};
     (newDeck ? newDeck.cards : []).forEach((no) => { names[no] = 1; });
     check('⑭ デッキ編成: 新しいデッキにモンスター3体・50枚を入れて保存できる', monCount === 3 && deckReady === 'ok' && savedDecks && savedDecks.decks.length === 2 && newDeck.monsters.length === 3 && newDeck.cards.length === 50, JSON.stringify({ monCount, deckReady, n: savedDecks && savedDecks.decks.length, cards: newDeck && newDeck.cards.length }));
+    check('⑭ 50枚に足りないデッキは「まだ対戦に使えません」と、あと何枚かが出る', /あと\d+枚/.test(shortProblems), shortProblems);
     check('⑭ 同じ名前4枚目・持っている枚数を超える分は入らない(理由が出る)', /3枚まで|持っているのは/.test(sameNameStop), sameNameStop);
     await page.locator(`[data-card-deck-use="${newDeck.id}"]`).click();
     await page.waitForTimeout(300);
@@ -453,6 +480,23 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     check('⑭ 一覧で「使う」を押すと、そのデッキで対戦する', act === newDeck.id, act);
     await page.locator('[data-card-deck-list] button').first().click();
     await page.waitForTimeout(300);
+    // ⑮ カード図鑑: 弾ごとのタブ・集めた種類・持っていないカードは暗い・持っているカードに枚数
+    await page.locator('[data-card-dex-open]').click();
+    await page.locator('[data-card-dex]').waitFor({ timeout: 5000 });
+    const dexTotal = await page.locator('[data-card-dex-total]').innerText();
+    const dex1 = await page.locator('[data-card-dex-tile]').count();
+    const haveTiles = await page.locator('[data-card-dex-tile]:not([data-card-dex-have="0"])').count();
+    if (SHOT) await shot(page, '23-dex-1');
+    await page.getByRole('tab', { name: '混血' }).click();
+    await page.waitForTimeout(200);
+    const dexH = await page.locator('[data-card-dex-tile]').count();
+    if (SHOT) await shot(page, '24-dex-hybrid');
+    await page.locator('[data-card-dex-show="have"]').click();
+    await page.waitForTimeout(150);
+    const dexHHave = await page.locator('[data-card-dex-tile]').count();
+    check('⑮ カード図鑑: 第1弾が並び、持っている種類が数えられ、混血のタブ・持っているだけの絞り込みが効く', Number(dexTotal) >= 20 && Number(dexTotal) === haveTiles && dex1 >= 100 && haveTiles >= 20 && dexH === 15 && dexHHave === 0, JSON.stringify({ dexTotal, dex1, haveTiles, dexH, dexHHave }));
+    await page.locator('[data-card-dex] button').first().click();
+    await page.waitForTimeout(250);
     check('どこでも実行時エラーが出ない', errors.length === 0, errors.slice(0, 3).join(' / '));
   } catch (e) {
     if (lastPage) await shot(lastPage, 'zz-fail').catch(() => {});
