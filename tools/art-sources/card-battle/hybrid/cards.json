@@ -4,7 +4,7 @@
  "monster": [
   {
    "no": "C-051",
-   "name": null,
+   "name": "バロン",
    "name_en": "BALON",
    "type": "地上",
    "type_en": "G",
@@ -13,11 +13,12 @@
    "sub": "ガリ",
    "main_en": "TIGER",
    "sub_en": "GALI",
-   "img": "C051.jpg"
+   "img": "C051.jpg",
+   "name_source": "案(英語版の名前をカタカナにした)"
   },
   {
    "no": "C-052",
-   "name": null,
+   "name": "アクアマスク",
    "name_en": "AQUA MASK",
    "type": "空中",
    "type_en": "A",
@@ -26,11 +27,12 @@
    "sub": "ゲル",
    "main_en": "GALI",
    "sub_en": "JELL",
-   "img": "C052.jpg"
+   "img": "C052.jpg",
+   "name_source": "案(英語版の名前をカタカナにした)"
   },
   {
    "no": "C-053",
-   "name": null,
+   "name": "グリーンスエゾー",
    "name_en": "GREEN SUEZO",
    "type": "地上",
    "type_en": "G",
@@ -39,11 +41,12 @@
    "sub": "プラント",
    "main_en": "SUEZO",
    "sub_en": "PLANT",
-   "img": "C053.jpg"
+   "img": "C053.jpg",
+   "name_source": "案(英語版の名前をカタカナにした)"
   },
   {
    "no": "C-054",
-   "name": null,
+   "name": "ストライカー",
    "name_en": "STRIKER",
    "type": "地上",
    "type_en": "G",
@@ -52,11 +55,12 @@
    "sub": "ライガー",
    "main_en": "NAGA",
    "sub_en": "TIGER",
-   "img": "C054.jpg"
+   "img": "C054.jpg",
+   "name_source": "案(英語版の名前をカタカナにした)"
   },
   {
    "no": "C-055",
-   "name": null,
+   "name": "イビルハム",
    "name_en": "EVIL HARE",
    "type": "地上",
    "type_en": "G",
@@ -65,7 +69,8 @@
    "sub": "モノリス",
    "main_en": "HARE",
    "sub_en": "MONOL",
-   "img": "C055.jpg"
+   "img": "C055.jpg",
+   "name_source": "案(英語版の名前をカタカナにした)"
   },
   {
    "no": "C-056",
@@ -79,11 +84,11 @@
    "main_en": "MOCCHI",
    "sub_en": "JOKER",
    "img": "C056.jpg",
-   "name_source": "元(検索の抜粋。要確認)"
+   "name_source": "元?(検索の抜粋で「ヘルファット」。英語版は HELL PIERROT。要確認)"
   },
   {
    "no": "C-057",
-   "name": null,
+   "name": "スケイル",
    "name_en": "SCALES",
    "type": "地上",
    "type_en": "G",
@@ -92,11 +97,12 @@
    "sub": "ディノ",
    "main_en": "JELL",
    "sub_en": "DINO",
-   "img": "C057.jpg"
+   "img": "C057.jpg",
+   "name_source": "案(英語版の名前をカタカナにした)"
   },
   {
    "no": "C-058",
-   "name": null,
+   "name": "ニューリーフ",
    "name_en": "NEW LEAF",
    "type": "空中",
    "type_en": "A",
@@ -105,11 +111,12 @@
    "sub": "プラント",
    "main_en": "MONOL",
    "sub_en": "PLANT",
-   "img": "C058.jpg"
+   "img": "C058.jpg",
+   "name_source": "案(英語版の名前をカタカナにした)"
   },
   {
    "no": "C-059",
-   "name": null,
+   "name": "ガーラント",
    "name_en": "GARLANT",
    "type": "地上",
    "type_en": "G",
@@ -118,11 +125,12 @@
    "sub": "ドラゴン",
    "main_en": "HENGER",
    "sub_en": "DRAGON",
-   "img": "C059.jpg"
+   "img": "C059.jpg",
+   "name_source": "案(英語版の名前をカタカナにした)"
   },
   {
    "no": "C-060",
-   "name": null,
+   "name": "ミミニャー",
    "name_en": "EARED MEW",
    "type": "地上",
    "type_en": "G",
@@ -131,7 +139,8 @@
    "sub": "ハム",
    "main_en": "MEW",
    "sub_en": "HARE",
-   "img": "C060.jpg"
+   "img": "C060.jpg",
+   "name_source": "案(英語版の名前をカタカナにした)"
   },
   {
    "no": "C-060C",
@@ -146,11 +155,12 @@
    "sub_en": "HARE",
    "img": "C060C.jpg",
    "variant": "ファンアート",
-   "note": "絵の下に「fanart by YafusaArt」とある。元のカードではない(ファンの描いた絵)。使うかは社長に聞く"
+   "note": "絵の下に「fanart by YafusaArt」とある。元のカードではない(ファンの描いた絵)。社長の決めで入れない(台帳 #3413)",
+   "excluded": true
   },
   {
    "no": "C-061",
-   "name": null,
+   "name": "クイーンプラント",
    "name_en": "QUEEN PLANT",
    "type": "地上",
    "type_en": "G",
@@ -159,11 +169,12 @@
    "sub": "ピクシー",
    "main_en": "PLANT",
    "sub_en": "PIXIE",
-   "img": "C061.jpg"
+   "img": "C061.jpg",
+   "name_source": "案(英語版の名前をカタカナにした)"
   },
   {
    "no": "C-062",
-   "name": null,
+   "name": "パープルワーム",
    "name_en": "PURPLE WORM",
    "type": "地上",
    "type_en": "G",
@@ -172,11 +183,12 @@
    "sub": "ナーガ",
    "main_en": "WORM",
    "sub_en": "NAGA",
-   "img": "C062.jpg"
+   "img": "C062.jpg",
+   "name_source": "案(英語版の名前をカタカナにした)"
   },
   {
    "no": "C-063",
-   "name": null,
+   "name": "アーマードラゴン",
    "name_en": "ARMOR DRAGON",
    "type": "地上",
    "type_en": "G",
@@ -185,11 +197,12 @@
    "sub": "デュラハン",
    "main_en": "DRAGON",
    "sub_en": "DURAHAN",
-   "img": "C063.jpg"
+   "img": "C063.jpg",
+   "name_source": "案(英語版の名前をカタカナにした)"
   },
   {
    "no": "C-064",
-   "name": null,
+   "name": "ケルマディクス",
    "name_en": "KELMADICS",
    "type": "地上",
    "type_en": "G",
@@ -198,11 +211,12 @@
    "sub": "ゴーレム",
    "main_en": "DURAHAN",
    "sub_en": "GOLEM",
-   "img": "C064.jpg"
+   "img": "C064.jpg",
+   "name_source": "案(英語版の名前をカタカナにした)"
   },
   {
    "no": "C-065",
-   "name": null,
+   "name": "ギガロン",
    "name_en": "GIGALON",
    "type": "水中",
    "type_en": "W",
@@ -211,7 +225,8 @@
    "sub": "ゲル",
    "main_en": "ZILLA",
    "sub_en": "JELL",
-   "img": "C065.jpg"
+   "img": "C065.jpg",
+   "name_source": "案(英語版の名前をカタカナにした)"
   }
  ],
  "skills": []
