@@ -78,6 +78,7 @@
 | `mh_card_daily_v1` | object / `cardNormalizeDaily` | MFバトルカードの今日の記録 `{ day(JST), cpuPoint, pvpPoint, firstWin, foes }`。日が変われば 0 に戻る |
 | `mh_card_record_v1` | object / `cardNormalizeRecord` | MFバトルカードの戦績 `{ cpu:{win,lose,surrender}, pvp:{win,lose}, beaten:{助手id:true}, recent:[30件] }` |
 | `mh_card_cpu_unlocked_v1` | object / `cardNormalizeCpuUnlocked` | コンピューター戦の難易度を開いた印 `{ hard, expert, master }`(EASY・NORMAL は最初から) |
+| `mh_card_tutorial_v1` | object / `cardNormalizeTutorial` | MFバトルカードの練習試合(チュートリアル)の印 `{ done, skipped, rewarded, at }`。`rewarded` があれば 100 カードポイントを二度と渡さない(`cardTutorialFinish`) |
 | `mh_raid_jack_frame_gift_v1` | object / `null` | プロフィールフレーム「ハロウィン・妖」をギフトで届けた印(`{ at, frameId }`・2026-10-20)。レイドで大王まで倒せたときの終章を見た参加者へ1回だけ届けるため。ギフトの一覧(`mh_gifts`)は古いものから消えるので、二重に届けないためにこの印を持つ。ギフトと同じ取引で保存する |
 | `mh_assistant_bond_rewards_v1` | object / `null` | 助手の仲良し度の節目(Lv22・25・28・30)のごほうびを、**最初の量**(`ASSISTANT_BOND_LEVEL_REWARDS_V1`)で届けた印(`{ 助手のid: [22, 25, ...] }`・2026-10-21 #3241)。量を上げたあと(下の v2)は書かず、読むだけ。この印がある節目には、今の量との差のぶんだけを追加で届ける |
 | `mh_assistant_bond_rewards_v2` | object / `null` | 助手の仲良し度のLvごとのごほうび(Lv2〜30・`ASSISTANT_BOND_LEVEL_REWARDS`)を**今の量**で届けた(または最初の量との差を届けた)印(`{ 助手のid: [2, 3, ...] }`・2026-10-21)。助手ごとに各Lv1回。ギフトの一覧(`mh_gifts`)は古いものから消えるので、二重に届けないためにこの印を持つ。ギフトと同じ取引で保存する。起動時に、もう越えているLvのぶんをまとめて届ける |
