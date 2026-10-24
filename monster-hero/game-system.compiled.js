@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9487470cd33c3dbb
+// source-sha256: 45f7dbcef4b50177
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-24 12:22";
+const BUILD_DATE = "2026-10-24 12:23";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -83765,9 +83765,9 @@ const CARD_BATTLE_LINES = Object.freeze({
     lose: [['わぁ、負けたか…強いな、ほんとに', 'surprise'], ['負けたわ…おでなんか膝しか取り柄ないからな。えへへ', 'troubled'], ['たしかに、今日はそっちが一枚上だったな', 'normal']]
   },
   atsu: {
-    challenge: ['カード勝負ね。とりあえず全力でいこ笑', 'いいね、受けて立つよ( *\'ω\'*)ノ', '今日は最後まで本気な笑', 'まとめて押し込むのが俺のやり方だから笑'],
+    challenge: ['カード勝負ね。とりあえず全力でいこ笑', 'いいね、受けて立つよ( *\'ω\'*)ノ', '今日は最後まで本気な笑', 'まとめて押し込むのが俺のやり方だから笑', 'これでもモンスター甲子園に出たことあるんだよね笑'],
     start: ['よろしく！ 楽しもうぜ笑', 'まずは場を見るわ！', 'まじで手加減しないからな笑', 'いくよ！ 最後まで集中な！'],
-    big: ['まとめていくぞ！', 'とりあえず全員に当てとくわ笑', 'ここ、押し込むとこだよな！', 'やっぱこれでしょ笑'],
+    big: ['まとめていくぞ！', 'とりあえず全員に当てとくわ笑', 'ここ、押し込むとこだよな！', 'やっぱこれでしょ笑', 'この流れ、大会でよくやったやつ！'],
     bigHit: ['いった…まじで効いたわ笑', 'てか、それ強すぎない！？', 'やるじゃん…！', '次で取り返すわ笑'],
     guardMine: ['読めてたよ笑', '当たらないって！', 'いいね、守り決まった笑'],
     guardTheirs: ['よけられたか…やるね笑', 'まじか、それ持ってたの！？', 'しゃあない、次いこ！'],
@@ -84431,7 +84431,7 @@ const CardBattleBoard = ({
       })
     }, "攻撃おわり → ガッツへ"));
   })();
-  const guide = mode === 'attack' ? sel ? monChosen === undefined ? '使う子をタップ' : needTarget ? '狙う相手をタップ' : '「使う」をタップ' : '技をタップ → 相手のモンスターをタップ' : mode === 'guard' ? guardOpts.length ? '使える回避・防御だけが明るくなっています' : '使える回避・防御はありません' : mode === 'guts' ? 'ガッツにするカードをタップ(何枚でも)' : mode === 'setup' ? '後攻: 始める前に2枚までガッツにできます' : mode === 'discard' ? `捨てるカードを${st.pendingDiscard ? st.pendingDiscard.n : 0}枚タップ` : '';
+  const guide = mode === 'attack' ? sel ? monChosen === undefined ? '使う子をタップ' : needTarget ? '狙う相手をタップ' : '「使う」をタップ' : attackOpts.length ? '技をタップ → 相手のモンスターをタップ' : '使える技がありません →「攻撃おわり」でガッツへ' : mode === 'guard' ? guardOpts.length ? '使える回避・防御だけが明るくなっています' : '使える回避・防御はありません' : mode === 'guts' ? 'ガッツにするカードをタップ(何枚でも)' : mode === 'setup' ? '後攻: 始める前に2枚までガッツにできます' : mode === 'discard' ? `捨てるカードを${st.pendingDiscard ? st.pendingDiscard.n : 0}枚タップ` : '';
   return React.createElement("div", {
     "data-mh-screen": true,
     "data-card-battle": true,
@@ -84465,15 +84465,7 @@ const CardBattleBoard = ({
     className: "block text-[10px] font-bold text-rose-200"
   }, CARD_LEVEL_LABEL[game.level])), React.createElement("div", {
     className: "ml-auto"
-  }, strip(CARD_CPU))), bubble && React.createElement("div", {
-    key: bubble.key,
-    "data-card-bubble": true,
-    className: `pointer-events-none absolute left-[56px] right-2 ${compact ? 'top-[118px]' : 'top-[150px]'} z-10 rounded-2xl border-[3px] bg-white px-2.5 py-1 text-[13px] font-extrabold leading-snug text-[#1f1333] shadow-lg`,
-    style: {
-      borderColor: who.accent,
-      ...JA_WRAP_STYLE
-    }
-  }, bubble.text), React.createElement("div", {
+  }, strip(CARD_CPU))), React.createElement("div", {
     className: "flex shrink-0 items-start justify-around px-1"
   }, opp.mons.map((_, m) => React.createElement(CardMonSlot, {
     key: m,
@@ -84489,7 +84481,20 @@ const CardBattleBoard = ({
   }))), React.createElement("div", {
     "data-card-stage": true,
     className: "relative flex min-h-[64px] flex-1 flex-col items-center justify-center gap-1.5 overflow-hidden px-3 py-1"
-  }, React.createElement("div", {
+  }, bubble && React.createElement("div", {
+    key: bubble.key,
+    "data-card-bubble": true,
+    className: `pointer-events-none relative z-[2] max-w-full rounded-2xl border-[3px] bg-white px-2.5 py-0.5 ${compact ? 'text-[12px]' : 'text-[13px]'} font-extrabold leading-snug text-[#1f1333] shadow-lg`,
+    style: {
+      borderColor: who.accent,
+      ...JA_WRAP_STYLE
+    }
+  }, React.createElement("span", {
+    className: "mr-1 text-[11px]",
+    style: {
+      color: who.accent
+    }
+  }, who.name), bubble.text), React.createElement("div", {
     className: "pointer-events-none absolute inset-x-6 top-1/2 h-px bg-gradient-to-r from-transparent via-violet-300/40 to-transparent"
   }), action && React.createElement("div", {
     key: action.key,
@@ -84513,7 +84518,7 @@ const CardBattleBoard = ({
     style: JA_WRAP_STYLE
   }, pendingText && React.createElement("div", {
     className: "text-rose-200"
-  }, pendingText), (pendingText ? logLines.slice(-1).slice(compact ? 1 : 0) : compact ? logLines.slice(action ? -1 : -2) : logLines).map((l, i, arr) => React.createElement("div", {
+  }, pendingText), (pendingText ? [] : compact ? logLines.slice(action || bubble ? -1 : -2) : logLines.slice(bubble && action ? -2 : -3)).map((l, i, arr) => React.createElement("div", {
     key: i,
     className: i === arr.length - 1 && !pendingText ? '' : 'text-[11px] text-violet-200'
   }, l.text)))), React.createElement("div", {
@@ -84569,7 +84574,14 @@ const CardBattleBoard = ({
     }), React.createElement("div", {
       className: "mt-0.5 w-full rounded-md bg-black/60 py-0.5 text-center leading-tight"
     }, React.createElement("b", {
-      className: "block truncate text-[12px]"
+      className: `block ${compact ? 'text-[10px]' : 'text-[11px]'} leading-tight`,
+      style: {
+        ...JA_WRAP_STYLE,
+        display: '-webkit-box',
+        WebkitLineClamp: 2,
+        WebkitBoxOrient: 'vertical',
+        overflow: 'hidden'
+      }
     }, c ? c.name : no), compact ? React.createElement(React.Fragment, null, React.createElement("span", {
       className: "block text-[10px] font-extrabold leading-tight text-amber-200"
     }, "ガッツ", c ? c.guts : '-'), React.createElement("span", {
