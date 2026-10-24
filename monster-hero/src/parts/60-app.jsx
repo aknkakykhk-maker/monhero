@@ -1748,6 +1748,9 @@ function MonsterHeroGame() {
   // 助手4人がタイプを教えるお話を見たか(TACTICS_TYPES_STORY_SEEN_KEY)。読み終えるまで流さない
   const [tacticsTypesStorySeenFlag, setTacticsTypesStorySeenFlag] = useState(false);
   const [tacticsTypesStorySeenLoaded, setTacticsTypesStorySeenLoaded] = useState(false);
+  // MFバトルカードのはじまりを見たか(CARD_BATTLE_INTRO_STORY_SEEN_KEY)。HOME の入口は「公開の印が真」かつこれが真のときだけ出す
+  const [cardBattleIntroSeenFlag, setCardBattleIntroSeenFlag] = useState(false);
+  const [cardBattleIntroSeenLoaded, setCardBattleIntroSeenLoaded] = useState(false);
   // 既読を読み終えたか(読む前に「まだ見ていない」と取り違えて流さないため)
   const [rhythmHellStorySeenLoaded, setRhythmHellStorySeenLoaded] = useState(false);
   const [rhythmHellGuide, setRhythmHellGuide] = useState(null);
@@ -4780,6 +4783,14 @@ function MonsterHeroGame() {
     // ★同じ瞬間にほかのお話(HELL・おしゃべり)も流れようとしたら、そちらを先にする(上書きしない)
     setRhythmEventStoryPending(prev => prev || TACTICS_TYPES_STORY_ID);
   }, [tacticsTypesStorySeenLoaded, tacticsTypesStorySeenFlag, tacticsIntroSeenFlag, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  // MFバトルカードのはじまり(2026-10-24)を、公開のあとの最初の HOME で1回だけ流す。置き方は上のタイプのお話と同じ(ほかのお話が先なら待つ)
+  useEffect(() => {
+    if (!EVENT_REPLAY_RELEASE_FLAGS.cardBattle) return;
+    if (!cardBattleIntroSeenLoaded || cardBattleIntroSeenFlag) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
+    if (rhythmEventStoryStartedRef.current.includes(CARD_BATTLE_INTRO_STORY_ID)) return;
+    setRhythmEventStoryPending(prev => prev || CARD_BATTLE_INTRO_STORY_ID);
+  }, [cardBattleIntroSeenLoaded, cardBattleIntroSeenFlag, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
   // タクティクスバトルの導入も同じ置き方で、HOMEで1度だけ流す。
   // ★ほかの会話が出ているあいだは待つ(重ねて出すと、どちらも読めない)
   useEffect(() => {
@@ -6289,6 +6300,10 @@ function MonsterHeroGame() {
       if (EVENT_REPLAY_RELEASE_FLAGS.tacticsTypes) {
         try { setTacticsTypesStorySeenFlag((await storeGet(TACTICS_TYPES_STORY_SEEN_KEY, false, false)) === true); setTacticsTypesStorySeenLoaded(true); } catch {}
       }
+      // MFバトルカードのはじまりを見たか。MFバトルカードの公開(cardBattle)のあとだけ読む。true 以外(無い・壊れた値)は「まだ」
+      if (EVENT_REPLAY_RELEASE_FLAGS.cardBattle) {
+        try { setCardBattleIntroSeenFlag((await storeGet(CARD_BATTLE_INTRO_STORY_SEEN_KEY, false, false)) === true); setCardBattleIntroSeenLoaded(true); } catch {}
+      }
       if (EVENT_REPLAY_RELEASE_FLAGS.tacticsBattle) {
         const tacticsIntroSeen = await storeGet(TACTICS_INTRO_SEEN_KEY, false, false);
         setTacticsIntroSeenFlag(tacticsIntroSeen === true);
@@ -7586,6 +7601,11 @@ function MonsterHeroGame() {
     setTacticsTypesStorySeenFlag(true);
     try { storeSet(TACTICS_TYPES_STORY_SEEN_KEY, true, false); } catch {}
   }, []);
+  // MFバトルカードのはじまりを「見た」にする。回想の画面からは保存へ直接書かず、この関数を通す
+  const markCardBattleIntroSeen = useCallback(() => {
+    setCardBattleIntroSeenFlag(true);
+    try { storeSet(CARD_BATTLE_INTRO_STORY_SEEN_KEY, true, false); } catch {}
+  }, []);
   // イベント回想の解放判定。EVENT_REPLAYS側はunlockedKeyという「呼び名」しか持たないので、
   // その名前→実際のstateの対応をここで持つ(データファイルはgame-system.jsxの状態を見られないため)。
   // 今後イベントを増やすときは、そのイベントの既読フラグをここへ1行足すだけでよい
@@ -7594,6 +7614,7 @@ function MonsterHeroGame() {
     rhythmHellStorySeen: rhythmHellStorySeenFlag,
     assistantChatStorySeen: assistantChatStorySeenFlag,
     tacticsTypesSeen: tacticsTypesStorySeenFlag,
+    cardBattleIntroSeen: cardBattleIntroSeenFlag,
     monbeatCupEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(MONBEAT_CUP_STORY_ID),
     monbeatCupThanksSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(MONBEAT_CUP_THANKS_STORY_ID),
     symphonyThanksSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_THANKS_STORY_ID),
@@ -21420,6 +21441,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 助手とおしゃべりのお話は、本編で流したときだけ「見た」にする(回想・デバッグでは立てない)
           if(event&&event.id===ASSISTANT_CHAT_STORY_ID&&eventReplay.live&&!eventReplay.debug) markAssistantChatStorySeen();
           if(event&&event.id===TACTICS_TYPES_STORY_ID&&eventReplay.live&&!eventReplay.debug) markTacticsTypesStorySeen();
+          // MFバトルカードのはじまりは、本編で見終えたらそのままスターター選び(CARD_TOP。持っていない人にはスターター選びが出る)へ
+          if(event&&event.id===CARD_BATTLE_INTRO_STORY_ID&&eventReplay.live&&!eventReplay.debug){
+            markCardBattleIntroSeen();
+            setEventReplay(null);setGameState('CARD_TOP');return;
+          }
           if(event&&event.id===RHYTHM_HELL_STORY_ID){
             if(!eventReplay.debug) markRhythmHellStorySeen();
             setRhythmHellGuide({page:0,debugList:!!eventReplay.debugList,fromList:!!eventReplay.fromList});
@@ -21440,6 +21466,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           if(eventReplay.live&&!eventReplay.debug&&event&&event.id==='tactics_intro') markTacticsIntroSeen();
           if(eventReplay.live&&!eventReplay.debug&&event&&event.id===ASSISTANT_CHAT_STORY_ID) markAssistantChatStorySeen();
           if(eventReplay.live&&!eventReplay.debug&&event&&event.id===TACTICS_TYPES_STORY_ID) markTacticsTypesStorySeen();
+          // MFバトルカードのはじまりは、飛ばしたら HOME のまま(入口から入れる)
+          if(eventReplay.live&&!eventReplay.debug&&event&&event.id===CARD_BATTLE_INTRO_STORY_ID) markCardBattleIntroSeen();
           // HELL のお話は飛ばしても説明は出す(遊び方は飛ばさずに知ってほしい)。見たにするのは本編で流したときだけ
           if(event&&event.id===RHYTHM_HELL_STORY_ID){
             if(eventReplay.live&&!eventReplay.debug) markRhythmHellStorySeen();
