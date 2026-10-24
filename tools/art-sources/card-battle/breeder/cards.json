@@ -1,5 +1,5 @@
 {
- "note": "社長から 2026-10-24 に受け取ったブリーダーのカード全種。**画像は英語版**(名前・文が英語)。日本語の名前はスターターの表(starter-decklists)で分かったものだけ入れ、ほかは null。文の日本語は無い(text は null・text_en に英語のまま)。数字はカード部が拡大して確かめた",
+ "note": "社長から 2026-10-24 に受け取ったブリーダーのカード全種。**画像は英語版**(名前・文が英語)。name・text は日本語(name_source/text_source: 元=元の日本語版で確かめた・元(要旨)=元の日本語版の要旨・推定・案/訳案=カード部が作った案。社長に見てもらう)。英語は name_en・text_en に残す。数字はカード部が拡大して確かめた",
  "category": "ブリーダー",
  "skills": [
   {
@@ -11,8 +11,10 @@
    "category": "ブリーダー",
    "damage": 1,
    "guts": 1,
-   "text": null,
-   "text_en": "Cannot be played to defeat a monster."
+   "text": "この技でモンスターのライフを0にしてはならない。",
+   "text_en": "Cannot be played to defeat a monster.",
+   "name_source": "元",
+   "text_source": "元"
   },
   {
    "no": "113",
@@ -22,184 +24,218 @@
    "kind_en": "SPE",
    "category": "ブリーダー",
    "guts": 0,
-   "text": null,
-   "text_en": "Heal 1 HP from one of your monsters."
+   "text": "1体の味方モンスターのライフを1回復する。",
+   "text_en": "Heal 1 HP from one of your monsters.",
+   "name_source": "元",
+   "text_source": "元"
   },
   {
    "no": "114",
-   "name": null,
+   "name": "突進",
    "name_en": "Wild Rush",
    "kind": "特殊",
    "kind_en": "SPE",
    "category": "ブリーダー",
    "guts": 3,
-   "text": null,
-   "text_en": "Can only be played as the first and only card in your BATTLE STEP. The top 5 cards of your deck become GUTS."
+   "text": "戦闘ステップの最初に使う。山札の上から5枚をガッツにする。このターンは他のカードを使用できない。",
+   "text_en": "Can only be played as the first and only card in your BATTLE STEP. The top 5 cards of your deck become GUTS.",
+   "name_source": "元",
+   "text_source": "元"
   },
   {
    "no": "122",
-   "name": null,
+   "name": "最後の切札",
    "name_en": "Last Trump",
    "kind": "特殊",
    "kind_en": "SPE",
    "category": "ブリーダー",
    "guts": 0,
-   "text": null,
-   "text_en": "Return one card from your hand to your deck. Shuffle and draw one card."
+   "text": "手札の中から1枚のカードを山札に戻し、山札をシャッフルする。その後、自分の山札からカードを1枚引く。",
+   "text_en": "Return one card from your hand to your deck. Shuffle and draw one card.",
+   "name_source": "元",
+   "text_source": "元"
   },
   {
    "no": "126",
-   "name": null,
+   "name": "戦意喪失",
    "name_en": "Fainted",
    "kind": "特殊",
    "kind_en": "SPE",
    "category": "ブリーダー",
    "guts": 5,
-   "text": null,
-   "text_en": "Both players lose ALL GUTS."
+   "text": "お互いのガッツを0にする。",
+   "text_en": "Both players lose ALL GUTS.",
+   "name_source": "元",
+   "text_source": "元(要旨)"
   },
   {
    "no": "127",
-   "name": null,
+   "name": "最後のきらめき",
    "name_en": "Twinkling",
    "kind": "特殊",
    "kind_en": "SPE",
    "category": "ブリーダー",
    "guts": 4,
-   "text": null,
-   "text_en": "If you have only one monster left, take your entire deck and place it in your GUTS pile."
+   "text": "味方モンスターが一体の時に使用できる。自分の山札の「全ての」カードをガッツにする。",
+   "text_en": "If you have only one monster left, take your entire deck and place it in your GUTS pile.",
+   "name_source": "元",
+   "text_source": "元"
   },
   {
    "no": "128",
-   "name": null,
+   "name": "ヒノトリの復活",
    "name_en": "Reborn",
    "kind": "特殊",
    "kind_en": "SPE",
    "category": "ブリーダー",
    "guts": 2,
-   "text": null,
-   "text_en": "Bring back your defeated Phoenix with 4 HP. It returns exhausted."
+   "text": "KOされた「ヒノトリ」をライフ4で復活させる。そのターンは攻撃できない。",
+   "text_en": "Bring back your defeated Phoenix with 4 HP. It returns exhausted.",
+   "name_source": "元",
+   "text_source": "元(要旨)"
   },
   {
    "no": "252",
-   "name": null,
+   "name": "時間稼ぎ",
    "name_en": "Busy Time",
    "kind": "特殊",
    "kind_en": "SPE",
    "category": "ブリーダー",
    "guts": 0,
-   "text": null,
-   "text_en": "Return all of your GUTS to your deck, then shuffle it."
+   "text": "自分のガッツを山札に戻す。その後、山札をシャッフルする。",
+   "text_en": "Return all of your GUTS to your deck, then shuffle it.",
+   "name_source": "元",
+   "text_source": "元"
   },
   {
    "no": "253",
-   "name": null,
+   "name": "冬虫散",
    "name_en": "Powder",
    "kind": "特殊",
    "kind_en": "SPE",
    "category": "ブリーダー",
    "guts": 0,
-   "text": null,
-   "text_en": "Remove 1 HP from one of your monsters. Draw a card."
+   "text": "一体の味方モンスターのライフを1減らす。自分の山札からカードを一枚引く。",
+   "text_en": "Remove 1 HP from one of your monsters. Draw a card.",
+   "name_source": "元",
+   "text_source": "元"
   },
   {
    "no": "254",
-   "name": null,
+   "name": "オイリーオイル",
    "name_en": "Nuts Oil",
    "kind": "特殊",
    "kind_en": "SPE",
    "category": "ブリーダー",
    "guts": 2,
-   "text": null,
-   "text_en": "Remove exhaustion from one of your monsters."
+   "text": "このターン、既に攻撃したモンスターに使用する。そのモンスターは、もう一回攻撃できる。",
+   "text_en": "Remove exhaustion from one of your monsters.",
+   "name_source": "元",
+   "text_source": "元"
   },
   {
    "no": "276",
-   "name": null,
+   "name": "ジョイのサポート",
    "name_en": "Support",
    "kind": "特殊",
    "kind_en": "SPE",
    "category": "ブリーダー",
    "guts": 0,
-   "text": null,
-   "text_en": "Play with a Breeder card that costs 3 or less GUTS. Ignore its cost."
+   "text": "消費ガッツが3以下の技の「ブリーダーカード」と同時に使用する。その技はガッツを消費せずに使用できる。",
+   "text_en": "Play with a Breeder card that costs 3 or less GUTS. Ignore its cost.",
+   "name_source": "元",
+   "text_source": "元"
   },
   {
    "no": "277",
-   "name": null,
+   "name": "意味不明",
    "name_en": "Complicated",
    "kind": "特殊",
    "kind_en": "SPE",
    "category": "ブリーダー",
    "guts": 1,
-   "text": null,
-   "text_en": "Choose an opponent's monster. It cannot attack next turn."
+   "text": "この技を受けたモンスターは、次のターン攻撃できない。",
+   "text_en": "Choose an opponent's monster. It cannot attack next turn.",
+   "name_source": "元",
+   "text_source": "元"
   },
   {
    "no": "278",
-   "name": null,
+   "name": "泣き真似",
    "name_en": "Fake Cry",
    "kind": "特殊",
    "kind_en": "SPE",
    "category": "ブリーダー",
    "guts": 1,
-   "text": null,
-   "text_en": "Opponent loses 1 GUTS."
+   "text": "相手ブリーダーはガッツを1減らす。",
+   "text_en": "Opponent loses 1 GUTS.",
+   "name_source": "元",
+   "text_source": "元"
   },
   {
    "no": "279",
-   "name": null,
+   "name": "リフレッシュ",
    "name_en": "Refresh",
    "kind": "特殊",
    "kind_en": "SPE",
    "category": "ブリーダー",
    "guts": 1,
-   "text": null,
-   "text_en": "Discard all cards in your hand. Draw the same amount."
+   "text": "手札を全部捨て、捨てた枚数だけカードをドローする。",
+   "text_en": "Discard all cards in your hand. Draw the same amount.",
+   "name_source": "元",
+   "text_source": "元"
   },
   {
    "no": "280",
-   "name": null,
+   "name": "おいのり",
    "name_en": "Pray",
    "kind": "防御",
    "kind_en": "BLK",
    "category": "ブリーダー",
    "guts": 0,
-   "text": null,
-   "text_en": "Play this when the opponent plays an ENV card. Ignore its effect and discard it."
+   "text": "この技は相手ブリーダーが「全体カード」を使用した瞬間に使用できる。全体カードを場から無くす。",
+   "text_en": "Play this when the opponent plays an ENV card. Ignore its effect and discard it.",
+   "name_source": "元",
+   "text_source": "元"
   },
   {
    "no": "351",
-   "name": null,
+   "name": "夏美草",
    "name_en": "Mint Leaf",
    "kind": "特殊",
    "kind_en": "SPE",
    "category": "ブリーダー",
    "guts": 0,
-   "text": null,
-   "text_en": "Remove the Cannot Attack effect from one of your monsters."
+   "text": "このターン攻撃できないモンスター1体を、攻撃できるようにする。",
+   "text_en": "Remove the Cannot Attack effect from one of your monsters.",
+   "name_source": "元",
+   "text_source": "元(要旨)"
   },
   {
    "no": "352",
-   "name": null,
+   "name": "合体",
    "name_en": "Fusion",
    "kind": "特殊",
    "kind_en": "SPE",
    "category": "ブリーダー",
    "guts": 0,
-   "text": null,
-   "text_en": "Sacrifice 2 of your monsters. Replace them with a mixedbred that has the MAIN of one and the SUB of the other. It enters exhausted."
+   "text": "味方モンスター2体をKOする。片方の MAIN と、もう片方の SUB を持つ派生モンスターを出す。そのターンは攻撃できない。",
+   "text_en": "Sacrifice 2 of your monsters. Replace them with a mixedbred that has the MAIN of one and the SUB of the other. It enters exhausted.",
+   "name_source": "元",
+   "text_source": "訳案"
   },
   {
    "no": "366",
-   "name": null,
+   "name": "影縛り",
    "name_en": "Shadow Bind",
    "kind": "特殊",
    "kind_en": "SPE",
    "category": "ブリーダー",
    "guts": 0,
-   "text": null,
-   "text_en": "Play with a POW/INT move. Name a BLK/DGE card. It cannot be played."
+   "text": "ちから技か、かしこさ技と同時に使用する。回避・防御のカードを1つ名指しする。そのカードは、この技に使用できない。",
+   "text_en": "Play with a POW/INT move. Name a BLK/DGE card. It cannot be played.",
+   "name_source": "元",
+   "text_source": "訳案"
   }
  ]
 }
