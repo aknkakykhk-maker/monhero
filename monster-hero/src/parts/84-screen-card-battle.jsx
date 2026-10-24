@@ -917,7 +917,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         <div className={`${SCREEN_LIST_CLASS} space-y-3 pb-4`}>
           <button type="button" data-card-mode-assistant className="mh-button mh-button-primary flex min-h-[96px] w-full flex-col items-center justify-center rounded-2xl px-3 py-3 active:scale-[.98]" onClick={() => { Audio_.se.tap(); setView('foe'); }}>
             <span className="text-[18px] font-black">助手と対戦</span>
-            <span className="mt-1 text-[12px] font-bold opacity-80">みゅあ・ももすけ・きき・きゅうこ・ドラ・あつ と戦う</span>
+            <span className="mt-1 text-[12px] font-bold opacity-80">助手のみんなと戦う</span>
           </button>
           <button type="button" data-card-mode-multi disabled className="mh-button flex min-h-[96px] w-full flex-col items-center justify-center rounded-2xl border border-white/10 bg-slate-900 px-3 py-3 text-slate-400">
             <span className="text-[18px] font-black">マルチ対戦</span>
@@ -966,8 +966,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
           {debug && <p className="text-[11px] font-bold text-slate-400">(デバッグ: まだ開いていない強さも選べます。開いた印は勝ったときだけ付きます)</p>}
           <div className={SCREEN_PANEL_FLAT_CLASS}>
             <div className="text-[12px] font-bold text-slate-300">使うデッキ: <b className="text-white">{activeDeck ? activeDeck.name : 'なし'}</b></div>
-            {deckIssues.length > 0 && <div className="mt-1 text-[12px] font-bold text-rose-300">{deckIssues.join('・')}</div>}
-            <div className="mt-1 text-[11px] font-bold text-slate-400">今日もらったカードポイント(助手と対戦): {save.daily.cpuPoint} / {CARD_CPU_DAILY_MAX}{save.daily.firstWin ? '' : '・今日はじめての勝ちで +50'}</div>
+            {deckIssues.length > 0 && <div className="mt-1 text-[12px] font-bold text-rose-300" style={JA_WRAP_STYLE}>{jaWrap(deckIssues.join('・'))}</div>}
+            <div className="mt-1 text-[11px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{cardRuleLine(`今日もらったカードポイント《(助手と対戦)》: 《${save.daily.cpuPoint} / ${CARD_CPU_DAILY_MAX}》${save.daily.firstWin ? '' : '・《今日はじめての勝ちで +50》'}`)}</div>
           </div>
           {notice && <p className="text-[12px] font-bold text-amber-200">{notice}</p>}
         </div>
@@ -1078,7 +1078,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             <div className="text-[12px] font-bold text-slate-400">いまのデッキ</div>
             <div className="text-[14px] font-black text-white">{activeDeck.name}</div>
             <div className="mt-1 flex gap-1.5">{activeDeck.monsters.map((no) => { const m = cardMonsterOf(db, no); return m ? <img key={no} {...press(no)} src={CARD_IMG(m.img)} alt={m.name} className="w-[22%] rounded-md"/> : null; })}</div>
-            <div className="mt-1 text-[11px] font-bold text-slate-400">戦績(助手と対戦): {save.record.cpu.win}勝 {save.record.cpu.lose}敗{save.record.cpu.surrender ? `・投了${save.record.cpu.surrender}` : ''}</div>
+            {/* 投了は負けに数える(カゲあつくんの確認)。保存の形(cpu.lose と cpu.surrender を別に持つ)はそのまま、見せるときに足す */}
+            <div data-card-record className="mt-1 text-[11px] font-bold text-slate-400">戦績(助手と対戦): {save.record.cpu.win}勝 {save.record.cpu.lose + save.record.cpu.surrender}敗{save.record.cpu.surrender ? `(うち投了${save.record.cpu.surrender})` : ''}</div>
           </div>
         )}
         {notice && <p className="text-[12px] font-bold text-amber-200">{notice}</p>}

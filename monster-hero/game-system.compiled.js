@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4ad3c5bb9ce19d1f
+// source-sha256: 697a615771b2828e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-24 23:05";
+const BUILD_DATE = "2026-10-24 23:10";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -86766,7 +86766,7 @@ const CardBattleScreen = ({
       className: "text-[18px] font-black"
     }, "助手と対戦"), React.createElement("span", {
       className: "mt-1 text-[12px] font-bold opacity-80"
-    }, "みゅあ・ももすけ・きき・きゅうこ・ドラ・あつ と戦う")), React.createElement("button", {
+    }, "助手のみんなと戦う")), React.createElement("button", {
       type: "button",
       "data-card-mode-multi": true,
       disabled: true,
@@ -86863,10 +86863,12 @@ const CardBattleScreen = ({
     }, "使うデッキ: ", React.createElement("b", {
       className: "text-white"
     }, activeDeck ? activeDeck.name : 'なし')), deckIssues.length > 0 && React.createElement("div", {
-      className: "mt-1 text-[12px] font-bold text-rose-300"
-    }, deckIssues.join('・')), React.createElement("div", {
-      className: "mt-1 text-[11px] font-bold text-slate-400"
-    }, "今日もらったカードポイント(助手と対戦): ", save.daily.cpuPoint, " / ", CARD_CPU_DAILY_MAX, save.daily.firstWin ? '' : '・今日はじめての勝ちで +50')), notice && React.createElement("p", {
+      className: "mt-1 text-[12px] font-bold text-rose-300",
+      style: JA_WRAP_STYLE
+    }, jaWrap(deckIssues.join('・'))), React.createElement("div", {
+      className: "mt-1 text-[11px] font-bold text-slate-400",
+      style: JA_WRAP_STYLE
+    }, cardRuleLine(`今日もらったカードポイント《(助手と対戦)》: 《${save.daily.cpuPoint} / ${CARD_CPU_DAILY_MAX}》${save.daily.firstWin ? '' : '・《今日はじめての勝ちで +50》'}`))), notice && React.createElement("p", {
       className: "text-[12px] font-bold text-amber-200"
     }, notice)), React.createElement("div", {
       className: SCREEN_FOOTER_CLASS
@@ -87090,8 +87092,9 @@ const CardBattleScreen = ({
       className: "w-[22%] rounded-md"
     })) : null;
   })), React.createElement("div", {
+    "data-card-record": true,
     className: "mt-1 text-[11px] font-bold text-slate-400"
-  }, "戦績(助手と対戦): ", save.record.cpu.win, "勝 ", save.record.cpu.lose, "敗", save.record.cpu.surrender ? `・投了${save.record.cpu.surrender}` : '')), notice && React.createElement("p", {
+  }, "戦績(助手と対戦): ", save.record.cpu.win, "勝 ", save.record.cpu.lose + save.record.cpu.surrender, "敗", save.record.cpu.surrender ? `(うち投了${save.record.cpu.surrender})` : '')), notice && React.createElement("p", {
     className: "text-[12px] font-bold text-amber-200"
   }, notice), React.createElement("button", {
     type: "button",
