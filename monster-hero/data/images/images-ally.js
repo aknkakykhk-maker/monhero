@@ -203,6 +203,7 @@ const HYBRID_C061_IMG = "images/monsters/c061.png?v=4e015080a484";
 const HYBRID_C062_IMG = "images/monsters/c062.png?v=090cdd583324";
 const HYBRID_C063_IMG = "images/monsters/c063.png?v=97693bd14c3a";
 const HYBRID_C064_IMG = "images/monsters/c064.png?v=7e039c580e69";
+const HYBRID_C065_IMG = "images/monsters/c065.png?v=651de4a99a0b";
 const HYBRID_MONSTER_IMGS = Object.freeze({
   'C-051': HYBRID_C051_IMG,
   'C-052': HYBRID_C052_IMG,
@@ -218,6 +219,7 @@ const HYBRID_MONSTER_IMGS = Object.freeze({
   'C-062': HYBRID_C062_IMG,
   'C-063': HYBRID_C063_IMG,
   'C-064': HYBRID_C064_IMG,
+  'C-065': HYBRID_C065_IMG,
 });
 
 const MOCCHI_ICON = MOCCHI_IMG;
@@ -306,6 +308,18 @@ const MF_DRAGON_FACE_ICON = "images/monster-icons/face/dragon.png?v=411efc44bf8a
 const MF_DURAHAN_FACE_ICON = "images/monster-icons/face/durahan.png?v=475b35a2e468";
 const MF_PHOENIX_FACE_ICON = "images/monster-icons/face/phoenix.png?v=7e70faa2de7a";
 const MF_WORM_FACE_ICON = "images/monster-icons/face/worm.png?v=2edd20512375";
+// 混血モンスター(2026-10-24)。社長が A〜D から選んだ案。範囲は tools/image/make-face-icons.js の FACE_BOXES
+const HYBRID_C051_FACE_ICON = "images/monster-icons/face/c051.png?v=4853c5670318";
+const HYBRID_C052_FACE_ICON = "images/monster-icons/face/c052.png?v=6b18c1fd8234";
+const HYBRID_C053_FACE_ICON = "images/monster-icons/face/c053.png?v=b662c2469e1b";
+const HYBRID_C054_FACE_ICON = "images/monster-icons/face/c054.png?v=3963d6c624b6";
+const HYBRID_C056_FACE_ICON = "images/monster-icons/face/c056.png?v=85ff6a92b817";
+const HYBRID_C057_FACE_ICON = "images/monster-icons/face/c057.png?v=13230681ef1d";
+const HYBRID_C058_FACE_ICON = "images/monster-icons/face/c058.png?v=3bfcaaa0ceaf";
+const HYBRID_C059_FACE_ICON = "images/monster-icons/face/c059.png?v=106d33ba40e0";
+const HYBRID_C060_FACE_ICON = "images/monster-icons/face/c060.png?v=6068ebe63111";
+const HYBRID_C061_FACE_ICON = "images/monster-icons/face/c061.png?v=920ea9e836ad";
+const HYBRID_C062_FACE_ICON = "images/monster-icons/face/c062.png?v=07f17eb1dfee";
 
 // 血統別のアイコン(エンブレム・144x146・金の枠つき)。2026-10-05・ユーザー提供の37個(blood-icons.zip)。
 // 血統のid(MONSTER_LINEAGES)との対応は、このファイルの下の MONSTER_LINEAGE_ICONS。ゲームにまだ無い血統のぶんも先に入れてある(使うのは血統を足すとき)。
