@@ -1,4 +1,4 @@
-// ==================== 画面: MFバトルカード デッキ編成(区切り2) ====================
+// ==================== 画面: MFバトルカード デッキ編成・カード図鑑・ルールの画面(区切り2) ====================
 // トップの「デッキ編成」から入る(社長: デッキ編成はトップ画面に置く)。設計: docs/spec/CARD_BATTLE.md 5-2
 //   CardDeckList   … デッキの一覧(5つまで)。使うデッキを決める・組む・新しく作る・写す・消す
 //   CardDeckEditor … 1つのデッキを組む。上にモンスター3体の枠、下に持っているカード(タブ: 技/モンスター/デッキの中)
@@ -171,3 +171,82 @@ const CardDeckList = ({ db, collection, decks, onBack, onEdit, onPut, onRemove, 
     </div>
   );
 };
+
+// ==================== カード図鑑(区切り2) ====================
+// 弾ごとのタブ(第1〜4弾・混血)。持っている/持っていない・枚数・準備中。持っていないカードは暗い絵で出す(何が集まるか分かるように)
+// ★C-060C(ファンの描いた絵)はカードの表に入っていない(社長)。並べるのはカードの表にあるものだけ
+const CARD_DEX_TABS = Object.freeze([
+  { id: '1', label: '第1弾' }, { id: '2', label: '第2弾' }, { id: '3', label: '第3弾' }, { id: '4', label: '第4弾' }, { id: 'hybrid', label: '混血' },
+]);
+const cardDexList = (db, wave) => {
+  const mons = Object.values(db.monsters).filter((m) => String(m.wave) === wave).map((m) => m.no).sort();
+  const cards = Object.values(db.cards).filter((c) => String(c.wave) === wave).map((c) => c.no).sort();
+  return [...mons, ...cards];
+};
+const CardDex = ({ db, collection, onBack }) => {
+  const [tab, setTab] = useState('1');
+  const [show, setShow] = useState('all');
+  const [detail, setDetail] = useState(null);
+  const press = useCardLongPress((no) => setDetail(no));
+  const col = collection || {};
+  const all = CARD_DEX_TABS.flatMap((t) => cardDexList(db, t.id));
+  const list = cardDexList(db, tab);
+  const shown = list.filter((no) => (show === 'have' ? col[no] > 0 : show === 'miss' ? !(col[no] > 0) : true));
+  const haveIn = (arr) => arr.filter((no) => col[no] > 0).length;
+  return (
+    <div data-mh-screen data-card-dex className={SCREEN_SHELL_CLASS}>
+      <ScreenHead title="カード図鑑" accent="text-amber-200" onBack={onBack}/>
+      <div className={`${SCREEN_PANEL_FLAT_CLASS} mb-2 shrink-0 text-[12px] font-bold text-slate-300`}>
+        集めた種類 <b data-card-dex-total className="text-[15px] text-amber-200">{haveIn(all)}</b> / {all.length}
+        <span className="ml-2 text-slate-400">(この弾 {haveIn(list)} / {list.length})</span>
+      </div>
+      <ScreenTabs value={tab} onChange={setTab} items={CARD_DEX_TABS.map((t) => ({ id: t.id, label: t.label }))}/>
+      <div className="mb-1.5 flex shrink-0 gap-1">
+        {[['all', '全部'], ['have', '持っている'], ['miss', 'まだ']].map(([k, label]) => <button key={k} type="button" data-card-dex-show={k} onClick={() => setShow(k)} className={`rounded-full px-2.5 py-1 text-[11px] font-black ${show === k ? 'bg-amber-300 text-slate-950' : 'border border-white/20 bg-slate-900 text-slate-300'}`}>{label}</button>)}
+      </div>
+      <div className={`${SCREEN_LIST_CLASS} pb-2`}>
+        {shown.length ? (
+          <div className="grid grid-cols-4 gap-1.5">
+            {shown.map((no) => {
+              const c = cardOf(db, no); const m = c ? null : cardMonsterOf(db, no);
+              const have = col[no] || 0;
+              const name = c ? c.name : m ? `${m.name}${m.variant ? `(${m.variant})` : ''}` : no;
+              return (
+                <button key={no} type="button" data-card-dex-tile={no} data-card-dex-have={have} {...press(no, () => setDetail(no))} className="relative flex flex-col items-center rounded-lg bg-white/5 p-0.5 text-center active:scale-95" style={{ WebkitUserSelect: 'none', userSelect: 'none' }}>
+                  <img src={CARD_IMG(c ? c.img : m ? m.img : no)} alt={name} loading="lazy" draggable={false} className={`aspect-[5/7] w-full rounded-[5px] object-cover ${have ? '' : 'opacity-30 grayscale'}`}/>
+                  {have > 0 && <span className="absolute right-0.5 top-0.5 rounded-md bg-slate-950/90 px-1 text-[10px] font-black text-white">×{have}</span>}
+                  {c && !c.ready && <span className="absolute left-0.5 top-0.5 rounded-md bg-slate-600 px-1 text-[9px] font-black text-white">準備中</span>}
+                  {m && m.variant && <span className="absolute left-0.5 top-0.5 rounded-md bg-amber-400 px-1 text-[9px] font-black text-slate-950">{/キラ/.test(m.variant) ? 'キラ' : '別'}</span>}
+                  <span className={`mt-0.5 line-clamp-2 min-h-[26px] text-[10px] font-bold leading-tight ${have ? 'text-slate-100' : 'text-slate-500'}`} style={JA_WRAP_STYLE}>{name}</span>
+                  <span className="text-[9px] font-bold text-slate-500">No.{no}</span>
+                </button>
+              );
+            })}
+          </div>
+        ) : <ScreenEmpty emoji="🃏" lines={[show === 'have' ? 'この弾のカードはまだ持っていません' : 'この弾は全部集まっています']}/>}
+      </div>
+      {detail && <CardDetailModal db={db} no={detail} onClose={() => setDetail(null)}/>}
+    </div>
+  );
+};
+
+// ==================== ルールの画面(区切り2) ====================
+// 文は 88-card-rules.jsx の CARD_RULE_PAGES(正本は RULES_SOURCE.md)。練習試合のやり直しもここから(ドラの D20)
+const CardRules = ({ onBack, onTutorial }) => (
+  <div data-mh-screen data-card-rules className={SCREEN_SHELL_CLASS}>
+    <ScreenHead title="ルール" accent="text-amber-200" onBack={onBack}/>
+    <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-2`}>
+      {CARD_RULE_PAGES.map((pg) => (
+        <div key={pg.id} data-card-rule={pg.id} className={SCREEN_PANEL_CLASS}>
+          <div className="text-[14px] font-black text-amber-200">{pg.icon} {pg.title}</div>
+          <ul className="mt-1 space-y-0.5">
+            {pg.lines.map((t, i) => <li key={i} className="flex gap-1 text-[12px] font-bold leading-snug text-slate-100" style={JA_WRAP_STYLE}><span className="shrink-0 text-amber-300">・</span><span>{jaWrap(t)}</span></li>)}
+          </ul>
+        </div>
+      ))}
+    </div>
+    <div className={SCREEN_FOOTER_CLASS}>
+      <button type="button" data-card-tutorial-again className="mh-button min-h-[52px] w-full rounded-2xl border border-emerald-300/50 bg-emerald-900/60 font-black text-emerald-50 active:scale-[.98]" onClick={() => { Audio_.se.tap(); onTutorial(); }}>練習試合をもう一度<span className="block text-[10px] font-bold text-emerald-200">ドラと、みゅあ相手に5つの決まりをおさらい</span></button>
+    </div>
+  </div>
+);
