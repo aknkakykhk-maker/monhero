@@ -303,11 +303,15 @@ const assistantUnlockedBy = (assistantId, seenStoryIds) => {
 //   atsu:'with' … あつを解放している人だけに出す行 / atsu:'without' … 解放していない人だけに出す行(あつの行の代わり) / 印なし … 両方
 //   解放の判定はあつの解放と同じ(assistantUnlockedBy)。印の無いお話は、同じ台本をそのまま返す(今までと何も変わらない)。
 //   再生の画面は選んだあとの台本から話し手・顔の列を作るので、解放していない人にはあつが一度も出ない
+// きゅうこも同じ形(kyuko:'with'/'without'・2026-10-24 MFバトルカードのお話から)。1行に両方の印があれば、両方が合うときだけ出す
+const EVENT_SCRIPT_SPLIT_ASSISTANTS = Object.freeze(['atsu', 'kyuko']);
 const eventScriptForPlayer = (script, seenStoryIds) => {
   const list = Array.isArray(script) ? script : [];
-  if (!list.some(l => l && (l.atsu === 'with' || l.atsu === 'without'))) return list;
-  const atsuOn = assistantUnlockedBy('atsu', seenStoryIds);
-  return list.filter(l => !l || (l.atsu !== 'with' && l.atsu !== 'without') || ((l.atsu === 'with') === atsuOn));
+  const marked = (l, id) => l && (l[id] === 'with' || l[id] === 'without');
+  const ids = EVENT_SCRIPT_SPLIT_ASSISTANTS.filter(id => list.some(l => marked(l, id)));
+  if (!ids.length) return list;
+  const on = Object.fromEntries(ids.map(id => [id, assistantUnlockedBy(id, seenStoryIds)]));
+  return list.filter(l => !l || ids.every(id => !marked(l, id) || ((l[id] === 'with') === on[id])));
 };
 // 選べる助手だけを残す。読み込みが間に合っていない・壊れた値でも、
 // 条件のない助手は必ず残る(画面から助手が消えない)
@@ -8457,6 +8461,68 @@ const ASSISTANT_RHYTHM_MASU_CALL_CALLS = { mua: 'ドラケン／もも', kiki: '
 // 助手4人がタイプを教える(2026-10-17 試作・社長「助手の4人でうまいことタイプを当てはめて説明するストーリーは？」)。
 // BGM: 名乗りまでイベントBGM 1(会話イベントの曲 tacticsTypesEvent)→ ドラが前に立つ行(bgm:)から戦場の疾風へ。曲は0.8秒下げてから替わる
 // 下書き: docs/playbot/reports/2026-10-17/tactics-hate-release-text.md の案D
+// MFバトルカードのはじまり(2026-10-24・ブレイブくん。台本 docs/playbot/reports/2026-10-24/card-battle-intro/story.md)。
+// ドラが物置から古いカードの箱を持ってきて、ルールを教える。あつ・きゅうこは解放した人にだけ出す(atsu/kyuko の印・eventScriptForPlayer)。
+// 公開(RELEASE_FLAGS.cardBattle)のあとの最初の HOME で1回流し、見終えたらスターター選び(CARD_TOP)へ
+const ASSISTANT_CARD_BATTLE_INTRO = [
+  { who:'dra', e:'happy', t:'おーい、みんな。物置を片付けてたら、なつかしいもんが出てきたぞ' },
+  { who:'mua', e:'surprise', t:'なになに？ その箱、ほこりだらけじゃんｗ' },
+  { who:'dra', e:'excited', t:'ふっふっふ……『モンスターファームバトルカード』だ。おでが昔ハマってたやつなんだよ' },
+  { who:'momosuke', e:'surprise', t:'カード？ え、モンスターの絵が描いてある！！ これで何するの？' },
+  { who:'mua', e:'excited', t:'あたし、初めて見た！ まじかわいいんだけど、どうやって遊ぶの？' },
+  { who:'kiki', e:'surprise', t:'あれま、私も初めて見まつ。カードで、モンスターどうしを戦わせるんでつか？' },
+  { who:'atsu', e:'excited', atsu:'with', t:'うわ、まじか！ 俺もそれ、めちゃくちゃやってた笑' },
+  { who:'atsu', e:'wink', atsu:'with', t:'てか、けっこうガチでね。モンスター甲子園にも出たことあるよ笑' },
+  { who:'momosuke', e:'surprise', atsu:'with', t:'えっ、甲子園！？ カードの大会に出てたの！？ あつ、すごすぎなんだけど！！' },
+  { who:'dra', e:'surprise', atsu:'with', t:'ほう、あっくんもやってたのか。しかも甲子園とはな……どうりで、箱を見る目が本気なわけだ' },
+  { who:'atsu', e:'happy', atsu:'with', t:'まぁ〜昔の話ね笑 いまは、みんなとわいわい遊べたらそれでいいよ！' },
+  { who:'momosuke', e:'surprise', atsu:'without', t:'ドラちゃんだけ知ってるの、ずるい！！ もも、早く遊びたい！！' },
+  { who:'atsu', e:'wink', atsu:'with', t:'ドラちゃん、それまだ遊べる？ ルールの説明は任せた笑' },
+  { who:'mua', e:'excited', atsu:'without', t:'ドラケン、それまだ遊べるの？ 早くやってみたい！' },
+  { who:'dra', e:'normal', t:'あせるな。まずはルールからだ。大事なとこだけ、順番に教えるからな' },
+  { who:'dra', e:'normal', t:'ひとつめ。モンスターを3体ならべて戦う。相手の3体をぜんぶ倒したら勝ちだ' },
+  { who:'momosuke', e:'happy', t:'3体かぁ。だれを出すか、もう迷っちゃう♡' },
+  { who:'dra', e:'normal', t:'ふたつめ。自分の番になったら、手札が5枚になるまで山札から引くんだよ' },
+  { who:'mua', e:'happy', t:'じゃあ、毎回5枚から選べるってこと？ 手札がなくなる心配はないじゃん！' },
+  { who:'dra', e:'wink', t:'そのかわり、山札がなくなって引けなくなったら、その時点で負けだからな' },
+  { who:'momosuke', e:'surprise', t:'え、山札なくなったらゲームオーバーってこと！？ こわっ！！' },
+  { who:'atsu', e:'normal', atsu:'with', t:'山札切れの負け、大会でもけっこうあるからね。最後のほうは数えといて！' },
+  { who:'dra', e:'normal', t:'みっつめは『ガッツ』。手札を伏せて置くと、それがガッツになる。技は、そのガッツを払って出すんだよ' },
+  { who:'mua', e:'surprise', t:'えっ、手札をガッツにしちゃうの？ 技のカード、もったいなくない？' },
+  { who:'dra', e:'happy', t:'そこが悩みどころなんだよ。ためて大技を狙うか、小さい技で刻むか。どっちでいくかで、戦い方がぜんぜん変わるんだ' },
+  { who:'kiki', e:'happy', t:'ためて、大きいのを当てる……私、そっちのほうが好きかもしれまつ( ˘ω˘)' },
+  { who:'dra', e:'normal', t:'よっつめ。技を使えるのは、カードに描いてあるモンスターだけだ。スエゾーの技は、スエゾーにしか使えない' },
+  { who:'momosuke', e:'excited', t:'じゃあ、ももの好きな子の技をいっぱい入れればいいんだ♡' },
+  { who:'dra', e:'normal', t:'それと、攻撃の技は1体につき1ターンに1枚まで。3体いれば、3回攻撃できるってわけだ' },
+  { who:'atsu', e:'wink', atsu:'with', t:'どの子から攻撃するかは自由ね。弱ってる子から狙うのがおすすめ笑' },
+  { who:'mua', e:'happy', t:'1体ずつ攻撃していく感じだね！ わかってきたかも！' },
+  { who:'dra', e:'normal', t:'いつつめ。攻撃されたら、回避や防御のカードで守れる。守りは何枚重ねてもいいぞ' },
+  { who:'mua', e:'surprise', t:'えっ、守りは何枚でもいいの！？ ずっと守ってたら最強じゃん！' },
+  { who:'dra', e:'wink', t:'ところが、守りのカードを残すと、ガッツにできる手札が減る。……そこが面白いんだよ' },
+  { who:'atsu', e:'wink', atsu:'with', t:'守りをどこで使うかで、勝ち負けがかなり変わるんだよ！' },
+  { who:'dra', e:'wink', t:'守りは固いほうがいいからな。何がとは言わんけど……えへへ' },
+  { who:'mua', e:'wink', t:'もー、くだらなすぎじゃんｗ' },
+  { who:'momosuke', e:'excited', t:'でも、ぜんぶ覚えた！！ もも、天才かも♡' },
+  { who:'kyuko', e:'happy', kyuko:'with', t:'ほい！ 話は聞かせてもらったよぉ。デッキの組み方なら任せて笑' },
+  { who:'kyuko', e:'normal', kyuko:'with', t:'ガッツの安い技と守りを、うまく混ぜるのがコツなんだよねぇ。そこは俺、ちょっと細かいよw' },
+  { who:'dra', e:'happy', kyuko:'without', t:'デッキの組み方は、遊びながら覚えていけばいい。分からないとこは、おでに聞いてくれよな' },
+  { who:'kiki', e:'troubled', t:'私は、ルールを覚えるのでせいいっぱいでつ……。でも、楽しそうでつね♪♪' },
+  { who:'momosuke', e:'excited', t:'ねえねえ、早くやろ！！ ももも自分のデッキほしい！' },
+  { who:'mua', e:'excited', t:'あ、いいこと思いついた！ {name}にも、デッキを選んでもらお！' },
+  { who:'dra', e:'happy', t:'いいな。最初の箱は3つあるんだ。すばやく攻めるチーム、力で押すチーム、一発で決めるチーム。それぞれ、戦い方がちがうからな' },
+  { who:'kiki', e:'happy', t:'どれも強そうで、迷っちゃいまつね……。{name}は、どれにしますか？' },
+  { who:'atsu', e:'happy', atsu:'with', t:'迷ったら、直感でいいよ！ どれ選んでも、ちゃんと戦えるから笑' },
+  { who:'dra', e:'happy', atsu:'without', t:'迷ったら、直感でいいぞ。どれを選んでも、ちゃんと戦えるからな' },
+  { who:'mua', e:'wink', t:'選んだら、最初はあたしと練習試合しよ！ あたし、手加減しないけどね♪' },
+  { who:'momosuke', e:'wink', t:'みゅあねぇ、それ練習って言わないじゃんw' },
+  { who:'mua', e:'happy', t:'いいの！ 楽しいのがいちばんじゃんｗ' },
+  { who:'dra', e:'happy', t:'慣れてきたら、ほかのみんなとも戦えるぞ。それぞれ戦い方にくせがあるからな' },
+  { who:'kiki', e:'happy', t:'私も、これからいっぱい練習しまつね。負けませんよ( ˘ω˘)9' },
+  { who:'kyuko', e:'wink', kyuko:'with', t:'俺とやるときは、ちゃんと先まで読んでくるんだよぉ笑' },
+  { who:'atsu', e:'wink', atsu:'with', t:'俺とも戦おうな！ 待ってるから笑' },
+  { who:'dra', e:'happy', t:'よし、それじゃあ箱を開けるぞ。{name}、デッキを選んでくれ' },
+  { who:'mua', e:'excited', t:'いっくよー！ MFバトルカード、スタート！' },
+];
 const ASSISTANT_TACTICS_TYPES = [
   { who:'mua',      e:'excited',  t:'ねえねえ、モンスターにタイプができたんだって！ あたしたちも当てはめてみよ！' },
   { who:'mua',      e:'happy',    t:'まずはあたし！ ✨サポーター！ みんなを強くして、背中を押す係だよ！ ちょっとだけ🔥が付きやすいかも' },
@@ -9214,6 +9280,8 @@ const EVENT_REPLAYS = [
   // (releaseFlag。モードが見えていないのに会話だけあると、何の話か分からない)。
   // いまは alwaysUnlocked で「公開したら回想からいつでも見られる」形。
   // 本編で1度だけ流す導線は、β版を出すときに告知とセットで足す
+  // MFバトルカードのはじまり(2026-10-24)。公開の印 cardBattle まで回想にも出さない。見たかは mh_story_card_battle_seen_v1(cardBattleIntroSeen)
+  { id: 'card_battle_intro_2026', date: '2026-10-24 12:40', title: 'MFバトルカード ～物置の古い箱～', script: ASSISTANT_CARD_BATTLE_INTRO, unlockedKey: 'cardBattleIntroSeen', releaseFlag: 'cardBattle', group: 'update' },
   // 助手4人がタイプを教える(2026-10-17 作成・2026-10-18 公開)。releaseFlag の tacticsTypes はヘイトとタイプの公開の印(RELEASE_FLAGS.tacticsHate)と一緒
   { id: 'tactics_types', date: '2026-10-18 23:14', title: 'タクティクスバトル ～4人のタイプ～', script: ASSISTANT_TACTICS_TYPES, unlockedKey: 'tacticsTypesSeen', releaseFlag: 'tacticsTypes', alwaysUnlocked: true, group: 'update' },
   { id: 'tactics_intro', date: '2026-09-21 20:15', title: 'タクティクスバトル ～誰を連れていくか～', script: ASSISTANT_TACTICS_INTRO, unlockedKey: 'tacticsIntroSeen', releaseFlag: 'tacticsBattle', alwaysUnlocked: true, group: 'update' },
