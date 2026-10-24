@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1cd9ce807a38cd7d
+// source-sha256: 397b0a48aee2a03f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-25 07:51";
+const BUILD_DATE = "2026-10-25 07:55";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -90002,6 +90002,74 @@ const sbFetchCardPvpRatings = async () => {
     clearTimeout(timer);
   }
 };
+const CARD_PVP_INVITE_TTL_MS = 3 * 60 * 1000;
+const CARD_PVP_INVITE_POLL_MS = 8000;
+const CARD_PVP_INVITE_ID_RE = /^[A-Za-z0-9_-]{1,100}$/;
+let _cardPvpInvitesUnavailable = false;
+const cardPvpInviteRequest = async (path, {
+  method = 'GET',
+  body = null,
+  prefer = null
+} = {}) => {
+  if (_cardPvpInvitesUnavailable || typeof SUPABASE_URL === 'undefined') return null;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+      method,
+      headers: prefer ? {
+        ...SB_HEADERS,
+        Prefer: prefer
+      } : SB_HEADERS,
+      cache: 'no-store',
+      signal: controller.signal,
+      body: body === null ? undefined : JSON.stringify(body)
+    });
+    const text = await res.text();
+    if (!res.ok) {
+      if (_isMissingTableError(res.status, text)) _cardPvpInvitesUnavailable = true;
+      return null;
+    }
+    return text ? JSON.parse(text) : [];
+  } catch (_) {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+};
+const sbSendCardInvite = async (selfId, targetId, code) => {
+  const room = rhythmMultiNormalizeCode(code);
+  if (!CARD_PVP_INVITE_ID_RE.test(String(selfId)) || !CARD_PVP_INVITE_ID_RE.test(String(targetId)) || selfId === targetId || !room) return false;
+  const r = await cardPvpInviteRequest('card_battle_invites?on_conflict=sender_id,target_id', {
+    method: 'POST',
+    body: [{
+      sender_id: selfId,
+      target_id: targetId,
+      room_code: room
+    }],
+    prefer: 'resolution=merge-duplicates,return=minimal'
+  });
+  return r !== null;
+};
+const sbFetchCardInvites = async (selfId, nowMs) => {
+  if (!CARD_PVP_INVITE_ID_RE.test(String(selfId))) return [];
+  const since = new Date(nowMs - CARD_PVP_INVITE_TTL_MS).toISOString();
+  const rows = await cardPvpInviteRequest(`card_battle_invites?select=sender_id,room_code,created_at&target_id=eq.${selfId}&created_at=gte.${encodeURIComponent(since)}&order=created_at.desc&limit=20`);
+  return (Array.isArray(rows) ? rows : []).map(row => ({
+    senderId: typeof row.sender_id === 'string' ? row.sender_id : '',
+    roomCode: rhythmMultiNormalizeCode(row.room_code),
+    createdAt: Date.parse(row.created_at) || 0
+  })).filter(x => CARD_PVP_INVITE_ID_RE.test(x.senderId) && x.roomCode && nowMs - x.createdAt <= CARD_PVP_INVITE_TTL_MS);
+};
+const cardPvpRoster = async selfId => {
+  if (typeof window !== 'undefined' && Array.isArray(window.__mhCardPvpRosterTest)) return window.__mhCardPvpRosterTest;
+  if (typeof sbFetchFriendRoster !== 'function') return [];
+  try {
+    return await sbFetchFriendRoster(selfId);
+  } catch (_) {
+    return [];
+  }
+};
 const CARD_PVP = (() => {
   const listeners = new Set();
   let s = null;
@@ -90731,6 +90799,45 @@ const CardPvpLobby = ({
     return () => clearInterval(t);
   }, []);
   const penaltyMin = penaltyUntil > now ? Math.ceil((penaltyUntil - now) / 60000) : 0;
+  const [selfBid, setSelfBid] = useState('');
+  const [roster, setRoster] = useState(null);
+  const [invites, setInvites] = useState([]);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [invited, setInvited] = useState({});
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const id = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
+      if (!alive || typeof id !== 'string') return;
+      setSelfBid(id);
+      const list = await cardPvpRoster(id);
+      if (alive) setRoster(Array.isArray(list) ? list : []);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+  useEffect(() => {
+    if (room.phase !== 'idle' || !selfBid || !roster || !roster.length) {
+      setInvites([]);
+      return undefined;
+    }
+    let alive = true;
+    const ids = new Map(roster.map(f => [f.otherId, f.userName]));
+    const load = async () => {
+      const list = await sbFetchCardInvites(selfBid, Date.now());
+      if (alive) setInvites(list.filter(x => ids.has(x.senderId)).map(x => ({
+        ...x,
+        name: ids.get(x.senderId)
+      })));
+    };
+    void load();
+    const t = setInterval(load, CARD_PVP_INVITE_POLL_MS);
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+  }, [room.phase, selfBid, roster]);
   const rewardRef = useRef(onReward);
   rewardRef.current = onReward;
   useEffect(() => {
@@ -90890,7 +90997,25 @@ const CardPvpLobby = ({
       Audio_.fgSe.tap();
       void CARD_PVP.create(profile, deck);
     }
-  }, "合言葉で部屋を作る"), React.createElement("div", {
+  }, "合言葉で部屋を作る"), invites.length > 0 && React.createElement("div", {
+    "data-card-pvp-invites": true,
+    className: "space-y-2 rounded-2xl border border-emerald-300/40 bg-emerald-500/10 p-3"
+  }, invites.slice(0, 3).map(x => React.createElement("div", {
+    key: `${x.senderId}-${x.roomCode}`,
+    className: "flex items-center gap-2"
+  }, React.createElement("p", {
+    className: "min-w-0 flex-1 text-[13px] font-bold text-emerald-50",
+    style: JA_WRAP_STYLE
+  }, jaWrap(`${x.name || 'フレンド'}さんから、マルチ対戦の招待が届いています`)), React.createElement("button", {
+    type: "button",
+    "data-card-pvp-accept": x.roomCode,
+    disabled: !ready,
+    className: "mh-button mh-button-primary min-h-[44px] shrink-0 rounded-xl px-3 text-[13px] font-black disabled:opacity-40",
+    onClick: () => {
+      Audio_.fgSe.tap();
+      CARD_PVP.join(x.roomCode, profile, deck);
+    }
+  }, "参加する")))), React.createElement("div", {
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-3"
   }, React.createElement("p", {
     className: "mb-2 text-[13px] font-bold text-slate-300"
@@ -90955,7 +91080,38 @@ const CardPvpLobby = ({
     className: "my-1 text-[40px] font-black tracking-[.3em] text-white"
   }, room.code), React.createElement("p", {
     className: "text-[13px] font-bold text-slate-200"
-  }, room.phase === 'connecting' ? 'つないでいます…' : room.foe ? `${room.foe.name}さんが来ました。始めます…` : 'この合言葉を友だちに伝えて、待っています…')), room.phase === 'error' && React.createElement("p", {
+  }, room.phase === 'connecting' ? 'つないでいます…' : room.foe ? `${room.foe.name}さんが来ました。始めます…` : 'この合言葉を友だちに伝えて、待っています…'), room.phase === 'waiting' && !room.foe && roster && roster.length > 0 && React.createElement("div", {
+    className: "mt-3 text-left"
+  }, React.createElement("button", {
+    type: "button",
+    "data-card-pvp-invite": true,
+    className: `${btn} border border-emerald-300/40 bg-slate-900 text-emerald-100`,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      setInviteOpen(v => !v);
+    }
+  }, "フレンドを招待する"), inviteOpen && React.createElement("ul", {
+    "data-card-pvp-roster": true,
+    className: "mt-2 max-h-[40vh] space-y-1 overflow-y-auto"
+  }, roster.slice(0, 30).map(f => React.createElement("li", {
+    key: f.otherId,
+    className: "flex items-center gap-2 rounded-xl bg-black/30 px-2 py-1.5"
+  }, React.createElement("span", {
+    className: "min-w-0 flex-1 truncate text-[13px] font-bold text-white"
+  }, f.userName), React.createElement("button", {
+    type: "button",
+    "data-card-pvp-invite-to": f.otherId,
+    disabled: invited[f.otherId] === 'sent',
+    className: "mh-button mh-button-primary min-h-[36px] rounded-lg px-3 text-[12px] font-black disabled:opacity-50",
+    onClick: async () => {
+      Audio_.fgSe.tap();
+      const ok = await sbSendCardInvite(selfBid, f.otherId, room.code);
+      setInvited(cur => ({
+        ...cur,
+        [f.otherId]: ok ? 'sent' : 'ng'
+      }));
+    }
+  }, invited[f.otherId] === 'sent' ? '招待しました' : invited[f.otherId] === 'ng' ? '送れませんでした' : '招待する')))))), room.phase === 'error' && React.createElement("p", {
     className: "rounded-xl border border-rose-300/40 bg-rose-500/10 p-3 text-[13px] font-bold text-rose-100"
   }, room.error), room.broken && React.createElement("p", {
     className: "rounded-xl border border-rose-300/40 bg-rose-500/10 p-3 text-[13px] font-bold text-rose-100"

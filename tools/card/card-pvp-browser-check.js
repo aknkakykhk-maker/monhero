@@ -16,6 +16,8 @@
 //      終わったら報酬(カードポイント・クイック周回)が出て、カードポイントが増える
 //   ⑦ 区切り3: 「だれとでも」で2台が受付から出会い、最後まで戦える(待っている人数が出る)・終わったら2台とも強さの点数へ、同じ試合の結果を届ける
 //      (本物の表には送らない。検査は Supabase を偽物にして、届いた中身だけを見る。window.__mhCardPvpRankTest)
+//   ⑧ 区切り4: 部屋を作った人が、名簿のフレンドへ招待を送れる(表 card_battle_invites へ書く)・届いた人の画面に「招待が届いています」が出て、
+//      「参加する」で同じ部屋に入って対戦が始まる(名簿は window.__mhCardPvpRosterTest・表は偽物)
 const http = require('http'), path = require('path'), fs = require('fs');
 const { eventStorySeed } = require(path.resolve(__dirname, '..', 'boot/quiet-boot-seed'));
 const ROOT = path.resolve(__dirname, '..', '..');
@@ -61,6 +63,9 @@ const FAKE_WS = () => {
   window.__mhCardPvpAuto = true;
   window.__mhCardPvpAutoMs = 700;
   window.__mhCardPvpRankTest = true;
+  // ★自動操作のブラウザでは、本物の Supabase へ書き込まない仕組みがある(26-supabase.jsx)。この検査は Supabase を偽物に差し替えているので、書き込みも通す
+  window.__mhSupabaseStubbed = true;
+  window.__mhCardPvpRosterTest = [{ otherId: 'friend-x', userName: 'フレンドX' }];
 };
 const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive: true }); await page.screenshot({ path: path.join(SHOT, `${name}.png`), style: 'div[style*="2147483647"] > span { display: none !important; }' }).catch(() => {}); } };
 
@@ -73,8 +78,15 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
   try {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 });
     const reports = [];
+    const invites = [];
     await ctx.route(/supabase\.co/, (route) => {
       const req = route.request();
+      if (process.env.DEBUG_PVP && /invite/.test(req.url())) console.log('REQ', req.method(), req.url().slice(0, 140), (req.postData() || '').slice(0, 120));
+      if (/\/card_battle_invites/.test(req.url())) {
+        if (req.method() === 'POST') { try { const row = JSON.parse(req.postData() || '[]')[0]; invites.push({ ...row, created_at: new Date().toISOString() }); } catch (_) { /* 中身が読めない */ } return route.fulfill({ status: 201, body: '' }); }
+        // 同じブラウザで2台を動かすので、届いた側からは「名簿のフレンド(friend-x)から」の招待に見せる
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(invites.map((x) => ({ sender_id: 'friend-x', room_code: x.room_code, created_at: x.created_at }))) });
+      }
       if (/\/rpc\/card_battle_pvp_report/.test(req.url())) { try { reports.push(JSON.parse(req.postData() || '{}')); } catch (_) { /* 中身が読めない */ } return route.fulfill({ status: 200, contentType: 'application/json', body: '"wait"' }); }
       return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
     });
@@ -218,6 +230,22 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const mine = reports.slice(reportsBefore);
     check('⑦ 終わったら2台とも、同じ試合・同じ勝った人で強さの点数へ届ける', mine.length === 2 && mine[0].p_match_id && mine[0].p_match_id === mine[1].p_match_id && mine[0].p_winner === mine[1].p_winner,
       JSON.stringify(mine.map((x) => [x.p_match_id, x.p_winner])));
+    // ⑧ フレンドから招待
+    for (const page of [A, B]) { await page.locator('[data-card-pvp-leave]').click(); await page.locator('[data-card-pvp="idle"]').waitFor({ timeout: 10000 }); }
+    await A.locator('[data-card-pvp-create]').click();
+    await A.locator('[data-card-pvp="waiting"]').waitFor({ timeout: 10000 });
+    const code3 = (await A.locator('[data-card-pvp-room]').innerText()).trim();
+    await A.locator('[data-card-pvp-invite]').click();
+    await A.locator('[data-card-pvp-invite-to="friend-x"]').click();
+    const sentOk = await A.locator('[data-card-pvp-invite-to="friend-x"]').filter({ hasText: '招待しました' }).waitFor({ timeout: 5000 }).then(() => true).catch(() => false);
+    await shot(A, 'pvp-07-invite-send');
+    check('⑧ 部屋を作った人が、名簿のフレンドへ招待を送れる(表へ合言葉を書く)', sentOk && invites.length === 1 && invites[0].room_code === code3 && invites[0].target_id === 'friend-x', JSON.stringify(invites));
+    const acceptSeen = await B.locator(`[data-card-pvp-accept="${code3}"]`).waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+    await shot(B, 'pvp-07-invite-got');
+    check('⑧ 届いた人の画面に「招待が届いています」が出る', acceptSeen);
+    if (acceptSeen) await B.locator(`[data-card-pvp-accept="${code3}"]`).click();
+    const metInvite = await Promise.all([A.locator('[data-card-battle]').waitFor({ timeout: 30000 }), B.locator('[data-card-battle]').waitFor({ timeout: 30000 })]).then(() => true).catch(() => false);
+    check('⑧ 「参加する」で同じ部屋に入って、対戦が始まる', metInvite);
     const after = await A.evaluate(() => Object.fromEntries(Object.keys(localStorage).filter((k) => k.startsWith('mh_')).map((k) => [k, localStorage.getItem(k)])));
     // 起動のあとに本体が書き足すもの(お話の既読など)は数えない。マルチ対戦は何も保存しない
     const volatile = /^mh_(last_|session|boot|app_open|login|bgm|se_|ui_|debug|daily_login|visit|rhythm_event_story_v1)/;

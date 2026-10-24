@@ -87,10 +87,30 @@ create table if not exists public.card_battle_invites (
   room_code  text        not null,
   created_at timestamptz not null default now(),
   constraint card_battle_invites_pkey primary key (sender_id, target_id),
-  constraint card_battle_invites_code_shape check (room_code ~ '^[A-HJ-NP-Z2-9]{4}$')
+  constraint card_battle_invites_code_shape check (room_code ~ '^[A-HJ-NP-Z2-9]{4}$'),
+  constraint card_battle_invites_id_shape check (length(sender_id) between 1 and 100 and length(target_id) between 1 and 100)
 );
+create index if not exists card_battle_invites_target_idx on public.card_battle_invites (target_id, created_at desc);
+-- 同じ2人のあいだの招待は1行に上書きし、上書きのたびに時刻を新しくする(friend_invites と同じ)
+create or replace function public.card_battle_invites_touch_created_at()
+returns trigger language plpgsql as $$ begin new.created_at := now(); return new; end $$;
+drop trigger if exists card_battle_invites_set_created_at on public.card_battle_invites;
+create trigger card_battle_invites_set_created_at before insert or update on public.card_battle_invites
+  for each row execute function public.card_battle_invites_touch_created_at();
 alter table public.card_battle_invites enable row level security;
--- (招待の読み書きの決まりは friend_invites と同じ形にする。区切り4で書く)
+-- 読み書きの決まりは friend_invites と同じ(読む・足す・上書きはだれでも。消すことは許さない)
+do $$ begin
+  if not exists (select 1 from pg_policies where schemaname='public' and tablename='card_battle_invites' and policyname='card_battle_invites_select') then
+    create policy card_battle_invites_select on public.card_battle_invites for select to anon, authenticated using (true);
+  end if;
+  if not exists (select 1 from pg_policies where schemaname='public' and tablename='card_battle_invites' and policyname='card_battle_invites_insert') then
+    create policy card_battle_invites_insert on public.card_battle_invites for insert to anon, authenticated with check (sender_id <> target_id);
+  end if;
+  if not exists (select 1 from pg_policies where schemaname='public' and tablename='card_battle_invites' and policyname='card_battle_invites_update') then
+    create policy card_battle_invites_update on public.card_battle_invites for update to anon, authenticated using (true) with check (sender_id <> target_id);
+  end if;
+end $$;
+grant select, insert, update on public.card_battle_invites to anon, authenticated;
 
 -- ---- 流したあとの確かめ(読むだけ) ----
 select 'card_battle_pvp_ratings' as 表, count(*) as 行の数,
