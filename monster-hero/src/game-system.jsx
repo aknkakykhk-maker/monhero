@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 741ab58a83d49ff6
+// generated-sha256: f04061538e99d085
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-25 07:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-25 07:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -54168,6 +54168,48 @@ const cardPvpCleanMessage = (raw) => {
   return null;
 };
 
+// マルチ対戦の結果で、立ち絵の自分の助手が言う台詞(2026-10-24 社長「このまま入れる」・控え docs/progress/card-battle/multi/result-lines.md)。
+// 場面ごとに3本から1本。[台詞, 表情]。ほかの助手の名前は出さない(まだ会っていない子がいるため)。left … 相手が抜けた
+const CARD_PVP_RESULT_LINES = Object.freeze({
+  mua: {
+    win: [['やったー！ 勝っちゃったね♪ あたしまでﾄﾞｷﾄﾞｷしたｗ', 'happy'], ['まじすごいじゃん！ 最後の一手、かっこよすぎたよ！', 'excited'], ['勝ち！ この調子で、どんどん強くなっちゃお٩(`･ω･´)و', 'wink']],
+    lose: [['くやしー！ でも、いい勝負だったよ！ 次いこ！', 'troubled'], ['ドンマイ！ あたし、ちゃんと見てたよ(｡ ˘-˘)ｳﾝｳﾝ', 'happy'], ['負けちゃったかー…でも、もう1回やったら勝てるって！', 'crying']],
+    left: [['えっ、相手いなくなっちゃった？ 勝ちは勝ちだね♪', 'surprise'], ['また会えたら、ちゃんと決着つけよ！', 'normal'], ['あれれ、行っちゃった…次の相手、さがしにいこ！', 'wink']],
+  },
+  kiki: {
+    win: [['お見事でつ。最後まで押し切りましたね( ˘ω˘)9グッ!', 'happy'], ['勝ちましたね♪♪ ためたガッツの使いどころ、ばっちりでした', 'excited'], ['いい勝負でした。火力で押し切るの、気持ちいいでつね', 'wink']],
+    lose: [['あれま…惜しかったでつ。次はもっとためて挑みましょう', 'troubled'], ['負けちゃいましたね。でも、ちゃんと食らいついてましたよ(´ー`*)ウンウン', 'normal'], ['そなのか…お相手も強かったでつね。また挑戦しまつか？', 'crying']],
+    left: [['あれま、お相手が抜けちゃいましたね。ためたガッツ、使いそびれちゃいました', 'surprise'], ['電波の調子が悪かったのかもしれませんね。次の方をさがしまつか？', 'normal'], ['お相手、行ってしまいました…。またどこかで会えるといいでつね', 'troubled']],
+  },
+  momosuke: {
+    win: [['え、勝った！！ やるじゃん♡ ちょっとだけ見直したw', 'excited'], ['すご！！ 今の、ももでもマネできないかも♡', 'happy'], ['勝ち〜♡ ほらね、やればできるじゃん！！', 'wink']],
+    lose: [['あー負けた！！ でもいい勝負だったよ、えらいえらい♡', 'happy'], ['むかつく〜！！ 次はリベンジしよ、もも応援するから！！', 'angry'], ['ドンマイ！ 相手が強すぎただけだよ♡ たぶんw', 'wink']],
+    left: [['え、逃げた！？ もも、ちゃんと見てたからね〜♡', 'surprise'], ['まって、相手いなくなったんだけど！！ 勝ち逃げならぬ負け逃げ？w', 'excited'], ['行っちゃった〜。ももの応援が強すぎたかな♡', 'wink']],
+  },
+  dra: {
+    win: [['ふむ、勝ったな。守りの使いどころが良かったぞ', 'happy'], ['おめでとさん。いい勝ち方だったよ、えへへ', 'wink'], ['やるな。カードの組み合わせ、ちゃんと分かってきたな', 'excited']],
+    lose: [['わぁ、負けたか。でも惜しかったぞ。山札の残りを見てれば、もう少しいけたな', 'troubled'], ['ドンマイだ。負けた試合のほうが、学ぶことは多いからな', 'normal'], ['ふむ、今日は相手が一枚上だったな。次は守りを厚くしてみるか', 'surprise']],
+    left: [['おや、相手が抜けちまったか。最後までやりたかったんだがなぁ', 'surprise'], ['ふむ、急な用事でもできたのかもな。気にせず次いこうな', 'normal'], ['たしかに、決着はつけたかったな。次の相手に期待だ', 'troubled']],
+  },
+  atsu: {
+    win: [['いいね、勝ち！ 最後の詰め、完璧だった笑', 'happy'], ['まじで強くなってるじゃん！ 次は連勝いこ笑', 'excited'], ['ナイス！ その勝ち方、見てて気持ちよかった！', 'wink']],
+    lose: [['しゃあない！ デッキいじったら次いけるよ！', 'normal'], ['惜しかったー笑 てか、相手もガチだったな！', 'troubled'], ['負けても胸張っていいよ！ ちゃんと戦えてた笑', 'happy']],
+    left: [['あれ、相手抜けた？ 勝ちは勝ちだけど、決着つけたかったな笑', 'surprise'], ['電波かな？ 次の相手さがそ！', 'normal'], ['途中で抜けるのはナシだよな笑 まぁ〜気にせずいこ！', 'wink']],
+  },
+  kyuko: {
+    win: [['ほい、勝ち！ 組み方がはまってたねぇ笑', 'happy'], ['おけ〜、計算どおりって顔してるよぉw', 'wink'], ['いい勝ち方だったねぇ。ガッツの使い方、上手くなってる🫂', 'excited']],
+    lose: [['ぐぬぬぬ…惜しかったねぇ。組み方、いっしょに見直そっかぁ', 'angry'], ['まあ、なんとかなるっしょ笑 次は勝てるよぉ', 'normal'], ['負けたけど、見立ては悪くなかったよ。あと一手だったねぇw', 'troubled']],
+    left: [['あら、相手いなくなっちゃったぁ。不戦勝はノーカンにしとこ笑', 'surprise'], ['まあ、こういう日もあるっしょ。次いこw', 'normal'], ['ほい、ちょっと物足りないかぁ。次はちゃんと最後までやりたいねぇ', 'wink']],
+  },
+});
+const cardPvpResultLine = (who, scene, seed = 0) => {
+  const list = ((CARD_PVP_RESULT_LINES[who] || CARD_PVP_RESULT_LINES.mua)[scene]) || [];
+  if (!list.length) return null;
+  const [text, face] = list[Math.abs(seed) % list.length];
+  return { text, face };
+};
+const cardPvpSeedOf = (text) => String(text || '').split('').reduce((a, ch) => ((a * 31) + ch.charCodeAt(0)) >>> 0, 7);
+
 // ---- 部屋と通信(ここから下は画面と通信。区切り1)
 // ---- 強さの点数(表 card_battle_pvp_ratings・関数 card_battle_pvp_report)。表がまだ無い環境でも壊れない(無いと分かったら以後アクセスしない) ----
 let _cardPvpRatingsUnavailable = false;
@@ -54499,19 +54541,25 @@ const CardPvpLobby = ({ deck, deckIssues = [], onStart, onBack, onReward, assist
     const a = assistant && typeof ASSISTANTS !== 'undefined' ? ASSISTANTS.find((x) => x.id === assistant.id) || null : null;
     const got = r.got && !r.got.pending ? r.got : null;
     const foeName = room.foe ? room.foe.name : 'あいて';
+    const scene = r.reason === '相手が抜けた' ? 'left' : win ? 'win' : 'lose';
+    const line = a ? cardPvpResultLine(a.id, scene, cardPvpSeedOf(room.match)) : null;
     const verifyText = r.verify === 'ok' ? 'おたがいの山札を見せ合って、正しく終わったことを確かめました' : r.verify === 'ng' ? `この試合は無効です(${r.why})`
       : r.verify === 'skip' ? '相手の山札は届きませんでした(相手が抜けたため)' : 'おたがいの山札を見せ合って、確かめています…';
     return (
       <div data-mh-screen data-card-pvp="over" data-card-pvp-result={r.outcome} className={SCREEN_SHELL_CLASS}>
         <ScreenHead title={win ? '勝ち！' : r.reward === 'surrender' ? '投了' : '負け…'} accent={win ? 'text-amber-200' : 'text-slate-300'} onBack={back}/>
         <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
-          <div className="flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2">
-            {a && <CardAssistantArt src={assistantFullImage(a, win ? 'happy' : 'troubled')} alt={a.name} className="h-[220px] w-[46%]"/>}
-            <div className="mb-2 min-w-0 flex-1 space-y-1">
-              <div className="text-[15px] font-black text-white" style={JA_WRAP_STYLE}>{jaWrap(`${foeName}さんとのマルチ対戦`)}</div>
-              <div className="text-[12px] font-bold text-slate-300">{win ? '勝ち' : r.reward === 'surrender' ? '投了' : '負け'}{r.reason && !['勝ち', '負け', '投了'].includes(r.reason) ? `(${r.reason})` : ''}</div>
-              <p data-card-pvp-verify={r.verify} className={`rounded-xl px-2 py-1.5 text-[12px] font-bold ${r.verify === 'ok' ? 'bg-emerald-500/15 text-emerald-100' : r.verify === 'ng' ? 'bg-rose-500/15 text-rose-100' : 'bg-white/5 text-slate-200'}`} style={JA_WRAP_STYLE}>{cardPvpPhrases(verifyText)}</p>
+          {/* 立ち絵と吹き出し(助手と対戦の結果と同じ形)。台詞は CARD_PVP_RESULT_LINES(相手が抜けたときは left) */}
+          {a && line && (
+            <div className="flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2">
+              <CardAssistantArt src={assistantFullImage(a, line.face)} alt={a.name} className="h-[220px] w-[46%]"/>
+              <div data-card-pvp-line={scene} className="mb-2 min-w-0 flex-1 rounded-2xl border-2 bg-white px-2 py-1 text-[13px] font-extrabold leading-snug text-[#1f1333]" style={{ borderColor: a.accent, ...JA_WRAP_STYLE }}>{jaWrap(line.text)}</div>
             </div>
+          )}
+          <div className={SCREEN_PANEL_CLASS}>
+            <div className="text-[14px] font-black text-white" style={JA_WRAP_STYLE}>{jaWrap(`${foeName}さんとのマルチ対戦`)}</div>
+            <div className="text-[12px] font-bold text-slate-300">{win ? '勝ち' : r.reward === 'surrender' ? '投了' : '負け'}{r.reason && !['勝ち', '負け', '投了'].includes(r.reason) ? `(${r.reason})` : ''}</div>
+            <p data-card-pvp-verify={r.verify} className={`mt-1 rounded-xl px-2 py-1.5 text-[12px] font-bold ${r.verify === 'ok' ? 'bg-emerald-500/15 text-emerald-100' : r.verify === 'ng' ? 'bg-rose-500/15 text-rose-100' : 'bg-white/5 text-slate-200'}`} style={JA_WRAP_STYLE}>{cardPvpPhrases(verifyText)}</p>
           </div>
           <div className={SCREEN_PANEL_CLASS}>
             {!got && r.verify !== 'ng' && <div className="text-[12px] font-bold text-slate-300">ごほうびを確かめています…</div>}

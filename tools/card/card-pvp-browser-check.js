@@ -197,6 +197,8 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     check('⑥ 終わったら、2台とも報酬が出る', /カードポイント|ごほうびはありません/.test(rewardA) && /カードポイント|ごほうびはありません/.test(rewardB), `${rewardA} / ${rewardB}`);
     // ★この検査は2台が同じブラウザの保存を使うので、あとから書いた側(+200 か +50)が残る。実際は別の端末なので、両方それぞれに入る
     check('⑥ カードポイントが増えている(勝ち+200・負け+50 のどちらかが残る)', [200, 50].includes(pointAfter - pointBefore), `${pointBefore} → ${pointAfter}`);
+    const lineA = await A.locator('[data-card-pvp-line]').innerText().catch(() => ''), lineB = await B.locator('[data-card-pvp-line]').innerText().catch(() => '');
+    check('⑥ 結果の画面で、立ち絵の助手が勝ち・負けの台詞を言う', !!lineA && !!lineB && lineA !== lineB, `${lineA} / ${lineB}`);
     await shot(A, 'pvp-03-A-result'); await shot(B, 'pvp-03-B-result');
     // ⑦ だれとでも: 2台とも部屋を出て、受付から出会う
     const reportsBefore = reports.length;

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d2e8aee493432324
+// source-sha256: a4cf1ee5c4ed7a6e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-25 07:11";
+const BUILD_DATE = "2026-10-25 07:20";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -89833,6 +89833,48 @@ const cardPvpCleanMessage = raw => {
   };
   return null;
 };
+const CARD_PVP_RESULT_LINES = Object.freeze({
+  mua: {
+    win: [['やったー！ 勝っちゃったね♪ あたしまでﾄﾞｷﾄﾞｷしたｗ', 'happy'], ['まじすごいじゃん！ 最後の一手、かっこよすぎたよ！', 'excited'], ['勝ち！ この調子で、どんどん強くなっちゃお٩(`･ω･´)و', 'wink']],
+    lose: [['くやしー！ でも、いい勝負だったよ！ 次いこ！', 'troubled'], ['ドンマイ！ あたし、ちゃんと見てたよ(｡ ˘-˘)ｳﾝｳﾝ', 'happy'], ['負けちゃったかー…でも、もう1回やったら勝てるって！', 'crying']],
+    left: [['えっ、相手いなくなっちゃった？ 勝ちは勝ちだね♪', 'surprise'], ['また会えたら、ちゃんと決着つけよ！', 'normal'], ['あれれ、行っちゃった…次の相手、さがしにいこ！', 'wink']]
+  },
+  kiki: {
+    win: [['お見事でつ。最後まで押し切りましたね( ˘ω˘)9グッ!', 'happy'], ['勝ちましたね♪♪ ためたガッツの使いどころ、ばっちりでした', 'excited'], ['いい勝負でした。火力で押し切るの、気持ちいいでつね', 'wink']],
+    lose: [['あれま…惜しかったでつ。次はもっとためて挑みましょう', 'troubled'], ['負けちゃいましたね。でも、ちゃんと食らいついてましたよ(´ー`*)ウンウン', 'normal'], ['そなのか…お相手も強かったでつね。また挑戦しまつか？', 'crying']],
+    left: [['あれま、お相手が抜けちゃいましたね。ためたガッツ、使いそびれちゃいました', 'surprise'], ['電波の調子が悪かったのかもしれませんね。次の方をさがしまつか？', 'normal'], ['お相手、行ってしまいました…。またどこかで会えるといいでつね', 'troubled']]
+  },
+  momosuke: {
+    win: [['え、勝った！！ やるじゃん♡ ちょっとだけ見直したw', 'excited'], ['すご！！ 今の、ももでもマネできないかも♡', 'happy'], ['勝ち〜♡ ほらね、やればできるじゃん！！', 'wink']],
+    lose: [['あー負けた！！ でもいい勝負だったよ、えらいえらい♡', 'happy'], ['むかつく〜！！ 次はリベンジしよ、もも応援するから！！', 'angry'], ['ドンマイ！ 相手が強すぎただけだよ♡ たぶんw', 'wink']],
+    left: [['え、逃げた！？ もも、ちゃんと見てたからね〜♡', 'surprise'], ['まって、相手いなくなったんだけど！！ 勝ち逃げならぬ負け逃げ？w', 'excited'], ['行っちゃった〜。ももの応援が強すぎたかな♡', 'wink']]
+  },
+  dra: {
+    win: [['ふむ、勝ったな。守りの使いどころが良かったぞ', 'happy'], ['おめでとさん。いい勝ち方だったよ、えへへ', 'wink'], ['やるな。カードの組み合わせ、ちゃんと分かってきたな', 'excited']],
+    lose: [['わぁ、負けたか。でも惜しかったぞ。山札の残りを見てれば、もう少しいけたな', 'troubled'], ['ドンマイだ。負けた試合のほうが、学ぶことは多いからな', 'normal'], ['ふむ、今日は相手が一枚上だったな。次は守りを厚くしてみるか', 'surprise']],
+    left: [['おや、相手が抜けちまったか。最後までやりたかったんだがなぁ', 'surprise'], ['ふむ、急な用事でもできたのかもな。気にせず次いこうな', 'normal'], ['たしかに、決着はつけたかったな。次の相手に期待だ', 'troubled']]
+  },
+  atsu: {
+    win: [['いいね、勝ち！ 最後の詰め、完璧だった笑', 'happy'], ['まじで強くなってるじゃん！ 次は連勝いこ笑', 'excited'], ['ナイス！ その勝ち方、見てて気持ちよかった！', 'wink']],
+    lose: [['しゃあない！ デッキいじったら次いけるよ！', 'normal'], ['惜しかったー笑 てか、相手もガチだったな！', 'troubled'], ['負けても胸張っていいよ！ ちゃんと戦えてた笑', 'happy']],
+    left: [['あれ、相手抜けた？ 勝ちは勝ちだけど、決着つけたかったな笑', 'surprise'], ['電波かな？ 次の相手さがそ！', 'normal'], ['途中で抜けるのはナシだよな笑 まぁ〜気にせずいこ！', 'wink']]
+  },
+  kyuko: {
+    win: [['ほい、勝ち！ 組み方がはまってたねぇ笑', 'happy'], ['おけ〜、計算どおりって顔してるよぉw', 'wink'], ['いい勝ち方だったねぇ。ガッツの使い方、上手くなってる🫂', 'excited']],
+    lose: [['ぐぬぬぬ…惜しかったねぇ。組み方、いっしょに見直そっかぁ', 'angry'], ['まあ、なんとかなるっしょ笑 次は勝てるよぉ', 'normal'], ['負けたけど、見立ては悪くなかったよ。あと一手だったねぇw', 'troubled']],
+    left: [['あら、相手いなくなっちゃったぁ。不戦勝はノーカンにしとこ笑', 'surprise'], ['まあ、こういう日もあるっしょ。次いこw', 'normal'], ['ほい、ちょっと物足りないかぁ。次はちゃんと最後までやりたいねぇ', 'wink']]
+  }
+});
+const cardPvpResultLine = (who, scene, seed = 0) => {
+  const list = (CARD_PVP_RESULT_LINES[who] || CARD_PVP_RESULT_LINES.mua)[scene] || [];
+  if (!list.length) return null;
+  const [text, face] = list[Math.abs(seed) % list.length];
+  return {
+    text,
+    face
+  };
+};
+const cardPvpSeedOf = text => String(text || '').split('').reduce((a, ch) => a * 31 + ch.charCodeAt(0) >>> 0, 7);
 let _cardPvpRatingsUnavailable = false;
 const sbCardPvpReport = async ({
   match,
@@ -90694,6 +90736,8 @@ const CardPvpLobby = ({
     const a = assistant && typeof ASSISTANTS !== 'undefined' ? ASSISTANTS.find(x => x.id === assistant.id) || null : null;
     const got = r.got && !r.got.pending ? r.got : null;
     const foeName = room.foe ? room.foe.name : 'あいて';
+    const scene = r.reason === '相手が抜けた' ? 'left' : win ? 'win' : 'lose';
+    const line = a ? cardPvpResultLine(a.id, scene, cardPvpSeedOf(room.match)) : null;
     const verifyText = r.verify === 'ok' ? 'おたがいの山札を見せ合って、正しく終わったことを確かめました' : r.verify === 'ng' ? `この試合は無効です(${r.why})` : r.verify === 'skip' ? '相手の山札は届きませんでした(相手が抜けたため)' : 'おたがいの山札を見せ合って、確かめています…';
     return React.createElement("div", {
       "data-mh-screen": true,
@@ -90706,24 +90750,31 @@ const CardPvpLobby = ({
       onBack: back
     }), React.createElement("div", {
       className: `${SCREEN_LIST_CLASS} space-y-2 pb-4`
-    }, React.createElement("div", {
+    }, a && line && React.createElement("div", {
       className: "flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2"
-    }, a && React.createElement(CardAssistantArt, {
-      src: assistantFullImage(a, win ? 'happy' : 'troubled'),
+    }, React.createElement(CardAssistantArt, {
+      src: assistantFullImage(a, line.face),
       alt: a.name,
       className: "h-[220px] w-[46%]"
     }), React.createElement("div", {
-      className: "mb-2 min-w-0 flex-1 space-y-1"
+      "data-card-pvp-line": scene,
+      className: "mb-2 min-w-0 flex-1 rounded-2xl border-2 bg-white px-2 py-1 text-[13px] font-extrabold leading-snug text-[#1f1333]",
+      style: {
+        borderColor: a.accent,
+        ...JA_WRAP_STYLE
+      }
+    }, jaWrap(line.text))), React.createElement("div", {
+      className: SCREEN_PANEL_CLASS
     }, React.createElement("div", {
-      className: "text-[15px] font-black text-white",
+      className: "text-[14px] font-black text-white",
       style: JA_WRAP_STYLE
     }, jaWrap(`${foeName}さんとのマルチ対戦`)), React.createElement("div", {
       className: "text-[12px] font-bold text-slate-300"
     }, win ? '勝ち' : r.reward === 'surrender' ? '投了' : '負け', r.reason && !['勝ち', '負け', '投了'].includes(r.reason) ? `(${r.reason})` : ''), React.createElement("p", {
       "data-card-pvp-verify": r.verify,
-      className: `rounded-xl px-2 py-1.5 text-[12px] font-bold ${r.verify === 'ok' ? 'bg-emerald-500/15 text-emerald-100' : r.verify === 'ng' ? 'bg-rose-500/15 text-rose-100' : 'bg-white/5 text-slate-200'}`,
+      className: `mt-1 rounded-xl px-2 py-1.5 text-[12px] font-bold ${r.verify === 'ok' ? 'bg-emerald-500/15 text-emerald-100' : r.verify === 'ng' ? 'bg-rose-500/15 text-rose-100' : 'bg-white/5 text-slate-200'}`,
       style: JA_WRAP_STYLE
-    }, cardPvpPhrases(verifyText)))), React.createElement("div", {
+    }, cardPvpPhrases(verifyText))), React.createElement("div", {
       className: SCREEN_PANEL_CLASS
     }, !got && r.verify !== 'ng' && React.createElement("div", {
       className: "text-[12px] font-bold text-slate-300"
