@@ -106,6 +106,61 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     await shot(page, '01-starter');
     await page.locator('[data-card-kit="powerful"]').click();
     await page.getByRole('button', { name: /にする$/ }).click();
+    // ⑪ スターターを選ぶと、そのまま練習試合(チュートリアル)。5つの段を操作で通す
+    await page.locator('[data-card-tutor]').waitFor({ timeout: 20000 });
+    await shot(page, '11-tutorial-start');
+    const tutorSeen = new Set();
+    let wrongShown = false;
+    const tDeadline = Date.now() + 120000;
+    while (Date.now() < tDeadline) {
+      if (await page.locator('[data-card-top="result"]').count()) break;
+      const stageId = await page.locator('[data-card-tutor]').getAttribute('data-card-tutor').catch(() => null);
+      if (stageId) tutorSeen.add(stageId);
+      const next = page.locator('[data-card-tutor-next]');
+      if (await next.count()) { await next.click(); await page.waitForTimeout(250); continue; }
+      const mode = await page.locator('[data-card-battle]').getAttribute('data-card-mode').catch(() => null);
+      const handCard = (name) => page.locator('[data-card-hand-card]').filter({ hasText: name }).first();
+      if (stageId === 'guts' && mode === 'attack') {
+        if (!wrongShown) { // ちがうカード(パンチ)を押すと、ドラが案内する
+          await handCard('パンチ').click(); await page.waitForTimeout(150);
+          wrongShown = /光ってる所/.test(await page.locator('[data-card-battle]').innerText());
+          if (wrongShown) await shot(page, '12-tutorial-wrong');
+        }
+        await page.getByRole('button', { name: '攻撃おわり → ガッツへ' }).click(); await page.waitForTimeout(200); continue;
+      }
+      if (stageId === 'guts' && mode === 'guts') { await handCard('キック').click(); await handCard('チョップ').click(); await page.getByRole('button', { name: /ターン終了$/ }).click(); await page.waitForTimeout(300); continue; }
+      if (stageId === 'guard' && mode === 'guard') {
+        if (await page.getByRole('button', { name: 'これで守る' }).count()) { await page.getByRole('button', { name: 'これで守る' }).click(); }
+        else { await shot(page, '13-tutorial-guard'); await handCard('ステップ').click(); }
+        await page.waitForTimeout(300); continue;
+      }
+      if (stageId === 'attack' && mode === 'attack') {
+        await handCard('パンチ').click(); await page.waitForTimeout(150);
+        const tgt = page.locator('[data-card-mon].ring-rose-400').first();
+        if (await tgt.count()) await tgt.click();
+        await page.waitForTimeout(400); continue;
+      }
+      if (stageId === 'deckEnd' && mode === 'attack') { await page.getByRole('button', { name: '攻撃おわり → ガッツへ' }).click(); await page.waitForTimeout(200); continue; }
+      if (stageId === 'deckEnd' && mode === 'guts') { await page.getByRole('button', { name: /ターン終了$/ }).click(); await page.waitForTimeout(400); continue; }
+      await page.waitForTimeout(250);
+    }
+    const tutOutcome = await page.locator('[data-card-top="result"]').getAttribute('data-card-outcome').catch(() => null);
+    await shot(page, '14-tutorial-result');
+    check('⑪ 練習試合を最後まで操作で通せる(5つの段)', tutOutcome === 'tutorialDone' && ['draw', 'guts', 'guard', 'attack', 'deckEnd', 'finish'].every((k) => tutorSeen.has(k)), `${tutOutcome}・${[...tutorSeen].join('→')}`);
+    check('⑪ ちがう所を押すと、ドラが「光ってる所」と案内する', wrongShown);
+    const tut = await page.evaluate(() => ({ t: JSON.parse(localStorage.getItem('mh_card_tutorial_v1') || 'null'), point: JSON.parse(localStorage.getItem('mh_card_point_v1') || '0') }));
+    check('⑪ はじめて最後までやると 100(印 done・rewarded)', tut.t && tut.t.done && tut.t.rewarded && tut.point === 400, JSON.stringify(tut));
+    await page.getByRole('button', { name: 'トップへ' }).click();
+    await page.locator('[data-card-top="top"]').waitFor({ timeout: 20000 });
+    // もう一度 → 飛ばす: 100 は二度ともらえない
+    await page.locator('[data-card-tutorial-again]').click();
+    await page.locator('[data-card-tutor]').waitFor({ timeout: 20000 });
+    await page.locator('[data-card-quit]').click();
+    await page.locator('[data-confirm-sheet]').locator('xpath=..').getByRole('button', { name: '飛ばす' }).click();
+    await page.locator('[data-card-top="result"]').waitFor({ timeout: 20000 });
+    const tut2 = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_card_point_v1') || '0'));
+    check('⑪ もう一度やっても(飛ばしても)100 は二度ともらえない', tut2 === 400, String(tut2));
+    await page.getByRole('button', { name: 'トップへ' }).click();
     await page.locator('[data-card-top="top"]').waitFor({ timeout: 20000 });
     const saved = await page.evaluate(() => ({
       col: JSON.parse(localStorage.getItem('mh_card_collection_v1') || '{}'),
@@ -114,8 +169,8 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       starter: JSON.parse(localStorage.getItem('mh_card_starter_v1') || 'null'),
     }));
     const total = Object.values(saved.col).reduce((s, v) => s + v, 0);
-    check('② スターターを選ぶとカード53枚・デッキ1つ・カードポイント300', total === 53 && saved.decks && saved.decks.decks.length === 1 && saved.point === 300 && saved.starter && saved.starter.kit === 'powerful', JSON.stringify({ total, point: saved.point, starter: saved.starter }));
-    check('② トップにカードポイント300と出る', (await page.locator('[data-card-point]').innerText()).trim() === '300');
+    check('② スターターを選ぶとカード53枚・デッキ1つ・カードポイント300(＋練習試合の100)', total === 53 && saved.decks && saved.decks.decks.length === 1 && saved.point === 400 && saved.starter && saved.starter.kit === 'powerful', JSON.stringify({ total, point: saved.point, starter: saved.starter }));
+    check('② トップにカードポイント400(300＋練習試合の100)と出る', (await page.locator('[data-card-point]').innerText()).trim() === '400');
     await shot(page, '02-top');
     // ③ 戻ってもう一度開く
     await page.getByRole('button', { name: 'デバッグ設定へ戻る' }).click();
@@ -230,7 +285,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       all: Object.fromEntries(Object.keys(localStorage).filter((k) => k.startsWith('mh_')).map((k) => [k, localStorage.getItem(k)])),
     }));
     const outcome = await page.locator('[data-card-top="result"]').getAttribute('data-card-outcome');
-    if (outcome === 'surrender') check('⑦ 投了ではカードポイントが増えない・戦績に投了が1つ', after.point === 300 && after.record && after.record.cpu.surrender === 1, JSON.stringify({ point: after.point, cpu: after.record && after.record.cpu }));
+    if (outcome === 'surrender') check('⑦ 投了ではカードポイントが増えない・戦績に投了が1つ', after.point === 400 && after.record && after.record.cpu.surrender === 1, JSON.stringify({ point: after.point, cpu: after.record && after.record.cpu }));
     else check(`⑦ 決着(${outcome})で結果が出て戦績が付く`, after.record && after.record.cpu[outcome] === 1);
     // ⑧ 既存のキーを書き換えていない(時刻・起動のたびに変わる記録は除く)
     const volatile = /^mh_(debug_entry|last_|play_|session|boot|reload|device|playtime|visit|bgm_|se_|audio|login|daily_|mission|update|seen_build|build)/;

@@ -238,6 +238,13 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
   const [hint, setHint] = useState('');
   const [quit, setQuit] = useState(false);
   const [action, setAction] = useState(null);   // まんなかに出す、いま使った技
+  // 練習試合(チュートリアル・86-card-tutorial.jsx)。tutI … いまの段 / tutQ … これから出す台詞 / tutSay … ドラの説明の窓に出している台詞
+  const tutorial = game.tutorial === true;
+  const [tutI, setTutI] = useState(0);
+  const [tutQ, setTutQ] = useState(() => (tutorial ? CARD_TUTORIAL_STAGES[0].lines.slice() : []));
+  const [tutSay, setTutSay] = useState(null);
+  const tutWrong = useRef(0);
+  const tutStage = tutorial ? CARD_TUTORIAL_STAGES[Math.min(tutI, CARD_TUTORIAL_STAGES.length - 1)] : null;
   const [motions, setMotions] = useState({});   // 場の子の動き { 'p-m': { type, kind, dx, dy, key } }
   const motionTimers = useRef([]);
   useEffect(() => () => motionTimers.current.forEach(clearTimeout), []);
@@ -269,10 +276,27 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
     clearTimeout(bubbleTimer.current);
     bubbleTimer.current = setTimeout(() => setBubble(null), 4500);
   };
-  useEffect(() => { say('start'); return () => clearTimeout(bubbleTimer.current); }, []);
+  useEffect(() => { if (!tutorial) say('start'); return () => clearTimeout(bubbleTimer.current); }, []);
+  // 練習試合: 段が変わったら、その段の台詞を出す。みゅあの台詞は吹き出しに出して、少ししたら次へ。ドラの台詞は説明の窓に出す
+  useEffect(() => { if (tutorial && tutStage) setTutQ(tutStage.lines.slice()); }, [tutI]);
+  useEffect(() => {
+    if (!tutorial || !tutQ.length) return undefined;
+    const head = tutQ[0];
+    if (head[0] === 'M') {
+      setFace('happy');
+      setBubble({ text: CARD_TUTORIAL_LINES[head], key: `t-${head}-${Date.now()}` });
+      const t = setTimeout(() => { setBubble(null); setTutQ((q) => q.slice(1)); }, 2100);
+      return () => clearTimeout(t);
+    }
+    setTutSay(head);
+    return undefined;
+  }, [tutQ]);
 
   // 操作を1つ進める(だめな操作は何もしない)
+  const tutAllow = (act) => !tutorial || (!tutStage.next && tutQ.length <= 1 && (!tutQ.length || tutQ[0][0] === 'D') && cardTutorialAllow(db, tutStage.id, st, act));
+  const tutWrongSay = () => { const id = CARD_TUTORIAL_WRONG[tutWrong.current % CARD_TUTORIAL_WRONG.length]; tutWrong.current += 1; setHint(CARD_TUTORIAL_LINES[id]); };
   const step = (act) => {
+    if (tutorial && cardDeciderOf(st) === CARD_ME && !tutAllow(act)) { tutWrongSay(); return false; }
     const next = cardApplyAction(db, st, act);
     if (!next) return false;
     const evs = next.events || [];
@@ -313,7 +337,8 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
       setTimeout(() => setAction((cur) => (cur && cur.key === key ? null : cur)), 2200);
     }
     else if (evs.some((e) => e.t === 'guard')) Audio_.se.guard();
-    const scene = cardLineSceneOf(db, st, next, CARD_CPU);
+    if (tutorial && cardTutorialDone(tutStage.id, st, next)) setTutI((i) => i + 1);
+    const scene = tutorial ? null : cardLineSceneOf(db, st, next, CARD_CPU);
     setSt(next); setSel(null); setPicks([]); setHint('');
     if (scene) say(scene);
     return true;
@@ -322,14 +347,16 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
   // コンピューターの番(守りの番・始める前・捨てる番も)。詳しい画面や捨て札を見ているあいだは待つ
   useEffect(() => {
     if (st.winner !== null || paused || game.demo) return undefined;
+    if (tutorial && !cardTutorialCpu(db, tutStage.id, st)) return undefined;
     if (cardDeciderOf(st) !== CARD_CPU) return undefined;
     const wait = st.pending ? 950 : st.phase === 'guts' ? 600 : 900; // 守りの番は、技の動きを見せ切ってから
     const t = setTimeout(() => {
-      const act = cardAiChooseAction(db, st, policy);
+      const act = tutorial ? cardTutorialCpu(db, tutStage.id, st) : cardAiChooseAction(db, st, policy);
+      if (!act) return; // 練習試合のみゅあは、段が来るまで待つ
       if (!step(act)) step(st.pending ? { type: 'pass' } : st.phase === 'main' ? { type: 'endAttacks' } : { type: 'guts', hand: [] });
     }, wait);
     return () => clearTimeout(t);
-  }, [st, paused]);
+  }, [st, paused, tutI]);
 
   // 動きの見本(デバッグ): 決まった順に1手ずつ進める
   const demoAt = useRef(0);
@@ -346,7 +373,7 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
   }, [st, paused]);
   // 勝ち負けが決まったら、少し見せてから結果へ
   useEffect(() => {
-    if (st.winner === null || finished.current) return undefined;
+    if (st.winner === null || finished.current || tutorial) return undefined; // 練習試合は、ドラの締めの台詞のあと「次へ」で終わる
     finished.current = true;
     const t = setTimeout(() => onFinish({ outcome: st.winner === CARD_ME ? 'win' : 'lose', st }), 2200);
     return () => clearTimeout(t);
@@ -362,8 +389,8 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
     : st.pending ? 'guard'
     : st.phase === 'main' ? 'attack'
     : st.phase === 'guts' ? 'guts' : 'wait';
-  const attackOpts = mode === 'attack' ? cardAttackOptions(db, st) : [];
-  const guardOpts = mode === 'guard' ? cardGuardOptions(db, st) : [];
+  const attackOpts = mode === 'attack' ? cardAttackOptions(db, st).filter(tutAllow) : [];
+  const guardOpts = mode === 'guard' ? cardGuardOptions(db, st).filter(tutAllow) : [];
 
   // 選んだカードから、残りの選び方(使う子・組み合わせ・狙う相手)を絞る
   const selOpts = sel && mode === 'attack' ? attackOpts.filter((o) => o.hand.includes(sel.hand)) : [];
@@ -377,6 +404,7 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
 
   const tapHand = (i) => {
     Audio_.se.tap();
+    if (tutorial && myTurn && (!cardTutorialHandOk(tutStage.id, st, i) || tutStage.next || tutQ.length > 1)) { tutWrongSay(); return; }
     if (mode === 'guts' || mode === 'setup' || mode === 'discard') {
       const max = mode === 'setup' ? CARD_BATTLE_SETUP_GUTS_MAX : mode === 'discard' ? st.pendingDiscard.n : 99;
       setPicks((cur) => (cur.includes(i) ? cur.filter((x) => x !== i) : cur.length >= max ? cur : [...cur, i]));
@@ -463,11 +491,12 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
 
   const footer = (() => {
     const btn = 'mh-button min-h-[44px] flex-1 rounded-xl text-[14px] font-black active:scale-[.98] disabled:opacity-40';
-    if (st.winner !== null) return <div className="flex-1 text-center text-[15px] font-black text-amber-200">{st.winner === CARD_ME ? '勝ち！' : '負け…'}</div>;
+    if (st.winner !== null && !tutorial) return <div className="flex-1 text-center text-[15px] font-black text-amber-200">{st.winner === CARD_ME ? '勝ち！' : '負け…'}</div>;
+    if (tutorial && (st.winner !== null || tutStage.next)) return <div className="flex-1 text-center text-[13px] font-bold text-slate-300">ドラの説明を読んで「次へ」</div>;
     if (mode === 'wait') return <div className="flex-1 text-center text-[13px] font-bold text-slate-300">{who.name}の番…</div>;
     if (mode === 'setup') return <button type="button" className={`${btn} mh-button-primary`} onClick={() => step({ type: 'setupGuts', hand: picks })}>{picks.length ? `${picks.length}枚をガッツにして始める` : 'ガッツにしないで始める'}</button>;
     if (mode === 'discard') return <button type="button" disabled={picks.length !== st.pendingDiscard.n} className={`${btn} mh-button-danger`} onClick={() => step({ type: 'discard', hand: picks })}>{`${st.pendingDiscard.n}枚えらんで捨てる`}</button>;
-    if (mode === 'guard') return <button type="button" className={`${btn} border border-white/20 bg-slate-800`} onClick={() => step({ type: 'pass' })}>守らない</button>;
+    if (mode === 'guard') return <button type="button" className={`${btn} border border-white/20 bg-slate-800`} onClick={() => step({ type: 'pass' })}>{tutorial && st.pending && st.pending.evaded ? 'これで守る' : '守らない'}</button>;
     if (mode === 'guts') return <button type="button" className={`${btn} bg-gradient-to-b from-orange-400 to-orange-600`} onClick={() => step({ type: 'guts', hand: picks })}>{picks.length ? `${picks.length}枚をガッツにしてターン終了` : 'ガッツにしないでターン終了'}</button>;
     const useBtn = sel && monChosen !== undefined && finalOpts.length && !needTarget;
     return (<>
@@ -475,7 +504,7 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
       <button type="button" className={`${btn} border border-violet-300/60 bg-violet-900`} onClick={() => step({ type: 'endAttacks' })}>攻撃おわり → ガッツへ</button>
     </>);
   })();
-  const guide = mode === 'attack' ? (sel ? (monChosen === undefined ? '使う子をタップ' : needTarget ? '狙う相手をタップ' : '「使う」をタップ') : attackOpts.length ? '技をタップ → 相手のモンスターをタップ' : '使える技がありません →「攻撃おわり」でガッツへ')
+  const guide = tutorial && (tutStage.next || tutQ.length > 1) ? '' : mode === 'attack' ? (sel ? (monChosen === undefined ? '使う子をタップ' : needTarget ? '狙う相手をタップ' : '「使う」をタップ') : attackOpts.length ? '技をタップ → 相手のモンスターをタップ' : '使える技がありません →「攻撃おわり」でガッツへ')
     : mode === 'guard' ? (guardOpts.length ? '使える回避・防御だけが明るくなっています' : '使える回避・防御はありません')
     : mode === 'guts' ? 'ガッツにするカードをタップ(何枚でも)'
     : mode === 'setup' ? '後攻: 始める前に2枚までガッツにできます'
@@ -484,7 +513,7 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
   return (
     <div data-mh-screen data-card-battle data-card-mode={mode} className="relative flex h-full min-h-0 flex-1 flex-col overflow-hidden text-white" style={{ background: 'radial-gradient(ellipse at 50% 45%,#3b2a6b 0%,#1b1438 55%,#0d0a1f 100%)' }}>
       <div className={`flex ${compact ? 'h-[36px]' : 'h-[44px]'} shrink-0 items-center justify-between bg-black/35 px-2`}>
-        <button type="button" onClick={() => setQuit(true)} className="rounded-lg border border-white/20 px-2 py-1 text-[12px] font-black text-slate-200">投了</button>
+        <button type="button" data-card-quit onClick={() => setQuit(true)} className="rounded-lg border border-white/20 px-2 py-1 text-[12px] font-black text-slate-200">{tutorial ? '飛ばす' : '投了'}</button>
         <span className="text-[15px] font-black">MFバトルカード</span>
         <span className="text-[12px] font-bold text-violet-200">ターン {Math.max(1, st.turn)} ・ {st.active === CARD_ME ? 'あなたの番' : `${who.name}の番`}</span>
       </div>
@@ -516,8 +545,29 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
         )}
         <div data-card-log className="relative z-[1] max-w-full rounded-xl border border-white/15 bg-black/45 px-3 py-1 text-center text-[13px] font-bold leading-snug" style={JA_WRAP_STYLE}>
           {pendingText && <div className="text-rose-200">{pendingText}</div>}
-          {(pendingText ? [] : compact ? logLines.slice(action || bubble ? -1 : -2) : logLines.slice(bubble && action ? -2 : -3)).map((l, i, arr) => <div key={i} className={i === arr.length - 1 && !pendingText ? '' : 'text-[11px] text-violet-200'}>{l.text}</div>)}
+          {(pendingText ? [] : (compact || tutorial) ? logLines.slice(action || bubble || tutorial ? -1 : -2) : logLines.slice(bubble && action ? -2 : -3)).map((l, i, arr) => <div key={i} className={i === arr.length - 1 && !pendingText ? '' : 'text-[11px] text-violet-200'}>{l.text}</div>)}
         </div>
+        {/* 練習試合: ドラの説明の窓(まんなかの下)。操作が要らない台詞は「次へ」で進む */}
+        {tutorial && tutSay && (() => {
+          const dra = ASSISTANTS.find((a) => a.id === 'dra');
+          const head = tutQ[0];
+          const showNext = tutStage.next ? (!head || head[0] === 'D') : (head && head[0] === 'D' && tutQ.length > 1);
+          const onNext = () => {
+            Audio_.se.tap();
+            setHint('');
+            if (tutQ.length > 1) { setTutQ((q) => q.slice(1)); return; }
+            if (tutStage.onNext === 'finish') { finished.current = true; onFinish({ outcome: 'tutorialDone', st }); return; }
+            if (tutStage.onNext) setSt((cur) => cardTutorialMutate(db, cur, tutStage.onNext));
+            setTutI((i) => i + 1);
+          };
+          return (
+            <div data-card-tutor={tutStage.id} className="relative z-[3] flex w-full max-w-[420px] items-start gap-2 rounded-2xl border-2 border-emerald-300/70 bg-slate-950/90 px-2 py-1.5 shadow-lg">
+              {dra && <img src={assistantFaceImage(dra, 'happy')} alt="ドラ" className="h-[36px] w-[36px] shrink-0 rounded-lg object-cover object-top"/>}
+              <div className="min-w-0 flex-1 text-[12px] font-bold leading-snug text-emerald-50" style={JA_WRAP_STYLE}><b className="mr-1 text-[11px] text-emerald-300">ドラ</b>{CARD_TUTORIAL_LINES[tutSay]}</div>
+              {showNext && <button type="button" data-card-tutor-next onClick={onNext} className="shrink-0 self-center rounded-xl bg-emerald-500 px-2.5 py-1.5 text-[12px] font-black text-slate-950 active:scale-95">次へ</button>}
+            </div>
+          );
+        })()}
       </div>
       <div className="flex shrink-0 items-end justify-around px-1">
         {me.mons.map((_, m) => <CardMonSlot key={m} db={db} st={st} p={CARD_ME} m={m} mark={markOf(CARD_ME, m)} fx={fx.filter((f) => f.p === CARD_ME && f.m === m)} onTap={() => tapMon(CARD_ME, m)} press={press} compact={compact} motion={motions[`0-${m}`] || null}/>)}
@@ -558,7 +608,8 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
       <div data-card-footer className="flex shrink-0 gap-2 px-2.5 pb-2 pt-1" style={{ paddingBottom: 'max(8px, env(safe-area-inset-bottom))' }}>{footer}</div>
       {detail && <CardDetailModal db={db} no={detail} onClose={() => setDetail(null)}/>}
       {discard && <CardDiscardModal db={db} st={st} initial={discard.tab} onDetail={(no) => setDetail(no)} onClose={() => setDiscard(null)}/>}
-      {quit && <ConfirmSheet title="投了しますか？" message={'投了すると負けになります(カードポイントはもらえません)'} confirmLabel="投了する" danger onCancel={() => setQuit(false)} onConfirm={() => { setQuit(false); finished.current = true; onFinish({ outcome: 'surrender', st }); }}/>}
+      {quit && !tutorial && <ConfirmSheet title="投了しますか？" message={'投了すると負けになります(カードポイントはもらえません)'} confirmLabel="投了する" danger onCancel={() => setQuit(false)} onConfirm={() => { setQuit(false); finished.current = true; onFinish({ outcome: 'surrender', st }); }}/>}
+      {quit && tutorial && <ConfirmSheet title="チュートリアルを飛ばしますか？" message={'ルールの画面からいつでもできます'} confirmLabel="飛ばす" onCancel={() => setQuit(false)} onConfirm={() => { setQuit(false); finished.current = true; onFinish({ outcome: 'tutorialSkip', st }); }}/>}
     </div>
   );
 };
@@ -579,14 +630,14 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
 
   const load = async () => {
     const K = CARD_SAVE_KEYS;
-    const [collection, decks, point, starter, daily, record, unlocked] = await Promise.all([
+    const [collection, decks, point, starter, daily, record, unlocked, tutorial] = await Promise.all([
       storeGet(K.collection, null), storeGet(K.decks, null), storeGet(K.point, null), storeGet(K.starter, null),
-      storeGet(K.daily, null), storeGet(K.record, null), storeGet(K.cpuUnlocked, null),
+      storeGet(K.daily, null), storeGet(K.record, null), storeGet(K.cpuUnlocked, null), storeGet(K.tutorial, null),
     ]);
     const next = {
       collection: cardNormalizeCollection(collection), decks: cardNormalizeDecks(decks), point: cardNormalizePoint(point),
       starter: cardNormalizeStarter(starter), daily: cardNormalizeDaily(daily, cardTodayJst()), record: cardNormalizeRecord(record),
-      unlocked: cardNormalizeCpuUnlocked(unlocked),
+      unlocked: cardNormalizeCpuUnlocked(unlocked), tutorial: cardNormalizeTutorial(tutorial),
     };
     setSave(next);
     if (!next.starter) setView('starter');
@@ -610,6 +661,16 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
 
   if (screen === 'CARD_BATTLE' && game) {
     return <CardBattleBoard key={game.key} db={db} game={game} onFinish={async ({ outcome }) => {
+      if (game.tutorial) {
+        // 練習試合: 終えた・飛ばしたの印と、はじめて最後までやったときだけカードポイント 100(1日の上限とは別)
+        const fin = cardTutorialFinish(save.tutorial, outcome === 'tutorialDone' ? 'done' : 'skip', Date.now());
+        const ok = await persist({ tutorial: fin.tutorial, point: save.point + fin.reward });
+        setResult({ tutorial: true, done: outcome === 'tutorialDone', reward: ok ? fin.reward : 0, saved: ok });
+        onBgm && onBgm(null);
+        onNavigate('CARD_TOP');
+        setView('result');
+        return;
+      }
       const reward = cardCpuReward(cardNormalizeDaily(save.daily, cardTodayJst()), game.level, outcome);
       const rec = cardNormalizeRecord(save.record);
       const nextRecord = {
@@ -634,6 +695,13 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   const deckIssues = activeDeck ? cardDeckProblems(db, activeDeck) : ['デッキがありません'];
   const btn = 'mh-button min-h-[52px] w-full rounded-2xl font-black active:scale-[.98] disabled:opacity-40';
 
+  // 練習試合(チュートリアル)を始める。相手はみゅあ・デッキはドラが貸す(選んだスターターとは別)
+  const startTutorial = () => {
+    setResult(null);
+    setGame({ key: `tutorial-${Date.now()}`, st: cardTutorialGame(db), who: 'mua', level: 'easy', tutorial: true });
+    onBgm && onBgm(CARD_AI_BGM.mua);
+    onNavigate('CARD_BATTLE');
+  };
   const startBattle = (pick = foe) => {
     if (!activeDeck || deckIssues.length) { setNotice(deckIssues.join('・')); return; }
     const cpuDeck = cardAiBuildDeck(db, pick.who, pick.level);
@@ -669,7 +737,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             if (!g) { setNotice('スターターはもう受け取っています'); setView('top'); return; }
             const ok = await persist(g);
             setNotice(ok ? `「${pick.name}」を受け取りました。カードポイント${CARD_STARTER_POINT}もいっしょに！` : '保存できませんでした。もう一度お試しください');
-            if (ok) setView('top');
+            if (ok) { setView('top'); if (!save.tutorial.done && !save.tutorial.skipped) startTutorial(); }
           }}>{pick ? `「${pick.name}」にする` : 'キットをえらんでください'}</button>
         </div>
       </div>
@@ -729,6 +797,24 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   }
 
   // ---- 結果 ----
+  if (view === 'result' && result && result.tutorial) {
+    return (
+      <div data-mh-screen data-card-top="result" data-card-outcome={result.done ? 'tutorialDone' : 'tutorialSkip'} className={SCREEN_SHELL_CLASS}>
+        <ScreenHead title={result.done ? '練習試合クリア！' : '練習試合を飛ばしました'} accent="text-amber-200" onBack={() => setView('top')}/>
+        <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
+          <div className={SCREEN_PANEL_CLASS}>
+            {result.done && result.reward > 0 && <div className="text-[15px] font-black text-amber-200">カードポイント {result.reward}</div>}
+            <div className="mt-1 text-[12px] font-bold text-slate-300">{result.done ? 'これで5つ全部です。いろんな相手と戦ってみましょう' : 'トップの「練習試合」から、いつでもできます'}</div>
+            <div className="mt-1 text-[12px] font-bold text-slate-300">いまのカードポイント: {save.point}</div>
+            {!result.saved && <div className="mt-1 text-[12px] font-bold text-rose-300">保存できませんでした</div>}
+          </div>
+        </div>
+        <div className={SCREEN_FOOTER_CLASS}>
+          <button type="button" className={`${btn} mh-button-primary`} onClick={() => setView('top')}>トップへ</button>
+        </div>
+      </div>
+    );
+  }
   if (view === 'result' && result) {
     const a = allAssistants.find((x) => x.id === result.who);
     const win = result.outcome === 'win';
@@ -781,7 +867,10 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         )}
         {notice && <p className="text-[12px] font-bold text-amber-200">{notice}</p>}
         <button type="button" data-card-cpu className={`${btn} mh-button-primary`} disabled={!activeDeck} onClick={() => { Audio_.se.tap(); setNotice(''); setView('foe'); }}>コンピューター戦</button>
-        <div className="grid grid-cols-2 gap-2">{soon('デッキ編成')}{soon('マーケットへ')}{soon('カード図鑑')}{soon('ルール')}</div>
+        <div className="grid grid-cols-2 gap-2">{soon('デッキ編成')}{soon('マーケットへ')}{soon('カード図鑑')}
+          {/* ルールの画面ができるまでは、練習試合(チュートリアル)の入口をここに置く(設計書 7-4「もう一度できる」) */}
+          <button type="button" data-card-tutorial-again className={`${btn} border border-emerald-300/50 bg-emerald-900/60 text-emerald-50`} onClick={() => { Audio_.se.tap(); startTutorial(); }}>練習試合<span className="block text-[10px] font-bold">ドラが教えるチュートリアル</span></button>
+        </div>
         {debug && (
           <div className={`${SCREEN_PANEL_FLAT_CLASS} space-y-1`}>
             <div className="text-[11px] font-bold text-slate-400">デバッグ: カードバトルの記録(mh_card_* の新しいキーだけ)</div>
