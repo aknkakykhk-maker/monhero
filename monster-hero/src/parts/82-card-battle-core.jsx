@@ -1126,10 +1126,9 @@ const cardGrantStarter = (db, { collection, decks, point, starter }, kitId, now)
 //   クイック周回: 勝ち … 難易度の周 / 負け … 勝ちの半分 × (自分の番の数 ÷ 10。10回で満額)/ 降参 … 倒した数 × 負けの3分の1(0体なら0)
 //   ★かかった時間は見ない(止めて放っておいても増えない)。自分の番を3回やる前に終わった試合は、どちらも0(すぐ降参・すぐ負けで回せないように)
 //   ★負けのポイントを難易度で増やさないのは、MASTER でわざと早く負けるのがいちばん得にならないようにするため
-//   1日の上限は CPU 1,500(その日はじめての勝ちの +50 は上限の外)
+//   1日の上限は設けない(社長 2026-10-24。#3531 で取り消し)。その日はじめての勝ちの +50 だけは1日1回
 const CARD_CPU_LOSE_POINT = 25;
 const CARD_SURRENDER_POINT_PER_KO = 10;
-const CARD_CPU_DAILY_MAX = 1500;
 const CARD_FIRST_WIN_BONUS = 50;
 const CARD_MIN_OWN_TURNS = 3;
 const CARD_LOSE_FULL_TURNS = 10;
@@ -1164,10 +1163,10 @@ const cardCpuLoops = (levelId, outcome, facts = cardResultFacts(null)) => {
 };
 const cardCpuReward = (daily, levelId, outcome, facts = cardResultFacts(null)) => {
   const base = cardCpuBasePoint(levelId, outcome, facts);
-  const room = Math.max(0, CARD_CPU_DAILY_MAX - daily.cpuPoint);
-  const got = Math.min(base, room);
+  // 上限なし(何戦してももらえる)。daily.cpuPoint は前のまま数えるだけで、もらえる数には使わない(保存の形は変えない・決まり⑦)
+  const got = base;
   const bonus = outcome === 'win' && base > 0 && !daily.firstWin ? CARD_FIRST_WIN_BONUS : 0;
-  return { base, got, capped: got < base, bonus, total: got + bonus, short: facts.ownTurns < CARD_MIN_OWN_TURNS, daily: { ...daily, cpuPoint: daily.cpuPoint + got, firstWin: daily.firstWin || bonus > 0 } };
+  return { base, got, capped: false, bonus, total: got + bonus, short: facts.ownTurns < CARD_MIN_OWN_TURNS, daily: { ...daily, cpuPoint: daily.cpuPoint + got, firstWin: daily.firstWin || bonus > 0 } };
 };
 // 勝ったら次の難易度を開く(NORMAL→HARD→EXPERT→MASTER)
 const cardUnlockAfterWin = (unlocked, levelId) => {
