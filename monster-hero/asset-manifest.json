@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "2c03d356a773",
-  "packs": {"beat":{"bytes":107387446,"count":93},"battle":{"bytes":115815752,"count":593},"all":{"bytes":223203198,"count":686}},
+  "id": "1cb9ab92b9f7",
+  "packs": {"beat":{"bytes":107387446,"count":93},"battle":{"bytes":115959830,"count":594},"all":{"bytes":223347276,"count":687}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"ddce743e94fa","size":1416528,"pack":"beat"},
@@ -429,6 +429,7 @@
     "images/monsters/c061.png": {"v":"4e015080a484","size":98144,"pack":"battle"},
     "images/monsters/c062.png": {"v":"090cdd583324","size":144036,"pack":"battle"},
     "images/monsters/c063.png": {"v":"97693bd14c3a","size":239974,"pack":"battle"},
+    "images/monsters/c064.png": {"v":"7e039c580e69","size":144078,"pack":"battle"},
     "images/monsters/centaur.png": {"v":"55e31863fe99","size":88030,"pack":"battle"},
     "images/monsters/colorpandora.png": {"v":"9deee820503c","size":120359,"pack":"battle"},
     "images/monsters/dino.png": {"v":"ac797293f479","size":127071,"pack":"battle"},
