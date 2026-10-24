@@ -95,7 +95,7 @@
   },
   {
    "no": "249",
-   "name": "捨て身",
+   "name": "肉を切らせて",
    "name_en": "Jump In",
    "kind": "防御",
    "kind_en": "BLK",
@@ -103,7 +103,7 @@
    "guts": 0,
    "text": "ちから技を受けるときに使用する。受けるダメージは2倍になる。次のターン、このモンスターのちから技のダメージを3倍にする。",
    "text_en": "Play against a POW move. Take double damage. Triples the damage of this monster's POW moves next turn.",
-   "name_source": "案(社長がこのままでよいと決めた。330 と同じ名前になる点は窓口に確認中)",
+   "name_source": "社長が決めた(台帳 #3413)",
    "text_source": "訳案"
   },
   {
