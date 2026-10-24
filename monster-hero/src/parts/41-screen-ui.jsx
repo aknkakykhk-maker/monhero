@@ -76,7 +76,8 @@ const ScreenHead = ({ title, icon = null, accent = 'text-white', accentStyle = n
     )}
     <div className="min-w-0 flex-1">
       <h2 className={`flex items-center gap-1.5 ${wrapTitle ? 'break-words' : 'truncate'} text-xl font-black italic leading-tight ${accent}`} style={accentStyle || undefined}>{icon}{title}</h2>
-      {note && <p className="mh-screen-note mt-0.5 text-[10px] font-bold leading-snug text-slate-400">{note}</p>}
+      {/* 注記は文字のときだけ言葉の切れ目で折る(2026-10-24。M/B管理「アシストカードは／ここ」と2字だけ落ちていた) */}
+      {note && <p className="mh-screen-note mt-0.5 text-[10px] font-bold leading-snug text-slate-400" style={typeof note === 'string' ? JA_LABEL_STYLE : undefined}>{typeof note === 'string' ? jaWrap(note) : note}</p>}
     </div>
     {right && <div className="shrink-0">{right}</div>}
   </header>
@@ -222,7 +223,11 @@ const jaWrapPoints = (text) => {
     const segs = [..._jaSegmenter.segment(s)].map(seg => seg.segment);
     // 「ご」「お」で始まる言葉(ごほうび・おしらせ)は、頭の1字のあとで折らない(2026-10-21 窓口「〜のご／ほうび」。道具は「ご」「ほうび」を別の語にする)。
     // ひらがな同士の間を全部つなぐと、長いひらがなのセリフが折れる所を失って「…じゃぞ／！」になるので、頭の1字だけにする
-    const inHiraWord = (i) => /^[ごお]$/.test(segs[i - 1]) && /^[ぁ-ゖ]/.test(segs[i]);
+    // 2026-10-24: 道具が知らない言葉を1字ずつに割る所(「い|って|ら|っ|し|ゃ|い」)は、1字のひらがなの前後で折らない
+    //   (「いってらっしゃ／い〜」と最後の1字が落ちていた)。1字の助詞は前の言葉(ひらがな・漢字・カタカナ)につなげる(「から|が」「仲間|に」)。2字以上どうしの間は今のまま
+    const hiraOne = (t) => /^[ぁ-ゖ]$/.test(t);
+    const inHiraWord = (i) => (/^[ごお]$/.test(segs[i - 1]) && /^[ぁ-ゖ]/.test(segs[i]))
+      || (hiraOne(segs[i]) && /[ぁ-ゖ一-龯ァ-ヶー]$/.test(segs[i - 1])) || (hiraOne(segs[i - 1]) && /^[ぁ-ゖ]/.test(segs[i]));
     return segs.reduce((out, seg, i) => (i === 0 || inHiraWord(i) || /^[\s、。，．,.！？!?」』）)】〕〉》…‥ー〜～・：:；;ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ]/.test(seg) || /[\s「『（(【〔〈《]$/.test(segs[i - 1])
       ? out + seg : `${out}\u200B${seg}`), '');
   } catch { return s; }
@@ -232,7 +237,9 @@ const jaWrapPoints = (text) => {
 const jaWrap = (text) => {
   const s = jaWrapPoints(text);
   if (typeof s !== 'string' || !s.includes('\u200B')) return s;
-  return s.split('\u200B').map((seg, i) => <React.Fragment key={i}>{i > 0 && <wbr/>}{seg}</React.Fragment>);
+  // 「……」「‥」は手前で折れてしまう(ブラウザは三点リーダーの前を折り目として扱う)。「入れんのじゃ／……」と記号だけが
+  // 次の行へ落ちないよう、それを含む12字までのかたまりは折らずに置く(2026-10-24。見えない字は足さない)
+  return s.split('\u200B').map((seg, i) => <React.Fragment key={i}>{i > 0 && <wbr/>}{/[…‥]/.test(seg) && seg.length <= 12 ? <span style={{ whiteSpace: 'nowrap' }}>{seg}</span> : seg}</React.Fragment>);
 };
 // textWrap:'wrap' … 画面全体の text-wrap:pretty(index.html)と anywhere が組み合わさると、語の中へ1字だけ動かすことがある(「スキッ／プ」)ので外す
 const JA_WRAP_STYLE = Object.freeze({ wordBreak: 'keep-all', overflowWrap: 'anywhere', textWrap: 'wrap' });
