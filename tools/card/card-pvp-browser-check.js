@@ -14,6 +14,8 @@
 //   ⑤ 実行時エラーが無い・保存は mh_card_* 以外を書き換えない(マルチは何も保存しない)
 //   ⑥ 区切り2: 持ち時間が出る・定型のチャットが相手の吹き出しに出る・電波が切れても戻って最後まで遊べる(相手には「相手の電波が途切れています」)・
 //      終わったら報酬(カードポイント・クイック周回)が出て、カードポイントが増える
+//   ⑦ 区切り3: 「だれとでも」で2台が受付から出会い、最後まで戦える(待っている人数が出る)・終わったら2台とも強さの点数へ、同じ試合の結果を届ける
+//      (本物の表には送らない。検査は Supabase を偽物にして、届いた中身だけを見る。window.__mhCardPvpRankTest)
 const http = require('http'), path = require('path'), fs = require('fs');
 const { eventStorySeed } = require(path.resolve(__dirname, '..', 'boot/quiet-boot-seed'));
 const ROOT = path.resolve(__dirname, '..', '..');
@@ -58,6 +60,7 @@ const FAKE_WS = () => {
   window.WebSocket = FakeWS;
   window.__mhCardPvpAuto = true;
   window.__mhCardPvpAutoMs = 700;
+  window.__mhCardPvpRankTest = true;
 };
 const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive: true }); await page.screenshot({ path: path.join(SHOT, `${name}.png`), style: 'div[style*="2147483647"] > span { display: none !important; }' }).catch(() => {}); } };
 
@@ -69,7 +72,12 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
   const errors = [];
   try {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 });
-    await ctx.route(/supabase\.co/, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
+    const reports = [];
+    await ctx.route(/supabase\.co/, (route) => {
+      const req = route.request();
+      if (/\/rpc\/card_battle_pvp_report/.test(req.url())) { try { reports.push(JSON.parse(req.postData() || '{}')); } catch (_) { /* 中身が読めない */ } return route.fulfill({ status: 200, contentType: 'application/json', body: '"wait"' }); }
+      return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+    });
     await ctx.addInitScript(() => {
       if (localStorage.getItem('mh_onboarded')) return;
       const put = (k, v) => localStorage.setItem(k, JSON.stringify(v));
@@ -189,7 +197,27 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     check('⑥ 終わったら、2台とも報酬が出る', /カードポイント|ごほうびはありません/.test(rewardA) && /カードポイント|ごほうびはありません/.test(rewardB), `${rewardA} / ${rewardB}`);
     // ★この検査は2台が同じブラウザの保存を使うので、あとから書いた側(+200 か +50)が残る。実際は別の端末なので、両方それぞれに入る
     check('⑥ カードポイントが増えている(勝ち+200・負け+50 のどちらかが残る)', [200, 50].includes(pointAfter - pointBefore), `${pointBefore} → ${pointAfter}`);
+    const lineA = await A.locator('[data-card-pvp-line]').innerText().catch(() => ''), lineB = await B.locator('[data-card-pvp-line]').innerText().catch(() => '');
+    check('⑥ 結果の画面で、立ち絵の助手が勝ち・負けの台詞を言う', !!lineA && !!lineB && lineA !== lineB, `${lineA} / ${lineB}`);
     await shot(A, 'pvp-03-A-result'); await shot(B, 'pvp-03-B-result');
+    // ⑦ だれとでも: 2台とも部屋を出て、受付から出会う
+    const reportsBefore = reports.length;
+    for (const page of [A, B]) { await page.locator('[data-card-pvp-leave]').click(); await page.locator('[data-card-pvp="idle"]').waitFor({ timeout: 10000 }); }
+    await A.locator('[data-card-pvp-free]').click();
+    await A.locator('[data-card-pvp-seek]').waitFor({ timeout: 10000 });
+    const waitingA = await A.locator('[data-card-pvp-waiting]').innerText();
+    await shot(A, 'pvp-06-seek');
+    await B.locator('[data-card-pvp-free]').click();
+    const met = await Promise.all([A.locator('[data-card-battle]').waitFor({ timeout: 30000 }), B.locator('[data-card-battle]').waitFor({ timeout: 30000 })]).then(() => true).catch(() => false);
+    check('⑦ 「だれとでも」で、受付から2台が出会って対戦が始まる・待っている人数が出る', met && /待っている人 \d+人/.test(waitingA), waitingA);
+    const end2 = Date.now() + 300000;
+    while (Date.now() < end2 && !((await A.locator('[data-card-pvp-result]').count()) && (await B.locator('[data-card-pvp-result]').count()))) await A.waitForTimeout(500);
+    const r2 = [await A.locator('[data-card-pvp-result]').getAttribute('data-card-pvp-result').catch(() => null), await B.locator('[data-card-pvp-result]').getAttribute('data-card-pvp-result').catch(() => null)];
+    check('⑦ だれとでもの対戦も最後まで戦えて、片方が勝ち・片方が負け', !!r2[0] && !!r2[1] && r2[0] !== r2[1], r2.join(' / '));
+    for (let i = 0; i < 40 && reports.length - reportsBefore < 2; i++) await A.waitForTimeout(500);
+    const mine = reports.slice(reportsBefore);
+    check('⑦ 終わったら2台とも、同じ試合・同じ勝った人で強さの点数へ届ける', mine.length === 2 && mine[0].p_match_id && mine[0].p_match_id === mine[1].p_match_id && mine[0].p_winner === mine[1].p_winner,
+      JSON.stringify(mine.map((x) => [x.p_match_id, x.p_winner])));
     const after = await A.evaluate(() => Object.fromEntries(Object.keys(localStorage).filter((k) => k.startsWith('mh_')).map((k) => [k, localStorage.getItem(k)])));
     // 起動のあとに本体が書き足すもの(お話の既読など)は数えない。マルチ対戦は何も保存しない
     const volatile = /^mh_(last_|session|boot|app_open|login|bgm|se_|ui_|debug|daily_login|visit|rhythm_event_story_v1)/;

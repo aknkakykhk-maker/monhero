@@ -654,7 +654,7 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null }) => {
       <div className={`flex ${compact ? 'h-[42px]' : 'h-[50px]'} shrink-0 items-center gap-2 px-2`}>
         {pvp ? <span data-card-pvp-foe className="grid h-[42px] w-[42px] place-items-center rounded-xl border-2 bg-black text-[24px]" style={{ borderColor: who.accent }}>{cardIconNode(pvp.icon, 30)}</span>
           : <img src={assistantFaceImage(who, face)} alt={who.name} className="h-[42px] w-[42px] rounded-xl border-2 bg-black object-cover object-top" style={{ borderColor: who.accent }}/>}
-        <div className="min-w-0 text-[13px] font-black leading-tight">{who.name}<small className="block text-[10px] font-bold text-rose-200">{pvp ? 'マルチ対戦' : CARD_LEVEL_LABEL[game.level]}</small></div>
+        <div className={`min-w-0 text-[13px] font-black leading-tight ${pvp ? 'max-w-[34%] truncate whitespace-nowrap' : ''}`}>{who.name}<small className="block text-[10px] font-bold text-rose-200">{pvp ? 'マルチ対戦' : CARD_LEVEL_LABEL[game.level]}</small></div>
         <div className="ml-auto">{strip(CARD_CPU)}</div>
       </div>
       {/* 吹き出し(帯の下・相手のモンスターの上。指の操作は下へ通す) */}
@@ -1006,7 +1006,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       if (ok && got.loops > 0 && onQuickLoops) { try { quick = await onQuickLoops(got.loops); } catch (_) { quick = null; } }
       return { ...got, saved: ok, quick };
     };
-    return <CardPvpLobby deck={activeDeck} deckIssues={deckIssues} onBack={() => setView('mode')} onReward={pvpReward} assistant={topAssistant} point={save.point} onStart={(g) => {
+    return <CardPvpLobby deck={activeDeck} deckIssues={deckIssues} onBack={() => setView('mode')} onReward={pvpReward} assistant={topAssistant} point={save.point} onAssistant={() => setView('foe')} rankSend={!!(rank && rank.send) && !debug} onStart={(g) => {
       setResult(null);
       setGame({ ...g, settings: save.settings });
       onBgm && onBgm(save.bgm.pvp || null);
