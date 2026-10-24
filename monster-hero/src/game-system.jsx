@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 74b3e46215b16cf2
+// generated-sha256: c35c3e88bba23c7b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-25 06:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-25 06:44"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -50289,6 +50289,19 @@ const cardLegalActions = (db, st) => {
 const cardDecider = (st) => (st.pending ? st.pending.defender : st.active);
 
 // ---- 攻撃を出す ----
+// 技を使った人の書き方(2026-10-24 窓口・カゲあつくん: 記録・まんなかの「いま使った技」・守りの番の文を1つの形にそろえる)。
+//   モンスターの技 … 「モッチーの「ローリン」」 / ブリーダーのカード … 「検査ブリーダーの「加勢」(モッチーで)」(子を選ばないカードは「(…で)」なし)
+const cardUseWho = (db, st, p, mi, cardNo) => {
+  const c = cardOf(db, cardNo);
+  const pl = st.players[p];
+  const mon = mi >= 0 ? pl.mons[mi] : null;
+  if (c && c.user === 'breeder') return { who: pl.name, by: mon ? mon.name : '' };
+  return { who: mon ? mon.name : pl.name, by: '' };
+};
+const cardUseText = (db, st, p, mi, cards) => {
+  const l = cardUseWho(db, st, p, mi, cards[0]);
+  return `${l.who}の「${cards.map((n) => (cardOf(db, n) || {}).name || '').join('＋')}」${l.by ? `(${l.by}で)` : ''}`;
+};
 const cardStartAttack = (db, st, act) => {
   const p = st.active;
   const me = st.players[p];
@@ -50302,8 +50315,7 @@ const cardStartAttack = (db, st, act) => {
   const mon = mi >= 0 ? me.mons[mi] : null;
   if (isBreeder) me.breederUsed = true;
   else { mon.attacks += 1; mon.lastCard = mainNo; }
-  const who = isBreeder ? `${me.name}(ブリーダー)` : mon.name;
-  cardLog(st, `${who}の「${used.map((n) => cardOf(db, n).name).join('＋')}」`, { kind: 'use', p, cards: used });
+  cardLog(st, cardUseText(db, st, p, mi, used), { kind: 'use', p, cards: used });
   cardEvent(st, { t: 'use', p, mon: mi, cards: used, target: act.target || null });
   // 特殊技: 守れない。その場で効く
   if (main.kind === 'spe') {
@@ -52187,9 +52199,9 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
     });
     const use = evs.find((e) => e.t === 'use');
     if (use) {
-      const p0 = next.players[use.p];
       const key = `${next.log.length}-${Date.now()}`;
-      setAction({ key, cards: use.cards, who: use.mon >= 0 ? p0.mons[use.mon].name : `${p0.name}(ブリーダー)` });
+      const ul = cardUseWho(db, next, use.p, use.mon, use.cards[0]); // 書き方は記録と同じ(82 の cardUseText)
+      setAction({ key, cards: use.cards, who: ul.by ? `${ul.who}(${ul.by}で)` : ul.who });
       setTimeout(() => setAction((cur) => (cur && cur.key === key ? null : cur)), 2200);
     }
     else if (evs.some((e) => e.t === 'guard')) Audio_.se.guard();
@@ -52419,11 +52431,9 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
   // まんなかの「いま起きたこと」(新しい2行)。守りの番は、何が来ているかを出す
   const pd = st.pending;
   const pendingText = pd ? (() => {
-    const c = cardOf(db, pd.main);
     const t = pd.targets[pd.ti];
     const tm = t ? st.players[t.p].mons[t.m] : null;
-    const atk = pd.mon >= 0 ? st.players[pd.attacker].mons[pd.mon].name : 'ブリーダー';
-    return `${atk}の「${c.name}」(ダメージ${pd.base * pd.mult})が${tm ? tm.name : ''}に！`;
+    return `${cardUseText(db, st, pd.attacker, pd.mon, [pd.main])}が${tm ? tm.name : ''}に！(ダメージ${pd.base * pd.mult})`;
   })() : null;
   const logLines = st.log.filter((l) => l.kind !== 'turn').slice(-3);
 
@@ -52844,7 +52854,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       if (ok && got.loops > 0 && onQuickLoops) { try { quick = await onQuickLoops(got.loops); } catch (_) { quick = null; } }
       return { ...got, saved: ok, quick };
     };
-    return <CardPvpLobby deck={activeDeck} deckIssues={deckIssues} onBack={() => setView('mode')} onReward={pvpReward} onStart={(g) => {
+    return <CardPvpLobby deck={activeDeck} deckIssues={deckIssues} onBack={() => setView('mode')} onReward={pvpReward} assistant={topAssistant} point={save.point} onStart={(g) => {
       setResult(null);
       setGame({ ...g, settings: save.settings });
       onBgm && onBgm(save.bgm.pvp || null);
@@ -54340,7 +54350,8 @@ const CARD_PVP = (() => {
 // ---- 画面: マルチ対戦の部屋(合言葉) ----
 // onStart(game) … 試合が始まったら対戦の画面へ。onBack … 対戦の選び方へ戻る(部屋も出る)
 // onReward(result) … 確かめが済んだら1回だけ呼ぶ(84 が保存して { point, loops, quick, saved } を返す)。確かめで無効になった試合は呼ばない
-const CardPvpLobby = ({ deck, deckIssues = [], onStart, onBack, onReward }) => {
+// assistant … 結果の画面に立ち絵を出す自分の助手(84 の topAssistant)/ point … いまのカードポイント
+const CardPvpLobby = ({ deck, deckIssues = [], onStart, onBack, onReward, assistant = null, point = null }) => {
   const [room, setRoom] = useState(() => CARD_PVP.get());
   const [code, setCode] = useState('');
   const [profile, setProfile] = useState({ name: 'ブリーダー', icon: '🙂' });
@@ -54375,6 +54386,54 @@ const CardPvpLobby = ({ deck, deckIssues = [], onStart, onBack, onReward }) => {
   const ready = !!deck && deckIssues.length === 0 && penaltyMin === 0;
   const back = () => { CARD_PVP.leave(); onBack(); };
   const r = room.result;
+  // ---- 結果(助手と対戦の結果の画面と同じ形: 立ち絵・もらったカードポイント・クイック周回・いまのカードポイント) ----
+  // ★立ち絵の横は、助手の台詞ではなく結果の文(マルチ対戦の結果の台詞は、まだ作っていない。台詞は社長が先に読む決まり)
+  if (room.phase === 'over' && r) {
+    const win = r.outcome === 'win';
+    const a = assistant && typeof ASSISTANTS !== 'undefined' ? ASSISTANTS.find((x) => x.id === assistant.id) || null : null;
+    const got = r.got && !r.got.pending ? r.got : null;
+    const foeName = room.foe ? room.foe.name : 'あいて';
+    const verifyText = r.verify === 'ok' ? 'おたがいの山札を見せ合って、正しく終わったことを確かめました' : r.verify === 'ng' ? `この試合は無効です(${r.why})`
+      : r.verify === 'skip' ? '相手の山札は届きませんでした(相手が抜けたため)' : 'おたがいの山札を見せ合って、確かめています…';
+    return (
+      <div data-mh-screen data-card-pvp="over" data-card-pvp-result={r.outcome} className={SCREEN_SHELL_CLASS}>
+        <ScreenHead title={win ? '勝ち！' : r.reward === 'surrender' ? '投了' : '負け…'} accent={win ? 'text-amber-200' : 'text-slate-300'} onBack={back}/>
+        <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
+          <div className="flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2">
+            {a && <CardAssistantArt src={assistantFullImage(a, win ? 'happy' : 'troubled')} alt={a.name} className="h-[220px] w-[46%]"/>}
+            <div className="mb-2 min-w-0 flex-1 space-y-1">
+              <div className="text-[15px] font-black text-white" style={JA_WRAP_STYLE}>{jaWrap(`${foeName}さんとのマルチ対戦`)}</div>
+              <div className="text-[12px] font-bold text-slate-300">{win ? '勝ち' : r.reward === 'surrender' ? '投了' : '負け'}{r.reason && !['勝ち', '負け', '投了'].includes(r.reason) ? `(${r.reason})` : ''}</div>
+              <p data-card-pvp-verify={r.verify} className={`rounded-xl px-2 py-1.5 text-[12px] font-bold ${r.verify === 'ok' ? 'bg-emerald-500/15 text-emerald-100' : r.verify === 'ng' ? 'bg-rose-500/15 text-rose-100' : 'bg-white/5 text-slate-200'}`} style={JA_WRAP_STYLE}>{jaWrap(verifyText)}</p>
+            </div>
+          </div>
+          <div className={SCREEN_PANEL_CLASS}>
+            {!got && r.verify !== 'ng' && <div className="text-[12px] font-bold text-slate-300">ごほうびを確かめています…</div>}
+            {r.verify === 'ng' && <div className="text-[12px] font-bold text-slate-300">無効の試合なので、カードポイントとクイック周回は入りません</div>}
+            {got && (<>
+              <div data-card-pvp-reward className="text-[13px] font-black text-amber-200">もらったカードポイント: {got.point}</div>
+              {got.short && <div className="mt-1 text-[12px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('自分の番を3回やる前に終わったので、カードポイントとクイック周回は入りません')}</div>}
+              {!got.short && got.loops > 0 && (
+                <div data-card-quick-loops={got.quick ? got.loops : 0} className="mt-2 rounded-xl border border-sky-300/40 bg-sky-500/10 px-2 py-1.5">
+                  {got.quick
+                    ? <>
+                      <div className="text-[13px] font-black text-sky-200">クイック周回 {got.loops}周ぶん</div>
+                      <div className="mt-0.5 text-[11px] font-bold text-slate-300" style={JA_WRAP_STYLE}>裏のクイック周回({(got.quick.quickDifficulty && quickDifficultySetting(got.quick.quickDifficulty)?.label) || 'AUTO設定'})が{got.loops}周ぶん進みました</div>
+                    </>
+                    : <div className="text-[12px] font-bold text-slate-300" style={JA_LABEL_STYLE}>{jaWrap('クイック周回をしていないときは入りません')}</div>}
+                </div>
+              )}
+              {point !== null && <div className="mt-1 text-[12px] font-bold text-slate-300">いまのカードポイント: {point}</div>}
+              {got.saved === false && <div className="mt-1 text-[12px] font-bold text-rose-300" style={JA_LABEL_STYLE}>{jaWrap('保存できませんでした(カードポイントは増えていません)')}</div>}
+            </>)}
+          </div>
+        </div>
+        <div className={SCREEN_FOOTER_CLASS}>
+          <button type="button" data-card-pvp-leave className={`${btn} mh-button-primary`} onClick={() => { Audio_.se.tap(); CARD_PVP.leave(); }}>部屋を出る</button>
+        </div>
+      </div>
+    );
+  }
   return (
     <div data-mh-screen data-card-pvp={room.phase} className={SCREEN_SHELL_CLASS}>
       <ScreenHead title="マルチ対戦" accent="text-sky-200" onBack={back} note="合言葉で、友だちと1対1で戦えます(デバッグ専用・つくっている途中)"/>
@@ -54401,21 +54460,6 @@ const CardPvpLobby = ({ deck, deckIssues = [], onStart, onBack, onReward }) => {
           </div>
         )}
         {room.phase === 'error' && <p className="rounded-xl border border-rose-300/40 bg-rose-500/10 p-3 text-[13px] font-bold text-rose-100">{room.error}</p>}
-        {room.phase === 'over' && r && (
-          <div data-card-pvp-result={r.outcome} className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center">
-            <p className={`text-[30px] font-black ${r.outcome === 'win' ? 'text-amber-200' : 'text-sky-200'}`}>{r.outcome === 'win' ? 'かち！' : 'まけ…'}</p>
-            <p className="text-[13px] font-bold text-slate-300">{room.foe ? `${room.foe.name}さんとの対戦` : ''}{r.reason ? `(${r.reason})` : ''}</p>
-            <p data-card-pvp-verify={r.verify} className={`mt-2 rounded-xl px-2 py-1.5 text-[13px] font-bold ${r.verify === 'ok' ? 'bg-emerald-500/15 text-emerald-100' : r.verify === 'ng' ? 'bg-rose-500/15 text-rose-100' : 'bg-white/5 text-slate-200'}`}>
-              {r.verify === 'ok' ? 'おたがいの山札を見せ合って、正しく終わったことを確かめました' : r.verify === 'ng' ? `この試合は無効です(${r.why})` : r.verify === 'skip' ? '相手の山札は届きませんでした(相手が抜けたため)' : 'おたがいの山札を見せ合って、確かめています…'}
-            </p>
-            {r.got && !r.got.pending && (
-              <p data-card-pvp-reward className="mt-2 text-[14px] font-black text-amber-100">
-                {r.got.short ? '自分の番が3回より前に終わったので、ごほうびはありません' : `カードポイント +${r.got.point}${r.got.loops > 0 ? `・クイック周回 ${r.got.loops}周ぶん` : ''}`}
-                {r.got.saved === false && <span className="block text-[12px] text-rose-200">保存できませんでした</span>}
-              </p>
-            )}
-          </div>
-        )}
         {room.broken && <p className="rounded-xl border border-rose-300/40 bg-rose-500/10 p-3 text-[13px] font-bold text-rose-100">{room.broken}</p>}
       </div>
       {room.phase !== 'idle' && (

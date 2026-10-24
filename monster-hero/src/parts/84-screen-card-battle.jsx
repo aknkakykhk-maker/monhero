@@ -346,9 +346,9 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
     });
     const use = evs.find((e) => e.t === 'use');
     if (use) {
-      const p0 = next.players[use.p];
       const key = `${next.log.length}-${Date.now()}`;
-      setAction({ key, cards: use.cards, who: use.mon >= 0 ? p0.mons[use.mon].name : `${p0.name}(ブリーダー)` });
+      const ul = cardUseWho(db, next, use.p, use.mon, use.cards[0]); // 書き方は記録と同じ(82 の cardUseText)
+      setAction({ key, cards: use.cards, who: ul.by ? `${ul.who}(${ul.by}で)` : ul.who });
       setTimeout(() => setAction((cur) => (cur && cur.key === key ? null : cur)), 2200);
     }
     else if (evs.some((e) => e.t === 'guard')) Audio_.se.guard();
@@ -578,11 +578,9 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
   // まんなかの「いま起きたこと」(新しい2行)。守りの番は、何が来ているかを出す
   const pd = st.pending;
   const pendingText = pd ? (() => {
-    const c = cardOf(db, pd.main);
     const t = pd.targets[pd.ti];
     const tm = t ? st.players[t.p].mons[t.m] : null;
-    const atk = pd.mon >= 0 ? st.players[pd.attacker].mons[pd.mon].name : 'ブリーダー';
-    return `${atk}の「${c.name}」(ダメージ${pd.base * pd.mult})が${tm ? tm.name : ''}に！`;
+    return `${cardUseText(db, st, pd.attacker, pd.mon, [pd.main])}が${tm ? tm.name : ''}に！(ダメージ${pd.base * pd.mult})`;
   })() : null;
   const logLines = st.log.filter((l) => l.kind !== 'turn').slice(-3);
 
@@ -1003,7 +1001,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       if (ok && got.loops > 0 && onQuickLoops) { try { quick = await onQuickLoops(got.loops); } catch (_) { quick = null; } }
       return { ...got, saved: ok, quick };
     };
-    return <CardPvpLobby deck={activeDeck} deckIssues={deckIssues} onBack={() => setView('mode')} onReward={pvpReward} onStart={(g) => {
+    return <CardPvpLobby deck={activeDeck} deckIssues={deckIssues} onBack={() => setView('mode')} onReward={pvpReward} assistant={topAssistant} point={save.point} onStart={(g) => {
       setResult(null);
       setGame({ ...g, settings: save.settings });
       onBgm && onBgm(save.bgm.pvp || null);

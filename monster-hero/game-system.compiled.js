@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a999ed4a3df3e218
+// source-sha256: 4c7c5c2be52a9399
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-25 06:38";
+const BUILD_DATE = "2026-10-25 06:44";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -83002,6 +83002,23 @@ const cardLegalActions = (db, st) => {
   return [];
 };
 const cardDecider = st => st.pending ? st.pending.defender : st.active;
+const cardUseWho = (db, st, p, mi, cardNo) => {
+  const c = cardOf(db, cardNo);
+  const pl = st.players[p];
+  const mon = mi >= 0 ? pl.mons[mi] : null;
+  if (c && c.user === 'breeder') return {
+    who: pl.name,
+    by: mon ? mon.name : ''
+  };
+  return {
+    who: mon ? mon.name : pl.name,
+    by: ''
+  };
+};
+const cardUseText = (db, st, p, mi, cards) => {
+  const l = cardUseWho(db, st, p, mi, cards[0]);
+  return `${l.who}の「${cards.map(n => (cardOf(db, n) || {}).name || '').join('＋')}」${l.by ? `(${l.by}で)` : ''}`;
+};
 const cardStartAttack = (db, st, act) => {
   const p = st.active;
   const me = st.players[p];
@@ -83017,8 +83034,7 @@ const cardStartAttack = (db, st, act) => {
     mon.attacks += 1;
     mon.lastCard = mainNo;
   }
-  const who = isBreeder ? `${me.name}(ブリーダー)` : mon.name;
-  cardLog(st, `${who}の「${used.map(n => cardOf(db, n).name).join('＋')}」`, {
+  cardLog(st, cardUseText(db, st, p, mi, used), {
     kind: 'use',
     p,
     cards: used
@@ -85870,12 +85886,12 @@ const CardBattleBoard = ({
     });
     const use = evs.find(e => e.t === 'use');
     if (use) {
-      const p0 = next.players[use.p];
       const key = `${next.log.length}-${Date.now()}`;
+      const ul = cardUseWho(db, next, use.p, use.mon, use.cards[0]);
       setAction({
         key,
         cards: use.cards,
-        who: use.mon >= 0 ? p0.mons[use.mon].name : `${p0.name}(ブリーダー)`
+        who: ul.by ? `${ul.who}(${ul.by}で)` : ul.who
       });
       setTimeout(() => setAction(cur => cur && cur.key === key ? null : cur), 2200);
     } else if (evs.some(e => e.t === 'guard')) Audio_.se.guard();
@@ -86178,11 +86194,9 @@ const CardBattleBoard = ({
   };
   const pd = st.pending;
   const pendingText = pd ? (() => {
-    const c = cardOf(db, pd.main);
     const t = pd.targets[pd.ti];
     const tm = t ? st.players[t.p].mons[t.m] : null;
-    const atk = pd.mon >= 0 ? st.players[pd.attacker].mons[pd.mon].name : 'ブリーダー';
-    return `${atk}の「${c.name}」(ダメージ${pd.base * pd.mult})が${tm ? tm.name : ''}に！`;
+    return `${cardUseText(db, st, pd.attacker, pd.mon, [pd.main])}が${tm ? tm.name : ''}に！(ダメージ${pd.base * pd.mult})`;
   })() : null;
   const logLines = st.log.filter(l => l.kind !== 'turn').slice(-3);
   const strip = p => {
@@ -87098,6 +87112,8 @@ const CardBattleScreen = ({
       deckIssues: deckIssues,
       onBack: () => setView('mode'),
       onReward: pvpReward,
+      assistant: topAssistant,
+      point: save.point,
       onStart: g => {
         setResult(null);
         setGame({
@@ -90349,7 +90365,9 @@ const CardPvpLobby = ({
   deckIssues = [],
   onStart,
   onBack,
-  onReward
+  onReward,
+  assistant = null,
+  point = null
 }) => {
   const [room, setRoom] = useState(() => CARD_PVP.get());
   const [code, setCode] = useState('');
@@ -90409,6 +90427,80 @@ const CardPvpLobby = ({
     onBack();
   };
   const r = room.result;
+  if (room.phase === 'over' && r) {
+    const win = r.outcome === 'win';
+    const a = assistant && typeof ASSISTANTS !== 'undefined' ? ASSISTANTS.find(x => x.id === assistant.id) || null : null;
+    const got = r.got && !r.got.pending ? r.got : null;
+    const foeName = room.foe ? room.foe.name : 'あいて';
+    const verifyText = r.verify === 'ok' ? 'おたがいの山札を見せ合って、正しく終わったことを確かめました' : r.verify === 'ng' ? `この試合は無効です(${r.why})` : r.verify === 'skip' ? '相手の山札は届きませんでした(相手が抜けたため)' : 'おたがいの山札を見せ合って、確かめています…';
+    return React.createElement("div", {
+      "data-mh-screen": true,
+      "data-card-pvp": "over",
+      "data-card-pvp-result": r.outcome,
+      className: SCREEN_SHELL_CLASS
+    }, React.createElement(ScreenHead, {
+      title: win ? '勝ち！' : r.reward === 'surrender' ? '投了' : '負け…',
+      accent: win ? 'text-amber-200' : 'text-slate-300',
+      onBack: back
+    }), React.createElement("div", {
+      className: `${SCREEN_LIST_CLASS} space-y-2 pb-4`
+    }, React.createElement("div", {
+      className: "flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2"
+    }, a && React.createElement(CardAssistantArt, {
+      src: assistantFullImage(a, win ? 'happy' : 'troubled'),
+      alt: a.name,
+      className: "h-[220px] w-[46%]"
+    }), React.createElement("div", {
+      className: "mb-2 min-w-0 flex-1 space-y-1"
+    }, React.createElement("div", {
+      className: "text-[15px] font-black text-white",
+      style: JA_WRAP_STYLE
+    }, jaWrap(`${foeName}さんとのマルチ対戦`)), React.createElement("div", {
+      className: "text-[12px] font-bold text-slate-300"
+    }, win ? '勝ち' : r.reward === 'surrender' ? '投了' : '負け', r.reason && !['勝ち', '負け', '投了'].includes(r.reason) ? `(${r.reason})` : ''), React.createElement("p", {
+      "data-card-pvp-verify": r.verify,
+      className: `rounded-xl px-2 py-1.5 text-[12px] font-bold ${r.verify === 'ok' ? 'bg-emerald-500/15 text-emerald-100' : r.verify === 'ng' ? 'bg-rose-500/15 text-rose-100' : 'bg-white/5 text-slate-200'}`,
+      style: JA_WRAP_STYLE
+    }, jaWrap(verifyText)))), React.createElement("div", {
+      className: SCREEN_PANEL_CLASS
+    }, !got && r.verify !== 'ng' && React.createElement("div", {
+      className: "text-[12px] font-bold text-slate-300"
+    }, "ごほうびを確かめています…"), r.verify === 'ng' && React.createElement("div", {
+      className: "text-[12px] font-bold text-slate-300"
+    }, "無効の試合なので、カードポイントとクイック周回は入りません"), got && React.createElement(React.Fragment, null, React.createElement("div", {
+      "data-card-pvp-reward": true,
+      className: "text-[13px] font-black text-amber-200"
+    }, "もらったカードポイント: ", got.point), got.short && React.createElement("div", {
+      className: "mt-1 text-[12px] font-bold text-slate-400",
+      style: JA_LABEL_STYLE
+    }, jaWrap('自分の番を3回やる前に終わったので、カードポイントとクイック周回は入りません')), !got.short && got.loops > 0 && React.createElement("div", {
+      "data-card-quick-loops": got.quick ? got.loops : 0,
+      className: "mt-2 rounded-xl border border-sky-300/40 bg-sky-500/10 px-2 py-1.5"
+    }, got.quick ? React.createElement(React.Fragment, null, React.createElement("div", {
+      className: "text-[13px] font-black text-sky-200"
+    }, "クイック周回 ", got.loops, "周ぶん"), React.createElement("div", {
+      className: "mt-0.5 text-[11px] font-bold text-slate-300",
+      style: JA_WRAP_STYLE
+    }, "裏のクイック周回(", got.quick.quickDifficulty && quickDifficultySetting(got.quick.quickDifficulty)?.label || 'AUTO設定', ")が", got.loops, "周ぶん進みました")) : React.createElement("div", {
+      className: "text-[12px] font-bold text-slate-300",
+      style: JA_LABEL_STYLE
+    }, jaWrap('クイック周回をしていないときは入りません'))), point !== null && React.createElement("div", {
+      className: "mt-1 text-[12px] font-bold text-slate-300"
+    }, "いまのカードポイント: ", point), got.saved === false && React.createElement("div", {
+      className: "mt-1 text-[12px] font-bold text-rose-300",
+      style: JA_LABEL_STYLE
+    }, jaWrap('保存できませんでした(カードポイントは増えていません)'))))), React.createElement("div", {
+      className: SCREEN_FOOTER_CLASS
+    }, React.createElement("button", {
+      type: "button",
+      "data-card-pvp-leave": true,
+      className: `${btn} mh-button-primary`,
+      onClick: () => {
+        Audio_.se.tap();
+        CARD_PVP.leave();
+      }
+    }, "部屋を出る")));
+  }
   return React.createElement("div", {
     "data-mh-screen": true,
     "data-card-pvp": room.phase,
@@ -90469,22 +90561,7 @@ const CardPvpLobby = ({
     className: "text-[13px] font-bold text-slate-200"
   }, room.phase === 'connecting' ? 'つないでいます…' : room.foe ? `${room.foe.name}さんが来ました。始めます…` : 'この合言葉を友だちに伝えて、待っています…')), room.phase === 'error' && React.createElement("p", {
     className: "rounded-xl border border-rose-300/40 bg-rose-500/10 p-3 text-[13px] font-bold text-rose-100"
-  }, room.error), room.phase === 'over' && r && React.createElement("div", {
-    "data-card-pvp-result": r.outcome,
-    className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center"
-  }, React.createElement("p", {
-    className: `text-[30px] font-black ${r.outcome === 'win' ? 'text-amber-200' : 'text-sky-200'}`
-  }, r.outcome === 'win' ? 'かち！' : 'まけ…'), React.createElement("p", {
-    className: "text-[13px] font-bold text-slate-300"
-  }, room.foe ? `${room.foe.name}さんとの対戦` : '', r.reason ? `(${r.reason})` : ''), React.createElement("p", {
-    "data-card-pvp-verify": r.verify,
-    className: `mt-2 rounded-xl px-2 py-1.5 text-[13px] font-bold ${r.verify === 'ok' ? 'bg-emerald-500/15 text-emerald-100' : r.verify === 'ng' ? 'bg-rose-500/15 text-rose-100' : 'bg-white/5 text-slate-200'}`
-  }, r.verify === 'ok' ? 'おたがいの山札を見せ合って、正しく終わったことを確かめました' : r.verify === 'ng' ? `この試合は無効です(${r.why})` : r.verify === 'skip' ? '相手の山札は届きませんでした(相手が抜けたため)' : 'おたがいの山札を見せ合って、確かめています…'), r.got && !r.got.pending && React.createElement("p", {
-    "data-card-pvp-reward": true,
-    className: "mt-2 text-[14px] font-black text-amber-100"
-  }, r.got.short ? '自分の番が3回より前に終わったので、ごほうびはありません' : `カードポイント +${r.got.point}${r.got.loops > 0 ? `・クイック周回 ${r.got.loops}周ぶん` : ''}`, r.got.saved === false && React.createElement("span", {
-    className: "block text-[12px] text-rose-200"
-  }, "保存できませんでした"))), room.broken && React.createElement("p", {
+  }, room.error), room.broken && React.createElement("p", {
     className: "rounded-xl border border-rose-300/40 bg-rose-500/10 p-3 text-[13px] font-bold text-rose-100"
   }, room.broken)), room.phase !== 'idle' && React.createElement("div", {
     className: SCREEN_FOOTER_CLASS
