@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 838b437511a92d7f
+// generated-sha256: 8539cc17904c7390
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-24 12:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-24 13:02"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -50959,6 +50959,44 @@ const cardMotionMs = (kind) => {
   return sp && sp.ms ? sp.ms : 650;
 };
 
+// ---- 動きの見本(デバッグ専用。社長に見せる動画・技の動きの確かめ用) ----
+// 決まった場面で、自分の3体が順に攻め、相手はよける・防ぐ・受ける・倒れるを見せる。手で押さずに、決まった順に進む
+//   ① スエゾーの「かみつき」(モンヒロに同じ名前の技がある) → ナーガが受ける
+//   ② ガリの「雷」(名前から決めた動き) → モッチーが受ける
+//   ③ ゴーレムの「竜巻アタック」(全ての相手に) → ピクシーは「ステップ」でよける・モッチーは「まるまる」で防ぐ・ナーガは倒れる
+const cardMotionDemo = (db) => {
+  const decks = [
+    { monsters: ['C-004', 'C-002', 'C-003'], cards: Array(50).fill('100') },
+    { monsters: ['C-005', 'C-009', 'C-007'], cards: Array(50).fill('100') },
+  ];
+  let st = cardCreateGame(db, { decks, names: ['あなた', 'みゅあ'], seed: 7, first: 0 });
+  st = cardApplyAction(db, st, { type: 'setupGuts', hand: [] });
+  st.players[0].hand = ['040', '018', '032', '100', '100'];
+  st.players[0].guts = Array(20).fill('100');
+  st.players[1].hand = ['059', '106', '100'];
+  st.players[1].guts = Array(3).fill('100');
+  // ナーガは かみつき(6)→ 竜巻アタック(4)で倒れる。モッチーは 雷(4)→ まるまるで防いで残る
+  st.log = [{ turn: 1, text: '動きの見本(決まった順に進みます)' }];
+  const steps = [
+    { attack: '040', mon: 0, target: { p: 1, m: 2 } }, { pass: true },
+    { attack: '018', mon: 1, target: { p: 1, m: 1 } }, { pass: true },
+    { attack: '032', mon: 2 }, { guard: '059' }, { pass: true }, { guard: '106' }, { pass: true }, { pass: true },
+  ];
+  return { st, steps };
+};
+// 見本の1手を、いまの状態で出せる操作に直す(出せなければ null)
+const cardMotionDemoAction = (db, st, step) => {
+  if (!step) return null;
+  if (step.pass) return st.pending ? { type: 'pass' } : null;
+  if (step.guard) {
+    const q = st.pending ? st.pending.defender : -1;
+    return cardGuardOptions(db, st).find((o) => st.players[q].hand[o.hand] === step.guard) || { type: 'pass' };
+  }
+  const me = st.players[st.active];
+  return cardAttackOptions(db, st).find((o) => me.hand[o.hand[0]] === step.attack && o.mon === step.mon && o.hand.length === 1
+    && JSON.stringify(o.target || null) === JSON.stringify(step.target || null)) || null;
+};
+
 // ---- part: 84-screen-card-battle.jsx ----
 // ==================== 画面: MFバトルカード ====================
 // 紙の『モンスターファームバトルカード』を元にしたカードバトル。設計: docs/spec/CARD_BATTLE.md
@@ -51283,7 +51321,7 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
 
   // コンピューターの番(守りの番・始める前・捨てる番も)。詳しい画面や捨て札を見ているあいだは待つ
   useEffect(() => {
-    if (st.winner !== null || paused) return undefined;
+    if (st.winner !== null || paused || game.demo) return undefined;
     if (cardDeciderOf(st) !== CARD_CPU) return undefined;
     const wait = st.pending ? 950 : st.phase === 'guts' ? 600 : 900; // 守りの番は、技の動きを見せ切ってから
     const t = setTimeout(() => {
@@ -51293,6 +51331,19 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
     return () => clearTimeout(t);
   }, [st, paused]);
 
+  // 動きの見本(デバッグ): 決まった順に1手ずつ進める
+  const demoAt = useRef(0);
+  useEffect(() => {
+    if (!game.demo || paused) return undefined;
+    const t = setTimeout(() => {
+      const demoStep = game.demo.steps[demoAt.current];
+      if (!demoStep) return;
+      demoAt.current += 1;
+      const act = cardMotionDemoAction(db, st, demoStep);
+      if (act) step(act);
+    }, demoAt.current === 0 ? 1400 : 1700);
+    return () => clearTimeout(t);
+  }, [st, paused]);
   // 勝ち負けが決まったら、少し見せてから結果へ
   useEffect(() => {
     if (st.winner === null || finished.current) return undefined;
@@ -51734,6 +51785,14 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         {debug && (
           <div className={`${SCREEN_PANEL_FLAT_CLASS} space-y-1`}>
             <div className="text-[11px] font-bold text-slate-400">デバッグ: カードバトルの記録(mh_card_* の新しいキーだけ)</div>
+            <button type="button" data-card-motion-demo className="mh-button mh-button-secondary min-h-[44px] w-full rounded-xl border border-white/20 bg-slate-800 text-[12px] font-black" onClick={() => {
+              // 技の動きの見本(決まった順に自動で進む。保存は何もしない)
+              const demo = cardMotionDemo(db);
+              setResult(null);
+              setGame({ key: `demo-${Date.now()}`, st: demo.st, who: 'mua', level: 'easy', demo: { steps: demo.steps } });
+              onBgm && onBgm(CARD_AI_BGM.mua);
+              onNavigate('CARD_BATTLE');
+            }}>技の動きの見本を流す(保存しない)</button>
             <button type="button" className="mh-button mh-button-danger min-h-[44px] w-full rounded-xl text-[12px] font-black" onClick={() => setConfirmReset(true)}>カードバトルの記録を消して、スターター選びからやり直す</button>
           </div>
         )}

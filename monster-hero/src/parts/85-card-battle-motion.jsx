@@ -90,3 +90,41 @@ const cardMotionMs = (kind) => {
   const sp = kind && typeof skillFxSpecOf === 'function' ? skillFxSpecOf(kind) : null;
   return sp && sp.ms ? sp.ms : 650;
 };
+
+// ---- 動きの見本(デバッグ専用。社長に見せる動画・技の動きの確かめ用) ----
+// 決まった場面で、自分の3体が順に攻め、相手はよける・防ぐ・受ける・倒れるを見せる。手で押さずに、決まった順に進む
+//   ① スエゾーの「かみつき」(モンヒロに同じ名前の技がある) → ナーガが受ける
+//   ② ガリの「雷」(名前から決めた動き) → モッチーが受ける
+//   ③ ゴーレムの「竜巻アタック」(全ての相手に) → ピクシーは「ステップ」でよける・モッチーは「まるまる」で防ぐ・ナーガは倒れる
+const cardMotionDemo = (db) => {
+  const decks = [
+    { monsters: ['C-004', 'C-002', 'C-003'], cards: Array(50).fill('100') },
+    { monsters: ['C-005', 'C-009', 'C-007'], cards: Array(50).fill('100') },
+  ];
+  let st = cardCreateGame(db, { decks, names: ['あなた', 'みゅあ'], seed: 7, first: 0 });
+  st = cardApplyAction(db, st, { type: 'setupGuts', hand: [] });
+  st.players[0].hand = ['040', '018', '032', '100', '100'];
+  st.players[0].guts = Array(20).fill('100');
+  st.players[1].hand = ['059', '106', '100'];
+  st.players[1].guts = Array(3).fill('100');
+  // ナーガは かみつき(6)→ 竜巻アタック(4)で倒れる。モッチーは 雷(4)→ まるまるで防いで残る
+  st.log = [{ turn: 1, text: '動きの見本(決まった順に進みます)' }];
+  const steps = [
+    { attack: '040', mon: 0, target: { p: 1, m: 2 } }, { pass: true },
+    { attack: '018', mon: 1, target: { p: 1, m: 1 } }, { pass: true },
+    { attack: '032', mon: 2 }, { guard: '059' }, { pass: true }, { guard: '106' }, { pass: true }, { pass: true },
+  ];
+  return { st, steps };
+};
+// 見本の1手を、いまの状態で出せる操作に直す(出せなければ null)
+const cardMotionDemoAction = (db, st, step) => {
+  if (!step) return null;
+  if (step.pass) return st.pending ? { type: 'pass' } : null;
+  if (step.guard) {
+    const q = st.pending ? st.pending.defender : -1;
+    return cardGuardOptions(db, st).find((o) => st.players[q].hand[o.hand] === step.guard) || { type: 'pass' };
+  }
+  const me = st.players[st.active];
+  return cardAttackOptions(db, st).find((o) => me.hand[o.hand[0]] === step.attack && o.mon === step.mon && o.hand.length === 1
+    && JSON.stringify(o.target || null) === JSON.stringify(step.target || null)) || null;
+};

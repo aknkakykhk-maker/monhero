@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e696b092615fc5c6
+// source-sha256: 83077de135f2a5cd
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-24 12:59";
+const BUILD_DATE = "2026-10-24 13:02";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -84073,6 +84073,83 @@ const cardMotionMs = kind => {
   const sp = kind && typeof skillFxSpecOf === 'function' ? skillFxSpecOf(kind) : null;
   return sp && sp.ms ? sp.ms : 650;
 };
+const cardMotionDemo = db => {
+  const decks = [{
+    monsters: ['C-004', 'C-002', 'C-003'],
+    cards: Array(50).fill('100')
+  }, {
+    monsters: ['C-005', 'C-009', 'C-007'],
+    cards: Array(50).fill('100')
+  }];
+  let st = cardCreateGame(db, {
+    decks,
+    names: ['あなた', 'みゅあ'],
+    seed: 7,
+    first: 0
+  });
+  st = cardApplyAction(db, st, {
+    type: 'setupGuts',
+    hand: []
+  });
+  st.players[0].hand = ['040', '018', '032', '100', '100'];
+  st.players[0].guts = Array(20).fill('100');
+  st.players[1].hand = ['059', '106', '100'];
+  st.players[1].guts = Array(3).fill('100');
+  st.log = [{
+    turn: 1,
+    text: '動きの見本(決まった順に進みます)'
+  }];
+  const steps = [{
+    attack: '040',
+    mon: 0,
+    target: {
+      p: 1,
+      m: 2
+    }
+  }, {
+    pass: true
+  }, {
+    attack: '018',
+    mon: 1,
+    target: {
+      p: 1,
+      m: 1
+    }
+  }, {
+    pass: true
+  }, {
+    attack: '032',
+    mon: 2
+  }, {
+    guard: '059'
+  }, {
+    pass: true
+  }, {
+    guard: '106'
+  }, {
+    pass: true
+  }, {
+    pass: true
+  }];
+  return {
+    st,
+    steps
+  };
+};
+const cardMotionDemoAction = (db, st, step) => {
+  if (!step) return null;
+  if (step.pass) return st.pending ? {
+    type: 'pass'
+  } : null;
+  if (step.guard) {
+    const q = st.pending ? st.pending.defender : -1;
+    return cardGuardOptions(db, st).find(o => st.players[q].hand[o.hand] === step.guard) || {
+      type: 'pass'
+    };
+  }
+  const me = st.players[st.active];
+  return cardAttackOptions(db, st).find(o => me.hand[o.hand[0]] === step.attack && o.mon === step.mon && o.hand.length === 1 && JSON.stringify(o.target || null) === JSON.stringify(step.target || null)) || null;
+};
 const CARD_IMAGE_SET = Object.freeze({
   imageDir: 'images/card-battle'
 });
@@ -84558,7 +84635,7 @@ const CardBattleBoard = ({
     return true;
   };
   useEffect(() => {
-    if (st.winner !== null || paused) return undefined;
+    if (st.winner !== null || paused || game.demo) return undefined;
     if (cardDeciderOf(st) !== CARD_CPU) return undefined;
     const wait = st.pending ? 950 : st.phase === 'guts' ? 600 : 900;
     const t = setTimeout(() => {
@@ -84572,6 +84649,18 @@ const CardBattleBoard = ({
         hand: []
       });
     }, wait);
+    return () => clearTimeout(t);
+  }, [st, paused]);
+  const demoAt = useRef(0);
+  useEffect(() => {
+    if (!game.demo || paused) return undefined;
+    const t = setTimeout(() => {
+      const demoStep = game.demo.steps[demoAt.current];
+      if (!demoStep) return;
+      demoAt.current += 1;
+      const act = cardMotionDemoAction(db, st, demoStep);
+      if (act) step(act);
+    }, demoAt.current === 0 ? 1400 : 1700);
     return () => clearTimeout(t);
   }, [st, paused]);
   useEffect(() => {
@@ -85396,6 +85485,25 @@ const CardBattleScreen = ({
   }, React.createElement("div", {
     className: "text-[11px] font-bold text-slate-400"
   }, "デバッグ: カードバトルの記録(mh_card_* の新しいキーだけ)"), React.createElement("button", {
+    type: "button",
+    "data-card-motion-demo": true,
+    className: "mh-button mh-button-secondary min-h-[44px] w-full rounded-xl border border-white/20 bg-slate-800 text-[12px] font-black",
+    onClick: () => {
+      const demo = cardMotionDemo(db);
+      setResult(null);
+      setGame({
+        key: `demo-${Date.now()}`,
+        st: demo.st,
+        who: 'mua',
+        level: 'easy',
+        demo: {
+          steps: demo.steps
+        }
+      });
+      onBgm && onBgm(CARD_AI_BGM.mua);
+      onNavigate('CARD_BATTLE');
+    }
+  }, "技の動きの見本を流す(保存しない)"), React.createElement("button", {
     type: "button",
     className: "mh-button mh-button-danger min-h-[44px] w-full rounded-xl text-[12px] font-black",
     onClick: () => setConfirmReset(true)
