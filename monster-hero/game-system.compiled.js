@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1cd9ce807a38cd7d
+// source-sha256: 14ae2a315cd2742e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-25 07:51";
+const BUILD_DATE = "2026-10-25 07:54";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -85647,6 +85647,7 @@ const CardMonSlot = ({
   onTap,
   press,
   compact = false,
+  tiny = false,
   motion = null
 }) => {
   const mon = st.players[p].mons[m];
@@ -85660,9 +85661,9 @@ const CardMonSlot = ({
   }, React.createElement("img", {
     src: CARD_IMG(cardMonsterOf(db, mon.no).img),
     alt: mon.name,
-    className: `h-[52px] w-[37px] rounded-[3px] object-cover shadow ${mon.ko ? 'grayscale opacity-40' : ''}`
+    className: `${tiny ? 'h-[40px] w-[28px]' : 'h-[52px] w-[37px]'} shrink-0 rounded-[3px] object-cover shadow ${mon.ko ? 'grayscale opacity-40' : ''}`
   }), React.createElement("div", {
-    className: "w-[62px] min-w-0"
+    className: `${tiny ? 'w-[56px]' : 'w-[62px]'} min-w-0`
   }, React.createElement("div", {
     className: "truncate text-[12px] font-black leading-tight"
   }, mon.name), React.createElement("div", {
@@ -85681,7 +85682,7 @@ const CardMonSlot = ({
   }, CARD_TYPE_LABEL[ty]), stunned && React.createElement("span", {
     className: "ml-0.5 inline-block rounded bg-rose-900 px-1 text-[10px] font-bold"
   }, "攻撃できない")));
-  const artSize = compact ? 'max-h-[56px] max-w-[72px]' : 'max-h-[78px] max-w-[96px]';
+  const artSize = tiny ? 'max-h-[44px] max-w-[60px]' : compact ? 'max-h-[56px] max-w-[72px]' : 'max-h-[78px] max-w-[96px]';
   const imgEl = art ? React.createElement("img", {
     src: art,
     alt: "",
@@ -85689,13 +85690,13 @@ const CardMonSlot = ({
   }) : React.createElement("img", {
     src: CARD_IMG(cardMonsterOf(db, mon.no).img),
     alt: "",
-    className: `${compact ? 'h-[54px]' : 'h-[74px]'} rounded-md object-cover`
+    className: `${tiny ? 'h-[42px]' : compact ? 'h-[54px]' : 'h-[74px]'} rounded-md object-cover`
   });
   const mv = motion && !mon.ko ? motion : null;
   const poseClass = mon.ko ? 'mh-card-ko' : mv && mv.type === 'hit' ? 'mh-card-hit' : mv && mv.type === 'dodge' ? 'mh-card-dodge' : mv && mv.type === 'guard' ? 'mh-card-guard' : '';
   const artEl = React.createElement("div", {
     "data-card-art": `${p}-${m}`,
-    className: `relative flex ${compact ? 'h-[56px]' : 'h-[78px]'} w-full items-end justify-center`,
+    className: `relative flex ${tiny ? 'h-[44px]' : compact ? 'h-[56px]' : 'h-[78px]'} w-full items-end justify-center`,
     style: mv && mv.type === 'attack' ? {
       '--atk-dx': `${mv.dx}px`,
       '--atk-dy': `${mv.dy}px`,
@@ -85785,8 +85786,12 @@ const CardBattleBoard = ({
     }) => rest)(cur) : cur), ms));
   };
   const [compact, setCompact] = useState(() => typeof window !== 'undefined' && window.innerHeight < 760);
+  const [tiny, setTiny] = useState(() => typeof window !== 'undefined' && (window.innerWidth < 360 || window.innerHeight < 620));
   useEffect(() => {
-    const on = () => setCompact(window.innerHeight < 760);
+    const on = () => {
+      setCompact(window.innerHeight < 760);
+      setTiny(window.innerWidth < 360 || window.innerHeight < 620);
+    };
     window.addEventListener('resize', on);
     return () => window.removeEventListener('resize', on);
   }, []);
@@ -86235,24 +86240,24 @@ const CardBattleBoard = ({
   const strip = p => {
     const pl = st.players[p];
     return React.createElement("div", {
-      className: "flex items-center gap-1.5 text-[11px] font-bold"
+      className: `flex items-center whitespace-nowrap font-bold ${tiny ? 'gap-1 text-[10px]' : 'gap-1.5 text-[11px]'}`
     }, p === CARD_CPU && React.createElement("span", {
       className: "flex"
     }, pl.hand.map((_, i) => React.createElement("b", {
       key: i,
       className: "-ml-1 h-[18px] w-[13px] rounded-[2px] border border-violet-300 bg-gradient-to-br from-violet-600 to-indigo-900 first:ml-0"
     }))), React.createElement("span", {
-      className: "rounded-md border border-white/20 bg-white/10 px-1.5 py-0.5"
+      className: `rounded-md border border-white/20 bg-white/10 ${tiny ? 'px-1' : 'px-1.5'} py-0.5`
     }, "山札 ", pl.deck.length), React.createElement("span", _extends({}, p === CARD_ME ? {
       'data-card-guts-drop': true
     } : {}, {
-      className: `flex items-center gap-0.5 rounded-md border px-1.5 py-0.5 text-amber-100 ${p === CARD_ME && dropOver === 'guts' ? 'border-emerald-300 bg-emerald-400/30 ring-4 ring-emerald-300' : 'border-amber-300/40 bg-amber-500/10'}`
+      className: `flex items-center gap-0.5 rounded-md border ${tiny ? 'px-1' : 'px-1.5'} py-0.5 text-amber-100 ${p === CARD_ME && dropOver === 'guts' ? 'border-emerald-300 bg-emerald-400/30 ring-4 ring-emerald-300' : 'border-amber-300/40 bg-amber-500/10'}`
     }), "ガッツ ", pl.guts.length), React.createElement("button", {
       type: "button",
       onClick: () => setDiscard({
         tab: p
       }),
-      className: "rounded-md border border-white/20 bg-white/10 px-1.5 py-0.5"
+      className: `rounded-md border border-white/20 bg-white/10 ${tiny ? 'px-1' : 'px-1.5'} py-0.5`
     }, "捨て札 ", pl.discard.length));
   };
   const tutFocus = (() => {
@@ -86381,6 +86386,8 @@ const CardBattleBoard = ({
     className: "rounded-lg border border-white/20 px-2 py-1 text-[12px] font-black text-slate-200"
   }, tutorial ? '飛ばす' : '投了'), pvp && React.createElement(CardPvpChat, null)), pvp ? React.createElement(CardPvpStatus, {
     clock: pvpClock
+  }) : tiny ? React.createElement("span", {
+    className: "flex-1"
   }) : React.createElement("span", {
     className: "min-w-0 truncate text-[15px] font-black"
   }, "MFバトルカード"), React.createElement("span", {
@@ -86407,7 +86414,7 @@ const CardBattleBoard = ({
       borderColor: who.accent
     }
   }), React.createElement("div", {
-    className: `min-w-0 text-[13px] font-black leading-tight ${pvp ? 'max-w-[34%] truncate whitespace-nowrap' : ''}`
+    className: `min-w-0 text-[13px] font-black leading-tight ${pvp ? 'max-w-[34%] truncate whitespace-nowrap' : 'shrink-0 whitespace-nowrap'}`
   }, who.name, React.createElement("small", {
     className: "block text-[10px] font-bold text-rose-200"
   }, pvp ? 'マルチ対戦' : CARD_LEVEL_LABEL[game.level])), React.createElement("div", {
@@ -86425,6 +86432,7 @@ const CardBattleBoard = ({
     onTap: () => tapMon(CARD_CPU, m),
     press: press,
     compact: compact,
+    tiny: tiny,
     motion: motions[`1-${m}`] || null
   }))), React.createElement("div", {
     "data-card-stage": true,
@@ -86484,6 +86492,7 @@ const CardBattleBoard = ({
     onTap: () => tapMon(CARD_ME, m),
     press: press,
     compact: compact,
+    tiny: tiny,
     motion: motions[`0-${m}`] || null
   }))), React.createElement("div", {
     className: "flex shrink-0 justify-end px-2 py-1"
@@ -86573,7 +86582,7 @@ const CardBattleBoard = ({
         WebkitUserSelect: 'none',
         userSelect: 'none'
       },
-      className: `flex w-[19%] ${compact ? 'max-w-[58px]' : 'max-w-[76px]'} flex-col items-center transition-transform ${up ? '-translate-y-2' : ''} ${myTurn && !on && !tutorial ? 'opacity-45' : ''} ${tutorial && myTurn && !tutFocus.hand.includes(i) && !picks.includes(i) && !(sel && sel.hand === i) ? 'opacity-40' : ''} ${tutorial && tutFocus.hand.includes(i) ? 'animate-pulse rounded-[7px] ring-4 ring-emerald-300' : ''} ${drag && drag.i === i ? 'opacity-30' : ''}`,
+      className: `flex w-[19%] ${tiny ? 'max-w-[50px]' : compact ? 'max-w-[58px]' : 'max-w-[76px]'} flex-col items-center transition-transform ${up ? '-translate-y-2' : ''} ${myTurn && !on && !tutorial ? 'opacity-45' : ''} ${tutorial && myTurn && !tutFocus.hand.includes(i) && !picks.includes(i) && !(sel && sel.hand === i) ? 'opacity-40' : ''} ${tutorial && tutFocus.hand.includes(i) ? 'animate-pulse rounded-[7px] ring-4 ring-emerald-300' : ''} ${drag && drag.i === i ? 'opacity-30' : ''}`,
       "data-card-tutor-focus": tutorial && tutFocus.hand.includes(i) ? true : undefined
     }, React.createElement("img", {
       src: CARD_IMG(c ? c.img : no),
@@ -86589,7 +86598,11 @@ const CardBattleBoard = ({
       name: c ? c.name : no,
       size: compact ? 10 : 11,
       className: "font-bold leading-tight"
-    }), compact ? React.createElement(React.Fragment, null, React.createElement("span", {
+    }), tiny ? React.createElement(React.Fragment, null, React.createElement(CardNameFit, {
+      name: `ガッツ${c ? c.guts : '-'}・${cardCaption(c)}`,
+      size: 10,
+      className: "font-extrabold leading-tight text-amber-200"
+    })) : compact ? React.createElement(React.Fragment, null, React.createElement("span", {
       className: "block text-[10px] font-extrabold leading-tight text-amber-200"
     }, "ガッツ", c ? c.guts : '-'), React.createElement("span", {
       className: "block whitespace-nowrap text-[10px] font-extrabold leading-tight text-amber-200"

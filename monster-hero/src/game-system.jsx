@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8b9e7cae5c8ce559
+// generated-sha256: eda1e675af3b973c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-25 07:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-25 07:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -52056,7 +52056,7 @@ const CardDiscardModal = ({ db, st, initial = CARD_ME, onDetail, onClose }) => {
 };
 
 // ---- 場のモンスター1体(カードの小さい絵・名前・ライフ・特徴・モンヒロの絵) ----
-const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact = false, motion = null }) => {
+const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact = false, tiny = false, motion = null }) => {
   const mon = st.players[p].mons[m];
   const art = cardMonArt(mon);
   const ty = cardMonType(mon, st.turn);
@@ -52065,8 +52065,8 @@ const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact
   const stunned = mon.stunTurn === st.turn + (st.active === p ? 0 : 1) && !mon.ko;
   const info = (
     <div className="flex items-center gap-1">
-      <img src={CARD_IMG(cardMonsterOf(db, mon.no).img)} alt={mon.name} className={`h-[52px] w-[37px] rounded-[3px] object-cover shadow ${mon.ko ? 'grayscale opacity-40' : ''}`}/>
-      <div className="w-[62px] min-w-0">
+      <img src={CARD_IMG(cardMonsterOf(db, mon.no).img)} alt={mon.name} className={`${tiny ? 'h-[40px] w-[28px]' : 'h-[52px] w-[37px]'} shrink-0 rounded-[3px] object-cover shadow ${mon.ko ? 'grayscale opacity-40' : ''}`}/>
+      <div className={`${tiny ? 'w-[56px]' : 'w-[62px]'} min-w-0`}>
         <div className="truncate text-[12px] font-black leading-tight">{mon.name}</div>
         <div className="text-[13px] font-black leading-tight">{mon.life}<span className="text-[10px] text-slate-400"> / {mon.max}</span></div>
         <div className="h-[6px] overflow-hidden rounded bg-slate-700"><div className={`h-full ${pct > 50 ? 'bg-emerald-400' : pct > 25 ? 'bg-amber-400' : 'bg-rose-500'}`} style={{ width: `${pct}%` }}/></div>
@@ -52076,14 +52076,14 @@ const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact
     </div>
   );
   // 動き(85-card-battle-motion.jsx): attack … SkillFxMotion で技の動き / hit 揺れ / dodge よける / guard 防ぐ(光の盾) / KO は倒れたまま
-  const artSize = compact ? 'max-h-[56px] max-w-[72px]' : 'max-h-[78px] max-w-[96px]';
+  const artSize = tiny ? 'max-h-[44px] max-w-[60px]' : compact ? 'max-h-[56px] max-w-[72px]' : 'max-h-[78px] max-w-[96px]';
   const imgEl = art
     ? <img src={art} alt="" className={`${artSize} object-contain drop-shadow-[0_6px_6px_rgba(0,0,0,.6)] ${opp ? '-scale-x-100' : ''}`}/>
-    : <img src={CARD_IMG(cardMonsterOf(db, mon.no).img)} alt="" className={`${compact ? 'h-[54px]' : 'h-[74px]'} rounded-md object-cover`}/>;
+    : <img src={CARD_IMG(cardMonsterOf(db, mon.no).img)} alt="" className={`${tiny ? 'h-[42px]' : compact ? 'h-[54px]' : 'h-[74px]'} rounded-md object-cover`}/>;
   const mv = motion && !mon.ko ? motion : null;
   const poseClass = mon.ko ? 'mh-card-ko' : mv && mv.type === 'hit' ? 'mh-card-hit' : mv && mv.type === 'dodge' ? 'mh-card-dodge' : mv && mv.type === 'guard' ? 'mh-card-guard' : '';
   const artEl = (
-    <div data-card-art={`${p}-${m}`} className={`relative flex ${compact ? 'h-[56px]' : 'h-[78px]'} w-full items-end justify-center`}
+    <div data-card-art={`${p}-${m}`} className={`relative flex ${tiny ? 'h-[44px]' : compact ? 'h-[56px]' : 'h-[78px]'} w-full items-end justify-center`}
       style={mv && mv.type === 'attack' ? { '--atk-dx': `${mv.dx}px`, '--atk-dy': `${mv.dy}px`, zIndex: 40 } : undefined}>
       {mv && mv.type === 'attack' && mv.kind
         ? <SkillFxMotion key={mv.key} kind={mv.kind} image={imgEl}/>
@@ -52145,7 +52145,9 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null }) => {
   };
   // 背の低い画面(iPhone SE など)では、絵と手札を少し小さくして、まんなかの場所を残す
   const [compact, setCompact] = useState(() => typeof window !== 'undefined' && window.innerHeight < 760);
-  useEffect(() => { const on = () => setCompact(window.innerHeight < 760); window.addEventListener('resize', on); return () => window.removeEventListener('resize', on); }, []);
+  // もっと小さい画面(幅 360 未満の 320 幅・高さ 620 未満)。名前と札を1行に縮め、絵と手札の字も小さくする(2026-10-24 改善部の点検 V1)
+  const [tiny, setTiny] = useState(() => typeof window !== 'undefined' && (window.innerWidth < 360 || window.innerHeight < 620));
+  useEffect(() => { const on = () => { setCompact(window.innerHeight < 760); setTiny(window.innerWidth < 360 || window.innerHeight < 620); }; window.addEventListener('resize', on); return () => window.removeEventListener('resize', on); }, []);
   const lastLine = useRef({});
   const spoke = useRef({ turn: -1, n: 0 });
   const bubbleTimer = useRef(null);
@@ -52467,11 +52469,11 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null }) => {
   const strip = (p) => {
     const pl = st.players[p];
     return (
-      <div className="flex items-center gap-1.5 text-[11px] font-bold">
+      <div className={`flex items-center whitespace-nowrap font-bold ${tiny ? 'gap-1 text-[10px]' : 'gap-1.5 text-[11px]'}`}>
         {p === CARD_CPU && <span className="flex">{pl.hand.map((_, i) => <b key={i} className="-ml-1 h-[18px] w-[13px] rounded-[2px] border border-violet-300 bg-gradient-to-br from-violet-600 to-indigo-900 first:ml-0"/>)}</span>}
-        <span className="rounded-md border border-white/20 bg-white/10 px-1.5 py-0.5">山札 {pl.deck.length}</span>
-        <span {...(p === CARD_ME ? { 'data-card-guts-drop': true } : {})} className={`flex items-center gap-0.5 rounded-md border px-1.5 py-0.5 text-amber-100 ${p === CARD_ME && dropOver === 'guts' ? 'border-emerald-300 bg-emerald-400/30 ring-4 ring-emerald-300' : 'border-amber-300/40 bg-amber-500/10'}`}>ガッツ {pl.guts.length}</span>
-        <button type="button" onClick={() => setDiscard({ tab: p })} className="rounded-md border border-white/20 bg-white/10 px-1.5 py-0.5">捨て札 {pl.discard.length}</button>
+        <span className={`rounded-md border border-white/20 bg-white/10 ${tiny ? 'px-1' : 'px-1.5'} py-0.5`}>山札 {pl.deck.length}</span>
+        <span {...(p === CARD_ME ? { 'data-card-guts-drop': true } : {})} className={`flex items-center gap-0.5 rounded-md border ${tiny ? 'px-1' : 'px-1.5'} py-0.5 text-amber-100 ${p === CARD_ME && dropOver === 'guts' ? 'border-emerald-300 bg-emerald-400/30 ring-4 ring-emerald-300' : 'border-amber-300/40 bg-amber-500/10'}`}>ガッツ {pl.guts.length}</span>
+        <button type="button" onClick={() => setDiscard({ tab: p })} className={`rounded-md border border-white/20 bg-white/10 ${tiny ? 'px-1' : 'px-1.5'} py-0.5`}>捨て札 {pl.discard.length}</button>
       </div>
     );
   };
@@ -52523,7 +52525,7 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null }) => {
           <button type="button" data-card-quit onClick={() => setQuit(true)} className="rounded-lg border border-white/20 px-2 py-1 text-[12px] font-black text-slate-200">{tutorial ? '飛ばす' : '投了'}</button>
           {pvp && <CardPvpChat/>}
         </div>
-        {pvp ? <CardPvpStatus clock={pvpClock}/> : <span className="min-w-0 truncate text-[15px] font-black">MFバトルカード</span>}
+        {pvp ? <CardPvpStatus clock={pvpClock}/> : tiny ? <span className="flex-1"/> : <span className="min-w-0 truncate text-[15px] font-black">MFバトルカード</span>}
         <span className="flex shrink-0 items-center gap-1.5">
           {/* 裏のクイック∞周回(設計書 5-3)。対戦中は帯もポップアップも出さず、ここに小さく「⚔ ◯周目」だけ。止まったら赤くする */}
           {quickRun && <span data-card-battle-quick-run={quickRun.stopped ? 'stopped' : 'live'} aria-label={quickRun.stopped ? '裏のクイック周回は止まっています' : `裏のクイック周回 ${quickRun.loops}周目`} className={`rounded-full border px-1.5 py-0.5 text-[10px] font-black ${quickRun.stopped ? 'border-rose-400/70 bg-rose-950/60 text-rose-200' : 'border-fuchsia-300/50 bg-slate-950/60 text-fuchsia-100'}`}>⚔ {quickRun.loops}周目</span>}
@@ -52534,12 +52536,12 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null }) => {
       <div className={`flex ${compact ? 'h-[42px]' : 'h-[50px]'} shrink-0 items-center gap-2 px-2`}>
         {pvp ? <span data-card-pvp-foe className="grid h-[42px] w-[42px] place-items-center rounded-xl border-2 bg-black text-[24px]" style={{ borderColor: who.accent }}>{cardIconNode(pvp.icon, 30)}</span>
           : <img src={assistantFaceImage(who, face)} alt={who.name} className="h-[42px] w-[42px] rounded-xl border-2 bg-black object-cover object-top" style={{ borderColor: who.accent }}/>}
-        <div className={`min-w-0 text-[13px] font-black leading-tight ${pvp ? 'max-w-[34%] truncate whitespace-nowrap' : ''}`}>{who.name}<small className="block text-[10px] font-bold text-rose-200">{pvp ? 'マルチ対戦' : CARD_LEVEL_LABEL[game.level]}</small></div>
+        <div className={`min-w-0 text-[13px] font-black leading-tight ${pvp ? 'max-w-[34%] truncate whitespace-nowrap' : 'shrink-0 whitespace-nowrap'}`}>{who.name}<small className="block text-[10px] font-bold text-rose-200">{pvp ? 'マルチ対戦' : CARD_LEVEL_LABEL[game.level]}</small></div>
         <div className="ml-auto">{strip(CARD_CPU)}</div>
       </div>
       {/* 吹き出し(帯の下・相手のモンスターの上。指の操作は下へ通す) */}
       <div className="flex shrink-0 items-start justify-around px-1">
-        {opp.mons.map((_, m) => <CardMonSlot key={m} db={db} st={st} p={CARD_CPU} m={m} mark={markOf(CARD_CPU, m)} fx={fx.filter((f) => f.p === CARD_CPU && f.m === m)} onTap={() => tapMon(CARD_CPU, m)} press={press} compact={compact} motion={motions[`1-${m}`] || null}/>)}
+        {opp.mons.map((_, m) => <CardMonSlot key={m} db={db} st={st} p={CARD_CPU} m={m} mark={markOf(CARD_CPU, m)} fx={fx.filter((f) => f.p === CARD_CPU && f.m === m)} onTap={() => tapMon(CARD_CPU, m)} press={press} compact={compact} tiny={tiny} motion={motions[`1-${m}`] || null}/>)}
       </div>
       {/* まんなか: 技の動き(アクション)と、起きたことの記録(ログ)の場所。相手の場と自分の場をここで上下に分ける(社長 2026-10-24)
           ★次の区切りの技ごとの動きも、この data-card-stage の中で見せる */}
@@ -52563,7 +52565,7 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null }) => {
         </div>
       </div>
       <div className="flex shrink-0 items-end justify-around px-1">
-        {me.mons.map((_, m) => <CardMonSlot key={m} db={db} st={st} p={CARD_ME} m={m} mark={markOf(CARD_ME, m)} fx={fx.filter((f) => f.p === CARD_ME && f.m === m)} onTap={() => tapMon(CARD_ME, m)} press={press} compact={compact} motion={motions[`0-${m}`] || null}/>)}
+        {me.mons.map((_, m) => <CardMonSlot key={m} db={db} st={st} p={CARD_ME} m={m} mark={markOf(CARD_ME, m)} fx={fx.filter((f) => f.p === CARD_ME && f.m === m)} onTap={() => tapMon(CARD_ME, m)} press={press} compact={compact} tiny={tiny} motion={motions[`0-${m}`] || null}/>)}
       </div>
       <div className="flex shrink-0 justify-end px-2 py-1">{strip(CARD_ME)}</div>
         {/* 練習試合: ドラの説明の窓。手札のすぐ上に、中身の高さぶん場所を取って出す(まんなかに入れると、背の低い iPhone で自分の場の下に隠れて「次へ」が押せなかった・2026-10-24 社長の実機 #3475〜#3477) */}
@@ -52606,11 +52608,13 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null }) => {
           const on = handUsable(i);
           const up = (sel && sel.hand === i) || picks.includes(i) || (setChosen && JSON.parse(setChosen).includes(i));
           return (
-            <div key={`${no}-${i}`} data-card-hand-card={i} onPointerDown={(e) => handDown(e, i, no)} onContextMenu={(e) => e.preventDefault()} onDragStart={(e) => e.preventDefault()} style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }} className={`flex w-[19%] ${compact ? 'max-w-[58px]' : 'max-w-[76px]'} flex-col items-center transition-transform ${up ? '-translate-y-2' : ''} ${myTurn && !on && !tutorial ? 'opacity-45' : ''} ${tutorial && myTurn && !tutFocus.hand.includes(i) && !picks.includes(i) && !(sel && sel.hand === i) ? 'opacity-40' : ''} ${tutorial && tutFocus.hand.includes(i) ? 'animate-pulse rounded-[7px] ring-4 ring-emerald-300' : ''} ${drag && drag.i === i ? 'opacity-30' : ''}`} data-card-tutor-focus={tutorial && tutFocus.hand.includes(i) ? true : undefined}>
+            <div key={`${no}-${i}`} data-card-hand-card={i} onPointerDown={(e) => handDown(e, i, no)} onContextMenu={(e) => e.preventDefault()} onDragStart={(e) => e.preventDefault()} style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }} className={`flex w-[19%] ${tiny ? 'max-w-[50px]' : compact ? 'max-w-[58px]' : 'max-w-[76px]'} flex-col items-center transition-transform ${up ? '-translate-y-2' : ''} ${myTurn && !on && !tutorial ? 'opacity-45' : ''} ${tutorial && myTurn && !tutFocus.hand.includes(i) && !picks.includes(i) && !(sel && sel.hand === i) ? 'opacity-40' : ''} ${tutorial && tutFocus.hand.includes(i) ? 'animate-pulse rounded-[7px] ring-4 ring-emerald-300' : ''} ${drag && drag.i === i ? 'opacity-30' : ''}`} data-card-tutor-focus={tutorial && tutFocus.hand.includes(i) ? true : undefined}>
               <img src={CARD_IMG(c ? c.img : no)} alt={c ? c.name : no} draggable={false} style={{ WebkitUserDrag: 'none' }} className={`w-full rounded-[5px] shadow-[0_3px_6px_#000] ${up ? 'outline outline-[3px] outline-amber-300' : ''}`}/>
               <div className="mt-0.5 w-full rounded-md bg-black/60 py-0.5 text-center leading-tight">
                 <CardNameFit name={c ? c.name : no} size={compact ? 10 : 11} className="font-bold leading-tight"/>
-                {compact ? <>
+                {tiny ? <>
+                  <CardNameFit name={`ガッツ${c ? c.guts : '-'}・${cardCaption(c)}`} size={10} className="font-extrabold leading-tight text-amber-200"/>
+                </> : compact ? <>
                   <span className="block text-[10px] font-extrabold leading-tight text-amber-200">ガッツ{c ? c.guts : '-'}</span>
                   <span className="block whitespace-nowrap text-[10px] font-extrabold leading-tight text-amber-200">{cardCaption(c)}</span>
                 </> : <>
