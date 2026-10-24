@@ -40,7 +40,7 @@ window.addEventListener('unhandledrejection', function(ev){ window.__mhErr('[pro
 // ここでは各ファイルの実サイズを重みにして、実際に受け取ったバイト数で動かす。
 window.__mhBoot = (function () {
   // 起動時に読み込むファイルの実サイズ(バイト)。tools/build.js が実ファイルから書き込む
-  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":31227,"data/images/images-enemy.js":2926,"data/ally-monsters.js":45728,"data/lineages.js":17430,"data/breeder.js":105673,"data/enemy-monsters.js":7879,"data/skills.js":4375,"data/rhythm-mode.js":3891085,"data/rhythm-lane-svg.js":11949,"data/rhythm-geometry-calibration.js":15552,"data/rhythm-result-replay-remount.js":5743,"data/rhythm-event.js":76361,"data/changelog.js":1434101,"data/help.js":623628,"data/rhythm-step3-release.js":8517,"data/assistants.js":827727,"data/card-battle-cards.js":90386,"tailwind.css":225078,"game-system.compiled.js":5981711,"data/images/title-screen-halloween.jpg":368790,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
+  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":31227,"data/images/images-enemy.js":2926,"data/ally-monsters.js":45728,"data/lineages.js":17430,"data/breeder.js":105673,"data/enemy-monsters.js":7879,"data/skills.js":4375,"data/rhythm-mode.js":3891085,"data/rhythm-lane-svg.js":11949,"data/rhythm-geometry-calibration.js":15552,"data/rhythm-result-replay-remount.js":5743,"data/rhythm-event.js":76361,"data/changelog.js":1434101,"data/help.js":623628,"data/rhythm-step3-release.js":8517,"data/assistants.js":827727,"data/card-battle-cards.js":90386,"tailwind.css":225078,"game-system.compiled.js":5982583,"data/images/title-screen-halloween.jpg":368790,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
   var total = 0, k;
   for (k in SIZES) total += SIZES[k];
   var got = {};   // ファイルごとに「いま何バイト受け取ったか」
@@ -98,7 +98,7 @@ window.__mhBoot = (function () {
 })();
 // 本体JSのキャッシュキー。ここで一度だけ宣言し、下の読み込み処理でも同じ値を使う。
 // 先読みと <script> のURLがずれると、同じ2.7MBを2回取りに行くことになる
-var GAME_BUILD = '202610250029';
+var GAME_BUILD = '202610250119';
 window.__mhGameBuild = GAME_BUILD;
 // 起動でいちばん大きいのは本体JS(約2.7MB)。いちばん後ろで読むため、そこへ来ると
 // ゲージが止まって見えていた。先に取りはじめて、受け取ったバイト数をそのまま出す。
@@ -132,7 +132,7 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
      作るのは tools/build-tailwind.js(node tools/build.js が中身の変化を見て必要なときだけ呼ぶ)。
      landscape: の差し替え(自前で画面を回したときにも効かせる)もそちらの設定へ移してある。
      ?v= は中身のハッシュ。tools/stamp-version.js が data/*.js と同じ仕組みで打つ。 -->
-<link rel="stylesheet" href="tailwind.css?v=c51b85d54d9e" onload="__mhBoot.done('tailwind.css','見た目を読み込み中')" onerror="__mhBoot.fail('tailwind.css')">
+<link rel="stylesheet" href="tailwind.css?v=701d9d959013" onload="__mhBoot.done('tailwind.css','見た目を読み込み中')" onerror="__mhBoot.fail('tailwind.css')">
 <style>
   html, body { margin:0; padding:0; background:#000; overscroll-behavior:none; -webkit-tap-highlight-color:transparent; height:100%; }
   /* 画面の高さは、ここで決めた --mh-vh ひとつだけを使う。
@@ -296,6 +296,9 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
   /* HOME のみゅあの吹き出し: 下の行の左に「💬 おしゃべり」を重ねている(69-screen-home.jsx)。幅の狭い画面では「タップで詳しく」の字が
      ボタンとぶつかるので、字を隠して「>」だけ残す(吹き出しを押せば説明が開くのは同じ。2026-10-16) */
   @media (max-width: 359px) { .mh-home-assistant [data-bubble-more-text] { display: none; } }
+  /* 幅320ほどの画面では、HOME のみゅあの文を9pxにする。文は切らずに全部出し(伸びたぶん M/B管理・神殿の札が下がる)、
+     ジャックの吹き出しをかぼちゃの上に置くすき間を残す(2026-10-24 窓口「『…』で切れている」「帯の右に出さない」) */
+  @media (max-width: 359px) { .mh-home-assistant [data-bubble-text] { font-size: 9px; } }
   /* 文の最後の1〜2字だけが次の行へ落ちないよう、行の長さをならして折る(2026-10-21 社長決定・改善部の見直しの洗い出し)。
      「無理はしないで／ね〜！」「ジャック大王があらわれ／た！」のような落ち方を、文言を変えずに防ぐ。
      演奏中の画面は字が少なく、毎フレーム描き直すので外す。tools/boot/ja-wrap-check.js が見張る */
@@ -303,9 +306,6 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
   /* 助手の吹き出しは文が短く、pretty でも「えら／い♪」と残ることがあるので、行の長さをそろえる(balance) */
   .mh-app [data-bubble-text] { text-wrap: balance; }
   [data-rhythm-play-area], [data-rhythm-play-area] * { text-wrap: wrap; }
-  /* 幅320ほどの画面では、HOME の吹き出しの文を2行までにする(2026-10-20 改善部 M7)。3行になると「M/B管理」の札の左上を隠していた。
-     続きは吹き出しを押すと開く説明で読める。tools/home-layout-check.js が本物の画面で重ならないかを見る */
-  @media (max-width: 359px) { .mh-home-assistant [data-bubble-text] { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; } }
   .mh-range-label { color: #fff !important; text-shadow: 1px 0 0 #000, -1px 0 0 #000, 0 1px 0 #000, 0 -1px 0 #000, 0 0 1px #000; }
   /* バトルの「マーク×数」(2026-10-12)。味方の枠は絵の左下(下の札の1段上)、敵はライフの帯の右端に常に出す(敵の絵の隅は技名の帯と重なり、横持ちでは隠れる)。絵柄は BATTLE_STACK_MARKS(22-enemy-and-bond-entries.jsx) */
   .mh-stack-marks { position: absolute; z-index: 62; display: flex; flex-wrap: wrap; gap: 2px; max-width: calc(100% - 4px); }

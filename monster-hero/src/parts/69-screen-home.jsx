@@ -85,75 +85,51 @@ const HOME_RAID_JACK_BUTTON_STYLE = Object.freeze({
 //   iPhone縦では「M/B管理」「神殿」のボタンの下へ吹き出しがもぐって文の頭が隠れ、横では上の帯の裏へ隠れていた。
 //   HOMEのボタンの位置は端末ごとに違うので、決め打ちの位置ではどこかで必ず重なる。
 //   そこで「ボタン・みゅあの吹き出し・画面の端」を障害物として測り、重ならない場所と幅を順に試す:
-//     ① 頭の上(幅184→120まで絞る) ② 頭の右 ③ 頭の左 ④ 少しずつ下げて頭の4分の3まで重ねる(それでもだめなときの控え)
-//   どれも重なるときは、重なりがいちばん小さいものを選ぶ。ボタン側は動かさない(押せる場所を変えない)。
-//   head … ジャック本体の絵の箱(跳ねる前の位置) / obstacles … 避ける箱 / measure(width) … その幅での吹き出しの高さ
+//     頭の上で、広い幅から順に、左右へずらし、少しずつ下げて頭の4分の3まで重ねる。帯(〜があらわれた！・共有HP)には乗せない。
+//     以前は頭の右・左にも置いたが、狭い画面で帯を隠した(2026-10-24 窓口「iPhone 13 と同じように、かぼちゃの上に」)
+//   どれも重なるときは、重なりがいちばん小さいものを選ぶ(札にかけるより絵にかける)。絵を3分の1以上隠すときは出さない。
+//   ボタン側は動かさない(押せる場所を変えない)。
+//   head … ジャック本体の絵の箱(跳ねる前の位置) / band … 帯の箱 / obstacles … 避ける箱 / measure(width) … その幅での吹き出しの高さ
 // 広い順に試すので、入るならこれまでどおり広いほうになる。いちばん狭くて 144px(2026-10-24 窓口・カゲあつくん「言葉の途中で折れないように」。
 // 以前は狭い画面(幅320)でジャックの横へ置くとき用に 104・96 まであったが、1行に8字ほどしか入らず「いってらっ／しゃい」と折れた。
 // 144px なら本文が約120pxで、太字の11pxが10字入る(jaWrap は言葉のかたまりを10字までに分ける。41-screen-ui.jsx の JA_WRAP_LINE)。
 // 台詞を全部描いて確かめる検査は tools/boot/ja-wrap-lines-check.js
 const HOME_RAID_SAY_WIDTHS = Object.freeze([184, 168, 152, 144]);
-// 狭い画面(幅360未満)は M/B管理の札とジャックの頭のあいだが狭いので、字を 10px にして 136px まで使う(本文は約112pxで10字入る。
-// 幅320ではジャックの左横に置き、絵に少しかかる)
+// 上の幅がどれも置けないときだけ、字を10pxにした 136px、字9pxにした 124px(本文は約100px。10字の言葉のかたまりが1行に入る)も使う。
+// 幅320や 360×640 では、みゅあの吹き出しと M/B管理・神殿の札のすき間が狭く、それより広いとかぼちゃの上に置けなかった(2026-10-24)
+const HOME_RAID_SAY_SMALL_WIDTHS = Object.freeze([136, 124]);
+const HOME_RAID_SAY_INLINE_NEXT = 130; // これより狭い吹き出しは字9pxにし、「▶ つぎ」を文のあとへ続けて1行減らす
+const homeRaidSayFont = (width) => (width < HOME_RAID_SAY_INLINE_NEXT ? 9 : width < 144 ? 10 : 11);
+// 幅360未満の画面では、帯の「ジャック大王があらわれた！」を字9pxにして1行に収める
 const HOME_RAID_SAY_NARROW_VW = 360;
-const HOME_RAID_SAY_NARROW_WIDTHS = Object.freeze([...HOME_RAID_SAY_WIDTHS, 136]);
-const HOME_RAID_SAY_GAP = 6;
 const HOME_RAID_SAY_HOP = 18; // 跳ねる高さ(mhRaidJackHop の16px)+ゆとり。頭の上に置くときは、跳ねても頭がしっぽにかからない
-const homeRaidSayPlace = ({ head, obstacles, vw, vh, measure, top = 0 }) => {
-  const widths = vw < HOME_RAID_SAY_NARROW_VW ? HOME_RAID_SAY_NARROW_WIDTHS : HOME_RAID_SAY_WIDTHS;
-  const pad = 4, edge = 6;
+const homeRaidSayPlace = ({ head, band = null, obstacles, vw, vh, measure, top = 0 }) => {
+  const widths = [...HOME_RAID_SAY_WIDTHS, ...HOME_RAID_SAY_SMALL_WIDTHS];
+  const pad = 4, edge = 6, tail = 9;
+  const hit = (r, o, p = 0) => { const w = Math.min(r.right, o.right + p) - Math.max(r.left, o.left - p), h = Math.min(r.bottom, o.bottom + p) - Math.max(r.top, o.top - p); return w > 0 && h > 0 ? w * h : 0; };
   const overlap = (r) => {
     let area = 0;
     if (r.left < edge || r.top < top + edge || r.right > vw - edge || r.bottom > vh - edge) area += 1e6;
-    for (const o of obstacles) {
-      const w = Math.min(r.right, o.right + pad) - Math.max(r.left, o.left - pad);
-      const h = Math.min(r.bottom, o.bottom + pad) - Math.max(r.top, o.top - pad);
-      if (w > 0 && h > 0) area += w * h;
-    }
-    // ジャックの絵を隠すのも数える(札より軽く、半分の重み)。狭い画面で、置けない所の代わりに絵の上へ重ねていた(2026-10-24)
-    { const w = Math.min(r.right, head.right) - Math.max(r.left, head.left), h = Math.min(r.bottom, head.bottom) - Math.max(r.top, head.top); if (w > 0 && h > 0) area += w * h * 0.5; }
+    // 帯(「ジャック大王があらわれた！」と共有HP)には、しっぽも含めて乗せない(2026-10-24 窓口「SE・320 で帯を隠している」)
+    if (band && hit({ ...r, bottom: r.bottom + tail }, band, 2)) area += 1e6;
+    // 札(ボタン)にかかるのは、ジャックの絵にかかるより重く数える。狭い画面では、札にかけるより絵の上半分に重ねるほうを選ぶ
+    for (const o of obstacles) area += hit(r, o, pad) * 20;
+    // ジャックの絵を隠すのも数える(半分の重み)
+    area += hit(r, head) * 0.5;
     return area;
   };
   const clampX = (x, w) => Math.max(edge, Math.min(vw - edge - w, x));
   const cx = (head.left + head.right) / 2;
+  // いつも頭の上(帯より上)に置く。横へ置くのはやめた(2026-10-24 窓口「狭い画面でも iPhone 13 と同じように、かぼちゃの上に」)。
+  // 真上から6pxずつ下げ(頭の4分の3まで・帯にかからないところまで)、それぞれで左右へ6pxずつ(48pxまで)ずらして、札とのすき間を探す
   const tries = [];
   for (const w of widths) {
     const h = measure(w);
-    const left = clampX(cx - w / 2, w);
-    tries.push({ side: 'top', left, top: head.top - HOME_RAID_SAY_HOP - h, width: w, height: h });
-  }
-  // ①-2 頭の上で、左右へ6pxずつ(36pxまで)ずらしたもの。真上だと施設の札に少しかかる狭い画面(幅320)で、札とのすき間へ入れる(2026-10-24)
-  for (const w of widths) {
-    const h = measure(w);
-    for (let dx = 6; dx <= 36; dx += 6) for (const sign of [1, -1]) {
-      tries.push({ side: 'top', left: clampX(cx - w / 2 + sign * dx, w), top: head.top - HOME_RAID_SAY_HOP - h, width: w, height: h });
-    }
-  }
-  for (const side of ['right', 'left']) {
-    for (const w of widths) {
-      const h = measure(w);
-      const left = side === 'right' ? head.right + HOME_RAID_SAY_GAP + 6 : head.left - HOME_RAID_SAY_GAP - 6 - w;
-      const midY = head.top + Math.min(head.bottom - head.top, 80) * 0.35;
-      tries.push({ side, left, top: Math.max(top + edge, midY - h / 2), width: w, height: h });
-      // 画面からはみ出すなら、はみ出すぶんジャック側へ寄せる(幅320の左横。ジャックの絵に少しかかる)
-      if (clampX(left, w) !== left) tries.push({ side, left: clampX(left, w), top: Math.max(top + edge, midY - h / 2), width: w, height: h });
-    }
-  }
-  // ③-2 横に置くときは、6pxずつ下げて施設の札(神殿・M/B管理)の下へ逃がす。吹き出しの上端は頭の半分まで(2026-10-21 窓口
-  //  「幅320で ジャックの吹き出しが M/B管理 の札にかかる」。320 は札のすぐ下にジャックがいて、頭の上にも横にも置けず、札と絵に重ねていた)
-  for (const side of ['right', 'left']) {
-    for (const w of widths) {
-      const h = measure(w);
-      const left0 = side === 'right' ? head.right + HOME_RAID_SAY_GAP + 6 : head.left - HOME_RAID_SAY_GAP - 6 - w;
-      const from = Math.max(top + edge, head.top + Math.min(head.bottom - head.top, 80) * 0.35 - h / 2), to = head.top + (head.bottom - head.top) * 0.5;
-      for (const left of [...new Set([left0, clampX(left0, w)])]) for (let y = from + 6; y <= to; y += 6) tries.push({ side, left, top: y, width: w, height: h });
-    }
-  }
-  // ④ 頭の上の位置から6pxずつ下げ、頭の4分の3に重なるところまで探す(ジャックの絵に少し重なっても、文が読めるほうを選ぶ)
-  for (const w of widths) {
-    const h = measure(w);
     const from = head.top - HOME_RAID_SAY_HOP - h, to = head.top + (head.bottom - head.top) * 0.75 - h;
-    for (let y = from + 6; y <= to; y += 6) tries.push({ side: 'top', left: clampX(cx - w / 2, w), top: y, width: w, height: h });
+    for (let y = from; y <= Math.max(from, to); y += 6) {
+      tries.push({ side: 'top', left: clampX(cx - w / 2, w), top: y, width: w, height: h });
+      for (let dx = 6; dx <= 48; dx += 6) for (const sign of [1, -1]) tries.push({ side: 'top', left: clampX(cx - w / 2 + sign * dx, w), top: y, width: w, height: h });
+    }
   }
   let best = null;
   for (const t of tries) {
@@ -161,10 +137,14 @@ const homeRaidSayPlace = ({ head, obstacles, vw, vh, measure, top = 0 }) => {
     if (area === 0) return { ...t, clear: true };
     if (!best || area < best.area) best = { ...t, area };
   }
-  return best ? { side: best.side, left: best.left, top: best.top, width: best.width, height: best.height, clear: false } : null;
+  if (!best) return null;
+  // それでもジャックの絵の箱を3分の1以上隠すなら、吹き出しは出さない(幅320で、みゅあの台詞が3行以上あるとき。2026-10-24)。
+  // 絵の箱の上のほうは透明で、かぼちゃは下の8割ほどにあるので、3分の1かかると顔が見えなくなる。
+  // ジャックを押せばレイド画面へ行けるのは同じ。みゅあの台詞が変われば、測り直して出す
+  const headArea = Math.max(1, (head.right - head.left) * (head.bottom - head.top));
+  const cover = hit({ left: best.left, top: best.top, right: best.left + best.width, bottom: best.top + best.height }, head) / headArea;
+  return { side: best.side, left: best.left, top: best.top, width: best.width, height: best.height, clear: false, hidden: cover >= 1 / 3 };
 };
-// HOMEで吹き出しが避ける相手を集める。ボタン・リンク・みゅあの吹き出し(施設は見える札)。
-// ジャック自身・画面いっぱいの背景のような大きな押し場所・見えていないものは数えない
 const homeRaidSayObstacles = (wrap) => {
   if (typeof document === 'undefined') return [];
   const vw = window.innerWidth, vh = window.innerHeight, out = [];
@@ -206,6 +186,7 @@ const HomeRaidJack = ({ eventId, onOpen }) => {
   const wrapRef = React.useRef(null);
   const sayRef = React.useRef(null);
   const [sayPlace, setSayPlace] = React.useState(null);
+  const sayInline = !!(sayPlace && sayPlace.width < HOME_RAID_SAY_INLINE_NEXT);
   React.useLayoutEffect(() => {
     if (typeof window === 'undefined') return undefined;
     const place = () => {
@@ -218,14 +199,24 @@ const HomeRaidJack = ({ eventId, onOpen }) => {
       const head = { left: ar.left + img.offsetLeft, top: ar.top + img.offsetTop, right: ar.left + img.offsetLeft + img.offsetWidth, bottom: ar.top + img.offsetTop + img.offsetHeight };
       if (head.right - head.left < 2) return;
       const keep = say.style.width;
-      const measure = (w) => { say.style.width = `${w}px`; return say.offsetHeight; };
-      const next = homeRaidSayPlace({ head, obstacles: homeRaidSayObstacles(wrap), vw: window.innerWidth, vh: window.innerHeight, measure });
-      say.style.width = keep;
+      const keepFont = say.style.fontSize;
+      const nextInline = say.querySelector('[data-say-next-inline]'), nextRow = say.querySelector('[data-say-next-row]');
+      const keepNext = [nextInline && nextInline.style.display, nextRow && nextRow.style.display];
+      const measure = (w) => {
+        say.style.width = `${w}px`; say.style.fontSize = `${homeRaidSayFont(w)}px`;
+        if (nextInline && nextRow) { const inl = w < HOME_RAID_SAY_INLINE_NEXT; nextInline.style.display = inl ? 'inline-block' : 'none'; nextRow.style.display = inl ? 'none' : 'block'; }
+        return say.offsetHeight;
+      };
+      const bandEl = wrap.querySelector('[data-home-raid-jack] [data-home-raid-jack-title]');
+      const br = bandEl && bandEl.parentElement.getBoundingClientRect();
+      const next = homeRaidSayPlace({ head, band: br ? { left: br.left, top: br.top, right: br.right, bottom: br.bottom } : null, obstacles: homeRaidSayObstacles(wrap), vw: window.innerWidth, vh: window.innerHeight, measure });
+      say.style.width = keep; say.style.fontSize = keepFont;
+      if (nextInline && nextRow) { nextInline.style.display = keepNext[0]; nextRow.style.display = keepNext[1]; }
       if (!next) return;
       const wr = wrap.getBoundingClientRect();
-      const rel = { side: next.side, left: Math.round(next.left - wr.left), top: Math.round(next.top - wr.top), width: next.width,
-        tail: Math.round(Math.max(14, Math.min(next.width - 14, (head.left + head.right) / 2 - next.left))), tailY: Math.round(Math.max(14, Math.min(next.height - 14, head.top + 24 - next.top))) };
-      setSayPlace((prev) => (prev && prev.side === rel.side && prev.left === rel.left && prev.top === rel.top && prev.width === rel.width && prev.tail === rel.tail && prev.tailY === rel.tailY ? prev : rel));
+      const rel = { side: next.side, hidden: !!next.hidden, left: Math.round(next.left - wr.left), top: Math.round(next.top - wr.top), width: next.width,
+        tail: Math.round(Math.max(14, Math.min(next.width - 14, (head.left + head.right) / 2 - next.left))) };
+      setSayPlace((prev) => (prev && prev.side === rel.side && prev.hidden === rel.hidden && prev.left === rel.left && prev.top === rel.top && prev.width === rel.width && prev.tail === rel.tail ? prev : rel));
     };
     place();
     // ボタンの並び・みゅあの吹き出しの長さは、読み込みやセリフで後から変わる。軽い測り直しをときどき回す
@@ -233,7 +224,11 @@ const HomeRaidJack = ({ eventId, onOpen }) => {
     const id = setInterval(place, 1500);
     window.addEventListener('resize', place);
     window.addEventListener('orientationchange', place);
-    return () => { timers.forEach(clearTimeout); clearInterval(id); window.removeEventListener('resize', place); window.removeEventListener('orientationchange', place); };
+    // みゅあの吹き出しが伸び縮みすると、札(M/B管理・神殿)も動く(--mh-home-assistant-bottom)。札が動き終わってから測り直す
+    const mua = document.querySelector('.mh-home-assistant');
+    const ro = (mua && typeof ResizeObserver !== 'undefined') ? new ResizeObserver(() => timers.push(setTimeout(place, 60))) : null;
+    if (ro) ro.observe(mua);
+    return () => { if (ro) ro.disconnect(); timers.forEach(clearTimeout); clearInterval(id); window.removeEventListener('resize', place); window.removeEventListener('orientationchange', place); };
   }, [lineNo, totals]);
   // ときどき両腕ポーズ(約7秒に1回、1.4秒だけ)
   React.useEffect(() => {
@@ -263,8 +258,9 @@ const HomeRaidJack = ({ eventId, onOpen }) => {
   const labelEl = (
       <span style={{ display:'block', width:'100%', marginTop:'6px', padding:'3px 6px', borderRadius:'10px', border:'1px solid #fdba74aa', background:'#1c0a02d9', color:'#ffedd5', fontSize:'10px', fontWeight:900, textAlign:'center', lineHeight:1.3 }}>
         {/* 「〜が」のあとだけで折る(2026-10-20 窓口「ジャック大王があらわれ／た！」と言葉の途中で折れていた)。
-            keep-all で字の間では折らず、<wbr/> の所だけで折る。それでも入らないときだけ anywhere で折る */}
-        <span data-home-raid-jack-title style={{ display:'block', ...JA_WRAP_STYLE }}>{allDone ? <>{RAID_JACK_PUMPKIN.name}が<wbr/>遊びに来た！</> : <>{tier.name}が<wbr/>あらわれた！</>}</span>
+            keep-all で字の間では折らず、<wbr/> の所だけで折る。それでも入らないときだけ anywhere で折る。
+            幅360未満の画面は字を9pxにして1行に収める(2026-10-24 窓口「幅320で『ジャック大王／あらわれた』と折れている」) */}
+        <span data-home-raid-jack-title style={{ display:'block', ...JA_WRAP_STYLE, ...(typeof window !== 'undefined' && window.innerWidth < HOME_RAID_SAY_NARROW_VW ? { fontSize:'9px' } : {}) }}>{allDone ? <>{RAID_JACK_PUMPKIN.name}が<wbr/>遊びに来た！</> : <>{tier.name}が<wbr/>あらわれた！</>}</span>
         {allDone ? <span data-home-raid-pumpkin-note style={{ display:'block', marginTop:'2px', fontSize:'8px', opacity:.9 }}>ジャックを倒した！あそんでダメージを競おう</span> : <>
         <span style={{ display:'block', height:'7px', marginTop:'3px', borderRadius:'999px', overflow:'hidden', background:'#000a', border:'1px solid #fff3' }} role="progressbar" aria-valuemin={0} aria-valuemax={tier.hp} aria-valuenow={left}>
           <span style={{ display:'block', height:'100%', width:`${rate * 100}%`, background:'#f97316' }} />
@@ -292,18 +288,18 @@ const HomeRaidJack = ({ eventId, onOpen }) => {
     </div>}
     <div ref={wrapRef} data-home-raid-jack-wrap style={HOME_RAID_JACK_WRAP_STYLE}>
     {/* ひとこと。ジャックの上に出る吹き出し。押すと次のセリフへ(ジャック本体を押すとレイド画面) */}
-    <button type="button" ref={sayRef} key={`say${lineNo}`} data-home-raid-say data-story-pop="1" data-say-side={sayPlace ? sayPlace.side : 'top'} onClick={() => setLineNo((n) => n + 1)} aria-label="ジャックのひとこと(押すと次のセリフ)"
+    <button type="button" ref={sayRef} key={`say${lineNo}`} data-home-raid-say data-story-pop="1" data-say-side={sayPlace ? sayPlace.side : 'top'} data-say-hidden={sayPlace && sayPlace.hidden ? 'true' : undefined} aria-hidden={sayPlace && sayPlace.hidden ? 'true' : undefined} onClick={() => setLineNo((n) => n + 1)} aria-label="ジャックのひとこと(押すと次のセリフ)"
       style={{ position:'absolute', ...(sayPlace ? { left:sayPlace.left, top:sayPlace.top, width:sayPlace.width } : { left:'50%', bottom:'100%', marginLeft:-92, marginBottom:'4px', width:184 }),
         padding:'6px 10px', borderRadius:'14px', boxSizing:'border-box',
-        border:`2px solid ${speechAccent}`, background:'#1c0a02ee', color:'#ffedd5', fontSize:(typeof window !== 'undefined' && window.innerWidth < HOME_RAID_SAY_NARROW_VW) ? '10px' : '11px', fontWeight:900, lineHeight:1.45, textAlign:'left', cursor:'pointer',
-        boxShadow:`0 0 12px ${speechAccent}66`, animation:'storyPop .25s ease-out both', zIndex:2, pointerEvents:'auto' }}>
+        border:`2px solid ${speechAccent}`, background:'#1c0a02ee', color:'#ffedd5', fontSize:`${homeRaidSayFont(sayPlace ? sayPlace.width : 184)}px`, fontWeight:900, lineHeight:1.45, textAlign:'left', cursor:'pointer',
+        boxShadow:`0 0 12px ${speechAccent}66`, animation:'storyPop .25s ease-out both', zIndex:2, pointerEvents:(sayPlace && sayPlace.hidden) ? 'none' : 'auto',
+        ...(sayPlace && sayPlace.hidden ? { visibility:'hidden' } : {}) }}>
       {/* 狭い幅(横へ置いたとき)でも「聞こえるの／う」と言葉の途中で折らず、行の長さをならす(2026-10-21) */}
-      <span data-home-raid-say-text style={{ display:'block', ...JA_LABEL_STYLE }}>{jaWrap(speech)}</span>
-      <span aria-hidden="true" style={{ display:'block', textAlign:'right', fontSize:'8px', opacity:.7 }}>▶ つぎ</span>
+      {/* いちばん狭い124pxのときは「▶ つぎ」を文のあとへ続けて1行減らす(幅320で、かぼちゃを隠さないため。2026-10-24) */}
+      <span data-home-raid-say-text style={{ display:'block', ...JA_LABEL_STYLE }}>{jaWrap(speech)}<span aria-hidden="true" data-say-next-inline style={{ display:sayInline ? 'inline-block' : 'none', marginLeft:'4px', fontSize:'8px', opacity:.7, whiteSpace:'nowrap' }}>▶ つぎ</span></span>
+      <span aria-hidden="true" data-say-next-row style={{ display:sayInline ? 'none' : 'block', textAlign:'right', fontSize:'8px', opacity:.7 }}>▶ つぎ</span>
       {/* しっぽはジャックのほうへ向ける(上に置いたら下向き、右に置いたら左向き、左に置いたら右向き) */}
       {(!sayPlace || sayPlace.side === 'top') && <span aria-hidden="true" style={{ position:'absolute', left:sayPlace ? sayPlace.tail : '50%', bottom:-9, marginLeft:-8, width:0, height:0, borderLeft:'8px solid transparent', borderRight:'8px solid transparent', borderTop:`9px solid ${speechAccent}` }} />}
-      {sayPlace && sayPlace.side === 'right' && <span aria-hidden="true" style={{ position:'absolute', left:-9, top:sayPlace.tailY, marginTop:-8, width:0, height:0, borderTop:'8px solid transparent', borderBottom:'8px solid transparent', borderRight:`9px solid ${speechAccent}` }} />}
-      {sayPlace && sayPlace.side === 'left' && <span aria-hidden="true" style={{ position:'absolute', right:-9, top:sayPlace.tailY, marginTop:-8, width:0, height:0, borderTop:'8px solid transparent', borderBottom:'8px solid transparent', borderLeft:`9px solid ${speechAccent}` }} />}
     </button>
     <button type="button" data-home-raid-jack onClick={onOpen} aria-label={allDone ? `${RAID_JACK_PUMPKIN.name}が遊びに来た！タップでレイド画面を開く` : `${tier.name}があらわれた！タップでレイド画面を開く`} style={HOME_RAID_JACK_BUTTON_STYLE}>
       {/* 通常絵とポーズ絵を重ねて、切り替えは透明度だけで行う(先に両方読み込める・切り替えで枠の高さが変わらない)。
@@ -356,6 +352,17 @@ function HomeScreen({
     measure();
     if(typeof ResizeObserver==='undefined'){window.addEventListener('resize',measure);return()=>window.removeEventListener('resize',measure);}
     const ro=new ResizeObserver(measure);ro.observe(el);return()=>ro.disconnect();
+  },[]);
+  // みゅあの吹き出しの下端(場面の上から何px)を CSS の --mh-home-assistant-bottom へ渡す。台詞は切らずに全部出すので、
+  // 長い台詞で伸びたぶんだけ M/B管理・神殿の札を下げる(2026-10-24 窓口「幅320で『ついてるから大丈夫！…』と切れている」)。
+  // 回して描いているときも狂わないよう、画面上の位置ではなく offset で測る
+  React.useEffect(()=>{
+    const scene=homeSceneRef.current;const box=scene&&scene.querySelector('.mh-home-assistant');
+    if(!scene||!box)return undefined;
+    const measure=()=>{const b=box.offsetTop+box.offsetHeight;if(b>0)scene.style.setProperty('--mh-home-assistant-bottom',`${Math.ceil(b)}px`);};
+    measure();
+    if(typeof ResizeObserver==='undefined'){const id=setInterval(measure,1000);return()=>clearInterval(id);}
+    const ro=new ResizeObserver(measure);ro.observe(box);ro.observe(scene);return()=>ro.disconnect();
   },[]);
   const homeBackgroundSrc=homeArtSrc(homeArt,homeSceneWide);
   const homeBackgroundWide=homeArtIsWide(homeArt,homeSceneWide);
@@ -440,7 +447,7 @@ function HomeScreen({
         {/* MFバトルカード(社長が決めた案A: 左の列のいちばん下・ハロウィン・ナイトの札の下。札が無いときは1段上がる) */}
         {cardBattleVisible&&typeof onOpenCardBattle==='function'&&<button type="button" data-home-card-battle className={`mh-home-card-battle${homeEventCampaign?'':' raised'}`} onClick={onOpenCardBattle} aria-label="MFバトルカード"><span>🃏 MFバトルカード</span></button>}
         {/* 仲良し度が上がった直後だけ、みゅあがそのことに触れる(HOMEを離れると元に戻る) */}
-        <div className={`mh-home-assistant${spotClass('assistant')}`}><AssistantBubble scene="home" condition={assistantBondUp?'bondUp':(masuMons.length===0?'firstRun':null)} compact maxLines={2} footerSpace={typeof onOpenAssistantChat==='function'?70:0}/>
+        <div className={`mh-home-assistant${spotClass('assistant')}`}><AssistantBubble scene="home" condition={assistantBondUp?'bondUp':(masuMons.length===0?'firstRun':null)} compact footerSpace={typeof onOpenAssistantChat==='function'?70:0}/>
           {/* ★おしゃべりのボタンは、吹き出しの下の行(「タップで詳しく」の左の空き)へ重ねる(2026-10-16)。吹き出しの下へ1段足すと
               吹き出しが高くなり、横持ちでは施設の札「M/B管理」、小さい画面ではジャックの吹き出しにかぶって押せなくなっていた
               (raid-jack-home-say-tap-check)。吹き出しの中身はボタン(詳しい説明を開く)なので、入れ子にせず上に重ねる。左は顔(48px)+すき間(8px)+吹き出しの内側。吹き出しには footerSpace で、下の行の左にボタンの幅ぶんの空きを取らせる */}

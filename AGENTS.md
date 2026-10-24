@@ -104,8 +104,11 @@ node tools/merge-main.js --continue
 
 道具がやること(`tools/merge-main.js` の冒頭に全部書いてある):
 
-- 生成物(game-system.jsx・game-system.compiled.js・index.html・version.json・tailwind.css・asset-manifest.json・
+- 生成物(game-system.jsx・game-system.compiled.js・version.json・tailwind.css・asset-manifest.json・
   assistant-chat-digest.json)は main 側を取り、最後に `node tools/build.js` で parts・data から作り直す
+- `index.html` は手で書く CSS も入っているので、丸ごと main 側は取らない。ぶつかりが build.js の書き込む数値
+  (読み込むファイルの大きさ・`GAME_BUILD`・`?v=`)の行だけのときに限ってこちら側を取り、ほかは止まる
+  (2026-10-24。以前は丸ごと main 側を取っていて、ぶつかっていないこちらの CSS まで消えた)
 - `10-core.jsx` は、ぶつかりが `BUILD_DATE` の1行だけのときに限ってこちら側を取る(build.js が付け直す)
 - 更新履歴(`data/changelog.js`)は、こちらが先頭に足した項目を、main 側の並びの日時の合う所へ差し込む。
   main 側の並びは動かさない。こちらが先頭以外も書き換えていたら止まる(両方の項目を残し、新しい順に並べる)
