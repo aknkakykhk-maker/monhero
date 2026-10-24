@@ -21,6 +21,8 @@
 //   all    … 両方
 // movies/ は入れない。<video> は範囲指定(Range)で取るので、Service Worker から丸ごと返すと
 // iPhone で再生できないことがあるため。
+// images/card-battle/ も入れない(MFバトルカードのカードの絵。数百枚・約28MB)。対戦の前にそのデッキのぶんだけ、
+// 開いたときに読む決まり(docs/spec/CARD_BATTLE.md 2-4)なので、バトルのまとまりに混ぜて先に落とさせない。
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -73,7 +75,7 @@ function buildManifest() {
   const images = [
     ...walk(path.join(GAME_DIR, 'images')),
     ...walk(path.join(GAME_DIR, 'data', 'images')),
-  ].filter(f => IMAGE_RE.test(f));
+  ].filter(f => IMAGE_RE.test(f) && !rel(f).startsWith('images/card-battle/'));
   for (const full of [...audio, ...images].sort()) {
     const r = rel(full);
     const isBeat = beat.set.has(r) || r.startsWith('images/song-art/') || r.startsWith('images/rhythm-look/');

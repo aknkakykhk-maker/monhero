@@ -289,6 +289,20 @@
       "role": "助手とおしゃべりの窓(AssistantChatWindow)。中継役へ送るだけで、会話は端末の新しいキーにだけ置く。公開の印 assistantChat の後ろ"
     },
     {
+      "file": "82-card-battle-core.jsx",
+      "role": "MFバトルカードのルールの本体とコンピューターの考え方(ゲームの始まり・できる操作・操作を進める・守り・勝ち負け・くせと難易度)。カードの表は data/card-battle-cards.js",
+      "pure": true
+    },
+    {
+      "file": "83-card-battle-lines.jsx",
+      "role": "MFバトルカードの相手の助手のひとこと(6人×14場面の台詞・表情・場面の選び方)",
+      "pure": true
+    },
+    {
+      "file": "84-screen-card-battle.jsx",
+      "role": "画面: MFバトルカード(CARD_TOP=トップ・スターター選び・相手えらび / CARD_BATTLE=対戦 / 結果)。保存は mh_card_* の新しいキーだけ。いまはデバッグ設定からだけ入れる"
+    },
+    {
       "file": "81-debug-trials.jsx",
       "role": "デバッグ設定のいちばん上の「確認待ちの試作」(DEBUG_TRIALS に1行足すと出る)。デバッグ専用"
     },

@@ -1,0 +1,667 @@
+// ==================== 画面: MFバトルカード ====================
+// 紙の『モンスターファームバトルカード』を元にしたカードバトル。設計: docs/spec/CARD_BATTLE.md
+// ルールの本体とコンピューターの考え方は 82-card-battle-core.jsx、助手のひとことは 83-card-battle-lines.jsx。
+// この部品は画面と保存だけを持つ(ルールの計算はしない)。
+//
+// 画面(gameState。カードバトルの画面は全部 CARD_ で始める。5-3「裏でクイック∞周回」の決まり)
+//   CARD_TOP    … トップ。はじめての人はスターター選び、コンピューター戦の相手えらび、結果もここ
+//   CARD_BATTLE … 対戦
+// ★いまはデバッグ設定からだけ入れる(HOME の入口は公開の区切りで足す。社長)
+// ★保存は新しいキー mh_card_*(CARD_SAVE_KEYS)だけ。既存の mh_* には一切さわらない
+// カードの絵(道具 tools/card/card-image-build.js が © を消して縮めたもの)。s=240×336(手札・場)/ l=480×672(詳しい画面)。フォルダごと使う
+const CARD_IMAGE_SET = Object.freeze({ imageDir: 'images/card-battle' });
+const CARD_IMG = (img, size = 's') => `${CARD_IMAGE_SET.imageDir}/${size}/${img}.jpg`;
+const CARD_KIND_LABEL = Object.freeze({ pow: 'ちから', int: 'かしこさ', spe: '特殊', dge: '回避', blk: '防御' });
+const CARD_TYPE_LABEL = Object.freeze({ ground: '地上', air: '空中', water: '水中' });
+const CARD_LEVEL_LABEL = Object.freeze({ easy: 'EASY', normal: 'NORMAL', hard: 'HARD', expert: 'EXPERT', master: 'MASTER' });
+// 相手の助手に合わせた曲(5-3)。ももすけの曲は「あとで決める」(社長)ので、いまは仮にトリコ
+const CARD_AI_BGM = Object.freeze({
+  mua: 'ichika_battle', momosuke: 'melo_toriko', kiki: 'melo_kiki_issen_short',
+  kyuko: 'melo_toward_the_stars_short', dra: 'melo_mou_hitotsu_no_sekai_e', atsu: 'melo_against_my_own_shadow',
+});
+// モンヒロにいる種族は、いまのゲームの絵を使う(ほかの種族は、絵が届くまでカードの絵で代える。5-3)
+const CARD_SPECIES_ART = Object.freeze({ tiger: 'Tiger', golem: 'Golem', suezo: 'Suezo', pixie: 'Pixie', hare: 'Ham', mocchi: 'Mocchi', monol: 'Monol', plant: 'Plant' });
+const cardMonArt = (mon) => {
+  const id = CARD_SPECIES_ART[mon.species] || CARD_SPECIES_ART[mon.main];
+  const m = id && typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[id] : null;
+  return m && m.imgUrl ? m.imgUrl : null;
+};
+const cardTodayJst = () => new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+const cardCaption = (c) => (!c ? '' : c.kind === 'dge' ? '回避' : c.kind === 'blk' ? '防御' : c.kind === 'spe' ? '特殊' : `ダメージ${c.damage}`);
+const cardUserLabel = (db, c) => {
+  if (!c) return '';
+  if (c.user === 'any') return '全モンスター';
+  if (c.user === 'breeder') return 'ブリーダー';
+  const m = Object.values(db.monsters).find((x) => x.species === c.user && !x.variant);
+  return m ? `${m.name}専用` : c.user;
+};
+const CARD_CPU = 1;
+const CARD_ME = 0;
+const cardDeciderOf = (st) => (st.pendingDiscard ? st.pendingDiscard.p : st.phase === 'setup' ? 1 - st.first : cardDecider(st));
+
+// 長押しで詳しい画面(どのカードでも。5-3)。指を離すまでに 450ms たったら長押し
+const useCardLongPress = (onLong) => {
+  const timer = useRef(null);
+  const fired = useRef(false);
+  useEffect(() => () => clearTimeout(timer.current), []);
+  return (no, onTap) => ({
+    onPointerDown: () => { fired.current = false; clearTimeout(timer.current); timer.current = setTimeout(() => { fired.current = true; onLong(no); }, 450); },
+    onPointerUp: () => clearTimeout(timer.current),
+    onPointerLeave: () => clearTimeout(timer.current),
+    onPointerCancel: () => clearTimeout(timer.current),
+    onContextMenu: (e) => e.preventDefault(),
+    onClick: (e) => { if (fired.current) { fired.current = false; return; } if (onTap) onTap(e); },
+  });
+};
+
+// ---- 詳しい画面(大きな絵・名前・種類・ガッツ・使える子・番号・文)。どこをタップしても閉じる ----
+const CardDetailModal = ({ db, no, onClose }) => {
+  const c = cardOf(db, no);
+  const m = c ? null : cardMonsterOf(db, no);
+  return (
+    <div data-card-detail onClick={onClose} className="fixed inset-0 flex flex-col items-center justify-center gap-3 overflow-y-auto px-4 py-6" style={{ zIndex: MODAL_Z.dialog, backgroundColor: 'rgba(2,6,23,0.94)' }} role="dialog" aria-label="カードの詳しい画面">
+      <img src={CARD_IMG(c ? c.img : m ? m.img : no, 'l')} alt={c ? c.name : m ? m.name : ''} className="w-[min(78vw,300px)] rounded-xl shadow-2xl"/>
+      {c && (
+        <div className="w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900/90 p-3 text-slate-100">
+          <div className="text-lg font-black">{c.name}</div>
+          <div className="mt-1 flex flex-wrap gap-1.5 text-[12px] font-bold">
+            <span className="rounded-md bg-indigo-900 px-2 py-0.5">{CARD_KIND_LABEL[c.kind]}</span>
+            <span className="rounded-md bg-amber-900 px-2 py-0.5">ガッツ{c.guts}</span>
+            {c.damage !== null && c.damage !== undefined && <span className="rounded-md bg-rose-900 px-2 py-0.5">ダメージ{c.damage}</span>}
+            <span className="rounded-md bg-slate-700 px-2 py-0.5">{cardUserLabel(db, c)}</span>
+            <span className="rounded-md bg-slate-800 px-2 py-0.5 text-slate-400">No.{c.no}</span>
+          </div>
+          {c.text && <p className="mt-2 text-[14px] font-bold leading-relaxed">{c.text}</p>}
+          {!c.ready && <p className="mt-2 text-[12px] font-bold text-amber-300">このカードは準備中です(まだデッキに入れられません)</p>}
+        </div>
+      )}
+      {m && (
+        <div className="w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900/90 p-3 text-slate-100">
+          <div className="text-lg font-black">{m.name}</div>
+          <div className="mt-1 flex flex-wrap gap-1.5 text-[12px] font-bold">
+            <span className="rounded-md bg-emerald-900 px-2 py-0.5">ライフ{m.life}</span>
+            <span className="rounded-md bg-sky-900 px-2 py-0.5">{CARD_TYPE_LABEL[m.type]}</span>
+            <span className="rounded-md bg-slate-800 px-2 py-0.5 text-slate-400">No.{m.no}</span>
+          </div>
+        </div>
+      )}
+      <button type="button" onClick={onClose} className="mh-button mh-button-secondary min-h-[48px] w-full max-w-sm rounded-2xl border border-white/20 bg-slate-900 font-black">閉じる</button>
+    </div>
+  );
+};
+
+// ---- 捨て札の一覧(自分/相手のタブ・新しい順・1枚を長押しで詳しい画面) ----
+const CardDiscardModal = ({ db, st, initial = CARD_ME, onDetail, onClose }) => {
+  const [tab, setTab] = useState(initial);
+  const press = useCardLongPress(onDetail);
+  const list = st.players[tab].discard.slice().reverse();
+  return (
+    <ModalFrame label="捨て札" border="border-indigo-400/70" onClose={onClose}>
+      <div data-card-discard className="mb-2 grid grid-cols-2 gap-2">
+        {[CARD_ME, CARD_CPU].map((p) => (
+          <button key={p} type="button" onClick={() => setTab(p)} className={`min-h-[44px] rounded-xl border text-[13px] font-black ${tab === p ? 'border-amber-300 bg-amber-500/20 text-amber-100' : 'border-white/15 bg-slate-900 text-slate-300'}`}>
+            {p === CARD_ME ? '自分の捨て札' : '相手の捨て札'}({st.players[p].discard.length})
+          </button>
+        ))}
+      </div>
+      <div className="grid max-h-[60vh] grid-cols-4 gap-1.5 overflow-y-auto">
+        {list.length === 0 && <p className="col-span-4 py-6 text-center text-[13px] font-bold text-slate-400">まだありません</p>}
+        {list.map((no, i) => { const c = cardOf(db, no); return (
+          <div key={`${no}-${i}`} {...press(no)} className="flex flex-col items-center">
+            <img src={CARD_IMG(c ? c.img : no)} alt={c ? c.name : no} loading="lazy" className="w-full rounded-md"/>
+            <span className="mt-0.5 w-full truncate text-center text-[11px] font-bold text-slate-200">{c ? c.name : no}</span>
+          </div>
+        ); })}
+      </div>
+      <p className="mt-2 text-center text-[11px] font-bold text-slate-400">カードを長押しすると詳しく見られます</p>
+      <div className="mt-2"><ModalCloseButton onClick={onClose}/></div>
+    </ModalFrame>
+  );
+};
+
+// ---- 場のモンスター1体(カードの小さい絵・名前・ライフ・特徴・モンヒロの絵) ----
+const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press }) => {
+  const mon = st.players[p].mons[m];
+  const art = cardMonArt(mon);
+  const ty = cardMonType(mon, st.turn);
+  const opp = p === CARD_CPU;
+  const pct = Math.max(0, Math.round((mon.life / mon.max) * 100));
+  const stunned = mon.stunTurn === st.turn + (st.active === p ? 0 : 1) && !mon.ko;
+  const info = (
+    <div className="flex items-center gap-1">
+      <img src={CARD_IMG(cardMonsterOf(db, mon.no).img)} alt={mon.name} className={`h-[52px] w-[37px] rounded-[3px] object-cover shadow ${mon.ko ? 'grayscale opacity-40' : ''}`}/>
+      <div className="w-[62px] min-w-0">
+        <div className="truncate text-[12px] font-black leading-tight">{mon.name}</div>
+        <div className="text-[13px] font-black leading-tight">{mon.life}<span className="text-[10px] text-slate-400"> / {mon.max}</span></div>
+        <div className="h-[6px] overflow-hidden rounded bg-slate-700"><div className={`h-full ${pct > 50 ? 'bg-emerald-400' : pct > 25 ? 'bg-amber-400' : 'bg-rose-500'}`} style={{ width: `${pct}%` }}/></div>
+        <span className={`mt-0.5 inline-block rounded px-1 text-[10px] font-bold ${ty === 'air' ? 'bg-cyan-800' : ty === 'water' ? 'bg-blue-800' : 'bg-indigo-900'}`}>{CARD_TYPE_LABEL[ty]}</span>
+        {stunned && <span className="ml-0.5 inline-block rounded bg-rose-900 px-1 text-[10px] font-bold">攻撃できない</span>}
+      </div>
+    </div>
+  );
+  const artEl = (
+    <div className="relative flex h-[78px] w-full items-end justify-center">
+      {art ? <img src={art} alt="" className={`max-h-[78px] max-w-[96px] object-contain drop-shadow-[0_6px_6px_rgba(0,0,0,.6)] ${opp ? '-scale-x-100' : ''} ${mon.ko ? 'grayscale opacity-30' : ''}`}/>
+        : <img src={CARD_IMG(cardMonsterOf(db, mon.no).img)} alt="" className={`h-[74px] rounded-md object-cover ${mon.ko ? 'grayscale opacity-30' : ''}`}/>}
+      {mon.ko && <span className="absolute bottom-2 rounded bg-black/70 px-1.5 text-[12px] font-black text-slate-300">KO</span>}
+      {fx.map((f) => (
+        <span key={f.key} className={`pointer-events-none absolute top-1 text-[30px] font-black ${f.dmg > 0 ? 'animate-bounce text-white' : 'text-sky-200'}`} style={{ WebkitTextStroke: f.dmg > 0 ? '2px #dc2626' : '1px #0369a1', textShadow: '0 0 10px rgba(248,113,113,.8)' }}>
+          {f.dmg > 0 ? `−${f.dmg}` : f.heal ? `＋${f.heal}` : 'ミス'}
+        </span>
+      ))}
+    </div>
+  );
+  const ring = mark === 'target' ? 'ring-4 ring-rose-400' : mark === 'user' ? 'ring-4 ring-amber-300' : mark === 'acting' ? 'ring-2 ring-amber-300/80' : '';
+  return (
+    <div data-card-mon={`${p}-${m}`} {...(press ? press(mon.no, onTap) : { onClick: onTap })} className={`relative flex w-[31%] flex-col items-center rounded-xl p-0.5 ${ring} ${fx.some((f) => f.dmg > 0) ? 'brightness-125' : ''}`}>
+      {opp ? <>{info}{artEl}</> : <>{artEl}{info}</>}
+    </div>
+  );
+};
+
+// ---- 対戦の盤面 ----
+const CardBattleBoard = ({ db, game, onFinish }) => {
+  const who = ASSISTANTS.find((a) => a.id === game.who) || ASSISTANTS[0];
+  const policy = useMemo(() => cardAiPolicy(game.who, game.level), [game.who, game.level]);
+  const [st, setSt] = useState(game.st);
+  const [sel, setSel] = useState(null);      // 攻撃: { hand, mon, set } / 守り: { hand }
+  const [picks, setPicks] = useState([]);    // ガッツへ・捨てる・始める前のガッツで選んだ手札
+  const [fx, setFx] = useState([]);          // ダメージの数字
+  const [bubble, setBubble] = useState(null);
+  const [face, setFace] = useState('normal');
+  const [detail, setDetail] = useState(null);
+  const [discard, setDiscard] = useState(null);
+  const [hint, setHint] = useState('');
+  const [quit, setQuit] = useState(false);
+  const lastLine = useRef({});
+  const spoke = useRef({ turn: -1, n: 0 });
+  const bubbleTimer = useRef(null);
+  const finished = useRef(false);
+  const press = useCardLongPress((no) => setDetail(no));
+  const paused = !!detail || !!discard || quit;
+
+  const say = (scene) => {
+    if (!scene) return;
+    const turn = st.turn;
+    if (spoke.current.turn !== turn) spoke.current = { turn, n: 0 };
+    if (spoke.current.n >= CARD_LINE_PER_TURN && scene !== 'win' && scene !== 'lose') return;
+    const line = cardPickLine(game.who, scene, lastLine.current);
+    if (!line) return;
+    spoke.current.n += 1;
+    lastLine.current = { ...lastLine.current, [scene]: line.index };
+    setFace(line.face);
+    setBubble({ text: line.text, key: `${Date.now()}-${scene}` });
+    clearTimeout(bubbleTimer.current);
+    bubbleTimer.current = setTimeout(() => setBubble(null), 4500);
+  };
+  useEffect(() => { say('start'); return () => clearTimeout(bubbleTimer.current); }, []);
+
+  // 操作を1つ進める(だめな操作は何もしない)
+  const step = (act) => {
+    const next = cardApplyAction(db, st, act);
+    if (!next) return false;
+    const evs = next.events || [];
+    // 次のことが起きたら、吹き出しはその時点で消す(5-3)
+    if (evs.some((e) => e.t === 'use' || e.t === 'guard')) { clearTimeout(bubbleTimer.current); setBubble(null); }
+    const hits = evs.filter((e) => e.t === 'hit' || e.t === 'heal').map((e, i) => ({ ...e, key: `${next.log.length}-${i}-${Date.now()}`, heal: e.t === 'heal' ? e.n : 0, dmg: e.t === 'hit' ? e.dmg : 0 }));
+    if (hits.length) {
+      setFx(hits);
+      setTimeout(() => setFx((cur) => cur.filter((f) => !hits.some((h) => h.key === f.key))), 1000);
+      if (hits.some((h) => h.dmg >= 3)) Audio_.se.crit(); else if (hits.some((h) => h.dmg > 0)) Audio_.se.attack(); else if (hits.some((h) => h.heal)) Audio_.se.heal(); else Audio_.se.guard();
+    } else if (evs.some((e) => e.t === 'use')) Audio_.se.card();
+    else if (evs.some((e) => e.t === 'guard')) Audio_.se.guard();
+    const scene = cardLineSceneOf(db, st, next, CARD_CPU);
+    setSt(next); setSel(null); setPicks([]); setHint('');
+    if (scene) say(scene);
+    return true;
+  };
+
+  // コンピューターの番(守りの番・始める前・捨てる番も)。詳しい画面や捨て札を見ているあいだは待つ
+  useEffect(() => {
+    if (st.winner !== null || paused) return undefined;
+    if (cardDeciderOf(st) !== CARD_CPU) return undefined;
+    const wait = st.pending ? 700 : st.phase === 'guts' ? 600 : 900;
+    const t = setTimeout(() => {
+      const act = cardAiChooseAction(db, st, policy);
+      if (!step(act)) step(st.pending ? { type: 'pass' } : st.phase === 'main' ? { type: 'endAttacks' } : { type: 'guts', hand: [] });
+    }, wait);
+    return () => clearTimeout(t);
+  }, [st, paused]);
+
+  // 勝ち負けが決まったら、少し見せてから結果へ
+  useEffect(() => {
+    if (st.winner === null || finished.current) return undefined;
+    finished.current = true;
+    const t = setTimeout(() => onFinish({ outcome: st.winner === CARD_ME ? 'win' : 'lose', st }), 2200);
+    return () => clearTimeout(t);
+  }, [st.winner]);
+
+  const me = st.players[CARD_ME];
+  const opp = st.players[CARD_CPU];
+  const decider = cardDeciderOf(st);
+  const myTurn = st.winner === null && decider === CARD_ME;
+  const mode = !myTurn ? 'wait'
+    : st.pendingDiscard ? 'discard'
+    : st.phase === 'setup' ? 'setup'
+    : st.pending ? 'guard'
+    : st.phase === 'main' ? 'attack'
+    : st.phase === 'guts' ? 'guts' : 'wait';
+  const attackOpts = mode === 'attack' ? cardAttackOptions(db, st) : [];
+  const guardOpts = mode === 'guard' ? cardGuardOptions(db, st) : [];
+
+  // 選んだカードから、残りの選び方(使う子・組み合わせ・狙う相手)を絞る
+  const selOpts = sel && mode === 'attack' ? attackOpts.filter((o) => o.hand.includes(sel.hand)) : [];
+  const selMons = [...new Set(selOpts.map((o) => (o.mon === undefined ? -1 : o.mon)))];
+  const monChosen = sel && (sel.mon !== undefined ? sel.mon : selMons.length === 1 ? selMons[0] : undefined);
+  const byMon = monChosen === undefined ? [] : selOpts.filter((o) => (o.mon === undefined ? -1 : o.mon) === monChosen);
+  const sets = [...new Set(byMon.map((o) => JSON.stringify(o.hand)))].sort((a, b) => JSON.parse(b).length - JSON.parse(a).length);
+  const setChosen = sel && sets.length ? (sel.set && sets.includes(sel.set) ? sel.set : sets[0]) : null;
+  const finalOpts = byMon.filter((o) => JSON.stringify(o.hand) === setChosen);
+  const needTarget = finalOpts.some((o) => o.target);
+
+  const tapHand = (i) => {
+    Audio_.se.tap();
+    if (mode === 'guts' || mode === 'setup' || mode === 'discard') {
+      const max = mode === 'setup' ? CARD_BATTLE_SETUP_GUTS_MAX : mode === 'discard' ? st.pendingDiscard.n : 99;
+      setPicks((cur) => (cur.includes(i) ? cur.filter((x) => x !== i) : cur.length >= max ? cur : [...cur, i]));
+      return;
+    }
+    if (mode === 'guard') {
+      const os = guardOpts.filter((o) => o.hand === i);
+      if (!os.length) { setHint('このカードでは守れません'); return; }
+      const mons = [...new Set(os.map((o) => o.mon))];
+      if (mons.length === 1) { step(os[0]); return; }
+      setSel({ hand: i }); setHint('かばう子をタップ');
+      return;
+    }
+    if (mode !== 'attack') return;
+    if (sel && sel.hand === i) { setSel(null); setHint(''); return; }
+    const os = attackOpts.filter((o) => o.hand.includes(i));
+    const c = cardOf(db, me.hand[i]);
+    if (!os.length) {
+      setHint(!c ? '' : cardIsGuardKind(c.kind) ? '回避・防御は、相手に攻撃されたときに使います'
+        : !c.ready ? 'このカードは準備中です'
+        : c.guts > me.guts.length ? `ガッツが足りません(あと${c.guts - me.guts.length})` : 'いまは使えません(使える子がいない・もう攻撃した など)');
+      setSel(null);
+      return;
+    }
+    setSel({ hand: i });
+    setHint('');
+  };
+  const tapMon = (p, m) => {
+    if (mode === 'guard' && sel) {
+      const o = guardOpts.find((x) => x.hand === sel.hand && x.mon === m && p === CARD_ME);
+      if (o) step(o);
+      return;
+    }
+    if (mode !== 'attack' || !sel) return;
+    if (monChosen === undefined) {
+      if (p === CARD_ME && selMons.includes(m)) { Audio_.se.tap(); setSel({ ...sel, mon: m }); }
+      return;
+    }
+    const o = finalOpts.find((x) => x.target && x.target.p === p && x.target.m === m);
+    if (o) step(o);
+  };
+  const markOf = (p, m) => {
+    if (mode === 'attack' && sel) {
+      if (monChosen === undefined) return p === CARD_ME && selMons.includes(m) ? 'user' : null;
+      if (p === CARD_ME && m === monChosen) return 'acting';
+      if (finalOpts.some((o) => o.target && o.target.p === p && o.target.m === m)) return 'target';
+    }
+    if (mode === 'guard' && sel && p === CARD_ME && guardOpts.some((o) => o.hand === sel.hand && o.mon === m)) return 'user';
+    if (st.pending) {
+      const t = st.pending.targets[st.pending.ti];
+      if (t && t.p === p && t.m === m) return 'target';
+      if (st.pending.attacker === p && st.pending.mon === m) return 'acting';
+    }
+    return null;
+  };
+  const handUsable = (i) => {
+    if (mode === 'attack') return attackOpts.some((o) => o.hand.includes(i));
+    if (mode === 'guard') return guardOpts.some((o) => o.hand === i);
+    return mode === 'guts' || mode === 'setup' || mode === 'discard';
+  };
+
+  // まんなかの「いま起きたこと」(新しい2行)。守りの番は、何が来ているかを出す
+  const pd = st.pending;
+  const pendingText = pd ? (() => {
+    const c = cardOf(db, pd.main);
+    const t = pd.targets[pd.ti];
+    const tm = t ? st.players[t.p].mons[t.m] : null;
+    const atk = pd.mon >= 0 ? st.players[pd.attacker].mons[pd.mon].name : 'ブリーダー';
+    return `${atk}の「${c.name}」(ダメージ${pd.base * pd.mult})が${tm ? tm.name : ''}に！`;
+  })() : null;
+  const logLines = st.log.filter((l) => l.kind !== 'turn').slice(-2);
+
+  const strip = (p) => {
+    const pl = st.players[p];
+    return (
+      <div className="flex items-center gap-1.5 text-[11px] font-bold">
+        {p === CARD_CPU && <span className="flex">{pl.hand.map((_, i) => <b key={i} className="-ml-1 h-[18px] w-[13px] rounded-[2px] border border-violet-300 bg-gradient-to-br from-violet-600 to-indigo-900 first:ml-0"/>)}</span>}
+        <span className="rounded-md border border-white/20 bg-white/10 px-1.5 py-0.5">山札 {pl.deck.length}</span>
+        <span className="flex items-center gap-0.5 rounded-md border border-amber-300/40 bg-amber-500/10 px-1.5 py-0.5 text-amber-100">ガッツ {pl.guts.length}</span>
+        <button type="button" onClick={() => setDiscard({ tab: p })} className="rounded-md border border-white/20 bg-white/10 px-1.5 py-0.5">捨て札 {pl.discard.length}</button>
+      </div>
+    );
+  };
+
+  const footer = (() => {
+    const btn = 'mh-button min-h-[44px] flex-1 rounded-xl text-[14px] font-black active:scale-[.98] disabled:opacity-40';
+    if (st.winner !== null) return <div className="flex-1 text-center text-[15px] font-black text-amber-200">{st.winner === CARD_ME ? '勝ち！' : '負け…'}</div>;
+    if (mode === 'wait') return <div className="flex-1 text-center text-[13px] font-bold text-slate-300">{who.name}の番…</div>;
+    if (mode === 'setup') return <button type="button" className={`${btn} mh-button-primary`} onClick={() => step({ type: 'setupGuts', hand: picks })}>{picks.length ? `${picks.length}枚をガッツにして始める` : 'ガッツにしないで始める'}</button>;
+    if (mode === 'discard') return <button type="button" disabled={picks.length !== st.pendingDiscard.n} className={`${btn} mh-button-danger`} onClick={() => step({ type: 'discard', hand: picks })}>{`${st.pendingDiscard.n}枚えらんで捨てる`}</button>;
+    if (mode === 'guard') return <button type="button" className={`${btn} border border-white/20 bg-slate-800`} onClick={() => step({ type: 'pass' })}>守らない</button>;
+    if (mode === 'guts') return <button type="button" className={`${btn} bg-gradient-to-b from-orange-400 to-orange-600`} onClick={() => step({ type: 'guts', hand: picks })}>{picks.length ? `${picks.length}枚をガッツにしてターン終了` : 'ガッツにしないでターン終了'}</button>;
+    const useBtn = sel && monChosen !== undefined && finalOpts.length && !needTarget;
+    return (<>
+      {useBtn ? <button type="button" className={`${btn} mh-button-primary`} onClick={() => step(finalOpts[0])}>使う</button> : null}
+      <button type="button" className={`${btn} border border-violet-300/60 bg-violet-900`} onClick={() => step({ type: 'endAttacks' })}>攻撃おわり → ガッツへ</button>
+    </>);
+  })();
+  const guide = mode === 'attack' ? (sel ? (monChosen === undefined ? '使う子をタップ' : needTarget ? '狙う相手をタップ' : '「使う」をタップ') : '技をタップ → 相手のモンスターをタップ')
+    : mode === 'guard' ? (guardOpts.length ? '使える回避・防御だけが明るくなっています' : '使える回避・防御はありません')
+    : mode === 'guts' ? 'ガッツにするカードをタップ(何枚でも)'
+    : mode === 'setup' ? '後攻: 始める前に2枚までガッツにできます'
+    : mode === 'discard' ? `捨てるカードを${st.pendingDiscard ? st.pendingDiscard.n : 0}枚タップ` : '';
+
+  return (
+    <div data-mh-screen data-card-battle data-card-mode={mode} className="relative flex h-full min-h-0 flex-1 flex-col overflow-hidden text-white" style={{ background: 'radial-gradient(ellipse at 50% 45%,#3b2a6b 0%,#1b1438 55%,#0d0a1f 100%)' }}>
+      <div className="flex h-[44px] shrink-0 items-center justify-between bg-black/35 px-2">
+        <button type="button" onClick={() => setQuit(true)} className="rounded-lg border border-white/20 px-2 py-1 text-[12px] font-black text-slate-200">投了</button>
+        <span className="text-[15px] font-black">MFバトルカード</span>
+        <span className="text-[12px] font-bold text-violet-200">ターン {Math.max(1, st.turn)} ・ {st.active === CARD_ME ? 'あなたの番' : `${who.name}の番`}</span>
+      </div>
+      {/* 相手の帯(隠さない) */}
+      <div className="flex h-[50px] shrink-0 items-center gap-2 px-2">
+        <img src={assistantFaceImage(who, face)} alt={who.name} className="h-[42px] w-[42px] rounded-xl border-2 bg-black object-cover object-top" style={{ borderColor: who.accent }}/>
+        <div className="min-w-0 text-[13px] font-black leading-tight">{who.name}<small className="block text-[10px] font-bold text-rose-200">{CARD_LEVEL_LABEL[game.level]}</small></div>
+        <div className="ml-auto">{strip(CARD_CPU)}</div>
+      </div>
+      {/* 吹き出し(帯の下・相手のモンスターの上。指の操作は下へ通す) */}
+      {bubble && (
+        <div key={bubble.key} data-card-bubble className="pointer-events-none absolute left-[56px] right-2 top-[150px] z-10 rounded-2xl border-[3px] bg-white px-2.5 py-1 text-[13px] font-extrabold leading-snug text-[#1f1333] shadow-lg" style={{ borderColor: who.accent, ...JA_WRAP_STYLE }}>
+          {bubble.text}
+        </div>
+      )}
+      <div className="flex shrink-0 items-start justify-around px-1">
+        {opp.mons.map((_, m) => <CardMonSlot key={m} db={db} st={st} p={CARD_CPU} m={m} mark={markOf(CARD_CPU, m)} fx={fx.filter((f) => f.p === CARD_CPU && f.m === m)} onTap={() => tapMon(CARD_CPU, m)} press={press}/>)}
+      </div>
+      <div className="flex min-h-[54px] shrink-0 items-center justify-center px-3 py-1">
+        <div data-card-log className="rounded-xl border border-white/15 bg-black/45 px-3 py-1 text-center text-[13px] font-bold leading-snug" style={JA_WRAP_STYLE}>
+          {pendingText ? <span className="text-rose-200">{pendingText}</span> : logLines.map((l, i) => <div key={i} className={i === logLines.length - 1 ? '' : 'text-[11px] text-violet-200'}>{l.text}</div>)}
+        </div>
+      </div>
+      <div className="flex shrink-0 items-end justify-around px-1">
+        {me.mons.map((_, m) => <CardMonSlot key={m} db={db} st={st} p={CARD_ME} m={m} mark={markOf(CARD_ME, m)} fx={fx.filter((f) => f.p === CARD_ME && f.m === m)} onTap={() => tapMon(CARD_ME, m)} press={press}/>)}
+      </div>
+      <div className="flex shrink-0 justify-end px-2 py-1">{strip(CARD_ME)}</div>
+      <div className="min-h-0 flex-1"/>
+      {guide && <div className="mx-auto mb-1 shrink-0 rounded-lg bg-amber-300 px-2 py-0.5 text-[11px] font-black text-slate-900">{hint || guide}</div>}
+      {!guide && hint && <div className="mx-auto mb-1 shrink-0 rounded-lg bg-amber-300 px-2 py-0.5 text-[11px] font-black text-slate-900">{hint}</div>}
+      {mode === 'attack' && sel && monChosen !== undefined && sets.length > 1 && (
+        <div className="mb-1 flex shrink-0 flex-wrap justify-center gap-1 px-2">
+          {sets.map((s) => <button key={s} type="button" onClick={() => setSel({ ...sel, mon: monChosen, set: s })} className={`rounded-lg border px-2 py-1 text-[12px] font-black ${s === setChosen ? 'border-amber-300 bg-amber-500/25' : 'border-white/20 bg-slate-800'}`}>{JSON.parse(s).map((i) => cardOf(db, me.hand[i]).name).join('＋')}</button>)}
+        </div>
+      )}
+      <div data-card-hand className="flex shrink-0 items-end justify-center gap-1 px-1 pb-1">
+        {me.hand.map((no, i) => {
+          const c = cardOf(db, no);
+          const on = handUsable(i);
+          const up = (sel && sel.hand === i) || picks.includes(i) || (setChosen && JSON.parse(setChosen).includes(i));
+          return (
+            <div key={`${no}-${i}`} data-card-hand-card={i} {...press(no, () => tapHand(i))} className={`flex w-[19%] max-w-[76px] flex-col items-center transition-transform ${up ? '-translate-y-3' : ''} ${myTurn && !on ? 'opacity-45' : ''}`}>
+              <img src={CARD_IMG(c ? c.img : no)} alt={c ? c.name : no} className={`w-full rounded-[5px] shadow-[0_3px_6px_#000] ${up ? 'outline outline-[3px] outline-amber-300' : ''}`}/>
+              <div className="mt-0.5 w-full rounded-md bg-black/60 py-0.5 text-center leading-tight">
+                <b className="block truncate text-[12px]">{c ? c.name : no}</b>
+                <span className="block text-[11px] font-extrabold text-amber-200">ガッツ{c ? c.guts : '-'}</span>
+                <span className="block text-[11px] font-extrabold text-amber-200">{cardCaption(c)}</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div className="flex shrink-0 gap-2 px-2.5 pb-2 pt-1" style={{ paddingBottom: 'max(8px, env(safe-area-inset-bottom))' }}>{footer}</div>
+      {detail && <CardDetailModal db={db} no={detail} onClose={() => setDetail(null)}/>}
+      {discard && <CardDiscardModal db={db} st={st} initial={discard.tab} onDetail={(no) => setDetail(no)} onClose={() => setDiscard(null)}/>}
+      {quit && <ConfirmSheet title="投了しますか？" message={'投了すると負けになります(カードポイントはもらえません)'} confirmLabel="投了する" danger onCancel={() => setQuit(false)} onConfirm={() => { setQuit(false); finished.current = true; onFinish({ outcome: 'surrender', st }); }}/>}
+    </div>
+  );
+};
+
+// ---- トップ・スターター選び・相手えらび・結果 ----
+const CardBattleScreen = ({ screen, onNavigate, onExit, seenStoryIds = [], debug = false, onBgm }) => {
+  const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
+  const [save, setSave] = useState(null);
+  const [view, setView] = useState('top');
+  const [kitPick, setKitPick] = useState(null);
+  const [foe, setFoe] = useState({ who: 'mua', level: 'easy' });
+  const [game, setGame] = useState(null);
+  const [result, setResult] = useState(null);
+  const [notice, setNotice] = useState('');
+  const [confirmReset, setConfirmReset] = useState(false);
+  const [detail, setDetail] = useState(null);
+  const press = useCardLongPress((no) => setDetail(no));
+
+  const load = async () => {
+    const K = CARD_SAVE_KEYS;
+    const [collection, decks, point, starter, daily, record, unlocked] = await Promise.all([
+      storeGet(K.collection, null), storeGet(K.decks, null), storeGet(K.point, null), storeGet(K.starter, null),
+      storeGet(K.daily, null), storeGet(K.record, null), storeGet(K.cpuUnlocked, null),
+    ]);
+    const next = {
+      collection: cardNormalizeCollection(collection), decks: cardNormalizeDecks(decks), point: cardNormalizePoint(point),
+      starter: cardNormalizeStarter(starter), daily: cardNormalizeDaily(daily, cardTodayJst()), record: cardNormalizeRecord(record),
+      unlocked: cardNormalizeCpuUnlocked(unlocked),
+    };
+    setSave(next);
+    if (!next.starter) setView('starter');
+    return next;
+  };
+  useEffect(() => { void load(); }, []);
+  // 対戦の画面から外へ出たら(戻るなど)、トップに戻す
+  useEffect(() => { if (screen === 'CARD_TOP' && game && !result) setGame(null); }, [screen]);
+
+  // 保存はまとめて1つの取引で(失敗したら全部戻す)
+  const persist = async (patch) => {
+    const K = CARD_SAVE_KEYS;
+    const entries = Object.entries(patch).map(([k, next]) => ({ key: K[k], next, before: save[k] === undefined ? null : save[k] }));
+    const ok = await saveStoredValuesOrRollback(entries, storeGet, storeSet);
+    if (ok) setSave((cur) => ({ ...cur, ...patch }));
+    return ok;
+  };
+
+  if (!db) return <div data-mh-screen className={SCREEN_SHELL_CLASS}><ScreenHead title="MFバトルカード" onBack={onExit}/><ScreenEmpty emoji="🃏" lines={['カードのデータを読み込めませんでした']}/></div>;
+  if (!save) return <div data-mh-screen className={SCREEN_SHELL_CLASS}><ScreenHead title="MFバトルカード" onBack={onExit}/><ScreenEmpty emoji="⏳" lines={['読み込み中…']}/></div>;
+
+  if (screen === 'CARD_BATTLE' && game) {
+    return <CardBattleBoard key={game.key} db={db} game={game} onFinish={async ({ outcome }) => {
+      const reward = cardCpuReward(cardNormalizeDaily(save.daily, cardTodayJst()), game.level, outcome);
+      const rec = cardNormalizeRecord(save.record);
+      const nextRecord = {
+        ...rec,
+        cpu: { ...rec.cpu, [outcome]: rec.cpu[outcome] + 1 },
+        beaten: outcome === 'win' ? { ...rec.beaten, [game.who]: true } : rec.beaten,
+        recent: [{ at: Date.now(), who: game.who, level: game.level, outcome }, ...rec.recent].slice(0, 30),
+      };
+      const nextUnlocked = outcome === 'win' ? cardUnlockAfterWin(save.unlocked, game.level) : save.unlocked;
+      const opened = CARD_LEVEL_ORDER.find((lv) => nextUnlocked[lv] && !save.unlocked[lv]) || null;
+      const ok = await persist({ point: save.point + reward.total, daily: reward.daily, record: nextRecord, unlocked: nextUnlocked });
+      setResult({ outcome, reward, opened, saved: ok, who: game.who, level: game.level });
+      onBgm && onBgm(null);
+      onNavigate('CARD_TOP');
+      setView('result');
+    }}/>;
+  }
+
+  const allAssistants = typeof ASSISTANTS !== 'undefined' ? ASSISTANTS : [];
+  const foes = (debug ? allAssistants : assistantsUnlockedFrom(seenStoryIds)).filter((a) => CARD_AI_HABITS[a.id]);
+  const activeDeck = save.decks.decks.find((d) => d.id === save.decks.active) || save.decks.decks[0] || null;
+  const deckIssues = activeDeck ? cardDeckProblems(db, activeDeck) : ['デッキがありません'];
+  const btn = 'mh-button min-h-[52px] w-full rounded-2xl font-black active:scale-[.98] disabled:opacity-40';
+
+  const startBattle = (pick = foe) => {
+    if (!activeDeck || deckIssues.length) { setNotice(deckIssues.join('・')); return; }
+    const cpuDeck = cardAiBuildDeck(db, pick.who, pick.level);
+    const seed = (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0;
+    const first = Math.random() < 0.5 ? CARD_ME : CARD_CPU;
+    const assistant = allAssistants.find((a) => a.id === pick.who);
+    const st = cardCreateGame(db, { decks: [{ monsters: activeDeck.monsters, cards: activeDeck.cards }, cpuDeck], names: ['あなた', assistant ? assistant.name : 'あいて'], seed, first });
+    setResult(null);
+    setGame({ key: `${seed}`, st, who: pick.who, level: pick.level });
+    onBgm && onBgm(CARD_AI_BGM[pick.who] || null);
+    onNavigate('CARD_BATTLE');
+  };
+
+  // ---- スターター選び(一度きり) ----
+  if (view === 'starter') {
+    const kits = Object.values(db.starters);
+    const pick = kitPick ? db.starters[kitPick] : null;
+    return (
+      <div data-mh-screen data-card-top="starter" className={SCREEN_SHELL_CLASS}>
+        <ScreenHead title="スターターをえらぶ" accent="text-amber-200" onBack={save.starter ? () => setView('top') : onExit} note="最初の1つは無料。えらばなかった2つは、あとでカードポイントで買えます"/>
+        <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
+          {kits.map((k) => (
+            <button key={k.id} type="button" data-card-kit={k.id} onClick={() => { Audio_.se.tap(); setKitPick(k.id); }} className={`w-full rounded-2xl border-2 p-2 text-left ${kitPick === k.id ? 'border-amber-300 bg-amber-500/15' : 'border-white/10 bg-slate-900/70'}`}>
+              <div className="text-[15px] font-black text-white">{k.name}</div>
+              <div className="mt-1 flex gap-1.5">{k.monsters.map((no) => <img key={no} src={CARD_IMG(cardMonsterOf(db, no).img)} alt={cardMonsterOf(db, no).name} className="w-[27%] rounded-md"/>)}</div>
+              <div className="mt-1 text-[12px] font-bold text-slate-300">{k.monsters.map((no) => cardMonsterOf(db, no).name).join('・')} と技カード50枚</div>
+            </button>
+          ))}
+        </div>
+        <div className={SCREEN_FOOTER_CLASS}>
+          <button type="button" disabled={!pick} className={`${btn} mh-button-primary`} onClick={async () => {
+            const g = cardGrantStarter(db, save, kitPick, Date.now());
+            if (!g) { setNotice('スターターはもう受け取っています'); setView('top'); return; }
+            const ok = await persist(g);
+            setNotice(ok ? `「${pick.name}」を受け取りました。カードポイント${CARD_STARTER_POINT}もいっしょに！` : '保存できませんでした。もう一度お試しください');
+            if (ok) setView('top');
+          }}>{pick ? `「${pick.name}」にする` : 'キットをえらんでください'}</button>
+        </div>
+      </div>
+    );
+  }
+
+  // ---- 相手えらび(助手・難易度) ----
+  if (view === 'foe') {
+    const a = allAssistants.find((x) => x.id === foe.who) || foes[0];
+    const line = a ? cardPickLine(a.id, 'challenge', null, () => 0.0) : null;
+    return (
+      <div data-mh-screen data-card-top="foe" className={SCREEN_SHELL_CLASS}>
+        <ScreenHead title="コンピューター戦" accent="text-amber-200" onBack={() => setView('top')} note="相手の助手と強さをえらびます"/>
+        <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
+          <div className="grid grid-cols-3 gap-1.5">
+            {foes.map((x) => (
+              <button key={x.id} type="button" data-card-foe={x.id} onClick={() => { Audio_.se.tap(); setFoe((f) => ({ ...f, who: x.id })); }} className={`relative flex flex-col items-center rounded-xl border-2 p-1 ${foe.who === x.id ? 'bg-white/10' : 'border-white/10 bg-slate-900/70'}`} style={foe.who === x.id ? { borderColor: x.accent } : undefined}>
+                <img src={assistantFaceImage(x, 'normal')} alt={x.name} className="h-[52px] w-[52px] rounded-lg object-cover object-top"/>
+                <span className="text-[13px] font-black">{x.name}</span>
+                {save.record.beaten[x.id] && <span className="absolute right-1 top-1 rounded bg-amber-400 px-1 text-[10px] font-black text-slate-900">勝</span>}
+              </button>
+            ))}
+          </div>
+          {a && (
+            <div className="flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2">
+              <img src={assistantFullImage(a, 'wink')} alt={a.name} className="h-[150px] w-[42%] shrink-0 object-contain object-bottom"/>
+              <div className="min-w-0 flex-1 pb-2">
+                <div className="text-[11px] font-bold text-slate-400">{a.tagline}</div>
+                <div className="mt-1 rounded-2xl border-2 bg-white px-2 py-1 text-[13px] font-extrabold leading-snug text-[#1f1333]" style={{ borderColor: a.accent, ...JA_WRAP_STYLE }}>{line ? line.text : ''}</div>
+              </div>
+            </div>
+          )}
+          <ScreenSectionLabel note="勝つと次の強さが開きます">強さ</ScreenSectionLabel>
+          <div className="grid grid-cols-5 gap-1">
+            {CARD_LEVEL_ORDER.map((lv) => {
+              const open = cardLevelOpen(save.unlocked, lv) || debug;
+              return (
+                <button key={lv} type="button" data-card-level={lv} disabled={!open} onClick={() => { Audio_.se.tap(); setFoe((f) => ({ ...f, level: lv })); }} className={`min-h-[52px] rounded-xl border-2 text-[11px] font-black ${foe.level === lv ? 'border-amber-300 bg-amber-500/20 text-amber-100' : 'border-white/10 bg-slate-900 text-slate-200'} disabled:opacity-35`}>
+                  {CARD_LEVEL_LABEL[lv]}<span className="block text-[10px] text-amber-200">{open ? `勝ち${CARD_AI_LEVELS[lv].point}` : '🔒'}</span>
+                </button>
+              );
+            })}
+          </div>
+          {debug && <p className="text-[11px] font-bold text-slate-400">(デバッグ: まだ開いていない強さも選べます。開いた印は勝ったときだけ付きます)</p>}
+          <div className={SCREEN_PANEL_FLAT_CLASS}>
+            <div className="text-[12px] font-bold text-slate-300">使うデッキ: <b className="text-white">{activeDeck ? activeDeck.name : 'なし'}</b></div>
+            {deckIssues.length > 0 && <div className="mt-1 text-[12px] font-bold text-rose-300">{deckIssues.join('・')}</div>}
+            <div className="mt-1 text-[11px] font-bold text-slate-400">今日もらったカードポイント(コンピューター戦): {save.daily.cpuPoint} / {CARD_CPU_DAILY_MAX}{save.daily.firstWin ? '' : '・今日はじめての勝ちで +50'}</div>
+          </div>
+          {notice && <p className="text-[12px] font-bold text-amber-200">{notice}</p>}
+        </div>
+        <div className={SCREEN_FOOTER_CLASS}>
+          <button type="button" data-card-start className={`${btn} mh-button-primary`} disabled={!a || deckIssues.length > 0} onClick={() => startBattle(foe)}>対戦する</button>
+        </div>
+      </div>
+    );
+  }
+
+  // ---- 結果 ----
+  if (view === 'result' && result) {
+    const a = allAssistants.find((x) => x.id === result.who);
+    const win = result.outcome === 'win';
+    const line = a ? cardPickLine(a.id, win ? 'lose' : 'win', null) : null; // 助手から見た勝ち負け
+    const r = result.reward;
+    return (
+      <div data-mh-screen data-card-top="result" data-card-outcome={result.outcome} className={SCREEN_SHELL_CLASS}>
+        <ScreenHead title={win ? '勝ち！' : result.outcome === 'surrender' ? '投了' : '負け…'} accent={win ? 'text-amber-200' : 'text-slate-300'} onBack={() => setView('top')}/>
+        <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
+          {a && (
+            <div className="flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2">
+              <img src={assistantFullImage(a, win ? 'crying' : 'happy')} alt={a.name} className="h-[220px] w-[46%] shrink-0 object-contain object-bottom"/>
+              <div className="mb-2 min-w-0 flex-1 rounded-2xl border-2 bg-white px-2 py-1 text-[13px] font-extrabold leading-snug text-[#1f1333]" style={{ borderColor: a.accent, ...JA_WRAP_STYLE }}>{line ? line.text : ''}</div>
+            </div>
+          )}
+          <div className={SCREEN_PANEL_CLASS}>
+            <div className="text-[13px] font-black text-amber-200">もらったカードポイント: {r.total}</div>
+            <div className="mt-1 text-[12px] font-bold text-slate-300">{CARD_LEVEL_LABEL[result.level]}の{win ? '勝ち' : result.outcome === 'lose' ? '負け' : '投了'}: {r.got}{r.capped ? `(今日の上限${CARD_CPU_DAILY_MAX}に届きました)` : ''}</div>
+            {r.bonus > 0 && <div className="text-[12px] font-bold text-slate-300">今日はじめての勝ち: +{r.bonus}</div>}
+            <div className="mt-1 text-[12px] font-bold text-slate-300">いまのカードポイント: {save.point}</div>
+            {result.opened && <div className="mt-1 text-[13px] font-black text-emerald-300">{CARD_LEVEL_LABEL[result.opened]}が選べるようになりました！</div>}
+            {!result.saved && <div className="mt-1 text-[12px] font-bold text-rose-300">保存できませんでした(カードポイントは増えていません)</div>}
+          </div>
+        </div>
+        <div className={`${SCREEN_FOOTER_CLASS} grid grid-cols-2 gap-2`}>
+          <button type="button" className={`${btn} mh-button-primary`} onClick={() => { const again = { who: result.who, level: result.level }; setFoe(again); startBattle(again); }}>もう一度</button>
+          <button type="button" className={`${btn} mh-button-secondary border border-white/20 bg-slate-800`} onClick={() => setView('foe')}>相手をえらぶ</button>
+        </div>
+      </div>
+    );
+  }
+
+  // ---- トップ ----
+  const soon = (label) => <button type="button" disabled className={`${btn} border border-white/10 bg-slate-900 text-slate-400`}>{label}<span className="block text-[10px] font-bold">つぎの区切りで作ります</span></button>;
+  return (
+    <div data-mh-screen data-card-top="top" className={SCREEN_SHELL_CLASS}>
+      <ScreenHead title="MFバトルカード" accent="text-amber-200" onBack={onExit} backLabel="デバッグ設定へ戻る" note={debug ? 'デバッグ専用(まだ公開していません)' : ''}/>
+      <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
+        <div className={`${SCREEN_PANEL_CLASS} flex items-center justify-between`}>
+          <div className="text-[13px] font-black text-slate-200">カードポイント</div>
+          <div data-card-point className="text-xl font-black text-amber-200">{save.point}</div>
+        </div>
+        {activeDeck && (
+          <div className={SCREEN_PANEL_CLASS}>
+            <div className="text-[12px] font-bold text-slate-400">いまのデッキ</div>
+            <div className="text-[14px] font-black text-white">{activeDeck.name}</div>
+            <div className="mt-1 flex gap-1.5">{activeDeck.monsters.map((no) => { const m = cardMonsterOf(db, no); return m ? <img key={no} {...press(no)} src={CARD_IMG(m.img)} alt={m.name} className="w-[22%] rounded-md"/> : null; })}</div>
+            <div className="mt-1 text-[11px] font-bold text-slate-400">戦績(コンピューター戦): {save.record.cpu.win}勝 {save.record.cpu.lose}敗{save.record.cpu.surrender ? `・投了${save.record.cpu.surrender}` : ''}</div>
+          </div>
+        )}
+        {notice && <p className="text-[12px] font-bold text-amber-200">{notice}</p>}
+        <button type="button" data-card-cpu className={`${btn} mh-button-primary`} disabled={!activeDeck} onClick={() => { Audio_.se.tap(); setNotice(''); setView('foe'); }}>コンピューター戦</button>
+        <div className="grid grid-cols-2 gap-2">{soon('デッキ編成')}{soon('マーケットへ')}{soon('カード図鑑')}{soon('ルール')}</div>
+        {debug && (
+          <div className={`${SCREEN_PANEL_FLAT_CLASS} space-y-1`}>
+            <div className="text-[11px] font-bold text-slate-400">デバッグ: カードバトルの記録(mh_card_* の新しいキーだけ)</div>
+            <button type="button" className="mh-button mh-button-danger min-h-[44px] w-full rounded-xl text-[12px] font-black" onClick={() => setConfirmReset(true)}>カードバトルの記録を消して、スターター選びからやり直す</button>
+          </div>
+        )}
+      </div>
+      {detail && <CardDetailModal db={db} no={detail} onClose={() => setDetail(null)}/>}
+      {confirmReset && <ConfirmSheet title="カードバトルの記録を消しますか？" message={'持っているカード・デッキ・カードポイント・戦績・スターターの印を消します。\nほかのモードの保存データには触れません。'} confirmLabel="消す" danger onCancel={() => setConfirmReset(false)} onConfirm={async () => {
+        setConfirmReset(false);
+        await Promise.all(Object.values(CARD_SAVE_KEYS).map((k) => storeSet(k, null)));
+        setNotice('');
+        await load();
+      }}/>}
+    </div>
+  );
+};

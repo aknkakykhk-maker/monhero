@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c5066c4153c31500
+// source-sha256: ae3b418b3933d439
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-24 10:58";
+const BUILD_DATE = "2026-10-24 11:39";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -82135,6 +82135,2812 @@ const loadAssistantChatMemoFor = async assistantId => {
   const [v1, v2] = await Promise.all([storeGet(ASSISTANT_CHAT_MEMO_KEY, {}, false), storeGet(ASSISTANT_CHAT_MEMO_V2_KEY, {}, false)]);
   return normalizeAssistantChatMemo(v2, v1)[assistantId] || null;
 };
+const CARD_BATTLE_HAND_MAX = 5;
+const CARD_BATTLE_DECK_SIZE = 50;
+const CARD_BATTLE_SETUP_GUTS_MAX = 2;
+const CARD_BATTLE_LOG_MAX = 80;
+const cardRngNext = s => {
+  let t = s + 0x6D2B79F5 >>> 0;
+  let r = Math.imul(t ^ t >>> 15, 1 | t);
+  r = r + Math.imul(r ^ r >>> 7, 61 | r) ^ r;
+  return {
+    s: t,
+    v: ((r ^ r >>> 14) >>> 0) / 4294967296
+  };
+};
+const cardShuffle = (arr, seed) => {
+  const a = arr.slice();
+  let s = seed >>> 0;
+  for (let i = a.length - 1; i > 0; i--) {
+    const n = cardRngNext(s);
+    s = n.s;
+    const j = Math.floor(n.v * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return {
+    list: a,
+    seed: s
+  };
+};
+const cardEff = (card, t) => card && Array.isArray(card.effects) ? card.effects.find(e => e && e.t === t) : null;
+const cardHasEff = (card, t) => !!cardEff(card, t);
+const cardOf = (db, no) => db && db.cards && db.cards[no] || null;
+const cardMonsterOf = (db, no) => db && db.monsters && db.monsters[no] || null;
+const cardIsAttackKind = k => k === 'pow' || k === 'int' || k === 'spe';
+const cardIsGuardKind = k => k === 'dge' || k === 'blk';
+const cardClone = st => JSON.parse(JSON.stringify(st));
+const cardOther = p => 1 - p;
+const cardUsableBy = (card, mon) => {
+  if (!card || !mon || mon.ko) return false;
+  if (card.user === 'any') return true;
+  if (card.user === 'breeder') return false;
+  if (card.user === mon.species) return true;
+  if (mon.main && card.user === mon.main) return true;
+  if (mon.sub && card.user === mon.sub && cardIsGuardKind(card.kind)) return true;
+  return false;
+};
+const cardMonType = (mon, turn) => mon.airUntil >= turn ? 'air' : mon.type;
+const cardLog = (st, text, extra) => {
+  st.log.push({
+    turn: st.turn,
+    text,
+    ...(extra || {})
+  });
+  if (st.log.length > CARD_BATTLE_LOG_MAX) st.log.splice(0, st.log.length - CARD_BATTLE_LOG_MAX);
+};
+const cardEvent = (st, ev) => {
+  st.events.push(ev);
+};
+const cardCreateGame = (db, {
+  decks,
+  names = ['あなた', 'あいて'],
+  seed = 1,
+  first = 0
+}) => {
+  let s = seed >>> 0;
+  const players = decks.map((d, i) => {
+    const sh = cardShuffle(d.cards, s);
+    s = sh.seed;
+    const mons = d.monsters.map(no => {
+      const m = cardMonsterOf(db, no);
+      return {
+        no,
+        species: m.species,
+        name: m.name,
+        main: m.main || null,
+        sub: m.sub || null,
+        type: m.type,
+        life: m.life,
+        max: m.life,
+        ko: false,
+        attacks: 0,
+        lastCard: null,
+        stunTurn: -1,
+        airUntil: -1,
+        mult: null
+      };
+    });
+    const deck = sh.list;
+    const hand = deck.splice(deck.length - CARD_BATTLE_HAND_MAX, CARD_BATTLE_HAND_MAX).reverse();
+    return {
+      name: names[i] || `P${i + 1}`,
+      mons,
+      deck,
+      hand,
+      guts: [],
+      discard: [],
+      breederUsed: false
+    };
+  });
+  const st = {
+    v: 1,
+    seed: s,
+    turn: 0,
+    first,
+    active: cardOther(first),
+    phase: 'setup',
+    players,
+    pending: null,
+    forbid: {},
+    winner: null,
+    reason: null,
+    log: [],
+    events: []
+  };
+  cardLog(st, `${players[first].name}が先攻、${players[cardOther(first)].name}が後攻`);
+  return st;
+};
+const cardGameOver = (st, winner, reason) => {
+  if (st.winner !== null) return;
+  st.winner = winner;
+  st.reason = reason;
+  st.phase = 'over';
+  st.pending = null;
+  cardLog(st, `${st.players[winner].name}の勝ち(${reason})`, {
+    kind: 'over'
+  });
+  cardEvent(st, {
+    t: 'over',
+    winner,
+    reason
+  });
+};
+const cardBeginTurn = st => {
+  st.turn += 1;
+  const p = st.active;
+  const me = st.players[p];
+  me.breederUsed = false;
+  st.forbid = {};
+  me.mons.forEach(m => {
+    m.attacks = 0;
+    m.lastCard = null;
+  });
+  st.phase = 'main';
+  cardLog(st, `ターン${st.turn}: ${me.name}の番`, {
+    kind: 'turn'
+  });
+  cardEvent(st, {
+    t: 'turn',
+    p,
+    turn: st.turn
+  });
+  if (st.turn === 1) return;
+  if (me.hand.length >= CARD_BATTLE_HAND_MAX) {
+    if (!me.deck.length) {
+      cardGameOver(st, cardOther(p), '山札切れ');
+      return;
+    }
+    me.guts.push(me.deck.pop());
+    cardLog(st, `${me.name}の手札は5枚なので、山札の上をガッツにした`);
+    return;
+  }
+  while (me.hand.length < CARD_BATTLE_HAND_MAX) {
+    if (!me.deck.length) {
+      cardGameOver(st, cardOther(p), '山札切れ');
+      return;
+    }
+    me.hand.push(me.deck.pop());
+  }
+};
+const cardPayGuts = (st, p, n) => {
+  const me = st.players[p];
+  for (let i = 0; i < n; i++) me.discard.push(me.guts.pop());
+};
+const cardLoseGuts = (st, p, n) => {
+  const me = st.players[p];
+  const k = n === 'all' ? me.guts.length : Math.min(n, me.guts.length);
+  for (let i = 0; i < k; i++) me.discard.push(me.guts.pop());
+  return k;
+};
+const cardTakeFromHand = (st, p, idxs) => {
+  const me = st.players[p];
+  const sorted = [...new Set(idxs)].sort((a, b) => b - a);
+  const taken = sorted.map(i => me.hand[i]);
+  sorted.forEach(i => me.hand.splice(i, 1));
+  return taken;
+};
+const cardActionCost = (db, st, p, hand, idxs) => idxs.reduce((s, i) => s + ((cardOf(db, hand[i]) || {}).guts || 0), 0);
+const cardMonCanAttack = (db, st, p, mi, card) => {
+  const mon = st.players[p].mons[mi];
+  if (!mon || mon.ko) return false;
+  if (mon.stunTurn === st.turn) return false;
+  if (mon.attacks === 0) return true;
+  const prev = cardOf(db, mon.lastCard);
+  const chainNow = cardEff(card, 'chain');
+  const chainPrev = cardEff(prev, 'chain');
+  if (chainNow && chainPrev && chainNow.names.includes(prev.name) && chainPrev.names.includes(card.name)) return true;
+  return false;
+};
+const cardCanTarget = (card, target, turn) => {
+  if (!target || target.ko) return false;
+  const ty = cardMonType(target, turn);
+  const ch = cardEff(card, 'cannotHit');
+  if (ch && ch.type === ty) return false;
+  const oh = cardEff(card, 'onlyHit');
+  if (oh && oh.type !== ty) return false;
+  return true;
+};
+const cardAreaTargets = (st, p, mi, card) => {
+  const ar = cardEff(card, 'area');
+  const out = [];
+  const pushIf = (q, j) => {
+    const t = st.players[q].mons[j];
+    if (t.ko) return;
+    if (ar.only && cardMonType(t, st.turn) !== ar.only) return;
+    out.push({
+      p: q,
+      m: j
+    });
+  };
+  st.players[cardOther(p)].mons.forEach((_, j) => pushIf(cardOther(p), j));
+  if (ar.who === 'others') st.players[p].mons.forEach((_, j) => {
+    if (j !== mi) pushIf(p, j);
+  });
+  return out;
+};
+const cardAttackOptions = (db, st) => {
+  if (st.phase !== 'main' || st.pending || st.winner !== null) return [];
+  const p = st.active;
+  const me = st.players[p];
+  const opp = st.players[cardOther(p)];
+  const guts = me.guts.length;
+  const out = [];
+  me.hand.forEach((no, hi) => {
+    const card = cardOf(db, no);
+    if (!card || !card.ready || !cardIsAttackKind(card.kind)) return;
+    if (cardHasEff(card, 'attach')) return;
+    if (card.user === 'breeder') {
+      if (me.breederUsed) return;
+      if (card.guts > guts) return;
+      if (card.kind === 'spe') {
+        if (cardHasEff(card, 'heal')) me.mons.forEach((m, j) => {
+          if (!m.ko && m.life < m.max) out.push({
+            type: 'breeder',
+            hand: [hi],
+            target: {
+              p,
+              m: j
+            }
+          });
+        });else out.push({
+          type: 'breeder',
+          hand: [hi],
+          target: null
+        });
+      } else {
+        me.mons.forEach((m, mi) => {
+          if (m.ko) return;
+          opp.mons.forEach((t, j) => {
+            if (cardCanTarget(card, t, st.turn)) out.push({
+              type: 'breeder',
+              hand: [hi],
+              mon: mi,
+              target: {
+                p: cardOther(p),
+                m: j
+              }
+            });
+          });
+        });
+      }
+      return;
+    }
+    me.mons.forEach((mon, mi) => {
+      if (!cardUsableBy(card, mon) || !cardMonCanAttack(db, st, p, mi, card)) return;
+      const combo = cardEff(card, 'combo');
+      const sets = [[hi]];
+      if (combo) {
+        const others = me.hand.map((n2, j) => ({
+          j,
+          c: cardOf(db, n2)
+        })).filter(({
+          j,
+          c
+        }) => j !== hi && c && combo.names.includes(c.name) && c.name !== card.name && cardUsableBy(c, mon));
+        const byName = {};
+        others.forEach(o => {
+          if (!(o.c.name in byName)) byName[o.c.name] = o.j;
+        });
+        const names = Object.keys(byName);
+        if (names.length >= 1) {
+          names.forEach(n => sets.push([hi, byName[n]]));
+        }
+        if (names.length >= 2) sets.push([hi, byName[names[0]], byName[names[1]]]);
+        for (let k = sets.length - 1; k >= 0; k--) if (Math.min(...sets[k]) !== hi) sets.splice(k, 1);
+      }
+      const attachIdx = me.hand.map((n2, j) => ({
+        j,
+        c: cardOf(db, n2)
+      })).filter(({
+        j,
+        c
+      }) => j !== hi && c && c.ready && cardHasEff(c, 'attach') && cardUsableBy(c, mon) && (() => {
+        const w = cardEff(c, 'attach').when || {};
+        if (w.lifeMax !== undefined && mon.life > w.lifeMax) return false;
+        return card.kind === 'pow' || card.kind === 'int';
+      })()).map(o => o.j);
+      const withAttach = [];
+      sets.forEach(s => {
+        withAttach.push(s);
+        attachIdx.forEach(a => withAttach.push([...s, a]));
+      });
+      withAttach.forEach(idxs => {
+        const cost = cardActionCost(db, st, p, me.hand, idxs);
+        if (cost > guts) return;
+        if (card.kind === 'spe') {
+          if (cardHasEff(card, 'heal')) me.mons.forEach((m, j) => {
+            if (!m.ko && m.life < m.max) out.push({
+              type: 'attack',
+              mon: mi,
+              hand: idxs,
+              target: {
+                p,
+                m: j
+              }
+            });
+          });else out.push({
+            type: 'attack',
+            mon: mi,
+            hand: idxs,
+            target: null
+          });
+          return;
+        }
+        if (cardHasEff(card, 'area')) {
+          if (cardAreaTargets(st, p, mi, card).some(t => t.p !== p)) out.push({
+            type: 'attack',
+            mon: mi,
+            hand: idxs,
+            target: null
+          });
+          return;
+        }
+        opp.mons.forEach((t, j) => {
+          if (cardCanTarget(card, t, st.turn)) out.push({
+            type: 'attack',
+            mon: mi,
+            hand: idxs,
+            target: {
+              p: cardOther(p),
+              m: j
+            }
+          });
+        });
+      });
+    });
+  });
+  return out;
+};
+const cardGuardOptions = (db, st) => {
+  const pd = st.pending;
+  if (!pd || st.winner !== null) return [];
+  const q = pd.defender;
+  const me = st.players[q];
+  const tgt = pd.targets[pd.ti];
+  if (!tgt) return [];
+  const target = st.players[tgt.p].mons[tgt.m];
+  const atkCard = cardOf(db, pd.main);
+  const forbid = st.forbid[q] || [];
+  const guts = me.guts.length;
+  const out = [];
+  me.hand.forEach((no, hi) => {
+    const c = cardOf(db, no);
+    if (!c || !c.ready || !cardIsGuardKind(c.kind)) return;
+    if (forbid.includes(c.kind)) return;
+    if (c.guts > guts) return;
+    if (cardHasEff(c, 'cover')) {
+      if (pd.cover !== null && pd.cover !== undefined) return;
+      me.mons.forEach((m, mi) => {
+        if (mi !== tgt.m && tgt.p === q && cardUsableBy(c, m)) out.push({
+          type: 'guard',
+          hand: hi,
+          mon: mi
+        });
+      });
+      return;
+    }
+    if (tgt.p !== q || !cardUsableBy(c, target)) return;
+    const ev = cardEff(c, 'evade');
+    if (ev) {
+      if (pd.evaded) return;
+      if (cardHasEff(atkCard, 'noEvade') || pd.noEvade) return;
+      if (!ev.kinds.includes(atkCard.kind)) return;
+      if (ev.minGuts && pd.cost < ev.minGuts) return;
+      out.push({
+        type: 'guard',
+        hand: hi,
+        mon: tgt.m
+      });
+      return;
+    }
+    const re = cardEff(c, 'reduce') || cardEff(c, 'reduceHalf') || cardEff(c, 'reduceAll');
+    if (re) {
+      if (re.kinds.includes(atkCard.kind)) out.push({
+        type: 'guard',
+        hand: hi,
+        mon: tgt.m
+      });
+      return;
+    }
+    const rf = cardEff(c, 'reflect');
+    if (rf) {
+      if (rf.kinds.includes(atkCard.kind) && !pd.reflect) out.push({
+        type: 'guard',
+        hand: hi,
+        mon: tgt.m
+      });
+      return;
+    }
+  });
+  return out;
+};
+const cardLegalActions = (db, st) => {
+  if (st.winner !== null) return [];
+  if (st.phase === 'setup') return [{
+    type: 'setupGuts',
+    hand: []
+  }];
+  if (st.pending) return [...cardGuardOptions(db, st), {
+    type: 'pass'
+  }];
+  if (st.phase === 'main') return [...cardAttackOptions(db, st), {
+    type: 'endAttacks'
+  }];
+  if (st.phase === 'guts') return [{
+    type: 'guts',
+    hand: []
+  }];
+  return [];
+};
+const cardDecider = st => st.pending ? st.pending.defender : st.active;
+const cardStartAttack = (db, st, act) => {
+  const p = st.active;
+  const me = st.players[p];
+  const isBreeder = act.type === 'breeder';
+  const mainNo = me.hand[act.hand[0]];
+  const main = cardOf(db, mainNo);
+  const cost = cardActionCost(db, st, p, me.hand, act.hand);
+  const used = cardTakeFromHand(st, p, act.hand);
+  cardPayGuts(st, p, cost);
+  const mi = isBreeder ? act.mon !== undefined ? act.mon : -1 : act.mon;
+  const mon = mi >= 0 ? me.mons[mi] : null;
+  if (isBreeder) me.breederUsed = true;else {
+    mon.attacks += 1;
+    mon.lastCard = mainNo;
+  }
+  const who = isBreeder ? `${me.name}(ブリーダー)` : mon.name;
+  cardLog(st, `${who}の「${used.map(n => cardOf(db, n).name).join('＋')}」`, {
+    kind: 'use',
+    p,
+    cards: used
+  });
+  cardEvent(st, {
+    t: 'use',
+    p,
+    mon: mi,
+    cards: used,
+    target: act.target || null
+  });
+  if (main.kind === 'spe') {
+    cardApplySpecial(db, st, p, mi, main, act.target);
+    me.discard.push(...used);
+    return;
+  }
+  let dmg = main.damage || 0;
+  const combo = cardEff(main, 'combo');
+  if (combo) {
+    const kinds = new Set(used.map(n => cardOf(db, n)).filter(c => combo.names.includes(c.name)).map(c => c.name)).size;
+    if (combo.table[kinds]) dmg = combo.table[kinds];
+  }
+  let mult = 1;
+  used.forEach(n => {
+    const am = cardEff(cardOf(db, n), 'attachMult');
+    if (am) mult *= am.n;
+  });
+  if (mon && mon.mult && mon.mult.turn === st.turn && mon.mult.kinds.includes(main.kind)) {
+    mult *= mon.mult.n;
+    mon.mult = null;
+  }
+  const targets = cardHasEff(main, 'area') ? cardAreaTargets(st, p, mi, main) : [act.target];
+  st.pending = {
+    attacker: p,
+    defender: cardOther(p),
+    mon: mi,
+    main: mainNo,
+    used,
+    cost,
+    base: dmg,
+    mult,
+    targets,
+    ti: 0,
+    evaded: false,
+    reduce: 0,
+    reduceHalf: false,
+    reduceAll: false,
+    reflect: null,
+    cover: null,
+    hitAny: false,
+    evadedAny: false,
+    results: []
+  };
+  cardAdvancePending(db, st);
+};
+const cardAdvancePending = (db, st) => {
+  const pd = st.pending;
+  while (pd && pd.ti < pd.targets.length) {
+    const t = pd.targets[pd.ti];
+    pd.defender = t.p;
+    if (t.p === pd.attacker) {
+      cardResolveTarget(db, st);
+      continue;
+    }
+    return;
+  }
+  if (pd) cardFinishAttack(db, st);
+};
+const cardResolveTarget = (db, st) => {
+  const pd = st.pending;
+  const main = cardOf(db, pd.main);
+  let t = pd.targets[pd.ti];
+  if (pd.cover !== null && pd.cover !== undefined) t = {
+    p: t.p,
+    m: pd.cover
+  };
+  const target = st.players[t.p].mons[t.m];
+  let dmg = pd.base * pd.mult;
+  const mv = cardEff(main, 'multVs');
+  if (mv && cardMonType(target, st.turn) === mv.type) dmg *= mv.n;
+  const evaded = pd.evaded;
+  if (evaded) dmg = cardHasEff(main, 'halfOnEvade') ? Math.ceil(dmg / 2) : 0;
+  if (!cardHasEff(main, 'noBlockReduce')) {
+    if (pd.reduceAll) dmg = 0;
+    if (pd.reduceHalf) dmg -= Math.floor(dmg / 2);
+    dmg = Math.max(0, dmg - pd.reduce);
+  }
+  let reflected = 0;
+  if (pd.reflect) {
+    if (pd.reflect.keep) reflected = Math.floor(dmg * pd.reflect.frac);else {
+      reflected = dmg;
+      dmg = 0;
+    }
+  }
+  if (cardHasEff(main, 'nonLethal')) dmg = Math.max(0, Math.min(dmg, target.life - 1));
+  target.life = Math.max(0, target.life - dmg);
+  const guarded = pd.reduce > 0 || pd.reduceHalf || pd.reduceAll || !!pd.reflect || pd.cover !== null;
+  const res = {
+    p: t.p,
+    m: t.m,
+    dmg,
+    evaded,
+    reflected
+  };
+  pd.results.push(res);
+  cardEvent(st, {
+    t: 'hit',
+    p: t.p,
+    m: t.m,
+    dmg,
+    evaded,
+    guarded,
+    card: pd.main
+  });
+  cardLog(st, evaded && dmg === 0 ? `${target.name}は回避した` : `${target.name}に${dmg}ダメージ${evaded ? '(回避されても半分)' : ''}`, {
+    kind: 'hit'
+  });
+  const atkMon = pd.mon >= 0 ? st.players[pd.attacker].mons[pd.mon] : null;
+  if (dmg > 0) {
+    pd.hitAny = true;
+    const gl = cardEff(main, 'gutsLossOnHit');
+    if (gl && t.p !== pd.attacker) {
+      const k = cardLoseGuts(st, t.p, gl.n);
+      if (k) cardLog(st, `${st.players[t.p].name}はガッツを${k}失った`);
+    }
+    if (cardHasEff(main, 'stunOnHit')) {
+      target.stunTurn = st.turn + 1;
+      cardLog(st, `${target.name}は次のターン攻撃できない`);
+    }
+    if (cardHasEff(main, 'drain') && atkMon && !atkMon.ko) {
+      const h = Math.min(dmg, atkMon.max - atkMon.life);
+      atkMon.life += h;
+      if (h) cardLog(st, `${atkMon.name}はライフを${h}回復`);
+    }
+  }
+  if (!evaded || cardHasEff(main, 'halfOnEvade')) {
+    if (!evaded) pd.hitAnyNotEvaded = true;
+  }
+  if (evaded) pd.evadedAny = true;
+  if (reflected > 0 && atkMon && !atkMon.ko) {
+    atkMon.life = Math.max(0, atkMon.life - reflected);
+    cardEvent(st, {
+      t: 'hit',
+      p: pd.attacker,
+      m: pd.mon,
+      dmg: reflected,
+      reflect: true
+    });
+    cardLog(st, `${reflected}ダメージをはね返した`);
+  }
+  if (target.life <= 0 && !target.ko) cardKo(st, t.p, t.m);
+  pd.ti += 1;
+  pd.evaded = false;
+  pd.reduce = 0;
+  pd.reduceHalf = false;
+  pd.reduceAll = false;
+  pd.reflect = null;
+  pd.cover = null;
+  pd.noEvade = false;
+};
+const cardKo = (st, p, m) => {
+  const mon = st.players[p].mons[m];
+  mon.ko = true;
+  mon.life = 0;
+  cardLog(st, `${mon.name}はKOされた`, {
+    kind: 'ko'
+  });
+  cardEvent(st, {
+    t: 'ko',
+    p,
+    m
+  });
+};
+const cardFinishAttack = (db, st) => {
+  const pd = st.pending;
+  const main = cardOf(db, pd.main);
+  const me = st.players[pd.attacker];
+  const atkMon = pd.mon >= 0 ? me.mons[pd.mon] : null;
+  let self = 0;
+  const sh = cardEff(main, 'selfDamageIfHit');
+  if (sh && pd.results.some(r => !r.evaded)) self += sh.n;
+  const se = cardEff(main, 'selfDamageIfEvaded');
+  if (se && pd.results.some(r => r.evaded)) self += se.n;
+  const sa = cardEff(main, 'selfDamage');
+  if (sa) self += sa.n;
+  if (self > 0 && atkMon && !atkMon.ko) {
+    atkMon.life = Math.max(0, atkMon.life - self);
+    cardEvent(st, {
+      t: 'hit',
+      p: pd.attacker,
+      m: pd.mon,
+      dmg: self,
+      self: true
+    });
+    cardLog(st, `${atkMon.name}も${self}ダメージを受けた`);
+    if (atkMon.life <= 0) cardKo(st, pd.attacker, pd.mon);
+  }
+  me.discard.push(...pd.used);
+  st.pending = null;
+  cardCheckWin(st, pd.attacker);
+};
+const cardCheckWin = (st, attacker) => {
+  const dead = st.players.map(pl => pl.mons.every(m => m.ko));
+  if (dead[0] && dead[1]) cardGameOver(st, attacker, '同時にKO(攻撃した側の勝ち)');else if (dead[0]) cardGameOver(st, 1, '全員KO');else if (dead[1]) cardGameOver(st, 0, '全員KO');
+};
+const cardApplySpecial = (db, st, p, mi, card, target) => {
+  const me = st.players[p];
+  const opp = st.players[cardOther(p)];
+  (card.effects || []).forEach(e => {
+    if (e.t === 'draw') {
+      for (let i = 0; i < e.n; i++) {
+        if (!me.deck.length) break;
+        me.hand.push(me.deck.pop());
+      }
+      cardLog(st, `${me.name}は${e.n}枚引いた`);
+    }
+    if (e.t === 'peekHand') {
+      cardEvent(st, {
+        t: 'peek',
+        p,
+        hand: opp.hand.slice()
+      });
+      cardLog(st, `${me.name}は相手の手札を見た`);
+    }
+    if (e.t === 'discardOpp') {
+      st.pendingDiscard = {
+        p: cardOther(p),
+        n: Math.min(e.n, opp.hand.length)
+      };
+      if (!st.pendingDiscard.n) st.pendingDiscard = null;
+    }
+    if (e.t === 'heal' && target) {
+      const m = me.mons[target.m];
+      const h = Math.min(e.n, m.max - m.life);
+      m.life += h;
+      cardEvent(st, {
+        t: 'heal',
+        p,
+        m: target.m,
+        n: h
+      });
+      cardLog(st, `${m.name}のライフが${h}回復`);
+    }
+    if (e.t === 'forbidThisTurn') {
+      st.forbid[cardOther(p)] = [...(st.forbid[cardOther(p)] || []), ...e.kinds];
+      cardLog(st, `このターン、相手は${e.kinds.includes('dge') ? '回避' : '防御'}を使えない`);
+    }
+  });
+};
+const cardApplyGuard = (db, st, act) => {
+  const pd = st.pending;
+  const q = pd.defender;
+  const me = st.players[q];
+  const no = me.hand[act.hand];
+  const c = cardOf(db, no);
+  cardTakeFromHand(st, q, [act.hand]);
+  cardPayGuts(st, q, c.guts);
+  me.discard.push(no);
+  const user = me.mons[act.mon];
+  cardLog(st, `${user.name}の「${c.name}」`, {
+    kind: 'guard',
+    p: q,
+    cards: [no]
+  });
+  cardEvent(st, {
+    t: 'guard',
+    p: q,
+    mon: act.mon,
+    card: no
+  });
+  (c.effects || []).forEach(e => {
+    if (e.t === 'evade') pd.evaded = true;
+    if (e.t === 'reduce') pd.reduce += e.n;
+    if (e.t === 'reduceHalf') pd.reduceHalf = true;
+    if (e.t === 'reduceAll') pd.reduceAll = true;
+    if (e.t === 'reflect') pd.reflect = {
+      frac: e.frac,
+      keep: !!e.keep
+    };
+    if (e.t === 'cover') pd.cover = act.mon;
+    if (e.t === 'nextTurnMult') user.mult = {
+      turn: st.turn + 1,
+      kinds: e.kinds,
+      n: e.n
+    };
+    if (e.t === 'becomeAir') user.airUntil = st.turn + 1;
+  });
+};
+const cardApplyAction = (db, st0, act) => {
+  if (!act || st0.winner !== null) return null;
+  const st = cardClone(st0);
+  st.events = [];
+  const p = st.active;
+  if (st.pendingDiscard) {
+    if (act.type !== 'discard') return null;
+    const q = st.pendingDiscard.p;
+    const idxs = (act.hand || []).slice(0, st.pendingDiscard.n);
+    if (idxs.length !== st.pendingDiscard.n || idxs.some(i => i < 0 || i >= st.players[q].hand.length)) return null;
+    const taken = cardTakeFromHand(st, q, idxs);
+    st.players[q].discard.push(...taken);
+    cardLog(st, `${st.players[q].name}は手札を${taken.length}枚捨てた`);
+    st.pendingDiscard = null;
+    return st;
+  }
+  if (st.phase === 'setup') {
+    if (act.type !== 'setupGuts') return null;
+    const idxs = (act.hand || []).slice(0, CARD_BATTLE_SETUP_GUTS_MAX);
+    const q = cardOther(st.first);
+    const taken = cardTakeFromHand(st, q, idxs);
+    st.players[q].guts.push(...taken);
+    if (taken.length) cardLog(st, `${st.players[q].name}は始める前に${taken.length}枚をガッツにした`);
+    cardLog(st, 'モンスターを表にした');
+    st.active = st.first;
+    cardBeginTurn(st);
+    return st;
+  }
+  if (st.pending) {
+    if (act.type === 'pass') {
+      cardResolveTarget(db, st);
+      cardAdvancePending(db, st);
+      return st;
+    }
+    if (act.type !== 'guard') return null;
+    const ok = cardGuardOptions(db, st0).some(o => o.hand === act.hand && o.mon === act.mon);
+    if (!ok) return null;
+    cardApplyGuard(db, st, act);
+    return st;
+  }
+  if (st.phase === 'main') {
+    if (act.type === 'endAttacks') {
+      st.phase = 'guts';
+      return st;
+    }
+    if (act.type !== 'attack' && act.type !== 'breeder') return null;
+    const ok = cardAttackOptions(db, st0).some(o => o.type === act.type && o.mon === act.mon && JSON.stringify(o.hand) === JSON.stringify(act.hand) && JSON.stringify(o.target) === JSON.stringify(act.target || null));
+    if (!ok) return null;
+    cardStartAttack(db, st, act);
+    return st;
+  }
+  if (st.phase === 'guts') {
+    if (act.type !== 'guts') return null;
+    const taken = cardTakeFromHand(st, p, act.hand || []);
+    st.players[p].guts.push(...taken);
+    if (taken.length) cardLog(st, `${st.players[p].name}は${taken.length}枚をガッツにした`);
+    st.active = cardOther(p);
+    cardBeginTurn(st);
+    return st;
+  }
+  return null;
+};
+const CARD_AI_LEVELS = Object.freeze({
+  easy: {
+    depth: 0,
+    whim: 0.30,
+    sloppy: 0.55,
+    point: 30
+  },
+  normal: {
+    depth: 1,
+    whim: 0.15,
+    sloppy: 0.30,
+    point: 45
+  },
+  hard: {
+    depth: 2,
+    whim: 0.08,
+    sloppy: 0.15,
+    point: 60
+  },
+  expert: {
+    depth: 3,
+    whim: 0.04,
+    sloppy: 0.06,
+    point: 75
+  },
+  master: {
+    depth: 3,
+    whim: 0.01,
+    sloppy: 0,
+    point: 90,
+    readHand: true
+  }
+});
+const CARD_AI_HABITS = Object.freeze({
+  mua: {
+    attack: 1.5,
+    keepGuard: 0.2,
+    saveGuts: 0.2,
+    big: 0.8,
+    disrupt: 0.5,
+    area: 0.8,
+    finish: 0.5
+  },
+  momosuke: {
+    attack: 1.0,
+    keepGuard: 0.6,
+    saveGuts: 0.8,
+    big: 0.6,
+    disrupt: 1.8,
+    area: 0.8,
+    finish: 0.8
+  },
+  kiki: {
+    attack: 0.9,
+    keepGuard: 0.7,
+    saveGuts: 1.6,
+    big: 1.8,
+    disrupt: 0.5,
+    area: 1.0,
+    finish: 1.0
+  },
+  kyuko: {
+    attack: 1.0,
+    keepGuard: 1.0,
+    saveGuts: 1.0,
+    big: 1.0,
+    disrupt: 1.0,
+    area: 1.0,
+    finish: 1.2
+  },
+  dra: {
+    attack: 0.7,
+    keepGuard: 1.5,
+    saveGuts: 1.0,
+    big: 0.6,
+    disrupt: 0.8,
+    area: 0.8,
+    finish: 0.8
+  },
+  atsu: {
+    attack: 1.2,
+    keepGuard: 0.6,
+    saveGuts: 0.8,
+    big: 1.0,
+    disrupt: 0.8,
+    area: 1.8,
+    finish: 1.5
+  }
+});
+const CARD_AI_TUNE = Object.freeze({
+  mua: 0.6,
+  momosuke: 0.5,
+  kiki: 1.3,
+  kyuko: 1,
+  dra: 1.15,
+  atsu: 1
+});
+const cardAiPolicy = (habitId, levelId) => {
+  const level = CARD_AI_LEVELS[levelId] || CARD_AI_LEVELS.normal;
+  const tune = CARD_AI_TUNE[habitId] === undefined ? 1 : CARD_AI_TUNE[habitId];
+  return {
+    habit: CARD_AI_HABITS[habitId] || CARD_AI_HABITS.kyuko,
+    level: {
+      ...level,
+      sloppy: Math.min(0.9, (level.sloppy || 0) * tune)
+    }
+  };
+};
+const cardAiEvadeChance = (db, st, p, card, target, level) => {
+  if (cardHasEff(card, 'noEvade') || card.kind === 'spe') return 0;
+  const q = cardOther(p);
+  const opp = st.players[q];
+  const tmon = opp.mons[target.m];
+  const fits = no => {
+    const c = cardOf(db, no);
+    const ev = cardEff(c, 'evade');
+    return c && ev && ev.kinds.includes(card.kind) && cardUsableBy(c, tmon) && c.guts <= opp.guts.length && (!ev.minGuts || card.guts >= ev.minGuts);
+  };
+  if ((st.forbid[q] || []).includes('dge')) return 0;
+  if (level.readHand) return opp.hand.some(fits) ? 0.85 : 0;
+  const unseen = [...opp.hand, ...opp.deck];
+  if (!unseen.length) return 0;
+  const frac = unseen.filter(fits).length / unseen.length;
+  return Math.min(0.8, 1 - Math.pow(1 - frac, opp.hand.length));
+};
+const cardAiScoreAttack = (db, st, opt, policy) => {
+  const p = st.active;
+  const me = st.players[p];
+  const {
+    habit,
+    level
+  } = policy;
+  const main = cardOf(db, me.hand[opt.hand[0]]);
+  const cost = cardActionCost(db, st, p, me.hand, opt.hand);
+  let score = 0;
+  if (main.kind === 'spe') {
+    (main.effects || []).forEach(e => {
+      if (e.t === 'heal' && opt.target) {
+        const m = me.mons[opt.target.m];
+        score += Math.min(e.n, m.max - m.life) * 1.1;
+      }
+      if (e.t === 'draw') score += e.n * 0.9;
+      if (e.t === 'peekHand') score += 0.4 * habit.disrupt;
+      if (e.t === 'discardOpp') score += 1.4 * habit.disrupt;
+      if (e.t === 'forbidThisTurn') {
+        const followUp = cardAttackOptions(db, st).filter(o => o.type === 'attack' && cardOf(db, me.hand[o.hand[0]]).kind !== 'spe').length;
+        score += followUp ? 1.5 * habit.disrupt : 0;
+      }
+    });
+  } else {
+    let dmg = main.damage || 0;
+    const combo = cardEff(main, 'combo');
+    if (combo) {
+      const kinds = new Set(opt.hand.map(i => cardOf(db, me.hand[i]).name).filter(n => combo.names.includes(n))).size;
+      dmg = combo.table[kinds] || dmg;
+    }
+    opt.hand.forEach(i => {
+      const am = cardEff(cardOf(db, me.hand[i]), 'attachMult');
+      if (am) dmg *= am.n;
+    });
+    const mon = opt.mon >= 0 ? me.mons[opt.mon] : null;
+    if (mon && mon.mult && mon.mult.turn === st.turn && mon.mult.kinds.includes(main.kind)) dmg *= mon.mult.n;
+    const targets = cardHasEff(main, 'area') ? cardAreaTargets(st, p, opt.mon, main) : [opt.target];
+    targets.forEach(t => {
+      const tm = st.players[t.p].mons[t.m];
+      let d = dmg;
+      const mv = cardEff(main, 'multVs');
+      if (mv && cardMonType(tm, st.turn) === mv.type) d *= mv.n;
+      if (cardHasEff(main, 'nonLethal')) d = Math.min(d, tm.life - 1);
+      const ev = cardAiEvadeChance(db, st, p, main, t, level);
+      const half = cardHasEff(main, 'halfOnEvade') ? Math.ceil(d / 2) : 0;
+      const exp = d * (1 - ev) + half * ev;
+      const sign = t.p === p ? -1.3 : 1;
+      score += sign * Math.min(exp, tm.life) * habit.attack;
+      if (t.p !== p && d >= tm.life) score += (1 - ev) * 4 * habit.finish;
+      const gl = cardEff(main, 'gutsLossOnHit');
+      if (gl && t.p !== p) score += (1 - ev) * (gl.n === 'all' ? st.players[t.p].guts.length : Math.min(gl.n, st.players[t.p].guts.length)) * 0.8 * habit.disrupt;
+      if (cardHasEff(main, 'stunOnHit') && t.p !== p) score += (1 - ev) * 1.2;
+    });
+    if (targets.length > 1) score *= 1 + 0.15 * (habit.area - 1);
+    if (cost >= 5) score *= 1 + 0.12 * (habit.big - 1);
+    const sh = cardEff(main, 'selfDamageIfHit');
+    if (sh && mon) score -= sh.n * (mon.life <= sh.n ? 3 : 0.6);
+    const sa = cardEff(main, 'selfDamage');
+    if (sa && mon) score -= sa.n * (mon.life <= sa.n ? 3 : 0.6);
+  }
+  const left = me.guts.length - cost;
+  const cheapGuard = Math.min(9, ...me.hand.filter((_, i) => !opt.hand.includes(i)).map(n => cardOf(db, n)).filter(c => c && cardIsGuardKind(c.kind)).map(c => c.guts));
+  if (level.depth >= 1 && cheapGuard < 9 && left < cheapGuard) score -= 1.2 * habit.keepGuard;
+  score -= cost * 0.12 * habit.saveGuts * (level.depth >= 2 ? 1.2 : 1);
+  if (level.depth >= 2 && opt.target && opt.target.p !== p) {
+    const tm = st.players[opt.target.p].mons[opt.target.m];
+    score += (tm.max - tm.life) * 0.15 + (tm.life <= 3 ? 0.8 : 0);
+  }
+  return score;
+};
+const cardAiChooseGuard = (db, st, policy, rand) => {
+  const pd = st.pending;
+  const q = pd.defender;
+  const me = st.players[q];
+  const {
+    habit
+  } = policy;
+  const opts = cardGuardOptions(db, st);
+  if (!opts.length) return {
+    type: 'pass'
+  };
+  const main = cardOf(db, pd.main);
+  const tgt = pd.targets[pd.ti];
+  const target = st.players[tgt.p].mons[pd.cover !== null && pd.cover !== undefined ? pd.cover : tgt.m];
+  let dmg = pd.base * pd.mult;
+  const mv = cardEff(main, 'multVs');
+  if (mv && cardMonType(target, st.turn) === mv.type) dmg *= mv.n;
+  if (pd.evaded) dmg = cardHasEff(main, 'halfOnEvade') ? Math.ceil(dmg / 2) : 0;
+  dmg = Math.max(0, dmg - pd.reduce);
+  if (dmg <= 0) return {
+    type: 'pass'
+  };
+  let best = null;
+  opts.forEach(o => {
+    const c = cardOf(db, me.hand[o.hand]);
+    let after = dmg;
+    if (cardHasEff(c, 'evade')) after = cardHasEff(main, 'halfOnEvade') ? Math.ceil(dmg / 2) : 0;
+    const re = cardEff(c, 'reduce');
+    if (re && !cardHasEff(main, 'noBlockReduce')) after = Math.max(0, dmg - re.n);
+    if (cardHasEff(c, 'reduceHalf') && !cardHasEff(main, 'noBlockReduce')) after = dmg - Math.floor(dmg / 2);
+    const rf = cardEff(c, 'reflect');
+    if (rf) after = rf.keep ? dmg : 0;
+    if (cardHasEff(c, 'cover')) {
+      const cm = me.mons[o.mon];
+      after = target.life <= dmg && cm.life > dmg ? 0 : dmg;
+    }
+    const saved = Math.min(dmg, target.life) - Math.min(after, target.life);
+    const ko = target.life <= dmg && target.life > after ? 5 : 0;
+    const v = saved * (0.6 + 0.4 * habit.keepGuard) + ko - c.guts * 0.35 * habit.saveGuts + (rf ? (rf.keep ? Math.floor(dmg * rf.frac) : dmg) * 0.6 : 0);
+    if (!best || v > best.v) best = {
+      v,
+      o
+    };
+  });
+  if (!best || best.v < 0.8 + rand() * 0.3) return {
+    type: 'pass'
+  };
+  return best.o;
+};
+const cardAiChooseGuts = (db, st, policy) => {
+  const p = st.active;
+  const me = st.players[p];
+  const {
+    habit
+  } = policy;
+  const target = Math.round(3 + 1.6 * habit.saveGuts);
+  const need = Math.max(0, target - me.guts.length);
+  const keep = no => {
+    const c = cardOf(db, no);
+    if (!c) return -9;
+    const usable = c.user === 'breeder' || me.mons.some(m => cardUsableBy(c, m));
+    if (!usable) return -10;
+    if (cardIsGuardKind(c.kind)) return 2 * habit.keepGuard - c.guts * 0.2;
+    return (c.damage || 1) * 0.5 - Math.max(0, c.guts - (me.guts.length + 2)) * 0.8;
+  };
+  const order = me.hand.map((no, i) => ({
+    i,
+    k: keep(no)
+  })).sort((a, b) => a.k - b.k);
+  const pick = [];
+  order.forEach(o => {
+    if (o.k <= -9) pick.push(o.i);
+  });
+  for (const o of order) {
+    if (pick.length >= Math.max(need, pick.length) || me.hand.length - pick.length <= 1) break;
+    if (!pick.includes(o.i)) pick.push(o.i);
+  }
+  return {
+    type: 'guts',
+    hand: pick
+  };
+};
+const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
+  if (st.pendingDiscard) {
+    const q = st.pendingDiscard.p;
+    const hand = st.players[q].hand;
+    const order = hand.map((no, i) => ({
+      i,
+      g: (cardOf(db, no) || {}).guts || 0
+    })).sort((a, b) => b.g - a.g).map(o => o.i);
+    return {
+      type: 'discard',
+      hand: order.slice(0, st.pendingDiscard.n)
+    };
+  }
+  if (st.phase === 'setup') {
+    const q = cardOther(st.first);
+    const hand = st.players[q].hand;
+    const order = hand.map((no, i) => ({
+      i,
+      g: (cardOf(db, no) || {}).guts || 0
+    })).sort((a, b) => b.g - a.g).map(o => o.i);
+    return {
+      type: 'setupGuts',
+      hand: order.slice(0, CARD_BATTLE_SETUP_GUTS_MAX)
+    };
+  }
+  const sloppy = rand() < (policy.level.sloppy || 0);
+  if (st.pending) return sloppy ? {
+    type: 'pass'
+  } : cardAiChooseGuard(db, st, policy, rand);
+  if (st.phase === 'guts') {
+    if (!sloppy) return cardAiChooseGuts(db, st, policy);
+    const hand = st.players[st.active].hand;
+    return {
+      type: 'guts',
+      hand: hand.map((_, i) => i).filter(() => rand() < 0.4)
+    };
+  }
+  const opts = cardAttackOptions(db, st);
+  if (!opts.length) return {
+    type: 'endAttacks'
+  };
+  if (sloppy) return rand() < 0.25 ? {
+    type: 'endAttacks'
+  } : opts[Math.floor(rand() * opts.length)];
+  const scored = opts.map(o => ({
+    o,
+    s: cardAiScoreAttack(db, st, o, policy)
+  })).sort((a, b) => b.s - a.s);
+  if (scored[0].s <= 0.3) return {
+    type: 'endAttacks'
+  };
+  if (rand() < policy.level.whim) {
+    const pool = scored.filter(x => x.s > 0.3).slice(0, 3);
+    return pool[Math.floor(rand() * pool.length)].o;
+  }
+  return scored[0].o;
+};
+const CARD_AI_DECKS = Object.freeze({
+  mua: {
+    kit: 'speed'
+  },
+  momosuke: {
+    kit: 'miracle'
+  },
+  kiki: {
+    kit: 'powerful'
+  },
+  dra: {
+    kit: 'powerful'
+  },
+  kyuko: {
+    monsters: ['C-007', 'C-005', 'C-009']
+  },
+  atsu: {
+    monsters: ['C-003', 'C-001', 'C-002'],
+    prefer: ['竜巻アタック', '地震', '炎のカベ', 'ブリザード']
+  }
+});
+const CARD_DECK_COPY_MAX = 3;
+const cardAiCardValue = (card, habit) => {
+  const eff = t => cardHasEff(card, t);
+  if (cardIsGuardKind(card.kind)) {
+    let v = eff('evade') ? 2.2 : eff('reduceAll') ? 2.4 : eff('reflect') ? 2.3 : eff('cover') ? 1.4 : 1.6;
+    const re = cardEff(card, 'reduce');
+    if (re) v = 1 + re.n * 0.4;
+    return (v - card.guts * 0.35) * habit.keepGuard;
+  }
+  if (card.kind === 'spe') {
+    let v = 0.6;
+    (card.effects || []).forEach(e => {
+      if (e.t === 'draw') v += e.n * 0.5;
+      if (e.t === 'heal') v += e.n * 0.35;
+      if (e.t === 'discardOpp') v += e.n * 0.8 * habit.disrupt;
+      if (e.t === 'peekHand') v += 0.2 * habit.disrupt;
+      if (e.t === 'forbidThisTurn') v += 0.8 * habit.disrupt;
+    });
+    return v - card.guts * 0.3;
+  }
+  let dmg = card.damage || 0;
+  if (eff('combo')) dmg = 3;
+  if (eff('halfOnEvade') || eff('noEvade')) dmg *= 1.3;
+  if (eff('area')) dmg *= 1.6 * habit.area;
+  const gl = cardEff(card, 'gutsLossOnHit');
+  if (gl) dmg += (gl.n === 'all' ? 2 : gl.n) * 0.7 * habit.disrupt;
+  if (eff('stunOnHit')) dmg += 1;
+  const sh = cardEff(card, 'selfDamageIfHit') || cardEff(card, 'selfDamage');
+  if (sh) dmg -= sh.n * 0.8;
+  const cost = card.guts + 1.5;
+  const big = card.guts >= 4 ? habit.big : 1;
+  return dmg / cost * 2 * habit.attack * big;
+};
+const cardAiBuildDeck = (db, who, levelId = 'normal') => {
+  if (db.starters[who]) return {
+    monsters: db.starters[who].monsters.slice(),
+    cards: db.starters[who].cards.slice()
+  };
+  const recipe = CARD_AI_DECKS[who] || CARD_AI_DECKS.mua;
+  const upper = levelId === 'hard' || levelId === 'expert' || levelId === 'master';
+  if (recipe.kit && !upper) return cardAiBuildDeck(db, recipe.kit);
+  const monsters = recipe.monsters || db.starters[recipe.kit].monsters;
+  const maxWave = levelId === 'expert' || levelId === 'master' ? 4 : 1;
+  const habit = CARD_AI_HABITS[who] || CARD_AI_HABITS.kyuko;
+  const mons = monsters.map(no => cardMonsterOf(db, no));
+  const pool = Object.values(db.cards).filter(c => c.ready && c.wave <= maxWave && !cardHasEff(c, 'attach') && (c.user === 'any' || c.user === 'breeder' || mons.some(m => cardUsableBy(c, {
+    ...m,
+    ko: false
+  }))));
+  const byName = {};
+  pool.forEach(c => {
+    const v = cardAiCardValue(c, habit);
+    if (!byName[c.name] || byName[c.name].v < v) byName[c.name] = {
+      c,
+      v
+    };
+  });
+  const ranked = Object.values(byName).sort((a, b) => b.v - a.v || (a.c.no < b.c.no ? -1 : 1));
+  const guardTarget = Math.round(12 + 6 * Math.min(1.5, habit.keepGuard));
+  const cards = [];
+  const heavyMax = Math.round(8 * habit.big);
+  let heavy = 0;
+  const add = (c, n) => {
+    for (let i = 0; i < n && cards.length < CARD_BATTLE_DECK_SIZE; i++) {
+      const isHeavy = !cardIsGuardKind(c.kind) && c.guts >= 5;
+      if (isHeavy && heavy >= heavyMax) return;
+      if (isHeavy) heavy += 1;
+      cards.push(c.no);
+    }
+  };
+  const guards = ranked.filter(x => cardIsGuardKind(x.c.kind));
+  let g = 0;
+  for (const x of guards) {
+    if (g >= guardTarget) break;
+    const n = Math.min(CARD_DECK_COPY_MAX, guardTarget - g);
+    add(x.c, n);
+    g += n;
+  }
+  const attacks = ranked.filter(x => !cardIsGuardKind(x.c.kind));
+  const lanes = mons.map(m => attacks.filter(x => x.c.user !== 'any' && x.c.user !== 'breeder' && cardUsableBy(x.c, {
+    ...m,
+    ko: false
+  })));
+  const shared = attacks.filter(x => x.c.user === 'any' || x.c.user === 'breeder');
+  const used = new Set();
+  (recipe.prefer || []).forEach(name => {
+    const x = byName[name];
+    if (x && !used.has(name)) {
+      used.add(name);
+      add(x.c, CARD_DECK_COPY_MAX);
+    }
+  });
+  let li = 0,
+    guard = 0;
+  while (cards.length < CARD_BATTLE_DECK_SIZE && guard++ < 400) {
+    const lane = li < lanes.length ? lanes[li] : shared;
+    li = (li + 1) % (lanes.length + 1);
+    const x = lane.find(y => !used.has(y.c.name));
+    if (!x) continue;
+    used.add(x.c.name);
+    add(x.c, CARD_DECK_COPY_MAX);
+  }
+  for (const x of ranked) {
+    if (cards.length >= CARD_BATTLE_DECK_SIZE) break;
+    const have = cards.filter(n => cardOf(db, n).name === x.c.name).length;
+    add(x.c, CARD_DECK_COPY_MAX - have);
+  }
+  heavy = -99;
+  for (const x of ranked) {
+    if (cards.length >= CARD_BATTLE_DECK_SIZE) break;
+    const have = cards.filter(n => cardOf(db, n).name === x.c.name).length;
+    add(x.c, CARD_DECK_COPY_MAX - have);
+  }
+  return {
+    monsters: monsters.slice(),
+    cards
+  };
+};
+const cardDeckProblems = (db, deck) => {
+  const out = [];
+  if (!deck || !Array.isArray(deck.monsters) || !Array.isArray(deck.cards)) return ['デッキがありません'];
+  if (deck.monsters.length !== 3) out.push(`モンスターが${deck.monsters.length}体です(3体にしてください)`);
+  const ms = deck.monsters.map(no => cardMonsterOf(db, no));
+  if (ms.some(m => !m)) out.push('知らないモンスターカードが入っています');
+  const species = ms.filter(Boolean).map(m => m.species);
+  if (new Set(species).size !== species.length) out.push('同じモンスターが2体入っています');
+  if (deck.cards.length !== CARD_BATTLE_DECK_SIZE) out.push(`カードが${deck.cards.length}枚です(あと${CARD_BATTLE_DECK_SIZE - deck.cards.length}枚)`);
+  const names = {};
+  deck.cards.forEach(no => {
+    const c = cardOf(db, no);
+    if (!c) {
+      out.push(`知らないカード(${no})が入っています`);
+      return;
+    }
+    names[c.name] = (names[c.name] || 0) + 1;
+  });
+  Object.entries(names).forEach(([n, k]) => {
+    if (k > CARD_DECK_COPY_MAX) out.push(`「${n}」が${k}枚です(3枚まで)`);
+  });
+  return [...new Set(out)];
+};
+const CARD_SAVE_KEYS = Object.freeze({
+  collection: 'mh_card_collection_v1',
+  decks: 'mh_card_decks_v1',
+  point: 'mh_card_point_v1',
+  starter: 'mh_card_starter_v1',
+  daily: 'mh_card_daily_v1',
+  record: 'mh_card_record_v1',
+  cpuUnlocked: 'mh_card_cpu_unlocked_v1'
+});
+const cardIsPlainObject = v => !!v && typeof v === 'object' && !Array.isArray(v);
+const cardNormalizeCollection = v => {
+  const out = {};
+  if (!cardIsPlainObject(v)) return out;
+  Object.entries(v).forEach(([k, n]) => {
+    const x = Number(n);
+    if (Number.isFinite(x) && x > 0) out[k] = Math.min(99, Math.floor(x));
+  });
+  return out;
+};
+const cardNormalizePoint = v => {
+  const x = Number(v);
+  return Number.isFinite(x) && x > 0 ? Math.floor(x) : 0;
+};
+const cardNormalizeStarter = v => cardIsPlainObject(v) && typeof v.kit === 'string' && v.kit ? {
+  kit: v.kit,
+  at: Number.isFinite(Number(v.at)) ? Number(v.at) : 0
+} : null;
+const CARD_DECK_MAX = 5;
+const cardNormalizeDecks = v => {
+  const decks = (cardIsPlainObject(v) && Array.isArray(v.decks) ? v.decks : []).filter(cardIsPlainObject).slice(0, CARD_DECK_MAX).map((d, i) => ({
+    id: typeof d.id === 'string' && d.id ? d.id : `deck${i + 1}`,
+    name: typeof d.name === 'string' && d.name ? d.name.slice(0, 20) : `デッキ${i + 1}`,
+    monsters: Array.isArray(d.monsters) ? d.monsters.filter(x => typeof x === 'string').slice(0, 3) : [],
+    cards: Array.isArray(d.cards) ? d.cards.filter(x => typeof x === 'string').slice(0, CARD_BATTLE_DECK_SIZE) : []
+  }));
+  const active = cardIsPlainObject(v) && decks.some(d => d.id === v.active) ? v.active : decks[0] ? decks[0].id : null;
+  return {
+    active,
+    decks
+  };
+};
+const cardNormalizeDaily = (v, today) => {
+  const base = {
+    day: today,
+    cpuPoint: 0,
+    pvpPoint: 0,
+    firstWin: false,
+    foes: {}
+  };
+  if (!cardIsPlainObject(v) || v.day !== today) return base;
+  return {
+    day: today,
+    cpuPoint: cardNormalizePoint(v.cpuPoint),
+    pvpPoint: cardNormalizePoint(v.pvpPoint),
+    firstWin: v.firstWin === true,
+    foes: cardIsPlainObject(v.foes) ? {
+      ...v.foes
+    } : {}
+  };
+};
+const cardNormalizeRecord = v => {
+  const r = cardIsPlainObject(v) ? v : {};
+  const cpu = cardIsPlainObject(r.cpu) ? r.cpu : {};
+  const pvp = cardIsPlainObject(r.pvp) ? r.pvp : {};
+  const beaten = cardIsPlainObject(r.beaten) ? r.beaten : {};
+  return {
+    cpu: {
+      win: cardNormalizePoint(cpu.win),
+      lose: cardNormalizePoint(cpu.lose),
+      surrender: cardNormalizePoint(cpu.surrender)
+    },
+    pvp: {
+      win: cardNormalizePoint(pvp.win),
+      lose: cardNormalizePoint(pvp.lose)
+    },
+    beaten: Object.fromEntries(Object.entries(beaten).filter(([, x]) => x === true)),
+    recent: Array.isArray(r.recent) ? r.recent.filter(cardIsPlainObject).slice(0, 30) : []
+  };
+};
+const CARD_LEVEL_ORDER = Object.freeze(['easy', 'normal', 'hard', 'expert', 'master']);
+const cardNormalizeCpuUnlocked = v => {
+  const r = cardIsPlainObject(v) ? v : {};
+  return {
+    hard: r.hard === true,
+    expert: r.expert === true,
+    master: r.master === true
+  };
+};
+const cardLevelOpen = (unlocked, levelId) => levelId === 'easy' || levelId === 'normal' || unlocked && unlocked[levelId] === true;
+const CARD_STARTER_POINT = 300;
+const cardGrantStarter = (db, {
+  collection,
+  decks,
+  point,
+  starter
+}, kitId, now) => {
+  if (starter) return null;
+  const kit = db.starters[kitId];
+  if (!kit) return null;
+  const nextCol = {
+    ...collection
+  };
+  [...kit.monsters, ...kit.cards].forEach(no => {
+    nextCol[no] = Math.min(99, (nextCol[no] || 0) + 1);
+  });
+  const deck = {
+    id: `starter_${kitId}`,
+    name: kit.name,
+    monsters: kit.monsters.slice(),
+    cards: kit.cards.slice()
+  };
+  const nextDecks = {
+    active: deck.id,
+    decks: [deck, ...decks.decks.filter(d => d.id !== deck.id)].slice(0, CARD_DECK_MAX)
+  };
+  return {
+    collection: nextCol,
+    decks: nextDecks,
+    point: point + CARD_STARTER_POINT,
+    starter: {
+      kit: kitId,
+      at: now
+    }
+  };
+};
+const CARD_CPU_LOSE_POINT = 10;
+const CARD_CPU_DAILY_MAX = 600;
+const CARD_FIRST_WIN_BONUS = 50;
+const cardCpuReward = (daily, levelId, outcome) => {
+  const level = CARD_AI_LEVELS[levelId] || CARD_AI_LEVELS.normal;
+  const base = outcome === 'win' ? level.point : outcome === 'lose' ? CARD_CPU_LOSE_POINT : 0;
+  const room = Math.max(0, CARD_CPU_DAILY_MAX - daily.cpuPoint);
+  const got = Math.min(base, room);
+  const bonus = outcome === 'win' && !daily.firstWin ? CARD_FIRST_WIN_BONUS : 0;
+  return {
+    base,
+    got,
+    capped: got < base,
+    bonus,
+    total: got + bonus,
+    daily: {
+      ...daily,
+      cpuPoint: daily.cpuPoint + got,
+      firstWin: daily.firstWin || outcome === 'win'
+    }
+  };
+};
+const cardUnlockAfterWin = (unlocked, levelId) => {
+  const i = CARD_LEVEL_ORDER.indexOf(levelId);
+  const next = CARD_LEVEL_ORDER[i + 1];
+  if (i < 1 || !next || unlocked[next]) return unlocked;
+  return {
+    ...unlocked,
+    [next]: true
+  };
+};
+const cardSimulate = (db, {
+  decks,
+  policies,
+  seed = 1,
+  first = 0,
+  maxSteps = 4000
+}) => {
+  let st = cardCreateGame(db, {
+    decks,
+    seed,
+    first
+  });
+  let s = seed * 7919 >>> 0;
+  const rand = () => {
+    const n = cardRngNext(s);
+    s = n.s;
+    return n.v;
+  };
+  for (let i = 0; i < maxSteps && st.winner === null; i++) {
+    const who = st.pendingDiscard ? st.pendingDiscard.p : st.phase === 'setup' ? cardOther(st.first) : cardDecider(st);
+    const act = cardAiChooseAction(db, st, policies[who], rand);
+    const next = cardApplyAction(db, st, act);
+    if (!next) {
+      const fb = st.pending ? {
+        type: 'pass'
+      } : st.phase === 'main' ? {
+        type: 'endAttacks'
+      } : st.phase === 'guts' ? {
+        type: 'guts',
+        hand: []
+      } : null;
+      st = cardApplyAction(db, st, fb) || st;
+      if (!fb) break;
+    } else st = next;
+  }
+  return st;
+};
+const CARD_LINE_SCENES = Object.freeze(['challenge', 'start', 'big', 'bigHit', 'guardMine', 'guardTheirs', 'myKo', 'theirKo', 'lastMine', 'lastTheirs', 'deckMine', 'deckTheirs', 'win', 'lose']);
+const CARD_LINE_FACE = Object.freeze({
+  challenge: 'wink',
+  start: 'happy',
+  big: 'excited',
+  bigHit: 'troubled',
+  guardMine: 'happy',
+  guardTheirs: 'surprise',
+  myKo: 'crying',
+  theirKo: 'excited',
+  lastMine: 'troubled',
+  lastTheirs: 'excited',
+  deckMine: 'surprise',
+  deckTheirs: 'wink',
+  win: 'happy',
+  lose: 'crying'
+});
+const CARD_BATTLE_LINES = Object.freeze({
+  mua: {
+    challenge: ['カードで勝負しよ！ あたし、手加減しないよ♪', '準備できた？ あたしはいつでもいけるよ！', 'まじ楽しみすぎる！ 全力でいこ！', 'デッキ組んだ？ あたしのスピード、見せちゃうよ♪'],
+    start: ['いっくよー！ 先に攻めたもん勝ちぢゃんｗ', 'よろしくね！ あたし、ガンガンいっちゃうよ♪', 'ﾜｸﾜｸ…！ 最初の一手、決めちゃお！', 'まじ燃えてきた！ 楽しくいこ！'],
+    big: ['これでどーだ！ 大技いっちゃうよ♪', 'ためたガッツ、ぜんぶ乗せぢゃんｗ', 'まとめていっけぇー！', 'ここで決めるよ！ 覚悟しててね♪'],
+    bigHit: ['いったぁ…！ 今のはまじ効いた…', 'えっ、そんなに削れるの！？ やばすぎｗ', 'うわー！ でもまだまだいけるよ！', 'ぐぬ…！ 次はあたしの番だかんね！'],
+    guardMine: ['よけたー！ あたしの子、すばしっこいでしょ♪', 'セーフ！ 読んでたもんね〜ｗ', '守りもバッチリぢゃん！'],
+    guardTheirs: ['えー！ よけられた！？ うまっ！', 'むぅ、守られちゃった…次は当てるよ！', 'そうくるかー！ やるぢゃんｗ'],
+    myKo: ['あぁっ、倒れちゃった…！ ありがと、休んでて！', 'うそー！ まだ残りの子がいるもん！', 'くやしい…！ でも、ここから巻き返すよ！'],
+    theirKo: ['やったー！ 1体倒したよ♪', 'よっしゃ！ この調子でいこ！', '決まったー！ ﾄﾞﾔｧ'],
+    lastMine: ['あと1体…！ でもあたし、あきらめないよ！', 'ピンチすぎる…！ ここからが本番ぢゃんｗ'],
+    lastTheirs: ['あと1体だね！ 一気にいっちゃうよ♪', 'ラストスパート！ 最後まで全力でいこ！'],
+    deckMine: ['山札、あと少しぢゃん…！ 急がなきゃ！', 'カード残り少ない…早く決めなきゃ！'],
+    deckTheirs: ['そっちの山札、もう少ないよ？ 気をつけて♪', '山札が切れたら負けだからね！ ﾄﾞｷﾄﾞｷ'],
+    win: ['あたしの勝ちー！ めっちゃ楽しかった♪', 'やったー！ またいつでも相手するよ！', '勝っちゃった！ 次も全力でいこ！'],
+    lose: ['負けたー！ でも、まじ楽しかったよ！', '強すぎぢゃんｗ もう1回やろ！', 'くやしー！ 次は絶対負けないからね♪']
+  },
+  kiki: {
+    challenge: ['カードで勝負でつか？ 喜んでお相手しまつ♪♪', '私、こう見えて火力で押すタイプなんです( ˘ω˘)', 'よろしくお願いします。全力でいきますね', '準備はいいですか？ 私はガッツをためて待ってまつ'],
+    start: ['では、始めましょうか。お手柔らかに♪♪', 'じっくりためて、大きいのを当てまつね', 'どきどきしまつ…でも負けませんよ( ˘ω˘)9', 'よろしくお願いします。いい勝負にしましょうね'],
+    big: ['ためた甲斐がありました。いきまつよ♪♪', 'ここは押し切りまつ…！', 'とっておき、使っちゃいますね( ˘ω˘)', 'ガッツ、ぜんぶ込めます。えいっ'],
+    bigHit: ['あれま、けっこう効きました…', 'いたた…やりますね、ほんとに', 'そなのか…今のは痛かったでつ', 'まだ大丈夫です。次で取り返しまつ'],
+    guardMine: ['ふふ、読んでましたよ♪♪', 'よけられました。危なかったでつ', '守りもちゃんと用意してあるんです(´ー`*)ウンウン'],
+    guardTheirs: ['あれま、守られちゃいました', 'そなのか…上手ですね', 'よけられまちた…次はもっと重いのをいきまつ'],
+    myKo: ['お疲れさまでした…あとは任せてくださいね', 'あれま、倒れちゃいました…', 'くやしいでつ…でも、まだ終わりませんよ'],
+    theirKo: ['1体、倒しました。押し切りまつよ♪♪', 'やりました( ˘ω˘)9グッ!', 'ふふ、火力は裏切りませんね'],
+    lastMine: ['残り1体…ここからが勝負でつ', '追いつめられちゃいました。でも、まだ一撃ありまつよ'],
+    lastTheirs: ['あと1体ですね。最後まで気は抜きません', 'とどめ、いきまつね( ˘ω˘)'],
+    deckMine: ['山札が少なくなってきました…急がないと', 'あれま、カードがもう残りわずかでつ'],
+    deckTheirs: ['そちらの山札、残り少ないですよ？', '山札が切れたら負けです。気をつけてくださいね♪♪'],
+    win: ['私の勝ちでつ。ありがとうございました♪♪', '火力で押し切れました( ˘ω˘)9グッ!', 'いい勝負でした。またお相手してくださいね'],
+    lose: ['負けちゃいました…お強いですね', 'あれま…悔しいでつ。もう一度お願いしまつ', '完敗です。次はもっとためてから挑みますね(´ー`*)']
+  },
+  momosuke: {
+    challenge: ['カードでももに勝てると思ってる？w', 'いいよ、相手してあげる♡ 泣いても知らないよ？', '手札、ぜーんぶ見えちゃうかもよ？w', 'ももと勝負！？ 楽しませてよね♡'],
+    start: ['さ、どこからいじってあげよっかな〜w', '先に言っとくけど、ももはずるいよ？♡', 'よろしくー！ すぐ終わっちゃったらごめんねw', 'ガッツ、ためすぎないほうがいいよ？ 理由はあとでね♡'],
+    big: ['はい、どーん！！ これは痛いでしょw', 'とっておき出しちゃう♡', 'まとめてやっちゃうよー！！', 'ここで本気出すの、ずるくない？ ももは出すけどw'],
+    bigHit: ['まって、痛すぎるんだけど！！', 'えっ、今のなに！？ すご…', 'ちょ、ももの子になにしてくれてんの！！', 'むかつく〜！ でも今のはうまかったw'],
+    guardMine: ['残念でした〜♡ 当たらないよw', 'それ、読めてたよ？ww', 'はいセーフ！！ ももの勝ち〜'],
+    guardTheirs: ['は！？ よけるのずるい！！', 'まって、それ持ってたの！？', 'むぅ…やるじゃん。ちょっとだけね'],
+    myKo: ['えー！！ ももの子がー！！', 'やられた…覚えときなよ？w', 'ありがとね。あとはももがなんとかする！'],
+    theirKo: ['1体いただき〜♡', 'はい、いっちょあがり！！w', 'よわよわじゃん？ なーんてね、次いくよ！'],
+    lastMine: ['残り1体…でもここから逆転するのがももだから！！', 'まって、ピンチじゃん…！ 本気出す'],
+    lastTheirs: ['あと1体だね〜♡ どうする？w', 'もう逃げられないよ？ ふふっ'],
+    deckMine: ['え、ももの山札もう少ない！？', 'カードなくなる前に決めちゃお！！'],
+    deckTheirs: ['山札、あとちょっとじゃん？w', '山札切れで負けとか、かわいそすぎるよ？♡'],
+    win: ['ももの勝ち〜♡ 楽しかったよ！', 'ね、言ったでしょ？ ももはずるいって！w', '勝った！！ でもけっこう強かったよ、えらいえらい♡'],
+    lose: ['うそでしょ！？ …強いじゃん、すご', 'むかつく〜！！ もう1回！！', '負けた…今日だけは認めてあげる♡']
+  },
+  kyuko: {
+    challenge: ['ほい！ カード勝負だねぇ。組み方なら負けないよ笑', '先まで読むタイプなんで、よろしくぅ', 'おけ〜、相手するよ。お手柔らかにね笑', '俺のデッキ、安い技ばっかりだけど強いよぉ'],
+    start: ['ほい、始めよっか。ガッツの数え合いだねぇ', 'まずは様子見から…なんてね笑', 'よろしくお願いします笑 楽しもうねぇ', '手札とガッツの損得、ちゃんと数えるよw'],
+    big: ['ここは使いどころだねぇ。いくよ笑', 'ほい！ これで一気にいけるはず', '計算どおり…たぶんw', 'まとめて当てるのが効率いいからねぇ'],
+    bigHit: ['ぐぬぬぬ…そこ狙うかぁ', 'いたた、見立てが甘かったかも笑', 'うわ、それは計算外だぁ', 'やるねぇ。でもまだ取り返せるよw'],
+    guardMine: ['ほい、読めてた笑', '守りはちゃんと残してあるんだよねぇ', 'それ来ると思ったw'],
+    guardTheirs: ['あら、よけられたぁ', 'おけ、そっちも守り持ってたかぁ笑', 'ぐぬぬぬ…今のは読まれてた'],
+    myKo: ['ありがとん、休んでて笑', '1体やられたかぁ。まぁ、なんとかなる', 'ぐぬぬぬ…でも残りで取り返すよぉ'],
+    theirKo: ['ほい、1体！ いい感じだねぇ', '狙いどおりw', 'おけ〜、次いこ次'],
+    lastMine: ['残り1体かぁ。ここからが腕の見せどころだねぇ笑', 'まだ勝ち筋あるよ。たぶんw'],
+    lastTheirs: ['あと1体。落ち着いていくよぉ', 'ここで焦らないのが大事なんだよねぇ笑'],
+    deckMine: ['山札、思ったより減ってるなぁ笑', 'カード切れ、気をつけないとだぁ'],
+    deckTheirs: ['そっちの山札、もう少ないねぇ', '山札が切れたら負けだから、数えといたほうがいいよw'],
+    win: ['ほい、俺の勝ち！ ありがとん笑', '計算どおり…ってことにしといて笑', 'いい勝負だったねぇ。またやろw'],
+    lose: ['ぐぬぬぬ…負けたぁ', '見立てがずれてたかぁ。強いねぇ笑', 'おけ、次は組み方から考え直すよw']
+  },
+  dra: {
+    challenge: ['おでとカード勝負か。守りの固さ、見せてやるからな', 'ふむ、いいよ。膝以外も固いってとこ見せるわ', 'よろしくな。カードの組み合わせで勝つのが、おでのやり方だよ', 'えへへ、手札は見せないよ。隠しごとは得意なんだ'],
+    start: ['さて、始めるか。焦らずいこうな', 'ふむ、まずは守りを固めるとこからだな', 'えへへ、おで、意外とねばるよ', 'よろしく頼むよ。長い勝負になるかもな'],
+    big: ['ここは出しどころだな。いくぞ', 'ふむ、ためてたぶん、ぜんぶ使うわ', 'えへへ、たまには攻めるのも気持ちいいからな', 'まとめていくぞ。覚悟しろよ'],
+    bigHit: ['いてて…膝にきたわ', 'わぁ、今のはでかいな…', 'ふむ、そこを突くか。やるな', '痛いのは嫌いなんだよなぁ…えへへ'],
+    guardMine: ['ほらな、固いだろ？ えへへ', '守りは手放さない主義なんだよ', 'ふむ、読みどおりだな'],
+    guardTheirs: ['わぁ、守られたか。なるほどな', 'たしかに、そう来るよな', 'ふむ、そっちも固いじゃないか'],
+    myKo: ['すまんな…あとはおでが引き受けるからな', 'わぁ、倒れちまった…', 'ふむ、ここからは慎重にいかないとだな'],
+    theirKo: ['1体いただいたよ。えへへ', 'ふむ、仕組みどおりだな', 'よし、この調子でいくからな'],
+    lastMine: ['残り1体か…でも、ねばるのは得意なんだよ', '追いつめられたな。ここからが見せどころだわ'],
+    lastTheirs: ['あと1体だな。最後まで気は抜かないからな', 'ふむ、ここで決めさせてもらうわ'],
+    deckMine: ['山札が心もとないな…', 'わぁ、カードが残り少ないわ。急がないとな'],
+    deckTheirs: ['そっちの山札、もう少ないよ。数えといたほうがいいぞ', '山札切れも負けだからな。覚えとくといいよ'],
+    win: ['おでの勝ちだな。えへへ、ありがとな', 'ふむ、守り勝ちってやつだな', 'いい勝負だったよ。また相手してくれよな'],
+    lose: ['わぁ、負けたか…強いな、ほんとに', '負けたわ…おでなんか膝しか取り柄ないからな。えへへ', 'たしかに、今日はそっちが一枚上だったな']
+  },
+  atsu: {
+    challenge: ['カード勝負ね。とりあえず全力でいこ笑', 'いいね、受けて立つよ！', 'てか、上の難易度もあるからな笑', 'まとめて押し込むのが俺のやり方だから笑'],
+    start: ['よろしく！ 楽しもうぜ笑', 'とりあえず先に場を見るわ！', 'まじで手加減しないからな笑', 'いくよ！ 最後まで集中な！'],
+    big: ['まとめていくぞ！', 'とりあえず全員に当てとくわ笑', 'ここ、押し込むとこだよな！', 'やっぱこれでしょ笑'],
+    bigHit: ['いった…まじで効いたわ笑', 'てか、それ強すぎない！？', 'やるじゃん…！', 'しゃあない、取り返すわ笑'],
+    guardMine: ['読めてたよ笑', '当たらないって！', 'いいね、守り決まった笑'],
+    guardTheirs: ['よけられたか…やるね笑', 'てか、それ持ってたの！？', 'しゃあない、次いこ！'],
+    myKo: ['ごめん、ありがとな…！', 'まじか…でもまだいける笑', 'しゃあない、ここから取り返すぞ！'],
+    theirKo: ['弱ってたの、見逃さないよ笑', 'いいね、1体！', 'とりあえず1体、もらった！'],
+    lastMine: ['残り1体ね…ここからが面白いんだよ笑', 'まだ終わってないからな！'],
+    lastTheirs: ['あと1体！ 押し込むぞ！', 'ここで決めるわ笑'],
+    deckMine: ['山札少ないな…急ぐか笑', 'てか、カードもう残りわずかじゃん…！'],
+    deckTheirs: ['山札、もう少ないよ？ 気をつけな笑', '山札切れも負けだからな！'],
+    win: ['俺の勝ち！ いい勝負だった笑', '楽しかった！ 次は上の難易度でやろうぜ笑', 'いいね、また相手してな！'],
+    lose: ['負けた…まじで強いじゃん笑', 'やるね！ 次は上の難易度で勝負な笑', 'しゃあない、俺の負け！ もう1回やろ！']
+  }
+});
+const CARD_LINE_PER_TURN = 2;
+const cardPickLine = (who, scene, lastByScene, rand = Math.random) => {
+  const list = (CARD_BATTLE_LINES[who] || CARD_BATTLE_LINES.mua)[scene] || [];
+  if (!list.length) return null;
+  const last = lastByScene ? lastByScene[scene] : undefined;
+  const pool = list.length > 1 ? list.map((_, i) => i).filter(i => i !== last) : [0];
+  const i = pool[Math.floor(rand() * pool.length)];
+  return {
+    scene,
+    index: i,
+    text: list[i],
+    face: CARD_LINE_FACE[scene] || 'normal'
+  };
+};
+const cardLineSceneOf = (db, before, after, cpu) => {
+  const me = cpu,
+    you = 1 - cpu;
+  const evs = after.events || [];
+  if (after.winner !== null && before.winner === null) return after.winner === me ? 'win' : 'lose';
+  const alive = (st, p) => st.players[p].mons.filter(m => !m.ko).length;
+  if (alive(after, me) === 1 && alive(before, me) > 1) return 'lastMine';
+  if (alive(after, you) === 1 && alive(before, you) > 1) return 'lastTheirs';
+  if (evs.some(e => e.t === 'ko' && e.p === me)) return 'myKo';
+  if (evs.some(e => e.t === 'ko' && e.p === you)) return 'theirKo';
+  const use = evs.find(e => e.t === 'use' && e.p === me);
+  if (use) {
+    const c = cardOf(db, use.cards[0]);
+    const cost = use.cards.reduce((s, n) => s + ((cardOf(db, n) || {}).guts || 0), 0);
+    if (c && (cost >= 5 || cardHasEff(c, 'area'))) return 'big';
+  }
+  if (evs.some(e => e.t === 'hit' && e.p === me && e.dmg >= 3 && !e.self)) return 'bigHit';
+  const hitEv = evs.find(e => e.t === 'hit' && (e.evaded || e.guarded) && !e.self && !e.reflect);
+  if (hitEv) return hitEv.p === me ? 'guardMine' : 'guardTheirs';
+  if (after.players[me].deck.length <= 10 && before.players[me].deck.length > 10) return 'deckMine';
+  if (after.players[you].deck.length <= 10 && before.players[you].deck.length > 10) return 'deckTheirs';
+  return null;
+};
+const CARD_IMAGE_SET = Object.freeze({
+  imageDir: 'images/card-battle'
+});
+const CARD_IMG = (img, size = 's') => `${CARD_IMAGE_SET.imageDir}/${size}/${img}.jpg`;
+const CARD_KIND_LABEL = Object.freeze({
+  pow: 'ちから',
+  int: 'かしこさ',
+  spe: '特殊',
+  dge: '回避',
+  blk: '防御'
+});
+const CARD_TYPE_LABEL = Object.freeze({
+  ground: '地上',
+  air: '空中',
+  water: '水中'
+});
+const CARD_LEVEL_LABEL = Object.freeze({
+  easy: 'EASY',
+  normal: 'NORMAL',
+  hard: 'HARD',
+  expert: 'EXPERT',
+  master: 'MASTER'
+});
+const CARD_AI_BGM = Object.freeze({
+  mua: 'ichika_battle',
+  momosuke: 'melo_toriko',
+  kiki: 'melo_kiki_issen_short',
+  kyuko: 'melo_toward_the_stars_short',
+  dra: 'melo_mou_hitotsu_no_sekai_e',
+  atsu: 'melo_against_my_own_shadow'
+});
+const CARD_SPECIES_ART = Object.freeze({
+  tiger: 'Tiger',
+  golem: 'Golem',
+  suezo: 'Suezo',
+  pixie: 'Pixie',
+  hare: 'Ham',
+  mocchi: 'Mocchi',
+  monol: 'Monol',
+  plant: 'Plant'
+});
+const cardMonArt = mon => {
+  const id = CARD_SPECIES_ART[mon.species] || CARD_SPECIES_ART[mon.main];
+  const m = id && typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[id] : null;
+  return m && m.imgUrl ? m.imgUrl : null;
+};
+const cardTodayJst = () => new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+const cardCaption = c => !c ? '' : c.kind === 'dge' ? '回避' : c.kind === 'blk' ? '防御' : c.kind === 'spe' ? '特殊' : `ダメージ${c.damage}`;
+const cardUserLabel = (db, c) => {
+  if (!c) return '';
+  if (c.user === 'any') return '全モンスター';
+  if (c.user === 'breeder') return 'ブリーダー';
+  const m = Object.values(db.monsters).find(x => x.species === c.user && !x.variant);
+  return m ? `${m.name}専用` : c.user;
+};
+const CARD_CPU = 1;
+const CARD_ME = 0;
+const cardDeciderOf = st => st.pendingDiscard ? st.pendingDiscard.p : st.phase === 'setup' ? 1 - st.first : cardDecider(st);
+const useCardLongPress = onLong => {
+  const timer = useRef(null);
+  const fired = useRef(false);
+  useEffect(() => () => clearTimeout(timer.current), []);
+  return (no, onTap) => ({
+    onPointerDown: () => {
+      fired.current = false;
+      clearTimeout(timer.current);
+      timer.current = setTimeout(() => {
+        fired.current = true;
+        onLong(no);
+      }, 450);
+    },
+    onPointerUp: () => clearTimeout(timer.current),
+    onPointerLeave: () => clearTimeout(timer.current),
+    onPointerCancel: () => clearTimeout(timer.current),
+    onContextMenu: e => e.preventDefault(),
+    onClick: e => {
+      if (fired.current) {
+        fired.current = false;
+        return;
+      }
+      if (onTap) onTap(e);
+    }
+  });
+};
+const CardDetailModal = ({
+  db,
+  no,
+  onClose
+}) => {
+  const c = cardOf(db, no);
+  const m = c ? null : cardMonsterOf(db, no);
+  return React.createElement("div", {
+    "data-card-detail": true,
+    onClick: onClose,
+    className: "fixed inset-0 flex flex-col items-center justify-center gap-3 overflow-y-auto px-4 py-6",
+    style: {
+      zIndex: MODAL_Z.dialog,
+      backgroundColor: 'rgba(2,6,23,0.94)'
+    },
+    role: "dialog",
+    "aria-label": "カードの詳しい画面"
+  }, React.createElement("img", {
+    src: CARD_IMG(c ? c.img : m ? m.img : no, 'l'),
+    alt: c ? c.name : m ? m.name : '',
+    className: "w-[min(78vw,300px)] rounded-xl shadow-2xl"
+  }), c && React.createElement("div", {
+    className: "w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900/90 p-3 text-slate-100"
+  }, React.createElement("div", {
+    className: "text-lg font-black"
+  }, c.name), React.createElement("div", {
+    className: "mt-1 flex flex-wrap gap-1.5 text-[12px] font-bold"
+  }, React.createElement("span", {
+    className: "rounded-md bg-indigo-900 px-2 py-0.5"
+  }, CARD_KIND_LABEL[c.kind]), React.createElement("span", {
+    className: "rounded-md bg-amber-900 px-2 py-0.5"
+  }, "ガッツ", c.guts), c.damage !== null && c.damage !== undefined && React.createElement("span", {
+    className: "rounded-md bg-rose-900 px-2 py-0.5"
+  }, "ダメージ", c.damage), React.createElement("span", {
+    className: "rounded-md bg-slate-700 px-2 py-0.5"
+  }, cardUserLabel(db, c)), React.createElement("span", {
+    className: "rounded-md bg-slate-800 px-2 py-0.5 text-slate-400"
+  }, "No.", c.no)), c.text && React.createElement("p", {
+    className: "mt-2 text-[14px] font-bold leading-relaxed"
+  }, c.text), !c.ready && React.createElement("p", {
+    className: "mt-2 text-[12px] font-bold text-amber-300"
+  }, "このカードは準備中です(まだデッキに入れられません)")), m && React.createElement("div", {
+    className: "w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900/90 p-3 text-slate-100"
+  }, React.createElement("div", {
+    className: "text-lg font-black"
+  }, m.name), React.createElement("div", {
+    className: "mt-1 flex flex-wrap gap-1.5 text-[12px] font-bold"
+  }, React.createElement("span", {
+    className: "rounded-md bg-emerald-900 px-2 py-0.5"
+  }, "ライフ", m.life), React.createElement("span", {
+    className: "rounded-md bg-sky-900 px-2 py-0.5"
+  }, CARD_TYPE_LABEL[m.type]), React.createElement("span", {
+    className: "rounded-md bg-slate-800 px-2 py-0.5 text-slate-400"
+  }, "No.", m.no))), React.createElement("button", {
+    type: "button",
+    onClick: onClose,
+    className: "mh-button mh-button-secondary min-h-[48px] w-full max-w-sm rounded-2xl border border-white/20 bg-slate-900 font-black"
+  }, "閉じる"));
+};
+const CardDiscardModal = ({
+  db,
+  st,
+  initial = CARD_ME,
+  onDetail,
+  onClose
+}) => {
+  const [tab, setTab] = useState(initial);
+  const press = useCardLongPress(onDetail);
+  const list = st.players[tab].discard.slice().reverse();
+  return React.createElement(ModalFrame, {
+    label: "捨て札",
+    border: "border-indigo-400/70",
+    onClose: onClose
+  }, React.createElement("div", {
+    "data-card-discard": true,
+    className: "mb-2 grid grid-cols-2 gap-2"
+  }, [CARD_ME, CARD_CPU].map(p => React.createElement("button", {
+    key: p,
+    type: "button",
+    onClick: () => setTab(p),
+    className: `min-h-[44px] rounded-xl border text-[13px] font-black ${tab === p ? 'border-amber-300 bg-amber-500/20 text-amber-100' : 'border-white/15 bg-slate-900 text-slate-300'}`
+  }, p === CARD_ME ? '自分の捨て札' : '相手の捨て札', "(", st.players[p].discard.length, ")"))), React.createElement("div", {
+    className: "grid max-h-[60vh] grid-cols-4 gap-1.5 overflow-y-auto"
+  }, list.length === 0 && React.createElement("p", {
+    className: "col-span-4 py-6 text-center text-[13px] font-bold text-slate-400"
+  }, "まだありません"), list.map((no, i) => {
+    const c = cardOf(db, no);
+    return React.createElement("div", _extends({
+      key: `${no}-${i}`
+    }, press(no), {
+      className: "flex flex-col items-center"
+    }), React.createElement("img", {
+      src: CARD_IMG(c ? c.img : no),
+      alt: c ? c.name : no,
+      loading: "lazy",
+      className: "w-full rounded-md"
+    }), React.createElement("span", {
+      className: "mt-0.5 w-full truncate text-center text-[11px] font-bold text-slate-200"
+    }, c ? c.name : no));
+  })), React.createElement("p", {
+    className: "mt-2 text-center text-[11px] font-bold text-slate-400"
+  }, "カードを長押しすると詳しく見られます"), React.createElement("div", {
+    className: "mt-2"
+  }, React.createElement(ModalCloseButton, {
+    onClick: onClose
+  })));
+};
+const CardMonSlot = ({
+  db,
+  st,
+  p,
+  m,
+  mark = null,
+  fx = [],
+  onTap,
+  press
+}) => {
+  const mon = st.players[p].mons[m];
+  const art = cardMonArt(mon);
+  const ty = cardMonType(mon, st.turn);
+  const opp = p === CARD_CPU;
+  const pct = Math.max(0, Math.round(mon.life / mon.max * 100));
+  const stunned = mon.stunTurn === st.turn + (st.active === p ? 0 : 1) && !mon.ko;
+  const info = React.createElement("div", {
+    className: "flex items-center gap-1"
+  }, React.createElement("img", {
+    src: CARD_IMG(cardMonsterOf(db, mon.no).img),
+    alt: mon.name,
+    className: `h-[52px] w-[37px] rounded-[3px] object-cover shadow ${mon.ko ? 'grayscale opacity-40' : ''}`
+  }), React.createElement("div", {
+    className: "w-[62px] min-w-0"
+  }, React.createElement("div", {
+    className: "truncate text-[12px] font-black leading-tight"
+  }, mon.name), React.createElement("div", {
+    className: "text-[13px] font-black leading-tight"
+  }, mon.life, React.createElement("span", {
+    className: "text-[10px] text-slate-400"
+  }, " / ", mon.max)), React.createElement("div", {
+    className: "h-[6px] overflow-hidden rounded bg-slate-700"
+  }, React.createElement("div", {
+    className: `h-full ${pct > 50 ? 'bg-emerald-400' : pct > 25 ? 'bg-amber-400' : 'bg-rose-500'}`,
+    style: {
+      width: `${pct}%`
+    }
+  })), React.createElement("span", {
+    className: `mt-0.5 inline-block rounded px-1 text-[10px] font-bold ${ty === 'air' ? 'bg-cyan-800' : ty === 'water' ? 'bg-blue-800' : 'bg-indigo-900'}`
+  }, CARD_TYPE_LABEL[ty]), stunned && React.createElement("span", {
+    className: "ml-0.5 inline-block rounded bg-rose-900 px-1 text-[10px] font-bold"
+  }, "攻撃できない")));
+  const artEl = React.createElement("div", {
+    className: "relative flex h-[78px] w-full items-end justify-center"
+  }, art ? React.createElement("img", {
+    src: art,
+    alt: "",
+    className: `max-h-[78px] max-w-[96px] object-contain drop-shadow-[0_6px_6px_rgba(0,0,0,.6)] ${opp ? '-scale-x-100' : ''} ${mon.ko ? 'grayscale opacity-30' : ''}`
+  }) : React.createElement("img", {
+    src: CARD_IMG(cardMonsterOf(db, mon.no).img),
+    alt: "",
+    className: `h-[74px] rounded-md object-cover ${mon.ko ? 'grayscale opacity-30' : ''}`
+  }), mon.ko && React.createElement("span", {
+    className: "absolute bottom-2 rounded bg-black/70 px-1.5 text-[12px] font-black text-slate-300"
+  }, "KO"), fx.map(f => React.createElement("span", {
+    key: f.key,
+    className: `pointer-events-none absolute top-1 text-[30px] font-black ${f.dmg > 0 ? 'animate-bounce text-white' : 'text-sky-200'}`,
+    style: {
+      WebkitTextStroke: f.dmg > 0 ? '2px #dc2626' : '1px #0369a1',
+      textShadow: '0 0 10px rgba(248,113,113,.8)'
+    }
+  }, f.dmg > 0 ? `−${f.dmg}` : f.heal ? `＋${f.heal}` : 'ミス')));
+  const ring = mark === 'target' ? 'ring-4 ring-rose-400' : mark === 'user' ? 'ring-4 ring-amber-300' : mark === 'acting' ? 'ring-2 ring-amber-300/80' : '';
+  return React.createElement("div", _extends({
+    "data-card-mon": `${p}-${m}`
+  }, press ? press(mon.no, onTap) : {
+    onClick: onTap
+  }, {
+    className: `relative flex w-[31%] flex-col items-center rounded-xl p-0.5 ${ring} ${fx.some(f => f.dmg > 0) ? 'brightness-125' : ''}`
+  }), opp ? React.createElement(React.Fragment, null, info, artEl) : React.createElement(React.Fragment, null, artEl, info));
+};
+const CardBattleBoard = ({
+  db,
+  game,
+  onFinish
+}) => {
+  const who = ASSISTANTS.find(a => a.id === game.who) || ASSISTANTS[0];
+  const policy = useMemo(() => cardAiPolicy(game.who, game.level), [game.who, game.level]);
+  const [st, setSt] = useState(game.st);
+  const [sel, setSel] = useState(null);
+  const [picks, setPicks] = useState([]);
+  const [fx, setFx] = useState([]);
+  const [bubble, setBubble] = useState(null);
+  const [face, setFace] = useState('normal');
+  const [detail, setDetail] = useState(null);
+  const [discard, setDiscard] = useState(null);
+  const [hint, setHint] = useState('');
+  const [quit, setQuit] = useState(false);
+  const lastLine = useRef({});
+  const spoke = useRef({
+    turn: -1,
+    n: 0
+  });
+  const bubbleTimer = useRef(null);
+  const finished = useRef(false);
+  const press = useCardLongPress(no => setDetail(no));
+  const paused = !!detail || !!discard || quit;
+  const say = scene => {
+    if (!scene) return;
+    const turn = st.turn;
+    if (spoke.current.turn !== turn) spoke.current = {
+      turn,
+      n: 0
+    };
+    if (spoke.current.n >= CARD_LINE_PER_TURN && scene !== 'win' && scene !== 'lose') return;
+    const line = cardPickLine(game.who, scene, lastLine.current);
+    if (!line) return;
+    spoke.current.n += 1;
+    lastLine.current = {
+      ...lastLine.current,
+      [scene]: line.index
+    };
+    setFace(line.face);
+    setBubble({
+      text: line.text,
+      key: `${Date.now()}-${scene}`
+    });
+    clearTimeout(bubbleTimer.current);
+    bubbleTimer.current = setTimeout(() => setBubble(null), 4500);
+  };
+  useEffect(() => {
+    say('start');
+    return () => clearTimeout(bubbleTimer.current);
+  }, []);
+  const step = act => {
+    const next = cardApplyAction(db, st, act);
+    if (!next) return false;
+    const evs = next.events || [];
+    if (evs.some(e => e.t === 'use' || e.t === 'guard')) {
+      clearTimeout(bubbleTimer.current);
+      setBubble(null);
+    }
+    const hits = evs.filter(e => e.t === 'hit' || e.t === 'heal').map((e, i) => ({
+      ...e,
+      key: `${next.log.length}-${i}-${Date.now()}`,
+      heal: e.t === 'heal' ? e.n : 0,
+      dmg: e.t === 'hit' ? e.dmg : 0
+    }));
+    if (hits.length) {
+      setFx(hits);
+      setTimeout(() => setFx(cur => cur.filter(f => !hits.some(h => h.key === f.key))), 1000);
+      if (hits.some(h => h.dmg >= 3)) Audio_.se.crit();else if (hits.some(h => h.dmg > 0)) Audio_.se.attack();else if (hits.some(h => h.heal)) Audio_.se.heal();else Audio_.se.guard();
+    } else if (evs.some(e => e.t === 'use')) Audio_.se.card();else if (evs.some(e => e.t === 'guard')) Audio_.se.guard();
+    const scene = cardLineSceneOf(db, st, next, CARD_CPU);
+    setSt(next);
+    setSel(null);
+    setPicks([]);
+    setHint('');
+    if (scene) say(scene);
+    return true;
+  };
+  useEffect(() => {
+    if (st.winner !== null || paused) return undefined;
+    if (cardDeciderOf(st) !== CARD_CPU) return undefined;
+    const wait = st.pending ? 700 : st.phase === 'guts' ? 600 : 900;
+    const t = setTimeout(() => {
+      const act = cardAiChooseAction(db, st, policy);
+      if (!step(act)) step(st.pending ? {
+        type: 'pass'
+      } : st.phase === 'main' ? {
+        type: 'endAttacks'
+      } : {
+        type: 'guts',
+        hand: []
+      });
+    }, wait);
+    return () => clearTimeout(t);
+  }, [st, paused]);
+  useEffect(() => {
+    if (st.winner === null || finished.current) return undefined;
+    finished.current = true;
+    const t = setTimeout(() => onFinish({
+      outcome: st.winner === CARD_ME ? 'win' : 'lose',
+      st
+    }), 2200);
+    return () => clearTimeout(t);
+  }, [st.winner]);
+  const me = st.players[CARD_ME];
+  const opp = st.players[CARD_CPU];
+  const decider = cardDeciderOf(st);
+  const myTurn = st.winner === null && decider === CARD_ME;
+  const mode = !myTurn ? 'wait' : st.pendingDiscard ? 'discard' : st.phase === 'setup' ? 'setup' : st.pending ? 'guard' : st.phase === 'main' ? 'attack' : st.phase === 'guts' ? 'guts' : 'wait';
+  const attackOpts = mode === 'attack' ? cardAttackOptions(db, st) : [];
+  const guardOpts = mode === 'guard' ? cardGuardOptions(db, st) : [];
+  const selOpts = sel && mode === 'attack' ? attackOpts.filter(o => o.hand.includes(sel.hand)) : [];
+  const selMons = [...new Set(selOpts.map(o => o.mon === undefined ? -1 : o.mon))];
+  const monChosen = sel && (sel.mon !== undefined ? sel.mon : selMons.length === 1 ? selMons[0] : undefined);
+  const byMon = monChosen === undefined ? [] : selOpts.filter(o => (o.mon === undefined ? -1 : o.mon) === monChosen);
+  const sets = [...new Set(byMon.map(o => JSON.stringify(o.hand)))].sort((a, b) => JSON.parse(b).length - JSON.parse(a).length);
+  const setChosen = sel && sets.length ? sel.set && sets.includes(sel.set) ? sel.set : sets[0] : null;
+  const finalOpts = byMon.filter(o => JSON.stringify(o.hand) === setChosen);
+  const needTarget = finalOpts.some(o => o.target);
+  const tapHand = i => {
+    Audio_.se.tap();
+    if (mode === 'guts' || mode === 'setup' || mode === 'discard') {
+      const max = mode === 'setup' ? CARD_BATTLE_SETUP_GUTS_MAX : mode === 'discard' ? st.pendingDiscard.n : 99;
+      setPicks(cur => cur.includes(i) ? cur.filter(x => x !== i) : cur.length >= max ? cur : [...cur, i]);
+      return;
+    }
+    if (mode === 'guard') {
+      const os = guardOpts.filter(o => o.hand === i);
+      if (!os.length) {
+        setHint('このカードでは守れません');
+        return;
+      }
+      const mons = [...new Set(os.map(o => o.mon))];
+      if (mons.length === 1) {
+        step(os[0]);
+        return;
+      }
+      setSel({
+        hand: i
+      });
+      setHint('かばう子をタップ');
+      return;
+    }
+    if (mode !== 'attack') return;
+    if (sel && sel.hand === i) {
+      setSel(null);
+      setHint('');
+      return;
+    }
+    const os = attackOpts.filter(o => o.hand.includes(i));
+    const c = cardOf(db, me.hand[i]);
+    if (!os.length) {
+      setHint(!c ? '' : cardIsGuardKind(c.kind) ? '回避・防御は、相手に攻撃されたときに使います' : !c.ready ? 'このカードは準備中です' : c.guts > me.guts.length ? `ガッツが足りません(あと${c.guts - me.guts.length})` : 'いまは使えません(使える子がいない・もう攻撃した など)');
+      setSel(null);
+      return;
+    }
+    setSel({
+      hand: i
+    });
+    setHint('');
+  };
+  const tapMon = (p, m) => {
+    if (mode === 'guard' && sel) {
+      const o = guardOpts.find(x => x.hand === sel.hand && x.mon === m && p === CARD_ME);
+      if (o) step(o);
+      return;
+    }
+    if (mode !== 'attack' || !sel) return;
+    if (monChosen === undefined) {
+      if (p === CARD_ME && selMons.includes(m)) {
+        Audio_.se.tap();
+        setSel({
+          ...sel,
+          mon: m
+        });
+      }
+      return;
+    }
+    const o = finalOpts.find(x => x.target && x.target.p === p && x.target.m === m);
+    if (o) step(o);
+  };
+  const markOf = (p, m) => {
+    if (mode === 'attack' && sel) {
+      if (monChosen === undefined) return p === CARD_ME && selMons.includes(m) ? 'user' : null;
+      if (p === CARD_ME && m === monChosen) return 'acting';
+      if (finalOpts.some(o => o.target && o.target.p === p && o.target.m === m)) return 'target';
+    }
+    if (mode === 'guard' && sel && p === CARD_ME && guardOpts.some(o => o.hand === sel.hand && o.mon === m)) return 'user';
+    if (st.pending) {
+      const t = st.pending.targets[st.pending.ti];
+      if (t && t.p === p && t.m === m) return 'target';
+      if (st.pending.attacker === p && st.pending.mon === m) return 'acting';
+    }
+    return null;
+  };
+  const handUsable = i => {
+    if (mode === 'attack') return attackOpts.some(o => o.hand.includes(i));
+    if (mode === 'guard') return guardOpts.some(o => o.hand === i);
+    return mode === 'guts' || mode === 'setup' || mode === 'discard';
+  };
+  const pd = st.pending;
+  const pendingText = pd ? (() => {
+    const c = cardOf(db, pd.main);
+    const t = pd.targets[pd.ti];
+    const tm = t ? st.players[t.p].mons[t.m] : null;
+    const atk = pd.mon >= 0 ? st.players[pd.attacker].mons[pd.mon].name : 'ブリーダー';
+    return `${atk}の「${c.name}」(ダメージ${pd.base * pd.mult})が${tm ? tm.name : ''}に！`;
+  })() : null;
+  const logLines = st.log.filter(l => l.kind !== 'turn').slice(-2);
+  const strip = p => {
+    const pl = st.players[p];
+    return React.createElement("div", {
+      className: "flex items-center gap-1.5 text-[11px] font-bold"
+    }, p === CARD_CPU && React.createElement("span", {
+      className: "flex"
+    }, pl.hand.map((_, i) => React.createElement("b", {
+      key: i,
+      className: "-ml-1 h-[18px] w-[13px] rounded-[2px] border border-violet-300 bg-gradient-to-br from-violet-600 to-indigo-900 first:ml-0"
+    }))), React.createElement("span", {
+      className: "rounded-md border border-white/20 bg-white/10 px-1.5 py-0.5"
+    }, "山札 ", pl.deck.length), React.createElement("span", {
+      className: "flex items-center gap-0.5 rounded-md border border-amber-300/40 bg-amber-500/10 px-1.5 py-0.5 text-amber-100"
+    }, "ガッツ ", pl.guts.length), React.createElement("button", {
+      type: "button",
+      onClick: () => setDiscard({
+        tab: p
+      }),
+      className: "rounded-md border border-white/20 bg-white/10 px-1.5 py-0.5"
+    }, "捨て札 ", pl.discard.length));
+  };
+  const footer = (() => {
+    const btn = 'mh-button min-h-[44px] flex-1 rounded-xl text-[14px] font-black active:scale-[.98] disabled:opacity-40';
+    if (st.winner !== null) return React.createElement("div", {
+      className: "flex-1 text-center text-[15px] font-black text-amber-200"
+    }, st.winner === CARD_ME ? '勝ち！' : '負け…');
+    if (mode === 'wait') return React.createElement("div", {
+      className: "flex-1 text-center text-[13px] font-bold text-slate-300"
+    }, who.name, "の番…");
+    if (mode === 'setup') return React.createElement("button", {
+      type: "button",
+      className: `${btn} mh-button-primary`,
+      onClick: () => step({
+        type: 'setupGuts',
+        hand: picks
+      })
+    }, picks.length ? `${picks.length}枚をガッツにして始める` : 'ガッツにしないで始める');
+    if (mode === 'discard') return React.createElement("button", {
+      type: "button",
+      disabled: picks.length !== st.pendingDiscard.n,
+      className: `${btn} mh-button-danger`,
+      onClick: () => step({
+        type: 'discard',
+        hand: picks
+      })
+    }, `${st.pendingDiscard.n}枚えらんで捨てる`);
+    if (mode === 'guard') return React.createElement("button", {
+      type: "button",
+      className: `${btn} border border-white/20 bg-slate-800`,
+      onClick: () => step({
+        type: 'pass'
+      })
+    }, "守らない");
+    if (mode === 'guts') return React.createElement("button", {
+      type: "button",
+      className: `${btn} bg-gradient-to-b from-orange-400 to-orange-600`,
+      onClick: () => step({
+        type: 'guts',
+        hand: picks
+      })
+    }, picks.length ? `${picks.length}枚をガッツにしてターン終了` : 'ガッツにしないでターン終了');
+    const useBtn = sel && monChosen !== undefined && finalOpts.length && !needTarget;
+    return React.createElement(React.Fragment, null, useBtn ? React.createElement("button", {
+      type: "button",
+      className: `${btn} mh-button-primary`,
+      onClick: () => step(finalOpts[0])
+    }, "使う") : null, React.createElement("button", {
+      type: "button",
+      className: `${btn} border border-violet-300/60 bg-violet-900`,
+      onClick: () => step({
+        type: 'endAttacks'
+      })
+    }, "攻撃おわり → ガッツへ"));
+  })();
+  const guide = mode === 'attack' ? sel ? monChosen === undefined ? '使う子をタップ' : needTarget ? '狙う相手をタップ' : '「使う」をタップ' : '技をタップ → 相手のモンスターをタップ' : mode === 'guard' ? guardOpts.length ? '使える回避・防御だけが明るくなっています' : '使える回避・防御はありません' : mode === 'guts' ? 'ガッツにするカードをタップ(何枚でも)' : mode === 'setup' ? '後攻: 始める前に2枚までガッツにできます' : mode === 'discard' ? `捨てるカードを${st.pendingDiscard ? st.pendingDiscard.n : 0}枚タップ` : '';
+  return React.createElement("div", {
+    "data-mh-screen": true,
+    "data-card-battle": true,
+    "data-card-mode": mode,
+    className: "relative flex h-full min-h-0 flex-1 flex-col overflow-hidden text-white",
+    style: {
+      background: 'radial-gradient(ellipse at 50% 45%,#3b2a6b 0%,#1b1438 55%,#0d0a1f 100%)'
+    }
+  }, React.createElement("div", {
+    className: "flex h-[44px] shrink-0 items-center justify-between bg-black/35 px-2"
+  }, React.createElement("button", {
+    type: "button",
+    onClick: () => setQuit(true),
+    className: "rounded-lg border border-white/20 px-2 py-1 text-[12px] font-black text-slate-200"
+  }, "投了"), React.createElement("span", {
+    className: "text-[15px] font-black"
+  }, "MFバトルカード"), React.createElement("span", {
+    className: "text-[12px] font-bold text-violet-200"
+  }, "ターン ", Math.max(1, st.turn), " ・ ", st.active === CARD_ME ? 'あなたの番' : `${who.name}の番`)), React.createElement("div", {
+    className: "flex h-[50px] shrink-0 items-center gap-2 px-2"
+  }, React.createElement("img", {
+    src: assistantFaceImage(who, face),
+    alt: who.name,
+    className: "h-[42px] w-[42px] rounded-xl border-2 bg-black object-cover object-top",
+    style: {
+      borderColor: who.accent
+    }
+  }), React.createElement("div", {
+    className: "min-w-0 text-[13px] font-black leading-tight"
+  }, who.name, React.createElement("small", {
+    className: "block text-[10px] font-bold text-rose-200"
+  }, CARD_LEVEL_LABEL[game.level])), React.createElement("div", {
+    className: "ml-auto"
+  }, strip(CARD_CPU))), bubble && React.createElement("div", {
+    key: bubble.key,
+    "data-card-bubble": true,
+    className: "pointer-events-none absolute left-[56px] right-2 top-[150px] z-10 rounded-2xl border-[3px] bg-white px-2.5 py-1 text-[13px] font-extrabold leading-snug text-[#1f1333] shadow-lg",
+    style: {
+      borderColor: who.accent,
+      ...JA_WRAP_STYLE
+    }
+  }, bubble.text), React.createElement("div", {
+    className: "flex shrink-0 items-start justify-around px-1"
+  }, opp.mons.map((_, m) => React.createElement(CardMonSlot, {
+    key: m,
+    db: db,
+    st: st,
+    p: CARD_CPU,
+    m: m,
+    mark: markOf(CARD_CPU, m),
+    fx: fx.filter(f => f.p === CARD_CPU && f.m === m),
+    onTap: () => tapMon(CARD_CPU, m),
+    press: press
+  }))), React.createElement("div", {
+    className: "flex min-h-[54px] shrink-0 items-center justify-center px-3 py-1"
+  }, React.createElement("div", {
+    "data-card-log": true,
+    className: "rounded-xl border border-white/15 bg-black/45 px-3 py-1 text-center text-[13px] font-bold leading-snug",
+    style: JA_WRAP_STYLE
+  }, pendingText ? React.createElement("span", {
+    className: "text-rose-200"
+  }, pendingText) : logLines.map((l, i) => React.createElement("div", {
+    key: i,
+    className: i === logLines.length - 1 ? '' : 'text-[11px] text-violet-200'
+  }, l.text)))), React.createElement("div", {
+    className: "flex shrink-0 items-end justify-around px-1"
+  }, me.mons.map((_, m) => React.createElement(CardMonSlot, {
+    key: m,
+    db: db,
+    st: st,
+    p: CARD_ME,
+    m: m,
+    mark: markOf(CARD_ME, m),
+    fx: fx.filter(f => f.p === CARD_ME && f.m === m),
+    onTap: () => tapMon(CARD_ME, m),
+    press: press
+  }))), React.createElement("div", {
+    className: "flex shrink-0 justify-end px-2 py-1"
+  }, strip(CARD_ME)), React.createElement("div", {
+    className: "min-h-0 flex-1"
+  }), guide && React.createElement("div", {
+    className: "mx-auto mb-1 shrink-0 rounded-lg bg-amber-300 px-2 py-0.5 text-[11px] font-black text-slate-900"
+  }, hint || guide), !guide && hint && React.createElement("div", {
+    className: "mx-auto mb-1 shrink-0 rounded-lg bg-amber-300 px-2 py-0.5 text-[11px] font-black text-slate-900"
+  }, hint), mode === 'attack' && sel && monChosen !== undefined && sets.length > 1 && React.createElement("div", {
+    className: "mb-1 flex shrink-0 flex-wrap justify-center gap-1 px-2"
+  }, sets.map(s => React.createElement("button", {
+    key: s,
+    type: "button",
+    onClick: () => setSel({
+      ...sel,
+      mon: monChosen,
+      set: s
+    }),
+    className: `rounded-lg border px-2 py-1 text-[12px] font-black ${s === setChosen ? 'border-amber-300 bg-amber-500/25' : 'border-white/20 bg-slate-800'}`
+  }, JSON.parse(s).map(i => cardOf(db, me.hand[i]).name).join('＋')))), React.createElement("div", {
+    "data-card-hand": true,
+    className: "flex shrink-0 items-end justify-center gap-1 px-1 pb-1"
+  }, me.hand.map((no, i) => {
+    const c = cardOf(db, no);
+    const on = handUsable(i);
+    const up = sel && sel.hand === i || picks.includes(i) || setChosen && JSON.parse(setChosen).includes(i);
+    return React.createElement("div", _extends({
+      key: `${no}-${i}`,
+      "data-card-hand-card": i
+    }, press(no, () => tapHand(i)), {
+      className: `flex w-[19%] max-w-[76px] flex-col items-center transition-transform ${up ? '-translate-y-3' : ''} ${myTurn && !on ? 'opacity-45' : ''}`
+    }), React.createElement("img", {
+      src: CARD_IMG(c ? c.img : no),
+      alt: c ? c.name : no,
+      className: `w-full rounded-[5px] shadow-[0_3px_6px_#000] ${up ? 'outline outline-[3px] outline-amber-300' : ''}`
+    }), React.createElement("div", {
+      className: "mt-0.5 w-full rounded-md bg-black/60 py-0.5 text-center leading-tight"
+    }, React.createElement("b", {
+      className: "block truncate text-[12px]"
+    }, c ? c.name : no), React.createElement("span", {
+      className: "block text-[11px] font-extrabold text-amber-200"
+    }, "ガッツ", c ? c.guts : '-'), React.createElement("span", {
+      className: "block text-[11px] font-extrabold text-amber-200"
+    }, cardCaption(c))));
+  })), React.createElement("div", {
+    className: "flex shrink-0 gap-2 px-2.5 pb-2 pt-1",
+    style: {
+      paddingBottom: 'max(8px, env(safe-area-inset-bottom))'
+    }
+  }, footer), detail && React.createElement(CardDetailModal, {
+    db: db,
+    no: detail,
+    onClose: () => setDetail(null)
+  }), discard && React.createElement(CardDiscardModal, {
+    db: db,
+    st: st,
+    initial: discard.tab,
+    onDetail: no => setDetail(no),
+    onClose: () => setDiscard(null)
+  }), quit && React.createElement(ConfirmSheet, {
+    title: "投了しますか？",
+    message: '投了すると負けになります(カードポイントはもらえません)',
+    confirmLabel: "投了する",
+    danger: true,
+    onCancel: () => setQuit(false),
+    onConfirm: () => {
+      setQuit(false);
+      finished.current = true;
+      onFinish({
+        outcome: 'surrender',
+        st
+      });
+    }
+  }));
+};
+const CardBattleScreen = ({
+  screen,
+  onNavigate,
+  onExit,
+  seenStoryIds = [],
+  debug = false,
+  onBgm
+}) => {
+  const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
+  const [save, setSave] = useState(null);
+  const [view, setView] = useState('top');
+  const [kitPick, setKitPick] = useState(null);
+  const [foe, setFoe] = useState({
+    who: 'mua',
+    level: 'easy'
+  });
+  const [game, setGame] = useState(null);
+  const [result, setResult] = useState(null);
+  const [notice, setNotice] = useState('');
+  const [confirmReset, setConfirmReset] = useState(false);
+  const [detail, setDetail] = useState(null);
+  const press = useCardLongPress(no => setDetail(no));
+  const load = async () => {
+    const K = CARD_SAVE_KEYS;
+    const [collection, decks, point, starter, daily, record, unlocked] = await Promise.all([storeGet(K.collection, null), storeGet(K.decks, null), storeGet(K.point, null), storeGet(K.starter, null), storeGet(K.daily, null), storeGet(K.record, null), storeGet(K.cpuUnlocked, null)]);
+    const next = {
+      collection: cardNormalizeCollection(collection),
+      decks: cardNormalizeDecks(decks),
+      point: cardNormalizePoint(point),
+      starter: cardNormalizeStarter(starter),
+      daily: cardNormalizeDaily(daily, cardTodayJst()),
+      record: cardNormalizeRecord(record),
+      unlocked: cardNormalizeCpuUnlocked(unlocked)
+    };
+    setSave(next);
+    if (!next.starter) setView('starter');
+    return next;
+  };
+  useEffect(() => {
+    void load();
+  }, []);
+  useEffect(() => {
+    if (screen === 'CARD_TOP' && game && !result) setGame(null);
+  }, [screen]);
+  const persist = async patch => {
+    const K = CARD_SAVE_KEYS;
+    const entries = Object.entries(patch).map(([k, next]) => ({
+      key: K[k],
+      next,
+      before: save[k] === undefined ? null : save[k]
+    }));
+    const ok = await saveStoredValuesOrRollback(entries, storeGet, storeSet);
+    if (ok) setSave(cur => ({
+      ...cur,
+      ...patch
+    }));
+    return ok;
+  };
+  if (!db) return React.createElement("div", {
+    "data-mh-screen": true,
+    className: SCREEN_SHELL_CLASS
+  }, React.createElement(ScreenHead, {
+    title: "MFバトルカード",
+    onBack: onExit
+  }), React.createElement(ScreenEmpty, {
+    emoji: "🃏",
+    lines: ['カードのデータを読み込めませんでした']
+  }));
+  if (!save) return React.createElement("div", {
+    "data-mh-screen": true,
+    className: SCREEN_SHELL_CLASS
+  }, React.createElement(ScreenHead, {
+    title: "MFバトルカード",
+    onBack: onExit
+  }), React.createElement(ScreenEmpty, {
+    emoji: "⏳",
+    lines: ['読み込み中…']
+  }));
+  if (screen === 'CARD_BATTLE' && game) {
+    return React.createElement(CardBattleBoard, {
+      key: game.key,
+      db: db,
+      game: game,
+      onFinish: async ({
+        outcome
+      }) => {
+        const reward = cardCpuReward(cardNormalizeDaily(save.daily, cardTodayJst()), game.level, outcome);
+        const rec = cardNormalizeRecord(save.record);
+        const nextRecord = {
+          ...rec,
+          cpu: {
+            ...rec.cpu,
+            [outcome]: rec.cpu[outcome] + 1
+          },
+          beaten: outcome === 'win' ? {
+            ...rec.beaten,
+            [game.who]: true
+          } : rec.beaten,
+          recent: [{
+            at: Date.now(),
+            who: game.who,
+            level: game.level,
+            outcome
+          }, ...rec.recent].slice(0, 30)
+        };
+        const nextUnlocked = outcome === 'win' ? cardUnlockAfterWin(save.unlocked, game.level) : save.unlocked;
+        const opened = CARD_LEVEL_ORDER.find(lv => nextUnlocked[lv] && !save.unlocked[lv]) || null;
+        const ok = await persist({
+          point: save.point + reward.total,
+          daily: reward.daily,
+          record: nextRecord,
+          unlocked: nextUnlocked
+        });
+        setResult({
+          outcome,
+          reward,
+          opened,
+          saved: ok,
+          who: game.who,
+          level: game.level
+        });
+        onBgm && onBgm(null);
+        onNavigate('CARD_TOP');
+        setView('result');
+      }
+    });
+  }
+  const allAssistants = typeof ASSISTANTS !== 'undefined' ? ASSISTANTS : [];
+  const foes = (debug ? allAssistants : assistantsUnlockedFrom(seenStoryIds)).filter(a => CARD_AI_HABITS[a.id]);
+  const activeDeck = save.decks.decks.find(d => d.id === save.decks.active) || save.decks.decks[0] || null;
+  const deckIssues = activeDeck ? cardDeckProblems(db, activeDeck) : ['デッキがありません'];
+  const btn = 'mh-button min-h-[52px] w-full rounded-2xl font-black active:scale-[.98] disabled:opacity-40';
+  const startBattle = (pick = foe) => {
+    if (!activeDeck || deckIssues.length) {
+      setNotice(deckIssues.join('・'));
+      return;
+    }
+    const cpuDeck = cardAiBuildDeck(db, pick.who, pick.level);
+    const seed = (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0;
+    const first = Math.random() < 0.5 ? CARD_ME : CARD_CPU;
+    const assistant = allAssistants.find(a => a.id === pick.who);
+    const st = cardCreateGame(db, {
+      decks: [{
+        monsters: activeDeck.monsters,
+        cards: activeDeck.cards
+      }, cpuDeck],
+      names: ['あなた', assistant ? assistant.name : 'あいて'],
+      seed,
+      first
+    });
+    setResult(null);
+    setGame({
+      key: `${seed}`,
+      st,
+      who: pick.who,
+      level: pick.level
+    });
+    onBgm && onBgm(CARD_AI_BGM[pick.who] || null);
+    onNavigate('CARD_BATTLE');
+  };
+  if (view === 'starter') {
+    const kits = Object.values(db.starters);
+    const pick = kitPick ? db.starters[kitPick] : null;
+    return React.createElement("div", {
+      "data-mh-screen": true,
+      "data-card-top": "starter",
+      className: SCREEN_SHELL_CLASS
+    }, React.createElement(ScreenHead, {
+      title: "スターターをえらぶ",
+      accent: "text-amber-200",
+      onBack: save.starter ? () => setView('top') : onExit,
+      note: "最初の1つは無料。えらばなかった2つは、あとでカードポイントで買えます"
+    }), React.createElement("div", {
+      className: `${SCREEN_LIST_CLASS} space-y-2 pb-4`
+    }, kits.map(k => React.createElement("button", {
+      key: k.id,
+      type: "button",
+      "data-card-kit": k.id,
+      onClick: () => {
+        Audio_.se.tap();
+        setKitPick(k.id);
+      },
+      className: `w-full rounded-2xl border-2 p-2 text-left ${kitPick === k.id ? 'border-amber-300 bg-amber-500/15' : 'border-white/10 bg-slate-900/70'}`
+    }, React.createElement("div", {
+      className: "text-[15px] font-black text-white"
+    }, k.name), React.createElement("div", {
+      className: "mt-1 flex gap-1.5"
+    }, k.monsters.map(no => React.createElement("img", {
+      key: no,
+      src: CARD_IMG(cardMonsterOf(db, no).img),
+      alt: cardMonsterOf(db, no).name,
+      className: "w-[27%] rounded-md"
+    }))), React.createElement("div", {
+      className: "mt-1 text-[12px] font-bold text-slate-300"
+    }, k.monsters.map(no => cardMonsterOf(db, no).name).join('・'), " と技カード50枚")))), React.createElement("div", {
+      className: SCREEN_FOOTER_CLASS
+    }, React.createElement("button", {
+      type: "button",
+      disabled: !pick,
+      className: `${btn} mh-button-primary`,
+      onClick: async () => {
+        const g = cardGrantStarter(db, save, kitPick, Date.now());
+        if (!g) {
+          setNotice('スターターはもう受け取っています');
+          setView('top');
+          return;
+        }
+        const ok = await persist(g);
+        setNotice(ok ? `「${pick.name}」を受け取りました。カードポイント${CARD_STARTER_POINT}もいっしょに！` : '保存できませんでした。もう一度お試しください');
+        if (ok) setView('top');
+      }
+    }, pick ? `「${pick.name}」にする` : 'キットをえらんでください')));
+  }
+  if (view === 'foe') {
+    const a = allAssistants.find(x => x.id === foe.who) || foes[0];
+    const line = a ? cardPickLine(a.id, 'challenge', null, () => 0.0) : null;
+    return React.createElement("div", {
+      "data-mh-screen": true,
+      "data-card-top": "foe",
+      className: SCREEN_SHELL_CLASS
+    }, React.createElement(ScreenHead, {
+      title: "コンピューター戦",
+      accent: "text-amber-200",
+      onBack: () => setView('top'),
+      note: "相手の助手と強さをえらびます"
+    }), React.createElement("div", {
+      className: `${SCREEN_LIST_CLASS} space-y-2 pb-4`
+    }, React.createElement("div", {
+      className: "grid grid-cols-3 gap-1.5"
+    }, foes.map(x => React.createElement("button", {
+      key: x.id,
+      type: "button",
+      "data-card-foe": x.id,
+      onClick: () => {
+        Audio_.se.tap();
+        setFoe(f => ({
+          ...f,
+          who: x.id
+        }));
+      },
+      className: `relative flex flex-col items-center rounded-xl border-2 p-1 ${foe.who === x.id ? 'bg-white/10' : 'border-white/10 bg-slate-900/70'}`,
+      style: foe.who === x.id ? {
+        borderColor: x.accent
+      } : undefined
+    }, React.createElement("img", {
+      src: assistantFaceImage(x, 'normal'),
+      alt: x.name,
+      className: "h-[52px] w-[52px] rounded-lg object-cover object-top"
+    }), React.createElement("span", {
+      className: "text-[13px] font-black"
+    }, x.name), save.record.beaten[x.id] && React.createElement("span", {
+      className: "absolute right-1 top-1 rounded bg-amber-400 px-1 text-[10px] font-black text-slate-900"
+    }, "勝")))), a && React.createElement("div", {
+      className: "flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2"
+    }, React.createElement("img", {
+      src: assistantFullImage(a, 'wink'),
+      alt: a.name,
+      className: "h-[150px] w-[42%] shrink-0 object-contain object-bottom"
+    }), React.createElement("div", {
+      className: "min-w-0 flex-1 pb-2"
+    }, React.createElement("div", {
+      className: "text-[11px] font-bold text-slate-400"
+    }, a.tagline), React.createElement("div", {
+      className: "mt-1 rounded-2xl border-2 bg-white px-2 py-1 text-[13px] font-extrabold leading-snug text-[#1f1333]",
+      style: {
+        borderColor: a.accent,
+        ...JA_WRAP_STYLE
+      }
+    }, line ? line.text : ''))), React.createElement(ScreenSectionLabel, {
+      note: "勝つと次の強さが開きます"
+    }, "強さ"), React.createElement("div", {
+      className: "grid grid-cols-5 gap-1"
+    }, CARD_LEVEL_ORDER.map(lv => {
+      const open = cardLevelOpen(save.unlocked, lv) || debug;
+      return React.createElement("button", {
+        key: lv,
+        type: "button",
+        "data-card-level": lv,
+        disabled: !open,
+        onClick: () => {
+          Audio_.se.tap();
+          setFoe(f => ({
+            ...f,
+            level: lv
+          }));
+        },
+        className: `min-h-[52px] rounded-xl border-2 text-[11px] font-black ${foe.level === lv ? 'border-amber-300 bg-amber-500/20 text-amber-100' : 'border-white/10 bg-slate-900 text-slate-200'} disabled:opacity-35`
+      }, CARD_LEVEL_LABEL[lv], React.createElement("span", {
+        className: "block text-[10px] text-amber-200"
+      }, open ? `勝ち${CARD_AI_LEVELS[lv].point}` : '🔒'));
+    })), debug && React.createElement("p", {
+      className: "text-[11px] font-bold text-slate-400"
+    }, "(デバッグ: まだ開いていない強さも選べます。開いた印は勝ったときだけ付きます)"), React.createElement("div", {
+      className: SCREEN_PANEL_FLAT_CLASS
+    }, React.createElement("div", {
+      className: "text-[12px] font-bold text-slate-300"
+    }, "使うデッキ: ", React.createElement("b", {
+      className: "text-white"
+    }, activeDeck ? activeDeck.name : 'なし')), deckIssues.length > 0 && React.createElement("div", {
+      className: "mt-1 text-[12px] font-bold text-rose-300"
+    }, deckIssues.join('・')), React.createElement("div", {
+      className: "mt-1 text-[11px] font-bold text-slate-400"
+    }, "今日もらったカードポイント(コンピューター戦): ", save.daily.cpuPoint, " / ", CARD_CPU_DAILY_MAX, save.daily.firstWin ? '' : '・今日はじめての勝ちで +50')), notice && React.createElement("p", {
+      className: "text-[12px] font-bold text-amber-200"
+    }, notice)), React.createElement("div", {
+      className: SCREEN_FOOTER_CLASS
+    }, React.createElement("button", {
+      type: "button",
+      "data-card-start": true,
+      className: `${btn} mh-button-primary`,
+      disabled: !a || deckIssues.length > 0,
+      onClick: () => startBattle(foe)
+    }, "対戦する")));
+  }
+  if (view === 'result' && result) {
+    const a = allAssistants.find(x => x.id === result.who);
+    const win = result.outcome === 'win';
+    const line = a ? cardPickLine(a.id, win ? 'lose' : 'win', null) : null;
+    const r = result.reward;
+    return React.createElement("div", {
+      "data-mh-screen": true,
+      "data-card-top": "result",
+      "data-card-outcome": result.outcome,
+      className: SCREEN_SHELL_CLASS
+    }, React.createElement(ScreenHead, {
+      title: win ? '勝ち！' : result.outcome === 'surrender' ? '投了' : '負け…',
+      accent: win ? 'text-amber-200' : 'text-slate-300',
+      onBack: () => setView('top')
+    }), React.createElement("div", {
+      className: `${SCREEN_LIST_CLASS} space-y-2 pb-4`
+    }, a && React.createElement("div", {
+      className: "flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2"
+    }, React.createElement("img", {
+      src: assistantFullImage(a, win ? 'crying' : 'happy'),
+      alt: a.name,
+      className: "h-[220px] w-[46%] shrink-0 object-contain object-bottom"
+    }), React.createElement("div", {
+      className: "mb-2 min-w-0 flex-1 rounded-2xl border-2 bg-white px-2 py-1 text-[13px] font-extrabold leading-snug text-[#1f1333]",
+      style: {
+        borderColor: a.accent,
+        ...JA_WRAP_STYLE
+      }
+    }, line ? line.text : '')), React.createElement("div", {
+      className: SCREEN_PANEL_CLASS
+    }, React.createElement("div", {
+      className: "text-[13px] font-black text-amber-200"
+    }, "もらったカードポイント: ", r.total), React.createElement("div", {
+      className: "mt-1 text-[12px] font-bold text-slate-300"
+    }, CARD_LEVEL_LABEL[result.level], "の", win ? '勝ち' : result.outcome === 'lose' ? '負け' : '投了', ": ", r.got, r.capped ? `(今日の上限${CARD_CPU_DAILY_MAX}に届きました)` : ''), r.bonus > 0 && React.createElement("div", {
+      className: "text-[12px] font-bold text-slate-300"
+    }, "今日はじめての勝ち: +", r.bonus), React.createElement("div", {
+      className: "mt-1 text-[12px] font-bold text-slate-300"
+    }, "いまのカードポイント: ", save.point), result.opened && React.createElement("div", {
+      className: "mt-1 text-[13px] font-black text-emerald-300"
+    }, CARD_LEVEL_LABEL[result.opened], "が選べるようになりました！"), !result.saved && React.createElement("div", {
+      className: "mt-1 text-[12px] font-bold text-rose-300"
+    }, "保存できませんでした(カードポイントは増えていません)"))), React.createElement("div", {
+      className: `${SCREEN_FOOTER_CLASS} grid grid-cols-2 gap-2`
+    }, React.createElement("button", {
+      type: "button",
+      className: `${btn} mh-button-primary`,
+      onClick: () => {
+        const again = {
+          who: result.who,
+          level: result.level
+        };
+        setFoe(again);
+        startBattle(again);
+      }
+    }, "もう一度"), React.createElement("button", {
+      type: "button",
+      className: `${btn} mh-button-secondary border border-white/20 bg-slate-800`,
+      onClick: () => setView('foe')
+    }, "相手をえらぶ")));
+  }
+  const soon = label => React.createElement("button", {
+    type: "button",
+    disabled: true,
+    className: `${btn} border border-white/10 bg-slate-900 text-slate-400`
+  }, label, React.createElement("span", {
+    className: "block text-[10px] font-bold"
+  }, "つぎの区切りで作ります"));
+  return React.createElement("div", {
+    "data-mh-screen": true,
+    "data-card-top": "top",
+    className: SCREEN_SHELL_CLASS
+  }, React.createElement(ScreenHead, {
+    title: "MFバトルカード",
+    accent: "text-amber-200",
+    onBack: onExit,
+    backLabel: "デバッグ設定へ戻る",
+    note: debug ? 'デバッグ専用(まだ公開していません)' : ''
+  }), React.createElement("div", {
+    className: `${SCREEN_LIST_CLASS} space-y-2 pb-4`
+  }, React.createElement("div", {
+    className: `${SCREEN_PANEL_CLASS} flex items-center justify-between`
+  }, React.createElement("div", {
+    className: "text-[13px] font-black text-slate-200"
+  }, "カードポイント"), React.createElement("div", {
+    "data-card-point": true,
+    className: "text-xl font-black text-amber-200"
+  }, save.point)), activeDeck && React.createElement("div", {
+    className: SCREEN_PANEL_CLASS
+  }, React.createElement("div", {
+    className: "text-[12px] font-bold text-slate-400"
+  }, "いまのデッキ"), React.createElement("div", {
+    className: "text-[14px] font-black text-white"
+  }, activeDeck.name), React.createElement("div", {
+    className: "mt-1 flex gap-1.5"
+  }, activeDeck.monsters.map(no => {
+    const m = cardMonsterOf(db, no);
+    return m ? React.createElement("img", _extends({
+      key: no
+    }, press(no), {
+      src: CARD_IMG(m.img),
+      alt: m.name,
+      className: "w-[22%] rounded-md"
+    })) : null;
+  })), React.createElement("div", {
+    className: "mt-1 text-[11px] font-bold text-slate-400"
+  }, "戦績(コンピューター戦): ", save.record.cpu.win, "勝 ", save.record.cpu.lose, "敗", save.record.cpu.surrender ? `・投了${save.record.cpu.surrender}` : '')), notice && React.createElement("p", {
+    className: "text-[12px] font-bold text-amber-200"
+  }, notice), React.createElement("button", {
+    type: "button",
+    "data-card-cpu": true,
+    className: `${btn} mh-button-primary`,
+    disabled: !activeDeck,
+    onClick: () => {
+      Audio_.se.tap();
+      setNotice('');
+      setView('foe');
+    }
+  }, "コンピューター戦"), React.createElement("div", {
+    className: "grid grid-cols-2 gap-2"
+  }, soon('デッキ編成'), soon('マーケットへ'), soon('カード図鑑'), soon('ルール')), debug && React.createElement("div", {
+    className: `${SCREEN_PANEL_FLAT_CLASS} space-y-1`
+  }, React.createElement("div", {
+    className: "text-[11px] font-bold text-slate-400"
+  }, "デバッグ: カードバトルの記録(mh_card_* の新しいキーだけ)"), React.createElement("button", {
+    type: "button",
+    className: "mh-button mh-button-danger min-h-[44px] w-full rounded-xl text-[12px] font-black",
+    onClick: () => setConfirmReset(true)
+  }, "カードバトルの記録を消して、スターター選びからやり直す"))), detail && React.createElement(CardDetailModal, {
+    db: db,
+    no: detail,
+    onClose: () => setDetail(null)
+  }), confirmReset && React.createElement(ConfirmSheet, {
+    title: "カードバトルの記録を消しますか？",
+    message: '持っているカード・デッキ・カードポイント・戦績・スターターの印を消します。\nほかのモードの保存データには触れません。',
+    confirmLabel: "消す",
+    danger: true,
+    onCancel: () => setConfirmReset(false),
+    onConfirm: async () => {
+      setConfirmReset(false);
+      await Promise.all(Object.values(CARD_SAVE_KEYS).map(k => storeSet(k, null)));
+      setNotice('');
+      await load();
+    }
+  }));
+};
 const DEBUG_TRIALS = [{
   id: 'rhythm_mon_layers',
   added: '2026-10-16',
@@ -86824,6 +89630,7 @@ function MonsterHeroGame() {
   const rhythmEventStoryIdFor = event => event && RHYTHM_EVENT_STORY_BY_EVENT[event.id] || null;
   const rhythmEventThanksStoryIdFor = event => event && RHYTHM_EVENT_THANKS_STORY_BY_EVENT[event.id] || null;
   const [rhythmEventStorySeen, setRhythmEventStorySeen] = useState(null);
+  const [cardBgm, setCardBgm] = useState(null);
   const rhythmEventStorySeenRef = useRef(null);
   const [rhythmEventStoryPending, setRhythmEventStoryPending] = useState(null);
   const [pendingFriendCode, setPendingFriendCode] = useState('');
@@ -87359,6 +90166,7 @@ function MonsterHeroGame() {
       return bgmArrangement.clear;
     }
     if (BGM_SILENT_STATES.includes(state)) return null;
+    if (state === 'CARD_TOP' || state === 'CARD_BATTLE') return cardBgm || homeBgm;
     if (state === 'HOME' || state === 'PROFILE' || state === 'ITEM_INVENTORY') return homeBgm;
     if (BGM_STATE_MAP[state] === 'home') return homeBgm;
     if (BGM_STATE_MAP[state]) return bgmArrangementWithEventDefault(bgmArrangement, BGM_STATE_MAP[state]) || BGM_STATE_MAP[state];
@@ -87445,7 +90253,7 @@ function MonsterHeroGame() {
       key
     } : null;
     if (key && eventId && prev && prev.id === eventId && prev.key !== key) Audio_.fadeToBGM(key, EVENT_BGM_FADE_MS);else if (key) Audio_.playBGM(key);else Audio_.stopBGM();
-  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen, eventLineBgm]);
+  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen, eventLineBgm, cardBgm]);
   useEffect(() => {
     Audio_.setSeVolume(ultraEcoSession || rhythmScreenOpen ? 0 : seVolume);
   }, [seVolume, ultraEcoSession, rhythmScreenOpen]);
@@ -108260,6 +111068,13 @@ function MonsterHeroGame() {
       desc: "定義・期間と回数・端末の記録・サーバー(別のイベントID)の確認。端末の記録を書き換える操作があります",
       tone: "save",
       onClick: () => setGameState('RAID_JACK_DEBUG')
+    }), React.createElement(DebugMenuRow, {
+      "data-debug-card-battle": true,
+      icon: "🃏",
+      label: "MFバトルカード",
+      desc: "コンピューター戦とスターター(作っている途中)。カードバトルの新しい保存キー(mh_card_*)だけを書きます",
+      tone: "save",
+      onClick: () => setGameState('CARD_TOP')
     }), React.createElement("button", {
       "data-debug-species-challenge": true,
       onClick: async () => {
@@ -108552,7 +111367,17 @@ function MonsterHeroGame() {
       accent: 'indigo',
       readOnly: true,
       label: `${raidJackDetailMon.name}の詳細`
-    })), gameState === 'RAID_JACK_DEBUG' && React.createElement(RaidJackDebugScreen, {
+    })), (gameState === 'CARD_TOP' || gameState === 'CARD_BATTLE') && React.createElement(CardBattleScreen, {
+      screen: gameState,
+      onNavigate: setGameState,
+      onExit: () => {
+        setCardBgm(null);
+        setGameState('DEBUG_SETTINGS');
+      },
+      seenStoryIds: rhythmEventStorySeen || [],
+      debug: true,
+      onBgm: setCardBgm
+    }), gameState === 'RAID_JACK_DEBUG' && React.createElement(RaidJackDebugScreen, {
       onBack: () => setGameState('DEBUG_SETTINGS'),
       raidForce: raidJackDebugForce,
       onToggleRaidForce: () => setRaidJackDebugForce(v => !v),
