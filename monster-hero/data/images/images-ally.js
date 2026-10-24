@@ -167,6 +167,25 @@ const ILLUMINE_IMG = "images/monsters/illumine.png?v=856c3192a848";
 const ILLUMINE_DYE_MASK = "images/monsters/illumine-dye-mask.PNG?v=f129752bb07a";
 const DREAMY_DYE_MASK = "images/monsters/dreamy-dye-mask.PNG?v=0a38c9def40d";
 const DREAMY_IMG = "images/monsters/dreamy.png?v=14e1f738cec9";
+// 新しい16種(2026-10-24・まだ味方には入れていない)。ファイル名はカードの種族名(data/card-battle-cards.js の species)。
+// 元絵は tools/art-sources/new-monsters-2026-10-24/。透明な余白を切って高さ916pxへ縮め、256色へ減色。
+// ケンタウロスは背景に散ったごく薄い光の画素(不透明度64未満)を消してから取り込んだ
+const NEW16_DINO_IMG = "images/monsters/dino.png?v=ac797293f479";
+const NEW16_GALI_IMG = "images/monsters/gali.png?v=802cb6ce6f64";
+const NEW16_NAGA_IMG = "images/monsters/naga.png?v=07114a6c8886";
+const NEW16_DRAGON_IMG = "images/monsters/dragon.png?v=3c00722a5a78";
+const NEW16_HENGER_IMG = "images/monsters/henger.png?v=87f6df286ad0";
+const NEW16_DURAHAN_IMG = "images/monsters/durahan.png?v=9cbb4a00954c";
+const NEW16_ARROWHEAD_IMG = "images/monsters/arrowhead.png?v=64f1d371ad4d";
+const NEW16_ZILLA_IMG = "images/monsters/zilla.png?v=1d39343cc42d";
+const NEW16_PHOENIX_IMG = "images/monsters/phoenix.png?v=c9a5b27b642f";
+const NEW16_JOKER_IMG = "images/monsters/joker.png?v=6b89ffd17807";
+const NEW16_JELL_IMG = "images/monsters/jell.png?v=7d1a439b82e5";
+const NEW16_MEW_IMG = "images/monsters/mew.png?v=ade472351a21";
+const NEW16_METALNER_IMG = "images/monsters/metalner.png?v=a975f4a4dee2";
+const NEW16_WORM_IMG = "images/monsters/worm.png?v=ea6dcafd645b";
+const NEW16_CENTAUR_IMG = "images/monsters/centaur.png?v=55e31863fe99";
+const NEW16_COLORPANDORA_IMG = "images/monsters/colorpandora.png?v=9deee820503c";
 
 const MOCCHI_ICON = MOCCHI_IMG;
 const HAM_ICON = HAM_IMG;
@@ -237,6 +256,18 @@ const KUROMY_FACE_ICON = "images/monster-icons/face/kuromy.png?v=29d41f754746";
 // イルミネ・ドリーミィ(2026-10-22・案の段階)。顔アイコンは社長が選んだ案(範囲は tools/image/make-face-icons.js の FACE_BOXES)
 const ILLUMINE_FACE_ICON = "images/monster-icons/face/illumine.png?v=68f84dc1972f";
 const DREAMY_FACE_ICON = "images/monster-icons/face/dreamy.png?v=ff318780a036";
+// 新しい16種(2026-10-24)。社長が A〜D の4案から選んだもの。範囲は tools/image/make-face-icons.js の FACE_BOXES
+const NEW16_DINO_FACE_ICON = "images/monster-icons/face/dino.png?v=49ae7bf49bd7";
+const NEW16_NAGA_FACE_ICON = "images/monster-icons/face/naga.png?v=3e34d760941f";
+const NEW16_HENGER_FACE_ICON = "images/monster-icons/face/henger.png?v=0485ba6e277c";
+const NEW16_ARROWHEAD_FACE_ICON = "images/monster-icons/face/arrowhead.png?v=92e7ed5fa2c1";
+const NEW16_ZILLA_FACE_ICON = "images/monster-icons/face/zilla.png?v=baa8882d641e";
+const NEW16_JOKER_FACE_ICON = "images/monster-icons/face/joker.png?v=44f6f8edaccc";
+const NEW16_JELL_FACE_ICON = "images/monster-icons/face/jell.png?v=f775b1f7a7c9";
+const NEW16_MEW_FACE_ICON = "images/monster-icons/face/mew.png?v=8c5f6a06b720";
+const NEW16_METALNER_FACE_ICON = "images/monster-icons/face/metalner.png?v=ac30798baf9a";
+const NEW16_CENTAUR_FACE_ICON = "images/monster-icons/face/centaur.png?v=90c8aff29500";
+const NEW16_COLORPANDORA_FACE_ICON = "images/monster-icons/face/colorpandora.png?v=5b510b687438";
 
 // 血統別のアイコン(エンブレム・144x146・金の枠つき)。2026-10-05・ユーザー提供の37個(blood-icons.zip)。
 // 血統のid(MONSTER_LINEAGES)との対応は、このファイルの下の MONSTER_LINEAGE_ICONS。ゲームにまだ無い血統のぶんも先に入れてある(使うのは血統を足すとき)。
