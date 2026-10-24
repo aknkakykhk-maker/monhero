@@ -575,10 +575,17 @@ const CARD_AI_HABITS = Object.freeze({
 // 助手どうしの強さをそろえる数(雑な手の割合に掛ける)。くせとデッキの違いで、同じ難易度でも勝率に差が出るため。
 // tools/card/card-rules-check.js の試算で、どの助手もスターター相手に同じくらいの勝率になるように決めた
 const CARD_AI_TUNE = Object.freeze({ mua: 0.6, momosuke: 0.5, kiki: 1.3, kyuko: 1, dra: 1.15, atsu: 1 });
+// 深く読む難易度で、くせの重みを「真ん中(1.0)」へ寄せる割合(1 = そのまま・0.5 = 半分だけ寄せる)。くせの向きは変えない。
+//   みゅあ(攻める 1.5・守りを残す 0.2・ガッツをためる 0.2)は、深く読む相手には極端なくせが裏目に出て、
+//   EXPERT・MASTER でプレイヤー役に 29〜32% しか勝てなかった(公開の条件。tools/card/card-ai-balance.js で測る)
+const CARD_AI_HABIT_BLEND = Object.freeze({ expert: { mua: 0.6 }, master: { mua: 0.6, momosuke: 0.5 } });
 const cardAiPolicy = (habitId, levelId) => {
   const level = CARD_AI_LEVELS[levelId] || CARD_AI_LEVELS.normal;
   const tune = CARD_AI_TUNE[habitId] === undefined ? 1 : CARD_AI_TUNE[habitId];
-  return { habit: CARD_AI_HABITS[habitId] || CARD_AI_HABITS.kyuko, level: { ...level, sloppy: Math.min(0.9, (level.sloppy || 0) * tune) } };
+  const base = CARD_AI_HABITS[habitId] || CARD_AI_HABITS.kyuko;
+  const blend = (CARD_AI_HABIT_BLEND[levelId] || {})[habitId];
+  const habit = blend === undefined ? base : Object.fromEntries(Object.entries(base).map(([k, v]) => [k, 1 + (v - 1) * blend]));
+  return { habit, level: { ...level, sloppy: Math.min(0.9, (level.sloppy || 0) * tune) } };
 };
 
 // 相手が回避できそうな見込み(見えない手札は、残りの山札＋手札から平均で見積もる)
@@ -767,6 +774,10 @@ const CARD_AI_DECKS = Object.freeze({
   kyuko:    { monsters: ['C-007', 'C-005', 'C-009'] },  // ナーガ・ピクシー・モッチー
   atsu:     { monsters: ['C-003', 'C-001', 'C-002'], prefer: ['竜巻アタック', '地震', '炎のカベ', 'ブリザード'] },  // ゴーレム・ライガー・ガリ。全体攻撃を集める
 });
+// 組み直すデッキで、順番の枠に入れてよい「入れたい度」の下限(cardAiCardValue の値)。助手ごとの違いは、
+//   EXPERT・MASTER でプレイヤー役との勝率がそろうように tools/card/card-ai-balance.js で決めた
+const CARD_AI_LANE_MIN_DEFAULT = 0.8;
+const CARD_AI_LANE_MIN = Object.freeze({ momosuke: 1.5, dra: 0.3 });
 const CARD_DECK_COPY_MAX = 3; // 同じ名前の技・全体・ブリーダーカードは3枚まで
 
 // カード1枚の「入れたい度」(くせの重みを掛ける)
@@ -845,7 +856,10 @@ const cardAiBuildDeck = (db, who, levelId = 'normal') => {
   while (cards.length < CARD_BATTLE_DECK_SIZE && guard++ < 400) {
     const lane = li < lanes.length ? lanes[li] : shared;
     li = (li + 1) % (lanes.length + 1);
-    const x = lane.find((y) => !used.has(y.c.name));
+    // ★入れたい度が低い札は、順番の枠では入れない(足りないときだけ最後に入れる)。
+    //   第3弾のブリーダー「意味不明」(ダメージの無い特殊技)が全モンスター・ブリーダーの枠で3枚入り、
+    //   みゅあの EXPERT の勝率を17点下げていた。しきい値は助手ごとに試算で決めた(CARD_AI_LANE_MIN)
+    const x = lane.find((y) => !used.has(y.c.name) && y.v >= (CARD_AI_LANE_MIN[who] ?? CARD_AI_LANE_MIN_DEFAULT));
     if (!x) continue;
     used.add(x.c.name);
     add(x.c, CARD_DECK_COPY_MAX);

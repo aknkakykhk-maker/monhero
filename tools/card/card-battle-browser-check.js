@@ -89,6 +89,9 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       await btn.dispatchEvent('click').catch(() => {});
       await page.waitForTimeout(250);
     }
+    // ⑰ 公開前: ふつうのプレイヤー(デバッグの合言葉の印が無い)には、HOME に MFバトルカードの入口が出ない(社長 #3495・必ず守る)
+    await page.waitForTimeout(800);
+    check('⑰ ふつうのプレイヤーの HOME には MFバトルカードの入口が出ない', (await page.locator('[data-home-card-battle]').count()) === 0);
     // ここまでの保存(既存のキー)を控える。カードバトルが書くのは mh_card_* だけのはず
     await page.waitForTimeout(1500);
     const before = await page.evaluate(() => Object.fromEntries(Object.keys(localStorage).filter((k) => k.startsWith('mh_')).map((k) => [k, localStorage.getItem(k)])));
@@ -230,6 +233,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     check('③ 2回目はスターター選びが出ない', await page.locator('[data-card-top="starter"]').count() === 0);
     // ④ 相手えらび → 対戦
     await page.locator('[data-card-cpu]').click();
+    await page.locator('[data-card-mode-assistant]').click();
     await page.locator('[data-card-top="foe"]').waitFor({ timeout: 10000 });
     const foes = await page.locator('[data-card-foe]').count();
     check('④ 相手の助手が並ぶ', foes >= 4, `${foes}人`);
@@ -515,6 +519,8 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     await page.locator('[data-card-shop-rates="w1"]').click();
     if (SHOT) await shot(page, '25-shop-packs');
     const rateText = await page.locator('[data-card-shop-rate-table]').innerText();
+    const brokenShop = await page.evaluate(() => [...document.querySelectorAll('[data-card-shop] span.whitespace-nowrap')].filter((el) => el.getClientRects().length > 1).map((el) => el.textContent));
+    check('⑯ 出る確率の説明で、印を付けた言葉(準備中のカード・2倍出やすい など)が途中で折れていない', brokenShop.length === 0 && !/《|》/.test(rateText), brokenShop.join('・'));
     await page.locator('[data-card-shop-buy="w1-5"]').click();
     await page.locator('[data-confirm-sheet]').locator('xpath=..').getByRole('button', { name: '買って開ける' }).click();
     await page.locator('[data-card-pack-open]').waitFor({ timeout: 10000 });
@@ -570,6 +576,53 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     await page.locator('[data-mh-screen] button').first().click();
     await page.locator('[data-card-top="top"]').waitFor({ timeout: 10000 }).catch(() => {});
     check('⑯ 売り場から戻ると MFバトルカードのトップへ戻る', (await page.locator('[data-card-top="top"]').count()) === 1);
+    // ⑰ デバッグの人(合言葉の印 mh_debug_unlocked_v1 がある端末)には、公開したときと同じ HOME の入口(案A)を出す。そこからトップ → 対戦 → 助手と対戦/マルチ対戦(準備中)
+    await page.evaluate(() => { localStorage.setItem('mh_debug_unlocked_v1', '1'); });
+    await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
+    await page.getByRole('button', { name: 'TAP TO START' }).click({ timeout: 60000 });
+    await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
+    await page.getByRole('button', { name: 'モンヒロバトル' }).waitFor({ timeout: 30000 });
+    for (let i = 0; i < 6; i++) {
+      const btn = page.getByRole('button', { name: /受け取る|閉じる|はじめる|OK/ }).first();
+      if (await btn.count() === 0 || !(await btn.isVisible().catch(() => false))) break;
+      await btn.dispatchEvent('click').catch(() => {});
+      await page.waitForTimeout(250);
+    }
+    // 読み込み直すと、助手のお話などが出ることがある。スキップ・閉じるで HOME に戻す
+    for (let i = 0; i < 8; i++) {
+      await page.waitForTimeout(500);
+      const b = page.getByRole('button', { name: /^スキップ$|受け取る|閉じる|OK|あとで読む/ }).first();
+      if (await b.count() === 0 || !(await b.isVisible().catch(() => false))) break;
+      await b.click().catch(() => {});
+      const ok = page.getByRole('button', { name: /はい|スキップする|OK/ }).first();
+      if (await ok.count() && await ok.isVisible().catch(() => false)) await ok.click().catch(() => {});
+    }
+    await page.waitForTimeout(1200);
+    const homeEntry = await page.locator('[data-home-card-battle]').count();
+    if (SHOT) await shot(page, '31-home');
+    check('⑰ デバッグの人の HOME には MFバトルカードの入口が出る', homeEntry === 1, String(homeEntry));
+    if (homeEntry) {
+      await page.locator('[data-home-card-battle]').click();
+      await page.locator('[data-card-top="top"]').waitFor({ timeout: 20000 });
+      if (SHOT) await shot(page, '32-top-from-home');
+      const recText = await page.locator('[data-card-record]').innerText().catch(() => '');
+      check('⑰ 戦績は投了を負けに数える(「0勝 1敗(うち投了1)」の形)', /\d+勝 \d+敗\(うち投了\d+\)/.test(recText) && !/・投了/.test(recText), recText);
+      await page.locator('[data-card-cpu]').click();
+      await page.locator('[data-card-top="mode"]').waitFor({ timeout: 10000 });
+      if (SHOT) await shot(page, '33-mode');
+      const multiOff = await page.locator('[data-card-mode-multi]').isDisabled();
+      const multiText = await page.locator('[data-card-mode-multi]').innerText();
+      check('⑰ 対戦は「助手と対戦」と「マルチ対戦(準備中・押せない)」から選ぶ', multiOff && /準備中/.test(multiText) && (await page.locator('[data-card-mode-assistant]').count()) === 1, multiText);
+      const shown = await page.evaluate(() => document.body.innerText);
+      check('⑰ 画面に「コンピューター戦」が出ていない', !/コンピューター戦/.test(shown));
+      const modeText = await page.locator('[data-card-mode-assistant]').innerText();
+      check('⑰ 「助手と対戦」の説明に助手の名前を並べない(会っていない子のネタバレ)', !/みゅあ|もも|きき|きゅうこ|ドラ|あつ/.test(modeText), modeText);
+      await page.locator('[data-card-mode-assistant]').click();
+      await page.locator('[data-card-top="foe"]').waitFor({ timeout: 10000 });
+      if (SHOT) await shot(page, '34-foe');
+      const brokenFoe = await page.evaluate(() => [...document.querySelectorAll('[data-card-top="foe"] span.whitespace-nowrap')].filter((el) => el.getClientRects().length > 1).map((el) => el.textContent));
+      check('⑰ 助手と対戦の画面で、印を付けた言葉(今日はじめての勝ちで +50 など)が途中で折れていない', brokenFoe.length === 0, brokenFoe.join('・'));
+    }
     check('どこでも実行時エラーが出ない', errors.length === 0, errors.slice(0, 3).join(' / '));
   } catch (e) {
     if (lastPage) await shot(lastPage, 'zz-fail').catch(() => {});

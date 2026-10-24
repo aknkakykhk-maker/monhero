@@ -168,6 +168,17 @@ const sims = () => {
 };
 
 const decksAndSaves = () => {
+  // 公開の条件: EXPERT・MASTER で、どの助手もプレイヤー役(スターター3つ・同じ難易度の考え方)に同じくらい勝つ。
+  //   直す前は、みゅあ 33%・ももすけ(MASTER)38% と弱く、弱い子がカードポイントの稼ぎ場になっていた。細かい数は tools/card/card-ai-balance.js
+  ['expert', 'master'].forEach((lv) => {
+    const rates = Object.keys(E.CARD_AI_HABITS).map((w) => {
+      const d = E.cardAiBuildDeck(db, w, lv); let win = 0, n = 0, sd = 1;
+      Object.keys(db.starters).forEach((k) => { for (let g = 0; g < 30; g++) { const st = E.cardSimulate(db, { decks: [d, E.cardAiBuildDeck(db, k)], policies: [E.cardAiPolicy(w, lv), E.cardAiPolicy('kyuko', lv)], seed: 7000 + sd++, first: g % 2 }); if (st.winner === 0) win += 1; n += 1; } });
+      return [w, win / n];
+    });
+    const bad = rates.filter(([, r]) => r < 0.38 || r > 0.65);
+    ok(!bad.length, `${lv.toUpperCase()} の助手の強さがそろっていない(プレイヤー役への勝率 38〜65% の外): ${bad.map(([w, r]) => `${w} ${Math.round(r * 100)}%`).join('・')}`);
+  });
   // スターターと助手のデッキ(全部の難易度)が決まりどおり
   Object.keys(db.starters).forEach((k) => { const p = E.cardDeckProblems(db, E.cardAiBuildDeck(db, k)); ok(!p.length, `スターター ${k}: ${p.join('・')}`); });
   Object.keys(E.CARD_AI_DECKS).forEach((w) => Object.keys(E.CARD_AI_LEVELS).forEach((lv) => {

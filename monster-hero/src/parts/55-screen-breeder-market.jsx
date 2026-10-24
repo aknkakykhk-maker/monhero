@@ -36,6 +36,8 @@ function BreederMarketScreen({
   // 2026-09-14・マーケットのタブ乱立を避けるため、最初に用途別の入口を選ぶ。
   // 入口だけこの画面のローカル状態で持ち、購入・交換・商品タブの既存stateは親側をそのまま使う。
   const [marketSection,setMarketSection]=useState(initialSection);
+  // カードポイントの売り場の、みゅあのひとこと(開いたときに1本選ぶ。台詞は data/assistants.js の MUA_CARD_SHOP_LINES)
+  const [cardShopLine]=useState(()=>typeof MUA_CARD_SHOP_LINES!=='undefined'&&MUA_CARD_SHOP_LINES.length?MUA_CARD_SHOP_LINES[Math.floor(Math.random()*MUA_CARD_SHOP_LINES.length)]:{e:'normal',t:''});
   // 開いている購入/交換の確認窓。{ item, balance, stackable, countUnit, grantAmount, grantUnit, confirm(count) }
   const [sheet,setSheet]=useState(null);
   const [sheetQuantity,setSheetQuantity]=useState(1);
@@ -192,7 +194,9 @@ function BreederMarketScreen({
     <div data-mh-screen className={SCREEN_SHELL_CLASS}>
       <ScreenHead title={headerTitle} accent="text-amber-400" onBack={handleBack}
         icon={marketSection?<span aria-hidden="true">{sectionMeta[marketSection].emoji}</span>:<ShoppingBag size={20}/>}/>
-      <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="market" compact condition={Number.isFinite(CHEAPEST_GOLD_ITEM_COST)&&gold<CHEAPEST_GOLD_ITEM_COST?'lowGold':null}/></div>
+      <div className="shrink-0 w-full max-w-md mx-auto mb-2">{marketSection==='card'
+        ? <AssistantBubble key="card-shop" assistantId="mua" line={cardShopLine.t} expression={cardShopLine.e} compact/>
+        : <AssistantBubble scene="market" compact condition={Number.isFinite(CHEAPEST_GOLD_ITEM_COST)&&gold<CHEAPEST_GOLD_ITEM_COST?'lowGold':null}/>}</div>
 
       {!marketSection&&<div data-market-top className={`relative ${SCREEN_LIST_CLASS}`}>
         <div aria-hidden="true" className="pointer-events-none absolute inset-x-4 top-1 h-60 rounded-2xl bg-gradient-to-br from-cyan-500/10 via-amber-500/5 to-violet-500/10 blur-2xl"/>

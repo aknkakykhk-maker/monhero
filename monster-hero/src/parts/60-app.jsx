@@ -159,6 +159,10 @@ function MonsterHeroGame() {
   // ・合っていれば開き、その端末は覚えて次から聞かない(新しいキー mh_debug_unlocked_v1)
   // ・リポジトリは公開なので、合言葉の文字は書かず、塩+PBKDF2 のハッシュで照らす(作り方: node tools/debug-passphrase-hash.js <合言葉>)
   // ・自動操作のブラウザ(navigator.webdriver)では聞かない。検査・手順書がヘルプの「💊」から開く道を壊さないため
+  // MFバトルカードの HOME の入口を、公開前でもデバッグの人には出す(2026-10-24 社長「デバッグを本実装と同じ画面で作って」台帳 #3495)。
+  // ★デバッグの人の見分け方は、デバッグ設定の合言葉が合った印(DEBUG_UNLOCK_KEY = mh_debug_unlocked_v1)を**読むだけ**。新しく保存はしない。
+  //   ふつうのプレイヤーは合言葉を知らないので、この印を持たず、入口は出ない(公開の印 EVENT_REPLAY_RELEASE_FLAGS.cardBattle が立つまで)
+  const [cardBattleDebugHome,setCardBattleDebugHome]=useState(()=>{try{return localStorage.getItem(DEBUG_UNLOCK_KEY)==='1';}catch{return false;}});
   const [debugPassOpen,setDebugPassOpen]=useState(false);
   const [debugPassText,setDebugPassText]=useState('');
   const [debugPassError,setDebugPassError]=useState('');
@@ -173,6 +177,7 @@ function MonsterHeroGame() {
     const ok=await debugPassphraseMatches(debugPassText);
     if(!ok){setDebugPassError('合言葉が違います');return;}
     try{localStorage.setItem(DEBUG_UNLOCK_KEY,'1');}catch{}
+    setCardBattleDebugHome(true);
     setDebugPassOpen(false);setDebugPassText('');setDebugPassError('');
     openDebugSettings();
   };
@@ -17156,7 +17161,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             raidJackVisible={(RELEASE_FLAGS.raidJack===true&&raidJackWindowAt(Date.now())==='open')||raidJackDebugForce}
             raidJackEventId={raidJackEventId} onOpenRaidJack={openRaidJack}
             onOpenAssistantChat={RELEASE_FLAGS.assistantChat===true?()=>setAssistantChatOpen(true):null}
-            cardBattleVisible={EVENT_REPLAY_RELEASE_FLAGS.cardBattle&&cardBattleIntroSeenFlag} onOpenCardBattle={()=>{setCardOrigin('home');setGameState('CARD_TOP');}}
+            cardBattleVisible={(EVENT_REPLAY_RELEASE_FLAGS.cardBattle&&cardBattleIntroSeenFlag)||cardBattleDebugHome} onOpenCardBattle={()=>{setCardOrigin('home');setGameState('CARD_TOP');}}
           />
         )}
         {/* 助手とおしゃべり(2026-10-14)。話す相手は、いま選んでいる助手。返事が来た1往復ごとにその助手の仲良し度(chat)が増える */}
@@ -19290,7 +19295,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   {/* イベント・レイドボス「ジャック」の確認(デバッグ専用。更新履歴・ヘルプには載せない)。実装した段階ごとに、この画面へ確認の入口を足す */}
                   <DebugMenuRow data-debug-raid-jack icon="🎃" label="ジャック確認" desc="定義・期間と回数・端末の記録・サーバー(別のイベントID)の確認。端末の記録を書き換える操作があります" tone="save" onClick={()=>setGameState('RAID_JACK_DEBUG')}/>
                   {/* MFバトルカード(公開の区切りまでは、入口はここだけ。デバッグ専用なので更新履歴・ヘルプには載せない) */}
-                  <DebugMenuRow data-debug-card-battle icon="🃏" label="MFバトルカード" desc="コンピューター戦とスターター(作っている途中)。カードバトルの新しい保存キー(mh_card_*)だけを書きます" tone="save" onClick={()=>{setCardOrigin('debug');setGameState('CARD_TOP');}}/>
+                  <DebugMenuRow data-debug-card-battle icon="🃏" label="MFバトルカード" desc="助手と対戦・デッキ編成・パック(作っている途中)。カードバトルの新しい保存キー(mh_card_*)だけを書きます" tone="save" onClick={()=>{setCardOrigin('debug');setGameState('CARD_TOP');}}/>
                   <button data-debug-species-challenge onClick={async()=>{await loadSpeciesChallengeProgress();setGameState('SPECIES_CHALLENGE_DEBUG');}} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">🧬 種族チャレンジ進行確認<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">種族別の解放・クリア・初回報酬を確認／編集</small></button>
                   {/* 将来つくる独立型ダンジョンRPGの戦闘だけを先に試す試作。入口はここだけで、
                       通常HOME・通常バトル・マスモン管理には出さない。保存・報酬・ランキングへは触れない */}
@@ -19728,7 +19733,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           />
         )}
         {/* MFバトルカード: パックを開ける(区切り2)。買うのはマーケットの「カードポイント」の売り場 */}
-        {gameState==='CARD_PACK_OPEN'&&cardPackOpen&&typeof CARD_BATTLE_DATA!=='undefined'&&(
+        {/* ★条件は「gameState===…&&名前&&(<部品」の形のまま(layout-consistency-check が部品の名前を読み取る)。cardPackOpen はカードの表があるときだけ作られる(buyCardPacks) */}
+        {gameState==='CARD_PACK_OPEN'&&cardPackOpen&&(
           <CardPackOpen db={CARD_BATTLE_DATA} result={cardPackOpen} onDone={()=>{setCardPackOpen(null);setGameState('BREEDER_MARKET');}}/>
         )}
 
