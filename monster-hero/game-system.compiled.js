@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e503b556b449fc43
+// source-sha256: d2e8aee493432324
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-25 07:06";
+const BUILD_DATE = "2026-10-25 07:11";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -90615,6 +90615,10 @@ const CARD_PVP = (() => {
     }
   };
 })();
+const cardPvpPhrases = text => String(text).split(/(?<=、)/).map((x, i) => React.createElement("span", {
+  key: i,
+  className: "inline-block"
+}, x));
 const CardPvpLobby = ({
   deck,
   deckIssues = [],
@@ -90719,7 +90723,7 @@ const CardPvpLobby = ({
       "data-card-pvp-verify": r.verify,
       className: `rounded-xl px-2 py-1.5 text-[12px] font-bold ${r.verify === 'ok' ? 'bg-emerald-500/15 text-emerald-100' : r.verify === 'ng' ? 'bg-rose-500/15 text-rose-100' : 'bg-white/5 text-slate-200'}`,
       style: JA_WRAP_STYLE
-    }, jaWrap(verifyText)))), React.createElement("div", {
+    }, cardPvpPhrases(verifyText)))), React.createElement("div", {
       className: SCREEN_PANEL_CLASS
     }, !got && r.verify !== 'ng' && React.createElement("div", {
       className: "text-[12px] font-bold text-slate-300"
@@ -90956,7 +90960,7 @@ const CardPvpStatus = ({
   className: `rounded-full px-2 py-0.5 text-[13px] font-black tabular-nums ${clock.mine ? clock.left <= 10 ? 'bg-rose-500/30 text-rose-100' : 'bg-amber-400/20 text-amber-100' : 'bg-white/10 text-slate-200'}`
 }, clock.mine ? `残り ${clock.left}秒` : `相手 ${clock.left}秒`, clock.mine && clock.timeouts > 0 ? `(時間切れ ${clock.timeouts}/${CARD_PVP_TIMEOUT_LOSE})` : ''), (clock.offline || clock.foeQuietSec > 0) && React.createElement("div", {
   "data-card-pvp-signal": true,
-  className: "pointer-events-none absolute inset-x-2 top-[46px] z-[30] rounded-xl border border-amber-300/50 bg-black/80 px-2 py-1 text-center text-[12px] font-bold text-amber-100"
+  className: "pointer-events-none absolute inset-x-4 top-[44%] z-[30] rounded-xl border border-amber-300/50 bg-black/80 px-2 py-1 text-center text-[12px] font-bold text-amber-100"
 }, clock.offline ? '電波が途切れています。つなぎ直しています…' : `相手の電波が途切れています(あと${clock.foeQuietSec}秒で相手の負け)`));
 const CardPvpChat = () => {
   const [open, setOpen] = useState(false);

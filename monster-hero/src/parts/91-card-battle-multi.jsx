@@ -491,6 +491,9 @@ const CARD_PVP = (() => {
   };
 })();
 
+// 文を読点で区切り、区切りごとに折れないようにする(「見せ／合って」のような言葉の途中の折れを防ぐ。カゲあつくん)
+const cardPvpPhrases = (text) => String(text).split(/(?<=、)/).map((x, i) => <span key={i} className="inline-block">{x}</span>);
+
 // ---- 画面: マルチ対戦の部屋(合言葉) ----
 // onStart(game) … 試合が始まったら対戦の画面へ。onBack … 対戦の選び方へ戻る(部屋も出る)
 // onReward(result) … 確かめが済んだら1回だけ呼ぶ(84 が保存して { point, loops, quick, saved } を返す)。確かめで無効になった試合は呼ばない
@@ -551,7 +554,7 @@ const CardPvpLobby = ({ deck, deckIssues = [], onStart, onBack, onReward, assist
             <div className="mb-2 min-w-0 flex-1 space-y-1">
               <div className="text-[15px] font-black text-white" style={JA_WRAP_STYLE}>{jaWrap(`${foeName}さんとのマルチ対戦`)}</div>
               <div className="text-[12px] font-bold text-slate-300">{win ? '勝ち' : r.reward === 'surrender' ? '投了' : '負け'}{r.reason && !['勝ち', '負け', '投了'].includes(r.reason) ? `(${r.reason})` : ''}</div>
-              <p data-card-pvp-verify={r.verify} className={`rounded-xl px-2 py-1.5 text-[12px] font-bold ${r.verify === 'ok' ? 'bg-emerald-500/15 text-emerald-100' : r.verify === 'ng' ? 'bg-rose-500/15 text-rose-100' : 'bg-white/5 text-slate-200'}`} style={JA_WRAP_STYLE}>{jaWrap(verifyText)}</p>
+              <p data-card-pvp-verify={r.verify} className={`rounded-xl px-2 py-1.5 text-[12px] font-bold ${r.verify === 'ok' ? 'bg-emerald-500/15 text-emerald-100' : r.verify === 'ng' ? 'bg-rose-500/15 text-rose-100' : 'bg-white/5 text-slate-200'}`} style={JA_WRAP_STYLE}>{cardPvpPhrases(verifyText)}</p>
             </div>
           </div>
           <div className={SCREEN_PANEL_CLASS}>
@@ -677,14 +680,14 @@ const useCardPvpClock = (pvp, st, step) => {
   return { left: Math.max(0, Math.ceil(left / 1000)), mine: decider === 0, timeouts: room.timeouts, offline: room.offline,
     foeQuietSec: quiet > CARD_PVP_QUIET_MS ? Math.max(0, Math.ceil((CARD_PVP_ALIVE_MS - quiet) / 1000)) : 0 };
 };
-// 上の帯のまんなか: 持ち時間。電波が途切れたときの知らせは、帯のすぐ下に重ねて出す
+// 上の帯のまんなか: 持ち時間。電波が途切れたときの知らせは、盤のまんなか(記録の所)に重ねて出す(相手の帯は隠さない。カゲあつくん)
 const CardPvpStatus = ({ clock }) => (
   <>
     <span data-card-pvp-clock={clock.mine ? 'mine' : 'foe'} className={`rounded-full px-2 py-0.5 text-[13px] font-black tabular-nums ${clock.mine ? (clock.left <= 10 ? 'bg-rose-500/30 text-rose-100' : 'bg-amber-400/20 text-amber-100') : 'bg-white/10 text-slate-200'}`}>
       {clock.mine ? `残り ${clock.left}秒` : `相手 ${clock.left}秒`}{clock.mine && clock.timeouts > 0 ? `(時間切れ ${clock.timeouts}/${CARD_PVP_TIMEOUT_LOSE})` : ''}
     </span>
     {(clock.offline || clock.foeQuietSec > 0) && (
-      <div data-card-pvp-signal className="pointer-events-none absolute inset-x-2 top-[46px] z-[30] rounded-xl border border-amber-300/50 bg-black/80 px-2 py-1 text-center text-[12px] font-bold text-amber-100">
+      <div data-card-pvp-signal className="pointer-events-none absolute inset-x-4 top-[44%] z-[30] rounded-xl border border-amber-300/50 bg-black/80 px-2 py-1 text-center text-[12px] font-bold text-amber-100">
         {clock.offline ? '電波が途切れています。つなぎ直しています…' : `相手の電波が途切れています(あと${clock.foeQuietSec}秒で相手の負け)`}
       </div>
     )}
