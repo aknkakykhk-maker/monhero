@@ -12,6 +12,7 @@
 //   ④ 終わってから封を開けてなぞり直すと、両方で「合っている」になる
 //   ⑤ ズルを見抜く: 持っていない札を使った・山札の順を入れ替えた・勝ち負けをごまかした・封と中身が違う
 //   ⑥ 受け取った知らせの掃除(知らない形・大きすぎる数・狙う先の番号の入れ替え)
+//   ⑦ 報酬(台帳 #119 の対人戦・1日の上限なし)と持ち時間の決まり(自分の番60秒・守り15秒・使い切ったときの手)
 const fs = require('fs'), path = require('path'), vm = require('vm'), crypto = require('crypto');
 const GAME = path.resolve(__dirname, '..', '..', 'monster-hero');
 const read = (p) => fs.readFileSync(path.join(GAME, p), 'utf8');
@@ -20,7 +21,8 @@ const ctx = vm.createContext({ console, Math, JSON, Object, Array, Number, Strin
 vm.runInContext(`${read('data/card-battle-cards.js')}\n;\n${read('src/parts/82-card-battle-core.jsx')}\n;\n`
   + 'const rhythmMultiText = (v, max) => String(v == null ? "" : v).replace(/[\\u0000-\\u001f]/g, "").slice(0, max);\n'
   + `${multi}\n;\nthis.E = { CARD_BATTLE_DATA, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardDecider, cardClone, cardApplyAction, CARD_PVP_HIDDEN,
-    cardPvpFlip, cardPvpRevealOf, cardPvpNewGame, cardPvpApplyRemote, cardPvpPatchDiscard, cardPvpSealText, cardPvpSha256, cardPvpTruthGame, cardPvpVerify, cardPvpCleanMessage, cardPvpCleanAct };`, ctx);
+    cardPvpFlip, cardPvpRevealOf, cardPvpNewGame, cardPvpApplyRemote, cardPvpPatchDiscard, cardPvpSealText, cardPvpSha256, cardPvpTruthGame, cardPvpVerify, cardPvpCleanMessage, cardPvpCleanAct,
+    cardPvpReward, cardPvpTimeoutAct, cardPvpLimitMs, cardPvpClockKey, cardPvpDecider, cardPvpNormalizePenalty, CARD_PVP_STAMPS, CARD_PVP_TURN_MS, CARD_PVP_GUARD_MS };`, ctx);
 const E = ctx.E;
 const db = E.CARD_BATTLE_DATA;
 let failed = 0;
@@ -128,6 +130,28 @@ const base = { myDeck: g.deckA, mySeed: g.seedA, foeDeck: g.deckB, foeSeed: g.se
   check('⑥ 相手から見た手は、狙う先の人の番号だけが入れ替わる', flip.target.p === 0 && flip.target.m === 2 && flip.mon === 0 && E.cardPvpFlip({ type: 'pass' }).type === 'pass');
   const hb = C({ t: 'hb', from: 'a', name: 'x'.repeat(99), mons: ['C-001', 'C-002', 'C-003'], seal: 'f'.repeat(64) });
   check('⑥ 名前は長さで切り、封は64文字の指紋だけ通す', hb && hb.name.length === 16 && hb.seal === 'f'.repeat(64) && C({ t: 'hb', from: 'a', seal: 'zz' }).seal === null);
+  check('⑥ チャットは定型文の番号だけ通す', C({ t: 'chat', from: 'a', i: 0 }).i === 0 && C({ t: 'chat', from: 'a', i: 99 }) === null && C({ t: 'chat', from: 'a', i: 'よろしく' }) === null);
+  // ⑦ 報酬と持ち時間
+  const R = E.cardPvpReward;
+  const eq = (a, b) => a.point === b[0] && a.loops === b[1];
+  check('⑦ 勝ち 200・24周 / 負け 50・12周(自分の番10回で満額)', eq(R('win', { ownTurns: 12, kos: 3 }), [200, 24]) && eq(R('lose', { ownTurns: 10, kos: 0 }), [50, 12]) && eq(R('lose', { ownTurns: 5, kos: 0 }), [50, 6]));
+  check('⑦ 投了は倒した数で決める・自分の番が3回より前に終わったら0', eq(R('surrender', { ownTurns: 8, kos: 2 }), [20, 8]) && eq(R('win', { ownTurns: 2, kos: 3 }), [0, 0]) && R('win', { ownTurns: 2, kos: 3 }).short === true);
+  check('⑦ 何戦してももらえる(1日の上限・同じ相手の制限を使わない)', !/dailyMax|sameFoePerDay|pvpPoint\s*[<>]/.test(multi));
+  const st0 = E.cardPvpNewGame(db, { myDeck: g.deckA, mySeed: 3, foeMonsters: g.deckB.monsters, first: 1, names: ['A', 'B'] });
+  check('⑦ 始める前・攻撃の番は60秒、守りの番は15秒', E.cardPvpLimitMs(st0) === 60000 && E.cardPvpLimitMs({ ...st0, pending: {} }) === 15000);
+  check('⑦ 持ち時間を使い切ったときの手は、どの場面でもルールに合う(始める前・攻撃・ガッツ)', (() => {
+    let s1 = E.cardApplyAction(db, st0, E.cardPvpTimeoutAct(st0));           // 始める前(こちらが後攻)
+    if (!s1) return false;
+    for (let k = 0; k < 6 && s1.winner === null; k++) {
+      const a = E.cardPvpTimeoutAct(s1);
+      const n = E.cardApplyAction(db, s1, a.type === 'setupGuts' || E.cardPvpDecider(s1) === 0 ? a : (s1.pending ? { type: 'pass' } : s1.phase === 'main' ? { type: 'endAttacks' } : { type: 'guts', hand: [] }));
+      if (!n) return false; s1 = n;
+    }
+    return true;
+  })());
+  check('⑦ 時計は、決める人か番が変わると数え直す(攻撃とガッツは同じ60秒)', E.cardPvpClockKey({ ...st0, phase: 'main', turn: 3 }) === E.cardPvpClockKey({ ...st0, phase: 'guts', turn: 3 })
+    && E.cardPvpClockKey({ ...st0, phase: 'main', turn: 3 }) !== E.cardPvpClockKey({ ...st0, phase: 'main', turn: 4 }));
+  check('⑦ 抜けた人の待ち時間の保存は、壊れた値なら0(入れる)', E.cardPvpNormalizePenalty('x') === 0 && E.cardPvpNormalizePenalty(-5) === 0 && E.cardPvpNormalizePenalty(123) === 123);
   console.log(failed ? `\n${failed}件 NG` : '\nすべて OK');
   process.exit(failed ? 1 : 0);
 })();

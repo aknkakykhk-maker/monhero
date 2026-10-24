@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9adc159918c58d5c
+// source-sha256: a999ed4a3df3e218
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-25 06:20";
+const BUILD_DATE = "2026-10-25 06:38";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -85931,10 +85931,20 @@ const CardBattleBoard = ({
           outcome,
           st: stRef.current
         });
+      },
+      onChat: text => {
+        setFace('normal');
+        setBubble({
+          text,
+          key: `chat-${Date.now()}`
+        });
+        clearTimeout(bubbleTimer.current);
+        bubbleTimer.current = setTimeout(() => setBubble(null), 4500);
       }
     });
   }, []);
   useCardPvpAuto(db, pvp, st, step, paused);
+  const pvpClock = useCardPvpClock(pvp, st, step);
   const demoAt = useRef(0);
   useEffect(() => {
     if (!game.demo || paused) return undefined;
@@ -86315,12 +86325,16 @@ const CardBattleBoard = ({
     }
   }, React.createElement("div", {
     className: `flex ${compact ? 'h-[36px]' : 'h-[44px]'} shrink-0 items-center justify-between bg-black/35 px-2`
+  }, React.createElement("div", {
+    className: "flex items-center gap-1.5"
   }, React.createElement("button", {
     type: "button",
     "data-card-quit": true,
     onClick: () => setQuit(true),
     className: "rounded-lg border border-white/20 px-2 py-1 text-[12px] font-black text-slate-200"
-  }, tutorial ? '飛ばす' : '投了'), React.createElement("span", {
+  }, tutorial ? '飛ばす' : '投了'), pvp && React.createElement(CardPvpChat, null)), pvp ? React.createElement(CardPvpStatus, {
+    clock: pvpClock
+  }) : React.createElement("span", {
     className: "text-[15px] font-black"
   }, "MFバトルカード"), React.createElement("span", {
     className: "text-[12px] font-bold text-violet-200"
@@ -86833,7 +86847,7 @@ const CardBattleScreen = ({
         st
       }) => {
         if (game.pvp) {
-          CARD_PVP.finish(outcome);
+          CARD_PVP.finish(outcome, st);
           onBgm && onBgm(null);
           onNavigate('CARD_TOP');
           setView('pvp');
@@ -87046,10 +87060,44 @@ const CardBattleScreen = ({
     }, debug ? 'つくっている途中(デバッグ)' : '準備中'))));
   }
   if (view === 'pvp') {
+    const pvpReward = async r => {
+      const got = cardPvpReward(r.reward, r.facts);
+      const daily = cardNormalizeDaily(save.daily, cardTodayJst());
+      const record = cardNormalizeRecord(save.record);
+      const win = r.outcome === 'win';
+      const ok = await persist({
+        point: save.point + got.point,
+        daily: {
+          ...daily,
+          pvpPoint: daily.pvpPoint + got.point
+        },
+        record: {
+          ...record,
+          pvp: {
+            win: record.pvp.win + (win ? 1 : 0),
+            lose: record.pvp.lose + (win ? 0 : 1)
+          }
+        }
+      });
+      let quick = null;
+      if (ok && got.loops > 0 && onQuickLoops) {
+        try {
+          quick = await onQuickLoops(got.loops);
+        } catch (_) {
+          quick = null;
+        }
+      }
+      return {
+        ...got,
+        saved: ok,
+        quick
+      };
+    };
     return React.createElement(CardPvpLobby, {
       deck: activeDeck,
       deckIssues: deckIssues,
       onBack: () => setView('mode'),
+      onReward: pvpReward,
       onStart: g => {
         setResult(null);
         setGame({
@@ -89405,6 +89453,18 @@ const CARD_PVP_HEARTBEAT_MS = 2000;
 const CARD_PVP_RESEND_MS = 1500;
 const CARD_PVP_ALIVE_MS = 60000;
 const CARD_PVP_NAME_MAX = 16;
+const CARD_PVP_TURN_MS = 60000;
+const CARD_PVP_GUARD_MS = 15000;
+const CARD_PVP_TIMEOUT_LOSE = 3;
+const CARD_PVP_STALL_GRACE_MS = 20000;
+const CARD_PVP_QUIET_MS = 6000;
+const CARD_PVP_RECONNECT_MS = 3000;
+const CARD_PVP_VERIFY_WAIT_MS = 15000;
+const CARD_PVP_PENALTY_KEY = 'mh_card_pvp_penalty_v1';
+const CARD_PVP_PENALTY_MS = 3 * 60 * 1000;
+const cardPvpNormalizePenalty = v => Number.isFinite(v) && v > 0 ? v : 0;
+const CARD_PVP_STAMPS = Object.freeze(['よろしく！', 'ナイス！', 'うまい！', '考え中…', 'ありがとう！', 'もう1回やろ！']);
+const CARD_PVP_CHAT_GAP_MS = 1500;
 const cardPvpFlip = act => {
   if (!act || typeof act !== 'object') return act;
   const out = JSON.parse(JSON.stringify(act));
@@ -89471,6 +89531,52 @@ const cardPvpPatchDiscard = (db, st, list) => {
   const s = cardClone(st);
   s.players[1].discard = list.slice();
   return s;
+};
+const cardPvpLimitMs = st => st.pending || st.pendingDiscard ? CARD_PVP_GUARD_MS : CARD_PVP_TURN_MS;
+const cardPvpClockKey = st => `${cardPvpDecider(st)}-${st.turn}-${st.pending ? `g${st.log.length}` : st.pendingDiscard ? `d${st.log.length}` : st.phase === 'setup' ? 's' : 'm'}`;
+const cardPvpTimeoutAct = st => st.pendingDiscard ? {
+  type: 'discard',
+  hand: Array.from({
+    length: st.pendingDiscard.n
+  }, (_, i) => i)
+} : st.phase === 'setup' ? {
+  type: 'setupGuts',
+  hand: []
+} : st.pending ? {
+  type: 'pass'
+} : st.phase === 'main' ? {
+  type: 'endAttacks'
+} : {
+  type: 'guts',
+  hand: []
+};
+const cardPvpReward = (outcome, facts) => {
+  const f = facts || {
+    ownTurns: 0,
+    kos: 0
+  };
+  if (f.ownTurns < CARD_MIN_OWN_TURNS || outcome === 'left') return {
+    point: 0,
+    loops: 0,
+    short: f.ownTurns < CARD_MIN_OWN_TURNS
+  };
+  const W = CARD_PVP_REWARD.win,
+    L = CARD_PVP_REWARD.lose;
+  if (outcome === 'win') return {
+    point: W.point,
+    loops: W.loops,
+    short: false
+  };
+  if (outcome === 'surrender') return {
+    point: Math.min(L.point, f.kos * CARD_SURRENDER_POINT_PER_KO),
+    loops: Math.min(L.loops, Math.round(f.kos * L.loops / 3)),
+    short: false
+  };
+  return {
+    point: L.point,
+    loops: Math.floor(L.loops * Math.min(1, f.ownTurns / CARD_LOSE_FULL_TURNS)),
+    short: false
+  };
 };
 const cardPvpSealText = ({
   seed,
@@ -89676,7 +89782,15 @@ const cardPvpCleanMessage = raw => {
       }
     };
   }
-  if (raw.t === 'surrender' || raw.t === 'bye') return {
+  if (raw.t === 'chat') {
+    const i = cardPvpInt(raw.i, CARD_PVP_STAMPS.length - 1);
+    return i === null ? null : {
+      t: 'chat',
+      from,
+      i
+    };
+  }
+  if (raw.t === 'surrender' || raw.t === 'bye' || raw.t === 'timeout') return {
     t: raw.t,
     from
   };
@@ -89686,7 +89800,9 @@ const CARD_PVP = (() => {
   const listeners = new Set();
   let s = null;
   let socket = null;
+  let alive = false;
   let tick = null;
+  let retry = null;
   let board = null;
   const blank = () => ({
     phase: 'idle',
@@ -89711,7 +89827,11 @@ const CARD_PVP = (() => {
     result: null,
     foeOpen: null,
     error: '',
-    broken: ''
+    broken: '',
+    offline: false,
+    timeouts: 0,
+    autoActing: false,
+    chatAt: 0
   });
   const emit = () => listeners.forEach(fn => {
     try {
@@ -89726,7 +89846,7 @@ const CARD_PVP = (() => {
     emit();
   };
   const send = payload => {
-    if (socket) socket.send({
+    if (socket && alive) socket.send({
       ...payload,
       from: s.me.id
     });
@@ -89742,15 +89862,31 @@ const CARD_PVP = (() => {
     seal: s.seal,
     match: s.match || null
   });
+  const sendOpen = () => send({
+    t: 'open',
+    seed: s.seed,
+    salt: s.salt,
+    mons: s.deck.monsters,
+    cards: s.deck.cards
+  });
+  const inGame = () => !!s && (s.phase === 'playing' || s.phase === 'over');
   const stop = () => {
     if (tick) clearInterval(tick);
     tick = null;
+    if (retry) clearTimeout(retry);
+    retry = null;
+    alive = false;
     if (socket) {
       try {
         socket.close();
       } catch (_) {}
     }
     socket = null;
+  };
+  const penalize = () => {
+    try {
+      void storeSet(CARD_PVP_PENALTY_KEY, Date.now() + CARD_PVP_PENALTY_MS, false);
+    } catch (_) {}
   };
   const begin = msg => {
     if (s.match || !s.foe) return;
@@ -89814,6 +89950,9 @@ const CARD_PVP = (() => {
       emit();
     }
   };
+  const forceEnd = outcome => {
+    if (s && s.phase === 'playing' && board) board.onForceEnd(outcome);
+  };
   const tryVerify = async () => {
     if (!s.result || !s.foeOpen || s.result.verify !== 'wait') return;
     const o = s.foeOpen;
@@ -89833,7 +89972,7 @@ const CARD_PVP = (() => {
       });
       return;
     }
-    const winner = s.result.outcome === 'win' ? 0 : s.result.outcome === 'lose' ? 1 : null;
+    const winner = s.result.reward === 'win' && !s.result.forced ? 0 : s.result.reward === 'lose' && !s.result.forced ? 1 : null;
     const v = cardPvpVerify(CARD_BATTLE_DATA, {
       myDeck: s.deck,
       mySeed: s.seed,
@@ -89948,20 +90087,56 @@ const CARD_PVP = (() => {
       }
       return;
     }
-    if (msg.t === 'surrender' || msg.t === 'bye') {
-      if (s.phase === 'playing') {
-        if (board) board.onForceEnd(msg.t === 'surrender' ? 'foeSurrender' : 'foeLeft');else set({
-          phase: 'over',
-          result: {
-            outcome: 'win',
-            reason: msg.t === 'surrender' ? '相手の投了' : '相手が抜けた',
-            verify: 'wait'
-          }
-        });
-      } else if (s.phase === 'waiting') set({
+    if (msg.t === 'chat') {
+      if (s.phase === 'playing' && board && board.onChat) board.onChat(CARD_PVP_STAMPS[msg.i]);
+      return;
+    }
+    if (msg.t === 'surrender' || msg.t === 'bye' || msg.t === 'timeout') {
+      if (s.phase === 'playing') forceEnd(msg.t === 'surrender' ? 'foeSurrender' : msg.t === 'timeout' ? 'foeTimeout' : 'foeLeft');else if (s.phase === 'waiting') set({
         foe: null
       });
     }
+  };
+  const connect = () => {
+    if (retry) clearTimeout(retry);
+    retry = null;
+    if (socket) {
+      try {
+        socket.close();
+      } catch (_) {}
+    }
+    alive = false;
+    const me = socket = rhythmMultiOpenSocket({
+      topic: `${CARD_PVP_ROOM_TOPIC}${s.code}`,
+      onOpen: () => {
+        if (socket !== me) return;
+        alive = true;
+        set({
+          offline: false,
+          phase: s.phase === 'connecting' ? 'waiting' : s.phase
+        });
+        hb();
+      },
+      onMessage: raw => {
+        if (socket === me) onMessage(raw);
+      },
+      onClose: () => {
+        if (socket !== me || !s) return;
+        alive = false;
+        if (s.phase === 'connecting') {
+          set({
+            phase: 'error',
+            error: 'つながりませんでした。電波のよい所で、もう一度お試しください'
+          });
+          return;
+        }
+        if (s.phase === 'idle' || s.phase === 'error') return;
+        set({
+          offline: true
+        });
+        retry = setTimeout(connect, CARD_PVP_RECONNECT_MS);
+      }
+    });
   };
   const open = async (code, profile, deck) => {
     stop();
@@ -89998,39 +90173,31 @@ const CARD_PVP = (() => {
       });
       return;
     }
-    socket = rhythmMultiOpenSocket({
-      topic: `${CARD_PVP_ROOM_TOPIC}${code}`,
-      onOpen: () => {
-        set({
-          phase: 'waiting'
-        });
-        hb();
-      },
-      onMessage,
-      onClose: () => {
-        if (s && (s.phase === 'connecting' || s.phase === 'waiting')) set({
-          phase: 'error',
-          error: 'つながりませんでした。電波のよい所で、もう一度お試しください'
-        });
-      }
-    });
+    connect();
     tick = setInterval(() => {
       if (!s || !socket) return;
       hb();
       if (s.startMsg && !s.foeInMatch && isHost()) send(s.startMsg);
       s.outbox.forEach(m => send(m));
-      if (s.phase === 'over') send({
-        t: 'open',
-        seed: s.seed,
-        salt: s.salt,
-        mons: s.deck.monsters,
-        cards: s.deck.cards
-      });
-      if (s.phase === 'playing' && s.foe && Date.now() - s.foe.seen > CARD_PVP_ALIVE_MS) {
-        if (board) board.onForceEnd('foeLeft');
-      }
+      if (s.phase === 'over') sendOpen();
+      if (s.phase === 'playing' && s.foe && alive && Date.now() - s.foe.seen > CARD_PVP_ALIVE_MS) forceEnd('foeLeft');
     }, CARD_PVP_HEARTBEAT_MS);
   };
+  if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && inGame() && !alive) connect();
+    });
+  }
+  if (typeof window !== 'undefined') {
+    window.addEventListener('pagehide', () => {
+      if (s && s.phase === 'playing') {
+        send({
+          t: 'bye'
+        });
+        penalize();
+      }
+    });
+  }
   return {
     get: () => s || blank(),
     subscribe: fn => {
@@ -90045,6 +90212,7 @@ const CARD_PVP = (() => {
       return true;
     },
     leave: () => {
+      if (s && s.phase === 'playing') penalize();
       if (s && socket) send({
         t: 'bye'
       });
@@ -90078,43 +90246,101 @@ const CARD_PVP = (() => {
           by: 0,
           act,
           reveal: {}
-        }]
+        }],
+        timeouts: s.autoActing ? s.timeouts : 0
       };
       send(msg);
       emit();
     },
+    timedOut: () => {
+      if (!s || s.phase !== 'playing') return 0;
+      s = {
+        ...s,
+        timeouts: s.timeouts + 1
+      };
+      emit();
+      return s.timeouts;
+    },
+    timeoutLose: () => {
+      if (!s || s.phase !== 'playing') return;
+      send({
+        t: 'timeout'
+      });
+      forceEnd('timeout');
+    },
+    foeStalled: () => forceEnd('foeTimeout'),
+    auto: fn => {
+      if (!s) return fn();
+      s.autoActing = true;
+      try {
+        return fn();
+      } finally {
+        s.autoActing = false;
+      }
+    },
+    chat: i => {
+      if (!s || s.phase !== 'playing' || !CARD_PVP_STAMPS[i] || Date.now() - s.chatAt < CARD_PVP_CHAT_GAP_MS) return false;
+      s = {
+        ...s,
+        chatAt: Date.now()
+      };
+      send({
+        t: 'chat',
+        i
+      });
+      return true;
+    },
+    alive: () => alive,
     surrender: () => {
       if (s && s.phase === 'playing') send({
         t: 'surrender'
       });
     },
-    finish: outcome => {
+    finish: (outcome, st) => {
       if (!s || s.phase !== 'playing') return;
       const label = {
         win: '勝ち',
         lose: '負け',
         surrender: '投了',
         foeSurrender: '相手の投了',
-        foeLeft: '相手が抜けた'
+        foeLeft: '相手が抜けた',
+        timeout: '時間切れ',
+        foeTimeout: '相手の時間切れ'
       }[outcome] || '';
-      const mine = outcome === 'win' || outcome === 'foeSurrender' || outcome === 'foeLeft' ? 'win' : 'lose';
+      const reward = ['win', 'foeSurrender', 'foeLeft', 'foeTimeout'].includes(outcome) ? 'win' : outcome === 'surrender' ? 'surrender' : 'lose';
+      const forced = !['win', 'lose'].includes(outcome);
       set({
         phase: 'over',
         result: {
-          outcome: mine,
+          outcome: reward === 'win' ? 'win' : 'lose',
+          reward,
+          forced,
           reason: label,
-          verify: 'wait',
-          why: ''
+          facts: cardResultFacts(st, CARD_ME),
+          verify: outcome === 'foeLeft' ? 'skip' : 'wait',
+          why: '',
+          rewarded: false
         }
       });
-      send({
-        t: 'open',
-        seed: s.seed,
-        salt: s.salt,
-        mons: s.deck.monsters,
-        cards: s.deck.cards
-      });
+      sendOpen();
       void tryVerify();
+      setTimeout(() => {
+        if (s && s.result && s.result.verify === 'wait') set({
+          result: {
+            ...s.result,
+            verify: 'skip'
+          }
+        });
+      }, CARD_PVP_VERIFY_WAIT_MS);
+    },
+    markRewarded: got => {
+      if (s && s.result) set({
+        result: {
+          ...s.result,
+          rewarded: true,
+          got
+        }
+      });
     }
   };
 })();
@@ -90122,7 +90348,8 @@ const CardPvpLobby = ({
   deck,
   deckIssues = [],
   onStart,
-  onBack
+  onBack,
+  onReward
 }) => {
   const [room, setRoom] = useState(() => CARD_PVP.get());
   const [code, setCode] = useState('');
@@ -90131,6 +90358,31 @@ const CardPvpLobby = ({
     icon: '🙂'
   });
   useEffect(() => CARD_PVP.subscribe(setRoom), []);
+  const [penaltyUntil, setPenaltyUntil] = useState(0);
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    storeGet(CARD_PVP_PENALTY_KEY, 0, false).then(v => setPenaltyUntil(cardPvpNormalizePenalty(v))).catch(() => {});
+  }, [room.phase]);
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const penaltyMin = penaltyUntil > now ? Math.ceil((penaltyUntil - now) / 60000) : 0;
+  const rewardRef = useRef(onReward);
+  rewardRef.current = onReward;
+  useEffect(() => {
+    const r = room.result;
+    if (room.phase !== 'over' || !r || r.rewarded) return;
+    if (r.verify === 'ng') {
+      CARD_PVP.markRewarded(null);
+      return;
+    }
+    if (r.verify !== 'ok' && r.verify !== 'skip') return;
+    CARD_PVP.markRewarded({
+      pending: true
+    });
+    Promise.resolve(rewardRef.current ? rewardRef.current(r) : null).then(got => CARD_PVP.markRewarded(got)).catch(() => CARD_PVP.markRewarded(null));
+  }, [room.phase, room.result && room.result.verify]);
   useEffect(() => {
     let alive = true;
     Promise.all([storeGet('mh_breeder_name', 'ブリーダー', false), storeGet('mh_breeder_icon', '🙂', false)]).then(([name, icon]) => {
@@ -90151,7 +90403,7 @@ const CardPvpLobby = ({
     }
   }, [room.phase, room.match]);
   const btn = 'mh-button min-h-[52px] w-full rounded-2xl font-black active:scale-[.98] disabled:opacity-40';
-  const ready = !!deck && deckIssues.length === 0;
+  const ready = !!deck && deckIssues.length === 0 && penaltyMin === 0;
   const back = () => {
     CARD_PVP.leave();
     onBack();
@@ -90168,7 +90420,10 @@ const CardPvpLobby = ({
     note: "合言葉で、友だちと1対1で戦えます(デバッグ専用・つくっている途中)"
   }), React.createElement("div", {
     className: `${SCREEN_LIST_CLASS} space-y-3 pb-4`
-  }, room.phase === 'idle' && React.createElement(React.Fragment, null, !ready && React.createElement("p", {
+  }, room.phase === 'idle' && React.createElement(React.Fragment, null, penaltyMin > 0 && React.createElement("p", {
+    "data-card-pvp-penalty": true,
+    className: "rounded-xl border border-rose-300/40 bg-rose-500/10 p-2 text-[13px] font-bold text-rose-100"
+  }, "試合の途中で抜けたので、あと", penaltyMin, "分は部屋に入れません"), penaltyMin === 0 && !ready && React.createElement("p", {
     className: "rounded-xl border border-amber-300/40 bg-amber-500/10 p-2 text-[13px] font-bold text-amber-100"
   }, deckIssues.join('・') || 'デッキがありません'), React.createElement("button", {
     type: "button",
@@ -90224,7 +90479,12 @@ const CardPvpLobby = ({
   }, room.foe ? `${room.foe.name}さんとの対戦` : '', r.reason ? `(${r.reason})` : ''), React.createElement("p", {
     "data-card-pvp-verify": r.verify,
     className: `mt-2 rounded-xl px-2 py-1.5 text-[13px] font-bold ${r.verify === 'ok' ? 'bg-emerald-500/15 text-emerald-100' : r.verify === 'ng' ? 'bg-rose-500/15 text-rose-100' : 'bg-white/5 text-slate-200'}`
-  }, r.verify === 'ok' ? 'おたがいの山札を見せ合って、正しく終わったことを確かめました' : r.verify === 'ng' ? `この試合は無効です(${r.why})` : 'おたがいの山札を見せ合って、確かめています…')), room.broken && React.createElement("p", {
+  }, r.verify === 'ok' ? 'おたがいの山札を見せ合って、正しく終わったことを確かめました' : r.verify === 'ng' ? `この試合は無効です(${r.why})` : r.verify === 'skip' ? '相手の山札は届きませんでした(相手が抜けたため)' : 'おたがいの山札を見せ合って、確かめています…'), r.got && !r.got.pending && React.createElement("p", {
+    "data-card-pvp-reward": true,
+    className: "mt-2 text-[14px] font-black text-amber-100"
+  }, r.got.short ? '自分の番が3回より前に終わったので、ごほうびはありません' : `カードポイント +${r.got.point}${r.got.loops > 0 ? `・クイック周回 ${r.got.loops}周ぶん` : ''}`, r.got.saved === false && React.createElement("span", {
+    className: "block text-[12px] text-rose-200"
+  }, "保存できませんでした"))), room.broken && React.createElement("p", {
     className: "rounded-xl border border-rose-300/40 bg-rose-500/10 p-3 text-[13px] font-bold text-rose-100"
   }, room.broken)), room.phase !== 'idle' && React.createElement("div", {
     className: SCREEN_FOOTER_CLASS
@@ -90260,6 +90520,103 @@ const useCardPvpAuto = (db, pvp, st, step, paused) => useEffect(() => {
   }, Number(window.__mhCardPvpAutoMs) || 150);
   return () => clearTimeout(t);
 }, [st, paused]);
+const useCardPvpClock = (pvp, st, step) => {
+  const [now, setNow] = useState(() => Date.now());
+  const keyRef = useRef('');
+  const startRef = useRef(Date.now());
+  const firedRef = useRef('');
+  const gutsRef = useRef(-1);
+  const key = pvp ? cardPvpClockKey(st) : '';
+  if (key !== keyRef.current) {
+    keyRef.current = key;
+    startRef.current = Date.now();
+  }
+  useEffect(() => {
+    if (!pvp) return undefined;
+    const t = setInterval(() => setNow(Date.now()), 500);
+    return () => clearInterval(t);
+  }, []);
+  const decider = pvp ? cardPvpDecider(st) : -1;
+  const left = pvp ? cardPvpLimitMs(st) - (now - startRef.current) : 0;
+  useEffect(() => {
+    if (!pvp || st.winner !== null) return;
+    if (decider === 0 && st.phase === 'guts' && !st.pending && gutsRef.current === st.turn) {
+      gutsRef.current = -1;
+      CARD_PVP.auto(() => step({
+        type: 'guts',
+        hand: []
+      }));
+      return;
+    }
+    if (decider === 0 && left <= 0 && firedRef.current !== key) {
+      firedRef.current = key;
+      if (CARD_PVP.timedOut() >= CARD_PVP_TIMEOUT_LOSE) {
+        CARD_PVP.timeoutLose();
+        return;
+      }
+      if (st.phase === 'main' && !st.pending) gutsRef.current = st.turn;
+      CARD_PVP.auto(() => step(cardPvpTimeoutAct(st)));
+      return;
+    }
+    if (decider === 1 && left <= -CARD_PVP_STALL_GRACE_MS && CARD_PVP.alive() && firedRef.current !== key) {
+      firedRef.current = key;
+      CARD_PVP.foeStalled();
+    }
+  }, [now, key]);
+  const room = CARD_PVP.get();
+  const quiet = pvp && room.foe ? now - room.foe.seen : 0;
+  return {
+    left: Math.max(0, Math.ceil(left / 1000)),
+    mine: decider === 0,
+    timeouts: room.timeouts,
+    offline: room.offline,
+    foeQuietSec: quiet > CARD_PVP_QUIET_MS ? Math.max(0, Math.ceil((CARD_PVP_ALIVE_MS - quiet) / 1000)) : 0
+  };
+};
+const CardPvpStatus = ({
+  clock
+}) => React.createElement(React.Fragment, null, React.createElement("span", {
+  "data-card-pvp-clock": clock.mine ? 'mine' : 'foe',
+  className: `rounded-full px-2 py-0.5 text-[13px] font-black tabular-nums ${clock.mine ? clock.left <= 10 ? 'bg-rose-500/30 text-rose-100' : 'bg-amber-400/20 text-amber-100' : 'bg-white/10 text-slate-200'}`
+}, clock.mine ? `残り ${clock.left}秒` : `相手 ${clock.left}秒`, clock.mine && clock.timeouts > 0 ? `(時間切れ ${clock.timeouts}/${CARD_PVP_TIMEOUT_LOSE})` : ''), (clock.offline || clock.foeQuietSec > 0) && React.createElement("div", {
+  "data-card-pvp-signal": true,
+  className: "pointer-events-none absolute inset-x-2 top-[46px] z-[30] rounded-xl border border-amber-300/50 bg-black/80 px-2 py-1 text-center text-[12px] font-bold text-amber-100"
+}, clock.offline ? '電波が途切れています。つなぎ直しています…' : `相手の電波が途切れています(あと${clock.foeQuietSec}秒で相手の負け)`));
+const CardPvpChat = () => {
+  const [open, setOpen] = useState(false);
+  const [sent, setSent] = useState('');
+  useEffect(() => {
+    if (!sent) return undefined;
+    const t = setTimeout(() => setSent(''), 1600);
+    return () => clearTimeout(t);
+  }, [sent]);
+  return React.createElement("div", {
+    className: "relative"
+  }, React.createElement("button", {
+    type: "button",
+    "data-card-pvp-chat": true,
+    "aria-label": "定型文を送る",
+    onClick: () => {
+      Audio_.se.tap();
+      setOpen(v => !v);
+    },
+    className: "grid h-[28px] w-[30px] place-items-center rounded-lg border border-white/20 bg-white/10 text-[14px]"
+  }, "💬"), sent && React.createElement("span", {
+    className: "pointer-events-none absolute left-0 top-[32px] z-[40] whitespace-nowrap rounded-full bg-sky-500/80 px-2 py-0.5 text-[11px] font-black text-white"
+  }, "「", sent, "」"), open && React.createElement("div", {
+    "data-card-pvp-stamps": true,
+    className: "absolute left-0 top-[34px] z-[40] grid w-[200px] grid-cols-2 gap-1 rounded-xl border border-white/15 bg-slate-950/95 p-1.5 shadow-xl"
+  }, CARD_PVP_STAMPS.map((t, i) => React.createElement("button", {
+    key: t,
+    type: "button",
+    "data-card-pvp-stamp": i,
+    className: "min-h-[36px] rounded-lg bg-white/10 px-1 text-[12px] font-bold text-white active:scale-[.97]",
+    onClick: () => {
+      if (CARD_PVP.chat(i)) setSent(t);
+      setOpen(false);
+    }
+  }, t))));
+};
 const DEBUG_TRIALS = [{
   id: 'rhythm_mon_layers',
   added: '2026-10-16',

@@ -384,9 +384,11 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
       onAct: (msg) => { const next = cardPvpApplyRemote(db, stRef.current, msg); if (next) stepRef.current(null, next); return next; },
       onDiscard: (list) => setSt((cur) => { const n = cardPvpPatchDiscard(db, cur, list); stRef.current = n; return n; }),
       onForceEnd: (outcome) => { if (finished.current) return; finished.current = true; onFinish({ outcome, st: stRef.current }); },
+      onChat: (text) => { setFace('normal'); setBubble({ text, key: `chat-${Date.now()}` }); clearTimeout(bubbleTimer.current); bubbleTimer.current = setTimeout(() => setBubble(null), 4500); },
     });
   }, []);
   useCardPvpAuto(db, pvp, st, step, paused); // 検査のときだけ自分の番を自動で打つ(91。ふだんは何もしない)
+  const pvpClock = useCardPvpClock(pvp, st, step); // マルチ対戦の持ち時間(91)。マルチでないときは何もしない
   // 動きの見本(デバッグ): 決まった順に1手ずつ進める
   const demoAt = useRef(0);
   useEffect(() => {
@@ -639,8 +641,11 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
   return (
     <div data-mh-screen data-card-battle data-card-mode={mode} className="relative flex h-full min-h-0 flex-1 flex-col overflow-hidden text-white" style={{ background: 'radial-gradient(ellipse at 50% 45%,#3b2a6b 0%,#1b1438 55%,#0d0a1f 100%)' }}>
       <div className={`flex ${compact ? 'h-[36px]' : 'h-[44px]'} shrink-0 items-center justify-between bg-black/35 px-2`}>
-        <button type="button" data-card-quit onClick={() => setQuit(true)} className="rounded-lg border border-white/20 px-2 py-1 text-[12px] font-black text-slate-200">{tutorial ? '飛ばす' : '投了'}</button>
-        <span className="text-[15px] font-black">MFバトルカード</span>
+        <div className="flex items-center gap-1.5">
+          <button type="button" data-card-quit onClick={() => setQuit(true)} className="rounded-lg border border-white/20 px-2 py-1 text-[12px] font-black text-slate-200">{tutorial ? '飛ばす' : '投了'}</button>
+          {pvp && <CardPvpChat/>}
+        </div>
+        {pvp ? <CardPvpStatus clock={pvpClock}/> : <span className="text-[15px] font-black">MFバトルカード</span>}
         <span className="text-[12px] font-bold text-violet-200">ターン {Math.max(1, st.turn)} ・ {st.active === CARD_ME ? 'あなたの番' : `${who.name}の番`}</span>
       </div>
       {/* 相手の帯(隠さない) */}
@@ -872,7 +877,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     return <CardBattleBoard key={game.key} db={db} game={game} onFinish={async ({ outcome, st }) => {
       // マルチ対戦: 封を開けて確かめるのは 91 の CARD_PVP。結果は部屋の画面に出す(報酬は区切り2)
       if (game.pvp) {
-        CARD_PVP.finish(outcome);
+        CARD_PVP.finish(outcome, st);
         onBgm && onBgm(null);
         onNavigate('CARD_TOP');
         setView('pvp');
@@ -986,7 +991,19 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     );
   }
   if (view === 'pvp') {
-    return <CardPvpLobby deck={activeDeck} deckIssues={deckIssues} onBack={() => setView('mode')} onStart={(g) => {
+    // 報酬(区切り2・台帳 #119 の対人戦。1日の上限なし): カードポイント・その日の数・記録(pvp の勝ち負け)・クイック周回
+    const pvpReward = async (r) => {
+      const got = cardPvpReward(r.reward, r.facts);
+      const daily = cardNormalizeDaily(save.daily, cardTodayJst());
+      const record = cardNormalizeRecord(save.record);
+      const win = r.outcome === 'win';
+      const ok = await persist({ point: save.point + got.point, daily: { ...daily, pvpPoint: daily.pvpPoint + got.point },
+        record: { ...record, pvp: { win: record.pvp.win + (win ? 1 : 0), lose: record.pvp.lose + (win ? 0 : 1) } } });
+      let quick = null;
+      if (ok && got.loops > 0 && onQuickLoops) { try { quick = await onQuickLoops(got.loops); } catch (_) { quick = null; } }
+      return { ...got, saved: ok, quick };
+    };
+    return <CardPvpLobby deck={activeDeck} deckIssues={deckIssues} onBack={() => setView('mode')} onReward={pvpReward} onStart={(g) => {
       setResult(null);
       setGame({ ...g, settings: save.settings });
       onBgm && onBgm(save.bgm.pvp || null);
