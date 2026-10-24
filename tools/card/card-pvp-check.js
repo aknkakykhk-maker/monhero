@@ -13,6 +13,7 @@
 //   ⑤ ズルを見抜く: 持っていない札を使った・山札の順を入れ替えた・勝ち負けをごまかした・封と中身が違う
 //   ⑥ 受け取った知らせの掃除(知らない形・大きすぎる数・狙う先の番号の入れ替え)
 //   ⑦ 報酬(台帳 #119 の対人戦・1日の上限なし)と持ち時間の決まり(自分の番60秒・守り15秒・使い切ったときの手)
+//   ⑧ 結果の台詞(社長「このまま入れる」): 6人×勝ち・負け・相手が抜けた×3本・話し方の決まり・控えの表と同じ
 const fs = require('fs'), path = require('path'), vm = require('vm'), crypto = require('crypto');
 const GAME = path.resolve(__dirname, '..', '..', 'monster-hero');
 const read = (p) => fs.readFileSync(path.join(GAME, p), 'utf8');
@@ -22,7 +23,7 @@ vm.runInContext(`${read('data/card-battle-cards.js')}\n;\n${read('src/parts/82-c
   + 'const rhythmMultiText = (v, max) => String(v == null ? "" : v).replace(/[\\u0000-\\u001f]/g, "").slice(0, max);\n'
   + `${multi}\n;\nthis.E = { CARD_BATTLE_DATA, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardDecider, cardClone, cardApplyAction, CARD_PVP_HIDDEN,
     cardPvpFlip, cardPvpRevealOf, cardPvpNewGame, cardPvpApplyRemote, cardPvpPatchDiscard, cardPvpSealText, cardPvpSha256, cardPvpTruthGame, cardPvpVerify, cardPvpCleanMessage, cardPvpCleanAct,
-    cardPvpReward, cardPvpTimeoutAct, cardPvpLimitMs, cardPvpClockKey, cardPvpDecider, cardPvpNormalizePenalty, CARD_PVP_STAMPS, CARD_PVP_TURN_MS, CARD_PVP_GUARD_MS };`, ctx);
+    cardPvpReward, cardPvpTimeoutAct, cardPvpLimitMs, cardPvpClockKey, cardPvpDecider, cardPvpNormalizePenalty, CARD_PVP_STAMPS, CARD_PVP_TURN_MS, CARD_PVP_GUARD_MS, CARD_PVP_RESULT_LINES, cardPvpResultLine };`, ctx);
 const E = ctx.E;
 const db = E.CARD_BATTLE_DATA;
 let failed = 0;
@@ -152,6 +153,24 @@ const base = { myDeck: g.deckA, mySeed: g.seedA, foeDeck: g.deckB, foeSeed: g.se
   check('⑦ 時計は、決める人か番が変わると数え直す(攻撃とガッツは同じ60秒)', E.cardPvpClockKey({ ...st0, phase: 'main', turn: 3 }) === E.cardPvpClockKey({ ...st0, phase: 'guts', turn: 3 })
     && E.cardPvpClockKey({ ...st0, phase: 'main', turn: 3 }) !== E.cardPvpClockKey({ ...st0, phase: 'main', turn: 4 }));
   check('⑦ 抜けた人の待ち時間の保存は、壊れた値なら0(入れる)', E.cardPvpNormalizePenalty('x') === 0 && E.cardPvpNormalizePenalty(-5) === 0 && E.cardPvpNormalizePenalty(123) === 123);
+  // ⑧ 結果の台詞
+  const L = E.CARD_PVP_RESULT_LINES;
+  const ids = ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko'];
+  const all = ids.flatMap((id) => ['win', 'lose', 'left'].flatMap((k) => ((L[id] || {})[k] || []).map(([t, f]) => ({ id, k, t, f }))));
+  check('⑧ 6人それぞれに、勝ち・負け・相手が抜けたの台詞が3本ずつ', all.length === 54 && ids.every((id) => ['win', 'lose', 'left'].every((k) => L[id][k].length === 3)));
+  const faces = ['normal', 'happy', 'wink', 'excited', 'troubled', 'surprise', 'angry', 'crying'];
+  check('⑧ 表情は助手の8つの表情のどれか', all.every((x) => faces.includes(x.f)), all.filter((x) => !faces.includes(x.f)).map((x) => x.f).join(','));
+  const names = ['みゅあ', 'きき', 'ももすけ', 'ドラ', 'あつ', 'きゅうこ'];
+  check('⑧ ほかの助手の名前を出さない(まだ会っていない子がいる)', all.every((x) => !names.some((n) => x.t.includes(n))), all.filter((x) => names.some((n) => x.t.includes(n))).map((x) => x.t).join(' / '));
+  const atsuBad = all.filter((x) => x.id === 'atsu' && !/[笑！？…!?)）]$/.test(x.t));
+  check('⑧ あつの台詞は、文末に笑か記号', atsuBad.length === 0, atsuBad.map((x) => x.t).join(' / '));
+  check('⑧ みゅあは「ぢゃん」を使わない・半角の \' を使わない', all.filter((x) => x.id === 'mua').every((x) => !/ぢゃん|'/.test(x.t)));
+  check('⑧ きゅうこは1文に笑とwを両方付けない', all.filter((x) => x.id === 'kyuko').every((x) => !/笑w|w笑/.test(x.t)));
+  const leftAll = all.filter((x) => x.k === 'left');
+  check('⑧ 相手が抜けたときの「勝ちは勝ち」「電波」は、それぞれ2人まで(同じ言い方にしない)', leftAll.filter((x) => x.t.includes('勝ちは勝ち')).length <= 2 && leftAll.filter((x) => x.t.includes('電波')).length <= 2);
+  const md = fs.readFileSync(path.resolve(__dirname, '..', '..', 'docs/progress/card-battle/multi/result-lines.md'), 'utf8');
+  check('⑧ 台詞は、社長に見せた控えの表と1字も違わない', all.every((x) => md.includes(`| ${x.f} | ${x.t} |`)));
+  check('⑧ 台詞の選び方: 同じ試合なら同じ台詞・知らない助手はみゅあの台詞', E.cardPvpResultLine('kiki', 'win', 5).text === E.cardPvpResultLine('kiki', 'win', 5).text && E.cardPvpResultLine('zzz', 'lose', 0).text === L.mua.lose[0][0]);
   console.log(failed ? `\n${failed}件 NG` : '\nすべて OK');
   process.exit(failed ? 1 : 0);
 })();

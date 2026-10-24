@@ -1,4 +1,5 @@
--- MFバトルカード マルチ対戦(人どうし)の表 ── 下書き(2026-10-24 ブレイブくん)。まだ流さない(区切り3で流す)。
+-- MFバトルカード マルチ対戦(人どうし)の表(2026-10-24 ブレイブくん)。区切り3で窓口が流す(足すだけの SQL)。
+-- 端末から呼ぶのは 91-card-battle-multi.jsx の sbCardPvpReport(関数)と sbFetchCardPvpRatings(点数の表を読む)だけ。
 -- 足すだけ。いまある表(rankings・card_battle_ranks・friend_invites など)は読みも書きもしない。
 -- 何回流しても同じ結果になる(if not exists / create or replace)。
 
@@ -90,3 +91,15 @@ create table if not exists public.card_battle_invites (
 );
 alter table public.card_battle_invites enable row level security;
 -- (招待の読み書きの決まりは friend_invites と同じ形にする。区切り4で書く)
+
+-- ---- 流したあとの確かめ(読むだけ) ----
+select 'card_battle_pvp_ratings' as 表, count(*) as 行の数,
+       (select case when c.relrowsecurity then '有効' else '無効(要確認)' end from pg_class c where c.oid = 'public.card_battle_pvp_ratings'::regclass) as rls
+  from public.card_battle_pvp_ratings
+union all
+select 'card_battle_pvp_matches', count(*), (select case when c.relrowsecurity then '有効' else '無効(要確認)' end from pg_class c where c.oid = 'public.card_battle_pvp_matches'::regclass)
+  from public.card_battle_pvp_matches
+union all
+select 'card_battle_invites', count(*), (select case when c.relrowsecurity then '有効' else '無効(要確認)' end from pg_class c where c.oid = 'public.card_battle_invites'::regclass)
+  from public.card_battle_invites;
+

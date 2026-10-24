@@ -14,6 +14,20 @@ const CARD_IMG = (img, size = 's') => `${CARD_IMAGE_SET.imageDir}/${size}/${img}
 const CARD_KIND_LABEL = Object.freeze({ pow: 'ちから', int: 'かしこさ', spe: '特殊', dge: '回避', blk: '防御' });
 const CARD_TYPE_LABEL = Object.freeze({ ground: '地上', air: '空中', water: '水中' });
 const CARD_LEVEL_LABEL = Object.freeze({ easy: 'EASY', normal: 'NORMAL', hard: 'HARD', expert: 'EXPERT', master: 'MASTER' });
+// カードやモンスターの名前を1行に収める(2026-10-24 改善部の点検 V4「ぐるぐるアタッ/ク」「ストライクリパ/ー」)。
+//   名前は1つの言葉なので折らない。長い名前だけ、入れ物の幅(cqw)に合わせて字を小さくする(size が上限・min が下限)
+//   「ゴーレム(別絵キラ)」のような ( ) の付いた名前は、( ) から下の行へ分ける(名前の途中では折らない)
+const CardNameFit = ({ name, size = 10, min = 7, className = '', style = null }) => {
+  const text = String(name == null ? '' : name);
+  const m = /^(.+?)([(（].+)$/.exec(text);
+  const lines = m ? [m[1], m[2]] : [text];
+  const fit = (t) => `clamp(${min}px, ${(96 / Math.max(1, [...t].length)).toFixed(1)}cqw, ${size}px)`;
+  return (
+    <span className={`block w-full ${className}`} style={{ containerType: 'inline-size', ...(style || {}) }}>
+      {lines.map((t, i) => <span key={i} className="block overflow-hidden whitespace-nowrap text-center" style={{ fontSize: fit(t), textOverflow: 'clip' }}>{t}</span>)}
+    </span>
+  );
+};
 // 相手の助手ごとの対戦の既定の曲(社長 台帳 #3438)。対人戦は ichika_battle(対人戦の区切りで使う)
 // ききは綺季一閃のフル版(eiki_boss)。きゅうこの Toward the Stars はゲームに short 版しかないので、それを使う
 const CARD_AI_BGM = Object.freeze({
@@ -693,7 +707,7 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
       <div className={`flex ${compact ? 'h-[42px]' : 'h-[50px]'} shrink-0 items-center gap-2 px-2`}>
         {pvp ? <span data-card-pvp-foe className="grid h-[42px] w-[42px] place-items-center rounded-xl border-2 bg-black text-[24px]" style={{ borderColor: who.accent }}>{cardIconNode(pvp.icon, 30)}</span>
           : <img src={assistantFaceImage(who, face)} alt={who.name} className="h-[42px] w-[42px] rounded-xl border-2 bg-black object-cover object-top" style={{ borderColor: who.accent }}/>}
-        <div className="min-w-0 text-[13px] font-black leading-tight">{who.name}<small className="block text-[10px] font-bold text-rose-200">{pvp ? 'マルチ対戦' : CARD_LEVEL_LABEL[game.level]}</small></div>
+        <div className={`min-w-0 text-[13px] font-black leading-tight ${pvp ? 'max-w-[34%] truncate whitespace-nowrap' : ''}`}>{who.name}<small className="block text-[10px] font-bold text-rose-200">{pvp ? 'マルチ対戦' : CARD_LEVEL_LABEL[game.level]}</small></div>
         <div className="ml-auto">{strip(CARD_CPU)}</div>
       </div>
       {/* 吹き出し(帯の下・相手のモンスターの上。指の操作は下へ通す) */}
@@ -768,16 +782,17 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
           {sets.map((s) => <button key={s} type="button" onClick={() => setSel({ ...sel, mon: monChosen, set: s })} className={`rounded-lg border px-2 py-1 text-[12px] font-black ${s === setChosen ? 'border-amber-300 bg-amber-500/25' : 'border-white/20 bg-slate-800'}`}>{JSON.parse(s).map((i) => cardOf(db, me.hand[i]).name).join('＋')}</button>)}
         </div>
       )}
-      <div data-card-hand className="flex shrink-0 items-end justify-center gap-1 px-1 pb-1">
+      {/* 選んだ手札は上へ少し持ち上がる。その分の高さ(pt-2)を手札の箱の中に取っておき、上の案内の帯に重ならないようにする(2026-10-24 改善部の点検 V3) */}
+      <div data-card-hand className="flex shrink-0 items-end justify-center gap-1 px-1 pb-1 pt-2">
         {me.hand.map((no, i) => {
           const c = cardOf(db, no);
           const on = handUsable(i);
           const up = (sel && sel.hand === i) || picks.includes(i) || (setChosen && JSON.parse(setChosen).includes(i));
           return (
-            <div key={`${no}-${i}`} data-card-hand-card={i} onPointerDown={(e) => handDown(e, i, no)} onContextMenu={(e) => e.preventDefault()} onDragStart={(e) => e.preventDefault()} style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }} className={`flex w-[19%] ${compact ? 'max-w-[58px]' : 'max-w-[76px]'} flex-col items-center transition-transform ${up ? '-translate-y-3' : ''} ${myTurn && !on && !tutorial ? 'opacity-45' : ''} ${tutorial && myTurn && !tutFocus.hand.includes(i) && !picks.includes(i) && !(sel && sel.hand === i) ? 'opacity-40' : ''} ${tutorial && tutFocus.hand.includes(i) ? 'animate-pulse rounded-[7px] ring-4 ring-emerald-300' : ''} ${drag && drag.i === i ? 'opacity-30' : ''}`} data-card-tutor-focus={tutorial && tutFocus.hand.includes(i) ? true : undefined}>
+            <div key={`${no}-${i}`} data-card-hand-card={i} onPointerDown={(e) => handDown(e, i, no)} onContextMenu={(e) => e.preventDefault()} onDragStart={(e) => e.preventDefault()} style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }} className={`flex w-[19%] ${compact ? 'max-w-[58px]' : 'max-w-[76px]'} flex-col items-center transition-transform ${up ? '-translate-y-2' : ''} ${myTurn && !on && !tutorial ? 'opacity-45' : ''} ${tutorial && myTurn && !tutFocus.hand.includes(i) && !picks.includes(i) && !(sel && sel.hand === i) ? 'opacity-40' : ''} ${tutorial && tutFocus.hand.includes(i) ? 'animate-pulse rounded-[7px] ring-4 ring-emerald-300' : ''} ${drag && drag.i === i ? 'opacity-30' : ''}`} data-card-tutor-focus={tutorial && tutFocus.hand.includes(i) ? true : undefined}>
               <img src={CARD_IMG(c ? c.img : no)} alt={c ? c.name : no} draggable={false} style={{ WebkitUserDrag: 'none' }} className={`w-full rounded-[5px] shadow-[0_3px_6px_#000] ${up ? 'outline outline-[3px] outline-amber-300' : ''}`}/>
               <div className="mt-0.5 w-full rounded-md bg-black/60 py-0.5 text-center leading-tight">
-                <b className={`block ${compact ? 'text-[10px]' : 'text-[11px]'} leading-tight`} style={{ ...JA_WRAP_STYLE, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{c ? c.name : no}</b>
+                <CardNameFit name={c ? c.name : no} size={compact ? 10 : 11} className="font-bold leading-tight"/>
                 {compact ? <>
                   <span className="block text-[10px] font-extrabold leading-tight text-amber-200">ガッツ{c ? c.guts : '-'}</span>
                   <span className="block whitespace-nowrap text-[10px] font-extrabold leading-tight text-amber-200">{cardCaption(c)}</span>
@@ -1060,7 +1075,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       if (ok && got.loops > 0 && onQuickLoops) { try { quick = await onQuickLoops(got.loops); } catch (_) { quick = null; } }
       return { ...got, saved: ok, quick };
     };
-    return <CardPvpLobby deck={activeDeck} deckIssues={deckIssues} onBack={() => setView('mode')} onReward={pvpReward} assistant={topAssistant} point={save.point} onStart={(g) => {
+    return <CardPvpLobby deck={activeDeck} deckIssues={deckIssues} onBack={() => setView('mode')} onReward={pvpReward} assistant={topAssistant} point={save.point} onAssistant={() => setView('foe')} rankSend={!!(rank && rank.send) && !debug} onStart={(g) => {
       setResult(null);
       setGame({ ...g, settings: save.settings });
       onBgm && onBgm(save.bgm.pvp || null);

@@ -22,7 +22,7 @@ const CardDeckTile = ({ db, no, inDeck = 0, owned = 0, dim = false, press, onTap
       <img src={CARD_IMG(c ? c.img : m ? m.img : no)} alt={name} draggable={false} onDragStart={(e) => e.preventDefault()} className="aspect-[5/7] w-full rounded-[5px] object-cover"/>
       <span data-card-deck-badge className="absolute right-0.5 top-0.5 rounded-md bg-slate-950/90 px-1 text-[10px] font-black text-white"><span className="text-emerald-300">入{inDeck}</span>/持{owned}</span>
       {mark && <span className="absolute left-0.5 top-0.5 rounded-md bg-amber-400 px-1 text-[9px] font-black text-slate-950">{mark}</span>}
-      <span className="mt-0.5 line-clamp-2 min-h-[26px] text-[10px] font-bold leading-tight text-slate-100" style={JA_WRAP_STYLE}>{name}</span>
+      <CardNameFit name={name} className="mt-0.5 font-bold leading-tight text-slate-100"/>
     </button>
   );
 };
@@ -218,7 +218,7 @@ const CardDex = ({ db, collection, onBack }) => {
                   {have > 0 && <span className="absolute right-0.5 top-0.5 rounded-md bg-slate-950/90 px-1 text-[10px] font-black text-white">×{have}</span>}
                   {c && !c.ready && <span className="absolute left-0.5 top-0.5 rounded-md bg-slate-600 px-1 text-[9px] font-black text-white">準備中</span>}
                   {m && m.variant && <span className="absolute left-0.5 top-0.5 rounded-md bg-amber-400 px-1 text-[9px] font-black text-slate-950">{/キラ/.test(m.variant) ? 'キラ' : '別'}</span>}
-                  <span className={`mt-0.5 line-clamp-2 min-h-[26px] text-[10px] font-bold leading-tight ${have ? 'text-slate-100' : 'text-slate-500'}`} style={JA_WRAP_STYLE}>{name}</span>
+                  <CardNameFit name={name} className={`mt-0.5 font-bold leading-tight ${have ? 'text-slate-100' : 'text-slate-500'}`}/>
                   <span className="text-[9px] font-bold text-slate-500">No.{no}</span>
                 </button>
               );
@@ -397,7 +397,7 @@ const CardPackOpen = ({ db, result, onDone }) => {
                     {on && !c.dup && <span className="absolute right-0.5 top-0.5 z-[2] rounded-md bg-emerald-400 px-1 text-[9px] font-black text-slate-950">NEW</span>}
                     {on && rare && <span className={`absolute left-0.5 top-0.5 z-[2] rounded-md px-1 text-[9px] font-black text-slate-950 ${c.rarity === 'alt' ? 'mh-pack-alt-label' : 'bg-amber-300'}`}>{CARD_RARITY_LABEL[c.rarity]}</span>}
                   </button>
-                  <span className="mt-0.5 line-clamp-2 min-h-[26px] text-center text-[10px] font-bold leading-tight text-slate-100" style={JA_WRAP_STYLE}>{on ? name : ''}</span>
+                  <CardNameFit name={on ? name : '\u00a0'} className="mt-0.5 font-bold leading-tight text-slate-100"/>
                 </div>
               );
             })}
