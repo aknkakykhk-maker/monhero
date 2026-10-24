@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 36871a1675a81778
+// source-sha256: 9487470cd33c3dbb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-24 12:04";
+const BUILD_DATE = "2026-10-24 12:22";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -12184,6 +12184,7 @@ const RELEASE_FLAGS = {
   assistantDailyLines: true,
   assistantAtsu: true,
   assistantKyuko: true,
+  cardBattle: false,
   tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE,
   tacticsHate: true,
   tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE,
@@ -83843,13 +83844,14 @@ const CARD_LEVEL_LABEL = Object.freeze({
   master: 'MASTER'
 });
 const CARD_AI_BGM = Object.freeze({
-  mua: 'ichika_battle',
-  momosuke: 'melo_toriko',
-  kiki: 'melo_kiki_issen_short',
+  mua: 'melo_toriko',
+  kiki: 'eiki_boss',
+  momosuke: 'melo_crossing_field',
   kyuko: 'melo_toward_the_stars_short',
   dra: 'melo_mou_hitotsu_no_sekai_e',
   atsu: 'melo_against_my_own_shadow'
 });
+const CARD_PVP_BGM = 'ichika_battle';
 const CARD_SPECIES_ART = Object.freeze({
   tiger: 'Tiger',
   golem: 'Golem',
@@ -83860,10 +83862,30 @@ const CARD_SPECIES_ART = Object.freeze({
   monol: 'Monol',
   plant: 'Plant'
 });
+const cardNewSpeciesArt = () => ({
+  dino: typeof NEW16_DINO_IMG !== 'undefined' ? NEW16_DINO_IMG : null,
+  gali: typeof NEW16_GALI_IMG !== 'undefined' ? NEW16_GALI_IMG : null,
+  naga: typeof NEW16_NAGA_IMG !== 'undefined' ? NEW16_NAGA_IMG : null,
+  dragon: typeof NEW16_DRAGON_IMG !== 'undefined' ? NEW16_DRAGON_IMG : null,
+  henger: typeof NEW16_HENGER_IMG !== 'undefined' ? NEW16_HENGER_IMG : null,
+  durahan: typeof NEW16_DURAHAN_IMG !== 'undefined' ? NEW16_DURAHAN_IMG : null,
+  arrowhead: typeof NEW16_ARROWHEAD_IMG !== 'undefined' ? NEW16_ARROWHEAD_IMG : null,
+  zilla: typeof NEW16_ZILLA_IMG !== 'undefined' ? NEW16_ZILLA_IMG : null,
+  phoenix: typeof NEW16_PHOENIX_IMG !== 'undefined' ? NEW16_PHOENIX_IMG : null,
+  joker: typeof NEW16_JOKER_IMG !== 'undefined' ? NEW16_JOKER_IMG : null,
+  jell: typeof NEW16_JELL_IMG !== 'undefined' ? NEW16_JELL_IMG : null,
+  mew: typeof NEW16_MEW_IMG !== 'undefined' ? NEW16_MEW_IMG : null,
+  metalner: typeof NEW16_METALNER_IMG !== 'undefined' ? NEW16_METALNER_IMG : null,
+  worm: typeof NEW16_WORM_IMG !== 'undefined' ? NEW16_WORM_IMG : null,
+  centaur: typeof NEW16_CENTAUR_IMG !== 'undefined' ? NEW16_CENTAUR_IMG : null,
+  colorpandora: typeof NEW16_COLORPANDORA_IMG !== 'undefined' ? NEW16_COLORPANDORA_IMG : null
+});
 const cardMonArt = mon => {
-  const id = CARD_SPECIES_ART[mon.species] || CARD_SPECIES_ART[mon.main];
+  if (mon.main) return null;
+  const id = CARD_SPECIES_ART[mon.species];
   const m = id && typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[id] : null;
-  return m && m.imgUrl ? m.imgUrl : null;
+  if (m && m.imgUrl) return m.imgUrl;
+  return cardNewSpeciesArt()[mon.species] || null;
 };
 const cardTodayJst = () => new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
 const cardCaption = c => !c ? '' : c.kind === 'dge' ? '回避' : c.kind === 'blk' ? '防御' : c.kind === 'spe' ? '特殊' : `ダメージ${c.damage}`;
@@ -84042,7 +84064,8 @@ const CardMonSlot = ({
   mark = null,
   fx = [],
   onTap,
-  press
+  press,
+  compact = false
 }) => {
   const mon = st.players[p].mons[m];
   const art = cardMonArt(mon);
@@ -84077,15 +84100,15 @@ const CardMonSlot = ({
     className: "ml-0.5 inline-block rounded bg-rose-900 px-1 text-[10px] font-bold"
   }, "攻撃できない")));
   const artEl = React.createElement("div", {
-    className: "relative flex h-[78px] w-full items-end justify-center"
+    className: `relative flex ${compact ? 'h-[56px]' : 'h-[78px]'} w-full items-end justify-center`
   }, art ? React.createElement("img", {
     src: art,
     alt: "",
-    className: `max-h-[78px] max-w-[96px] object-contain drop-shadow-[0_6px_6px_rgba(0,0,0,.6)] ${opp ? '-scale-x-100' : ''} ${mon.ko ? 'grayscale opacity-30' : ''}`
+    className: `${compact ? 'max-h-[56px] max-w-[72px]' : 'max-h-[78px] max-w-[96px]'} object-contain drop-shadow-[0_6px_6px_rgba(0,0,0,.6)] ${opp ? '-scale-x-100' : ''} ${mon.ko ? 'grayscale opacity-30' : ''}`
   }) : React.createElement("img", {
     src: CARD_IMG(cardMonsterOf(db, mon.no).img),
     alt: "",
-    className: `h-[74px] rounded-md object-cover ${mon.ko ? 'grayscale opacity-30' : ''}`
+    className: `${compact ? 'h-[54px]' : 'h-[74px]'} rounded-md object-cover ${mon.ko ? 'grayscale opacity-30' : ''}`
   }), mon.ko && React.createElement("span", {
     className: "absolute bottom-2 rounded bg-black/70 px-1.5 text-[12px] font-black text-slate-300"
   }, "KO"), fx.map(f => React.createElement("span", {
@@ -84122,6 +84145,13 @@ const CardBattleBoard = ({
   const [discard, setDiscard] = useState(null);
   const [hint, setHint] = useState('');
   const [quit, setQuit] = useState(false);
+  const [action, setAction] = useState(null);
+  const [compact, setCompact] = useState(() => typeof window !== 'undefined' && window.innerHeight < 760);
+  useEffect(() => {
+    const on = () => setCompact(window.innerHeight < 760);
+    window.addEventListener('resize', on);
+    return () => window.removeEventListener('resize', on);
+  }, []);
   const lastLine = useRef({});
   const spoke = useRef({
     turn: -1,
@@ -84176,7 +84206,18 @@ const CardBattleBoard = ({
       setFx(hits);
       setTimeout(() => setFx(cur => cur.filter(f => !hits.some(h => h.key === f.key))), 1000);
       if (hits.some(h => h.dmg >= 3)) Audio_.se.crit();else if (hits.some(h => h.dmg > 0)) Audio_.se.attack();else if (hits.some(h => h.heal)) Audio_.se.heal();else Audio_.se.guard();
-    } else if (evs.some(e => e.t === 'use')) Audio_.se.card();else if (evs.some(e => e.t === 'guard')) Audio_.se.guard();
+    } else if (evs.some(e => e.t === 'use')) Audio_.se.card();
+    const use = evs.find(e => e.t === 'use');
+    if (use) {
+      const p0 = next.players[use.p];
+      const key = `${next.log.length}-${Date.now()}`;
+      setAction({
+        key,
+        cards: use.cards,
+        who: use.mon >= 0 ? p0.mons[use.mon].name : `${p0.name}(ブリーダー)`
+      });
+      setTimeout(() => setAction(cur => cur && cur.key === key ? null : cur), 2200);
+    } else if (evs.some(e => e.t === 'guard')) Audio_.se.guard();
     const scene = cardLineSceneOf(db, st, next, CARD_CPU);
     setSt(next);
     setSel(null);
@@ -84315,7 +84356,7 @@ const CardBattleBoard = ({
     const atk = pd.mon >= 0 ? st.players[pd.attacker].mons[pd.mon].name : 'ブリーダー';
     return `${atk}の「${c.name}」(ダメージ${pd.base * pd.mult})が${tm ? tm.name : ''}に！`;
   })() : null;
-  const logLines = st.log.filter(l => l.kind !== 'turn').slice(-2);
+  const logLines = st.log.filter(l => l.kind !== 'turn').slice(-3);
   const strip = p => {
     const pl = st.players[p];
     return React.createElement("div", {
@@ -84400,7 +84441,7 @@ const CardBattleBoard = ({
       background: 'radial-gradient(ellipse at 50% 45%,#3b2a6b 0%,#1b1438 55%,#0d0a1f 100%)'
     }
   }, React.createElement("div", {
-    className: "flex h-[44px] shrink-0 items-center justify-between bg-black/35 px-2"
+    className: `flex ${compact ? 'h-[36px]' : 'h-[44px]'} shrink-0 items-center justify-between bg-black/35 px-2`
   }, React.createElement("button", {
     type: "button",
     onClick: () => setQuit(true),
@@ -84410,7 +84451,7 @@ const CardBattleBoard = ({
   }, "MFバトルカード"), React.createElement("span", {
     className: "text-[12px] font-bold text-violet-200"
   }, "ターン ", Math.max(1, st.turn), " ・ ", st.active === CARD_ME ? 'あなたの番' : `${who.name}の番`)), React.createElement("div", {
-    className: "flex h-[50px] shrink-0 items-center gap-2 px-2"
+    className: `flex ${compact ? 'h-[42px]' : 'h-[50px]'} shrink-0 items-center gap-2 px-2`
   }, React.createElement("img", {
     src: assistantFaceImage(who, face),
     alt: who.name,
@@ -84427,7 +84468,7 @@ const CardBattleBoard = ({
   }, strip(CARD_CPU))), bubble && React.createElement("div", {
     key: bubble.key,
     "data-card-bubble": true,
-    className: "pointer-events-none absolute left-[56px] right-2 top-[150px] z-10 rounded-2xl border-[3px] bg-white px-2.5 py-1 text-[13px] font-extrabold leading-snug text-[#1f1333] shadow-lg",
+    className: `pointer-events-none absolute left-[56px] right-2 ${compact ? 'top-[118px]' : 'top-[150px]'} z-10 rounded-2xl border-[3px] bg-white px-2.5 py-1 text-[13px] font-extrabold leading-snug text-[#1f1333] shadow-lg`,
     style: {
       borderColor: who.accent,
       ...JA_WRAP_STYLE
@@ -84443,18 +84484,38 @@ const CardBattleBoard = ({
     mark: markOf(CARD_CPU, m),
     fx: fx.filter(f => f.p === CARD_CPU && f.m === m),
     onTap: () => tapMon(CARD_CPU, m),
-    press: press
+    press: press,
+    compact: compact
   }))), React.createElement("div", {
-    className: "flex min-h-[54px] shrink-0 items-center justify-center px-3 py-1"
+    "data-card-stage": true,
+    className: "relative flex min-h-[64px] flex-1 flex-col items-center justify-center gap-1.5 overflow-hidden px-3 py-1"
   }, React.createElement("div", {
+    className: "pointer-events-none absolute inset-x-6 top-1/2 h-px bg-gradient-to-r from-transparent via-violet-300/40 to-transparent"
+  }), action && React.createElement("div", {
+    key: action.key,
+    "data-card-action": true,
+    className: `relative z-[1] flex items-center gap-2 rounded-2xl border border-amber-300/50 bg-black/55 px-2 ${compact ? "py-0.5" : "py-1"} shadow-lg`
+  }, action.cards.slice(0, 3).map((no, i) => {
+    const c = cardOf(db, no);
+    return c ? React.createElement("img", {
+      key: i,
+      src: CARD_IMG(c.img),
+      alt: c.name,
+      className: `${compact ? 'h-[40px] w-[29px]' : 'h-[64px] w-[46px]'} rounded-[4px] object-cover shadow`
+    }) : null;
+  }), React.createElement("div", {
+    className: "text-[13px] font-black leading-tight"
+  }, action.who, React.createElement("span", {
+    className: "block text-[15px] text-amber-200"
+  }, "「", action.cards.map(n => (cardOf(db, n) || {}).name).join('＋'), "」"))), React.createElement("div", {
     "data-card-log": true,
-    className: "rounded-xl border border-white/15 bg-black/45 px-3 py-1 text-center text-[13px] font-bold leading-snug",
+    className: "relative z-[1] max-w-full rounded-xl border border-white/15 bg-black/45 px-3 py-1 text-center text-[13px] font-bold leading-snug",
     style: JA_WRAP_STYLE
-  }, pendingText ? React.createElement("span", {
+  }, pendingText && React.createElement("div", {
     className: "text-rose-200"
-  }, pendingText) : logLines.map((l, i) => React.createElement("div", {
+  }, pendingText), (pendingText ? logLines.slice(-1).slice(compact ? 1 : 0) : compact ? logLines.slice(action ? -1 : -2) : logLines).map((l, i, arr) => React.createElement("div", {
     key: i,
-    className: i === logLines.length - 1 ? '' : 'text-[11px] text-violet-200'
+    className: i === arr.length - 1 && !pendingText ? '' : 'text-[11px] text-violet-200'
   }, l.text)))), React.createElement("div", {
     className: "flex shrink-0 items-end justify-around px-1"
   }, me.mons.map((_, m) => React.createElement(CardMonSlot, {
@@ -84466,12 +84527,11 @@ const CardBattleBoard = ({
     mark: markOf(CARD_ME, m),
     fx: fx.filter(f => f.p === CARD_ME && f.m === m),
     onTap: () => tapMon(CARD_ME, m),
-    press: press
+    press: press,
+    compact: compact
   }))), React.createElement("div", {
     className: "flex shrink-0 justify-end px-2 py-1"
-  }, strip(CARD_ME)), React.createElement("div", {
-    className: "min-h-0 flex-1"
-  }), guide && React.createElement("div", {
+  }, strip(CARD_ME)), guide && React.createElement("div", {
     className: "mx-auto mb-1 shrink-0 rounded-lg bg-amber-300 px-2 py-0.5 text-[11px] font-black text-slate-900"
   }, hint || guide), mode === 'guard' && !guardOpts.length && React.createElement("div", {
     "data-card-guard-why": true,
@@ -84501,7 +84561,7 @@ const CardBattleBoard = ({
       key: `${no}-${i}`,
       "data-card-hand-card": i
     }, press(no, () => tapHand(i)), {
-      className: `flex w-[19%] max-w-[76px] flex-col items-center transition-transform ${up ? '-translate-y-3' : ''} ${myTurn && !on ? 'opacity-45' : ''}`
+      className: `flex w-[19%] ${compact ? 'max-w-[58px]' : 'max-w-[76px]'} flex-col items-center transition-transform ${up ? '-translate-y-3' : ''} ${myTurn && !on ? 'opacity-45' : ''}`
     }), React.createElement("img", {
       src: CARD_IMG(c ? c.img : no),
       alt: c ? c.name : no,
@@ -84510,12 +84570,17 @@ const CardBattleBoard = ({
       className: "mt-0.5 w-full rounded-md bg-black/60 py-0.5 text-center leading-tight"
     }, React.createElement("b", {
       className: "block truncate text-[12px]"
-    }, c ? c.name : no), React.createElement("span", {
+    }, c ? c.name : no), compact ? React.createElement(React.Fragment, null, React.createElement("span", {
+      className: "block text-[10px] font-extrabold leading-tight text-amber-200"
+    }, "ガッツ", c ? c.guts : '-'), React.createElement("span", {
+      className: "block whitespace-nowrap text-[10px] font-extrabold leading-tight text-amber-200"
+    }, cardCaption(c))) : React.createElement(React.Fragment, null, React.createElement("span", {
       className: "block text-[11px] font-extrabold text-amber-200"
     }, "ガッツ", c ? c.guts : '-'), React.createElement("span", {
       className: "block text-[11px] font-extrabold text-amber-200"
-    }, cardCaption(c))));
+    }, cardCaption(c)))));
   })), React.createElement("div", {
+    "data-card-footer": true,
     className: "flex shrink-0 gap-2 px-2.5 pb-2 pt-1",
     style: {
       paddingBottom: 'max(8px, env(safe-area-inset-bottom))'

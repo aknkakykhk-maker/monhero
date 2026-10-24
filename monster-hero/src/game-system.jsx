@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 12c78f1b57b8e785
+// generated-sha256: 416ec4175b10ef67
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-24 12:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-24 12:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8620,6 +8620,9 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   // 6人目の助手きゅうこ(2026-10-22 社長の決定)。新モンスターのイルミネ・ドリーミィも出る加入のお話を社長が全文読んで OK を出したら、3つ同時に真にする。
   //   偽のあいだは、助手の一覧・加入のお話・回想・マーケットのカード「きゅうこ」に出ない(data/assistants.js の ASSISTANT_RELEASE_FLAGS・data/breeder.js の kyukoCardOnSale)
   assistantKyuko: true,
+  // MFバトルカード(2026-10-24〜作っている途中。設計 docs/spec/CARD_BATTLE.md 7-3)。社長がお話と画面を見て「公開」と言ったら真にする。
+  //   偽のあいだは、公開のお話(card_battle_intro_2026)・HOME の入口・マーケットのカードポイントの欄・更新履歴・ヘルプに出ない(デバッグ設定からだけ入れる)
+  cardBattle: false,
   tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE,
   // タクティクスのヘイト(🔥)とモンスターのタイプ表記。2026-10-18 社長「ヘイトシステムは実装していいよ」で公開。
   //   数字は 32-tactics-units.jsx の TACTICS_HATE / MONSTER_TYPES。お話「タクティクスバトル ～4人のタイプ～」(tactics_types)もこの印で出る
@@ -50853,17 +50856,40 @@ const CARD_IMG = (img, size = 's') => `${CARD_IMAGE_SET.imageDir}/${size}/${img}
 const CARD_KIND_LABEL = Object.freeze({ pow: 'ちから', int: 'かしこさ', spe: '特殊', dge: '回避', blk: '防御' });
 const CARD_TYPE_LABEL = Object.freeze({ ground: '地上', air: '空中', water: '水中' });
 const CARD_LEVEL_LABEL = Object.freeze({ easy: 'EASY', normal: 'NORMAL', hard: 'HARD', expert: 'EXPERT', master: 'MASTER' });
-// 相手の助手に合わせた曲(5-3)。ももすけの曲は「あとで決める」(社長)ので、いまは仮にトリコ
+// 相手の助手ごとの対戦の既定の曲(社長 台帳 #3438)。対人戦は ichika_battle(対人戦の区切りで使う)
+// ききは綺季一閃のフル版(eiki_boss)。きゅうこの Toward the Stars はゲームに short 版しかないので、それを使う
 const CARD_AI_BGM = Object.freeze({
-  mua: 'ichika_battle', momosuke: 'melo_toriko', kiki: 'melo_kiki_issen_short',
+  mua: 'melo_toriko', kiki: 'eiki_boss', momosuke: 'melo_crossing_field',
   kyuko: 'melo_toward_the_stars_short', dra: 'melo_mou_hitotsu_no_sekai_e', atsu: 'melo_against_my_own_shadow',
 });
-// モンヒロにいる種族は、いまのゲームの絵を使う(ほかの種族は、絵が届くまでカードの絵で代える。5-3)
+const CARD_PVP_BGM = 'ichika_battle';
+// モンスターの絵(5-3)。モンヒロにいる種族はいまのゲームの絵、いない16種族は社長から届いた立ち絵(#3437 でクラフトくんが取り込んだ)。
+// 混血の15体はカードの絵で代える(社長)
 const CARD_SPECIES_ART = Object.freeze({ tiger: 'Tiger', golem: 'Golem', suezo: 'Suezo', pixie: 'Pixie', hare: 'Ham', mocchi: 'Mocchi', monol: 'Monol', plant: 'Plant' });
+const cardNewSpeciesArt = () => ({
+  dino: typeof NEW16_DINO_IMG !== 'undefined' ? NEW16_DINO_IMG : null,
+  gali: typeof NEW16_GALI_IMG !== 'undefined' ? NEW16_GALI_IMG : null,
+  naga: typeof NEW16_NAGA_IMG !== 'undefined' ? NEW16_NAGA_IMG : null,
+  dragon: typeof NEW16_DRAGON_IMG !== 'undefined' ? NEW16_DRAGON_IMG : null,
+  henger: typeof NEW16_HENGER_IMG !== 'undefined' ? NEW16_HENGER_IMG : null,
+  durahan: typeof NEW16_DURAHAN_IMG !== 'undefined' ? NEW16_DURAHAN_IMG : null,
+  arrowhead: typeof NEW16_ARROWHEAD_IMG !== 'undefined' ? NEW16_ARROWHEAD_IMG : null,
+  zilla: typeof NEW16_ZILLA_IMG !== 'undefined' ? NEW16_ZILLA_IMG : null,       // グジラは地上も水中も同じ立ち絵(社長)
+  phoenix: typeof NEW16_PHOENIX_IMG !== 'undefined' ? NEW16_PHOENIX_IMG : null,
+  joker: typeof NEW16_JOKER_IMG !== 'undefined' ? NEW16_JOKER_IMG : null,
+  jell: typeof NEW16_JELL_IMG !== 'undefined' ? NEW16_JELL_IMG : null,
+  mew: typeof NEW16_MEW_IMG !== 'undefined' ? NEW16_MEW_IMG : null,
+  metalner: typeof NEW16_METALNER_IMG !== 'undefined' ? NEW16_METALNER_IMG : null,
+  worm: typeof NEW16_WORM_IMG !== 'undefined' ? NEW16_WORM_IMG : null,
+  centaur: typeof NEW16_CENTAUR_IMG !== 'undefined' ? NEW16_CENTAUR_IMG : null,
+  colorpandora: typeof NEW16_COLORPANDORA_IMG !== 'undefined' ? NEW16_COLORPANDORA_IMG : null,
+});
 const cardMonArt = (mon) => {
-  const id = CARD_SPECIES_ART[mon.species] || CARD_SPECIES_ART[mon.main];
+  if (mon.main) return null; // 混血はカードの絵
+  const id = CARD_SPECIES_ART[mon.species];
   const m = id && typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[id] : null;
-  return m && m.imgUrl ? m.imgUrl : null;
+  if (m && m.imgUrl) return m.imgUrl;
+  return cardNewSpeciesArt()[mon.species] || null;
 };
 const cardTodayJst = () => new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
 const cardCaption = (c) => (!c ? '' : c.kind === 'dge' ? '回避' : c.kind === 'blk' ? '防御' : c.kind === 'spe' ? '特殊' : `ダメージ${c.damage}`);
@@ -50989,7 +51015,7 @@ const CardDiscardModal = ({ db, st, initial = CARD_ME, onDetail, onClose }) => {
 };
 
 // ---- 場のモンスター1体(カードの小さい絵・名前・ライフ・特徴・モンヒロの絵) ----
-const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press }) => {
+const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact = false }) => {
   const mon = st.players[p].mons[m];
   const art = cardMonArt(mon);
   const ty = cardMonType(mon, st.turn);
@@ -51009,9 +51035,9 @@ const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press }) => {
     </div>
   );
   const artEl = (
-    <div className="relative flex h-[78px] w-full items-end justify-center">
-      {art ? <img src={art} alt="" className={`max-h-[78px] max-w-[96px] object-contain drop-shadow-[0_6px_6px_rgba(0,0,0,.6)] ${opp ? '-scale-x-100' : ''} ${mon.ko ? 'grayscale opacity-30' : ''}`}/>
-        : <img src={CARD_IMG(cardMonsterOf(db, mon.no).img)} alt="" className={`h-[74px] rounded-md object-cover ${mon.ko ? 'grayscale opacity-30' : ''}`}/>}
+    <div className={`relative flex ${compact ? 'h-[56px]' : 'h-[78px]'} w-full items-end justify-center`}>
+      {art ? <img src={art} alt="" className={`${compact ? 'max-h-[56px] max-w-[72px]' : 'max-h-[78px] max-w-[96px]'} object-contain drop-shadow-[0_6px_6px_rgba(0,0,0,.6)] ${opp ? '-scale-x-100' : ''} ${mon.ko ? 'grayscale opacity-30' : ''}`}/>
+        : <img src={CARD_IMG(cardMonsterOf(db, mon.no).img)} alt="" className={`${compact ? 'h-[54px]' : 'h-[74px]'} rounded-md object-cover ${mon.ko ? 'grayscale opacity-30' : ''}`}/>}
       {mon.ko && <span className="absolute bottom-2 rounded bg-black/70 px-1.5 text-[12px] font-black text-slate-300">KO</span>}
       {fx.map((f) => (
         <span key={f.key} className={`pointer-events-none absolute top-1 text-[30px] font-black ${f.dmg > 0 ? 'animate-bounce text-white' : 'text-sky-200'}`} style={{ WebkitTextStroke: f.dmg > 0 ? '2px #dc2626' : '1px #0369a1', textShadow: '0 0 10px rgba(248,113,113,.8)' }}>
@@ -51042,6 +51068,10 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
   const [discard, setDiscard] = useState(null);
   const [hint, setHint] = useState('');
   const [quit, setQuit] = useState(false);
+  const [action, setAction] = useState(null);   // まんなかに出す、いま使った技
+  // 背の低い画面(iPhone SE など)では、絵と手札を少し小さくして、まんなかの場所を残す
+  const [compact, setCompact] = useState(() => typeof window !== 'undefined' && window.innerHeight < 760);
+  useEffect(() => { const on = () => setCompact(window.innerHeight < 760); window.addEventListener('resize', on); return () => window.removeEventListener('resize', on); }, []);
   const lastLine = useRef({});
   const spoke = useRef({ turn: -1, n: 0 });
   const bubbleTimer = useRef(null);
@@ -51078,6 +51108,13 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
       setTimeout(() => setFx((cur) => cur.filter((f) => !hits.some((h) => h.key === f.key))), 1000);
       if (hits.some((h) => h.dmg >= 3)) Audio_.se.crit(); else if (hits.some((h) => h.dmg > 0)) Audio_.se.attack(); else if (hits.some((h) => h.heal)) Audio_.se.heal(); else Audio_.se.guard();
     } else if (evs.some((e) => e.t === 'use')) Audio_.se.card();
+    const use = evs.find((e) => e.t === 'use');
+    if (use) {
+      const p0 = next.players[use.p];
+      const key = `${next.log.length}-${Date.now()}`;
+      setAction({ key, cards: use.cards, who: use.mon >= 0 ? p0.mons[use.mon].name : `${p0.name}(ブリーダー)` });
+      setTimeout(() => setAction((cur) => (cur && cur.key === key ? null : cur)), 2200);
+    }
     else if (evs.some((e) => e.t === 'guard')) Audio_.se.guard();
     const scene = cardLineSceneOf(db, st, next, CARD_CPU);
     setSt(next); setSel(null); setPicks([]); setHint('');
@@ -51200,7 +51237,7 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
     const atk = pd.mon >= 0 ? st.players[pd.attacker].mons[pd.mon].name : 'ブリーダー';
     return `${atk}の「${c.name}」(ダメージ${pd.base * pd.mult})が${tm ? tm.name : ''}に！`;
   })() : null;
-  const logLines = st.log.filter((l) => l.kind !== 'turn').slice(-2);
+  const logLines = st.log.filter((l) => l.kind !== 'turn').slice(-3);
 
   const strip = (p) => {
     const pl = st.players[p];
@@ -51236,36 +51273,45 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
 
   return (
     <div data-mh-screen data-card-battle data-card-mode={mode} className="relative flex h-full min-h-0 flex-1 flex-col overflow-hidden text-white" style={{ background: 'radial-gradient(ellipse at 50% 45%,#3b2a6b 0%,#1b1438 55%,#0d0a1f 100%)' }}>
-      <div className="flex h-[44px] shrink-0 items-center justify-between bg-black/35 px-2">
+      <div className={`flex ${compact ? 'h-[36px]' : 'h-[44px]'} shrink-0 items-center justify-between bg-black/35 px-2`}>
         <button type="button" onClick={() => setQuit(true)} className="rounded-lg border border-white/20 px-2 py-1 text-[12px] font-black text-slate-200">投了</button>
         <span className="text-[15px] font-black">MFバトルカード</span>
         <span className="text-[12px] font-bold text-violet-200">ターン {Math.max(1, st.turn)} ・ {st.active === CARD_ME ? 'あなたの番' : `${who.name}の番`}</span>
       </div>
       {/* 相手の帯(隠さない) */}
-      <div className="flex h-[50px] shrink-0 items-center gap-2 px-2">
+      <div className={`flex ${compact ? 'h-[42px]' : 'h-[50px]'} shrink-0 items-center gap-2 px-2`}>
         <img src={assistantFaceImage(who, face)} alt={who.name} className="h-[42px] w-[42px] rounded-xl border-2 bg-black object-cover object-top" style={{ borderColor: who.accent }}/>
         <div className="min-w-0 text-[13px] font-black leading-tight">{who.name}<small className="block text-[10px] font-bold text-rose-200">{CARD_LEVEL_LABEL[game.level]}</small></div>
         <div className="ml-auto">{strip(CARD_CPU)}</div>
       </div>
       {/* 吹き出し(帯の下・相手のモンスターの上。指の操作は下へ通す) */}
       {bubble && (
-        <div key={bubble.key} data-card-bubble className="pointer-events-none absolute left-[56px] right-2 top-[150px] z-10 rounded-2xl border-[3px] bg-white px-2.5 py-1 text-[13px] font-extrabold leading-snug text-[#1f1333] shadow-lg" style={{ borderColor: who.accent, ...JA_WRAP_STYLE }}>
+        <div key={bubble.key} data-card-bubble className={`pointer-events-none absolute left-[56px] right-2 ${compact ? 'top-[118px]' : 'top-[150px]'} z-10 rounded-2xl border-[3px] bg-white px-2.5 py-1 text-[13px] font-extrabold leading-snug text-[#1f1333] shadow-lg`} style={{ borderColor: who.accent, ...JA_WRAP_STYLE }}>
           {bubble.text}
         </div>
       )}
       <div className="flex shrink-0 items-start justify-around px-1">
-        {opp.mons.map((_, m) => <CardMonSlot key={m} db={db} st={st} p={CARD_CPU} m={m} mark={markOf(CARD_CPU, m)} fx={fx.filter((f) => f.p === CARD_CPU && f.m === m)} onTap={() => tapMon(CARD_CPU, m)} press={press}/>)}
+        {opp.mons.map((_, m) => <CardMonSlot key={m} db={db} st={st} p={CARD_CPU} m={m} mark={markOf(CARD_CPU, m)} fx={fx.filter((f) => f.p === CARD_CPU && f.m === m)} onTap={() => tapMon(CARD_CPU, m)} press={press} compact={compact}/>)}
       </div>
-      <div className="flex min-h-[54px] shrink-0 items-center justify-center px-3 py-1">
-        <div data-card-log className="rounded-xl border border-white/15 bg-black/45 px-3 py-1 text-center text-[13px] font-bold leading-snug" style={JA_WRAP_STYLE}>
-          {pendingText ? <span className="text-rose-200">{pendingText}</span> : logLines.map((l, i) => <div key={i} className={i === logLines.length - 1 ? '' : 'text-[11px] text-violet-200'}>{l.text}</div>)}
+      {/* まんなか: 技の動き(アクション)と、起きたことの記録(ログ)の場所。相手の場と自分の場をここで上下に分ける(社長 2026-10-24)
+          ★次の区切りの技ごとの動きも、この data-card-stage の中で見せる */}
+      <div data-card-stage className="relative flex min-h-[64px] flex-1 flex-col items-center justify-center gap-1.5 overflow-hidden px-3 py-1">
+        <div className="pointer-events-none absolute inset-x-6 top-1/2 h-px bg-gradient-to-r from-transparent via-violet-300/40 to-transparent"/>
+        {action && (
+          <div key={action.key} data-card-action className={`relative z-[1] flex items-center gap-2 rounded-2xl border border-amber-300/50 bg-black/55 px-2 ${compact ? "py-0.5" : "py-1"} shadow-lg`}>
+            {action.cards.slice(0, 3).map((no, i) => { const c = cardOf(db, no); return c ? <img key={i} src={CARD_IMG(c.img)} alt={c.name} className={`${compact ? 'h-[40px] w-[29px]' : 'h-[64px] w-[46px]'} rounded-[4px] object-cover shadow`}/> : null; })}
+            <div className="text-[13px] font-black leading-tight">{action.who}<span className="block text-[15px] text-amber-200">「{action.cards.map((n) => (cardOf(db, n) || {}).name).join('＋')}」</span></div>
+          </div>
+        )}
+        <div data-card-log className="relative z-[1] max-w-full rounded-xl border border-white/15 bg-black/45 px-3 py-1 text-center text-[13px] font-bold leading-snug" style={JA_WRAP_STYLE}>
+          {pendingText && <div className="text-rose-200">{pendingText}</div>}
+          {(pendingText ? logLines.slice(-1).slice(compact ? 1 : 0) : compact ? logLines.slice(action ? -1 : -2) : logLines).map((l, i, arr) => <div key={i} className={i === arr.length - 1 && !pendingText ? '' : 'text-[11px] text-violet-200'}>{l.text}</div>)}
         </div>
       </div>
       <div className="flex shrink-0 items-end justify-around px-1">
-        {me.mons.map((_, m) => <CardMonSlot key={m} db={db} st={st} p={CARD_ME} m={m} mark={markOf(CARD_ME, m)} fx={fx.filter((f) => f.p === CARD_ME && f.m === m)} onTap={() => tapMon(CARD_ME, m)} press={press}/>)}
+        {me.mons.map((_, m) => <CardMonSlot key={m} db={db} st={st} p={CARD_ME} m={m} mark={markOf(CARD_ME, m)} fx={fx.filter((f) => f.p === CARD_ME && f.m === m)} onTap={() => tapMon(CARD_ME, m)} press={press} compact={compact}/>)}
       </div>
       <div className="flex shrink-0 justify-end px-2 py-1">{strip(CARD_ME)}</div>
-      <div className="min-h-0 flex-1"/>
       {guide && <div className="mx-auto mb-1 shrink-0 rounded-lg bg-amber-300 px-2 py-0.5 text-[11px] font-black text-slate-900">{hint || guide}</div>}
       {mode === 'guard' && !guardOpts.length && (
         <div data-card-guard-why className="mx-auto mb-1 max-w-[94%] shrink-0 text-center text-[11px] font-bold leading-snug text-slate-300" style={JA_WRAP_STYLE}>{cardGuardBlockReasons(db, st).join(' / ')}</div>
@@ -51282,18 +51328,23 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
           const on = handUsable(i);
           const up = (sel && sel.hand === i) || picks.includes(i) || (setChosen && JSON.parse(setChosen).includes(i));
           return (
-            <div key={`${no}-${i}`} data-card-hand-card={i} {...press(no, () => tapHand(i))} className={`flex w-[19%] max-w-[76px] flex-col items-center transition-transform ${up ? '-translate-y-3' : ''} ${myTurn && !on ? 'opacity-45' : ''}`}>
+            <div key={`${no}-${i}`} data-card-hand-card={i} {...press(no, () => tapHand(i))} className={`flex w-[19%] ${compact ? 'max-w-[58px]' : 'max-w-[76px]'} flex-col items-center transition-transform ${up ? '-translate-y-3' : ''} ${myTurn && !on ? 'opacity-45' : ''}`}>
               <img src={CARD_IMG(c ? c.img : no)} alt={c ? c.name : no} className={`w-full rounded-[5px] shadow-[0_3px_6px_#000] ${up ? 'outline outline-[3px] outline-amber-300' : ''}`}/>
               <div className="mt-0.5 w-full rounded-md bg-black/60 py-0.5 text-center leading-tight">
                 <b className="block truncate text-[12px]">{c ? c.name : no}</b>
-                <span className="block text-[11px] font-extrabold text-amber-200">ガッツ{c ? c.guts : '-'}</span>
-                <span className="block text-[11px] font-extrabold text-amber-200">{cardCaption(c)}</span>
+                {compact ? <>
+                  <span className="block text-[10px] font-extrabold leading-tight text-amber-200">ガッツ{c ? c.guts : '-'}</span>
+                  <span className="block whitespace-nowrap text-[10px] font-extrabold leading-tight text-amber-200">{cardCaption(c)}</span>
+                </> : <>
+                  <span className="block text-[11px] font-extrabold text-amber-200">ガッツ{c ? c.guts : '-'}</span>
+                  <span className="block text-[11px] font-extrabold text-amber-200">{cardCaption(c)}</span>
+                </>}
               </div>
             </div>
           );
         })}
       </div>
-      <div className="flex shrink-0 gap-2 px-2.5 pb-2 pt-1" style={{ paddingBottom: 'max(8px, env(safe-area-inset-bottom))' }}>{footer}</div>
+      <div data-card-footer className="flex shrink-0 gap-2 px-2.5 pb-2 pt-1" style={{ paddingBottom: 'max(8px, env(safe-area-inset-bottom))' }}>{footer}</div>
       {detail && <CardDetailModal db={db} no={detail} onClose={() => setDetail(null)}/>}
       {discard && <CardDiscardModal db={db} st={st} initial={discard.tab} onDetail={(no) => setDetail(no)} onClose={() => setDiscard(null)}/>}
       {quit && <ConfirmSheet title="投了しますか？" message={'投了すると負けになります(カードポイントはもらえません)'} confirmLabel="投了する" danger onCancel={() => setQuit(false)} onConfirm={() => { setQuit(false); finished.current = true; onFinish({ outcome: 'surrender', st }); }}/>}

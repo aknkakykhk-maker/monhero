@@ -611,15 +611,15 @@ HOME の「MFバトルカード」
 - 決め方は、いまのバトルの BGM 設定(`13-bgm-and-rhythm-settings.jsx` の `BGM_BATTLE_MODE_TABS`・`normalizeBgmArrangement`)と同じ形: BGM の設定画面に「MFバトルカード」のタブを足し、「コンピューター戦」「対人戦」の枠を並べる。コンピューター戦の枠の既定は「おまかせ(相手の助手に合わせる)」。
 - 保存は新しいキー `mh_card_bgm_v1`(`{ cpu:'auto' か 曲id, pvp: 曲id }`)。読むときは `normalizeCardBgm` を通し、無い・知らない曲idは既定にする。いまの `mh_bgm_arrangement` は触らない。
 
-| 相手 | 「おまかせ」のときの曲(案。いまゲームにある曲から) | 選んだ理由 |
+| 相手 | 「おまかせ」のときの曲(社長が1人ずつ決めた。台帳 #3438) | 曲の id |
 | --- | --- | --- |
-| みゅあ | バトルテーマ by いちか(`ichika_battle`) | 明るく元気な子に合う、いちばん王道のバトル曲 |
-| ももすけ | トリコ(`melo_toriko`)/ 候補2: Crazy Party Night ～ぱんぷきんの逆襲～(`melo_crazy_party_night`) | トリコ: 「相手を夢中にさせる」曲名が、からかって振り回すももすけらしい。候補2: いたずら好きでにぎやかな曲。どちらにするかは作るときに聞いてもらう |
-| きき | 綺季一閃 ～花雪に舞う詠姫～ short ver.(`melo_kiki_issen_short`) | ききの名前の入った曲 |
-| きゅうこ | Toward the Stars, Paradise or Truth short ver.(`melo_toward_the_stars_short`) | きゅうこの加入のお話の曲(作り手 hitoyakyuko) |
-| ドラ | もう一つの世界へ(`melo_mou_hitotsu_no_sekai_e`) | ドラが作った曲 |
-| あつ | Against My Own Shadow(`melo_against_my_own_shadow`) | あつの BGM(台帳) |
-| 対人戦の既定 | 戦場の疾風(`senjou_no_shippuu`) | 人どうしの対戦に合う、いまの対戦向けの曲 |
+| みゅあ | トリコ | `melo_toriko` |
+| きき | 綺季一閃 ～花雪に舞う詠姫～(フル版) | `eiki_boss` |
+| ももすけ | crossing field | `melo_crossing_field` |
+| きゅうこ | Toward the Stars, Paradise or Truth(ゲームには short 版しかないので、それを使う) | `melo_toward_the_stars_short` |
+| ドラ | もう一つの世界へ | `melo_mou_hitotsu_no_sekai_e` |
+| あつ | Against My Own Shadow | `melo_against_my_own_shadow` |
+| 対人戦の既定 | バトルテーマ by いちか | `ichika_battle` |
 
 **裏でクイック∞周回**(社長: ほかのモードと同じく、MFバトルカードを遊んでいるあいだも回り続ける)
 - 手本はモンヒロビート(`60-app.jsx` の `RHYTHM_BACKGROUND_RUN_SCREENS`・`rhythmBackgroundRun`・`returnToBackgroundRun`、[`QUICK_RHYTHM_LINK.md`](QUICK_RHYTHM_LINK.md))。
@@ -746,7 +746,7 @@ HOME の「MFバトルカード」
 | `mh_card_pack_pity_v1` | `{ パックid: キラなしで開けた数 }` | `{}` |
 | `mh_card_daily_v1` | `{ day:'YYYY-MM-DD', cpuCoin, pvpCoin, firstWin, foes:{ ブリーダーid: 戦った数 } }` | 今日の0 |
 | `mh_card_record_v1` | `{ cpu:{win,lose,surrender}, pvp:{win,lose}, recent:[…30件] }` | 0 |
-| `mh_card_bgm_v1` | `{ cpu:'auto' か 曲id, pvp: 曲id }` 対戦の BGM(5-3) | `{ cpu:'auto', pvp:'senjou_no_shippuu' }` |
+| `mh_card_bgm_v1` | `{ cpu:'auto' か 曲id, pvp: 曲id }` 対戦の BGM(5-3) | `{ cpu:'auto', pvp:'ichika_battle' }` |
 | `mh_card_cpu_unlocked_v1` | `{ hard, expert, master }` コンピューター戦の難易度を開いた印(5-5) | EASY・NORMAL だけ開いている |
 | `mh_card_settings_v1` | 演出の速さ・守りの自動パス など | 既定値(`normalizeCardSettings` を通す) |
 
