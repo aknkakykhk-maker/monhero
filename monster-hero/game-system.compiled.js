@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 51dbac18edcebd67
+// source-sha256: 694b269c5f51e837
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-24 13:44";
+const BUILD_DATE = "2026-10-24 14:41";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -83927,11 +83927,11 @@ const CARD_TUTORIAL_LINES = Object.freeze({
   M2: 'じゃあ次はあたしの番ね！ いっくよー！',
   M3: 'これでどーだ！',
   D9: 'みゅあが攻めてきたぞ。相手の番でも、回避か防御のカードで守れるんだ',
-  D10: '光ってる「ステップ」をタップ。守りのカードは、狙われた子のぶん(か、誰でも使えるもの)だけ使えるからな',
+  D10: '光ってる「ステップ」をタップか、狙われたピクシーまで運んでみな。守りのカードは、狙われた子のぶん(か、誰でも使えるもの)だけ使えるからな',
   M4: 'えー！ よけられた！？ うまっ！ｗ',
   D11: 'ほらな、守りは大事なんだよ。おでの膝くらい大事だ。えへへ',
   D12: '今度はこっちの番。ガッツが2つあるから「パンチ」が出せる',
-  D13: '技をタップして、狙う相手のモンスターをタップ。1体は1ターンに1回まで攻撃できるからな',
+  D13: '技をタップして相手をタップ。相手まで運んで離してもいいぞ。1体は1ターンに1回まで攻撃できるからな',
   M5: 'いったぁ…！ 今のはまじ効いた…',
   D14: 'いい当たりだ。ダメージの数だけライフが減って、0になったらKOだよ',
   D15: '最後にもうひとつ。ちょっと時間を進めるぞ…',
@@ -84460,6 +84460,7 @@ const cardGuardBlockReasons = (db, st) => {
   return out.slice(0, 2);
 };
 const CARD_CPU = 1;
+const CARD_DRAG_THRESHOLD = 10;
 const CARD_ME = 0;
 const cardDeciderOf = st => st.pendingDiscard ? st.pendingDiscard.p : st.phase === 'setup' ? 1 - st.first : cardDecider(st);
 const useCardLongPress = onLong => {
@@ -84681,7 +84682,7 @@ const CardMonSlot = ({
       textShadow: '0 0 10px rgba(248,113,113,.8)'
     }
   }, f.dmg > 0 ? `−${f.dmg}` : f.heal ? `＋${f.heal}` : 'ミス')));
-  const ring = mark === 'target' ? 'ring-4 ring-rose-400' : mark === 'user' ? 'ring-4 ring-amber-300' : mark === 'acting' ? 'ring-2 ring-amber-300/80' : '';
+  const ring = mark === 'drop' ? 'ring-4 ring-emerald-300 bg-emerald-400/15' : mark === 'target' ? 'ring-4 ring-rose-400' : mark === 'user' ? 'ring-4 ring-amber-300' : mark === 'acting' ? 'ring-2 ring-amber-300/80' : '';
   return React.createElement("div", _extends({
     "data-card-mon": `${p}-${m}`
   }, press ? press(mon.no, onTap) : {
@@ -84711,6 +84712,10 @@ const CardBattleBoard = ({
   const [hint, setHint] = useState('');
   const [quit, setQuit] = useState(false);
   const [action, setAction] = useState(null);
+  const [drag, setDrag] = useState(null);
+  const [dropOver, setDropOver] = useState(null);
+  const dragRef = useRef(null);
+  const ghostRef = useRef(null);
   const tutorial = game.tutorial === true;
   const [tutI, setTutI] = useState(0);
   const [tutQ, setTutQ] = useState(() => tutorial ? CARD_TUTORIAL_STAGES[0].lines.slice() : []);
@@ -85003,6 +85008,7 @@ const CardBattleBoard = ({
     if (o) step(o);
   };
   const markOf = (p, m) => {
+    if (drag && drag.active) return dropOver === `${p}-${m}` ? 'drop' : null;
     if (mode === 'attack' && sel) {
       if (monChosen === undefined) return p === CARD_ME && selMons.includes(m) ? 'user' : null;
       if (p === CARD_ME && m === monChosen) return 'acting';
@@ -85020,6 +85026,107 @@ const CardBattleBoard = ({
     if (mode === 'attack') return attackOpts.some(o => o.hand.includes(i));
     if (mode === 'guard') return guardOpts.some(o => o.hand === i);
     return mode === 'guts' || mode === 'setup' || mode === 'discard';
+  };
+  const dropTargetsOf = i => {
+    const out = {};
+    if (mode === 'attack') {
+      const os = attackOpts.filter(o => o.hand[0] === i).concat(attackOpts.filter(o => o.hand[0] !== i && o.hand.includes(i)));
+      os.forEach(o => {
+        const keys = o.target ? [`${o.target.p}-${o.target.m}`] : [...opp.mons.map((x, m) => x.ko ? null : `${CARD_CPU}-${m}`).filter(Boolean), ...(o.mon >= 0 ? [`${CARD_ME}-${o.mon}`] : [])];
+        keys.forEach(k => {
+          if (!out[k] || o.hand.length > out[k].hand.length) out[k] = o;
+        });
+      });
+    }
+    if (mode === 'guard') guardOpts.filter(o => o.hand === i).forEach(o => {
+      out[`${CARD_ME}-${o.mon}`] = o;
+    });
+    if ((mode === 'guts' || mode === 'setup') && !picks.includes(i)) {
+      const max = mode === 'setup' ? CARD_BATTLE_SETUP_GUTS_MAX : 99;
+      if (picks.length < max && (!tutorial || cardTutorialHandOk(tutStage.id, st, i))) out.guts = 'pick';
+    }
+    return out;
+  };
+  const dropKeyAt = (x, y) => {
+    const el = document.elementFromPoint(x, y);
+    if (!el) return null;
+    if (el.closest('[data-card-guts-drop]')) return 'guts';
+    const mon = el.closest('[data-card-mon]');
+    return mon ? mon.getAttribute('data-card-mon') : null;
+  };
+  const handDown = (e, i, no) => {
+    if (e.button !== undefined && e.button !== 0) return;
+    const d = {
+      i,
+      no,
+      sx: e.clientX,
+      sy: e.clientY,
+      active: false,
+      long: false,
+      targets: myTurn ? dropTargetsOf(i) : {}
+    };
+    dragRef.current = d;
+    clearTimeout(d.timer);
+    d.timer = setTimeout(() => {
+      if (!d.active) {
+        d.long = true;
+        setDetail(no);
+      }
+    }, 450);
+    const onMove = ev => {
+      const moved = Math.hypot(ev.clientX - d.sx, ev.clientY - d.sy);
+      if (!d.active && moved >= CARD_DRAG_THRESHOLD && !d.long && Object.keys(d.targets).length) {
+        d.active = true;
+        clearTimeout(d.timer);
+        setDrag({
+          i,
+          no,
+          x: ev.clientX,
+          y: ev.clientY,
+          active: true
+        });
+      }
+      if (!d.active) {
+        if (moved >= CARD_DRAG_THRESHOLD) clearTimeout(d.timer);
+        return;
+      }
+      if (ghostRef.current) {
+        ghostRef.current.style.left = `${ev.clientX}px`;
+        ghostRef.current.style.top = `${ev.clientY}px`;
+      }
+      const k = dropKeyAt(ev.clientX, ev.clientY);
+      const over = k && d.targets[k] ? k : null;
+      if (over !== d.over) {
+        d.over = over;
+        setDropOver(over);
+      }
+      if (ev.cancelable) ev.preventDefault();
+    };
+    const onUp = ev => {
+      clearTimeout(d.timer);
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
+      dragRef.current = null;
+      if (d.active) {
+        const k = ev.type === 'pointercancel' ? null : dropKeyAt(ev.clientX, ev.clientY);
+        const t = k ? d.targets[k] : null;
+        setDrag(null);
+        setDropOver(null);
+        if (t === 'pick') {
+          Audio_.se.tap();
+          setPicks(cur => cur.includes(i) ? cur : [...cur, i]);
+        } else if (t) step(t);
+        return;
+      }
+      if (d.long || ev.type === 'pointercancel') return;
+      if (Math.hypot(ev.clientX - d.sx, ev.clientY - d.sy) < CARD_DRAG_THRESHOLD) tapHand(i);
+    };
+    window.addEventListener('pointermove', onMove, {
+      passive: false
+    });
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
   };
   const pd = st.pending;
   const pendingText = pd ? (() => {
@@ -85041,9 +85148,11 @@ const CardBattleBoard = ({
       className: "-ml-1 h-[18px] w-[13px] rounded-[2px] border border-violet-300 bg-gradient-to-br from-violet-600 to-indigo-900 first:ml-0"
     }))), React.createElement("span", {
       className: "rounded-md border border-white/20 bg-white/10 px-1.5 py-0.5"
-    }, "山札 ", pl.deck.length), React.createElement("span", {
-      className: "flex items-center gap-0.5 rounded-md border border-amber-300/40 bg-amber-500/10 px-1.5 py-0.5 text-amber-100"
-    }, "ガッツ ", pl.guts.length), React.createElement("button", {
+    }, "山札 ", pl.deck.length), React.createElement("span", _extends({}, p === CARD_ME ? {
+      'data-card-guts-drop': true
+    } : {}, {
+      className: `flex items-center gap-0.5 rounded-md border px-1.5 py-0.5 text-amber-100 ${p === CARD_ME && dropOver === 'guts' ? 'border-emerald-300 bg-emerald-400/30 ring-4 ring-emerald-300' : 'border-amber-300/40 bg-amber-500/10'}`
+    }), "ガッツ ", pl.guts.length), React.createElement("button", {
       type: "button",
       onClick: () => setDiscard({
         tab: p
@@ -85107,7 +85216,7 @@ const CardBattleBoard = ({
       })
     }, "攻撃おわり → ガッツへ"));
   })();
-  const guide = tutorial && (tutStage.next || tutQ.length > 1) ? '' : mode === 'attack' ? sel ? monChosen === undefined ? '使う子をタップ' : needTarget ? '狙う相手をタップ' : '「使う」をタップ' : attackOpts.length ? '技をタップ → 相手のモンスターをタップ' : '使える技がありません →「攻撃おわり」でガッツへ' : mode === 'guard' ? guardOpts.length ? '使える回避・防御だけが明るくなっています' : '使える回避・防御はありません' : mode === 'guts' ? 'ガッツにするカードをタップ(何枚でも)' : mode === 'setup' ? '後攻: 始める前に2枚までガッツにできます' : mode === 'discard' ? `捨てるカードを${st.pendingDiscard ? st.pendingDiscard.n : 0}枚タップ` : '';
+  const guide = tutorial && (tutStage.next || tutQ.length > 1) ? '' : mode === 'attack' ? sel ? monChosen === undefined ? '使う子をタップ' : needTarget ? '狙う相手をタップ' : '「使う」をタップ' : attackOpts.length ? '技をタップ → 相手をタップ(相手まで運んでもOK)' : '使える技がありません →「攻撃おわり」でガッツへ' : mode === 'guard' ? guardOpts.length ? '使える回避・防御だけが明るくなっています' : '使える回避・防御はありません' : mode === 'guts' ? 'ガッツにするカードをタップ(ガッツへ運んでもOK・何枚でも)' : mode === 'setup' ? '後攻: 始める前に2枚までガッツにできます' : mode === 'discard' ? `捨てるカードを${st.pendingDiscard ? st.pendingDiscard.n : 0}枚タップ` : '';
   return React.createElement("div", {
     "data-mh-screen": true,
     "data-card-battle": true,
@@ -85281,14 +85390,25 @@ const CardBattleBoard = ({
     const c = cardOf(db, no);
     const on = handUsable(i);
     const up = sel && sel.hand === i || picks.includes(i) || setChosen && JSON.parse(setChosen).includes(i);
-    return React.createElement("div", _extends({
+    return React.createElement("div", {
       key: `${no}-${i}`,
-      "data-card-hand-card": i
-    }, press(no, () => tapHand(i)), {
-      className: `flex w-[19%] ${compact ? 'max-w-[58px]' : 'max-w-[76px]'} flex-col items-center transition-transform ${up ? '-translate-y-3' : ''} ${myTurn && !on ? 'opacity-45' : ''}`
-    }), React.createElement("img", {
+      "data-card-hand-card": i,
+      onPointerDown: e => handDown(e, i, no),
+      onContextMenu: e => e.preventDefault(),
+      onDragStart: e => e.preventDefault(),
+      style: {
+        touchAction: 'none',
+        WebkitUserSelect: 'none',
+        userSelect: 'none'
+      },
+      className: `flex w-[19%] ${compact ? 'max-w-[58px]' : 'max-w-[76px]'} flex-col items-center transition-transform ${up ? '-translate-y-3' : ''} ${myTurn && !on ? 'opacity-45' : ''} ${drag && drag.i === i ? 'opacity-30' : ''}`
+    }, React.createElement("img", {
       src: CARD_IMG(c ? c.img : no),
       alt: c ? c.name : no,
+      draggable: false,
+      style: {
+        WebkitUserDrag: 'none'
+      },
       className: `w-full rounded-[5px] shadow-[0_3px_6px_#000] ${up ? 'outline outline-[3px] outline-amber-300' : ''}`
     }), React.createElement("div", {
       className: "mt-0.5 w-full rounded-md bg-black/60 py-0.5 text-center leading-tight"
@@ -85316,7 +85436,23 @@ const CardBattleBoard = ({
     style: {
       paddingBottom: 'max(8px, env(safe-area-inset-bottom))'
     }
-  }, footer), detail && React.createElement(CardDetailModal, {
+  }, footer), drag && drag.active && typeof ReactDOM !== 'undefined' && ReactDOM.createPortal(React.createElement("div", {
+    "data-drag-card-layer": true,
+    className: "pointer-events-none fixed inset-0",
+    style: {
+      zIndex: MODAL_Z.dialog - 1
+    }
+  }, React.createElement("img", {
+    ref: ghostRef,
+    "data-dragging-card": true,
+    src: CARD_IMG((cardOf(db, drag.no) || {}).img || drag.no),
+    alt: "",
+    className: "fixed w-[76px] -translate-x-1/2 -translate-y-[70%] rotate-[-4deg] rounded-[5px] shadow-[0_8px_18px_rgba(0,0,0,.7)]",
+    style: {
+      left: drag.x,
+      top: drag.y
+    }
+  })), document.body), detail && React.createElement(CardDetailModal, {
     db: db,
     no: detail,
     onClose: () => setDetail(null)
