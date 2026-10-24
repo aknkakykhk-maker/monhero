@@ -781,7 +781,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   const [notice, setNotice] = useState('');
   const [confirmReset, setConfirmReset] = useState(false);
   const [detail, setDetail] = useState(null);
-  const [demoWho, setDemoWho] = useState('mua'); // デバッグの「結果の見本」の相手
+  const [demoWho, setDemoWho] = useState('mua');
+  const [editDeck, setEditDeck] = useState(null); // デッキ編成で組んでいるデッキ // デバッグの「結果の見本」の相手
   const press = useCardLongPress((no) => setDetail(no));
 
   const load = async () => {
@@ -854,7 +855,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   const allAssistants = typeof ASSISTANTS !== 'undefined' ? ASSISTANTS : [];
   const foes = (debug ? allAssistants : assistantsUnlockedFrom(seenStoryIds)).filter((a) => CARD_AI_HABITS[a.id]);
   const activeDeck = save.decks.decks.find((d) => d.id === save.decks.active) || save.decks.decks[0] || null;
-  const deckIssues = activeDeck ? cardDeckProblems(db, activeDeck) : ['デッキがありません'];
+  const deckIssues = activeDeck ? [...cardDeckProblems(db, activeDeck), ...cardDeckOwnProblems(db, activeDeck, save.collection)] : ['デッキがありません'];
   const btn = 'mh-button min-h-[52px] w-full rounded-2xl font-black active:scale-[.98] disabled:opacity-40';
 
   // 練習試合(チュートリアル)を始める。相手はみゅあ・デッキはドラが貸す(選んだスターターとは別)
@@ -959,6 +960,27 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   }
 
   // ---- 結果 ----
+  // デッキ編成(87-card-deck-edit.jsx)。保存はここで mh_card_decks_v1 へまとめて入れる
+  if (view === 'deckEdit' && editDeck) {
+    return <CardDeckEditor key={editDeck.id} db={db} collection={save.collection} deck={editDeck} onCancel={() => { setEditDeck(null); setView('decks'); }} onSave={async (d) => {
+      const ok = await persist({ decks: cardDecksPut(save.decks, d) });
+      setNotice(ok ? `「${d.name}」を保存しました` : '保存できませんでした');
+      setEditDeck(null); setView('decks');
+    }}/>;
+  }
+  if (view === 'decks') {
+    return (
+      <>
+        <CardDeckList db={db} collection={save.collection} decks={save.decks} onBack={() => { setNotice(''); setView('top'); }}
+          onEdit={(d) => { setNotice(''); setEditDeck(d); setView('deckEdit'); }}
+          onPut={async (d) => { const ok = await persist({ decks: cardDecksPut(save.decks, d) }); setNotice(ok ? `「${d.name}」を作りました` : '保存できませんでした'); }}
+          onRemove={async (id) => { const ok = await persist({ decks: cardDecksRemove(save.decks, id) }); setNotice(ok ? 'デッキを消しました' : '保存できませんでした'); }}
+          onActive={async (id) => { const ok = await persist({ decks: { ...save.decks, active: id } }); setNotice(ok ? '対戦に使うデッキを変えました' : '保存できませんでした'); }}/>
+        {notice && <div data-card-deck-toast className="pointer-events-none fixed inset-x-0 bottom-24 z-[60] mx-auto w-fit rounded-full bg-slate-950/95 px-4 py-2 text-[13px] font-black text-amber-200 shadow-lg">{notice}</div>}
+      </>
+    );
+  }
+
   if (view === 'result' && result && result.tutorial) {
     return (
       <div data-mh-screen data-card-top="result" data-card-outcome={result.done ? 'tutorialDone' : 'tutorialSkip'} className={SCREEN_SHELL_CLASS}>
@@ -1041,7 +1063,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         )}
         {notice && <p className="text-[12px] font-bold text-amber-200">{notice}</p>}
         <button type="button" data-card-cpu className={`${btn} mh-button-primary`} disabled={!activeDeck} onClick={() => { Audio_.se.tap(); setNotice(''); setView('foe'); }}>コンピューター戦</button>
-        <div className="grid grid-cols-2 gap-2">{soon('デッキ編成')}{soon('マーケットへ')}{soon('カード図鑑')}
+        <div className="grid grid-cols-2 gap-2"><button type="button" data-card-decks className={`${btn} border border-amber-300/50 bg-amber-900/50 text-amber-50`} onClick={() => { Audio_.se.tap(); setNotice(''); setView('decks'); }}>デッキ編成</button>{soon('マーケットへ')}{soon('カード図鑑')}
           {/* ルールの画面ができるまでは、練習試合(チュートリアル)の入口をここに置く(設計書 7-4「もう一度できる」) */}
           <button type="button" data-card-tutorial-again className={`${btn} border border-emerald-300/50 bg-emerald-900/60 text-emerald-50`} onClick={() => { Audio_.se.tap(); startTutorial(); }}>練習試合<span className="block text-[10px] font-bold">ドラが教えるチュートリアル</span></button>
         </div>
