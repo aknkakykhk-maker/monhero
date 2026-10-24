@@ -98,7 +98,7 @@ window.__mhBoot = (function () {
 })();
 // 本体JSのキャッシュキー。ここで一度だけ宣言し、下の読み込み処理でも同じ値を使う。
 // 先読みと <script> のURLがずれると、同じ2.7MBを2回取りに行くことになる
-var GAME_BUILD = '202610250012';
+var GAME_BUILD = '202610250016';
 window.__mhGameBuild = GAME_BUILD;
 // 起動でいちばん大きいのは本体JS(約2.7MB)。いちばん後ろで読むため、そこへ来ると
 // ゲージが止まって見えていた。先に取りはじめて、受け取ったバイト数をそのまま出す。
@@ -296,6 +296,9 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
   /* HOME のみゅあの吹き出し: 下の行の左に「💬 おしゃべり」を重ねている(69-screen-home.jsx)。幅の狭い画面では「タップで詳しく」の字が
      ボタンとぶつかるので、字を隠して「>」だけ残す(吹き出しを押せば説明が開くのは同じ。2026-10-16) */
   @media (max-width: 359px) { .mh-home-assistant [data-bubble-more-text] { display: none; } }
+  /* 幅320ほどの画面では、HOME のみゅあの文を9pxにする。文は切らずに全部出し(伸びたぶん M/B管理・神殿の札が下がる)、
+     ジャックの吹き出しをかぼちゃの上に置くすき間を残す(2026-10-24 窓口「『…』で切れている」「帯の右に出さない」) */
+  @media (max-width: 359px) { .mh-home-assistant [data-bubble-text] { font-size: 9px; } }
   /* 文の最後の1〜2字だけが次の行へ落ちないよう、行の長さをならして折る(2026-10-21 社長決定・改善部の見直しの洗い出し)。
      「無理はしないで／ね〜！」「ジャック大王があらわれ／た！」のような落ち方を、文言を変えずに防ぐ。
      演奏中の画面は字が少なく、毎フレーム描き直すので外す。tools/boot/ja-wrap-check.js が見張る */
@@ -303,9 +306,6 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
   /* 助手の吹き出しは文が短く、pretty でも「えら／い♪」と残ることがあるので、行の長さをそろえる(balance) */
   .mh-app [data-bubble-text] { text-wrap: balance; }
   [data-rhythm-play-area], [data-rhythm-play-area] * { text-wrap: wrap; }
-  /* 幅320ほどの画面では、HOME の吹き出しの文を2行までにする(2026-10-20 改善部 M7)。3行になると「M/B管理」の札の左上を隠していた。
-     続きは吹き出しを押すと開く説明で読める。tools/home-layout-check.js が本物の画面で重ならないかを見る */
-  @media (max-width: 359px) { .mh-home-assistant [data-bubble-text] { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; } }
   .mh-range-label { color: #fff !important; text-shadow: 1px 0 0 #000, -1px 0 0 #000, 0 1px 0 #000, 0 -1px 0 #000, 0 0 1px #000; }
   /* バトルの「マーク×数」(2026-10-12)。味方の枠は絵の左下(下の札の1段上)、敵はライフの帯の右端に常に出す(敵の絵の隅は技名の帯と重なり、横持ちでは隠れる)。絵柄は BATTLE_STACK_MARKS(22-enemy-and-bond-entries.jsx) */
   .mh-stack-marks { position: absolute; z-index: 62; display: flex; flex-wrap: wrap; gap: 2px; max-width: calc(100% - 4px); }
