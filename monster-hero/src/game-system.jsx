@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ec0ed4d630953cfa
+// generated-sha256: b8ea3fe726ae2a11
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-24 16:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-24 17:01"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11345,7 +11345,8 @@ const MarketDetailChip = ({ label, onClick }) => (
 // ★語の頭に印が来ても害はない(行の先頭では折り返しの機会にならない)。
 // 2026-10-20 窓口「モッチーのフ／レーム」「ウンディーネ／3姉妹のフレ／ーム」: 'フレーム'・'ビート'(スエゾー|ビート)を足し、「・」の後ろ(ハロウィン・|恐)と、
 // カタカナのあとに数字が続く所(ウンディーネ|3姉妹)でも折ってよいことにした
-const MARKET_NAME_WRAP_WORDS = Object.freeze(['チケット', 'カード', 'リセット', 'ショップ', 'ボーナス', 'プシュケー', '円盤石', 'アイコン', 'フレーム', 'ビート']);
+// 2026-10-24: 'フード'(うさ耳|フード)。着替え「ハロウィンのうさ耳フ／ード」(390)と落ちていた
+const MARKET_NAME_WRAP_WORDS = Object.freeze(['チケット', 'カード', 'リセット', 'ショップ', 'ボーナス', 'プシュケー', '円盤石', 'アイコン', 'フレーム', 'ビート', 'フード']);
 // 全角のかっこ「（…）」は、かっこの中を途中で割らない(2026-10-04・ユーザー指摘「文字列が悪い」。
 // 「みゅあ（ハロウィン／）のアイコン」と、閉じかっこだけが次の行へ落ちていた)。
 // 「（」の前と「）」の後ろにも印を入れ、「みゅあ／（ハロウィン）」のようにかっこのかたまりで折る。
@@ -11359,6 +11360,8 @@ const marketNameForWrap = (name) => MARKET_NAME_WRAP_WORDS.reduce(
   // 2026-10-21: カタカナのあとの「の＋漢字2字以上」は「の」の前でも折る(「ハロウィンの小悪／魔」→「ハロウィン／の小悪魔」)。
   // 「の書」のように漢字1字なら折らない(「リセット／の書」と2字だけ落ちるため)
   .replace(/([ァ-ヶー])の([一-龯]{2,})/g, '$1​の$2')
+  // 2026-10-24: 「の」のあとがひらがなで始まり、3字以上続くときも「の」の前で折る(「ハロウィンのう／さ耳フード」(320)→「ハロウィン／のうさ耳フード」)
+  .replace(/([ァ-ヶー])の(?=[ぁ-ゖ][^​]{2,})/g, '$1​の')
   // 名前の終わりの「・序」のような1〜2字は、手前の「・」で切り離さない(「スキップチケット・／序」→「スキップ／チケット・序」)
   .replace(/・​([^​]{1,2})$/, '・$1');
 // ★印は文字(U+200B)のままDOMへ置かず、<wbr> に変えてから描く。
@@ -12220,6 +12223,10 @@ const useAssistantBubbleState = () => {
 //   compact     … 縦の場所が取れない画面(選択画面・リザルト)向けの小さい表示
 //   defaultOpen … 最初から詳細を開いた状態にする(チュートリアルなどで使う)
 // footerSpace … 吹き出しの下の行の左に空ける幅(px)。HOME はそこへ「💬 おしゃべり」を重ねる(2026-10-16)。指定が無ければ今までどおり
+// 吹き出しの本文の折り方(jaWrap・JA_LABEL_STYLE は 41-screen-ui.jsx)。一部だけを描く検査では無いことがあるので、無ければそのまま出す
+const bubbleWrap = (text) => (typeof jaWrap === 'function' ? jaWrap(text) : text);
+// (どちらも後ろの部品で宣言されるので、読み込み時ではなく描くときに引く)
+const bubbleWrapStyle = () => (typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined);
 const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null, helpRef=null, condition=null, expression=null, accent=null, faceSize=null, compact=false, defaultOpen=false, footerSpace=0, maxLines=0 }) => {
   const [open, setOpen] = useState(defaultOpen);
   // 設定「助手のひとこと」で隠すか。開いた画面ごとに1回だけ決め、見ているあいだに消えたり出たりしない
@@ -12316,8 +12323,9 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
           <span className={`block font-black tracking-widest ${compact?'text-[9px]':'text-[10px]'}`} style={{ color }}>{who.name}</span>
           {/* maxLines … セリフをこの行数で切る(0なら切らない)。HOMEは吹き出しの下に施設の札があるので2行まで
               (2026-10-23 社長「MB管理に助手のコメントが被ってくる」)。全文は「タップで詳しく」で開く画面の上に出る */}
+          {/* 本文は言葉の切れ目で折り、行の長さをそろえる(2026-10-24。「ここからが本番じゃ／ん！」と最後の1字が落ちていた) */}
           <span data-bubble-text data-bubble-max-lines={maxLines>0?maxLines:undefined} className={`block text-white leading-relaxed ${compact?'text-[10px]':'text-[12px]'}`}
-            style={maxLines>0?{display:'-webkit-box',WebkitBoxOrient:'vertical',WebkitLineClamp:maxLines,overflow:'hidden'}:undefined}>{text}</span>
+            style={maxLines>0?{...bubbleWrapStyle(),display:'-webkit-box',WebkitBoxOrient:'vertical',WebkitLineClamp:maxLines,overflow:'hidden'}:bubbleWrapStyle()}>{bubbleWrap(text)}</span>
           {(hasDetail||footerSpace>0)&&<span className="mt-0.5 flex items-center justify-end gap-0.5 text-[9px] font-black" style={{ color, ...(footerSpace>0?{paddingLeft:`${footerSpace}px`,minHeight:'18px',whiteSpace:'nowrap'}:{}) }}>{hasDetail&&<><span data-bubble-more-text>タップで詳しく</span><ChevronRight size={11}/></>}</span>}
         </Wrapper>
       </div>
@@ -31575,7 +31583,8 @@ const ScreenHead = ({ title, icon = null, accent = 'text-white', accentStyle = n
     )}
     <div className="min-w-0 flex-1">
       <h2 className={`flex items-center gap-1.5 ${wrapTitle ? 'break-words' : 'truncate'} text-xl font-black italic leading-tight ${accent}`} style={accentStyle || undefined}>{icon}{title}</h2>
-      {note && <p className="mh-screen-note mt-0.5 text-[10px] font-bold leading-snug text-slate-400">{note}</p>}
+      {/* 注記は文字のときだけ言葉の切れ目で折る(2026-10-24。M/B管理「アシストカードは／ここ」と2字だけ落ちていた) */}
+      {note && <p className="mh-screen-note mt-0.5 text-[10px] font-bold leading-snug text-slate-400" style={typeof note === 'string' ? JA_LABEL_STYLE : undefined}>{typeof note === 'string' ? jaWrap(note) : note}</p>}
     </div>
     {right && <div className="shrink-0">{right}</div>}
   </header>
@@ -31721,7 +31730,11 @@ const jaWrapPoints = (text) => {
     const segs = [..._jaSegmenter.segment(s)].map(seg => seg.segment);
     // 「ご」「お」で始まる言葉(ごほうび・おしらせ)は、頭の1字のあとで折らない(2026-10-21 窓口「〜のご／ほうび」。道具は「ご」「ほうび」を別の語にする)。
     // ひらがな同士の間を全部つなぐと、長いひらがなのセリフが折れる所を失って「…じゃぞ／！」になるので、頭の1字だけにする
-    const inHiraWord = (i) => /^[ごお]$/.test(segs[i - 1]) && /^[ぁ-ゖ]/.test(segs[i]);
+    // 2026-10-24: 道具が知らない言葉を1字ずつに割る所(「い|って|ら|っ|し|ゃ|い」)は、1字のひらがなの前後で折らない
+    //   (「いってらっしゃ／い〜」と最後の1字が落ちていた)。1字の助詞は前の言葉(ひらがな・漢字・カタカナ)につなげる(「から|が」「仲間|に」)。2字以上どうしの間は今のまま
+    const hiraOne = (t) => /^[ぁ-ゖ]$/.test(t);
+    const inHiraWord = (i) => (/^[ごお]$/.test(segs[i - 1]) && /^[ぁ-ゖ]/.test(segs[i]))
+      || (hiraOne(segs[i]) && /[ぁ-ゖ一-龯ァ-ヶー]$/.test(segs[i - 1])) || (hiraOne(segs[i - 1]) && /^[ぁ-ゖ]/.test(segs[i]));
     return segs.reduce((out, seg, i) => (i === 0 || inHiraWord(i) || /^[\s、。，．,.！？!?」』）)】〕〉》…‥ー〜～・：:；;ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ]/.test(seg) || /[\s「『（(【〔〈《]$/.test(segs[i - 1])
       ? out + seg : `${out}\u200B${seg}`), '');
   } catch { return s; }
@@ -31731,7 +31744,9 @@ const jaWrapPoints = (text) => {
 const jaWrap = (text) => {
   const s = jaWrapPoints(text);
   if (typeof s !== 'string' || !s.includes('\u200B')) return s;
-  return s.split('\u200B').map((seg, i) => <React.Fragment key={i}>{i > 0 && <wbr/>}{seg}</React.Fragment>);
+  // 「……」「‥」は手前で折れてしまう(ブラウザは三点リーダーの前を折り目として扱う)。「入れんのじゃ／……」と記号だけが
+  // 次の行へ落ちないよう、それを含む12字までのかたまりは折らずに置く(2026-10-24。見えない字は足さない)
+  return s.split('\u200B').map((seg, i) => <React.Fragment key={i}>{i > 0 && <wbr/>}{/[…‥]/.test(seg) && seg.length <= 12 ? <span style={{ whiteSpace: 'nowrap' }}>{seg}</span> : seg}</React.Fragment>);
 };
 // textWrap:'wrap' … 画面全体の text-wrap:pretty(index.html)と anywhere が組み合わさると、語の中へ1字だけ動かすことがある(「スキッ／プ」)ので外す
 const JA_WRAP_STYLE = Object.freeze({ wordBreak: 'keep-all', overflowWrap: 'anywhere', textWrap: 'wrap' });

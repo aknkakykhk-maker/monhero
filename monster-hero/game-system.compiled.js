@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6e2a41ba5c08c877
+// source-sha256: 69f22660ee1a3307
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-24 16:00";
+const BUILD_DATE = "2026-10-24 17:01";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -16100,8 +16100,8 @@ const MarketDetailChip = ({
 }, React.createElement(BookOpen, {
   size: 10
 }), "詳細");
-const MARKET_NAME_WRAP_WORDS = Object.freeze(['チケット', 'カード', 'リセット', 'ショップ', 'ボーナス', 'プシュケー', '円盤石', 'アイコン', 'フレーム', 'ビート']);
-const marketNameForWrap = name => MARKET_NAME_WRAP_WORDS.reduce((text, word) => text.split(word).join(`​${word}`), String(name || '')).split('（').join('​（').split('）').join('）​').split('・').join('・​').replace(/([ァ-ヶー])([0-9０-９])/g, '$1​$2').replace(/([ァ-ヶー]{7,})の/g, '$1​の').replace(/([ァ-ヶー])の([一-龯]{2,})/g, '$1​の$2').replace(/・​([^​]{1,2})$/, '・$1');
+const MARKET_NAME_WRAP_WORDS = Object.freeze(['チケット', 'カード', 'リセット', 'ショップ', 'ボーナス', 'プシュケー', '円盤石', 'アイコン', 'フレーム', 'ビート', 'フード']);
+const marketNameForWrap = name => MARKET_NAME_WRAP_WORDS.reduce((text, word) => text.split(word).join(`​${word}`), String(name || '')).split('（').join('​（').split('）').join('）​').split('・').join('・​').replace(/([ァ-ヶー])([0-9０-９])/g, '$1​$2').replace(/([ァ-ヶー]{7,})の/g, '$1​の').replace(/([ァ-ヶー])の([一-龯]{2,})/g, '$1​の$2').replace(/([ァ-ヶー])の(?=[ぁ-ゖ][^​]{2,})/g, '$1​の').replace(/・​([^​]{1,2})$/, '・$1');
 const marketNameNodes = name => React.createElement("span", {
   "data-market-name-text": true
 }, marketNameForWrap(name).split('\u200b').map((seg, index, all) => {
@@ -17178,6 +17178,8 @@ const useAssistantBubbleState = () => {
   }, []);
   return state;
 };
+const bubbleWrap = text => typeof jaWrap === 'function' ? jaWrap(text) : text;
+const bubbleWrapStyle = () => typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined;
 const AssistantBubble = ({
   scene = null,
   assistantId = null,
@@ -17334,12 +17336,13 @@ const AssistantBubble = ({
     "data-bubble-max-lines": maxLines > 0 ? maxLines : undefined,
     className: `block text-white leading-relaxed ${compact ? 'text-[10px]' : 'text-[12px]'}`,
     style: maxLines > 0 ? {
+      ...bubbleWrapStyle(),
       display: '-webkit-box',
       WebkitBoxOrient: 'vertical',
       WebkitLineClamp: maxLines,
       overflow: 'hidden'
-    } : undefined
-  }, text), (hasDetail || footerSpace > 0) && React.createElement("span", {
+    } : bubbleWrapStyle()
+  }, bubbleWrap(text)), (hasDetail || footerSpace > 0) && React.createElement("span", {
     className: "mt-0.5 flex items-center justify-end gap-0.5 text-[9px] font-black",
     style: {
       color,
@@ -50154,8 +50157,9 @@ const ScreenHead = ({
   className: `flex items-center gap-1.5 ${wrapTitle ? 'break-words' : 'truncate'} text-xl font-black italic leading-tight ${accent}`,
   style: accentStyle || undefined
 }, icon, title), note && React.createElement("p", {
-  className: "mh-screen-note mt-0.5 text-[10px] font-bold leading-snug text-slate-400"
-}, note)), right && React.createElement("div", {
+  className: "mh-screen-note mt-0.5 text-[10px] font-bold leading-snug text-slate-400",
+  style: typeof note === 'string' ? JA_LABEL_STYLE : undefined
+}, typeof note === 'string' ? jaWrap(note) : note)), right && React.createElement("div", {
   className: "shrink-0"
 }, right));
 const ScreenLead = ({
@@ -50347,7 +50351,8 @@ const jaWrapPoints = text => {
     }) : null;
     if (!_jaSegmenter) return s;
     const segs = [..._jaSegmenter.segment(s)].map(seg => seg.segment);
-    const inHiraWord = i => /^[ごお]$/.test(segs[i - 1]) && /^[ぁ-ゖ]/.test(segs[i]);
+    const hiraOne = t => /^[ぁ-ゖ]$/.test(t);
+    const inHiraWord = i => /^[ごお]$/.test(segs[i - 1]) && /^[ぁ-ゖ]/.test(segs[i]) || hiraOne(segs[i]) && /[ぁ-ゖ一-龯ァ-ヶー]$/.test(segs[i - 1]) || hiraOne(segs[i - 1]) && /^[ぁ-ゖ]/.test(segs[i]);
     return segs.reduce((out, seg, i) => i === 0 || inHiraWord(i) || /^[\s、。，．,.！？!?」』）)】〕〉》…‥ー〜～・：:；;ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ]/.test(seg) || /[\s「『（(【〔〈《]$/.test(segs[i - 1]) ? out + seg : `${out}\u200B${seg}`, '');
   } catch {
     return s;
@@ -50358,7 +50363,11 @@ const jaWrap = text => {
   if (typeof s !== 'string' || !s.includes('\u200B')) return s;
   return s.split('\u200B').map((seg, i) => React.createElement(React.Fragment, {
     key: i
-  }, i > 0 && React.createElement("wbr", null), seg));
+  }, i > 0 && React.createElement("wbr", null), /[…‥]/.test(seg) && seg.length <= 12 ? React.createElement("span", {
+    style: {
+      whiteSpace: 'nowrap'
+    }
+  }, seg) : seg));
 };
 const JA_WRAP_STYLE = Object.freeze({
   wordBreak: 'keep-all',
