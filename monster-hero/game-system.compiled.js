@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2875dbdd80f64a38
+// source-sha256: 411109257206d7e0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-25 04:40";
+const BUILD_DATE = "2026-10-25 04:46";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -16360,7 +16360,7 @@ const MarketItemDetail = ({
     accent: meta.text
   }), item.desc && React.createElement("p", {
     className: "mt-3 text-[12px] text-slate-200 leading-relaxed"
-  }, item.desc), item.groupMembers && React.createElement("div", {
+  }, helpWrap(item.desc)), item.groupMembers && React.createElement("div", {
     "data-market-icon-group": item.groupId,
     className: "mt-3 rounded-2xl border border-white/10 bg-black/30 p-3"
   }, React.createElement("p", {
@@ -31540,7 +31540,7 @@ const RhythmOptions = ({
     className: "min-h-[24px] cursor-pointer list-none text-[10px] font-black leading-[24px] text-cyan-300/90"
   }, "▸ この端末で通知をどこまで止められるか"), React.createElement("p", {
     className: `mt-1 ${note}`
-  }, rhythmQuietModeSupportText())), !RHYTHM_HAPTICS.supported() && React.createElement("p", {
+  }, helpWrap(rhythmQuietModeSupportText()))), !RHYTHM_HAPTICS.supported() && React.createElement("p", {
     "data-rhythm-vibration-unsupported": true,
     className: "mt-2 text-[10px] font-bold leading-relaxed text-amber-200"
   }, "この端末は振動に対応していないため、ONにしても振動しません（音とエフェクトはそのまま出ます）。"))), !wide && React.createElement("p", {
@@ -32514,7 +32514,7 @@ const RhythmSongSelect = ({
     }, rhythmSongFullName(song)), song.credit && song.credit.text && React.createElement("p", {
       "data-rhythm-song-credit": true,
       className: "mt-2 max-w-full text-center text-[11px] leading-relaxed text-slate-300"
-    }, song.credit.text), song.credit && changelogSafeLink(song.credit.link) && React.createElement("a", {
+    }, helpWrap(song.credit.text)), song.credit && changelogSafeLink(song.credit.link) && React.createElement("a", {
       "data-rhythm-song-credit-link": true,
       href: changelogSafeLink(song.credit.link),
       target: "_blank",
@@ -32831,7 +32831,7 @@ const RhythmHellGuide = ({
       lineHeight: 1.7,
       color: '#e2e8f0'
     }
-  }, page.text), last && typeof rhythmHellEntryText === 'function' && rhythmHellEntryText() && React.createElement("p", {
+  }, helpWrap(page.text)), last && typeof rhythmHellEntryText === 'function' && rhythmHellEntryText() && React.createElement("p", {
     "data-rhythm-hell-guide-entry": true,
     style: {
       margin: '12px 0 0',
@@ -34276,7 +34276,7 @@ const RhythmMonsterNoteGuide = () => {
     className: "text-[12px] font-black leading-none"
   }, ability.name)), React.createElement("p", {
     className: "mt-1.5 text-[11px] font-bold leading-relaxed"
-  }, rhythmAbilityEffectText(ability)), React.createElement("p", {
+  }, helpWrap(rhythmAbilityEffectText(ability))), React.createElement("p", {
     className: "mt-1 text-[10px] font-bold leading-relaxed opacity-80"
   }, "主血統: ", lineages.join(' / '))))), React.createElement("p", {
     className: "mt-2 text-[10px] font-bold leading-relaxed text-slate-400"
@@ -40378,7 +40378,7 @@ const RhythmTapTest = ({
   }, (song.tutorialSteps || RHYTHM_TUTORIAL_STEPS)[0].title), React.createElement("span", {
     "data-rhythm-tutorial-text": true,
     className: "mt-1 block text-[11px] font-bold leading-relaxed text-slate-200"
-  }, (song.tutorialSteps || RHYTHM_TUTORIAL_STEPS)[0].text)), view.status === 'paused' && !resumeCountdown && React.createElement("div", {
+  }, helpWrap((song.tutorialSteps || RHYTHM_TUTORIAL_STEPS)[0].text))), view.status === 'paused' && !resumeCountdown && React.createElement("div", {
     "data-rhythm-pause-menu": true,
     "data-rhythm-debug-play": debugPlay ? '1' : undefined,
     className: "absolute inset-0 z-40 flex flex-col items-center justify-center gap-3 bg-slate-950/95 p-5"
@@ -51015,7 +51015,7 @@ const TrainingResultFx = ({
     className: "text-[13px] font-black text-sky-200"
   }, "🛡️ ", effect.guard.title), React.createElement("div", {
     className: "text-[9px] font-bold text-sky-100/80 leading-snug whitespace-pre-line"
-  }, effect.guard.text)));
+  }, helpWrap(effect.guard.text))));
 };
 const AllyJoinFx = ({
   effect
@@ -51150,7 +51150,7 @@ const TeachingResultFx = ({
     style: {
       '--d': '300ms'
     }
-  }, effect.desc));
+  }, helpWrap(effect.desc)));
 };
 const SkillResultFx = ({
   effect
@@ -51889,7 +51889,7 @@ function AssetDownloadPage({
       className: "ml-2 text-[11px] font-bold text-slate-400"
     }, "約", formatAssetMB(st.bytes))), React.createElement("span", {
       className: "mt-0.5 block text-[10px] font-bold leading-snug text-slate-400"
-    }, pack.desc))), React.createElement("div", {
+    }, helpWrap(pack.desc)))), React.createElement("div", {
       className: "mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-800",
       role: "progressbar",
       "aria-valuemin": 0,
@@ -52046,7 +52046,7 @@ function SettingsScreen({
         className: "block text-[13px] font-black text-slate-200"
       }, item.title), React.createElement("p", {
         className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
-      }, item.desc), item.key === 'load' && battleFxAutoLoad && battleFxAutoLoad !== current && React.createElement("p", {
+      }, helpWrap(item.desc)), item.key === 'load' && battleFxAutoLoad && battleFxAutoLoad !== current && React.createElement("p", {
         "data-battle-fx-auto-note": true,
         className: "mt-1 rounded-lg border border-amber-400/40 bg-amber-950/30 px-2 py-1 text-[10px] font-bold leading-relaxed text-amber-100"
       }, "かくつきが続いたので、いまは「", (item.options.find(o => o.id === battleFxAutoLoad) || {}).label, "」で表示しています。アプリを開き直すか、ここで選び直すと元に戻ります。"), React.createElement("div", {
@@ -52604,7 +52604,7 @@ function ItemInventoryScreen({
     className: "shrink-0 rounded-full bg-slate-950/60 px-2.5 py-0.5 text-[11px] font-black tabular-nums text-teal-300"
   }, "所持数: ", ownedItems[item.id])), React.createElement("div", {
     className: "text-[10px] text-slate-400 leading-relaxed mt-1"
-  }, item.desc)), item.usage === 'battleSkip' ? React.createElement("div", {
+  }, helpWrap(item.desc))), item.usage === 'battleSkip' ? React.createElement("div", {
     className: usageNoteClass
   }, "バトルの", React.createElement("br", null), DIFFICULTY_SETTINGS[item.skipDifficulty]?.label, React.createElement("br", null), "スキップで使用") : item.usage === 'breakthrough' ? React.createElement("div", {
     className: usageNoteClass
@@ -55040,7 +55040,7 @@ function MonsterDexDetailScreen({
     }
   }, React.createElement("p", {
     className: "font-bold leading-relaxed text-slate-200 break-words"
-  }, monsterDexDescription(mon.id))), React.createElement(ScreenTabs, {
+  }, helpWrap(monsterDexDescription(mon.id)))), React.createElement(ScreenTabs, {
     className: "mt-2",
     value: tab,
     onChange: onSelectTab,
@@ -55777,7 +55777,7 @@ function RhythmNoteDexScreen({
     }, row.label || entry.name), row.text && React.createElement("span", {
       "data-rhythm-note-dex-text": true,
       className: "mt-1 block text-[11px] leading-relaxed text-slate-300"
-    }, row.text))), React.createElement("button", {
+    }, helpWrap(row.text)))), React.createElement("button", {
       "data-rhythm-note-dex-play": entry.id,
       onClick: () => onPlay(entry.id),
       className: "mt-auto min-h-[44px] w-full rounded-xl bg-gradient-to-r from-amber-400 to-fuchsia-500 text-[12px] font-black text-slate-950"
@@ -55984,14 +55984,14 @@ function RhythmEventRewardModal({
     className: "shrink-0 text-sm text-amber-100"
   }, entry.rank, "位")), React.createElement("p", {
     className: "mt-1 text-[10px] leading-tight text-white"
-  }, rhythmEventRewardText(entry.reward))))), participation && React.createElement("div", {
+  }, helpWrap(rhythmEventRewardText(entry.reward)))))), participation && React.createElement("div", {
     "data-rhythm-event-reward-participation": true,
     className: "mt-2 rounded-2xl border border-cyan-300/40 bg-cyan-500/5 p-2"
   }, React.createElement("p", {
     className: "text-[10px] font-black text-cyan-200"
   }, "参加報酬（", weekly ? `その週に${participation.plays}回遊びました` : `対象曲を${participation.songs}曲すべて`, "）"), React.createElement("p", {
     className: "mt-1 text-[10px] leading-tight text-white"
-  }, rhythmEventParticipationText(participation))), React.createElement("button", {
+  }, helpWrap(rhythmEventParticipationText(participation)))), React.createElement("button", {
     type: "button",
     "data-rhythm-event-reward-claim": true,
     disabled: claiming,
@@ -56324,7 +56324,7 @@ function RhythmRankingScreen({
   }, rhythmEventPeriodText(eventDefinition, eventRange))), React.createElement("p", {
     "data-rhythm-event-remaining": true,
     className: "shrink-0 text-[10px] font-black text-fuchsia-200"
-  }, eventRange ? rhythmEventRemainingText(eventRange.endMs - eventNowMs) : '—')), React.createElement("button", {
+  }, helpWrap(eventRange ? rhythmEventRemainingText(eventRange.endMs - eventNowMs) : '—'))), React.createElement("button", {
     type: "button",
     "data-rhythm-event-detail-open": true,
     onClick: () => setEventDetailOpen(true),
@@ -59174,7 +59174,7 @@ function MasuSoulTraitsScreen({
       className: "text-[12px] font-black text-white"
     }, trait.name), React.createElement("div", {
       className: "mt-0.5 text-[10px] font-bold leading-relaxed text-slate-400"
-    }, trait.desc)), React.createElement("div", {
+    }, helpWrap(trait.desc))), React.createElement("div", {
       className: "shrink-0 text-right"
     }, React.createElement("div", {
       className: "text-[10px] font-black text-sky-300"
@@ -62353,7 +62353,7 @@ function PickHeroAllyScreen({
     }, pickMode === 'hero' ? '勇者モンを選択' : '供モンを選択'), React.createElement("p", {
       "data-pick-term-note": true,
       className: `mt-0.5 text-[10px] font-bold leading-snug text-slate-400${pickMode === 'hero' && isProMode(runMode) && !battleTutorial ? ' [@media(max-height:760px)]:hidden' : ''}`
-    }, pickMode === 'hero' ? '勇者モン＝バトルの主役。この子の勇者特性が効く' : '供モン＝勇者モンと一緒に戦う仲間')), React.createElement("div", {
+    }, helpWrap(pickMode === 'hero' ? '勇者モン＝バトルの主役。この子の勇者特性が効く' : '供モン＝勇者モンと一緒に戦う仲間'))), React.createElement("div", {
       className: "w-10"
     })), pickMode === 'ally' && React.createElement("div", {
       className: "-mt-1 mb-2 flex shrink-0 flex-col items-center gap-1.5"
@@ -69113,7 +69113,7 @@ function BattleScreen({
   }, cardIconNode(b.icon, 14), " ", b.title), React.createElement("div", {
     "data-battle-luck-result": true,
     className: "mt-0.5 text-[15px] font-black leading-snug"
-  }, b.result)))), document.body), enemy && enemyIntent && !isBusy && !enemyAttackFx && !Array.isArray(tacticsUnits) && enemyIntent.type === 'SPECIAL' && React.createElement("div", {
+  }, helpWrap(b.result))))), document.body), enemy && enemyIntent && !isBusy && !enemyAttackFx && !Array.isArray(tacticsUnits) && enemyIntent.type === 'SPECIAL' && React.createElement("div", {
     className: "fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1",
     style: {
       top: '11%',
@@ -71353,7 +71353,7 @@ function BattleScreen({
     className: "block text-[13px] font-black"
   }, st.label, st.current ? '（いまのスタイル）' : ''), React.createElement("span", {
     className: "block text-[10px] font-bold leading-snug opacity-80"
-  }, st.desc))), React.createElement("button", {
+  }, helpWrap(st.desc)))), React.createElement("button", {
     type: "button",
     "data-tactics-ex-choice-back": true,
     onClick: () => setExChoosing(false),
@@ -76304,7 +76304,7 @@ function RhythmMultiMemberSheet({
     className: "mt-3 text-[11px] font-bold leading-relaxed text-lime-200"
   }, "メンバーが呼んだ、CPUのマスモンです"), !m.cpu && !canAsk && !isFriend && React.createElement("p", {
     className: "mt-3 text-[11px] font-bold text-slate-400"
-  }, !friendsOn ? 'フレンド機能はいま使えません' : 'この人には、ここからはフレンド申請できません'), text && React.createElement("p", {
+  }, helpWrap(!friendsOn ? 'フレンド機能はいま使えません' : 'この人には、ここからはフレンド申請できません')), text && React.createElement("p", {
     "data-rhythm-multi-friend-result": true,
     className: "mt-2 text-[12px] font-black text-amber-200"
   }, text), React.createElement("button", {
@@ -79773,7 +79773,7 @@ function RhythmBuddyList({
   const list = rhythmBuddyListRows(masuMons, state, dayKey, settings);
   if (list.length === 0) return React.createElement("p", {
     className: "py-6 text-center text-[12px] font-bold text-slate-400"
-  }, (masuMons || []).length ? 'しぼりこみに当てはまるマスモンがいません' : 'マスモンがまだいません');
+  }, helpWrap((masuMons || []).length ? 'しぼりこみに当てはまるマスモンがいません' : 'マスモンがまだいません'));
   if (settings && settings.view === 'card') {
     return React.createElement("div", {
       "data-rhythm-buddy-cards": true,
@@ -79944,7 +79944,7 @@ function RhythmBuddySheet({
     singleType: true
   }), masuPicker.entries.length === 0 ? React.createElement("p", {
     className: "py-6 text-center text-[12px] font-bold text-slate-400"
-  }, (masuMons || []).length ? '表示設定に当てはまるマスモンがいません' : 'マスモンがまだいません') : React.createElement("div", {
+  }, helpWrap((masuMons || []).length ? '表示設定に当てはまるマスモンがいません' : 'マスモンがまだいません')) : React.createElement("div", {
     className: "grid grid-cols-3 gap-2.5 pb-4"
   }, masuPicker.entries.map(e => React.createElement("button", {
     key: e.key,
@@ -80357,7 +80357,7 @@ function RhythmBuddyRankingBoard({
     className: "mt-2 min-h-[44px] rounded-xl bg-slate-800 px-4 text-sm font-black"
   }, "もう一度読み込む")), state.status === 'ready' && shown.length === 0 && React.createElement("p", {
     className: "py-8 text-center text-sm font-bold text-slate-400"
-  }, friendOnly ? 'フレンドのマスモンは、まだ載っていません' : 'まだ記録がありません。マルチの部屋でマスモンを呼んで、育ててみましょう'), state.status === 'ready' && shown.map((e, i) => {
+  }, helpWrap(friendOnly ? 'フレンドのマスモンは、まだ載っていません' : 'まだ記録がありません。マルチの部屋でマスモンを呼んで、育ててみましょう')), state.status === 'ready' && shown.map((e, i) => {
     const base = ALL_PLAYER_MONSTERS[e.monsterId];
     const mine = selfId && e.breederId === selfId || !e.breederId && !!selfName && e.userName === selfName;
     const score = e.scores[diffId] || 0;
@@ -82354,7 +82354,7 @@ function AssistantChatWindow({
     }
   }, log.length === 0 && React.createElement("p", {
     className: "text-[11px] text-slate-400 leading-relaxed"
-  }, assistant.greeting || '話しかけてみてね'), log.map((m, i) => React.createElement("div", {
+  }, helpWrap(assistant.greeting || '話しかけてみてね')), log.map((m, i) => React.createElement("div", {
     key: i,
     "data-assistant-chat-msg": m.role,
     className: `flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`
@@ -108358,7 +108358,7 @@ function MonsterHeroGame() {
         className: "mt-0.5 text-[12px] font-black text-white"
       }, "EX《", exDef.name, "》"), React.createElement("div", {
         className: "mt-1 whitespace-pre-line text-[10px] font-bold leading-relaxed text-slate-200"
-      }, exDef.desc), React.createElement("div", {
+      }, helpWrap(exDef.desc)), React.createElement("div", {
         className: "mt-1.5 grid grid-cols-3 gap-1 text-center text-[9px] font-black"
       }, React.createElement("div", {
         className: "rounded-lg bg-black/30 px-1 py-1 text-slate-300"
@@ -109009,11 +109009,11 @@ function MonsterHeroGame() {
     className: "min-w-0 flex-1"
   }, React.createElement("p", {
     className: "text-[12px] font-black leading-snug text-red-100"
-  }, storageTrouble.text), React.createElement("p", {
+  }, helpWrap(storageTrouble.text)), React.createElement("p", {
     className: "mt-1 text-[10px] leading-relaxed text-red-200"
   }, "このまま遊んでも、経験値やダイヤが端末に残りません。下のボタンで空きを作るか、ゲームを開き直してください。心配なときは設定の「データバックアップ」で書き出しておくと安心です。"), storageTrouble.detail ? React.createElement("p", {
     className: "mt-1 text-[9px] leading-relaxed text-red-300/80"
-  }, storageTrouble.detail) : null, React.createElement("button", {
+  }, helpWrap(storageTrouble.detail)) : null, React.createElement("button", {
     type: "button",
     "data-storage-trouble-compact": true,
     onClick: () => {
@@ -110388,7 +110388,7 @@ function MonsterHeroGame() {
       key: d.id,
       className: `${trainingDifficulty === d.id ? 'active' : ''} ${d.available ? '' : 'soon'}`,
       onClick: () => setTrainingDifficulty(d.id)
-    }, React.createElement("div", null, React.createElement("b", null, d.label), React.createElement("em", null, d.available ? 'テスト可能' : '準備中')), React.createElement("p", null, d.summary), React.createElement("dl", null, React.createElement("span", null, d.turns, "ターン"), React.createElement("span", null, "🎲 ", d.dice[0], "～", d.dice[1]), React.createElement("span", null, "約", d.spaces, "マス"))))), React.createElement("footer", {
+    }, React.createElement("div", null, React.createElement("b", null, d.label), React.createElement("em", null, d.available ? 'テスト可能' : '準備中')), React.createElement("p", null, helpWrap(d.summary)), React.createElement("dl", null, React.createElement("span", null, d.turns, "ターン"), React.createElement("span", null, "🎲 ", d.dice[0], "～", d.dice[1]), React.createElement("span", null, "約", d.spaces, "マス"))))), React.createElement("footer", {
       className: "mh-training-footer"
     }, React.createElement("button", {
       disabled: trainingDifficulty !== 'BEGINNER',
@@ -117205,7 +117205,7 @@ function MonsterHeroGame() {
           className: "text-[10px] bg-slate-600 text-white px-1.5 rounded-full leading-none py-0.5"
         }, "未習得")), React.createElement("div", {
           className: "text-[11px] leading-relaxed text-slate-300"
-        }, info.desc));
+        }, helpWrap(info.desc)));
       })), React.createElement("button", {
         onClick: () => setRosterDetailTeaching(null),
         className: "w-full min-h-[52px] bg-purple-600 text-white rounded-xl font-black shadow-lg text-sm shrink-0 active:scale-[.98]"
@@ -119086,15 +119086,15 @@ function MonsterHeroGame() {
             className: "rounded-2xl border border-amber-500/60 bg-amber-950/30 px-3 py-2"
           }, status && React.createElement("p", {
             className: "text-[10px] font-black text-amber-300 leading-tight text-center"
-          }, status.text), status && React.createElement("p", {
+          }, helpWrap(status.text)), status && React.createElement("p", {
             className: "text-[9px] text-slate-400 leading-tight text-center mt-1"
-          }, status.met ? '条件を達成しています！' : status.progress), React.createElement("p", {
+          }, helpWrap(status.met ? '条件を達成しています！' : status.progress)), React.createElement("p", {
             className: "text-[9px] text-slate-300 leading-tight text-center mt-1"
           }, "マーケットで買えます：", shops), freeShops && React.createElement("p", {
             className: "text-[9px] text-emerald-300 leading-tight text-center mt-1"
           }, freeShops, "なら条件なしで買えます"), React.createElement("p", {
             className: "text-[9px] text-slate-500 leading-tight text-center mt-1"
-          }, frame.desc || ''));
+          }, helpWrap(frame.desc || '')));
         }
         if (!frame || !unlock) return null;
         const who = assistantById(unlock.assistantId);
@@ -119111,7 +119111,7 @@ function MonsterHeroGame() {
           className: "text-[9px] text-slate-400 leading-tight text-center mt-1"
         }, "いまは Lv", level, remain != null && remain > 0 ? ` ／ あと ${remain}` : ''), React.createElement("p", {
           className: "text-[9px] text-slate-500 leading-tight text-center mt-1"
-        }, frame.desc || ''));
+        }, helpWrap(frame.desc || '')));
       })();
       return React.createElement(PickerSheet, {
         title: "プロフィールフレーム",
@@ -119227,7 +119227,7 @@ function MonsterHeroGame() {
         className: "text-[9px] text-slate-300 leading-tight text-center mt-1"
       }, assistantCostumeSales(lockedCostume).map(sale => `${ASSISTANT_COSTUME_SHOPS[sale.shop].label} ${sale.cost.toLocaleString()}${sale.shop === 'diamond' ? 'ダイヤ' : 'ビートP'}`).join(' ／ ')), React.createElement("p", {
         className: "text-[9px] text-slate-500 leading-tight text-center mt-1"
-      }, lockedCostume.desc || ''));
+      }, helpWrap(lockedCostume.desc || '')));
       return React.createElement(PickerSheet, {
         title: "助手の着替え",
         note: "助手の顔と立ち絵が、えらんだ服に変わります。服はマーケットで買えます。",
@@ -119649,7 +119649,7 @@ function MonsterHeroGame() {
     }, React.createElement("p", {
       "data-friend-result": true,
       className: "text-center text-[13px] font-black leading-relaxed text-pink-100"
-    }, friendCandidate.text), React.createElement("div", {
+    }, helpWrap(friendCandidate.text)), React.createElement("div", {
       className: "mt-4 grid grid-cols-1 gap-2"
     }, React.createElement("button", {
       type: "button",
@@ -121165,7 +121165,7 @@ function MonsterHeroGame() {
         className: "space-y-2"
       }, React.createElement("p", {
         className: "text-[11px] text-slate-400 leading-relaxed mb-3"
-      }, cat.summary), cat.topics.map((t, i) => React.createElement(React.Fragment, {
+      }, helpWrap(cat.summary)), cat.topics.map((t, i) => React.createElement(React.Fragment, {
         key: t.id
       }, t.group && t.group !== (cat.topics[i - 1] || {}).group && React.createElement("div", {
         "data-help-topic-group": true,
@@ -121892,7 +121892,7 @@ function MonsterHeroGame() {
       className: "text-[9px] text-indigo-300 font-black uppercase tracking-wider mb-1"
     }, "効果"), React.createElement("div", {
       className: "text-[11px] text-slate-200 leading-relaxed whitespace-pre-line"
-    }, skillEffectDetail.effect)), React.createElement("button", {
+    }, helpWrap(skillEffectDetail.effect))), React.createElement("button", {
       onClick: () => setSkillEffectDetail(null),
       className: "w-full bg-indigo-600 text-white py-2.5 rounded-2xl font-black text-[12px] mt-3 active:scale-95"
     }, "閉じる"))), (showEnemyInfo && enemy || waveScanPreview) && (() => {
@@ -122116,7 +122116,7 @@ function MonsterHeroGame() {
       className: "text-[9px] text-indigo-400 uppercase font-black"
     }, "勇者特性"), React.createElement("div", {
       className: "text-[11px] text-white font-bold leading-relaxed mt-1"
-    }, mainHero.traitDesc)), React.createElement("div", {
+    }, helpWrap(mainHero.traitDesc))), React.createElement("div", {
       className: "text-left"
     }, React.createElement(AssistantBubble, {
       scene: "battleHelp",

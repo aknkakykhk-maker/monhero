@@ -16320,7 +16320,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         return <div data-monster-detail-ex className="rounded-xl border border-violet-400/40 bg-violet-950/25 p-2 min-w-0">
           <div className="flex items-center justify-between gap-2"><div className="text-[10px] font-black uppercase tracking-widest text-violet-300">EXスキル</div><div className="text-[9px] font-black text-violet-200/80">タクティクス専用</div></div>
           <div className="mt-0.5 text-[12px] font-black text-white">EX《{exDef.name}》</div>
-          <div className="mt-1 whitespace-pre-line text-[10px] font-bold leading-relaxed text-slate-200">{exDef.desc}</div>
+          <div className="mt-1 whitespace-pre-line text-[10px] font-bold leading-relaxed text-slate-200">{helpWrap(exDef.desc)}</div>
           <div className="mt-1.5 grid grid-cols-3 gap-1 text-center text-[9px] font-black">
             <div className="rounded-lg bg-black/30 px-1 py-1 text-slate-300">回数<span className="block text-white">{exDef.unlimited?'無制限':`${exDef.maxUses}回`}</span></div>
             <div className="rounded-lg bg-black/30 px-1 py-1 text-slate-300">効果時間<span className="block text-white">{durationLabel}</span></div>
@@ -16683,9 +16683,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       <div className="flex items-start gap-2">
         <span className="shrink-0 text-base" aria-hidden="true">⚠️</span>
         <div className="min-w-0 flex-1">
-          <p className="text-[12px] font-black leading-snug text-red-100">{storageTrouble.text}</p>
+          <p className="text-[12px] font-black leading-snug text-red-100">{helpWrap(storageTrouble.text)}</p>
           <p className="mt-1 text-[10px] leading-relaxed text-red-200">このまま遊んでも、経験値やダイヤが端末に残りません。下のボタンで空きを作るか、ゲームを開き直してください。心配なときは設定の「データバックアップ」で書き出しておくと安心です。</p>
-          {storageTrouble.detail ? <p className="mt-1 text-[9px] leading-relaxed text-red-300/80">{storageTrouble.detail}</p> : null}
+          {storageTrouble.detail ? <p className="mt-1 text-[9px] leading-relaxed text-red-300/80">{helpWrap(storageTrouble.detail)}</p> : null}
           <button type="button" data-storage-trouble-compact onClick={()=>{void compactStoredDataNow();}}
             className="mt-2 min-h-[44px] w-full rounded-xl border border-red-200/70 bg-red-700 text-[11px] font-black text-red-50 active:scale-[.98]">古い記録を整理して空きを作る</button>
         </div>
@@ -17196,7 +17196,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
         {gameState==='TRAINING_SELECT'&&(()=>{const selected=masuMons.find(m=>String(m.id)===String(trainingSelectedId));return <main className="mh-training-screen"><div className="mh-debug-banner">DEBUG・報酬や進行状況は保存されません</div><header className="mh-training-head"><button onClick={()=>setGameState('DEBUG_SETTINGS')}><ArrowLeft/></button><div><small>TRAINING TEST</small><h2>所持マスモン選択</h2></div><i/></header>{selected&&<section className="mh-training-selected"><DyedMonsterImage baseId={selected.baseId} src={ALL_PLAYER_MONSTERS[selected.baseId]?.iconUrl} alt={selected.name} masuColors={getMasuColors(selected)}/><div><b>{selected.name}</b><span>絆Lv.{bondLevelInfo(selected.bondXp||0).level}</span></div></section>}<p className="mh-training-note">デバッグ修行に参加する所持マスモンを1体選択してください。</p><div className="mh-training-mon-list">{masuMons.map(m=><button key={m.id} className={String(m.id)===String(trainingSelectedId)?'active':''} onClick={()=>setTrainingSelectedId(m.id)}><DyedMonsterImage baseId={m.baseId} src={ALL_PLAYER_MONSTERS[m.baseId]?.iconUrl} alt={m.name} masuColors={getMasuColors(m)}/><b>{m.name}</b><small>絆Lv.{bondLevelInfo(m.bondXp||0).level}</small></button>)}</div><footer className="mh-training-footer"><button disabled={!selected} onClick={()=>setGameState('TRAINING_DIFFICULTY')}>難易度選択へ</button></footer></main>})()}
 
-        {gameState==='TRAINING_DIFFICULTY'&&<main className="mh-training-screen"><div className="mh-debug-banner">DEBUG・報酬や進行状況は保存されません</div><header className="mh-training-head"><button onClick={()=>setGameState('TRAINING_SELECT')}><ArrowLeft/></button><div><small>TRAINING TEST</small><h2>難易度選択</h2></div><i/></header><div className="mh-training-difficulties">{Object.values(TRAINING_DIFFICULTIES).map(d=><button key={d.id} className={`${trainingDifficulty===d.id?'active':''} ${d.available?'':'soon'}`} onClick={()=>setTrainingDifficulty(d.id)}><div><b>{d.label}</b><em>{d.available?'テスト可能':'準備中'}</em></div><p>{d.summary}</p><dl><span>{d.turns}ターン</span><span>🎲 {d.dice[0]}～{d.dice[1]}</span><span>約{d.spaces}マス</span></dl></button>)}</div><footer className="mh-training-footer"><button disabled={trainingDifficulty!=='BEGINNER'} onClick={()=>setGameState('TRAINING_CONFIRM')}>{trainingDifficulty==='BEGINNER'?'マップとルール確認へ':'説明のみ・準備中'}</button></footer></main>}
+        {gameState==='TRAINING_DIFFICULTY'&&<main className="mh-training-screen"><div className="mh-debug-banner">DEBUG・報酬や進行状況は保存されません</div><header className="mh-training-head"><button onClick={()=>setGameState('TRAINING_SELECT')}><ArrowLeft/></button><div><small>TRAINING TEST</small><h2>難易度選択</h2></div><i/></header><div className="mh-training-difficulties">{Object.values(TRAINING_DIFFICULTIES).map(d=><button key={d.id} className={`${trainingDifficulty===d.id?'active':''} ${d.available?'':'soon'}`} onClick={()=>setTrainingDifficulty(d.id)}><div><b>{d.label}</b><em>{d.available?'テスト可能':'準備中'}</em></div><p>{helpWrap(d.summary)}</p><dl><span>{d.turns}ターン</span><span>🎲 {d.dice[0]}～{d.dice[1]}</span><span>約{d.spaces}マス</span></dl></button>)}</div><footer className="mh-training-footer"><button disabled={trainingDifficulty!=='BEGINNER'} onClick={()=>setGameState('TRAINING_CONFIRM')}>{trainingDifficulty==='BEGINNER'?'マップとルール確認へ':'説明のみ・準備中'}</button></footer></main>}
 
         {gameState==='TRAINING_CONFIRM'&&<main className="mh-training-screen"><div className="mh-debug-banner">DEBUG・報酬や進行状況は保存されません</div><header className="mh-training-head"><button onClick={()=>setGameState('TRAINING_DIFFICULTY')}><ArrowLeft/></button><div><small>BEGINNER</small><h2>マップとルール確認</h2></div><i/></header><section className="mh-training-confirm"><h3>BEGINNER 試作マップ</h3><p>24マス / 10ターン / サイコロ1～3。3か所の分岐で短い安全ルートと遠回りの報酬ルートを選び、再合流してゴールを目指します。</p><h4>移動ルール</h4><p>サイコロ後は出目ぶん1マスずつ自動で進みます。操作が必要なのは、移動中に分岐へ着いた時の進行方向だけです。ゴールは到達または通過で成功。前進・後退は最終停止マスだけ発動し、強制移動は1ターン3回までです。</p><button className="mh-rule-button" onClick={()=>setTrainingModal({type:'rules'})}>マス一覧／ルール・全道具を見る</button><div className="mh-training-ticket"><b>デバッグ専用</b><small>チケット・通常データ・報酬・ミッション・ランキング・実績には一切反映しません。</small></div></section><footer className="mh-training-footer"><button onClick={startTraining}>BEGINNER 修行開始</button></footer></main>}
 
@@ -19918,7 +19918,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {rosterDetailTeaching.detailNote&&<div data-teach-detail-note className="-mt-5 mb-1 w-full shrink-0 text-center text-[11px] font-bold leading-snug text-amber-200">{rosterDetailTeaching.detailNote}</div>}
               <div className="w-full space-y-2 mb-4 overflow-y-auto min-h-0 flex-1">
                 {getFullEvolutionDetails(rosterDetailTeaching).map(info=>{const isCurrent=info.lvl===currentLvl; const isNext=info.lvl===currentLvl+1;
-                  return(<div key={info.lvl} className={`p-2 rounded-xl border ${isCurrent?'bg-purple-900/50 border-purple-400':isNext?'bg-amber-900/30 border-amber-500/50':'bg-black/30 border-white/5'}`}><div className="flex justify-between items-center mb-1"><span className={`text-[11px] font-black ${isCurrent?'text-purple-300':isNext?'text-amber-300':'text-slate-400'}`}>Lv.{info.lvl} {info.name}</span>{isCurrent&&<span className="text-[10px] bg-purple-500 text-white px-1.5 rounded-full leading-none py-0.5">{rosterDetailTeaching.detailNote?'開始':'所持'}</span>}{!owned&&!rosterDetailTeaching.detailNote&&info.lvl===0&&<span className="text-[10px] bg-slate-600 text-white px-1.5 rounded-full leading-none py-0.5">未習得</span>}</div><div className="text-[11px] leading-relaxed text-slate-300">{info.desc}</div></div>);
+                  return(<div key={info.lvl} className={`p-2 rounded-xl border ${isCurrent?'bg-purple-900/50 border-purple-400':isNext?'bg-amber-900/30 border-amber-500/50':'bg-black/30 border-white/5'}`}><div className="flex justify-between items-center mb-1"><span className={`text-[11px] font-black ${isCurrent?'text-purple-300':isNext?'text-amber-300':'text-slate-400'}`}>Lv.{info.lvl} {info.name}</span>{isCurrent&&<span className="text-[10px] bg-purple-500 text-white px-1.5 rounded-full leading-none py-0.5">{rosterDetailTeaching.detailNote?'開始':'所持'}</span>}{!owned&&!rosterDetailTeaching.detailNote&&info.lvl===0&&<span className="text-[10px] bg-slate-600 text-white px-1.5 rounded-full leading-none py-0.5">未習得</span>}</div><div className="text-[11px] leading-relaxed text-slate-300">{helpWrap(info.desc)}</div></div>);
                 })}
               </div>
               <button onClick={()=>setRosterDetailTeaching(null)} className="w-full min-h-[52px] bg-purple-600 text-white rounded-xl font-black shadow-lg text-sm shrink-0 active:scale-[.98]">閉じる</button>
@@ -20969,11 +20969,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               const freeShops=profileFrameSales(frame).filter(sale=>!profileFrameConditionFor(frame,sale.shop)).map(sale=>PROFILE_FRAME_SHOPS[sale.shop].label).join('・');
               return (
                 <div data-profile-frame-locked-info data-profile-frame-sale className="rounded-2xl border border-amber-500/60 bg-amber-950/30 px-3 py-2">
-                  {status&&<p className="text-[10px] font-black text-amber-300 leading-tight text-center">{status.text}</p>}
-                  {status&&<p className="text-[9px] text-slate-400 leading-tight text-center mt-1">{status.met?'条件を達成しています！':status.progress}</p>}
+                  {status&&<p className="text-[10px] font-black text-amber-300 leading-tight text-center">{helpWrap(status.text)}</p>}
+                  {status&&<p className="text-[9px] text-slate-400 leading-tight text-center mt-1">{helpWrap(status.met?'条件を達成しています！':status.progress)}</p>}
                   <p className="text-[9px] text-slate-300 leading-tight text-center mt-1">マーケットで買えます：{shops}</p>
                   {freeShops&&<p className="text-[9px] text-emerald-300 leading-tight text-center mt-1">{freeShops}なら条件なしで買えます</p>}
-                  <p className="text-[9px] text-slate-500 leading-tight text-center mt-1">{frame.desc||''}</p>
+                  <p className="text-[9px] text-slate-500 leading-tight text-center mt-1">{helpWrap(frame.desc||'')}</p>
                 </div>
               );
             }
@@ -20987,7 +20987,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <div data-profile-frame-locked-info className="rounded-2xl border border-amber-500/60 bg-amber-950/30 px-3 py-2">
                 <p className="text-[10px] font-black text-amber-300 leading-tight text-center">{(who&&who.name)||''}との仲良し度 Lv{unlock.bondLevel} でもらえます</p>
                 <p className="text-[9px] text-slate-400 leading-tight text-center mt-1">いまは Lv{level}{remain!=null&&remain>0?` ／ あと ${remain}`:''}</p>
-                <p className="text-[9px] text-slate-500 leading-tight text-center mt-1">{frame.desc||''}</p>
+                <p className="text-[9px] text-slate-500 leading-tight text-center mt-1">{helpWrap(frame.desc||'')}</p>
               </div>
             );
           })();
@@ -21049,7 +21049,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div data-assistant-costume-locked-info className="rounded-2xl border border-amber-500/60 bg-amber-950/30 px-3 py-2">
               <p className="text-[10px] font-black text-amber-300 leading-tight text-center">{lockedCostume.name}はマーケットで買えます</p>
               <p className="text-[9px] text-slate-300 leading-tight text-center mt-1">{assistantCostumeSales(lockedCostume).map(sale=>`${ASSISTANT_COSTUME_SHOPS[sale.shop].label} ${sale.cost.toLocaleString()}${sale.shop==='diamond'?'ダイヤ':'ビートP'}`).join(' ／ ')}</p>
-              <p className="text-[9px] text-slate-500 leading-tight text-center mt-1">{lockedCostume.desc||''}</p>
+              <p className="text-[9px] text-slate-500 leading-tight text-center mt-1">{helpWrap(lockedCostume.desc||'')}</p>
             </div>
           );
           return (
@@ -21258,7 +21258,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       )}
       {friendCandidate&&friendCandidate.phase==='done'&&(
         <ModalFrame label="フレンド申請の結果" border="border-pink-400/70" onClose={()=>setFriendCandidate(null)} zIndex={MODAL_Z.confirm}>
-          <p data-friend-result className="text-center text-[13px] font-black leading-relaxed text-pink-100">{friendCandidate.text}</p>
+          <p data-friend-result className="text-center text-[13px] font-black leading-relaxed text-pink-100">{helpWrap(friendCandidate.text)}</p>
           <div className="mt-4 grid grid-cols-1 gap-2">
             <button type="button" onClick={()=>{ setFriendCandidate(null); openFriends(null); }} className="mh-button mh-button-primary min-h-[48px] rounded-2xl font-black active:scale-[.98]">フレンド画面をひらく</button>
             <ModalCloseButton onClick={()=>setFriendCandidate(null)}/>
@@ -22122,7 +22122,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             )}
             {cat&&!topic&&(
               <div className="space-y-2">
-                <p className="text-[11px] text-slate-400 leading-relaxed mb-3">{cat.summary}</p>
+                <p className="text-[11px] text-slate-400 leading-relaxed mb-3">{helpWrap(cat.summary)}</p>
                 {/* 項目に group が書いてあるカテゴリは、切り替わり目に小見出しを挟む。
                     モンヒロビートのように項目が20を超えるカテゴリで、どこに何があるかを
                     一覧のまま見渡せるようにするため(2026-09-06)。group の無いカテゴリは
@@ -22546,7 +22546,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
             </div>
             <div className="bg-black/40 border border-white/10 rounded-2xl p-3">
               <div className="text-[9px] text-indigo-300 font-black uppercase tracking-wider mb-1">効果</div>
-              <div className="text-[11px] text-slate-200 leading-relaxed whitespace-pre-line">{skillEffectDetail.effect}</div>
+              <div className="text-[11px] text-slate-200 leading-relaxed whitespace-pre-line">{helpWrap(skillEffectDetail.effect)}</div>
             </div>
             <button onClick={()=>setSkillEffectDetail(null)} className="w-full bg-indigo-600 text-white py-2.5 rounded-2xl font-black text-[12px] mt-3 active:scale-95">閉じる</button>
           </div>
@@ -22583,7 +22583,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
   })}
 </div>)}{/* ★タクティクスは1体ずつなので、パーティの合計・平均の欄そのものを出さない
                   (2026-09-22 ユーザー選択「消す」)。ちから・丈夫さは平均でしかなく、
-                  ダメージも被弾もガードも、いまは全部その子の値で決まる */}{!isTacticsMode(runMode)&&<div className="grid grid-cols-2 gap-6 text-left"><div><div className="text-[9px] text-pink-400 font-black uppercase">ライフ</div><div className="text-xl font-mono font-black">{hp.toLocaleString()} / {effectiveMaxHp.toLocaleString()}</div></div><div><div className="text-[9px] text-red-400 font-black uppercase">ちから</div><div className="text-xl font-mono font-black">{atk}</div></div><div><div className="text-[9px] text-emerald-400 font-black uppercase">丈夫さ</div><div className="text-xl font-mono font-black">{effectiveDef}{getPermaBuff('defPct')>0&&<span className="text-[10px] text-emerald-400 ml-1">(基礎{def} 丈夫さ+{Math.round(getPermaBuff('defPct')*100)}%)</span>}{getPermaBuff('dmgCutPct')>0&&<span className="text-[10px] text-emerald-400 ml-1">(被ダメ -{Math.round(getPermaBuff('dmgCutPct')*100)}%)</span>}</div></div><div><div className="text-[9px] text-amber-400 font-black uppercase">ガッツ</div><div className="text-xl font-mono font-black">{guts} / {effectiveMaxGuts}</div></div></div>}<div className="bg-black/40 p-3 rounded-xl border border-indigo-500/30 text-left"><div className="text-[9px] text-indigo-400 uppercase font-black">勇者特性</div><div className="text-[11px] text-white font-bold leading-relaxed mt-1">{mainHero.traitDesc}</div></div><div className="text-left"><AssistantBubble scene="battleHelp" compact/></div></div></div></div>)}
+                  ダメージも被弾もガードも、いまは全部その子の値で決まる */}{!isTacticsMode(runMode)&&<div className="grid grid-cols-2 gap-6 text-left"><div><div className="text-[9px] text-pink-400 font-black uppercase">ライフ</div><div className="text-xl font-mono font-black">{hp.toLocaleString()} / {effectiveMaxHp.toLocaleString()}</div></div><div><div className="text-[9px] text-red-400 font-black uppercase">ちから</div><div className="text-xl font-mono font-black">{atk}</div></div><div><div className="text-[9px] text-emerald-400 font-black uppercase">丈夫さ</div><div className="text-xl font-mono font-black">{effectiveDef}{getPermaBuff('defPct')>0&&<span className="text-[10px] text-emerald-400 ml-1">(基礎{def} 丈夫さ+{Math.round(getPermaBuff('defPct')*100)}%)</span>}{getPermaBuff('dmgCutPct')>0&&<span className="text-[10px] text-emerald-400 ml-1">(被ダメ -{Math.round(getPermaBuff('dmgCutPct')*100)}%)</span>}</div></div><div><div className="text-[9px] text-amber-400 font-black uppercase">ガッツ</div><div className="text-xl font-mono font-black">{guts} / {effectiveMaxGuts}</div></div></div>}<div className="bg-black/40 p-3 rounded-xl border border-indigo-500/30 text-left"><div className="text-[9px] text-indigo-400 uppercase font-black">勇者特性</div><div className="text-[11px] text-white font-bold leading-relaxed mt-1">{helpWrap(mainHero.traitDesc)}</div></div><div className="text-left"><AssistantBubble scene="battleHelp" compact/></div></div></div></div>)}
 
       {showSoulBattleEffects&&gameState==='BATTLE'&&(
         <SoulBattleEffects
