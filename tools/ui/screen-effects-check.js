@@ -223,8 +223,11 @@ check('表の件数と setTimeout の数が合っている', callCount === rows.
 
 const counts = rows.reduce((acc, r) => { acc[r.kind] = (acc[r.kind] || 0) + 1; return acc; }, {});
 console.log(`   内訳: 画面専用 ${counts.screen || 0} / 進行 ${counts.progress || 0} / 対象外 ${counts['対象外'] || 0}`);
-check('「進行」が「画面専用」より多い(一律に止めてはいけない理由が表に残っている)',
-  (counts.progress || 0) > (counts.screen || 0));
+// 以前は「進行が画面専用より多い」で見ていたが、演出だけのタイマー(画面専用)を持つ画面が増えて逆転した
+// (2026-10-24。MFバトルカードの画面専用9件など)。狙いは「一律に止めると困るタイマーが表に残っている」ことなので、
+// 上の【なぜ要るか】の31箇所が「進行」として残っているかで見る
+check('「進行」が31件以上ある(一律に止めてはいけない理由が表に残っている)',
+  (counts.progress || 0) >= 31, `進行 ${counts.progress || 0} 件`);
 
 console.log(failed === 0 ? '\nすべてOK' : `\nNG ${failed} 件`);
 process.exit(failed === 0 ? 0 : 1);
