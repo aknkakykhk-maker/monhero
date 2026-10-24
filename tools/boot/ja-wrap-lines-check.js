@@ -43,7 +43,7 @@ check('台詞を集められた', texts.length >= 500, `${texts.length}本`);
     const tails = [], mids = [], soft = [], overflow = [];
     const range = document.createRange();
     // 本文の幅と字の大きさ。ふつうは字11px で120px(吹き出し144px)から、狭い画面(幅360未満)は字10px で112px(吹き出し136px)
-    const sizes = [[100, 9], [112, 10], ...Array.from({ length: 16 }, (_, i) => [120 + i * 12, 11])];
+    const sizes = [[96, 9], [112, 10], ...Array.from({ length: 16 }, (_, i) => [120 + i * 12, 11])];
     for (const t of texts) for (const [w, fs] of sizes) {
       // 吹き出しと同じ: 言葉の切れ目(印)で折り、行の長さをそろえる(JA_LABEL_STYLE)
       const d = document.createElement('div');
@@ -88,7 +88,7 @@ check('台詞を集められた', texts.length >= 500, `${texts.length}本`);
   await browser.close();
   const show = (a) => a.slice(0, 6).join(' / ');
   if (process.env.SHOW_ALL) console.log([...res.tails, ...res.mids].join('\n'));
-  check('最後の行に1〜2字だけ落ちた台詞が無い(字11pxで本文120〜300px・字10pxで112px・字9pxで100px)', res.tails.length === 0, show(res.tails) || `${texts.length}本`);
+  check('最後の行に1〜2字だけ落ちた台詞が無い(字11pxで本文120〜300px・字10pxで112px・字9pxで96px)', res.tails.length === 0, show(res.tails) || `${texts.length}本`);
   check('言葉の途中(印の無い所)で折れた台詞が無い', res.mids.length === 0, show(res.mids));
   check('本文が吹き出しの幅からはみ出さない', res.overflow.length === 0, show(res.overflow));
   // 2026-10-24 の時点で 3件(すべて90pxの顔文字の中)。増えたら部品を見直す

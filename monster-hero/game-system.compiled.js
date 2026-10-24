@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a8071fe87844cf08
+// source-sha256: a3a745931167b4af
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-25 00:30";
+const BUILD_DATE = "2026-10-25 01:09";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -64426,11 +64426,13 @@ const HOME_RAID_JACK_BUTTON_STYLE = Object.freeze({
   pointerEvents: 'auto'
 });
 const HOME_RAID_SAY_WIDTHS = Object.freeze([184, 168, 152, 144]);
-const HOME_RAID_SAY_SMALL_WIDTHS = Object.freeze([136, 124]);
+const HOME_RAID_SAY_SMALL_WIDTHS = Object.freeze([136, 120]);
 const HOME_RAID_SAY_INLINE_NEXT = 130;
 const homeRaidSayFont = width => width < HOME_RAID_SAY_INLINE_NEXT ? 9 : width < 144 ? 10 : 11;
 const HOME_RAID_SAY_NARROW_VW = 360;
 const HOME_RAID_SAY_HOP = 18;
+const HOME_RAID_SAY_FACE = 0.45;
+const HOME_RAID_SAY_FACE_GAP = 8;
 const homeRaidSayPlace = ({
   head,
   band = null,
@@ -64449,16 +64451,15 @@ const homeRaidSayPlace = ({
       h = Math.min(r.bottom, o.bottom + p) - Math.max(r.top, o.top - p);
     return w > 0 && h > 0 ? w * h : 0;
   };
-  const overlap = r => {
-    let area = 0;
-    if (r.left < edge || r.top < top + edge || r.right > vw - edge || r.bottom > vh - edge) area += 1e6;
+  const faceTop = head.top + (head.bottom - head.top) * HOME_RAID_SAY_FACE - HOME_RAID_SAY_FACE_GAP;
+  const fits = r => {
+    if (r.left < edge || r.top < top + edge || r.right > vw - edge || r.bottom > vh - edge) return false;
+    if (r.bottom + tail > faceTop) return false;
     if (band && hit({
       ...r,
       bottom: r.bottom + tail
-    }, band, 2)) area += 1e6;
-    for (const o of obstacles) area += hit(r, o, pad) * 20;
-    area += hit(r, head) * 0.5;
-    return area;
+    }, band, 2)) return false;
+    return obstacles.every(o => !hit(r, o, pad));
   };
   const clampX = (x, w) => Math.max(edge, Math.min(vw - edge - w, x));
   const cx = (head.left + head.right) / 2;
@@ -64466,7 +64467,7 @@ const homeRaidSayPlace = ({
   for (const w of widths) {
     const h = measure(w);
     const from = head.top - HOME_RAID_SAY_HOP - h,
-      to = head.top + (head.bottom - head.top) * 0.75 - h;
+      to = faceTop - tail - h;
     for (let y = from; y <= Math.max(from, to); y += 6) {
       tries.push({
         side: 'top',
@@ -64482,42 +64483,29 @@ const homeRaidSayPlace = ({
         width: w,
         height: h
       });
+      for (const o of obstacles) for (const left of [o.right + pad, o.left - pad - w]) if (Math.abs(left + w / 2 - cx) <= 60) tries.push({
+        side: 'top',
+        left: clampX(left, w),
+        top: y,
+        width: w,
+        height: h
+      });
     }
   }
-  let best = null;
-  for (const t of tries) {
-    const area = overlap({
-      left: t.left,
-      top: t.top,
-      right: t.left + t.width,
-      bottom: t.top + t.height
-    });
-    if (area === 0) return {
-      ...t,
-      clear: true
-    };
-    if (!best || area < best.area) best = {
-      ...t,
-      area
-    };
-  }
-  if (!best) return null;
-  const headArea = Math.max(1, (head.right - head.left) * (head.bottom - head.top));
-  const cover = hit({
-    left: best.left,
-    top: best.top,
-    right: best.left + best.width,
-    bottom: best.top + best.height
-  }, head) / headArea;
-  return {
-    side: best.side,
-    left: best.left,
-    top: best.top,
-    width: best.width,
-    height: best.height,
-    clear: false,
-    hidden: cover >= 1 / 3
+  for (const t of tries) if (fits({
+    left: t.left,
+    top: t.top,
+    right: t.left + t.width,
+    bottom: t.top + t.height
+  })) return {
+    ...t,
+    clear: true
   };
+  return tries.length ? {
+    ...tries[0],
+    clear: false,
+    hidden: true
+  } : null;
 };
 const homeRaidSayObstacles = wrap => {
   if (typeof document === 'undefined') return [];
@@ -64610,7 +64598,7 @@ const HomeRaidJack = ({
         say.style.fontSize = `${homeRaidSayFont(w)}px`;
         if (nextInline && nextRow) {
           const inl = w < HOME_RAID_SAY_INLINE_NEXT;
-          nextInline.style.display = inl ? 'inline-block' : 'none';
+          nextInline.style.display = inl ? 'block' : 'none';
           nextRow.style.display = inl ? 'none' : 'block';
         }
         return say.offsetHeight;
@@ -64857,17 +64845,23 @@ const HomeRaidJack = ({
       display: 'block',
       ...JA_LABEL_STYLE
     }
-  }, jaWrap(speech), React.createElement("span", {
+  }, jaWrap(speech)), React.createElement("span", {
     "aria-hidden": "true",
     "data-say-next-inline": true,
     style: {
-      display: sayInline ? 'inline-block' : 'none',
-      marginLeft: '4px',
+      display: sayInline ? 'block' : 'none',
+      position: 'absolute',
+      right: '10px',
+      bottom: '-6px',
+      padding: '0 4px',
+      borderRadius: '4px',
+      background: '#1c0a02',
+      color: '#ffedd5',
       fontSize: '8px',
-      opacity: .7,
+      lineHeight: '10px',
       whiteSpace: 'nowrap'
     }
-  }, "▶ つぎ")), React.createElement("span", {
+  }, "▶ つぎ"), React.createElement("span", {
     "aria-hidden": "true",
     "data-say-next-row": true,
     style: {

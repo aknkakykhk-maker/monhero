@@ -42,9 +42,9 @@ check('M3 結果の「刻み」の説明は言葉の切れ目で折る', play.in
 check('M3 MAX COMBO は1行のまま(狭い画面は字の間を詰める)', /whitespace-nowrap text-\[10px\] font-black tracking-\[\.2em\] max-\[359px\]:tracking-\[\.06em\][^>]*>MAX COMBO</.test(play));
 
 const home = P('69-screen-home.jsx');
-check('HOME: ジャックの吹き出しは、どの幅でもかぼちゃの上(帯より上)に置く(横へは置かない・置けないときだけ136・124の幅)・セリフは言葉の切れ目で折る',
-  home.includes('HOME_RAID_SAY_WIDTHS = Object.freeze([184, 168, 152, 144])') && home.includes('HOME_RAID_SAY_SMALL_WIDTHS = Object.freeze([136, 124])') && home.includes('const widths = [...HOME_RAID_SAY_WIDTHS, ...HOME_RAID_SAY_SMALL_WIDTHS];')
-  && home.includes("if (band && hit({ ...r, bottom: r.bottom + tail }, band, 2)) area += 1e6;") && !/side: '(right|left)'|\['right', 'left'\]/.test(home)
+check('HOME: ジャックの吹き出しは、どの幅でもかぼちゃの上(帯より上)に置く(横へは置かない・札にも顔にもかけない・置けないときだけ136・120の幅)・セリフは言葉の切れ目で折る',
+  home.includes('HOME_RAID_SAY_WIDTHS = Object.freeze([184, 168, 152, 144])') && home.includes('HOME_RAID_SAY_SMALL_WIDTHS = Object.freeze([136, 120])') && home.includes('const widths = [...HOME_RAID_SAY_WIDTHS, ...HOME_RAID_SAY_SMALL_WIDTHS];')
+  && home.includes("if (band && hit({ ...r, bottom: r.bottom + tail }, band, 2)) return false;") && home.includes("if (r.bottom + tail > faceTop) return false;") && !/side: '(right|left)'|\['right', 'left'\]/.test(home)
   && home.includes('<span data-home-raid-say-text style={{ display:\'block\', ...JA_LABEL_STYLE }}>{jaWrap(speech)}'));
 
 // N5(2026-10-21 改善部の見直し・その3): 大きな所持数は9桁(1億)から縮めて出す。保存値は変えない・押すと細かい数

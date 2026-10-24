@@ -241,25 +241,26 @@ const SIZES = [
         const title = document.querySelector('[data-home-raid-jack] [data-home-raid-jack-title]');
         const band = title ? title.parentElement.getBoundingClientRect() : null;
         const titleLines = title ? Math.round(title.getBoundingClientRect().height / (parseFloat(getComputedStyle(title).fontSize) * 1.3)) : 0;
-        return { labels, jackHit: Math.round(jackHit * 100), inside: r.left >= 0 && r.right <= innerWidth && r.top >= 0 && r.bottom <= innerHeight, box: [r.left, r.top, r.right, r.bottom].map(Math.round),
+        return { labels, jackHit: Math.round(jackHit * 100), faceTop: jr ? Math.round(jr.top + jr.height * 0.45 - 8) : 0, inside: r.left >= 0 && r.right <= innerWidth && r.top >= 0 && r.bottom <= innerHeight, box: [r.left, r.top, r.right, r.bottom].map(Math.round),
           side: say.getAttribute('data-say-side'), hidden: say.getAttribute('data-say-hidden') === 'true', bandTop: band ? Math.round(band.top) : null, titleLines };
       });
       // ① みゅあがふつうの長さ(2行)の台詞のとき: ジャックの吹き出しは必ず出て、札・帯・絵を隠さない
       const sayJack = (jack, label) => {
         if (!jack) return;
         check(`  ${label}ジャックの吹き出しが施設の札(M/B管理・神殿など)にかからない`, jack.labels.length === 0, `${jack.labels.join('・')} / 吹き出し ${jack.box.join(',')}`);
-        // 絵の箱の上のほうは透明なので、3分の1かかるとかぼちゃの顔が隠れる(2026-10-24。それより隠すなら吹き出しを出さない)
-        check(`  ${label}ジャックの吹き出しがジャックの絵を3分の1以上かくさない・画面の中にある`, jack.jackHit < 34 && jack.inside, `絵にかかる ${jack.jackHit}% / 吹き出し ${jack.box.join(',')}`);
+        // 2026-10-24 窓口「320 で大王の吹き出しがかぼちゃの顔を隠している」。しっぽの先まで、目の高さ(絵の箱の上から45%)より8px上に置く
+        check(`  ${label}ジャックの吹き出しがかぼちゃの顔を隠さない・画面の中にある`, jack.box[3] + 9 <= jack.faceTop + 1 && jack.inside, `吹き出しの下端+しっぽ ${jack.box[3] + 9}px / 顔の線 ${jack.faceTop}px / 吹き出し ${jack.box.join(',')}`);
         // 2026-10-24 窓口「SE・320 で、帯の右に出て帯を隠している」。どの幅でもかぼちゃの上(帯より上。しっぽ9pxも含めて)に置く
         check(`  ${label}ジャックの吹き出しはかぼちゃの上に出て、帯(〜があらわれた！・共有HP)に乗らない`, jack.side === 'top' && jack.bandTop !== null && jack.box[3] + 9 <= jack.bandTop, `${jack.side} / 吹き出しの下端 ${jack.box[3]}px / 帯の上端 ${jack.bandTop}px`);
       };
       const short = await readJack();
       if (short) {
         check('  帯の「〜があらわれた！」が1行に収まる', short.titleLines === 1, `${short.titleLines}行`);
-        check('  (みゅあが2行のとき)ジャックの吹き出しが出ている', !short.hidden);
+        // 幅360未満は、ジャックの台詞が長いと置ける所が無く、出さないことがある(2026-10-24 窓口「置ける場所がなければ出さない扱いで構わない」)
+        check('  (みゅあが2行のとき)ジャックの吹き出しが出ている(出さないのは幅360未満だけ)', !short.hidden || size.width < 360, `幅${size.width}`);
         if (!short.hidden) sayJack(short, '(みゅあが2行のとき)');
       }
-      // ② みゅあが長い台詞(上で差し替えた3〜4行)のとき。置き場所が無くて絵を3分の1以上隠すなら出さない。出さないのは幅360未満だけ
+      // ② みゅあが長い台詞(上で差し替えた3〜4行)のとき。札にも顔にもかからない置き場所が無いなら出さない。出さないのは幅360未満だけ
       await page.evaluate(() => { const t = document.querySelector('.mh-home-assistant [data-bubble-text]'); if (t) t.textContent = '今日はどんな勇者モンが育つかなぁ〜٩(*´ᵕ`*)۶ワクワク まずはミッションとギフトを見てから、バトルへいこ！'; });
       await page.waitForTimeout(2000);
       const jack = await readJack();
