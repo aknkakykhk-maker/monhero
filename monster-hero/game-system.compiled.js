@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e5baeed08321035a
+// source-sha256: 96795c7d8b4e95e6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-24 22:38";
+const BUILD_DATE = "2026-10-24 22:59";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -52648,6 +52648,10 @@ function BreederMarketScreen({
   initialSection = null
 }) {
   const [marketSection, setMarketSection] = useState(initialSection);
+  const [cardShopLine] = useState(() => typeof MUA_CARD_SHOP_LINES !== 'undefined' && MUA_CARD_SHOP_LINES.length ? MUA_CARD_SHOP_LINES[Math.floor(Math.random() * MUA_CARD_SHOP_LINES.length)] : {
+    e: 'normal',
+    t: ''
+  });
   const [sheet, setSheet] = useState(null);
   const [sheetQuantity, setSheetQuantity] = useState(1);
   const [sheetPending, setSheetPending] = useState(false);
@@ -52950,7 +52954,13 @@ function BreederMarketScreen({
     })
   }), React.createElement("div", {
     className: "shrink-0 w-full max-w-md mx-auto mb-2"
-  }, React.createElement(AssistantBubble, {
+  }, marketSection === 'card' ? React.createElement(AssistantBubble, {
+    key: "card-shop",
+    assistantId: "mua",
+    line: cardShopLine.t,
+    expression: cardShopLine.e,
+    compact: true
+  }) : React.createElement(AssistantBubble, {
     scene: "market",
     compact: true,
     condition: Number.isFinite(CHEAPEST_GOLD_ITEM_COST) && gold < CHEAPEST_GOLD_ITEM_COST ? 'lowGold' : null
@@ -86733,6 +86743,40 @@ const CardBattleScreen = ({
       }
     }, pick ? `「${pick.name}」にする` : 'キットをえらんでください')));
   }
+  if (view === 'mode') {
+    return React.createElement("div", {
+      "data-mh-screen": true,
+      "data-card-top": "mode",
+      className: SCREEN_SHELL_CLASS
+    }, React.createElement(ScreenHead, {
+      title: "対戦",
+      accent: "text-amber-200",
+      onBack: () => setView('top')
+    }), React.createElement("div", {
+      className: `${SCREEN_LIST_CLASS} space-y-3 pb-4`
+    }, React.createElement("button", {
+      type: "button",
+      "data-card-mode-assistant": true,
+      className: "mh-button mh-button-primary flex min-h-[96px] w-full flex-col items-center justify-center rounded-2xl px-3 py-3 active:scale-[.98]",
+      onClick: () => {
+        Audio_.se.tap();
+        setView('foe');
+      }
+    }, React.createElement("span", {
+      className: "text-[18px] font-black"
+    }, "助手と対戦"), React.createElement("span", {
+      className: "mt-1 text-[12px] font-bold opacity-80"
+    }, "みゅあ・ももすけ・きき・きゅうこ・ドラ・あつ と戦う")), React.createElement("button", {
+      type: "button",
+      "data-card-mode-multi": true,
+      disabled: true,
+      className: "mh-button flex min-h-[96px] w-full flex-col items-center justify-center rounded-2xl border border-white/10 bg-slate-900 px-3 py-3 text-slate-400"
+    }, React.createElement("span", {
+      className: "text-[18px] font-black"
+    }, "マルチ対戦"), React.createElement("span", {
+      className: "mt-1 rounded-full bg-slate-700 px-2 py-0.5 text-[11px] font-black text-slate-200"
+    }, "準備中"))));
+  }
   if (view === 'foe') {
     const a = allAssistants.find(x => x.id === foe.who) || foes[0];
     const line = a ? cardPickLine(a.id, 'challenge', null, () => 0.0) : null;
@@ -86741,9 +86785,9 @@ const CardBattleScreen = ({
       "data-card-top": "foe",
       className: SCREEN_SHELL_CLASS
     }, React.createElement(ScreenHead, {
-      title: "コンピューター戦",
+      title: "助手と対戦",
       accent: "text-amber-200",
-      onBack: () => setView('top'),
+      onBack: () => setView('mode'),
       note: "相手の助手と強さをえらびます"
     }), React.createElement("div", {
       className: `${SCREEN_LIST_CLASS} space-y-2 pb-4`
@@ -86822,7 +86866,7 @@ const CardBattleScreen = ({
       className: "mt-1 text-[12px] font-bold text-rose-300"
     }, deckIssues.join('・')), React.createElement("div", {
       className: "mt-1 text-[11px] font-bold text-slate-400"
-    }, "今日もらったカードポイント(コンピューター戦): ", save.daily.cpuPoint, " / ", CARD_CPU_DAILY_MAX, save.daily.firstWin ? '' : '・今日はじめての勝ちで +50')), notice && React.createElement("p", {
+    }, "今日もらったカードポイント(助手と対戦): ", save.daily.cpuPoint, " / ", CARD_CPU_DAILY_MAX, save.daily.firstWin ? '' : '・今日はじめての勝ちで +50')), notice && React.createElement("p", {
       className: "text-[12px] font-bold text-amber-200"
     }, notice)), React.createElement("div", {
       className: SCREEN_FOOTER_CLASS
@@ -87047,7 +87091,7 @@ const CardBattleScreen = ({
     })) : null;
   })), React.createElement("div", {
     className: "mt-1 text-[11px] font-bold text-slate-400"
-  }, "戦績(コンピューター戦): ", save.record.cpu.win, "勝 ", save.record.cpu.lose, "敗", save.record.cpu.surrender ? `・投了${save.record.cpu.surrender}` : '')), notice && React.createElement("p", {
+  }, "戦績(助手と対戦): ", save.record.cpu.win, "勝 ", save.record.cpu.lose, "敗", save.record.cpu.surrender ? `・投了${save.record.cpu.surrender}` : '')), notice && React.createElement("p", {
     className: "text-[12px] font-bold text-amber-200"
   }, notice), React.createElement("button", {
     type: "button",
@@ -87057,9 +87101,9 @@ const CardBattleScreen = ({
     onClick: () => {
       Audio_.se.tap();
       setNotice('');
-      setView('foe');
+      setView('mode');
     }
-  }, "コンピューター戦"), React.createElement("div", {
+  }, "対戦"), React.createElement("div", {
     className: "grid grid-cols-2 gap-2"
   }, React.createElement("button", {
     type: "button",
@@ -87720,10 +87764,13 @@ const CardDex = ({
     onClose: () => setDetail(null)
   }));
 };
-const cardRuleLine = t => String(t).split(/(「[^」]*」)/).map((seg, i) => /^「/.test(seg) ? React.createElement("span", {
+const cardRuleLine = t => String(t).split(/(「[^」]*」|《[^》]*》)/).map((seg, i) => /^「/.test(seg) ? React.createElement("span", {
   key: i,
   className: "whitespace-nowrap"
-}, seg) : React.createElement(React.Fragment, {
+}, seg) : /^《/.test(seg) ? React.createElement("span", {
+  key: i,
+  className: "whitespace-nowrap"
+}, seg.slice(1, -1)) : React.createElement(React.Fragment, {
   key: i
 }, jaWrap(seg)));
 const CardRules = ({
@@ -87945,15 +87992,18 @@ const CardShopPacks = ({
     }, pack.name), React.createElement("div", {
       className: "text-[11px] font-bold text-slate-300",
       style: JA_WRAP_STYLE
-    }, pack.tech ? `${pack.tech + pack.mon}枚入り(技など${pack.tech}枚・モンスター${pack.mon}枚)` : `${pack.mon}枚入り(3枚とも混血モンスター)`), React.createElement("button", {
+    }, jaWrap(pack.tech ? `${pack.tech + pack.mon}枚入り(技など${pack.tech}枚・モンスター${pack.mon}枚)` : `${pack.mon}枚入り(3枚とも混血モンスター)`)), React.createElement("button", {
       type: "button",
       "data-card-shop-rates": pack.id,
       onClick: () => setRates(rates === pack.id ? null : pack.id),
       className: "mt-0.5 text-[11px] font-black text-sky-300 underline"
     }, "出る確率を見る"))), rates === pack.id && r && React.createElement("div", {
       "data-card-shop-rate-table": true,
-      className: "mt-1.5 rounded-lg bg-black/30 p-2 text-[11px] font-bold leading-relaxed text-slate-200"
-    }, pack.tech > 0 && React.createElement("div", null, "技などの枠(1パック", pack.tech, "枚): ", r.techKinds, "種類から同じ確率(1種類 ", pct(r.techEach), ")。準備中のカードは出ません"), React.createElement("div", null, "モンスターの枠(1パック", pack.mon, "枚): 通常 ", pack.rarity.normal, "%", pack.rarity.kira ? `・キラ ${pack.rarity.kira}%` : '', pack.rarity.alt ? `・別絵キラ ${pack.rarity.alt}%` : '', "(通常", r.mons.normal, "種", r.mons.kira ? `・キラ${r.mons.kira}種` : '', r.mons.alt ? `・別絵キラ${r.mons.alt}種` : '', ")。まだ持っていない種族は2倍出やすい"), pack.pity && React.createElement("div", null, "キラも別絵キラも出ないまま", CARD_PACK_PITY_AT, "パック開けたら、つぎのパックはキラ以上"), React.createElement("div", null, "だぶったカードはカードポイントになります(技など4枚目から", CARD_DUP_POINT.tech, "・モンスター2枚目から", pack.id === 'hybrid' ? CARD_DUP_POINT.hybrid : `${CARD_DUP_POINT.normal}〔キラ${CARD_DUP_POINT.kira}・別絵キラ${CARD_DUP_POINT.alt}〕`, ")")), React.createElement("div", {
+      className: "mt-1.5 space-y-0.5 rounded-lg bg-black/30 p-2 text-[11px] font-bold leading-relaxed text-slate-200",
+      style: JA_WRAP_STYLE
+    }, [pack.tech > 0 ? `技などの枠(1パック${pack.tech}枚): ${r.techKinds}種類から同じ確率(1種類 ${pct(r.techEach)})。《準備中のカード》は出ません` : null, `モンスターの枠(1パック${pack.mon}枚): 通常 ${pack.rarity.normal}%${pack.rarity.kira ? `・キラ ${pack.rarity.kira}%` : ''}${pack.rarity.alt ? `・別絵キラ ${pack.rarity.alt}%` : ''}(通常${r.mons.normal}種${r.mons.kira ? `・キラ${r.mons.kira}種` : ''}${r.mons.alt ? `・別絵キラ${r.mons.alt}種` : ''})。まだ持っていない種族は《2倍出やすい》`, pack.pity ? `キラも別絵キラも出ないまま${CARD_PACK_PITY_AT}パック開けたら、つぎのパックは《キラ以上》` : null, `だぶったカードはカードポイントになります(技など4枚目から${CARD_DUP_POINT.tech}・モンスター2枚目から${pack.id === 'hybrid' ? CARD_DUP_POINT.hybrid : `${CARD_DUP_POINT.normal}〔キラ${CARD_DUP_POINT.kira}・別絵キラ${CARD_DUP_POINT.alt}〕`})`].filter(Boolean).map((t, i) => React.createElement("div", {
+      key: i
+    }, cardRuleLine(t)))), React.createElement("div", {
       className: `mt-2 grid gap-1.5 ${pack.bundle ? 'grid-cols-2' : 'grid-cols-1'}`
     }, React.createElement("button", {
       type: "button",
@@ -88004,10 +88054,12 @@ const CardShopStarters = ({
     className: "space-y-2 pb-2"
   }, done && React.createElement("div", {
     "data-card-shop-starter-done": true,
-    className: "rounded-xl border border-emerald-400/40 bg-emerald-950/40 px-3 py-2 text-[12px] font-black text-emerald-200"
-  }, done), React.createElement("p", {
-    className: "text-[11px] font-bold text-slate-400"
-  }, "はじめに選ばなかったスターターキット。1つにつき1回、", CARD_STARTER_SHOP_PRICE, "カードポイント。デッキも1つ増えます"), kits.map(k => {
+    className: "rounded-xl border border-emerald-400/40 bg-emerald-950/40 px-3 py-2 text-[12px] font-black text-emerald-200",
+    style: JA_WRAP_STYLE
+  }, jaWrap(done)), React.createElement("p", {
+    className: "text-[11px] font-bold text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap(`はじめに選ばなかったスターターキット。1つにつき1回、${CARD_STARTER_SHOP_PRICE}カードポイント。デッキも1つ増えます`)), kits.map(k => {
     const bought = !!(shop && shop.starters && shop.starters[k.id]);
     return React.createElement("div", {
       key: k.id,
@@ -88388,6 +88440,13 @@ function MonsterHeroGame() {
     } catch {}
     setDebugEntryKnown(true);
   }, [gameState]);
+  const [cardBattleDebugHome, setCardBattleDebugHome] = useState(() => {
+    try {
+      return localStorage.getItem(DEBUG_UNLOCK_KEY) === '1';
+    } catch {
+      return false;
+    }
+  });
   const [debugPassOpen, setDebugPassOpen] = useState(false);
   const [debugPassText, setDebugPassText] = useState('');
   const [debugPassError, setDebugPassError] = useState('');
@@ -88414,6 +88473,7 @@ function MonsterHeroGame() {
     try {
       localStorage.setItem(DEBUG_UNLOCK_KEY, '1');
     } catch {}
+    setCardBattleDebugHome(true);
     setDebugPassOpen(false);
     setDebugPassText('');
     setDebugPassError('');
@@ -109122,7 +109182,7 @@ function MonsterHeroGame() {
       raidJackEventId: raidJackEventId,
       onOpenRaidJack: openRaidJack,
       onOpenAssistantChat: RELEASE_FLAGS.assistantChat === true ? () => setAssistantChatOpen(true) : null,
-      cardBattleVisible: EVENT_REPLAY_RELEASE_FLAGS.cardBattle && cardBattleIntroSeenFlag,
+      cardBattleVisible: EVENT_REPLAY_RELEASE_FLAGS.cardBattle && cardBattleIntroSeenFlag || cardBattleDebugHome,
       onOpenCardBattle: () => {
         setCardOrigin('home');
         setGameState('CARD_TOP');
@@ -114446,7 +114506,7 @@ function MonsterHeroGame() {
       "data-debug-card-battle": true,
       icon: "🃏",
       label: "MFバトルカード",
-      desc: "コンピューター戦とスターター(作っている途中)。カードバトルの新しい保存キー(mh_card_*)だけを書きます",
+      desc: "助手と対戦・デッキ編成・パック(作っている途中)。カードバトルの新しい保存キー(mh_card_*)だけを書きます",
       tone: "save",
       onClick: () => {
         setCardOrigin('debug');

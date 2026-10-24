@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3d980301bbd057c7
+// generated-sha256: a0e5b7cd4be3e31b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-24 22:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-24 22:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -33148,6 +33148,8 @@ function BreederMarketScreen({
   // 2026-09-14・マーケットのタブ乱立を避けるため、最初に用途別の入口を選ぶ。
   // 入口だけこの画面のローカル状態で持ち、購入・交換・商品タブの既存stateは親側をそのまま使う。
   const [marketSection,setMarketSection]=useState(initialSection);
+  // カードポイントの売り場の、みゅあのひとこと(開いたときに1本選ぶ。台詞は data/assistants.js の MUA_CARD_SHOP_LINES)
+  const [cardShopLine]=useState(()=>typeof MUA_CARD_SHOP_LINES!=='undefined'&&MUA_CARD_SHOP_LINES.length?MUA_CARD_SHOP_LINES[Math.floor(Math.random()*MUA_CARD_SHOP_LINES.length)]:{e:'normal',t:''});
   // 開いている購入/交換の確認窓。{ item, balance, stackable, countUnit, grantAmount, grantUnit, confirm(count) }
   const [sheet,setSheet]=useState(null);
   const [sheetQuantity,setSheetQuantity]=useState(1);
@@ -33304,7 +33306,9 @@ function BreederMarketScreen({
     <div data-mh-screen className={SCREEN_SHELL_CLASS}>
       <ScreenHead title={headerTitle} accent="text-amber-400" onBack={handleBack}
         icon={marketSection?<span aria-hidden="true">{sectionMeta[marketSection].emoji}</span>:<ShoppingBag size={20}/>}/>
-      <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="market" compact condition={Number.isFinite(CHEAPEST_GOLD_ITEM_COST)&&gold<CHEAPEST_GOLD_ITEM_COST?'lowGold':null}/></div>
+      <div className="shrink-0 w-full max-w-md mx-auto mb-2">{marketSection==='card'
+        ? <AssistantBubble key="card-shop" assistantId="mua" line={cardShopLine.t} expression={cardShopLine.e} compact/>
+        : <AssistantBubble scene="market" compact condition={Number.isFinite(CHEAPEST_GOLD_ITEM_COST)&&gold<CHEAPEST_GOLD_ITEM_COST?'lowGold':null}/>}</div>
 
       {!marketSection&&<div data-market-top className={`relative ${SCREEN_LIST_CLASS}`}>
         <div aria-hidden="true" className="pointer-events-none absolute inset-x-4 top-1 h-60 rounded-2xl bg-gradient-to-br from-cyan-500/10 via-amber-500/5 to-violet-500/10 blur-2xl"/>
@@ -52631,12 +52635,30 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   }
 
   // ---- 相手えらび(助手・難易度) ----
+  // 対戦の選び方(社長 台帳 #3495「コンピューター戦って表示がやだ」): 助手と対戦/マルチ対戦(できるまで準備中・押せない)
+  if (view === 'mode') {
+    return (
+      <div data-mh-screen data-card-top="mode" className={SCREEN_SHELL_CLASS}>
+        <ScreenHead title="対戦" accent="text-amber-200" onBack={() => setView('top')}/>
+        <div className={`${SCREEN_LIST_CLASS} space-y-3 pb-4`}>
+          <button type="button" data-card-mode-assistant className="mh-button mh-button-primary flex min-h-[96px] w-full flex-col items-center justify-center rounded-2xl px-3 py-3 active:scale-[.98]" onClick={() => { Audio_.se.tap(); setView('foe'); }}>
+            <span className="text-[18px] font-black">助手と対戦</span>
+            <span className="mt-1 text-[12px] font-bold opacity-80">みゅあ・ももすけ・きき・きゅうこ・ドラ・あつ と戦う</span>
+          </button>
+          <button type="button" data-card-mode-multi disabled className="mh-button flex min-h-[96px] w-full flex-col items-center justify-center rounded-2xl border border-white/10 bg-slate-900 px-3 py-3 text-slate-400">
+            <span className="text-[18px] font-black">マルチ対戦</span>
+            <span className="mt-1 rounded-full bg-slate-700 px-2 py-0.5 text-[11px] font-black text-slate-200">準備中</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
   if (view === 'foe') {
     const a = allAssistants.find((x) => x.id === foe.who) || foes[0];
     const line = a ? cardPickLine(a.id, 'challenge', null, () => 0.0) : null;
     return (
       <div data-mh-screen data-card-top="foe" className={SCREEN_SHELL_CLASS}>
-        <ScreenHead title="コンピューター戦" accent="text-amber-200" onBack={() => setView('top')} note="相手の助手と強さをえらびます"/>
+        <ScreenHead title="助手と対戦" accent="text-amber-200" onBack={() => setView('mode')} note="相手の助手と強さをえらびます"/>
         <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
           <div className="grid grid-cols-3 gap-1.5">
             {foes.map((x) => (
@@ -52671,7 +52693,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
           <div className={SCREEN_PANEL_FLAT_CLASS}>
             <div className="text-[12px] font-bold text-slate-300">使うデッキ: <b className="text-white">{activeDeck ? activeDeck.name : 'なし'}</b></div>
             {deckIssues.length > 0 && <div className="mt-1 text-[12px] font-bold text-rose-300">{deckIssues.join('・')}</div>}
-            <div className="mt-1 text-[11px] font-bold text-slate-400">今日もらったカードポイント(コンピューター戦): {save.daily.cpuPoint} / {CARD_CPU_DAILY_MAX}{save.daily.firstWin ? '' : '・今日はじめての勝ちで +50'}</div>
+            <div className="mt-1 text-[11px] font-bold text-slate-400">今日もらったカードポイント(助手と対戦): {save.daily.cpuPoint} / {CARD_CPU_DAILY_MAX}{save.daily.firstWin ? '' : '・今日はじめての勝ちで +50'}</div>
           </div>
           {notice && <p className="text-[12px] font-bold text-amber-200">{notice}</p>}
         </div>
@@ -52782,11 +52804,11 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             <div className="text-[12px] font-bold text-slate-400">いまのデッキ</div>
             <div className="text-[14px] font-black text-white">{activeDeck.name}</div>
             <div className="mt-1 flex gap-1.5">{activeDeck.monsters.map((no) => { const m = cardMonsterOf(db, no); return m ? <img key={no} {...press(no)} src={CARD_IMG(m.img)} alt={m.name} className="w-[22%] rounded-md"/> : null; })}</div>
-            <div className="mt-1 text-[11px] font-bold text-slate-400">戦績(コンピューター戦): {save.record.cpu.win}勝 {save.record.cpu.lose}敗{save.record.cpu.surrender ? `・投了${save.record.cpu.surrender}` : ''}</div>
+            <div className="mt-1 text-[11px] font-bold text-slate-400">戦績(助手と対戦): {save.record.cpu.win}勝 {save.record.cpu.lose}敗{save.record.cpu.surrender ? `・投了${save.record.cpu.surrender}` : ''}</div>
           </div>
         )}
         {notice && <p className="text-[12px] font-bold text-amber-200">{notice}</p>}
-        <button type="button" data-card-cpu className={`${btn} mh-button-primary`} disabled={!activeDeck} onClick={() => { Audio_.se.tap(); setNotice(''); setView('foe'); }}>コンピューター戦</button>
+        <button type="button" data-card-cpu className={`${btn} mh-button-primary`} disabled={!activeDeck} onClick={() => { Audio_.se.tap(); setNotice(''); setView('mode'); }}>対戦</button>
         <div className="grid grid-cols-2 gap-2"><button type="button" data-card-decks className={`${btn} border border-amber-300/50 bg-amber-900/50 text-amber-50`} onClick={() => { Audio_.se.tap(); setNotice(''); setView('decks'); }}>デッキ編成</button><button type="button" data-card-market-open className={`${btn} border border-orange-300/50 bg-orange-900/50 text-orange-50`} disabled={!onOpenMarket} onClick={() => { Audio_.se.tap(); setNotice(''); onOpenMarket && onOpenMarket(); }}>マーケットへ<span className="block text-[10px] font-bold">パック・キット・円盤石</span></button>
           <button type="button" data-card-dex-open className={`${btn} border border-sky-300/50 bg-sky-900/50 text-sky-50`} onClick={() => { Audio_.se.tap(); setNotice(''); setView('dex'); }}>カード図鑑</button>
           {/* 練習試合のやり直しは、ルールの画面の中(ドラの D20「ルールの画面から、いつでもこの練習試合をやり直せる」) */}
@@ -53069,7 +53091,9 @@ const CardDex = ({ db, collection, onBack }) => {
 // ==================== ルールの画面(区切り2) ====================
 // 文は 88-card-rules.jsx の CARD_RULE_PAGES(正本は RULES_SOURCE.md)。練習試合のやり直しもここから(ドラの D20)
 // 「」で囲んだ言葉は途中で折らない(「全モンスター」が「全/モンスター」と折れていた。言葉の切れ目を探す jaWrap は「全」と「モンスター」を別の言葉と見る)
-const cardRuleLine = (t) => String(t).split(/(「[^」]*」)/).map((seg, i) => (/^「/.test(seg) ? <span key={i} className="whitespace-nowrap">{seg}</span> : <React.Fragment key={i}>{jaWrap(seg)}</React.Fragment>));
+// 《》で囲んだ言葉も途中で折らない(《》は画面には出さない)。jaWrap が「準備中」を「準備/中」、「出やすい」を「出/やすい」と分けるため(カゲあつくんの確認)
+const cardRuleLine = (t) => String(t).split(/(「[^」]*」|《[^》]*》)/).map((seg, i) => (/^「/.test(seg) ? <span key={i} className="whitespace-nowrap">{seg}</span>
+  : /^《/.test(seg) ? <span key={i} className="whitespace-nowrap">{seg.slice(1, -1)}</span> : <React.Fragment key={i}>{jaWrap(seg)}</React.Fragment>));
 const CardRules = ({ onBack, onTutorial }) => (
   <div data-mh-screen data-card-rules className={SCREEN_SHELL_CLASS}>
     <ScreenHead title="ルール" accent="text-amber-200" onBack={onBack}/>
@@ -53175,16 +53199,18 @@ const CardShopPacks = ({ db, point, busy, onBuyPack }) => {
               <div className="flex h-[56px] w-[40px] shrink-0 items-center justify-center rounded-md border-2 border-white/60 text-[20px]" style={{ background: `linear-gradient(160deg, ${pack.color}, #1e1b4b)` }}>🎴</div>
               <div className="min-w-0 flex-1">
                 <div className="text-[14px] font-black text-white">{pack.name}</div>
-                <div className="text-[11px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{pack.tech ? `${pack.tech + pack.mon}枚入り(技など${pack.tech}枚・モンスター${pack.mon}枚)` : `${pack.mon}枚入り(3枚とも混血モンスター)`}</div>
+                <div className="text-[11px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{jaWrap(pack.tech ? `${pack.tech + pack.mon}枚入り(技など${pack.tech}枚・モンスター${pack.mon}枚)` : `${pack.mon}枚入り(3枚とも混血モンスター)`)}</div>
                 <button type="button" data-card-shop-rates={pack.id} onClick={() => setRates(rates === pack.id ? null : pack.id)} className="mt-0.5 text-[11px] font-black text-sky-300 underline">出る確率を見る</button>
               </div>
             </div>
             {rates === pack.id && r && (
-              <div data-card-shop-rate-table className="mt-1.5 rounded-lg bg-black/30 p-2 text-[11px] font-bold leading-relaxed text-slate-200">
-                {pack.tech > 0 && <div>技などの枠(1パック{pack.tech}枚): {r.techKinds}種類から同じ確率(1種類 {pct(r.techEach)})。準備中のカードは出ません</div>}
-                <div>モンスターの枠(1パック{pack.mon}枚): 通常 {pack.rarity.normal}%{pack.rarity.kira ? `・キラ ${pack.rarity.kira}%` : ''}{pack.rarity.alt ? `・別絵キラ ${pack.rarity.alt}%` : ''}(通常{r.mons.normal}種{r.mons.kira ? `・キラ${r.mons.kira}種` : ''}{r.mons.alt ? `・別絵キラ${r.mons.alt}種` : ''})。まだ持っていない種族は2倍出やすい</div>
-                {pack.pity && <div>キラも別絵キラも出ないまま{CARD_PACK_PITY_AT}パック開けたら、つぎのパックはキラ以上</div>}
-                <div>だぶったカードはカードポイントになります(技など4枚目から{CARD_DUP_POINT.tech}・モンスター2枚目から{pack.id === 'hybrid' ? CARD_DUP_POINT.hybrid : `${CARD_DUP_POINT.normal}〔キラ${CARD_DUP_POINT.kira}・別絵キラ${CARD_DUP_POINT.alt}〕`})</div>
+              <div data-card-shop-rate-table className="mt-1.5 space-y-0.5 rounded-lg bg-black/30 p-2 text-[11px] font-bold leading-relaxed text-slate-200" style={JA_WRAP_STYLE}>
+                {[
+                  pack.tech > 0 ? `技などの枠(1パック${pack.tech}枚): ${r.techKinds}種類から同じ確率(1種類 ${pct(r.techEach)})。《準備中のカード》は出ません` : null,
+                  `モンスターの枠(1パック${pack.mon}枚): 通常 ${pack.rarity.normal}%${pack.rarity.kira ? `・キラ ${pack.rarity.kira}%` : ''}${pack.rarity.alt ? `・別絵キラ ${pack.rarity.alt}%` : ''}(通常${r.mons.normal}種${r.mons.kira ? `・キラ${r.mons.kira}種` : ''}${r.mons.alt ? `・別絵キラ${r.mons.alt}種` : ''})。まだ持っていない種族は《2倍出やすい》`,
+                  pack.pity ? `キラも別絵キラも出ないまま${CARD_PACK_PITY_AT}パック開けたら、つぎのパックは《キラ以上》` : null,
+                  `だぶったカードはカードポイントになります(技など4枚目から${CARD_DUP_POINT.tech}・モンスター2枚目から${pack.id === 'hybrid' ? CARD_DUP_POINT.hybrid : `${CARD_DUP_POINT.normal}〔キラ${CARD_DUP_POINT.kira}・別絵キラ${CARD_DUP_POINT.alt}〕`})`,
+                ].filter(Boolean).map((t, i) => <div key={i}>{cardRuleLine(t)}</div>)}
               </div>
             )}
             <div className={`mt-2 grid gap-1.5 ${pack.bundle ? 'grid-cols-2' : 'grid-cols-1'}`}>
@@ -53204,8 +53230,8 @@ const CardShopStarters = ({ db, point, busy, starter, shop, onBuyStarter }) => {
   const kits = Object.values(db.starters).filter((k) => !starter || k.id !== starter.kit);
   return (
     <div data-card-shop-starters className="space-y-2 pb-2">
-      {done && <div data-card-shop-starter-done className="rounded-xl border border-emerald-400/40 bg-emerald-950/40 px-3 py-2 text-[12px] font-black text-emerald-200">{done}</div>}
-      <p className="text-[11px] font-bold text-slate-400">はじめに選ばなかったスターターキット。1つにつき1回、{CARD_STARTER_SHOP_PRICE}カードポイント。デッキも1つ増えます</p>
+      {done && <div data-card-shop-starter-done className="rounded-xl border border-emerald-400/40 bg-emerald-950/40 px-3 py-2 text-[12px] font-black text-emerald-200" style={JA_WRAP_STYLE}>{jaWrap(done)}</div>}
+      <p className="text-[11px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap(`はじめに選ばなかったスターターキット。1つにつき1回、${CARD_STARTER_SHOP_PRICE}カードポイント。デッキも1つ増えます`)}</p>
       {kits.map((k) => {
         const bought = !!(shop && shop.starters && shop.starters[k.id]);
         return (
@@ -53485,6 +53511,10 @@ function MonsterHeroGame() {
   // ・合っていれば開き、その端末は覚えて次から聞かない(新しいキー mh_debug_unlocked_v1)
   // ・リポジトリは公開なので、合言葉の文字は書かず、塩+PBKDF2 のハッシュで照らす(作り方: node tools/debug-passphrase-hash.js <合言葉>)
   // ・自動操作のブラウザ(navigator.webdriver)では聞かない。検査・手順書がヘルプの「💊」から開く道を壊さないため
+  // MFバトルカードの HOME の入口を、公開前でもデバッグの人には出す(2026-10-24 社長「デバッグを本実装と同じ画面で作って」台帳 #3495)。
+  // ★デバッグの人の見分け方は、デバッグ設定の合言葉が合った印(DEBUG_UNLOCK_KEY = mh_debug_unlocked_v1)を**読むだけ**。新しく保存はしない。
+  //   ふつうのプレイヤーは合言葉を知らないので、この印を持たず、入口は出ない(公開の印 EVENT_REPLAY_RELEASE_FLAGS.cardBattle が立つまで)
+  const [cardBattleDebugHome,setCardBattleDebugHome]=useState(()=>{try{return localStorage.getItem(DEBUG_UNLOCK_KEY)==='1';}catch{return false;}});
   const [debugPassOpen,setDebugPassOpen]=useState(false);
   const [debugPassText,setDebugPassText]=useState('');
   const [debugPassError,setDebugPassError]=useState('');
@@ -53499,6 +53529,7 @@ function MonsterHeroGame() {
     const ok=await debugPassphraseMatches(debugPassText);
     if(!ok){setDebugPassError('合言葉が違います');return;}
     try{localStorage.setItem(DEBUG_UNLOCK_KEY,'1');}catch{}
+    setCardBattleDebugHome(true);
     setDebugPassOpen(false);setDebugPassText('');setDebugPassError('');
     openDebugSettings();
   };
@@ -70482,7 +70513,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             raidJackVisible={(RELEASE_FLAGS.raidJack===true&&raidJackWindowAt(Date.now())==='open')||raidJackDebugForce}
             raidJackEventId={raidJackEventId} onOpenRaidJack={openRaidJack}
             onOpenAssistantChat={RELEASE_FLAGS.assistantChat===true?()=>setAssistantChatOpen(true):null}
-            cardBattleVisible={EVENT_REPLAY_RELEASE_FLAGS.cardBattle&&cardBattleIntroSeenFlag} onOpenCardBattle={()=>{setCardOrigin('home');setGameState('CARD_TOP');}}
+            cardBattleVisible={(EVENT_REPLAY_RELEASE_FLAGS.cardBattle&&cardBattleIntroSeenFlag)||cardBattleDebugHome} onOpenCardBattle={()=>{setCardOrigin('home');setGameState('CARD_TOP');}}
           />
         )}
         {/* 助手とおしゃべり(2026-10-14)。話す相手は、いま選んでいる助手。返事が来た1往復ごとにその助手の仲良し度(chat)が増える */}
@@ -72616,7 +72647,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   {/* イベント・レイドボス「ジャック」の確認(デバッグ専用。更新履歴・ヘルプには載せない)。実装した段階ごとに、この画面へ確認の入口を足す */}
                   <DebugMenuRow data-debug-raid-jack icon="🎃" label="ジャック確認" desc="定義・期間と回数・端末の記録・サーバー(別のイベントID)の確認。端末の記録を書き換える操作があります" tone="save" onClick={()=>setGameState('RAID_JACK_DEBUG')}/>
                   {/* MFバトルカード(公開の区切りまでは、入口はここだけ。デバッグ専用なので更新履歴・ヘルプには載せない) */}
-                  <DebugMenuRow data-debug-card-battle icon="🃏" label="MFバトルカード" desc="コンピューター戦とスターター(作っている途中)。カードバトルの新しい保存キー(mh_card_*)だけを書きます" tone="save" onClick={()=>{setCardOrigin('debug');setGameState('CARD_TOP');}}/>
+                  <DebugMenuRow data-debug-card-battle icon="🃏" label="MFバトルカード" desc="助手と対戦・デッキ編成・パック(作っている途中)。カードバトルの新しい保存キー(mh_card_*)だけを書きます" tone="save" onClick={()=>{setCardOrigin('debug');setGameState('CARD_TOP');}}/>
                   <button data-debug-species-challenge onClick={async()=>{await loadSpeciesChallengeProgress();setGameState('SPECIES_CHALLENGE_DEBUG');}} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">🧬 種族チャレンジ進行確認<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">種族別の解放・クリア・初回報酬を確認／編集</small></button>
                   {/* 将来つくる独立型ダンジョンRPGの戦闘だけを先に試す試作。入口はここだけで、
                       通常HOME・通常バトル・マスモン管理には出さない。保存・報酬・ランキングへは触れない */}
