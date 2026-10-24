@@ -243,12 +243,16 @@ const tutorialRun = () => {
     if (id === 'guts') return st.phase === 'main' ? { type: 'endAttacks' } : { type: 'guts', hand: [0, 2] };
     if (id === 'guard') return st.pending && !st.pending.evaded ? E.cardGuardOptions(db, st).find((o) => st.players[0].hand[o.hand] === '059') : { type: 'pass' };
     if (id === 'attack') return E.cardAttackOptions(db, st).find((o) => st.players[0].hand[o.hand[0]] === '061');
-    if (id === 'deckEnd') return st.phase === 'main' ? { type: 'endAttacks' } : { type: 'guts', hand: [] };
+    if (id === 'deckEnd') return { type: 'endAttacks' };
+    if (id === 'deckTurn') return { type: 'guts', hand: [] };
     return null;
   };
   let si = 0;
   for (let n = 0; n < 80 && si < S.length; n++) {
     const stg = S[si];
+    // 練習の全部の段で、手札・山札・捨て札・ガッツを合わせて同じ名前が4枚以上にならない(#3478)
+    const cp = E.cardTutorialCopyProblems(db, st);
+    ok(!cp.length, `練習試合の「${stg.id}」で同じカードが4枚以上: ${cp.join('・')}`);
     if (stg.next) { if (stg.onNext && stg.onNext !== 'finish') st = E.cardTutorialMutate(db, st, stg.onNext); si += 1; continue; }
     const cpuTurn = st.pending ? st.pending.defender === 1 : st.active === 1;
     const act = cpuTurn ? E.cardTutorialCpu(db, stg.id, st) : human(stg.id);
