@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 329c9480a34c4da1
+// generated-sha256: 11652dea6a33eb5f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-24 20:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-24 20:56"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -31746,7 +31746,7 @@ const jaWrap = (text) => {
   if (typeof s !== 'string' || !s.includes('\u200B')) return s;
   // 「……」「‥」は手前で折れてしまう(ブラウザは三点リーダーの前を折り目として扱う)。「入れんのじゃ／……」と記号だけが
   // 次の行へ落ちないよう、それを含む12字までのかたまりは折らずに置く(2026-10-24。見えない字は足さない)
-  return s.split('\u200B').map((seg, i) => <React.Fragment key={i}>{i > 0 && <wbr/>}{/[…‥]/.test(seg) && seg.length <= 12 ? <span style={{ whiteSpace: 'nowrap' }}>{seg}</span> : seg}</React.Fragment>);
+  return s.split('\u200B').map((seg, i) => <React.Fragment key={i}>{i > 0 && <wbr/>}{/[…‥]/.test(seg) && seg.length <= 12 ? <span data-ja-keep style={{ whiteSpace: 'nowrap' }}>{seg}</span> : seg}</React.Fragment>);
 };
 // textWrap:'wrap' … 画面全体の text-wrap:pretty(index.html)と anywhere が組み合わさると、語の中へ1字だけ動かすことがある(「スキッ／プ」)ので外す
 const JA_WRAP_STYLE = Object.freeze({ wordBreak: 'keep-all', overflowWrap: 'anywhere', textWrap: 'wrap' });

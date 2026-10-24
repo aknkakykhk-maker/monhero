@@ -239,7 +239,7 @@ const jaWrap = (text) => {
   if (typeof s !== 'string' || !s.includes('\u200B')) return s;
   // 「……」「‥」は手前で折れてしまう(ブラウザは三点リーダーの前を折り目として扱う)。「入れんのじゃ／……」と記号だけが
   // 次の行へ落ちないよう、それを含む12字までのかたまりは折らずに置く(2026-10-24。見えない字は足さない)
-  return s.split('\u200B').map((seg, i) => <React.Fragment key={i}>{i > 0 && <wbr/>}{/[…‥]/.test(seg) && seg.length <= 12 ? <span style={{ whiteSpace: 'nowrap' }}>{seg}</span> : seg}</React.Fragment>);
+  return s.split('\u200B').map((seg, i) => <React.Fragment key={i}>{i > 0 && <wbr/>}{/[…‥]/.test(seg) && seg.length <= 12 ? <span data-ja-keep style={{ whiteSpace: 'nowrap' }}>{seg}</span> : seg}</React.Fragment>);
 };
 // textWrap:'wrap' … 画面全体の text-wrap:pretty(index.html)と anywhere が組み合わさると、語の中へ1字だけ動かすことがある(「スキッ／プ」)ので外す
 const JA_WRAP_STYLE = Object.freeze({ wordBreak: 'keep-all', overflowWrap: 'anywhere', textWrap: 'wrap' });
