@@ -1,5 +1,5 @@
 {
- "note": "社長から 2026-10-24 に受け取った混血(派生)モンスターカード16枚。**絵は英語版**(名前・特徴の札 G/A/W が英語)。番号は英語版の番号(C-051〜)で、日本語版の派生モンスターの番号(C-010 ハムライガー など)とは別。日本語の名前は分かったものだけ入れ、ほかは null。main/sub は絵の左上(MAIN)と右下(SUB)の種族。数字はカード部が拡大して確かめた",
+ "note": "社長から 2026-10-24 に受け取った混血(派生)モンスターカード16枚。**絵は英語版**(名前・特徴の札 G/A/W が英語)。番号は英語版の番号(C-051〜)で、日本語版の派生モンスターの番号(C-010 ハムライガー など)とは別。日本語の名前は社長が決めた(台帳 #3418)。絵の中の英語(名前・MAIN/SUB・G/A/W)は、英語版37枚と同じく消して日本語(メイン/サブ・地上/空中/水中)にする。main/sub は絵の左上(MAIN)と右下(SUB)の種族。数字はカード部が拡大して確かめた",
  "category": "派生モンスター",
  "monster": [
   {
@@ -14,11 +14,11 @@
    "main_en": "TIGER",
    "sub_en": "GALI",
    "img": "C051.jpg",
-   "name_source": "案(英語版の名前をカタカナにした)"
+   "name_source": "社長が決めた(台帳 #3418)"
   },
   {
    "no": "C-052",
-   "name": "アクアマスク",
+   "name": "アクアリウス",
    "name_en": "AQUA MASK",
    "type": "空中",
    "type_en": "A",
@@ -28,11 +28,11 @@
    "main_en": "GALI",
    "sub_en": "JELL",
    "img": "C052.jpg",
-   "name_source": "案(英語版の名前をカタカナにした)"
+   "name_source": "社長が決めた(台帳 #3418)"
   },
   {
    "no": "C-053",
-   "name": "グリーンスエゾー",
+   "name": "プラムラー",
    "name_en": "GREEN SUEZO",
    "type": "地上",
    "type_en": "G",
@@ -42,11 +42,11 @@
    "main_en": "SUEZO",
    "sub_en": "PLANT",
    "img": "C053.jpg",
-   "name_source": "案(英語版の名前をカタカナにした)"
+   "name_source": "社長が決めた(台帳 #3418)"
   },
   {
    "no": "C-054",
-   "name": "ストライカー",
+   "name": "ストライクリパー",
    "name_en": "STRIKER",
    "type": "地上",
    "type_en": "G",
@@ -56,11 +56,11 @@
    "main_en": "NAGA",
    "sub_en": "TIGER",
    "img": "C054.jpg",
-   "name_source": "案(英語版の名前をカタカナにした)"
+   "name_source": "社長が決めた(台帳 #3418)"
   },
   {
    "no": "C-055",
-   "name": "イビルハム",
+   "name": "ダークハム",
    "name_en": "EVIL HARE",
    "type": "地上",
    "type_en": "G",
@@ -70,7 +70,7 @@
    "main_en": "HARE",
    "sub_en": "MONOL",
    "img": "C055.jpg",
-   "name_source": "案(英語版の名前をカタカナにした)"
+   "name_source": "社長が決めた(台帳 #3418)"
   },
   {
    "no": "C-056",
@@ -84,11 +84,11 @@
    "main_en": "MOCCHI",
    "sub_en": "JOKER",
    "img": "C056.jpg",
-   "name_source": "元?(検索の抜粋で「ヘルファット」。英語版は HELL PIERROT。要確認)"
+   "name_source": "社長が決めた(台帳 #3418)"
   },
   {
    "no": "C-057",
-   "name": "スケイル",
+   "name": "ウロコゲル",
    "name_en": "SCALES",
    "type": "地上",
    "type_en": "G",
@@ -98,11 +98,11 @@
    "main_en": "JELL",
    "sub_en": "DINO",
    "img": "C057.jpg",
-   "name_source": "案(英語版の名前をカタカナにした)"
+   "name_source": "社長が決めた(台帳 #3418)"
   },
   {
    "no": "C-058",
-   "name": "ニューリーフ",
+   "name": "ワカクサケンザイ",
    "name_en": "NEW LEAF",
    "type": "空中",
    "type_en": "A",
@@ -112,7 +112,7 @@
    "main_en": "MONOL",
    "sub_en": "PLANT",
    "img": "C058.jpg",
-   "name_source": "案(英語版の名前をカタカナにした)"
+   "name_source": "社長が決めた(台帳 #3418)"
   },
   {
    "no": "C-059",
@@ -126,7 +126,7 @@
    "main_en": "HENGER",
    "sub_en": "DRAGON",
    "img": "C059.jpg",
-   "name_source": "案(英語版の名前をカタカナにした)"
+   "name_source": "社長が決めた(台帳 #3418)"
   },
   {
    "no": "C-060",
@@ -140,7 +140,7 @@
    "main_en": "MEW",
    "sub_en": "HARE",
    "img": "C060.jpg",
-   "name_source": "案(英語版の名前をカタカナにした)"
+   "name_source": "社長が決めた(台帳 #3418)"
   },
   {
    "no": "C-060C",
@@ -160,7 +160,7 @@
   },
   {
    "no": "C-061",
-   "name": "クイーンプラント",
+   "name": "ベニヒメソウ",
    "name_en": "QUEEN PLANT",
    "type": "地上",
    "type_en": "G",
@@ -170,11 +170,11 @@
    "main_en": "PLANT",
    "sub_en": "PIXIE",
    "img": "C061.jpg",
-   "name_source": "案(英語版の名前をカタカナにした)"
+   "name_source": "社長が決めた(台帳 #3418)"
   },
   {
    "no": "C-062",
-   "name": "パープルワーム",
+   "name": "ムラサキチュウ",
    "name_en": "PURPLE WORM",
    "type": "地上",
    "type_en": "G",
@@ -184,7 +184,7 @@
    "main_en": "WORM",
    "sub_en": "NAGA",
    "img": "C062.jpg",
-   "name_source": "案(英語版の名前をカタカナにした)"
+   "name_source": "社長が決めた(台帳 #3418)"
   },
   {
    "no": "C-063",
@@ -198,7 +198,7 @@
    "main_en": "DRAGON",
    "sub_en": "DURAHAN",
    "img": "C063.jpg",
-   "name_source": "案(英語版の名前をカタカナにした)"
+   "name_source": "社長が決めた(台帳 #3418)"
   },
   {
    "no": "C-064",
@@ -212,7 +212,7 @@
    "main_en": "DURAHAN",
    "sub_en": "GOLEM",
    "img": "C064.jpg",
-   "name_source": "案(英語版の名前をカタカナにした)"
+   "name_source": "社長が決めた(台帳 #3418)"
   },
   {
    "no": "C-065",
@@ -226,7 +226,7 @@
    "main_en": "ZILLA",
    "sub_en": "JELL",
    "img": "C065.jpg",
-   "name_source": "案(英語版の名前をカタカナにした)"
+   "name_source": "社長が決めた(台帳 #3418)"
   }
  ],
  "skills": []
