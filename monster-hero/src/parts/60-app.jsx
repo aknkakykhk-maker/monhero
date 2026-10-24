@@ -3,6 +3,15 @@ function MonsterHeroGame() {
   // モンビーを開いているか(演奏中も含む)。判定の理由は下の rhythmScreenOpen のところに書いてある。
   // ★定義がここにあるのは、すぐ下の setGameState から使うため。
   const isRhythmScreen = state => typeof state === 'string' && state.startsWith('RHYTHM_');
+  // MFバトルカードを開いているか(対戦中も含む)。カードの画面は全部 CARD_ で始める。
+  // モンビーと同じく、一覧で持たず名前の頭で見る(一覧から漏れた画面で周回がバトルへ飛んだ事故が2回ある。docs/spec/CARD_BATTLE.md 5-3)
+  const isCardScreen = state => typeof state === 'string' && state.startsWith('CARD_');
+  // カードのトップの「マーケット」から開いたマーケット(BREEDER_MARKET)にいるあいだも、カードの中と同じに扱う。
+  // ★state ではなく控え(ref)で持つ。押した瞬間に setGameState が読むので、次の描画を待つと1描画ぶん古い判断になる(下の 2026-09-14 と同じ型)
+  const cardMarketEntryRef = useRef(false);
+  const isCardRunScreen = state => isCardScreen(state) || (state === 'BREEDER_MARKET' && cardMarketEntryRef.current === true);
+  // 裏でクイック∞周回を続けたまま開いていてよい画面か(モンビー・MFバトルカード)
+  const isBackgroundRunScreen = state => isRhythmScreen(state) || isCardRunScreen(state);
   // 「いまモンビーを開いているか」の控え。advanceRunStage が呼ばれた時点の値で判断するために使う。
   const runBackgroundAllowedRef = useRef(false);
   // 画面を切り替える唯一の入口。★必ずこれを通す(useStateのsetterを直接呼ばない)。
@@ -19,7 +28,7 @@ function MonsterHeroGame() {
   //   (WAVEの切り替わりに重なったときだけなので「たまに」になる。2026-09-12の
   //    「モンビー中にオプションに行くとたまにバトルに飛ばされる」と同じ型の、逆向きの事故)
   // ここで控えも一緒に更新すれば、切り替えたその瞬間から正しい判断になる。
-  const setGameState = (next) => { runBackgroundAllowedRef.current = isRhythmScreen(next); setGameStateRaw(next); };
+  const setGameState = (next) => { runBackgroundAllowedRef.current = isBackgroundRunScreen(next); setGameStateRaw(next); };
   const [debugThrowScreenError, setDebugThrowScreenError] = useState(false); // デバッグ設定から画面エラーの受け止めを試すためだけの印
   const [battleMenuTab, setBattleMenuTab] = useState('difficulty');
   // バトルメニューで選んでいるモード。挑戦を始めた時点の値が runMode に固定される
@@ -4127,8 +4136,14 @@ function MonsterHeroGame() {
   //  ・タブが見えていないときは、これまでどおり stopAllAuto で止まる
   const rhythmBackgroundRun = runStage !== null && autoRepeat === true && isQuickMode(runMode)
     && RHYTHM_BACKGROUND_RUN_SCREENS.includes(gameState);
-  // ランの画面を描かずに段階だけ進めてよいか。モンビーを開いている間はそのまま進める
-  const runBackgroundAllowed = rhythmScreenOpen;
+  // MFバトルカードを開いているか(対戦中・カードから開いたマーケットも含む)。開いている間はランが進んでも画面を切り替えない
+  const cardScreenOpen = isCardRunScreen(gameState);
+  // MFバトルカードを開いたまま裏で周回してよい状態か(docs/spec/CARD_BATTLE.md 5-3)。
+  //  ・クイックの∞周回だけ(モンビーと同じ)
+  //  ・対戦中(CARD_BATTLE)も回す。演奏と違ってターン制で、1/60秒ごとの判定が無いので割り込まれても困らない
+  const cardBackgroundRun = runStage !== null && autoRepeat === true && isQuickMode(runMode) && cardScreenOpen;
+  // ランの画面を描かずに段階だけ進めてよいか。モンビー・MFバトルカードを開いている間はそのまま進める
+  const runBackgroundAllowed = rhythmScreenOpen || cardScreenOpen;
   // ★advanceRunStage は setTimeout や await の後から呼ばれる。
   //   そこで値をそのまま読むと「バトル画面で作られたときの古い値」を掴んでしまい、
   //   モンビーへ移った直後に敵を倒した瞬間、画面がバトルへ飛び戻る
@@ -4150,7 +4165,7 @@ function MonsterHeroGame() {
   // ランから抜けた(HOMEへ戻った・やり直した)ときに段階を捨てる
   const clearRunStage = () => { runStageRef.current = null; setRunStage(null); };
   // ランを進めてよいか。ランの画面を描いているとき、またはモンビーの非演奏画面で裏回し中。
-  const runProgressAllowed = runStage !== null && (gameState === runStage || rhythmBackgroundRun);
+  const runProgressAllowed = runStage !== null && (gameState === runStage || rhythmBackgroundRun || cardBackgroundRun);
   // モンビーからクイックのバトルへ戻る。ランの段階そのものへ戻すので、続きから遊べる
   // 曲えらびの一覧をどこまで見ていたか。全国ランキングや遊びかたを見て戻ったとき、
   // その場所から続けられるようにするための控え(保存はしない・リロードで消えてよい)
@@ -4614,7 +4629,9 @@ function MonsterHeroGame() {
   // MFバトルカードへどこから入ったか('debug' … デバッグ設定から / 'home' … HOME の入口・公開のお話のあと)。戻るボタンの行き先と、デバッグの道具を出すかに使う
   const [cardOrigin, setCardOrigin] = useState('home');
   // MFバトルカードの「マーケットへ」から入ったときだけ、マーケットに「カードポイント」の売り場を出す(デバッグ専用のあいだ。区切り2)
-  const [cardMarketEntry, setCardMarketEntry] = useState(false);
+  const [cardMarketEntry, setCardMarketEntryRaw] = useState(false);
+  // ★控え(冒頭の cardMarketEntryRef)も同時に入れる。setGameState('BREEDER_MARKET') がすぐあとに読むので、描画を待たない
+  const setCardMarketEntry = (next) => { cardMarketEntryRef.current = next === true; setCardMarketEntryRaw(next === true); };
   const [cardShopState, setCardShopState] = useState(null); // { point, starter, shop }(売り場に出す分だけ。保存の正本は mh_card_*)
   const [cardPackOpen, setCardPackOpen] = useState(null);   // パックを開ける画面に渡す結果 { packId, packs, dupPoint, cost }
   const rhythmEventStorySeenRef = useRef(null);
@@ -5146,6 +5163,47 @@ function MonsterHeroGame() {
   const quickToRhythmButtonNode = gameState==='BATTLE'&&isQuickMode(runMode)&&autoRepeat===true
     ? <button data-quick-to-rhythm type="button" onClick={openRhythmDemo} aria-label="周回を続けたままモンヒロビートへ" title="周回を続けたままモンヒロビートへ" className="shrink-0 min-h-[24px] min-w-[42px] rounded-md border border-fuchsia-300 bg-fuchsia-700 px-1.5 font-black text-[7px] leading-[9px] text-fuchsia-50 active:scale-90"><span className="block text-[11px] leading-none">🎵</span><span className="mt-0.5 block text-[6px] leading-[8px]">モンヒロ<br/>ビート</span></button>
     : null;
+  // ∞周回中だけ出す「周回を止めずに MFバトルカードへ」の入口(docs/spec/CARD_BATTLE.md 5-3)。モンビーへの入口と同じ作り。
+  // HOME の入口は returnToHome を通るので周回が終わる。ここから入れば、周回を続けたままカードのトップへ移る。
+  // 出すのは HOME に MFバトルカードの入口が出る人だけ(公開してお話を見た人・デバッグの人。HOME の cardBattleVisible と同じ条件)
+  const cardBattleEntryVisible = (EVENT_REPLAY_RELEASE_FLAGS.cardBattle&&cardBattleIntroSeenFlag)||cardBattleDebugHome;
+  const openCardBattleKeepRun = () => { setCardOrigin('home'); setGameState('CARD_TOP'); };
+  const quickToCardButtonNode = gameState==='BATTLE'&&isQuickMode(runMode)&&autoRepeat===true&&cardBattleEntryVisible
+    ? <button data-quick-to-card type="button" onClick={openCardBattleKeepRun} aria-label="周回を続けたままMFバトルカードへ" title="周回を続けたままMFバトルカードへ" className="shrink-0 min-h-[24px] min-w-[42px] rounded-md border border-amber-300 bg-amber-700 px-1.5 font-black text-[7px] leading-[9px] text-amber-50 active:scale-90"><span className="block text-[11px] leading-none">🃏</span><span className="mt-0.5 block text-[6px] leading-[8px]">バトル<br/>カード</span></button>
+    : null;
+  // MFバトルカードに渡す、裏の周回のようす(docs/spec/CARD_BATTLE.md 5-3「知らせの出し方」)。周回を一度もしていなければ null。
+  // info はモンヒロビートのモードえらびの帯(RhythmQuickRunPill)に渡すものと同じ形。
+  // ★描くときに呼ぶ関数にする(見込み報酬の quickRunPendingRewards は、この行より下で定義されている。renderQuickRunBattleBand と同じ理由)
+  const cardQuickRunView = () => {
+    if (!quickRunProgress) return null;
+    const finished = !!quickRunProgress.finished;
+    const pending = finished ? { xp: 0, gold: 0 } : quickRunPendingRewards();
+    return {
+      live: cardBackgroundRun,
+      loops: quickRunProgress.loops,
+      stopped: finished || !cardBackgroundRun,
+      xp: Math.floor(quickRunProgress.xp + pending.xp),
+      gold: Math.floor(quickRunProgress.gold + pending.gold),
+      info: { wave, loops: quickRunProgress.loops, finished, catchingUp: false, reason: finished ? quickRunFinishReasonText(quickRunProgress.reason) : '',
+        canRestart: finished && !quickRunResumable && !!repeatTemplateForNewRun(), processing: resultProcessing,
+        canResume: finished && quickRunResumable },
+    };
+  };
+  // MFバトルカードのトップ(デッキ編成・図鑑・ルールなどトップの中の画面も)の上に出す、裏の周回の帯。
+  // モンヒロビートのモードえらびと同じ帯(RhythmQuickRunPill)に、獲得ダイヤ・獲得経験値と「⚔ バトルへ」を足す。
+  // 対戦中(CARD_BATTLE)は出さない(盤のヘッダーに「⚔ ◯周目」だけ。CardBattleBoard の quickRun)
+  const renderCardQuickRunStrip = () => {
+    if (gameState !== 'CARD_TOP') return null;
+    const view = cardQuickRunView();
+    if (!view) return null;
+    return (
+      <div data-card-quick-run={view.stopped ? 'stopped' : 'live'} className="relative z-20 flex shrink-0 items-center gap-1.5 border-b border-fuchsia-400/25 bg-slate-950/95 px-2 py-1">
+        <RhythmQuickRunPill info={view.info} onRestart={() => startQuickRunFromRhythm()} onResume={() => resumeQuickRunFromRhythm()} widthClass="min-w-0 flex-1"/>
+        {!view.info.finished && <small data-card-quick-run-gain className="shrink-0 text-[10px] font-black text-slate-300">ダイヤ+{view.gold.toLocaleString()}・経験値+{view.xp.toLocaleString()}</small>}
+        {view.live && <button type="button" data-card-quick-run-back onClick={() => { setCardBgm(null); returnToBackgroundRun(); }} className="min-h-[32px] shrink-0 rounded-full border border-fuchsia-300/60 bg-fuchsia-800/70 px-2.5 text-[11px] font-black text-fuchsia-50 active:scale-95">⚔ バトルへ</button>}
+      </div>
+    );
+  };
   // ===== ∞周回の進捗を、バトル画面の空いているところにも出す =====
   // 超省エネは演出を出さないぶん画面が大きく空くので、そこへ積み上がりを置く
   // (2026-09-07・ユーザー指示「無限周回時の空いてるスペースにも
@@ -5317,7 +5375,7 @@ function MonsterHeroGame() {
     if (key === '__keep_battle_bgm__' && bgmSuspendedByRhythmRef.current) {
       key = bgmKeyForState(gameState, wave, enemy?.id, (waveHistory||[]).length > 0, hp <= 0 || gaveUp, false);
     }
-    bgmSuspendedByRhythmRef.current = rhythmScreenOpen;
+    bgmSuspendedByRhythmRef.current = rhythmScreenOpen || cardScreenOpen;
     // ★次に鳴る曲も読んでおく。AUTO中の「直前の曲を続ける」で下のreturnへ入る場面でも
     //   読んでおきたいので、鳴らす処理より先に呼ぶ
     bgmPreloadKeys(gameState, wave).forEach((next) => Audio_.preloadBGM(next));
@@ -5340,14 +5398,18 @@ function MonsterHeroGame() {
     if (key && eventId && prev && prev.id === eventId && prev.key !== key) Audio_.fadeToBGM(key, EVENT_BGM_FADE_MS);
     else if (key) Audio_.playBGM(key);
     else Audio_.stopBGM();
-  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen, eventLineBgm, cardBgm]);
+  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen, cardScreenOpen, eventLineBgm, cardBgm]);
 
   // SE/BGMそれぞれの音量をAudioエンジンへ反映
   // 超省エネではBGMを選んで鳴らしてもSEだけは常に0。保存済みSE音量そのものは変更しない。
   // モンビーを開いている間は、裏で回っているバトルのSEを鳴らさない。
   // 曲の試聴・演奏と重なると邪魔になるため(超省エネと同じ考え方)。
   // 音量の保存値そのものは変えないので、モンビーを出れば元の音量へ戻る
-  useEffect(() => { Audio_.setSeVolume((ultraEcoSession || rhythmScreenOpen) ? 0 : seVolume); }, [seVolume, ultraEcoSession, rhythmScreenOpen]);
+  useEffect(() => { Audio_.setSeVolume(((ultraEcoSession && !cardScreenOpen) || rhythmScreenOpen) ? 0 : seVolume); }, [seVolume, ultraEcoSession, rhythmScreenOpen, cardScreenOpen]);
+  // MFバトルカードにいるあいだは、裏の周回のバトルの効果音だけを止める(docs/spec/CARD_BATTLE.md 5-3「音」)。
+  // カードも同じ効果音を使うので、上の音量(0)では止めない。カードの画面は Audio_.fgSe から鳴らすので、この印を受けない。
+  // 超省エネの「効果音を0にする」も、カードの画面にいるあいだは外す(カードの音まで消えるため)。音量の保存値は変えない
+  useEffect(() => { if (Audio_.setBackgroundSeQuiet) Audio_.setBackgroundSeQuiet(cardScreenOpen); }, [cardScreenOpen]);
   useEffect(() => { Audio_.setBgmVolume(bgmVolume); }, [bgmVolume]);
   // 「音が出ないとき」を開いているあいだだけ、出口の状態と実際に出ている音を見張る。
   // 閉じたら必ず止める(鳴らしているあいだ中ずっと測り続けない)
@@ -9347,6 +9409,51 @@ function MonsterHeroGame() {
       bondParticipantMasuIds: quickAllyMasuIds,
     });
     return awarded ? { ...awarded, quickDifficulty } : null;
+  };
+  // ===== MFバトルカードの1戦ぶんを、クイック周回の周回クリアとして配る(docs/spec/CARD_BATTLE.md 5-3・台帳 #3484) =====
+  // ・裏で∞周回を回したままカードへ来ているとき … モンヒロビートの1曲と同じ。いま回している周回へ入れ、
+  //   その周は「クリアした」ことにして次の周から始める(帯の「◯周目」も進む)
+  // ・回していないとき … プロのランぶんと同じく、AUTO設定のクイックへ入れる(awardBackQuickLoops。これまでどおり)
+  // ★「回しているか」は控え(ref)で見る。対戦の結果は setTimeout のあとから呼ばれるので、値で読むと古い
+  const cardQuickRunLive = () => runStageRef.current != null && autoRepeatRef.current === true && isQuickMode(runMode)
+    && !runResultFinishedRef.current && !!quickRunProgressRef.current && !quickRunProgressRef.current.finished;
+  // カードから開いたマーケットの印は、カードとマーケットの外へ出たら下ろす(ふつうにマーケットへ来たときにカードの中と数えない)
+  useEffect(() => { if (gameState !== 'BREEDER_MARKET' && !isCardScreen(gameState) && cardMarketEntryRef.current) setCardMarketEntry(false); }, [gameState]);
+  // MFバトルカードの「戻る」。裏で周回を回したまま来ていたら、モンヒロビートの「戻る」(exitRhythmSongSelect)と同じく、
+  // そこまでの報酬を入れて周回を締めてから出る(締めずに出ると、ランが宙ぶらりんのまま残る)
+  const cardExitingRunRef = useRef(false);
+  const exitCardBattle = async () => {
+    const toDebug = cardOrigin === 'debug';
+    setCardBgm(null); setCardOrigin('home');
+    if (runStageRef.current != null) {
+      if (cardExitingRunRef.current) return;
+      cardExitingRunRef.current = true;
+      try { if (cardQuickRunLive()) await handleGiveUp({ silent: true }); } catch (_) {}
+      cardExitingRunRef.current = false;
+      returnToHome();
+      if (toDebug) setGameState('DEBUG_SETTINGS');
+      return;
+    }
+    setGameState(toDebug ? 'DEBUG_SETTINGS' : 'HOME');
+  };
+  const awardCardQuickLoops = async (loops) => {
+    if (!(loops > 0)) return null;
+    if (!cardQuickRunLive()) return awardBackQuickLoops(loops);
+    const awarded = await awardRhythmPlayRunLoops(loops, RHYTHM_PLAY_RUN_LOOP_SCALE, { cleared: true, baseLoops: loops });
+    if (!awarded) return null;
+    // 限界突破・次の周の始め方は、モンヒロビートの1曲ぶん(RhythmTapTest の onComplete)とまったく同じ
+    try { await executeAutoRepeatBreakthroughs(autoRepeatBondAwardMasuIdsRef.current); } catch (_) {}
+    const repeat = repeatTemplateForNewRun();
+    if (repeat) {
+      const started = startRunFromRepeatTemplate(repeat);
+      if (started.ok) {
+        autoRepeatStartingRef.current = false;
+        autoBattleRef.current = true;
+        setAutoBattle(true);
+        setAutoTurnCycle(n => n + 1);
+      } else stopAllAuto('error');
+    }
+    return { ...awarded, quickDifficulty: difficulty, live: true };
   };
   // ジャック戦のぶん。周回数は使ったターン数×2(raidJackQuickLoops)。デバッグの強制表示(別のイベントID)の戦いには配らない
   const awardRaidJackQuickLoops = async (turnsUsed) => awardBackQuickLoops(raidJackQuickLoops(turnsUsed));
@@ -17142,11 +17249,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       {/* AUTO∞の超省エネ中は、BATTLEから中間画面・CHAMPION・次周まで同じ暗さを保つ。 */}
       {/* モンビーを開いている間は外す。曲えらびや譜面まで暗いままだと遊べない
           (超省エネはバトルを見ないための暗幕なので、見る画面へ移ったら役目が終わる) */}
-      {ultraEcoSession&&!rhythmScreenOpen&&<div data-ultra-eco-session-dimmer className="fixed inset-0 bg-black/55 pointer-events-none" style={{zIndex:2147483646}} aria-hidden="true"/>}
+      {ultraEcoSession&&!rhythmScreenOpen&&!cardScreenOpen&&<div data-ultra-eco-session-dimmer className="fixed inset-0 bg-black/55 pointer-events-none" style={{zIndex:2147483646}} aria-hidden="true"/>}
       {/* 画面の揺れはアプリ全体にかかるので、モンビーを開いている間は掛けない。
           裏でバトルが進んでいるだけなのに、曲えらびや演奏の画面まで揺れてしまう
           (2026-09-06・ユーザー指摘「演出が残ってた（画面が揺れるなど）」) */}
-      <div className="relative z-10 h-full flex flex-col" style={screenShake&&!ecoBattleView&&!rhythmScreenOpen&&battleFxSettings.shake!=='OFF'?{animation:bigShake?'mooQuake 750ms ease-in-out':'screenShake 450ms ease-in-out'}:undefined}>
+      <div className="relative z-10 h-full flex flex-col" style={screenShake&&!ecoBattleView&&!rhythmScreenOpen&&!cardScreenOpen&&battleFxSettings.shake!=='OFF'?{animation:bigShake?'mooQuake 750ms ease-in-out':'screenShake 450ms ease-in-out'}:undefined}>
 
         {/* HOME: 背景・将来のマスモン・施設操作・情報UIの順に重ねる */}
         {gameState==='HOME'&&(
@@ -19423,7 +19530,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onClose:()=>setRaidJackDetailMon(null),accent:'indigo',readOnly:true,
             label:`${raidJackDetailMon.name}の詳細`,
           })}</>)}
-        {(gameState==='CARD_TOP'||gameState==='CARD_BATTLE'||(gameState==='CARD_PACK_OPEN'&&!cardPackOpen))&&(<CardBattleScreen screen={gameState} onNavigate={setGameState} onExit={()=>{setCardBgm(null);setCardOrigin('home');setGameState(cardOrigin==='debug'?'DEBUG_SETTINGS':'HOME');}} exitLabel={cardOrigin==='debug'?'デバッグ設定へ戻る':'HOMEへ戻る'} seenStoryIds={rhythmEventStorySeen||[]} debug={cardOrigin==='debug'} onBgm={setCardBgm} onQuickLoops={awardBackQuickLoops} onOpenMarket={()=>{setCardMarketEntry(true);setMarketExchangeError('');void loadCardShop();setGameState('BREEDER_MARKET');}}
+        {renderCardQuickRunStrip()}
+        {(gameState==='CARD_TOP'||gameState==='CARD_BATTLE'||(gameState==='CARD_PACK_OPEN'&&!cardPackOpen))&&(<CardBattleScreen screen={gameState} onNavigate={setGameState} onExit={()=>{void exitCardBattle();}} exitLabel={cardOrigin==='debug'?'デバッグ設定へ戻る':'HOMEへ戻る'} seenStoryIds={rhythmEventStorySeen||[]} debug={cardOrigin==='debug'} onBgm={setCardBgm} onQuickLoops={awardCardQuickLoops}
+          quickRun={cardQuickRunView()} onOpenMarket={()=>{setCardMarketEntry(true);setMarketExchangeError('');void loadCardShop();setGameState('BREEDER_MARKET');}}
           topAssistant={cardTopAssistant}
           bgmPreview={{toggle:toggleBgmPreview,playing:previewTrackId}}
           /* ランキングへ送るのは、公開してから・デバッグでない人だけ(台帳 #3513「公開前は、デバッグの人の記録も送らない」) */
@@ -21168,7 +21277,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             kikiCardBonus={kikiCardBonus} liteBattleView={liteBattleView} mainHero={mainHero} openHelp={openHelp}
             ownedUniques={ownedUniques} pendingCard={pendingCard} pendingCardGuts={pendingCardGuts} popups={popups}
             previewLocalBoosts={previewLocalBoosts} processTurn={processTurn}
-            quickRhythmIntroVisible={quickRhythmIntroVisible} quickToRhythmButtonNode={quickToRhythmButtonNode}
+            quickRhythmIntroVisible={quickRhythmIntroVisible} quickToRhythmButtonNode={quickToRhythmButtonNode} quickToCardButtonNode={quickToCardButtonNode}
             renderQuickRunBattleBand={renderQuickRunBattleBand} runMode={runMode} safeDifficulty={safeDifficulty}
             score={score} selectedCardGuts={selectedCardGuts} selectedCards={selectedCards}
             setCardAssignments={setCardAssignments} setDragState={setDragState} setFocusedCard={setFocusedCard}
@@ -22703,7 +22812,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
       )}
 
       {/* GAME OVER */}
-      {hp<=0&&!debugBattle&&!rhythmScreenOpen&&(
+      {hp<=0&&!debugBattle&&!rhythmScreenOpen&&!cardScreenOpen&&(
         <GameOverScreen
           finalRewardSummary={finalRewardSummary} handleRetry={handleRetry}
           masuRegisterButtonNode={masuRegisterButtonNode} resultActionPending={resultActionPending}
@@ -22712,7 +22821,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
         />
       )}
 
-      {gaveUp&&!debugBattle&&!rhythmScreenOpen&&(
+      {gaveUp&&!debugBattle&&!rhythmScreenOpen&&!cardScreenOpen&&(
         <GaveUpScreen
           finalRewardSummary={finalRewardSummary} handleRetry={handleRetry}
           masuRegisterButtonNode={masuRegisterButtonNode} resultActionPending={resultActionPending}
@@ -22742,7 +22851,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
         ?<RaidJackIntro enabled={battleFxEffective.waveIntro!=='OFF'&&gameState==='BATTLE'&&!!enemy} enemyName={enemy?.name} title={battleModeInfo(runMode).short} tier={enemy?.raidJackPumpkin?1:(Number(String(enemy?.raidJackTier||'').slice(1))||1)} friendly={enemy?.raidJackPumpkin===true}/>
         :<WaveIntro enabled={battleFxEffective.waveIntro!=='OFF'&&gameState==='BATTLE'&&!!enemy} wave={wave} enemyName={enemy?.name} title={''}/>}
       <EnemyDefeatFx fx={gameState==='BATTLE'?defeatFx:null}/>
-      {effect&&!rhythmScreenOpen&&(<div className="fixed inset-0 flex flex-col items-center justify-center pointer-events-none text-center p-8 overflow-hidden" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.96)',zIndex:70000}}>
+      {effect&&!rhythmScreenOpen&&!cardScreenOpen&&(<div className="fixed inset-0 flex flex-col items-center justify-center pointer-events-none text-center p-8 overflow-hidden" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.96)',zIndex:70000}}>
         {effect.type==='unique'&&(
           <>
             <div className="absolute inset-0" style={{background:'radial-gradient(circle at 50% 42%, rgba(168,85,247,0.5) 0%, rgba(99,102,241,0.35) 35%, rgba(0,0,0,0) 68%)', animation:'auraPulse 600ms ease-out infinite'}}></div>

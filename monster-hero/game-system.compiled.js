@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: bf012c1f720725f6
+// source-sha256: 75b440f8a7ea5a4c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-25 07:01";
+const BUILD_DATE = "2026-10-25 07:08";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -6809,6 +6809,7 @@ const Audio_ = (() => {
     bgmVolumePct = 0,
     seVolumePct = 0,
     pageHidden = false;
+  let backgroundSeQuiet = false;
   let enabled = false;
   const activeRhythmGains = new Set();
   const rhythmBuffersInUse = new Set();
@@ -7641,7 +7642,7 @@ const Audio_ = (() => {
     if (enabled && src) loadBuffer(src).catch(() => {});
   };
   const playSeFile = async src => {
-    if (!enabled || !src) return null;
+    if (!enabled || !src || backgroundSeQuiet) return null;
     await ensure();
     if (!Tone || !seBus) return null;
     let buffer = null;
@@ -7873,7 +7874,10 @@ const Audio_ = (() => {
     if (enabled && key === currentKey && !bgmSource && !jingleSource) playBGM(key);
   };
   const isContextRunning = () => !!audioCtx && audioCtx.state === 'running';
-  const se = {
+  const setBackgroundSeQuiet = on => {
+    backgroundSeQuiet = !!on;
+  };
+  const fgSe = {
     trainingDice: async () => {
       if (!enabled) return;
       await ensure();
@@ -8671,6 +8675,7 @@ const Audio_ = (() => {
       }, 2200);
     }
   };
+  const se = Object.fromEntries(Object.entries(fgSe).map(([name, play]) => [name, (...args) => backgroundSeQuiet ? Promise.resolve() : play(...args)]));
   return {
     playSeFile,
     preloadSE,
@@ -8696,7 +8701,9 @@ const Audio_ = (() => {
     diagnose,
     playTestTone,
     repair,
-    se
+    se,
+    fgSe,
+    setBackgroundSeQuiet
   };
 })();
 const MOO_IMG = "";
@@ -67892,6 +67899,7 @@ function BattleScreen({
   processTurn,
   quickRhythmIntroVisible,
   quickToRhythmButtonNode,
+  quickToCardButtonNode,
   renderQuickRunBattleBand,
   runMode,
   safeDifficulty,
@@ -68753,7 +68761,7 @@ function BattleScreen({
     className: "block text-[13px] leading-none"
   }, "🎵"), React.createElement("span", {
     className: "mt-0.5 block text-[10px] font-black leading-none"
-  }, "BGM")), quickToRhythmButtonNode), React.createElement("div", {
+  }, "BGM")), quickToRhythmButtonNode), quickToCardButtonNode, React.createElement("div", {
     className: "w-[44px] shrink-0 flex flex-col gap-0.5"
   }, React.createElement("button", {
     type: "button",
@@ -70860,7 +70868,7 @@ function BattleScreen({
     className: "mt-0.5 text-[10px] font-black text-blue-50"
   }, "緊急")), React.createElement("div", {
     className: "shrink-0 flex flex-col gap-0.5"
-  }, quickToRhythmButtonNode), React.createElement("div", {
+  }, quickToRhythmButtonNode, quickToCardButtonNode), React.createElement("div", {
     className: "w-[44px] shrink-0 flex flex-col gap-0.5"
   }, React.createElement("button", {
     type: "button",
@@ -85706,7 +85714,8 @@ const CardMonSlot = ({
 const CardBattleBoard = ({
   db,
   game,
-  onFinish
+  onFinish,
+  quickRun = null
 }) => {
   const settings = normalizeCardSettings(game.settings);
   const pace = settings.speed === 'fast' ? 0.5 : 1;
@@ -85843,8 +85852,8 @@ const CardBattleBoard = ({
     if (hits.length) {
       setFx(hits);
       setTimeout(() => setFx(cur => cur.filter(f => !hits.some(h => h.key === f.key))), 1000);
-      if (hits.some(h => h.dmg >= 3)) Audio_.se.crit();else if (hits.some(h => h.dmg > 0)) Audio_.se.attack();else if (hits.some(h => h.heal)) Audio_.se.heal();else Audio_.se.guard();
-    } else if (evs.some(e => e.t === 'use')) Audio_.se.card();
+      if (hits.some(h => h.dmg >= 3)) Audio_.fgSe.crit();else if (hits.some(h => h.dmg > 0)) Audio_.fgSe.attack();else if (hits.some(h => h.heal)) Audio_.fgSe.heal();else Audio_.fgSe.guard();
+    } else if (evs.some(e => e.t === 'use')) Audio_.fgSe.card();
     const centerOf = id => {
       const el = document.querySelector(`[data-card-art="${id}"]`);
       if (!el) return null;
@@ -85894,7 +85903,7 @@ const CardBattleBoard = ({
         who: ul.by ? `${ul.who}(${ul.by}で)` : ul.who
       });
       setTimeout(() => setAction(cur => cur && cur.key === key ? null : cur), 2200);
-    } else if (evs.some(e => e.t === 'guard')) Audio_.se.guard();
+    } else if (evs.some(e => e.t === 'guard')) Audio_.fgSe.guard();
     if (tutorial && cardTutorialDone(tutStage.id, st, next)) setTutI(i => i + 1);
     const scene = tutorial ? null : cardLineSceneOf(db, st, next, CARD_CPU);
     setSt(next);
@@ -86006,7 +86015,7 @@ const CardBattleBoard = ({
   const finalOpts = byMon.filter(o => JSON.stringify(o.hand) === setChosen);
   const needTarget = finalOpts.some(o => o.target);
   const tapHand = i => {
-    Audio_.se.tap();
+    Audio_.fgSe.tap();
     if (tutorial && myTurn && (!cardTutorialHandOk(tutStage.id, st, i) || tutStage.next || tutQ.length > 1)) {
       tutWrongSay();
       return;
@@ -86060,7 +86069,7 @@ const CardBattleBoard = ({
     if (mode !== 'attack' || !sel) return;
     if (monChosen === undefined) {
       if (p === CARD_ME && selMons.includes(m)) {
-        Audio_.se.tap();
+        Audio_.fgSe.tap();
         setSel({
           ...sel,
           mon: m
@@ -86178,7 +86187,7 @@ const CardBattleBoard = ({
         setDrag(null);
         setDropOver(null);
         if (t === 'pick') {
-          Audio_.se.tap();
+          Audio_.fgSe.tap();
           setPicks(cur => cur.includes(i) ? cur : [...cur, i]);
         } else if (t) step(t);
         return;
@@ -86340,7 +86349,7 @@ const CardBattleBoard = ({
   }, React.createElement("div", {
     className: `flex ${compact ? 'h-[36px]' : 'h-[44px]'} shrink-0 items-center justify-between bg-black/35 px-2`
   }, React.createElement("div", {
-    className: "flex items-center gap-1.5"
+    className: "flex shrink-0 items-center gap-1.5"
   }, React.createElement("button", {
     type: "button",
     "data-card-quit": true,
@@ -86349,10 +86358,16 @@ const CardBattleBoard = ({
   }, tutorial ? '飛ばす' : '投了'), pvp && React.createElement(CardPvpChat, null)), pvp ? React.createElement(CardPvpStatus, {
     clock: pvpClock
   }) : React.createElement("span", {
-    className: "text-[15px] font-black"
+    className: "min-w-0 truncate text-[15px] font-black"
   }, "MFバトルカード"), React.createElement("span", {
+    className: "flex shrink-0 items-center gap-1.5"
+  }, quickRun && React.createElement("span", {
+    "data-card-battle-quick-run": quickRun.stopped ? 'stopped' : 'live',
+    "aria-label": quickRun.stopped ? '裏のクイック周回は止まっています' : `裏のクイック周回 ${quickRun.loops}周目`,
+    className: `rounded-full border px-1.5 py-0.5 text-[10px] font-black ${quickRun.stopped ? 'border-rose-400/70 bg-rose-950/60 text-rose-200' : 'border-fuchsia-300/50 bg-slate-950/60 text-fuchsia-100'}`
+  }, "⚔ ", quickRun.loops, "周目"), React.createElement("span", {
     className: "text-[12px] font-bold text-violet-200"
-  }, "ターン ", Math.max(1, st.turn), " ・ ", st.active === CARD_ME ? 'あなたの番' : `${who.name}の番`)), React.createElement("div", {
+  }, "ターン ", Math.max(1, st.turn), " ・ ", st.active === CARD_ME ? 'あなたの番' : `${who.name}の番`))), React.createElement("div", {
     className: `flex ${compact ? 'h-[42px]' : 'h-[50px]'} shrink-0 items-center gap-2 px-2`
   }, pvp ? React.createElement("span", {
     "data-card-pvp-foe": true,
@@ -86453,7 +86468,7 @@ const CardBattleBoard = ({
     const head = tutQ[0];
     const showNext = tutStage.next ? !head || head[0] === 'D' : head && head[0] === 'D' && tutQ.length > 1;
     const onNext = () => {
-      Audio_.se.tap();
+      Audio_.fgSe.tap();
       setHint('');
       if (tutQ.length > 1) {
         setTutQ(q => q.slice(1));
@@ -86748,7 +86763,8 @@ const CardBattleScreen = ({
   onOpenMarket,
   topAssistant = null,
   rank = null,
-  bgmPreview = null
+  bgmPreview = null,
+  quickRun = null
 }) => {
   const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
   const [save, setSave] = useState(null);
@@ -86856,6 +86872,10 @@ const CardBattleScreen = ({
       key: game.key,
       db: db,
       game: game,
+      quickRun: quickRun ? {
+        loops: quickRun.loops,
+        stopped: quickRun.stopped
+      } : null,
       onFinish: async ({
         outcome,
         st
@@ -86998,7 +87018,7 @@ const CardBattleScreen = ({
       type: "button",
       "data-card-kit": k.id,
       onClick: () => {
-        Audio_.se.tap();
+        Audio_.fgSe.tap();
         setKitPick(k.id);
       },
       className: `w-full rounded-2xl border-2 p-2 text-left ${kitPick === k.id ? 'border-amber-300 bg-amber-500/15' : 'border-white/10 bg-slate-900/70'}`
@@ -87051,7 +87071,7 @@ const CardBattleScreen = ({
       "data-card-mode-assistant": true,
       className: "mh-button mh-button-primary flex min-h-[96px] w-full flex-col items-center justify-center rounded-2xl px-3 py-3 active:scale-[.98]",
       onClick: () => {
-        Audio_.se.tap();
+        Audio_.fgSe.tap();
         setView('foe');
       }
     }, React.createElement("span", {
@@ -87063,7 +87083,7 @@ const CardBattleScreen = ({
       "data-card-mode-multi": true,
       disabled: !debug,
       onClick: () => {
-        Audio_.se.tap();
+        Audio_.fgSe.tap();
         setView('pvp');
       },
       className: "mh-button flex min-h-[96px] w-full flex-col items-center justify-center rounded-2xl border border-white/10 bg-slate-900 px-3 py-3 text-slate-400 enabled:text-sky-100"
@@ -87146,7 +87166,7 @@ const CardBattleScreen = ({
       type: "button",
       "data-card-foe": x.id,
       onClick: () => {
-        Audio_.se.tap();
+        Audio_.fgSe.tap();
         setFoe(f => ({
           ...f,
           who: x.id
@@ -87192,7 +87212,7 @@ const CardBattleScreen = ({
         "data-card-level": lv,
         disabled: !open,
         onClick: () => {
-          Audio_.se.tap();
+          Audio_.fgSe.tap();
           setFoe(f => ({
             ...f,
             level: lv
@@ -87412,7 +87432,10 @@ const CardBattleScreen = ({
     }, "クイック周回 ", result.loops, "周ぶん"), React.createElement("div", {
       className: "mt-0.5 text-[11px] font-bold text-slate-300",
       style: JA_WRAP_STYLE
-    }, "裏のクイック周回(", result.quick.quickDifficulty && quickDifficultySetting(result.quick.quickDifficulty)?.label || 'AUTO設定', ")が", result.loops, "周ぶん進みました")) : React.createElement("div", {
+    }, "裏のクイック周回(", result.quick.quickDifficulty && quickDifficultySetting(result.quick.quickDifficulty)?.label || 'AUTO設定', ")が", result.loops, "周ぶん進みました"), result.quick.live && Number(result.quick.toLoop) > Number(result.quick.fromLoop) && React.createElement("div", {
+      "data-card-quick-loops-range": true,
+      className: "mt-0.5 text-[11px] font-bold text-sky-100"
+    }, result.quick.fromLoop, "周目 → ", result.quick.toLoop, "周目")) : React.createElement("div", {
       className: "text-[12px] font-bold text-slate-300",
       style: JA_LABEL_STYLE
     }, jaWrap('クイック周回をしていないときは入りません'))), React.createElement("div", {
@@ -87586,7 +87609,7 @@ const CardBattleScreen = ({
       "data-card-speed": v,
       "aria-pressed": save.settings.speed === v,
       onClick: () => {
-        Audio_.se.tap();
+        Audio_.fgSe.tap();
         void persist({
           settings: {
             ...save.settings,
@@ -87605,7 +87628,7 @@ const CardBattleScreen = ({
       "data-card-auto-pass": true,
       "aria-pressed": save.settings.autoPass,
       onClick: () => {
-        Audio_.se.tap();
+        Audio_.fgSe.tap();
         void persist({
           settings: {
             ...save.settings,
@@ -87637,7 +87660,7 @@ const CardBattleScreen = ({
   } : null;
   const assistShown = !!topAssistant && (assist.modeSelectArt || assist.modeSelectComment);
   const go = v => () => {
-    Audio_.se.tap();
+    Audio_.fgSe.tap();
     setNotice('');
     setView(v);
   };
@@ -87675,7 +87698,7 @@ const CardBattleScreen = ({
     ico: '🛒',
     grad: 'from-sky-200 via-sky-400 to-blue-500',
     onClick: () => {
-      Audio_.se.tap();
+      Audio_.fgSe.tap();
       setNotice('');
       onOpenMarket && onOpenMarket();
     }
@@ -87850,7 +87873,7 @@ const CardBattleScreen = ({
     "data-card-pack-art-demo": true,
     className: "mh-button mh-button-secondary min-h-[40px] rounded-xl border border-white/20 bg-slate-800 text-[11px] font-black",
     onClick: () => {
-      Audio_.se.tap();
+      Audio_.fgSe.tap();
       setView('packArt');
     }
   }, "パックの絵の見本"), React.createElement("button", {
@@ -88072,7 +88095,7 @@ const CardDeckEditor = ({
       setNotice(why);
       return;
     }
-    Audio_.se.tap();
+    Audio_.fgSe.tap();
     setNotice('');
     if (cardMonsterOf(db, no)) setDeck(d => ({
       ...d,
@@ -88083,7 +88106,7 @@ const CardDeckEditor = ({
     }));
   };
   const removeOne = no => {
-    Audio_.se.tap();
+    Audio_.fgSe.tap();
     setNotice('');
     setDeck(d => {
       if (d.monsters.includes(no)) return {
@@ -88248,7 +88271,7 @@ const CardDeckEditor = ({
     "data-card-deck-save": true,
     className: "mh-button mh-button-primary min-h-[52px] rounded-2xl font-black active:scale-[.98]",
     onClick: () => {
-      Audio_.se.tap();
+      Audio_.fgSe.tap();
       onSave({
         ...deck,
         name: (deck.name || '').trim() || 'デッキ'
@@ -88336,7 +88359,7 @@ const CardDeckList = ({
       disabled: on || !ready,
       className: `${btn} ${on ? 'bg-amber-300 text-slate-950' : 'border border-amber-300/50 bg-amber-900/40 text-amber-100'}`,
       onClick: () => {
-        Audio_.se.tap();
+        Audio_.fgSe.tap();
         onActive(d.id);
       }
     }, on ? '使用中' : '使う'), React.createElement("button", {
@@ -88344,7 +88367,7 @@ const CardDeckList = ({
       "data-card-deck-open": d.id,
       className: `${btn} mh-button-primary`,
       onClick: () => {
-        Audio_.se.tap();
+        Audio_.fgSe.tap();
         onEdit(d);
       }
     }, "組む"), React.createElement("button", {
@@ -88353,7 +88376,7 @@ const CardDeckList = ({
       disabled: full,
       className: `${btn} border border-white/20 bg-slate-800`,
       onClick: () => {
-        Audio_.se.tap();
+        Audio_.fgSe.tap();
         onPut({
           ...d,
           id: cardNewDeckId(decks.decks, Date.now()),
@@ -88377,7 +88400,7 @@ const CardDeckList = ({
     disabled: full,
     className: "mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98] disabled:opacity-40",
     onClick: () => {
-      Audio_.se.tap();
+      Audio_.fgSe.tap();
       onEdit({
         id: cardNewDeckId(decks.decks, Date.now()),
         name: `デッキ${decks.decks.length + 1}`,
@@ -88553,7 +88576,7 @@ const CardRules = ({
   "data-card-tutorial-again": true,
   className: "mh-button min-h-[52px] w-full rounded-2xl border border-emerald-300/50 bg-emerald-900/60 font-black text-emerald-50 active:scale-[.98]",
   onClick: () => {
-    Audio_.se.tap();
+    Audio_.fgSe.tap();
     onTutorial();
   }
 }, "練習試合をもう一度", React.createElement("span", {
@@ -88716,7 +88739,7 @@ const CardPackOpen = ({
   const [seLog, setSeLog] = useState([]);
   const se = name => {
     try {
-      Audio_.se[name]();
+      Audio_.fgSe[name]();
     } catch (e) {}
     setSeLog(l => [...l.slice(-40), name]);
   };
@@ -88782,7 +88805,7 @@ const CardPackOpen = ({
     });
   };
   const next = () => {
-    Audio_.se.tap();
+    Audio_.fgSe.tap();
     timers.current.forEach(clearTimeout);
     timers.current = [];
     setPi(x => x + 1);
@@ -88943,7 +88966,7 @@ const CardPackOpen = ({
     "data-card-pack-done": true,
     className: "mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]",
     onClick: () => {
-      Audio_.se.tap();
+      Audio_.fgSe.tap();
       onDone();
     }
   }, result.demo ? 'トップへ戻る' : 'マーケットへ戻る')), detail && React.createElement(CardDetailModal, {
@@ -89358,7 +89381,7 @@ const CardRankingBoard = ({
     "data-card-ranking-tab": k.id,
     "aria-pressed": kind === k.id,
     onClick: () => {
-      Audio_.se.tap();
+      Audio_.fgSe.tap();
       setKind(k.id);
     },
     className: `min-h-[44px] rounded-xl border text-[11px] font-black ${kind === k.id ? 'border-amber-300 bg-amber-500/25 text-amber-100' : 'border-white/10 bg-slate-900/80 text-slate-300'}`
@@ -90496,7 +90519,7 @@ const CardPvpLobby = ({
       "data-card-pvp-leave": true,
       className: `${btn} mh-button-primary`,
       onClick: () => {
-        Audio_.se.tap();
+        Audio_.fgSe.tap();
         CARD_PVP.leave();
       }
     }, "部屋を出る")));
@@ -90523,7 +90546,7 @@ const CardPvpLobby = ({
     disabled: !ready,
     className: `${btn} mh-button-primary`,
     onClick: () => {
-      Audio_.se.tap();
+      Audio_.fgSe.tap();
       void CARD_PVP.create(profile, deck);
     }
   }, "合言葉で部屋を作る"), React.createElement("div", {
@@ -90547,7 +90570,7 @@ const CardPvpLobby = ({
     disabled: !ready || !rhythmMultiNormalizeCode(code),
     className: "mh-button mh-button-primary min-h-[48px] rounded-xl px-4 font-black disabled:opacity-40",
     onClick: () => {
-      Audio_.se.tap();
+      Audio_.fgSe.tap();
       CARD_PVP.join(code, profile, deck);
     }
   }, "入る")))), (room.phase === 'connecting' || room.phase === 'waiting') && React.createElement("div", {
@@ -90570,7 +90593,7 @@ const CardPvpLobby = ({
     "data-card-pvp-leave": true,
     className: `${btn} border border-white/15 bg-slate-900 text-slate-100`,
     onClick: () => {
-      Audio_.se.tap();
+      Audio_.fgSe.tap();
       CARD_PVP.leave();
     }
   }, "部屋を出る")));
@@ -90674,7 +90697,7 @@ const CardPvpChat = () => {
     "data-card-pvp-chat": true,
     "aria-label": "定型文を送る",
     onClick: () => {
-      Audio_.se.tap();
+      Audio_.fgSe.tap();
       setOpen(v => !v);
     },
     className: "grid h-[28px] w-[30px] place-items-center rounded-lg border border-white/20 bg-white/10 text-[14px]"
@@ -90861,9 +90884,13 @@ function DebugTrialsPanel({
 function MonsterHeroGame() {
   const [gameState, setGameStateRaw] = useState('HOME');
   const isRhythmScreen = state => typeof state === 'string' && state.startsWith('RHYTHM_');
+  const isCardScreen = state => typeof state === 'string' && state.startsWith('CARD_');
+  const cardMarketEntryRef = useRef(false);
+  const isCardRunScreen = state => isCardScreen(state) || state === 'BREEDER_MARKET' && cardMarketEntryRef.current === true;
+  const isBackgroundRunScreen = state => isRhythmScreen(state) || isCardRunScreen(state);
   const runBackgroundAllowedRef = useRef(false);
   const setGameState = next => {
-    runBackgroundAllowedRef.current = isRhythmScreen(next);
+    runBackgroundAllowedRef.current = isBackgroundRunScreen(next);
     setGameStateRaw(next);
   };
   const [debugThrowScreenError, setDebugThrowScreenError] = useState(false);
@@ -95027,7 +95054,9 @@ function MonsterHeroGame() {
   const RHYTHM_AUTO_START_SCREENS = [...RHYTHM_BACKGROUND_RUN_SCREENS, 'RHYTHM_PLAY'];
   const QUICK_RUN_AUTO_RETRY_MS = 4000;
   const rhythmBackgroundRun = runStage !== null && autoRepeat === true && isQuickMode(runMode) && RHYTHM_BACKGROUND_RUN_SCREENS.includes(gameState);
-  const runBackgroundAllowed = rhythmScreenOpen;
+  const cardScreenOpen = isCardRunScreen(gameState);
+  const cardBackgroundRun = runStage !== null && autoRepeat === true && isQuickMode(runMode) && cardScreenOpen;
+  const runBackgroundAllowed = rhythmScreenOpen || cardScreenOpen;
   runBackgroundAllowedRef.current = runBackgroundAllowed;
   const advanceRunStage = stage => {
     runStageRef.current = stage;
@@ -95038,7 +95067,7 @@ function MonsterHeroGame() {
     runStageRef.current = null;
     setRunStage(null);
   };
-  const runProgressAllowed = runStage !== null && (gameState === runStage || rhythmBackgroundRun);
+  const runProgressAllowed = runStage !== null && (gameState === runStage || rhythmBackgroundRun || cardBackgroundRun);
   const rhythmSongListScrollRef = useRef(0);
   const returnToBackgroundRun = () => {
     catchUpUntilRef.current = 0;
@@ -95395,7 +95424,11 @@ function MonsterHeroGame() {
   const [rhythmEventStorySeen, setRhythmEventStorySeen] = useState(null);
   const [cardBgm, setCardBgm] = useState(null);
   const [cardOrigin, setCardOrigin] = useState('home');
-  const [cardMarketEntry, setCardMarketEntry] = useState(false);
+  const [cardMarketEntry, setCardMarketEntryRaw] = useState(false);
+  const setCardMarketEntry = next => {
+    cardMarketEntryRef.current = next === true;
+    setCardMarketEntryRaw(next === true);
+  };
   const [cardShopState, setCardShopState] = useState(null);
   const [cardPackOpen, setCardPackOpen] = useState(null);
   const rhythmEventStorySeenRef = useRef(null);
@@ -95875,6 +95908,73 @@ function MonsterHeroGame() {
   }, "🎵"), React.createElement("span", {
     className: "mt-0.5 block text-[6px] leading-[8px]"
   }, "モンヒロ", React.createElement("br", null), "ビート")) : null;
+  const cardBattleEntryVisible = EVENT_REPLAY_RELEASE_FLAGS.cardBattle && cardBattleIntroSeenFlag || cardBattleDebugHome;
+  const openCardBattleKeepRun = () => {
+    setCardOrigin('home');
+    setGameState('CARD_TOP');
+  };
+  const quickToCardButtonNode = gameState === 'BATTLE' && isQuickMode(runMode) && autoRepeat === true && cardBattleEntryVisible ? React.createElement("button", {
+    "data-quick-to-card": true,
+    type: "button",
+    onClick: openCardBattleKeepRun,
+    "aria-label": "周回を続けたままMFバトルカードへ",
+    title: "周回を続けたままMFバトルカードへ",
+    className: "shrink-0 min-h-[24px] min-w-[42px] rounded-md border border-amber-300 bg-amber-700 px-1.5 font-black text-[7px] leading-[9px] text-amber-50 active:scale-90"
+  }, React.createElement("span", {
+    className: "block text-[11px] leading-none"
+  }, "🃏"), React.createElement("span", {
+    className: "mt-0.5 block text-[6px] leading-[8px]"
+  }, "バトル", React.createElement("br", null), "カード")) : null;
+  const cardQuickRunView = () => {
+    if (!quickRunProgress) return null;
+    const finished = !!quickRunProgress.finished;
+    const pending = finished ? {
+      xp: 0,
+      gold: 0
+    } : quickRunPendingRewards();
+    return {
+      live: cardBackgroundRun,
+      loops: quickRunProgress.loops,
+      stopped: finished || !cardBackgroundRun,
+      xp: Math.floor(quickRunProgress.xp + pending.xp),
+      gold: Math.floor(quickRunProgress.gold + pending.gold),
+      info: {
+        wave,
+        loops: quickRunProgress.loops,
+        finished,
+        catchingUp: false,
+        reason: finished ? quickRunFinishReasonText(quickRunProgress.reason) : '',
+        canRestart: finished && !quickRunResumable && !!repeatTemplateForNewRun(),
+        processing: resultProcessing,
+        canResume: finished && quickRunResumable
+      }
+    };
+  };
+  const renderCardQuickRunStrip = () => {
+    if (gameState !== 'CARD_TOP') return null;
+    const view = cardQuickRunView();
+    if (!view) return null;
+    return React.createElement("div", {
+      "data-card-quick-run": view.stopped ? 'stopped' : 'live',
+      className: "relative z-20 flex shrink-0 items-center gap-1.5 border-b border-fuchsia-400/25 bg-slate-950/95 px-2 py-1"
+    }, React.createElement(RhythmQuickRunPill, {
+      info: view.info,
+      onRestart: () => startQuickRunFromRhythm(),
+      onResume: () => resumeQuickRunFromRhythm(),
+      widthClass: "min-w-0 flex-1"
+    }), !view.info.finished && React.createElement("small", {
+      "data-card-quick-run-gain": true,
+      className: "shrink-0 text-[10px] font-black text-slate-300"
+    }, "ダイヤ+", view.gold.toLocaleString(), "・経験値+", view.xp.toLocaleString()), view.live && React.createElement("button", {
+      type: "button",
+      "data-card-quick-run-back": true,
+      onClick: () => {
+        setCardBgm(null);
+        returnToBackgroundRun();
+      },
+      className: "min-h-[32px] shrink-0 rounded-full border border-fuchsia-300/60 bg-fuchsia-800/70 px-2.5 text-[11px] font-black text-fuchsia-50 active:scale-95"
+    }, "⚔ バトルへ"));
+  };
   const renderQuickRunBattleBand = () => {
     if (!(gameState === 'BATTLE' && isQuickMode(runMode) && autoRepeat === true && quickRunProgress && !quickRunProgress.finished)) return null;
     return (() => {
@@ -96006,7 +96106,7 @@ function MonsterHeroGame() {
     if (key === '__keep_battle_bgm__' && bgmSuspendedByRhythmRef.current) {
       key = bgmKeyForState(gameState, wave, enemy?.id, (waveHistory || []).length > 0, hp <= 0 || gaveUp, false);
     }
-    bgmSuspendedByRhythmRef.current = rhythmScreenOpen;
+    bgmSuspendedByRhythmRef.current = rhythmScreenOpen || cardScreenOpen;
     bgmPreloadKeys(gameState, wave).forEach(next => Audio_.preloadBGM(next));
     if (key === '__keep_battle_bgm__') {
       if (!audioOn) Audio_.stopBGM();
@@ -96028,10 +96128,13 @@ function MonsterHeroGame() {
       key
     } : null;
     if (key && eventId && prev && prev.id === eventId && prev.key !== key) Audio_.fadeToBGM(key, EVENT_BGM_FADE_MS);else if (key) Audio_.playBGM(key);else Audio_.stopBGM();
-  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen, eventLineBgm, cardBgm]);
+  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen, cardScreenOpen, eventLineBgm, cardBgm]);
   useEffect(() => {
-    Audio_.setSeVolume(ultraEcoSession || rhythmScreenOpen ? 0 : seVolume);
-  }, [seVolume, ultraEcoSession, rhythmScreenOpen]);
+    Audio_.setSeVolume(ultraEcoSession && !cardScreenOpen || rhythmScreenOpen ? 0 : seVolume);
+  }, [seVolume, ultraEcoSession, rhythmScreenOpen, cardScreenOpen]);
+  useEffect(() => {
+    if (Audio_.setBackgroundSeQuiet) Audio_.setBackgroundSeQuiet(cardScreenOpen);
+  }, [cardScreenOpen]);
   useEffect(() => {
     Audio_.setBgmVolume(bgmVolume);
   }, [bgmVolume]);
@@ -101189,6 +101292,57 @@ function MonsterHeroGame() {
       ...awarded,
       quickDifficulty
     } : null;
+  };
+  const cardQuickRunLive = () => runStageRef.current != null && autoRepeatRef.current === true && isQuickMode(runMode) && !runResultFinishedRef.current && !!quickRunProgressRef.current && !quickRunProgressRef.current.finished;
+  useEffect(() => {
+    if (gameState !== 'BREEDER_MARKET' && !isCardScreen(gameState) && cardMarketEntryRef.current) setCardMarketEntry(false);
+  }, [gameState]);
+  const cardExitingRunRef = useRef(false);
+  const exitCardBattle = async () => {
+    const toDebug = cardOrigin === 'debug';
+    setCardBgm(null);
+    setCardOrigin('home');
+    if (runStageRef.current != null) {
+      if (cardExitingRunRef.current) return;
+      cardExitingRunRef.current = true;
+      try {
+        if (cardQuickRunLive()) await handleGiveUp({
+          silent: true
+        });
+      } catch (_) {}
+      cardExitingRunRef.current = false;
+      returnToHome();
+      if (toDebug) setGameState('DEBUG_SETTINGS');
+      return;
+    }
+    setGameState(toDebug ? 'DEBUG_SETTINGS' : 'HOME');
+  };
+  const awardCardQuickLoops = async loops => {
+    if (!(loops > 0)) return null;
+    if (!cardQuickRunLive()) return awardBackQuickLoops(loops);
+    const awarded = await awardRhythmPlayRunLoops(loops, RHYTHM_PLAY_RUN_LOOP_SCALE, {
+      cleared: true,
+      baseLoops: loops
+    });
+    if (!awarded) return null;
+    try {
+      await executeAutoRepeatBreakthroughs(autoRepeatBondAwardMasuIdsRef.current);
+    } catch (_) {}
+    const repeat = repeatTemplateForNewRun();
+    if (repeat) {
+      const started = startRunFromRepeatTemplate(repeat);
+      if (started.ok) {
+        autoRepeatStartingRef.current = false;
+        autoBattleRef.current = true;
+        setAutoBattle(true);
+        setAutoTurnCycle(n => n + 1);
+      } else stopAllAuto('error');
+    }
+    return {
+      ...awarded,
+      quickDifficulty: difficulty,
+      live: true
+    };
   };
   const awardRaidJackQuickLoops = async turnsUsed => awardBackQuickLoops(raidJackQuickLoops(turnsUsed));
   const awardRunRewards = async wavesCleared => {
@@ -111731,7 +111885,7 @@ function MonsterHeroGame() {
       value: track.id
     }, track.name)))), React.createElement("p", {
       className: "mt-2 text-[10px] leading-relaxed text-slate-400"
-    }, "BGMの一時選択は保存済みBGMアレンジを変更しません。SE/BGM音量はHOMEの音量設定と共通です。"))), ultraEcoSession && !rhythmScreenOpen && React.createElement("div", {
+    }, "BGMの一時選択は保存済みBGMアレンジを変更しません。SE/BGM音量はHOMEの音量設定と共通です。"))), ultraEcoSession && !rhythmScreenOpen && !cardScreenOpen && React.createElement("div", {
       "data-ultra-eco-session-dimmer": true,
       className: "fixed inset-0 bg-black/55 pointer-events-none",
       style: {
@@ -111740,7 +111894,7 @@ function MonsterHeroGame() {
       "aria-hidden": "true"
     }), React.createElement("div", {
       className: "relative z-10 h-full flex flex-col",
-      style: screenShake && !ecoBattleView && !rhythmScreenOpen && battleFxSettings.shake !== 'OFF' ? {
+      style: screenShake && !ecoBattleView && !rhythmScreenOpen && !cardScreenOpen && battleFxSettings.shake !== 'OFF' ? {
         animation: bigShake ? 'mooQuake 750ms ease-in-out' : 'screenShake 450ms ease-in-out'
       } : undefined
     }, gameState === 'HOME' && React.createElement(HomeScreen, {
@@ -117409,19 +117563,18 @@ function MonsterHeroGame() {
       accent: 'indigo',
       readOnly: true,
       label: `${raidJackDetailMon.name}の詳細`
-    })), (gameState === 'CARD_TOP' || gameState === 'CARD_BATTLE' || gameState === 'CARD_PACK_OPEN' && !cardPackOpen) && React.createElement(CardBattleScreen, {
+    })), renderCardQuickRunStrip(), (gameState === 'CARD_TOP' || gameState === 'CARD_BATTLE' || gameState === 'CARD_PACK_OPEN' && !cardPackOpen) && React.createElement(CardBattleScreen, {
       screen: gameState,
       onNavigate: setGameState,
       onExit: () => {
-        setCardBgm(null);
-        setCardOrigin('home');
-        setGameState(cardOrigin === 'debug' ? 'DEBUG_SETTINGS' : 'HOME');
+        void exitCardBattle();
       },
       exitLabel: cardOrigin === 'debug' ? 'デバッグ設定へ戻る' : 'HOMEへ戻る',
       seenStoryIds: rhythmEventStorySeen || [],
       debug: cardOrigin === 'debug',
       onBgm: setCardBgm,
-      onQuickLoops: awardBackQuickLoops,
+      onQuickLoops: awardCardQuickLoops,
+      quickRun: cardQuickRunView(),
       onOpenMarket: () => {
         setCardMarketEntry(true);
         setMarketExchangeError('');
@@ -120968,6 +121121,7 @@ function MonsterHeroGame() {
       processTurn: processTurn,
       quickRhythmIntroVisible: quickRhythmIntroVisible,
       quickToRhythmButtonNode: quickToRhythmButtonNode,
+      quickToCardButtonNode: quickToCardButtonNode,
       renderQuickRunBattleBand: renderQuickRunBattleBand,
       runMode: runMode,
       safeDifficulty: safeDifficulty,
@@ -123906,7 +124060,7 @@ function MonsterHeroGame() {
       speciesChallengeFromDebugRef: speciesChallengeFromDebugRef,
       speciesChallengeSaveRunRef: speciesChallengeSaveRunRef,
       speciesChallengeBattleRunRef: speciesChallengeBattleRunRef
-    }), hp <= 0 && !debugBattle && !rhythmScreenOpen && React.createElement(GameOverScreen, {
+    }), hp <= 0 && !debugBattle && !rhythmScreenOpen && !cardScreenOpen && React.createElement(GameOverScreen, {
       finalRewardSummary: finalRewardSummary,
       handleRetry: handleRetry,
       masuRegisterButtonNode: masuRegisterButtonNode,
@@ -123916,7 +124070,7 @@ function MonsterHeroGame() {
       runMode: runMode,
       runResultActionOnce: runResultActionOnce,
       score: score
-    }), gaveUp && !debugBattle && !rhythmScreenOpen && React.createElement(GaveUpScreen, {
+    }), gaveUp && !debugBattle && !rhythmScreenOpen && !cardScreenOpen && React.createElement(GaveUpScreen, {
       finalRewardSummary: finalRewardSummary,
       handleRetry: handleRetry,
       masuRegisterButtonNode: masuRegisterButtonNode,
@@ -123961,7 +124115,7 @@ function MonsterHeroGame() {
       title: ''
     }), React.createElement(EnemyDefeatFx, {
       fx: gameState === 'BATTLE' ? defeatFx : null
-    }), effect && !rhythmScreenOpen && React.createElement("div", {
+    }), effect && !rhythmScreenOpen && !cardScreenOpen && React.createElement("div", {
       className: "fixed inset-0 flex flex-col items-center justify-center pointer-events-none text-center p-8 overflow-hidden",
       style: {
         position: 'fixed',

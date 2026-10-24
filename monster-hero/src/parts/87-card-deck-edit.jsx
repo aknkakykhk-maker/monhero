@@ -46,13 +46,13 @@ const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel }) => {
   const add = (no) => {
     const why = cardDeckAddReason(db, deck, no, col);
     if (why) { setNotice(why); return; }
-    Audio_.se.tap();
+    Audio_.fgSe.tap();
     setNotice('');
     if (cardMonsterOf(db, no)) setDeck((d) => ({ ...d, monsters: [...d.monsters, no] }));
     else setDeck((d) => ({ ...d, cards: [...d.cards, no] }));
   };
   const removeOne = (no) => {
-    Audio_.se.tap();
+    Audio_.fgSe.tap();
     setNotice('');
     setDeck((d) => {
       if (d.monsters.includes(no)) return { ...d, monsters: d.monsters.filter((x) => x !== no) };
@@ -124,7 +124,7 @@ const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel }) => {
           : <ScreenEmpty emoji="🃏" lines={['まだカードが入っていません', '「技・ブリーダー」から入れてください']}/>)}
       </div>
       <div className={`${SCREEN_FOOTER_CLASS} grid grid-cols-2 gap-2`}>
-        <button type="button" data-card-deck-save className="mh-button mh-button-primary min-h-[52px] rounded-2xl font-black active:scale-[.98]" onClick={() => { Audio_.se.tap(); onSave({ ...deck, name: (deck.name || '').trim() || 'デッキ' }); }}>保存する</button>
+        <button type="button" data-card-deck-save className="mh-button mh-button-primary min-h-[52px] rounded-2xl font-black active:scale-[.98]" onClick={() => { Audio_.fgSe.tap(); onSave({ ...deck, name: (deck.name || '').trim() || 'デッキ' }); }}>保存する</button>
         <button type="button" className="mh-button mh-button-secondary min-h-[52px] rounded-2xl border border-white/20 bg-slate-800 font-black active:scale-[.98]" onClick={() => (changed ? setLeave(true) : onCancel())}>やめる</button>
       </div>
       {detail && <CardDetailModal db={db} no={detail} onClose={() => setDetail(null)}/>}
@@ -156,9 +156,9 @@ const CardDeckList = ({ db, collection, decks, onBack, onEdit, onPut, onRemove, 
                 </div>
               </div>
               <div className="mt-2 grid grid-cols-4 gap-1">
-                <button type="button" data-card-deck-use={d.id} disabled={on || !ready} className={`${btn} ${on ? 'bg-amber-300 text-slate-950' : 'border border-amber-300/50 bg-amber-900/40 text-amber-100'}`} onClick={() => { Audio_.se.tap(); onActive(d.id); }}>{on ? '使用中' : '使う'}</button>
-                <button type="button" data-card-deck-open={d.id} className={`${btn} mh-button-primary`} onClick={() => { Audio_.se.tap(); onEdit(d); }}>組む</button>
-                <button type="button" data-card-deck-copy={d.id} disabled={full} className={`${btn} border border-white/20 bg-slate-800`} onClick={() => { Audio_.se.tap(); onPut({ ...d, id: cardNewDeckId(decks.decks, Date.now()), name: `${d.name}のコピー`.slice(0, 20), monsters: d.monsters.slice(), cards: d.cards.slice() }); }}>コピー</button>
+                <button type="button" data-card-deck-use={d.id} disabled={on || !ready} className={`${btn} ${on ? 'bg-amber-300 text-slate-950' : 'border border-amber-300/50 bg-amber-900/40 text-amber-100'}`} onClick={() => { Audio_.fgSe.tap(); onActive(d.id); }}>{on ? '使用中' : '使う'}</button>
+                <button type="button" data-card-deck-open={d.id} className={`${btn} mh-button-primary`} onClick={() => { Audio_.fgSe.tap(); onEdit(d); }}>組む</button>
+                <button type="button" data-card-deck-copy={d.id} disabled={full} className={`${btn} border border-white/20 bg-slate-800`} onClick={() => { Audio_.fgSe.tap(); onPut({ ...d, id: cardNewDeckId(decks.decks, Date.now()), name: `${d.name}のコピー`.slice(0, 20), monsters: d.monsters.slice(), cards: d.cards.slice() }); }}>コピー</button>
                 <button type="button" data-card-deck-del={d.id} disabled={decks.decks.length <= 1} className={`${btn} border border-rose-300/40 bg-rose-950/50 text-rose-100`} onClick={() => setConfirmDel(d)}>消す</button>
               </div>
             </div>
@@ -166,7 +166,7 @@ const CardDeckList = ({ db, collection, decks, onBack, onEdit, onPut, onRemove, 
         })}
       </div>
       <div className={SCREEN_FOOTER_CLASS}>
-        <button type="button" data-card-deck-new disabled={full} className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98] disabled:opacity-40" onClick={() => { Audio_.se.tap(); onEdit({ id: cardNewDeckId(decks.decks, Date.now()), name: `デッキ${decks.decks.length + 1}`, monsters: [], cards: [] }); }}>{full ? `デッキは${CARD_DECK_MAX}つまでです` : '新しいデッキを作る'}</button>
+        <button type="button" data-card-deck-new disabled={full} className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98] disabled:opacity-40" onClick={() => { Audio_.fgSe.tap(); onEdit({ id: cardNewDeckId(decks.decks, Date.now()), name: `デッキ${decks.decks.length + 1}`, monsters: [], cards: [] }); }}>{full ? `デッキは${CARD_DECK_MAX}つまでです` : '新しいデッキを作る'}</button>
       </div>
       {confirmDel && <ConfirmSheet title={`「${confirmDel.name}」を消しますか？`} message="デッキだけを消します(カードは消えません)" confirmLabel="消す" danger onCancel={() => setConfirmDel(null)} onConfirm={() => { const id = confirmDel.id; setConfirmDel(null); onRemove(id); }}/>}
     </div>
@@ -251,7 +251,7 @@ const CardRules = ({ onBack, onTutorial }) => (
       ))}
     </div>
     <div className={SCREEN_FOOTER_CLASS}>
-      <button type="button" data-card-tutorial-again className="mh-button min-h-[52px] w-full rounded-2xl border border-emerald-300/50 bg-emerald-900/60 font-black text-emerald-50 active:scale-[.98]" onClick={() => { Audio_.se.tap(); onTutorial(); }}>練習試合をもう一度<span className="block text-[10px] font-bold text-emerald-200" style={JA_LABEL_STYLE}>{jaWrap('ドラと、みゅあ相手に5つの決まりをおさらい')}</span></button>
+      <button type="button" data-card-tutorial-again className="mh-button min-h-[52px] w-full rounded-2xl border border-emerald-300/50 bg-emerald-900/60 font-black text-emerald-50 active:scale-[.98]" onClick={() => { Audio_.fgSe.tap(); onTutorial(); }}>練習試合をもう一度<span className="block text-[10px] font-bold text-emerald-200" style={JA_LABEL_STYLE}>{jaWrap('ドラと、みゅあ相手に5つの決まりをおさらい')}</span></button>
     </div>
   </div>
 );
@@ -320,7 +320,7 @@ const CardPackOpen = ({ db, result, onDone }) => {
   const timers = useRef([]);
   // 鳴らした効果音の記録(data-card-pack-se。実機の音の確かめと、ブラウザ検査でキラの音を鳴らしたかを見る)
   const [seLog, setSeLog] = useState([]);
-  const se = (name) => { try { Audio_.se[name](); } catch (e) {} setSeLog((l) => [...l.slice(-40), name]); };
+  const se = (name) => { try { Audio_.fgSe[name](); } catch (e) {} setSeLog((l) => [...l.slice(-40), name]); };
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
   const later = (fn, ms) => { timers.current.push(setTimeout(fn, ms)); };
   const press = useCardLongPress((no) => setDetail(no));
@@ -362,7 +362,7 @@ const CardPackOpen = ({ db, result, onDone }) => {
       at += cards[i].rarity !== 'normal' ? 380 + CARD_PACK_SPOT_MS + CARD_PACK_SPOT_BACK_MS + 120 : 140;
     });
   };
-  const next = () => { Audio_.se.tap(); timers.current.forEach(clearTimeout); timers.current = []; setPi((x) => x + 1); setPhase('closed'); setFlipped([]); setSpot(null); };
+  const next = () => { Audio_.fgSe.tap(); timers.current.forEach(clearTimeout); timers.current = []; setPi((x) => x + 1); setPhase('closed'); setFlipped([]); setSpot(null); };
   const packPoint = cards.reduce((a, c) => a + (c.point || 0), 0);
   return (
     <div data-mh-screen data-card-pack-open data-card-pack-phase={phase} data-card-pack-se={seLog.join(',')} className={SCREEN_SHELL_CLASS}>
@@ -431,7 +431,7 @@ const CardPackOpen = ({ db, result, onDone }) => {
         {phase !== 'open' ? <div className="text-center text-[12px] font-bold text-slate-400">パックをタップしてください</div>
           : !allOpen ? <button type="button" data-card-pack-flip-all className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]" onClick={flipAll}>全部めくる</button>
           : !last ? <button type="button" data-card-pack-next className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]" onClick={next}>つぎのパック</button>
-          : <button type="button" data-card-pack-done className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]" onClick={() => { Audio_.se.tap(); onDone(); }}>{result.demo ? 'トップへ戻る' : 'マーケットへ戻る'}</button>}
+          : <button type="button" data-card-pack-done className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]" onClick={() => { Audio_.fgSe.tap(); onDone(); }}>{result.demo ? 'トップへ戻る' : 'マーケットへ戻る'}</button>}
       </div>
       {detail && <CardDetailModal db={db} no={detail} onClose={() => setDetail(null)}/>}
     </div>
