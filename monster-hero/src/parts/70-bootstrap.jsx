@@ -4271,6 +4271,22 @@ const createAnimationStyle = () => {
     .mh-card-hit { animation: mhRjJackHit .6s ease-out both; }
     .mh-card-ko { animation: mhCardKo .9s ease-in forwards; transform-origin: 50% 90%; }
     .mh-card-shield { position: absolute; inset: 6% 14%; border-radius: 45% 45% 50% 50%; border: 3px solid rgba(147,197,253,.95); background: radial-gradient(circle, rgba(191,219,254,.35), rgba(59,130,246,.15) 60%, transparent 72%); box-shadow: 0 0 18px rgba(96,165,250,.9); pointer-events: none; animation: mhCardShield .7s ease-out both; }
+    /* 跳んでよける(ジャンプ・舞い上がる): 上で止まってから降りる / よけた残像 / 盾の数字 / はね返す光線 / ブリーダーの顔 / 倒れたカードが裏返る(設計書 5-3・5-4) */
+    @keyframes mhCardJump { 0% { transform: none; } 25% { transform: translateY(-30px) scale(1.04); } 72% { transform: translateY(-30px) scale(1.04); filter: drop-shadow(0 18px 6px rgba(0,0,0,.35)); } 100% { transform: none; } }
+    @keyframes mhCardAfter { 0% { opacity: .55; transform: none; } 100% { opacity: 0; transform: translateX(-8px); } }
+    @keyframes mhCardPop { 0% { opacity: 0; transform: translateY(6px) scale(.6); } 25% { opacity: 1; transform: translateY(0) scale(1.15); } 80% { opacity: 1; transform: translateY(-4px) scale(1); } 100% { opacity: 0; transform: translateY(-10px); } }
+    @keyframes mhCardBeam { 0% { opacity: 0; transform-origin: 0 50%; clip-path: inset(0 100% 0 0); } 30% { opacity: 1; clip-path: inset(0 0 0 0); } 75% { opacity: 1; clip-path: inset(0 0 0 0); } 100% { opacity: 0; clip-path: inset(0 0 0 60%); } }
+    @keyframes mhCardBreeder { 0% { opacity: 0; transform: scale(.4); box-shadow: 0 0 0 rgba(253,224,71,0); } 20% { opacity: 1; transform: scale(1.12); box-shadow: 0 0 22px rgba(253,224,71,.95); } 75% { opacity: 1; transform: scale(1); box-shadow: 0 0 14px rgba(253,224,71,.7); } 100% { opacity: 0; transform: scale(.9); } }
+    @keyframes mhCardFlip { 0% { transform: rotateY(0); } 100% { transform: rotateY(180deg); } }
+    .mh-card-jump { animation: mhCardJump .9s ease-out both; }
+    .mh-card-afterimage { position: absolute; inset: 0; display: flex; align-items: flex-end; justify-content: center; pointer-events: none; filter: grayscale(.4) brightness(1.4) drop-shadow(0 0 6px rgba(125,211,252,.9)); animation: mhCardAfter .62s ease-out both; }
+    .mh-card-air-mark { position: absolute; top: -2px; left: 50%; margin-left: -18px; width: 36px; border-radius: 6px; background: rgba(8,145,178,.92); color: #ecfeff; font-size: 11px; font-weight: 900; text-align: center; pointer-events: none; animation: mhCardPop .9s ease-out both; }
+    .mh-card-guard-num { position: absolute; right: 4%; top: 18%; z-index: 51; font-size: 22px; font-weight: 900; color: #dbeafe; -webkit-text-stroke: 1.5px #1d4ed8; text-shadow: 0 0 10px rgba(96,165,250,.95); pointer-events: none; white-space: nowrap; animation: mhCardPop .9s ease-out both; }
+    .mh-card-beam { position: fixed; height: 8px; margin-top: -4px; border-radius: 999px; transform-origin: 0 50%; background: linear-gradient(90deg, rgba(191,219,254,.2), #e0f2fe 30%, #7dd3fc 70%, #fff); box-shadow: 0 0 14px rgba(125,211,252,1), 0 0 4px #fff; animation: mhCardBeam .8s ease-out both; }
+    .mh-card-breeder { animation: mhCardBreeder 1.7s ease-out both; }
+    .mh-card-flip { transform-style: preserve-3d; animation: mhCardFlip .5s ease-in .9s both; }
+    .mh-card-flip-face { backface-visibility: hidden; }
+    .mh-card-flip-back { position: absolute; inset: 0; border-radius: 3px; transform: rotateY(180deg); backface-visibility: hidden; border: 2px solid rgba(148,163,184,.55); background: repeating-linear-gradient(45deg, #1e1b4b 0 5px, #312e81 5px 10px); filter: brightness(.6); }
     /* ==== MFバトルカードのパックを開ける演出(87-card-deck-edit.jsx の CardPackOpen。社長「派手に」台帳 #3503) ====
        破る: 上の帯がちぎれて飛ぶ・光があふれる / めくる: 1枚ずつ裏返る / キラ: めくる前から裏が光って揺れる・めくったら大きく光る */
     @keyframes mhPackIdle { 0%,100% { transform: translateY(0) rotate(-1deg); } 50% { transform: translateY(-6px) rotate(1deg); } }

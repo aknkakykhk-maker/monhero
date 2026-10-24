@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f96b13119534767e
+// source-sha256: 76720a391c94e920
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-25 07:34";
+const BUILD_DATE = "2026-10-25 07:50";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -83198,6 +83198,7 @@ const cardResolveTarget = (db, st) => {
       reflect: true
     });
     cardLog(st, `${reflected}ダメージをはね返した`);
+    if (atkMon.life <= 0) cardKo(st, pd.attacker, pd.mon);
   }
   if (target.life <= 0 && !target.ko) cardKo(st, t.p, t.m);
   pd.ti += 1;
@@ -85253,12 +85254,27 @@ const CARD_MOTION_SPECS = Object.freeze({
     c: 'gold',
     fx: skmFx('fall', 'star', 8),
     over: 'wave'
+  }),
+  cardSpeRing: skm('gather', {
+    c: 'holy',
+    over: 'aurora',
+    burst: 'spark'
+  }),
+  cardSpeSong: skm('float', {
+    c: 'pink',
+    fx: skmFx('orbit', 'note', 6),
+    burst: 'note'
+  }),
+  cardSpeEye: skm('gather', {
+    c: 'gold',
+    over: 'eye'
   })
 });
 Object.entries(CARD_MOTION_SPECS).forEach(([kind, sp]) => {
   SKILL_FX_SPEC_CACHE[kind] = skmNormalize(sp);
 });
 const CARD_MOTION_RULES = Object.freeze([[/キッス|ぺろ|なめ|ベロ|舌/, 'cardKiss'], [/歌|うた|ソング|音/, 'cardSong'], [/雷|電撃|ライトニング|サンダー|稲妻|放電/, 'cardThunder'], [/炎|火|ファイア|フレイム|熱|バーニング/, 'cardFire'], [/冷|氷|ブリザード|吹雪|凍/, 'cardIce'], [/水|泡|ツバ|しぶき|ウォーター/, 'cardWater'], [/光|聖|レーザー|ビーム|ビッグバン/, 'cardLight'], [/魔空|ドレイン|弾|玉|波動|念/, 'cardOrb'], [/毒|ガス|おなら|胞子/, 'cardGas'], [/葉|花|さくら|種|つる/, 'cardLeaf'], [/岩|石|地震|ロック/, 'cardRock'], [/投げ/, 'cardThrow'], [/回転|ぐるぐる|竜巻|スピン|旋風|まわし/, 'cardSpin'], [/剣|斬|まっぷたつ|Vの字|居合|カッター/, 'cardBlade'], [/かみ|噛|かじ/, 'cardBite'], [/ひっかき|爪|ツノ|クロー|突き|つき|くしざし|ヤリ|槍/, 'cardClaw'], [/キック|けり|蹴|ひざ/, 'cardKick'], [/体当たり|タックル|頭つき|突進|ダッシュ|ころがる|転がる/, 'cardDash'], [/パンチ|チョップ|はたき|ソバット|ビンタ|でこぴん|こぶし|殴/, 'cardJab']]);
+const CARD_SPECIAL_MOTION_RULES = Object.freeze([[/歌|うた|ソング|音|笛|おどり|踊/, 'cardSpeSong'], [/偵察|にらむ|睨|見|挑発|のぞ|ガン/, 'cardSpeEye']]);
 const CARD_MOTION_BY_NO = Object.freeze({});
 const CARD_MOTION_GAME_ID = Object.freeze({
   tiger: 'Tiger',
@@ -85272,8 +85288,12 @@ const CARD_MOTION_GAME_ID = Object.freeze({
 });
 const cardMotionKindOf = (db, cardNo, mon) => {
   const c = cardOf(db, cardNo);
-  if (!c || !cardIsAttackKind(c.kind) || c.kind === 'spe' || c.user === 'breeder') return null;
+  if (!c || !cardIsAttackKind(c.kind) || c.user === 'breeder') return null;
   if (CARD_MOTION_BY_NO[c.no]) return CARD_MOTION_BY_NO[c.no];
+  if (c.kind === 'spe') {
+    const sp = CARD_SPECIAL_MOTION_RULES.find(([re]) => re.test(c.name));
+    return sp ? sp[1] : 'cardSpeRing';
+  }
   const id = mon && (CARD_MOTION_GAME_ID[mon.species] || CARD_MOTION_GAME_ID[mon.main]);
   const names = id && typeof HERO_ATK_NAMES !== 'undefined' ? HERO_ATK_NAMES[id] : null;
   const i = Array.isArray(names) ? names.indexOf(c.name) : -1;
@@ -85290,6 +85310,20 @@ const cardMotionKindOf = (db, cardNo, mon) => {
   }
   return base;
 };
+const cardIsBreederCard = (db, cardNo) => {
+  const c = cardOf(db, cardNo);
+  return !!c && c.user === 'breeder';
+};
+const cardDodgeIsJump = c => !!c && (cardHasEff(c, 'becomeAir') || /ジャンプ|舞い上が|飛び|飛ぶ|浮|空中/.test(c.name));
+const cardGuardLabel = c => {
+  if (!c) return '';
+  if (cardHasEff(c, 'reflect')) return 'はね返す';
+  const r = cardEff(c, 'reduce');
+  if (r && r.n) return `−${r.n}`;
+  if (cardHasEff(c, 'reduceHalf')) return '半分';
+  if (cardHasEff(c, 'reduceAll')) return '0';
+  return '';
+};
 const cardMotionMs = kind => {
   const sp = kind && typeof skillFxSpecOf === 'function' ? skillFxSpecOf(kind) : null;
   return sp && sp.ms ? sp.ms : 650;
@@ -85299,7 +85333,7 @@ const cardMotionDemo = db => {
     monsters: ['C-004', 'C-002', 'C-003'],
     cards: Array(50).fill('100')
   }, {
-    monsters: ['C-005', 'C-009', 'C-007'],
+    monsters: ['C-001', 'C-009', 'C-007'],
     cards: Array(50).fill('100')
   }];
   let st = cardCreateGame(db, {
@@ -85312,10 +85346,10 @@ const cardMotionDemo = db => {
     type: 'setupGuts',
     hand: []
   });
-  st.players[0].hand = ['040', '018', '032', '100', '100'];
+  st.players[0].hand = ['040', '018', '032', '112', '023', '045'];
   st.players[0].guts = Array(20).fill('100');
-  st.players[1].hand = ['059', '106', '100'];
-  st.players[1].guts = Array(3).fill('100');
+  st.players[1].hand = ['012', '106', '105'];
+  st.players[1].guts = Array(20).fill('100');
   st.log = [{
     turn: 1,
     text: '動きの見本(決まった順に進みます)'
@@ -85342,7 +85376,7 @@ const cardMotionDemo = db => {
     attack: '032',
     mon: 2
   }, {
-    guard: '059'
+    guard: '012'
   }, {
     pass: true
   }, {
@@ -85351,6 +85385,47 @@ const cardMotionDemo = db => {
     pass: true
   }, {
     pass: true
+  }, {
+    attack: '112',
+    mon: 0,
+    target: {
+      p: 1,
+      m: 1
+    }
+  }, {
+    pass: true
+  }, {
+    act: {
+      type: 'endAttacks'
+    }
+  }, {
+    act: {
+      type: 'guts',
+      hand: []
+    }
+  }, {
+    attack: '105',
+    mon: 1,
+    target: {
+      p: 0,
+      m: 1
+    }
+  }, {
+    guard: '023'
+  }, {
+    pass: true
+  }, {
+    act: {
+      type: 'endAttacks'
+    }
+  }, {
+    act: {
+      type: 'guts',
+      hand: []
+    }
+  }, {
+    attack: '045',
+    mon: 0
   }];
   return {
     st,
@@ -85359,6 +85434,7 @@ const cardMotionDemo = db => {
 };
 const cardMotionDemoAction = (db, st, step) => {
   if (!step) return null;
+  if (step.act) return step.act;
   if (step.pass) return st.pending ? {
     type: 'pass'
   } : null;
@@ -85631,11 +85707,17 @@ const CardMonSlot = ({
   const stunned = mon.stunTurn === st.turn + (st.active === p ? 0 : 1) && !mon.ko;
   const info = React.createElement("div", {
     className: "flex items-center gap-1"
+  }, React.createElement("span", {
+    "data-card-flip": mon.ko ? 'ko' : undefined,
+    className: `relative block h-[52px] w-[37px] shrink-0 ${mon.ko ? 'mh-card-flip' : ''}`
   }, React.createElement("img", {
     src: CARD_IMG(cardMonsterOf(db, mon.no).img),
     alt: mon.name,
-    className: `h-[52px] w-[37px] rounded-[3px] object-cover shadow ${mon.ko ? 'grayscale opacity-40' : ''}`
-  }), React.createElement("div", {
+    className: `mh-card-flip-face h-[52px] w-[37px] rounded-[3px] object-cover shadow ${mon.ko ? 'grayscale opacity-40' : ''}`
+  }), mon.ko && React.createElement("span", {
+    className: "mh-card-flip-back",
+    "aria-hidden": "true"
+  })), React.createElement("div", {
     className: "w-[62px] min-w-0"
   }, React.createElement("div", {
     className: "truncate text-[12px] font-black leading-tight"
@@ -85666,7 +85748,7 @@ const CardMonSlot = ({
     className: `${compact ? 'h-[54px]' : 'h-[74px]'} rounded-md object-cover`
   });
   const mv = motion && !mon.ko ? motion : null;
-  const poseClass = mon.ko ? 'mh-card-ko' : mv && mv.type === 'hit' ? 'mh-card-hit' : mv && mv.type === 'dodge' ? 'mh-card-dodge' : mv && mv.type === 'guard' ? 'mh-card-guard' : '';
+  const poseClass = mon.ko ? 'mh-card-ko' : mv && mv.type === 'hit' ? 'mh-card-hit' : mv && mv.type === 'dodge' ? 'mh-card-dodge' : mv && mv.type === 'jump' ? 'mh-card-jump' : mv && mv.type === 'guard' ? 'mh-card-guard' : '';
   const artEl = React.createElement("div", {
     "data-card-art": `${p}-${m}`,
     className: `relative flex ${compact ? 'h-[56px]' : 'h-[78px]'} w-full items-end justify-center`,
@@ -85683,11 +85765,23 @@ const CardMonSlot = ({
     key: mv ? mv.key : 'still',
     "data-card-pose": mon.ko ? 'ko' : mv ? mv.type : 'still',
     className: `flex items-end justify-center ${poseClass}`
-  }, imgEl), mv && mv.type === 'guard' && React.createElement("span", {
+  }, imgEl), mv && mv.type === 'dodge' && React.createElement("div", {
+    key: `${mv.key}-a`,
+    className: "mh-card-afterimage",
+    "aria-hidden": "true"
+  }, imgEl), mv && mv.type === 'jump' && React.createElement("span", {
+    key: `${mv.key}-j`,
+    "data-card-air-mark": true,
+    className: "mh-card-air-mark"
+  }, "空中"), mv && mv.type === 'guard' && React.createElement("span", {
     key: `${mv.key}-s`,
     className: "mh-card-shield",
     "aria-hidden": "true"
-  }), mon.ko && React.createElement("span", {
+  }), mv && mv.type === 'guard' && mv.label && React.createElement("span", {
+    key: `${mv.key}-n`,
+    "data-card-guard-num": true,
+    className: "mh-card-guard-num"
+  }, mv.label), mon.ko && React.createElement("span", {
     className: "absolute bottom-2 rounded bg-black/70 px-1.5 text-[12px] font-black text-slate-300"
   }, "KO"), fx.map(f => React.createElement("span", {
     key: f.key,
@@ -85713,7 +85807,8 @@ const CardBattleBoard = ({
   db,
   game,
   onFinish,
-  quickRun = null
+  quickRun = null,
+  meProfile = null
 }) => {
   const settings = normalizeCardSettings(game.settings);
   const pace = settings.speed === 'fast' ? 0.5 : 1;
@@ -85735,6 +85830,9 @@ const CardBattleBoard = ({
   const [hint, setHint] = useState('');
   const [quit, setQuit] = useState(false);
   const [action, setAction] = useState(null);
+  const [breederFx, setBreederFx] = useState(null);
+  const [beams, setBeams] = useState([]);
+  const lastGuard = useRef({});
   const [drag, setDrag] = useState(null);
   const [dropOver, setDropOver] = useState(null);
   const dragRef = useRef(null);
@@ -85866,7 +85964,9 @@ const CardBattleBoard = ({
       const kind = cardMotionKindOf(db, e.cards[0], mon);
       if (!kind) return;
       const from = centerOf(`${e.p}-${e.mon}`);
-      const to = e.target ? centerOf(`${e.target.p}-${e.target.m}`) : centerOf(`${1 - e.p}-1`);
+      const c0 = cardOf(db, e.cards[0]);
+      const inPlace = !!c0 && c0.kind === 'spe' && (!e.target || e.target.p === e.p);
+      const to = inPlace ? from : e.target ? centerOf(`${e.target.p}-${e.target.m}`) : centerOf(`${1 - e.p}-1`);
       if (!from || !to) return;
       const key = `${next.log.length}-${n}-${Date.now()}`;
       playMotion(`${e.p}-${e.mon}`, {
@@ -85877,19 +85977,60 @@ const CardBattleBoard = ({
         key
       }, cardMotionMs(kind) + 80);
     });
+    const breederUse = evs.find(e => e.t === 'use' && cardIsBreederCard(db, e.cards[0]));
+    if (breederUse) {
+      const key = `b${next.log.length}-${Date.now()}`;
+      setBreederFx({
+        p: breederUse.p,
+        key
+      });
+      motionTimers.current.push(setTimeout(() => setBreederFx(cur => cur && cur.key === key ? null : cur), 1700));
+    }
+    const back = evs.find(e => e.t === 'hit' && e.reflect);
+    const shield = back && evs.find(e => e.t === 'hit' && !e.reflect && e.guarded);
+    if (back && shield) {
+      const a = centerOf(`${shield.p}-${shield.m}`);
+      const b = centerOf(`${back.p}-${back.m}`);
+      if (a && b) {
+        const key = `r${next.log.length}-${Date.now()}`;
+        const beam = {
+          key,
+          x: a.x,
+          y: a.y,
+          len: Math.round(Math.hypot(b.x - a.x, b.y - a.y)),
+          deg: Math.atan2(b.y - a.y, b.x - a.x) * 180 / Math.PI
+        };
+        motionTimers.current.push(setTimeout(() => setBeams(cur => [...cur, beam]), 260));
+        motionTimers.current.push(setTimeout(() => setBeams(cur => cur.filter(x => x.key !== key)), 1100));
+      }
+    }
+    evs.filter(e => e.t === 'guard').forEach(e => {
+      const c = cardOf(db, e.card);
+      lastGuard.current[`${e.p}-${e.mon}`] = {
+        jump: cardDodgeIsJump(c),
+        label: c && c.kind !== 'dge' ? cardGuardLabel(c) : '',
+        at: Date.now()
+      };
+    });
     evs.filter(e => e.t === 'hit').forEach((e, n) => {
-      const type = e.evaded && !e.dmg ? 'dodge' : e.guarded && !e.dmg ? 'guard' : e.dmg > 0 ? 'hit' : e.evaded ? 'dodge' : null;
+      let type = e.evaded && !e.dmg ? 'dodge' : e.guarded && !e.dmg ? 'guard' : e.dmg > 0 ? 'hit' : e.evaded ? 'dodge' : null;
+      const g = lastGuard.current[`${e.p}-${e.m}`];
+      const recent = g && Date.now() - g.at < 20000;
+      if (type === 'dodge' && recent && g.jump) type = 'jump';
       if (type) playMotion(`${e.p}-${e.m}`, {
         type,
+        label: type === 'guard' && recent ? g.label : '',
         key: `h${next.log.length}-${n}-${Date.now()}`
-      }, 720);
+      }, type === 'jump' ? 920 : 720);
     });
     evs.filter(e => e.t === 'guard').forEach((e, n) => {
       const c = cardOf(db, e.card);
+      const type = c && c.kind === 'dge' ? cardDodgeIsJump(c) ? 'jump' : 'dodge' : 'guard';
       playMotion(`${e.p}-${e.mon}`, {
-        type: c && c.kind === 'dge' ? 'dodge' : 'guard',
+        type,
+        label: type === 'guard' ? cardGuardLabel(c) : '',
         key: `g${next.log.length}-${n}-${Date.now()}`
-      }, 720);
+      }, type === 'jump' ? 920 : 720);
     });
     const use = evs.find(e => e.t === 'use');
     if (use) {
@@ -86420,7 +86561,21 @@ const CardBattleBoard = ({
     style: JA_WRAP_STYLE
   }, jaWrap(bubble.text))), React.createElement("div", {
     className: "pointer-events-none absolute inset-x-6 top-1/2 h-px bg-gradient-to-r from-transparent via-violet-300/40 to-transparent"
-  }), action && React.createElement("div", {
+  }), breederFx && React.createElement("div", {
+    key: breederFx.key,
+    "data-card-breeder-fx": breederFx.p === CARD_ME ? 'me' : 'foe',
+    "aria-hidden": "true",
+    className: `mh-card-breeder pointer-events-none absolute z-[3] grid h-[46px] w-[46px] place-items-center overflow-hidden rounded-2xl border-2 bg-black ${breederFx.p === CARD_ME ? 'bottom-1 left-2 border-amber-300' : 'right-2 top-1'}`,
+    style: breederFx.p === CARD_ME ? undefined : {
+      borderColor: who.accent
+    }
+  }, breederFx.p === CARD_ME ? meProfile && meProfile.icon ? cardIconNode(meProfile.icon, 34) : React.createElement("span", {
+    className: "text-[26px]"
+  }, "🧑") : pvp ? cardIconNode(pvp.icon, 34) : React.createElement("img", {
+    src: assistantFaceImage(who, 'happy'),
+    alt: "",
+    className: "h-full w-full object-cover object-top"
+  })), action && React.createElement("div", {
     key: action.key,
     "data-card-action": true,
     className: `relative z-[1] flex items-center gap-2 rounded-2xl border border-amber-300/50 bg-black/55 px-2 ${compact ? "py-0.5" : "py-1"} shadow-lg`
@@ -86599,7 +86754,23 @@ const CardBattleBoard = ({
       left: drag.x,
       top: drag.y
     }
-  })), document.body), detail && React.createElement(CardDetailModal, {
+  })), document.body), beams.length > 0 && typeof ReactDOM !== 'undefined' && ReactDOM.createPortal(React.createElement("div", {
+    "data-card-beam-layer": true,
+    className: "pointer-events-none fixed inset-0",
+    style: {
+      zIndex: MODAL_Z.dialog - 2
+    }
+  }, beams.map(b => React.createElement("span", {
+    key: b.key,
+    "data-card-beam": true,
+    className: "mh-card-beam",
+    style: {
+      left: b.x,
+      top: b.y,
+      width: b.len,
+      transform: `rotate(${b.deg}deg)`
+    }
+  }))), document.body), detail && React.createElement(CardDetailModal, {
     db: db,
     no: detail,
     onClose: () => setDetail(null)
@@ -86870,6 +87041,7 @@ const CardBattleScreen = ({
       key: game.key,
       db: db,
       game: game,
+      meProfile: rank && rank.profile,
       quickRun: quickRun ? {
         loops: quickRun.loops,
         stopped: quickRun.stopped
@@ -128630,6 +128802,22 @@ const createAnimationStyle = () => {
     .mh-card-hit { animation: mhRjJackHit .6s ease-out both; }
     .mh-card-ko { animation: mhCardKo .9s ease-in forwards; transform-origin: 50% 90%; }
     .mh-card-shield { position: absolute; inset: 6% 14%; border-radius: 45% 45% 50% 50%; border: 3px solid rgba(147,197,253,.95); background: radial-gradient(circle, rgba(191,219,254,.35), rgba(59,130,246,.15) 60%, transparent 72%); box-shadow: 0 0 18px rgba(96,165,250,.9); pointer-events: none; animation: mhCardShield .7s ease-out both; }
+    /* 跳んでよける(ジャンプ・舞い上がる): 上で止まってから降りる / よけた残像 / 盾の数字 / はね返す光線 / ブリーダーの顔 / 倒れたカードが裏返る(設計書 5-3・5-4) */
+    @keyframes mhCardJump { 0% { transform: none; } 25% { transform: translateY(-30px) scale(1.04); } 72% { transform: translateY(-30px) scale(1.04); filter: drop-shadow(0 18px 6px rgba(0,0,0,.35)); } 100% { transform: none; } }
+    @keyframes mhCardAfter { 0% { opacity: .55; transform: none; } 100% { opacity: 0; transform: translateX(-8px); } }
+    @keyframes mhCardPop { 0% { opacity: 0; transform: translateY(6px) scale(.6); } 25% { opacity: 1; transform: translateY(0) scale(1.15); } 80% { opacity: 1; transform: translateY(-4px) scale(1); } 100% { opacity: 0; transform: translateY(-10px); } }
+    @keyframes mhCardBeam { 0% { opacity: 0; transform-origin: 0 50%; clip-path: inset(0 100% 0 0); } 30% { opacity: 1; clip-path: inset(0 0 0 0); } 75% { opacity: 1; clip-path: inset(0 0 0 0); } 100% { opacity: 0; clip-path: inset(0 0 0 60%); } }
+    @keyframes mhCardBreeder { 0% { opacity: 0; transform: scale(.4); box-shadow: 0 0 0 rgba(253,224,71,0); } 20% { opacity: 1; transform: scale(1.12); box-shadow: 0 0 22px rgba(253,224,71,.95); } 75% { opacity: 1; transform: scale(1); box-shadow: 0 0 14px rgba(253,224,71,.7); } 100% { opacity: 0; transform: scale(.9); } }
+    @keyframes mhCardFlip { 0% { transform: rotateY(0); } 100% { transform: rotateY(180deg); } }
+    .mh-card-jump { animation: mhCardJump .9s ease-out both; }
+    .mh-card-afterimage { position: absolute; inset: 0; display: flex; align-items: flex-end; justify-content: center; pointer-events: none; filter: grayscale(.4) brightness(1.4) drop-shadow(0 0 6px rgba(125,211,252,.9)); animation: mhCardAfter .62s ease-out both; }
+    .mh-card-air-mark { position: absolute; top: -2px; left: 50%; margin-left: -18px; width: 36px; border-radius: 6px; background: rgba(8,145,178,.92); color: #ecfeff; font-size: 11px; font-weight: 900; text-align: center; pointer-events: none; animation: mhCardPop .9s ease-out both; }
+    .mh-card-guard-num { position: absolute; right: 4%; top: 18%; z-index: 51; font-size: 22px; font-weight: 900; color: #dbeafe; -webkit-text-stroke: 1.5px #1d4ed8; text-shadow: 0 0 10px rgba(96,165,250,.95); pointer-events: none; white-space: nowrap; animation: mhCardPop .9s ease-out both; }
+    .mh-card-beam { position: fixed; height: 8px; margin-top: -4px; border-radius: 999px; transform-origin: 0 50%; background: linear-gradient(90deg, rgba(191,219,254,.2), #e0f2fe 30%, #7dd3fc 70%, #fff); box-shadow: 0 0 14px rgba(125,211,252,1), 0 0 4px #fff; animation: mhCardBeam .8s ease-out both; }
+    .mh-card-breeder { animation: mhCardBreeder 1.7s ease-out both; }
+    .mh-card-flip { transform-style: preserve-3d; animation: mhCardFlip .5s ease-in .9s both; }
+    .mh-card-flip-face { backface-visibility: hidden; }
+    .mh-card-flip-back { position: absolute; inset: 0; border-radius: 3px; transform: rotateY(180deg); backface-visibility: hidden; border: 2px solid rgba(148,163,184,.55); background: repeating-linear-gradient(45deg, #1e1b4b 0 5px, #312e81 5px 10px); filter: brightness(.6); }
     /* ==== MFバトルカードのパックを開ける演出(87-card-deck-edit.jsx の CardPackOpen。社長「派手に」台帳 #3503) ====
        破る: 上の帯がちぎれて飛ぶ・光があふれる / めくる: 1枚ずつ裏返る / キラ: めくる前から裏が光って揺れる・めくったら大きく光る */
     @keyframes mhPackIdle { 0%,100% { transform: translateY(0) rotate(-1deg); } 50% { transform: translateY(-6px) rotate(1deg); } }

@@ -1,6 +1,7 @@
 // MFバトルカードの「技の動きの見本」(デバッグ設定 → MFバトルカード → 技の動きの見本を流す)を、実際のブラウザで動画に撮る(社長に見せる用)。
 //   node tools/card/card-motion-video.js <出力.mp4>   iPhone 13(390×844)の大きさ。ffmpeg で mp4 にする
-// 撮るもの: 同じ名前の技(スエゾーのかみつき)・名前から決めた技(ガリの雷)・全体攻撃(ゴーレムの竜巻アタック)・よける・防ぐ・KO
+// 撮るもの: 同じ名前の技(スエゾーのかみつき)・名前から決めた技(ガリの雷)・全体攻撃(ゴーレムの竜巻アタック)・跳んでよける・防ぐ(−3)・KO(カードが裏返る)・
+//   ブリーダーのカード(加勢)・はね返す(魔法反射の光線)・特殊技(偵察)
 // ※ここから下の起動の手順は card-battle-browser-check.js と同じ(写して使う)。
 //
 //   node tools/card/card-battle-browser-check.js            確かめる
@@ -95,13 +96,15 @@ const serve = () => new Promise((resolve) => {
     const t0 = Date.now();
     await page.locator('[data-card-motion-demo]').click();
     await page.locator('[data-card-battle]').waitFor({ timeout: 20000 });
-    await page.waitForTimeout(19000);
-    const cutFrom = (Date.now() - t0 > 0) ? 0 : 0;
+    // 見本の最後(スエゾーの「偵察」で1枚引く)まで待ち、動きが消えるまで少し置く。届かなくても 45 秒で切る
+    await page.waitForFunction(() => /1枚引いた/.test(document.querySelector('[data-card-log]')?.textContent || ''), null, { timeout: 45000 }).catch(() => {});
+    await page.waitForTimeout(2200);
+    const demoSec = (Date.now() - t0) / 1000; // 見本を押してから終わるまでの長さ。この長さだけを残す
     await context.close();
     const webm = fs.readdirSync(tmp).find((f) => f.endsWith('.webm'));
-    // 起動からトップまでの部分は切って、見本の所だけにする(おおよそ最後の 19 秒)
+    // 起動からトップまでの部分は切って、見本の所だけにする(見本を押してから終わるまで)
     const dur = Number(require('child_process').execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', path.join(tmp, webm)]).toString().trim()) || 0;
-    const start = Math.max(0, dur - 19.5 + cutFrom);
+    const start = Math.max(0, dur - demoSec - 0.3);
     require('child_process').execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-ss', String(start), '-i', path.join(tmp, webm), '-vf', 'fps=30,format=yuv420p', '-c:v', 'libx264', '-crf', '28', '-preset', 'veryfast', '-an', outFile]);
     console.log(`書き出し: ${outFile}(${(fs.statSync(outFile).size / 1024).toFixed(0)}KB)`);
   } finally {
