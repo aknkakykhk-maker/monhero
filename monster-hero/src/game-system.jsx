@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e558545b668071e8
+// generated-sha256: 7113f302a72ad7c5
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-25 01:24"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-25 01:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -53168,10 +53168,11 @@ const cardPackMonsters = (db, pack, n = 5) => {
   const step = list.length / n;
   return Array.from({ length: n }, (_, k) => list[Math.floor(k * step)]);
 };
+// 後ろの4体は左右へ広げ、奥の2体は高い所から顔を出す(真ん中の1体と重なって顔が隠れないように。#3503 カゲあつくん)
 const CARD_PACK_SLOTS = Object.freeze([
-  { left: '-8%', w: '50%', b: '19%', z: 1, o: .9 }, { right: '-8%', w: '50%', b: '19%', z: 1, o: .9 },
-  { left: '6%', w: '56%', b: '9%', z: 2, o: 1 }, { right: '6%', w: '56%', b: '9%', z: 2, o: 1 },
-  { left: '50%', w: '74%', b: '2%', z: 3, o: 1, center: true },
+  { left: '-12%', w: '44%', h: '44%', b: '31%', z: 1, o: .92 }, { right: '-12%', w: '44%', h: '44%', b: '31%', z: 1, o: .92 },
+  { left: '-6%', w: '46%', h: '48%', b: '10%', z: 2, o: 1 }, { right: '-6%', w: '46%', h: '48%', b: '10%', z: 2, o: 1 },
+  { left: '50%', w: '62%', h: '58%', b: '2%', z: 3, o: 1, center: true },
 ]);
 const CardPackArt = ({ db, pack, width = 200, torn = false, className = '' }) => {
   const mons = cardPackMonsters(db, pack);
@@ -53188,7 +53189,7 @@ const CardPackArt = ({ db, pack, width = 200, torn = false, className = '' }) =>
       {order.map((m, k) => {
         const sl = slots[k]; const src = cardMonArt(m) || CARD_IMG(m.img);
         return <img key={m.no} src={src} alt="" aria-hidden="true" draggable={false} className="absolute object-contain object-bottom drop-shadow-[0_4px_6px_rgba(0,0,0,.6)]"
-          style={{ width: sl.w, height: '58%', bottom: sl.b, zIndex: sl.z, opacity: sl.o, ...(sl.center ? { left: sl.left, transform: 'translateX(-50%)' } : sl.left ? { left: sl.left } : { right: sl.right }) }}/>;
+          style={{ width: sl.w, height: sl.h, bottom: sl.b, zIndex: sl.z, opacity: sl.o, ...(sl.center ? { left: sl.left, transform: 'translateX(-50%)' } : sl.left ? { left: sl.left } : { right: sl.right }) }}/>;
       })}
       <div className="absolute inset-x-0 top-[9%] z-[5] text-center">
         <div className="font-black leading-none text-white" style={{ fontSize: Math.round(width * 0.2), WebkitTextStroke: `${Math.max(2, Math.round(width / 50))}px #111`, paintOrder: 'stroke fill', textShadow: '0 4px 0 rgba(0,0,0,.45)' }}>{label}</div>
@@ -53203,14 +53204,20 @@ const CardPackArt = ({ db, pack, width = 200, torn = false, className = '' }) =>
 // マーケットの「カードポイント」の売り場で買ったら、ここへ来る(買うのと保存は 60-app。この部品は見せるだけ)
 // result: { packId, packs:[[{ no, slot, rarity, dup, point }…]…], dupPoint, cost }
 // 演出(社長「派手に」台帳 #3503): パックをタップ → 上の帯がちぎれて飛び、光があふれる → カードが配られる → タップで1枚ずつ裏返る(音)
-//   キラ・別絵キラは、めくる前から裏が光って揺れる。めくると画面が光り、大きな音。「全部めくる」で続けてめくれる(飛ばせる)
+//   破れた所から光の柱が立ち、画面が一瞬白く光ってからカードが配られる(カゲあつくん「開ける瞬間を大きく」)
+//   キラ・別絵キラは、めくる前から裏が光って揺れる。めくると真ん中へ大きく出て少し止まり、並びへ戻る(タップで早く戻せる)
+//   別絵キラはキラより1段上の虹色の光(レア度の差が見て分かるように)。「全部めくる」も1枚ずつ順にめくり、キラ以上では止まる
 //   音は今ある効果音(Audio_.se の special・card・crit・levelUp・fusion)
 const CARD_RARITY_LABEL = Object.freeze({ normal: '', kira: 'キラ', alt: '別絵キラ' });
+const CARD_PACK_TEAR_MS = 1150;   // 破れる → 光の柱 → 白く光る → 配る
+const CARD_PACK_SPOT_MS = 1500;   // キラ以上を真ん中に出しておく長さ(このあと並びへ戻る)
+const CARD_PACK_SPOT_BACK_MS = 320;
 const CardPackOpen = ({ db, result, onDone }) => {
   const [pi, setPi] = useState(0);
   const [phase, setPhase] = useState('closed'); // closed → tearing → open
   const [flipped, setFlipped] = useState([]);
-  const [flash, setFlash] = useState(0);
+  const [flash, setFlash] = useState(null); // { n, rarity }
+  const [spot, setSpot] = useState(null);   // { i, rarity, leaving } 真ん中へ大きく出しているキラ以上
   const [detail, setDetail] = useState(null);
   const timers = useRef([]);
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
@@ -53224,17 +53231,37 @@ const CardPackOpen = ({ db, result, onDone }) => {
     if (phase !== 'closed') return;
     Audio_.se.special();
     setPhase('tearing');
-    later(() => setPhase('open'), 900);
+    later(() => Audio_.se.crit(), 520);
+    later(() => setPhase('open'), CARD_PACK_TEAR_MS);
+  };
+  const spotOff = () => {
+    setSpot((sp) => (sp && !sp.leaving ? { ...sp, leaving: true } : sp));
+    later(() => setSpot(null), CARD_PACK_SPOT_BACK_MS);
   };
   const reveal = (i) => {
     Audio_.se.card();
     setFlipped((f) => (f.includes(i) ? f : [...f, i]));
     const c = cards[i];
-    if (c && c.rarity !== 'normal') later(() => { setFlash((x) => x + 1); Audio_.se.crit(); if (c.rarity === 'alt') Audio_.se.fusion(); else Audio_.se.levelUp(); }, 380);
+    if (c && c.rarity !== 'normal') {
+      later(() => {
+        setFlash((x) => ({ n: ((x && x.n) || 0) + 1, rarity: c.rarity }));
+        setSpot({ i, rarity: c.rarity, leaving: false });
+        Audio_.se.crit(); if (c.rarity === 'alt') Audio_.se.fusion(); else Audio_.se.levelUp();
+      }, 380);
+      later(spotOff, 380 + CARD_PACK_SPOT_MS);
+    }
   };
-  const flip = (i) => { if (flipped.includes(i) || phase !== 'open') return; reveal(i); };
-  const flipAll = () => { cards.map((_, i) => i).filter((i) => !flipped.includes(i)).forEach((i, k) => later(() => reveal(i), k * 140)); };
-  const next = () => { Audio_.se.tap(); timers.current.forEach(clearTimeout); timers.current = []; setPi((x) => x + 1); setPhase('closed'); setFlipped([]); };
+  const flip = (i) => { if (flipped.includes(i) || phase !== 'open' || spot) return; reveal(i); };
+  // 1枚ずつ順に。キラ以上は真ん中に出している間だけ次を待つ
+  const flipAll = () => {
+    if (spot) return;
+    let at = 0;
+    cards.map((_, i) => i).filter((i) => !flipped.includes(i)).forEach((i) => {
+      later(() => reveal(i), at);
+      at += cards[i].rarity !== 'normal' ? 380 + CARD_PACK_SPOT_MS + CARD_PACK_SPOT_BACK_MS + 120 : 140;
+    });
+  };
+  const next = () => { Audio_.se.tap(); timers.current.forEach(clearTimeout); timers.current = []; setPi((x) => x + 1); setPhase('closed'); setFlipped([]); setSpot(null); };
   const packPoint = cards.reduce((a, c) => a + (c.point || 0), 0);
   return (
     <div data-mh-screen data-card-pack-open data-card-pack-phase={phase} className={SCREEN_SHELL_CLASS}>
@@ -53244,6 +53271,7 @@ const CardPackOpen = ({ db, result, onDone }) => {
           <button type="button" data-card-pack-tear onClick={tear} className={`relative ${phase === 'closed' ? 'mh-pack-idle' : 'mh-pack-shake'}`} aria-label="パックを開ける">
             <div className={phase === 'tearing' ? 'mh-pack-drop' : ''}><CardPackArt db={db} pack={pack} width={210} torn={phase === 'tearing'}/></div>
             {phase === 'tearing' && <div aria-hidden="true" className="mh-pack-strip absolute inset-x-0 top-0 h-[7%] rounded-t-[14px]" style={{ background: 'repeating-linear-gradient(90deg, rgba(255,255,255,.95) 0 6px, rgba(255,255,255,.5) 6px 12px)' }}/>}
+            {phase === 'tearing' && <div aria-hidden="true" className="mh-pack-pillar"/>}
             {phase === 'tearing' && <div aria-hidden="true" className="mh-pack-burst"/>}
             {phase === 'closed' && <span className="absolute inset-x-0 -bottom-9 animate-pulse text-center text-[14px] font-black text-white">タップで開ける</span>}
           </button>
@@ -53258,15 +53286,15 @@ const CardPackOpen = ({ db, result, onDone }) => {
                 <div key={`${pi}-${i}`} className="mh-pack-deal flex flex-col items-center" style={{ animationDelay: `${i * 70}ms` }}>
                   <button type="button" data-card-pack-card={i} data-card-pack-flipped={on ? 1 : 0} data-card-pack-rarity={c.rarity} {...(on ? press(c.no, () => setDetail(c.no)) : { onClick: () => flip(i) })} className="mh-pack-card relative w-full active:scale-95" style={{ WebkitUserSelect: 'none', userSelect: 'none' }}>
                     <div className={`mh-pack-card-in aspect-[5/7] w-full ${on ? 'flipped' : ''}`}>
-                      <div className={`mh-pack-face flex items-center justify-center rounded-[5px] border-2 border-white/50 text-[22px] ${rare && !on ? 'mh-pack-kira-back' : ''}`} style={{ background: `linear-gradient(160deg, ${pack.color}, #0f172a)` }}>{c.slot === 'mon' ? '★' : '🃏'}</div>
-                      <div className={`mh-pack-face mh-pack-front ${rare ? 'mh-pack-kira-front' : ''}`}>
+                      <div className={`mh-pack-face flex items-center justify-center rounded-[5px] border-2 border-white/50 text-[22px] ${rare && !on ? (c.rarity === 'alt' ? 'mh-pack-alt-back' : 'mh-pack-kira-back') : ''}`} style={{ background: `linear-gradient(160deg, ${pack.color}, #0f172a)` }}>{c.slot === 'mon' ? '★' : '🃏'}</div>
+                      <div className={`mh-pack-face mh-pack-front ${rare ? (c.rarity === 'alt' ? 'mh-pack-alt-front' : 'mh-pack-kira-front') : ''}`}>
                         <img src={CARD_IMG(card ? card.img : m ? m.img : c.no)} alt={name} draggable={false} className="h-full w-full rounded-[5px] object-cover"/>
                       </div>
                     </div>
-                    {on && rare && <div aria-hidden="true" className="mh-pack-rays"/>}
+                    {on && rare && <div aria-hidden="true" className={`mh-pack-rays ${c.rarity === 'alt' ? 'mh-pack-rays-alt' : ''}`}/>}
                     {on && c.dup && <span className="absolute right-0.5 top-0.5 z-[2] rounded-md bg-slate-950/90 px-1 text-[10px] font-black text-amber-200">+{c.point}</span>}
                     {on && !c.dup && <span className="absolute right-0.5 top-0.5 z-[2] rounded-md bg-emerald-400 px-1 text-[9px] font-black text-slate-950">NEW</span>}
-                    {on && rare && <span className="absolute left-0.5 top-0.5 z-[2] rounded-md bg-amber-300 px-1 text-[9px] font-black text-slate-950">{CARD_RARITY_LABEL[c.rarity]}</span>}
+                    {on && rare && <span className={`absolute left-0.5 top-0.5 z-[2] rounded-md px-1 text-[9px] font-black text-slate-950 ${c.rarity === 'alt' ? 'mh-pack-alt-label' : 'bg-amber-300'}`}>{CARD_RARITY_LABEL[c.rarity]}</span>}
                   </button>
                   <span className="mt-0.5 line-clamp-2 min-h-[26px] text-center text-[10px] font-bold leading-tight text-slate-100" style={JA_WRAP_STYLE}>{on ? name : ''}</span>
                 </div>
@@ -53281,7 +53309,23 @@ const CardPackOpen = ({ db, result, onDone }) => {
           </div>
         )}
       </div>
-      {flash > 0 && <div key={flash} aria-hidden="true" className="mh-pack-flash"/>}
+      {phase === 'tearing' && <div aria-hidden="true" className="mh-pack-whiteout"/>}
+      {flash && <div key={flash.n} aria-hidden="true" className={`mh-pack-flash ${flash.rarity === 'alt' ? 'mh-pack-flash-alt' : ''}`}/>}
+      {spot && cards[spot.i] && (() => {
+        const c = cards[spot.i]; const card = cardOf(db, c.no); const m = card ? null : cardMonsterOf(db, c.no);
+        const alt = spot.rarity === 'alt';
+        return (
+          <button type="button" data-card-pack-spot={spot.rarity} aria-label="並びへ戻す" onClick={spotOff} className="fixed inset-0 z-[72] flex flex-col items-center justify-center bg-slate-950/70">
+            <div aria-hidden="true" className={`mh-pack-spot-rays ${alt ? 'mh-pack-spot-rays-alt' : ''}`}/>
+            <div className={`relative w-[62vw] max-w-[260px] ${spot.leaving ? 'mh-pack-spot-out' : 'mh-pack-spot-in'}`}>
+              <div className={`relative aspect-[5/7] w-full ${alt ? 'mh-pack-alt-front' : 'mh-pack-kira-front'}`}>
+                <img src={CARD_IMG(card ? card.img : m ? m.img : c.no)} alt={card ? card.name : m ? m.name : c.no} draggable={false} className="h-full w-full rounded-[8px] object-cover"/>
+              </div>
+            </div>
+            <span className={`relative mt-4 rounded-full px-4 py-1 text-[18px] font-black text-slate-950 ${alt ? 'mh-pack-alt-label' : 'bg-amber-300'} ${spot.leaving ? 'opacity-0' : ''}`}>{CARD_RARITY_LABEL[c.rarity]}!</span>
+          </button>
+        );
+      })()}
       <div className={SCREEN_FOOTER_CLASS}>
         {phase !== 'open' ? <div className="text-center text-[12px] font-bold text-slate-400">パックをタップしてください</div>
           : !allOpen ? <button type="button" data-card-pack-flip-all className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]" onClick={flipAll}>全部めくる</button>
@@ -80559,7 +80603,7 @@ const createAnimationStyle = () => {
     .mh-pack-idle { animation: mhPackIdle 2.4s ease-in-out infinite; }
     .mh-pack-shake { animation: mhPackShake .35s ease-in-out both; }
     .mh-pack-strip { animation: mhPackTearStrip .6s cubic-bezier(.3,.6,.4,1) forwards; }
-    .mh-pack-drop { animation: mhPackDrop .45s ease-in .25s forwards; }
+    .mh-pack-drop { animation: mhPackDrop .3s ease-in .62s forwards; }
     .mh-pack-burst { position: absolute; left: 50%; top: 30%; width: 320px; height: 320px; margin: -160px 0 0 -160px; border-radius: 50%; pointer-events: none; background: radial-gradient(circle, rgba(255,255,255,1), rgba(253,230,138,.85) 30%, rgba(253,186,116,.35) 55%, transparent 70%); animation: mhPackBurst .8s ease-out forwards; }
     .mh-pack-deal { animation: mhPackDeal .42s cubic-bezier(.2,.8,.3,1.2) both; }
     .mh-pack-card { perspective: 700px; }
@@ -80573,7 +80617,28 @@ const createAnimationStyle = () => {
     .mh-pack-kira-front::after { content: ''; position: absolute; inset: 0; border-radius: 5px; background: linear-gradient(105deg, transparent 30%, rgba(255,255,255,.55) 45%, rgba(147,197,253,.45) 55%, transparent 70%); background-size: 220% 100%; animation: mhPackShimmer 1.6s linear infinite; pointer-events: none; }
     .mh-pack-flash { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(circle at 50% 45%, rgba(255,255,255,.95), rgba(253,224,71,.6) 35%, rgba(253,224,71,0) 70%); animation: mhPackFlash .7s ease-out forwards; z-index: 70; }
     .mh-pack-rays { position: absolute; inset: -60%; pointer-events: none; background: repeating-conic-gradient(rgba(253,224,71,.55) 0 8deg, transparent 8deg 22deg); border-radius: 50%; animation: mhPackRays .9s ease-out forwards; }
-    @media (prefers-reduced-motion: reduce) { .mh-pack-idle, .mh-pack-kira-back { animation: none; } }
+    @keyframes mhPackPillar { 0% { opacity: 0; transform: translateX(-50%) scaleX(.15) scaleY(0); } 20% { opacity: 1; transform: translateX(-50%) scaleX(.35) scaleY(1); } 60% { opacity: 1; transform: translateX(-50%) scaleX(1.25) scaleY(1); } 100% { opacity: 0; transform: translateX(-50%) scaleX(2.4) scaleY(1); } }
+    @keyframes mhPackWhiteout { 0%, 46% { opacity: 0; } 64% { opacity: 1; } 100% { opacity: 0; } }
+    @keyframes mhPackSpotIn { 0% { transform: scale(.25) rotateY(180deg); opacity: 0; } 55% { transform: scale(1.12) rotateY(0); opacity: 1; } 75% { transform: scale(.97); } 100% { transform: scale(1); } }
+    @keyframes mhPackSpotOut { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(.25) translateY(-30vh); opacity: 0; } }
+    @keyframes mhPackSpin { 0% { transform: translate(-50%,-50%) rotate(0); } 100% { transform: translate(-50%,-50%) rotate(360deg); } }
+    @keyframes mhPackHue { 0% { filter: hue-rotate(0deg) brightness(1.2); } 100% { filter: hue-rotate(360deg) brightness(1.2); } }
+    @keyframes mhPackRainbowMove { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
+    .mh-pack-pillar { position: absolute; left: 50%; bottom: 86%; width: 170px; height: 120vh; transform-origin: 50% 100%; pointer-events: none; background: linear-gradient(to top, rgba(255,255,255,1), rgba(254,240,138,.9) 25%, rgba(253,186,116,.35) 70%, transparent); filter: blur(3px); -webkit-mask: linear-gradient(90deg, transparent, #000 32%, #000 68%, transparent); mask: linear-gradient(90deg, transparent, #000 32%, #000 68%, transparent); animation: mhPackPillar .95s ease-out .12s both; z-index: 3; }
+    .mh-pack-whiteout { position: fixed; inset: 0; pointer-events: none; background: #fff; z-index: 71; animation: mhPackWhiteout 1.15s ease-out forwards; }
+    .mh-pack-flash-alt { background: radial-gradient(circle at 50% 45%, rgba(255,255,255,.95), rgba(244,114,182,.6) 25%, rgba(96,165,250,.55) 45%, rgba(74,222,128,.35) 60%, transparent 75%); }
+    .mh-pack-rays-alt { background: repeating-conic-gradient(#f87171 0 6deg, transparent 6deg 12deg, #facc15 12deg 18deg, transparent 18deg 24deg, #4ade80 24deg 30deg, transparent 30deg 36deg, #60a5fa 36deg 42deg, transparent 42deg 48deg, #c084fc 48deg 54deg, transparent 54deg 60deg); opacity: .8; }
+    .mh-pack-alt-back { animation: mhPackKiraBack .7s ease-in-out infinite; background: linear-gradient(120deg, #f87171, #facc15, #4ade80, #60a5fa, #c084fc, #f87171) !important; background-size: 200% 100% !important; box-shadow: 0 0 18px 4px rgba(192,132,252,.9); }
+    .mh-pack-alt-back::after { content: ''; position: absolute; inset: 0; border-radius: 5px; background: linear-gradient(105deg, transparent 35%, rgba(255,255,255,.9) 50%, transparent 65%); background-size: 220% 100%; animation: mhPackShimmer .8s linear infinite; }
+    .mh-pack-alt-front { border-radius: 8px; box-shadow: 0 0 0 3px #fff, 0 0 18px 6px rgba(244,114,182,.9), 0 0 36px 14px rgba(96,165,250,.7); }
+    .mh-pack-alt-front::before { content: ''; position: absolute; inset: -4px; border-radius: 10px; z-index: -1; background: conic-gradient(#f87171, #facc15, #4ade80, #60a5fa, #c084fc, #f87171); animation: mhPackHue 1.6s linear infinite; }
+    .mh-pack-alt-front::after { content: ''; position: absolute; inset: 0; border-radius: 7px; pointer-events: none; background: linear-gradient(115deg, rgba(248,113,113,.0) 20%, rgba(248,113,113,.35) 32%, rgba(250,204,21,.35) 42%, rgba(74,222,128,.35) 52%, rgba(96,165,250,.35) 62%, rgba(192,132,252,.35) 72%, transparent 84%); background-size: 200% 100%; mix-blend-mode: screen; animation: mhPackShimmer 1.4s linear infinite; }
+    .mh-pack-alt-label { background: linear-gradient(90deg, #f87171, #facc15, #4ade80, #60a5fa, #c084fc, #f87171); background-size: 200% 100%; animation: mhPackRainbowMove 1.2s linear infinite; }
+    .mh-pack-spot-in { animation: mhPackSpotIn .55s cubic-bezier(.2,.8,.3,1.1) both; perspective: 900px; }
+    .mh-pack-spot-out { animation: mhPackSpotOut .32s ease-in forwards; }
+    .mh-pack-spot-rays { position: absolute; left: 50%; top: 46%; width: 180vmax; height: 180vmax; pointer-events: none; background: repeating-conic-gradient(rgba(253,224,71,.4) 0 7deg, transparent 7deg 20deg); border-radius: 50%; animation: mhPackSpin 9s linear infinite; -webkit-mask: radial-gradient(circle, #000 10%, transparent 55%); mask: radial-gradient(circle, #000 10%, transparent 55%); }
+    .mh-pack-spot-rays-alt { background: repeating-conic-gradient(rgba(248,113,113,.55) 0 6deg, transparent 6deg 12deg, rgba(250,204,21,.55) 12deg 18deg, transparent 18deg 24deg, rgba(74,222,128,.55) 24deg 30deg, transparent 30deg 36deg, rgba(96,165,250,.55) 36deg 42deg, transparent 42deg 48deg, rgba(192,132,252,.55) 48deg 54deg, transparent 54deg 60deg); animation-duration: 6s; }
+    @media (prefers-reduced-motion: reduce) { .mh-pack-idle, .mh-pack-kira-back, .mh-pack-alt-back, .mh-pack-spot-rays { animation: none; } }
     @keyframes mhRjJackHit { 0% { transform: none; filter: brightness(1); } 12% { transform: translate(-14px, 2px) rotate(-4deg); filter: brightness(2.6); } 30% { transform: translate(12px, -2px) rotate(3deg); filter: brightness(1.6); } 55% { transform: translate(-6px, 0); filter: brightness(1.2); } 100% { transform: none; filter: brightness(1); } }
     @keyframes mhRjBarDrop { 0% { transform: scaleX(var(--from)); } 100% { transform: scaleX(var(--to)); } }
     @media (max-height: 760px) { .mh-rjdmg { gap: 3px; } .mh-rjdmg-score b { font-size: 30px; } .mh-rjdmg-damage b { font-size: 40px !important; } .mh-rjdmg-down { font-size: 48px; } }

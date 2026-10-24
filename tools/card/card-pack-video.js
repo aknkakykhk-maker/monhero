@@ -97,14 +97,14 @@ const serve = () => new Promise((resolve) => {
     await page.waitForTimeout(1600);
     for (let i = 0; i < 8; i++) {
       await page.locator(`[data-card-pack-card="${i}"]`).dispatchEvent('click');
-      await page.waitForTimeout(i === 7 ? 2600 : 650);
+      await page.waitForTimeout(i === 7 ? 3000 : 650);
     }
     await page.locator('[data-card-pack-next]').dispatchEvent('click');
     await page.waitForTimeout(1500);
     await page.locator('[data-card-pack-tear]').dispatchEvent('click');
     await page.waitForTimeout(2400);
     await page.locator('[data-card-pack-flip-all]').dispatchEvent('click');
-    await page.waitForTimeout(3800);
+    await page.waitForTimeout(4400);
     const len = (Date.now() - t0) / 1000;
     await context.close();
     const webm = fs.readdirSync(tmp).find((f) => f.endsWith('.webm'));
