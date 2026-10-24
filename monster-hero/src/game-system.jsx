@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a22c2edeed1fccf7
+// generated-sha256: 26ecb2f7ef8bc391
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-25 05:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-25 05:14"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -50935,6 +50935,8 @@ const CARD_SAVE_KEYS = Object.freeze({
   shop: 'mh_card_shop_v1',       // マーケットで買ったスターターキットの印(89-card-pack.jsx)
   topAssist: 'mh_card_top_assist_v1', // トップの助手の「立ち絵/コメント」の出し入れ(84。無ければ両方ON)
   rankSync: 'mh_card_rank_sync_v1',   // ランキングへ最後に送った行の中身(同じなら送り直さない。90-card-rank.jsx)
+  bgm: 'mh_card_bgm_v1',              // 対戦の BGM { cpu: 'auto' か 曲id, pvp: 曲id }(設計書 5-3。いまの mh_bgm_arrangement は触らない)
+  settings: 'mh_card_settings_v1',    // 演出の速さ・守れないときの自動パス(normalizeCardSettings)
 });
 const cardIsPlainObject = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
 const cardNormalizeCollection = (v) => {
@@ -50963,6 +50965,22 @@ const cardNormalizeDaily = (v, today) => {
   return { day: today, cpuPoint: cardNormalizePoint(v.cpuPoint), pvpPoint: cardNormalizePoint(v.pvpPoint), firstWin: v.firstWin === true, foes: cardIsPlainObject(v.foes) ? { ...v.foes } : {} };
 };
 const CARD_LEVEL_ORDER = Object.freeze(['easy', 'normal', 'hard', 'expert', 'master']);
+// 対戦の BGM。cpu は 'auto'(相手の助手に合わせる)か曲id、pvp は曲id。無い・知らない曲idは既定へ戻す(isTrack: 曲idか確かめる関数)
+const CARD_BGM_DEFAULT = Object.freeze({ cpu: 'auto', pvp: 'ichika_battle' });
+const normalizeCardBgm = (v, isTrack = () => true) => {
+  const r = cardIsPlainObject(v) ? v : {};
+  return {
+    cpu: r.cpu === 'auto' || (typeof r.cpu === 'string' && isTrack(r.cpu)) ? r.cpu : CARD_BGM_DEFAULT.cpu,
+    pvp: typeof r.pvp === 'string' && isTrack(r.pvp) ? r.pvp : CARD_BGM_DEFAULT.pvp,
+  };
+};
+// 演出の設定。speed … 'normal' / 'fast'(相手の考える間と、決着から結果までを短くする)
+//   autoPass … 守れるカードが1枚も無いとき、自動で「守らない」にする(既定は ON。理由の一言は少し見せてから進む)
+const CARD_SETTINGS_DEFAULT = Object.freeze({ speed: 'normal', autoPass: true });
+const normalizeCardSettings = (v) => {
+  const r = cardIsPlainObject(v) ? v : {};
+  return { speed: r.speed === 'fast' ? 'fast' : 'normal', autoPass: r.autoPass !== false };
+};
 // 難易度ごとの数 { easy: n, … }。知らない難易度は捨てる
 const cardNormalizeLevelCounts = (v) => {
   const r = cardIsPlainObject(v) ? v : {};
@@ -51844,6 +51862,7 @@ const CARD_AI_BGM = Object.freeze({
   kyuko: 'melo_toward_the_stars_short', dra: 'melo_mou_hitotsu_no_sekai_e', atsu: 'melo_against_my_own_shadow',
 });
 const CARD_PVP_BGM = 'ichika_battle';
+const cardIsBgmTrack = (id) => typeof BGM_TRACKS !== 'undefined' && BGM_TRACKS.some((t) => t.id === id);
 // モンスターの絵(5-3)。モンヒロにいる種族はいまのゲームの絵、いない16種族は社長から届いた立ち絵(#3437 でクラフトくんが取り込んだ)。
 // 混血の15体は、立ち絵が届いた子から立ち絵にする(HYBRID_MONSTER_IMGS)。まだの子はカードの絵で代える(社長)
 const CARD_SPECIES_ART = Object.freeze({ tiger: 'Tiger', golem: 'Golem', suezo: 'Suezo', pixie: 'Pixie', hare: 'Ham', mocchi: 'Mocchi', monol: 'Monol', plant: 'Plant' });
@@ -52049,6 +52068,9 @@ const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact
 
 // ---- 対戦の盤面 ----
 const CardBattleBoard = ({ db, game, onFinish }) => {
+  // 演出の設定(オプション)。はやい … 相手の考える間と、決着から結果までを短くする
+  const settings = normalizeCardSettings(game.settings);
+  const pace = settings.speed === 'fast' ? 0.5 : 1;
   const who = ASSISTANTS.find((a) => a.id === game.who) || ASSISTANTS[0];
   const policy = useMemo(() => cardAiPolicy(game.who, game.level), [game.who, game.level]);
   const [st, setSt] = useState(game.st);
@@ -52178,7 +52200,7 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
     if (st.winner !== null || paused || game.demo) return undefined;
     if (tutorial && !cardTutorialCpu(db, tutStage.id, st)) return undefined;
     if (cardDeciderOf(st) !== CARD_CPU) return undefined;
-    const wait = st.pending ? 950 : st.phase === 'guts' ? 600 : 900; // 守りの番は、技の動きを見せ切ってから
+    const wait = Math.round((st.pending ? 950 : st.phase === 'guts' ? 600 : 900) * pace); // 守りの番は、技の動きを見せ切ってから
     const t = setTimeout(() => {
       const act = tutorial ? cardTutorialCpu(db, tutStage.id, st) : cardAiChooseAction(db, st, policy);
       if (!act) return; // 練習試合のみゅあは、段が来るまで待つ
@@ -52204,7 +52226,7 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
   useEffect(() => {
     if (st.winner === null || finished.current || tutorial) return undefined; // 練習試合は、ドラの締めの台詞のあと「次へ」で終わる
     finished.current = true;
-    const t = setTimeout(() => onFinish({ outcome: st.winner === CARD_ME ? 'win' : 'lose', st }), 2200);
+    const t = setTimeout(() => onFinish({ outcome: st.winner === CARD_ME ? 'win' : 'lose', st }), settings.speed === 'fast' ? 1200 : 2200);
     return () => clearTimeout(t);
   }, [st.winner]);
 
@@ -52220,6 +52242,14 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
     : st.phase === 'guts' ? 'guts' : 'wait';
   const attackOpts = mode === 'attack' ? cardAttackOptions(db, st).filter(tutAllow) : [];
   const guardOpts = mode === 'guard' ? cardGuardOptions(db, st).filter(tutAllow) : [];
+  // 守れるカードが1枚も無いときは、自動で「守らない」にする(オプションの「自動パス」。練習試合と見本では使わない)
+  //   守れない理由の一言(data-card-guard-why)を少し見せてから進む
+  const autoPassKey = mode === 'guard' && settings.autoPass && !tutorial && !game.demo && !guardOpts.length && st.pending && !st.pending.evaded ? `${st.turn}-${JSON.stringify(st.pending.attack || st.pending)}` : '';
+  useEffect(() => {
+    if (!autoPassKey) return undefined;
+    const t = setTimeout(() => step({ type: 'pass' }), Math.round(1100 * pace));
+    return () => clearTimeout(t);
+  }, [autoPassKey]);
 
   // 選んだカードから、残りの選び方(使う子・組み合わせ・狙う相手)を絞る
   const selOpts = sel && mode === 'attack' ? attackOpts.filter((o) => o.hand.includes(sel.hand)) : [];
@@ -52596,7 +52626,8 @@ const CardAssistantArt = ({ src, alt, className = '' }) => {
 // onOpenMarket … マーケットの「カードポイント」の売り場へ(60-app)
 // topAssistant … トップに出す助手の立ち絵とひとこと({ id, name, accent, image, text }。60-app が場面 cardTop から選ぶ)
 // rank … ランキング({ send: 送ってよいか, profile: { name, icon, frame }, renderBreederIcon })。送るのは公開後のふつうの対戦だけ
-const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', seenStoryIds = [], debug = false, onBgm, onQuickLoops, onOpenMarket, topAssistant = null, rank = null }) => {
+// bgmPreview … オプションの BGM の試聴({ toggle(曲id), playing: 鳴らしている曲id }。60-app の BGM アレンジと同じもの)
+const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', seenStoryIds = [], debug = false, onBgm, onQuickLoops, onOpenMarket, topAssistant = null, rank = null, bgmPreview = null }) => {
   const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
   const [save, setSave] = useState(null);
   const [view, setView] = useState('top');
@@ -52627,14 +52658,16 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
 
   const load = async () => {
     const K = CARD_SAVE_KEYS;
-    const [collection, decks, point, starter, daily, record, unlocked, tutorial] = await Promise.all([
+    const [collection, decks, point, starter, daily, record, unlocked, tutorial, bgm, settings] = await Promise.all([
       storeGet(K.collection, null), storeGet(K.decks, null), storeGet(K.point, null), storeGet(K.starter, null),
       storeGet(K.daily, null), storeGet(K.record, null), storeGet(K.cpuUnlocked, null), storeGet(K.tutorial, null),
+      storeGet(K.bgm, null), storeGet(K.settings, null),
     ]);
     const next = {
       collection: cardNormalizeCollection(collection), decks: cardNormalizeDecks(decks), point: cardNormalizePoint(point),
       starter: cardNormalizeStarter(starter), daily: cardNormalizeDaily(daily, cardTodayJst()), record: cardNormalizeRecord(record),
       unlocked: cardNormalizeCpuUnlocked(unlocked), tutorial: cardNormalizeTutorial(tutorial),
+      bgm: normalizeCardBgm(bgm, cardIsBgmTrack), settings: normalizeCardSettings(settings),
     };
     setSave(next);
     if (!next.starter) setView('starter');
@@ -52710,8 +52743,9 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     const assistant = allAssistants.find((a) => a.id === pick.who);
     const st = cardCreateGame(db, { decks: [{ monsters: activeDeck.monsters, cards: activeDeck.cards }, cpuDeck], names: ['あなた', assistant ? assistant.name : 'あいて'], seed, first });
     setResult(null);
-    setGame({ key: `${seed}`, st, who: pick.who, level: pick.level });
-    onBgm && onBgm(CARD_AI_BGM[pick.who] || null);
+    setGame({ key: `${seed}`, st, who: pick.who, level: pick.level, settings: save.settings });
+    // 対戦の BGM: オプションで曲を決めていればその曲、「おまかせ」なら相手の助手に合わせる
+    onBgm && onBgm(save.bgm.cpu !== 'auto' ? save.bgm.cpu : (CARD_AI_BGM[pick.who] || null));
     onNavigate('CARD_BATTLE');
   };
 
@@ -52953,13 +52987,39 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             <div className="text-[13px] font-black text-white">トップの助手</div>
             <div className="mt-1.5 flex justify-end"><ModeSelectAssistToggles assistant={topAssistant} showArt={assist.modeSelectArt} showComment={assist.modeSelectComment} onToggle={toggleAssist} cls="" withLabel/></div>
           </div>
-          <div className={SCREEN_PANEL_CLASS}>
-            <div className="flex items-center gap-2"><span className="text-[13px] font-black text-white">対戦のBGM</span><span className="rounded border border-slate-500 px-1.5 py-0.5 text-[10px] font-black text-slate-300">準備中</span></div>
-            <p className="mt-1 text-[12px] font-bold leading-snug text-slate-300" style={JA_LABEL_STYLE}>{jaWrap('いまは、対戦する助手に合わせて曲が変わります。自分で曲を決められるようにするのは準備中です')}</p>
+          {/* 対戦の BGM(社長「バトルと同じように自分で決められる」)。いまの BGM アレンジと同じ、曲の一覧から選んで試聴できる形 */}
+          <div data-card-options-bgm className={SCREEN_PANEL_CLASS}>
+            <div className="text-[13px] font-black text-white">対戦のBGM</div>
+            {[['cpu', '助手と対戦'], ['pvp', 'マルチ対戦']].map(([k, label]) => (
+              <label key={k} className="mt-2 block text-left">
+                <span className="text-[11px] font-black text-slate-300">{label}{k === 'pvp' ? '(準備中)' : ''}</span>
+                <div className="mt-1 flex gap-2">
+                  <select data-card-bgm-select={k} aria-label={`${label}のBGM`} value={save.bgm[k]} onChange={(e) => { void persist({ bgm: normalizeCardBgm({ ...save.bgm, [k]: e.target.value }, cardIsBgmTrack) }); }}
+                    className="min-h-[44px] min-w-0 flex-1 rounded-xl border border-white/15 bg-slate-950 px-2 py-2 text-xs text-white">
+                    {k === 'cpu' && <option value="auto">おまかせ(相手の助手に合わせる)</option>}
+                    {(typeof BGM_TRACKS !== 'undefined' ? BGM_TRACKS : []).map((t) => <option key={t.id} value={t.id}>{t.name}{k === 'pvp' && t.id === CARD_BGM_DEFAULT.pvp ? '(デフォルト)' : ''}</option>)}
+                  </select>
+                  {bgmPreview && (save.bgm[k] !== 'auto') && <button type="button" data-card-bgm-preview={k} onClick={() => bgmPreview.toggle(save.bgm[k])} className="min-h-[44px] min-w-[58px] shrink-0 rounded-xl bg-indigo-700 px-2 text-xs font-black">{bgmPreview.playing === save.bgm[k] ? '停止' : '試聴'}</button>}
+                </div>
+              </label>
+            ))}
+            <p className="mt-1.5 text-[10px] font-bold leading-snug text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('「おまかせ」のときは、対戦する助手ごとに決まった曲が流れます')}</p>
           </div>
-          <div className={SCREEN_PANEL_CLASS}>
-            <div className="flex items-center gap-2"><span className="text-[13px] font-black text-white">演出</span><span className="rounded border border-slate-500 px-1.5 py-0.5 text-[10px] font-black text-slate-300">準備中</span></div>
-            <p className="mt-1 text-[12px] font-bold leading-snug text-slate-300" style={JA_LABEL_STYLE}>{jaWrap('技の動きやパックを開ける演出の速さを選べるようにするのは準備中です')}</p>
+          <div data-card-options-settings className={SCREEN_PANEL_CLASS}>
+            <div className="text-[13px] font-black text-white">演出</div>
+            <div className="mt-2 flex items-center gap-2">
+              <span className="min-w-0 flex-1 text-[12px] font-bold text-slate-200">対戦の進む速さ</span>
+              {[['normal', 'ふつう'], ['fast', 'はやい']].map(([v, label]) => (
+                <button key={v} type="button" data-card-speed={v} aria-pressed={save.settings.speed === v} onClick={() => { Audio_.se.tap(); void persist({ settings: { ...save.settings, speed: v } }); }}
+                  className={`min-h-[36px] rounded-full border px-3 text-[11px] font-black ${save.settings.speed === v ? 'border-amber-300 bg-amber-500/25 text-amber-100' : 'border-white/15 bg-slate-900 text-slate-300'}`}>{label}</button>
+              ))}
+            </div>
+            <div className="mt-2 flex items-center gap-2">
+              <span className="min-w-0 flex-1 text-[12px] font-bold leading-snug text-slate-200" style={JA_LABEL_STYLE}>{jaWrap('守れるカードが無いときは、自動で「守らない」')}</span>
+              <button type="button" data-card-auto-pass aria-pressed={save.settings.autoPass} onClick={() => { Audio_.se.tap(); void persist({ settings: { ...save.settings, autoPass: !save.settings.autoPass } }); }}
+                className={`min-h-[36px] shrink-0 rounded-full border px-3 text-[11px] font-black ${save.settings.autoPass ? 'border-emerald-300 bg-emerald-700/85 text-white' : 'border-white/25 bg-slate-900/75 text-slate-200'}`}>{save.settings.autoPass ? 'ON' : 'OFF'}</button>
+            </div>
+            <p className="mt-1.5 text-[10px] font-bold leading-snug text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('はやいにすると、相手の考える間と、勝ち負けが決まってから結果までが短くなります')}</p>
           </div>
         </div>
       </div>
@@ -73352,6 +73412,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           })}</>)}
         {(gameState==='CARD_TOP'||gameState==='CARD_BATTLE'||(gameState==='CARD_PACK_OPEN'&&!cardPackOpen))&&(<CardBattleScreen screen={gameState} onNavigate={setGameState} onExit={()=>{setCardBgm(null);setCardOrigin('home');setGameState(cardOrigin==='debug'?'DEBUG_SETTINGS':'HOME');}} exitLabel={cardOrigin==='debug'?'デバッグ設定へ戻る':'HOMEへ戻る'} seenStoryIds={rhythmEventStorySeen||[]} debug={cardOrigin==='debug'} onBgm={setCardBgm} onQuickLoops={awardBackQuickLoops} onOpenMarket={()=>{setCardMarketEntry(true);setMarketExchangeError('');void loadCardShop();setGameState('BREEDER_MARKET');}}
           topAssistant={cardTopAssistant}
+          bgmPreview={{toggle:toggleBgmPreview,playing:previewTrackId}}
           /* ランキングへ送るのは、公開してから・デバッグでない人だけ(台帳 #3513「公開前は、デバッグの人の記録も送らない」) */
           rank={{send:EVENT_REPLAY_RELEASE_FLAGS.cardBattle===true&&!cardBattleDebugHome,profile:{name:breederName||'名無しのブリーダー',icon:breederIcon,frame:rankingProfileFrameValue(profileFrameId)},renderBreederIcon:rankingBreederIcon}}/>)}
         {gameState==='RAID_JACK_DEBUG'&&(<RaidJackDebugScreen onBack={()=>setGameState('DEBUG_SETTINGS')} raidForce={raidJackDebugForce} onToggleRaidForce={()=>setRaidJackDebugForce(v=>!v)} realRules={raidJackDebugRealRules} onToggleRealRules={()=>setRaidJackDebugRealRules(v=>!v)} onOpenRaid={async()=>{setRaidJackDebugForce(true);await openRaidJack();}} onGoHome={returnToHome} onPreviewRhythmResult={(kind)=>{const pumpkin=kind==='pumpkin';const t=pumpkin?RAID_JACK_PUMPKIN:RAID_JACK_A_TIERS[2];const hp=t.hp;const before=Math.floor(hp*0.6);const damage=523456;setRaidJackResult({way:'rhythm',songName:'Monster Hero',difficultyName:'HARD',score:523456,assist:false,kind:'a',tierIndex:pumpkin?RAID_JACK_A_TIERS.length-1:2,tierName:t.name,reason:'rhythm',damage,defeated:false,turns:0,levelUps:0,growths:0,outcome:'sent',opened:false,eventId:'raid_jack_debug',quickAward:null,lifeLeft:pumpkin?hp:Math.max(0,before-damage),lifeBefore:pumpkin?null:before,lifeMax:hp,pumpkin});}} onPreviewDamageFx={(kind)=>{const t=RAID_JACK_A_TIERS[2];const hp=t.hp;setRaidDamageFx(kind==='none'?{key:`preview-${Date.now()}`,tierIndex:2,tierName:t.name,score:0,damage:0,assist:true,lifeBefore:Math.floor(hp*0.6),max:hp,pumpkin:false}:{key:`preview-${Date.now()}`,tierIndex:2,tierName:t.name,score:523456,damage:kind==='down'?hp:523456,assist:false,lifeBefore:kind==='down'?Math.floor(hp*0.05):Math.floor(hp*0.6),max:hp,pumpkin:false});}} onStartBattle={(kind,tierIndex,opts)=>{

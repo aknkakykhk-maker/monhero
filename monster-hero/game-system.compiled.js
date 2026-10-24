@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ea11a7a08f145bca
+// source-sha256: a919c4f1a12841c6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-25 05:03";
+const BUILD_DATE = "2026-10-25 05:14";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -84000,7 +84000,9 @@ const CARD_SAVE_KEYS = Object.freeze({
   pity: 'mh_card_pack_pity_v1',
   shop: 'mh_card_shop_v1',
   topAssist: 'mh_card_top_assist_v1',
-  rankSync: 'mh_card_rank_sync_v1'
+  rankSync: 'mh_card_rank_sync_v1',
+  bgm: 'mh_card_bgm_v1',
+  settings: 'mh_card_settings_v1'
 });
 const cardIsPlainObject = v => !!v && typeof v === 'object' && !Array.isArray(v);
 const cardNormalizeCollection = v => {
@@ -84054,6 +84056,28 @@ const cardNormalizeDaily = (v, today) => {
   };
 };
 const CARD_LEVEL_ORDER = Object.freeze(['easy', 'normal', 'hard', 'expert', 'master']);
+const CARD_BGM_DEFAULT = Object.freeze({
+  cpu: 'auto',
+  pvp: 'ichika_battle'
+});
+const normalizeCardBgm = (v, isTrack = () => true) => {
+  const r = cardIsPlainObject(v) ? v : {};
+  return {
+    cpu: r.cpu === 'auto' || typeof r.cpu === 'string' && isTrack(r.cpu) ? r.cpu : CARD_BGM_DEFAULT.cpu,
+    pvp: typeof r.pvp === 'string' && isTrack(r.pvp) ? r.pvp : CARD_BGM_DEFAULT.pvp
+  };
+};
+const CARD_SETTINGS_DEFAULT = Object.freeze({
+  speed: 'normal',
+  autoPass: true
+});
+const normalizeCardSettings = v => {
+  const r = cardIsPlainObject(v) ? v : {};
+  return {
+    speed: r.speed === 'fast' ? 'fast' : 'normal',
+    autoPass: r.autoPass !== false
+  };
+};
 const cardNormalizeLevelCounts = v => {
   const r = cardIsPlainObject(v) ? v : {};
   return Object.fromEntries(CARD_LEVEL_ORDER.map(lv => [lv, cardNormalizePoint(r[lv])]));
@@ -85357,6 +85381,7 @@ const CARD_AI_BGM = Object.freeze({
   atsu: 'melo_against_my_own_shadow'
 });
 const CARD_PVP_BGM = 'ichika_battle';
+const cardIsBgmTrack = id => typeof BGM_TRACKS !== 'undefined' && BGM_TRACKS.some(t => t.id === id);
 const CARD_SPECIES_ART = Object.freeze({
   tiger: 'Tiger',
   golem: 'Golem',
@@ -85667,6 +85692,8 @@ const CardBattleBoard = ({
   game,
   onFinish
 }) => {
+  const settings = normalizeCardSettings(game.settings);
+  const pace = settings.speed === 'fast' ? 0.5 : 1;
   const who = ASSISTANTS.find(a => a.id === game.who) || ASSISTANTS[0];
   const policy = useMemo(() => cardAiPolicy(game.who, game.level), [game.who, game.level]);
   const [st, setSt] = useState(game.st);
@@ -85858,7 +85885,7 @@ const CardBattleBoard = ({
     if (st.winner !== null || paused || game.demo) return undefined;
     if (tutorial && !cardTutorialCpu(db, tutStage.id, st)) return undefined;
     if (cardDeciderOf(st) !== CARD_CPU) return undefined;
-    const wait = st.pending ? 950 : st.phase === 'guts' ? 600 : 900;
+    const wait = Math.round((st.pending ? 950 : st.phase === 'guts' ? 600 : 900) * pace);
     const t = setTimeout(() => {
       const act = tutorial ? cardTutorialCpu(db, tutStage.id, st) : cardAiChooseAction(db, st, policy);
       if (!act) return;
@@ -85891,7 +85918,7 @@ const CardBattleBoard = ({
     const t = setTimeout(() => onFinish({
       outcome: st.winner === CARD_ME ? 'win' : 'lose',
       st
-    }), 2200);
+    }), settings.speed === 'fast' ? 1200 : 2200);
     return () => clearTimeout(t);
   }, [st.winner]);
   const me = st.players[CARD_ME];
@@ -85901,6 +85928,14 @@ const CardBattleBoard = ({
   const mode = !myTurn ? 'wait' : st.pendingDiscard ? 'discard' : st.phase === 'setup' ? 'setup' : st.pending ? 'guard' : st.phase === 'main' ? 'attack' : st.phase === 'guts' ? 'guts' : 'wait';
   const attackOpts = mode === 'attack' ? cardAttackOptions(db, st).filter(tutAllow) : [];
   const guardOpts = mode === 'guard' ? cardGuardOptions(db, st).filter(tutAllow) : [];
+  const autoPassKey = mode === 'guard' && settings.autoPass && !tutorial && !game.demo && !guardOpts.length && st.pending && !st.pending.evaded ? `${st.turn}-${JSON.stringify(st.pending.attack || st.pending)}` : '';
+  useEffect(() => {
+    if (!autoPassKey) return undefined;
+    const t = setTimeout(() => step({
+      type: 'pass'
+    }), Math.round(1100 * pace));
+    return () => clearTimeout(t);
+  }, [autoPassKey]);
   const selOpts = sel && mode === 'attack' ? attackOpts.filter(o => o.hand.includes(sel.hand)) : [];
   const selMons = [...new Set(selOpts.map(o => o.mon === undefined ? -1 : o.mon))];
   const monChosen = sel && (sel.mon !== undefined ? sel.mon : selMons.length === 1 ? selMons[0] : undefined);
@@ -86642,7 +86677,8 @@ const CardBattleScreen = ({
   onQuickLoops,
   onOpenMarket,
   topAssistant = null,
-  rank = null
+  rank = null,
+  bgmPreview = null
 }) => {
   const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
   const [save, setSave] = useState(null);
@@ -86688,7 +86724,7 @@ const CardBattleScreen = ({
   };
   const load = async () => {
     const K = CARD_SAVE_KEYS;
-    const [collection, decks, point, starter, daily, record, unlocked, tutorial] = await Promise.all([storeGet(K.collection, null), storeGet(K.decks, null), storeGet(K.point, null), storeGet(K.starter, null), storeGet(K.daily, null), storeGet(K.record, null), storeGet(K.cpuUnlocked, null), storeGet(K.tutorial, null)]);
+    const [collection, decks, point, starter, daily, record, unlocked, tutorial, bgm, settings] = await Promise.all([storeGet(K.collection, null), storeGet(K.decks, null), storeGet(K.point, null), storeGet(K.starter, null), storeGet(K.daily, null), storeGet(K.record, null), storeGet(K.cpuUnlocked, null), storeGet(K.tutorial, null), storeGet(K.bgm, null), storeGet(K.settings, null)]);
     const next = {
       collection: cardNormalizeCollection(collection),
       decks: cardNormalizeDecks(decks),
@@ -86697,7 +86733,9 @@ const CardBattleScreen = ({
       daily: cardNormalizeDaily(daily, cardTodayJst()),
       record: cardNormalizeRecord(record),
       unlocked: cardNormalizeCpuUnlocked(unlocked),
-      tutorial: cardNormalizeTutorial(tutorial)
+      tutorial: cardNormalizeTutorial(tutorial),
+      bgm: normalizeCardBgm(bgm, cardIsBgmTrack),
+      settings: normalizeCardSettings(settings)
     };
     setSave(next);
     if (!next.starter) setView('starter');
@@ -86858,9 +86896,10 @@ const CardBattleScreen = ({
       key: `${seed}`,
       st,
       who: pick.who,
-      level: pick.level
+      level: pick.level,
+      settings: save.settings
     });
-    onBgm && onBgm(CARD_AI_BGM[pick.who] || null);
+    onBgm && onBgm(save.bgm.cpu !== 'auto' ? save.bgm.cpu : CARD_AI_BGM[pick.who] || null);
     onNavigate('CARD_BATTLE');
   };
   if (view === 'starter') {
@@ -87362,28 +87401,90 @@ const CardBattleScreen = ({
       cls: "",
       withLabel: true
     }))), React.createElement("div", {
+      "data-card-options-bgm": true,
       className: SCREEN_PANEL_CLASS
     }, React.createElement("div", {
-      className: "flex items-center gap-2"
-    }, React.createElement("span", {
       className: "text-[13px] font-black text-white"
-    }, "対戦のBGM"), React.createElement("span", {
-      className: "rounded border border-slate-500 px-1.5 py-0.5 text-[10px] font-black text-slate-300"
-    }, "準備中")), React.createElement("p", {
-      className: "mt-1 text-[12px] font-bold leading-snug text-slate-300",
+    }, "対戦のBGM"), [['cpu', '助手と対戦'], ['pvp', 'マルチ対戦']].map(([k, label]) => React.createElement("label", {
+      key: k,
+      className: "mt-2 block text-left"
+    }, React.createElement("span", {
+      className: "text-[11px] font-black text-slate-300"
+    }, label, k === 'pvp' ? '(準備中)' : ''), React.createElement("div", {
+      className: "mt-1 flex gap-2"
+    }, React.createElement("select", {
+      "data-card-bgm-select": k,
+      "aria-label": `${label}のBGM`,
+      value: save.bgm[k],
+      onChange: e => {
+        void persist({
+          bgm: normalizeCardBgm({
+            ...save.bgm,
+            [k]: e.target.value
+          }, cardIsBgmTrack)
+        });
+      },
+      className: "min-h-[44px] min-w-0 flex-1 rounded-xl border border-white/15 bg-slate-950 px-2 py-2 text-xs text-white"
+    }, k === 'cpu' && React.createElement("option", {
+      value: "auto"
+    }, "おまかせ(相手の助手に合わせる)"), (typeof BGM_TRACKS !== 'undefined' ? BGM_TRACKS : []).map(t => React.createElement("option", {
+      key: t.id,
+      value: t.id
+    }, t.name, k === 'pvp' && t.id === CARD_BGM_DEFAULT.pvp ? '(デフォルト)' : ''))), bgmPreview && save.bgm[k] !== 'auto' && React.createElement("button", {
+      type: "button",
+      "data-card-bgm-preview": k,
+      onClick: () => bgmPreview.toggle(save.bgm[k]),
+      className: "min-h-[44px] min-w-[58px] shrink-0 rounded-xl bg-indigo-700 px-2 text-xs font-black"
+    }, bgmPreview.playing === save.bgm[k] ? '停止' : '試聴')))), React.createElement("p", {
+      className: "mt-1.5 text-[10px] font-bold leading-snug text-slate-400",
       style: JA_LABEL_STYLE
-    }, jaWrap('いまは、対戦する助手に合わせて曲が変わります。自分で曲を決められるようにするのは準備中です'))), React.createElement("div", {
+    }, jaWrap('「おまかせ」のときは、対戦する助手ごとに決まった曲が流れます'))), React.createElement("div", {
+      "data-card-options-settings": true,
       className: SCREEN_PANEL_CLASS
     }, React.createElement("div", {
-      className: "flex items-center gap-2"
-    }, React.createElement("span", {
       className: "text-[13px] font-black text-white"
-    }, "演出"), React.createElement("span", {
-      className: "rounded border border-slate-500 px-1.5 py-0.5 text-[10px] font-black text-slate-300"
-    }, "準備中")), React.createElement("p", {
-      className: "mt-1 text-[12px] font-bold leading-snug text-slate-300",
+    }, "演出"), React.createElement("div", {
+      className: "mt-2 flex items-center gap-2"
+    }, React.createElement("span", {
+      className: "min-w-0 flex-1 text-[12px] font-bold text-slate-200"
+    }, "対戦の進む速さ"), [['normal', 'ふつう'], ['fast', 'はやい']].map(([v, label]) => React.createElement("button", {
+      key: v,
+      type: "button",
+      "data-card-speed": v,
+      "aria-pressed": save.settings.speed === v,
+      onClick: () => {
+        Audio_.se.tap();
+        void persist({
+          settings: {
+            ...save.settings,
+            speed: v
+          }
+        });
+      },
+      className: `min-h-[36px] rounded-full border px-3 text-[11px] font-black ${save.settings.speed === v ? 'border-amber-300 bg-amber-500/25 text-amber-100' : 'border-white/15 bg-slate-900 text-slate-300'}`
+    }, label))), React.createElement("div", {
+      className: "mt-2 flex items-center gap-2"
+    }, React.createElement("span", {
+      className: "min-w-0 flex-1 text-[12px] font-bold leading-snug text-slate-200",
       style: JA_LABEL_STYLE
-    }, jaWrap('技の動きやパックを開ける演出の速さを選べるようにするのは準備中です')))));
+    }, jaWrap('守れるカードが無いときは、自動で「守らない」')), React.createElement("button", {
+      type: "button",
+      "data-card-auto-pass": true,
+      "aria-pressed": save.settings.autoPass,
+      onClick: () => {
+        Audio_.se.tap();
+        void persist({
+          settings: {
+            ...save.settings,
+            autoPass: !save.settings.autoPass
+          }
+        });
+      },
+      className: `min-h-[36px] shrink-0 rounded-full border px-3 text-[11px] font-black ${save.settings.autoPass ? 'border-emerald-300 bg-emerald-700/85 text-white' : 'border-white/25 bg-slate-900/75 text-slate-200'}`
+    }, save.settings.autoPass ? 'ON' : 'OFF')), React.createElement("p", {
+      className: "mt-1.5 text-[10px] font-bold leading-snug text-slate-400",
+      style: JA_LABEL_STYLE
+    }, jaWrap('はやいにすると、相手の考える間と、勝ち負けが決まってから結果までが短くなります')))));
   }
   if (view === 'ranking') {
     return React.createElement(CardRankingBoard, {
@@ -115964,6 +116065,10 @@ function MonsterHeroGame() {
         setGameState('BREEDER_MARKET');
       },
       topAssistant: cardTopAssistant,
+      bgmPreview: {
+        toggle: toggleBgmPreview,
+        playing: previewTrackId
+      },
       rank: {
         send: EVENT_REPLAY_RELEASE_FLAGS.cardBattle === true && !cardBattleDebugHome,
         profile: {
