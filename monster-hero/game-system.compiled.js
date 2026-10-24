@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7fc016c85880d7b5
+// source-sha256: f2d3a8ac3560736a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-25 03:24";
+const BUILD_DATE = "2026-10-25 04:08";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -83990,7 +83990,9 @@ const CARD_SAVE_KEYS = Object.freeze({
   cpuUnlocked: 'mh_card_cpu_unlocked_v1',
   tutorial: 'mh_card_tutorial_v1',
   pity: 'mh_card_pack_pity_v1',
-  shop: 'mh_card_shop_v1'
+  shop: 'mh_card_shop_v1',
+  topAssist: 'mh_card_top_assist_v1',
+  rankSync: 'mh_card_rank_sync_v1'
 });
 const cardIsPlainObject = v => !!v && typeof v === 'object' && !Array.isArray(v);
 const cardNormalizeCollection = v => {
@@ -84043,11 +84045,39 @@ const cardNormalizeDaily = (v, today) => {
     } : {}
   };
 };
+const CARD_LEVEL_ORDER = Object.freeze(['easy', 'normal', 'hard', 'expert', 'master']);
+const cardNormalizeLevelCounts = v => {
+  const r = cardIsPlainObject(v) ? v : {};
+  return Object.fromEntries(CARD_LEVEL_ORDER.map(lv => [lv, cardNormalizePoint(r[lv])]));
+};
+const cardWeekKeyJst = now => {
+  const d = new Date(Number(now) + 9 * 3600 * 1000);
+  d.setUTCDate(d.getUTCDate() - (d.getUTCDay() + 6) % 7);
+  return d.toISOString().slice(0, 10);
+};
+const cardNormalizeRank = v => {
+  const r = cardIsPlainObject(v) ? v : {};
+  const week = cardIsPlainObject(r.week) ? r.week : {};
+  const streak = cardIsPlainObject(r.streak) ? r.streak : {};
+  const now = cardNormalizePoint(streak.now);
+  return {
+    total: cardNormalizeLevelCounts(r.total),
+    week: {
+      key: typeof week.key === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(week.key) ? week.key : '',
+      wins: cardNormalizeLevelCounts(week.wins)
+    },
+    streak: {
+      now,
+      best: Math.max(now, cardNormalizePoint(streak.best))
+    }
+  };
+};
 const cardNormalizeRecord = v => {
   const r = cardIsPlainObject(v) ? v : {};
   const cpu = cardIsPlainObject(r.cpu) ? r.cpu : {};
   const pvp = cardIsPlainObject(r.pvp) ? r.pvp : {};
   const beaten = cardIsPlainObject(r.beaten) ? r.beaten : {};
+  const byLevel = cardIsPlainObject(r.byLevel) ? r.byLevel : {};
   return {
     cpu: {
       win: cardNormalizePoint(cpu.win),
@@ -84059,10 +84089,105 @@ const cardNormalizeRecord = v => {
       lose: cardNormalizePoint(pvp.lose)
     },
     beaten: Object.fromEntries(Object.entries(beaten).filter(([, x]) => x === true)),
-    recent: Array.isArray(r.recent) ? r.recent.filter(cardIsPlainObject).slice(0, 30) : []
+    recent: Array.isArray(r.recent) ? r.recent.filter(cardIsPlainObject).slice(0, 30) : [],
+    byLevel: {
+      win: cardNormalizeLevelCounts(byLevel.win),
+      lose: cardNormalizeLevelCounts(byLevel.lose)
+    },
+    rank: cardNormalizeRank(r.rank)
   };
 };
-const CARD_LEVEL_ORDER = Object.freeze(['easy', 'normal', 'hard', 'expert', 'master']);
+const cardRecordAfter = (record, {
+  who,
+  level,
+  outcome,
+  at,
+  rankable
+}) => {
+  const rec = cardNormalizeRecord(record);
+  const win = outcome === 'win';
+  const lv = CARD_LEVEL_ORDER.includes(level) ? level : null;
+  const side = win ? 'win' : 'lose';
+  const next = {
+    ...rec,
+    cpu: {
+      ...rec.cpu,
+      [outcome]: (rec.cpu[outcome] || 0) + 1
+    },
+    beaten: win ? {
+      ...rec.beaten,
+      [who]: true
+    } : rec.beaten,
+    recent: [{
+      at,
+      who,
+      level,
+      outcome
+    }, ...rec.recent].slice(0, 30),
+    byLevel: lv ? {
+      ...rec.byLevel,
+      [side]: {
+        ...rec.byLevel[side],
+        [lv]: rec.byLevel[side][lv] + 1
+      }
+    } : rec.byLevel
+  };
+  if (!rankable || !lv) return next;
+  const key = cardWeekKeyJst(at);
+  const weekWins = rec.rank.week.key === key ? rec.rank.week.wins : cardNormalizeLevelCounts(null);
+  const streakNow = win ? rec.rank.streak.now + 1 : 0;
+  next.rank = {
+    total: win ? {
+      ...rec.rank.total,
+      [lv]: rec.rank.total[lv] + 1
+    } : rec.rank.total,
+    week: {
+      key,
+      wins: win ? {
+        ...weekWins,
+        [lv]: weekWins[lv] + 1
+      } : weekWins
+    },
+    streak: {
+      now: streakNow,
+      best: Math.max(rec.rank.streak.best, streakNow)
+    }
+  };
+  return next;
+};
+const cardRankRow = (record, {
+  dexCount,
+  dexTotal,
+  userName,
+  icon,
+  profileFrame,
+  breederId,
+  now
+}) => {
+  const rank = cardNormalizeRecord(record).rank;
+  const key = cardWeekKeyJst(now);
+  const weekWins = rank.week.key === key ? rank.week.wins : cardNormalizeLevelCounts(null);
+  const row = {
+    user_name: String(userName || '名無しのブリーダー').slice(0, 40),
+    ...(typeof breederId === 'string' && breederId ? {
+      breeder_id: breederId
+    } : {}),
+    icon: icon ?? null,
+    ...(profileFrame ? {
+      profile_frame: profileFrame
+    } : {}),
+    week_key: key,
+    best_streak: rank.streak.best,
+    current_streak: rank.streak.now,
+    dex_count: cardNormalizePoint(dexCount),
+    dex_total: cardNormalizePoint(dexTotal)
+  };
+  CARD_LEVEL_ORDER.forEach(lv => {
+    row[`wins_${lv}`] = rank.total[lv];
+    row[`week_wins_${lv}`] = weekWins[lv];
+  });
+  return row;
+};
 const cardNormalizeCpuUnlocked = v => {
   const r = cardIsPlainObject(v) ? v : {};
   return {
@@ -86499,7 +86624,9 @@ const CardBattleScreen = ({
   debug = false,
   onBgm,
   onQuickLoops,
-  onOpenMarket
+  onOpenMarket,
+  topAssistant = null,
+  rank = null
 }) => {
   const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
   const [save, setSave] = useState(null);
@@ -86518,6 +86645,31 @@ const CardBattleScreen = ({
   const [editDeck, setEditDeck] = useState(null);
   const [packDemo, setPackDemo] = useState(null);
   const press = useCardLongPress(no => setDetail(no));
+  const [assist, setAssist] = useState({
+    modeSelectArt: true,
+    modeSelectComment: true
+  });
+  useEffect(() => {
+    let alive = true;
+    storeGet(CARD_SAVE_KEYS.topAssist, null).then(v => {
+      if (alive && v && typeof v === 'object' && !Array.isArray(v)) setAssist({
+        modeSelectArt: v.modeSelectArt !== false,
+        modeSelectComment: v.modeSelectComment !== false
+      });
+    }).catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const toggleAssist = key => {
+    if (key !== 'modeSelectArt' && key !== 'modeSelectComment') return;
+    const next = {
+      ...assist,
+      [key]: assist[key] === false
+    };
+    setAssist(next);
+    void storeSet(CARD_SAVE_KEYS.topAssist, next).catch(() => {});
+  };
   const load = async () => {
     const K = CARD_SAVE_KEYS;
     const [collection, decks, point, starter, daily, record, unlocked, tutorial] = await Promise.all([storeGet(K.collection, null), storeGet(K.decks, null), storeGet(K.point, null), storeGet(K.starter, null), storeGet(K.daily, null), storeGet(K.record, null), storeGet(K.cpuUnlocked, null), storeGet(K.tutorial, null)]);
@@ -86604,24 +86756,14 @@ const CardBattleScreen = ({
         const facts = cardResultFacts(st, CARD_ME);
         const reward = cardCpuReward(cardNormalizeDaily(save.daily, cardTodayJst()), game.level, outcome, facts);
         const loops = cardCpuLoops(game.level, outcome, facts);
-        const rec = cardNormalizeRecord(save.record);
-        const nextRecord = {
-          ...rec,
-          cpu: {
-            ...rec.cpu,
-            [outcome]: rec.cpu[outcome] + 1
-          },
-          beaten: outcome === 'win' ? {
-            ...rec.beaten,
-            [game.who]: true
-          } : rec.beaten,
-          recent: [{
-            at: Date.now(),
-            who: game.who,
-            level: game.level,
-            outcome
-          }, ...rec.recent].slice(0, 30)
-        };
+        const rankable = !!(rank && rank.send) && !debug;
+        const nextRecord = cardRecordAfter(save.record, {
+          who: game.who,
+          level: game.level,
+          outcome,
+          at: Date.now(),
+          rankable
+        });
         const nextUnlocked = outcome === 'win' ? cardUnlockAfterWin(save.unlocked, game.level) : save.unlocked;
         const opened = CARD_LEVEL_ORDER.find(lv => nextUnlocked[lv] && !save.unlocked[lv]) || null;
         const ok = await persist({
@@ -86629,6 +86771,11 @@ const CardBattleScreen = ({
           daily: reward.daily,
           record: nextRecord,
           unlocked: nextUnlocked
+        });
+        if (ok && rankable) void cardRankSync(db, {
+          record: nextRecord,
+          collection: save.collection,
+          profile: rank.profile
         });
         let quick = null;
         if (loops > 0 && onQuickLoops) {
@@ -87102,101 +87249,341 @@ const CardBattleScreen = ({
       onClick: () => setView('foe')
     }, "相手をえらぶ")));
   }
-  return React.createElement("div", {
-    "data-mh-screen": true,
-    "data-card-top": "top",
-    className: SCREEN_SHELL_CLASS
-  }, React.createElement(ScreenHead, {
-    title: "MFバトルカード",
-    accent: "text-amber-200",
-    onBack: onExit,
-    backLabel: exitLabel,
-    note: debug ? 'デバッグ専用(まだ公開していません)' : ''
-  }), React.createElement("div", {
-    className: `${SCREEN_LIST_CLASS} space-y-2 pb-4`
-  }, React.createElement("div", {
-    className: `${SCREEN_PANEL_CLASS} flex items-center justify-between`
-  }, React.createElement("div", {
-    className: "text-[13px] font-black text-slate-200"
-  }, "カードポイント"), React.createElement("div", {
-    "data-card-point": true,
-    className: "text-xl font-black text-amber-200"
-  }, save.point)), activeDeck && React.createElement("div", {
-    className: SCREEN_PANEL_CLASS
-  }, React.createElement("div", {
-    className: "text-[12px] font-bold text-slate-400"
-  }, "いまのデッキ"), React.createElement("div", {
-    className: "text-[14px] font-black text-white"
-  }, activeDeck.name), React.createElement("div", {
-    className: "mt-1 flex gap-1.5"
-  }, activeDeck.monsters.map(no => {
-    const m = cardMonsterOf(db, no);
-    return m ? React.createElement("img", _extends({
-      key: no
-    }, press(no), {
-      src: CARD_IMG(m.img),
-      alt: m.name,
-      className: "w-[22%] rounded-md"
-    })) : null;
-  })), React.createElement("div", {
-    "data-card-record": true,
-    className: "mt-1 text-[11px] font-bold text-slate-400"
-  }, "戦績(助手と対戦): ", save.record.cpu.win, "勝 ", save.record.cpu.lose + save.record.cpu.surrender, "敗", save.record.cpu.surrender ? `(うち投了${save.record.cpu.surrender})` : '')), notice && React.createElement("p", {
-    className: "text-[12px] font-bold text-amber-200"
-  }, notice), React.createElement("button", {
-    type: "button",
-    "data-card-cpu": true,
-    className: `${btn} mh-button-primary`,
+  if (view === 'record') {
+    const rec = save.record;
+    const r = rec.rank;
+    const weekNow = cardWeekKeyJst(Date.now());
+    return React.createElement("div", {
+      "data-mh-screen": true,
+      "data-card-record-view": true,
+      className: SCREEN_SHELL_CLASS
+    }, React.createElement(ScreenHead, {
+      title: "記録",
+      accent: "text-amber-200",
+      onBack: () => setView('top'),
+      note: "MFバトルカード"
+    }), React.createElement("div", {
+      className: `${SCREEN_LIST_CLASS} space-y-2 pb-4`
+    }, React.createElement("div", {
+      className: SCREEN_PANEL_CLASS
+    }, React.createElement("div", {
+      className: "text-[12px] font-bold text-slate-400"
+    }, "助手と対戦"), React.createElement("div", {
+      "data-card-record": true,
+      className: "text-[16px] font-black text-white"
+    }, rec.cpu.win, "勝 ", rec.cpu.lose + rec.cpu.surrender, "敗", rec.cpu.surrender ? `(うち投了${rec.cpu.surrender})` : ''), React.createElement("table", {
+      "data-card-record-levels": true,
+      className: "mt-2 w-full text-[12px] font-bold"
+    }, React.createElement("thead", null, React.createElement("tr", {
+      className: "text-slate-400"
+    }, React.createElement("th", {
+      className: "py-1 text-left font-bold"
+    }, "難易度"), React.createElement("th", {
+      className: "py-1 text-right font-bold"
+    }, "勝ち"), React.createElement("th", {
+      className: "py-1 text-right font-bold"
+    }, "負け"))), React.createElement("tbody", null, CARD_LEVEL_ORDER.map(lv => React.createElement("tr", {
+      key: lv,
+      className: "border-t border-white/10"
+    }, React.createElement("td", {
+      className: "py-1 text-slate-200"
+    }, CARD_LEVEL_LABEL[lv]), React.createElement("td", {
+      className: "py-1 text-right text-amber-200"
+    }, rec.byLevel.win[lv]), React.createElement("td", {
+      className: "py-1 text-right text-slate-300"
+    }, rec.byLevel.lose[lv]))))), React.createElement("p", {
+      className: "mt-1 text-[10px] font-bold text-slate-500"
+    }, "難易度ごとの数は、この記録ができてからのぶんです")), React.createElement("div", {
+      className: SCREEN_PANEL_CLASS
+    }, React.createElement("div", {
+      className: "text-[12px] font-bold text-slate-400"
+    }, "ランキングの記録"), React.createElement("div", {
+      className: "mt-1 grid grid-cols-3 gap-1.5 text-center"
+    }, [['今週の勝ち', CARD_LEVEL_ORDER.reduce((a, lv) => a + (r.week.key === weekNow ? r.week.wins[lv] : 0), 0), '勝'], ['いまの連勝', r.streak.now, '連勝'], ['最高の連勝', r.streak.best, '連勝']].map(([label, v, u]) => React.createElement("div", {
+      key: label,
+      className: "rounded-xl bg-black/30 py-1.5"
+    }, React.createElement("small", {
+      className: "block text-[10px] font-bold text-slate-400"
+    }, label), React.createElement("b", {
+      className: "text-[16px] font-black text-amber-200"
+    }, v), React.createElement("small", {
+      className: "text-[10px] font-bold text-slate-400"
+    }, u)))), React.createElement("p", {
+      className: "mt-1 text-[10px] font-bold leading-snug text-slate-500",
+      style: JA_WRAP_STYLE
+    }, jaWrap('ランキングに数えるのは、公開してからのふつうの対戦だけです')))));
+  }
+  if (view === 'options') {
+    return React.createElement("div", {
+      "data-mh-screen": true,
+      "data-card-options": true,
+      className: SCREEN_SHELL_CLASS
+    }, React.createElement(ScreenHead, {
+      title: "オプション",
+      accent: "text-amber-200",
+      onBack: () => setView('top'),
+      note: "MFバトルカード"
+    }), React.createElement("div", {
+      className: `${SCREEN_LIST_CLASS} space-y-2 pb-4`
+    }, React.createElement("div", {
+      className: SCREEN_PANEL_CLASS
+    }, React.createElement("div", {
+      className: "text-[13px] font-black text-white"
+    }, "トップの助手"), React.createElement("div", {
+      className: "mt-1.5 flex justify-end"
+    }, React.createElement(ModeSelectAssistToggles, {
+      assistant: topAssistant,
+      showArt: assist.modeSelectArt,
+      showComment: assist.modeSelectComment,
+      onToggle: toggleAssist,
+      cls: "",
+      withLabel: true
+    }))), React.createElement("div", {
+      className: SCREEN_PANEL_CLASS
+    }, React.createElement("div", {
+      className: "flex items-center gap-2"
+    }, React.createElement("span", {
+      className: "text-[13px] font-black text-white"
+    }, "対戦のBGM"), React.createElement("span", {
+      className: "rounded border border-slate-500 px-1.5 py-0.5 text-[10px] font-black text-slate-300"
+    }, "準備中")), React.createElement("p", {
+      className: "mt-1 text-[12px] font-bold leading-snug text-slate-300",
+      style: JA_LABEL_STYLE
+    }, jaWrap('いまは、対戦する助手に合わせて曲が変わります。自分で曲を決められるようにするのは準備中です'))), React.createElement("div", {
+      className: SCREEN_PANEL_CLASS
+    }, React.createElement("div", {
+      className: "flex items-center gap-2"
+    }, React.createElement("span", {
+      className: "text-[13px] font-black text-white"
+    }, "演出"), React.createElement("span", {
+      className: "rounded border border-slate-500 px-1.5 py-0.5 text-[10px] font-black text-slate-300"
+    }, "準備中")), React.createElement("p", {
+      className: "mt-1 text-[12px] font-bold leading-snug text-slate-300",
+      style: JA_LABEL_STYLE
+    }, jaWrap('技の動きやパックを開ける演出の速さを選べるようにするのは準備中です')))));
+  }
+  if (view === 'ranking') {
+    return React.createElement(CardRankingBoard, {
+      onBack: () => setView('top'),
+      renderBreederIcon: rank && rank.renderBreederIcon,
+      selfName: rank && rank.profile && rank.profile.name || '',
+      record: save.record,
+      dex: cardDexCounts(db, save.collection),
+      sendOn: !!(rank && rank.send) && !debug
+    });
+  }
+  const topAssistantShown = topAssistant ? {
+    ...topAssistant,
+    text: React.createElement("span", {
+      style: JA_WRAP_STYLE
+    }, jaWrap(topAssistant.text))
+  } : null;
+  const assistShown = !!topAssistant && (assist.modeSelectArt || assist.modeSelectComment);
+  const go = v => () => {
+    Audio_.se.tap();
+    setNotice('');
+    setView(v);
+  };
+  const bigCards = [{
+    key: 'cpu',
+    attr: {
+      'data-card-cpu': ''
+    },
+    label: '対戦',
+    sub: '助手と対戦・マルチ対戦',
+    mark: 'BATTLE',
+    ico: '⚔️',
+    grad: 'from-orange-200 via-orange-400 to-rose-500',
     disabled: !activeDeck,
-    onClick: () => {
-      Audio_.se.tap();
-      setNotice('');
-      setView('mode');
-    }
-  }, "対戦"), React.createElement("div", {
-    className: "grid grid-cols-2 gap-2"
-  }, React.createElement("button", {
-    type: "button",
-    "data-card-decks": true,
-    className: `${btn} border border-amber-300/50 bg-amber-900/50 text-amber-50`,
-    onClick: () => {
-      Audio_.se.tap();
-      setNotice('');
-      setView('decks');
-    }
-  }, "デッキ編成"), React.createElement("button", {
-    type: "button",
-    "data-card-market-open": true,
-    className: `${btn} border border-orange-300/50 bg-orange-900/50 text-orange-50`,
-    disabled: !onOpenMarket,
+    onClick: go('mode')
+  }, {
+    key: 'decks',
+    attr: {
+      'data-card-decks': ''
+    },
+    label: 'デッキ編成',
+    sub: 'デッキを組む・えらぶ',
+    mark: 'DECK',
+    ico: '🃏',
+    grad: 'from-yellow-200 via-amber-300 to-orange-400',
+    onClick: go('decks')
+  }, {
+    key: 'market',
+    attr: {
+      'data-card-market-open': ''
+    },
+    label: 'マーケット',
+    sub: 'パック・スターターキット',
+    mark: 'MARKET',
+    ico: '🛒',
+    grad: 'from-sky-200 via-sky-400 to-blue-500',
     onClick: () => {
       Audio_.se.tap();
       setNotice('');
       onOpenMarket && onOpenMarket();
     }
-  }, "マーケットへ", React.createElement("span", {
-    className: "block text-[10px] font-bold"
-  }, "パック・キット・円盤石")), React.createElement("button", {
+  }, {
+    key: 'ranking',
+    attr: {
+      'data-card-ranking-open': ''
+    },
+    label: 'ランキング',
+    sub: '勝ち数・連勝・図鑑',
+    mark: 'RANKING',
+    ico: '🏆',
+    grad: 'from-lime-200 via-emerald-300 to-teal-500',
+    onClick: go('ranking')
+  }];
+  const smallButtons = [{
+    key: 'dex',
+    attr: {
+      'data-card-dex-open': ''
+    },
+    label: 'カード図鑑',
+    ico: '📖',
+    tone: 'text-sky-100',
+    onClick: go('dex')
+  }, {
+    key: 'rules',
+    attr: {
+      'data-card-rules-open': ''
+    },
+    label: 'ルール',
+    sub: '練習試合',
+    ico: '📘',
+    tone: 'text-emerald-100',
+    onClick: go('rules')
+  }, {
+    key: 'record',
+    attr: {
+      'data-card-record-open': ''
+    },
+    label: '記録',
+    ico: '📊',
+    tone: 'text-amber-100',
+    onClick: go('record')
+  }, {
+    key: 'options',
+    attr: {
+      'data-card-options-open': ''
+    },
+    label: 'オプション',
+    sub: 'BGM・演出',
+    ico: '⚙️',
+    tone: 'text-fuchsia-100',
+    onClick: go('options')
+  }];
+  return React.createElement("div", {
+    "data-mh-screen": true,
+    "data-card-top": "top",
+    className: "mhms-stage relative flex h-full min-h-0 flex-1 flex-col overflow-hidden text-white"
+  }, React.createElement(RhythmModeSelectStage, {
+    notes: false
+  }), React.createElement("header", {
+    className: "relative z-10 flex shrink-0 items-center gap-1.5 border-b border-fuchsia-300/20 bg-slate-950/55 px-2 py-1 backdrop-blur-sm"
+  }, React.createElement("button", {
     type: "button",
-    "data-card-dex-open": true,
-    className: `${btn} border border-sky-300/50 bg-sky-900/50 text-sky-50`,
-    onClick: () => {
-      Audio_.se.tap();
-      setNotice('');
-      setView('dex');
-    }
-  }, "カード図鑑"), React.createElement("button", {
+    "aria-label": exitLabel,
+    onClick: onExit,
+    className: "min-h-[44px] min-w-[44px] shrink-0 rounded-xl text-lg font-black text-slate-300 active:scale-90"
+  }, "←"), React.createElement("div", {
+    className: "min-w-0 flex-1 leading-none"
+  }, React.createElement("small", {
+    className: "block truncate text-[8px] font-black tracking-[0.2em] text-fuchsia-300"
+  }, "MF BATTLE CARD ・ TOP"), React.createElement("b", {
+    className: "mhms-title block truncate text-lg font-black leading-tight tracking-wider"
+  }, "MFバトルカード"), React.createElement("small", {
+    className: "block truncate text-[9px] font-black text-slate-300/90"
+  }, debug ? 'デバッグ専用(まだ公開していません)' : 'カードで助手と対戦しよう')), React.createElement("span", {
+    "data-card-point-pill": true,
+    className: "shrink-0 rounded-full border border-amber-300/50 bg-slate-950/70 px-2.5 py-1 text-[11px] font-black text-amber-100"
+  }, React.createElement("span", {
+    "aria-hidden": "true"
+  }, "🃏"), " ", React.createElement("span", {
+    "data-card-point": true
+  }, save.point))), React.createElement("div", {
+    className: `relative z-[1] flex min-h-0 flex-1 flex-col overflow-y-auto landscape:flex-row landscape:overflow-hidden ${assistShown && assist.modeSelectArt ? '' : 'portrait:justify-center'}`
+  }, React.createElement(ModeSelectAssistantPanel, {
+    assistant: topAssistantShown,
+    showArt: assist.modeSelectArt,
+    showComment: assist.modeSelectComment,
+    onToggle: toggleAssist
+  }), React.createElement("div", {
+    className: "shrink-0 space-y-2 p-3 landscape:flex landscape:min-h-0 landscape:flex-1 landscape:shrink landscape:flex-col landscape:justify-center landscape:overflow-y-auto landscape:py-2"
+  }, !assistShown && topAssistant && React.createElement(ModeSelectAssistToggles, {
+    assistant: topAssistant,
+    showArt: assist.modeSelectArt,
+    showComment: assist.modeSelectComment,
+    onToggle: toggleAssist,
+    cls: "justify-end",
+    withLabel: true
+  }), activeDeck && React.createElement("button", {
     type: "button",
-    "data-card-rules-open": true,
-    className: `${btn} border border-emerald-300/50 bg-emerald-900/60 text-emerald-50`,
-    onClick: () => {
-      Audio_.se.tap();
-      setNotice('');
-      setView('rules');
+    "data-card-active-deck": true,
+    onClick: go('decks'),
+    className: "mhms-glass mhms-in flex w-full min-w-0 items-center gap-2 rounded-xl px-2.5 py-1.5 text-left active:scale-[.98]"
+  }, React.createElement("small", {
+    className: "shrink-0 text-[10px] font-black text-slate-400"
+  }, "いまのデッキ"), React.createElement("b", {
+    className: "min-w-0 flex-1 truncate text-[12px] font-black text-white"
+  }, activeDeck.name), React.createElement("span", {
+    "aria-hidden": "true",
+    className: "flex shrink-0 -space-x-2"
+  }, activeDeck.monsters.map(no => {
+    const m = cardMonsterOf(db, no);
+    return m ? React.createElement("img", {
+      key: no,
+      src: CARD_IMG(m.img),
+      alt: "",
+      className: "h-8 w-6 rounded-[3px] border border-white/40 object-cover"
+    }) : null;
+  }))), notice && React.createElement("p", {
+    className: "text-[12px] font-bold text-amber-200"
+  }, notice), React.createElement("div", {
+    "data-card-top-cards": true,
+    className: "grid grid-cols-2 gap-2"
+  }, bigCards.map((c, idx) => React.createElement("button", _extends({
+    key: c.key,
+    type: "button"
+  }, c.attr, {
+    disabled: !!c.disabled,
+    onClick: c.onClick,
+    className: `mhms-card mhms-in flex min-h-[84px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br ${c.grad} px-3 text-left text-slate-950 active:scale-[.97] disabled:opacity-50 landscape:min-h-[76px]`,
+    style: {
+      animationDelay: `${0.05 + idx * 0.06}s`
     }
-  }, "ルール", React.createElement("span", {
-    className: "block text-[10px] font-bold"
-  }, "練習試合もここから"))), debug && React.createElement("div", {
+  }), React.createElement("span", {
+    "aria-hidden": "true",
+    className: "mhms-mark"
+  }, c.mark), React.createElement("span", {
+    "aria-hidden": "true",
+    className: "mhms-ico relative text-3xl leading-none"
+  }, c.ico), React.createElement("span", {
+    className: "relative min-w-0"
+  }, React.createElement("b", {
+    className: "block text-[18px] font-black italic leading-tight"
+  }, c.label), React.createElement("small", {
+    className: "block text-[10px] font-black leading-tight text-slate-900/80"
+  }, c.sub))))), React.createElement("div", {
+    "data-card-top-shortcuts": true,
+    className: "mhms-in grid grid-cols-4 gap-1.5",
+    style: {
+      animationDelay: '.28s'
+    }
+  }, smallButtons.map(b => React.createElement("button", _extends({
+    key: b.key,
+    type: "button"
+  }, b.attr, {
+    onClick: b.onClick,
+    className: `mhms-glass flex min-h-[52px] min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-0.5 leading-none active:scale-95 ${b.tone}`
+  }), React.createElement("span", {
+    "aria-hidden": "true",
+    className: "text-lg"
+  }, b.ico), React.createElement("b", {
+    className: "text-[11px] font-black"
+  }, b.label), b.sub && React.createElement("small", {
+    className: "text-[9px] font-black text-slate-300/90"
+  }, b.sub)))), debug && React.createElement("div", {
     className: `${SCREEN_PANEL_FLAT_CLASS} space-y-1`
   }, React.createElement("div", {
     className: "grid grid-cols-2 gap-1"
@@ -87308,7 +87695,7 @@ const CardBattleScreen = ({
     type: "button",
     className: "mh-button mh-button-danger min-h-[44px] w-full rounded-xl text-[12px] font-black",
     onClick: () => setConfirmReset(true)
-  }, "カードバトルの記録を消して、スターター選びからやり直す"))), detail && React.createElement(CardDetailModal, {
+  }, "カードバトルの記録を消して、スターター選びからやり直す")))), detail && React.createElement(CardDetailModal, {
     db: db,
     no: detail,
     onClose: () => setDetail(null)
@@ -88449,6 +88836,369 @@ const CardShopStarters = ({
       if (r && r.ok) setDone(`「${k.name}」を買いました。デッキ編成に1つ増えています${r.dupPoint > 0 ? `(だぶったカードはカードポイント +${r.dupPoint})` : ''}`);
     }
   }));
+};
+const CARD_RANK_TABLE = 'card_battle_ranks';
+const CARD_RANK_SELECT = 'user_name,breeder_id,icon,profile_frame,week_key,' + CARD_LEVEL_ORDER.map(lv => `wins_${lv},week_wins_${lv}`).join(',') + ',best_streak,current_streak,dex_count,dex_total,updated_at';
+const CARD_RANK_FETCH_LIMIT = 150;
+const CARD_RANK_SHOW_LIMIT = 50;
+const CARD_RANK_CACHE_MS = 60 * 1000;
+let _cardRanksUnavailable = false;
+const cardRanksUnavailable = () => _cardRanksUnavailable;
+const cardRankCache = new Map();
+const cardDexCounts = (db, collection) => {
+  const all = [...Object.values(db.monsters).map(m => m.no), ...Object.values(db.cards).map(c => c.no)];
+  const col = collection || {};
+  return {
+    count: all.filter(no => col[no] > 0).length,
+    total: all.length
+  };
+};
+const cardRankEntryFromRow = row => {
+  if (!row || typeof row !== 'object') return null;
+  const n = k => {
+    const x = Number(row[k]);
+    return Number.isFinite(x) && x > 0 ? Math.floor(x) : 0;
+  };
+  return {
+    userName: String(row.user_name || '名無しのブリーダー'),
+    breederId: typeof row.breeder_id === 'string' ? row.breeder_id : '',
+    icon: row.icon || null,
+    profileFrame: typeof normalizeProfileFrameId === 'function' ? normalizeProfileFrameId(row.profile_frame) : null,
+    weekKey: typeof row.week_key === 'string' ? row.week_key : '',
+    wins: Object.fromEntries(CARD_LEVEL_ORDER.map(lv => [lv, n(`wins_${lv}`)])),
+    weekWins: Object.fromEntries(CARD_LEVEL_ORDER.map(lv => [lv, n(`week_wins_${lv}`)])),
+    bestStreak: n('best_streak'),
+    dexCount: n('dex_count'),
+    dexTotal: n('dex_total'),
+    updatedAt: String(row.updated_at || '')
+  };
+};
+const cardRankMerge = entries => {
+  const byKey = new Map();
+  (Array.isArray(entries) ? entries : []).forEach(e => {
+    if (!e) return;
+    const key = e.breederId || `name:${e.userName}`;
+    const cur = byKey.get(key);
+    if (!cur || e.updatedAt > cur.updatedAt) byKey.set(key, e);
+  });
+  return [...byKey.values()];
+};
+const cardRankColumn = ({
+  kind,
+  period,
+  level
+}) => kind === 'streak' ? 'best_streak' : kind === 'dex' ? 'dex_count' : `${period === 'week' ? 'week_wins' : 'wins'}_${level}`;
+const cardRankValue = (e, {
+  kind,
+  period,
+  level
+}) => kind === 'streak' ? e.bestStreak : kind === 'dex' ? e.dexCount : (period === 'week' ? e.weekWins : e.wins)[level] || 0;
+const sbFetchCardRanks = async (q, now = Date.now()) => {
+  if (_cardRanksUnavailable) return null;
+  const column = cardRankColumn(q);
+  const week = q.kind === 'wins' && q.period === 'week' ? `&week_key=eq.${cardWeekKeyJst(now)}` : '';
+  const url = `${SUPABASE_URL}/rest/v1/${CARD_RANK_TABLE}?select=${CARD_RANK_SELECT}&${column}=gt.0${week}` + `&order=${column}.desc.nullslast,updated_at.asc&limit=${CARD_RANK_FETCH_LIMIT}`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch(url, {
+      headers: SB_HEADERS,
+      cache: 'no-store',
+      signal: controller.signal
+    });
+    const body = await res.text();
+    if (!res.ok) {
+      if (_isMissingTableError(res.status, body)) {
+        _cardRanksUnavailable = true;
+        return null;
+      }
+      throw new Error(`${CARD_RANK_TABLE} ${res.status}: ${body || res.statusText}`);
+    }
+    const rows = JSON.parse(body || '[]');
+    const entries = cardRankMerge((Array.isArray(rows) ? rows : []).map(cardRankEntryFromRow));
+    entries.sort((a, b) => cardRankValue(b, q) - cardRankValue(a, q));
+    return entries;
+  } finally {
+    clearTimeout(timer);
+  }
+};
+const sbUpsertCardRank = async row => {
+  if (_cardRanksUnavailable || !row) return false;
+  const url = `${SUPABASE_URL}/rest/v1/${CARD_RANK_TABLE}?on_conflict=user_name`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        ...SB_HEADERS,
+        'Prefer': 'resolution=merge-duplicates,return=minimal'
+      },
+      body: JSON.stringify([row]),
+      signal: controller.signal
+    });
+    if (!res.ok) {
+      const body = await res.text();
+      if (_isMissingTableError(res.status, body)) {
+        _cardRanksUnavailable = true;
+        return false;
+      }
+      throw new Error(`${CARD_RANK_TABLE} upsert ${res.status}: ${body || res.statusText}`);
+    }
+    return true;
+  } finally {
+    clearTimeout(timer);
+  }
+};
+const cardRankSync = async (db, {
+  record,
+  collection,
+  profile
+}) => {
+  try {
+    if (_cardRanksUnavailable || !profile) return false;
+    const breederId = typeof ensureBreederId === 'function' ? await ensureBreederId() : null;
+    const dex = cardDexCounts(db, collection);
+    const row = cardRankRow(record, {
+      dexCount: dex.count,
+      dexTotal: dex.total,
+      userName: profile.name,
+      icon: profile.icon,
+      profileFrame: profile.frame,
+      breederId,
+      now: Date.now()
+    });
+    const sign = JSON.stringify(row);
+    if ((await storeGet(CARD_SAVE_KEYS.rankSync, null)) === sign) return true;
+    const ok = await sbUpsertCardRank(row);
+    if (ok) {
+      await storeSet(CARD_SAVE_KEYS.rankSync, sign);
+      cardRankCache.clear();
+    }
+    return ok;
+  } catch (err) {
+    console.error('[ranking] card_battle_ranks sync failed:', err && err.message ? err.message : err);
+    return false;
+  }
+};
+const CARD_RANK_KINDS = Object.freeze([{
+  id: 'wins',
+  label: '勝ち数',
+  emoji: '🏆'
+}, {
+  id: 'streak',
+  label: '連勝',
+  emoji: '🔥'
+}, {
+  id: 'dex',
+  label: '図鑑',
+  emoji: '📖'
+}, {
+  id: 'multi',
+  label: 'マルチ',
+  emoji: '🎮'
+}]);
+const CardRankingBoard = ({
+  onBack,
+  renderBreederIcon = null,
+  selfName = '',
+  record = null,
+  dex = null,
+  sendOn = false
+}) => {
+  const [kind, setKind] = useState('wins');
+  const [period, setPeriod] = useState('week');
+  const [level, setLevel] = useState('normal');
+  const [state, setState] = useState({
+    status: 'loading',
+    entries: []
+  });
+  const [selfId, setSelfId] = useState('');
+  const [retry, setRetry] = useState(0);
+  const q = {
+    kind,
+    period,
+    level
+  };
+  const cacheKey = kind === 'wins' ? `wins:${period}:${level}` : kind;
+  useEffect(() => {
+    let alive = true;
+    if (typeof ensureBreederId === 'function') ensureBreederId().then(id => {
+      if (alive && typeof id === 'string') setSelfId(id);
+    }).catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
+  useEffect(() => {
+    if (kind === 'multi') return undefined;
+    let alive = true;
+    const hit = cardRankCache.get(cacheKey);
+    setState(hit ? {
+      status: 'ready',
+      entries: hit.entries
+    } : {
+      status: 'loading',
+      entries: []
+    });
+    if (hit && Date.now() - hit.at < CARD_RANK_CACHE_MS) return () => {
+      alive = false;
+    };
+    sbFetchCardRanks(q).then(entries => {
+      if (!alive) return;
+      if (entries == null) {
+        setState({
+          status: 'missing',
+          entries: []
+        });
+        return;
+      }
+      cardRankCache.set(cacheKey, {
+        at: Date.now(),
+        entries
+      });
+      setState({
+        status: 'ready',
+        entries
+      });
+    }).catch(() => {
+      if (alive && !hit) setState({
+        status: 'error',
+        entries: []
+      });
+    });
+    return () => {
+      alive = false;
+    };
+  }, [cacheKey, retry]);
+  const rec = cardNormalizeRecord(record);
+  const weekNow = cardWeekKeyJst(Date.now());
+  const mineValue = kind === 'streak' ? rec.rank.streak.best : kind === 'dex' ? dex ? dex.count : 0 : (period === 'week' ? rec.rank.week.key === weekNow ? rec.rank.week.wins : {} : rec.rank.total)[level] || 0;
+  const unit = kind === 'dex' ? '種類' : kind === 'streak' ? '連勝' : '勝';
+  const shown = state.entries.slice(0, CARD_RANK_SHOW_LIMIT);
+  const chip = on => `min-h-[36px] shrink-0 rounded-full border px-3 text-[11px] font-black ${on ? 'border-amber-300 bg-amber-500/25 text-amber-100' : 'border-white/10 bg-slate-900 text-slate-400'}`;
+  const medal = i => i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : String(i + 1);
+  const levelLabel = lv => CARD_LEVEL_LABEL[lv] || lv.toUpperCase();
+  return React.createElement("div", {
+    "data-mh-screen": true,
+    "data-card-ranking": kind,
+    className: SCREEN_SHELL_CLASS
+  }, React.createElement(ScreenHead, {
+    title: "ランキング",
+    accent: "text-amber-200",
+    onBack: onBack,
+    note: "MFバトルカード"
+  }), React.createElement("div", {
+    className: "mb-2 grid shrink-0 grid-cols-4 gap-1"
+  }, CARD_RANK_KINDS.map(k => React.createElement("button", {
+    key: k.id,
+    type: "button",
+    "data-card-ranking-tab": k.id,
+    "aria-pressed": kind === k.id,
+    onClick: () => {
+      Audio_.se.tap();
+      setKind(k.id);
+    },
+    className: `min-h-[44px] rounded-xl border text-[11px] font-black ${kind === k.id ? 'border-amber-300 bg-amber-500/25 text-amber-100' : 'border-white/10 bg-slate-900/80 text-slate-300'}`
+  }, React.createElement("span", {
+    "aria-hidden": "true",
+    className: "block text-base leading-none"
+  }, k.emoji), k.label))), kind === 'wins' && React.createElement("div", {
+    className: "mb-1.5 shrink-0 space-y-1.5"
+  }, React.createElement("div", {
+    className: "flex gap-1.5"
+  }, [['week', '今週'], ['total', '通算']].map(([id, label]) => React.createElement("button", {
+    key: id,
+    type: "button",
+    "data-card-ranking-period": id,
+    onClick: () => setPeriod(id),
+    className: chip(period === id)
+  }, label)), React.createElement("small", {
+    className: "ml-auto self-center text-[10px] font-bold text-slate-400"
+  }, period === 'week' ? '月曜 0:00 から' : '助手と対戦で勝った数')), React.createElement("div", {
+    className: "flex gap-1.5 overflow-x-auto"
+  }, CARD_LEVEL_ORDER.map(lv => React.createElement("button", {
+    key: lv,
+    type: "button",
+    "data-card-ranking-level": lv,
+    onClick: () => setLevel(lv),
+    className: chip(level === lv)
+  }, levelLabel(lv))))), kind !== 'multi' && React.createElement("div", {
+    "data-card-ranking-mine": true,
+    className: `${SCREEN_PANEL_FLAT_CLASS} mb-1.5 flex shrink-0 items-center gap-2 text-[12px] font-bold`
+  }, React.createElement("span", {
+    className: "text-slate-300"
+  }, "あなたの記録"), React.createElement("b", {
+    className: "ml-auto text-base font-black text-amber-200"
+  }, mineValue.toLocaleString(), React.createElement("small", {
+    className: "ml-0.5 text-[10px] text-slate-400"
+  }, unit))), kind !== 'multi' && !sendOn && React.createElement("p", {
+    "data-card-ranking-preview": true,
+    className: "mb-1.5 shrink-0 text-[10px] font-bold leading-snug text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('いまは見本です。ランキングへ送るのは、公開してからのふつうの対戦の記録だけです')), React.createElement("div", {
+    className: `${SCREEN_LIST_CLASS} space-y-1.5 pb-3`
+  }, kind === 'multi' && React.createElement("div", {
+    "data-card-ranking-multi": true,
+    className: "mt-6 rounded-2xl border border-white/10 bg-slate-900/80 p-5 text-center"
+  }, React.createElement("div", {
+    "aria-hidden": "true",
+    className: "text-3xl"
+  }, "🎮"), React.createElement("b", {
+    className: "mt-1 block text-[15px] font-black text-white"
+  }, "マルチ対戦の強さ"), React.createElement("span", {
+    className: "mt-1 inline-block rounded border border-slate-500 px-2 py-0.5 text-[11px] font-black text-slate-300"
+  }, "準備中"), React.createElement("p", {
+    className: "mt-2 text-[12px] font-bold text-slate-400"
+  }, "マルチ対戦ができるようになったら、ここに順位が出ます")), kind !== 'multi' && state.status === 'loading' && React.createElement("p", {
+    className: "py-8 text-center text-sm font-bold text-slate-400"
+  }, "読み込み中…"), kind !== 'multi' && state.status === 'missing' && React.createElement("p", {
+    "data-card-ranking-missing": true,
+    className: "py-8 text-center text-sm font-bold text-amber-200"
+  }, "ランキングは準備中です"), kind !== 'multi' && state.status === 'error' && React.createElement("div", {
+    className: "py-8 text-center"
+  }, React.createElement("p", {
+    className: "text-sm font-bold text-amber-200"
+  }, "ランキングを読み込めませんでした"), React.createElement("button", {
+    type: "button",
+    onClick: () => {
+      cardRankCache.delete(cacheKey);
+      setRetry(n => n + 1);
+    },
+    className: "mt-2 min-h-[44px] rounded-xl bg-slate-800 px-4 text-sm font-black"
+  }, "もう一度読み込む")), kind !== 'multi' && state.status === 'ready' && shown.length === 0 && React.createElement("p", {
+    "data-card-ranking-empty": true,
+    className: "py-8 text-center text-sm font-bold text-slate-400"
+  }, "まだ記録がありません"), kind !== 'multi' && state.status === 'ready' && shown.map((e, i) => {
+    const mine = selfId && e.breederId === selfId || !e.breederId && !!selfName && e.userName === selfName;
+    const v = cardRankValue(e, q);
+    return React.createElement("article", {
+      key: e.breederId || e.userName,
+      "data-card-ranking-row": i + 1,
+      "data-mine": mine ? '1' : undefined,
+      className: `grid grid-cols-[28px_32px_minmax(0,1fr)_auto] items-center gap-2 rounded-xl border p-2 ${mine ? 'border-amber-300/70 bg-amber-500/10' : i === 0 ? 'border-amber-500/50 bg-amber-500/10' : 'border-white/10 bg-slate-900/80'}`
+    }, React.createElement("b", {
+      className: "text-center text-sm font-black text-slate-200"
+    }, medal(i)), renderBreederIcon ? renderBreederIcon({
+      userName: e.userName,
+      icon: e.icon,
+      profileFrame: e.profileFrame,
+      breederId: e.breederId
+    }) : React.createElement("span", {
+      "aria-hidden": "true",
+      className: "text-lg"
+    }, "👤"), React.createElement("span", {
+      className: "min-w-0 leading-tight"
+    }, React.createElement("b", {
+      className: "block truncate text-[13px] font-black text-white"
+    }, e.userName, mine ? '(あなた)' : ''), kind === 'dex' && e.dexTotal > 0 && React.createElement("small", {
+      className: "block text-[10px] font-bold text-slate-400"
+    }, e.dexTotal, "種類のうち")), React.createElement("b", {
+      className: "text-right text-base font-black leading-tight text-amber-200"
+    }, v.toLocaleString(), React.createElement("small", {
+      className: "ml-0.5 text-[10px] font-bold text-slate-400"
+    }, unit)));
+  })));
 };
 const DEBUG_TRIALS = [{
   id: 'rhythm_mon_layers',
@@ -95985,6 +96735,20 @@ function MonsterHeroGame() {
       text
     };
   }, [battleSystemSelectOpen, activeAssistant && activeAssistant.id]);
+  const cardTopOpen = gameState === 'CARD_TOP';
+  const cardTopAssistant = useMemo(() => {
+    if (!cardTopOpen || !activeAssistant) return null;
+    const line = typeof pickAssistantLine === 'function' ? pickAssistantLine('cardTop', null, assistantBondLevelNow, activeAssistant.id) : null;
+    const text = line ? assistantSpeakText(line.t, breederName, assistantBondLevelNow, assistantCallStyles[activeAssistant.id] || null, activeAssistant.id) : '';
+    return {
+      id: activeAssistant.id,
+      name: activeAssistant.name,
+      accent: activeAssistant.accent,
+      image: assistantFullImage(activeAssistant, line && line.e || 'happy'),
+      face: assistantFaceSrc(activeAssistant, line && line.e || 'happy'),
+      text
+    };
+  }, [cardTopOpen, activeAssistant && activeAssistant.id]);
   const newProfileFrames = ownedProfileFrames.filter(id => !profileFrameNoticed.includes(id)).map(id => profileFrameById(id)).filter(Boolean);
   const newProfileFrameAssistantName = (() => {
     const ids = [...new Set(newProfileFrames.map(frame => (profileFrameUnlock(frame) || {}).assistantId).filter(Boolean))];
@@ -115168,6 +115932,16 @@ function MonsterHeroGame() {
         setMarketExchangeError('');
         void loadCardShop();
         setGameState('BREEDER_MARKET');
+      },
+      topAssistant: cardTopAssistant,
+      rank: {
+        send: EVENT_REPLAY_RELEASE_FLAGS.cardBattle === true && !cardBattleDebugHome,
+        profile: {
+          name: breederName || '名無しのブリーダー',
+          icon: breederIcon,
+          frame: rankingProfileFrameValue(profileFrameId)
+        },
+        renderBreederIcon: rankingBreederIcon
       }
     }), gameState === 'RAID_JACK_DEBUG' && React.createElement(RaidJackDebugScreen, {
       onBack: () => setGameState('DEBUG_SETTINGS'),

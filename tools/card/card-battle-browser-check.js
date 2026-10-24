@@ -632,8 +632,40 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     if (homeEntry) {
       await page.locator('[data-home-card-battle]').click();
       await page.locator('[data-card-top="top"]').waitFor({ timeout: 20000 });
-      if (SHOT) await shot(page, '32-top-from-home');
+      // 札は少しずつ出てくる(mhms-in)ので、出そろってから写す
+      if (SHOT) { await page.waitForTimeout(1500); await shot(page, '32-top-from-home'); }
+      // ⑱ トップはモンヒロビート・モンヒロバトルの入口と同じ作り(社長 台帳 #3513): 助手の立ち絵と吹き出し・大きい札 2×2・小さいボタン 4つ
+      const topShape = await page.evaluate(() => ({
+        big: document.querySelectorAll('[data-card-top-cards] > button').length,
+        small: document.querySelectorAll('[data-card-top-shortcuts] > button').length,
+        art: !!document.querySelector('[data-card-top="top"] [data-rhythm-mode-assistant-art-box]'),
+        line: (document.querySelector('[data-card-top="top"] [data-rhythm-mode-assistant-line]') || {}).textContent || '',
+        toggles: document.querySelectorAll('[data-card-top="top"] [data-rhythm-mode-assistant-toggles] button').length,
+        point: !!document.querySelector('[data-card-top="top"] [data-card-point]'),
+      }));
+      check('⑱ トップ: 助手の立ち絵とひとこと・立ち絵/コメントの札・大きい札4つ・小さいボタン4つ・カードポイント', topShape.big === 4 && topShape.small === 4 && topShape.art && topShape.line.length > 3 && topShape.toggles === 2 && topShape.point, JSON.stringify(topShape));
+      // 戦績は「記録」の画面へ移した
+      await page.locator('[data-card-record-open]').click();
+      await page.locator('[data-card-record-view]').waitFor({ timeout: 10000 });
+      if (SHOT) await shot(page, '35-record');
       const recText = await page.locator('[data-card-record]').innerText().catch(() => '');
+      await page.locator('[data-card-record-view] header button').first().click();
+      // ⑱ ランキング: 4つのタブ(勝ち数・連勝・図鑑・マルチ)。マルチは準備中の札。表が無い/空でも壊れない。公開前は「見本です」と出る
+      await page.locator('[data-card-ranking-open]').click();
+      await page.locator('[data-card-ranking="wins"]').waitFor({ timeout: 10000 });
+      await page.waitForFunction(() => !/読み込み中/.test((document.querySelector('[data-card-ranking]') || {}).textContent || ''), null, { timeout: 15000 }).catch(() => {});
+      if (SHOT) await shot(page, '36-ranking');
+      const rankWins = await page.evaluate(() => ({ tabs: document.querySelectorAll('[data-card-ranking-tab]').length, levels: document.querySelectorAll('[data-card-ranking-level]').length, periods: document.querySelectorAll('[data-card-ranking-period]').length, mine: !!document.querySelector('[data-card-ranking-mine]'), preview: !!document.querySelector('[data-card-ranking-preview]'), state: document.querySelector('[data-card-ranking-missing]') ? 'missing' : document.querySelector('[data-card-ranking-empty]') ? 'empty' : document.querySelectorAll('[data-card-ranking-row]').length ? 'rows' : 'other' }));
+      await page.locator('[data-card-ranking-tab="multi"]').click();
+      const multiSoon = /準備中/.test(await page.locator('[data-card-ranking-multi]').innerText().catch(() => ''));
+      if (SHOT) await shot(page, '37-ranking-multi');
+      check('⑱ ランキング: 勝ち数(今週・通算×5難易度)・連勝・図鑑・マルチ(準備中)。公開前は見本の案内が出て、表が無くても壊れない', rankWins.tabs === 4 && rankWins.levels === 5 && rankWins.periods === 2 && rankWins.mine && rankWins.preview && rankWins.state !== 'other' && multiSoon, JSON.stringify({ ...rankWins, multiSoon }));
+      await page.locator('[data-card-ranking] header button').first().click();
+      await page.locator('[data-card-options-open]').click();
+      await page.locator('[data-card-options]').waitFor({ timeout: 10000 });
+      if (SHOT) await shot(page, '38-options');
+      await page.locator('[data-card-options] header button').first().click();
+      await page.locator('[data-card-top="top"]').waitFor({ timeout: 10000 });
       check('⑰ 戦績は投了を負けに数える(「0勝 1敗(うち投了1)」の形)', /\d+勝 \d+敗\(うち投了\d+\)/.test(recText) && !/・投了/.test(recText), recText);
       await page.locator('[data-card-cpu]').click();
       await page.locator('[data-card-top="mode"]').waitFor({ timeout: 10000 });
