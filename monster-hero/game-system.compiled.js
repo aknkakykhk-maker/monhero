@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 697a615771b2828e
+// source-sha256: 1c92fc249ca8c2e2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-24 23:10";
+const BUILD_DATE = "2026-10-24 23:54";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -83486,11 +83486,23 @@ const CARD_AI_TUNE = Object.freeze({
   dra: 1.15,
   atsu: 1
 });
+const CARD_AI_HABIT_BLEND = Object.freeze({
+  expert: {
+    mua: 0.6
+  },
+  master: {
+    mua: 0.6,
+    momosuke: 0.5
+  }
+});
 const cardAiPolicy = (habitId, levelId) => {
   const level = CARD_AI_LEVELS[levelId] || CARD_AI_LEVELS.normal;
   const tune = CARD_AI_TUNE[habitId] === undefined ? 1 : CARD_AI_TUNE[habitId];
+  const base = CARD_AI_HABITS[habitId] || CARD_AI_HABITS.kyuko;
+  const blend = (CARD_AI_HABIT_BLEND[levelId] || {})[habitId];
+  const habit = blend === undefined ? base : Object.fromEntries(Object.entries(base).map(([k, v]) => [k, 1 + (v - 1) * blend]));
   return {
-    habit: CARD_AI_HABITS[habitId] || CARD_AI_HABITS.kyuko,
+    habit,
     level: {
       ...level,
       sloppy: Math.min(0.9, (level.sloppy || 0) * tune)
@@ -83752,6 +83764,11 @@ const CARD_AI_DECKS = Object.freeze({
     prefer: ['竜巻アタック', '地震', '炎のカベ', 'ブリザード']
   }
 });
+const CARD_AI_LANE_MIN_DEFAULT = 0.8;
+const CARD_AI_LANE_MIN = Object.freeze({
+  momosuke: 1.5,
+  dra: 0.3
+});
 const CARD_DECK_COPY_MAX = 3;
 const cardAiCardValue = (card, habit) => {
   const eff = t => cardHasEff(card, t);
@@ -83851,7 +83868,7 @@ const cardAiBuildDeck = (db, who, levelId = 'normal') => {
   while (cards.length < CARD_BATTLE_DECK_SIZE && guard++ < 400) {
     const lane = li < lanes.length ? lanes[li] : shared;
     li = (li + 1) % (lanes.length + 1);
-    const x = lane.find(y => !used.has(y.c.name));
+    const x = lane.find(y => !used.has(y.c.name) && y.v >= (CARD_AI_LANE_MIN[who] ?? CARD_AI_LANE_MIN_DEFAULT));
     if (!x) continue;
     used.add(x.c.name);
     add(x.c, CARD_DECK_COPY_MAX);
