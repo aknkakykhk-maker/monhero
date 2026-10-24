@@ -616,7 +616,7 @@ const TrainingResultFx = ({ effect }) => {
       </div>
       {effect.guard && <div className="mh-train-guard shrink-0 w-full max-w-sm rounded-2xl border border-sky-300/50 bg-sky-950/70 px-3 py-1.5 text-center" style={{'--d': `${350 + entries.length * 260 + 300}ms`}}>
         <div className="text-[13px] font-black text-sky-200">🛡️ {effect.guard.title}</div>
-        <div className="text-[9px] font-bold text-sky-100/80 leading-snug whitespace-pre-line">{effect.guard.text}</div>
+        <div className="text-[9px] font-bold text-sky-100/80 leading-snug whitespace-pre-line">{helpWrap(effect.guard.text)}</div>
       </div>}
     </div>
   );
@@ -673,7 +673,7 @@ const TeachingResultFx = ({ effect }) => {
         ))}
       </div>
       <div className="mh-train-gain text-[12px] font-black text-purple-200" style={{'--d': '450ms'}}>{isUpgrade ? `Lv.${effect.fromLevel} → Lv.${effect.toLevel} に強化！` : '新しく習得しました！'}</div>
-      {effect.desc && <div className="mh-train-card mh-ph-panel w-full max-w-sm rounded-2xl px-3 py-2 text-[11px] font-bold leading-snug text-slate-100" style={{'--d': '300ms'}}>{effect.desc}</div>}
+      {effect.desc && <div className="mh-train-card mh-ph-panel w-full max-w-sm rounded-2xl px-3 py-2 text-[11px] font-bold leading-snug text-slate-100" style={{'--d': '300ms'}}>{helpWrap(effect.desc)}</div>}
     </div>
   );
 };

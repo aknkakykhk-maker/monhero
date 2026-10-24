@@ -1843,7 +1843,7 @@ function BattleScreen({
                   className={`w-full rounded-2xl border-2 px-3 py-1.5 text-center shadow-[0_4px_20px_rgba(0,0,0,.85)] ${b.tone==='bad'?'bg-slate-800/95 border-slate-300 text-slate-100':b.tone==='enemy'?'bg-violet-800/95 border-violet-200 text-white':'bg-amber-600/95 border-amber-100 text-white'}`}
                   style={{animation:liteBattleView?undefined:'skillNamePop 350ms ease-out forwards'}}>
                   <div data-battle-luck-title className="text-[11px] font-black leading-tight opacity-90">{cardIconNode(b.icon,14)} {b.title}</div>
-                  <div data-battle-luck-result className="mt-0.5 text-[15px] font-black leading-snug">{b.result}</div>
+                  <div data-battle-luck-result className="mt-0.5 text-[15px] font-black leading-snug">{helpWrap(b.result)}</div>
                 </div>))}
               </div>,document.body
             )}
@@ -3145,7 +3145,7 @@ function BattleScreen({
                       onClick={()=>{ if(activateTacticsEx&&activateTacticsEx(exPanel.slot,st.id)) setExPanelSlot(null); }}
                       className={`min-h-[44px] rounded-xl border-2 px-3 py-1.5 text-left active:scale-95 ${st.current?'border-slate-600 bg-slate-800 text-slate-500':'border-fuchsia-300 bg-fuchsia-900/60 text-white'}`}>
                       <span className="block text-[13px] font-black">{st.label}{st.current?'（いまのスタイル）':''}</span>
-                      <span className="block text-[10px] font-bold leading-snug opacity-80">{st.desc}</span>
+                      <span className="block text-[10px] font-bold leading-snug opacity-80">{helpWrap(st.desc)}</span>
                     </button>
                   ))}
                   <button type="button" data-tactics-ex-choice-back onClick={()=>setExChoosing(false)} className="min-h-[40px] rounded-xl border border-white/20 bg-slate-800 text-[12px] font-black text-slate-200 active:scale-95">戻る</button>
