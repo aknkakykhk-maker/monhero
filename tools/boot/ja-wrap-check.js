@@ -10,6 +10,7 @@
 //   ・ジャックのセリフの吹き出し([data-home-raid-say])は長い文なので数えない。レイドの札(「ジャック大王が／あらわれた！」)は数える(2026-10-20)
 //   ・2026-10-21 社長の指示で広げた: 30字より長い文・助手の吹き出しも「最後の行に1〜2字だけ落ちた」は数える(160字まで)。
 //     作り手が <wbr> で決めた折り目は、言葉の切れ目として扱う
+//     jaWrap が「……」を含む短いかたまりを包む折らない枠([data-ja-keep])の字は、外側の文の一部として数える(2026-10-24)
 //   ・見る画面: ヘルプ・プロフィール・マーケットの全部の売り場とタブ・モンヒロビート・曲えらび・HOME・マーケット・ダイヤショップ・
 //     神殿・ギフト(長い題名のギフトを並べて)・ミッション・M/B管理・設定・モンヒロバトル(幅320と390)
 // 直し方: 字を言葉の切れ目で折る(41-screen-ui.jsx の jaWrap と JA_WRAP_STYLE、マーケットの札は marketNameForWrap)
@@ -26,7 +27,7 @@ const SCAN=()=>{const seg=new Intl.Segmenter('ja',{granularity:'word'});const ou
 const walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);const range=document.createRange();
 const visible=(el)=>{const st=getComputedStyle(el);if(st.visibility==='hidden'||st.display==='none'||Number(st.opacity)===0)return false;const r=el.getBoundingClientRect();return r.width>0&&r.height>0&&r.bottom>0&&r.top<innerHeight;};
 const byEl=new Map();
-for(let n=walker.nextNode();n;n=walker.nextNode()){const t=n.textContent;if(!t||!/[぀-ヿ一-鿿]/.test(t))continue;const el=n.parentElement;if(!el||!visible(el))continue;if(!byEl.has(el))byEl.set(el,[]);byEl.get(el).push(n);}
+for(let n=walker.nextNode();n;n=walker.nextNode()){const t=n.textContent;if(!t||!/[぀-ヿ一-鿿]/.test(t))continue;let el=n.parentElement;if(el&&el.matches('[data-ja-keep]'))el=el.parentElement;if(!el||!visible(el))continue;if(!byEl.has(el))byEl.set(el,[]);byEl.get(el).push(n);}
 for(const [el,nodes] of byEl){let text='';const tops=[];
 const wbrAt=new Set();for(const n of nodes){const s=n.textContent;if(n.previousSibling&&n.previousSibling.nodeName==='WBR')wbrAt.add(text.length);for(let i=0;i<s.length;i++){range.setStart(n,i);range.setEnd(n,i+1);const rs=range.getClientRects();if(!rs.length){continue;}text+=s[i];tops.push(Math.round(rs[0].top));}}
 const plain=text.replace(/\u200B/g,'');const longText=plain.length>30;if(plain.length>160)continue;const inBubble=!!el.closest('[data-bubble-text],[class*="bubble"],[class*="speech"],[data-home-raid-say]');const labelLike=!longText&&!inBubble&&(el.closest('h1,h2,h3,h4,[role=tab]')||plain.length<=16);
