@@ -44,7 +44,8 @@ const LAYOUTS = {
     erase: [
       { name: 'title', rect: [208, 50, 340, 136], keep: 'dark', dir: 'col' },
       { name: 'kind', rect: [74, 80, 171, 200], keep: 'colored' },
-      { name: 'label', rect: [60, 698, 252, 741], keep: 'dark', dir: 'col' },
+      // 左のほうは地がほとんど黒で、黒いふちと見分けられない。すぐ下の2行の色を、列ごとにそのまま写す(card-image-build の © の消し方と同じ)
+      { name: 'label', rect: [56, 699, 256, 742], from: 'bottom' },
       { name: 'guts', rect: [64, 900, 150, 941], keep: 'light' },
       { name: 'text', rect: [198, 772, 683, 937], keep: 'light', grow: 3 },
     ],
@@ -118,6 +119,16 @@ const pageScript = async ({ imgUrl, fontUrls, layout, ops }) => {
     const [x0, y0, x1, y1] = e.rect;
     const w = x1 - x0, h = y1 - y0;
     const id = cx.getImageData(x0, y0, w, h); const d = id.data;
+    if (e.from === 'bottom') {
+      const below = cx.getImageData(x0, y1, w, 2).data;
+      for (let x = 0; x < w; x++) for (let c = 0; c < 3; c++) {
+        let sum = 0, n = 0;
+        for (let dx = -3; dx <= 3; dx++) { const xx = Math.min(w - 1, Math.max(0, x + dx)); for (let yy = 0; yy < 2; yy++) { sum += below[(yy * w + xx) * 4 + c]; n++; } }
+        for (let y = 0; y < h; y++) d[(y * w + x) * 4 + c] = Math.round(sum / n);
+      }
+      cx.putImageData(id, x0, y0);
+      continue;
+    }
     const keep = keepOf[e.keep];
     const inShape = (x, y) => {
       if (e.shape === 'circle') return (x - w / 2) ** 2 + (y - h / 2) ** 2 <= (Math.min(w, h) / 2) ** 2;

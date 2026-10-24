@@ -29,7 +29,9 @@ const BAND = {
 };
 const ART_COPYRIGHT = { x0: 496, y0: 702, x1: 690, y1: 731, from: 'top' }; // 技カードの絵の右下の「© TECMO, LTD. 1999」
 
-const isMonster = (file) => /^C-/.test(path.basename(file));
+// ★混血の絵は「C051.jpg」と「-」が無い名前なので、C のあとに数字が続くものもモンスターカードにする
+//   (前は技カードとして扱っていて、© が残り、右下の「No. C-051」を塗りつぶしていた・2026-10-24 に気づいた)
+const isMonster = (file) => /^C-?\d/.test(path.basename(file));
 
 // 四角の中を、上の2行と下の2行の色から列ごとにつないで塗る。from:'top' は上の2行の色だけで塗る(下がふちのとき)
 const fillRect = (px, ch, r) => {
@@ -96,7 +98,7 @@ const build = async (opts) => {
   console.log(`書き出し: ${files.length}枚 × ${Object.keys(SIZES).length}つの大きさ → ${path.relative(ROOT, OUT)}`);
 };
 
-module.exports = { erase, allCards };
+module.exports = { erase, allCards, isMonster };
 
 if (require.main === module) (async () => {
   const args = process.argv.slice(2);
