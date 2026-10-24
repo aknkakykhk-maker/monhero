@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 14ae2a315cd2742e
+// source-sha256: c2866ef1c7598180
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-25 07:54";
+const BUILD_DATE = "2026-10-25 08:01";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -85667,17 +85667,19 @@ const CardMonSlot = ({
   }, React.createElement("div", {
     className: "truncate text-[12px] font-black leading-tight"
   }, mon.name), React.createElement("div", {
-    className: "text-[13px] font-black leading-tight"
+    className: "flex items-center gap-1 whitespace-nowrap text-[13px] font-black leading-tight"
   }, mon.life, React.createElement("span", {
     className: "text-[10px] text-slate-400"
-  }, " / ", mon.max)), React.createElement("div", {
+  }, " / ", mon.max), tiny && React.createElement("span", {
+    className: `ml-auto rounded px-0.5 text-[9px] font-bold ${ty === 'air' ? 'bg-cyan-800' : ty === 'water' ? 'bg-blue-800' : 'bg-indigo-900'}`
+  }, CARD_TYPE_LABEL[ty])), React.createElement("div", {
     className: "h-[6px] overflow-hidden rounded bg-slate-700"
   }, React.createElement("div", {
     className: `h-full ${pct > 50 ? 'bg-emerald-400' : pct > 25 ? 'bg-amber-400' : 'bg-rose-500'}`,
     style: {
       width: `${pct}%`
     }
-  })), React.createElement("span", {
+  })), !tiny && React.createElement("span", {
     className: `mt-0.5 inline-block rounded px-1 text-[10px] font-bold ${ty === 'air' ? 'bg-cyan-800' : ty === 'water' ? 'bg-blue-800' : 'bg-indigo-900'}`
   }, CARD_TYPE_LABEL[ty]), stunned && React.createElement("span", {
     className: "ml-0.5 inline-block rounded bg-rose-900 px-1 text-[10px] font-bold"
@@ -86399,7 +86401,7 @@ const CardBattleBoard = ({
   }, "⚔ ", quickRun.loops, "周目"), React.createElement("span", {
     className: "text-[12px] font-bold text-violet-200"
   }, "ターン ", Math.max(1, st.turn), " ・ ", st.active === CARD_ME ? 'あなたの番' : `${who.name}の番`))), React.createElement("div", {
-    className: `flex ${compact ? 'h-[42px]' : 'h-[50px]'} shrink-0 items-center gap-2 px-2`
+    className: `flex ${tiny ? 'h-[36px]' : compact ? 'h-[42px]' : 'h-[50px]'} shrink-0 items-center gap-2 px-2`
   }, pvp ? React.createElement("span", {
     "data-card-pvp-foe": true,
     className: "grid h-[42px] w-[42px] place-items-center rounded-xl border-2 bg-black text-[24px]",
@@ -86409,7 +86411,7 @@ const CardBattleBoard = ({
   }, cardIconNode(pvp.icon, 30)) : React.createElement("img", {
     src: assistantFaceImage(who, face),
     alt: who.name,
-    className: "h-[42px] w-[42px] rounded-xl border-2 bg-black object-cover object-top",
+    className: `${tiny ? 'h-[34px] w-[34px]' : 'h-[42px] w-[42px]'} rounded-xl border-2 bg-black object-cover object-top`,
     style: {
       borderColor: who.accent
     }
@@ -86458,7 +86460,7 @@ const CardBattleBoard = ({
     key: action.key,
     "data-card-action": true,
     className: `relative z-[1] flex items-center gap-2 rounded-2xl border border-amber-300/50 bg-black/55 px-2 ${compact ? "py-0.5" : "py-1"} shadow-lg`
-  }, action.cards.slice(0, 3).map((no, i) => {
+  }, !tiny && action.cards.slice(0, 3).map((no, i) => {
     const c = cardOf(db, no);
     return c ? React.createElement("img", {
       key: i,
@@ -86548,8 +86550,8 @@ const CardBattleBoard = ({
     style: JA_LABEL_STYLE
   }, jaWrap(hint || guide)), mode === 'guard' && !guardOpts.length && React.createElement("div", {
     "data-card-guard-why": true,
-    className: "mx-auto mb-1 max-w-[94%] shrink-0 text-center text-[11px] font-bold leading-snug text-slate-300",
-    style: JA_WRAP_STYLE
+    className: `mx-auto mb-1 max-w-[94%] shrink-0 text-center ${tiny ? 'truncate whitespace-nowrap text-[10px]' : 'text-[11px]'} font-bold leading-snug text-slate-300`,
+    style: tiny ? undefined : JA_WRAP_STYLE
   }, cardGuardBlockReasons(db, st).join(' / ')), !guide && !tutorial && hint && React.createElement("div", {
     className: "mx-auto mb-1 shrink-0 rounded-lg bg-amber-300 px-2 py-0.5 text-[11px] font-black text-slate-900",
     style: JA_LABEL_STYLE
@@ -86599,7 +86601,11 @@ const CardBattleBoard = ({
       size: compact ? 10 : 11,
       className: "font-bold leading-tight"
     }), tiny ? React.createElement(React.Fragment, null, React.createElement(CardNameFit, {
-      name: `ガッツ${c ? c.guts : '-'}・${cardCaption(c)}`,
+      name: `ガッツ${c ? c.guts : '-'}`,
+      size: 10,
+      className: "font-extrabold leading-tight text-amber-200"
+    }), React.createElement(CardNameFit, {
+      name: cardCaption(c),
       size: 10,
       className: "font-extrabold leading-tight text-amber-200"
     })) : compact ? React.createElement(React.Fragment, null, React.createElement("span", {
