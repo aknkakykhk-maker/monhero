@@ -44,7 +44,7 @@ const MONSTER_LINEAGES = {
   plant:   { id:'plant',   name:'プラント',     monId:'Plant' },
   gel:     { id:'gel',     name:'ゲル' },
   // 新しい16種(2026-10-24・案の段階)の血統。本体を入れるときに monId を足す。
-  // コロペンドラは血統別のアイコンの絵がまだ無いので、届いてから足す(案の子の確認画面では血統が「未登録」と出る)
+  // コロペンドラは血統別のアイコン(images/lineage-icons/)の絵がまだ無い。画面の血統アイコンは顔アイコンを使うので困らない
   dino: { id:'dino', name:'ディノ' },
   gali: { id:'gali', name:'ガリ' },
   naga: { id:'naga', name:'ナーガ' },
@@ -55,6 +55,7 @@ const MONSTER_LINEAGES = {
   phoenix: { id:'phoenix', name:'ヒノトリ' },
   metalner: { id:'metalner', name:'メタルナー' },
   worm: { id:'worm', name:'ワーム' },
+  colorpandora: { id:'colorpandora', name:'コロペンドラ' },
   centaur: { id:'centaur', name:'ケンタウロス' },
   // 正体不明のレア血統
   unknown: { id:'unknown', name:'？？？', rare:true },
