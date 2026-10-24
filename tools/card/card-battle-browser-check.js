@@ -440,6 +440,28 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     }
     check(`⑬ 結果の画面の助手の絵が、${whoIds.length}人とも同じ大きさで足元が枠の下にそろう`, whoIds.length >= 6 && artBad.length === 0, artBad.join(' / ') || whoIds.join('・'));
     check('⑬ 結果の画面に「クイック周回 ◯周ぶん」が出る(入るとき・入らないとき)', /クイック周回 16周ぶん/.test(demoTxt.in) && /16周ぶん進みました/.test(demoTxt.in) && /^クイック周回をしていないときは入りません$/.test(demoTxt.out.trim()), JSON.stringify(demoTxt).slice(0, 200));
+    // ⑬ パックを開ける見本(デバッグ・保存しない。1パック目の最後は別絵キラ・2パック目の最後はキラ)
+    //   キラ以上は真ん中に大きく出る(data-card-pack-spot)。鳴らした効果音(data-card-pack-se)に、破る音・めくる音・キラの音(crit＋levelUp)・別絵キラの音(crit＋fusion)がそろう
+    await page.locator('[data-card-pack-open-demo]').dispatchEvent('click');
+    await page.locator('[data-card-pack-tear]').waitFor({ timeout: 10000 });
+    await page.locator('[data-card-pack-tear]').dispatchEvent('click');
+    await page.locator('[data-card-pack-open][data-card-pack-phase="open"]').waitFor({ timeout: 10000 });
+    for (let i = 0; i < 8; i++) { await page.locator(`[data-card-pack-card="${i}"]`).dispatchEvent('click'); await page.waitForTimeout(120); }
+    const spotAlt = await page.locator('[data-card-pack-spot="alt"]').waitFor({ timeout: 3000 }).then(() => true).catch(() => false);
+    await page.locator('[data-card-pack-spot]').waitFor({ state: 'detached', timeout: 5000 }).catch(() => {});
+    await page.locator('[data-card-pack-next]').dispatchEvent('click');
+    await page.locator('[data-card-pack-tear]').dispatchEvent('click');
+    await page.locator('[data-card-pack-open][data-card-pack-phase="open"]').waitFor({ timeout: 10000 });
+    await page.locator('[data-card-pack-flip-all]').dispatchEvent('click');
+    const spotKira = await page.locator('[data-card-pack-spot="kira"]').waitFor({ timeout: 6000 }).then(() => true).catch(() => false);
+    const packSe = ((await page.locator('[data-card-pack-open]').getAttribute('data-card-pack-se')) || '').split(',');
+    const seCount = (n) => packSe.filter((x) => x === n).length;
+    check('⑬ パックを開ける見本: 別絵キラ・キラが真ん中に大きく出て、破る音・めくる音・キラの音・別絵キラの音を鳴らす',
+      spotAlt && spotKira && seCount('special') === 2 && seCount('card') === 16 && seCount('crit') >= 4 && seCount('fusion') === 1 && seCount('levelUp') === 1,
+      JSON.stringify({ spotAlt, spotKira, se: ['special', 'card', 'crit', 'fusion', 'levelUp'].map((n) => `${n}:${seCount(n)}`).join(' ') }));
+    await page.locator('[data-card-pack-spot]').waitFor({ state: 'detached', timeout: 5000 }).catch(() => {});
+    await page.locator('[data-card-pack-done]').dispatchEvent('click');
+    await page.locator('[data-card-top="top"]').waitFor({ timeout: 10000 });
     // ⑭ デッキ編成: 新しいデッキを作り、モンスター3体と50枚を入れて保存 → 一覧で「対戦に使えます」・使うデッキにできる
     await page.locator('[data-card-decks]').click();
     await page.waitForSelector('[data-card-deck-list]', { timeout: 5000 });

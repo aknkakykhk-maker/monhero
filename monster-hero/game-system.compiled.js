@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6134d01ffdf268ee
+// source-sha256: 5667969fc7d6da65
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-25 02:35";
+const BUILD_DATE = "2026-10-25 03:13";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -88064,6 +88064,13 @@ const CardPackOpen = ({
   const [spot, setSpot] = useState(null);
   const [detail, setDetail] = useState(null);
   const timers = useRef([]);
+  const [seLog, setSeLog] = useState([]);
+  const se = name => {
+    try {
+      Audio_.se[name]();
+    } catch (e) {}
+    setSeLog(l => [...l.slice(-40), name]);
+  };
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
   const later = (fn, ms) => {
     timers.current.push(setTimeout(fn, ms));
@@ -88080,9 +88087,9 @@ const CardPackOpen = ({
   const last = pi >= result.packs.length - 1;
   const tear = () => {
     if (phase !== 'closed') return;
-    Audio_.se.special();
+    se('special');
     setPhase('tearing');
-    later(() => Audio_.se.crit(), 520);
+    later(() => se('crit'), 520);
     later(() => setPhase('open'), CARD_PACK_TEAR_MS);
   };
   const spotOff = () => {
@@ -88093,7 +88100,7 @@ const CardPackOpen = ({
     later(() => setSpot(null), CARD_PACK_SPOT_BACK_MS);
   };
   const reveal = i => {
-    Audio_.se.card();
+    se('card');
     setFlipped(f => f.includes(i) ? f : [...f, i]);
     const c = cards[i];
     if (c && c.rarity !== 'normal') {
@@ -88107,8 +88114,8 @@ const CardPackOpen = ({
           rarity: c.rarity,
           leaving: false
         });
-        Audio_.se.crit();
-        if (c.rarity === 'alt') Audio_.se.fusion();else Audio_.se.levelUp();
+        se('crit');
+        if (c.rarity === 'alt') se('fusion');else se('levelUp');
       }, 380);
       later(spotOff, 380 + CARD_PACK_SPOT_MS);
     }
@@ -88139,6 +88146,7 @@ const CardPackOpen = ({
     "data-mh-screen": true,
     "data-card-pack-open": true,
     "data-card-pack-phase": phase,
+    "data-card-pack-se": seLog.join(','),
     className: SCREEN_SHELL_CLASS
   }, React.createElement(ScreenHead, {
     title: pack.name,
