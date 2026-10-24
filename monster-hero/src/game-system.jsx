@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b9b262d7aaada581
+// generated-sha256: 5051fce9793e6d3d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-24 16:42"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-24 16:48"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -51957,6 +51957,59 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
 };
 
 // ---- トップ・スターター選び・相手えらび・結果 ----
+// 助手の全身絵を、描かれている所(透明でない所)の範囲で枠に合わせて出す。足元を枠の下・まんなかにそろえる
+//   ★絵によって周りの透明な余白がちがい(着替えの絵など)、object-contain のままだと小さく左下に出る子がいた(2026-10-24 カゲあつくん)
+const CARD_ART_BOX_CACHE = {};
+const cardArtBox = (src) => new Promise((resolve) => {
+  if (CARD_ART_BOX_CACHE[src]) { resolve(CARD_ART_BOX_CACHE[src]); return; }
+  const img = new Image();
+  img.onload = () => {
+    try {
+      const nw = img.naturalWidth, nh = img.naturalHeight;
+      const k = Math.min(1, 256 / Math.max(nw, nh));
+      const w = Math.max(1, Math.round(nw * k)), h = Math.max(1, Math.round(nh * k));
+      const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+      const cx = cv.getContext('2d'); cx.drawImage(img, 0, 0, w, h);
+      const d = cx.getImageData(0, 0, w, h).data;
+      // 列・行ごとに透明でない点を数え、3点以上ある所だけを範囲にする(絵の端にぽつんと残った点で範囲が広がらないように)
+      const col = new Array(w).fill(0), row = new Array(h).fill(0);
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (d[(y * w + x) * 4 + 3] > 24) { col[x] += 1; row[y] += 1; }
+      const MIN = 3;
+      let x0 = col.findIndex((n) => n >= MIN), y0 = row.findIndex((n) => n >= MIN);
+      let x1 = w - 1 - [...col].reverse().findIndex((n) => n >= MIN), y1 = h - 1 - [...row].reverse().findIndex((n) => n >= MIN);
+      if (x0 < 0 || y0 < 0) { x1 = -1; }
+      const box = x1 < 0 ? { nw, nh, x: 0, y: 0, w: nw, h: nh } : { nw, nh, x: x0 / k, y: y0 / k, w: (x1 - x0 + 1) / k, h: (y1 - y0 + 1) / k };
+      CARD_ART_BOX_CACHE[src] = box; resolve(box);
+    } catch (_) { resolve(null); }
+  };
+  img.onerror = () => resolve(null);
+  img.src = src;
+});
+const CardAssistantArt = ({ src, alt, className = '' }) => {
+  const ref = useRef(null);
+  const [fit, setFit] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    setFit(null);
+    void cardArtBox(src).then((box) => {
+      const el = ref.current;
+      if (!alive || !box || !el) return;
+      const W = el.clientWidth, H = el.clientHeight;
+      if (!W || !H) return;
+      const sc = Math.min(H / box.h, W / box.w);
+      setFit({ width: box.nw * sc, left: W / 2 - (box.x + box.w / 2) * sc, top: H - (box.y + box.h) * sc, artH: Math.round(box.h * sc), artW: Math.round(box.w * sc) });
+    });
+    return () => { alive = false; };
+  }, [src]);
+  return (
+    <div ref={ref} data-card-assistant-art data-card-art-h={fit ? fit.artH : undefined} data-card-art-w={fit ? fit.artW : undefined} className={`relative shrink-0 overflow-hidden ${className}`}>
+      {fit
+        ? <img src={src} alt={alt} draggable={false} className="absolute max-w-none" style={{ width: `${fit.width}px`, left: `${fit.left}px`, top: `${fit.top}px` }}/>
+        : <img src={src} alt={alt} draggable={false} className="h-full w-full object-contain object-bottom"/>}
+    </div>
+  );
+};
+
 // onQuickLoops(loops) … 1戦ぶんをクイック周回の周回クリアとして配る(60-app の awardBackQuickLoops)。配れたら配った中身、配れなければ null
 const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', seenStoryIds = [], debug = false, onBgm, onQuickLoops }) => {
   const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
@@ -51969,6 +52022,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   const [notice, setNotice] = useState('');
   const [confirmReset, setConfirmReset] = useState(false);
   const [detail, setDetail] = useState(null);
+  const [demoWho, setDemoWho] = useState('mua'); // デバッグの「結果の見本」の相手
   const press = useCardLongPress((no) => setDetail(no));
 
   const load = async () => {
@@ -52112,7 +52166,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
           </div>
           {a && (
             <div className="flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2">
-              <img src={assistantFullImage(a, 'wink')} alt={a.name} className="h-[150px] w-[42%] shrink-0 object-contain object-bottom"/>
+              <CardAssistantArt src={assistantFullImage(a, 'wink')} alt={a.name} className="h-[150px] w-[42%]"/>
               <div className="min-w-0 flex-1 pb-2">
                 <div className="text-[11px] font-bold text-slate-400">{a.tagline}</div>
                 <div className="mt-1 rounded-2xl border-2 bg-white px-2 py-1 text-[13px] font-extrabold leading-snug text-[#1f1333]" style={{ borderColor: a.accent, ...JA_WRAP_STYLE }}>{line ? line.text : ''}</div>
@@ -52175,7 +52229,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
           {a && (
             <div className="flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2">
-              <img src={assistantFullImage(a, line ? line.face : 'normal')} alt={a.name} className="h-[220px] w-[46%] shrink-0 object-contain object-bottom"/>
+              <CardAssistantArt src={assistantFullImage(a, line ? line.face : 'normal')} alt={a.name} className="h-[220px] w-[46%]"/>
               <div className="mb-2 min-w-0 flex-1 rounded-2xl border-2 bg-white px-2 py-1 text-[13px] font-extrabold leading-snug text-[#1f1333]" style={{ borderColor: a.accent, ...JA_WRAP_STYLE }}>{line ? line.text : ''}</div>
             </div>
           )}
@@ -52186,10 +52240,12 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             {r.short && <div className="mt-1 text-[12px] font-bold text-slate-400">自分の番を3回やる前に終わったので、カードポイントとクイック周回は入りません</div>}
             {!r.short && result.loops > 0 && (
               <div data-card-quick-loops={result.quick ? result.loops : 0} className="mt-2 rounded-xl border border-sky-300/40 bg-sky-500/10 px-2 py-1.5">
-                <div className="text-[13px] font-black text-sky-200">クイック周回 {result.loops}周ぶん{result.quick ? '' : '(今回は入りません)'}</div>
                 {result.quick
-                  ? <div className="mt-0.5 text-[11px] font-bold text-slate-300">裏で回しているクイック({(result.quick.quickDifficulty && quickDifficultySetting(result.quick.quickDifficulty)?.label) || 'AUTO設定'})を、{result.loops}周クリアしたことにしました</div>
-                  : <div className="mt-0.5 text-[11px] font-bold text-slate-400" style={JA_WRAP_STYLE}>AUTO設定でクイックを回していて、その難易度をクイックで通したことがあると入ります</div>}
+                  ? <>
+                    <div className="text-[13px] font-black text-sky-200">クイック周回 {result.loops}周ぶん</div>
+                    <div className="mt-0.5 text-[11px] font-bold text-slate-300" style={JA_WRAP_STYLE}>裏のクイック周回({(result.quick.quickDifficulty && quickDifficultySetting(result.quick.quickDifficulty)?.label) || 'AUTO設定'})が{result.loops}周ぶん進みました</div>
+                  </>
+                  : <div className="text-[12px] font-bold text-slate-300">クイック周回をしていないときは入りません</div>}
               </div>
             )}
             <div className="mt-1 text-[12px] font-bold text-slate-300">いまのカードポイント: {save.point}</div>
@@ -52233,12 +52289,15 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         {debug && (
           <div className={`${SCREEN_PANEL_FLAT_CLASS} space-y-1`}>
             {/* 結果の画面の見本(NORMAL の勝ち・自分の番8回・2体倒した)。クイック周回が入るとき/入らないとき。保存は何もしない */}
+            <select data-card-result-demo-who value={demoWho} onChange={(e) => setDemoWho(e.target.value)} className="w-full rounded-lg border border-white/20 bg-slate-800 px-2 py-1 text-[12px] font-bold text-white">
+              {allAssistants.filter((x) => CARD_AI_HABITS[x.id]).map((x) => <option key={x.id} value={x.id}>見本の相手: {x.name}</option>)}
+            </select>
             <div className="grid grid-cols-2 gap-1">
               {[['in', '結果の見本(周回が入る)'], ['out', '結果の見本(入らない)']].map(([k, label]) => (
                 <button key={k} type="button" data-card-result-demo={k} className="mh-button mh-button-secondary min-h-[40px] rounded-xl border border-white/20 bg-slate-800 text-[11px] font-black" onClick={() => {
                   const facts = { ownTurns: 8, kos: 2 };
                   const reward = cardCpuReward(cardNormalizeDaily(null, cardTodayJst()), 'normal', 'win', facts);
-                  setResult({ demo: true, outcome: 'win', reward, opened: null, saved: true, who: 'mua', level: 'normal', loops: cardCpuLoops('normal', 'win', facts), quick: k === 'in' ? { quickDifficulty: 'Normal' } : null, facts });
+                  setResult({ demo: true, outcome: 'win', reward, opened: null, saved: true, who: demoWho, level: 'normal', loops: cardCpuLoops('normal', 'win', facts), quick: k === 'in' ? { quickDifficulty: 'Normal' } : null, facts });
                   setView('result');
                 }}>{label}</button>
               ))}
