@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 88d46d20585a897f
+// source-sha256: 22263f5cb5735951
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-24 20:56";
+const BUILD_DATE = "2026-10-24 21:23";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -50350,25 +50350,67 @@ const jaWrapPoints = text => {
       granularity: 'word'
     }) : null;
     if (!_jaSegmenter) return s;
+    const letters = t => (t.match(/[ぁ-ゖァ-ヶ一-龯ーA-Za-z0-9０-９Ａ-Ｚａ-ｖｘ-ｚ]/g) || []).length;
+    const kao = [];
+    for (const m of s.matchAll(/(?:ε-|[٩«ヾ＼])*[(（][^()（）\n]{1,14}[)）][っو۶»ﾉﾞ✧･]*/g)) {
+      if (/[^ぁ-ゖァ-ヶ一-龯ーA-Za-z0-9０-９\s、。・！？!?()（）]/.test(m[0])) kao.push([m.index, m.index + m[0].length]);
+    }
+    const inKao = pos => kao.some(([a, b]) => pos > a && pos < b);
+    const kaoStart = pos => kao.some(([a]) => pos === a || a > pos && /^\s+$/.test(s.slice(pos, a)));
     const segs = [..._jaSegmenter.segment(s)].map(seg => seg.segment);
-    const hiraOne = t => /^[ぁ-ゖ]$/.test(t);
-    const inHiraWord = i => /^[ごお]$/.test(segs[i - 1]) && /^[ぁ-ゖ]/.test(segs[i]) || hiraOne(segs[i]) && /[ぁ-ゖ一-龯ァ-ヶー]$/.test(segs[i - 1]) || hiraOne(segs[i - 1]) && /^[ぁ-ゖ]/.test(segs[i]);
-    return segs.reduce((out, seg, i) => i === 0 || inHiraWord(i) || /^[\s、。，．,.！？!?」』）)】〕〉》…‥ー〜～・：:；;ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ]/.test(seg) || /[\s「『（(【〔〈《]$/.test(segs[i - 1]) ? out + seg : `${out}\u200B${seg}`, '');
+    const chunks = [];
+    let pos = 0;
+    for (let i = 0; i < segs.length; i++) {
+      const seg = segs[i];
+      if (i === 0) {
+        chunks.push(seg);
+        pos += seg.length;
+        continue;
+      }
+      const prev = segs[i - 1],
+        cur = chunks[chunks.length - 1];
+      const join = inKao(pos) || !kaoStart(pos) && (/^[\s、。，．,.！？!?」』）)】〕〉》…‥ー〜～・：:；;ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ]/.test(seg) || /[\s「『（(【〔〈《]$/.test(prev) || /^[ごお]$/.test(prev) && /^[ぁ-ゖ]/.test(seg) || /^[ぁ-ゖ]$/.test(seg) && /[一-龯ァ-ヶー]$/.test(prev) && letters(cur) + 1 <= 6 || /^[はがをにでとものへ]$/.test(seg) && /[ぁ-ゖ]$/.test(prev) && letters(cur) + 1 <= 5 || /[」』？！?!]$/.test(prev) && /^[ぁ-ゖ]/.test(seg));
+      if (join) chunks[chunks.length - 1] += seg;else chunks.push(seg);
+      pos += seg.length;
+    }
+    for (let k = 0; k < chunks.length; k++) {
+      const m = letters(chunks[k]) > 7 && chunks[k].match(/^(.*[ァ-ヶー])([ぁ-ゖ].*)$/s);
+      if (m && letters(m[1]) >= 2 && letters(m[2]) >= 2) chunks.splice(k, 1, m[1], m[2]);
+    }
+    let end = chunks.length - 1;
+    {
+      let at = s.length,
+        k = chunks.length - 1;
+      while (k > 0 && !/[ぁ-ゖァ-ヶ一-龯]/.test(chunks[k]) && !kaoStart(at - chunks[k].length)) {
+        at -= chunks[k].length;
+        k--;
+      }
+      if (k > 0 && kaoStart(at - chunks[k].length)) end = k - 1;
+    }
+    while (end > 0 && letters(chunks[end]) <= 2) {
+      chunks[end - 1] += chunks[end];
+      chunks.splice(end, 1);
+      end--;
+    }
+    return chunks.join('​');
   } catch {
     return s;
   }
 };
+const jaKeepWhole = seg => seg.length <= 14 && (/[…‥～〜♡]/u.test(seg) || /\p{Extended_Pictographic}/u.test(seg) || /[」』？！?!][ぁ-ゖ]/.test(seg) || !/[ぁ-ゖァ-ヶ一-龯A-Za-z0-9]/.test(seg) || /[(（][^()（）]*[^ぁ-ゖァ-ヶ一-龯ーA-Za-z0-9０-９\s、。・！？!?()（）][^()（）]*[)）]/.test(seg));
 const jaWrap = text => {
   const s = jaWrapPoints(text);
   if (typeof s !== 'string' || !s.includes('\u200B')) return s;
-  return s.split('\u200B').map((seg, i) => React.createElement(React.Fragment, {
-    key: i
-  }, i > 0 && React.createElement("wbr", null), /[…‥]/.test(seg) && seg.length <= 12 ? React.createElement("span", {
+  const keep = (t, k) => React.createElement("span", {
+    key: k,
     "data-ja-keep": true,
     style: {
       whiteSpace: 'nowrap'
     }
-  }, seg) : seg));
+  }, t);
+  return s.split('\u200B').map((seg, i) => React.createElement(React.Fragment, {
+    key: i
+  }, i > 0 && React.createElement("wbr", null), jaKeepWhole(seg) ? keep(seg) : /[」』？！?!][ぁ-ゖ]/.test(seg) ? seg.split(/(.[」』？！?!][ぁ-ゖ]{1,3})/).map((t, k) => k % 2 ? keep(t, k) : t) : seg));
 };
 const JA_WRAP_STYLE = Object.freeze({
   wordBreak: 'keep-all',
