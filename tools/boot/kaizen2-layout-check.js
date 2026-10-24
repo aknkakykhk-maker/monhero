@@ -21,7 +21,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
 const ui = P('41-screen-ui.jsx');
 check('M3 言葉の切れ目で折る部品(jaWrap・JA_WRAP_STYLE)がある。印は文字(U+200B)のまま置かず <wbr> で描く(コピーに混ざらない)', /const jaWrap = \(text\) =>/.test(ui)
   // 印は <wbr> で描く(2026-10-24 #3487 で、「……」を含む短いかたまりを nowrap の span で包むようにした。印の描き方は同じ)
-  && ui.includes("return s.split('\\u200B').map((seg, i) => <React.Fragment key={i}>{i > 0 && <wbr/>}") && !/\\u2060|\u2060/.test(ui) && /Intl\.Segmenter\('ja', \{ granularity: 'word' \}\)/.test(ui)
+  && ui.includes("return s.split('\\u200B').map((seg, i) => <React.Fragment key={i}>{i > 0 && !/^\\s/.test(seg) && <wbr/>}") && !/\\u2060|\u2060/.test(ui) && /Intl\.Segmenter\('ja', \{ granularity: 'word' \}\)/.test(ui)
   && /const JA_WRAP_STYLE = Object\.freeze\(\{ wordBreak: 'keep-all', overflowWrap: 'anywhere'/.test(ui));
 // 2026-10-21: 印は禁則より強いので、「！」「、」「…」小さい字の前・「「」の後ろ・空白の前後には入れない(「きたわい／！」と折れた)
 {
@@ -43,7 +43,7 @@ check('M3 MAX COMBO は1行のまま(狭い画面は字の間を詰める)', /wh
 
 const home = P('69-screen-home.jsx');
 check('HOME: ジャックの吹き出しは、狭い画面で横へ置いて札の下へ逃がせる(104・96の幅と、横で下げる候補がある)・セリフは言葉の切れ目で折る',
-  home.includes('HOME_RAID_SAY_WIDTHS = Object.freeze([184, 168, 152, 136, 120, 104, 96])') && home.includes('for (let y = from + 6; y <= to; y += 6) tries.push({ side, left, top: y')
+  home.includes('HOME_RAID_SAY_WIDTHS = Object.freeze([184, 168, 152, 144])') && home.includes('HOME_RAID_SAY_NARROW_WIDTHS = Object.freeze([...HOME_RAID_SAY_WIDTHS, 136])') && home.includes('for (let y = from + 6; y <= to; y += 6) tries.push({ side, left, top: y')
   && home.includes('<span data-home-raid-say-text style={{ display:\'block\', ...JA_LABEL_STYLE }}>{jaWrap(speech)}</span>'));
 
 // N5(2026-10-21 改善部の見直し・その3): 大きな所持数は9桁(1億)から縮めて出す。保存値は変えない・押すと細かい数

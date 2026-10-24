@@ -88,11 +88,19 @@ const HOME_RAID_JACK_BUTTON_STYLE = Object.freeze({
 //     ① 頭の上(幅184→120まで絞る) ② 頭の右 ③ 頭の左 ④ 少しずつ下げて頭の4分の3まで重ねる(それでもだめなときの控え)
 //   どれも重なるときは、重なりがいちばん小さいものを選ぶ。ボタン側は動かさない(押せる場所を変えない)。
 //   head … ジャック本体の絵の箱(跳ねる前の位置) / obstacles … 避ける箱 / measure(width) … その幅での吹き出しの高さ
-// 104・96 は狭い画面(幅320)でジャックの横へ置くとき用。広い順に試すので、入るならこれまでどおり広いほうになる(2026-10-21)
-const HOME_RAID_SAY_WIDTHS = Object.freeze([184, 168, 152, 136, 120, 104, 96]);
+// 広い順に試すので、入るならこれまでどおり広いほうになる。いちばん狭くて 144px(2026-10-24 窓口・カゲあつくん「言葉の途中で折れないように」。
+// 以前は狭い画面(幅320)でジャックの横へ置くとき用に 104・96 まであったが、1行に8字ほどしか入らず「いってらっ／しゃい」と折れた。
+// 144px なら本文が約120pxで、太字の11pxが10字入る(jaWrap は言葉のかたまりを10字までに分ける。41-screen-ui.jsx の JA_WRAP_LINE)。
+// 台詞を全部描いて確かめる検査は tools/boot/ja-wrap-lines-check.js
+const HOME_RAID_SAY_WIDTHS = Object.freeze([184, 168, 152, 144]);
+// 狭い画面(幅360未満)は M/B管理の札とジャックの頭のあいだが狭いので、字を 10px にして 136px まで使う(本文は約112pxで10字入る。
+// 幅320ではジャックの左横に置き、絵に少しかかる)
+const HOME_RAID_SAY_NARROW_VW = 360;
+const HOME_RAID_SAY_NARROW_WIDTHS = Object.freeze([...HOME_RAID_SAY_WIDTHS, 136]);
 const HOME_RAID_SAY_GAP = 6;
 const HOME_RAID_SAY_HOP = 18; // 跳ねる高さ(mhRaidJackHop の16px)+ゆとり。頭の上に置くときは、跳ねても頭がしっぽにかからない
 const homeRaidSayPlace = ({ head, obstacles, vw, vh, measure, top = 0 }) => {
+  const widths = vw < HOME_RAID_SAY_NARROW_VW ? HOME_RAID_SAY_NARROW_WIDTHS : HOME_RAID_SAY_WIDTHS;
   const pad = 4, edge = 6;
   const overlap = (r) => {
     let area = 0;
@@ -102,36 +110,47 @@ const homeRaidSayPlace = ({ head, obstacles, vw, vh, measure, top = 0 }) => {
       const h = Math.min(r.bottom, o.bottom + pad) - Math.max(r.top, o.top - pad);
       if (w > 0 && h > 0) area += w * h;
     }
+    // ジャックの絵を隠すのも数える(札より軽く、半分の重み)。狭い画面で、置けない所の代わりに絵の上へ重ねていた(2026-10-24)
+    { const w = Math.min(r.right, head.right) - Math.max(r.left, head.left), h = Math.min(r.bottom, head.bottom) - Math.max(r.top, head.top); if (w > 0 && h > 0) area += w * h * 0.5; }
     return area;
   };
   const clampX = (x, w) => Math.max(edge, Math.min(vw - edge - w, x));
   const cx = (head.left + head.right) / 2;
   const tries = [];
-  for (const w of HOME_RAID_SAY_WIDTHS) {
+  for (const w of widths) {
     const h = measure(w);
     const left = clampX(cx - w / 2, w);
     tries.push({ side: 'top', left, top: head.top - HOME_RAID_SAY_HOP - h, width: w, height: h });
   }
+  // ①-2 頭の上で、左右へ6pxずつ(36pxまで)ずらしたもの。真上だと施設の札に少しかかる狭い画面(幅320)で、札とのすき間へ入れる(2026-10-24)
+  for (const w of widths) {
+    const h = measure(w);
+    for (let dx = 6; dx <= 36; dx += 6) for (const sign of [1, -1]) {
+      tries.push({ side: 'top', left: clampX(cx - w / 2 + sign * dx, w), top: head.top - HOME_RAID_SAY_HOP - h, width: w, height: h });
+    }
+  }
   for (const side of ['right', 'left']) {
-    for (const w of HOME_RAID_SAY_WIDTHS) {
+    for (const w of widths) {
       const h = measure(w);
       const left = side === 'right' ? head.right + HOME_RAID_SAY_GAP + 6 : head.left - HOME_RAID_SAY_GAP - 6 - w;
       const midY = head.top + Math.min(head.bottom - head.top, 80) * 0.35;
       tries.push({ side, left, top: Math.max(top + edge, midY - h / 2), width: w, height: h });
+      // 画面からはみ出すなら、はみ出すぶんジャック側へ寄せる(幅320の左横。ジャックの絵に少しかかる)
+      if (clampX(left, w) !== left) tries.push({ side, left: clampX(left, w), top: Math.max(top + edge, midY - h / 2), width: w, height: h });
     }
   }
   // ③-2 横に置くときは、6pxずつ下げて施設の札(神殿・M/B管理)の下へ逃がす。吹き出しの上端は頭の半分まで(2026-10-21 窓口
   //  「幅320で ジャックの吹き出しが M/B管理 の札にかかる」。320 は札のすぐ下にジャックがいて、頭の上にも横にも置けず、札と絵に重ねていた)
   for (const side of ['right', 'left']) {
-    for (const w of HOME_RAID_SAY_WIDTHS) {
+    for (const w of widths) {
       const h = measure(w);
-      const left = side === 'right' ? head.right + HOME_RAID_SAY_GAP + 6 : head.left - HOME_RAID_SAY_GAP - 6 - w;
+      const left0 = side === 'right' ? head.right + HOME_RAID_SAY_GAP + 6 : head.left - HOME_RAID_SAY_GAP - 6 - w;
       const from = Math.max(top + edge, head.top + Math.min(head.bottom - head.top, 80) * 0.35 - h / 2), to = head.top + (head.bottom - head.top) * 0.5;
-      for (let y = from + 6; y <= to; y += 6) tries.push({ side, left, top: y, width: w, height: h });
+      for (const left of [...new Set([left0, clampX(left0, w)])]) for (let y = from + 6; y <= to; y += 6) tries.push({ side, left, top: y, width: w, height: h });
     }
   }
   // ④ 頭の上の位置から6pxずつ下げ、頭の4分の3に重なるところまで探す(ジャックの絵に少し重なっても、文が読めるほうを選ぶ)
-  for (const w of HOME_RAID_SAY_WIDTHS) {
+  for (const w of widths) {
     const h = measure(w);
     const from = head.top - HOME_RAID_SAY_HOP - h, to = head.top + (head.bottom - head.top) * 0.75 - h;
     for (let y = from + 6; y <= to; y += 6) tries.push({ side: 'top', left: clampX(cx - w / 2, w), top: y, width: w, height: h });
@@ -276,7 +295,7 @@ const HomeRaidJack = ({ eventId, onOpen }) => {
     <button type="button" ref={sayRef} key={`say${lineNo}`} data-home-raid-say data-story-pop="1" data-say-side={sayPlace ? sayPlace.side : 'top'} onClick={() => setLineNo((n) => n + 1)} aria-label="ジャックのひとこと(押すと次のセリフ)"
       style={{ position:'absolute', ...(sayPlace ? { left:sayPlace.left, top:sayPlace.top, width:sayPlace.width } : { left:'50%', bottom:'100%', marginLeft:-92, marginBottom:'4px', width:184 }),
         padding:'6px 10px', borderRadius:'14px', boxSizing:'border-box',
-        border:`2px solid ${speechAccent}`, background:'#1c0a02ee', color:'#ffedd5', fontSize:'11px', fontWeight:900, lineHeight:1.45, textAlign:'left', cursor:'pointer',
+        border:`2px solid ${speechAccent}`, background:'#1c0a02ee', color:'#ffedd5', fontSize:(typeof window !== 'undefined' && window.innerWidth < HOME_RAID_SAY_NARROW_VW) ? '10px' : '11px', fontWeight:900, lineHeight:1.45, textAlign:'left', cursor:'pointer',
         boxShadow:`0 0 12px ${speechAccent}66`, animation:'storyPop .25s ease-out both', zIndex:2, pointerEvents:'auto' }}>
       {/* 狭い幅(横へ置いたとき)でも「聞こえるの／う」と言葉の途中で折らず、行の長さをならす(2026-10-21) */}
       <span data-home-raid-say-text style={{ display:'block', ...JA_LABEL_STYLE }}>{jaWrap(speech)}</span>
