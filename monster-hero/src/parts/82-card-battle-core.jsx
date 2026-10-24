@@ -313,6 +313,19 @@ const cardLegalActions = (db, st) => {
 const cardDecider = (st) => (st.pending ? st.pending.defender : st.active);
 
 // ---- 攻撃を出す ----
+// 技を使った人の書き方(2026-10-24 窓口・カゲあつくん: 記録・まんなかの「いま使った技」・守りの番の文を1つの形にそろえる)。
+//   モンスターの技 … 「モッチーの「ローリン」」 / ブリーダーのカード … 「検査ブリーダーの「加勢」(モッチーで)」(子を選ばないカードは「(…で)」なし)
+const cardUseWho = (db, st, p, mi, cardNo) => {
+  const c = cardOf(db, cardNo);
+  const pl = st.players[p];
+  const mon = mi >= 0 ? pl.mons[mi] : null;
+  if (c && c.user === 'breeder') return { who: pl.name, by: mon ? mon.name : '' };
+  return { who: mon ? mon.name : pl.name, by: '' };
+};
+const cardUseText = (db, st, p, mi, cards) => {
+  const l = cardUseWho(db, st, p, mi, cards[0]);
+  return `${l.who}の「${cards.map((n) => (cardOf(db, n) || {}).name || '').join('＋')}」${l.by ? `(${l.by}で)` : ''}`;
+};
 const cardStartAttack = (db, st, act) => {
   const p = st.active;
   const me = st.players[p];
@@ -326,8 +339,7 @@ const cardStartAttack = (db, st, act) => {
   const mon = mi >= 0 ? me.mons[mi] : null;
   if (isBreeder) me.breederUsed = true;
   else { mon.attacks += 1; mon.lastCard = mainNo; }
-  const who = isBreeder ? `${me.name}(ブリーダー)` : mon.name;
-  cardLog(st, `${who}の「${used.map((n) => cardOf(db, n).name).join('＋')}」`, { kind: 'use', p, cards: used });
+  cardLog(st, cardUseText(db, st, p, mi, used), { kind: 'use', p, cards: used });
   cardEvent(st, { t: 'use', p, mon: mi, cards: used, target: act.target || null });
   // 特殊技: 守れない。その場で効く
   if (main.kind === 'spe') {

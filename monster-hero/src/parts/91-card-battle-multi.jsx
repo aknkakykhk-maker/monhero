@@ -18,6 +18,21 @@ const CARD_PVP_HEARTBEAT_MS = 2000;
 const CARD_PVP_RESEND_MS = 1500;          // 「受け取った」が来ない手を送り直す間
 const CARD_PVP_ALIVE_MS = 60000;          // これだけ何も届かなければ抜けた扱い(社長: iPhone でアプリを切り替えて戻る分)
 const CARD_PVP_NAME_MAX = 16;
+// 区切り2: 持ち時間(ルールの本文 CARD_BATTLE.md 1-3)。自分の番60秒・守り15秒。3回続けて使い切ったら負け
+const CARD_PVP_TURN_MS = 60000;
+const CARD_PVP_GUARD_MS = 15000;
+const CARD_PVP_TIMEOUT_LOSE = 3;
+const CARD_PVP_STALL_GRACE_MS = 20000;    // 相手の持ち時間が過ぎても手が来ないとき、これだけ待ってから相手の負けにする(電波の遅れの分)
+const CARD_PVP_QUIET_MS = 6000;           // これだけ相手から何も届かなければ「電波が途切れています」を出す
+const CARD_PVP_RECONNECT_MS = 3000;       // こちらの電波が切れたら、これおきにつなぎ直す
+const CARD_PVP_VERIFY_WAIT_MS = 15000;    // 相手の封がこれだけ届かなければ、確かめずに終える(相手が抜けたなど)
+// 抜けた人は、少しのあいだ部屋に入れない(新しい保存キー。モンヒロビートの mh_rhythm_multi_penalty_v1 と同じ考え方)
+const CARD_PVP_PENALTY_KEY = 'mh_card_pvp_penalty_v1';
+const CARD_PVP_PENALTY_MS = 3 * 60 * 1000;
+const cardPvpNormalizePenalty = (v) => (Number.isFinite(v) && v > 0 ? v : 0);
+// 定型のチャット(打たない。1.5秒に1回まで)
+const CARD_PVP_STAMPS = Object.freeze(['よろしく！', 'ナイス！', 'うまい！', '考え中…', 'ありがとう！', 'もう1回やろ！']);
+const CARD_PVP_CHAT_GAP_MS = 1500;
 
 // ---- 純粋な計算(ここから下の UI と通信を使わない。tools/card/card-pvp-check.js が node で確かめる) ----
 
@@ -77,6 +92,23 @@ const cardPvpPatchDiscard = (db, st, list) => {
   const s = cardClone(st);
   s.players[1].discard = list.slice();
   return s;
+};
+
+// 持ち時間の区切り。決める人・番・守りの回が変わったら、時計をはじめから(攻撃と、そのあとのガッツは同じ60秒)
+const cardPvpLimitMs = (st) => (st.pending || st.pendingDiscard ? CARD_PVP_GUARD_MS : CARD_PVP_TURN_MS);
+const cardPvpClockKey = (st) => `${cardPvpDecider(st)}-${st.turn}-${st.pending ? `g${st.log.length}` : st.pendingDiscard ? `d${st.log.length}` : st.phase === 'setup' ? 's' : 'm'}`;
+// 持ち時間を使い切ったときの手(その番を終える・守らない)。攻撃の番は「攻撃おわり」のあと、ガッツへ回さずにターン終了
+const cardPvpTimeoutAct = (st) => (st.pendingDiscard ? { type: 'discard', hand: Array.from({ length: st.pendingDiscard.n }, (_, i) => i) }
+  : st.phase === 'setup' ? { type: 'setupGuts', hand: [] } : st.pending ? { type: 'pass' } : st.phase === 'main' ? { type: 'endAttacks' } : { type: 'guts', hand: [] });
+// 1戦でもらえる数(台帳 #119 の対人戦: 勝ち24周・200/負け12周・50/抜けた0。1日の上限は無し・同じ相手の制限も無し(社長の決め直し))
+// 負けの周回は、自分の番の数が10回で満額(助手と対戦と同じ)。投了は倒した数で決める。自分の番が3回より前に終わった試合は0
+const cardPvpReward = (outcome, facts) => {
+  const f = facts || { ownTurns: 0, kos: 0 };
+  if (f.ownTurns < CARD_MIN_OWN_TURNS || outcome === 'left') return { point: 0, loops: 0, short: f.ownTurns < CARD_MIN_OWN_TURNS };
+  const W = CARD_PVP_REWARD.win, L = CARD_PVP_REWARD.lose;
+  if (outcome === 'win') return { point: W.point, loops: W.loops, short: false };
+  if (outcome === 'surrender') return { point: Math.min(L.point, f.kos * CARD_SURRENDER_POINT_PER_KO), loops: Math.min(L.loops, Math.round((f.kos * L.loops) / 3)), short: false };
+  return { point: L.point, loops: Math.floor(L.loops * Math.min(1, f.ownTurns / CARD_LOSE_FULL_TURNS)), short: false };
 };
 
 // 封(山札の切り方とデッキ)。終わるまで中身は見せず、指紋だけを先に渡す
@@ -165,7 +197,8 @@ const cardPvpCleanMessage = (raw) => {
     if (!cards || cards.includes(null) || !mons || mons.includes(null)) return null;
     return { t: 'open', from, seed: Number.isInteger(raw.seed) ? raw.seed >>> 0 : 0, salt: typeof raw.salt === 'string' ? raw.salt.slice(0, 40) : '', deck: { monsters: mons, cards } };
   }
-  if (raw.t === 'surrender' || raw.t === 'bye') return { t: raw.t, from };
+  if (raw.t === 'chat') { const i = cardPvpInt(raw.i, CARD_PVP_STAMPS.length - 1); return i === null ? null : { t: 'chat', from, i }; }
+  if (raw.t === 'surrender' || raw.t === 'bye' || raw.t === 'timeout') return { t: raw.t, from };
   return null;
 };
 
@@ -175,19 +208,28 @@ const CARD_PVP = (() => {
   const listeners = new Set();
   let s = null;
   let socket = null;
+  let alive = false;                // いまつながっているか
   let tick = null;
-  let board = null;                 // 対戦の画面の受け口 { onAct(msg) → 次の場|null, onDiscard(list), onForceEnd(outcome) }
+  let retry = null;                 // つなぎ直しの予約
+  let board = null;                 // 対戦の画面の受け口 { onAct(msg) → 次の場|null, onDiscard(list), onForceEnd(outcome), onChat(text) }
   const blank = () => ({ phase: 'idle', code: '', me: null, foe: null, deck: null, seed: 0, salt: '', seal: '', match: '', hostFirst: false, first: 0,
-    game: null, startMsg: null, foeInMatch: false, mySeq: 0, outbox: [], theirSeq: 0, inbox: {}, history: [], result: null, foeOpen: null, error: '', broken: '' });
+    game: null, startMsg: null, foeInMatch: false, mySeq: 0, outbox: [], theirSeq: 0, inbox: {}, history: [], result: null, foeOpen: null, error: '', broken: '',
+    offline: false, timeouts: 0, autoActing: false, chatAt: 0 });
   const emit = () => listeners.forEach((fn) => { try { fn(s); } catch (_) { /* 画面の都合で落ちても部屋は続ける */ } });
   const set = (patch) => { s = { ...s, ...patch }; emit(); };
-  const send = (payload) => { if (socket) socket.send({ ...payload, from: s.me.id }); };
+  const send = (payload) => { if (socket && alive) socket.send({ ...payload, from: s.me.id }); };
   const isHost = () => !!(s.foe && (s.me.at < s.foe.at || (s.me.at === s.foe.at && s.me.id < s.foe.id)));
   const hb = () => send({ t: 'hb', name: s.me.name, icon: s.me.icon, at: s.me.at, mons: s.deck.monsters, count: s.deck.cards.length, seal: s.seal, match: s.match || null });
+  const sendOpen = () => send({ t: 'open', seed: s.seed, salt: s.salt, mons: s.deck.monsters, cards: s.deck.cards });
+  const inGame = () => !!s && (s.phase === 'playing' || s.phase === 'over');
   const stop = () => {
     if (tick) clearInterval(tick); tick = null;
+    if (retry) clearTimeout(retry); retry = null;
+    alive = false;
     if (socket) { try { socket.close(); } catch (_) { /* 閉じている */ } } socket = null;
   };
+  // 抜けた人は、少しのあいだ部屋に入れない(試合の途中で部屋を出た・アプリを閉じたとき)
+  const penalize = () => { try { void storeSet(CARD_PVP_PENALTY_KEY, Date.now() + CARD_PVP_PENALTY_MS, false); } catch (_) { /* 保存できなくても続ける */ } };
   // 始まり(ホストのくじが届いたとき)
   const begin = (msg) => {
     if (s.match || !s.foe) return;
@@ -208,6 +250,7 @@ const CARD_PVP = (() => {
       emit();
     }
   };
+  const forceEnd = (outcome) => { if (s && s.phase === 'playing' && board) board.onForceEnd(outcome); };
   // 終わったあと: 両方の封がそろったら、なぞり直す
   const tryVerify = async () => {
     if (!s.result || !s.foeOpen || s.result.verify !== 'wait') return;
@@ -215,7 +258,7 @@ const CARD_PVP = (() => {
     const seal = await cardPvpSha256(cardPvpSealText({ seed: o.seed, salt: o.salt, deck: o.deck }));
     if (!s.result || s.result.verify !== 'wait') return;
     if (!seal || seal !== (s.foe && s.foe.seal)) { set({ result: { ...s.result, verify: 'ng', why: '相手の山札の封が合いませんでした' } }); return; }
-    const winner = s.result.outcome === 'win' ? 0 : s.result.outcome === 'lose' ? 1 : null;
+    const winner = s.result.reward === 'win' && !s.result.forced ? 0 : s.result.reward === 'lose' && !s.result.forced ? 1 : null;
     const v = cardPvpVerify(CARD_BATTLE_DATA, { myDeck: s.deck, mySeed: s.seed, foeDeck: o.deck, foeSeed: o.seed, first: s.first, names: ['あなた', 'あいて'], history: s.history, winner });
     set({ result: { ...s.result, verify: v.ok ? 'ok' : 'ng', why: v.why } });
   };
@@ -256,10 +299,30 @@ const CARD_PVP = (() => {
       return;
     }
     if (msg.t === 'open') { if (!s.foeOpen) { set({ foeOpen: msg }); void tryVerify(); } return; }
-    if (msg.t === 'surrender' || msg.t === 'bye') {
-      if (s.phase === 'playing') { if (board) board.onForceEnd(msg.t === 'surrender' ? 'foeSurrender' : 'foeLeft'); else set({ phase: 'over', result: { outcome: 'win', reason: msg.t === 'surrender' ? '相手の投了' : '相手が抜けた', verify: 'wait' } }); }
+    if (msg.t === 'chat') { if (s.phase === 'playing' && board && board.onChat) board.onChat(CARD_PVP_STAMPS[msg.i]); return; }
+    if (msg.t === 'surrender' || msg.t === 'bye' || msg.t === 'timeout') {
+      if (s.phase === 'playing') forceEnd(msg.t === 'surrender' ? 'foeSurrender' : msg.t === 'timeout' ? 'foeTimeout' : 'foeLeft');
       else if (s.phase === 'waiting') set({ foe: null });
     }
+  };
+  // つなぐ(電波が切れたら、同じ部屋へつなぎ直す。届いていない手は送り直しで追いつく)
+  const connect = () => {
+    if (retry) clearTimeout(retry); retry = null;
+    if (socket) { try { socket.close(); } catch (_) { /* 閉じている */ } }
+    alive = false;
+    const me = socket = rhythmMultiOpenSocket({
+      topic: `${CARD_PVP_ROOM_TOPIC}${s.code}`,
+      onOpen: () => { if (socket !== me) return; alive = true; set({ offline: false, phase: s.phase === 'connecting' ? 'waiting' : s.phase }); hb(); },
+      onMessage: (raw) => { if (socket === me) onMessage(raw); },
+      onClose: () => {
+        if (socket !== me || !s) return;
+        alive = false;
+        if (s.phase === 'connecting') { set({ phase: 'error', error: 'つながりませんでした。電波のよい所で、もう一度お試しください' }); return; }
+        if (s.phase === 'idle' || s.phase === 'error') return;
+        set({ offline: true });
+        retry = setTimeout(connect, CARD_PVP_RECONNECT_MS);
+      },
+    });
   };
   const open = async (code, profile, deck) => {
     stop();
@@ -270,58 +333,92 @@ const CARD_PVP = (() => {
       me: { id: rhythmMultiMakeId('c'), name: rhythmMultiText(profile.name || 'ブリーダー', CARD_PVP_NAME_MAX), icon: rhythmMultiText(profile.icon || '🙂', 8), at: Date.now() } };
     emit();
     if (!seal) { set({ phase: 'error', error: 'この端末では、マルチ対戦の封を作れませんでした' }); return; }
-    socket = rhythmMultiOpenSocket({
-      topic: `${CARD_PVP_ROOM_TOPIC}${code}`,
-      onOpen: () => { set({ phase: 'waiting' }); hb(); },
-      onMessage,
-      onClose: () => { if (s && (s.phase === 'connecting' || s.phase === 'waiting')) set({ phase: 'error', error: 'つながりませんでした。電波のよい所で、もう一度お試しください' }); },
-    });
+    connect();
     tick = setInterval(() => {
       if (!s || !socket) return;
       hb();
       if (s.startMsg && !s.foeInMatch && isHost()) send(s.startMsg);
       s.outbox.forEach((m) => send(m)); // 「受け取った」が来ていない手は送り直す
-      if (s.phase === 'over') send({ t: 'open', seed: s.seed, salt: s.salt, mons: s.deck.monsters, cards: s.deck.cards });
-      // 相手から何も届かないまま CARD_PVP_ALIVE_MS が過ぎたら、抜けた扱い
-      if (s.phase === 'playing' && s.foe && Date.now() - s.foe.seen > CARD_PVP_ALIVE_MS) { if (board) board.onForceEnd('foeLeft'); }
+      if (s.phase === 'over') sendOpen();
+      // 相手から何も届かないまま CARD_PVP_ALIVE_MS が過ぎたら、抜けた扱い(こちらの電波が切れているあいだは数えない)
+      if (s.phase === 'playing' && s.foe && alive && Date.now() - s.foe.seen > CARD_PVP_ALIVE_MS) forceEnd('foeLeft');
     }, CARD_PVP_HEARTBEAT_MS);
   };
+  // iPhone でアプリを切り替えて戻ってきたら、すぐにつなぎ直す / タブを閉じるときは「抜けます」を送る
+  if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && inGame() && !alive) connect(); });
+  }
+  if (typeof window !== 'undefined') {
+    window.addEventListener('pagehide', () => { if (s && s.phase === 'playing') { send({ t: 'bye' }); penalize(); } });
+  }
   return {
     get: () => s || blank(),
     subscribe: (fn) => { listeners.add(fn); return () => listeners.delete(fn); },
     create: (profile, deck) => open(rhythmMultiMakeCode(), profile, deck),
     join: (code, profile, deck) => { const c = rhythmMultiNormalizeCode(code); if (!c) return false; void open(c, profile, deck); return true; },
-    leave: () => { if (s && socket) send({ t: 'bye' }); stop(); board = null; s = blank(); emit(); },
+    leave: () => { if (s && s.phase === 'playing') penalize(); if (s && socket) send({ t: 'bye' }); stop(); board = null; s = blank(); emit(); },
     // 対戦の画面がつなぐ。届いていた手があれば、ここで当てる
     attach: (h) => { board = h; deliver(); return () => { if (board === h) board = null; }; },
-    // 自分の手を進めたとき(対戦の画面から)
+    // 自分の手を進めたとき(対戦の画面から)。自分で打った手なら、時間切れの続きの数を0に戻す
     local: (prev, act, next) => {
       if (!s || s.phase !== 'playing') return;
       const msg = { t: 'act', match: s.match, seq: s.mySeq + 1, act, reveal: cardPvpRevealOf(prev, act), discard: next.players[0].discard };
-      s = { ...s, mySeq: msg.seq, outbox: [...s.outbox, msg], history: [...s.history, { by: 0, act, reveal: {} }] };
+      s = { ...s, mySeq: msg.seq, outbox: [...s.outbox, msg], history: [...s.history, { by: 0, act, reveal: {} }], timeouts: s.autoActing ? s.timeouts : 0 };
       send(msg);
       emit();
     },
-    surrender: () => { if (s && s.phase === 'playing') send({ t: 'surrender' }); },
-    // 決着したとき(対戦の画面から)。封を開けて、相手の封を待つ
-    finish: (outcome) => {
-      if (!s || s.phase !== 'playing') return;
-      const label = { win: '勝ち', lose: '負け', surrender: '投了', foeSurrender: '相手の投了', foeLeft: '相手が抜けた' }[outcome] || '';
-      const mine = outcome === 'win' || outcome === 'foeSurrender' || outcome === 'foeLeft' ? 'win' : 'lose';
-      set({ phase: 'over', result: { outcome: mine, reason: label, verify: 'wait', why: '' } });
-      send({ t: 'open', seed: s.seed, salt: s.salt, mons: s.deck.monsters, cards: s.deck.cards });
-      void tryVerify();
+    // 持ち時間(useCardPvpClock から)。使い切った回を数え、3回続けたら負け
+    timedOut: () => { if (!s || s.phase !== 'playing') return 0; s = { ...s, timeouts: s.timeouts + 1 }; emit(); return s.timeouts; },
+    timeoutLose: () => { if (!s || s.phase !== 'playing') return; send({ t: 'timeout' }); forceEnd('timeout'); },
+    foeStalled: () => forceEnd('foeTimeout'),
+    auto: (fn) => { if (!s) return fn(); s.autoActing = true; try { return fn(); } finally { s.autoActing = false; } },
+    chat: (i) => {
+      if (!s || s.phase !== 'playing' || !CARD_PVP_STAMPS[i] || Date.now() - s.chatAt < CARD_PVP_CHAT_GAP_MS) return false;
+      s = { ...s, chatAt: Date.now() }; send({ t: 'chat', i }); return true;
     },
+    alive: () => alive,
+    surrender: () => { if (s && s.phase === 'playing') send({ t: 'surrender' }); },
+    // 決着したとき(対戦の画面から)。封を開けて、相手の封を待つ。相手が抜けたときは確かめない(相手の封は届かない)
+    finish: (outcome, st) => {
+      if (!s || s.phase !== 'playing') return;
+      const label = { win: '勝ち', lose: '負け', surrender: '投了', foeSurrender: '相手の投了', foeLeft: '相手が抜けた', timeout: '時間切れ', foeTimeout: '相手の時間切れ' }[outcome] || '';
+      const reward = ['win', 'foeSurrender', 'foeLeft', 'foeTimeout'].includes(outcome) ? 'win' : outcome === 'surrender' ? 'surrender' : 'lose';
+      const forced = !['win', 'lose'].includes(outcome); // 投了・抜けた・時間切れで終わった(なぞり直しで勝ち負けまでは比べない)
+      set({ phase: 'over', result: { outcome: reward === 'win' ? 'win' : 'lose', reward, forced, reason: label, facts: cardResultFacts(st, CARD_ME), verify: outcome === 'foeLeft' ? 'skip' : 'wait', why: '', rewarded: false } });
+      sendOpen();
+      void tryVerify();
+      setTimeout(() => { if (s && s.result && s.result.verify === 'wait') set({ result: { ...s.result, verify: 'skip' } }); }, CARD_PVP_VERIFY_WAIT_MS);
+    },
+    markRewarded: (got) => { if (s && s.result) set({ result: { ...s.result, rewarded: true, got } }); },
   };
 })();
 
 // ---- 画面: マルチ対戦の部屋(合言葉) ----
 // onStart(game) … 試合が始まったら対戦の画面へ。onBack … 対戦の選び方へ戻る(部屋も出る)
-const CardPvpLobby = ({ deck, deckIssues = [], onStart, onBack }) => {
+// onReward(result) … 確かめが済んだら1回だけ呼ぶ(84 が保存して { point, loops, quick, saved } を返す)。確かめで無効になった試合は呼ばない
+// assistant … 結果の画面に立ち絵を出す自分の助手(84 の topAssistant)/ point … いまのカードポイント
+const CardPvpLobby = ({ deck, deckIssues = [], onStart, onBack, onReward, assistant = null, point = null }) => {
   const [room, setRoom] = useState(() => CARD_PVP.get());
   const [code, setCode] = useState('');
   const [profile, setProfile] = useState({ name: 'ブリーダー', icon: '🙂' });
   useEffect(() => CARD_PVP.subscribe(setRoom), []);
+  // 試合の途中で抜けた人は、少しのあいだ入れない(mh_card_pvp_penalty_v1。無い・壊れた値は 0 = 入れる)
+  const [penaltyUntil, setPenaltyUntil] = useState(0);
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => { storeGet(CARD_PVP_PENALTY_KEY, 0, false).then((v) => setPenaltyUntil(cardPvpNormalizePenalty(v))).catch(() => {}); }, [room.phase]);
+  useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
+  const penaltyMin = penaltyUntil > now ? Math.ceil((penaltyUntil - now) / 60000) : 0;
+  // 報酬: 確かめが「合っている」か「確かめられない(相手が抜けた・封が届かない)」になったら、1回だけ渡す
+  const rewardRef = useRef(onReward);
+  rewardRef.current = onReward;
+  useEffect(() => {
+    const r = room.result;
+    if (room.phase !== 'over' || !r || r.rewarded) return;
+    if (r.verify === 'ng') { CARD_PVP.markRewarded(null); return; }
+    if (r.verify !== 'ok' && r.verify !== 'skip') return;
+    CARD_PVP.markRewarded({ pending: true });
+    Promise.resolve(rewardRef.current ? rewardRef.current(r) : null).then((got) => CARD_PVP.markRewarded(got)).catch(() => CARD_PVP.markRewarded(null));
+  }, [room.phase, room.result && room.result.verify]);
   useEffect(() => {
     let alive = true;
     Promise.all([storeGet('mh_breeder_name', 'ブリーダー', false), storeGet('mh_breeder_icon', '🙂', false)])
@@ -332,15 +429,64 @@ const CardPvpLobby = ({ deck, deckIssues = [], onStart, onBack }) => {
   const started = useRef('');
   useEffect(() => { if (room.phase === 'playing' && room.game && started.current !== room.match) { started.current = room.match; onStart(room.game); } }, [room.phase, room.match]);
   const btn = 'mh-button min-h-[52px] w-full rounded-2xl font-black active:scale-[.98] disabled:opacity-40';
-  const ready = !!deck && deckIssues.length === 0;
+  const ready = !!deck && deckIssues.length === 0 && penaltyMin === 0;
   const back = () => { CARD_PVP.leave(); onBack(); };
   const r = room.result;
+  // ---- 結果(助手と対戦の結果の画面と同じ形: 立ち絵・もらったカードポイント・クイック周回・いまのカードポイント) ----
+  // ★立ち絵の横は、助手の台詞ではなく結果の文(マルチ対戦の結果の台詞は、まだ作っていない。台詞は社長が先に読む決まり)
+  if (room.phase === 'over' && r) {
+    const win = r.outcome === 'win';
+    const a = assistant && typeof ASSISTANTS !== 'undefined' ? ASSISTANTS.find((x) => x.id === assistant.id) || null : null;
+    const got = r.got && !r.got.pending ? r.got : null;
+    const foeName = room.foe ? room.foe.name : 'あいて';
+    const verifyText = r.verify === 'ok' ? 'おたがいの山札を見せ合って、正しく終わったことを確かめました' : r.verify === 'ng' ? `この試合は無効です(${r.why})`
+      : r.verify === 'skip' ? '相手の山札は届きませんでした(相手が抜けたため)' : 'おたがいの山札を見せ合って、確かめています…';
+    return (
+      <div data-mh-screen data-card-pvp="over" data-card-pvp-result={r.outcome} className={SCREEN_SHELL_CLASS}>
+        <ScreenHead title={win ? '勝ち！' : r.reward === 'surrender' ? '投了' : '負け…'} accent={win ? 'text-amber-200' : 'text-slate-300'} onBack={back}/>
+        <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
+          <div className="flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2">
+            {a && <CardAssistantArt src={assistantFullImage(a, win ? 'happy' : 'troubled')} alt={a.name} className="h-[220px] w-[46%]"/>}
+            <div className="mb-2 min-w-0 flex-1 space-y-1">
+              <div className="text-[15px] font-black text-white" style={JA_WRAP_STYLE}>{jaWrap(`${foeName}さんとのマルチ対戦`)}</div>
+              <div className="text-[12px] font-bold text-slate-300">{win ? '勝ち' : r.reward === 'surrender' ? '投了' : '負け'}{r.reason && !['勝ち', '負け', '投了'].includes(r.reason) ? `(${r.reason})` : ''}</div>
+              <p data-card-pvp-verify={r.verify} className={`rounded-xl px-2 py-1.5 text-[12px] font-bold ${r.verify === 'ok' ? 'bg-emerald-500/15 text-emerald-100' : r.verify === 'ng' ? 'bg-rose-500/15 text-rose-100' : 'bg-white/5 text-slate-200'}`} style={JA_WRAP_STYLE}>{jaWrap(verifyText)}</p>
+            </div>
+          </div>
+          <div className={SCREEN_PANEL_CLASS}>
+            {!got && r.verify !== 'ng' && <div className="text-[12px] font-bold text-slate-300">ごほうびを確かめています…</div>}
+            {r.verify === 'ng' && <div className="text-[12px] font-bold text-slate-300">無効の試合なので、カードポイントとクイック周回は入りません</div>}
+            {got && (<>
+              <div data-card-pvp-reward className="text-[13px] font-black text-amber-200">もらったカードポイント: {got.point}</div>
+              {got.short && <div className="mt-1 text-[12px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('自分の番を3回やる前に終わったので、カードポイントとクイック周回は入りません')}</div>}
+              {!got.short && got.loops > 0 && (
+                <div data-card-quick-loops={got.quick ? got.loops : 0} className="mt-2 rounded-xl border border-sky-300/40 bg-sky-500/10 px-2 py-1.5">
+                  {got.quick
+                    ? <>
+                      <div className="text-[13px] font-black text-sky-200">クイック周回 {got.loops}周ぶん</div>
+                      <div className="mt-0.5 text-[11px] font-bold text-slate-300" style={JA_WRAP_STYLE}>裏のクイック周回({(got.quick.quickDifficulty && quickDifficultySetting(got.quick.quickDifficulty)?.label) || 'AUTO設定'})が{got.loops}周ぶん進みました</div>
+                    </>
+                    : <div className="text-[12px] font-bold text-slate-300" style={JA_LABEL_STYLE}>{jaWrap('クイック周回をしていないときは入りません')}</div>}
+                </div>
+              )}
+              {point !== null && <div className="mt-1 text-[12px] font-bold text-slate-300">いまのカードポイント: {point}</div>}
+              {got.saved === false && <div className="mt-1 text-[12px] font-bold text-rose-300" style={JA_LABEL_STYLE}>{jaWrap('保存できませんでした(カードポイントは増えていません)')}</div>}
+            </>)}
+          </div>
+        </div>
+        <div className={SCREEN_FOOTER_CLASS}>
+          <button type="button" data-card-pvp-leave className={`${btn} mh-button-primary`} onClick={() => { Audio_.se.tap(); CARD_PVP.leave(); }}>部屋を出る</button>
+        </div>
+      </div>
+    );
+  }
   return (
     <div data-mh-screen data-card-pvp={room.phase} className={SCREEN_SHELL_CLASS}>
       <ScreenHead title="マルチ対戦" accent="text-sky-200" onBack={back} note="合言葉で、友だちと1対1で戦えます(デバッグ専用・つくっている途中)"/>
       <div className={`${SCREEN_LIST_CLASS} space-y-3 pb-4`}>
         {room.phase === 'idle' && (<>
-          {!ready && <p className="rounded-xl border border-amber-300/40 bg-amber-500/10 p-2 text-[13px] font-bold text-amber-100">{deckIssues.join('・') || 'デッキがありません'}</p>}
+          {penaltyMin > 0 && <p data-card-pvp-penalty className="rounded-xl border border-rose-300/40 bg-rose-500/10 p-2 text-[13px] font-bold text-rose-100">試合の途中で抜けたので、あと{penaltyMin}分は部屋に入れません</p>}
+          {penaltyMin === 0 && !ready && <p className="rounded-xl border border-amber-300/40 bg-amber-500/10 p-2 text-[13px] font-bold text-amber-100">{deckIssues.join('・') || 'デッキがありません'}</p>}
           <button type="button" data-card-pvp-create disabled={!ready} className={`${btn} mh-button-primary`} onClick={() => { Audio_.se.tap(); void CARD_PVP.create(profile, deck); }}>合言葉で部屋を作る</button>
           <div className="rounded-2xl border border-white/10 bg-slate-900/80 p-3">
             <p className="mb-2 text-[13px] font-bold text-slate-300">友だちの合言葉で入る</p>
@@ -360,15 +506,6 @@ const CardPvpLobby = ({ deck, deckIssues = [], onStart, onBack }) => {
           </div>
         )}
         {room.phase === 'error' && <p className="rounded-xl border border-rose-300/40 bg-rose-500/10 p-3 text-[13px] font-bold text-rose-100">{room.error}</p>}
-        {room.phase === 'over' && r && (
-          <div data-card-pvp-result={r.outcome} className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center">
-            <p className={`text-[30px] font-black ${r.outcome === 'win' ? 'text-amber-200' : 'text-sky-200'}`}>{r.outcome === 'win' ? 'かち！' : 'まけ…'}</p>
-            <p className="text-[13px] font-bold text-slate-300">{room.foe ? `${room.foe.name}さんとの対戦` : ''}{r.reason ? `(${r.reason})` : ''}</p>
-            <p data-card-pvp-verify={r.verify} className={`mt-2 rounded-xl px-2 py-1.5 text-[13px] font-bold ${r.verify === 'ok' ? 'bg-emerald-500/15 text-emerald-100' : r.verify === 'ng' ? 'bg-rose-500/15 text-rose-100' : 'bg-white/5 text-slate-200'}`}>
-              {r.verify === 'ok' ? 'おたがいの山札を見せ合って、正しく終わったことを確かめました' : r.verify === 'ng' ? `この試合は無効です(${r.why})` : 'おたがいの山札を見せ合って、確かめています…'}
-            </p>
-          </div>
-        )}
         {room.broken && <p className="rounded-xl border border-rose-300/40 bg-rose-500/10 p-3 text-[13px] font-bold text-rose-100">{room.broken}</p>}
       </div>
       {room.phase !== 'idle' && (
@@ -391,3 +528,69 @@ const useCardPvpAuto = (db, pvp, st, step, paused) => useEffect(() => {
   }, Number(window.__mhCardPvpAutoMs) || 150);
   return () => clearTimeout(t);
 }, [st, paused]);
+
+// ---- 持ち時間(区切り2) ----
+// 自分の番60秒・守り15秒。使い切ったら、その番を終える(攻撃の番は、ガッツへ回さずにターン終了)・守らない。3回続けて使い切ったら負け。
+// 相手の持ち時間が過ぎても手が来ない(電波はつながっている)ときは、CARD_PVP_STALL_GRACE_MS 待って相手の負け。
+// 時計は、決める人・番・守りの回が変わったところから、それぞれの端末で数える
+const useCardPvpClock = (pvp, st, step) => {
+  const [now, setNow] = useState(() => Date.now());
+  const keyRef = useRef('');
+  const startRef = useRef(Date.now());
+  const firedRef = useRef('');
+  const gutsRef = useRef(-1);
+  const key = pvp ? cardPvpClockKey(st) : '';
+  if (key !== keyRef.current) { keyRef.current = key; startRef.current = Date.now(); }
+  useEffect(() => { if (!pvp) return undefined; const t = setInterval(() => setNow(Date.now()), 500); return () => clearInterval(t); }, []);
+  const decider = pvp ? cardPvpDecider(st) : -1;
+  const left = pvp ? cardPvpLimitMs(st) - (now - startRef.current) : 0;
+  useEffect(() => {
+    if (!pvp || st.winner !== null) return;
+    if (decider === 0 && st.phase === 'guts' && !st.pending && gutsRef.current === st.turn) { gutsRef.current = -1; CARD_PVP.auto(() => step({ type: 'guts', hand: [] })); return; }
+    if (decider === 0 && left <= 0 && firedRef.current !== key) {
+      firedRef.current = key;
+      if (CARD_PVP.timedOut() >= CARD_PVP_TIMEOUT_LOSE) { CARD_PVP.timeoutLose(); return; }
+      if (st.phase === 'main' && !st.pending) gutsRef.current = st.turn;
+      CARD_PVP.auto(() => step(cardPvpTimeoutAct(st)));
+      return;
+    }
+    if (decider === 1 && left <= -CARD_PVP_STALL_GRACE_MS && CARD_PVP.alive() && firedRef.current !== key) { firedRef.current = key; CARD_PVP.foeStalled(); }
+  }, [now, key]);
+  const room = CARD_PVP.get();
+  const quiet = pvp && room.foe ? now - room.foe.seen : 0;
+  return { left: Math.max(0, Math.ceil(left / 1000)), mine: decider === 0, timeouts: room.timeouts, offline: room.offline,
+    foeQuietSec: quiet > CARD_PVP_QUIET_MS ? Math.max(0, Math.ceil((CARD_PVP_ALIVE_MS - quiet) / 1000)) : 0 };
+};
+// 上の帯のまんなか: 持ち時間。電波が途切れたときの知らせは、帯のすぐ下に重ねて出す
+const CardPvpStatus = ({ clock }) => (
+  <>
+    <span data-card-pvp-clock={clock.mine ? 'mine' : 'foe'} className={`rounded-full px-2 py-0.5 text-[13px] font-black tabular-nums ${clock.mine ? (clock.left <= 10 ? 'bg-rose-500/30 text-rose-100' : 'bg-amber-400/20 text-amber-100') : 'bg-white/10 text-slate-200'}`}>
+      {clock.mine ? `残り ${clock.left}秒` : `相手 ${clock.left}秒`}{clock.mine && clock.timeouts > 0 ? `(時間切れ ${clock.timeouts}/${CARD_PVP_TIMEOUT_LOSE})` : ''}
+    </span>
+    {(clock.offline || clock.foeQuietSec > 0) && (
+      <div data-card-pvp-signal className="pointer-events-none absolute inset-x-2 top-[46px] z-[30] rounded-xl border border-amber-300/50 bg-black/80 px-2 py-1 text-center text-[12px] font-bold text-amber-100">
+        {clock.offline ? '電波が途切れています。つなぎ直しています…' : `相手の電波が途切れています(あと${clock.foeQuietSec}秒で相手の負け)`}
+      </div>
+    )}
+  </>
+);
+// 定型のチャット(上の帯の「投了」の横の 💬)。相手の言葉は、助手と対戦のひとことと同じ吹き出しに出る
+const CardPvpChat = () => {
+  const [open, setOpen] = useState(false);
+  const [sent, setSent] = useState('');
+  useEffect(() => { if (!sent) return undefined; const t = setTimeout(() => setSent(''), 1600); return () => clearTimeout(t); }, [sent]);
+  return (
+    <div className="relative">
+      <button type="button" data-card-pvp-chat aria-label="定型文を送る" onClick={() => { Audio_.se.tap(); setOpen((v) => !v); }} className="grid h-[28px] w-[30px] place-items-center rounded-lg border border-white/20 bg-white/10 text-[14px]">💬</button>
+      {sent && <span className="pointer-events-none absolute left-0 top-[32px] z-[40] whitespace-nowrap rounded-full bg-sky-500/80 px-2 py-0.5 text-[11px] font-black text-white">「{sent}」</span>}
+      {open && (
+        <div data-card-pvp-stamps className="absolute left-0 top-[34px] z-[40] grid w-[200px] grid-cols-2 gap-1 rounded-xl border border-white/15 bg-slate-950/95 p-1.5 shadow-xl">
+          {CARD_PVP_STAMPS.map((t, i) => (
+            <button key={t} type="button" data-card-pvp-stamp={i} className="min-h-[36px] rounded-lg bg-white/10 px-1 text-[12px] font-bold text-white active:scale-[.97]"
+              onClick={() => { if (CARD_PVP.chat(i)) setSent(t); setOpen(false); }}>{t}</button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};

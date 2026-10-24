@@ -346,9 +346,9 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
     });
     const use = evs.find((e) => e.t === 'use');
     if (use) {
-      const p0 = next.players[use.p];
       const key = `${next.log.length}-${Date.now()}`;
-      setAction({ key, cards: use.cards, who: use.mon >= 0 ? p0.mons[use.mon].name : `${p0.name}(ブリーダー)` });
+      const ul = cardUseWho(db, next, use.p, use.mon, use.cards[0]); // 書き方は記録と同じ(82 の cardUseText)
+      setAction({ key, cards: use.cards, who: ul.by ? `${ul.who}(${ul.by}で)` : ul.who });
       setTimeout(() => setAction((cur) => (cur && cur.key === key ? null : cur)), 2200);
     }
     else if (evs.some((e) => e.t === 'guard')) Audio_.se.guard();
@@ -384,9 +384,11 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
       onAct: (msg) => { const next = cardPvpApplyRemote(db, stRef.current, msg); if (next) stepRef.current(null, next); return next; },
       onDiscard: (list) => setSt((cur) => { const n = cardPvpPatchDiscard(db, cur, list); stRef.current = n; return n; }),
       onForceEnd: (outcome) => { if (finished.current) return; finished.current = true; onFinish({ outcome, st: stRef.current }); },
+      onChat: (text) => { setFace('normal'); setBubble({ text, key: `chat-${Date.now()}` }); clearTimeout(bubbleTimer.current); bubbleTimer.current = setTimeout(() => setBubble(null), 4500); },
     });
   }, []);
   useCardPvpAuto(db, pvp, st, step, paused); // 検査のときだけ自分の番を自動で打つ(91。ふだんは何もしない)
+  const pvpClock = useCardPvpClock(pvp, st, step); // マルチ対戦の持ち時間(91)。マルチでないときは何もしない
   // 動きの見本(デバッグ): 決まった順に1手ずつ進める
   const demoAt = useRef(0);
   useEffect(() => {
@@ -576,11 +578,9 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
   // まんなかの「いま起きたこと」(新しい2行)。守りの番は、何が来ているかを出す
   const pd = st.pending;
   const pendingText = pd ? (() => {
-    const c = cardOf(db, pd.main);
     const t = pd.targets[pd.ti];
     const tm = t ? st.players[t.p].mons[t.m] : null;
-    const atk = pd.mon >= 0 ? st.players[pd.attacker].mons[pd.mon].name : 'ブリーダー';
-    return `${atk}の「${c.name}」(ダメージ${pd.base * pd.mult})が${tm ? tm.name : ''}に！`;
+    return `${cardUseText(db, st, pd.attacker, pd.mon, [pd.main])}が${tm ? tm.name : ''}に！(ダメージ${pd.base * pd.mult})`;
   })() : null;
   const logLines = st.log.filter((l) => l.kind !== 'turn').slice(-3);
 
@@ -639,8 +639,11 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
   return (
     <div data-mh-screen data-card-battle data-card-mode={mode} className="relative flex h-full min-h-0 flex-1 flex-col overflow-hidden text-white" style={{ background: 'radial-gradient(ellipse at 50% 45%,#3b2a6b 0%,#1b1438 55%,#0d0a1f 100%)' }}>
       <div className={`flex ${compact ? 'h-[36px]' : 'h-[44px]'} shrink-0 items-center justify-between bg-black/35 px-2`}>
-        <button type="button" data-card-quit onClick={() => setQuit(true)} className="rounded-lg border border-white/20 px-2 py-1 text-[12px] font-black text-slate-200">{tutorial ? '飛ばす' : '投了'}</button>
-        <span className="text-[15px] font-black">MFバトルカード</span>
+        <div className="flex items-center gap-1.5">
+          <button type="button" data-card-quit onClick={() => setQuit(true)} className="rounded-lg border border-white/20 px-2 py-1 text-[12px] font-black text-slate-200">{tutorial ? '飛ばす' : '投了'}</button>
+          {pvp && <CardPvpChat/>}
+        </div>
+        {pvp ? <CardPvpStatus clock={pvpClock}/> : <span className="text-[15px] font-black">MFバトルカード</span>}
         <span className="text-[12px] font-bold text-violet-200">ターン {Math.max(1, st.turn)} ・ {st.active === CARD_ME ? 'あなたの番' : `${who.name}の番`}</span>
       </div>
       {/* 相手の帯(隠さない) */}
@@ -872,7 +875,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     return <CardBattleBoard key={game.key} db={db} game={game} onFinish={async ({ outcome, st }) => {
       // マルチ対戦: 封を開けて確かめるのは 91 の CARD_PVP。結果は部屋の画面に出す(報酬は区切り2)
       if (game.pvp) {
-        CARD_PVP.finish(outcome);
+        CARD_PVP.finish(outcome, st);
         onBgm && onBgm(null);
         onNavigate('CARD_TOP');
         setView('pvp');
@@ -986,7 +989,19 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     );
   }
   if (view === 'pvp') {
-    return <CardPvpLobby deck={activeDeck} deckIssues={deckIssues} onBack={() => setView('mode')} onStart={(g) => {
+    // 報酬(区切り2・台帳 #119 の対人戦。1日の上限なし): カードポイント・その日の数・記録(pvp の勝ち負け)・クイック周回
+    const pvpReward = async (r) => {
+      const got = cardPvpReward(r.reward, r.facts);
+      const daily = cardNormalizeDaily(save.daily, cardTodayJst());
+      const record = cardNormalizeRecord(save.record);
+      const win = r.outcome === 'win';
+      const ok = await persist({ point: save.point + got.point, daily: { ...daily, pvpPoint: daily.pvpPoint + got.point },
+        record: { ...record, pvp: { win: record.pvp.win + (win ? 1 : 0), lose: record.pvp.lose + (win ? 0 : 1) } } });
+      let quick = null;
+      if (ok && got.loops > 0 && onQuickLoops) { try { quick = await onQuickLoops(got.loops); } catch (_) { quick = null; } }
+      return { ...got, saved: ok, quick };
+    };
+    return <CardPvpLobby deck={activeDeck} deckIssues={deckIssues} onBack={() => setView('mode')} onReward={pvpReward} assistant={topAssistant} point={save.point} onStart={(g) => {
       setResult(null);
       setGame({ ...g, settings: save.settings });
       onBgm && onBgm(save.bgm.pvp || null);

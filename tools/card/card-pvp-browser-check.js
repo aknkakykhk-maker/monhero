@@ -12,6 +12,8 @@
 //   ③ 最後まで戦えて、片方が勝ち・片方が負け
 //   ④ 終わってから山札を見せ合って、両方で「正しく終わった」になる
 //   ⑤ 実行時エラーが無い・保存は mh_card_* 以外を書き換えない(マルチは何も保存しない)
+//   ⑥ 区切り2: 持ち時間が出る・定型のチャットが相手の吹き出しに出る・電波が切れても戻って最後まで遊べる(相手には「相手の電波が途切れています」)・
+//      終わったら報酬(カードポイント・クイック周回)が出て、カードポイントが増える
 const http = require('http'), path = require('path'), fs = require('fs');
 const { eventStorySeed } = require(path.resolve(__dirname, '..', 'boot/quiet-boot-seed'));
 const ROOT = path.resolve(__dirname, '..', '..');
@@ -26,8 +28,16 @@ const serve = () => new Promise((r) => { const s = http.createServer((req, res) 
   res.writeHead(200, { 'Content-Type': TYPES[path.extname(f)] || 'application/octet-stream' }); fs.createReadStream(f).pipe(res); }); s.listen(PORT, () => r(s)); });
 // ページの中の偽の WebSocket(topic ごとに BroadcastChannel。Realtime と同じく自分にも返す)
 const FAKE_WS = () => {
+  // __fakeWsDrop(ms) … いまのつながりを切り、ms のあいだは新しくつながらない(電波が切れたふり)
+  const all = new Set();
+  window.__fakeWsBlockUntil = 0;
+  window.__fakeWsDrop = (ms) => { window.__fakeWsBlockUntil = Date.now() + ms; [...all].forEach((w) => w.close()); };
   class FakeWS {
-    constructor() { this.readyState = 0; this.topic = null; this.ch = null; setTimeout(() => { this.readyState = 1; if (this.onopen) this.onopen({}); }, 0); }
+    constructor() {
+      this.readyState = 0; this.topic = null; this.ch = null; all.add(this);
+      if (Date.now() < window.__fakeWsBlockUntil) { setTimeout(() => { this.readyState = 3; all.delete(this); if (this.onclose) this.onclose({}); }, 50); return; }
+      setTimeout(() => { this.readyState = 1; if (this.onopen) this.onopen({}); }, 0);
+    }
     deliver(obj) { const data = JSON.stringify(obj); setTimeout(() => { if (this.readyState === 1 && this.onmessage) this.onmessage({ data }); }, 0); }
     send(data) {
       const m = JSON.parse(data);
@@ -43,7 +53,7 @@ const FAKE_WS = () => {
       if (this.ch) this.ch.postMessage(payload);
       this.deliver({ topic: this.topic, event: 'broadcast', payload: { type: 'broadcast', event: 'msg', payload } });
     }
-    close() { this.readyState = 3; if (this.ch) this.ch.close(); if (this.onclose) this.onclose({}); }
+    close() { if (this.readyState === 3) return; this.readyState = 3; all.delete(this); if (this.ch) this.ch.close(); if (this.onclose) this.onclose({}); }
   }
   window.WebSocket = FakeWS;
   window.__mhCardPvpAuto = true;
@@ -136,6 +146,21 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const handBacks = await A.evaluate(() => document.querySelectorAll('[data-card-hand-card]').length);
     check('② 相手は助手ではなく、ブリーダーのアイコンと名前で出る', foeA === 1 && (await A.getByText('マルチ対戦').count()) > 0);
     check('② 自分の手札が出る(後攻は始める前に2枚までガッツにするので3〜5枚)', handBacks >= 3 && handBacks <= 5, `${handBacks}枚`);
+    // ⑥ 持ち時間・チャット・電波
+    check('⑥ 上の帯に持ち時間が出る', (await A.locator('[data-card-pvp-clock]').count()) === 1 && /秒/.test(await A.locator('[data-card-pvp-clock]').innerText()));
+    await A.locator('[data-card-pvp-chat]').click();
+    await A.locator('[data-card-pvp-stamp="0"]').click();
+    const chatSeen = await B.locator('[data-card-bubble]').filter({ hasText: 'よろしく！' }).waitFor({ timeout: 5000 }).then(() => true).catch(() => false);
+    check('⑥ 定型のチャットが、相手の画面の吹き出しに出る', chatSeen);
+    await shot(B, 'pvp-04-chat');
+    const pointBefore = await A.evaluate(() => JSON.parse(localStorage.getItem('mh_card_point_v1') || '0'));
+    await B.evaluate(() => window.__fakeWsDrop(9000));
+    const offSeen = await B.locator('[data-card-pvp-signal]').filter({ hasText: '電波が途切れています' }).waitFor({ timeout: 6000 }).then(() => true).catch(() => false);
+    const foeQuietSeen = await A.locator('[data-card-pvp-signal]').filter({ hasText: '相手の電波が途切れています' }).waitFor({ timeout: 12000 }).then(() => true).catch(() => false);
+    await shot(A, 'pvp-05-foe-signal');
+    check('⑥ 電波が切れると「つなぎ直しています」、相手には「相手の電波が途切れています(あと◯秒)」が出る', offSeen && foeQuietSeen, `${offSeen} / ${foeQuietSeen}`);
+    const backSeen = await B.locator('[data-card-pvp-signal]').waitFor({ state: 'detached', timeout: 20000 }).then(() => true).catch(() => false);
+    check('⑥ 電波が戻ると、知らせが消えて続きから遊べる', backSeen);
     // 写真: 自分の番・あいての番・守りの番
     const shots = new Set();
     const deadline = Date.now() + 300000;
@@ -158,6 +183,12 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const waitVerify = async (page) => { for (let i = 0; i < 40; i++) { const v = await page.locator('[data-card-pvp-verify]').getAttribute('data-card-pvp-verify').catch(() => null); if (v && v !== 'wait') return v; await page.waitForTimeout(250); } return 'wait'; };
     const vA = await waitVerify(A), vB = await waitVerify(B);
     check('④ 終わってから山札を見せ合って、両方で「正しく終わった」', vA === 'ok' && vB === 'ok', `${vA} / ${vB} ${vA !== 'ok' ? await A.locator('[data-card-pvp-verify]').innerText().catch(() => '') : ''}`);
+    const rewardA = await A.locator('[data-card-pvp-reward]').waitFor({ timeout: 10000 }).then(() => A.locator('[data-card-pvp-reward]').innerText()).catch(() => '');
+    const rewardB = await B.locator('[data-card-pvp-reward]').waitFor({ timeout: 10000 }).then(() => B.locator('[data-card-pvp-reward]').innerText()).catch(() => '');
+    const pointAfter = await A.evaluate(() => JSON.parse(localStorage.getItem('mh_card_point_v1') || '0'));
+    check('⑥ 終わったら、2台とも報酬が出る', /カードポイント|ごほうびはありません/.test(rewardA) && /カードポイント|ごほうびはありません/.test(rewardB), `${rewardA} / ${rewardB}`);
+    // ★この検査は2台が同じブラウザの保存を使うので、あとから書いた側(+200 か +50)が残る。実際は別の端末なので、両方それぞれに入る
+    check('⑥ カードポイントが増えている(勝ち+200・負け+50 のどちらかが残る)', [200, 50].includes(pointAfter - pointBefore), `${pointBefore} → ${pointAfter}`);
     await shot(A, 'pvp-03-A-result'); await shot(B, 'pvp-03-B-result');
     const after = await A.evaluate(() => Object.fromEntries(Object.keys(localStorage).filter((k) => k.startsWith('mh_')).map((k) => [k, localStorage.getItem(k)])));
     // 起動のあとに本体が書き足すもの(お話の既読など)は数えない。マルチ対戦は何も保存しない
