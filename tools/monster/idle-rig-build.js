@@ -200,6 +200,23 @@ const RIGS = [
     { name:'beadsL', poly:[[0,34],[9,34],[9,82],[0,82]], keep:{ hue:[0,360], minSat:0.3, orDark:70 }, pivot:[7,35], anim:'swing', amp:2.5, dur:2400, layer:'back' },
     { name:'beadsR', poly:[[89,33],[100,33],[100,82],[89,82]], keep:{ hue:[0,360], minSat:0.3, orDark:70 }, pivot:[92,34], anim:'swing', amp:-2.5, dur:2400, delay:500, layer:'back' },
   ]},
+  // 新しい16種(2026-10-24・案の段階)。まずは体の動きだけ(部位の揺れは正式実装のときに足す)
+  { id:'Dino', img:'images/monsters/dino.png', body:'breathe', parts:[] },
+  { id:'Gali', img:'images/monsters/gali.png', body:'sway', parts:[] },
+  { id:'Naga', img:'images/monsters/naga.png', body:'sway', parts:[] },
+  { id:'Dragon', img:'images/monsters/dragon.png', body:'breathe', parts:[] },
+  { id:'Henger', img:'images/monsters/henger.png', body:'heavy', parts:[] },
+  { id:'Durahan', img:'images/monsters/durahan.png', body:'heavy', parts:[] },
+  { id:'Arrowhead', img:'images/monsters/arrowhead.png', body:'breathe', parts:[] },
+  { id:'Zilla', img:'images/monsters/zilla.png', body:'breathe', parts:[] },
+  { id:'Phoenix', img:'images/monsters/phoenix.png', body:'glide', parts:[] },
+  { id:'Joker', img:'images/monsters/joker.png', body:'sway', parts:[] },
+  { id:'Jell', img:'images/monsters/jell.png', body:'jelly', parts:[] },
+  { id:'Mew', img:'images/monsters/mew.png', body:'breathe', parts:[] },
+  { id:'Metalner', img:'images/monsters/metalner.png', body:'drift', parts:[] },
+  { id:'Worm', img:'images/monsters/worm.png', body:'jelly', parts:[] },
+  { id:'Centaur', img:'images/monsters/centaur.png', body:'breathe', parts:[] },
+  { id:'Colorpandora', img:'images/monsters/colorpandora.png', body:'hop', parts:[] },
 ];
 
 const constName = (id, name) => `IDLE_${id.replace(/([a-z])([A-Z])/g, '$1_$2').toUpperCase()}_${name.replace(/([a-z])([A-Z])/g, '$1_$2').toUpperCase()}_MASK`;

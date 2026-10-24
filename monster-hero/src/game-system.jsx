@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 624b39691d2d3bfe
+// generated-sha256: 3f9b8ad7f406c3a2
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-24 12:42"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-24 12:44"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15238,6 +15238,22 @@ const MONSTER_IDLE_RIGS = Object.freeze({
   Kuromy: { body:'breathe', bodyMask:IDLE_KUROMY_BODY_MASK, parts:[{ mask:IDLE_KUROMY_TAIL_MASK, origin:'65.9% 53.4%', anim:'wag', amp:7, dur:1700, delay:0, layer:'back' }] },
   Illumine: { body:'hover', bodyMask:IDLE_ILLUMINE_BODY_MASK, parts:[{ mask:IDLE_ILLUMINE_HAIR_L_MASK, origin:'17.1% 75%', anim:'swing', amp:5, dur:2800, delay:0, layer:'back' }, { mask:IDLE_ILLUMINE_HAIR_R_MASK, origin:'82.9% 75%', anim:'swing', amp:-5, dur:2800, delay:600, layer:'back' }] },
   Dreamy: { body:'breathe', bodyMask:IDLE_DREAMY_BODY_MASK, parts:[{ mask:IDLE_DREAMY_BEADS_L_MASK, origin:'20% 35%', anim:'swing', amp:2.5, dur:2400, delay:0, layer:'back' }, { mask:IDLE_DREAMY_BEADS_R_MASK, origin:'79.3% 34%', anim:'swing', amp:-2.5, dur:2400, delay:500, layer:'back' }] },
+  Dino: { body:'breathe', bodyMask:null, parts:[] },
+  Gali: { body:'sway', bodyMask:null, parts:[] },
+  Naga: { body:'sway', bodyMask:null, parts:[] },
+  Dragon: { body:'breathe', bodyMask:null, parts:[] },
+  Henger: { body:'heavy', bodyMask:null, parts:[] },
+  Durahan: { body:'heavy', bodyMask:null, parts:[] },
+  Arrowhead: { body:'breathe', bodyMask:null, parts:[] },
+  Zilla: { body:'breathe', bodyMask:null, parts:[] },
+  Phoenix: { body:'glide', bodyMask:null, parts:[] },
+  Joker: { body:'sway', bodyMask:null, parts:[] },
+  Jell: { body:'jelly', bodyMask:null, parts:[] },
+  Mew: { body:'breathe', bodyMask:null, parts:[] },
+  Metalner: { body:'drift', bodyMask:null, parts:[] },
+  Worm: { body:'jelly', bodyMask:null, parts:[] },
+  Centaur: { body:'breathe', bodyMask:null, parts:[] },
+  Colorpandora: { body:'hop', bodyMask:null, parts:[] },
 });
 // ==== MONSTER_IDLE_RIGS ここまで ====
 const MONSTER_IDLE_MASK_STYLE = (url) => ({
@@ -50971,22 +50987,22 @@ const CARD_PVP_BGM = 'ichika_battle';
 // 混血の15体はカードの絵で代える(社長)
 const CARD_SPECIES_ART = Object.freeze({ tiger: 'Tiger', golem: 'Golem', suezo: 'Suezo', pixie: 'Pixie', hare: 'Ham', mocchi: 'Mocchi', monol: 'Monol', plant: 'Plant' });
 const cardNewSpeciesArt = () => ({
-  dino: typeof NEW16_DINO_IMG !== 'undefined' ? NEW16_DINO_IMG : null,
-  gali: typeof NEW16_GALI_IMG !== 'undefined' ? NEW16_GALI_IMG : null,
-  naga: typeof NEW16_NAGA_IMG !== 'undefined' ? NEW16_NAGA_IMG : null,
-  dragon: typeof NEW16_DRAGON_IMG !== 'undefined' ? NEW16_DRAGON_IMG : null,
-  henger: typeof NEW16_HENGER_IMG !== 'undefined' ? NEW16_HENGER_IMG : null,
-  durahan: typeof NEW16_DURAHAN_IMG !== 'undefined' ? NEW16_DURAHAN_IMG : null,
-  arrowhead: typeof NEW16_ARROWHEAD_IMG !== 'undefined' ? NEW16_ARROWHEAD_IMG : null,
-  zilla: typeof NEW16_ZILLA_IMG !== 'undefined' ? NEW16_ZILLA_IMG : null,       // グジラは地上も水中も同じ立ち絵(社長)
-  phoenix: typeof NEW16_PHOENIX_IMG !== 'undefined' ? NEW16_PHOENIX_IMG : null,
-  joker: typeof NEW16_JOKER_IMG !== 'undefined' ? NEW16_JOKER_IMG : null,
-  jell: typeof NEW16_JELL_IMG !== 'undefined' ? NEW16_JELL_IMG : null,
-  mew: typeof NEW16_MEW_IMG !== 'undefined' ? NEW16_MEW_IMG : null,
-  metalner: typeof NEW16_METALNER_IMG !== 'undefined' ? NEW16_METALNER_IMG : null,
-  worm: typeof NEW16_WORM_IMG !== 'undefined' ? NEW16_WORM_IMG : null,
-  centaur: typeof NEW16_CENTAUR_IMG !== 'undefined' ? NEW16_CENTAUR_IMG : null,
-  colorpandora: typeof NEW16_COLORPANDORA_IMG !== 'undefined' ? NEW16_COLORPANDORA_IMG : null,
+  dino: typeof MF_DINO_IMG !== 'undefined' ? MF_DINO_IMG : null,
+  gali: typeof MF_GALI_IMG !== 'undefined' ? MF_GALI_IMG : null,
+  naga: typeof MF_NAGA_IMG !== 'undefined' ? MF_NAGA_IMG : null,
+  dragon: typeof MF_DRAGON_IMG !== 'undefined' ? MF_DRAGON_IMG : null,
+  henger: typeof MF_HENGER_IMG !== 'undefined' ? MF_HENGER_IMG : null,
+  durahan: typeof MF_DURAHAN_IMG !== 'undefined' ? MF_DURAHAN_IMG : null,
+  arrowhead: typeof MF_ARROWHEAD_IMG !== 'undefined' ? MF_ARROWHEAD_IMG : null,
+  zilla: typeof MF_ZILLA_IMG !== 'undefined' ? MF_ZILLA_IMG : null,       // グジラは地上も水中も同じ立ち絵(社長)
+  phoenix: typeof MF_PHOENIX_IMG !== 'undefined' ? MF_PHOENIX_IMG : null,
+  joker: typeof MF_JOKER_IMG !== 'undefined' ? MF_JOKER_IMG : null,
+  jell: typeof MF_JELL_IMG !== 'undefined' ? MF_JELL_IMG : null,
+  mew: typeof MF_MEW_IMG !== 'undefined' ? MF_MEW_IMG : null,
+  metalner: typeof MF_METALNER_IMG !== 'undefined' ? MF_METALNER_IMG : null,
+  worm: typeof MF_WORM_IMG !== 'undefined' ? MF_WORM_IMG : null,
+  centaur: typeof MF_CENTAUR_IMG !== 'undefined' ? MF_CENTAUR_IMG : null,
+  colorpandora: typeof MF_COLORPANDORA_IMG !== 'undefined' ? MF_COLORPANDORA_IMG : null,
 });
 const cardMonArt = (mon) => {
   if (mon.main) return null; // 混血はカードの絵

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 60660286d4b6b0f3
+// source-sha256: 98edab1158c8dbfa
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-24 12:42";
+const BUILD_DATE = "2026-10-24 12:44";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -24987,6 +24987,86 @@ const MONSTER_IDLE_RIGS = Object.freeze({
       delay: 500,
       layer: 'back'
     }]
+  },
+  Dino: {
+    body: 'breathe',
+    bodyMask: null,
+    parts: []
+  },
+  Gali: {
+    body: 'sway',
+    bodyMask: null,
+    parts: []
+  },
+  Naga: {
+    body: 'sway',
+    bodyMask: null,
+    parts: []
+  },
+  Dragon: {
+    body: 'breathe',
+    bodyMask: null,
+    parts: []
+  },
+  Henger: {
+    body: 'heavy',
+    bodyMask: null,
+    parts: []
+  },
+  Durahan: {
+    body: 'heavy',
+    bodyMask: null,
+    parts: []
+  },
+  Arrowhead: {
+    body: 'breathe',
+    bodyMask: null,
+    parts: []
+  },
+  Zilla: {
+    body: 'breathe',
+    bodyMask: null,
+    parts: []
+  },
+  Phoenix: {
+    body: 'glide',
+    bodyMask: null,
+    parts: []
+  },
+  Joker: {
+    body: 'sway',
+    bodyMask: null,
+    parts: []
+  },
+  Jell: {
+    body: 'jelly',
+    bodyMask: null,
+    parts: []
+  },
+  Mew: {
+    body: 'breathe',
+    bodyMask: null,
+    parts: []
+  },
+  Metalner: {
+    body: 'drift',
+    bodyMask: null,
+    parts: []
+  },
+  Worm: {
+    body: 'jelly',
+    bodyMask: null,
+    parts: []
+  },
+  Centaur: {
+    body: 'breathe',
+    bodyMask: null,
+    parts: []
+  },
+  Colorpandora: {
+    body: 'hop',
+    bodyMask: null,
+    parts: []
   }
 });
 const MONSTER_IDLE_MASK_STYLE = url => ({
@@ -84036,22 +84116,22 @@ const CARD_SPECIES_ART = Object.freeze({
   plant: 'Plant'
 });
 const cardNewSpeciesArt = () => ({
-  dino: typeof NEW16_DINO_IMG !== 'undefined' ? NEW16_DINO_IMG : null,
-  gali: typeof NEW16_GALI_IMG !== 'undefined' ? NEW16_GALI_IMG : null,
-  naga: typeof NEW16_NAGA_IMG !== 'undefined' ? NEW16_NAGA_IMG : null,
-  dragon: typeof NEW16_DRAGON_IMG !== 'undefined' ? NEW16_DRAGON_IMG : null,
-  henger: typeof NEW16_HENGER_IMG !== 'undefined' ? NEW16_HENGER_IMG : null,
-  durahan: typeof NEW16_DURAHAN_IMG !== 'undefined' ? NEW16_DURAHAN_IMG : null,
-  arrowhead: typeof NEW16_ARROWHEAD_IMG !== 'undefined' ? NEW16_ARROWHEAD_IMG : null,
-  zilla: typeof NEW16_ZILLA_IMG !== 'undefined' ? NEW16_ZILLA_IMG : null,
-  phoenix: typeof NEW16_PHOENIX_IMG !== 'undefined' ? NEW16_PHOENIX_IMG : null,
-  joker: typeof NEW16_JOKER_IMG !== 'undefined' ? NEW16_JOKER_IMG : null,
-  jell: typeof NEW16_JELL_IMG !== 'undefined' ? NEW16_JELL_IMG : null,
-  mew: typeof NEW16_MEW_IMG !== 'undefined' ? NEW16_MEW_IMG : null,
-  metalner: typeof NEW16_METALNER_IMG !== 'undefined' ? NEW16_METALNER_IMG : null,
-  worm: typeof NEW16_WORM_IMG !== 'undefined' ? NEW16_WORM_IMG : null,
-  centaur: typeof NEW16_CENTAUR_IMG !== 'undefined' ? NEW16_CENTAUR_IMG : null,
-  colorpandora: typeof NEW16_COLORPANDORA_IMG !== 'undefined' ? NEW16_COLORPANDORA_IMG : null
+  dino: typeof MF_DINO_IMG !== 'undefined' ? MF_DINO_IMG : null,
+  gali: typeof MF_GALI_IMG !== 'undefined' ? MF_GALI_IMG : null,
+  naga: typeof MF_NAGA_IMG !== 'undefined' ? MF_NAGA_IMG : null,
+  dragon: typeof MF_DRAGON_IMG !== 'undefined' ? MF_DRAGON_IMG : null,
+  henger: typeof MF_HENGER_IMG !== 'undefined' ? MF_HENGER_IMG : null,
+  durahan: typeof MF_DURAHAN_IMG !== 'undefined' ? MF_DURAHAN_IMG : null,
+  arrowhead: typeof MF_ARROWHEAD_IMG !== 'undefined' ? MF_ARROWHEAD_IMG : null,
+  zilla: typeof MF_ZILLA_IMG !== 'undefined' ? MF_ZILLA_IMG : null,
+  phoenix: typeof MF_PHOENIX_IMG !== 'undefined' ? MF_PHOENIX_IMG : null,
+  joker: typeof MF_JOKER_IMG !== 'undefined' ? MF_JOKER_IMG : null,
+  jell: typeof MF_JELL_IMG !== 'undefined' ? MF_JELL_IMG : null,
+  mew: typeof MF_MEW_IMG !== 'undefined' ? MF_MEW_IMG : null,
+  metalner: typeof MF_METALNER_IMG !== 'undefined' ? MF_METALNER_IMG : null,
+  worm: typeof MF_WORM_IMG !== 'undefined' ? MF_WORM_IMG : null,
+  centaur: typeof MF_CENTAUR_IMG !== 'undefined' ? MF_CENTAUR_IMG : null,
+  colorpandora: typeof MF_COLORPANDORA_IMG !== 'undefined' ? MF_COLORPANDORA_IMG : null
 });
 const cardMonArt = mon => {
   if (mon.main) return null;

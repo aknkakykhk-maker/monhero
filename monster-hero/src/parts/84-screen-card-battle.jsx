@@ -25,22 +25,22 @@ const CARD_PVP_BGM = 'ichika_battle';
 // 混血の15体はカードの絵で代える(社長)
 const CARD_SPECIES_ART = Object.freeze({ tiger: 'Tiger', golem: 'Golem', suezo: 'Suezo', pixie: 'Pixie', hare: 'Ham', mocchi: 'Mocchi', monol: 'Monol', plant: 'Plant' });
 const cardNewSpeciesArt = () => ({
-  dino: typeof NEW16_DINO_IMG !== 'undefined' ? NEW16_DINO_IMG : null,
-  gali: typeof NEW16_GALI_IMG !== 'undefined' ? NEW16_GALI_IMG : null,
-  naga: typeof NEW16_NAGA_IMG !== 'undefined' ? NEW16_NAGA_IMG : null,
-  dragon: typeof NEW16_DRAGON_IMG !== 'undefined' ? NEW16_DRAGON_IMG : null,
-  henger: typeof NEW16_HENGER_IMG !== 'undefined' ? NEW16_HENGER_IMG : null,
-  durahan: typeof NEW16_DURAHAN_IMG !== 'undefined' ? NEW16_DURAHAN_IMG : null,
-  arrowhead: typeof NEW16_ARROWHEAD_IMG !== 'undefined' ? NEW16_ARROWHEAD_IMG : null,
-  zilla: typeof NEW16_ZILLA_IMG !== 'undefined' ? NEW16_ZILLA_IMG : null,       // グジラは地上も水中も同じ立ち絵(社長)
-  phoenix: typeof NEW16_PHOENIX_IMG !== 'undefined' ? NEW16_PHOENIX_IMG : null,
-  joker: typeof NEW16_JOKER_IMG !== 'undefined' ? NEW16_JOKER_IMG : null,
-  jell: typeof NEW16_JELL_IMG !== 'undefined' ? NEW16_JELL_IMG : null,
-  mew: typeof NEW16_MEW_IMG !== 'undefined' ? NEW16_MEW_IMG : null,
-  metalner: typeof NEW16_METALNER_IMG !== 'undefined' ? NEW16_METALNER_IMG : null,
-  worm: typeof NEW16_WORM_IMG !== 'undefined' ? NEW16_WORM_IMG : null,
-  centaur: typeof NEW16_CENTAUR_IMG !== 'undefined' ? NEW16_CENTAUR_IMG : null,
-  colorpandora: typeof NEW16_COLORPANDORA_IMG !== 'undefined' ? NEW16_COLORPANDORA_IMG : null,
+  dino: typeof MF_DINO_IMG !== 'undefined' ? MF_DINO_IMG : null,
+  gali: typeof MF_GALI_IMG !== 'undefined' ? MF_GALI_IMG : null,
+  naga: typeof MF_NAGA_IMG !== 'undefined' ? MF_NAGA_IMG : null,
+  dragon: typeof MF_DRAGON_IMG !== 'undefined' ? MF_DRAGON_IMG : null,
+  henger: typeof MF_HENGER_IMG !== 'undefined' ? MF_HENGER_IMG : null,
+  durahan: typeof MF_DURAHAN_IMG !== 'undefined' ? MF_DURAHAN_IMG : null,
+  arrowhead: typeof MF_ARROWHEAD_IMG !== 'undefined' ? MF_ARROWHEAD_IMG : null,
+  zilla: typeof MF_ZILLA_IMG !== 'undefined' ? MF_ZILLA_IMG : null,       // グジラは地上も水中も同じ立ち絵(社長)
+  phoenix: typeof MF_PHOENIX_IMG !== 'undefined' ? MF_PHOENIX_IMG : null,
+  joker: typeof MF_JOKER_IMG !== 'undefined' ? MF_JOKER_IMG : null,
+  jell: typeof MF_JELL_IMG !== 'undefined' ? MF_JELL_IMG : null,
+  mew: typeof MF_MEW_IMG !== 'undefined' ? MF_MEW_IMG : null,
+  metalner: typeof MF_METALNER_IMG !== 'undefined' ? MF_METALNER_IMG : null,
+  worm: typeof MF_WORM_IMG !== 'undefined' ? MF_WORM_IMG : null,
+  centaur: typeof MF_CENTAUR_IMG !== 'undefined' ? MF_CENTAUR_IMG : null,
+  colorpandora: typeof MF_COLORPANDORA_IMG !== 'undefined' ? MF_COLORPANDORA_IMG : null,
 });
 const cardMonArt = (mon) => {
   if (mon.main) return null; // 混血はカードの絵
