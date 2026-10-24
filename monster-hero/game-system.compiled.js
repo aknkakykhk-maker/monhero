@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 24e10f9cd3781928
+// source-sha256: a1dd3e80c1bdf27e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-24 14:51";
+const BUILD_DATE = "2026-10-24 15:19";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -84002,14 +84002,41 @@ const CARD_TUTORIAL_STAGES = Object.freeze([{
   onNext: 'finish'
 }]);
 const cardTutorialGame = db => {
-  const filler = '064';
-  const myDeck = [...Array(43).fill(filler), '026', '061'];
+  const myHand = ['027', CARD_TUTORIAL_CARD.step, '029'];
+  const myTop = ['026', CARD_TUTORIAL_CARD.punch];
+  const count = {};
+  const nameOf = no => (cardOf(db, no) || {}).name;
+  [...myHand, ...myTop].forEach(no => {
+    count[nameOf(no)] = (count[nameOf(no)] || 0) + 1;
+  });
+  const mons = ['C-006', 'C-005', 'C-003'].map(no => ({
+    ...cardMonsterOf(db, no),
+    ko: false
+  }));
+  const pool = Object.values(db.cards).filter(c => c.ready && c.wave === 1 && c.kind !== 'spe' && c.user !== 'breeder' && (c.user === 'any' || mons.some(m => cardUsableBy(c, m))) && !cardHasEff(c, 'attach')).sort((a, b) => b.guts - a.guts || (a.no < b.no ? -1 : 1));
+  const rest = [];
+  for (const c of pool) {
+    while ((count[c.name] || 0) < CARD_DECK_COPY_MAX && rest.length < 43) {
+      rest.push(c.no);
+      count[c.name] = (count[c.name] || 0) + 1;
+    }
+    if (rest.length >= 43) break;
+  }
+  const myDeck = [...rest.reverse(), ...myTop];
+  const kit = cardAiBuildDeck(db, 'speed').cards.slice();
+  const take = no => {
+    const k = kit.indexOf(no);
+    return k >= 0 ? kit.splice(k, 1)[0] : null;
+  };
+  const muaHand = [take(CARD_TUTORIAL_CARD.sobat) || CARD_TUTORIAL_CARD.sobat];
+  while (muaHand.length < CARD_BATTLE_HAND_MAX) muaHand.push(kit.pop());
+  const muaGuts = [kit.pop(), kit.pop()];
   const decks = [{
     monsters: ['C-006', 'C-005', 'C-003'],
-    cards: Array(50).fill(filler)
+    cards: [...myHand, ...myDeck]
   }, {
     monsters: ['C-006', 'C-008', 'C-009'],
-    cards: Array(50).fill('062')
+    cards: [...muaHand, ...muaGuts, ...kit]
   }];
   let st = cardCreateGame(db, {
     decks,
@@ -84021,16 +84048,31 @@ const cardTutorialGame = db => {
     type: 'setupGuts',
     hand: []
   });
-  st.players[0].hand = ['027', CARD_TUTORIAL_CARD.step, '029'];
+  st.players[0].hand = myHand.slice();
   st.players[0].deck = myDeck;
   st.players[0].guts = [];
-  st.players[1].hand = [CARD_TUTORIAL_CARD.sobat, '062', '062', '062', '062'];
-  st.players[1].guts = ['062', '062'];
+  st.players[1].hand = muaHand;
+  st.players[1].guts = muaGuts;
+  st.players[1].deck = kit;
   st.log = [{
     turn: 1,
     text: '練習試合(あなたが先攻)'
   }];
   return st;
+};
+const cardTutorialCopyProblems = (db, st) => {
+  const out = [];
+  st.players.forEach((pl, p) => {
+    const n = {};
+    [...pl.hand, ...pl.deck, ...pl.guts, ...pl.discard].forEach(no => {
+      const c = cardOf(db, no);
+      if (c) n[c.name] = (n[c.name] || 0) + 1;
+    });
+    Object.entries(n).forEach(([name, k]) => {
+      if (k > CARD_DECK_COPY_MAX) out.push(`${p === 0 ? '自分' : 'みゅあ'}の「${name}」が${k}枚`);
+    });
+  });
+  return out;
 };
 const cardTutorialMutate = (db, st0, kind) => {
   const st = cardClone(st0);
@@ -84812,7 +84854,7 @@ const CardBattleBoard = ({
     const next = cardApplyAction(db, st, act);
     if (!next) return false;
     const evs = next.events || [];
-    if (evs.some(e => e.t === 'use' || e.t === 'guard')) {
+    if (!tutorial && evs.some(e => e.t === 'use' || e.t === 'guard')) {
       clearTimeout(bubbleTimer.current);
       setBubble(null);
     }
@@ -85160,6 +85202,53 @@ const CardBattleBoard = ({
       className: "rounded-md border border-white/20 bg-white/10 px-1.5 py-0.5"
     }, "捨て札 ", pl.discard.length));
   };
+  const tutFocus = (() => {
+    if (!tutorial) return {
+      hand: [],
+      button: null
+    };
+    if (tutStage.next || tutQ.length > 1 || tutQ[0] && tutQ[0][0] === 'M' || !myTurn) return {
+      hand: [],
+      button: null
+    };
+    const okAct = act => cardTutorialAllow(db, tutStage.id, st, act);
+    const hand = me.hand.map((_, i) => i).filter(i => cardTutorialHandOk(tutStage.id, st, i) && !picks.includes(i));
+    if (mode === 'attack') {
+      if (okAct({
+        type: 'endAttacks'
+      })) return {
+        hand: [],
+        button: 'end'
+      };
+      return {
+        hand: sel ? [] : hand.filter(i => attackOpts.some(o => o.hand.includes(i))),
+        button: null
+      };
+    }
+    if (mode === 'guts') {
+      if (tutStage.id === 'guts') return {
+        hand: picks.length >= 2 ? [] : hand,
+        button: picks.length ? 'turn' : null
+      };
+      return {
+        hand: [],
+        button: 'turn'
+      };
+    }
+    if (mode === 'guard') return st.pending && st.pending.evaded ? {
+      hand: [],
+      button: 'pass'
+    } : {
+      hand: hand.filter(i => guardOpts.some(o => o.hand === i)),
+      button: null
+    };
+    return {
+      hand: [],
+      button: null
+    };
+  })();
+  const tutBtn = key => tutorial ? tutFocus.button === key ? ' animate-pulse ring-4 ring-emerald-300' : '' : '';
+  const tutOff = key => tutorial && tutFocus.button !== key;
   const footer = (() => {
     const btn = 'mh-button min-h-[44px] flex-1 rounded-xl text-[14px] font-black active:scale-[.98] disabled:opacity-40';
     if (st.winner !== null && !tutorial) return React.createElement("div", {
@@ -85190,14 +85279,16 @@ const CardBattleBoard = ({
     }, `${st.pendingDiscard.n}枚えらんで捨てる`);
     if (mode === 'guard') return React.createElement("button", {
       type: "button",
-      className: `${btn} border border-white/20 bg-slate-800`,
+      disabled: tutOff('pass'),
+      className: `${btn} border border-white/20 bg-slate-800${tutBtn('pass')}`,
       onClick: () => step({
         type: 'pass'
       })
     }, tutorial && st.pending && st.pending.evaded ? 'これで守る' : '守らない');
     if (mode === 'guts') return React.createElement("button", {
       type: "button",
-      className: `${btn} bg-gradient-to-b from-orange-400 to-orange-600`,
+      disabled: tutOff('turn'),
+      className: `${btn} bg-gradient-to-b from-orange-400 to-orange-600${tutBtn('turn')}`,
       onClick: () => step({
         type: 'guts',
         hand: picks
@@ -85210,7 +85301,8 @@ const CardBattleBoard = ({
       onClick: () => step(finalOpts[0])
     }, "使う") : null, React.createElement("button", {
       type: "button",
-      className: `${btn} border border-violet-300/60 bg-violet-900`,
+      disabled: tutOff('end'),
+      className: `${btn} border border-violet-300/60 bg-violet-900${tutBtn('end')}`,
       onClick: () => step({
         type: 'endAttacks'
       })
@@ -85308,7 +85400,23 @@ const CardBattleBoard = ({
   }, pendingText), (pendingText ? [] : compact || tutorial ? logLines.slice(action || bubble || tutorial ? -1 : -2) : logLines.slice(bubble && action ? -2 : -3)).map((l, i, arr) => React.createElement("div", {
     key: i,
     className: i === arr.length - 1 && !pendingText ? '' : 'text-[11px] text-violet-200'
-  }, l.text))), tutorial && tutSay && (() => {
+  }, l.text)))), React.createElement("div", {
+    className: "flex shrink-0 items-end justify-around px-1"
+  }, me.mons.map((_, m) => React.createElement(CardMonSlot, {
+    key: m,
+    db: db,
+    st: st,
+    p: CARD_ME,
+    m: m,
+    mark: markOf(CARD_ME, m),
+    fx: fx.filter(f => f.p === CARD_ME && f.m === m),
+    onTap: () => tapMon(CARD_ME, m),
+    press: press,
+    compact: compact,
+    motion: motions[`0-${m}`] || null
+  }))), React.createElement("div", {
+    className: "flex shrink-0 justify-end px-2 py-1"
+  }, strip(CARD_ME)), tutorial && tutSay && (() => {
     const dra = ASSISTANTS.find(a => a.id === 'dra');
     const head = tutQ[0];
     const showNext = tutStage.next ? !head || head[0] === 'D' : head && head[0] === 'D' && tutQ.length > 1;
@@ -85332,7 +85440,7 @@ const CardBattleBoard = ({
     };
     return React.createElement("div", {
       "data-card-tutor": tutStage.id,
-      className: "relative z-[3] flex w-full max-w-[420px] items-start gap-2 rounded-2xl border-2 border-emerald-300/70 bg-slate-950/90 px-2 py-1.5 shadow-lg"
+      className: "relative z-[30] mx-2 mb-1 flex shrink-0 items-start gap-2 rounded-2xl border-2 border-emerald-300/80 bg-slate-950 px-2 py-1.5 shadow-lg"
     }, dra && React.createElement("img", {
       src: assistantFaceImage(dra, 'happy'),
       alt: "ドラ",
@@ -85342,35 +85450,25 @@ const CardBattleBoard = ({
       style: JA_WRAP_STYLE
     }, React.createElement("b", {
       className: "mr-1 text-[11px] text-emerald-300"
-    }, "ドラ"), CARD_TUTORIAL_LINES[tutSay]), showNext && React.createElement("button", {
+    }, "ドラ"), CARD_TUTORIAL_LINES[tutSay], hint && React.createElement("span", {
+      "data-card-tutor-hint": true,
+      className: "mt-0.5 block text-[11px] text-amber-200"
+    }, hint)), showNext && React.createElement("button", {
       type: "button",
       "data-card-tutor-next": true,
       onClick: onNext,
-      className: "shrink-0 self-center rounded-xl bg-emerald-500 px-2.5 py-1.5 text-[12px] font-black text-slate-950 active:scale-95"
+      className: "shrink-0 self-center animate-pulse rounded-xl bg-emerald-400 px-3 py-2 text-[13px] font-black text-slate-950 ring-4 ring-emerald-300/70 active:scale-95"
     }, "次へ"));
-  })()), React.createElement("div", {
-    className: "flex shrink-0 items-end justify-around px-1"
-  }, me.mons.map((_, m) => React.createElement(CardMonSlot, {
-    key: m,
-    db: db,
-    st: st,
-    p: CARD_ME,
-    m: m,
-    mark: markOf(CARD_ME, m),
-    fx: fx.filter(f => f.p === CARD_ME && f.m === m),
-    onTap: () => tapMon(CARD_ME, m),
-    press: press,
-    compact: compact,
-    motion: motions[`0-${m}`] || null
-  }))), React.createElement("div", {
-    className: "flex shrink-0 justify-end px-2 py-1"
-  }, strip(CARD_ME)), guide && React.createElement("div", {
+  })(), tutorial && tutFocus.hand.length > 0 && React.createElement("div", {
+    "data-card-tutor-arrow": true,
+    className: "mx-auto mb-1 shrink-0 animate-bounce rounded-lg bg-emerald-300 px-2 py-0.5 text-[12px] font-black text-slate-900"
+  }, "👇 ", mode === 'guts' ? 'タップでガッツに(ガッツへ運んでもOK)' : mode === 'guard' ? 'タップで守る(狙われた子へ運んでもOK)' : 'タップ → 相手をタップ(相手へ運んでもOK)'), guide && !tutorial && React.createElement("div", {
     className: "mx-auto mb-1 shrink-0 rounded-lg bg-amber-300 px-2 py-0.5 text-[11px] font-black text-slate-900"
   }, hint || guide), mode === 'guard' && !guardOpts.length && React.createElement("div", {
     "data-card-guard-why": true,
     className: "mx-auto mb-1 max-w-[94%] shrink-0 text-center text-[11px] font-bold leading-snug text-slate-300",
     style: JA_WRAP_STYLE
-  }, cardGuardBlockReasons(db, st).join(' / ')), !guide && hint && React.createElement("div", {
+  }, cardGuardBlockReasons(db, st).join(' / ')), !guide && !tutorial && hint && React.createElement("div", {
     className: "mx-auto mb-1 shrink-0 rounded-lg bg-amber-300 px-2 py-0.5 text-[11px] font-black text-slate-900"
   }, hint), mode === 'attack' && sel && monChosen !== undefined && sets.length > 1 && React.createElement("div", {
     className: "mb-1 flex shrink-0 flex-wrap justify-center gap-1 px-2"
@@ -85401,7 +85499,8 @@ const CardBattleBoard = ({
         WebkitUserSelect: 'none',
         userSelect: 'none'
       },
-      className: `flex w-[19%] ${compact ? 'max-w-[58px]' : 'max-w-[76px]'} flex-col items-center transition-transform ${up ? '-translate-y-3' : ''} ${myTurn && !on ? 'opacity-45' : ''} ${drag && drag.i === i ? 'opacity-30' : ''}`
+      className: `flex w-[19%] ${compact ? 'max-w-[58px]' : 'max-w-[76px]'} flex-col items-center transition-transform ${up ? '-translate-y-3' : ''} ${myTurn && !on && !tutorial ? 'opacity-45' : ''} ${tutorial && myTurn && !tutFocus.hand.includes(i) && !picks.includes(i) && !(sel && sel.hand === i) ? 'opacity-40' : ''} ${tutorial && tutFocus.hand.includes(i) ? 'animate-pulse rounded-[7px] ring-4 ring-emerald-300' : ''} ${drag && drag.i === i ? 'opacity-30' : ''}`,
+      "data-card-tutor-focus": tutorial && tutFocus.hand.includes(i) ? true : undefined
     }, React.createElement("img", {
       src: CARD_IMG(c ? c.img : no),
       alt: c ? c.name : no,

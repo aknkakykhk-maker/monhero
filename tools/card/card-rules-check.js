@@ -12,9 +12,10 @@ const GAME = path.join(ROOT, 'monster-hero');
 const load = () => {
   const ctx = vm.createContext({ console, Math, JSON, Object, Array, Number, String, Set, Map });
   const src = `${fs.readFileSync(path.join(GAME, 'data', 'card-battle-cards.js'), 'utf8')}\n;\n${fs.readFileSync(path.join(GAME, 'src', 'parts', '82-card-battle-core.jsx'), 'utf8')}\n;\n`
+    + `${fs.readFileSync(path.join(GAME, 'src', 'parts', '86-card-tutorial.jsx'), 'utf8')}\n;\n`
     // 85 は画面の部品(SkillFxMotion)を使うので、ルールだけで動く「動きの見本」の所だけ読む
     + `${fs.readFileSync(path.join(GAME, 'src', 'parts', '85-card-battle-motion.jsx'), 'utf8').split('// ---- 動きの見本')[1].replace(/^[^\n]*\n/, '')}\n;\n`
-    + 'this.E = { CARD_BATTLE_DATA, cardCreateGame, cardApplyAction, cardLegalActions, cardAttackOptions, cardGuardOptions, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardSimulate, CARD_AI_LEVELS, CARD_AI_HABITS, CARD_AI_DECKS, cardDeckProblems, cardNormalizeCollection, cardNormalizeDecks, cardNormalizePoint, cardNormalizeDaily, cardNormalizeRecord, cardNormalizeCpuUnlocked, cardGrantStarter, cardCpuReward, cardUnlockAfterWin, cardMotionDemo, cardMotionDemoAction };';
+    + 'this.E = { CARD_BATTLE_DATA, cardCreateGame, cardApplyAction, cardLegalActions, cardAttackOptions, cardGuardOptions, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardSimulate, CARD_AI_LEVELS, CARD_AI_HABITS, CARD_AI_DECKS, cardDeckProblems, cardNormalizeCollection, cardNormalizeDecks, cardNormalizePoint, cardNormalizeDaily, cardNormalizeRecord, cardNormalizeCpuUnlocked, cardGrantStarter, cardCpuReward, cardUnlockAfterWin, cardMotionDemo, cardMotionDemoAction, cardTutorialGame, cardTutorialMutate, cardTutorialAllow, cardTutorialDone, cardTutorialCpu, CARD_TUTORIAL_STAGES, cardTutorialCopyProblems, cardTutorialFinish, CARD_TUTORIAL_LINES };';
   vm.runInContext(src, ctx, { filename: '82-card-battle-core.jsx' });
   return ctx.E;
 };
@@ -232,8 +233,44 @@ const motionDemo = () => {
   }
   ok(['よける', '防ぐ', '受ける', '倒れる'].every((k) => seen.has(k)), `動きの見本で出ない動きがある(${[...seen].join('・')})`);
 };
+// 練習試合(86): 同じ名前3枚まで・人の手と みゅあの決まった手で最後まで通せる・100 は1回だけ
+const tutorialRun = () => {
+  let st = E.cardTutorialGame(db);
+  const copy = E.cardTutorialCopyProblems(db, st);
+  ok(!copy.length, `練習試合のカードが3枚を超える: ${copy.join('・')}`);
+  const S = E.CARD_TUTORIAL_STAGES;
+  const human = (id) => {
+    if (id === 'guts') return st.phase === 'main' ? { type: 'endAttacks' } : { type: 'guts', hand: [0, 2] };
+    if (id === 'guard') return st.pending && !st.pending.evaded ? E.cardGuardOptions(db, st).find((o) => st.players[0].hand[o.hand] === '059') : { type: 'pass' };
+    if (id === 'attack') return E.cardAttackOptions(db, st).find((o) => st.players[0].hand[o.hand[0]] === '061');
+    if (id === 'deckEnd') return st.phase === 'main' ? { type: 'endAttacks' } : { type: 'guts', hand: [] };
+    return null;
+  };
+  let si = 0;
+  for (let n = 0; n < 80 && si < S.length; n++) {
+    const stg = S[si];
+    if (stg.next) { if (stg.onNext && stg.onNext !== 'finish') st = E.cardTutorialMutate(db, st, stg.onNext); si += 1; continue; }
+    const cpuTurn = st.pending ? st.pending.defender === 1 : st.active === 1;
+    const act = cpuTurn ? E.cardTutorialCpu(db, stg.id, st) : human(stg.id);
+    ok(act, `練習試合が「${stg.id}」で止まる`);
+    if (!act) return;
+    if (!cpuTurn) ok(E.cardTutorialAllow(db, stg.id, st, act), `練習試合の「${stg.id}」で教えている手が出せない: ${JSON.stringify(act)}`);
+    const before = st;
+    st = E.cardApplyAction(db, st, act);
+    ok(st, `練習試合の手がだめ: ${JSON.stringify(act)}`);
+    if (!st) return;
+    if (E.cardTutorialDone(stg.id, before, st)) si += 1;
+  }
+  ok(si === S.length && st.winner === 0, `練習試合を最後まで通せない(段 ${si}/${S.length}・勝ち ${st.winner})`);
+  const f1 = E.cardTutorialFinish(null, 'done', 1);
+  const f2 = E.cardTutorialFinish(f1.tutorial, 'done', 2);
+  const f3 = E.cardTutorialFinish(null, 'skip', 3);
+  ok(f1.reward === 100 && f2.reward === 0 && f3.reward === 0 && f3.tutorial.skipped, '練習試合の 100 が1回だけになっていない');
+  Object.entries(E.CARD_TUTORIAL_LINES).forEach(([id, t]) => ok(t.length <= 70, `練習試合の台詞 ${id} が長すぎる(${t.length}字)`));
+};
 scenes();
 motionDemo();
+tutorialRun();
 decksAndSaves();
 dataAndImages();
 sims();

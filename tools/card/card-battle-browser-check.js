@@ -35,6 +35,7 @@ const serve = () => new Promise((resolve) => {
 });
 
 let failed = 0;
+let lastPage = null;
 const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failed++; };
 
 (async () => {
@@ -62,6 +63,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
   try {
     browser = await playwright.chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
     const page = await browser.newPage({ viewport: { width: VW, height: VH } });
+    lastPage = page;
     page.on('pageerror', (e) => errors.push(String(e)));
     await page.addInitScript(() => {
       if (sessionStorage.getItem('__cardSeeded')) return;
@@ -110,14 +112,43 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     await page.locator('[data-card-tutor]').waitFor({ timeout: 20000 });
     await shot(page, '11-tutorial-start');
     const tutorSeen = new Set();
+    const tutorIssues = new Set();
+    const tutorNoFocus = new Set();
+    const tutorShot = new Set();
+    const focusShot = new Set();
+    let noFocusPrev = null; // 切り替わりの一瞬は数えない(2回続けて光っていないときだけ)
     let wrongShown = false;
     const tDeadline = Date.now() + 120000;
     while (Date.now() < tDeadline) {
       if (await page.locator('[data-card-top="result"]').count()) break;
       const stageId = await page.locator('[data-card-tutor]').getAttribute('data-card-tutor').catch(() => null);
       if (stageId) tutorSeen.add(stageId);
+      // ドラの窓が画面の中に全部入っていて、ほかの物の下に隠れていないか(社長の実機で、窓が切れて「次へ」が押せなかった)
+      const panelIssue = await page.evaluate(() => {
+        const el = document.querySelector('[data-card-tutor]');
+        if (!el) return null;
+        const r = el.getBoundingClientRect();
+        if (r.top < 0 || r.bottom > window.innerHeight + 1) return `窓が画面の外(${Math.round(r.top)}〜${Math.round(r.bottom)})`;
+        for (const [x, y] of [[r.left + 8, r.top + 4], [r.left + 8, r.bottom - 4], [r.left + r.width / 2, r.top + r.height / 2]]) {
+          const hit = document.elementFromPoint(x, y);
+          if (!hit || !el.contains(hit)) return `窓の上に別の物(${hit ? hit.tagName : 'なし'})`;
+        }
+        const b = el.querySelector('[data-card-tutor-next]');
+        if (b) { const q = b.getBoundingClientRect(); const hit = document.elementFromPoint(q.left + q.width / 2, q.top + q.height / 2); if (!hit || !b.contains(hit)) return '「次へ」が押せない'; }
+        return '';
+      });
+      if (panelIssue) tutorIssues.add(`${stageId}: ${panelIssue}`);
       const next = page.locator('[data-card-tutor-next]');
       if (await next.count()) { await next.click(); await page.waitForTimeout(250); continue; }
+      // 操作の段では、教えている所(カードか下のボタン)が光っている
+      const focused = await page.locator('[data-card-tutor-focus], [data-card-battle] button.animate-pulse').count();
+      if (!focused && !(await page.locator('[data-card-bubble]').count()) && ['guts', 'guard', 'attack', 'deckEnd'].includes(stageId) && (await page.locator('[data-card-battle]').getAttribute('data-card-mode')) !== 'wait') { if (noFocusPrev === stageId && SHOT && !tutorNoFocus.size) await shot(page, `zz-nofocus-${stageId}`); if (noFocusPrev === stageId) tutorNoFocus.add(`${stageId}(${await page.locator('[data-card-battle]').getAttribute('data-card-mode')})`); noFocusPrev = stageId; } else noFocusPrev = null;
+      // 光った瞬間ごとの写真(段・手番・光っている物の組が変わるたび。社長に「何が光っているか」を見せる)
+      if (SHOT && focused) {
+        const sig = `${stageId}-${await page.locator('[data-card-battle]').getAttribute('data-card-mode')}-${await page.locator('[data-card-tutor-focus]').count()}`;
+        if (!focusShot.has(sig)) { focusShot.add(sig); await shot(page, `f-${String(focusShot.size).padStart(2, '0')}-${sig}`); }
+      }
+      if (SHOT && stageId && !tutorShot.has(stageId)) { tutorShot.add(stageId); await shot(page, `t-${String(tutorShot.size).padStart(2, '0')}-${stageId}`); }
       const mode = await page.locator('[data-card-battle]').getAttribute('data-card-mode').catch(() => null);
       const handCard = (name) => page.locator('[data-card-hand-card]').filter({ hasText: name }).first();
       if (stageId === 'guts' && mode === 'attack') {
@@ -126,28 +157,32 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
           wrongShown = /光ってる所/.test(await page.locator('[data-card-battle]').innerText());
           if (wrongShown) await shot(page, '12-tutorial-wrong');
         }
-        await page.getByRole('button', { name: '攻撃おわり → ガッツへ' }).click(); await page.waitForTimeout(200); continue;
+        const b = page.getByRole('button', { name: '攻撃おわり → ガッツへ' }); if (await b.isEnabled()) await b.click(); await page.waitForTimeout(250); continue;
       }
-      if (stageId === 'guts' && mode === 'guts') { await handCard('キック').click(); await handCard('チョップ').click(); await page.getByRole('button', { name: /ターン終了$/ }).click(); await page.waitForTimeout(300); continue; }
+      if (stageId === 'guts' && mode === 'guts') { if (!(await page.locator('[data-card-tutor-focus]').count()) && !(await page.getByRole('button', { name: /ターン終了$/ }).isEnabled())) { await page.waitForTimeout(250); continue; } await handCard('キック').click(); await handCard('チョップ').click(); await page.getByRole('button', { name: /ターン終了$/ }).click(); await page.waitForTimeout(300); continue; }
       if (stageId === 'guard' && mode === 'guard') {
-        if (await page.getByRole('button', { name: 'これで守る' }).count()) { await page.getByRole('button', { name: 'これで守る' }).click(); }
+        if (await page.locator('[data-card-bubble]').count()) { await page.waitForTimeout(250); continue; }
+        if (await page.getByRole('button', { name: 'これで守る' }).count()) { const b = page.getByRole('button', { name: 'これで守る' }); if (await b.isEnabled()) await b.click(); }
         else { await shot(page, '13-tutorial-guard'); await handCard('ステップ').click(); }
         await page.waitForTimeout(300); continue;
       }
       if (stageId === 'attack' && mode === 'attack') {
+        if (!(await handCard('パンチ').count())) { await page.waitForTimeout(250); continue; }
         await handCard('パンチ').click(); await page.waitForTimeout(150);
         const tgt = page.locator('[data-card-mon].ring-rose-400').first();
         if (await tgt.count()) await tgt.click();
         await page.waitForTimeout(400); continue;
       }
-      if (stageId === 'deckEnd' && mode === 'attack') { await page.getByRole('button', { name: '攻撃おわり → ガッツへ' }).click(); await page.waitForTimeout(200); continue; }
-      if (stageId === 'deckEnd' && mode === 'guts') { await page.getByRole('button', { name: /ターン終了$/ }).click(); await page.waitForTimeout(400); continue; }
+      if (stageId === 'deckEnd' && mode === 'attack') { const b = page.getByRole('button', { name: '攻撃おわり → ガッツへ' }); if (await b.isEnabled()) await b.click(); await page.waitForTimeout(250); continue; }
+      if (stageId === 'deckEnd' && mode === 'guts') { const b = page.getByRole('button', { name: /ターン終了$/ }); if (await b.isEnabled()) await b.click(); await page.waitForTimeout(400); continue; }
       await page.waitForTimeout(250);
     }
     const tutOutcome = await page.locator('[data-card-top="result"]').getAttribute('data-card-outcome').catch(() => null);
     await shot(page, '14-tutorial-result');
     check('⑪ 練習試合を最後まで操作で通せる(5つの段)', tutOutcome === 'tutorialDone' && ['draw', 'guts', 'guard', 'attack', 'deckEnd', 'finish'].every((k) => tutorSeen.has(k)), `${tutOutcome}・${[...tutorSeen].join('→')}`);
     check('⑪ ちがう所を押すと、ドラが「光ってる所」と案内する', wrongShown);
+    check(`⑪ ${VW}×${VH} で、ドラの窓が全部見えて「次へ」が押せる(どの台詞でも)`, tutorIssues.size === 0, [...tutorIssues].slice(0, 4).join(' / '));
+    check('⑪ 操作の段では、教えている所が光っている', tutorNoFocus.size === 0, [...tutorNoFocus].join('・'));
     const tut = await page.evaluate(() => ({ t: JSON.parse(localStorage.getItem('mh_card_tutorial_v1') || 'null'), point: JSON.parse(localStorage.getItem('mh_card_point_v1') || '0') }));
     check('⑪ はじめて最後までやると 100(印 done・rewarded)', tut.t && tut.t.done && tut.t.rewarded && tut.point === 400, JSON.stringify(tut));
     await page.getByRole('button', { name: 'トップへ' }).click();
@@ -269,7 +304,8 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
             const glow = await carry(from, to, mine, async () => { midGlow += await page.locator('[data-card-mon].ring-emerald-300').count(); });
             await page.waitForTimeout(300);
             const changed = (await page.locator('[data-card-log]').innerText()) !== logBefore || (await page.locator('[data-card-battle]').getAttribute('data-card-mode')) !== 'attack';
-            if (changed) { dragAttack = glow > 0; dragNoGlow = midGlow === 0; myActions += 1; break; }
+            // 自分の子に使う札(回復など)は相手の上で光らないので、光って使えたときだけ成功にする(ほかは次の札で試し直す)
+            if (changed) { myActions += 1; if (glow > 0) { dragAttack = true; dragNoGlow = midGlow === 0; } break; }
           }
           if (dragAttack === null) { dragTries += 1; if (dragTries >= 3) dragAttack = false; else { await page.getByRole('button', { name: '攻撃おわり → ガッツへ' }).click().catch(() => {}); } }
           continue;
@@ -338,6 +374,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     check('⑧ 新しく増えた保存キーは mh_card_* だけ', added.length === 0, added.join(', '));
     check('どこでも実行時エラーが出ない', errors.length === 0, errors.slice(0, 3).join(' / '));
   } catch (e) {
+    if (lastPage) await shot(lastPage, 'zz-fail').catch(() => {});
     check('最後まで動く', false, String(e).slice(0, 300));
   } finally {
     if (browser) await browser.close();

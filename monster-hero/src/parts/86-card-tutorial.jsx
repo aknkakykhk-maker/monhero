@@ -60,22 +60,53 @@ const CARD_TUTORIAL_STAGES = Object.freeze([
 
 // 練習試合の場面(決まった手札・山札)。自分はドラが貸すデッキ(ディノ・ピクシー・ゴーレム)、みゅあはスピードチーム
 const cardTutorialGame = (db) => {
-  const filler = '064'; // ディノのかみつき(ガッツ4。最初はガッツが無いので出せない)
-  // 山札は末尾が上。①で上から「パンチ」「でこぴん」を引く
-  const myDeck = [...Array(43).fill(filler), '026', '061'];
+  // 同じ名前は3枚まで(デッキの決まり)。自分の山札は、ディノ・ピクシー・ゴーレムが使える札を3枚ずつ順に入れて作る
+  //   ★最初は 064(かみつき)だけで埋めていて、手札に同じカードが4枚並んだ(2026-10-24 社長の実機・#3478)
+  const myHand = ['027', CARD_TUTORIAL_CARD.step, '029']; // キック・ステップ・チョップ(練習試合だけ3枚から)
+  const myTop = ['026', CARD_TUTORIAL_CARD.punch];        // 山札の上(末尾が上): ①で「パンチ」「でこぴん」を引く
+  const count = {};
+  const nameOf = (no) => (cardOf(db, no) || {}).name;
+  [...myHand, ...myTop].forEach((no) => { count[nameOf(no)] = (count[nameOf(no)] || 0) + 1; });
+  const mons = ['C-006', 'C-005', 'C-003'].map((no) => ({ ...cardMonsterOf(db, no), ko: false }));
+  // 2ターン目に引く札は、ガッツ2では出せない重い技にする(④で教える「パンチ」だけが光るように)
+  const pool = Object.values(db.cards).filter((c) => c.ready && c.wave === 1 && c.kind !== 'spe' && c.user !== 'breeder' && (c.user === 'any' || mons.some((m) => cardUsableBy(c, m))) && !cardHasEff(c, 'attach'))
+    .sort((a, b) => (b.guts - a.guts) || (a.no < b.no ? -1 : 1));
+  const rest = [];
+  for (const c of pool) {
+    while ((count[c.name] || 0) < CARD_DECK_COPY_MAX && rest.length < 43) { rest.push(c.no); count[c.name] = (count[c.name] || 0) + 1; }
+    if (rest.length >= 43) break;
+  }
+  const myDeck = [...rest.reverse(), ...myTop];
+  // みゅあはスピードチームの50枚をそのまま分ける(手札5枚・ガッツ2枚・残りが山札)。手札の1枚目は「ソバット」
+  const kit = cardAiBuildDeck(db, 'speed').cards.slice();
+  const take = (no) => { const k = kit.indexOf(no); return k >= 0 ? kit.splice(k, 1)[0] : null; };
+  const muaHand = [take(CARD_TUTORIAL_CARD.sobat) || CARD_TUTORIAL_CARD.sobat];
+  while (muaHand.length < CARD_BATTLE_HAND_MAX) muaHand.push(kit.pop());
+  const muaGuts = [kit.pop(), kit.pop()];
   const decks = [
-    { monsters: ['C-006', 'C-005', 'C-003'], cards: Array(50).fill(filler) },
-    { monsters: ['C-006', 'C-008', 'C-009'], cards: Array(50).fill('062') },
+    { monsters: ['C-006', 'C-005', 'C-003'], cards: [...myHand, ...myDeck] },
+    { monsters: ['C-006', 'C-008', 'C-009'], cards: [...muaHand, ...muaGuts, ...kit] },
   ];
   let st = cardCreateGame(db, { decks, names: ['あなた', 'みゅあ'], seed: 11, first: 0 });
   st = cardApplyAction(db, st, { type: 'setupGuts', hand: [] });
-  st.players[0].hand = ['027', CARD_TUTORIAL_CARD.step, '029']; // キック・ステップ・チョップ(練習試合だけ3枚から)
+  st.players[0].hand = myHand.slice();
   st.players[0].deck = myDeck;
   st.players[0].guts = [];
-  st.players[1].hand = [CARD_TUTORIAL_CARD.sobat, '062', '062', '062', '062'];
-  st.players[1].guts = ['062', '062'];
+  st.players[1].hand = muaHand;
+  st.players[1].guts = muaGuts;
+  st.players[1].deck = kit;
   st.log = [{ turn: 1, text: '練習試合(あなたが先攻)' }];
   return st;
+};
+// 練習試合の自分・みゅあのカード(手札・山札・ガッツ)が、同じ名前3枚までになっているか(検査用)
+const cardTutorialCopyProblems = (db, st) => {
+  const out = [];
+  st.players.forEach((pl, p) => {
+    const n = {};
+    [...pl.hand, ...pl.deck, ...pl.guts, ...pl.discard].forEach((no) => { const c = cardOf(db, no); if (c) n[c.name] = (n[c.name] || 0) + 1; });
+    Object.entries(n).forEach(([name, k]) => { if (k > CARD_DECK_COPY_MAX) out.push(`${p === 0 ? '自分' : 'みゅあ'}の「${name}」が${k}枚`); });
+  });
+  return out;
 };
 
 // 「次へ」で場面を変える
