@@ -293,7 +293,8 @@ const marketNameForWrap = (name) => MARKET_NAME_WRAP_WORDS.reduce(
 //   「スキップ　・序／チケット」と順番が崩れる(2026-10-21)
 const marketNameNodes = (name) => <span data-market-name-text>{marketNameForWrap(name).split('\u200b')
   .map((seg, index, all) => {
-    const tail = index === all.length - 1 ? seg.match(/^(.*)(・[^・]{1,2})$/) : null;
+    // 最後の「・1〜2字」と、受け取る数「チケット ×3」は、前の言葉と離さない(2026-10-24 ja-wrap-check「トレーニングチケット／×3」)
+    const tail = index === all.length - 1 ? (seg.match(/^(.*)(・[^・]{1,2})$/) || seg.match(/^(.*?)([^\s]*\s+×[\d,]+)$/)) : null;
     return <React.Fragment key={index}>{index>0&&<wbr/>}{tail ? <>{tail[1]}<span style={{whiteSpace:'nowrap'}}>{tail[2]}</span></> : seg}</React.Fragment>;
   })}</span>;
 // 予告の札の折り位置(2026-10-20 窓口「条件を達成 / すると買え / ます」)。語の切れ目(「すると」の後ろ)だけで折る

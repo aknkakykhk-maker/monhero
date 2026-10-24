@@ -7561,7 +7561,7 @@ function MonsterHeroGame() {
     <div data-assistant-unlock-notice={scene} className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:76000,backgroundColor:'rgba(2,6,23,.94)'}} role="dialog" aria-modal="true" aria-label={notice.title}>
       <div className="w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] overflow-y-auto rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
         <h2 className="mb-1 text-center text-base font-black text-pink-200">{notice.title}</h2><p className="mb-3 text-center text-[10px] font-bold text-slate-400">{page+1} / {pages.length}</p>
-        <div className="flex items-end gap-2"><AssistantFace who={who} size={76} accent={who.accent} expression={notice.expression||'happy'}/><div className="flex-1 rounded-2xl border-2 border-pink-400 bg-slate-900 px-3 py-3 text-[13px] font-bold leading-relaxed text-white">{assistantSpeakText(pages[page],breederName,assistantBondLevelNow,assistantCallStyle,selectedAssistantId)}</div></div>
+        <div className="flex items-end gap-2"><AssistantFace who={who} size={76} accent={who.accent} expression={notice.expression||'happy'}/><div className="flex-1 rounded-2xl border-2 border-pink-400 bg-slate-900 px-3 py-3 text-[13px] font-bold leading-relaxed text-white" style={bubbleWrapStyle()}>{bubbleWrap(assistantSpeakText(pages[page],breederName,assistantBondLevelNow,assistantCallStyle,selectedAssistantId))}</div></div>
         {!last
           ?<button onClick={()=>setAssistantUnlockPage(page+1)} className="mt-4 min-h-[50px] w-full rounded-2xl bg-pink-500 text-sm font-black text-slate-950">次へ</button>
           :<div className={`mt-4 grid ${notice.destination?'grid-cols-2':'grid-cols-1'} gap-2`}>
@@ -21629,7 +21629,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     {/* 話している人の顔を指すしっぽ */}
                     <span aria-hidden="true" style={{position:'absolute',left:-9,top:22,width:0,height:0,borderTop:'8px solid transparent',borderBottom:'8px solid transparent',borderRight:`9px solid ${stageGuest.accent}`}}/>
                     <span className="inline-block rounded-full px-2 py-0.5 text-[10px] font-black" style={{color:'#0f172a',background:stageGuest.accent}}>{bubbleLine.name||stageGuest.name}</span>
-                    <span className="mt-1 block text-[14px] font-bold leading-relaxed text-white">{speakText(bubbleLine,stageGuest)}</span>
+                    <span className="mt-1 block text-[14px] font-bold leading-relaxed text-white" style={bubbleWrapStyle()}>{bubbleWrap(speakText(bubbleLine,stageGuest))}</span>
                   </div>
                 )}
               </div>
@@ -21665,7 +21665,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   ここを素の {line.t} で出していたため、画面に {name} がそのまま出ていた
                   (2026-09-11・ユーザー指摘「名前呼びのとこが変換されてない」)。
                   呼び方も絆Lvも助手ごとに違うので、選んでいる助手ではなく「話している助手」から引く */}
-              <span className="block text-[13px] font-bold leading-relaxed text-white mt-1">{speakText(bottomLine,bottomSpeaker)}</span>
+              <span className="block text-[13px] font-bold leading-relaxed text-white mt-1" style={bubbleWrapStyle()}>{bubbleWrap(speakText(bottomLine,bottomSpeaker))}</span>
             </div>:<div className="rounded-2xl border-2 border-slate-700 bg-slate-900 px-3 py-3 text-center text-[11px] font-bold text-slate-400">▲ 上のことばを読んでね</div>}
             <p className="mt-2 text-center text-[8px] text-slate-500">
               {step+1} / {script.length}
