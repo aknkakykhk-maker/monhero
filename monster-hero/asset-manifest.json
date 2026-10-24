@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "929f8d2a5845",
-  "packs": {"beat":{"bytes":107387446,"count":93},"battle":{"bytes":113882994,"count":580},"all":{"bytes":221270440,"count":673}},
+  "id": "7b14a07793e4",
+  "packs": {"beat":{"bytes":107387446,"count":93},"battle":{"bytes":114793028,"count":586},"all":{"bytes":222180474,"count":679}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"ddce743e94fa","size":1416528,"pack":"beat"},
@@ -416,6 +416,12 @@
     "images/monsters/SNEGUROCHKA_AWAKENED.PNG": {"v":"52c8eda68793","size":155050,"pack":"battle"},
     "images/monsters/ark.png": {"v":"a9dce68b24d4","size":121164,"pack":"battle"},
     "images/monsters/arrowhead.png": {"v":"64f1d371ad4d","size":120361,"pack":"battle"},
+    "images/monsters/c051.png": {"v":"c0a0df62c4f7","size":188631,"pack":"battle"},
+    "images/monsters/c052.png": {"v":"ef445601b28a","size":137167,"pack":"battle"},
+    "images/monsters/c053.png": {"v":"ffa75a7fabaa","size":125426,"pack":"battle"},
+    "images/monsters/c054.png": {"v":"94f20e8b1d54","size":174693,"pack":"battle"},
+    "images/monsters/c055.png": {"v":"ce688625bfa6","size":121996,"pack":"battle"},
+    "images/monsters/c056.png": {"v":"c83f29cf8474","size":162121,"pack":"battle"},
     "images/monsters/centaur.png": {"v":"55e31863fe99","size":88030,"pack":"battle"},
     "images/monsters/colorpandora.png": {"v":"9deee820503c","size":120359,"pack":"battle"},
     "images/monsters/dino.png": {"v":"ac797293f479","size":127071,"pack":"battle"},

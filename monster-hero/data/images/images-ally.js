@@ -186,6 +186,23 @@ const MF_METALNER_IMG = "images/monsters/metalner.png?v=a975f4a4dee2";
 const MF_WORM_IMG = "images/monsters/worm.png?v=ea6dcafd645b";
 const MF_CENTAUR_IMG = "images/monsters/centaur.png?v=55e31863fe99";
 const MF_COLORPANDORA_IMG = "images/monsters/colorpandora.png?v=9deee820503c";
+// 混血モンスター(2026-10-24・まだ味方には入れていない)。MFバトルカードの混血15体(C-051〜C-065。C-060C は作らない)。
+// ファイル名はカード番号(カード部と決めた)。元絵は tools/art-sources/hybrid-2026-10-24/。余白を切って高さ916px・256色。
+// カードの対戦画面は HYBRID_MONSTER_IMGS だけを読む(番号 → 絵)。届いた分から足す
+const HYBRID_C051_IMG = "images/monsters/c051.png?v=c0a0df62c4f7";
+const HYBRID_C052_IMG = "images/monsters/c052.png?v=ef445601b28a";
+const HYBRID_C053_IMG = "images/monsters/c053.png?v=ffa75a7fabaa";
+const HYBRID_C054_IMG = "images/monsters/c054.png?v=94f20e8b1d54";
+const HYBRID_C055_IMG = "images/monsters/c055.png?v=ce688625bfa6";
+const HYBRID_C056_IMG = "images/monsters/c056.png?v=c83f29cf8474";
+const HYBRID_MONSTER_IMGS = Object.freeze({
+  'C-051': HYBRID_C051_IMG,
+  'C-052': HYBRID_C052_IMG,
+  'C-053': HYBRID_C053_IMG,
+  'C-054': HYBRID_C054_IMG,
+  'C-055': HYBRID_C055_IMG,
+  'C-056': HYBRID_C056_IMG,
+});
 
 const MOCCHI_ICON = MOCCHI_IMG;
 const HAM_ICON = HAM_IMG;
