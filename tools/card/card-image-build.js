@@ -63,6 +63,9 @@ const erase = async (file, { artCopyright = true } = {}) => {
   return sharp(data, { raw: { width: W, height: H, channels: info.channels } });
 };
 
+// 日本語にした絵(card-image-ja.js が書き出したもの)。同じファイル名があれば、英語版の代わりにこちらを使う(社長 台帳 #3511「このやり方で全部作る」)
+const JA = path.join(ROOT, 'tools', 'art-sources', 'card-battle-ja');
+const jaOf = (f) => { const j = path.join(JA, path.basename(f)); return fs.existsSync(j) ? j : f; };
 const allCards = () => fs.readdirSync(SRC, { withFileTypes: true })
   .filter((d) => d.isDirectory() && fs.existsSync(path.join(SRC, d.name, 'cards.json')))
   .flatMap((d) => fs.readdirSync(path.join(SRC, d.name)).filter((f) => f.endsWith('.jpg')).map((f) => path.join(SRC, d.name, f)));
@@ -89,7 +92,7 @@ const build = async (opts) => {
   const files = allCards();
   for (const [key, [w, h]] of Object.entries(SIZES)) fs.mkdirSync(path.join(OUT, key), { recursive: true });
   for (const f of files) {
-    const img = await erase(f, opts);
+    const img = await erase(jaOf(f), opts);
     const buf = await img.png().toBuffer();
     for (const [key, [w, h]] of Object.entries(SIZES)) {
       await sharp(buf).resize(w, h).jpeg({ quality: 78, mozjpeg: true }).toFile(path.join(OUT, key, path.basename(f)));
@@ -98,7 +101,7 @@ const build = async (opts) => {
   console.log(`書き出し: ${files.length}枚 × ${Object.keys(SIZES).length}つの大きさ → ${path.relative(ROOT, OUT)}`);
 };
 
-module.exports = { erase, allCards, isMonster };
+module.exports = { erase, allCards, isMonster, jaOf };
 
 if (require.main === module) (async () => {
   const args = process.argv.slice(2);
