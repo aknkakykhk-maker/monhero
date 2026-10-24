@@ -101,20 +101,20 @@
    "kind_en": "BLK",
    "category": "全モンスター",
    "guts": 0,
-   "text": "ちから技を受けるときに使用する。受けるダメージは2倍になる。次のターン、このモンスターのちから技のダメージを3倍にする。",
+   "text": "受けるダメージは2倍になるかわりに、次のターンのちから技が強くなる。ちから技を受けるときに使用する。次のターン、このモンスターのちから技のダメージを3倍にする。",
    "text_en": "Play against a POW move. Take double damage. Triples the damage of this monster's POW moves next turn.",
    "name_source": "案",
    "text_source": "訳案"
   },
   {
    "no": "250",
-   "name": "最後の一体",
+   "name": "孤軍奮闘",
    "name_en": "Last Man",
    "kind": "特殊",
    "kind_en": "SPE",
    "category": "全モンスター",
    "guts": 1,
-   "text": "味方モンスターが一体の時に使用できる。このターン、このモンスターはもう一回攻撃できる。",
+   "text": "味方モンスターが1体の時に使用できる。このターン、このモンスターはもう一回攻撃できる。",
    "text_en": "If this is your last monster, it can attack this turn without becoming exhausted.",
    "name_source": "案",
    "text_source": "訳案"
@@ -218,7 +218,7 @@
    "kind_en": "SPE",
    "category": "全モンスター",
    "guts": 1,
-   "text": "特殊技と同時に使用する。派生モンスターが、SUB の種族の特殊技を使えるようになる。",
+   "text": "特殊技と同時に使用する。派生モンスターが、サブの種族の特殊技を使えるようになる。",
    "text_en": "Play with a SPE move. Allows a mixedbred monster to play a SPE move from its sub-monster.",
    "name_source": "元",
    "text_source": "訳案"
