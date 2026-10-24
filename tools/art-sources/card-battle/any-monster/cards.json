@@ -101,9 +101,9 @@
    "kind_en": "BLK",
    "category": "全モンスター",
    "guts": 0,
-   "text": "受けるダメージは2倍になるかわりに、次のターンのちから技が強くなる。ちから技を受けるときに使用する。次のターン、このモンスターのちから技のダメージを3倍にする。",
+   "text": "ちから技を受けるときに使用する。受けるダメージは2倍になる。次のターン、このモンスターのちから技のダメージを3倍にする。",
    "text_en": "Play against a POW move. Take double damage. Triples the damage of this monster's POW moves next turn.",
-   "name_source": "案",
+   "name_source": "案(社長がこのままでよいと決めた。330 と同じ名前になる点は窓口に確認中)",
    "text_source": "訳案"
   },
   {
