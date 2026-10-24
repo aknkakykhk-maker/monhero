@@ -251,3 +251,140 @@ const CardRules = ({ onBack, onTutorial }) => (
     </div>
   </div>
 );
+
+// ==================== パックを開ける画面(区切り2・CARD_PACK_OPEN) ====================
+// マーケットの「カードポイント」の売り場で買ったら、ここへ来る(買うのと保存は 60-app。この部品は見せるだけ)
+// result: { packId, packs:[[{ no, slot, rarity, dup, point }…]…], dupPoint, cost }
+// 1パックずつ。裏のカードをタップでめくる(モンスターの枠は最後)・「全部めくる」。キラは光る。だぶりは「+◯」
+const CARD_RARITY_LABEL = Object.freeze({ normal: '', kira: 'キラ', alt: '別絵キラ' });
+const CardPackOpen = ({ db, result, onDone }) => {
+  const [pi, setPi] = useState(0);
+  const [open, setOpen] = useState(false);
+  const [flipped, setFlipped] = useState([]);
+  const [detail, setDetail] = useState(null);
+  const press = useCardLongPress((no) => setDetail(no));
+  const pack = cardPackOf(result.packId) || { name: 'パック', color: '#f59e0b' };
+  const cards = result.packs[pi] || [];
+  const allOpen = flipped.length >= cards.length;
+  const last = pi >= result.packs.length - 1;
+  const flip = (i) => { if (flipped.includes(i)) return; Audio_.se.card(); setFlipped((f) => [...f, i]); };
+  const flipAll = () => { Audio_.se.card(); setFlipped(cards.map((_, i) => i)); };
+  const next = () => { Audio_.se.tap(); setPi((x) => x + 1); setOpen(false); setFlipped([]); };
+  const packPoint = cards.reduce((a, c) => a + (c.point || 0), 0);
+  return (
+    <div data-mh-screen data-card-pack-open className={SCREEN_SHELL_CLASS}>
+      <ScreenHead title={pack.name} accent="text-amber-200" note={result.packs.length > 1 ? `${pi + 1} / ${result.packs.length}パック` : ''}/>
+      <div className={`${SCREEN_LIST_CLASS} flex flex-col items-center justify-center pb-2`}>
+        {!open ? (
+          <button type="button" data-card-pack-tear onClick={() => { Audio_.se.tap(); setOpen(true); }} className="relative flex h-[300px] w-[200px] flex-col items-center justify-center rounded-2xl border-4 border-white/70 text-center shadow-2xl active:scale-95" style={{ background: `linear-gradient(160deg, ${pack.color}, #1e1b4b)` }}>
+            <span className="text-[44px]">🎴</span>
+            <span className="mt-2 text-[18px] font-black text-white">{pack.name}</span>
+            <span className="mt-1 text-[12px] font-bold text-white/80">{cards.length}枚入り</span>
+            <span className="absolute inset-x-0 bottom-4 animate-pulse text-[13px] font-black text-white">タップで開ける</span>
+          </button>
+        ) : (
+          <div className={`grid w-full gap-2 ${cards.length > 4 ? 'grid-cols-4' : 'grid-cols-3'} px-1`}>
+            {cards.map((c, i) => {
+              const on = flipped.includes(i);
+              const card = cardOf(db, c.no); const m = card ? null : cardMonsterOf(db, c.no);
+              const name = card ? card.name : m ? m.name : c.no;
+              const shine = c.rarity !== 'normal';
+              return (
+                <button key={i} type="button" data-card-pack-card={i} data-card-pack-flipped={on ? 1 : 0} data-card-pack-rarity={c.rarity} {...(on ? press(c.no, () => setDetail(c.no)) : { onClick: () => flip(i) })} className={`relative flex flex-col items-center rounded-lg p-0.5 text-center active:scale-95 ${on && shine ? 'animate-pulse ring-4 ring-amber-300 shadow-[0_0_18px_rgba(252,211,77,0.9)]' : ''}`} style={{ WebkitUserSelect: 'none', userSelect: 'none' }}>
+                  {on
+                    ? <img src={CARD_IMG(card ? card.img : m ? m.img : c.no)} alt={name} draggable={false} className="aspect-[5/7] w-full rounded-[5px] object-cover"/>
+                    : <div className="flex aspect-[5/7] w-full items-center justify-center rounded-[5px] border-2 border-white/40 text-[22px]" style={{ background: `linear-gradient(160deg, ${pack.color}, #0f172a)` }}>{c.slot === 'mon' ? '★' : '🃏'}</div>}
+                  {on && c.dup && <span className="absolute right-0.5 top-0.5 rounded-md bg-slate-950/90 px-1 text-[10px] font-black text-amber-200">+{c.point}</span>}
+                  {on && !c.dup && <span className="absolute right-0.5 top-0.5 rounded-md bg-emerald-400 px-1 text-[9px] font-black text-slate-950">NEW</span>}
+                  {on && shine && <span className="absolute left-0.5 top-0.5 rounded-md bg-amber-300 px-1 text-[9px] font-black text-slate-950">{CARD_RARITY_LABEL[c.rarity]}</span>}
+                  <span className="mt-0.5 line-clamp-2 min-h-[26px] text-[10px] font-bold leading-tight text-slate-100" style={JA_WRAP_STYLE}>{on ? name : ''}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+        {open && allOpen && (
+          <div data-card-pack-summary className="mt-3 text-center text-[12px] font-bold text-slate-300">
+            {packPoint > 0 ? <>だぶったカードは <b className="text-amber-200">カードポイント +{packPoint}</b> になりました</> : 'だぶったカードはありません'}
+            {last && result.packs.length > 1 && <div className="mt-0.5">({result.packs.length}パックで +{result.dupPoint})</div>}
+          </div>
+        )}
+      </div>
+      <div className={SCREEN_FOOTER_CLASS}>
+        {!open ? <div className="text-center text-[12px] font-bold text-slate-400">パックをタップしてください</div>
+          : !allOpen ? <button type="button" data-card-pack-flip-all className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]" onClick={flipAll}>全部めくる</button>
+          : !last ? <button type="button" data-card-pack-next className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]" onClick={next}>つぎのパック</button>
+          : <button type="button" data-card-pack-done className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]" onClick={() => { Audio_.se.tap(); onDone(); }}>マーケットへ戻る</button>}
+      </div>
+      {detail && <CardDetailModal db={db} no={detail} onClose={() => setDetail(null)}/>}
+    </div>
+  );
+};
+
+// ==================== マーケットの「カードポイント」の売り場: パックとスターターキット(区切り2) ====================
+// 55-screen-breeder-market.jsx の「カードポイント」の売り場から出す。円盤石・アシストカードは 55 側(ビートP交換所と同じ並べ方)
+// onBuyPack(packId, count) / onBuyStarter(kitId) … 60-app が保存して、パックならパックを開ける画面へ進む
+const CardShopPacks = ({ db, point, busy, onBuyPack }) => {
+  const [rates, setRates] = useState(null);
+  const [confirm, setConfirm] = useState(null);
+  const pct = (x) => `${(Math.round(x * 1000) / 10).toFixed(1)}%`;
+  return (
+    <div data-card-shop-packs className="space-y-2 pb-2">
+      {CARD_PACKS.map((pack) => {
+        const r = cardPackRates(db, pack.id);
+        return (
+          <div key={pack.id} data-card-shop-pack={pack.id} className={SCREEN_PANEL_CLASS} style={{ borderColor: `${pack.color}88` }}>
+            <div className="flex items-center gap-2">
+              <div className="flex h-[56px] w-[40px] shrink-0 items-center justify-center rounded-md border-2 border-white/60 text-[20px]" style={{ background: `linear-gradient(160deg, ${pack.color}, #1e1b4b)` }}>🎴</div>
+              <div className="min-w-0 flex-1">
+                <div className="text-[14px] font-black text-white">{pack.name}</div>
+                <div className="text-[11px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{pack.tech ? `${pack.tech + pack.mon}枚入り(技など${pack.tech}枚・モンスター${pack.mon}枚)` : `${pack.mon}枚入り(3枚とも混血モンスター)`}</div>
+                <button type="button" data-card-shop-rates={pack.id} onClick={() => setRates(rates === pack.id ? null : pack.id)} className="mt-0.5 text-[11px] font-black text-sky-300 underline">出る確率を見る</button>
+              </div>
+            </div>
+            {rates === pack.id && r && (
+              <div data-card-shop-rate-table className="mt-1.5 rounded-lg bg-black/30 p-2 text-[11px] font-bold leading-relaxed text-slate-200">
+                {pack.tech > 0 && <div>技などの枠(1パック{pack.tech}枚): {r.techKinds}種類から同じ確率(1種類 {pct(r.techEach)})。準備中のカードは出ません</div>}
+                <div>モンスターの枠(1パック{pack.mon}枚): 通常 {pack.rarity.normal}%{pack.rarity.kira ? `・キラ ${pack.rarity.kira}%` : ''}{pack.rarity.alt ? `・別絵キラ ${pack.rarity.alt}%` : ''}(通常{r.mons.normal}種{r.mons.kira ? `・キラ${r.mons.kira}種` : ''}{r.mons.alt ? `・別絵キラ${r.mons.alt}種` : ''})。まだ持っていない種族は2倍出やすい</div>
+                {pack.pity && <div>キラも別絵キラも出ないまま{CARD_PACK_PITY_AT}パック開けたら、つぎのパックはキラ以上</div>}
+                <div>だぶったカードはカードポイントになります(技など4枚目から{CARD_DUP_POINT.tech}・モンスター2枚目から{pack.id === 'hybrid' ? CARD_DUP_POINT.hybrid : `${CARD_DUP_POINT.normal}〔キラ${CARD_DUP_POINT.kira}・別絵キラ${CARD_DUP_POINT.alt}〕`})</div>
+              </div>
+            )}
+            <div className={`mt-2 grid gap-1.5 ${pack.bundle ? 'grid-cols-2' : 'grid-cols-1'}`}>
+              <button type="button" data-card-shop-buy={`${pack.id}-1`} disabled={busy || point < pack.price} onClick={() => setConfirm({ pack, count: 1 })} className="mh-button min-h-[44px] rounded-xl bg-orange-500 text-[13px] font-black text-white active:scale-[.98] disabled:opacity-40">1パック {pack.price}</button>
+              {pack.bundle && <button type="button" data-card-shop-buy={`${pack.id}-${pack.bundle.n}`} disabled={busy || point < pack.bundle.price} onClick={() => setConfirm({ pack, count: pack.bundle.n })} className="mh-button min-h-[44px] rounded-xl bg-orange-600 text-[13px] font-black text-white active:scale-[.98] disabled:opacity-40">{pack.bundle.n}パック {pack.bundle.price}<span className="block text-[9px] font-bold">({pack.price * pack.bundle.n - pack.bundle.price}おトク)</span></button>}
+            </div>
+          </div>
+        );
+      })}
+      {confirm && <ConfirmSheet title={`${confirm.pack.name}を${confirm.count}パック買いますか？`} message={`カードポイント ${cardPackPrice(confirm.pack, confirm.count)} を使います(いま ${point})`} confirmLabel="買って開ける" onCancel={() => setConfirm(null)} onConfirm={() => { const c = confirm; setConfirm(null); void onBuyPack(c.pack.id, c.count); }}/>}
+    </div>
+  );
+};
+const CardShopStarters = ({ db, point, busy, starter, shop, onBuyStarter }) => {
+  const [confirm, setConfirm] = useState(null);
+  const [done, setDone] = useState('');
+  const kits = Object.values(db.starters).filter((k) => !starter || k.id !== starter.kit);
+  return (
+    <div data-card-shop-starters className="space-y-2 pb-2">
+      {done && <div data-card-shop-starter-done className="rounded-xl border border-emerald-400/40 bg-emerald-950/40 px-3 py-2 text-[12px] font-black text-emerald-200">{done}</div>}
+      <p className="text-[11px] font-bold text-slate-400">はじめに選ばなかったスターターキット。1つにつき1回、{CARD_STARTER_SHOP_PRICE}カードポイント。デッキも1つ増えます</p>
+      {kits.map((k) => {
+        const bought = !!(shop && shop.starters && shop.starters[k.id]);
+        return (
+          <div key={k.id} data-card-shop-starter={k.id} className={SCREEN_PANEL_CLASS}>
+            <div className="flex items-center gap-2">
+              <div className="flex shrink-0 gap-0.5">{k.monsters.map((no) => { const m = cardMonsterOf(db, no); return m ? <img key={no} src={CARD_IMG(m.img)} alt={m.name} className="h-[52px] w-[37px] rounded-[4px] object-cover"/> : null; })}</div>
+              <div className="min-w-0 flex-1">
+                <div className="text-[13px] font-black text-white" style={JA_WRAP_STYLE}>{jaWrap(k.name)}</div>
+                <div className="text-[11px] font-bold text-slate-300">モンスター3枚・カード{k.cards.length}枚</div>
+              </div>
+            </div>
+            <button type="button" data-card-shop-starter-buy={k.id} disabled={bought || busy || point < CARD_STARTER_SHOP_PRICE} onClick={() => setConfirm(k)} className="mh-button mt-2 min-h-[44px] w-full rounded-xl bg-orange-500 text-[13px] font-black text-white active:scale-[.98] disabled:opacity-40">{bought ? '買いました' : `${CARD_STARTER_SHOP_PRICE}カードポイント`}</button>
+          </div>
+        );
+      })}
+      {confirm && <ConfirmSheet title={`「${confirm.name}」を買いますか？`} message={`カードポイント ${CARD_STARTER_SHOP_PRICE} を使います(いま ${point})。だぶったカードはカードポイントになります`} confirmLabel="買う" onCancel={() => setConfirm(null)} onConfirm={async () => { const k = confirm; setConfirm(null); const r = await onBuyStarter(k.id); if (r && r.ok) setDone(`「${k.name}」を買いました。デッキ編成に1つ増えています${r.dupPoint > 0 ? `(だぶったカードはカードポイント +${r.dupPoint})` : ''}`); }}/>}
+    </div>
+  );
+};
