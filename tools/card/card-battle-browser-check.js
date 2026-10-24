@@ -386,7 +386,27 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       await page.locator('[data-card-top="result"] button').first().click();
       await page.waitForTimeout(300);
     }
-    check('⑬ 結果の画面に「クイック周回 ◯周ぶん」が出る(入るとき・入らないとき)', /クイック周回 16周ぶん/.test(demoTxt.in) && !/入りません/.test(demoTxt.in) && /今回は入りません/.test(demoTxt.out), JSON.stringify(demoTxt).slice(0, 200));
+    // ⑬ 助手の絵は、どの子も同じ大きさ・足元を枠の下にそろえる(描かれている所の高さが枠の高さ、または幅いっぱい)
+    const artBad = [];
+    const whoIds = await page.locator('[data-card-result-demo-who] option').evaluateAll((els) => els.map((e) => e.value));
+    for (const id of whoIds) {
+      await page.locator('[data-card-result-demo-who]').selectOption(id);
+      await page.locator('[data-card-result-demo="in"]').click();
+      await page.waitForFunction(() => document.querySelector('[data-card-top="result"] [data-card-art-h]'), null, { timeout: 5000 }).catch(() => {});
+      await page.waitForTimeout(200);
+      const m = await page.evaluate(() => {
+        const el = document.querySelector('[data-card-top="result"] [data-card-assistant-art]');
+        if (!el) return null;
+        const im = el.querySelector('img').getBoundingClientRect(); const r = el.getBoundingClientRect();
+        return { h: Number(el.getAttribute('data-card-art-h')), w: Number(el.getAttribute('data-card-art-w')), boxH: el.clientHeight, boxW: el.clientWidth, imgBottom: Math.round(im.bottom - r.bottom) };
+      });
+      if (SHOT) await shot(page, `17-art-${id}`);
+      if (!m || !(m.h >= m.boxH - 2 || m.w >= m.boxW - 2)) artBad.push(`${id}:${JSON.stringify(m)}`);
+      await page.locator('[data-card-top="result"] button').first().click();
+      await page.waitForTimeout(250);
+    }
+    check(`⑬ 結果の画面の助手の絵が、${whoIds.length}人とも同じ大きさで足元が枠の下にそろう`, whoIds.length >= 6 && artBad.length === 0, artBad.join(' / ') || whoIds.join('・'));
+    check('⑬ 結果の画面に「クイック周回 ◯周ぶん」が出る(入るとき・入らないとき)', /クイック周回 16周ぶん/.test(demoTxt.in) && /16周ぶん進みました/.test(demoTxt.in) && /^クイック周回をしていないときは入りません$/.test(demoTxt.out.trim()), JSON.stringify(demoTxt).slice(0, 200));
     check('どこでも実行時エラーが出ない', errors.length === 0, errors.slice(0, 3).join(' / '));
   } catch (e) {
     if (lastPage) await shot(lastPage, 'zz-fail').catch(() => {});

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6f885b895c6458fd
+// source-sha256: 2485f706285877f8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-24 16:42";
+const BUILD_DATE = "2026-10-24 16:48";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -85649,6 +85649,116 @@ const CardBattleBoard = ({
     }
   }));
 };
+const CARD_ART_BOX_CACHE = {};
+const cardArtBox = src => new Promise(resolve => {
+  if (CARD_ART_BOX_CACHE[src]) {
+    resolve(CARD_ART_BOX_CACHE[src]);
+    return;
+  }
+  const img = new Image();
+  img.onload = () => {
+    try {
+      const nw = img.naturalWidth,
+        nh = img.naturalHeight;
+      const k = Math.min(1, 256 / Math.max(nw, nh));
+      const w = Math.max(1, Math.round(nw * k)),
+        h = Math.max(1, Math.round(nh * k));
+      const cv = document.createElement('canvas');
+      cv.width = w;
+      cv.height = h;
+      const cx = cv.getContext('2d');
+      cx.drawImage(img, 0, 0, w, h);
+      const d = cx.getImageData(0, 0, w, h).data;
+      const col = new Array(w).fill(0),
+        row = new Array(h).fill(0);
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (d[(y * w + x) * 4 + 3] > 24) {
+        col[x] += 1;
+        row[y] += 1;
+      }
+      const MIN = 3;
+      let x0 = col.findIndex(n => n >= MIN),
+        y0 = row.findIndex(n => n >= MIN);
+      let x1 = w - 1 - [...col].reverse().findIndex(n => n >= MIN),
+        y1 = h - 1 - [...row].reverse().findIndex(n => n >= MIN);
+      if (x0 < 0 || y0 < 0) {
+        x1 = -1;
+      }
+      const box = x1 < 0 ? {
+        nw,
+        nh,
+        x: 0,
+        y: 0,
+        w: nw,
+        h: nh
+      } : {
+        nw,
+        nh,
+        x: x0 / k,
+        y: y0 / k,
+        w: (x1 - x0 + 1) / k,
+        h: (y1 - y0 + 1) / k
+      };
+      CARD_ART_BOX_CACHE[src] = box;
+      resolve(box);
+    } catch (_) {
+      resolve(null);
+    }
+  };
+  img.onerror = () => resolve(null);
+  img.src = src;
+});
+const CardAssistantArt = ({
+  src,
+  alt,
+  className = ''
+}) => {
+  const ref = useRef(null);
+  const [fit, setFit] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    setFit(null);
+    void cardArtBox(src).then(box => {
+      const el = ref.current;
+      if (!alive || !box || !el) return;
+      const W = el.clientWidth,
+        H = el.clientHeight;
+      if (!W || !H) return;
+      const sc = Math.min(H / box.h, W / box.w);
+      setFit({
+        width: box.nw * sc,
+        left: W / 2 - (box.x + box.w / 2) * sc,
+        top: H - (box.y + box.h) * sc,
+        artH: Math.round(box.h * sc),
+        artW: Math.round(box.w * sc)
+      });
+    });
+    return () => {
+      alive = false;
+    };
+  }, [src]);
+  return React.createElement("div", {
+    ref: ref,
+    "data-card-assistant-art": true,
+    "data-card-art-h": fit ? fit.artH : undefined,
+    "data-card-art-w": fit ? fit.artW : undefined,
+    className: `relative shrink-0 overflow-hidden ${className}`
+  }, fit ? React.createElement("img", {
+    src: src,
+    alt: alt,
+    draggable: false,
+    className: "absolute max-w-none",
+    style: {
+      width: `${fit.width}px`,
+      left: `${fit.left}px`,
+      top: `${fit.top}px`
+    }
+  }) : React.createElement("img", {
+    src: src,
+    alt: alt,
+    draggable: false,
+    className: "h-full w-full object-contain object-bottom"
+  }));
+};
 const CardBattleScreen = ({
   screen,
   onNavigate,
@@ -85672,6 +85782,7 @@ const CardBattleScreen = ({
   const [notice, setNotice] = useState('');
   const [confirmReset, setConfirmReset] = useState(false);
   const [detail, setDetail] = useState(null);
+  const [demoWho, setDemoWho] = useState('mua');
   const press = useCardLongPress(no => setDetail(no));
   const load = async () => {
     const K = CARD_SAVE_KEYS;
@@ -85952,10 +86063,10 @@ const CardBattleScreen = ({
       className: "absolute right-1 top-1 rounded bg-amber-400 px-1 text-[10px] font-black text-slate-900"
     }, "勝")))), a && React.createElement("div", {
       className: "flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2"
-    }, React.createElement("img", {
+    }, React.createElement(CardAssistantArt, {
       src: assistantFullImage(a, 'wink'),
       alt: a.name,
-      className: "h-[150px] w-[42%] shrink-0 object-contain object-bottom"
+      className: "h-[150px] w-[42%]"
     }), React.createElement("div", {
       className: "min-w-0 flex-1 pb-2"
     }, React.createElement("div", {
@@ -86061,10 +86172,10 @@ const CardBattleScreen = ({
       className: `${SCREEN_LIST_CLASS} space-y-2 pb-4`
     }, a && React.createElement("div", {
       className: "flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2"
-    }, React.createElement("img", {
+    }, React.createElement(CardAssistantArt, {
       src: assistantFullImage(a, line ? line.face : 'normal'),
       alt: a.name,
-      className: "h-[220px] w-[46%] shrink-0 object-contain object-bottom"
+      className: "h-[220px] w-[46%]"
     }), React.createElement("div", {
       className: "mb-2 min-w-0 flex-1 rounded-2xl border-2 bg-white px-2 py-1 text-[13px] font-extrabold leading-snug text-[#1f1333]",
       style: {
@@ -86084,14 +86195,14 @@ const CardBattleScreen = ({
     }, "自分の番を3回やる前に終わったので、カードポイントとクイック周回は入りません"), !r.short && result.loops > 0 && React.createElement("div", {
       "data-card-quick-loops": result.quick ? result.loops : 0,
       className: "mt-2 rounded-xl border border-sky-300/40 bg-sky-500/10 px-2 py-1.5"
-    }, React.createElement("div", {
+    }, result.quick ? React.createElement(React.Fragment, null, React.createElement("div", {
       className: "text-[13px] font-black text-sky-200"
-    }, "クイック周回 ", result.loops, "周ぶん", result.quick ? '' : '(今回は入りません)'), result.quick ? React.createElement("div", {
-      className: "mt-0.5 text-[11px] font-bold text-slate-300"
-    }, "裏で回しているクイック(", result.quick.quickDifficulty && quickDifficultySetting(result.quick.quickDifficulty)?.label || 'AUTO設定', ")を、", result.loops, "周クリアしたことにしました") : React.createElement("div", {
-      className: "mt-0.5 text-[11px] font-bold text-slate-400",
+    }, "クイック周回 ", result.loops, "周ぶん"), React.createElement("div", {
+      className: "mt-0.5 text-[11px] font-bold text-slate-300",
       style: JA_WRAP_STYLE
-    }, "AUTO設定でクイックを回していて、その難易度をクイックで通したことがあると入ります")), React.createElement("div", {
+    }, "裏のクイック周回(", result.quick.quickDifficulty && quickDifficultySetting(result.quick.quickDifficulty)?.label || 'AUTO設定', ")が", result.loops, "周ぶん進みました")) : React.createElement("div", {
+      className: "text-[12px] font-bold text-slate-300"
+    }, "クイック周回をしていないときは入りません")), React.createElement("div", {
       className: "mt-1 text-[12px] font-bold text-slate-300"
     }, "いまのカードポイント: ", save.point), result.opened && React.createElement("div", {
       className: "mt-1 text-[13px] font-black text-emerald-300"
@@ -86189,7 +86300,15 @@ const CardBattleScreen = ({
     className: "block text-[10px] font-bold"
   }, "ドラが教えるチュートリアル"))), debug && React.createElement("div", {
     className: `${SCREEN_PANEL_FLAT_CLASS} space-y-1`
-  }, React.createElement("div", {
+  }, React.createElement("select", {
+    "data-card-result-demo-who": true,
+    value: demoWho,
+    onChange: e => setDemoWho(e.target.value),
+    className: "w-full rounded-lg border border-white/20 bg-slate-800 px-2 py-1 text-[12px] font-bold text-white"
+  }, allAssistants.filter(x => CARD_AI_HABITS[x.id]).map(x => React.createElement("option", {
+    key: x.id,
+    value: x.id
+  }, "見本の相手: ", x.name))), React.createElement("div", {
     className: "grid grid-cols-2 gap-1"
   }, [['in', '結果の見本(周回が入る)'], ['out', '結果の見本(入らない)']].map(([k, label]) => React.createElement("button", {
     key: k,
@@ -86208,7 +86327,7 @@ const CardBattleScreen = ({
         reward,
         opened: null,
         saved: true,
-        who: 'mua',
+        who: demoWho,
         level: 'normal',
         loops: cardCpuLoops('normal', 'win', facts),
         quick: k === 'in' ? {
