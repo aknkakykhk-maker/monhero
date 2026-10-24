@@ -318,6 +318,9 @@ const CardPackOpen = ({ db, result, onDone }) => {
   const [spot, setSpot] = useState(null);   // { i, rarity, leaving } 真ん中へ大きく出しているキラ以上
   const [detail, setDetail] = useState(null);
   const timers = useRef([]);
+  // 鳴らした効果音の記録(data-card-pack-se。実機の音の確かめと、ブラウザ検査でキラの音を鳴らしたかを見る)
+  const [seLog, setSeLog] = useState([]);
+  const se = (name) => { try { Audio_.se[name](); } catch (e) {} setSeLog((l) => [...l.slice(-40), name]); };
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
   const later = (fn, ms) => { timers.current.push(setTimeout(fn, ms)); };
   const press = useCardLongPress((no) => setDetail(no));
@@ -327,9 +330,9 @@ const CardPackOpen = ({ db, result, onDone }) => {
   const last = pi >= result.packs.length - 1;
   const tear = () => {
     if (phase !== 'closed') return;
-    Audio_.se.special();
+    se('special');
     setPhase('tearing');
-    later(() => Audio_.se.crit(), 520);
+    later(() => se('crit'), 520);
     later(() => setPhase('open'), CARD_PACK_TEAR_MS);
   };
   const spotOff = () => {
@@ -337,14 +340,14 @@ const CardPackOpen = ({ db, result, onDone }) => {
     later(() => setSpot(null), CARD_PACK_SPOT_BACK_MS);
   };
   const reveal = (i) => {
-    Audio_.se.card();
+    se('card');
     setFlipped((f) => (f.includes(i) ? f : [...f, i]));
     const c = cards[i];
     if (c && c.rarity !== 'normal') {
       later(() => {
         setFlash((x) => ({ n: ((x && x.n) || 0) + 1, rarity: c.rarity }));
         setSpot({ i, rarity: c.rarity, leaving: false });
-        Audio_.se.crit(); if (c.rarity === 'alt') Audio_.se.fusion(); else Audio_.se.levelUp();
+        se('crit'); if (c.rarity === 'alt') se('fusion'); else se('levelUp');
       }, 380);
       later(spotOff, 380 + CARD_PACK_SPOT_MS);
     }
@@ -362,7 +365,7 @@ const CardPackOpen = ({ db, result, onDone }) => {
   const next = () => { Audio_.se.tap(); timers.current.forEach(clearTimeout); timers.current = []; setPi((x) => x + 1); setPhase('closed'); setFlipped([]); setSpot(null); };
   const packPoint = cards.reduce((a, c) => a + (c.point || 0), 0);
   return (
-    <div data-mh-screen data-card-pack-open data-card-pack-phase={phase} className={SCREEN_SHELL_CLASS}>
+    <div data-mh-screen data-card-pack-open data-card-pack-phase={phase} data-card-pack-se={seLog.join(',')} className={SCREEN_SHELL_CLASS}>
       <ScreenHead title={pack.name} accent="text-amber-200" note={result.packs.length > 1 ? `${pi + 1} / ${result.packs.length}パック` : ''}/>
       <div className={`${SCREEN_LIST_CLASS} relative flex flex-col items-center justify-center overflow-hidden pb-2`}>
         {phase !== 'open' ? (
