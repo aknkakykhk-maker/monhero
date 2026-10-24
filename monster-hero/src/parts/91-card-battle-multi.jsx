@@ -290,6 +290,44 @@ const sbFetchCardPvpRatings = async () => {
   } finally { clearTimeout(timer); }
 };
 
+// ---- フレンドから招待(区切り4・表 card_battle_invites)。モンヒロビートの friend_invites と同じ形の、カード用の新しい表 ----
+// ★表が無い環境でも、フレンドの機能は止めない(friendsRequest を使わず、ここで別に数える)
+const CARD_PVP_INVITE_TTL_MS = 3 * 60 * 1000;   // これより古い招待は出さない
+const CARD_PVP_INVITE_POLL_MS = 8000;           // 部屋に入っていないあいだ、これおきに読む
+const CARD_PVP_INVITE_ID_RE = /^[A-Za-z0-9_-]{1,100}$/;
+let _cardPvpInvitesUnavailable = false;
+const cardPvpInviteRequest = async (path, { method = 'GET', body = null, prefer = null } = {}) => {
+  if (_cardPvpInvitesUnavailable || typeof SUPABASE_URL === 'undefined') return null;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, { method, headers: prefer ? { ...SB_HEADERS, Prefer: prefer } : SB_HEADERS, cache: 'no-store', signal: controller.signal, body: body === null ? undefined : JSON.stringify(body) });
+    const text = await res.text();
+    if (!res.ok) { if (_isMissingTableError(res.status, text)) _cardPvpInvitesUnavailable = true; return null; }
+    return text ? JSON.parse(text) : [];
+  } catch (_) { return null; } finally { clearTimeout(timer); }
+};
+const sbSendCardInvite = async (selfId, targetId, code) => {
+  const room = rhythmMultiNormalizeCode(code);
+  if (!CARD_PVP_INVITE_ID_RE.test(String(selfId)) || !CARD_PVP_INVITE_ID_RE.test(String(targetId)) || selfId === targetId || !room) return false;
+  const r = await cardPvpInviteRequest('card_battle_invites?on_conflict=sender_id,target_id', { method: 'POST', body: [{ sender_id: selfId, target_id: targetId, room_code: room }], prefer: 'resolution=merge-duplicates,return=minimal' });
+  return r !== null;
+};
+// 自分に届いている3分以内の招待 [{ senderId, roomCode, createdAt }](新しい順)
+const sbFetchCardInvites = async (selfId, nowMs) => {
+  if (!CARD_PVP_INVITE_ID_RE.test(String(selfId))) return [];
+  const since = new Date(nowMs - CARD_PVP_INVITE_TTL_MS).toISOString();
+  const rows = await cardPvpInviteRequest(`card_battle_invites?select=sender_id,room_code,created_at&target_id=eq.${selfId}&created_at=gte.${encodeURIComponent(since)}&order=created_at.desc&limit=20`);
+  return (Array.isArray(rows) ? rows : []).map((row) => ({ senderId: typeof row.sender_id === 'string' ? row.sender_id : '', roomCode: rhythmMultiNormalizeCode(row.room_code), createdAt: Date.parse(row.created_at) || 0 }))
+    .filter((x) => CARD_PVP_INVITE_ID_RE.test(x.senderId) && x.roomCode && nowMs - x.createdAt <= CARD_PVP_INVITE_TTL_MS);
+};
+// 招待の相手(承認済みのフレンドだけ)。フレンドの表が無い環境では空。検査のときは window.__mhCardPvpRosterTest を使う
+const cardPvpRoster = async (selfId) => {
+  if (typeof window !== 'undefined' && Array.isArray(window.__mhCardPvpRosterTest)) return window.__mhCardPvpRosterTest;
+  if (typeof sbFetchFriendRoster !== 'function') return [];
+  try { return await sbFetchFriendRoster(selfId); } catch (_) { return []; }
+};
+
 // 部屋の状態は React の外に置く(対戦の画面へ行って戻っても、部屋は切れない。モンヒロビートの RHYTHM_MULTI と同じ)
 const CARD_PVP = (() => {
   const listeners = new Set();
@@ -552,6 +590,33 @@ const CardPvpLobby = ({ deck, deckIssues = [], onStart, onBack, onReward, assist
   useEffect(() => { storeGet(CARD_PVP_PENALTY_KEY, 0, false).then((v) => setPenaltyUntil(cardPvpNormalizePenalty(v))).catch(() => {}); }, [room.phase]);
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
   const penaltyMin = penaltyUntil > now ? Math.ceil((penaltyUntil - now) / 60000) : 0;
+  // フレンドから招待: 自分のブリーダーid・名簿(承認済みのフレンド)・届いている招待
+  const [selfBid, setSelfBid] = useState('');
+  const [roster, setRoster] = useState(null);
+  const [invites, setInvites] = useState([]);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [invited, setInvited] = useState({});
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const id = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
+      if (!alive || typeof id !== 'string') return;
+      setSelfBid(id);
+      const list = await cardPvpRoster(id);
+      if (alive) setRoster(Array.isArray(list) ? list : []);
+    })();
+    return () => { alive = false; };
+  }, []);
+  // 部屋に入っていないあいだだけ、8秒おきに招待を読む(承認済みのフレンドからの3分以内だけ)
+  useEffect(() => {
+    if (room.phase !== 'idle' || !selfBid || !roster || !roster.length) { setInvites([]); return undefined; }
+    let alive = true;
+    const ids = new Map(roster.map((f) => [f.otherId, f.userName]));
+    const load = async () => { const list = await sbFetchCardInvites(selfBid, Date.now()); if (alive) setInvites(list.filter((x) => ids.has(x.senderId)).map((x) => ({ ...x, name: ids.get(x.senderId) }))); };
+    void load();
+    const t = setInterval(load, CARD_PVP_INVITE_POLL_MS);
+    return () => { alive = false; clearInterval(t); };
+  }, [room.phase, selfBid, roster]);
   // 報酬: 確かめが「合っている」か「確かめられない(相手が抜けた・封が届かない)」になったら、1回だけ渡す
   const rewardRef = useRef(onReward);
   rewardRef.current = onReward;
@@ -641,6 +706,17 @@ const CardPvpLobby = ({ deck, deckIssues = [], onStart, onBack, onReward, assist
           {penaltyMin === 0 && !ready && <p className="rounded-xl border border-amber-300/40 bg-amber-500/10 p-2 text-[13px] font-bold text-amber-100">{deckIssues.join('・') || 'デッキがありません'}</p>}
           <button type="button" data-card-pvp-free disabled={!ready} className={`${btn} mh-button-primary`} onClick={() => { Audio_.fgSe.tap(); void CARD_PVP.free(profile, deck); }}>だれとでも</button>
           <button type="button" data-card-pvp-create disabled={!ready} className={`${btn} border border-sky-300/40 bg-slate-900 text-sky-100`} onClick={() => { Audio_.fgSe.tap(); void CARD_PVP.create(profile, deck); }}>合言葉で部屋を作る</button>
+          {invites.length > 0 && (
+            <div data-card-pvp-invites className="space-y-2 rounded-2xl border border-emerald-300/40 bg-emerald-500/10 p-3">
+              {invites.slice(0, 3).map((x) => (
+                <div key={`${x.senderId}-${x.roomCode}`} className="flex items-center gap-2">
+                  <p className="min-w-0 flex-1 text-[13px] font-bold text-emerald-50" style={JA_WRAP_STYLE}>{jaWrap(`${x.name || 'フレンド'}さんから、マルチ対戦の招待が届いています`)}</p>
+                  <button type="button" data-card-pvp-accept={x.roomCode} disabled={!ready} className="mh-button mh-button-primary min-h-[44px] shrink-0 rounded-xl px-3 text-[13px] font-black disabled:opacity-40"
+                    onClick={() => { Audio_.fgSe.tap(); CARD_PVP.join(x.roomCode, profile, deck); }}>参加する</button>
+                </div>
+              ))}
+            </div>
+          )}
           <div className="rounded-2xl border border-white/10 bg-slate-900/80 p-3">
             <p className="mb-2 text-[13px] font-bold text-slate-300">友だちの合言葉で入る</p>
             <div className="flex gap-2">
@@ -670,6 +746,25 @@ const CardPvpLobby = ({ deck, deckIssues = [], onStart, onBack, onReward, assist
             <p className="text-[13px] font-bold text-sky-100">合言葉</p>
             <p data-card-pvp-room className="my-1 text-[40px] font-black tracking-[.3em] text-white">{room.code}</p>
             <p className="text-[13px] font-bold text-slate-200">{room.phase === 'connecting' ? 'つないでいます…' : room.foe ? `${room.foe.name}さんが来ました。始めます…` : 'この合言葉を友だちに伝えて、待っています…'}</p>
+            {/* フレンドから招待(区切り4): 承認済みのフレンドの名簿から選ぶ。フレンドがいない・表が無いときは出さない */}
+            {room.phase === 'waiting' && !room.foe && roster && roster.length > 0 && (
+              <div className="mt-3 text-left">
+                <button type="button" data-card-pvp-invite className={`${btn} border border-emerald-300/40 bg-slate-900 text-emerald-100`} onClick={() => { Audio_.fgSe.tap(); setInviteOpen((v) => !v); }}>フレンドを招待する</button>
+                {inviteOpen && (
+                  <ul data-card-pvp-roster className="mt-2 max-h-[40vh] space-y-1 overflow-y-auto">
+                    {roster.slice(0, 30).map((f) => (
+                      <li key={f.otherId} className="flex items-center gap-2 rounded-xl bg-black/30 px-2 py-1.5">
+                        <span className="min-w-0 flex-1 truncate text-[13px] font-bold text-white">{f.userName}</span>
+                        <button type="button" data-card-pvp-invite-to={f.otherId} disabled={invited[f.otherId] === 'sent'} className="mh-button mh-button-primary min-h-[36px] rounded-lg px-3 text-[12px] font-black disabled:opacity-50"
+                          onClick={async () => { Audio_.fgSe.tap(); const ok = await sbSendCardInvite(selfBid, f.otherId, room.code); setInvited((cur) => ({ ...cur, [f.otherId]: ok ? 'sent' : 'ng' })); }}>
+                          {invited[f.otherId] === 'sent' ? '招待しました' : invited[f.otherId] === 'ng' ? '送れませんでした' : '招待する'}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
           </div>
         )}
         {room.phase === 'error' && <p className="rounded-xl border border-rose-300/40 bg-rose-500/10 p-3 text-[13px] font-bold text-rose-100">{room.error}</p>}
