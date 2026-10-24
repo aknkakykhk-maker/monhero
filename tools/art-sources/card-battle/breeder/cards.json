@@ -1,0 +1,205 @@
+{
+ "note": "社長から 2026-10-24 に受け取ったブリーダーのカード全種。**画像は英語版**(名前・文が英語)。日本語の名前はスターターの表(starter-decklists)で分かったものだけ入れ、ほかは null。文の日本語は無い(text は null・text_en に英語のまま)。数字はカード部が拡大して確かめた",
+ "category": "ブリーダー",
+ "skills": [
+  {
+   "no": "112",
+   "name": "加勢",
+   "name_en": "Help",
+   "kind": "ちから",
+   "kind_en": "POW",
+   "category": "ブリーダー",
+   "damage": 1,
+   "guts": 1,
+   "text": null,
+   "text_en": "Cannot be played to defeat a monster."
+  },
+  {
+   "no": "113",
+   "name": "カララギマンゴー",
+   "name_en": "Mango",
+   "kind": "特殊",
+   "kind_en": "SPE",
+   "category": "ブリーダー",
+   "guts": 0,
+   "text": null,
+   "text_en": "Heal 1 HP from one of your monsters."
+  },
+  {
+   "no": "114",
+   "name": null,
+   "name_en": "Wild Rush",
+   "kind": "特殊",
+   "kind_en": "SPE",
+   "category": "ブリーダー",
+   "guts": 3,
+   "text": null,
+   "text_en": "Can only be played as the first and only card in your BATTLE STEP. The top 5 cards of your deck become GUTS."
+  },
+  {
+   "no": "122",
+   "name": null,
+   "name_en": "Last Trump",
+   "kind": "特殊",
+   "kind_en": "SPE",
+   "category": "ブリーダー",
+   "guts": 0,
+   "text": null,
+   "text_en": "Return one card from your hand to your deck. Shuffle and draw one card."
+  },
+  {
+   "no": "126",
+   "name": null,
+   "name_en": "Fainted",
+   "kind": "特殊",
+   "kind_en": "SPE",
+   "category": "ブリーダー",
+   "guts": 5,
+   "text": null,
+   "text_en": "Both players lose ALL GUTS."
+  },
+  {
+   "no": "127",
+   "name": null,
+   "name_en": "Twinkling",
+   "kind": "特殊",
+   "kind_en": "SPE",
+   "category": "ブリーダー",
+   "guts": 4,
+   "text": null,
+   "text_en": "If you have only one monster left, take your entire deck and place it in your GUTS pile."
+  },
+  {
+   "no": "128",
+   "name": null,
+   "name_en": "Reborn",
+   "kind": "特殊",
+   "kind_en": "SPE",
+   "category": "ブリーダー",
+   "guts": 2,
+   "text": null,
+   "text_en": "Bring back your defeated Phoenix with 4 HP. It returns exhausted."
+  },
+  {
+   "no": "252",
+   "name": null,
+   "name_en": "Busy Time",
+   "kind": "特殊",
+   "kind_en": "SPE",
+   "category": "ブリーダー",
+   "guts": 0,
+   "text": null,
+   "text_en": "Return all of your GUTS to your deck, then shuffle it."
+  },
+  {
+   "no": "253",
+   "name": null,
+   "name_en": "Powder",
+   "kind": "特殊",
+   "kind_en": "SPE",
+   "category": "ブリーダー",
+   "guts": 0,
+   "text": null,
+   "text_en": "Remove 1 HP from one of your monsters. Draw a card."
+  },
+  {
+   "no": "254",
+   "name": null,
+   "name_en": "Nuts Oil",
+   "kind": "特殊",
+   "kind_en": "SPE",
+   "category": "ブリーダー",
+   "guts": 2,
+   "text": null,
+   "text_en": "Remove exhaustion from one of your monsters."
+  },
+  {
+   "no": "276",
+   "name": null,
+   "name_en": "Support",
+   "kind": "特殊",
+   "kind_en": "SPE",
+   "category": "ブリーダー",
+   "guts": 0,
+   "text": null,
+   "text_en": "Play with a Breeder card that costs 3 or less GUTS. Ignore its cost."
+  },
+  {
+   "no": "277",
+   "name": null,
+   "name_en": "Complicated",
+   "kind": "特殊",
+   "kind_en": "SPE",
+   "category": "ブリーダー",
+   "guts": 1,
+   "text": null,
+   "text_en": "Choose an opponent's monster. It cannot attack next turn."
+  },
+  {
+   "no": "278",
+   "name": null,
+   "name_en": "Fake Cry",
+   "kind": "特殊",
+   "kind_en": "SPE",
+   "category": "ブリーダー",
+   "guts": 1,
+   "text": null,
+   "text_en": "Opponent loses 1 GUTS."
+  },
+  {
+   "no": "279",
+   "name": null,
+   "name_en": "Refresh",
+   "kind": "特殊",
+   "kind_en": "SPE",
+   "category": "ブリーダー",
+   "guts": 1,
+   "text": null,
+   "text_en": "Discard all cards in your hand. Draw the same amount."
+  },
+  {
+   "no": "280",
+   "name": null,
+   "name_en": "Pray",
+   "kind": "防御",
+   "kind_en": "BLK",
+   "category": "ブリーダー",
+   "guts": 0,
+   "text": null,
+   "text_en": "Play this when the opponent plays an ENV card. Ignore its effect and discard it."
+  },
+  {
+   "no": "351",
+   "name": null,
+   "name_en": "Mint Leaf",
+   "kind": "特殊",
+   "kind_en": "SPE",
+   "category": "ブリーダー",
+   "guts": 0,
+   "text": null,
+   "text_en": "Remove the Cannot Attack effect from one of your monsters."
+  },
+  {
+   "no": "352",
+   "name": null,
+   "name_en": "Fusion",
+   "kind": "特殊",
+   "kind_en": "SPE",
+   "category": "ブリーダー",
+   "guts": 0,
+   "text": null,
+   "text_en": "Sacrifice 2 of your monsters. Replace them with a mixedbred that has the MAIN of one and the SUB of the other. It enters exhausted."
+  },
+  {
+   "no": "366",
+   "name": null,
+   "name_en": "Shadow Bind",
+   "kind": "特殊",
+   "kind_en": "SPE",
+   "category": "ブリーダー",
+   "guts": 0,
+   "text": null,
+   "text_en": "Play with a POW/INT move. Name a BLK/DGE card. It cannot be played."
+  }
+ ]
+}

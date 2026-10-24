@@ -1,0 +1,215 @@
+{
+ "note": "社長から 2026-10-24 に受け取った全モンスター(どのモンスターでも使える技)のカード全種。**画像は英語版**(名前・文が英語)。日本語の名前はスターターの表(starter-decklists)で分かったものだけ入れ、ほかは null。文の日本語は無い(text は null・text_en に英語のまま)。数字はカード部が拡大して確かめた",
+ "category": "全モンスター",
+ "skills": [
+  {
+   "no": "109",
+   "name": null,
+   "name_en": "Dodge",
+   "kind": "回避",
+   "kind_en": "DGE",
+   "category": "全モンスター",
+   "guts": 0,
+   "text": null,
+   "text_en": "Dodges a POW/INT move. Lose all your GUTS."
+  },
+  {
+   "no": "110",
+   "name": null,
+   "name_en": "Will Power",
+   "kind": "特殊",
+   "kind_en": "SPE",
+   "category": "全モンスター",
+   "guts": 1,
+   "text": null,
+   "text_en": "Play with a POW/INT move from a monster that has 2 or less HP. It doubles the damage."
+  },
+  {
+   "no": "111",
+   "name": "底力",
+   "name_en": "Grit",
+   "kind": "防御",
+   "kind_en": "BLK",
+   "category": "全モンスター",
+   "guts": 2,
+   "text": null,
+   "text_en": "If this monster would reach exactly 0 HP from a POW/INT move, it survives with 1 HP instead."
+  },
+  {
+   "no": "121",
+   "name": null,
+   "name_en": "Critical",
+   "kind": "特殊",
+   "kind_en": "SPE",
+   "category": "全モンスター",
+   "guts": 2,
+   "text": null,
+   "text_en": "Play this with a POW/INT move. +2 damage."
+  },
+  {
+   "no": "123",
+   "name": null,
+   "name_en": "Retreat",
+   "kind": "回避",
+   "kind_en": "DGE",
+   "category": "全モンスター",
+   "guts": 1,
+   "text": null,
+   "text_en": "Can be played only if your opponent plays a card that damages multiple monsters. They all dodge it."
+  },
+  {
+   "no": "124",
+   "name": null,
+   "name_en": "Grand End",
+   "kind": "特殊",
+   "kind_en": "SPE",
+   "category": "全モンスター",
+   "guts": 0,
+   "text": null,
+   "text_en": "Can only be played if your deck is empty. Play this with a POW/INT move. Triples the damage."
+  },
+  {
+   "no": "125",
+   "name": null,
+   "name_en": "Good Luck",
+   "kind": "特殊",
+   "kind_en": "SPE",
+   "category": "全モンスター",
+   "guts": 0,
+   "text": null,
+   "text_en": "Sacrifice this monster. Take cards from your discards equal to its remaining HP and place them in your GUTS pile."
+  },
+  {
+   "no": "249",
+   "name": null,
+   "name_en": "Jump In",
+   "kind": "防御",
+   "kind_en": "BLK",
+   "category": "全モンスター",
+   "guts": 0,
+   "text": null,
+   "text_en": "Play against a POW move. Take double damage. Triples the damage of this monster's POW moves next turn."
+  },
+  {
+   "no": "250",
+   "name": null,
+   "name_en": "Last Man",
+   "kind": "特殊",
+   "kind_en": "SPE",
+   "category": "全モンスター",
+   "guts": 1,
+   "text": null,
+   "text_en": "If this is your last monster, it can attack this turn without becoming exhausted."
+  },
+  {
+   "no": "251",
+   "name": null,
+   "name_en": "Rage",
+   "kind": "特殊",
+   "kind_en": "SPE",
+   "category": "全モンスター",
+   "guts": 1,
+   "text": null,
+   "text_en": "This monster cannot play BLK/DGE until your next turn. Doubles the damage of this monster next turn."
+  },
+  {
+   "no": "273",
+   "name": null,
+   "name_en": "Blow Away",
+   "kind": "特殊",
+   "kind_en": "SPE",
+   "category": "全モンスター",
+   "guts": 0,
+   "text": null,
+   "text_en": "Choose an opponent's monster. It cannot attack next turn."
+  },
+  {
+   "no": "274",
+   "name": null,
+   "name_en": "Concentrate",
+   "kind": "特殊",
+   "kind_en": "SPE",
+   "category": "全モンスター",
+   "guts": 1,
+   "text": null,
+   "text_en": "Play with a POW/INT move. Any BLK/DGE that costs zero GUTS cannot be played."
+  },
+  {
+   "no": "275",
+   "name": null,
+   "name_en": "Persistence",
+   "kind": "防御",
+   "kind_en": "BLK",
+   "category": "全モンスター",
+   "guts": 1,
+   "text": null,
+   "text_en": "Play against a POW/INT move that lowers your GUTS. It will have no effect."
+  },
+  {
+   "no": "345",
+   "name": null,
+   "name_en": "Desperation",
+   "kind": "特殊",
+   "kind_en": "SPE",
+   "category": "全モンスター",
+   "guts": 0,
+   "text": null,
+   "text_en": "Play with a POW/INT move from a monster that has 2 or less HP. +2 damage."
+  },
+  {
+   "no": "346",
+   "name": null,
+   "name_en": "Pureblood",
+   "kind": "特殊",
+   "kind_en": "SPE",
+   "category": "全モンスター",
+   "guts": 0,
+   "text": null,
+   "text_en": "Play with a POW/INT move from a purebred monster. It cannot be dodged by a mixedbred monster."
+  },
+  {
+   "no": "347",
+   "name": null,
+   "name_en": "Raid",
+   "kind": "特殊",
+   "kind_en": "SPE",
+   "category": "全モンスター",
+   "guts": 1,
+   "text": null,
+   "text_en": "Play with a POW/INT move that damages multiple monsters. The cost is halved, rounded up."
+  },
+  {
+   "no": "348",
+   "name": null,
+   "name_en": "Ancient Echo",
+   "kind": "特殊",
+   "kind_en": "SPE",
+   "category": "全モンスター",
+   "guts": 1,
+   "text": null,
+   "text_en": "Play with a SPE move. Allows a mixedbred monster to play a SPE move from its sub-monster."
+  },
+  {
+   "no": "349",
+   "name": null,
+   "name_en": "Flanking",
+   "kind": "特殊",
+   "kind_en": "SPE",
+   "category": "全モンスター",
+   "guts": 1,
+   "text": null,
+   "text_en": "Play with a POW/INT move. It cannot be dodged or blocked by a monster that has already used a BLK/DGE this turn."
+  },
+  {
+   "no": "350",
+   "name": null,
+   "name_en": "Shield of Light",
+   "kind": "防御",
+   "kind_en": "BLK",
+   "category": "全モンスター",
+   "guts": 1,
+   "text": null,
+   "text_en": "Blocks 1 damage from a POW move."
+  }
+ ]
+}
