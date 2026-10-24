@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 19ccba7ef38df16d
+// generated-sha256: 2d1df7099cf6e8cf
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-24 20:42"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-24 21:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -51191,25 +51191,25 @@ const cardTutorialFinish = (tutorial, outcome, now) => {
 // ★ルールを変えたら、ここの文と 82 の本体を両方直す。カードの文はルールより優先する(1-3 のいちばん大事な決まり)
 // ★1つの節は短い箇条書き。画面の幅で読みやすいよう、1行は40字くらいまで
 const CARD_RULE_PAGES = Object.freeze([
-  { id: 'deck', icon: '🃏', title: 'デッキ', lines: [
+  { id: 'deck', emoji: '🃏', title: 'デッキ', lines: [
     'モンスター3体と、技などのカード50枚で1つのデッキ',
     '同じモンスターは1体まで(キラ・別絵キラも同じモンスター)。同じ種族でも、別の混血モンスターなら入れてよい',
     '同じ名前のカードは3枚まで',
     'デッキ編成で5つまで作れる。★のデッキで対戦する',
   ] },
-  { id: 'start', icon: '🎲', title: '始め方', lines: [
+  { id: 'start', emoji: '🎲', title: '始め方', lines: [
     '先攻・後攻はランダム。おたがいに手札を5枚引く',
     '後攻は、始める前に手札から2枚までガッツにできる',
     'そのあと、おたがいのモンスターを表にして、先攻の番から始める',
   ] },
-  { id: 'turn', icon: '🔁', title: 'ターンの流れ', lines: [
+  { id: 'turn', emoji: '🔁', title: 'ターンの流れ', lines: [
     '① 引く: 手札が5枚になるまで山札から引く(先攻の1ターン目は引かない)',
     '手札がもう5枚あるときは、山札のいちばん上が1枚ガッツになる',
     '② 攻撃: 技を使う(使わない子がいてもよい)',
     '③ ガッツ: 手札から好きな枚数をガッツにする',
     '④ 「ターン終了」で相手の番へ',
   ] },
-  { id: 'attack', icon: '⚔️', title: '攻撃', lines: [
+  { id: 'attack', emoji: '⚔️', title: '攻撃', lines: [
     'それぞれのモンスターは、1ターンに攻撃の技(ちから・かしこさ・特殊)を1枚まで',
     '3体がそれぞれ1枚ずつ使ってよく、順番は自由',
     '技はカードに書いてあるモンスターだけが使える。「全モンスター」のカードは誰でも使える',
@@ -51217,30 +51217,30 @@ const CARD_RULE_PAGES = Object.freeze([
     'ブリーダーのカードは、モンスターの攻撃とは別に1ターンに1枚まで',
     '混血モンスターは、攻撃・特殊はメインの種族の技、防御・回避はサブの種族の技も使える',
   ] },
-  { id: 'guard', icon: '🛡️', title: '守り', lines: [
+  { id: 'guard', emoji: '🛡️', title: '守り', lines: [
     '攻撃された側は、回避・防御のカードを何枚でも出せる(ガッツが足りる限り)',
     '回避はよけてダメージを0にする。防御はダメージを減らす',
     'そのモンスターの守りのカードは、その子が狙われたときだけ使える。「全モンスター」の守りは、狙われた子が使う',
     '特殊技は、ふつうの回避・防御では守れない',
     '守っても、次の自分の番の攻撃はなくならない',
   ] },
-  { id: 'guts', icon: '💰', title: 'ガッツ', lines: [
+  { id: 'guts', emoji: '💰', title: 'ガッツ', lines: [
     '技を使うためのもの。カード1枚で1ガッツ',
     'ガッツはプレイヤーごと(モンスターごとではない)。何枚あるかは相手にも見える',
     '使ったガッツは捨て札へ。ガッツにしたカードは技として使い直せない',
     'ガッツをためすぎると山札が減る。山札切れに気をつけよう',
   ] },
-  { id: 'field', icon: '☁️', title: '空中・地上・水中', lines: [
+  { id: 'field', emoji: '☁️', title: '空中・地上・水中', lines: [
     'モンスターカードの右上の丸がそのモンスターの特徴(空中・地上・水中)',
     '技の文が特徴にふれていれば、そのとおり(「空中にいるモンスターには当たらない」など)',
   ] },
-  { id: 'win', icon: '🏆', title: '勝ち負け', lines: [
+  { id: 'win', emoji: '🏆', title: '勝ち負け', lines: [
     '相手のモンスター3体を全員KOしたら勝ち',
     '相手が引くときに山札が無かったら勝ち(山札切れ)',
     '相手が投了したら勝ち',
     '両方の最後の1体が同時にKOされたときは、攻撃した側の勝ち',
   ] },
-  { id: 'text', icon: '📜', title: 'カードの文がいちばん', lines: [
+  { id: 'text', emoji: '📜', title: 'カードの文がいちばん', lines: [
     'カードに書いてある文は、ここの決まりより先に効く',
     '「同時に使用できる」「同一ターンに連続して使用できる」などは、その文のとおり',
     'カードを長押しすると、大きな絵と文が見られる',
@@ -52495,7 +52495,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
 // ---- part: 87-card-deck-edit.jsx ----
 // ==================== 画面: MFバトルカード デッキ編成・カード図鑑・ルールの画面(区切り2) ====================
 // トップの「デッキ編成」から入る(社長: デッキ編成はトップ画面に置く)。設計: docs/spec/CARD_BATTLE.md 5-2
-//   CardDeckList   … デッキの一覧(5つまで)。使うデッキを決める・組む・新しく作る・写す・消す
+//   CardDeckList   … デッキの一覧(5つまで)。使うデッキを決める・組む・新しく作る・コピー・消す
 //   CardDeckEditor … 1つのデッキを組む。上にモンスター3体の枠、下に持っているカード(タブ: 技/モンスター/デッキの中)
 // ★決まり(同じモンスターは1体まで・同じ名前のカードは3枚まで・50枚)は 82-card-battle-core.jsx の
 //   cardDeckProblems / cardDeckAddReason / cardDeckOwnProblems が正本。この部品は画面だけを持つ
@@ -52515,7 +52515,7 @@ const CardDeckTile = ({ db, no, inDeck = 0, owned = 0, dim = false, press, onTap
   return (
     <button type="button" data-card-deck-tile={no} {...press(no, onTap)} className={`relative flex flex-col items-center rounded-lg p-0.5 text-center active:scale-95 ${dim ? 'opacity-40' : ''} ${inDeck > 0 ? 'bg-emerald-500/15 ring-2 ring-emerald-300/70' : 'bg-white/5'}`} style={{ WebkitUserSelect: 'none', userSelect: 'none' }}>
       <img src={CARD_IMG(c ? c.img : m ? m.img : no)} alt={name} draggable={false} onDragStart={(e) => e.preventDefault()} className="aspect-[5/7] w-full rounded-[5px] object-cover"/>
-      <span className="absolute right-0.5 top-0.5 rounded-md bg-slate-950/90 px-1 text-[10px] font-black text-white">{inDeck}/{owned}</span>
+      <span data-card-deck-badge className="absolute right-0.5 top-0.5 rounded-md bg-slate-950/90 px-1 text-[10px] font-black text-white"><span className="text-emerald-300">入{inDeck}</span>/持{owned}</span>
       {mark && <span className="absolute left-0.5 top-0.5 rounded-md bg-amber-400 px-1 text-[9px] font-black text-slate-950">{mark}</span>}
       <span className="mt-0.5 line-clamp-2 min-h-[26px] text-[10px] font-bold leading-tight text-slate-100" style={JA_WRAP_STYLE}>{name}</span>
     </button>
@@ -52588,6 +52588,7 @@ const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel }) => {
             <div data-card-deck-ready={ready ? 'ok' : 'ng'} className={`text-[11px] font-black ${ready ? 'text-emerald-300' : 'text-amber-200'}`}>{ready ? '対戦に使えます' : 'まだ対戦に使えません'}</div>
           </div>
         </div>
+        <div data-card-deck-legend className="text-[10px] font-bold text-slate-400">カードの右上: <span className="text-emerald-300">入</span>=デッキに入れた枚数 / 持=持っている枚数</div>
         {!ready && <div data-card-deck-problems className="text-[11px] font-bold leading-snug text-rose-300" style={JA_WRAP_STYLE}>{[...rules, ...own].slice(0, 2).join(' / ')}</div>}
         {notice && <div data-card-deck-notice className="text-[12px] font-black text-amber-200">{notice}</div>}
       </div>
@@ -52652,7 +52653,7 @@ const CardDeckList = ({ db, collection, decks, onBack, onEdit, onPut, onRemove, 
               <div className="mt-2 grid grid-cols-4 gap-1">
                 <button type="button" data-card-deck-use={d.id} disabled={on || !ready} className={`${btn} ${on ? 'bg-amber-300 text-slate-950' : 'border border-amber-300/50 bg-amber-900/40 text-amber-100'}`} onClick={() => { Audio_.se.tap(); onActive(d.id); }}>{on ? '使用中' : '使う'}</button>
                 <button type="button" data-card-deck-open={d.id} className={`${btn} mh-button-primary`} onClick={() => { Audio_.se.tap(); onEdit(d); }}>組む</button>
-                <button type="button" data-card-deck-copy={d.id} disabled={full} className={`${btn} border border-white/20 bg-slate-800`} onClick={() => { Audio_.se.tap(); onPut({ ...d, id: cardNewDeckId(decks.decks, Date.now()), name: `${d.name}のコピー`.slice(0, 20), monsters: d.monsters.slice(), cards: d.cards.slice() }); }}>写す</button>
+                <button type="button" data-card-deck-copy={d.id} disabled={full} className={`${btn} border border-white/20 bg-slate-800`} onClick={() => { Audio_.se.tap(); onPut({ ...d, id: cardNewDeckId(decks.decks, Date.now()), name: `${d.name}のコピー`.slice(0, 20), monsters: d.monsters.slice(), cards: d.cards.slice() }); }}>コピー</button>
                 <button type="button" data-card-deck-del={d.id} disabled={decks.decks.length <= 1} className={`${btn} border border-rose-300/40 bg-rose-950/50 text-rose-100`} onClick={() => setConfirmDel(d)}>消す</button>
               </div>
             </div>
@@ -52733,7 +52734,7 @@ const CardRules = ({ onBack, onTutorial }) => (
     <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-2`}>
       {CARD_RULE_PAGES.map((pg) => (
         <div key={pg.id} data-card-rule={pg.id} className={SCREEN_PANEL_CLASS}>
-          <div className="text-[14px] font-black text-amber-200">{pg.icon} {pg.title}</div>
+          <div className="text-[14px] font-black text-amber-200">{pg.emoji} {pg.title}</div>
           <ul className="mt-1 space-y-0.5">
             {pg.lines.map((t, i) => <li key={i} className="flex gap-1 text-[12px] font-bold leading-snug text-slate-100" style={JA_WRAP_STYLE}><span className="shrink-0 text-amber-300">・</span><span>{jaWrap(t)}</span></li>)}
           </ul>

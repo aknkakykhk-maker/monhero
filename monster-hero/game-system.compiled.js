@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e5652bbd8e0fb3c8
+// source-sha256: 85153bd20e6599b8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-24 20:42";
+const BUILD_DATE = "2026-10-24 21:09";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -84307,47 +84307,47 @@ const cardTutorialFinish = (tutorial, outcome, now) => {
 };
 const CARD_RULE_PAGES = Object.freeze([{
   id: 'deck',
-  icon: '🃏',
+  emoji: '🃏',
   title: 'デッキ',
   lines: ['モンスター3体と、技などのカード50枚で1つのデッキ', '同じモンスターは1体まで(キラ・別絵キラも同じモンスター)。同じ種族でも、別の混血モンスターなら入れてよい', '同じ名前のカードは3枚まで', 'デッキ編成で5つまで作れる。★のデッキで対戦する']
 }, {
   id: 'start',
-  icon: '🎲',
+  emoji: '🎲',
   title: '始め方',
   lines: ['先攻・後攻はランダム。おたがいに手札を5枚引く', '後攻は、始める前に手札から2枚までガッツにできる', 'そのあと、おたがいのモンスターを表にして、先攻の番から始める']
 }, {
   id: 'turn',
-  icon: '🔁',
+  emoji: '🔁',
   title: 'ターンの流れ',
   lines: ['① 引く: 手札が5枚になるまで山札から引く(先攻の1ターン目は引かない)', '手札がもう5枚あるときは、山札のいちばん上が1枚ガッツになる', '② 攻撃: 技を使う(使わない子がいてもよい)', '③ ガッツ: 手札から好きな枚数をガッツにする', '④ 「ターン終了」で相手の番へ']
 }, {
   id: 'attack',
-  icon: '⚔️',
+  emoji: '⚔️',
   title: '攻撃',
   lines: ['それぞれのモンスターは、1ターンに攻撃の技(ちから・かしこさ・特殊)を1枚まで', '3体がそれぞれ1枚ずつ使ってよく、順番は自由', '技はカードに書いてあるモンスターだけが使える。「全モンスター」のカードは誰でも使える', 'ガッツが足りない技は使えない。ガッツ0の技はガッツが無くても使える', 'ブリーダーのカードは、モンスターの攻撃とは別に1ターンに1枚まで', '混血モンスターは、攻撃・特殊はメインの種族の技、防御・回避はサブの種族の技も使える']
 }, {
   id: 'guard',
-  icon: '🛡️',
+  emoji: '🛡️',
   title: '守り',
   lines: ['攻撃された側は、回避・防御のカードを何枚でも出せる(ガッツが足りる限り)', '回避はよけてダメージを0にする。防御はダメージを減らす', 'そのモンスターの守りのカードは、その子が狙われたときだけ使える。「全モンスター」の守りは、狙われた子が使う', '特殊技は、ふつうの回避・防御では守れない', '守っても、次の自分の番の攻撃はなくならない']
 }, {
   id: 'guts',
-  icon: '💰',
+  emoji: '💰',
   title: 'ガッツ',
   lines: ['技を使うためのもの。カード1枚で1ガッツ', 'ガッツはプレイヤーごと(モンスターごとではない)。何枚あるかは相手にも見える', '使ったガッツは捨て札へ。ガッツにしたカードは技として使い直せない', 'ガッツをためすぎると山札が減る。山札切れに気をつけよう']
 }, {
   id: 'field',
-  icon: '☁️',
+  emoji: '☁️',
   title: '空中・地上・水中',
   lines: ['モンスターカードの右上の丸がそのモンスターの特徴(空中・地上・水中)', '技の文が特徴にふれていれば、そのとおり(「空中にいるモンスターには当たらない」など)']
 }, {
   id: 'win',
-  icon: '🏆',
+  emoji: '🏆',
   title: '勝ち負け',
   lines: ['相手のモンスター3体を全員KOしたら勝ち', '相手が引くときに山札が無かったら勝ち(山札切れ)', '相手が投了したら勝ち', '両方の最後の1体が同時にKOされたときは、攻撃した側の勝ち']
 }, {
   id: 'text',
-  icon: '📜',
+  emoji: '📜',
   title: 'カードの文がいちばん',
   lines: ['カードに書いてある文は、ここの決まりより先に効く', '「同時に使用できる」「同一ターンに連続して使用できる」などは、その文のとおり', 'カードを長押しすると、大きな絵と文が見られる']
 }]);
@@ -86652,8 +86652,11 @@ const CardDeckTile = ({
     onDragStart: e => e.preventDefault(),
     className: "aspect-[5/7] w-full rounded-[5px] object-cover"
   }), React.createElement("span", {
+    "data-card-deck-badge": true,
     className: "absolute right-0.5 top-0.5 rounded-md bg-slate-950/90 px-1 text-[10px] font-black text-white"
-  }, inDeck, "/", owned), mark && React.createElement("span", {
+  }, React.createElement("span", {
+    className: "text-emerald-300"
+  }, "入", inDeck), "/持", owned), mark && React.createElement("span", {
     className: "absolute left-0.5 top-0.5 rounded-md bg-amber-400 px-1 text-[9px] font-black text-slate-950"
   }, mark), React.createElement("span", {
     className: "mt-0.5 line-clamp-2 min-h-[26px] text-[10px] font-bold leading-tight text-slate-100",
@@ -86801,7 +86804,12 @@ const CardDeckEditor = ({
   }, "/", CARD_BATTLE_DECK_SIZE, "枚")), React.createElement("div", {
     "data-card-deck-ready": ready ? 'ok' : 'ng',
     className: `text-[11px] font-black ${ready ? 'text-emerald-300' : 'text-amber-200'}`
-  }, ready ? '対戦に使えます' : 'まだ対戦に使えません'))), !ready && React.createElement("div", {
+  }, ready ? '対戦に使えます' : 'まだ対戦に使えません'))), React.createElement("div", {
+    "data-card-deck-legend": true,
+    className: "text-[10px] font-bold text-slate-400"
+  }, "カードの右上: ", React.createElement("span", {
+    className: "text-emerald-300"
+  }, "入"), "=デッキに入れた枚数 / 持=持っている枚数"), !ready && React.createElement("div", {
     "data-card-deck-problems": true,
     className: "text-[11px] font-bold leading-snug text-rose-300",
     style: JA_WRAP_STYLE
@@ -86977,7 +86985,7 @@ const CardDeckList = ({
           cards: d.cards.slice()
         });
       }
-    }, "写す"), React.createElement("button", {
+    }, "コピー"), React.createElement("button", {
       type: "button",
       "data-card-deck-del": d.id,
       disabled: decks.decks.length <= 1,
@@ -87144,7 +87152,7 @@ const CardRules = ({
   className: SCREEN_PANEL_CLASS
 }, React.createElement("div", {
   className: "text-[14px] font-black text-amber-200"
-}, pg.icon, " ", pg.title), React.createElement("ul", {
+}, pg.emoji, " ", pg.title), React.createElement("ul", {
   className: "mt-1 space-y-0.5"
 }, pg.lines.map((t, i) => React.createElement("li", {
   key: i,

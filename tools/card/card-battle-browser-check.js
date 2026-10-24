@@ -59,7 +59,8 @@ const layoutIssues = async (page) => page.evaluate(() => {
   return out;
 });
 const layoutSeen = [];
-const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive: true }); await page.screenshot({ path: path.join(SHOT, `${name}.png`) }).catch(() => {}); } };
+// 写真には、押した跡の波紋(TapRippleLayer の白い丸)を写さない(社長に見せる写真のため)
+const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive: true }); await page.screenshot({ path: path.join(SHOT, `${name}.png`), style: 'div[style*="2147483647"] > span { display: none !important; }' }).catch(() => {}); } };
   try {
     browser = await playwright.chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
     const page = await browser.newPage({ viewport: { width: VW, height: VH } });
@@ -437,10 +438,16 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const monCount = await page.locator('[data-card-deck-mon] img').count();
     // 同じ種類の2体目は入らない(キラがあれば)・技は「使える子だけ」で絞って入れる
     await page.getByRole('tab', { name: /技・ブリーダー/ }).click();
-    let sameNameStop = '';
+    let sameNameStop = '', shortShot = false, shortProblems = '';
     for (let guard = 0; guard < 400; guard++) {
       const n = Number((await page.locator('[data-card-deck-count]').innerText()).replace(/\/.*$/, '').trim());
       if (n >= 50) break;
+      if (n >= 47 && !shortShot) {
+        shortShot = true;
+        await page.evaluate(() => document.querySelectorAll('[data-card-deck-edit] .mh-scroll').forEach((el) => { el.scrollTop = 0; }));
+        shortProblems = await page.locator('[data-card-deck-problems]').innerText().catch(() => '');
+        if (SHOT) await shot(page, '19b-deck-short');
+      }
       const tiles = page.locator('[data-card-deck-tile]');
       const k = await tiles.count();
       let added = false;
@@ -464,6 +471,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const names = {};
     (newDeck ? newDeck.cards : []).forEach((no) => { names[no] = 1; });
     check('⑭ デッキ編成: 新しいデッキにモンスター3体・50枚を入れて保存できる', monCount === 3 && deckReady === 'ok' && savedDecks && savedDecks.decks.length === 2 && newDeck.monsters.length === 3 && newDeck.cards.length === 50, JSON.stringify({ monCount, deckReady, n: savedDecks && savedDecks.decks.length, cards: newDeck && newDeck.cards.length }));
+    check('⑭ 50枚に足りないデッキは「まだ対戦に使えません」と、あと何枚かが出る', /あと\d+枚/.test(shortProblems), shortProblems);
     check('⑭ 同じ名前4枚目・持っている枚数を超える分は入らない(理由が出る)', /3枚まで|持っているのは/.test(sameNameStop), sameNameStop);
     await page.locator(`[data-card-deck-use="${newDeck.id}"]`).click();
     await page.waitForTimeout(300);
