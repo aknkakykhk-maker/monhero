@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d76b92dc5d0d0e4a
+// source-sha256: 2875dbdd80f64a38
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-25 04:25";
+const BUILD_DATE = "2026-10-25 04:40";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -17000,6 +17000,9 @@ const AssistantFace = ({
     }
   }, who.emoji));
 };
+const helpWrap = x => typeof x === 'string' && typeof jaWrap === 'function' ? React.createElement("span", {
+  style: typeof JA_WRAP_STYLE !== 'undefined' ? JA_WRAP_STYLE : undefined
+}, jaWrap(x)) : x;
 const renderHelpBlocks = (blocks, accent) => (blocks || []).map((b, i) => {
   if (b.t === 'video') return React.createElement("div", {
     key: i,
@@ -17015,7 +17018,7 @@ const renderHelpBlocks = (blocks, accent) => (blocks || []).map((b, i) => {
     id: b.video
   }), b.text && React.createElement("div", {
     className: "text-[12px] text-slate-300 leading-relaxed mt-2"
-  }, b.text));
+  }, helpWrap(b.text)));
   if (b.t === 'note') return React.createElement("div", {
     key: i,
     className: "rounded-2xl p-4 border",
@@ -17027,13 +17030,13 @@ const renderHelpBlocks = (blocks, accent) => (blocks || []).map((b, i) => {
     className: "text-[11px] font-black text-white mb-1"
   }, b.title), React.createElement("div", {
     className: "text-[12px] text-slate-300 leading-relaxed"
-  }, b.text));
+  }, helpWrap(b.text)));
   if (b.t === 'list') return React.createElement("ul", {
     key: i,
     className: "text-[12px] text-slate-300 leading-relaxed space-y-2 list-disc pl-5"
   }, b.items.map((x, j) => React.createElement("li", {
     key: j
-  }, x)));
+  }, helpWrap(x))));
   if (b.t === 'steps') return React.createElement("div", {
     key: i,
     className: "space-y-2.5"
@@ -17047,7 +17050,7 @@ const renderHelpBlocks = (blocks, accent) => (blocks || []).map((b, i) => {
     }
   }, j + 1), React.createElement("span", {
     className: "text-[12px] text-slate-300 leading-relaxed pt-0.5"
-  }, x))));
+  }, helpWrap(x)))));
   if (b.t === 'kv') return React.createElement("div", {
     key: i,
     className: "rounded-2xl bg-black/50 border border-white/5 overflow-hidden"
@@ -17066,7 +17069,7 @@ const renderHelpBlocks = (blocks, accent) => (blocks || []).map((b, i) => {
     height: r[2].notes.length > 1 ? 34 : 42
   }))), r[0]), React.createElement("span", {
     className: "flex-1 text-[11px] text-white leading-relaxed"
-  }, r[1]))));
+  }, helpWrap(r[1])))));
   if (b.t === 'data') {
     const rows = helpDataRows(b.id);
     if (rows.length === 0) return null;
@@ -17086,12 +17089,12 @@ const renderHelpBlocks = (blocks, accent) => (blocks || []).map((b, i) => {
       className: "shrink-0 w-24 text-[11px] font-black text-slate-400 leading-tight"
     }, r[0]), React.createElement("span", {
       className: "flex-1 text-[11px] text-white leading-relaxed"
-    }, r[1])))));
+    }, helpWrap(r[1]))))));
   }
   return React.createElement("p", {
     key: i,
     className: "text-[12px] text-slate-200 leading-relaxed"
-  }, b.text);
+  }, helpWrap(b.text));
 });
 const ASSISTANT_BUBBLE_MODES = ['ALWAYS', 'DAILY', 'OFF'];
 const normalizeAssistantBubbleMode = value => ASSISTANT_BUBBLE_MODES.includes(String(value)) ? String(value) : 'ALWAYS';
@@ -17403,8 +17406,9 @@ const AssistantBubble = ({
       color
     }
   }, who.name), React.createElement("div", {
-    className: "text-[12px] text-white leading-relaxed"
-  }, text)), React.createElement("button", {
+    className: "text-[12px] text-white leading-relaxed",
+    style: bubbleWrapStyle()
+  }, bubbleWrap(text))), React.createElement("button", {
     onClick: () => setOpen(false),
     "aria-label": "説明を閉じる",
     className: "mh-hit-expand relative shrink-0 p-2 bg-white/10 rounded-full active:scale-90"
@@ -17415,7 +17419,7 @@ const AssistantBubble = ({
   }, topic ? renderHelpBlocks(topic.blocks, color) : (paragraphs || []).map((x, i) => React.createElement("p", {
     key: i,
     className: "text-[12px] text-slate-200 leading-relaxed"
-  }, x))), React.createElement("div", {
+  }, helpWrap(x)))), React.createElement("div", {
     className: "shrink-0 p-4 pt-2",
     style: {
       paddingBottom: 'calc(1rem + var(--mh-sa-bottom))'
