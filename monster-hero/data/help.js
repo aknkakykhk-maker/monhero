@@ -2392,6 +2392,7 @@ const HELP_SCREEN_COVERAGE = {
   // MFバトルカード(2026-10-24〜作っている途中。いまはデバッグ設定からだけ入れる)。公開の区切りでヘルプの項目を足して、ここを差し替える
   CARD_TOP: null,
   CARD_BATTLE: null,
+  CARD_PACK_OPEN: null, // パックを開ける(マーケットの「カードポイント」の売り場から)
   // イベント・レイドボス「ジャック」(項目は公開フラグ RAID_JACK_PUBLIC_RELEASE が立つまで出ない)
   RAID_JACK: 'basics/raid-jack',
   RAID_JACK_PREP: 'basics/raid-jack',

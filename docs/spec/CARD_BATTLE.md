@@ -749,6 +749,7 @@ HOME の「MFバトルカード」
 | `mh_card_point_v1` | 数(カードポイント) | 0。マイナス・数でない値は0 |
 | `mh_card_starter_v1` | `{ kit:'speed'|'power'|'miracle', at }` 一度きりの印 | 無ければスターター選びを出す。**ある人には二度と配らない**(二重付与を防ぐ) |
 | `mh_card_pack_pity_v1` | `{ パックid: キラなしで開けた数 }` | `{}` |
+| `mh_card_shop_v1` | `{ starters:{ キットid: 時刻 } }` マーケットで買ったスターターキットの印(区切り2) | `{ starters:{} }`。印があるキットは二度と買えない |
 | `mh_card_daily_v1` | `{ day:'YYYY-MM-DD', cpuCoin, pvpCoin, firstWin, foes:{ ブリーダーid: 戦った数 } }` | 今日の0 |
 | `mh_card_record_v1` | `{ cpu:{win,lose,surrender}, pvp:{win,lose}, recent:[…30件] }` | 0 |
 | `mh_card_bgm_v1` | `{ cpu:'auto' か 曲id, pvp: 曲id }` 対戦の BGM(5-3) | `{ cpu:'auto', pvp:'ichika_battle' }` |

@@ -770,7 +770,8 @@ const CardAssistantArt = ({ src, alt, className = '' }) => {
 };
 
 // onQuickLoops(loops) … 1戦ぶんをクイック周回の周回クリアとして配る(60-app の awardBackQuickLoops)。配れたら配った中身、配れなければ null
-const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', seenStoryIds = [], debug = false, onBgm, onQuickLoops }) => {
+// onOpenMarket … マーケットの「カードポイント」の売り場へ(60-app)
+const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', seenStoryIds = [], debug = false, onBgm, onQuickLoops, onOpenMarket }) => {
   const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
   const [save, setSave] = useState(null);
   const [view, setView] = useState('top');
@@ -1046,7 +1047,6 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   }
 
   // ---- トップ ----
-  const soon = (label) => <button type="button" disabled className={`${btn} border border-white/10 bg-slate-900 text-slate-400`}>{label}<span className="block text-[10px] font-bold">つぎの区切りで作ります</span></button>;
   return (
     <div data-mh-screen data-card-top="top" className={SCREEN_SHELL_CLASS}>
       <ScreenHead title="MFバトルカード" accent="text-amber-200" onBack={onExit} backLabel={exitLabel} note={debug ? 'デバッグ専用(まだ公開していません)' : ''}/>
@@ -1065,7 +1065,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         )}
         {notice && <p className="text-[12px] font-bold text-amber-200">{notice}</p>}
         <button type="button" data-card-cpu className={`${btn} mh-button-primary`} disabled={!activeDeck} onClick={() => { Audio_.se.tap(); setNotice(''); setView('foe'); }}>コンピューター戦</button>
-        <div className="grid grid-cols-2 gap-2"><button type="button" data-card-decks className={`${btn} border border-amber-300/50 bg-amber-900/50 text-amber-50`} onClick={() => { Audio_.se.tap(); setNotice(''); setView('decks'); }}>デッキ編成</button>{soon('マーケットへ')}
+        <div className="grid grid-cols-2 gap-2"><button type="button" data-card-decks className={`${btn} border border-amber-300/50 bg-amber-900/50 text-amber-50`} onClick={() => { Audio_.se.tap(); setNotice(''); setView('decks'); }}>デッキ編成</button><button type="button" data-card-market-open className={`${btn} border border-orange-300/50 bg-orange-900/50 text-orange-50`} disabled={!onOpenMarket} onClick={() => { Audio_.se.tap(); setNotice(''); onOpenMarket && onOpenMarket(); }}>マーケットへ<span className="block text-[10px] font-bold">パック・キット・円盤石</span></button>
           <button type="button" data-card-dex-open className={`${btn} border border-sky-300/50 bg-sky-900/50 text-sky-50`} onClick={() => { Audio_.se.tap(); setNotice(''); setView('dex'); }}>カード図鑑</button>
           {/* 練習試合のやり直しは、ルールの画面の中(ドラの D20「ルールの画面から、いつでもこの練習試合をやり直せる」) */}
           <button type="button" data-card-rules-open className={`${btn} border border-emerald-300/50 bg-emerald-900/60 text-emerald-50`} onClick={() => { Audio_.se.tap(); setNotice(''); setView('rules'); }}>ルール<span className="block text-[10px] font-bold">練習試合もここから</span></button>

@@ -29,10 +29,13 @@ function BreederMarketScreen({
   gold, breederPoints, ownedItems, marketTab, marketExchangeError, purchaseProcessing,
   isItemOwned, previewIcon=null, onBack, onSelectTab, onZoomIcon, onBuy, onOpenDetail, onOpenItemDetail, onExchangeSoulRankRespec,
   onExchangeHeroProof, eventPoints=0, onExchangeEventPoints, onOpenUpcomingDetail, frameConditionOf=null,
+  // MFバトルカードの「カードポイント」の売り場(区切り2)。いまはMFバトルカードのトップの「マーケットへ」から入ったときだけ渡す(デバッグ専用のあいだ)。
+  // { point, starter, shop, busy, onBuyPack(packId,count), onBuyStarter(kit), onExchange(offer) }。initialSection … 最初に開く売り場
+  cardShop=null, initialSection=null,
 }) {
   // 2026-09-14・マーケットのタブ乱立を避けるため、最初に用途別の入口を選ぶ。
   // 入口だけこの画面のローカル状態で持ち、購入・交換・商品タブの既存stateは親側をそのまま使う。
-  const [marketSection,setMarketSection]=useState(null);
+  const [marketSection,setMarketSection]=useState(initialSection);
   // 開いている購入/交換の確認窓。{ item, balance, stackable, countUnit, grantAmount, grantUnit, confirm(count) }
   const [sheet,setSheet]=useState(null);
   const [sheetQuantity,setSheetQuantity]=useState(1);
@@ -80,6 +83,7 @@ function BreederMarketScreen({
   const SECTION_TABS = {
     breeder:{ color:'#d97706', tabs:[{key:'face',label:'アイコン'},...(hasDiscIconCards?[{key:'disc',label:'円盤石アイコン'}]:[]),...(breederFrameItems.length?[{key:'frame',label:'フレーム'}]:[])] },
     exchange:{ color:'#059669', tabs:[{key:'psyche',label:'プシュケー'},{key:'proof',label:'勇者の証'}] },
+    card:{ color:'#ea580c', tabs:[{key:'pack',label:'パック'},{key:'starter',label:'スターター'},{key:'disc',label:'円盤石'},{key:'assist',label:'アシスト'}] },
     event:{ color:'#7c3aed', tabs:[{key:'disc',label:'円盤石'},{key:'assist',label:'アシスト'},...(RHYTHM_EVENT_POINT_SHOP_FRAME_OFFERS.length?[{key:'frame',label:'フレーム'}]:[]),...(RHYTHM_EVENT_POINT_SHOP_COSTUME_OFFERS.some(offer=>offer.available!==false)?[{key:'costume',label:'着替え'}]:[]),...(RHYTHM_EVENT_POINT_SHOP_ICON_OFFERS.some(offer=>offer.available!==false)?[{key:'icon',label:'アイコン'}]:[]),{key:'item',label:'アイテム'},{key:'material',label:'強化素材'}] },
   };
   const activeSectionTab = (section) => {
@@ -102,9 +106,10 @@ function BreederMarketScreen({
     breeder:{label:'ブリーダーP交換所',emoji:'🪙'},
     exchange:{label:'アイテム交換所',emoji:'🔄'},
     event:{label:'ビートP交換所',emoji:'🎟️'},
+    card:{label:'カードポイント',emoji:'🃏'},
   };
   const balanceOf = (currency) => currency==='psyche' ? psycheHave : currency==='heroProofShard' ? shardHave : currency==='heroProof' ? proofHave
-    : currency==='beatPoint' ? safeEventPoints : currency==='breederPoint' ? breederPoints : gold;
+    : currency==='beatPoint' ? safeEventPoints : currency==='cardPoint' ? (cardShop ? cardShop.point : 0) : currency==='breederPoint' ? breederPoints : gold;
   const busy = purchaseProcessing || sheetPending;
 
   const openSheet = (next) => { setSheetQuantity(1); setSheet(next); };
@@ -178,7 +183,8 @@ function BreederMarketScreen({
 
   const headerTitle = marketSection ? sectionMeta[marketSection].label : 'マーケット';
   const handleBack = ()=>{
-    if(marketSection){ setMarketSection(null); return; }
+    // MFバトルカードから入ったときは、その売り場から戻るとMFバトルカードのトップへ(マーケットの入口を通らない)
+    if(marketSection&&!(initialSection&&marketSection===initialSection)){ setMarketSection(null); return; }
     onBack();
   };
 
@@ -198,6 +204,7 @@ function BreederMarketScreen({
             {key:'breeder',emoji:'🪙',label:'ブリーダーP交換所',titleLines:['ブリーダーP','交換所'],value:compactCount(breederPoints),hint:'Lv.UPで獲得',border:'border-amber-400/35',title:'text-amber-200',arrow:'text-amber-300/80'},
             {key:'exchange',emoji:'🔄',label:'アイテム交換所',titleLines:['アイテム','交換所'],value:`🌈${ownedItemCount(ownedItems,BREAKTHROUGH_ITEM_ID).toLocaleString()}`,hint:'所持している虹のプシュケー',border:'border-emerald-400/35',title:'text-emerald-200',arrow:'text-emerald-300/80'},
             {key:'event',emoji:'🎟️',label:'ビートP交換所',titleLines:['ビートP','交換所'],value:compactCount(safeEventPoints),hint:'所持ビートP',border:'border-violet-400/35',title:'text-violet-200',arrow:'text-violet-300/80'},
+            ...(cardShop?[{key:'card',emoji:'🃏',label:'カードポイント',titleLines:['カード','ポイント'],value:compactCount(cardShop.point),hint:'MFバトルカードでためる',border:'border-orange-400/35',title:'text-orange-200',arrow:'text-orange-300/80'}]:[]),
           ].map(section=>(
             <button
               key={section.key}
@@ -223,6 +230,7 @@ function BreederMarketScreen({
           marketSection==='diamond'?[{currency:'diamond',value:gold}]
           :marketSection==='breeder'?[{currency:'breederPoint',value:breederPoints}]
           :marketSection==='exchange'?[{currency:'psyche',value:psycheHave},{currency:'heroProofShard',value:shardHave},{currency:'heroProof',value:proofHave}]
+          :marketSection==='card'?[{currency:'cardPoint',value:cardShop?cardShop.point:0}]
           :[{currency:'beatPoint',value:safeEventPoints}]}/>
         {/* ビートPアップキャンペーン中の知らせ(2026-09-28)。開いたときの時刻で数え直す */}
         {marketSection==='event'&&(()=>{const campaign=typeof rhythmEventPointCampaignAt==='function'&&!rhythmLimitedEventAt(Date.now())?rhythmEventPointCampaignAt(Date.now()):null;
@@ -263,6 +271,52 @@ function BreederMarketScreen({
         </div>
         </div>
       </>}
+
+      {marketSection==='card'&&cardShop&&(()=>{
+        const tab=activeSectionTab('card');
+        const cp=cardShop.point;
+        return <>
+          {renderSectionTabs('card')}
+          <div className={SCREEN_LIST_CLASS} data-card-shop data-card-shop-tab={tab}>
+            {tab==='pack'&&<CardShopPacks db={CARD_BATTLE_DATA} point={cp} busy={busy||cardShop.busy} onBuyPack={cardShop.onBuyPack}/>}
+            {tab==='starter'&&<CardShopStarters db={CARD_BATTLE_DATA} point={cp} busy={busy||cardShop.busy} starter={cardShop.starter} shop={cardShop.shop} onBuyStarter={cardShop.onBuyStarter}/>}
+            {/* 円盤石・アシストカードは、ビートP交換所と同じ物を同じ値段(1,500)で並べる(社長 台帳 #3405)。一覧はビートP交換所のものをそのまま引く */}
+            {(tab==='disc'||tab==='assist')&&<div className={MARKET_GRID_CLASS}>
+              {tab==='disc'&&RHYTHM_EVENT_POINT_SHOP_DISC_OFFERS.map(offer=>{
+                const disc=BREEDER_MARKET_ITEMS.find(item=>item.id===offer.monsterId&&item.type==='disc');
+                const mon=ALL_PLAYER_MONSTERS[offer.monsterId]||null;
+                const item={ id:offer.id, name:offer.name, emoji:'💿', icon:disc?.icon, type:'disc', currency:'cardPoint', cost:offer.cost };
+                const owned=isItemOwned({ id:offer.monsterId, type:'disc' });
+                return <MarketProductCard key={offer.id} dataAttrs={{'data-card-shop-disc':offer.id}}
+                  item={item} owned={owned} comingSoon={false}
+                  canBuy={!owned&&cp>=offer.cost&&!busy}
+                  disabled={purchaseProcessing}
+                  onZoom={()=>onZoomIcon(disc||item)}
+                  onBuy={()=>openSheet({ item, confirm:()=>cardShop.onExchange(offer),
+                    rebirth:{monsterId:offer.monsterId,discIcon:disc?.icon||item.icon} })}
+                  detail={mon}
+                  onDetail={()=>mon&&onOpenDetail(disc||item,mon,null)}
+                />;
+              })}
+              {tab==='assist'&&RHYTHM_EVENT_POINT_SHOP_ASSIST_OFFERS.map(offer=>{
+                const card=BREEDER_MARKET_ITEMS.find(item=>item.id===offer.cardId&&item.type==='assist');
+                const teaching=TEACHING_CARDS.find(t=>t.id===offer.cardId)||null;
+                const item={ id:offer.id, name:offer.name, emoji:'🃏', icon:card?.icon, type:'assist', currency:'cardPoint', cost:offer.cost };
+                const owned=isItemOwned({ id:offer.cardId, type:'assist' });
+                return <MarketProductCard key={offer.id} dataAttrs={{'data-card-shop-assist':offer.id}}
+                  item={item} owned={owned} comingSoon={false}
+                  canBuy={!owned&&cp>=offer.cost&&!busy}
+                  disabled={purchaseProcessing}
+                  onZoom={()=>onZoomIcon(card?{...card,name:offer.name}:item)}
+                  onBuy={()=>openSheet({ item, confirm:()=>cardShop.onExchange(offer) })}
+                  detail={teaching}
+                  onDetail={()=>teaching&&onOpenDetail(card||item,null,teaching)}
+                />;
+              })}
+            </div>}
+          </div>
+        </>;
+      })()}
 
       {marketSection==='event'&&<>
         {renderSectionTabs('event')}

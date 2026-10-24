@@ -13,9 +13,10 @@ const load = () => {
   const ctx = vm.createContext({ console, Math, JSON, Object, Array, Number, String, Set, Map });
   const src = `${fs.readFileSync(path.join(GAME, 'data', 'card-battle-cards.js'), 'utf8')}\n;\n${fs.readFileSync(path.join(GAME, 'src', 'parts', '82-card-battle-core.jsx'), 'utf8')}\n;\n`
     + `${fs.readFileSync(path.join(GAME, 'src', 'parts', '86-card-tutorial.jsx'), 'utf8')}\n;\n`
+    + `${fs.readFileSync(path.join(GAME, 'src', 'parts', '89-card-pack.jsx'), 'utf8')}\n;\n`
     // 85 は画面の部品(SkillFxMotion)を使うので、ルールだけで動く「動きの見本」の所だけ読む
     + `${fs.readFileSync(path.join(GAME, 'src', 'parts', '85-card-battle-motion.jsx'), 'utf8').split('// ---- 動きの見本')[1].replace(/^[^\n]*\n/, '')}\n;\n`
-    + 'this.E = { CARD_BATTLE_DATA, cardCreateGame, cardApplyAction, cardLegalActions, cardAttackOptions, cardGuardOptions, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardSimulate, CARD_AI_LEVELS, CARD_AI_HABITS, CARD_AI_DECKS, cardDeckProblems, cardNormalizeCollection, cardNormalizeDecks, cardNormalizePoint, cardNormalizeDaily, cardNormalizeRecord, cardNormalizeCpuUnlocked, cardGrantStarter, cardCpuReward, cardUnlockAfterWin, cardMotionDemo, cardMotionDemoAction, cardTutorialGame, cardTutorialMutate, cardTutorialAllow, cardTutorialDone, cardTutorialCpu, CARD_TUTORIAL_STAGES, cardTutorialCopyProblems, cardTutorialFinish, CARD_TUTORIAL_LINES, cardCpuLoops, cardOwnTurns, cardDeckAddReason, cardDeckReady, cardDecksPut, cardDecksRemove };';
+    + 'this.E = { CARD_BATTLE_DATA, cardCreateGame, cardApplyAction, cardLegalActions, cardAttackOptions, cardGuardOptions, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardSimulate, CARD_AI_LEVELS, CARD_AI_HABITS, CARD_AI_DECKS, cardDeckProblems, cardNormalizeCollection, cardNormalizeDecks, cardNormalizePoint, cardNormalizeDaily, cardNormalizeRecord, cardNormalizeCpuUnlocked, cardGrantStarter, cardCpuReward, cardUnlockAfterWin, cardMotionDemo, cardMotionDemoAction, cardTutorialGame, cardTutorialMutate, cardTutorialAllow, cardTutorialDone, cardTutorialCpu, CARD_TUTORIAL_STAGES, cardTutorialCopyProblems, cardTutorialFinish, CARD_TUTORIAL_LINES, cardCpuLoops, cardOwnTurns, cardDeckAddReason, cardDeckReady, cardDecksPut, cardDecksRemove, CARD_PACKS, cardOpenPack, cardBuyPacks, cardPackRates, cardBuyStarter, cardMonRarity, cardNormalizePity, cardNormalizeShop, CARD_SAVE_KEYS };';
   vm.runInContext(src, ctx, { filename: '82-card-battle-core.jsx' });
   return ctx.E;
 };
@@ -266,6 +267,58 @@ const motionDemo = () => {
   ok(['よける', '防ぐ', '受ける', '倒れる'].every((k) => seen.has(k)), `動きの見本で出ない動きがある(${[...seen].join('・')})`);
 };
 // 練習試合(86): 同じ名前3枚まで・人の手と みゅあの決まった手で最後まで通せる・100 は1回だけ
+// パック(区切り2): 中身・確率・天井・だぶり・C-060C と準備中が出ない・スターターを買う
+const packs = () => {
+  let seed = 12345;
+  const rand = () => { seed |= 0; seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  ok(E.CARD_SAVE_KEYS.pity === 'mh_card_pack_pity_v1' && E.CARD_SAVE_KEYS.shop === 'mh_card_shop_v1', 'パックの保存キーの名前が違う');
+  E.CARD_PACKS.forEach((pack) => {
+    let col = {}; let pity = {}; let maxDry = 0; let dry = 0;
+    const rar = { normal: 0, kira: 0, alt: 0 };
+    const seen = new Set();
+    const N = 3000;
+    for (let i = 0; i < N; i++) {
+      // 天井を見るときは、持っているカードを毎回空にして「まだ持っていない」状態のまま回す
+      const r = E.cardOpenPack(db, pack.id, { collection: col, pity }, rand);
+      ok(r.cards.length === pack.tech + pack.mon, `${pack.name}の枚数が違う(${r.cards.length})`);
+      r.cards.forEach((c) => {
+        seen.add(c.no);
+        const card = db.cards[c.no]; const m = db.monsters[c.no];
+        ok(card ? card.ready && String(card.wave) === pack.wave : m && String(m.wave) === pack.wave, `${pack.name}に別の弾か準備中のカード ${c.no}`);
+        ok(c.no !== 'C-060C', 'C-060C が出た');
+        if (c.slot === 'mon') rar[c.rarity] += 1;
+      });
+      ok(r.cards.slice(pack.tech).every((c) => c.slot === 'mon'), 'モンスターの枠が最後になっていない');
+      dry = r.hit ? 0 : dry + 1; maxDry = Math.max(maxDry, dry);
+      col = r.collection; pity = r.pity;
+    }
+    if (pack.pity) {
+      ok(maxDry <= 7, `${pack.name}の天井が効いていない(キラなしが${maxDry}パック続いた)`);
+      const kiraRate = (rar.kira + rar.alt) / N;
+      ok(kiraRate > 0.13 && kiraRate < 0.24, `${pack.name}のキラの出る割合がおかしい(${kiraRate.toFixed(3)})`);
+    } else ok(rar.kira + rar.alt === 0, '混血パックにキラが出た');
+    const pool = Object.values(db.cards).filter((c) => String(c.wave) === pack.wave && c.ready).length + Object.values(db.monsters).filter((m) => String(m.wave) === pack.wave).length;
+    ok(seen.size === pool, `${pack.name}で出ないカードがある(${seen.size}/${pool})`);
+    ok(Object.entries(col).every(([no, n]) => (db.cards[no] ? n <= 3 : n <= 1)), `${pack.name}で持てる枚数を超えた`);
+  });
+  // だぶり: 技は4枚目から5、モンスターは2枚目から50
+  const one = E.cardOpenPack(db, 'w1', { collection: {}, pity: {} }, () => 0);
+  const full = Object.fromEntries(one.cards.map((c) => [c.no, db.cards[c.no] ? 3 : 1]));
+  const again = E.cardOpenPack(db, 'w1', { collection: full, pity: {} }, () => 0);
+  ok(again.cards.every((c) => c.dup) && again.point === 7 * 5 + (again.cards[7].rarity === 'normal' ? 50 : again.cards[7].rarity === 'kira' ? 100 : 200), `だぶりのカードポイントが違う(${again.point})`);
+  // まとめ買い: 5つで450・足りなければ買えない
+  const b5 = E.cardBuyPacks(db, 'w2', 5, { collection: {}, pity: {}, point: 500 }, rand);
+  ok(b5 && b5.cost === 450 && b5.packs.length === 5 && b5.point === 50 + b5.dupPoint, '5パックまとめて450にならない');
+  ok(E.cardBuyPacks(db, 'hybrid', 1, { collection: {}, pity: {}, point: 149 }, rand) === null, 'カードポイントが足りないのに買えた');
+  ok(E.cardBuyPacks(db, 'hybrid', 1, { collection: {}, pity: {}, point: 150 }, rand).packs[0].length === 3, '混血パックが3枚でない');
+  // 選ばなかったスターターキット: 500・1回だけ・選んだキットは買えない
+  const base = { collection: {}, decks: { active: 'starter_speed', decks: [{ id: 'starter_speed', name: 's', monsters: [], cards: [] }] }, point: 600, starter: { kit: 'speed' }, shop: E.cardNormalizeShop(null) };
+  ok(E.cardBuyStarter(db, 'speed', base, 1) === null, '選んだスターターキットを買えてしまう');
+  const bs = E.cardBuyStarter(db, 'miracle', base, 1);
+  ok(bs && bs.point === 100 && bs.decks.decks.length === 2 && bs.shop.starters.miracle, 'スターターキットを500で買えない');
+  ok(E.cardBuyStarter(db, 'miracle', { ...base, ...bs, starter: base.starter }, 2) === null, 'スターターキットを2回買えてしまう');
+  ok(JSON.stringify(E.cardNormalizePity({ w1: 3, w9: 5, w2: 'x' })) === '{"w1":3}', '天井の保存の読み方が違う');
+};
 const tutorialRun = () => {
   let st = E.cardTutorialGame(db);
   const copy = E.cardTutorialCopyProblems(db, st);
@@ -307,6 +360,7 @@ const tutorialRun = () => {
 scenes();
 motionDemo();
 tutorialRun();
+packs();
 decksAndSaves();
 dataAndImages();
 sims();

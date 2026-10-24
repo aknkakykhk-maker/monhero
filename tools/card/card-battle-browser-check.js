@@ -193,6 +193,15 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     await page.locator('[data-card-rules]').waitFor({ timeout: 5000 });
     const ruleCount = await page.locator('[data-card-rule]').count();
     if (SHOT) await shot(page, '22-rules');
+    if (SHOT) {
+      await page.evaluate(() => document.querySelectorAll('[data-card-rules] .mh-scroll').forEach((el) => { el.scrollTop = Math.round(el.scrollHeight / 2) - 200; }));
+      await shot(page, '22b-rules-middle');
+      await page.evaluate(() => document.querySelectorAll('[data-card-rules] .mh-scroll').forEach((el) => { el.scrollTop = el.scrollHeight; }));
+      await shot(page, '22c-rules-bottom');
+    }
+    // 「」で囲んだ言葉が途中で折れていない(「全/モンスター」と折れていた)
+    const brokenQuote = await page.evaluate(() => [...document.querySelectorAll('[data-card-rules] span.whitespace-nowrap')].filter((el) => el.getClientRects().length > 1).map((el) => el.textContent));
+    check('⑮ ルールの「」で囲んだ言葉が途中で折れていない', brokenQuote.length === 0, brokenQuote.join('・'));
     check('⑮ ルールの画面に節が並び、練習試合のやり直しがある', ruleCount >= 8 && (await page.locator('[data-card-rules] [data-card-tutorial-again]').count()) === 1, String(ruleCount));
     await page.locator('[data-card-tutorial-again]').click();
     await page.locator('[data-card-tutor]').waitFor({ timeout: 20000 });
@@ -497,6 +506,70 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     check('⑮ カード図鑑: 第1弾が並び、持っている種類が数えられ、混血のタブ・持っているだけの絞り込みが効く', Number(dexTotal) >= 20 && Number(dexTotal) === haveTiles && dex1 >= 100 && haveTiles >= 20 && dexH === 15 && dexHHave === 0, JSON.stringify({ dexTotal, dex1, haveTiles, dexH, dexHHave }));
     await page.locator('[data-card-dex] button').first().click();
     await page.waitForTimeout(250);
+    // ⑯ マーケットの「カードポイント」の売り場: パックを買って開ける・スターターキットを買う・円盤石と交換する
+    await page.evaluate(() => localStorage.setItem('mh_card_point_v1', JSON.stringify(5000)));
+    const unlockedBefore = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_unlocked_monsters') || 'null'));
+    const colBefore = await page.evaluate(() => Object.values(JSON.parse(localStorage.getItem('mh_card_collection_v1') || '{}')).reduce((a, n) => a + n, 0));
+    await page.locator('[data-card-market-open]').click();
+    await page.locator('[data-card-shop]').waitFor({ timeout: 10000 });
+    await page.locator('[data-card-shop-rates="w1"]').click();
+    if (SHOT) await shot(page, '25-shop-packs');
+    const rateText = await page.locator('[data-card-shop-rate-table]').innerText();
+    await page.locator('[data-card-shop-buy="w1-5"]').click();
+    await page.locator('[data-confirm-sheet]').locator('xpath=..').getByRole('button', { name: '買って開ける' }).click();
+    await page.locator('[data-card-pack-open]').waitFor({ timeout: 10000 });
+    if (SHOT) await shot(page, '26-pack-closed');
+    let packsOpened = 0;
+    for (let k = 0; k < 5; k++) {
+      await page.locator('[data-card-pack-tear]').click();
+      await page.locator('[data-card-pack-card="0"]').click();
+      await page.waitForTimeout(150);
+      if (k === 0 && SHOT) await shot(page, '27-pack-one');
+      await page.locator('[data-card-pack-flip-all]').click();
+      await page.waitForTimeout(200);
+      if (k === 0 && SHOT) await shot(page, '28-pack-all');
+      packsOpened += 1;
+      if (await page.locator('[data-card-pack-next]').count()) await page.locator('[data-card-pack-next]').click();
+    }
+    const flippedAll = await page.locator('[data-card-pack-card][data-card-pack-flipped="1"]').count();
+    await page.locator('[data-card-pack-done]').click();
+    await page.locator('[data-card-shop]').waitFor({ timeout: 10000 });
+    const afterPack = await page.evaluate(() => ({ point: JSON.parse(localStorage.getItem('mh_card_point_v1') || '0'), pity: JSON.parse(localStorage.getItem('mh_card_pack_pity_v1') || 'null'), col: Object.values(JSON.parse(localStorage.getItem('mh_card_collection_v1') || '{}')).reduce((a, n) => a + n, 0) }));
+    check('⑯ 第1弾パックを5つ(450)買って開けると、カードが増え、カードポイントが減り、天井の数が残る', packsOpened === 5 && flippedAll === 8 && afterPack.point <= 5000 - 450 + 40 * 5 * 5 && afterPack.point >= 4550 && afterPack.col > colBefore && afterPack.pity && typeof afterPack.pity.w1 === 'number' && /技などの枠/.test(rateText), JSON.stringify({ packsOpened, flippedAll, afterPack, colBefore }));
+    await page.getByRole('tab', { name: 'スターター' }).click();
+    await page.waitForTimeout(300);
+    if (SHOT) await shot(page, '29-shop-starters');
+    const kits = await page.locator('[data-card-shop-starter]').count();
+    await page.locator('[data-card-shop-starter-buy]').first().click();
+    await page.locator('[data-confirm-sheet]').locator('xpath=..').getByRole('button', { name: '買う' }).click();
+    await page.waitForTimeout(500);
+    const afterKit = await page.evaluate(() => ({ shop: JSON.parse(localStorage.getItem('mh_card_shop_v1') || 'null'), decks: JSON.parse(localStorage.getItem('mh_card_decks_v1') || 'null') }));
+    const boughtLabel = await page.locator('[data-card-shop-starter-buy]').first().innerText();
+    if (SHOT) await shot(page, '29b-shop-starter-bought');
+    check('⑯ 選ばなかったスターターキットは2つ並び、買うと印が付き、デッキが1つ増え、もう買えない', kits === 2 && afterKit.shop && Object.keys(afterKit.shop.starters).length === 1 && afterKit.decks.decks.length === 3 && /買いました/.test(boughtLabel), JSON.stringify({ kits, shop: afterKit.shop, decks: afterKit.decks && afterKit.decks.decks.length, boughtLabel }));
+    await page.getByRole('tab', { name: '円盤石' }).click();
+    await page.waitForTimeout(200);
+    if (SHOT) await shot(page, '30-shop-disc');
+    const discBuy = page.locator('[data-card-shop-disc] button:not([disabled])').filter({ hasText: /交換|1,500/ }).first();
+    let discOk = 'なし';
+    if (await discBuy.count()) {
+      const pBefore = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_card_point_v1') || '0'));
+      await discBuy.click();
+      await page.waitForTimeout(300);
+      const sheetBtn = page.locator('[role="dialog"] button').filter({ hasText: /交換/ }).last();
+      if (await sheetBtn.count()) { await sheetBtn.click(); await page.waitForTimeout(800); }
+      const unlockedAfter = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_unlocked_monsters') || 'null'));
+      const pAfter = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_card_point_v1') || '0'));
+      // 交換前は保存に無いこともある(既定の顔ぶれ)。カードポイントが 1,500 減り、解放済みが前より1体多い(前が無ければ保存ができた)ことを見る
+      discOk = pBefore - pAfter === 1500 && Array.isArray(unlockedAfter) && (!Array.isArray(unlockedBefore) || unlockedAfter.length === unlockedBefore.length + 1) ? 1 : `${pBefore}→${pAfter}・${JSON.stringify(unlockedAfter)}`;
+      await page.locator('[role="dialog"] button').filter({ hasText: /閉じる|あとで|OK|スキップ/ }).first().click().catch(() => {});
+    }
+    check('⑯ 円盤石をカードポイント 1,500 で交換できる(mh_unlocked_monsters に1体足される)', discOk === 1 || discOk === 'なし', String(discOk));
+    // マーケットから戻ると MFバトルカードのトップへ
+    await page.keyboard.press('Escape').catch(() => {});
+    await page.locator('[data-mh-screen] button').first().click();
+    await page.locator('[data-card-top="top"]').waitFor({ timeout: 10000 }).catch(() => {});
+    check('⑯ 売り場から戻ると MFバトルカードのトップへ戻る', (await page.locator('[data-card-top="top"]').count()) === 1);
     check('どこでも実行時エラーが出ない', errors.length === 0, errors.slice(0, 3).join(' / '));
   } catch (e) {
     if (lastPage) await shot(lastPage, 'zz-fail').catch(() => {});
