@@ -131,6 +131,8 @@ const LINES_PER_SIZE = 6;
         const probe = await page.evaluate(() => {
           const say = document.querySelector('[data-home-raid-say]');
           if (!say) return null;
+          // かぼちゃの上に置き場所が無いとき(幅320で、みゅあの台詞が長いとき)は、吹き出しを出さない(2026-10-24)
+          if (say.getAttribute('data-say-hidden') === 'true') return { hidden: true };
           const r = say.getBoundingClientRect();
           const bad = [];
           for (let i = 0; i < 5; i++) for (let j = 0; j < 4; j++) {
@@ -144,6 +146,8 @@ const LINES_PER_SIZE = 6;
             box: [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)] };
         });
         if (!probe) { tapBad.push('吹き出しが見つからない(HOMEへ戻れなかった)'); break; }
+        // 出さないのは幅360未満だけ。出していないあいだは押せないので、この幅はここまで
+        if (probe.hidden) { if (w >= 360) gridBad.push('吹き出しを出していない(出さないのは幅360未満だけ)'); break; }
         sides.add(probe.side);
         if (probe.bad.length) gridBad.push(`${probe.side} ${probe.box.join(',')}: ${probe.bad.slice(0, 3).join(' / ')}`);
         if (SHOT && k === 0) await page.screenshot({ path: `${SHOT}/home-${w}x${h}.png` });
