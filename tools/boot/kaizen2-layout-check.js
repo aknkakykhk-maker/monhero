@@ -20,7 +20,8 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
 
 const ui = P('41-screen-ui.jsx');
 check('M3 言葉の切れ目で折る部品(jaWrap・JA_WRAP_STYLE)がある。印は文字(U+200B)のまま置かず <wbr> で描く(コピーに混ざらない)', /const jaWrap = \(text\) =>/.test(ui)
-  && ui.includes("return s.split('\\u200B').map((seg, i) => <React.Fragment key={i}>{i > 0 && <wbr/>}{seg}</React.Fragment>);") && /Intl\.Segmenter\('ja', \{ granularity: 'word' \}\)/.test(ui)
+  // 印は <wbr> で描く(2026-10-24 #3487 で、「……」を含む短いかたまりを nowrap の span で包むようにした。印の描き方は同じ)
+  && ui.includes("return s.split('\\u200B').map((seg, i) => <React.Fragment key={i}>{i > 0 && <wbr/>}") && !/\\u2060|\u2060/.test(ui) && /Intl\.Segmenter\('ja', \{ granularity: 'word' \}\)/.test(ui)
   && /const JA_WRAP_STYLE = Object\.freeze\(\{ wordBreak: 'keep-all', overflowWrap: 'anywhere'/.test(ui));
 // 2026-10-21: 印は禁則より強いので、「！」「、」「…」小さい字の前・「「」の後ろ・空白の前後には入れない(「きたわい／！」と折れた)
 {
