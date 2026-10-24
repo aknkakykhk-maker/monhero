@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a1dd3e80c1bdf27e
+// source-sha256: 6e2a41ba5c08c877
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-24 15:19";
+const BUILD_DATE = "2026-10-24 16:00";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -83937,7 +83937,8 @@ const CARD_TUTORIAL_LINES = Object.freeze({
   D15: '最後にもうひとつ。ちょっと時間を進めるぞ…',
   M6: 'あれ？ あたしの山札、なんか少なくない？',
   D16: 'みゅあの山札、もう0枚だろ？ 次の番に引けなかったら、その時点で負けなんだ',
-  D17: '「ターン終了」を押してみな',
+  D17: 'まずは光ってる「攻撃おわり → ガッツへ」を押してみな',
+  D17b: '次は「ガッツにしないでターン終了」だ。みゅあの番になるぞ',
   M7: 'えっ、引けないじゃん…！ 負けたー！🤣ｗ',
   D18: 'これが山札切れ。3体全部倒しても勝ちだけど、山札の残りも気にしような',
   D19: 'これで5つ全部だ。あとはデッキを組んで、いろんな相手と戦ってみな',
@@ -83996,6 +83997,9 @@ const CARD_TUTORIAL_STAGES = Object.freeze([{
   id: 'deckEnd',
   lines: ['M6', 'D16', 'D17']
 }, {
+  id: 'deckTurn',
+  lines: ['D17b']
+}, {
   id: 'finish',
   lines: ['M7', 'D18', 'D19', 'M8', 'D20'],
   next: true,
@@ -84015,12 +84019,13 @@ const cardTutorialGame = db => {
   }));
   const pool = Object.values(db.cards).filter(c => c.ready && c.wave === 1 && c.kind !== 'spe' && c.user !== 'breeder' && (c.user === 'any' || mons.some(m => cardUsableBy(c, m))) && !cardHasEff(c, 'attach')).sort((a, b) => b.guts - a.guts || (a.no < b.no ? -1 : 1));
   const rest = [];
-  for (const c of pool) {
-    while ((count[c.name] || 0) < CARD_DECK_COPY_MAX && rest.length < 43) {
+  for (let round = 0; round < CARD_DECK_COPY_MAX && rest.length < 43; round++) {
+    for (const c of pool) {
+      if (rest.length >= 43) break;
+      if ((count[c.name] || 0) > round) continue;
       rest.push(c.no);
       count[c.name] = (count[c.name] || 0) + 1;
     }
-    if (rest.length >= 43) break;
   }
   const myDeck = [...rest.reverse(), ...myTop];
   const kit = cardAiBuildDeck(db, 'speed').cards.slice();
@@ -84084,7 +84089,7 @@ const cardTutorialMutate = (db, st0, kind) => {
   }
   if (kind === 'fastForward') {
     st.players[1].deck = [];
-    cardLog(st, '(時間を進めた)みゅあの山札は0枚');
+    cardLog(st, 'みゅあの山札は0枚');
   }
   return st;
 };
@@ -84101,7 +84106,8 @@ const cardTutorialAllow = (db, stageId, st, act) => {
     return false;
   }
   if (stageId === 'attack') return act.type === 'attack' && me.hand[act.hand[0]] === CARD_TUTORIAL_CARD.punch;
-  if (stageId === 'deckEnd') return act.type === 'endAttacks' || act.type === 'guts';
+  if (stageId === 'deckEnd') return act.type === 'endAttacks';
+  if (stageId === 'deckTurn') return act.type === 'guts' && !(act.hand || []).length;
   return false;
 };
 const cardTutorialHandOk = (stageId, st, i) => {
@@ -84109,7 +84115,6 @@ const cardTutorialHandOk = (stageId, st, i) => {
   if (stageId === 'guts') return no !== CARD_TUTORIAL_CARD.step && no !== CARD_TUTORIAL_CARD.punch;
   if (stageId === 'guard') return no === CARD_TUTORIAL_CARD.step;
   if (stageId === 'attack') return no === CARD_TUTORIAL_CARD.punch;
-  if (stageId === 'deckEnd') return true;
   return false;
 };
 const cardTutorialDone = (stageId, before, after) => {
@@ -84117,7 +84122,8 @@ const cardTutorialDone = (stageId, before, after) => {
   if (stageId === 'guts') return after.active === 1;
   if (stageId === 'guard') return evs.some(e => e.t === 'hit' && e.p === 0 && e.evaded);
   if (stageId === 'attack') return evs.some(e => e.t === 'hit' && e.p === 1 && e.dmg > 0);
-  if (stageId === 'deckEnd') return after.winner === 0;
+  if (stageId === 'deckEnd') return after.phase === 'guts' && after.active === 0;
+  if (stageId === 'deckTurn') return after.winner === 0;
   return false;
 };
 const cardTutorialCpu = (db, stageId, st) => {

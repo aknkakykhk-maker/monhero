@@ -142,7 +142,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       if (await next.count()) { await next.click(); await page.waitForTimeout(250); continue; }
       // 操作の段では、教えている所(カードか下のボタン)が光っている
       const focused = await page.locator('[data-card-tutor-focus], [data-card-battle] button.animate-pulse').count();
-      if (!focused && !(await page.locator('[data-card-bubble]').count()) && ['guts', 'guard', 'attack', 'deckEnd'].includes(stageId) && (await page.locator('[data-card-battle]').getAttribute('data-card-mode')) !== 'wait') { if (noFocusPrev === stageId && SHOT && !tutorNoFocus.size) await shot(page, `zz-nofocus-${stageId}`); if (noFocusPrev === stageId) tutorNoFocus.add(`${stageId}(${await page.locator('[data-card-battle]').getAttribute('data-card-mode')})`); noFocusPrev = stageId; } else noFocusPrev = null;
+      if (!focused && !(await page.locator('[data-card-bubble]').count()) && ['guts', 'guard', 'attack', 'deckEnd', 'deckTurn'].includes(stageId) && (await page.locator('[data-card-battle]').getAttribute('data-card-mode')) !== 'wait') { if (noFocusPrev === stageId && SHOT && !tutorNoFocus.size) await shot(page, `zz-nofocus-${stageId}`); if (noFocusPrev === stageId) tutorNoFocus.add(`${stageId}(${await page.locator('[data-card-battle]').getAttribute('data-card-mode')})`); noFocusPrev = stageId; } else noFocusPrev = null;
       // 光った瞬間ごとの写真(段・手番・光っている物の組が変わるたび。社長に「何が光っているか」を見せる)
       if (SHOT && focused) {
         const sig = `${stageId}-${await page.locator('[data-card-battle]').getAttribute('data-card-mode')}-${await page.locator('[data-card-tutor-focus]').count()}`;
@@ -174,12 +174,12 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
         await page.waitForTimeout(400); continue;
       }
       if (stageId === 'deckEnd' && mode === 'attack') { const b = page.getByRole('button', { name: '攻撃おわり → ガッツへ' }); if (await b.isEnabled()) await b.click(); await page.waitForTimeout(250); continue; }
-      if (stageId === 'deckEnd' && mode === 'guts') { const b = page.getByRole('button', { name: /ターン終了$/ }); if (await b.isEnabled()) await b.click(); await page.waitForTimeout(400); continue; }
+      if (stageId === 'deckTurn' && mode === 'guts') { const b = page.getByRole('button', { name: /ターン終了$/ }); if (await b.isEnabled()) await b.click(); await page.waitForTimeout(400); continue; }
       await page.waitForTimeout(250);
     }
     const tutOutcome = await page.locator('[data-card-top="result"]').getAttribute('data-card-outcome').catch(() => null);
     await shot(page, '14-tutorial-result');
-    check('⑪ 練習試合を最後まで操作で通せる(5つの段)', tutOutcome === 'tutorialDone' && ['draw', 'guts', 'guard', 'attack', 'deckEnd', 'finish'].every((k) => tutorSeen.has(k)), `${tutOutcome}・${[...tutorSeen].join('→')}`);
+    check('⑪ 練習試合を最後まで操作で通せる(5つの段)', tutOutcome === 'tutorialDone' && ['draw', 'guts', 'guard', 'attack', 'deckEnd', 'deckTurn', 'finish'].every((k) => tutorSeen.has(k)), `${tutOutcome}・${[...tutorSeen].join('→')}`);
     check('⑪ ちがう所を押すと、ドラが「光ってる所」と案内する', wrongShown);
     check(`⑪ ${VW}×${VH} で、ドラの窓が全部見えて「次へ」が押せる(どの台詞でも)`, tutorIssues.size === 0, [...tutorIssues].slice(0, 4).join(' / '));
     check('⑪ 操作の段では、教えている所が光っている', tutorNoFocus.size === 0, [...tutorNoFocus].join('・'));

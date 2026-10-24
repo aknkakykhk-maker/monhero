@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 875ab37f4ef7df60
+// generated-sha256: ec0ed4d630953cfa
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-24 15:19"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-24 16:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -50895,7 +50895,9 @@ const CARD_TUTORIAL_LINES = Object.freeze({
   D15: '最後にもうひとつ。ちょっと時間を進めるぞ…',
   M6: 'あれ？ あたしの山札、なんか少なくない？',
   D16: 'みゅあの山札、もう0枚だろ？ 次の番に引けなかったら、その時点で負けなんだ',
-  D17: '「ターン終了」を押してみな',
+  // D17 は2つに分けた(言うボタンと光るボタンを合わせる。2026-10-24 カゲあつくんの確認)
+  D17: 'まずは光ってる「攻撃おわり → ガッツへ」を押してみな',
+  D17b: '次は「ガッツにしないでターン終了」だ。みゅあの番になるぞ',
   M7: 'えっ、引けないじゃん…！ 負けたー！🤣ｗ',
   D18: 'これが山札切れ。3体全部倒しても勝ちだけど、山札の残りも気にしような',
   D19: 'これで5つ全部だ。あとはデッキを組んで、いろんな相手と戦ってみな',
@@ -50924,6 +50926,7 @@ const CARD_TUTORIAL_STAGES = Object.freeze([
   { id: 'attackAfter', lines: ['M5', 'D14'], next: true },
   { id: 'deck', lines: ['D15'], next: true, onNext: 'fastForward' },
   { id: 'deckEnd', lines: ['M6', 'D16', 'D17'] },
+  { id: 'deckTurn', lines: ['D17b'] },
   { id: 'finish', lines: ['M7', 'D18', 'D19', 'M8', 'D20'], next: true, onNext: 'finish' },
 ]);
 
@@ -50940,10 +50943,15 @@ const cardTutorialGame = (db) => {
   // 2ターン目に引く札は、ガッツ2では出せない重い技にする(④で教える「パンチ」だけが光るように)
   const pool = Object.values(db.cards).filter((c) => c.ready && c.wave === 1 && c.kind !== 'spe' && c.user !== 'breeder' && (c.user === 'any' || mons.some((m) => cardUsableBy(c, m))) && !cardHasEff(c, 'attach'))
     .sort((a, b) => (b.guts - a.guts) || (a.no < b.no ? -1 : 1));
+  //   ★同じ札を3枚続けて入れると、引くたびに同じカードが手札に並ぶ(#3478 のあと「竜巻アタック」が3枚並んだ)。
+  //     違う名前を1枚ずつ順に入れて1周、それを3周する(名前ごとに3枚まで)
   const rest = [];
-  for (const c of pool) {
-    while ((count[c.name] || 0) < CARD_DECK_COPY_MAX && rest.length < 43) { rest.push(c.no); count[c.name] = (count[c.name] || 0) + 1; }
-    if (rest.length >= 43) break;
+  for (let round = 0; round < CARD_DECK_COPY_MAX && rest.length < 43; round++) {
+    for (const c of pool) {
+      if (rest.length >= 43) break;
+      if ((count[c.name] || 0) > round) continue;
+      rest.push(c.no); count[c.name] = (count[c.name] || 0) + 1;
+    }
   }
   const myDeck = [...rest.reverse(), ...myTop];
   // みゅあはスピードチームの50枚をそのまま分ける(手札5枚・ガッツ2枚・残りが山札)。手札の1枚目は「ソバット」
@@ -50989,7 +50997,7 @@ const cardTutorialMutate = (db, st0, kind) => {
   }
   if (kind === 'fastForward') {
     st.players[1].deck = [];
-    cardLog(st, '(時間を進めた)みゅあの山札は0枚');
+    cardLog(st, 'みゅあの山札は0枚');
   }
   return st;
 };
@@ -51008,7 +51016,8 @@ const cardTutorialAllow = (db, stageId, st, act) => {
     return false;
   }
   if (stageId === 'attack') return (act.type === 'attack') && me.hand[act.hand[0]] === CARD_TUTORIAL_CARD.punch;
-  if (stageId === 'deckEnd') return act.type === 'endAttacks' || act.type === 'guts';
+  if (stageId === 'deckEnd') return act.type === 'endAttacks';
+  if (stageId === 'deckTurn') return act.type === 'guts' && !(act.hand || []).length;
   return false;
 };
 // 手札のそのカードを、その段で選んでよいか(ガッツへ回すカード・守るカード・技)
@@ -51017,7 +51026,6 @@ const cardTutorialHandOk = (stageId, st, i) => {
   if (stageId === 'guts') return no !== CARD_TUTORIAL_CARD.step && no !== CARD_TUTORIAL_CARD.punch;
   if (stageId === 'guard') return no === CARD_TUTORIAL_CARD.step;
   if (stageId === 'attack') return no === CARD_TUTORIAL_CARD.punch;
-  if (stageId === 'deckEnd') return true;
   return false;
 };
 
@@ -51027,7 +51035,8 @@ const cardTutorialDone = (stageId, before, after) => {
   if (stageId === 'guts') return after.active === 1;
   if (stageId === 'guard') return evs.some((e) => e.t === 'hit' && e.p === 0 && e.evaded);
   if (stageId === 'attack') return evs.some((e) => e.t === 'hit' && e.p === 1 && e.dmg > 0);
-  if (stageId === 'deckEnd') return after.winner === 0;
+  if (stageId === 'deckEnd') return after.phase === 'guts' && after.active === 0;
+  if (stageId === 'deckTurn') return after.winner === 0;
   return false;
 };
 
