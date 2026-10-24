@@ -24,9 +24,10 @@ const fnSrc = ui.slice(ui.indexOf('const JA_WRAP_LINE'), ui.indexOf('const jaWra
 check('部品 jaWrapPoints・jaKeepWhole・jaWrapPieces を取り出せた', /jaWrapPoints =/.test(fnSrc) && /jaKeepWhole =/.test(fnSrc) && /jaWrapPieces =/.test(fnSrc));
 const jack = P('src/parts/38-raid-jack-home-lines.jsx');
 const asst = P('data/assistants.js');
+// 助手の台詞は200字まで集める。HOME の吹き出しは台詞を切らずに全部出すようになったので、長い台詞(「…着替えて遊んでね♪」)も見る(2026-10-24)
 const texts = [...new Set([
   ...[...jack.matchAll(/'([^'\n]{8,})'/g)].map((m) => m[1]),
-  ...[...asst.matchAll(/t:'([^'\n{}]{8,80})'/g)].map((m) => m[1]),
+  ...[...asst.matchAll(/t:'([^'\n{}]{8,200})'/g)].map((m) => m[1]),
 ].filter((t) => /[ぁ-ん]/.test(t)))];
 check('台詞を集められた', texts.length >= 500, `${texts.length}本`);
 
