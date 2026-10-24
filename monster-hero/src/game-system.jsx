@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 948f16f56248023b
+// generated-sha256: 6f3cde846f2dd3f0
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-24 22:02"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-24 22:07"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -31728,28 +31728,68 @@ const jaWrapPoints = (text) => {
   try {
     if (_jaSegmenter === undefined) _jaSegmenter = (typeof Intl !== 'undefined' && Intl.Segmenter) ? new Intl.Segmenter('ja', { granularity: 'word' }) : null;
     if (!_jaSegmenter) return s;
-    // 行の頭に来てはいけない字(「！」「、」「…」小さい字など)の前と、行の終わりに来てはいけない字(「「」「（」)の後ろ、空白の前後には印を入れない
-    // (印は「ここで折ってよい」の意味なので、入れると禁則より強くなり「きたわい／！」と折れる。2026-10-21)
+    // 印(U+200B)は「ここで折ってよい」の意味。道具(Intl.Segmenter)の言葉の切れ目に入れ、次の所には入れない。
+    // ・行の頭に来てはいけない字(「！」「、」「…」小さい字など)の前と、行の終わりに来てはいけない字(「「」「（」)の後ろ、空白の前後
+    //   (印は禁則より強いので、入れると「きたわい／！」と折れる。2026-10-21)
+    // ・「ご」「お」で始まる言葉の頭の1字のあと(「〜のご／ほうび」2026-10-21)
+    // ・1字の助詞は前の言葉につなぐ(漢字・カタカナのあと「仲間|に」は6字まで。ひらがなのあと「これ|は」は5字まで)
+    // ・閉じかっこ・「？」「！」のすぐあとのひらがな(「』|って言った」「？|ってとき」。ブラウザはそこを印が無くても折るので、jaKeepWhole で包む)
+    // ・顔文字(かっこの中に、かな・漢字・英数字・句読点以外の記号があるもの。(｡･ω･)ﾉﾞ・(っ`･ω･´)っﾌ など)の中。顔文字の手前では折ってよい
+    // そのうえで、最後のかたまり(終わりの顔文字の手前)が1〜2字(✨・♡も)なら手前とつなぐ(「いってらっしゃ／い〜」「であるぞ／！」)。
+    // 2026-10-24: 1字のひらがなを広くつなげた形(#3487)は、かたまりが長くなり狭い吹き出しでかえって崩れたのでやめた。
+    //   助手とジャックの台詞を全部、幅90〜300pxで描いて数える検査は tools/boot/ja-wrap-lines-check.js(最後の行が1〜2字・言葉の途中で折れた: 0件)
+    const letters = (t) => (t.match(/[ぁ-ゖァ-ヶ一-龯ーA-Za-z0-9０-９Ａ-Ｚａ-ｖｘ-ｚ]/g) || []).length; // 笑いの「ｗ」は字に数えない
+    const kao = [];
+    for (const m of s.matchAll(/(?:ε-|[٩«ヾ＼])*[(（][^()（）\n]{1,14}[)）][っو۶»ﾉﾞ✧･]*/g)) {
+      if (/[^ぁ-ゖァ-ヶ一-龯ーA-Za-z0-9０-９\s、。・！？!?()（）]/.test(m[0])) kao.push([m.index, m.index + m[0].length]);
+    }
+    const inKao = (pos) => kao.some(([a, b]) => pos > a && pos < b);
+    // 道具が空白と「(」を1つの区切りにすることがあるので、空白のすぐあとから顔文字が始まる所も「始まり」とみなす
+    const kaoStart = (pos) => kao.some(([a]) => pos === a || (a > pos && /^\s+$/.test(s.slice(pos, a))));
     const segs = [..._jaSegmenter.segment(s)].map(seg => seg.segment);
-    // 「ご」「お」で始まる言葉(ごほうび・おしらせ)は、頭の1字のあとで折らない(2026-10-21 窓口「〜のご／ほうび」。道具は「ご」「ほうび」を別の語にする)。
-    // ひらがな同士の間を全部つなぐと、長いひらがなのセリフが折れる所を失って「…じゃぞ／！」になるので、頭の1字だけにする
-    // 2026-10-24: 道具が知らない言葉を1字ずつに割る所(「い|って|ら|っ|し|ゃ|い」)は、1字のひらがなの前後で折らない
-    //   (「いってらっしゃ／い〜」と最後の1字が落ちていた)。1字の助詞は前の言葉(ひらがな・漢字・カタカナ)につなげる(「から|が」「仲間|に」)。2字以上どうしの間は今のまま
-    const hiraOne = (t) => /^[ぁ-ゖ]$/.test(t);
-    const inHiraWord = (i) => (/^[ごお]$/.test(segs[i - 1]) && /^[ぁ-ゖ]/.test(segs[i]))
-      || (hiraOne(segs[i]) && /[ぁ-ゖ一-龯ァ-ヶー]$/.test(segs[i - 1])) || (hiraOne(segs[i - 1]) && /^[ぁ-ゖ]/.test(segs[i]));
-    return segs.reduce((out, seg, i) => (i === 0 || inHiraWord(i) || /^[\s、。，．,.！？!?」』）)】〕〉》…‥ー〜～・：:；;ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ]/.test(seg) || /[\s「『（(【〔〈《]$/.test(segs[i - 1])
-      ? out + seg : `${out}\u200B${seg}`), '');
+    const chunks = [];
+    let pos = 0;
+    for (let i = 0; i < segs.length; i++) {
+      const seg = segs[i];
+      if (i === 0) { chunks.push(seg); pos += seg.length; continue; }
+      const prev = segs[i - 1], cur = chunks[chunks.length - 1];
+      const join = inKao(pos) || (!kaoStart(pos) && (
+        /^[\s、。，．,.！？!?」』）)】〕〉》…‥ー〜～・：:；;ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ]/.test(seg) || /[\s「『（(【〔〈《]$/.test(prev)
+        || (/^[ごお]$/.test(prev) && /^[ぁ-ゖ]/.test(seg))
+        || (/^[ぁ-ゖ]$/.test(seg) && /[一-龯ァ-ヶー]$/.test(prev) && letters(cur) + 1 <= 6)
+        || (/^[はがをにでとものへ]$/.test(seg) && /[ぁ-ゖ]$/.test(prev) && letters(cur) + 1 <= 5)
+        || (/[」』？！?!]$/.test(prev) && /^[ぁ-ゖ]/.test(seg))));
+      if (join) chunks[chunks.length - 1] += seg; else chunks.push(seg);
+      pos += seg.length;
+    }
+    // 7字を超えるかたまりは、狭い吹き出しで1行に入らず好きな所で折られるので、カタカナからひらがなへ変わる所でも折ってよい
+    // (道具が「スパルタっていう」「チュートリアルって」を1語にする)
+    for (let k = 0; k < chunks.length; k++) {
+      const m = letters(chunks[k]) > 7 && chunks[k].match(/^(.*[ァ-ヶー])([ぁ-ゖ].*)$/s);
+      if (m && letters(m[1]) >= 2 && letters(m[2]) >= 2) chunks.splice(k, 1, m[1], m[2]);
+    }
+    // 終わりの顔文字(とそのうしろの「ﾌﾚｰｯ!」「ﾌﾞﾌｫｗ」のような、かな・漢字の無い飾り)は飛ばして、その手前の本文の最後のかたまりで見る
+    let end = chunks.length - 1;
+    {
+      let at = s.length, k = chunks.length - 1;
+      while (k > 0 && !/[ぁ-ゖァ-ヶ一-龯]/.test(chunks[k]) && !kaoStart(at - chunks[k].length)) { at -= chunks[k].length; k--; }
+      if (k > 0 && kaoStart(at - chunks[k].length)) end = k - 1;
+    }
+    while (end > 0 && letters(chunks[end]) <= 2) { chunks[end - 1] += chunks[end]; chunks.splice(end, 1); end--; }
+    return chunks.join('​');
   } catch { return s; }
 };
-// ★印を文字(U+200B)のまま画面へ置かない(2026-10-21 窓口)。U+200B は見えなくても文字として残るので、画面の文をコピーすると混ざり、
-//   文を照らす検査(mode/raid-jack-screen-browser-check.js)も一致しなくなった。<wbr> は「ここで折ってよい」だけで、innerText にもコピーにも出ない
+const jaKeepWhole = (seg) => seg.length <= 14 && (/[…‥～〜♡]/u.test(seg) || /\p{Extended_Pictographic}/u.test(seg) || /[」』？！?!][ぁ-ゖ]/.test(seg)
+  || !/[ぁ-ゖァ-ヶ一-龯A-Za-z0-9]/.test(seg) || /[(（][^()（）]*[^ぁ-ゖァ-ヶ一-龯ーA-Za-z0-9０-９\s、。・！？!?()（）][^()（）]*[)）]/.test(seg));
 const jaWrap = (text) => {
   const s = jaWrapPoints(text);
   if (typeof s !== 'string' || !s.includes('\u200B')) return s;
-  // 「……」「‥」は手前で折れてしまう(ブラウザは三点リーダーの前を折り目として扱う)。「入れんのじゃ／……」と記号だけが
-  // 次の行へ落ちないよう、それを含む12字までのかたまりは折らずに置く(2026-10-24。見えない字は足さない)
-  return s.split('\u200B').map((seg, i) => <React.Fragment key={i}>{i > 0 && <wbr/>}{/[…‥]/.test(seg) && seg.length <= 12 ? <span data-ja-keep style={{ whiteSpace: 'nowrap' }}>{seg}</span> : seg}</React.Fragment>);
+  // ブラウザは「…」「～」「♡」・絵文字・顔文字の手前や中を、印が無くても折り目として扱う。「入れんのじゃ／……」「(っ`･／ω･´)」と
+  // 崩れないよう、それを含む14字までのかたまりは折らずに置く(2026-10-24。見えない字は足さない)
+  const keep = (t, k) => <span key={k} data-ja-keep style={{ whiteSpace: 'nowrap' }}>{t}</span>;
+  return s.split('\u200B').map((seg, i) => <React.Fragment key={i}>{i > 0 && <wbr/>}{jaKeepWhole(seg) ? keep(seg)
+    // 長いかたまり(「『MONSTERS』で」)は、閉じかっこ・？・！とその前後の字だけを包む
+    : /[」』？！?!][ぁ-ゖ]/.test(seg) ? seg.split(/(.[」』？！?!][ぁ-ゖ]{1,3})/).map((t, k) => (k % 2 ? keep(t, k) : t)) : seg}</React.Fragment>);
 };
 // textWrap:'wrap' … 画面全体の text-wrap:pretty(index.html)と anywhere が組み合わさると、語の中へ1字だけ動かすことがある(「スキッ／プ」)ので外す
 const JA_WRAP_STYLE = Object.freeze({ wordBreak: 'keep-all', overflowWrap: 'anywhere', textWrap: 'wrap' });
