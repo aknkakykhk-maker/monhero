@@ -47,7 +47,7 @@ function ItemInventoryScreen({ ownedItems, onBack, onUseItem }) {
                       <div className="flex-1 min-w-0 text-[13px] leading-snug font-black text-white">{item.name}</div>
                       <span className="shrink-0 rounded-full bg-slate-950/60 px-2.5 py-0.5 text-[11px] font-black tabular-nums text-teal-300">所持数: {ownedItems[item.id]}</span>
                     </div>
-                    <div className="text-[10px] text-slate-400 leading-relaxed mt-1">{item.desc}</div>
+                    <div className="text-[10px] text-slate-400 leading-relaxed mt-1">{helpWrap(item.desc)}</div>
                   </div>
                   {/* スキップチケットや超越の実はマスモン詳細の別の場所で使うものなので、使う場所だけ案内する */}
                   {item.usage==='battleSkip'

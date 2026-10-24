@@ -403,7 +403,7 @@ const MarketItemDetail = ({ item, owned=0, grantText='', onClose }) => {
   const meta=MARKET_CURRENCY_META[marketCurrencyOf(item)];
   return <MarketModal label={`${item.name}の効果`} border={meta.border} onClose={onClose}>
     <MarketModalHead item={item} accent={meta.text}/>
-    {item.desc&&<p className="mt-3 text-[12px] text-slate-200 leading-relaxed">{item.desc}</p>}
+    {item.desc&&<p className="mt-3 text-[12px] text-slate-200 leading-relaxed">{helpWrap(item.desc)}</p>}
     {item.groupMembers&&<div data-market-icon-group={item.groupId} className="mt-3 rounded-2xl border border-white/10 bg-black/30 p-3">
       <p className="text-[12px] font-black text-slate-200 leading-snug">{item.groupMembers.length}種類まとめて手に入ります。どれか1つでも持っていれば、全部持っていることになります。</p>
       <p className="mt-1 text-[10px] text-slate-400 leading-snug">プロフィールで、1つずつ選んで設定できます。</p>

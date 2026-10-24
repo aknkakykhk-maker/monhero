@@ -374,7 +374,7 @@ function AssistantChatWindow({ assistant, playerName, callName, bondLevel, bondT
           <button type="button" data-assistant-chat-close onClick={onClose} className="h-9 w-9 rounded-full border border-slate-600 text-slate-300 text-lg font-black active:scale-95" aria-label="閉じる">×</button>
         </div>
         <div ref={listRef} className="flex-1 overflow-y-auto mh-scroll px-3 py-2 space-y-2" style={{ minHeight: 180 }}>
-          {log.length === 0 && <p className="text-[11px] text-slate-400 leading-relaxed">{assistant.greeting || '話しかけてみてね'}</p>}
+          {log.length === 0 && <p className="text-[11px] text-slate-400 leading-relaxed">{helpWrap(assistant.greeting || '話しかけてみてね')}</p>}
           {log.map((m, i) => (
             <div key={i} data-assistant-chat-msg={m.role} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               <p className={`max-w-[80%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-[12px] leading-relaxed ${m.role === 'user' ? 'bg-slate-700 text-white' : 'bg-slate-800/80 text-slate-100 border'}`} style={m.role === 'user' ? undefined : { borderColor: accent }}>{m.text}{m.role !== 'user' && assistantChatNoteKinds(m.text, (log.slice(0, i).reverse().find(x => x.role === 'user') || {}).text).length > 0 && (

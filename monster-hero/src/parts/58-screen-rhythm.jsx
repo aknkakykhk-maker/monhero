@@ -471,7 +471,7 @@ function RhythmNoteDexScreen({onBack,onPlay}){
               {typeof RhythmNoteSwatch==='function'&&entry.swatch&&<span data-rhythm-note-dex-swatch={entry.swatch} className="shrink-0"><RhythmNoteSwatch kind={entry.swatch} width={64} height={48}/></span>}
               <div className="min-w-0 flex-1">
                 <b data-rhythm-note-dex-name className="block text-[13px] font-black text-amber-100">{row.label||entry.name}</b>
-                {row.text&&<span data-rhythm-note-dex-text className="mt-1 block text-[11px] leading-relaxed text-slate-300">{row.text}</span>}
+                {row.text&&<span data-rhythm-note-dex-text className="mt-1 block text-[11px] leading-relaxed text-slate-300">{helpWrap(row.text)}</span>}
               </div>
               </div>
               <button data-rhythm-note-dex-play={entry.id} onClick={()=>onPlay(entry.id)}
@@ -605,14 +605,14 @@ function RhythmEventRewardModal({ prize, onClaim, claiming }) {
                 </span>
                 <b className="shrink-0 text-sm text-amber-100">{entry.rank}位</b>
               </p>
-              <p className="mt-1 text-[10px] leading-tight text-white">{rhythmEventRewardText(entry.reward)}</p>
+              <p className="mt-1 text-[10px] leading-tight text-white">{helpWrap(rhythmEventRewardText(entry.reward))}</p>
             </li>
           ))}
         </ul>
         {participation&&(
           <div data-rhythm-event-reward-participation className="mt-2 rounded-2xl border border-cyan-300/40 bg-cyan-500/5 p-2">
             <p className="text-[10px] font-black text-cyan-200">参加報酬（{weekly?`その週に${participation.plays}回遊びました`:`対象曲を${participation.songs}曲すべて`}）</p>
-            <p className="mt-1 text-[10px] leading-tight text-white">{rhythmEventParticipationText(participation)}</p>
+            <p className="mt-1 text-[10px] leading-tight text-white">{helpWrap(rhythmEventParticipationText(participation))}</p>
           </div>
         )}
         <button type="button" data-rhythm-event-reward-claim disabled={claiming} onClick={onClaim}
@@ -955,7 +955,7 @@ function RhythmRankingScreen({
                   <p data-rhythm-event-period className="text-[9px] text-slate-400">{rhythmEventPeriodText(eventDefinition,eventRange)}</p>
                 </div>
                 <p data-rhythm-event-remaining className="shrink-0 text-[10px] font-black text-fuchsia-200">
-                  {eventRange?rhythmEventRemainingText(eventRange.endMs-eventNowMs):'—'}
+                  {helpWrap(eventRange?rhythmEventRemainingText(eventRange.endMs-eventNowMs):'—')}
                 </p>
               </div>
               {/* ★告知画像と報酬の表は詳細へ移した(2026-09-11・ユーザー指摘

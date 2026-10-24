@@ -491,7 +491,7 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
 <section className={card}>
           <details data-rhythm-option-help className="mt-3">
             <summary className="min-h-[24px] cursor-pointer list-none text-[10px] font-black leading-[24px] text-cyan-300/90">▸ この端末で通知をどこまで止められるか</summary>
-            <p className={`mt-1 ${note}`}>{rhythmQuietModeSupportText()}</p>
+            <p className={`mt-1 ${note}`}>{helpWrap(rhythmQuietModeSupportText())}</p>
           </details>
           {!RHYTHM_HAPTICS.supported()&&<p data-rhythm-vibration-unsupported className="mt-2 text-[10px] font-bold leading-relaxed text-amber-200">この端末は振動に対応していないため、ONにしても振動しません（音とエフェクトはそのまま出ます）。</p>}
         </section>
@@ -1252,7 +1252,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
           リンクは更新履歴と同じ関門(changelogSafeLink)を通す。https だけ通り、
           target="_blank" と rel="noopener noreferrer" が付く */}
       {song.credit&&song.credit.text&&<p data-rhythm-song-credit
-        className="mt-2 max-w-full text-center text-[11px] leading-relaxed text-slate-300">{song.credit.text}</p>}
+        className="mt-2 max-w-full text-center text-[11px] leading-relaxed text-slate-300">{helpWrap(song.credit.text)}</p>}
       {song.credit&&changelogSafeLink(song.credit.link)&&<a data-rhythm-song-credit-link
         href={changelogSafeLink(song.credit.link)} target="_blank" rel="noopener noreferrer"
         onClick={e=>e.stopPropagation()}
@@ -1379,7 +1379,7 @@ const RhythmHellGuide=({pageIndex,onPage,onClose})=>{
         {video&&<RhythmHellVideo id={video}/>}
         <div>
           <h2 data-rhythm-hell-guide-title style={{margin:video?0:'6px 0 0',fontSize:'22px',fontWeight:900,lineHeight:1.25,color:'#fff'}}>{page.title}</h2>
-          <p data-rhythm-hell-guide-text style={{margin:'10px 0 0',fontSize:'14px',fontWeight:700,lineHeight:1.7,color:'#e2e8f0'}}>{page.text}</p>
+          <p data-rhythm-hell-guide-text style={{margin:'10px 0 0',fontSize:'14px',fontWeight:700,lineHeight:1.7,color:'#e2e8f0'}}>{helpWrap(page.text)}</p>
           {/* 最後のページに、はじめての HELL の目安(Lv. がいちばん低い HELL・実データから。2026-10-21 改善部 N6) */}
           {last&&typeof rhythmHellEntryText==='function'&&rhythmHellEntryText()&&<p data-rhythm-hell-guide-entry style={{margin:'12px 0 0',padding:'8px 10px',borderRadius:'12px',border:'1px solid rgba(251,113,133,.5)',background:'rgba(76,5,25,.55)',fontSize:'13px',fontWeight:900,lineHeight:1.6,color:'#fecdd3'}}>🔥 {rhythmHellEntryText()}。曲によって HELL の Lv. は大きく違います。曲えらびの HELL のボタンの数字を見て選んでください。</p>}
         </div>

@@ -70,7 +70,7 @@ function AssetDownloadPage({ onBack }) {
                 <span aria-hidden="true" data-icon={pack.icon} className="mh-emoji-icon w-8 shrink-0 text-center text-[22px] leading-none"/>
                 <span className="min-w-0 flex-1">
                   <b className="block text-[14px] font-black leading-tight text-slate-100">{pack.label}<small className="ml-2 text-[11px] font-bold text-slate-400">約{formatAssetMB(st.bytes)}</small></b>
-                  <span className="mt-0.5 block text-[10px] font-bold leading-snug text-slate-400">{pack.desc}</span>
+                  <span className="mt-0.5 block text-[10px] font-bold leading-snug text-slate-400">{helpWrap(pack.desc)}</span>
                 </span>
               </div>
               <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-800" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
@@ -168,7 +168,7 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
               return (
                 <div key={item.key} data-battle-fx-setting={item.key} className="border-t border-white/10 pt-3">
                   <b className="block text-[13px] font-black text-slate-200">{item.title}</b>
-                  <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">{item.desc}</p>
+                  <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">{helpWrap(item.desc)}</p>
                   {/* 「重いときは自動で軽く」で、いま自動で下げている軽さ(保存はしていない)。選び直すと消える */}
                   {item.key === 'load' && battleFxAutoLoad && battleFxAutoLoad !== current && (
                     <p data-battle-fx-auto-note className="mt-1 rounded-lg border border-amber-400/40 bg-amber-950/30 px-2 py-1 text-[10px] font-bold leading-relaxed text-amber-100">
