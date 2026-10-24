@@ -5235,6 +5235,7 @@ function MonsterHeroGame() {
     if (BGM_SILENT_STATES.includes(state)) return null;
     // MFバトルカードは画面の部品が曲を決める(対戦は相手の助手の曲。それ以外はHOMEの曲を続ける)
     if (state === 'CARD_TOP' || state === 'CARD_BATTLE') return cardBgm || homeBgm;
+    if (state === 'CARD_PACK_OPEN') return homeBgm; // パックを開ける(マーケットと同じく HOME の曲を続ける)
     if (state === 'HOME' || state === 'PROFILE' || state === 'ITEM_INVENTORY') return homeBgm;
     if (BGM_STATE_MAP[state] === 'home') return homeBgm;
     if (BGM_STATE_MAP[state]) return bgmArrangementWithEventDefault(bgmArrangement, BGM_STATE_MAP[state]) || BGM_STATE_MAP[state];

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: acc84a9bcef2e362
+// generated-sha256: 948f16f56248023b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-24 21:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-24 22:02"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -51295,7 +51295,7 @@ const CARD_RULE_PAGES = Object.freeze([
   ] },
   { id: 'win', emoji: '🏆', title: '勝ち負け', lines: [
     '相手のモンスター3体を全員KOしたら勝ち',
-    '相手が引くときに山札が無かったら勝ち(山札切れ)',
+    '引くときに山札が無かったら、そのプレイヤーの負け(山札切れ。相手が切れたら自分の勝ち)',
     '相手が投了したら勝ち',
     '両方の最後の1体が同時にKOされたときは、攻撃した側の勝ち',
   ] },
@@ -52917,6 +52917,8 @@ const CardDex = ({ db, collection, onBack }) => {
 
 // ==================== ルールの画面(区切り2) ====================
 // 文は 88-card-rules.jsx の CARD_RULE_PAGES(正本は RULES_SOURCE.md)。練習試合のやり直しもここから(ドラの D20)
+// 「」で囲んだ言葉は途中で折らない(「全モンスター」が「全/モンスター」と折れていた。言葉の切れ目を探す jaWrap は「全」と「モンスター」を別の言葉と見る)
+const cardRuleLine = (t) => String(t).split(/(「[^」]*」)/).map((seg, i) => (/^「/.test(seg) ? <span key={i} className="whitespace-nowrap">{seg}</span> : <React.Fragment key={i}>{jaWrap(seg)}</React.Fragment>));
 const CardRules = ({ onBack, onTutorial }) => (
   <div data-mh-screen data-card-rules className={SCREEN_SHELL_CLASS}>
     <ScreenHead title="ルール" accent="text-amber-200" onBack={onBack}/>
@@ -52925,7 +52927,7 @@ const CardRules = ({ onBack, onTutorial }) => (
         <div key={pg.id} data-card-rule={pg.id} className={SCREEN_PANEL_CLASS}>
           <div className="text-[14px] font-black text-amber-200">{pg.emoji} {pg.title}</div>
           <ul className="mt-1 space-y-0.5">
-            {pg.lines.map((t, i) => <li key={i} className="flex gap-1 text-[12px] font-bold leading-snug text-slate-100" style={JA_WRAP_STYLE}><span className="shrink-0 text-amber-300">・</span><span>{jaWrap(t)}</span></li>)}
+            {pg.lines.map((t, i) => <li key={i} className="flex gap-1 text-[12px] font-bold leading-snug text-slate-100" style={JA_WRAP_STYLE}><span className="shrink-0 text-amber-300">・</span><span>{cardRuleLine(t)}</span></li>)}
           </ul>
         </div>
       ))}
@@ -58408,6 +58410,7 @@ function MonsterHeroGame() {
     if (BGM_SILENT_STATES.includes(state)) return null;
     // MFバトルカードは画面の部品が曲を決める(対戦は相手の助手の曲。それ以外はHOMEの曲を続ける)
     if (state === 'CARD_TOP' || state === 'CARD_BATTLE') return cardBgm || homeBgm;
+    if (state === 'CARD_PACK_OPEN') return homeBgm; // パックを開ける(マーケットと同じく HOME の曲を続ける)
     if (state === 'HOME' || state === 'PROFILE' || state === 'ITEM_INVENTORY') return homeBgm;
     if (BGM_STATE_MAP[state] === 'home') return homeBgm;
     if (BGM_STATE_MAP[state]) return bgmArrangementWithEventDefault(bgmArrangement, BGM_STATE_MAP[state]) || BGM_STATE_MAP[state];

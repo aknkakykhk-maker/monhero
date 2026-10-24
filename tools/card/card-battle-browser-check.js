@@ -193,6 +193,15 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     await page.locator('[data-card-rules]').waitFor({ timeout: 5000 });
     const ruleCount = await page.locator('[data-card-rule]').count();
     if (SHOT) await shot(page, '22-rules');
+    if (SHOT) {
+      await page.evaluate(() => document.querySelectorAll('[data-card-rules] .mh-scroll').forEach((el) => { el.scrollTop = Math.round(el.scrollHeight / 2) - 200; }));
+      await shot(page, '22b-rules-middle');
+      await page.evaluate(() => document.querySelectorAll('[data-card-rules] .mh-scroll').forEach((el) => { el.scrollTop = el.scrollHeight; }));
+      await shot(page, '22c-rules-bottom');
+    }
+    // 「」で囲んだ言葉が途中で折れていない(「全/モンスター」と折れていた)
+    const brokenQuote = await page.evaluate(() => [...document.querySelectorAll('[data-card-rules] span.whitespace-nowrap')].filter((el) => el.getClientRects().length > 1).map((el) => el.textContent));
+    check('⑮ ルールの「」で囲んだ言葉が途中で折れていない', brokenQuote.length === 0, brokenQuote.join('・'));
     check('⑮ ルールの画面に節が並び、練習試合のやり直しがある', ruleCount >= 8 && (await page.locator('[data-card-rules] [data-card-tutorial-again]').count()) === 1, String(ruleCount));
     await page.locator('[data-card-tutorial-again]').click();
     await page.locator('[data-card-tutor]').waitFor({ timeout: 20000 });

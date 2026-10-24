@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0252d66e5c6cb51e
+// source-sha256: 0436f3b10dab9d1e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-24 21:34";
+const BUILD_DATE = "2026-10-24 22:02";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -84494,7 +84494,7 @@ const CARD_RULE_PAGES = Object.freeze([{
   id: 'win',
   emoji: '🏆',
   title: '勝ち負け',
-  lines: ['相手のモンスター3体を全員KOしたら勝ち', '相手が引くときに山札が無かったら勝ち(山札切れ)', '相手が投了したら勝ち', '両方の最後の1体が同時にKOされたときは、攻撃した側の勝ち']
+  lines: ['相手のモンスター3体を全員KOしたら勝ち', '引くときに山札が無かったら、そのプレイヤーの負け(山札切れ。相手が切れたら自分の勝ち)', '相手が投了したら勝ち', '両方の最後の1体が同時にKOされたときは、攻撃した側の勝ち']
 }, {
   id: 'text',
   emoji: '📜',
@@ -87563,6 +87563,12 @@ const CardDex = ({
     onClose: () => setDetail(null)
   }));
 };
+const cardRuleLine = t => String(t).split(/(「[^」]*」)/).map((seg, i) => /^「/.test(seg) ? React.createElement("span", {
+  key: i,
+  className: "whitespace-nowrap"
+}, seg) : React.createElement(React.Fragment, {
+  key: i
+}, jaWrap(seg)));
 const CardRules = ({
   onBack,
   onTutorial
@@ -87590,7 +87596,7 @@ const CardRules = ({
   style: JA_WRAP_STYLE
 }, React.createElement("span", {
   className: "shrink-0 text-amber-300"
-}, "・"), React.createElement("span", null, jaWrap(t)))))))), React.createElement("div", {
+}, "・"), React.createElement("span", null, cardRuleLine(t)))))))), React.createElement("div", {
   className: SCREEN_FOOTER_CLASS
 }, React.createElement("button", {
   type: "button",
@@ -93128,6 +93134,7 @@ function MonsterHeroGame() {
     }
     if (BGM_SILENT_STATES.includes(state)) return null;
     if (state === 'CARD_TOP' || state === 'CARD_BATTLE') return cardBgm || homeBgm;
+    if (state === 'CARD_PACK_OPEN') return homeBgm;
     if (state === 'HOME' || state === 'PROFILE' || state === 'ITEM_INVENTORY') return homeBgm;
     if (BGM_STATE_MAP[state] === 'home') return homeBgm;
     if (BGM_STATE_MAP[state]) return bgmArrangementWithEventDefault(bgmArrangement, BGM_STATE_MAP[state]) || BGM_STATE_MAP[state];

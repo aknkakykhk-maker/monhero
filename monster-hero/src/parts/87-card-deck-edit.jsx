@@ -233,6 +233,8 @@ const CardDex = ({ db, collection, onBack }) => {
 
 // ==================== ルールの画面(区切り2) ====================
 // 文は 88-card-rules.jsx の CARD_RULE_PAGES(正本は RULES_SOURCE.md)。練習試合のやり直しもここから(ドラの D20)
+// 「」で囲んだ言葉は途中で折らない(「全モンスター」が「全/モンスター」と折れていた。言葉の切れ目を探す jaWrap は「全」と「モンスター」を別の言葉と見る)
+const cardRuleLine = (t) => String(t).split(/(「[^」]*」)/).map((seg, i) => (/^「/.test(seg) ? <span key={i} className="whitespace-nowrap">{seg}</span> : <React.Fragment key={i}>{jaWrap(seg)}</React.Fragment>));
 const CardRules = ({ onBack, onTutorial }) => (
   <div data-mh-screen data-card-rules className={SCREEN_SHELL_CLASS}>
     <ScreenHead title="ルール" accent="text-amber-200" onBack={onBack}/>
@@ -241,7 +243,7 @@ const CardRules = ({ onBack, onTutorial }) => (
         <div key={pg.id} data-card-rule={pg.id} className={SCREEN_PANEL_CLASS}>
           <div className="text-[14px] font-black text-amber-200">{pg.emoji} {pg.title}</div>
           <ul className="mt-1 space-y-0.5">
-            {pg.lines.map((t, i) => <li key={i} className="flex gap-1 text-[12px] font-bold leading-snug text-slate-100" style={JA_WRAP_STYLE}><span className="shrink-0 text-amber-300">・</span><span>{jaWrap(t)}</span></li>)}
+            {pg.lines.map((t, i) => <li key={i} className="flex gap-1 text-[12px] font-bold leading-snug text-slate-100" style={JA_WRAP_STYLE}><span className="shrink-0 text-amber-300">・</span><span>{cardRuleLine(t)}</span></li>)}
           </ul>
         </div>
       ))}
