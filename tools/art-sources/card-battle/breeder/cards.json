@@ -37,10 +37,10 @@
    "kind_en": "SPE",
    "category": "ブリーダー",
    "guts": 3,
-   "text": "戦闘ステップの最初に使う。山札の上から5枚をガッツにする。このターンは他のカードを使用できない。",
+   "text": "攻撃のはじめ(最初のカード)に使う。山札の上から5枚をガッツにする。このターンは、ほかのカードを使用できない。",
    "text_en": "Can only be played as the first and only card in your BATTLE STEP. The top 5 cards of your deck become GUTS.",
    "name_source": "元",
-   "text_source": "元"
+   "text_source": "元(言い回しをそろえた)"
   },
   {
    "no": "122",
@@ -76,10 +76,10 @@
    "kind_en": "SPE",
    "category": "ブリーダー",
    "guts": 4,
-   "text": "味方モンスターが一体の時に使用できる。自分の山札の「全ての」カードをガッツにする。",
+   "text": "味方モンスターが1体の時に使用できる。山札のカードを全てガッツにする。",
    "text_en": "If you have only one monster left, take your entire deck and place it in your GUTS pile.",
    "name_source": "元",
-   "text_source": "元"
+   "text_source": "元(言い回しをそろえた)"
   },
   {
    "no": "128",
@@ -115,10 +115,10 @@
    "kind_en": "SPE",
    "category": "ブリーダー",
    "guts": 0,
-   "text": "一体の味方モンスターのライフを1減らす。自分の山札からカードを一枚引く。",
+   "text": "1体の味方モンスターのライフを1減らす。自分の山札からカードを1枚引く。",
    "text_en": "Remove 1 HP from one of your monsters. Draw a card.",
    "name_source": "元",
-   "text_source": "元"
+   "text_source": "元(言い回しをそろえた)"
   },
   {
    "no": "254",
@@ -180,10 +180,10 @@
    "kind_en": "SPE",
    "category": "ブリーダー",
    "guts": 1,
-   "text": "手札を全部捨て、捨てた枚数だけカードをドローする。",
+   "text": "手札を全部捨て、捨てた枚数だけ山札からカードを引く。",
    "text_en": "Discard all cards in your hand. Draw the same amount.",
    "name_source": "元",
-   "text_source": "元"
+   "text_source": "元(言い回しをそろえた)"
   },
   {
    "no": "280",
@@ -219,7 +219,7 @@
    "kind_en": "SPE",
    "category": "ブリーダー",
    "guts": 0,
-   "text": "味方モンスター2体をKOする。片方の MAIN と、もう片方の SUB を持つ派生モンスターを出す。そのターンは攻撃できない。",
+   "text": "味方モンスター2体をKOする。片方のメインと、もう片方のサブを持つ派生モンスターを出す。そのターンは攻撃できない。",
    "text_en": "Sacrifice 2 of your monsters. Replace them with a mixedbred that has the MAIN of one and the SUB of the other. It enters exhausted.",
    "name_source": "元",
    "text_source": "訳案"
