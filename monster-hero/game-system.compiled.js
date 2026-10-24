@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 60d29d3b28666999
+// source-sha256: bf1355d6740e2326
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-25 08:37";
+const BUILD_DATE = "2026-10-25 08:42";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -85470,6 +85470,21 @@ const CARD_LEVEL_LABEL = Object.freeze({
   expert: 'EXPERT',
   master: 'MASTER'
 });
+const CardResultBanner = ({
+  title,
+  sub,
+  tone = 'win'
+}) => React.createElement("div", {
+  "data-card-result-banner": tone,
+  className: "mhms-in py-1 text-center"
+}, React.createElement("div", {
+  className: `text-[44px] font-black italic leading-none tracking-wider ${tone === 'win' ? 'text-amber-200' : tone === 'lose' ? 'text-slate-300' : 'text-sky-200'}`,
+  style: {
+    textShadow: tone === 'win' ? '0 0 18px rgba(251,191,36,.65), 0 3px 0 #7c2d12' : '0 3px 0 #0f172a'
+  }
+}, title), sub && React.createElement("div", {
+  className: "mt-1 text-[10px] font-black tracking-[0.3em] text-white/70"
+}, sub));
 const CardNameFit = ({
   name,
   size = 10,
@@ -87272,26 +87287,47 @@ const CardBattleScreen = ({
     return React.createElement("div", {
       "data-mh-screen": true,
       "data-card-top": "mode",
-      className: SCREEN_SHELL_CLASS
+      className: "mhms-stage relative flex h-full min-h-0 flex-1 flex-col overflow-hidden text-white"
+    }, React.createElement(RhythmModeSelectStage, {
+      notes: false
+    }), React.createElement("div", {
+      className: "relative z-10"
     }, React.createElement(ScreenHead, {
       title: "対戦",
       accent: "text-amber-200",
-      onBack: () => setView('top')
-    }), React.createElement("div", {
-      className: `${SCREEN_LIST_CLASS} space-y-3 pb-4`
+      onBack: () => setView('top'),
+      note: "だれと戦うかをえらびます"
+    })), React.createElement("div", {
+      className: `${SCREEN_LIST_CLASS} relative z-[1] flex flex-col justify-center space-y-3 px-3 pb-4`
     }, React.createElement("button", {
       type: "button",
       "data-card-mode-assistant": true,
-      className: "mh-button mh-button-primary flex min-h-[96px] w-full flex-col items-center justify-center rounded-2xl px-3 py-3 active:scale-[.98]",
+      className: "mhms-card mhms-in flex min-h-[150px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-orange-200 via-orange-400 to-rose-500 px-4 py-3 text-left text-slate-950 active:scale-[.98]",
       onClick: () => {
         Audio_.fgSe.tap();
         setView('foe');
       }
     }, React.createElement("span", {
-      className: "text-[18px] font-black"
-    }, "助手と対戦"), React.createElement("span", {
-      className: "mt-1 text-[12px] font-bold opacity-80"
-    }, "助手のみんなと戦う")), React.createElement("button", {
+      "aria-hidden": "true",
+      className: "mhms-mark"
+    }, "ASSISTANT"), React.createElement("span", {
+      className: "relative flex items-center gap-2"
+    }, React.createElement("span", {
+      "aria-hidden": "true",
+      className: "text-3xl leading-none"
+    }, "⚔️"), React.createElement("span", null, React.createElement("b", {
+      className: "block text-[22px] font-black italic leading-tight"
+    }, "助手と対戦"), React.createElement("small", {
+      className: "block text-[11px] font-black text-slate-900/80"
+    }, "助手のみんなと戦う・強さは5段"))), React.createElement("span", {
+      "aria-hidden": "true",
+      className: "relative flex -space-x-2"
+    }, foes.map(x => React.createElement("img", {
+      key: x.id,
+      src: assistantFaceImage(x, 'normal'),
+      alt: "",
+      className: "h-10 w-10 rounded-full border-2 border-white/80 bg-slate-900 object-cover object-top shadow"
+    })))), React.createElement("button", {
       type: "button",
       "data-card-mode-multi": true,
       disabled: !debug,
@@ -87299,11 +87335,24 @@ const CardBattleScreen = ({
         Audio_.fgSe.tap();
         setView('pvp');
       },
-      className: "mh-button flex min-h-[96px] w-full flex-col items-center justify-center rounded-2xl border border-white/10 bg-slate-900 px-3 py-3 text-slate-400 enabled:text-sky-100"
+      className: "mhms-card mhms-in flex min-h-[150px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-sky-200 via-sky-400 to-indigo-500 px-4 py-3 text-left text-slate-950 active:scale-[.98] disabled:opacity-50",
+      style: {
+        animationDelay: '60ms'
+      }
     }, React.createElement("span", {
-      className: "text-[18px] font-black"
-    }, "マルチ対戦"), React.createElement("span", {
-      className: "mt-1 rounded-full bg-slate-700 px-2 py-0.5 text-[11px] font-black text-slate-200"
+      "aria-hidden": "true",
+      className: "mhms-mark"
+    }, "MULTI"), React.createElement("span", {
+      className: "relative flex items-center gap-2"
+    }, React.createElement("span", {
+      "aria-hidden": "true",
+      className: "text-3xl leading-none"
+    }, "🎮"), React.createElement("span", null, React.createElement("b", {
+      className: "block text-[22px] font-black italic leading-tight"
+    }, "マルチ対戦"), React.createElement("small", {
+      className: "block text-[11px] font-black text-slate-900/80"
+    }, "ブリーダーどうしで戦う"))), React.createElement("span", {
+      className: "relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white"
     }, debug ? 'つくっている途中(デバッグ)' : '準備中'))));
   }
   if (view === 'pvp') {
@@ -87583,7 +87632,29 @@ const CardBattleScreen = ({
       onBack: () => setView('top')
     }), React.createElement("div", {
       className: `${SCREEN_LIST_CLASS} space-y-2 pb-4`
-    }, React.createElement("div", {
+    }, result.done && React.createElement(CardResultBanner, {
+      title: "クリア！",
+      sub: "TUTORIAL CLEAR",
+      tone: "win"
+    }), (() => {
+      const dra = allAssistants.find(x => x.id === 'dra');
+      return dra ? React.createElement("div", {
+        className: "flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2"
+      }, React.createElement(CardAssistantArt, {
+        src: assistantFullImage(dra, result.done ? 'happy' : 'normal'),
+        alt: dra.name,
+        className: "w-[42%]",
+        style: {
+          height: 'min(180px, 24vh)'
+        }
+      }), React.createElement("div", {
+        className: "mb-2 min-w-0 flex-1 rounded-2xl border-2 bg-white px-2 py-1 text-[13px] font-extrabold leading-snug text-[#1f1333]",
+        style: {
+          borderColor: dra.accent,
+          ...JA_WRAP_STYLE
+        }
+      }, jaWrap(result.done ? 'よくやったな。これで決まりはひととおりだ。あとは対戦で慣れていこう' : 'またいつでも練習しような。トップの「練習試合」からできるぞ'))) : null;
+    })(), React.createElement("div", {
       className: SCREEN_PANEL_CLASS
     }, result.done && result.reward > 0 && React.createElement("div", {
       className: "text-[15px] font-black text-amber-200"
@@ -87619,12 +87690,19 @@ const CardBattleScreen = ({
       onBack: () => setView('top')
     }), React.createElement("div", {
       className: `${SCREEN_LIST_CLASS} space-y-2 pb-4`
-    }, a && React.createElement("div", {
+    }, React.createElement(CardResultBanner, {
+      title: win ? '勝ち！' : result.outcome === 'surrender' ? '投了' : '負け…',
+      sub: win ? 'YOU WIN' : result.outcome === 'surrender' ? 'SURRENDER' : 'YOU LOSE',
+      tone: win ? 'win' : 'lose'
+    }), a && React.createElement("div", {
       className: "flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2"
     }, React.createElement(CardAssistantArt, {
       src: assistantFullImage(a, line ? line.face : 'normal'),
       alt: a.name,
-      className: "h-[220px] w-[46%]"
+      className: "w-[46%]",
+      style: {
+        height: 'min(220px, 28vh)'
+      }
     }), React.createElement("div", {
       className: "mb-2 min-w-0 flex-1 rounded-2xl border-2 bg-white px-2 py-1 text-[13px] font-extrabold leading-snug text-[#1f1333]",
       style: {
@@ -88260,7 +88338,9 @@ const CardDeckTile = ({
       WebkitUserSelect: 'none',
       userSelect: 'none'
     }
-  }), React.createElement("img", {
+  }), React.createElement("span", {
+    className: "relative block w-full"
+  }, React.createElement("img", {
     src: CARD_IMG(c ? c.img : m ? m.img : no),
     alt: name,
     draggable: false,
@@ -88268,10 +88348,10 @@ const CardDeckTile = ({
     className: "aspect-[5/7] w-full rounded-[5px] object-cover"
   }), React.createElement("span", {
     "data-card-deck-badge": true,
-    className: "absolute right-0.5 top-0.5 rounded-md bg-slate-950/90 px-1 text-[10px] font-black text-white"
+    className: "absolute bottom-0.5 right-0.5 rounded-md bg-slate-950/90 px-1 text-[10px] font-black text-white"
   }, React.createElement("span", {
     className: "text-emerald-300"
-  }, "入", inDeck), "/持", owned), mark && React.createElement("span", {
+  }, "入", inDeck), "/持", owned)), mark && React.createElement("span", {
     className: "absolute left-0.5 top-0.5 rounded-md bg-amber-400 px-1 text-[9px] font-black text-slate-950"
   }, mark), React.createElement(CardNameFit, {
     name: name,
@@ -88297,6 +88377,7 @@ const CardDeckEditor = ({
   const [detail, setDetail] = useState(null);
   const [leave, setLeave] = useState(false);
   const press = useCardLongPress(no => setDetail(no));
+  const short = typeof window !== 'undefined' && window.innerHeight < 760;
   const col = collection || {};
   const changed = JSON.stringify(deck) !== JSON.stringify(deck0);
   const rules = cardDeckProblems(db, deck);
@@ -88394,7 +88475,10 @@ const CardDeckEditor = ({
       type: "button",
       "data-card-deck-mon": i
     }, press(no, () => removeOne(no)), {
-      className: "relative w-[20%] max-w-[64px] active:scale-95"
+      className: "relative w-[20%] max-w-[64px] active:scale-95",
+      style: short ? {
+        maxWidth: 'min(64px, 7vh)'
+      } : undefined
     }), React.createElement("img", {
       src: CARD_IMG(m.img),
       alt: m.name,
@@ -88407,6 +88491,9 @@ const CardDeckEditor = ({
       type: "button",
       "data-card-deck-mon": i,
       onClick: () => setTab('mon'),
+      style: short ? {
+        maxWidth: 'min(64px, 7vh)'
+      } : undefined,
       className: "flex aspect-[5/7] w-[20%] max-w-[64px] items-center justify-center rounded-[5px] border-2 border-dashed border-white/30 text-[10px] font-bold text-slate-400"
     }, "モンスター");
   }), React.createElement("div", {
@@ -88421,7 +88508,7 @@ const CardDeckEditor = ({
     className: `text-[11px] font-black ${ready ? 'text-emerald-300' : 'text-amber-200'}`
   }, ready ? '対戦に使えます' : 'まだ対戦に使えません'))), React.createElement("div", {
     "data-card-deck-legend": true,
-    className: "text-[10px] font-bold text-slate-400"
+    className: `${short ? 'hidden' : ''} text-[10px] font-bold text-slate-400`
   }, "カードの右上: ", React.createElement("span", {
     className: "text-emerald-300"
   }, "入"), "=デッキに入れた枚数 / 持=持っている枚数"), !ready && React.createElement("div", {
@@ -89072,7 +89159,7 @@ const CardPackOpen = ({
   }), phase === 'closed' && React.createElement("span", {
     className: "absolute inset-x-0 -bottom-9 animate-pulse text-center text-[14px] font-black text-white"
   }, "タップで開ける")) : React.createElement("div", {
-    className: `grid w-full gap-2 ${cards.length > 4 ? 'grid-cols-4' : 'grid-cols-3'} px-1`
+    className: `grid w-full gap-2 ${cards.length > 4 && !(typeof window !== 'undefined' && window.innerHeight >= 760) ? 'grid-cols-4' : 'grid-cols-3'} px-1`
   }, cards.map((c, i) => {
     const on = flipped.includes(i);
     const card = cardOf(db, c.no);
@@ -89101,11 +89188,29 @@ const CardPackOpen = ({
     }), React.createElement("div", {
       className: `mh-pack-card-in aspect-[5/7] w-full ${on ? 'flipped' : ''}`
     }, React.createElement("div", {
-      className: `mh-pack-face flex items-center justify-center rounded-[5px] border-2 border-white/50 text-[22px] ${rare && !on ? c.rarity === 'alt' ? 'mh-pack-alt-back' : 'mh-pack-kira-back' : ''}`,
+      className: `mh-pack-face flex items-center justify-center overflow-hidden rounded-[5px] border-2 border-white/50 ${rare && !on ? c.rarity === 'alt' ? 'mh-pack-alt-back' : 'mh-pack-kira-back' : ''}`,
       style: {
-        background: `linear-gradient(160deg, ${pack.color}, #0f172a)`
+        background: `repeating-linear-gradient(135deg, rgba(255,255,255,.07) 0 6px, transparent 6px 12px), linear-gradient(160deg, ${pack.color}, #0f172a)`,
+        containerType: 'inline-size'
       }
-    }, c.slot === 'mon' ? '★' : '🃏'), React.createElement("div", {
+    }, React.createElement("span", {
+      "aria-hidden": "true",
+      className: "pointer-events-none absolute inset-[6%] rounded-[4px] border border-white/40"
+    }), React.createElement("span", {
+      "aria-hidden": "true",
+      className: "relative grid aspect-square w-[58%] place-items-center rounded-full border-2 border-amber-200/80 bg-black/40 shadow-[0_0_10px_rgba(0,0,0,.5)]"
+    }, React.createElement("span", {
+      className: "text-center font-black leading-none text-amber-100",
+      style: {
+        fontSize: '17cqw',
+        textShadow: '0 1px 2px #000'
+      }
+    }, c.slot === 'mon' ? '★' : 'MF', React.createElement("span", {
+      className: "block font-black tracking-tight text-white/80",
+      style: {
+        fontSize: '7cqw'
+      }
+    }, "BATTLE CARD")))), React.createElement("div", {
       className: `mh-pack-face mh-pack-front ${rare ? c.rarity === 'alt' ? 'mh-pack-alt-front' : 'mh-pack-kira-front' : ''}`
     }, React.createElement("img", {
       src: CARD_IMG(card ? card.img : m ? m.img : c.no),
