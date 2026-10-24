@@ -20,6 +20,8 @@ const { eventStorySeed } = require(path.resolve(__dirname, '..', 'boot/quiet-boo
 const root = path.resolve(__dirname, '..', '..');
 const PORT = 8994;
 const SHOT = process.env.CARD_SHOT_DIR || '';
+// 画面の大きさ(既定は iPhone 13 の 390×844。SE は CARD_VIEWPORT=375x667)
+const [VW, VH] = (process.env.CARD_VIEWPORT || '390x844').split('x').map(Number);
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.png': 'image/png', '.PNG': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.mp3': 'audio/mpeg' };
 const serve = () => new Promise((resolve) => {
   const server = http.createServer((req, res) => {
@@ -41,10 +43,25 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
   const server = await serve();
   const errors = [];
   let browser;
-  const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive: true }); await page.screenshot({ path: path.join(SHOT, `${name}.png`) }).catch(() => {}); } };
+  // 対戦の画面で、相手の場・まんなか・自分の場・手札・下のボタンが上から順に並び、重なっていないか
+const layoutIssues = async (page) => page.evaluate(() => {
+  const box = (sel) => { const els = [...document.querySelectorAll(sel)]; if (!els.length) return null; const r = els.map((e) => e.getBoundingClientRect()); return { top: Math.min(...r.map((x) => x.top)), bottom: Math.max(...r.map((x) => x.bottom)) }; };
+  const opp = box('[data-card-mon^="1-"]'), stage = box('[data-card-stage]'), me = box('[data-card-mon^="0-"]'), hand = box('[data-card-hand]'), foot = box('[data-card-footer]');
+  const out = [];
+  if (!opp || !stage || !me || !hand || !foot) return ['部品が見つからない'];
+  if (opp.bottom > stage.top + 1) out.push('相手の場がまんなかにかかる');
+  if (stage.bottom > me.top + 1) out.push('まんなかが自分の場にかかる');
+  if (me.bottom > hand.top + 1) out.push(`自分の場が手札にかかる(${Math.round(me.bottom - hand.top)}px)`);
+  if (hand.bottom > foot.top + 1) out.push('手札がボタンにかかる');
+  if (foot.bottom > window.innerHeight + 1) out.push('ボタンが画面の外');
+  if (stage.bottom - stage.top < 60) out.push(`まんなかが狭い(${Math.round(stage.bottom - stage.top)}px)`);
+  return out;
+});
+const layoutSeen = [];
+const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive: true }); await page.screenshot({ path: path.join(SHOT, `${name}.png`) }).catch(() => {}); } };
   try {
     browser = await playwright.chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
-    const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    const page = await browser.newPage({ viewport: { width: VW, height: VH } });
     page.on('pageerror', (e) => errors.push(String(e)));
     await page.addInitScript(() => {
       if (sessionStorage.getItem('__cardSeeded')) return;
@@ -121,6 +138,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     const mons = await page.locator('[data-card-mon]').count();
     check('④ 対戦が始まり、手札5枚・場の6体が出る', hand === 5 && mons === 6, `手札${hand}・場${mons}`);
     await shot(page, '04-battle-start');
+    layoutSeen.push(...(await layoutIssues(page)).map((x) => `始まり: ${x}`));
     // ⑥ 長押しで詳しい画面
     const card0 = page.locator('[data-card-hand-card="0"]');
     const box = await card0.boundingBox();
@@ -143,7 +161,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
       if (mode === 'setup') { await page.getByRole('button', { name: /始める$/ }).click(); continue; }
       if (mode === 'discard') { const n = await page.locator('[data-card-hand-card]').count(); for (let i = 0; i < n; i++) await page.locator(`[data-card-hand-card="${i}"]`).click(); await page.getByRole('button', { name: /捨てる$/ }).click().catch(() => {}); continue; }
       if (mode === 'guard') {
-        if (!shotGuard) { await shot(page, '07-guard'); shotGuard = true; }
+        if (!shotGuard) { await shot(page, '07-guard'); layoutSeen.push(...(await layoutIssues(page)).map((x) => `守りの番: ${x}`)); shotGuard = true; }
         guards += 1;
         await page.getByRole('button', { name: '守らない' }).click();
         continue;
@@ -167,7 +185,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
           if (await user.count()) { await user.click(); await page.waitForTimeout(150); }
           const target = page.locator('[data-card-mon].ring-rose-400').first();
           if (await target.count()) {
-            if (!shotTarget) { await shot(page, '06-target'); shotTarget = true; }
+            if (!shotTarget) { await shot(page, '06-target'); layoutSeen.push(...(await layoutIssues(page)).map((x) => `狙う相手を選ぶ: ${x}`)); shotTarget = true; }
             await target.click(); acted = true; break;
           }
           const use = page.getByRole('button', { name: '使う' });
@@ -180,6 +198,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
       }
       await page.waitForTimeout(300);
     }
+    check(`⑨ ${VW}×${VH} で相手の場・まんなか・自分の場・手札・ボタンが重ならない`, layoutSeen.length === 0, layoutSeen.join(' / '));
     check('⑤ 自分の番を何ターンも進められる(技・守り・ガッツ)', gutsTurns >= 3 && errors.length === 0, `技 ${myActions} 回・守りの番 ${guards} 回・ターン終了 ${gutsTurns} 回`);
     // 捨て札の一覧
     await page.getByRole('button', { name: /^捨て札/ }).last().click();

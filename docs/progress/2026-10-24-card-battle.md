@@ -55,3 +55,15 @@
 | 長押しの詳しい画面 ![](card-battle/step1-05-detail.jpg) | 狙う相手を選ぶ ![](card-battle/step1-06-target.jpg) |
 | 守りの番 ![](card-battle/step1-07-guard.jpg) | 捨て札の一覧 ![](card-battle/step1-08-discard.jpg) |
 | 結果(投了) ![](card-battle/step1-09-result.jpg) | |
+
+### 対戦の画面の配置を直した(社長 2026-10-24「上によりすぎ。上下をもっと分けて、真ん中をアクションやログに」)
+
+- 相手の場を上、自分の場を手札のすぐ上に置き、そのあいだを **まんなかの場所(`data-card-stage`)** にした。使った技のカードと名前(アクション)と、起きたことの新しい3行(ログ)をここに出す。**次の区切りの技ごとの動きも、この場所で見せる。**
+- 背の低い画面(高さ 760 未満。iPhone SE)では、モンスターの絵・手札・帯を少し小さくし、ログは新しい1〜2行にする。
+- `card-battle-browser-check.js` の ⑨ で、相手の場・まんなか・自分の場・手札・ボタンが上から順に並んで重ならないかを測る(`CARD_VIEWPORT=375x667` で SE)。
+
+| | iPhone 13(390×844) | iPhone SE(375×667) |
+| --- | --- | --- |
+| 対戦の始まり | ![](card-battle/layout2-13-04-battle-start.jpg) | ![](card-battle/layout2-se-04-battle-start.jpg) |
+| 攻撃の途中(狙う相手を選ぶ) | ![](card-battle/layout2-13-06-target.jpg) | ![](card-battle/layout2-se-06-target.jpg) |
+| 守りの番 | ![](card-battle/layout2-13-07-guard.jpg) | ![](card-battle/layout2-se-07-guard.jpg) |
