@@ -140,7 +140,7 @@ const LINES_PER_SIZE = 6;
             const top = document.elementFromPoint(x, y);
             if (!top || !say.contains(top)) bad.push(`(${Math.round(x)},${Math.round(y)})→${top ? (top.getAttribute('aria-label') || top.className || top.tagName) : 'なし'}`);
           }
-          const next = [...say.querySelectorAll('span')].find((s) => /つぎ/.test(s.textContent));
+          const next = [...say.querySelectorAll('span')].find((s) => /つぎ/.test(s.textContent) && s.getBoundingClientRect().width > 0);   // 狭い吹き出しでは枠線の上の「▶ つぎ」、ふだんは下の行
           const nr = next.getBoundingClientRect();
           return { side: say.getAttribute('data-say-side'), text: say.innerText.replace('▶ つぎ', '').trim(), bad, nx: nr.left + nr.width - 10, ny: nr.top + nr.height / 2,
             box: [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)] };
