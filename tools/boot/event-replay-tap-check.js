@@ -89,6 +89,9 @@ const markRhythmHellStorySeen=()=>{}; const markTacticsIntroSeen=()=>{};
 const ASSISTANT_CHAT_STORY_ID='assistant_chat_story'; const markAssistantChatStorySeen=()=>{};
 const TACTICS_TYPES_STORY_ID='tactics_types'; const markTacticsTypesStorySeen=()=>{};
 const setRhythmHellGuide=()=>{}; const setShowDebugStoryList=()=>{}; const setShowEventReplayList=()=>{};
+// ★MFバトルカードのはじまり(2026-10-24 #3452)。スキップ・最後まで見たときに event.id と比べて「見た」にするので、
+//   定義していないと ReferenceError でスキップが効かなくなる(会話が閉じない)。ここでは比べられれば足りる
+const CARD_BATTLE_INTRO_STORY_ID='card_battle_intro'; const markCardBattleIntroSeen=()=>{};
 function Screen(){
   const [eventReplay,setEventReplay]=useState({id:${JSON.stringify(target.id)},step:0,live:true});
   window.__state=eventReplay;
