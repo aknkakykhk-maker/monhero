@@ -39,7 +39,7 @@ for (const file of files) {
 
   check(`${rel}: モンビーで止めたことを覚えている`,
     src.includes('const bgmSuspendedByRhythmRef = useRef(false);')
-    && compact.includes('bgmSuspendedByRhythmRef.current=rhythmScreenOpen;'));
+    && compact.includes('bgmSuspendedByRhythmRef.current=rhythmScreenOpen||cardScreenOpen;'));
   check(`${rel}: 戻った最初の1回は維持せず鳴らし直す`,
     /key === '__keep_battle_bgm__' && bgmSuspendedByRhythmRef\.current/.test(src)
     // 生成物は `(waveHistory || [])` のように空白が入るので、空白を潰してから見る
@@ -80,7 +80,7 @@ for (const file of files) {
     // 生成物は書き方が変わるので、編集元だけで見る
     if (file.includes('/src/')) {
       check(`${rel}: モンビー中のSE消音に巻き込まれない（負けの音はBGM側）`,
-        src.includes('Audio_.setSeVolume((ultraEcoSession || rhythmScreenOpen) ? 0 : seVolume)')
+        src.includes('Audio_.setSeVolume(((ultraEcoSession && !cardScreenOpen) || rhythmScreenOpen) ? 0 : seVolume)')
         && !/setSeVolume[\s\S]{0,200}isGameOver/.test(src));
     }
   }

@@ -226,7 +226,7 @@ const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact
 };
 
 // ---- 対戦の盤面 ----
-const CardBattleBoard = ({ db, game, onFinish }) => {
+const CardBattleBoard = ({ db, game, onFinish, quickRun = null }) => {
   // 演出の設定(オプション)。はやい … 相手の考える間と、決着から結果までを短くする
   const settings = normalizeCardSettings(game.settings);
   const pace = settings.speed === 'fast' ? 0.5 : 1;
@@ -316,8 +316,8 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
     if (hits.length) {
       setFx(hits);
       setTimeout(() => setFx((cur) => cur.filter((f) => !hits.some((h) => h.key === f.key))), 1000);
-      if (hits.some((h) => h.dmg >= 3)) Audio_.se.crit(); else if (hits.some((h) => h.dmg > 0)) Audio_.se.attack(); else if (hits.some((h) => h.heal)) Audio_.se.heal(); else Audio_.se.guard();
-    } else if (evs.some((e) => e.t === 'use')) Audio_.se.card();
+      if (hits.some((h) => h.dmg >= 3)) Audio_.fgSe.crit(); else if (hits.some((h) => h.dmg > 0)) Audio_.fgSe.attack(); else if (hits.some((h) => h.heal)) Audio_.fgSe.heal(); else Audio_.fgSe.guard();
+    } else if (evs.some((e) => e.t === 'use')) Audio_.fgSe.card();
     // 技の動き: 攻撃した子が狙った子へ向かって動く(位置は画面で測る。全員に当たる技は相手の真ん中へ)
     const centerOf = (id) => { const el = document.querySelector(`[data-card-art="${id}"]`); if (!el) return null; const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; };
     evs.filter((e) => e.t === 'use' && e.mon >= 0).forEach((e, n) => {
@@ -346,7 +346,7 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
       setAction({ key, cards: use.cards, who: use.mon >= 0 ? p0.mons[use.mon].name : `${p0.name}(ブリーダー)` });
       setTimeout(() => setAction((cur) => (cur && cur.key === key ? null : cur)), 2200);
     }
-    else if (evs.some((e) => e.t === 'guard')) Audio_.se.guard();
+    else if (evs.some((e) => e.t === 'guard')) Audio_.fgSe.guard();
     if (tutorial && cardTutorialDone(tutStage.id, st, next)) setTutI((i) => i + 1);
     const scene = tutorial ? null : cardLineSceneOf(db, st, next, CARD_CPU);
     setSt(next); setSel(null); setPicks([]); setHint('');
@@ -421,7 +421,7 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
   const needTarget = finalOpts.some((o) => o.target);
 
   const tapHand = (i) => {
-    Audio_.se.tap();
+    Audio_.fgSe.tap();
     if (tutorial && myTurn && (!cardTutorialHandOk(tutStage.id, st, i) || tutStage.next || tutQ.length > 1)) { tutWrongSay(); return; }
     if (mode === 'guts' || mode === 'setup' || mode === 'discard') {
       const max = mode === 'setup' ? CARD_BATTLE_SETUP_GUTS_MAX : mode === 'discard' ? st.pendingDiscard.n : 99;
@@ -458,7 +458,7 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
     }
     if (mode !== 'attack' || !sel) return;
     if (monChosen === undefined) {
-      if (p === CARD_ME && selMons.includes(m)) { Audio_.se.tap(); setSel({ ...sel, mon: m }); }
+      if (p === CARD_ME && selMons.includes(m)) { Audio_.fgSe.tap(); setSel({ ...sel, mon: m }); }
       return;
     }
     const o = finalOpts.find((x) => x.target && x.target.p === p && x.target.m === m);
@@ -542,7 +542,7 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
         const k = ev.type === 'pointercancel' ? null : dropKeyAt(ev.clientX, ev.clientY);
         const t = k ? d.targets[k] : null;
         setDrag(null); setDropOver(null);
-        if (t === 'pick') { Audio_.se.tap(); setPicks((cur) => (cur.includes(i) ? cur : [...cur, i])); }
+        if (t === 'pick') { Audio_.fgSe.tap(); setPicks((cur) => (cur.includes(i) ? cur : [...cur, i])); }
         else if (t) step(t);
         return;
       }
@@ -621,8 +621,12 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
     <div data-mh-screen data-card-battle data-card-mode={mode} className="relative flex h-full min-h-0 flex-1 flex-col overflow-hidden text-white" style={{ background: 'radial-gradient(ellipse at 50% 45%,#3b2a6b 0%,#1b1438 55%,#0d0a1f 100%)' }}>
       <div className={`flex ${compact ? 'h-[36px]' : 'h-[44px]'} shrink-0 items-center justify-between bg-black/35 px-2`}>
         <button type="button" data-card-quit onClick={() => setQuit(true)} className="rounded-lg border border-white/20 px-2 py-1 text-[12px] font-black text-slate-200">{tutorial ? '飛ばす' : '投了'}</button>
-        <span className="text-[15px] font-black">MFバトルカード</span>
-        <span className="text-[12px] font-bold text-violet-200">ターン {Math.max(1, st.turn)} ・ {st.active === CARD_ME ? 'あなたの番' : `${who.name}の番`}</span>
+        <span className="min-w-0 truncate text-[15px] font-black">MFバトルカード</span>
+        <span className="flex shrink-0 items-center gap-1.5">
+          {/* 裏のクイック∞周回(設計書 5-3)。対戦中は帯もポップアップも出さず、ここに小さく「⚔ ◯周目」だけ。止まったら赤くする */}
+          {quickRun && <span data-card-battle-quick-run={quickRun.stopped ? 'stopped' : 'live'} aria-label={quickRun.stopped ? '裏のクイック周回は止まっています' : `裏のクイック周回 ${quickRun.loops}周目`} className={`rounded-full border px-1.5 py-0.5 text-[10px] font-black ${quickRun.stopped ? 'border-rose-400/70 bg-rose-950/60 text-rose-200' : 'border-fuchsia-300/50 bg-slate-950/60 text-fuchsia-100'}`}>⚔ {quickRun.loops}周目</span>}
+          <span className="text-[12px] font-bold text-violet-200">ターン {Math.max(1, st.turn)} ・ {st.active === CARD_ME ? 'あなたの番' : `${who.name}の番`}</span>
+        </span>
       </div>
       {/* 相手の帯(隠さない) */}
       <div className={`flex ${compact ? 'h-[42px]' : 'h-[50px]'} shrink-0 items-center gap-2 px-2`}>
@@ -665,7 +669,7 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
           const head = tutQ[0];
           const showNext = tutStage.next ? (!head || head[0] === 'D') : (head && head[0] === 'D' && tutQ.length > 1);
           const onNext = () => {
-            Audio_.se.tap();
+            Audio_.fgSe.tap();
             setHint('');
             if (tutQ.length > 1) { setTutQ((q) => q.slice(1)); return; }
             if (tutStage.onNext === 'finish') { finished.current = true; onFinish({ outcome: 'tutorialDone', st }); return; }
@@ -781,12 +785,13 @@ const CardAssistantArt = ({ src, alt, className = '' }) => {
   );
 };
 
-// onQuickLoops(loops) … 1戦ぶんをクイック周回の周回クリアとして配る(60-app の awardBackQuickLoops)。配れたら配った中身、配れなければ null
+// onQuickLoops(loops) … 1戦ぶんをクイック周回の周回クリアとして配る(60-app の awardCardQuickLoops。裏で回していればその周回へ、いなければ AUTO設定のクイックへ)。配れたら配った中身、配れなければ null
+// quickRun … 裏のクイック∞周回のようす({ live, loops, stopped, xp, gold, info }。60-app の cardQuickRunView)。周回をしていなければ null。対戦中は盤のヘッダーに「⚔ ◯周目」だけ出す
 // onOpenMarket … マーケットの「カードポイント」の売り場へ(60-app)
 // topAssistant … トップに出す助手の立ち絵とひとこと({ id, name, accent, image, text }。60-app が場面 cardTop から選ぶ)
 // rank … ランキング({ send: 送ってよいか, profile: { name, icon, frame }, renderBreederIcon })。送るのは公開後のふつうの対戦だけ
 // bgmPreview … オプションの BGM の試聴({ toggle(曲id), playing: 鳴らしている曲id }。60-app の BGM アレンジと同じもの)
-const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', seenStoryIds = [], debug = false, onBgm, onQuickLoops, onOpenMarket, topAssistant = null, rank = null, bgmPreview = null }) => {
+const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', seenStoryIds = [], debug = false, onBgm, onQuickLoops, onOpenMarket, topAssistant = null, rank = null, bgmPreview = null, quickRun = null }) => {
   const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
   const [save, setSave] = useState(null);
   const [view, setView] = useState('top');
@@ -849,7 +854,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   if (!save) return <div data-mh-screen className={SCREEN_SHELL_CLASS}><ScreenHead title="MFバトルカード" onBack={onExit}/><ScreenEmpty emoji="⏳" lines={['読み込み中…']}/></div>;
 
   if (screen === 'CARD_BATTLE' && game) {
-    return <CardBattleBoard key={game.key} db={db} game={game} onFinish={async ({ outcome, st }) => {
+    return <CardBattleBoard key={game.key} db={db} game={game} quickRun={quickRun ? { loops: quickRun.loops, stopped: quickRun.stopped } : null} onFinish={async ({ outcome, st }) => {
       if (game.tutorial) {
         // 練習試合: 終えた・飛ばしたの印と、はじめて最後までやったときだけカードポイント 100(1日の上限とは別)
         const fin = cardTutorialFinish(save.tutorial, outcome === 'tutorialDone' ? 'done' : 'skip', Date.now());
@@ -917,7 +922,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         <ScreenHead title="スターターをえらぶ" accent="text-amber-200" onBack={save.starter ? () => setView('top') : onExit} note="最初の1つは無料。えらばなかった2つは、あとでカードポイントで買えます"/>
         <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
           {kits.map((k) => (
-            <button key={k.id} type="button" data-card-kit={k.id} onClick={() => { Audio_.se.tap(); setKitPick(k.id); }} className={`w-full rounded-2xl border-2 p-2 text-left ${kitPick === k.id ? 'border-amber-300 bg-amber-500/15' : 'border-white/10 bg-slate-900/70'}`}>
+            <button key={k.id} type="button" data-card-kit={k.id} onClick={() => { Audio_.fgSe.tap(); setKitPick(k.id); }} className={`w-full rounded-2xl border-2 p-2 text-left ${kitPick === k.id ? 'border-amber-300 bg-amber-500/15' : 'border-white/10 bg-slate-900/70'}`}>
               <div className="text-[15px] font-black text-white">{k.name}</div>
               <div className="mt-1 flex gap-1.5">{k.monsters.map((no) => <img key={no} src={CARD_IMG(cardMonsterOf(db, no).img)} alt={cardMonsterOf(db, no).name} className="w-[27%] rounded-md"/>)}</div>
               <div className="mt-1 text-[12px] font-bold text-slate-300">{k.monsters.map((no) => cardMonsterOf(db, no).name).join('・')} と技カード50枚</div>
@@ -944,7 +949,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       <div data-mh-screen data-card-top="mode" className={SCREEN_SHELL_CLASS}>
         <ScreenHead title="対戦" accent="text-amber-200" onBack={() => setView('top')}/>
         <div className={`${SCREEN_LIST_CLASS} space-y-3 pb-4`}>
-          <button type="button" data-card-mode-assistant className="mh-button mh-button-primary flex min-h-[96px] w-full flex-col items-center justify-center rounded-2xl px-3 py-3 active:scale-[.98]" onClick={() => { Audio_.se.tap(); setView('foe'); }}>
+          <button type="button" data-card-mode-assistant className="mh-button mh-button-primary flex min-h-[96px] w-full flex-col items-center justify-center rounded-2xl px-3 py-3 active:scale-[.98]" onClick={() => { Audio_.fgSe.tap(); setView('foe'); }}>
             <span className="text-[18px] font-black">助手と対戦</span>
             <span className="mt-1 text-[12px] font-bold opacity-80">助手のみんなと戦う</span>
           </button>
@@ -965,7 +970,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
           <div className="grid grid-cols-3 gap-1.5">
             {foes.map((x) => (
-              <button key={x.id} type="button" data-card-foe={x.id} onClick={() => { Audio_.se.tap(); setFoe((f) => ({ ...f, who: x.id })); }} className={`relative flex flex-col items-center rounded-xl border-2 p-1 ${foe.who === x.id ? 'bg-white/10' : 'border-white/10 bg-slate-900/70'}`} style={foe.who === x.id ? { borderColor: x.accent } : undefined}>
+              <button key={x.id} type="button" data-card-foe={x.id} onClick={() => { Audio_.fgSe.tap(); setFoe((f) => ({ ...f, who: x.id })); }} className={`relative flex flex-col items-center rounded-xl border-2 p-1 ${foe.who === x.id ? 'bg-white/10' : 'border-white/10 bg-slate-900/70'}`} style={foe.who === x.id ? { borderColor: x.accent } : undefined}>
                 <img src={assistantFaceImage(x, 'normal')} alt={x.name} className="h-[52px] w-[52px] rounded-lg object-cover object-top"/>
                 <span className="text-[13px] font-black">{x.name}</span>
                 {save.record.beaten[x.id] && <span className="absolute right-1 top-1 rounded bg-amber-400 px-1 text-[10px] font-black text-slate-900">勝</span>}
@@ -986,7 +991,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             {CARD_LEVEL_ORDER.map((lv) => {
               const open = cardLevelOpen(save.unlocked, lv) || debug;
               return (
-                <button key={lv} type="button" data-card-level={lv} disabled={!open} onClick={() => { Audio_.se.tap(); setFoe((f) => ({ ...f, level: lv })); }} className={`min-h-[52px] rounded-xl border-2 text-[11px] font-black ${foe.level === lv ? 'border-amber-300 bg-amber-500/20 text-amber-100' : 'border-white/10 bg-slate-900 text-slate-200'} disabled:opacity-35`}>
+                <button key={lv} type="button" data-card-level={lv} disabled={!open} onClick={() => { Audio_.fgSe.tap(); setFoe((f) => ({ ...f, level: lv })); }} className={`min-h-[52px] rounded-xl border-2 text-[11px] font-black ${foe.level === lv ? 'border-amber-300 bg-amber-500/20 text-amber-100' : 'border-white/10 bg-slate-900 text-slate-200'} disabled:opacity-35`}>
                   {CARD_LEVEL_LABEL[lv]}<span className="block text-[10px] text-amber-200">{open ? `勝ち${CARD_AI_LEVELS[lv].point}` : '🔒'}</span>
                 </button>
               );
@@ -1086,6 +1091,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
                   ? <>
                     <div className="text-[13px] font-black text-sky-200">クイック周回 {result.loops}周ぶん</div>
                     <div className="mt-0.5 text-[11px] font-bold text-slate-300" style={JA_WRAP_STYLE}>裏のクイック周回({(result.quick.quickDifficulty && quickDifficultySetting(result.quick.quickDifficulty)?.label) || 'AUTO設定'})が{result.loops}周ぶん進みました</div>
+                    {result.quick.live && Number(result.quick.toLoop) > Number(result.quick.fromLoop) && <div data-card-quick-loops-range className="mt-0.5 text-[11px] font-bold text-sky-100">{result.quick.fromLoop}周目 → {result.quick.toLoop}周目</div>}
                   </>
                   : <div className="text-[12px] font-bold text-slate-300" style={JA_LABEL_STYLE}>{jaWrap('クイック周回をしていないときは入りません')}</div>}
               </div>
@@ -1169,13 +1175,13 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             <div className="mt-2 flex items-center gap-2">
               <span className="min-w-0 flex-1 text-[12px] font-bold text-slate-200">対戦の進む速さ</span>
               {[['normal', 'ふつう'], ['fast', 'はやい']].map(([v, label]) => (
-                <button key={v} type="button" data-card-speed={v} aria-pressed={save.settings.speed === v} onClick={() => { Audio_.se.tap(); void persist({ settings: { ...save.settings, speed: v } }); }}
+                <button key={v} type="button" data-card-speed={v} aria-pressed={save.settings.speed === v} onClick={() => { Audio_.fgSe.tap(); void persist({ settings: { ...save.settings, speed: v } }); }}
                   className={`min-h-[36px] rounded-full border px-3 text-[11px] font-black ${save.settings.speed === v ? 'border-amber-300 bg-amber-500/25 text-amber-100' : 'border-white/15 bg-slate-900 text-slate-300'}`}>{label}</button>
               ))}
             </div>
             <div className="mt-2 flex items-center gap-2">
               <span className="min-w-0 flex-1 text-[12px] font-bold leading-snug text-slate-200" style={JA_LABEL_STYLE}>{jaWrap('守れるカードが無いときは、自動で「守らない」')}</span>
-              <button type="button" data-card-auto-pass aria-pressed={save.settings.autoPass} onClick={() => { Audio_.se.tap(); void persist({ settings: { ...save.settings, autoPass: !save.settings.autoPass } }); }}
+              <button type="button" data-card-auto-pass aria-pressed={save.settings.autoPass} onClick={() => { Audio_.fgSe.tap(); void persist({ settings: { ...save.settings, autoPass: !save.settings.autoPass } }); }}
                 className={`min-h-[36px] shrink-0 rounded-full border px-3 text-[11px] font-black ${save.settings.autoPass ? 'border-emerald-300 bg-emerald-700/85 text-white' : 'border-white/25 bg-slate-900/75 text-slate-200'}`}>{save.settings.autoPass ? 'ON' : 'OFF'}</button>
             </div>
             <p className="mt-1.5 text-[10px] font-bold leading-snug text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('はやいにすると、相手の考える間と、勝ち負けが決まってから結果までが短くなります')}</p>
@@ -1194,11 +1200,11 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   // 吹き出しの文は言葉の切れ目で折る(「どこまでいく/かな」のように折れないように)
   const topAssistantShown = topAssistant ? { ...topAssistant, text: <span style={JA_WRAP_STYLE}>{jaWrap(topAssistant.text)}</span> } : null;
   const assistShown = !!topAssistant && (assist.modeSelectArt || assist.modeSelectComment);
-  const go = (v) => () => { Audio_.se.tap(); setNotice(''); setView(v); };
+  const go = (v) => () => { Audio_.fgSe.tap(); setNotice(''); setView(v); };
   const bigCards = [
     { key: 'cpu', attr: { 'data-card-cpu': '' }, label: '対戦', sub: '助手と対戦・マルチ対戦', mark: 'BATTLE', ico: '⚔️', grad: 'from-orange-200 via-orange-400 to-rose-500', disabled: !activeDeck, onClick: go('mode') },
     { key: 'decks', attr: { 'data-card-decks': '' }, label: 'デッキ編成', sub: 'デッキを組む・えらぶ', mark: 'DECK', ico: '🃏', grad: 'from-yellow-200 via-amber-300 to-orange-400', onClick: go('decks') },
-    { key: 'market', attr: { 'data-card-market-open': '' }, label: 'マーケット', sub: 'パック・スターターキット', mark: 'MARKET', ico: '🛒', grad: 'from-sky-200 via-sky-400 to-blue-500', onClick: () => { Audio_.se.tap(); setNotice(''); onOpenMarket && onOpenMarket(); } },
+    { key: 'market', attr: { 'data-card-market-open': '' }, label: 'マーケット', sub: 'パック・スターターキット', mark: 'MARKET', ico: '🛒', grad: 'from-sky-200 via-sky-400 to-blue-500', onClick: () => { Audio_.fgSe.tap(); setNotice(''); onOpenMarket && onOpenMarket(); } },
     { key: 'ranking', attr: { 'data-card-ranking-open': '' }, label: 'ランキング', sub: '勝ち数・連勝・図鑑', mark: 'RANKING', ico: '🏆', grad: 'from-lime-200 via-emerald-300 to-teal-500', onClick: go('ranking') },
   ];
   const smallButtons = [
@@ -1255,7 +1261,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             {/* 結果の画面の見本(NORMAL の勝ち・自分の番8回・2体倒した)。クイック周回が入るとき/入らないとき。保存は何もしない */}
             {/* パックの絵と開ける演出の見本(社長 台帳 #3503。保存はしない) */}
             <div className="grid grid-cols-2 gap-1">
-              <button type="button" data-card-pack-art-demo className="mh-button mh-button-secondary min-h-[40px] rounded-xl border border-white/20 bg-slate-800 text-[11px] font-black" onClick={() => { Audio_.se.tap(); setView('packArt'); }}>パックの絵の見本</button>
+              <button type="button" data-card-pack-art-demo className="mh-button mh-button-secondary min-h-[40px] rounded-xl border border-white/20 bg-slate-800 text-[11px] font-black" onClick={() => { Audio_.fgSe.tap(); setView('packArt'); }}>パックの絵の見本</button>
               <button type="button" data-card-pack-open-demo className="mh-button mh-button-secondary min-h-[40px] rounded-xl border border-white/20 bg-slate-800 text-[11px] font-black" onClick={() => {
                 // 第1弾を2パック。1パック目の最後のモンスターの枠は別絵キラ、2パック目はキラ(演出を見るため)
                 const a = cardOpenPack(db, 'w1', { collection: {}, pity: {} }, Math.random);
