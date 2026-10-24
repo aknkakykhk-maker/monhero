@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 75b440f8a7ea5a4c
+// source-sha256: 82544391c01a3554
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-25 07:08";
+const BUILD_DATE = "2026-10-25 07:20";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -50408,7 +50408,7 @@ const jaWrapPoints = text => {
         g = groups[groups.length - 1],
         cur = g.parts.join('');
       const hard = inKao(pos) || !kaoStart(pos) && (/^[\s、。，．,.！？!?」』）)】〕〉》…‥ー〜～・：:；;ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ]/.test(seg) || /[\s「『（(【〔〈《]$/.test(prev) || /^[ごお]$/.test(prev) && /^[ぁ-ゖ]/.test(seg) || /[」』？！?!]$/.test(prev) && /^[ぁ-ゖ]/.test(seg));
-      const soft = !hard && !kaoStart(pos) && (/^[ぁ-ゖ]$/.test(seg) && /[一-龯ァ-ヶー]$/.test(prev) && letters(cur) + 1 <= 6 || /^[はがをにでとものへ]$/.test(seg) && /[ぁ-ゖ]$/.test(prev) || /^[ぁ-ゖ]/.test(seg) && !JA_PARTICLE_END.test(prev) || /^[ァ-ヶー]+$/.test(seg) && /^[ァ-ヶー]+$/.test(prev) && (seg.length === 1 || prev.length === 1) || /^[ぁ-ゖ]/.test(seg) && /^[ぁ-ゖ]$/.test(prev) && /^[一-龯]$/.test(segs[i - 2] || '') || /で$/.test(prev) && /^(?:す|つ|しょ)/.test(seg));
+      const soft = !hard && !kaoStart(pos) && (/^[ぁ-ゖ]$/.test(seg) && /[一-龯ァ-ヶー]$/.test(prev) && letters(cur) + 1 <= 6 || /^[はがをにでとものへ]$/.test(seg) && /[ぁ-ゖ]$/.test(prev) || /^[ぁ-ゖ]/.test(seg) && !JA_PARTICLE_END.test(prev) || /^[ァ-ヶー]+$/.test(seg) && /^[ァ-ヶー]+$/.test(prev) && (seg.length === 1 || prev.length === 1) || /(?:カード|ビート|ブリーダー)$/.test(prev) && /^ポイント/.test(seg) || /^[ぁ-ゖ]/.test(seg) && /^[ぁ-ゖ]$/.test(prev) && /^[一-龯]$/.test(segs[i - 2] || '') || /で$/.test(prev) && /^(?:す|つ|しょ)/.test(seg));
       if (hard || soft) {
         g.parts.push(seg);
         g.hard.push(hard);
@@ -85396,6 +85396,32 @@ const CARD_LEVEL_LABEL = Object.freeze({
   expert: 'EXPERT',
   master: 'MASTER'
 });
+const CardNameFit = ({
+  name,
+  size = 10,
+  min = 7,
+  className = '',
+  style = null
+}) => {
+  const text = String(name == null ? '' : name);
+  const m = /^(.+?)([(（].+)$/.exec(text);
+  const lines = m ? [m[1], m[2]] : [text];
+  const fit = t => `clamp(${min}px, ${(96 / Math.max(1, [...t].length)).toFixed(1)}cqw, ${size}px)`;
+  return React.createElement("span", {
+    className: `block w-full ${className}`,
+    style: {
+      containerType: 'inline-size',
+      ...(style || {})
+    }
+  }, lines.map((t, i) => React.createElement("span", {
+    key: i,
+    className: "block overflow-hidden whitespace-nowrap text-center",
+    style: {
+      fontSize: fit(t),
+      textOverflow: 'clip'
+    }
+  }, t)));
+};
 const CARD_AI_BGM = Object.freeze({
   mua: 'melo_toriko',
   kiki: 'eiki_boss',
@@ -86561,16 +86587,11 @@ const CardBattleBoard = ({
       className: `w-full rounded-[5px] shadow-[0_3px_6px_#000] ${up ? 'outline outline-[3px] outline-amber-300' : ''}`
     }), React.createElement("div", {
       className: "mt-0.5 w-full rounded-md bg-black/60 py-0.5 text-center leading-tight"
-    }, React.createElement("b", {
-      className: `block ${compact ? 'text-[10px]' : 'text-[11px]'} leading-tight`,
-      style: {
-        ...JA_WRAP_STYLE,
-        display: '-webkit-box',
-        WebkitLineClamp: 2,
-        WebkitBoxOrient: 'vertical',
-        overflow: 'hidden'
-      }
-    }, c ? c.name : no), compact ? React.createElement(React.Fragment, null, React.createElement("span", {
+    }, React.createElement(CardNameFit, {
+      name: c ? c.name : no,
+      size: compact ? 10 : 11,
+      className: "font-bold leading-tight"
+    }), compact ? React.createElement(React.Fragment, null, React.createElement("span", {
       className: "block text-[10px] font-extrabold leading-tight text-amber-200"
     }, "ガッツ", c ? c.guts : '-'), React.createElement("span", {
       className: "block whitespace-nowrap text-[10px] font-extrabold leading-tight text-amber-200"
@@ -88055,10 +88076,10 @@ const CardDeckTile = ({
     className: "text-emerald-300"
   }, "入", inDeck), "/持", owned), mark && React.createElement("span", {
     className: "absolute left-0.5 top-0.5 rounded-md bg-amber-400 px-1 text-[9px] font-black text-slate-950"
-  }, mark), React.createElement("span", {
-    className: "mt-0.5 line-clamp-2 min-h-[26px] text-[10px] font-bold leading-tight text-slate-100",
-    style: JA_WRAP_STYLE
-  }, name));
+  }, mark), React.createElement(CardNameFit, {
+    name: name,
+    className: "mt-0.5 font-bold leading-tight text-slate-100"
+  }));
 };
 const CardDeckEditor = ({
   db,
@@ -88518,10 +88539,10 @@ const CardDex = ({
       className: "absolute left-0.5 top-0.5 rounded-md bg-slate-600 px-1 text-[9px] font-black text-white"
     }, "準備中"), m && m.variant && React.createElement("span", {
       className: "absolute left-0.5 top-0.5 rounded-md bg-amber-400 px-1 text-[9px] font-black text-slate-950"
-    }, /キラ/.test(m.variant) ? 'キラ' : '別'), React.createElement("span", {
-      className: `mt-0.5 line-clamp-2 min-h-[26px] text-[10px] font-bold leading-tight ${have ? 'text-slate-100' : 'text-slate-500'}`,
-      style: JA_WRAP_STYLE
-    }, name), React.createElement("span", {
+    }, /キラ/.test(m.variant) ? 'キラ' : '別'), React.createElement(CardNameFit, {
+      name: name,
+      className: `mt-0.5 font-bold leading-tight ${have ? 'text-slate-100' : 'text-slate-500'}`
+    }), React.createElement("span", {
       className: "text-[9px] font-bold text-slate-500"
     }, "No.", no));
   })) : React.createElement(ScreenEmpty, {
@@ -88903,10 +88924,10 @@ const CardPackOpen = ({
       className: "absolute right-0.5 top-0.5 z-[2] rounded-md bg-emerald-400 px-1 text-[9px] font-black text-slate-950"
     }, "NEW"), on && rare && React.createElement("span", {
       className: `absolute left-0.5 top-0.5 z-[2] rounded-md px-1 text-[9px] font-black text-slate-950 ${c.rarity === 'alt' ? 'mh-pack-alt-label' : 'bg-amber-300'}`
-    }, CARD_RARITY_LABEL[c.rarity])), React.createElement("span", {
-      className: "mt-0.5 line-clamp-2 min-h-[26px] text-center text-[10px] font-bold leading-tight text-slate-100",
-      style: JA_WRAP_STYLE
-    }, on ? name : ''));
+    }, CARD_RARITY_LABEL[c.rarity])), React.createElement(CardNameFit, {
+      name: on ? name : '\u00a0',
+      className: "mt-0.5 font-bold leading-tight text-slate-100"
+    }));
   })), phase === 'open' && allOpen && React.createElement("div", {
     "data-card-pack-summary": true,
     className: "mt-3 text-center text-[12px] font-bold text-slate-300"
