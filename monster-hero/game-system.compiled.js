@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4cffe7c4a4588a9c
+// source-sha256: e2db14ff5b4b8a61
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-25 08:22";
+const BUILD_DATE = "2026-10-25 08:39";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -85723,6 +85723,7 @@ const CardMonSlot = ({
   onTap,
   press,
   compact = false,
+  tiny = false,
   wide = false,
   motion = null
 }) => {
@@ -85736,35 +85737,37 @@ const CardMonSlot = ({
     className: "flex items-center gap-1"
   }, React.createElement("span", {
     "data-card-flip": mon.ko ? 'ko' : undefined,
-    className: `relative block h-[52px] w-[37px] shrink-0 ${mon.ko ? 'mh-card-flip' : ''}`
+    className: `relative block ${tiny ? 'h-[40px] w-[28px]' : 'h-[52px] w-[37px]'} shrink-0 ${mon.ko ? 'mh-card-flip' : ''}`
   }, React.createElement("img", {
     src: CARD_IMG(cardMonsterOf(db, mon.no).img),
     alt: mon.name,
-    className: `mh-card-flip-face h-[52px] w-[37px] rounded-[3px] object-cover shadow ${mon.ko ? 'grayscale opacity-40' : ''}`
+    className: `mh-card-flip-face ${tiny ? 'h-[40px] w-[28px]' : 'h-[52px] w-[37px]'} rounded-[3px] object-cover shadow ${mon.ko ? 'grayscale opacity-40' : ''}`
   }), mon.ko && React.createElement("span", {
     className: "mh-card-flip-back",
     "aria-hidden": "true"
   })), React.createElement("div", {
-    className: "w-[62px] min-w-0"
+    className: `${tiny ? 'w-[56px]' : 'w-[62px]'} min-w-0`
   }, React.createElement("div", {
     className: "truncate text-[12px] font-black leading-tight"
   }, mon.name), React.createElement("div", {
-    className: "text-[13px] font-black leading-tight"
+    className: "flex items-center gap-1 whitespace-nowrap text-[13px] font-black leading-tight"
   }, mon.life, React.createElement("span", {
     className: "text-[10px] text-slate-400"
-  }, " / ", mon.max)), React.createElement("div", {
+  }, " / ", mon.max), tiny && React.createElement("span", {
+    className: `ml-auto rounded px-0.5 text-[9px] font-bold ${ty === 'air' ? 'bg-cyan-800' : ty === 'water' ? 'bg-blue-800' : 'bg-indigo-900'}`
+  }, CARD_TYPE_LABEL[ty])), React.createElement("div", {
     className: "h-[6px] overflow-hidden rounded bg-slate-700"
   }, React.createElement("div", {
     className: `h-full ${pct > 50 ? 'bg-emerald-400' : pct > 25 ? 'bg-amber-400' : 'bg-rose-500'}`,
     style: {
       width: `${pct}%`
     }
-  })), React.createElement("span", {
+  })), !tiny && React.createElement("span", {
     className: `mt-0.5 inline-block rounded px-1 text-[10px] font-bold ${ty === 'air' ? 'bg-cyan-800' : ty === 'water' ? 'bg-blue-800' : 'bg-indigo-900'}`
   }, CARD_TYPE_LABEL[ty]), stunned && React.createElement("span", {
     className: "ml-0.5 inline-block rounded bg-rose-900 px-1 text-[10px] font-bold"
   }, "攻撃できない")));
-  const artSize = wide ? 'max-h-[40px] max-w-[56px]' : compact ? 'max-h-[56px] max-w-[72px]' : 'max-h-[78px] max-w-[96px]';
+  const artSize = wide ? 'max-h-[40px] max-w-[56px]' : tiny ? 'max-h-[44px] max-w-[60px]' : compact ? 'max-h-[56px] max-w-[72px]' : 'max-h-[78px] max-w-[96px]';
   const imgEl = art ? React.createElement("img", {
     src: art,
     alt: "",
@@ -85772,13 +85775,13 @@ const CardMonSlot = ({
   }) : React.createElement("img", {
     src: CARD_IMG(cardMonsterOf(db, mon.no).img),
     alt: "",
-    className: `${compact ? 'h-[54px]' : 'h-[74px]'} rounded-md object-cover`
+    className: `${tiny ? 'h-[42px]' : compact ? 'h-[54px]' : 'h-[74px]'} rounded-md object-cover`
   });
   const mv = motion && !mon.ko ? motion : null;
   const poseClass = mon.ko ? 'mh-card-ko' : mv && mv.type === 'hit' ? 'mh-card-hit' : mv && mv.type === 'dodge' ? 'mh-card-dodge' : mv && mv.type === 'jump' ? 'mh-card-jump' : mv && mv.type === 'guard' ? 'mh-card-guard' : '';
   const artEl = React.createElement("div", {
     "data-card-art": `${p}-${m}`,
-    className: `relative flex ${wide ? 'h-[40px]' : compact ? 'h-[56px]' : 'h-[78px]'} w-full items-end justify-center`,
+    className: `relative flex ${wide ? 'h-[40px]' : tiny ? 'h-[44px]' : compact ? 'h-[56px]' : 'h-[78px]'} w-full items-end justify-center`,
     style: mv && mv.type === 'attack' ? {
       '--atk-dx': `${mv.dx}px`,
       '--atk-dy': `${mv.dy}px`,
@@ -85884,8 +85887,13 @@ const CardBattleBoard = ({
     }) => rest)(cur) : cur), ms));
   };
   const [compact, setCompact] = useState(() => typeof window !== 'undefined' && window.innerHeight < 760);
+  const [tinyScreen, setTiny] = useState(() => typeof window !== 'undefined' && (window.innerWidth < 360 || window.innerHeight < 620));
+  const tiny = tinyScreen || compact && !!tutorial;
   useEffect(() => {
-    const on = () => setCompact(window.innerHeight < 760);
+    const on = () => {
+      setCompact(window.innerHeight < 760);
+      setTiny(window.innerWidth < 360 || window.innerHeight < 620);
+    };
     window.addEventListener('resize', on);
     return () => window.removeEventListener('resize', on);
   }, []);
@@ -86390,24 +86398,24 @@ const CardBattleBoard = ({
   const strip = p => {
     const pl = st.players[p];
     return React.createElement("div", {
-      className: "flex items-center gap-1.5 text-[11px] font-bold"
+      className: `flex items-center whitespace-nowrap font-bold ${tiny ? 'gap-1 text-[10px]' : 'gap-1.5 text-[11px]'}`
     }, p === CARD_CPU && React.createElement("span", {
       className: "flex"
     }, pl.hand.map((_, i) => React.createElement("b", {
       key: i,
       className: "-ml-1 h-[18px] w-[13px] rounded-[2px] border border-violet-300 bg-gradient-to-br from-violet-600 to-indigo-900 first:ml-0"
     }))), React.createElement("span", {
-      className: "rounded-md border border-white/20 bg-white/10 px-1.5 py-0.5"
+      className: `rounded-md border border-white/20 bg-white/10 ${tiny ? 'px-1' : 'px-1.5'} py-0.5`
     }, "山札 ", pl.deck.length), React.createElement("span", _extends({}, p === CARD_ME ? {
       'data-card-guts-drop': true
     } : {}, {
-      className: `flex items-center gap-0.5 rounded-md border px-1.5 py-0.5 text-amber-100 ${p === CARD_ME && dropOver === 'guts' ? 'border-emerald-300 bg-emerald-400/30 ring-4 ring-emerald-300' : 'border-amber-300/40 bg-amber-500/10'}`
+      className: `flex items-center gap-0.5 rounded-md border ${tiny ? 'px-1' : 'px-1.5'} py-0.5 text-amber-100 ${p === CARD_ME && dropOver === 'guts' ? 'border-emerald-300 bg-emerald-400/30 ring-4 ring-emerald-300' : 'border-amber-300/40 bg-amber-500/10'}`
     }), "ガッツ ", pl.guts.length), React.createElement("button", {
       type: "button",
       onClick: () => setDiscard({
         tab: p
       }),
-      className: "rounded-md border border-white/20 bg-white/10 px-1.5 py-0.5"
+      className: `rounded-md border border-white/20 bg-white/10 ${tiny ? 'px-1' : 'px-1.5'} py-0.5`
     }, "捨て札 ", pl.discard.length));
   };
   const tutFocus = (() => {
@@ -86538,6 +86546,8 @@ const CardBattleBoard = ({
     className: "rounded-lg border border-white/20 px-2 py-1 text-[12px] font-black text-slate-200"
   }, tutorial ? '飛ばす' : '投了'), pvp && React.createElement(CardPvpChat, null)), pvp ? React.createElement(CardPvpStatus, {
     clock: pvpClock
+  }) : tiny ? React.createElement("span", {
+    className: "flex-1"
   }) : React.createElement("span", {
     className: "min-w-0 truncate text-[15px] font-black"
   }, "MFバトルカード"), React.createElement("span", {
@@ -86555,7 +86565,7 @@ const CardBattleBoard = ({
     "data-card-field": true,
     className: wide ? 'flex min-h-0 min-w-0 flex-1 flex-col' : 'contents'
   }, React.createElement("div", {
-    className: `flex ${compact ? 'h-[42px]' : 'h-[50px]'} shrink-0 items-center gap-2 px-2`
+    className: `flex ${tiny ? 'h-[36px]' : compact ? 'h-[42px]' : 'h-[50px]'} shrink-0 items-center gap-2 px-2`
   }, pvp ? React.createElement("span", {
     "data-card-pvp-foe": true,
     className: "grid h-[42px] w-[42px] place-items-center rounded-xl border-2 bg-black text-[24px]",
@@ -86565,12 +86575,12 @@ const CardBattleBoard = ({
   }, cardIconNode(pvp.icon, 30)) : React.createElement("img", {
     src: assistantFaceImage(who, face),
     alt: who.name,
-    className: "h-[42px] w-[42px] rounded-xl border-2 bg-black object-cover object-top",
+    className: `${tiny ? 'h-[34px] w-[34px]' : 'h-[42px] w-[42px]'} rounded-xl border-2 bg-black object-cover object-top`,
     style: {
       borderColor: who.accent
     }
   }), React.createElement("div", {
-    className: `min-w-0 text-[13px] font-black leading-tight ${pvp ? 'max-w-[34%] truncate whitespace-nowrap' : ''}`
+    className: `min-w-0 text-[13px] font-black leading-tight ${pvp ? 'max-w-[34%] truncate whitespace-nowrap' : 'shrink-0 whitespace-nowrap'}`
   }, who.name, React.createElement("small", {
     className: "block text-[10px] font-bold text-rose-200"
   }, pvp ? 'マルチ対戦' : CARD_LEVEL_LABEL[game.level])), React.createElement("div", {
@@ -86588,6 +86598,7 @@ const CardBattleBoard = ({
     onTap: () => tapMon(CARD_CPU, m),
     press: press,
     compact: compact,
+    tiny: tiny,
     wide: wide,
     motion: motions[`1-${m}`] || null
   }))), React.createElement("div", {
@@ -86628,7 +86639,7 @@ const CardBattleBoard = ({
     key: action.key,
     "data-card-action": true,
     className: `relative z-[1] flex items-center gap-2 rounded-2xl border border-amber-300/50 bg-black/55 px-2 ${compact ? "py-0.5" : "py-1"} shadow-lg`
-  }, action.cards.slice(0, 3).map((no, i) => {
+  }, !compact && action.cards.slice(0, 3).map((no, i) => {
     const c = cardOf(db, no);
     return c ? React.createElement("img", {
       key: i,
@@ -86662,6 +86673,7 @@ const CardBattleBoard = ({
     onTap: () => tapMon(CARD_ME, m),
     press: press,
     compact: compact,
+    tiny: tiny,
     wide: wide,
     motion: motions[`0-${m}`] || null
   }))), React.createElement("div", {
@@ -86721,8 +86733,8 @@ const CardBattleBoard = ({
     style: JA_LABEL_STYLE
   }, jaWrap(hint || guide)), mode === 'guard' && !guardOpts.length && React.createElement("div", {
     "data-card-guard-why": true,
-    className: "mx-auto mb-1 max-w-[94%] shrink-0 text-center text-[11px] font-bold leading-snug text-slate-300",
-    style: JA_WRAP_STYLE
+    className: `mx-auto mb-1 max-w-[94%] shrink-0 text-center ${tiny ? 'truncate whitespace-nowrap text-[10px]' : 'text-[11px]'} font-bold leading-snug text-slate-300`,
+    style: tiny ? undefined : JA_WRAP_STYLE
   }, cardGuardBlockReasons(db, st).join(' / ')), !guide && !tutorial && hint && React.createElement("div", {
     className: "mx-auto mb-1 shrink-0 rounded-lg bg-amber-300 px-2 py-0.5 text-[11px] font-black text-slate-900",
     style: JA_LABEL_STYLE
@@ -86755,7 +86767,7 @@ const CardBattleBoard = ({
         WebkitUserSelect: 'none',
         userSelect: 'none'
       },
-      className: `flex w-[19%] ${compact ? 'max-w-[58px]' : 'max-w-[76px]'} flex-col items-center transition-transform ${up ? '-translate-y-2' : ''} ${myTurn && !on && !tutorial ? 'opacity-45' : ''} ${tutorial && myTurn && !tutFocus.hand.includes(i) && !picks.includes(i) && !(sel && sel.hand === i) ? 'opacity-40' : ''} ${tutorial && tutFocus.hand.includes(i) ? 'animate-pulse rounded-[7px] ring-4 ring-emerald-300' : ''} ${drag && drag.i === i ? 'opacity-30' : ''}`,
+      className: `flex w-[19%] ${tiny ? 'max-w-[50px]' : compact ? 'max-w-[58px]' : 'max-w-[76px]'} flex-col items-center transition-transform ${up ? '-translate-y-2' : ''} ${myTurn && !on && !tutorial ? 'opacity-45' : ''} ${tutorial && myTurn && !tutFocus.hand.includes(i) && !picks.includes(i) && !(sel && sel.hand === i) ? 'opacity-40' : ''} ${tutorial && tutFocus.hand.includes(i) ? 'animate-pulse rounded-[7px] ring-4 ring-emerald-300' : ''} ${drag && drag.i === i ? 'opacity-30' : ''}`,
       "data-card-tutor-focus": tutorial && tutFocus.hand.includes(i) ? true : undefined
     }, React.createElement("img", {
       src: CARD_IMG(c ? c.img : no),
@@ -86771,7 +86783,15 @@ const CardBattleBoard = ({
       name: c ? c.name : no,
       size: compact ? 10 : 11,
       className: "font-bold leading-tight"
-    }), compact ? React.createElement(React.Fragment, null, React.createElement("span", {
+    }), tiny ? React.createElement(React.Fragment, null, React.createElement(CardNameFit, {
+      name: `ガッツ${c ? c.guts : '-'}`,
+      size: 10,
+      className: "font-extrabold leading-tight text-amber-200"
+    }), React.createElement(CardNameFit, {
+      name: cardCaption(c),
+      size: 10,
+      className: "font-extrabold leading-tight text-amber-200"
+    })) : compact ? React.createElement(React.Fragment, null, React.createElement("span", {
       className: "block text-[10px] font-extrabold leading-tight text-amber-200"
     }, "ガッツ", c ? c.guts : '-'), React.createElement("span", {
       className: "block whitespace-nowrap text-[10px] font-extrabold leading-tight text-amber-200"
@@ -86919,7 +86939,8 @@ const cardArtBox = src => new Promise(resolve => {
 const CardAssistantArt = ({
   src,
   alt,
-  className = ''
+  className = '',
+  style = null
 }) => {
   const ref = useRef(null);
   const [fit, setFit] = useState(null);
@@ -86950,7 +86971,8 @@ const CardAssistantArt = ({
     "data-card-assistant-art": true,
     "data-card-art-h": fit ? fit.artH : undefined,
     "data-card-art-w": fit ? fit.artW : undefined,
-    className: `relative shrink-0 overflow-hidden ${className}`
+    className: `relative shrink-0 overflow-hidden ${className}`,
+    style: style || undefined
   }, fit ? React.createElement("img", {
     src: src,
     alt: alt,
@@ -87409,7 +87431,10 @@ const CardBattleScreen = ({
     }, React.createElement(CardAssistantArt, {
       src: assistantFullImage(a, 'wink'),
       alt: a.name,
-      className: "h-[150px] w-[42%]"
+      className: "w-[42%]",
+      style: {
+        height: 'min(150px, 17vh)'
+      }
     }), React.createElement("div", {
       className: "min-w-0 flex-1 pb-2"
     }, React.createElement("div", {
@@ -90201,6 +90226,74 @@ const sbFetchCardPvpRatings = async () => {
     clearTimeout(timer);
   }
 };
+const CARD_PVP_INVITE_TTL_MS = 3 * 60 * 1000;
+const CARD_PVP_INVITE_POLL_MS = 8000;
+const CARD_PVP_INVITE_ID_RE = /^[A-Za-z0-9_-]{1,100}$/;
+let _cardPvpInvitesUnavailable = false;
+const cardPvpInviteRequest = async (path, {
+  method = 'GET',
+  body = null,
+  prefer = null
+} = {}) => {
+  if (_cardPvpInvitesUnavailable || typeof SUPABASE_URL === 'undefined') return null;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+      method,
+      headers: prefer ? {
+        ...SB_HEADERS,
+        Prefer: prefer
+      } : SB_HEADERS,
+      cache: 'no-store',
+      signal: controller.signal,
+      body: body === null ? undefined : JSON.stringify(body)
+    });
+    const text = await res.text();
+    if (!res.ok) {
+      if (_isMissingTableError(res.status, text)) _cardPvpInvitesUnavailable = true;
+      return null;
+    }
+    return text ? JSON.parse(text) : [];
+  } catch (_) {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+};
+const sbSendCardInvite = async (selfId, targetId, code) => {
+  const room = rhythmMultiNormalizeCode(code);
+  if (!CARD_PVP_INVITE_ID_RE.test(String(selfId)) || !CARD_PVP_INVITE_ID_RE.test(String(targetId)) || selfId === targetId || !room) return false;
+  const r = await cardPvpInviteRequest('card_battle_invites?on_conflict=sender_id,target_id', {
+    method: 'POST',
+    body: [{
+      sender_id: selfId,
+      target_id: targetId,
+      room_code: room
+    }],
+    prefer: 'resolution=merge-duplicates,return=minimal'
+  });
+  return r !== null;
+};
+const sbFetchCardInvites = async (selfId, nowMs) => {
+  if (!CARD_PVP_INVITE_ID_RE.test(String(selfId))) return [];
+  const since = new Date(nowMs - CARD_PVP_INVITE_TTL_MS).toISOString();
+  const rows = await cardPvpInviteRequest(`card_battle_invites?select=sender_id,room_code,created_at&target_id=eq.${selfId}&created_at=gte.${encodeURIComponent(since)}&order=created_at.desc&limit=20`);
+  return (Array.isArray(rows) ? rows : []).map(row => ({
+    senderId: typeof row.sender_id === 'string' ? row.sender_id : '',
+    roomCode: rhythmMultiNormalizeCode(row.room_code),
+    createdAt: Date.parse(row.created_at) || 0
+  })).filter(x => CARD_PVP_INVITE_ID_RE.test(x.senderId) && x.roomCode && nowMs - x.createdAt <= CARD_PVP_INVITE_TTL_MS);
+};
+const cardPvpRoster = async selfId => {
+  if (typeof window !== 'undefined' && Array.isArray(window.__mhCardPvpRosterTest)) return window.__mhCardPvpRosterTest;
+  if (typeof sbFetchFriendRoster !== 'function') return [];
+  try {
+    return await sbFetchFriendRoster(selfId);
+  } catch (_) {
+    return [];
+  }
+};
 const CARD_PVP = (() => {
   const listeners = new Set();
   let s = null;
@@ -90930,6 +91023,45 @@ const CardPvpLobby = ({
     return () => clearInterval(t);
   }, []);
   const penaltyMin = penaltyUntil > now ? Math.ceil((penaltyUntil - now) / 60000) : 0;
+  const [selfBid, setSelfBid] = useState('');
+  const [roster, setRoster] = useState(null);
+  const [invites, setInvites] = useState([]);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [invited, setInvited] = useState({});
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const id = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
+      if (!alive || typeof id !== 'string') return;
+      setSelfBid(id);
+      const list = await cardPvpRoster(id);
+      if (alive) setRoster(Array.isArray(list) ? list : []);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+  useEffect(() => {
+    if (room.phase !== 'idle' || !selfBid || !roster || !roster.length) {
+      setInvites([]);
+      return undefined;
+    }
+    let alive = true;
+    const ids = new Map(roster.map(f => [f.otherId, f.userName]));
+    const load = async () => {
+      const list = await sbFetchCardInvites(selfBid, Date.now());
+      if (alive) setInvites(list.filter(x => ids.has(x.senderId)).map(x => ({
+        ...x,
+        name: ids.get(x.senderId)
+      })));
+    };
+    void load();
+    const t = setInterval(load, CARD_PVP_INVITE_POLL_MS);
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+  }, [room.phase, selfBid, roster]);
   const rewardRef = useRef(onReward);
   rewardRef.current = onReward;
   useEffect(() => {
@@ -91089,7 +91221,25 @@ const CardPvpLobby = ({
       Audio_.fgSe.tap();
       void CARD_PVP.create(profile, deck);
     }
-  }, "合言葉で部屋を作る"), React.createElement("div", {
+  }, "合言葉で部屋を作る"), invites.length > 0 && React.createElement("div", {
+    "data-card-pvp-invites": true,
+    className: "space-y-2 rounded-2xl border border-emerald-300/40 bg-emerald-500/10 p-3"
+  }, invites.slice(0, 3).map(x => React.createElement("div", {
+    key: `${x.senderId}-${x.roomCode}`,
+    className: "flex items-center gap-2"
+  }, React.createElement("p", {
+    className: "min-w-0 flex-1 text-[13px] font-bold text-emerald-50",
+    style: JA_WRAP_STYLE
+  }, jaWrap(`${x.name || 'フレンド'}さんから、マルチ対戦の招待が届いています`)), React.createElement("button", {
+    type: "button",
+    "data-card-pvp-accept": x.roomCode,
+    disabled: !ready,
+    className: "mh-button mh-button-primary min-h-[44px] shrink-0 rounded-xl px-3 text-[13px] font-black disabled:opacity-40",
+    onClick: () => {
+      Audio_.fgSe.tap();
+      CARD_PVP.join(x.roomCode, profile, deck);
+    }
+  }, "参加する")))), React.createElement("div", {
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-3"
   }, React.createElement("p", {
     className: "mb-2 text-[13px] font-bold text-slate-300"
@@ -91154,7 +91304,38 @@ const CardPvpLobby = ({
     className: "my-1 text-[40px] font-black tracking-[.3em] text-white"
   }, room.code), React.createElement("p", {
     className: "text-[13px] font-bold text-slate-200"
-  }, room.phase === 'connecting' ? 'つないでいます…' : room.foe ? `${room.foe.name}さんが来ました。始めます…` : 'この合言葉を友だちに伝えて、待っています…')), room.phase === 'error' && React.createElement("p", {
+  }, room.phase === 'connecting' ? 'つないでいます…' : room.foe ? `${room.foe.name}さんが来ました。始めます…` : 'この合言葉を友だちに伝えて、待っています…'), room.phase === 'waiting' && !room.foe && roster && roster.length > 0 && React.createElement("div", {
+    className: "mt-3 text-left"
+  }, React.createElement("button", {
+    type: "button",
+    "data-card-pvp-invite": true,
+    className: `${btn} border border-emerald-300/40 bg-slate-900 text-emerald-100`,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      setInviteOpen(v => !v);
+    }
+  }, "フレンドを招待する"), inviteOpen && React.createElement("ul", {
+    "data-card-pvp-roster": true,
+    className: "mt-2 max-h-[40vh] space-y-1 overflow-y-auto"
+  }, roster.slice(0, 30).map(f => React.createElement("li", {
+    key: f.otherId,
+    className: "flex items-center gap-2 rounded-xl bg-black/30 px-2 py-1.5"
+  }, React.createElement("span", {
+    className: "min-w-0 flex-1 truncate text-[13px] font-bold text-white"
+  }, f.userName), React.createElement("button", {
+    type: "button",
+    "data-card-pvp-invite-to": f.otherId,
+    disabled: invited[f.otherId] === 'sent',
+    className: "mh-button mh-button-primary min-h-[36px] rounded-lg px-3 text-[12px] font-black disabled:opacity-50",
+    onClick: async () => {
+      Audio_.fgSe.tap();
+      const ok = await sbSendCardInvite(selfBid, f.otherId, room.code);
+      setInvited(cur => ({
+        ...cur,
+        [f.otherId]: ok ? 'sent' : 'ng'
+      }));
+    }
+  }, invited[f.otherId] === 'sent' ? '招待しました' : invited[f.otherId] === 'ng' ? '送れませんでした' : '招待する')))))), room.phase === 'error' && React.createElement("p", {
     className: "rounded-xl border border-rose-300/40 bg-rose-500/10 p-3 text-[13px] font-bold text-rose-100"
   }, room.error), room.broken && React.createElement("p", {
     className: "rounded-xl border border-rose-300/40 bg-rose-500/10 p-3 text-[13px] font-bold text-rose-100"
