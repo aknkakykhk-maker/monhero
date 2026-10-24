@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 24c95057996ab43d
+// generated-sha256: 0c91c075b789d6c8
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-25 03:44"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-25 04:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -52948,11 +52948,11 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
           </div>
           <div className={SCREEN_PANEL_CLASS}>
             <div className="flex items-center gap-2"><span className="text-[13px] font-black text-white">対戦のBGM</span><span className="rounded border border-slate-500 px-1.5 py-0.5 text-[10px] font-black text-slate-300">準備中</span></div>
-            <p className="mt-1 text-[12px] font-bold leading-snug text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('いまは、対戦する助手に合わせて曲が変わります。自分で曲を決められるようにするのは準備中です')}</p>
+            <p className="mt-1 text-[12px] font-bold leading-snug text-slate-300" style={JA_LABEL_STYLE}>{jaWrap('いまは、対戦する助手に合わせて曲が変わります。自分で曲を決められるようにするのは準備中です')}</p>
           </div>
           <div className={SCREEN_PANEL_CLASS}>
             <div className="flex items-center gap-2"><span className="text-[13px] font-black text-white">演出</span><span className="rounded border border-slate-500 px-1.5 py-0.5 text-[10px] font-black text-slate-300">準備中</span></div>
-            <p className="mt-1 text-[12px] font-bold leading-snug text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('技の動きやパックを開ける演出の速さを選べるようにするのは準備中です')}</p>
+            <p className="mt-1 text-[12px] font-bold leading-snug text-slate-300" style={JA_LABEL_STYLE}>{jaWrap('技の動きやパックを開ける演出の速さを選べるようにするのは準備中です')}</p>
           </div>
         </div>
       </div>
