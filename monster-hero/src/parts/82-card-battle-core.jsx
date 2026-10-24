@@ -873,6 +873,69 @@ const cardDeckProblems = (db, deck) => {
   return [...new Set(out)];
 };
 
+// ===== デッキ編成(区切り2) =====
+// 持っている枚数を超えていないか・準備中のカードが入っていないか(デッキの決まり cardDeckProblems とは別に、編成の画面で出す)
+const cardDeckOwnProblems = (db, deck, collection) => {
+  const out = [];
+  if (!deck) return out;
+  const col = collection || {};
+  const n = {};
+  [...(deck.monsters || []), ...(deck.cards || [])].forEach((no) => { n[no] = (n[no] || 0) + 1; });
+  Object.entries(n).forEach(([no, k]) => {
+    const c = cardOf(db, no); const m = cardMonsterOf(db, no);
+    const name = c ? c.name : m ? m.name : no;
+    if ((col[no] || 0) < k) out.push(`「${name}」が足りません(持っているのは${col[no] || 0}枚)`);
+    if (c && !c.ready) out.push(`「${name}」は準備中です`);
+  });
+  return out;
+};
+// デッキの対戦に使えるか(決まり・持っている枚数・準備中)
+const cardDeckReady = (db, deck, collection) => cardDeckProblems(db, deck).length === 0 && cardDeckOwnProblems(db, deck, collection).length === 0;
+// そのカードを1枚足せるか。足せないときはその理由(画面に出す)。足せるときは ''
+const cardDeckAddReason = (db, deck, no, collection) => {
+  const col = collection || {};
+  const m = cardMonsterOf(db, no);
+  if (m) {
+    if (deck.monsters.includes(no)) return 'もう入っています';
+    if (deck.monsters.length >= 3) return 'モンスターは3体までです';
+    if (deck.monsters.some((x) => (cardMonsterOf(db, x) || {}).species === m.species)) return '同じモンスターは1体までです(キラも同じモンスター)';
+    if ((col[no] || 0) < 1) return '持っていません';
+    return '';
+  }
+  const c = cardOf(db, no);
+  if (!c) return '知らないカードです';
+  if (!c.ready) return '準備中のカードです';
+  if (deck.cards.length >= CARD_BATTLE_DECK_SIZE) return `カードは${CARD_BATTLE_DECK_SIZE}枚までです`;
+  const same = deck.cards.filter((x) => (cardOf(db, x) || {}).name === c.name).length;
+  if (same >= CARD_DECK_COPY_MAX) return `同じ名前のカードは${CARD_DECK_COPY_MAX}枚までです`;
+  const mine = deck.cards.filter((x) => x === no).length;
+  if (mine >= (col[no] || 0)) return `持っているのは${col[no] || 0}枚です`;
+  return '';
+};
+// 新しいデッキの id(いまのデッキと重ならないもの)
+const cardNewDeckId = (decks, now) => {
+  let id = `deck_${Math.floor(Number(now) || 0).toString(36)}`;
+  let k = 1;
+  while (decks.some((d) => d.id === id)) { id = `deck_${Math.floor(Number(now) || 0).toString(36)}_${k}`; k += 1; }
+  return id;
+};
+// デッキを1つ入れかえ(無ければ足す・5つまで)。active はそのまま(無いときは最初のデッキ)
+const cardDecksPut = (decks, deck) => {
+  const list = decks.decks.some((d) => d.id === deck.id) ? decks.decks.map((d) => (d.id === deck.id ? deck : d)) : [...decks.decks, deck].slice(0, CARD_DECK_MAX);
+  return { active: list.some((d) => d.id === decks.active) ? decks.active : (list[0] ? list[0].id : null), decks: list };
+};
+const cardDecksRemove = (decks, id) => {
+  const list = decks.decks.filter((d) => d.id !== id);
+  return { active: list.some((d) => d.id === decks.active) ? decks.active : (list[0] ? list[0].id : null), decks: list };
+};
+// 並べる順(モンスター → 種類 → 番号)
+const CARD_KIND_ORDER = Object.freeze({ pow: 0, int: 1, spe: 2, dge: 3, blk: 4 });
+const cardSortKey = (db, no) => {
+  const c = cardOf(db, no);
+  if (!c) return `0-${no}`;
+  return `1-${c.user === 'any' ? 'y' : c.user === 'breeder' ? 'z' : 'a'}-${CARD_KIND_ORDER[c.kind] ?? 9}-${no}`;
+};
+
 // ===== 保存の形(6-1)。読むときは必ずここを通す(無い・壊れているときは既定値) =====
 const CARD_SAVE_KEYS = Object.freeze({
   collection: 'mh_card_collection_v1', decks: 'mh_card_decks_v1', point: 'mh_card_point_v1', starter: 'mh_card_starter_v1',

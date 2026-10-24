@@ -15,7 +15,7 @@ const load = () => {
     + `${fs.readFileSync(path.join(GAME, 'src', 'parts', '86-card-tutorial.jsx'), 'utf8')}\n;\n`
     // 85 は画面の部品(SkillFxMotion)を使うので、ルールだけで動く「動きの見本」の所だけ読む
     + `${fs.readFileSync(path.join(GAME, 'src', 'parts', '85-card-battle-motion.jsx'), 'utf8').split('// ---- 動きの見本')[1].replace(/^[^\n]*\n/, '')}\n;\n`
-    + 'this.E = { CARD_BATTLE_DATA, cardCreateGame, cardApplyAction, cardLegalActions, cardAttackOptions, cardGuardOptions, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardSimulate, CARD_AI_LEVELS, CARD_AI_HABITS, CARD_AI_DECKS, cardDeckProblems, cardNormalizeCollection, cardNormalizeDecks, cardNormalizePoint, cardNormalizeDaily, cardNormalizeRecord, cardNormalizeCpuUnlocked, cardGrantStarter, cardCpuReward, cardUnlockAfterWin, cardMotionDemo, cardMotionDemoAction, cardTutorialGame, cardTutorialMutate, cardTutorialAllow, cardTutorialDone, cardTutorialCpu, CARD_TUTORIAL_STAGES, cardTutorialCopyProblems, cardTutorialFinish, CARD_TUTORIAL_LINES, cardCpuLoops, cardOwnTurns };';
+    + 'this.E = { CARD_BATTLE_DATA, cardCreateGame, cardApplyAction, cardLegalActions, cardAttackOptions, cardGuardOptions, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardSimulate, CARD_AI_LEVELS, CARD_AI_HABITS, CARD_AI_DECKS, cardDeckProblems, cardNormalizeCollection, cardNormalizeDecks, cardNormalizePoint, cardNormalizeDaily, cardNormalizeRecord, cardNormalizeCpuUnlocked, cardGrantStarter, cardCpuReward, cardUnlockAfterWin, cardMotionDemo, cardMotionDemoAction, cardTutorialGame, cardTutorialMutate, cardTutorialAllow, cardTutorialDone, cardTutorialCpu, CARD_TUTORIAL_STAGES, cardTutorialCopyProblems, cardTutorialFinish, CARD_TUTORIAL_LINES, cardCpuLoops, cardOwnTurns, cardDeckAddReason, cardDeckReady, cardDecksPut, cardDecksRemove };';
   vm.runInContext(src, ctx, { filename: '82-card-battle-core.jsx' });
   return ctx.E;
 };
@@ -214,6 +214,25 @@ const decksAndSaves = () => {
   const g = E.cardCreateGame(db, { decks: [E.cardAiBuildDeck(db, 'speed'), E.cardAiBuildDeck(db, 'speed')], first: 1 });
   g.turn = 7;
   ok(E.cardOwnTurns(g, 0) === 3 && E.cardOwnTurns(g, 1) === 4, '自分の番の数え方が違う');
+  // デッキ編成(区切り2): 同じ名前3枚まで・持っている枚数まで・同じモンスター1体まで・準備中は入らない
+  {
+    const kit = db.starters.speed;
+    const col = {}; [...kit.monsters, ...kit.cards].forEach((no) => { col[no] = (col[no] || 0) + 1; });
+    const d = { id: 'x', name: 'x', monsters: [], cards: [] };
+    ok(E.cardDeckAddReason(db, d, kit.monsters[0], col) === '', 'デッキにモンスターを入れられない');
+    const kira = Object.values(db.monsters).find((m) => m.species === db.monsters[kit.monsters[0]].species && m.no !== kit.monsters[0]);
+    if (kira) ok(/同じモンスター/.test(E.cardDeckAddReason(db, { ...d, monsters: [kit.monsters[0]] }, kira.no, { ...col, [kira.no]: 1 })), 'キラも同じモンスターとして止まらない');
+    const no = kit.cards[0];
+    const three = { ...d, cards: [no, no, no] };
+    ok(/3枚まで/.test(E.cardDeckAddReason(db, three, no, { [no]: 9 })), '同じ名前の4枚目が入ってしまう');
+    ok(/持っているのは/.test(E.cardDeckAddReason(db, { ...d, cards: [no] }, no, { [no]: 1 })), '持っている枚数を超えて入ってしまう');
+    const notReady = Object.values(db.cards).find((c) => !c.ready);
+    ok(/準備中/.test(E.cardDeckAddReason(db, d, notReady.no, { [notReady.no]: 3 })), '準備中のカードが入ってしまう');
+    const full = { id: 's', name: 's', monsters: kit.monsters.slice(), cards: kit.cards.slice() };
+    ok(E.cardDeckReady(db, full, col) && !E.cardDeckReady(db, full, {}), '持っていないカードのデッキが対戦に使えてしまう');
+    const ds = E.cardDecksPut({ active: 'a', decks: [{ ...full, id: 'a' }] }, { ...full, id: 'b' });
+    ok(ds.decks.length === 2 && ds.active === 'a' && E.cardDecksRemove(ds, 'a').active === 'b', 'デッキの足し方・消し方が違う');
+  }
   const u = E.cardUnlockAfterWin(E.cardNormalizeCpuUnlocked(null), 'normal');
   ok(u.hard && !u.expert, 'NORMAL で勝っても HARD が開かない');
   ok(!E.cardUnlockAfterWin(E.cardNormalizeCpuUnlocked(null), 'easy').hard, 'EASY の勝ちで HARD が開いてしまう');

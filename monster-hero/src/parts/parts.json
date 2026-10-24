@@ -312,6 +312,10 @@
       "role": "画面: MFバトルカード(CARD_TOP=トップ・スターター選び・相手えらび / CARD_BATTLE=対戦 / 結果)。保存は mh_card_* の新しいキーだけ。いまはデバッグ設定からだけ入れる"
     },
     {
+      "file": "87-card-deck-edit.jsx",
+      "role": "画面: MFバトルカードのデッキ編成(デッキの一覧・組む画面)。決まりは 82 の cardDeckProblems・cardDeckAddReason。保存は 84 の CardBattleScreen が入れる"
+    },
+    {
       "file": "81-debug-trials.jsx",
       "role": "デバッグ設定のいちばん上の「確認待ちの試作」(DEBUG_TRIALS に1行足すと出る)。デバッグ専用"
     },

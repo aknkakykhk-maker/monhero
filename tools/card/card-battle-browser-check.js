@@ -407,6 +407,52 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     }
     check(`⑬ 結果の画面の助手の絵が、${whoIds.length}人とも同じ大きさで足元が枠の下にそろう`, whoIds.length >= 6 && artBad.length === 0, artBad.join(' / ') || whoIds.join('・'));
     check('⑬ 結果の画面に「クイック周回 ◯周ぶん」が出る(入るとき・入らないとき)', /クイック周回 16周ぶん/.test(demoTxt.in) && /16周ぶん進みました/.test(demoTxt.in) && /^クイック周回をしていないときは入りません$/.test(demoTxt.out.trim()), JSON.stringify(demoTxt).slice(0, 200));
+    // ⑭ デッキ編成: 新しいデッキを作り、モンスター3体と50枚を入れて保存 → 一覧で「対戦に使えます」・使うデッキにできる
+    await page.locator('[data-card-decks]').click();
+    await page.waitForSelector('[data-card-deck-list]', { timeout: 5000 });
+    if (SHOT) await shot(page, '18-deck-list');
+    await page.locator('[data-card-deck-new]').click();
+    await page.waitForSelector('[data-card-deck-edit]', { timeout: 5000 });
+    const monTiles = page.locator('[data-card-deck-tile]');
+    for (let i = 0; i < 3; i++) await monTiles.nth(i).click();
+    const monCount = await page.locator('[data-card-deck-mon] img').count();
+    // 同じ種類の2体目は入らない(キラがあれば)・技は「使える子だけ」で絞って入れる
+    await page.getByRole('tab', { name: /技・ブリーダー/ }).click();
+    let sameNameStop = '';
+    for (let guard = 0; guard < 400; guard++) {
+      const n = Number((await page.locator('[data-card-deck-count]').innerText()).replace(/\/.*$/, '').trim());
+      if (n >= 50) break;
+      const tiles = page.locator('[data-card-deck-tile]');
+      const k = await tiles.count();
+      let added = false;
+      for (let t = 0; t < k && !added; t++) {
+        const before = (await page.locator('[data-card-deck-count]').innerText());
+        await tiles.nth(t).click();
+        if ((await page.locator('[data-card-deck-count]').innerText()) !== before) added = true;
+        else if (!sameNameStop) sameNameStop = await page.locator('[data-card-deck-notice]').innerText().catch(() => '');
+      }
+      if (!added) { await page.locator('[data-card-deck-usable]').click(); }
+    }
+    await page.evaluate(() => document.querySelectorAll('[data-card-deck-edit] .mh-scroll').forEach((el) => { el.scrollTop = 0; }));
+    if (SHOT) await shot(page, '19-deck-edit');
+    const deckReady = await page.locator('[data-card-deck-ready]').getAttribute('data-card-deck-ready');
+    await page.getByRole('tab', { name: /デッキの中/ }).click();
+    if (SHOT) await shot(page, '20-deck-inside');
+    await page.locator('[data-card-deck-save]').click();
+    await page.waitForSelector('[data-card-deck-list]', { timeout: 5000 });
+    const savedDecks = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_card_decks_v1') || 'null'));
+    const newDeck = savedDecks && savedDecks.decks[savedDecks.decks.length - 1];
+    const names = {};
+    (newDeck ? newDeck.cards : []).forEach((no) => { names[no] = 1; });
+    check('⑭ デッキ編成: 新しいデッキにモンスター3体・50枚を入れて保存できる', monCount === 3 && deckReady === 'ok' && savedDecks && savedDecks.decks.length === 2 && newDeck.monsters.length === 3 && newDeck.cards.length === 50, JSON.stringify({ monCount, deckReady, n: savedDecks && savedDecks.decks.length, cards: newDeck && newDeck.cards.length }));
+    check('⑭ 同じ名前4枚目・持っている枚数を超える分は入らない(理由が出る)', /3枚まで|持っているのは/.test(sameNameStop), sameNameStop);
+    await page.locator(`[data-card-deck-use="${newDeck.id}"]`).click();
+    await page.waitForTimeout(300);
+    const act = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_card_decks_v1') || 'null').active);
+    if (SHOT) await shot(page, '21-deck-list-after');
+    check('⑭ 一覧で「使う」を押すと、そのデッキで対戦する', act === newDeck.id, act);
+    await page.locator('[data-card-deck-list] button').first().click();
+    await page.waitForTimeout(300);
     check('どこでも実行時エラーが出ない', errors.length === 0, errors.slice(0, 3).join(' / '));
   } catch (e) {
     if (lastPage) await shot(lastPage, 'zz-fail').catch(() => {});
