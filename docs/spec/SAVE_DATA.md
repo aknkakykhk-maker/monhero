@@ -76,11 +76,13 @@
 | `mh_card_point_v1` | number / `cardNormalizePoint` | MFバトルカードのカードポイント。マイナス・数でない値は 0 |
 | `mh_card_starter_v1` | object / `cardNormalizeStarter` | スターターを受け取った一度きりの印 `{ kit, at }`。ある人には二度と配らない(`cardGrantStarter`) |
 | `mh_card_daily_v1` | object / `cardNormalizeDaily` | MFバトルカードの今日の記録 `{ day(JST), cpuPoint, pvpPoint, firstWin, foes }`。日が変われば 0 に戻る |
-| `mh_card_record_v1` | object / `cardNormalizeRecord` | MFバトルカードの戦績 `{ cpu:{win,lose,surrender}, pvp:{win,lose}, beaten:{助手id:true}, recent:[30件] }` |
+| `mh_card_record_v1` | object / `cardNormalizeRecord` | MFバトルカードの戦績 `{ cpu:{win,lose,surrender}, pvp:{win,lose}, beaten:{助手id:true}, recent:[30件], byLevel:{win:{難易度:数},lose:{…}}, rank:{ total:{難易度:勝ち}, week:{key:月曜の日付, wins:{…}}, streak:{now,best} } }`。byLevel・rank は 2026-10-24 に足した項目(無い人は 0 で補う)。rank はランキングに数えてよい対戦(公開後・デバッグでない人)だけを数える(`cardRecordAfter`) |
 | `mh_card_cpu_unlocked_v1` | object / `cardNormalizeCpuUnlocked` | コンピューター戦の難易度を開いた印 `{ hard, expert, master }`(EASY・NORMAL は最初から) |
 | `mh_card_tutorial_v1` | object / `cardNormalizeTutorial` | MFバトルカードの練習試合(チュートリアル)の印 `{ done, skipped, rewarded, at }`。`rewarded` があれば 100 カードポイントを二度と渡さない(`cardTutorialFinish`) |
 | `mh_card_pack_pity_v1` | object / `cardNormalizePity` | MFバトルカードのパックの天井 `{ パックid(w1〜w4): キラなしで開けた数 }`。知らないパックid・数でない値は捨てる(89-card-pack.jsx) |
 | `mh_card_shop_v1` | object / `cardNormalizeShop` | マーケットで買った選ばなかったスターターキットの印 `{ starters:{ キットid: 時刻 } }`。印があるキットは二度と買えない(`cardBuyStarter`) |
+| `mh_card_top_assist_v1` | object | MFバトルカードのトップの助手の出し入れ `{ modeSelectArt, modeSelectComment }`。無い・壊れていたら両方ON |
+| `mh_card_rank_sync_v1` | string | MFバトルカードのランキング(表 `card_battle_ranks`)へ最後に送った行の中身。同じなら送り直さない(90-card-rank.jsx) |
 | `mh_raid_jack_frame_gift_v1` | object / `null` | プロフィールフレーム「ハロウィン・妖」をギフトで届けた印(`{ at, frameId }`・2026-10-20)。レイドで大王まで倒せたときの終章を見た参加者へ1回だけ届けるため。ギフトの一覧(`mh_gifts`)は古いものから消えるので、二重に届けないためにこの印を持つ。ギフトと同じ取引で保存する |
 | `mh_assistant_bond_rewards_v1` | object / `null` | 助手の仲良し度の節目(Lv22・25・28・30)のごほうびを、**最初の量**(`ASSISTANT_BOND_LEVEL_REWARDS_V1`)で届けた印(`{ 助手のid: [22, 25, ...] }`・2026-10-21 #3241)。量を上げたあと(下の v2)は書かず、読むだけ。この印がある節目には、今の量との差のぶんだけを追加で届ける |
 | `mh_assistant_bond_rewards_v2` | object / `null` | 助手の仲良し度のLvごとのごほうび(Lv2〜30・`ASSISTANT_BOND_LEVEL_REWARDS`)を**今の量**で届けた(または最初の量との差を届けた)印(`{ 助手のid: [2, 3, ...] }`・2026-10-21)。助手ごとに各Lv1回。ギフトの一覧(`mh_gifts`)は古いものから消えるので、二重に届けないためにこの印を持つ。ギフトと同じ取引で保存する。起動時に、もう越えているLvのぶんをまとめて届ける |

@@ -440,6 +440,28 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     }
     check(`⑬ 結果の画面の助手の絵が、${whoIds.length}人とも同じ大きさで足元が枠の下にそろう`, whoIds.length >= 6 && artBad.length === 0, artBad.join(' / ') || whoIds.join('・'));
     check('⑬ 結果の画面に「クイック周回 ◯周ぶん」が出る(入るとき・入らないとき)', /クイック周回 16周ぶん/.test(demoTxt.in) && /16周ぶん進みました/.test(demoTxt.in) && /^クイック周回をしていないときは入りません$/.test(demoTxt.out.trim()), JSON.stringify(demoTxt).slice(0, 200));
+    // ⑬ パックを開ける見本(デバッグ・保存しない。1パック目の最後は別絵キラ・2パック目の最後はキラ)
+    //   キラ以上は真ん中に大きく出る(data-card-pack-spot)。鳴らした効果音(data-card-pack-se)に、破る音・めくる音・キラの音(crit＋levelUp)・別絵キラの音(crit＋fusion)がそろう
+    await page.locator('[data-card-pack-open-demo]').dispatchEvent('click');
+    await page.locator('[data-card-pack-tear]').waitFor({ timeout: 10000 });
+    await page.locator('[data-card-pack-tear]').dispatchEvent('click');
+    await page.locator('[data-card-pack-open][data-card-pack-phase="open"]').waitFor({ timeout: 10000 });
+    for (let i = 0; i < 8; i++) { await page.locator(`[data-card-pack-card="${i}"]`).dispatchEvent('click'); await page.waitForTimeout(120); }
+    const spotAlt = await page.locator('[data-card-pack-spot="alt"]').waitFor({ timeout: 3000 }).then(() => true).catch(() => false);
+    await page.locator('[data-card-pack-spot]').waitFor({ state: 'detached', timeout: 5000 }).catch(() => {});
+    await page.locator('[data-card-pack-next]').dispatchEvent('click');
+    await page.locator('[data-card-pack-tear]').dispatchEvent('click');
+    await page.locator('[data-card-pack-open][data-card-pack-phase="open"]').waitFor({ timeout: 10000 });
+    await page.locator('[data-card-pack-flip-all]').dispatchEvent('click');
+    const spotKira = await page.locator('[data-card-pack-spot="kira"]').waitFor({ timeout: 6000 }).then(() => true).catch(() => false);
+    const packSe = ((await page.locator('[data-card-pack-open]').getAttribute('data-card-pack-se')) || '').split(',');
+    const seCount = (n) => packSe.filter((x) => x === n).length;
+    check('⑬ パックを開ける見本: 別絵キラ・キラが真ん中に大きく出て、破る音・めくる音・キラの音・別絵キラの音を鳴らす',
+      spotAlt && spotKira && seCount('special') === 2 && seCount('card') === 16 && seCount('crit') >= 4 && seCount('fusion') === 1 && seCount('levelUp') === 1,
+      JSON.stringify({ spotAlt, spotKira, se: ['special', 'card', 'crit', 'fusion', 'levelUp'].map((n) => `${n}:${seCount(n)}`).join(' ') }));
+    await page.locator('[data-card-pack-spot]').waitFor({ state: 'detached', timeout: 5000 }).catch(() => {});
+    await page.locator('[data-card-pack-done]').dispatchEvent('click');
+    await page.locator('[data-card-top="top"]').waitFor({ timeout: 10000 });
     // ⑭ デッキ編成: 新しいデッキを作り、モンスター3体と50枚を入れて保存 → 一覧で「対戦に使えます」・使うデッキにできる
     await page.locator('[data-card-decks]').click();
     await page.waitForSelector('[data-card-deck-list]', { timeout: 5000 });
@@ -610,8 +632,40 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     if (homeEntry) {
       await page.locator('[data-home-card-battle]').click();
       await page.locator('[data-card-top="top"]').waitFor({ timeout: 20000 });
-      if (SHOT) await shot(page, '32-top-from-home');
+      // 札は少しずつ出てくる(mhms-in)ので、出そろってから写す
+      if (SHOT) { await page.waitForTimeout(1500); await shot(page, '32-top-from-home'); }
+      // ⑱ トップはモンヒロビート・モンヒロバトルの入口と同じ作り(社長 台帳 #3513): 助手の立ち絵と吹き出し・大きい札 2×2・小さいボタン 4つ
+      const topShape = await page.evaluate(() => ({
+        big: document.querySelectorAll('[data-card-top-cards] > button').length,
+        small: document.querySelectorAll('[data-card-top-shortcuts] > button').length,
+        art: !!document.querySelector('[data-card-top="top"] [data-rhythm-mode-assistant-art-box]'),
+        line: (document.querySelector('[data-card-top="top"] [data-rhythm-mode-assistant-line]') || {}).textContent || '',
+        toggles: document.querySelectorAll('[data-card-top="top"] [data-rhythm-mode-assistant-toggles] button').length,
+        point: !!document.querySelector('[data-card-top="top"] [data-card-point]'),
+      }));
+      check('⑱ トップ: 助手の立ち絵とひとこと・立ち絵/コメントの札・大きい札4つ・小さいボタン4つ・カードポイント', topShape.big === 4 && topShape.small === 4 && topShape.art && topShape.line.length > 3 && topShape.toggles === 2 && topShape.point, JSON.stringify(topShape));
+      // 戦績は「記録」の画面へ移した
+      await page.locator('[data-card-record-open]').click();
+      await page.locator('[data-card-record-view]').waitFor({ timeout: 10000 });
+      if (SHOT) await shot(page, '35-record');
       const recText = await page.locator('[data-card-record]').innerText().catch(() => '');
+      await page.locator('[data-card-record-view] header button').first().click();
+      // ⑱ ランキング: 4つのタブ(勝ち数・連勝・図鑑・マルチ)。マルチは準備中の札。表が無い/空でも壊れない。公開前は「見本です」と出る
+      await page.locator('[data-card-ranking-open]').click();
+      await page.locator('[data-card-ranking="wins"]').waitFor({ timeout: 10000 });
+      await page.waitForFunction(() => !/読み込み中/.test((document.querySelector('[data-card-ranking]') || {}).textContent || ''), null, { timeout: 15000 }).catch(() => {});
+      if (SHOT) await shot(page, '36-ranking');
+      const rankWins = await page.evaluate(() => ({ tabs: document.querySelectorAll('[data-card-ranking-tab]').length, levels: document.querySelectorAll('[data-card-ranking-level]').length, periods: document.querySelectorAll('[data-card-ranking-period]').length, mine: !!document.querySelector('[data-card-ranking-mine]'), preview: !!document.querySelector('[data-card-ranking-preview]'), state: document.querySelector('[data-card-ranking-missing]') ? 'missing' : document.querySelector('[data-card-ranking-empty]') ? 'empty' : document.querySelectorAll('[data-card-ranking-row]').length ? 'rows' : 'other' }));
+      await page.locator('[data-card-ranking-tab="multi"]').click();
+      const multiSoon = /準備中/.test(await page.locator('[data-card-ranking-multi]').innerText().catch(() => ''));
+      if (SHOT) await shot(page, '37-ranking-multi');
+      check('⑱ ランキング: 勝ち数(今週・通算×5難易度)・連勝・図鑑・マルチ(準備中)。公開前は見本の案内が出て、表が無くても壊れない', rankWins.tabs === 4 && rankWins.levels === 5 && rankWins.periods === 2 && rankWins.mine && rankWins.preview && rankWins.state !== 'other' && multiSoon, JSON.stringify({ ...rankWins, multiSoon }));
+      await page.locator('[data-card-ranking] header button').first().click();
+      await page.locator('[data-card-options-open]').click();
+      await page.locator('[data-card-options]').waitFor({ timeout: 10000 });
+      if (SHOT) await shot(page, '38-options');
+      await page.locator('[data-card-options] header button').first().click();
+      await page.locator('[data-card-top="top"]').waitFor({ timeout: 10000 });
       check('⑰ 戦績は投了を負けに数える(「0勝 1敗(うち投了1)」の形)', /\d+勝 \d+敗\(うち投了\d+\)/.test(recText) && !/・投了/.test(recText), recText);
       await page.locator('[data-card-cpu]').click();
       await page.locator('[data-card-top="mode"]').waitFor({ timeout: 10000 });

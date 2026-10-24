@@ -28,6 +28,10 @@ const BAND = {
   skill: [{ x0: 402, y0: 957, x1: 690, y1: 989 }],     // 右下: URL の行(© は帯ではなく絵の上にある)
 };
 const ART_COPYRIGHT = { x0: 496, y0: 702, x1: 690, y1: 731, from: 'top' }; // 技カードの絵の右下の「© TECMO, LTD. 1999」
+// 日本語にした絵(全モンスター・ブリーダー)は、縦じまが目立たないように広くならす(blur)。
+// ブリーダーの絵は右のふちが x≈678 から灰色の枠なので、その手前で止める(ふちの明るい色が左へ伸びて白くにじんでいた・カゲあつくん 113・122・126)
+const ART_COPYRIGHT_JA = { ...ART_COPYRIGHT, blur: 9 };
+const ART_COPYRIGHT_BREEDER = { ...ART_COPYRIGHT_JA, x1: 674 };
 
 // ★混血の絵は「C051.jpg」と「-」が無い名前なので、C のあとに数字が続くものもモンスターカードにする
 //   (前は技カードとして扱っていて、© が残り、右下の「No. C-051」を塗りつぶしていた・2026-10-24 に気づいた)
@@ -39,7 +43,9 @@ const fillRect = (px, ch, r) => {
   // 帯の地にはざらつきがあるので、1列だけ拾うと縦すじになる。左右3列ずつ・2行をならして拾う
   const near = (x, ys, c) => {
     let sum = 0, n = 0;
-    for (let dx = -3; dx <= 3; dx += 1) for (const y of ys) { sum += at(Math.min(W - 1, Math.max(0, x + dx)), y, c); n += 1; }
+    // 絵の上(© の所)は色の変わりが大きいので、もっと広くならす(blur)。四角の外の列は拾わない(ふちの色を引きこまない)
+    const k = r.blur || 3;
+    for (let dx = -k; dx <= k; dx += 1) for (const y of ys) { sum += at(Math.min(r.blur ? r.x1 : W - 1, Math.max(r.blur ? r.x0 : 0, x + dx)), y, c); n += 1; }
     return sum / n;
   };
   for (let x = r.x0; x <= r.x1; x += 1) {
@@ -54,11 +60,11 @@ const fillRect = (px, ch, r) => {
   }
 };
 
-const erase = async (file, { artCopyright = true } = {}) => {
+const erase = async (file, { artCopyright = true, breeder = false } = {}) => {
   const { data, info } = await sharp(file).removeAlpha().raw().toBuffer({ resolveWithObject: true });
   if (info.width !== W || info.height !== H) throw new Error(`${file}: 大きさが ${info.width}×${info.height}(${W}×${H} のはず)`);
   const rects = [...(isMonster(file) ? BAND.monster : BAND.skill)];
-  if (artCopyright && !isMonster(file)) rects.push(ART_COPYRIGHT);
+  if (artCopyright && !isMonster(file)) rects.push(breeder ? ART_COPYRIGHT_BREEDER : file.startsWith(JA) ? ART_COPYRIGHT_JA : ART_COPYRIGHT);
   for (const r of rects) fillRect(data, info.channels, r);
   return sharp(data, { raw: { width: W, height: H, channels: info.channels } });
 };
@@ -92,7 +98,7 @@ const build = async (opts) => {
   const files = allCards();
   for (const [key, [w, h]] of Object.entries(SIZES)) fs.mkdirSync(path.join(OUT, key), { recursive: true });
   for (const f of files) {
-    const img = await erase(jaOf(f), opts);
+    const img = await erase(jaOf(f), { ...opts, breeder: path.basename(path.dirname(f)) === 'breeder' });
     const buf = await img.png().toBuffer();
     for (const [key, [w, h]] of Object.entries(SIZES)) {
       await sharp(buf).resize(w, h).jpeg({ quality: 78, mozjpeg: true }).toFile(path.join(OUT, key, path.basename(f)));

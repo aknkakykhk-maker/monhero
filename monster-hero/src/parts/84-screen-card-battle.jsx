@@ -771,7 +771,9 @@ const CardAssistantArt = ({ src, alt, className = '' }) => {
 
 // onQuickLoops(loops) … 1戦ぶんをクイック周回の周回クリアとして配る(60-app の awardBackQuickLoops)。配れたら配った中身、配れなければ null
 // onOpenMarket … マーケットの「カードポイント」の売り場へ(60-app)
-const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', seenStoryIds = [], debug = false, onBgm, onQuickLoops, onOpenMarket }) => {
+// topAssistant … トップに出す助手の立ち絵とひとこと({ id, name, accent, image, text }。60-app が場面 cardTop から選ぶ)
+// rank … ランキング({ send: 送ってよいか, profile: { name, icon, frame }, renderBreederIcon })。送るのは公開後のふつうの対戦だけ
+const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', seenStoryIds = [], debug = false, onBgm, onQuickLoops, onOpenMarket, topAssistant = null, rank = null }) => {
   const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
   const [save, setSave] = useState(null);
   const [view, setView] = useState('top');
@@ -786,6 +788,19 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   const [editDeck, setEditDeck] = useState(null);
   const [packDemo, setPackDemo] = useState(null); // デバッグの「パックを開ける見本」 // デッキ編成で組んでいるデッキ // デバッグの「結果の見本」の相手
   const press = useCardLongPress((no) => setDetail(no));
+  // トップの助手の「立ち絵/コメント」の出し入れ(モンヒロビート・モンヒロバトルの入口と同じ札。保存は mh_card_top_assist_v1。無い・壊れていたら両方ON)
+  const [assist, setAssist] = useState({ modeSelectArt: true, modeSelectComment: true });
+  useEffect(() => {
+    let alive = true;
+    storeGet(CARD_SAVE_KEYS.topAssist, null).then((v) => { if (alive && v && typeof v === 'object' && !Array.isArray(v)) setAssist({ modeSelectArt: v.modeSelectArt !== false, modeSelectComment: v.modeSelectComment !== false }); }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
+  const toggleAssist = (key) => {
+    if (key !== 'modeSelectArt' && key !== 'modeSelectComment') return;
+    const next = { ...assist, [key]: assist[key] === false };
+    setAssist(next);
+    void storeSet(CARD_SAVE_KEYS.topAssist, next).catch(() => {});
+  };
 
   const load = async () => {
     const K = CARD_SAVE_KEYS;
@@ -834,16 +849,13 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       const facts = cardResultFacts(st, CARD_ME);
       const reward = cardCpuReward(cardNormalizeDaily(save.daily, cardTodayJst()), game.level, outcome, facts);
       const loops = cardCpuLoops(game.level, outcome, facts);
-      const rec = cardNormalizeRecord(save.record);
-      const nextRecord = {
-        ...rec,
-        cpu: { ...rec.cpu, [outcome]: rec.cpu[outcome] + 1 },
-        beaten: outcome === 'win' ? { ...rec.beaten, [game.who]: true } : rec.beaten,
-        recent: [{ at: Date.now(), who: game.who, level: game.level, outcome }, ...rec.recent].slice(0, 30),
-      };
+      // ランキングに数えるのは、公開後に、デバッグでない人がふつうの入口から戦ったぶんだけ(rank.send。60-app が決める)
+      const rankable = !!(rank && rank.send) && !debug;
+      const nextRecord = cardRecordAfter(save.record, { who: game.who, level: game.level, outcome, at: Date.now(), rankable });
       const nextUnlocked = outcome === 'win' ? cardUnlockAfterWin(save.unlocked, game.level) : save.unlocked;
       const opened = CARD_LEVEL_ORDER.find((lv) => nextUnlocked[lv] && !save.unlocked[lv]) || null;
       const ok = await persist({ point: save.point + reward.total, daily: reward.daily, record: nextRecord, unlocked: nextUnlocked });
+      if (ok && rankable) void cardRankSync(db, { record: nextRecord, collection: save.collection, profile: rank.profile });
       // クイック周回ぶん: 周回クリア扱いにするのは、ビートと同じく、AUTO設定のクイックの難易度を通したことがある人だけ(配る側が決める)
       let quick = null;
       if (loops > 0 && onQuickLoops) { try { quick = await onQuickLoops(loops); } catch (_) { quick = null; } }
@@ -1076,31 +1088,126 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     );
   }
 
-  // ---- トップ ----
-  return (
-    <div data-mh-screen data-card-top="top" className={SCREEN_SHELL_CLASS}>
-      <ScreenHead title="MFバトルカード" accent="text-amber-200" onBack={onExit} backLabel={exitLabel} note={debug ? 'デバッグ専用(まだ公開していません)' : ''}/>
-      <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
-        <div className={`${SCREEN_PANEL_CLASS} flex items-center justify-between`}>
-          <div className="text-[13px] font-black text-slate-200">カードポイント</div>
-          <div data-card-point className="text-xl font-black text-amber-200">{save.point}</div>
-        </div>
-        {activeDeck && (
+  // ---- 記録 ----
+  if (view === 'record') {
+    const rec = save.record;
+    const r = rec.rank;
+    const weekNow = cardWeekKeyJst(Date.now());
+    return (
+      <div data-mh-screen data-card-record-view className={SCREEN_SHELL_CLASS}>
+        <ScreenHead title="記録" accent="text-amber-200" onBack={() => setView('top')} note="MFバトルカード"/>
+        <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
+          {/* 投了は負けに数える(カゲあつくんの確認)。保存の形(cpu.lose と cpu.surrender を別に持つ)はそのまま、見せるときに足す */}
           <div className={SCREEN_PANEL_CLASS}>
-            <div className="text-[12px] font-bold text-slate-400">いまのデッキ</div>
-            <div className="text-[14px] font-black text-white">{activeDeck.name}</div>
-            <div className="mt-1 flex gap-1.5">{activeDeck.monsters.map((no) => { const m = cardMonsterOf(db, no); return m ? <img key={no} {...press(no)} src={CARD_IMG(m.img)} alt={m.name} className="w-[22%] rounded-md"/> : null; })}</div>
-            {/* 投了は負けに数える(カゲあつくんの確認)。保存の形(cpu.lose と cpu.surrender を別に持つ)はそのまま、見せるときに足す */}
-            <div data-card-record className="mt-1 text-[11px] font-bold text-slate-400">戦績(助手と対戦): {save.record.cpu.win}勝 {save.record.cpu.lose + save.record.cpu.surrender}敗{save.record.cpu.surrender ? `(うち投了${save.record.cpu.surrender})` : ''}</div>
+            <div className="text-[12px] font-bold text-slate-400">助手と対戦</div>
+            <div data-card-record className="text-[16px] font-black text-white">{rec.cpu.win}勝 {rec.cpu.lose + rec.cpu.surrender}敗{rec.cpu.surrender ? `(うち投了${rec.cpu.surrender})` : ''}</div>
+            <table data-card-record-levels className="mt-2 w-full text-[12px] font-bold">
+              <thead><tr className="text-slate-400"><th className="py-1 text-left font-bold">難易度</th><th className="py-1 text-right font-bold">勝ち</th><th className="py-1 text-right font-bold">負け</th></tr></thead>
+              <tbody>{CARD_LEVEL_ORDER.map((lv) => <tr key={lv} className="border-t border-white/10"><td className="py-1 text-slate-200">{CARD_LEVEL_LABEL[lv]}</td><td className="py-1 text-right text-amber-200">{rec.byLevel.win[lv]}</td><td className="py-1 text-right text-slate-300">{rec.byLevel.lose[lv]}</td></tr>)}</tbody>
+            </table>
+            <p className="mt-1 text-[10px] font-bold text-slate-500">難易度ごとの数は、この記録ができてからのぶんです</p>
           </div>
-        )}
-        {notice && <p className="text-[12px] font-bold text-amber-200">{notice}</p>}
-        <button type="button" data-card-cpu className={`${btn} mh-button-primary`} disabled={!activeDeck} onClick={() => { Audio_.se.tap(); setNotice(''); setView('mode'); }}>対戦</button>
-        <div className="grid grid-cols-2 gap-2"><button type="button" data-card-decks className={`${btn} border border-amber-300/50 bg-amber-900/50 text-amber-50`} onClick={() => { Audio_.se.tap(); setNotice(''); setView('decks'); }}>デッキ編成</button><button type="button" data-card-market-open className={`${btn} border border-orange-300/50 bg-orange-900/50 text-orange-50`} disabled={!onOpenMarket} onClick={() => { Audio_.se.tap(); setNotice(''); onOpenMarket && onOpenMarket(); }}>マーケットへ<span className="block text-[10px] font-bold">パック・キット・円盤石</span></button>
-          <button type="button" data-card-dex-open className={`${btn} border border-sky-300/50 bg-sky-900/50 text-sky-50`} onClick={() => { Audio_.se.tap(); setNotice(''); setView('dex'); }}>カード図鑑</button>
-          {/* 練習試合のやり直しは、ルールの画面の中(ドラの D20「ルールの画面から、いつでもこの練習試合をやり直せる」) */}
-          <button type="button" data-card-rules-open className={`${btn} border border-emerald-300/50 bg-emerald-900/60 text-emerald-50`} onClick={() => { Audio_.se.tap(); setNotice(''); setView('rules'); }}>ルール<span className="block text-[10px] font-bold">練習試合もここから</span></button>
+          <div className={SCREEN_PANEL_CLASS}>
+            <div className="text-[12px] font-bold text-slate-400">ランキングの記録</div>
+            <div className="mt-1 grid grid-cols-3 gap-1.5 text-center">
+              {[['今週の勝ち', CARD_LEVEL_ORDER.reduce((a, lv) => a + (r.week.key === weekNow ? r.week.wins[lv] : 0), 0), '勝'], ['いまの連勝', r.streak.now, '連勝'], ['最高の連勝', r.streak.best, '連勝']].map(([label, v, u]) => (
+                <div key={label} className="rounded-xl bg-black/30 py-1.5"><small className="block text-[10px] font-bold text-slate-400">{label}</small><b className="text-[16px] font-black text-amber-200">{v}</b><small className="text-[10px] font-bold text-slate-400">{u}</small></div>
+              ))}
+            </div>
+            <p className="mt-1 text-[10px] font-bold leading-snug text-slate-500" style={JA_WRAP_STYLE}>{jaWrap('ランキングに数えるのは、公開してからのふつうの対戦だけです')}</p>
+          </div>
         </div>
+      </div>
+    );
+  }
+  // ---- オプション(BGM・演出) ----
+  if (view === 'options') {
+    return (
+      <div data-mh-screen data-card-options className={SCREEN_SHELL_CLASS}>
+        <ScreenHead title="オプション" accent="text-amber-200" onBack={() => setView('top')} note="MFバトルカード"/>
+        <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
+          <div className={SCREEN_PANEL_CLASS}>
+            <div className="text-[13px] font-black text-white">トップの助手</div>
+            <div className="mt-1.5 flex justify-end"><ModeSelectAssistToggles assistant={topAssistant} showArt={assist.modeSelectArt} showComment={assist.modeSelectComment} onToggle={toggleAssist} cls="" withLabel/></div>
+          </div>
+          <div className={SCREEN_PANEL_CLASS}>
+            <div className="flex items-center gap-2"><span className="text-[13px] font-black text-white">対戦のBGM</span><span className="rounded border border-slate-500 px-1.5 py-0.5 text-[10px] font-black text-slate-300">準備中</span></div>
+            <p className="mt-1 text-[12px] font-bold leading-snug text-slate-300" style={JA_LABEL_STYLE}>{jaWrap('いまは、対戦する助手に合わせて曲が変わります。自分で曲を決められるようにするのは準備中です')}</p>
+          </div>
+          <div className={SCREEN_PANEL_CLASS}>
+            <div className="flex items-center gap-2"><span className="text-[13px] font-black text-white">演出</span><span className="rounded border border-slate-500 px-1.5 py-0.5 text-[10px] font-black text-slate-300">準備中</span></div>
+            <p className="mt-1 text-[12px] font-bold leading-snug text-slate-300" style={JA_LABEL_STYLE}>{jaWrap('技の動きやパックを開ける演出の速さを選べるようにするのは準備中です')}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  // ---- ランキング ----
+  if (view === 'ranking') {
+    return <CardRankingBoard onBack={() => setView('top')} renderBreederIcon={rank && rank.renderBreederIcon} selfName={(rank && rank.profile && rank.profile.name) || ''} record={save.record} dex={cardDexCounts(db, save.collection)} sendOn={!!(rank && rank.send) && !debug}/>;
+  }
+
+  // ---- トップ(モンヒロビートのモードえらび・モンヒロバトルの入口と同じ作り。社長 台帳 #3513) ----
+  //   上: 英字の小見出しと題 / まんなか: 助手の大きい立ち絵と吹き出し / その下: 色つきの大きい札 2×2 / いちばん下: 小さいボタンの列
+  // 吹き出しの文は言葉の切れ目で折る(「どこまでいく/かな」のように折れないように)
+  const topAssistantShown = topAssistant ? { ...topAssistant, text: <span style={JA_WRAP_STYLE}>{jaWrap(topAssistant.text)}</span> } : null;
+  const assistShown = !!topAssistant && (assist.modeSelectArt || assist.modeSelectComment);
+  const go = (v) => () => { Audio_.se.tap(); setNotice(''); setView(v); };
+  const bigCards = [
+    { key: 'cpu', attr: { 'data-card-cpu': '' }, label: '対戦', sub: '助手と対戦・マルチ対戦', mark: 'BATTLE', ico: '⚔️', grad: 'from-orange-200 via-orange-400 to-rose-500', disabled: !activeDeck, onClick: go('mode') },
+    { key: 'decks', attr: { 'data-card-decks': '' }, label: 'デッキ編成', sub: 'デッキを組む・えらぶ', mark: 'DECK', ico: '🃏', grad: 'from-yellow-200 via-amber-300 to-orange-400', onClick: go('decks') },
+    { key: 'market', attr: { 'data-card-market-open': '' }, label: 'マーケット', sub: 'パック・スターターキット', mark: 'MARKET', ico: '🛒', grad: 'from-sky-200 via-sky-400 to-blue-500', onClick: () => { Audio_.se.tap(); setNotice(''); onOpenMarket && onOpenMarket(); } },
+    { key: 'ranking', attr: { 'data-card-ranking-open': '' }, label: 'ランキング', sub: '勝ち数・連勝・図鑑', mark: 'RANKING', ico: '🏆', grad: 'from-lime-200 via-emerald-300 to-teal-500', onClick: go('ranking') },
+  ];
+  const smallButtons = [
+    { key: 'dex', attr: { 'data-card-dex-open': '' }, label: 'カード図鑑', ico: '📖', tone: 'text-sky-100', onClick: go('dex') },
+    // 練習試合のやり直しは、ルールの画面の中(ドラの D20「ルールの画面から、いつでもこの練習試合をやり直せる」)
+    { key: 'rules', attr: { 'data-card-rules-open': '' }, label: 'ルール', sub: '練習試合', ico: '📘', tone: 'text-emerald-100', onClick: go('rules') },
+    { key: 'record', attr: { 'data-card-record-open': '' }, label: '記録', ico: '📊', tone: 'text-amber-100', onClick: go('record') },
+    { key: 'options', attr: { 'data-card-options-open': '' }, label: 'オプション', sub: 'BGM・演出', ico: '⚙️', tone: 'text-fuchsia-100', onClick: go('options') },
+  ];
+  return (
+    <div data-mh-screen data-card-top="top" className="mhms-stage relative flex h-full min-h-0 flex-1 flex-col overflow-hidden text-white">
+      <RhythmModeSelectStage notes={false}/>
+      <header className="relative z-10 flex shrink-0 items-center gap-1.5 border-b border-fuchsia-300/20 bg-slate-950/55 px-2 py-1 backdrop-blur-sm">
+        <button type="button" aria-label={exitLabel} onClick={onExit} className="min-h-[44px] min-w-[44px] shrink-0 rounded-xl text-lg font-black text-slate-300 active:scale-90">←</button>
+        <div className="min-w-0 flex-1 leading-none">
+          <small className="block truncate text-[8px] font-black tracking-[0.2em] text-fuchsia-300">MF BATTLE CARD ・ TOP</small>
+          <b className="mhms-title block truncate text-lg font-black leading-tight tracking-wider">MFバトルカード</b>
+          <small className="block truncate text-[9px] font-black text-slate-300/90">{debug ? 'デバッグ専用(まだ公開していません)' : 'カードで助手と対戦しよう'}</small>
+        </div>
+        <span data-card-point-pill className="shrink-0 rounded-full border border-amber-300/50 bg-slate-950/70 px-2.5 py-1 text-[11px] font-black text-amber-100"><span aria-hidden="true">🃏</span> <span data-card-point>{save.point}</span></span>
+      </header>
+      <div className={`relative z-[1] flex min-h-0 flex-1 flex-col overflow-y-auto landscape:flex-row landscape:overflow-hidden ${assistShown && assist.modeSelectArt ? '' : 'portrait:justify-center'}`}>
+        <ModeSelectAssistantPanel assistant={topAssistantShown} showArt={assist.modeSelectArt} showComment={assist.modeSelectComment} onToggle={toggleAssist}/>
+        <div className="shrink-0 space-y-2 p-3 landscape:flex landscape:min-h-0 landscape:flex-1 landscape:shrink landscape:flex-col landscape:justify-center landscape:overflow-y-auto landscape:py-2">
+          {!assistShown && topAssistant && <ModeSelectAssistToggles assistant={topAssistant} showArt={assist.modeSelectArt} showComment={assist.modeSelectComment} onToggle={toggleAssist} cls="justify-end" withLabel/>}
+          {/* いまのデッキ(小さく。押すとデッキ編成へ) */}
+          {activeDeck && (
+            <button type="button" data-card-active-deck onClick={go('decks')} className="mhms-glass mhms-in flex w-full min-w-0 items-center gap-2 rounded-xl px-2.5 py-1.5 text-left active:scale-[.98]">
+              <small className="shrink-0 text-[10px] font-black text-slate-400">いまのデッキ</small>
+              <b className="min-w-0 flex-1 truncate text-[12px] font-black text-white">{activeDeck.name}</b>
+              <span aria-hidden="true" className="flex shrink-0 -space-x-2">{activeDeck.monsters.map((no) => { const m = cardMonsterOf(db, no); return m ? <img key={no} src={CARD_IMG(m.img)} alt="" className="h-8 w-6 rounded-[3px] border border-white/40 object-cover"/> : null; })}</span>
+            </button>
+          )}
+          {notice && <p className="text-[12px] font-bold text-amber-200">{notice}</p>}
+          <div data-card-top-cards className="grid grid-cols-2 gap-2">
+            {bigCards.map((c, idx) => (
+              <button key={c.key} type="button" {...c.attr} disabled={!!c.disabled} onClick={c.onClick}
+                className={`mhms-card mhms-in flex min-h-[84px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br ${c.grad} px-3 text-left text-slate-950 active:scale-[.97] disabled:opacity-50 landscape:min-h-[76px]`} style={{ animationDelay: `${0.05 + idx * 0.06}s` }}>
+                <span aria-hidden="true" className="mhms-mark">{c.mark}</span>
+                <span aria-hidden="true" className="mhms-ico relative text-3xl leading-none">{c.ico}</span>
+                <span className="relative min-w-0"><b className="block text-[18px] font-black italic leading-tight">{c.label}</b><small className="block text-[10px] font-black leading-tight text-slate-900/80">{c.sub}</small></span>
+              </button>
+            ))}
+          </div>
+          <div data-card-top-shortcuts className="mhms-in grid grid-cols-4 gap-1.5" style={{ animationDelay: '.28s' }}>
+            {smallButtons.map((b) => (
+              <button key={b.key} type="button" {...b.attr} onClick={b.onClick} className={`mhms-glass flex min-h-[52px] min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-0.5 leading-none active:scale-95 ${b.tone}`}>
+                <span aria-hidden="true" className="text-lg">{b.ico}</span><b className="text-[11px] font-black">{b.label}</b>{b.sub && <small className="text-[9px] font-black text-slate-300/90">{b.sub}</small>}
+              </button>
+            ))}
+          </div>
         {debug && (
           <div className={`${SCREEN_PANEL_FLAT_CLASS} space-y-1`}>
             {/* 結果の画面の見本(NORMAL の勝ち・自分の番8回・2体倒した)。クイック周回が入るとき/入らないとき。保存は何もしない */}
@@ -1144,6 +1251,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             <button type="button" className="mh-button mh-button-danger min-h-[44px] w-full rounded-xl text-[12px] font-black" onClick={() => setConfirmReset(true)}>カードバトルの記録を消して、スターター選びからやり直す</button>
           </div>
         )}
+        </div>
       </div>
       {detail && <CardDetailModal db={db} no={detail} onClose={() => setDetail(null)}/>}
       {confirmReset && <ConfirmSheet title="カードバトルの記録を消しますか？" message={'持っているカード・デッキ・カードポイント・戦績・スターターの印を消します。\nほかのモードの保存データには触れません。'} confirmLabel="消す" danger onCancel={() => setConfirmReset(false)} onConfirm={async () => {

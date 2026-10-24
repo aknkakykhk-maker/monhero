@@ -48,7 +48,8 @@ const LAYOUTS = {
     erase: [
       // 長い題字(Shadow Bind など)は x≈480 まで。下と右は絵のふちの黒い線(下 y≈128、x≈478 から右上へ)
       { name: 'title', rect: [208, 50, 520, 125], keep: 'dark', dir: 'col', shape: 'tab', tab: [476, 122, 1.0] },
-      { name: 'kind', rect: [74, 80, 171, 200], keep: 'colored' },
+      // 種類の札: ちから・特殊は赤い角丸の四角。防御・回避は全モンスターと同じ青い縦長の札なので、同じ範囲で消す(280 おいのりで「K」が残っていた)
+      (c) => (/^(BLK|DGE)$/.test(c.kind) ? { name: 'kind', rect: [72, 80, 170, 232], keep: 'colored', shape: 'stadium' } : { name: 'kind', rect: [74, 80, 171, 200], keep: 'colored' }),
       // 左のほうは地がほとんど黒で、黒いふちと見分けられない。すぐ下の2行の色を、列ごとにそのまま写す(card-image-build の © の消し方と同じ)
       { name: 'label', rect: [56, 699, 256, 742], from: 'bottom' },
       { name: 'guts', rect: [64, 900, 150, 941], keep: 'light' },
@@ -300,7 +301,7 @@ const pageScript = async ({ imgUrl, fontUrls, layout, ops }) => {
     const src = path.join(SRC, c.folder, c.file);
     const imgUrl = `data:image/jpeg;base64,${fs.readFileSync(src).toString('base64')}`;
     const ops = layout.draw(c);
-    const data = await page.evaluate(pageScript, { imgUrl, fontUrls, layout: { erase: layout.erase }, ops });
+    const data = await page.evaluate(pageScript, { imgUrl, fontUrls, layout: { erase: layout.erase.map((e) => (typeof e === 'function' ? e(c) : e)) }, ops });
     fs.writeFileSync(path.join(outDir, c.file), Buffer.from(data.split(',')[1], 'base64'));
     console.log(`書き出し: ${c.file}(${c.name})`);
   }
