@@ -15,7 +15,7 @@ const load = () => {
     + `${fs.readFileSync(path.join(GAME, 'src', 'parts', '86-card-tutorial.jsx'), 'utf8')}\n;\n`
     // 85 は画面の部品(SkillFxMotion)を使うので、ルールだけで動く「動きの見本」の所だけ読む
     + `${fs.readFileSync(path.join(GAME, 'src', 'parts', '85-card-battle-motion.jsx'), 'utf8').split('// ---- 動きの見本')[1].replace(/^[^\n]*\n/, '')}\n;\n`
-    + 'this.E = { CARD_BATTLE_DATA, cardCreateGame, cardApplyAction, cardLegalActions, cardAttackOptions, cardGuardOptions, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardSimulate, CARD_AI_LEVELS, CARD_AI_HABITS, CARD_AI_DECKS, cardDeckProblems, cardNormalizeCollection, cardNormalizeDecks, cardNormalizePoint, cardNormalizeDaily, cardNormalizeRecord, cardNormalizeCpuUnlocked, cardGrantStarter, cardCpuReward, cardUnlockAfterWin, cardMotionDemo, cardMotionDemoAction, cardTutorialGame, cardTutorialMutate, cardTutorialAllow, cardTutorialDone, cardTutorialCpu, CARD_TUTORIAL_STAGES, cardTutorialCopyProblems, cardTutorialFinish, CARD_TUTORIAL_LINES };';
+    + 'this.E = { CARD_BATTLE_DATA, cardCreateGame, cardApplyAction, cardLegalActions, cardAttackOptions, cardGuardOptions, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardSimulate, CARD_AI_LEVELS, CARD_AI_HABITS, CARD_AI_DECKS, cardDeckProblems, cardNormalizeCollection, cardNormalizeDecks, cardNormalizePoint, cardNormalizeDaily, cardNormalizeRecord, cardNormalizeCpuUnlocked, cardGrantStarter, cardCpuReward, cardUnlockAfterWin, cardMotionDemo, cardMotionDemoAction, cardTutorialGame, cardTutorialMutate, cardTutorialAllow, cardTutorialDone, cardTutorialCpu, CARD_TUTORIAL_STAGES, cardTutorialCopyProblems, cardTutorialFinish, CARD_TUTORIAL_LINES, cardCpuLoops, cardOwnTurns };';
   vm.runInContext(src, ctx, { filename: '82-card-battle-core.jsx' });
   return ctx.E;
 };
@@ -192,15 +192,28 @@ const decksAndSaves = () => {
   ok(g1 && g1.point === 300 && g1.starter.kit === 'speed' && g1.decks.decks.length === 1, 'スターターを配れない');
   ok(g1 && Object.values(g1.collection).reduce((s, v) => s + v, 0) === 53, 'スターターの枚数が 3体＋50枚 にならない');
   ok(E.cardGrantStarter(db, g1, 'powerful', 2) === null, 'スターターを2回配れてしまう');
-  // カードポイント: 1日600まで・はじめての勝ちは+50
+  // カードポイントとクイック周回(案A・台帳 #3484): 1日1,500まで・はじめての勝ちは+50
+  const full = { ownTurns: 10, kos: 0 };
   let daily = E.cardNormalizeDaily(null, '2026-10-24');
-  const r1 = E.cardCpuReward(daily, 'master', 'win');
-  ok(r1.total === 140 && r1.daily.firstWin, `はじめての MASTER の勝ちは 90+50 のはず(${r1.total})`);
-  daily = { ...r1.daily, cpuPoint: 580 };
-  const r2 = E.cardCpuReward(daily, 'master', 'win');
+  const r1 = E.cardCpuReward(daily, 'master', 'win', full);
+  ok(r1.total === 250 && r1.daily.firstWin, `はじめての MASTER の勝ちは 200+50 のはず(${r1.total})`);
+  daily = { ...r1.daily, cpuPoint: 1480 };
+  const r2 = E.cardCpuReward(daily, 'master', 'win', full);
   ok(r2.got === 20 && r2.capped && r2.bonus === 0, '1日の上限で止まらない');
-  ok(E.cardCpuReward(daily, 'easy', 'surrender').total === 0, '降参でカードポイントが出てしまう');
-  ok(E.cardCpuReward(E.cardNormalizeDaily(null, 'd'), 'easy', 'lose').total === 10, '負けは10のはず');
+  ok(E.cardCpuReward(daily, 'easy', 'surrender', { ownTurns: 5, kos: 0 }).total === 0, '倒さずに降参でカードポイントが出てしまう');
+  ok(E.cardCpuReward(E.cardNormalizeDaily(null, 'd'), 'easy', 'surrender', { ownTurns: 5, kos: 2 }).total === 20, '2体倒して降参は20のはず');
+  ok(E.cardCpuReward(E.cardNormalizeDaily(null, 'd'), 'easy', 'surrender', { ownTurns: 5, kos: 5 }).total === 25, '降参は負けの25を超えない');
+  ok(E.cardCpuReward(E.cardNormalizeDaily(null, 'd'), 'master', 'lose', full).total === 25, '負けはどの難易度も25のはず');
+  const sh = E.cardCpuReward(E.cardNormalizeDaily(null, 'd'), 'master', 'win', { ownTurns: 2, kos: 3 });
+  ok(sh.total === 0 && sh.short && !sh.daily.firstWin, '自分の番を3回やる前に終わった試合でカードポイントが出る');
+  const L = (lv, o, f) => E.cardCpuLoops(lv, o, f);
+  ok([['easy', 14], ['normal', 16], ['hard', 18], ['expert', 20], ['master', 22]].every(([lv, n]) => L(lv, 'win', full) === n), '勝ちの周回が案Aと違う');
+  ok(L('normal', 'lose', full) === 8 && L('normal', 'lose', { ownTurns: 5, kos: 0 }) === 4, '負けの周回は勝ちの半分×(自分の番÷10)のはず');
+  ok(L('normal', 'surrender', { ownTurns: 5, kos: 0 }) === 0 && L('normal', 'surrender', { ownTurns: 5, kos: 1 }) === 3 && L('normal', 'surrender', { ownTurns: 5, kos: 2 }) === 5, '降参の周回は倒した数×負けの3分の1のはず');
+  ok(L('master', 'win', { ownTurns: 2, kos: 3 }) === 0, '自分の番を3回やる前に終わった試合で周回が出る');
+  const g = E.cardCreateGame(db, { decks: [E.cardAiBuildDeck(db, 'speed'), E.cardAiBuildDeck(db, 'speed')], first: 1 });
+  g.turn = 7;
+  ok(E.cardOwnTurns(g, 0) === 3 && E.cardOwnTurns(g, 1) === 4, '自分の番の数え方が違う');
   const u = E.cardUnlockAfterWin(E.cardNormalizeCpuUnlocked(null), 'normal');
   ok(u.hard && !u.expert, 'NORMAL で勝っても HARD が開かない');
   ok(!E.cardUnlockAfterWin(E.cardNormalizeCpuUnlocked(null), 'easy').hard, 'EASY の勝ちで HARD が開いてしまう');

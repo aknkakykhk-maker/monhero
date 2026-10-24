@@ -364,7 +364,9 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       all: Object.fromEntries(Object.keys(localStorage).filter((k) => k.startsWith('mh_')).map((k) => [k, localStorage.getItem(k)])),
     }));
     const outcome = await page.locator('[data-card-top="result"]').getAttribute('data-card-outcome');
-    if (outcome === 'surrender') check('⑦ 投了ではカードポイントが増えない・戦績に投了が1つ', after.point === 400 && after.record && after.record.cpu.surrender === 1, JSON.stringify({ point: after.point, cpu: after.record && after.record.cpu }));
+    const gain = Number(await page.locator('[data-card-top="result"]').getAttribute('data-card-gain'));
+    // 投了は倒した相手のモンスター × 10(25まで。案A・台帳 #3484)。結果に出た数だけ増えている
+    if (outcome === 'surrender') check('⑦ 投了のカードポイントは25まで・結果に出た数だけ増える・戦績に投了が1つ', gain >= 0 && gain <= 25 && after.point === 400 + gain && after.record && after.record.cpu.surrender === 1, JSON.stringify({ gain, point: after.point, cpu: after.record && after.record.cpu }));
     else check(`⑦ 決着(${outcome})で結果が出て戦績が付く`, after.record && after.record.cpu[outcome] === 1);
     // ⑧ 既存のキーを書き換えていない(時刻・起動のたびに変わる記録は除く)
     const volatile = /^mh_(debug_entry|last_|play_|session|boot|reload|device|playtime|visit|bgm_|se_|audio|login|daily_|mission|update|seen_build|build)/;
@@ -372,6 +374,19 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     check('⑧ カードバトル以外の保存キーを書き換えていない', changed.length === 0, changed.join(', '));
     const added = Object.keys(after.all).filter((k) => !(k in before) && !k.startsWith('mh_card_') && !volatile.test(k));
     check('⑧ 新しく増えた保存キーは mh_card_* だけ', added.length === 0, added.join(', '));
+    // ⑬ 結果の画面の「クイック周回 ◯周ぶん」(デバッグの見本。NORMAL の勝ち = 16周ぶん・保存しない)
+    await page.locator('[data-card-top="result"] button').first().click();
+    await page.waitForTimeout(300);
+    const demoTxt = {};
+    for (const k of ['in', 'out']) {
+      await page.locator(`[data-card-result-demo="${k}"]`).click();
+      await page.waitForTimeout(300);
+      demoTxt[k] = await page.locator('[data-card-quick-loops]').innerText().catch(() => '');
+      await shot(page, `16-result-loops-${k}`);
+      await page.locator('[data-card-top="result"] button').first().click();
+      await page.waitForTimeout(300);
+    }
+    check('⑬ 結果の画面に「クイック周回 ◯周ぶん」が出る(入るとき・入らないとき)', /クイック周回 16周ぶん/.test(demoTxt.in) && !/入りません/.test(demoTxt.in) && /今回は入りません/.test(demoTxt.out), JSON.stringify(demoTxt).slice(0, 200));
     check('どこでも実行時エラーが出ない', errors.length === 0, errors.slice(0, 3).join(' / '));
   } catch (e) {
     if (lastPage) await shot(lastPage, 'zz-fail').catch(() => {});
