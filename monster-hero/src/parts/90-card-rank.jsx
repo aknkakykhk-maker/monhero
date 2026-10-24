@@ -173,7 +173,7 @@ const CardRankingBoard = ({ onBack, renderBreederIcon = null, selfName = '', rec
         <div className="mb-1.5 shrink-0 space-y-1.5">
           <div className="flex gap-1.5">
             {[['week', '今週'], ['total', '通算']].map(([id, label]) => <button key={id} type="button" data-card-ranking-period={id} onClick={() => setPeriod(id)} className={chip(period === id)}>{label}</button>)}
-            <small className="ml-auto self-center text-[10px] font-bold text-slate-400">{period === 'week' ? '月曜 0:00 から' : '助手と対戦で勝った数'}</small>
+            <small className="ml-auto self-center text-[10px] font-bold text-slate-400">{period === 'week' ? '月曜 5:00 から' : '助手と対戦で勝った数'}</small>
           </div>
           <div className="flex gap-1.5 overflow-x-auto">
             {CARD_LEVEL_ORDER.map((lv) => <button key={lv} type="button" data-card-ranking-level={lv} onClick={() => setLevel(lv)} className={chip(level === lv)}>{levelLabel(lv)}</button>)}
@@ -193,7 +193,7 @@ const CardRankingBoard = ({ onBack, renderBreederIcon = null, selfName = '', rec
             <div aria-hidden="true" className="text-3xl">🎮</div>
             <b className="mt-1 block text-[15px] font-black text-white">マルチ対戦の強さ</b>
             <span className="mt-1 inline-block rounded border border-slate-500 px-2 py-0.5 text-[11px] font-black text-slate-300">準備中</span>
-            <p className="mt-2 text-[12px] font-bold text-slate-400">マルチ対戦ができるようになったら、ここに順位が出ます</p>
+            <p className="mt-2 text-[12px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('マルチ対戦ができるようになったら、ここに順位が出ます')}</p>
           </div>
         )}
         {kind !== 'multi' && state.status === 'loading' && <p className="py-8 text-center text-sm font-bold text-slate-400">読み込み中…</p>}

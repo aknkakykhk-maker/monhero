@@ -206,8 +206,8 @@ const decksAndSaves = () => {
   ok(E.cardGrantStarter(db, g1, 'powerful', 2) === null, 'スターターを2回配れてしまう');
   // 記録とランキング(台帳 #3513): 難易度ごとの勝ち負け・週の勝ち・連勝。ランキングに数えるのは rankable の対戦だけ
   {
-    // 2026-10-26(月)0:00 JST = 2026-10-25T15:00Z。その直前は前の週(10-19)
-    ok(E.cardWeekKeyJst(Date.UTC(2026, 9, 25, 14, 59)) === '2026-10-19' && E.cardWeekKeyJst(Date.UTC(2026, 9, 25, 15, 0)) === '2026-10-26', '週の区切りが日本時間の月曜 0:00 になっていない');
+    // 2026-10-26(月)5:00 JST = 2026-10-25T20:00Z。その直前(月曜 4:59)は前の週(10-19)。モンヒロビートの週間ランキングと同じ区切り
+    ok(E.cardWeekKeyJst(Date.UTC(2026, 9, 25, 19, 59)) === '2026-10-19' && E.cardWeekKeyJst(Date.UTC(2026, 9, 25, 20, 0)) === '2026-10-26', '週の区切りが日本時間の月曜 5:00 になっていない');
     const old = E.cardNormalizeRecord({ cpu: { win: 3, lose: 1, surrender: 0 } });
     ok(old.byLevel.win.master === 0 && old.rank.streak.best === 0 && old.rank.week.key === '' && old.cpu.win === 3, '前からの記録に新しい項目が既定値で補われない');
     const t0 = Date.UTC(2026, 9, 20, 3, 0);

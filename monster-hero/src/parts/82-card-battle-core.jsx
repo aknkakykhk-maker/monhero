@@ -992,9 +992,11 @@ const cardNormalizeLevelCounts = (v) => {
   const r = cardIsPlainObject(v) ? v : {};
   return Object.fromEntries(CARD_LEVEL_ORDER.map((lv) => [lv, cardNormalizePoint(r[lv])]));
 };
-// 週の区切り: 日本時間の月曜 0:00 から。週の鍵はその月曜の日付(YYYY-MM-DD)
+// 週の区切り: モンヒロビートの週間ランキングと同じ、日本時間の月曜 5:00 から(カゲあつくん)。週の鍵はその月曜の日付(YYYY-MM-DD)
+//   日本時間から5時間戻した日付で数える(月曜 4:59 は前の週・5:00 から新しい週)
+const CARD_WEEK_START_HOUR_JST = 5;
 const cardWeekKeyJst = (now) => {
-  const d = new Date(Number(now) + 9 * 3600 * 1000);
+  const d = new Date(Number(now) + (9 - CARD_WEEK_START_HOUR_JST) * 3600 * 1000);
   d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7));
   return d.toISOString().slice(0, 10);
 };

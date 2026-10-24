@@ -95,7 +95,7 @@ const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel }) => {
         </div>
         <div data-card-deck-legend className="text-[10px] font-bold text-slate-400">カードの右上: <span className="text-emerald-300">入</span>=デッキに入れた枚数 / 持=持っている枚数</div>
         {!ready && <div data-card-deck-problems className="text-[11px] font-bold leading-snug text-rose-300" style={JA_WRAP_STYLE}>{[...rules, ...own].slice(0, 2).join(' / ')}</div>}
-        {notice && <div data-card-deck-notice className="text-[12px] font-black text-amber-200">{notice}</div>}
+        {notice && <div data-card-deck-notice className="text-[12px] font-black text-amber-200" style={JA_LABEL_STYLE}>{jaWrap(notice)}</div>}
       </div>
       <ScreenTabs className="mt-2" value={tab} onChange={(id) => { setTab(id); setNotice(''); }} items={[
         { id: 'card', label: '技・ブリーダー' }, { id: 'mon', label: `モンスター ${deck.monsters.length}/3` }, { id: 'deck', label: `デッキの中 ${deck.cards.length}` },
@@ -112,13 +112,13 @@ const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel }) => {
           : <ScreenEmpty emoji="🃏" lines={['当てはまるカードがありません']}/>)}
         {tab === 'mon' && (
           <>
-            <p className="mb-1 text-[11px] font-bold text-slate-400">タップで入れる・上の枠をタップで外す。同じモンスターは1体まで(キラも同じモンスター)</p>
+            <p className="mb-1 text-[11px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('タップで入れる・上の枠をタップで外す。同じモンスターは1体まで(キラも同じモンスター)')}</p>
             <div className="grid grid-cols-4 gap-1.5">{ownedMons.map((no) => tile(no, () => (deck.monsters.includes(no) ? removeOne(no) : add(no))))}</div>
           </>
         )}
         {tab === 'deck' && (deckUnique.length
           ? <>
-            <p className="mb-1 text-[11px] font-bold text-slate-400">タップで1枚外す・長押しで詳しく</p>
+            <p className="mb-1 text-[11px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('タップで1枚外す・長押しで詳しく')}</p>
             <div className="grid grid-cols-4 gap-1.5">{deckUnique.map((no) => tile(no, () => removeOne(no)))}</div>
           </>
           : <ScreenEmpty emoji="🃏" lines={['まだカードが入っていません', '「技・ブリーダー」から入れてください']}/>)}
@@ -251,7 +251,7 @@ const CardRules = ({ onBack, onTutorial }) => (
       ))}
     </div>
     <div className={SCREEN_FOOTER_CLASS}>
-      <button type="button" data-card-tutorial-again className="mh-button min-h-[52px] w-full rounded-2xl border border-emerald-300/50 bg-emerald-900/60 font-black text-emerald-50 active:scale-[.98]" onClick={() => { Audio_.se.tap(); onTutorial(); }}>練習試合をもう一度<span className="block text-[10px] font-bold text-emerald-200">ドラと、みゅあ相手に5つの決まりをおさらい</span></button>
+      <button type="button" data-card-tutorial-again className="mh-button min-h-[52px] w-full rounded-2xl border border-emerald-300/50 bg-emerald-900/60 font-black text-emerald-50 active:scale-[.98]" onClick={() => { Audio_.se.tap(); onTutorial(); }}>練習試合をもう一度<span className="block text-[10px] font-bold text-emerald-200" style={JA_LABEL_STYLE}>{jaWrap('ドラと、みゅあ相手に5つの決まりをおさらい')}</span></button>
     </div>
   </div>
 );

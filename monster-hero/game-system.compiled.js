@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d76b92dc5d0d0e4a
+// source-sha256: accadcaedb525e70
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-25 04:25";
+const BUILD_DATE = "2026-10-25 04:45";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -84054,8 +84054,9 @@ const cardNormalizeLevelCounts = v => {
   const r = cardIsPlainObject(v) ? v : {};
   return Object.fromEntries(CARD_LEVEL_ORDER.map(lv => [lv, cardNormalizePoint(r[lv])]));
 };
+const CARD_WEEK_START_HOUR_JST = 5;
 const cardWeekKeyJst = now => {
-  const d = new Date(Number(now) + 9 * 3600 * 1000);
+  const d = new Date(Number(now) + (9 - CARD_WEEK_START_HOUR_JST) * 3600 * 1000);
   d.setUTCDate(d.getUTCDate() - (d.getUTCDay() + 6) % 7);
   return d.toISOString().slice(0, 10);
 };
@@ -85490,8 +85491,9 @@ const CardDetailModal = ({
   }, "No.", c.no)), c.text && React.createElement("p", {
     className: "mt-2 text-[14px] font-bold leading-relaxed"
   }, c.text), !c.ready && React.createElement("p", {
-    className: "mt-2 text-[12px] font-bold text-amber-300"
-  }, "このカードは準備中です(まだデッキに入れられません)")), m && React.createElement("div", {
+    className: "mt-2 text-[12px] font-bold text-amber-300",
+    style: JA_LABEL_STYLE
+  }, jaWrap('このカードは準備中です(まだデッキに入れられません)'))), m && React.createElement("div", {
     className: "w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900/90 p-3 text-slate-100"
   }, React.createElement("div", {
     className: "text-lg font-black"
@@ -85550,8 +85552,9 @@ const CardDiscardModal = ({
       className: "mt-0.5 w-full truncate text-center text-[11px] font-bold text-slate-200"
     }, c ? c.name : no));
   })), React.createElement("p", {
-    className: "mt-2 text-center text-[11px] font-bold text-slate-400"
-  }, "カードを長押しすると詳しく見られます"), React.createElement("div", {
+    className: "mt-2 text-center text-[11px] font-bold text-slate-400",
+    style: JA_LABEL_STYLE
+  }, jaWrap('カードを長押しすると詳しく見られます')), React.createElement("div", {
     className: "mt-2"
   }, React.createElement(ModalCloseButton, {
     onClick: onClose
@@ -86292,7 +86295,9 @@ const CardBattleBoard = ({
     style: {
       color: who.accent
     }
-  }, who.name), bubble.text), React.createElement("div", {
+  }, who.name), React.createElement("span", {
+    style: JA_WRAP_STYLE
+  }, jaWrap(bubble.text))), React.createElement("div", {
     className: "pointer-events-none absolute inset-x-6 top-1/2 h-px bg-gradient-to-r from-transparent via-violet-300/40 to-transparent"
   }), action && React.createElement("div", {
     key: action.key,
@@ -86369,10 +86374,10 @@ const CardBattleBoard = ({
       style: JA_WRAP_STYLE
     }, React.createElement("b", {
       className: "mr-1 text-[11px] text-emerald-300"
-    }, "ドラ"), CARD_TUTORIAL_LINES[tutSay], hint && React.createElement("span", {
+    }, "ドラ"), jaWrap(CARD_TUTORIAL_LINES[tutSay]), hint && React.createElement("span", {
       "data-card-tutor-hint": true,
       className: "mt-0.5 block text-[11px] text-amber-200"
-    }, hint)), showNext && React.createElement("button", {
+    }, jaWrap(hint))), showNext && React.createElement("button", {
       type: "button",
       "data-card-tutor-next": true,
       onClick: onNext,
@@ -86380,16 +86385,19 @@ const CardBattleBoard = ({
     }, "次へ"));
   })(), tutorial && tutFocus.hand.length > 0 && React.createElement("div", {
     "data-card-tutor-arrow": true,
-    className: "mx-auto mb-1 shrink-0 animate-bounce rounded-lg bg-emerald-300 px-2 py-0.5 text-[12px] font-black text-slate-900"
-  }, "👇 ", mode === 'guts' ? 'タップでガッツに(ガッツへ運んでもOK)' : mode === 'guard' ? 'タップで守る(狙われた子へ運んでもOK)' : 'タップ → 相手をタップ(相手へ運んでもOK)'), guide && !tutorial && React.createElement("div", {
-    className: "mx-auto mb-1 shrink-0 rounded-lg bg-amber-300 px-2 py-0.5 text-[11px] font-black text-slate-900"
-  }, hint || guide), mode === 'guard' && !guardOpts.length && React.createElement("div", {
+    className: "mx-auto mb-1 shrink-0 animate-bounce rounded-lg bg-emerald-300 px-2 py-0.5 text-[12px] font-black text-slate-900",
+    style: JA_LABEL_STYLE
+  }, "👇 ", jaWrap(mode === 'guts' ? 'タップでガッツに(ガッツへ運んでもOK)' : mode === 'guard' ? 'タップで守る(狙われた子へ運んでもOK)' : 'タップ → 相手をタップ(相手へ運んでもOK)')), guide && !tutorial && React.createElement("div", {
+    className: "mx-auto mb-1 shrink-0 rounded-lg bg-amber-300 px-2 py-0.5 text-[11px] font-black text-slate-900",
+    style: JA_LABEL_STYLE
+  }, jaWrap(hint || guide)), mode === 'guard' && !guardOpts.length && React.createElement("div", {
     "data-card-guard-why": true,
     className: "mx-auto mb-1 max-w-[94%] shrink-0 text-center text-[11px] font-bold leading-snug text-slate-300",
     style: JA_WRAP_STYLE
   }, cardGuardBlockReasons(db, st).join(' / ')), !guide && !tutorial && hint && React.createElement("div", {
-    className: "mx-auto mb-1 shrink-0 rounded-lg bg-amber-300 px-2 py-0.5 text-[11px] font-black text-slate-900"
-  }, hint), mode === 'attack' && sel && monChosen !== undefined && sets.length > 1 && React.createElement("div", {
+    className: "mx-auto mb-1 shrink-0 rounded-lg bg-amber-300 px-2 py-0.5 text-[11px] font-black text-slate-900",
+    style: JA_LABEL_STYLE
+  }, jaWrap(hint)), mode === 'attack' && sel && monChosen !== undefined && sets.length > 1 && React.createElement("div", {
     className: "mb-1 flex shrink-0 flex-wrap justify-center gap-1 px-2"
   }, sets.map(s => React.createElement("button", {
     key: s,
@@ -87033,8 +87041,9 @@ const CardBattleScreen = ({
       className: "mt-1 text-[11px] font-bold text-slate-400",
       style: JA_WRAP_STYLE
     }, cardRuleLine(`今日もらったカードポイント《(助手と対戦)》: 《${save.daily.cpuPoint} / ${CARD_CPU_DAILY_MAX}》${save.daily.firstWin ? '' : '・《今日はじめての勝ちで +50》'}`))), notice && React.createElement("p", {
-      className: "text-[12px] font-bold text-amber-200"
-    }, notice)), React.createElement("div", {
+      className: "text-[12px] font-bold text-amber-200",
+      style: JA_LABEL_STYLE
+    }, jaWrap(notice))), React.createElement("div", {
       className: SCREEN_FOOTER_CLASS
     }, React.createElement("button", {
       type: "button",
@@ -87144,8 +87153,9 @@ const CardBattleScreen = ({
       }
     }), notice && React.createElement("div", {
       "data-card-deck-toast": true,
-      className: "pointer-events-none fixed inset-x-0 bottom-24 z-[60] mx-auto w-fit rounded-full bg-slate-950/95 px-4 py-2 text-[13px] font-black text-amber-200 shadow-lg"
-    }, notice));
+      className: "pointer-events-none fixed inset-x-0 bottom-24 z-[60] mx-auto w-fit rounded-full bg-slate-950/95 px-4 py-2 text-[13px] font-black text-amber-200 shadow-lg",
+      style: JA_LABEL_STYLE
+    }, jaWrap(notice)));
   }
   if (view === 'result' && result && result.tutorial) {
     return React.createElement("div", {
@@ -87164,8 +87174,9 @@ const CardBattleScreen = ({
     }, result.done && result.reward > 0 && React.createElement("div", {
       className: "text-[15px] font-black text-amber-200"
     }, "カードポイント ", result.reward), React.createElement("div", {
-      className: "mt-1 text-[12px] font-bold text-slate-300"
-    }, result.done ? 'これで5つ全部です。いろんな相手と戦ってみましょう' : 'トップの「練習試合」から、いつでもできます'), React.createElement("div", {
+      className: "mt-1 text-[12px] font-bold text-slate-300",
+      style: JA_LABEL_STYLE
+    }, jaWrap(result.done ? 'これで5つ全部です。いろんな相手と戦ってみましょう' : 'トップの「練習試合」から、いつでもできます')), React.createElement("div", {
       className: "mt-1 text-[12px] font-bold text-slate-300"
     }, "いまのカードポイント: ", save.point), !result.saved && React.createElement("div", {
       className: "mt-1 text-[12px] font-bold text-rose-300"
@@ -87215,8 +87226,9 @@ const CardBattleScreen = ({
     }, CARD_LEVEL_LABEL[result.level], "の", win ? '勝ち' : result.outcome === 'lose' ? '負け' : '投了', ": ", r.got, r.capped ? `(今日の上限${CARD_CPU_DAILY_MAX}に届きました)` : ''), r.bonus > 0 && React.createElement("div", {
       className: "text-[12px] font-bold text-slate-300"
     }, "今日はじめての勝ち: +", r.bonus), r.short && React.createElement("div", {
-      className: "mt-1 text-[12px] font-bold text-slate-400"
-    }, "自分の番を3回やる前に終わったので、カードポイントとクイック周回は入りません"), !r.short && result.loops > 0 && React.createElement("div", {
+      className: "mt-1 text-[12px] font-bold text-slate-400",
+      style: JA_LABEL_STYLE
+    }, jaWrap('自分の番を3回やる前に終わったので、カードポイントとクイック周回は入りません')), !r.short && result.loops > 0 && React.createElement("div", {
       "data-card-quick-loops": result.quick ? result.loops : 0,
       className: "mt-2 rounded-xl border border-sky-300/40 bg-sky-500/10 px-2 py-1.5"
     }, result.quick ? React.createElement(React.Fragment, null, React.createElement("div", {
@@ -87225,14 +87237,16 @@ const CardBattleScreen = ({
       className: "mt-0.5 text-[11px] font-bold text-slate-300",
       style: JA_WRAP_STYLE
     }, "裏のクイック周回(", result.quick.quickDifficulty && quickDifficultySetting(result.quick.quickDifficulty)?.label || 'AUTO設定', ")が", result.loops, "周ぶん進みました")) : React.createElement("div", {
-      className: "text-[12px] font-bold text-slate-300"
-    }, "クイック周回をしていないときは入りません")), React.createElement("div", {
+      className: "text-[12px] font-bold text-slate-300",
+      style: JA_LABEL_STYLE
+    }, jaWrap('クイック周回をしていないときは入りません'))), React.createElement("div", {
       className: "mt-1 text-[12px] font-bold text-slate-300"
     }, "いまのカードポイント: ", save.point), result.opened && React.createElement("div", {
       className: "mt-1 text-[13px] font-black text-emerald-300"
     }, CARD_LEVEL_LABEL[result.opened], "が選べるようになりました！"), !result.saved && React.createElement("div", {
-      className: "mt-1 text-[12px] font-bold text-rose-300"
-    }, "保存できませんでした(カードポイントは増えていません)"), result.demo && React.createElement("div", {
+      className: "mt-1 text-[12px] font-bold text-rose-300",
+      style: JA_LABEL_STYLE
+    }, jaWrap('保存できませんでした(カードポイントは増えていません)')), result.demo && React.createElement("div", {
       className: "mt-1 text-[11px] font-bold text-slate-400"
     }, "(デバッグの見本です。何も保存していません)"))), React.createElement("div", {
       className: `${SCREEN_FOOTER_CLASS} grid grid-cols-2 gap-2`
@@ -87296,8 +87310,9 @@ const CardBattleScreen = ({
     }, rec.byLevel.win[lv]), React.createElement("td", {
       className: "py-1 text-right text-slate-300"
     }, rec.byLevel.lose[lv]))))), React.createElement("p", {
-      className: "mt-1 text-[10px] font-bold text-slate-500"
-    }, "難易度ごとの数は、この記録ができてからのぶんです")), React.createElement("div", {
+      className: "mt-1 text-[10px] font-bold text-slate-500",
+      style: JA_LABEL_STYLE
+    }, jaWrap('難易度ごとの数は、この記録ができてからのぶんです'))), React.createElement("div", {
       className: SCREEN_PANEL_CLASS
     }, React.createElement("div", {
       className: "text-[12px] font-bold text-slate-400"
@@ -87542,8 +87557,9 @@ const CardBattleScreen = ({
       className: "h-8 w-6 rounded-[3px] border border-white/40 object-cover"
     }) : null;
   }))), notice && React.createElement("p", {
-    className: "text-[12px] font-bold text-amber-200"
-  }, notice), React.createElement("div", {
+    className: "text-[12px] font-bold text-amber-200",
+    style: JA_LABEL_STYLE
+  }, jaWrap(notice)), React.createElement("div", {
     "data-card-top-cards": true,
     className: "grid grid-cols-2 gap-2"
   }, bigCards.map((c, idx) => React.createElement("button", _extends({
@@ -87935,8 +87951,9 @@ const CardDeckEditor = ({
     style: JA_WRAP_STYLE
   }, [...rules, ...own].slice(0, 2).join(' / ')), notice && React.createElement("div", {
     "data-card-deck-notice": true,
-    className: "text-[12px] font-black text-amber-200"
-  }, notice)), React.createElement(ScreenTabs, {
+    className: "text-[12px] font-black text-amber-200",
+    style: JA_LABEL_STYLE
+  }, jaWrap(notice))), React.createElement(ScreenTabs, {
     className: "mt-2",
     value: tab,
     onChange: id => {
@@ -87974,12 +87991,14 @@ const CardDeckEditor = ({
     emoji: "🃏",
     lines: ['当てはまるカードがありません']
   })), tab === 'mon' && React.createElement(React.Fragment, null, React.createElement("p", {
-    className: "mb-1 text-[11px] font-bold text-slate-400"
-  }, "タップで入れる・上の枠をタップで外す。同じモンスターは1体まで(キラも同じモンスター)"), React.createElement("div", {
+    className: "mb-1 text-[11px] font-bold text-slate-400",
+    style: JA_LABEL_STYLE
+  }, jaWrap('タップで入れる・上の枠をタップで外す。同じモンスターは1体まで(キラも同じモンスター)')), React.createElement("div", {
     className: "grid grid-cols-4 gap-1.5"
   }, ownedMons.map(no => tile(no, () => deck.monsters.includes(no) ? removeOne(no) : add(no))))), tab === 'deck' && (deckUnique.length ? React.createElement(React.Fragment, null, React.createElement("p", {
-    className: "mb-1 text-[11px] font-bold text-slate-400"
-  }, "タップで1枚外す・長押しで詳しく"), React.createElement("div", {
+    className: "mb-1 text-[11px] font-bold text-slate-400",
+    style: JA_LABEL_STYLE
+  }, jaWrap('タップで1枚外す・長押しで詳しく')), React.createElement("div", {
     className: "grid grid-cols-4 gap-1.5"
   }, deckUnique.map(no => tile(no, () => removeOne(no))))) : React.createElement(ScreenEmpty, {
     emoji: "🃏",
@@ -88300,8 +88319,9 @@ const CardRules = ({
     onTutorial();
   }
 }, "練習試合をもう一度", React.createElement("span", {
-  className: "block text-[10px] font-bold text-emerald-200"
-}, "ドラと、みゅあ相手に5つの決まりをおさらい"))));
+  className: "block text-[10px] font-bold text-emerald-200",
+  style: JA_LABEL_STYLE
+}, jaWrap('ドラと、みゅあ相手に5つの決まりをおさらい')))));
 const cardPackMonsters = (db, pack, n = 5) => {
   const seen = new Set();
   const list = Object.values(db.monsters).filter(m => String(m.wave) === pack.wave && !m.variant && m.ready !== false && !seen.has(m.species) && seen.add(m.species));
@@ -89119,7 +89139,7 @@ const CardRankingBoard = ({
     className: chip(period === id)
   }, label)), React.createElement("small", {
     className: "ml-auto self-center text-[10px] font-bold text-slate-400"
-  }, period === 'week' ? '月曜 0:00 から' : '助手と対戦で勝った数')), React.createElement("div", {
+  }, period === 'week' ? '月曜 5:00 から' : '助手と対戦で勝った数')), React.createElement("div", {
     className: "flex gap-1.5 overflow-x-auto"
   }, CARD_LEVEL_ORDER.map(lv => React.createElement("button", {
     key: lv,
@@ -89153,8 +89173,9 @@ const CardRankingBoard = ({
   }, "マルチ対戦の強さ"), React.createElement("span", {
     className: "mt-1 inline-block rounded border border-slate-500 px-2 py-0.5 text-[11px] font-black text-slate-300"
   }, "準備中"), React.createElement("p", {
-    className: "mt-2 text-[12px] font-bold text-slate-400"
-  }, "マルチ対戦ができるようになったら、ここに順位が出ます")), kind !== 'multi' && state.status === 'loading' && React.createElement("p", {
+    className: "mt-2 text-[12px] font-bold text-slate-400",
+    style: JA_LABEL_STYLE
+  }, jaWrap('マルチ対戦ができるようになったら、ここに順位が出ます'))), kind !== 'multi' && state.status === 'loading' && React.createElement("p", {
     className: "py-8 text-center text-sm font-bold text-slate-400"
   }, "読み込み中…"), kind !== 'multi' && state.status === 'missing' && React.createElement("p", {
     "data-card-ranking-missing": true,

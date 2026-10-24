@@ -127,7 +127,7 @@ const CardDetailModal = ({ db, no, onClose }) => {
             <span className="rounded-md bg-slate-800 px-2 py-0.5 text-slate-400">No.{c.no}</span>
           </div>
           {c.text && <p className="mt-2 text-[14px] font-bold leading-relaxed">{c.text}</p>}
-          {!c.ready && <p className="mt-2 text-[12px] font-bold text-amber-300">このカードは準備中です(まだデッキに入れられません)</p>}
+          {!c.ready && <p className="mt-2 text-[12px] font-bold text-amber-300" style={JA_LABEL_STYLE}>{jaWrap('このカードは準備中です(まだデッキに入れられません)')}</p>}
         </div>
       )}
       {m && (
@@ -168,7 +168,7 @@ const CardDiscardModal = ({ db, st, initial = CARD_ME, onDetail, onClose }) => {
           </div>
         ); })}
       </div>
-      <p className="mt-2 text-center text-[11px] font-bold text-slate-400">カードを長押しすると詳しく見られます</p>
+      <p className="mt-2 text-center text-[11px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('カードを長押しすると詳しく見られます')}</p>
       <div className="mt-2"><ModalCloseButton onClick={onClose}/></div>
     </ModalFrame>
   );
@@ -628,7 +628,7 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
         {/* 相手の助手の吹き出し(まんなかのいちばん上。相手のモンスターにはかけない。指の操作は下へ通す) */}
         {bubble && (
           <div key={bubble.key} data-card-bubble className={`pointer-events-none relative z-[2] max-w-full rounded-2xl border-[3px] bg-white px-2.5 py-0.5 ${compact ? 'text-[12px]' : 'text-[13px]'} font-extrabold leading-snug text-[#1f1333] shadow-lg`} style={{ borderColor: who.accent, ...JA_WRAP_STYLE }}>
-            <span className="mr-1 text-[11px]" style={{ color: who.accent }}>{who.name}</span>{bubble.text}
+            <span className="mr-1 text-[11px]" style={{ color: who.accent }}>{who.name}</span><span style={JA_WRAP_STYLE}>{jaWrap(bubble.text)}</span>
           </div>
         )}
         <div className="pointer-events-none absolute inset-x-6 top-1/2 h-px bg-gradient-to-r from-transparent via-violet-300/40 to-transparent"/>
@@ -663,18 +663,18 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
           return (
             <div data-card-tutor={tutStage.id} className="relative z-[30] mx-2 mb-1 flex shrink-0 items-start gap-2 rounded-2xl border-2 border-emerald-300/80 bg-slate-950 px-2 py-1.5 shadow-lg">
               {dra && <img src={assistantFaceImage(dra, 'happy')} alt="ドラ" className="h-[36px] w-[36px] shrink-0 rounded-lg object-cover object-top"/>}
-              <div className="min-w-0 flex-1 text-[12px] font-bold leading-snug text-emerald-50" style={JA_WRAP_STYLE}><b className="mr-1 text-[11px] text-emerald-300">ドラ</b>{CARD_TUTORIAL_LINES[tutSay]}{hint && <span data-card-tutor-hint className="mt-0.5 block text-[11px] text-amber-200">{hint}</span>}</div>
+              <div className="min-w-0 flex-1 text-[12px] font-bold leading-snug text-emerald-50" style={JA_WRAP_STYLE}><b className="mr-1 text-[11px] text-emerald-300">ドラ</b>{jaWrap(CARD_TUTORIAL_LINES[tutSay])}{hint && <span data-card-tutor-hint className="mt-0.5 block text-[11px] text-amber-200">{jaWrap(hint)}</span>}</div>
               {showNext && <button type="button" data-card-tutor-next onClick={onNext} className="shrink-0 self-center animate-pulse rounded-xl bg-emerald-400 px-3 py-2 text-[13px] font-black text-slate-950 ring-4 ring-emerald-300/70 active:scale-95">次へ</button>}
             </div>
           );
       })()}
       {/* 練習試合で、いまタップ(か運ぶ)カードの上に出す案内 */}
-      {tutorial && tutFocus.hand.length > 0 && <div data-card-tutor-arrow className="mx-auto mb-1 shrink-0 animate-bounce rounded-lg bg-emerald-300 px-2 py-0.5 text-[12px] font-black text-slate-900">👇 {mode === 'guts' ? 'タップでガッツに(ガッツへ運んでもOK)' : mode === 'guard' ? 'タップで守る(狙われた子へ運んでもOK)' : 'タップ → 相手をタップ(相手へ運んでもOK)'}</div>}
-      {guide && !tutorial && <div className="mx-auto mb-1 shrink-0 rounded-lg bg-amber-300 px-2 py-0.5 text-[11px] font-black text-slate-900">{hint || guide}</div>}
+      {tutorial && tutFocus.hand.length > 0 && <div data-card-tutor-arrow className="mx-auto mb-1 shrink-0 animate-bounce rounded-lg bg-emerald-300 px-2 py-0.5 text-[12px] font-black text-slate-900" style={JA_LABEL_STYLE}>👇 {jaWrap(mode === 'guts' ? 'タップでガッツに(ガッツへ運んでもOK)' : mode === 'guard' ? 'タップで守る(狙われた子へ運んでもOK)' : 'タップ → 相手をタップ(相手へ運んでもOK)')}</div>}
+      {guide && !tutorial && <div className="mx-auto mb-1 shrink-0 rounded-lg bg-amber-300 px-2 py-0.5 text-[11px] font-black text-slate-900" style={JA_LABEL_STYLE}>{jaWrap(hint || guide)}</div>}
       {mode === 'guard' && !guardOpts.length && (
         <div data-card-guard-why className="mx-auto mb-1 max-w-[94%] shrink-0 text-center text-[11px] font-bold leading-snug text-slate-300" style={JA_WRAP_STYLE}>{cardGuardBlockReasons(db, st).join(' / ')}</div>
       )}
-      {!guide && !tutorial && hint && <div className="mx-auto mb-1 shrink-0 rounded-lg bg-amber-300 px-2 py-0.5 text-[11px] font-black text-slate-900">{hint}</div>}
+      {!guide && !tutorial && hint && <div className="mx-auto mb-1 shrink-0 rounded-lg bg-amber-300 px-2 py-0.5 text-[11px] font-black text-slate-900" style={JA_LABEL_STYLE}>{jaWrap(hint)}</div>}
       {mode === 'attack' && sel && monChosen !== undefined && sets.length > 1 && (
         <div className="mb-1 flex shrink-0 flex-wrap justify-center gap-1 px-2">
           {sets.map((s) => <button key={s} type="button" onClick={() => setSel({ ...sel, mon: monChosen, set: s })} className={`rounded-lg border px-2 py-1 text-[12px] font-black ${s === setChosen ? 'border-amber-300 bg-amber-500/25' : 'border-white/20 bg-slate-800'}`}>{JSON.parse(s).map((i) => cardOf(db, me.hand[i]).name).join('＋')}</button>)}
@@ -982,7 +982,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             {deckIssues.length > 0 && <div className="mt-1 text-[12px] font-bold text-rose-300" style={JA_WRAP_STYLE}>{jaWrap(deckIssues.join('・'))}</div>}
             <div className="mt-1 text-[11px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{cardRuleLine(`今日もらったカードポイント《(助手と対戦)》: 《${save.daily.cpuPoint} / ${CARD_CPU_DAILY_MAX}》${save.daily.firstWin ? '' : '・《今日はじめての勝ちで +50》'}`)}</div>
           </div>
-          {notice && <p className="text-[12px] font-bold text-amber-200">{notice}</p>}
+          {notice && <p className="text-[12px] font-bold text-amber-200" style={JA_LABEL_STYLE}>{jaWrap(notice)}</p>}
         </div>
         <div className={SCREEN_FOOTER_CLASS}>
           <button type="button" data-card-start className={`${btn} mh-button-primary`} disabled={!a || deckIssues.length > 0} onClick={() => startBattle(foe)}>対戦する</button>
@@ -1021,7 +1021,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
           onPut={async (d) => { const ok = await persist({ decks: cardDecksPut(save.decks, d) }); setNotice(ok ? `「${d.name}」を作りました` : '保存できませんでした'); }}
           onRemove={async (id) => { const ok = await persist({ decks: cardDecksRemove(save.decks, id) }); setNotice(ok ? 'デッキを消しました' : '保存できませんでした'); }}
           onActive={async (id) => { const ok = await persist({ decks: { ...save.decks, active: id } }); setNotice(ok ? '対戦に使うデッキを変えました' : '保存できませんでした'); }}/>
-        {notice && <div data-card-deck-toast className="pointer-events-none fixed inset-x-0 bottom-24 z-[60] mx-auto w-fit rounded-full bg-slate-950/95 px-4 py-2 text-[13px] font-black text-amber-200 shadow-lg">{notice}</div>}
+        {notice && <div data-card-deck-toast className="pointer-events-none fixed inset-x-0 bottom-24 z-[60] mx-auto w-fit rounded-full bg-slate-950/95 px-4 py-2 text-[13px] font-black text-amber-200 shadow-lg" style={JA_LABEL_STYLE}>{jaWrap(notice)}</div>}
       </>
     );
   }
@@ -1033,7 +1033,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
           <div className={SCREEN_PANEL_CLASS}>
             {result.done && result.reward > 0 && <div className="text-[15px] font-black text-amber-200">カードポイント {result.reward}</div>}
-            <div className="mt-1 text-[12px] font-bold text-slate-300">{result.done ? 'これで5つ全部です。いろんな相手と戦ってみましょう' : 'トップの「練習試合」から、いつでもできます'}</div>
+            <div className="mt-1 text-[12px] font-bold text-slate-300" style={JA_LABEL_STYLE}>{jaWrap(result.done ? 'これで5つ全部です。いろんな相手と戦ってみましょう' : 'トップの「練習試合」から、いつでもできます')}</div>
             <div className="mt-1 text-[12px] font-bold text-slate-300">いまのカードポイント: {save.point}</div>
             {!result.saved && <div className="mt-1 text-[12px] font-bold text-rose-300">保存できませんでした</div>}
           </div>
@@ -1063,7 +1063,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             <div className="text-[13px] font-black text-amber-200">もらったカードポイント: {r.total}</div>
             <div className="mt-1 text-[12px] font-bold text-slate-300">{CARD_LEVEL_LABEL[result.level]}の{win ? '勝ち' : result.outcome === 'lose' ? '負け' : '投了'}: {r.got}{r.capped ? `(今日の上限${CARD_CPU_DAILY_MAX}に届きました)` : ''}</div>
             {r.bonus > 0 && <div className="text-[12px] font-bold text-slate-300">今日はじめての勝ち: +{r.bonus}</div>}
-            {r.short && <div className="mt-1 text-[12px] font-bold text-slate-400">自分の番を3回やる前に終わったので、カードポイントとクイック周回は入りません</div>}
+            {r.short && <div className="mt-1 text-[12px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('自分の番を3回やる前に終わったので、カードポイントとクイック周回は入りません')}</div>}
             {!r.short && result.loops > 0 && (
               <div data-card-quick-loops={result.quick ? result.loops : 0} className="mt-2 rounded-xl border border-sky-300/40 bg-sky-500/10 px-2 py-1.5">
                 {result.quick
@@ -1071,12 +1071,12 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
                     <div className="text-[13px] font-black text-sky-200">クイック周回 {result.loops}周ぶん</div>
                     <div className="mt-0.5 text-[11px] font-bold text-slate-300" style={JA_WRAP_STYLE}>裏のクイック周回({(result.quick.quickDifficulty && quickDifficultySetting(result.quick.quickDifficulty)?.label) || 'AUTO設定'})が{result.loops}周ぶん進みました</div>
                   </>
-                  : <div className="text-[12px] font-bold text-slate-300">クイック周回をしていないときは入りません</div>}
+                  : <div className="text-[12px] font-bold text-slate-300" style={JA_LABEL_STYLE}>{jaWrap('クイック周回をしていないときは入りません')}</div>}
               </div>
             )}
             <div className="mt-1 text-[12px] font-bold text-slate-300">いまのカードポイント: {save.point}</div>
             {result.opened && <div className="mt-1 text-[13px] font-black text-emerald-300">{CARD_LEVEL_LABEL[result.opened]}が選べるようになりました！</div>}
-            {!result.saved && <div className="mt-1 text-[12px] font-bold text-rose-300">保存できませんでした(カードポイントは増えていません)</div>}
+            {!result.saved && <div className="mt-1 text-[12px] font-bold text-rose-300" style={JA_LABEL_STYLE}>{jaWrap('保存できませんでした(カードポイントは増えていません)')}</div>}
             {result.demo && <div className="mt-1 text-[11px] font-bold text-slate-400">(デバッグの見本です。何も保存していません)</div>}
           </div>
         </div>
@@ -1105,7 +1105,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
               <thead><tr className="text-slate-400"><th className="py-1 text-left font-bold">難易度</th><th className="py-1 text-right font-bold">勝ち</th><th className="py-1 text-right font-bold">負け</th></tr></thead>
               <tbody>{CARD_LEVEL_ORDER.map((lv) => <tr key={lv} className="border-t border-white/10"><td className="py-1 text-slate-200">{CARD_LEVEL_LABEL[lv]}</td><td className="py-1 text-right text-amber-200">{rec.byLevel.win[lv]}</td><td className="py-1 text-right text-slate-300">{rec.byLevel.lose[lv]}</td></tr>)}</tbody>
             </table>
-            <p className="mt-1 text-[10px] font-bold text-slate-500">難易度ごとの数は、この記録ができてからのぶんです</p>
+            <p className="mt-1 text-[10px] font-bold text-slate-500" style={JA_LABEL_STYLE}>{jaWrap('難易度ごとの数は、この記録ができてからのぶんです')}</p>
           </div>
           <div className={SCREEN_PANEL_CLASS}>
             <div className="text-[12px] font-bold text-slate-400">ランキングの記録</div>
@@ -1190,7 +1190,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
               <span aria-hidden="true" className="flex shrink-0 -space-x-2">{activeDeck.monsters.map((no) => { const m = cardMonsterOf(db, no); return m ? <img key={no} src={CARD_IMG(m.img)} alt="" className="h-8 w-6 rounded-[3px] border border-white/40 object-cover"/> : null; })}</span>
             </button>
           )}
-          {notice && <p className="text-[12px] font-bold text-amber-200">{notice}</p>}
+          {notice && <p className="text-[12px] font-bold text-amber-200" style={JA_LABEL_STYLE}>{jaWrap(notice)}</p>}
           <div data-card-top-cards className="grid grid-cols-2 gap-2">
             {bigCards.map((c, idx) => (
               <button key={c.key} type="button" {...c.attr} disabled={!!c.disabled} onClick={c.onClick}

@@ -268,3 +268,5 @@
 - ランキング(90-card-rank.jsx): 勝ち数(今週・通算 × EASY〜MASTER)・連勝・図鑑・マルチ(準備中)。表 `card_battle_ranks` は新しく足すだけ(SQL: `docs/sql/card-battle-ranks/CARD_BATTLE_RANKS_APPLY.sql`。窓口が流す)。
   送るのは公開後のふつうの対戦だけ(`EVENT_REPLAY_RELEASE_FLAGS.cardBattle` が真で、デバッグの人でなく、デバッグの入口でもない)。いまは「見本です」と出して送らない。表が無くても「ランキングは準備中です」と出て壊れない。
 - 写真(390幅): `card-battle/top-13.jpg`・`card-battle/ranking-13.jpg`
+- 直し(カゲあつくん): 週の区切りを、モンヒロビートの週間ランキングと同じ月曜 5:00(日本時間)にそろえた(`CARD_WEEK_START_HOUR_JST`)。表の形はそのまま。
+- 直し(クラフトくんの調べ): 84・87・90 の説明文・案内・お知らせ・吹き出しを、言葉の区切りの部品(`jaWrap`)に通した。
