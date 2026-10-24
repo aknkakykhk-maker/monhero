@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 90664e7d3c2c2c2b
+// generated-sha256: 5dbce4a3de9ce2fd
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-24 22:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-24 22:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -33056,6 +33056,8 @@ function BreederMarketScreen({
   // 2026-09-14・マーケットのタブ乱立を避けるため、最初に用途別の入口を選ぶ。
   // 入口だけこの画面のローカル状態で持ち、購入・交換・商品タブの既存stateは親側をそのまま使う。
   const [marketSection,setMarketSection]=useState(initialSection);
+  // カードポイントの売り場の、みゅあのひとこと(開いたときに1本選ぶ。台詞は data/assistants.js の MUA_CARD_SHOP_LINES)
+  const [cardShopLine]=useState(()=>typeof MUA_CARD_SHOP_LINES!=='undefined'&&MUA_CARD_SHOP_LINES.length?MUA_CARD_SHOP_LINES[Math.floor(Math.random()*MUA_CARD_SHOP_LINES.length)]:{e:'normal',t:''});
   // 開いている購入/交換の確認窓。{ item, balance, stackable, countUnit, grantAmount, grantUnit, confirm(count) }
   const [sheet,setSheet]=useState(null);
   const [sheetQuantity,setSheetQuantity]=useState(1);
@@ -33212,7 +33214,9 @@ function BreederMarketScreen({
     <div data-mh-screen className={SCREEN_SHELL_CLASS}>
       <ScreenHead title={headerTitle} accent="text-amber-400" onBack={handleBack}
         icon={marketSection?<span aria-hidden="true">{sectionMeta[marketSection].emoji}</span>:<ShoppingBag size={20}/>}/>
-      <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="market" compact condition={Number.isFinite(CHEAPEST_GOLD_ITEM_COST)&&gold<CHEAPEST_GOLD_ITEM_COST?'lowGold':null}/></div>
+      <div className="shrink-0 w-full max-w-md mx-auto mb-2">{marketSection==='card'
+        ? <AssistantBubble key="card-shop" assistantId="mua" line={cardShopLine.t} expression={cardShopLine.e} compact/>
+        : <AssistantBubble scene="market" compact condition={Number.isFinite(CHEAPEST_GOLD_ITEM_COST)&&gold<CHEAPEST_GOLD_ITEM_COST?'lowGold':null}/>}</div>
 
       {!marketSection&&<div data-market-top className={`relative ${SCREEN_LIST_CLASS}`}>
         <div aria-hidden="true" className="pointer-events-none absolute inset-x-4 top-1 h-60 rounded-2xl bg-gradient-to-br from-cyan-500/10 via-amber-500/5 to-violet-500/10 blur-2xl"/>
@@ -52976,7 +52980,9 @@ const CardDex = ({ db, collection, onBack }) => {
 // ==================== ルールの画面(区切り2) ====================
 // 文は 88-card-rules.jsx の CARD_RULE_PAGES(正本は RULES_SOURCE.md)。練習試合のやり直しもここから(ドラの D20)
 // 「」で囲んだ言葉は途中で折らない(「全モンスター」が「全/モンスター」と折れていた。言葉の切れ目を探す jaWrap は「全」と「モンスター」を別の言葉と見る)
-const cardRuleLine = (t) => String(t).split(/(「[^」]*」)/).map((seg, i) => (/^「/.test(seg) ? <span key={i} className="whitespace-nowrap">{seg}</span> : <React.Fragment key={i}>{jaWrap(seg)}</React.Fragment>));
+// 《》で囲んだ言葉も途中で折らない(《》は画面には出さない)。jaWrap が「準備中」を「準備/中」、「出やすい」を「出/やすい」と分けるため(カゲあつくんの確認)
+const cardRuleLine = (t) => String(t).split(/(「[^」]*」|《[^》]*》)/).map((seg, i) => (/^「/.test(seg) ? <span key={i} className="whitespace-nowrap">{seg}</span>
+  : /^《/.test(seg) ? <span key={i} className="whitespace-nowrap">{seg.slice(1, -1)}</span> : <React.Fragment key={i}>{jaWrap(seg)}</React.Fragment>));
 const CardRules = ({ onBack, onTutorial }) => (
   <div data-mh-screen data-card-rules className={SCREEN_SHELL_CLASS}>
     <ScreenHead title="ルール" accent="text-amber-200" onBack={onBack}/>
@@ -53082,16 +53088,18 @@ const CardShopPacks = ({ db, point, busy, onBuyPack }) => {
               <div className="flex h-[56px] w-[40px] shrink-0 items-center justify-center rounded-md border-2 border-white/60 text-[20px]" style={{ background: `linear-gradient(160deg, ${pack.color}, #1e1b4b)` }}>🎴</div>
               <div className="min-w-0 flex-1">
                 <div className="text-[14px] font-black text-white">{pack.name}</div>
-                <div className="text-[11px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{pack.tech ? `${pack.tech + pack.mon}枚入り(技など${pack.tech}枚・モンスター${pack.mon}枚)` : `${pack.mon}枚入り(3枚とも混血モンスター)`}</div>
+                <div className="text-[11px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{jaWrap(pack.tech ? `${pack.tech + pack.mon}枚入り(技など${pack.tech}枚・モンスター${pack.mon}枚)` : `${pack.mon}枚入り(3枚とも混血モンスター)`)}</div>
                 <button type="button" data-card-shop-rates={pack.id} onClick={() => setRates(rates === pack.id ? null : pack.id)} className="mt-0.5 text-[11px] font-black text-sky-300 underline">出る確率を見る</button>
               </div>
             </div>
             {rates === pack.id && r && (
-              <div data-card-shop-rate-table className="mt-1.5 rounded-lg bg-black/30 p-2 text-[11px] font-bold leading-relaxed text-slate-200">
-                {pack.tech > 0 && <div>技などの枠(1パック{pack.tech}枚): {r.techKinds}種類から同じ確率(1種類 {pct(r.techEach)})。準備中のカードは出ません</div>}
-                <div>モンスターの枠(1パック{pack.mon}枚): 通常 {pack.rarity.normal}%{pack.rarity.kira ? `・キラ ${pack.rarity.kira}%` : ''}{pack.rarity.alt ? `・別絵キラ ${pack.rarity.alt}%` : ''}(通常{r.mons.normal}種{r.mons.kira ? `・キラ${r.mons.kira}種` : ''}{r.mons.alt ? `・別絵キラ${r.mons.alt}種` : ''})。まだ持っていない種族は2倍出やすい</div>
-                {pack.pity && <div>キラも別絵キラも出ないまま{CARD_PACK_PITY_AT}パック開けたら、つぎのパックはキラ以上</div>}
-                <div>だぶったカードはカードポイントになります(技など4枚目から{CARD_DUP_POINT.tech}・モンスター2枚目から{pack.id === 'hybrid' ? CARD_DUP_POINT.hybrid : `${CARD_DUP_POINT.normal}〔キラ${CARD_DUP_POINT.kira}・別絵キラ${CARD_DUP_POINT.alt}〕`})</div>
+              <div data-card-shop-rate-table className="mt-1.5 space-y-0.5 rounded-lg bg-black/30 p-2 text-[11px] font-bold leading-relaxed text-slate-200" style={JA_WRAP_STYLE}>
+                {[
+                  pack.tech > 0 ? `技などの枠(1パック${pack.tech}枚): ${r.techKinds}種類から同じ確率(1種類 ${pct(r.techEach)})。《準備中のカード》は出ません` : null,
+                  `モンスターの枠(1パック${pack.mon}枚): 通常 ${pack.rarity.normal}%${pack.rarity.kira ? `・キラ ${pack.rarity.kira}%` : ''}${pack.rarity.alt ? `・別絵キラ ${pack.rarity.alt}%` : ''}(通常${r.mons.normal}種${r.mons.kira ? `・キラ${r.mons.kira}種` : ''}${r.mons.alt ? `・別絵キラ${r.mons.alt}種` : ''})。まだ持っていない種族は《2倍出やすい》`,
+                  pack.pity ? `キラも別絵キラも出ないまま${CARD_PACK_PITY_AT}パック開けたら、つぎのパックは《キラ以上》` : null,
+                  `だぶったカードはカードポイントになります(技など4枚目から${CARD_DUP_POINT.tech}・モンスター2枚目から${pack.id === 'hybrid' ? CARD_DUP_POINT.hybrid : `${CARD_DUP_POINT.normal}〔キラ${CARD_DUP_POINT.kira}・別絵キラ${CARD_DUP_POINT.alt}〕`})`,
+                ].filter(Boolean).map((t, i) => <div key={i}>{cardRuleLine(t)}</div>)}
               </div>
             )}
             <div className={`mt-2 grid gap-1.5 ${pack.bundle ? 'grid-cols-2' : 'grid-cols-1'}`}>
@@ -53111,8 +53119,8 @@ const CardShopStarters = ({ db, point, busy, starter, shop, onBuyStarter }) => {
   const kits = Object.values(db.starters).filter((k) => !starter || k.id !== starter.kit);
   return (
     <div data-card-shop-starters className="space-y-2 pb-2">
-      {done && <div data-card-shop-starter-done className="rounded-xl border border-emerald-400/40 bg-emerald-950/40 px-3 py-2 text-[12px] font-black text-emerald-200">{done}</div>}
-      <p className="text-[11px] font-bold text-slate-400">はじめに選ばなかったスターターキット。1つにつき1回、{CARD_STARTER_SHOP_PRICE}カードポイント。デッキも1つ増えます</p>
+      {done && <div data-card-shop-starter-done className="rounded-xl border border-emerald-400/40 bg-emerald-950/40 px-3 py-2 text-[12px] font-black text-emerald-200" style={JA_WRAP_STYLE}>{jaWrap(done)}</div>}
+      <p className="text-[11px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap(`はじめに選ばなかったスターターキット。1つにつき1回、${CARD_STARTER_SHOP_PRICE}カードポイント。デッキも1つ増えます`)}</p>
       {kits.map((k) => {
         const bought = !!(shop && shop.starters && shop.starters[k.id]);
         return (

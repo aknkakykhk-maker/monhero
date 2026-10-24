@@ -519,6 +519,8 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     await page.locator('[data-card-shop-rates="w1"]').click();
     if (SHOT) await shot(page, '25-shop-packs');
     const rateText = await page.locator('[data-card-shop-rate-table]').innerText();
+    const brokenShop = await page.evaluate(() => [...document.querySelectorAll('[data-card-shop] span.whitespace-nowrap')].filter((el) => el.getClientRects().length > 1).map((el) => el.textContent));
+    check('⑯ 出る確率の説明で、印を付けた言葉(準備中のカード・2倍出やすい など)が途中で折れていない', brokenShop.length === 0 && !/《|》/.test(rateText), brokenShop.join('・'));
     await page.locator('[data-card-shop-buy="w1-5"]').click();
     await page.locator('[data-confirm-sheet]').locator('xpath=..').getByRole('button', { name: '買って開ける' }).click();
     await page.locator('[data-card-pack-open]').waitFor({ timeout: 10000 });
