@@ -295,7 +295,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
         const from = await center(card); const to = await center(page.locator('[data-card-guts-drop]'));
         const glow = await carry(from, to);
         await page.waitForTimeout(150);
-        dragGuts = glow > 0 && /-translate-y-3/.test(await card.getAttribute('class'));
+        dragGuts = glow > 0 && /-translate-y-[23]/.test(await card.getAttribute('class'));
         await page.getByRole('button', { name: /ターン終了$/ }).click();
         gutsTurns += 1;
         continue;
