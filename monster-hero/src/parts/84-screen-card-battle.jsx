@@ -550,7 +550,7 @@ const CardBattleBoard = ({ db, game, onFinish }) => {
 };
 
 // ---- トップ・スターター選び・相手えらび・結果 ----
-const CardBattleScreen = ({ screen, onNavigate, onExit, seenStoryIds = [], debug = false, onBgm }) => {
+const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', seenStoryIds = [], debug = false, onBgm }) => {
   const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
   const [save, setSave] = useState(null);
   const [view, setView] = useState('top');
@@ -751,7 +751,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, seenStoryIds = [], debug
   const soon = (label) => <button type="button" disabled className={`${btn} border border-white/10 bg-slate-900 text-slate-400`}>{label}<span className="block text-[10px] font-bold">つぎの区切りで作ります</span></button>;
   return (
     <div data-mh-screen data-card-top="top" className={SCREEN_SHELL_CLASS}>
-      <ScreenHead title="MFバトルカード" accent="text-amber-200" onBack={onExit} backLabel="デバッグ設定へ戻る" note={debug ? 'デバッグ専用(まだ公開していません)' : ''}/>
+      <ScreenHead title="MFバトルカード" accent="text-amber-200" onBack={onExit} backLabel={exitLabel} note={debug ? 'デバッグ専用(まだ公開していません)' : ''}/>
       <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
         <div className={`${SCREEN_PANEL_CLASS} flex items-center justify-between`}>
           <div className="text-[13px] font-black text-slate-200">カードポイント</div>

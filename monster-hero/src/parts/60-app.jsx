@@ -4606,6 +4606,8 @@ function MonsterHeroGame() {
   const [rhythmEventStorySeen, setRhythmEventStorySeen] = useState(null);
   // MFバトルカードの画面が決めた曲(null なら HOME の曲)。保存はしない
   const [cardBgm, setCardBgm] = useState(null);
+  // MFバトルカードへどこから入ったか('debug' … デバッグ設定から / 'home' … HOME の入口・公開のお話のあと)。戻るボタンの行き先と、デバッグの道具を出すかに使う
+  const [cardOrigin, setCardOrigin] = useState('home');
   const rhythmEventStorySeenRef = useRef(null);
   const [rhythmEventStoryPending, setRhythmEventStoryPending] = useState(null);
   // 招待リンク(?friend=フレンドコード)で開いたとき。URLからコードを拾って(拾ったらURLからは消す)、
@@ -17045,6 +17047,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             raidJackVisible={(RELEASE_FLAGS.raidJack===true&&raidJackWindowAt(Date.now())==='open')||raidJackDebugForce}
             raidJackEventId={raidJackEventId} onOpenRaidJack={openRaidJack}
             onOpenAssistantChat={RELEASE_FLAGS.assistantChat===true?()=>setAssistantChatOpen(true):null}
+            cardBattleVisible={EVENT_REPLAY_RELEASE_FLAGS.cardBattle&&cardBattleIntroSeenFlag} onOpenCardBattle={()=>{setCardOrigin('home');setGameState('CARD_TOP');}}
           />
         )}
         {/* 助手とおしゃべり(2026-10-14)。話す相手は、いま選んでいる助手。返事が来た1往復ごとにその助手の仲良し度(chat)が増える */}
@@ -19178,7 +19181,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   {/* イベント・レイドボス「ジャック」の確認(デバッグ専用。更新履歴・ヘルプには載せない)。実装した段階ごとに、この画面へ確認の入口を足す */}
                   <DebugMenuRow data-debug-raid-jack icon="🎃" label="ジャック確認" desc="定義・期間と回数・端末の記録・サーバー(別のイベントID)の確認。端末の記録を書き換える操作があります" tone="save" onClick={()=>setGameState('RAID_JACK_DEBUG')}/>
                   {/* MFバトルカード(公開の区切りまでは、入口はここだけ。デバッグ専用なので更新履歴・ヘルプには載せない) */}
-                  <DebugMenuRow data-debug-card-battle icon="🃏" label="MFバトルカード" desc="コンピューター戦とスターター(作っている途中)。カードバトルの新しい保存キー(mh_card_*)だけを書きます" tone="save" onClick={()=>setGameState('CARD_TOP')}/>
+                  <DebugMenuRow data-debug-card-battle icon="🃏" label="MFバトルカード" desc="コンピューター戦とスターター(作っている途中)。カードバトルの新しい保存キー(mh_card_*)だけを書きます" tone="save" onClick={()=>{setCardOrigin('debug');setGameState('CARD_TOP');}}/>
                   <button data-debug-species-challenge onClick={async()=>{await loadSpeciesChallengeProgress();setGameState('SPECIES_CHALLENGE_DEBUG');}} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">🧬 種族チャレンジ進行確認<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">種族別の解放・クリア・初回報酬を確認／編集</small></button>
                   {/* 将来つくる独立型ダンジョンRPGの戦闘だけを先に試す試作。入口はここだけで、
                       通常HOME・通常バトル・マスモン管理には出さない。保存・報酬・ランキングへは触れない */}
@@ -19297,7 +19300,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onClose:()=>setRaidJackDetailMon(null),accent:'indigo',readOnly:true,
             label:`${raidJackDetailMon.name}の詳細`,
           })}</>)}
-        {(gameState==='CARD_TOP'||gameState==='CARD_BATTLE')&&(<CardBattleScreen screen={gameState} onNavigate={setGameState} onExit={()=>{setCardBgm(null);setGameState('DEBUG_SETTINGS');}} seenStoryIds={rhythmEventStorySeen||[]} debug onBgm={setCardBgm}/>)}
+        {(gameState==='CARD_TOP'||gameState==='CARD_BATTLE')&&(<CardBattleScreen screen={gameState} onNavigate={setGameState} onExit={()=>{setCardBgm(null);setCardOrigin('home');setGameState(cardOrigin==='debug'?'DEBUG_SETTINGS':'HOME');}} exitLabel={cardOrigin==='debug'?'デバッグ設定へ戻る':'HOMEへ戻る'} seenStoryIds={rhythmEventStorySeen||[]} debug={cardOrigin==='debug'} onBgm={setCardBgm}/>)}
         {gameState==='RAID_JACK_DEBUG'&&(<RaidJackDebugScreen onBack={()=>setGameState('DEBUG_SETTINGS')} raidForce={raidJackDebugForce} onToggleRaidForce={()=>setRaidJackDebugForce(v=>!v)} realRules={raidJackDebugRealRules} onToggleRealRules={()=>setRaidJackDebugRealRules(v=>!v)} onOpenRaid={async()=>{setRaidJackDebugForce(true);await openRaidJack();}} onGoHome={returnToHome} onPreviewRhythmResult={(kind)=>{const pumpkin=kind==='pumpkin';const t=pumpkin?RAID_JACK_PUMPKIN:RAID_JACK_A_TIERS[2];const hp=t.hp;const before=Math.floor(hp*0.6);const damage=523456;setRaidJackResult({way:'rhythm',songName:'Monster Hero',difficultyName:'HARD',score:523456,assist:false,kind:'a',tierIndex:pumpkin?RAID_JACK_A_TIERS.length-1:2,tierName:t.name,reason:'rhythm',damage,defeated:false,turns:0,levelUps:0,growths:0,outcome:'sent',opened:false,eventId:'raid_jack_debug',quickAward:null,lifeLeft:pumpkin?hp:Math.max(0,before-damage),lifeBefore:pumpkin?null:before,lifeMax:hp,pumpkin});}} onPreviewDamageFx={(kind)=>{const t=RAID_JACK_A_TIERS[2];const hp=t.hp;setRaidDamageFx(kind==='none'?{key:`preview-${Date.now()}`,tierIndex:2,tierName:t.name,score:0,damage:0,assist:true,lifeBefore:Math.floor(hp*0.6),max:hp,pumpkin:false}:{key:`preview-${Date.now()}`,tierIndex:2,tierName:t.name,score:523456,damage:kind==='down'?hp:523456,assist:false,lifeBefore:kind==='down'?Math.floor(hp*0.05):Math.floor(hp*0.6),max:hp,pumpkin:false});}} onStartBattle={(kind,tierIndex,opts)=>{
           // 回数は使わず、別のイベントID(raid_jack_debug)で送る確認用の入口。runMode は反映されてから始まる(useEffect)
           const isB=kind==='b'; const mode=isB?BATTLE_MODE_RAID_JACK_B:BATTLE_MODE_RAID_JACK_A;
