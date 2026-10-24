@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 73fe3fc1e1273534
+// source-sha256: 36871a1675a81778
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-24 11:58";
+const BUILD_DATE = "2026-10-24 12:04";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -82217,7 +82217,8 @@ const cardCreateGame = (db, {
         lastCard: null,
         stunTurn: -1,
         airUntil: -1,
-        mult: null
+        mult: null,
+        charge: null
       };
     });
     const deck = sh.list;
@@ -82229,7 +82230,8 @@ const cardCreateGame = (db, {
       hand,
       guts: [],
       discard: [],
-      breederUsed: false
+      breederUsed: false,
+      gutsGuardUntil: -1
     };
   });
   const st = {
@@ -82308,6 +82310,10 @@ const cardPayGuts = (st, p, n) => {
 };
 const cardLoseGuts = (st, p, n) => {
   const me = st.players[p];
+  if (me.gutsGuardUntil >= st.turn) {
+    cardLog(st, `${me.name}のガッツは減らされなかった(精神集中)`);
+    return 0;
+  }
   const k = n === 'all' ? me.guts.length : Math.min(n, me.guts.length);
   for (let i = 0; i < k; i++) me.discard.push(me.guts.pop());
   return k;
@@ -82407,6 +82413,8 @@ const cardAttackOptions = (db, st) => {
     }
     me.mons.forEach((mon, mi) => {
       if (!cardUsableBy(card, mon) || !cardMonCanAttack(db, st, p, mi, card)) return;
+      const uw = cardEff(card, 'useWhen');
+      if (uw && uw.lifeMax !== undefined && mon.life > uw.lifeMax) return;
       const combo = cardEff(card, 'combo');
       const sets = [[hi]];
       if (combo) {
@@ -82621,6 +82629,10 @@ const cardStartAttack = (db, st, act) => {
     mult *= mon.mult.n;
     mon.mult = null;
   }
+  if (mon && mon.charge && mon.charge.kinds.includes(main.kind)) {
+    mult *= mon.charge.n;
+    mon.charge = null;
+  }
   const targets = cardHasEff(main, 'area') ? cardAreaTargets(st, p, mi, main) : [act.target];
   st.pending = {
     attacker: p,
@@ -82686,6 +82698,7 @@ const cardResolveTarget = (db, st) => {
   }
   if (cardHasEff(main, 'nonLethal')) dmg = Math.max(0, Math.min(dmg, target.life - 1));
   target.life = Math.max(0, target.life - dmg);
+  if (dmg > 0) target.charge = null;
   const guarded = pd.reduce > 0 || pd.reduceHalf || pd.reduceAll || !!pd.reflect || pd.cover !== null;
   const res = {
     p: t.p,
@@ -82731,6 +82744,7 @@ const cardResolveTarget = (db, st) => {
   if (evaded) pd.evadedAny = true;
   if (reflected > 0 && atkMon && !atkMon.ko) {
     atkMon.life = Math.max(0, atkMon.life - reflected);
+    atkMon.charge = null;
     cardEvent(st, {
       t: 'hit',
       p: pd.attacker,
@@ -82777,6 +82791,7 @@ const cardFinishAttack = (db, st) => {
   if (sa) self += sa.n;
   if (self > 0 && atkMon && !atkMon.ko) {
     atkMon.life = Math.max(0, atkMon.life - self);
+    atkMon.charge = null;
     cardEvent(st, {
       t: 'hit',
       p: pd.attacker,
@@ -82832,6 +82847,17 @@ const cardApplySpecial = (db, st, p, mi, card, target) => {
         n: h
       });
       cardLog(st, `${m.name}のライフが${h}回復`);
+    }
+    if (e.t === 'gutsGuard') {
+      me.gutsGuardUntil = st.turn + 1;
+      cardLog(st, `${me.name}は次のターンまでガッツを減らされない`);
+    }
+    if (e.t === 'charge' && mi >= 0) {
+      me.mons[mi].charge = {
+        kinds: e.kinds,
+        n: e.n
+      };
+      cardLog(st, `${me.mons[mi].name}は次のかしこさ技のダメージが${e.n}倍`);
     }
     if (e.t === 'forbidThisTurn') {
       st.forbid[cardOther(p)] = [...(st.forbid[cardOther(p)] || []), ...e.kinds];
@@ -83084,6 +83110,12 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
       if (e.t === 'draw') score += e.n * 0.9;
       if (e.t === 'peekHand') score += 0.4 * habit.disrupt;
       if (e.t === 'discardOpp') score += 1.4 * habit.disrupt;
+      if (e.t === 'gutsGuard') score += st.players[cardOther(p)].hand.length >= 3 ? 0.4 : 0.1;
+      if (e.t === 'charge') {
+        const m = opt.mon >= 0 ? me.mons[opt.mon] : null;
+        const big = m && !m.charge ? Math.max(0, ...me.hand.map(n => cardOf(db, n)).filter(c => c && e.kinds.includes(c.kind) && cardUsableBy(c, m)).map(c => c.damage || 0)) : 0;
+        score += big * 0.5;
+      }
       if (e.t === 'forbidThisTurn') {
         const followUp = cardAttackOptions(db, st).filter(o => o.type === 'attack' && cardOf(db, me.hand[o.hand[0]]).kind !== 'spe').length;
         score += followUp ? 1.5 * habit.disrupt : 0;
@@ -83102,6 +83134,7 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
     });
     const mon = opt.mon >= 0 ? me.mons[opt.mon] : null;
     if (mon && mon.mult && mon.mult.turn === st.turn && mon.mult.kinds.includes(main.kind)) dmg *= mon.mult.n;
+    if (mon && mon.charge && mon.charge.kinds.includes(main.kind)) dmg *= mon.charge.n;
     const targets = cardHasEff(main, 'area') ? cardAreaTargets(st, p, opt.mon, main) : [opt.target];
     targets.forEach(t => {
       const tm = st.players[t.p].mons[t.m];
@@ -83313,6 +83346,8 @@ const cardAiCardValue = (card, habit) => {
       if (e.t === 'discardOpp') v += e.n * 0.8 * habit.disrupt;
       if (e.t === 'peekHand') v += 0.2 * habit.disrupt;
       if (e.t === 'forbidThisTurn') v += 0.8 * habit.disrupt;
+      if (e.t === 'gutsGuard') v += 0.3;
+      if (e.t === 'charge') v += 1.2;
     });
     return v - card.guts * 0.3;
   }
@@ -83660,9 +83695,9 @@ const CARD_BATTLE_LINES = Object.freeze({
     lastMine: ['あと1体…！ でもあたし、あきらめないよ！', 'ピンチすぎる…！ ここからが本番ぢゃんｗ'],
     lastTheirs: ['あと1体だね！ 一気にいっちゃうよ♪', 'ラストスパート！ 最後まで全力でいこ！'],
     deckMine: ['山札、あと少しぢゃん…！ 急がなきゃ！', 'カード残り少ない…早く決めなきゃ！'],
-    deckTheirs: ['そっちの山札、もう少ないよ？ 気をつけて♪', '山札が切れたら負けだからね！ ﾄﾞｷﾄﾞｷ'],
+    deckTheirs: ['そっちの山札、もう少ないよ？ 大丈夫？', 'カード足りる…？ あたしまでﾄﾞｷﾄﾞｷしてきた！'],
     win: ['あたしの勝ちー！ めっちゃ楽しかった♪', 'やったー！ またいつでも相手するよ！', '勝っちゃった！ 次も全力でいこ！'],
-    lose: ['負けたー！ でも、まじ楽しかったよ！', '強すぎぢゃんｗ もう1回やろ！', 'くやしー！ 次は絶対負けないからね♪']
+    lose: [['負けたー！ でも、まじ楽しかったよ！', 'happy'], ['強すぎぢゃんｗ もう1回やろ！', 'excited'], ['くやしー！ 次は絶対負けないからね♪', 'crying']]
   },
   kiki: {
     challenge: ['カードで勝負でつか？ 喜んでお相手しまつ♪♪', '私、こう見えて火力で押すタイプなんです( ˘ω˘)', 'よろしくお願いします。全力でいきますね', '準備はいいですか？ 私はガッツをためて待ってまつ'],
@@ -83676,9 +83711,9 @@ const CARD_BATTLE_LINES = Object.freeze({
     lastMine: ['残り1体…ここからが勝負でつ', '追いつめられちゃいました。でも、まだ一撃ありまつよ'],
     lastTheirs: ['あと1体ですね。最後まで気は抜きません', 'とどめ、いきまつね( ˘ω˘)'],
     deckMine: ['山札が少なくなってきました…急がないと', 'あれま、カードがもう残りわずかでつ'],
-    deckTheirs: ['そちらの山札、残り少ないですよ？', '山札が切れたら負けです。気をつけてくださいね♪♪'],
+    deckTheirs: ['あれま、そちらの山札、もうそんなに減ったんでつね', 'このまま押し切りまつね( ˘ω˘)'],
     win: ['私の勝ちでつ。ありがとうございました♪♪', '火力で押し切れました( ˘ω˘)9グッ!', 'いい勝負でした。またお相手してくださいね'],
-    lose: ['負けちゃいました…お強いですね', 'あれま…悔しいでつ。もう一度お願いしまつ', '完敗です。次はもっとためてから挑みますね(´ー`*)']
+    lose: [['負けちゃいました…お強いですね', 'troubled'], ['あれま…悔しいでつ。もう一度お願いしまつ', 'crying'], ['完敗です。次はもっとためてから挑みますね(´ー`*)', 'normal']]
   },
   momosuke: {
     challenge: ['カードでももに勝てると思ってる？w', 'いいよ、相手してあげる♡ 泣いても知らないよ？', '手札、ぜーんぶ見えちゃうかもよ？w', 'ももと勝負！？ 楽しませてよね♡'],
@@ -83692,57 +83727,57 @@ const CARD_BATTLE_LINES = Object.freeze({
     lastMine: ['残り1体…でもここから逆転するのがももだから！！', 'まって、ピンチじゃん…！ 本気出す'],
     lastTheirs: ['あと1体だね〜♡ どうする？w', 'もう逃げられないよ？ ふふっ'],
     deckMine: ['え、ももの山札もう少ない！？', 'カードなくなる前に決めちゃお！！'],
-    deckTheirs: ['山札、あとちょっとじゃん？w', '山札切れで負けとか、かわいそすぎるよ？♡'],
+    deckTheirs: ['山札、あとちょっとじゃん？w', 'カードなくなりそうでかわいそ〜♡ 早く降参する？w'],
     win: ['ももの勝ち〜♡ 楽しかったよ！', 'ね、言ったでしょ？ ももはずるいって！w', '勝った！！ でもけっこう強かったよ、えらいえらい♡'],
-    lose: ['うそでしょ！？ …強いじゃん、すご', 'むかつく〜！！ もう1回！！', '負けた…今日だけは認めてあげる♡']
+    lose: [['うそでしょ！？ …強いじゃん、すご', 'surprise'], ['むかつく〜！！ もう1回！！', 'angry'], ['負けた…今日だけは認めてあげる♡', 'wink']]
   },
   kyuko: {
     challenge: ['ほい！ カード勝負だねぇ。組み方なら負けないよ笑', '先まで読むタイプなんで、よろしくぅ', 'おけ〜、相手するよ。お手柔らかにね笑', '俺のデッキ、安い技ばっかりだけど強いよぉ'],
     start: ['ほい、始めよっか。ガッツの数え合いだねぇ', 'まずは様子見から…なんてね笑', 'よろしくお願いします笑 楽しもうねぇ', '手札とガッツの損得、ちゃんと数えるよw'],
     big: ['ここは使いどころだねぇ。いくよ笑', 'ほい！ これで一気にいけるはず', '計算どおり…たぶんw', 'まとめて当てるのが効率いいからねぇ'],
-    bigHit: ['ぐぬぬぬ…そこ狙うかぁ', 'いたた、見立てが甘かったかも笑', 'うわ、それは計算外だぁ', 'やるねぇ。でもまだ取り返せるよw'],
+    bigHit: ['うぇ、そこ狙うかぁ', 'いたた、見立てが甘かったかも笑', 'うわ、それは計算外だぁ', 'やるねぇ。でもまだ取り返せるよw'],
     guardMine: ['ほい、読めてた笑', '守りはちゃんと残してあるんだよねぇ', 'それ来ると思ったw'],
     guardTheirs: ['あら、よけられたぁ', 'おけ、そっちも守り持ってたかぁ笑', 'ぐぬぬぬ…今のは読まれてた'],
-    myKo: ['ありがとん、休んでて笑', '1体やられたかぁ。まぁ、なんとかなる', 'ぐぬぬぬ…でも残りで取り返すよぉ'],
+    myKo: ['ありがとん、休んでて笑', '1体やられたかぁ。まぁ、なんとかなる', 'ごめんよぉ😭 残りで取り返すから'],
     theirKo: ['ほい、1体！ いい感じだねぇ', '狙いどおりw', 'おけ〜、次いこ次'],
     lastMine: ['残り1体かぁ。ここからが腕の見せどころだねぇ笑', 'まだ勝ち筋あるよ。たぶんw'],
     lastTheirs: ['あと1体。落ち着いていくよぉ', 'ここで焦らないのが大事なんだよねぇ笑'],
     deckMine: ['山札、思ったより減ってるなぁ笑', 'カード切れ、気をつけないとだぁ'],
     deckTheirs: ['そっちの山札、もう少ないねぇ', '山札が切れたら負けだから、数えといたほうがいいよw'],
     win: ['ほい、俺の勝ち！ ありがとん笑', '計算どおり…ってことにしといて笑', 'いい勝負だったねぇ。またやろw'],
-    lose: ['ぐぬぬぬ…負けたぁ', '見立てがずれてたかぁ。強いねぇ笑', 'おけ、次は組み方から考え直すよw']
+    lose: [['ぐぬぬぬ…負けたぁ', 'angry'], ['見立てがずれてたかぁ🥲 強いねぇ', 'troubled'], ['おけ、次は組み方から考え直すよw', 'normal']]
   },
   dra: {
     challenge: ['おでとカード勝負か。守りの固さ、見せてやるからな', 'ふむ、いいよ。膝以外も固いってとこ見せるわ', 'よろしくな。カードの組み合わせで勝つのが、おでのやり方だよ', 'えへへ、手札は見せないよ。隠しごとは得意なんだ'],
-    start: ['さて、始めるか。焦らずいこうな', 'ふむ、まずは守りを固めるとこからだな', 'えへへ、おで、意外とねばるよ', 'よろしく頼むよ。長い勝負になるかもな'],
-    big: ['ここは出しどころだな。いくぞ', 'ふむ、ためてたぶん、ぜんぶ使うわ', 'えへへ、たまには攻めるのも気持ちいいからな', 'まとめていくぞ。覚悟しろよ'],
+    start: ['さて、始めるか。焦らずいこうな', 'まずは守りを固めるとこからだな', 'おで、意外とねばるよ', 'よろしく頼むよ。長い勝負になるかもな'],
+    big: ['ここは出しどころだな。いくぞ', 'ためてたぶん、ワイがぜんぶ使うわ', 'たまには攻めるのも気持ちいいからな', 'まとめていくぞ。覚悟しろよ'],
     bigHit: ['いてて…膝にきたわ', 'わぁ、今のはでかいな…', 'ふむ、そこを突くか。やるな', '痛いのは嫌いなんだよなぁ…えへへ'],
     guardMine: ['ほらな、固いだろ？ えへへ', '守りは手放さない主義なんだよ', 'ふむ、読みどおりだな'],
-    guardTheirs: ['わぁ、守られたか。なるほどな', 'たしかに、そう来るよな', 'ふむ、そっちも固いじゃないか'],
-    myKo: ['すまんな…あとはおでが引き受けるからな', 'わぁ、倒れちまった…', 'ふむ、ここからは慎重にいかないとだな'],
-    theirKo: ['1体いただいたよ。えへへ', 'ふむ、仕組みどおりだな', 'よし、この調子でいくからな'],
+    guardTheirs: ['わぁ、守られたか。なるほどな', 'たしかに、そう来るよな', 'そっちも守り持ってたか。固いな'],
+    myKo: ['すまんな…あとはおでが引き受けるからな', 'わぁ、倒れちまった…', 'ここからは慎重にいかないとだな'],
+    theirKo: ['1体いただいたよ', 'ふむ、仕組みどおりだな', 'よし、この調子でいくからな'],
     lastMine: ['残り1体か…でも、ねばるのは得意なんだよ', '追いつめられたな。ここからが見せどころだわ'],
-    lastTheirs: ['あと1体だな。最後まで気は抜かないからな', 'ふむ、ここで決めさせてもらうわ'],
+    lastTheirs: ['あと1体だな。最後まで気は抜かないからな', 'ワイがここで決めさせてもらうわ'],
     deckMine: ['山札が心もとないな…', 'わぁ、カードが残り少ないわ。急がないとな'],
     deckTheirs: ['そっちの山札、もう少ないよ。数えといたほうがいいぞ', '山札切れも負けだからな。覚えとくといいよ'],
     win: ['おでの勝ちだな。えへへ、ありがとな', 'ふむ、守り勝ちってやつだな', 'いい勝負だったよ。また相手してくれよな'],
-    lose: ['わぁ、負けたか…強いな、ほんとに', '負けたわ…おでなんか膝しか取り柄ないからな。えへへ', 'たしかに、今日はそっちが一枚上だったな']
+    lose: [['わぁ、負けたか…強いな、ほんとに', 'surprise'], ['負けたわ…おでなんか膝しか取り柄ないからな。えへへ', 'troubled'], ['たしかに、今日はそっちが一枚上だったな', 'normal']]
   },
   atsu: {
-    challenge: ['カード勝負ね。とりあえず全力でいこ笑', 'いいね、受けて立つよ！', 'てか、上の難易度もあるからな笑', 'まとめて押し込むのが俺のやり方だから笑'],
-    start: ['よろしく！ 楽しもうぜ笑', 'とりあえず先に場を見るわ！', 'まじで手加減しないからな笑', 'いくよ！ 最後まで集中な！'],
+    challenge: ['カード勝負ね。とりあえず全力でいこ笑', 'いいね、受けて立つよ( *\'ω\'*)ノ', '今日は最後まで本気な笑', 'まとめて押し込むのが俺のやり方だから笑'],
+    start: ['よろしく！ 楽しもうぜ笑', 'まずは場を見るわ！', 'まじで手加減しないからな笑', 'いくよ！ 最後まで集中な！'],
     big: ['まとめていくぞ！', 'とりあえず全員に当てとくわ笑', 'ここ、押し込むとこだよな！', 'やっぱこれでしょ笑'],
-    bigHit: ['いった…まじで効いたわ笑', 'てか、それ強すぎない！？', 'やるじゃん…！', 'しゃあない、取り返すわ笑'],
+    bigHit: ['いった…まじで効いたわ笑', 'てか、それ強すぎない！？', 'やるじゃん…！', '次で取り返すわ笑'],
     guardMine: ['読めてたよ笑', '当たらないって！', 'いいね、守り決まった笑'],
-    guardTheirs: ['よけられたか…やるね笑', 'てか、それ持ってたの！？', 'しゃあない、次いこ！'],
-    myKo: ['ごめん、ありがとな…！', 'まじか…でもまだいける笑', 'しゃあない、ここから取り返すぞ！'],
-    theirKo: ['弱ってたの、見逃さないよ笑', 'いいね、1体！', 'とりあえず1体、もらった！'],
+    guardTheirs: ['よけられたか…やるね笑', 'まじか、それ持ってたの！？', 'しゃあない、次いこ！'],
+    myKo: ['ごめん、ありがとな…！', 'まじか…でもまだいける笑', 'ここから取り返すぞ！'],
+    theirKo: ['弱ってたの、見逃さないよ笑', 'いいね、1体！', '1体、もらった！'],
     lastMine: ['残り1体ね…ここからが面白いんだよ笑', 'まだ終わってないからな！'],
     lastTheirs: ['あと1体！ 押し込むぞ！', 'ここで決めるわ笑'],
-    deckMine: ['山札少ないな…急ぐか笑', 'てか、カードもう残りわずかじゃん…！'],
-    deckTheirs: ['山札、もう少ないよ？ 気をつけな笑', '山札切れも負けだからな！'],
+    deckMine: ['山札少ないな…急ぐか笑', 'カードもう残りわずかじゃん…！'],
+    deckTheirs: ['山札、もう少ないじゃん…焦ってる？笑', 'そろそろ山札が尽きるな！ 押し込むぞ！'],
     win: ['俺の勝ち！ いい勝負だった笑', '楽しかった！ 次は上の難易度でやろうぜ笑', 'いいね、また相手してな！'],
-    lose: ['負けた…まじで強いじゃん笑', 'やるね！ 次は上の難易度で勝負な笑', 'しゃあない、俺の負け！ もう1回やろ！']
+    lose: [['負けた…まじで強いじゃん笑', 'happy'], ['やるね！ 次は俺が勝つからな笑', 'excited'], ['しゃあない、俺の負け！ もう1回やろ！', 'wink']]
   }
 });
 const CARD_LINE_PER_TURN = 2;
@@ -83752,11 +83787,13 @@ const cardPickLine = (who, scene, lastByScene, rand = Math.random) => {
   const last = lastByScene ? lastByScene[scene] : undefined;
   const pool = list.length > 1 ? list.map((_, i) => i).filter(i => i !== last) : [0];
   const i = pool[Math.floor(rand() * pool.length)];
+  const entry = list[i];
+  const [text, face] = Array.isArray(entry) ? entry : [entry, CARD_LINE_FACE[scene] || 'normal'];
   return {
     scene,
     index: i,
-    text: list[i],
-    face: CARD_LINE_FACE[scene] || 'normal'
+    text,
+    face
   };
 };
 const cardLineSceneOf = (db, before, after, cpu) => {
@@ -83836,6 +83873,30 @@ const cardUserLabel = (db, c) => {
   if (c.user === 'breeder') return 'ブリーダー';
   const m = Object.values(db.monsters).find(x => x.species === c.user && !x.variant);
   return m ? `${m.name}専用` : c.user;
+};
+const cardGuardBlockReasons = (db, st) => {
+  const pd = st.pending;
+  if (!pd) return [];
+  const q = pd.defender;
+  const me = st.players[q];
+  const t = pd.targets[pd.ti];
+  const target = t ? st.players[t.p].mons[t.m] : null;
+  const atk = cardOf(db, pd.main);
+  const kindName = {
+    pow: 'ちから技',
+    int: 'かしこさ技'
+  };
+  const out = [];
+  const guards = me.hand.map(no => cardOf(db, no)).filter(c => c && cardIsGuardKind(c.kind));
+  if (!guards.length) return ['手札に回避・防御のカードがありません'];
+  guards.forEach(c => {
+    const ev = cardEff(c, 'evade');
+    const re = cardEff(c, 'reduce') || cardEff(c, 'reduceHalf') || cardEff(c, 'reduceAll') || cardEff(c, 'reflect');
+    let why = null;
+    if (!c.ready) why = `「${c.name}」は準備中`;else if ((st.forbid[q] || []).includes(c.kind)) why = `このターンは${c.kind === 'dge' ? '回避' : '防御'}を使えません`;else if (c.guts > me.guts.length) why = `「${c.name}」はガッツが足りません(あと${c.guts - me.guts.length})`;else if (cardHasEff(c, 'cover')) why = `「${c.name}」は味方が狙われたときに、別の子が使います`;else if (target && t.p === q && !cardUsableBy(c, target)) why = `「${c.name}」は${target.name}が使えるカードではありません`;else if (ev && cardHasEff(atk, 'noEvade')) why = `「${atk.name}」は回避できません`;else if (ev && !ev.kinds.includes(atk.kind)) why = `「${c.name}」は${ev.kinds.map(k => kindName[k] || k).join('・')}にしか使えません`;else if (ev && ev.minGuts && pd.cost < ev.minGuts) why = `「${c.name}」はガッツ${ev.minGuts}以上の技にしか使えません`;else if (re && !re.kinds.includes(atk.kind)) why = `「${c.name}」は${re.kinds.map(k => kindName[k] || k).join('・')}にしか使えません`;
+    if (why && !out.includes(why)) out.push(why);
+  });
+  return out.slice(0, 2);
 };
 const CARD_CPU = 1;
 const CARD_ME = 0;
@@ -84412,7 +84473,11 @@ const CardBattleBoard = ({
     className: "min-h-0 flex-1"
   }), guide && React.createElement("div", {
     className: "mx-auto mb-1 shrink-0 rounded-lg bg-amber-300 px-2 py-0.5 text-[11px] font-black text-slate-900"
-  }, hint || guide), !guide && hint && React.createElement("div", {
+  }, hint || guide), mode === 'guard' && !guardOpts.length && React.createElement("div", {
+    "data-card-guard-why": true,
+    className: "mx-auto mb-1 max-w-[94%] shrink-0 text-center text-[11px] font-bold leading-snug text-slate-300",
+    style: JA_WRAP_STYLE
+  }, cardGuardBlockReasons(db, st).join(' / ')), !guide && hint && React.createElement("div", {
     className: "mx-auto mb-1 shrink-0 rounded-lg bg-amber-300 px-2 py-0.5 text-[11px] font-black text-slate-900"
   }, hint), mode === 'attack' && sel && monChosen !== undefined && sets.length > 1 && React.createElement("div", {
     className: "mb-1 flex shrink-0 flex-wrap justify-center gap-1 px-2"
@@ -84814,7 +84879,7 @@ const CardBattleScreen = ({
     }, a && React.createElement("div", {
       className: "flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2"
     }, React.createElement("img", {
-      src: assistantFullImage(a, win ? 'crying' : 'happy'),
+      src: assistantFullImage(a, line ? line.face : 'normal'),
       alt: a.name,
       className: "h-[220px] w-[46%] shrink-0 object-contain object-bottom"
     }), React.createElement("div", {

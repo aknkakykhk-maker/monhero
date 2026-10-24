@@ -111,7 +111,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await page.locator('[data-card-top="foe"]').waitFor({ timeout: 10000 });
     const foes = await page.locator('[data-card-foe]').count();
     check('④ 相手の助手が並ぶ', foes >= 4, `${foes}人`);
-    await page.locator('[data-card-foe="kiki"]').click();
+    await page.locator('[data-card-foe="momosuke"]').click();
     await page.waitForTimeout(500);
     await shot(page, '03-foe');
     await page.locator('[data-card-start]').click();

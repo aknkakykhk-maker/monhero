@@ -84,6 +84,28 @@ const scenes = () => {
     st = act(st, { type: 'pass' });
     ok(st.winner === 0, `同時KOは攻撃した側の勝ちのはず(winner=${st.winner})`);
   }
+  // デュラハン: 最終奥義はライフ2以下のときだけ・静の構えで次のかしこさ技2倍・精神集中でガッツを減らされない
+  {
+    let st = scene({ mons: [['C-030', 'C-003', 'C-005'], ['C-003', 'C-005', 'C-009']], hands: [['241'], []], guts: [9, 0] });
+    ok(!E.cardAttackOptions(db, st).some((o) => o.mon === 0), '最終奥義がライフ2より多いのに出せてしまう');
+    st.players[0].mons[0].life = 2;
+    ok(E.cardAttackOptions(db, st).some((o) => o.mon === 0), '最終奥義がライフ2で出せない');
+  }
+  {
+    let st = scene({ mons: [['C-030', 'C-003', 'C-005'], ['C-003', 'C-005', 'C-009']], hands: [['246', '244'], []], guts: [9, 0] });
+    st = act(st, E.cardAttackOptions(db, st).find((o) => o.mon === 0 && st.players[0].hand[o.hand[0]] === '246'));
+    ok(st.players[0].mons[0].charge && st.players[0].mons[0].charge.n === 2, '静の構えが付かない');
+    st.players[0].mons[0].attacks = 0; // 同じターンに続けて試すため
+    const o = E.cardAttackOptions(db, st).find((x) => x.mon === 0 && x.target && x.target.m === 0);
+    st = act(st, o); st = act(st, { type: 'pass' });
+    ok(st.players[1].mons[0].life === Math.max(0, 9 - 14), `静の構えのあとの雷神剣(7)は14ダメージのはず(残り ${st.players[1].mons[0].life})`);
+  }
+  {
+    let st = scene({ mons: [['C-009', 'C-003', 'C-005'], ['C-030', 'C-003', 'C-005']], hands: [['103'], []], guts: [2, 3] });
+    st.players[1].gutsGuardUntil = st.turn + 1;
+    st = act(st, E.cardAttackOptions(db, st).find((o) => o.target && o.target.m === 0)); st = act(st, { type: 'pass' });
+    ok(st.players[1].guts.length === 3, `精神集中のあいだはガッツが減らないはず(${st.players[1].guts.length})`);
+  }
   // 山札が引けなければ負け
   {
     let st = scene({ hands: [[], []] });
