@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6e2a41ba5c08c877
+// source-sha256: 6f885b895c6458fd
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-24 16:00";
+const BUILD_DATE = "2026-10-24 16:42";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -83065,31 +83065,36 @@ const CARD_AI_LEVELS = Object.freeze({
     depth: 0,
     whim: 0.30,
     sloppy: 0.55,
-    point: 30
+    point: 80,
+    loops: 14
   },
   normal: {
     depth: 1,
     whim: 0.15,
     sloppy: 0.30,
-    point: 45
+    point: 110,
+    loops: 16
   },
   hard: {
     depth: 2,
     whim: 0.08,
     sloppy: 0.15,
-    point: 60
+    point: 140,
+    loops: 18
   },
   expert: {
     depth: 3,
     whim: 0.04,
     sloppy: 0.06,
-    point: 75
+    point: 170,
+    loops: 20
   },
   master: {
     depth: 3,
     whim: 0.01,
     sloppy: 0,
-    point: 90,
+    point: 200,
+    loops: 22,
     readHand: true
   }
 });
@@ -83692,25 +83697,73 @@ const cardGrantStarter = (db, {
     }
   };
 };
-const CARD_CPU_LOSE_POINT = 10;
-const CARD_CPU_DAILY_MAX = 600;
+const CARD_CPU_LOSE_POINT = 25;
+const CARD_SURRENDER_POINT_PER_KO = 10;
+const CARD_CPU_DAILY_MAX = 1500;
 const CARD_FIRST_WIN_BONUS = 50;
-const cardCpuReward = (daily, levelId, outcome) => {
+const CARD_MIN_OWN_TURNS = 3;
+const CARD_LOSE_FULL_TURNS = 10;
+const CARD_PVP_REWARD = Object.freeze({
+  win: {
+    point: 200,
+    loops: 24
+  },
+  lose: {
+    point: 50,
+    loops: 12
+  },
+  left: {
+    point: 0,
+    loops: 0
+  },
+  dailyMax: 2200,
+  sameFoePerDay: 3
+});
+const cardOwnTurns = (st, p) => {
+  const t = Math.max(0, Number(st && st.turn) || 0);
+  return st && st.first === p ? Math.ceil(t / 2) : Math.floor(t / 2);
+};
+const cardKoCount = (st, p) => st && st.players && st.players[cardOther(p)] ? st.players[cardOther(p)].mons.filter(m => m.ko).length : 0;
+const cardResultFacts = (st, p = CARD_ME) => st ? {
+  ownTurns: cardOwnTurns(st, p),
+  kos: cardKoCount(st, p)
+} : {
+  ownTurns: CARD_LOSE_FULL_TURNS,
+  kos: 0
+};
+const cardCpuBasePoint = (levelId, outcome, facts) => {
   const level = CARD_AI_LEVELS[levelId] || CARD_AI_LEVELS.normal;
-  const base = outcome === 'win' ? level.point : outcome === 'lose' ? CARD_CPU_LOSE_POINT : 0;
+  if (facts.ownTurns < CARD_MIN_OWN_TURNS) return 0;
+  if (outcome === 'win') return level.point;
+  if (outcome === 'lose') return CARD_CPU_LOSE_POINT;
+  if (outcome === 'surrender') return Math.min(CARD_CPU_LOSE_POINT, facts.kos * CARD_SURRENDER_POINT_PER_KO);
+  return 0;
+};
+const cardCpuLoops = (levelId, outcome, facts = cardResultFacts(null)) => {
+  const level = CARD_AI_LEVELS[levelId] || CARD_AI_LEVELS.normal;
+  if (facts.ownTurns < CARD_MIN_OWN_TURNS) return 0;
+  const loseFull = Math.floor(level.loops / 2);
+  if (outcome === 'win') return level.loops;
+  if (outcome === 'lose') return Math.floor(loseFull * Math.min(1, facts.ownTurns / CARD_LOSE_FULL_TURNS));
+  if (outcome === 'surrender') return Math.min(loseFull, Math.round(facts.kos * loseFull / 3));
+  return 0;
+};
+const cardCpuReward = (daily, levelId, outcome, facts = cardResultFacts(null)) => {
+  const base = cardCpuBasePoint(levelId, outcome, facts);
   const room = Math.max(0, CARD_CPU_DAILY_MAX - daily.cpuPoint);
   const got = Math.min(base, room);
-  const bonus = outcome === 'win' && !daily.firstWin ? CARD_FIRST_WIN_BONUS : 0;
+  const bonus = outcome === 'win' && base > 0 && !daily.firstWin ? CARD_FIRST_WIN_BONUS : 0;
   return {
     base,
     got,
     capped: got < base,
     bonus,
     total: got + bonus,
+    short: facts.ownTurns < CARD_MIN_OWN_TURNS,
     daily: {
       ...daily,
       cpuPoint: daily.cpuPoint + got,
-      firstWin: daily.firstWin || outcome === 'win'
+      firstWin: daily.firstWin || bonus > 0
     }
   };
 };
@@ -85569,7 +85622,7 @@ const CardBattleBoard = ({
     onClose: () => setDiscard(null)
   }), quit && !tutorial && React.createElement(ConfirmSheet, {
     title: "投了しますか？",
-    message: '投了すると負けになります(カードポイントはもらえません)',
+    message: '投了すると負けになります(カードポイントとクイック周回は、倒した相手のモンスターの数に応じて少しだけ)',
     confirmLabel: "投了する",
     danger: true,
     onCancel: () => setQuit(false),
@@ -85603,7 +85656,8 @@ const CardBattleScreen = ({
   exitLabel = '戻る',
   seenStoryIds = [],
   debug = false,
-  onBgm
+  onBgm,
+  onQuickLoops
 }) => {
   const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
   const [save, setSave] = useState(null);
@@ -85682,7 +85736,8 @@ const CardBattleScreen = ({
       db: db,
       game: game,
       onFinish: async ({
-        outcome
+        outcome,
+        st
       }) => {
         if (game.tutorial) {
           const fin = cardTutorialFinish(save.tutorial, outcome === 'tutorialDone' ? 'done' : 'skip', Date.now());
@@ -85701,7 +85756,9 @@ const CardBattleScreen = ({
           setView('result');
           return;
         }
-        const reward = cardCpuReward(cardNormalizeDaily(save.daily, cardTodayJst()), game.level, outcome);
+        const facts = cardResultFacts(st, CARD_ME);
+        const reward = cardCpuReward(cardNormalizeDaily(save.daily, cardTodayJst()), game.level, outcome, facts);
+        const loops = cardCpuLoops(game.level, outcome, facts);
         const rec = cardNormalizeRecord(save.record);
         const nextRecord = {
           ...rec,
@@ -85728,13 +85785,24 @@ const CardBattleScreen = ({
           record: nextRecord,
           unlocked: nextUnlocked
         });
+        let quick = null;
+        if (loops > 0 && onQuickLoops) {
+          try {
+            quick = await onQuickLoops(loops);
+          } catch (_) {
+            quick = null;
+          }
+        }
         setResult({
           outcome,
           reward,
           opened,
           saved: ok,
           who: game.who,
-          level: game.level
+          level: game.level,
+          loops,
+          quick,
+          facts
         });
         onBgm && onBgm(null);
         onNavigate('CARD_TOP');
@@ -85983,6 +86051,7 @@ const CardBattleScreen = ({
       "data-mh-screen": true,
       "data-card-top": "result",
       "data-card-outcome": result.outcome,
+      "data-card-gain": result.demo ? undefined : r.total,
       className: SCREEN_SHELL_CLASS
     }, React.createElement(ScreenHead, {
       title: win ? '勝ち！' : result.outcome === 'surrender' ? '投了' : '負け…',
@@ -86010,13 +86079,27 @@ const CardBattleScreen = ({
       className: "mt-1 text-[12px] font-bold text-slate-300"
     }, CARD_LEVEL_LABEL[result.level], "の", win ? '勝ち' : result.outcome === 'lose' ? '負け' : '投了', ": ", r.got, r.capped ? `(今日の上限${CARD_CPU_DAILY_MAX}に届きました)` : ''), r.bonus > 0 && React.createElement("div", {
       className: "text-[12px] font-bold text-slate-300"
-    }, "今日はじめての勝ち: +", r.bonus), React.createElement("div", {
+    }, "今日はじめての勝ち: +", r.bonus), r.short && React.createElement("div", {
+      className: "mt-1 text-[12px] font-bold text-slate-400"
+    }, "自分の番を3回やる前に終わったので、カードポイントとクイック周回は入りません"), !r.short && result.loops > 0 && React.createElement("div", {
+      "data-card-quick-loops": result.quick ? result.loops : 0,
+      className: "mt-2 rounded-xl border border-sky-300/40 bg-sky-500/10 px-2 py-1.5"
+    }, React.createElement("div", {
+      className: "text-[13px] font-black text-sky-200"
+    }, "クイック周回 ", result.loops, "周ぶん", result.quick ? '' : '(今回は入りません)'), result.quick ? React.createElement("div", {
+      className: "mt-0.5 text-[11px] font-bold text-slate-300"
+    }, "裏で回しているクイック(", result.quick.quickDifficulty && quickDifficultySetting(result.quick.quickDifficulty)?.label || 'AUTO設定', ")を、", result.loops, "周クリアしたことにしました") : React.createElement("div", {
+      className: "mt-0.5 text-[11px] font-bold text-slate-400",
+      style: JA_WRAP_STYLE
+    }, "AUTO設定でクイックを回していて、その難易度をクイックで通したことがあると入ります")), React.createElement("div", {
       className: "mt-1 text-[12px] font-bold text-slate-300"
     }, "いまのカードポイント: ", save.point), result.opened && React.createElement("div", {
       className: "mt-1 text-[13px] font-black text-emerald-300"
     }, CARD_LEVEL_LABEL[result.opened], "が選べるようになりました！"), !result.saved && React.createElement("div", {
       className: "mt-1 text-[12px] font-bold text-rose-300"
-    }, "保存できませんでした(カードポイントは増えていません)"))), React.createElement("div", {
+    }, "保存できませんでした(カードポイントは増えていません)"), result.demo && React.createElement("div", {
+      className: "mt-1 text-[11px] font-bold text-slate-400"
+    }, "(デバッグの見本です。何も保存していません)"))), React.createElement("div", {
       className: `${SCREEN_FOOTER_CLASS} grid grid-cols-2 gap-2`
     }, React.createElement("button", {
       type: "button",
@@ -86107,6 +86190,35 @@ const CardBattleScreen = ({
   }, "ドラが教えるチュートリアル"))), debug && React.createElement("div", {
     className: `${SCREEN_PANEL_FLAT_CLASS} space-y-1`
   }, React.createElement("div", {
+    className: "grid grid-cols-2 gap-1"
+  }, [['in', '結果の見本(周回が入る)'], ['out', '結果の見本(入らない)']].map(([k, label]) => React.createElement("button", {
+    key: k,
+    type: "button",
+    "data-card-result-demo": k,
+    className: "mh-button mh-button-secondary min-h-[40px] rounded-xl border border-white/20 bg-slate-800 text-[11px] font-black",
+    onClick: () => {
+      const facts = {
+        ownTurns: 8,
+        kos: 2
+      };
+      const reward = cardCpuReward(cardNormalizeDaily(null, cardTodayJst()), 'normal', 'win', facts);
+      setResult({
+        demo: true,
+        outcome: 'win',
+        reward,
+        opened: null,
+        saved: true,
+        who: 'mua',
+        level: 'normal',
+        loops: cardCpuLoops('normal', 'win', facts),
+        quick: k === 'in' ? {
+          quickDifficulty: 'Normal'
+        } : null,
+        facts
+      });
+      setView('result');
+    }
+  }, label))), React.createElement("div", {
     className: "text-[11px] font-bold text-slate-400"
   }, "デバッグ: カードバトルの記録(mh_card_* の新しいキーだけ)"), React.createElement("button", {
     type: "button",
@@ -112617,7 +112729,8 @@ function MonsterHeroGame() {
       exitLabel: cardOrigin === 'debug' ? 'デバッグ設定へ戻る' : 'HOMEへ戻る',
       seenStoryIds: rhythmEventStorySeen || [],
       debug: cardOrigin === 'debug',
-      onBgm: setCardBgm
+      onBgm: setCardBgm,
+      onQuickLoops: awardBackQuickLoops
     }), gameState === 'RAID_JACK_DEBUG' && React.createElement(RaidJackDebugScreen, {
       onBack: () => setGameState('DEBUG_SETTINGS'),
       raidForce: raidJackDebugForce,
