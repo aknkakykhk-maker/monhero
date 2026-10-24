@@ -26,13 +26,17 @@ const SPECIES = [
   ['henger', 'henger', 'ヘンガー'], ['mew', 'mew', 'ニャー'], ['plant', 'plant', 'プラント'], ['worm', 'worm', 'ワーム'],
   ['dragon', 'dragon', 'ドラゴン'], ['zilla', 'zilla', 'グジラ'], ['metalner', 'metalner', 'メタルナー'], ['joker', 'joker', 'ジョーカー'],
   ['arrowhead', 'arrowhead', 'アローヘッド'], ['centaur', 'centaur', 'ケンタロウス'], ['colorpandora', 'colorpandora', 'コロペンドラ'],
+  ['durahan', 'durahan', 'デュラハン'],
 ];
 const SPECIES_BY_NAME = Object.fromEntries(SPECIES.map(([, id, name]) => [name, id]));
 // 弾(台帳 #3413)。番号の離れた技(357〜)は第4弾。全モンスター・ブリーダーは番号で分ける(推定)
 const WAVE_OF_SPECIES = {
   tiger: 1, gali: 1, golem: 1, suezo: 1, pixie: 1, dino: 1, naga: 1, hare: 1, mocchi: 1,
   monol: 2, henger: 2, plant: 2, dragon: 2, phoenix: 2,
+
   jell: 3, mew: 3, worm: 3, zilla: 3,
+  // デュラハン(2026-10-24 #3421 で届いた)。legendcup の抜粋で第3弾と分かっていた(設計書 4-2)
+  durahan: 3,
   metalner: 4, joker: 4, arrowhead: 4, centaur: 4, colorpandora: 4,
 };
 const waveOfNo = (no) => (no <= 128 ? 1 : no <= 260 ? 2 : no <= 280 ? 3 : 4);
@@ -71,6 +75,8 @@ const SENTENCE_RULES = [
   [/^ちから技を回避する。$/, () => ({ t: 'evade', kinds: ['pow'] })],
   [/^かしこさ技を回避する。$/, () => ({ t: 'evade', kinds: ['int'] })],
   [/^ちから技で与えられるダメージを[−-](\d+)する。$/, (m) => ({ t: 'reduce', kinds: ['pow'], n: +m[1] })],
+  [/^かしこさ技で与えられるダメージを[−-](\d+)する。$/, (m) => ({ t: 'reduce', kinds: ['int'], n: +m[1] })],
+  [/^この技は自分のライフが(\d+)以下の時に使用できる。$/, (m) => ({ t: 'useWhen', lifeMax: +m[1] })],
   [/^ちから技か、かしこさ技で与えられるダメージを[−-](\d+)する。$/, (m) => ({ t: 'reduce', kinds: both, n: +m[1] })],
   [/^ちから技で受けるダメージの半分\(切り捨て\)をマイナスする。$/, () => ({ t: 'reduceHalf', kinds: ['pow'] })],
   [/^ちから技で与えられるダメージを0にする。$/, () => ({ t: 'reduceAll', kinds: ['pow'] })],
@@ -97,6 +103,10 @@ const BY_NO = {
   12: [{ t: 'evade', kinds: ['pow'] }, { t: 'nextTurnMult', kinds: ['pow'], n: 2 }, { t: 'becomeAir' }],
   // 底力: ライフ2以下の子の技に付ける(技を使う前に)。その技のダメージ2倍
   110: [{ t: 'attach', when: { lifeMax: 2 } }, { t: 'attachMult', n: 2 }],
+  // デュラハンの精神集中: 次のターン(相手の番)が終わるまで、相手にガッツを減らされない
+  245: [{ t: 'gutsGuard' }],
+  // デュラハンの静の構え: 次の自分のかしこさ技1回を2倍。ダメージを受けたら消える
+  246: [{ t: 'charge', kinds: ['int'], n: 2 }],
 };
 
 const splitSentences = (text) => (text || '').split(/(?<=。)/).map((s) => s.trim()).filter(Boolean);
@@ -151,7 +161,7 @@ const build = () => {
     if (m.excluded) continue;
     monsters[m.no] = { no: m.no, species: `hybrid:${m.no}`, name: m.name, type: TYPE[m.type], life: m.life, variant: null,
       main: SPECIES_BY_NAME[m.main] || m.main, sub: SPECIES_BY_NAME[m.sub] || m.sub, wave: 'hybrid', img: m.img.replace(/\.jpg$/, ''),
-      // デュラハンがメインの子はデュラハンの技がまだ無いので準備中(設計書 4-2)
+      // メインの種族の技が届いていない子は準備中(設計書 4-2。デュラハンは 2026-10-24 に届いた)
       ready: !!SPECIES_BY_NAME[m.main] };
   }
   // スターター(元の表どおり。頭突き → 頭つき はカードの文字に合わせる)

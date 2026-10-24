@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0e41979d69771b67
+// source-sha256: 1e10837c5e2b047f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-24 11:49";
+const BUILD_DATE = "2026-10-24 11:55";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -82217,7 +82217,8 @@ const cardCreateGame = (db, {
         lastCard: null,
         stunTurn: -1,
         airUntil: -1,
-        mult: null
+        mult: null,
+        charge: null
       };
     });
     const deck = sh.list;
@@ -82229,7 +82230,8 @@ const cardCreateGame = (db, {
       hand,
       guts: [],
       discard: [],
-      breederUsed: false
+      breederUsed: false,
+      gutsGuardUntil: -1
     };
   });
   const st = {
@@ -82308,6 +82310,10 @@ const cardPayGuts = (st, p, n) => {
 };
 const cardLoseGuts = (st, p, n) => {
   const me = st.players[p];
+  if (me.gutsGuardUntil >= st.turn) {
+    cardLog(st, `${me.name}のガッツは減らされなかった(精神集中)`);
+    return 0;
+  }
   const k = n === 'all' ? me.guts.length : Math.min(n, me.guts.length);
   for (let i = 0; i < k; i++) me.discard.push(me.guts.pop());
   return k;
@@ -82407,6 +82413,8 @@ const cardAttackOptions = (db, st) => {
     }
     me.mons.forEach((mon, mi) => {
       if (!cardUsableBy(card, mon) || !cardMonCanAttack(db, st, p, mi, card)) return;
+      const uw = cardEff(card, 'useWhen');
+      if (uw && uw.lifeMax !== undefined && mon.life > uw.lifeMax) return;
       const combo = cardEff(card, 'combo');
       const sets = [[hi]];
       if (combo) {
@@ -82621,6 +82629,10 @@ const cardStartAttack = (db, st, act) => {
     mult *= mon.mult.n;
     mon.mult = null;
   }
+  if (mon && mon.charge && mon.charge.kinds.includes(main.kind)) {
+    mult *= mon.charge.n;
+    mon.charge = null;
+  }
   const targets = cardHasEff(main, 'area') ? cardAreaTargets(st, p, mi, main) : [act.target];
   st.pending = {
     attacker: p,
@@ -82686,6 +82698,7 @@ const cardResolveTarget = (db, st) => {
   }
   if (cardHasEff(main, 'nonLethal')) dmg = Math.max(0, Math.min(dmg, target.life - 1));
   target.life = Math.max(0, target.life - dmg);
+  if (dmg > 0) target.charge = null;
   const guarded = pd.reduce > 0 || pd.reduceHalf || pd.reduceAll || !!pd.reflect || pd.cover !== null;
   const res = {
     p: t.p,
@@ -82731,6 +82744,7 @@ const cardResolveTarget = (db, st) => {
   if (evaded) pd.evadedAny = true;
   if (reflected > 0 && atkMon && !atkMon.ko) {
     atkMon.life = Math.max(0, atkMon.life - reflected);
+    atkMon.charge = null;
     cardEvent(st, {
       t: 'hit',
       p: pd.attacker,
@@ -82777,6 +82791,7 @@ const cardFinishAttack = (db, st) => {
   if (sa) self += sa.n;
   if (self > 0 && atkMon && !atkMon.ko) {
     atkMon.life = Math.max(0, atkMon.life - self);
+    atkMon.charge = null;
     cardEvent(st, {
       t: 'hit',
       p: pd.attacker,
@@ -82832,6 +82847,17 @@ const cardApplySpecial = (db, st, p, mi, card, target) => {
         n: h
       });
       cardLog(st, `${m.name}のライフが${h}回復`);
+    }
+    if (e.t === 'gutsGuard') {
+      me.gutsGuardUntil = st.turn + 1;
+      cardLog(st, `${me.name}は次のターンまでガッツを減らされない`);
+    }
+    if (e.t === 'charge' && mi >= 0) {
+      me.mons[mi].charge = {
+        kinds: e.kinds,
+        n: e.n
+      };
+      cardLog(st, `${me.mons[mi].name}は次のかしこさ技のダメージが${e.n}倍`);
     }
     if (e.t === 'forbidThisTurn') {
       st.forbid[cardOther(p)] = [...(st.forbid[cardOther(p)] || []), ...e.kinds];
@@ -83084,6 +83110,12 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
       if (e.t === 'draw') score += e.n * 0.9;
       if (e.t === 'peekHand') score += 0.4 * habit.disrupt;
       if (e.t === 'discardOpp') score += 1.4 * habit.disrupt;
+      if (e.t === 'gutsGuard') score += st.players[cardOther(p)].hand.length >= 3 ? 0.4 : 0.1;
+      if (e.t === 'charge') {
+        const m = opt.mon >= 0 ? me.mons[opt.mon] : null;
+        const big = m && !m.charge ? Math.max(0, ...me.hand.map(n => cardOf(db, n)).filter(c => c && e.kinds.includes(c.kind) && cardUsableBy(c, m)).map(c => c.damage || 0)) : 0;
+        score += big * 0.5;
+      }
       if (e.t === 'forbidThisTurn') {
         const followUp = cardAttackOptions(db, st).filter(o => o.type === 'attack' && cardOf(db, me.hand[o.hand[0]]).kind !== 'spe').length;
         score += followUp ? 1.5 * habit.disrupt : 0;
@@ -83102,6 +83134,7 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
     });
     const mon = opt.mon >= 0 ? me.mons[opt.mon] : null;
     if (mon && mon.mult && mon.mult.turn === st.turn && mon.mult.kinds.includes(main.kind)) dmg *= mon.mult.n;
+    if (mon && mon.charge && mon.charge.kinds.includes(main.kind)) dmg *= mon.charge.n;
     const targets = cardHasEff(main, 'area') ? cardAreaTargets(st, p, opt.mon, main) : [opt.target];
     targets.forEach(t => {
       const tm = st.players[t.p].mons[t.m];
@@ -83313,6 +83346,8 @@ const cardAiCardValue = (card, habit) => {
       if (e.t === 'discardOpp') v += e.n * 0.8 * habit.disrupt;
       if (e.t === 'peekHand') v += 0.2 * habit.disrupt;
       if (e.t === 'forbidThisTurn') v += 0.8 * habit.disrupt;
+      if (e.t === 'gutsGuard') v += 0.3;
+      if (e.t === 'charge') v += 1.2;
     });
     return v - card.guts * 0.3;
   }

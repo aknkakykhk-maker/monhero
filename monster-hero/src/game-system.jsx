@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: bb286b461bac027b
+// generated-sha256: 85de40d4ad252a08
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-24 11:49"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-24 11:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -49730,6 +49730,8 @@ const loadAssistantChatMemoFor = async (assistantId) => {
 //         chain(names) 同じターンに続けて使える / combo(names,table) 同時に使う種類の数でダメージが変わる / nonLethal とどめにならない
 //   付ける: attach(when) 技に付けて使う(攻撃の回数に数えない) / attachMult(n) 付けた技のダメージn倍
 //   特殊: draw(n) / peekHand / discardOpp(n) 相手が選んで捨てる / heal(n) 味方1体 / forbidThisTurn(kinds) このターン相手は回避(防御)を使えない
+//         gutsGuard 次のターンまでガッツを減らされない / charge(kinds,n) 次のその種類の技1回をn倍(ダメージを受けると消える)
+//   使える時: useWhen(lifeMax) 自分のライフがその数以下のときだけ出せる
 //   守り: evade(kinds,minGuts) / reduce(kinds,n) / reduceHalf(kinds) 半分(切り捨て)減らす / reduceAll(kinds) / reflect(kinds,frac,keep) はね返す /
 //         cover 味方への1回分を自分が受ける / nextTurnMult(kinds,n) 次の自分のターンの技n倍 / becomeAir 次のターン終わりまで空中
 //
@@ -49801,11 +49803,11 @@ const cardCreateGame = (db, { decks, names = ['あなた', 'あいて'], seed = 
     const mons = d.monsters.map((no) => {
       const m = cardMonsterOf(db, no);
       return { no, species: m.species, name: m.name, main: m.main || null, sub: m.sub || null, type: m.type, life: m.life, max: m.life,
-        ko: false, attacks: 0, lastCard: null, stunTurn: -1, airUntil: -1, mult: null };
+        ko: false, attacks: 0, lastCard: null, stunTurn: -1, airUntil: -1, mult: null, charge: null };
     });
     const deck = sh.list;
     const hand = deck.splice(deck.length - CARD_BATTLE_HAND_MAX, CARD_BATTLE_HAND_MAX).reverse();
-    return { name: names[i] || `P${i + 1}`, mons, deck, hand, guts: [], discard: [], breederUsed: false };
+    return { name: names[i] || `P${i + 1}`, mons, deck, hand, guts: [], discard: [], breederUsed: false, gutsGuardUntil: -1 };
   });
   const st = { v: 1, seed: s, turn: 0, first, active: cardOther(first), phase: 'setup', players, pending: null, forbid: {}, winner: null, reason: null, log: [], events: [] };
   cardLog(st, `${players[first].name}が先攻、${players[cardOther(first)].name}が後攻`);
@@ -49849,6 +49851,7 @@ const cardPayGuts = (st, p, n) => {
 };
 const cardLoseGuts = (st, p, n) => {
   const me = st.players[p];
+  if (me.gutsGuardUntil >= st.turn) { cardLog(st, `${me.name}のガッツは減らされなかった(精神集中)`); return 0; }
   const k = n === 'all' ? me.guts.length : Math.min(n, me.guts.length);
   for (let i = 0; i < k; i++) me.discard.push(me.guts.pop());
   return k;
@@ -49927,6 +49930,7 @@ const cardAttackOptions = (db, st) => {
     }
     me.mons.forEach((mon, mi) => {
       if (!cardUsableBy(card, mon) || !cardMonCanAttack(db, st, p, mi, card)) return;
+      const uw = cardEff(card, 'useWhen'); if (uw && uw.lifeMax !== undefined && mon.life > uw.lifeMax) return; // 最終奥義など: ライフが少ないときだけ
       const combo = cardEff(card, 'combo');
       // 同時に使う札の組(右爪・左爪・ツノ)。いちばん小さい手札の番号の札を主にして、ほかを足す
       const sets = [[hi]];
@@ -50053,6 +50057,7 @@ const cardStartAttack = (db, st, act) => {
   let mult = 1;
   used.forEach((n) => { const am = cardEff(cardOf(db, n), 'attachMult'); if (am) mult *= am.n; });
   if (mon && mon.mult && mon.mult.turn === st.turn && mon.mult.kinds.includes(main.kind)) { mult *= mon.mult.n; mon.mult = null; }
+  if (mon && mon.charge && mon.charge.kinds.includes(main.kind)) { mult *= mon.charge.n; mon.charge = null; } // 静の構え
   const targets = cardHasEff(main, 'area') ? cardAreaTargets(st, p, mi, main) : [act.target];
   st.pending = { attacker: p, defender: cardOther(p), mon: mi, main: mainNo, used, cost, base: dmg, mult, targets, ti: 0,
     evaded: false, reduce: 0, reduceHalf: false, reduceAll: false, reflect: null, cover: null, hitAny: false, evadedAny: false, results: [] };
@@ -50096,6 +50101,7 @@ const cardResolveTarget = (db, st) => {
   }
   if (cardHasEff(main, 'nonLethal')) dmg = Math.max(0, Math.min(dmg, target.life - 1));
   target.life = Math.max(0, target.life - dmg);
+  if (dmg > 0) target.charge = null; // 静の構えはダメージを受けると終わる
   const guarded = pd.reduce > 0 || pd.reduceHalf || pd.reduceAll || !!pd.reflect || pd.cover !== null;
   const res = { p: t.p, m: t.m, dmg, evaded, reflected };
   pd.results.push(res);
@@ -50113,6 +50119,7 @@ const cardResolveTarget = (db, st) => {
   if (evaded) pd.evadedAny = true;
   if (reflected > 0 && atkMon && !atkMon.ko) {
     atkMon.life = Math.max(0, atkMon.life - reflected);
+    atkMon.charge = null;
     cardEvent(st, { t: 'hit', p: pd.attacker, m: pd.mon, dmg: reflected, reflect: true });
     cardLog(st, `${reflected}ダメージをはね返した`);
   }
@@ -50140,6 +50147,7 @@ const cardFinishAttack = (db, st) => {
   const sa = cardEff(main, 'selfDamage'); if (sa) self += sa.n;
   if (self > 0 && atkMon && !atkMon.ko) {
     atkMon.life = Math.max(0, atkMon.life - self);
+    atkMon.charge = null;
     cardEvent(st, { t: 'hit', p: pd.attacker, m: pd.mon, dmg: self, self: true });
     cardLog(st, `${atkMon.name}も${self}ダメージを受けた`);
     if (atkMon.life <= 0) cardKo(st, pd.attacker, pd.mon);
@@ -50166,6 +50174,8 @@ const cardApplySpecial = (db, st, p, mi, card, target) => {
     if (e.t === 'peekHand') { cardEvent(st, { t: 'peek', p, hand: opp.hand.slice() }); cardLog(st, `${me.name}は相手の手札を見た`); }
     if (e.t === 'discardOpp') { st.pendingDiscard = { p: cardOther(p), n: Math.min(e.n, opp.hand.length) }; if (!st.pendingDiscard.n) st.pendingDiscard = null; }
     if (e.t === 'heal' && target) { const m = me.mons[target.m]; const h = Math.min(e.n, m.max - m.life); m.life += h; cardEvent(st, { t: 'heal', p, m: target.m, n: h }); cardLog(st, `${m.name}のライフが${h}回復`); }
+    if (e.t === 'gutsGuard') { me.gutsGuardUntil = st.turn + 1; cardLog(st, `${me.name}は次のターンまでガッツを減らされない`); }
+    if (e.t === 'charge' && mi >= 0) { me.mons[mi].charge = { kinds: e.kinds, n: e.n }; cardLog(st, `${me.mons[mi].name}は次のかしこさ技のダメージが${e.n}倍`); }
     if (e.t === 'forbidThisTurn') { st.forbid[cardOther(p)] = [...(st.forbid[cardOther(p)] || []), ...e.kinds]; cardLog(st, `このターン、相手は${e.kinds.includes('dge') ? '回避' : '防御'}を使えない`); }
   });
 };
@@ -50311,6 +50321,12 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
       if (e.t === 'draw') score += e.n * 0.9;
       if (e.t === 'peekHand') score += 0.4 * habit.disrupt;
       if (e.t === 'discardOpp') score += 1.4 * habit.disrupt;
+      if (e.t === 'gutsGuard') score += st.players[cardOther(p)].hand.length >= 3 ? 0.4 : 0.1;
+      if (e.t === 'charge') {
+        const m = opt.mon >= 0 ? me.mons[opt.mon] : null;
+        const big = m && !m.charge ? Math.max(0, ...me.hand.map((n) => cardOf(db, n)).filter((c) => c && e.kinds.includes(c.kind) && cardUsableBy(c, m)).map((c) => c.damage || 0)) : 0;
+        score += big * 0.5;
+      }
       if (e.t === 'forbidThisTurn') {
         const followUp = cardAttackOptions(db, st).filter((o) => o.type === 'attack' && cardOf(db, me.hand[o.hand[0]]).kind !== 'spe').length;
         score += followUp ? 1.5 * habit.disrupt : 0;
@@ -50323,6 +50339,7 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
     opt.hand.forEach((i) => { const am = cardEff(cardOf(db, me.hand[i]), 'attachMult'); if (am) dmg *= am.n; });
     const mon = opt.mon >= 0 ? me.mons[opt.mon] : null;
     if (mon && mon.mult && mon.mult.turn === st.turn && mon.mult.kinds.includes(main.kind)) dmg *= mon.mult.n;
+    if (mon && mon.charge && mon.charge.kinds.includes(main.kind)) dmg *= mon.charge.n;
     const targets = cardHasEff(main, 'area') ? cardAreaTargets(st, p, opt.mon, main) : [opt.target];
     targets.forEach((t) => {
       const tm = st.players[t.p].mons[t.m];
@@ -50479,6 +50496,8 @@ const cardAiCardValue = (card, habit) => {
       if (e.t === 'discardOpp') v += e.n * 0.8 * habit.disrupt;
       if (e.t === 'peekHand') v += 0.2 * habit.disrupt;
       if (e.t === 'forbidThisTurn') v += 0.8 * habit.disrupt;
+      if (e.t === 'gutsGuard') v += 0.3;
+      if (e.t === 'charge') v += 1.2;
     });
     return v - card.guts * 0.3;
   }
