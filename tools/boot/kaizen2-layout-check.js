@@ -42,9 +42,10 @@ check('M3 結果の「刻み」の説明は言葉の切れ目で折る', play.in
 check('M3 MAX COMBO は1行のまま(狭い画面は字の間を詰める)', /whitespace-nowrap text-\[10px\] font-black tracking-\[\.2em\] max-\[359px\]:tracking-\[\.06em\][^>]*>MAX COMBO</.test(play));
 
 const home = P('69-screen-home.jsx');
-check('HOME: ジャックの吹き出しは、狭い画面で横へ置いて札の下へ逃がせる(104・96の幅と、横で下げる候補がある)・セリフは言葉の切れ目で折る',
-  home.includes('HOME_RAID_SAY_WIDTHS = Object.freeze([184, 168, 152, 144])') && home.includes('HOME_RAID_SAY_NARROW_WIDTHS = Object.freeze([...HOME_RAID_SAY_WIDTHS, 136])') && home.includes('for (let y = from + 6; y <= to; y += 6) tries.push({ side, left, top: y')
-  && home.includes('<span data-home-raid-say-text style={{ display:\'block\', ...JA_LABEL_STYLE }}>{jaWrap(speech)}</span>'));
+check('HOME: ジャックの吹き出しは、どの幅でもかぼちゃの上(帯より上)に置く(横へは置かない・置けないときだけ136・124の幅)・セリフは言葉の切れ目で折る',
+  home.includes('HOME_RAID_SAY_WIDTHS = Object.freeze([184, 168, 152, 144])') && home.includes('HOME_RAID_SAY_SMALL_WIDTHS = Object.freeze([136, 124])') && home.includes('const widths = [...HOME_RAID_SAY_WIDTHS, ...HOME_RAID_SAY_SMALL_WIDTHS];')
+  && home.includes("if (band && hit({ ...r, bottom: r.bottom + tail }, band, 2)) area += 1e6;") && !/side: '(right|left)'|\['right', 'left'\]/.test(home)
+  && home.includes('<span data-home-raid-say-text style={{ display:\'block\', ...JA_LABEL_STYLE }}>{jaWrap(speech)}'));
 
 // N5(2026-10-21 改善部の見直し・その3): 大きな所持数は9桁(1億)から縮めて出す。保存値は変えない・押すと細かい数
 {
@@ -76,7 +77,8 @@ const html = fs.readFileSync(path.join(ROOT, 'monster-hero/index.html'), 'utf8')
 check('文の最後の1〜2字だけ落とさない CSS(画面全体 pretty・助手の吹き出し balance・演奏中は外す)が index.html にある',
   html.includes('.mh-app { text-wrap: pretty; }') && html.includes('.mh-app [data-bubble-text] { text-wrap: balance; }') && html.includes('[data-rhythm-play-area], [data-rhythm-play-area] * { text-wrap: wrap; }'));
 const assistant = P('21-assistant.jsx');
-check('M7 HOME: 幅360未満で吹き出しの文を2行まで', assistant.includes('<span data-bubble-text ') && html.includes('@media (max-width: 359px) { .mh-home-assistant [data-bubble-text] { display: -webkit-box; -webkit-line-clamp: 2;'));
+// 2026-10-24 窓口「幅320で『…』で切れている」で、2行で切るのをやめた。字を9pxにして全文を出し、伸びたぶん札を下げる(home-layout-check)
+check('M7 HOME: 幅360未満でみゅあの文は9px・切らずに全部出す', assistant.includes('<span data-bubble-text ') && html.includes('@media (max-width: 359px) { .mh-home-assistant [data-bubble-text] { font-size: 9px; } }') && !html.includes('-webkit-line-clamp: 2;'));
 
 check('M8 結果: 幅360未満で判定の表と MAX COMBO を詰める', play.includes('max-[359px]:gap-y-0 max-[359px]:py-1.5 max-[359px]:text-[13px]') && play.includes('max-[359px]:text-[28px]'));
 check('M8 結果: 下の帯の上に、続きがあるあいだだけ「▼ ビートP・ライブログ」の印', /const RhythmResultMoreHint=\(\{label\}\)=>/.test(play) && play.includes('<RhythmResultMoreHint label=')

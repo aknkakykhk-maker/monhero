@@ -15,6 +15,7 @@
 //
 // 【やること】
 // ① 生成物(GENERATED)は main 側を取ってから、最後に build.js で parts・data から作り直す(中身は何でもよい)
+// ①-2 index.html は、ぶつかりが build.js の書き込む数値の行だけのときに限ってこちら側を取る(手で書いた CSS を消さない)
 // ② 10-core.jsx は、ぶつかりが BUILD_DATE の1行だけのときに限ってこちら側を取る(build.js が付け直す)
 // ③ 更新履歴は、こちらが先頭に足した項目だけを、main 側の並びの日時の合う所へ差し込む(main 側の並びは動かさない)。
 //    こちらが先頭以外を書き換えていたら、手で直してもらう
@@ -36,7 +37,6 @@ const CORE = 'monster-hero/src/parts/10-core.jsx';
 const GENERATED = [
   'monster-hero/src/game-system.jsx',
   'monster-hero/game-system.compiled.js',
-  'monster-hero/index.html',
   'monster-hero/version.json',
   'monster-hero/tailwind.css',
   'monster-hero/asset-manifest.json',
@@ -51,6 +51,26 @@ const say = (s) => console.log(s);
 const stop = (msg, code = 1) => { console.error(`\nNG: ${msg}`); process.exit(code); };
 const conflicted = () => git('diff', '--name-only', '--diff-filter=U').out.split('\n').filter(Boolean);
 const MARK_RE = /^(<{7}( |$)|={7}$|>{7}( |$))/m;
+
+// ---- ①-2 index.html: 手で書く CSS・起動の処理と、build.js が書き込む数値(読み込むファイルの大きさ・GAME_BUILD・?v=)が同じファイルにある。
+// 以前は生成物として main 側を丸ごと取っていたので、ぶつかっていない所まで、こちらの CSS が消えた(2026-10-24。#3222 でも起きた)。
+// ぶつかりが数値の行だけならこちら側を取り(build.js が付け直す)、それ以外の行がぶつかったら手で直してもらう
+const STAMPED_HTML = 'monster-hero/index.html';
+const HTML_STAMP_LINE = /\/\* BOOT_SIZES \*\/|^\s*var GAME_BUILD = '|\?v=[0-9a-z]+/;
+function resolveStampedHtml() {
+  const file = path.join(ROOT, STAMPED_HTML);
+  const src = fs.readFileSync(file, 'utf8');
+  const hunk = /<{7}[^\n]*\n([\s\S]*?)={7}\n([\s\S]*?)>{7}[^\n]*\n/g;
+  let onlyStamps = true;
+  const out = src.replace(hunk, (all, ours, theirs) => {
+    const lines = (t) => t.split('\n').filter(l => l.trim());
+    if (![...lines(ours), ...lines(theirs)].every(l => HTML_STAMP_LINE.test(l))) onlyStamps = false;
+    return ours;
+  });
+  if (!onlyStamps) return false;
+  fs.writeFileSync(file, out);
+  return !MARK_RE.test(out);
+}
 
 // ---- ② 10-core.jsx: ぶつかりが BUILD_DATE の行だけなら、こちら側を取る ----
 function resolveCore() {
@@ -160,6 +180,10 @@ function main() {
   const manual = [];
   for (const f of list) {
     if (GENERATED.includes(f)) { git('checkout', '--theirs', '--', f); git('add', '--', f); say(`  生成物(作り直す): ${f}`); continue; }
+    if (f === STAMPED_HTML) {
+      if (resolveStampedHtml()) { git('add', '--', f); say(`  読み込みの数値だけ(作り直す): ${f}`); continue; }
+      manual.push(`${f}(読み込みの数値の行以外もぶつかっている。両方の CSS・処理を残す)`); continue;
+    }
     if (f === CORE) {
       if (resolveCore()) { git('add', '--', f); say(`  BUILD_DATE だけ(作り直す): ${f}`); continue; }
       manual.push(`${f}(BUILD_DATE 以外もぶつかっている)`); continue;
