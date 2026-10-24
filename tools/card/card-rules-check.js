@@ -16,7 +16,9 @@ const load = () => {
     + `${fs.readFileSync(path.join(GAME, 'src', 'parts', '89-card-pack.jsx'), 'utf8')}\n;\n`
     // 85 は画面の部品(SkillFxMotion)を使うので、ルールだけで動く「動きの見本」の所だけ読む
     + `${fs.readFileSync(path.join(GAME, 'src', 'parts', '85-card-battle-motion.jsx'), 'utf8').split('// ---- 動きの見本')[1].replace(/^[^\n]*\n/, '')}\n;\n`
-    + 'this.E = { CARD_BATTLE_DATA, cardCreateGame, cardApplyAction, cardLegalActions, cardAttackOptions, cardGuardOptions, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardSimulate, CARD_AI_LEVELS, CARD_AI_HABITS, CARD_AI_DECKS, cardDeckProblems, cardNormalizeCollection, cardNormalizeDecks, cardNormalizePoint, cardNormalizeDaily, cardNormalizeRecord, cardNormalizeCpuUnlocked, cardGrantStarter, cardCpuReward, cardUnlockAfterWin, cardMotionDemo, cardMotionDemoAction, cardTutorialGame, cardTutorialMutate, cardTutorialAllow, cardTutorialDone, cardTutorialCpu, CARD_TUTORIAL_STAGES, cardTutorialCopyProblems, cardTutorialFinish, CARD_TUTORIAL_LINES, cardCpuLoops, cardOwnTurns, cardDeckAddReason, cardDeckReady, cardDecksPut, cardDecksRemove, CARD_PACKS, cardOpenPack, cardBuyPacks, cardPackRates, cardBuyStarter, cardMonRarity, cardNormalizePity, cardNormalizeShop, CARD_SAVE_KEYS, cardRecordAfter, cardRankRow, cardWeekKeyJst, normalizeCardBgm, normalizeCardSettings };';
+    // よけ方・盾の数字・ブリーダーのカードの見分け(ルールだけで決まる所)も読む
+    + `${(() => { const m = fs.readFileSync(path.join(GAME, 'src', 'parts', '85-card-battle-motion.jsx'), 'utf8'); return m.slice(m.indexOf('// ブリーダーのカードか'), m.indexOf('// 動きの長さ')); })()}\n;\n`
+    + 'this.E = { CARD_BATTLE_DATA, cardOf, cardIsBreederCard, cardDodgeIsJump, cardGuardLabel, cardCreateGame, cardApplyAction, cardLegalActions, cardAttackOptions, cardGuardOptions, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardSimulate, CARD_AI_LEVELS, CARD_AI_HABITS, CARD_AI_DECKS, cardDeckProblems, cardNormalizeCollection, cardNormalizeDecks, cardNormalizePoint, cardNormalizeDaily, cardNormalizeRecord, cardNormalizeCpuUnlocked, cardGrantStarter, cardCpuReward, cardUnlockAfterWin, cardMotionDemo, cardMotionDemoAction, cardTutorialGame, cardTutorialMutate, cardTutorialAllow, cardTutorialDone, cardTutorialCpu, CARD_TUTORIAL_STAGES, cardTutorialCopyProblems, cardTutorialFinish, CARD_TUTORIAL_LINES, cardCpuLoops, cardOwnTurns, cardDeckAddReason, cardDeckReady, cardDecksPut, cardDecksRemove, CARD_PACKS, cardOpenPack, cardBuyPacks, cardPackRates, cardBuyStarter, cardMonRarity, cardNormalizePity, cardNormalizeShop, CARD_SAVE_KEYS, cardRecordAfter, cardRankRow, cardWeekKeyJst, normalizeCardBgm, normalizeCardSettings };';
   vm.runInContext(src, ctx, { filename: '82-card-battle-core.jsx' });
   return ctx.E;
 };
@@ -297,9 +299,18 @@ const motionDemo = () => {
     st = E.cardApplyAction(db, st, a);
     ok(st, `動きの見本の手がだめ: ${JSON.stringify(a)}`);
     if (!st) return;
-    st.events.forEach((e) => { if (e.t === 'hit') seen.add(e.evaded ? 'よける' : e.guarded ? '防ぐ' : '受ける'); if (e.t === 'ko') seen.add('倒れる'); });
+    st.events.forEach((e) => {
+      if (e.t === 'hit') seen.add(e.reflect ? 'はね返す' : e.evaded ? 'よける' : e.guarded ? '防ぐ' : '受ける');
+      if (e.t === 'ko') seen.add('倒れる');
+      if (e.t === 'guard' && E.cardDodgeIsJump(E.cardOf(db, e.card))) seen.add('跳んでよける');
+      if (e.t === 'guard' && E.cardGuardLabel(E.cardOf(db, e.card)) === '−3') seen.add('盾の数字');
+      if (e.t === 'use' && E.cardIsBreederCard(db, e.cards[0])) seen.add('ブリーダー');
+      if (e.t === 'use' && (E.cardOf(db, e.cards[0]) || {}).kind === 'spe') seen.add('特殊');
+    });
+    // ライフが0の子は、どの手のあとでも必ず倒れている(はね返されて0になった子が残っていた・2026-10-24)
+    st.players.forEach((pl, p) => pl.mons.forEach((m, i) => ok(m.life > 0 || m.ko, `ライフ0なのに倒れていない(${p}-${i} ${m.name}・${JSON.stringify(s)} のあと)`)));
   }
-  ok(['よける', '防ぐ', '受ける', '倒れる'].every((k) => seen.has(k)), `動きの見本で出ない動きがある(${[...seen].join('・')})`);
+  ok(['よける', '防ぐ', '受ける', '倒れる', 'はね返す', '跳んでよける', '盾の数字', 'ブリーダー', '特殊'].every((k) => seen.has(k)), `動きの見本で出ない動きがある(${[...seen].join('・')})`);
 };
 // 練習試合(86): 同じ名前3枚まで・人の手と みゅあの決まった手で最後まで通せる・100 は1回だけ
 // パック(区切り2): 中身・確率・天井・だぶり・C-060C と準備中が出ない・スターターを買う
