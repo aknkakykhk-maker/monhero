@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 03869e238b862c34
+// generated-sha256: bd24442672679003
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -52148,7 +52148,9 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null }) => {
   // 背の低い画面(iPhone SE など)では、絵と手札を少し小さくして、まんなかの場所を残す
   const [compact, setCompact] = useState(() => typeof window !== 'undefined' && window.innerHeight < 760);
   // もっと小さい画面(幅 360 未満の 320 幅・高さ 620 未満)。名前と札を1行に縮め、絵と手札の字も小さくする(2026-10-24 改善部の点検 V1)
-  const [tiny, setTiny] = useState(() => typeof window !== 'undefined' && (window.innerWidth < 360 || window.innerHeight < 620));
+  //   練習試合は、ドラの説明の窓が手札の上に場所を取るので、背の低い画面(compact)のときも小さい段にする(SE で「守らない」が下に押し出された)
+  const [tinyScreen, setTiny] = useState(() => typeof window !== 'undefined' && (window.innerWidth < 360 || window.innerHeight < 620));
+  const tiny = tinyScreen || (compact && !!tutorial);
   useEffect(() => { const on = () => { setCompact(window.innerHeight < 760); setTiny(window.innerWidth < 360 || window.innerHeight < 620); }; window.addEventListener('resize', on); return () => window.removeEventListener('resize', on); }, []);
   const lastLine = useRef({});
   const spoke = useRef({ turn: -1, n: 0 });
@@ -52557,7 +52559,7 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null }) => {
         <div className="pointer-events-none absolute inset-x-6 top-1/2 h-px bg-gradient-to-r from-transparent via-violet-300/40 to-transparent"/>
         {action && (
           <div key={action.key} data-card-action className={`relative z-[1] flex items-center gap-2 rounded-2xl border border-amber-300/50 bg-black/55 px-2 ${compact ? "py-0.5" : "py-1"} shadow-lg`}>
-            {!tiny && action.cards.slice(0, 3).map((no, i) => { const c = cardOf(db, no); return c ? <img key={i} src={CARD_IMG(c.img)} alt={c.name} className={`${compact ? 'h-[40px] w-[29px]' : 'h-[64px] w-[46px]'} rounded-[4px] object-cover shadow`}/> : null; })}
+            {!compact && action.cards.slice(0, 3).map((no, i) => { const c = cardOf(db, no); return c ? <img key={i} src={CARD_IMG(c.img)} alt={c.name} className={`${compact ? 'h-[40px] w-[29px]' : 'h-[64px] w-[46px]'} rounded-[4px] object-cover shadow`}/> : null; })}
             <div className="text-[13px] font-black leading-tight">{action.who}<span className="block text-[15px] text-amber-200">「{action.cards.map((n) => (cardOf(db, n) || {}).name).join('＋')}」</span></div>
           </div>
         )}
@@ -52671,7 +52673,7 @@ const cardArtBox = (src) => new Promise((resolve) => {
   img.onerror = () => resolve(null);
   img.src = src;
 });
-const CardAssistantArt = ({ src, alt, className = '' }) => {
+const CardAssistantArt = ({ src, alt, className = '', style = null }) => {
   const ref = useRef(null);
   const [fit, setFit] = useState(null);
   useEffect(() => {
@@ -52688,7 +52690,7 @@ const CardAssistantArt = ({ src, alt, className = '' }) => {
     return () => { alive = false; };
   }, [src]);
   return (
-    <div ref={ref} data-card-assistant-art data-card-art-h={fit ? fit.artH : undefined} data-card-art-w={fit ? fit.artW : undefined} className={`relative shrink-0 overflow-hidden ${className}`}>
+    <div ref={ref} data-card-assistant-art data-card-art-h={fit ? fit.artH : undefined} data-card-art-w={fit ? fit.artW : undefined} className={`relative shrink-0 overflow-hidden ${className}`} style={style || undefined}>
       {fit
         ? <img src={src} alt={alt} draggable={false} className="absolute max-w-none" style={{ width: `${fit.width}px`, left: `${fit.left}px`, top: `${fit.top}px` }}/>
         : <img src={src} alt={alt} draggable={false} className="h-full w-full object-contain object-bottom"/>}
@@ -52919,7 +52921,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
           </div>
           {a && (
             <div className="flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2">
-              <CardAssistantArt src={assistantFullImage(a, 'wink')} alt={a.name} className="h-[150px] w-[42%]"/>
+              {/* 背の低い画面(SE)では絵を低くして、下の「使うデッキ」の欄まで1画面に入れる(2026-10-24 改善部の点検 V2) */}
+              <CardAssistantArt src={assistantFullImage(a, 'wink')} alt={a.name} className="w-[42%]" style={{ height: 'min(150px, 17vh)' }}/>
               <div className="min-w-0 flex-1 pb-2">
                 <div className="text-[11px] font-bold text-slate-400">{a.tagline}</div>
                 <div className="mt-1 rounded-2xl border-2 bg-white px-2 py-1 text-[13px] font-extrabold leading-snug text-[#1f1333]" style={{ borderColor: a.accent, ...JA_WRAP_STYLE }}>{line ? line.text : ''}</div>

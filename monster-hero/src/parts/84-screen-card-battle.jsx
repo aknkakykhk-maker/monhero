@@ -282,7 +282,9 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null }) => {
   // 背の低い画面(iPhone SE など)では、絵と手札を少し小さくして、まんなかの場所を残す
   const [compact, setCompact] = useState(() => typeof window !== 'undefined' && window.innerHeight < 760);
   // もっと小さい画面(幅 360 未満の 320 幅・高さ 620 未満)。名前と札を1行に縮め、絵と手札の字も小さくする(2026-10-24 改善部の点検 V1)
-  const [tiny, setTiny] = useState(() => typeof window !== 'undefined' && (window.innerWidth < 360 || window.innerHeight < 620));
+  //   練習試合は、ドラの説明の窓が手札の上に場所を取るので、背の低い画面(compact)のときも小さい段にする(SE で「守らない」が下に押し出された)
+  const [tinyScreen, setTiny] = useState(() => typeof window !== 'undefined' && (window.innerWidth < 360 || window.innerHeight < 620));
+  const tiny = tinyScreen || (compact && !!tutorial);
   useEffect(() => { const on = () => { setCompact(window.innerHeight < 760); setTiny(window.innerWidth < 360 || window.innerHeight < 620); }; window.addEventListener('resize', on); return () => window.removeEventListener('resize', on); }, []);
   const lastLine = useRef({});
   const spoke = useRef({ turn: -1, n: 0 });
@@ -691,7 +693,7 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null }) => {
         <div className="pointer-events-none absolute inset-x-6 top-1/2 h-px bg-gradient-to-r from-transparent via-violet-300/40 to-transparent"/>
         {action && (
           <div key={action.key} data-card-action className={`relative z-[1] flex items-center gap-2 rounded-2xl border border-amber-300/50 bg-black/55 px-2 ${compact ? "py-0.5" : "py-1"} shadow-lg`}>
-            {!tiny && action.cards.slice(0, 3).map((no, i) => { const c = cardOf(db, no); return c ? <img key={i} src={CARD_IMG(c.img)} alt={c.name} className={`${compact ? 'h-[40px] w-[29px]' : 'h-[64px] w-[46px]'} rounded-[4px] object-cover shadow`}/> : null; })}
+            {!compact && action.cards.slice(0, 3).map((no, i) => { const c = cardOf(db, no); return c ? <img key={i} src={CARD_IMG(c.img)} alt={c.name} className={`${compact ? 'h-[40px] w-[29px]' : 'h-[64px] w-[46px]'} rounded-[4px] object-cover shadow`}/> : null; })}
             <div className="text-[13px] font-black leading-tight">{action.who}<span className="block text-[15px] text-amber-200">「{action.cards.map((n) => (cardOf(db, n) || {}).name).join('＋')}」</span></div>
           </div>
         )}
