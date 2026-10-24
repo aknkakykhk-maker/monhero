@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f3bed96f938ab14d
+// generated-sha256: 77e8aa95dd04fa14
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-25 07:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-25 07:19"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -51114,10 +51114,9 @@ const cardGrantStarter = (db, { collection, decks, point, starter }, kitId, now)
 //   クイック周回: 勝ち … 難易度の周 / 負け … 勝ちの半分 × (自分の番の数 ÷ 10。10回で満額)/ 降参 … 倒した数 × 負けの3分の1(0体なら0)
 //   ★かかった時間は見ない(止めて放っておいても増えない)。自分の番を3回やる前に終わった試合は、どちらも0(すぐ降参・すぐ負けで回せないように)
 //   ★負けのポイントを難易度で増やさないのは、MASTER でわざと早く負けるのがいちばん得にならないようにするため
-//   1日の上限は CPU 1,500(その日はじめての勝ちの +50 は上限の外)
+//   1日の上限は設けない(社長 2026-10-24。#3531 で取り消し)。その日はじめての勝ちの +50 だけは1日1回
 const CARD_CPU_LOSE_POINT = 25;
 const CARD_SURRENDER_POINT_PER_KO = 10;
-const CARD_CPU_DAILY_MAX = 1500;
 const CARD_FIRST_WIN_BONUS = 50;
 const CARD_MIN_OWN_TURNS = 3;
 const CARD_LOSE_FULL_TURNS = 10;
@@ -51152,10 +51151,10 @@ const cardCpuLoops = (levelId, outcome, facts = cardResultFacts(null)) => {
 };
 const cardCpuReward = (daily, levelId, outcome, facts = cardResultFacts(null)) => {
   const base = cardCpuBasePoint(levelId, outcome, facts);
-  const room = Math.max(0, CARD_CPU_DAILY_MAX - daily.cpuPoint);
-  const got = Math.min(base, room);
+  // 上限なし(何戦してももらえる)。daily.cpuPoint は前のまま数えるだけで、もらえる数には使わない(保存の形は変えない・決まり⑦)
+  const got = base;
   const bonus = outcome === 'win' && base > 0 && !daily.firstWin ? CARD_FIRST_WIN_BONUS : 0;
-  return { base, got, capped: got < base, bonus, total: got + bonus, short: facts.ownTurns < CARD_MIN_OWN_TURNS, daily: { ...daily, cpuPoint: daily.cpuPoint + got, firstWin: daily.firstWin || bonus > 0 } };
+  return { base, got, capped: false, bonus, total: got + bonus, short: facts.ownTurns < CARD_MIN_OWN_TURNS, daily: { ...daily, cpuPoint: daily.cpuPoint + got, firstWin: daily.firstWin || bonus > 0 } };
 };
 // 勝ったら次の難易度を開く(NORMAL→HARD→EXPERT→MASTER)
 const cardUnlockAfterWin = (unlocked, levelId) => {
@@ -52092,7 +52091,7 @@ const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact
 
 // ---- 対戦の盤面 ----
 const CardBattleBoard = ({ db, game, onFinish, quickRun = null }) => {
-  // 演出の設定(オプション)。はやい … 相手の考える間と、決着から結果までを短くする
+  // 演出の設定(オプション)。はやい … 相手が考える時間と、決着から結果までを短くする
   const settings = normalizeCardSettings(game.settings);
   const pace = settings.speed === 'fast' ? 0.5 : 1;
   // マルチ対戦(91-card-battle-multi.jsx)では、相手は助手ではなくブリーダー。名前とアイコンだけを出す
@@ -52918,7 +52917,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
           <div className={SCREEN_PANEL_FLAT_CLASS}>
             <div className="text-[12px] font-bold text-slate-300">使うデッキ: <b className="text-white">{activeDeck ? activeDeck.name : 'なし'}</b></div>
             {deckIssues.length > 0 && <div className="mt-1 text-[12px] font-bold text-rose-300" style={JA_WRAP_STYLE}>{jaWrap(deckIssues.join('・'))}</div>}
-            <div className="mt-1 text-[11px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{cardRuleLine(`今日もらったカードポイント《(助手と対戦)》: 《${save.daily.cpuPoint} / ${CARD_CPU_DAILY_MAX}》${save.daily.firstWin ? '' : '・《今日はじめての勝ちで +50》'}`)}</div>
+            {!save.daily.firstWin && <div className="mt-1 text-[11px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{cardRuleLine('《今日はじめての勝ちで +50》')}</div>}
           </div>
           {notice && <p className="text-[12px] font-bold text-amber-200" style={JA_LABEL_STYLE}>{jaWrap(notice)}</p>}
         </div>
@@ -52999,7 +52998,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
           )}
           <div className={SCREEN_PANEL_CLASS}>
             <div className="text-[13px] font-black text-amber-200">もらったカードポイント: {r.total}</div>
-            <div className="mt-1 text-[12px] font-bold text-slate-300">{CARD_LEVEL_LABEL[result.level]}の{win ? '勝ち' : result.outcome === 'lose' ? '負け' : '投了'}: {r.got}{r.capped ? `(今日の上限${CARD_CPU_DAILY_MAX}に届きました)` : ''}</div>
+            <div className="mt-1 text-[12px] font-bold text-slate-300">{CARD_LEVEL_LABEL[result.level]}の{win ? '勝ち' : result.outcome === 'lose' ? '負け' : '投了'}: {r.got}</div>
             {r.bonus > 0 && <div className="text-[12px] font-bold text-slate-300">今日はじめての勝ち: +{r.bonus}</div>}
             {r.short && <div className="mt-1 text-[12px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('自分の番を3回やる前に終わったので、カードポイントとクイック周回は入りません')}</div>}
             {!r.short && result.loops > 0 && (
@@ -53101,7 +53100,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
               <button type="button" data-card-auto-pass aria-pressed={save.settings.autoPass} onClick={() => { Audio_.fgSe.tap(); void persist({ settings: { ...save.settings, autoPass: !save.settings.autoPass } }); }}
                 className={`min-h-[36px] shrink-0 rounded-full border px-3 text-[11px] font-black ${save.settings.autoPass ? 'border-emerald-300 bg-emerald-700/85 text-white' : 'border-white/25 bg-slate-900/75 text-slate-200'}`}>{save.settings.autoPass ? 'ON' : 'OFF'}</button>
             </div>
-            <p className="mt-1.5 text-[10px] font-bold leading-snug text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('はやいにすると、相手の考える間と、勝ち負けが決まってから結果までが短くなります')}</p>
+            <p className="mt-1.5 text-[10px] font-bold leading-snug text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('はやいにすると、相手が考える時間と、勝ち負けが決まってから結果までが短くなります')}</p>
           </div>
         </div>
       </div>

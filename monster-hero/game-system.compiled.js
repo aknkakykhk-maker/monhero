@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 75b440f8a7ea5a4c
+// source-sha256: 80ef2c42453919d8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-25 07:08";
+const BUILD_DATE = "2026-10-25 07:19";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -84292,7 +84292,6 @@ const cardGrantStarter = (db, {
 };
 const CARD_CPU_LOSE_POINT = 25;
 const CARD_SURRENDER_POINT_PER_KO = 10;
-const CARD_CPU_DAILY_MAX = 1500;
 const CARD_FIRST_WIN_BONUS = 50;
 const CARD_MIN_OWN_TURNS = 3;
 const CARD_LOSE_FULL_TURNS = 10;
@@ -84343,13 +84342,12 @@ const cardCpuLoops = (levelId, outcome, facts = cardResultFacts(null)) => {
 };
 const cardCpuReward = (daily, levelId, outcome, facts = cardResultFacts(null)) => {
   const base = cardCpuBasePoint(levelId, outcome, facts);
-  const room = Math.max(0, CARD_CPU_DAILY_MAX - daily.cpuPoint);
-  const got = Math.min(base, room);
+  const got = base;
   const bonus = outcome === 'win' && base > 0 && !daily.firstWin ? CARD_FIRST_WIN_BONUS : 0;
   return {
     base,
     got,
-    capped: got < base,
+    capped: false,
     bonus,
     total: got + bonus,
     short: facts.ownTurns < CARD_MIN_OWN_TURNS,
@@ -87233,10 +87231,10 @@ const CardBattleScreen = ({
     }, activeDeck ? activeDeck.name : 'なし')), deckIssues.length > 0 && React.createElement("div", {
       className: "mt-1 text-[12px] font-bold text-rose-300",
       style: JA_WRAP_STYLE
-    }, jaWrap(deckIssues.join('・'))), React.createElement("div", {
+    }, jaWrap(deckIssues.join('・'))), !save.daily.firstWin && React.createElement("div", {
       className: "mt-1 text-[11px] font-bold text-slate-400",
       style: JA_WRAP_STYLE
-    }, cardRuleLine(`今日もらったカードポイント《(助手と対戦)》: 《${save.daily.cpuPoint} / ${CARD_CPU_DAILY_MAX}》${save.daily.firstWin ? '' : '・《今日はじめての勝ちで +50》'}`))), notice && React.createElement("p", {
+    }, cardRuleLine('《今日はじめての勝ちで +50》'))), notice && React.createElement("p", {
       className: "text-[12px] font-bold text-amber-200",
       style: JA_LABEL_STYLE
     }, jaWrap(notice))), React.createElement("div", {
@@ -87419,7 +87417,7 @@ const CardBattleScreen = ({
       className: "text-[13px] font-black text-amber-200"
     }, "もらったカードポイント: ", r.total), React.createElement("div", {
       className: "mt-1 text-[12px] font-bold text-slate-300"
-    }, CARD_LEVEL_LABEL[result.level], "の", win ? '勝ち' : result.outcome === 'lose' ? '負け' : '投了', ": ", r.got, r.capped ? `(今日の上限${CARD_CPU_DAILY_MAX}に届きました)` : ''), r.bonus > 0 && React.createElement("div", {
+    }, CARD_LEVEL_LABEL[result.level], "の", win ? '勝ち' : result.outcome === 'lose' ? '負け' : '投了', ": ", r.got), r.bonus > 0 && React.createElement("div", {
       className: "text-[12px] font-bold text-slate-300"
     }, "今日はじめての勝ち: +", r.bonus), r.short && React.createElement("div", {
       className: "mt-1 text-[12px] font-bold text-slate-400",
@@ -87640,7 +87638,7 @@ const CardBattleScreen = ({
     }, save.settings.autoPass ? 'ON' : 'OFF')), React.createElement("p", {
       className: "mt-1.5 text-[10px] font-bold leading-snug text-slate-400",
       style: JA_LABEL_STYLE
-    }, jaWrap('はやいにすると、相手の考える間と、勝ち負けが決まってから結果までが短くなります')))));
+    }, jaWrap('はやいにすると、相手が考える時間と、勝ち負けが決まってから結果までが短くなります')))));
   }
   if (view === 'ranking') {
     return React.createElement(CardRankingBoard, {

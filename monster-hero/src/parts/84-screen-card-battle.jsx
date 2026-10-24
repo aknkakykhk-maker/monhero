@@ -227,7 +227,7 @@ const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact
 
 // ---- 対戦の盤面 ----
 const CardBattleBoard = ({ db, game, onFinish, quickRun = null }) => {
-  // 演出の設定(オプション)。はやい … 相手の考える間と、決着から結果までを短くする
+  // 演出の設定(オプション)。はやい … 相手が考える時間と、決着から結果までを短くする
   const settings = normalizeCardSettings(game.settings);
   const pace = settings.speed === 'fast' ? 0.5 : 1;
   // マルチ対戦(91-card-battle-multi.jsx)では、相手は助手ではなくブリーダー。名前とアイコンだけを出す
@@ -1053,7 +1053,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
           <div className={SCREEN_PANEL_FLAT_CLASS}>
             <div className="text-[12px] font-bold text-slate-300">使うデッキ: <b className="text-white">{activeDeck ? activeDeck.name : 'なし'}</b></div>
             {deckIssues.length > 0 && <div className="mt-1 text-[12px] font-bold text-rose-300" style={JA_WRAP_STYLE}>{jaWrap(deckIssues.join('・'))}</div>}
-            <div className="mt-1 text-[11px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{cardRuleLine(`今日もらったカードポイント《(助手と対戦)》: 《${save.daily.cpuPoint} / ${CARD_CPU_DAILY_MAX}》${save.daily.firstWin ? '' : '・《今日はじめての勝ちで +50》'}`)}</div>
+            {!save.daily.firstWin && <div className="mt-1 text-[11px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{cardRuleLine('《今日はじめての勝ちで +50》')}</div>}
           </div>
           {notice && <p className="text-[12px] font-bold text-amber-200" style={JA_LABEL_STYLE}>{jaWrap(notice)}</p>}
         </div>
@@ -1134,7 +1134,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
           )}
           <div className={SCREEN_PANEL_CLASS}>
             <div className="text-[13px] font-black text-amber-200">もらったカードポイント: {r.total}</div>
-            <div className="mt-1 text-[12px] font-bold text-slate-300">{CARD_LEVEL_LABEL[result.level]}の{win ? '勝ち' : result.outcome === 'lose' ? '負け' : '投了'}: {r.got}{r.capped ? `(今日の上限${CARD_CPU_DAILY_MAX}に届きました)` : ''}</div>
+            <div className="mt-1 text-[12px] font-bold text-slate-300">{CARD_LEVEL_LABEL[result.level]}の{win ? '勝ち' : result.outcome === 'lose' ? '負け' : '投了'}: {r.got}</div>
             {r.bonus > 0 && <div className="text-[12px] font-bold text-slate-300">今日はじめての勝ち: +{r.bonus}</div>}
             {r.short && <div className="mt-1 text-[12px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('自分の番を3回やる前に終わったので、カードポイントとクイック周回は入りません')}</div>}
             {!r.short && result.loops > 0 && (
@@ -1236,7 +1236,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
               <button type="button" data-card-auto-pass aria-pressed={save.settings.autoPass} onClick={() => { Audio_.fgSe.tap(); void persist({ settings: { ...save.settings, autoPass: !save.settings.autoPass } }); }}
                 className={`min-h-[36px] shrink-0 rounded-full border px-3 text-[11px] font-black ${save.settings.autoPass ? 'border-emerald-300 bg-emerald-700/85 text-white' : 'border-white/25 bg-slate-900/75 text-slate-200'}`}>{save.settings.autoPass ? 'ON' : 'OFF'}</button>
             </div>
-            <p className="mt-1.5 text-[10px] font-bold leading-snug text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('はやいにすると、相手の考える間と、勝ち負けが決まってから結果までが短くなります')}</p>
+            <p className="mt-1.5 text-[10px] font-bold leading-snug text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('はやいにすると、相手が考える時間と、勝ち負けが決まってから結果までが短くなります')}</p>
           </div>
         </div>
       </div>

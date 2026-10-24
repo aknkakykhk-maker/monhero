@@ -228,14 +228,14 @@ const decksAndSaves = () => {
     ok(JSON.stringify(E.normalizeCardBgm(null, isT)) === '{"cpu":"auto","pvp":"ichika_battle"}' && E.normalizeCardBgm({ cpu: 'nope', pvp: 'nope' }, isT).cpu === 'auto' && E.normalizeCardBgm({ cpu: 'melo_toriko' }, isT).cpu === 'melo_toriko', '対戦のBGMの読み込みで、既定・知らない曲の戻しが合わない');
     ok(JSON.stringify(E.normalizeCardSettings(null)) === '{"speed":"normal","autoPass":true}' && E.normalizeCardSettings({ speed: 'fast', autoPass: false }).autoPass === false && E.normalizeCardSettings({ speed: 'x' }).speed === 'normal', '演出の設定の読み込みが合わない');
   }
-  // カードポイントとクイック周回(案A・台帳 #3484): 1日1,500まで・はじめての勝ちは+50
+  // カードポイントとクイック周回(案A・台帳 #3484): 1日の上限なし(台帳 #3531)・はじめての勝ちは+50
   const full = { ownTurns: 10, kos: 0 };
   let daily = E.cardNormalizeDaily(null, '2026-10-24');
   const r1 = E.cardCpuReward(daily, 'master', 'win', full);
   ok(r1.total === 250 && r1.daily.firstWin, `はじめての MASTER の勝ちは 200+50 のはず(${r1.total})`);
   daily = { ...r1.daily, cpuPoint: 1480 };
   const r2 = E.cardCpuReward(daily, 'master', 'win', full);
-  ok(r2.got === 20 && r2.capped && r2.bonus === 0, '1日の上限で止まらない');
+  ok(r2.got === 200 && !r2.capped && r2.bonus === 0 && r2.total === 200, '1日の上限が残っている(1,480 もらったあとでも満額のはず)');
   ok(E.cardCpuReward(daily, 'easy', 'surrender', { ownTurns: 5, kos: 0 }).total === 0, '倒さずに降参でカードポイントが出てしまう');
   ok(E.cardCpuReward(E.cardNormalizeDaily(null, 'd'), 'easy', 'surrender', { ownTurns: 5, kos: 2 }).total === 20, '2体倒して降参は20のはず');
   ok(E.cardCpuReward(E.cardNormalizeDaily(null, 'd'), 'easy', 'surrender', { ownTurns: 5, kos: 5 }).total === 25, '降参は負けの25を超えない');
