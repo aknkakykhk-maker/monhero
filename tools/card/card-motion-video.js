@@ -86,6 +86,11 @@ const serve = () => new Promise((resolve) => {
     await page.locator('[data-card-top="starter"]').waitFor({ timeout: 20000 });
     await page.locator('[data-card-kit="powerful"]').click();
     await page.getByRole('button', { name: /にする$/ }).click();
+    // スターターを選ぶと練習試合が始まるので、飛ばしてトップへ
+    await page.locator('[data-card-tutor]').waitFor({ timeout: 20000 });
+    await page.locator('[data-card-quit]').click();
+    await page.locator('[data-confirm-sheet]').locator('xpath=..').getByRole('button', { name: '飛ばす' }).click();
+    await page.getByRole('button', { name: 'トップへ' }).click();
     await page.locator('[data-card-top="top"]').waitFor({ timeout: 20000 });
     const t0 = Date.now();
     await page.locator('[data-card-motion-demo]').click();

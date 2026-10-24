@@ -208,6 +208,19 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
 
     // ⑤ 自分の番を進める(使えるカードを出す → 狙える相手 → 攻撃おわり → ガッツ)
     let myActions = 0, guards = 0, gutsTurns = 0, shotGuard = false, shotTarget = false, motionSeen = false, poseSeen = new Set();
+    // ⑫ 運ぶ操作: 指(マウス)で手札を持って、置ける所まで運んで離す
+    let dragAttack = null, dragGuts = null, dragNoGlow = null, dragTries = 0;
+    const center = async (loc) => { const b = await loc.boundingBox(); return b ? { x: b.x + b.width / 2, y: b.y + b.height / 2 } : null; };
+    const carry = async (from, to, mid = null, onMid = null) => {
+      await page.mouse.move(from.x, from.y); await page.mouse.down();
+      await page.mouse.move(from.x + 4, from.y - 20, { steps: 4 });
+      if (mid) { await page.mouse.move(mid.x, mid.y, { steps: 6 }); if (onMid) await onMid(); }
+      await page.mouse.move(to.x, to.y, { steps: 8 });
+      const glow = await page.locator('[data-card-mon].ring-emerald-300, [data-card-guts-drop].ring-emerald-300').count();
+      if (SHOT && !dragAttack) await shot(page, '15-drag');
+      await page.mouse.up();
+      return glow;
+    };
     const deadline = Date.now() + 150000;
     while (Date.now() < deadline && gutsTurns < 6) {
       const mode = await page.locator('[data-card-battle]').getAttribute('data-card-mode').catch(() => null);
@@ -223,6 +236,16 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
         await page.getByRole('button', { name: '守らない' }).click();
         continue;
       }
+      if (mode === 'guts' && dragGuts === null) {
+        const card = page.locator('[data-card-hand-card="0"]');
+        const from = await center(card); const to = await center(page.locator('[data-card-guts-drop]'));
+        const glow = await carry(from, to);
+        await page.waitForTimeout(150);
+        dragGuts = glow > 0 && /-translate-y-3/.test(await card.getAttribute('class'));
+        await page.getByRole('button', { name: /ターン終了$/ }).click();
+        gutsTurns += 1;
+        continue;
+      }
       if (mode === 'guts') {
         const n = await page.locator('[data-card-hand-card]').count();
         if (n > 2) await page.locator('[data-card-hand-card="0"]').click();
@@ -234,6 +257,23 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
         // 明るい(使える)手札を1枚出す
         const usable = await page.locator('[data-card-hand-card]').evaluateAll((els) => els.map((e, i) => (e.className.includes('opacity-45') ? -1 : i)).filter((i) => i >= 0));
         let acted = false;
+        if (dragAttack === null && usable.length) {
+          // 技を相手のモンスターまで運ぶ。途中で自分の場(置けない所)の上を通るときは光らない
+          const logBefore = await page.locator('[data-card-log]').innerText();
+          const from = await center(page.locator(`[data-card-hand-card="${usable[0]}"]`));
+          const mine = await center(page.locator('[data-card-mon="0-0"]'));
+          let midGlow = 0;
+          const tries = ['1-0', '1-1', '1-2'];
+          for (const t of tries) {
+            const to = await center(page.locator(`[data-card-mon="${t}"]`));
+            const glow = await carry(from, to, mine, async () => { midGlow += await page.locator('[data-card-mon].ring-emerald-300').count(); });
+            await page.waitForTimeout(300);
+            const changed = (await page.locator('[data-card-log]').innerText()) !== logBefore || (await page.locator('[data-card-battle]').getAttribute('data-card-mode')) !== 'attack';
+            if (changed) { dragAttack = glow > 0; dragNoGlow = midGlow === 0; myActions += 1; break; }
+          }
+          if (dragAttack === null) { dragTries += 1; if (dragTries >= 3) dragAttack = false; else { await page.getByRole('button', { name: '攻撃おわり → ガッツへ' }).click().catch(() => {}); } }
+          continue;
+        }
         for (const i of usable) {
           await page.locator(`[data-card-hand-card="${i}"]`).click();
           await page.waitForTimeout(150);
@@ -261,6 +301,9 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       }
       await page.waitForTimeout(300);
     }
+    check('⑫ 技を相手のモンスターまで運んで離すと使える(置ける所の上で光る)', dragAttack === true, `${dragAttack}(試した回数 ${dragTries + (dragAttack === true ? 1 : 0)})`);
+    check('⑫ 置けない所(自分の場)の上では光らない', dragNoGlow !== false, String(dragNoGlow));
+    check('⑫ ガッツの置き場まで運ぶと、そのカードをガッツにする組に入れる', dragGuts === true, String(dragGuts));
     check(`⑨ ${VW}×${VH} で相手の場・まんなか・自分の場・手札・ボタンが重ならない`, layoutSeen.length === 0, layoutSeen.join(' / '));
     check('⑩ 技を出すと、攻撃した子がモンヒロの技の動きをする', motionSeen || poseSeen.has('attack'), `見えた動き: ${[...poseSeen].join('・')}`);
     check('⑤ 自分の番を何ターンも進められる(技・守り・ガッツ)', gutsTurns >= 3 && errors.length === 0, `技 ${myActions} 回・守りの番 ${guards} 回・ターン終了 ${gutsTurns} 回`);
