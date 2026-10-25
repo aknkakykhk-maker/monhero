@@ -39,6 +39,12 @@
 //         lastWish 自分をKO、残りライフの枚数を捨て札の新しいほうからガッツへ / gutsZeroBoth / deckToGuts / oppHandToDeckBottom・oppDraw(n) /
 //         gutsToDeckShuffle / selfHurt(n) 味方1体 / oppGutsLoss(n) / refresh 手札を全部捨てて同じ数引く / millOpp(n) / discardBothHands
 //         ★山札を切り直すのは、その山札の持ち主の種(players[i].rng)。マルチで相手の端末と同じ順になる(場の種 st.seed は使わない)
+//         ---- 区切り5: 守りの新しい形・持ちょう ----
+//         守り: redirect 目標を自分から他の味方へ(act.to。移した先はもう守れない)/ endure(kinds) ライフ1で残る / evadeAll 全員に当たる技を全員が回避 /
+//               shield 1回の攻撃で味方が受けるダメージを全部この子が / noGutsLoss / takeMult(kinds,n) 受けるダメージn倍 /
+//               liftAllies・waterAll 狙われていなくても出せる(自分以外の味方を空中に・味方を全員このターン水中に)
+//         特殊: safe 次の自分の番まで、どこからのダメージも0 / form 空中か地上かを選ぶ(act.form)
+//         ★守りで持ちょうが変わったら、当てる直前に「当たるか」を見直す(当たらなければ0)
 //   使える時: useWhen(lifeMax) 自分のライフがその数以下のときだけ出せる
 //   守り: evade(kinds,minGuts) / reduce(kinds,n) / reduceHalf(kinds) 半分(切り捨て)減らす / reduceAll(kinds) / reflect(kinds,frac,keep) はね返す /
 //         cover 味方への1回分を自分が受ける / nextTurnMult(kinds,n) 次の自分のターンの技n倍 / becomeAir 次のターン終わりまで空中 /
@@ -95,7 +101,7 @@ const cardUsableBy = (card, mon) => {
   return false;
 };
 // いまの特徴(空中・地上・水中)。ジャンプなどで期限つきで空中になる
-const cardMonType = (mon, turn) => (mon.airUntil >= turn ? 'air' : mon.type);
+const cardMonType = (mon, turn) => (mon.waterUntil >= turn ? 'water' : mon.airUntil >= turn ? 'air' : mon.type); // ひきずりこむ(水中)は空中より先
 
 const cardLog = (st, text, extra) => {
   st.log.push({ turn: st.turn, text, ...(extra || {}) });
@@ -363,7 +369,9 @@ const cardAttackOptions = (db, st) => {
         const cost = cardActionCost(db, st, p, me.hand, idxs);
         if (cost > guts) return;
         if (card.kind === 'spe') {
-          cardSpeTargets(db, st, p, mi, card).forEach((target) => out.push({ type: 'attack', mon: mi, hand: idxs, target }));
+          // 変形・トランスフォーム: 空中か地上かを選ぶ(手に form を持たせる)
+          const forms = cardHasEff(card, 'form') ? ['air', 'ground'] : [undefined];
+          cardSpeTargets(db, st, p, mi, card).forEach((target) => forms.forEach((form) => out.push(form ? { type: 'attack', mon: mi, hand: idxs, target, form } : { type: 'attack', mon: mi, hand: idxs, target })));
           return;
         }
         if (cardHasEff(card, 'area')) {
@@ -391,6 +399,9 @@ const cardGuardOptions = (db, st) => {
   const forbid = st.forbid[q] || [];
   const fl = pd.flags || {};
   if (fl.attachNoGuard) return []; // 瞬殺: 回避も防御も出せない
+  if (pd.redirected) return []; // 隠れるで目標を移したら、移した先の子はもう守れない
+  const isArea = cardHasEff(atkCard, 'area');
+  const evadeBlocked = cardHasEff(atkCard, 'noEvade') || pd.noEvade || fl.attachNoEvade;
   const guts = me.guts.length;
   const out = [];
   // 挟み撃ち: このターンもう守りを出した子は、守れない
@@ -402,6 +413,30 @@ const cardGuardOptions = (db, st) => {
     if (c.guts > guts) return;
     if (fl.attachNoZeroGuard && !c.guts) return; // 集中
     if (fl.bind && c.name === fl.bind) return; // 影縛りで名指しされた札
+    // ---- 区切り5 ----
+    // 狙われていなくても出せる守り(吹き上げる・ひきずりこむ): 味方のだれかが狙われているとき、カードの持ち主が出す
+    if (cardHasEff(c, 'liftAllies') || cardHasEff(c, 'waterAll')) {
+      if (tgt.p === q) me.mons.forEach((m, mi) => { if (cardUsableBy(c, m) && !guardedNow(m)) out.push({ type: 'guard', hand: hi, mon: mi }); });
+      return;
+    }
+    // 盾になる: かばう(cover)と同じく、狙われた味方の代わりの子が出す。全員に当たる技なら、そのあとの味方のぶんも全部
+    if (cardHasEff(c, 'shield')) {
+      if (pd.shield !== null && pd.shield !== undefined) return;
+      me.mons.forEach((m, mi) => { if (mi !== tgt.m && tgt.p === q && cardUsableBy(c, m) && !guardedNow(m)) out.push({ type: 'guard', hand: hi, mon: mi }); });
+      return;
+    }
+    if (cardHasEff(c, 'redirect')) {
+      if (tgt.p !== q || isArea || !['pow', 'int'].includes(atkCard.kind) || !cardUsableBy(c, target) || guardedNow(target)) return;
+      me.mons.forEach((m, j) => { if (j !== tgt.m && !m.ko) out.push({ type: 'guard', hand: hi, mon: tgt.m, to: j }); });
+      return;
+    }
+    if (cardHasEff(c, 'evadeAll')) {
+      if (tgt.p === q && isArea && !pd.evadeAll && !evadeBlocked && !(fl.attachNoEvadeHybrid && (target.main || target.sub)) && cardUsableBy(c, target) && !guardedNow(target)) out.push({ type: 'guard', hand: hi, mon: tgt.m });
+      return;
+    }
+    const en = cardEff(c, 'endure') || cardEff(c, 'takeMult');
+    if (en) { if (tgt.p === q && en.kinds.includes(atkCard.kind) && cardUsableBy(c, target) && !guardedNow(target)) out.push({ type: 'guard', hand: hi, mon: tgt.m }); return; }
+    if (cardHasEff(c, 'noGutsLoss')) { if (tgt.p === q && cardHasEff(atkCard, 'gutsLossOnHit') && !pd.noGutsLoss && cardUsableBy(c, target) && !guardedNow(target)) out.push({ type: 'guard', hand: hi, mon: tgt.m }); return; }
     if (cardHasEff(c, 'cover')) {
       // 味方への1回分を自分が受ける: 狙われたのが味方で、カードの持ち主(生きている別の子)が使う
       if (pd.cover !== null && pd.cover !== undefined) return;
@@ -472,7 +507,7 @@ const cardStartAttack = (db, st, act) => {
   cardEvent(st, { t: 'use', p, mon: mi, cards: used, target: act.target || null });
   // 特殊技: 守れない。その場で効く
   if (main.kind === 'spe') {
-    cardApplySpecial(db, st, p, mi, main, act.target);
+    cardApplySpecial(db, st, p, mi, main, act.target, act);
     me.discard.push(...used);
     return;
   }
@@ -514,11 +549,17 @@ const cardResolveTarget = (db, st) => {
   const main = cardOf(db, pd.main);
   let t = pd.targets[pd.ti];
   if (pd.cover !== null && pd.cover !== undefined) t = { p: t.p, m: pd.cover };
+  if (pd.shield !== null && pd.shield !== undefined && t.p === pd.defender && !st.players[t.p].mons[pd.shield].ko) t = { p: t.p, m: pd.shield }; // 盾になる
   const target = st.players[t.p].mons[t.m];
   let dmg = pd.base * pd.mult;
   const mv = cardEff(main, 'multVs');
   if (mv && cardMonType(target, st.turn) === mv.type) dmg *= mv.n;
-  const evaded = pd.evaded;
+  if (pd.takeMult) dmg *= pd.takeMult; // 肉を切らせて
+  // 守りで持ちょうが変わった(吹き上げる・ひきずりこむ)ときは、当てる直前に当たるかを見直す
+  const ar = cardEff(main, 'area');
+  const missed = t.p !== pd.attacker && (!cardCanTarget(main, target, st.turn) || (ar && ar.only && cardMonType(target, st.turn) !== ar.only));
+  if (missed) dmg = 0;
+  const evaded = pd.evaded || (pd.evadeAll && t.p !== pd.attacker); // みんな下がれ
   if (evaded) dmg = cardHasEff(main, 'halfOnEvade') ? Math.ceil(dmg / 2) : 0;
   if (!cardHasEff(main, 'noBlockReduce') && !(pd.flags || {}).attachNoBlockReduce) {
     if (pd.reduceAll) dmg = 0;
@@ -531,23 +572,26 @@ const cardResolveTarget = (db, st) => {
     else { reflected = dmg; dmg = 0; }
   }
   if (cardHasEff(main, 'nonLethal')) dmg = Math.max(0, Math.min(dmg, target.life - 1));
+  if (pd.endure && dmg >= target.life && target.life > 0) dmg = target.life - 1; // 根性: ライフ1で残る
+  if (target.safeUntil >= st.turn) dmg = 0; // ぬいぐるみ
   target.life = Math.max(0, target.life - dmg);
   if (dmg > 0) target.charge = null; // 静の構えはダメージを受けると終わる
   const guarded = pd.reduce > 0 || pd.reduceHalf || pd.reduceAll || !!pd.reflect || pd.cover !== null;
   const res = { p: t.p, m: t.m, dmg, evaded, reflected };
   pd.results.push(res);
   cardEvent(st, { t: 'hit', p: t.p, m: t.m, dmg, evaded, guarded, card: pd.main });
-  cardLog(st, evaded && dmg === 0 ? `${target.name}は回避した` : `${target.name}に${dmg}ダメージ${evaded ? '(回避されても半分)' : ''}`, { kind: 'hit' });
+  cardLog(st, missed ? `${target.name}には当たらなかった` : evaded && dmg === 0 ? `${target.name}は回避した` : `${target.name}に${dmg}ダメージ${evaded ? '(回避されても半分)' : ''}`, { kind: 'hit' });
   const atkMon = pd.mon >= 0 ? st.players[pd.attacker].mons[pd.mon] : null;
   if (dmg > 0) {
     pd.hitAny = true;
     const gl = cardEff(main, 'gutsLossOnHit');
-    if (gl && t.p !== pd.attacker) { const k = cardLoseGuts(st, t.p, gl.n); if (k) cardLog(st, `${st.players[t.p].name}はガッツを${k}失った`); }
+    if (gl && t.p !== pd.attacker && !pd.noGutsLoss) { const k = cardLoseGuts(st, t.p, gl.n); if (k) cardLog(st, `${st.players[t.p].name}はガッツを${k}失った`); }
     if (cardHasEff(main, 'stunOnHit')) { target.stunTurn = st.turn + 1; cardLog(st, `${target.name}は次のターン攻撃できない`); }
     if (cardHasEff(main, 'drain') && atkMon && !atkMon.ko) { const h = Math.min(dmg, atkMon.max - atkMon.life); atkMon.life += h; if (h) cardLog(st, `${atkMon.name}はライフを${h}回復`); }
   }
   if (!evaded || cardHasEff(main, 'halfOnEvade')) { if (!evaded) pd.hitAnyNotEvaded = true; }
   if (evaded) pd.evadedAny = true;
+  if (atkMon && atkMon.safeUntil >= st.turn) reflected = 0; // ぬいぐるみ: はね返しも0
   if (reflected > 0 && atkMon && !atkMon.ko) {
     atkMon.life = Math.max(0, atkMon.life - reflected);
     atkMon.charge = null;
@@ -559,6 +603,7 @@ const cardResolveTarget = (db, st) => {
   if (target.life <= 0 && !target.ko) cardKo(st, t.p, t.m);
   // 次の相手へ(守りの状態は1体ごとに戻す)
   pd.ti += 1; pd.evaded = false; pd.reduce = 0; pd.reduceHalf = false; pd.reduceAll = false; pd.reflect = null; pd.cover = null; pd.noEvade = false;
+  pd.redirected = false; pd.endure = false; pd.takeMult = 0; // 隠れる・根性・肉を切らせては1体ぶん(盾になる・みんな下がれ・我慢は1回の攻撃ぶん)
 };
 
 const cardKo = (st, p, m) => {
@@ -579,6 +624,7 @@ const cardFinishAttack = (db, st) => {
   const se = cardEff(main, 'selfDamageIfEvaded'); if (se && pd.results.some((r) => r.evaded)) self += se.n;
   const sa = cardEff(main, 'selfDamage'); if (sa) self += sa.n;
   if (pd.flags && pd.flags.selfIfHit && pd.results.some((r) => !r.evaded)) self += pd.flags.selfIfHit; // 捨て身
+  if (atkMon && atkMon.safeUntil >= st.turn) self = 0; // ぬいぐるみ: 自分の技の反動も0
   if (self > 0 && atkMon && !atkMon.ko) {
     atkMon.life = Math.max(0, atkMon.life - self);
     atkMon.charge = null;
@@ -600,7 +646,7 @@ const cardCheckWin = (st, attacker) => {
 };
 
 // 特殊技・ブリーダーの特殊
-const cardApplySpecial = (db, st, p, mi, card, target) => {
+const cardApplySpecial = (db, st, p, mi, card, target, act = {}) => {
   const me = st.players[p];
   const opp = st.players[cardOther(p)];
   (card.effects || []).forEach((e) => {
@@ -624,6 +670,9 @@ const cardApplySpecial = (db, st, p, mi, card, target) => {
     if (e.t === 'stunTarget' && tm) { tm.stunTurn = st.turn + 1; cardLog(st, `${tm.name}は次のターン攻撃できない`); }
     if (e.t === 'skipTurn') { st.skip = cardOther(p); cardLog(st, `${opp.name}の次の番を飛ばす`); }
     if (e.t === 'rage' && self) { self.noGuardUntil = st.turn + 1; self.mult = { turn: st.turn + 2, kinds: ['pow', 'int'], n: 2 }; cardLog(st, `${self.name}は次の番まで守れない。次の番の技は2倍`); }
+    // ---- 区切り5 ----
+    if (e.t === 'safe' && self) { self.safeUntil = st.turn + 1; cardLog(st, `${self.name}は次の番までダメージを受けない`); }
+    if (e.t === 'form' && self && (act.form === 'air' || act.form === 'ground')) { self.type = act.form; cardLog(st, `${self.name}は${act.form === 'air' ? '空中' : '地上'}になった`); }
     // ---- 区切り4 ----
     if (e.t === 'choose') {
       const cands = cardChoiceCands(db, st, p, mi, e);
@@ -647,7 +696,8 @@ const cardApplySpecial = (db, st, p, mi, card, target) => {
     if (e.t === 'oppHandToDeckBottom') { const k = opp.hand.length; opp.deck.unshift(...opp.hand.splice(0)); cardLog(st, `${opp.name}の手札${k}枚を山札の一番下へ`); }
     if (e.t === 'oppDraw') { const k = cardDrawN(st, cardOther(p), e.n); cardLog(st, `${opp.name}は${k}枚引いた`); }
     if (e.t === 'gutsToDeckShuffle') { const k = me.guts.length; me.deck.push(...me.guts.splice(0)); cardReshuffle(st, p); cardLog(st, `${me.name}はガッツ${k}枚を山札に戻して切った`); }
-    if (e.t === 'selfHurt' && tm) { tm.life = Math.max(0, tm.life - e.n); cardEvent(st, { t: 'hit', p: target.p, m: target.m, dmg: e.n, self: true }); cardLog(st, `${tm.name}のライフが${e.n}減った`); if (tm.life <= 0) { cardKo(st, target.p, target.m); cardCheckWin(st, p); } }
+    if (e.t === 'selfHurt' && tm && tm.safeUntil >= st.turn) cardLog(st, `${tm.name}はダメージを受けない(ぬいぐるみ)`);
+    else if (e.t === 'selfHurt' && tm) { tm.life = Math.max(0, tm.life - e.n); cardEvent(st, { t: 'hit', p: target.p, m: target.m, dmg: e.n, self: true }); cardLog(st, `${tm.name}のライフが${e.n}減った`); if (tm.life <= 0) { cardKo(st, target.p, target.m); cardCheckWin(st, p); } }
     if (e.t === 'oppGutsLoss') { const k = cardLoseGuts(st, cardOther(p), e.n); cardLog(st, `${opp.name}はガッツを${k}失った`); }
     if (e.t === 'refresh') { const k = me.hand.length; me.discard.push(...me.hand.splice(0)); cardDrawN(st, p, k); cardLog(st, `${me.name}は手札を${k}枚捨てて、引き直した`); }
     if (e.t === 'millOpp') { let k = 0; for (let i = 0; i < e.n && opp.deck.length; i++) { opp.discard.push(opp.deck.pop()); k += 1; } cardLog(st, `${opp.name}の山札を${k}枚捨て札にした`); }
@@ -678,6 +728,14 @@ const cardApplyGuard = (db, st, act) => {
     if (e.t === 'reduceAll') pd.reduceAll = true;
     if (e.t === 'reflect') pd.reflect = { frac: e.frac, keep: !!e.keep };
     if (e.t === 'cover') pd.cover = act.mon;
+    if (e.t === 'redirect') { pd.targets[pd.ti] = { p: q, m: act.to }; pd.redirected = true; cardLog(st, `目標が${me.mons[act.to].name}に変わった`); }
+    if (e.t === 'endure') pd.endure = true;
+    if (e.t === 'evadeAll') { pd.evadeAll = true; pd.evaded = true; }
+    if (e.t === 'shield') pd.shield = act.mon;
+    if (e.t === 'noGutsLoss') pd.noGutsLoss = true;
+    if (e.t === 'takeMult') pd.takeMult = e.n;
+    if (e.t === 'liftAllies') { me.mons.forEach((m, j) => { if (j !== act.mon && !m.ko) m.airUntil = Math.max(m.airUntil, st.turn + 1); }); cardLog(st, `${user.name}以外の味方が空中になった`); }
+    if (e.t === 'waterAll') { me.mons.forEach((m) => { if (!m.ko) m.waterUntil = st.turn; }); cardLog(st, '味方が全員水中になった'); }
     if (e.t === 'nextTurnMult') user.mult = { turn: st.turn + 1, kinds: e.kinds, n: e.n };
     if (e.t === 'becomeAir') user.airUntil = st.turn + 1;
     // 自分で捨てるガッツなので、精神集中(相手に減らされない)でも止まらない
@@ -744,7 +802,7 @@ const cardApplyAction = (db, st0, act) => {
   if (st.pending) {
     if (act.type === 'pass') { cardResolveTarget(db, st); cardAdvancePending(db, st); return st; }
     if (act.type !== 'guard') return null;
-    const ok = cardGuardOptions(db, st0).some((o) => o.hand === act.hand && o.mon === act.mon);
+    const ok = cardGuardOptions(db, st0).some((o) => o.hand === act.hand && o.mon === act.mon && o.to === act.to); // 隠れるは移す先(to)も合わせる
     if (!ok) return null;
     cardApplyGuard(db, st, act);
     return st;
@@ -752,7 +810,7 @@ const cardApplyAction = (db, st0, act) => {
   if (st.phase === 'main') {
     if (act.type === 'endAttacks') { st.phase = 'guts'; return st; }
     if (act.type !== 'attack' && act.type !== 'breeder') return null;
-    const ok = cardAttackOptions(db, st0).some((o) => o.type === act.type && o.mon === act.mon && JSON.stringify(o.hand) === JSON.stringify(act.hand) && JSON.stringify(o.target) === JSON.stringify(act.target || null));
+    const ok = cardAttackOptions(db, st0).some((o) => o.type === act.type && o.mon === act.mon && JSON.stringify(o.hand) === JSON.stringify(act.hand) && JSON.stringify(o.target) === JSON.stringify(act.target || null) && o.form === act.form);
     if (!ok) return null;
     // 影縛り: 名指しが要る札を付けたら、回避・防御の札の名前が1つ要る(付けていなければ名指しは持たない)
     const needBind = act.hand.some((i) => cardHasEff(cardOf(db, st0.players[p].hand[i]), 'attachBind'));
@@ -843,6 +901,9 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
       if (e.t === 'peekHand') score += 0.4 * habit.disrupt;
       if (e.t === 'discardOpp') score += 1.4 * habit.disrupt;
       if (e.t === 'gutsGuard') score += st.players[cardOther(p)].hand.length >= 3 ? 0.4 : 0.1;
+      // 区切り5
+      if (e.t === 'safe') { const m0 = opt.mon >= 0 ? me.mons[opt.mon] : null; score += m0 && m0.life <= Math.ceil(m0.max / 2) ? 1.4 : 0.4; }
+      if (e.t === 'form') score += 0.2;
       // 区切り4: 山札・手札・捨て札・ガッツ
       const oppP = st.players[cardOther(p)];
       if (e.t === 'choose') score += e.then === 'toHand' ? 1.3 : e.then === 'discardDraw2' ? 0.9 : 0.3;
@@ -953,14 +1014,27 @@ const cardAiChooseGuard = (db, st, policy, rand) => {
     const re = cardEff(c, 'reduce'); if (re && !cardHasEff(main, 'noBlockReduce')) after = Math.max(0, dmg - re.n);
     if (cardHasEff(c, 'reduceHalf') && !cardHasEff(main, 'noBlockReduce')) after = dmg - Math.floor(dmg / 2);
     const rf = cardEff(c, 'reflect'); if (rf) after = rf.keep ? dmg : 0;
-    if (cardHasEff(c, 'cover')) {
+    if (cardHasEff(c, 'cover') || cardHasEff(c, 'shield')) {
       const cm = me.mons[o.mon];
       after = target.life <= dmg && cm.life > dmg ? 0 : dmg; // 倒れそうな味方を、硬い子がかばう
+    }
+    // 区切り5
+    let extra = 0;
+    if (cardHasEff(c, 'redirect')) { const am = me.mons[o.to]; after = 0; extra -= Math.min(dmg, am.life) * 0.9 + (am.life <= dmg ? 5 : 0); }
+    if (cardHasEff(c, 'endure')) after = dmg >= target.life ? target.life - 1 : dmg;
+    if (cardHasEff(c, 'evadeAll')) { after = cardHasEff(main, 'halfOnEvade') ? Math.ceil(dmg / 2) : 0; extra += (pd.targets.length - pd.ti - 1) * Math.min(3, dmg) * 0.6; }
+    if (cardHasEff(c, 'noGutsLoss')) { const gl = cardEff(main, 'gutsLossOnHit'); extra += (gl ? (gl.n === 'all' ? me.guts.length : Math.min(gl.n, me.guts.length)) : 0) * 0.6; }
+    if (cardHasEff(c, 'takeMult')) { after = dmg * 2; extra += 1.2; }
+    if (cardHasEff(c, 'liftAllies') || cardHasEff(c, 'waterAll')) {
+      const tmp = JSON.parse(JSON.stringify(target));
+      if (cardHasEff(c, 'waterAll')) tmp.waterUntil = st.turn; else if (o.mon !== tgt.m) tmp.airUntil = st.turn + 1;
+      const ar = cardEff(main, 'area');
+      after = !cardCanTarget(main, tmp, st.turn) || (ar && ar.only && cardMonType(tmp, st.turn) !== ar.only) ? 0 : dmg;
     }
     const saved = Math.min(dmg, target.life) - Math.min(after, target.life);
     const ko = target.life <= dmg && target.life > after ? 5 : 0;
     const lostAll = cardHasEff(c, 'selfGutsAll') ? me.guts.length - c.guts : 0; // 緊急回避: 残りのガッツも全部なくなる
-    const v = saved * (0.6 + 0.4 * habit.keepGuard) + ko - (c.guts + lostAll) * 0.35 * habit.saveGuts + (rf ? (rf.keep ? Math.floor(dmg * rf.frac) : dmg) * 0.6 : 0);
+    const v = extra + saved * (0.6 + 0.4 * habit.keepGuard) + ko - (c.guts + lostAll) * 0.35 * habit.saveGuts + (rf ? (rf.keep ? Math.floor(dmg * rf.frac) : dmg) * 0.6 : 0);
     if (!best || v > best.v) best = { v, o };
   });
   if (!best || best.v < 0.8 + rand() * 0.3) return { type: 'pass' };
@@ -1089,7 +1163,8 @@ const cardAiCardValue = (card, habit) => {
     return v - card.guts * 0.3;
   }
   if (cardIsGuardKind(card.kind)) {
-    let v = eff('evade') ? 2.2 : eff('reduceAll') ? 2.4 : eff('reflect') ? 2.3 : eff('cover') ? 1.4 : 1.6;
+    let v = eff('evade') ? 2.2 : eff('reduceAll') ? 2.4 : eff('reflect') ? 2.3 : eff('cover') ? 1.4 : eff('endure') ? 1.1 : eff('redirect') ? 1.0 : eff('shield') ? 1.0
+      : eff('evadeAll') ? 1.2 : eff('noGutsLoss') ? 0.8 : eff('takeMult') ? 0.5 : (eff('liftAllies') || eff('waterAll')) ? 0.6 : 1.6;
     const re = cardEff(card, 'reduce'); if (re) v = 1 + re.n * 0.4;
     if (eff('selfGutsAll')) v -= 1.4; // 緊急回避: 守れても、ためたガッツを全部なくす
     return (v - card.guts * 0.35) * habit.keepGuard;
@@ -1116,6 +1191,8 @@ const cardAiCardValue = (card, habit) => {
       if (e.t === 'skipTurn') v += 1.5;
       if (e.t === 'rage') v += 0.6;
       if (e.t === 'choose') v += e.then === 'toHand' ? 0.8 : 0.3;
+      if (e.t === 'safe') v += 0.8;
+      if (e.t === 'form') v += 0.1;
       if (e.t === 'peekPick') v += 0.8 * habit.disrupt;
       if (e.t === 'rush' || e.t === 'gutsZeroBoth' || e.t === 'oppHandToDeckBottom' || e.t === 'oppGutsLoss' || e.t === 'millOpp' || e.t === 'discardBothHands' || e.t === 'refresh') v += 0.3;
       if (e.t === 'lastWish' || e.t === 'deckToGuts' || e.t === 'gutsToDeckShuffle' || e.t === 'selfHurt') v -= 0.3;
