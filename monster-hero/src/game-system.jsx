@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: eaa9f3d9c684f9fb
+// generated-sha256: 127551db7a59cc7d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-26 08:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-26 08:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -78206,14 +78206,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <button key={id} type="button" data-dex-tab={id} aria-pressed={lookDexTab===id} onClick={()=>{ setLookDexTab(id); setLookDexZoom(null); }}
               className={`flex-1 rounded-xl py-2 text-[13px] font-black active:scale-95 ${lookDexTab===id?'bg-amber-700 text-white':'bg-slate-800 text-slate-300'}`}>{label}</button>
           );
-          const shell={position:'fixed',inset:0,zIndex:120,display:'flex',flexDirection:'column',alignItems:'center',color:'#fff'};
+          // 画面いっぱいに重ねるので、body の safe-area の余白が効かない。切り欠き・下のバーに戻るボタンが隠れないよう、ここで足す(2026-10-25 社長「戻るボタンがない」)
+          const shell={position:'fixed',inset:0,zIndex:120,display:'flex',flexDirection:'column',alignItems:'center',color:'#fff',paddingTop:'env(safe-area-inset-top)',paddingBottom:'env(safe-area-inset-bottom)',paddingLeft:'env(safe-area-inset-left)',paddingRight:'env(safe-area-inset-right)'};
           if(lookDexZoom!=null&&list[lookDexZoom]){
             const x=list[lookDexZoom];
             const n=list.length;
             const go=(d)=>setLookDexZoom((lookDexZoom+d+n)%n);
             const vw=typeof window!=='undefined'?window.innerWidth:390, vh=typeof window!=='undefined'?window.innerHeight:664;
             // 飾りの大きいフレームも収まる大きさ(飾りは絵の約1.4倍に広がる)。横向きでは高さにも合わせる
-            const box=Math.max(120, Math.min(vw-40, 360, Math.round(vh*0.42)));
+            const box=Math.max(120, Math.min(vw-96, 340, Math.round(vh*0.42))); // 左右の矢印の幅をあける
             const selected=isFrame?normalizeProfileFrameId(profileFrameId)===x.id:breederIcon===x.id;
             const choose=()=>{
               if(!x.owned) return;
@@ -78226,9 +78227,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 onTouchStart={(e)=>{ touchX=e.touches&&e.touches[0]?e.touches[0].clientX:null; }}
                 onTouchEnd={(e)=>{ const t=e.changedTouches&&e.changedTouches[0]; if(touchX==null||!t) return; const dx=t.clientX-touchX; touchX=null; if(Math.abs(dx)>40) go(dx<0?1:-1); }}>
                 <div style={{width:'100%',maxWidth:420,display:'flex',flexDirection:'column',alignItems:'center',padding:'0 16px 20px'}}>
-                  <div style={{alignSelf:'stretch',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 0'}}>
+                  <div style={{alignSelf:'stretch',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 0 4px'}}>
+                    <button type="button" data-dex-zoom-close aria-label="一覧へ戻る" onClick={()=>setLookDexZoom(null)}
+                      className="mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
                     <span className="text-[12px] font-bold text-slate-400">{lookDexZoom+1} / {n}</span>
-                    <button type="button" data-dex-zoom-close aria-label="一覧へもどる" onClick={()=>setLookDexZoom(null)} className="rounded-full px-3 py-1 text-[20px] leading-none text-white active:scale-95">✕</button>
                   </div>
                   <div style={{position:'relative',display:'flex',alignItems:'center',justifyContent:'center',alignSelf:'stretch',height:box}}>
                     <button type="button" data-dex-prev aria-label="前へ" onClick={()=>go(-1)} className="absolute left-0 z-10 px-2 py-4 text-[30px] leading-none text-slate-300 active:scale-90">‹</button>
@@ -78258,9 +78260,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           return (
             <div data-dex style={{...shell,background:'#0b1020'}}>
               <div style={{width:'100%',maxWidth:520,display:'flex',flexDirection:'column',flex:1,minHeight:0}}>
-                <div className="flex items-center gap-2 px-3.5 pt-3.5 pb-2">
-                  <button type="button" data-dex-close aria-label="閉じる" onClick={closeDex} className="px-1 text-[22px] leading-none text-white active:scale-90">‹</button>
-                  <b className="flex-1 text-[17px] font-black">{jaWrap('アイコン・フレーム図鑑')}</b>
+                <div className="flex items-center gap-1.5 px-3.5 pt-3 pb-2">
+                  <button type="button" data-dex-close aria-label="プロフィールへ戻る" onClick={closeDex}
+                    className="mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
+                  <b className="min-w-0 flex-1 text-[17px] font-black">{jaWrap('アイコン・フレーム図鑑')}</b>
                 </div>
                 <div className="flex gap-2 px-3.5">{tabButton('icon','アイコン')}{tabButton('frame','フレーム')}</div>
                 <p data-dex-count className="px-3.5 pt-2.5 text-[12px] font-black text-amber-300">集めた {ownedCount} / {list.length}</p>
