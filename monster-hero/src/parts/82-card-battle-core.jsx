@@ -1017,9 +1017,85 @@ const normalizeCardBgm = (v, isTrack = () => true) => {
 const CARD_SETTINGS_DEFAULT = Object.freeze({ speed: 'normal', autoPass: true });
 const normalizeCardSettings = (v) => {
   const r = cardIsPlainObject(v) ? v : {};
-  // quickAutoStart … MFバトルカードを開いたら裏のクイック∞周回を自動で始める・負けたら数秒おいて始め直す(社長 2026-10-25。モンヒロビートの「開いたら自動で始める」と同じ中身。最初は OFF)
-  return { speed: r.speed === 'fast' ? 'fast' : 'normal', autoPass: r.autoPass !== false, quickAutoStart: r.quickAutoStart === true };
+  const pick = (val, list, def) => (list.includes(val) ? val : def);
+  const onOff = (val, def) => (val === 'ON' || val === 'OFF' ? val : def);
+  // 前の「対戦の進む速さ」(speed: 'fast')は、相手が考える時間「はやい」と結果までの間「短め」の2つに分けた。前の値はここで引き継ぐ
+  const oldFast = r.speed === 'fast';
+  const think = pick(r.think, CARD_THINK_IDS, oldFast ? 'FAST' : 'NORMAL');
+  return {
+    speed: think === 'FAST' || think === 'FAST2' ? 'fast' : 'normal', // 前の作りが読む名前(残しておく)
+    autoPass: r.autoPass !== false,
+    // quickAutoStart … MFバトルカードを開いたら裏のクイック∞周回を自動で始める・負けたら数秒おいて始め直す(社長 2026-10-25。モンヒロビートの「開いたら自動で始める」と同じ中身。最初は OFF)
+    quickAutoStart: r.quickAutoStart === true,
+    // ここから下は、対戦中の設定(社長 2026-10-25「オプションでバトル中の設定関係を各種作って」)。既定はどれも、足す前の動きと同じ
+    think,
+    resultWait: pick(r.resultWait, ['NORMAL', 'SHORT', 'QUICK'], oldFast ? 'SHORT' : 'NORMAL'),
+    motion: pick(r.motion, ['FULL', 'SHORT', 'OFF'], 'FULL'),
+    shake: onOff(r.shake, 'ON'),
+    damageNum: onOff(r.damageNum, 'ON'),
+    bubble: pick(r.bubble, ['MANY', 'NORMAL', 'FEW', 'OFF'], 'NORMAL'),
+    confirmUse: onOff(r.confirmUse, 'OFF'),
+    confirmEnd: onOff(r.confirmEnd, 'OFF'),
+    press: pick(r.press, ['SHORT', 'NORMAL', 'LONG'], 'NORMAL'),
+    drag: onOff(r.drag, 'ON'),
+    gutsPick: onOff(r.gutsPick, 'OFF'),
+    handText: pick(r.handText, ['NORMAL', 'LARGE'], 'NORMAL'),
+    handSort: pick(r.handSort, ['DRAW', 'KIND'], 'DRAW'),
+  };
 };
+// 相手が考える時間の倍率(1 が足す前の「ふつう」、0.5 が前の「はやい」)
+const CARD_THINK_IDS = ['SLOW2', 'SLOW', 'NORMAL', 'FAST', 'FAST2'];
+const CARD_THINK_PACE = Object.freeze({ SLOW2: 2, SLOW: 1.5, NORMAL: 1, FAST: 0.5, FAST2: 0.25 });
+// 勝ち負けが決まってから結果の画面までの間(ms)。NORMAL・SHORT は足す前の「ふつう」「はやい」と同じ
+const CARD_RESULT_WAIT_MS = Object.freeze({ NORMAL: 2200, SHORT: 1200, QUICK: 500 });
+// 長押しで詳しい画面が出るまで(ms)。NORMAL は足す前と同じ
+const CARD_PRESS_MS = Object.freeze({ SHORT: 300, NORMAL: 450, LONG: 700 });
+// 助手のひとこと: 1ターンにしゃべる数(NORMAL は足す前の CARD_LINE_PER_TURN と同じ 2)。OFF は勝ち負けも含めて出さない
+const CARD_BUBBLE_PER_TURN = Object.freeze({ MANY: 3, NORMAL: 2, FEW: 1, OFF: 0 });
+// オプションに並べる対戦中の設定(モンヒロバトルの BATTLE_FX_SETTING_ITEMS と同じ形: 題・説明・選択肢の名前と一言)。
+// bool … 保存は true/false(自動パス)。only … 'cpu' は助手と対戦だけに効く(マルチ対戦では相手が人なので効かない)
+const CARD_SETTING_GROUPS = Object.freeze([
+  { title: '演出', items: [
+    { key: 'motion', title: '技の動き', desc: '技を出したときに、モンスターが相手へ向かって動く演出です。「短め」は攻める側の動きを省き、受けた・よけた・防いだ動きだけ出します。',
+      options: [{ id: 'FULL', label: 'ふつう', note: '全部の動き' }, { id: 'SHORT', label: '短め', note: '受ける側だけ' }, { id: 'OFF', label: '出さない', note: 'すぐ次へ' }] },
+    { key: 'shake', title: '画面の揺れ', desc: '攻撃を受けたモンスターが揺れる演出です。止めても光や数字は出ます。',
+      options: [{ id: 'ON', label: '揺らす', note: 'いつもの見た目' }, { id: 'OFF', label: '揺らさない', note: '酔いやすい人向け' }] },
+    { key: 'damageNum', title: 'ダメージの数字', desc: '攻撃を受けたモンスターの上に出る「−3」などの大きな数字です。出さなくても、ライフの数字とバーは減ります。',
+      options: [{ id: 'ON', label: '出す', note: '大きな数字' }, { id: 'OFF', label: '出さない', note: 'ライフだけ' }] },
+  ] },
+  { title: '速さ', items: [
+    { key: 'think', title: '相手が考える時間', only: 'cpu', desc: '助手と対戦で、相手の助手が技や守りを決めるまでの間です。マルチ対戦では相手が人なので変わりません。',
+      options: [{ id: 'SLOW2', label: 'とても\nゆっくり', note: '×2' }, { id: 'SLOW', label: 'ゆっくり', note: '×1.5' }, { id: 'NORMAL', label: 'ふつう', note: '×1' }, { id: 'FAST', label: 'はやい', note: '×0.5' }, { id: 'FAST2', label: 'とても\nはやい', note: '×0.25' }] },
+    { key: 'resultWait', title: '結果までの間', only: 'cpu', desc: '助手と対戦で、勝ち負けが決まってから結果の画面に移るまでの間です。',
+      options: [{ id: 'NORMAL', label: 'ふつう', note: '約2秒' }, { id: 'SHORT', label: '短め', note: '約1秒' }, { id: 'QUICK', label: 'すぐ', note: '約0.5秒' }] },
+  ] },
+  { title: '助手', items: [
+    { key: 'bubble', title: '対戦中のひとこと', only: 'cpu', desc: '助手と対戦で、相手の助手がしゃべる吹き出しの多さです。「出さない」は、勝ち負けのときも出しません。',
+      options: [{ id: 'MANY', label: '多め', note: '1ターン3回まで' }, { id: 'NORMAL', label: 'ふつう', note: '1ターン2回まで' }, { id: 'FEW', label: '少なめ', note: '1ターン1回まで' }, { id: 'OFF', label: '出さない', note: 'しゃべらない' }] },
+  ] },
+  { title: '操作', items: [
+    { key: 'confirmUse', title: '技を使う前の確認', desc: '技を選んで相手をタップ(か運んで置く)したときに、「使いますか？」と1回確かめます。押しまちがいを防げます。',
+      options: [{ id: 'OFF', label: '確かめない', note: 'すぐ使う' }, { id: 'ON', label: '確かめる', note: '「使う」で決める' }] },
+    { key: 'confirmEnd', title: 'ターン終了の確認', desc: 'ガッツの番に「ターン終了」を押したときに、1回確かめます。',
+      options: [{ id: 'OFF', label: '確かめない', note: 'すぐ終わる' }, { id: 'ON', label: '確かめる', note: '「終わる」で決める' }] },
+    { key: 'press', title: '長押しで詳しく出るまで', desc: 'カードを長押ししたときに、大きな絵と文の画面が出るまでの時間です。',
+      options: [{ id: 'SHORT', label: '短め', note: '約0.3秒' }, { id: 'NORMAL', label: 'ふつう', note: '約0.45秒' }, { id: 'LONG', label: '長め', note: '約0.7秒' }] },
+    { key: 'drag', title: '手札を運ぶ操作', desc: '手札を指で持って、狙うモンスターやガッツの置き場へ運ぶ操作です。使わないときは、タップだけで遊びます。',
+      options: [{ id: 'ON', label: '使う', note: '運んでもタップでも' }, { id: 'OFF', label: '使わない', note: 'タップだけ' }] },
+  ] },
+  { title: '自動', items: [
+    { key: 'autoPass', bool: true, title: '守れないときは自動で「守らない」', desc: '攻撃されたときに、使える回避・防御のカードが1枚も無ければ、理由を少し見せてから自動で「守らない」にします。',
+      options: [{ id: 'ON', label: 'する', note: '自動で進む' }, { id: 'OFF', label: 'しない', note: '自分で押す' }] },
+    { key: 'gutsPick', title: 'ガッツにするカードのおすすめ', desc: 'ガッツの番になったときに、おすすめのカードを先に選んでおきます。選び直してから「ターン終了」を押せます。',
+      options: [{ id: 'OFF', label: '選ばない', note: '自分で選ぶ' }, { id: 'ON', label: '選んでおく', note: '直してもOK' }] },
+  ] },
+  { title: '表示', items: [
+    { key: 'handText', title: '手札の下の字', desc: '手札の下に出す名前・ガッツ・ダメージの字の大きさです。狭い画面では、ふつうのままになります。',
+      options: [{ id: 'NORMAL', label: 'ふつう', note: 'いつもの大きさ' }, { id: 'LARGE', label: '大きめ', note: '読みやすく' }] },
+    { key: 'handSort', title: '手札の並べ方', desc: '手札を並べる順番です。並べ方を変えても、出すカードは変わりません。',
+      options: [{ id: 'DRAW', label: '引いた順', note: 'いつもの並び' }, { id: 'KIND', label: '種類順', note: 'ちから→かしこさ→特殊→回避→防御' }] },
+  ] },
+]);
 // 難易度ごとの数 { easy: n, … }。知らない難易度は捨てる
 const cardNormalizeLevelCounts = (v) => {
   const r = cardIsPlainObject(v) ? v : {};

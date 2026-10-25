@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b33f07389ccb365c
+// source-sha256: efbb4606752a38c1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-25 13:29";
+const BUILD_DATE = "2026-10-25 13:42";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -84098,12 +84098,290 @@ const CARD_SETTINGS_DEFAULT = Object.freeze({
 });
 const normalizeCardSettings = v => {
   const r = cardIsPlainObject(v) ? v : {};
+  const pick = (val, list, def) => list.includes(val) ? val : def;
+  const onOff = (val, def) => val === 'ON' || val === 'OFF' ? val : def;
+  const oldFast = r.speed === 'fast';
+  const think = pick(r.think, CARD_THINK_IDS, oldFast ? 'FAST' : 'NORMAL');
   return {
-    speed: r.speed === 'fast' ? 'fast' : 'normal',
+    speed: think === 'FAST' || think === 'FAST2' ? 'fast' : 'normal',
     autoPass: r.autoPass !== false,
-    quickAutoStart: r.quickAutoStart === true
+    quickAutoStart: r.quickAutoStart === true,
+    think,
+    resultWait: pick(r.resultWait, ['NORMAL', 'SHORT', 'QUICK'], oldFast ? 'SHORT' : 'NORMAL'),
+    motion: pick(r.motion, ['FULL', 'SHORT', 'OFF'], 'FULL'),
+    shake: onOff(r.shake, 'ON'),
+    damageNum: onOff(r.damageNum, 'ON'),
+    bubble: pick(r.bubble, ['MANY', 'NORMAL', 'FEW', 'OFF'], 'NORMAL'),
+    confirmUse: onOff(r.confirmUse, 'OFF'),
+    confirmEnd: onOff(r.confirmEnd, 'OFF'),
+    press: pick(r.press, ['SHORT', 'NORMAL', 'LONG'], 'NORMAL'),
+    drag: onOff(r.drag, 'ON'),
+    gutsPick: onOff(r.gutsPick, 'OFF'),
+    handText: pick(r.handText, ['NORMAL', 'LARGE'], 'NORMAL'),
+    handSort: pick(r.handSort, ['DRAW', 'KIND'], 'DRAW')
   };
 };
+const CARD_THINK_IDS = ['SLOW2', 'SLOW', 'NORMAL', 'FAST', 'FAST2'];
+const CARD_THINK_PACE = Object.freeze({
+  SLOW2: 2,
+  SLOW: 1.5,
+  NORMAL: 1,
+  FAST: 0.5,
+  FAST2: 0.25
+});
+const CARD_RESULT_WAIT_MS = Object.freeze({
+  NORMAL: 2200,
+  SHORT: 1200,
+  QUICK: 500
+});
+const CARD_PRESS_MS = Object.freeze({
+  SHORT: 300,
+  NORMAL: 450,
+  LONG: 700
+});
+const CARD_BUBBLE_PER_TURN = Object.freeze({
+  MANY: 3,
+  NORMAL: 2,
+  FEW: 1,
+  OFF: 0
+});
+const CARD_SETTING_GROUPS = Object.freeze([{
+  title: '演出',
+  items: [{
+    key: 'motion',
+    title: '技の動き',
+    desc: '技を出したときに、モンスターが相手へ向かって動く演出です。「短め」は攻める側の動きを省き、受けた・よけた・防いだ動きだけ出します。',
+    options: [{
+      id: 'FULL',
+      label: 'ふつう',
+      note: '全部の動き'
+    }, {
+      id: 'SHORT',
+      label: '短め',
+      note: '受ける側だけ'
+    }, {
+      id: 'OFF',
+      label: '出さない',
+      note: 'すぐ次へ'
+    }]
+  }, {
+    key: 'shake',
+    title: '画面の揺れ',
+    desc: '攻撃を受けたモンスターが揺れる演出です。止めても光や数字は出ます。',
+    options: [{
+      id: 'ON',
+      label: '揺らす',
+      note: 'いつもの見た目'
+    }, {
+      id: 'OFF',
+      label: '揺らさない',
+      note: '酔いやすい人向け'
+    }]
+  }, {
+    key: 'damageNum',
+    title: 'ダメージの数字',
+    desc: '攻撃を受けたモンスターの上に出る「−3」などの大きな数字です。出さなくても、ライフの数字とバーは減ります。',
+    options: [{
+      id: 'ON',
+      label: '出す',
+      note: '大きな数字'
+    }, {
+      id: 'OFF',
+      label: '出さない',
+      note: 'ライフだけ'
+    }]
+  }]
+}, {
+  title: '速さ',
+  items: [{
+    key: 'think',
+    title: '相手が考える時間',
+    only: 'cpu',
+    desc: '助手と対戦で、相手の助手が技や守りを決めるまでの間です。マルチ対戦では相手が人なので変わりません。',
+    options: [{
+      id: 'SLOW2',
+      label: 'とても\nゆっくり',
+      note: '×2'
+    }, {
+      id: 'SLOW',
+      label: 'ゆっくり',
+      note: '×1.5'
+    }, {
+      id: 'NORMAL',
+      label: 'ふつう',
+      note: '×1'
+    }, {
+      id: 'FAST',
+      label: 'はやい',
+      note: '×0.5'
+    }, {
+      id: 'FAST2',
+      label: 'とても\nはやい',
+      note: '×0.25'
+    }]
+  }, {
+    key: 'resultWait',
+    title: '結果までの間',
+    only: 'cpu',
+    desc: '助手と対戦で、勝ち負けが決まってから結果の画面に移るまでの間です。',
+    options: [{
+      id: 'NORMAL',
+      label: 'ふつう',
+      note: '約2秒'
+    }, {
+      id: 'SHORT',
+      label: '短め',
+      note: '約1秒'
+    }, {
+      id: 'QUICK',
+      label: 'すぐ',
+      note: '約0.5秒'
+    }]
+  }]
+}, {
+  title: '助手',
+  items: [{
+    key: 'bubble',
+    title: '対戦中のひとこと',
+    only: 'cpu',
+    desc: '助手と対戦で、相手の助手がしゃべる吹き出しの多さです。「出さない」は、勝ち負けのときも出しません。',
+    options: [{
+      id: 'MANY',
+      label: '多め',
+      note: '1ターン3回まで'
+    }, {
+      id: 'NORMAL',
+      label: 'ふつう',
+      note: '1ターン2回まで'
+    }, {
+      id: 'FEW',
+      label: '少なめ',
+      note: '1ターン1回まで'
+    }, {
+      id: 'OFF',
+      label: '出さない',
+      note: 'しゃべらない'
+    }]
+  }]
+}, {
+  title: '操作',
+  items: [{
+    key: 'confirmUse',
+    title: '技を使う前の確認',
+    desc: '技を選んで相手をタップ(か運んで置く)したときに、「使いますか？」と1回確かめます。押しまちがいを防げます。',
+    options: [{
+      id: 'OFF',
+      label: '確かめない',
+      note: 'すぐ使う'
+    }, {
+      id: 'ON',
+      label: '確かめる',
+      note: '「使う」で決める'
+    }]
+  }, {
+    key: 'confirmEnd',
+    title: 'ターン終了の確認',
+    desc: 'ガッツの番に「ターン終了」を押したときに、1回確かめます。',
+    options: [{
+      id: 'OFF',
+      label: '確かめない',
+      note: 'すぐ終わる'
+    }, {
+      id: 'ON',
+      label: '確かめる',
+      note: '「終わる」で決める'
+    }]
+  }, {
+    key: 'press',
+    title: '長押しで詳しく出るまで',
+    desc: 'カードを長押ししたときに、大きな絵と文の画面が出るまでの時間です。',
+    options: [{
+      id: 'SHORT',
+      label: '短め',
+      note: '約0.3秒'
+    }, {
+      id: 'NORMAL',
+      label: 'ふつう',
+      note: '約0.45秒'
+    }, {
+      id: 'LONG',
+      label: '長め',
+      note: '約0.7秒'
+    }]
+  }, {
+    key: 'drag',
+    title: '手札を運ぶ操作',
+    desc: '手札を指で持って、狙うモンスターやガッツの置き場へ運ぶ操作です。使わないときは、タップだけで遊びます。',
+    options: [{
+      id: 'ON',
+      label: '使う',
+      note: '運んでもタップでも'
+    }, {
+      id: 'OFF',
+      label: '使わない',
+      note: 'タップだけ'
+    }]
+  }]
+}, {
+  title: '自動',
+  items: [{
+    key: 'autoPass',
+    bool: true,
+    title: '守れないときは自動で「守らない」',
+    desc: '攻撃されたときに、使える回避・防御のカードが1枚も無ければ、理由を少し見せてから自動で「守らない」にします。',
+    options: [{
+      id: 'ON',
+      label: 'する',
+      note: '自動で進む'
+    }, {
+      id: 'OFF',
+      label: 'しない',
+      note: '自分で押す'
+    }]
+  }, {
+    key: 'gutsPick',
+    title: 'ガッツにするカードのおすすめ',
+    desc: 'ガッツの番になったときに、おすすめのカードを先に選んでおきます。選び直してから「ターン終了」を押せます。',
+    options: [{
+      id: 'OFF',
+      label: '選ばない',
+      note: '自分で選ぶ'
+    }, {
+      id: 'ON',
+      label: '選んでおく',
+      note: '直してもOK'
+    }]
+  }]
+}, {
+  title: '表示',
+  items: [{
+    key: 'handText',
+    title: '手札の下の字',
+    desc: '手札の下に出す名前・ガッツ・ダメージの字の大きさです。狭い画面では、ふつうのままになります。',
+    options: [{
+      id: 'NORMAL',
+      label: 'ふつう',
+      note: 'いつもの大きさ'
+    }, {
+      id: 'LARGE',
+      label: '大きめ',
+      note: '読みやすく'
+    }]
+  }, {
+    key: 'handSort',
+    title: '手札の並べ方',
+    desc: '手札を並べる順番です。並べ方を変えても、出すカードは変わりません。',
+    options: [{
+      id: 'DRAW',
+      label: '引いた順',
+      note: 'いつもの並び'
+    }, {
+      id: 'KIND',
+      label: '種類順',
+      note: 'ちから→かしこさ→特殊→回避→防御'
+    }]
+  }]
+}]);
 const cardNormalizeLevelCounts = v => {
   const r = cardIsPlainObject(v) ? v : {};
   return Object.fromEntries(CARD_LEVEL_ORDER.map(lv => [lv, cardNormalizePoint(r[lv])]));
@@ -85615,7 +85893,7 @@ const CARD_CPU = 1;
 const CARD_DRAG_THRESHOLD = 10;
 const CARD_ME = 0;
 const cardDeciderOf = st => st.pendingDiscard ? st.pendingDiscard.p : st.phase === 'setup' ? 1 - st.first : cardDecider(st);
-const useCardLongPress = onLong => {
+const useCardLongPress = (onLong, ms = 450) => {
   const timer = useRef(null);
   const fired = useRef(false);
   useEffect(() => () => clearTimeout(timer.current), []);
@@ -85626,7 +85904,7 @@ const useCardLongPress = onLong => {
       timer.current = setTimeout(() => {
         fired.current = true;
         onLong(no);
-      }, 450);
+      }, ms);
     },
     onPointerUp: () => clearTimeout(timer.current),
     onPointerLeave: () => clearTimeout(timer.current),
@@ -85762,7 +86040,8 @@ const CardMonSlot = ({
   compact = false,
   tiny = false,
   wide = false,
-  motion = null
+  motion = null,
+  calm = false
 }) => {
   const mon = st.players[p].mons[m];
   const art = cardMonArt(mon);
@@ -85815,7 +86094,7 @@ const CardMonSlot = ({
     className: `${tiny ? 'h-[42px]' : compact ? 'h-[54px]' : 'h-[74px]'} rounded-md object-cover`
   });
   const mv = motion && !mon.ko ? motion : null;
-  const poseClass = mon.ko ? 'mh-card-ko' : mv && mv.type === 'hit' ? 'mh-card-hit' : mv && mv.type === 'dodge' ? 'mh-card-dodge' : mv && mv.type === 'jump' ? 'mh-card-jump' : mv && mv.type === 'guard' ? 'mh-card-guard' : '';
+  const poseClass = mon.ko ? 'mh-card-ko' : mv && mv.type === 'hit' ? calm ? 'mh-card-hit-calm' : 'mh-card-hit' : mv && mv.type === 'dodge' ? 'mh-card-dodge' : mv && mv.type === 'jump' ? 'mh-card-jump' : mv && mv.type === 'guard' ? 'mh-card-guard' : '';
   const artEl = React.createElement("div", {
     "data-card-art": `${p}-${m}`,
     className: `relative flex ${wide ? 'h-[40px]' : tiny ? 'h-[44px]' : compact ? 'h-[56px]' : 'h-[78px]'} w-full items-end justify-center`,
@@ -85878,7 +86157,9 @@ const CardBattleBoard = ({
   meProfile = null
 }) => {
   const settings = normalizeCardSettings(game.settings);
-  const pace = settings.speed === 'fast' ? 0.5 : 1;
+  const pace = CARD_THINK_PACE[settings.think] || 1;
+  const pressMs = CARD_PRESS_MS[settings.press] || 450;
+  const confirmOn = key => settings[key] === 'ON' && !game.tutorial && !game.demo && !(typeof window !== 'undefined' && window.__mhCardPvpAuto);
   const pvp = game.pvp || null;
   const who = pvp ? {
     id: 'pvp',
@@ -85954,16 +86235,16 @@ const CardBattleBoard = ({
   });
   const bubbleTimer = useRef(null);
   const finished = useRef(false);
-  const press = useCardLongPress(no => setDetail(no));
+  const press = useCardLongPress(no => setDetail(no), pressMs);
   const paused = !!detail || !!discard || quit;
   const say = scene => {
-    if (!scene || pvp) return;
+    if (!scene || pvp || settings.bubble === 'OFF') return;
     const turn = st.turn;
     if (spoke.current.turn !== turn) spoke.current = {
       turn,
       n: 0
     };
-    if (spoke.current.n >= CARD_LINE_PER_TURN && scene !== 'win' && scene !== 'lose') return;
+    if (spoke.current.n >= (CARD_BUBBLE_PER_TURN[settings.bubble] ?? CARD_LINE_PER_TURN) && scene !== 'win' && scene !== 'lose') return;
     const line = cardPickLine(game.who, scene, lastLine.current);
     if (!line) return;
     spoke.current.n += 1;
@@ -86031,7 +86312,7 @@ const CardBattleBoard = ({
       dmg: e.t === 'hit' ? e.dmg : 0
     }));
     if (hits.length) {
-      setFx(hits);
+      if (settings.damageNum !== 'OFF') setFx(hits);
       setTimeout(() => setFx(cur => cur.filter(f => !hits.some(h => h.key === f.key))), 1000);
       if (hits.some(h => h.dmg >= 3)) Audio_.fgSe.crit();else if (hits.some(h => h.dmg > 0)) Audio_.fgSe.attack();else if (hits.some(h => h.heal)) Audio_.fgSe.heal();else Audio_.fgSe.guard();
     } else if (evs.some(e => e.t === 'use')) Audio_.fgSe.card();
@@ -86044,7 +86325,8 @@ const CardBattleBoard = ({
         y: r.top + r.height / 2
       };
     };
-    evs.filter(e => e.t === 'use' && e.mon >= 0).forEach((e, n) => {
+    const motionOn = settings.motion !== 'OFF';
+    evs.filter(e => e.t === 'use' && e.mon >= 0 && settings.motion === 'FULL').forEach((e, n) => {
       const mon = next.players[e.p].mons[e.mon];
       const kind = cardMotionKindOf(db, e.cards[0], mon);
       if (!kind) return;
@@ -86062,7 +86344,7 @@ const CardBattleBoard = ({
         key
       }, cardMotionMs(kind) + 80);
     });
-    const breederUse = evs.find(e => e.t === 'use' && cardIsBreederCard(db, e.cards[0]));
+    const breederUse = motionOn && evs.find(e => e.t === 'use' && cardIsBreederCard(db, e.cards[0]));
     if (breederUse) {
       const key = `b${next.log.length}-${Date.now()}`;
       setBreederFx({
@@ -86071,7 +86353,7 @@ const CardBattleBoard = ({
       });
       motionTimers.current.push(setTimeout(() => setBreederFx(cur => cur && cur.key === key ? null : cur), 1700));
     }
-    const back = evs.find(e => e.t === 'hit' && e.reflect);
+    const back = motionOn && evs.find(e => e.t === 'hit' && e.reflect);
     const shield = back && evs.find(e => e.t === 'hit' && !e.reflect && e.guarded);
     if (back && shield) {
       const a = centerOf(`${shield.p}-${shield.m}`);
@@ -86102,7 +86384,7 @@ const CardBattleBoard = ({
       const g = lastGuard.current[`${e.p}-${e.m}`];
       const recent = g && Date.now() - g.at < 20000;
       if (type === 'dodge' && recent && g.jump) type = 'jump';
-      if (type) playMotion(`${e.p}-${e.m}`, {
+      if (type && motionOn) playMotion(`${e.p}-${e.m}`, {
         type,
         label: type === 'guard' && recent ? g.label : '',
         key: `h${next.log.length}-${n}-${Date.now()}`
@@ -86111,7 +86393,7 @@ const CardBattleBoard = ({
     evs.filter(e => e.t === 'guard').forEach((e, n) => {
       const c = cardOf(db, e.card);
       const type = c && c.kind === 'dge' ? cardDodgeIsJump(c) ? 'jump' : 'dodge' : 'guard';
-      playMotion(`${e.p}-${e.mon}`, {
+      if (motionOn) playMotion(`${e.p}-${e.mon}`, {
         type,
         label: type === 'guard' ? cardGuardLabel(c) : '',
         key: `g${next.log.length}-${n}-${Date.now()}`
@@ -86212,7 +86494,7 @@ const CardBattleBoard = ({
     const t = setTimeout(() => onFinish({
       outcome: st.winner === CARD_ME ? 'win' : 'lose',
       st
-    }), settings.speed === 'fast' ? 1200 : 2200);
+    }), CARD_RESULT_WAIT_MS[settings.resultWait] || 2200);
     return () => clearTimeout(t);
   }, [st.winner]);
   const me = st.players[CARD_ME];
@@ -86238,6 +86520,61 @@ const CardBattleBoard = ({
   const setChosen = sel && sets.length ? sel.set && sets.includes(sel.set) ? sel.set : sets[0] : null;
   const finalOpts = byMon.filter(o => JSON.stringify(o.hand) === setChosen);
   const needTarget = finalOpts.some(o => o.target);
+  const [confirm, setConfirm] = useState(null);
+  useEffect(() => {
+    setConfirm(null);
+  }, [st]);
+  const askUse = o => {
+    if (!confirmOn('confirmUse')) {
+      step(o);
+      return;
+    }
+    const c = cardOf(db, me.hand[o.hand[0]]);
+    const tm = o.target ? st.players[o.target.p].mons[o.target.m] : null;
+    setConfirm({
+      kind: 'use',
+      act: o,
+      label: `「${c ? c.name : ''}」を${tm ? `${tm.name}に` : ''}使いますか？`
+    });
+  };
+  const askEnd = act => {
+    if (!confirmOn('confirmEnd')) {
+      step(act);
+      return;
+    }
+    setConfirm({
+      kind: 'end',
+      act,
+      label: act.hand && act.hand.length ? `${act.hand.length}枚をガッツにして、ターンを終わりますか？` : 'ガッツにしないで、ターンを終わりますか？'
+    });
+  };
+  const confirmYes = () => {
+    const cf = confirm;
+    setConfirm(null);
+    if (!cf) return;
+    if (cf.kind === 'use' && !cardAttackOptions(db, st).some(o => JSON.stringify(o) === JSON.stringify(cf.act))) return;
+    if (cf.kind === 'end' && (st.phase !== 'guts' || cardDeciderOf(st) !== CARD_ME || st.pending)) return;
+    step(cf.act);
+  };
+  const gutsAdvisor = useMemo(() => cardAiPolicy('kyuko', 'master'), []);
+  const gutsPickKey = settings.gutsPick === 'ON' && mode === 'guts' && myTurn && !tutorial && !game.demo ? `${st.turn}` : '';
+  useEffect(() => {
+    if (!gutsPickKey) return;
+    try {
+      const a = cardAiChooseGuts(db, st, gutsAdvisor);
+      if (a && Array.isArray(a.hand) && a.hand.length) setPicks(a.hand.filter(i => i >= 0 && i < me.hand.length));
+    } catch (_) {}
+  }, [gutsPickKey]);
+  const handOrder = (() => {
+    const idx = me.hand.map((_, i) => i);
+    if (settings.handSort !== 'KIND') return idx;
+    const rank = i => {
+      const c = cardOf(db, me.hand[i]);
+      return c ? c.user === 'breeder' ? 9 : CARD_KIND_ORDER[c.kind] ?? 8 : 10;
+    };
+    return idx.sort((a, b) => rank(a) - rank(b) || a - b);
+  })();
+  const handLarge = settings.handText === 'LARGE' && !tiny;
   const tapHand = i => {
     Audio_.fgSe.tap();
     if (tutorial && myTurn && (!cardTutorialHandOk(tutStage.id, st, i) || tutStage.next || tutQ.length > 1)) {
@@ -86302,7 +86639,7 @@ const CardBattleBoard = ({
       return;
     }
     const o = finalOpts.find(x => x.target && x.target.p === p && x.target.m === m);
-    if (o) step(o);
+    if (o) askUse(o);
   };
   const markOf = (p, m) => {
     if (drag && drag.active) return dropOver === `${p}-${m}` ? 'drop' : null;
@@ -86360,7 +86697,7 @@ const CardBattleBoard = ({
       sy: e.clientY,
       active: false,
       long: false,
-      targets: myTurn ? dropTargetsOf(i) : {}
+      targets: myTurn && settings.drag !== 'OFF' ? dropTargetsOf(i) : {}
     };
     dragRef.current = d;
     clearTimeout(d.timer);
@@ -86369,7 +86706,7 @@ const CardBattleBoard = ({
         d.long = true;
         setDetail(no);
       }
-    }, 450);
+    }, pressMs);
     const onMove = ev => {
       const moved = Math.hypot(ev.clientX - d.sx, ev.clientY - d.sy);
       if (!d.active && moved >= CARD_DRAG_THRESHOLD && !d.long && Object.keys(d.targets).length) {
@@ -86413,7 +86750,7 @@ const CardBattleBoard = ({
         if (t === 'pick') {
           Audio_.fgSe.tap();
           setPicks(cur => cur.includes(i) ? cur : [...cur, i]);
-        } else if (t) step(t);
+        } else if (t && mode === 'attack') askUse(t);else if (t) step(t);
         return;
       }
       if (d.long || ev.type === 'pointercancel') return;
@@ -86542,7 +86879,7 @@ const CardBattleBoard = ({
       type: "button",
       disabled: tutOff('turn'),
       className: `${btn} bg-gradient-to-b from-orange-400 to-orange-600${tutBtn('turn')}`,
-      onClick: () => step({
+      onClick: () => askEnd({
         type: 'guts',
         hand: picks
       })
@@ -86551,7 +86888,7 @@ const CardBattleBoard = ({
     return React.createElement(React.Fragment, null, useBtn ? React.createElement("button", {
       type: "button",
       className: `${btn} mh-button-primary`,
-      onClick: () => step(finalOpts[0])
+      onClick: () => askUse(finalOpts[0])
     }, "使う") : null, React.createElement("button", {
       type: "button",
       disabled: tutOff('end'),
@@ -86639,6 +86976,7 @@ const CardBattleBoard = ({
     compact: compact,
     tiny: tiny,
     wide: wide,
+    calm: settings.shake === 'OFF',
     motion: motions[`1-${m}`] || null
   }))), React.createElement("div", {
     "data-card-stage": true,
@@ -86714,6 +87052,7 @@ const CardBattleBoard = ({
     compact: compact,
     tiny: tiny,
     wide: wide,
+    calm: settings.shake === 'OFF',
     motion: motions[`0-${m}`] || null
   }))), React.createElement("div", {
     className: "flex shrink-0 justify-end px-2 py-1"
@@ -86791,7 +87130,8 @@ const CardBattleBoard = ({
   }, JSON.parse(s).map(i => cardOf(db, me.hand[i]).name).join('＋')))), React.createElement("div", {
     "data-card-hand": true,
     className: "flex shrink-0 items-end justify-center gap-1 px-1 pb-1 pt-2"
-  }, me.hand.map((no, i) => {
+  }, handOrder.map(i => {
+    const no = me.hand[i];
     const c = cardOf(db, no);
     const on = handUsable(i);
     const up = sel && sel.hand === i || picks.includes(i) || setChosen && JSON.parse(setChosen).includes(i);
@@ -86820,7 +87160,7 @@ const CardBattleBoard = ({
       className: `mt-0.5 w-full rounded-md bg-black/60 ${tiny ? 'py-px' : 'py-0.5'} text-center leading-tight`
     }, React.createElement(CardNameFit, {
       name: c ? c.name : no,
-      size: compact ? 10 : 11,
+      size: handLarge ? compact ? 12 : 13 : compact ? 10 : 11,
       className: "font-bold leading-tight",
       twoLine: true
     }), tiny ? React.createElement(React.Fragment, null, React.createElement(CardNameFit, {
@@ -86832,13 +87172,13 @@ const CardBattleBoard = ({
       size: 10,
       className: "font-extrabold leading-[1.1] text-amber-200"
     })) : compact ? React.createElement(React.Fragment, null, React.createElement("span", {
-      className: "block text-[10px] font-extrabold leading-tight text-amber-200"
+      className: `block ${handLarge ? 'text-[12px]' : 'text-[10px]'} font-extrabold leading-tight text-amber-200`
     }, "ガッツ", c ? c.guts : '-'), React.createElement("span", {
-      className: "block whitespace-nowrap text-[10px] font-extrabold leading-tight text-amber-200"
+      className: `block whitespace-nowrap ${handLarge ? 'text-[12px]' : 'text-[10px]'} font-extrabold leading-tight text-amber-200`
     }, cardCaption(c))) : React.createElement(React.Fragment, null, React.createElement("span", {
-      className: "block text-[11px] font-extrabold text-amber-200"
+      className: `block ${handLarge ? 'text-[13px]' : 'text-[11px]'} font-extrabold text-amber-200`
     }, "ガッツ", c ? c.guts : '-'), React.createElement("span", {
-      className: "block text-[11px] font-extrabold text-amber-200"
+      className: `block ${handLarge ? 'text-[13px]' : 'text-[11px]'} font-extrabold text-amber-200`
     }, cardCaption(c)))));
   })), React.createElement("div", {
     "data-card-footer": true,
@@ -86888,6 +87228,12 @@ const CardBattleBoard = ({
     initial: discard.tab,
     onDetail: no => setDetail(no),
     onClose: () => setDiscard(null)
+  }), confirm && React.createElement(ConfirmSheet, {
+    title: confirm.label,
+    message: confirm.kind === 'use' ? 'オプションで確かめないようにもできます' : '',
+    confirmLabel: confirm.kind === 'use' ? '使う' : '終わる',
+    onCancel: () => setConfirm(null),
+    onConfirm: confirmYes
   }), quit && !tutorial && React.createElement(ConfirmSheet, {
     title: "投了しますか？",
     message: pvp ? '投了すると負けになります' : '投了すると負けになります(カードポイントとクイック周回は、倒した相手のモンスターの数に応じて少しだけ)',
@@ -87878,35 +88224,13 @@ const CardBattleScreen = ({
     }, jaWrap('ランキングに数えるのは、公開してからのふつうの対戦だけです')))));
   }
   if (view === 'options') {
-    return React.createElement("div", {
-      "data-mh-screen": true,
-      "data-card-options": true,
-      className: SCREEN_SHELL_CLASS
-    }, React.createElement(ScreenHead, {
-      title: "オプション",
-      accent: "text-amber-200",
-      onBack: () => setView('top'),
-      note: "MFバトルカード"
-    }), React.createElement("div", {
-      className: `${SCREEN_LIST_CLASS} space-y-2 pb-4`
-    }, React.createElement("div", {
-      className: SCREEN_PANEL_CLASS
-    }, React.createElement("div", {
-      className: "text-[13px] font-black text-white"
-    }, "トップの助手"), React.createElement("div", {
-      className: "mt-1.5 flex justify-end"
-    }, React.createElement(ModeSelectAssistToggles, {
-      assistant: topAssistant,
-      showArt: assist.modeSelectArt,
-      showComment: assist.modeSelectComment,
-      onToggle: toggleAssist,
-      cls: "",
-      withLabel: true
-    }))), React.createElement("div", {
+    const bgmPanel = React.createElement("div", {
       "data-card-options-bgm": true,
       className: SCREEN_PANEL_CLASS
     }, React.createElement("div", {
       className: "text-[13px] font-black text-white"
+    }, "音"), React.createElement("b", {
+      className: "mt-2 block text-[12px] font-black text-slate-200"
     }, "対戦のBGM"), [['cpu', '助手と対戦'], ['pvp', 'マルチ対戦']].map(([k, label]) => React.createElement("label", {
       key: k,
       className: "mt-2 block text-left"
@@ -87940,57 +88264,17 @@ const CardBattleScreen = ({
     }, bgmPreview.playing === save.bgm[k] ? '停止' : '試聴')))), React.createElement("p", {
       className: "mt-1.5 text-[10px] font-bold leading-snug text-slate-400",
       style: JA_LABEL_STYLE
-    }, jaWrap('「おまかせ」のときは、対戦する助手ごとに決まった曲が流れます'))), React.createElement("div", {
-      "data-card-options-settings": true,
-      className: SCREEN_PANEL_CLASS
-    }, React.createElement("div", {
-      className: "text-[13px] font-black text-white"
-    }, "演出"), React.createElement("div", {
-      className: "mt-2 flex items-center gap-2"
-    }, React.createElement("span", {
-      className: "min-w-0 flex-1 text-[12px] font-bold text-slate-200"
-    }, "対戦の進む速さ"), [['normal', 'ふつう'], ['fast', 'はやい']].map(([v, label]) => React.createElement("button", {
-      key: v,
-      type: "button",
-      "data-card-speed": v,
-      "aria-pressed": save.settings.speed === v,
-      onClick: () => {
-        Audio_.fgSe.tap();
-        void persist({
-          settings: {
-            ...save.settings,
-            speed: v
-          }
-        });
-      },
-      className: `min-h-[36px] rounded-full border px-3 text-[11px] font-black ${save.settings.speed === v ? 'border-amber-300 bg-amber-500/25 text-amber-100' : 'border-white/15 bg-slate-900 text-slate-300'}`
-    }, label))), React.createElement("div", {
-      className: "mt-2 flex items-center gap-2"
-    }, React.createElement("span", {
-      className: "min-w-0 flex-1 text-[12px] font-bold leading-snug text-slate-200",
-      style: JA_LABEL_STYLE
-    }, jaWrap('守れるカードが無いときは、自動で「守らない」')), React.createElement("button", {
-      type: "button",
-      "data-card-auto-pass": true,
-      "aria-pressed": save.settings.autoPass,
-      onClick: () => {
-        Audio_.fgSe.tap();
-        void persist({
-          settings: {
-            ...save.settings,
-            autoPass: !save.settings.autoPass
-          }
-        });
-      },
-      className: `min-h-[36px] shrink-0 rounded-full border px-3 text-[11px] font-black ${save.settings.autoPass ? 'border-emerald-300 bg-emerald-700/85 text-white' : 'border-white/25 bg-slate-900/75 text-slate-200'}`
-    }, save.settings.autoPass ? 'ON' : 'OFF')), React.createElement("p", {
-      className: "mt-1.5 text-[10px] font-bold leading-snug text-slate-400",
-      style: JA_LABEL_STYLE
-    }, jaWrap('はやいにすると、相手が考える時間と、勝ち負けが決まってから結果までが短くなります'))), React.createElement("div", {
+    }, jaWrap('「おまかせ」のときは、対戦する助手ごとに決まった曲が流れます')), React.createElement("p", {
+      "data-card-options-se": true,
+      className: "mt-1 text-[10px] font-bold leading-snug text-slate-400",
+      style: JA_WRAP_STYLE
+    }, jaWrap('効果音とBGMの大きさは、ゲーム全体の設定の「音量」と同じです(MFバトルカードだけ別にはしていません)')));
+    const quickAutoPanel = React.createElement("div", {
       "data-card-options-quick": true,
-      className: SCREEN_PANEL_CLASS
-    }, React.createElement("div", {
-      className: "text-[13px] font-black text-white"
+      "data-card-setting": "quickAutoStart",
+      className: "mt-2.5 border-t border-white/10 pt-2.5"
+    }, React.createElement("b", {
+      className: "block text-[12px] font-black text-slate-200"
     }, "裏のクイック周回"), React.createElement("div", {
       className: "mt-2 flex items-center gap-2"
     }, React.createElement("span", {
@@ -88017,7 +88301,74 @@ const CardBattleScreen = ({
       "data-card-quick-auto-needs": true,
       className: "mt-1 text-[10px] font-bold leading-snug text-amber-200",
       style: JA_WRAP_STYLE
-    }, jaWrap('AUTO設定で、勇者モン・配置距離・難易度の3つを決めると使えます')))));
+    }, jaWrap('AUTO設定で、勇者モン・配置距離・難易度の3つを決めると使えます')));
+    return React.createElement("div", {
+      "data-mh-screen": true,
+      "data-card-options": true,
+      className: SCREEN_SHELL_CLASS
+    }, React.createElement(ScreenHead, {
+      title: "オプション",
+      accent: "text-amber-200",
+      onBack: () => setView('top'),
+      note: "MFバトルカード"
+    }), React.createElement("div", {
+      className: `${SCREEN_LIST_CLASS} space-y-2 pb-4`
+    }, React.createElement("div", {
+      className: SCREEN_PANEL_CLASS
+    }, React.createElement("div", {
+      className: "text-[13px] font-black text-white"
+    }, "トップの助手"), React.createElement("div", {
+      className: "mt-1.5 flex justify-end"
+    }, React.createElement(ModeSelectAssistToggles, {
+      assistant: topAssistant,
+      showArt: assist.modeSelectArt,
+      showComment: assist.modeSelectComment,
+      onToggle: toggleAssist,
+      cls: "",
+      withLabel: true
+    }))), CARD_SETTING_GROUPS.map(g => React.createElement(React.Fragment, {
+      key: g.title
+    }, g.title === '表示' && bgmPanel, React.createElement("div", {
+      "data-card-setting-group": g.title,
+      className: SCREEN_PANEL_CLASS
+    }, React.createElement("div", {
+      className: "text-[13px] font-black text-white"
+    }, g.title), g.items.map(item => {
+      const cur = item.bool ? save.settings[item.key] ? 'ON' : 'OFF' : save.settings[item.key];
+      return React.createElement("div", {
+        key: item.key,
+        "data-card-setting": item.key,
+        className: "mt-2.5 border-t border-white/10 pt-2.5"
+      }, React.createElement("b", {
+        className: "block text-[12px] font-black text-slate-200"
+      }, item.title, item.only === 'cpu' && React.createElement("small", {
+        className: "ml-1 text-[10px] font-bold text-slate-400"
+      }, "(助手と対戦)")), React.createElement("p", {
+        className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400",
+        style: JA_WRAP_STYLE
+      }, jaWrap(item.desc)), React.createElement("div", {
+        className: `mt-2 grid gap-1.5 ${item.options.length >= 5 ? 'grid-cols-5' : item.options.length === 4 ? 'grid-cols-4' : item.options.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`
+      }, item.options.map(o => React.createElement("button", {
+        key: o.id,
+        type: "button",
+        "data-card-setting-option": o.id,
+        "aria-pressed": cur === o.id,
+        onClick: () => {
+          Audio_.fgSe.tap();
+          void persist({
+            settings: normalizeCardSettings({
+              ...save.settings,
+              [item.key]: item.bool ? o.id === 'ON' : o.id
+            })
+          });
+        },
+        className: `flex min-h-[48px] flex-col items-center justify-center rounded-xl px-0.5 py-1 text-[11px] font-black leading-tight active:scale-95 ${cur === o.id ? 'border border-amber-300 bg-amber-500/30 text-amber-50' : 'border border-white/10 bg-slate-950 text-slate-300'}`
+      }, React.createElement("span", {
+        className: "block whitespace-pre-line text-center"
+      }, o.label), React.createElement("small", {
+        className: "mt-0.5 block text-center text-[9px] font-bold leading-tight opacity-80"
+      }, o.note)))));
+    }), g.title === '自動' && quickAutoPanel)))));
   }
   if (view === 'ranking') {
     return React.createElement(CardRankingBoard, {
@@ -129681,6 +130032,9 @@ const createAnimationStyle = () => {
     .mh-card-guard { animation: mhCardGuard .7s ease-out both; }
     .mh-card-hit { animation: mhRjJackHit .6s ease-out both; }
     .mh-card-ko { animation: mhCardKo .9s ease-in forwards; transform-origin: 50% 90%; }
+    /* 「画面の揺れ: 揺らさない」(カードのオプション)のときの受けた動き。揺らさずに赤く光るだけ */
+    @keyframes mhCardHitCalm { 0%,100% { filter: none; } 30% { filter: drop-shadow(0 0 10px rgba(248,113,113,1)) brightness(1.3); } }
+    .mh-card-hit-calm { animation: mhCardHitCalm .6s ease-out both; }
     .mh-card-shield { position: absolute; inset: 6% 14%; border-radius: 45% 45% 50% 50%; border: 3px solid rgba(147,197,253,.95); background: radial-gradient(circle, rgba(191,219,254,.35), rgba(59,130,246,.15) 60%, transparent 72%); box-shadow: 0 0 18px rgba(96,165,250,.9); pointer-events: none; animation: mhCardShield .7s ease-out both; }
     /* 跳んでよける(ジャンプ・舞い上がる): 上で止まってから降りる / よけた残像 / 盾の数字 / はね返す光線 / ブリーダーの顔 / 倒れたカードが裏返る(設計書 5-3・5-4) */
     @keyframes mhCardJump { 0% { transform: none; } 25% { transform: translateY(-30px) scale(1.04); } 72% { transform: translateY(-30px) scale(1.04); filter: drop-shadow(0 18px 6px rgba(0,0,0,.35)); } 100% { transform: none; } }
