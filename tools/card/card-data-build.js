@@ -289,9 +289,12 @@ const build = () => {
   for (const m of hy.monster) {
     if (m.excluded) continue;
     monsters[m.no] = { no: m.no, species: `hybrid:${m.no}`, name: m.name, type: TYPE[m.type], life: m.life, variant: null,
-      main: SPECIES_BY_NAME[m.main] || m.main, sub: SPECIES_BY_NAME[m.sub] || m.sub, wave: 'hybrid', img: m.img.replace(/\.jpg$/, ''),
+      // 副が ??? の子は sub: 'unknown'(どの種族とも一致しない。このゲームでは ??? がレアの印。社長 2026-10-25)
+      main: SPECIES_BY_NAME[m.main] || m.main, sub: m.sub === '？？？' ? 'unknown' : SPECIES_BY_NAME[m.sub] || m.sub, wave: 'hybrid', img: m.img.replace(/\.jpg$/, ''),
       // メインの種族の技が届いていない子は準備中(設計書 4-2。デュラハンは 2026-10-24 に届いた)
-      ready: !!SPECIES_BY_NAME[m.main] };
+      ready: !!SPECIES_BY_NAME[m.main],
+      // 立ち絵が無い子は、パックにもコンピューターのデッキにも入れず、図鑑にだけ並べる(社長 2026-10-25。cards.json の dex_only)
+      ...(m.dex_only ? { dexOnly: true } : {}) };
   }
   // スターター(元の表どおり。頭突き → 頭つき はカードの文字に合わせる)
   const dl = JSON.parse(fs.readFileSync(path.join(SRC, 'starter-decklists', 'decklists.json'), 'utf8'));

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9a8bfb8229ceea6d
+// source-sha256: 36344755ec0a1097
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-26 01:59";
+const BUILD_DATE = "2026-10-26 02:15";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -84822,7 +84822,7 @@ const CARD_AI_DECK_TUNE = Object.freeze({
     normal: -1.5,
     hard: -1.5,
     expert: 0,
-    master: 0.1
+    master: 1
   },
   dra: {
     easy: -1.5,
@@ -84946,7 +84946,7 @@ const cardAiPickIndex = (weights, rand) => {
 };
 const cardAiFavoriteCandidates = (db, who) => {
   const fav = CARD_AI_FAVORITE[who] || CARD_AI_FAVORITE.mua;
-  return Object.values(db.monsters).filter(m => m.ready !== false && (String(m.wave) === 'hybrid' ? m.main === fav : m.species === fav)).map(m => m.no).sort();
+  return Object.values(db.monsters).filter(m => m.ready !== false && !m.dexOnly && (String(m.wave) === 'hybrid' ? m.main === fav : m.species === fav)).map(m => m.no).sort();
 };
 const cardAiMonWave = (db, m) => {
   if (String(m.wave) !== 'hybrid') return Number(m.wave) || 1;
@@ -84969,7 +84969,7 @@ const cardAiPickTrio = (db, who, levelId, rand, playerDeck) => {
   const favScore = favs.map(m => cardAiMonScore(db, who, m, cfg.maxWave));
   const favW = favs.map(m => String(m.wave) === 'hybrid' ? 1.5 : !m.variant ? 3 : /別絵/.test(m.variant) ? 1 : 2);
   const fav = cfg.best ? favs[favScore.indexOf(Math.max(...favScore))] : favs[cardAiPickIndex(favW, rand)];
-  const cands = Object.values(db.monsters).filter(m => m.ready !== false && !m.variant && m.species !== fav.species && m.species !== CARD_AI_FAVORITE[who] && (String(m.wave) === 'hybrid' ? cfg.maxWave >= 99 && m.main !== CARD_AI_FAVORITE[who] : Number(m.wave) <= cfg.maxWave));
+  const cands = Object.values(db.monsters).filter(m => m.ready !== false && !m.dexOnly && !m.variant && m.species !== fav.species && m.species !== CARD_AI_FAVORITE[who] && (String(m.wave) === 'hybrid' ? cfg.maxWave >= 99 && m.main !== CARD_AI_FAVORITE[who] : Number(m.wave) <= cfg.maxWave));
   let counter = () => 0;
   if (cfg.best && playerDeck && Array.isArray(playerDeck.cards) && playerDeck.cards.length) {
     const pc = playerDeck.cards.map(no => cardOf(db, no)).filter(Boolean);
@@ -86416,7 +86416,7 @@ const cardPackIdOf = (db, no) => {
   return cardPackIdOfSpecies(c.user);
 };
 const cardPackTechPool = (db, pack) => Object.values(db.cards).filter(c => c.ready && cardPackIdOf(db, c.no) === pack.id).map(c => c.no).sort();
-const cardPackMonPool = (db, pack, rarity) => Object.values(db.monsters).filter(m => m.ready !== false && cardMonRarity(m) === rarity && cardPackIdOf(db, m.no) === pack.id).map(m => m.no).sort();
+const cardPackMonPool = (db, pack, rarity) => Object.values(db.monsters).filter(m => m.ready !== false && !m.dexOnly && cardMonRarity(m) === rarity && cardPackIdOf(db, m.no) === pack.id).map(m => m.no).sort();
 const cardPackAllCards = (db, pack) => ({
   monsters: Object.values(db.monsters).filter(m => cardPackIdOf(db, m.no) === pack.id).map(m => m.no).sort(),
   cards: Object.values(db.cards).filter(c => cardPackIdOf(db, c.no) === pack.id).map(c => c.no).sort()
@@ -87386,7 +87386,11 @@ const CardDetailModal = ({
     className: "rounded-md bg-sky-900 px-2 py-0.5"
   }, CARD_TYPE_LABEL[m.type]), React.createElement("span", {
     className: "rounded-md bg-slate-800 px-2 py-0.5 text-slate-400"
-  }, "No.", m.no))), React.createElement("button", {
+  }, "No.", m.no)), m.dexOnly && React.createElement("p", {
+    "data-card-dex-only": true,
+    className: "mt-2 text-[12px] font-bold text-amber-300",
+    style: JA_LABEL_STYLE
+  }, jaWrap('まだ手に入らないカードです(パックには入っていません)'))), React.createElement("button", {
     type: "button",
     onClick: onClose,
     className: "mh-button mh-button-secondary min-h-[48px] w-full max-w-sm rounded-2xl border border-white/20 bg-slate-900 font-black"

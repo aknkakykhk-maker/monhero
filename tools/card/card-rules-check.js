@@ -361,14 +361,18 @@ const packs = () => {
   ok(E.CARD_SAVE_KEYS.pity === 'mh_card_pack_pity_v1' && E.CARD_SAVE_KEYS.shop === 'mh_card_shop_v1' && E.CARD_SAVE_KEYS.pitySplit === 'mh_card_pack_pity_split_v1', 'パックの保存キーの名前が違う');
   // 8弾の分け方(2026-10-25 社長が決めた案。種族3つずつ・第1〜3弾はスターターキットの顔ぶれ・混血はメインの種族の弾)
   const PLAN = { p1: ['dino', 'hare', 'mocchi'], p2: ['golem', 'pixie', 'naga'], p3: ['suezo', 'gali', 'tiger'], p4: ['phoenix', 'monol', 'henger'], p5: ['plant', 'dragon', 'jell'], p6: ['mew', 'worm', 'durahan'], p7: ['zilla', 'metalner', 'joker'], p8: ['arrowhead', 'centaur', 'colorpandora'] };
-  const HYBRID = { p1: ['ダークハム', 'ヘルファット'], p2: ['ストライクリパー'], p3: ['バロン', 'アクアリウス', 'プラムラー'], p4: ['ワカクサケンザイ', 'ガーラント'], p5: ['ベニヒメソウ', 'アーマードラゴン', 'ウロコゲル'], p6: ['ミミニャー', 'ムラサキチュウ', 'ケルマディクス'], p7: ['ギガロン'], p8: [] };
+  // 混血・派生は主の種族の弾へ(#3575)。2026-10-25 の派生25枚も同じ決め(立ち絵の無い5枚は図鑑だけで、パックには出ない)
+  const HYBRID = { p1: ['ダークハム', 'ヘルファット', 'ヴァージアハピ', 'カッチュウサウル', 'ジェントル', 'ヨロイモッチー', 'アンキロックス'], p2: ['ストライクリパー', 'ラベンダーキール', 'エンジェル', 'バズラ', 'ナハトファルター', 'ブルーマウンテン', 'マグナビートル'], p3: ['バロン', 'アクアリウス', 'プラムラー', 'ハムライガー', 'メロンボ', 'ヒトツメオウジ', 'ツノマル', 'ギンギライガー'], p4: ['ワカクサケンザイ', 'ガーラント', 'ダークヘンガー', 'ソボロベント'], p5: ['ベニヒメソウ', 'アーマードラゴン', 'ウロコゲル', 'パー・プリン', 'ヒネクレソウ', 'ジハード', 'ムー'], p6: ['ミミニャー', 'ムラサキチュウ', 'ケルマディクス', 'ママニャー', 'コロネ', 'ベスビオス'], p7: ['ギガロン'], p8: [] };
+  const DEX_ONLY = ['C-011', 'C-014', 'C-032', 'C-037', 'C-044'];
+  ok(DEX_ONLY.every((no) => db.monsters[no] && db.monsters[no].dexOnly) && Object.values(db.monsters).filter((m) => m.dexOnly).length === DEX_ONLY.length, '立ち絵の無い5枚だけが「図鑑だけ」になっていない');
+  ok(['C-020', 'C-044', 'C-045'].every((no) => db.monsters[no].sub === 'unknown'), '副が ??? の3枚の副が unknown でない');
   ok(E.CARD_PACKS.length === 8 && E.CARD_PACKS.every((p, i) => p.id === `p${i + 1}` && p.name === `第${i + 1}弾パック` && JSON.stringify(p.species) === JSON.stringify(PLAN[p.id])), '8弾の顔ぶれが決めた案と違う');
   const lost = [...Object.keys(db.cards), ...Object.keys(db.monsters)].filter((no) => !E.cardPackIdOf(db, no));
   ok(!lost.length, `どの弾にも入っていないカードがある: ${lost.slice(0, 8).join('・')}`);
   E.CARD_PACKS.forEach((p) => {
     const all = E.cardPackAllCards(db, p);
     const n = all.monsters.length + all.cards.length;
-    ok(n >= 48 && n <= 52, `${p.name}の種類が50前後でない(${n})`);
+    ok(n >= 48 && n <= 58, `${p.name}の種類が50前後でない(${n})`);   // 派生25枚(2026-10-25)で、第1〜3・5弾は少し増えた
     const hy = all.monsters.filter((no) => String(db.monsters[no].wave) === 'hybrid').map((no) => db.monsters[no].name).sort();
     ok(JSON.stringify(hy) === JSON.stringify(HYBRID[p.id].slice().sort()), `${p.name}の混血が決めた案と違う(${hy.join('・')})`);
     const shared = all.cards.filter((no) => db.cards[no].user === 'any' || db.cards[no].user === 'breeder').length;
@@ -404,7 +408,7 @@ const packs = () => {
     const kiraRate = (rar.kira + rar.alt) / N;
     ok(kiraRate > 0.13 && kiraRate < 0.24, `${pack.name}のキラの出る割合がおかしい(${kiraRate.toFixed(3)})`);
     ok((pack.no <= 3) === (rar.alt > 0), `${pack.name}の別絵キラの出かたが違う(第1〜3弾だけに出る)`);
-    const pool = Object.values(db.cards).filter((c) => c.ready && E.cardPackIdOf(db, c.no) === pack.id).length + Object.values(db.monsters).filter((m) => m.ready !== false && E.cardPackIdOf(db, m.no) === pack.id).length;
+    const pool = Object.values(db.cards).filter((c) => c.ready && E.cardPackIdOf(db, c.no) === pack.id).length + Object.values(db.monsters).filter((m) => m.ready !== false && !m.dexOnly && E.cardPackIdOf(db, m.no) === pack.id).length;
     ok(seen.size === pool, `${pack.name}で出ないカードがある(${seen.size}/${pool})`);
     ok(Object.entries(col).every(([no, n]) => (db.cards[no] ? n <= 3 : n <= 1)), `${pack.name}で持てる枚数を超えた`);
   });
@@ -633,8 +637,8 @@ const pendingCards = () => {
     const hyAtk = Object.values(db.cards).find((c) => c.ready && c.user === hy.main && c.kind === 'pow' && !(c.effects || []).length);
     if (hyAtk) { const st3 = scene({ mons: [[hy.no, 'C-003', 'C-005'], ['C-001', 'C-003', 'C-005']], hands: [[hyAtk.no, '346'], []], guts: [9, 0] }); ok(!optWith(st3, [hyAtk.no, '346'], 0), '346: 混血の子の技に付けられる'); } }
   // ジョイのサポート(276): ガッツ3以下のブリーダーのカードに付けて、そのカードは0ガッツ。1ターン1枚のまま
-  // その場面ですぐ出せるブリーダーのカード(狙いの要る札・条件のある札は見本にしない)
-  const breederFresh = (minG, maxG) => Object.values(db.cards).filter((c) => c.ready && c.user === 'breeder' && c.guts >= minG && c.guts <= maxG && !(c.effects || []).some((e) => ['attach', 'extraAttackTarget', 'unstunTarget', 'useWhenAllies', 'heal'].includes(e.t)))
+  // その場面ですぐ出せるブリーダーのカード(狙いの要る札・条件のある札・合体は見本にしない。合体は派生が増えると使える場面が変わる)
+  const breederFresh = (minG, maxG) => Object.values(db.cards).filter((c) => c.ready && c.user === 'breeder' && c.guts >= minG && c.guts <= maxG && !(c.effects || []).some((e) => ['attach', 'extraAttackTarget', 'unstunTarget', 'useWhenAllies', 'heal', 'fuse'].includes(e.t)))
     .filter((c) => { const t = scene({ hands: [[c.no], []], guts: [9, 0] }); return E.cardAttackOptions(db, t).some((x) => x.type === 'breeder'); }).sort((a, b) => b.guts - a.guts || (a.no < b.no ? -1 : 1));
   { ready('276'); const br = breederFresh(1, 3)[0];
     ok(br, '276: ガッツ3以下のブリーダーのカードの見本が無い');
