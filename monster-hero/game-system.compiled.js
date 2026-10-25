@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9cea10f1c95b9e4a
+// source-sha256: 85f2712576c75990
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-25 14:06";
+const BUILD_DATE = "2026-10-25 14:07";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -87749,6 +87749,9 @@ const CardBattleScreen = ({
         setView('foe');
       }
     }, React.createElement("span", {
+      "aria-hidden": "true",
+      className: "mhms-mark"
+    }, "ASSISTANT"), React.createElement("span", {
       className: "relative flex items-center gap-2"
     }, React.createElement("span", {
       "aria-hidden": "true",
@@ -87760,7 +87763,7 @@ const CardBattleScreen = ({
     }, "助手のみんなと戦う・強さは5段"))), React.createElement("span", {
       "aria-hidden": "true",
       className: "relative flex -space-x-2"
-    }, foes.map(x => React.createElement("img", {
+    }, assistantsUnlockedFrom(seenStoryIds).filter(x => CARD_AI_HABITS[x.id]).map(x => React.createElement("img", {
       key: x.id,
       src: assistantFaceImage(x, 'normal'),
       alt: "",
@@ -87778,6 +87781,9 @@ const CardBattleScreen = ({
         animationDelay: '60ms'
       }
     }, React.createElement("span", {
+      "aria-hidden": "true",
+      className: "mhms-mark"
+    }, "MULTI"), React.createElement("span", {
       className: "relative flex items-center gap-2"
     }, React.createElement("span", {
       "aria-hidden": "true",
