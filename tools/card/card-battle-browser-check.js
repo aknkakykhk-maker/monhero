@@ -188,7 +188,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     check('⑪ ちがう所を押すと、ドラが「光ってる所」と案内する', wrongShown);
     check(`⑪ ${VW}×${VH} で、ドラの窓が全部見えて「次へ」が押せる(どの台詞でも)`, tutorIssues.size === 0, [...tutorIssues].slice(0, 4).join(' / '));
     check('⑪ 操作の段では、教えている所が光っている', tutorNoFocus.size === 0, [...tutorNoFocus].join('・'));
-    const tut = await page.evaluate(() => ({ t: JSON.parse(localStorage.getItem('mh_card_tutorial_v1') || 'null'), point: JSON.parse(localStorage.getItem('mh_card_point_v1') || '0') }));
+    const tut = await page.evaluate(() => ({ t: JSON.parse(localStorage.getItem('mh_card_tutorial_v1') || 'null'), point: JSON.parse(localStorage.getItem('mh_rhythm_event_points_v1') || '0') }));
     check('⑪ はじめて最後までやると 100(印 done・rewarded)', tut.t && tut.t.done && tut.t.rewarded && tut.point === 400, JSON.stringify(tut));
     await page.getByRole('button', { name: 'トップへ' }).click();
     await page.locator('[data-card-top="top"]').waitFor({ timeout: 20000 });
@@ -212,14 +212,14 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     await page.locator('[data-card-quit]').click();
     await page.locator('[data-confirm-sheet]').locator('xpath=..').getByRole('button', { name: '飛ばす' }).click();
     await page.locator('[data-card-top="result"]').waitFor({ timeout: 20000 });
-    const tut2 = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_card_point_v1') || '0'));
+    const tut2 = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_rhythm_event_points_v1') || '0'));
     check('⑪ もう一度やっても(飛ばしても)100 は二度ともらえない', tut2 === 400, String(tut2));
     await page.getByRole('button', { name: 'トップへ' }).click();
     await page.locator('[data-card-top="top"]').waitFor({ timeout: 20000 });
     const saved = await page.evaluate(() => ({
       col: JSON.parse(localStorage.getItem('mh_card_collection_v1') || '{}'),
       decks: JSON.parse(localStorage.getItem('mh_card_decks_v1') || 'null'),
-      point: JSON.parse(localStorage.getItem('mh_card_point_v1') || '0'),
+      point: JSON.parse(localStorage.getItem('mh_rhythm_event_points_v1') || '0'),
       starter: JSON.parse(localStorage.getItem('mh_card_starter_v1') || 'null'),
     }));
     const total = Object.values(saved.col).reduce((s, v) => s + v, 0);
@@ -436,7 +436,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     await page.waitForTimeout(500);
     await shot(page, '09-result');
     const after = await page.evaluate(() => ({
-      point: JSON.parse(localStorage.getItem('mh_card_point_v1') || '0'),
+      point: JSON.parse(localStorage.getItem('mh_rhythm_event_points_v1') || '0'),
       record: JSON.parse(localStorage.getItem('mh_card_record_v1') || 'null'),
       all: Object.fromEntries(Object.keys(localStorage).filter((k) => k.startsWith('mh_')).map((k) => [k, localStorage.getItem(k)])),
     }));
@@ -592,7 +592,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     await page.locator('[data-card-dex] button').first().click();
     await page.waitForTimeout(250);
     // ⑯ マーケットの「カードポイント」の売り場: パックを買って開ける・スターターキットを買う・円盤石と交換する
-    await page.evaluate(() => localStorage.setItem('mh_card_point_v1', JSON.stringify(5000)));
+    await page.evaluate(() => localStorage.setItem('mh_rhythm_event_points_v1', JSON.stringify(5000)));
     // 以前の4弾の天井の数(w1 に 4)を入れておく。買ったときに新しい8弾へ1回だけ写り、w1 は消えない
     await page.evaluate(() => localStorage.setItem('mh_card_pack_pity_v1', JSON.stringify({ w1: 4, w3: 2 })));
     const unlockedBefore = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_unlocked_monsters') || 'null'));
@@ -651,7 +651,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const flippedAll = await page.locator('[data-card-pack-card][data-card-pack-flipped="1"]').count();
     await page.locator('[data-card-pack-done]').dispatchEvent('click');
     await page.locator('[data-card-shop]').waitFor({ timeout: 10000 });
-    const afterPack = await page.evaluate(() => ({ point: JSON.parse(localStorage.getItem('mh_card_point_v1') || '0'), pity: JSON.parse(localStorage.getItem('mh_card_pack_pity_v1') || 'null'), col: Object.values(JSON.parse(localStorage.getItem('mh_card_collection_v1') || '{}')).reduce((a, n) => a + n, 0) }));
+    const afterPack = await page.evaluate(() => ({ point: JSON.parse(localStorage.getItem('mh_rhythm_event_points_v1') || '0'), pity: JSON.parse(localStorage.getItem('mh_card_pack_pity_v1') || 'null'), col: Object.values(JSON.parse(localStorage.getItem('mh_card_collection_v1') || '{}')).reduce((a, n) => a + n, 0) }));
     const split = await page.evaluate(() => ({ flag: JSON.parse(localStorage.getItem('mh_card_pack_pity_split_v1') || 'null'), pity: JSON.parse(localStorage.getItem('mh_card_pack_pity_v1') || 'null') }));
     check('⑯ 以前の天井の数(w1・w3)は消えずに残り、新しい弾へ1回だけ写る(w1→第2・3弾は 4、w3→第6弾は 2)・写した印が付く', split.flag === true && split.pity && split.pity.w1 === 4 && split.pity.w3 === 2 && split.pity.p2 === 4 && split.pity.p3 === 4 && split.pity.p6 === 2, JSON.stringify(split));
     check('⑯ 第1弾パックを5つ(1,350)買って開けると、カードが増え、カードポイントが減り、天井の数が残る(新しい弾 p1 で数える)', packsOpened === 5 && flippedAll === 8 && tearPhase === 'tearing' && afterPack.point <= 5000 - 1350 + 40 * 5 * 5 && afterPack.point >= 3650 && afterPack.col > colBefore && afterPack.pity && typeof afterPack.pity.p1 === 'number' && /技などの枠/.test(rateText), JSON.stringify({ packsOpened, flippedAll, tearPhase, afterPack, colBefore }));
@@ -683,13 +683,13 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const discBuy = page.locator('[data-card-shop-disc] button:not([disabled])').filter({ hasText: /交換|1,500/ }).first();
     let discOk = 'なし';
     if (await discBuy.count()) {
-      const pBefore = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_card_point_v1') || '0'));
+      const pBefore = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_rhythm_event_points_v1') || '0'));
       await discBuy.click();
       await page.waitForTimeout(300);
       const sheetBtn = page.locator('[role="dialog"] button').filter({ hasText: /交換/ }).last();
       if (await sheetBtn.count()) { await sheetBtn.click(); await page.waitForTimeout(800); }
       const unlockedAfter = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_unlocked_monsters') || 'null'));
-      const pAfter = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_card_point_v1') || '0'));
+      const pAfter = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_rhythm_event_points_v1') || '0'));
       // 交換前は保存に無いこともある(既定の顔ぶれ)。カードポイントが 1,500 減り、解放済みが前より1体多い(前が無ければ保存ができた)ことを見る
       discOk = pBefore - pAfter === 1500 && Array.isArray(unlockedAfter) && (!Array.isArray(unlockedBefore) || unlockedAfter.length === unlockedBefore.length + 1) ? 1 : `${pBefore}→${pAfter}・${JSON.stringify(unlockedAfter)}`;
       await page.locator('[role="dialog"] button').filter({ hasText: /閉じる|あとで|OK|スキップ/ }).first().click().catch(() => {});

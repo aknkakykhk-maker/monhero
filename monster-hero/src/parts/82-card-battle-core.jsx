@@ -1056,7 +1056,7 @@ const cardApplyAction = (db, st0, act) => {
 // 先読みの深さと気まぐれは難易度で決まる(5-5)。★次の1手を選ぶ所・デッキを組む所は差し替えられる口にしておく
 // sloppy … その場の1手を、考えずに選ぶ割合(守りを出し忘れる・手札を適当にガッツへ回す・適当な相手を狙う)
 const CARD_AI_LEVELS = Object.freeze({
-  // point … 勝ったときのカードポイント / loops … 勝ったときのクイック周回(◯周ぶん)。社長が案Aに決めた(台帳 #3484)
+  // point … 勝ったときのビートP / loops … 勝ったときのクイック周回(◯周ぶん)。社長が案Aに決めた(台帳 #3484)
   easy:   { depth: 0, whim: 0.30, sloppy: 0.55, point: 80, loops: 14 },
   normal: { depth: 1, whim: 0.15, sloppy: 0.30, point: 110, loops: 16 },
   hard:   { depth: 2, whim: 0.08, sloppy: 0.15, point: 140, loops: 18 },
@@ -1724,6 +1724,7 @@ const cardSortKey = (db, no) => {
 
 // ===== 保存の形(6-1)。読むときは必ずここを通す(無い・壊れているときは既定値) =====
 const CARD_SAVE_KEYS = Object.freeze({
+  // point(mh_card_point_v1)は、ビートPをやめてビートPにした(2026-10-26 社長)ので、もう読まない。消さずに残す(⑦)
   collection: 'mh_card_collection_v1', decks: 'mh_card_decks_v1', point: 'mh_card_point_v1', starter: 'mh_card_starter_v1',
   daily: 'mh_card_daily_v1', record: 'mh_card_record_v1', cpuUnlocked: 'mh_card_cpu_unlocked_v1',
   tutorial: 'mh_card_tutorial_v1', // 練習試合(チュートリアル)を終えた・飛ばした・100 を渡した印(86-card-tutorial.jsx)
@@ -1736,6 +1737,11 @@ const CARD_SAVE_KEYS = Object.freeze({
   settings: 'mh_card_settings_v1',    // 演出の速さ・守れないときの自動パス(normalizeCardSettings)
   aiTalk: 'mh_card_ai_talk_v1',       // 助手のおしゃべり(AI)の入/切 { on }(無ければ入。83-card-battle-talk-ai.jsx の cardNormalizeAiTalk)
 });
+// カードで使う・もらうポイントはビートP(2026-10-26 社長「ビートPを廃止してビートポイントにして」)。
+//   保存先はビートPのもの(25-storage.jsx の RHYTHM_EVENT_POINTS_KEY・mh_rhythm_event_points_v1)。数はビートPのときのまま
+//   ★CARD_SAVE_KEYS には入れない。デバッグの「カードバトルの記録を消す」が CARD_SAVE_KEYS を全部消すので、入れるとビートPまで消える
+//   ★検査(node で 82 だけ読む)では 25-storage が無いので、同じ名前を書いておく
+const CARD_POINT_STORE_KEY = typeof RHYTHM_EVENT_POINTS_KEY !== 'undefined' ? RHYTHM_EVENT_POINTS_KEY : 'mh_rhythm_event_points_v1';
 const cardIsPlainObject = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
 const cardNormalizeCollection = (v) => {
   const out = {};
@@ -1947,7 +1953,7 @@ const cardNormalizeCpuUnlocked = (v) => {
 };
 const cardLevelOpen = (unlocked, levelId) => levelId === 'easy' || levelId === 'normal' || (unlocked && unlocked[levelId] === true);
 
-// スターターを配る(一度きり。印がある人には二度と配らない)。300 カードポイントもいっしょに
+// スターターを配る(一度きり。印がある人には二度と配らない)。300 ビートPもいっしょに
 const CARD_STARTER_POINT = 300;
 const cardGrantStarter = (db, { collection, decks, point, starter }, kitId, now) => {
   if (starter) return null;
@@ -1961,7 +1967,7 @@ const cardGrantStarter = (db, { collection, decks, point, starter }, kitId, now)
 };
 
 // コンピューター戦の結果(4-1・社長が案Aに決めた 台帳 #3484)
-//   カードポイント: 勝ち … 難易度の点 / 負け(最後まで)… どの難易度も 25 / 降参 … 倒した相手のモンスター × 10(25まで。0体なら0)
+//   ビートP: 勝ち … 難易度の点 / 負け(最後まで)… どの難易度も 25 / 降参 … 倒した相手のモンスター × 10(25まで。0体なら0)
 //   クイック周回: 勝ち … 難易度の周 / 負け … 勝ちの半分 × (自分の番の数 ÷ 10。10回で満額)/ 降参 … 倒した数 × 負けの3分の1(0体なら0)
 //   ★かかった時間は見ない(止めて放っておいても増えない)。自分の番を3回やる前に終わった試合は、どちらも0(すぐ降参・すぐ負けで回せないように)
 //   ★負けのポイントを難易度で増やさないのは、MASTER でわざと早く負けるのがいちばん得にならないようにするため
