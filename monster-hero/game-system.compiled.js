@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 52ebd097153fafa9
+// source-sha256: 7cc027a5f1364d55
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-25 09:13";
+const BUILD_DATE = "2026-10-25 12:03";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -86663,9 +86663,9 @@ const CardBattleBoard = ({
       className: `${compact ? 'h-[40px] w-[29px]' : 'h-[64px] w-[46px]'} rounded-[4px] object-cover shadow`
     }) : null;
   }), React.createElement("div", {
-    className: "text-[13px] font-black leading-tight"
+    className: `${tiny ? 'whitespace-nowrap text-[12px]' : 'text-[13px]'} font-black leading-tight`
   }, action.who, React.createElement("span", {
-    className: "block text-[15px] text-amber-200"
+    className: tiny ? 'text-[13px] text-amber-200' : 'block text-[15px] text-amber-200'
   }, "「", action.cards.map(n => (cardOf(db, n) || {}).name).join('＋'), "」"))), React.createElement("div", {
     "data-card-log": true,
     className: "relative z-[1] max-w-full rounded-xl border border-white/15 bg-black/45 px-3 py-1 text-center text-[13px] font-bold leading-snug",
@@ -87335,9 +87335,6 @@ const CardBattleScreen = ({
         setView('foe');
       }
     }, React.createElement("span", {
-      "aria-hidden": "true",
-      className: "mhms-mark"
-    }, "ASSISTANT"), React.createElement("span", {
       className: "relative flex items-center gap-2"
     }, React.createElement("span", {
       "aria-hidden": "true",
@@ -87367,9 +87364,6 @@ const CardBattleScreen = ({
         animationDelay: '60ms'
       }
     }, React.createElement("span", {
-      "aria-hidden": "true",
-      className: "mhms-mark"
-    }, "MULTI"), React.createElement("span", {
       className: "relative flex items-center gap-2"
     }, React.createElement("span", {
       "aria-hidden": "true",
@@ -87680,7 +87674,7 @@ const CardBattleScreen = ({
           borderColor: dra.accent,
           ...JA_WRAP_STYLE
         }
-      }, jaWrap(result.done ? 'よくやったな。これで決まりはひととおりだ。あとは対戦で慣れていこう' : 'またいつでも練習しような。トップの「練習試合」からできるぞ'))) : null;
+      }, jaWrap(result.done ? 'よくやったな。これで決まりはひととおりだ。あとは対戦で慣れていこう' : 'またいつでも練習しような。トップの「ルール」から、また練習試合できるぞ'))) : null;
     })(), React.createElement("div", {
       className: SCREEN_PANEL_CLASS
     }, result.done && result.reward > 0 && React.createElement("div", {
@@ -87755,7 +87749,7 @@ const CardBattleScreen = ({
     }, "クイック周回 ", result.loops, "周ぶん"), React.createElement("div", {
       className: "mt-0.5 text-[11px] font-bold text-slate-300",
       style: JA_WRAP_STYLE
-    }, "裏のクイック周回(", result.quick.quickDifficulty && quickDifficultySetting(result.quick.quickDifficulty)?.label || 'AUTO設定', ")が", result.loops, "周ぶん進みました"), result.quick.live && Number(result.quick.toLoop) > Number(result.quick.fromLoop) && React.createElement("div", {
+    }, "裏のクイック周回(", result.quick.quickDifficulty && String(quickDifficultySetting(result.quick.quickDifficulty)?.label || '').toUpperCase() || 'AUTO設定', ")が", result.loops, "周ぶん進みました"), result.quick.live && Number(result.quick.toLoop) > Number(result.quick.fromLoop) && React.createElement("div", {
       "data-card-quick-loops-range": true,
       className: "mt-0.5 text-[11px] font-bold text-sky-100"
     }, result.quick.fromLoop, "周目 → ", result.quick.toLoop, "周目")) : React.createElement("div", {
