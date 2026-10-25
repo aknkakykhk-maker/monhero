@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f3bf2b3110253b46
+// source-sha256: 4c2a4643343578e2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-26 00:40";
+const BUILD_DATE = "2026-10-26 00:48";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -84241,17 +84241,25 @@ const CARD_AI_HABIT_BLEND = Object.freeze({
     momosuke: 0.5
   }
 });
+const CARD_AI_PLAY_TUNE = Object.freeze({
+  mua: {},
+  momosuke: {},
+  kiki: {},
+  dra: {},
+  atsu: {}
+});
 const cardAiPolicy = (habitId, levelId) => {
   const level = CARD_AI_LEVELS[levelId] || CARD_AI_LEVELS.normal;
   const tune = CARD_AI_TUNE[habitId] === undefined ? 1 : CARD_AI_TUNE[habitId];
   const base = CARD_AI_HABITS[habitId] || CARD_AI_HABITS.kyuko;
   const blend = (CARD_AI_HABIT_BLEND[levelId] || {})[habitId];
   const habit = blend === undefined ? base : Object.fromEntries(Object.entries(base).map(([k, v]) => [k, 1 + (v - 1) * blend]));
+  const add = (CARD_AI_PLAY_TUNE[habitId] || {})[levelId] || 0;
   return {
     habit,
     level: {
       ...level,
-      sloppy: Math.min(0.9, (level.sloppy || 0) * tune)
+      sloppy: Math.max(0, Math.min(0.9, (level.sloppy || 0) * tune + add))
     }
   };
 };
@@ -84669,6 +84677,14 @@ const CARD_AI_BUILD = Object.freeze({
     best: true
   }
 });
+const CARD_AI_DECK_TUNE = Object.freeze({
+  mua: {},
+  momosuke: {},
+  kiki: {},
+  kyuko: {},
+  dra: {},
+  atsu: {}
+});
 const CARD_AI_LANE_MIN_DEFAULT = 0.8;
 const CARD_AI_LANE_MIN = Object.freeze({
   momosuke: 1.5,
@@ -84851,8 +84867,9 @@ const cardAiBuildDeck = (db, who, levelId = 'normal', rand = null, opts = {}) =>
     ko: false
   }) && c.wave <= Math.max(maxWave, cardAiMonWave(db, m)))));
   const byName = {};
+  const noise = Math.max(0, cfg.noise + ((CARD_AI_DECK_TUNE[who] || {})[levelId] || 0));
   pool.forEach(c => {
-    const v = cardAiCardValue(c, habit) + cfg.noise * (rnd() * 2 - 1);
+    const v = cardAiCardValue(c, habit) + noise * (rnd() * 2 - 1);
     if (!byName[c.name] || byName[c.name].v < v) byName[c.name] = {
       c,
       v

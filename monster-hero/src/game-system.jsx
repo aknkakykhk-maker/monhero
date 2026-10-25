@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ab02112c75bfced2
+// generated-sha256: 7172a0f60b59718c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-26 00:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-26 00:48"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -50977,13 +50977,18 @@ const CARD_AI_TUNE = Object.freeze({ mua: 0.6, momosuke: 0.5, kiki: 1.3, kyuko: 
 //   みゅあ(攻める 1.5・守りを残す 0.2・ガッツをためる 0.2)は、深く読む相手には極端なくせが裏目に出て、
 //   EXPERT・MASTER でプレイヤー役に 29〜32% しか勝てなかった(公開の条件。tools/card/card-ai-balance.js で測る)
 const CARD_AI_HABIT_BLEND = Object.freeze({ expert: { mua: 0.6 }, master: { mua: 0.6, momosuke: 0.5 } });
+// 助手ごと・強さごとに「その場の1手を考えずに選ぶ割合」へ足す値(+ で弱く・- で強く。0〜0.9 に収める)。
+// デッキの組み方を毎試合変えた(2026-10-25)ので、card-ai-balance.js で勝率がそろうように決め直した。
+// ★きゅうこは足さない(プレイヤー役の考え方にも使うので。きゅうこはデッキ側の CARD_AI_DECK_TUNE だけで合わせる)
+const CARD_AI_PLAY_TUNE = Object.freeze({ mua: {}, momosuke: {}, kiki: {}, dra: {}, atsu: {} });
 const cardAiPolicy = (habitId, levelId) => {
   const level = CARD_AI_LEVELS[levelId] || CARD_AI_LEVELS.normal;
   const tune = CARD_AI_TUNE[habitId] === undefined ? 1 : CARD_AI_TUNE[habitId];
   const base = CARD_AI_HABITS[habitId] || CARD_AI_HABITS.kyuko;
   const blend = (CARD_AI_HABIT_BLEND[levelId] || {})[habitId];
   const habit = blend === undefined ? base : Object.fromEntries(Object.entries(base).map(([k, v]) => [k, 1 + (v - 1) * blend]));
-  return { habit, level: { ...level, sloppy: Math.min(0.9, (level.sloppy || 0) * tune) } };
+  const add = ((CARD_AI_PLAY_TUNE[habitId] || {})[levelId]) || 0;
+  return { habit, level: { ...level, sloppy: Math.max(0, Math.min(0.9, (level.sloppy || 0) * tune + add)) } };
 };
 
 // 相手が回避できそうな見込み(見えない手札は、残りの山札＋手札から平均で見積もる)
@@ -51269,6 +51274,11 @@ const CARD_AI_BUILD = Object.freeze({
   expert: { maxWave: 99, noise: 0.15, temp: 0.5, stray: 0 },              // 全部の弾から・強いカードを優先
   master: { maxWave: 99, noise: 0.05, temp: 0.2, stray: 0, best: true },  // いちばん強い組み合わせで本気・相手のデッキを見て選び直す
 });
+// 助手ごとの強さのそろえ(カードの選び方の雑さに足す値。+ で弱く・- で強く。0 より下にはならない)。
+// tools/card/card-ai-balance.js で、プレイヤー役(スターター)への勝率が強さごとにそろうように決めた(2026-10-25)
+const CARD_AI_DECK_TUNE = Object.freeze({
+  mua: {}, momosuke: {}, kiki: {}, kyuko: {}, dra: {}, atsu: {},
+});
 // 組み直すデッキで、順番の枠に入れてよい「入れたい度」の下限(cardAiCardValue の値)。助手ごとの違いは、
 //   EXPERT・MASTER でプレイヤー役との勝率がそろうように tools/card/card-ai-balance.js で決めた
 const CARD_AI_LANE_MIN_DEFAULT = 0.8;
@@ -51439,7 +51449,8 @@ const cardAiBuildDeck = (db, who, levelId = 'normal', rand = null, opts = {}) =>
     : mons.some((m) => cardUsableBy(c, { ...m, ko: false }) && c.wave <= Math.max(maxWave, cardAiMonWave(db, m)))));
   // 名前ごとに1つ(同じ名前の別番号は、入れたい度の高いほう)。強さごとの雑さ(noise)で、毎回少しずつ違うカードが入る
   const byName = {};
-  pool.forEach((c) => { const v = cardAiCardValue(c, habit) + cfg.noise * (rnd() * 2 - 1); if (!byName[c.name] || byName[c.name].v < v) byName[c.name] = { c, v }; });
+  const noise = Math.max(0, cfg.noise + (((CARD_AI_DECK_TUNE[who] || {})[levelId]) || 0));
+  pool.forEach((c) => { const v = cardAiCardValue(c, habit) + noise * (rnd() * 2 - 1); if (!byName[c.name] || byName[c.name].v < v) byName[c.name] = { c, v }; });
   const ranked = Object.values(byName).sort((a, b) => b.v - a.v || (a.c.no < b.c.no ? -1 : 1));
   const preferOn = levelId === 'hard' || levelId === 'expert' || levelId === 'master';   // 助手らしさの札(あつの全体攻撃など)は、しっかり組む強さ(HARD から)だけ
   // 守りの枚数の目安(くせ「守りを残す」で増える)。3体それぞれの攻撃が入るよう、攻撃は子ごとに順番に足す

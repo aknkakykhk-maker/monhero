@@ -954,13 +954,18 @@ const CARD_AI_TUNE = Object.freeze({ mua: 0.6, momosuke: 0.5, kiki: 1.3, kyuko: 
 //   みゅあ(攻める 1.5・守りを残す 0.2・ガッツをためる 0.2)は、深く読む相手には極端なくせが裏目に出て、
 //   EXPERT・MASTER でプレイヤー役に 29〜32% しか勝てなかった(公開の条件。tools/card/card-ai-balance.js で測る)
 const CARD_AI_HABIT_BLEND = Object.freeze({ expert: { mua: 0.6 }, master: { mua: 0.6, momosuke: 0.5 } });
+// 助手ごと・強さごとに「その場の1手を考えずに選ぶ割合」へ足す値(+ で弱く・- で強く。0〜0.9 に収める)。
+// デッキの組み方を毎試合変えた(2026-10-25)ので、card-ai-balance.js で勝率がそろうように決め直した。
+// ★きゅうこは足さない(プレイヤー役の考え方にも使うので。きゅうこはデッキ側の CARD_AI_DECK_TUNE だけで合わせる)
+const CARD_AI_PLAY_TUNE = Object.freeze({ mua: {}, momosuke: {}, kiki: {}, dra: {}, atsu: {} });
 const cardAiPolicy = (habitId, levelId) => {
   const level = CARD_AI_LEVELS[levelId] || CARD_AI_LEVELS.normal;
   const tune = CARD_AI_TUNE[habitId] === undefined ? 1 : CARD_AI_TUNE[habitId];
   const base = CARD_AI_HABITS[habitId] || CARD_AI_HABITS.kyuko;
   const blend = (CARD_AI_HABIT_BLEND[levelId] || {})[habitId];
   const habit = blend === undefined ? base : Object.fromEntries(Object.entries(base).map(([k, v]) => [k, 1 + (v - 1) * blend]));
-  return { habit, level: { ...level, sloppy: Math.min(0.9, (level.sloppy || 0) * tune) } };
+  const add = ((CARD_AI_PLAY_TUNE[habitId] || {})[levelId]) || 0;
+  return { habit, level: { ...level, sloppy: Math.max(0, Math.min(0.9, (level.sloppy || 0) * tune + add)) } };
 };
 
 // 相手が回避できそうな見込み(見えない手札は、残りの山札＋手札から平均で見積もる)
