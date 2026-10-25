@@ -957,7 +957,13 @@ const CARD_AI_HABIT_BLEND = Object.freeze({ expert: { mua: 0.6 }, master: { mua:
 // 助手ごと・強さごとに「その場の1手を考えずに選ぶ割合」へ足す値(+ で弱く・- で強く。0〜0.9 に収める)。
 // デッキの組み方を毎試合変えた(2026-10-25)ので、card-ai-balance.js で勝率がそろうように決め直した。
 // ★きゅうこは足さない(プレイヤー役の考え方にも使うので。きゅうこはデッキ側の CARD_AI_DECK_TUNE だけで合わせる)
-const CARD_AI_PLAY_TUNE = Object.freeze({ mua: {}, momosuke: {}, kiki: {}, dra: {}, atsu: {} });
+const CARD_AI_PLAY_TUNE = Object.freeze({
+  mua: { easy: -0.035, normal: -0.105, hard: -0.11, expert: 0.075, master: 0.12 },
+  momosuke: { easy: 0.12, normal: 0.06, hard: 0, expert: 0.15, master: 0.165 },
+  kiki: { easy: -0.045, normal: 0.06, hard: 0.15, expert: 0, master: 0.345 },
+  dra: { easy: -0.075, normal: -0.075, hard: 0.03, expert: 0, master: 0.12 },
+  atsu: { easy: -0.075, normal: -0.15, hard: -0.105, expert: 0.03, master: 0.12 },
+});
 const cardAiPolicy = (habitId, levelId) => {
   const level = CARD_AI_LEVELS[levelId] || CARD_AI_LEVELS.normal;
   const tune = CARD_AI_TUNE[habitId] === undefined ? 1 : CARD_AI_TUNE[habitId];
@@ -1254,7 +1260,12 @@ const CARD_AI_BUILD = Object.freeze({
 // 助手ごとの強さのそろえ(カードの選び方の雑さに足す値。+ で弱く・- で強く。0 より下にはならない)。
 // tools/card/card-ai-balance.js で、プレイヤー役(スターター)への勝率が強さごとにそろうように決めた(2026-10-25)
 const CARD_AI_DECK_TUNE = Object.freeze({
-  mua: {}, momosuke: {}, kiki: {}, kyuko: {}, dra: {}, atsu: {},
+  mua: { easy: -0.7, normal: -2.1, hard: -2.2 },
+  momosuke: {  },
+  kiki: { easy: -0.9 },
+  kyuko: { easy: -1.5, normal: -1.5, hard: -1.5, expert: 0, master: 0.1 },
+  dra: { easy: -1.5, normal: -1.5 },
+  atsu: { easy: -1.5, normal: -3, hard: -2.1 },
 });
 // 組み直すデッキで、順番の枠に入れてよい「入れたい度」の下限(cardAiCardValue の値)。助手ごとの違いは、
 //   EXPERT・MASTER でプレイヤー役との勝率がそろうように tools/card/card-ai-balance.js で決めた

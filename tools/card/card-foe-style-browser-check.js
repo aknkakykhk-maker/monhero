@@ -8,7 +8,7 @@
 //   ① どの助手を選んでも、型の札(〜型)・説明・好きなモンスター(1体・顔付き)が出る。型は CARD_AI_HABITS から決まる(みゅあ=攻撃型 など)
 //   ② 好んで入れるカードがある助手(あつ)だけ、しっかり組む強さ(HARD から)で「よく使うカード」が出る
 //   ③ 強さで組み方の説明が変わる(EASY は気分屋・HARD は相性のいい3体 など。82 の CARD_AI_BUILD と同じ決め)
-//   ④ 字が切れていない(1行のままの字が箱からはみ出さない)・数字(重みや勝率)を出していない(「3体」「4体」「第1弾」だけは数として出す)
+//   ④ 字が切れていない(1行のままの字が箱からはみ出さない)・数字(重みや勝率)を出していない(「1体」〜「4体」「第1弾」だけは数として出す)
 const http = require('http');
 const path = require('path');
 const fs = require('fs');
@@ -142,7 +142,7 @@ const seed = (withAuto) => `(() => {
           if (lv === 'easy' && !/^EASY: .*気分/.test(r.note)) bad.push(`${who} EASY: ${r.note}`);
           if (lv === 'hard' && !/^HARD: 残りの2体は、型に合う子/.test(r.note)) bad.push(`${who} HARD: ${r.note}`);
           if (r.clipped.length) bad.push(`${who}: 字が切れている(${r.clipped.join('・')})`);
-          if (/[0-9０-９]/.test(r.text.replace(/[34]体|第[0-9]弾/g, ''))) bad.push(`${who}: 数字を出している(${(r.text.replace(/[34]体|第[0-9]弾/g, '').match(/.{0,8}[0-9０-９].{0,8}/) || [''])[0]})`);
+          if (/[0-9０-９]/.test(r.text.replace(/[1-4]体|第[0-9]弾/g, ''))) bad.push(`${who}: 数字を出している(${(r.text.replace(/[1-4]体|第[0-9]弾/g, '').match(/.{0,8}[0-9０-９].{0,8}/) || [''])[0]})`);
         }
       }
       check(`①〜④ ${w}×${h}: 助手${foes.length}人の型・好きなモンスター・よく使うカード・強さの組み方が切れずに出る`, foes.length >= 6 && bad.length === 0, bad.slice(0, 4).join(' / '));
