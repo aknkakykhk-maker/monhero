@@ -56,6 +56,7 @@ const textReply = (obj, usage = { input_tokens: 300, output_tokens: 40, cache_re
     ok(req.model === 'claude-haiku-5-5', 'モデルが Haiku 5.5 でない');
     ok(req.thinking && req.thinking.type === 'disabled' && req.output_config.effort === 'low', '速さ優先(thinking を切る・effort low)になっていない');
     ok(!('temperature' in req), 'temperature を送っている(Haiku 5.5 は 400)');
+    ok(/渡していない様子は言わない/.test(req.system[0].text), '渡していない事実(体の様子など)を作らない決まりが無い');
     ok(req.system.length === 2 && req.system[1].cache_control && req.system[1].text.includes('みゅあ'), '人柄の終わりでキャッシュしていない');
     const again = fakeClient(textReply({ text: 'また勝った', expression: 'happy' }));
     await core.handleRequest({ body: { ...after, facts: { ...after.facts, turn: 30, card: 'ほかの技' } }, digest, client: again, take: c.take, refund: c.refund, log });
