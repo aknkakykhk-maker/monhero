@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: aa80d221dd55f917
+// source-sha256: fb9090f9a1e79e35
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-25 21:58";
+const BUILD_DATE = "2026-10-25 22:21";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -83274,7 +83274,7 @@ const cardUseText = (db, st, p, mi, cards) => {
   const l = cardUseWho(db, st, p, mi, cards[0]);
   return `${l.who}の「${cards.map(n => (cardOf(db, n) || {}).name || '').join('＋')}」${l.by ? `(${l.by}で)` : ''}`;
 };
-const cardBaseDamage = (db, st, p, mi, main, cards) => {
+const cardBaseDamage = (db, st, p, mi, main, cards, discard = st.players[p].discard) => {
   let dmg = main.damage || 0;
   const combo = cardEff(main, 'combo');
   if (combo) {
@@ -83285,7 +83285,7 @@ const cardBaseDamage = (db, st, p, mi, main, cards) => {
   if (pair && cards.filter(c => c.name === main.name).length >= 2) dmg = pair.dmg;
   const me = st.players[p];
   const bd = cardEff(main, 'bonusDiscard');
-  if (bd) dmg += me.discard.map(no => cardOf(db, no)).filter(c => c && c.user === bd.user && cardIsAttackKind(c.kind)).length;
+  if (bd) dmg += discard.map(no => cardOf(db, no)).filter(c => c && c.user === bd.user && cardIsAttackKind(c.kind)).length;
   const mon = mi >= 0 ? me.mons[mi] : null;
   if (cardHasEff(main, 'bonusLost') && mon) dmg += mon.max - mon.life;
   return dmg;
@@ -83320,6 +83320,7 @@ const cardStartAttack = (db, st, act) => {
   const main = cardOf(db, mainNo);
   const cost = cardActionCost(db, st, p, me.hand, act.hand);
   const used = cardTakeFromHand(st, p, act.hand);
+  const discardBefore = me.discard.slice();
   cardPayGuts(st, p, cost);
   me.playedTurn = st.turn;
   const mi = isBreeder ? act.mon !== undefined ? act.mon : -1 : act.mon;
@@ -83349,7 +83350,7 @@ const cardStartAttack = (db, st, act) => {
     me.discard.push(...used);
     return;
   }
-  let dmg = cardBaseDamage(db, st, p, mi, main, used.map(n => cardOf(db, n)).filter(Boolean));
+  let dmg = cardBaseDamage(db, st, p, mi, main, used.map(n => cardOf(db, n)).filter(Boolean), discardBefore);
   const mods = cardAttachMods(used.map(n => cardOf(db, n)).filter(Boolean));
   dmg += mods.add;
   let mult = mods.mult;
@@ -91761,6 +91762,9 @@ const cardPvpApplyRemote = (db, st, msg) => {
   const s = cardClone(st);
   const foe = s.players[1];
   if (!(s.pendingChoice && s.pendingChoice.src === 'oppHand')) foe.hand = foe.hand.map(() => CARD_PVP_HIDDEN);
+  if (Array.isArray(msg.discard)) foe.discard.forEach((no, i) => {
+    if (no === CARD_PVP_HIDDEN && cardOf(db, msg.discard[i])) foe.discard[i] = msg.discard[i];
+  });
   const reveal = msg.reveal && typeof msg.reveal === 'object' ? msg.reveal : {};
   for (const [k, no] of Object.entries(reveal)) {
     const i = Number(k);

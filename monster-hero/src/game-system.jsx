@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f450500f5ba9283b
+// generated-sha256: d6392e56633cd9fe
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-25 21:58"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-25 22:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -50509,7 +50509,8 @@ const cardUseText = (db, st, p, mi, cards) => {
   return `${l.who}の「${cards.map((n) => (cardOf(db, n) || {}).name || '').join('＋')}」${l.by ? `(${l.by}で)` : ''}`;
 };
 // 技のダメージの元(書いてある数・組・2枚同時・捨て札やライフで増える分)。付けた札・倍は別(攻撃を出すときとコンピューターの見積もりで同じ)
-const cardBaseDamage = (db, st, p, mi, main, cards) => {
+// discard … 技を出す前の捨て札(払ったガッツは入れない。マルチで相手の端末では、払ったガッツは仮の札のため)
+const cardBaseDamage = (db, st, p, mi, main, cards, discard = st.players[p].discard) => {
   let dmg = main.damage || 0;
   const combo = cardEff(main, 'combo');
   if (combo) {
@@ -50518,7 +50519,7 @@ const cardBaseDamage = (db, st, p, mi, main, cards) => {
   }
   const pair = cardEff(main, 'pair'); if (pair && cards.filter((c) => c.name === main.name).length >= 2) dmg = pair.dmg;
   const me = st.players[p];
-  const bd = cardEff(main, 'bonusDiscard'); if (bd) dmg += me.discard.map((no) => cardOf(db, no)).filter((c) => c && c.user === bd.user && cardIsAttackKind(c.kind)).length;
+  const bd = cardEff(main, 'bonusDiscard'); if (bd) dmg += discard.map((no) => cardOf(db, no)).filter((c) => c && c.user === bd.user && cardIsAttackKind(c.kind)).length;
   const mon = mi >= 0 ? me.mons[mi] : null;
   if (cardHasEff(main, 'bonusLost') && mon) dmg += mon.max - mon.life;
   return dmg;
@@ -50542,6 +50543,7 @@ const cardStartAttack = (db, st, act) => {
   const main = cardOf(db, mainNo);
   const cost = cardActionCost(db, st, p, me.hand, act.hand);
   const used = cardTakeFromHand(st, p, act.hand);
+  const discardBefore = me.discard.slice(); // 魔神ファイナルが数える(払うガッツより前)
   cardPayGuts(st, p, cost);
   me.playedTurn = st.turn; // 突進(そのターンの最初のカード)が見る
   const mi = isBreeder ? (act.mon !== undefined ? act.mon : -1) : act.mon;
@@ -50557,7 +50559,7 @@ const cardStartAttack = (db, st, act) => {
     return;
   }
   // ダメージの元: 書いてある数・同時に使う組・付けた札・次のターンn倍
-  let dmg = cardBaseDamage(db, st, p, mi, main, used.map((n) => cardOf(db, n)).filter(Boolean));
+  let dmg = cardBaseDamage(db, st, p, mi, main, used.map((n) => cardOf(db, n)).filter(Boolean), discardBefore);
   const mods = cardAttachMods(used.map((n) => cardOf(db, n)).filter(Boolean));
   dmg += mods.add;
   let mult = mods.mult;
@@ -55217,6 +55219,9 @@ const cardPvpApplyRemote = (db, st, msg) => {
   const foe = s.players[1];
   // 相手の手札は、いつも仮の札に戻してから当てる(死神の力で見せてもらった札・捨て札から戻した札が、本物の番号のまま残らないように)
   if (!(s.pendingChoice && s.pendingChoice.src === 'oppHand')) foe.hand = foe.hand.map(() => CARD_PVP_HIDDEN);
+  // 捨て札の仮の札は、届いた並びで先に本物へ(魔神ファイナルのように、捨て札の中身で効き目が変わる札があるため)。
+  //   届くのは手を当てたあとの並びだが、手の前からあった札は同じ場所にある
+  if (Array.isArray(msg.discard)) foe.discard.forEach((no, i) => { if (no === CARD_PVP_HIDDEN && cardOf(db, msg.discard[i])) foe.discard[i] = msg.discard[i]; });
   const reveal = msg.reveal && typeof msg.reveal === 'object' ? msg.reveal : {};
   for (const [k, no] of Object.entries(reveal)) {
     const i = Number(k);
