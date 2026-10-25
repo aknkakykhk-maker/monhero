@@ -39,12 +39,13 @@ const same = (a, b) => JSON.stringify(pub(a, 0)) === JSON.stringify(pub(b, 1)) &
 // 準備中だった札(区切りごとに足す。一覧 docs/progress/card-battle/pending-83/README.md)
 const PENDING_DONE = ['034', '210', '060', '236', '109',
   '121', '124', '330', '345', '343', '347', '274', '349', '366', '362', '363', '346', '276', '342', '009', '070', '209',
-  '250', '254', '351', '234', '294', '083', '197', '046', '365', '057', '269', '010', '273', '047', '251'];
+  '250', '254', '351', '234', '294', '083', '197', '046', '365', '057', '269', '010', '273', '047', '251',
+  '114', '122', '125', '126', '127', '137', '149', '186', '252', '253', '278', '279', '303', '304', '306', '364', '022', '094'];
 // 付ける札は、準備中だった札だけ入れる(ほかの付ける札まで入れると、技が足りなくなる)
 const usable = (c, mons) => c && c.ready && (PENDING_DONE.includes(c.no) || !(c.effects || []).some((e) => e.t === 'attach'))
   && (c.user === 'any' || c.user === 'breeder' || mons.some((m) => c.user === m.species));
 // 試合でまず起きない条件の札(山札0で付ける劇的な幕切れ)は、card-rules-check の場面だけで確かめる
-const PENDING_RARE = ['124', '250']; // 劇的な幕切れ(山札0)・孤軍奮闘(味方が1体)
+const PENDING_RARE = ['124', '250', '127']; // 劇的な幕切れ(山札0)・孤軍奮闘・最後のきらめき(味方が1体)
 const USED_SO_FAR = new Set();
 const monOf = (sp) => Object.values(db.monsters).filter((m) => m.species === sp && !m.main).map((m) => m.no).sort()[0];
 // その3体で使える準備中だった札を3枚ずつ入れ、残りはその3体で使える札を3枚ずつ順に足して50枚にする
@@ -108,7 +109,7 @@ const play = (n, extraTrio, must) => {
     if (next && (act.type === 'attack' || act.type === 'breeder')) usedNos.push(...act.hand.map((i) => me.players[0].hand[i]));
     if (next && act.type === 'guard') usedNos.push(me.players[0].hand[act.hand]);
     usedNos.forEach((no) => USED_SO_FAR.add(no));
-    if (!next) { act = me.pending ? { type: 'pass' } : me.phase === 'main' ? { type: 'endAttacks' } : me.pendingDiscard ? { type: 'discard', hand: [0] } : { type: 'guts', hand: [] }; next = E.cardApplyAction(db, me, act); }
+    if (!next) { act = E.cardPvpTimeoutAct(me); next = E.cardApplyAction(db, me, act); }
     if (!next) { err = `${steps}手目: 自分の手が進まない`; break; }
     const reveal = E.cardPvpRevealOf(me, act);
     const msg = E.cardPvpCleanMessage(JSON.parse(JSON.stringify({ t: 'act', from: 'x', seq: steps, act, reveal, discard: next.players[0].discard })));
@@ -140,7 +141,7 @@ const runOne = (n, extraTrio, must) => {
   if (vA.ok && vB.ok) verifyOk++; else if (!firstErr) firstErr = `${n}戦目のなぞり直し: ${vA.why || vB.why}`;
 };
 for (let n = 0; n < N; n++) runOne(n);
-// まだ使われていない準備中だった札があれば、その札を使える3体で追加の試合(1枚につき3戦まで・全部で6戦まで)。追加の試合も①〜④に数える
+// まだ使われていない準備中だった札があれば、その札を使える3体で追加の試合(1枚につき3戦まで・全部で40戦まで)。追加の試合も①〜④に数える
 {
   const usedNow = () => new Set(games.flatMap((x) => x.usedNos));
   const left = () => PENDING_DONE.filter((no) => !PENDING_RARE.includes(no) && !usedNow().has(no));
@@ -156,8 +157,11 @@ for (let n = 0; n < N; n++) runOne(n);
     const isAttach = (c.effects || []).some((e) => e.t === 'attach') && !needArea;
     const leadSp = db.monsters[lead].species;
     const baseAtk = isAttach ? Object.values(db.cards).filter((x) => x.ready && x.user === leadSp && x.kind === 'pow' && !(x.effects || []).length).map((x) => x.no).sort()[0] : null;
+    // 捨て札から回避の札を選ぶ札(回避プログラム)は、その子が使える回避の札も3枚入れる
+    const ch = (c.effects || []).find((e) => e.t === 'choose');
+    const dgeCard = ch && ch.filter && ch.filter.kind === 'dge' ? Object.values(db.cards).filter((x) => x.ready && x.kind === 'dge' && x.user === leadSp && !PENDING_DONE.includes(x.no)).map((x) => x.no).sort()[0] : null;
     const areaCard = needArea ? Object.values(db.cards).filter((x) => x.ready && x.user === db.monsters[lead].species && (x.effects || []).some((e) => e.t === 'area' && e.who === 'enemies')).map((x) => x.no).sort()[0] : null;
-    for (let k = 0; k < 3 && extra < 6 && !usedNow().has(no); k++, extra++) { runOne(N + extra, [trioA, ['C-001', 'C-003', 'C-005']], [no, ...(areaCard ? [areaCard] : []), ...(baseAtk ? [baseAtk] : [])]); }
+    for (let k = 0; k < 3 && extra < 40 && !usedNow().has(no); k++, extra++) { runOne(N + extra, [trioA, ['C-001', 'C-003', 'C-005']], [no, ...(areaCard ? [areaCard] : []), ...(baseAtk ? [baseAtk] : []), ...(dgeCard ? [dgeCard] : [])]); }
   }
   N += extra;
 }

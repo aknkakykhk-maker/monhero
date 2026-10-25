@@ -18,7 +18,7 @@ const load = () => {
     + `${fs.readFileSync(path.join(GAME, 'src', 'parts', '85-card-battle-motion.jsx'), 'utf8').split('// ---- 動きの見本')[1].replace(/^[^\n]*\n/, '')}\n;\n`
     // よけ方・盾の数字・ブリーダーのカードの見分け(ルールだけで決まる所)も読む
     + `${(() => { const m = fs.readFileSync(path.join(GAME, 'src', 'parts', '85-card-battle-motion.jsx'), 'utf8'); return m.slice(m.indexOf('// ブリーダーのカードか'), m.indexOf('// 動きの長さ')); })()}\n;\n`
-    + 'this.E = { CARD_BATTLE_DATA, cardMonType, CARD_THINK_PACE, CARD_RESULT_WAIT_MS, CARD_PRESS_MS, CARD_BUBBLE_PER_TURN, CARD_SETTING_GROUPS, cardOf, cardIsBreederCard, cardDodgeIsJump, cardGuardLabel, cardCreateGame, cardApplyAction, cardLegalActions, cardAttackOptions, cardGuardOptions, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardSimulate, CARD_AI_LEVELS, CARD_AI_HABITS, CARD_AI_DECKS, cardDeckProblems, cardNormalizeCollection, cardNormalizeDecks, cardNormalizePoint, cardNormalizeDaily, cardNormalizeRecord, cardNormalizeCpuUnlocked, cardGrantStarter, cardCpuReward, cardUnlockAfterWin, cardMotionDemo, cardMotionDemoAction, cardTutorialGame, cardTutorialMutate, cardTutorialAllow, cardTutorialDone, cardTutorialCpu, CARD_TUTORIAL_STAGES, cardTutorialCopyProblems, cardTutorialFinish, CARD_TUTORIAL_LINES, cardCpuLoops, cardOwnTurns, cardDeckAddReason, cardDeckReady, cardDecksPut, cardDecksRemove, CARD_PACKS, cardOpenPack, cardBuyPacks, cardPackRates, cardBuyStarter, cardMonRarity, cardNormalizePity, cardNormalizeShop, CARD_SAVE_KEYS, cardRecordAfter, cardRankRow, cardWeekKeyJst, normalizeCardBgm, normalizeCardSettings };';
+    + 'this.E = { CARD_BATTLE_DATA, cardMonType, cardDecider, CARD_THINK_PACE, CARD_RESULT_WAIT_MS, CARD_PRESS_MS, CARD_BUBBLE_PER_TURN, CARD_SETTING_GROUPS, cardOf, cardIsBreederCard, cardDodgeIsJump, cardGuardLabel, cardCreateGame, cardApplyAction, cardLegalActions, cardAttackOptions, cardGuardOptions, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardSimulate, CARD_AI_LEVELS, CARD_AI_HABITS, CARD_AI_DECKS, cardDeckProblems, cardNormalizeCollection, cardNormalizeDecks, cardNormalizePoint, cardNormalizeDaily, cardNormalizeRecord, cardNormalizeCpuUnlocked, cardGrantStarter, cardCpuReward, cardUnlockAfterWin, cardMotionDemo, cardMotionDemoAction, cardTutorialGame, cardTutorialMutate, cardTutorialAllow, cardTutorialDone, cardTutorialCpu, CARD_TUTORIAL_STAGES, cardTutorialCopyProblems, cardTutorialFinish, CARD_TUTORIAL_LINES, cardCpuLoops, cardOwnTurns, cardDeckAddReason, cardDeckReady, cardDecksPut, cardDecksRemove, CARD_PACKS, cardOpenPack, cardBuyPacks, cardPackRates, cardBuyStarter, cardMonRarity, cardNormalizePity, cardNormalizeShop, CARD_SAVE_KEYS, cardRecordAfter, cardRankRow, cardWeekKeyJst, normalizeCardBgm, normalizeCardSettings };';
   vm.runInContext(src, ctx, { filename: '82-card-battle-core.jsx' });
   return ctx.E;
 };
@@ -650,6 +650,76 @@ const pendingCards = () => {
     const a = find(E.cardAttackOptions(db, st), (x) => st.players[0].hand[x.hand[0]] === '234' && x.target && x.target.m === 1); ok(a, '234: 相手を選べない');
     if (a) { st = act(st, a); ok(E.cardMonType(st.players[1].mons[1], st.turn) === 'air', '234: 空中にならない'); ok(canHit(st, [dp.no], 0), '234: もう1回攻撃できない');
       ok(E.cardMonType(st.players[1].mons[1], st.turn + 1) === 'ground', '234: ターンが終わっても空中のまま'); } }
+  // ---- 区切り4: 山札・手札・捨て札・ガッツを動かす ----
+  const total = (pl) => pl.hand.length + pl.deck.length + pl.guts.length + pl.discard.length;
+  const useSpe = (st, no, pred = () => true) => { const a = find(E.cardAttackOptions(db, st), (x) => st.players[st.active].hand[x.hand[0]] === no && pred(x)); ok(a, `${no}: 出せない`); return a ? act(st, a) : null; };
+  const deckOf = (n) => Array.from({ length: n }, (_, i) => (i % 2 ? '026' : '100'));
+  // 作戦の指示(022・ガリ): 捨て札から1枚を手札へ。いま使った札は選べない。捨て札が空なら出せない
+  { ready('022'); const gali = monOf('gali');
+    let st = scene({ mons: [[gali, 'C-003', 'C-005'], ['C-001', 'C-003', 'C-005']], hands: [['022'], []], guts: [9, 0] });
+    ok(!optWith(st, ['022']), '022: 捨て札が空なのに出せる');
+    st.players[0].discard = ['109', '026'];
+    st = useSpe(st, '022');
+    // 候補は、いま使った札(最後に捨て札へ行く)を除く捨て札の全部(払ったガッツも先に捨て札へ行くので入る)
+    if (st) { const d = st.players[0].discard; ok(st.pendingChoice && d[d.length - 1] === '022' && JSON.stringify(st.pendingChoice.cands) === JSON.stringify(d.slice(0, -1).map((_, i) => i)), `022: 候補が合わない(${JSON.stringify(st.pendingChoice && st.pendingChoice.cands)})`);
+      ok(E.cardDecider(st) === 0 && E.cardLegalActions(db, st).every((x) => x.type === 'choose'), '022: 選ぶ段で、使った人が選ぶ形になっていない');
+      st = act(st, { type: 'choose', pick: 0 }); ok(st.players[0].hand.includes('109') && !st.pendingChoice, '022: 選んだ札が手札に入らない');
+      ok(!E.cardApplyAction(db, st, { type: 'choose', pick: 0 }), '022: 選ぶ段が終わったのに選べる'); } }
+  // 回避プログラム(186・ヘンガー): その子が使える回避だけ / 悪夢(303・ジョーカー): その子が使える攻撃の札だけ
+  [['186', 'henger', (c) => c.kind === 'dge'], ['303', 'joker', (c) => ['pow', 'int', 'spe'].includes(c.kind)]].forEach(([no, sp, okKind]) => {
+    ready(no); const mo = monOf(sp);
+    let st = scene({ mons: [[mo, 'C-003', 'C-005'], ['C-001', 'C-003', 'C-005']], hands: [[no], []], guts: [9, 0] });
+    st.players[0].discard = ['109', '026', '096', plainOf(sp, 'pow') ? plainOf(sp, 'pow').no : '100'];
+    st = useSpe(st, no); if (!st) return;
+    const want = st.players[0].discard.map((n2, i) => ({ i, c: db.cards[n2] })).filter(({ i, c }) => i < 4 && okKind(c) && (c.user === 'any' || c.user === sp)).map((x) => x.i);
+    ok(st.pendingChoice && JSON.stringify(st.pendingChoice.cands) === JSON.stringify(want), `${no}: 候補が合わない(${JSON.stringify(st.pendingChoice && st.pendingChoice.cands)} / ${JSON.stringify(want)})`);
+  });
+  // 伝説のちから(137・ヒノトリ): 捨て札の1枚を山札の一番下へ
+  { ready('137'); let st = scene({ mons: [[monOf('phoenix'), 'C-003', 'C-005'], ['C-001', 'C-003', 'C-005']], hands: [['137'], []], guts: [9, 0] });
+    st.players[0].discard = ['109']; st = useSpe(st, '137'); if (st) { st = act(st, { type: 'choose', pick: 0 }); ok(st.players[0].deck[0] === '109', '137: 山札の一番下に戻らない'); } }
+  // 最後の切札(122): 手札の1枚を山札に戻して切り、1枚引く / 素早い計算(094・ハム): 手札を1枚捨てて2枚引く
+  { ready('122'); let st = scene({ hands: [['122', '109', '026'], []], guts: [9, 0] }); const n0 = total(st.players[0]);
+    st = useSpe(st, '122'); if (st) { ok(JSON.stringify(st.pendingChoice.cands) === '[0,1]', '122: 手札の候補が合わない'); const d0 = st.players[0].deck.length; st = act(st, { type: 'choose', pick: 0 });
+      ok(st.players[0].hand.length === 2 && st.players[0].deck.length === d0 && total(st.players[0]) === n0, '122: 戻して1枚引く形になっていない'); } }
+  { ready('094'); let st = scene({ mons: [['C-008', 'C-003', 'C-005'], ['C-001', 'C-003', 'C-005']], hands: [['094', '109'], []], guts: [9, 0] });
+    st = useSpe(st, '094'); if (st) { st = act(st, { type: 'choose', pick: 0 }); ok(st.players[0].hand.length === 2 && st.players[0].discard.includes('109'), '094: 1枚捨てて2枚引く形になっていない'); }
+    const st2 = scene({ mons: [['C-008', 'C-003', 'C-005'], ['C-001', 'C-003', 'C-005']], hands: [['094'], []], guts: [9, 0] }); ok(!optWith(st2, ['094']), '094: ほかに手札が無いのに出せる'); }
+  // 死神の力(304・ジョーカー): 相手が手札を見せる段 → こちらが選んで捨てさせる
+  { ready('304'); let st = scene({ mons: [[monOf('joker'), 'C-003', 'C-005'], ['C-001', 'C-003', 'C-005']], hands: [['304'], ['109', '026']], guts: [9, 0] });
+    st = useSpe(st, '304');
+    if (st) { ok(st.pendingReveal && E.cardDecider(st) === 1, '304: 相手が手札を見せる段にならない');
+      st = act(st, { type: 'reveal' }); ok(st.pendingChoice && E.cardDecider(st) === 0 && st.pendingChoice.cands.length === 2, '304: 見せたあと、こちらが選ぶ段にならない');
+      st = act(st, { type: 'choose', pick: 1 }); ok(st.players[1].hand.join() === '109' && st.players[1].discard.includes('026'), '304: 選んだ札を捨てさせられない'); } }
+  // 突進(114): そのターンの最初のカードだけ。山札の上から5枚をガッツ。そのあとは出せない
+  { ready('114'); let st = scene({ hands: [['114', gol.no], []], guts: [3, 0] }); st.players[0].deck = deckOf(20);
+    st = useSpe(st, '114'); if (st) { ok(st.players[0].guts.length === 3 - db.cards['114'].guts + 5, `114: ガッツが5増えない(${st.players[0].guts.length})`); ok(!E.cardAttackOptions(db, st).length, '114: 突進のあとも出せる'); }
+    let st2 = scene({ hands: [[gol.no, '114'], []], guts: [9, 0] }); st2 = act(act(st2, optWith(st2, [gol.no], 0)), { type: 'pass' }); ok(!optWith(st2, ['114']), '114: 最初のカードでないのに出せる'); }
+  // 後は頼んだ(125): 自分をKO。残りライフの枚数を、捨て札の新しいほうからガッツへ
+  { ready('125'); let st = scene({ hands: [['125'], []], guts: [0, 0] }); st.players[0].discard = ['a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a7', 'a8'].map(() => '100'); st.players[0].discard.push('109'); st.players[0].mons[1].life = 4;
+    st = useSpe(st, '125', (x) => x.mon === 1); if (st) { ok(st.players[0].mons[1].ko && st.players[0].guts.length === 4 && st.players[0].guts.includes('109'), `125: KO・ガッツ4(新しいほうから)にならない(${st.players[0].guts.length})`); } }
+  // 戦意喪失(126): お互いのガッツが0(精神集中の相手は減らない)
+  { ready('126'); let st = scene({ hands: [['126'], []], guts: [9, 4] }); st = useSpe(st, '126'); if (st) ok(st.players[0].guts.length === 0 && st.players[1].guts.length === 0, '126: お互い0にならない');
+    let st2 = scene({ hands: [['126'], []], guts: [9, 4] }); st2.players[1].gutsGuardUntil = st2.turn + 3; st2 = useSpe(st2, '126'); if (st2) ok(st2.players[0].guts.length === 0 && st2.players[1].guts.length === 4, '126: 精神集中の相手まで減る'); }
+  // 最後のきらめき(127): 味方1体のときだけ。山札を全部ガッツ
+  { ready('127'); let st = scene({ hands: [['127'], []], guts: [9, 0] }); st.players[0].deck = deckOf(12); ok(!optWith(st, ['127']), '127: 味方3体で出せる');
+    st.players[0].mons[0].ko = true; st.players[0].mons[2].ko = true; st = useSpe(st, '127'); if (st) ok(!st.players[0].deck.length && st.players[0].guts.length === 9 - db.cards['127'].guts + 12, '127: 山札が全部ガッツにならない'); }
+  // ハテナマーク(149・ゲル): 相手の手札を全部、相手の山札の一番下へ。そのあと相手は4枚引く
+  { ready('149'); let st = scene({ mons: [[monOf('jell'), 'C-003', 'C-005'], ['C-001', 'C-003', 'C-005']], hands: [['149'], ['109', '096', '026']], guts: [9, 0] }); st.players[1].deck = deckOf(10);
+    st = useSpe(st, '149'); if (st) ok(st.players[1].hand.length === 4 && st.players[1].deck.slice(0, 3).join() === '109,096,026', '149: 一番下へ戻して4枚引く形になっていない'); }
+  // 時間稼ぎ(252): ガッツを山札に戻して切る(持ち主の種で切る)
+  { ready('252'); let st = scene({ hands: [['252'], []], guts: [6, 0] }); st.players[0].deck = deckOf(10); const n0 = total(st.players[0]); const r0 = st.players[0].rng;
+    st = useSpe(st, '252'); if (st) ok(!st.players[0].guts.length && st.players[0].deck.length === 16 && total(st.players[0]) === n0 && st.players[0].rng !== r0, '252: ガッツが山札に戻って切られない'); }
+  // 冬虫散(253): 味方1体のライフを1減らして1枚引く(ライフ1ならKO)
+  { ready('253'); let st = scene({ hands: [['253'], []], guts: [9, 0] }); st.players[0].mons[2].life = 1;
+    st = useSpe(st, '253', (x) => x.target && x.target.m === 2); if (st) ok(st.players[0].mons[2].ko && st.players[0].hand.length === 1, '253: ライフ1の子がKOにならない・引かない'); }
+  // 泣き真似(278): 相手のガッツを1 / リフレッシュ(279): 手札を全部捨てて同じ数引く
+  { ready('278'); let st = scene({ hands: [['278'], []], guts: [9, 3] }); st = useSpe(st, '278'); if (st) ok(st.players[1].guts.length === 2, '278: 相手のガッツが1減らない'); }
+  { ready('279'); let st = scene({ hands: [['279', '109', '026', '096'], []], guts: [9, 0] }); st = useSpe(st, '279'); if (st) ok(st.players[0].hand.length === 3 && ['109', '026', '096'].every((x) => st.players[0].discard.includes(x)), '279: 捨てて同じ数引く形になっていない'); }
+  // 大鎌(306・ジョーカー): 相手の山札を3枚捨て札に / 超大声(364・ハム): お互いの手札を全部捨てる
+  { ready('306'); let st = scene({ mons: [[monOf('joker'), 'C-003', 'C-005'], ['C-001', 'C-003', 'C-005']], hands: [['306'], []], guts: [9, 0] }); const d0 = st.players[1].deck.length;
+    st = useSpe(st, '306'); if (st) ok(st.players[1].deck.length === d0 - 3 && st.players[1].discard.length === 3, '306: 相手の山札が3枚捨て札にならない'); }
+  { ready('364'); let st = scene({ mons: [['C-008', 'C-003', 'C-005'], ['C-001', 'C-003', 'C-005']], hands: [['364', '109'], ['026', '096']], guts: [9, 0] });
+    st = useSpe(st, '364'); if (st) ok(!st.players[0].hand.length && !st.players[1].hand.length && st.players[1].discard.length === 2, '364: お互いの手札が全部捨てられない'); }
 };
 scenes();
 pendingCards();

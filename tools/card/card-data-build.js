@@ -149,6 +149,25 @@ const BY_NO = {
   273: [{ t: 'stunTarget' }], // 吹き飛ばし
   47: [{ t: 'skipTurn' }], // 歌う
   251: [{ t: 'rage' }], // 怒り
+  // ---- 区切り4: 山札・手札・捨て札・ガッツを動かす(choose は選ぶ段。src … discard/hand、then … 選んだ札の行き先) ----
+  114: [{ t: 'rush', n: 5 }], // 突進(そのターンの最初のカード。ほかのカードを出せなくなる)
+  122: [{ t: 'choose', src: 'hand', then: 'toDeckShuffleDraw' }], // 最後の切札
+  125: [{ t: 'lastWish' }], // 後は頼んだ
+  126: [{ t: 'gutsZeroBoth' }], // 戦意喪失
+  127: [{ t: 'useWhenAllies', n: 1 }, { t: 'deckToGuts' }], // 最後のきらめき
+  137: [{ t: 'choose', src: 'discard', then: 'toDeckBottom' }], // 伝説のちから
+  149: [{ t: 'oppHandToDeckBottom' }, { t: 'oppDraw', n: 4 }], // ハテナマーク
+  186: [{ t: 'choose', src: 'discard', filter: { kind: 'dge', usable: true }, then: 'toHand' }], // 回避プログラム
+  252: [{ t: 'gutsToDeckShuffle' }], // 時間稼ぎ
+  253: [{ t: 'selfHurt', n: 1 }, { t: 'draw', n: 1 }], // 冬虫散(味方1体)
+  278: [{ t: 'oppGutsLoss', n: 1 }], // 泣き真似
+  279: [{ t: 'refresh' }], // リフレッシュ
+  303: [{ t: 'choose', src: 'discard', filter: { attack: true, usable: true }, then: 'toHand' }], // 悪夢
+  304: [{ t: 'peekPick' }], // 死神の力(相手が手札を見せる → こちらが選んで捨てさせる)
+  306: [{ t: 'millOpp', n: 3 }], // 大鎌
+  364: [{ t: 'discardBothHands' }], // 超大声
+  22: [{ t: 'choose', src: 'discard', then: 'toHand' }], // 作戦の指示
+  94: [{ t: 'choose', src: 'hand', then: 'discardDraw2' }], // 素早い計算
 };
 
 // カードの詳しい画面に足す一言。文の読み方を決めた札だけ(2026-10-25 社長「推奨どおり」。一覧: docs/progress/card-battle/pending-83/README.md)
@@ -170,6 +189,10 @@ const NOTE_BY_NO = {
   294: 'その子は、そのターン攻撃の技を何枚でも出せます(ガッツはふつうに払います)',
   351: '「攻撃できない」を消します。もう攻撃した子には使えません',
   251: '次の番のちから技・かしこさ技が2倍になります',
+  114: 'そのターンは、ほかの技・ブリーダーのカードを出せません(ガッツ置きはできます)',
+  125: '捨て札の新しいほうから、残りライフの枚数をガッツにします',
+  253: 'ライフ1の子にも使えて、その子はKOになります',
+  126: '精神集中をしている相手のガッツは減りません。自分のガッツは必ず0になります',
 };
 const splitSentences = (text) => (text || '').split(/(?<=。)/).map((s) => s.trim()).filter(Boolean);
 const effectsOf = (no, text) => {
