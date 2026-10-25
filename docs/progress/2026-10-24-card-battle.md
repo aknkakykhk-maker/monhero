@@ -341,6 +341,12 @@
 - マルチ対戦(ブレイブくんと決めた): 自分の画面だけに効く設定はマルチでも効く。考える時間・ひとこと・結果までの間は助手と対戦だけ。確かめの窓は、場が変わったら閉じる(時間切れの自動の手・相手の手)・押したときにその手がまだ出せるか確かめ直す・`window.__mhCardPvpAuto` のときは出さない。技の動きの完了は待たない。
 - 検査: `card/card-battle-settings-browser-check.js`(全部いちばん変わる側で助手と1戦。390・320・横画面)。マルチの検査(`card-pvp-check.js`・`card-pvp-browser-check.js`)を、いちばん変わる設定でも回して通った。写真 `docs/progress/card-battle/options-battle-settings.jpg`(オプションを上から順に4枚・技を使う前の確認・ターン終了の確認)。
 
+### 公開前の予告(社長 2026-10-25「お知らせで新コンテンツのお知らせを出して、近日公開みたいな感じでホームに出して」)
+- 公開の印(`RELEASE_FLAGS.cardBattle`)は偽のまま。ふつうのプレイヤーの HOME の案Aの場所に「🃏 MFバトルカード 近日公開」の札(`data-home-card-battle-teaser`)。押すと予告の小窓(84 の `CardBattleTeaser`)。中の画面へは入れず、何も保存しない。合言葉の端末はいままでどおり中へ入れる。印を立てると札が下り、ふつうの入口に替わる。
+- 更新履歴の先頭に「新コンテンツ『MFバトルカード』近日公開」(助手の告知 `update_notice_card_battle_soon_v1`・`content`)。キー画像 `images/events/card-battle-teaser.jpg`(`tools/image/make-card-battle-teaser-notice.js`。スターター3つのモンスターのカード)。小窓の絵と本文は、この項目から引く(書く場所を1つにする)。
+- ヘルプは足していない(まだ遊べないので、使い方の説明が無い)。公開のときに足す。
+- 検査 `card/card-teaser-browser-check.js`。写真 `teaser-390.jpg`(HOME の札・小窓・助手のお知らせのまとめ・くわしく)・`teaser-844.jpg`(横画面の小窓)。
+
 ### ④ 横画面(前の会話のメモ)
 - `tools/landscape-screens-check.js` に CARD_ の画面を入れて通す。トップは手本(モードえらび)と同じく `landscape:` の組み方を入れてある。対戦の盤・デッキ編成・図鑑・パックを開ける画面が残り。
 
