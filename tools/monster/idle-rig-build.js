@@ -217,7 +217,7 @@ const RIGS = [
   { id:'Worm', img:'images/monsters/worm.png', body:'jelly', parts:[] },
   { id:'Centaur', img:'images/monsters/centaur.png', body:'breathe', parts:[] },
   { id:'Colorpandora', img:'images/monsters/colorpandora.png', body:'hop', parts:[] },
-  // 派生モンスター16体(2026-10-25・案の子)。動かす部分はまだ無く、体の動きだけ
+  // 派生モンスター17体(2026-10-25・案の子)。動かす部分はまだ無く、体の動きだけ
   { id:'HamLiger', img:'images/monsters/c010.png', body:'breathe', parts:[] },
   { id:'Melonbo', img:'images/monsters/c012.png', body:'hop', parts:[] },
   { id:'LavenderKeel', img:'images/monsters/c013.png', body:'drift', parts:[] },
@@ -234,6 +234,7 @@ const RIGS = [
   { id:'MamaNyaa', img:'images/monsters/c039.png', body:'breathe', parts:[] },
   { id:'Hinekuresou', img:'images/monsters/c040.png', body:'sway', parts:[] },
   { id:'Corone', img:'images/monsters/c041.png', body:'breathe', parts:[] },
+  { id:'Jihad', img:'images/monsters/c042.png', body:'breathe', parts:[] },
 ];
 
 const constName = (id, name) => `IDLE_${id.replace(/([a-z])([A-Z])/g, '$1_$2').toUpperCase()}_${name.replace(/([a-z])([A-Z])/g, '$1_$2').toUpperCase()}_MASK`;

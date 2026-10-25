@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "6645ff69c211",
-  "packs": {"beat":{"bytes":107387446,"count":93},"battle":{"bytes":119741771,"count":643},"card":{"bytes":27691566,"count":812},"all":{"bytes":254820783,"count":1548}},
+  "id": "ba6091a546c6",
+  "packs": {"beat":{"bytes":107387446,"count":93},"battle":{"bytes":119885932,"count":645},"card":{"bytes":27691566,"count":812},"all":{"bytes":254964944,"count":1550}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"ddce743e94fa","size":1416528,"pack":"beat"},
@@ -1202,6 +1202,7 @@
     "images/monster-icons/face/c039.png": {"v":"673f2f41e714","size":70959,"pack":"battle"},
     "images/monster-icons/face/c040.png": {"v":"c09a8d93ef8e","size":55474,"pack":"battle"},
     "images/monster-icons/face/c041.png": {"v":"e5b9e37dddf1","size":52869,"pack":"battle"},
+    "images/monster-icons/face/c042.png": {"v":"9331e5dd8316","size":54705,"pack":"battle"},
     "images/monster-icons/face/c051.png": {"v":"4853c5670318","size":79996,"pack":"battle"},
     "images/monster-icons/face/c052.png": {"v":"6b18c1fd8234","size":74804,"pack":"battle"},
     "images/monster-icons/face/c053.png": {"v":"b662c2469e1b","size":70196,"pack":"battle"},
@@ -1276,6 +1277,7 @@
     "images/monsters/c039.png": {"v":"9dfd1759dd1a","size":81126,"pack":"battle"},
     "images/monsters/c040.png": {"v":"143432d34282","size":124351,"pack":"battle"},
     "images/monsters/c041.png": {"v":"1ca881589d31","size":97946,"pack":"battle"},
+    "images/monsters/c042.png": {"v":"e5a483c55e02","size":89456,"pack":"battle"},
     "images/monsters/c051.png": {"v":"c0a0df62c4f7","size":188631,"pack":"battle"},
     "images/monsters/c052.png": {"v":"ef445601b28a","size":137167,"pack":"battle"},
     "images/monsters/c053.png": {"v":"ffa75a7fabaa","size":125426,"pack":"battle"},

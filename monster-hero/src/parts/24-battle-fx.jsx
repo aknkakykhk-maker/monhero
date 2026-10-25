@@ -1342,6 +1342,7 @@ const MONSTER_IDLE_RIGS = Object.freeze({
   MamaNyaa: { body:'breathe', bodyMask:null, parts:[] },
   Hinekuresou: { body:'sway', bodyMask:null, parts:[] },
   Corone: { body:'breathe', bodyMask:null, parts:[] },
+  Jihad: { body:'breathe', bodyMask:null, parts:[] },
 });
 // ==== MONSTER_IDLE_RIGS ここまで ====
 const MONSTER_IDLE_MASK_STYLE = (url) => ({

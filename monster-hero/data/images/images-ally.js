@@ -204,7 +204,7 @@ const HYBRID_C062_IMG = "images/monsters/c062.png?v=090cdd583324";
 const HYBRID_C063_IMG = "images/monsters/c063.png?v=97693bd14c3a";
 const HYBRID_C064_IMG = "images/monsters/c064.png?v=7e039c580e69";
 const HYBRID_C065_IMG = "images/monsters/c065.png?v=651de4a99a0b";
-// 派生モンスター16体(2026-10-25 社長から。C-010〜C-019 の一部。名前は本編の図鑑の名前)
+// 派生モンスター17体(2026-10-25 社長から。C-010〜C-019 の一部。名前は本編の図鑑の名前)
 const HYBRID_C010_IMG = "images/monsters/c010.png?v=e53142331a97";
 const HYBRID_C012_IMG = "images/monsters/c012.png?v=38661b85c0b6";
 const HYBRID_C013_IMG = "images/monsters/c013.png?v=fca923cd46e8";
@@ -221,6 +221,7 @@ const HYBRID_C038_IMG = "images/monsters/c038.png?v=8819b3a3dcdd";
 const HYBRID_C039_IMG = "images/monsters/c039.png?v=9dfd1759dd1a";
 const HYBRID_C040_IMG = "images/monsters/c040.png?v=143432d34282";
 const HYBRID_C041_IMG = "images/monsters/c041.png?v=1ca881589d31";
+const HYBRID_C042_IMG = "images/monsters/c042.png?v=e5a483c55e02";
 const HYBRID_MONSTER_IMGS = Object.freeze({
   'C-010': HYBRID_C010_IMG,
   'C-012': HYBRID_C012_IMG,
@@ -238,6 +239,7 @@ const HYBRID_MONSTER_IMGS = Object.freeze({
   'C-039': HYBRID_C039_IMG,
   'C-040': HYBRID_C040_IMG,
   'C-041': HYBRID_C041_IMG,
+  'C-042': HYBRID_C042_IMG,
   'C-051': HYBRID_C051_IMG,
   'C-052': HYBRID_C052_IMG,
   'C-053': HYBRID_C053_IMG,
@@ -374,6 +376,7 @@ const HYBRID_C038_FACE_ICON = "images/monster-icons/face/c038.png?v=4eaeb9ce0c27
 const HYBRID_C039_FACE_ICON = "images/monster-icons/face/c039.png?v=673f2f41e714";
 const HYBRID_C040_FACE_ICON = "images/monster-icons/face/c040.png?v=c09a8d93ef8e";
 const HYBRID_C041_FACE_ICON = "images/monster-icons/face/c041.png?v=e5b9e37dddf1";
+const HYBRID_C042_FACE_ICON = "images/monster-icons/face/c042.png?v=9331e5dd8316";
 // カードの対戦画面などが番号から引く顔アイコンの表(立ち絵の HYBRID_MONSTER_IMGS と同じ番号)
 const HYBRID_MONSTER_FACE_ICONS = Object.freeze({
   'C-010': HYBRID_C010_FACE_ICON,
@@ -392,6 +395,7 @@ const HYBRID_MONSTER_FACE_ICONS = Object.freeze({
   'C-039': HYBRID_C039_FACE_ICON,
   'C-040': HYBRID_C040_FACE_ICON,
   'C-041': HYBRID_C041_FACE_ICON,
+  'C-042': HYBRID_C042_FACE_ICON,
   'C-051': HYBRID_C051_FACE_ICON,
   'C-052': HYBRID_C052_FACE_ICON,
   'C-053': HYBRID_C053_FACE_ICON,
