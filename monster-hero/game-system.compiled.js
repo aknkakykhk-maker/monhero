@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4e83b06fd2d20f65
+// source-sha256: c8656f8ed34105ea
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-25 17:40";
+const BUILD_DATE = "2026-10-25 18:17";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -83304,7 +83304,7 @@ const cardApplySpecial = (db, st, p, mi, card, target) => {
         kinds: e.kinds,
         n: e.n
       };
-      cardLog(st, `${me.mons[mi].name}は次のかしこさ技のダメージが${e.n}倍`);
+      cardLog(st, `${me.mons[mi].name}は次の${e.kinds.includes('pow') ? 'ちから' : 'かしこさ'}技のダメージが${e.n}倍`);
     }
     if (e.t === 'forbidThisTurn') {
       st.forbid[cardOther(p)] = [...(st.forbid[cardOther(p)] || []), ...e.kinds];
@@ -83349,6 +83349,11 @@ const cardApplyGuard = (db, st, act) => {
       n: e.n
     };
     if (e.t === 'becomeAir') user.airUntil = st.turn + 1;
+    if (e.t === 'selfGutsAll' && me.guts.length) {
+      const k = me.guts.length;
+      me.discard.push(...me.guts.splice(0));
+      cardLog(st, `${me.name}はガッツを${k}失った`);
+    }
   });
 };
 const cardApplyAction = (db, st0, act) => {
@@ -83671,7 +83676,8 @@ const cardAiChooseGuard = (db, st, policy, rand) => {
     }
     const saved = Math.min(dmg, target.life) - Math.min(after, target.life);
     const ko = target.life <= dmg && target.life > after ? 5 : 0;
-    const v = saved * (0.6 + 0.4 * habit.keepGuard) + ko - c.guts * 0.35 * habit.saveGuts + (rf ? (rf.keep ? Math.floor(dmg * rf.frac) : dmg) * 0.6 : 0);
+    const lostAll = cardHasEff(c, 'selfGutsAll') ? me.guts.length - c.guts : 0;
+    const v = saved * (0.6 + 0.4 * habit.keepGuard) + ko - (c.guts + lostAll) * 0.35 * habit.saveGuts + (rf ? (rf.keep ? Math.floor(dmg * rf.frac) : dmg) * 0.6 : 0);
     if (!best || v > best.v) best = {
       v,
       o
@@ -83805,6 +83811,7 @@ const cardAiCardValue = (card, habit) => {
     let v = eff('evade') ? 2.2 : eff('reduceAll') ? 2.4 : eff('reflect') ? 2.3 : eff('cover') ? 1.4 : 1.6;
     const re = cardEff(card, 'reduce');
     if (re) v = 1 + re.n * 0.4;
+    if (eff('selfGutsAll')) v -= 1.4;
     return (v - card.guts * 0.35) * habit.keepGuard;
   }
   if (card.kind === 'spe') {

@@ -21,7 +21,7 @@ const multi = read('src/parts/91-card-battle-multi.jsx').split('// ---- 部屋�
 const ctx = vm.createContext({ console, Math, JSON, Object, Array, Number, String, Set, Map, crypto: crypto.webcrypto, TextEncoder });
 vm.runInContext(`${read('data/card-battle-cards.js')}\n;\n${read('src/parts/82-card-battle-core.jsx')}\n;\n`
   + 'const rhythmMultiText = (v, max) => String(v == null ? "" : v).replace(/[\\u0000-\\u001f]/g, "").slice(0, max);\n'
-  + `${multi}\n;\nthis.E = { CARD_BATTLE_DATA, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardDecider, cardClone, cardApplyAction, CARD_PVP_HIDDEN,
+  + `${multi}\n;\nthis.E = { CARD_BATTLE_DATA, cardLegalActions, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardDecider, cardClone, cardApplyAction, CARD_PVP_HIDDEN,
     cardPvpFlip, cardPvpRevealOf, cardPvpNewGame, cardPvpApplyRemote, cardPvpPatchDiscard, cardPvpSealText, cardPvpSha256, cardPvpTruthGame, cardPvpVerify, cardPvpCleanMessage, cardPvpCleanAct,
     cardPvpReward, cardPvpTimeoutAct, cardPvpLimitMs, cardPvpClockKey, cardPvpDecider, cardPvpNormalizePenalty, CARD_PVP_STAMPS, CARD_PVP_TURN_MS, CARD_PVP_GUARD_MS, CARD_PVP_RESULT_LINES, cardPvpResultLine };`, ctx);
 const E = ctx.E;
@@ -36,17 +36,36 @@ const pub = (st, p) => ({ life: st.players[p].mons.map((m) => `${m.life}${m.ko ?
 const same = (a, b) => JSON.stringify(pub(a, 0)) === JSON.stringify(pub(b, 1)) && JSON.stringify(pub(a, 1)) === JSON.stringify(pub(b, 0))
   && a.turn === b.turn && a.phase === b.phase && (a.winner === null ? b.winner === null : b.winner === 1 - a.winner);
 
+// 準備中だった札(区切りごとに足す。一覧 docs/progress/card-battle/pending-83/README.md)
+const PENDING_DONE = ['034', '210', '060', '236', '109'];
+const usable = (c, mons) => c && c.ready && !(c.effects || []).some((e) => e.t === 'attach')
+  && (c.user === 'any' || c.user === 'breeder' || mons.some((m) => c.user === m.species));
+// その3体で使える準備中だった札を3枚ずつ入れ、残りはその3体で使える札を3枚ずつ順に足して50枚にする
+const pendingDeck = (monsters) => {
+  const mons = monsters.map((no) => db.monsters[no]);
+  const cards = [];
+  PENDING_DONE.filter((no) => usable(db.cards[no], mons)).forEach((no) => cards.push(no, no, no));
+  const rest = Object.values(db.cards).filter((c) => usable(c, mons) && !PENDING_DONE.includes(c.no)).map((c) => c.no).sort();
+  // 同じ名前は3枚まで(番号の違う同じ名前の札もある)
+  const named = (no) => cards.filter((x) => db.cards[x].name === db.cards[no].name).length;
+  for (let i = 0; cards.length < 50 && i < 5000; i++) { const no = rest[i % rest.length]; if (named(no) < 3) cards.push(no); }
+  return { monsters, cards };
+};
+
 // 1戦: 2台(A・B)。A から見た first、B から見た first は反対
 const play = (n) => {
   const r = rng(1000 + n);
   const who = ['mua', 'kiki', 'momosuke', 'dra', 'kyuko', 'atsu'];
-  const deckA = E.cardAiBuildDeck(db, who[n % 6], 'normal');
-  const deckB = E.cardAiBuildDeck(db, who[(n + 3) % 6], 'normal');
+  // 後半の20戦は MASTER のデッキ(全部の弾)。準備中だった札(台帳 #141)も、マルチで当てられるかを見る
+  //   最後の10戦は、その札を使える3体で、その札を必ず入れたデッキ(助手のデッキに入らない種族の札もあるため)
+  const lv = n < 20 ? 'normal' : 'master';
+  const deckA = n >= 30 ? pendingDeck(['C-003', 'C-027', 'C-029']) : E.cardAiBuildDeck(db, who[n % 6], lv);
+  const deckB = n >= 30 ? pendingDeck(['C-005', 'C-001', 'C-003']) : E.cardAiBuildDeck(db, who[(n + 3) % 6], lv);
   const seedA = (n * 7919 + 13) >>> 0, seedB = (n * 104729 + 7) >>> 0;
   const firstA = n % 2;
   let A = E.cardPvpNewGame(db, { myDeck: deckA, mySeed: seedA, foeMonsters: deckB.monsters, first: firstA, names: ['A', 'B'] });
   let B = E.cardPvpNewGame(db, { myDeck: deckB, mySeed: seedB, foeMonsters: deckA.monsters, first: 1 - firstA, names: ['B', 'A'] });
-  const hA = [], hB = [];
+  const hA = [], hB = [], usedNos = [];
   const pol = E.cardAiPolicy('kyuko', 'easy');
   let steps = 0, err = '';
   while (A.winner === null && steps < 3000) {
@@ -55,7 +74,15 @@ const play = (n) => {
     const [me, foe] = aTurn ? [A, B] : [B, A];
     if (decider(foe) !== 1) { err = `${steps}手目: 2台で番が食い違った`; break; }
     let act = E.cardAiChooseAction(db, me, pol, r);
+    // 最後の10戦: 準備中だった札を使える場面なら、その札を選ぶ(コンピューターが選ばない札も、マルチで通るか見るため)
+    if (n >= 30) {
+      const noOf = (a) => (a.type === 'guard' ? [me.players[0].hand[a.hand]] : Array.isArray(a.hand) ? a.hand.map((i) => me.players[0].hand[i]) : []);
+      const pick = E.cardLegalActions(db, me).find((a) => noOf(a).some((no) => PENDING_DONE.includes(no)));
+      if (pick) act = pick;
+    }
     let next = act && E.cardApplyAction(db, me, act);
+    if (next && (act.type === 'attack' || act.type === 'breeder')) usedNos.push(...act.hand.map((i) => me.players[0].hand[i]));
+    if (next && act.type === 'guard') usedNos.push(me.players[0].hand[act.hand]);
     if (!next) { act = me.pending ? { type: 'pass' } : me.phase === 'main' ? { type: 'endAttacks' } : me.pendingDiscard ? { type: 'discard', hand: [0] } : { type: 'guts', hand: [] }; next = E.cardApplyAction(db, me, act); }
     if (!next) { err = `${steps}手目: 自分の手が進まない`; break; }
     const reveal = E.cardPvpRevealOf(me, act);
@@ -68,7 +95,7 @@ const play = (n) => {
     else { B = back; A = other; hB.push({ by: 0, act, reveal: {} }); hA.push({ by: 1, act: E.cardPvpFlip(act), reveal }); }
     if (!same(A, B)) { err = `${steps}手目: 2台の場が食い違った ${JSON.stringify([pub(A, 0), pub(B, 1)])}`; break; }
   }
-  return { A, B, hA, hB, deckA, deckB, seedA, seedB, firstA, steps, err };
+  return { A, B, hA, hB, deckA, deckB, seedA, seedB, firstA, steps, err, usedNos };
 };
 
 const N = 40;
@@ -91,6 +118,10 @@ check(`① ${N}戦とも、届いた手を当てられて、2台の場がずっ�
 check(`② ${N}戦とも最後まで決着して、勝ち負けが合う`, finished === N && winOk === N, `決着 ${finished} / 合う ${winOk}`);
 check('③ 相手の手札・山札は、最後まで仮の札のまま(本物の番号が入らない)', hiddenOk === N, `${hiddenOk} / ${N}`);
 check('④ 終わってから封を開けてなぞり直すと、両方で合っている', verifyOk === N, `${verifyOk} / ${N}`);
+// 準備中だった札が、40戦のどこかで使われて、①〜④が通っていること
+const usedAll = new Set(games.flatMap((x) => x.usedNos));
+const usedNew = PENDING_DONE.filter((no) => usedAll.has(no));
+check('④ 準備中だった札も、マルチの試合で使われて当てられる(全部)', usedNew.length === PENDING_DONE.length, `使われた ${usedNew.join('・') || 'なし'} / ${PENDING_DONE.length}枚`);
 
 // ⑤ ズルを見抜く
 const g = games.find((x) => !x.err && x.hA.some((e) => e.by === 1 && Object.keys(e.reveal).length));

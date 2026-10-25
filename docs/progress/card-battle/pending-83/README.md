@@ -4,6 +4,23 @@
 
 番号・弾・名前・カードの文は `monster-hero/data/card-battle-cards.js`(ready:false)から取った。
 
+## 進み具合
+
+| 区切り | 枚数 | できた | PR | メモ |
+| --- | --- | --- | --- | --- |
+| 1 | 5 | 5 | (この PR) | 新しい部品は selfGutsAll だけ。緊急回避はデッキに入れたい度を下げた(MASTER のあつが 66% になったため) |
+| 2 | 17 | 0 | | |
+| 3 | 15 | 0 | | |
+| 4 | 18 | 0 | | |
+| 5 | 11 | 0 | | |
+| 6 | 11 | 0 | | |
+| 7 | 6 | 0 | | 決めてほしいことの答え待ち |
+
+区切りごとに確かめること:
+- `node tools/card/card-rules-check.js` の pendingCards で、1枚ずつ確かめる
+- `node tools/card/card-pvp-check.js` の PENDING_DONE に、できた札を足す。マルチで使われ、なぞり直しが通ること
+- `node tools/card/card-ai-balance.js --games 90` で、EXPERT・MASTER がどの助手も 38〜65% の中に入ること
+
 ## 区切り1: いまの部品の組み合わせ+小さい足し(5枚)
 
 足りない部品: ため(charge のちから技版)・回避+次のターン2倍+空中(nextTurnMult・becomeAir)・回避+ガッツを全部失う
