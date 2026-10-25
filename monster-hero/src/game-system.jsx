@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2030d690c112f7b8
+// generated-sha256: a92f5f797f555198
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-25 12:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-25 12:31"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -52634,6 +52634,7 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
       {/* 横画面(④): 左に「相手の帯〜自分の帯」、右に「案内〜手札〜下のボタン」。縦のときは2つの箱を display:contents にして、今までと同じ縦の並び */}
       <div data-card-wide-row className={wide ? 'flex min-h-0 flex-1 flex-row' : 'contents'}>
       <div data-card-field className={wide ? 'flex min-h-0 min-w-0 flex-1 flex-col' : 'contents'}>
+      {pvp && <CardPvpSignal clock={pvpClock}/>}
       {/* 相手の帯(隠さない) */}
       <div className={`flex ${tiny ? 'h-[36px]' : compact ? 'h-[42px]' : 'h-[50px]'} shrink-0 items-center gap-2 px-2`}>
         {pvp ? <span data-card-pvp-foe className="grid h-[42px] w-[42px] place-items-center rounded-xl border-2 bg-black text-[24px]" style={{ borderColor: who.accent }}>{cardIconNode(pvp.icon, 30)}</span>
@@ -52994,10 +52995,10 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             <span className="relative flex items-center gap-2"><span aria-hidden="true" className="text-3xl leading-none">⚔️</span><span><b className="block text-[22px] font-black italic leading-tight">助手と対戦</b><small className="block text-[11px] font-black text-slate-900/80">助手のみんなと戦う・強さは5段</small></span></span>
             <span aria-hidden="true" className="relative flex -space-x-2">{foes.map((x) => <img key={x.id} src={assistantFaceImage(x, 'normal')} alt="" className="h-10 w-10 rounded-full border-2 border-white/80 bg-slate-900 object-cover object-top shadow"/>)}</span>
           </button>
-          {/* マルチ対戦(91-card-battle-multi.jsx)。つくっている途中なので、デバッグ設定から入ったときだけ押せる */}
-          <button type="button" data-card-mode-multi disabled={!debug} onClick={() => { Audio_.fgSe.tap(); setView('pvp'); }} className="mhms-card mhms-in flex min-h-[150px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-sky-200 via-sky-400 to-indigo-500 px-4 py-3 text-left text-slate-950 active:scale-[.98] disabled:opacity-50" style={{ animationDelay: '60ms' }}>
+          {/* マルチ対戦(91-card-battle-multi.jsx)。MFバトルカードの公開の印と同じ日に開く(cardPvpOpen・社長 案A)。それまではデバッグ設定から入ったときだけ押せる */}
+          <button type="button" data-card-mode-multi disabled={!(debug || cardPvpOpen())} onClick={() => { Audio_.fgSe.tap(); setView('pvp'); }} className="mhms-card mhms-in flex min-h-[150px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-sky-200 via-sky-400 to-indigo-500 px-4 py-3 text-left text-slate-950 active:scale-[.98] disabled:opacity-50" style={{ animationDelay: '60ms' }}>
             <span className="relative flex items-center gap-2"><span aria-hidden="true" className="text-3xl leading-none">🎮</span><span><b className="block text-[22px] font-black italic leading-tight">マルチ対戦</b><small className="block text-[11px] font-black text-slate-900/80">ブリーダーどうしで戦う</small></span></span>
-            <span className="relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white">{debug ? 'つくっている途中(デバッグ)' : '準備中'}</span>
+            {!cardPvpOpen() && <span className="relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white">{debug ? 'つくっている途中(デバッグ)' : '準備中'}</span>}
           </button>
         </div>
       </div>
@@ -54103,8 +54104,9 @@ const CardRankingBoard = ({ onBack, renderBreederIcon = null, selfName = '', rec
           <div data-card-ranking-multi className="mt-6 rounded-2xl border border-white/10 bg-slate-900/80 p-5 text-center">
             <div aria-hidden="true" className="text-3xl">🎮</div>
             <b className="mt-1 block text-[15px] font-black text-white">マルチ対戦の強さ</b>
-            <span className="mt-1 inline-block rounded border border-slate-500 px-2 py-0.5 text-[11px] font-black text-slate-300">準備中</span>
-            <p className="mt-2 text-[12px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('マルチ対戦ができるようになったら、ここに順位が出ます')}</p>
+            {/* 「準備中」はマルチ対戦を開ける(MFバトルカードの公開の印・91 の cardPvpOpen)まで */}
+            {!cardPvpOpen() && <span className="mt-1 inline-block rounded border border-slate-500 px-2 py-0.5 text-[11px] font-black text-slate-300">準備中</span>}
+            {!cardPvpOpen() && <p className="mt-2 text-[12px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('マルチ対戦ができるようになったら、ここに順位が出ます')}</p>}
             {/* 勝つと上がる強さの点数の順(91-card-battle-multi.jsx・表 card_battle_pvp_ratings)。表が無いあいだは「準備中」 */}
             <CardPvpRankingList renderBreederIcon={renderBreederIcon} selfId={selfId}/>
           </div>
@@ -54154,6 +54156,9 @@ const CardRankingBoard = ({ onBack, renderBreederIcon = null, selfName = '', rec
 //
 // 区切り1(いま): 合言葉の部屋で、2人が1戦を最後まで遊べる。時間切れ・切断・報酬・だれとでも・強さの点数は、このあとの区切り
 
+// 公開の印: MFバトルカードの公開(RELEASE_FLAGS.cardBattle)と同じ日に開ける(2026-10-25 社長 案A)。見るたびに引く(読み込み時に後ろの部品の const を触らない)。
+// 印が偽のあいだは、デバッグ設定から入ったときだけ入れる
+const cardPvpOpen = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.cardBattle === true;
 const CARD_PVP_HIDDEN = -1;               // 相手の見えない札
 const CARD_PVP_ROOM_TOPIC = 'realtime:mhc-room-';
 const CARD_PVP_HEARTBEAT_MS = 2000;
@@ -54713,6 +54718,9 @@ const CARD_PVP = (() => {
   };
 })();
 
+// 台詞の顔文字と、うしろに続くカナ・数字・「!」(「(｡ ˘-˘)ｳﾝｳﾝ」「( ˘ω˘)9グッ!」)を1つのかたまりにして、途中で折らない(カゲあつくん)。ほかは jaWrap
+const cardPvpLineNode = (text) => String(text).split(/(\([^()\s]*(?:\s[^()\s]*)*\)[0-9\u30A0-\u30FF\uFF65-\uFF9F!！]*|[\u0660-\u06FF٩][^\s、。！？]*[و])/).filter((x) => x !== '')
+  .map((x, i) => (/^\(.*\)|^٩/.test(x) ? <span key={i} data-ja-keep style={{ whiteSpace: 'nowrap' }}>{x}</span> : <React.Fragment key={i}>{jaWrap(x)}</React.Fragment>));
 // 文を読点で区切り、区切りごとに折れないようにする(「見せ／合って」のような言葉の途中の折れを防ぐ。カゲあつくん)
 const cardPvpPhrases = (text) => String(text).split(/(?<=、)/).map((x, i) => <span key={i} className="inline-block">{x}</span>);
 
@@ -54793,7 +54801,9 @@ const CardPvpLobby = ({ deck, deckIssues = [], onStart, onBack, onReward, assist
     const got = r.got && !r.got.pending ? r.got : null;
     const foeName = room.foe ? room.foe.name : 'あいて';
     const scene = r.reason === '相手が抜けた' ? 'left' : win ? 'win' : 'lose';
-    const line = a ? cardPvpResultLine(a.id, scene, cardPvpSeedOf(room.match)) : null;
+    // 検査のときだけ、写真に出す台詞を選べる(window.__mhCardPvpLineSeed)
+    const lineSeed = typeof window !== 'undefined' && Number.isInteger(window.__mhCardPvpLineSeed) ? window.__mhCardPvpLineSeed : cardPvpSeedOf(room.match);
+    const line = a ? cardPvpResultLine(a.id, scene, lineSeed) : null;
     const verifyText = r.verify === 'ok' ? 'おたがいの山札を見せ合って、正しく終わったことを確かめました' : r.verify === 'ng' ? `この試合は無効です(${r.why})`
       : r.verify === 'skip' ? '相手の山札は届きませんでした(相手が抜けたため)' : 'おたがいの山札を見せ合って、確かめています…';
     return (
@@ -54804,7 +54814,7 @@ const CardPvpLobby = ({ deck, deckIssues = [], onStart, onBack, onReward, assist
           {a && line && (
             <div className="flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2">
               <CardAssistantArt src={assistantFullImage(a, line.face)} alt={a.name} className="h-[220px] w-[46%]"/>
-              <div data-card-pvp-line={scene} className="mb-2 min-w-0 flex-1 rounded-2xl border-2 bg-white px-2 py-1 text-[13px] font-extrabold leading-snug text-[#1f1333]" style={{ borderColor: a.accent, ...JA_WRAP_STYLE }}>{jaWrap(line.text)}</div>
+              <div data-card-pvp-line={scene} className="mb-2 min-w-0 flex-1 rounded-2xl border-2 bg-white px-2 py-1 text-[13px] font-extrabold leading-snug text-[#1f1333]" style={{ borderColor: a.accent, ...JA_WRAP_STYLE }}>{cardPvpLineNode(line.text)}</div>
             </div>
           )}
           <div className={SCREEN_PANEL_CLASS}>
@@ -54841,7 +54851,7 @@ const CardPvpLobby = ({ deck, deckIssues = [], onStart, onBack, onReward, assist
   }
   return (
     <div data-mh-screen data-card-pvp={room.phase} className={SCREEN_SHELL_CLASS}>
-      <ScreenHead title="マルチ対戦" accent="text-sky-200" onBack={back} note="ほかのブリーダーと1対1で戦えます(デバッグ専用・つくっている途中)"/>
+      <ScreenHead title="マルチ対戦" accent="text-sky-200" onBack={back} note={cardPvpOpen() ? 'ほかのブリーダーと1対1で戦えます' : 'ほかのブリーダーと1対1で戦えます(デバッグ専用・つくっている途中)'}/>
       <div className={`${SCREEN_LIST_CLASS} space-y-3 pb-4`}>
         {room.phase === 'idle' && (<>
           {penaltyMin > 0 && <p data-card-pvp-penalty className="rounded-xl border border-rose-300/40 bg-rose-500/10 p-2 text-[13px] font-bold text-rose-100">試合の途中で抜けたので、あと{penaltyMin}分は部屋に入れません</p>}
@@ -54860,7 +54870,7 @@ const CardPvpLobby = ({ deck, deckIssues = [], onStart, onBack, onReward, assist
             </div>
           )}
           <div className="rounded-2xl border border-white/10 bg-slate-900/80 p-3">
-            <p className="mb-2 text-[13px] font-bold text-slate-300">友だちの合言葉で入る</p>
+            <p className="mb-2 text-[13px] font-bold text-slate-300">フレンドの合言葉で入る</p>
             <div className="flex gap-2">
               <input data-card-pvp-code value={code} onChange={(e) => setCode(e.target.value.toUpperCase().slice(0, 4))} maxLength={4} inputMode="text" autoCapitalize="characters" placeholder="ABCD"
                 className="min-h-[48px] w-0 flex-1 rounded-xl border border-white/20 bg-black/40 px-3 text-center text-[22px] font-black tracking-[.3em] text-white"/>
@@ -54872,7 +54882,8 @@ const CardPvpLobby = ({ deck, deckIssues = [], onStart, onBack, onReward, assist
         {(room.phase === 'connecting' || room.phase === 'waiting') && room.mode === 'free' && (
           <div data-card-pvp-seek className="rounded-2xl border border-sky-300/40 bg-sky-500/10 p-4 text-center">
             <p className="text-[15px] font-black text-white">{room.foe ? `${room.foe.name}さんが見つかりました。始めます…` : '相手をさがしています…'}</p>
-            <p data-card-pvp-waiting={room.lobbyCount} className="mt-1 text-[13px] font-bold text-sky-100">いま待っている人 {Math.max(1, room.lobbyCount)}人</p>
+            {/* 自分は数えない(「1人」が自分のことか分からない。カゲあつくん) */}
+            <p data-card-pvp-waiting={Math.max(0, room.lobbyCount - 1)} className="mt-1 text-[13px] font-bold text-sky-100">{room.lobbyCount > 1 ? `あなたのほかに ${room.lobbyCount - 1}人が待っています` : 'いまは、ほかに待っている人はいません'}</p>
             {!room.foe && now - room.seekAt <= CARD_PVP_LOBBY_LIMIT_MS && <p className="mt-1 text-[12px] font-bold text-slate-300 tabular-nums">あと{Math.max(0, Math.ceil((CARD_PVP_LOBBY_LIMIT_MS - (now - room.seekAt)) / 1000))}秒</p>}
             {!room.foe && now - room.seekAt > CARD_PVP_LOBBY_LIMIT_MS && (
               <div data-card-pvp-nobody className="mt-3 space-y-2">
@@ -54887,7 +54898,7 @@ const CardPvpLobby = ({ deck, deckIssues = [], onStart, onBack, onReward, assist
           <div className="rounded-2xl border border-sky-300/40 bg-sky-500/10 p-4 text-center">
             <p className="text-[13px] font-bold text-sky-100">合言葉</p>
             <p data-card-pvp-room className="my-1 text-[40px] font-black tracking-[.3em] text-white">{room.code}</p>
-            <p className="text-[13px] font-bold text-slate-200">{room.phase === 'connecting' ? 'つないでいます…' : room.foe ? `${room.foe.name}さんが来ました。始めます…` : 'この合言葉を友だちに伝えて、待っています…'}</p>
+            <p className="text-[13px] font-bold text-slate-200">{room.phase === 'connecting' ? 'つないでいます…' : room.foe ? `${room.foe.name}さんが来ました。始めます…` : 'この合言葉をフレンドに伝えて、待っています…'}</p>
             {/* フレンドから招待(区切り4): 承認済みのフレンドの名簿から選ぶ。フレンドがいない・表が無いときは出さない */}
             {room.phase === 'waiting' && !room.foe && roster && roster.length > 0 && (
               <div className="mt-3 text-left">
@@ -54962,22 +54973,24 @@ const useCardPvpClock = (pvp, st, step) => {
   }, [now, key]);
   const room = CARD_PVP.get();
   const quiet = pvp && room.foe ? now - room.foe.seen : 0;
-  return { left: Math.max(0, Math.ceil(left / 1000)), mine: decider === 0, timeouts: room.timeouts, offline: room.offline,
+  // 時計を数え直した瞬間は now が少し古く、61秒と出ていた。持ち時間を超えて出さない
+  return { left: Math.max(0, Math.min(Math.ceil(left / 1000), pvp ? cardPvpLimitMs(st) / 1000 : 0)), mine: decider === 0, timeouts: room.timeouts, offline: room.offline,
     foeQuietSec: quiet > CARD_PVP_QUIET_MS ? Math.max(0, Math.ceil((CARD_PVP_ALIVE_MS - quiet) / 1000)) : 0 };
 };
-// 上の帯のまんなか: 持ち時間。電波が途切れたときの知らせは、盤のまんなか(記録の所)に重ねて出す(相手の帯は隠さない。カゲあつくん)
+// 上の帯のまんなか: 持ち時間
 const CardPvpStatus = ({ clock }) => (
   <>
     <span data-card-pvp-clock={clock.mine ? 'mine' : 'foe'} className={`rounded-full px-2 py-0.5 text-[13px] font-black tabular-nums ${clock.mine ? (clock.left <= 10 ? 'bg-rose-500/30 text-rose-100' : 'bg-amber-400/20 text-amber-100') : 'bg-white/10 text-slate-200'}`}>
       {clock.mine ? `残り ${clock.left}秒` : `相手 ${clock.left}秒`}{clock.mine && clock.timeouts > 0 ? `(時間切れ ${clock.timeouts}/${CARD_PVP_TIMEOUT_LOSE})` : ''}
     </span>
-    {(clock.offline || clock.foeQuietSec > 0) && (
-      <div data-card-pvp-signal className="pointer-events-none absolute inset-x-4 top-[44%] z-[30] rounded-xl border border-amber-300/50 bg-black/80 px-2 py-1 text-center text-[12px] font-bold text-amber-100">
-        {clock.offline ? '電波が途切れています。つなぎ直しています…' : `相手の電波が途切れています(あと${clock.foeQuietSec}秒で相手の負け)`}
-      </div>
-    )}
   </>
 );
+// 電波が途切れたときの知らせ。上の帯のすぐ下に1行で出し、場を少し下げる(重ねると、相手の帯や記録の文字を隠す。カゲあつくん)
+const CardPvpSignal = ({ clock }) => ((clock.offline || clock.foeQuietSec > 0) ? (
+  <div data-card-pvp-signal className="shrink-0 border-y border-amber-300/40 bg-amber-500/15 px-2 py-1 text-center text-[12px] font-bold text-amber-100">
+    {clock.offline ? '電波が途切れています。つなぎ直しています…' : `相手の電波が途切れています(あと${clock.foeQuietSec}秒で相手の負け)`}
+  </div>
+) : null);
 // 定型のチャット(上の帯の「投了」の横の 💬)。相手の言葉は、助手と対戦のひとことと同じ吹き出しに出る
 const CardPvpChat = () => {
   const [open, setOpen] = useState(false);

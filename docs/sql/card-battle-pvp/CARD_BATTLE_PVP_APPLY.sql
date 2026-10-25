@@ -112,6 +112,17 @@ do $$ begin
 end $$;
 grant select, insert, update on public.card_battle_invites to anon, authenticated;
 
+-- ---- 権限を絞り直す(2026-10-25 窓口・マイグレーション tighten_card_battle_pvp_grants) ----
+-- Supabase は新しい表に anon・authenticated の全部の権限(DELETE・TRUNCATE を含む)を自動で付ける。TRUNCATE は RLS が効かないので、
+-- だれでも表を空にできてしまう。いったん全部外してから、要るものだけを付け直す
+revoke all on public.card_battle_pvp_ratings from anon, authenticated;
+revoke all on public.card_battle_pvp_matches from anon, authenticated;
+revoke all on public.card_battle_invites from anon, authenticated;
+grant select on public.card_battle_pvp_ratings to anon, authenticated;          -- 点数は読むだけ(書くのは関数だけ)
+-- card_battle_pvp_matches には権限を付けない(関数 card_battle_pvp_report だけが書く)
+grant select, insert, update on public.card_battle_invites to anon, authenticated; -- 招待は読む・足す・上書き(消すのは不可)
+grant execute on function public.card_battle_pvp_report(text, text, text, text, text, integer, text, text, text) to anon, authenticated;
+
 -- ---- 流したあとの確かめ(読むだけ) ----
 select 'card_battle_pvp_ratings' as 表, count(*) as 行の数,
        (select case when c.relrowsecurity then '有効' else '無効(要確認)' end from pg_class c where c.oid = 'public.card_battle_pvp_ratings'::regclass) as rls
