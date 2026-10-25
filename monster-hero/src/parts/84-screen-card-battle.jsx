@@ -598,7 +598,13 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
     return () => clearTimeout(t);
   }, [st.turn, st.active, st.phase]);
   // まとめは、自分が何かしたら(手札を選ぶ・カードを出す)閉じる
-  useEffect(() => { if (turnSummary && (sel || picks.length)) setTurnSummary(null); }, [sel, picks.length]);
+  //   手札を運び始めたとき(運んだ先にまとめが重なる)と、しばらくたったときも閉じる
+  useEffect(() => { if (turnSummary && (sel || picks.length || drag)) setTurnSummary(null); }, [sel, picks.length, drag]);
+  useEffect(() => {
+    if (!turnSummary) return undefined;
+    const t = setTimeout(() => setTurnSummary((cur) => (cur && cur.key === turnSummary.key ? null : cur)), Math.max(3500, turnSummary.lines.length * 1200));
+    return () => clearTimeout(t);
+  }, [turnSummary && turnSummary.key]);
 
   // マルチ対戦: 届いた相手の手を当てる・相手の捨て札の並びを本物にする・相手の投了や抜けたで終える(91 の CARD_PVP)
   const stRef = useRef(st);

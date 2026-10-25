@@ -313,7 +313,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
         logSheetOpened = true; await page.locator('header [data-card-log-open], [data-card-battle] > div [data-card-log-open]').first().click().catch(() => {});
         await page.locator('[data-card-log-sheet]').waitFor({ timeout: 3000 }).catch(() => {}); await measureStage();
         if (SHOT) await shot(page, '41-log-sheet');
-        await page.getByRole('button', { name: '閉じる' }).last().click().catch(() => {});
+        await page.locator('[data-card-log-sheet] button').last().click().catch(() => {});
       }
       if (SHOT && !fitShots.has('banner') && await page.locator('[data-card-turn-banner]').count()) { fitShots.add('banner'); await shot(page, '42-turn-banner'); }
       if (SHOT && !fitShots.has('big') && await page.locator('[data-card-big]').count()) { fitShots.add('big'); await shot(page, '43-big-card'); }
