@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b5f32cc7ed02bba0
+// generated-sha256: d53619f7ec0fa1b0
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-25 22:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-25 22:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -16057,8 +16057,25 @@ const ASSET_CACHE_DEFAULT_ENABLED = true;
 const ASSET_PACKS = [
   { id: 'beat', icon: '🎵', label: 'モンヒロビート', desc: '全曲の音源とジャケット' },
   { id: 'battle', icon: '⚔️', label: 'バトル', desc: 'バトル・HOMEのBGM、モンスター・敵・演出・助手の画像' },
+  // MFバトルカードのカードの絵(小さい版と大きい版。2026-10-25 社長)。公開の印(RELEASE_FLAGS.cardBattle)が立つまでは、
+  // デバッグ端末にだけ見せる。遊ぶ人には出さず、「全部」にも自動ダウンロードにも入れない(assetPackOpen)。公開した日から自動で入る
+  { id: 'card', icon: '🃏', label: 'バトルカード', desc: 'MFバトルカードのカードの絵', gate: 'cardBattle' },
   { id: 'all', icon: '📦', label: '全部', desc: 'モンヒロビートとバトルの両方' },
 ];
+// まとまりを出してよいか(公開の印か、デバッグの合言葉が合った端末か。印は読むだけ)
+const assetPackOpen = (pack) => {
+  if (!pack || !pack.gate) return true;
+  try { if (typeof EVENT_REPLAY_RELEASE_FLAGS !== 'undefined' && EVENT_REPLAY_RELEASE_FLAGS[pack.gate]) return true; } catch (e) {}
+  try { return typeof localStorage !== 'undefined' && typeof DEBUG_UNLOCK_KEY !== 'undefined' && localStorage.getItem(DEBUG_UNLOCK_KEY) === '1'; } catch (e) { return false; }
+};
+const assetPackOfId = (id) => ASSET_PACKS.find((p) => p.id === id) || null;
+// 設定の「ダウンロード」に並べるまとまり(出してよいものだけ)。「全部」の説明も、バトルカードを出すときは3つにする
+const assetPacksShown = () => {
+  const cardOpen = assetPackOpen(assetPackOfId('card'));
+  return ASSET_PACKS.filter(assetPackOpen).map((p) => (p.id === 'all' && cardOpen ? { ...p, desc: 'モンヒロビート・バトル・バトルカードの全部' } : p));
+};
+// 自動ダウンロードで、よく使う画像のあとに落とすカードの絵(小さい版だけ。大きい版は詳しい画面を開いたときに取る)
+const ASSET_CARD_AUTO_PREFIX = 'images/card-battle/s/';
 // 自動の前もって落としで、まず落とす「よく使う画面の画像」(背景・タイトル・画面の部品・顔アイコン)
 const ASSET_CORE_PREFIXES = ['data/images/', 'images/ui/', 'images/monster-icons/'];
 // 自動の前もって落としで1回の起動に落とす上限(バイト)。モバイル回線では少なく、わからない端末(iPhone)は控えめに
@@ -16104,7 +16121,8 @@ const ASSET_CACHE = (() => {
     }
     return manifestPromise;
   };
-  const filesOfPack = (m, packId) => Object.entries(m.files).filter(([, f]) => packId === 'all' || f.pack === packId);
+  // 「全部」には、出してよいまとまりのものだけを入れる(公開前のバトルカードは入れない)
+  const filesOfPack = (m, packId) => Object.entries(m.files).filter(([, f]) => (packId === 'all' ? assetPackOpen(assetPackOfId(f.pack)) : f.pack === packId));
 
   // 端末にあるもの(版も一覧と同じもの)を数え直す
   const refreshStatus = async () => {
@@ -16176,7 +16194,7 @@ const ASSET_CACHE = (() => {
 
   // ---- まとまりのダウンロード ----
   const download = async (packId) => {
-    if (job || !settings.enabled || !supported() || !ASSET_PACKS.some(p => p.id === packId)) return false;
+    if (job || !settings.enabled || !supported() || !ASSET_PACKS.some(p => p.id === packId && assetPackOpen(p))) return false;
     // 最初の await より前に job を置く(2つ同時に始めると、進み具合を取り合う)
     const j = job = { packId, preparing: true, total: 0, done: 0, bytesTotal: 0, bytesDone: 0, failed: 0, cancel: false, error: null };
     emit();
@@ -16307,6 +16325,8 @@ const ASSET_CACHE = (() => {
     if (!m) return;
     enqueue(Object.keys(m.files).filter(p => ASSET_CORE_PREFIXES.some(pre => p.startsWith(pre))));
     for (const songId of settings.songs) enqueue(songPaths(songId));
+    // カードの絵(小さい版)は、バトルカードのまとまりを出してよいときだけ(公開前の遊ぶ人の端末では落とさない)
+    if (assetPackOpen(assetPackOfId('card'))) enqueue(Object.keys(m.files).filter(p => p.startsWith(ASSET_CARD_AUTO_PREFIX)));
   };
 
   let listening = false;
@@ -32683,7 +32703,7 @@ function AssetDownloadPage({ onBack }) {
         {!asset.supported && (
           <p data-asset-unsupported className="rounded-xl border border-amber-400/40 bg-amber-950/30 px-3 py-2 text-[11px] font-bold leading-relaxed text-amber-100">この端末・ブラウザでは前もって入れておくことができません。ふだんどおり、開いたときに読み込みます。</p>
         )}
-        {ASSET_PACKS.map(pack => {
+        {assetPacksShown().map(pack => {
           const st = packs[pack.id] || { count: 0, bytes: 0, haveCount: 0, haveBytes: 0 };
           const complete = st.count > 0 && st.haveCount >= st.count;
           const running = job && job.packId === pack.id;
