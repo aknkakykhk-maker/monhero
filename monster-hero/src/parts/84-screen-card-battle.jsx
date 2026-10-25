@@ -649,12 +649,28 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
   const decider = cardDeciderOf(st);
   const myTurn = st.winner === null && decider === CARD_ME;
   const mode = !myTurn ? 'wait'
+    : st.pendingReveal ? 'reveal'
+    : st.pendingChoice ? 'choose'
     : st.pendingDiscard ? 'discard'
     : st.phase === 'setup' ? 'setup'
     : st.pending ? 'guard'
     : st.phase === 'main' ? 'attack'
     : st.phase === 'guts' ? 'guts' : 'wait';
   const attackOpts = mode === 'attack' ? cardAttackOptions(db, st).filter(tutAllow) : [];
+  // 見せる段(相手の死神の力): こちらは選ぶことが無いので、少し見せてから自動で進める
+  const revealKey = mode === 'reveal' ? `${st.turn}-${st.log.length}` : '';
+  useEffect(() => {
+    if (!revealKey) return undefined;
+    const t = setTimeout(() => step({ type: 'reveal' }), Math.round(900 * pace));
+    return () => clearTimeout(t);
+  }, [revealKey]);
+  // 選ぶ段の候補(捨て札・手札・相手の手札の、何枚目か)
+  const choice = mode === 'choose' ? (() => {
+    const ch = st.pendingChoice;
+    const list = ch.src === 'oppHand' ? st.players[CARD_CPU].hand : ch.src === 'hand' ? me.hand : me.discard;
+    const title = { toHand: '手札に加えるカードを選ぶ', toDeckBottom: '山札の一番下へ戻すカードを選ぶ', toDeckShuffleDraw: '山札に戻すカードを選ぶ', discardDraw2: '捨てるカードを選ぶ', oppDiscard: '相手に捨てさせるカードを選ぶ' }[ch.then] || 'カードを選ぶ';
+    return { title, from: (cardOf(db, ch.card) || {}).name || '', items: ch.cands.map((i) => ({ i, no: list[i], c: cardOf(db, list[i]) })) };
+  })() : null;
   const guardOpts = mode === 'guard' ? cardGuardOptions(db, st).filter(tutAllow) : [];
   // 守れるカードが1枚も無いときは、自動で「守らない」にする(オプションの「自動パス」。練習試合と見本では使わない)
   //   守れない理由の一言(data-card-guard-why)を少し見せてから進む
@@ -913,6 +929,8 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
     // 自分の番に相手が守りを選んでいるあいだは「◯◯の番」と言わない(上のヘッダーと食い違っていた。案A)
     if (mode === 'wait') return <div className="flex-1 text-center text-[13px] font-bold text-slate-300">{st.active === CARD_ME ? `${who.name}が守りを考えています…` : `${who.name}の番…`}</div>;
     if (mode === 'setup') return <button type="button" className={`${btn} mh-button-primary`} onClick={() => step({ type: 'setupGuts', hand: picks })}>{picks.length ? `${picks.length}枚をガッツにして始める` : 'ガッツにしないで始める'}</button>;
+    if (mode === 'reveal') return <div className="flex-1 text-center text-[13px] font-bold text-slate-300">相手に手札を見せています…</div>;
+    if (mode === 'choose') return <div className="flex-1 text-center text-[13px] font-bold text-amber-200">カードを1枚選んでください</div>;
     if (mode === 'discard') return <button type="button" disabled={picks.length !== st.pendingDiscard.n} className={`${btn} mh-button-danger`} onClick={() => step({ type: 'discard', hand: picks })}>{`${st.pendingDiscard.n}枚えらんで捨てる`}</button>;
     if (mode === 'guard') return <button type="button" disabled={tutOff('pass')} className={`${btn} border border-white/20 bg-slate-800${tutBtn('pass')}`} onClick={() => step({ type: 'pass' })}>{tutorial && st.pending && st.pending.evaded ? 'これで守る' : '守らない'}</button>;
     if (mode === 'guts') return <button type="button" disabled={tutOff('turn')} className={`${btn} bg-gradient-to-b from-orange-400 to-orange-600${tutBtn('turn')}`} onClick={() => askEnd({ type: 'guts', hand: picks })}>{picks.length ? `${picks.length}枚をガッツにしてターン終了` : 'ガッツにしないでターン終了'}</button>;
@@ -1121,6 +1139,25 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
               ))}
             </div>
             <button type="button" className="mt-2 min-h-[44px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200" onClick={bindCancel}>やめる</button>
+          </div>
+        </div>
+      )}
+      {choice && (
+        <div data-card-choose className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3">
+          <div className="w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900 p-3 text-slate-100">
+            <div className="text-[15px] font-black" style={JA_LABEL_STYLE}>{jaWrap(`${choice.from ? `${choice.from}: ` : ''}${choice.title}`)}</div>
+            <div className="mt-2 grid max-h-[55vh] gap-1.5 overflow-y-auto">
+              {choice.items.map(({ i, no, c }) => (
+                <button key={`${i}-${no}`} type="button" data-card-choose-item={i} onClick={() => step({ type: 'choose', pick: i })}
+                  className="flex min-h-[48px] items-center gap-2 rounded-xl bg-slate-700 px-2 py-1.5 text-left active:scale-[.98]">
+                  <span className="shrink-0 rounded-md bg-indigo-900 px-1.5 py-0.5 text-[11px] font-black">{c ? CARD_KIND_LABEL[c.kind] : '？'}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[14px] font-black text-white">{c ? c.name : 'カード'}</span>
+                    {c && <span className="block text-[11px] font-bold text-slate-300">{`ガッツ${c.guts}${c.damage !== null && c.damage !== undefined ? `・ダメージ${c.damage}` : ''}`}</span>}
+                  </span>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       )}

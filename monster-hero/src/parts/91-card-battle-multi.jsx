@@ -58,7 +58,8 @@ const cardPvpFlip = (act) => {
 const cardPvpRevealOf = (st, act, p = 0) => {
   if (!st || !act) return {};
   const hand = st.players[p].hand;
-  const idxs = act.type === 'guard' ? [act.hand] : (act.type === 'attack' || act.type === 'breeder' || act.type === 'discard') ? (act.hand || []) : [];
+  // 見せる段(死神の力)は、手札を全部見せる
+  const idxs = act.type === 'reveal' ? hand.map((_, i) => i) : act.type === 'guard' ? [act.hand] : (act.type === 'attack' || act.type === 'breeder' || act.type === 'discard') ? (act.hand || []) : [];
   const out = {};
   idxs.forEach((i) => { if (Number.isInteger(i) && i >= 0 && i < hand.length) out[i] = hand[i]; });
   return out;
@@ -77,6 +78,8 @@ const cardPvpApplyRemote = (db, st, msg) => {
   if (!st || !msg || !msg.act || st.winner !== null || cardPvpDecider(st) !== 1) return null;
   const s = cardClone(st);
   const foe = s.players[1];
+  // 相手の手札は、いつも仮の札に戻してから当てる(死神の力で見せてもらった札・捨て札から戻した札が、本物の番号のまま残らないように)
+  if (!(s.pendingChoice && s.pendingChoice.src === 'oppHand')) foe.hand = foe.hand.map(() => CARD_PVP_HIDDEN);
   const reveal = msg.reveal && typeof msg.reveal === 'object' ? msg.reveal : {};
   for (const [k, no] of Object.entries(reveal)) {
     const i = Number(k);
@@ -94,6 +97,7 @@ const cardPvpApplyRemote = (db, st, msg) => {
     }
     next.players[1].discard = msg.discard.slice();
   }
+  next.players[1].deck = next.players[1].deck.map(() => CARD_PVP_HIDDEN); // 山札へ戻した札(伝説のちから・時間稼ぎなど)も仮の札に
   return next;
 };
 // 相手の捨て札の並びだけが届いたとき(こちらの手で相手のガッツが捨て札へ行ったあとなど)。数が合わなければそのまま
@@ -106,10 +110,13 @@ const cardPvpPatchDiscard = (db, st, list) => {
 };
 
 // 持ち時間の区切り。決める人・番・守りの回が変わったら、時計をはじめから(攻撃と、そのあとのガッツは同じ60秒)
-const cardPvpLimitMs = (st) => (st.pending || st.pendingDiscard ? CARD_PVP_GUARD_MS : CARD_PVP_TURN_MS);
-const cardPvpClockKey = (st) => `${cardPvpDecider(st)}-${st.turn}-${st.pending ? `g${st.log.length}` : st.pendingDiscard ? `d${st.log.length}` : st.phase === 'setup' ? 's' : 'm'}`;
+// 見せる段(死神の力)は守りと同じ短い時間。選ぶ段は攻撃の番のうちなので、ふつうの時間
+const cardPvpLimitMs = (st) => (st.pending || st.pendingDiscard || st.pendingReveal ? CARD_PVP_GUARD_MS : CARD_PVP_TURN_MS);
+const cardPvpClockKey = (st) => `${cardPvpDecider(st)}-${st.turn}-${st.pending ? `g${st.log.length}` : st.pendingDiscard ? `d${st.log.length}` : st.pendingReveal ? `r${st.log.length}` : st.pendingChoice ? `c${st.log.length}` : st.phase === 'setup' ? 's' : 'm'}`;
 // 持ち時間を使い切ったときの手(その番を終える・守らない)。攻撃の番は「攻撃おわり」のあと、ガッツへ回さずにターン終了
-const cardPvpTimeoutAct = (st) => (st.pendingDiscard ? { type: 'discard', hand: Array.from({ length: st.pendingDiscard.n }, (_, i) => i) }
+// 選ぶ段は、いちばん前の候補を選ぶ
+const cardPvpTimeoutAct = (st) => (st.pendingReveal ? { type: 'reveal' } : st.pendingChoice ? { type: 'choose', pick: st.pendingChoice.cands[0] }
+  : st.pendingDiscard ? { type: 'discard', hand: Array.from({ length: st.pendingDiscard.n }, (_, i) => i) }
   : st.phase === 'setup' ? { type: 'setupGuts', hand: [] } : st.pending ? { type: 'pass' } : st.phase === 'main' ? { type: 'endAttacks' } : { type: 'guts', hand: [] });
 // 1戦でもらえる数(台帳 #119 の対人戦: 勝ち24周・200/負け12周・50/抜けた0。1日の上限は無し・同じ相手の制限も無し(社長の決め直し))
 // 負けの周回は、自分の番の数が10回で満額(助手と対戦と同じ)。投了は倒した数で決める。自分の番が3回より前に終わった試合は0
@@ -164,10 +171,13 @@ const cardPvpVerify = (db, { myDeck, mySeed, foeDeck, foeSeed, first, names, his
 const cardPvpInt = (v, max) => (Number.isInteger(v) && v >= 0 && v <= max ? v : null);
 const cardPvpCleanAct = (raw) => {
   if (!raw || typeof raw !== 'object') return null;
-  const types = ['setupGuts', 'guts', 'attack', 'breeder', 'guard', 'pass', 'endAttacks', 'discard'];
+  const types = ['setupGuts', 'guts', 'attack', 'breeder', 'guard', 'pass', 'endAttacks', 'discard', 'reveal', 'choose'];
   if (!types.includes(raw.type)) return null;
   const act = { type: raw.type };
   if (raw.type === 'guard') { act.hand = cardPvpInt(raw.hand, 20); act.mon = cardPvpInt(raw.mon, 2); if (act.hand === null || act.mon === null) return null; return act; }
+  if (raw.type === 'reveal') return act;
+  // 選ぶ段: 手札か捨て札の番号(捨て札は50枚を超えない)
+  if (raw.type === 'choose') { act.pick = cardPvpInt(raw.pick, 60); return act.pick === null ? null : act; }
   if (Array.isArray(raw.hand)) { act.hand = raw.hand.slice(0, 20).map((i) => cardPvpInt(i, 20)); if (act.hand.some((i) => i === null)) return null; }
   if (raw.mon !== undefined) { act.mon = cardPvpInt(raw.mon, 2); if (act.mon === null) return null; }
   if (raw.target !== undefined) {
@@ -828,7 +838,7 @@ const useCardPvpAuto = (db, pvp, st, step, paused) => useEffect(() => {
   const t = setTimeout(() => {
     const act = cardAiChooseAction(db, st, cardAiPolicy('kyuko', 'easy'));
     if (act && step(act)) return;
-    step(st.pendingDiscard ? { type: 'discard', hand: [0] } : st.phase === 'setup' ? { type: 'setupGuts', hand: [] } : st.pending ? { type: 'pass' } : st.phase === 'main' ? { type: 'endAttacks' } : { type: 'guts', hand: [] });
+    step(cardPvpTimeoutAct(st));
   }, Number(window.__mhCardPvpAutoMs) || 150);
   return () => clearTimeout(t);
 }, [st, paused]);

@@ -515,8 +515,8 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const monTiles = page.locator('[data-card-deck-tile]');
     for (let i = 0; i < 3; i++) await monTiles.nth(i).click();
     const monCount = await page.locator('[data-card-deck-mon] img').count();
-    // 同じ種類の2体目は入らない(キラがあれば)・技は「使える子だけ」で絞って入れる
-    await page.getByRole('tab', { name: /技・ブリーダー/ }).click();
+    // 同じ種類の2体目は入らない(キラがあれば)・技は「使える子だけ」で絞って入れる(タブはやめて、絞り込み1列。2026-10-25 案A)
+    await page.locator('[data-card-deck-filter="all"]').click();
     let sameNameStop = '', shortShot = false, shortProblems = '';
     for (let guard = 0; guard < 400; guard++) {
       const n = Number((await page.locator('[data-card-deck-count]').innerText()).replace(/\/.*$/, '').trim());
@@ -541,8 +541,18 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     await page.evaluate(() => document.querySelectorAll('[data-card-deck-edit] .mh-scroll').forEach((el) => { el.scrollTop = 0; }));
     if (SHOT) await shot(page, '19-deck-edit');
     const deckReady = await page.locator('[data-card-deck-ready]').getAttribute('data-card-deck-ready');
-    await page.getByRole('tab', { name: /デッキの中/ }).click();
+    // デッキに入れたものだけを出し、「−」で1枚外して「＋」で戻せる(外し方が見える。2026-10-25 社長「外し方がわからない」)
+    await page.locator('[data-card-deck-filter="deck"]').click();
     if (SHOT) await shot(page, '20-deck-inside');
+    const firstIn = await page.locator('[data-card-deck-grid] [data-card-deck-pick]').nth(3).getAttribute('data-card-deck-pick');
+    const inBefore = await page.locator(`[data-card-deck-in="${firstIn}"]`).innerText();
+    await page.locator(`[data-card-deck-minus="${firstIn}"]`).click();
+    const afterMinus = { n: await page.locator('[data-card-deck-count]').innerText(), inn: await page.locator(`[data-card-deck-in="${firstIn}"]`).innerText().catch(() => '') };
+    await page.locator(`[data-card-deck-plus="${firstIn}"]`).click();
+    const afterPlus = await page.locator('[data-card-deck-count]').innerText();
+    const monMinus = await page.locator('[data-card-deck-mon="0"] span').innerText().catch(() => '');
+    const chipsRows = await page.evaluate(() => { const el = document.querySelector('[data-card-deck-chips]'); const ys = new Set([...el.children].map((b) => Math.round(b.getBoundingClientRect().top))); return ys.size; });
+    check('⑭ デッキに入れたカードは「−」で1枚外れ、「＋」で戻る・上のモンスターにも「−」・絞り込みは1列', /^49/.test(afterMinus.n) && Number(afterMinus.inn.split('/')[0]) === Number(inBefore.split('/')[0]) - 1 && /^50/.test(afterPlus) && monMinus === '−' && chipsRows === 1, JSON.stringify({ firstIn, inBefore, afterMinus, afterPlus, monMinus, chipsRows }));
     await page.locator('[data-card-deck-save]').click();
     await page.waitForSelector('[data-card-deck-list]', { timeout: 5000 });
     const savedDecks = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_card_decks_v1') || 'null'));

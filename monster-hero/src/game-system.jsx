@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 12ffc7e2fe25f973
+// generated-sha256: af502db98b1b972b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-25 21:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-25 21:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -50028,6 +50028,13 @@ const loadAssistantChatMemoFor = async (assistantId) => {
 //         breederUnlimited このターン、ブリーダーのカードを何枚でも / taunt(mode:'only'|'not', noArea) 相手の次の番に狙える相手を縛る /
 //         stunAllEnemies・stunTarget 相手(1体)は次のターン攻撃できない / skipTurn 相手の次の番を飛ばす /
 //         rage 次の自分の番まで、この子は守れない。次の自分の番の技は2倍
+//         ---- 区切り4: 山札・手札・捨て札・ガッツ ----
+//         choose(src:'discard'|'hand', filter:{kind,attack,usable}, then) 1枚選ぶ段(st.pendingChoice)。then … toHand / toDeckBottom /
+//                toDeckShuffleDraw(山札へ戻して切り、1枚引く)/ discardDraw2(捨てて2枚引く)/ oppDiscard(相手の手札から捨てさせる)
+//         peekPick 相手が手札を見せる段(st.pendingReveal)→ こちらが1枚選んで捨てさせる / rush(n) 山札の上からnをガッツ。そのターンはもう出せない /
+//         lastWish 自分をKO、残りライフの枚数を捨て札の新しいほうからガッツへ / gutsZeroBoth / deckToGuts / oppHandToDeckBottom・oppDraw(n) /
+//         gutsToDeckShuffle / selfHurt(n) 味方1体 / oppGutsLoss(n) / refresh 手札を全部捨てて同じ数引く / millOpp(n) / discardBothHands
+//         ★山札を切り直すのは、その山札の持ち主の種(players[i].rng)。マルチで相手の端末と同じ順になる(場の種 st.seed は使わない)
 //   使える時: useWhen(lifeMax) 自分のライフがその数以下のときだけ出せる
 //   守り: evade(kinds,minGuts) / reduce(kinds,n) / reduceHalf(kinds) 半分(切り捨て)減らす / reduceAll(kinds) / reflect(kinds,frac,keep) はね返す /
 //         cover 味方への1回分を自分が受ける / nextTurnMult(kinds,n) 次の自分のターンの技n倍 / becomeAir 次のターン終わりまで空中 /
@@ -50105,7 +50112,8 @@ const cardCreateGame = (db, { decks, names = ['あなた', 'あいて'], seed = 
     });
     const deck = sh.list;
     const hand = deck.splice(deck.length - CARD_BATTLE_HAND_MAX, CARD_BATTLE_HAND_MAX).reverse();
-    return { name: names[i] || `P${i + 1}`, mons, deck, hand, guts: [], discard: [], breederUsed: false, gutsGuardUntil: -1 };
+    // rng … この山札を試合の中で切り直すときの種(自分の山札の切り方から決まる。マルチでも、山札の持ち主の端末と同じ数になる)
+    return { name: names[i] || `P${i + 1}`, mons, deck, hand, guts: [], discard: [], breederUsed: false, gutsGuardUntil: -1, rng: (sh.seed ^ 0x9E3779B9) >>> 0 };
   });
   const st = { v: 1, seed: s, turn: 0, first, active: cardOther(first), phase: 'setup', players, pending: null, forbid: {}, winner: null, reason: null, log: [], events: [] };
   cardLog(st, `${players[first].name}が先攻、${players[cardOther(first)].name}が後攻`);
@@ -50146,6 +50154,23 @@ const cardBeginTurn = (st) => {
 const cardPayGuts = (st, p, n) => {
   const me = st.players[p];
   for (let i = 0; i < n; i++) me.discard.push(me.guts.pop());
+};
+// 山札を切り直す(持ち主の種で。古い保存で種が無ければ場の種)
+const cardReshuffle = (st, p) => {
+  const me = st.players[p];
+  const sh = cardShuffle(me.deck, Number.isFinite(me.rng) ? me.rng : st.seed);
+  me.deck = sh.list; me.rng = sh.seed;
+};
+const cardDrawN = (st, p, n) => { const me = st.players[p]; let k = 0; for (let i = 0; i < n; i++) { if (!me.deck.length) break; me.hand.push(me.deck.pop()); k += 1; } return k; };
+// 選ぶ段の候補(手札・捨て札の番号)。discardLen … 選ぶ段を作ったときの捨て札の数(いま使った札は選べない)
+const cardChoiceCands = (db, st, p, mi, e, discardLen) => {
+  const me = st.players[p];
+  const list = e.src === 'hand' ? me.hand : me.discard.slice(0, discardLen === undefined ? me.discard.length : discardLen);
+  const mon = mi >= 0 ? me.mons[mi] : null;
+  const f = e.filter || {};
+  // 絞り込みの無い選び方なら、中身の分からない札(マルチで相手の手札は仮の札)も候補に数える。数がずれると、相手の手が当てられない
+  const any = !f.kind && !f.attack && !f.usable;
+  return list.map((no, i) => ({ i, c: cardOf(db, no) })).filter(({ c }) => (c ? (!f.kind || c.kind === f.kind) && (!f.attack || cardIsAttackKind(c.kind)) && (!f.usable || (mon && cardUsableBy(c, mon))) : any)).map((x) => x.i);
 };
 const cardLoseGuts = (st, p, n) => {
   const me = st.players[p];
@@ -50266,7 +50291,7 @@ const cardTauntOk = (st, p, targets, area) => cardTauntsOn(st, p).every((t) => {
   return hits.every((x) => x.m === t.m);
 });
 // 特殊技の狙い(null は狙わない技)。使えない場面なら空
-const cardSpeTargets = (st, p, mi, card) => {
+const cardSpeTargets = (db, st, p, mi, card) => {
   const me = st.players[p];
   const opp = st.players[cardOther(p)];
   const ua = cardEff(card, 'useWhenAllies'); if (ua && me.mons.filter((m) => !m.ko).length !== ua.n) return [];
@@ -50274,14 +50299,20 @@ const cardSpeTargets = (st, p, mi, card) => {
   if (cardHasEff(card, 'extraAttackTarget')) return me.mons.map((m, j) => (!m.ko && m.attacks > 0 && m.stunTurn !== st.turn ? { p, m: j } : null)).filter(Boolean);
   if (cardHasEff(card, 'unstunTarget')) return me.mons.map((m, j) => (!m.ko && m.stunTurn === st.turn ? { p, m: j } : null)).filter(Boolean);
   if (cardHasEff(card, 'stunTarget') || cardHasEff(card, 'liftTarget')) return opp.mons.map((m, j) => (!m.ko ? { p: cardOther(p), m: j } : null)).filter(Boolean);
+  if (cardHasEff(card, 'selfHurt')) return me.mons.map((m, j) => (!m.ko ? { p, m: j } : null)).filter(Boolean);
+  // 選ぶ札が1枚も無いときは出さない(手札から選ぶ札は、このカードのほかに手札が要る)
+  const ch = cardEff(card, 'choose');
+  if (ch) { const n = cardChoiceCands(db, st, p, mi, ch).length - (ch.src === 'hand' ? 1 : 0); if (n <= 0) return []; }
+  if (cardHasEff(card, 'peekPick') && !opp.hand.length) return [];
   return [null];
 };
 
 // ---- いまできる操作 ----
 // 攻撃の候補を全部並べる(コンピューターと画面の「使えるカード」の両方に使う)
 const cardAttackOptions = (db, st) => {
-  if (st.phase !== 'main' || st.pending || st.winner !== null) return [];
+  if (st.phase !== 'main' || st.pending || st.pendingChoice || st.pendingReveal || st.winner !== null) return [];
   const p = st.active;
+  if (st.lock && st.lock.p === p && st.lock.turn === st.turn) return []; // 突進のあと: そのターンはもう出せない
   const me = st.players[p];
   const opp = st.players[cardOther(p)];
   const guts = me.guts.length;
@@ -50292,12 +50323,13 @@ const cardAttackOptions = (db, st) => {
     if (cardHasEff(card, 'attach')) return; // 付ける札は単独では出さない(下で技に付ける)
     if (card.user === 'breeder') {
       if (me.breederUsed && !cardBreederFree(st, p)) return;
+      if (cardHasEff(card, 'rush') && me.playedTurn === st.turn) return; // 突進は、そのターンの最初のカード
       // ジョイのサポートなど、ブリーダーのカードに付ける札も一緒に(付けると払うガッツが変わる)
       cardAttachSets(db, st, p, null, card, [hi]).forEach((att) => {
         const hand = [hi, ...att];
         if (cardActionCost(db, st, p, me.hand, hand) > guts) return;
         if (card.kind === 'spe') {
-          cardSpeTargets(st, p, -1, card).forEach((target) => out.push({ type: 'breeder', hand, target }));
+          cardSpeTargets(db, st, p, -1, card).forEach((target) => out.push({ type: 'breeder', hand, target }));
         } else {
           me.mons.forEach((m, mi) => { if (m.ko) return; opp.mons.forEach((t, j) => { if (cardCanTarget(card, t, st.turn)) out.push({ type: 'breeder', hand, mon: mi, target: { p: cardOther(p), m: j } }); }); });
         }
@@ -50327,7 +50359,7 @@ const cardAttackOptions = (db, st) => {
         const cost = cardActionCost(db, st, p, me.hand, idxs);
         if (cost > guts) return;
         if (card.kind === 'spe') {
-          cardSpeTargets(st, p, mi, card).forEach((target) => out.push({ type: 'attack', mon: mi, hand: idxs, target }));
+          cardSpeTargets(db, st, p, mi, card).forEach((target) => out.push({ type: 'attack', mon: mi, hand: idxs, target }));
           return;
         }
         if (cardHasEff(card, 'area')) {
@@ -50394,13 +50426,15 @@ const cardGuardOptions = (db, st) => {
 const cardLegalActions = (db, st) => {
   if (st.winner !== null) return [];
   if (st.phase === 'setup') return [{ type: 'setupGuts', hand: [] }];
+  if (st.pendingReveal) return [{ type: 'reveal' }];
+  if (st.pendingChoice) return st.pendingChoice.cands.map((i) => ({ type: 'choose', pick: i }));
   if (st.pending) return [...cardGuardOptions(db, st), { type: 'pass' }];
   if (st.phase === 'main') return [...cardAttackOptions(db, st), { type: 'endAttacks' }];
   if (st.phase === 'guts') return [{ type: 'guts', hand: [] }];
   return [];
 };
 // いま決める番の人(守りの途中なら守る側)
-const cardDecider = (st) => (st.pending ? st.pending.defender : st.active);
+const cardDecider = (st) => (st.pendingReveal ? st.pendingReveal.p : st.pendingChoice ? st.pendingChoice.p : st.pending ? st.pending.defender : st.active);
 
 // ---- 攻撃を出す ----
 // 技を使った人の書き方(2026-10-24 窓口・カゲあつくん: 記録・まんなかの「いま使った技」・守りの番の文を1つの形にそろえる)。
@@ -50425,6 +50459,7 @@ const cardStartAttack = (db, st, act) => {
   const cost = cardActionCost(db, st, p, me.hand, act.hand);
   const used = cardTakeFromHand(st, p, act.hand);
   cardPayGuts(st, p, cost);
+  me.playedTurn = st.turn; // 突進(そのターンの最初のカード)が見る
   const mi = isBreeder ? (act.mon !== undefined ? act.mon : -1) : act.mon;
   const mon = mi >= 0 ? me.mons[mi] : null;
   if (isBreeder || used.some((n) => { const c = cardOf(db, n); return c && c.user === 'breeder'; })) me.breederUsed = true; // 影縛りなどブリーダーの札を付けたときも1枚に数える
@@ -50585,6 +50620,34 @@ const cardApplySpecial = (db, st, p, mi, card, target) => {
     if (e.t === 'stunTarget' && tm) { tm.stunTurn = st.turn + 1; cardLog(st, `${tm.name}は次のターン攻撃できない`); }
     if (e.t === 'skipTurn') { st.skip = cardOther(p); cardLog(st, `${opp.name}の次の番を飛ばす`); }
     if (e.t === 'rage' && self) { self.noGuardUntil = st.turn + 1; self.mult = { turn: st.turn + 2, kinds: ['pow', 'int'], n: 2 }; cardLog(st, `${self.name}は次の番まで守れない。次の番の技は2倍`); }
+    // ---- 区切り4 ----
+    if (e.t === 'choose') {
+      const cands = cardChoiceCands(db, st, p, mi, e);
+      if (cands.length) st.pendingChoice = { p, src: e.src, then: e.then, cands, card: card.no };
+      else cardLog(st, '選べるカードが無かった');
+    }
+    if (e.t === 'peekPick') {
+      if (opp.hand.length) { st.pendingReveal = { p: cardOther(p), next: { p, src: 'oppHand', then: 'oppDiscard', card: card.no } }; cardLog(st, `${opp.name}は手札を見せる`); }
+    }
+    if (e.t === 'rush') { let k = 0; for (let i = 0; i < e.n && me.deck.length; i++) { me.guts.push(me.deck.pop()); k += 1; } st.lock = { p, turn: st.turn }; cardLog(st, `${me.name}は山札の上から${k}枚をガッツにした。このターンはもう出せない`); }
+    if (e.t === 'lastWish' && self) {
+      const n = self.life;
+      cardKo(st, p, mi);
+      const k = Math.min(n, me.discard.length);
+      me.guts.push(...me.discard.splice(me.discard.length - k, k));
+      cardLog(st, `捨て札から${k}枚をガッツにした`);
+      cardCheckWin(st, p);
+    }
+    if (e.t === 'gutsZeroBoth') { me.discard.push(...me.guts.splice(0)); const k = cardLoseGuts(st, cardOther(p), 'all'); cardLog(st, `お互いのガッツが0になった${k === 0 && opp.guts.length ? '(相手は精神集中で減らない)' : ''}`); }
+    if (e.t === 'deckToGuts') { const k = me.deck.length; me.guts.push(...me.deck.splice(0)); cardLog(st, `山札の${k}枚を全部ガッツにした`); }
+    if (e.t === 'oppHandToDeckBottom') { const k = opp.hand.length; opp.deck.unshift(...opp.hand.splice(0)); cardLog(st, `${opp.name}の手札${k}枚を山札の一番下へ`); }
+    if (e.t === 'oppDraw') { const k = cardDrawN(st, cardOther(p), e.n); cardLog(st, `${opp.name}は${k}枚引いた`); }
+    if (e.t === 'gutsToDeckShuffle') { const k = me.guts.length; me.deck.push(...me.guts.splice(0)); cardReshuffle(st, p); cardLog(st, `${me.name}はガッツ${k}枚を山札に戻して切った`); }
+    if (e.t === 'selfHurt' && tm) { tm.life = Math.max(0, tm.life - e.n); cardEvent(st, { t: 'hit', p: target.p, m: target.m, dmg: e.n, self: true }); cardLog(st, `${tm.name}のライフが${e.n}減った`); if (tm.life <= 0) { cardKo(st, target.p, target.m); cardCheckWin(st, p); } }
+    if (e.t === 'oppGutsLoss') { const k = cardLoseGuts(st, cardOther(p), e.n); cardLog(st, `${opp.name}はガッツを${k}失った`); }
+    if (e.t === 'refresh') { const k = me.hand.length; me.discard.push(...me.hand.splice(0)); cardDrawN(st, p, k); cardLog(st, `${me.name}は手札を${k}枚捨てて、引き直した`); }
+    if (e.t === 'millOpp') { let k = 0; for (let i = 0; i < e.n && opp.deck.length; i++) { opp.discard.push(opp.deck.pop()); k += 1; } cardLog(st, `${opp.name}の山札を${k}枚捨て札にした`); }
+    if (e.t === 'discardBothHands') { me.discard.push(...me.hand.splice(0)); opp.discard.push(...opp.hand.splice(0)); cardLog(st, 'お互いの手札を全部捨てた'); }
     if (e.t === 'freeSpeThisTurn') { st.freeSpe = { p, turn: st.turn }; cardLog(st, `このターン、${me.name}の味方の特殊技は0ガッツ`); }
     if (e.t === 'forbidThisTurn') { st.forbid[cardOther(p)] = [...(st.forbid[cardOther(p)] || []), ...e.kinds]; cardLog(st, `このターン、相手は${e.kinds.includes('dge') ? '回避' : '防御'}を使えない`); }
   });
@@ -50624,6 +50687,32 @@ const cardApplyAction = (db, st0, act) => {
   const st = cardClone(st0);
   st.events = [];
   const p = st.active;
+  // 見せる段(死神の力): 手札の持ち主が見せる。そのあと、使った人が1枚選ぶ
+  if (st.pendingReveal) {
+    if (act.type !== 'reveal') return null;
+    const nx = st.pendingReveal.next;
+    const q = st.pendingReveal.p;
+    st.pendingReveal = null;
+    cardEvent(st, { t: 'peek', p: nx.p, hand: st.players[q].hand.slice() });
+    const cands = st.players[q].hand.map((_, i) => i);
+    if (cands.length) st.pendingChoice = { ...nx, cands };
+    return st;
+  }
+  // 選ぶ段: 候補の中から1枚
+  if (st.pendingChoice) {
+    const ch = st.pendingChoice;
+    if (act.type !== 'choose' || !ch.cands.includes(act.pick)) return null;
+    const me = st.players[ch.p];
+    const opp = st.players[cardOther(ch.p)];
+    const take = (list) => list.splice(act.pick, 1)[0];
+    st.pendingChoice = null;
+    if (ch.then === 'toHand') { const no = take(me.discard); me.hand.push(no); cardLog(st, `${me.name}は捨て札から「${(cardOf(db, no) || {}).name || ''}」を手札に加えた`); }
+    if (ch.then === 'toDeckBottom') { const no = take(me.discard); me.deck.unshift(no); cardLog(st, `${me.name}は捨て札から「${(cardOf(db, no) || {}).name || ''}」を山札の一番下へ戻した`); }
+    if (ch.then === 'toDeckShuffleDraw') { me.deck.push(take(me.hand)); cardReshuffle(st, ch.p); cardDrawN(st, ch.p, 1); cardLog(st, `${me.name}は手札を1枚山札に戻して切り、1枚引いた`); }
+    if (ch.then === 'discardDraw2') { me.discard.push(take(me.hand)); const k = cardDrawN(st, ch.p, 2); cardLog(st, `${me.name}は手札を1枚捨てて、${k}枚引いた`); }
+    if (ch.then === 'oppDiscard') { const no = take(opp.hand); opp.discard.push(no); cardLog(st, `${opp.name}は「${(cardOf(db, no) || {}).name || ''}」を捨てた`); }
+    return st;
+  }
   if (st.pendingDiscard) {
     // 相手の手札を捨てさせる: 捨てる側が選ぶ
     if (act.type !== 'discard') return null;
@@ -50750,6 +50839,21 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
       if (e.t === 'peekHand') score += 0.4 * habit.disrupt;
       if (e.t === 'discardOpp') score += 1.4 * habit.disrupt;
       if (e.t === 'gutsGuard') score += st.players[cardOther(p)].hand.length >= 3 ? 0.4 : 0.1;
+      // 区切り4: 山札・手札・捨て札・ガッツ
+      const oppP = st.players[cardOther(p)];
+      if (e.t === 'choose') score += e.then === 'toHand' ? 1.3 : e.then === 'discardDraw2' ? 0.9 : 0.3;
+      if (e.t === 'peekPick') score += 1.4 * habit.disrupt;
+      if (e.t === 'rush') score += me.guts.length < 4 ? 1.6 : 0.2;
+      if (e.t === 'lastWish') { const m0 = opt.mon >= 0 ? me.mons[opt.mon] : null; score += m0 ? Math.min(m0.life, me.discard.length) * 0.6 - 2.5 - (me.mons.filter((m) => !m.ko).length <= 1 ? 99 : 0) : -9; }
+      if (e.t === 'gutsZeroBoth') score += (oppP.guts.length - me.guts.length) * 0.6;
+      if (e.t === 'deckToGuts') score += me.deck.length <= 3 ? 1 : -3;
+      if (e.t === 'oppHandToDeckBottom') score += 0.5 * habit.disrupt;
+      if (e.t === 'gutsToDeckShuffle') score += me.deck.length < 6 ? me.guts.length * 0.5 : -1;
+      if (e.t === 'selfHurt') { const t0 = opt.target ? me.mons[opt.target.m] : null; score += t0 && t0.life >= 3 ? 0.3 : -5; }
+      if (e.t === 'oppGutsLoss') score += Math.min(e.n, oppP.guts.length) * 0.8 * habit.disrupt;
+      if (e.t === 'refresh') score += me.hand.filter((_, i) => !opt.hand.includes(i)).map((n) => cardOf(db, n)).filter((c) => c && c.user !== 'breeder' && c.user !== 'any' && !me.mons.some((m) => !m.ko && cardUsableBy(c, m))).length * 0.6 - 0.4;
+      if (e.t === 'millOpp') score += oppP.deck.length <= e.n ? 3 : 0.5;
+      if (e.t === 'discardBothHands') score += (oppP.hand.length - (me.hand.length - opt.hand.length)) * 0.6;
       // 区切り3: もう1回・何枚でも・攻撃できない・縛り・番を飛ばす
       const mine = opt.mon >= 0 ? me.mons[opt.mon] : null;
       const tmon = opt.target ? st.players[opt.target.p].mons[opt.target.m] : null;
@@ -50899,6 +51003,16 @@ const cardAiFillBind = (db, st, o, policy) => {
 
 // 次の1手を選ぶ(★差し替えられる口。別の考え方を差すときは、同じ形 (db, st, policy, rand) → 操作 で渡す)
 const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
+  if (st.pendingReveal) return { type: 'reveal' };
+  if (st.pendingChoice) {
+    // 選ぶ段: 手に入れる・山札へ戻すなら強い札、手札から出すなら要らない札、相手に捨てさせるなら相手の強い札
+    const ch = st.pendingChoice;
+    const me = st.players[ch.p];
+    const list = ch.then === 'oppDiscard' ? st.players[cardOther(ch.p)].hand : ch.src === 'hand' ? me.hand : me.discard;
+    const worth = (no) => { const c = cardOf(db, no); if (!c) return -9; const usable = c.user === 'breeder' || c.user === 'any' || me.mons.some((m) => !m.ko && cardUsableBy(c, m)); return (usable ? 1 : -3) + (c.damage || 0) * 0.5 + (cardIsGuardKind(c.kind) ? 1.5 : 0) - Math.max(0, c.guts - me.guts.length) * 0.3; };
+    const best = ch.cands.slice().sort((a, b) => (ch.then === 'toDeckShuffleDraw' || ch.then === 'discardDraw2' ? worth(list[a]) - worth(list[b]) : worth(list[b]) - worth(list[a])) || a - b)[0];
+    return { type: 'choose', pick: best };
+  }
   if (st.pendingDiscard) {
     const q = st.pendingDiscard.p;
     const hand = st.players[q].hand;
@@ -50997,6 +51111,10 @@ const cardAiCardValue = (card, habit) => {
       if (e.t === 'stunTarget') v += 0.8;
       if (e.t === 'skipTurn') v += 1.5;
       if (e.t === 'rage') v += 0.6;
+      if (e.t === 'choose') v += e.then === 'toHand' ? 0.8 : 0.3;
+      if (e.t === 'peekPick') v += 0.8 * habit.disrupt;
+      if (e.t === 'rush' || e.t === 'gutsZeroBoth' || e.t === 'oppHandToDeckBottom' || e.t === 'oppGutsLoss' || e.t === 'millOpp' || e.t === 'discardBothHands' || e.t === 'refresh') v += 0.3;
+      if (e.t === 'lastWish' || e.t === 'deckToGuts' || e.t === 'gutsToDeckShuffle' || e.t === 'selfHurt') v -= 0.3;
     });
     if (cardHasEff(card, 'useWhenAllies')) v *= 0.4;
     return v - card.guts * 0.3;
@@ -52888,12 +53006,28 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
   const decider = cardDeciderOf(st);
   const myTurn = st.winner === null && decider === CARD_ME;
   const mode = !myTurn ? 'wait'
+    : st.pendingReveal ? 'reveal'
+    : st.pendingChoice ? 'choose'
     : st.pendingDiscard ? 'discard'
     : st.phase === 'setup' ? 'setup'
     : st.pending ? 'guard'
     : st.phase === 'main' ? 'attack'
     : st.phase === 'guts' ? 'guts' : 'wait';
   const attackOpts = mode === 'attack' ? cardAttackOptions(db, st).filter(tutAllow) : [];
+  // 見せる段(相手の死神の力): こちらは選ぶことが無いので、少し見せてから自動で進める
+  const revealKey = mode === 'reveal' ? `${st.turn}-${st.log.length}` : '';
+  useEffect(() => {
+    if (!revealKey) return undefined;
+    const t = setTimeout(() => step({ type: 'reveal' }), Math.round(900 * pace));
+    return () => clearTimeout(t);
+  }, [revealKey]);
+  // 選ぶ段の候補(捨て札・手札・相手の手札の、何枚目か)
+  const choice = mode === 'choose' ? (() => {
+    const ch = st.pendingChoice;
+    const list = ch.src === 'oppHand' ? st.players[CARD_CPU].hand : ch.src === 'hand' ? me.hand : me.discard;
+    const title = { toHand: '手札に加えるカードを選ぶ', toDeckBottom: '山札の一番下へ戻すカードを選ぶ', toDeckShuffleDraw: '山札に戻すカードを選ぶ', discardDraw2: '捨てるカードを選ぶ', oppDiscard: '相手に捨てさせるカードを選ぶ' }[ch.then] || 'カードを選ぶ';
+    return { title, from: (cardOf(db, ch.card) || {}).name || '', items: ch.cands.map((i) => ({ i, no: list[i], c: cardOf(db, list[i]) })) };
+  })() : null;
   const guardOpts = mode === 'guard' ? cardGuardOptions(db, st).filter(tutAllow) : [];
   // 守れるカードが1枚も無いときは、自動で「守らない」にする(オプションの「自動パス」。練習試合と見本では使わない)
   //   守れない理由の一言(data-card-guard-why)を少し見せてから進む
@@ -53152,6 +53286,8 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
     // 自分の番に相手が守りを選んでいるあいだは「◯◯の番」と言わない(上のヘッダーと食い違っていた。案A)
     if (mode === 'wait') return <div className="flex-1 text-center text-[13px] font-bold text-slate-300">{st.active === CARD_ME ? `${who.name}が守りを考えています…` : `${who.name}の番…`}</div>;
     if (mode === 'setup') return <button type="button" className={`${btn} mh-button-primary`} onClick={() => step({ type: 'setupGuts', hand: picks })}>{picks.length ? `${picks.length}枚をガッツにして始める` : 'ガッツにしないで始める'}</button>;
+    if (mode === 'reveal') return <div className="flex-1 text-center text-[13px] font-bold text-slate-300">相手に手札を見せています…</div>;
+    if (mode === 'choose') return <div className="flex-1 text-center text-[13px] font-bold text-amber-200">カードを1枚選んでください</div>;
     if (mode === 'discard') return <button type="button" disabled={picks.length !== st.pendingDiscard.n} className={`${btn} mh-button-danger`} onClick={() => step({ type: 'discard', hand: picks })}>{`${st.pendingDiscard.n}枚えらんで捨てる`}</button>;
     if (mode === 'guard') return <button type="button" disabled={tutOff('pass')} className={`${btn} border border-white/20 bg-slate-800${tutBtn('pass')}`} onClick={() => step({ type: 'pass' })}>{tutorial && st.pending && st.pending.evaded ? 'これで守る' : '守らない'}</button>;
     if (mode === 'guts') return <button type="button" disabled={tutOff('turn')} className={`${btn} bg-gradient-to-b from-orange-400 to-orange-600${tutBtn('turn')}`} onClick={() => askEnd({ type: 'guts', hand: picks })}>{picks.length ? `${picks.length}枚をガッツにしてターン終了` : 'ガッツにしないでターン終了'}</button>;
@@ -53360,6 +53496,25 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
               ))}
             </div>
             <button type="button" className="mt-2 min-h-[44px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200" onClick={bindCancel}>やめる</button>
+          </div>
+        </div>
+      )}
+      {choice && (
+        <div data-card-choose className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3">
+          <div className="w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900 p-3 text-slate-100">
+            <div className="text-[15px] font-black" style={JA_LABEL_STYLE}>{jaWrap(`${choice.from ? `${choice.from}: ` : ''}${choice.title}`)}</div>
+            <div className="mt-2 grid max-h-[55vh] gap-1.5 overflow-y-auto">
+              {choice.items.map(({ i, no, c }) => (
+                <button key={`${i}-${no}`} type="button" data-card-choose-item={i} onClick={() => step({ type: 'choose', pick: i })}
+                  className="flex min-h-[48px] items-center gap-2 rounded-xl bg-slate-700 px-2 py-1.5 text-left active:scale-[.98]">
+                  <span className="shrink-0 rounded-md bg-indigo-900 px-1.5 py-0.5 text-[11px] font-black">{c ? CARD_KIND_LABEL[c.kind] : '？'}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[14px] font-black text-white">{c ? c.name : 'カード'}</span>
+                    {c && <span className="block text-[11px] font-bold text-slate-300">{`ガッツ${c.guts}${c.damage !== null && c.damage !== undefined ? `・ダメージ${c.damage}` : ''}`}</span>}
+                  </span>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       )}
@@ -54066,18 +54221,42 @@ const CardDeckTile = ({ db, no, inDeck = 0, owned = 0, dim = false, press, onTap
   );
 };
 
+// 絞り込み(1列。2026-10-25 社長「外し方がわからない・カード選択のエリアがせまい」で、タブをやめて案A)
+//   mon … モンスター / deck … デッキに入れたもの(モンスターも) / ほか … 技など(CARD_DECK_FILTERS)
+const CARD_DECK_VIEWS = Object.freeze([{ id: 'mon', label: 'モンスター' }, { id: 'deck', label: 'デッキに入れた' }, ...CARD_DECK_FILTERS.map((f) => (f.id === 'all' ? { ...f, label: '技など全部' } : f))]);
+const CARD_DECK_SORTS = Object.freeze([{ id: 'kind', label: '種類順' }, { id: 'guts', label: 'ガッツ順' }, { id: 'no', label: '番号順' }]);
+// 選ぶ場所の1枚: 絵(押すと1枚入れる・長押しで詳しく)と、下に「− 入れた/入れられる ＋」
+const CardDeckPickTile = ({ db, no, inDeck, limit, canAdd, press, onAdd, onRemove }) => {
+  const c = cardOf(db, no); const m = c ? null : cardMonsterOf(db, no);
+  const name = c ? c.name : m ? m.name : no;
+  return (
+    <div data-card-deck-pick={no} className={`relative flex min-w-0 flex-col rounded-lg p-0.5 ${inDeck > 0 ? 'bg-emerald-500/15 ring-2 ring-emerald-300/70' : 'bg-white/5'}`}>
+      <button type="button" data-card-deck-tile={no} {...press(no, onAdd)} className={`block w-full active:scale-95 ${!canAdd && inDeck === 0 ? 'opacity-45' : ''}`} style={{ WebkitUserSelect: 'none', userSelect: 'none' }} aria-label={`${name}を1枚入れる`}>
+        <img src={CARD_IMG(c ? c.img : m ? m.img : no)} alt={name} draggable={false} onDragStart={(e) => e.preventDefault()} className="aspect-[5/7] w-full rounded-[5px] object-cover"/>
+      </button>
+      <CardNameFit name={name} className="mt-0.5 font-bold leading-tight text-slate-100"/>
+      <div className="mt-0.5 flex items-center justify-between gap-0.5">
+        <button type="button" data-card-deck-minus={no} disabled={inDeck === 0} onClick={onRemove} aria-label={`${name}を1枚外す`} className="flex h-[28px] w-[27px] shrink-0 items-center justify-center rounded-md bg-rose-600 text-[18px] font-black leading-none text-white active:scale-90 disabled:bg-slate-700 disabled:text-slate-500">−</button>
+        <span data-card-deck-in={no} className="min-w-0 whitespace-nowrap text-center text-[11px] font-black tabular-nums text-white">{inDeck}<span className="text-[9px] text-slate-400">/{limit}</span></span>
+        <button type="button" data-card-deck-plus={no} disabled={!canAdd} onClick={onAdd} aria-label={`${name}を1枚入れる`} className="flex h-[28px] w-[27px] shrink-0 items-center justify-center rounded-md bg-emerald-600 text-[18px] font-black leading-none text-white active:scale-90 disabled:bg-slate-700 disabled:text-slate-500">＋</button>
+      </div>
+    </div>
+  );
+};
 const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel }) => {
   const [deck, setDeck] = useState(() => ({ ...deck0, monsters: deck0.monsters.slice(), cards: deck0.cards.slice() }));
-  const [tab, setTab] = useState(deck0.monsters.length < 3 ? 'mon' : 'card');
-  const [filter, setFilter] = useState('all');
+  const [view, setView] = useState(deck0.monsters.length < 3 ? 'mon' : 'all');
+  const [sort, setSort] = useState('kind');
   const [usableOnly, setUsableOnly] = useState(true);
   const [notice, setNotice] = useState('');
   const [detail, setDetail] = useState(null);
   const [leave, setLeave] = useState(false);
   const press = useCardLongPress((no) => setDetail(no));
-  // 背の低い画面(SE・320幅)では上の枠を小さくし、説明の1行を省いて、カードの一覧を広く見せる(2026-10-24 改善部の点検 V5)
-  //   縦の画面のときだけ(横の画面はカード部の landscape: の大きさにまかせる)
+  // 背の低い画面(SE・320幅)では上の枠を小さくして、カードの一覧を広く見せる(2026-10-24 改善部の点検 V5)。縦の画面のときだけ
   const short = typeof window !== 'undefined' && window.innerHeight < 760 && window.innerHeight > window.innerWidth;
+  // 横の画面か(保存のボタンを左の列に置くか、下に置くか。ボタンは1つだけ描く)
+  const [land, setLand] = useState(() => typeof window !== 'undefined' && window.innerWidth > window.innerHeight);
+  useEffect(() => { const on = () => setLand(window.innerWidth > window.innerHeight); window.addEventListener('resize', on); return () => window.removeEventListener('resize', on); }, []);
   const col = collection || {};
   const changed = JSON.stringify(deck) !== JSON.stringify(deck0);
   const rules = cardDeckProblems(db, deck);
@@ -54102,74 +54281,74 @@ const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel }) => {
       return k < 0 ? d : { ...d, cards: [...d.cards.slice(0, k), ...d.cards.slice(k + 1)] };
     });
   };
-  // 持っているカード(準備中は出さない)
-  const ownedCards = Object.keys(col).filter((no) => { const c = cardOf(db, no); return c && c.ready && col[no] > 0; }).sort((a, b) => (cardSortKey(db, a) < cardSortKey(db, b) ? -1 : 1));
-  const ownedMons = Object.keys(col).filter((no) => cardMonsterOf(db, no) && col[no] > 0).sort();
-  const shownCards = ownedCards.filter((no) => {
+  const sortKey = (no) => {
     const c = cardOf(db, no);
-    if (!cardDeckFilterOk(c, filter)) return false;
-    if (usableOnly && mons.length && c.user !== 'breeder' && !mons.some((m) => cardUsableBy(c, m))) return false;
-    return true;
-  });
-  const deckUnique = [...new Set(deck.cards)].sort((a, b) => (cardSortKey(db, a) < cardSortKey(db, b) ? -1 : 1));
-  const tile = (no, onTap) => {
-    const inDeck = countOf(no);
-    const why = cardDeckAddReason(db, deck, no, col);
-    return <CardDeckTile key={no} db={db} no={no} inDeck={inDeck} owned={col[no] || 0} dim={!!why && inDeck === 0} press={press} onTap={onTap}/>;
+    if (sort === 'guts' && c) return `${String(c.guts ?? 9).padStart(2, '0')}-${cardSortKey(db, no)}`;
+    if (sort === 'no') return String(no).padStart(6, '0');
+    return cardSortKey(db, no);
   };
+  const bySort = (a, b) => (sortKey(a) < sortKey(b) ? -1 : 1);
+  // 持っているカード(準備中は出さない)
+  const ownedCards = Object.keys(col).filter((no) => { const c = cardOf(db, no); return c && c.ready && col[no] > 0; });
+  const ownedMons = Object.keys(col).filter((no) => cardMonsterOf(db, no) && col[no] > 0).sort();
+  const usable = (no) => { const c = cardOf(db, no); return !usableOnly || !mons.length || c.user === 'breeder' || mons.some((m) => cardUsableBy(c, m)); };
+  const shown = view === 'mon' ? ownedMons
+    : view === 'deck' ? [...deck.monsters, ...[...new Set(deck.cards)].sort(bySort)]
+      : ownedCards.filter((no) => cardDeckFilterOk(cardOf(db, no), view) && usable(no)).sort(bySort);
+  const tile = (no) => {
+    const inDeck = countOf(no);
+    const limit = cardMonsterOf(db, no) ? 1 : Math.min(3, col[no] || 0);
+    return <CardDeckPickTile key={no} db={db} no={no} inDeck={inDeck} limit={limit} canAdd={!cardDeckAddReason(db, deck, no, col)} press={press} onAdd={() => add(no)} onRemove={() => removeOne(no)}/>;
+  };
+  const chip = (on) => `shrink-0 rounded-full px-2.5 py-1 text-[11px] font-black ${on ? 'bg-amber-300 text-slate-950' : 'border border-white/20 bg-slate-900 text-slate-300'}`;
+  const footer = (
+    <div className={`${SCREEN_FOOTER_CLASS} grid grid-cols-2 gap-2 ${land ? 'mt-auto' : ''}`}>
+      <button type="button" data-card-deck-save className={`mh-button mh-button-primary ${land ? 'min-h-[44px]' : 'min-h-[52px]'} rounded-2xl font-black active:scale-[.98]`} onClick={() => { Audio_.fgSe.tap(); onSave({ ...deck, name: (deck.name || '').trim() || 'デッキ' }); }}>保存する</button>
+      <button type="button" className={`mh-button mh-button-secondary ${land ? 'min-h-[44px]' : 'min-h-[52px]'} rounded-2xl border border-white/20 bg-slate-800 font-black active:scale-[.98]`} onClick={() => (changed ? setLeave(true) : onCancel())}>やめる</button>
+    </div>
+  );
+  const sortLabel = (CARD_DECK_SORTS.find((x) => x.id === sort) || CARD_DECK_SORTS[0]).label;
   return (
     <div data-mh-screen data-card-deck-edit className={SCREEN_SHELL_CLASS}>
       <ScreenHead title="デッキを組む" accent="text-amber-200" onBack={() => (changed ? setLeave(true) : onCancel())}/>
-      <div className={`${SCREEN_PANEL_FLAT_CLASS} shrink-0 space-y-1.5`}>
-        <input data-card-deck-name value={deck.name} maxLength={20} onChange={(e) => setDeck((d) => ({ ...d, name: e.target.value }))} className="w-full rounded-lg border border-white/20 bg-slate-950 px-2 py-1.5 text-[14px] font-black text-white" aria-label="デッキの名前"/>
-        <div className="flex items-end gap-1.5">
-          {[0, 1, 2].map((i) => {
-            const no = deck.monsters[i];
-            const m = no ? cardMonsterOf(db, no) : null;
-            return m
-              ? <button key={i} type="button" data-card-deck-mon={i} {...press(no, () => removeOne(no))} className="relative w-[20%] max-w-[64px] active:scale-95 landscape:max-w-[42px]" style={short ? { maxWidth: 'min(64px, 7vh)' } : undefined}><img src={CARD_IMG(m.img)} alt={m.name} draggable={false} className="aspect-[5/7] w-full rounded-[5px] object-cover"/><span className="absolute -right-1 -top-1 rounded-full bg-rose-500 px-1 text-[10px] font-black text-white">×</span></button>
-              : <button key={i} type="button" data-card-deck-mon={i} onClick={() => setTab('mon')} style={short ? { maxWidth: 'min(64px, 7vh)' } : undefined} className="flex aspect-[5/7] w-[20%] max-w-[64px] items-center justify-center rounded-[5px] border-2 border-dashed border-white/30 text-[10px] font-bold text-slate-400 landscape:max-w-[42px] landscape:whitespace-nowrap landscape:text-[7px]">モンスター</button>;
-          })}
-          <div className="min-w-0 flex-1 text-right">
-            <div data-card-deck-count className={`text-[20px] font-black ${deck.cards.length === CARD_BATTLE_DECK_SIZE ? 'text-emerald-300' : 'text-white'}`}>{deck.cards.length}<span className="text-[12px] text-slate-400">/{CARD_BATTLE_DECK_SIZE}枚</span></div>
-            <div data-card-deck-ready={ready ? 'ok' : 'ng'} className={`text-[11px] font-black ${ready ? 'text-emerald-300' : 'text-amber-200'}`}>{ready ? '対戦に使えます' : 'まだ対戦に使えません'}</div>
+      {/* 横の画面は左右に分ける: 左に名前・モンスター・枚数・絞り込み・保存、右を全部カードの一覧にする */}
+      <div className="flex min-h-0 flex-1 flex-col landscape:flex-row landscape:gap-2">
+        <div className="flex shrink-0 flex-col landscape:min-h-0 landscape:w-[36%] landscape:max-w-[340px] landscape:overflow-y-auto">
+          <div className={`${SCREEN_PANEL_FLAT_CLASS} shrink-0 space-y-1.5`}>
+            <input data-card-deck-name value={deck.name} maxLength={20} onChange={(e) => setDeck((d) => ({ ...d, name: e.target.value }))} className="w-full rounded-lg border border-white/20 bg-slate-950 px-2 py-1.5 text-[14px] font-black text-white landscape:py-1 landscape:text-[13px]" aria-label="デッキの名前"/>
+            <div className="flex items-end gap-1.5">
+              {[0, 1, 2].map((i) => {
+                const no = deck.monsters[i];
+                const m = no ? cardMonsterOf(db, no) : null;
+                const size = short ? { maxWidth: 'min(52px, 6vh)' } : undefined;
+                return m
+                  ? <button key={i} type="button" data-card-deck-mon={i} {...press(no, () => removeOne(no))} aria-label={`${m.name}を外す`} className="relative w-[15%] max-w-[52px] active:scale-95 landscape:max-w-[40px]" style={size}><img src={CARD_IMG(m.img)} alt={m.name} draggable={false} className="aspect-[5/7] w-full rounded-[5px] object-cover"/><span className="absolute -right-1 -top-1 flex h-[18px] w-[18px] items-center justify-center rounded-full bg-rose-600 text-[13px] font-black leading-none text-white shadow">−</span></button>
+                  : <button key={i} type="button" data-card-deck-mon={i} onClick={() => setView('mon')} style={size} className="flex aspect-[5/7] w-[15%] max-w-[52px] items-center justify-center rounded-[5px] border-2 border-dashed border-white/30 text-[18px] text-white/50 landscape:max-w-[40px]">＋</button>;
+              })}
+              <div className="min-w-0 flex-1 text-right">
+                <div data-card-deck-count className={`text-[20px] font-black ${deck.cards.length === CARD_BATTLE_DECK_SIZE ? 'text-emerald-300' : 'text-white'}`}>{deck.cards.length}<span className="text-[12px] text-slate-400">/{CARD_BATTLE_DECK_SIZE}枚</span></div>
+                <div data-card-deck-ready={ready ? 'ok' : 'ng'} className={`text-[11px] font-black ${ready ? 'text-emerald-300' : 'text-amber-200'}`}>{ready ? '対戦に使えます' : 'まだ対戦に使えません'}</div>
+              </div>
+            </div>
+            {!ready && <div data-card-deck-problems className="text-[11px] font-bold leading-snug text-rose-300" style={JA_WRAP_STYLE}>{[...rules, ...own].slice(0, 2).join(' / ')}</div>}
+            {notice && <div data-card-deck-notice className="text-[12px] font-black text-amber-200" style={JA_LABEL_STYLE}>{jaWrap(notice)}</div>}
           </div>
+          {/* 絞り込みは1列(縦は横に流す・横の画面は折り返す) */}
+          <div data-card-deck-chips className="mh-scroll mt-1.5 flex shrink-0 gap-1 overflow-x-auto pb-1 landscape:flex-wrap landscape:overflow-visible">
+            {CARD_DECK_VIEWS.map((f) => <button key={f.id} type="button" data-card-deck-filter={f.id} onClick={() => { setView(f.id); setNotice(''); }} className={chip(view === f.id)}>{f.id === 'mon' ? `モンスター ${deck.monsters.length}/3` : f.id === 'deck' ? `デッキに入れた ${deck.cards.length + deck.monsters.length}` : f.label}</button>)}
+            <button type="button" data-card-deck-usable onClick={() => setUsableOnly((v) => !v)} className={chip(usableOnly)}>{usableOnly ? '✓ ' : ''}使える子だけ</button>
+            <button type="button" data-card-deck-sort={sort} onClick={() => setSort((s) => CARD_DECK_SORTS[(CARD_DECK_SORTS.findIndex((x) => x.id === s) + 1) % CARD_DECK_SORTS.length].id)} className={chip(false)}>並び: {sortLabel} ▾</button>
+          </div>
+          {land && footer}
         </div>
-        <div data-card-deck-legend className={`${short ? 'hidden' : ''} text-[10px] font-bold text-slate-400 landscape:hidden`}>カードの右上: <span className="text-emerald-300">入</span>=デッキに入れた枚数 / 持=持っている枚数</div>
-        {!ready && <div data-card-deck-problems className="text-[11px] font-bold leading-snug text-rose-300" style={JA_WRAP_STYLE}>{[...rules, ...own].slice(0, 2).join(' / ')}</div>}
-        {notice && <div data-card-deck-notice className="text-[12px] font-black text-amber-200" style={JA_LABEL_STYLE}>{jaWrap(notice)}</div>}
-      </div>
-      <ScreenTabs className="mt-2" value={tab} onChange={(id) => { setTab(id); setNotice(''); }} items={[
-        { id: 'card', label: '技・ブリーダー' }, { id: 'mon', label: `モンスター ${deck.monsters.length}/3` }, { id: 'deck', label: `デッキの中 ${deck.cards.length}` },
-      ]}/>
-      {tab === 'card' && (
-        <div className="mb-1.5 flex shrink-0 flex-wrap gap-1">
-          <button type="button" data-card-deck-usable onClick={() => setUsableOnly((v) => !v)} className={`rounded-full px-2 py-1 text-[11px] font-black ${usableOnly ? 'bg-emerald-400 text-slate-950' : 'border border-white/20 bg-slate-900 text-slate-300'}`}>{usableOnly ? '✓ ' : ''}使える子だけ</button>
-          {CARD_DECK_FILTERS.map((f) => <button key={f.id} type="button" data-card-deck-filter={f.id} onClick={() => setFilter(f.id)} className={`rounded-full px-2 py-1 text-[11px] font-black ${filter === f.id ? 'bg-amber-300 text-slate-950' : 'border border-white/20 bg-slate-900 text-slate-300'}`}>{f.label}</button>)}
+        <div className={`${SCREEN_LIST_CLASS} pb-2 landscape:flex-1`}>
+          {view === 'mon' && <p className="mb-1 text-[11px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('3体えらびます。同じモンスターは1体まで(キラも同じモンスター)')}</p>}
+          {shown.length
+            ? <div data-card-deck-grid className="grid gap-1.5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))' }}>{shown.map(tile)}</div>
+            : <ScreenEmpty emoji="🃏" lines={view === 'deck' ? ['まだカードが入っていません', '「技など全部」から入れてください'] : ['当てはまるカードがありません']}/>}
         </div>
-      )}
-      <div className={`${SCREEN_LIST_CLASS} pb-2`}>
-        {tab === 'card' && (shownCards.length
-          ? <div className="grid grid-cols-4 gap-1.5">{shownCards.map((no) => tile(no, () => add(no)))}</div>
-          : <ScreenEmpty emoji="🃏" lines={['当てはまるカードがありません']}/>)}
-        {tab === 'mon' && (
-          <>
-            <p className="mb-1 text-[11px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('タップで入れる・上の枠をタップで外す。同じモンスターは1体まで(キラも同じモンスター)')}</p>
-            <div className="grid grid-cols-4 gap-1.5">{ownedMons.map((no) => tile(no, () => (deck.monsters.includes(no) ? removeOne(no) : add(no))))}</div>
-          </>
-        )}
-        {tab === 'deck' && (deckUnique.length
-          ? <>
-            <p className="mb-1 text-[11px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('タップで1枚外す・長押しで詳しく')}</p>
-            <div className="grid grid-cols-4 gap-1.5">{deckUnique.map((no) => tile(no, () => removeOne(no)))}</div>
-          </>
-          : <ScreenEmpty emoji="🃏" lines={['まだカードが入っていません', '「技・ブリーダー」から入れてください']}/>)}
       </div>
-      {/* 横画面では左の列に入るので、高さを詰めて「保存する/やめる」まで画面に収める(④・landscape-screens-check) */}
-      <div className={`${SCREEN_FOOTER_CLASS} grid grid-cols-2 gap-2`}>
-        <button type="button" data-card-deck-save className="mh-button mh-button-primary min-h-[52px] landscape:min-h-[44px] rounded-2xl font-black active:scale-[.98]" onClick={() => { Audio_.fgSe.tap(); onSave({ ...deck, name: (deck.name || '').trim() || 'デッキ' }); }}>保存する</button>
-        <button type="button" className="mh-button mh-button-secondary min-h-[52px] landscape:min-h-[44px] rounded-2xl border border-white/20 bg-slate-800 font-black active:scale-[.98]" onClick={() => (changed ? setLeave(true) : onCancel())}>やめる</button>
-      </div>
+      {!land && footer}
       {detail && <CardDetailModal db={db} no={detail} onClose={() => setDetail(null)}/>}
       {leave && <ConfirmSheet title="保存せずに戻りますか？" message="組みかえたところは消えます" confirmLabel="保存せずに戻る" danger onCancel={() => setLeave(false)} onConfirm={() => { setLeave(false); onCancel(); }}/>}
     </div>
@@ -54971,7 +55150,8 @@ const cardPvpFlip = (act) => {
 const cardPvpRevealOf = (st, act, p = 0) => {
   if (!st || !act) return {};
   const hand = st.players[p].hand;
-  const idxs = act.type === 'guard' ? [act.hand] : (act.type === 'attack' || act.type === 'breeder' || act.type === 'discard') ? (act.hand || []) : [];
+  // 見せる段(死神の力)は、手札を全部見せる
+  const idxs = act.type === 'reveal' ? hand.map((_, i) => i) : act.type === 'guard' ? [act.hand] : (act.type === 'attack' || act.type === 'breeder' || act.type === 'discard') ? (act.hand || []) : [];
   const out = {};
   idxs.forEach((i) => { if (Number.isInteger(i) && i >= 0 && i < hand.length) out[i] = hand[i]; });
   return out;
@@ -54990,6 +55170,8 @@ const cardPvpApplyRemote = (db, st, msg) => {
   if (!st || !msg || !msg.act || st.winner !== null || cardPvpDecider(st) !== 1) return null;
   const s = cardClone(st);
   const foe = s.players[1];
+  // 相手の手札は、いつも仮の札に戻してから当てる(死神の力で見せてもらった札・捨て札から戻した札が、本物の番号のまま残らないように)
+  if (!(s.pendingChoice && s.pendingChoice.src === 'oppHand')) foe.hand = foe.hand.map(() => CARD_PVP_HIDDEN);
   const reveal = msg.reveal && typeof msg.reveal === 'object' ? msg.reveal : {};
   for (const [k, no] of Object.entries(reveal)) {
     const i = Number(k);
@@ -55007,6 +55189,7 @@ const cardPvpApplyRemote = (db, st, msg) => {
     }
     next.players[1].discard = msg.discard.slice();
   }
+  next.players[1].deck = next.players[1].deck.map(() => CARD_PVP_HIDDEN); // 山札へ戻した札(伝説のちから・時間稼ぎなど)も仮の札に
   return next;
 };
 // 相手の捨て札の並びだけが届いたとき(こちらの手で相手のガッツが捨て札へ行ったあとなど)。数が合わなければそのまま
@@ -55019,10 +55202,13 @@ const cardPvpPatchDiscard = (db, st, list) => {
 };
 
 // 持ち時間の区切り。決める人・番・守りの回が変わったら、時計をはじめから(攻撃と、そのあとのガッツは同じ60秒)
-const cardPvpLimitMs = (st) => (st.pending || st.pendingDiscard ? CARD_PVP_GUARD_MS : CARD_PVP_TURN_MS);
-const cardPvpClockKey = (st) => `${cardPvpDecider(st)}-${st.turn}-${st.pending ? `g${st.log.length}` : st.pendingDiscard ? `d${st.log.length}` : st.phase === 'setup' ? 's' : 'm'}`;
+// 見せる段(死神の力)は守りと同じ短い時間。選ぶ段は攻撃の番のうちなので、ふつうの時間
+const cardPvpLimitMs = (st) => (st.pending || st.pendingDiscard || st.pendingReveal ? CARD_PVP_GUARD_MS : CARD_PVP_TURN_MS);
+const cardPvpClockKey = (st) => `${cardPvpDecider(st)}-${st.turn}-${st.pending ? `g${st.log.length}` : st.pendingDiscard ? `d${st.log.length}` : st.pendingReveal ? `r${st.log.length}` : st.pendingChoice ? `c${st.log.length}` : st.phase === 'setup' ? 's' : 'm'}`;
 // 持ち時間を使い切ったときの手(その番を終える・守らない)。攻撃の番は「攻撃おわり」のあと、ガッツへ回さずにターン終了
-const cardPvpTimeoutAct = (st) => (st.pendingDiscard ? { type: 'discard', hand: Array.from({ length: st.pendingDiscard.n }, (_, i) => i) }
+// 選ぶ段は、いちばん前の候補を選ぶ
+const cardPvpTimeoutAct = (st) => (st.pendingReveal ? { type: 'reveal' } : st.pendingChoice ? { type: 'choose', pick: st.pendingChoice.cands[0] }
+  : st.pendingDiscard ? { type: 'discard', hand: Array.from({ length: st.pendingDiscard.n }, (_, i) => i) }
   : st.phase === 'setup' ? { type: 'setupGuts', hand: [] } : st.pending ? { type: 'pass' } : st.phase === 'main' ? { type: 'endAttacks' } : { type: 'guts', hand: [] });
 // 1戦でもらえる数(台帳 #119 の対人戦: 勝ち24周・200/負け12周・50/抜けた0。1日の上限は無し・同じ相手の制限も無し(社長の決め直し))
 // 負けの周回は、自分の番の数が10回で満額(助手と対戦と同じ)。投了は倒した数で決める。自分の番が3回より前に終わった試合は0
@@ -55077,10 +55263,13 @@ const cardPvpVerify = (db, { myDeck, mySeed, foeDeck, foeSeed, first, names, his
 const cardPvpInt = (v, max) => (Number.isInteger(v) && v >= 0 && v <= max ? v : null);
 const cardPvpCleanAct = (raw) => {
   if (!raw || typeof raw !== 'object') return null;
-  const types = ['setupGuts', 'guts', 'attack', 'breeder', 'guard', 'pass', 'endAttacks', 'discard'];
+  const types = ['setupGuts', 'guts', 'attack', 'breeder', 'guard', 'pass', 'endAttacks', 'discard', 'reveal', 'choose'];
   if (!types.includes(raw.type)) return null;
   const act = { type: raw.type };
   if (raw.type === 'guard') { act.hand = cardPvpInt(raw.hand, 20); act.mon = cardPvpInt(raw.mon, 2); if (act.hand === null || act.mon === null) return null; return act; }
+  if (raw.type === 'reveal') return act;
+  // 選ぶ段: 手札か捨て札の番号(捨て札は50枚を超えない)
+  if (raw.type === 'choose') { act.pick = cardPvpInt(raw.pick, 60); return act.pick === null ? null : act; }
   if (Array.isArray(raw.hand)) { act.hand = raw.hand.slice(0, 20).map((i) => cardPvpInt(i, 20)); if (act.hand.some((i) => i === null)) return null; }
   if (raw.mon !== undefined) { act.mon = cardPvpInt(raw.mon, 2); if (act.mon === null) return null; }
   if (raw.target !== undefined) {
@@ -55741,7 +55930,7 @@ const useCardPvpAuto = (db, pvp, st, step, paused) => useEffect(() => {
   const t = setTimeout(() => {
     const act = cardAiChooseAction(db, st, cardAiPolicy('kyuko', 'easy'));
     if (act && step(act)) return;
-    step(st.pendingDiscard ? { type: 'discard', hand: [0] } : st.phase === 'setup' ? { type: 'setupGuts', hand: [] } : st.pending ? { type: 'pass' } : st.phase === 'main' ? { type: 'endAttacks' } : { type: 'guts', hand: [] });
+    step(cardPvpTimeoutAct(st));
   }, Number(window.__mhCardPvpAutoMs) || 150);
   return () => clearTimeout(t);
 }, [st, paused]);
