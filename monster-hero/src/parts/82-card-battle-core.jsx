@@ -1017,7 +1017,8 @@ const normalizeCardBgm = (v, isTrack = () => true) => {
 const CARD_SETTINGS_DEFAULT = Object.freeze({ speed: 'normal', autoPass: true });
 const normalizeCardSettings = (v) => {
   const r = cardIsPlainObject(v) ? v : {};
-  return { speed: r.speed === 'fast' ? 'fast' : 'normal', autoPass: r.autoPass !== false };
+  // quickAutoStart … MFバトルカードを開いたら裏のクイック∞周回を自動で始める・負けたら数秒おいて始め直す(社長 2026-10-25。モンヒロビートの「開いたら自動で始める」と同じ中身。最初は OFF)
+  return { speed: r.speed === 'fast' ? 'fast' : 'normal', autoPass: r.autoPass !== false, quickAutoStart: r.quickAutoStart === true };
 };
 // 難易度ごとの数 { easy: n, … }。知らない難易度は捨てる
 const cardNormalizeLevelCounts = (v) => {

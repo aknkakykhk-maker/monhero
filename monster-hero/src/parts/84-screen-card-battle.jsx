@@ -942,7 +942,7 @@ const CardAssistantArt = ({ src, alt, className = '', style = null }) => {
 // topAssistant … トップに出す助手の立ち絵とひとこと({ id, name, accent, image, text }。60-app が場面 cardTop から選ぶ)
 // rank … ランキング({ send: 送ってよいか, profile: { name, icon, frame }, renderBreederIcon })。送るのは公開後のふつうの対戦だけ
 // bgmPreview … オプションの BGM の試聴({ toggle(曲id), playing: 鳴らしている曲id }。60-app の BGM アレンジと同じもの)
-const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', seenStoryIds = [], debug = false, onBgm, onQuickLoops, onOpenMarket, topAssistant = null, rank = null, bgmPreview = null, quickRun = null }) => {
+const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', seenStoryIds = [], debug = false, onBgm, onQuickLoops, onOpenMarket, topAssistant = null, rank = null, bgmPreview = null, quickRun = null, quickAutoReady = false, onSettings = null }) => {
   const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
   const [save, setSave] = useState(null);
   const [view, setView] = useState('top');
@@ -985,6 +985,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       bgm: normalizeCardBgm(bgm, cardIsBgmTrack), settings: normalizeCardSettings(settings),
     };
     setSave(next);
+    if (onSettings) onSettings(next.settings);
     if (!next.starter) setView('starter');
     return next;
   };
@@ -998,6 +999,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     const entries = Object.entries(patch).map(([k, next]) => ({ key: K[k], next, before: save[k] === undefined ? null : save[k] }));
     const ok = await saveStoredValuesOrRollback(entries, storeGet, storeSet);
     if (ok) setSave((cur) => ({ ...cur, ...patch }));
+    if (ok && patch.settings && onSettings) onSettings(patch.settings); // 周回の自動(quickAutoStart)は 60-app が見る
     return ok;
   };
 
@@ -1153,7 +1155,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
           <div className="grid grid-cols-3 gap-1.5">
             {foes.map((x) => (
               <button key={x.id} type="button" data-card-foe={x.id} onClick={() => { Audio_.fgSe.tap(); setFoe((f) => ({ ...f, who: x.id })); }} className={`relative flex flex-col items-center rounded-xl border-2 p-1 ${foe.who === x.id ? 'bg-white/10' : 'border-white/10 bg-slate-900/70'}`} style={foe.who === x.id ? { borderColor: x.accent } : undefined}>
-                <img src={assistantFaceImage(x, 'normal')} alt={x.name} className="h-[52px] w-[52px] rounded-lg object-cover object-top"/>
+                <img src={assistantFaceImage(x, 'normal')} alt={x.name} className="h-[52px] w-[52px] rounded-lg object-cover object-top landscape:h-[34px] landscape:w-[34px]"/>
                 <span className="text-[13px] font-black">{x.name}</span>
                 {save.record.beaten[x.id] && <span className="absolute right-1 top-1 rounded bg-amber-400 px-1 text-[10px] font-black text-slate-900">勝</span>}
               </button>
@@ -1162,7 +1164,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
           {a && (
             <div className="flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2">
               {/* 背の低い画面(SE)では絵を低くして、下の「使うデッキ」の欄まで1画面に入れる(2026-10-24 改善部の点検 V2) */}
-              <CardAssistantArt src={assistantFullImage(a, 'wink')} alt={a.name} className="w-[42%]" style={{ height: 'min(150px, 17vh)' }}/>
+              {/* 横画面では絵を外して、強さのボタンまでスクロールなしで見せる(2026-10-25 カゲあつくん「EASY〜が下で切れている」) */}
+              <CardAssistantArt src={assistantFullImage(a, 'wink')} alt={a.name} className="w-[42%] landscape:hidden" style={{ height: 'min(150px, 17vh)' }}/>
               <div className="min-w-0 flex-1 pb-2">
                 <div className="text-[11px] font-bold text-slate-400">{a.tagline}</div>
                 <div className="mt-1 rounded-2xl border-2 bg-white px-2 py-1 text-[13px] font-extrabold leading-snug text-[#1f1333]" style={{ borderColor: a.accent, ...JA_WRAP_STYLE }}>{line ? line.text : ''}</div>
@@ -1349,7 +1352,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             <div className="text-[13px] font-black text-white">対戦のBGM</div>
             {[['cpu', '助手と対戦'], ['pvp', 'マルチ対戦']].map(([k, label]) => (
               <label key={k} className="mt-2 block text-left">
-                <span className="text-[11px] font-black text-slate-300">{label}{k === 'pvp' ? '(準備中)' : ''}</span>
+                <span className="text-[11px] font-black text-slate-300">{label}{k === 'pvp' && !(typeof cardPvpOpen === 'function' && cardPvpOpen()) ? '(準備中)' : ''}</span>
                 <div className="mt-1 flex gap-2">
                   <select data-card-bgm-select={k} aria-label={`${label}のBGM`} value={save.bgm[k]} onChange={(e) => { void persist({ bgm: normalizeCardBgm({ ...save.bgm, [k]: e.target.value }, cardIsBgmTrack) }); }}
                     className="min-h-[44px] min-w-0 flex-1 rounded-xl border border-white/15 bg-slate-950 px-2 py-2 text-xs text-white">
@@ -1377,6 +1380,17 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
                 className={`min-h-[36px] shrink-0 rounded-full border px-3 text-[11px] font-black ${save.settings.autoPass ? 'border-emerald-300 bg-emerald-700/85 text-white' : 'border-white/25 bg-slate-900/75 text-slate-200'}`}>{save.settings.autoPass ? 'ON' : 'OFF'}</button>
             </div>
             <p className="mt-1.5 text-[10px] font-bold leading-snug text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('はやいにすると、相手が考える時間と、勝ち負けが決まってから結果までが短くなります')}</p>
+          </div>
+          {/* 裏のクイック周回の自動(社長 2026-10-25「モンヒロビートと同じように」)。編成は AUTO設定の「モンヒロビート中に回すクイック周回」と同じものを使う */}
+          <div data-card-options-quick className={SCREEN_PANEL_CLASS}>
+            <div className="text-[13px] font-black text-white">裏のクイック周回</div>
+            <div className="mt-2 flex items-center gap-2">
+              <span className="min-w-0 flex-1 text-[12px] font-bold leading-snug text-slate-200" style={JA_LABEL_STYLE}>{jaWrap('MFバトルカードを開いたら自動で始める')}</span>
+              <button type="button" data-card-quick-auto aria-pressed={save.settings.quickAutoStart} onClick={() => { Audio_.fgSe.tap(); void persist({ settings: { ...save.settings, quickAutoStart: !save.settings.quickAutoStart } }); }}
+                className={`min-h-[36px] shrink-0 rounded-full border px-3 text-[11px] font-black ${save.settings.quickAutoStart ? 'border-emerald-300 bg-emerald-700/85 text-white' : 'border-white/25 bg-slate-900/75 text-slate-200'}`}>{save.settings.quickAutoStart ? 'ON' : 'OFF'}</button>
+            </div>
+            <p className="mt-1.5 text-[10px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('ONにすると、MFバトルカードを開いたときに、裏でクイックの∞周回を始めます。負けたときは、少しおいて1周目から始め直します。編成は、AUTO設定の「モンヒロビート中に回すクイック周回」と同じです')}</p>
+            {!quickAutoReady && <p data-card-quick-auto-needs className="mt-1 text-[10px] font-bold leading-snug text-amber-200" style={JA_WRAP_STYLE}>{jaWrap('AUTO設定で、勇者モン・配置距離・難易度の3つを決めると使えます')}</p>}
           </div>
         </div>
       </div>

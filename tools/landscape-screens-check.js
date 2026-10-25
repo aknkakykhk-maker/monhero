@@ -107,9 +107,12 @@ const TEMPLE_LINKS=(()=>{const app=fs.readFileSync(path.join(ROOT,'monster-hero/
     return out;});
   // MFバトルカードの画面を順に開いて測る(HOME の入口 → はじめてはスターター → 練習試合 → トップの中の画面 → 助手と対戦)
   const checkCardScreens=async page=>{
-    const measureCard=async name=>{await page.waitForTimeout(700);const m=await measure(page);const bad=await unreachable(page);
+    // mustSee … スクロールしなくても全部見えていてほしいボタン(相手えらびの強さのボタン。2026-10-25 カゲあつくん)
+    const measureCard=async(name,mustSee='')=>{await page.waitForTimeout(700);const m=await measure(page);const bad=await unreachable(page);
       ok(`カード ${name}: 横にはみ出さない`,!m.hOverflow);
-      ok(`カード ${name}: どのボタンも画面の中か、スクロールで届く`,bad.length===0,bad.slice(0,4).join(' / '));};
+      ok(`カード ${name}: どのボタンも画面の中か、スクロールで届く`,bad.length===0,bad.slice(0,4).join(' / '));
+      if(mustSee){const hidden=await page.evaluate(sel=>[...document.querySelectorAll(sel)].map(b=>{const r=b.getBoundingClientRect();let v=r.bottom<=innerHeight+1&&r.top>=-1;for(let e=b.parentElement;e&&v;e=e.parentElement){const st=getComputedStyle(e);if(/(auto|scroll|hidden)/.test(st.overflowY)){const q=e.getBoundingClientRect();if(r.bottom>q.bottom+1||r.top<q.top-1)v=false;}}return v?null:(b.innerText||'').replace(/\s+/g,' ').trim().slice(0,10);}).filter(Boolean),mustSee);
+        ok(`カード ${name}: ${mustSee} がスクロールしなくても全部見える`,hidden.length===0,hidden.join(' / '));}};
     const has=sel=>page.evaluate(s=>!!document.querySelector(s),sel);
     const backTop=async()=>{await page.evaluate(()=>document.querySelector('[data-mh-screen] button')?.click());await page.waitForSelector('[data-card-top="top"]',{timeout:8000}).catch(()=>{});};
     if(!(await page.evaluate(()=>{const b=document.querySelector('[data-home-card-battle]');if(b)b.click();return !!b;}))){ok('カード: HOME の入口から入れる(デバッグの人)',false);return;}
@@ -136,7 +139,7 @@ const TEMPLE_LINKS=(()=>{const app=fs.readFileSync(path.join(ROOT,'monster-hero/
     for(const [open,name] of [['[data-card-dex-open]','図鑑'],['[data-card-rules-open]','ルール'],['[data-card-record-open]','記録'],['[data-card-options-open]','オプション'],['[data-card-ranking-open]','ランキング']]){
       await page.click(open);await measureCard(name);await backTop();}
     await page.click('[data-card-cpu]');await measureCard('対戦の選び方');
-    await page.click('[data-card-mode-assistant]');await page.waitForSelector('[data-card-foe]',{timeout:8000}).catch(()=>{});await measureCard('助手と対戦(相手えらび)');
+    await page.click('[data-card-mode-assistant]');await page.waitForSelector('[data-card-foe]',{timeout:8000}).catch(()=>{});await measureCard('助手と対戦(相手えらび)','[data-card-level]');
     await page.click('[data-card-start]');await page.waitForSelector('[data-card-battle]',{timeout:20000}).catch(()=>{});await page.waitForTimeout(1200);await dismiss(page);
     await measureCard('助手と対戦(対戦の盤)');
     await page.click('[data-card-quit]');await page.waitForTimeout(300);await page.getByRole('button',{name:'投了する'}).click();

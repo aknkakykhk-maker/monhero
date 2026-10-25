@@ -4626,6 +4626,8 @@ function MonsterHeroGame() {
   const [rhythmEventStorySeen, setRhythmEventStorySeen] = useState(null);
   // MFバトルカードの画面が決めた曲(null なら HOME の曲)。保存はしない
   const [cardBgm, setCardBgm] = useState(null);
+  // MFバトルカードのオプションの「開いたら自動で始める」(mh_card_settings_v1.quickAutoStart)。カードを開いたとき・オプションで変えたときに入れる
+  const [cardQuickAutoStart, setCardQuickAutoStart] = useState(false);
   // MFバトルカードへどこから入ったか('debug' … デバッグ設定から / 'home' … HOME の入口・公開のお話のあと)。戻るボタンの行き先と、デバッグの道具を出すかに使う
   const [cardOrigin, setCardOrigin] = useState('home');
   // MFバトルカードの「マーケットへ」から入ったときだけ、マーケットに「カードポイント」の売り場を出す(デバッグ専用のあいだ。区切り2)
@@ -14281,6 +14283,46 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     }, QUICK_RUN_AUTO_RETRY_MS);
     return () => clearTimeout(timer);
   }, [quickRunProgress, gameState, resultProcessing, autoSettings]);
+  // ===== MFバトルカードを開いたら自動で∞周回を始める・負けたら始め直す(社長 2026-10-25「モンヒロビートと同じように」) =====
+  // 中身はモンヒロビートの2つ(上の「開いたら自動で始める」と「負けたら数秒おいて始め直す」)と同じ。
+  // ★スイッチはカードのオプション(mh_card_settings_v1.quickAutoStart・最初は OFF)。モンヒロビートのスイッチ(AUTO設定)とは分ける。
+  //   編成(勇者モン・配置距離・難易度)は、AUTO設定の「モンヒロビート中に回すクイック周回」と同じものを使う(同じ周回なので)。
+  // ★「入った瞬間」は、カードの外(HOME・バトルなど)からカードの中(CARD_*・カードから開いたマーケット)へ来たときだけ。
+  //   カードの中を行き来しても数えない(トップ↔対戦↔マーケットで周回が何度も立ち上がらないように)
+  const cardAutoStartInsideRef = useRef(false);
+  const cardAutoStartTokenRef = useRef(0);
+  useEffect(() => {
+    const inside = isCardRunScreen(gameState);
+    const wasInside = cardAutoStartInsideRef.current;
+    cardAutoStartInsideRef.current = inside;
+    if (!inside || wasInside) return;
+    const token = ++cardAutoStartTokenRef.current;
+    void storeGet(CARD_SAVE_KEYS.settings, null).then((saved) => {
+      const settings = normalizeCardSettings(saved);
+      setCardQuickAutoStart(settings.quickAutoStart);
+      // 読むあいだにカードの外へ出た・もう一度入り直した ときは何もしない
+      if (token !== cardAutoStartTokenRef.current || !cardAutoStartInsideRef.current) return;
+      if (!settings.quickAutoStart || !autoQuickRunConfigured(autoSettings)) return;
+      // すでに回っている(止まっていない)なら、そのまま続ける
+      if (quickRunProgressRef.current && !quickRunProgressRef.current.finished) return;
+      // まだ勝負のついていない挑戦の上へ、新しいランを重ねない(startQuickRunFromRhythm と同じ条件)
+      if (runStageRef.current && !runResultFinishedRef.current) return;
+      if (!repeatTemplateFromAutoSettings()) return;
+      startQuickRunFromRhythm();
+    }).catch(() => {});
+  }, [gameState]);
+  useEffect(() => {
+    if (!quickRunProgress || !quickRunProgress.finished || quickRunProgress.reason !== 'defeat') return undefined;
+    if (!isCardRunScreen(gameState)) return undefined;
+    if (resultProcessing) return undefined;
+    if (!cardQuickAutoStart || !autoQuickRunConfigured(autoSettings)) return undefined;
+    const timer = setTimeout(() => {
+      const current = quickRunProgressRef.current;
+      if (!current || !current.finished || current.reason !== 'defeat') return;
+      startQuickRunFromRhythm();
+    }, QUICK_RUN_AUTO_RETRY_MS);
+    return () => clearTimeout(timer);
+  }, [quickRunProgress, gameState, resultProcessing, autoSettings, cardQuickAutoStart]);
   // バトル内ではAUTO系を1ボタンで循環する。表示用stateは持たず、既存の同期refから次の状態だけを決める。
   const cycleBattleAuto = () => {
     if(autoRepeatRef.current){setAutoBattleEnabled(false);return;}
@@ -19532,7 +19574,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           })}</>)}
         {renderCardQuickRunStrip()}
         {(gameState==='CARD_TOP'||gameState==='CARD_BATTLE'||(gameState==='CARD_PACK_OPEN'&&!cardPackOpen))&&(<CardBattleScreen screen={gameState} onNavigate={setGameState} onExit={()=>{void exitCardBattle();}} exitLabel={cardOrigin==='debug'?'デバッグ設定へ戻る':'HOMEへ戻る'} seenStoryIds={rhythmEventStorySeen||[]} debug={cardOrigin==='debug'} onBgm={setCardBgm} onQuickLoops={awardCardQuickLoops}
-          quickRun={cardQuickRunView()} onOpenMarket={()=>{setCardMarketEntry(true);setMarketExchangeError('');void loadCardShop();setGameState('BREEDER_MARKET');}}
+          quickRun={cardQuickRunView()}
+          quickAutoReady={autoQuickRunConfigured(autoSettings)} onSettings={(settings)=>setCardQuickAutoStart(!!(settings&&settings.quickAutoStart))} onOpenMarket={()=>{setCardMarketEntry(true);setMarketExchangeError('');void loadCardShop();setGameState('BREEDER_MARKET');}}
           topAssistant={cardTopAssistant}
           bgmPreview={{toggle:toggleBgmPreview,playing:previewTrackId}}
           /* ランキングへ送るのは、公開してから・デバッグでない人だけ(台帳 #3513「公開前は、デバッグの人の記録も送らない」) */
