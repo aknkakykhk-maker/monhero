@@ -39,8 +39,8 @@ const assetPacksShown = () => {
   const cardOpen = assetPackOpen(assetPackOfId('card'));
   return ASSET_PACKS.filter(assetPackOpen).map((p) => (p.id === 'all' && cardOpen ? { ...p, desc: 'モンヒロビート・バトル・バトルカードの全部' } : p));
 };
-// 自動ダウンロードで、よく使う画像のあとに落とすカードの絵(小さい版だけ。大きい版は詳しい画面を開いたときに取る)
-const ASSET_CARD_AUTO_PREFIX = 'images/card-battle/s/';
+// 自動ダウンロードで、よく使う画像のあとに落とすカードの絵。小さい版を先に、大きい版をそのあとに(2026-10-25 社長「両方入れる」)
+const ASSET_CARD_AUTO_PREFIXES = ['images/card-battle/s/', 'images/card-battle/l/'];
 // 自動の前もって落としで、まず落とす「よく使う画面の画像」(背景・タイトル・画面の部品・顔アイコン)
 const ASSET_CORE_PREFIXES = ['data/images/', 'images/ui/', 'images/monster-icons/'];
 // 自動の前もって落としで1回の起動に落とす上限(バイト)。モバイル回線では少なく、わからない端末(iPhone)は控えめに
@@ -290,8 +290,8 @@ const ASSET_CACHE = (() => {
     if (!m) return;
     enqueue(Object.keys(m.files).filter(p => ASSET_CORE_PREFIXES.some(pre => p.startsWith(pre))));
     for (const songId of settings.songs) enqueue(songPaths(songId));
-    // カードの絵(小さい版)は、バトルカードのまとまりを出してよいときだけ(公開前の遊ぶ人の端末では落とさない)
-    if (assetPackOpen(assetPackOfId('card'))) enqueue(Object.keys(m.files).filter(p => p.startsWith(ASSET_CARD_AUTO_PREFIX)));
+    // カードの絵(小さい版→大きい版)は、バトルカードのまとまりを出してよいときだけ(公開前の遊ぶ人の端末では落とさない)
+    if (assetPackOpen(assetPackOfId('card'))) for (const pre of ASSET_CARD_AUTO_PREFIXES) enqueue(Object.keys(m.files).filter(p => p.startsWith(pre)));
   };
 
   let listening = false;
