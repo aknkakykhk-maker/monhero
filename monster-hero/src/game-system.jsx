@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f01ce5c5d1afbe6e
+// generated-sha256: e52eb93613380ade
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-25 13:29"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-25 13:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -53015,11 +53015,15 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         <div className="relative z-10"><ScreenHead title="対戦" accent="text-amber-200" onBack={() => setView('top')} note="だれと戦うかをえらびます"/></div>
         <div className={`${SCREEN_LIST_CLASS} relative z-[1] flex flex-col justify-center space-y-3 pb-4`}>
           <button type="button" data-card-mode-assistant className="mhms-card mhms-in flex min-h-[150px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-orange-200 via-orange-400 to-rose-500 px-4 py-3 text-left text-slate-950 active:scale-[.98]" onClick={() => { Audio_.fgSe.tap(); setView('foe'); }}>
+            {/* 札の透かしの英字は、トップ・モンヒロビートと同じ置き方(端で切れて見えるのも同じ作り) */}
+            <span aria-hidden="true" className="mhms-mark">ASSISTANT</span>
             <span className="relative flex items-center gap-2"><span aria-hidden="true" className="text-3xl leading-none">⚔️</span><span><b className="block text-[22px] font-black italic leading-tight">助手と対戦</b><small className="block text-[11px] font-black text-slate-900/80">助手のみんなと戦う・強さは5段</small></span></span>
-            <span aria-hidden="true" className="relative flex -space-x-2">{foes.map((x) => <img key={x.id} src={assistantFaceImage(x, 'normal')} alt="" className="h-10 w-10 rounded-full border-2 border-white/80 bg-slate-900 object-cover object-top shadow"/>)}</span>
+            {/* 顔は、もう会っている助手だけ(まだ会っていない助手が見えるとネタバレ。デバッグでも同じ) */}
+            <span aria-hidden="true" className="relative flex -space-x-2">{assistantsUnlockedFrom(seenStoryIds).filter((x) => CARD_AI_HABITS[x.id]).map((x) => <img key={x.id} src={assistantFaceImage(x, 'normal')} alt="" className="h-10 w-10 rounded-full border-2 border-white/80 bg-slate-900 object-cover object-top shadow"/>)}</span>
           </button>
           {/* マルチ対戦(91-card-battle-multi.jsx)。MFバトルカードの公開の印と同じ日に開く(cardPvpOpen・社長 案A)。それまではデバッグ設定から入ったときだけ押せる */}
           <button type="button" data-card-mode-multi disabled={!(debug || cardPvpOpen())} onClick={() => { Audio_.fgSe.tap(); setView('pvp'); }} className="mhms-card mhms-in flex min-h-[150px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-sky-200 via-sky-400 to-indigo-500 px-4 py-3 text-left text-slate-950 active:scale-[.98] disabled:opacity-50" style={{ animationDelay: '60ms' }}>
+            <span aria-hidden="true" className="mhms-mark">MULTI</span>
             <span className="relative flex items-center gap-2"><span aria-hidden="true" className="text-3xl leading-none">🎮</span><span><b className="block text-[22px] font-black italic leading-tight">マルチ対戦</b><small className="block text-[11px] font-black text-slate-900/80">ブリーダーどうしで戦う</small></span></span>
             {!cardPvpOpen() && <span className="relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white">{debug ? 'つくっている途中(デバッグ)' : '準備中'}</span>}
           </button>
