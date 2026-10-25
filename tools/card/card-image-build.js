@@ -88,7 +88,8 @@ const normalizeField = async (file) => {
 
 const erase = async (file, { artCopyright = true, breeder = false } = {}) => {
   // 全体カードは、先に黒い枠に合わせてそろえる(絵ははじめから日本語。右下の URL・絵の © は、ほかのブリーダーのカードと同じ場所を消す)
-  const { data, info } = await sharp(isField(file) ? await normalizeField(file) : file).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+  // 文字を描き直した版(card-battle-ja/F*.jpg・カード部)は、もう枠にそろえてあるので切り出さない
+  const { data, info } = await sharp(isField(file) && !file.startsWith(JA) ? await normalizeField(file) : file).removeAlpha().raw().toBuffer({ resolveWithObject: true });
   if (info.width !== W || info.height !== H) throw new Error(`${file}: 大きさが ${info.width}×${info.height}(${W}×${H} のはず)`);
   const rects = [...(isMonster(file) ? BAND.monster : BAND.skill)];
   if (artCopyright && !isMonster(file)) rects.push(breeder ? ART_COPYRIGHT_BREEDER : file.startsWith(JA) ? ART_COPYRIGHT_JA : ART_COPYRIGHT);
