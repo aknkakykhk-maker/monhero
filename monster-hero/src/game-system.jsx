@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 95c3aaf2d5691e8c
+// generated-sha256: 71621d4531fb0326
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-25 21:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-25 21:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -53158,6 +53158,18 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
     return `${cardUseText(db, st, pd.attacker, pd.mon, [pd.main])}が${tm ? tm.name : ''}に！(ダメージ${pd.base * pd.mult})`;
   })() : null;
   const logLines = st.log.filter((l) => l.kind !== 'turn').slice(-3);
+  // まんなかに入り切らないときの詰め方(2026-10-25 社長の実機「コメントが切れてる」。iPhone の字は行が高く、上下が切れた)。
+  //   0 … ふつう / 1 … 記録は新しい1行だけ / 2 … 技の帯の絵を省く / 3 … 技の帯を隠す。吹き出しと記録の最後の1行は必ず残す。
+  //   中身が変わるたびに 0 から測り直す(描く前に測るので、ちらつかない)
+  const stageRef = useRef(null);
+  const [stageFit, setStageFit] = useState(0);
+  const stageKey = `${bubble ? bubble.key : ''}|${action ? action.key : ''}|${st.log.length}|${pendingText || ''}|${tutorial ? 1 : 0}`;
+  React.useLayoutEffect(() => { setStageFit(0); }, [stageKey]);
+  React.useLayoutEffect(() => {
+    const el = stageRef.current;
+    if (!el || stageFit >= 3) return;
+    if (el.scrollHeight > el.clientHeight + 1) setStageFit((f) => Math.min(3, f + 1));
+  });
 
   const strip = (p) => {
     const pl = st.players[p];
@@ -53244,7 +53256,8 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
       </div>
       {/* まんなか: 技の動き(アクション)と、起きたことの記録(ログ)の場所。相手の場と自分の場をここで上下に分ける(社長 2026-10-24)
           ★次の区切りの技ごとの動きも、この data-card-stage の中で見せる */}
-      <div data-card-stage className="relative flex min-h-[64px] flex-1 flex-col items-center justify-center gap-1.5 overflow-hidden px-3 py-1">
+      {/* 入り切らないときも上から並べる(safe center)。吹き出しの上が切れないように */}
+      <div ref={stageRef} data-card-stage data-card-stage-fit={stageFit} className="relative flex min-h-[64px] flex-1 flex-col items-center justify-center gap-1.5 overflow-hidden px-3 py-1" style={{ justifyContent: 'safe center' }}>
         {/* 相手の助手の吹き出し(まんなかのいちばん上。相手のモンスターにはかけない。指の操作は下へ通す) */}
         {bubble && (
           <div key={bubble.key} data-card-bubble className={`pointer-events-none relative z-[2] max-w-full rounded-2xl border-[3px] bg-white px-2.5 py-0.5 ${compact ? 'text-[12px]' : 'text-[13px]'} font-extrabold leading-snug text-[#1f1333] shadow-lg`} style={{ borderColor: who.accent, ...JA_WRAP_STYLE }}>
@@ -53262,16 +53275,16 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
               : pvp ? cardIconNode(pvp.icon, 34) : <img src={assistantFaceImage(who, 'happy')} alt="" className="h-full w-full object-cover object-top"/>}
           </div>
         )}
-        {action && (
+        {action && stageFit < 3 && (
           <div key={action.key} data-card-action className={`relative z-[1] flex items-center gap-2 rounded-2xl border border-amber-300/50 bg-black/55 px-2 ${compact ? "py-0.5" : "py-1"} shadow-lg`}>
-            {!compact && action.cards.slice(0, 3).map((no, i) => { const c = cardOf(db, no); return c ? <img key={i} src={CARD_IMG(c.img)} alt={c.name} className={`${compact ? 'h-[40px] w-[29px]' : 'h-[64px] w-[46px]'} rounded-[4px] object-cover shadow`}/> : null; })}
+            {!compact && stageFit < 2 && action.cards.slice(0, 3).map((no, i) => { const c = cardOf(db, no); return c ? <img key={i} src={CARD_IMG(c.img)} alt={c.name} className={`${compact ? 'h-[40px] w-[29px]' : 'h-[64px] w-[46px]'} rounded-[4px] object-cover shadow`}/> : null; })}
             {/* 小さい段は1行(だれ「技」)にして、まんなかの高さに収める(2段だと上が切れた。カゲあつくんの確認 2026-10-25) */}
             <div className={`${tiny ? 'whitespace-nowrap text-[12px]' : 'text-[13px]'} font-black leading-tight`}>{action.who}<span className={tiny ? 'text-[13px] text-amber-200' : 'block text-[15px] text-amber-200'}>「{action.cards.map((n) => (cardOf(db, n) || {}).name).join('＋')}」</span></div>
           </div>
         )}
         <div data-card-log className="relative z-[1] max-w-full rounded-xl border border-white/15 bg-black/45 px-3 py-1 text-center text-[13px] font-bold leading-snug" style={JA_WRAP_STYLE}>
           {pendingText && <div className="text-rose-200">{pendingText}</div>}
-          {(pendingText ? [] : (compact || tutorial) ? logLines.slice(action || bubble || tutorial ? -1 : -2) : logLines.slice(bubble && action ? -2 : -3)).map((l, i, arr) => <div key={i} className={i === arr.length - 1 && !pendingText ? '' : 'text-[11px] text-violet-200'}>{l.text}</div>)}
+          {(pendingText ? [] : (compact || tutorial || stageFit >= 1) ? logLines.slice(stageFit >= 1 || action || bubble || tutorial ? -1 : -2) : logLines.slice(bubble && action ? -2 : -3)).map((l, i, arr) => <div key={i} className={i === arr.length - 1 && !pendingText ? '' : 'text-[11px] text-violet-200'}>{l.text}</div>)}
         </div>
       </div>
       <div className="flex shrink-0 items-end justify-around px-1">
@@ -54098,18 +54111,42 @@ const CardDeckTile = ({ db, no, inDeck = 0, owned = 0, dim = false, press, onTap
   );
 };
 
+// 絞り込み(1列。2026-10-25 社長「外し方がわからない・カード選択のエリアがせまい」で、タブをやめて案A)
+//   mon … モンスター / deck … デッキに入れたもの(モンスターも) / ほか … 技など(CARD_DECK_FILTERS)
+const CARD_DECK_VIEWS = Object.freeze([{ id: 'mon', label: 'モンスター' }, { id: 'deck', label: 'デッキに入れた' }, ...CARD_DECK_FILTERS.map((f) => (f.id === 'all' ? { ...f, label: '技など全部' } : f))]);
+const CARD_DECK_SORTS = Object.freeze([{ id: 'kind', label: '種類順' }, { id: 'guts', label: 'ガッツ順' }, { id: 'no', label: '番号順' }]);
+// 選ぶ場所の1枚: 絵(押すと1枚入れる・長押しで詳しく)と、下に「− 入れた/入れられる ＋」
+const CardDeckPickTile = ({ db, no, inDeck, limit, canAdd, press, onAdd, onRemove }) => {
+  const c = cardOf(db, no); const m = c ? null : cardMonsterOf(db, no);
+  const name = c ? c.name : m ? m.name : no;
+  return (
+    <div data-card-deck-pick={no} className={`relative flex min-w-0 flex-col rounded-lg p-0.5 ${inDeck > 0 ? 'bg-emerald-500/15 ring-2 ring-emerald-300/70' : 'bg-white/5'}`}>
+      <button type="button" data-card-deck-tile={no} {...press(no, onAdd)} className={`block w-full active:scale-95 ${!canAdd && inDeck === 0 ? 'opacity-45' : ''}`} style={{ WebkitUserSelect: 'none', userSelect: 'none' }} aria-label={`${name}を1枚入れる`}>
+        <img src={CARD_IMG(c ? c.img : m ? m.img : no)} alt={name} draggable={false} onDragStart={(e) => e.preventDefault()} className="aspect-[5/7] w-full rounded-[5px] object-cover"/>
+      </button>
+      <CardNameFit name={name} className="mt-0.5 font-bold leading-tight text-slate-100"/>
+      <div className="mt-0.5 flex items-center justify-between gap-0.5">
+        <button type="button" data-card-deck-minus={no} disabled={inDeck === 0} onClick={onRemove} aria-label={`${name}を1枚外す`} className="flex h-[28px] w-[27px] shrink-0 items-center justify-center rounded-md bg-rose-600 text-[18px] font-black leading-none text-white active:scale-90 disabled:bg-slate-700 disabled:text-slate-500">−</button>
+        <span data-card-deck-in={no} className="min-w-0 whitespace-nowrap text-center text-[11px] font-black tabular-nums text-white">{inDeck}<span className="text-[9px] text-slate-400">/{limit}</span></span>
+        <button type="button" data-card-deck-plus={no} disabled={!canAdd} onClick={onAdd} aria-label={`${name}を1枚入れる`} className="flex h-[28px] w-[27px] shrink-0 items-center justify-center rounded-md bg-emerald-600 text-[18px] font-black leading-none text-white active:scale-90 disabled:bg-slate-700 disabled:text-slate-500">＋</button>
+      </div>
+    </div>
+  );
+};
 const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel }) => {
   const [deck, setDeck] = useState(() => ({ ...deck0, monsters: deck0.monsters.slice(), cards: deck0.cards.slice() }));
-  const [tab, setTab] = useState(deck0.monsters.length < 3 ? 'mon' : 'card');
-  const [filter, setFilter] = useState('all');
+  const [view, setView] = useState(deck0.monsters.length < 3 ? 'mon' : 'all');
+  const [sort, setSort] = useState('kind');
   const [usableOnly, setUsableOnly] = useState(true);
   const [notice, setNotice] = useState('');
   const [detail, setDetail] = useState(null);
   const [leave, setLeave] = useState(false);
   const press = useCardLongPress((no) => setDetail(no));
-  // 背の低い画面(SE・320幅)では上の枠を小さくし、説明の1行を省いて、カードの一覧を広く見せる(2026-10-24 改善部の点検 V5)
-  //   縦の画面のときだけ(横の画面はカード部の landscape: の大きさにまかせる)
+  // 背の低い画面(SE・320幅)では上の枠を小さくして、カードの一覧を広く見せる(2026-10-24 改善部の点検 V5)。縦の画面のときだけ
   const short = typeof window !== 'undefined' && window.innerHeight < 760 && window.innerHeight > window.innerWidth;
+  // 横の画面か(保存のボタンを左の列に置くか、下に置くか。ボタンは1つだけ描く)
+  const [land, setLand] = useState(() => typeof window !== 'undefined' && window.innerWidth > window.innerHeight);
+  useEffect(() => { const on = () => setLand(window.innerWidth > window.innerHeight); window.addEventListener('resize', on); return () => window.removeEventListener('resize', on); }, []);
   const col = collection || {};
   const changed = JSON.stringify(deck) !== JSON.stringify(deck0);
   const rules = cardDeckProblems(db, deck);
@@ -54134,74 +54171,74 @@ const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel }) => {
       return k < 0 ? d : { ...d, cards: [...d.cards.slice(0, k), ...d.cards.slice(k + 1)] };
     });
   };
-  // 持っているカード(準備中は出さない)
-  const ownedCards = Object.keys(col).filter((no) => { const c = cardOf(db, no); return c && c.ready && col[no] > 0; }).sort((a, b) => (cardSortKey(db, a) < cardSortKey(db, b) ? -1 : 1));
-  const ownedMons = Object.keys(col).filter((no) => cardMonsterOf(db, no) && col[no] > 0).sort();
-  const shownCards = ownedCards.filter((no) => {
+  const sortKey = (no) => {
     const c = cardOf(db, no);
-    if (!cardDeckFilterOk(c, filter)) return false;
-    if (usableOnly && mons.length && c.user !== 'breeder' && !mons.some((m) => cardUsableBy(c, m))) return false;
-    return true;
-  });
-  const deckUnique = [...new Set(deck.cards)].sort((a, b) => (cardSortKey(db, a) < cardSortKey(db, b) ? -1 : 1));
-  const tile = (no, onTap) => {
-    const inDeck = countOf(no);
-    const why = cardDeckAddReason(db, deck, no, col);
-    return <CardDeckTile key={no} db={db} no={no} inDeck={inDeck} owned={col[no] || 0} dim={!!why && inDeck === 0} press={press} onTap={onTap}/>;
+    if (sort === 'guts' && c) return `${String(c.guts ?? 9).padStart(2, '0')}-${cardSortKey(db, no)}`;
+    if (sort === 'no') return String(no).padStart(6, '0');
+    return cardSortKey(db, no);
   };
+  const bySort = (a, b) => (sortKey(a) < sortKey(b) ? -1 : 1);
+  // 持っているカード(準備中は出さない)
+  const ownedCards = Object.keys(col).filter((no) => { const c = cardOf(db, no); return c && c.ready && col[no] > 0; });
+  const ownedMons = Object.keys(col).filter((no) => cardMonsterOf(db, no) && col[no] > 0).sort();
+  const usable = (no) => { const c = cardOf(db, no); return !usableOnly || !mons.length || c.user === 'breeder' || mons.some((m) => cardUsableBy(c, m)); };
+  const shown = view === 'mon' ? ownedMons
+    : view === 'deck' ? [...deck.monsters, ...[...new Set(deck.cards)].sort(bySort)]
+      : ownedCards.filter((no) => cardDeckFilterOk(cardOf(db, no), view) && usable(no)).sort(bySort);
+  const tile = (no) => {
+    const inDeck = countOf(no);
+    const limit = cardMonsterOf(db, no) ? 1 : Math.min(3, col[no] || 0);
+    return <CardDeckPickTile key={no} db={db} no={no} inDeck={inDeck} limit={limit} canAdd={!cardDeckAddReason(db, deck, no, col)} press={press} onAdd={() => add(no)} onRemove={() => removeOne(no)}/>;
+  };
+  const chip = (on) => `shrink-0 rounded-full px-2.5 py-1 text-[11px] font-black ${on ? 'bg-amber-300 text-slate-950' : 'border border-white/20 bg-slate-900 text-slate-300'}`;
+  const footer = (
+    <div className={`${SCREEN_FOOTER_CLASS} grid grid-cols-2 gap-2 ${land ? 'mt-auto' : ''}`}>
+      <button type="button" data-card-deck-save className={`mh-button mh-button-primary ${land ? 'min-h-[44px]' : 'min-h-[52px]'} rounded-2xl font-black active:scale-[.98]`} onClick={() => { Audio_.fgSe.tap(); onSave({ ...deck, name: (deck.name || '').trim() || 'デッキ' }); }}>保存する</button>
+      <button type="button" className={`mh-button mh-button-secondary ${land ? 'min-h-[44px]' : 'min-h-[52px]'} rounded-2xl border border-white/20 bg-slate-800 font-black active:scale-[.98]`} onClick={() => (changed ? setLeave(true) : onCancel())}>やめる</button>
+    </div>
+  );
+  const sortLabel = (CARD_DECK_SORTS.find((x) => x.id === sort) || CARD_DECK_SORTS[0]).label;
   return (
     <div data-mh-screen data-card-deck-edit className={SCREEN_SHELL_CLASS}>
       <ScreenHead title="デッキを組む" accent="text-amber-200" onBack={() => (changed ? setLeave(true) : onCancel())}/>
-      <div className={`${SCREEN_PANEL_FLAT_CLASS} shrink-0 space-y-1.5`}>
-        <input data-card-deck-name value={deck.name} maxLength={20} onChange={(e) => setDeck((d) => ({ ...d, name: e.target.value }))} className="w-full rounded-lg border border-white/20 bg-slate-950 px-2 py-1.5 text-[14px] font-black text-white" aria-label="デッキの名前"/>
-        <div className="flex items-end gap-1.5">
-          {[0, 1, 2].map((i) => {
-            const no = deck.monsters[i];
-            const m = no ? cardMonsterOf(db, no) : null;
-            return m
-              ? <button key={i} type="button" data-card-deck-mon={i} {...press(no, () => removeOne(no))} className="relative w-[20%] max-w-[64px] active:scale-95 landscape:max-w-[42px]" style={short ? { maxWidth: 'min(64px, 7vh)' } : undefined}><img src={CARD_IMG(m.img)} alt={m.name} draggable={false} className="aspect-[5/7] w-full rounded-[5px] object-cover"/><span className="absolute -right-1 -top-1 rounded-full bg-rose-500 px-1 text-[10px] font-black text-white">×</span></button>
-              : <button key={i} type="button" data-card-deck-mon={i} onClick={() => setTab('mon')} style={short ? { maxWidth: 'min(64px, 7vh)' } : undefined} className="flex aspect-[5/7] w-[20%] max-w-[64px] items-center justify-center rounded-[5px] border-2 border-dashed border-white/30 text-[10px] font-bold text-slate-400 landscape:max-w-[42px] landscape:whitespace-nowrap landscape:text-[7px]">モンスター</button>;
-          })}
-          <div className="min-w-0 flex-1 text-right">
-            <div data-card-deck-count className={`text-[20px] font-black ${deck.cards.length === CARD_BATTLE_DECK_SIZE ? 'text-emerald-300' : 'text-white'}`}>{deck.cards.length}<span className="text-[12px] text-slate-400">/{CARD_BATTLE_DECK_SIZE}枚</span></div>
-            <div data-card-deck-ready={ready ? 'ok' : 'ng'} className={`text-[11px] font-black ${ready ? 'text-emerald-300' : 'text-amber-200'}`}>{ready ? '対戦に使えます' : 'まだ対戦に使えません'}</div>
+      {/* 横の画面は左右に分ける: 左に名前・モンスター・枚数・絞り込み・保存、右を全部カードの一覧にする */}
+      <div className="flex min-h-0 flex-1 flex-col landscape:flex-row landscape:gap-2">
+        <div className="flex shrink-0 flex-col landscape:min-h-0 landscape:w-[36%] landscape:max-w-[340px] landscape:overflow-y-auto">
+          <div className={`${SCREEN_PANEL_FLAT_CLASS} shrink-0 space-y-1.5`}>
+            <input data-card-deck-name value={deck.name} maxLength={20} onChange={(e) => setDeck((d) => ({ ...d, name: e.target.value }))} className="w-full rounded-lg border border-white/20 bg-slate-950 px-2 py-1.5 text-[14px] font-black text-white landscape:py-1 landscape:text-[13px]" aria-label="デッキの名前"/>
+            <div className="flex items-end gap-1.5">
+              {[0, 1, 2].map((i) => {
+                const no = deck.monsters[i];
+                const m = no ? cardMonsterOf(db, no) : null;
+                const size = short ? { maxWidth: 'min(52px, 6vh)' } : undefined;
+                return m
+                  ? <button key={i} type="button" data-card-deck-mon={i} {...press(no, () => removeOne(no))} aria-label={`${m.name}を外す`} className="relative w-[15%] max-w-[52px] active:scale-95 landscape:max-w-[40px]" style={size}><img src={CARD_IMG(m.img)} alt={m.name} draggable={false} className="aspect-[5/7] w-full rounded-[5px] object-cover"/><span className="absolute -right-1 -top-1 flex h-[18px] w-[18px] items-center justify-center rounded-full bg-rose-600 text-[13px] font-black leading-none text-white shadow">−</span></button>
+                  : <button key={i} type="button" data-card-deck-mon={i} onClick={() => setView('mon')} style={size} className="flex aspect-[5/7] w-[15%] max-w-[52px] items-center justify-center rounded-[5px] border-2 border-dashed border-white/30 text-[18px] text-white/50 landscape:max-w-[40px]">＋</button>;
+              })}
+              <div className="min-w-0 flex-1 text-right">
+                <div data-card-deck-count className={`text-[20px] font-black ${deck.cards.length === CARD_BATTLE_DECK_SIZE ? 'text-emerald-300' : 'text-white'}`}>{deck.cards.length}<span className="text-[12px] text-slate-400">/{CARD_BATTLE_DECK_SIZE}枚</span></div>
+                <div data-card-deck-ready={ready ? 'ok' : 'ng'} className={`text-[11px] font-black ${ready ? 'text-emerald-300' : 'text-amber-200'}`}>{ready ? '対戦に使えます' : 'まだ対戦に使えません'}</div>
+              </div>
+            </div>
+            {!ready && <div data-card-deck-problems className="text-[11px] font-bold leading-snug text-rose-300" style={JA_WRAP_STYLE}>{[...rules, ...own].slice(0, 2).join(' / ')}</div>}
+            {notice && <div data-card-deck-notice className="text-[12px] font-black text-amber-200" style={JA_LABEL_STYLE}>{jaWrap(notice)}</div>}
           </div>
+          {/* 絞り込みは1列(縦は横に流す・横の画面は折り返す) */}
+          <div data-card-deck-chips className="mh-scroll mt-1.5 flex shrink-0 gap-1 overflow-x-auto pb-1 landscape:flex-wrap landscape:overflow-visible">
+            {CARD_DECK_VIEWS.map((f) => <button key={f.id} type="button" data-card-deck-filter={f.id} onClick={() => { setView(f.id); setNotice(''); }} className={chip(view === f.id)}>{f.id === 'mon' ? `モンスター ${deck.monsters.length}/3` : f.id === 'deck' ? `デッキに入れた ${deck.cards.length + deck.monsters.length}` : f.label}</button>)}
+            <button type="button" data-card-deck-usable onClick={() => setUsableOnly((v) => !v)} className={chip(usableOnly)}>{usableOnly ? '✓ ' : ''}使える子だけ</button>
+            <button type="button" data-card-deck-sort={sort} onClick={() => setSort((s) => CARD_DECK_SORTS[(CARD_DECK_SORTS.findIndex((x) => x.id === s) + 1) % CARD_DECK_SORTS.length].id)} className={chip(false)}>並び: {sortLabel} ▾</button>
+          </div>
+          {land && footer}
         </div>
-        <div data-card-deck-legend className={`${short ? 'hidden' : ''} text-[10px] font-bold text-slate-400 landscape:hidden`}>カードの右上: <span className="text-emerald-300">入</span>=デッキに入れた枚数 / 持=持っている枚数</div>
-        {!ready && <div data-card-deck-problems className="text-[11px] font-bold leading-snug text-rose-300" style={JA_WRAP_STYLE}>{[...rules, ...own].slice(0, 2).join(' / ')}</div>}
-        {notice && <div data-card-deck-notice className="text-[12px] font-black text-amber-200" style={JA_LABEL_STYLE}>{jaWrap(notice)}</div>}
-      </div>
-      <ScreenTabs className="mt-2" value={tab} onChange={(id) => { setTab(id); setNotice(''); }} items={[
-        { id: 'card', label: '技・ブリーダー' }, { id: 'mon', label: `モンスター ${deck.monsters.length}/3` }, { id: 'deck', label: `デッキの中 ${deck.cards.length}` },
-      ]}/>
-      {tab === 'card' && (
-        <div className="mb-1.5 flex shrink-0 flex-wrap gap-1">
-          <button type="button" data-card-deck-usable onClick={() => setUsableOnly((v) => !v)} className={`rounded-full px-2 py-1 text-[11px] font-black ${usableOnly ? 'bg-emerald-400 text-slate-950' : 'border border-white/20 bg-slate-900 text-slate-300'}`}>{usableOnly ? '✓ ' : ''}使える子だけ</button>
-          {CARD_DECK_FILTERS.map((f) => <button key={f.id} type="button" data-card-deck-filter={f.id} onClick={() => setFilter(f.id)} className={`rounded-full px-2 py-1 text-[11px] font-black ${filter === f.id ? 'bg-amber-300 text-slate-950' : 'border border-white/20 bg-slate-900 text-slate-300'}`}>{f.label}</button>)}
+        <div className={`${SCREEN_LIST_CLASS} pb-2 landscape:flex-1`}>
+          {view === 'mon' && <p className="mb-1 text-[11px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('3体えらびます。同じモンスターは1体まで(キラも同じモンスター)')}</p>}
+          {shown.length
+            ? <div data-card-deck-grid className="grid gap-1.5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))' }}>{shown.map(tile)}</div>
+            : <ScreenEmpty emoji="🃏" lines={view === 'deck' ? ['まだカードが入っていません', '「技など全部」から入れてください'] : ['当てはまるカードがありません']}/>}
         </div>
-      )}
-      <div className={`${SCREEN_LIST_CLASS} pb-2`}>
-        {tab === 'card' && (shownCards.length
-          ? <div className="grid grid-cols-4 gap-1.5">{shownCards.map((no) => tile(no, () => add(no)))}</div>
-          : <ScreenEmpty emoji="🃏" lines={['当てはまるカードがありません']}/>)}
-        {tab === 'mon' && (
-          <>
-            <p className="mb-1 text-[11px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('タップで入れる・上の枠をタップで外す。同じモンスターは1体まで(キラも同じモンスター)')}</p>
-            <div className="grid grid-cols-4 gap-1.5">{ownedMons.map((no) => tile(no, () => (deck.monsters.includes(no) ? removeOne(no) : add(no))))}</div>
-          </>
-        )}
-        {tab === 'deck' && (deckUnique.length
-          ? <>
-            <p className="mb-1 text-[11px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('タップで1枚外す・長押しで詳しく')}</p>
-            <div className="grid grid-cols-4 gap-1.5">{deckUnique.map((no) => tile(no, () => removeOne(no)))}</div>
-          </>
-          : <ScreenEmpty emoji="🃏" lines={['まだカードが入っていません', '「技・ブリーダー」から入れてください']}/>)}
       </div>
-      {/* 横画面では左の列に入るので、高さを詰めて「保存する/やめる」まで画面に収める(④・landscape-screens-check) */}
-      <div className={`${SCREEN_FOOTER_CLASS} grid grid-cols-2 gap-2`}>
-        <button type="button" data-card-deck-save className="mh-button mh-button-primary min-h-[52px] landscape:min-h-[44px] rounded-2xl font-black active:scale-[.98]" onClick={() => { Audio_.fgSe.tap(); onSave({ ...deck, name: (deck.name || '').trim() || 'デッキ' }); }}>保存する</button>
-        <button type="button" className="mh-button mh-button-secondary min-h-[52px] landscape:min-h-[44px] rounded-2xl border border-white/20 bg-slate-800 font-black active:scale-[.98]" onClick={() => (changed ? setLeave(true) : onCancel())}>やめる</button>
-      </div>
+      {!land && footer}
       {detail && <CardDetailModal db={db} no={detail} onClose={() => setDetail(null)}/>}
       {leave && <ConfirmSheet title="保存せずに戻りますか？" message="組みかえたところは消えます" confirmLabel="保存せずに戻る" danger onCancel={() => setLeave(false)} onConfirm={() => { setLeave(false); onCancel(); }}/>}
     </div>

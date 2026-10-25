@@ -12,6 +12,7 @@
 //   ⑥ 長押しで詳しい画面・捨て札の一覧が開いて閉じる
 //   ⑦ 投了すると結果が出て、カードポイントは増えない・戦績に投了が1つ付く
 //   ⑧ 既存の保存キー(mh_card_ 以外)を1つも書き換えていない
+//   ⑲ まんなかの吹き出しと記録が、行の高い字(iPhone のつもり)でも切れない(2026-10-25 社長の実機)
 const http = require('http');
 const path = require('path');
 const fs = require('fs');
@@ -275,10 +276,27 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       await page.mouse.up();
       return glow;
     };
+    // ⑲ まんなかの吹き出しと記録が切れない(2026-10-25 社長の実機「コメントが切れてる」)。
+    //   iPhone の字(ヒラギノ)は行が高いので、まんなかの字の行の高さを 1.6 にして、実機より厳しめの条件で測る
+    await page.addStyleTag({ content: '[data-card-stage], [data-card-stage] * { line-height: 1.6 !important; }' });
+    const stageClip = new Set(); let stageSamples = 0, stageBubbleSamples = 0;
+    const measureStage = async () => {
+      const r = await page.evaluate(() => {
+        const st = document.querySelector('[data-card-stage]'); if (!st) return null;
+        const sb = st.getBoundingClientRect(); const out = [];
+        const inside = (el, name) => { if (!el) return; const b = el.getBoundingClientRect(); if (b.top < sb.top - 1) out.push(`${name}の上が切れる(${Math.round(sb.top - b.top)}px)`); if (b.bottom > sb.bottom + 1) out.push(`${name}の下が切れる(${Math.round(b.bottom - sb.bottom)}px)`); };
+        const bubble = st.querySelector('[data-card-bubble]'), log = st.querySelector('[data-card-log]');
+        inside(bubble, '吹き出し'); inside(log, '記録');
+        if (log && log.lastElementChild) inside(log.lastElementChild, '記録の最後の行');
+        return { out, bubble: !!bubble };
+      }).catch(() => null);
+      if (!r) return; stageSamples += 1; if (r.bubble) stageBubbleSamples += 1; r.out.forEach((x) => stageClip.add(x));
+    };
     const deadline = Date.now() + 150000;
     while (Date.now() < deadline && (gutsTurns < 6 || (dragAttack === null && gutsTurns < 12))) {
       const mode = await page.locator('[data-card-battle]').getAttribute('data-card-mode').catch(() => null);
       if (mode === null) break;
+      await measureStage();
       (await page.locator('[data-card-pose]').evaluateAll((els) => els.map((e) => e.getAttribute('data-card-pose')))).forEach((x) => poseSeen.add(x));
       if ((await page.locator('[data-card-mon] [data-skill-fx]').count()) > 0) poseSeen.add('attack');
       if (mode === 'wait') { await page.waitForTimeout(150); continue; }
@@ -374,6 +392,8 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     check('⑫ 置けない所(自分の場)の上では光らない', dragNoGlow !== false, String(dragNoGlow));
     check('⑫ ガッツの置き場まで運ぶと、そのカードをガッツにする組に入れる', dragGuts === true, String(dragGuts));
     check(`⑨ ${VW}×${VH} で相手の場・まんなか・自分の場・手札・ボタンが重ならない`, layoutSeen.length === 0, layoutSeen.join(' / '));
+    check(`⑲ ${VW}×${VH}・行の高い字で、まんなかの吹き出しと記録が切れない`, stageSamples > 5 && stageBubbleSamples > 0 && stageClip.size === 0,
+      `${stageSamples}回測った(吹き出しあり ${stageBubbleSamples}回)${stageClip.size ? ' — ' + [...stageClip].join(' / ') : ''}`);
     check('⑩ 技を出すと、攻撃した子がモンヒロの技の動きをする', motionSeen || poseSeen.has('attack'), `見えた動き: ${[...poseSeen].join('・')}`);
     check('⑤ 自分の番を何ターンも進められる(技・守り・ガッツ)', gutsTurns >= 3 && errors.length === 0, `技 ${myActions} 回・守りの番 ${guards} 回・ターン終了 ${gutsTurns} 回`);
     // 捨て札の一覧
@@ -471,8 +491,8 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const monTiles = page.locator('[data-card-deck-tile]');
     for (let i = 0; i < 3; i++) await monTiles.nth(i).click();
     const monCount = await page.locator('[data-card-deck-mon] img').count();
-    // 同じ種類の2体目は入らない(キラがあれば)・技は「使える子だけ」で絞って入れる
-    await page.getByRole('tab', { name: /技・ブリーダー/ }).click();
+    // 同じ種類の2体目は入らない(キラがあれば)・技は「使える子だけ」で絞って入れる(タブはやめて、絞り込み1列。2026-10-25 案A)
+    await page.locator('[data-card-deck-filter="all"]').click();
     let sameNameStop = '', shortShot = false, shortProblems = '';
     for (let guard = 0; guard < 400; guard++) {
       const n = Number((await page.locator('[data-card-deck-count]').innerText()).replace(/\/.*$/, '').trim());
@@ -497,8 +517,18 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     await page.evaluate(() => document.querySelectorAll('[data-card-deck-edit] .mh-scroll').forEach((el) => { el.scrollTop = 0; }));
     if (SHOT) await shot(page, '19-deck-edit');
     const deckReady = await page.locator('[data-card-deck-ready]').getAttribute('data-card-deck-ready');
-    await page.getByRole('tab', { name: /デッキの中/ }).click();
+    // デッキに入れたものだけを出し、「−」で1枚外して「＋」で戻せる(外し方が見える。2026-10-25 社長「外し方がわからない」)
+    await page.locator('[data-card-deck-filter="deck"]').click();
     if (SHOT) await shot(page, '20-deck-inside');
+    const firstIn = await page.locator('[data-card-deck-grid] [data-card-deck-pick]').nth(3).getAttribute('data-card-deck-pick');
+    const inBefore = await page.locator(`[data-card-deck-in="${firstIn}"]`).innerText();
+    await page.locator(`[data-card-deck-minus="${firstIn}"]`).click();
+    const afterMinus = { n: await page.locator('[data-card-deck-count]').innerText(), inn: await page.locator(`[data-card-deck-in="${firstIn}"]`).innerText().catch(() => '') };
+    await page.locator(`[data-card-deck-plus="${firstIn}"]`).click();
+    const afterPlus = await page.locator('[data-card-deck-count]').innerText();
+    const monMinus = await page.locator('[data-card-deck-mon="0"] span').innerText().catch(() => '');
+    const chipsRows = await page.evaluate(() => { const el = document.querySelector('[data-card-deck-chips]'); const ys = new Set([...el.children].map((b) => Math.round(b.getBoundingClientRect().top))); return ys.size; });
+    check('⑭ デッキに入れたカードは「−」で1枚外れ、「＋」で戻る・上のモンスターにも「−」・絞り込みは1列', /^49/.test(afterMinus.n) && Number(afterMinus.inn.split('/')[0]) === Number(inBefore.split('/')[0]) - 1 && /^50/.test(afterPlus) && monMinus === '−' && chipsRows === 1, JSON.stringify({ firstIn, inBefore, afterMinus, afterPlus, monMinus, chipsRows }));
     await page.locator('[data-card-deck-save]').click();
     await page.waitForSelector('[data-card-deck-list]', { timeout: 5000 });
     const savedDecks = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_card_decks_v1') || 'null'));
