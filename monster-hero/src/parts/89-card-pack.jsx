@@ -3,8 +3,8 @@
 // ここは pure(画面・保存・乱数の元を持たない)。乱数は rand(0〜1 を返す関数)を外から渡す(検査で同じ並びを作れるように)
 //
 // 1パックの中身
-//   第1〜4弾 … 8枚・100カードポイント(5パックまとめて 450)。技の枠7・モンスターの枠1(最後にめくる)
-//   混血パック … 3枚・150カードポイント。3枚とも混血モンスター(キラは無い)
+//   第1〜4弾 … 8枚・300カードポイント(5パックまとめて 1,350。2026-10-25 社長「300で8枚」)。技の枠7・モンスターの枠1(最後にめくる)
+//   混血パック … 3枚・1,000カードポイント。3枚とも混血モンスター(キラは無い)
 // 技の枠: その弾の「準備中でない」カード(技・全モンスター・ブリーダー)から同じ確率で1枚。技にレア度の差は無い(社長)
 // モンスターの枠: まずレア度(第1弾 通常85%/キラ12%/別絵キラ3%・第2〜4弾 通常85%/キラ15%)、そのレア度のモンスターから1枚。
 //   まだ持っていない種族は2倍の重みで引く(持っていない種族が出やすいように)
@@ -12,17 +12,17 @@
 // だぶり(自動でカードポイントへ): 技カードは4枚目から1枚 5 / モンスターは2枚目から 50(キラ 100・別絵キラ 200)/ 混血は 20
 //   ★持てる枚数を超えた分だけをカードポイントにする(持っている分は減らさない)
 const CARD_PACKS = Object.freeze([
-  { id: 'w1', wave: '1', name: '第1弾パック', price: 100, bundle: { n: 5, price: 450 }, tech: 7, mon: 1, rarity: { normal: 85, kira: 12, alt: 3 }, pity: true, color: '#f59e0b' },
-  { id: 'w2', wave: '2', name: '第2弾パック', price: 100, bundle: { n: 5, price: 450 }, tech: 7, mon: 1, rarity: { normal: 85, kira: 15, alt: 0 }, pity: true, color: '#ef4444' },
-  { id: 'w3', wave: '3', name: '第3弾パック', price: 100, bundle: { n: 5, price: 450 }, tech: 7, mon: 1, rarity: { normal: 85, kira: 15, alt: 0 }, pity: true, color: '#22c55e' },
-  { id: 'w4', wave: '4', name: '第4弾パック', price: 100, bundle: { n: 5, price: 450 }, tech: 7, mon: 1, rarity: { normal: 85, kira: 15, alt: 0 }, pity: true, color: '#3b82f6' },
-  { id: 'hybrid', wave: 'hybrid', name: '混血パック', price: 150, bundle: null, tech: 0, mon: 3, rarity: { normal: 100, kira: 0, alt: 0 }, pity: false, color: '#a855f7' },
+  { id: 'w1', wave: '1', name: '第1弾パック', price: 300, bundle: { n: 5, price: 1350 }, tech: 7, mon: 1, rarity: { normal: 85, kira: 12, alt: 3 }, pity: true, color: '#f59e0b' },
+  { id: 'w2', wave: '2', name: '第2弾パック', price: 300, bundle: { n: 5, price: 1350 }, tech: 7, mon: 1, rarity: { normal: 85, kira: 15, alt: 0 }, pity: true, color: '#ef4444' },
+  { id: 'w3', wave: '3', name: '第3弾パック', price: 300, bundle: { n: 5, price: 1350 }, tech: 7, mon: 1, rarity: { normal: 85, kira: 15, alt: 0 }, pity: true, color: '#22c55e' },
+  { id: 'w4', wave: '4', name: '第4弾パック', price: 300, bundle: { n: 5, price: 1350 }, tech: 7, mon: 1, rarity: { normal: 85, kira: 15, alt: 0 }, pity: true, color: '#3b82f6' },
+  { id: 'hybrid', wave: 'hybrid', name: '混血パック', price: 1000, bundle: null, tech: 0, mon: 3, rarity: { normal: 100, kira: 0, alt: 0 }, pity: false, color: '#a855f7' },
 ]);
 const CARD_PACK_PITY_AT = 7;          // キラなしでこの数だけ開けたら、次のパックはキラ以上
 const CARD_TECH_KEEP_MAX = 3;         // 技カードは3枚まで持つ(4枚目からカードポイントへ)
 const CARD_DUP_POINT = Object.freeze({ tech: 5, normal: 50, kira: 100, alt: 200, hybrid: 20 });
 // 保存は CARD_SAVE_KEYS.pity(mh_card_pack_pity_v1 { パックid: 数 })と CARD_SAVE_KEYS.shop(mh_card_shop_v1 { starters: { キット: 時刻 } })
-const CARD_STARTER_SHOP_PRICE = 500;
+const CARD_STARTER_SHOP_PRICE = 1500;   // 2026-10-25 社長(以前は500)
 
 const cardPackOf = (id) => CARD_PACKS.find((p) => p.id === id) || null;
 // モンスターカードのレア度(通常・キラ・別絵キラ)。水中のグジラは通常/キラのあつかい
@@ -113,7 +113,29 @@ const cardPackRates = (db, packId) => {
   return { pack, techKinds: tech, techEach: tech ? 1 / tech : 0, mons, rarity: pack.rarity };
 };
 
-// 選ばなかったスターターキットを買う(1つにつき1回・500)。持っていた分を超えるカードは、パックと同じ決まりでカードポイントへ
+// 提供割合の表(カード1枚ずつ)。collection … いまの持ち物(まだ持っていない種族は2倍の重みなので、出やすさは持ち物で変わる)
+//   tech … 技などの枠の1枠ごとの割合(どれも同じ) / mon … モンスターの枠の1枠ごとの割合(レア度の割合 × そのレア度の中の重み)
+//   天井で「キラ以上」になる枠は入れていない(ふつうに開けたときの割合)
+const cardPackCardRates = (db, packId, collection) => {
+  const pack = cardPackOf(packId);
+  if (!pack) return null;
+  const techPool = pack.tech > 0 ? cardPackTechPool(db, pack) : [];
+  const tech = techPool.map((no) => ({ no, p: 1 / techPool.length }));
+  const rar = Object.entries(pack.rarity).filter(([k, w]) => w > 0 && cardPackMonPool(db, pack, k).length);
+  const rarTotal = rar.reduce((a, [, w]) => a + w, 0);
+  const rarity = {};
+  const mon = [];
+  rar.forEach(([k, w]) => {
+    const pool = cardPackMonPool(db, pack, k);
+    const wOf = (no) => (cardOwnsSpecies(db, collection, (cardMonsterOf(db, no) || {}).species) ? 1 : 2);
+    const sum = pool.reduce((a, no) => a + wOf(no), 0);
+    rarity[k] = w / rarTotal;
+    pool.forEach((no) => mon.push({ no, rarity: k, p: (w / rarTotal) * (wOf(no) / sum), boosted: wOf(no) === 2 }));
+  });
+  return { pack, tech, mon, rarity };
+};
+
+// 選ばなかったスターターキットを買う(1つにつき1回・CARD_STARTER_SHOP_PRICE)。持っていた分を超えるカードは、パックと同じ決まりでカードポイントへ
 //   デッキも1つ足す(5つに満たないとき)。返す: { collection, decks, point, shop, dupPoint } / 買えないとき null
 const cardBuyStarter = (db, kitId, { collection, decks, point, starter, shop }, now) => {
   const kit = db.starters[kitId];

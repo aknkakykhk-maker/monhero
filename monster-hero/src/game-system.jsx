@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9fc02fb52ff714a8
+// generated-sha256: 5d531cee74b928d4
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-25 17:19"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-25 17:49"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -33409,8 +33409,8 @@ function BreederMarketScreen({
         return <>
           {renderSectionTabs('card')}
           <div className={SCREEN_LIST_CLASS} data-card-shop data-card-shop-tab={tab}>
-            {tab==='pack'&&<CardShopPacks db={CARD_BATTLE_DATA} point={cp} busy={busy||cardShop.busy} onBuyPack={cardShop.onBuyPack}/>}
-            {tab==='starter'&&<CardShopStarters db={CARD_BATTLE_DATA} point={cp} busy={busy||cardShop.busy} starter={cardShop.starter} shop={cardShop.shop} onBuyStarter={cardShop.onBuyStarter}/>}
+            {tab==='pack'&&<CardShopPacks db={CARD_BATTLE_DATA} point={cp} busy={busy||cardShop.busy} collection={cardShop.collection} onBuyPack={cardShop.onBuyPack}/>}
+            {tab==='starter'&&<CardShopStarters db={CARD_BATTLE_DATA} point={cp} collection={cardShop.collection} busy={busy||cardShop.busy} starter={cardShop.starter} shop={cardShop.shop} onBuyStarter={cardShop.onBuyStarter}/>}
             {/* 円盤石・アシストカードは、ビートP交換所と同じ物を同じ値段(1,500)で並べる(社長 台帳 #3405)。一覧はビートP交換所のものをそのまま引く */}
             {(tab==='disc'||tab==='assist')&&<div className={MARKET_GRID_CLASS}>
               {tab==='disc'&&RHYTHM_EVENT_POINT_SHOP_DISC_OFFERS.map(offer=>{
@@ -51686,8 +51686,8 @@ const CARD_RULE_PAGES = Object.freeze([
 // ここは pure(画面・保存・乱数の元を持たない)。乱数は rand(0〜1 を返す関数)を外から渡す(検査で同じ並びを作れるように)
 //
 // 1パックの中身
-//   第1〜4弾 … 8枚・100カードポイント(5パックまとめて 450)。技の枠7・モンスターの枠1(最後にめくる)
-//   混血パック … 3枚・150カードポイント。3枚とも混血モンスター(キラは無い)
+//   第1〜4弾 … 8枚・300カードポイント(5パックまとめて 1,350。2026-10-25 社長「300で8枚」)。技の枠7・モンスターの枠1(最後にめくる)
+//   混血パック … 3枚・1,000カードポイント。3枚とも混血モンスター(キラは無い)
 // 技の枠: その弾の「準備中でない」カード(技・全モンスター・ブリーダー)から同じ確率で1枚。技にレア度の差は無い(社長)
 // モンスターの枠: まずレア度(第1弾 通常85%/キラ12%/別絵キラ3%・第2〜4弾 通常85%/キラ15%)、そのレア度のモンスターから1枚。
 //   まだ持っていない種族は2倍の重みで引く(持っていない種族が出やすいように)
@@ -51695,17 +51695,17 @@ const CARD_RULE_PAGES = Object.freeze([
 // だぶり(自動でカードポイントへ): 技カードは4枚目から1枚 5 / モンスターは2枚目から 50(キラ 100・別絵キラ 200)/ 混血は 20
 //   ★持てる枚数を超えた分だけをカードポイントにする(持っている分は減らさない)
 const CARD_PACKS = Object.freeze([
-  { id: 'w1', wave: '1', name: '第1弾パック', price: 100, bundle: { n: 5, price: 450 }, tech: 7, mon: 1, rarity: { normal: 85, kira: 12, alt: 3 }, pity: true, color: '#f59e0b' },
-  { id: 'w2', wave: '2', name: '第2弾パック', price: 100, bundle: { n: 5, price: 450 }, tech: 7, mon: 1, rarity: { normal: 85, kira: 15, alt: 0 }, pity: true, color: '#ef4444' },
-  { id: 'w3', wave: '3', name: '第3弾パック', price: 100, bundle: { n: 5, price: 450 }, tech: 7, mon: 1, rarity: { normal: 85, kira: 15, alt: 0 }, pity: true, color: '#22c55e' },
-  { id: 'w4', wave: '4', name: '第4弾パック', price: 100, bundle: { n: 5, price: 450 }, tech: 7, mon: 1, rarity: { normal: 85, kira: 15, alt: 0 }, pity: true, color: '#3b82f6' },
-  { id: 'hybrid', wave: 'hybrid', name: '混血パック', price: 150, bundle: null, tech: 0, mon: 3, rarity: { normal: 100, kira: 0, alt: 0 }, pity: false, color: '#a855f7' },
+  { id: 'w1', wave: '1', name: '第1弾パック', price: 300, bundle: { n: 5, price: 1350 }, tech: 7, mon: 1, rarity: { normal: 85, kira: 12, alt: 3 }, pity: true, color: '#f59e0b' },
+  { id: 'w2', wave: '2', name: '第2弾パック', price: 300, bundle: { n: 5, price: 1350 }, tech: 7, mon: 1, rarity: { normal: 85, kira: 15, alt: 0 }, pity: true, color: '#ef4444' },
+  { id: 'w3', wave: '3', name: '第3弾パック', price: 300, bundle: { n: 5, price: 1350 }, tech: 7, mon: 1, rarity: { normal: 85, kira: 15, alt: 0 }, pity: true, color: '#22c55e' },
+  { id: 'w4', wave: '4', name: '第4弾パック', price: 300, bundle: { n: 5, price: 1350 }, tech: 7, mon: 1, rarity: { normal: 85, kira: 15, alt: 0 }, pity: true, color: '#3b82f6' },
+  { id: 'hybrid', wave: 'hybrid', name: '混血パック', price: 1000, bundle: null, tech: 0, mon: 3, rarity: { normal: 100, kira: 0, alt: 0 }, pity: false, color: '#a855f7' },
 ]);
 const CARD_PACK_PITY_AT = 7;          // キラなしでこの数だけ開けたら、次のパックはキラ以上
 const CARD_TECH_KEEP_MAX = 3;         // 技カードは3枚まで持つ(4枚目からカードポイントへ)
 const CARD_DUP_POINT = Object.freeze({ tech: 5, normal: 50, kira: 100, alt: 200, hybrid: 20 });
 // 保存は CARD_SAVE_KEYS.pity(mh_card_pack_pity_v1 { パックid: 数 })と CARD_SAVE_KEYS.shop(mh_card_shop_v1 { starters: { キット: 時刻 } })
-const CARD_STARTER_SHOP_PRICE = 500;
+const CARD_STARTER_SHOP_PRICE = 1500;   // 2026-10-25 社長(以前は500)
 
 const cardPackOf = (id) => CARD_PACKS.find((p) => p.id === id) || null;
 // モンスターカードのレア度(通常・キラ・別絵キラ)。水中のグジラは通常/キラのあつかい
@@ -51796,7 +51796,29 @@ const cardPackRates = (db, packId) => {
   return { pack, techKinds: tech, techEach: tech ? 1 / tech : 0, mons, rarity: pack.rarity };
 };
 
-// 選ばなかったスターターキットを買う(1つにつき1回・500)。持っていた分を超えるカードは、パックと同じ決まりでカードポイントへ
+// 提供割合の表(カード1枚ずつ)。collection … いまの持ち物(まだ持っていない種族は2倍の重みなので、出やすさは持ち物で変わる)
+//   tech … 技などの枠の1枠ごとの割合(どれも同じ) / mon … モンスターの枠の1枠ごとの割合(レア度の割合 × そのレア度の中の重み)
+//   天井で「キラ以上」になる枠は入れていない(ふつうに開けたときの割合)
+const cardPackCardRates = (db, packId, collection) => {
+  const pack = cardPackOf(packId);
+  if (!pack) return null;
+  const techPool = pack.tech > 0 ? cardPackTechPool(db, pack) : [];
+  const tech = techPool.map((no) => ({ no, p: 1 / techPool.length }));
+  const rar = Object.entries(pack.rarity).filter(([k, w]) => w > 0 && cardPackMonPool(db, pack, k).length);
+  const rarTotal = rar.reduce((a, [, w]) => a + w, 0);
+  const rarity = {};
+  const mon = [];
+  rar.forEach(([k, w]) => {
+    const pool = cardPackMonPool(db, pack, k);
+    const wOf = (no) => (cardOwnsSpecies(db, collection, (cardMonsterOf(db, no) || {}).species) ? 1 : 2);
+    const sum = pool.reduce((a, no) => a + wOf(no), 0);
+    rarity[k] = w / rarTotal;
+    pool.forEach((no) => mon.push({ no, rarity: k, p: (w / rarTotal) * (wOf(no) / sum), boosted: wOf(no) === 2 }));
+  });
+  return { pack, tech, mon, rarity };
+};
+
+// 選ばなかったスターターキットを買う(1つにつき1回・CARD_STARTER_SHOP_PRICE)。持っていた分を超えるカードは、パックと同じ決まりでカードポイントへ
 //   デッキも1つ足す(5つに満たないとき)。返す: { collection, decks, point, shop, dupPoint } / 買えないとき null
 const cardBuyStarter = (db, kitId, { collection, decks, point, starter, shop }, now) => {
   const kit = db.starters[kitId];
@@ -54049,69 +54071,186 @@ const CardPackOpen = ({ db, result, onDone }) => {
 // ==================== マーケットの「カードポイント」の売り場: パックとスターターキット(区切り2) ====================
 // 55-screen-breeder-market.jsx の「カードポイント」の売り場から出す。円盤石・アシストカードは 55 側(ビートP交換所と同じ並べ方)
 // onBuyPack(packId, count) / onBuyStarter(kitId) … 60-app が保存して、パックならパックを開ける画面へ進む
-const CardShopPacks = ({ db, point, busy, onBuyPack }) => {
-  const [rates, setRates] = useState(null);
+// ---- パック・スターターキットの中身と提供割合(2026-10-25 社長「中身が分かるように」。手本はガチャのピックアップ詳細・提供割合) ----
+// どれもカードを押すと詳しい画面(CardDetailModal)。持っていないカードには「未取得」の印
+const cardShopName = (db, no) => { const c = cardOf(db, no); const m = c ? null : cardMonsterOf(db, no); return c ? c.name : m ? m.name : no; };
+const cardShopImg = (db, no) => { const c = cardOf(db, no); const m = c ? null : cardMonsterOf(db, no); return CARD_IMG(c ? c.img : m ? m.img : no); };
+const CARD_RARITY_ORDER = Object.freeze({ alt: 0, kira: 1, normal: 2 });
+// 詳しい画面は一覧の外に置く(中に置くと、詳しい画面を閉じるタップが一覧の背景まで届いて、一覧も閉じた)
+const CardShopSheet = ({ title, onClose, children, detail, setDetail, db, tag }) => (
+  <>
+  <div data-card-shop-sheet={tag} role="dialog" aria-modal="true" aria-label={title} onClick={onClose} className="fixed inset-0 flex items-center justify-center p-3" style={{ zIndex: MODAL_Z.dialog, backgroundColor: 'rgba(2,6,23,0.88)' }}>
+    <div onClick={(e) => e.stopPropagation()} className="flex max-h-full w-full max-w-[460px] flex-col rounded-3xl border-2 border-amber-300/70 bg-slate-950 text-white shadow-2xl landscape:max-w-[720px]">
+      <div className="shrink-0 rounded-t-[22px] bg-amber-300/15 px-3 py-2 text-center text-[15px] font-black text-amber-100" style={JA_WRAP_STYLE}>{jaWrap(title)}</div>
+      <div className="min-h-0 flex-1 overflow-y-auto px-3 py-2">{children}</div>
+      <div className="shrink-0 p-2"><button type="button" data-card-shop-sheet-close onClick={onClose} className="mh-button mh-button-primary min-h-[46px] w-full rounded-2xl text-[14px] font-black active:scale-[.98] landscape:min-h-[40px]">とじる</button></div>
+    </div>
+  </div>
+  {detail && <CardDetailModal db={db} no={detail} onClose={() => setDetail(null)}/>}
+  </>
+);
+// 中身の一覧(絵の並び)。rows: [{ no, count?, rarity? }]
+const CardShopGrid = ({ db, rows, collection, onTap }) => (
+  <div className="grid grid-cols-4 gap-1.5 landscape:grid-cols-7">
+    {rows.map(({ no, count, rarity }) => {
+      const missing = !((collection || {})[no] > 0);
+      return (
+        <button key={no} type="button" data-card-shop-item={no} data-card-shop-missing={missing ? '1' : undefined} onClick={() => onTap(no)} className="relative flex flex-col items-center rounded-lg bg-white/5 p-0.5 text-center active:scale-95">
+          <span className="relative block w-full">
+            <img src={cardShopImg(db, no)} alt={cardShopName(db, no)} className="aspect-[5/7] w-full rounded-[5px] object-cover"/>
+            {missing && <span data-card-shop-missing-badge className="absolute left-0.5 top-0.5 rounded-md bg-rose-600 px-1 text-[9px] font-black text-white shadow">未取得</span>}
+            {rarity && rarity !== 'normal' && <span className="absolute bottom-0.5 left-0.5 rounded-md bg-amber-300 px-1 text-[9px] font-black text-slate-950">{CARD_RARITY_LABEL[rarity]}</span>}
+            {count > 1 && <span className="absolute bottom-0.5 right-0.5 rounded-md bg-slate-950/90 px-1 text-[10px] font-black text-white">×{count}</span>}
+          </span>
+          <CardNameFit name={cardShopName(db, no)} className="mt-0.5 font-bold leading-tight text-slate-100"/>
+        </button>
+      );
+    })}
+  </div>
+);
+const CardShopHead = ({ children }) => <div className="mb-1 mt-2 rounded-md bg-sky-400/20 px-2 py-0.5 text-[12px] font-black text-sky-100 first:mt-0">■ {children}</div>;
+const cardShopPct = (x) => `${(x * 100).toFixed(3)}%`;
+const CardPackContents = ({ db, pack, collection, onClose }) => {
+  const [detail, setDetail] = useState(null);
+  const r = cardPackCardRates(db, pack.id, collection);
+  const mons = r.mon.slice().sort((a, b) => CARD_RARITY_ORDER[a.rarity] - CARD_RARITY_ORDER[b.rarity] || String(a.no).localeCompare(String(b.no)));
+  const missing = [...mons, ...r.tech].filter((x) => !((collection || {})[x.no] > 0)).length;
+  return (
+    <CardShopSheet tag="contents" title={`${pack.name}の中身`} onClose={onClose} detail={detail} setDetail={setDetail} db={db}>
+      <p className="text-[11px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{jaWrap(`このパックで出るカードです(${mons.length + r.tech.length}種類・まだ持っていないもの ${missing}種類)。押すとくわしく見られます。`)}</p>
+      <CardShopHead>モンスター({pack.mon}枚の枠・{mons.length}種類)</CardShopHead>
+      <CardShopGrid db={db} rows={mons} collection={collection} onTap={setDetail}/>
+      {r.tech.length > 0 && <><CardShopHead>技など({pack.tech}枚の枠・{r.tech.length}種類)</CardShopHead><CardShopGrid db={db} rows={r.tech} collection={collection} onTap={setDetail}/></>}
+    </CardShopSheet>
+  );
+};
+const CardPackRateSheet = ({ db, pack, collection, onClose }) => {
+  const [detail, setDetail] = useState(null);
+  const r = cardPackCardRates(db, pack.id, collection);
+  const mons = r.mon.slice().sort((a, b) => CARD_RARITY_ORDER[a.rarity] - CARD_RARITY_ORDER[b.rarity] || b.p - a.p || String(a.no).localeCompare(String(b.no)));
+  const th = 'border border-white/15 bg-amber-200/15 px-1 py-0.5 text-[11px] font-black text-amber-100';
+  const td = 'border border-white/10 px-1 py-0.5 text-[11px] font-bold';
+  const rarLabel = (k) => CARD_RARITY_LABEL[k] || '通常';
+  const rows = (list) => list.map((x) => (
+    <tr key={x.no} data-card-rate-row={x.no} onClick={() => setDetail(x.no)} className="cursor-pointer active:bg-white/10">
+      <td className={`${td} text-center`}>{x.rarity ? rarLabel(x.rarity) : '技など'}</td>
+      <td className={td}><span className="flex items-center gap-1"><img src={cardShopImg(db, x.no)} alt="" loading="lazy" className="h-[28px] w-[20px] shrink-0 rounded-[2px] object-cover"/><span className="min-w-0" style={JA_WRAP_STYLE}>{cardShopName(db, x.no)}</span>{x.boosted && <span className="shrink-0 rounded bg-emerald-700 px-1 text-[9px] font-black">2倍</span>}</span></td>
+      <td className={`${td} text-right tabular-nums`}>{cardShopPct(x.p)}</td>
+    </tr>
+  ));
+  const notes = [
+    `1パックは${pack.tech ? `技などの枠${pack.tech}枚と、` : ''}モンスターの枠${pack.mon}枚です。割合は、枠1つごとの割合です。`,
+    pack.tech ? `技などの枠は、${r.tech.length}種類から同じ割合で出ます。` : null,
+    pack.mon && Object.keys(r.rarity).length > 1 ? 'モンスターの枠は、まずレア度を決めてから、そのレア度のモンスターから1枚出ます。' : null,
+    pack.id === 'hybrid' ? '3枚とも混血モンスターです。キラはありません。' : null,
+    '「2倍」の印は、まだ持っていない種族のモンスターです(持っている種族の2倍出やすくなります)。表の割合は、いまの持ち物での割合です。',
+    pack.pity ? `このパックでキラも別絵キラも出ないまま${CARD_PACK_PITY_AT}パック開けると、つぎのパックのモンスターの枠は必ずキラ以上になります(天井)。` : null,
+    `だぶったカードはカードポイントになります(技などは4枚目から1枚${CARD_DUP_POINT.tech}・モンスターは2枚目から${pack.id === 'hybrid' ? CARD_DUP_POINT.hybrid : `${CARD_DUP_POINT.normal}〔キラ${CARD_DUP_POINT.kira}・別絵キラ${CARD_DUP_POINT.alt}〕`})。`,
+    '準備中のカードは出ません。',
+  ].filter(Boolean);
+  return (
+    <CardShopSheet tag="rates" title={`${pack.name} 提供割合`} onClose={onClose} detail={detail} setDetail={setDetail} db={db}>
+      <CardShopHead>レア度ごとの割合(モンスターの枠)</CardShopHead>
+      <table data-card-rate-rarity className="w-full border-collapse text-slate-100">
+        <thead><tr><th className={th}>レア度</th><th className={th}>割合</th></tr></thead>
+        <tbody>{['normal', 'kira', 'alt'].filter((k) => r.rarity[k] > 0).map((k) => <tr key={k}><td className={`${td} text-center`}>{rarLabel(k)}</td><td className={`${td} text-right tabular-nums`}>{cardShopPct(r.rarity[k])}</td></tr>)}</tbody>
+      </table>
+      <div className="mt-1 space-y-0.5">{notes.map((t, i) => <p key={i} className="text-[10.5px] font-bold leading-snug text-slate-300" style={JA_WRAP_STYLE}>※{jaWrap(t)}</p>)}</div>
+      <CardShopHead>カード1枚ずつの割合(モンスターの枠)</CardShopHead>
+      <table data-card-rate-mon className="w-full table-fixed border-collapse text-slate-100">
+        <colgroup><col className="w-[4.2em]"/><col/><col className="w-[5.6em]"/></colgroup>
+        <thead><tr><th className={th}>レア度</th><th className={th}>カード</th><th className={th}>割合</th></tr></thead>
+        <tbody>{rows(mons)}</tbody>
+      </table>
+      {r.tech.length > 0 && <>
+        <CardShopHead>カード1枚ずつの割合(技などの枠)</CardShopHead>
+        <table data-card-rate-tech className="w-full table-fixed border-collapse text-slate-100">
+          <colgroup><col className="w-[4.2em]"/><col/><col className="w-[5.6em]"/></colgroup>
+          <thead><tr><th className={th}>種類</th><th className={th}>カード</th><th className={th}>割合</th></tr></thead>
+          <tbody>{rows(r.tech)}</tbody>
+        </table>
+      </>}
+    </CardShopSheet>
+  );
+};
+const CardStarterContents = ({ db, kit, collection, onClose }) => {
+  const [detail, setDetail] = useState(null);
+  const counts = {};
+  kit.cards.forEach((no) => { counts[no] = (counts[no] || 0) + 1; });
+  const cards = Object.keys(counts).map((no) => ({ no, count: counts[no] }));
+  return (
+    <CardShopSheet tag="starter" title={`${kit.name}の中身`} onClose={onClose} detail={detail} setDetail={setDetail} db={db}>
+      <p className="text-[11px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('このキットに入っているカードです。押すとくわしく見られます。')}</p>
+      <CardShopHead>モンスター(3枚)</CardShopHead>
+      <CardShopGrid db={db} rows={kit.monsters.map((no) => ({ no, rarity: cardMonRarity(cardMonsterOf(db, no)) }))} collection={collection} onTap={setDetail}/>
+      <CardShopHead>カード({kit.cards.length}枚・{cards.length}種類)</CardShopHead>
+      <CardShopGrid db={db} rows={cards} collection={collection} onTap={setDetail}/>
+    </CardShopSheet>
+  );
+};
+
+const CardShopPacks = ({ db, point, busy, collection = null, onBuyPack }) => {
+  const [sheet, setSheet] = useState(null);   // { kind:'contents'|'rates', pack }
   const [confirm, setConfirm] = useState(null);
-  const pct = (x) => `${(Math.round(x * 1000) / 10).toFixed(1)}%`;
   return (
     <div data-card-shop-packs className="space-y-2 pb-2">
-      {CARD_PACKS.map((pack) => {
-        const r = cardPackRates(db, pack.id);
-        return (
-          <div key={pack.id} data-card-shop-pack={pack.id} className={SCREEN_PANEL_CLASS} style={{ borderColor: `${pack.color}88` }}>
-            <div className="flex items-center gap-2">
-              <CardPackArt db={db} pack={pack} width={58} className="shrink-0 !rounded-[8px] !border-2"/>
-              <div className="min-w-0 flex-1">
-                <div className="text-[14px] font-black text-white">{pack.name}</div>
-                <div className="text-[11px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{jaWrap(pack.tech ? `${pack.tech + pack.mon}枚入り(技など${pack.tech}枚・モンスター${pack.mon}枚)` : `${pack.mon}枚入り(3枚とも混血モンスター)`)}</div>
-                <button type="button" data-card-shop-rates={pack.id} onClick={() => setRates(rates === pack.id ? null : pack.id)} className="mt-0.5 text-[11px] font-black text-sky-300 underline">出る確率を見る</button>
+      {CARD_PACKS.map((pack) => (
+        <div key={pack.id} data-card-shop-pack={pack.id} className={SCREEN_PANEL_CLASS} style={{ borderColor: `${pack.color}88` }}>
+          <div className="flex items-center gap-2">
+            <CardPackArt db={db} pack={pack} width={58} className="shrink-0 !rounded-[8px] !border-2"/>
+            <div className="min-w-0 flex-1">
+              <div className="text-[14px] font-black text-white">{pack.name}</div>
+              <div className="text-[11px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{jaWrap(pack.tech ? `${pack.tech + pack.mon}枚入り(技など${pack.tech}枚・モンスター${pack.mon}枚)` : `${pack.mon}枚入り(3枚とも混血モンスター)`)}</div>
+              <div className="mt-1 flex gap-1.5">
+                <button type="button" data-card-shop-contents={pack.id} onClick={() => setSheet({ kind: 'contents', pack })} className="min-h-[30px] rounded-lg border border-sky-300/60 bg-sky-900/50 px-2 text-[11px] font-black text-sky-100 active:scale-95">中身を見る</button>
+                <button type="button" data-card-shop-rates={pack.id} onClick={() => setSheet({ kind: 'rates', pack })} className="min-h-[30px] rounded-lg border border-amber-300/60 bg-amber-900/40 px-2 text-[11px] font-black text-amber-100 active:scale-95">提供割合</button>
               </div>
-            </div>
-            {rates === pack.id && r && (
-              <div data-card-shop-rate-table className="mt-1.5 space-y-0.5 rounded-lg bg-black/30 p-2 text-[11px] font-bold leading-relaxed text-slate-200" style={JA_WRAP_STYLE}>
-                {[
-                  pack.tech > 0 ? `技などの枠(1パック${pack.tech}枚): ${r.techKinds}種類から同じ確率(1種類 ${pct(r.techEach)})。《準備中のカード》は出ません` : null,
-                  `モンスターの枠(1パック${pack.mon}枚): 通常 ${pack.rarity.normal}%${pack.rarity.kira ? `・キラ ${pack.rarity.kira}%` : ''}${pack.rarity.alt ? `・別絵キラ ${pack.rarity.alt}%` : ''}(通常${r.mons.normal}種${r.mons.kira ? `・キラ${r.mons.kira}種` : ''}${r.mons.alt ? `・別絵キラ${r.mons.alt}種` : ''})。まだ持っていない種族は《2倍出やすい》`,
-                  pack.pity ? `キラも別絵キラも出ないまま${CARD_PACK_PITY_AT}パック開けたら、つぎのパックは《キラ以上》` : null,
-                  `だぶったカードはカードポイントになります(技など4枚目から${CARD_DUP_POINT.tech}・モンスター2枚目から${pack.id === 'hybrid' ? CARD_DUP_POINT.hybrid : `${CARD_DUP_POINT.normal}〔キラ${CARD_DUP_POINT.kira}・別絵キラ${CARD_DUP_POINT.alt}〕`})`,
-                ].filter(Boolean).map((t, i) => <div key={i}>{cardRuleLine(t)}</div>)}
-              </div>
-            )}
-            <div className={`mt-2 grid gap-1.5 ${pack.bundle ? 'grid-cols-2' : 'grid-cols-1'}`}>
-              <button type="button" data-card-shop-buy={`${pack.id}-1`} disabled={busy || point < pack.price} onClick={() => setConfirm({ pack, count: 1 })} className="mh-button min-h-[44px] rounded-xl bg-orange-500 text-[13px] font-black text-white active:scale-[.98] disabled:opacity-40">1パック {pack.price}</button>
-              {pack.bundle && <button type="button" data-card-shop-buy={`${pack.id}-${pack.bundle.n}`} disabled={busy || point < pack.bundle.price} onClick={() => setConfirm({ pack, count: pack.bundle.n })} className="mh-button min-h-[44px] rounded-xl bg-orange-600 text-[13px] font-black text-white active:scale-[.98] disabled:opacity-40">{pack.bundle.n}パック {pack.bundle.price}<span className="block text-[9px] font-bold">({pack.price * pack.bundle.n - pack.bundle.price}おトク)</span></button>}
             </div>
           </div>
-        );
-      })}
-      {confirm && <ConfirmSheet title={`${confirm.pack.name}を${confirm.count}パック買いますか？`} message={`カードポイント ${cardPackPrice(confirm.pack, confirm.count)} を使います(いま ${point})`} confirmLabel="買って開ける" onCancel={() => setConfirm(null)} onConfirm={() => { const c = confirm; setConfirm(null); void onBuyPack(c.pack.id, c.count); }}/>}
+          <div className={`mt-2 grid gap-1.5 ${pack.bundle ? 'grid-cols-2' : 'grid-cols-1'}`}>
+            <button type="button" data-card-shop-buy={`${pack.id}-1`} disabled={busy || point < pack.price} onClick={() => setConfirm({ pack, count: 1 })} className="mh-button min-h-[44px] rounded-xl bg-orange-500 text-[13px] font-black text-white active:scale-[.98] disabled:opacity-40">1パック {pack.price.toLocaleString()}</button>
+            {pack.bundle && <button type="button" data-card-shop-buy={`${pack.id}-${pack.bundle.n}`} disabled={busy || point < pack.bundle.price} onClick={() => setConfirm({ pack, count: pack.bundle.n })} className="mh-button min-h-[44px] rounded-xl bg-orange-600 text-[13px] font-black text-white active:scale-[.98] disabled:opacity-40">{pack.bundle.n}パック {pack.bundle.price.toLocaleString()}<span className="block text-[9px] font-bold">({(pack.price * pack.bundle.n - pack.bundle.price).toLocaleString()}おトク)</span></button>}
+          </div>
+        </div>
+      ))}
+      {sheet && sheet.kind === 'contents' && <CardPackContents db={db} pack={sheet.pack} collection={collection} onClose={() => setSheet(null)}/>}
+      {sheet && sheet.kind === 'rates' && <CardPackRateSheet db={db} pack={sheet.pack} collection={collection} onClose={() => setSheet(null)}/>}
+      {confirm && <ConfirmSheet title={`${confirm.pack.name}を${confirm.count}パック買いますか？`} message={`カードポイント ${cardPackPrice(confirm.pack, confirm.count).toLocaleString()} を使います(いま ${point.toLocaleString()})`} confirmLabel="買って開ける" onCancel={() => setConfirm(null)} onConfirm={() => { const c = confirm; setConfirm(null); void onBuyPack(c.pack.id, c.count); }}/>}
     </div>
   );
 };
-const CardShopStarters = ({ db, point, busy, starter, shop, onBuyStarter }) => {
+const CardShopStarters = ({ db, point, busy, starter, shop, collection = null, onBuyStarter }) => {
   const [confirm, setConfirm] = useState(null);
   const [done, setDone] = useState('');
-  const kits = Object.values(db.starters).filter((k) => !starter || k.id !== starter.kit);
+  const [view, setView] = useState(null);
+  // 持っているキット(はじめに選んだもの・買ったもの)も並べて、中身を見られるようにする(買えない)
+  const kits = Object.values(db.starters);
+  const price = CARD_STARTER_SHOP_PRICE.toLocaleString();
   return (
     <div data-card-shop-starters className="space-y-2 pb-2">
       {done && <div data-card-shop-starter-done className="rounded-xl border border-emerald-400/40 bg-emerald-950/40 px-3 py-2 text-[12px] font-black text-emerald-200" style={JA_WRAP_STYLE}>{jaWrap(done)}</div>}
-      <p className="text-[11px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap(`はじめに選ばなかったスターターキット。1つにつき1回、${CARD_STARTER_SHOP_PRICE}カードポイント。デッキも1つ増えます`)}</p>
+      <p className="text-[11px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap(`スターターキットは1つにつき1回、${price}カードポイントで買えます。買うとデッキも1つ増えます。どのキットも中身を見られます。`)}</p>
       {kits.map((k) => {
-        const bought = !!(shop && shop.starters && shop.starters[k.id]);
+        const owned = !!((starter && starter.kit === k.id) || (shop && shop.starters && shop.starters[k.id]));
         return (
-          <div key={k.id} data-card-shop-starter={k.id} className={SCREEN_PANEL_CLASS}>
+          <div key={k.id} data-card-shop-starter={k.id} data-card-shop-starter-owned={owned ? '1' : undefined} className={SCREEN_PANEL_CLASS}>
             <div className="flex items-center gap-2">
               <div className="flex shrink-0 gap-0.5">{k.monsters.map((no) => { const m = cardMonsterOf(db, no); return m ? <img key={no} src={CARD_IMG(m.img)} alt={m.name} className="h-[52px] w-[37px] rounded-[4px] object-cover"/> : null; })}</div>
               <div className="min-w-0 flex-1">
-                <div className="text-[13px] font-black text-white" style={JA_WRAP_STYLE}>{jaWrap(k.name)}</div>
+                <div className="flex flex-wrap items-center gap-1">
+                  <span className="whitespace-nowrap text-[13px] font-black text-white">{k.name}</span>
+                  {owned && <span data-card-shop-starter-owned-badge className="rounded-full bg-emerald-500 px-1.5 text-[10px] font-black text-slate-950">持っています</span>}
+                </div>
                 <div className="text-[11px] font-bold text-slate-300">モンスター3枚・カード{k.cards.length}枚</div>
+                <button type="button" data-card-shop-starter-contents={k.id} onClick={() => setView(k)} className="mt-1 min-h-[30px] rounded-lg border border-sky-300/60 bg-sky-900/50 px-2 text-[11px] font-black text-sky-100 active:scale-95">中身を見る</button>
               </div>
             </div>
-            <button type="button" data-card-shop-starter-buy={k.id} disabled={bought || busy || point < CARD_STARTER_SHOP_PRICE} onClick={() => setConfirm(k)} className="mh-button mt-2 min-h-[44px] w-full rounded-xl bg-orange-500 text-[13px] font-black text-white active:scale-[.98] disabled:opacity-40">{bought ? '買いました' : `${CARD_STARTER_SHOP_PRICE}カードポイント`}</button>
+            <button type="button" data-card-shop-starter-buy={k.id} disabled={owned || busy || point < CARD_STARTER_SHOP_PRICE} onClick={() => setConfirm(k)} className="mh-button mt-2 min-h-[44px] w-full rounded-xl bg-orange-500 text-[13px] font-black text-white active:scale-[.98] disabled:opacity-40">{owned ? '持っています' : `${price}カードポイント`}</button>
           </div>
         );
       })}
-      {confirm && <ConfirmSheet title={`「${confirm.name}」を買いますか？`} message={`カードポイント ${CARD_STARTER_SHOP_PRICE} を使います(いま ${point})。だぶったカードはカードポイントになります`} confirmLabel="買う" onCancel={() => setConfirm(null)} onConfirm={async () => { const k = confirm; setConfirm(null); const r = await onBuyStarter(k.id); if (r && r.ok) setDone(`「${k.name}」を買いました。デッキ編成に1つ増えています${r.dupPoint > 0 ? `(だぶったカードはカードポイント +${r.dupPoint})` : ''}`); }}/>}
+      {view && <CardStarterContents db={db} kit={view} collection={collection} onClose={() => setView(null)}/>}
+      {confirm && <ConfirmSheet title={`「${confirm.name}」を買いますか？`} message={`カードポイント ${price} を使います(いま ${point.toLocaleString()})。だぶったカードはカードポイントになります`} confirmLabel="買う" onCancel={() => setConfirm(null)} onConfirm={async () => { const k = confirm; setConfirm(null); const r = await onBuyStarter(k.id); if (r && r.ok) setDone(`「${k.name}」を買いました。デッキ編成に1つ増えています${r.dupPoint > 0 ? `(だぶったカードはカードポイント +${r.dupPoint})` : ''}`); }}/>}
     </div>
   );
 };
@@ -63473,8 +63612,9 @@ function MonsterHeroGame() {
   // ★カードの保存は mh_card_* の新しいキーだけ。円盤石・アシストカードは、ビートP交換所と同じ入れ物(mh_unlocked_monsters・mh_unlocked_teachings)へ
   const loadCardShop = async () => {
     const K = CARD_SAVE_KEYS;
-    const [point, starter, shop] = await Promise.all([storeGet(K.point, null), storeGet(K.starter, null), storeGet(K.shop, null)]);
-    const next = { point: cardNormalizePoint(point), starter: cardNormalizeStarter(starter), shop: cardNormalizeShop(shop) };
+    const [point, starter, shop, collection] = await Promise.all([storeGet(K.point, null), storeGet(K.starter, null), storeGet(K.shop, null), storeGet(K.collection, null)]);
+    // collection … パックの中身・提供割合に「未取得」と、いまの持ち物で決まる出やすさを出すため(読むだけ)
+    const next = { point: cardNormalizePoint(point), starter: cardNormalizeStarter(starter), shop: cardNormalizeShop(shop), collection: cardNormalizeCollection(collection) };
     setCardShopState(next);
     return next;
   };
@@ -63494,7 +63634,7 @@ function MonsterHeroGame() {
         { key: K.point, before: rawPoint, next: r.point },
       ], storeGet, storeSet);
       if (!saved) { setMarketExchangeError('保存できませんでした。カードポイントは変わっていません。'); return { ok:false, reason:'save' }; }
-      setCardShopState((cur) => ({ ...(cur || {}), point: r.point }));
+      setCardShopState((cur) => ({ ...(cur || {}), point: r.point, collection: r.collection }));
       setCardPackOpen({ packId, packs: r.packs, dupPoint: r.dupPoint, cost: r.cost });
       setGameState('CARD_PACK_OPEN');
       return { ok:true };
@@ -63519,7 +63659,7 @@ function MonsterHeroGame() {
         { key: K.shop, before: rawShop, next: r.shop },
       ], storeGet, storeSet);
       if (!saved) { setMarketExchangeError('保存できませんでした。カードポイントは変わっていません。'); return { ok:false, reason:'save' }; }
-      setCardShopState((cur) => ({ ...(cur || {}), point: r.point, shop: r.shop }));
+      setCardShopState((cur) => ({ ...(cur || {}), point: r.point, shop: r.shop, collection: r.collection }));
       return { ok:true, dupPoint: r.dupPoint };
     } catch {
       setMarketExchangeError('保存できませんでした。カードポイントは変わっていません。');

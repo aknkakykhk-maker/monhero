@@ -8094,8 +8094,9 @@ function MonsterHeroGame() {
   // ★カードの保存は mh_card_* の新しいキーだけ。円盤石・アシストカードは、ビートP交換所と同じ入れ物(mh_unlocked_monsters・mh_unlocked_teachings)へ
   const loadCardShop = async () => {
     const K = CARD_SAVE_KEYS;
-    const [point, starter, shop] = await Promise.all([storeGet(K.point, null), storeGet(K.starter, null), storeGet(K.shop, null)]);
-    const next = { point: cardNormalizePoint(point), starter: cardNormalizeStarter(starter), shop: cardNormalizeShop(shop) };
+    const [point, starter, shop, collection] = await Promise.all([storeGet(K.point, null), storeGet(K.starter, null), storeGet(K.shop, null), storeGet(K.collection, null)]);
+    // collection … パックの中身・提供割合に「未取得」と、いまの持ち物で決まる出やすさを出すため(読むだけ)
+    const next = { point: cardNormalizePoint(point), starter: cardNormalizeStarter(starter), shop: cardNormalizeShop(shop), collection: cardNormalizeCollection(collection) };
     setCardShopState(next);
     return next;
   };
@@ -8115,7 +8116,7 @@ function MonsterHeroGame() {
         { key: K.point, before: rawPoint, next: r.point },
       ], storeGet, storeSet);
       if (!saved) { setMarketExchangeError('保存できませんでした。カードポイントは変わっていません。'); return { ok:false, reason:'save' }; }
-      setCardShopState((cur) => ({ ...(cur || {}), point: r.point }));
+      setCardShopState((cur) => ({ ...(cur || {}), point: r.point, collection: r.collection }));
       setCardPackOpen({ packId, packs: r.packs, dupPoint: r.dupPoint, cost: r.cost });
       setGameState('CARD_PACK_OPEN');
       return { ok:true };
@@ -8140,7 +8141,7 @@ function MonsterHeroGame() {
         { key: K.shop, before: rawShop, next: r.shop },
       ], storeGet, storeSet);
       if (!saved) { setMarketExchangeError('保存できませんでした。カードポイントは変わっていません。'); return { ok:false, reason:'save' }; }
-      setCardShopState((cur) => ({ ...(cur || {}), point: r.point, shop: r.shop }));
+      setCardShopState((cur) => ({ ...(cur || {}), point: r.point, shop: r.shop, collection: r.collection }));
       return { ok:true, dupPoint: r.dupPoint };
     } catch {
       setMarketExchangeError('保存できませんでした。カードポイントは変わっていません。');

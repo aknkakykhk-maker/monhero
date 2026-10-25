@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: addf9f15696acef4
+// source-sha256: 166aa749fc0237c7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-25 17:19";
+const BUILD_DATE = "2026-10-25 17:49";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -53146,10 +53146,12 @@ function BreederMarketScreen({
       db: CARD_BATTLE_DATA,
       point: cp,
       busy: busy || cardShop.busy,
+      collection: cardShop.collection,
       onBuyPack: cardShop.onBuyPack
     }), tab === 'starter' && React.createElement(CardShopStarters, {
       db: CARD_BATTLE_DATA,
       point: cp,
+      collection: cardShop.collection,
       busy: busy || cardShop.busy,
       starter: cardShop.starter,
       shop: cardShop.shop,
@@ -85145,10 +85147,10 @@ const CARD_PACKS = Object.freeze([{
   id: 'w1',
   wave: '1',
   name: '第1弾パック',
-  price: 100,
+  price: 300,
   bundle: {
     n: 5,
-    price: 450
+    price: 1350
   },
   tech: 7,
   mon: 1,
@@ -85163,10 +85165,10 @@ const CARD_PACKS = Object.freeze([{
   id: 'w2',
   wave: '2',
   name: '第2弾パック',
-  price: 100,
+  price: 300,
   bundle: {
     n: 5,
-    price: 450
+    price: 1350
   },
   tech: 7,
   mon: 1,
@@ -85181,10 +85183,10 @@ const CARD_PACKS = Object.freeze([{
   id: 'w3',
   wave: '3',
   name: '第3弾パック',
-  price: 100,
+  price: 300,
   bundle: {
     n: 5,
-    price: 450
+    price: 1350
   },
   tech: 7,
   mon: 1,
@@ -85199,10 +85201,10 @@ const CARD_PACKS = Object.freeze([{
   id: 'w4',
   wave: '4',
   name: '第4弾パック',
-  price: 100,
+  price: 300,
   bundle: {
     n: 5,
-    price: 450
+    price: 1350
   },
   tech: 7,
   mon: 1,
@@ -85217,7 +85219,7 @@ const CARD_PACKS = Object.freeze([{
   id: 'hybrid',
   wave: 'hybrid',
   name: '混血パック',
-  price: 150,
+  price: 1000,
   bundle: null,
   tech: 0,
   mon: 3,
@@ -85238,7 +85240,7 @@ const CARD_DUP_POINT = Object.freeze({
   alt: 200,
   hybrid: 20
 });
-const CARD_STARTER_SHOP_PRICE = 500;
+const CARD_STARTER_SHOP_PRICE = 1500;
 const cardPackOf = id => CARD_PACKS.find(p => p.id === id) || null;
 const cardMonRarity = m => !m || !m.variant ? 'normal' : /別絵キラ/.test(m.variant) ? 'alt' : /キラ/.test(m.variant) ? 'kira' : 'normal';
 const cardPackTechPool = (db, pack) => Object.values(db.cards).filter(c => String(c.wave) === pack.wave && c.ready).map(c => c.no).sort();
@@ -85371,6 +85373,37 @@ const cardPackRates = (db, packId) => {
     techEach: tech ? 1 / tech : 0,
     mons,
     rarity: pack.rarity
+  };
+};
+const cardPackCardRates = (db, packId, collection) => {
+  const pack = cardPackOf(packId);
+  if (!pack) return null;
+  const techPool = pack.tech > 0 ? cardPackTechPool(db, pack) : [];
+  const tech = techPool.map(no => ({
+    no,
+    p: 1 / techPool.length
+  }));
+  const rar = Object.entries(pack.rarity).filter(([k, w]) => w > 0 && cardPackMonPool(db, pack, k).length);
+  const rarTotal = rar.reduce((a, [, w]) => a + w, 0);
+  const rarity = {};
+  const mon = [];
+  rar.forEach(([k, w]) => {
+    const pool = cardPackMonPool(db, pack, k);
+    const wOf = no => cardOwnsSpecies(db, collection, (cardMonsterOf(db, no) || {}).species) ? 1 : 2;
+    const sum = pool.reduce((a, no) => a + wOf(no), 0);
+    rarity[k] = w / rarTotal;
+    pool.forEach(no => mon.push({
+      no,
+      rarity: k,
+      p: w / rarTotal * (wOf(no) / sum),
+      boosted: wOf(no) === 2
+    }));
+  });
+  return {
+    pack,
+    tech,
+    mon,
+    rarity
   };
 };
 const cardBuyStarter = (db, kitId, {
@@ -89776,78 +89809,353 @@ const CardPackOpen = ({
     onClose: () => setDetail(null)
   }));
 };
+const cardShopName = (db, no) => {
+  const c = cardOf(db, no);
+  const m = c ? null : cardMonsterOf(db, no);
+  return c ? c.name : m ? m.name : no;
+};
+const cardShopImg = (db, no) => {
+  const c = cardOf(db, no);
+  const m = c ? null : cardMonsterOf(db, no);
+  return CARD_IMG(c ? c.img : m ? m.img : no);
+};
+const CARD_RARITY_ORDER = Object.freeze({
+  alt: 0,
+  kira: 1,
+  normal: 2
+});
+const CardShopSheet = ({
+  title,
+  onClose,
+  children,
+  detail,
+  setDetail,
+  db,
+  tag
+}) => React.createElement(React.Fragment, null, React.createElement("div", {
+  "data-card-shop-sheet": tag,
+  role: "dialog",
+  "aria-modal": "true",
+  "aria-label": title,
+  onClick: onClose,
+  className: "fixed inset-0 flex items-center justify-center p-3",
+  style: {
+    zIndex: MODAL_Z.dialog,
+    backgroundColor: 'rgba(2,6,23,0.88)'
+  }
+}, React.createElement("div", {
+  onClick: e => e.stopPropagation(),
+  className: "flex max-h-full w-full max-w-[460px] flex-col rounded-3xl border-2 border-amber-300/70 bg-slate-950 text-white shadow-2xl landscape:max-w-[720px]"
+}, React.createElement("div", {
+  className: "shrink-0 rounded-t-[22px] bg-amber-300/15 px-3 py-2 text-center text-[15px] font-black text-amber-100",
+  style: JA_WRAP_STYLE
+}, jaWrap(title)), React.createElement("div", {
+  className: "min-h-0 flex-1 overflow-y-auto px-3 py-2"
+}, children), React.createElement("div", {
+  className: "shrink-0 p-2"
+}, React.createElement("button", {
+  type: "button",
+  "data-card-shop-sheet-close": true,
+  onClick: onClose,
+  className: "mh-button mh-button-primary min-h-[46px] w-full rounded-2xl text-[14px] font-black active:scale-[.98] landscape:min-h-[40px]"
+}, "とじる")))), detail && React.createElement(CardDetailModal, {
+  db: db,
+  no: detail,
+  onClose: () => setDetail(null)
+}));
+const CardShopGrid = ({
+  db,
+  rows,
+  collection,
+  onTap
+}) => React.createElement("div", {
+  className: "grid grid-cols-4 gap-1.5 landscape:grid-cols-7"
+}, rows.map(({
+  no,
+  count,
+  rarity
+}) => {
+  const missing = !((collection || {})[no] > 0);
+  return React.createElement("button", {
+    key: no,
+    type: "button",
+    "data-card-shop-item": no,
+    "data-card-shop-missing": missing ? '1' : undefined,
+    onClick: () => onTap(no),
+    className: "relative flex flex-col items-center rounded-lg bg-white/5 p-0.5 text-center active:scale-95"
+  }, React.createElement("span", {
+    className: "relative block w-full"
+  }, React.createElement("img", {
+    src: cardShopImg(db, no),
+    alt: cardShopName(db, no),
+    className: "aspect-[5/7] w-full rounded-[5px] object-cover"
+  }), missing && React.createElement("span", {
+    "data-card-shop-missing-badge": true,
+    className: "absolute left-0.5 top-0.5 rounded-md bg-rose-600 px-1 text-[9px] font-black text-white shadow"
+  }, "未取得"), rarity && rarity !== 'normal' && React.createElement("span", {
+    className: "absolute bottom-0.5 left-0.5 rounded-md bg-amber-300 px-1 text-[9px] font-black text-slate-950"
+  }, CARD_RARITY_LABEL[rarity]), count > 1 && React.createElement("span", {
+    className: "absolute bottom-0.5 right-0.5 rounded-md bg-slate-950/90 px-1 text-[10px] font-black text-white"
+  }, "×", count)), React.createElement(CardNameFit, {
+    name: cardShopName(db, no),
+    className: "mt-0.5 font-bold leading-tight text-slate-100"
+  }));
+}));
+const CardShopHead = ({
+  children
+}) => React.createElement("div", {
+  className: "mb-1 mt-2 rounded-md bg-sky-400/20 px-2 py-0.5 text-[12px] font-black text-sky-100 first:mt-0"
+}, "■ ", children);
+const cardShopPct = x => `${(x * 100).toFixed(3)}%`;
+const CardPackContents = ({
+  db,
+  pack,
+  collection,
+  onClose
+}) => {
+  const [detail, setDetail] = useState(null);
+  const r = cardPackCardRates(db, pack.id, collection);
+  const mons = r.mon.slice().sort((a, b) => CARD_RARITY_ORDER[a.rarity] - CARD_RARITY_ORDER[b.rarity] || String(a.no).localeCompare(String(b.no)));
+  const missing = [...mons, ...r.tech].filter(x => !((collection || {})[x.no] > 0)).length;
+  return React.createElement(CardShopSheet, {
+    tag: "contents",
+    title: `${pack.name}の中身`,
+    onClose: onClose,
+    detail: detail,
+    setDetail: setDetail,
+    db: db
+  }, React.createElement("p", {
+    className: "text-[11px] font-bold text-slate-300",
+    style: JA_WRAP_STYLE
+  }, jaWrap(`このパックで出るカードです(${mons.length + r.tech.length}種類・まだ持っていないもの ${missing}種類)。押すとくわしく見られます。`)), React.createElement(CardShopHead, null, "モンスター(", pack.mon, "枚の枠・", mons.length, "種類)"), React.createElement(CardShopGrid, {
+    db: db,
+    rows: mons,
+    collection: collection,
+    onTap: setDetail
+  }), r.tech.length > 0 && React.createElement(React.Fragment, null, React.createElement(CardShopHead, null, "技など(", pack.tech, "枚の枠・", r.tech.length, "種類)"), React.createElement(CardShopGrid, {
+    db: db,
+    rows: r.tech,
+    collection: collection,
+    onTap: setDetail
+  })));
+};
+const CardPackRateSheet = ({
+  db,
+  pack,
+  collection,
+  onClose
+}) => {
+  const [detail, setDetail] = useState(null);
+  const r = cardPackCardRates(db, pack.id, collection);
+  const mons = r.mon.slice().sort((a, b) => CARD_RARITY_ORDER[a.rarity] - CARD_RARITY_ORDER[b.rarity] || b.p - a.p || String(a.no).localeCompare(String(b.no)));
+  const th = 'border border-white/15 bg-amber-200/15 px-1 py-0.5 text-[11px] font-black text-amber-100';
+  const td = 'border border-white/10 px-1 py-0.5 text-[11px] font-bold';
+  const rarLabel = k => CARD_RARITY_LABEL[k] || '通常';
+  const rows = list => list.map(x => React.createElement("tr", {
+    key: x.no,
+    "data-card-rate-row": x.no,
+    onClick: () => setDetail(x.no),
+    className: "cursor-pointer active:bg-white/10"
+  }, React.createElement("td", {
+    className: `${td} text-center`
+  }, x.rarity ? rarLabel(x.rarity) : '技など'), React.createElement("td", {
+    className: td
+  }, React.createElement("span", {
+    className: "flex items-center gap-1"
+  }, React.createElement("img", {
+    src: cardShopImg(db, x.no),
+    alt: "",
+    loading: "lazy",
+    className: "h-[28px] w-[20px] shrink-0 rounded-[2px] object-cover"
+  }), React.createElement("span", {
+    className: "min-w-0",
+    style: JA_WRAP_STYLE
+  }, cardShopName(db, x.no)), x.boosted && React.createElement("span", {
+    className: "shrink-0 rounded bg-emerald-700 px-1 text-[9px] font-black"
+  }, "2倍"))), React.createElement("td", {
+    className: `${td} text-right tabular-nums`
+  }, cardShopPct(x.p))));
+  const notes = [`1パックは${pack.tech ? `技などの枠${pack.tech}枚と、` : ''}モンスターの枠${pack.mon}枚です。割合は、枠1つごとの割合です。`, pack.tech ? `技などの枠は、${r.tech.length}種類から同じ割合で出ます。` : null, pack.mon && Object.keys(r.rarity).length > 1 ? 'モンスターの枠は、まずレア度を決めてから、そのレア度のモンスターから1枚出ます。' : null, pack.id === 'hybrid' ? '3枚とも混血モンスターです。キラはありません。' : null, '「2倍」の印は、まだ持っていない種族のモンスターです(持っている種族の2倍出やすくなります)。表の割合は、いまの持ち物での割合です。', pack.pity ? `このパックでキラも別絵キラも出ないまま${CARD_PACK_PITY_AT}パック開けると、つぎのパックのモンスターの枠は必ずキラ以上になります(天井)。` : null, `だぶったカードはカードポイントになります(技などは4枚目から1枚${CARD_DUP_POINT.tech}・モンスターは2枚目から${pack.id === 'hybrid' ? CARD_DUP_POINT.hybrid : `${CARD_DUP_POINT.normal}〔キラ${CARD_DUP_POINT.kira}・別絵キラ${CARD_DUP_POINT.alt}〕`})。`, '準備中のカードは出ません。'].filter(Boolean);
+  return React.createElement(CardShopSheet, {
+    tag: "rates",
+    title: `${pack.name} 提供割合`,
+    onClose: onClose,
+    detail: detail,
+    setDetail: setDetail,
+    db: db
+  }, React.createElement(CardShopHead, null, "レア度ごとの割合(モンスターの枠)"), React.createElement("table", {
+    "data-card-rate-rarity": true,
+    className: "w-full border-collapse text-slate-100"
+  }, React.createElement("thead", null, React.createElement("tr", null, React.createElement("th", {
+    className: th
+  }, "レア度"), React.createElement("th", {
+    className: th
+  }, "割合"))), React.createElement("tbody", null, ['normal', 'kira', 'alt'].filter(k => r.rarity[k] > 0).map(k => React.createElement("tr", {
+    key: k
+  }, React.createElement("td", {
+    className: `${td} text-center`
+  }, rarLabel(k)), React.createElement("td", {
+    className: `${td} text-right tabular-nums`
+  }, cardShopPct(r.rarity[k])))))), React.createElement("div", {
+    className: "mt-1 space-y-0.5"
+  }, notes.map((t, i) => React.createElement("p", {
+    key: i,
+    className: "text-[10.5px] font-bold leading-snug text-slate-300",
+    style: JA_WRAP_STYLE
+  }, "※", jaWrap(t)))), React.createElement(CardShopHead, null, "カード1枚ずつの割合(モンスターの枠)"), React.createElement("table", {
+    "data-card-rate-mon": true,
+    className: "w-full table-fixed border-collapse text-slate-100"
+  }, React.createElement("colgroup", null, React.createElement("col", {
+    className: "w-[4.2em]"
+  }), React.createElement("col", null), React.createElement("col", {
+    className: "w-[5.6em]"
+  })), React.createElement("thead", null, React.createElement("tr", null, React.createElement("th", {
+    className: th
+  }, "レア度"), React.createElement("th", {
+    className: th
+  }, "カード"), React.createElement("th", {
+    className: th
+  }, "割合"))), React.createElement("tbody", null, rows(mons))), r.tech.length > 0 && React.createElement(React.Fragment, null, React.createElement(CardShopHead, null, "カード1枚ずつの割合(技などの枠)"), React.createElement("table", {
+    "data-card-rate-tech": true,
+    className: "w-full table-fixed border-collapse text-slate-100"
+  }, React.createElement("colgroup", null, React.createElement("col", {
+    className: "w-[4.2em]"
+  }), React.createElement("col", null), React.createElement("col", {
+    className: "w-[5.6em]"
+  })), React.createElement("thead", null, React.createElement("tr", null, React.createElement("th", {
+    className: th
+  }, "種類"), React.createElement("th", {
+    className: th
+  }, "カード"), React.createElement("th", {
+    className: th
+  }, "割合"))), React.createElement("tbody", null, rows(r.tech)))));
+};
+const CardStarterContents = ({
+  db,
+  kit,
+  collection,
+  onClose
+}) => {
+  const [detail, setDetail] = useState(null);
+  const counts = {};
+  kit.cards.forEach(no => {
+    counts[no] = (counts[no] || 0) + 1;
+  });
+  const cards = Object.keys(counts).map(no => ({
+    no,
+    count: counts[no]
+  }));
+  return React.createElement(CardShopSheet, {
+    tag: "starter",
+    title: `${kit.name}の中身`,
+    onClose: onClose,
+    detail: detail,
+    setDetail: setDetail,
+    db: db
+  }, React.createElement("p", {
+    className: "text-[11px] font-bold text-slate-300",
+    style: JA_WRAP_STYLE
+  }, jaWrap('このキットに入っているカードです。押すとくわしく見られます。')), React.createElement(CardShopHead, null, "モンスター(3枚)"), React.createElement(CardShopGrid, {
+    db: db,
+    rows: kit.monsters.map(no => ({
+      no,
+      rarity: cardMonRarity(cardMonsterOf(db, no))
+    })),
+    collection: collection,
+    onTap: setDetail
+  }), React.createElement(CardShopHead, null, "カード(", kit.cards.length, "枚・", cards.length, "種類)"), React.createElement(CardShopGrid, {
+    db: db,
+    rows: cards,
+    collection: collection,
+    onTap: setDetail
+  }));
+};
 const CardShopPacks = ({
   db,
   point,
   busy,
+  collection = null,
   onBuyPack
 }) => {
-  const [rates, setRates] = useState(null);
+  const [sheet, setSheet] = useState(null);
   const [confirm, setConfirm] = useState(null);
-  const pct = x => `${(Math.round(x * 1000) / 10).toFixed(1)}%`;
   return React.createElement("div", {
     "data-card-shop-packs": true,
     className: "space-y-2 pb-2"
-  }, CARD_PACKS.map(pack => {
-    const r = cardPackRates(db, pack.id);
-    return React.createElement("div", {
-      key: pack.id,
-      "data-card-shop-pack": pack.id,
-      className: SCREEN_PANEL_CLASS,
-      style: {
-        borderColor: `${pack.color}88`
-      }
-    }, React.createElement("div", {
-      className: "flex items-center gap-2"
-    }, React.createElement(CardPackArt, {
-      db: db,
-      pack: pack,
-      width: 58,
-      className: "shrink-0 !rounded-[8px] !border-2"
-    }), React.createElement("div", {
-      className: "min-w-0 flex-1"
-    }, React.createElement("div", {
-      className: "text-[14px] font-black text-white"
-    }, pack.name), React.createElement("div", {
-      className: "text-[11px] font-bold text-slate-300",
-      style: JA_WRAP_STYLE
-    }, jaWrap(pack.tech ? `${pack.tech + pack.mon}枚入り(技など${pack.tech}枚・モンスター${pack.mon}枚)` : `${pack.mon}枚入り(3枚とも混血モンスター)`)), React.createElement("button", {
-      type: "button",
-      "data-card-shop-rates": pack.id,
-      onClick: () => setRates(rates === pack.id ? null : pack.id),
-      className: "mt-0.5 text-[11px] font-black text-sky-300 underline"
-    }, "出る確率を見る"))), rates === pack.id && r && React.createElement("div", {
-      "data-card-shop-rate-table": true,
-      className: "mt-1.5 space-y-0.5 rounded-lg bg-black/30 p-2 text-[11px] font-bold leading-relaxed text-slate-200",
-      style: JA_WRAP_STYLE
-    }, [pack.tech > 0 ? `技などの枠(1パック${pack.tech}枚): ${r.techKinds}種類から同じ確率(1種類 ${pct(r.techEach)})。《準備中のカード》は出ません` : null, `モンスターの枠(1パック${pack.mon}枚): 通常 ${pack.rarity.normal}%${pack.rarity.kira ? `・キラ ${pack.rarity.kira}%` : ''}${pack.rarity.alt ? `・別絵キラ ${pack.rarity.alt}%` : ''}(通常${r.mons.normal}種${r.mons.kira ? `・キラ${r.mons.kira}種` : ''}${r.mons.alt ? `・別絵キラ${r.mons.alt}種` : ''})。まだ持っていない種族は《2倍出やすい》`, pack.pity ? `キラも別絵キラも出ないまま${CARD_PACK_PITY_AT}パック開けたら、つぎのパックは《キラ以上》` : null, `だぶったカードはカードポイントになります(技など4枚目から${CARD_DUP_POINT.tech}・モンスター2枚目から${pack.id === 'hybrid' ? CARD_DUP_POINT.hybrid : `${CARD_DUP_POINT.normal}〔キラ${CARD_DUP_POINT.kira}・別絵キラ${CARD_DUP_POINT.alt}〕`})`].filter(Boolean).map((t, i) => React.createElement("div", {
-      key: i
-    }, cardRuleLine(t)))), React.createElement("div", {
-      className: `mt-2 grid gap-1.5 ${pack.bundle ? 'grid-cols-2' : 'grid-cols-1'}`
-    }, React.createElement("button", {
-      type: "button",
-      "data-card-shop-buy": `${pack.id}-1`,
-      disabled: busy || point < pack.price,
-      onClick: () => setConfirm({
-        pack,
-        count: 1
-      }),
-      className: "mh-button min-h-[44px] rounded-xl bg-orange-500 text-[13px] font-black text-white active:scale-[.98] disabled:opacity-40"
-    }, "1パック ", pack.price), pack.bundle && React.createElement("button", {
-      type: "button",
-      "data-card-shop-buy": `${pack.id}-${pack.bundle.n}`,
-      disabled: busy || point < pack.bundle.price,
-      onClick: () => setConfirm({
-        pack,
-        count: pack.bundle.n
-      }),
-      className: "mh-button min-h-[44px] rounded-xl bg-orange-600 text-[13px] font-black text-white active:scale-[.98] disabled:opacity-40"
-    }, pack.bundle.n, "パック ", pack.bundle.price, React.createElement("span", {
-      className: "block text-[9px] font-bold"
-    }, "(", pack.price * pack.bundle.n - pack.bundle.price, "おトク)"))));
+  }, CARD_PACKS.map(pack => React.createElement("div", {
+    key: pack.id,
+    "data-card-shop-pack": pack.id,
+    className: SCREEN_PANEL_CLASS,
+    style: {
+      borderColor: `${pack.color}88`
+    }
+  }, React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, React.createElement(CardPackArt, {
+    db: db,
+    pack: pack,
+    width: 58,
+    className: "shrink-0 !rounded-[8px] !border-2"
+  }), React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("div", {
+    className: "text-[14px] font-black text-white"
+  }, pack.name), React.createElement("div", {
+    className: "text-[11px] font-bold text-slate-300",
+    style: JA_WRAP_STYLE
+  }, jaWrap(pack.tech ? `${pack.tech + pack.mon}枚入り(技など${pack.tech}枚・モンスター${pack.mon}枚)` : `${pack.mon}枚入り(3枚とも混血モンスター)`)), React.createElement("div", {
+    className: "mt-1 flex gap-1.5"
+  }, React.createElement("button", {
+    type: "button",
+    "data-card-shop-contents": pack.id,
+    onClick: () => setSheet({
+      kind: 'contents',
+      pack
+    }),
+    className: "min-h-[30px] rounded-lg border border-sky-300/60 bg-sky-900/50 px-2 text-[11px] font-black text-sky-100 active:scale-95"
+  }, "中身を見る"), React.createElement("button", {
+    type: "button",
+    "data-card-shop-rates": pack.id,
+    onClick: () => setSheet({
+      kind: 'rates',
+      pack
+    }),
+    className: "min-h-[30px] rounded-lg border border-amber-300/60 bg-amber-900/40 px-2 text-[11px] font-black text-amber-100 active:scale-95"
+  }, "提供割合")))), React.createElement("div", {
+    className: `mt-2 grid gap-1.5 ${pack.bundle ? 'grid-cols-2' : 'grid-cols-1'}`
+  }, React.createElement("button", {
+    type: "button",
+    "data-card-shop-buy": `${pack.id}-1`,
+    disabled: busy || point < pack.price,
+    onClick: () => setConfirm({
+      pack,
+      count: 1
+    }),
+    className: "mh-button min-h-[44px] rounded-xl bg-orange-500 text-[13px] font-black text-white active:scale-[.98] disabled:opacity-40"
+  }, "1パック ", pack.price.toLocaleString()), pack.bundle && React.createElement("button", {
+    type: "button",
+    "data-card-shop-buy": `${pack.id}-${pack.bundle.n}`,
+    disabled: busy || point < pack.bundle.price,
+    onClick: () => setConfirm({
+      pack,
+      count: pack.bundle.n
+    }),
+    className: "mh-button min-h-[44px] rounded-xl bg-orange-600 text-[13px] font-black text-white active:scale-[.98] disabled:opacity-40"
+  }, pack.bundle.n, "パック ", pack.bundle.price.toLocaleString(), React.createElement("span", {
+    className: "block text-[9px] font-bold"
+  }, "(", (pack.price * pack.bundle.n - pack.bundle.price).toLocaleString(), "おトク)"))))), sheet && sheet.kind === 'contents' && React.createElement(CardPackContents, {
+    db: db,
+    pack: sheet.pack,
+    collection: collection,
+    onClose: () => setSheet(null)
+  }), sheet && sheet.kind === 'rates' && React.createElement(CardPackRateSheet, {
+    db: db,
+    pack: sheet.pack,
+    collection: collection,
+    onClose: () => setSheet(null)
   }), confirm && React.createElement(ConfirmSheet, {
     title: `${confirm.pack.name}を${confirm.count}パック買いますか？`,
-    message: `カードポイント ${cardPackPrice(confirm.pack, confirm.count)} を使います(いま ${point})`,
+    message: `カードポイント ${cardPackPrice(confirm.pack, confirm.count).toLocaleString()} を使います(いま ${point.toLocaleString()})`,
     confirmLabel: "買って開ける",
     onCancel: () => setConfirm(null),
     onConfirm: () => {
@@ -89863,11 +90171,14 @@ const CardShopStarters = ({
   busy,
   starter,
   shop,
+  collection = null,
   onBuyStarter
 }) => {
   const [confirm, setConfirm] = useState(null);
   const [done, setDone] = useState('');
-  const kits = Object.values(db.starters).filter(k => !starter || k.id !== starter.kit);
+  const [view, setView] = useState(null);
+  const kits = Object.values(db.starters);
+  const price = CARD_STARTER_SHOP_PRICE.toLocaleString();
   return React.createElement("div", {
     "data-card-shop-starters": true,
     className: "space-y-2 pb-2"
@@ -89878,11 +90189,12 @@ const CardShopStarters = ({
   }, jaWrap(done)), React.createElement("p", {
     className: "text-[11px] font-bold text-slate-400",
     style: JA_WRAP_STYLE
-  }, jaWrap(`はじめに選ばなかったスターターキット。1つにつき1回、${CARD_STARTER_SHOP_PRICE}カードポイント。デッキも1つ増えます`)), kits.map(k => {
-    const bought = !!(shop && shop.starters && shop.starters[k.id]);
+  }, jaWrap(`スターターキットは1つにつき1回、${price}カードポイントで買えます。買うとデッキも1つ増えます。どのキットも中身を見られます。`)), kits.map(k => {
+    const owned = !!(starter && starter.kit === k.id || shop && shop.starters && shop.starters[k.id]);
     return React.createElement("div", {
       key: k.id,
       "data-card-shop-starter": k.id,
+      "data-card-shop-starter-owned": owned ? '1' : undefined,
       className: SCREEN_PANEL_CLASS
     }, React.createElement("div", {
       className: "flex items-center gap-2"
@@ -89899,20 +90211,34 @@ const CardShopStarters = ({
     })), React.createElement("div", {
       className: "min-w-0 flex-1"
     }, React.createElement("div", {
-      className: "text-[13px] font-black text-white",
-      style: JA_WRAP_STYLE
-    }, jaWrap(k.name)), React.createElement("div", {
+      className: "flex flex-wrap items-center gap-1"
+    }, React.createElement("span", {
+      className: "whitespace-nowrap text-[13px] font-black text-white"
+    }, k.name), owned && React.createElement("span", {
+      "data-card-shop-starter-owned-badge": true,
+      className: "rounded-full bg-emerald-500 px-1.5 text-[10px] font-black text-slate-950"
+    }, "持っています")), React.createElement("div", {
       className: "text-[11px] font-bold text-slate-300"
-    }, "モンスター3枚・カード", k.cards.length, "枚"))), React.createElement("button", {
+    }, "モンスター3枚・カード", k.cards.length, "枚"), React.createElement("button", {
+      type: "button",
+      "data-card-shop-starter-contents": k.id,
+      onClick: () => setView(k),
+      className: "mt-1 min-h-[30px] rounded-lg border border-sky-300/60 bg-sky-900/50 px-2 text-[11px] font-black text-sky-100 active:scale-95"
+    }, "中身を見る"))), React.createElement("button", {
       type: "button",
       "data-card-shop-starter-buy": k.id,
-      disabled: bought || busy || point < CARD_STARTER_SHOP_PRICE,
+      disabled: owned || busy || point < CARD_STARTER_SHOP_PRICE,
       onClick: () => setConfirm(k),
       className: "mh-button mt-2 min-h-[44px] w-full rounded-xl bg-orange-500 text-[13px] font-black text-white active:scale-[.98] disabled:opacity-40"
-    }, bought ? '買いました' : `${CARD_STARTER_SHOP_PRICE}カードポイント`));
+    }, owned ? '持っています' : `${price}カードポイント`));
+  }), view && React.createElement(CardStarterContents, {
+    db: db,
+    kit: view,
+    collection: collection,
+    onClose: () => setView(null)
   }), confirm && React.createElement(ConfirmSheet, {
     title: `「${confirm.name}」を買いますか？`,
-    message: `カードポイント ${CARD_STARTER_SHOP_PRICE} を使います(いま ${point})。だぶったカードはカードポイントになります`,
+    message: `カードポイント ${price} を使います(いま ${point.toLocaleString()})。だぶったカードはカードポイントになります`,
     confirmLabel: "買う",
     onCancel: () => setConfirm(null),
     onConfirm: async () => {
@@ -100430,11 +100756,12 @@ function MonsterHeroGame() {
   };
   const loadCardShop = async () => {
     const K = CARD_SAVE_KEYS;
-    const [point, starter, shop] = await Promise.all([storeGet(K.point, null), storeGet(K.starter, null), storeGet(K.shop, null)]);
+    const [point, starter, shop, collection] = await Promise.all([storeGet(K.point, null), storeGet(K.starter, null), storeGet(K.shop, null), storeGet(K.collection, null)]);
     const next = {
       point: cardNormalizePoint(point),
       starter: cardNormalizeStarter(starter),
-      shop: cardNormalizeShop(shop)
+      shop: cardNormalizeShop(shop),
+      collection: cardNormalizeCollection(collection)
     };
     setCardShopState(next);
     return next;
@@ -100484,7 +100811,8 @@ function MonsterHeroGame() {
       }
       setCardShopState(cur => ({
         ...(cur || {}),
-        point: r.point
+        point: r.point,
+        collection: r.collection
       }));
       setCardPackOpen({
         packId,
@@ -100557,7 +100885,8 @@ function MonsterHeroGame() {
       setCardShopState(cur => ({
         ...(cur || {}),
         point: r.point,
-        shop: r.shop
+        shop: r.shop,
+        collection: r.collection
       }));
       return {
         ok: true,

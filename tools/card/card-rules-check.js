@@ -18,7 +18,7 @@ const load = () => {
     + `${fs.readFileSync(path.join(GAME, 'src', 'parts', '85-card-battle-motion.jsx'), 'utf8').split('// ---- 動きの見本')[1].replace(/^[^\n]*\n/, '')}\n;\n`
     // よけ方・盾の数字・ブリーダーのカードの見分け(ルールだけで決まる所)も読む
     + `${(() => { const m = fs.readFileSync(path.join(GAME, 'src', 'parts', '85-card-battle-motion.jsx'), 'utf8'); return m.slice(m.indexOf('// ブリーダーのカードか'), m.indexOf('// 動きの長さ')); })()}\n;\n`
-    + 'this.E = { CARD_BATTLE_DATA, CARD_THINK_PACE, CARD_RESULT_WAIT_MS, CARD_PRESS_MS, CARD_BUBBLE_PER_TURN, CARD_SETTING_GROUPS, cardOf, cardIsBreederCard, cardDodgeIsJump, cardGuardLabel, cardCreateGame, cardApplyAction, cardLegalActions, cardAttackOptions, cardGuardOptions, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardSimulate, CARD_AI_LEVELS, CARD_AI_HABITS, CARD_AI_DECKS, cardDeckProblems, cardNormalizeCollection, cardNormalizeDecks, cardNormalizePoint, cardNormalizeDaily, cardNormalizeRecord, cardNormalizeCpuUnlocked, cardGrantStarter, cardCpuReward, cardUnlockAfterWin, cardMotionDemo, cardMotionDemoAction, cardTutorialGame, cardTutorialMutate, cardTutorialAllow, cardTutorialDone, cardTutorialCpu, CARD_TUTORIAL_STAGES, cardTutorialCopyProblems, cardTutorialFinish, CARD_TUTORIAL_LINES, cardCpuLoops, cardOwnTurns, cardDeckAddReason, cardDeckReady, cardDecksPut, cardDecksRemove, CARD_PACKS, cardOpenPack, cardBuyPacks, cardPackRates, cardBuyStarter, cardMonRarity, cardNormalizePity, cardNormalizeShop, CARD_SAVE_KEYS, cardRecordAfter, cardRankRow, cardWeekKeyJst, normalizeCardBgm, normalizeCardSettings };';
+    + 'this.E = { CARD_BATTLE_DATA, CARD_THINK_PACE, CARD_RESULT_WAIT_MS, CARD_PRESS_MS, CARD_BUBBLE_PER_TURN, CARD_SETTING_GROUPS, cardOf, cardIsBreederCard, cardDodgeIsJump, cardGuardLabel, cardCreateGame, cardApplyAction, cardLegalActions, cardAttackOptions, cardGuardOptions, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardSimulate, CARD_AI_LEVELS, CARD_AI_HABITS, CARD_AI_DECKS, cardDeckProblems, cardNormalizeCollection, cardNormalizeDecks, cardNormalizePoint, cardNormalizeDaily, cardNormalizeRecord, cardNormalizeCpuUnlocked, cardGrantStarter, cardCpuReward, cardUnlockAfterWin, cardMotionDemo, cardMotionDemoAction, cardTutorialGame, cardTutorialMutate, cardTutorialAllow, cardTutorialDone, cardTutorialCpu, CARD_TUTORIAL_STAGES, cardTutorialCopyProblems, cardTutorialFinish, CARD_TUTORIAL_LINES, cardCpuLoops, cardOwnTurns, cardDeckAddReason, cardDeckReady, cardDecksPut, cardDecksRemove, CARD_PACKS, cardOpenPack, cardBuyPacks, cardPackRates, cardPackCardRates, cardBuyStarter, cardMonRarity, cardNormalizePity, cardNormalizeShop, CARD_SAVE_KEYS, cardRecordAfter, cardRankRow, cardWeekKeyJst, normalizeCardBgm, normalizeCardSettings };';
   vm.runInContext(src, ctx, { filename: '82-card-battle-core.jsx' });
   return ctx.E;
 };
@@ -360,16 +360,28 @@ const packs = () => {
   const full = Object.fromEntries(one.cards.map((c) => [c.no, db.cards[c.no] ? 3 : 1]));
   const again = E.cardOpenPack(db, 'w1', { collection: full, pity: {} }, () => 0);
   ok(again.cards.every((c) => c.dup) && again.point === 7 * 5 + (again.cards[7].rarity === 'normal' ? 50 : again.cards[7].rarity === 'kira' ? 100 : 200), `だぶりのカードポイントが違う(${again.point})`);
-  // まとめ買い: 5つで450・足りなければ買えない
-  const b5 = E.cardBuyPacks(db, 'w2', 5, { collection: {}, pity: {}, point: 500 }, rand);
-  ok(b5 && b5.cost === 450 && b5.packs.length === 5 && b5.point === 50 + b5.dupPoint, '5パックまとめて450にならない');
-  ok(E.cardBuyPacks(db, 'hybrid', 1, { collection: {}, pity: {}, point: 149 }, rand) === null, 'カードポイントが足りないのに買えた');
-  ok(E.cardBuyPacks(db, 'hybrid', 1, { collection: {}, pity: {}, point: 150 }, rand).packs[0].length === 3, '混血パックが3枚でない');
-  // 選ばなかったスターターキット: 500・1回だけ・選んだキットは買えない
-  const base = { collection: {}, decks: { active: 'starter_speed', decks: [{ id: 'starter_speed', name: 's', monsters: [], cards: [] }] }, point: 600, starter: { kit: 'speed' }, shop: E.cardNormalizeShop(null) };
+  // 値段(2026-10-25 社長): 第1〜4弾 1パック300・5パックまとめて1,350 / 混血 1,000 / スターターキット 1,500
+  ok(E.CARD_PACKS.filter((p) => p.id !== 'hybrid').every((p) => p.price === 300 && p.bundle && p.bundle.n === 5 && p.bundle.price === 1350 && p.tech + p.mon === 8), '第1〜4弾が1パック300・8枚・5パック1,350でない');
+  const b5 = E.cardBuyPacks(db, 'w2', 5, { collection: {}, pity: {}, point: 1400 }, rand);
+  ok(b5 && b5.cost === 1350 && b5.packs.length === 5 && b5.point === 50 + b5.dupPoint, '5パックまとめて1,350にならない');
+  ok(E.cardBuyPacks(db, 'hybrid', 1, { collection: {}, pity: {}, point: 999 }, rand) === null, 'カードポイントが足りないのに買えた');
+  ok(E.cardBuyPacks(db, 'hybrid', 1, { collection: {}, pity: {}, point: 1000 }, rand).packs[0].length === 3, '混血パックが1,000で3枚でない');
+  // 提供割合の表: 1枠ごとの割合を足すと100%・持っていない種族は持っている種族の2倍
+  E.CARD_PACKS.forEach((p) => {
+    const r = E.cardPackCardRates(db, p.id, { 'C-001': 1 });
+    const sum = (xs) => xs.reduce((a, x) => a + x.p, 0);
+    ok(Math.abs(sum(r.mon) - 1) < 1e-9 && (p.tech ? Math.abs(sum(r.tech) - 1) < 1e-9 : !r.tech.length), `${p.name}の提供割合を足しても100%にならない`);
+    ok(Math.abs(Object.values(r.rarity).reduce((a, x) => a + x, 0) - 1) < 1e-9, `${p.name}のレア度の割合を足しても100%にならない`);
+  });
+  const r1 = E.cardPackCardRates(db, 'w1', { 'C-001': 1 });
+  const owned = r1.mon.find((x) => x.no === 'C-001');
+  const fresh = r1.mon.find((x) => x.rarity === owned.rarity && x.boosted);
+  ok(owned && !owned.boosted && fresh && Math.abs(fresh.p - owned.p * 2) < 1e-9, '持っていない種族の割合が持っている種族の2倍になっていない');
+  // 選ばなかったスターターキット: 1,500・1回だけ・選んだキットは買えない
+  const base = { collection: {}, decks: { active: 'starter_speed', decks: [{ id: 'starter_speed', name: 's', monsters: [], cards: [] }] }, point: 1600, starter: { kit: 'speed' }, shop: E.cardNormalizeShop(null) };
   ok(E.cardBuyStarter(db, 'speed', base, 1) === null, '選んだスターターキットを買えてしまう');
   const bs = E.cardBuyStarter(db, 'miracle', base, 1);
-  ok(bs && bs.point === 100 && bs.decks.decks.length === 2 && bs.shop.starters.miracle, 'スターターキットを500で買えない');
+  ok(bs && bs.point === 100 && bs.decks.decks.length === 2 && bs.shop.starters.miracle, 'スターターキットを1,500で買えない');
   ok(E.cardBuyStarter(db, 'miracle', { ...base, ...bs, starter: base.starter }, 2) === null, 'スターターキットを2回買えてしまう');
   ok(JSON.stringify(E.cardNormalizePity({ w1: 3, w9: 5, w2: 'x' })) === '{"w1":3}', '天井の保存の読み方が違う');
 };
