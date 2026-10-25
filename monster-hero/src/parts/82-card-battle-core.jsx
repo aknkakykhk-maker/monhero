@@ -1282,6 +1282,7 @@ const CARD_SAVE_KEYS = Object.freeze({
   daily: 'mh_card_daily_v1', record: 'mh_card_record_v1', cpuUnlocked: 'mh_card_cpu_unlocked_v1',
   tutorial: 'mh_card_tutorial_v1', // 練習試合(チュートリアル)を終えた・飛ばした・100 を渡した印(86-card-tutorial.jsx)
   pity: 'mh_card_pack_pity_v1', // パックの天井(弾ごとに、キラなしで開けた数。89-card-pack.jsx)
+  pitySplit: 'mh_card_pack_pity_split_v1', // 以前の4弾の天井の数を新しい8弾へ写した印(1回だけ。89 の cardSplitPity)
   shop: 'mh_card_shop_v1',       // マーケットで買ったスターターキットの印(89-card-pack.jsx)
   topAssist: 'mh_card_top_assist_v1', // トップの助手の「立ち絵/コメント」の出し入れ(84。無ければ両方ON)
   rankSync: 'mh_card_rank_sync_v1',   // ランキングへ最後に送った行の中身(同じなら送り直さない。90-card-rank.jsx)

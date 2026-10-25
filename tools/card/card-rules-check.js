@@ -18,7 +18,7 @@ const load = () => {
     + `${fs.readFileSync(path.join(GAME, 'src', 'parts', '85-card-battle-motion.jsx'), 'utf8').split('// ---- 動きの見本')[1].replace(/^[^\n]*\n/, '')}\n;\n`
     // よけ方・盾の数字・ブリーダーのカードの見分け(ルールだけで決まる所)も読む
     + `${(() => { const m = fs.readFileSync(path.join(GAME, 'src', 'parts', '85-card-battle-motion.jsx'), 'utf8'); return m.slice(m.indexOf('// ブリーダーのカードか'), m.indexOf('// 動きの長さ')); })()}\n;\n`
-    + 'this.E = { CARD_BATTLE_DATA, cardMonType, cardDecider, CARD_THINK_PACE, CARD_RESULT_WAIT_MS, CARD_PRESS_MS, CARD_BUBBLE_PER_TURN, CARD_SETTING_GROUPS, cardOf, cardIsBreederCard, cardDodgeIsJump, cardGuardLabel, cardCreateGame, cardApplyAction, cardLegalActions, cardAttackOptions, cardGuardOptions, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardSimulate, CARD_AI_LEVELS, CARD_AI_HABITS, CARD_AI_DECKS, cardDeckProblems, cardNormalizeCollection, cardNormalizeDecks, cardNormalizePoint, cardNormalizeDaily, cardNormalizeRecord, cardNormalizeCpuUnlocked, cardGrantStarter, cardCpuReward, cardUnlockAfterWin, cardMotionDemo, cardMotionDemoAction, cardTutorialGame, cardTutorialMutate, cardTutorialAllow, cardTutorialDone, cardTutorialCpu, CARD_TUTORIAL_STAGES, cardTutorialCopyProblems, cardTutorialFinish, CARD_TUTORIAL_LINES, cardCpuLoops, cardOwnTurns, cardDeckAddReason, cardDeckReady, cardDecksPut, cardDecksRemove, CARD_PACKS, cardOpenPack, cardBuyPacks, cardPackRates, cardBuyStarter, cardMonRarity, cardNormalizePity, cardNormalizeShop, CARD_SAVE_KEYS, cardRecordAfter, cardRankRow, cardWeekKeyJst, normalizeCardBgm, normalizeCardSettings };';
+    + 'this.E = { CARD_BATTLE_DATA, cardDecider, cardMonType, CARD_THINK_PACE, CARD_RESULT_WAIT_MS, CARD_PRESS_MS, CARD_BUBBLE_PER_TURN, CARD_SETTING_GROUPS, cardOf, cardIsBreederCard, cardDodgeIsJump, cardGuardLabel, cardCreateGame, cardApplyAction, cardLegalActions, cardAttackOptions, cardGuardOptions, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardSimulate, CARD_AI_LEVELS, CARD_AI_HABITS, CARD_AI_DECKS, cardDeckProblems, cardNormalizeCollection, cardNormalizeDecks, cardNormalizePoint, cardNormalizeDaily, cardNormalizeRecord, cardNormalizeCpuUnlocked, cardGrantStarter, cardCpuReward, cardUnlockAfterWin, cardMotionDemo, cardMotionDemoAction, cardTutorialGame, cardTutorialMutate, cardTutorialAllow, cardTutorialDone, cardTutorialCpu, CARD_TUTORIAL_STAGES, cardTutorialCopyProblems, cardTutorialFinish, CARD_TUTORIAL_LINES, cardCpuLoops, cardOwnTurns, cardDeckAddReason, cardDeckReady, cardDecksPut, cardDecksRemove, CARD_PACKS, cardOpenPack, cardBuyPacks, cardPackRates, cardPackCardRates, cardPackIdOf, cardPackAllCards, cardSplitPity, cardBuyStarter, cardMonRarity, cardNormalizePity, cardNormalizeShop, CARD_SAVE_KEYS, cardRecordAfter, cardRankRow, cardWeekKeyJst, normalizeCardBgm, normalizeCardSettings };';
   vm.runInContext(src, ctx, { filename: '82-card-battle-core.jsx' });
   return ctx.E;
 };
@@ -325,7 +325,28 @@ const motionDemo = () => {
 const packs = () => {
   let seed = 12345;
   const rand = () => { seed |= 0; seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
-  ok(E.CARD_SAVE_KEYS.pity === 'mh_card_pack_pity_v1' && E.CARD_SAVE_KEYS.shop === 'mh_card_shop_v1', 'パックの保存キーの名前が違う');
+  ok(E.CARD_SAVE_KEYS.pity === 'mh_card_pack_pity_v1' && E.CARD_SAVE_KEYS.shop === 'mh_card_shop_v1' && E.CARD_SAVE_KEYS.pitySplit === 'mh_card_pack_pity_split_v1', 'パックの保存キーの名前が違う');
+  // 8弾の分け方(2026-10-25 社長が決めた案。種族3つずつ・第1〜3弾はスターターキットの顔ぶれ・混血はメインの種族の弾)
+  const PLAN = { p1: ['dino', 'hare', 'mocchi'], p2: ['golem', 'pixie', 'naga'], p3: ['suezo', 'gali', 'tiger'], p4: ['phoenix', 'monol', 'henger'], p5: ['plant', 'dragon', 'jell'], p6: ['mew', 'worm', 'durahan'], p7: ['zilla', 'metalner', 'joker'], p8: ['arrowhead', 'centaur', 'colorpandora'] };
+  const HYBRID = { p1: ['ダークハム', 'ヘルファット'], p2: ['ストライクリパー'], p3: ['バロン', 'アクアリウス', 'プラムラー'], p4: ['ワカクサケンザイ', 'ガーラント'], p5: ['ベニヒメソウ', 'アーマードラゴン', 'ウロコゲル'], p6: ['ミミニャー', 'ムラサキチュウ', 'ケルマディクス'], p7: ['ギガロン'], p8: [] };
+  ok(E.CARD_PACKS.length === 8 && E.CARD_PACKS.every((p, i) => p.id === `p${i + 1}` && p.name === `第${i + 1}弾パック` && JSON.stringify(p.species) === JSON.stringify(PLAN[p.id])), '8弾の顔ぶれが決めた案と違う');
+  const lost = [...Object.keys(db.cards), ...Object.keys(db.monsters)].filter((no) => !E.cardPackIdOf(db, no));
+  ok(!lost.length, `どの弾にも入っていないカードがある: ${lost.slice(0, 8).join('・')}`);
+  E.CARD_PACKS.forEach((p) => {
+    const all = E.cardPackAllCards(db, p);
+    const n = all.monsters.length + all.cards.length;
+    ok(n >= 48 && n <= 52, `${p.name}の種類が50前後でない(${n})`);
+    const hy = all.monsters.filter((no) => String(db.monsters[no].wave) === 'hybrid').map((no) => db.monsters[no].name).sort();
+    ok(JSON.stringify(hy) === JSON.stringify(HYBRID[p.id].slice().sort()), `${p.name}の混血が決めた案と違う(${hy.join('・')})`);
+    const shared = all.cards.filter((no) => db.cards[no].user === 'any' || db.cards[no].user === 'breeder').length;
+    ok(shared >= 1, `${p.name}に全モンスター・ブリーダーのカードが無い`);
+    ok(all.cards.every((no) => ['any', 'breeder', ...PLAN[p.id]].includes(db.cards[no].user)), `${p.name}にほかの種族の技が入っている`);
+  });
+  // 天井の保存: 以前の w1〜w4 は消さずに残し、新しい弾へ1回だけ写す(新しい弾に数があれば上書きしない)
+  const legacy = E.cardNormalizePity({ w1: 3, w2: 5, w4: 1, p9: 2, p1: 'x' });
+  ok(JSON.stringify(legacy) === '{"w1":3,"w2":5,"w4":1}', `以前の天井の数を残していない(${JSON.stringify(legacy)})`);
+  const sp = E.cardSplitPity({ ...legacy, p2: 6 });
+  ok(sp.w1 === 3 && sp.w2 === 5 && sp.p1 === 3 && sp.p2 === 6 && sp.p3 === 3 && sp.p4 === 5 && sp.p5 === 5 && !sp.p6 && sp.p7 === 1 && sp.p8 === 1, `天井の数の写し方が違う(${JSON.stringify(sp)})`);
   E.CARD_PACKS.forEach((pack) => {
     let col = {}; let pity = {}; let maxDry = 0; let dry = 0;
     const rar = { normal: 0, kira: 0, alt: 0 };
@@ -338,7 +359,7 @@ const packs = () => {
       r.cards.forEach((c) => {
         seen.add(c.no);
         const card = db.cards[c.no]; const m = db.monsters[c.no];
-        ok(card ? card.ready && String(card.wave) === pack.wave : m && String(m.wave) === pack.wave, `${pack.name}に別の弾か準備中のカード ${c.no}`);
+        ok(card ? card.ready && E.cardPackIdOf(db, c.no) === pack.id : m && m.ready !== false && E.cardPackIdOf(db, c.no) === pack.id, `${pack.name}に別の弾か準備中のカード ${c.no}`);
         ok(c.no !== 'C-060C', 'C-060C が出た');
         if (c.slot === 'mon') rar[c.rarity] += 1;
       });
@@ -346,32 +367,46 @@ const packs = () => {
       dry = r.hit ? 0 : dry + 1; maxDry = Math.max(maxDry, dry);
       col = r.collection; pity = r.pity;
     }
-    if (pack.pity) {
-      ok(maxDry <= 7, `${pack.name}の天井が効いていない(キラなしが${maxDry}パック続いた)`);
-      const kiraRate = (rar.kira + rar.alt) / N;
-      ok(kiraRate > 0.13 && kiraRate < 0.24, `${pack.name}のキラの出る割合がおかしい(${kiraRate.toFixed(3)})`);
-    } else ok(rar.kira + rar.alt === 0, '混血パックにキラが出た');
-    const pool = Object.values(db.cards).filter((c) => String(c.wave) === pack.wave && c.ready).length + Object.values(db.monsters).filter((m) => String(m.wave) === pack.wave).length;
+    ok(pack.pity && maxDry <= 7, `${pack.name}の天井が効いていない(キラなしが${maxDry}パック続いた)`);
+    const kiraRate = (rar.kira + rar.alt) / N;
+    ok(kiraRate > 0.13 && kiraRate < 0.24, `${pack.name}のキラの出る割合がおかしい(${kiraRate.toFixed(3)})`);
+    ok((pack.no <= 3) === (rar.alt > 0), `${pack.name}の別絵キラの出かたが違う(第1〜3弾だけに出る)`);
+    const pool = Object.values(db.cards).filter((c) => c.ready && E.cardPackIdOf(db, c.no) === pack.id).length + Object.values(db.monsters).filter((m) => m.ready !== false && E.cardPackIdOf(db, m.no) === pack.id).length;
     ok(seen.size === pool, `${pack.name}で出ないカードがある(${seen.size}/${pool})`);
     ok(Object.entries(col).every(([no, n]) => (db.cards[no] ? n <= 3 : n <= 1)), `${pack.name}で持てる枚数を超えた`);
   });
   // だぶり: 技は4枚目から5、モンスターは2枚目から50
-  const one = E.cardOpenPack(db, 'w1', { collection: {}, pity: {} }, () => 0);
+  const one = E.cardOpenPack(db, 'p1', { collection: {}, pity: {} }, () => 0);
   const full = Object.fromEntries(one.cards.map((c) => [c.no, db.cards[c.no] ? 3 : 1]));
-  const again = E.cardOpenPack(db, 'w1', { collection: full, pity: {} }, () => 0);
+  const again = E.cardOpenPack(db, 'p1', { collection: full, pity: {} }, () => 0);
   ok(again.cards.every((c) => c.dup) && again.point === 7 * 5 + (again.cards[7].rarity === 'normal' ? 50 : again.cards[7].rarity === 'kira' ? 100 : 200), `だぶりのカードポイントが違う(${again.point})`);
-  // まとめ買い: 5つで450・足りなければ買えない
-  const b5 = E.cardBuyPacks(db, 'w2', 5, { collection: {}, pity: {}, point: 500 }, rand);
-  ok(b5 && b5.cost === 450 && b5.packs.length === 5 && b5.point === 50 + b5.dupPoint, '5パックまとめて450にならない');
-  ok(E.cardBuyPacks(db, 'hybrid', 1, { collection: {}, pity: {}, point: 149 }, rand) === null, 'カードポイントが足りないのに買えた');
-  ok(E.cardBuyPacks(db, 'hybrid', 1, { collection: {}, pity: {}, point: 150 }, rand).packs[0].length === 3, '混血パックが3枚でない');
-  // 選ばなかったスターターキット: 500・1回だけ・選んだキットは買えない
-  const base = { collection: {}, decks: { active: 'starter_speed', decks: [{ id: 'starter_speed', name: 's', monsters: [], cards: [] }] }, point: 600, starter: { kit: 'speed' }, shop: E.cardNormalizeShop(null) };
+  // 値段(2026-10-25 社長): どの弾も 1パック300・8枚(技など7・モンスター1)・5パックまとめて1,350 / スターターキット 1,500。混血パックは無い
+  ok(E.CARD_PACKS.every((p) => p.price === 300 && p.bundle && p.bundle.n === 5 && p.bundle.price === 1350 && p.tech === 7 && p.mon === 1), 'どの弾も1パック300・8枚・5パック1,350になっていない');
+  ok(E.CARD_PACKS.every((p) => JSON.stringify(p.rarity) === JSON.stringify(p.no <= 3 ? { normal: 85, kira: 12, alt: 3 } : { normal: 85, kira: 15, alt: 0 })), 'レア度の割合が違う(第1〜3弾 85/12/3・第4〜8弾 85/15)');
+  const b5 = E.cardBuyPacks(db, 'p2', 5, { collection: {}, pity: {}, point: 1400 }, rand);
+  ok(b5 && b5.cost === 1350 && b5.packs.length === 5 && b5.point === 50 + b5.dupPoint, '5パックまとめて1,350にならない');
+  ok(E.cardBuyPacks(db, 'p2', 1, { collection: {}, pity: {}, point: 299 }, rand) === null, 'カードポイントが足りないのに買えた');
+  ok(E.cardBuyPacks(db, 'hybrid', 1, { collection: {}, pity: {}, point: 9999 }, rand) === null, '混血パックが買えてしまう');
+  // 混血のだぶりは50(ほかの通常のモンスターと同じ)
+  const hyNo = Object.values(db.monsters).find((m) => String(m.wave) === 'hybrid' && E.cardPackIdOf(db, m.no) === 'p3').no;
+  let hyDup = null;
+  for (let i = 0; i < 400 && hyDup === null; i++) { const r = E.cardOpenPack(db, 'p3', { collection: { [hyNo]: 1 }, pity: {} }, rand); const c = r.cards.find((x) => x.no === hyNo); if (c) hyDup = c; }
+  ok(hyDup && hyDup.dup && hyDup.point === 50, `混血のだぶりが50でない(${JSON.stringify(hyDup)})`);
+  // 提供割合の表: 1枠ごとの割合を足すと100%・同じレア度のモンスターはどれも同じ割合(持っていない種族の優遇はなくした)
+  E.CARD_PACKS.forEach((p) => {
+    const r = E.cardPackCardRates(db, p.id);
+    ['normal', 'kira', 'alt'].forEach((k) => { const ps = r.mon.filter((x) => x.rarity === k).map((x) => x.p); ok(ps.every((x) => Math.abs(x - ps[0]) < 1e-12), `${p.name}の${k}の割合がそろっていない`); });
+    const sum = (xs) => xs.reduce((a, x) => a + x.p, 0);
+    ok(Math.abs(sum(r.mon) - 1) < 1e-9 && (p.tech ? Math.abs(sum(r.tech) - 1) < 1e-9 : !r.tech.length), `${p.name}の提供割合を足しても100%にならない`);
+    ok(Math.abs(Object.values(r.rarity).reduce((a, x) => a + x, 0) - 1) < 1e-9, `${p.name}のレア度の割合を足しても100%にならない`);
+  });
+  // 選ばなかったスターターキット: 1,500・1回だけ・選んだキットは買えない
+  const base = { collection: {}, decks: { active: 'starter_speed', decks: [{ id: 'starter_speed', name: 's', monsters: [], cards: [] }] }, point: 1600, starter: { kit: 'speed' }, shop: E.cardNormalizeShop(null) };
   ok(E.cardBuyStarter(db, 'speed', base, 1) === null, '選んだスターターキットを買えてしまう');
   const bs = E.cardBuyStarter(db, 'miracle', base, 1);
-  ok(bs && bs.point === 100 && bs.decks.decks.length === 2 && bs.shop.starters.miracle, 'スターターキットを500で買えない');
+  ok(bs && bs.point === 100 && bs.decks.decks.length === 2 && bs.shop.starters.miracle, 'スターターキットを1,500で買えない');
   ok(E.cardBuyStarter(db, 'miracle', { ...base, ...bs, starter: base.starter }, 2) === null, 'スターターキットを2回買えてしまう');
-  ok(JSON.stringify(E.cardNormalizePity({ w1: 3, w9: 5, w2: 'x' })) === '{"w1":3}', '天井の保存の読み方が違う');
+  ok(JSON.stringify(E.cardNormalizePity({ w1: 3, w9: 5, w2: 'x', p8: 2 })) === '{"p8":2,"w1":3}', '天井の保存の読み方が違う');
 };
 const tutorialRun = () => {
   let st = E.cardTutorialGame(db);
