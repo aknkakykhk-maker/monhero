@@ -18,7 +18,7 @@ const load = () => {
     + `${fs.readFileSync(path.join(GAME, 'src', 'parts', '85-card-battle-motion.jsx'), 'utf8').split('// ---- 動きの見本')[1].replace(/^[^\n]*\n/, '')}\n;\n`
     // よけ方・盾の数字・ブリーダーのカードの見分け(ルールだけで決まる所)も読む
     + `${(() => { const m = fs.readFileSync(path.join(GAME, 'src', 'parts', '85-card-battle-motion.jsx'), 'utf8'); return m.slice(m.indexOf('// ブリーダーのカードか'), m.indexOf('// 動きの長さ')); })()}\n;\n`
-    + 'this.E = { CARD_BATTLE_DATA, cardDecider, cardMonType, CARD_THINK_PACE, CARD_RESULT_WAIT_MS, CARD_PRESS_MS, CARD_BUBBLE_PER_TURN, CARD_SETTING_GROUPS, cardOf, cardIsBreederCard, cardDodgeIsJump, cardGuardLabel, cardCreateGame, cardApplyAction, cardLegalActions, cardAttackOptions, cardGuardOptions, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardSimulate, CARD_AI_LEVELS, CARD_AI_HABITS, CARD_AI_DECKS, cardDeckProblems, cardNormalizeCollection, cardNormalizeDecks, cardNormalizePoint, cardNormalizeDaily, cardNormalizeRecord, cardNormalizeCpuUnlocked, cardGrantStarter, cardCpuReward, cardUnlockAfterWin, cardMotionDemo, cardMotionDemoAction, cardTutorialGame, cardTutorialMutate, cardTutorialAllow, cardTutorialDone, cardTutorialCpu, CARD_TUTORIAL_STAGES, cardTutorialCopyProblems, cardTutorialFinish, CARD_TUTORIAL_LINES, cardCpuLoops, cardOwnTurns, cardDeckAddReason, cardDeckReady, cardDecksPut, cardDecksRemove, CARD_PACKS, cardOpenPack, cardBuyPacks, cardPackRates, cardPackCardRates, cardPackIdOf, cardPackAllCards, cardSplitPity, cardBuyStarter, cardMonRarity, cardNormalizePity, cardNormalizeShop, CARD_SAVE_KEYS, cardRecordAfter, cardRankRow, cardWeekKeyJst, normalizeCardBgm, normalizeCardSettings };';
+    + 'this.E = { CARD_BATTLE_DATA, cardDecider, cardMonType, CARD_THINK_PACE, CARD_RESULT_WAIT_MS, CARD_PRESS_MS, CARD_BUBBLE_PER_TURN, CARD_SETTING_GROUPS, cardOf, cardIsBreederCard, cardDodgeIsJump, cardGuardLabel, cardCreateGame, cardApplyAction, cardLegalActions, cardAttackOptions, cardGuardOptions, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardAiSeededRand, cardAiPickTrio, CARD_AI_FAVORITE, cardAiFavoriteCandidates, CARD_AI_BUILD, cardUsableBy, cardSimulate, CARD_AI_LEVELS, CARD_AI_HABITS, CARD_AI_DECKS, cardDeckProblems, cardNormalizeCollection, cardNormalizeDecks, cardNormalizePoint, cardNormalizeDaily, cardNormalizeRecord, cardNormalizeCpuUnlocked, cardGrantStarter, cardCpuReward, cardUnlockAfterWin, cardMotionDemo, cardMotionDemoAction, cardTutorialGame, cardTutorialMutate, cardTutorialAllow, cardTutorialDone, cardTutorialCpu, CARD_TUTORIAL_STAGES, cardTutorialCopyProblems, cardTutorialFinish, CARD_TUTORIAL_LINES, cardCpuLoops, cardOwnTurns, cardDeckAddReason, cardDeckReady, cardDecksPut, cardDecksRemove, CARD_PACKS, cardOpenPack, cardBuyPacks, cardPackRates, cardPackCardRates, cardPackIdOf, cardPackAllCards, cardSplitPity, cardBuyStarter, cardMonRarity, cardNormalizePity, cardNormalizeShop, CARD_SAVE_KEYS, cardRecordAfter, cardRankRow, cardWeekKeyJst, normalizeCardBgm, normalizeCardSettings };';
   vm.runInContext(src, ctx, { filename: '82-card-battle-core.jsx' });
   return ctx.E;
 };
@@ -174,8 +174,9 @@ const decksAndSaves = () => {
   //   直す前は、みゅあ 33%・ももすけ(MASTER)38% と弱く、弱い子がカードポイントの稼ぎ場になっていた。細かい数は tools/card/card-ai-balance.js
   ['expert', 'master'].forEach((lv) => {
     const rates = Object.keys(E.CARD_AI_HABITS).map((w) => {
-      const d = E.cardAiBuildDeck(db, w, lv); let win = 0, n = 0, sd = 1;
-      Object.keys(db.starters).forEach((k) => { for (let g = 0; g < 30; g++) { const st = E.cardSimulate(db, { decks: [d, E.cardAiBuildDeck(db, k)], policies: [E.cardAiPolicy(w, lv), E.cardAiPolicy('kyuko', lv)], seed: 7000 + sd++, first: g % 2 }); if (st.winner === 0) win += 1; n += 1; } });
+      let win = 0, n = 0, sd = 1;
+      // 助手のデッキは毎試合組み直す(好きなモンスター ベスト4から3体。2026-10-25)。MASTER はプレイヤー役のデッキを見る
+      Object.keys(db.starters).forEach((k) => { for (let g = 0; g < 30; g++) { const d = E.cardAiBuildDeck(db, w, lv, E.cardAiSeededRand(`${w}:${lv}:${k}:${g}`), { playerDeck: E.cardAiBuildDeck(db, k) }); const st = E.cardSimulate(db, { decks: [d, E.cardAiBuildDeck(db, k)], policies: [E.cardAiPolicy(w, lv), E.cardAiPolicy('kyuko', lv)], seed: 7000 + sd++, first: g % 2 }); if (st.winner === 0) win += 1; n += 1; } });
       return [w, win / n];
     });
     const bad = rates.filter(([, r]) => r < 0.38 || r > 0.65);
@@ -183,12 +184,44 @@ const decksAndSaves = () => {
   });
   // スターターと助手のデッキ(全部の難易度)が決まりどおり
   Object.keys(db.starters).forEach((k) => { const p = E.cardDeckProblems(db, E.cardAiBuildDeck(db, k)); ok(!p.length, `スターター ${k}: ${p.join('・')}`); });
-  Object.keys(E.CARD_AI_DECKS).forEach((w) => Object.keys(E.CARD_AI_LEVELS).forEach((lv) => {
-    const d = E.cardAiBuildDeck(db, w, lv);
+  // 好きなモンスター(1体・主血統で決める。2026-10-25 社長): どの強さでも必ず1体入る(後の弾の子も EASY から)。
+  //   候補はその種族の通常・キラ・別絵キラと、主血統がその種族の混血。毎試合少し変わり、残り2体は別々の種族。EASY はたまに気まぐれ
+  const WANT_FAV = { mua: 'mocchi', momosuke: 'metalner', kiki: 'golem', kyuko: 'mew', dra: 'zilla', atsu: 'dragon' };
+  ok(JSON.stringify(E.CARD_AI_FAVORITE) === JSON.stringify(WANT_FAV), `好きなモンスターが社長の決めと違う: ${JSON.stringify(E.CARD_AI_FAVORITE)}`);
+  const hf = E.cardAiFavoriteCandidates(db, 'mua').map((no) => db.monsters[no].name);
+  ok(hf.includes('ヘルファット') && hf.filter((n) => n === 'モッチー').length >= 2, `みゅあの好きなモンスターの候補に、モッチーのキラや派生(ヘルファット)が入っていない: ${hf.join('・')}`);
+  Object.keys(E.CARD_AI_HABITS).forEach((w) => {
+    const cands = E.cardAiFavoriteCandidates(db, w);
+    ok(cands.length >= 1, `助手 ${w} の好きなモンスターの候補が無い`);
+    Object.keys(E.CARD_AI_LEVELS).forEach((lv) => {
+      const trios = new Set(); const favUsed = new Set(); let favAttack = true;
+      for (let g = 0; g < 40; g++) {
+        const d = E.cardAiBuildDeck(db, w, lv, E.cardAiSeededRand(`fav:${w}:${lv}:${g}`));
+        const fm = d.monsters.filter((no) => cands.includes(no));
+        ok(fm.length >= 1, `助手 ${w}(${lv})のデッキに好きなモンスターがいない`);
+        const sp = d.monsters.map((no) => db.monsters[no].species);
+        ok(new Set(sp).size === 3, `助手 ${w}(${lv})の3体の種族が重なっている`);
+        trios.add(d.monsters.slice().sort().join(',')); fm.forEach((no) => favUsed.add(no));
+        // 好きな子が使える攻撃の技が入っている(後の弾の子でも、EASY から戦える)
+        const fmon = db.monsters[fm[0]];
+        if (!d.cards.some((no) => { const c = db.cards[no]; return c.user !== 'any' && c.user !== 'breeder' && ['pow', 'int'].includes(c.kind) && E.cardUsableBy(c, { ...fmon, ko: false }); })) favAttack = false;
+      }
+      ok(favAttack, `助手 ${w}(${lv})で、好きなモンスターの攻撃の技が入らないことがある`);
+      if (lv !== 'master') ok(trios.size >= 2, `助手 ${w}(${lv})の3体が毎回同じ`);
+      if (lv === 'easy' && cands.length >= 3) ok(favUsed.size >= 2, `助手 ${w}(EASY)の好きな子が毎回同じ(キラや派生も使う)`);
+    });
+  });
+  Object.keys(E.CARD_AI_DECKS).forEach((w) => Object.keys(E.CARD_AI_LEVELS).forEach((lv) => [0, 1, 2, 3, 4].forEach((g) => {
+    const d = E.cardAiBuildDeck(db, w, lv, g ? E.cardAiSeededRand(`deck:${w}:${lv}:${g}`) : null);
     const p = E.cardDeckProblems(db, d);
     ok(!p.length, `助手 ${w}(${lv})のデッキ: ${p.join('・')}`);
     ok(d.cards.every((no) => db.cards[no].ready), `助手 ${w}(${lv})のデッキに準備中のカード`);
-  }));
+    // 弾の制限: 全モンスター・ブリーダーのカードは決めた弾まで。各モンスターの技は、その子の弾まで(後の弾の好きな子も EASY から戦える)
+    const mw = (m) => (String(m.wave) === 'hybrid' ? Number((Object.values(db.monsters).find((x) => !x.variant && x.species === m.main && String(x.wave) !== 'hybrid') || { wave: 4 }).wave) : Number(m.wave));
+    const maxW = E.CARD_AI_BUILD[lv].maxWave;
+    const badWave = d.cards.filter((no) => { const c = db.cards[no]; if (c.user === 'any' || c.user === 'breeder') return c.wave > maxW; return !d.monsters.some((mno) => { const m = db.monsters[mno]; return E.cardUsableBy(c, { ...m, ko: false }) && c.wave <= Math.max(maxW, mw(m)); }); });
+    ok(!badWave.length, `助手 ${w}(${lv})のデッキに使えない弾のカード: ${[...new Set(badWave)].slice(0, 4).join('・')}`);
+  })));
   // 保存の読み込み: 無い・壊れた値でも既定値になる
   [undefined, null, 'x', 5, [], { a: 'b' }].forEach((bad) => {
     ok(JSON.stringify(E.cardNormalizeCollection(bad)) === '{}' || cardIsObj(E.cardNormalizeCollection(bad)), 'コレクションの正規化');

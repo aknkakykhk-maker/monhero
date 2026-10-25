@@ -217,6 +217,27 @@ const RIGS = [
   { id:'Worm', img:'images/monsters/worm.png', body:'jelly', parts:[] },
   { id:'Centaur', img:'images/monsters/centaur.png', body:'breathe', parts:[] },
   { id:'Colorpandora', img:'images/monsters/colorpandora.png', body:'hop', parts:[] },
+  // 派生モンスター20体(2026-10-25・案の子)。動かす部分はまだ無く、体の動きだけ
+  { id:'HamLiger', img:'images/monsters/c010.png', body:'breathe', parts:[] },
+  { id:'Melonbo', img:'images/monsters/c012.png', body:'hop', parts:[] },
+  { id:'LavenderKeel', img:'images/monsters/c013.png', body:'drift', parts:[] },
+  { id:'VirgiaHapi', img:'images/monsters/c015.png', body:'breathe', parts:[] },
+  { id:'Angel', img:'images/monsters/c016.png', body:'drift', parts:[] },
+  { id:'HitotsumeOuji', img:'images/monsters/c017.png', body:'sway', parts:[] },
+  { id:'Tsunomaru', img:'images/monsters/c018.png', body:'hop', parts:[] },
+  { id:'Bazula', img:'images/monsters/c019.png', body:'sway', parts:[] },
+  { id:'NachtFalter', img:'images/monsters/c033.png', body:'drift', parts:[] },
+  { id:'Katchusaur', img:'images/monsters/c034.png', body:'breathe', parts:[] },
+  { id:'YoroiMocchi', img:'images/monsters/c035.png', body:'breathe', parts:[] },
+  { id:'ParPurin', img:'images/monsters/c036.png', body:'jelly', parts:[] },
+  { id:'DarkHenger', img:'images/monsters/c038.png', body:'drift', parts:[] },
+  { id:'MamaNyaa', img:'images/monsters/c039.png', body:'breathe', parts:[] },
+  { id:'Hinekuresou', img:'images/monsters/c040.png', body:'sway', parts:[] },
+  { id:'Corone', img:'images/monsters/c041.png', body:'breathe', parts:[] },
+  { id:'Jihad', img:'images/monsters/c042.png', body:'breathe', parts:[] },
+  { id:'Gentle', img:'images/monsters/c020.png', body:'breathe', parts:[] },
+  { id:'Vesuvios', img:'images/monsters/c043.png', body:'breathe', parts:[] },
+  { id:'MooHybrid', img:'images/monsters/c045.png', body:'breathe', parts:[] },
 ];
 
 const constName = (id, name) => `IDLE_${id.replace(/([a-z])([A-Z])/g, '$1_$2').toUpperCase()}_${name.replace(/([a-z])([A-Z])/g, '$1_$2').toUpperCase()}_MASK`;

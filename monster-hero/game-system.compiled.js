@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3f9ed3bda71232ba
+// source-sha256: 9a8bfb8229ceea6d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-26 00:32";
+const BUILD_DATE = "2026-10-26 01:59";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -25103,6 +25103,106 @@ const MONSTER_IDLE_RIGS = Object.freeze({
   },
   Colorpandora: {
     body: 'hop',
+    bodyMask: null,
+    parts: []
+  },
+  HamLiger: {
+    body: 'breathe',
+    bodyMask: null,
+    parts: []
+  },
+  Melonbo: {
+    body: 'hop',
+    bodyMask: null,
+    parts: []
+  },
+  LavenderKeel: {
+    body: 'drift',
+    bodyMask: null,
+    parts: []
+  },
+  VirgiaHapi: {
+    body: 'breathe',
+    bodyMask: null,
+    parts: []
+  },
+  Angel: {
+    body: 'drift',
+    bodyMask: null,
+    parts: []
+  },
+  HitotsumeOuji: {
+    body: 'sway',
+    bodyMask: null,
+    parts: []
+  },
+  Tsunomaru: {
+    body: 'hop',
+    bodyMask: null,
+    parts: []
+  },
+  Bazula: {
+    body: 'sway',
+    bodyMask: null,
+    parts: []
+  },
+  NachtFalter: {
+    body: 'drift',
+    bodyMask: null,
+    parts: []
+  },
+  Katchusaur: {
+    body: 'breathe',
+    bodyMask: null,
+    parts: []
+  },
+  YoroiMocchi: {
+    body: 'breathe',
+    bodyMask: null,
+    parts: []
+  },
+  ParPurin: {
+    body: 'jelly',
+    bodyMask: null,
+    parts: []
+  },
+  DarkHenger: {
+    body: 'drift',
+    bodyMask: null,
+    parts: []
+  },
+  MamaNyaa: {
+    body: 'breathe',
+    bodyMask: null,
+    parts: []
+  },
+  Hinekuresou: {
+    body: 'sway',
+    bodyMask: null,
+    parts: []
+  },
+  Corone: {
+    body: 'breathe',
+    bodyMask: null,
+    parts: []
+  },
+  Jihad: {
+    body: 'breathe',
+    bodyMask: null,
+    parts: []
+  },
+  Gentle: {
+    body: 'breathe',
+    bodyMask: null,
+    parts: []
+  },
+  Vesuvios: {
+    body: 'breathe',
+    bodyMask: null,
+    parts: []
+  },
+  MooHybrid: {
+    body: 'breathe',
     bodyMask: null,
     parts: []
   }
@@ -84241,17 +84341,55 @@ const CARD_AI_HABIT_BLEND = Object.freeze({
     momosuke: 0.5
   }
 });
+const CARD_AI_PLAY_TUNE = Object.freeze({
+  mua: {
+    easy: -0.035,
+    normal: -0.105,
+    hard: -0.11,
+    expert: 0.075,
+    master: 0.12
+  },
+  momosuke: {
+    easy: 0.12,
+    normal: 0.06,
+    hard: 0,
+    expert: 0.15,
+    master: 0.165
+  },
+  kiki: {
+    easy: -0.045,
+    normal: 0.06,
+    hard: 0.15,
+    expert: 0,
+    master: 0.345
+  },
+  dra: {
+    easy: -0.075,
+    normal: -0.075,
+    hard: 0.03,
+    expert: 0,
+    master: 0.12
+  },
+  atsu: {
+    easy: -0.075,
+    normal: -0.15,
+    hard: -0.105,
+    expert: 0.03,
+    master: 0.12
+  }
+});
 const cardAiPolicy = (habitId, levelId) => {
   const level = CARD_AI_LEVELS[levelId] || CARD_AI_LEVELS.normal;
   const tune = CARD_AI_TUNE[habitId] === undefined ? 1 : CARD_AI_TUNE[habitId];
   const base = CARD_AI_HABITS[habitId] || CARD_AI_HABITS.kyuko;
   const blend = (CARD_AI_HABIT_BLEND[levelId] || {})[habitId];
   const habit = blend === undefined ? base : Object.fromEntries(Object.entries(base).map(([k, v]) => [k, 1 + (v - 1) * blend]));
+  const add = (CARD_AI_PLAY_TUNE[habitId] || {})[levelId] || 0;
   return {
     habit,
     level: {
       ...level,
-      sloppy: Math.min(0.9, (level.sloppy || 0) * tune)
+      sloppy: Math.max(0, Math.min(0.9, (level.sloppy || 0) * tune + add))
     }
   };
 };
@@ -84628,6 +84766,74 @@ const CARD_AI_DECKS = Object.freeze({
     prefer: ['竜巻アタック', '地震', '炎のカベ', 'ブリザード']
   }
 });
+const CARD_AI_FAVORITE = Object.freeze({
+  mua: 'mocchi',
+  momosuke: 'metalner',
+  kiki: 'golem',
+  kyuko: 'mew',
+  dra: 'zilla',
+  atsu: 'dragon'
+});
+const CARD_AI_BUILD = Object.freeze({
+  easy: {
+    maxWave: 1,
+    noise: 1.6,
+    temp: 3.0,
+    stray: 0.3
+  },
+  normal: {
+    maxWave: 1,
+    noise: 0.8,
+    temp: 1.5,
+    stray: 0
+  },
+  hard: {
+    maxWave: 1,
+    noise: 0.3,
+    temp: 0.8,
+    stray: 0
+  },
+  expert: {
+    maxWave: 99,
+    noise: 0.15,
+    temp: 0.5,
+    stray: 0
+  },
+  master: {
+    maxWave: 99,
+    noise: 0.05,
+    temp: 0.2,
+    stray: 0,
+    best: true
+  }
+});
+const CARD_AI_DECK_TUNE = Object.freeze({
+  mua: {
+    easy: -0.7,
+    normal: -2.1,
+    hard: -2.2
+  },
+  momosuke: {},
+  kiki: {
+    easy: -0.9
+  },
+  kyuko: {
+    easy: -1.5,
+    normal: -1.5,
+    hard: -1.5,
+    expert: 0,
+    master: 0.1
+  },
+  dra: {
+    easy: -1.5,
+    normal: -1.5
+  },
+  atsu: {
+    easy: -1.5,
+    normal: -3,
+    hard: -2.1
+  }
+});
 const CARD_AI_LANE_MIN_DEFAULT = 0.8;
 const CARD_AI_LANE_MIN = Object.freeze({
   momosuke: 1.5,
@@ -84715,31 +84921,111 @@ const cardAiCardValue = (card, habit) => {
   const big = card.guts >= 4 ? habit.big : 1;
   return dmg / cost * 2 * habit.attack * big;
 };
-const cardAiBuildDeck = (db, who, levelId = 'normal') => {
+const cardAiSeededRand = key => {
+  let h = 2166136261;
+  for (const ch of String(key)) {
+    h ^= ch.charCodeAt(0);
+    h = Math.imul(h, 16777619);
+  }
+  let t = h >>> 0;
+  return () => {
+    t = t + 0x6D2B79F5 | 0;
+    let r = Math.imul(t ^ t >>> 15, 1 | t);
+    r = r + Math.imul(r ^ r >>> 7, 61 | r) ^ r;
+    return ((r ^ r >>> 14) >>> 0) / 4294967296;
+  };
+};
+const cardAiPickIndex = (weights, rand) => {
+  const total = weights.reduce((x, w) => x + Math.max(0, w), 0);
+  let r = rand() * total;
+  for (let i = 0; i < weights.length; i++) {
+    r -= Math.max(0, weights[i]);
+    if (r < 0) return i;
+  }
+  return weights.length - 1;
+};
+const cardAiFavoriteCandidates = (db, who) => {
+  const fav = CARD_AI_FAVORITE[who] || CARD_AI_FAVORITE.mua;
+  return Object.values(db.monsters).filter(m => m.ready !== false && (String(m.wave) === 'hybrid' ? m.main === fav : m.species === fav)).map(m => m.no).sort();
+};
+const cardAiMonWave = (db, m) => {
+  if (String(m.wave) !== 'hybrid') return Number(m.wave) || 1;
+  const main = Object.values(db.monsters).find(x => !x.variant && x.species === m.main && String(x.wave) !== 'hybrid');
+  return main ? Number(main.wave) || 1 : 4;
+};
+const cardAiMonScore = (db, who, m, maxWave) => {
+  const habit = CARD_AI_HABITS[who] || CARD_AI_HABITS.kyuko;
+  const lim = Math.max(maxWave, cardAiMonWave(db, m));
+  const vals = Object.values(db.cards).filter(c => c.ready && c.user !== 'any' && c.user !== 'breeder' && c.wave <= lim && cardUsableBy(c, {
+    ...m,
+    ko: false
+  })).map(c => cardAiCardValue(c, habit));
+  return vals.sort((x, y) => y - x).slice(0, 10).reduce((x, v) => x + v, 0) + (m.life || 0) * 0.3;
+};
+const cardAiPickTrio = (db, who, levelId, rand, playerDeck) => {
+  const cfg = CARD_AI_BUILD[levelId] || CARD_AI_BUILD.normal;
+  const favs = cardAiFavoriteCandidates(db, who).map(no => cardMonsterOf(db, no));
+  if (!favs.length) return [];
+  const favScore = favs.map(m => cardAiMonScore(db, who, m, cfg.maxWave));
+  const favW = favs.map(m => String(m.wave) === 'hybrid' ? 1.5 : !m.variant ? 3 : /別絵/.test(m.variant) ? 1 : 2);
+  const fav = cfg.best ? favs[favScore.indexOf(Math.max(...favScore))] : favs[cardAiPickIndex(favW, rand)];
+  const cands = Object.values(db.monsters).filter(m => m.ready !== false && !m.variant && m.species !== fav.species && m.species !== CARD_AI_FAVORITE[who] && (String(m.wave) === 'hybrid' ? cfg.maxWave >= 99 && m.main !== CARD_AI_FAVORITE[who] : Number(m.wave) <= cfg.maxWave));
+  let counter = () => 0;
+  if (cfg.best && playerDeck && Array.isArray(playerDeck.cards) && playerDeck.cards.length) {
+    const pc = playerDeck.cards.map(no => cardOf(db, no)).filter(Boolean);
+    const areaRate = pc.filter(c => cardHasEff(c, 'area')).length / pc.length;
+    const evadeRate = pc.filter(c => cardHasEff(c, 'evade')).length / pc.length;
+    counter = m => areaRate * (m.life || 0) * 1.5 + evadeRate * Object.values(db.cards).filter(c => c.ready && cardHasEff(c, 'noEvade') && cardUsableBy(c, {
+      ...m,
+      ko: false
+    })).length * 1.2;
+  }
+  const scored = cands.map(m => ({
+    m,
+    v: cardAiMonScore(db, who, m, cfg.maxWave) + counter(m)
+  }));
+  const out = [fav.no];
+  const usedSpecies = new Set([fav.species, String(fav.wave) === 'hybrid' ? fav.main : fav.species]);
+  for (let k = 0; k < 2; k++) {
+    const left = scored.filter(x => !usedSpecies.has(x.m.species) && !(String(x.m.wave) === 'hybrid' && usedSpecies.has(x.m.main)));
+    if (!left.length) break;
+    let pick;
+    if (cfg.stray > 0 && rand() < cfg.stray) pick = left[Math.floor(rand() * left.length) % left.length];else if (cfg.best) pick = left.reduce((x, y) => y.v > x.v ? y : x);else {
+      const top = Math.max(...left.map(x => x.v));
+      pick = left[cardAiPickIndex(left.map(x => Math.exp((x.v - top) / cfg.temp)), rand)];
+    }
+    out.push(pick.m.no);
+    usedSpecies.add(pick.m.species);
+  }
+  return out;
+};
+const cardAiBuildDeck = (db, who, levelId = 'normal', rand = null, opts = {}) => {
   if (db.starters[who]) return {
     monsters: db.starters[who].monsters.slice(),
     cards: db.starters[who].cards.slice()
   };
   const recipe = CARD_AI_DECKS[who] || CARD_AI_DECKS.mua;
-  const upper = levelId === 'hard' || levelId === 'expert' || levelId === 'master';
-  if (recipe.kit && !upper) return cardAiBuildDeck(db, recipe.kit);
-  const monsters = recipe.monsters || db.starters[recipe.kit].monsters;
-  const maxWave = levelId === 'expert' || levelId === 'master' ? 4 : 1;
+  const cfg = CARD_AI_BUILD[levelId] || CARD_AI_BUILD.normal;
+  const rnd = typeof rand === 'function' ? rand : cardAiSeededRand(`${who}:${levelId}`);
+  const monsters = cardAiPickTrio(db, who, levelId, rnd, opts && opts.playerDeck);
+  const maxWave = cfg.maxWave;
   const habit = CARD_AI_HABITS[who] || CARD_AI_HABITS.kyuko;
   const mons = monsters.map(no => cardMonsterOf(db, no));
-  const pool = Object.values(db.cards).filter(c => c.ready && c.wave <= maxWave && (c.user === 'any' || c.user === 'breeder' || mons.some(m => cardUsableBy(c, {
+  const pool = Object.values(db.cards).filter(c => c.ready && (c.user === 'any' || c.user === 'breeder' ? c.wave <= maxWave : mons.some(m => cardUsableBy(c, {
     ...m,
     ko: false
-  }))));
+  }) && c.wave <= Math.max(maxWave, cardAiMonWave(db, m)))));
   const byName = {};
+  const noise = Math.max(0, cfg.noise + ((CARD_AI_DECK_TUNE[who] || {})[levelId] || 0));
   pool.forEach(c => {
-    const v = cardAiCardValue(c, habit);
+    const v = cardAiCardValue(c, habit) + noise * (rnd() * 2 - 1);
     if (!byName[c.name] || byName[c.name].v < v) byName[c.name] = {
       c,
       v
     };
   });
   const ranked = Object.values(byName).sort((a, b) => b.v - a.v || (a.c.no < b.c.no ? -1 : 1));
+  const preferOn = levelId === 'hard' || levelId === 'expert' || levelId === 'master';
   const guardTarget = Math.round(12 + 6 * Math.min(1.5, habit.keepGuard));
   const cards = [];
   const heavyMax = Math.round(8 * habit.big);
@@ -84770,7 +85056,7 @@ const cardAiBuildDeck = (db, who, levelId = 'normal') => {
   })));
   const shared = attacks.filter(x => x.c.user === 'any' || x.c.user === 'breeder');
   const used = new Set();
-  (recipe.prefer || []).forEach(name => {
+  (preferOn ? recipe.prefer || [] : []).forEach(name => {
     const x = byName[name];
     if (x && !used.has(name)) {
       used.add(name);
@@ -86979,6 +87265,13 @@ const cardFoeStyle = who => {
   const [k, v] = Object.entries(h).sort((a, b) => b[1] - a[1])[0];
   return v <= 1.2 ? CARD_FOE_STYLES.balance : CARD_FOE_STYLES[k] || CARD_FOE_STYLES.balance;
 };
+const CARD_FOE_BUILD_NOTE = Object.freeze({
+  easy: '残りの2体は気分でえらぶ(気まぐれな子が混ざることも)。カードは第1弾だけで、組み方は雑',
+  normal: '残りの2体は型に合う子が中心。カードは型に合うものを、ざっくり入れる',
+  hard: '残りの2体は、型に合う子をしっかりえらぶ。第1弾のカードで、型どおりに組む',
+  expert: '残りの2体は、型に合う子をしっかりえらぶ。全部の弾から、強いカードを優先して組む',
+  master: 'いちばん強い組み合わせで、全部の弾から本気で組む。あなたのデッキを見て、残りの2体をえらび直すことも'
+});
 const CardFoeStyle = ({
   db,
   who,
@@ -86987,11 +87280,11 @@ const CardFoeStyle = ({
   const style = cardFoeStyle(who);
   const recipe = CARD_AI_DECKS[who];
   if (!style || !recipe) return null;
-  const kit = recipe.kit ? db.starters[recipe.kit] : null;
-  const mons = (recipe.monsters || (kit ? kit.monsters : [])).map(no => cardMonsterOf(db, no)).filter(Boolean);
-  const upper = level === 'hard' || level === 'expert' || level === 'master';
+  const favSpecies = CARD_AI_FAVORITE[who];
+  const fav = Object.values(db.monsters).find(m => m.species === favSpecies && !m.variant && String(m.wave) !== 'hybrid') || null;
+  const kin = cardAiFavoriteCandidates(db, who).filter(no => String((cardMonsterOf(db, no) || {}).wave) === 'hybrid').length;
   const lv = CARD_LEVEL_LABEL[level] || '';
-  const deckNote = kit && !upper ? `${lv}: スターター「${kit.name}」のままのデッキ` : `${lv}: この3体に合わせて、${style.label}のデッキを組んでくる${level === 'expert' || level === 'master' ? '(いろいろな弾のカードも使う)' : ''}`;
+  const upper = level === 'hard' || level === 'expert' || level === 'master';
   return React.createElement("div", {
     "data-card-foe-style": who,
     className: "space-y-1.5 rounded-2xl border border-white/10 bg-slate-900/70 p-2"
@@ -87003,22 +87296,24 @@ const CardFoeStyle = ({
   }, style.label), React.createElement("span", {
     className: "min-w-0 text-[11px] font-bold text-slate-200",
     style: JA_WRAP_STYLE
-  }, jaWrap(style.note))), React.createElement("div", {
+  }, jaWrap(style.note))), fav && React.createElement("div", {
     className: "flex flex-wrap items-center gap-x-2 gap-y-1"
   }, React.createElement("small", {
     className: "shrink-0 text-[10px] font-black text-slate-400"
-  }, "使うモンスター"), mons.map(m => React.createElement("span", {
-    key: m.no,
-    "data-card-foe-mon": m.no,
+  }, "好きなモンスター"), React.createElement("span", {
+    "data-card-foe-mon": fav.no,
     className: "flex shrink-0 items-center gap-1"
   }, React.createElement("img", {
-    src: cardMonArt(m) || CARD_IMG(m.img),
+    src: cardMonArt(fav) || CARD_IMG(fav.img),
     alt: "",
     "aria-hidden": "true",
-    className: "h-7 w-7 rounded-md bg-white/10 object-contain"
+    className: "h-8 w-8 rounded-md bg-white/10 object-contain"
   }), React.createElement("b", {
-    className: "whitespace-nowrap text-[12px] font-black text-white"
-  }, m.name)))), Array.isArray(recipe.prefer) && recipe.prefer.length > 0 && React.createElement("div", {
+    className: "whitespace-nowrap text-[13px] font-black text-amber-100"
+  }, fav.name)), React.createElement("span", {
+    className: "text-[10px] font-bold text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap(kin ? 'いつも1体入れる(キラや派生のことも)' : 'いつも1体入れる(キラのことも)'))), upper && Array.isArray(recipe.prefer) && recipe.prefer.length > 0 && React.createElement("div", {
     "data-card-foe-prefer": true,
     className: "text-[11px] font-bold text-slate-200",
     style: JA_WRAP_STYLE
@@ -87031,7 +87326,7 @@ const CardFoeStyle = ({
     "data-card-foe-deck-note": true,
     className: "text-[10px] font-bold text-slate-400",
     style: JA_WRAP_STYLE
-  }, jaWrap(deckNote)));
+  }, jaWrap(`${lv}: ${CARD_FOE_BUILD_NOTE[level] || ''}`)));
 };
 const CardDetailModal = ({
   db,
@@ -89096,7 +89391,9 @@ const CardBattleScreen = ({
       setNotice(deckIssues.join('・'));
       return;
     }
-    const cpuDeck = cardAiBuildDeck(db, pick.who, pick.level);
+    const cpuDeck = cardAiBuildDeck(db, pick.who, pick.level, Math.random, {
+      playerDeck: activeDeck
+    });
     const seed = (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0;
     const first = Math.random() < 0.5 ? CARD_ME : CARD_CPU;
     const assistant = allAssistants.find(a => a.id === pick.who);
