@@ -172,6 +172,33 @@ const useCardLongPress = (onLong, ms = 450) => {
   });
 };
 
+// ---- 公開前の予告の小窓(社長 2026-10-25「近日公開みたいな感じでホームに出して」) ----
+// HOME の「近日公開」の札を押すと出る。絵と文は、更新履歴の予告の項目(assistantNotice の id で引く)と同じもの(書く場所を1つにする)。
+// 中の画面へは入れない。何も保存しない
+const CARD_TEASER_NOTICE_ID = 'update_notice_card_battle_soon_v1';
+const CardBattleTeaser = ({ onClose }) => {
+  const entry = (typeof CHANGELOG !== 'undefined' && Array.isArray(CHANGELOG) ? CHANGELOG : []).find((e) => e && e.assistantNotice && e.assistantNotice.id === CARD_TEASER_NOTICE_ID) || null;
+  return (
+    <div data-card-teaser role="dialog" aria-modal="true" aria-label="MFバトルカード 近日公開" onClick={onClose} className="fixed inset-0 flex items-center justify-center overflow-y-auto p-4" style={{ zIndex: MODAL_Z.dialog, backgroundColor: 'rgba(2,6,23,0.88)' }}>
+      <div onClick={(e) => e.stopPropagation()} className="w-full max-w-[420px] rounded-3xl border-2 border-amber-300/80 bg-slate-950 p-3 text-white shadow-2xl landscape:max-w-[760px]">
+        <div className="landscape:flex landscape:items-start landscape:gap-3">
+          {entry && entry.image && <img src={entry.image} alt="MFバトルカード 近日公開" className="w-full rounded-2xl landscape:w-[46%] landscape:shrink-0"/>}
+          <div className="min-w-0 landscape:flex-1">
+            <div className="mt-2 flex items-center gap-2 landscape:mt-0">
+              <b className="text-[18px] font-black">MFバトルカード</b>
+              <span className="rounded-full bg-amber-400 px-2 py-0.5 text-[11px] font-black text-slate-950">近日公開</span>
+            </div>
+            <div className="mt-1.5 space-y-1">
+              {(entry ? entry.items.filter((t) => !/HOMEに入口/.test(t)) : ['近日公開します。']).map((t, i) => <p key={i} className="text-[12px] font-bold leading-relaxed text-slate-200" style={JA_WRAP_STYLE}>{t.split(/(「[^」]+」)/).map((part, k) => (/^「[^」]+」$/.test(part) ? <span key={k} className="inline-block whitespace-nowrap">{part}</span> : <React.Fragment key={k}>{jaWrap(part)}</React.Fragment>))}</p>)}
+            </div>
+            <button type="button" data-card-teaser-close onClick={onClose} className="mh-button mh-button-primary mt-3 min-h-[48px] w-full rounded-2xl text-[14px] font-black active:scale-[.98]">閉じる</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ---- 詳しい画面(大きな絵・名前・種類・ガッツ・使える子・番号・文)。どこをタップしても閉じる ----
 const CardDetailModal = ({ db, no, onClose }) => {
   const c = cardOf(db, no);
