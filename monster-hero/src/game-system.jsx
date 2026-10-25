@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 659e6050793a7cff
+// generated-sha256: a92f5f797f555198
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-25 12:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-25 12:31"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -51203,20 +51203,20 @@ const CARD_LINE_FACE = Object.freeze({
 // 1本は文字だけか [文, 表情]。表情を書いた行はその表情を出す(負けたときなど、子と台詞で顔を変える)
 const CARD_BATTLE_LINES = Object.freeze({
   mua: {
-    challenge: ['カードで勝負しよ！ あたし、手加減しないよ♪', '準備できた？ あたしはいつでもいけるよ！', 'まじ楽しみすぎる！ 全力でいこ！', 'デッキ組んだ？ あたしのスピード、見せちゃうよ♪'],
-    start: ['いっくよー！ 先に攻めたもん勝ちじゃんｗ', 'よろしくね！ あたし、ガンガンいっちゃうよ♪', 'ﾜｸﾜｸ…！ 最初の一手、決めちゃお！', 'まじ燃えてきた！ 楽しくいこ！'],
-    big: ['これでどーだ！ 大技いっちゃうよ♪', 'ためたガッツ、ぜんぶ乗せじゃんｗ', 'まとめていっけぇー！', 'ここで決めるよ！ 覚悟しててね♪'],
-    bigHit: ['いったぁ…！ 今のはまじ効いた…', 'えっ、そんなに削れるの！？ やばすぎｗ', 'うわー！ でもまだまだいけるよ！', 'ぐぬ…！ 次はあたしの番だかんね！'],
-    guardMine: ['よけたー！ あたしの子、すばしっこいでしょ♪', 'セーフ！ 読んでたもんね〜ｗ', '守りもバッチリじゃん！'],
-    guardTheirs: ['えー！ よけられた！？ うまっ！', 'むぅ、守られちゃった…次は当てるよ！', 'そうくるかー！ やるじゃんｗ'],
+    challenge: ['カードで勝負しよ！ あたし、手加減しないよ♪', '準備できた？ あたしはいつでもいけるよ！', 'まぢ楽しみすぎる！ 全力でいこ！', 'デッキ組んだ？ あたしのスピード、見せちゃうよ♪'],
+    start: ['いっくよー！ 先に攻めたもん勝ちぢゃんｗ', 'よろしくね！ あたし、ガンガンいっちゃうよ♪', 'ﾜｸﾜｸ…！ 最初の一手、決めちゃお！', 'まぢ燃えてきた！ 楽しくいこ！'],
+    big: ['これでどーだ！ 大技いっちゃうよ♪', 'ためたガッツ、ぜんぶ乗せぢゃんｗ', 'まとめていっけぇー！', 'ここで決めるよ！ 覚悟しててね♪'],
+    bigHit: ['いったぁ…！ 今のはまぢ効いた…', 'えっ、そんなに削れるの！？ やばすぎｗ', 'うわー！ でもまだまだいけるよ！', 'ぐぬ…！ 次はあたしの番だかんね！'],
+    guardMine: ['よけたー！ あたしの子、すばしっこいでしょ♪', 'セーフ！ 読んでたもんね〜ｗ', '守りもバッチリぢゃん！'],
+    guardTheirs: ['えー！ よけられた！？ うまっ！', 'むぅ、守られちゃった…次は当てるよ！', 'そうくるかー！ やるぢゃんｗ'],
     myKo: ['あぁっ、倒れちゃった…！ ありがと、休んでて！', 'うそー！ まだ残りの子がいるもん！', 'くやしい…！ でも、ここから巻き返すよ！'],
     theirKo: ['やったー！ 1体倒したよ♪', 'よっしゃ！ この調子でいこ！', '決まったー！ ﾄﾞﾔｧ'],
-    lastMine: ['あと1体…！ でもあたし、あきらめないよ！', 'ピンチすぎる…！ ここからが本番じゃんｗ'],
+    lastMine: ['あと1体…！ でもあたし、あきらめないよ！', 'ピンチすぎる…！ ここからが本番ぢゃんｗ'],
     lastTheirs: ['あと1体だね！ 一気にいっちゃうよ♪', 'ラストスパート！ 最後まで全力でいこ！'],
-    deckMine: ['山札、あと少しじゃん…！ 急がなきゃ！', 'カード残り少ない…早く決めなきゃ！'],
+    deckMine: ['山札、あと少しぢゃん…！ 急がなきゃ！', 'カード残り少ない…早く決めなきゃ！'],
     deckTheirs: ['そっちの山札、もう少ないよ？ 大丈夫？', 'カード足りる…？ あたしまでﾄﾞｷﾄﾞｷしてきた！'],
     win: ['あたしの勝ちー！ めっちゃ楽しかった♪', 'やったー！ またいつでも相手するよ！', '勝っちゃった！ 次も全力でいこ！'],
-    lose: [['負けたー！ でも、まじ楽しかったよ！', 'happy'], ['強すぎじゃんｗ もう1回やろ！', 'excited'], ['くやしー！ 次は絶対負けないからね♪', 'crying']],
+    lose: [['負けたー！ でも、まぢ楽しかったよ！', 'happy'], ['強すぎぢゃんｗ もう1回やろ！', 'excited'], ['くやしー！ 次は絶対負けないからね♪', 'crying']],
   },
   kiki: {
     challenge: ['カードで勝負でつか？ 喜んでお相手しまつ♪♪', '私、こう見えて火力で押すタイプなんです( ˘ω˘)', 'よろしくお願いします。全力でいきますね', '準備はいいですか？ 私はガッツをためて待ってまつ'],
@@ -51361,7 +51361,7 @@ const CARD_TUTORIAL_LINES = Object.freeze({
   D11: 'ほらな、守りは大事なんだよ。おでの膝くらい大事だ。えへへ',
   D12: '今度はこっちの番。ガッツが2つあるから「パンチ」が出せる',
   D13: '技をタップして相手をタップ。相手まで運んで離してもいいぞ。1体は1ターンに1回まで攻撃できるからな',
-  M5: 'いったぁ…！ 今のはまじ効いた…',
+  M5: 'いったぁ…！ 今のはまぢ効いた…',
   D14: 'いい当たりだ。ダメージの数だけライフが減って、0になったらKOだよ',
   D15: '最後にもうひとつ。ちょっと時間を進めるぞ…',
   M6: 'あれ？ あたしの山札、なんか少なくない？',
@@ -51369,7 +51369,7 @@ const CARD_TUTORIAL_LINES = Object.freeze({
   // D17 は2つに分けた(言うボタンと光るボタンを合わせる。2026-10-24 カゲあつくんの確認)
   D17: 'まずは光ってる「攻撃おわり → ガッツへ」を押してみな',
   D17b: '次は「ガッツにしないでターン終了」だ。みゅあの番になるぞ',
-  M7: 'えっ、引けないじゃん…！ 負けたー！🤣ｗ',
+  M7: 'えっ、引けないぢゃん…！ 負けたー！🤣ｗ',
   D18: 'これが山札切れ。3体全部倒しても勝ちだけど、山札の残りも気にしような',
   D19: 'これで5つ全部だ。あとはデッキを組んで、いろんな相手と戦ってみな',
   M8: '楽しかった！ 次は本気で勝負しよ٩(`･ω･´)و',
@@ -52669,7 +52669,8 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
         {action && (
           <div key={action.key} data-card-action className={`relative z-[1] flex items-center gap-2 rounded-2xl border border-amber-300/50 bg-black/55 px-2 ${compact ? "py-0.5" : "py-1"} shadow-lg`}>
             {!compact && action.cards.slice(0, 3).map((no, i) => { const c = cardOf(db, no); return c ? <img key={i} src={CARD_IMG(c.img)} alt={c.name} className={`${compact ? 'h-[40px] w-[29px]' : 'h-[64px] w-[46px]'} rounded-[4px] object-cover shadow`}/> : null; })}
-            <div className="text-[13px] font-black leading-tight">{action.who}<span className="block text-[15px] text-amber-200">「{action.cards.map((n) => (cardOf(db, n) || {}).name).join('＋')}」</span></div>
+            {/* 小さい段は1行(だれ「技」)にして、まんなかの高さに収める(2段だと上が切れた。カゲあつくんの確認 2026-10-25) */}
+            <div className={`${tiny ? 'whitespace-nowrap text-[12px]' : 'text-[13px]'} font-black leading-tight`}>{action.who}<span className={tiny ? 'text-[13px] text-amber-200' : 'block text-[15px] text-amber-200'}>「{action.cards.map((n) => (cardOf(db, n) || {}).name).join('＋')}」</span></div>
           </div>
         )}
         <div data-card-log className="relative z-[1] max-w-full rounded-xl border border-white/15 bg-black/45 px-3 py-1 text-center text-[13px] font-bold leading-snug" style={JA_WRAP_STYLE}>
@@ -52991,13 +52992,11 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         <div className="relative z-10"><ScreenHead title="対戦" accent="text-amber-200" onBack={() => setView('top')} note="だれと戦うかをえらびます"/></div>
         <div className={`${SCREEN_LIST_CLASS} relative z-[1] flex flex-col justify-center space-y-3 pb-4`}>
           <button type="button" data-card-mode-assistant className="mhms-card mhms-in flex min-h-[150px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-orange-200 via-orange-400 to-rose-500 px-4 py-3 text-left text-slate-950 active:scale-[.98]" onClick={() => { Audio_.fgSe.tap(); setView('foe'); }}>
-            <span aria-hidden="true" className="mhms-mark">ASSISTANT</span>
             <span className="relative flex items-center gap-2"><span aria-hidden="true" className="text-3xl leading-none">⚔️</span><span><b className="block text-[22px] font-black italic leading-tight">助手と対戦</b><small className="block text-[11px] font-black text-slate-900/80">助手のみんなと戦う・強さは5段</small></span></span>
             <span aria-hidden="true" className="relative flex -space-x-2">{foes.map((x) => <img key={x.id} src={assistantFaceImage(x, 'normal')} alt="" className="h-10 w-10 rounded-full border-2 border-white/80 bg-slate-900 object-cover object-top shadow"/>)}</span>
           </button>
           {/* マルチ対戦(91-card-battle-multi.jsx)。MFバトルカードの公開の印と同じ日に開く(cardPvpOpen・社長 案A)。それまではデバッグ設定から入ったときだけ押せる */}
           <button type="button" data-card-mode-multi disabled={!(debug || cardPvpOpen())} onClick={() => { Audio_.fgSe.tap(); setView('pvp'); }} className="mhms-card mhms-in flex min-h-[150px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-sky-200 via-sky-400 to-indigo-500 px-4 py-3 text-left text-slate-950 active:scale-[.98] disabled:opacity-50" style={{ animationDelay: '60ms' }}>
-            <span aria-hidden="true" className="mhms-mark">MULTI</span>
             <span className="relative flex items-center gap-2"><span aria-hidden="true" className="text-3xl leading-none">🎮</span><span><b className="block text-[22px] font-black italic leading-tight">マルチ対戦</b><small className="block text-[11px] font-black text-slate-900/80">ブリーダーどうしで戦う</small></span></span>
             {!cardPvpOpen() && <span className="relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white">{debug ? 'つくっている途中(デバッグ)' : '準備中'}</span>}
           </button>
@@ -53122,7 +53121,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
           {(() => { const dra = allAssistants.find((x) => x.id === 'dra'); return dra ? (
             <div className="flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2">
               <CardAssistantArt src={assistantFullImage(dra, result.done ? 'happy' : 'normal')} alt={dra.name} className="w-[42%]" style={{ height: 'min(180px, 24vh)' }}/>
-              <div className="mb-2 min-w-0 flex-1 rounded-2xl border-2 bg-white px-2 py-1 text-[13px] font-extrabold leading-snug text-[#1f1333]" style={{ borderColor: dra.accent, ...JA_WRAP_STYLE }}>{jaWrap(result.done ? 'よくやったな。これで決まりはひととおりだ。あとは対戦で慣れていこう' : 'またいつでも練習しような。トップの「練習試合」からできるぞ')}</div>
+              <div className="mb-2 min-w-0 flex-1 rounded-2xl border-2 bg-white px-2 py-1 text-[13px] font-extrabold leading-snug text-[#1f1333]" style={{ borderColor: dra.accent, ...JA_WRAP_STYLE }}>{jaWrap(result.done ? 'よくやったな。これで決まりはひととおりだ。あとは対戦で慣れていこう' : 'またいつでも練習しような。トップの「ルール」から、また練習試合できるぞ')}</div>
             </div>
           ) : null; })()}
           <div className={SCREEN_PANEL_CLASS}>
@@ -53164,7 +53163,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
                 {result.quick
                   ? <>
                     <div className="text-[13px] font-black text-sky-200">クイック周回 {result.loops}周ぶん</div>
-                    <div className="mt-0.5 text-[11px] font-bold text-slate-300" style={JA_WRAP_STYLE}>裏のクイック周回({(result.quick.quickDifficulty && quickDifficultySetting(result.quick.quickDifficulty)?.label) || 'AUTO設定'})が{result.loops}周ぶん進みました</div>
+                    <div className="mt-0.5 text-[11px] font-bold text-slate-300" style={JA_WRAP_STYLE}>裏のクイック周回({(result.quick.quickDifficulty && String(quickDifficultySetting(result.quick.quickDifficulty)?.label || '').toUpperCase()) || 'AUTO設定'})が{result.loops}周ぶん進みました</div>
                     {result.quick.live && Number(result.quick.toLoop) > Number(result.quick.fromLoop) && <div data-card-quick-loops-range className="mt-0.5 text-[11px] font-bold text-sky-100">{result.quick.fromLoop}周目 → {result.quick.toLoop}周目</div>}
                   </>
                   : <div className="text-[12px] font-bold text-slate-300" style={JA_LABEL_STYLE}>{jaWrap('クイック周回をしていないときは入りません')}</div>}
@@ -54364,7 +54363,7 @@ const cardPvpCleanMessage = (raw) => {
 // 場面ごとに3本から1本。[台詞, 表情]。ほかの助手の名前は出さない(まだ会っていない子がいるため)。left … 相手が抜けた
 const CARD_PVP_RESULT_LINES = Object.freeze({
   mua: {
-    win: [['やったー！ 勝っちゃったね♪ あたしまでﾄﾞｷﾄﾞｷしたｗ', 'happy'], ['まじすごいじゃん！ 最後の一手、かっこよすぎたよ！', 'excited'], ['勝ち！ この調子で、どんどん強くなっちゃお٩(`･ω･´)و', 'wink']],
+    win: [['やったー！ 勝っちゃったね♪ あたしまでﾄﾞｷﾄﾞｷしたｗ', 'happy'], ['まぢすごいぢゃん！ 最後の一手、かっこよすぎたよ！', 'excited'], ['勝ち！ この調子で、どんどん強くなっちゃお٩(`･ω･´)و', 'wink']],
     lose: [['くやしー！ でも、いい勝負だったよ！ 次いこ！', 'troubled'], ['ドンマイ！ あたし、ちゃんと見てたよ(｡ ˘-˘)ｳﾝｳﾝ', 'happy'], ['負けちゃったかー…でも、もう1回やったら勝てるって！', 'crying']],
     left: [['えっ、相手いなくなっちゃった？ 勝ちは勝ちだね♪', 'surprise'], ['また会えたら、ちゃんと決着つけよ！', 'normal'], ['あれれ、行っちゃった…次の相手、さがしにいこ！', 'wink']],
   },
