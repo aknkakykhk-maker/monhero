@@ -183,7 +183,7 @@ const UPCOMING_MONSTER_DRAFTS = Object.freeze({
     faceIconUrl:MF_CENTAUR_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'centaur', sub:'centaur' }) }),
   Colorpandora: Object.freeze({ id:'Colorpandora', name:"コロペンドラ", emoji:"🟩", imgUrl:MF_COLORPANDORA_IMG, iconUrl:MF_COLORPANDORA_IMG,
     faceIconUrl:MF_COLORPANDORA_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'colorpandora', sub:'colorpandora' }) }),
-  // 派生モンスター14体(2026-10-25・案の段階)。立ち絵・顔アイコンはMFバトルカードの派生カードと共用(HYBRID_C0NN)。名前・血統・図鑑の文は社長から(本編の図鑑の写し)
+  // 派生モンスター16体(2026-10-25・案の段階)。立ち絵・顔アイコンはMFバトルカードの派生カードと共用(HYBRID_C0NN)。名前・血統・図鑑の文は社長から(本編の図鑑の写し)
   HamLiger: Object.freeze({ id:'HamLiger', name:"ハムライガー", emoji:"🦊", imgUrl:HYBRID_C010_IMG, iconUrl:HYBRID_C010_IMG,
     faceIconUrl:HYBRID_C010_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'tiger', sub:'ham' }) }),
   Melonbo: Object.freeze({ id:'Melonbo', name:"メロンボ", emoji:"🍈", imgUrl:HYBRID_C012_IMG, iconUrl:HYBRID_C012_IMG,
@@ -212,4 +212,8 @@ const UPCOMING_MONSTER_DRAFTS = Object.freeze({
     faceIconUrl:HYBRID_C038_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'henger', sub:'monol' }) }),
   MamaNyaa: Object.freeze({ id:'MamaNyaa', name:"ママニャー", emoji:"😺", imgUrl:HYBRID_C039_IMG, iconUrl:HYBRID_C039_IMG,
     faceIconUrl:HYBRID_C039_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'nya', sub:'pixie' }) }),
+  Hinekuresou: Object.freeze({ id:'Hinekuresou', name:"ヒネクレソウ", emoji:"🌼", imgUrl:HYBRID_C040_IMG, iconUrl:HYBRID_C040_IMG,
+    faceIconUrl:HYBRID_C040_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'plant', sub:'suezo' }) }),
+  Corone: Object.freeze({ id:'Corone', name:"コロネ", emoji:"🥐", imgUrl:HYBRID_C041_IMG, iconUrl:HYBRID_C041_IMG,
+    faceIconUrl:HYBRID_C041_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'worm', sub:'ham' }) }),
 });
