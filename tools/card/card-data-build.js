@@ -115,8 +115,62 @@ const BY_NO = {
   60: [{ t: 'evade', kinds: ['pow'] }, { t: 'nextTurnMult', kinds: ['pow'], n: 2 }, { t: 'becomeAir' }],
   // ドラゴンの飛び上がる: ちから技を回避。次の自分のターンのちから技・かしこさ技2倍・それまで空中
   236: [{ t: 'evade', kinds: ['pow'] }, { t: 'nextTurnMult', kinds: both, n: 2 }, { t: 'becomeAir' }],
+  // ---- 区切り2: 技と同時に使う札(attach。when は付けられる技の条件。部品の意味は 82 の上) ----
+  121: [{ t: 'attach', when: { kinds: both } }, { t: 'attachAdd', n: 2 }], // クリティカル
+  124: [{ t: 'attach', when: { kinds: both, deckEmpty: true } }, { t: 'attachMult', n: 3 }], // 劇的な幕切れ
+  330: [{ t: 'attach', when: { kinds: ['pow'] } }, { t: 'attachMult', n: 2 }, { t: 'attachSelfIfHit', n: 2 }], // 捨て身
+  345: [{ t: 'attach', when: { kinds: both, lifeMax: 2 } }, { t: 'attachAdd', n: 2 }], // 必死
+  343: [{ t: 'attach', when: { kinds: both } }, { t: 'attachCost', n: 1 }], // 団結
+  347: [{ t: 'attach', when: { area: true } }, { t: 'attachCostHalf' }], // 急襲
+  274: [{ t: 'attach', when: { kinds: both } }, { t: 'attachNoZeroGuard' }], // 集中
+  349: [{ t: 'attach', when: { kinds: both } }, { t: 'attachNoGuardIfGuarded' }], // 挟み撃ち
+  366: [{ t: 'attach', when: { kinds: both } }, { t: 'attachBind' }], // 影縛り(ブリーダー)
+  362: [{ t: 'attach', when: { kinds: ['pow'] } }, { t: 'attachNoBlockReduce' }], // 渾身
+  363: [{ t: 'attach', when: { kinds: ['pow'] } }, { t: 'attachNoGuard' }], // 瞬殺
+  346: [{ t: 'attach', when: { kinds: both, pure: true } }, { t: 'attachNoEvadeHybrid' }], // 純血のスピード
+  276: [{ t: 'attach', when: { breederMaxGuts: 3 } }, { t: 'attachFree' }], // ジョイのサポート(ブリーダーのカードに付ける)
+  342: [{ t: 'freeSpeThisTurn' }], // 友情の証(付けずに出す特殊技)
+  9: [{ t: 'attach', when: { kinds: ['pow'] } }, { t: 'attachNoEvade' }], // 電光石火
+  70: [{ t: 'attach', when: { kinds: ['pow'] } }, { t: 'attachNoEvade' }], // 跳躍
+  209: [{ t: 'attach', when: { kinds: both } }, { t: 'attachCost', n: 2 }], // 光合成
+  // ---- 区切り3: もう1回攻撃・攻撃できない・狙いの縛り(部品の意味は 82 の上) ----
+  250: [{ t: 'useWhenAllies', n: 1 }, { t: 'extraAttack', n: 1 }], // 孤軍奮闘
+  254: [{ t: 'extraAttackTarget', n: 1 }], // オイリーオイル(もう攻撃した味方に)
+  351: [{ t: 'unstunTarget' }], // 夏美草(攻撃できない印のある味方に)
+  234: [{ t: 'liftTarget' }, { t: 'extraAttack', n: 1 }], // ほうり上げる
+  294: [{ t: 'unlimitedAttacks' }], // タイムディレイ
+  83: [{ t: 'unlimitedAttacks' }], // 死亡遊戯
+  197: [{ t: 'breederUnlimited' }], // うたうニャ
+  46: [{ t: 'taunt', mode: 'only' }], // 挑発
+  365: [{ t: 'taunt', mode: 'only' }], // レロレロ
+  57: [{ t: 'taunt', mode: 'not' }], // 魅了
+  269: [{ t: 'taunt', mode: 'only', noArea: true }], // たちはだかる
+  10: [{ t: 'stunAllEnemies' }], // 吠え
+  273: [{ t: 'stunTarget' }], // 吹き飛ばし
+  47: [{ t: 'skipTurn' }], // 歌う
+  251: [{ t: 'rage' }], // 怒り
 };
 
+// カードの詳しい画面に足す一言。文の読み方を決めた札だけ(2026-10-25 社長「推奨どおり」。一覧: docs/progress/card-battle/pending-83/README.md)
+const NOTE_BY_NO = {
+  9: '技に付けて一緒に出します(攻撃の1回には数えません)',
+  70: '技に付けて一緒に出します(攻撃の1回には数えません)',
+  209: '技に付けて一緒に出します(攻撃の1回には数えません)',
+  342: '出した子の攻撃1回に数えます。そのターン、ほかの味方の特殊技は0ガッツで出せます',
+  363: '回避も防御も出せません',
+  366: '回避・防御のカードを名前で名指しします。同じ名前のカードは全部使えません',
+  46: '相手は次の番、この子を狙う技しか出せません(全員に当たる技は出せます)',
+  365: '相手は次の番、この子を狙う技しか出せません(全員に当たる技は出せます)',
+  57: '相手は次の番、この子に当たる技を出せません(全員に当たる技も出せません)',
+  269: '相手は次の番、この子を狙う技しか出せません(全員に当たる技も出せません)',
+  10: '技(ちから・かしこさ・特殊)が出せなくなります。守りとブリーダーのカードは出せます',
+  273: '技(ちから・かしこさ・特殊)が出せなくなります。守りとブリーダーのカードは出せます',
+  47: '相手の次の番は、引く・攻撃・ガッツ置きが全部なくなります',
+  83: 'その子は、そのターン攻撃の技を何枚でも出せます(ガッツはふつうに払います)',
+  294: 'その子は、そのターン攻撃の技を何枚でも出せます(ガッツはふつうに払います)',
+  351: '「攻撃できない」を消します。もう攻撃した子には使えません',
+  251: '次の番のちから技・かしこさ技が2倍になります',
+};
 const splitSentences = (text) => (text || '').split(/(?<=。)/).map((s) => s.trim()).filter(Boolean);
 const effectsOf = (no, text) => {
   if (BY_NO[no]) return { ready: true, effects: BY_NO[no] };
@@ -151,7 +205,7 @@ const build = () => {
       const eff = effectsOf(no, s.text);
       if (!eff.ready) notReady.push(`${s.no} ${s.name}: ${eff.missing}`);
       add({ no: s.no, name: s.name, kind: KIND[s.kind], damage: Number.isFinite(s.damage) ? s.damage : null, guts: s.guts,
-        text: s.text || '', user: id, wave: no >= 357 ? 4 : WAVE_OF_SPECIES[id], ready: eff.ready, effects: eff.effects, img: s.no });
+        text: s.text || '', user: id, wave: no >= 357 ? 4 : WAVE_OF_SPECIES[id], ready: eff.ready, effects: eff.effects, img: s.no, ...(NOTE_BY_NO[no] ? { note: NOTE_BY_NO[no] } : {}) });
     }
   }
   for (const [dir, cat] of [['any-monster', 'any'], ['breeder', 'breeder']]) {
@@ -161,7 +215,7 @@ const build = () => {
       const eff = effectsOf(no, s.text);
       if (!eff.ready) notReady.push(`${s.no} ${s.name}: ${eff.missing}`);
       add({ no: s.no, name: s.name, kind: KIND[s.kind], damage: Number.isFinite(s.damage) ? s.damage : null, guts: s.guts,
-        text: s.text || '', user: cat, wave: waveOfNo(no), ready: eff.ready, effects: eff.effects, img: s.no });
+        text: s.text || '', user: cat, wave: waveOfNo(no), ready: eff.ready, effects: eff.effects, img: s.no, ...(NOTE_BY_NO[no] ? { note: NOTE_BY_NO[no] } : {}) });
     }
   }
   const hy = readJson('hybrid');

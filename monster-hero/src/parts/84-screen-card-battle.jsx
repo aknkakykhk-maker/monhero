@@ -218,6 +218,7 @@ const CardDetailModal = ({ db, no, onClose }) => {
             <span className="rounded-md bg-slate-800 px-2 py-0.5 text-slate-400">No.{c.no}</span>
           </div>
           {c.text && <p className="mt-2 text-[14px] font-bold leading-relaxed">{c.text}</p>}
+          {c.note && <p data-card-detail-note className="mt-1.5 text-[12px] font-bold leading-relaxed text-sky-200" style={JA_LABEL_STYLE}>{jaWrap(c.note)}</p>}
           {!c.ready && <p className="mt-2 text-[12px] font-bold text-amber-300" style={JA_LABEL_STYLE}>{jaWrap('このカードは準備中です(まだデッキに入れられません)')}</p>}
         </div>
       )}
@@ -601,8 +602,13 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
   // ★マルチ対戦では、窓を出しているあいだも持ち時間は止まらない。場が変わったら(時間切れの自動の手・相手の手が届いた・自分の手)窓は閉じる。
   //   閉じずに古い「はい」が残ると、時間切れのあとに古い手を送って2台の場がずれる(ブレイブくんとの決め)。押したときにも、その手がまだ出せるかを確かめ直す
   const [confirm, setConfirm] = useState(null); // { kind: 'use' | 'end', act, label }
-  useEffect(() => { setConfirm(null); }, [st]);
+  // 影縛り(名指しの要る札)を付けた手は、名指しする守りの札を先に選ぶ。場が変わったら閉じる(確かめの窓と同じ)
+  const [bindAsk, setBindAsk] = useState(null); // 名指しを待っている手
+  useEffect(() => { setConfirm(null); setBindAsk(null); }, [st]);
+  // 名指しをやめたら、選んでいた手札も外す(残っていると、次に押したとき選び外しになって分かりにくい)
+  const bindCancel = () => { setBindAsk(null); setSel(null); setHint(''); };
   const askUse = (o) => {
+    if (o && Array.isArray(o.hand) && !o.bind && o.hand.some((i) => cardHasEff(cardOf(db, me.hand[i]), 'attachBind'))) { setBindAsk(o); return; }
     if (!confirmOn('confirmUse')) { step(o); return; }
     const c = cardOf(db, me.hand[o.hand[0]]);
     const tm = o.target ? st.players[o.target.p].mons[o.target.m] : null;
@@ -616,7 +622,7 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
     const cf = confirm;
     setConfirm(null);
     if (!cf) return;
-    if (cf.kind === 'use' && !cardAttackOptions(db, st).some((o) => JSON.stringify(o) === JSON.stringify(cf.act))) return;
+    if (cf.kind === 'use') { const { bind: _bind, ...bare } = cf.act; if (!cardAttackOptions(db, st).some((o) => JSON.stringify(o) === JSON.stringify(bare))) return; }
     if (cf.kind === 'end' && (st.phase !== 'guts' || cardDeciderOf(st) !== CARD_ME || st.pending)) return;
     step(cf.act);
   };
@@ -974,6 +980,27 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
         </div>, document.body)}
       {detail && <CardDetailModal db={db} no={detail} onClose={() => setDetail(null)}/>}
       {discard && <CardDiscardModal db={db} st={st} initial={discard.tab} onDetail={(no) => setDetail(no)} onClose={() => setDiscard(null)}/>}
+      {bindAsk && (
+        <div data-card-bind-pick className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3" onClick={bindCancel}>
+          <div className="w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900 p-3 text-slate-100" onClick={(e) => e.stopPropagation()}>
+            <div className="text-[15px] font-black" style={JA_LABEL_STYLE}>{jaWrap('影縛り: 使えなくする守りのカードを選ぶ')}</div>
+            <div className="mt-1 text-[11px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('同じ名前のカードは全部、この技に使えなくなります。赤いのは、狙った子が使える守りです')}</div>
+            <div className="mt-2 grid max-h-[50vh] grid-cols-2 gap-1.5 overflow-y-auto">
+              {(() => {
+                // 狙った子が使える守りを先に(光らせる)。ほかの名前もそのあとに並べる(名指しはどの守りの名前でもよい)
+                const tm = bindAsk.target ? st.players[bindAsk.target.p].mons[bindAsk.target.m] : null;
+                const can = new Set(Object.values(db.cards).filter((c) => c.ready && cardIsGuardKind(c.kind) && tm && cardUsableBy(c, tm)).map((c) => c.name));
+                const all = cardBindNames(db);
+                return [...all.filter((x) => can.has(x)), ...all.filter((x) => !can.has(x))].map((name) => ({ name, can: can.has(name) }));
+              })().map(({ name, can }) => (
+                <button key={name} type="button" data-card-bind-name={name} data-card-bind-usable={can ? '1' : '0'} className={`min-h-[40px] rounded-xl px-2 text-[13px] font-black text-white active:scale-95 ${can ? 'bg-rose-700 ring-1 ring-rose-300' : 'bg-slate-700'}`}
+                  onClick={() => { const o = { ...bindAsk, bind: name }; setBindAsk(null); askUse(o); }}>{name}</button>
+              ))}
+            </div>
+            <button type="button" className="mt-2 min-h-[44px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200" onClick={bindCancel}>やめる</button>
+          </div>
+        </div>
+      )}
       {confirm && <ConfirmSheet title={confirm.label} message={confirm.kind === 'use' ? 'オプションで確かめないようにもできます' : ''} confirmLabel={confirm.kind === 'use' ? '使う' : '終わる'} onCancel={() => setConfirm(null)} onConfirm={confirmYes}/>}
       {quit && !tutorial && <ConfirmSheet title="投了しますか？" message={pvp ? '投了すると負けになります' : '投了すると負けになります(カードポイントとクイック周回は、倒した相手のモンスターの数に応じて少しだけ)'} confirmLabel="投了する" danger onCancel={() => setQuit(false)} onConfirm={() => { setQuit(false); finished.current = true; if (pvp) CARD_PVP.surrender(); onFinish({ outcome: 'surrender', st }); }}/>}
       {quit && tutorial && <ConfirmSheet title="チュートリアルを飛ばしますか？" message={'ルールの画面からいつでもできます'} confirmLabel="飛ばす" onCancel={() => setQuit(false)} onConfirm={() => { setQuit(false); finished.current = true; onFinish({ outcome: 'tutorialSkip', st }); }}/>}
@@ -1165,7 +1192,9 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     const seed = (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0;
     const first = Math.random() < 0.5 ? CARD_ME : CARD_CPU;
     const assistant = allAssistants.find((a) => a.id === pick.who);
-    const st = cardCreateGame(db, { decks: [{ monsters: activeDeck.monsters, cards: activeDeck.cards }, cpuDeck], names: ['あなた', assistant ? assistant.name : 'あいて'], seed, first });
+    let st = cardCreateGame(db, { decks: [{ monsters: activeDeck.monsters, cards: activeDeck.cards }, cpuDeck], names: ['あなた', assistant ? assistant.name : 'あいて'], seed, first });
+    // 検査のときだけ: 始まりの場を決めた形に差しかえる(window.__mhCardScene が関数のときだけ。ふだんの遊びでは無い)
+    if (typeof window !== 'undefined' && typeof window.__mhCardScene === 'function') { try { st = window.__mhCardScene(cardClone(st)) || st; } catch (_) { /* 差しかえに失敗したら、ふつうの始まりのまま */ } }
     setResult(null);
     setGame({ key: `${seed}`, st, who: pick.who, level: pick.level, settings: save.settings });
     // 対戦の BGM: オプションで曲を決めていればその曲、「おまかせ」なら相手の助手に合わせる

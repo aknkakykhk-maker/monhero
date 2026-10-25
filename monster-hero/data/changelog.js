@@ -37,7 +37,7 @@ const CHANGELOG = [
   {
     // 2026-10-25 社長「お知らせで新コンテンツのお知らせを出して、近日公開みたいな感じでホームに出して」。公開の印(RELEASE_FLAGS.cardBattle)は偽のまま。
     // 画像は tools/image/make-card-battle-teaser-notice.js で作った(スターターキット3つのモンスターのカード)。HOME の「近日公開」の札の小窓にも、この絵と本文がそのまま出る(84 の CardBattleTeaser)
-    date: "2026-10-25 18:33", type:'update', title:'新コンテンツ「MFバトルカード」近日公開', status:'new',
+    date: "2026-10-25 18:33", type:'content', group:'cardBattle', title:'新コンテンツ「MFバトルカード」近日公開', status:'new',
     image: 'images/events/card-battle-teaser.jpg?v=dc64e1718761',
     items:[
       '新しい遊び「MFバトルカード」を近日公開します。モンスターと技のカードでデッキを組んで、助手たちとカードで対戦する遊びです。',

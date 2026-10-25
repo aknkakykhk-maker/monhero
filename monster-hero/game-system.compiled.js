@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 88c2ad7dc1dc4efe
+// source-sha256: 6e395b249fda0c6a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-25 19:49";
+const BUILD_DATE = "2026-10-25 20:11";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -12249,6 +12249,11 @@ const CHANGELOG_GROUPS = Object.freeze([{
   label: '新モンスター',
   emoji: '🐣',
   match: /新モンスター|新しいモンスター|新しい仲間|新血統/
+}, {
+  id: 'cardBattle',
+  label: 'MFバトルカード',
+  emoji: '🃏',
+  match: /MFバトルカード/
 }, {
   id: 'rhythm',
   label: 'モンヒロビート',
@@ -82765,12 +82770,75 @@ const cardTakeFromHand = (st, p, idxs) => {
   sorted.forEach(i => me.hand.splice(i, 1));
   return taken;
 };
-const cardActionCost = (db, st, p, hand, idxs) => idxs.reduce((s, i) => s + ((cardOf(db, hand[i]) || {}).guts || 0), 0);
+const cardActionCost = (db, st, p, hand, idxs) => {
+  const cards = idxs.map(i => cardOf(db, hand[i])).filter(Boolean);
+  const att = cards.filter(c => cardHasEff(c, 'attach'));
+  const core = cards.filter(c => !cardHasEff(c, 'attach'));
+  let main = core.reduce((s, c) => s + (c.guts || 0), 0);
+  const fs = st && st.freeSpe;
+  if (core[0] && core[0].kind === 'spe' && core[0].user !== 'breeder' && fs && fs.p === p && fs.turn === st.turn) main = 0;
+  if (att.some(c => cardHasEff(c, 'attachCostHalf'))) main = Math.ceil(main / 2);
+  att.forEach(c => {
+    const e = cardEff(c, 'attachCost');
+    if (e) main -= e.n;
+  });
+  if (att.some(c => cardHasEff(c, 'attachFree'))) main = 0;
+  return Math.max(0, main) + att.reduce((s, c) => s + (c.guts || 0), 0);
+};
+const CARD_ATTACH_FLAGS = ['attachNoEvade', 'attachNoGuard', 'attachNoBlockReduce', 'attachNoZeroGuard', 'attachNoGuardIfGuarded', 'attachNoEvadeHybrid'];
+const cardAttachMods = cards => {
+  const m = {
+    add: 0,
+    mult: 1,
+    flags: {}
+  };
+  cards.forEach(c => {
+    if (!cardHasEff(c, 'attach')) return;
+    (c.effects || []).forEach(e => {
+      if (e.t === 'attachAdd') m.add += e.n;
+      if (e.t === 'attachMult') m.mult *= e.n;
+      if (e.t === 'attachSelfIfHit') m.flags.selfIfHit = (m.flags.selfIfHit || 0) + e.n;
+      if (CARD_ATTACH_FLAGS.includes(e.t)) m.flags[e.t] = true;
+    });
+  });
+  return m;
+};
+const cardAttachOk = (db, st, p, mon, main, c) => {
+  const w = (cardEff(c, 'attach') || {}).when || {};
+  const me = st.players[p];
+  if (w.breederMaxGuts !== undefined) return main.user === 'breeder' && !cardHasEff(main, 'attach') && (main.guts || 0) <= w.breederMaxGuts;
+  if (!mon || main.user === 'breeder') return false;
+  if (!(w.kinds || ['pow', 'int']).includes(main.kind)) return false;
+  if (w.area && !cardHasEff(main, 'area')) return false;
+  if (w.lifeMax !== undefined && mon.life > w.lifeMax) return false;
+  if (w.deckEmpty && me.deck.length) return false;
+  if (w.pure && (mon.main || mon.sub)) return false;
+  return c.user === 'breeder' ? !me.breederUsed || cardBreederFree(st, p) : cardUsableBy(c, mon);
+};
+const cardAttachSets = (db, st, p, mon, main, exclude) => {
+  const me = st.players[p];
+  const idx = me.hand.map((no, j) => ({
+    j,
+    c: cardOf(db, no)
+  })).filter(({
+    j,
+    c
+  }) => !exclude.includes(j) && c && c.ready && cardHasEff(c, 'attach') && cardAttachOk(db, st, p, mon, main, c));
+  const out = [[]];
+  idx.forEach(a => out.push([a.j]));
+  idx.forEach((a, k) => idx.slice(k + 1).forEach(b => {
+    if (a.c.name !== b.c.name && !(a.c.user === 'breeder' && b.c.user === 'breeder')) out.push([a.j, b.j]);
+  }));
+  return out;
+};
+const cardBindNames = db => [...new Set(Object.values(db.cards).filter(c => c.ready && cardIsGuardKind(c.kind)).map(c => c.name))].sort();
 const cardMonCanAttack = (db, st, p, mi, card) => {
   const mon = st.players[p].mons[mi];
   if (!mon || mon.ko) return false;
   if (mon.stunTurn === st.turn) return false;
   if (mon.attacks === 0) return true;
+  if (mon.unlimited === st.turn) return true;
+  if (mon.bonus && mon.bonus.turn === st.turn && mon.attacks < 1 + mon.bonus.n) return true;
   const prev = cardOf(db, mon.lastCard);
   const chainNow = cardEff(card, 'chain');
   const chainPrev = cardEff(prev, 'chain');
@@ -82804,6 +82872,37 @@ const cardAreaTargets = (st, p, mi, card) => {
   });
   return out;
 };
+const cardBreederFree = (st, p) => !!(st.breederFree && st.breederFree.p === p && st.breederFree.turn === st.turn);
+const cardTauntsOn = (st, p) => (st.taunts || []).filter(t => t.turn === st.turn && t.by === cardOther(p) && !st.players[t.by].mons[t.m].ko);
+const cardTauntOk = (st, p, targets, area) => cardTauntsOn(st, p).every(t => {
+  const hits = targets.filter(x => x.p === t.by);
+  if (t.mode === 'not') return !hits.some(x => x.m === t.m);
+  if (area) return !t.noArea || !hits.some(x => x.m !== t.m);
+  return hits.every(x => x.m === t.m);
+});
+const cardSpeTargets = (st, p, mi, card) => {
+  const me = st.players[p];
+  const opp = st.players[cardOther(p)];
+  const ua = cardEff(card, 'useWhenAllies');
+  if (ua && me.mons.filter(m => !m.ko).length !== ua.n) return [];
+  if (cardHasEff(card, 'heal')) return me.mons.map((m, j) => !m.ko && m.life < m.max ? {
+    p,
+    m: j
+  } : null).filter(Boolean);
+  if (cardHasEff(card, 'extraAttackTarget')) return me.mons.map((m, j) => !m.ko && m.attacks > 0 && m.stunTurn !== st.turn ? {
+    p,
+    m: j
+  } : null).filter(Boolean);
+  if (cardHasEff(card, 'unstunTarget')) return me.mons.map((m, j) => !m.ko && m.stunTurn === st.turn ? {
+    p,
+    m: j
+  } : null).filter(Boolean);
+  if (cardHasEff(card, 'stunTarget') || cardHasEff(card, 'liftTarget')) return opp.mons.map((m, j) => !m.ko ? {
+    p: cardOther(p),
+    m: j
+  } : null).filter(Boolean);
+  return [null];
+};
 const cardAttackOptions = (db, st) => {
   if (st.phase !== 'main' || st.pending || st.winner !== null) return [];
   const p = st.active;
@@ -82816,39 +82915,33 @@ const cardAttackOptions = (db, st) => {
     if (!card || !card.ready || !cardIsAttackKind(card.kind)) return;
     if (cardHasEff(card, 'attach')) return;
     if (card.user === 'breeder') {
-      if (me.breederUsed) return;
-      if (card.guts > guts) return;
-      if (card.kind === 'spe') {
-        if (cardHasEff(card, 'heal')) me.mons.forEach((m, j) => {
-          if (!m.ko && m.life < m.max) out.push({
+      if (me.breederUsed && !cardBreederFree(st, p)) return;
+      cardAttachSets(db, st, p, null, card, [hi]).forEach(att => {
+        const hand = [hi, ...att];
+        if (cardActionCost(db, st, p, me.hand, hand) > guts) return;
+        if (card.kind === 'spe') {
+          cardSpeTargets(st, p, -1, card).forEach(target => out.push({
             type: 'breeder',
-            hand: [hi],
-            target: {
-              p,
-              m: j
-            }
-          });
-        });else out.push({
-          type: 'breeder',
-          hand: [hi],
-          target: null
-        });
-      } else {
-        me.mons.forEach((m, mi) => {
-          if (m.ko) return;
-          opp.mons.forEach((t, j) => {
-            if (cardCanTarget(card, t, st.turn)) out.push({
-              type: 'breeder',
-              hand: [hi],
-              mon: mi,
-              target: {
-                p: cardOther(p),
-                m: j
-              }
+            hand,
+            target
+          }));
+        } else {
+          me.mons.forEach((m, mi) => {
+            if (m.ko) return;
+            opp.mons.forEach((t, j) => {
+              if (cardCanTarget(card, t, st.turn)) out.push({
+                type: 'breeder',
+                hand,
+                mon: mi,
+                target: {
+                  p: cardOther(p),
+                  m: j
+                }
+              });
             });
           });
-        });
-      }
+        }
+      });
       return;
     }
     me.mons.forEach((mon, mi) => {
@@ -82876,46 +82969,25 @@ const cardAttackOptions = (db, st) => {
         if (names.length >= 2) sets.push([hi, byName[names[0]], byName[names[1]]]);
         for (let k = sets.length - 1; k >= 0; k--) if (Math.min(...sets[k]) !== hi) sets.splice(k, 1);
       }
-      const attachIdx = me.hand.map((n2, j) => ({
-        j,
-        c: cardOf(db, n2)
-      })).filter(({
-        j,
-        c
-      }) => j !== hi && c && c.ready && cardHasEff(c, 'attach') && cardUsableBy(c, mon) && (() => {
-        const w = cardEff(c, 'attach').when || {};
-        if (w.lifeMax !== undefined && mon.life > w.lifeMax) return false;
-        return card.kind === 'pow' || card.kind === 'int';
-      })()).map(o => o.j);
       const withAttach = [];
       sets.forEach(s => {
-        withAttach.push(s);
-        attachIdx.forEach(a => withAttach.push([...s, a]));
+        cardAttachSets(db, st, p, mon, card, s).forEach(att => withAttach.push([...s, ...att]));
       });
       withAttach.forEach(idxs => {
         const cost = cardActionCost(db, st, p, me.hand, idxs);
         if (cost > guts) return;
         if (card.kind === 'spe') {
-          if (cardHasEff(card, 'heal')) me.mons.forEach((m, j) => {
-            if (!m.ko && m.life < m.max) out.push({
-              type: 'attack',
-              mon: mi,
-              hand: idxs,
-              target: {
-                p,
-                m: j
-              }
-            });
-          });else out.push({
+          cardSpeTargets(st, p, mi, card).forEach(target => out.push({
             type: 'attack',
             mon: mi,
             hand: idxs,
-            target: null
-          });
+            target
+          }));
           return;
         }
         if (cardHasEff(card, 'area')) {
-          if (cardAreaTargets(st, p, mi, card).some(t => t.p !== p)) out.push({
+          const at = cardAreaTargets(st, p, mi, card);
+          if (at.some(t => t.p !== p) && cardTauntOk(st, p, at, true)) out.push({
             type: 'attack',
             mon: mi,
             hand: idxs,
@@ -82924,7 +82996,10 @@ const cardAttackOptions = (db, st) => {
           return;
         }
         opp.mons.forEach((t, j) => {
-          if (cardCanTarget(card, t, st.turn)) out.push({
+          if (cardCanTarget(card, t, st.turn) && cardTauntOk(st, p, [{
+            p: cardOther(p),
+            m: j
+          }], false)) out.push({
             type: 'attack',
             mon: mi,
             hand: idxs,
@@ -82949,17 +83024,22 @@ const cardGuardOptions = (db, st) => {
   const target = st.players[tgt.p].mons[tgt.m];
   const atkCard = cardOf(db, pd.main);
   const forbid = st.forbid[q] || [];
+  const fl = pd.flags || {};
+  if (fl.attachNoGuard) return [];
   const guts = me.guts.length;
   const out = [];
+  const guardedNow = m => fl.attachNoGuardIfGuarded && m.guardTurn === st.turn || m.noGuardUntil >= st.turn;
   me.hand.forEach((no, hi) => {
     const c = cardOf(db, no);
     if (!c || !c.ready || !cardIsGuardKind(c.kind)) return;
     if (forbid.includes(c.kind)) return;
     if (c.guts > guts) return;
+    if (fl.attachNoZeroGuard && !c.guts) return;
+    if (fl.bind && c.name === fl.bind) return;
     if (cardHasEff(c, 'cover')) {
       if (pd.cover !== null && pd.cover !== undefined) return;
       me.mons.forEach((m, mi) => {
-        if (mi !== tgt.m && tgt.p === q && cardUsableBy(c, m)) out.push({
+        if (mi !== tgt.m && tgt.p === q && cardUsableBy(c, m) && !guardedNow(m)) out.push({
           type: 'guard',
           hand: hi,
           mon: mi
@@ -82967,11 +83047,12 @@ const cardGuardOptions = (db, st) => {
       });
       return;
     }
-    if (tgt.p !== q || !cardUsableBy(c, target)) return;
+    if (tgt.p !== q || !cardUsableBy(c, target) || guardedNow(target)) return;
     const ev = cardEff(c, 'evade');
     if (ev) {
       if (pd.evaded) return;
-      if (cardHasEff(atkCard, 'noEvade') || pd.noEvade) return;
+      if (cardHasEff(atkCard, 'noEvade') || pd.noEvade || fl.attachNoEvade) return;
+      if (fl.attachNoEvadeHybrid && (target.main || target.sub)) return;
       if (!ev.kinds.includes(atkCard.kind)) return;
       if (ev.minGuts && pd.cost < ev.minGuts) return;
       out.push({
@@ -83049,7 +83130,11 @@ const cardStartAttack = (db, st, act) => {
   cardPayGuts(st, p, cost);
   const mi = isBreeder ? act.mon !== undefined ? act.mon : -1 : act.mon;
   const mon = mi >= 0 ? me.mons[mi] : null;
-  if (isBreeder) me.breederUsed = true;else {
+  if (isBreeder || used.some(n => {
+    const c = cardOf(db, n);
+    return c && c.user === 'breeder';
+  })) me.breederUsed = true;
+  if (!isBreeder) {
     mon.attacks += 1;
     mon.lastCard = mainNo;
   }
@@ -83076,11 +83161,9 @@ const cardStartAttack = (db, st, act) => {
     const kinds = new Set(used.map(n => cardOf(db, n)).filter(c => combo.names.includes(c.name)).map(c => c.name)).size;
     if (combo.table[kinds]) dmg = combo.table[kinds];
   }
-  let mult = 1;
-  used.forEach(n => {
-    const am = cardEff(cardOf(db, n), 'attachMult');
-    if (am) mult *= am.n;
-  });
+  const mods = cardAttachMods(used.map(n => cardOf(db, n)).filter(Boolean));
+  dmg += mods.add;
+  let mult = mods.mult;
   if (mon && mon.mult && mon.mult.turn === st.turn && mon.mult.kinds.includes(main.kind)) {
     mult *= mon.mult.n;
     mon.mult = null;
@@ -83109,7 +83192,11 @@ const cardStartAttack = (db, st, act) => {
     cover: null,
     hitAny: false,
     evadedAny: false,
-    results: []
+    results: [],
+    flags: {
+      ...mods.flags,
+      bind: act.bind || null
+    }
   };
   cardAdvancePending(db, st);
 };
@@ -83140,7 +83227,7 @@ const cardResolveTarget = (db, st) => {
   if (mv && cardMonType(target, st.turn) === mv.type) dmg *= mv.n;
   const evaded = pd.evaded;
   if (evaded) dmg = cardHasEff(main, 'halfOnEvade') ? Math.ceil(dmg / 2) : 0;
-  if (!cardHasEff(main, 'noBlockReduce')) {
+  if (!cardHasEff(main, 'noBlockReduce') && !(pd.flags || {}).attachNoBlockReduce) {
     if (pd.reduceAll) dmg = 0;
     if (pd.reduceHalf) dmg -= Math.floor(dmg / 2);
     dmg = Math.max(0, dmg - pd.reduce);
@@ -83246,6 +83333,7 @@ const cardFinishAttack = (db, st) => {
   if (se && pd.results.some(r => r.evaded)) self += se.n;
   const sa = cardEff(main, 'selfDamage');
   if (sa) self += sa.n;
+  if (pd.flags && pd.flags.selfIfHit && pd.results.some(r => !r.evaded)) self += pd.flags.selfIfHit;
   if (self > 0 && atkMon && !atkMon.ko) {
     atkMon.life = Math.max(0, atkMon.life - self);
     atkMon.charge = null;
@@ -83316,6 +83404,81 @@ const cardApplySpecial = (db, st, p, mi, card, target) => {
       };
       cardLog(st, `${me.mons[mi].name}は次の${e.kinds.includes('pow') ? 'ちから' : 'かしこさ'}技のダメージが${e.n}倍`);
     }
+    const self = mi >= 0 ? me.mons[mi] : null;
+    const tm = target ? st.players[target.p].mons[target.m] : null;
+    const addBonus = (m, n) => {
+      m.bonus = {
+        turn: st.turn,
+        n: (m.bonus && m.bonus.turn === st.turn ? m.bonus.n : 0) + n
+      };
+    };
+    if (e.t === 'extraAttack' && self) {
+      addBonus(self, e.n);
+      cardLog(st, `${self.name}はこのターン、もう${e.n}回攻撃できる`);
+    }
+    if (e.t === 'extraAttackTarget' && tm) {
+      addBonus(tm, e.n);
+      cardLog(st, `${tm.name}はもう${e.n}回攻撃できる`);
+    }
+    if (e.t === 'unstunTarget' && tm) {
+      tm.stunTurn = -1;
+      cardLog(st, `${tm.name}は攻撃できるようになった`);
+    }
+    if (e.t === 'liftTarget' && tm) {
+      tm.airUntil = Math.max(tm.airUntil, st.turn);
+      cardLog(st, `${tm.name}はこのターン空中になった`);
+    }
+    if (e.t === 'unlimitedAttacks' && self) {
+      self.unlimited = st.turn;
+      cardLog(st, `${self.name}はこのターン、技を何枚でも出せる`);
+    }
+    if (e.t === 'breederUnlimited') {
+      st.breederFree = {
+        p,
+        turn: st.turn
+      };
+      cardLog(st, `このターン、${me.name}はブリーダーのカードを何枚でも出せる`);
+    }
+    if (e.t === 'taunt' && self) {
+      st.taunts = [...(st.taunts || []).filter(t => t.turn >= st.turn), {
+        by: p,
+        m: mi,
+        mode: e.mode,
+        noArea: !!e.noArea,
+        turn: st.turn + 1
+      }];
+      cardLog(st, e.mode === 'not' ? `相手は次の番、${self.name}に当たる技を出せない` : `相手は次の番、${self.name}を狙う技しか出せない`);
+    }
+    if (e.t === 'stunAllEnemies') {
+      opp.mons.forEach(m => {
+        if (!m.ko) m.stunTurn = st.turn + 1;
+      });
+      cardLog(st, '相手のモンスターは全員、次のターン攻撃できない');
+    }
+    if (e.t === 'stunTarget' && tm) {
+      tm.stunTurn = st.turn + 1;
+      cardLog(st, `${tm.name}は次のターン攻撃できない`);
+    }
+    if (e.t === 'skipTurn') {
+      st.skip = cardOther(p);
+      cardLog(st, `${opp.name}の次の番を飛ばす`);
+    }
+    if (e.t === 'rage' && self) {
+      self.noGuardUntil = st.turn + 1;
+      self.mult = {
+        turn: st.turn + 2,
+        kinds: ['pow', 'int'],
+        n: 2
+      };
+      cardLog(st, `${self.name}は次の番まで守れない。次の番の技は2倍`);
+    }
+    if (e.t === 'freeSpeThisTurn') {
+      st.freeSpe = {
+        p,
+        turn: st.turn
+      };
+      cardLog(st, `このターン、${me.name}の味方の特殊技は0ガッツ`);
+    }
     if (e.t === 'forbidThisTurn') {
       st.forbid[cardOther(p)] = [...(st.forbid[cardOther(p)] || []), ...e.kinds];
       cardLog(st, `このターン、相手は${e.kinds.includes('dge') ? '回避' : '防御'}を使えない`);
@@ -83332,6 +83495,7 @@ const cardApplyGuard = (db, st, act) => {
   cardPayGuts(st, q, c.guts);
   me.discard.push(no);
   const user = me.mons[act.mon];
+  user.guardTurn = st.turn;
   cardLog(st, `${user.name}の「${c.name}」`, {
     kind: 'guard',
     p: q,
@@ -83414,6 +83578,8 @@ const cardApplyAction = (db, st0, act) => {
     if (act.type !== 'attack' && act.type !== 'breeder') return null;
     const ok = cardAttackOptions(db, st0).some(o => o.type === act.type && o.mon === act.mon && JSON.stringify(o.hand) === JSON.stringify(act.hand) && JSON.stringify(o.target) === JSON.stringify(act.target || null));
     if (!ok) return null;
+    const needBind = act.hand.some(i => cardHasEff(cardOf(db, st0.players[p].hand[i]), 'attachBind'));
+    if (needBind ? !(typeof act.bind === 'string' && cardBindNames(db).includes(act.bind)) : act.bind !== undefined && act.bind !== null) return null;
     cardStartAttack(db, st, act);
     return st;
   }
@@ -83423,6 +83589,14 @@ const cardApplyAction = (db, st0, act) => {
     st.players[p].guts.push(...taken);
     if (taken.length) cardLog(st, `${st.players[p].name}は${taken.length}枚をガッツにした`);
     st.active = cardOther(p);
+    if (st.skip === st.active) {
+      st.skip = null;
+      st.turn += 1;
+      cardLog(st, `ターン${st.turn}: ${st.players[st.active].name}の番は飛ばされた`, {
+        kind: 'turn'
+      });
+      st.active = p;
+    }
     cardBeginTurn(st);
     return st;
   }
@@ -83553,11 +83727,13 @@ const cardAiPolicy = (habitId, levelId) => {
     }
   };
 };
-const cardAiEvadeChance = (db, st, p, card, target, level) => {
+const cardAiEvadeChance = (db, st, p, card, target, level, flags = {}) => {
   if (cardHasEff(card, 'noEvade') || card.kind === 'spe') return 0;
+  if (flags.attachNoEvade || flags.attachNoGuard) return 0;
   const q = cardOther(p);
   const opp = st.players[q];
   const tmon = opp.mons[target.m];
+  if (flags.attachNoEvadeHybrid && (tmon.main || tmon.sub)) return 0;
   const fits = no => {
     const c = cardOf(db, no);
     const ev = cardEff(c, 'evade');
@@ -83590,6 +83766,20 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
       if (e.t === 'peekHand') score += 0.4 * habit.disrupt;
       if (e.t === 'discardOpp') score += 1.4 * habit.disrupt;
       if (e.t === 'gutsGuard') score += st.players[cardOther(p)].hand.length >= 3 ? 0.4 : 0.1;
+      const mine = opt.mon >= 0 ? me.mons[opt.mon] : null;
+      const tmon = opt.target ? st.players[opt.target.p].mons[opt.target.m] : null;
+      const attacksFor = m => m ? me.hand.filter((_, i) => !opt.hand.includes(i)).map(n => cardOf(db, n)).filter(c => c && cardIsAttackKind(c.kind) && c.kind !== 'spe' && cardUsableBy(c, m) && c.guts <= me.guts.length - cost).length : 0;
+      if (e.t === 'extraAttack') score += Math.min(1, attacksFor(mine)) * 1.6;
+      if (e.t === 'extraAttackTarget' || e.t === 'unstunTarget') score += Math.min(1, attacksFor(tmon)) * 1.6;
+      if (e.t === 'unlimitedAttacks') score += Math.min(3, attacksFor(mine)) * 0.9 - 0.4;
+      if (e.t === 'breederUnlimited') score += me.hand.filter(n => (cardOf(db, n) || {}).user === 'breeder').length * 0.7 - 0.3;
+      if (e.t === 'liftTarget') score += 0.3;
+      if (e.t === 'taunt') score += 0.9 * habit.disrupt;
+      if (e.t === 'stunAllEnemies') score += st.players[cardOther(p)].mons.filter(m => !m.ko).length * 1.0;
+      if (e.t === 'stunTarget' && tmon) score += 0.8 + tmon.life / Math.max(1, tmon.max) * 0.6;
+      if (e.t === 'skipTurn') score += 3;
+      if (e.t === 'rage' && mine) score += Math.max(0, ...me.hand.map(n => cardOf(db, n)).filter(c => c && (c.kind === 'pow' || c.kind === 'int') && cardUsableBy(c, mine)).map(c => c.damage || 0)) * 0.35 - 0.6;
+      if (e.t === 'freeSpeThisTurn') score += me.hand.filter((_, i) => !opt.hand.includes(i)).map(n => cardOf(db, n)).filter(c => c && c.kind === 'spe' && c.user !== 'breeder' && !cardHasEff(c, 'attach')).reduce((s2, c) => s2 + (c.guts || 0) * 0.4, 0);
       if (e.t === 'charge') {
         const m = opt.mon >= 0 ? me.mons[opt.mon] : null;
         const big = m && !m.charge ? Math.max(0, ...me.hand.map(n => cardOf(db, n)).filter(c => c && e.kinds.includes(c.kind) && cardUsableBy(c, m)).map(c => c.damage || 0)) : 0;
@@ -83607,10 +83797,8 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
       const kinds = new Set(opt.hand.map(i => cardOf(db, me.hand[i]).name).filter(n => combo.names.includes(n))).size;
       dmg = combo.table[kinds] || dmg;
     }
-    opt.hand.forEach(i => {
-      const am = cardEff(cardOf(db, me.hand[i]), 'attachMult');
-      if (am) dmg *= am.n;
-    });
+    const mods = cardAttachMods(opt.hand.map(i => cardOf(db, me.hand[i])).filter(Boolean));
+    dmg = (dmg + mods.add) * mods.mult;
     const mon = opt.mon >= 0 ? me.mons[opt.mon] : null;
     if (mon && mon.mult && mon.mult.turn === st.turn && mon.mult.kinds.includes(main.kind)) dmg *= mon.mult.n;
     if (mon && mon.charge && mon.charge.kinds.includes(main.kind)) dmg *= mon.charge.n;
@@ -83621,7 +83809,7 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
       const mv = cardEff(main, 'multVs');
       if (mv && cardMonType(tm, st.turn) === mv.type) d *= mv.n;
       if (cardHasEff(main, 'nonLethal')) d = Math.min(d, tm.life - 1);
-      const ev = cardAiEvadeChance(db, st, p, main, t, level);
+      const ev = cardAiEvadeChance(db, st, p, main, t, level, mods.flags) * (opt.hand.some(i => cardHasEff(cardOf(db, me.hand[i]), 'attachBind')) ? 0.5 : 1);
       const half = cardHasEff(main, 'halfOnEvade') ? Math.ceil(d / 2) : 0;
       const exp = d * (1 - ev) + half * ev;
       const sign = t.p === p ? -1.3 : 1;
@@ -83635,6 +83823,8 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
     if (cost >= 5) score *= 1 + 0.12 * (habit.big - 1);
     const sh = cardEff(main, 'selfDamageIfHit');
     if (sh && mon) score -= sh.n * (mon.life <= sh.n ? 3 : 0.6);
+    const si = mods.flags.selfIfHit;
+    if (si && mon) score -= si * (mon.life <= si ? 3 : 0.6);
     const sa = cardEff(main, 'selfDamage');
     if (sa && mon) score -= sa.n * (mon.life <= sa.n ? 3 : 0.6);
   }
@@ -83731,6 +83921,28 @@ const cardAiChooseGuts = (db, st, policy) => {
     hand: pick
   };
 };
+const cardAiFillBind = (db, st, o, policy) => {
+  if (!o || !Array.isArray(o.hand)) return o;
+  const me = st.players[st.active];
+  if (!o.hand.some(i => cardHasEff(cardOf(db, me.hand[i]), 'attachBind'))) return o;
+  const opp = st.players[cardOther(st.active)];
+  const tmon = o.target && o.target.p !== st.active ? opp.mons[o.target.m] : opp.mons.find(m => !m.ko);
+  const guardName = no => {
+    const c = cardOf(db, no);
+    return c && c.ready && cardIsGuardKind(c.kind) && (!tmon || c.user === 'any' || cardUsableBy(c, tmon)) ? c.name : null;
+  };
+  const seen = (policy.level.readHand ? opp.hand : opp.discard).map(guardName).filter(Boolean);
+  const count = {};
+  seen.forEach(n => {
+    count[n] = (count[n] || 0) + 1;
+  });
+  let name = Object.keys(count).sort((a, b) => count[b] - count[a] || (a < b ? -1 : 1))[0];
+  if (!name) name = Object.values(db.cards).filter(c => c.ready && cardHasEff(c, 'evade') && (!tmon || cardUsableBy(c, tmon))).map(c => c.name).sort()[0] || cardBindNames(db)[0];
+  return {
+    ...o,
+    bind: name
+  };
+};
 const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
   if (st.pendingDiscard) {
     const q = st.pendingDiscard.p;
@@ -83774,7 +83986,7 @@ const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
   };
   if (sloppy) return rand() < 0.25 ? {
     type: 'endAttacks'
-  } : opts[Math.floor(rand() * opts.length)];
+  } : cardAiFillBind(db, st, opts[Math.floor(rand() * opts.length)], policy);
   const scored = opts.map(o => ({
     o,
     s: cardAiScoreAttack(db, st, o, policy)
@@ -83784,9 +83996,9 @@ const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
   };
   if (rand() < policy.level.whim) {
     const pool = scored.filter(x => x.s > 0.3).slice(0, 3);
-    return pool[Math.floor(rand() * pool.length)].o;
+    return cardAiFillBind(db, st, pool[Math.floor(rand() * pool.length)].o, policy);
   }
-  return scored[0].o;
+  return cardAiFillBind(db, st, scored[0].o, policy);
 };
 const CARD_AI_DECKS = Object.freeze({
   mua: {
@@ -83815,8 +84027,26 @@ const CARD_AI_LANE_MIN = Object.freeze({
   dra: 0.3
 });
 const CARD_DECK_COPY_MAX = 3;
+const CARD_AI_ATTACH_MAX = 6;
 const cardAiCardValue = (card, habit) => {
   const eff = t => cardHasEff(card, t);
+  if (eff('attach')) {
+    let v = 0.3;
+    (card.effects || []).forEach(e => {
+      if (e.t === 'attachAdd') v += e.n * 0.35;
+      if (e.t === 'attachMult') v += (e.n - 1) * 0.7;
+      if (e.t === 'attachCost') v += e.n * 0.3;
+      if (e.t === 'attachCostHalf' || e.t === 'attachFree') v += 0.6;
+      if (e.t === 'attachNoEvade' || e.t === 'attachNoGuard') v += 0.7;
+      if (e.t === 'attachBind' || e.t === 'attachNoEvadeHybrid' || e.t === 'attachNoBlockReduce' || e.t === 'attachNoZeroGuard' || e.t === 'attachNoGuardIfGuarded') v += 0.35;
+      if (e.t === 'attachSelfIfHit') v -= e.n * 0.3;
+    });
+    const w = cardEff(card, 'attach').when || {};
+    if (w.deckEmpty) v *= 0.2;
+    if (w.lifeMax !== undefined) v *= 0.5;
+    if (w.area) v *= 0.6 * habit.area;
+    return v - card.guts * 0.3;
+  }
   if (cardIsGuardKind(card.kind)) {
     let v = eff('evade') ? 2.2 : eff('reduceAll') ? 2.4 : eff('reflect') ? 2.3 : eff('cover') ? 1.4 : 1.6;
     const re = cardEff(card, 'reduce');
@@ -83834,7 +84064,19 @@ const cardAiCardValue = (card, habit) => {
       if (e.t === 'forbidThisTurn') v += 0.8 * habit.disrupt;
       if (e.t === 'gutsGuard') v += 0.3;
       if (e.t === 'charge') v += 1.2;
+      if (e.t === 'extraAttack') v += 0.8;
+      if (e.t === 'extraAttackTarget') v += 0.6;
+      if (e.t === 'unstunTarget') v += 0.2;
+      if (e.t === 'liftTarget') v += 0.2;
+      if (e.t === 'unlimitedAttacks') v += 1.0;
+      if (e.t === 'breederUnlimited') v += 0.4;
+      if (e.t === 'taunt') v += 0.6 * habit.disrupt;
+      if (e.t === 'stunAllEnemies') v += 1.2;
+      if (e.t === 'stunTarget') v += 0.8;
+      if (e.t === 'skipTurn') v += 1.5;
+      if (e.t === 'rage') v += 0.6;
     });
+    if (cardHasEff(card, 'useWhenAllies')) v *= 0.4;
     return v - card.guts * 0.3;
   }
   let dmg = card.damage || 0;
@@ -83862,7 +84104,7 @@ const cardAiBuildDeck = (db, who, levelId = 'normal') => {
   const maxWave = levelId === 'expert' || levelId === 'master' ? 4 : 1;
   const habit = CARD_AI_HABITS[who] || CARD_AI_HABITS.kyuko;
   const mons = monsters.map(no => cardMonsterOf(db, no));
-  const pool = Object.values(db.cards).filter(c => c.ready && c.wave <= maxWave && !cardHasEff(c, 'attach') && (c.user === 'any' || c.user === 'breeder' || mons.some(m => cardUsableBy(c, {
+  const pool = Object.values(db.cards).filter(c => c.ready && c.wave <= maxWave && (c.user === 'any' || c.user === 'breeder' || mons.some(m => cardUsableBy(c, {
     ...m,
     ko: false
   }))));
@@ -83879,10 +84121,13 @@ const cardAiBuildDeck = (db, who, levelId = 'normal') => {
   const cards = [];
   const heavyMax = Math.round(8 * habit.big);
   let heavy = 0;
+  let attached = 0;
   const add = (c, n) => {
     for (let i = 0; i < n && cards.length < CARD_BATTLE_DECK_SIZE; i++) {
       const isHeavy = !cardIsGuardKind(c.kind) && c.guts >= 5;
       if (isHeavy && heavy >= heavyMax) return;
+      if (cardHasEff(c, 'attach') && attached >= CARD_AI_ATTACH_MAX) return;
+      if (cardHasEff(c, 'attach')) attached += 1;
       if (isHeavy) heavy += 1;
       cards.push(c.no);
     }
@@ -86110,7 +86355,11 @@ const CardDetailModal = ({
     className: "rounded-md bg-slate-800 px-2 py-0.5 text-slate-400"
   }, "No.", c.no)), c.text && React.createElement("p", {
     className: "mt-2 text-[14px] font-bold leading-relaxed"
-  }, c.text), !c.ready && React.createElement("p", {
+  }, c.text), c.note && React.createElement("p", {
+    "data-card-detail-note": true,
+    className: "mt-1.5 text-[12px] font-bold leading-relaxed text-sky-200",
+    style: JA_LABEL_STYLE
+  }, jaWrap(c.note)), !c.ready && React.createElement("p", {
     className: "mt-2 text-[12px] font-bold text-amber-300",
     style: JA_LABEL_STYLE
   }, jaWrap('このカードは準備中です(まだデッキに入れられません)'))), m && React.createElement("div", {
@@ -86673,10 +86922,21 @@ const CardBattleBoard = ({
   const finalOpts = byMon.filter(o => JSON.stringify(o.hand) === setChosen);
   const needTarget = finalOpts.some(o => o.target);
   const [confirm, setConfirm] = useState(null);
+  const [bindAsk, setBindAsk] = useState(null);
   useEffect(() => {
     setConfirm(null);
+    setBindAsk(null);
   }, [st]);
+  const bindCancel = () => {
+    setBindAsk(null);
+    setSel(null);
+    setHint('');
+  };
   const askUse = o => {
+    if (o && Array.isArray(o.hand) && !o.bind && o.hand.some(i => cardHasEff(cardOf(db, me.hand[i]), 'attachBind'))) {
+      setBindAsk(o);
+      return;
+    }
     if (!confirmOn('confirmUse')) {
       step(o);
       return;
@@ -86704,7 +86964,13 @@ const CardBattleBoard = ({
     const cf = confirm;
     setConfirm(null);
     if (!cf) return;
-    if (cf.kind === 'use' && !cardAttackOptions(db, st).some(o => JSON.stringify(o) === JSON.stringify(cf.act))) return;
+    if (cf.kind === 'use') {
+      const {
+        bind: _bind,
+        ...bare
+      } = cf.act;
+      if (!cardAttackOptions(db, st).some(o => JSON.stringify(o) === JSON.stringify(bare))) return;
+    }
     if (cf.kind === 'end' && (st.phase !== 'guts' || cardDeciderOf(st) !== CARD_ME || st.pending)) return;
     step(cf.act);
   };
@@ -87380,7 +87646,51 @@ const CardBattleBoard = ({
     initial: discard.tab,
     onDetail: no => setDetail(no),
     onClose: () => setDiscard(null)
-  }), confirm && React.createElement(ConfirmSheet, {
+  }), bindAsk && React.createElement("div", {
+    "data-card-bind-pick": true,
+    className: "fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3",
+    onClick: bindCancel
+  }, React.createElement("div", {
+    className: "w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900 p-3 text-slate-100",
+    onClick: e => e.stopPropagation()
+  }, React.createElement("div", {
+    className: "text-[15px] font-black",
+    style: JA_LABEL_STYLE
+  }, jaWrap('影縛り: 使えなくする守りのカードを選ぶ')), React.createElement("div", {
+    className: "mt-1 text-[11px] font-bold text-slate-400",
+    style: JA_LABEL_STYLE
+  }, jaWrap('同じ名前のカードは全部、この技に使えなくなります。赤いのは、狙った子が使える守りです')), React.createElement("div", {
+    className: "mt-2 grid max-h-[50vh] grid-cols-2 gap-1.5 overflow-y-auto"
+  }, (() => {
+    const tm = bindAsk.target ? st.players[bindAsk.target.p].mons[bindAsk.target.m] : null;
+    const can = new Set(Object.values(db.cards).filter(c => c.ready && cardIsGuardKind(c.kind) && tm && cardUsableBy(c, tm)).map(c => c.name));
+    const all = cardBindNames(db);
+    return [...all.filter(x => can.has(x)), ...all.filter(x => !can.has(x))].map(name => ({
+      name,
+      can: can.has(name)
+    }));
+  })().map(({
+    name,
+    can
+  }) => React.createElement("button", {
+    key: name,
+    type: "button",
+    "data-card-bind-name": name,
+    "data-card-bind-usable": can ? '1' : '0',
+    className: `min-h-[40px] rounded-xl px-2 text-[13px] font-black text-white active:scale-95 ${can ? 'bg-rose-700 ring-1 ring-rose-300' : 'bg-slate-700'}`,
+    onClick: () => {
+      const o = {
+        ...bindAsk,
+        bind: name
+      };
+      setBindAsk(null);
+      askUse(o);
+    }
+  }, name))), React.createElement("button", {
+    type: "button",
+    className: "mt-2 min-h-[44px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200",
+    onClick: bindCancel
+  }, "やめる"))), confirm && React.createElement(ConfirmSheet, {
     title: confirm.label,
     message: confirm.kind === 'use' ? 'オプションで確かめないようにもできます' : '',
     confirmLabel: confirm.kind === 'use' ? '使う' : '終わる',
@@ -87761,7 +88071,7 @@ const CardBattleScreen = ({
     const seed = (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0;
     const first = Math.random() < 0.5 ? CARD_ME : CARD_CPU;
     const assistant = allAssistants.find(a => a.id === pick.who);
-    const st = cardCreateGame(db, {
+    let st = cardCreateGame(db, {
       decks: [{
         monsters: activeDeck.monsters,
         cards: activeDeck.cards
@@ -87770,6 +88080,11 @@ const CardBattleScreen = ({
       seed,
       first
     });
+    if (typeof window !== 'undefined' && typeof window.__mhCardScene === 'function') {
+      try {
+        st = window.__mhCardScene(cardClone(st)) || st;
+      } catch (_) {}
+    }
     setResult(null);
     setGame({
       key: `${seed}`,
@@ -90954,6 +91269,10 @@ const cardPvpCleanAct = raw => {
         m
       };
     }
+  }
+  if (raw.bind !== undefined && raw.bind !== null) {
+    if (typeof raw.bind !== 'string' || !raw.bind || raw.bind.length > 16) return null;
+    act.bind = raw.bind;
   }
   return act;
 };

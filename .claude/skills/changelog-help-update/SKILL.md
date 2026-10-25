@@ -139,7 +139,7 @@ const CHANGELOG = [
 | `title` | ○ | 一覧に出る1行。**正式名称で書く**（音ゲーは「モンヒロビート」。略称「モンビー」はキャラの会話だけ） |
 | `status` | ○ | `'new'`（NEWマーク） |
 | `items` | ○ | 本文の配列。**空にしない**（空だと告知が作られない） |
-| `group` | 任意 | `monster`（新モンスター・新血統） / `rhythm` / `masu` / `battle` / `items` / `ranking` / `assistant` / `ui` / `other`。**書かなければタイトルと本文から自動で見当が付く**ので、見当が外れるときだけ書く |
+| `group` | 任意 | `monster`（新モンスター・新血統） / `cardBattle`（MFバトルカード） / `rhythm` / `masu` / `battle` / `items` / `ranking` / `assistant` / `ui` / `other`。**書かなければタイトルと本文から自動で見当が付く**ので、見当が外れるときだけ書く |
 | `assistantNotice` | 大きい追加のみ | ③を見る |
 | `image` | 新曲のとき必須 | `'images/song-art/◯◯.jpg'`。`?v=` は手で書かない |
 | `gallery` | 任意 | `[{ caption, image }]`。本文の下に「■見出し」と絵を順に並べる（染色イメージなど）。一覧の詳細にだけ出て、助手の告知には出ない。`?v=` は手で書かない |
