@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b2d3a66a0fe3bba5
+// source-sha256: c0478df38928f425
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-25 22:22";
+const BUILD_DATE = "2026-10-25 22:27";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -82844,6 +82844,7 @@ const cardAttachOk = (db, st, p, mon, main, c) => {
   if (w.lifeMax !== undefined && mon.life > w.lifeMax) return false;
   if (w.deckEmpty && me.deck.length) return false;
   if (w.pure && (mon.main || mon.sub)) return false;
+  if (w.subSpe && !(mon.sub && main.user === mon.sub)) return false;
   return c.user === 'breeder' ? !me.breederUsed || cardBreederFree(st, p) : cardUsableBy(c, mon);
 };
 const cardAttachSets = (db, st, p, mon, main, exclude) => {
@@ -82911,6 +82912,40 @@ const cardTauntOk = (st, p, targets, area) => cardTauntsOn(st, p).every(t => {
   if (area) return !t.noArea || !hits.some(x => x.m !== t.m);
   return hits.every(x => x.m === t.m);
 });
+const cardFuseOptions = (db, st, p) => {
+  const mons = st.players[p].mons;
+  const out = [];
+  mons.forEach((a, ai) => mons.forEach((b, bi) => {
+    if (ai === bi || a.ko || b.ko || a.main || b.main) return;
+    Object.values(db.monsters).filter(m => m.main === a.species && m.sub === b.species && m.ready !== false).sort((x, y) => x.no < y.no ? -1 : 1).slice(0, 1).forEach(m => out.push({
+      a: ai,
+      b: bi,
+      no: m.no
+    }));
+  }));
+  return out;
+};
+const cardSwapMon = (db, mon, no) => {
+  const m = cardMonsterOf(db, no);
+  Object.assign(mon, {
+    no: m.no,
+    species: m.species,
+    name: m.name,
+    main: m.main || null,
+    sub: m.sub || null,
+    type: m.type,
+    life: m.life,
+    max: m.life,
+    ko: false,
+    cocoon: false,
+    charge: null,
+    mult: null,
+    airUntil: -1,
+    waterUntil: -1,
+    safeUntil: -1,
+    noGuardUntil: -1
+  });
+};
 const cardSpeTargets = (db, st, p, mi, card) => {
   const me = st.players[p];
   const opp = st.players[cardOther(p)];
@@ -82936,6 +82971,15 @@ const cardSpeTargets = (db, st, p, mi, card) => {
     p,
     m: j
   } : null).filter(Boolean);
+  const rv = cardEff(card, 'revive');
+  if (rv) return me.mons.map((m, j) => m.ko && m.species === rv.species ? {
+    p,
+    m: j
+  } : null).filter(Boolean);
+  const self0 = mi >= 0 ? me.mons[mi] : null;
+  if (cardHasEff(card, 'emerge') && !(self0 && self0.cocoon)) return [];
+  if (cardHasEff(card, 'cocoon') && self0 && self0.cocoon) return [];
+  if (cardHasEff(card, 'fuse') && !cardFuseOptions(db, st, p).length) return [];
   const ch = cardEff(card, 'choose');
   if (ch) {
     const n = cardChoiceCands(db, st, p, mi, ch).length - (ch.src === 'hand' ? 1 : 0);
@@ -82963,6 +83007,15 @@ const cardAttackOptions = (db, st) => {
         const hand = [hi, ...att];
         if (cardActionCost(db, st, p, me.hand, hand) > guts) return;
         if (card.kind === 'spe') {
+          if (cardHasEff(card, 'fuse')) {
+            cardFuseOptions(db, st, p).forEach(fuse => out.push({
+              type: 'breeder',
+              hand,
+              target: null,
+              fuse
+            }));
+            return;
+          }
           cardSpeTargets(db, st, p, -1, card).forEach(target => out.push({
             type: 'breeder',
             hand,
@@ -82988,15 +83041,17 @@ const cardAttackOptions = (db, st) => {
       return;
     }
     me.mons.forEach((mon, mi) => {
-      const mimicIdx = me.hand.map((n2, j) => ({
+      const enabler = card.kind === 'pow' ? 'mimic' : card.kind === 'spe' && mon.sub && card.user === mon.sub ? 'ancient' : null;
+      const mimicIdx = enabler ? me.hand.map((n2, j) => ({
         j,
         c: cardOf(db, n2)
       })).filter(({
         j,
         c
-      }) => j !== hi && c && c.ready && cardHasEff(c, 'mimic') && cardUsableBy(c, mon)).map(x => x.j);
-      const byMimic = !cardUsableBy(card, mon) && card.kind === 'pow' && card.user !== 'breeder' && mimicIdx.length > 0 && !mon.ko;
+      }) => j !== hi && c && c.ready && cardHasEff(c, enabler) && cardUsableBy(c, mon)).map(x => x.j) : [];
+      const byMimic = !cardUsableBy(card, mon) && card.user !== 'breeder' && mimicIdx.length > 0 && !mon.ko;
       if (!cardUsableBy(card, mon) && !byMimic || !cardMonCanAttack(db, st, p, mi, card)) return;
+      if (mon.cocoon && !cardHasEff(card, 'emerge')) return;
       const uw = cardEff(card, 'useWhen');
       if (uw && uw.lifeMax !== undefined && mon.life > uw.lifeMax) return;
       const combo = cardEff(card, 'combo');
@@ -83033,6 +83088,7 @@ const cardAttackOptions = (db, st) => {
       const withAttach = [];
       sets.forEach(s => {
         cardAttachSets(db, st, p, mon, card, s).forEach(att => {
+          if (mon.cocoon && att.length) return;
           if (!byMimic || att.some(a => mimicIdx.includes(a))) withAttach.push([...s, ...att]);
         });
       });
@@ -83118,7 +83174,7 @@ const cardGuardOptions = (db, st) => {
   const evadeBlocked = cardHasEff(atkCard, 'noEvade') || pd.noEvade || fl.attachNoEvade;
   const guts = me.guts.length;
   const out = [];
-  const guardedNow = m => fl.attachNoGuardIfGuarded && m.guardTurn === st.turn || m.noGuardUntil >= st.turn;
+  const guardedNow = m => fl.attachNoGuardIfGuarded && m.guardTurn === st.turn || m.noGuardUntil >= st.turn || !!m.cocoon;
   me.hand.forEach((no, hi) => {
     const c = cardOf(db, no);
     if (!c || !c.ready || !cardIsGuardKind(c.kind)) return;
@@ -83691,6 +83747,33 @@ const cardApplySpecial = (db, st, p, mi, card, target, act = {}) => {
       };
       cardLog(st, `${self.name}は次の番まで守れない。次の番の技は2倍`);
     }
+    if (e.t === 'revive' && tm && tm.ko) {
+      tm.ko = false;
+      tm.life = Math.min(e.life, tm.max);
+      tm.stunTurn = st.turn;
+      tm.attacks = 0;
+      cardLog(st, `${tm.name}がライフ${tm.life}で戻った(このターンは攻撃できない)`);
+    }
+    if (e.t === 'cocoon' && self) {
+      self.cocoon = true;
+      cardLog(st, `${self.name}はまゆになった(羽化のほかは出せない)`);
+    }
+    if (e.t === 'emerge' && self && self.cocoon) {
+      const from = self.name;
+      cardSwapMon(db, self, e.to);
+      cardLog(st, `${from}は${self.name}になった(ライフ${self.life})`);
+    }
+    if (e.t === 'fuse' && act.fuse) {
+      const f = act.fuse;
+      const a = me.mons[f.a],
+        b = me.mons[f.b];
+      cardKo(st, p, f.a);
+      cardKo(st, p, f.b);
+      cardSwapMon(db, a, f.no);
+      a.stunTurn = st.turn;
+      a.attacks = 0;
+      cardLog(st, `${b.name}と合体して、${a.name}が出た(このターンは攻撃できない)`);
+    }
     if (e.t === 'safe' && self) {
       self.safeUntil = st.turn + 1;
       cardLog(st, `${self.name}は次の番までダメージを受けない`);
@@ -83990,7 +84073,7 @@ const cardApplyAction = (db, st0, act) => {
       return st;
     }
     if (act.type !== 'attack' && act.type !== 'breeder') return null;
-    const ok = cardAttackOptions(db, st0).some(o => o.type === act.type && o.mon === act.mon && JSON.stringify(o.hand) === JSON.stringify(act.hand) && JSON.stringify(o.target) === JSON.stringify(act.target || null) && o.form === act.form && JSON.stringify(o.split) === JSON.stringify(act.split));
+    const ok = cardAttackOptions(db, st0).some(o => o.type === act.type && o.mon === act.mon && JSON.stringify(o.hand) === JSON.stringify(act.hand) && JSON.stringify(o.target) === JSON.stringify(act.target || null) && o.form === act.form && JSON.stringify(o.split) === JSON.stringify(act.split) && JSON.stringify(o.fuse) === JSON.stringify(act.fuse));
     if (!ok) return null;
     const needBind = act.hand.some(i => cardHasEff(cardOf(db, st0.players[p].hand[i]), 'attachBind'));
     if (needBind ? !(typeof act.bind === 'string' && cardBindNames(db).includes(act.bind)) : act.bind !== undefined && act.bind !== null) return null;
@@ -84180,6 +84263,17 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
       if (e.t === 'peekHand') score += 0.4 * habit.disrupt;
       if (e.t === 'discardOpp') score += 1.4 * habit.disrupt;
       if (e.t === 'gutsGuard') score += st.players[cardOther(p)].hand.length >= 3 ? 0.4 : 0.1;
+      if (e.t === 'revive') score += 4;
+      if (e.t === 'cocoon') score += me.hand.some(n => cardHasEff(cardOf(db, n), 'emerge')) ? 1 : -3;
+      if (e.t === 'emerge') {
+        const m0 = opt.mon >= 0 ? me.mons[opt.mon] : null;
+        const to = cardMonsterOf(db, e.to);
+        score += 2 + (m0 && to ? (to.life - m0.life) * 0.3 : 0);
+      }
+      if (e.t === 'fuse' && opt.fuse) {
+        const to = cardMonsterOf(db, opt.fuse.no);
+        score += to.life - (me.mons[opt.fuse.a].life + me.mons[opt.fuse.b].life) * 0.8 - 1;
+      }
       if (e.t === 'safe') {
         const m0 = opt.mon >= 0 ? me.mons[opt.mon] : null;
         score += m0 && m0.life <= Math.ceil(m0.max / 2) ? 1.4 : 0.4;
@@ -84560,6 +84654,10 @@ const cardAiCardValue = (card, habit) => {
       if (e.t === 'rage') v += 0.6;
       if (e.t === 'choose') v += e.then === 'toHand' ? 0.8 : 0.3;
       if (e.t === 'safe') v += 0.8;
+      if (e.t === 'revive') v += 0.3;
+      if (e.t === 'cocoon') v -= 1;
+      if (e.t === 'emerge') v += 0.3;
+      if (e.t === 'fuse') v -= 0.3;
       if (e.t === 'form') v += 0.1;
       if (e.t === 'peekPick') v += 0.8 * habit.disrupt;
       if (e.t === 'rush' || e.t === 'gutsZeroBoth' || e.t === 'oppHandToDeckBottom' || e.t === 'oppGutsLoss' || e.t === 'millOpp' || e.t === 'discardBothHands' || e.t === 'refresh') v += 0.3;
@@ -87955,12 +88053,12 @@ const CardBattleBoard = ({
       })
     }, picks.length ? `${picks.length}枚をガッツにしてターン終了` : 'ガッツにしないでターン終了');
     const useBtn = sel && monChosen !== undefined && finalOpts.length && !needTarget;
-    return React.createElement(React.Fragment, null, useBtn && finalOpts.some(o => o.split) ? React.createElement("button", {
+    return React.createElement(React.Fragment, null, useBtn && finalOpts.some(o => o.split || o.fuse) ? React.createElement("button", {
       type: "button",
       "data-card-split-open": true,
       className: `${btn} mh-button-primary`,
       onClick: () => setSplitAsk(finalOpts)
-    }, "割り振りを選ぶ") : useBtn && finalOpts.some(o => o.form) ? ['air', 'ground'].map(f => {
+    }, finalOpts.some(o => o.fuse) ? '合体の組を選ぶ' : '割り振りを選ぶ') : useBtn && finalOpts.some(o => o.form) ? ['air', 'ground'].map(f => {
       const o = finalOpts.find(x => x.form === f);
       return o ? React.createElement("button", {
         key: f,
@@ -88450,18 +88548,18 @@ const CardBattleBoard = ({
   }, React.createElement("div", {
     className: "text-[15px] font-black",
     style: JA_LABEL_STYLE
-  }, jaWrap('ダメージの割り振りを選ぶ')), React.createElement("div", {
+  }, jaWrap(splitAsk.some(o => o.fuse) ? '合体する2体を選ぶ(左がメイン・右がサブ)' : 'ダメージの割り振りを選ぶ')), React.createElement("div", {
     className: "mt-2 grid max-h-[55vh] gap-1.5 overflow-y-auto"
   }, splitAsk.map(o => React.createElement("button", {
-    key: o.split.join('-'),
+    key: JSON.stringify(o.split || o.fuse),
     type: "button",
-    "data-card-split": o.split.join('-'),
+    "data-card-split": o.split ? o.split.join('-') : `${o.fuse.a}-${o.fuse.b}`,
     onClick: () => {
       setSplitAsk(null);
       askUse(o);
     },
     className: "min-h-[44px] rounded-xl bg-slate-700 px-2 text-left text-[14px] font-black text-white active:scale-[.98]"
-  }, o.split.map((x, j) => x > 0 ? `${st.players[CARD_CPU].mons[j].name} ${x}` : null).filter(Boolean).join('・')))), React.createElement("button", {
+  }, o.fuse ? `${me.mons[o.fuse.a].name}＋${me.mons[o.fuse.b].name} → ${(cardMonsterOf(db, o.fuse.no) || {}).name || ''}` : o.split.map((x, j) => x > 0 ? `${st.players[CARD_CPU].mons[j].name} ${x}` : null).filter(Boolean).join('・')))), React.createElement("button", {
     type: "button",
     className: "mt-2 min-h-[44px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200",
     onClick: () => setSplitAsk(null)
@@ -92177,6 +92275,17 @@ const cardPvpCleanAct = raw => {
     if (!Array.isArray(raw.split) || raw.split.length !== 3) return null;
     act.split = raw.split.map(x => cardPvpInt(x, 30));
     if (act.split.some(x => x === null)) return null;
+  }
+  if (raw.fuse !== undefined) {
+    const f = raw.fuse || {};
+    const a = cardPvpInt(f.a, 2),
+      b = cardPvpInt(f.b, 2);
+    if (a === null || b === null || typeof f.no !== 'string' || !/^C-[0-9A-Z-]{1,8}$/.test(f.no)) return null;
+    act.fuse = {
+      a,
+      b,
+      no: f.no
+    };
   }
   if (raw.form !== undefined) {
     if (raw.form !== 'air' && raw.form !== 'ground') return null;
