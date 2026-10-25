@@ -530,7 +530,7 @@ const CardPackRateSheet = ({ db, pack, collection, onClose }) => {
     '同じレア度のモンスターは、どれも同じ割合で出ます。',
     pack.pity ? `このパックでキラも別絵キラも出ないまま${CARD_PACK_PITY_AT}パック開けると、つぎのパックのモンスターの枠は必ずキラ以上になります(天井)。` : null,
     `だぶったカードはカードポイントになります(技などは4枚目から1枚${CARD_DUP_POINT.tech}・モンスターは2枚目から${CARD_DUP_POINT.normal}〔キラ${CARD_DUP_POINT.kira}・別絵キラ${CARD_DUP_POINT.alt}〕)。`,
-    '準備中のカードは出ません。',
+    '新しいカードは、できしだい追加されます。',
   ].filter(Boolean);
   return (
     <CardShopSheet tag="rates" title={`${pack.name} 提供割合`} onClose={onClose} detail={detail} setDetail={setDetail} db={db}>

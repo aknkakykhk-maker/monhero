@@ -609,9 +609,9 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     await page.locator('[data-card-shop-starter][data-card-shop-starter-owned] [data-card-shop-starter-contents]').first().click();
     await page.locator('[data-card-shop-sheet="starter"]').waitFor({ timeout: 5000 });
     if (SHOT) await shot(page, '29a-shop-starter-contents');
-    const kitView = await page.evaluate(() => { const el = document.querySelector('[data-card-shop-sheet="starter"]'); return { items: el.querySelectorAll('[data-card-shop-item]').length, total: [...el.querySelectorAll('[data-card-shop-item]')].reduce((a, b) => a + (Number((b.innerText.match(/×(\d+)/) || [])[1]) || 1), 0) }; });
+    const kitView = await page.evaluate(() => { const el = document.querySelector('[data-card-shop-sheet="starter"]'); return { items: el.querySelectorAll('[data-card-shop-item]').length, missing: el.querySelectorAll('[data-card-shop-missing-badge]').length, total: [...el.querySelectorAll('[data-card-shop-item]')].reduce((a, b) => a + (Number((b.innerText.match(/×(\d+)/) || [])[1]) || 1), 0) }; });
     await page.locator('[data-card-shop-sheet-close]').click();
-    check('⑯ スターターキットは持っているものも並び(「持っています」・買えない)、中身(モンスター3枚とカード50枚)を見られる', kits === 3 && ownedKits === 1 && ownedBuyDisabled && kitView.total === 53, JSON.stringify({ kits, ownedKits, ownedBuyDisabled, kitView }));
+    check('⑯ スターターキットは持っているものも並び(「持っています」・買えない)、中身(モンスター3枚とカード50枚)を見られる・持っているキットの中身に「未取得」が出ない', kits === 3 && ownedKits === 1 && ownedBuyDisabled && kitView.total === 53 && kitView.missing === 0, JSON.stringify({ kits, ownedKits, ownedBuyDisabled, kitView }));
     const buyKit = page.locator('[data-card-shop-starter]:not([data-card-shop-starter-owned])').first();
     const buyKitId = await buyKit.getAttribute('data-card-shop-starter');
     await buyKit.locator('[data-card-shop-starter-buy]').click();
