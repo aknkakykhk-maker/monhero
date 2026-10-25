@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a92f5f797f555198
+// generated-sha256: 46d330c9144609e6
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-25 12:31"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-25 12:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -51926,14 +51926,33 @@ const CardResultBanner = ({ title, sub, tone = 'win' }) => (
 // カードやモンスターの名前を1行に収める(2026-10-24 改善部の点検 V4「ぐるぐるアタッ/ク」「ストライクリパ/ー」)。
 //   名前は1つの言葉なので折らない。長い名前だけ、入れ物の幅(cqw)に合わせて字を小さくする(size が上限・min が下限)
 //   「ゴーレム(別絵キラ)」のような ( ) の付いた名前は、( ) から下の行へ分ける(名前の途中では折らない)
-const CardNameFit = ({ name, size = 10, min = 7, className = '', style = null }) => {
+// 2行に折るときの切れ目。「の」「・」の後ろか、まんなかあたり。次の行の頭に「ー」「ッ」「ン」や小さい字が来ないようにずらす
+//   例: カララギマンゴー → カララギ/マンゴー  最後のきらめき → 最後の/きらめき  フォーメーション → フォー/メーション
+const cardNameSplit = (text) => {
+  const ch = [...text];
+  const mid = Math.ceil(ch.length / 2);
+  for (const d of [0, 1, -1, 2, -2]) { const i = mid + d; if (i > 1 && i < ch.length - 1 && /[の・]/.test(ch[i - 1])) return [ch.slice(0, i).join(''), ch.slice(i).join('')]; }
+  // まんなかから左右へ交互に探す(フォーメーション → フォー/メーション。右だけへずらすと「フォーメー/ション」になる)
+  const bad = /[ーッンャュョァィゥェォっゃゅょぁぃぅぇぉ、。]/;
+  for (let d = 0; d < ch.length; d++) {
+    for (const i of [mid - d, mid + d]) if (i >= 2 && i <= ch.length - 2 && !bad.test(ch[i])) return [ch.slice(0, i).join(''), ch.slice(i).join('')];
+  }
+  return [ch.slice(0, mid).join(''), ch.slice(mid).join('')];
+};
+// twoLine … 手札の名前。箱が狭い(56px 以下・320幅や横画面の手札)ときだけ、長い名前(7文字以上)を言葉の切れ目で2行に折る。
+//   1行のまま縮めると、いちばん小さい字(7px)でも入らず端が切れていた(2026-10-25 カゲあつくん「カララギマンゴ/ー」)。
+//   狭いときは短い名前も2行ぶんの高さを取り、手札の絵の高さをそろえる(CSS の mh-nf-*。70-bootstrap.jsx)
+const CardNameFit = ({ name, size = 10, min = 7, className = '', style = null, twoLine = false }) => {
   const text = String(name == null ? '' : name);
   const m = /^(.+?)([(（].+)$/.exec(text);
   const lines = m ? [m[1], m[2]] : [text];
   const fit = (t) => `clamp(${min}px, ${(96 / Math.max(1, [...t].length)).toFixed(1)}cqw, ${size}px)`;
+  const two = twoLine && !m && [...text].length >= 7 ? cardNameSplit(text) : null;
+  const row = (t, i) => <span key={i} className="block overflow-hidden whitespace-nowrap text-center" style={{ fontSize: fit(t), textOverflow: 'clip' }}>{t}</span>;
   return (
     <span className={`block w-full ${className}`} style={{ containerType: 'inline-size', ...(style || {}) }}>
-      {lines.map((t, i) => <span key={i} className="block overflow-hidden whitespace-nowrap text-center" style={{ fontSize: fit(t), textOverflow: 'clip' }}>{t}</span>)}
+      <span className={twoLine ? `mh-nf-a block ${two ? 'mh-nf-hide' : ''}` : 'block'}>{lines.map(row)}</span>
+      {two && <span data-card-name-two className="mh-nf-b">{two.map(row)}</span>}
     </span>
   );
 };
@@ -52726,11 +52745,12 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
           return (
             <div key={`${no}-${i}`} data-card-hand-card={i} onPointerDown={(e) => handDown(e, i, no)} onContextMenu={(e) => e.preventDefault()} onDragStart={(e) => e.preventDefault()} style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }} className={`flex w-[19%] ${tiny ? 'max-w-[50px]' : compact ? 'max-w-[58px]' : 'max-w-[76px]'} flex-col items-center transition-transform ${up ? '-translate-y-2' : ''} ${myTurn && !on && !tutorial ? 'opacity-45' : ''} ${tutorial && myTurn && !tutFocus.hand.includes(i) && !picks.includes(i) && !(sel && sel.hand === i) ? 'opacity-40' : ''} ${tutorial && tutFocus.hand.includes(i) ? 'animate-pulse rounded-[7px] ring-4 ring-emerald-300' : ''} ${drag && drag.i === i ? 'opacity-30' : ''}`} data-card-tutor-focus={tutorial && tutFocus.hand.includes(i) ? true : undefined}>
               <img src={CARD_IMG(c ? c.img : no)} alt={c ? c.name : no} draggable={false} style={{ WebkitUserDrag: 'none' }} className={`w-full rounded-[5px] shadow-[0_3px_6px_#000] ${up ? 'outline outline-[3px] outline-amber-300' : ''}`}/>
-              <div className="mt-0.5 w-full rounded-md bg-black/60 py-0.5 text-center leading-tight">
-                <CardNameFit name={c ? c.name : no} size={compact ? 10 : 11} className="font-bold leading-tight"/>
+              {/* 小さい段(tiny)は名前が2行になることがあるので、字の行間と上下の余白を詰めて、下のボタンを画面に残す(320×568 の守りの番) */}
+              <div className={`mt-0.5 w-full rounded-md bg-black/60 ${tiny ? 'py-px' : 'py-0.5'} text-center leading-tight`}>
+                <CardNameFit name={c ? c.name : no} size={compact ? 10 : 11} className="font-bold leading-tight" twoLine/>
                 {tiny ? <>
-                  <CardNameFit name={`ガッツ${c ? c.guts : '-'}`} size={10} className="font-extrabold leading-tight text-amber-200"/>
-                  <CardNameFit name={cardCaption(c)} size={10} className="font-extrabold leading-tight text-amber-200"/>
+                  <CardNameFit name={`ガッツ${c ? c.guts : '-'}`} size={10} className="font-extrabold leading-[1.1] text-amber-200"/>
+                  <CardNameFit name={cardCaption(c)} size={10} className="font-extrabold leading-[1.1] text-amber-200"/>
                 </> : compact ? <>
                   <span className="block text-[10px] font-extrabold leading-tight text-amber-200">ガッツ{c ? c.guts : '-'}</span>
                   <span className="block whitespace-nowrap text-[10px] font-extrabold leading-tight text-amber-200">{cardCaption(c)}</span>
@@ -82351,6 +82371,9 @@ const createAnimationStyle = () => {
     @keyframes mhCardBeam { 0% { opacity: 0; transform-origin: 0 50%; clip-path: inset(0 100% 0 0); } 30% { opacity: 1; clip-path: inset(0 0 0 0); } 75% { opacity: 1; clip-path: inset(0 0 0 0); } 100% { opacity: 0; clip-path: inset(0 0 0 60%); } }
     @keyframes mhCardBreeder { 0% { opacity: 0; transform: scale(.4); box-shadow: 0 0 0 rgba(253,224,71,0); } 20% { opacity: 1; transform: scale(1.12); box-shadow: 0 0 22px rgba(253,224,71,.95); } 75% { opacity: 1; transform: scale(1); box-shadow: 0 0 14px rgba(253,224,71,.7); } 100% { opacity: 0; transform: scale(.9); } }
     @keyframes mhCardFlip { 0% { transform: rotateY(0); } 100% { transform: rotateY(180deg); } }
+    /* 手札の名前(84 の CardNameFit twoLine): 箱が 56px 以下のときだけ、長い名前を2行に折る。短い名前も2行ぶんの高さを取ってそろえる */
+    .mh-nf-b { display: none; }
+    @container (max-width: 56px) { .mh-nf-a, .mh-nf-b { display: flex; flex-direction: column; justify-content: center; min-height: 20px; line-height: 1; } .mh-nf-a.mh-nf-hide { display: none; } }
     .mh-card-jump { animation: mhCardJump .9s ease-out both; }
     .mh-card-afterimage { position: absolute; inset: 0; display: flex; align-items: flex-end; justify-content: center; pointer-events: none; filter: grayscale(.4) brightness(1.4) drop-shadow(0 0 6px rgba(125,211,252,.9)); animation: mhCardAfter .62s ease-out both; }
     .mh-card-air-mark { position: absolute; top: -2px; left: 50%; margin-left: -18px; width: 36px; border-radius: 6px; background: rgba(8,145,178,.92); color: #ecfeff; font-size: 11px; font-weight: 900; text-align: center; pointer-events: none; animation: mhCardPop .9s ease-out both; }

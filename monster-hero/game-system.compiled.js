@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ec7f61db4e6d8c89
+// source-sha256: c3e24d1b6aa2b6df
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-25 12:31";
+const BUILD_DATE = "2026-10-25 12:54";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -85485,31 +85485,52 @@ const CardResultBanner = ({
 }, title), sub && React.createElement("div", {
   className: "mt-1 text-[10px] font-black tracking-[0.3em] text-white/70"
 }, sub));
+const cardNameSplit = text => {
+  const ch = [...text];
+  const mid = Math.ceil(ch.length / 2);
+  for (const d of [0, 1, -1, 2, -2]) {
+    const i = mid + d;
+    if (i > 1 && i < ch.length - 1 && /[の・]/.test(ch[i - 1])) return [ch.slice(0, i).join(''), ch.slice(i).join('')];
+  }
+  const bad = /[ーッンャュョァィゥェォっゃゅょぁぃぅぇぉ、。]/;
+  for (let d = 0; d < ch.length; d++) {
+    for (const i of [mid - d, mid + d]) if (i >= 2 && i <= ch.length - 2 && !bad.test(ch[i])) return [ch.slice(0, i).join(''), ch.slice(i).join('')];
+  }
+  return [ch.slice(0, mid).join(''), ch.slice(mid).join('')];
+};
 const CardNameFit = ({
   name,
   size = 10,
   min = 7,
   className = '',
-  style = null
+  style = null,
+  twoLine = false
 }) => {
   const text = String(name == null ? '' : name);
   const m = /^(.+?)([(（].+)$/.exec(text);
   const lines = m ? [m[1], m[2]] : [text];
   const fit = t => `clamp(${min}px, ${(96 / Math.max(1, [...t].length)).toFixed(1)}cqw, ${size}px)`;
-  return React.createElement("span", {
-    className: `block w-full ${className}`,
-    style: {
-      containerType: 'inline-size',
-      ...(style || {})
-    }
-  }, lines.map((t, i) => React.createElement("span", {
+  const two = twoLine && !m && [...text].length >= 7 ? cardNameSplit(text) : null;
+  const row = (t, i) => React.createElement("span", {
     key: i,
     className: "block overflow-hidden whitespace-nowrap text-center",
     style: {
       fontSize: fit(t),
       textOverflow: 'clip'
     }
-  }, t)));
+  }, t);
+  return React.createElement("span", {
+    className: `block w-full ${className}`,
+    style: {
+      containerType: 'inline-size',
+      ...(style || {})
+    }
+  }, React.createElement("span", {
+    className: twoLine ? `mh-nf-a block ${two ? 'mh-nf-hide' : ''}` : 'block'
+  }, lines.map(row)), two && React.createElement("span", {
+    "data-card-name-two": true,
+    className: "mh-nf-b"
+  }, two.map(row)));
 };
 const CARD_AI_BGM = Object.freeze({
   mua: 'melo_toriko',
@@ -86795,19 +86816,20 @@ const CardBattleBoard = ({
       },
       className: `w-full rounded-[5px] shadow-[0_3px_6px_#000] ${up ? 'outline outline-[3px] outline-amber-300' : ''}`
     }), React.createElement("div", {
-      className: "mt-0.5 w-full rounded-md bg-black/60 py-0.5 text-center leading-tight"
+      className: `mt-0.5 w-full rounded-md bg-black/60 ${tiny ? 'py-px' : 'py-0.5'} text-center leading-tight`
     }, React.createElement(CardNameFit, {
       name: c ? c.name : no,
       size: compact ? 10 : 11,
-      className: "font-bold leading-tight"
+      className: "font-bold leading-tight",
+      twoLine: true
     }), tiny ? React.createElement(React.Fragment, null, React.createElement(CardNameFit, {
       name: `ガッツ${c ? c.guts : '-'}`,
       size: 10,
-      className: "font-extrabold leading-tight text-amber-200"
+      className: "font-extrabold leading-[1.1] text-amber-200"
     }), React.createElement(CardNameFit, {
       name: cardCaption(c),
       size: 10,
-      className: "font-extrabold leading-tight text-amber-200"
+      className: "font-extrabold leading-[1.1] text-amber-200"
     })) : compact ? React.createElement(React.Fragment, null, React.createElement("span", {
       className: "block text-[10px] font-extrabold leading-tight text-amber-200"
     }, "ガッツ", c ? c.guts : '-'), React.createElement("span", {
@@ -129572,6 +129594,9 @@ const createAnimationStyle = () => {
     @keyframes mhCardBeam { 0% { opacity: 0; transform-origin: 0 50%; clip-path: inset(0 100% 0 0); } 30% { opacity: 1; clip-path: inset(0 0 0 0); } 75% { opacity: 1; clip-path: inset(0 0 0 0); } 100% { opacity: 0; clip-path: inset(0 0 0 60%); } }
     @keyframes mhCardBreeder { 0% { opacity: 0; transform: scale(.4); box-shadow: 0 0 0 rgba(253,224,71,0); } 20% { opacity: 1; transform: scale(1.12); box-shadow: 0 0 22px rgba(253,224,71,.95); } 75% { opacity: 1; transform: scale(1); box-shadow: 0 0 14px rgba(253,224,71,.7); } 100% { opacity: 0; transform: scale(.9); } }
     @keyframes mhCardFlip { 0% { transform: rotateY(0); } 100% { transform: rotateY(180deg); } }
+    /* 手札の名前(84 の CardNameFit twoLine): 箱が 56px 以下のときだけ、長い名前を2行に折る。短い名前も2行ぶんの高さを取ってそろえる */
+    .mh-nf-b { display: none; }
+    @container (max-width: 56px) { .mh-nf-a, .mh-nf-b { display: flex; flex-direction: column; justify-content: center; min-height: 20px; line-height: 1; } .mh-nf-a.mh-nf-hide { display: none; } }
     .mh-card-jump { animation: mhCardJump .9s ease-out both; }
     .mh-card-afterimage { position: absolute; inset: 0; display: flex; align-items: flex-end; justify-content: center; pointer-events: none; filter: grayscale(.4) brightness(1.4) drop-shadow(0 0 6px rgba(125,211,252,.9)); animation: mhCardAfter .62s ease-out both; }
     .mh-card-air-mark { position: absolute; top: -2px; left: 50%; margin-left: -18px; width: 36px; border-radius: 6px; background: rgba(8,145,178,.92); color: #ecfeff; font-size: 11px; font-weight: 900; text-align: center; pointer-events: none; animation: mhCardPop .9s ease-out both; }
