@@ -821,6 +821,47 @@ const pendingCards = () => {
     if (a) { const s1 = act(st, a); ok(s1.players[0].mons[0].type === a.form && s1.players[0].hand.length === 1, `${no}: 持ちょうが変わらない・引かない`); }
     ok(!E.cardApplyAction(db, st, { ...os[0], form: 'water' }), `${no}: 空中・地上のほかを選べる`);
   });
+  // ---- 区切り6: 同時に2枚・ダメージの数え方が変わる技 ----
+  const meScene = (sp, hand, guts = 20) => big(scene({ mons: [[monOf(sp), 'C-003', 'C-005'], ['C-001', 'C-003', 'C-005']], hands: [hand, []], guts: [guts, 0] }));
+  const hitWith = (st, nos, m = 0) => { const a = optWith(st, nos, m); ok(a, `${nos.join('+')}: 出せない`); return a ? hitOnce(st, a) : null; };
+  // キック(178・ヘンガー)・しっぽキック(214・ワーム): 1枚ならふつう、2枚同時なら10・12
+  [['178', 'henger', 10], ['214', 'worm', 12]].forEach(([no, sp, two]) => {
+    ready(no); const r1 = hitWith(meScene(sp, [no]), [no]); if (r1) ok(r1.dmg[0] === db.cards[no].damage, `${no}: 1枚のダメージが違う`);
+    const r2 = hitWith(meScene(sp, [no, no]), [no, no]); if (r2) ok(r2.dmg[0] === two, `${no}: 2枚同時で${two}にならない(${r2 && r2.dmg[0]})`);
+  });
+  // 右掌(285)・左掌(286・メタルナー): 2種類なら4
+  { ready('285'); ready('286'); const r = hitWith(meScene('metalner', ['285', '286']), ['285', '286']); if (r) ok(r.dmg[0] === 4, '285/286: 2種類で4にならない'); }
+  // コンビネーション(227・ドラゴン): しっぽアタック・かみつきが手札に1枚ずつあるときだけ。払うのは4だけ・相手全員に8
+  { ready('227'); const tail = Object.values(db.cards).find((c) => c.user === 'dragon' && c.name === 'しっぽアタック'); const bite = Object.values(db.cards).find((c) => c.user === 'dragon' && c.name === 'かみつき');
+    ok(tail && bite, '227: しっぽアタック・かみつきが無い');
+    if (tail && bite) {
+      ok(!optWith(meScene('dragon', ['227', tail.no]), ['227', tail.no]), '227: かみつきが無いのに出せる');
+      const st = meScene('dragon', ['227', tail.no, bite.no], 4);
+      const a = find(E.cardAttackOptions(db, st), (x) => st.players[0].hand[x.hand[0]] === '227'); ok(a && a.hand.length === 3, '227: 3枚一緒の手にならない(ガッツ4で)');
+      if (a) { let s1 = act(st, a); ok(!s1.players[0].guts.length, '227: 払ったガッツが4でない'); while (s1.pending) s1 = act(s1, { type: 'pass' }); ok(s1.players[1].mons.every((m) => m.life === 40 - 8), '227: 相手全員に8にならない'); } } }
+  // ポン拳(288・メタルナー): ダメージを与えたら手札へ戻る
+  { ready('288'); const r = hitWith(meScene('metalner', ['288']), ['288']); if (r) ok(r.st.players[0].hand.includes('288') && !r.st.players[0].discard.includes('288'), '288: 手札へ戻らない'); }
+  // ショットガン(340・コロペンドラ / 054・ピクシー): 1点ずつ割り振る(1体に全部もできる)
+  [['340', 'colorpandora'], ['054', 'pixie']].forEach(([no, sp]) => {
+    ready(no); const st = meScene(sp, [no]); const n = db.cards[no].damage;
+    const os = E.cardAttackOptions(db, st).filter((x) => st.players[0].hand[x.hand[0]] === no && x.mon === 0);
+    ok(os.length && os.every((x) => Array.isArray(x.split) && x.split.reduce((a, b) => a + b, 0) === n) && os.some((x) => x.split.filter(Boolean).length === 1), `${no}: 割り振りの手が合わない(${os.length})`);
+    const a = os.find((x) => x.split.filter(Boolean).length >= 2);
+    if (a) { let s1 = act(st, a); while (s1.pending) s1 = act(s1, { type: 'pass' }); ok(s1.players[1].mons.every((m, j) => m.life === 40 - a.split[j]), `${no}: 割り振ったとおりに入らない`); }
+    ok(!E.cardApplyAction(db, st, { ...os[0], split: [n + 1, 0, 0] }), `${no}: 割り振りの合計が違う手が通る`);
+  });
+  // 魔神ファイナル(358・ガリ): 回避されない。捨て札のガリの攻撃の技の枚数を足す
+  { ready('358'); const st = meScene('gali', ['358']); const ga = Object.values(db.cards).filter((c) => c.ready && c.user === 'gali' && ['pow', 'int'].includes(c.kind)).slice(0, 2).map((c) => c.no);
+    st.players[0].discard = [...ga, '109']; st.players[1].hand = ['109']; st.players[1].guts = Array(5).fill('100');
+    const a = optWith(st, ['358'], 0); if (a) { let s1 = act(st, a); ok(!E.cardGuardOptions(db, s1).some((x) => s1.players[1].hand[x.hand] === '109'), '358: 回避できてしまう'); s1 = act(s1, { type: 'pass' }); ok(40 - s1.players[1].mons[0].life === (db.cards['358'].damage || 0) + ga.length, '358: 捨て札のガリの技の数が足されない'); } }
+  // ビッグバン(361・ピクシー): 回避されない。減ったライフのぶんを足す
+  { ready('361'); const st = meScene('pixie', ['361']); st.players[0].mons[0].life = st.players[0].mons[0].max - 2;
+    const r = hitWith(st, ['361']); if (r) ok(r.dmg[0] === db.cards['361'].damage + 2, '361: 減ったライフのぶんが足されない'); }
+  // ものまね(150・ゲル): どの種族のちから技でも、ものまねを付ければゲルが出せる
+  { ready('150'); const st = meScene('jell', [gol.no, '150']);
+    const a = find(E.cardAttackOptions(db, st), (x) => x.mon === 0 && st.players[0].hand[x.hand[0]] === gol.no);
+    ok(a && a.hand.some((i) => st.players[0].hand[i] === '150'), '150: ゲルがゴーレムの技を出せない');
+    ok(!find(E.cardAttackOptions(db, st), (x) => x.mon === 0 && st.players[0].hand[x.hand[0]] === gol.no && x.hand.length === 1), '150: ものまねを付けずに出せてしまう'); }
 };
 scenes();
 pendingCards();
