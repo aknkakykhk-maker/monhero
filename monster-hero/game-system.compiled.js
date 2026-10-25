@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3f9ed3bda71232ba
+// source-sha256: 1fe053d13738027e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-26 00:32";
+const BUILD_DATE = "2026-10-26 02:23";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -12199,6 +12199,7 @@ const RELEASE_FLAGS = {
   assistantAtsu: true,
   assistantKyuko: true,
   cardBattle: false,
+  cardAssistantTalk: false,
   tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE,
   tacticsHate: true,
   tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE,
@@ -84914,7 +84915,8 @@ const CARD_SAVE_KEYS = Object.freeze({
   topAssist: 'mh_card_top_assist_v1',
   rankSync: 'mh_card_rank_sync_v1',
   bgm: 'mh_card_bgm_v1',
-  settings: 'mh_card_settings_v1'
+  settings: 'mh_card_settings_v1',
+  aiTalk: 'mh_card_ai_talk_v1'
 });
 const cardIsPlainObject = v => !!v && typeof v === 'object' && !Array.isArray(v);
 const cardNormalizeCollection = v => {
@@ -85724,6 +85726,206 @@ const cardLineSceneOf = (db, before, after, cpu) => {
   if (after.players[me].deck.length <= 10 && before.players[me].deck.length > 10) return 'deckMine';
   if (after.players[you].deck.length <= 10 && before.players[you].deck.length > 10) return 'deckTheirs';
   return null;
+};
+const CARD_TALK_URL = `${typeof SUPABASE_URL !== 'undefined' ? SUPABASE_URL : ''}/functions/v1/card-assistant-talk`;
+const CARD_TALK_KEY = CARD_SAVE_KEYS.aiTalk;
+const CARD_TALK_MOMENTS = Object.freeze(['big', 'bigHit', 'myKo', 'theirKo', 'lastMine', 'lastTheirs', 'comeback', 'comebackTheirs']);
+const CARD_TALK_MOMENT_PER_GAME = 5;
+const CARD_TALK_WAIT_MS = Object.freeze({
+  moment: 2500,
+  after: 6000,
+  deck: 12000
+});
+const CARD_TALK_DECK_SORRY = 'いまはうまく相談にのれないみたい…。少しあとで、もう一度聞いてね';
+const CARD_TALK_FACES = ['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited'];
+const cardTalkOpen = () => {
+  try {
+    if (typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.cardAssistantTalk === true) return true;
+  } catch (e) {}
+  try {
+    return typeof localStorage !== 'undefined' && typeof DEBUG_UNLOCK_KEY !== 'undefined' && localStorage.getItem(DEBUG_UNLOCK_KEY) === '1';
+  } catch (e) {
+    return false;
+  }
+};
+const cardNormalizeAiTalk = v => ({
+  on: !(v && typeof v === 'object' && !Array.isArray(v) && v.on === false)
+});
+let cardAiTalkState = {
+  on: true
+};
+const cardAiTalkOn = () => cardTalkOpen() && cardAiTalkState.on;
+const cardLoadAiTalk = async () => {
+  try {
+    cardAiTalkState = cardNormalizeAiTalk(await storeGet(CARD_TALK_KEY, null));
+  } catch (e) {
+    cardAiTalkState = {
+      on: true
+    };
+  }
+  return cardAiTalkState;
+};
+const cardSaveAiTalk = async on => {
+  cardAiTalkState = {
+    on: !!on
+  };
+  try {
+    await storeSet(CARD_TALK_KEY, cardAiTalkState);
+  } catch (e) {}
+  return cardAiTalkState;
+};
+const cardTalkSamples = (who, scene) => ((CARD_BATTLE_LINES[who] || {})[scene] || []).map(e => Array.isArray(e) ? e[0] : e).slice(0, 6);
+const cardTalkFetch = async (kind, {
+  who,
+  facts,
+  samples = []
+}) => {
+  if (!cardAiTalkOn() || typeof fetch === 'undefined') return null;
+  const ac = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const timer = setTimeout(() => {
+    if (ac) ac.abort();
+  }, CARD_TALK_WAIT_MS[kind] || 3000);
+  try {
+    const breederId = typeof ensureBreederId === 'function' ? await ensureBreederId() : null;
+    const r = await fetch(CARD_TALK_URL, {
+      method: 'POST',
+      headers: typeof SB_HEADERS !== 'undefined' ? SB_HEADERS : {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        kind,
+        breederId: breederId || 'unknown',
+        assistantId: who,
+        facts,
+        samples
+      }),
+      signal: ac ? ac.signal : undefined
+    });
+    const res = r.ok ? await r.json() : null;
+    if (!res || res.ok !== true || res.kind !== 'reply' || typeof res.text !== 'string' || !res.text.trim()) return null;
+    return {
+      text: res.text.trim().slice(0, kind === 'deck' ? 200 : 80),
+      face: CARD_TALK_FACES.includes(res.expression) ? res.expression : 'normal',
+      picks: Array.isArray(res.picks) ? res.picks : []
+    };
+  } catch (e) {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+};
+const cardTalkAlive = (st, p) => st.players[p].mons.filter(m => !m.ko).length;
+const cardTalkLead = (st, cpu) => cardTalkAlive(st, cpu) - cardTalkAlive(st, 1 - cpu);
+const cardTalkComebackScene = (before, after, cpu) => {
+  const a = cardTalkLead(before, cpu),
+    b = cardTalkLead(after, cpu);
+  if (a < 0 && b > 0) return 'comeback';
+  if (a > 0 && b < 0) return 'comebackTheirs';
+  return null;
+};
+const cardTalkPlayerStyle = (db, st, p) => {
+  const used = (st.log || []).filter(x => (x.kind === 'use' || x.kind === 'guard') && x.p === p).flatMap(x => x.cards || []).map(no => cardOf(db, no)).filter(Boolean);
+  if (used.length < 3) return '';
+  const share = f => used.filter(f).length / used.length;
+  if (share(c => c.kind === 'blk' || c.kind === 'dge') >= 0.4) return '守り型';
+  if (share(c => cardHasEff(c, 'area')) >= 0.3) return '全体攻撃型';
+  if (share(c => (c.guts || 0) >= 5) >= 0.3) return '大技型';
+  if (share(c => c.kind === 'pow' || c.kind === 'int') >= 0.6) return '攻撃型';
+  return 'バランス型';
+};
+const cardTalkMomentFacts = (db, after, cpu, scene) => {
+  const use = (after.events || []).find(e => e.t === 'use');
+  const user = use && use.mon >= 0 ? after.players[use.p].mons[use.mon] : null;
+  const c = use ? cardOf(db, use.cards[0]) : null;
+  return {
+    scene,
+    turn: after.turn,
+    myAlive: cardTalkAlive(after, cpu),
+    theirAlive: cardTalkAlive(after, 1 - cpu),
+    card: c ? c.name : '',
+    monster: user ? user.name : ''
+  };
+};
+const cardTalkAfterFacts = (db, st, {
+  cpu,
+  outcome,
+  level,
+  comeback
+}) => {
+  if (!st) return null;
+  const helper = outcome === 'win' ? 'lose' : outcome === 'surrender' ? 'surrender' : 'win';
+  const winner = st.winner !== null && st.winner !== undefined ? st.winner : outcome === 'win' ? 1 - cpu : cpu;
+  const last = (st.log || []).slice().reverse().find(x => x.kind === 'use' && x.p === winner);
+  const c = last ? cardOf(db, (last.cards || [])[0]) : null;
+  const reason = outcome === 'surrender' ? 'surrender' : /山札/.test(st.reason || '') ? 'deck' : 'ko';
+  return {
+    outcome: helper,
+    reason,
+    turn: st.turn,
+    myAlive: cardTalkAlive(st, cpu),
+    theirAlive: cardTalkAlive(st, 1 - cpu),
+    card: c ? c.name : '',
+    decisiveBy: c ? winner === cpu ? 'me' : 'you' : null,
+    comeback: !!comeback,
+    playerStyle: cardTalkPlayerStyle(db, st, 1 - cpu),
+    level: typeof CARD_LEVEL_LABEL !== 'undefined' && CARD_LEVEL_LABEL[level] || ''
+  };
+};
+const cardTalkDeckFacts = (db, deck, collection) => {
+  const mons = (deck.monsters || []).map(no => cardMonsterOf(db, no)).filter(Boolean);
+  const inDeck = {};
+  (deck.cards || []).forEach(no => {
+    inDeck[no] = (inDeck[no] || 0) + 1;
+  });
+  const kinds = {
+    pow: 'ちから',
+    int: 'かしこさ',
+    spe: '特殊',
+    dge: '回避',
+    blk: '防御'
+  };
+  const userName = u => u === 'any' ? '全モンスター' : u === 'breeder' ? 'ブリーダー' : (Object.values(db.monsters).find(m => m.species === u && !m.main) || {}).name || u;
+  const cards = Object.values(db.cards).filter(c => c.ready && (c.user === 'any' || c.user === 'breeder' || mons.some(m => cardUsableBy(c, m)))).map(c => {
+    const have = Math.floor(Number((collection || {})[c.no]) || 0);
+    const sameName = (deck.cards || []).filter(x => (cardOf(db, x) || {}).name === c.name).length;
+    const room = cardDeckAddReason(db, {
+      monsters: deck.monsters || [],
+      cards: deck.cards || []
+    }, c.no, collection) ? 0 : Math.max(0, Math.min(CARD_DECK_COPY_MAX - sameName, have - (inDeck[c.no] || 0), CARD_BATTLE_DECK_SIZE - (deck.cards || []).length));
+    return {
+      no: c.no,
+      name: c.name,
+      kind: kinds[c.kind] || c.kind,
+      user: userName(c.user),
+      guts: c.guts || 0,
+      damage: Number.isFinite(c.damage) ? c.damage : null,
+      text: String(c.text || '').slice(0, 90),
+      room
+    };
+  }).filter(c => c.room > 0).slice(0, 200);
+  const count = {};
+  (deck.cards || []).forEach(no => {
+    const c = cardOf(db, no);
+    if (c) count[kinds[c.kind] || c.kind] = (count[kinds[c.kind] || c.kind] || 0) + 1;
+  });
+  const topKinds = Object.entries(count).sort((a, b) => b[1] - a[1]).slice(0, 2).map(([k, n]) => `${k}${n}枚`).join('・');
+  return {
+    monsters: mons.map(m => m.name),
+    deckCount: (deck.cards || []).length,
+    deckSize: CARD_BATTLE_DECK_SIZE,
+    cards,
+    topKinds
+  };
+};
+const cardTalkCheckPicks = (db, deck, collection, picks) => {
+  const facts = cardTalkDeckFacts(db, deck, collection);
+  const room = new Map(facts.cards.map(c => [c.no, c]));
+  const seen = new Set();
+  return (Array.isArray(picks) ? picks : []).filter(p => p && room.has(String(p.no)) && !seen.has(String(p.no)) && seen.add(String(p.no))).slice(0, 6).map(p => ({
+    no: String(p.no),
+    name: room.get(String(p.no)).name,
+    reason: String(p.reason || '').slice(0, 30)
+  }));
 };
 const CARD_TUTORIAL_LINES = Object.freeze({
   D1: 'よし、練習試合だ。相手はみゅあ、デッキはおでが貸すからな',
@@ -86939,6 +87141,46 @@ const CardBattleTeaser = ({
     className: "mh-button mh-button-primary mt-3 min-h-[48px] w-full rounded-2xl text-[14px] font-black active:scale-[.98]"
   }, "閉じる")))));
 };
+const CardResultTalk = ({
+  a,
+  scene,
+  talkFacts
+}) => {
+  const [line] = useState(() => cardPickLine(a.id, scene, null));
+  const [ai, setAi] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    if (talkFacts && cardAiTalkOn()) void cardTalkFetch('after', {
+      who: a.id,
+      facts: talkFacts,
+      samples: cardTalkSamples(a.id, scene)
+    }).then(r => {
+      if (alive && r) setAi(r);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const text = ai ? ai.text : line ? line.text : '';
+  const face = ai ? ai.face : line ? line.face : 'normal';
+  return React.createElement("div", {
+    "data-card-result-talk": ai ? 'ai' : 'line',
+    className: "flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2"
+  }, React.createElement(CardAssistantArt, {
+    src: assistantFullImage(a, face),
+    alt: a.name,
+    className: "w-[46%]",
+    style: {
+      height: 'min(220px, 28vh)'
+    }
+  }), React.createElement("div", {
+    className: "mb-2 min-w-0 flex-1 rounded-2xl border-2 bg-white px-2 py-1 text-[13px] font-extrabold leading-snug text-[#1f1333]",
+    style: {
+      borderColor: a.accent,
+      ...JA_WRAP_STYLE
+    }
+  }, text));
+};
 const CARD_FOE_STYLES = Object.freeze({
   attack: {
     label: '攻撃型',
@@ -87406,9 +87648,13 @@ const CardBattleBoard = ({
   });
   const bubbleTimer = useRef(null);
   const finished = useRef(false);
+  const talk = useRef({
+    n: 0,
+    behind: [false, false]
+  });
   const press = useCardLongPress(no => setDetail(no), pressMs);
   const paused = !!detail || !!discard || quit;
-  const say = scene => {
+  const say = (scene, ai = null) => {
     if (!scene || pvp || settings.bubble === 'OFF') return;
     const turn = st.turn;
     if (spoke.current.turn !== turn) spoke.current = {
@@ -87424,12 +87670,28 @@ const CardBattleBoard = ({
       [scene]: line.index
     };
     setFace(line.face);
+    const key = `${Date.now()}-${scene}`;
     setBubble({
       text: line.text,
-      key: `${Date.now()}-${scene}`
+      key
     });
     clearTimeout(bubbleTimer.current);
     bubbleTimer.current = setTimeout(() => setBubble(null), 4500);
+    if (ai && !game.demo && !tutorial && CARD_TALK_MOMENTS.includes(ai.scene) && talk.current.n < CARD_TALK_MOMENT_PER_GAME && cardAiTalkOn()) {
+      talk.current.n += 1;
+      void cardTalkFetch('moment', {
+        who: game.who,
+        facts: cardTalkMomentFacts(db, ai.next, CARD_CPU, ai.scene),
+        samples: cardTalkSamples(game.who, scene)
+      }).then(r => {
+        if (!r) return;
+        setBubble(cur => cur && cur.key === key ? {
+          ...cur,
+          text: r.text
+        } : cur);
+        setFace(r.face);
+      });
+    }
   };
   useEffect(() => {
     if (!tutorial) say('start');
@@ -87595,11 +87857,18 @@ const CardBattleBoard = ({
     } else if (evs.some(e => e.t === 'guard')) Audio_.fgSe.guard();
     if (tutorial && cardTutorialDone(tutStage.id, st, next)) setTutI(i => i + 1);
     const scene = tutorial ? null : cardLineSceneOf(db, st, next, CARD_CPU);
+    const flip = tutorial ? null : cardTalkComebackScene(st, next, CARD_CPU);
+    [0, 1].forEach(p => {
+      if (cardTalkLead(next, p) < 0) talk.current.behind[p] = true;
+    });
     setSt(next);
     setSel(null);
     setPicks([]);
     setHint('');
-    if (scene) say(scene);
+    if (scene) say(scene, {
+      scene: flip || scene,
+      next
+    });
     return true;
   };
   useEffect(() => {
@@ -87722,7 +87991,8 @@ const CardBattleBoard = ({
     finished.current = true;
     const t = setTimeout(() => onFinish({
       outcome: st.winner === CARD_ME ? 'win' : 'lose',
-      st
+      st,
+      comeback: !!talk.current.behind[st.winner]
     }), CARD_RESULT_WAIT_MS[settings.resultWait] || 2200);
     return () => clearTimeout(t);
   }, [st.winner]);
@@ -88917,6 +89187,21 @@ const CardBattleScreen = ({
       alive = false;
     };
   }, []);
+  const [aiTalk, setAiTalk] = useState(cardAiTalkState.on);
+  useEffect(() => {
+    let alive = true;
+    void cardLoadAiTalk().then(v => {
+      if (alive) setAiTalk(v.on);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const toggleAiTalk = () => {
+    const next = !aiTalk;
+    setAiTalk(next);
+    void cardSaveAiTalk(next);
+  };
   const toggleAssist = key => {
     if (key !== 'modeSelectArt' && key !== 'modeSelectComment') return;
     const next = {
@@ -88999,7 +89284,8 @@ const CardBattleScreen = ({
       } : null,
       onFinish: async ({
         outcome,
-        st
+        st,
+        comeback = false
       }) => {
         if (game.pvp) {
           CARD_PVP.finish(outcome, st);
@@ -89057,6 +89343,12 @@ const CardBattleScreen = ({
             quick = null;
           }
         }
+        const talkFacts = !game.demo && !game.pvp ? cardTalkAfterFacts(db, st, {
+          cpu: CARD_CPU,
+          outcome,
+          level: game.level,
+          comeback
+        }) : null;
         setResult({
           outcome,
           reward,
@@ -89066,7 +89358,8 @@ const CardBattleScreen = ({
           level: game.level,
           loops,
           quick,
-          facts
+          facts,
+          talk: talkFacts
         });
         onBgm && onBgm(null);
         onNavigate('CARD_TOP');
@@ -89426,6 +89719,7 @@ const CardBattleScreen = ({
       db: db,
       collection: save.collection,
       deck: editDeck,
+      advisor: topAssistant,
       onCancel: () => {
         setEditDeck(null);
         setView('decks');
@@ -89580,7 +89874,6 @@ const CardBattleScreen = ({
   if (view === 'result' && result) {
     const a = allAssistants.find(x => x.id === result.who);
     const win = result.outcome === 'win';
-    const line = a ? cardPickLine(a.id, win ? 'lose' : 'win', null) : null;
     const r = result.reward;
     return React.createElement("div", {
       "data-mh-screen": true,
@@ -89598,22 +89891,11 @@ const CardBattleScreen = ({
       title: win ? '勝ち！' : result.outcome === 'surrender' ? '投了' : '負け…',
       sub: win ? 'YOU WIN' : result.outcome === 'surrender' ? 'SURRENDER' : 'YOU LOSE',
       tone: win ? 'win' : 'lose'
-    }), a && React.createElement("div", {
-      className: "flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2"
-    }, React.createElement(CardAssistantArt, {
-      src: assistantFullImage(a, line ? line.face : 'normal'),
-      alt: a.name,
-      className: "w-[46%]",
-      style: {
-        height: 'min(220px, 28vh)'
-      }
+    }), a && React.createElement(CardResultTalk, {
+      a: a,
+      scene: win ? 'lose' : 'win',
+      talkFacts: result.talk
     }), React.createElement("div", {
-      className: "mb-2 min-w-0 flex-1 rounded-2xl border-2 bg-white px-2 py-1 text-[13px] font-extrabold leading-snug text-[#1f1333]",
-      style: {
-        borderColor: a.accent,
-        ...JA_WRAP_STYLE
-      }
-    }, line ? line.text : '')), React.createElement("div", {
       className: SCREEN_PANEL_CLASS
     }, React.createElement("div", {
       className: "text-[13px] font-black text-amber-200"
@@ -89834,7 +90116,26 @@ const CardBattleScreen = ({
       onToggle: toggleAssist,
       cls: "",
       withLabel: true
-    }))), CARD_SETTING_GROUPS.map(g => React.createElement(React.Fragment, {
+    }))), cardTalkOpen() && React.createElement("div", {
+      "data-card-ai-talk-panel": true,
+      className: SCREEN_PANEL_CLASS
+    }, React.createElement("div", {
+      className: "flex items-center gap-2"
+    }, React.createElement("b", {
+      className: "min-w-0 flex-1 text-[13px] font-black text-white"
+    }, "助手のおしゃべり(AI)"), React.createElement("button", {
+      type: "button",
+      "data-card-ai-talk": true,
+      "aria-pressed": aiTalk,
+      onClick: () => {
+        Audio_.fgSe.tap();
+        toggleAiTalk();
+      },
+      className: `min-h-[36px] shrink-0 rounded-full border px-3 text-[11px] font-black ${aiTalk ? 'border-emerald-300 bg-emerald-700/85 text-white' : 'border-white/25 bg-slate-900/75 text-slate-200'}`
+    }, aiTalk ? 'ON' : 'OFF')), React.createElement("p", {
+      className: "mt-1.5 text-[10px] font-bold leading-snug text-slate-400",
+      style: JA_WRAP_STYLE
+    }, jaWrap('ONにすると、対戦のあと・対戦の山場・デッキ相談で、助手がその場に合わせたひとことを話します。うまく届かないときは、いつものセリフになります'))), CARD_SETTING_GROUPS.map(g => React.createElement(React.Fragment, {
       key: g.title
     }, g.title === '表示' && bgmPanel, React.createElement("div", {
       "data-card-setting-group": g.title,
@@ -90382,7 +90683,8 @@ const CardDeckEditor = ({
   collection,
   deck: deck0,
   onSave,
-  onCancel
+  onCancel,
+  advisor = null
 }) => {
   const [deck, setDeck] = useState(() => ({
     ...deck0,
@@ -90395,6 +90697,7 @@ const CardDeckEditor = ({
   const [notice, setNotice] = useState('');
   const [detail, setDetail] = useState(null);
   const [leave, setLeave] = useState(false);
+  const [ask, setAsk] = useState(null);
   const press = useCardLongPress(no => setDetail(no));
   const short = typeof window !== 'undefined' && window.innerHeight < 760 && window.innerHeight > window.innerWidth;
   const [land, setLand] = useState(() => typeof window !== 'undefined' && window.innerWidth > window.innerHeight);
@@ -90496,6 +90799,26 @@ const CardDeckEditor = ({
     onClick: () => changed ? setLeave(true) : onCancel()
   }, "やめる"));
   const sortLabel = (CARD_DECK_SORTS.find(x => x.id === sort) || CARD_DECK_SORTS[0]).label;
+  const canAsk = !!advisor && cardAiTalkOn() && deck.monsters.length > 0;
+  const consult = async () => {
+    Audio_.fgSe.tap();
+    setAsk({
+      busy: true
+    });
+    const r = await cardTalkFetch('deck', {
+      who: advisor.id,
+      facts: cardTalkDeckFacts(db, deck, col)
+    });
+    setAsk(r ? {
+      text: r.text,
+      face: r.face,
+      picks: cardTalkCheckPicks(db, deck, col, r.picks)
+    } : {
+      text: CARD_TALK_DECK_SORRY,
+      face: 'troubled',
+      picks: []
+    });
+  };
   return React.createElement("div", {
     "data-mh-screen": true,
     "data-card-deck-edit": true,
@@ -90581,7 +90904,14 @@ const CardDeckEditor = ({
       setNotice('');
     },
     className: chip(view === f.id)
-  }, f.id === 'mon' ? `モンスター ${deck.monsters.length}/3` : f.id === 'deck' ? `デッキに入れた ${deck.cards.length + deck.monsters.length}` : f.label)), React.createElement("button", {
+  }, f.id === 'mon' ? `モンスター ${deck.monsters.length}/3` : f.id === 'deck' ? `デッキに入れた ${deck.cards.length + deck.monsters.length}` : f.label)), canAsk && React.createElement("button", {
+    type: "button",
+    "data-card-deck-ask": true,
+    onClick: () => {
+      void consult();
+    },
+    className: chip(false)
+  }, "💬 ", advisor.name, "に相談"), React.createElement("button", {
     type: "button",
     "data-card-deck-usable": true,
     onClick: () => setUsableOnly(v => !v),
@@ -90605,7 +90935,62 @@ const CardDeckEditor = ({
   }, shown.map(tile)) : React.createElement(ScreenEmpty, {
     emoji: "🃏",
     lines: view === 'deck' ? ['まだカードが入っていません', '「技など全部」から入れてください'] : ['当てはまるカードがありません']
-  }))), !land && footer, detail && React.createElement(CardDetailModal, {
+  }))), !land && footer, ask && React.createElement("div", {
+    "data-card-deck-ask-sheet": true,
+    className: "fixed inset-0 z-[70] flex items-end justify-center bg-black/60 p-2 sm:items-center",
+    onClick: () => {
+      if (!ask.busy) setAsk(null);
+    }
+  }, React.createElement("div", {
+    className: "w-full max-w-[420px] rounded-2xl border border-white/15 bg-slate-900 p-3",
+    onClick: e => e.stopPropagation()
+  }, React.createElement("div", {
+    className: "flex items-start gap-2"
+  }, advisor.face && React.createElement("img", {
+    src: advisor.face,
+    alt: "",
+    className: "h-12 w-12 shrink-0 rounded-full border-2 object-cover",
+    style: {
+      borderColor: advisor.accent
+    }
+  }), React.createElement("div", {
+    "data-card-deck-ask-text": true,
+    className: "min-w-0 flex-1 rounded-2xl border-2 bg-white px-2 py-1.5 text-[13px] font-extrabold leading-snug text-[#1f1333]",
+    style: {
+      borderColor: advisor.accent,
+      ...JA_WRAP_STYLE
+    }
+  }, ask.busy ? 'うーん、どうしようかな…' : ask.text)), !ask.busy && ask.picks.length > 0 && React.createElement("div", {
+    className: "mt-2 space-y-1"
+  }, ask.picks.map(p => {
+    const why = cardDeckAddReason(db, deck, p.no, col);
+    return React.createElement("div", {
+      key: p.no,
+      "data-card-deck-ask-pick": p.no,
+      className: "flex items-center gap-2 rounded-xl border border-white/10 bg-slate-950/70 px-2 py-1"
+    }, React.createElement("button", {
+      type: "button",
+      onClick: () => setDetail(p.no),
+      className: "min-w-0 flex-1 text-left"
+    }, React.createElement("b", {
+      className: "block text-[12px] font-black text-white"
+    }, p.name), p.reason && React.createElement("small", {
+      className: "block text-[10px] font-bold text-slate-400",
+      style: JA_WRAP_STYLE
+    }, p.reason)), React.createElement("button", {
+      type: "button",
+      disabled: !!why,
+      onClick: () => add(p.no),
+      className: `min-h-[36px] shrink-0 rounded-full px-3 text-[11px] font-black ${why ? 'border border-white/15 bg-slate-800 text-slate-500' : 'bg-amber-300 text-slate-950 active:scale-95'}`
+    }, why ? '入れられない' : '入れる'));
+  })), !ask.busy && React.createElement("button", {
+    type: "button",
+    onClick: () => {
+      Audio_.fgSe.tap();
+      setAsk(null);
+    },
+    className: "mh-button mh-button-secondary mt-2 min-h-[44px] w-full rounded-2xl border border-white/20 bg-slate-800 font-black"
+  }, "とじる"))), detail && React.createElement(CardDetailModal, {
     db: db,
     no: detail,
     onClose: () => setDetail(null)

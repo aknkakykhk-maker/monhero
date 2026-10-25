@@ -773,6 +773,7 @@ HOME の「MFバトルカード」
 | `mh_card_bgm_v1` | `{ cpu:'auto' か 曲id, pvp: 曲id }` 対戦の BGM(5-3) | `{ cpu:'auto', pvp:'ichika_battle' }` |
 | `mh_card_cpu_unlocked_v1` | `{ hard, expert, master }` コンピューター戦の難易度を開いた印(5-5) | EASY・NORMAL だけ開いている |
 | `mh_card_settings_v1` | 対戦中の設定(演出・速さ・助手のひとこと・操作・自動・表示。項目は 82 の `CARD_SETTING_GROUPS`)・裏の周回の自動(`quickAutoStart`) | 既定値(`normalizeCardSettings` を通す。足した項目は前からの人にも既定値で補う。前の `speed:"fast"` は考える時間「はやい」・結果まで「短め」に引き継ぐ) |
+| `mh_card_ai_talk_v1` | 助手のおしゃべり(AI)の入/切 `{ on }`(仕様 `docs/spec/CARD_ASSISTANT_TALK.md`) | 入(`cardNormalizeAiTalk`) |
 
 - 引き継ぎ(`data/mhsave-backup.js`)は `mh_` で始まるキーをまとめて運ぶので、何もしなくても入る。
 - [`SAVE_DATA.md`](SAVE_DATA.md) に10行足す。
