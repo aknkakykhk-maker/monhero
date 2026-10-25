@@ -574,9 +574,40 @@ const CARD_PVP = (() => {
   };
 })();
 
-// 台詞の顔文字と、うしろに続くカナ・数字・「!」(「(｡ ˘-˘)ｳﾝｳﾝ」「( ˘ω˘)9グッ!」)を1つのかたまりにして、途中で折らない(カゲあつくん)。ほかは jaWrap
-const cardPvpLineNode = (text) => String(text).split(/(\([^()\s]*(?:\s[^()\s]*)*\)[0-9\u30A0-\u30FF\uFF65-\uFF9F!！]*|[\u0660-\u06FF٩][^\s、。！？]*[و])/).filter((x) => x !== '')
-  .map((x, i) => (/^\(.*\)|^٩/.test(x) ? <span key={i} data-ja-keep style={{ whiteSpace: 'nowrap' }}>{x}</span> : <React.Fragment key={i}>{jaWrap(x)}</React.Fragment>));
+// 台詞を、句読点・「！」「？」・「…」・空白の区切りごとの折れないかたまりにする(「かっこよ／すぎたよ」のような言葉の途中の折れを防ぐ。窓口・カゲあつくん)。
+// 顔文字と、うしろに続くカナ・数字・「!」(「(｡ ˘-˘)ｳﾝｳﾝ」「( ˘ω˘)9グッ!」)も1つのかたまり。かたまりが吹き出しの幅より長いときだけ、中で折れる
+const CARD_PVP_FACE_RE = /(\([^()\s]*(?:\s[^()\s]*)*\)[0-9\u30A0-\u30FF\uFF65-\uFF9F!！]*|[\u0660-\u06FF٩][^\s、。！？]*[و])/;
+// 長いかたまり(吹き出しの1行 = およそ11字より長い)は、言葉の区切り(Intl.Segmenter)で、次の所でだけ、さらに区切る
+//   ① 助詞のうしろ(助詞が2つ続くときと、ききの「〜でつ・〜です」の「で」は除く)
+//   ② ひらがなの言葉 → 漢字で始まる言葉 / ③ 2字以上の漢字の言葉 → 助詞でないひらがなの言葉 / ④「だけど」「けど」「かも」「だから」の手前
+//   区切ったかたまりが2字より短くなるときは区切らない
+// ★文末の「よ」「な」「ね」と「って」は入れない(「かっこよすぎ」「強くなってる」の途中で折れた)
+const CARD_PVP_PARTICLES = new Set(['は', 'が', 'を', 'に', 'で', 'も', 'と', 'の', 'へ', 'まで', 'から', 'けど', 'ので', '、']);
+const cardPvpSplitWords = (piece) => {
+  if (piece.length <= 11 || typeof Intl === 'undefined' || typeof Intl.Segmenter !== 'function') return [piece];
+  const words = [...new Intl.Segmenter('ja', { granularity: 'word' }).segment(piece)].map((x) => x.segment);
+  const P = CARD_PVP_PARTICLES;
+  const out = [''];
+  words.forEach((w, i) => {
+    out[out.length - 1] += w;
+    const next = words[i + 1];
+    if (!next || /^[ぁぃぅぇぉっゃゅょゎー〜…！？!?wｗ笑。、]/.test(next)) return;
+    if (out[out.length - 1].length < 2 || (P.has(w) && P.has(words[i - 1])) || (w === 'で' && /^[つす]/.test(next))) return;
+    if ((P.has(w) && !P.has(next)) || (/^[ぁ-ん]+$/.test(w) && /^[\u4E00-\u9FFF]/.test(next)) || (/^[\u4E00-\u9FFF]{2,}$/.test(w) && /^[ぁ-ん]/.test(next) && !P.has(next)) || ['だけど', 'けど', 'かも', 'だから'].includes(next)) out.push('');
+  });
+  return out.filter((x) => x !== '');
+};
+const cardPvpLinePieces = (text) => {
+  const out = [];
+  String(text).split(CARD_PVP_FACE_RE).filter((x) => x !== '').forEach((part) => {
+    if (CARD_PVP_FACE_RE.test(part) && /^[(٩]/.test(part)) { out.push(part); return; }
+    // 「、」「。」「！」「？」「…」「ｗ」のあと、空白のところで区切る(区切りの字はまえのかたまりに付ける)
+    part.split(/(?<=[、。！？!?…ｗw♪♡])(?![、。！？!?…ｗw♪♡])|(?<=\s)/).filter((x) => x !== '').forEach((x) => cardPvpSplitWords(x).forEach((y) => out.push(y)));
+  });
+  return out;
+};
+// 吹き出しより長いかたまりの中だけは、言葉の区切り(jaWrap)で折れる
+const cardPvpLineNode = (text) => cardPvpLinePieces(text).map((x, i) => <span key={i} data-pvp-phrase className="inline-block">{/^[(٩]/.test(x) ? x : jaWrap(x)}</span>);
 // 文を読点で区切り、区切りごとに折れないようにする(「見せ／合って」のような言葉の途中の折れを防ぐ。カゲあつくん)
 const cardPvpPhrases = (text) => String(text).split(/(?<=、)/).map((x, i) => <span key={i} className="inline-block">{x}</span>);
 

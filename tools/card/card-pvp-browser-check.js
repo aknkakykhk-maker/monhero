@@ -212,6 +212,49 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     check('⑥ カードポイントが増えている(勝ち+200・負け+50 のどちらかが残る)', [200, 50].includes(pointAfter - pointBefore), `${pointBefore} → ${pointAfter}`);
     const lineA = await A.locator('[data-card-pvp-line]').innerText().catch(() => ''), lineB = await B.locator('[data-card-pvp-line]').innerText().catch(() => '');
     check('⑥ 結果の画面で、立ち絵の助手が勝ち・負けの台詞を言う', !!lineA && !!lineB && lineA !== lineB, `${lineA} / ${lineB}`);
+    // ⑥ 54本の台詞を、いまの吹き出しと同じ幅・同じ文字に入れて、言葉の途中で折れていないか測る(かたまり1つが2行にまたがっていない)
+    const broken = await A.evaluate(() => {
+      const bubble = document.querySelector('[data-card-pvp-line]');
+      if (!bubble || typeof cardPvpLinePieces !== 'function') return ['(吹き出しが見つからない)'];
+      const cs = getComputedStyle(bubble);
+      const bad = [];
+      Object.entries(CARD_PVP_RESULT_LINES).forEach(([who, scenes]) => Object.values(scenes).forEach((list) => list.forEach(([text]) => {
+        const box = document.createElement('div');
+        box.className = bubble.className;
+        box.style.cssText = `position:fixed;left:0;top:0;visibility:hidden;width:${bubble.getBoundingClientRect().width}px;font:${cs.font};letter-spacing:${cs.letterSpacing}`;
+        cardPvpLinePieces(text).forEach((t) => { const sp = document.createElement('span'); sp.className = 'inline-block'; sp.textContent = t; box.appendChild(sp); });
+        document.body.appendChild(box);
+        // 吹き出しの幅に収まるかたまりは、1行のままのはず(長いかたまりは、言葉の区切りで折れてよい)
+        [...box.children].forEach((sp) => {
+          const probe = document.createElement('span'); probe.style.whiteSpace = 'nowrap'; probe.textContent = sp.textContent; box.appendChild(probe);
+          const fits = probe.getBoundingClientRect().width <= box.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+          probe.remove();
+          if (fits && sp.getBoundingClientRect().height > parseFloat(cs.lineHeight) * 1.5) bad.push(`${who}: ${sp.textContent}`);
+        });
+        box.remove();
+      })));
+      return bad;
+    });
+    check('⑥ 54本の台詞で、吹き出しの幅に収まる言葉のかたまりは、途中で折れない', broken.length === 0, broken.slice(0, 4).join(' / '));
+    // 写真: 54本の吹き出しを、いまの幅で並べた1枚(長い台詞がどこで折れるかを目で確かめる)
+    if (SHOT) {
+      await A.evaluate(() => {
+        const bubble = document.querySelector('[data-card-pvp-line]');
+        const sheet = document.createElement('div');
+        sheet.id = 'pvp-line-sheet';
+        sheet.style.cssText = 'position:absolute;left:0;top:0;z-index:99999;background:#1b1438;padding:8px;display:grid;grid-template-columns:repeat(3,auto);gap:6px';
+        document.body.appendChild(sheet);
+        const names = { mua: 'みゅあ', kiki: 'きき', momosuke: 'もも', dra: 'ドラ', atsu: 'あつ', kyuko: 'きゅうこ' };
+        const items = [];
+        Object.entries(CARD_PVP_RESULT_LINES).forEach(([who, scenes]) => Object.entries(scenes).forEach(([k, list]) => list.forEach(([text]) => items.push({ who, k, text }))));
+        ReactDOM.createRoot(sheet).render(React.createElement(React.Fragment, null, items.map((x, i) => React.createElement('div', { key: i, style: { width: `${bubble.getBoundingClientRect().width}px` } },
+          React.createElement('div', { style: { color: '#cbd5e1', fontSize: '10px', fontWeight: 700 } }, `${names[x.who]}・${x.k === 'win' ? '勝ち' : x.k === 'lose' ? '負け' : '抜けた'}`),
+          React.createElement('div', { className: bubble.className, style: { borderColor: '#f472b6', ...JA_WRAP_STYLE } }, cardPvpLineNode(x.text))))));
+      });
+      await A.waitForTimeout(500);
+      await A.locator('#pvp-line-sheet').screenshot({ path: path.join(SHOT, 'pvp-08-lines.png') }).catch(() => {});
+      await A.evaluate(() => document.getElementById('pvp-line-sheet')?.remove());
+    }
     await shot(A, 'pvp-03-A-result'); await shot(B, 'pvp-03-B-result');
     // ⑦ だれとでも: 2台とも部屋を出て、受付から出会う
     const reportsBefore = reports.length;
