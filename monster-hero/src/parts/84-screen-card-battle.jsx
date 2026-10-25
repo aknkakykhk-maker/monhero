@@ -25,29 +25,50 @@ const CardResultBanner = ({ title, sub, tone = 'win' }) => (
 // カードやモンスターの名前を1行に収める(2026-10-24 改善部の点検 V4「ぐるぐるアタッ/ク」「ストライクリパ/ー」)。
 //   名前は1つの言葉なので折らない。長い名前だけ、入れ物の幅(cqw)に合わせて字を小さくする(size が上限・min が下限)
 //   「ゴーレム(別絵キラ)」のような ( ) の付いた名前は、( ) から下の行へ分ける(名前の途中では折らない)
-// 2行に折るときの切れ目。「の」「・」の後ろか、まんなかあたり。次の行の頭に「ー」「ッ」「ン」や小さい字が来ないようにずらす
-//   例: カララギマンゴー → カララギ/マンゴー  最後のきらめき → 最後の/きらめき  フォーメーション → フォー/メーション
+// 手札の名前を2行に折るとき(狭い画面・7文字以上)の切れ目。**2つの言葉の切れ目だけで折る**(2026-10-25 カゲあつくん
+//   「フォー／メーション は1つの言葉の途中で割れている。1語のカタカナは割らない」)。
+//   ① 「の」「・」の後ろ ② ひらがな・漢字とカタカナが切り替わる所(空中回転/アタック・きりもみ/アタック)
+//   ③ カタカナだけの名前は、言葉の切れ目を機械では見分けられないので、下の表に書いた2語の名前だけ(ドラゴン/パンチ)。
+//   表に無いカタカナの名前(フォーメーション・コンビネーション など1語)は割らずに、字を小さく・字の間を詰めて1行に収める
+const CARD_NAME_KATAKANA_BREAKS = Object.freeze({
+  'カララギマンゴー': 4, 'ファイアリバー': 4, 'フレイムビーム': 4, 'ファイアウェーブ': 4, 'パラボラビーム': 4, 'ロケットパンチ': 4,
+  'レーザーブレード': 4, 'ファイナルソード': 5, 'バーストキャノン': 4, 'フェイスドリル': 4, 'ウィングカッター': 4, 'クローアタック': 3,
+  'ドラゴンパンチ': 4, 'ドラゴンラッシュ': 4, 'ファイアブレス': 4, 'オイリーオイル': 4, 'タイムディレイ': 3, 'デススラッシュ': 2,
+  'デスファイナル': 2, 'ニードルターン': 4, 'ファイナルボム': 5, 'サテラアタック': 3, 'メテオドライブ': 3, 'マインドフレア': 4,
+  'ヒップアタック': 3, 'マッハトルネード': 3, 'デルタアタック': 3, 'スピンカッター': 3, 'ダブルチョップ': 3, 'ボディーブロー': 4,
+  'ワンツーパンチ': 4, 'マシンガンパンチ': 5,
+});
+const cardNameScript = (c) => (/[ァ-ヴー]/.test(c) ? 'k' : /[ぁ-ゖ]/.test(c) ? 'h' : /[一-龯々]/.test(c) ? 'j' : 'o');
 const cardNameSplit = (text) => {
   const ch = [...text];
-  const mid = Math.ceil(ch.length / 2);
-  for (const d of [0, 1, -1, 2, -2]) { const i = mid + d; if (i > 1 && i < ch.length - 1 && /[の・]/.test(ch[i - 1])) return [ch.slice(0, i).join(''), ch.slice(i).join('')]; }
-  // まんなかから左右へ交互に探す(フォーメーション → フォー/メーション。右だけへずらすと「フォーメー/ション」になる)
-  const bad = /[ーッンャュョァィゥェォっゃゅょぁぃぅぇぉ、。]/;
-  for (let d = 0; d < ch.length; d++) {
-    for (const i of [mid - d, mid + d]) if (i >= 2 && i <= ch.length - 2 && !bad.test(ch[i])) return [ch.slice(0, i).join(''), ch.slice(i).join('')];
+  const cut = (i) => [ch.slice(0, i).join(''), ch.slice(i).join('')];
+  if (CARD_NAME_KATAKANA_BREAKS[text]) return cut(CARD_NAME_KATAKANA_BREAKS[text]);
+  // 「の」「・」の後ろをいちばん先に(ヒノトリの/復活。「ヒノトリ/の復活」にしない)。無ければ、ひらがな・漢字とカタカナの切り替わり。まんなかに近い所から
+  const mid = ch.length / 2;
+  const near = (list) => list.sort((x, y) => Math.abs(x - mid) - Math.abs(y - mid))[0];
+  const afterNo = [];
+  const scriptTurn = [];
+  for (let i = 1; i < ch.length; i++) {
+    if (/[の・]/.test(ch[i - 1])) afterNo.push(i);
+    else if (cardNameScript(ch[i - 1]) !== cardNameScript(ch[i]) && (cardNameScript(ch[i - 1]) === 'k' || cardNameScript(ch[i]) === 'k') && ch[i] !== 'の') scriptTurn.push(i);
   }
-  return [ch.slice(0, mid).join(''), ch.slice(mid).join('')];
+  if (afterNo.length) return cut(near(afterNo));
+  if (scriptTurn.length) return cut(near(scriptTurn));
+  return null; // 1語(割らない)
 };
 // twoLine … 手札の名前。箱が狭い(56px 以下・320幅や横画面の手札)ときだけ、長い名前(7文字以上)を言葉の切れ目で2行に折る。
 //   1行のまま縮めると、いちばん小さい字(7px)でも入らず端が切れていた(2026-10-25 カゲあつくん「カララギマンゴ/ー」)。
+//   切れ目の無い1語(フォーメーション など)は、字を小さく(5pxまで)・字の間を詰めて1行に収める(CSS の mh-nf-squeeze)。
 //   狭いときは短い名前も2行ぶんの高さを取り、手札の絵の高さをそろえる(CSS の mh-nf-*。70-bootstrap.jsx)
 const CardNameFit = ({ name, size = 10, min = 7, className = '', style = null, twoLine = false }) => {
   const text = String(name == null ? '' : name);
   const m = /^(.+?)([(（].+)$/.exec(text);
   const lines = m ? [m[1], m[2]] : [text];
-  const fit = (t) => `clamp(${min}px, ${(96 / Math.max(1, [...t].length)).toFixed(1)}cqw, ${size}px)`;
-  const two = twoLine && !m && [...text].length >= 7 ? cardNameSplit(text) : null;
-  const row = (t, i) => <span key={i} className="block overflow-hidden whitespace-nowrap text-center" style={{ fontSize: fit(t), textOverflow: 'clip' }}>{t}</span>;
+  const long = twoLine && !m && [...text].length >= 7;
+  const two = long ? cardNameSplit(text) : null;
+  const squeeze = long && !two;
+  const fit = (t) => `clamp(${squeeze ? 5 : min}px, ${((squeeze ? 104 : 96) / Math.max(1, [...t].length)).toFixed(1)}cqw, ${size}px)`;
+  const row = (t, i) => <span key={i} className={`block overflow-hidden whitespace-nowrap text-center ${squeeze ? 'mh-nf-squeeze' : ''}`} style={{ fontSize: fit(t), textOverflow: 'clip' }}>{t}</span>;
   return (
     <span className={`block w-full ${className}`} style={{ containerType: 'inline-size', ...(style || {}) }}>
       <span className={twoLine ? `mh-nf-a block ${two ? 'mh-nf-hide' : ''}` : 'block'}>{lines.map(row)}</span>

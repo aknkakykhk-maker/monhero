@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 18e5bf1631721de1
+// generated-sha256: e6f48e59c2cbe47a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-25 13:42"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-25 14:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -52003,29 +52003,50 @@ const CardResultBanner = ({ title, sub, tone = 'win' }) => (
 // カードやモンスターの名前を1行に収める(2026-10-24 改善部の点検 V4「ぐるぐるアタッ/ク」「ストライクリパ/ー」)。
 //   名前は1つの言葉なので折らない。長い名前だけ、入れ物の幅(cqw)に合わせて字を小さくする(size が上限・min が下限)
 //   「ゴーレム(別絵キラ)」のような ( ) の付いた名前は、( ) から下の行へ分ける(名前の途中では折らない)
-// 2行に折るときの切れ目。「の」「・」の後ろか、まんなかあたり。次の行の頭に「ー」「ッ」「ン」や小さい字が来ないようにずらす
-//   例: カララギマンゴー → カララギ/マンゴー  最後のきらめき → 最後の/きらめき  フォーメーション → フォー/メーション
+// 手札の名前を2行に折るとき(狭い画面・7文字以上)の切れ目。**2つの言葉の切れ目だけで折る**(2026-10-25 カゲあつくん
+//   「フォー／メーション は1つの言葉の途中で割れている。1語のカタカナは割らない」)。
+//   ① 「の」「・」の後ろ ② ひらがな・漢字とカタカナが切り替わる所(空中回転/アタック・きりもみ/アタック)
+//   ③ カタカナだけの名前は、言葉の切れ目を機械では見分けられないので、下の表に書いた2語の名前だけ(ドラゴン/パンチ)。
+//   表に無いカタカナの名前(フォーメーション・コンビネーション など1語)は割らずに、字を小さく・字の間を詰めて1行に収める
+const CARD_NAME_KATAKANA_BREAKS = Object.freeze({
+  'カララギマンゴー': 4, 'ファイアリバー': 4, 'フレイムビーム': 4, 'ファイアウェーブ': 4, 'パラボラビーム': 4, 'ロケットパンチ': 4,
+  'レーザーブレード': 4, 'ファイナルソード': 5, 'バーストキャノン': 4, 'フェイスドリル': 4, 'ウィングカッター': 4, 'クローアタック': 3,
+  'ドラゴンパンチ': 4, 'ドラゴンラッシュ': 4, 'ファイアブレス': 4, 'オイリーオイル': 4, 'タイムディレイ': 3, 'デススラッシュ': 2,
+  'デスファイナル': 2, 'ニードルターン': 4, 'ファイナルボム': 5, 'サテラアタック': 3, 'メテオドライブ': 3, 'マインドフレア': 4,
+  'ヒップアタック': 3, 'マッハトルネード': 3, 'デルタアタック': 3, 'スピンカッター': 3, 'ダブルチョップ': 3, 'ボディーブロー': 4,
+  'ワンツーパンチ': 4, 'マシンガンパンチ': 5,
+});
+const cardNameScript = (c) => (/[ァ-ヴー]/.test(c) ? 'k' : /[ぁ-ゖ]/.test(c) ? 'h' : /[一-龯々]/.test(c) ? 'j' : 'o');
 const cardNameSplit = (text) => {
   const ch = [...text];
-  const mid = Math.ceil(ch.length / 2);
-  for (const d of [0, 1, -1, 2, -2]) { const i = mid + d; if (i > 1 && i < ch.length - 1 && /[の・]/.test(ch[i - 1])) return [ch.slice(0, i).join(''), ch.slice(i).join('')]; }
-  // まんなかから左右へ交互に探す(フォーメーション → フォー/メーション。右だけへずらすと「フォーメー/ション」になる)
-  const bad = /[ーッンャュョァィゥェォっゃゅょぁぃぅぇぉ、。]/;
-  for (let d = 0; d < ch.length; d++) {
-    for (const i of [mid - d, mid + d]) if (i >= 2 && i <= ch.length - 2 && !bad.test(ch[i])) return [ch.slice(0, i).join(''), ch.slice(i).join('')];
+  const cut = (i) => [ch.slice(0, i).join(''), ch.slice(i).join('')];
+  if (CARD_NAME_KATAKANA_BREAKS[text]) return cut(CARD_NAME_KATAKANA_BREAKS[text]);
+  // 「の」「・」の後ろをいちばん先に(ヒノトリの/復活。「ヒノトリ/の復活」にしない)。無ければ、ひらがな・漢字とカタカナの切り替わり。まんなかに近い所から
+  const mid = ch.length / 2;
+  const near = (list) => list.sort((x, y) => Math.abs(x - mid) - Math.abs(y - mid))[0];
+  const afterNo = [];
+  const scriptTurn = [];
+  for (let i = 1; i < ch.length; i++) {
+    if (/[の・]/.test(ch[i - 1])) afterNo.push(i);
+    else if (cardNameScript(ch[i - 1]) !== cardNameScript(ch[i]) && (cardNameScript(ch[i - 1]) === 'k' || cardNameScript(ch[i]) === 'k') && ch[i] !== 'の') scriptTurn.push(i);
   }
-  return [ch.slice(0, mid).join(''), ch.slice(mid).join('')];
+  if (afterNo.length) return cut(near(afterNo));
+  if (scriptTurn.length) return cut(near(scriptTurn));
+  return null; // 1語(割らない)
 };
 // twoLine … 手札の名前。箱が狭い(56px 以下・320幅や横画面の手札)ときだけ、長い名前(7文字以上)を言葉の切れ目で2行に折る。
 //   1行のまま縮めると、いちばん小さい字(7px)でも入らず端が切れていた(2026-10-25 カゲあつくん「カララギマンゴ/ー」)。
+//   切れ目の無い1語(フォーメーション など)は、字を小さく(5pxまで)・字の間を詰めて1行に収める(CSS の mh-nf-squeeze)。
 //   狭いときは短い名前も2行ぶんの高さを取り、手札の絵の高さをそろえる(CSS の mh-nf-*。70-bootstrap.jsx)
 const CardNameFit = ({ name, size = 10, min = 7, className = '', style = null, twoLine = false }) => {
   const text = String(name == null ? '' : name);
   const m = /^(.+?)([(（].+)$/.exec(text);
   const lines = m ? [m[1], m[2]] : [text];
-  const fit = (t) => `clamp(${min}px, ${(96 / Math.max(1, [...t].length)).toFixed(1)}cqw, ${size}px)`;
-  const two = twoLine && !m && [...text].length >= 7 ? cardNameSplit(text) : null;
-  const row = (t, i) => <span key={i} className="block overflow-hidden whitespace-nowrap text-center" style={{ fontSize: fit(t), textOverflow: 'clip' }}>{t}</span>;
+  const long = twoLine && !m && [...text].length >= 7;
+  const two = long ? cardNameSplit(text) : null;
+  const squeeze = long && !two;
+  const fit = (t) => `clamp(${squeeze ? 5 : min}px, ${((squeeze ? 104 : 96) / Math.max(1, [...t].length)).toFixed(1)}cqw, ${size}px)`;
+  const row = (t, i) => <span key={i} className={`block overflow-hidden whitespace-nowrap text-center ${squeeze ? 'mh-nf-squeeze' : ''}`} style={{ fontSize: fit(t), textOverflow: 'clip' }}>{t}</span>;
   return (
     <span className={`block w-full ${className}`} style={{ containerType: 'inline-size', ...(style || {}) }}>
       <span className={twoLine ? `mh-nf-a block ${two ? 'mh-nf-hide' : ''}` : 'block'}>{lines.map(row)}</span>
@@ -82610,9 +82631,9 @@ const createAnimationStyle = () => {
     @keyframes mhCardBeam { 0% { opacity: 0; transform-origin: 0 50%; clip-path: inset(0 100% 0 0); } 30% { opacity: 1; clip-path: inset(0 0 0 0); } 75% { opacity: 1; clip-path: inset(0 0 0 0); } 100% { opacity: 0; clip-path: inset(0 0 0 60%); } }
     @keyframes mhCardBreeder { 0% { opacity: 0; transform: scale(.4); box-shadow: 0 0 0 rgba(253,224,71,0); } 20% { opacity: 1; transform: scale(1.12); box-shadow: 0 0 22px rgba(253,224,71,.95); } 75% { opacity: 1; transform: scale(1); box-shadow: 0 0 14px rgba(253,224,71,.7); } 100% { opacity: 0; transform: scale(.9); } }
     @keyframes mhCardFlip { 0% { transform: rotateY(0); } 100% { transform: rotateY(180deg); } }
-    /* 手札の名前(84 の CardNameFit twoLine): 箱が 56px 以下のときだけ、長い名前を2行に折る。短い名前も2行ぶんの高さを取ってそろえる */
+    /* 手札の名前(84 の CardNameFit twoLine): 箱が 56px 以下のときだけ、長い名前を言葉の切れ目で2行に折る。切れ目の無い1語は字の間を詰めて1行(mh-nf-squeeze)。短い名前も2行ぶんの高さを取ってそろえる */
     .mh-nf-b { display: none; }
-    @container (max-width: 56px) { .mh-nf-a, .mh-nf-b { display: flex; flex-direction: column; justify-content: center; min-height: 20px; line-height: 1; } .mh-nf-a.mh-nf-hide { display: none; } }
+    @container (max-width: 56px) { .mh-nf-a, .mh-nf-b { display: flex; flex-direction: column; justify-content: center; min-height: 20px; line-height: 1; } .mh-nf-a.mh-nf-hide { display: none; } .mh-nf-squeeze { letter-spacing: -0.07em; } }
     .mh-card-jump { animation: mhCardJump .9s ease-out both; }
     .mh-card-afterimage { position: absolute; inset: 0; display: flex; align-items: flex-end; justify-content: center; pointer-events: none; filter: grayscale(.4) brightness(1.4) drop-shadow(0 0 6px rgba(125,211,252,.9)); animation: mhCardAfter .62s ease-out both; }
     .mh-card-air-mark { position: absolute; top: -2px; left: 50%; margin-left: -18px; width: 36px; border-radius: 6px; background: rgba(8,145,178,.92); color: #ecfeff; font-size: 11px; font-weight: 900; text-align: center; pointer-events: none; animation: mhCardPop .9s ease-out both; }

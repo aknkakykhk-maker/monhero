@@ -9,9 +9,10 @@
 //
 // 見ているもの
 //   ① 手札の箱の幅(50・58・76px)ごとに、全部のカード名が切れていない(どの行も中身が箱に入る)
-//   ② 狭い箱(50px)では、7文字以上の名前は2行。2行目の頭が「ー」「ッ」「ン」や小さい字で始まらない
+//   ② 狭い箱(50px)では、7文字以上で2つの言葉の切れ目がある名前だけ2行。1語のカタカナ(フォーメーション など)は割らずに1行
+//      (2026-10-25 カゲあつくん「1語のカタカナは割らない」)。2行目の頭が「ー」「ッ」「ン」や小さい字で始まらない
 //   ③ 広い箱(58・76px)では、今までどおり1行
-//   ④ 「カララギマンゴー」は狭い箱で「カララギ/マンゴー」。ほかも言葉の切れ目で(フォー/メーション など)
+//   ④ 「カララギ/マンゴー」「最後の/きらめき」「空中回転/アタック」「ドラゴン/パンチ」のように、言葉の切れ目で折る
 //   ⑤ 狭い箱では、短い名前も長い名前も名前の高さがそろう(手札の絵の高さがずれない)
 const http = require('http');
 const path = require('path');
@@ -66,15 +67,19 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
       const clipped = res.filter((x) => x.clipped.length);
       check(`① 手札の箱 ${W}px: 全部のカード名(${res.length}種類)が切れていない`, res.length > 200 && clipped.length === 0, clipped.slice(0, 6).map((x) => `${x.name}(${x.clipped.join('/')})`).join('・'));
       if (W === 50) {
-        const longOne = res.filter((x) => [...x.name].length >= 7 && !/[(（]/.test(x.name) && x.rows.length !== 2);
-        check('② 狭い箱では、7文字以上の名前は2行', longOne.length === 0, longOne.slice(0, 6).map((x) => x.name).join('・'));
+        // 1語のカタカナ(割らない)。ここに無い7文字以上の名前は、2つの言葉の切れ目があるので2行
+        const ONE_WORD = ['フォーメーション', 'コンビネーション', 'バックドロップ', 'トランスフォーム'];
+        const longOne = res.filter((x) => [...x.name].length >= 7 && !/[(（]/.test(x.name) && !ONE_WORD.includes(x.name) && x.rows.length !== 2);
+        check('② 狭い箱では、2つの言葉の切れ目がある7文字以上の名前は2行', longOne.length === 0, longOne.slice(0, 6).map((x) => x.name).join('・'));
+        const oneWordSplit = res.filter((x) => ONE_WORD.includes(x.name) && x.rows.length !== 1);
+        check('② 1語のカタカナ(フォーメーション など)は割らずに1行', oneWordSplit.length === 0 && ONE_WORD.every((n) => res.some((x) => x.name === n)), oneWordSplit.map((x) => x.rows.join('/')).join('・'));
         const badHead = res.filter((x) => x.rows.length === 2 && /^[ーッッンャュョァィゥェォっゃゅょぁぃぅぇぉ、。]/.test(x.rows[1]));
         check('② 2行目の頭が「ー」「ッ」「ン」や小さい字で始まらない', badHead.length === 0, badHead.slice(0, 6).map((x) => x.rows.join('/')).join('・'));
         const mango = res.find((x) => x.name === 'カララギマンゴー');
         check('④ 「カララギマンゴー」は「カララギ/マンゴー」', !!mango && mango.rows.join('/') === 'カララギ/マンゴー', mango ? mango.rows.join('/') : 'なし');
-        const want = { 'フォーメーション': 'フォー/メーション', 'コンビネーション': 'コンビ/ネーション', '最後のきらめき': '最後の/きらめき' };
+        const want = { '最後のきらめき': '最後の/きらめき', '空中回転アタック': '空中回転/アタック', 'ドラゴンパンチ': 'ドラゴン/パンチ', 'ぐるぐるプレス': 'ぐるぐる/プレス', 'ヒノトリの復活': 'ヒノトリの/復活', 'ハガネのウロコ': 'ハガネの/ウロコ', 'ファイナルソード': 'ファイナル/ソード', 'フォーメーション': 'フォーメーション', 'コンビネーション': 'コンビネーション' };
         const wrong = Object.entries(want).map(([n, w]) => [n, w, (res.find((x) => x.name === n) || { rows: [] }).rows.join('/')]).filter(([, w, got]) => got !== w);
-        check('④ 言葉の切れ目で折る(フォー/メーション・コンビ/ネーション・最後の/きらめき)', wrong.length === 0, wrong.map(([n, w, g]) => `${n}: ${g}(${w} のはず)`).join('・'));
+        check('④ 言葉の切れ目で折る(最後の/きらめき・空中回転/アタック・ドラゴン/パンチ)・1語は1行', wrong.length === 0, wrong.map(([n, w, g]) => `${n}: ${g}(${w} のはず)`).join('・'));
         const hs = [...new Set(res.filter((x) => !/[(（]/.test(x.name)).map((x) => x.h))];
         check('⑤ 狭い箱では、名前の高さがそろう(手札の絵がずれない)', hs.length === 1, `高さ ${hs.join('・')}px`);
       } else {
