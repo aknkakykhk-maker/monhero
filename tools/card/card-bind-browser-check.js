@@ -10,7 +10,7 @@
 //
 // 見ているもの(助手と対戦の始まりを、検査のときだけの口 window.__mhCardScene で決めた場面にする)
 //   自分: 先頭の子の文の無いちから技・影縛り・ガッツ9 / 相手: 緊急回避(0ガッツの回避)だけを持ち、ガッツ3
-//   ① 技を選んで相手を狙うと、名指しの窓が開く(守りの札の名前が並ぶ)
+//   ① 技を選んで相手を狙うと、名指しの窓が開く(守りの札の名前が並ぶ。狙った子が使える守りが先)
 //   ② 「やめる」で閉じる。技は出ていない(記録が変わらない・攻撃の番のまま)
 //   ③ もう一度開いて「緊急回避」を選ぶと技が出る。相手は緊急回避で回避できず、ダメージが入る
 //   ④ 実行時エラーが無い
@@ -121,27 +121,32 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await openBind();
     const names = await page.locator('[data-card-bind-name]').evaluateAll((els) => els.map((e) => e.getAttribute('data-card-bind-name')));
     check('① 技を選んで相手を狙うと、名指しの窓が開く(守りの札の名前が並ぶ)', names.length >= 5 && names.includes('緊急回避'), `${names.length}個`);
+    const usable = await page.locator('[data-card-bind-name][data-card-bind-usable="1"]').evaluateAll((els) => els.map((e) => e.getAttribute('data-card-bind-name')));
+    check('① 狙った子が使える守りが先に並ぶ(緊急回避は全モンスターの回避なので入る)', usable.includes('緊急回避') && names.slice(0, usable.length).every((x) => usable.includes(x)), usable.join('・'));
     if (SHOT) { fs.mkdirSync(SHOT, { recursive: true }); await page.screenshot({ path: path.join(SHOT, 'bind-pick.png') }); }
     const log0 = await page.locator('[data-card-log]').innerText().catch(() => '');
+    const lifeOf = async () => { const t = await page.locator('[data-card-mon="1-0"]').innerText().catch(() => ''); const m = t.match(/(\d+)\s*\/\s*(\d+)/); return m ? Number(m[1]) : null; };
+    const life0 = await lifeOf();
     await page.locator('[data-card-bind-pick]').getByRole('button', { name: 'やめる' }).click();
     await page.waitForTimeout(300);
     const log1 = await page.locator('[data-card-log]').innerText().catch(() => '');
     const mode1 = await page.locator('[data-card-battle]').getAttribute('data-card-mode');
     check('② 「やめる」で閉じる。技は出ていない', (await page.locator('[data-card-bind-pick]').count()) === 0 && log1 === log0 && mode1 === 'attack', `窓 ${await page.locator('[data-card-bind-pick]').count()}・段 ${mode1}`);
     // もう一度開いて「緊急回避」を名指し
-    const sel = page.locator('[data-card-hand-card].ring-amber-300, [data-card-hand-card].-translate-y-3');
-    if (await sel.count()) { await page.locator('[data-card-hand-card="0"]').click(); await page.waitForTimeout(150); }
+    // 「やめる」で選んでいた手札も外れている(そのまま選び直す)
     await openBind();
     const reopened = (await page.locator('[data-card-bind-pick]').count()) === 1;
     if (reopened) await page.locator('[data-card-bind-name="緊急回避"]').click();
     // 相手(コンピューター)が守るかを決めて、ダメージが入るまで待つ
-    let logText = '';
+    let logText = '', life1 = life0;
     for (let i = 0; i < 40; i++) {
       await page.waitForTimeout(250);
       logText = await page.locator('[data-card-log]').innerText().catch(() => '');
-      if (/ダメージ|回避した/.test(logText) && logText !== log0) break;
+      life1 = await lifeOf();
+      if (life1 !== life0 || /回避した/.test(logText)) break;
     }
-    check('③ 「緊急回避」を名指しすると技が出て、相手は回避できずダメージが入る', reopened && /影縛り/.test(logText) && /ダメージ/.test(logText) && !/回避した/.test(logText), logText.replace(/\s+/g, ' ').slice(-160));
+    // 相手の手札の守りは緊急回避だけ。名指しが効いていれば回避できず、技のダメージぶんライフが減る
+    check('③ 「緊急回避」を名指しすると技が出て、相手は回避できずダメージが入る', reopened && life0 !== null && life0 - life1 === Math.min(life0, atk.damage) && !/回避した/.test(logText), `窓 ${reopened}・ライフ ${life0} → ${life1}`);
     check('④ 実行時エラーが無い', errors.length === 0, errors.slice(0, 2).join(' / '));
   } finally { await browser.close(); server.close(); }
   console.log(failed ? `\n${failed}件 NG` : '\nすべて OK');

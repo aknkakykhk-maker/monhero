@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: bd90aa5aae3afa7f
+// source-sha256: 7746a359cf93c15f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-25 19:29";
+const BUILD_DATE = "2026-10-25 19:53";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -86876,6 +86876,11 @@ const CardBattleBoard = ({
     setConfirm(null);
     setBindAsk(null);
   }, [st]);
+  const bindCancel = () => {
+    setBindAsk(null);
+    setSel(null);
+    setHint('');
+  };
   const askUse = o => {
     if (o && Array.isArray(o.hand) && !o.bind && o.hand.some(i => cardHasEff(cardOf(db, me.hand[i]), 'attachBind'))) {
       setBindAsk(o);
@@ -87593,7 +87598,7 @@ const CardBattleBoard = ({
   }), bindAsk && React.createElement("div", {
     "data-card-bind-pick": true,
     className: "fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3",
-    onClick: () => setBindAsk(null)
+    onClick: bindCancel
   }, React.createElement("div", {
     className: "w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900 p-3 text-slate-100",
     onClick: e => e.stopPropagation()
@@ -87603,13 +87608,25 @@ const CardBattleBoard = ({
   }, jaWrap('影縛り: 使えなくする守りのカードを選ぶ')), React.createElement("div", {
     className: "mt-1 text-[11px] font-bold text-slate-400",
     style: JA_LABEL_STYLE
-  }, jaWrap('同じ名前のカードは全部、この技に使えなくなります')), React.createElement("div", {
+  }, jaWrap('同じ名前のカードは全部、この技に使えなくなります。赤いのは、狙った子が使える守りです')), React.createElement("div", {
     className: "mt-2 grid max-h-[50vh] grid-cols-2 gap-1.5 overflow-y-auto"
-  }, cardBindNames(db).map(name => React.createElement("button", {
+  }, (() => {
+    const tm = bindAsk.target ? st.players[bindAsk.target.p].mons[bindAsk.target.m] : null;
+    const can = new Set(Object.values(db.cards).filter(c => c.ready && cardIsGuardKind(c.kind) && tm && cardUsableBy(c, tm)).map(c => c.name));
+    const all = cardBindNames(db);
+    return [...all.filter(x => can.has(x)), ...all.filter(x => !can.has(x))].map(name => ({
+      name,
+      can: can.has(name)
+    }));
+  })().map(({
+    name,
+    can
+  }) => React.createElement("button", {
     key: name,
     type: "button",
     "data-card-bind-name": name,
-    className: "min-h-[40px] rounded-xl bg-slate-700 px-2 text-[13px] font-black text-white active:scale-95",
+    "data-card-bind-usable": can ? '1' : '0',
+    className: `min-h-[40px] rounded-xl px-2 text-[13px] font-black text-white active:scale-95 ${can ? 'bg-rose-700 ring-1 ring-rose-300' : 'bg-slate-700'}`,
     onClick: () => {
       const o = {
         ...bindAsk,
@@ -87621,7 +87638,7 @@ const CardBattleBoard = ({
   }, name))), React.createElement("button", {
     type: "button",
     className: "mt-2 min-h-[44px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200",
-    onClick: () => setBindAsk(null)
+    onClick: bindCancel
   }, "やめる"))), confirm && React.createElement(ConfirmSheet, {
     title: confirm.label,
     message: confirm.kind === 'use' ? 'オプションで確かめないようにもできます' : '',
@@ -88003,7 +88020,7 @@ const CardBattleScreen = ({
     const seed = (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0;
     const first = Math.random() < 0.5 ? CARD_ME : CARD_CPU;
     const assistant = allAssistants.find(a => a.id === pick.who);
-    const st = cardCreateGame(db, {
+    let st = cardCreateGame(db, {
       decks: [{
         monsters: activeDeck.monsters,
         cards: activeDeck.cards
@@ -88012,6 +88029,11 @@ const CardBattleScreen = ({
       seed,
       first
     });
+    if (typeof window !== 'undefined' && typeof window.__mhCardScene === 'function') {
+      try {
+        st = window.__mhCardScene(cardClone(st)) || st;
+      } catch (_) {}
+    }
     setResult(null);
     setGame({
       key: `${seed}`,
