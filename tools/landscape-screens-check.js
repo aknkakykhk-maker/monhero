@@ -16,6 +16,8 @@
 //   ③ 神殿の6つのボタンがすべて届く(スクロールで最後まで見える)
 //   ④ 横にはみ出さない
 //   ⑤ 縦画面では何も変わらない(コラムは画面幅、一覧は左端から＝縦積みのまま)
+//   ⑥ MFバトルカード(CARD_*。いまはデバッグの人だけ)の画面で、横にはみ出さず、
+//      どのボタンも画面の中にあるか、スクロールで届く(手札・下のボタンが画面の外に切れていない)
 //
 // Tailwind は 2026-09-12 に静的CSS(monster-hero/tailwind.css)へ切り替えたので、
 // ここで配っている index.html がそのまま本物のCSSを読む。差し込む細工は要らなくなった。
@@ -45,8 +47,10 @@ const TEMPLE_LINKS=(()=>{const app=fs.readFileSync(path.join(ROOT,'monster-hero/
   catch{console.log('SKIP: playwright が入っていないので確認できません');process.exit(0);}
   const server=await serve();
   const browser=await chromium.launch({executablePath:'/opt/pw-browsers/chromium',args:['--autoplay-policy=no-user-gesture-required']});
-  const open=async(width,height)=>{
+  const open=async(width,height,{debug=false}={})=>{
     const page=await browser.newPage({viewport:{width,height},deviceScaleFactor:2,isMobile:true,hasTouch:true});
+    // MFバトルカードは公開前なので、デバッグの人の印(合言葉が合ったときに立つもの)を立てて入口を出す
+    if(debug)await page.addInitScript(()=>{localStorage.setItem('mh_debug_unlocked_v1','1');});
     await page.addInitScript(()=>{const put=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
       put('mh_breeder_name','テスト');put('mh_breeder_icon','🐣');put('mh_intro_done',true);put('mh_onboarded',true);
       put('mh_tutorial_seen_v1',true);put('mh_battle_tutorial_seen_v1',true);put('mh_battle_tutorial_guide_shown_v1',true);
@@ -88,6 +92,56 @@ const TEMPLE_LINKS=(()=>{const app=fs.readFileSync(path.join(ROOT,'monster-hero/
     return {vw:innerWidth,vh:innerHeight,column:{x:Math.round(cr.x),w:Math.round(cr.width)},
       hasRoot:!!root,scroller:scroller?{...r(scroller),scrollHeight:scroller.scrollHeight}:null,first:first?r(first):null,
       hOverflow:document.documentElement.scrollWidth>innerWidth+1};});
+  // 画面の中のボタンで、画面の外にはみ出していて、しかもスクロールでも届かないもの
+  //(縦にスクロールできる箱の中にあるものは、スクロールで届くので数えない)
+  const unreachable=page=>page.evaluate(()=>{
+    const root=document.querySelector('[data-mh-screen]');if(!root)return ['画面の根(data-mh-screen)が無い'];
+    const scrollable=el=>{for(let e=el.parentElement;e&&e!==document.body;e=e.parentElement){const st=getComputedStyle(e);if(/(auto|scroll)/.test(st.overflowY)&&e.scrollHeight>e.clientHeight+1)return true;}return false;};
+    const out=[];
+    for(const b of root.querySelectorAll('button,[data-card-hand-card]')){
+      const r=b.getBoundingClientRect();if(r.width<1||r.height<1)continue;
+      if(getComputedStyle(b).visibility==='hidden')continue;
+      const outside=r.bottom>innerHeight+1||r.top<-1||r.right>innerWidth+1||r.left<-1;
+      if(outside&&!scrollable(b))out.push(((b.innerText||b.getAttribute('aria-label')||b.getAttribute('data-card-hand-card')||'?').replace(/\s+/g,' ').trim().slice(0,14))+`(${Math.round(r.top)}〜${Math.round(r.bottom)})`);
+    }
+    return out;});
+  // MFバトルカードの画面を順に開いて測る(HOME の入口 → はじめてはスターター → 練習試合 → トップの中の画面 → 助手と対戦)
+  const checkCardScreens=async page=>{
+    const measureCard=async name=>{await page.waitForTimeout(700);const m=await measure(page);const bad=await unreachable(page);
+      ok(`カード ${name}: 横にはみ出さない`,!m.hOverflow);
+      ok(`カード ${name}: どのボタンも画面の中か、スクロールで届く`,bad.length===0,bad.slice(0,4).join(' / '));};
+    const has=sel=>page.evaluate(s=>!!document.querySelector(s),sel);
+    const backTop=async()=>{await page.evaluate(()=>document.querySelector('[data-mh-screen] button')?.click());await page.waitForSelector('[data-card-top="top"]',{timeout:8000}).catch(()=>{});};
+    if(!(await page.evaluate(()=>{const b=document.querySelector('[data-home-card-battle]');if(b)b.click();return !!b;}))){ok('カード: HOME の入口から入れる(デバッグの人)',false);return;}
+    await page.waitForSelector('[data-card-top]',{timeout:20000}).catch(()=>{});
+    if(await has('[data-card-top="starter"]')){
+      await measureCard('スターターえらび');
+      await page.click('[data-card-kit="powerful"]');await page.getByRole('button',{name:/にする$/}).click();
+      await page.waitForSelector('[data-card-battle]',{timeout:20000}).catch(()=>{});
+      await measureCard('練習試合(対戦の盤)');
+      await page.click('[data-card-quit]');await page.waitForTimeout(300);
+      await page.evaluate(()=>{[...document.querySelectorAll('button')].find(x=>(x.innerText||'').trim()==='飛ばす'&&!x.hasAttribute('data-card-quit'))?.click();});
+      await page.waitForSelector('[data-card-top="result"]',{timeout:15000}).catch(()=>{});
+      await measureCard('練習試合の結果');
+      await page.getByRole('button',{name:'トップへ'}).click();
+    }
+    await page.waitForSelector('[data-card-top="top"]',{timeout:15000}).catch(()=>{});
+    await measureCard('トップ');
+    await page.click('[data-card-decks]');await measureCard('デッキの一覧');
+    const edit=await page.$('[data-card-deck-new]')||await page.$('[data-card-deck-list] button.mh-button-primary');
+    if(edit){await edit.click();await page.waitForSelector('[data-card-deck-edit]',{timeout:8000}).catch(()=>{});await measureCard('デッキを組む');
+      await page.evaluate(()=>[...document.querySelectorAll('[data-card-deck-edit] button')].find(x=>(x.innerText||'').trim()==='やめる')?.click());await page.waitForTimeout(400);}
+    else ok('カード: デッキを組む画面へ入れる',false);
+    await backTop();
+    for(const [open,name] of [['[data-card-dex-open]','図鑑'],['[data-card-rules-open]','ルール'],['[data-card-record-open]','記録'],['[data-card-options-open]','オプション'],['[data-card-ranking-open]','ランキング']]){
+      await page.click(open);await measureCard(name);await backTop();}
+    await page.click('[data-card-cpu]');await measureCard('対戦の選び方');
+    await page.click('[data-card-mode-assistant]');await page.waitForSelector('[data-card-foe]',{timeout:8000}).catch(()=>{});await measureCard('助手と対戦(相手えらび)');
+    await page.click('[data-card-start]');await page.waitForSelector('[data-card-battle]',{timeout:20000}).catch(()=>{});await page.waitForTimeout(1200);await dismiss(page);
+    await measureCard('助手と対戦(対戦の盤)');
+    await page.click('[data-card-quit]');await page.waitForTimeout(300);await page.getByRole('button',{name:'投了する'}).click();
+    await page.waitForSelector('[data-card-top="result"]',{timeout:15000}).catch(()=>{});await measureCard('対戦の結果');
+  };
   try{
     // ── 横画面 ──
     let page=await open(844,390);
@@ -111,6 +165,10 @@ const TEMPLE_LINKS=(()=>{const app=fs.readFileSync(path.join(ROOT,'monster-hero/
       }
       ok(`${name}: HOMEへ戻れる`,await backHome(page));
     }
+    await page.close();
+    // ── MFバトルカード(横画面) ──
+    page=await open(844,390,{debug:true});
+    await checkCardScreens(page);
     await page.close();
     // ── 縦画面(何も変わらないこと) ──
     page=await open(390,844);
