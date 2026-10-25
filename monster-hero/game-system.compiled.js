@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 52ebd097153fafa9
+// source-sha256: 79ddc56518f7df7e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-25 09:13";
+const BUILD_DATE = "2026-10-25 12:01";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -87357,7 +87357,7 @@ const CardBattleScreen = ({
     })))), React.createElement("button", {
       type: "button",
       "data-card-mode-multi": true,
-      disabled: !debug,
+      disabled: !(debug || cardPvpOpen()),
       onClick: () => {
         Audio_.fgSe.tap();
         setView('pvp');
@@ -87378,7 +87378,7 @@ const CardBattleScreen = ({
       className: "block text-[22px] font-black italic leading-tight"
     }, "マルチ対戦"), React.createElement("small", {
       className: "block text-[11px] font-black text-slate-900/80"
-    }, "ブリーダーどうしで戦う"))), React.createElement("span", {
+    }, "ブリーダーどうしで戦う"))), !cardPvpOpen() && React.createElement("span", {
       className: "relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white"
     }, debug ? 'つくっている途中(デバッグ)' : '準備中'))));
   }
@@ -89781,9 +89781,9 @@ const CardRankingBoard = ({
     className: "text-3xl"
   }, "🎮"), React.createElement("b", {
     className: "mt-1 block text-[15px] font-black text-white"
-  }, "マルチ対戦の強さ"), React.createElement("span", {
+  }, "マルチ対戦の強さ"), !cardPvpOpen() && React.createElement("span", {
     className: "mt-1 inline-block rounded border border-slate-500 px-2 py-0.5 text-[11px] font-black text-slate-300"
-  }, "準備中"), React.createElement("p", {
+  }, "準備中"), !cardPvpOpen() && React.createElement("p", {
     className: "mt-2 text-[12px] font-bold text-slate-400",
     style: JA_LABEL_STYLE
   }, jaWrap('マルチ対戦ができるようになったら、ここに順位が出ます')), React.createElement(CardPvpRankingList, {
@@ -89839,6 +89839,7 @@ const CardRankingBoard = ({
     }, unit)));
   })));
 };
+const cardPvpOpen = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.cardBattle === true;
 const CARD_PVP_HIDDEN = -1;
 const CARD_PVP_ROOM_TOPIC = 'realtime:mhc-room-';
 const CARD_PVP_HEARTBEAT_MS = 2000;
@@ -91300,7 +91301,7 @@ const CardPvpLobby = ({
     title: "マルチ対戦",
     accent: "text-sky-200",
     onBack: back,
-    note: "ほかのブリーダーと1対1で戦えます(デバッグ専用・つくっている途中)"
+    note: cardPvpOpen() ? 'ほかのブリーダーと1対1で戦えます' : 'ほかのブリーダーと1対1で戦えます(デバッグ専用・つくっている途中)'
   }), React.createElement("div", {
     className: `${SCREEN_LIST_CLASS} space-y-3 pb-4`
   }, room.phase === 'idle' && React.createElement(React.Fragment, null, penaltyMin > 0 && React.createElement("p", {
