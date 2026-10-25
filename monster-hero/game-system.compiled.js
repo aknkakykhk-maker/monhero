@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 51dc9f5ce30145da
+// source-sha256: cd87a2f79c345a69
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-25 23:47";
+const BUILD_DATE = "2026-10-26 00:06";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -86939,6 +86939,100 @@ const CardBattleTeaser = ({
     className: "mh-button mh-button-primary mt-3 min-h-[48px] w-full rounded-2xl text-[14px] font-black active:scale-[.98]"
   }, "閉じる")))));
 };
+const CARD_FOE_STYLES = Object.freeze({
+  attack: {
+    label: '攻撃型',
+    note: 'ちから・かしこさの技で、どんどん攻める'
+  },
+  disrupt: {
+    label: '邪魔型',
+    note: 'ガッツを減らしたり、こちらのじゃまをする'
+  },
+  big: {
+    label: '大技型',
+    note: 'ガッツをためて、大きな技を打つ'
+  },
+  saveGuts: {
+    label: 'ため型',
+    note: 'ガッツをためてから動く'
+  },
+  keepGuard: {
+    label: '守り型',
+    note: '守りのカードを残して、固く戦う'
+  },
+  area: {
+    label: '全体攻撃型',
+    note: '全体攻撃で、まとめてダメージを与える'
+  },
+  finish: {
+    label: 'とどめ型',
+    note: '弱ったモンスターを、確実に倒しにくる'
+  },
+  balance: {
+    label: 'バランス型',
+    note: '場面に合わせて、まんべんなく戦う'
+  }
+});
+const cardFoeStyle = who => {
+  const h = CARD_AI_HABITS[who];
+  if (!h) return null;
+  const [k, v] = Object.entries(h).sort((a, b) => b[1] - a[1])[0];
+  return v <= 1.2 ? CARD_FOE_STYLES.balance : CARD_FOE_STYLES[k] || CARD_FOE_STYLES.balance;
+};
+const CardFoeStyle = ({
+  db,
+  who,
+  level
+}) => {
+  const style = cardFoeStyle(who);
+  const recipe = CARD_AI_DECKS[who];
+  if (!style || !recipe) return null;
+  const kit = recipe.kit ? db.starters[recipe.kit] : null;
+  const mons = (recipe.monsters || (kit ? kit.monsters : [])).map(no => cardMonsterOf(db, no)).filter(Boolean);
+  const upper = level === 'hard' || level === 'expert' || level === 'master';
+  const lv = CARD_LEVEL_LABEL[level] || '';
+  const deckNote = kit && !upper ? `${lv}: スターター「${kit.name}」のままのデッキ` : `${lv}: この3体に合わせて、${style.label}のデッキを組んでくる${level === 'expert' || level === 'master' ? '(いろいろな弾のカードも使う)' : ''}`;
+  return React.createElement("div", {
+    "data-card-foe-style": who,
+    className: "space-y-1.5 rounded-2xl border border-white/10 bg-slate-900/70 p-2"
+  }, React.createElement("div", {
+    className: "flex flex-wrap items-center gap-x-2 gap-y-1"
+  }, React.createElement("span", {
+    "data-card-foe-style-label": true,
+    className: "shrink-0 rounded-full bg-amber-300 px-2.5 py-0.5 text-[12px] font-black text-slate-950"
+  }, style.label), React.createElement("span", {
+    className: "min-w-0 text-[11px] font-bold text-slate-200",
+    style: JA_WRAP_STYLE
+  }, jaWrap(style.note))), React.createElement("div", {
+    className: "flex flex-wrap items-center gap-x-2 gap-y-1"
+  }, React.createElement("small", {
+    className: "shrink-0 text-[10px] font-black text-slate-400"
+  }, "使うモンスター"), mons.map(m => React.createElement("span", {
+    key: m.no,
+    "data-card-foe-mon": m.no,
+    className: "flex shrink-0 items-center gap-1"
+  }, React.createElement("img", {
+    src: cardMonArt(m) || CARD_IMG(m.img),
+    alt: "",
+    "aria-hidden": "true",
+    className: "h-7 w-7 rounded-md bg-white/10 object-contain"
+  }), React.createElement("b", {
+    className: "whitespace-nowrap text-[12px] font-black text-white"
+  }, m.name)))), Array.isArray(recipe.prefer) && recipe.prefer.length > 0 && React.createElement("div", {
+    "data-card-foe-prefer": true,
+    className: "text-[11px] font-bold text-slate-200",
+    style: JA_WRAP_STYLE
+  }, React.createElement("small", {
+    className: "mr-1 text-[10px] font-black text-slate-400"
+  }, "よく使うカード"), recipe.prefer.map((n, i) => React.createElement("span", {
+    key: n,
+    className: "inline-block whitespace-nowrap"
+  }, n, i < recipe.prefer.length - 1 ? '・' : ''))), React.createElement("div", {
+    "data-card-foe-deck-note": true,
+    className: "text-[10px] font-bold text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap(deckNote)));
+};
 const CardDetailModal = ({
   db,
   no,
@@ -89228,7 +89322,7 @@ const CardBattleScreen = ({
     }), React.createElement("div", {
       className: `${SCREEN_LIST_CLASS} space-y-2 pb-4`
     }, React.createElement("div", {
-      className: "grid grid-cols-3 gap-1.5"
+      className: "grid grid-cols-3 gap-1.5 landscape:grid-cols-6"
     }, foes.map(x => React.createElement("button", {
       key: x.id,
       type: "button",
@@ -89252,7 +89346,9 @@ const CardBattleScreen = ({
       className: "text-[13px] font-black"
     }, x.name), save.record.beaten[x.id] && React.createElement("span", {
       className: "absolute right-1 top-1 rounded bg-amber-400 px-1 text-[10px] font-black text-slate-900"
-    }, "勝")))), a && React.createElement("div", {
+    }, "勝")))), React.createElement("div", {
+      className: "space-y-2 landscape:grid landscape:grid-cols-2 landscape:items-stretch landscape:gap-2 landscape:space-y-0"
+    }, a && React.createElement("div", {
       className: "flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2"
     }, React.createElement(CardAssistantArt, {
       src: assistantFullImage(a, 'wink'),
@@ -89271,7 +89367,11 @@ const CardBattleScreen = ({
         borderColor: a.accent,
         ...JA_WRAP_STYLE
       }
-    }, line ? line.text : ''))), React.createElement(ScreenSectionLabel, {
+    }, line ? line.text : ''))), a && React.createElement(CardFoeStyle, {
+      db: db,
+      who: a.id,
+      level: foe.level
+    })), React.createElement(ScreenSectionLabel, {
       note: "勝つと次の強さが開きます"
     }, "強さ"), React.createElement("div", {
       className: "grid grid-cols-5 gap-1"
