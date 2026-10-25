@@ -7752,6 +7752,19 @@ const ASSISTANT_ONBOARDING_SETS = {
     icon:  { e:'normal',  t:'アイコンはそれでいいんだ？ ……ま、悪くないけど♡ あとは名前だけだよ。' },
     ready: { e:'excited', t:'そろったじゃん♪ 「けってい」押して押して〜！' },
   },
+  // ドラ・あつ・きゅうこ(2026-10-25 社長「きゅうこを選んだら、みゅあって言ってた」。ここに無いとみゅあの台本が出ていた)
+  dra: {
+    intro:  { e:'happy', t:'よう、はじめまして。おではドラ、このゲームの助手だよ。まずは名前、教えてくれるか？' },
+    name:   { e:'excited', t:'いい名前だな。次はアイコンを選ぼうか' },
+    icon:   { e:'normal', t:'アイコン、いい顔してるわ。あとは名前を決めるだけだな' },
+    ready:  { e:'wink', t:'よし、そろったな。「けってい」を押したら、村を案内するからな' },
+  },
+  kyuko: {
+    intro:  { e:'happy', t:'はじめまして〜。俺はきゅうこ、このゲームの助手だよ。まずは名前、教えてぇ' },
+    name:   { e:'excited', t:'おけ！ いい名前だね笑 次はアイコン選ぼっか' },
+    icon:   { e:'normal', t:'アイコンいいじゃん、センスあるw あとは名前だけだよぉ' },
+    ready:  { e:'wink', t:'ほい、そろった！ 「けってい」押したら、村を案内するね笑' },
+  },
 };
 const assistantOnboardingOf = (assistantId) => ASSISTANT_ONBOARDING_SETS[assistantId] || ASSISTANT_ONBOARDING;
 // 決まっているものから、いま話す内容を選ぶ
@@ -9432,6 +9445,17 @@ const ASSISTANT_INTRO_SETS = {
     { e:'happy',   t:'モンスター育てて、強いチーム作って……ま、ももがついてるんだから余裕でしょ？', title:'よろしくね♪' },
     { e:'excited', t:'それより、キミのこと教えてよ！ 名前とアイコン、決めちゃお♪', title:'まずは自己紹介から' },
   ],
+  // ドラ・あつ・きゅうこ(2026-10-25 社長「きゅうこを選んだら、みゅあって言ってた」。ここに無いとみゅあの台本が出ていた)
+  dra: [
+    { e:'happy', t:'はじめまして。おではドラ、このゲームの助手だよ。えへへ、よろしくな', title:'はじめまして' },
+    { e:'excited', t:'これから一緒にモンスター育てて、最強のチームを作っていこうな', title:'よろしくな' },
+    { e:'wink', t:'まずはおまえさんのこと教えてくれ。名前とアイコンを決めるぞ', title:'まずは自己紹介から' },
+  ],
+  kyuko: [
+    { e:'happy', t:'はじめまして〜。俺はきゅうこ、このゲームの助手だよ笑', title:'はじめまして' },
+    { e:'excited', t:'これから一緒にモンスター育てて、いちばん強いチーム組もうね。組み方なら任せてぇ', title:'よろしくね' },
+    { e:'wink', t:'まずはあなたのこと教えて。名前とアイコンを決めるよ〜', title:'まずは自己紹介から' },
+  ],
 };
 const ASSISTANT_TUTORIAL_SETS = {
   kiki: [
@@ -9459,6 +9483,33 @@ const ASSISTANT_TUTORIAL_SETS = {
     { e:'surprise', t:'ミッションとギフトはこのへん。受け取り忘れてたら笑っちゃうよ？', title:'ミッションとギフト', help:'items/missions', spot:'reward' },
     { e:'normal',  t:'ヘルプは右上の「設定」の中。迷子になったら開けばいいから。', title:'ヘルプは設定の中', help:'tips/assistant', spot:'settings' },
     { e:'wink',    t:'ももはここにいるよ。呼びたくなったらタップして♡ ……ぜったい呼ぶでしょ♪', title:'それじゃ、いってらっしゃい', spot:'assistant' },
+  ],
+  // ドラ・あつ・きゅうこ(2026-10-25 社長「きゅうこを選んだら、みゅあって言ってた」。ここに無いとみゅあの台本が出ていた)
+  dra: [
+    { e:'excited', t:'{name}だな、よろしく。さっそく村を案内するからな', title:'あらためて、よろしくな' },
+    { e:'normal', t:'目標はWAVE10のラスボス「ムー」を倒すことだ。カードで戦っていくんだよ', title:'このゲームの目的', help:'basics/goal' },
+    { e:'normal', t:'ここがHOME。建物をタップすると、いろんなことができるんだよ', title:'HOMEのこと', help:'home/roster' },
+    { e:'wink', t:'神殿では合体・転生・寄付ができる。育成の土台になるとこだな', title:'神殿', help:'masu/fusion', spot:'temple' },
+    { e:'excited', t:'バトルで活躍した子は「マスモン」として登録できる。育てるほど強くなるからな', title:'勇者モンを育てる', help:'masu/masumon', spot:'management' },
+    { e:'happy', t:'バトルは勇者モンを選んで、カードで戦う。距離がいちばん大事だよ。近すぎてもダメなんだ、何がとは言わんけど。えへへ', title:'バトル', help:'battle/distance', spot:'battle' },
+    { e:'excited', t:'ランキングは「バトル」の中だ。モード切替のすぐ下のボタンから見られるよ', title:'ランキングはバトルの中', help:'basics/ranking', spot:'battle' },
+    { e:'happy', t:'マーケットではモンスターやカードが買える。ダイヤは大事に使えよな', title:'マーケット', help:'home/market', spot:'market' },
+    { e:'surprise', t:'ミッションとギフトはこの辺だ。報酬の受け取り忘れには気をつけてな', title:'ミッションとギフト', help:'items/missions', spot:'reward' },
+    { e:'normal', t:'ヘルプは右上の「設定」の中だよ。遊び方に迷ったら、そこ開いてくれ', title:'ヘルプは設定の中', help:'tips/assistant', spot:'settings' },
+    { e:'happy', t:'おではここにいるからな。困ったらいつでもタップしてくれよ', title:'それじゃあ、いってらっしゃい', spot:'assistant' },
+  ],
+  kyuko: [
+    { e:'excited', t:'{name}だね、よろしく〜。さっそく村を案内するね笑', title:'あらためて、よろしくね' },
+    { e:'normal', t:'目標はWAVE10のラスボス「ムー」を倒すこと。カードで戦っていくよ', title:'このゲームの目的', help:'basics/goal' },
+    { e:'normal', t:'ここがHOME。建物をタップすると、いろんなことができるよぉ', title:'HOMEのこと', help:'home/roster' },
+    { e:'wink', t:'神殿では合体・転生・寄付ができる。育成の土台だから、俺はここがいちばん好きw', title:'神殿', help:'masu/fusion', spot:'temple' },
+    { e:'excited', t:'バトルで活躍した子は「マスモン」として登録できるよ。育てるほど強くなるから、課金しなくても勝てるようになる笑', title:'勇者モンを育てる', help:'masu/masumon', spot:'management' },
+    { e:'happy', t:'バトルは勇者モンを選んで、カードで戦うよ。距離がほんとに大事だから、そこだけ覚えといてぇ', title:'バトル', help:'battle/distance', spot:'battle' },
+    { e:'excited', t:'ランキングは「バトル」の中だよ。モード切替のすぐ下のボタンから見られる笑', title:'ランキングはバトルの中', help:'basics/ranking', spot:'battle' },
+    { e:'happy', t:'マーケットではモンスターやカードが買えるよ。ダイヤは大事に使ってね〜', title:'マーケット', help:'home/market', spot:'market' },
+    { e:'surprise', t:'ミッションとギフトはこの辺！ 報酬の受け取り忘れ、けっこうもったいないから気をつけてw', title:'ミッションとギフト', help:'items/missions', spot:'reward' },
+    { e:'normal', t:'ヘルプは右上の「設定」の中だよ。遊び方に迷ったら、そこ開いてみてぇ', title:'ヘルプは設定の中', help:'tips/assistant', spot:'settings' },
+    { e:'happy', t:'俺はここにいるよ。困ったらいつでもタップしてね笑', title:'それじゃあ、いってらっしゃい', spot:'assistant' },
   ],
 };
 // ---------- モンビー(モンヒロビート)のチュートリアル ----------
@@ -9524,6 +9575,55 @@ const ASSISTANT_RHYTHM_TUTORIAL_SETS = {
     { e:'excited', t:'スコアは全国ランキングに載るよ！ 難易度をまたいだ合算だから、上でやるほど有利♪', title:'全国ランキング', help:'rhythm/rhythm-ranking' },
     { e:'wink',    t:'説明はいつでも、モードえらびの「📖 遊びかた」から見られるから。それじゃ……見せてもらうね♡', title:'それじゃ、はじめよっか' },
   ],
+  // ドラ・あつ・きゅうこ(2026-10-25 社長「きゅうこを選んだら、みゅあって言ってた」。ここに無いとみゅあの台本が出ていた)
+  dra: [
+    { e:'excited', t:'{name}、ここが「モンビー」だよ。曲に合わせてノーツを取る音ゲーだな', title:'モンヒロビートへようこそ', help:'rhythm/rhythm-mode' },
+    { e:'normal', t:'いまは体験版で、公開してる曲をEASY〜MASTERで遊べるよ。譜面は調整中だから、これから変わることもあるからな', title:'いまは体験版だよ', help:'rhythm/rhythm-demo-song' },
+    { e:'normal', t:'まずは曲えらびだ。ここに並んでるのが、いま遊べる曲だよ', title:'曲をえらぶ', help:'rhythm/rhythm-demo-song', spot:'songList' },
+    { e:'happy', t:'曲の左の数字は「楽曲Lv.」。大きいほど難しい譜面ってことだな', title:'楽曲Lv.', spot:'songLevel' },
+    { e:'normal', t:'曲名の下のひし形は、その難易度をどこまで達成したかの印だ。クリア→フルコンボ→オールエクセレント→オールマーベラスの順に、どんどん派手な色になるんだよ', title:'ひし形の印', spot:'achievement' },
+    { e:'normal', t:'曲をえらんだら、下(横画面だと右)で難易度をえらんでくれ', title:'難易度をえらぶ', spot:'difficulty' },
+    { e:'surprise', t:'EXPERTとMASTERは最初は鍵つきだ。その曲のHARDをクリアすると、2つとも挑めるようになるからな', title:'EXPERT以上は解放式', help:'rhythm/rhythm-unlock', spot:'difficulty' },
+    { e:'normal', t:'ノーツは4種類。TAPは押す、HOLDは押さえ続ける、FLICKは払う、SLIDEはなぞる。押さえ続けるのは得意だぞ、えへへ', title:'ノーツは4種類', help:'rhythm/rhythm-note-types' },
+    { e:'happy', t:'タイミングが合うほど良い判定になる。MARVELOUS→EXCELLENT→GREAT→GOOD→BADの順だな', title:'判定は5段階', help:'rhythm/rhythm-judgment' },
+    { e:'excited', t:'続けて取るとコンボがのびて、全部つなぐと「フルコンボ」だ。そこからさらに上の称号もあるんだよ', title:'コンボをつなごう', help:'rhythm/rhythm-notes-and-effects' },
+    { e:'normal', t:'モードえらびの「マスモン設定」でえらんだ子は、曲の途中で「モンスターノーツ」になって流れてくる。取ると血統ごとの力が働くんだよ', title:'マスモンも一緒に', help:'rhythm/rhythm-monster-note-display' },
+    { e:'happy', t:'ノーツの速さや音量、判定のタイミング補正はオプションで変えられる。合わないなと思ったら、ここだな', title:'オプション', help:'rhythm/rhythm-options', spot:'options' },
+    { e:'excited', t:'スコアは全国ランキングに載るよ。難易度をまたいだ合算だから、上の難易度で挑むほど有利なんだ', title:'全国ランキング', help:'rhythm/rhythm-ranking' },
+    { e:'wink', t:'説明はいつでも、モードえらびの「📖 遊びかた」から見られるからな。それじゃ、いってみようか', title:'それでは、はじめよう' },
+  ],
+  atsu: [
+    { e:'excited', t:'{name}、ここが「モンヒロビート」！ 曲に合わせてノーツを取る音ゲーね笑', title:'モンヒロビートへようこそ', help:'rhythm/rhythm-mode' },
+    { e:'normal', t:'いまは体験版で、公開してる曲をEASY〜MASTERで遊べる。譜面は調整中だから、これから変わるかも笑', title:'いまは体験版だよ', help:'rhythm/rhythm-demo-song' },
+    { e:'normal', t:'まずは曲えらび。ここに並んでるのが、いま遊べる曲ね！', title:'曲をえらぶ', help:'rhythm/rhythm-demo-song', spot:'songList' },
+    { e:'happy', t:'曲の左の数字は「楽曲Lv.」。大きいほど難しい譜面ってこと笑', title:'楽曲Lv.', spot:'songLevel' },
+    { e:'normal', t:'曲名の下のひし形は、その難易度をどこまで達成したかの印。クリア→フルコンボ→オールエクセレント→オールマーベラスの順に、色が派手になってく！', title:'ひし形の印', spot:'achievement' },
+    { e:'normal', t:'曲をえらんだら、下(横画面だと右)で難易度をえらんで笑', title:'難易度をえらぶ', spot:'difficulty' },
+    { e:'surprise', t:'EXPERTとMASTERは最初は鍵つき。その曲のHARDをクリアすると、2つとも挑める！ とりあえずそこ目指そ笑', title:'EXPERT以上は解放式', help:'rhythm/rhythm-unlock', spot:'difficulty' },
+    { e:'normal', t:'ノーツは4種類。TAPは押す、HOLDは押さえ続ける、FLICKは払う、SLIDEはなぞる。それだけ笑', title:'ノーツは4種類', help:'rhythm/rhythm-note-types' },
+    { e:'happy', t:'タイミングが合うほど良い判定。MARVELOUS→EXCELLENT→GREAT→GOOD→BADの順ね！', title:'判定は5段階', help:'rhythm/rhythm-judgment' },
+    { e:'excited', t:'続けて取るとコンボがのびて、全部つなぐと「フルコンボ」。そこからさらに上の称号もあるよ笑', title:'コンボをつなごう', help:'rhythm/rhythm-notes-and-effects' },
+    { e:'normal', t:'モードえらびの「マスモン設定」でえらんだ子は、曲の途中で「モンスターノーツ」になって流れてくる。取ると血統ごとの力が働く！', title:'マスモンも一緒に', help:'rhythm/rhythm-monster-note-display' },
+    { e:'happy', t:'ノーツの速さや音量、判定のタイミング補正はオプションで変えられる。合わないならここいじって笑', title:'オプション', help:'rhythm/rhythm-options', spot:'options' },
+    { e:'excited', t:'スコアは全国ランキングに載る。難易度をまたいだ合算だから、上の難易度ほど有利。上いこうよ笑', title:'全国ランキング', help:'rhythm/rhythm-ranking' },
+    { e:'wink', t:'説明はいつでも、モードえらびの「📖 遊びかた」から見られる。じゃ、いってみよ( *\'ω\'*)ノ！', title:'それでは、はじめよう' },
+  ],
+  kyuko: [
+    { e:'excited', t:'{name}、ここが「モンヒロビート」だよ。曲に合わせてノーツを取る音ゲー！ 俺、音楽好きなんだよね笑', title:'モンヒロビートへようこそ', help:'rhythm/rhythm-mode' },
+    { e:'normal', t:'いまは体験版で、公開してる曲をEASY〜MASTERで遊べるよ。譜面は調整中だから、これから変わることもあるかもw', title:'いまは体験版だよ', help:'rhythm/rhythm-demo-song' },
+    { e:'normal', t:'まずは曲えらび。ここに並んでるのが、いま遊べる曲だよぉ', title:'曲をえらぶ', help:'rhythm/rhythm-demo-song', spot:'songList' },
+    { e:'happy', t:'曲の左の数字は「楽曲Lv.」。大きいほど難しい譜面ってことだね', title:'楽曲Lv.', spot:'songLevel' },
+    { e:'normal', t:'曲名の下のひし形は、その難易度をどこまで達成したかの印。クリア→フルコンボ→オールエクセレント→オールマーベラスの順に、どんどん派手な色になるよ笑', title:'ひし形の印', spot:'achievement' },
+    { e:'normal', t:'曲をえらんだら、下(横画面だと右)で難易度をえらんでね〜', title:'難易度をえらぶ', spot:'difficulty' },
+    { e:'surprise', t:'EXPERTとMASTERは最初は鍵つき。その曲のHARDをクリアすると、2つとも挑めるようになるよ', title:'EXPERT以上は解放式', help:'rhythm/rhythm-unlock', spot:'difficulty' },
+    { e:'normal', t:'ノーツは4種類。TAPは押す、HOLDは押さえ続ける、FLICKは払う、SLIDEはなぞる。慣れれば簡単だよぉ', title:'ノーツは4種類', help:'rhythm/rhythm-note-types' },
+    { e:'happy', t:'タイミングが合うほど良い判定になるよ。MARVELOUS→EXCELLENT→GREAT→GOOD→BADの順ね', title:'判定は5段階', help:'rhythm/rhythm-judgment' },
+    { e:'excited', t:'続けて取るとコンボがのびて、全部つなぐと「フルコンボ」！ そこからさらに上の称号もあるんだよねw', title:'コンボをつなごう', help:'rhythm/rhythm-notes-and-effects' },
+    { e:'normal', t:'モードえらびの「マスモン設定」でえらんだ子は、曲の途中で「モンスターノーツ」になって流れてくるよ。取ると血統ごとの力が働くから、組み方しだいで差が出る笑', title:'マスモンも一緒に', help:'rhythm/rhythm-monster-note-display' },
+    { e:'happy', t:'ノーツの速さや音量、判定のタイミング補正はオプションで変えられるよ。合わないなーって思ったらここ！', title:'オプション', help:'rhythm/rhythm-options', spot:'options' },
+    { e:'excited', t:'スコアは全国ランキングに載るよ。難易度をまたいだ合算だから、上の難易度で挑むほど有利なんだ', title:'全国ランキング', help:'rhythm/rhythm-ranking' },
+    { e:'wink', t:'説明はいつでも、モードえらびの「📖 遊びかた」から見られるよ。ほい、いってみよ〜', title:'それでは、はじめよう' },
+  ],
 };
 const assistantRhythmTutorialPages = (assistantId) =>
   ASSISTANT_RHYTHM_TUTORIAL_SETS[assistantId] || ASSISTANT_RHYTHM_TUTORIAL;
@@ -9553,6 +9653,25 @@ const ASSISTANT_BATTLE_TUTORIAL_GUIDE_SETS = {
     { e:'normal', t:'Monster Heroのバトルってちょっと特殊だからさ。先にやっとくと迷わないと思うよ。', title:'動かして覚えちゃお' },
     { e:'wink', t:'いまから一緒にやる？ ……やるよね？♡', title:'どうする？', offer:'battleGuide' },
     { e:'happy', t:'はいはい、わかった♪ 「設定 → ヘルプ」からいつでも見られるから、詰まったら来なよ。', title:'いつでも待ってるから', declined:true },
+  ],
+  // ドラ・あつ・きゅうこ(2026-10-25 社長「きゅうこを選んだら、みゅあって言ってた」。ここに無いとみゅあの台本が出ていた)
+  dra: [
+    { e:'excited', t:'バトルチュートリアルが新しく追加されたんだよ', title:'新しいれんしゅうができたぞ' },
+    { e:'normal', t:'Monster Heroのバトルはちょっと特殊だからな。最初にやっとくと、遊び方が分かりやすいと思うわ', title:'バトルを動かして覚えよう' },
+    { e:'wink', t:'今から一緒にやってみるか？', title:'どうする？', offer:'battleGuide' },
+    { e:'happy', t:'おう、いいよ。あとからでも「設定 → ヘルプ」からいつでも見られるからな。分からなくなったら見てくれ', title:'いつでも待ってるからな', declined:true },
+  ],
+  atsu: [
+    { e:'excited', t:'バトルチュートリアルが新しく追加されたよ！', title:'新しいれんしゅうができた' },
+    { e:'normal', t:'Monster Heroのバトルはちょっと特殊。とりあえず最初にやっとくと分かりやすいよ笑', title:'バトルを動かして覚えよう' },
+    { e:'wink', t:'今から一緒にやってみる？笑', title:'どうする？', offer:'battleGuide' },
+    { e:'happy', t:'おけおけー笑 あとからでも「設定 → ヘルプ」からいつでも見られるから、分からなくなったら見てみて！', title:'いつでも待ってる', declined:true },
+  ],
+  kyuko: [
+    { e:'excited', t:'バトルチュートリアルが新しく追加されたよ〜', title:'新しいれんしゅうができたよ' },
+    { e:'normal', t:'Monster Heroのバトルはちょっと特殊だから、最初にやっとくと遊び方が分かりやすいと思う笑', title:'バトルを動かして覚えよう' },
+    { e:'wink', t:'今から一緒にやってみる？', title:'どうする？', offer:'battleGuide' },
+    { e:'happy', t:'おけ〜。あとからでも「設定 → ヘルプ」からいつでも見られるから、分からなくなったら見てみてねw', title:'いつでも待ってるね', declined:true },
   ],
 };
 const assistantBattleGuidePages = (assistantId) =>
