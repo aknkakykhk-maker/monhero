@@ -549,21 +549,48 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     await page.locator('[data-card-dex-show="have"]').click();
     await page.waitForTimeout(150);
     const dexHHave = await page.locator('[data-card-dex-tile]').count();
-    check('⑮ カード図鑑: 第1弾が並び、持っている種類が数えられ、混血のタブ・持っているだけの絞り込みが効く', Number(dexTotal) >= 20 && Number(dexTotal) === haveTiles && dex1 >= 100 && haveTiles >= 20 && dexH === 15 && dexHHave === 0, JSON.stringify({ dexTotal, dex1, haveTiles, dexH, dexHHave }));
+    // 図鑑のタブはパックと同じ第1〜8弾+混血(2026-10-25)。集めた種類は、持っているカードの種類と同じ数(混血を2回数えない)
+    const ownedKinds = await page.evaluate(() => Object.entries(JSON.parse(localStorage.getItem('mh_card_collection_v1') || '{}')).filter(([no, n]) => n > 0 && (CARD_BATTLE_DATA.cards[no] || CARD_BATTLE_DATA.monsters[no])).length);
+    const dexTabs = await page.locator('[data-card-dex] [role="tab"]').count();
+    check('⑮ カード図鑑: 第1〜8弾+混血のタブで、第1弾が並び、集めた種類が持っている種類と同じ数・混血のタブ・持っているだけの絞り込みが効く', dexTabs === 9 && Number(dexTotal) >= 20 && Number(dexTotal) === ownedKinds && dex1 >= 45 && dex1 <= 55 && haveTiles >= 1 && dexH === 15 && dexHHave === 0, JSON.stringify({ dexTabs, dexTotal, ownedKinds, dex1, haveTiles, dexH, dexHHave }));
     await page.locator('[data-card-dex] button').first().click();
     await page.waitForTimeout(250);
     // ⑯ マーケットの「カードポイント」の売り場: パックを買って開ける・スターターキットを買う・円盤石と交換する
     await page.evaluate(() => localStorage.setItem('mh_card_point_v1', JSON.stringify(5000)));
+    // 以前の4弾の天井の数(w1 に 4)を入れておく。買ったときに新しい8弾へ1回だけ写り、w1 は消えない
+    await page.evaluate(() => localStorage.setItem('mh_card_pack_pity_v1', JSON.stringify({ w1: 4, w3: 2 })));
     const unlockedBefore = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_unlocked_monsters') || 'null'));
     const colBefore = await page.evaluate(() => Object.values(JSON.parse(localStorage.getItem('mh_card_collection_v1') || '{}')).reduce((a, n) => a + n, 0));
     await page.locator('[data-card-market-open]').click();
     await page.locator('[data-card-shop]').waitFor({ timeout: 10000 });
-    await page.locator('[data-card-shop-rates="w1"]').click();
-    if (SHOT) await shot(page, '25-shop-packs');
-    const rateText = await page.locator('[data-card-shop-rate-table]').innerText();
-    const brokenShop = await page.evaluate(() => [...document.querySelectorAll('[data-card-shop] span.whitespace-nowrap')].filter((el) => el.getClientRects().length > 1).map((el) => el.textContent));
-    check('⑯ 出る確率の説明で、印を付けた言葉(準備中のカード・2倍出やすい など)が途中で折れていない', brokenShop.length === 0 && !/《|》/.test(rateText), brokenShop.join('・'));
-    await page.locator('[data-card-shop-buy="w1-5"]').click();
+    // 中身を見る(2026-10-25 社長「中身が分かるように」): 出るカードの絵が並び、持っていないものに「未取得」、押すと詳しい画面
+    await page.locator('[data-card-shop-contents="p1"]').click();
+    await page.locator('[data-card-shop-sheet="contents"]').waitFor({ timeout: 5000 });
+    if (SHOT) await shot(page, '25-shop-contents');
+    const contents = await page.evaluate(() => ({ items: document.querySelectorAll('[data-card-shop-sheet="contents"] [data-card-shop-item]').length, missing: document.querySelectorAll('[data-card-shop-sheet="contents"] [data-card-shop-missing-badge]').length }));
+    await page.locator('[data-card-shop-sheet="contents"] [data-card-shop-item]').first().click();
+    const contentsDetail = await page.locator('[data-card-detail]').waitFor({ timeout: 5000 }).then(() => true).catch(() => false);
+    await page.locator('[data-card-detail]').click().catch(() => {});
+    await page.locator('[data-card-shop-sheet-close]').click();
+    check('⑯ パックの「中身を見る」: 出るカードが全部並び、持っていないものに「未取得」、押すと詳しい画面', contents.items >= 20 && contents.missing > 0 && contents.missing < contents.items && contentsDetail, JSON.stringify({ contents, contentsDetail }));
+    // 提供割合: レア度ごとの表と、カード1枚ずつの表(足すと100%)・天井の決まり
+    await page.locator('[data-card-shop-rates="p1"]').click();
+    await page.locator('[data-card-shop-sheet="rates"]').waitFor({ timeout: 5000 });
+    if (SHOT) await shot(page, '25b-shop-rates');
+    const rates = await page.evaluate(() => {
+      const el = document.querySelector('[data-card-shop-sheet="rates"]');
+      const sum = (sel) => [...el.querySelectorAll(`${sel} tbody tr`)].reduce((a, tr) => a + parseFloat(tr.lastElementChild.textContent), 0);
+      return { text: el.innerText, rar: sum('[data-card-rate-rarity]'), mon: sum('[data-card-rate-mon]'), tech: sum('[data-card-rate-tech]'), rarRows: el.querySelectorAll('[data-card-rate-rarity] tbody tr').length };
+    });
+    const rateText = rates.text;
+    await page.locator('[data-card-shop-sheet="rates"] [data-card-rate-row]').first().click();
+    const ratesDetail = await page.locator('[data-card-detail]').waitFor({ timeout: 5000 }).then(() => true).catch(() => false);
+    await page.locator('[data-card-detail]').click().catch(() => {});
+    const brokenShop = await page.evaluate(() => [...document.querySelectorAll('[data-card-shop-sheet] span.whitespace-nowrap')].filter((el) => el.getClientRects().length > 1).map((el) => el.textContent));
+    await page.locator('[data-card-shop-sheet-close]').click();
+    const near = (x) => Math.abs(x - 100) < 0.05;
+    check('⑯ パックの「提供割合」: レア度ごと(通常・キラ・別絵キラ)とカード1枚ずつの表がそれぞれ100%になり、天井の決まりが書いてあり、押すと詳しい画面', rates.rarRows === 3 && near(rates.rar) && near(rates.mon) && near(rates.tech) && /天井/.test(rateText) && /だぶった/.test(rateText) && ratesDetail && brokenShop.length === 0, JSON.stringify({ rar: rates.rar, mon: rates.mon, tech: rates.tech, rarRows: rates.rarRows, ratesDetail, brokenShop }));
+    await page.locator('[data-card-shop-buy="p1-5"]').click();
     await page.locator('[data-confirm-sheet]').locator('xpath=..').getByRole('button', { name: '買って開ける' }).click();
     await page.locator('[data-card-pack-open]').waitFor({ timeout: 10000 });
     if (SHOT) await shot(page, '26-pack-closed');
@@ -589,18 +616,31 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     await page.locator('[data-card-pack-done]').dispatchEvent('click');
     await page.locator('[data-card-shop]').waitFor({ timeout: 10000 });
     const afterPack = await page.evaluate(() => ({ point: JSON.parse(localStorage.getItem('mh_card_point_v1') || '0'), pity: JSON.parse(localStorage.getItem('mh_card_pack_pity_v1') || 'null'), col: Object.values(JSON.parse(localStorage.getItem('mh_card_collection_v1') || '{}')).reduce((a, n) => a + n, 0) }));
-    check('⑯ 第1弾パックを5つ(450)買って開けると、カードが増え、カードポイントが減り、天井の数が残る', packsOpened === 5 && flippedAll === 8 && tearPhase === 'tearing' && afterPack.point <= 5000 - 450 + 40 * 5 * 5 && afterPack.point >= 4550 && afterPack.col > colBefore && afterPack.pity && typeof afterPack.pity.w1 === 'number' && /技などの枠/.test(rateText), JSON.stringify({ packsOpened, flippedAll, tearPhase, afterPack, colBefore }));
+    const split = await page.evaluate(() => ({ flag: JSON.parse(localStorage.getItem('mh_card_pack_pity_split_v1') || 'null'), pity: JSON.parse(localStorage.getItem('mh_card_pack_pity_v1') || 'null') }));
+    check('⑯ 以前の天井の数(w1・w3)は消えずに残り、新しい弾へ1回だけ写る(w1→第2・3弾は 4、w3→第6弾は 2)・写した印が付く', split.flag === true && split.pity && split.pity.w1 === 4 && split.pity.w3 === 2 && split.pity.p2 === 4 && split.pity.p3 === 4 && split.pity.p6 === 2, JSON.stringify(split));
+    check('⑯ 第1弾パックを5つ(1,350)買って開けると、カードが増え、カードポイントが減り、天井の数が残る(新しい弾 p1 で数える)', packsOpened === 5 && flippedAll === 8 && tearPhase === 'tearing' && afterPack.point <= 5000 - 1350 + 40 * 5 * 5 && afterPack.point >= 3650 && afterPack.col > colBefore && afterPack.pity && typeof afterPack.pity.p1 === 'number' && /技などの枠/.test(rateText), JSON.stringify({ packsOpened, flippedAll, tearPhase, afterPack, colBefore }));
     await page.getByRole('tab', { name: 'スターター' }).click();
     await page.waitForTimeout(300);
     if (SHOT) await shot(page, '29-shop-starters');
     const kits = await page.locator('[data-card-shop-starter]').count();
-    await page.locator('[data-card-shop-starter-buy]').first().click();
+    const ownedKits = await page.locator('[data-card-shop-starter][data-card-shop-starter-owned]').count();
+    const ownedBuyDisabled = await page.locator('[data-card-shop-starter][data-card-shop-starter-owned] [data-card-shop-starter-buy]').first().isDisabled();
+    // どのキットも中身(モンスター3枚・カード50枚)を見られる(持っているキットも)
+    await page.locator('[data-card-shop-starter][data-card-shop-starter-owned] [data-card-shop-starter-contents]').first().click();
+    await page.locator('[data-card-shop-sheet="starter"]').waitFor({ timeout: 5000 });
+    if (SHOT) await shot(page, '29a-shop-starter-contents');
+    const kitView = await page.evaluate(() => { const el = document.querySelector('[data-card-shop-sheet="starter"]'); return { items: el.querySelectorAll('[data-card-shop-item]').length, missing: el.querySelectorAll('[data-card-shop-missing-badge]').length, total: [...el.querySelectorAll('[data-card-shop-item]')].reduce((a, b) => a + (Number((b.innerText.match(/×(\d+)/) || [])[1]) || 1), 0) }; });
+    await page.locator('[data-card-shop-sheet-close]').click();
+    check('⑯ スターターキットは持っているものも並び(「持っています」・買えない)、中身(モンスター3枚とカード50枚)を見られる・持っているキットの中身に「未取得」が出ない', kits === 3 && ownedKits === 1 && ownedBuyDisabled && kitView.total === 53 && kitView.missing === 0, JSON.stringify({ kits, ownedKits, ownedBuyDisabled, kitView }));
+    const buyKit = page.locator('[data-card-shop-starter]:not([data-card-shop-starter-owned])').first();
+    const buyKitId = await buyKit.getAttribute('data-card-shop-starter');
+    await buyKit.locator('[data-card-shop-starter-buy]').click();
     await page.locator('[data-confirm-sheet]').locator('xpath=..').getByRole('button', { name: '買う' }).click();
     await page.waitForTimeout(500);
     const afterKit = await page.evaluate(() => ({ shop: JSON.parse(localStorage.getItem('mh_card_shop_v1') || 'null'), decks: JSON.parse(localStorage.getItem('mh_card_decks_v1') || 'null') }));
-    const boughtLabel = await page.locator('[data-card-shop-starter-buy]').first().innerText();
+    const boughtLabel = await page.locator(`[data-card-shop-starter="${buyKitId}"] [data-card-shop-starter-buy]`).innerText();
     if (SHOT) await shot(page, '29b-shop-starter-bought');
-    check('⑯ 選ばなかったスターターキットは2つ並び、買うと印が付き、デッキが1つ増え、もう買えない', kits === 2 && afterKit.shop && Object.keys(afterKit.shop.starters).length === 1 && afterKit.decks.decks.length === 3 && /買いました/.test(boughtLabel), JSON.stringify({ kits, shop: afterKit.shop, decks: afterKit.decks && afterKit.decks.decks.length, boughtLabel }));
+    check('⑯ 選ばなかったスターターキットを買うと印が付き、デッキが1つ増え、もう買えない', afterKit.shop && Object.keys(afterKit.shop.starters).length === 1 && afterKit.decks.decks.length === 3 && /持っています/.test(boughtLabel), JSON.stringify({ kits, shop: afterKit.shop, decks: afterKit.decks && afterKit.decks.decks.length, boughtLabel }));
     await page.getByRole('tab', { name: '円盤石' }).click();
     await page.waitForTimeout(200);
     if (SHOT) await shot(page, '30-shop-disc');
