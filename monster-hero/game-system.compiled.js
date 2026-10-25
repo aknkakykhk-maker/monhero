@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: fb9090f9a1e79e35
+// source-sha256: b2d3a66a0fe3bba5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-25 22:21";
+const BUILD_DATE = "2026-10-25 22:22";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -86923,6 +86923,55 @@ const CardDiscardModal = ({
     onClick: onClose
   })));
 };
+const CardTurnLogSheet = ({
+  st,
+  meName,
+  foeName,
+  onClose
+}) => {
+  const turns = [];
+  for (const l of st.log) {
+    if (!turns.length || turns[turns.length - 1].turn !== l.turn) turns.push({
+      turn: l.turn,
+      head: '',
+      lines: []
+    });
+    const t = turns[turns.length - 1];
+    if (l.kind === 'turn') t.head = l.text;else t.lines.push(l.text);
+  }
+  const list = turns.filter(t => t.lines.length || t.head).reverse();
+  return React.createElement("div", {
+    "data-card-log-sheet": true,
+    className: "fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3 sm:items-center",
+    onClick: onClose
+  }, React.createElement("div", {
+    className: "flex max-h-[80%] w-full max-w-md flex-col rounded-2xl border border-white/15 bg-slate-950 p-3",
+    onClick: e => e.stopPropagation()
+  }, React.createElement("div", {
+    className: "mb-2 text-[15px] font-black text-amber-200"
+  }, "ターンごとの記録"), React.createElement("div", {
+    className: "min-h-0 flex-1 space-y-2 overflow-y-auto mh-scroll"
+  }, list.map(t => React.createElement("div", {
+    key: t.turn,
+    "data-card-log-turn": t.turn,
+    className: "rounded-xl border border-white/10 bg-white/5 p-2"
+  }, React.createElement("div", {
+    "data-card-fit": true,
+    className: "text-[12px] font-black text-violet-200",
+    style: JA_WRAP_STYLE
+  }, jaWrap(t.head || `ターン${t.turn}`)), t.lines.map((x, i) => React.createElement("div", {
+    key: i,
+    "data-card-fit": true,
+    className: "text-[13px] font-bold leading-snug text-white",
+    style: JA_WRAP_STYLE
+  }, jaWrap(x))))), !list.length && React.createElement("div", {
+    className: "text-[13px] font-bold text-slate-400"
+  }, "まだ記録がありません")), React.createElement("button", {
+    type: "button",
+    onClick: onClose,
+    className: "mh-button mh-button-secondary mt-2 min-h-[44px] rounded-xl font-black"
+  }, "閉じる")));
+};
 const CardMonSlot = ({
   db,
   st,
@@ -87073,6 +87122,10 @@ const CardBattleBoard = ({
   const [hint, setHint] = useState('');
   const [quit, setQuit] = useState(false);
   const [action, setAction] = useState(null);
+  const [turnBanner, setTurnBanner] = useState(null);
+  const [bigCard, setBigCard] = useState(null);
+  const [turnSummary, setTurnSummary] = useState(null);
+  const [logSheet, setLogSheet] = useState(false);
   const [breederFx, setBreederFx] = useState(null);
   const [beams, setBeams] = useState([]);
   const lastGuard = useRef({});
@@ -87185,6 +87238,16 @@ const CardBattleBoard = ({
     const id = CARD_TUTORIAL_WRONG[tutWrong.current % CARD_TUTORIAL_WRONG.length];
     tutWrong.current += 1;
     setHint(CARD_TUTORIAL_LINES[id]);
+  };
+  const bigTimer = useRef(null);
+  const showBigCard = (cards, by, ms = 800) => {
+    const key = `big-${Date.now()}`;
+    setBigCard({
+      key,
+      cards: cards.slice(0, 3),
+      who: by
+    });
+    setTimeout(() => setBigCard(cur => cur && cur.key === key ? null : cur), ms);
   };
   const step = (act, forced = null) => {
     if (!forced && tutorial && cardDeciderOf(st) === CARD_ME && !tutAllow(act)) {
@@ -87301,8 +87364,10 @@ const CardBattleBoard = ({
       setAction({
         key,
         cards: use.cards,
-        who: ul.by ? `${ul.who}(${ul.by}で)` : ul.who
+        who: ul.by ? `${ul.who}(${ul.by}で)` : ul.who,
+        side: use.p === CARD_ME ? 'me' : 'foe'
       });
+      if (pvp && use.p === CARD_CPU) showBigCard(use.cards, ul.by ? `${ul.who}(${ul.by}で)` : ul.who);
       setTimeout(() => setAction(cur => cur && cur.key === key ? null : cur), 2200);
     } else if (evs.some(e => e.t === 'guard')) Audio_.fgSe.guard();
     if (tutorial && cardTutorialDone(tutStage.id, st, next)) setTutI(i => i + 1);
@@ -87322,17 +87387,63 @@ const CardBattleBoard = ({
     const t = setTimeout(() => {
       const act = tutorial ? cardTutorialCpu(db, tutStage.id, st) : cardAiChooseAction(db, st, policy);
       if (!act) return;
-      if (!step(act)) step(st.pending ? {
-        type: 'pass'
-      } : st.phase === 'main' ? {
-        type: 'endAttacks'
-      } : {
-        type: 'guts',
-        hand: []
-      });
+      const go = () => {
+        if (!step(act)) step(st.pending ? {
+          type: 'pass'
+        } : st.phase === 'main' ? {
+          type: 'endAttacks'
+        } : {
+          type: 'guts',
+          hand: []
+        });
+      };
+      const shown = !tutorial && ['attack', 'guard'].includes(act.type) && Array.isArray(act.hand) && act.hand.length ? act.hand.map(i => st.players[CARD_CPU].hand[i]).filter(Boolean) : [];
+      if (!shown.length) {
+        go();
+        return;
+      }
+      const ms = Math.max(250, Math.round(800 * pace));
+      showBigCard(shown, who.name, ms);
+      bigTimer.current = setTimeout(go, ms);
     }, wait);
-    return () => clearTimeout(t);
+    return () => {
+      clearTimeout(t);
+      clearTimeout(bigTimer.current);
+    };
   }, [st, paused, tutI]);
+  const turnSeen = useRef(null);
+  useEffect(() => {
+    if (st.phase === 'setup' || st.winner !== null || st.turn < 1) return undefined;
+    const id = `${st.turn}-${st.active}`;
+    if (turnSeen.current === id) return undefined;
+    turnSeen.current = id;
+    const key = `turn-${id}-${Date.now()}`;
+    const meNow = st.active === CARD_ME;
+    setTurnBanner({
+      key,
+      me: meNow,
+      name: meNow ? 'あなた' : who.name
+    });
+    setAction(null);
+    const t = setTimeout(() => setTurnBanner(cur => cur && cur.key === key ? null : cur), Math.max(500, Math.round(1000 * pace)));
+    if (meNow && !tutorial && !game.demo) {
+      const lines = st.log.filter(l => l.turn === st.turn - 1 && l.kind !== 'turn').map(l => l.text).slice(-8);
+      if (lines.length) setTurnSummary({
+        key: `sum-${id}`,
+        turn: st.turn - 1,
+        lines
+      });
+    } else setTurnSummary(null);
+    return () => clearTimeout(t);
+  }, [st.turn, st.active, st.phase]);
+  useEffect(() => {
+    if (turnSummary && (sel || picks.length || drag)) setTurnSummary(null);
+  }, [sel, picks.length, drag]);
+  useEffect(() => {
+    if (!turnSummary) return undefined;
+    const t = setTimeout(() => setTurnSummary(cur => cur && cur.key === turnSummary.key ? null : cur), Math.max(3500, turnSummary.lines.length * 1200));
+    return () => clearTimeout(t);
+  }, [turnSummary && turnSummary.key]);
   const stRef = useRef(st);
   stRef.current = st;
   const stepRef = useRef(step);
@@ -87802,7 +87913,7 @@ const CardBattleBoard = ({
     }, "ドラの説明を読んで「次へ」");
     if (mode === 'wait') return React.createElement("div", {
       className: "flex-1 text-center text-[13px] font-bold text-slate-300"
-    }, who.name, "の番…");
+    }, st.active === CARD_ME ? `${who.name}が守りを考えています…` : `${who.name}の番…`);
     if (mode === 'setup') return React.createElement("button", {
       type: "button",
       className: `${btn} mh-button-primary`,
@@ -87891,7 +88002,13 @@ const CardBattleBoard = ({
     "data-card-quit": true,
     onClick: () => setQuit(true),
     className: "rounded-lg border border-white/20 px-2 py-1 text-[12px] font-black text-slate-200"
-  }, tutorial ? '飛ばす' : '投了'), pvp && React.createElement(CardPvpChat, null)), pvp ? React.createElement(CardPvpStatus, {
+  }, tutorial ? '飛ばす' : '投了'), pvp && React.createElement(CardPvpChat, null), !tutorial && React.createElement("button", {
+    type: "button",
+    "data-card-log-open": true,
+    onClick: () => setLogSheet(true),
+    className: "rounded-lg border border-white/20 px-2 py-1 text-[12px] font-black text-slate-200",
+    "aria-label": "ターンごとの記録を見る"
+  }, "記録")), pvp ? React.createElement(CardPvpStatus, {
     clock: pvpClock
   }) : tiny && !wide ? React.createElement("span", {
     className: "flex-1"
@@ -87959,7 +88076,17 @@ const CardBattleBoard = ({
     style: {
       justifyContent: 'safe center'
     }
-  }, bubble && React.createElement("div", {
+  }, turnBanner && React.createElement("div", {
+    key: turnBanner.key,
+    "data-card-turn-banner": turnBanner.me ? 'me' : 'foe',
+    "data-card-fit": true,
+    "aria-live": "polite",
+    className: `mh-card-turn-banner pointer-events-none absolute inset-x-0 top-1/2 z-[6] -translate-y-1/2 py-1.5 text-center font-black tracking-wider text-white shadow-lg ${turnBanner.me ? 'bg-gradient-to-r from-amber-500/0 via-amber-500/90 to-amber-500/0' : 'bg-gradient-to-r from-rose-600/0 via-rose-600/90 to-rose-600/0'}`,
+    style: {
+      fontSize: 'clamp(16px, 5.5vw, 24px)',
+      textShadow: '0 2px 0 rgba(0,0,0,.45)'
+    }
+  }, turnBanner.me ? 'あなたのターン' : `${turnBanner.name}のターン`), bubble && React.createElement("div", {
     key: bubble.key,
     "data-card-bubble": true,
     className: `pointer-events-none relative z-[2] max-w-full rounded-2xl border-[3px] bg-white px-2.5 py-0.5 ${compact ? 'text-[12px]' : 'text-[13px]'} font-extrabold leading-snug text-[#1f1333] shadow-lg`,
@@ -87990,11 +88117,15 @@ const CardBattleBoard = ({
     src: assistantFaceImage(who, 'happy'),
     alt: "",
     className: "h-full w-full object-cover object-top"
-  })), action && stageFit < 3 && React.createElement("div", {
+  })), action && stageFit < 3 && !turnSummary && React.createElement("div", {
     key: action.key,
     "data-card-action": true,
-    className: `relative z-[1] flex items-center gap-2 rounded-2xl border border-amber-300/50 bg-black/55 px-2 ${compact ? "py-0.5" : "py-1"} shadow-lg`
-  }, !compact && stageFit < 2 && action.cards.slice(0, 3).map((no, i) => {
+    "data-card-action-side": action.side,
+    className: `relative z-[1] flex items-center gap-2 rounded-2xl border-2 bg-black/55 px-2 ${action.side === 'foe' ? 'border-rose-400/80' : 'border-amber-300/70'} ${compact ? "py-0.5" : "py-1"} shadow-lg`
+  }, React.createElement("span", {
+    "data-card-fit": true,
+    className: `shrink-0 whitespace-nowrap rounded-md px-1.5 py-0.5 text-[10px] font-black ${action.side === 'foe' ? 'bg-rose-500 text-white' : 'bg-amber-300 text-slate-950'}`
+  }, action.side === 'foe' ? '相手' : '自分'), !compact && stageFit < 2 && action.cards.slice(0, 3).map((no, i) => {
     const c = cardOf(db, no);
     return c ? React.createElement("img", {
       key: i,
@@ -88200,6 +88331,65 @@ const CardBattleBoard = ({
     db: db,
     no: detail,
     onClose: () => setDetail(null)
+  }), bigCard && React.createElement("div", {
+    key: bigCard.key,
+    "data-card-big": true,
+    className: "mh-card-big pointer-events-none absolute inset-x-0 top-1/2 z-[55] flex -translate-y-1/2 flex-col items-center gap-1.5 px-4"
+  }, React.createElement("div", {
+    className: "flex items-end justify-center gap-1.5"
+  }, bigCard.cards.map((no, i) => {
+    const c = cardOf(db, no);
+    return c ? React.createElement("img", {
+      key: i,
+      src: CARD_IMG(c.img, 'l'),
+      alt: c.name,
+      className: "rounded-[8px] border-[3px] border-rose-400 object-cover shadow-[0_8px_24px_rgba(0,0,0,.7)]",
+      style: {
+        height: `min(${bigCard.cards.length > 1 ? 30 : 38}vh, 300px)`,
+        aspectRatio: '5 / 7'
+      }
+    }) : null;
+  })), React.createElement("div", {
+    "data-card-fit": true,
+    className: "max-w-full rounded-xl border border-rose-300/60 bg-black/80 px-3 py-1 text-center text-[14px] font-black leading-snug text-white",
+    style: JA_WRAP_STYLE
+  }, React.createElement("span", {
+    className: "mr-1 rounded bg-rose-500 px-1 text-[11px]"
+  }, "相手"), bigCard.who, "「", bigCard.cards.map(n => (cardOf(db, n) || {}).name).join('＋'), "」")), turnSummary && !bigCard && React.createElement("button", {
+    type: "button",
+    key: turnSummary.key,
+    "data-card-turn-summary": true,
+    onClick: () => setTurnSummary(null),
+    className: "mh-card-big absolute inset-x-3 top-[18%] z-[54] mx-auto max-h-[56%] max-w-md overflow-y-auto rounded-2xl border-2 border-rose-300/80 bg-slate-950/95 p-3 text-left shadow-2xl"
+  }, React.createElement("div", {
+    "data-card-fit": true,
+    className: "text-[14px] font-black text-rose-200",
+    style: JA_WRAP_STYLE
+  }, jaWrap(`${who.name}のターンにしたこと`)), React.createElement("ol", {
+    className: "mt-1 space-y-0.5"
+  }, turnSummary.lines.map((t, i) => React.createElement("li", {
+    key: i,
+    "data-card-fit": true,
+    className: "text-[13px] font-bold leading-snug text-white",
+    style: JA_WRAP_STYLE
+  }, i + 1, ". ", jaWrap(t)))), React.createElement("div", {
+    className: "mt-2 flex items-center justify-between gap-2"
+  }, React.createElement("span", {
+    className: "text-[11px] font-bold text-slate-400"
+  }, "タップで閉じる"), React.createElement("span", {
+    role: "button",
+    "data-card-log-open": true,
+    onClick: e => {
+      e.stopPropagation();
+      setTurnSummary(null);
+      setLogSheet(true);
+    },
+    className: "whitespace-nowrap rounded-lg bg-violet-700 px-2.5 py-1 text-[12px] font-black text-white"
+  }, "記録を見る"))), logSheet && React.createElement(CardTurnLogSheet, {
+    st: st,
+    meName: "あなた",
+    foeName: who.name,
+    onClose: () => setLogSheet(false)
   }), discard && React.createElement(CardDiscardModal, {
     db: db,
     st: st,
@@ -131541,6 +131731,12 @@ const createAnimationStyle = () => {
     .mh-card-flip { transform-style: preserve-3d; animation: mhCardFlip .5s ease-in .9s both; }
     .mh-card-flip-face { backface-visibility: hidden; }
     .mh-card-flip-back { position: absolute; inset: 0; border-radius: 3px; transform: rotateY(180deg); backface-visibility: hidden; border: 2px solid rgba(148,163,184,.55); background: repeating-linear-gradient(45deg, #1e1b4b 0 5px, #312e81 5px 10px); filter: brightness(.6); }
+    /* MFバトルカード: 番が替わる帯・相手のカードを大きく見せる(案A・B。2026-10-25) */
+    .mh-card-turn-banner { animation: mhCardTurnBanner .9s ease-out both; }
+    @keyframes mhCardTurnBanner { 0% { opacity: 0; transform: translateY(-50%) scaleX(.6); } 18% { opacity: 1; transform: translateY(-50%) scaleX(1); } 80% { opacity: 1; } 100% { opacity: 0; } }
+    .mh-card-big { animation: mhCardBig .22s ease-out both; }
+    @keyframes mhCardBig { 0% { opacity: 0; scale: .85; } 100% { opacity: 1; scale: 1; } }
+    @media (prefers-reduced-motion: reduce) { .mh-card-turn-banner, .mh-card-big { animation: none; } }
     /* ==== MFバトルカードのパックを開ける演出(87-card-deck-edit.jsx の CardPackOpen。社長「派手に」台帳 #3503) ====
        破る: 上の帯がちぎれて飛ぶ・光があふれる / めくる: 1枚ずつ裏返る / キラ: めくる前から裏が光って揺れる・めくったら大きく光る */
     @keyframes mhPackIdle { 0%,100% { transform: translateY(0) rotate(-1deg); } 50% { transform: translateY(-6px) rotate(1deg); } }
