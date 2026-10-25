@@ -4,6 +4,7 @@
 //
 //   node tools/boot/card-battle-intro-story-browser-check.js
 //   SHOT_DIR=<フォルダ> を付けると、2通りそれぞれの写真を残す
+//   SHOT_LINES=0,4,15 のように行(0から)を並べると、その行ごとに撮る(ファイル名に行の番号が付く)
 //
 //   あつの加入のお話を「見た/まだ」の2通りで起動し、デバッグ設定の「全ストーリーを確認」から再生する
 //   (きゅうこは公開済みで最初からだれでも選べるので、いまのゲームでは必ず出る。きゅうこがいない版は card-battle-intro-story-check.js が見る)
@@ -16,6 +17,7 @@ const { eventStorySeed } = require(path.resolve(__dirname, '..', 'boot/quiet-boo
 const ROOT = path.resolve(__dirname, '..', '..');
 const PORT = 8937;
 const SHOT_DIR = process.env.SHOT_DIR || '';
+const SHOT_LINES = (process.env.SHOT_LINES || '').split(',').filter((x) => /^\d+$/.test(x)).map(Number);
 let failed = 0;
 const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failed++; };
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.json': 'application/json', '.mp3': 'audio/mpeg', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.mp4': 'video/mp4' };
@@ -90,7 +92,8 @@ const JOIN = { atsu: 'atsu_join_2026_10_22', kyuko: 'kyuko_join_2026_10_22' };
         for (let i = 0; i < 200; i++) {
           if (await dlg.count() === 0) break;
           texts.push(await dlg.innerText());
-          if (i === st.shot && SHOT_DIR) { fs.mkdirSync(SHOT_DIR, { recursive: true }); await page.waitForTimeout(400); await page.screenshot({ path: path.join(SHOT_DIR, `${st.id}-${label}.png`) }); }
+          const many = SHOT_LINES.length > 0;
+          if (SHOT_DIR && (many ? SHOT_LINES.includes(i) : i === st.shot)) { fs.mkdirSync(SHOT_DIR, { recursive: true }); await page.waitForTimeout(400); await page.screenshot({ path: path.join(SHOT_DIR, `${st.id}-${label}${many ? `-${String(i + 1).padStart(2, '0')}` : ''}.png`) }); }
           await dlg.locator('button[aria-label="次へ"]').dispatchEvent('click').catch(() => {});
           await page.waitForTimeout(40);
         }
