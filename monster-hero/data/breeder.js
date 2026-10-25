@@ -853,6 +853,8 @@ const profileFrameUnlock = (frame) => {
 //   gift:'raidJackEnding' … レイド「カボチャの大王ジャック」で大王まで倒せたときの終章(raid_jack_ending_cleared)を見た参加者へ
 // ★届くまでは選択画面にも出さない(手に入れ方を先に見せない)。届いたら mh_profile_frame_owned_v1 に入る(ほかの枠と同じ入れ物)
 const PROFILE_FRAME_GIFT_KINDS = Object.freeze(['raidJackEnding']);
+// プレゼントで届く枠の、マーケットの札に出す手に入れ方(買えない枠を条件だけ並べる)
+const PROFILE_FRAME_GIFT_LABELS = Object.freeze({ raidJackEnding: 'ジャック大王を倒すと届く' });
 const profileFrameGift = (frame) => {
   const gift = frame && frame.unlock && frame.unlock.gift;
   return (typeof gift === 'string' && PROFILE_FRAME_GIFT_KINDS.includes(gift)) ? gift : null;

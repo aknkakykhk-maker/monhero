@@ -21185,12 +21185,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         })()}
         {showLookDex&&(()=>{
           // アイコン・フレーム図鑑(2026-10-25 社長「これで作る」)。集めたもの・まだのものを一覧で見て、押すと大きく見られる。
-          // 並ぶのは公開済みのものだけ。贈り物で届く枠はピッカーと同じく届くまで出さない。売っていないアイコン(shop:false)も持っているときだけ出す。
+          // 並ぶのは公開済みのものだけ。贈り物で届く枠は、届く前から手に入れ方を添えて出す(2026-10-25 社長。マーケットの札と同じ言い方)。売っていないアイコン(shop:false)は持っているときだけ出す。
           // 新しい保存キーは作らない(選んだときは、アイコン・フレームのピッカーと同じ保存先へ書く)
           const closeDex=()=>{ setShowLookDex(false); setLookDexZoom(null); };
           const ownedIconIds=new Set(expandOwnedMarketIcons(ownedMarketIcons));
           const frameOwned=(frame)=>profileFrameOwned(frame.id, ownedProfileFrames);
-          const frames=releasedProfileFrames().filter(frame=>!profileFrameGift(frame)||frameOwned(frame));
+          const frames=releasedProfileFrames();
           const iconSeen=new Set();
           const icons=[
             ...STARTER_MONSTER_IDS.map(id=>ALL_PLAYER_MONSTERS[id]).filter(Boolean).map(m=>({id:m.id,name:m.name,src:m.faceIconUrl||m.iconUrl,source:'starter',owned:true})),
@@ -21208,7 +21208,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             if(!isFrame) return x.source==='starter'?'はじめから使える':x.source==='market'?'マーケットで買える':'プレゼントで届いた';
             const unlock=profileFrameUnlock(x.frame);
             if(unlock){ const who=assistantById(unlock.assistantId); return `${(who&&who.name)||''}との仲良し度 Lv${unlock.bondLevel}でもらえる`; }
-            if(profileFrameGift(x.frame)) return 'ジャック大王を倒すと届く'; // フレームを選ぶ窓の言い方とそろえる(2026-10-25 窓口)
+            if(profileFrameGift(x.frame)) return PROFILE_FRAME_GIFT_LABELS[profileFrameGift(x.frame)]||'プレゼントで届きます';
             if(profileFrameSale(x.frame)){ const status=profileFrameConditionStatus(x.frame); return status&&status.text?`マーケットで買える（${status.text}）`:'マーケットで買える'; }
             return 'はじめから使える';
           };

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 46bab90b5e616d1b
+// source-sha256: 785c6a6a01dbe3c5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-26 02:35";
+const BUILD_DATE = "2026-10-26 08:17";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -124454,7 +124454,7 @@ function MonsterHeroGame() {
       };
       const ownedIconIds = new Set(expandOwnedMarketIcons(ownedMarketIcons));
       const frameOwned = frame => profileFrameOwned(frame.id, ownedProfileFrames);
-      const frames = releasedProfileFrames().filter(frame => !profileFrameGift(frame) || frameOwned(frame));
+      const frames = releasedProfileFrames();
       const iconSeen = new Set();
       const icons = [...STARTER_MONSTER_IDS.map(id => ALL_PLAYER_MONSTERS[id]).filter(Boolean).map(m => ({
         id: m.id,
@@ -124511,7 +124511,7 @@ function MonsterHeroGame() {
           const who = assistantById(unlock.assistantId);
           return `${who && who.name || ''}との仲良し度 Lv${unlock.bondLevel}でもらえる`;
         }
-        if (profileFrameGift(x.frame)) return 'ジャック大王を倒すと届く';
+        if (profileFrameGift(x.frame)) return PROFILE_FRAME_GIFT_LABELS[profileFrameGift(x.frame)] || 'プレゼントで届きます';
         if (profileFrameSale(x.frame)) {
           const status = profileFrameConditionStatus(x.frame);
           return status && status.text ? `マーケットで買える（${status.text}）` : 'マーケットで買える';
