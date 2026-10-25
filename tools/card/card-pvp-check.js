@@ -21,7 +21,7 @@ const multi = read('src/parts/91-card-battle-multi.jsx').split('// ---- 部屋�
 const ctx = vm.createContext({ console, Math, JSON, Object, Array, Number, String, Set, Map, crypto: crypto.webcrypto, TextEncoder });
 vm.runInContext(`${read('data/card-battle-cards.js')}\n;\n${read('src/parts/82-card-battle-core.jsx')}\n;\n`
   + 'const rhythmMultiText = (v, max) => String(v == null ? "" : v).replace(/[\\u0000-\\u001f]/g, "").slice(0, max);\n'
-  + `${multi}\n;\nthis.E = { CARD_BATTLE_DATA, cardLegalActions, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardDecider, cardClone, cardApplyAction, CARD_PVP_HIDDEN,
+  + `${multi}\n;\nthis.E = { CARD_BATTLE_DATA, cardLegalActions, cardAiFillBind, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardDecider, cardClone, cardApplyAction, CARD_PVP_HIDDEN,
     cardPvpFlip, cardPvpRevealOf, cardPvpNewGame, cardPvpApplyRemote, cardPvpPatchDiscard, cardPvpSealText, cardPvpSha256, cardPvpTruthGame, cardPvpVerify, cardPvpCleanMessage, cardPvpCleanAct,
     cardPvpReward, cardPvpTimeoutAct, cardPvpLimitMs, cardPvpClockKey, cardPvpDecider, cardPvpNormalizePenalty, CARD_PVP_STAMPS, CARD_PVP_TURN_MS, CARD_PVP_GUARD_MS, CARD_PVP_RESULT_LINES, cardPvpResultLine };`, ctx);
 const E = ctx.E;
@@ -37,15 +37,25 @@ const same = (a, b) => JSON.stringify(pub(a, 0)) === JSON.stringify(pub(b, 1)) &
   && a.turn === b.turn && a.phase === b.phase && (a.winner === null ? b.winner === null : b.winner === 1 - a.winner);
 
 // 準備中だった札(区切りごとに足す。一覧 docs/progress/card-battle/pending-83/README.md)
-const PENDING_DONE = ['034', '210', '060', '236', '109'];
-const usable = (c, mons) => c && c.ready && !(c.effects || []).some((e) => e.t === 'attach')
+const PENDING_DONE = ['034', '210', '060', '236', '109',
+  '121', '124', '330', '345', '343', '347', '274', '349', '366', '362', '363', '346', '276', '342', '009', '070', '209'];
+// 付ける札は、準備中だった札だけ入れる(ほかの付ける札まで入れると、技が足りなくなる)
+const usable = (c, mons) => c && c.ready && (PENDING_DONE.includes(c.no) || !(c.effects || []).some((e) => e.t === 'attach'))
   && (c.user === 'any' || c.user === 'breeder' || mons.some((m) => c.user === m.species));
+// 試合でまず起きない条件の札(山札0で付ける劇的な幕切れ)は、card-rules-check の場面だけで確かめる
+const PENDING_RARE = ['124'];
+const USED_SO_FAR = new Set();
+const monOf = (sp) => Object.values(db.monsters).filter((m) => m.species === sp && !m.main).map((m) => m.no).sort()[0];
 // その3体で使える準備中だった札を3枚ずつ入れ、残りはその3体で使える札を3枚ずつ順に足して50枚にする
 const pendingDeck = (monsters) => {
   const mons = monsters.map((no) => db.monsters[no]);
   const cards = [];
-  PENDING_DONE.filter((no) => usable(db.cards[no], mons)).forEach((no) => cards.push(no, no, no));
-  const rest = Object.values(db.cards).filter((c) => usable(c, mons) && !PENDING_DONE.includes(c.no)).map((c) => c.no).sort();
+  // 種族専用の札は3枚、誰でも・ブリーダーの札は2枚ずつ(付ける札ばかりだと、付ける先の技が足りない)
+  PENDING_DONE.filter((no) => usable(db.cards[no], mons)).forEach((no) => { const c = db.cards[no]; if (c.user === 'any' || c.user === 'breeder') cards.push(no, no); else cards.push(no, no, no); });
+  // 残りは、3体それぞれの札と誰でも使える札を、1種ずつ順に(番号の順だけで埋めると、最初の種族の札ばかりになる)
+  const lanes = [...mons.map((m) => m.species), 'any'].map((sp) => Object.values(db.cards).filter((c) => usable(c, mons) && !PENDING_DONE.includes(c.no) && (sp === 'any' ? c.user === 'any' || c.user === 'breeder' : c.user === sp)).map((c) => c.no).sort());
+  const rest = [];
+  for (let k = 0; lanes.some((l) => k < l.length); k++) lanes.forEach((l) => { if (k < l.length) rest.push(l[k]); });
   // 同じ名前は3枚まで(番号の違う同じ名前の札もある)
   const named = (no) => cards.filter((x) => db.cards[x].name === db.cards[no].name).length;
   for (let i = 0; cards.length < 50 && i < 5000; i++) { const no = rest[i % rest.length]; if (named(no) < 3) cards.push(no); }
@@ -57,10 +67,12 @@ const play = (n) => {
   const r = rng(1000 + n);
   const who = ['mua', 'kiki', 'momosuke', 'dra', 'kyuko', 'atsu'];
   // 後半の20戦は MASTER のデッキ(全部の弾)。準備中だった札(台帳 #141)も、マルチで当てられるかを見る
-  //   最後の10戦は、その札を使える3体で、その札を必ず入れたデッキ(助手のデッキに入らない種族の札もあるため)
+  //   最後の12戦は、その札を使える3体で、その札を必ず入れたデッキ(助手のデッキに入らない種族の札もあるため)
   const lv = n < 20 ? 'normal' : 'master';
-  const deckA = n >= 30 ? pendingDeck(['C-003', 'C-027', 'C-029']) : E.cardAiBuildDeck(db, who[n % 6], lv);
-  const deckB = n >= 30 ? pendingDeck(['C-005', 'C-001', 'C-003']) : E.cardAiBuildDeck(db, who[(n + 3) % 6], lv);
+  //   3体の組は2通り(準備中だった札の持ち主の種族がそろうように)
+  const trio = n < 32 ? [['C-003', 'C-027', 'C-029'], ['C-005', 'C-001', 'C-003']] : [[monOf('centaur'), monOf('colorpandora'), monOf('dino')], [monOf('naga'), monOf('tiger'), monOf('plant')]];
+  const deckA = n >= 28 ? pendingDeck(trio[0]) : E.cardAiBuildDeck(db, who[n % 6], lv);
+  const deckB = n >= 28 ? pendingDeck(trio[1]) : E.cardAiBuildDeck(db, who[(n + 3) % 6], lv);
   const seedA = (n * 7919 + 13) >>> 0, seedB = (n * 104729 + 7) >>> 0;
   const firstA = n % 2;
   let A = E.cardPvpNewGame(db, { myDeck: deckA, mySeed: seedA, foeMonsters: deckB.monsters, first: firstA, names: ['A', 'B'] });
@@ -74,15 +86,18 @@ const play = (n) => {
     const [me, foe] = aTurn ? [A, B] : [B, A];
     if (decider(foe) !== 1) { err = `${steps}手目: 2台で番が食い違った`; break; }
     let act = E.cardAiChooseAction(db, me, pol, r);
-    // 最後の10戦: 準備中だった札を使える場面なら、その札を選ぶ(コンピューターが選ばない札も、マルチで通るか見るため)
-    if (n >= 30) {
+    // 最後の12戦: 準備中だった札を使える場面なら、その札を選ぶ(コンピューターが選ばない札も、マルチで通るか見るため)
+    if (n >= 28) {
       const noOf = (a) => (a.type === 'guard' ? [me.players[0].hand[a.hand]] : Array.isArray(a.hand) ? a.hand.map((i) => me.players[0].hand[i]) : []);
-      const pick = E.cardLegalActions(db, me).find((a) => noOf(a).some((no) => PENDING_DONE.includes(no)));
-      if (pick) act = pick;
+      // まだどの試合でも使っていない札を含む手を先に(影縛りには名指しを入れる)
+      const legal = E.cardLegalActions(db, me).filter((a) => noOf(a).some((no) => PENDING_DONE.includes(no)));
+      const pick = legal.find((a) => noOf(a).some((no) => PENDING_DONE.includes(no) && !USED_SO_FAR.has(no))) || legal[0];
+      if (pick) act = E.cardAiFillBind(db, me, pick, pol);
     }
     let next = act && E.cardApplyAction(db, me, act);
     if (next && (act.type === 'attack' || act.type === 'breeder')) usedNos.push(...act.hand.map((i) => me.players[0].hand[i]));
     if (next && act.type === 'guard') usedNos.push(me.players[0].hand[act.hand]);
+    usedNos.forEach((no) => USED_SO_FAR.add(no));
     if (!next) { act = me.pending ? { type: 'pass' } : me.phase === 'main' ? { type: 'endAttacks' } : me.pendingDiscard ? { type: 'discard', hand: [0] } : { type: 'guts', hand: [] }; next = E.cardApplyAction(db, me, act); }
     if (!next) { err = `${steps}手目: 自分の手が進まない`; break; }
     const reveal = E.cardPvpRevealOf(me, act);
@@ -120,8 +135,9 @@ check('③ 相手の手札・山札は、最後まで仮の札のまま(本物�
 check('④ 終わってから封を開けてなぞり直すと、両方で合っている', verifyOk === N, `${verifyOk} / ${N}`);
 // 準備中だった札が、40戦のどこかで使われて、①〜④が通っていること
 const usedAll = new Set(games.flatMap((x) => x.usedNos));
-const usedNew = PENDING_DONE.filter((no) => usedAll.has(no));
-check('④ 準備中だった札も、マルチの試合で使われて当てられる(全部)', usedNew.length === PENDING_DONE.length, `使われた ${usedNew.join('・') || 'なし'} / ${PENDING_DONE.length}枚`);
+const wantNew = PENDING_DONE.filter((no) => !PENDING_RARE.includes(no));
+const usedNew = wantNew.filter((no) => usedAll.has(no));
+check('④ 準備中だった札も、マルチの試合で使われて当てられる(全部)', usedNew.length === wantNew.length, `使われた ${usedNew.length} / ${wantNew.length}枚・まだ ${wantNew.filter((no) => !usedAll.has(no)).join('・') || 'なし'}`);
 
 // ⑤ ズルを見抜く
 const g = games.find((x) => !x.err && x.hA.some((e) => e.by === 1 && Object.keys(e.reveal).length));
