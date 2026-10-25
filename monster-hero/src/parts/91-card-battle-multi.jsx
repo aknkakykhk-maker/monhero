@@ -59,7 +59,7 @@ const cardPvpRevealOf = (st, act, p = 0) => {
   if (!st || !act) return {};
   const hand = st.players[p].hand;
   // 見せる段(死神の力)は、手札を全部見せる
-  const idxs = act.type === 'reveal' ? hand.map((_, i) => i) : act.type === 'guard' ? [act.hand] : (act.type === 'attack' || act.type === 'breeder' || act.type === 'discard') ? (act.hand || []) : [];
+  const idxs = act.type === 'reveal' ? hand.map((_, i) => i) : act.type === 'guard' ? [act.hand] : (act.type === 'attack' || act.type === 'breeder' || act.type === 'discard' || act.type === 'pray') ? (act.hand || []) : [];
   const out = {};
   idxs.forEach((i) => { if (Number.isInteger(i) && i >= 0 && i < hand.length) out[i] = hand[i]; });
   return out;
@@ -114,11 +114,11 @@ const cardPvpPatchDiscard = (db, st, list) => {
 
 // 持ち時間の区切り。決める人・番・守りの回が変わったら、時計をはじめから(攻撃と、そのあとのガッツは同じ60秒)
 // 見せる段(死神の力)は守りと同じ短い時間。選ぶ段は攻撃の番のうちなので、ふつうの時間
-const cardPvpLimitMs = (st) => (st.pending || st.pendingDiscard || st.pendingReveal ? CARD_PVP_GUARD_MS : CARD_PVP_TURN_MS);
-const cardPvpClockKey = (st) => `${cardPvpDecider(st)}-${st.turn}-${st.pending ? `g${st.log.length}` : st.pendingDiscard ? `d${st.log.length}` : st.pendingReveal ? `r${st.log.length}` : st.pendingChoice ? `c${st.log.length}` : st.phase === 'setup' ? 's' : 'm'}`;
+const cardPvpLimitMs = (st) => (st.pending || st.pendingDiscard || st.pendingReveal || st.pendingPray ? CARD_PVP_GUARD_MS : CARD_PVP_TURN_MS); // おいのりの窓も守りと同じ短い時間
+const cardPvpClockKey = (st) => `${cardPvpDecider(st)}-${st.turn}-${st.pendingPray ? `p${st.log.length}` : st.pending ? `g${st.log.length}` : st.pendingDiscard ? `d${st.log.length}` : st.pendingReveal ? `r${st.log.length}` : st.pendingChoice ? `c${st.log.length}` : st.phase === 'setup' ? 's' : 'm'}`;
 // 持ち時間を使い切ったときの手(その番を終える・守らない)。攻撃の番は「攻撃おわり」のあと、ガッツへ回さずにターン終了
 // 選ぶ段は、いちばん前の候補を選ぶ
-const cardPvpTimeoutAct = (st) => (st.pendingReveal ? { type: 'reveal' } : st.pendingChoice ? { type: 'choose', pick: st.pendingChoice.cands[0] }
+const cardPvpTimeoutAct = (st) => (st.pendingPray ? { type: 'pray' } : st.pendingReveal ? { type: 'reveal' } : st.pendingChoice ? { type: 'choose', pick: st.pendingChoice.cands[0] }
   : st.pendingDiscard ? { type: 'discard', hand: Array.from({ length: st.pendingDiscard.n }, (_, i) => i) }
   : st.phase === 'setup' ? { type: 'setupGuts', hand: [] } : st.pending ? { type: 'pass' } : st.phase === 'main' ? { type: 'endAttacks' } : { type: 'guts', hand: [] });
 // 1戦でもらえる数(台帳 #119 の対人戦: 勝ち24周・200/負け12周・50/抜けた0。1日の上限は無し・同じ相手の制限も無し(社長の決め直し))
@@ -174,7 +174,7 @@ const cardPvpVerify = (db, { myDeck, mySeed, foeDeck, foeSeed, first, names, his
 const cardPvpInt = (v, max) => (Number.isInteger(v) && v >= 0 && v <= max ? v : null);
 const cardPvpCleanAct = (raw) => {
   if (!raw || typeof raw !== 'object') return null;
-  const types = ['setupGuts', 'guts', 'attack', 'breeder', 'guard', 'pass', 'endAttacks', 'discard', 'reveal', 'choose'];
+  const types = ['setupGuts', 'guts', 'attack', 'breeder', 'guard', 'pass', 'endAttacks', 'discard', 'reveal', 'choose', 'pray'];
   if (!types.includes(raw.type)) return null;
   const act = { type: raw.type };
   if (raw.type === 'guard') {

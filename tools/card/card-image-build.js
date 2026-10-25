@@ -60,8 +60,35 @@ const fillRect = (px, ch, r) => {
   }
 };
 
-const erase = async (file, { artCopyright = true, breeder = false } = {}) => {
+// 全体カード(breeder-field)の元の絵は画面から切り出したもので、四隅に紺色の背景と白いふちが写っていて、縦横の比も1枚ずつ違う(2026-10-25)。
+// 白いふちの内側(黒い枠)を探して切り出し、ほかのカードの黒い枠と同じ場所・大きさ(x 34〜707・y 40〜997)に合わせ、外は白・角を丸く切り落とす
+const FIELD_FRAME = { x0: 34, y0: 40, x1: 708, y1: 998, r: 30 };
+const isField = (file) => /^F\d+\.jpg$/.test(path.basename(file));
+const normalizeField = async (file) => {
   const { data, info } = await sharp(file).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+  const { width: w, height: h, channels: ch } = info;
+  const white = (x, y) => { const i = (y * w + x) * ch; return Math.min(data[i], data[i + 1], data[i + 2]) > 225; };
+  // 白いふちの外側: 白い画素が半分を超える列・行の、いちばん外
+  const colsW = [], rowsW = [];
+  for (let x = 0; x < w; x++) { let n = 0; for (let y = 0; y < h; y++) if (white(x, y)) n++; if (n > h * 0.5) colsW.push(x); }
+  for (let y = 0; y < h; y++) { let n = 0; for (let x = 0; x < w; x++) if (white(x, y)) n++; if (n > w * 0.5) rowsW.push(y); }
+  if (!colsW.length || !rowsW.length) throw new Error(`${file}: 白いふちが見つからない`);
+  // ふちの内側(黒い枠の始まり): まんなかの行・列で、外から白が切れるところ
+  const midY = Math.round(h / 2), midX = Math.round(w / 2);
+  let L = colsW[0]; while (L < w - 1 && white(L, midY)) L++;
+  let R = colsW[colsW.length - 1]; while (R > 0 && white(R, midY)) R--;
+  let T = rowsW[0]; while (T < h - 1 && white(midX, T)) T++;
+  let B = rowsW[rowsW.length - 1]; while (B > 0 && white(midX, B)) B--;
+  const f = FIELD_FRAME;
+  const card = await sharp(file).extract({ left: L, top: T, width: R - L + 1, height: B - T + 1 }).resize(f.x1 - f.x0, f.y1 - f.y0, { fit: 'fill' }).png().toBuffer();
+  const mask = Buffer.from(`<svg width="${f.x1 - f.x0}" height="${f.y1 - f.y0}"><rect width="100%" height="100%" rx="${f.r}" ry="${f.r}" fill="#fff"/></svg>`);
+  const rounded = await sharp(card).ensureAlpha().composite([{ input: mask, blend: 'dest-in' }]).png().toBuffer();
+  return sharp({ create: { width: W, height: H, channels: 3, background: '#ffffff' } }).composite([{ input: rounded, left: f.x0, top: f.y0 }]).png().toBuffer();
+};
+
+const erase = async (file, { artCopyright = true, breeder = false } = {}) => {
+  // 全体カードは、先に黒い枠に合わせてそろえる(絵ははじめから日本語。右下の URL・絵の © は、ほかのブリーダーのカードと同じ場所を消す)
+  const { data, info } = await sharp(isField(file) ? await normalizeField(file) : file).removeAlpha().raw().toBuffer({ resolveWithObject: true });
   if (info.width !== W || info.height !== H) throw new Error(`${file}: 大きさが ${info.width}×${info.height}(${W}×${H} のはず)`);
   const rects = [...(isMonster(file) ? BAND.monster : BAND.skill)];
   if (artCopyright && !isMonster(file)) rects.push(breeder ? ART_COPYRIGHT_BREEDER : file.startsWith(JA) ? ART_COPYRIGHT_JA : ART_COPYRIGHT);
@@ -98,7 +125,7 @@ const build = async (opts) => {
   const files = allCards();
   for (const [key, [w, h]] of Object.entries(SIZES)) fs.mkdirSync(path.join(OUT, key), { recursive: true });
   for (const f of files) {
-    const img = await erase(jaOf(f), { ...opts, breeder: path.basename(path.dirname(f)) === 'breeder' });
+    const img = await erase(jaOf(f), { ...opts, breeder: ['breeder', 'breeder-field'].includes(path.basename(path.dirname(f))) });
     const buf = await img.png().toBuffer();
     for (const [key, [w, h]] of Object.entries(SIZES)) {
       await sharp(buf).resize(w, h).jpeg({ quality: 78, mozjpeg: true }).toFile(path.join(OUT, key, path.basename(f)));

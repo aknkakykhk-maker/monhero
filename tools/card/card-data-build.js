@@ -40,7 +40,7 @@ const WAVE_OF_SPECIES = {
   metalner: 4, joker: 4, arrowhead: 4, centaur: 4, colorpandora: 4,
 };
 const waveOfNo = (no) => (no <= 128 ? 1 : no <= 260 ? 2 : no <= 280 ? 3 : 4);
-const KIND = { 'ちから': 'pow', 'かしこさ': 'int', '特殊': 'spe', '回避': 'dge', '防御': 'blk' };
+const KIND = { 'ちから': 'pow', 'かしこさ': 'int', '特殊': 'spe', '回避': 'dge', '防御': 'blk', '全体': 'fld' };
 const TYPE = { '地上': 'ground', '空中': 'air', '水中': 'water' };
 
 // ---- 文 → 効果の部品 ----
@@ -198,6 +198,24 @@ const BY_NO = {
   222: [{ t: 'emerge', to: 'C-062' }], // 羽化(まゆ化した子を、ムラサキチュウ(C-062)と取りかえて最大まで回復。社長 2026-10-25)
   352: [{ t: 'fuse' }], // 合体(act.fuse … { a: メインを出す子, b: サブを出す子, no: 出る混血 })
   348: [{ t: 'attach', when: { kinds: ['spe'], subSpe: true } }, { t: 'ancient' }], // 太古の記憶(混血の子が、サブの種族の特殊技を出せる)
+  // ---- 全体カード(2026-10-25。場に1枚だけ残り、両方のブリーダーに効く。部品の中身は 82 の cardFieldEff・CARD_EFFECT_DOC) ----
+  // おいのり: 相手が全体カードを出した瞬間に出せる。その全体カードは効かずに捨て札へ(前から場にあった全体カードはそのまま)
+  280: [{ t: 'pray' }],
+  F115: [{ t: 'fieldDrawOnPlay', n: 1 }],                       // 冷静な判断: 出した時に1枚引く(場に残るあいだは何もしない)
+  F116: [{ t: 'fieldDmg', kinds: ['pow', 'int'], n: 1 }],        // 壮絶な戦い
+  F117: [{ t: 'fieldDmg', kinds: ['int'], n: -2 }],              // 興奮のるつぼ
+  F118: [{ t: 'fieldCost', n: -1 }],                             // ホリィの声援(0より下にはならない)
+  F119: [{ t: 'fieldBanDmg', kinds: ['pow', 'int'], max: 3 }],   // 必殺技の応酬(最終的なダメージが3以下は出せない)
+  F120: [{ t: 'fieldMill', n: 2 }],                              // 大混乱(ドローの前に、その番の人の山札の上から2枚を捨てる)
+  F255: [{ t: 'fieldPurePride' }],                               // 純血のプライド(純血の子の攻撃に、派生の子は回避を出せない)
+  F256: [{ t: 'fieldCost', n: 1 }],                              // 師匠のまなざし
+  F257: [{ t: 'fieldBanKind', kinds: ['spe'] }],                 // がんじがらめ
+  F258: [{ t: 'fieldBanDmg', kinds: ['pow', 'int'], min: 4 }],   // 必殺技の封印(最終的なダメージが4以上は出せない)
+  F259: [{ t: 'fieldType', type: 'ground' }],                    // 悪天候(場から無くなったら元に戻る)
+  F260: [{ t: 'fieldBurn', n: 1 }],                              // 灼熱の地(攻撃を終えたとき、攻撃した側の全員に1)
+  F261: [{ t: 'fieldDmg', kinds: ['int'], n: 1 }],               // 飛び散る火花
+  F262: [{ t: 'fieldType', type: 'air' }],                       // 空間のひずみ(場から無くなったら元に戻る)
+  F263: [{ t: 'fieldGutsMax', n: 2 }],                           // 長期戦の予感(ガッツの段で2枚まで)
 };
 
 // カードの詳しい画面に足す一言。文の読み方を決めた札だけ(2026-10-25 社長「推奨どおり」。一覧: docs/progress/card-battle/pending-83/README.md)
@@ -237,6 +255,14 @@ const NOTE_BY_NO = {
   222: '取りかえる先はムラサキチュウです。ライフは、ムラサキチュウの最大まで回復します',
   352: 'メインとサブが合う混血だけ出せます。ライフは最大で、メインを出した子の場所に出ます。出た子だけ、そのターン攻撃できません',
   348: '混血の子の特殊技に付けると、サブの種族の特殊技も出せます(一緒に出します)',
+  // 全体カード(2026-10-25)
+  280: '相手が全体カードを出した瞬間に出せます(相手の番でも出せます)。その全体カードは効かずに捨て札へ行き、前から場にあった全体カードはそのまま残ります',
+  F115: '出した時に1枚引きます。場に残っているあいだは、ほかに何もしません',
+  F119: '最終的なダメージは、技に付けた札と全体カードの分まで足した数です',
+  F258: '最終的なダメージは、技に付けた札と全体カードの分まで足した数です',
+  F120: 'それぞれの番のドローの前に、その番の人の山札の上から2枚を捨て札にします',
+  F260: '攻撃を終えて「攻撃おわり」にしたとき、攻撃した側のモンスター全員に1ダメージです',
+  F263: 'ガッツの段でガッツにできるのは2枚までです(手札が5枚のときに山札の上がガッツになるのは数えません)',
 };
 const splitSentences = (text) => (text || '').split(/(?<=。)/).map((s) => s.trim()).filter(Boolean);
 const effectsOf = (no, text) => {
@@ -275,14 +301,16 @@ const build = () => {
         text: s.text || '', user: id, wave: no >= 357 ? 4 : WAVE_OF_SPECIES[id], ready: eff.ready, effects: eff.effects, img: s.no, ...(NOTE_BY_NO[no] ? { note: NOTE_BY_NO[no] } : {}) });
     }
   }
-  for (const [dir, cat] of [['any-monster', 'any'], ['breeder', 'breeder']]) {
+  // 全体カード(breeder-field)は番号に F が付く(技カードの番号と重ならないように)。弾は F のあとの数で決める(115〜120 は第1弾・255〜263 は第3弾)
+  for (const [dir, cat] of [['any-monster', 'any'], ['breeder', 'breeder'], ['breeder-field', 'breeder']]) {
     const j = readJson(dir);
     for (const s of j.skills) {
-      const no = Number(s.no);
+      const field = /^F\d+$/.test(s.no);
+      const no = field ? s.no : Number(s.no);
       const eff = effectsOf(no, s.text);
       if (!eff.ready) notReady.push(`${s.no} ${s.name}: ${eff.missing}`);
       add({ no: s.no, name: s.name, kind: KIND[s.kind], damage: Number.isFinite(s.damage) ? s.damage : null, guts: s.guts,
-        text: s.text || '', user: cat, wave: waveOfNo(no), ready: eff.ready, effects: eff.effects, img: s.no, ...(NOTE_BY_NO[no] ? { note: NOTE_BY_NO[no] } : {}) });
+        text: s.text || '', user: cat, wave: waveOfNo(field ? Number(s.no.slice(1)) : no), ready: eff.ready, effects: eff.effects, img: s.no, ...(NOTE_BY_NO[no] ? { note: NOTE_BY_NO[no] } : {}) });
     }
   }
   const hy = readJson('hybrid');

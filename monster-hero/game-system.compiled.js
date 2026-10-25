@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 323f88b08905058f
+// source-sha256: 9176c9d2c7465c80
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-26 03:41";
+const BUILD_DATE = "2026-10-26 04:10";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -82745,6 +82745,13 @@ const cardOf = (db, no) => db && db.cards && db.cards[no] || null;
 const cardMonsterOf = (db, no) => db && db.monsters && db.monsters[no] || null;
 const cardIsAttackKind = k => k === 'pow' || k === 'int' || k === 'spe';
 const cardIsGuardKind = k => k === 'dge' || k === 'blk';
+const cardFieldEff = (st, t) => st && st.field && Array.isArray(st.field.effects) ? st.field.effects.find(e => e.t === t) || null : null;
+const cardFieldCostOf = (st, n) => {
+  const e = cardFieldEff(st, 'fieldCost');
+  return e ? Math.max(0, n + e.n) : n;
+};
+const cardGuardCost = (st, c) => cardFieldCostOf(st, c && c.guts || 0);
+const cardFieldDmgAdd = (st, main) => (st && st.field && Array.isArray(st.field.effects) ? st.field.effects : []).filter(e => e.t === 'fieldDmg' && main && e.kinds.includes(main.kind)).reduce((a, e) => a + e.n, 0);
 const cardClone = st => JSON.parse(JSON.stringify(st));
 const cardOther = p => 1 - p;
 const cardUsableBy = (card, mon) => {
@@ -82756,7 +82763,7 @@ const cardUsableBy = (card, mon) => {
   if (mon.sub && card.user === mon.sub && cardIsGuardKind(card.kind)) return true;
   return false;
 };
-const cardMonType = (mon, turn) => mon.waterUntil >= turn ? 'water' : mon.airUntil >= turn ? 'air' : mon.type;
+const cardMonType = (mon, turn) => mon.fieldType ? mon.fieldType : mon.waterUntil >= turn ? 'water' : mon.airUntil >= turn ? 'air' : mon.type;
 const cardLog = (st, text, extra) => {
   st.log.push({
     turn: st.turn,
@@ -82809,6 +82816,7 @@ const cardCreateGame = (db, {
       discard: [],
       breederUsed: false,
       gutsGuardUntil: -1,
+      prayTurn: -1,
       rng: (sh.seed ^ 0x9E3779B9) >>> 0
     };
   });
@@ -82821,6 +82829,7 @@ const cardCreateGame = (db, {
     phase: 'setup',
     players,
     pending: null,
+    field: null,
     forbid: {},
     winner: null,
     reason: null,
@@ -82865,6 +82874,12 @@ const cardBeginTurn = st => {
     turn: st.turn
   });
   if (st.turn === 1) return;
+  const mill = cardFieldEff(st, 'fieldMill');
+  if (mill) {
+    const k = Math.min(mill.n, me.deck.length);
+    for (let i = 0; i < k; i++) me.discard.push(me.deck.pop());
+    if (k) cardLog(st, `大混乱: ${me.name}は山札の上から${k}枚を捨てた`);
+  }
   if (me.hand.length >= CARD_BATTLE_HAND_MAX) {
     if (!me.deck.length) {
       cardGameOver(st, cardOther(p), '山札切れ');
@@ -82946,7 +82961,7 @@ const cardActionCost = (db, st, p, hand, idxs) => {
     if (e) main -= e.n;
   });
   if (att.some(c => cardHasEff(c, 'attachFree'))) main = 0;
-  return Math.max(0, main) + att.reduce((s, c) => s + (c.guts || 0), 0);
+  return cardFieldCostOf(st, Math.max(0, main) + att.reduce((s, c) => s + (c.guts || 0), 0));
 };
 const CARD_ATTACH_FLAGS = ['attachNoEvade', 'attachNoGuard', 'attachNoBlockReduce', 'attachNoZeroGuard', 'attachNoGuardIfGuarded', 'attachNoEvadeHybrid'];
 const cardAttachMods = cards => {
@@ -82965,6 +82980,83 @@ const cardAttachMods = cards => {
     });
   });
   return m;
+};
+const cardFieldBanned = (db, st, p, mi, card, idxs) => {
+  if (!st.field || !card) return false;
+  const kinds = cardFieldEff(st, 'fieldBanKind');
+  if (kinds && mi >= 0 && kinds.kinds.includes(card.kind)) return true;
+  const ban = cardFieldEff(st, 'fieldBanDmg');
+  if (!ban || !ban.kinds.includes(card.kind)) return false;
+  const me = st.players[p];
+  const cards = idxs.map(i => cardOf(db, me.hand[i])).filter(Boolean);
+  const mods = cardAttachMods(cards);
+  const mon = mi >= 0 ? me.mons[mi] : null;
+  let mult = mods.mult;
+  if (mon && mon.mult && mon.mult.turn === st.turn && mon.mult.kinds.includes(card.kind)) mult *= mon.mult.n;
+  if (mon && mon.charge && mon.charge.kinds.includes(card.kind)) mult *= mon.charge.n;
+  const dmg = Math.max(0, (cardBaseDamage(db, st, p, mi, card, cards) + mods.add) * mult + cardFieldDmgAdd(st, card));
+  return ban.max !== undefined && dmg <= ban.max || ban.min !== undefined && dmg >= ban.min;
+};
+const cardFieldClear = st => {
+  if (!st.field) return;
+  const f = st.field;
+  st.players[f.p].discard.push(f.no);
+  st.field = null;
+  st.players.forEach(pl => pl.mons.forEach(m => {
+    m.fieldType = null;
+  }));
+};
+const cardFieldPlace = (db, st, p, no) => {
+  const c = cardOf(db, no);
+  const old = st.field ? cardOf(db, st.field.no) : null;
+  if (old) cardLog(st, `全体カード「${old.name}」は場から無くなった`);
+  cardFieldClear(st);
+  st.field = {
+    no,
+    p,
+    effects: (c.effects || []).map(e => ({
+      ...e
+    }))
+  };
+  cardLog(st, `全体カード「${c.name}」が場に出た`, {
+    kind: 'field'
+  });
+  cardEvent(st, {
+    t: 'field',
+    p,
+    no
+  });
+  const ty = cardFieldEff(st, 'fieldType');
+  if (ty) st.players.forEach(pl => pl.mons.forEach(m => {
+    m.fieldType = ty.type;
+  }));
+  const dr = cardFieldEff(st, 'fieldDrawOnPlay');
+  if (dr) {
+    const k = cardDrawN(st, p, dr.n);
+    if (k) cardLog(st, `${st.players[p].name}は${k}枚引いた`);
+  }
+};
+const cardPrayWindowOpen = (st, q) => {
+  const me = st.players[q];
+  return me.hand.length > 0 && me.prayTurn !== st.turn && me.guts.length >= cardFieldCostOf(st, 0);
+};
+const cardPrayOptions = (db, st) => {
+  const pr = st.pendingPray;
+  if (!pr) return [];
+  const me = st.players[pr.p];
+  const out = [];
+  const i = me.hand.findIndex(no => {
+    const c = cardOf(db, no);
+    return c && c.ready && cardHasEff(c, 'pray');
+  });
+  if (i >= 0 && me.guts.length >= cardGuardCost(st, cardOf(db, me.hand[i]))) out.push({
+    type: 'pray',
+    hand: [i]
+  });
+  out.push({
+    type: 'pray'
+  });
+  return out;
 };
 const cardAttachOk = (db, st, p, mon, main, c) => {
   const w = (cardEff(c, 'attach') || {}).when || {};
@@ -83121,7 +83213,7 @@ const cardSpeTargets = (db, st, p, mi, card) => {
   return [null];
 };
 const cardAttackOptions = (db, st) => {
-  if (st.phase !== 'main' || st.pending || st.pendingChoice || st.pendingReveal || st.winner !== null) return [];
+  if (st.phase !== 'main' || st.pending || st.pendingChoice || st.pendingReveal || st.pendingPray || st.winner !== null) return [];
   const p = st.active;
   if (st.lock && st.lock.p === p && st.lock.turn === st.turn) return [];
   const me = st.players[p];
@@ -83130,7 +83222,7 @@ const cardAttackOptions = (db, st) => {
   const out = [];
   me.hand.forEach((no, hi) => {
     const card = cardOf(db, no);
-    if (!card || !card.ready || !cardIsAttackKind(card.kind)) return;
+    if (!card || !card.ready || !(cardIsAttackKind(card.kind) || card.kind === 'fld')) return;
     if (cardHasEff(card, 'attach')) return;
     if (card.user === 'breeder') {
       if (me.breederUsed && !cardBreederFree(st, p)) return;
@@ -83138,6 +83230,15 @@ const cardAttackOptions = (db, st) => {
       cardAttachSets(db, st, p, null, card, [hi]).forEach(att => {
         const hand = [hi, ...att];
         if (cardActionCost(db, st, p, me.hand, hand) > guts) return;
+        if (card.kind === 'fld') {
+          if (!att.length) out.push({
+            type: 'breeder',
+            hand,
+            target: null
+          });
+          return;
+        }
+        if (cardFieldBanned(db, st, p, -1, card, hand)) return;
         if (card.kind === 'spe') {
           if (cardHasEff(card, 'fuse')) {
             cardFuseOptions(db, st, p).forEach(fuse => out.push({
@@ -83227,6 +83328,7 @@ const cardAttackOptions = (db, st) => {
       withAttach.forEach(idxs => {
         const cost = cardActionCost(db, st, p, me.hand, idxs);
         if (cost > guts) return;
+        if (cardFieldBanned(db, st, p, mi, card, idxs)) return;
         if (card.kind === 'spe') {
           const forms = cardHasEff(card, 'form') ? ['air', 'ground'] : [undefined];
           cardSpeTargets(db, st, p, mi, card).forEach(target => forms.forEach(form => out.push(form ? {
@@ -83303,6 +83405,8 @@ const cardGuardOptions = (db, st) => {
   if (fl.attachNoGuard) return [];
   if (pd.redirected) return [];
   const isArea = cardHasEff(atkCard, 'area');
+  const atkMon0 = pd.mon >= 0 ? st.players[pd.attacker].mons[pd.mon] : null;
+  const pride = !!cardFieldEff(st, 'fieldPurePride') && atkMon0 && !atkMon0.main && !!target.main;
   const evadeBlocked = cardHasEff(atkCard, 'noEvade') || pd.noEvade || fl.attachNoEvade;
   const guts = me.guts.length;
   const out = [];
@@ -83311,7 +83415,8 @@ const cardGuardOptions = (db, st) => {
     const c = cardOf(db, no);
     if (!c || !c.ready || !cardIsGuardKind(c.kind)) return;
     if (forbid.includes(c.kind)) return;
-    if (c.guts > guts) return;
+    if (cardGuardCost(st, c) > guts) return;
+    if (pride && c.kind === 'dge') return;
     if (fl.attachNoZeroGuard && !c.guts) return;
     if (fl.bind && c.name === fl.bind) return;
     if (cardHasEff(c, 'liftAllies') || cardHasEff(c, 'waterAll')) {
@@ -83425,6 +83530,7 @@ const cardLegalActions = (db, st) => {
     type: 'setupGuts',
     hand: []
   }];
+  if (st.pendingPray) return cardPrayOptions(db, st);
   if (st.pendingReveal) return [{
     type: 'reveal'
   }];
@@ -83444,7 +83550,7 @@ const cardLegalActions = (db, st) => {
   }];
   return [];
 };
-const cardDecider = st => st.pendingReveal ? st.pendingReveal.p : st.pendingChoice ? st.pendingChoice.p : st.pending ? st.pending.defender : st.active;
+const cardDecider = st => st.pendingPray ? st.pendingPray.p : st.pendingReveal ? st.pendingReveal.p : st.pendingChoice ? st.pendingChoice.p : st.pending ? st.pending.defender : st.active;
 const cardUseWho = (db, st, p, mi, cardNo) => {
   const c = cardOf(db, cardNo);
   const pl = st.players[p];
@@ -83533,6 +83639,19 @@ const cardStartAttack = (db, st, act) => {
     cards: used,
     target: act.target || null
   });
+  if (main.kind === 'fld') {
+    const q = cardOther(p);
+    if (cardPrayWindowOpen(st, q)) {
+      st.pendingPray = {
+        p: q,
+        by: p,
+        no: mainNo
+      };
+      return;
+    }
+    cardFieldPlace(db, st, p, mainNo);
+    return;
+  }
   if (main.kind === 'spe') {
     cardApplySpecial(db, st, p, mi, main, act.target, act);
     me.discard.push(...used);
@@ -83627,6 +83746,7 @@ const cardResolveTarget = (db, st) => {
     if (pd.reduceHalf) dmg -= Math.floor(dmg / 2);
     dmg = Math.max(0, dmg - pd.reduce);
   }
+  if (dmg > 0) dmg = Math.max(0, dmg + cardFieldDmgAdd(st, main));
   let reflected = 0;
   if (pd.reflect) {
     if (pd.reflect.keep) reflected = Math.floor(dmg * pd.reflect.frac);else {
@@ -84041,7 +84161,7 @@ const cardApplyGuard = (db, st, act) => {
   const no = me.hand[act.hand];
   const c = cardOf(db, no);
   cardTakeFromHand(st, q, [act.hand]);
-  cardPayGuts(st, q, c.guts);
+  cardPayGuts(st, q, cardGuardCost(st, c));
   me.discard.push(no);
   const user = me.mons[act.mon];
   user.guardTurn = st.turn;
@@ -84112,6 +84232,42 @@ const cardApplyAction = (db, st0, act) => {
   const st = cardClone(st0);
   st.events = [];
   const p = st.active;
+  if (st.pendingPray) {
+    if (act.type !== 'pray') return null;
+    const pr = st.pendingPray;
+    const key = o => JSON.stringify(o.hand || null);
+    if (!cardPrayOptions(db, st0).some(o => key(o) === key(act))) return null;
+    st.pendingPray = null;
+    const fc = cardOf(db, pr.no);
+    if (act.hand) {
+      const me = st.players[pr.p];
+      const no = me.hand[act.hand[0]];
+      const c = cardOf(db, no);
+      cardTakeFromHand(st, pr.p, act.hand);
+      cardPayGuts(st, pr.p, cardGuardCost(st, c));
+      me.discard.push(no);
+      me.prayTurn = st.turn;
+      st.players[pr.by].discard.push(pr.no);
+      cardLog(st, `${me.name}の「${c.name}」で、全体カード「${fc.name}」は場から無くなった`, {
+        kind: 'use',
+        p: pr.p,
+        cards: [no]
+      });
+      cardEvent(st, {
+        t: 'use',
+        p: pr.p,
+        mon: -1,
+        cards: [no],
+        target: null
+      });
+      cardEvent(st, {
+        t: 'pray',
+        p: pr.p,
+        no: pr.no
+      });
+    } else cardFieldPlace(db, st, pr.by, pr.no);
+    return st;
+  }
   if (st.pendingReveal) {
     if (act.type !== 'reveal') return null;
     const nx = st.pendingReveal.next;
@@ -84201,6 +84357,29 @@ const cardApplyAction = (db, st0, act) => {
   }
   if (st.phase === 'main') {
     if (act.type === 'endAttacks') {
+      const burn = cardFieldEff(st, 'fieldBurn');
+      if (burn) {
+        st.players[p].mons.forEach((m, mi) => {
+          if (m.ko) return;
+          const d = m.safeUntil >= st.turn ? 0 : burn.n;
+          m.life = Math.max(0, m.life - d);
+          cardEvent(st, {
+            t: 'hit',
+            p,
+            m: mi,
+            dmg: d,
+            self: true
+          });
+          cardLog(st, `灼熱の地: ${m.name}に${d}ダメージ`, {
+            kind: 'hit'
+          });
+          if (m.life <= 0) cardKo(st, p, mi);
+        });
+        if (st.players[p].mons.every(m => m.ko)) {
+          cardGameOver(st, cardOther(p), '全員KO');
+          return st;
+        }
+      }
       st.phase = 'guts';
       return st;
     }
@@ -84214,6 +84393,8 @@ const cardApplyAction = (db, st0, act) => {
   }
   if (st.phase === 'guts') {
     if (act.type !== 'guts') return null;
+    const gm = cardFieldEff(st, 'fieldGutsMax');
+    if (gm && (act.hand || []).length > gm.n) return null;
     const taken = cardTakeFromHand(st, p, act.hand || []);
     st.players[p].guts.push(...taken);
     if (taken.length) cardLog(st, `${st.players[p].name}は${taken.length}枚をガッツにした`);
@@ -84354,7 +84535,7 @@ const CARD_AI_PLAY_TUNE = Object.freeze({
     easy: 0.12,
     normal: 0.06,
     hard: 0,
-    expert: 0.15,
+    expert: 0.1,
     master: 0.165
   },
   kiki: {
@@ -84376,7 +84557,7 @@ const CARD_AI_PLAY_TUNE = Object.freeze({
     normal: -0.15,
     hard: -0.105,
     expert: 0.03,
-    master: 0.12
+    master: 0
   }
 });
 const cardAiPolicy = (habitId, levelId) => {
@@ -84413,6 +84594,32 @@ const cardAiEvadeChance = (db, st, p, card, target, level, flags = {}) => {
   const frac = unseen.filter(fits).length / unseen.length;
   return Math.min(0.8, 1 - Math.pow(1 - frac, opp.hand.length));
 };
+const cardAiScoreField = (db, st, p, card, cost) => {
+  const me = st.players[p],
+    op = st.players[cardOther(p)];
+  const mine = [...me.hand, ...me.deck, ...me.discard].map(n => cardOf(db, n)).filter(Boolean);
+  const theirs = op.discard.map(n => cardOf(db, n)).filter(Boolean);
+  const share = (list, f, d) => list.length ? list.filter(f).length / list.length : d;
+  const alive = pl => pl.mons.filter(m => !m.ko);
+  let v = -cost * 0.25;
+  if (st.field) v += st.field.p === p ? -3 : 0.8;
+  (card.effects || []).forEach(e => {
+    if (e.t === 'fieldDrawOnPlay') v += 0.9 * e.n;
+    if (e.t === 'fieldDmg') v += e.n * (share(mine, c => e.kinds.includes(c.kind), 0.5) - share(theirs, c => e.kinds.includes(c.kind), 0.5)) * 4;
+    if (e.t === 'fieldCost') v += e.n < 0 ? 0.6 : (op.guts.length - me.guts.length) * 0.2;
+    if (e.t === 'fieldBanDmg') {
+      const hit = c => ['pow', 'int'].includes(c.kind) && Number.isFinite(c.damage) && (e.max !== undefined ? c.damage <= e.max : c.damage >= e.min);
+      v += (share(theirs, hit, 0.3) - share(mine, hit, 0.3)) * 4;
+    }
+    if (e.t === 'fieldMill') v += me.deck.length > op.deck.length + 5 ? 1 : -1.5;
+    if (e.t === 'fieldPurePride') v += (alive(op).filter(m => m.main).length - alive(me).filter(m => m.main).length) * 0.6;
+    if (e.t === 'fieldBanKind') v += (share(theirs, c => e.kinds.includes(c.kind), 0.2) - share(mine, c => e.kinds.includes(c.kind), 0.2)) * 4;
+    if (e.t === 'fieldType') v += (alive(me).filter(m => m.type === e.type).length - alive(op).filter(m => m.type === e.type).length) * 0.2;
+    if (e.t === 'fieldBurn') v += (alive(me).length - alive(op).length) * 0.5 - 0.4;
+    if (e.t === 'fieldGutsMax') v += (me.guts.length - op.guts.length) * 0.15;
+  });
+  return v;
+};
 const cardAiScoreAttack = (db, st, opt, policy) => {
   const p = st.active;
   const me = st.players[p];
@@ -84423,6 +84630,7 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
   const main = cardOf(db, me.hand[opt.hand[0]]);
   const cost = cardActionCost(db, st, p, me.hand, opt.hand);
   let score = 0;
+  if (main.kind === 'fld') return cardAiScoreField(db, st, p, main, cost);
   if (main.kind === 'spe') {
     (main.effects || []).forEach(e => {
       if (e.t === 'heal' && opt.target) {
@@ -84643,9 +84851,10 @@ const cardAiChooseGuts = (db, st, policy) => {
     if (pick.length >= Math.max(need, pick.length) || me.hand.length - pick.length <= 1) break;
     if (!pick.includes(o.i)) pick.push(o.i);
   }
+  const gm = cardFieldEff(st, 'fieldGutsMax');
   return {
     type: 'guts',
-    hand: pick
+    hand: gm ? pick.slice(0, gm.n) : pick
   };
 };
 const cardAiFillBind = (db, st, o, policy) => {
@@ -84671,6 +84880,12 @@ const cardAiFillBind = (db, st, o, policy) => {
   };
 };
 const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
+  if (st.pendingPray) {
+    const use = cardPrayOptions(db, st).find(o => o.hand);
+    return use && rand() >= (policy.level.sloppy || 0) ? use : {
+      type: 'pray'
+    };
+  }
   if (st.pendingReveal) return {
     type: 'reveal'
   };
@@ -84721,9 +84936,10 @@ const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
   if (st.phase === 'guts') {
     if (!sloppy) return cardAiChooseGuts(db, st, policy);
     const hand = st.players[st.active].hand;
+    const gm = cardFieldEff(st, 'fieldGutsMax');
     return {
       type: 'guts',
-      hand: hand.map((_, i) => i).filter(() => rand() < 0.4)
+      hand: hand.map((_, i) => i).filter(() => rand() < 0.4).slice(0, gm ? gm.n : 99)
     };
   }
   const opts = cardAttackOptions(db, st);
@@ -85179,7 +85395,8 @@ const CARD_KIND_ORDER = Object.freeze({
   int: 1,
   spe: 2,
   dge: 3,
-  blk: 4
+  blk: 4,
+  fld: 5
 });
 const cardSortKey = (db, no) => {
   const c = cardOf(db, no);
@@ -86586,6 +86803,13 @@ const CARD_PACK_SHARED = Object.freeze({
   p7: ['275', '278', '345', '279', '346', '280'],
   p8: ['351', '347', '352', '348', '366', '349', '350']
 });
+const CARD_PACK_FIELD = Object.freeze({
+  p8: ['F115', 'F116', 'F117', 'F118', 'F119', 'F120'],
+  p7: ['F255', 'F256', 'F257', 'F258'],
+  p4: ['F259', 'F260', 'F261'],
+  p6: ['F262'],
+  p5: ['F263']
+});
 const CARD_PACK_LEGACY_IDS = Object.freeze(['w1', 'w2', 'w3', 'w4', 'hybrid']);
 const CARD_PACK_PITY_FROM = Object.freeze({
   p1: 'w1',
@@ -86614,7 +86838,7 @@ const cardPackIdOf = (db, no) => {
   if (m) return cardPackIdOfSpecies(String(m.wave) === 'hybrid' ? m.main : m.species);
   const c = db.cards[no];
   if (!c) return null;
-  if (c.user === 'any' || c.user === 'breeder') return (Object.entries(CARD_PACK_SHARED).find(([, list]) => list.includes(no)) || [])[0] || null;
+  if (c.user === 'any' || c.user === 'breeder') return (Object.entries(CARD_PACK_SHARED).find(([, list]) => list.includes(no)) || Object.entries(CARD_PACK_FIELD).find(([, list]) => list.includes(no)) || [])[0] || null;
   return cardPackIdOfSpecies(c.user);
 };
 const cardPackTechPool = (db, pack) => Object.values(db.cards).filter(c => c.ready && cardPackIdOf(db, c.no) === pack.id).map(c => c.no).sort();
@@ -87153,7 +87377,8 @@ const CARD_KIND_LABEL = Object.freeze({
   int: 'かしこさ',
   spe: '特殊',
   dge: '回避',
-  blk: '防御'
+  blk: '防御',
+  fld: '全体'
 });
 const CARD_TYPE_LABEL = Object.freeze({
   ground: '地上',
@@ -88295,8 +88520,18 @@ const CardBattleBoard = ({
   const opp = st.players[CARD_CPU];
   const decider = cardDeciderOf(st);
   const myTurn = st.winner === null && decider === CARD_ME;
-  const mode = !myTurn ? 'wait' : st.pendingReveal ? 'reveal' : st.pendingChoice ? 'choose' : st.pendingDiscard ? 'discard' : st.phase === 'setup' ? 'setup' : st.pending ? 'guard' : st.phase === 'main' ? 'attack' : st.phase === 'guts' ? 'guts' : 'wait';
+  const mode = !myTurn ? 'wait' : st.pendingPray ? 'pray' : st.pendingReveal ? 'reveal' : st.pendingChoice ? 'choose' : st.pendingDiscard ? 'discard' : st.phase === 'setup' ? 'setup' : st.pending ? 'guard' : st.phase === 'main' ? 'attack' : st.phase === 'guts' ? 'guts' : 'wait';
   const attackOpts = mode === 'attack' ? cardAttackOptions(db, st).filter(tutAllow) : [];
+  const prayUse = mode === 'pray' ? cardPrayOptions(db, st).find(o => o.hand) || null : null;
+  const prayKey = mode === 'pray' && !prayUse ? `${st.turn}-${st.log.length}` : '';
+  useEffect(() => {
+    if (!prayKey) return undefined;
+    const t = setTimeout(() => step({
+      type: 'pray'
+    }), Math.round(500 * pace));
+    return () => clearTimeout(t);
+  }, [prayKey]);
+  const gutsMax = (cardFieldEff(st, 'fieldGutsMax') || {}).n || 99;
   const revealKey = mode === 'reveal' ? `${st.turn}-${st.log.length}` : '';
   useEffect(() => {
     if (!revealKey) return undefined;
@@ -88423,7 +88658,7 @@ const CardBattleBoard = ({
       return;
     }
     if (mode === 'guts' || mode === 'setup' || mode === 'discard') {
-      const max = mode === 'setup' ? CARD_BATTLE_SETUP_GUTS_MAX : mode === 'discard' ? st.pendingDiscard.n : 99;
+      const max = mode === 'setup' ? CARD_BATTLE_SETUP_GUTS_MAX : mode === 'discard' ? st.pendingDiscard.n : gutsMax;
       setPicks(cur => cur.includes(i) ? cur.filter(x => x !== i) : cur.length >= max ? cur : [...cur, i]);
       return;
     }
@@ -88517,7 +88752,7 @@ const CardBattleBoard = ({
       out[`${CARD_ME}-${o.mon}`] = o;
     });
     if ((mode === 'guts' || mode === 'setup') && !picks.includes(i)) {
-      const max = mode === 'setup' ? CARD_BATTLE_SETUP_GUTS_MAX : 99;
+      const max = mode === 'setup' ? CARD_BATTLE_SETUP_GUTS_MAX : gutsMax;
       if (picks.length < max && (!tutorial || cardTutorialHandOk(tutStage.id, st, i))) out.guts = 'pick';
     }
     return out;
@@ -88713,6 +88948,9 @@ const CardBattleBoard = ({
     if (mode === 'reveal') return React.createElement("div", {
       className: "flex-1 text-center text-[13px] font-bold text-slate-300"
     }, "相手に手札を見せています…");
+    if (mode === 'pray') return React.createElement("div", {
+      className: "flex-1 text-center text-[13px] font-bold text-amber-200"
+    }, prayUse ? 'おいのりを使うか選んでください' : '相手が全体カードを出しました');
     if (mode === 'choose') return React.createElement("div", {
       className: "flex-1 text-center text-[13px] font-bold text-amber-200"
     }, "カードを1枚選んでください");
@@ -88770,7 +89008,7 @@ const CardBattleBoard = ({
       })
     }, "攻撃おわり → ガッツへ"));
   })();
-  const guide = tutorial && (tutStage.next || tutQ.length > 1) ? '' : mode === 'attack' ? sel ? monChosen === undefined ? '使う子をタップ' : needTarget ? '狙う相手をタップ' : '「使う」をタップ' : attackOpts.length ? '技をタップ → 相手をタップ(相手まで運んでもOK)' : '使える技がありません →「攻撃おわり」でガッツへ' : mode === 'guard' ? guardOpts.length ? '使える回避・防御だけが明るくなっています' : '使える回避・防御はありません' : mode === 'guts' ? 'ガッツにするカードをタップ(ガッツへ運んでもOK・何枚でも)' : mode === 'setup' ? '後攻: 始める前に2枚までガッツにできます' : mode === 'discard' ? `捨てるカードを${st.pendingDiscard ? st.pendingDiscard.n : 0}枚タップ` : '';
+  const guide = tutorial && (tutStage.next || tutQ.length > 1) ? '' : mode === 'attack' ? sel ? monChosen === undefined ? '使う子をタップ' : needTarget ? '狙う相手をタップ' : '「使う」をタップ' : attackOpts.length ? '技をタップ → 相手をタップ(相手まで運んでもOK)' : '使える技がありません →「攻撃おわり」でガッツへ' : mode === 'guard' ? guardOpts.length ? '使える回避・防御だけが明るくなっています' : '使える回避・防御はありません' : mode === 'guts' ? gutsMax < 99 ? `ガッツにするカードをタップ(長期戦の予感: ${gutsMax}枚まで)` : 'ガッツにするカードをタップ(ガッツへ運んでもOK・何枚でも)' : mode === 'setup' ? '後攻: 始める前に2枚までガッツにできます' : mode === 'discard' ? `捨てるカードを${st.pendingDiscard ? st.pendingDiscard.n : 0}枚タップ` : '';
   return React.createElement("div", {
     ref: boardRef,
     "data-mh-screen": true,
@@ -88925,7 +89163,20 @@ const CardBattleBoard = ({
     className: `${tiny ? 'whitespace-nowrap text-[12px]' : 'text-[13px]'} font-black leading-tight`
   }, action.who, React.createElement("span", {
     className: tiny ? 'text-[13px] text-amber-200' : 'block text-[15px] text-amber-200'
-  }, "「", action.cards.map(n => (cardOf(db, n) || {}).name).join('＋'), "」"))), React.createElement("div", {
+  }, "「", action.cards.map(n => (cardOf(db, n) || {}).name).join('＋'), "」"))), st.field && cardOf(db, st.field.no) && React.createElement("button", {
+    type: "button",
+    "data-card-env": st.field.no,
+    "data-card-env-side": st.field.p === CARD_ME ? 'me' : 'foe',
+    onClick: () => setDetail(st.field.no),
+    className: "relative z-[1] flex max-w-full items-center gap-1.5 rounded-xl border-2 border-emerald-300/80 bg-emerald-950/80 px-2 py-0.5 text-left active:scale-[.98]"
+  }, React.createElement("span", {
+    className: "shrink-0 whitespace-nowrap rounded-md bg-emerald-400 px-1 py-0.5 text-[10px] font-black text-emerald-950"
+  }, "全体"), React.createElement("span", {
+    className: "min-w-0 text-[12px] font-black leading-tight text-emerald-50",
+    style: JA_WRAP_STYLE
+  }, cardOf(db, st.field.no).name, React.createElement("small", {
+    className: "ml-1 text-[10px] font-bold text-emerald-200"
+  }, "(", st.field.p === CARD_ME ? '自分' : '相手', "が出した)"))), React.createElement("div", {
     "data-card-log": true,
     className: "relative z-[1] max-w-full rounded-xl border border-white/15 bg-black/45 px-3 py-1 text-center text-[13px] font-bold leading-snug",
     style: JA_WRAP_STYLE
@@ -89253,7 +89504,40 @@ const CardBattleBoard = ({
     type: "button",
     className: "mt-2 min-h-[44px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200",
     onClick: () => setSplitAsk(null)
-  }, "やめる"))), choice && React.createElement("div", {
+  }, "やめる"))), mode === 'pray' && prayUse && (() => {
+    const fc = cardOf(db, st.pendingPray.no);
+    return React.createElement("div", {
+      "data-card-pray": true,
+      className: "fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3"
+    }, React.createElement("div", {
+      className: "w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900 p-3 text-slate-100"
+    }, React.createElement("div", {
+      className: "text-[15px] font-black",
+      style: JA_LABEL_STYLE
+    }, jaWrap(`相手が全体カード「${fc ? fc.name : ''}」を出しました`)), fc && React.createElement("button", {
+      type: "button",
+      onClick: () => setDetail(fc.no),
+      className: "mt-1 block w-full rounded-xl bg-slate-800 px-2 py-1.5 text-left text-[12px] font-bold leading-snug text-slate-200",
+      style: JA_WRAP_STYLE
+    }, fc.text), React.createElement("p", {
+      className: "mt-2 text-[12px] font-bold leading-snug text-amber-200",
+      style: JA_WRAP_STYLE
+    }, jaWrap('「おいのり」を使うと、この全体カードは効かずに捨て札へ行きます')), React.createElement("div", {
+      className: "mt-2 grid grid-cols-2 gap-2"
+    }, React.createElement("button", {
+      type: "button",
+      "data-card-pray-use": true,
+      onClick: () => step(prayUse),
+      className: "mh-button mh-button-primary min-h-[48px] rounded-xl text-[14px] font-black"
+    }, "おいのりを使う"), React.createElement("button", {
+      type: "button",
+      "data-card-pray-pass": true,
+      onClick: () => step({
+        type: 'pray'
+      }),
+      className: "mh-button min-h-[48px] rounded-xl border border-white/20 bg-slate-800 text-[14px] font-black"
+    }, "使わない"))));
+  })(), choice && React.createElement("div", {
     "data-card-choose": true,
     className: "fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3"
   }, React.createElement("div", {
@@ -90855,8 +91139,11 @@ const CARD_DECK_FILTERS = Object.freeze([{
 }, {
   id: 'breeder',
   label: 'ブリーダー'
+}, {
+  id: 'fld',
+  label: '全体'
 }]);
-const cardDeckFilterOk = (c, f) => f === 'all' ? true : f === 'any' ? c.user === 'any' : f === 'breeder' ? c.user === 'breeder' : c.kind === f && c.user !== 'any' && c.user !== 'breeder';
+const cardDeckFilterOk = (c, f) => f === 'all' ? true : f === 'any' ? c.user === 'any' : f === 'breeder' ? c.user === 'breeder' : f === 'fld' ? c.kind === 'fld' : c.kind === f && c.user !== 'any' && c.user !== 'breeder';
 const CardDeckTile = ({
   db,
   no,
@@ -92832,7 +93119,7 @@ const cardPvpFlip = act => {
 const cardPvpRevealOf = (st, act, p = 0) => {
   if (!st || !act) return {};
   const hand = st.players[p].hand;
-  const idxs = act.type === 'reveal' ? hand.map((_, i) => i) : act.type === 'guard' ? [act.hand] : act.type === 'attack' || act.type === 'breeder' || act.type === 'discard' ? act.hand || [] : [];
+  const idxs = act.type === 'reveal' ? hand.map((_, i) => i) : act.type === 'guard' ? [act.hand] : act.type === 'attack' || act.type === 'breeder' || act.type === 'discard' || act.type === 'pray' ? act.hand || [] : [];
   const out = {};
   idxs.forEach(i => {
     if (Number.isInteger(i) && i >= 0 && i < hand.length) out[i] = hand[i];
@@ -92895,9 +93182,11 @@ const cardPvpPatchDiscard = (db, st, list) => {
   s.players[1].discard = list.slice();
   return s;
 };
-const cardPvpLimitMs = st => st.pending || st.pendingDiscard || st.pendingReveal ? CARD_PVP_GUARD_MS : CARD_PVP_TURN_MS;
-const cardPvpClockKey = st => `${cardPvpDecider(st)}-${st.turn}-${st.pending ? `g${st.log.length}` : st.pendingDiscard ? `d${st.log.length}` : st.pendingReveal ? `r${st.log.length}` : st.pendingChoice ? `c${st.log.length}` : st.phase === 'setup' ? 's' : 'm'}`;
-const cardPvpTimeoutAct = st => st.pendingReveal ? {
+const cardPvpLimitMs = st => st.pending || st.pendingDiscard || st.pendingReveal || st.pendingPray ? CARD_PVP_GUARD_MS : CARD_PVP_TURN_MS;
+const cardPvpClockKey = st => `${cardPvpDecider(st)}-${st.turn}-${st.pendingPray ? `p${st.log.length}` : st.pending ? `g${st.log.length}` : st.pendingDiscard ? `d${st.log.length}` : st.pendingReveal ? `r${st.log.length}` : st.pendingChoice ? `c${st.log.length}` : st.phase === 'setup' ? 's' : 'm'}`;
+const cardPvpTimeoutAct = st => st.pendingPray ? {
+  type: 'pray'
+} : st.pendingReveal ? {
   type: 'reveal'
 } : st.pendingChoice ? {
   type: 'choose',
@@ -93048,7 +93337,7 @@ const cardPvpVerify = (db, {
 const cardPvpInt = (v, max) => Number.isInteger(v) && v >= 0 && v <= max ? v : null;
 const cardPvpCleanAct = raw => {
   if (!raw || typeof raw !== 'object') return null;
-  const types = ['setupGuts', 'guts', 'attack', 'breeder', 'guard', 'pass', 'endAttacks', 'discard', 'reveal', 'choose'];
+  const types = ['setupGuts', 'guts', 'attack', 'breeder', 'guard', 'pass', 'endAttacks', 'discard', 'reveal', 'choose', 'pray'];
   if (!types.includes(raw.type)) return null;
   const act = {
     type: raw.type

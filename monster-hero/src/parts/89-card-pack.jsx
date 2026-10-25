@@ -32,6 +32,11 @@ const CARD_PACK_SHARED = Object.freeze({
   p6: ['254', '251', '276', '273', '277', '274'], p7: ['275', '278', '345', '279', '346', '280'],
   p8: ['351', '347', '352', '348', '366', '349', '350'],
 });
+// 全体カード15枚(2026-10-25)の配り先。★仮(カード部の返事待ち)。どの弾も種類が50前後(48〜58)に収まるよう、種類の少ない弾から番号順に埋めた
+const CARD_PACK_FIELD = Object.freeze({
+  p8: ['F115', 'F116', 'F117', 'F118', 'F119', 'F120'], p7: ['F255', 'F256', 'F257', 'F258'],
+  p4: ['F259', 'F260', 'F261'], p6: ['F262'], p5: ['F263'],
+});
 // 以前の弾(w1〜w4・混血)の id。天井の保存(mh_card_pack_pity_v1)に残っている数は消さない(決まり⑦)
 const CARD_PACK_LEGACY_IDS = Object.freeze(['w1', 'w2', 'w3', 'w4', 'hybrid']);
 // 以前の天井の数を新しい弾へ1回だけ写す元(w1 → 第1〜3弾 / w2 → 第4・5弾 / w3 → 第6弾 / w4 → 第7・8弾)
@@ -52,7 +57,7 @@ const cardPackIdOf = (db, no) => {
   if (m) return cardPackIdOfSpecies(String(m.wave) === 'hybrid' ? m.main : m.species);
   const c = db.cards[no];
   if (!c) return null;
-  if (c.user === 'any' || c.user === 'breeder') return (Object.entries(CARD_PACK_SHARED).find(([, list]) => list.includes(no)) || [])[0] || null;
+  if (c.user === 'any' || c.user === 'breeder') return (Object.entries(CARD_PACK_SHARED).find(([, list]) => list.includes(no)) || Object.entries(CARD_PACK_FIELD).find(([, list]) => list.includes(no)) || [])[0] || null;
   return cardPackIdOfSpecies(c.user);
 };
 const cardPackTechPool = (db, pack) => Object.values(db.cards).filter((c) => c.ready && cardPackIdOf(db, c.no) === pack.id).map((c) => c.no).sort();
