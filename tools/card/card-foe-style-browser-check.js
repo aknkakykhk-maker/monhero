@@ -5,7 +5,7 @@
 //   CARD_SHOT_DIR=<フォルダ> node tools/card/card-foe-style-browser-check.js   390×844 の写真も撮る
 //
 // 見ているもの(390×664・844×390・1280×800。合言葉の端末なので、助手は全員選べる)
-//   ① どの助手を選んでも、型の札(〜型)・説明・好きなモンスター4体が出る。型は CARD_AI_HABITS から決まる(みゅあ=攻撃型 など)
+//   ① どの助手を選んでも、型の札(〜型)・説明・好きなモンスター(1体・顔付き)が出る。型は CARD_AI_HABITS から決まる(みゅあ=攻撃型 など)
 //   ② 好んで入れるカードがある助手(あつ)だけ、しっかり組む強さ(HARD から)で「よく使うカード」が出る
 //   ③ 強さで組み方の説明が変わる(EASY は気分屋・HARD は相性のいい3体 など。82 の CARD_AI_BUILD と同じ決め)
 //   ④ 字が切れていない(1行のままの字が箱からはみ出さない)・数字(重みや勝率)を出していない(「3体」「4体」「第1弾」だけは数として出す)
@@ -137,10 +137,10 @@ const seed = (withAuto) => `(() => {
           });
           if (!r) { bad.push(`${who}: 型の欄が出ない`); continue; }
           if (WANT[who] && r.label !== WANT[who]) bad.push(`${who}: 型が ${r.label}(${WANT[who]} のはず)`);
-          if (r.mons !== 4) bad.push(`${who}: 好きなモンスターが ${r.mons}体`);
+          if (r.mons !== 1) bad.push(`${who}: 好きなモンスターが ${r.mons}体`);
           if (r.prefer !== (who === 'atsu' && lv === 'hard')) bad.push(`${who} ${lv}: よく使うカードの出かたが違う`);
           if (lv === 'easy' && !/^EASY: .*気分/.test(r.note)) bad.push(`${who} EASY: ${r.note}`);
-          if (lv === 'hard' && !/^HARD: .*相性のいい3体/.test(r.note)) bad.push(`${who} HARD: ${r.note}`);
+          if (lv === 'hard' && !/^HARD: 残りの2体は、型に合う子/.test(r.note)) bad.push(`${who} HARD: ${r.note}`);
           if (r.clipped.length) bad.push(`${who}: 字が切れている(${r.clipped.join('・')})`);
           if (/[0-9０-９]/.test(r.text.replace(/[34]体|第[0-9]弾/g, ''))) bad.push(`${who}: 数字を出している(${(r.text.replace(/[34]体|第[0-9]弾/g, '').match(/.{0,8}[0-9０-９].{0,8}/) || [''])[0]})`);
         }
