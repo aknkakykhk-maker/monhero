@@ -23,7 +23,7 @@ vm.runInContext(`${read('data/card-battle-cards.js')}\n;\n${read('src/parts/82-c
   + 'const rhythmMultiText = (v, max) => String(v == null ? "" : v).replace(/[\\u0000-\\u001f]/g, "").slice(0, max);\n'
   + `${multi}\n;\nthis.E = { CARD_BATTLE_DATA, cardLegalActions, cardAiFillBind, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardDecider, cardClone, cardApplyAction, CARD_PVP_HIDDEN,
     cardPvpFlip, cardPvpRevealOf, cardPvpNewGame, cardPvpApplyRemote, cardPvpPatchDiscard, cardPvpSealText, cardPvpSha256, cardPvpTruthGame, cardPvpVerify, cardPvpCleanMessage, cardPvpCleanAct,
-    cardPvpReward, cardPvpTimeoutAct, cardPvpLimitMs, cardPvpClockKey, cardPvpDecider, cardPvpNormalizePenalty, CARD_PVP_STAMPS, CARD_PVP_TURN_MS, CARD_PVP_GUARD_MS, CARD_PVP_RESULT_LINES, cardPvpResultLine };`, ctx);
+    cardPvpReward, cardUsableBy, cardPvpTimeoutAct, cardPvpLimitMs, cardPvpClockKey, cardPvpDecider, cardPvpNormalizePenalty, CARD_PVP_STAMPS, CARD_PVP_TURN_MS, CARD_PVP_GUARD_MS, CARD_PVP_RESULT_LINES, cardPvpResultLine };`, ctx);
 const E = ctx.E;
 const db = E.CARD_BATTLE_DATA;
 let failed = 0;
@@ -46,7 +46,7 @@ const PENDING_DONE = ['034', '210', '060', '236', '109',
   '128', '221', '222', '352', '348'];
 // 付ける札は、準備中だった札だけ入れる(ほかの付ける札まで入れると、技が足りなくなる)
 const usable = (c, mons) => c && c.ready && (PENDING_DONE.includes(c.no) || !(c.effects || []).some((e) => e.t === 'attach'))
-  && (c.user === 'any' || c.user === 'breeder' || mons.some((m) => c.user === m.species));
+  && (c.user === 'any' || c.user === 'breeder' || mons.some((m) => c.user === m.species || E.cardUsableBy(c, m)));
 // 試合でまず起きない条件の札(山札0で付ける劇的な幕切れ)は、card-rules-check の場面だけで確かめる
 // みんな下がれ・我慢は、相手が全員に当たる技・ガッツを減らす技を出した場面だけ。試合の流れで出会わないことがある(相手に隠す中身を動かさない守りなので、マルチで食い違う心配は小さい。効き目は card-rules-check で1枚ずつ確かめる)
 const PENDING_RARE = ['124', '250', '127', '123', '275']; // 劇的な幕切れ(山札0)・孤軍奮闘・最後のきらめき(味方が1体)・みんな下がれ・我慢
@@ -64,7 +64,8 @@ const pendingDeck = (monsters, must = [], onlyMust = false) => {
   mineP.filter((no) => !must.includes(no) && ['any', 'breeder'].includes(db.cards[no].user)).forEach((no) => cards.push(no));
   cards.splice(30);
   // 残りは、3体それぞれの札と誰でも使える札を、1種ずつ順に(番号の順だけで埋めると、最初の種族の札ばかりになる)
-  const lanes = [...mons.map((m) => m.species), 'any'].map((sp) => Object.values(db.cards).filter((c) => usable(c, mons) && !PENDING_DONE.includes(c.no) && (sp === 'any' ? c.user === 'any' || c.user === 'breeder' : c.user === sp)).map((c) => c.no).sort());
+  // 派生(混血)の子は、メイン・サブの種族の札を使う(子の種族名そのものの札は無い)
+  const lanes = [...new Set(mons.flatMap((m) => (m.main ? [m.main, m.sub].filter(Boolean) : [m.species]))), 'any'].map((sp) => Object.values(db.cards).filter((c) => usable(c, mons) && !PENDING_DONE.includes(c.no) && (sp === 'any' ? c.user === 'any' || c.user === 'breeder' : c.user === sp)).map((c) => c.no).sort());
   const rest = [];
   for (let k = 0; lanes.some((l) => k < l.length); k++) lanes.forEach((l) => { if (k < l.length) rest.push(l[k]); });
   // 同じ名前は3枚まで(番号の違う同じ名前の札もある)
@@ -192,6 +193,20 @@ for (let n = 0; n < N; n++) runOne(n);
   }
   N += extra;
 }
+// 派生(混血)のモンスターも全員、マルチの場がずれないか(2026-10-25 統括部長の公開前の確認)。派生を3体ずつ組にし、相手はふつうの3体。追加の試合も①〜④に数える
+const hybrids = Object.values(db.monsters).filter((m) => m.main && m.ready !== false).map((m) => m.no).sort();
+{
+  let k = 0;
+  for (let i = 0; i < hybrids.length; i += 3) {
+    const trio = hybrids.slice(i, i + 3);
+    ['C-003', 'C-001', 'C-005'].forEach((x) => { if (trio.length < 3) trio.push(x); });
+    runOne(N + k, [trio, ['C-005', 'C-001', 'C-003']]); k++;
+    runOne(N + k, [['C-005', 'C-001', 'C-003'], trio]); k++; // 後攻・相手側でも
+  }
+  N += k;
+}
+const hyUsed = new Set(games.flatMap((g) => [...g.deckA.monsters, ...g.deckB.monsters]).filter((no) => hybrids.includes(no)));
+check(`① 派生のモンスター${hybrids.length}体が全員、マルチの試合に出ている`, hyUsed.size === hybrids.length, `${hyUsed.size} / ${hybrids.length}`);
 check(`① ${N}戦とも、届いた手を当てられて、2台の場がずっと同じ`, applyOk === N, firstErr);
 check(`② ${N}戦とも最後まで決着して、勝ち負けが合う`, finished === N && winOk === N, `決着 ${finished} / 合う ${winOk}`);
 check('③ 相手の手札・山札は、最後まで仮の札のまま(本物の番号が入らない)', hiddenOk === N, `${hiddenOk} / ${N}`);

@@ -10,6 +10,8 @@ create table if not exists public.card_assistant_talk_usage (
   primary key (day, breeder_id, bucket)
 );
 alter table public.card_assistant_talk_usage enable row level security;
+-- RLS は TRUNCATE を止めないので、表そのものの権限も外す(2026-10-25 窓口が本番に流したときに足した1行)
+revoke all on table public.card_assistant_talk_usage from anon, authenticated;
 
 create or replace function public.card_assistant_talk_take(p_breeder text, p_bucket text, p_user_limit int, p_total_limit int)
 returns jsonb language plpgsql security definer set search_path = public as $$
