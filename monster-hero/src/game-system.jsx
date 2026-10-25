@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ad076814454e7e0c
+// generated-sha256: 141cbf90bbaad627
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-25 19:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-25 20:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -50023,6 +50023,11 @@ const loadAssistantChatMemoFor = async (assistantId) => {
 //   特殊: draw(n) / peekHand / discardOpp(n) 相手が選んで捨てる / heal(n) 味方1体 / forbidThisTurn(kinds) このターン相手は回避(防御)を使えない
 //         gutsGuard 次のターンまでガッツを減らされない / charge(kinds,n) 次のその種類の技1回をn倍(ダメージを受けると消える)
 //         freeSpeThisTurn このターン、味方の特殊技(モンスターの)は0ガッツ(友情の証)
+//         extraAttack(n) この子はこのターンもうn回攻撃できる / extraAttackTarget(n) もう攻撃した味方1体に / useWhenAllies(n) 味方がn体のときだけ /
+//         unstunTarget 味方1体の「攻撃できない」を消す / liftTarget 相手1体をこのターンだけ空中に / unlimitedAttacks この子はこのターン何枚でも /
+//         breederUnlimited このターン、ブリーダーのカードを何枚でも / taunt(mode:'only'|'not', noArea) 相手の次の番に狙える相手を縛る /
+//         stunAllEnemies・stunTarget 相手(1体)は次のターン攻撃できない / skipTurn 相手の次の番を飛ばす /
+//         rage 次の自分の番まで、この子は守れない。次の自分の番の技は2倍
 //   使える時: useWhen(lifeMax) 自分のライフがその数以下のときだけ出せる
 //   守り: evade(kinds,minGuts) / reduce(kinds,n) / reduceHalf(kinds) 半分(切り捨て)減らす / reduceAll(kinds) / reflect(kinds,frac,keep) はね返す /
 //         cover 味方への1回分を自分が受ける / nextTurnMult(kinds,n) 次の自分のターンの技n倍 / becomeAir 次のターン終わりまで空中 /
@@ -50196,7 +50201,7 @@ const cardAttachOk = (db, st, p, mon, main, c) => {
   if (w.lifeMax !== undefined && mon.life > w.lifeMax) return false;
   if (w.deckEmpty && me.deck.length) return false;
   if (w.pure && (mon.main || mon.sub)) return false;
-  return c.user === 'breeder' ? !me.breederUsed : cardUsableBy(c, mon);
+  return c.user === 'breeder' ? (!me.breederUsed || cardBreederFree(st, p)) : cardUsableBy(c, mon);
 };
 // 付ける札の組み合わせ(0〜2枚。ブリーダーのカードは1枚まで)
 const cardAttachSets = (db, st, p, mon, main, exclude) => {
@@ -50216,6 +50221,8 @@ const cardMonCanAttack = (db, st, p, mi, card) => {
   if (!mon || mon.ko) return false;
   if (mon.stunTurn === st.turn) return false;
   if (mon.attacks === 0) return true;
+  if (mon.unlimited === st.turn) return true; // 死亡遊戯・タイムディレイ
+  if (mon.bonus && mon.bonus.turn === st.turn && mon.attacks < 1 + mon.bonus.n) return true; // 孤軍奮闘・オイリーオイル・ほうり上げる
   const prev = cardOf(db, mon.lastCard);
   const chainNow = cardEff(card, 'chain');
   const chainPrev = cardEff(prev, 'chain');
@@ -50247,6 +50254,29 @@ const cardAreaTargets = (st, p, mi, card) => {
   return out;
 };
 
+// このターン、ブリーダーのカードを何枚でも出せるか(うたうニャ)
+const cardBreederFree = (st, p) => !!(st.breederFree && st.breederFree.p === p && st.breederFree.turn === st.turn);
+// 挑発・魅了などの縛り(相手の次の番に効く)。いま攻撃する p に効いているもの(縛った子が倒れていたら効かない)
+const cardTauntsOn = (st, p) => (st.taunts || []).filter((t) => t.turn === st.turn && t.by === cardOther(p) && !st.players[t.by].mons[t.m].ko);
+// 狙う相手の組(1体を狙う技は [その子]、全員に当たる技は当たる子の全部)が、縛りに合うか
+const cardTauntOk = (st, p, targets, area) => cardTauntsOn(st, p).every((t) => {
+  const hits = targets.filter((x) => x.p === t.by);
+  if (t.mode === 'not') return !hits.some((x) => x.m === t.m);
+  if (area) return !t.noArea || !hits.some((x) => x.m !== t.m);
+  return hits.every((x) => x.m === t.m);
+});
+// 特殊技の狙い(null は狙わない技)。使えない場面なら空
+const cardSpeTargets = (st, p, mi, card) => {
+  const me = st.players[p];
+  const opp = st.players[cardOther(p)];
+  const ua = cardEff(card, 'useWhenAllies'); if (ua && me.mons.filter((m) => !m.ko).length !== ua.n) return [];
+  if (cardHasEff(card, 'heal')) return me.mons.map((m, j) => (!m.ko && m.life < m.max ? { p, m: j } : null)).filter(Boolean);
+  if (cardHasEff(card, 'extraAttackTarget')) return me.mons.map((m, j) => (!m.ko && m.attacks > 0 && m.stunTurn !== st.turn ? { p, m: j } : null)).filter(Boolean);
+  if (cardHasEff(card, 'unstunTarget')) return me.mons.map((m, j) => (!m.ko && m.stunTurn === st.turn ? { p, m: j } : null)).filter(Boolean);
+  if (cardHasEff(card, 'stunTarget') || cardHasEff(card, 'liftTarget')) return opp.mons.map((m, j) => (!m.ko ? { p: cardOther(p), m: j } : null)).filter(Boolean);
+  return [null];
+};
+
 // ---- いまできる操作 ----
 // 攻撃の候補を全部並べる(コンピューターと画面の「使えるカード」の両方に使う)
 const cardAttackOptions = (db, st) => {
@@ -50261,14 +50291,13 @@ const cardAttackOptions = (db, st) => {
     if (!card || !card.ready || !cardIsAttackKind(card.kind)) return;
     if (cardHasEff(card, 'attach')) return; // 付ける札は単独では出さない(下で技に付ける)
     if (card.user === 'breeder') {
-      if (me.breederUsed) return;
+      if (me.breederUsed && !cardBreederFree(st, p)) return;
       // ジョイのサポートなど、ブリーダーのカードに付ける札も一緒に(付けると払うガッツが変わる)
       cardAttachSets(db, st, p, null, card, [hi]).forEach((att) => {
         const hand = [hi, ...att];
         if (cardActionCost(db, st, p, me.hand, hand) > guts) return;
         if (card.kind === 'spe') {
-          if (cardHasEff(card, 'heal')) me.mons.forEach((m, j) => { if (!m.ko && m.life < m.max) out.push({ type: 'breeder', hand, target: { p, m: j } }); });
-          else out.push({ type: 'breeder', hand, target: null });
+          cardSpeTargets(st, p, -1, card).forEach((target) => out.push({ type: 'breeder', hand, target }));
         } else {
           me.mons.forEach((m, mi) => { if (m.ko) return; opp.mons.forEach((t, j) => { if (cardCanTarget(card, t, st.turn)) out.push({ type: 'breeder', hand, mon: mi, target: { p: cardOther(p), m: j } }); }); });
         }
@@ -50298,15 +50327,15 @@ const cardAttackOptions = (db, st) => {
         const cost = cardActionCost(db, st, p, me.hand, idxs);
         if (cost > guts) return;
         if (card.kind === 'spe') {
-          if (cardHasEff(card, 'heal')) me.mons.forEach((m, j) => { if (!m.ko && m.life < m.max) out.push({ type: 'attack', mon: mi, hand: idxs, target: { p, m: j } }); });
-          else out.push({ type: 'attack', mon: mi, hand: idxs, target: null });
+          cardSpeTargets(st, p, mi, card).forEach((target) => out.push({ type: 'attack', mon: mi, hand: idxs, target }));
           return;
         }
         if (cardHasEff(card, 'area')) {
-          if (cardAreaTargets(st, p, mi, card).some((t) => t.p !== p)) out.push({ type: 'attack', mon: mi, hand: idxs, target: null });
+          const at = cardAreaTargets(st, p, mi, card);
+          if (at.some((t) => t.p !== p) && cardTauntOk(st, p, at, true)) out.push({ type: 'attack', mon: mi, hand: idxs, target: null });
           return;
         }
-        opp.mons.forEach((t, j) => { if (cardCanTarget(card, t, st.turn)) out.push({ type: 'attack', mon: mi, hand: idxs, target: { p: cardOther(p), m: j } }); });
+        opp.mons.forEach((t, j) => { if (cardCanTarget(card, t, st.turn) && cardTauntOk(st, p, [{ p: cardOther(p), m: j }], false)) out.push({ type: 'attack', mon: mi, hand: idxs, target: { p: cardOther(p), m: j } }); });
       });
     });
   });
@@ -50329,7 +50358,7 @@ const cardGuardOptions = (db, st) => {
   const guts = me.guts.length;
   const out = [];
   // 挟み撃ち: このターンもう守りを出した子は、守れない
-  const guardedNow = (m) => fl.attachNoGuardIfGuarded && m.guardTurn === st.turn;
+  const guardedNow = (m) => (fl.attachNoGuardIfGuarded && m.guardTurn === st.turn) || m.noGuardUntil >= st.turn; // 挟み撃ち・怒り
   me.hand.forEach((no, hi) => {
     const c = cardOf(db, no);
     if (!c || !c.ready || !cardIsGuardKind(c.kind)) return;
@@ -50542,6 +50571,20 @@ const cardApplySpecial = (db, st, p, mi, card, target) => {
     if (e.t === 'heal' && target) { const m = me.mons[target.m]; const h = Math.min(e.n, m.max - m.life); m.life += h; cardEvent(st, { t: 'heal', p, m: target.m, n: h }); cardLog(st, `${m.name}のライフが${h}回復`); }
     if (e.t === 'gutsGuard') { me.gutsGuardUntil = st.turn + 1; cardLog(st, `${me.name}は次のターンまでガッツを減らされない`); }
     if (e.t === 'charge' && mi >= 0) { me.mons[mi].charge = { kinds: e.kinds, n: e.n }; cardLog(st, `${me.mons[mi].name}は次の${e.kinds.includes('pow') ? 'ちから' : 'かしこさ'}技のダメージが${e.n}倍`); }
+    const self = mi >= 0 ? me.mons[mi] : null;
+    const tm = target ? st.players[target.p].mons[target.m] : null;
+    const addBonus = (m, n) => { m.bonus = { turn: st.turn, n: (m.bonus && m.bonus.turn === st.turn ? m.bonus.n : 0) + n }; };
+    if (e.t === 'extraAttack' && self) { addBonus(self, e.n); cardLog(st, `${self.name}はこのターン、もう${e.n}回攻撃できる`); }
+    if (e.t === 'extraAttackTarget' && tm) { addBonus(tm, e.n); cardLog(st, `${tm.name}はもう${e.n}回攻撃できる`); }
+    if (e.t === 'unstunTarget' && tm) { tm.stunTurn = -1; cardLog(st, `${tm.name}は攻撃できるようになった`); }
+    if (e.t === 'liftTarget' && tm) { tm.airUntil = Math.max(tm.airUntil, st.turn); cardLog(st, `${tm.name}はこのターン空中になった`); }
+    if (e.t === 'unlimitedAttacks' && self) { self.unlimited = st.turn; cardLog(st, `${self.name}はこのターン、技を何枚でも出せる`); }
+    if (e.t === 'breederUnlimited') { st.breederFree = { p, turn: st.turn }; cardLog(st, `このターン、${me.name}はブリーダーのカードを何枚でも出せる`); }
+    if (e.t === 'taunt' && self) { st.taunts = [...(st.taunts || []).filter((t) => t.turn >= st.turn), { by: p, m: mi, mode: e.mode, noArea: !!e.noArea, turn: st.turn + 1 }]; cardLog(st, e.mode === 'not' ? `相手は次の番、${self.name}に当たる技を出せない` : `相手は次の番、${self.name}を狙う技しか出せない`); }
+    if (e.t === 'stunAllEnemies') { opp.mons.forEach((m) => { if (!m.ko) m.stunTurn = st.turn + 1; }); cardLog(st, '相手のモンスターは全員、次のターン攻撃できない'); }
+    if (e.t === 'stunTarget' && tm) { tm.stunTurn = st.turn + 1; cardLog(st, `${tm.name}は次のターン攻撃できない`); }
+    if (e.t === 'skipTurn') { st.skip = cardOther(p); cardLog(st, `${opp.name}の次の番を飛ばす`); }
+    if (e.t === 'rage' && self) { self.noGuardUntil = st.turn + 1; self.mult = { turn: st.turn + 2, kinds: ['pow', 'int'], n: 2 }; cardLog(st, `${self.name}は次の番まで守れない。次の番の技は2倍`); }
     if (e.t === 'freeSpeThisTurn') { st.freeSpe = { p, turn: st.turn }; cardLog(st, `このターン、${me.name}の味方の特殊技は0ガッツ`); }
     if (e.t === 'forbidThisTurn') { st.forbid[cardOther(p)] = [...(st.forbid[cardOther(p)] || []), ...e.kinds]; cardLog(st, `このターン、相手は${e.kinds.includes('dge') ? '回避' : '防御'}を使えない`); }
   });
@@ -50630,6 +50673,8 @@ const cardApplyAction = (db, st0, act) => {
     st.players[p].guts.push(...taken);
     if (taken.length) cardLog(st, `${st.players[p].name}は${taken.length}枚をガッツにした`);
     st.active = cardOther(p);
+    // 歌う: 相手の番を飛ばす(引く・攻撃・ガッツ置きが無い。その番の数だけ進めて、こちらの番へ)
+    if (st.skip === st.active) { st.skip = null; st.turn += 1; cardLog(st, `ターン${st.turn}: ${st.players[st.active].name}の番は飛ばされた`, { kind: 'turn' }); st.active = p; }
     cardBeginTurn(st);
     return st;
   }
@@ -50705,6 +50750,20 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
       if (e.t === 'peekHand') score += 0.4 * habit.disrupt;
       if (e.t === 'discardOpp') score += 1.4 * habit.disrupt;
       if (e.t === 'gutsGuard') score += st.players[cardOther(p)].hand.length >= 3 ? 0.4 : 0.1;
+      // 区切り3: もう1回・何枚でも・攻撃できない・縛り・番を飛ばす
+      const mine = opt.mon >= 0 ? me.mons[opt.mon] : null;
+      const tmon = opt.target ? st.players[opt.target.p].mons[opt.target.m] : null;
+      const attacksFor = (m) => (m ? me.hand.filter((_, i) => !opt.hand.includes(i)).map((n) => cardOf(db, n)).filter((c) => c && cardIsAttackKind(c.kind) && c.kind !== 'spe' && cardUsableBy(c, m) && c.guts <= me.guts.length - cost).length : 0);
+      if (e.t === 'extraAttack') score += Math.min(1, attacksFor(mine)) * 1.6;
+      if (e.t === 'extraAttackTarget' || e.t === 'unstunTarget') score += Math.min(1, attacksFor(tmon)) * 1.6;
+      if (e.t === 'unlimitedAttacks') score += Math.min(3, attacksFor(mine)) * 0.9 - 0.4;
+      if (e.t === 'breederUnlimited') score += me.hand.filter((n) => (cardOf(db, n) || {}).user === 'breeder').length * 0.7 - 0.3;
+      if (e.t === 'liftTarget') score += 0.3;
+      if (e.t === 'taunt') score += 0.9 * habit.disrupt;
+      if (e.t === 'stunAllEnemies') score += st.players[cardOther(p)].mons.filter((m) => !m.ko).length * 1.0;
+      if (e.t === 'stunTarget' && tmon) score += 0.8 + (tmon.life / Math.max(1, tmon.max)) * 0.6;
+      if (e.t === 'skipTurn') score += 3;
+      if (e.t === 'rage' && mine) score += Math.max(0, ...me.hand.map((n) => cardOf(db, n)).filter((c) => c && (c.kind === 'pow' || c.kind === 'int') && cardUsableBy(c, mine)).map((c) => c.damage || 0)) * 0.35 - 0.6;
       // 友情の証: このターン、手札のほかの特殊技を0ガッツで出せる
       if (e.t === 'freeSpeThisTurn') score += me.hand.filter((_, i) => !opt.hand.includes(i)).map((n) => cardOf(db, n)).filter((c) => c && c.kind === 'spe' && c.user !== 'breeder' && !cardHasEff(c, 'attach')).reduce((s2, c) => s2 + (c.guts || 0) * 0.4, 0);
       if (e.t === 'charge') {
@@ -50927,7 +50986,19 @@ const cardAiCardValue = (card, habit) => {
       if (e.t === 'forbidThisTurn') v += 0.8 * habit.disrupt;
       if (e.t === 'gutsGuard') v += 0.3;
       if (e.t === 'charge') v += 1.2;
+      if (e.t === 'extraAttack') v += 0.8;
+      if (e.t === 'extraAttackTarget') v += 0.6;
+      if (e.t === 'unstunTarget') v += 0.2;
+      if (e.t === 'liftTarget') v += 0.2;
+      if (e.t === 'unlimitedAttacks') v += 1.0;
+      if (e.t === 'breederUnlimited') v += 0.4;
+      if (e.t === 'taunt') v += 0.6 * habit.disrupt;
+      if (e.t === 'stunAllEnemies') v += 1.2;
+      if (e.t === 'stunTarget') v += 0.8;
+      if (e.t === 'skipTurn') v += 1.5;
+      if (e.t === 'rage') v += 0.6;
     });
+    if (cardHasEff(card, 'useWhenAllies')) v *= 0.4;
     return v - card.guts * 0.3;
   }
   let dmg = card.damage || 0;
@@ -52712,6 +52783,8 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
   // 影縛り(名指しの要る札)を付けた手は、名指しする守りの札を先に選ぶ。場が変わったら閉じる(確かめの窓と同じ)
   const [bindAsk, setBindAsk] = useState(null); // 名指しを待っている手
   useEffect(() => { setConfirm(null); setBindAsk(null); }, [st]);
+  // 名指しをやめたら、選んでいた手札も外す(残っていると、次に押したとき選び外しになって分かりにくい)
+  const bindCancel = () => { setBindAsk(null); setSel(null); setHint(''); };
   const askUse = (o) => {
     if (o && Array.isArray(o.hand) && !o.bind && o.hand.some((i) => cardHasEff(cardOf(db, me.hand[i]), 'attachBind'))) { setBindAsk(o); return; }
     if (!confirmOn('confirmUse')) { step(o); return; }
@@ -53086,17 +53159,23 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
       {detail && <CardDetailModal db={db} no={detail} onClose={() => setDetail(null)}/>}
       {discard && <CardDiscardModal db={db} st={st} initial={discard.tab} onDetail={(no) => setDetail(no)} onClose={() => setDiscard(null)}/>}
       {bindAsk && (
-        <div data-card-bind-pick className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3" onClick={() => setBindAsk(null)}>
+        <div data-card-bind-pick className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3" onClick={bindCancel}>
           <div className="w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900 p-3 text-slate-100" onClick={(e) => e.stopPropagation()}>
             <div className="text-[15px] font-black" style={JA_LABEL_STYLE}>{jaWrap('影縛り: 使えなくする守りのカードを選ぶ')}</div>
-            <div className="mt-1 text-[11px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('同じ名前のカードは全部、この技に使えなくなります')}</div>
+            <div className="mt-1 text-[11px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('同じ名前のカードは全部、この技に使えなくなります。赤いのは、狙った子が使える守りです')}</div>
             <div className="mt-2 grid max-h-[50vh] grid-cols-2 gap-1.5 overflow-y-auto">
-              {cardBindNames(db).map((name) => (
-                <button key={name} type="button" data-card-bind-name={name} className="min-h-[40px] rounded-xl bg-slate-700 px-2 text-[13px] font-black text-white active:scale-95"
+              {(() => {
+                // 狙った子が使える守りを先に(光らせる)。ほかの名前もそのあとに並べる(名指しはどの守りの名前でもよい)
+                const tm = bindAsk.target ? st.players[bindAsk.target.p].mons[bindAsk.target.m] : null;
+                const can = new Set(Object.values(db.cards).filter((c) => c.ready && cardIsGuardKind(c.kind) && tm && cardUsableBy(c, tm)).map((c) => c.name));
+                const all = cardBindNames(db);
+                return [...all.filter((x) => can.has(x)), ...all.filter((x) => !can.has(x))].map((name) => ({ name, can: can.has(name) }));
+              })().map(({ name, can }) => (
+                <button key={name} type="button" data-card-bind-name={name} data-card-bind-usable={can ? '1' : '0'} className={`min-h-[40px] rounded-xl px-2 text-[13px] font-black text-white active:scale-95 ${can ? 'bg-rose-700 ring-1 ring-rose-300' : 'bg-slate-700'}`}
                   onClick={() => { const o = { ...bindAsk, bind: name }; setBindAsk(null); askUse(o); }}>{name}</button>
               ))}
             </div>
-            <button type="button" className="mt-2 min-h-[44px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200" onClick={() => setBindAsk(null)}>やめる</button>
+            <button type="button" className="mt-2 min-h-[44px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200" onClick={bindCancel}>やめる</button>
           </div>
         </div>
       )}
@@ -53291,7 +53370,9 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     const seed = (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0;
     const first = Math.random() < 0.5 ? CARD_ME : CARD_CPU;
     const assistant = allAssistants.find((a) => a.id === pick.who);
-    const st = cardCreateGame(db, { decks: [{ monsters: activeDeck.monsters, cards: activeDeck.cards }, cpuDeck], names: ['あなた', assistant ? assistant.name : 'あいて'], seed, first });
+    let st = cardCreateGame(db, { decks: [{ monsters: activeDeck.monsters, cards: activeDeck.cards }, cpuDeck], names: ['あなた', assistant ? assistant.name : 'あいて'], seed, first });
+    // 検査のときだけ: 始まりの場を決めた形に差しかえる(window.__mhCardScene が関数のときだけ。ふだんの遊びでは無い)
+    if (typeof window !== 'undefined' && typeof window.__mhCardScene === 'function') { try { st = window.__mhCardScene(cardClone(st)) || st; } catch (_) { /* 差しかえに失敗したら、ふつうの始まりのまま */ } }
     setResult(null);
     setGame({ key: `${seed}`, st, who: pick.who, level: pick.level, settings: save.settings });
     // 対戦の BGM: オプションで曲を決めていればその曲、「おまかせ」なら相手の助手に合わせる
