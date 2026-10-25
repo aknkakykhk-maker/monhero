@@ -6,10 +6,12 @@
 //
 // 見るもの
 //   ① みゅあのセリフを読めた(1本も拾えていないのに「OK」にならない)
-//   ② 前の話し方の名残(「ぢゃん」・半角の ' 入りの顔文字 ( 'ω') )が無い
+//   ② 前の話し方の名残(半角の ' 入りの顔文字 ( 'ω') )が無い
 //   ③ ほかの助手の話し方(ききの「〜でつ」「〜まつ」、ドラの「おで」)が混ざっていない
 //   ④ 絵文字は1本に2つまで(説明のセリフが頭に入らなくなる)
 //   ⑤ 飾り(顔文字・絵文字・ｗ)は全体の15%〜50%(新しい口調が消えていない/盛りすぎていない)
+//   ⑥ 「じゃん」「まじ」が無い。みゅあは崩して「ぢゃん」「まぢ」と書く(社長 2026-10-25「みゅあはじゃんよりぢゃんまし、まじよりまぢだよ」)。
+//      assistants.js のほか、カード対戦(83)・カードの練習試合(86)・マルチの結果(91)のみゅあの台詞と、おしゃべりの人柄・答えも見る
 // 親密度Lv1・2のセリフ(bond:[1,2])は、わざと「ていねい語」にしてある(assistant-bond-check.js)。
 const fs = require('fs');
 const path = require('path');
@@ -63,23 +65,39 @@ L.forEach((line, i) => {
     let owner = who ? who[1] : keyOwner(i);
     if (!owner) owner = packOwner(i);
     if (!owner && constOf(i) === 'ASSISTANT_SCENES') owner = 'mua';
+    // 助手ごとの台本が無いときに使う元の台本と、みゅあだけが話す売り場の台詞は、みゅあの口調で書いてある
+    if (!owner && ['ASSISTANT_TUTORIAL', 'ASSISTANT_RHYTHM_TUTORIAL', 'MUA_CARD_SHOP_LINES'].includes(constOf(i))) owner = 'mua';
     if (owner === 'mua') mua.push({ no: i + 1, text: m[1] });
   }
 });
 const show = arr => arr.slice(0, 5).map(l => `${l.no}行「${l.text}」`).join(' / ');
 
 check('みゅあのセリフを読めた', mua.length >= 800, `${mua.length}本`);
-const old = mua.filter(l => /ぢゃ|\\'ω\\'/.test(l.text));
-check('前の話し方の名残(「ぢゃん」・( \'ω\') )が無い', old.length === 0, show(old));
-// セリフの外(助手の人柄 speech・speechQuirks・おしゃべりの答え・決まりの文)にも残っていた(2026-10-24 窓口「語尾を『じゃん』にそろえて」)。
-// おしゃべりの人柄(assistant-chat-digest.json)は assistants.js から作るので、両方を丸ごと見る
+const old = mua.filter(l => /\\'ω\\'/.test(l.text));
+check('前の話し方の名残(( \'ω\') )が無い', old.length === 0, show(old));
+// ⑥ 崩さずに書いた「じゃん」「まじ」(「じゃんけん」「まじめ」「まじない」「まじり」は別の言葉)
+const PLAIN = /じゃん(?!け)|まじ(?![めなり])/;
+const plain = mua.filter((l) => PLAIN.test(l.text));
 {
-  const fsx = require('fs'), px = require('path');
-  const whole = ['monster-hero/data/assistants.js', 'monster-hero/data/assistant-chat-digest.json']
-    .map((f) => [f, fsx.readFileSync(px.join(__dirname, '..', '..', f), 'utf8')]);
-  const left = whole.filter(([, t]) => /ぢゃん|まぢ/.test(t)).map(([f]) => f);
-  check('助手のデータとおしゃべりの人柄に「ぢゃん」「まぢ」が残っていない', left.length === 0, left.join(' / '));
+  const root = path.join(__dirname, '..', '..', 'monster-hero');
+  const src = (f) => fs.readFileSync(path.join(root, f), 'utf8').split('\n');
+  const pick = (file, lines, from, to) => lines.forEach((t, i) => { if (i >= from && i <= to && PLAIN.test(t)) plain.push({ no: `${file}:${i + 1}`, text: t.trim() }); });
+  // 範囲は「mua: {」「mua: [」から、次の同じ深さの助手の名前の手前まで
+  const block = (lines, startRe) => { const a = lines.findIndex((t) => startRe.test(t)); if (a < 0) return [-1, -2]; const ind = lines[a].match(/^\s*/)[0].length; let b = a + 1; while (b < lines.length && !(new RegExp(`^\\s{${ind}}\\w+\\s*:\\s*[\\[{]|^\\s{0,${Math.max(0, ind - 2)}}[}\\]]`)).test(lines[b])) b++; return [a, b - 1]; };
+  const asst = L;
+  // みゅあの人柄(ASSISTANTS の mua)と、おしゃべりの答えの見本(ASSISTANT_CHAT_EXAMPLES の mua)
+  const muaDef = asst.findIndex((t) => /^\s*id:\s*'mua'/.test(t));
+  if (muaDef >= 0) { let b = muaDef; while (b < asst.length && !/^\s{2}\},?\s*$/.test(asst[b])) b++; pick('assistants.js', asst, muaDef, b); }
+  const chat = asst.findIndex((t) => /^const ASSISTANT_CHAT_EXAMPLES/.test(t));
+  if (chat >= 0) { const [a, b] = block(asst.slice(chat), /^\s*mua:\s*\[/); pick('assistants.js', asst, chat + a, chat + b); }
+  const card = src('src/parts/83-card-battle-lines.jsx'); { const [a, b] = block(card, /^\s*mua:\s*\{/); pick('83-card-battle-lines.jsx', card, a, b); }
+  const tut = src('src/parts/86-card-tutorial.jsx'); tut.forEach((t, i) => { if (/^\s*M\d+:/.test(t) && PLAIN.test(t)) plain.push({ no: `86-card-tutorial.jsx:${i + 1}`, text: t.trim() }); });
+  const multi = src('src/parts/91-card-battle-multi.jsx'); { const [a, b] = block(multi, /^\s*mua:\s*\{/); pick('91-card-battle-multi.jsx', multi, a, b); }
+  const digest = fs.readFileSync(path.join(root, 'data/assistant-chat-digest.json'), 'utf8');
+  const d = JSON.parse(digest); const muaDigest = JSON.stringify((d.assistants || d).mua || '');
+  if (PLAIN.test(muaDigest)) plain.push({ no: 'assistant-chat-digest.json', text: (muaDigest.match(/.{0,20}(じゃん(?!け)|まじ(?![めなり])).{0,20}/) || [''])[0] });
 }
+check('みゅあの台詞に「じゃん」「まじ」が無い(「ぢゃん」「まぢ」と崩す。社長 2026-10-25)', plain.length === 0, show(plain));
 const other = mua.filter(l => /でつ|まつ[。！？♪]|おで[はがのも]/.test(l.text));
 check('ほかの助手の話し方(でつ・まつ・おで)が混ざっていない', other.length === 0, show(other));
 const many = mua.filter(l => (l.text.match(/\p{Extended_Pictographic}/gu) || []).length > 2);
